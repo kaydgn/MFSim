@@ -1385,7 +1385,7 @@ function _drChartMouseDown(e) {
   canvas.style.cursor = 'grabbing';
   // Hide tooltip
   var tip = document.getElementById(canvas.id + '-tooltip');
-  if(tip) tip.style.display = 'none';
+  if(tip) tip.classList.remove('visible');
 }
 
 function _drChartMouseUp(e) {
@@ -1410,10 +1410,12 @@ function _drChartMouseLeave(e) {
   var tip = document.getElementById(canvas.id + '-tooltip');
   var cv = document.getElementById(canvas.id + '-crossV');
   var ch = document.getElementById(canvas.id + '-crossH');
-  if(tip) tip.style.display = 'none';
+  if(tip) tip.classList.remove('visible');
   if(cv) cv.style.display = 'none';
   if(ch) ch.style.display = 'none';
 }
+
+var _DR_SNAP_DIST = 25; // piksel: veri noktasına bu kadar yaklaşınca tooltip görünsün
 
 function _drChartMouseMove(e) {
   var canvas = e.target;
@@ -1421,13 +1423,13 @@ function _drChartMouseMove(e) {
   if(!d) return;
   var rect = canvas.getBoundingClientRect();
   var mx = e.clientX - rect.left, my = e.clientY - rect.top;
-  
+
   // Pan
   if(_drChartPan.active && _drChartPan.canvasId === canvas.id) {
     var z = _drGetZoom(canvas.id);
     var dx = e.clientX - _drChartPan.startX;
     var dy = e.clientY - _drChartPan.startY;
-    var xRange = d.type === 'grade' ? (d.baseXMax - d.baseXMin) / z.scale : (d.baseXMax - d.baseXMin) / z.scale;
+    var xRange = (d.baseXMax - d.baseXMin) / z.scale;
     z.cx = _drChartPan.startCX - dx / d.plotW * xRange;
     if(d.type === 'grade') {
       var yRange = (d.baseYMax - d.baseYMin) / z.scale;
@@ -1436,80 +1438,90 @@ function _drChartMouseMove(e) {
     _drRedrawChart(canvas);
     return;
   }
-  
+
   // Outside plot area
   if(mx < d.padL || mx > d.W - d.padR || my < d.padT || my > d.H - d.padB) {
     var tip0 = document.getElementById(canvas.id + '-tooltip');
     var cv0 = document.getElementById(canvas.id + '-crossV');
     var ch0 = document.getElementById(canvas.id + '-crossH');
-    if(tip0) tip0.style.display = 'none';
+    if(tip0) tip0.classList.remove('visible');
     if(cv0) cv0.style.display = 'none';
     if(ch0) ch0.style.display = 'none';
     return;
   }
-  
+
   // Crosshair
   var crossV = document.getElementById(canvas.id + '-crossV');
   var crossH = document.getElementById(canvas.id + '-crossH');
   if(crossV) { crossV.style.display = 'block'; crossV.style.left = mx + 'px'; }
   if(crossH) { crossH.style.display = 'block'; crossH.style.top = my + 'px'; }
-  
+
   // Tooltip
   var tip = document.getElementById(canvas.id + '-tooltip');
   if(!tip) return;
-  
+
   var xVal = d.fromX(mx);
   var html = '';
-  
+  var snapOk = false; // veri noktasına yeterince yakın mı?
+
   if(d.type === 'grade') {
-    var yVal = d.fromY(my);
-    // Find nearest point
+    // En yakın veri noktasını bul
     var nearest = null, nearDist = Infinity;
     d.data.forEach(function(p) {
-      var dist = Math.abs(p.x - xVal);
+      var ppx = d.padL + (p.x - d.xMin) / (d.xMax - d.xMin) * d.plotW;
+      var ppy = d.padT + d.plotH - (p.y - d.yMin) / (d.yMax - d.yMin) * d.plotH;
+      var dist = Math.sqrt((mx - ppx) * (mx - ppx) + (my - ppy) * (my - ppy));
       if(dist < nearDist) { nearDist = dist; nearest = p; }
     });
-    html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Eğim Kabiliyeti</div>';
-    html += '<div>Hız: <b style="color:#60a5fa;">' + xVal.toFixed(1) + '</b> km/h</div>';
-    html += '<div>Eğim: <b style="color:#60a5fa;">' + yVal.toFixed(1) + '</b> %</div>';
-    if(nearest) {
-      html += '<div style="border-top:1px solid rgba(255,255,255,0.15); margin-top:3px; padding-top:3px;">En yakın nokta: <b>' + nearest.x.toFixed(1) + '</b> km/h → <b>' + nearest.y.toFixed(1) + '</b>%';
-      if(nearest.label) html += ' (' + nearest.label + ')';
-      html += '</div>';
+    if(nearest && nearDist <= _DR_SNAP_DIST) {
+      snapOk = true;
+      html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Eğim Kabiliyeti</div>';
+      html += '<div>Hız: <b style="color:#60a5fa;">' + nearest.x.toFixed(1) + '</b> km/h</div>';
+      html += '<div>Eğim: <b style="color:#60a5fa;">' + nearest.y.toFixed(1) + '</b> %</div>';
+      if(nearest.label) html += '<div style="border-top:1px solid rgba(255,255,255,0.15); margin-top:3px; padding-top:3px;">' + nearest.label + '</div>';
     }
   } else if(d.type === 'accel') {
-    // Interpolate time and distance at this speed
-    var tp = d.tp, dp = d.dp;
-    var tVal = null, dVal = null;
-    for(var i = 0; i < tp.length - 1; i++) {
-      if(xVal >= tp[i].x && xVal <= tp[i+1].x) {
-        var frac = (xVal - tp[i].x) / (tp[i+1].x - tp[i].x);
-        tVal = tp[i].y + frac * (tp[i+1].y - tp[i].y);
-        break;
-      }
+    // Her iki çizgi üzerindeki en yakın noktayı bul
+    var bestDist = Infinity, bestTP = null, bestDP = null;
+    for(var i = 0; i < d.tp.length; i++) {
+      var tpx = d.padL + (d.tp[i].x - d.xMin) / (d.xMax - d.xMin) * d.plotW;
+      var tpy = d.padT + d.plotH - (d.tp[i].y / d.yTMax) * d.plotH;
+      var dist = Math.sqrt((mx - tpx) * (mx - tpx) + (my - tpy) * (my - tpy));
+      if(dist < bestDist) { bestDist = dist; bestTP = d.tp[i]; }
     }
-    for(var j = 0; j < dp.length - 1; j++) {
-      if(xVal >= dp[j].x && xVal <= dp[j+1].x) {
-        var frac2 = (xVal - dp[j].x) / (dp[j+1].x - dp[j].x);
-        dVal = dp[j].y + frac2 * (dp[j+1].y - dp[j].y);
-        break;
-      }
+    for(var j = 0; j < d.dp.length; j++) {
+      var dpx = d.padL + (d.dp[j].x - d.xMin) / (d.xMax - d.xMin) * d.plotW;
+      var dpy = d.padT + d.plotH - (d.dp[j].y / d.yDMax) * d.plotH;
+      var dist2 = Math.sqrt((mx - dpx) * (mx - dpx) + (my - dpy) * (my - dpy));
+      if(dist2 < bestDist) { bestDist = dist2; bestDP = d.dp[j]; bestTP = null; }
     }
-    html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Hızlanma</div>';
-    html += '<div>Hız: <b style="color:#60a5fa;">' + xVal.toFixed(1) + '</b> km/h</div>';
-    if(tVal !== null) html += '<div>Süre: <b style="color:#4a86c8;">' + tVal.toFixed(2) + '</b> s</div>';
-    if(dVal !== null) html += '<div>Mesafe: <b style="color:#c0392b;">' + Math.round(dVal) + '</b> m</div>';
+    if(bestDist <= _DR_SNAP_DIST) {
+      snapOk = true;
+      // Snap edilen noktanın hız değerinde her iki çizginin değerini bul
+      var snapSpeed = bestTP ? bestTP.x : bestDP.x;
+      var tVal = null, dValI = null;
+      for(var ti = 0; ti < d.tp.length; ti++) { if(Math.abs(d.tp[ti].x - snapSpeed) < 0.01) { tVal = d.tp[ti].y; break; } }
+      for(var di = 0; di < d.dp.length; di++) { if(Math.abs(d.dp[di].x - snapSpeed) < 0.01) { dValI = d.dp[di].y; break; } }
+      html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Hızlanma</div>';
+      html += '<div>Hız: <b style="color:#60a5fa;">' + snapSpeed.toFixed(1) + '</b> km/h</div>';
+      if(tVal !== null) html += '<div>Süre: <b style="color:#4a86c8;">' + tVal.toFixed(2) + '</b> s</div>';
+      if(dValI !== null) html += '<div>Mesafe: <b style="color:#c0392b;">' + Math.round(dValI) + '</b> m</div>';
+    }
   }
-  
-  tip.innerHTML = html;
-  tip.style.display = 'block';
-  var tw = tip.offsetWidth || 200;
-  var tx = mx + 16, ty = my - 10;
-  if(tx + tw > d.W - 10) tx = mx - tw - 12;
-  if(ty < d.padT) ty = d.padT;
-  if(ty + (tip.offsetHeight || 80) > d.H - 10) ty = d.H - (tip.offsetHeight || 80) - 10;
-  tip.style.left = tx + 'px';
-  tip.style.top = ty + 'px';
+
+  if(snapOk) {
+    tip.innerHTML = html;
+    tip.classList.add('visible');
+    var tw = tip.offsetWidth || 200;
+    var tx = mx + 16, ty = my - 10;
+    if(tx + tw > d.W - 10) tx = mx - tw - 12;
+    if(ty < d.padT) ty = d.padT;
+    if(ty + (tip.offsetHeight || 80) > d.H - 10) ty = d.H - (tip.offsetHeight || 80) - 10;
+    tip.style.left = tx + 'px';
+    tip.style.top = ty + 'px';
+  } else {
+    tip.classList.remove('visible');
+  }
 }
 
 // Motor eğrisi grafiği çiz — interactive with zoom/pan/tooltip
@@ -1740,18 +1752,33 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
       var cv = document.getElementById('dr-engine-crossV');
       var ch = document.getElementById('dr-engine-crossH');
       if(mx < L.margin.left || mx > L.W - L.margin.right || my < L.margin.top || my > L.H - L.margin.bottom) {
-        if(tip) tip.style.display = 'none';
+        if(tip) tip.classList.remove('visible');
         if(cv) cv.style.display = 'none';
         if(ch) ch.style.display = 'none';
         return;
       }
       if(cv) { cv.style.display = 'block'; cv.style.left = mx + 'px'; }
       if(ch) { ch.style.display = 'block'; ch.style.top = my + 'px'; }
-      // Find nearest RPM
-      var rpm = L.rpmMin + (mx - L.margin.left) / L.pw * (L.rpmMax - L.rpmMin);
-      var nearest = null, nd = Infinity;
-      L.points.forEach(function(p) { var d = Math.abs(p.rpm - rpm); if(d < nd) { nd = d; nearest = p; } });
-      if(tip && nearest) {
+      // En yakın veri noktasına piksel mesafesini hesapla
+      var nearest = null, bestPxDist = Infinity;
+      L.points.forEach(function(p) {
+        var ppx = L.margin.left + (p.rpm - L.rpmMin) / (L.rpmMax - L.rpmMin) * L.pw;
+        // Güç eğrileri (sol eksen)
+        var pwyG = L.margin.top + L.ph - ((p.grossPwr - L.pwrMin) / (L.pwrMax - L.pwrMin)) * L.ph;
+        var dG = Math.sqrt((mx - ppx) * (mx - ppx) + (my - pwyG) * (my - pwyG));
+        if(dG < bestPxDist) { bestPxDist = dG; nearest = p; }
+        var pwyN = L.margin.top + L.ph - ((p.netPwr - L.pwrMin) / (L.pwrMax - L.pwrMin)) * L.ph;
+        var dN = Math.sqrt((mx - ppx) * (mx - ppx) + (my - pwyN) * (my - pwyN));
+        if(dN < bestPxDist) { bestPxDist = dN; nearest = p; }
+        // Tork eğrileri (sağ eksen)
+        var ptyG = L.margin.top + L.ph - ((p.grossTrk - L.trkMin) / (L.trkMax - L.trkMin)) * L.ph;
+        var dtG = Math.sqrt((mx - ppx) * (mx - ppx) + (my - ptyG) * (my - ptyG));
+        if(dtG < bestPxDist) { bestPxDist = dtG; nearest = p; }
+        var ptyN = L.margin.top + L.ph - ((p.netTrk - L.trkMin) / (L.trkMax - L.trkMin)) * L.ph;
+        var dtN = Math.sqrt((mx - ppx) * (mx - ppx) + (my - ptyN) * (my - ptyN));
+        if(dtN < bestPxDist) { bestPxDist = dtN; nearest = p; }
+      });
+      if(tip && nearest && bestPxDist <= _DR_SNAP_DIST) {
         var html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Motor Eğrisi</div>';
         html += '<div>Devir: <b style="color:#60a5fa;">' + nearest.rpm.toLocaleString('tr-TR') + '</b> rpm</div>';
         html += '<div style="color:#93c5fd;">Brüt Güç: <b>' + nearest.grossPwr.toFixed(1) + '</b> kW</div>';
@@ -1759,12 +1786,14 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
         html += '<div style="color:#fca5a5;">Brüt Tork: <b>' + nearest.grossTrk.toFixed(0) + '</b> N·m</div>';
         html += '<div style="color:#fca5a5;">Net Tork: <b>' + nearest.netTrk.toFixed(0) + '</b> N·m</div>';
         tip.innerHTML = html;
-        tip.style.display = 'block';
+        tip.classList.add('visible');
         var tw = tip.offsetWidth || 200;
         var tx = mx + 16, ty = my - 10;
         if(tx + tw > L.W - 10) tx = mx - tw - 12;
         if(ty < L.margin.top) ty = L.margin.top;
         tip.style.left = tx + 'px'; tip.style.top = ty + 'px';
+      } else if(tip) {
+        tip.classList.remove('visible');
       }
     });
     wrap.addEventListener('mouseup', function(e) {
@@ -1775,7 +1804,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
       var tip = document.getElementById('dr-engine-tooltip');
       var cv = document.getElementById('dr-engine-crossV');
       var ch = document.getElementById('dr-engine-crossH');
-      if(tip) tip.style.display = 'none';
+      if(tip) tip.classList.remove('visible');
       if(cv) cv.style.display = 'none';
       if(ch) ch.style.display = 'none';
     });
@@ -2469,10 +2498,10 @@ function _ftUpshiftMouseMove(e) {
   var canvas = e.currentTarget;
   var d = canvas._drChart;
   if(!d || d.type !== 'ftUpshift') return;
-  
+
   var cr = canvas.getBoundingClientRect();
   var mx = e.clientX - cr.left, my = e.clientY - cr.top;
-  
+
   // Pan handling
   if(_drChartPan && _drChartPan.active && _drChartPan.canvasId === canvas.id) {
     var z = _drGetZoom(canvas.id);
@@ -2482,42 +2511,51 @@ function _ftUpshiftMouseMove(e) {
     _drRedrawChart(canvas);
     return;
   }
-  
+
   // Tooltip + crosshair
   var tooltip = document.getElementById(canvas.id + '-tooltip');
   var crossV = document.getElementById(canvas.id + '-crossV');
   var crossH = document.getElementById(canvas.id + '-crossH');
-  
+
   if(mx < d.padL || mx > d.W - d.padR || my < d.padT || my > d.H - d.padB) {
-    if(tooltip) tooltip.style.display = 'none';
+    if(tooltip) tooltip.classList.remove('visible');
     if(crossV) crossV.style.display = 'none';
     if(crossH) crossH.style.display = 'none';
     return;
   }
-  
+
   if(crossV) { crossV.style.display = 'block'; crossV.style.left = mx + 'px'; }
   if(crossH) { crossH.style.display = 'block'; crossH.style.top = my + 'px'; }
-  
-  // Find nearest step
-  var speed = d.fromX(mx);
+
+  // Her veri noktasına piksel mesafesini hesapla (RPM ve Eğim çizgileri)
   var steps = d.data;
-  var best = null, bestDist = 99999;
+  var best = null, bestPxDist = Infinity;
   for(var si = 0; si < steps.length; si++) {
-    var dist = Math.abs(steps[si].speed - speed);
-    if(dist < bestDist) { bestDist = dist; best = steps[si]; }
+    var s = steps[si];
+    var spx = d.padL + (s.speed - d.xMin) / (d.xMax - d.xMin) * d.plotW;
+    // RPM çizgisi noktası
+    var rpmy = d.padT + d.plotH - ((s.engineRPM - d.yMin) / (d.yMax - d.yMin)) * d.plotH;
+    var distR = Math.sqrt((mx - spx) * (mx - spx) + (my - rpmy) * (my - rpmy));
+    if(distR < bestPxDist) { bestPxDist = distR; best = s; }
+    // Eğim çizgisi noktası
+    var gry = d.padT + d.plotH - ((s.netGrade - d.yGrMin) / (d.yGrMax - d.yGrMin)) * d.plotH;
+    var distG = Math.sqrt((mx - spx) * (mx - spx) + (my - gry) * (my - gry));
+    if(distG < bestPxDist) { bestPxDist = distG; best = s; }
   }
-  
-  if(tooltip && best) {
+
+  if(tooltip && best && bestPxDist <= _DR_SNAP_DIST) {
     var ttHTML = '<span style="color:#fff; font-weight:600;">' + best.gear + '</span> — ' + best.speed.toFixed(1) + ' km/h<br>';
     ttHTML += '<span style="color:#7db3e8;">Motor:</span> ' + Math.round(best.engineRPM) + ' rpm<br>';
     ttHTML += '<span style="color:#e88e8e;">Eğim:</span> ' + best.netGrade.toFixed(2) + '%<br>';
     ttHTML += '<span style="color:#ccc;">TE:</span> ' + best.te.toFixed(2) + ' kN  <span style="color:#ccc;">DP:</span> ' + best.dp.toFixed(2) + ' kN';
     tooltip.innerHTML = ttHTML;
-    tooltip.style.display = 'block';
+    tooltip.classList.add('visible');
     var tx = mx + 14, ty = my - 10;
     if(tx + 200 > d.W) tx = mx - 180;
     tooltip.style.left = tx + 'px';
     tooltip.style.top = ty + 'px';
+  } else if(tooltip) {
+    tooltip.classList.remove('visible');
   }
 }
 
@@ -3019,21 +3057,8 @@ function veRenderSlot(slotIdx) {
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
     html += '<div style="font-size:1.5rem; margin-bottom:6px;">📈</div>Simülasyon sonrası grafik görünecek</div>';
     html += '</div>';
-    // ── Eksen kontrol çubuğu ──
-    var yLock = slot.yAxisLock || {};
-    html += '<div class="ve-axis-ctrl" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
-    html += '<span style="font-weight:600; opacity:0.6; margin-right:2px;">Y:</span>';
-    html += '<input type="number" id="ve-ymin-' + slotIdx + '" placeholder="Min (oto)" value="' + (yLock.min !== undefined ? yLock.min : '') + '" step="any" style="width:62px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Y ekseni minimum değer">';
-    html += '<span style="opacity:0.4;">—</span>';
-    html += '<input type="number" id="ve-ymax-' + slotIdx + '" placeholder="Max (oto)" value="' + (yLock.max !== undefined ? yLock.max : '') + '" step="any" style="width:62px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Y ekseni maksimum değer">';
-    html += '<button onclick="veClearAxisLock(' + slotIdx + ')" title="Otomatik aralığa dön" style="padding:1px 4px; font-size:0.56rem; background:transparent; border:1px solid var(--border-color); border-radius:2px; cursor:pointer; color:var(--text-muted);" onmouseover="this.style.color=\'var(--accent-primary)\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.color=\'var(--text-muted)\';this.style.borderColor=\'var(--border-color)\'">↺ Oto</button>';
-    // Dual axis sağ eksen (varsa simülasyon sonrası dinamik güncellenir)
-    html += '<span id="ve-yaxis-r-ctrl-' + slotIdx + '" style="display:none; margin-left:6px; padding-left:6px; border-left:1px solid var(--border-color);">';
-    html += '<span style="font-weight:600; opacity:0.6; margin-right:2px;">Y₂:</span>';
-    html += '<input type="number" id="ve-ymin-r-' + slotIdx + '" placeholder="Min" value="' + (yLock.minR !== undefined ? yLock.minR : '') + '" step="any" style="width:55px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Sağ Y ekseni minimum">';
-    html += '<span style="opacity:0.4;">—</span>';
-    html += '<input type="number" id="ve-ymax-r-' + slotIdx + '" placeholder="Max" value="' + (yLock.maxR !== undefined ? yLock.maxR : '') + '" step="any" style="width:55px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Sağ Y ekseni maksimum">';
-    html += '</span>';
+    // ── Eksen kontrol çubuğu (dinamik — veRenderChart tarafından güncellenir) ──
+    html += '<div class="ve-axis-ctrl" id="ve-axis-ctrl-' + slotIdx + '" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
     html += '</div>';
     html += '<div class="ve-slot-axis-x">' + (slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</div>';
   } else {
@@ -3052,12 +3077,13 @@ function veRenderSlot(slotIdx) {
     html += '</tbody></table></div>';
   }
   
-  // Legend (her iki mod için)
+  // Legend (her iki mod için) — X butonu ile kaldırma destekli
   html += '<div class="ve-slot-legend">';
   sensors.forEach(function(s, i) {
     html += '<span class="ve-slot-legend-item" style="background:' + colors[i % colors.length] + '15; color:' + colors[i % colors.length] + '; border:1px solid ' + colors[i % colors.length] + '30;">';
     html += '<span style="width:10px; height:3px; border-radius:1px; background:' + colors[i % colors.length] + '; display:inline-block;"></span> ' + s.name;
     if(s.unit) html += ' <span style="opacity:0.6;">[' + s.unit + ']</span>';
+    html += '<span class="ve-legend-remove" onclick="veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
     html += '</span>';
   });
   html += '</div>';
@@ -3072,6 +3098,16 @@ function veRenderSlot(slotIdx) {
   } else {
     if(window.veSimResults) veRenderTable(slotIdx);
   }
+}
+
+// ===== LEJANTTAN SENSÖR KALDIRMA =====
+function veRemoveSensorFromSlot(slotIdx, sensorIdx) {
+  var slot = veResultSlots[slotIdx];
+  if(!slot || !slot.sensors || sensorIdx < 0 || sensorIdx >= slot.sensors.length) return;
+  slot.sensors.splice(sensorIdx, 1);
+  // Eksen lock'larını sıfırla (birim grupları değişmiş olabilir)
+  slot.yAxisLock = {};
+  veRenderSlot(slotIdx);
 }
 
 // ===== CANVAS PAN/ZOOM (Gelişmiş canvasOffset sistemi aşağıda) =====
