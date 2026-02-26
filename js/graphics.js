@@ -1647,8 +1647,8 @@ function veGenerateFTTxtReport(sim) {
   r += '  MOTOR TORK / GUC VERISI\n';
   r += '  ' + ln('-', 76) + '\n';
   r += '  ' + pad('Devir', 7, 'right') + pad('Brut Guc', 10, 'right') + pad('Brut Tork', 11, 'right');
-  r += pad('Net(FanOn)', 12, 'right') + pad('Net(FanOn)', 12, 'right');
-  r += pad('Net(FanOff)', 12, 'right') + pad('Net(FanOff)', 12, 'right') + '\n';
+  r += pad('Net(FanAcik)', 12, 'right') + pad('Net(FanAcik)', 12, 'right');
+  r += pad('Net(FanKpli)', 12, 'right') + pad('Net(FanKpli)', 12, 'right') + '\n';
   r += '  ' + pad('[rpm]', 7, 'right') + pad('[kW]', 10, 'right') + pad('[N.m]', 11, 'right');
   r += pad('Guc [kW]', 12, 'right') + pad('Tork [N.m]', 12, 'right');
   r += pad('Guc [kW]', 12, 'right') + pad('Tork [N.m]', 12, 'right') + '\n';
@@ -1666,10 +1666,10 @@ function veGenerateFTTxtReport(sim) {
     var netFanOffTorque = (p.rpm > 0) ? (netFanOffPower * 30000 / (p.rpm * Math.PI)) : 0;
 
     var tag = '';
-    if (Math.abs(p.rpm - peakTorqueRpm) < 5) tag = '  Peak Torque';
-    else if (Math.abs(p.rpm - peakPowerRpm) < 5) tag = '  Peak Power';
+    if (Math.abs(p.rpm - peakTorqueRpm) < 5) tag = '  Pik Tork';
+    else if (Math.abs(p.rpm - peakPowerRpm) < 5) tag = '  Pik Guc';
     else if (Math.abs(p.rpm - R.governed) < 5) tag = '  Governed';
-    else if (Math.abs(p.rpm - R.noLoad) < 5) tag = '  No Load Gov';
+    else if (Math.abs(p.rpm - R.noLoad) < 5) tag = '  Yuksuz Gov';
 
     r += '  ' + pad(numI(p.rpm), 7, 'right');
     r += pad(num(pw, 1), 10, 'right');
@@ -1721,10 +1721,10 @@ function veGenerateFTTxtReport(sim) {
   r += '  ' + ln('-', 38) + '\n';
   r += pRow('Shift Profili', ascii(shiftProfile));
   r += pRow('Shift Referans RPM', numI(shiftRefRPM) + ' rpm');
-  r += pRow('Lockup Offset', numI(lockupOffset) + ' rpm');
-  r += pRow('Lockup Gecis RPM', numI(lockupRPM) + ' rpm');
+  r += pRow('Kilitleme Ofseti', numI(lockupOffset) + ' rpm');
+  r += pRow('Kilitleme Gecis RPM', numI(lockupRPM) + ' rpm');
   var lowGear = 1, highGear = (R.gearData || []).length;
-  r += pRow('Primary Gear Range', 'Low=' + lowGear + ', Start=' + lowGear + ', High=' + highGear);
+  r += pRow('Vites Araligi', 'Dusuk=' + lowGear + ', Basla=' + lowGear + ', Yuksek=' + highGear);
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
@@ -1737,10 +1737,10 @@ function veGenerateFTTxtReport(sim) {
   r += '  MOTOR BILGISI\n';
   r += '  ' + ln('-', 38) + '\n';
   r += pRow('Motor', ascii(R.engineName));
-  r += pRow('Peak Tork', numI(peakTorque) + ' N.m @ ' + numI(peakTorqueRpm) + ' rpm');
+  r += pRow('Pik Tork', numI(peakTorque) + ' N.m @ ' + numI(peakTorqueRpm) + ' rpm');
   r += pRow('Governed Devir', numI(R.governed) + ' rpm');
-  r += pRow('Pump Dusum', num(R.pumpDrop || 17.6, 1) + ' N.m');
-  r += pRow('Turbin Limit', numI(R.turbineRating || 3320) + ' N.m');
+  r += pRow('Pompa Dusumu', num(R.pumpDrop || 17.6, 1) + ' N.m');
+  r += pRow('Turbin Limiti', numI(R.turbineRating || 3320) + ' N.m');
   r += '\n';
 
   if (_ecmResults.length > 0) {
@@ -1778,7 +1778,7 @@ function veGenerateFTTxtReport(sim) {
     if (selTC) {
       var durumTR = selTC.status === 'recommended' ? 'uygun' : selTC.status === 'caution' ? 'dikkatli' : 'uyumsuz';
       r += '  YORUM: ' + ascii(selTC.name) + ' tork konvertoru, ' + ascii(R.engineName) + ' motoru ile ' + durumTR + ' uyum gostermektedir.\n';
-      r += '  Stall torque ratio t=' + num(selTC.stallTau, 2) + ', governed\'da hiz orani SR=' + num(selTC.srGov, 3) + '.\n\n\n';
+      r += '  Durma tork orani t=' + num(selTC.stallTau, 2) + ', governed\'da hiz orani SR=' + num(selTC.srGov, 3) + '.\n\n\n';
     }
   } else {
     r += '  ECM verisi bulunamadi — EC Matching node topolojiye eklenmemis.\n\n\n';
@@ -1799,10 +1799,10 @@ function veGenerateFTTxtReport(sim) {
 
   // Kardan milleri
   (R.propshafts || []).forEach(function(ps) {
-    r += '  ' + pad(ascii(ps.name), 28) + pad('Single', 16) + pad('1.000', 11, 'right') + pad(num(ps.eff, 2), 14, 'right') + '\n';
+    r += '  ' + pad(ascii(ps.name), 28) + pad('Tek', 16) + pad('1.000', 11, 'right') + pad(num(ps.eff, 2), 14, 'right') + '\n';
   });
   // Aks
-  r += '  ' + pad('Aks', 28) + pad('Single', 16) + pad(num(R.diffRatio, 3), 11, 'right') + pad(num(R.diffEff, 2), 14, 'right') + '\n';
+  r += '  ' + pad('Aks', 28) + pad('Tek', 16) + pad(num(R.diffRatio, 3), 11, 'right') + pad(num(R.diffEff, 2), 14, 'right') + '\n';
   // Transfer kademeleri
   if (R.transferGears && R.transferGears.length > 0) {
     R.transferGears.forEach(function(tr) {
@@ -1889,13 +1889,13 @@ function veGenerateFTTxtReport(sim) {
     rg += '  ' + pad('Dusuk Hiz Egim Kabiliyeti', 36);
     rg += pad(num(gd.lowSpeedGrade, 1), 10, 'right');
     rg += pad(num(gd.lowSpeedV, 1), 12, 'right') + pad(gd.lowSpeedGear, 8, 'right');
-    rg += pad('80 Percent', 14, 'right') + '\n';
+    rg += pad('%80', 14, 'right') + '\n';
 
     // Duz yol maks hiz
     rg += '  ' + pad('Duz Yolda Maksimum Hiz', 36);
     rg += pad('0.0', 10, 'right');
     rg += pad(num(gd.maxSpeedFlat, 1), 12, 'right') + pad(gd.maxSpeedFlatGear, 8, 'right');
-    rg += pad('Road Load', 14, 'right') + '\n';
+    rg += pad('Yol Yuku', 14, 'right') + '\n';
 
     // Grade tablosu
     (gd.gradeTable || []).forEach(function(row) {
@@ -2101,14 +2101,14 @@ function veGenerateFTTxtReport(sim) {
     r += '  Motor (rpm)    : Motor devri -- konvertor modunda slip nedeniyle yuksek,\n';
     r += '                   lockup modunda cikis devri ile esit\n';
     r += '  Cikis (rpm)    : Sanziman cikis devri\n';
-    r += '  Cekis (kN)     : Tractive Effort -- tekerlek cevresindeki toplam cekis kuvveti\n';
-    r += '  Net Cekis (kN) : Drawbar Pull -- cekis kuvvetinden tum direncler (yuvarlanma +\n';
+    r += '  Cekis (kN)     : Cekis Kuvveti -- tekerlek cevresindeki toplam cekis kuvveti\n';
+    r += '  Net Cekis (kN) : Net Cekis -- cekis kuvvetinden tum direncler (yuvarlanma +\n';
     r += '                   aerodinamik) dusuldukten sonra kalan net kuvvet\n';
     r += '  Tekerlek Gucu  : Tekerlek cevresi gucu (kW)\n';
     r += '  Net Egim (%)   : Aragin bu hiz ve kuvvette tirmanabilecegi maks. egim yuzdesi\n';
-    r += '  Isi Reddi (kW) : Tork konvertoru kayip isisi -- lockup modunda 0, konvertor\n';
-    r += '                   modunda slip\'e oranli\n';
-    r += '  Esleme Noktasi : Referans kritik noktalar (Stall, %60 TE/Weight, %70/%80/%85\n';
+    r += '  Isi Reddi (kW) : Tork konvertoru kayip isisi -- kilitleme modunda 0, konvertor\n';
+    r += '                   modunda kayma oranina oranli\n';
+    r += '  Esleme Noktasi : Referans kritik noktalar (Durma, %60 Cekis/Agirlik, %70/%80/%85\n';
     r += '                   governed RPM yuzdesi, Governed)\n';
 
     // FT Yorum
