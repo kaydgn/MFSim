@@ -1,7 +1,10 @@
 /**
  * toolbar.js - Proje kaydetme / yükleme birim testleri
- * showSaveFilePicker API entegrasyonunu ve JSON serileştirme doğruluğunu test eder
+ * Uygulama-içi "Farklı Kaydet" diyaloğunu ve JSON serileştirme doğruluğunu test eder
  */
+
+// createElement referansını mock'tan ÖNCE kaydet
+const _origCreateElement = document.createElement.bind(document);
 
 // DOM setup
 document.body.innerHTML = `
@@ -48,114 +51,175 @@ global.veAddTab = jest.fn();
 const fs = require('fs');
 const path = require('path');
 
-// toolbar.js'yi yükle
 const toolbarCode = fs.readFileSync(path.join(__dirname, '../../js/toolbar.js'), 'utf8');
 try { eval(toolbarCode); } catch(e) { /* diğer fonksiyon bağımlılıkları */ }
 
-describe('veSaveTopology - proje serileştirme', () => {
-  let capturedFileName = null;
+function cleanupModals() {
+  var ol = document.getElementById('ve-save-dialog-overlay');
+  if(ol) ol.remove();
+}
 
+function setupTestState() {
+  veProjectName = 'TestProje';
+  veActiveModule = 'Motor Freni';
+  veTabCounter = 2;
+  veActiveTabIdx = 0;
+  veTabs = [
+    {
+      id: 'tab_1', name: 'Sekme 1',
+      state: {
+        nodes: [{ id: 'n1', type: 'Motor', x: 100, y: 200, data: { power: 50 } }],
+        connections: [], compCounter: 1,
+        canvasOffset: { x: 0, y: 0 }, canvasZoom: 1,
+        simResults: null, resultSlots: [{}, {}, {}, {}]
+      }
+    },
+    {
+      id: 'tab_2', name: 'Sekme 2',
+      state: {
+        nodes: [], connections: [], compCounter: 0,
+        canvasOffset: { x: 50, y: 50 }, canvasZoom: 0.8,
+        simResults: null, resultSlots: [{}, {}, {}, {}]
+      }
+    }
+  ];
+}
+
+describe('veShowSaveDialog - uygulama-içi kaydet diyaloğu', () => {
+  afterEach(cleanupModals);
+
+  test('modal açılır ve dosya adı alanı gösterilir', () => {
+    var blob = new Blob(['test'], {type: 'text/plain'});
+    veShowSaveDialog('test_dosya.json', blob, 'Kaydedildi');
+
+    var input = document.getElementById('ve-save-filename');
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('test_dosya');
+  });
+
+  test('uzantı ayrı gösterilir', () => {
+    var blob = new Blob(['test'], {type: 'text/plain'});
+    veShowSaveDialog('proje.json', blob, 'ok');
+
+    var input = document.getElementById('ve-save-filename');
+    expect(input.value).toBe('proje');
+
+    var overlay = document.getElementById('ve-save-dialog-overlay');
+    expect(overlay.textContent).toContain('.json');
+  });
+
+  test('Kaydet butonuna tıklayınca dosya indirilir', () => {
+    var blob = new Blob(['{"test":1}'], {type: 'application/json'});
+
+    var mockLink = _origCreateElement('a');
+    mockLink.click = jest.fn();
+    jest.spyOn(document, 'createElement').mockImplementation((tag) => {
+      if (tag === 'a') return mockLink;
+      return _origCreateElement(tag);
+    });
+    global.URL.createObjectURL = jest.fn().mockReturnValue('blob:mock');
+    global.URL.revokeObjectURL = jest.fn();
+
+    veShowSaveDialog('proje_2026.json', blob, 'Kaydedildi');
+    document.getElementById('ve-save-confirm').click();
+
+    expect(mockLink.download).toBe('proje_2026.json');
+    expect(mockLink.click).toHaveBeenCalled();
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+
+    document.createElement.mockRestore();
+  });
+
+  test('kullanıcı dosya adını değiştirebilir', () => {
+    var blob = new Blob(['test'], {type: 'text/plain'});
+
+    var mockLink = _origCreateElement('a');
+    mockLink.click = jest.fn();
+    jest.spyOn(document, 'createElement').mockImplementation((tag) => {
+      if (tag === 'a') return mockLink;
+      return _origCreateElement(tag);
+    });
+    global.URL.createObjectURL = jest.fn().mockReturnValue('blob:mock');
+    global.URL.revokeObjectURL = jest.fn();
+
+    veShowSaveDialog('varsayilan.json', blob, 'ok');
+
+    var input = document.getElementById('ve-save-filename');
+    input.value = 'benim_projem';
+
+    document.getElementById('ve-save-confirm').click();
+    expect(mockLink.download).toBe('benim_projem.json');
+
+    document.createElement.mockRestore();
+  });
+
+  test('İptal butonuna tıklayınca modal kapanır', () => {
+    var blob = new Blob(['test'], {type: 'text/plain'});
+    veShowSaveDialog('test.json', blob, 'ok');
+
+    expect(document.getElementById('ve-save-dialog-overlay')).not.toBeNull();
+    document.getElementById('ve-save-cancel').click();
+    expect(document.getElementById('ve-save-dialog-overlay')).toBeNull();
+  });
+
+  test('boş dosya adı uyarı gösterir', () => {
+    showToast.mockClear();
+    var blob = new Blob(['test'], {type: 'text/plain'});
+    veShowSaveDialog('test.json', blob, 'ok');
+
+    var input = document.getElementById('ve-save-filename');
+    input.value = '';
+
+    document.getElementById('ve-save-confirm').click();
+    expect(showToast).toHaveBeenCalledWith('Dosya adı boş olamaz', 'warning');
+    expect(document.getElementById('ve-save-dialog-overlay')).not.toBeNull();
+  });
+
+  test('.txt uzantılı dosyalar da desteklenir', () => {
+    var blob = new Blob(['ozet'], {type: 'text/plain'});
+    veShowSaveDialog('ozet_raporu.txt', blob, 'ok');
+
+    var input = document.getElementById('ve-save-filename');
+    expect(input.value).toBe('ozet_raporu');
+
+    var overlay = document.getElementById('ve-save-dialog-overlay');
+    expect(overlay.textContent).toContain('.txt');
+  });
+});
+
+describe('veSaveTopology - kaydet diyaloğu entegrasyonu', () => {
   beforeEach(() => {
-    capturedFileName = null;
+    setupTestState();
     showToast.mockClear();
     veSaveActiveTabState.mockClear();
-
-    // Proje adını set et (eval sonrası veProjectName '' oldu)
-    veProjectName = 'TestProje';
-    veActiveModule = 'Motor Freni';
-    veTabCounter = 2;
-    veActiveTabIdx = 0;
-    veTabs = [
-      {
-        id: 'tab_1', name: 'Sekme 1',
-        state: {
-          nodes: [{ id: 'n1', type: 'Motor', x: 100, y: 200, data: { power: 50 } }],
-          connections: [], compCounter: 1,
-          canvasOffset: { x: 0, y: 0 }, canvasZoom: 1,
-          simResults: null, resultSlots: [{}, {}, {}, {}]
-        }
-      },
-      {
-        id: 'tab_2', name: 'Sekme 2',
-        state: {
-          nodes: [], connections: [], compCounter: 0,
-          canvasOffset: { x: 50, y: 50 }, canvasZoom: 0.8,
-          simResults: null, resultSlots: [{}, {}, {}, {}]
-        }
-      }
-    ];
-
-    // showSaveFilePicker mock
-    const mockWritable = {
-      write: jest.fn().mockResolvedValue(undefined),
-      close: jest.fn().mockResolvedValue(undefined)
-    };
-    window.showSaveFilePicker = jest.fn().mockImplementation((opts) => {
-      capturedFileName = opts.suggestedName;
-      return Promise.resolve({
-        createWritable: () => Promise.resolve(mockWritable)
-      });
-    });
   });
 
-  afterEach(() => {
-    delete window.showSaveFilePicker;
-  });
+  afterEach(cleanupModals);
 
   test('veSaveActiveTabState çağrılır', () => {
     veSaveTopology();
     expect(veSaveActiveTabState).toHaveBeenCalled();
   });
 
-  test('showSaveFilePicker doğru parametrelerle çağrılır', async () => {
+  test('modal açılır ve dosya adı proje adını içerir', () => {
     veSaveTopology();
-    await new Promise(r => setTimeout(r, 10));
 
-    expect(window.showSaveFilePicker).toHaveBeenCalled();
-    const callArgs = window.showSaveFilePicker.mock.calls[0][0];
-    expect(callArgs.suggestedName).toContain('TestProje');
-    expect(callArgs.suggestedName).toContain('.json');
-    expect(callArgs.types[0].accept['application/json']).toContain('.json');
-  });
-
-  test('dosya adı proje adını içerir', () => {
-    veSaveTopology();
-    expect(capturedFileName).toContain('TestProje');
+    var input = document.getElementById('ve-save-filename');
+    expect(input).not.toBeNull();
+    expect(input.value).toContain('TestProje');
   });
 
   test('proje adı boşsa "topoloji" kullanır', () => {
     veProjectName = '';
     veSaveTopology();
-    expect(capturedFileName).toContain('topoloji');
+
+    var input = document.getElementById('ve-save-filename');
+    expect(input.value).toContain('topoloji');
   });
 });
 
 describe('Proje JSON formatı', () => {
-  beforeEach(() => {
-    veProjectName = 'TestProje';
-    veActiveModule = 'Motor Freni';
-    veTabCounter = 2;
-    veActiveTabIdx = 0;
-    veTabs = [
-      {
-        id: 'tab_1', name: 'Sekme 1',
-        state: {
-          nodes: [{ id: 'n1', type: 'Motor', x: 100, y: 200, data: { power: 50 } }],
-          connections: [], compCounter: 1,
-          canvasOffset: { x: 0, y: 0 }, canvasZoom: 1,
-          simResults: null, resultSlots: [{}, {}, {}, {}]
-        }
-      },
-      {
-        id: 'tab_2', name: 'Sekme 2',
-        state: {
-          nodes: [], connections: [], compCounter: 0,
-          canvasOffset: { x: 50, y: 50 }, canvasZoom: 0.8,
-          simResults: null, resultSlots: [{}, {}, {}, {}]
-        }
-      }
-    ];
-  });
+  beforeEach(() => setupTestState());
 
   test('v2 formatında doğru yapı oluşturur', () => {
     const project = {
@@ -201,36 +265,5 @@ describe('Proje JSON formatı', () => {
 
     expect(parsed).toEqual(original);
     expect(parsed.tabs[0].state.nodes[0].x).toBe(10);
-  });
-});
-
-describe('showSaveFilePicker fallback', () => {
-  beforeEach(() => {
-    veProjectName = 'Test';
-    veTabs = [{ id: 'tab_1', name: 'S1', state: { nodes: [], connections: [], compCounter: 0, canvasOffset: { x: 0, y: 0 }, canvasZoom: 1, simResults: null, resultSlots: [{},{},{},{}] } }];
-  });
-
-  test('API yoksa Blob download kullanır', () => {
-    delete window.showSaveFilePicker;
-
-    // <a> elementini tam mockla (jsdom uyumlu)
-    const realCreateElement = document.createElement.bind(document);
-    const mockLink = realCreateElement('a');
-    mockLink.click = jest.fn();
-
-    jest.spyOn(document, 'createElement').mockImplementation((tag) => {
-      if (tag === 'a') return mockLink;
-      return realCreateElement(tag);
-    });
-
-    global.URL.createObjectURL = jest.fn().mockReturnValue('blob:mock');
-    global.URL.revokeObjectURL = jest.fn();
-
-    veSaveTopology();
-    expect(mockLink.download).toContain('.json');
-    expect(mockLink.click).toHaveBeenCalled();
-    expect(URL.revokeObjectURL).toHaveBeenCalled();
-
-    document.createElement.mockRestore();
   });
 });
