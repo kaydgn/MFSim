@@ -811,6 +811,35 @@
 }
 .ve-node[data-type="sensor-wizard"] .ve-resize-handle{display:none;}
 
+/* Sensör Sihirbazı - sensörler kurulu */
+.ve-node[data-type="sensor-wizard"].sw-installed .ve-node-box{
+  border-color:#22c55e;
+  background:rgba(34,197,94,0.10);
+  box-shadow:0 0 10px rgba(34,197,94,0.25);
+}
+.ve-node[data-type="sensor-wizard"].sw-installed .ve-node-label{
+  color:#22c55e;
+}
+.ve-node[data-type="sensor-wizard"].sw-installed .ve-selection-border{
+  border-color:#22c55e;
+}
+.ve-node[data-type="sensor-wizard"].sw-installed:hover .ve-node-box{
+  border-color:#16a34a;
+  box-shadow:0 0 14px rgba(34,197,94,0.4);
+}
+/* Sensör Sihirbazı - kısmen kurulu */
+.ve-node[data-type="sensor-wizard"].sw-partial .ve-node-box{
+  border-color:#f59e0b;
+  background:rgba(245,158,11,0.10);
+  box-shadow:0 0 8px rgba(245,158,11,0.2);
+}
+.ve-node[data-type="sensor-wizard"].sw-partial .ve-node-label{
+  color:#f59e0b;
+}
+.ve-node[data-type="sensor-wizard"].sw-partial .ve-selection-border{
+  border-color:#f59e0b;
+}
+
 .ve-node[data-type="parametric"] .ve-node-box{
   border:2.5px solid var(--accent-primary, #3b82f6);
   background:rgba(59,130,246,0.06);
