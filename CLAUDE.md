@@ -4,44 +4,52 @@
 Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framework yok).
 
 - `index.html` — Ana sayfa (modüler versiyon, js/ klasöründen script yükler)
-- `MFSim_Code.html` — Tek dosya versiyonu (monolitik)
+- `MFSim_Code.html` — Tek dosya versiyonu (otomatik üretilir, elle düzenlenmez)
 - `js/` — Modüler JavaScript dosyaları
 - `css/` — Stiller
+- `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
 - `tests/unit/` — Jest birim testleri
 - `tests/e2e/` — Playwright E2E testleri
 
-**ÖNEMLİ:** Kod değişiklikleri hem `js/` klasöründeki modüler dosyalara hem de `MFSim_Code.html` monolitik dosyasına uygulanmalıdır. İkisi senkron tutulmalıdır.
+**ÖNEMLİ:** Kod değişiklikleri **yalnızca** `js/` ve `css/` klasörlerindeki modüler dosyalara ve `index.html`'e yapılır. `MFSim_Code.html` dosyası **elle düzenlenmez** — `npm run build` ile otomatik üretilir.
 
-## Kodlama Sonrası Test Akışı
+## Kodlama Sonrası Akış
 
 Her kod değişikliğinden sonra şu adımları izle:
 
-### 1. Birim Testleri (Jest + jsdom)
+### 1. Build (Monolitik dosyayı üret)
+```bash
+npm run build
+```
+Bu komut `index.html` + `css/styles.css` + `js/*.js` dosyalarını birleştirip `MFSim_Code.html` üretir.
+
+### 2. Birim Testleri (Jest + jsdom)
 ```bash
 npm test
 ```
 Bu komut `tests/unit/` altındaki tüm `*.test.js` dosyalarını çalıştırır.
 
-### 2. E2E Testleri (Playwright - yerel ortam gerektirir)
+### 3. E2E Testleri (Playwright - yerel ortam gerektirir)
 ```bash
 npm run test:e2e
 ```
 **Not:** Bu testler Chromium tarayıcısı gerektirir. İlk kurulumda `npx playwright install chromium` çalıştırılmalıdır.
 
-### 3. Her İkisi Birden
+### 4. Her İkisi Birden
 ```bash
 npm run test:all
 ```
 
-## İki Agent Akışı
+## Çalışma Akışı
 
 Claude Code ile çalışırken şu akışı uygula:
 
-1. **Kodlama Aşaması**: İstenen değişikliği `js/` ve `MFSim_Code.html` dosyalarına uygula
-2. **Test Aşaması**: `npm test` çalıştır
+1. **Kodlama**: Değişikliği `js/`, `css/` veya `index.html` dosyalarına uygula
+2. **Build**: `npm run build` çalıştır → `MFSim_Code.html` otomatik güncellenir
+3. **Test**: `npm test` çalıştır
    - Testler başarısızsa → düzelt ve tekrar test et
-   - Testler başarılıysa → commit yap
-3. **Yeni test yazımı**: Değişiklik yeni bir fonksiyon ekliyorsa, `tests/unit/` altına test ekle
+   - Testler başarılıysa → commit yap (build çıktısı dahil)
+4. **Yeni test yazımı**: Değişiklik yeni bir fonksiyon ekliyorsa, `tests/unit/` altına test ekle
 
 ## Test Dosyaları
 
@@ -55,6 +63,7 @@ Claude Code ile çalışırken şu akışı uygula:
 ## Sık Kullanılan Komutlar
 
 ```bash
+npm run build         # MFSim_Code.html üret (modüler → monolitik)
 npm test              # Birim testlerini çalıştır
 npm run test:unit     # Birim testlerini çalıştır (aynı)
 npm run test:e2e      # E2E testlerini çalıştır (tarayıcı gerekli)
