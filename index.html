@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="slate">
+<head>
+  <meta charset="UTF-8" />
+  <title>MFSim — Motor Freni Simülasyon</title>
+  <!-- Leaflet - Harita için -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<!-- ═══ LOGIN SCREEN (Gunmetal Theme) ═══ -->
+<div id="mfsim-login-overlay" style="position:fixed; inset:0; z-index:999999; background:linear-gradient(135deg, #d5d8dc 0%, #e8eaed 40%, #dcdfe3 100%); display:flex; align-items:center; justify-content:center; font-family:system-ui,-apple-system,sans-serif;">
+  <div style="width:360px; padding:40px; background:#f1f3f5; border:1px solid #c4c9d0; border-radius:16px; box-shadow:0 25px 80px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06);">
+    <div style="text-align:center; margin-bottom:28px;">
+      <div style="font-size:1.3rem; font-weight:700; color:#0d0f13; letter-spacing:0.5px;">MFSim</div>
+      <div style="font-size:0.7rem; color:#8590a2; margin-top:4px;">Motor Fren Simulasyon Yazılımı</div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <label style="display:block; font-size:0.68rem; color:#4a5060; margin-bottom:6px; font-weight:500;">Şifre</label>
+      <input type="password" id="mfsim-login-password" placeholder="Şifrenizi giriniz" autocomplete="current-password"
+        style="width:100%; padding:10px 14px; font-size:0.85rem; background:#f8f9fa; color:#1a1d23; border:1px solid #c4c9d0; border-radius:8px; outline:none; box-sizing:border-box; transition:border-color 0.2s;"
+        onfocus="this.style.borderColor='#1d4ed8'" onblur="this.style.borderColor='#c4c9d0'"
+        onkeydown="if(event.key==='Enter') mfsimLogin()">
+    </div>
+    <button onclick="mfsimLogin()" style="width:100%; padding:10px; font-size:0.82rem; font-weight:600; background:linear-gradient(135deg,#1d4ed8,#1e40af); color:white; border:none; border-radius:8px; cursor:pointer; transition:opacity 0.2s; letter-spacing:0.3px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Giriş Yap</button>
+    <div id="mfsim-login-error" style="margin-top:12px; font-size:0.68rem; color:#b91c1c; text-align:center; min-height:18px;"></div>
+    <div style="margin-top:20px; text-align:center;">
+      <label style="display:flex; align-items:center; justify-content:center; gap:6px; font-size:0.62rem; color:#8590a2; cursor:pointer; user-select:none;">
+        <input type="checkbox" id="mfsim-login-remember" checked style="accent-color:#1d4ed8;"> Beni hatırla
+      </label>
+    </div>
+  </div>
+</div>
+
+<script src="js/auth.js"></script>
+
+<!-- TAB BAR -->
+<div id="tab-bar">
+  <div class="ve-menu-wrapper" style="position:relative;">
+    <span class="logo" id="ve-project-name-btn" onclick="veToggleFileMenu()" style="cursor:pointer;" title="Proje Menüsü">⚙ MFSim ▾</span>
+    <div id="ve-file-menu" class="ve-file-menu" style="display:none;">
+      <div class="ve-menu-item" onclick="veNewProject()">📄 Yeni Proje</div>
+      <div class="ve-menu-item" onclick="veLoadTopology()">📂 Proje Aç</div>
+      <div class="ve-menu-item" onclick="veSaveTopology()">💾 Projeyi Kaydet</div>
+      <div class="ve-menu-divider"></div>
+      <div class="ve-menu-item" onclick="veShowTopologySummary()">📊 Topoloji Özeti</div>
+      <div class="ve-menu-divider"></div>
+      <div class="ve-menu-item" onclick="veClearAll()">🗑️ Projeyi Temizle</div>
+      <div class="ve-menu-divider"></div>
+      <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;">🔒 Çıkış Yap</div>
+    </div>
+  </div>
+  <div class="ve-tab-group">
+    <button class="active" id="tab-btn-editor">Görsel Editör</button>
+    <div class="ve-sub-tabs visible" id="ve-sub-tabs">
+      <button class="ve-sub-tab active" onclick="veSubTabDegistir('anasayfa')" data-subtab="anasayfa">Ana Sayfa</button>
+      <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
+    </div>
+  </div>
+  <span class="theme-selector" style="margin-left:auto;">
+    <label for="theme-select" class="theme-selector-label">🎨</label>
+    <select id="theme-select" onchange="changeTheme(this.value)">
+      <optgroup label="Koyu">
+        <option value="slate">Midnight</option>
+        <option value="cream">Carbon</option>
+      </optgroup>
+      <optgroup label="Açık">
+        <option value="light">Gunmetal</option>
+        <option value="arctic">Arctic</option>
+        <option value="sand">Sand</option>
+        <option value="forest">Forest</option>
+        <option value="iris">Iris</option>
+      </optgroup>
+    </select>
+  </span>
+</div>
+
+<!-- GÖRSEL EDİTÖR -->
+<div id="sayfa2" class="tab-page active">
+  <div id="sayfa2-content">
+    
+    <!-- Ana İçerik -->
+    <div class="ve-main">
+      
+      <!-- Sol Panel - Bileşenler -->
+      <div class="ve-sidebar" id="ve-sidebar">
+        <div class="ve-module-selector">
+          <div class="ve-module-label">Alt Modül</div>
+          <select id="ve-module-select" onchange="veOnModuleChange(this.value)">
+            <option value="" disabled selected>— Modül Seçiniz —</option>
+            <option value="engine-brake">M. Freni Performans</option>
+            <option value="full-throttle">Tam Gaz Hızlanma</option>
+            <option value="performance" disabled>Araç Performans Hesaplama (yakında)</option>
+            <option value="fuel" disabled>Yakıt Tüketimi Analizi (yakında)</option>
+          </select>
+        </div>
+        <div class="ve-sidebar-header">📦 Bileşenler</div>
+        <div class="ve-sidebar-resizer" id="ve-sidebar-resizer"></div>
+        <div class="ve-sidebar-content">
+          
+          <div class="ve-category">
+            <div class="ve-category-title">Güç Kaynağı</div>
+            <div class="ve-component" draggable="true" data-type="engine">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="15" y="20" width="70" height="55" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
+                <rect x="25" y="10" width="12" height="14" fill="currentColor" opacity="0.6"/>
+                <rect x="44" y="10" width="12" height="14" fill="currentColor" opacity="0.6"/>
+                <rect x="63" y="10" width="12" height="14" fill="currentColor" opacity="0.6"/>
+                <line x1="85" y1="48" x2="100" y2="48" stroke="currentColor" stroke-width="6"/>
+              </svg> <span class="ve-comp-label">Motor</span></div>
+          </div>
+          
+          <div class="ve-category">
+            <div class="ve-category-title">Aktarma Organları</div>
+            <div class="ve-component" draggable="true" data-type="torque-converter">
+              <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
+                <circle cx="50" cy="50" r="35" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/>
+                <circle cx="50" cy="50" r="25" fill="var(--text-muted, #888)" opacity="0.5"/>
+                <circle cx="50" cy="50" r="12" fill="var(--text-secondary, #666)"/>
+                <path d="M35 35 Q50 20 65 35" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" fill="none"/>
+                <path d="M65 65 Q50 80 35 65" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" fill="none"/>
+              </svg>
+              <span class="ve-comp-label">Tork Konvertörü</span>
+            </div>
+            <div class="ve-component" draggable="true" data-type="ec-matching">
+              <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
+                <rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4"/>
+                <circle cx="30" cy="42" r="14" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
+                <circle cx="30" cy="42" r="6" fill="var(--text-secondary, #666)"/>
+                <path d="M48 42 L56 42" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linecap="round"/>
+                <path d="M52 38 L56 42 L52 46" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
+                <path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="ve-comp-label">Motor-TC Eşleştirme</span>
+            </div>
+            <div class="ve-component" draggable="true" data-type="gearbox">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="20" y="10" width="60" height="80" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
+                <line x1="0" y1="50" x2="20" y2="50" stroke="currentColor" stroke-width="5"/>
+                <line x1="80" y1="50" x2="100" y2="50" stroke="currentColor" stroke-width="5"/>
+                <circle cx="40" cy="35" r="10" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="60" cy="55" r="14" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="40" cy="35" r="3" fill="currentColor"/>
+                <circle cx="60" cy="55" r="3" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Şanzıman</span>
+            </div>
+            <div class="ve-component" draggable="true" data-type="shift-controller">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="currentColor" stroke-width="5"/>
+                <path d="M35 25 L35 75" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="35" cy="32" r="5" fill="currentColor"/>
+                <path d="M65 25 L65 75" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="65" cy="55" r="5" fill="currentColor"/>
+                <path d="M35 32 L50 43 L65 55" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="4,3"/>
+              </svg> <span class="ve-comp-label">Şanzıman Kontrol</span>
+            </div>
+            <div class="ve-component" draggable="true" data-type="propshaft">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <line x1="5" y1="50" x2="95" y2="50" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="20" cy="50" r="10" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="80" cy="50" r="10" fill="none" stroke="currentColor" stroke-width="3"/>
+                <line x1="15" y1="40" x2="25" y2="60" stroke="currentColor" stroke-width="2.5"/>
+                <line x1="75" y1="40" x2="85" y2="60" stroke="currentColor" stroke-width="2.5"/>
+              </svg> <span class="ve-comp-label">Propşaft</span>
+            </div>
+            <div class="ve-component" draggable="true" data-type="transfer">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="15" y="20" width="70" height="60" rx="6" fill="none" stroke="currentColor" stroke-width="6"/>
+                <line x1="0" y1="50" x2="15" y2="50" stroke="currentColor" stroke-width="5"/>
+                <line x1="85" y1="35" x2="100" y2="35" stroke="currentColor" stroke-width="5"/>
+                <line x1="85" y1="65" x2="100" y2="65" stroke="currentColor" stroke-width="5"/>
+                <text x="50" y="58" text-anchor="middle" font-size="28" font-weight="bold" fill="currentColor">T</text>
+              </svg> <span class="ve-comp-label">Transfer Kutusu</span></div>
+            <div class="ve-component" draggable="true" data-type="differential">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="50" cy="50" r="12" fill="currentColor" opacity="0.4"/>
+                <line x1="0" y1="50" x2="15" y2="50" stroke="currentColor" stroke-width="5"/>
+                <line x1="85" y1="35" x2="100" y2="35" stroke="currentColor" stroke-width="5"/>
+                <line x1="85" y1="65" x2="100" y2="65" stroke="currentColor" stroke-width="5"/>
+              </svg> <span class="ve-comp-label">Diferansiyel</span></div>
+          </div>
+          
+          <div class="ve-category">
+            <div class="ve-category-title">Araç</div>
+            <div class="ve-component" draggable="true" data-type="wheel">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <circle cx="50" cy="50" r="38" fill="none" stroke="currentColor" stroke-width="6"/>
+                <circle cx="50" cy="50" r="18" fill="none" stroke="currentColor" stroke-width="4"/>
+                <circle cx="50" cy="50" r="6" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Tekerlek</span></div>
+            <div class="ve-component" draggable="true" data-type="vehicle">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="5" y="30" width="90" height="35" rx="4" fill="none" stroke="currentColor" stroke-width="4"/>
+                <rect x="60" y="15" width="30" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="25" cy="75" r="10" fill="none" stroke="currentColor" stroke-width="4"/>
+                <circle cx="75" cy="75" r="10" fill="none" stroke="currentColor" stroke-width="4"/>
+              </svg> <span class="ve-comp-label">Araç</span></div>
+          </div>
+          
+          <div class="ve-category">
+            <div class="ve-category-title">Ölçüm</div>
+            <div class="ve-component" draggable="true" data-type="sensor">
+              <svg width="14" height="18" viewBox="0 0 100 120" style="vertical-align:middle; margin-right:4px;">
+                <circle cx="50" cy="32" r="28" fill="currentColor"/>
+                <circle cx="50" cy="32" r="12" fill="white" opacity="0.3"/>
+                <path d="M38 56 L50 110 L62 56" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Sensör</span></div>
+            <div class="ve-component" draggable="true" data-type="sensor-wizard">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="30" cy="40" r="10" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="30" cy="40" r="4" fill="currentColor"/>
+                <circle cx="70" cy="40" r="10" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="70" cy="40" r="4" fill="currentColor"/>
+                <path d="M30 50 L30 62 M70 50 L70 62" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                <path d="M18 70 L82 70" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              </svg> <span class="ve-comp-label">Sensör Sihirbazı</span></div>
+            <div class="ve-component" draggable="true" data-type="terminator">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="18" y="18" width="64" height="64" rx="8" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="8,4"/>
+                <line x1="35" y1="35" x2="65" y2="65" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+                <line x1="65" y1="35" x2="35" y2="65" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+              </svg> <span class="ve-comp-label">Sonlandırıcı</span></div>
+          </div>
+          
+          <div class="ve-category">
+            <div class="ve-category-title">Çevre</div>
+            <div class="ve-component" draggable="true" data-type="scenario">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="currentColor" stroke-width="5"/>
+                <path d="M30 60 L45 40 L60 55 L75 30" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="75" cy="30" r="5" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Senaryolar</span></div>
+            <div class="ve-component" draggable="true" data-type="coast-down">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M10 80 Q30 75 50 50 Q70 25 90 20" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+                <circle cx="90" cy="20" r="6" fill="currentColor"/>
+                <circle cx="10" cy="80" r="5" fill="currentColor" opacity="0.5"/>
+              </svg> <span class="ve-comp-label">Coast-Down</span></div>
+            <div class="ve-component" draggable="true" data-type="solver">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="currentColor" stroke-width="6"/>
+                <polygon points="40,30 40,70 70,50" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Çözücü</span></div>
+            <div class="ve-component" draggable="true" data-type="road">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M10 80 L40 20 L60 20 L90 80" fill="none" stroke="currentColor" stroke-width="4"/>
+                <line x1="48" y1="25" x2="42" y2="75" stroke="currentColor" stroke-width="2" stroke-dasharray="6,4"/>
+                <circle cx="75" cy="20" r="12" fill="none" stroke="currentColor" stroke-width="3"/>
+                <line x1="75" y1="8" x2="75" y2="12" stroke="currentColor" stroke-width="2"/>
+              </svg> <span class="ve-comp-label">Yol / Ortam</span></div>
+          </div>
+          
+          <div class="ve-category">
+            <div class="ve-category-title">Analiz</div>
+            <div class="ve-component" draggable="true" data-type="parametric">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="currentColor" stroke-width="5"/>
+                <text x="50" y="42" text-anchor="middle" font-size="32" font-weight="700" fill="currentColor">P</text>
+                <path d="M25 62 L40 57 L55 67 L70 50 L85 60" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg> <span class="ve-comp-label">Parametrik Analiz</span></div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <!-- Orta - Canvas -->
+      <div class="ve-canvas-area">
+        <div class="ve-tab-bar" id="ve-tab-bar"></div>
+        <div class="ve-split-container" id="ve-split-container">
+          <div class="ve-split-pane focused" id="ve-pane-0">
+            <div class="ve-canvas-wrapper grid-hidden" id="ve-canvas-wrapper">
+              <!-- Module Selection Overlay -->
+              <div class="ve-module-overlay" id="ve-module-overlay">
+                <div class="ve-module-overlay-title">MFSim — Modül Seçimi</div>
+                <div class="ve-module-overlay-grid">
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('engine-brake')">
+                    <div class="ve-module-card-name">M. Freni Performans</div>
+                    <div class="ve-module-card-desc">Yokuş inişte motor freni ve retarder ile araç yavaşlama davranışını simüle eder. Fren torku, ısı reddi ve durma mesafesi hesaplar.</div>
+                  </div>
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('full-throttle')">
+                    <div class="ve-module-card-name">Tam Gaz Hızlanma</div>
+                    <div class="ve-module-card-desc">Duruştan maksimum hıza kadar tam gaz ivmelenmeyi simüle eder. Tork konvertör eşleştirmesi, vites geçişleri ve çekiş kuvveti analizi yapar.</div>
+                  </div>
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('performance')" style="opacity:0.45; cursor:not-allowed; pointer-events:none;">
+                    <div class="ve-module-card-name">Araç Performans <span style="font-size:0.6em;color:var(--accent-primary);">Yakında</span></div>
+                    <div class="ve-module-card-desc">Elastik hızlanma, tırmanma kapasitesi, maksimum hız ve çekiş diyagramı hesaplamaları.</div>
+                  </div>
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('fuel')" style="opacity:0.45; cursor:not-allowed; pointer-events:none;">
+                    <div class="ve-module-card-name">Yakıt Tüketimi <span style="font-size:0.6em;color:var(--accent-primary);">Yakında</span></div>
+                    <div class="ve-module-card-desc">Sürüş çevrimi üzerinde anlık ve toplam yakıt tüketimi, CO₂ emisyonu ve enerji akışı analizi.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="ve-selection-box" id="ve-selection-box"></div>
+              <!-- Hizalama çizgileri -->
+              <div class="ve-align-guide horizontal" id="ve-align-top" style="display:none;"></div>
+              <div class="ve-align-guide horizontal center-h" id="ve-align-center-h" style="display:none;"></div>
+              <div class="ve-align-guide horizontal" id="ve-align-bottom" style="display:none;"></div>
+              <div class="ve-align-guide vertical" id="ve-align-left" style="display:none;"></div>
+              <div class="ve-align-guide vertical center-v" id="ve-align-center-v" style="display:none;"></div>
+              <div class="ve-align-guide vertical" id="ve-align-right" style="display:none;"></div>
+              <div class="ve-canvas" id="ve-canvas">
+                <svg class="ve-connections-layer" id="ve-connections-layer"></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Alt Uyarı Paneli -->
+        <div class="ve-warnings-panel" id="ve-warnings-panel">
+          <div class="ve-warnings-header" onclick="veToggleWarnings()">
+            <span>⚠️ Uyarılar</span>
+            <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:10px;font-size:0.6rem;font-weight:600;">0</span>
+            <span id="ve-warnings-toggle" style="margin-left:auto;font-size:0.7rem;">▲</span>
+          </div>
+          <div class="ve-warnings-body" id="ve-warnings-body">
+            <div style="padding:8px 12px;font-size:0.65rem;color:var(--text-muted);">Uyarı bulunmuyor. Topoloji hazır.</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sağ Panel - Özellikler -->
+      <div class="ve-properties" id="ve-properties">
+        <div class="ve-properties-resizer" id="ve-properties-resizer"></div>
+        <div class="ve-properties-header">⚙️ Özellikler</div>
+        <div class="ve-properties-content">
+          <div class="ve-prop-empty">
+            <div class="ve-prop-empty-icon">🖱️</div>
+            <div>Bir bileşen seçin</div>
+            <small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+    
+  <!-- ===== ÇÖZÜCÜ SUB-SAYFASI ===== -->
+  <div id="ve-page-cozucu" class="ve-sub-page" style="display:none;">
+    <div class="ve-solver-container">
+      <div class="ve-solver-header">
+        <h2>⚡ Çözücü</h2>
+        <p>Topoloji modelini doğrulayın ve hesaplamayı başlatın</p>
+      </div>
+      
+      <div class="ve-solver-content">
+        <!-- Topoloji Doğrulama -->
+        <div class="ve-solver-card">
+          <div class="ve-solver-card-title">🔍 Topoloji Doğrulama</div>
+          <div id="ve-solver-validation" class="ve-solver-card-body">
+            <div class="ve-solver-empty">Doğrulama başlatılmadı. "Doğrula" butonuna tıklayın.</div>
+          </div>
+          <div class="ve-solver-card-footer">
+            <button class="ve-solver-btn primary" onclick="veSolverValidate()">🔍 Doğrula</button>
+          </div>
+        </div>
+        
+        <!-- Hesaplama Ayarları (Solver bileşeninden okunur) -->
+        <div class="ve-solver-card">
+          <div class="ve-solver-card-title">⚙️ Hesaplama Ayarları</div>
+          <div class="ve-solver-card-body">
+            <div id="ve-solver-settings-summary" style="font-size:0.75rem; color:var(--text-muted); line-height:1.5;">
+              Topolojideki <b>Çözücü</b> bileşenine tıklayarak ayarları yapılandırın (zaman modu, çözünürlük, yöntem vb.)
+            </div>
+          </div>
+        </div>
+        
+        <!-- Hesaplama Başlat -->
+        <div class="ve-solver-card">
+          <div class="ve-solver-card-title">▶️ Hesaplama</div>
+          <div class="ve-solver-card-body">
+            <div id="ve-solver-progress" style="display:none;">
+              <div class="ve-solver-progress-bar">
+                <div class="ve-solver-progress-fill" id="ve-solver-progress-fill" style="width:0%"></div>
+              </div>
+              <div id="ve-solver-progress-text" style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Hesaplanıyor...</div>
+            </div>
+            <div id="ve-solver-result" class="ve-solver-empty">Henüz hesaplama yapılmadı.</div>
+          </div>
+          <div class="ve-solver-card-footer">
+            <button class="ve-solver-btn success" onclick="veSolverRun()" id="ve-solver-run-btn">▶️ Hesaplamayı Başlat</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SONUÇLAR SUB-SAYFASI ===== -->
+  <div id="ve-page-sonuclar" class="ve-sub-page" style="display:none; flex-direction:row;">
+      
+      <!-- Sol Panel: Data Browser -->
+      <div id="ve-results-browser" style="width:250px; min-width:160px; max-width:400px; background:var(--bg-secondary); border-right:2px solid var(--border-color); display:flex; flex-direction:column; position:relative; flex-shrink:0;">
+        <div id="ve-results-browser-resizer" style="position:absolute; top:0; right:-3px; width:6px; height:100%; cursor:ew-resize; z-index:10;"></div>
+        
+        <!-- Browser Header -->
+        <div style="padding:8px 12px; background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:6px;">
+          <span style="font-size:0.85rem; font-weight:700; color:var(--text-heading);">📊 Data Browser</span>
+        </div>
+        
+        <!-- Arama -->
+        <div style="padding:4px 8px; border-bottom:1px solid var(--border-color);">
+          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input); color:var(--text-primary);">
+        </div>
+        
+        <!-- Tree -->
+        <div id="ve-results-tree" style="flex:1; overflow-y:auto; padding:4px 0; font-size:0.78rem;"></div>
+        
+        <!-- Aksiyon Butonları -->
+        <div style="padding:6px 8px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
+          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
+        </div>
+      </div>
+      
+      <!-- Sağ Panel: Dinamik Panel Grid -->
+      <div class="ve-results-grid" id="ve-results-grid" style="position:relative;">
+        <!-- Detaylı Rapor Overlay -->
+        <div id="ve-report-overlay"></div>
+        <!-- Üst satır -->
+        <div class="ve-results-row" id="ve-results-row-0" style="flex:1;">
+          <!-- Slot 0 (sol üst) -->
+          <div class="ve-rslot" id="ve-rslot-0" data-slot="0">
+            <div class="ve-rslot-hdr">
+              <div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-0">Panel 1</span></div>
+              <div class="ve-rslot-btns">
+                <button class="btn-collapse" onclick="veSlotToggle(0)" title="Daralt / Genişlet">▼</button>
+                <button class="btn-close" onclick="veSlotClear(0)" title="Temizle">✕</button>
+              </div>
+            </div>
+            <div class="ve-rslot-body" id="ve-rslot-body-0"></div>
+          </div>
+          
+          <!-- Sütun ayırıcı -->
+          <div class="ve-results-col-resizer" data-row="0"></div>
+          
+          <!-- Slot 1 (sağ üst) -->
+          <div class="ve-rslot" id="ve-rslot-1" data-slot="1">
+            <div class="ve-rslot-hdr">
+              <div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-1">Panel 2</span></div>
+              <div class="ve-rslot-btns">
+                <button class="btn-collapse" onclick="veSlotToggle(1)" title="Daralt / Genişlet">▼</button>
+                <button class="btn-close" onclick="veSlotClear(1)" title="Temizle">✕</button>
+              </div>
+            </div>
+            <div class="ve-rslot-body" id="ve-rslot-body-1"></div>
+          </div>
+        </div>
+        
+        <!-- Satır ayırıcı -->
+        <div class="ve-results-row-resizer" id="ve-row-resizer-0"></div>
+        
+        <!-- Alt satır -->
+        <div class="ve-results-row" id="ve-results-row-1" style="flex:1;">
+          <!-- Slot 2 (sol alt) -->
+          <div class="ve-rslot" id="ve-rslot-2" data-slot="2">
+            <div class="ve-rslot-hdr">
+              <div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-2">Panel 3</span></div>
+              <div class="ve-rslot-btns">
+                <button class="btn-collapse" onclick="veSlotToggle(2)" title="Daralt / Genişlet">▼</button>
+                <button class="btn-close" onclick="veSlotClear(2)" title="Temizle">✕</button>
+              </div>
+            </div>
+            <div class="ve-rslot-body" id="ve-rslot-body-2"></div>
+          </div>
+          
+          <!-- Sütun ayırıcı -->
+          <div class="ve-results-col-resizer" data-row="1"></div>
+          
+          <!-- Slot 3 (sağ alt) -->
+          <div class="ve-rslot" id="ve-rslot-3" data-slot="3">
+            <div class="ve-rslot-hdr">
+              <div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-3">Panel 4</span></div>
+              <div class="ve-rslot-btns">
+                <button class="btn-collapse" onclick="veSlotToggle(3)" title="Daralt / Genişlet">▼</button>
+                <button class="btn-close" onclick="veSlotClear(3)" title="Temizle">✕</button>
+              </div>
+            </div>
+            <div class="ve-rslot-body" id="ve-rslot-body-3"></div>
+          </div>
+        </div>
+      </div>
+  </div>
+  
+  </div><!-- sayfa2-content kapanış -->
+</div><!-- SAYFA 2 SONU -->
+
+<!-- TAB DEĞİŞTİRME VE GÖRSEL EDİTÖR SCRIPTİ -->
+<script src="js/theme.js"></script>
+<script src="js/tabs.js"></script>
+<script src="js/results.js"></script>
+<script src="js/components.js"></script>
+<script src="js/sensors.js"></script>
+<script src="js/ui-core.js"></script>
+<script src="js/component-properties.js"></script>
+<script src="js/simulation-ft.js"></script>
+<script src="js/solver-pro.js"></script>
+<script src="js/component-extras.js"></script>
+<script src="js/map.js"></script>
+<script src="js/state.js"></script>
+<script src="js/topology.js"></script>
+<script src="js/toolbar.js"></script>
+<script src="js/solver.js"></script>
+<script src="js/numerics.js"></script>
+<script src="js/simulation-engine.js"></script>
+<script src="js/graphics.js"></script>
+<script src="js/node-resize.js"></script>
+<script src="js/context-menus.js"></script>
+<script src="js/connections.js"></script>
+
+</body>
+</html>
