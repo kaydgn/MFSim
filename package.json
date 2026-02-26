@@ -1,0 +1,25 @@
+{
+  "name": "mfsim",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --verbose",
+    "test:unit": "jest --verbose",
+    "test:e2e": "npx playwright test",
+    "test:all": "jest --verbose && npx playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:40734/git/kaydgn/MFSim"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "jsdom": "^28.1.0"
+  }
+}
