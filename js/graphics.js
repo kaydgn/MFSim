@@ -332,7 +332,7 @@ function veRenderChart(slotIdx) {
   var margin = {
     left: Math.max(58, 14 + leftAxes.length * AXIS_W),
     right: rightAxes.length > 0 ? Math.max(58, 14 + rightAxes.length * AXIS_W) : 14,
-    top: 14, bottom: 30
+    top: 16, bottom: 38
   };
   var pw = w - margin.left - margin.right;
   var ph = h - margin.top - margin.bottom;
@@ -400,46 +400,49 @@ function veRenderChart(slotIdx) {
   };
   
   // ====== ÇİZİM ======
-  // Arka plan
-  ctx.fillStyle = 'rgba(0,0,0,0.012)';
+  // Arka plan (hafif gradient)
+  var bgGrad = ctx.createLinearGradient(margin.left, margin.top, margin.left, margin.top + ph);
+  bgGrad.addColorStop(0, 'rgba(0,0,0,0.02)');
+  bgGrad.addColorStop(1, 'rgba(0,0,0,0.005)');
+  ctx.fillStyle = bgGrad;
   ctx.fillRect(margin.left, margin.top, pw, ph);
-  
+
   // Clip region
   ctx.save();
   ctx.beginPath();
   ctx.rect(margin.left, margin.top, pw, ph);
   ctx.clip();
-  
+
   // Y grid (ilk eksen referanslı)
   var lyStep = axes[0]._yStep;
   for(var yv = axes[0]._tickStart; yv <= axes[0]._viewMax + lyStep * 0.01; yv += lyStep) {
     var gy = yPosAxis(yv, 0);
     if(gy < margin.top - 1 || gy > margin.top + ph + 1) continue;
-    ctx.strokeStyle = 'rgba(128,128,128,0.1)';
-    ctx.lineWidth = 0.5; ctx.setLineDash([3,3]);
+    ctx.strokeStyle = 'rgba(128,128,128,0.12)';
+    ctx.lineWidth = 0.6; ctx.setLineDash([4,4]);
     ctx.beginPath(); ctx.moveTo(margin.left, gy); ctx.lineTo(margin.left + pw, gy); ctx.stroke();
     ctx.setLineDash([]);
   }
-  
+
   // X grid
   for(var xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax + xStep * 0.01; xv += xStep) {
     var gx = xPos(xv);
-    ctx.strokeStyle = 'rgba(128,128,128,0.1)';
-    ctx.lineWidth = 0.5; ctx.setLineDash([3,3]);
+    ctx.strokeStyle = 'rgba(128,128,128,0.12)';
+    ctx.lineWidth = 0.6; ctx.setLineDash([4,4]);
     ctx.beginPath(); ctx.moveTo(gx, margin.top); ctx.lineTo(gx, margin.top + ph); ctx.stroke();
     ctx.setLineDash([]);
   }
-  
+
   // ====== VERİ ÇİZGİLERİ ======
+  var activeCount = datasets.filter(function(d) { return !d._noData; }).length;
   datasets.forEach(function(ds, di) {
-    if(ds._noData) return; // Verisi olmayan sensörü atla
+    if(ds._noData) return;
     var n = Math.min(ds.data.length, timeArr.length);
     var step = Math.max(1, Math.floor(n / (pw * 2)));
     var axIdx = ds._axisIdx;
-    
-    // Gradient dolgu (max 2 aktif dataset)
-    var activeCount = datasets.filter(function(d) { return !d._noData; }).length;
-    if(activeCount <= 2) {
+
+    // Gradient dolgu (max 3 aktif dataset)
+    if(activeCount <= 3) {
       ctx.beginPath();
       var first = true;
       for(var i = 0; i < n; i += step) {
@@ -451,14 +454,15 @@ function veRenderChart(slotIdx) {
       ctx.lineTo(xPos(timeArr[0]), margin.top + ph);
       ctx.closePath();
       var grad = ctx.createLinearGradient(0, margin.top, 0, margin.top + ph);
-      grad.addColorStop(0, ds.color + '18');
-      grad.addColorStop(1, ds.color + '02');
+      grad.addColorStop(0, ds.color + '20');
+      grad.addColorStop(0.6, ds.color + '08');
+      grad.addColorStop(1, ds.color + '01');
       ctx.fillStyle = grad; ctx.fill();
     }
-    
+
     // Çizgi
     ctx.strokeStyle = ds.color;
-    ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
     ctx.beginPath();
     for(var i = 0; i < n; i += step) {
       var x = xPos(timeArr[i]); var y = yPosAxis(ds.data[i], axIdx);
@@ -466,21 +470,24 @@ function veRenderChart(slotIdx) {
     }
     ctx.stroke();
   });
-  
+
   ctx.restore(); // clip kaldır
   
   // ====== SOL Y ETİKETLERİ (N-eksen) ======
   ctx.textBaseline = 'middle';
   leftAxes.forEach(function(ax, li) {
-    var axColor = (unitGroups.length >= 2) ? ax._color : 'rgba(160,160,180,0.8)';
+    var axColor = (unitGroups.length >= 2) ? ax._color : 'rgba(160,160,180,0.85)';
     var labelX = margin.left - 6 - li * AXIS_W;
     var unitX = margin.left - 40 - li * AXIS_W;
     var aStep = ax._yStep;
     for(var yv = ax._tickStart; yv <= ax._viewMax + aStep * 0.01; yv += aStep) {
       var gy = yPosAxis(yv, ax._globalIdx);
       if(gy < margin.top - 2 || gy > margin.top + ph + 2) continue;
+      // Küçük tick çizgisi
+      ctx.strokeStyle = axColor; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(margin.left - li * AXIS_W, gy); ctx.lineTo(margin.left - li * AXIS_W - 4, gy); ctx.stroke();
       ctx.fillStyle = axColor;
-      ctx.font = '10px -apple-system,system-ui,sans-serif';
+      ctx.font = '10.5px -apple-system,system-ui,sans-serif';
       ctx.textAlign = 'right';
       ctx.fillText(veFormatAxisVal(yv), labelX, gy);
     }
@@ -489,7 +496,7 @@ function veRenderChart(slotIdx) {
       ctx.translate(unitX, margin.top + ph / 2);
       ctx.rotate(-Math.PI / 2);
       ctx.fillStyle = axColor;
-      ctx.font = 'bold 9px -apple-system,system-ui,sans-serif';
+      ctx.font = '600 10px -apple-system,system-ui,sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('[' + ax.unit + ']', 0, 0);
       ctx.restore();
@@ -512,8 +519,11 @@ function veRenderChart(slotIdx) {
     for(var yv = ax._tickStart; yv <= ax._viewMax + aStep * 0.01; yv += aStep) {
       var gy = yPosAxis(yv, ax._globalIdx);
       if(gy < margin.top - 2 || gy > margin.top + ph + 2) continue;
+      // Küçük tick çizgisi
+      ctx.strokeStyle = axColor; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(margin.left + pw + ri * AXIS_W, gy); ctx.lineTo(margin.left + pw + ri * AXIS_W + 4, gy); ctx.stroke();
       ctx.fillStyle = axColor;
-      ctx.font = '10px -apple-system,system-ui,sans-serif';
+      ctx.font = '10.5px -apple-system,system-ui,sans-serif';
       ctx.textAlign = 'left';
       ctx.fillText(veFormatAxisVal(yv), labelX, gy);
     }
@@ -522,7 +532,7 @@ function veRenderChart(slotIdx) {
       ctx.translate(unitX, margin.top + ph / 2);
       ctx.rotate(Math.PI / 2);
       ctx.fillStyle = axColor;
-      ctx.font = 'bold 9px -apple-system,system-ui,sans-serif';
+      ctx.font = '600 10px -apple-system,system-ui,sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText('[' + ax.unit + ']', 0, 0);
       ctx.restore();
@@ -540,14 +550,24 @@ function veRenderChart(slotIdx) {
   for(var xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax + xStep * 0.01; xv += xStep) {
     var gx = xPos(xv);
     if(gx < margin.left - 2 || gx > margin.left + pw + 2) continue;
-    ctx.fillStyle = 'rgba(160,160,180,0.8)';
-    ctx.font = '10px -apple-system,system-ui,sans-serif';
+    // Küçük tick çizgisi
+    ctx.strokeStyle = 'rgba(160,160,180,0.5)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(gx, margin.top + ph); ctx.lineTo(gx, margin.top + ph + 4); ctx.stroke();
+    ctx.fillStyle = 'rgba(160,160,180,0.85)';
+    ctx.font = '10.5px -apple-system,system-ui,sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(veFormatAxisVal(xv), gx, margin.top + ph + 6);
+    ctx.fillText(veFormatAxisVal(xv), gx, margin.top + ph + 7);
   }
-  
+
+  // X ekseni başlığı (canvas üzerinde, altta ortada)
+  var xAxisName = (slot.xAxis ? slot.xAxis.name : 'Zaman [s]');
+  ctx.fillStyle = 'rgba(160,160,180,0.9)';
+  ctx.font = '600 11px -apple-system,system-ui,sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText(xAxisName, margin.left + pw / 2, margin.top + ph + 22);
+
   // Sol eksen çerçeve + alt çerçeve
-  ctx.strokeStyle = 'rgba(128,128,128,0.3)';
+  ctx.strokeStyle = 'rgba(128,128,128,0.35)';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(margin.left, margin.top); ctx.lineTo(margin.left, margin.top + ph);
@@ -555,10 +575,19 @@ function veRenderChart(slotIdx) {
   
   // Zoom göstergesi
   if(view.zoomX > 1.01 || view.zoomY > 1.01 || Math.abs(view.panX) > 0.001 || Math.abs(view.panY) > 0.001) {
-    ctx.fillStyle = 'rgba(59,130,246,0.7)';
+    var zoomText = 'x' + view.zoomX.toFixed(1) + ' | Cift tik: sifirla';
     ctx.font = '9px -apple-system,system-ui,sans-serif';
+    var ztw = ctx.measureText(zoomText).width;
+    // Arka plan kutusu
+    ctx.fillStyle = 'rgba(59,130,246,0.12)';
+    ctx.beginPath();
+    var zx = w - 8 - ztw - 8, zy = 4;
+    if(ctx.roundRect) { ctx.roundRect(zx, zy, ztw + 16, 18, 4); } else { ctx.rect(zx, zy, ztw + 16, 18); }
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(59,130,246,0.3)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = 'rgba(59,130,246,0.85)';
     ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-    ctx.fillText('x' + view.zoomX.toFixed(1) + ' | Cift tik: sifirla', w - 6, 4);
+    ctx.fillText(zoomText, w - 8, 8);
   }
   
   // Eksen kontrol panelini dinamik güncelle
@@ -587,24 +616,38 @@ function veInitChartInteraction(slotIdx) {
   var area = document.getElementById('ve-chart-area-' + slotIdx);
   if(!area || area._veInit) return;
   area._veInit = true;
-  
+
   var isPanning = false;
+  var panPending = false; // sol tık: threshold'u aşana kadar bekle
   var panStartX = 0, panStartY = 0;
   var panStartPanX = 0, panStartPanY = 0;
-  var _panRAF = null; // requestAnimationFrame throttle
-  
+  var _panRAF = null;
+  var PAN_THRESHOLD = 4; // piksel — bu mesafe aşılmadan pan başlamaz
+
   // Fare hareketi: tooltip veya pan
   area.addEventListener('mousemove', function(e) {
+    // Threshold kontrolü (sol tık pan için)
+    if(panPending && !isPanning) {
+      var dx = Math.abs(e.clientX - panStartX);
+      var dy = Math.abs(e.clientY - panStartY);
+      if(dx > PAN_THRESHOLD || dy > PAN_THRESHOLD) {
+        isPanning = true;
+        area.style.cursor = 'grabbing';
+        veChartHideTooltip(slotIdx);
+      } else {
+        veChartShowTooltip(slotIdx, e);
+        return;
+      }
+    }
     if(isPanning) {
       var slot = veResultSlots[slotIdx];
       var m = slot && slot._chartMeta;
       if(!m) return;
       var view = veChartViews[slotIdx];
-      var dx = (e.clientX - panStartX) / m.pw;
-      var dy = (e.clientY - panStartY) / m.ph;
-      view.panX = panStartPanX + dx / view.zoomX;
-      view.panY = panStartPanY - dy / view.zoomY;
-      // RAF throttle — sadece bir frame'de bir çiz
+      var ddx = (e.clientX - panStartX) / m.pw;
+      var ddy = (e.clientY - panStartY) / m.ph;
+      view.panX = panStartPanX + ddx / view.zoomX;
+      view.panY = panStartPanY - ddy / view.zoomY;
       if(!_panRAF) {
         _panRAF = requestAnimationFrame(function() {
           veRenderChart(slotIdx);
@@ -615,14 +658,14 @@ function veInitChartInteraction(slotIdx) {
     }
     veChartShowTooltip(slotIdx, e);
   });
-  
+
   area.addEventListener('mouseleave', function() {
-    if(!isPanning) veChartHideTooltip(slotIdx);
+    if(!isPanning && !panPending) veChartHideTooltip(slotIdx);
   });
-  
-  // Sağ tık: pan başlat (button=2)
+
+  // Sol tık veya sağ tık: pan başlat
   area.addEventListener('mousedown', function(e) {
-    if(e.button !== 2) return;
+    if(e.button !== 0 && e.button !== 2) return;
     var slot = veResultSlots[slotIdx];
     if(!slot || !slot._chartMeta) return;
     var m = slot._chartMeta;
@@ -631,20 +674,31 @@ function veInitChartInteraction(slotIdx) {
     var my = e.clientY - rect.top;
     if(mx < m.margin.left || mx > m.margin.left + m.pw) return;
     if(my < m.margin.top || my > m.margin.top + m.ph) return;
-    
-    isPanning = true;
+
     panStartX = e.clientX;
     panStartY = e.clientY;
     var view = veChartViews[slotIdx];
     panStartPanX = view.panX;
     panStartPanY = view.panY;
-    area.style.cursor = 'grabbing';
-    veChartHideTooltip(slotIdx);
+
+    if(e.button === 0) {
+      // Sol tık: threshold ile pan
+      panPending = true;
+    } else {
+      // Sağ tık: hemen pan
+      isPanning = true;
+      area.style.cursor = 'grabbing';
+      veChartHideTooltip(slotIdx);
+    }
     e.preventDefault();
   });
-  
+
   document.addEventListener('mouseup', function(e) {
-    if(isPanning) { isPanning = false; area.style.cursor = ''; }
+    if(isPanning || panPending) {
+      isPanning = false;
+      panPending = false;
+      area.style.cursor = '';
+    }
   });
   
   // Context menüyü engelle (sağ tık = pan)
@@ -765,7 +819,7 @@ function veChartShowTooltip(slotIdx, e) {
   
   crosshair.querySelectorAll('.ve-chart-crosshair-dot').forEach(function(d) { d.remove(); });
   
-  var html = '<div style="font-weight:600; font-size:0.62rem; color:var(--text-muted); margin-bottom:3px; border-bottom:1px solid var(--border-color); padding-bottom:2px;">t = ' + tArr[idx].toFixed(3) + ' s</div>';
+  var html = '<div style="font-weight:700; font-size:0.65rem; color:var(--text-secondary); margin-bottom:4px; border-bottom:1px solid var(--border-color); padding-bottom:3px; letter-spacing:0.2px;">t = ' + tArr[idx].toFixed(3) + ' s</div>';
   
   // Dual axis bilgisi
   var axesInfo = m.axes || [{ yMin: m.yMin, yMax: m.yMax }];

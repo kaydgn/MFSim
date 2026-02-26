@@ -3080,10 +3080,12 @@ function veRenderSlot(slotIdx) {
   // Legend (her iki mod için) — X butonu ile kaldırma destekli
   html += '<div class="ve-slot-legend">';
   sensors.forEach(function(s, i) {
-    html += '<span class="ve-slot-legend-item" style="background:' + colors[i % colors.length] + '15; color:' + colors[i % colors.length] + '; border:1px solid ' + colors[i % colors.length] + '30;">';
-    html += '<span style="width:10px; height:3px; border-radius:1px; background:' + colors[i % colors.length] + '; display:inline-block;"></span> ' + s.name;
-    if(s.unit) html += ' <span style="opacity:0.6;">[' + s.unit + ']</span>';
-    html += '<span class="ve-legend-remove" onclick="veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
+    var c = colors[i % colors.length];
+    html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
+    html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
+    html += '<span>' + s.name + '</span>';
+    if(s.unit) html += ' <span style="opacity:0.55; font-size:0.6rem;">[' + s.unit + ']</span>';
+    html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
     html += '</span>';
   });
   html += '</div>';
