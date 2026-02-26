@@ -2711,9 +2711,9 @@ function veRenderDetailedReport(filter) {
   
   // ═══ MOTOR KAYIPLARI ═══
   var accData = R.accessories.length > 0 ? R.accessories : [
-    {name:'Fan (Clutch Fan)',standardLoss:0,userLoss:0},{name:'Alternator / Generator',standardLoss:0,userLoss:0},
-    {name:'Air Compressor',standardLoss:0,userLoss:0},{name:'Steering Pump',standardLoss:0,userLoss:0},
-    {name:'Air Conditioning',standardLoss:0,userLoss:0},{name:'Implement Drive',standardLoss:0,userLoss:0}
+    {name:'Fan (Kavramalı Fan)',standardLoss:0,userLoss:0},{name:'Alternatör / Jeneratör',standardLoss:0,userLoss:0},
+    {name:'Hava Kompresörü',standardLoss:0,userLoss:0},{name:'Direksiyon Pompası',standardLoss:0,userLoss:0},
+    {name:'Klima',standardLoss:0,userLoss:0},{name:'Ek Tahrik',standardLoss:0,userLoss:0}
   ];
   var accHTML = '<table style="width:100%; border-collapse:collapse; background:#fff; font-size:0.73rem;">';
   accHTML += '<thead><tr style="background:#f5f6f8;"><th style="padding:6px 14px; text-align:left; border-bottom:1px solid #ddd; color:#555; font-weight:500;">Aksesuar</th>';
@@ -2753,7 +2753,7 @@ function veRenderDetailedReport(filter) {
     motorDetailHTML += '<div style="overflow-x:auto;">';
     motorDetailHTML += '<table style="width:100%; border-collapse:collapse; background:#fff; font-size:0.68rem;">';
     motorDetailHTML += '<thead><tr style="background:#f5f6f8;">';
-    ['Devir<br>(rpm)','Brüt Güç<br>(kW)','Brüt Tork<br>(N·m)','Net Güç<br>Fan On (kW)','Net Tork<br>Fan On (N·m)','Net Güç<br>Fan Off (kW)','Net Tork<br>Fan Off (N·m)','Tanım'].forEach(function(th) {
+    ['Devir<br>(rpm)','Brüt Güç<br>(kW)','Brüt Tork<br>(N·m)','Net Güç<br>Fan Açık (kW)','Net Tork<br>Fan Açık (N·m)','Net Güç<br>Fan Kapalı (kW)','Net Tork<br>Fan Kapalı (N·m)','Tanım'].forEach(function(th) {
       motorDetailHTML += '<th style="padding:5px 8px; border-bottom:1px solid #ddd; border-right:1px solid #eaeaea; color:#555; font-weight:500; text-align:center; white-space:nowrap;">' + th + '</th>';
     });
     motorDetailHTML += '</tr></thead><tbody>';
@@ -2770,9 +2770,9 @@ function veRenderDetailedReport(filter) {
       var netPwrFanOn = netPwr - fanPwr;
       var netTrkFanOn = rpm > 0 ? netPwrFanOn * 30000 / (Math.PI * rpm) : 0;
       var ident = '';
-      if(rpm === peakTorqueRpm && peakTorque > 0) ident = 'Peak Torque';
-      if(rpm === R.governed) ident = 'Peak Governed';
-      if(rpm === R.noLoad || (rpm > R.governed && netTrk <= 0)) ident = 'No Load Governed';
+      if(rpm === peakTorqueRpm && peakTorque > 0) ident = 'Pik Tork';
+      if(rpm === R.governed) ident = 'Pik Governed';
+      if(rpm === R.noLoad || (rpm > R.governed && netTrk <= 0)) ident = 'Yüksüz Governed';
       
       var td = function(v) { return '<td style="padding:4px 8px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">' + v + '</td>'; };
       motorDetailHTML += '<tr>';
@@ -2809,9 +2809,9 @@ function veRenderDetailedReport(filter) {
   var gHigh = R.gearData.length > 0 ? R.gearData[R.gearData.length - 1].name : '6';
   var controlHTML = '';
   controlHTML += row('Shift Profili', spName);
-  controlHTML += row('Shift Speed & Strategy', R.shiftRefRPM + ' rpm — S1 Performance');
-  controlHTML += row('Lockup Offset', R.lockupOffset + ' rpm');
-  controlHTML += row('Primary Mode: Gears', 'Low = ' + gLow + ', Start = ' + gLow + ', High = ' + gHigh + ' (' + gLow + '-' + gLow + '-' + gHigh + ')');
+  controlHTML += row('Vites Geçiş Hızı ve Strateji', R.shiftRefRPM + ' rpm — S1 Performans');
+  controlHTML += row('Kilitleme Ofseti', R.lockupOffset + ' rpm');
+  controlHTML += row('Ana Mod: Vitesler', 'Düşük = ' + gLow + ', Başlangıç = ' + gLow + ', Yüksek = ' + gHigh + ' (' + gLow + '-' + gLow + '-' + gHigh + ')');
   controlHTML = tableWrap(controlHTML);
   
   // ═══ AKTARMA ORGANLARI ═══
@@ -2823,13 +2823,13 @@ function veRenderDetailedReport(filter) {
   
   (R.propshafts.length > 0 ? R.propshafts : [{name:'Kardan Mili',eff:98.60}]).forEach(function(ps) {
     driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; font-weight:600; color:#222;">' + ps.name + '</td>';
-    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">Single</td>';
+    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">Tek</td>';
     driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; font-weight:600; color:#222;">1.000</td>';
     driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; font-weight:600; color:#222;">' + ps.eff.toFixed(2) + '</td></tr>';
   });
-  
+
   driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; font-weight:600; color:#222;">' + R.diffName + '</td>';
-  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">Single</td>';
+  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">Tek</td>';
   driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; font-weight:600; color:#222;">' + R.diffRatio.toFixed(3) + '</td>';
   driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; font-weight:600; color:#222;">' + R.diffEff.toFixed(2) + '</td></tr>';
   
@@ -2902,10 +2902,10 @@ function veRenderDetailedReport(filter) {
     // Motor bilgisi
     ecmHTML += '<table style="width:100%; border-collapse:collapse; background:#fff; margin-bottom:12px;">';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; width:230px; font-size:0.73rem;">Motor</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + R.engineName + '</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Peak Tork</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _peakT.toFixed(0) + ' N·m @ ' + _peakRPM + ' rpm</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Pik Tork</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _peakT.toFixed(0) + ' N·m @ ' + _peakRPM + ' rpm</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Governed Devir</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _gov + ' rpm</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Pump Düşüm</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _pDrop + ' N·m</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Türbin Limit</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _tRating + ' N·m</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Pompa Düşümü</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _pDrop + ' N·m</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Türbin Limiti</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _tRating + ' N·m</td></tr>';
     ecmHTML += '</table>';
     
     // Tablo
@@ -3046,8 +3046,8 @@ function veRenderDetailedReport(filter) {
       
       h += '<tr>' + _tdName('Durma Eğim Kabiliyeti (Stall)') + _td(gd.stallGrade.toFixed(1)) + _td('') + _td(gd.stallGear) + _tdL('Stall') + '</tr>';
       h += '<tr>' + _tdName('Kalkış Eğim Kabiliyeti (Launch)') + _td(gd.launchGrade.toFixed(1)) + _td('') + _td(gd.launchGear) + _tdL('') + '</tr>';
-      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(gd.lowSpeedGrade.toFixed(1)) + _td(gd.lowSpeedV.toFixed(1)) + _td(gd.lowSpeedGear) + _tdL('80 Percent') + '</tr>';
-      h += '<tr>' + _tdName('Düz Yolda Maksimum Hız') + _td('0.0') + _td(gd.maxSpeedFlat.toFixed(1)) + _td(gd.maxSpeedFlatGear) + _tdL('Road Load') + '</tr>';
+      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(gd.lowSpeedGrade.toFixed(1)) + _td(gd.lowSpeedV.toFixed(1)) + _td(gd.lowSpeedGear) + _tdL('%80') + '</tr>';
+      h += '<tr>' + _tdName('Düz Yolda Maksimum Hız') + _td('0.0') + _td(gd.maxSpeedFlat.toFixed(1)) + _td(gd.maxSpeedFlatGear) + _tdL('Yol Yükü') + '</tr>';
       
       gd.gradeTable.forEach(function(row) {
         if(row.v_max <= 0 && row.grade > 0) return;
@@ -3121,8 +3121,8 @@ function veRenderDetailedReport(filter) {
         bh += '<tr>';
         bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; color:#333;">0 — ' + row.targetSpeed + ' km/h</td>';
         if(row.time === null) {
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#999; font-style:italic;">Speed not possible</td>';
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; color:#999; font-style:italic;">Speed not possible</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#999; font-style:italic;">Hıza ulaşılamıyor</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; color:#999; font-style:italic;">Hıza ulaşılamıyor</td>';
         } else {
           bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">' + row.time.toFixed(1) + '</td>';
           bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; color:#333;">' + Math.round(row.distance) + '</td>';
@@ -3203,14 +3203,14 @@ function veBuildGradeChartData(gradeResult) {
   var points = [];
   // Stall ve Launch (sadece < 900)
   if(gradeResult.stallGrade < 900) {
-    points.push({ x: 0, y: gradeResult.stallGrade, label: 'Stall (' + gradeResult.stallGrade.toFixed(1) + '%)' });
+    points.push({ x: 0, y: gradeResult.stallGrade, label: 'Durma (' + gradeResult.stallGrade.toFixed(1) + '%)' });
   }
   if(gradeResult.launchGrade < 900) {
-    points.push({ x: 0, y: gradeResult.launchGrade, label: 'Launch (' + gradeResult.launchGrade.toFixed(1) + '%)' });
+    points.push({ x: 0, y: gradeResult.launchGrade, label: 'Kalkış (' + gradeResult.launchGrade.toFixed(1) + '%)' });
   }
-  // Low Speed
+  // Düşük Hız
   if(gradeResult.lowSpeedGrade < 900) {
-    points.push({ x: gradeResult.lowSpeedV, y: gradeResult.lowSpeedGrade, label: 'Low Speed (' + gradeResult.lowSpeedV.toFixed(0) + ' km/h, ' + gradeResult.lowSpeedGrade.toFixed(1) + '%)' });
+    points.push({ x: gradeResult.lowSpeedV, y: gradeResult.lowSpeedGrade, label: 'Düşük Hız (' + gradeResult.lowSpeedV.toFixed(0) + ' km/h, ' + gradeResult.lowSpeedGrade.toFixed(1) + '%)' });
   }
   // Grade tablosu (grade > 0 olanlar)
   for(var i = 0; i < gradeResult.gradeTable.length; i++) {
@@ -3310,9 +3310,9 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   
   // Axis titles
   ctx.fillStyle = '#555'; ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('Vehicle Speed (km/h)', padL + plotW / 2, H - 6);
+  ctx.fillText('Araç Hızı (km/h)', padL + plotW / 2, H - 6);
   ctx.save(); ctx.translate(16, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Net % Grade', 0, 0); ctx.restore();
+  ctx.fillText('Net % Eğim', 0, 0); ctx.restore();
   
   // Title
   ctx.fillStyle = '#222'; ctx.font = '600 13px Segoe UI, sans-serif'; ctx.textAlign = 'center';
@@ -3503,20 +3503,20 @@ function veRenderAccelChart(canvasId, chartData, title) {
   ctx.fillStyle = '#4a86c8'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'right';
   for(var lt = 0; lt <= yTMax; lt += tStep) { ctx.fillText(lt.toString(), padL - 8, toYT(lt) + 4); }
   ctx.save(); ctx.translate(16, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
-  ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Time (seconds)', 0, 0); ctx.restore();
-  
+  ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Süre (saniye)', 0, 0); ctx.restore();
+
   // Right Y labels (Distance - red)
   var dStep = yDMax <= 100 ? 20 : yDMax <= 300 ? 50 : yDMax <= 600 ? 100 : 200;
   ctx.fillStyle = '#c0392b'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
   for(var ld = 0; ld <= yDMax; ld += dStep) { ctx.fillText(ld.toString(), W - padR + 8, toYD(ld) + 4); }
   ctx.save(); ctx.translate(W - 10, padT + plotH / 2); ctx.rotate(Math.PI / 2);
-  ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Distance (m)', 0, 0); ctx.restore();
-  
+  ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Mesafe (m)', 0, 0); ctx.restore();
+
   // X labels
   ctx.fillStyle = '#777'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) { ctx.fillText(lx.toString(), toX(lx), H - padB + 16); }
   ctx.fillStyle = '#555'; ctx.font = '600 11.5px Segoe UI, sans-serif';
-  ctx.fillText('Vehicle Speed (km/h)', padL + plotW / 2, H - 6);
+  ctx.fillText('Araç Hızı (km/h)', padL + plotW / 2, H - 6);
   
   // Clip to plot area
   ctx.save();
@@ -3563,12 +3563,12 @@ function veRenderAccelChart(canvasId, chartData, title) {
   ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Time (s)', legX + 30, legY + 4);
+  ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Süre (s)', legX + 30, legY + 4);
   legY += 18;
   ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#c0392b'; ctx.fillText('Distance (m)', legX + 30, legY + 4);
+  ctx.fillStyle = '#c0392b'; ctx.fillText('Mesafe (m)', legX + 30, legY + 4);
   
   // Store interaction data
   canvas._drChart = {
@@ -3615,6 +3615,8 @@ function _drRedrawChart(canvas) {
     veRenderGradeChart(id, d.data, d.title, d.showLabels);
   } else if(d.type === 'accel') {
     veRenderAccelChart(id, d.chartData, d.title);
+  } else if(d.type === 'ftUpshift') {
+    veRenderFTUpshiftChart(id, d.data);
   }
 }
 
@@ -4168,8 +4170,8 @@ function _drEcmRedraw() {
   
   // Axes
   ctx.strokeStyle='#bbb';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
-  ctx.fillStyle='#475569';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('Pump Speed — RPM',ml+pw/2,H-6);
-  ctx.save();ctx.translate(14,mt+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Pump Torque — N·m',0,0);ctx.restore();
+  ctx.fillStyle='#475569';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('Pompa Devri — RPM',ml+pw/2,H-6);
+  ctx.save();ctx.translate(14,mt+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Pompa Torku — N·m',0,0);ctx.restore();
   
   // Clip to plot area
   ctx.save();
@@ -4213,7 +4215,7 @@ function _drEcmRedraw() {
   ctx.restore();
   
   // Legend
-  ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillStyle='#64748b';ctx.fillText('── Stall   --- 0.80 SR',ml+pw-120,mt+14);
+  ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillStyle='#64748b';ctx.fillText('── Durma   --- 0.80 SR',ml+pw-120,mt+14);
 }
 
 
@@ -4269,14 +4271,14 @@ function veBuildFTStepsFromSim(sim, transferLabel) {
     // TE/Weight Ratio = 0.60
     if(!mp060done && mg_kN > 0) {
       var ratio = s.te / mg_kN;
-      if(ratio <= 0.605 && ratio >= 0.30) { mp060done = true; return '0.60 TE/Weight Ratio'; }
+      if(ratio <= 0.605 && ratio >= 0.30) { mp060done = true; return '%60 Çekiş/Ağırlık'; }
     }
-    // RPM percentages (only in 1C)
+    // RPM yüzdeleri (sadece 1C)
     if(s.gear === '1C') {
       var rpmPct = s.engineRPM / governed * 100;
-      if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; return '70 Percent'; }
-      if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; return '80 Percent'; }
-      if(!mp85done && rpmPct >= 84.5 && rpmPct <= 86.0) { mp85done = true; return '85 Percent'; }
+      if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; return '%70'; }
+      if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; return '%80'; }
+      if(!mp85done && rpmPct >= 84.5 && rpmPct <= 86.0) { mp85done = true; return '%85'; }
     }
     // Governed
     if(!mpGovDone && Math.abs(s.engineRPM - governed) < 15) { mpGovDone = true; return 'Governed'; }
@@ -4362,7 +4364,7 @@ function veBuildFTStepsFromSim(sim, transferLabel) {
     var targetTE = 0.60 * mg_kN;
     for(var mi = 0; mi < steps.length - 1; mi++) {
       if(steps[mi].te >= targetTE && steps[mi+1].te < targetTE) {
-        steps[mi+1].matchPoint = steps[mi+1].matchPoint || '0.60 TE/Weight Ratio';
+        steps[mi+1].matchPoint = steps[mi+1].matchPoint || '%60 Çekiş/Ağırlık';
         break;
       }
     }
@@ -4519,12 +4521,12 @@ function _ftBuildLowRangeSteps(sim, ratioHigh, ratioLow, etaHigh, etaLow, m_kg, 
       heatRejection: hr, matchPoint: ''
     };
     
-    if(!mp060done && mg_kN > 0 && te / mg_kN <= 0.605 && te / mg_kN >= 0.30) { mp060done = true; s.matchPoint = '0.60 TE/Weight Ratio'; }
+    if(!mp060done && mg_kN > 0 && te / mg_kN <= 0.605 && te / mg_kN >= 0.30) { mp060done = true; s.matchPoint = '%60 Çekiş/Ağırlık'; }
     if(s.gear === '1C') {
       var rpmPct = s.engineRPM / governed * 100;
-      if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; s.matchPoint = '70 Percent'; }
-      if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; s.matchPoint = '80 Percent'; }
-      if(!mp85done && rpmPct >= 84.5 && rpmPct <= 86.0) { mp85done = true; s.matchPoint = '85 Percent'; }
+      if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; s.matchPoint = '%70'; }
+      if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; s.matchPoint = '%80'; }
+      if(!mp85done && rpmPct >= 84.5 && rpmPct <= 86.0) { mp85done = true; s.matchPoint = '%85'; }
     }
     if(!mpGovDone && Math.abs(s.engineRPM - governed) < 15) { mpGovDone = true; s.matchPoint = 'Governed'; }
     
@@ -4726,6 +4728,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
     canvas.addEventListener('mousemove', _ftUpshiftMouseMove);
     canvas.addEventListener('mouseleave', _drChartMouseLeave);
     canvas.addEventListener('dblclick', _drChartDblClick);
+    canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
   }
 }
 
@@ -4739,15 +4742,12 @@ function _ftUpshiftMouseMove(e) {
   var mx = e.clientX - cr.left, my = e.clientY - cr.top;
   
   // Pan handling
-  if(_drChartPan && _drChartPan.active && _drChartPan.canvas === canvas) {
-    var dx = (mx - _drChartPan.lastX) / d.plotW * (d.xMax - d.xMin);
-    var zState = _drChartZoom[canvas.id];
-    if(zState) { zState.cx -= dx; }
-    _drChartPan.lastX = mx;
-    if(!_drChartPan.raf) { _drChartPan.raf = requestAnimationFrame(function(){
-      veRenderFTUpshiftChart(canvas.id, d.data);
-      _drChartPan.raf = null;
-    }); }
+  if(_drChartPan && _drChartPan.active && _drChartPan.canvasId === canvas.id) {
+    var z = _drGetZoom(canvas.id);
+    var dx = e.clientX - _drChartPan.startX;
+    var xRange = (d.baseXMax - d.baseXMin) / z.scale;
+    z.cx = _drChartPan.startCX - dx / d.plotW * xRange;
+    _drRedrawChart(canvas);
     return;
   }
   
@@ -7841,12 +7841,12 @@ function getEnginePropertiesHTML(node) {
     html += '</tr></thead><tbody id="ve-acc-table-' + node.id + '">';
     
     var defaultAcc = [
-      {name: 'Fan (Clutch Fan)', standardLoss: 0, userLoss: 0},
-      {name: 'Alternator / Generator', standardLoss: 0, userLoss: 0},
-      {name: 'Air Compressor', standardLoss: 0, userLoss: 0},
-      {name: 'Steering Pump', standardLoss: 0, userLoss: 0},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0},
+      {name: 'Alternatör / Jeneratör', standardLoss: 0, userLoss: 0},
+      {name: 'Hava Kompresörü', standardLoss: 0, userLoss: 0},
+      {name: 'Direksiyon Pompası', standardLoss: 0, userLoss: 0},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ];
     var accData = accessories.length > 0 ? accessories : defaultAcc;
     
@@ -8126,12 +8126,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2150, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'azra_i6_2500_studio': {
@@ -8163,12 +8163,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2150, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'azra_i6_2500_panter': {
@@ -8200,12 +8200,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2150, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'bmc_i4_1600': {
@@ -8235,12 +8235,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2150, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb45_250_fr94257': {
@@ -8275,12 +8275,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2895, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb45e3_185_fr92152': {
@@ -8304,12 +8304,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb45e3_185_fr92154': {
@@ -8333,12 +8333,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb45e5_207_fr92473': {
@@ -8368,12 +8368,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67_fr98387': {
@@ -8410,12 +8410,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2830, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 20.2, userLoss: 20.2},
-      {name: 'Alternator / Generator', standardLoss: 2.1, userLoss: 2.1},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.6, userLoss: 1.6},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 20.2, userLoss: 20.2},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.1, userLoss: 2.1},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.6, userLoss: 1.6},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_185_fr95009': {
@@ -8440,12 +8440,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_210_fr95010': {
@@ -8470,12 +8470,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_230_fr95011': {
@@ -8500,12 +8500,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_245_fr95012': {
@@ -8530,12 +8530,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_285_fr95014': {
@@ -8560,12 +8560,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_360_fr93831': {
@@ -8594,12 +8594,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2900, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_360_fr97819': {
@@ -8628,12 +8628,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2900, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_360_fr97819_d2000': {
@@ -8667,12 +8667,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2900, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67ex_300_fr93522': {
@@ -8701,12 +8701,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 3000, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isg12e3_380_fr20522': {
@@ -8732,12 +8732,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2100, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isg12e3_400_fr20523': {
@@ -8763,12 +8763,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2100, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isg12e3_430_fr20547': {
@@ -8794,12 +8794,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2100, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isl89e3_375_fr94882': {
@@ -8827,12 +8827,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2330, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isle_t450_fr92598': {
@@ -8863,12 +8863,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2400, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isle3_400_fr95441': {
@@ -8899,12 +8899,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2330, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'ism_500_fr21020': {
@@ -8931,12 +8931,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2300, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme2_380_fr2695': {
@@ -8962,12 +8962,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme2_440_fr2578': {
@@ -8995,12 +8995,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme3_385_fr20317': {
@@ -9026,12 +9026,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme3_385_fr2855': {
@@ -9057,12 +9057,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme3_420_fr2854': {
@@ -9088,12 +9088,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'ism_380_fr20317': {
@@ -9119,12 +9119,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 0, userLoss: 0},
-      {name: 'Alternator / Generator', standardLoss: 0, userLoss: 0},
-      {name: 'Air Compressor', standardLoss: 0, userLoss: 0},
-      {name: 'Steering Pump', standardLoss: 0, userLoss: 0},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0},
+      {name: 'Alternatör / Jeneratör', standardLoss: 0, userLoss: 0},
+      {name: 'Hava Kompresörü', standardLoss: 0, userLoss: 0},
+      {name: 'Direksiyon Pompası', standardLoss: 0, userLoss: 0},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isl_330': {
@@ -9149,12 +9149,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2400, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 0, userLoss: 0},
-      {name: 'Alternator / Generator', standardLoss: 0, userLoss: 0},
-      {name: 'Air Compressor', standardLoss: 0, userLoss: 0},
-      {name: 'Steering Pump', standardLoss: 0, userLoss: 0},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0},
+      {name: 'Alternatör / Jeneratör', standardLoss: 0, userLoss: 0},
+      {name: 'Hava Kompresörü', standardLoss: 0, userLoss: 0},
+      {name: 'Direksiyon Pompası', standardLoss: 0, userLoss: 0},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx_525_fr11926': {
@@ -9186,12 +9186,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx_sig600_fr10149': {
@@ -9217,12 +9217,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx15_600_fr11779': {
@@ -9253,12 +9253,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx15_600_fr11860': {
@@ -9289,12 +9289,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx15_675_fr12042': {
@@ -9326,12 +9326,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'weichai_i4': {
@@ -9363,12 +9363,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2200, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   }
 };
@@ -9763,7 +9763,7 @@ function onVEAccChange(nodeId) {
   if(!node) return;
   if(!node.data) node.data = {};
   
-  var accNames = ['Fan (Clutch Fan)', 'Alternator / Generator', 'Air Compressor', 'Steering Pump', 'Air Conditioning', 'Implement Drive'];
+  var accNames = ['Fan (Kavramalı Fan)', 'Alternatör / Jeneratör', 'Hava Kompresörü', 'Direksiyon Pompası', 'Klima', 'Ek Tahrik'];
   var stdInputs = document.querySelectorAll('.ve-acc-std-' + nodeId);
   var userInputs = document.querySelectorAll('.ve-acc-user-' + nodeId);
   
@@ -9991,7 +9991,7 @@ function updateVEMotorChart(nodeId) {
 
 // Net Değerler diyagramı — brüt + net overlay
 // Aksesuar kaybı hesaplama — RPM bağımlı
-// Fan (Clutch Fan): küp yasası (RPM/governed)^3
+// Fan (Kavramalı Fan): küp yasası (RPM/governed)^3
 // Diğer aksesuarlar: lineer (RPM/governed)
 function veCalcAccLossAtRPM(accessories, rpm, governedSpeed) {
   if(!accessories || accessories.length === 0 || !governedSpeed) return 0;
@@ -10000,7 +10000,7 @@ function veCalcAccLossAtRPM(accessories, rpm, governedSpeed) {
   accessories.forEach(function(acc) {
     var loss = acc.userLoss || 0;
     if(loss <= 0) return;
-    // Fan (Clutch Fan) → küp yasası
+    // Fan (Kavramalı Fan) → küp yasası
     if(acc.name && acc.name.toLowerCase().indexOf('fan') >= 0) {
       totalLoss += loss * ratio * ratio * ratio;
     } else {
@@ -22107,16 +22107,74 @@ function veShowTopologySummary() {
   document.body.appendChild(overlay);
 }
 
+function veShowSaveDialog(defaultName, blob, toastMsg) {
+  // Önceki diyalog varsa kapat
+  var prev = document.getElementById('ve-save-dialog-overlay');
+  if(prev) prev.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 've-save-dialog-overlay';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.onclick = function(e) { if(e.target === overlay) overlay.remove(); };
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'background:var(--bg-secondary,#1a1a2e);color:var(--text-primary,#e0e0e0);border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,0.4);border:1px solid var(--border-color,#333);';
+
+  var nameOnly = defaultName.replace(/\.[^.]+$/, '');
+  var ext = defaultName.slice(nameOnly.length);
+
+  modal.innerHTML =
+    '<h3 style="margin:0 0 16px 0;font-size:1rem;">Farklı Kaydet</h3>' +
+    '<label style="font-size:0.8rem;color:var(--text-muted,#aaa);display:block;margin-bottom:6px;">Dosya adı</label>' +
+    '<div style="display:flex;align-items:center;gap:0;">' +
+      '<input id="ve-save-filename" type="text" value="' + nameOnly.replace(/"/g, '&quot;') + '" ' +
+        'style="flex:1;padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:8px 0 0 8px;font-size:0.85rem;outline:none;" />' +
+      '<span style="padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-muted,#888);border:1px solid var(--border-color,#444);border-left:none;border-radius:0 8px 8px 0;font-size:0.85rem;white-space:nowrap;">' + ext + '</span>' +
+    '</div>' +
+    '<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">' +
+      '<button id="ve-save-cancel" style="padding:7px 18px;background:var(--bg-tertiary,#222);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:8px;cursor:pointer;font-size:0.8rem;">İptal</button>' +
+      '<button id="ve-save-confirm" style="padding:7px 18px;background:var(--accent-primary,#3b82f6);color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600;">Kaydet</button>' +
+    '</div>';
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  var input = document.getElementById('ve-save-filename');
+  input.focus();
+  input.select();
+
+  function doSave() {
+    var fileName = input.value.trim();
+    if(!fileName) { showToast('Dosya adı boş olamaz', 'warning'); return; }
+    fileName += ext;
+    overlay.remove();
+
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(toastMsg);
+  }
+
+  document.getElementById('ve-save-confirm').onclick = doSave;
+  document.getElementById('ve-save-cancel').onclick = function() { overlay.remove(); };
+  input.addEventListener('keydown', function(e) {
+    if(e.key === 'Enter') doSave();
+    if(e.key === 'Escape') overlay.remove();
+  });
+}
+
 function veExportSummaryTXT() {
   veCloseFileMenu();
   if(nodes.length === 0) { showToast('Topolojide bileşen yok', 'warning'); return; }
   var summary = veGenerateTopologySummary();
   var blob = new Blob([summary], {type:'text/plain;charset=utf-8'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'topoloji_ozeti_' + new Date().toISOString().slice(0,10) + '.txt';
-  a.click();
-  showToast('Topoloji özeti indirildi');
+  var defaultName = 'topoloji_ozeti_' + new Date().toISOString().slice(0,10) + '.txt';
+  veShowSaveDialog(defaultName, blob, 'Topoloji özeti indirildi');
 }
 
 function veClearAll() {
@@ -22177,17 +22235,8 @@ function veSaveTopology() {
   
   var json = JSON.stringify(project, null, 2);
   var blob = new Blob([json], {type: 'application/json'});
-  var url = URL.createObjectURL(blob);
-  
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'topoloji_' + new Date().toISOString().slice(0,10) + '.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  
-  showToast('Proje kaydedildi (' + veTabs.length + ' sekme)');
+  var defaultName = (veProjectName || 'topoloji') + '_' + new Date().toISOString().slice(0,10) + '.json';
+  veShowSaveDialog(defaultName, blob, 'Proje kaydedildi (' + veTabs.length + ' sekme)');
 }
 
 function veLoadTopology() {
@@ -25676,8 +25725,8 @@ function veGenerateFTTxtReport(sim) {
   r += '  MOTOR TORK / GUC VERISI\n';
   r += '  ' + ln('-', 76) + '\n';
   r += '  ' + pad('Devir', 7, 'right') + pad('Brut Guc', 10, 'right') + pad('Brut Tork', 11, 'right');
-  r += pad('Net(FanOn)', 12, 'right') + pad('Net(FanOn)', 12, 'right');
-  r += pad('Net(FanOff)', 12, 'right') + pad('Net(FanOff)', 12, 'right') + '\n';
+  r += pad('Net(FanAcik)', 12, 'right') + pad('Net(FanAcik)', 12, 'right');
+  r += pad('Net(FanKpli)', 12, 'right') + pad('Net(FanKpli)', 12, 'right') + '\n';
   r += '  ' + pad('[rpm]', 7, 'right') + pad('[kW]', 10, 'right') + pad('[N.m]', 11, 'right');
   r += pad('Guc [kW]', 12, 'right') + pad('Tork [N.m]', 12, 'right');
   r += pad('Guc [kW]', 12, 'right') + pad('Tork [N.m]', 12, 'right') + '\n';
@@ -25695,10 +25744,10 @@ function veGenerateFTTxtReport(sim) {
     var netFanOffTorque = (p.rpm > 0) ? (netFanOffPower * 30000 / (p.rpm * Math.PI)) : 0;
 
     var tag = '';
-    if (Math.abs(p.rpm - peakTorqueRpm) < 5) tag = '  Peak Torque';
-    else if (Math.abs(p.rpm - peakPowerRpm) < 5) tag = '  Peak Power';
+    if (Math.abs(p.rpm - peakTorqueRpm) < 5) tag = '  Pik Tork';
+    else if (Math.abs(p.rpm - peakPowerRpm) < 5) tag = '  Pik Guc';
     else if (Math.abs(p.rpm - R.governed) < 5) tag = '  Governed';
-    else if (Math.abs(p.rpm - R.noLoad) < 5) tag = '  No Load Gov';
+    else if (Math.abs(p.rpm - R.noLoad) < 5) tag = '  Yuksuz Gov';
 
     r += '  ' + pad(numI(p.rpm), 7, 'right');
     r += pad(num(pw, 1), 10, 'right');
@@ -25750,10 +25799,10 @@ function veGenerateFTTxtReport(sim) {
   r += '  ' + ln('-', 38) + '\n';
   r += pRow('Shift Profili', ascii(shiftProfile));
   r += pRow('Shift Referans RPM', numI(shiftRefRPM) + ' rpm');
-  r += pRow('Lockup Offset', numI(lockupOffset) + ' rpm');
-  r += pRow('Lockup Gecis RPM', numI(lockupRPM) + ' rpm');
+  r += pRow('Kilitleme Ofseti', numI(lockupOffset) + ' rpm');
+  r += pRow('Kilitleme Gecis RPM', numI(lockupRPM) + ' rpm');
   var lowGear = 1, highGear = (R.gearData || []).length;
-  r += pRow('Primary Gear Range', 'Low=' + lowGear + ', Start=' + lowGear + ', High=' + highGear);
+  r += pRow('Vites Araligi', 'Dusuk=' + lowGear + ', Basla=' + lowGear + ', Yuksek=' + highGear);
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
@@ -25766,10 +25815,10 @@ function veGenerateFTTxtReport(sim) {
   r += '  MOTOR BILGISI\n';
   r += '  ' + ln('-', 38) + '\n';
   r += pRow('Motor', ascii(R.engineName));
-  r += pRow('Peak Tork', numI(peakTorque) + ' N.m @ ' + numI(peakTorqueRpm) + ' rpm');
+  r += pRow('Pik Tork', numI(peakTorque) + ' N.m @ ' + numI(peakTorqueRpm) + ' rpm');
   r += pRow('Governed Devir', numI(R.governed) + ' rpm');
-  r += pRow('Pump Dusum', num(R.pumpDrop || 17.6, 1) + ' N.m');
-  r += pRow('Turbin Limit', numI(R.turbineRating || 3320) + ' N.m');
+  r += pRow('Pompa Dusumu', num(R.pumpDrop || 17.6, 1) + ' N.m');
+  r += pRow('Turbin Limiti', numI(R.turbineRating || 3320) + ' N.m');
   r += '\n';
 
   if (_ecmResults.length > 0) {
@@ -25807,7 +25856,7 @@ function veGenerateFTTxtReport(sim) {
     if (selTC) {
       var durumTR = selTC.status === 'recommended' ? 'uygun' : selTC.status === 'caution' ? 'dikkatli' : 'uyumsuz';
       r += '  YORUM: ' + ascii(selTC.name) + ' tork konvertoru, ' + ascii(R.engineName) + ' motoru ile ' + durumTR + ' uyum gostermektedir.\n';
-      r += '  Stall torque ratio t=' + num(selTC.stallTau, 2) + ', governed\'da hiz orani SR=' + num(selTC.srGov, 3) + '.\n\n\n';
+      r += '  Durma tork orani t=' + num(selTC.stallTau, 2) + ', governed\'da hiz orani SR=' + num(selTC.srGov, 3) + '.\n\n\n';
     }
   } else {
     r += '  ECM verisi bulunamadi — EC Matching node topolojiye eklenmemis.\n\n\n';
@@ -25828,10 +25877,10 @@ function veGenerateFTTxtReport(sim) {
 
   // Kardan milleri
   (R.propshafts || []).forEach(function(ps) {
-    r += '  ' + pad(ascii(ps.name), 28) + pad('Single', 16) + pad('1.000', 11, 'right') + pad(num(ps.eff, 2), 14, 'right') + '\n';
+    r += '  ' + pad(ascii(ps.name), 28) + pad('Tek', 16) + pad('1.000', 11, 'right') + pad(num(ps.eff, 2), 14, 'right') + '\n';
   });
   // Aks
-  r += '  ' + pad('Aks', 28) + pad('Single', 16) + pad(num(R.diffRatio, 3), 11, 'right') + pad(num(R.diffEff, 2), 14, 'right') + '\n';
+  r += '  ' + pad('Aks', 28) + pad('Tek', 16) + pad(num(R.diffRatio, 3), 11, 'right') + pad(num(R.diffEff, 2), 14, 'right') + '\n';
   // Transfer kademeleri
   if (R.transferGears && R.transferGears.length > 0) {
     R.transferGears.forEach(function(tr) {
@@ -25918,13 +25967,13 @@ function veGenerateFTTxtReport(sim) {
     rg += '  ' + pad('Dusuk Hiz Egim Kabiliyeti', 36);
     rg += pad(num(gd.lowSpeedGrade, 1), 10, 'right');
     rg += pad(num(gd.lowSpeedV, 1), 12, 'right') + pad(gd.lowSpeedGear, 8, 'right');
-    rg += pad('80 Percent', 14, 'right') + '\n';
+    rg += pad('%80', 14, 'right') + '\n';
 
     // Duz yol maks hiz
     rg += '  ' + pad('Duz Yolda Maksimum Hiz', 36);
     rg += pad('0.0', 10, 'right');
     rg += pad(num(gd.maxSpeedFlat, 1), 12, 'right') + pad(gd.maxSpeedFlatGear, 8, 'right');
-    rg += pad('Road Load', 14, 'right') + '\n';
+    rg += pad('Yol Yuku', 14, 'right') + '\n';
 
     // Grade tablosu
     (gd.gradeTable || []).forEach(function(row) {
@@ -26130,14 +26179,14 @@ function veGenerateFTTxtReport(sim) {
     r += '  Motor (rpm)    : Motor devri -- konvertor modunda slip nedeniyle yuksek,\n';
     r += '                   lockup modunda cikis devri ile esit\n';
     r += '  Cikis (rpm)    : Sanziman cikis devri\n';
-    r += '  Cekis (kN)     : Tractive Effort -- tekerlek cevresindeki toplam cekis kuvveti\n';
-    r += '  Net Cekis (kN) : Drawbar Pull -- cekis kuvvetinden tum direncler (yuvarlanma +\n';
+    r += '  Cekis (kN)     : Cekis Kuvveti -- tekerlek cevresindeki toplam cekis kuvveti\n';
+    r += '  Net Cekis (kN) : Net Cekis -- cekis kuvvetinden tum direncler (yuvarlanma +\n';
     r += '                   aerodinamik) dusuldukten sonra kalan net kuvvet\n';
     r += '  Tekerlek Gucu  : Tekerlek cevresi gucu (kW)\n';
     r += '  Net Egim (%)   : Aragin bu hiz ve kuvvette tirmanabilecegi maks. egim yuzdesi\n';
-    r += '  Isi Reddi (kW) : Tork konvertoru kayip isisi -- lockup modunda 0, konvertor\n';
-    r += '                   modunda slip\'e oranli\n';
-    r += '  Esleme Noktasi : Referans kritik noktalar (Stall, %60 TE/Weight, %70/%80/%85\n';
+    r += '  Isi Reddi (kW) : Tork konvertoru kayip isisi -- kilitleme modunda 0, konvertor\n';
+    r += '                   modunda kayma oranina oranli\n';
+    r += '  Esleme Noktasi : Referans kritik noktalar (Durma, %60 Cekis/Agirlik, %70/%80/%85\n';
     r += '                   governed RPM yuzdesi, Governed)\n';
 
     // FT Yorum

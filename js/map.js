@@ -1,0 +1,897 @@
+// ====== HARİTA BÜYÜTME MODALI ======
+var _veMapModalActive = null;
+var _veMapModalOrigParent = null;
+var _veMapModalOrigNext = null;
+var _veMapModalInfoInterval = null;
+
+function veExpandRoadMap(nodeId) {
+  var map = veRoadMaps[nodeId];
+  var mapContainer = document.getElementById('ve-road-map-' + nodeId);
+  if(!map || !mapContainer) { showToast('Harita bulunamadı', 'warning'); return; }
+  
+  if(_veMapModalActive === nodeId) { veCloseMapModal(); return; }
+  
+  // Orijinal konumu kaydet
+  _veMapModalOrigParent = mapContainer.parentElement;
+  _veMapModalOrigNext = mapContainer.nextElementSibling;
+  
+  // Overlay
+  var overlay = document.createElement('div');
+  overlay.id = 've-map-modal-overlay';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.82); display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);';
+  
+  // Modal
+  var modal = document.createElement('div');
+  modal.style.cssText = 'width:100%; max-width:1100px; height:85vh; max-height:820px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:4px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  
+  // Header
+  var markerCount = (veRoadMarkers[nodeId] || []).length;
+  var badge = markerCount > 0 ? ' <span style="font-size:0.6rem; padding:1px 6px; background:var(--accent-primary); color:#fff; border-radius:8px; margin-left:6px;">' + markerCount + ' nokta</span>' : '';
+  
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">🗺️ Güzergah Haritası' + badge + '</span>' +
+    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:3px; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
+  modal.appendChild(header);
+  
+  // Toolbar
+  var bs = 'padding:6px 12px; font-size:0.66rem; font-weight:600; border:none; border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:opacity 0.12s;';
+  var toolbar = document.createElement('div');
+  toolbar.style.cssText = 'display:flex; align-items:center; gap:5px; padding:6px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;';
+  toolbar.innerHTML = '<button onclick="veCalcRouteOSRM(\'' + nodeId + '\')" style="' + bs + 'background:#1b5e20;color:white;">🛣️ OSRM Rota</button>' +
+    '<button onclick="veCalcElevation(\'' + nodeId + '\')" style="' + bs + 'background:#e65100;color:white;">📐 Eğim Hesapla</button>' +
+    '<button onclick="veSearchLocation(\'' + nodeId + '\')" style="' + bs + 'background:#1565c0;color:white;">🔍 Konum Ara</button>' +
+    '<button onclick="veClearRoute(\'' + nodeId + '\')" style="' + bs + 'background:var(--accent-danger);color:white;">🗑️ Temizle</button>' +
+    '<span style="flex:1;"></span>' +
+    '<span id="ve-map-modal-info" style="font-size:0.6rem; color:var(--text-muted);">Haritaya tıklayarak nokta ekleyin</span>';
+  modal.appendChild(toolbar);
+  
+  // Harita alanı
+  var mapBox = document.createElement('div');
+  mapBox.id = 've-map-modal-container';
+  mapBox.style.cssText = 'flex:1; position:relative; min-height:0;';
+  modal.appendChild(mapBox);
+  
+  // Footer
+  var footer = document.createElement('div');
+  footer.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:0.58rem; color:var(--text-muted);';
+  footer.innerHTML = '<span>Sol tık: Nokta ekle</span><span style="opacity:0.4;">│</span><span>Marker tık: Sonraki noktaları sil</span><span style="opacity:0.4;">│</span><span>Scroll: Zoom</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
+  modal.appendChild(footer);
+  
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  
+  // Haritayı modal'a taşı
+  mapContainer.style.width = '100%';
+  mapContainer.style.height = '100%';
+  mapContainer.style.borderRadius = '0';
+  mapContainer.style.border = 'none';
+  mapContainer.style.margin = '0';
+  mapBox.appendChild(mapContainer);
+  
+  _veMapModalActive = nodeId;
+  
+  // Yeniden boyutlandır
+  setTimeout(function() {
+    map.invalidateSize();
+    var markers = veRoadMarkers[nodeId] || [];
+    if(markers.length >= 2) {
+      var bounds = L.latLngBounds(markers.map(function(m) { return m.getLatLng(); }));
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, 80);
+  
+  // Bilgi güncelleme
+  _veMapModalInfoInterval = setInterval(function() {
+    var info = document.getElementById('ve-map-modal-info');
+    if(!info) return;
+    var mc = (veRoadMarkers[nodeId] || []).length;
+    info.textContent = mc === 0 ? 'Haritaya tıklayarak nokta ekleyin' : mc + ' nokta seçildi' + (mc >= 2 ? ' — Rota hesaplanabilir' : '');
+  }, 400);
+  
+  // ESC handler
+  overlay._veEscHandler = function(e) { if(e.key === 'Escape') veCloseMapModal(); };
+  document.addEventListener('keydown', overlay._veEscHandler);
+  
+  // Overlay tıklama ile kapat
+  overlay.addEventListener('mousedown', function(e) { if(e.target === overlay) veCloseMapModal(); });
+}
+
+function veCloseMapModal() {
+  var overlay = document.getElementById('ve-map-modal-overlay');
+  if(!overlay || !_veMapModalActive) return;
+  
+  var nodeId = _veMapModalActive;
+  var map = veRoadMaps[nodeId];
+  var mapContainer = document.getElementById('ve-road-map-' + nodeId);
+  
+  if(_veMapModalInfoInterval) { clearInterval(_veMapModalInfoInterval); _veMapModalInfoInterval = null; }
+  if(overlay._veEscHandler) document.removeEventListener('keydown', overlay._veEscHandler);
+  
+  // Haritayı geri taşı
+  if(mapContainer && _veMapModalOrigParent) {
+    mapContainer.style.width = '100%';
+    mapContainer.style.height = '220px';
+    mapContainer.style.borderRadius = '6px';
+    mapContainer.style.border = '1px solid var(--border-color)';
+    mapContainer.style.margin = '';
+    
+    if(_veMapModalOrigNext && _veMapModalOrigNext.parentElement === _veMapModalOrigParent) {
+      _veMapModalOrigParent.insertBefore(mapContainer, _veMapModalOrigNext);
+    } else {
+      _veMapModalOrigParent.appendChild(mapContainer);
+    }
+    
+    setTimeout(function() { if(map) map.invalidateSize(); }, 100);
+  }
+  
+  _veMapModalActive = null;
+  _veMapModalOrigParent = null;
+  _veMapModalOrigNext = null;
+  overlay.remove();
+}
+
+function veInitRoadMap(nodeId) {
+  var container = document.getElementById('ve-road-map-' + nodeId);
+  if(!container) return;
+  
+  // Modal açıksa haritayı yeniden oluşturma — modal kapanınca geri gelecek
+  if(_veMapModalActive === nodeId && veRoadMaps[nodeId]) {
+    return;
+  }
+  
+  // DOM yenilenmişse (properties tekrar açılmışsa) eski instance'ı temizle
+  if(veRoadMaps[nodeId]) {
+    try { veRoadMaps[nodeId].remove(); } catch(e) {}
+    veRoadMaps[nodeId] = null;
+  }
+  
+  if(typeof L === 'undefined') {
+    container.innerHTML = '<div style="padding:8px;color:#f44336;font-size:0.7rem;">Leaflet yüklenemedi.</div>';
+    return;
+  }
+  
+  // İzmir BMC Fabrika konumu
+  var bmcKonum = [38.375, 27.100];
+  var map = L.map(container, { center: bmcKonum, zoom: 11, minZoom: 5, maxZoom: 18 });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(map);
+  
+  veRoadMaps[nodeId] = map;
+  veRoadMarkers[nodeId] = [];
+  veRoadPolylines[nodeId] = null;
+  veRoadOSRMlines[nodeId] = null;
+  
+  // Arama butonu (sağ üst köşe)
+  var searchControl = L.control({ position: 'topright' });
+  searchControl.onAdd = function() {
+    var div = L.DomUtil.create('div', 'leaflet-bar');
+    div.style.background = 'white';
+    div.style.padding = '0';
+    div.innerHTML = '<a href="#" title="Konum Ara" style="display:block;width:30px;height:30px;line-height:30px;text-align:center;font-size:16px;text-decoration:none;color:#333;">🔍</a>';
+    L.DomEvent.disableClickPropagation(div);
+    L.DomEvent.on(div.querySelector('a'), 'click', function(e) {
+      L.DomEvent.stop(e);
+      veSearchLocation(nodeId);
+    });
+    return div;
+  };
+  searchControl.addTo(map);
+  
+  // Tıklama ile nokta ekleme
+  map.on('click', function(e) {
+    veAddRoutePoint(nodeId, e.latlng);
+  });
+  
+  // Harita boyutunu düzelt
+  setTimeout(function() { map.invalidateSize(); }, 300);
+}
+
+function veSearchLocation(nodeId) {
+  var map = veRoadMaps[nodeId];
+  if(!map) return;
+  
+  // Inline arama kutusu oluştur (toast tarzı)
+  var existing = document.getElementById('ve-map-search-' + nodeId);
+  if(existing) { existing.querySelector('input').focus(); return; }
+  
+  var container = document.getElementById('ve-road-map-' + nodeId);
+  var searchDiv = document.createElement('div');
+  searchDiv.id = 've-map-search-' + nodeId;
+  searchDiv.style.cssText = 'position:absolute; top:8px; left:50px; right:50px; z-index:1000; display:flex; gap:3px;';
+  searchDiv.innerHTML = '<input type="text" placeholder="Konum veya adres ara..." style="flex:1; padding:6px 8px; font-size:0.72rem; border:2px solid #2196f3; border-radius:6px; outline:none; background:white; color:#333; box-shadow:0 2px 8px rgba(0,0,0,0.2);"><button style="padding:6px 10px; background:#2196f3; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.68rem; white-space:nowrap;">Ara</button>';
+  container.style.position = 'relative';
+  container.appendChild(searchDiv);
+  
+  var input = searchDiv.querySelector('input');
+  var btn = searchDiv.querySelector('button');
+  input.focus();
+  
+  function doSearch() {
+    var q = input.value.trim();
+    if(!q) return;
+    btn.textContent = '⏳';
+    fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q) + '&limit=1')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if(data && data.length > 0) {
+          var lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
+          map.setView([lat, lon], 13, {animate: true});
+          // Arama marker'ı ekle
+          if(window._veSearchMarker) { try{map.removeLayer(window._veSearchMarker);}catch(e){} }
+          window._veSearchMarker = L.marker([lat, lon], {
+            icon: L.divIcon({
+              className:'',
+              html:'<div style="background:#f44336;color:white;width:24px;height:24px;border-radius:50%;text-align:center;line-height:24px;font-size:14px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);">📍</div>',
+              iconSize:[24,24], iconAnchor:[12,24]
+            })
+          }).addTo(map).bindPopup('<b>' + data[0].display_name.split(',').slice(0,3).join(',') + '</b>').openPopup();
+          searchDiv.remove();
+        } else {
+          showToast('Sonuç bulunamadı', 'warning');
+        }
+        btn.textContent = 'Ara';
+      })
+      .catch(function() { btn.textContent = 'Ara'; showToast('Arama hatası', 'warning'); });
+  }
+  
+  btn.onclick = doSearch;
+  input.addEventListener('keydown', function(e) {
+    if(e.key === 'Enter') doSearch();
+    if(e.key === 'Escape') { searchDiv.remove(); }
+  });
+}
+
+function veAddRoutePoint(nodeId, latlng) {
+  var map = veRoadMaps[nodeId];
+  if(!map) return;
+  
+  if(!veRoadMarkers[nodeId]) veRoadMarkers[nodeId] = [];
+  var idx = veRoadMarkers[nodeId].length + 1;
+  
+  var marker = L.marker(latlng, {
+    icon: L.divIcon({
+      className: 'custom-marker',
+      html: '<div style="background:#2196f3; color:white; width:20px; height:20px; border-radius:50%; text-align:center; line-height:20px; font-size:10px; font-weight:600; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.3);">' + idx + '</div>',
+      iconSize: [20, 20], iconAnchor: [10, 10]
+    })
+  }).addTo(map);
+  
+  marker.on('click', function(e) {
+    // Tıklanan noktayı sil (map click event'ine yayılmasını engelle)
+    if(e && e.originalEvent) L.DomEvent.stopPropagation(e);
+    var markers = veRoadMarkers[nodeId];
+    var mIdx = markers.indexOf(marker);
+    if(mIdx >= 0) {
+      // Tıklanan marker'ı sil
+      map.removeLayer(marker);
+      markers.splice(mIdx, 1);
+      // Kalan marker'ları yeniden numarala
+      for(var ri = 0; ri < markers.length; ri++) {
+        var newNum = ri + 1;
+        markers[ri].setIcon(L.divIcon({
+          className: 'custom-marker',
+          html: '<div style="background:#2196f3; color:white; width:20px; height:20px; border-radius:50%; text-align:center; line-height:20px; font-size:10px; font-weight:600; border:2px solid white; box-shadow:0 1px 3px rgba(0,0,0,0.3);">' + newNum + '</div>',
+          iconSize: [20, 20], iconAnchor: [10, 10]
+        }));
+      }
+    }
+    veUpdateRoutePolyline(nodeId);
+  });
+  
+  veRoadMarkers[nodeId].push(marker);
+  veUpdateRoutePolyline(nodeId);
+}
+
+function veUpdateRoutePolyline(nodeId) {
+  var map = veRoadMaps[nodeId];
+  if(!map) return;
+  
+  // Eski polyline sil
+  if(veRoadPolylines[nodeId]) { map.removeLayer(veRoadPolylines[nodeId]); veRoadPolylines[nodeId] = null; }
+  
+  var markers = veRoadMarkers[nodeId] || [];
+  if(markers.length < 2) return;
+  
+  var latlngs = markers.map(function(m) { return m.getLatLng(); });
+  veRoadPolylines[nodeId] = L.polyline(latlngs, { color: '#2196f3', weight: 3, dashArray: '8,4' }).addTo(map);
+}
+
+function veCalcRouteOSRM(nodeId) {
+  var markers = veRoadMarkers[nodeId] || [];
+  if(markers.length < 2) { showToast('En az 2 nokta gerekli', 'warning'); return; }
+  
+  var map = veRoadMaps[nodeId];
+  if(!map) return;
+  
+  // OSRM API ile rota bul
+  var coords = markers.map(function(m) { var ll = m.getLatLng(); return ll.lng + ',' + ll.lat; }).join(';');
+  var url = 'https://router.project-osrm.org/route/v1/driving/' + coords + '?overview=full&geometries=geojson';
+  
+  showToast('OSRM rota hesaplanıyor...');
+  
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if(!data.routes || !data.routes[0]) { showToast('Rota bulunamadı', 'warning'); return; }
+      
+      var route = data.routes[0];
+      var geom = route.geometry.coordinates;
+      var latlngs = geom.map(function(c) { return [c[1], c[0]]; });
+      
+      // Eski OSRM çizgisi sil
+      if(veRoadOSRMlines[nodeId]) { map.removeLayer(veRoadOSRMlines[nodeId]); }
+      
+      veRoadOSRMlines[nodeId] = L.polyline(latlngs, { color: '#4caf50', weight: 4 }).addTo(map);
+      map.fitBounds(veRoadOSRMlines[nodeId].getBounds(), { padding: [20, 20] });
+      
+      var distKm = (route.distance / 1000).toFixed(2);
+      var pointCount = latlngs.length;
+      showToast('Rota bulundu: ' + distKm + ' km (' + pointCount + ' nokta)');
+      
+      // Sonuç kutusunu göster
+      var resultDiv = document.getElementById('ve-road-route-result-' + nodeId);
+      var distDiv = document.getElementById('ve-road-dist-' + nodeId);
+      if(resultDiv) resultDiv.style.display = 'block';
+      if(distDiv) distDiv.textContent = distKm + ' km';
+      
+      // Segment aralığı butonları göster
+      var segBtns = document.getElementById('ve-road-seg-btns-' + nodeId);
+      if(!segBtns) {
+        segBtns = document.createElement('div');
+        segBtns.id = 've-road-seg-btns-' + nodeId;
+        segBtns.style.cssText = 'display:flex; gap:3px; margin-top:6px; flex-wrap:wrap;';
+        resultDiv.appendChild(segBtns);
+      }
+      var intervals = [100, 200, 300, 500];
+      var segEl = document.getElementById('ve-road-segment-' + nodeId);
+      var curInterval = segEl ? parseInt(segEl.value) : 300;
+      segBtns.innerHTML = '<span style="font-size:0.54rem; color:var(--text-muted); margin-right:2px; line-height:22px;">Segment:</span>';
+      intervals.forEach(function(iv) {
+        var estSegs = Math.ceil(route.distance / iv);
+        var active = iv === curInterval;
+        segBtns.innerHTML += '<button onclick="veSetSegmentInterval(\'' + nodeId + '\',' + iv + ')" style="padding:2px 6px; font-size:0.54rem; border-radius:3px; border:1px solid ' + (active ? 'var(--accent-primary)' : 'var(--border-color)') + '; background:' + (active ? 'var(--accent-primary)' : 'var(--bg-tertiary)') + '; color:' + (active ? 'white' : 'var(--text-secondary)') + '; cursor:pointer;">' + iv + 'm (~' + estSegs + ')</button>';
+      });
+      
+      // Node verilerine kaydet
+      var node = nodes.find(function(n) { return n.id === nodeId; });
+      if(node) { if(!node.data) node.data = {}; node.data.routeDistance = route.distance; node.data.routeCoords = latlngs; }
+    })
+    .catch(function(err) { showToast('OSRM hatası: ' + err.message, 'warning'); });
+}
+
+function veSetSegmentInterval(nodeId, interval) {
+  var segEl = document.getElementById('ve-road-segment-' + nodeId);
+  if(segEl) segEl.value = interval;
+  // Butonları güncelle
+  var segBtns = document.getElementById('ve-road-seg-btns-' + nodeId);
+  if(segBtns) {
+    segBtns.querySelectorAll('button').forEach(function(btn) {
+      var iv = parseInt(btn.textContent);
+      var active = iv === interval;
+      btn.style.border = '1px solid ' + (active ? 'var(--accent-primary)' : 'var(--border-color)');
+      btn.style.background = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
+      btn.style.color = active ? 'white' : 'var(--text-secondary)';
+    });
+  }
+  showToast('Segment aralığı: ~' + interval + 'm');
+}
+
+function veClearRoute(nodeId) {
+  var map = veRoadMaps[nodeId];
+  if(map) {
+    (veRoadMarkers[nodeId] || []).forEach(function(m) { map.removeLayer(m); });
+    veRoadMarkers[nodeId] = [];
+    if(veRoadPolylines[nodeId]) { map.removeLayer(veRoadPolylines[nodeId]); veRoadPolylines[nodeId] = null; }
+    if(veRoadOSRMlines[nodeId]) { map.removeLayer(veRoadOSRMlines[nodeId]); veRoadOSRMlines[nodeId] = null; }
+    // Segment noktalarını temizle
+    if(veRoadSegMarkers[nodeId]) {
+      veRoadSegMarkers[nodeId].forEach(function(m) { try { map.removeLayer(m); } catch(e){} });
+      veRoadSegMarkers[nodeId] = [];
+    }
+  }
+  var resultDiv = document.getElementById('ve-road-route-result-' + nodeId);
+  if(resultDiv) resultDiv.style.display = 'none';
+  var segBilgi = document.getElementById('ve-road-segment-bilgi-' + nodeId);
+  if(segBilgi) segBilgi.innerHTML = '<span style="color:var(--text-muted);">Güzergah temizlendi.</span>';
+  var segTable = document.getElementById('ve-road-seg-table-' + nodeId);
+  if(segTable) segTable.innerHTML = '';
+  var segBtns = document.getElementById('ve-road-seg-btns-' + nodeId);
+  if(segBtns) segBtns.remove();
+  
+  // Node verisini temizle
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(node && node.data) { delete node.data.routeCoords; delete node.data.routeSegments; delete node.data.routeDistance; }
+  showToast('Güzergah temizlendi');
+}
+
+// Haversine mesafe hesaplama
+function veHesaplaMesafe(lat1, lon1, lat2, lon2) {
+  var R = 6371000;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLon = (lon2 - lon1) * Math.PI / 180;
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function veCalcElevation(nodeId) {
+  // OSRM rota noktaları veya haritadaki marker'ları kullan
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node) return;
+  
+  var coords = [];
+  if(node.data && node.data.routeCoords && node.data.routeCoords.length >= 2) {
+    // OSRM rotasından noktalar (fazla nokta varsa adaptive sampling yap)
+    var rc = node.data.routeCoords;
+    var segEl = document.getElementById('ve-road-segment-' + nodeId);
+    var segInterval = segEl ? parseInt(segEl.value) : 300;
+    
+    // Adaptive sampling: rotayı belirli aralıklarla örnekle
+    coords.push({lat: rc[0][0], lng: rc[0][1]});
+    var cumDist = 0;
+    var lastSampled = 0;
+    for(var i = 1; i < rc.length; i++) {
+      var d = veHesaplaMesafe(rc[i-1][0], rc[i-1][1], rc[i][0], rc[i][1]);
+      cumDist += d;
+      if(cumDist - lastSampled >= segInterval || i === rc.length - 1) {
+        coords.push({lat: rc[i][0], lng: rc[i][1]});
+        lastSampled = cumDist;
+      }
+    }
+  } else {
+    // Marker'lardan noktalar
+    var markers = veRoadMarkers[nodeId] || [];
+    if(markers.length < 2) { showToast('En az 2 nokta veya OSRM rotası gerekli', 'warning'); return; }
+    markers.forEach(function(m) { var ll = m.getLatLng(); coords.push({lat: ll.lat, lng: ll.lng}); });
+  }
+  
+  if(coords.length < 2) { showToast('Yetersiz nokta', 'warning'); return; }
+  
+  showToast('⏳ Yükseklik verisi alınıyor... (' + coords.length + ' nokta)');
+  
+  // Open-Elevation API
+  var locations = coords.map(function(c) { return {latitude: c.lat, longitude: c.lng}; });
+  
+  fetch('https://api.open-elevation.com/api/v1/lookup', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({locations: locations})
+  })
+  .then(function(r) { if(!r.ok) throw new Error('API hatası'); return r.json(); })
+  .then(function(data) {
+    if(!data.results || data.results.length < coords.length) throw new Error('Eksik veri');
+    
+    // Yükseklikleri eşleştir
+    for(var i = 0; i < coords.length; i++) {
+      coords[i].elevation = data.results[i].elevation;
+    }
+    
+    // Toplam mesafe ve segment hesapla
+    var toplamMesafe = 0;
+    var segmentler = [];
+    var MAX_EGIM = 25;
+    
+    for(var s = 0; s < coords.length - 1; s++) {
+      var s1 = coords[s], s2 = coords[s+1];
+      var sMesafe = veHesaplaMesafe(s1.lat, s1.lng, s2.lat, s2.lng);
+      var sDh = s1.elevation - s2.elevation; // iniş=pozitif, çıkış=negatif
+      var sEgim = sMesafe > 0 ? (sDh / sMesafe) * 100 : 0;
+      if(Math.abs(sEgim) > MAX_EGIM) sEgim = sEgim > 0 ? MAX_EGIM : -MAX_EGIM;
+      
+      segmentler.push({ mesafe: sMesafe, egim: sEgim, deltaH: sDh });
+      toplamMesafe += sMesafe;
+    }
+    
+    // Genel yükseklik farkı ve ortalama eğim
+    var ilk = coords[0], son = coords[coords.length - 1];
+    var yukseklikFark = ilk.elevation - son.elevation;
+    var ortEgim = toplamMesafe > 0 ? (yukseklikFark / toplamMesafe) * 100 : 0;
+    
+    // Ortalama yükseklik
+    var topYuk = 0;
+    coords.forEach(function(c) { topYuk += c.elevation; });
+    var ortYukseklik = topYuk / coords.length;
+    
+    // Sonuçları göster
+    var resultDiv = document.getElementById('ve-road-route-result-' + nodeId);
+    var distDiv = document.getElementById('ve-road-dist-' + nodeId);
+    var dhDiv = document.getElementById('ve-road-dh-' + nodeId);
+    var gradeDiv = document.getElementById('ve-road-avggrade-' + nodeId);
+    if(resultDiv) resultDiv.style.display = 'block';
+    if(distDiv) distDiv.textContent = (toplamMesafe/1000).toFixed(2) + ' km';
+    if(dhDiv) dhDiv.textContent = yukseklikFark.toFixed(0) + ' m';
+    if(gradeDiv) gradeDiv.textContent = '%' + ortEgim.toFixed(1);
+    
+    // Detaylı segment tablosu
+    var segTable = document.getElementById('ve-road-seg-table-' + nodeId);
+    if(!segTable && resultDiv) {
+      segTable = document.createElement('div');
+      segTable.id = 've-road-seg-table-' + nodeId;
+      resultDiv.appendChild(segTable);
+    }
+    if(segTable) {
+      var thtml = '<div style="margin-top:8px; max-height:180px; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px;">';
+      thtml += '<table style="width:100%; font-size:0.56rem; border-collapse:collapse;">';
+      thtml += '<thead><tr style="background:var(--bg-tertiary); position:sticky; top:0;">';
+      thtml += '<th style="padding:3px 4px; text-align:center; border-bottom:1px solid var(--border-color);">#</th>';
+      thtml += '<th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Mesafe [m]</th>';
+      thtml += '<th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Δh [m]</th>';
+      thtml += '<th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Eğim [%]</th>';
+      thtml += '</tr></thead><tbody>';
+      
+      segmentler.forEach(function(seg, i) {
+        var egimColor = seg.egim > 2 ? 'var(--accent-success)' : (seg.egim < -2 ? 'var(--accent-danger)' : 'var(--text-secondary)');
+        var egimIcon = seg.egim > 1 ? '↓' : (seg.egim < -1 ? '↑' : '→');
+        thtml += '<tr style="border-bottom:1px solid var(--border-color);">';
+        thtml += '<td style="padding:2px 4px; text-align:center; color:var(--text-muted);">' + (i+1) + '</td>';
+        thtml += '<td style="padding:2px 4px; text-align:right;">' + seg.mesafe.toFixed(0) + '</td>';
+        thtml += '<td style="padding:2px 4px; text-align:right;">' + seg.deltaH.toFixed(1) + '</td>';
+        thtml += '<td style="padding:2px 4px; text-align:right; color:' + egimColor + '; font-weight:600;">' + egimIcon + ' %' + seg.egim.toFixed(1) + '</td>';
+        thtml += '</tr>';
+      });
+      
+      thtml += '</tbody></table></div>';
+      segTable.innerHTML = thtml;
+    }
+    
+    // Node verisine kaydet
+    if(!node.data) node.data = {};
+    node.data.routeSegments = segmentler;
+    node.data.routeAvgGrade = ortEgim;
+    node.data.routeAvgAltitude = ortYukseklik;
+    node.data.routeTotalDist = toplamMesafe;
+    
+    // ═══ SEGMENT NOKTALARINI HARİTADA GÖSTER ═══
+    var map = veRoadMaps[nodeId];
+    if(map) {
+      // Eski segment markerlarını temizle
+      if(veRoadSegMarkers[nodeId]) {
+        veRoadSegMarkers[nodeId].forEach(function(m) { try { map.removeLayer(m); } catch(e){} });
+      }
+      veRoadSegMarkers[nodeId] = [];
+      
+      var cumDist = 0;
+      for(var pi = 0; pi < coords.length; pi++) {
+        var pt = coords[pi];
+        var isEndpoint = (pi === 0 || pi === coords.length - 1);
+        
+        // Kümülatif mesafe hesapla
+        if(pi > 0) {
+          cumDist += veHesaplaMesafe(coords[pi-1].lat, coords[pi-1].lng, pt.lat, pt.lng);
+        }
+        
+        var cm = L.circleMarker([pt.lat, pt.lng], {
+          radius: isEndpoint ? 6 : 3.5,
+          color: isEndpoint ? '#fff' : '#ffa726',
+          fillColor: isEndpoint ? '#4fc3f7' : '#ffa726',
+          fillOpacity: isEndpoint ? 1 : 0.8,
+          weight: isEndpoint ? 2 : 1.2
+        }).addTo(map);
+        
+        // Tooltip: nokta bilgisi
+        var ttHtml = '<b>' + (isEndpoint ? (pi === 0 ? 'BAŞLANGIÇ' : 'BİTİŞ') : 'Nokta ' + (pi + 1)) + '</b>';
+        ttHtml += '<br>Mesafe: ' + (cumDist / 1000).toFixed(2) + ' km';
+        if(pt.elevation !== undefined && pt.elevation !== null) {
+          ttHtml += '<br>Yükseklik: ' + pt.elevation.toFixed(0) + ' m';
+        }
+        if(pi < segmentler.length) {
+          ttHtml += '<br>Segment eğim: %' + segmentler[pi].egim.toFixed(1);
+        }
+        cm.bindTooltip(ttHtml, { direction: 'top', offset: [0, -6] });
+        
+        veRoadSegMarkers[nodeId].push(cm);
+      }
+    }
+    
+    // Segment bilgi kutusunu güncelle
+    var segBilgi = document.getElementById('ve-road-segment-bilgi-' + nodeId);
+    if(segBilgi) {
+      var maxE = 0, minE = 0;
+      segmentler.forEach(function(seg) { if(seg.egim > maxE) maxE = seg.egim; if(seg.egim < minE) minE = seg.egim; });
+      segBilgi.innerHTML = '<div style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.6rem;">' +
+        '<span style="color:var(--accent-primary);">📏 <b>' + (toplamMesafe/1000).toFixed(2) + ' km</b></span>' +
+        '<span style="color:var(--accent-success);">📊 <b>' + segmentler.length + '</b> seg.</span>' +
+        '<span style="color:var(--accent-warning);">📐 Ort: <b>%' + ortEgim.toFixed(1) + '</b></span>' +
+        '<span style="color:var(--accent-danger);">⬆️ Max: <b>%' + maxE.toFixed(1) + '</b></span>' +
+        '</div>';
+    }
+    
+    // Segment modundaysa eğim alanını otomatik doldur
+    var egimModeEl = document.getElementById('ve-road-egimmode-' + nodeId);
+    if(egimModeEl && egimModeEl.value === 'segment') {
+      node.data.grade = ortEgim;
+    }
+    
+    // Yüksekliği ortam parametrelerine aktar
+    var altEl = document.getElementById('ve-road-alt-' + nodeId);
+    if(altEl && !altEl.value) { altEl.value = Math.round(ortYukseklik); node.data.altitude = ortYukseklik; }
+    
+    showToast('✅ Eğim hesaplandı: %' + ortEgim.toFixed(1) + ' (' + segmentler.length + ' segment)');
+  })
+  .catch(function(err) {
+    showToast('Yükseklik API hatası: ' + err.message, 'warning');
+  });
+}
+
+function onVERoadEgimModeChange(nodeId) {
+  var sel = document.getElementById('ve-road-egimmode-' + nodeId);
+  if(!sel) return;
+  var mode = sel.value;
+  
+  // Manuel satırları
+  var gradeRow = document.getElementById('ve-road-grade-row-' + nodeId);
+  var gradeHint = document.getElementById('ve-road-grade-hint-' + nodeId);
+  // Segment bilgi kutusu
+  var segInfo = document.getElementById('ve-road-segment-info-' + nodeId);
+  if(mode === 'segment') {
+    if(gradeRow) gradeRow.style.display = 'none';
+    if(gradeHint) gradeHint.style.display = 'none';
+    if(segInfo) segInfo.style.display = '';
+    // Segment modunda zaman modu seçenekleri gizle
+    if(timeModeRow) timeModeRow.style.display = 'none';
+    if(durationRow) durationRow.style.display = 'none';
+    if(maxTimeRow) maxTimeRow.style.display = 'none';
+  } else {
+    if(gradeRow) gradeRow.style.display = '';
+    if(gradeHint) gradeHint.style.display = '';
+    if(segInfo) segInfo.style.display = 'none';
+    // Zaman modunu göster
+    if(timeModeRow) timeModeRow.style.display = '';
+    onVERoadTimeModeChange(nodeId);
+  }
+  
+  onVERoadParamChange(nodeId);
+}
+
+function veCalcAirDensityRoad(nodeId) {
+  var altEl = document.getElementById('ve-road-alt-' + nodeId);
+  var tempEl = document.getElementById('ve-road-temp-' + nodeId);
+  var densEl = document.getElementById('ve-road-density-' + nodeId);
+  if(!altEl || !tempEl || !densEl) return;
+  var h = parseFloat(altEl.value), T = parseFloat(tempEl.value);
+  if(isNaN(h) || isNaN(T)) { showToast('Yükseklik ve sıcaklık giriniz', 'warning'); return; }
+  var P0=101325,T0=288.15,L=0.0065,R=287.05,g=9.80665;
+  var Tk=T+273.15, P=P0*Math.pow(1-L*h/T0,g/(R*L)), rho=P/(R*Tk);
+  densEl.value = rho.toFixed(4);
+  var node = nodes.find(function(n){return n.id===nodeId;});
+  if(node){if(!node.data)node.data={};node.data.airDensity=rho;}
+  showToast('Hava yoğunluğu: '+rho.toFixed(4)+' kg/m³');
+}
+
+
+// Sonlandırıcı bileşeni özellikleri
+function getTerminatorPropertiesHTML(node) {
+  var html = '';
+  
+  // Açıklama
+  html += '<div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 12px; margin-bottom:12px;">';
+  html += '<div style="font-size:0.72rem; color:var(--accent-danger); font-weight:600; margin-bottom:4px;">✂️ Hesap Sonlandırma Noktası</div>';
+  html += '<div style="font-size:0.68rem; color:var(--text-secondary); line-height:1.5;">Bu bileşen, güç akış zincirini burada keser. Çözücü, bu noktaya kadar olan bileşenlerin hesabını yapar ve durur. Tam model kurmadan kısmi analizler yapmanızı sağlar.</div>';
+  html += '</div>';
+  
+  // Bağlantı durumu - bu terminatöre gelen zinciri bul
+  var inConn = connections.find(function(c) { return c.to === node.id; });
+  
+  if(!inConn) {
+    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:12px; text-align:center;">';
+    html += '<div style="font-size:0.75rem; color:var(--text-muted);">⚠️ Henüz bir bileşene bağlanmadı</div>';
+    html += '<div style="font-size:0.65rem; color:var(--text-muted); margin-top:4px;">Bir bileşenin çıkış portuna bağlayın</div>';
+    html += '</div>';
+  } else {
+    // Upstream zinciri bul
+    var chain = [];
+    var visited = {};
+    function traceUpstream(nodeId) {
+      if(visited[nodeId]) return;
+      visited[nodeId] = true;
+      var nd = nodes.find(function(n) { return n.id === nodeId; });
+      if(!nd) return;
+      // Sadece güç aktarım bileşenlerini dahil et
+      var driveTypes = ['engine','engine-brake','torque-converter','gearbox','transfer','differential','wheel'];
+      if(driveTypes.indexOf(nd.type) > -1) {
+        chain.unshift(nd);
+      }
+      // Upstream'e git
+      connections.forEach(function(c) {
+        if(c.to === nodeId) traceUpstream(c.from);
+      });
+    }
+    traceUpstream(inConn.from);
+    
+    html += '<div style="border-top:1px solid var(--border-color); padding-top:10px; margin-bottom:10px;">';
+    html += '<div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">📐 Hesap Zinciri</div>';
+    
+    if(chain.length === 0) {
+      html += '<div style="font-size:0.72rem; color:var(--text-muted);">Upstream güç bileşeni bulunamadı.</div>';
+    } else {
+      html += '<div style="display:flex; flex-direction:column; gap:2px;">';
+      chain.forEach(function(nd, idx) {
+        var def = componentDefs[nd.type] || {};
+        var name = nd.customName || def.name || nd.type;
+        var isLast = idx === chain.length - 1;
+        html += '<div style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:' + (isLast ? 'rgba(239,68,68,0.08)' : 'var(--bg-tertiary)') + '; border-radius:5px; font-size:0.7rem;">';
+        html += '<span style="color:var(--text-muted); font-size:0.6rem; width:14px; text-align:center;">' + (idx + 1) + '</span>';
+        html += '<span style="color:var(--text-primary);">' + name + '</span>';
+        if(isLast) {
+          html += '<span style="margin-left:auto; font-size:0.6rem; color:var(--accent-danger);">← kesim noktası</span>';
+        }
+        html += '</div>';
+        if(idx < chain.length - 1) {
+          html += '<div style="text-align:center; color:var(--text-muted); font-size:0.6rem; line-height:1;">↓</div>';
+        }
+      });
+      html += '</div>';
+      
+      // Bu noktada ölçülebilir sinyaller
+      var lastNode = chain[chain.length - 1];
+      var lastDef = componentDefs[lastNode.type] || {};
+      html += '<div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border-color);">';
+      html += '<div style="font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">📊 Bu Noktada Ölçülebilir</div>';
+      
+      // Bileşen tipine göre çıkış sinyalleri
+      var signals = [];
+      if(lastNode.type === 'engine' || lastNode.type === 'engine-brake') {
+        signals = ['Tork (Nm)', 'Güç (kW)', 'Devir (rpm)'];
+      } else if(lastNode.type === 'torque-converter') {
+        signals = ['Çıkış Torku (Nm)', 'Çıkış Devri (rpm)', 'Tork Oranı', 'Kayma Oranı'];
+      } else if(lastNode.type === 'gearbox') {
+        signals = ['Çıkış Torku (Nm)', 'Çıkış Devri (rpm)', 'Aktif Vites'];
+      } else if(lastNode.type === 'transfer') {
+        signals = ['Çıkış Torku (Nm)', 'Çıkış Devri (rpm)', 'Dağılım Oranı'];
+      } else if(lastNode.type === 'differential') {
+        signals = ['Yarım Aks Torku (Nm)', 'Yarım Aks Devri (rpm)'];
+      } else if(lastNode.type === 'wheel') {
+        signals = ['Tekerlek Torku (Nm)', 'Tekerlek Devri (rpm)', 'Çekiş Kuvveti (N)'];
+      }
+      
+      if(signals.length > 0) {
+        html += '<div style="display:flex; flex-wrap:wrap; gap:4px;">';
+        signals.forEach(function(s) {
+          html += '<span style="font-size:0.62rem; background:var(--bg-tertiary); border:1px solid var(--border-color); padding:2px 7px; border-radius:10px; color:var(--text-secondary);">' + s + '</span>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  
+  return html;
+}
+
+// Varsayılan özellikler
+function getDefaultPropertiesHTML(node) {
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  html += '<div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Parametreler</div>';
+  html += '<div style="font-size:0.8rem; color:var(--text-secondary);">Bu bileşen için henüz parametre tanımlanmamış.</div>';
+  html += '</div>';
+  return html;
+}
+
+function veEditNodeName(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node) return;
+  
+  var currentName = node.customName || node.def.name;
+  var nameDisplay = document.getElementById('ve-node-name-display-' + nodeId);
+  if(!nameDisplay) return;
+  
+  // Inline edit - mevcut span'ı input'a çevir
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentName;
+  input.style.cssText = 'width:120px; padding:2px 6px; font-size:0.8rem; font-weight:600; text-align:center; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--accent-primary); border-radius:4px; outline:none;';
+  
+  nameDisplay.textContent = '';
+  nameDisplay.appendChild(input);
+  input.focus();
+  input.select();
+  
+  function applyName() {
+    var newName = input.value.trim();
+    if(newName === '') newName = node.def.name;
+    node.customName = newName;
+    nameDisplay.textContent = newName;
+    
+    var nodeEl = document.getElementById(nodeId);
+    if(nodeEl) {
+      var label = nodeEl.querySelector('.ve-node-label');
+      if(label) label.textContent = newName;
+    }
+    showToast('İsim güncellendi: ' + newName);
+  }
+  
+  input.addEventListener('blur', applyName);
+  input.addEventListener('keydown', function(e) {
+    if(e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if(e.key === 'Escape') { input.value = currentName; input.blur(); }
+  });
+}
+
+function showMultipleSelection() {
+  var content = document.querySelector('.ve-properties-content');
+  if(!content) return;
+  
+  var html = '<div style="text-align:center; padding:20px;">';
+  html += '<div style="font-size:2rem; margin-bottom:12px;">📦</div>';
+  html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:8px;">' + selectedNodes.length + ' bileşen seçili</div>';
+  html += '<div style="margin-top:16px;">';
+  html += '<button onclick="deleteSelectedNodes()" style="width:100%; padding:8px; background:var(--accent-danger); color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.8rem;">🗑️ Seçilenleri Sil</button>';
+  html += '</div>';
+  html += '</div>';
+  
+  content.innerHTML = html;
+}
+
+function showEmptyProperties() {
+  var content = document.querySelector('.ve-properties-content');
+  if(!content) return;
+  
+  content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon">🖱️</div><div>Bir bileşen seçin</div><small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small></div>';
+}
+
+function deleteSelectedNodes() {
+  // TC ↔ Şanzıman bağlıyken Şanzıman Kontrol silinemez
+  if(veIsTCConnectedToGearbox()) {
+    var hasMandatory = selectedNodes.some(function(n) { return n.type === 'shift-controller'; });
+    if(hasMandatory) {
+      showToast('Tork Konvertörü şanzımana bağlıyken Şanzıman Kontrol bileşeni zorunludur, silinemez', 'error');
+      selectedNodes = selectedNodes.filter(function(n) { return n.type !== 'shift-controller'; });
+      if(selectedNodes.length === 0) return;
+    }
+  }
+  selectedNodes.forEach(function(node) {
+    // Silinecek bağlantıları bul
+    var deadConnIds = connections.filter(function(c) {
+      return c.from === node.id || c.to === node.id;
+    }).map(function(c) { return c.id; });
+    
+    // Bu bağlantılara bağlı sensörleri kopar
+    deadConnIds.forEach(function(cid) {
+      nodes.forEach(function(n) {
+        if(n.type === 'sensor' && n.data && n.data.attachedConnection === cid) {
+          n.data.attachedConnection = '';
+          n.data.selectedSignal = '';
+        }
+      });
+    });
+    
+    // Bu bileşene doğrudan bağlı sensörleri kopar (vehicle/road/scenario)
+    nodes.forEach(function(n) {
+      if(n.type === 'sensor' && n.data && n.data.attachedComponent === node.id) {
+        n.data.attachedComponent = '';
+        n.data.selectedSignal = '';
+      }
+    });
+    
+    // Parametrik analizdeki referansları temizle
+    nodes.forEach(function(n) {
+      if(n.type === 'parametric' && n.data && n.data.params) {
+        n.data.params = n.data.params.filter(function(p) { return p.compId !== node.id; });
+      }
+    });
+    
+    // Node'a bağlı connectionları sil
+    connections = connections.filter(function(c) {
+      return c.from !== node.id && c.to !== node.id;
+    });
+    
+    // Node'u sil
+    var nodeEl = document.getElementById(node.id);
+    if(nodeEl) nodeEl.remove();
+    
+    nodes = nodes.filter(function(n) { return n.id !== node.id; });
+  });
+  
+  selectedNodes = [];
+  showEmptyProperties();
+  updateAllConnections();
+  updateNodeCount();
+}
+
+function updateNodeCount() {
+  var countEl = document.querySelector('.ve-toolbar-info');
+  if(countEl) {
+    countEl.innerHTML = nodes.length + ' bileşen, ' + connections.length + ' bağlantı';
+  }
+}
+
