@@ -2400,20 +2400,24 @@ function veUpdateResultsTree() {
     });
     
     var sensorCount = tabNodeObjs.filter(function(n) { return n.type === 'sensor'; }).length;
+    // Sihirbaz sanal sensör sayısı
+    var tabWizNode = tabNodeObjs.find(function(n) { return n.type === 'sensor-wizard' && n.data && n.data.sensorsInstalled; });
+    var tabWizSensors = tabWizNode ? (tabWizNode.data.activeSensors || []) : [];
+    var totalSensorCount = sensorCount + tabWizSensors.length;
     var hasSim = !!tabSimR;
-    
-    var tabIcon = hasSim ? '✅' : (sensorCount > 0 ? '📊' : '📂');
+
+    var tabIcon = hasSim ? '✅' : (totalSensorCount > 0 ? '📊' : '📂');
     var tabLabel = tab.name + (hasSim ? '' : ' (çözülmedi)');
-    
+
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row" style="padding-left:16px;">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (sensorCount > 0 ? '▶' : ' ') + '</span>';
+    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensorCount > 0 ? '▶' : ' ') + '</span>';
     html += '<span class="icon">' + tabIcon + '</span>';
     html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--accent-primary);' : '') + '">' + tabLabel + '</span>';
-    if(sensorCount > 0) html += ' <span style="font-size:0.6rem; color:var(--text-muted); margin-left:auto;">' + sensorCount + ' sensör</span>';
+    if(totalSensorCount > 0) html += ' <span style="font-size:0.6rem; color:var(--text-muted); margin-left:auto;">' + totalSensorCount + ' sensör</span>';
     html += '</div>';
-    
-    if(sensorCount > 0) {
+
+    if(totalSensorCount > 0) {
       html += '<div class="ve-tree-children' + (isActive ? ' open' : '') + '">';
       
       // Prefix: aktif sekme → sensörId direkt, diğer → @tabIdx:sensörId
@@ -2530,7 +2534,70 @@ function veUpdateResultsTree() {
           html += '<span>📌</span> ' + (sn.customName || 'Sensör') + '</div>';
         });
       }
-      
+
+      // ── Sihirbaz Sanal Sensörleri ──
+      if(tabWizSensors.length > 0) {
+        // Sanal sensörleri bileşen tipine göre grupla
+        var wizCompGroups = {};
+        tabWizSensors.forEach(function(ws) {
+          var key = ws.target;
+          if(!wizCompGroups[key]) wizCompGroups[key] = [];
+          wizCompGroups[key].push(ws);
+        });
+
+        html += '<div style="padding:4px 0 2px 32px; font-size:0.65rem; color:#22c55e; font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">🧙 Sihirbaz Sensörleri</div>';
+
+        var wizCompOrder = ['engine','torque-converter','gearbox','shift-controller','vehicle','road','solver'];
+        wizCompOrder.forEach(function(compType) {
+          var sensors = wizCompGroups[compType];
+          if(!sensors || sensors.length === 0) return;
+
+          var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
+          if(compType === 'engine') {
+            var engN = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+            if(engN) compName = componentDefs[engN.type] ? componentDefs[engN.type].name : compName;
+          }
+
+          html += '<div class="ve-tree-item">';
+          html += '<div class="ve-tree-sensor" style="padding-left:36px;">';
+          html += '<span class="arrow" onclick="event.stopPropagation();veToggleTree(this.closest(\'.ve-tree-item\').querySelector(\'.ve-tree-sensor\'))" style="font-size:0.55rem; width:12px; cursor:pointer; color:var(--text-muted);">▶</span>';
+          html += '<span>🧙</span> ' + compName;
+          html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + sensors.length + ' sinyal</span>';
+          html += '</div>';
+          html += '<div class="ve-tree-children">';
+
+          sensors.forEach(function(ws) {
+            // Sinyal bilgisini COMPONENT_SIGNALS'tan al
+            var sigInfo = null;
+            var lookupType = compType;
+            if(compType === 'engine') {
+              var engN2 = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+              if(engN2) lookupType = engN2.type;
+            }
+            if(COMPONENT_SIGNALS[lookupType]) {
+              sigInfo = (COMPONENT_SIGNALS[lookupType].outputs || []).find(function(s) { return s.id === ws.signal; });
+            }
+            if(!sigInfo && COMPONENT_SIGNALS[compType]) {
+              sigInfo = (COMPONENT_SIGNALS[compType].outputs || []).find(function(s) { return s.id === ws.signal; });
+            }
+
+            var sigName = sigInfo ? sigInfo.name : ws.signal;
+            var sigUnit = sigInfo ? sigInfo.unit : '';
+            var wizSensorId = '~' + compType;
+
+            html += '<div class="ve-tree-signal" style="padding-left:52px;" onmousedown="veStartSignalDrag(event,\'' + wizSensorId + '\',\'' + ws.signal + '\')" title="' + sigName + ' (' + sigUnit + ') — Sürükle">';
+            html += '<span>📊</span> ' + sigName + ' <span style="font-size:0.55rem; color:var(--text-muted);">(' + sigUnit + ')</span>';
+            html += '</div>';
+          });
+
+          // Tümünü Ekle
+          html += '<div class="ve-tree-signal" style="padding-left:52px; color:#22c55e; font-style:italic;" onmousedown="veStartSensorDrag(event,\'~' + compType + '\')" title="Tüm sinyalleri sürükle">';
+          html += '<span>📦</span> Tümünü Ekle (' + sensors.length + ' sinyal)';
+          html += '</div>';
+          html += '</div></div>';
+        });
+      }
+
       html += '</div>'; // tree-children (tab content)
     }
     
@@ -5257,7 +5324,45 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
   var tabConns = connections;
   var rawSensorId = sensorId;
   var lookupId = sensorId;
-  
+
+  // ── Sihirbaz sanal sensörü: ~compType formatı ──
+  if(sensorId.charAt(0) === '~') {
+    var compType = sensorId.substring(1);
+    var slot = veResultSlots[slotIdx];
+    if(!slot.sensors) slot.sensors = [];
+    if(!slot.type) slot.type = 'line';
+
+    // X ekseni otomatik
+    if(slot.sensors.length === 0) {
+      var solver = nodes.find(function(n) { return n.type === 'solver'; });
+      var tm = solver && solver.data ? (solver.data.timeMode || 'duration') : 'duration';
+      slot.xAxis = { id: 'time', name: tm === 'stop' ? 'Zaman [s] (Durma)' : 'Zaman [s]', unit: 's' };
+    }
+
+    // Çakışma kontrolü
+    if(slot.sensors.some(function(s) { return s.id === rawSensorId && s.signal === signalId; })) return;
+
+    // Sinyal bilgisini bul
+    var sigInfo = null;
+    var effectiveType = compType;
+    if(compType === 'engine') {
+      var engNode = tabNodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+      if(engNode) effectiveType = engNode.type;
+    }
+    if(COMPONENT_SIGNALS[effectiveType]) {
+      sigInfo = (COMPONENT_SIGNALS[effectiveType].outputs || []).find(function(s) { return s.id === signalId; });
+    }
+    if(!sigInfo && COMPONENT_SIGNALS[compType]) {
+      sigInfo = (COMPONENT_SIGNALS[compType].outputs || []).find(function(s) { return s.id === signalId; });
+    }
+
+    var compName = componentDefs[effectiveType] ? componentDefs[effectiveType].name : compType;
+    var displayName = '[SW] ' + compName + ' — ' + (sigInfo ? sigInfo.name : signalId);
+    slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
+    veRenderSlot(slotIdx);
+    return;
+  }
+
   if(sensorId.charAt(0) === '@') {
     var parts = sensorId.substring(1).split(':');
     var tabIdx = parseInt(parts[0]);
@@ -5326,12 +5431,27 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
 }
 
 function veAddSensorToSlot(slotIdx, sensorId) {
+  // ── Sihirbaz sanal sensörü: ~compType formatı — tüm sinyalleri ekle ──
+  if(sensorId.charAt(0) === '~') {
+    var compType = sensorId.substring(1);
+    var effectiveType = compType;
+    if(compType === 'engine') {
+      var engNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+      if(engNode) effectiveType = engNode.type;
+    }
+    var allSigs = (COMPONENT_SIGNALS[effectiveType] || COMPONENT_SIGNALS[compType] || {}).outputs || [];
+    allSigs.forEach(function(sig) {
+      veAddSignalToSlot(slotIdx, sensorId, sig.id);
+    });
+    return;
+  }
+
   // Cross-tab sensör desteği
   var tabNodes = nodes;
   var tabConns = connections;
   var rawSensorId = sensorId; // orijinal ID (prefix dahil)
   var lookupId = sensorId;
-  
+
   if(sensorId.charAt(0) === '@') {
     var parts = sensorId.substring(1).split(':');
     var tabIdx = parseInt(parts[0]);
