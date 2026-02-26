@@ -22111,11 +22111,33 @@ function veExportSummaryTXT() {
   if(nodes.length === 0) { showToast('Topolojide bileşen yok', 'warning'); return; }
   var summary = veGenerateTopologySummary();
   var blob = new Blob([summary], {type:'text/plain;charset=utf-8'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'topoloji_ozeti_' + new Date().toISOString().slice(0,10) + '.txt';
-  a.click();
-  showToast('Topoloji özeti indirildi');
+  var defaultName = 'topoloji_ozeti_' + new Date().toISOString().slice(0,10) + '.txt';
+
+  if(window.showSaveFilePicker) {
+    window.showSaveFilePicker({
+      suggestedName: defaultName,
+      types: [{
+        description: 'Metin Dosyası',
+        accept: {'text/plain': ['.txt']}
+      }]
+    }).then(function(handle) {
+      return handle.createWritable().then(function(writable) {
+        return writable.write(blob).then(function() {
+          return writable.close();
+        });
+      });
+    }).then(function() {
+      showToast('Topoloji özeti kaydedildi');
+    }).catch(function(err) {
+      if(err.name !== 'AbortError') showToast('Kaydetme hatası: ' + err.message, 'error');
+    });
+  } else {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = defaultName;
+    a.click();
+    showToast('Topoloji özeti indirildi');
+  }
 }
 
 function veClearAll() {
@@ -22176,17 +22198,37 @@ function veSaveTopology() {
   
   var json = JSON.stringify(project, null, 2);
   var blob = new Blob([json], {type: 'application/json'});
-  var url = URL.createObjectURL(blob);
-  
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'topoloji_' + new Date().toISOString().slice(0,10) + '.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  
-  showToast('Proje kaydedildi (' + veTabs.length + ' sekme)');
+  var defaultName = (veProjectName || 'topoloji') + '_' + new Date().toISOString().slice(0,10) + '.json';
+
+  if(window.showSaveFilePicker) {
+    window.showSaveFilePicker({
+      suggestedName: defaultName,
+      types: [{
+        description: 'JSON Dosyası',
+        accept: {'application/json': ['.json']}
+      }]
+    }).then(function(handle) {
+      return handle.createWritable().then(function(writable) {
+        return writable.write(blob).then(function() {
+          return writable.close();
+        });
+      });
+    }).then(function() {
+      showToast('Proje kaydedildi (' + veTabs.length + ' sekme)');
+    }).catch(function(err) {
+      if(err.name !== 'AbortError') showToast('Kaydetme hatası: ' + err.message, 'error');
+    });
+  } else {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = defaultName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Proje kaydedildi (' + veTabs.length + ' sekme)');
+  }
 }
 
 function veLoadTopology() {
