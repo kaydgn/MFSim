@@ -1508,6 +1508,45 @@
   height:20px;margin:0 4px 2px 4px;padding:1px 0;
   display:flex;align-items:center;justify-content:center;
   font-size:0.66rem;color:var(--text-muted);flex-shrink:0;
+  position:relative;
+}
+.ve-xaxis-btn{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:1px 8px;border-radius:3px;cursor:pointer;
+  border:1px solid transparent;transition:all 0.12s;
+  user-select:none;white-space:nowrap;
+}
+.ve-xaxis-btn:hover{
+  border-color:var(--accent-primary);color:var(--accent-primary);
+  background:rgba(45,138,90,0.06);
+}
+.ve-xaxis-btn .ve-xaxis-arrow{
+  font-size:0.5rem;opacity:0.5;transition:transform 0.15s;
+}
+.ve-xaxis-btn:hover .ve-xaxis-arrow{opacity:1;}
+.ve-xaxis-dropdown{
+  position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+  min-width:220px;max-width:340px;max-height:300px;overflow-y:auto;
+  background:var(--bg-primary);border:1px solid var(--border-color);
+  border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.18);
+  z-index:9999;padding:4px 0;font-size:0.68rem;
+}
+.ve-xaxis-dropdown-group{
+  padding:3px 10px 2px;font-size:0.58rem;font-weight:600;
+  color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;
+  border-top:1px solid var(--border-color);margin-top:2px;
+}
+.ve-xaxis-dropdown-group:first-child{border-top:none;margin-top:0;}
+.ve-xaxis-dropdown-item{
+  padding:5px 12px;cursor:pointer;display:flex;align-items:center;gap:6px;
+  transition:background 0.08s;white-space:nowrap;
+}
+.ve-xaxis-dropdown-item:hover{background:var(--bg-tertiary);}
+.ve-xaxis-dropdown-item.active{
+  background:rgba(45,138,90,0.10);color:var(--accent-primary);font-weight:600;
+}
+.ve-xaxis-dropdown-item .ve-xaxis-unit{
+  font-size:0.55rem;color:var(--text-muted);margin-left:auto;opacity:0.7;
 }
 .ve-slot-axis-y{
   width:22px;position:absolute;left:0;top:0;bottom:0;
@@ -5625,7 +5664,13 @@ function veRenderSlot(slotIdx) {
     // ── Eksen kontrol çubuğu (dinamik — veRenderChart tarafından güncellenir) ──
     html += '<div class="ve-axis-ctrl" id="ve-axis-ctrl-' + slotIdx + '" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
     html += '</div>';
-    html += '<div class="ve-slot-axis-x">' + (slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</div>';
+    var xName = slot.xAxis ? slot.xAxis.name : 'Zaman [s]';
+    html += '<div class="ve-slot-axis-x" id="ve-xaxis-area-' + slotIdx + '">';
+    html += '<span class="ve-xaxis-btn" onclick="veShowXAxisPicker(' + slotIdx + ',event)" title="X eksenini değiştir">';
+    html += '<span>' + xName + '</span>';
+    html += '<span class="ve-xaxis-arrow">▲</span>';
+    html += '</span>';
+    html += '</div>';
   } else {
     // ── Tablo modu ──
     html += '<div style="overflow:auto; width:100%; height:100%; flex:1;">';
@@ -5640,6 +5685,14 @@ function veRenderSlot(slotIdx) {
     html += '<tbody id="ve-table-body-' + slotIdx + '">';
     html += '<tr><td colspan="' + (sensors.length + 2) + '" style="padding:20px; text-align:center; color:var(--text-muted);">Simülasyon verisi bekleniyor</td></tr>';
     html += '</tbody></table></div>';
+    // Tablo modu için de X ekseni seçici
+    var xNameTbl = slot.xAxis ? slot.xAxis.name : 'Zaman [s]';
+    html += '<div class="ve-slot-axis-x" id="ve-xaxis-area-' + slotIdx + '">';
+    html += '<span class="ve-xaxis-btn" onclick="veShowXAxisPicker(' + slotIdx + ',event)" title="X eksenini değiştir">';
+    html += '<span>' + xNameTbl + '</span>';
+    html += '<span class="ve-xaxis-arrow">▲</span>';
+    html += '</span>';
+    html += '</div>';
   }
   
   // Legend (her iki mod için) — X butonu ile kaldırma destekli
@@ -5673,6 +5726,211 @@ function veRemoveSensorFromSlot(slotIdx, sensorIdx) {
   // Eksen lock'larını sıfırla (birim grupları değişmiş olabilir)
   slot.yAxisLock = {};
   veRenderSlot(slotIdx);
+}
+
+// ===== X EKSENİ SEÇİCİ (DROPDOWN) =====
+
+// Slot'taki mevcut sinyaller + topolojideki tüm bileşen sinyallerini topla
+function veGetAvailableXAxisOptions(slotIdx) {
+  var slot = veResultSlots[slotIdx];
+  var options = [];
+  var currentId = (slot.xAxis && slot.xAxis.id) ? slot.xAxis.id : 'time';
+
+  // 1) Zaman ekseni (her zaman mevcut)
+  options.push({ group: 'Varsayılan', id: 'time', name: 'Zaman', unit: 's', active: currentId === 'time' });
+
+  // 2) Slot'taki Y sinyallerinden (kullanıcı zaten eklemiş)
+  var slotSensors = slot.sensors || [];
+  if(slotSensors.length > 0) {
+    slotSensors.forEach(function(s) {
+      var axId;
+      if(s.id && s.id.charAt(0) === '~') {
+        axId = s.id + ':' + s.signal;
+      } else {
+        axId = s.id + ':' + s.signal;
+      }
+      options.push({
+        group: 'Paneldeki Sinyaller',
+        id: axId,
+        sensorId: s.id,
+        signal: s.signal,
+        name: s.name,
+        unit: s.unit || '',
+        active: currentId === axId
+      });
+    });
+  }
+
+  // 3) Topolojideki bileşen sinyalleri
+  var tabNodes = nodes || [];
+  var compOrder = ['engine','engine-brake','torque-converter','gearbox','shift-controller','transfer','propshaft','differential','wheel','vehicle','road','solver'];
+  var added = {};
+
+  compOrder.forEach(function(compType) {
+    var compNode = tabNodes.find(function(n) { return n.type === compType; });
+    if(!compNode) return;
+    var sigs = COMPONENT_SIGNALS[compType];
+    if(!sigs || !sigs.outputs) return;
+    var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
+
+    sigs.outputs.forEach(function(sig) {
+      var axId = '~' + compType + ':' + sig.id;
+      if(added[axId]) return;
+      added[axId] = true;
+      options.push({
+        group: compName,
+        id: axId,
+        sensorId: '~' + compType,
+        signal: sig.id,
+        name: sig.name,
+        unit: sig.unit || '',
+        active: currentId === axId
+      });
+    });
+  });
+
+  // 4) Fiziksel sensörlerden
+  var sensorNodes = tabNodes.filter(function(n) { return n.type === 'sensor'; });
+  sensorNodes.forEach(function(sNode) {
+    var sourceType = '';
+    var sourceName = '';
+    if(sNode.data && sNode.data.attachedConnection) {
+      var conn = (connections || []).find(function(c) { return c.id === sNode.data.attachedConnection; });
+      if(conn) {
+        var dir = sNode.data.sensorDirection || 'from';
+        var srcNode = tabNodes.find(function(n) { return n.id === (dir === 'to' ? conn.to : conn.from); });
+        if(srcNode) {
+          sourceType = srcNode.type;
+          sourceName = srcNode.customName || (componentDefs[srcNode.type] ? componentDefs[srcNode.type].name : srcNode.type);
+        }
+      }
+    }
+    if(!sourceType && sNode.data && sNode.data.attachedComponent) {
+      var compN = tabNodes.find(function(n) { return n.id === sNode.data.attachedComponent; });
+      if(compN) {
+        sourceType = compN.type;
+        sourceName = compN.customName || (componentDefs[compN.type] ? componentDefs[compN.type].name : compN.type);
+      }
+    }
+    if(!sourceType) return;
+
+    var sigs = COMPONENT_SIGNALS[sourceType];
+    if(!sigs || !sigs.outputs) return;
+    var sensorLabel = sNode.customName || sourceName;
+
+    sigs.outputs.forEach(function(sig) {
+      var axId = sNode.id + ':' + sig.id;
+      if(added[axId]) return;
+      added[axId] = true;
+      options.push({
+        group: '📌 ' + sensorLabel,
+        id: axId,
+        sensorId: sNode.id,
+        signal: sig.id,
+        name: sig.name,
+        unit: sig.unit || '',
+        active: currentId === axId
+      });
+    });
+  });
+
+  return options;
+}
+
+// Dropdown menüyü göster
+function veShowXAxisPicker(slotIdx, e) {
+  if(e) e.stopPropagation();
+
+  // Zaten açıksa kapat
+  var existing = document.getElementById('ve-xaxis-dropdown-' + slotIdx);
+  if(existing) { existing.remove(); return; }
+
+  // Diğer açık dropdown'ları kapat
+  document.querySelectorAll('.ve-xaxis-dropdown').forEach(function(d) { d.remove(); });
+
+  var area = document.getElementById('ve-xaxis-area-' + slotIdx);
+  if(!area) return;
+
+  var options = veGetAvailableXAxisOptions(slotIdx);
+
+  var html = '';
+  var lastGroup = '';
+  options.forEach(function(opt, i) {
+    if(opt.group !== lastGroup) {
+      lastGroup = opt.group;
+      html += '<div class="ve-xaxis-dropdown-group">' + opt.group + '</div>';
+    }
+    html += '<div class="ve-xaxis-dropdown-item' + (opt.active ? ' active' : '') + '" ';
+    html += 'onclick="veSetSlotXAxis(' + slotIdx + ',' + i + ');event.stopPropagation();" ';
+    html += 'data-opt-idx="' + i + '">';
+    html += '<span>' + (opt.active ? '● ' : '') + opt.name + '</span>';
+    if(opt.unit) html += '<span class="ve-xaxis-unit">' + opt.unit + '</span>';
+    html += '</div>';
+  });
+
+  var dd = document.createElement('div');
+  dd.className = 've-xaxis-dropdown';
+  dd.id = 've-xaxis-dropdown-' + slotIdx;
+  dd.innerHTML = html;
+  // Options verilerini dropdown'a bağla
+  dd._options = options;
+  area.appendChild(dd);
+
+  // Dropdown dışına tıklayınca kapat
+  setTimeout(function() {
+    function closeHandler(ev) {
+      if(!dd.contains(ev.target)) {
+        dd.remove();
+        document.removeEventListener('mousedown', closeHandler, true);
+      }
+    }
+    document.addEventListener('mousedown', closeHandler, true);
+  }, 0);
+}
+
+// X eksenini değiştir
+function veSetSlotXAxis(slotIdx, optIdx) {
+  var dd = document.getElementById('ve-xaxis-dropdown-' + slotIdx);
+  if(!dd || !dd._options) return;
+  var opt = dd._options[optIdx];
+  if(!opt) return;
+
+  var slot = veResultSlots[slotIdx];
+
+  if(opt.id === 'time') {
+    var solver = (nodes || []).find(function(n) { return n.type === 'solver'; });
+    var tm = solver && solver.data ? (solver.data.timeMode || 'duration') : 'duration';
+    slot.xAxis = { id: 'time', name: 'Zaman [s]', unit: 's' };
+  } else {
+    slot.xAxis = {
+      id: opt.id,
+      name: opt.name + ' [' + opt.unit + ']',
+      unit: opt.unit,
+      sensorId: opt.sensorId || null,
+      signal: opt.signal || null
+    };
+  }
+
+  // Dropdown kapat
+  dd.remove();
+
+  // X-axis etiketini güncelle
+  var btn = document.querySelector('#ve-xaxis-area-' + slotIdx + ' .ve-xaxis-btn span:first-child');
+  if(btn) btn.textContent = slot.xAxis.name;
+
+  // Tablo modundaysa başlığı güncelle
+  var tableHeader = document.querySelector('#ve-table-' + slotIdx + ' thead th:nth-child(2)');
+  if(tableHeader) tableHeader.textContent = slot.xAxis.name;
+
+  // Grafik/tabloyu yeniden çiz
+  if(window.veSimResults) {
+    if(slot.type === 'line') {
+      veResetChartView(slotIdx);
+      veRenderChart(slotIdx);
+    } else {
+      veRenderTable(slotIdx);
+    }
+  }
 }
 
 // ===== CANVAS PAN/ZOOM (Gelişmiş canvasOffset sistemi aşağıda) =====
@@ -24924,12 +25182,23 @@ function veRenderChart(slotIdx) {
   var r = window.veSimResults;
   var timeArr = null;
 
-  // Özel X ekseni: ~compType:signal formatı (sihirbaz diyagramları)
-  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id.charAt(0) === '~') {
-    var xParts = slot.xAxis.id.substring(1).split(':');
-    var xCompType = xParts[0];
-    var xSignal = xParts.slice(1).join(':');
-    timeArr = veGetSensorData('~' + xCompType, xSignal);
+  // Özel X ekseni desteği (sanal sensör veya fiziksel sensör)
+  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
+    if(slot.xAxis.id.charAt(0) === '~') {
+      // ~compType:signal formatı (sanal sensör / bileşen verisi)
+      var xParts = slot.xAxis.id.substring(1).split(':');
+      var xCompType = xParts[0];
+      var xSignal = xParts.slice(1).join(':');
+      timeArr = veGetSensorData('~' + xCompType, xSignal);
+    } else {
+      // sensorId:signal formatı (fiziksel sensör verisi)
+      var xColonIdx = slot.xAxis.id.indexOf(':');
+      if(xColonIdx > 0) {
+        var xSensorId = slot.xAxis.id.substring(0, xColonIdx);
+        var xSigId = slot.xAxis.id.substring(xColonIdx + 1);
+        timeArr = veGetSensorData(xSensorId, xSigId);
+      }
+    }
   }
 
   // Standart zaman ekseni
@@ -25490,9 +25759,9 @@ function veChartShowTooltip(slotIdx, e) {
   
   var xLabel = 't';
   var xUnit = 's';
-  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id.charAt(0) === '~') {
+  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
     xLabel = slot.xAxis.name || 'X';
-    xUnit = '';
+    xUnit = slot.xAxis.unit || '';
   }
   var html = '<div style="font-weight:600; font-size:0.62rem; color:var(--text-muted); margin-bottom:3px; border-bottom:1px solid var(--border-color); padding-bottom:2px;">' + xLabel + ' = ' + tArr[idx].toFixed(3) + (xUnit ? ' ' + xUnit : '') + '</div>';
   
@@ -25604,12 +25873,23 @@ function veRenderTable(slotIdx) {
   var r = window.veSimResults;
   var timeArr = null;
 
-  // Özel X ekseni: ~compType:signal formatı (sihirbaz diyagramları)
-  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id.charAt(0) === '~') {
-    var xParts = slot.xAxis.id.substring(1).split(':');
-    var xCompType = xParts[0];
-    var xSignal = xParts.slice(1).join(':');
-    timeArr = veGetSensorData('~' + xCompType, xSignal);
+  // Özel X ekseni desteği (sanal sensör veya fiziksel sensör)
+  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
+    if(slot.xAxis.id.charAt(0) === '~') {
+      // ~compType:signal formatı (sanal sensör / bileşen verisi)
+      var xParts = slot.xAxis.id.substring(1).split(':');
+      var xCompType = xParts[0];
+      var xSignal = xParts.slice(1).join(':');
+      timeArr = veGetSensorData('~' + xCompType, xSignal);
+    } else {
+      // sensorId:signal formatı (fiziksel sensör verisi)
+      var xColonIdx = slot.xAxis.id.indexOf(':');
+      if(xColonIdx > 0) {
+        var xSensorId = slot.xAxis.id.substring(0, xColonIdx);
+        var xSigId = slot.xAxis.id.substring(xColonIdx + 1);
+        timeArr = veGetSensorData(xSensorId, xSigId);
+      }
+    }
   }
 
   if(!timeArr) {

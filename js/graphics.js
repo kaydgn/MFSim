@@ -268,12 +268,23 @@ function veRenderChart(slotIdx) {
   var r = window.veSimResults;
   var timeArr = null;
 
-  // Özel X ekseni: ~compType:signal formatı (sihirbaz diyagramları)
-  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id.charAt(0) === '~') {
-    var xParts = slot.xAxis.id.substring(1).split(':');
-    var xCompType = xParts[0];
-    var xSignal = xParts.slice(1).join(':');
-    timeArr = veGetSensorData('~' + xCompType, xSignal);
+  // Özel X ekseni desteği (sanal sensör veya fiziksel sensör)
+  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
+    if(slot.xAxis.id.charAt(0) === '~') {
+      // ~compType:signal formatı (sanal sensör / bileşen verisi)
+      var xParts = slot.xAxis.id.substring(1).split(':');
+      var xCompType = xParts[0];
+      var xSignal = xParts.slice(1).join(':');
+      timeArr = veGetSensorData('~' + xCompType, xSignal);
+    } else {
+      // sensorId:signal formatı (fiziksel sensör verisi)
+      var xColonIdx = slot.xAxis.id.indexOf(':');
+      if(xColonIdx > 0) {
+        var xSensorId = slot.xAxis.id.substring(0, xColonIdx);
+        var xSigId = slot.xAxis.id.substring(xColonIdx + 1);
+        timeArr = veGetSensorData(xSensorId, xSigId);
+      }
+    }
   }
 
   // Standart zaman ekseni
@@ -834,9 +845,9 @@ function veChartShowTooltip(slotIdx, e) {
   
   var xLabel = 't';
   var xUnit = 's';
-  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id.charAt(0) === '~') {
+  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
     xLabel = slot.xAxis.name || 'X';
-    xUnit = '';
+    xUnit = slot.xAxis.unit || '';
   }
   var html = '<div style="font-weight:600; font-size:0.62rem; color:var(--text-muted); margin-bottom:3px; border-bottom:1px solid var(--border-color); padding-bottom:2px;">' + xLabel + ' = ' + tArr[idx].toFixed(3) + (xUnit ? ' ' + xUnit : '') + '</div>';
   
@@ -948,12 +959,23 @@ function veRenderTable(slotIdx) {
   var r = window.veSimResults;
   var timeArr = null;
 
-  // Özel X ekseni: ~compType:signal formatı (sihirbaz diyagramları)
-  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id.charAt(0) === '~') {
-    var xParts = slot.xAxis.id.substring(1).split(':');
-    var xCompType = xParts[0];
-    var xSignal = xParts.slice(1).join(':');
-    timeArr = veGetSensorData('~' + xCompType, xSignal);
+  // Özel X ekseni desteği (sanal sensör veya fiziksel sensör)
+  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
+    if(slot.xAxis.id.charAt(0) === '~') {
+      // ~compType:signal formatı (sanal sensör / bileşen verisi)
+      var xParts = slot.xAxis.id.substring(1).split(':');
+      var xCompType = xParts[0];
+      var xSignal = xParts.slice(1).join(':');
+      timeArr = veGetSensorData('~' + xCompType, xSignal);
+    } else {
+      // sensorId:signal formatı (fiziksel sensör verisi)
+      var xColonIdx = slot.xAxis.id.indexOf(':');
+      if(xColonIdx > 0) {
+        var xSensorId = slot.xAxis.id.substring(0, xColonIdx);
+        var xSigId = slot.xAxis.id.substring(xColonIdx + 1);
+        timeArr = veGetSensorData(xSensorId, xSigId);
+      }
+    }
   }
 
   if(!timeArr) {
