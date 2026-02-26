@@ -3057,21 +3057,8 @@ function veRenderSlot(slotIdx) {
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
     html += '<div style="font-size:1.5rem; margin-bottom:6px;">📈</div>Simülasyon sonrası grafik görünecek</div>';
     html += '</div>';
-    // ── Eksen kontrol çubuğu ──
-    var yLock = slot.yAxisLock || {};
-    html += '<div class="ve-axis-ctrl" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
-    html += '<span style="font-weight:600; opacity:0.6; margin-right:2px;">Y:</span>';
-    html += '<input type="number" id="ve-ymin-' + slotIdx + '" placeholder="Min (oto)" value="' + (yLock.min !== undefined ? yLock.min : '') + '" step="any" style="width:62px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Y ekseni minimum değer">';
-    html += '<span style="opacity:0.4;">—</span>';
-    html += '<input type="number" id="ve-ymax-' + slotIdx + '" placeholder="Max (oto)" value="' + (yLock.max !== undefined ? yLock.max : '') + '" step="any" style="width:62px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Y ekseni maksimum değer">';
-    html += '<button onclick="veClearAxisLock(' + slotIdx + ')" title="Otomatik aralığa dön" style="padding:1px 4px; font-size:0.56rem; background:transparent; border:1px solid var(--border-color); border-radius:2px; cursor:pointer; color:var(--text-muted);" onmouseover="this.style.color=\'var(--accent-primary)\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.color=\'var(--text-muted)\';this.style.borderColor=\'var(--border-color)\'">↺ Oto</button>';
-    // Dual axis sağ eksen (varsa simülasyon sonrası dinamik güncellenir)
-    html += '<span id="ve-yaxis-r-ctrl-' + slotIdx + '" style="display:none; margin-left:6px; padding-left:6px; border-left:1px solid var(--border-color);">';
-    html += '<span style="font-weight:600; opacity:0.6; margin-right:2px;">Y₂:</span>';
-    html += '<input type="number" id="ve-ymin-r-' + slotIdx + '" placeholder="Min" value="' + (yLock.minR !== undefined ? yLock.minR : '') + '" step="any" style="width:55px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Sağ Y ekseni minimum">';
-    html += '<span style="opacity:0.4;">—</span>';
-    html += '<input type="number" id="ve-ymax-r-' + slotIdx + '" placeholder="Max" value="' + (yLock.maxR !== undefined ? yLock.maxR : '') + '" step="any" style="width:55px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Sağ Y ekseni maksimum">';
-    html += '</span>';
+    // ── Eksen kontrol çubuğu (dinamik — veRenderChart tarafından güncellenir) ──
+    html += '<div class="ve-axis-ctrl" id="ve-axis-ctrl-' + slotIdx + '" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
     html += '</div>';
     html += '<div class="ve-slot-axis-x">' + (slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</div>';
   } else {
@@ -3090,12 +3077,13 @@ function veRenderSlot(slotIdx) {
     html += '</tbody></table></div>';
   }
   
-  // Legend (her iki mod için)
+  // Legend (her iki mod için) — X butonu ile kaldırma destekli
   html += '<div class="ve-slot-legend">';
   sensors.forEach(function(s, i) {
     html += '<span class="ve-slot-legend-item" style="background:' + colors[i % colors.length] + '15; color:' + colors[i % colors.length] + '; border:1px solid ' + colors[i % colors.length] + '30;">';
     html += '<span style="width:10px; height:3px; border-radius:1px; background:' + colors[i % colors.length] + '; display:inline-block;"></span> ' + s.name;
     if(s.unit) html += ' <span style="opacity:0.6;">[' + s.unit + ']</span>';
+    html += '<span class="ve-legend-remove" onclick="veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
     html += '</span>';
   });
   html += '</div>';
@@ -3110,6 +3098,16 @@ function veRenderSlot(slotIdx) {
   } else {
     if(window.veSimResults) veRenderTable(slotIdx);
   }
+}
+
+// ===== LEJANTTAN SENSÖR KALDIRMA =====
+function veRemoveSensorFromSlot(slotIdx, sensorIdx) {
+  var slot = veResultSlots[slotIdx];
+  if(!slot || !slot.sensors || sensorIdx < 0 || sensorIdx >= slot.sensors.length) return;
+  slot.sensors.splice(sensorIdx, 1);
+  // Eksen lock'larını sıfırla (birim grupları değişmiş olabilir)
+  slot.yAxisLock = {};
+  veRenderSlot(slotIdx);
 }
 
 // ===== CANVAS PAN/ZOOM (Gelişmiş canvasOffset sistemi aşağıda) =====

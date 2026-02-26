@@ -1481,8 +1481,15 @@
 .ve-slot-legend{display:flex;gap:4px;padding:1px 6px 3px;flex-wrap:wrap;flex-shrink:0;}
 .ve-slot-legend-item{
   font-size:0.65rem;padding:1px 6px;border-radius:3px;
-  display:flex;align-items:center;gap:3px;cursor:default;
+  display:flex;align-items:center;gap:3px;cursor:default;transition:background 0.15s;
 }
+.ve-slot-legend-item:hover{filter:brightness(1.1);}
+.ve-legend-remove{
+  margin-left:3px;cursor:pointer;font-size:0.5rem;opacity:0;
+  transition:opacity 0.15s;padding:0 2px;border-radius:2px;font-weight:700;
+}
+.ve-slot-legend-item:hover .ve-legend-remove{opacity:0.7;}
+.ve-legend-remove:hover{opacity:1 !important;background:rgba(255,0,0,0.15);}
 /* Chart tooltip / crosshair */
 .ve-chart-tooltip{
   position:absolute;pointer-events:none;z-index:20;

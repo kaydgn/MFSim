@@ -1490,8 +1490,15 @@
 .ve-slot-legend{display:flex;gap:4px;padding:1px 6px 3px;flex-wrap:wrap;flex-shrink:0;}
 .ve-slot-legend-item{
   font-size:0.65rem;padding:1px 6px;border-radius:3px;
-  display:flex;align-items:center;gap:3px;cursor:default;
+  display:flex;align-items:center;gap:3px;cursor:default;transition:background 0.15s;
 }
+.ve-slot-legend-item:hover{filter:brightness(1.1);}
+.ve-legend-remove{
+  margin-left:3px;cursor:pointer;font-size:0.5rem;opacity:0;
+  transition:opacity 0.15s;padding:0 2px;border-radius:2px;font-weight:700;
+}
+.ve-slot-legend-item:hover .ve-legend-remove{opacity:0.7;}
+.ve-legend-remove:hover{opacity:1 !important;background:rgba(255,0,0,0.15);}
 /* Chart tooltip / crosshair */
 .ve-chart-tooltip{
   position:absolute;pointer-events:none;z-index:20;
@@ -5325,21 +5332,8 @@ function veRenderSlot(slotIdx) {
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
     html += '<div style="font-size:1.5rem; margin-bottom:6px;">📈</div>Simülasyon sonrası grafik görünecek</div>';
     html += '</div>';
-    // ── Eksen kontrol çubuğu ──
-    var yLock = slot.yAxisLock || {};
-    html += '<div class="ve-axis-ctrl" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
-    html += '<span style="font-weight:600; opacity:0.6; margin-right:2px;">Y:</span>';
-    html += '<input type="number" id="ve-ymin-' + slotIdx + '" placeholder="Min (oto)" value="' + (yLock.min !== undefined ? yLock.min : '') + '" step="any" style="width:62px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Y ekseni minimum değer">';
-    html += '<span style="opacity:0.4;">—</span>';
-    html += '<input type="number" id="ve-ymax-' + slotIdx + '" placeholder="Max (oto)" value="' + (yLock.max !== undefined ? yLock.max : '') + '" step="any" style="width:62px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Y ekseni maksimum değer">';
-    html += '<button onclick="veClearAxisLock(' + slotIdx + ')" title="Otomatik aralığa dön" style="padding:1px 4px; font-size:0.56rem; background:transparent; border:1px solid var(--border-color); border-radius:2px; cursor:pointer; color:var(--text-muted);" onmouseover="this.style.color=\'var(--accent-primary)\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.color=\'var(--text-muted)\';this.style.borderColor=\'var(--border-color)\'">↺ Oto</button>';
-    // Dual axis sağ eksen (varsa simülasyon sonrası dinamik güncellenir)
-    html += '<span id="ve-yaxis-r-ctrl-' + slotIdx + '" style="display:none; margin-left:6px; padding-left:6px; border-left:1px solid var(--border-color);">';
-    html += '<span style="font-weight:600; opacity:0.6; margin-right:2px;">Y₂:</span>';
-    html += '<input type="number" id="ve-ymin-r-' + slotIdx + '" placeholder="Min" value="' + (yLock.minR !== undefined ? yLock.minR : '') + '" step="any" style="width:55px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Sağ Y ekseni minimum">';
-    html += '<span style="opacity:0.4;">—</span>';
-    html += '<input type="number" id="ve-ymax-r-' + slotIdx + '" placeholder="Max" value="' + (yLock.maxR !== undefined ? yLock.maxR : '') + '" step="any" style="width:55px; padding:1px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')" title="Sağ Y ekseni maksimum">';
-    html += '</span>';
+    // ── Eksen kontrol çubuğu (dinamik — veRenderChart tarafından güncellenir) ──
+    html += '<div class="ve-axis-ctrl" id="ve-axis-ctrl-' + slotIdx + '" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
     html += '</div>';
     html += '<div class="ve-slot-axis-x">' + (slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</div>';
   } else {
@@ -5358,19 +5352,20 @@ function veRenderSlot(slotIdx) {
     html += '</tbody></table></div>';
   }
   
-  // Legend (her iki mod için)
+  // Legend (her iki mod için) — X butonu ile kaldırma destekli
   html += '<div class="ve-slot-legend">';
   sensors.forEach(function(s, i) {
     html += '<span class="ve-slot-legend-item" style="background:' + colors[i % colors.length] + '15; color:' + colors[i % colors.length] + '; border:1px solid ' + colors[i % colors.length] + '30;">';
     html += '<span style="width:10px; height:3px; border-radius:1px; background:' + colors[i % colors.length] + '; display:inline-block;"></span> ' + s.name;
     if(s.unit) html += ' <span style="opacity:0.6;">[' + s.unit + ']</span>';
+    html += '<span class="ve-legend-remove" onclick="veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
     html += '</span>';
   });
   html += '</div>';
   html += '</div>';
-  
+
   body.innerHTML = html;
-  
+
   if(type === 'line') {
     veResetChartView(slotIdx);
     if(window.veSimResults) veRenderChart(slotIdx);
@@ -5378,6 +5373,16 @@ function veRenderSlot(slotIdx) {
   } else {
     if(window.veSimResults) veRenderTable(slotIdx);
   }
+}
+
+// ===== LEJANTTAN SENSÖR KALDIRMA =====
+function veRemoveSensorFromSlot(slotIdx, sensorIdx) {
+  var slot = veResultSlots[slotIdx];
+  if(!slot || !slot.sensors || sensorIdx < 0 || sensorIdx >= slot.sensors.length) return;
+  slot.sensors.splice(sensorIdx, 1);
+  // Eksen lock'larını sıfırla (birim grupları değişmiş olabilir)
+  slot.yAxisLock = {};
+  veRenderSlot(slotIdx);
 }
 
 // ===== CANVAS PAN/ZOOM (Gelişmiş canvasOffset sistemi aşağıda) =====
@@ -24288,25 +24293,17 @@ function veResetChartView(slotIdx) {
   veChartViews[slotIdx] = { panX: 0, panY: 0, zoomX: 1, zoomY: 1 };
 }
 
-// ── Y-Axis Manuel Kontrol ──
+// ── Y-Axis Manuel Kontrol (N-eksen destekli) ──
 function veSetAxisLock(slotIdx) {
   var slot = veResultSlots[slotIdx];
   if(!slot) return;
   if(!slot.yAxisLock) slot.yAxisLock = {};
-  
-  var minEl = document.getElementById('ve-ymin-' + slotIdx);
-  var maxEl = document.getElementById('ve-ymax-' + slotIdx);
-  var minREl = document.getElementById('ve-ymin-r-' + slotIdx);
-  var maxREl = document.getElementById('ve-ymax-r-' + slotIdx);
-  
-  // Sol eksen
-  slot.yAxisLock.min = (minEl && minEl.value !== '') ? parseFloat(minEl.value) : undefined;
-  slot.yAxisLock.max = (maxEl && maxEl.value !== '') ? parseFloat(maxEl.value) : undefined;
-  // Sağ eksen
-  slot.yAxisLock.minR = (minREl && minREl.value !== '') ? parseFloat(minREl.value) : undefined;
-  slot.yAxisLock.maxR = (maxREl && maxREl.value !== '') ? parseFloat(maxREl.value) : undefined;
-  
-  // Zoom/pan'ı sıfırla (manuel aralık ayarlandığında)
+  for(var ai = 0; ai < 8; ai++) {
+    var minEl = document.getElementById('ve-ymin-ax' + ai + '-' + slotIdx);
+    var maxEl = document.getElementById('ve-ymax-ax' + ai + '-' + slotIdx);
+    if(minEl) slot.yAxisLock['min' + ai] = (minEl.value !== '') ? parseFloat(minEl.value) : undefined;
+    if(maxEl) slot.yAxisLock['max' + ai] = (maxEl.value !== '') ? parseFloat(maxEl.value) : undefined;
+  }
   veChartViews[slotIdx] = { panX: 0, panY: 0, zoomX: 1, zoomY: 1 };
   veRenderChart(slotIdx);
 }
@@ -24315,13 +24312,12 @@ function veClearAxisLock(slotIdx) {
   var slot = veResultSlots[slotIdx];
   if(!slot) return;
   slot.yAxisLock = {};
-  
-  var ids = ['ve-ymin-', 've-ymax-', 've-ymin-r-', 've-ymax-r-'];
-  ids.forEach(function(id) {
-    var el = document.getElementById(id + slotIdx);
-    if(el) el.value = '';
-  });
-  
+  for(var ai = 0; ai < 8; ai++) {
+    var minEl = document.getElementById('ve-ymin-ax' + ai + '-' + slotIdx);
+    var maxEl = document.getElementById('ve-ymax-ax' + ai + '-' + slotIdx);
+    if(minEl) minEl.value = '';
+    if(maxEl) maxEl.value = '';
+  }
   veChartViews[slotIdx] = { panX: 0, panY: 0, zoomX: 1, zoomY: 1 };
   veRenderChart(slotIdx);
 }
@@ -24420,43 +24416,42 @@ function veRenderChart(slotIdx) {
     grp.yMax += pad;
   });
   
-  // ====== Y-AXIS LOCK OVERRIDE ======
+  // ====== Y-AXIS LOCK OVERRIDE (N-eksen) ======
   var yLock = slot.yAxisLock || {};
-  // Sol eksen (ilk grup) — yLock.min / yLock.max
-  if(unitGroups.length > 0) {
-    if(yLock.min !== undefined && isFinite(yLock.min)) unitGroups[0].yMin = yLock.min;
-    if(yLock.max !== undefined && isFinite(yLock.max)) unitGroups[0].yMax = yLock.max;
-    unitGroups[0]._locked = (yLock.min !== undefined || yLock.max !== undefined);
-  }
-  // Sağ eksen (ikinci grup) — yLock.minR / yLock.maxR
-  if(unitGroups.length > 1) {
-    if(yLock.minR !== undefined && isFinite(yLock.minR)) unitGroups[1].yMin = yLock.minR;
-    if(yLock.maxR !== undefined && isFinite(yLock.maxR)) unitGroups[1].yMax = yLock.maxR;
-    unitGroups[1]._locked = (yLock.minR !== undefined || yLock.maxR !== undefined);
-  }
-  
-  // En fazla 2 eksen — fazlası sol eksene eklenir
+  unitGroups.forEach(function(grp, gi) {
+    var mkMin = yLock['min' + gi], mkMax = yLock['max' + gi];
+    if(mkMin !== undefined && isFinite(mkMin)) grp.yMin = mkMin;
+    if(mkMax !== undefined && isFinite(mkMax)) grp.yMax = mkMax;
+    grp._locked = (mkMin !== undefined || mkMax !== undefined);
+  });
+
+  // ====== N-EKSEN DAĞITIMI (sol/sağ alternating) ======
   var hasDualAxis = unitGroups.length >= 2;
-  var leftAxis = unitGroups[0]; // sol Y ekseni (ilk birim grubu)
-  var rightAxis = hasDualAxis ? unitGroups[1] : null; // sağ Y ekseni
-  // 3+ farklı birim varsa → hepsini sol eksene ekle (fallback)
-  if(unitGroups.length > 2) {
-    for(var ug = 2; ug < unitGroups.length; ug++) {
-      leftAxis.dsIndices = leftAxis.dsIndices.concat(unitGroups[ug].dsIndices);
-      if(unitGroups[ug].yMin < leftAxis.yMin) leftAxis.yMin = unitGroups[ug].yMin;
-      if(unitGroups[ug].yMax > leftAxis.yMax) leftAxis.yMax = unitGroups[ug].yMax;
-    }
-    unitGroups = [leftAxis, rightAxis];
-  }
-  
+  unitGroups.forEach(function(grp) {
+    grp._color = datasets[grp.dsIndices[0]] ? datasets[grp.dsIndices[0]].color : '#888';
+  });
+  var leftAxes = [], rightAxes = [];
+  unitGroups.forEach(function(grp, gi) {
+    grp._globalIdx = gi;
+    if(gi % 2 === 0) { grp._side = 'left'; grp._sideIdx = leftAxes.length; leftAxes.push(grp); }
+    else { grp._side = 'right'; grp._sideIdx = rightAxes.length; rightAxes.push(grp); }
+  });
+
   // Dataset → axis mapping
   datasets.forEach(function(ds, di) {
-    ds._axisIdx = 0; // default left
-    if(rightAxis && rightAxis.dsIndices.indexOf(di) >= 0) ds._axisIdx = 1;
+    ds._axisIdx = 0;
+    for(var gi = 0; gi < unitGroups.length; gi++) {
+      if(unitGroups[gi].dsIndices.indexOf(di) >= 0) { ds._axisIdx = gi; break; }
+    }
   });
-  
-  // ====== MARJİN ======
-  var margin = {left: 58, right: hasDualAxis ? 58 : 14, top: 14, bottom: 30};
+
+  // ====== MARJİN (dinamik — eksen sayısına göre) ======
+  var AXIS_W = 52;
+  var margin = {
+    left: Math.max(58, 14 + leftAxes.length * AXIS_W),
+    right: rightAxes.length > 0 ? Math.max(58, 14 + rightAxes.length * AXIS_W) : 14,
+    top: 14, bottom: 30
+  };
   var pw = w - margin.left - margin.right;
   var ph = h - margin.top - margin.bottom;
   if(pw < 20 || ph < 20) return;
@@ -24476,8 +24471,7 @@ function veRenderChart(slotIdx) {
   var xMax = xCenter + xRange / 2;
   
   // Her eksen için zoom/pan uygula
-  var axes = [leftAxis];
-  if(rightAxis) axes.push(rightAxis);
+  var axes = unitGroups; // tüm eksenler
   
   axes.forEach(function(ax) {
     if(ax._locked) {
@@ -24512,14 +24506,14 @@ function veRenderChart(slotIdx) {
   slot._chartMeta = {
     margin: margin, pw: pw, ph: ph, w: w, h: h,
     xMin: xMin, xMax: xMax,
-    yMin: leftAxis._viewMin, yMax: leftAxis._viewMax,
+    yMin: axes[0]._viewMin, yMax: axes[0]._viewMax,
     dataXMin: dataXMin, dataXMax: dataXMax,
-    dataYMin: leftAxis.yMin, dataYMax: leftAxis.yMax,
+    dataYMin: axes[0].yMin, dataYMax: axes[0].yMax,
     datasets: datasets,
     timeArr: timeArr,
     hasDualAxis: hasDualAxis,
     axes: axes.map(function(ax) {
-      return { unit: ax.unit, yMin: ax._viewMin, yMax: ax._viewMax, yStep: ax._yStep };
+      return { unit: ax.unit, yMin: ax._viewMin, yMax: ax._viewMax, yStep: ax._yStep, color: ax._color };
     })
   };
   
@@ -24534,9 +24528,9 @@ function veRenderChart(slotIdx) {
   ctx.rect(margin.left, margin.top, pw, ph);
   ctx.clip();
   
-  // Y grid (sol eksen referanslı)
-  var lyStep = leftAxis._yStep;
-  for(var yv = leftAxis._tickStart; yv <= leftAxis._viewMax + lyStep * 0.01; yv += lyStep) {
+  // Y grid (ilk eksen referanslı)
+  var lyStep = axes[0]._yStep;
+  for(var yv = axes[0]._tickStart; yv <= axes[0]._viewMax + lyStep * 0.01; yv += lyStep) {
     var gy = yPosAxis(yv, 0);
     if(gy < margin.top - 1 || gy > margin.top + ph + 1) continue;
     ctx.strokeStyle = 'rgba(128,128,128,0.1)';
@@ -24593,61 +24587,69 @@ function veRenderChart(slotIdx) {
   
   ctx.restore(); // clip kaldır
   
-  // ====== SOL Y ETİKETLERİ ======
+  // ====== SOL Y ETİKETLERİ (N-eksen) ======
   ctx.textBaseline = 'middle';
-  var leftColor = hasDualAxis ? datasets[leftAxis.dsIndices[0]].color : 'rgba(160,160,180,0.8)';
-  for(var yv = leftAxis._tickStart; yv <= leftAxis._viewMax + lyStep * 0.01; yv += lyStep) {
-    var gy = yPosAxis(yv, 0);
-    if(gy < margin.top - 2 || gy > margin.top + ph + 2) continue;
-    ctx.fillStyle = leftColor;
-    ctx.font = '10px -apple-system,system-ui,sans-serif';
-    ctx.textAlign = 'right';
-    ctx.fillText(veFormatAxisVal(yv), margin.left - 6, gy);
-  }
-  // Sol birim etiketi
-  if(hasDualAxis && leftAxis.unit) {
-    ctx.save();
-    ctx.translate(10, margin.top + ph / 2);
-    ctx.rotate(-Math.PI / 2);
-    ctx.fillStyle = leftColor;
-    ctx.font = 'bold 9px -apple-system,system-ui,sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('[' + leftAxis.unit + ']', 0, 0);
-    ctx.restore();
-  }
-  
-  // ====== SAĞ Y ETİKETLERİ (dual axis) ======
-  if(hasDualAxis && rightAxis) {
-    var ryStep = rightAxis._yStep;
-    var rightColor = datasets[rightAxis.dsIndices[0]].color;
-    for(var yv = rightAxis._tickStart; yv <= rightAxis._viewMax + ryStep * 0.01; yv += ryStep) {
-      var gy = yPosAxis(yv, 1);
+  leftAxes.forEach(function(ax, li) {
+    var axColor = (unitGroups.length >= 2) ? ax._color : 'rgba(160,160,180,0.8)';
+    var labelX = margin.left - 6 - li * AXIS_W;
+    var unitX = margin.left - 40 - li * AXIS_W;
+    var aStep = ax._yStep;
+    for(var yv = ax._tickStart; yv <= ax._viewMax + aStep * 0.01; yv += aStep) {
+      var gy = yPosAxis(yv, ax._globalIdx);
       if(gy < margin.top - 2 || gy > margin.top + ph + 2) continue;
-      ctx.fillStyle = rightColor;
+      ctx.fillStyle = axColor;
       ctx.font = '10px -apple-system,system-ui,sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(veFormatAxisVal(yv), margin.left + pw + 6, gy);
+      ctx.textAlign = 'right';
+      ctx.fillText(veFormatAxisVal(yv), labelX, gy);
     }
-    // Sağ birim etiketi
-    if(rightAxis.unit) {
+    if(ax.unit) {
       ctx.save();
-      ctx.translate(w - 8, margin.top + ph / 2);
-      ctx.rotate(Math.PI / 2);
-      ctx.fillStyle = rightColor;
+      ctx.translate(unitX, margin.top + ph / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillStyle = axColor;
       ctx.font = 'bold 9px -apple-system,system-ui,sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('[' + rightAxis.unit + ']', 0, 0);
+      ctx.fillText('[' + ax.unit + ']', 0, 0);
       ctx.restore();
     }
-    
-    // Sağ eksen çerçeve
-    ctx.strokeStyle = rightColor + '40';
+    if(li > 0) {
+      var lineX = margin.left - li * AXIS_W + 4;
+      ctx.strokeStyle = axColor + '30';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(lineX, margin.top); ctx.lineTo(lineX, margin.top + ph); ctx.stroke();
+    }
+  });
+
+  // ====== SAĞ Y ETİKETLERİ (N-eksen) ======
+  rightAxes.forEach(function(ax, ri) {
+    var axColor = ax._color;
+    var labelX = margin.left + pw + 6 + ri * AXIS_W;
+    var unitX = margin.left + pw + 40 + ri * AXIS_W;
+    var aStep = ax._yStep;
+    for(var yv = ax._tickStart; yv <= ax._viewMax + aStep * 0.01; yv += aStep) {
+      var gy = yPosAxis(yv, ax._globalIdx);
+      if(gy < margin.top - 2 || gy > margin.top + ph + 2) continue;
+      ctx.fillStyle = axColor;
+      ctx.font = '10px -apple-system,system-ui,sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(veFormatAxisVal(yv), labelX, gy);
+    }
+    if(ax.unit) {
+      ctx.save();
+      ctx.translate(unitX, margin.top + ph / 2);
+      ctx.rotate(Math.PI / 2);
+      ctx.fillStyle = axColor;
+      ctx.font = 'bold 9px -apple-system,system-ui,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('[' + ax.unit + ']', 0, 0);
+      ctx.restore();
+    }
+    var lineX = margin.left + pw + ri * AXIS_W;
+    if(ri === 0) lineX = margin.left + pw;
+    ctx.strokeStyle = axColor + '40';
     ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(margin.left + pw, margin.top);
-    ctx.lineTo(margin.left + pw, margin.top + ph);
-    ctx.stroke();
-  }
+    ctx.beginPath(); ctx.moveTo(lineX, margin.top); ctx.lineTo(lineX, margin.top + ph); ctx.stroke();
+  });
   
   // ====== X ETİKETLERİ ======
   ctx.textBaseline = 'top';
@@ -24675,9 +24677,24 @@ function veRenderChart(slotIdx) {
     ctx.fillText('x' + view.zoomX.toFixed(1) + ' | Cift tik: sifirla', w - 6, 4);
   }
   
-  // Sağ eksen kontrol panelini göster/gizle
-  var rCtrl = document.getElementById('ve-yaxis-r-ctrl-' + slotIdx);
-  if(rCtrl) rCtrl.style.display = hasDualAxis ? '' : 'none';
+  // Eksen kontrol panelini dinamik güncelle
+  var axCtrlWrap = document.getElementById('ve-axis-ctrl-' + slotIdx);
+  if(axCtrlWrap) {
+    var ctrlHTML = '';
+    unitGroups.forEach(function(grp, gi) {
+      var yLk = slot.yAxisLock || {};
+      var label = grp._side === 'left' ? 'Y' : 'Y';
+      if(unitGroups.length > 1) label = grp.unit ? ('[' + grp.unit + ']') : ('Y' + (gi + 1));
+      ctrlHTML += '<span style="display:inline-flex; align-items:center; gap:2px;' + (gi > 0 ? ' margin-left:4px; padding-left:4px; border-left:1px solid var(--border-color);' : '') + '">';
+      ctrlHTML += '<span style="font-weight:600; opacity:0.7; color:' + grp._color + '; font-size:0.55rem; margin-right:1px;">' + label + '</span>';
+      ctrlHTML += '<input type="number" id="ve-ymin-ax' + gi + '-' + slotIdx + '" placeholder="Min" value="' + (yLk['min' + gi] !== undefined ? yLk['min' + gi] : '') + '" step="any" style="width:50px; padding:1px 2px; font-size:0.55rem; background:var(--bg-input); color:' + grp._color + '; border:1px solid ' + grp._color + '40; border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')">';
+      ctrlHTML += '<span style="opacity:0.4;">—</span>';
+      ctrlHTML += '<input type="number" id="ve-ymax-ax' + gi + '-' + slotIdx + '" placeholder="Max" value="' + (yLk['max' + gi] !== undefined ? yLk['max' + gi] : '') + '" step="any" style="width:50px; padding:1px 2px; font-size:0.55rem; background:var(--bg-input); color:' + grp._color + '; border:1px solid ' + grp._color + '40; border-radius:2px; text-align:center;" onchange="veSetAxisLock(' + slotIdx + ')">';
+      ctrlHTML += '</span>';
+    });
+    ctrlHTML += '<button onclick="veClearAxisLock(' + slotIdx + ')" title="Otomatik aralığa dön" style="padding:1px 4px; font-size:0.56rem; background:transparent; border:1px solid var(--border-color); border-radius:2px; cursor:pointer; color:var(--text-muted); margin-left:4px;" onmouseover="this.style.color=\'var(--accent-primary)\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.color=\'var(--text-muted)\';this.style.borderColor=\'var(--border-color)\'">↺ Oto</button>';
+    axCtrlWrap.innerHTML = ctrlHTML;
+  }
 }
 
 // ═══════ CHART İNTERAKTİVİTE — PAN / ZOOM / TOOLTIP ═══════
@@ -24896,10 +24913,12 @@ function veChartShowTooltip(slotIdx, e) {
     dot.style.borderColor = ds.color;
     crosshair.appendChild(dot);
     
-    // Eksen tarafı göstergesi (dual modda)
+    // Eksen tarafı göstergesi (çoklu eksen modunda)
     var axisBadge = '';
-    if(m.hasDualAxis) {
-      axisBadge = axIdx === 0 ? ' <span style="opacity:0.4;font-size:0.55rem;">◀</span>' : ' <span style="opacity:0.4;font-size:0.55rem;">▶</span>';
+    if(m.hasDualAxis && axesInfo[axIdx]) {
+      var axUnit = axesInfo[axIdx].unit;
+      var axClr = axesInfo[axIdx].color || ds.color;
+      axisBadge = ' <span style="opacity:0.5;font-size:0.5rem;color:' + axClr + ';">[' + (axUnit || ('Y' + (axIdx+1))) + ']</span>';
     }
     
     html += '<div class="ve-chart-tooltip-row">';
