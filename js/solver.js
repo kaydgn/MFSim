@@ -152,7 +152,55 @@ function veSolverRun() {
         progressText.textContent = 'Tamamlandı!';
         
         window.veSimResults = simResult;
-        
+
+        // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
+        if(typeof veTabs !== 'undefined' && veTabs.length > 1) {
+          var _origNodes = nodes;
+          var _origConns = connections;
+          var _origSimResults = window.veSimResults;
+          var _origChartViews = (typeof veChartViews !== 'undefined') ? JSON.parse(JSON.stringify(veChartViews)) : null;
+
+          for(var _ti = 0; _ti < veTabs.length; _ti++) {
+            if(_ti === veActiveTabIdx) continue;
+            var _otherTab = veTabs[_ti];
+            if(!_otherTab.state || !_otherTab.state.nodes || _otherTab.state.nodes.length === 0) continue;
+            var _hasEngine = _otherTab.state.nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+            if(!_hasEngine) continue;
+
+            try {
+              var _tempNodes = _otherTab.state.nodes.map(function(n) {
+                var _def = componentDefs[n.type];
+                if(!_def) return null;
+                return {
+                  id: n.id, type: n.type, x: n.x, y: n.y,
+                  width: n.width || 65, height: n.height || 60,
+                  def: _def,
+                  customName: n.customName || '',
+                  mirrored: n.mirrored || false,
+                  isMasterWheel: n.isMasterWheel || false,
+                  isMasterDiff: n.isMasterDiff || false,
+                  data: JSON.parse(JSON.stringify(n.data || {}))
+                };
+              }).filter(function(n) { return n !== null; });
+
+              var _tempConns = _otherTab.state.connections ? JSON.parse(JSON.stringify(_otherTab.state.connections)) : [];
+
+              nodes = _tempNodes;
+              connections = _tempConns;
+
+              var _otherResult = veActiveModule === 'full-throttle' ? veFTRunSimulationEngine() : veRunSimulationEngine();
+              _otherTab.state.simResults = _otherResult;
+            } catch(_err) {
+              console.warn('[MFSim] Topoloji çözüm hatası (' + _otherTab.name + '):', _err.message);
+            }
+          }
+
+          nodes = _origNodes;
+          connections = _origConns;
+          window.veSimResults = _origSimResults;
+          if(_origChartViews) veChartViews = _origChartViews;
+        }
+
         var totalTime = simResult.time[simResult.time.length - 1];
         var ss = simResult.solverStats || {};
         
