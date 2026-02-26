@@ -463,12 +463,12 @@ function getEnginePropertiesHTML(node) {
     html += '</tr></thead><tbody id="ve-acc-table-' + node.id + '">';
     
     var defaultAcc = [
-      {name: 'Fan (Clutch Fan)', standardLoss: 0, userLoss: 0},
-      {name: 'Alternator / Generator', standardLoss: 0, userLoss: 0},
-      {name: 'Air Compressor', standardLoss: 0, userLoss: 0},
-      {name: 'Steering Pump', standardLoss: 0, userLoss: 0},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0},
+      {name: 'Alternatör / Jeneratör', standardLoss: 0, userLoss: 0},
+      {name: 'Hava Kompresörü', standardLoss: 0, userLoss: 0},
+      {name: 'Direksiyon Pompası', standardLoss: 0, userLoss: 0},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ];
     var accData = accessories.length > 0 ? accessories : defaultAcc;
     
@@ -748,12 +748,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2150, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'azra_i6_2500_studio': {
@@ -785,12 +785,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2150, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'azra_i6_2500_panter': {
@@ -822,12 +822,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2150, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'bmc_i4_1600': {
@@ -857,12 +857,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2150, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb45_250_fr94257': {
@@ -897,12 +897,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2895, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb45e3_185_fr92152': {
@@ -926,12 +926,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb45e3_185_fr92154': {
@@ -955,12 +955,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb45e5_207_fr92473': {
@@ -990,12 +990,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67_fr98387': {
@@ -1032,12 +1032,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2830, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 20.2, userLoss: 20.2},
-      {name: 'Alternator / Generator', standardLoss: 2.1, userLoss: 2.1},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.6, userLoss: 1.6},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 20.2, userLoss: 20.2},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.1, userLoss: 2.1},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.6, userLoss: 1.6},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_185_fr95009': {
@@ -1062,12 +1062,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_210_fr95010': {
@@ -1092,12 +1092,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_230_fr95011': {
@@ -1122,12 +1122,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_245_fr95012': {
@@ -1152,12 +1152,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_285_fr95014': {
@@ -1182,12 +1182,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2850, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_360_fr93831': {
@@ -1216,12 +1216,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2900, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_360_fr97819': {
@@ -1250,12 +1250,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2900, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67e3_360_fr97819_d2000': {
@@ -1289,12 +1289,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2900, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isb67ex_300_fr93522': {
@@ -1323,12 +1323,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 3000, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isg12e3_380_fr20522': {
@@ -1354,12 +1354,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2100, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isg12e3_400_fr20523': {
@@ -1385,12 +1385,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2100, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isg12e3_430_fr20547': {
@@ -1416,12 +1416,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2100, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isl89e3_375_fr94882': {
@@ -1449,12 +1449,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2330, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isle_t450_fr92598': {
@@ -1485,12 +1485,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2400, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isle3_400_fr95441': {
@@ -1521,12 +1521,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2330, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'ism_500_fr21020': {
@@ -1553,12 +1553,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2300, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme2_380_fr2695': {
@@ -1584,12 +1584,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme2_440_fr2578': {
@@ -1617,12 +1617,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme3_385_fr20317': {
@@ -1648,12 +1648,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme3_385_fr2855': {
@@ -1679,12 +1679,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isme3_420_fr2854': {
@@ -1710,12 +1710,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'ism_380_fr20317': {
@@ -1741,12 +1741,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2130, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 0, userLoss: 0},
-      {name: 'Alternator / Generator', standardLoss: 0, userLoss: 0},
-      {name: 'Air Compressor', standardLoss: 0, userLoss: 0},
-      {name: 'Steering Pump', standardLoss: 0, userLoss: 0},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0},
+      {name: 'Alternatör / Jeneratör', standardLoss: 0, userLoss: 0},
+      {name: 'Hava Kompresörü', standardLoss: 0, userLoss: 0},
+      {name: 'Direksiyon Pompası', standardLoss: 0, userLoss: 0},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isl_330': {
@@ -1771,12 +1771,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2400, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 0, userLoss: 0},
-      {name: 'Alternator / Generator', standardLoss: 0, userLoss: 0},
-      {name: 'Air Compressor', standardLoss: 0, userLoss: 0},
-      {name: 'Steering Pump', standardLoss: 0, userLoss: 0},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0},
+      {name: 'Alternatör / Jeneratör', standardLoss: 0, userLoss: 0},
+      {name: 'Hava Kompresörü', standardLoss: 0, userLoss: 0},
+      {name: 'Direksiyon Pompası', standardLoss: 0, userLoss: 0},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx_525_fr11926': {
@@ -1808,12 +1808,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx_sig600_fr10149': {
@@ -1839,12 +1839,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx15_600_fr11779': {
@@ -1875,12 +1875,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx15_600_fr11860': {
@@ -1911,12 +1911,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'isx15_675_fr12042': {
@@ -1948,12 +1948,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2030, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
   'weichai_i4': {
@@ -1985,12 +1985,12 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 2200, torque: 0, power: 0}
     ],
     accessories: [
-      {name: 'Fan (Clutch Fan)', standardLoss: 22.4, userLoss: 22.4},
-      {name: 'Alternator / Generator', standardLoss: 2.8, userLoss: 2.8},
-      {name: 'Air Compressor', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Steering Pump', standardLoss: 1.4, userLoss: 1.4},
-      {name: 'Air Conditioning', standardLoss: 0, userLoss: 0},
-      {name: 'Implement Drive', standardLoss: 0, userLoss: 0}
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 22.4, userLoss: 22.4},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   }
 };
@@ -2385,7 +2385,7 @@ function onVEAccChange(nodeId) {
   if(!node) return;
   if(!node.data) node.data = {};
   
-  var accNames = ['Fan (Clutch Fan)', 'Alternator / Generator', 'Air Compressor', 'Steering Pump', 'Air Conditioning', 'Implement Drive'];
+  var accNames = ['Fan (Kavramalı Fan)', 'Alternatör / Jeneratör', 'Hava Kompresörü', 'Direksiyon Pompası', 'Klima', 'Ek Tahrik'];
   var stdInputs = document.querySelectorAll('.ve-acc-std-' + nodeId);
   var userInputs = document.querySelectorAll('.ve-acc-user-' + nodeId);
   
@@ -2613,7 +2613,7 @@ function updateVEMotorChart(nodeId) {
 
 // Net Değerler diyagramı — brüt + net overlay
 // Aksesuar kaybı hesaplama — RPM bağımlı
-// Fan (Clutch Fan): küp yasası (RPM/governed)^3
+// Fan (Kavramalı Fan): küp yasası (RPM/governed)^3
 // Diğer aksesuarlar: lineer (RPM/governed)
 function veCalcAccLossAtRPM(accessories, rpm, governedSpeed) {
   if(!accessories || accessories.length === 0 || !governedSpeed) return 0;
@@ -2622,7 +2622,7 @@ function veCalcAccLossAtRPM(accessories, rpm, governedSpeed) {
   accessories.forEach(function(acc) {
     var loss = acc.userLoss || 0;
     if(loss <= 0) return;
-    // Fan (Clutch Fan) → küp yasası
+    // Fan (Kavramalı Fan) → küp yasası
     if(acc.name && acc.name.toLowerCase().indexOf('fan') >= 0) {
       totalLoss += loss * ratio * ratio * ratio;
     } else {

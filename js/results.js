@@ -443,9 +443,9 @@ function veRenderDetailedReport(filter) {
   
   // ═══ MOTOR KAYIPLARI ═══
   var accData = R.accessories.length > 0 ? R.accessories : [
-    {name:'Fan (Clutch Fan)',standardLoss:0,userLoss:0},{name:'Alternator / Generator',standardLoss:0,userLoss:0},
-    {name:'Air Compressor',standardLoss:0,userLoss:0},{name:'Steering Pump',standardLoss:0,userLoss:0},
-    {name:'Air Conditioning',standardLoss:0,userLoss:0},{name:'Implement Drive',standardLoss:0,userLoss:0}
+    {name:'Fan (Kavramalı Fan)',standardLoss:0,userLoss:0},{name:'Alternatör / Jeneratör',standardLoss:0,userLoss:0},
+    {name:'Hava Kompresörü',standardLoss:0,userLoss:0},{name:'Direksiyon Pompası',standardLoss:0,userLoss:0},
+    {name:'Klima',standardLoss:0,userLoss:0},{name:'Ek Tahrik',standardLoss:0,userLoss:0}
   ];
   var accHTML = '<table style="width:100%; border-collapse:collapse; background:#fff; font-size:0.73rem;">';
   accHTML += '<thead><tr style="background:#f5f6f8;"><th style="padding:6px 14px; text-align:left; border-bottom:1px solid #ddd; color:#555; font-weight:500;">Aksesuar</th>';
@@ -485,7 +485,7 @@ function veRenderDetailedReport(filter) {
     motorDetailHTML += '<div style="overflow-x:auto;">';
     motorDetailHTML += '<table style="width:100%; border-collapse:collapse; background:#fff; font-size:0.68rem;">';
     motorDetailHTML += '<thead><tr style="background:#f5f6f8;">';
-    ['Devir<br>(rpm)','Brüt Güç<br>(kW)','Brüt Tork<br>(N·m)','Net Güç<br>Fan On (kW)','Net Tork<br>Fan On (N·m)','Net Güç<br>Fan Off (kW)','Net Tork<br>Fan Off (N·m)','Tanım'].forEach(function(th) {
+    ['Devir<br>(rpm)','Brüt Güç<br>(kW)','Brüt Tork<br>(N·m)','Net Güç<br>Fan Açık (kW)','Net Tork<br>Fan Açık (N·m)','Net Güç<br>Fan Kapalı (kW)','Net Tork<br>Fan Kapalı (N·m)','Tanım'].forEach(function(th) {
       motorDetailHTML += '<th style="padding:5px 8px; border-bottom:1px solid #ddd; border-right:1px solid #eaeaea; color:#555; font-weight:500; text-align:center; white-space:nowrap;">' + th + '</th>';
     });
     motorDetailHTML += '</tr></thead><tbody>';
@@ -502,9 +502,9 @@ function veRenderDetailedReport(filter) {
       var netPwrFanOn = netPwr - fanPwr;
       var netTrkFanOn = rpm > 0 ? netPwrFanOn * 30000 / (Math.PI * rpm) : 0;
       var ident = '';
-      if(rpm === peakTorqueRpm && peakTorque > 0) ident = 'Peak Torque';
-      if(rpm === R.governed) ident = 'Peak Governed';
-      if(rpm === R.noLoad || (rpm > R.governed && netTrk <= 0)) ident = 'No Load Governed';
+      if(rpm === peakTorqueRpm && peakTorque > 0) ident = 'Pik Tork';
+      if(rpm === R.governed) ident = 'Pik Governed';
+      if(rpm === R.noLoad || (rpm > R.governed && netTrk <= 0)) ident = 'Yüksüz Governed';
       
       var td = function(v) { return '<td style="padding:4px 8px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">' + v + '</td>'; };
       motorDetailHTML += '<tr>';
@@ -541,9 +541,9 @@ function veRenderDetailedReport(filter) {
   var gHigh = R.gearData.length > 0 ? R.gearData[R.gearData.length - 1].name : '6';
   var controlHTML = '';
   controlHTML += row('Shift Profili', spName);
-  controlHTML += row('Shift Speed & Strategy', R.shiftRefRPM + ' rpm — S1 Performance');
-  controlHTML += row('Lockup Offset', R.lockupOffset + ' rpm');
-  controlHTML += row('Primary Mode: Gears', 'Low = ' + gLow + ', Start = ' + gLow + ', High = ' + gHigh + ' (' + gLow + '-' + gLow + '-' + gHigh + ')');
+  controlHTML += row('Vites Geçiş Hızı ve Strateji', R.shiftRefRPM + ' rpm — S1 Performans');
+  controlHTML += row('Kilitleme Ofseti', R.lockupOffset + ' rpm');
+  controlHTML += row('Ana Mod: Vitesler', 'Düşük = ' + gLow + ', Başlangıç = ' + gLow + ', Yüksek = ' + gHigh + ' (' + gLow + '-' + gLow + '-' + gHigh + ')');
   controlHTML = tableWrap(controlHTML);
   
   // ═══ AKTARMA ORGANLARI ═══
@@ -555,13 +555,13 @@ function veRenderDetailedReport(filter) {
   
   (R.propshafts.length > 0 ? R.propshafts : [{name:'Kardan Mili',eff:98.60}]).forEach(function(ps) {
     driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; font-weight:600; color:#222;">' + ps.name + '</td>';
-    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">Single</td>';
+    driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">Tek</td>';
     driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; font-weight:600; color:#222;">1.000</td>';
     driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; font-weight:600; color:#222;">' + ps.eff.toFixed(2) + '</td></tr>';
   });
-  
+
   driveHTML += '<tr><td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; font-weight:600; color:#222;">' + R.diffName + '</td>';
-  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">Single</td>';
+  driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">Tek</td>';
   driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; font-weight:600; color:#222;">' + R.diffRatio.toFixed(3) + '</td>';
   driveHTML += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; font-weight:600; color:#222;">' + R.diffEff.toFixed(2) + '</td></tr>';
   
@@ -634,10 +634,10 @@ function veRenderDetailedReport(filter) {
     // Motor bilgisi
     ecmHTML += '<table style="width:100%; border-collapse:collapse; background:#fff; margin-bottom:12px;">';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; width:230px; font-size:0.73rem;">Motor</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + R.engineName + '</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Peak Tork</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _peakT.toFixed(0) + ' N·m @ ' + _peakRPM + ' rpm</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Pik Tork</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _peakT.toFixed(0) + ' N·m @ ' + _peakRPM + ' rpm</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Governed Devir</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _gov + ' rpm</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Pump Düşüm</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _pDrop + ' N·m</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Türbin Limit</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _tRating + ' N·m</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Pompa Düşümü</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _pDrop + ' N·m</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Türbin Limiti</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _tRating + ' N·m</td></tr>';
     ecmHTML += '</table>';
     
     // Tablo
@@ -778,8 +778,8 @@ function veRenderDetailedReport(filter) {
       
       h += '<tr>' + _tdName('Durma Eğim Kabiliyeti (Stall)') + _td(gd.stallGrade.toFixed(1)) + _td('') + _td(gd.stallGear) + _tdL('Stall') + '</tr>';
       h += '<tr>' + _tdName('Kalkış Eğim Kabiliyeti (Launch)') + _td(gd.launchGrade.toFixed(1)) + _td('') + _td(gd.launchGear) + _tdL('') + '</tr>';
-      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(gd.lowSpeedGrade.toFixed(1)) + _td(gd.lowSpeedV.toFixed(1)) + _td(gd.lowSpeedGear) + _tdL('80 Percent') + '</tr>';
-      h += '<tr>' + _tdName('Düz Yolda Maksimum Hız') + _td('0.0') + _td(gd.maxSpeedFlat.toFixed(1)) + _td(gd.maxSpeedFlatGear) + _tdL('Road Load') + '</tr>';
+      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(gd.lowSpeedGrade.toFixed(1)) + _td(gd.lowSpeedV.toFixed(1)) + _td(gd.lowSpeedGear) + _tdL('%80') + '</tr>';
+      h += '<tr>' + _tdName('Düz Yolda Maksimum Hız') + _td('0.0') + _td(gd.maxSpeedFlat.toFixed(1)) + _td(gd.maxSpeedFlatGear) + _tdL('Yol Yükü') + '</tr>';
       
       gd.gradeTable.forEach(function(row) {
         if(row.v_max <= 0 && row.grade > 0) return;
@@ -853,8 +853,8 @@ function veRenderDetailedReport(filter) {
         bh += '<tr>';
         bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; color:#333;">0 — ' + row.targetSpeed + ' km/h</td>';
         if(row.time === null) {
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#999; font-style:italic;">Speed not possible</td>';
-          bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; color:#999; font-style:italic;">Speed not possible</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#999; font-style:italic;">Hıza ulaşılamıyor</td>';
+          bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; color:#999; font-style:italic;">Hıza ulaşılamıyor</td>';
         } else {
           bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; border-right:1px solid #eaeaea; text-align:center; color:#333;">' + row.time.toFixed(1) + '</td>';
           bh += '<td style="padding:5px 12px; border-bottom:1px solid #eaeaea; text-align:center; color:#333;">' + Math.round(row.distance) + '</td>';
@@ -935,14 +935,14 @@ function veBuildGradeChartData(gradeResult) {
   var points = [];
   // Stall ve Launch (sadece < 900)
   if(gradeResult.stallGrade < 900) {
-    points.push({ x: 0, y: gradeResult.stallGrade, label: 'Stall (' + gradeResult.stallGrade.toFixed(1) + '%)' });
+    points.push({ x: 0, y: gradeResult.stallGrade, label: 'Durma (' + gradeResult.stallGrade.toFixed(1) + '%)' });
   }
   if(gradeResult.launchGrade < 900) {
-    points.push({ x: 0, y: gradeResult.launchGrade, label: 'Launch (' + gradeResult.launchGrade.toFixed(1) + '%)' });
+    points.push({ x: 0, y: gradeResult.launchGrade, label: 'Kalkış (' + gradeResult.launchGrade.toFixed(1) + '%)' });
   }
-  // Low Speed
+  // Düşük Hız
   if(gradeResult.lowSpeedGrade < 900) {
-    points.push({ x: gradeResult.lowSpeedV, y: gradeResult.lowSpeedGrade, label: 'Low Speed (' + gradeResult.lowSpeedV.toFixed(0) + ' km/h, ' + gradeResult.lowSpeedGrade.toFixed(1) + '%)' });
+    points.push({ x: gradeResult.lowSpeedV, y: gradeResult.lowSpeedGrade, label: 'Düşük Hız (' + gradeResult.lowSpeedV.toFixed(0) + ' km/h, ' + gradeResult.lowSpeedGrade.toFixed(1) + '%)' });
   }
   // Grade tablosu (grade > 0 olanlar)
   for(var i = 0; i < gradeResult.gradeTable.length; i++) {
@@ -1042,9 +1042,9 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   
   // Axis titles
   ctx.fillStyle = '#555'; ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('Vehicle Speed (km/h)', padL + plotW / 2, H - 6);
+  ctx.fillText('Araç Hızı (km/h)', padL + plotW / 2, H - 6);
   ctx.save(); ctx.translate(16, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
-  ctx.fillText('Net % Grade', 0, 0); ctx.restore();
+  ctx.fillText('Net % Eğim', 0, 0); ctx.restore();
   
   // Title
   ctx.fillStyle = '#222'; ctx.font = '600 13px Segoe UI, sans-serif'; ctx.textAlign = 'center';
@@ -1235,20 +1235,20 @@ function veRenderAccelChart(canvasId, chartData, title) {
   ctx.fillStyle = '#4a86c8'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'right';
   for(var lt = 0; lt <= yTMax; lt += tStep) { ctx.fillText(lt.toString(), padL - 8, toYT(lt) + 4); }
   ctx.save(); ctx.translate(16, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
-  ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Time (seconds)', 0, 0); ctx.restore();
+  ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Süre (saniye)', 0, 0); ctx.restore();
   
   // Right Y labels (Distance - red)
   var dStep = yDMax <= 100 ? 20 : yDMax <= 300 ? 50 : yDMax <= 600 ? 100 : 200;
   ctx.fillStyle = '#c0392b'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
   for(var ld = 0; ld <= yDMax; ld += dStep) { ctx.fillText(ld.toString(), W - padR + 8, toYD(ld) + 4); }
   ctx.save(); ctx.translate(W - 10, padT + plotH / 2); ctx.rotate(Math.PI / 2);
-  ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Distance (m)', 0, 0); ctx.restore();
+  ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Mesafe (m)', 0, 0); ctx.restore();
   
   // X labels
   ctx.fillStyle = '#777'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) { ctx.fillText(lx.toString(), toX(lx), H - padB + 16); }
   ctx.fillStyle = '#555'; ctx.font = '600 11.5px Segoe UI, sans-serif';
-  ctx.fillText('Vehicle Speed (km/h)', padL + plotW / 2, H - 6);
+  ctx.fillText('Araç Hızı (km/h)', padL + plotW / 2, H - 6);
   
   // Clip to plot area
   ctx.save();
@@ -1295,12 +1295,12 @@ function veRenderAccelChart(canvasId, chartData, title) {
   ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Time (s)', legX + 30, legY + 4);
+  ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Süre (s)', legX + 30, legY + 4);
   legY += 18;
   ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
   ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#c0392b'; ctx.fillText('Distance (m)', legX + 30, legY + 4);
+  ctx.fillStyle = '#c0392b'; ctx.fillText('Mesafe (m)', legX + 30, legY + 4);
   
   // Store interaction data
   canvas._drChart = {
@@ -1347,6 +1347,8 @@ function _drRedrawChart(canvas) {
     veRenderGradeChart(id, d.data, d.title, d.showLabels);
   } else if(d.type === 'accel') {
     veRenderAccelChart(id, d.chartData, d.title);
+  } else if(d.type === 'ftUpshift') {
+    veRenderFTUpshiftChart(id, d.data);
   }
 }
 
@@ -1900,8 +1902,8 @@ function _drEcmRedraw() {
   
   // Axes
   ctx.strokeStyle='#bbb';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
-  ctx.fillStyle='#475569';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('Pump Speed — RPM',ml+pw/2,H-6);
-  ctx.save();ctx.translate(14,mt+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Pump Torque — N·m',0,0);ctx.restore();
+  ctx.fillStyle='#475569';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('Pompa Devri — RPM',ml+pw/2,H-6);
+  ctx.save();ctx.translate(14,mt+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Pompa Torku — N·m',0,0);ctx.restore();
   
   // Clip to plot area
   ctx.save();
@@ -1945,7 +1947,7 @@ function _drEcmRedraw() {
   ctx.restore();
   
   // Legend
-  ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillStyle='#64748b';ctx.fillText('── Stall   --- 0.80 SR',ml+pw-120,mt+14);
+  ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillStyle='#64748b';ctx.fillText('── Durma   --- 0.80 SR',ml+pw-120,mt+14);
 }
 
 
@@ -2001,14 +2003,14 @@ function veBuildFTStepsFromSim(sim, transferLabel) {
     // TE/Weight Ratio = 0.60
     if(!mp060done && mg_kN > 0) {
       var ratio = s.te / mg_kN;
-      if(ratio <= 0.605 && ratio >= 0.30) { mp060done = true; return '0.60 TE/Weight Ratio'; }
+      if(ratio <= 0.605 && ratio >= 0.30) { mp060done = true; return '%60 Çekiş/Ağırlık'; }
     }
-    // RPM percentages (only in 1C)
+    // RPM yüzdeleri (sadece 1C)
     if(s.gear === '1C') {
       var rpmPct = s.engineRPM / governed * 100;
-      if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; return '70 Percent'; }
-      if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; return '80 Percent'; }
-      if(!mp85done && rpmPct >= 84.5 && rpmPct <= 86.0) { mp85done = true; return '85 Percent'; }
+      if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; return '%70'; }
+      if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; return '%80'; }
+      if(!mp85done && rpmPct >= 84.5 && rpmPct <= 86.0) { mp85done = true; return '%85'; }
     }
     // Governed
     if(!mpGovDone && Math.abs(s.engineRPM - governed) < 15) { mpGovDone = true; return 'Governed'; }
@@ -2094,7 +2096,7 @@ function veBuildFTStepsFromSim(sim, transferLabel) {
     var targetTE = 0.60 * mg_kN;
     for(var mi = 0; mi < steps.length - 1; mi++) {
       if(steps[mi].te >= targetTE && steps[mi+1].te < targetTE) {
-        steps[mi+1].matchPoint = steps[mi+1].matchPoint || '0.60 TE/Weight Ratio';
+        steps[mi+1].matchPoint = steps[mi+1].matchPoint || '%60 Çekiş/Ağırlık';
         break;
       }
     }
@@ -2251,12 +2253,12 @@ function _ftBuildLowRangeSteps(sim, ratioHigh, ratioLow, etaHigh, etaLow, m_kg, 
       heatRejection: hr, matchPoint: ''
     };
     
-    if(!mp060done && mg_kN > 0 && te / mg_kN <= 0.605 && te / mg_kN >= 0.30) { mp060done = true; s.matchPoint = '0.60 TE/Weight Ratio'; }
+    if(!mp060done && mg_kN > 0 && te / mg_kN <= 0.605 && te / mg_kN >= 0.30) { mp060done = true; s.matchPoint = '%60 Çekiş/Ağırlık'; }
     if(s.gear === '1C') {
       var rpmPct = s.engineRPM / governed * 100;
-      if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; s.matchPoint = '70 Percent'; }
-      if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; s.matchPoint = '80 Percent'; }
-      if(!mp85done && rpmPct >= 84.5 && rpmPct <= 86.0) { mp85done = true; s.matchPoint = '85 Percent'; }
+      if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; s.matchPoint = '%70'; }
+      if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; s.matchPoint = '%80'; }
+      if(!mp85done && rpmPct >= 84.5 && rpmPct <= 86.0) { mp85done = true; s.matchPoint = '%85'; }
     }
     if(!mpGovDone && Math.abs(s.engineRPM - governed) < 15) { mpGovDone = true; s.matchPoint = 'Governed'; }
     
@@ -2471,15 +2473,12 @@ function _ftUpshiftMouseMove(e) {
   var mx = e.clientX - cr.left, my = e.clientY - cr.top;
   
   // Pan handling
-  if(_drChartPan && _drChartPan.active && _drChartPan.canvas === canvas) {
-    var dx = (mx - _drChartPan.lastX) / d.plotW * (d.xMax - d.xMin);
-    var zState = _drChartZoom[canvas.id];
-    if(zState) { zState.cx -= dx; }
-    _drChartPan.lastX = mx;
-    if(!_drChartPan.raf) { _drChartPan.raf = requestAnimationFrame(function(){
-      veRenderFTUpshiftChart(canvas.id, d.data);
-      _drChartPan.raf = null;
-    }); }
+  if(_drChartPan && _drChartPan.active && _drChartPan.canvasId === canvas.id) {
+    var z = _drGetZoom(canvas.id);
+    var dx = e.clientX - _drChartPan.startX;
+    var xRange = (d.baseXMax - d.baseXMin) / z.scale;
+    z.cx = _drChartPan.startCX - dx / d.plotW * xRange;
+    _drRedrawChart(canvas);
     return;
   }
   
