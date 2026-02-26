@@ -1661,6 +1661,7 @@
   margin-bottom:12px;
 }
 
+
 </style>
 </head>
 <body>
@@ -1753,6 +1754,7 @@ function mfsimLogout() {
     }, 100);
   }
 })();
+
 </script>
 
 <!-- TAB BAR -->
@@ -2226,6 +2228,8 @@ document.addEventListener('DOMContentLoaded', function() {
   changeTheme(savedTheme);
 });
 
+</script>
+<script>
 // ============================================================================
 // TAB BAR — Her zaman görünür (artık tek sayfa)
 // ============================================================================
@@ -2273,6 +2277,8 @@ function veSubTabDegistir(tabName) {
   }
 }
 
+</script>
+<script>
 // ===== SONUÇLAR: DATA BROWSER AĞACI =====
 function veUpdateResultsTree() {
   var tree = document.getElementById('ve-results-tree');
@@ -3511,14 +3517,14 @@ function veRenderAccelChart(canvasId, chartData, title) {
   for(var lt = 0; lt <= yTMax; lt += tStep) { ctx.fillText(lt.toString(), padL - 8, toYT(lt) + 4); }
   ctx.save(); ctx.translate(16, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Süre (saniye)', 0, 0); ctx.restore();
-
+  
   // Right Y labels (Distance - red)
   var dStep = yDMax <= 100 ? 20 : yDMax <= 300 ? 50 : yDMax <= 600 ? 100 : 200;
   ctx.fillStyle = '#c0392b'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'left';
   for(var ld = 0; ld <= yDMax; ld += dStep) { ctx.fillText(ld.toString(), W - padR + 8, toYD(ld) + 4); }
   ctx.save(); ctx.translate(W - 10, padT + plotH / 2); ctx.rotate(Math.PI / 2);
   ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Mesafe (m)', 0, 0); ctx.restore();
-
+  
   // X labels
   ctx.fillStyle = '#777'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) { ctx.fillText(lx.toString(), toX(lx), H - padB + 16); }
@@ -5363,9 +5369,9 @@ function veRenderSlot(slotIdx) {
   });
   html += '</div>';
   html += '</div>';
-
+  
   body.innerHTML = html;
-
+  
   if(type === 'line') {
     veResetChartView(slotIdx);
     if(window.veSimResults) veRenderChart(slotIdx);
@@ -5842,6 +5848,9 @@ function checkAlignment(movingNodes) {
   return {snapX: snapX, snapY: snapY};
 }
 
+
+</script>
+<script>
 // ============================================================================
 // ALT MODÜL SİSTEMİ
 // ============================================================================
@@ -6307,6 +6316,9 @@ var COMPONENT_SIGNALS = {
   }
 };
 
+
+</script>
+<script>
 // ═══════════════════════════════════════════════════════════════════════════════
 // SENSÖR SİHİRBAZI — Paketler, Topoloji Tarama, Otomatik Yerleştirme
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -6686,6 +6698,9 @@ function getSensorWizardPropertiesHTML(node) {
   return html;
 }
 
+
+</script>
+<script>
 // Canvas transform uygula
 function updateCanvasTransform() {
   var canvas = document.getElementById('ve-canvas');
@@ -7419,6 +7434,9 @@ function veCheckShiftControllerRequired() {
 
 // updateAllConnections fonksiyonu dosyanın sonunda tanımlı (getPortPosition ile)
 
+
+</script>
+<script>
 // ============================================================================
 // INFO POPUP SİSTEMİ
 // ============================================================================
@@ -14759,6 +14777,9 @@ function onVESolverParamChange(nodeId) {
   if(ftRtolEl) node.data.ftRtol = parseFloat(ftRtolEl.value) || 1e-4;
 }
 
+
+</script>
+<script>
 // ============================================================================
 // FULL THROTTLE SOLVER — ÇEKIRDEK MATEMATİK FONKSİYONLARI
 // ============================================================================
@@ -16291,6 +16312,9 @@ function veCalculateAcceleration(simResult) {
   return result;
 }
 
+
+</script>
+<script>
 // PROFESYONEL SOLVER - ANSYS-TARZI HESAPLAMA MOTORU
 // ============================================================================
 
@@ -17520,6 +17544,9 @@ function veGetPowertrainChain() {
   chain._isPartial = isPartial;
   return chain;
 }
+
+</script>
+<script>
 
 // ===== SENSÖR BİLEŞENİ =====
 function getSensorPropertiesHTML(node) {
@@ -19403,6 +19430,9 @@ var veRoadPolylines = {};
 var veRoadOSRMlines = {};
 var veRoadSegMarkers = {}; // segment sınır noktaları (circleMarker)
 
+
+</script>
+<script>
 // ====== HARİTA BÜYÜTME MODALI ======
 var _veMapModalActive = null;
 var _veMapModalOrigParent = null;
@@ -20300,6 +20330,9 @@ function updateNodeCount() {
   }
 }
 
+
+</script>
+<script>
 // ============================================================================
 // UNDO / REDO SİSTEMİ
 // ============================================================================
@@ -20643,6 +20676,9 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+
+</script>
+<script>
 // ============================================================================
 // TOPOLOJİ SEKME SİSTEMİ
 // ============================================================================
@@ -21742,6 +21778,9 @@ var _origVeRenderTabsBase = null;
   };
 })();
 
+</script>
+<script>
+
 // ============================================================================
 // TOOLBAR FONKSİYONLARI
 // ============================================================================
@@ -22388,6 +22427,9 @@ function veLoadTopology() {
   input.click();
 }
 
+
+</script>
+<script>
 // ============================================================================
 // ÇÖZÜCÜ FONKSİYONLARI
 // ============================================================================
@@ -22634,6 +22676,9 @@ function veSolverRun() {
   }, 100);
 }
 
+
+</script>
+<script>
 // ============================================================================
 // SAYISAL YÖNTEMLER KÜTÜPHANESİ (VE Simülasyon Motoru için)
 // ============================================================================
@@ -23011,6 +23056,9 @@ function veEnergyBalance() {
 }
 
 
+
+</script>
+<script>
 // ============================================================================
 // BİLEŞEN BAZLI SİMÜLASYON MOTORU
 // ============================================================================
@@ -24119,6 +24167,9 @@ function veRunSimulationEngine() {
   };
 }
 
+
+</script>
+<script>
 // ============================================================================
 // GRAFİK VE TABLO RENDERLAMA
 // ============================================================================
@@ -24298,6 +24349,7 @@ function veSetAxisLock(slotIdx) {
   var slot = veResultSlots[slotIdx];
   if(!slot) return;
   if(!slot.yAxisLock) slot.yAxisLock = {};
+  // Tüm eksen lock'larını oku
   for(var ai = 0; ai < 8; ai++) {
     var minEl = document.getElementById('ve-ymin-ax' + ai + '-' + slotIdx);
     var maxEl = document.getElementById('ve-ymax-ax' + ai + '-' + slotIdx);
@@ -24427,9 +24479,11 @@ function veRenderChart(slotIdx) {
 
   // ====== N-EKSEN DAĞITIMI (sol/sağ alternating) ======
   var hasDualAxis = unitGroups.length >= 2;
+  // Eksen renkleri: her grup için ilk dataset'in rengini kullan
   unitGroups.forEach(function(grp) {
     grp._color = datasets[grp.dsIndices[0]] ? datasets[grp.dsIndices[0]].color : '#888';
   });
+  // Sol/sağ taraf ataması: 0→sol, 1→sağ, 2→sol, 3→sağ, ...
   var leftAxes = [], rightAxes = [];
   unitGroups.forEach(function(grp, gi) {
     grp._globalIdx = gi;
@@ -24446,7 +24500,7 @@ function veRenderChart(slotIdx) {
   });
 
   // ====== MARJİN (dinamik — eksen sayısına göre) ======
-  var AXIS_W = 52;
+  var AXIS_W = 52; // Her eksen için piksel genişlik
   var margin = {
     left: Math.max(58, 14 + leftAxes.length * AXIS_W),
     right: rightAxes.length > 0 ? Math.max(58, 14 + rightAxes.length * AXIS_W) : 14,
@@ -24612,6 +24666,7 @@ function veRenderChart(slotIdx) {
       ctx.fillText('[' + ax.unit + ']', 0, 0);
       ctx.restore();
     }
+    // İç eksenler için ayırıcı çizgi
     if(li > 0) {
       var lineX = margin.left - li * AXIS_W + 4;
       ctx.strokeStyle = axColor + '30';
@@ -24644,6 +24699,7 @@ function veRenderChart(slotIdx) {
       ctx.fillText('[' + ax.unit + ']', 0, 0);
       ctx.restore();
     }
+    // Sağ eksen çerçeve çizgisi
     var lineX = margin.left + pw + ri * AXIS_W;
     if(ri === 0) lineX = margin.left + pw;
     ctx.strokeStyle = axColor + '40';
@@ -26535,6 +26591,9 @@ window.addEventListener('resize', function() {
   window._veResizeTimer = setTimeout(veRefreshAllCharts, 150);
 });
 
+
+</script>
+<script>
 // ============================================================================
 // NODE RESIZE SİSTEMİ
 // ============================================================================
@@ -26726,6 +26785,9 @@ function stopResize() {
   document.removeEventListener('mouseup', stopResize);
 }
 
+
+</script>
+<script>
 // ============================================================================
 // NODE CONTEXT MENU — PORT DÜZEN İŞLEMLERİ
 // ============================================================================
@@ -27161,6 +27223,9 @@ function addControlPointToConnection(conn) {
   conn.controlPoints.push({x: midX, y: midY, id: 'cp-' + Date.now()});
 }
 
+
+</script>
+<script>
 // ============================================================================
 // TOPOLOJİ MATEMATİK HESAPLAMA SİSTEMİ
 // ============================================================================
@@ -27981,6 +28046,7 @@ setTimeout(function() {
     saveState();
   }
 }, 500);
+
 </script>
 
 </body>
