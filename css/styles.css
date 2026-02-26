@@ -1602,7 +1602,8 @@
 .dr-body table th{color:#555 !important;background:#f5f6f8 !important;border-color:#ddd !important;}
 .dr-body table td{color:#333 !important;border-color:#eaeaea !important;}
 .dr-body table tr:hover td{background:#f8f9fb !important;}
-.dr-chart-tooltip{position:absolute;display:none;pointer-events:none;background:rgba(30,36,48,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 12px;font-size:0.65rem;color:#e0e4ec;line-height:1.6;box-shadow:0 4px 16px rgba(0,0,0,0.35);z-index:10;max-width:280px;white-space:nowrap;backdrop-filter:blur(8px);}
+.dr-chart-tooltip{position:absolute;pointer-events:none;background:rgba(30,36,48,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 12px;font-size:0.65rem;color:#e0e4ec;line-height:1.6;box-shadow:0 4px 16px rgba(0,0,0,0.35);z-index:10;max-width:280px;white-space:nowrap;backdrop-filter:blur(8px);opacity:0;transition:opacity 0.35s cubic-bezier(0.4,0,0.2,1);}
+.dr-chart-tooltip.visible{opacity:1;}
 .dr-chart-crossV{position:absolute;top:0;width:1px;height:100%;background:rgba(100,160,250,0.25);pointer-events:none;display:none;z-index:5;}
 .dr-chart-crossH{position:absolute;left:0;width:100%;height:1px;background:rgba(100,160,250,0.25);pointer-events:none;display:none;z-index:5;}
 #ve-report-overlay{
