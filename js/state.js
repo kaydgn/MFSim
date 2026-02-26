@@ -312,6 +312,9 @@ function restoreState(state) {
   updateAllConnections();
   updateNodeCount();
   clearSelection();
+
+  // Sensör sihirbazı görsellerini güncelle
+  if(typeof swRefreshAllWizardVisuals === 'function') swRefreshAllWizardVisuals();
 }
 
 // Ctrl+Z ve Ctrl+Y için event listener güncelle

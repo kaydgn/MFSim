@@ -228,7 +228,59 @@ function veUpdateResultsTree() {
   });
   
   html += '</div></div>';
-  
+
+  // ── Sihirbaz Diyagramları ağacı ──
+  // Sensör sihirbazı kuruluysa ve simülasyon varsa göster
+  var wizNode = nodes.find(function(n) { return n.type === 'sensor-wizard'; });
+  var wizInstalled = wizNode && wizNode.data && wizNode.data.sensorsInstalled;
+  var wizPkgs = wizInstalled ? (wizNode.data.installedPackages || []) : [];
+  if(wizInstalled && wizPkgs.length > 0 && typeof SENSOR_PACKAGES !== 'undefined') {
+    var hasSimForWiz = !!window.veSimResults;
+    html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+    html += '<div class="ve-tree-item">';
+    html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
+    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
+    html += '<span class="icon">🧙</span>';
+    html += '<span style="font-weight:600; color:#22c55e;">Sihirbaz Diyagramları</span>';
+    html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + wizPkgs.length + ' paket</span>';
+    html += '</div>';
+    html += '<div class="ve-tree-children open">';
+
+    wizPkgs.forEach(function(pkgId) {
+      var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
+      if(!pkg) return;
+
+      html += '<div class="ve-tree-item">';
+      html += '<div class="ve-tree-row" style="padding-left:16px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
+      html += '<span class="icon">' + pkg.icon + '</span>';
+      html += '<span style="font-weight:500;">' + pkg.name + '</span>';
+      html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + pkg.diagrams.length + '</span>';
+      html += '</div>';
+      html += '<div class="ve-tree-children">';
+
+      pkg.diagrams.forEach(function(diag, dIdx) {
+        var diagSigDef = (typeof SW_DIAGRAM_SIGNALS !== 'undefined') ? SW_DIAGRAM_SIGNALS[diag.id] : null;
+        var canDrag = hasSimForWiz && !!diagSigDef;
+        var diagStyle = canDrag
+          ? 'cursor:grab; color:var(--text-primary);'
+          : 'cursor:default; color:var(--text-muted); opacity:0.6;';
+        var dragAttr = canDrag
+          ? ' onmousedown="veStartWizardDiagDrag(event,\'' + pkgId + '\',' + dIdx + ')"'
+          : '';
+
+        html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
+        html += '<span>' + (canDrag ? '📊' : '🔒') + '</span> ' + diag.name;
+        if(diag.note) html += ' <span style="font-size:0.5rem; color:#f59e0b;">⚠</span>';
+        html += '</div>';
+      });
+
+      html += '</div></div>';
+    });
+
+    html += '</div></div></div>';
+  }
+
   // Detaylı Rapor — expandable ağaç öğesi with sub-sections
   if(window.veSimResults) {
     html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
@@ -2804,6 +2856,89 @@ function veStartSignalDrag(e, sensorId, signalId) {
   
   document.addEventListener('mousemove', moveHandler);
   document.addEventListener('mouseup', upHandler);
+}
+
+// ── Sihirbaz diyagramı sürükleme ──
+var veDraggingWizDiag = null; // { pkgId, diagIdx }
+
+function veStartWizardDiagDrag(e, pkgId, diagIdx) {
+  if(e.button !== 0) return;
+  e.preventDefault();
+  veDraggingWizDiag = { pkgId: pkgId, diagIdx: diagIdx };
+
+  document.querySelectorAll('.ve-rslot').forEach(function(s) { s.classList.remove('drag-over'); });
+
+  var moveHandler = function(ev) {
+    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
+      var r = slot.getBoundingClientRect();
+      slot.classList.toggle('drag-over', ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom);
+    });
+  };
+
+  var upHandler = function(ev) {
+    document.removeEventListener('mousemove', moveHandler);
+    document.removeEventListener('mouseup', upHandler);
+    if(!veDraggingWizDiag) return;
+
+    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
+      var r = slot.getBoundingClientRect();
+      if(ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
+        veAddWizardDiagramToSlot(parseInt(slot.getAttribute('data-slot')), veDraggingWizDiag.pkgId, veDraggingWizDiag.diagIdx);
+      }
+      slot.classList.remove('drag-over');
+    });
+    veDraggingWizDiag = null;
+  };
+
+  document.addEventListener('mousemove', moveHandler);
+  document.addEventListener('mouseup', upHandler);
+}
+
+function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
+  var pkg = (typeof SENSOR_PACKAGES !== 'undefined') ? SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; }) : null;
+  if(!pkg || !pkg.diagrams[diagIdx]) return;
+  var diag = pkg.diagrams[diagIdx];
+  var sigDef = (typeof SW_DIAGRAM_SIGNALS !== 'undefined') ? SW_DIAGRAM_SIGNALS[diag.id] : null;
+  if(!sigDef) {
+    if(typeof showToast === 'function') showToast('Bu diyagram için sinyal haritası tanımlı değil', 'warning');
+    return;
+  }
+
+  var slot = veResultSlots[slotIdx];
+  // Slot'u temizle ve yeni diyagram ile doldur
+  slot.type = 'line';
+  slot.sensors = [];
+  slot.yAxisLock = {};
+  if(typeof veChartViews !== 'undefined') veChartViews[slotIdx] = { panX:0, panY:0, zoomX:1, zoomY:1 };
+
+  // X ekseni ayarla
+  if(sigDef.x.target === 'time') {
+    slot.xAxis = { id:'time', name:'Zaman [s]', unit:'s' };
+  } else {
+    // X ekseni bir bileşen sinyali — ilk Y sinyalinden önce eklenmeli
+    slot.xAxis = {
+      id: '~' + sigDef.x.target + ':' + sigDef.x.signal,
+      name: (sigDef.x.name || sigDef.x.signal) + ' [' + (sigDef.x.unit || '') + ']',
+      unit: sigDef.x.unit || ''
+    };
+  }
+
+  // Y eksen sinyallerini ekle
+  sigDef.y.forEach(function(ySig) {
+    var entry = {
+      id: '~' + ySig.target,
+      signal: ySig.signal,
+      name: ySig.name || ySig.signal,
+      unit: ySig.unit || ''
+    };
+    // Çakışma kontrolü
+    if(!slot.sensors.some(function(s) { return s.id === entry.id && s.signal === entry.signal; })) {
+      slot.sensors.push(entry);
+    }
+  });
+
+  veRenderSlot(slotIdx);
+  if(typeof showToast === 'function') showToast('📊 ' + diag.name + ' diyagramı eklendi', 'success');
 }
 
 // Tek sinyal slot'a ekle
