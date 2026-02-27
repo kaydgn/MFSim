@@ -18178,114 +18178,7 @@ function veSolverRunProfessional() {
         }
         
         // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
-        if(veTabs.length > 1) {
-          logSpacer();
-          log('═══════════════════════════════════════════', 'head');
-          log('  EK TOPOLOJİLER — OTOMATİK ÇÖZÜM', 'head');
-          log('═══════════════════════════════════════════', 'head');
-          logSpacer();
-          log('Aktif topoloji dışında ' + (veTabs.length - 1) + ' topoloji tespit edildi.', 'info');
-          logSpacer();
-
-          // Aktif topolojinin global değişkenlerini yedekle
-          var _origNodes = nodes;
-          var _origConns = connections;
-          var _origSimResults = window.veSimResults;
-          var _origChartViews = JSON.parse(JSON.stringify(veChartViews));
-
-          var _solvedCount = 0;
-          var _failCount = 0;
-
-          for(var _ti = 0; _ti < veTabs.length; _ti++) {
-            if(_ti === veActiveTabIdx) {
-              log('[' + (_ti+1) + '/' + veTabs.length + '] ' + veTabs[_ti].name + ' — zaten çözüldü ✓', 'ok');
-              continue;
-            }
-            var _otherTab = veTabs[_ti];
-            if(!_otherTab.state || !_otherTab.state.nodes || _otherTab.state.nodes.length === 0) {
-              log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' — boş topoloji, atlandı', 'warn');
-              continue;
-            }
-
-            // Motor/Motor Freni bileşeni var mı kontrol et
-            var _hasEngine = _otherTab.state.nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
-            if(!_hasEngine) {
-              log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' — motor bileşeni yok, atlandı', 'warn');
-              continue;
-            }
-
-            log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' çözülüyor...', 'info');
-
-            try {
-              // Tab'ın node'larını geçici olarak yükle (DOM oluşturmadan)
-              var _tempNodes = _otherTab.state.nodes.map(function(n) {
-                var _def = componentDefs[n.type];
-                if(!_def) return null;
-                return {
-                  id: n.id, type: n.type, x: n.x, y: n.y,
-                  width: n.width || 65, height: n.height || 60,
-                  def: _def,
-                  customName: n.customName || '',
-                  mirrored: n.mirrored || false,
-                  isMasterWheel: n.isMasterWheel || false,
-                  isMasterDiff: n.isMasterDiff || false,
-                  data: JSON.parse(JSON.stringify(n.data || {}))
-                };
-              }).filter(function(n) { return n !== null; });
-
-              var _tempConns = _otherTab.state.connections ? JSON.parse(JSON.stringify(_otherTab.state.connections)) : [];
-
-              // Global değişkenleri geçici olarak değiştir
-              nodes = _tempNodes;
-              connections = _tempConns;
-
-              // Simülasyonu çalıştır
-              var _otherResult;
-              if(veActiveModule === 'full-throttle') {
-                var _trN2 = _tempNodes.find(function(n) { return n.type === 'transfer'; });
-                var _trd2 = _trN2 ? (_trN2.data || {}) : {};
-                var _ftTrG2 = _trd2.ftTrGears || [
-                  { kademe: 'High', ratio: 1.054, eff: 97.00 }
-                ];
-                var _allRR2 = {};
-                _ftTrG2.forEach(function(g) {
-                  _allRR2[g.kademe] = veFTRunSimulationEngine(g.kademe);
-                });
-                _otherResult = _allRR2[_ftTrG2[0].kademe];
-              } else {
-                _otherResult = veRunSimulationEngine();
-              }
-
-              // Sonuçları tab state'ine kaydet
-              _otherTab.state.simResults = _otherResult;
-              _solvedCount++;
-
-              var _otLen = _otherResult.time.length;
-              var _otTime = _otherResult.time[_otLen - 1];
-              log('  ✓ Tamamlandı — ' + _otLen + ' nokta, ' + _otTime.toFixed(1) + ' s', 'ok');
-
-              // Kısa sonuç özeti
-              if(_otherResult.speed && _otherResult.speed.length > 0) {
-                log('  Hız: ' + _otherResult.speed[0].toFixed(1) + ' → ' + _otherResult.speed[_otLen - 1].toFixed(1) + ' km/h', 'dim');
-              } else if(_otherResult.rpm && _otherResult.rpm.length > 0) {
-                log('  Devir: ' + _otherResult.rpm[0].toFixed(0) + ' → ' + _otherResult.rpm[_otLen - 1].toFixed(0) + ' d/d', 'dim');
-              }
-            } catch(_err) {
-              _failCount++;
-              log('  ✗ HATA: ' + _err.message, 'err');
-            }
-          }
-
-          // Global değişkenleri geri yükle
-          nodes = _origNodes;
-          connections = _origConns;
-          window.veSimResults = _origSimResults;
-          veChartViews = _origChartViews;
-
-          logSpacer();
-          log(_solvedCount + ' ek topoloji başarıyla çözüldü' + (_failCount > 0 ? ', ' + _failCount + ' hata' : '') + '.', _failCount > 0 ? 'warn' : 'ok');
-          logSpacer();
-        }
+        _veSolveOtherTopologies({ log: log, logSpacer: logSpacer });
 
         // Sonuçlar sayfasını güncelle
         if(typeof veUpdateResultsTree === 'function') {
@@ -23285,6 +23178,129 @@ function veLoadTopology() {
 // ============================================================================
 // ÇÖZÜCÜ FONKSİYONLARI
 // ============================================================================
+
+// ── Ortak: Diğer topolojileri otomatik çöz ──
+// solver.js ve solver-pro.js tarafından ortak kullanılır.
+// options.log varsa detaylı loglama yapar (pro solver), yoksa sessiz çalışır.
+function _veSolveOtherTopologies(options) {
+  if(typeof veTabs === 'undefined' || veTabs.length <= 1) return;
+
+  var log = (options && options.log) || function() {};
+  var logSpacer = (options && options.logSpacer) || function() {};
+
+  if(options && options.log) {
+    logSpacer();
+    log('═══════════════════════════════════════════', 'head');
+    log('  EK TOPOLOJİLER — OTOMATİK ÇÖZÜM', 'head');
+    log('═══════════════════════════════════════════', 'head');
+    logSpacer();
+    log('Aktif topoloji dışında ' + (veTabs.length - 1) + ' topoloji tespit edildi.', 'info');
+    logSpacer();
+  }
+
+  // Global değişkenleri yedekle
+  var _origNodes = nodes;
+  var _origConns = connections;
+  var _origSimResults = window.veSimResults;
+  var _origChartViews = (typeof veChartViews !== 'undefined') ? JSON.parse(JSON.stringify(veChartViews)) : null;
+
+  var _solvedCount = 0;
+  var _failCount = 0;
+
+  try {
+    for(var _ti = 0; _ti < veTabs.length; _ti++) {
+      if(_ti === veActiveTabIdx) {
+        if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + veTabs[_ti].name + ' — zaten çözüldü ✓', 'ok');
+        continue;
+      }
+      var _otherTab = veTabs[_ti];
+      if(!_otherTab.state || !_otherTab.state.nodes || _otherTab.state.nodes.length === 0) {
+        if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' — boş topoloji, atlandı', 'warn');
+        continue;
+      }
+
+      var _hasEngine = _otherTab.state.nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+      if(!_hasEngine) {
+        if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' — motor bileşeni yok, atlandı', 'warn');
+        continue;
+      }
+
+      if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' çözülüyor...', 'info');
+
+      try {
+        var _tempNodes = _otherTab.state.nodes.map(function(n) {
+          var _def = componentDefs[n.type];
+          if(!_def) return null;
+          return {
+            id: n.id, type: n.type, x: n.x, y: n.y,
+            width: n.width || 65, height: n.height || 60,
+            def: _def,
+            customName: n.customName || '',
+            mirrored: n.mirrored || false,
+            isMasterWheel: n.isMasterWheel || false,
+            isMasterDiff: n.isMasterDiff || false,
+            data: JSON.parse(JSON.stringify(n.data || {}))
+          };
+        }).filter(function(n) { return n !== null; });
+
+        var _tempConns = _otherTab.state.connections ? JSON.parse(JSON.stringify(_otherTab.state.connections)) : [];
+
+        nodes = _tempNodes;
+        connections = _tempConns;
+
+        var _otherResult;
+        if(veActiveModule === 'full-throttle') {
+          // Transfer dişli oranlarını iterasyonla gez
+          var _trN = _tempNodes.find(function(n) { return n.type === 'transfer'; });
+          var _trd = _trN ? (_trN.data || {}) : {};
+          var _ftTrG = _trd.ftTrGears || [
+            { kademe: 'High', ratio: 1.054, eff: 97.00 }
+          ];
+          var _allRR = {};
+          _ftTrG.forEach(function(g) {
+            _allRR[g.kademe] = veFTRunSimulationEngine(g.kademe);
+          });
+          _otherResult = _allRR[_ftTrG[0].kademe];
+        } else {
+          _otherResult = veRunSimulationEngine();
+        }
+
+        _otherTab.state.simResults = _otherResult;
+        _solvedCount++;
+
+        if(options && options.log) {
+          var _otLen = _otherResult.time.length;
+          var _otTime = _otherResult.time[_otLen - 1];
+          log('  ✓ Tamamlandı — ' + _otLen + ' nokta, ' + _otTime.toFixed(1) + ' s', 'ok');
+          if(_otherResult.speed && _otherResult.speed.length > 0) {
+            log('  Hız: ' + _otherResult.speed[0].toFixed(1) + ' → ' + _otherResult.speed[_otLen - 1].toFixed(1) + ' km/h', 'dim');
+          } else if(_otherResult.rpm && _otherResult.rpm.length > 0) {
+            log('  Devir: ' + _otherResult.rpm[0].toFixed(0) + ' → ' + _otherResult.rpm[_otLen - 1].toFixed(0) + ' d/d', 'dim');
+          }
+        }
+      } catch(_err) {
+        _failCount++;
+        if(options && options.log) {
+          log('  ✗ HATA: ' + _err.message, 'err');
+        } else {
+          console.warn('[MFSim] Topoloji çözüm hatası (' + _otherTab.name + '):', _err.message);
+        }
+      }
+    }
+  } finally {
+    // Global değişkenleri HER DURUMDA geri yükle
+    nodes = _origNodes;
+    connections = _origConns;
+    window.veSimResults = _origSimResults;
+    if(_origChartViews) veChartViews = _origChartViews;
+  }
+
+  if(options && options.log) {
+    logSpacer();
+    log(_solvedCount + ' ek topoloji başarıyla çözüldü' + (_failCount > 0 ? ', ' + _failCount + ' hata' : '') + '.', _failCount > 0 ? 'warn' : 'ok');
+    logSpacer();
+  }
+}
 function veSolverValidate() {
   var container = document.getElementById('ve-solver-validation');
   if(!container) return;
@@ -23438,52 +23454,7 @@ function veSolverRun() {
         window.veSimResults = simResult;
 
         // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
-        if(typeof veTabs !== 'undefined' && veTabs.length > 1) {
-          var _origNodes = nodes;
-          var _origConns = connections;
-          var _origSimResults = window.veSimResults;
-          var _origChartViews = (typeof veChartViews !== 'undefined') ? JSON.parse(JSON.stringify(veChartViews)) : null;
-
-          for(var _ti = 0; _ti < veTabs.length; _ti++) {
-            if(_ti === veActiveTabIdx) continue;
-            var _otherTab = veTabs[_ti];
-            if(!_otherTab.state || !_otherTab.state.nodes || _otherTab.state.nodes.length === 0) continue;
-            var _hasEngine = _otherTab.state.nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
-            if(!_hasEngine) continue;
-
-            try {
-              var _tempNodes = _otherTab.state.nodes.map(function(n) {
-                var _def = componentDefs[n.type];
-                if(!_def) return null;
-                return {
-                  id: n.id, type: n.type, x: n.x, y: n.y,
-                  width: n.width || 65, height: n.height || 60,
-                  def: _def,
-                  customName: n.customName || '',
-                  mirrored: n.mirrored || false,
-                  isMasterWheel: n.isMasterWheel || false,
-                  isMasterDiff: n.isMasterDiff || false,
-                  data: JSON.parse(JSON.stringify(n.data || {}))
-                };
-              }).filter(function(n) { return n !== null; });
-
-              var _tempConns = _otherTab.state.connections ? JSON.parse(JSON.stringify(_otherTab.state.connections)) : [];
-
-              nodes = _tempNodes;
-              connections = _tempConns;
-
-              var _otherResult = veActiveModule === 'full-throttle' ? veFTRunSimulationEngine() : veRunSimulationEngine();
-              _otherTab.state.simResults = _otherResult;
-            } catch(_err) {
-              console.warn('[MFSim] Topoloji çözüm hatası (' + _otherTab.name + '):', _err.message);
-            }
-          }
-
-          nodes = _origNodes;
-          connections = _origConns;
-          window.veSimResults = _origSimResults;
-          if(_origChartViews) veChartViews = _origChartViews;
-        }
+        _veSolveOtherTopologies();
 
         var totalTime = simResult.time[simResult.time.length - 1];
         var ss = simResult.solverStats || {};
