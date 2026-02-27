@@ -1121,27 +1121,30 @@ function veSolverRunProfessional() {
           logSpacer();
         }
         
+        // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
+        _veSolveOtherTopologies({ log: log, logSpacer: logSpacer });
+
         // Sonuçlar sayfasını güncelle
         if(typeof veUpdateResultsTree === 'function') {
           veUpdateResultsTree();
         }
-        
+
         // Uyarı özeti
         if(warnings.length > 0) {
           log('Uyarılar (' + warnings.length + '):', 'warn');
           warnings.forEach(function(w) { log('  ⚠ ' + w, 'warn'); });
           logSpacer();
         }
-        
+
         // Final
         setProgress(100, 'Tamamlandı');
         logSpacer();
         log('═══════════════════════════════════════════', 'ok');
         if(errors.length === 0 && warnings.length === 0) {
-          log('  ✅ HESAP TAMAMLANDI', 'ok');
+          log('  ✅ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji', 'ok');
           log('  Herhangi bir sorunla karşılaşılmadı.', 'ok');
         } else if(errors.length === 0) {
-          log('  ✅ HESAP TAMAMLANDI (' + warnings.length + ' uyarı)', 'ok');
+          log('  ✅ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji (' + warnings.length + ' uyarı)', 'ok');
           log('  Hesap başarılı, ancak bazı uyarılar mevcut.', 'warn');
         }
         log('═══════════════════════════════════════════', 'ok');

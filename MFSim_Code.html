@@ -820,6 +820,35 @@
 }
 .ve-node[data-type="sensor-wizard"] .ve-resize-handle{display:none;}
 
+/* Sensör Sihirbazı - sensörler kurulu */
+.ve-node[data-type="sensor-wizard"].sw-installed .ve-node-box{
+  border-color:#22c55e;
+  background:rgba(34,197,94,0.10);
+  box-shadow:0 0 10px rgba(34,197,94,0.25);
+}
+.ve-node[data-type="sensor-wizard"].sw-installed .ve-node-label{
+  color:#22c55e;
+}
+.ve-node[data-type="sensor-wizard"].sw-installed .ve-selection-border{
+  border-color:#22c55e;
+}
+.ve-node[data-type="sensor-wizard"].sw-installed:hover .ve-node-box{
+  border-color:#16a34a;
+  box-shadow:0 0 14px rgba(34,197,94,0.4);
+}
+/* Sensör Sihirbazı - kısmen kurulu */
+.ve-node[data-type="sensor-wizard"].sw-partial .ve-node-box{
+  border-color:#f59e0b;
+  background:rgba(245,158,11,0.10);
+  box-shadow:0 0 8px rgba(245,158,11,0.2);
+}
+.ve-node[data-type="sensor-wizard"].sw-partial .ve-node-label{
+  color:#f59e0b;
+}
+.ve-node[data-type="sensor-wizard"].sw-partial .ve-selection-border{
+  border-color:#f59e0b;
+}
+
 .ve-node[data-type="parametric"] .ve-node-box{
   border:2.5px solid var(--accent-primary, #3b82f6);
   background:rgba(59,130,246,0.06);
@@ -1481,6 +1510,45 @@
   display:flex;align-items:center;justify-content:center;
   font-size:0.75rem;font-weight:600;color:var(--text-secondary);flex-shrink:0;
   letter-spacing:0.3px;
+  position:relative;
+}
+.ve-xaxis-btn{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:1px 8px;border-radius:3px;cursor:pointer;
+  border:1px solid transparent;transition:all 0.12s;
+  user-select:none;white-space:nowrap;
+}
+.ve-xaxis-btn:hover{
+  border-color:var(--accent-primary);color:var(--accent-primary);
+  background:rgba(45,138,90,0.06);
+}
+.ve-xaxis-btn .ve-xaxis-arrow{
+  font-size:0.5rem;opacity:0.5;transition:transform 0.15s;
+}
+.ve-xaxis-btn:hover .ve-xaxis-arrow{opacity:1;}
+.ve-xaxis-dropdown{
+  position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
+  min-width:220px;max-width:340px;max-height:300px;overflow-y:auto;
+  background:var(--bg-primary);border:1px solid var(--border-color);
+  border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.18);
+  z-index:9999;padding:4px 0;font-size:0.68rem;
+}
+.ve-xaxis-dropdown-group{
+  padding:3px 10px 2px;font-size:0.58rem;font-weight:600;
+  color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;
+  border-top:1px solid var(--border-color);margin-top:2px;
+}
+.ve-xaxis-dropdown-group:first-child{border-top:none;margin-top:0;}
+.ve-xaxis-dropdown-item{
+  padding:5px 12px;cursor:pointer;display:flex;align-items:center;gap:6px;
+  transition:background 0.08s;white-space:nowrap;
+}
+.ve-xaxis-dropdown-item:hover{background:var(--bg-tertiary);}
+.ve-xaxis-dropdown-item.active{
+  background:rgba(45,138,90,0.10);color:var(--accent-primary);font-weight:600;
+}
+.ve-xaxis-dropdown-item .ve-xaxis-unit{
+  font-size:0.55rem;color:var(--text-muted);margin-left:auto;opacity:0.7;
 }
 .ve-slot-axis-y{
   width:22px;position:absolute;left:0;top:0;bottom:0;
@@ -2377,20 +2445,24 @@ function veUpdateResultsTree() {
     });
     
     var sensorCount = tabNodeObjs.filter(function(n) { return n.type === 'sensor'; }).length;
+    // Sihirbaz sanal sensör sayısı
+    var tabWizNode = tabNodeObjs.find(function(n) { return n.type === 'sensor-wizard' && n.data && n.data.sensorsInstalled; });
+    var tabWizSensors = tabWizNode ? (tabWizNode.data.activeSensors || []) : [];
+    var totalSensorCount = sensorCount + tabWizSensors.length;
     var hasSim = !!tabSimR;
-    
-    var tabIcon = hasSim ? '✅' : (sensorCount > 0 ? '📊' : '📂');
+
+    var tabIcon = hasSim ? '✅' : (totalSensorCount > 0 ? '📊' : '📂');
     var tabLabel = tab.name + (hasSim ? '' : ' (çözülmedi)');
-    
+
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row" style="padding-left:16px;">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (sensorCount > 0 ? '▶' : ' ') + '</span>';
+    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensorCount > 0 ? '▶' : ' ') + '</span>';
     html += '<span class="icon">' + tabIcon + '</span>';
     html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--accent-primary);' : '') + '">' + tabLabel + '</span>';
-    if(sensorCount > 0) html += ' <span style="font-size:0.6rem; color:var(--text-muted); margin-left:auto;">' + sensorCount + ' sensör</span>';
+    if(totalSensorCount > 0) html += ' <span style="font-size:0.6rem; color:var(--text-muted); margin-left:auto;">' + totalSensorCount + ' sensör</span>';
     html += '</div>';
-    
-    if(sensorCount > 0) {
+
+    if(totalSensorCount > 0) {
       html += '<div class="ve-tree-children' + (isActive ? ' open' : '') + '">';
       
       // Prefix: aktif sekme → sensörId direkt, diğer → @tabIdx:sensörId
@@ -2507,7 +2579,70 @@ function veUpdateResultsTree() {
           html += '<span>📌</span> ' + (sn.customName || 'Sensör') + '</div>';
         });
       }
-      
+
+      // ── Sihirbaz Sanal Sensörleri ──
+      if(tabWizSensors.length > 0) {
+        // Sanal sensörleri bileşen tipine göre grupla
+        var wizCompGroups = {};
+        tabWizSensors.forEach(function(ws) {
+          var key = ws.target;
+          if(!wizCompGroups[key]) wizCompGroups[key] = [];
+          wizCompGroups[key].push(ws);
+        });
+
+        html += '<div style="padding:4px 0 2px 32px; font-size:0.65rem; color:#22c55e; font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">🧙 Sihirbaz Sensörleri</div>';
+
+        var wizCompOrder = ['engine','torque-converter','gearbox','shift-controller','vehicle','road','solver'];
+        wizCompOrder.forEach(function(compType) {
+          var sensors = wizCompGroups[compType];
+          if(!sensors || sensors.length === 0) return;
+
+          var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
+          if(compType === 'engine') {
+            var engN = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+            if(engN) compName = componentDefs[engN.type] ? componentDefs[engN.type].name : compName;
+          }
+
+          html += '<div class="ve-tree-item">';
+          html += '<div class="ve-tree-sensor" style="padding-left:36px;">';
+          html += '<span class="arrow" onclick="event.stopPropagation();veToggleTree(this.closest(\'.ve-tree-item\').querySelector(\'.ve-tree-sensor\'))" style="font-size:0.55rem; width:12px; cursor:pointer; color:var(--text-muted);">▶</span>';
+          html += '<span>🧙</span> ' + compName;
+          html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + sensors.length + ' sinyal</span>';
+          html += '</div>';
+          html += '<div class="ve-tree-children">';
+
+          sensors.forEach(function(ws) {
+            // Sinyal bilgisini COMPONENT_SIGNALS'tan al
+            var sigInfo = null;
+            var lookupType = compType;
+            if(compType === 'engine') {
+              var engN2 = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+              if(engN2) lookupType = engN2.type;
+            }
+            if(COMPONENT_SIGNALS[lookupType]) {
+              sigInfo = (COMPONENT_SIGNALS[lookupType].outputs || []).find(function(s) { return s.id === ws.signal; });
+            }
+            if(!sigInfo && COMPONENT_SIGNALS[compType]) {
+              sigInfo = (COMPONENT_SIGNALS[compType].outputs || []).find(function(s) { return s.id === ws.signal; });
+            }
+
+            var sigName = sigInfo ? sigInfo.name : ws.signal;
+            var sigUnit = sigInfo ? sigInfo.unit : '';
+            var wizSensorId = '~' + compType;
+
+            html += '<div class="ve-tree-signal" style="padding-left:52px;" onmousedown="veStartSignalDrag(event,\'' + wizSensorId + '\',\'' + ws.signal + '\')" title="' + sigName + ' (' + sigUnit + ') — Sürükle">';
+            html += '<span>📊</span> ' + sigName + ' <span style="font-size:0.55rem; color:var(--text-muted);">(' + sigUnit + ')</span>';
+            html += '</div>';
+          });
+
+          // Tümünü Ekle
+          html += '<div class="ve-tree-signal" style="padding-left:52px; color:#22c55e; font-style:italic;" onmousedown="veStartSensorDrag(event,\'~' + compType + '\')" title="Tüm sinyalleri sürükle">';
+          html += '<span>📦</span> Tümünü Ekle (' + sensors.length + ' sinyal)';
+          html += '</div>';
+          html += '</div></div>';
+        });
+      }
+
       html += '</div>'; // tree-children (tab content)
     }
     
@@ -2515,7 +2650,59 @@ function veUpdateResultsTree() {
   });
   
   html += '</div></div>';
-  
+
+  // ── Sihirbaz Diyagramları ağacı ──
+  // Sensör sihirbazı kuruluysa ve simülasyon varsa göster
+  var wizNode = nodes.find(function(n) { return n.type === 'sensor-wizard'; });
+  var wizInstalled = wizNode && wizNode.data && wizNode.data.sensorsInstalled;
+  var wizPkgs = wizInstalled ? (wizNode.data.installedPackages || []) : [];
+  if(wizInstalled && wizPkgs.length > 0 && typeof SENSOR_PACKAGES !== 'undefined') {
+    var hasSimForWiz = !!window.veSimResults;
+    html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+    html += '<div class="ve-tree-item">';
+    html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
+    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
+    html += '<span class="icon">🧙</span>';
+    html += '<span style="font-weight:600; color:#22c55e;">Sihirbaz Diyagramları</span>';
+    html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + wizPkgs.length + ' paket</span>';
+    html += '</div>';
+    html += '<div class="ve-tree-children open">';
+
+    wizPkgs.forEach(function(pkgId) {
+      var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
+      if(!pkg) return;
+
+      html += '<div class="ve-tree-item">';
+      html += '<div class="ve-tree-row" style="padding-left:16px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
+      html += '<span class="icon">' + pkg.icon + '</span>';
+      html += '<span style="font-weight:500;">' + pkg.name + '</span>';
+      html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + pkg.diagrams.length + '</span>';
+      html += '</div>';
+      html += '<div class="ve-tree-children">';
+
+      pkg.diagrams.forEach(function(diag, dIdx) {
+        var diagSigDef = (typeof SW_DIAGRAM_SIGNALS !== 'undefined') ? SW_DIAGRAM_SIGNALS[diag.id] : null;
+        var canDrag = hasSimForWiz && !!diagSigDef;
+        var diagStyle = canDrag
+          ? 'cursor:grab; color:var(--text-primary);'
+          : 'cursor:default; color:var(--text-muted); opacity:0.6;';
+        var dragAttr = canDrag
+          ? ' onmousedown="veStartWizardDiagDrag(event,\'' + pkgId + '\',' + dIdx + ')"'
+          : '';
+
+        html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
+        html += '<span>' + (canDrag ? '📊' : '🔒') + '</span> ' + diag.name;
+        if(diag.note) html += ' <span style="font-size:0.5rem; color:#f59e0b;">⚠</span>';
+        html += '</div>';
+      });
+
+      html += '</div></div>';
+    });
+
+    html += '</div></div></div>';
+  }
+
   // Detaylı Rapor — expandable ağaç öğesi with sub-sections
   if(window.veSimResults) {
     html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
@@ -5271,13 +5458,134 @@ function veStartSignalDrag(e, sensorId, signalId) {
   document.addEventListener('mouseup', upHandler);
 }
 
+// ── Sihirbaz diyagramı sürükleme ──
+var veDraggingWizDiag = null; // { pkgId, diagIdx }
+
+function veStartWizardDiagDrag(e, pkgId, diagIdx) {
+  if(e.button !== 0) return;
+  e.preventDefault();
+  veDraggingWizDiag = { pkgId: pkgId, diagIdx: diagIdx };
+
+  document.querySelectorAll('.ve-rslot').forEach(function(s) { s.classList.remove('drag-over'); });
+
+  var moveHandler = function(ev) {
+    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
+      var r = slot.getBoundingClientRect();
+      slot.classList.toggle('drag-over', ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom);
+    });
+  };
+
+  var upHandler = function(ev) {
+    document.removeEventListener('mousemove', moveHandler);
+    document.removeEventListener('mouseup', upHandler);
+    if(!veDraggingWizDiag) return;
+
+    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
+      var r = slot.getBoundingClientRect();
+      if(ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
+        veAddWizardDiagramToSlot(parseInt(slot.getAttribute('data-slot')), veDraggingWizDiag.pkgId, veDraggingWizDiag.diagIdx);
+      }
+      slot.classList.remove('drag-over');
+    });
+    veDraggingWizDiag = null;
+  };
+
+  document.addEventListener('mousemove', moveHandler);
+  document.addEventListener('mouseup', upHandler);
+}
+
+function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
+  var pkg = (typeof SENSOR_PACKAGES !== 'undefined') ? SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; }) : null;
+  if(!pkg || !pkg.diagrams[diagIdx]) return;
+  var diag = pkg.diagrams[diagIdx];
+  var sigDef = (typeof SW_DIAGRAM_SIGNALS !== 'undefined') ? SW_DIAGRAM_SIGNALS[diag.id] : null;
+  if(!sigDef) {
+    if(typeof showToast === 'function') showToast('Bu diyagram için sinyal haritası tanımlı değil', 'warning');
+    return;
+  }
+
+  var slot = veResultSlots[slotIdx];
+  // Slot'u temizle ve yeni diyagram ile doldur
+  slot.type = 'line';
+  slot.sensors = [];
+  slot.yAxisLock = {};
+  if(typeof veChartViews !== 'undefined') veChartViews[slotIdx] = { panX:0, panY:0, zoomX:1, zoomY:1 };
+
+  // X ekseni ayarla
+  if(sigDef.x.target === 'time') {
+    slot.xAxis = { id:'time', name:'Zaman [s]', unit:'s' };
+  } else {
+    // X ekseni bir bileşen sinyali — ilk Y sinyalinden önce eklenmeli
+    slot.xAxis = {
+      id: '~' + sigDef.x.target + ':' + sigDef.x.signal,
+      name: (sigDef.x.name || sigDef.x.signal) + ' [' + (sigDef.x.unit || '') + ']',
+      unit: sigDef.x.unit || ''
+    };
+  }
+
+  // Y eksen sinyallerini ekle
+  sigDef.y.forEach(function(ySig) {
+    var entry = {
+      id: '~' + ySig.target,
+      signal: ySig.signal,
+      name: ySig.name || ySig.signal,
+      unit: ySig.unit || ''
+    };
+    // Çakışma kontrolü
+    if(!slot.sensors.some(function(s) { return s.id === entry.id && s.signal === entry.signal; })) {
+      slot.sensors.push(entry);
+    }
+  });
+
+  veRenderSlot(slotIdx);
+  if(typeof showToast === 'function') showToast('📊 ' + diag.name + ' diyagramı eklendi', 'success');
+}
+
 // Tek sinyal slot'a ekle
 function veAddSignalToSlot(slotIdx, sensorId, signalId) {
   var tabNodes = nodes;
   var tabConns = connections;
   var rawSensorId = sensorId;
   var lookupId = sensorId;
-  
+
+  // ── Sihirbaz sanal sensörü: ~compType formatı ──
+  if(sensorId.charAt(0) === '~') {
+    var compType = sensorId.substring(1);
+    var slot = veResultSlots[slotIdx];
+    if(!slot.sensors) slot.sensors = [];
+    if(!slot.type) slot.type = 'line';
+
+    // X ekseni otomatik
+    if(slot.sensors.length === 0) {
+      var solver = nodes.find(function(n) { return n.type === 'solver'; });
+      var tm = solver && solver.data ? (solver.data.timeMode || 'duration') : 'duration';
+      slot.xAxis = { id: 'time', name: tm === 'stop' ? 'Zaman [s] (Durma)' : 'Zaman [s]', unit: 's' };
+    }
+
+    // Çakışma kontrolü
+    if(slot.sensors.some(function(s) { return s.id === rawSensorId && s.signal === signalId; })) return;
+
+    // Sinyal bilgisini bul
+    var sigInfo = null;
+    var effectiveType = compType;
+    if(compType === 'engine') {
+      var engNode = tabNodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+      if(engNode) effectiveType = engNode.type;
+    }
+    if(COMPONENT_SIGNALS[effectiveType]) {
+      sigInfo = (COMPONENT_SIGNALS[effectiveType].outputs || []).find(function(s) { return s.id === signalId; });
+    }
+    if(!sigInfo && COMPONENT_SIGNALS[compType]) {
+      sigInfo = (COMPONENT_SIGNALS[compType].outputs || []).find(function(s) { return s.id === signalId; });
+    }
+
+    var compName = componentDefs[effectiveType] ? componentDefs[effectiveType].name : compType;
+    var displayName = '[SW] ' + compName + ' — ' + (sigInfo ? sigInfo.name : signalId);
+    slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
+    veRenderSlot(slotIdx);
+    return;
+  }
+
   if(sensorId.charAt(0) === '@') {
     var parts = sensorId.substring(1).split(':');
     var tabIdx = parseInt(parts[0]);
@@ -5346,12 +5654,27 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
 }
 
 function veAddSensorToSlot(slotIdx, sensorId) {
+  // ── Sihirbaz sanal sensörü: ~compType formatı — tüm sinyalleri ekle ──
+  if(sensorId.charAt(0) === '~') {
+    var compType = sensorId.substring(1);
+    var effectiveType = compType;
+    if(compType === 'engine') {
+      var engNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+      if(engNode) effectiveType = engNode.type;
+    }
+    var allSigs = (COMPONENT_SIGNALS[effectiveType] || COMPONENT_SIGNALS[compType] || {}).outputs || [];
+    allSigs.forEach(function(sig) {
+      veAddSignalToSlot(slotIdx, sensorId, sig.id);
+    });
+    return;
+  }
+
   // Cross-tab sensör desteği
   var tabNodes = nodes;
   var tabConns = connections;
   var rawSensorId = sensorId; // orijinal ID (prefix dahil)
   var lookupId = sensorId;
-  
+
   if(sensorId.charAt(0) === '@') {
     var parts = sensorId.substring(1).split(':');
     var tabIdx = parseInt(parts[0]);
@@ -5525,7 +5848,13 @@ function veRenderSlot(slotIdx) {
     // ── Eksen kontrol çubuğu (dinamik — veRenderChart tarafından güncellenir) ──
     html += '<div class="ve-axis-ctrl" id="ve-axis-ctrl-' + slotIdx + '" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
     html += '</div>';
-    html += '<div class="ve-slot-axis-x">' + (slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</div>';
+    var xName = slot.xAxis ? slot.xAxis.name : 'Zaman [s]';
+    html += '<div class="ve-slot-axis-x" id="ve-xaxis-area-' + slotIdx + '">';
+    html += '<span class="ve-xaxis-btn" onclick="veShowXAxisPicker(' + slotIdx + ',event)" title="X eksenini değiştir">';
+    html += '<span>' + xName + '</span>';
+    html += '<span class="ve-xaxis-arrow">▲</span>';
+    html += '</span>';
+    html += '</div>';
   } else {
     // ── Tablo modu ──
     html += '<div style="overflow:auto; width:100%; height:100%; flex:1;">';
@@ -5540,6 +5869,14 @@ function veRenderSlot(slotIdx) {
     html += '<tbody id="ve-table-body-' + slotIdx + '">';
     html += '<tr><td colspan="' + (sensors.length + 2) + '" style="padding:20px; text-align:center; color:var(--text-muted);">Simülasyon verisi bekleniyor</td></tr>';
     html += '</tbody></table></div>';
+    // Tablo modu için de X ekseni seçici
+    var xNameTbl = slot.xAxis ? slot.xAxis.name : 'Zaman [s]';
+    html += '<div class="ve-slot-axis-x" id="ve-xaxis-area-' + slotIdx + '">';
+    html += '<span class="ve-xaxis-btn" onclick="veShowXAxisPicker(' + slotIdx + ',event)" title="X eksenini değiştir">';
+    html += '<span>' + xNameTbl + '</span>';
+    html += '<span class="ve-xaxis-arrow">▲</span>';
+    html += '</span>';
+    html += '</div>';
   }
   
   // Legend (her iki mod için) — X butonu ile kaldırma destekli
@@ -5575,6 +5912,211 @@ function veRemoveSensorFromSlot(slotIdx, sensorIdx) {
   // Eksen lock'larını sıfırla (birim grupları değişmiş olabilir)
   slot.yAxisLock = {};
   veRenderSlot(slotIdx);
+}
+
+// ===== X EKSENİ SEÇİCİ (DROPDOWN) =====
+
+// Slot'taki mevcut sinyaller + topolojideki tüm bileşen sinyallerini topla
+function veGetAvailableXAxisOptions(slotIdx) {
+  var slot = veResultSlots[slotIdx];
+  var options = [];
+  var currentId = (slot.xAxis && slot.xAxis.id) ? slot.xAxis.id : 'time';
+
+  // 1) Zaman ekseni (her zaman mevcut)
+  options.push({ group: 'Varsayılan', id: 'time', name: 'Zaman', unit: 's', active: currentId === 'time' });
+
+  // 2) Slot'taki Y sinyallerinden (kullanıcı zaten eklemiş)
+  var slotSensors = slot.sensors || [];
+  if(slotSensors.length > 0) {
+    slotSensors.forEach(function(s) {
+      var axId;
+      if(s.id && s.id.charAt(0) === '~') {
+        axId = s.id + ':' + s.signal;
+      } else {
+        axId = s.id + ':' + s.signal;
+      }
+      options.push({
+        group: 'Paneldeki Sinyaller',
+        id: axId,
+        sensorId: s.id,
+        signal: s.signal,
+        name: s.name,
+        unit: s.unit || '',
+        active: currentId === axId
+      });
+    });
+  }
+
+  // 3) Topolojideki bileşen sinyalleri
+  var tabNodes = nodes || [];
+  var compOrder = ['engine','engine-brake','torque-converter','gearbox','shift-controller','transfer','propshaft','differential','wheel','vehicle','road','solver'];
+  var added = {};
+
+  compOrder.forEach(function(compType) {
+    var compNode = tabNodes.find(function(n) { return n.type === compType; });
+    if(!compNode) return;
+    var sigs = COMPONENT_SIGNALS[compType];
+    if(!sigs || !sigs.outputs) return;
+    var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
+
+    sigs.outputs.forEach(function(sig) {
+      var axId = '~' + compType + ':' + sig.id;
+      if(added[axId]) return;
+      added[axId] = true;
+      options.push({
+        group: compName,
+        id: axId,
+        sensorId: '~' + compType,
+        signal: sig.id,
+        name: sig.name,
+        unit: sig.unit || '',
+        active: currentId === axId
+      });
+    });
+  });
+
+  // 4) Fiziksel sensörlerden
+  var sensorNodes = tabNodes.filter(function(n) { return n.type === 'sensor'; });
+  sensorNodes.forEach(function(sNode) {
+    var sourceType = '';
+    var sourceName = '';
+    if(sNode.data && sNode.data.attachedConnection) {
+      var conn = (connections || []).find(function(c) { return c.id === sNode.data.attachedConnection; });
+      if(conn) {
+        var dir = sNode.data.sensorDirection || 'from';
+        var srcNode = tabNodes.find(function(n) { return n.id === (dir === 'to' ? conn.to : conn.from); });
+        if(srcNode) {
+          sourceType = srcNode.type;
+          sourceName = srcNode.customName || (componentDefs[srcNode.type] ? componentDefs[srcNode.type].name : srcNode.type);
+        }
+      }
+    }
+    if(!sourceType && sNode.data && sNode.data.attachedComponent) {
+      var compN = tabNodes.find(function(n) { return n.id === sNode.data.attachedComponent; });
+      if(compN) {
+        sourceType = compN.type;
+        sourceName = compN.customName || (componentDefs[compN.type] ? componentDefs[compN.type].name : compN.type);
+      }
+    }
+    if(!sourceType) return;
+
+    var sigs = COMPONENT_SIGNALS[sourceType];
+    if(!sigs || !sigs.outputs) return;
+    var sensorLabel = sNode.customName || sourceName;
+
+    sigs.outputs.forEach(function(sig) {
+      var axId = sNode.id + ':' + sig.id;
+      if(added[axId]) return;
+      added[axId] = true;
+      options.push({
+        group: '📌 ' + sensorLabel,
+        id: axId,
+        sensorId: sNode.id,
+        signal: sig.id,
+        name: sig.name,
+        unit: sig.unit || '',
+        active: currentId === axId
+      });
+    });
+  });
+
+  return options;
+}
+
+// Dropdown menüyü göster
+function veShowXAxisPicker(slotIdx, e) {
+  if(e) e.stopPropagation();
+
+  // Zaten açıksa kapat
+  var existing = document.getElementById('ve-xaxis-dropdown-' + slotIdx);
+  if(existing) { existing.remove(); return; }
+
+  // Diğer açık dropdown'ları kapat
+  document.querySelectorAll('.ve-xaxis-dropdown').forEach(function(d) { d.remove(); });
+
+  var area = document.getElementById('ve-xaxis-area-' + slotIdx);
+  if(!area) return;
+
+  var options = veGetAvailableXAxisOptions(slotIdx);
+
+  var html = '';
+  var lastGroup = '';
+  options.forEach(function(opt, i) {
+    if(opt.group !== lastGroup) {
+      lastGroup = opt.group;
+      html += '<div class="ve-xaxis-dropdown-group">' + opt.group + '</div>';
+    }
+    html += '<div class="ve-xaxis-dropdown-item' + (opt.active ? ' active' : '') + '" ';
+    html += 'onclick="veSetSlotXAxis(' + slotIdx + ',' + i + ');event.stopPropagation();" ';
+    html += 'data-opt-idx="' + i + '">';
+    html += '<span>' + (opt.active ? '● ' : '') + opt.name + '</span>';
+    if(opt.unit) html += '<span class="ve-xaxis-unit">' + opt.unit + '</span>';
+    html += '</div>';
+  });
+
+  var dd = document.createElement('div');
+  dd.className = 've-xaxis-dropdown';
+  dd.id = 've-xaxis-dropdown-' + slotIdx;
+  dd.innerHTML = html;
+  // Options verilerini dropdown'a bağla
+  dd._options = options;
+  area.appendChild(dd);
+
+  // Dropdown dışına tıklayınca kapat
+  setTimeout(function() {
+    function closeHandler(ev) {
+      if(!dd.contains(ev.target)) {
+        dd.remove();
+        document.removeEventListener('mousedown', closeHandler, true);
+      }
+    }
+    document.addEventListener('mousedown', closeHandler, true);
+  }, 0);
+}
+
+// X eksenini değiştir
+function veSetSlotXAxis(slotIdx, optIdx) {
+  var dd = document.getElementById('ve-xaxis-dropdown-' + slotIdx);
+  if(!dd || !dd._options) return;
+  var opt = dd._options[optIdx];
+  if(!opt) return;
+
+  var slot = veResultSlots[slotIdx];
+
+  if(opt.id === 'time') {
+    var solver = (nodes || []).find(function(n) { return n.type === 'solver'; });
+    var tm = solver && solver.data ? (solver.data.timeMode || 'duration') : 'duration';
+    slot.xAxis = { id: 'time', name: 'Zaman [s]', unit: 's' };
+  } else {
+    slot.xAxis = {
+      id: opt.id,
+      name: opt.name + ' [' + opt.unit + ']',
+      unit: opt.unit,
+      sensorId: opt.sensorId || null,
+      signal: opt.signal || null
+    };
+  }
+
+  // Dropdown kapat
+  dd.remove();
+
+  // X-axis etiketini güncelle
+  var btn = document.querySelector('#ve-xaxis-area-' + slotIdx + ' .ve-xaxis-btn span:first-child');
+  if(btn) btn.textContent = slot.xAxis.name;
+
+  // Tablo modundaysa başlığı güncelle
+  var tableHeader = document.querySelector('#ve-table-' + slotIdx + ' thead th:nth-child(2)');
+  if(tableHeader) tableHeader.textContent = slot.xAxis.name;
+
+  // Grafik/tabloyu yeniden çiz
+  if(window.veSimResults) {
+    if(slot.type === 'line') {
+      veResetChartView(slotIdx);
+      veRenderChart(slotIdx);
+    } else {
+      veRenderTable(slotIdx);
+    }
+  }
 }
 
 // ===== CANVAS PAN/ZOOM (Gelişmiş canvasOffset sistemi aşağıda) =====
@@ -6707,6 +7249,148 @@ function swCheckSensorExists(sensorReq, topology) {
   return { matched:false, sensorNode:null };
 }
 
+// ── Diyagram → Sinyal Haritası ──
+// Her diyagramın hangi sinyallerden oluştuğunu tanımlar.
+// x.target='time' → veSimResults.time kullanılır
+// x/y target bir bileşen tipi ise → o bileşenin sinyal verisi
+var SW_DIAGRAM_SIGNALS = {
+  // Performans
+  'v-t':  { x:{target:'time'}, y:[{target:'vehicle', signal:'v_speed', name:'Araç Hızı', unit:'km/h'}] },
+  's-t':  { x:{target:'time'}, y:[{target:'vehicle', signal:'v_distance', name:'Mesafe', unit:'m'}] },
+  'a-v':  { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'vehicle', signal:'v_accel', name:'İvme', unit:'m/s²'}] },
+  'a-t':  { x:{target:'time'}, y:[{target:'vehicle', signal:'v_accel', name:'İvme', unit:'m/s²'}] },
+  // Motor Analizi
+  'rpm-v':   { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'}] },
+  'rpm-t':   { x:{target:'time'}, y:[{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'}] },
+  'torque-v':{ x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'engine', signal:'torque', name:'Motor Torku', unit:'Nm'}] },
+  'power-v': { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'engine', signal:'power', name:'Motor Gücü', unit:'kW'}] },
+  // TC Analizi
+  'sr-v':        { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'torque-converter', signal:'speed_ratio', name:'Hız Oranı (SR)', unit:'−'}] },
+  'tr-v':        { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'torque-converter', signal:'torque_ratio', name:'Tork Oranı (TR)', unit:'−'}] },
+  'eta-tc-v':    { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'torque-converter', signal:'efficiency', name:'TC Verimi η', unit:'%'}] },
+  'tc-slip-v':   { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'torque-converter', signal:'slip', name:'Kayma', unit:'%'}] },
+  'tc-io-torque':{ x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[
+    {target:'torque-converter', signal:'torque_in', name:'Pump Torku', unit:'Nm'},
+    {target:'torque-converter', signal:'torque_out', name:'Türbin Torku', unit:'Nm'}
+  ]},
+  // Çekiş Kuvveti
+  'te-v':           { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'solver', signal:'tractive_effort', name:'Çekiş Kuvveti (TE)', unit:'kN'}] },
+  'dp-v':           { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'solver', signal:'drawbar_pull', name:'Net Çekiş (DP)', unit:'kN'}] },
+  'resistances-v':  { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[
+    {target:'road', signal:'r_rolling_force', name:'Yuvarlanma Direnci', unit:'N'},
+    {target:'road', signal:'r_aero_force', name:'Aerodinamik Direnç', unit:'N'},
+    {target:'road', signal:'r_total_resist', name:'Toplam Direnç', unit:'N'}
+  ]},
+  'power-balance-v':{ x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[
+    {target:'engine', signal:'power', name:'Motor Gücü', unit:'kW'},
+    {target:'solver', signal:'wheel_power', name:'Tekerlekte Güç', unit:'kW'}
+  ]},
+  // Vites Geçiş
+  'gear-t':      { x:{target:'time'}, y:[{target:'shift-controller', signal:'current_gear', name:'Aktif Vites', unit:'−'}] },
+  'gear-v':      { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'shift-controller', signal:'current_gear', name:'Aktif Vites', unit:'−'}] },
+  'trans-out-v': { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'gearbox', signal:'torque_out', name:'Şanzıman Çıkış Torku', unit:'Nm'}] },
+  'shift-rpm-t': { x:{target:'time'}, y:[
+    {target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'},
+    {target:'shift-controller', signal:'current_gear', name:'Aktif Vites', unit:'−'}
+  ]},
+  // Karşılaştırma
+  'transfer-compare':  { x:{target:'time'}, y:[{target:'vehicle', signal:'v_speed', name:'Araç Hızı', unit:'km/h'}] },
+  'efficiency-chain':  { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'torque-converter', signal:'efficiency', name:'TC Verimi', unit:'%'}] },
+  'te-envelope':       { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'solver', signal:'tractive_effort', name:'TE Zarf', unit:'kN'}] },
+  'bsfc-map':          { x:{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'}, y:[{target:'engine', signal:'torque', name:'Motor Torku', unit:'Nm'}] }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SENSÖR KURULUMU — Sanal sensörleri sihirbaz içinde etkinleştirme
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function swInstallSensors(node) {
+  if(!node || node.type !== 'sensor-wizard') return;
+  var topo = swScanTopology();
+
+  var installedPkgs = [];
+  var activeSensors = [];
+
+  SENSOR_PACKAGES.forEach(function(pkg) {
+    // Bileşen gereksinimleri karşılanıyor mu?
+    var reqsMet = true;
+    for(var r = 0; r < pkg.requires.length; r++) {
+      var rt = pkg.requires[r];
+      if(!nodes.some(function(n) { return n.type === rt || (rt === 'engine' && (n.type === 'engine' || n.type === 'engine-brake')); })) {
+        reqsMet = false; break;
+      }
+    }
+    if(!reqsMet) return;
+
+    installedPkgs.push(pkg.id);
+    pkg.sensors.forEach(function(sReq) {
+      activeSensors.push({
+        packageId: pkg.id,
+        target: sReq.target,
+        attachment: sReq.attachment,
+        signal: sReq.signal,
+        label: sReq.label
+      });
+    });
+  });
+
+  node.data.sensorsInstalled = true;
+  node.data.installedPackages = installedPkgs;
+  node.data.activeSensors = activeSensors;
+
+  swUpdateWizardVisual(node);
+  if(typeof saveState === 'function') saveState();
+  if(typeof showToast === 'function') showToast(installedPkgs.length + ' paket kuruldu (' + activeSensors.length + ' sensör)', 'success');
+
+  // Properties panelini yenile
+  showNodeProperties(node);
+}
+
+function swRemoveSensors(node) {
+  if(!node || node.type !== 'sensor-wizard') return;
+
+  node.data.sensorsInstalled = false;
+  node.data.installedPackages = [];
+  node.data.activeSensors = [];
+
+  swUpdateWizardVisual(node);
+  if(typeof saveState === 'function') saveState();
+  if(typeof showToast === 'function') showToast('Sensörler kaldırıldı', 'info');
+
+  showNodeProperties(node);
+}
+
+function swUpdateWizardVisual(node) {
+  if(!node || node.type !== 'sensor-wizard') return;
+  var el = document.getElementById(node.id);
+  if(!el) return;
+
+  // Önceki durumu temizle
+  el.classList.remove('sw-installed', 'sw-partial');
+
+  if(node.data && node.data.sensorsInstalled) {
+    // Tüm paketler kurulu mu kontrol et
+    var totalPkgs = 0;
+    SENSOR_PACKAGES.forEach(function(pkg) {
+      if(pkg.sensors.length > 0) totalPkgs++;
+    });
+    var installedCount = (node.data.installedPackages || []).length;
+
+    if(installedCount >= totalPkgs) {
+      el.classList.add('sw-installed');
+    } else if(installedCount > 0) {
+      el.classList.add('sw-installed');
+    }
+  }
+}
+
+// Tüm sihirbaz node'larının görselini güncelle (restoreState sonrası için)
+function swRefreshAllWizardVisuals() {
+  nodes.forEach(function(n) {
+    if(n.type === 'sensor-wizard') swUpdateWizardVisual(n);
+  });
+}
+
 var swExpandedPkg = {};
 
 function swTogglePkg(pkgId) {
@@ -6743,8 +7427,23 @@ function swShowDiagramInfo(pkgId, diagIdx) {
 
 function getSensorWizardPropertiesHTML(node) {
   var topo = swScanTopology();
+  var isInstalled = node.data && node.data.sensorsInstalled;
+  var installedPkgs = (node.data && node.data.installedPackages) || [];
   var html = '<div style="border-top:1px solid var(--border-color);padding-top:12px;">';
-  
+
+  // ── Kurulum Durumu Başlığı ──
+  if(isInstalled) {
+    html += '<div style="padding:8px 10px;border-radius:6px;margin-bottom:10px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.3);">';
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
+    html += '<span style="font-size:0.9rem;">✅</span>';
+    html += '<span style="font-size:0.7rem;font-weight:700;color:#22c55e;">Sensörler Kurulu</span>';
+    html += '</div>';
+    html += '<div style="font-size:0.58rem;color:var(--text-secondary);line-height:1.4;">';
+    html += installedPkgs.length + ' paket aktif, ' + ((node.data.activeSensors || []).length) + ' sanal sensör';
+    html += '</div>';
+    html += '</div>';
+  }
+
   // ── Topoloji Durumu ──
   html += '<div style="font-size:0.72rem;font-weight:700;color:var(--accent-warning,#f59e0b);margin-bottom:8px;">📡 Topoloji Durumu</div>';
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;font-size:0.62rem;margin-bottom:10px;padding:8px;background:var(--bg-tertiary);border-radius:6px;border:1px solid var(--border-color);">';
@@ -6761,40 +7460,75 @@ function getSensorWizardPropertiesHTML(node) {
     html += '</div>';
   });
   html += '</div>';
-  
+
   // Zincir durumu
   html += '<div style="font-size:0.62rem;padding:5px 8px;border-radius:4px;margin-bottom:12px;' + (topo.chainComplete ? 'background:rgba(34,197,94,0.08);color:#16a34a;' : 'background:rgba(239,68,68,0.08);color:#dc2626;') + '">';
   html += topo.chainComplete ? '✅ Zincir: Motor → … → Araç tamamlanmış' : '⚠️ Güç aktarma zinciri tamamlanmamış!';
   html += '</div>';
-  
-  // Sensör sayısı özeti
-  var totalReq = 0, totalMatched = 0;
-  SENSOR_PACKAGES.forEach(function(pkg) {
-    pkg.sensors.forEach(function(sReq) {
-      totalReq++;
-      if(swCheckSensorExists(sReq, topo).matched) totalMatched++;
-    });
-  });
-  
-  // İlerleme çubuğu
-  var pct = totalReq > 0 ? Math.round(totalMatched / totalReq * 100) : 0;
-  html += '<div style="font-size:0.62rem;color:var(--text-muted);margin-bottom:4px;">Sensör Durumu: <b style="color:var(--text-primary);">' + totalMatched + ' / ' + totalReq + '</b> bağlı</div>';
-  html += '<div style="height:6px;background:var(--bg-tertiary);border-radius:3px;margin-bottom:12px;overflow:hidden;border:1px solid var(--border-color);">';
-  html += '<div style="height:100%;width:' + pct + '%;background:' + (pct === 100 ? '#22c55e' : pct > 0 ? '#f59e0b' : 'var(--bg-tertiary)') + ';border-radius:3px;transition:width 0.3s;"></div>';
+
+  // ── Sensörleri Kur / Kaldır Butonu ──
+  html += '<div style="text-align:center;margin-bottom:12px;">';
+  if(!isInstalled) {
+    html += '<button onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swInstallSensors(w);" style="padding:6px 18px;font-size:0.68rem;font-weight:600;background:#22c55e;color:white;border:none;border-radius:6px;cursor:pointer;box-shadow:0 2px 8px rgba(34,197,94,0.3);transition:all 0.15s;" onmouseover="this.style.background=\'#16a34a\'" onmouseout="this.style.background=\'#22c55e\'">📡 Sensörleri Kur</button>';
+  } else {
+    html += '<button onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swRemoveSensors(w);" style="padding:5px 14px;font-size:0.6rem;background:var(--bg-tertiary);color:var(--accent-danger,#ef4444);border:1px solid var(--accent-danger,#ef4444);border-radius:5px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background=\'rgba(239,68,68,0.1)\'" onmouseout="this.style.background=\'var(--bg-tertiary)\'">Sensörleri Kaldır</button>';
+    html += ' <button onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swInstallSensors(w);" style="padding:5px 14px;font-size:0.6rem;background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border-color);border-radius:5px;cursor:pointer;" title="Topoloji değişiklikleri sonrası yeniden kur">🔄 Yeniden Kur</button>';
+  }
   html += '</div>';
-  
+
+  // Kurulu paketler özeti (kuruluysa)
+  if(isInstalled && installedPkgs.length > 0) {
+    html += '<div style="font-size:0.62rem;color:var(--text-muted);margin-bottom:4px;">Kurulu Paketler:</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
+    installedPkgs.forEach(function(pkgId) {
+      var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
+      if(pkg) {
+        html += '<span style="padding:2px 6px;font-size:0.55rem;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:10px;">' + pkg.icon + ' ' + pkg.name + '</span>';
+      }
+    });
+    html += '</div>';
+  }
+
+  // Sensör sayısı özeti (kurulu değilse fiziksel sensörleri say)
+  if(!isInstalled) {
+    var totalReq = 0, totalMatched = 0;
+    SENSOR_PACKAGES.forEach(function(pkg) {
+      pkg.sensors.forEach(function(sReq) {
+        totalReq++;
+        if(swCheckSensorExists(sReq, topo).matched) totalMatched++;
+      });
+    });
+
+    var pct = totalReq > 0 ? Math.round(totalMatched / totalReq * 100) : 0;
+    html += '<div style="font-size:0.62rem;color:var(--text-muted);margin-bottom:4px;">Fiziksel Sensör Durumu: <b style="color:var(--text-primary);">' + totalMatched + ' / ' + totalReq + '</b> bağlı</div>';
+    html += '<div style="height:6px;background:var(--bg-tertiary);border-radius:3px;margin-bottom:12px;overflow:hidden;border:1px solid var(--border-color);">';
+    html += '<div style="height:100%;width:' + pct + '%;background:' + (pct === 100 ? '#22c55e' : pct > 0 ? '#f59e0b' : 'var(--bg-tertiary)') + ';border-radius:3px;transition:width 0.3s;"></div>';
+    html += '</div>';
+  }
+
   // ── Diyagram Paketleri ──
   html += '<div style="font-size:0.72rem;font-weight:700;color:var(--accent-warning,#f59e0b);margin-bottom:8px;">📦 Diyagram Paketleri</div>';
-  
+
   SENSOR_PACKAGES.forEach(function(pkg, pkgIdx) {
+    var pkgInstalled = isInstalled && installedPkgs.indexOf(pkg.id) > -1;
     var pkgMatched = 0, pkgTotal = pkg.sensors.length;
     var sensorStatuses = [];
-    pkg.sensors.forEach(function(sReq) {
-      var chk = swCheckSensorExists(sReq, topo);
-      sensorStatuses.push(chk.matched);
-      if(chk.matched) pkgMatched++;
-    });
-    
+
+    if(isInstalled) {
+      // Kuruluysa: paket ID'si kurulu paketler listesinde mi?
+      pkg.sensors.forEach(function(sReq) {
+        var matched = pkgInstalled;
+        sensorStatuses.push(matched);
+        if(matched) pkgMatched++;
+      });
+    } else {
+      pkg.sensors.forEach(function(sReq) {
+        var chk = swCheckSensorExists(sReq, topo);
+        sensorStatuses.push(chk.matched);
+        if(chk.matched) pkgMatched++;
+      });
+    }
+
     // Gerekli bileşenler var mı?
     var reqsMet = true;
     for(var r=0; r<pkg.requires.length; r++) {
@@ -6803,41 +7537,44 @@ function getSensorWizardPropertiesHTML(node) {
         reqsMet = false; break;
       }
     }
-    
+
     // Durum ikonu
     var statusIcon = '⬜', statusColor = '#94a3b8';
     if(!reqsMet) { statusIcon = '⚠️'; statusColor = '#ef4444'; }
+    else if(pkgInstalled) { statusIcon = '✅'; statusColor = '#22c55e'; }
     else if(pkgTotal === 0 && pkg.dependsOn) { statusIcon = '🔗'; statusColor = '#6b7280'; }
     else if(pkgMatched === pkgTotal && pkgTotal > 0) { statusIcon = '✅'; statusColor = '#22c55e'; }
     else if(pkgMatched > 0) { statusIcon = '🔶'; statusColor = '#f59e0b'; }
-    
+
     // Öncelik bordür rengi
     var prioColor = pkg.priority === 'essential' ? '#22c55e' : pkg.priority === 'recommended' ? '#3b82f6' : '#a855f7';
-    
+
     var expanded = swExpandedPkg[pkg.id];
-    
+
     html += '<div style="border-left:3px solid ' + prioColor + ';margin-bottom:6px;border-radius:4px;background:var(--bg-secondary);border:1px solid var(--border-color);overflow:hidden;">';
-    
+
     // Başlık
     html += '<div onclick="swTogglePkg(\'' + pkg.id + '\')" style="display:flex;align-items:center;gap:6px;padding:7px 8px;cursor:pointer;font-size:0.65rem;user-select:none;" onmouseover="this.style.background=\'var(--bg-tertiary)\'" onmouseout="this.style.background=\'transparent\'">';
     html += '<span style="font-size:0.6rem;opacity:0.5;">' + (expanded ? '▼' : '▶') + '</span>';
     html += '<span>' + pkg.icon + '</span>';
     html += '<span style="flex:1;font-weight:600;color:var(--text-primary);">' + pkg.name + '</span>';
-    if(pkgTotal > 0) {
+    if(pkgInstalled) {
+      html += '<span style="font-size:0.58rem;color:#22c55e;font-weight:600;">✅ kurulu</span>';
+    } else if(pkgTotal > 0) {
       html += '<span style="font-size:0.58rem;color:' + statusColor + ';font-weight:600;">' + pkgMatched + '/' + pkgTotal + ' ' + statusIcon + '</span>';
     } else {
       html += '<span style="font-size:0.58rem;color:' + statusColor + ';">' + statusIcon + ' bağımlı</span>';
     }
     html += '</div>';
-    
+
     // Genişletilmiş içerik
     if(expanded) {
       html += '<div style="padding:0 8px 8px;border-top:1px solid var(--border-color);">';
       html += '<div style="font-size:0.58rem;color:var(--text-muted);margin:6px 0 4px;line-height:1.4;">' + pkg.description + '</div>';
-      
+
       // Sensörler
       if(pkg.sensors.length > 0) {
-        html += '<div style="font-size:0.6rem;font-weight:600;color:var(--text-secondary);margin:8px 0 4px;">Gerekli Sensörler:</div>';
+        html += '<div style="font-size:0.6rem;font-weight:600;color:var(--text-secondary);margin:8px 0 4px;">Sensörler:</div>';
         pkg.sensors.forEach(function(sReq, sIdx) {
           var matched = sensorStatuses[sIdx];
           html += '<div style="display:flex;align-items:center;gap:4px;padding:3px 0;font-size:0.58rem;">';
@@ -6848,38 +7585,40 @@ function getSensorWizardPropertiesHTML(node) {
       } else if(pkg.dependsOn) {
         html += '<div style="font-size:0.58rem;color:var(--text-muted);margin:6px 0;font-style:italic;">Bu paket için ek sensör gerekmez — diğer paketlerin sensörlerini kullanır.</div>';
       }
-      
+
       // Diyagramlar
       html += '<div style="font-size:0.6rem;font-weight:600;color:var(--text-secondary);margin:10px 0 4px;">Oluşacak Diyagramlar:</div>';
       pkg.diagrams.forEach(function(d, dIdx) {
-        var diagramReady = (pkgTotal === 0 && pkg.dependsOn) ? false : (pkgMatched === pkgTotal && pkgTotal > 0);
+        var diagramReady = pkgInstalled || ((pkgTotal === 0 && pkg.dependsOn) ? false : (pkgMatched === pkgTotal && pkgTotal > 0));
         html += '<div style="display:flex;align-items:center;gap:4px;padding:2px 0;font-size:0.58rem;">';
         html += '<span style="color:' + (diagramReady ? '#22c55e' : '#6b7280') + ';">' + (diagramReady ? '✅' : '🔒') + '</span>';
         html += '<span style="flex:1;color:' + (diagramReady ? 'var(--text-primary)' : 'var(--text-muted)') + ';">' + d.name + '</span>';
         html += '<button onclick="event.stopPropagation();swShowDiagramInfo(\'' + pkg.id + '\',' + dIdx + ')" style="padding:1px 4px;font-size:0.52rem;background:transparent;color:var(--text-muted);border:1px solid var(--border-color);border-radius:3px;cursor:pointer;" title="Diyagram bilgisi">ℹ️</button>';
         html += '</div>';
       });
-      
+
       html += '</div>'; // expanded content
     }
-    
+
     html += '</div>'; // package card
   });
-  
+
   // ── Alt bilgi ──
-  if(totalMatched === totalReq && totalReq > 0) {
-    html += '<div style="text-align:center;padding:8px;font-size:0.65rem;color:#22c55e;font-weight:600;margin-top:8px;">✅ Tüm sensörler yerleştirilmiş!</div>';
+  if(isInstalled) {
+    html += '<div style="font-size:0.55rem;color:var(--text-muted);margin-top:8px;padding:6px 8px;background:var(--bg-tertiary);border-radius:4px;line-height:1.5;">';
+    html += '💡 Simülasyon tamamlandıktan sonra Sonuçlar sekmesinde <b>Sihirbaz Diyagramları</b> ağacından diyagramları sürükle-bırak ile oluşturabilirsiniz.';
+    html += '</div>';
   } else {
     html += '<div style="font-size:0.55rem;color:var(--text-muted);margin-top:8px;padding:6px 8px;background:var(--bg-tertiary);border-radius:4px;line-height:1.5;">';
-    html += '💡 Eksik sensörleri topolojiye manuel olarak ekleyin. Sensörü bağlantı çizgisine veya bileşene bağlayın, ardından ilgili sinyali seçin. Bu panel otomatik güncellenir.';
+    html += '💡 <b>Sensörleri Kur</b> butonuna tıklayarak tüm uygun sensörleri otomatik olarak kurabilirsiniz. Sensörler topoloji üzerinde görünmez — sihirbaz bileşeni üzerinden yönetilir.';
     html += '</div>';
   }
-  
+
   // Yenile butonu
   html += '<div style="text-align:center;margin-top:8px;">';
   html += '<button onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)showNodeProperties(w);" style="padding:4px 12px;font-size:0.6rem;background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border-color);border-radius:4px;cursor:pointer;">🔄 Durumu Yenile</button>';
   html += '</div>';
-  
+
   html += '</div>';
   return html;
 }
@@ -17624,27 +18363,30 @@ function veSolverRunProfessional() {
           logSpacer();
         }
         
+        // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
+        _veSolveOtherTopologies({ log: log, logSpacer: logSpacer });
+
         // Sonuçlar sayfasını güncelle
         if(typeof veUpdateResultsTree === 'function') {
           veUpdateResultsTree();
         }
-        
+
         // Uyarı özeti
         if(warnings.length > 0) {
           log('Uyarılar (' + warnings.length + '):', 'warn');
           warnings.forEach(function(w) { log('  ⚠ ' + w, 'warn'); });
           logSpacer();
         }
-        
+
         // Final
         setProgress(100, 'Tamamlandı');
         logSpacer();
         log('═══════════════════════════════════════════', 'ok');
         if(errors.length === 0 && warnings.length === 0) {
-          log('  ✅ HESAP TAMAMLANDI', 'ok');
+          log('  ✅ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji', 'ok');
           log('  Herhangi bir sorunla karşılaşılmadı.', 'ok');
         } else if(errors.length === 0) {
-          log('  ✅ HESAP TAMAMLANDI (' + warnings.length + ' uyarı)', 'ok');
+          log('  ✅ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji (' + warnings.length + ' uyarı)', 'ok');
           log('  Hesap başarılı, ancak bazı uyarılar mevcut.', 'warn');
         }
         log('═══════════════════════════════════════════', 'ok');
@@ -20833,6 +21575,9 @@ function restoreState(state) {
   updateAllConnections();
   updateNodeCount();
   clearSelection();
+
+  // Sensör sihirbazı görsellerini güncelle
+  if(typeof swRefreshAllWizardVisuals === 'function') swRefreshAllWizardVisuals();
 }
 
 // Ctrl+Z ve Ctrl+Y için event listener güncelle
@@ -22619,6 +23364,129 @@ function veLoadTopology() {
 // ============================================================================
 // ÇÖZÜCÜ FONKSİYONLARI
 // ============================================================================
+
+// ── Ortak: Diğer topolojileri otomatik çöz ──
+// solver.js ve solver-pro.js tarafından ortak kullanılır.
+// options.log varsa detaylı loglama yapar (pro solver), yoksa sessiz çalışır.
+function _veSolveOtherTopologies(options) {
+  if(typeof veTabs === 'undefined' || veTabs.length <= 1) return;
+
+  var log = (options && options.log) || function() {};
+  var logSpacer = (options && options.logSpacer) || function() {};
+
+  if(options && options.log) {
+    logSpacer();
+    log('═══════════════════════════════════════════', 'head');
+    log('  EK TOPOLOJİLER — OTOMATİK ÇÖZÜM', 'head');
+    log('═══════════════════════════════════════════', 'head');
+    logSpacer();
+    log('Aktif topoloji dışında ' + (veTabs.length - 1) + ' topoloji tespit edildi.', 'info');
+    logSpacer();
+  }
+
+  // Global değişkenleri yedekle
+  var _origNodes = nodes;
+  var _origConns = connections;
+  var _origSimResults = window.veSimResults;
+  var _origChartViews = (typeof veChartViews !== 'undefined') ? JSON.parse(JSON.stringify(veChartViews)) : null;
+
+  var _solvedCount = 0;
+  var _failCount = 0;
+
+  try {
+    for(var _ti = 0; _ti < veTabs.length; _ti++) {
+      if(_ti === veActiveTabIdx) {
+        if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + veTabs[_ti].name + ' — zaten çözüldü ✓', 'ok');
+        continue;
+      }
+      var _otherTab = veTabs[_ti];
+      if(!_otherTab.state || !_otherTab.state.nodes || _otherTab.state.nodes.length === 0) {
+        if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' — boş topoloji, atlandı', 'warn');
+        continue;
+      }
+
+      var _hasEngine = _otherTab.state.nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+      if(!_hasEngine) {
+        if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' — motor bileşeni yok, atlandı', 'warn');
+        continue;
+      }
+
+      if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' çözülüyor...', 'info');
+
+      try {
+        var _tempNodes = _otherTab.state.nodes.map(function(n) {
+          var _def = componentDefs[n.type];
+          if(!_def) return null;
+          return {
+            id: n.id, type: n.type, x: n.x, y: n.y,
+            width: n.width || 65, height: n.height || 60,
+            def: _def,
+            customName: n.customName || '',
+            mirrored: n.mirrored || false,
+            isMasterWheel: n.isMasterWheel || false,
+            isMasterDiff: n.isMasterDiff || false,
+            data: JSON.parse(JSON.stringify(n.data || {}))
+          };
+        }).filter(function(n) { return n !== null; });
+
+        var _tempConns = _otherTab.state.connections ? JSON.parse(JSON.stringify(_otherTab.state.connections)) : [];
+
+        nodes = _tempNodes;
+        connections = _tempConns;
+
+        var _otherResult;
+        if(veActiveModule === 'full-throttle') {
+          // Transfer dişli oranlarını iterasyonla gez
+          var _trN = _tempNodes.find(function(n) { return n.type === 'transfer'; });
+          var _trd = _trN ? (_trN.data || {}) : {};
+          var _ftTrG = _trd.ftTrGears || [
+            { kademe: 'High', ratio: 1.054, eff: 97.00 }
+          ];
+          var _allRR = {};
+          _ftTrG.forEach(function(g) {
+            _allRR[g.kademe] = veFTRunSimulationEngine(g.kademe);
+          });
+          _otherResult = _allRR[_ftTrG[0].kademe];
+        } else {
+          _otherResult = veRunSimulationEngine();
+        }
+
+        _otherTab.state.simResults = _otherResult;
+        _solvedCount++;
+
+        if(options && options.log) {
+          var _otLen = _otherResult.time.length;
+          var _otTime = _otherResult.time[_otLen - 1];
+          log('  ✓ Tamamlandı — ' + _otLen + ' nokta, ' + _otTime.toFixed(1) + ' s', 'ok');
+          if(_otherResult.speed && _otherResult.speed.length > 0) {
+            log('  Hız: ' + _otherResult.speed[0].toFixed(1) + ' → ' + _otherResult.speed[_otLen - 1].toFixed(1) + ' km/h', 'dim');
+          } else if(_otherResult.rpm && _otherResult.rpm.length > 0) {
+            log('  Devir: ' + _otherResult.rpm[0].toFixed(0) + ' → ' + _otherResult.rpm[_otLen - 1].toFixed(0) + ' d/d', 'dim');
+          }
+        }
+      } catch(_err) {
+        _failCount++;
+        if(options && options.log) {
+          log('  ✗ HATA: ' + _err.message, 'err');
+        } else {
+          console.warn('[MFSim] Topoloji çözüm hatası (' + _otherTab.name + '):', _err.message);
+        }
+      }
+    }
+  } finally {
+    // Global değişkenleri HER DURUMDA geri yükle
+    nodes = _origNodes;
+    connections = _origConns;
+    window.veSimResults = _origSimResults;
+    if(_origChartViews) veChartViews = _origChartViews;
+  }
+
+  if(options && options.log) {
+    logSpacer();
+    log(_solvedCount + ' ek topoloji başarıyla çözüldü' + (_failCount > 0 ? ', ' + _failCount + ' hata' : '') + '.', _failCount > 0 ? 'warn' : 'ok');
+    logSpacer();
+  }
+}
 function veSolverValidate() {
   var container = document.getElementById('ve-solver-validation');
   if(!container) return;
@@ -22770,7 +23638,10 @@ function veSolverRun() {
         progressText.textContent = 'Tamamlandı!';
         
         window.veSimResults = simResult;
-        
+
+        // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
+        _veSolveOtherTopologies();
+
         var totalTime = simResult.time[simResult.time.length - 1];
         var ss = simResult.solverStats || {};
         
@@ -24365,19 +25236,73 @@ function veGetSensorData(sensorId, signalOverride) {
   var tabNodes = nodes;
   var tabConns = connections;
   var r = window.veSimResults;
-  
+
   if(sensorId.charAt(0) === '@') {
     var parts = sensorId.substring(1).split(':');
     var tabIdx = parseInt(parts[0]);
     sensorId = parts.slice(1).join(':');
-    
+
     var tab = veTabs[tabIdx];
     if(!tab || !tab.state) return null;
     tabNodes = tab.state.nodes || [];
     tabConns = tab.state.connections || [];
     r = tab.state.simResults || null;
   }
-  
+
+  // ====== SIHIRBAZ DOĞRUDAN BİLEŞEN ERİŞİMİ ======
+  // ~compType formatı: fiziksel sensör olmadan doğrudan bileşen verisine erişim
+  if(sensorId.charAt(0) === '~') {
+    var compType = sensorId.substring(1);
+    var sig = signalOverride;
+    if(!r || !sig) return null;
+
+    // Hedef bileşeni bul
+    var compNode = tabNodes.find(function(n) {
+      return n.type === compType || (compType === 'engine' && n.type === 'engine-brake');
+    });
+
+    // nodeData'dan doğrudan oku
+    if(compNode && r.nodeData && r.nodeData[compNode.id]) {
+      var compData = r.nodeData[compNode.id];
+      if(compData[sig] && compData[sig].length > 0) return compData[sig];
+    }
+
+    // Fallback: top-level veSimResults'tan oku (aşağıdaki fallback mantığı)
+    // Araç sinyalleri
+    if(sig === 'v_speed') return r.speed || null;
+    if(sig === 'v_accel') return r.accel || null;
+    if(sig === 'v_distance') return r.distance || null;
+    // Yol sinyalleri
+    if(sig === 'r_rolling_force') return r.F_rolling || null;
+    if(sig === 'r_aero_force') return r.F_aero || null;
+    if(sig === 'r_total_resist' && r.F_rolling && r.F_aero) {
+      var tr2 = [];
+      for(var j2 = 0; j2 < r.F_rolling.length; j2++) tr2.push(r.F_rolling[j2] + r.F_aero[j2]);
+      return tr2;
+    }
+    // Solver sinyalleri
+    if(sig === 'tractive_effort' && r.TE) return r.TE;
+    if(sig === 'drawbar_pull' && r.DP) return r.DP;
+    if(sig === 'wheel_power' && r.WP) return r.WP;
+    // Motor sinyalleri
+    if(sig === 'rpm' && r.rpm) return r.rpm;
+    if(sig === 'torque' && r.engineTorque) return r.engineTorque;
+    if(sig === 'power' && r.rpm && r.engineTorque) {
+      var pw2 = [];
+      for(var i2 = 0; i2 < r.rpm.length; i2++) pw2.push(r.engineTorque[i2] * r.rpm[i2] / 9549);
+      return pw2;
+    }
+    // TC sinyalleri
+    if(sig === 'speed_ratio' && r.SR) return r.SR;
+    if(sig === 'torque_ratio' && r.tau) return r.tau;
+    if(sig === 'efficiency' && r.tcEta) return r.tcEta.map(function(e) { return e * 100; });
+    if(sig === 'slip' && r.SR) return r.SR.map(function(sr) { return (1 - sr) * 100; });
+    // Zaman
+    if(sig === 'time' && r.time) return r.time;
+
+    return null;
+  }
+
   var sensor = tabNodes.find(function(n) { return n.id === sensorId; });
   if(!sensor || !(sensor.data)) return null;
   
@@ -24568,10 +25493,34 @@ function veRenderChart(slotIdx) {
   var placeholder = document.getElementById('ve-chart-placeholder-' + slotIdx);
   if(!canvas) return;
   
-  // Zaman ekseni: sensörlerin kaynak simResults'larından en uzununu bul
+  // X ekseni verisini belirle
   var r = window.veSimResults;
-  var timeArr = (r && r.time) ? r.time : null;
-  
+  var timeArr = null;
+
+  // Özel X ekseni desteği (sanal sensör veya fiziksel sensör)
+  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
+    if(slot.xAxis.id.charAt(0) === '~') {
+      // ~compType:signal formatı (sanal sensör / bileşen verisi)
+      var xParts = slot.xAxis.id.substring(1).split(':');
+      var xCompType = xParts[0];
+      var xSignal = xParts.slice(1).join(':');
+      timeArr = veGetSensorData('~' + xCompType, xSignal);
+    } else {
+      // sensorId:signal formatı (fiziksel sensör verisi)
+      var xColonIdx = slot.xAxis.id.indexOf(':');
+      if(xColonIdx > 0) {
+        var xSensorId = slot.xAxis.id.substring(0, xColonIdx);
+        var xSigId = slot.xAxis.id.substring(xColonIdx + 1);
+        timeArr = veGetSensorData(xSensorId, xSigId);
+      }
+    }
+  }
+
+  // Standart zaman ekseni
+  if(!timeArr) {
+    timeArr = (r && r.time) ? r.time : null;
+  }
+
   // Cross-tab sensör varsa, her sensörün kaynağından zaman dizisi ara
   slot.sensors.forEach(function(s) {
     if(s.id.charAt(0) === '@') {
@@ -24581,11 +25530,11 @@ function veRenderChart(slotIdx) {
       var tr = (tab && tab.state && tab.state.simResults) ? tab.state.simResults : null;
       if(tr && tr.time && (!timeArr || tr.time.length > timeArr.length)) {
         timeArr = tr.time;
-        r = tr; // en uzun time dizisinin kaynağını kullan
+        r = tr;
       }
     }
   });
-  
+
   if(!timeArr || timeArr.length < 2) return;
   
   if(placeholder) placeholder.style.display = 'none';
@@ -25177,7 +26126,13 @@ function veChartShowTooltip(slotIdx, e) {
   
   crosshair.querySelectorAll('.ve-chart-crosshair-dot').forEach(function(d) { d.remove(); });
   
-  var html = '<div style="font-weight:700; font-size:0.65rem; color:var(--text-secondary); margin-bottom:4px; border-bottom:1px solid var(--border-color); padding-bottom:3px; letter-spacing:0.2px;">t = ' + tArr[idx].toFixed(3) + ' s</div>';
+  var xLabel = 't';
+  var xUnit = 's';
+  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
+    xLabel = slot.xAxis.name || 'X';
+    xUnit = slot.xAxis.unit || '';
+  }
+  var html = '<div style="font-weight:700; font-size:0.65rem; color:var(--text-secondary); margin-bottom:4px; border-bottom:1px solid var(--border-color); padding-bottom:3px; letter-spacing:0.2px;">' + xLabel + ' = ' + tArr[idx].toFixed(3) + (xUnit ? ' ' + xUnit : '') + '</div>';
   
   // Dual axis bilgisi
   var axesInfo = m.axes || [{ yMin: m.yMin, yMax: m.yMax }];
@@ -25283,10 +26238,33 @@ function veRenderTable(slotIdx) {
   var tbody = document.getElementById('ve-table-body-' + slotIdx);
   if(!tbody) return;
   
-  // Zaman dizisi: aktif veya cross-tab kaynaktan
+  // X ekseni verisini belirle
   var r = window.veSimResults;
-  var timeArr = (r && r.time) ? r.time : null;
-  
+  var timeArr = null;
+
+  // Özel X ekseni desteği (sanal sensör veya fiziksel sensör)
+  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
+    if(slot.xAxis.id.charAt(0) === '~') {
+      // ~compType:signal formatı (sanal sensör / bileşen verisi)
+      var xParts = slot.xAxis.id.substring(1).split(':');
+      var xCompType = xParts[0];
+      var xSignal = xParts.slice(1).join(':');
+      timeArr = veGetSensorData('~' + xCompType, xSignal);
+    } else {
+      // sensorId:signal formatı (fiziksel sensör verisi)
+      var xColonIdx = slot.xAxis.id.indexOf(':');
+      if(xColonIdx > 0) {
+        var xSensorId = slot.xAxis.id.substring(0, xColonIdx);
+        var xSigId = slot.xAxis.id.substring(xColonIdx + 1);
+        timeArr = veGetSensorData(xSensorId, xSigId);
+      }
+    }
+  }
+
+  if(!timeArr) {
+    timeArr = (r && r.time) ? r.time : null;
+  }
+
   slot.sensors.forEach(function(s) {
     if(s.id.charAt(0) === '@') {
       var parts = s.id.substring(1).split(':');
@@ -25298,9 +26276,9 @@ function veRenderTable(slotIdx) {
       }
     }
   });
-  
+
   if(!timeArr || timeArr.length === 0) return;
-  
+
   var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   var datasets = [];
   slot.sensors.forEach(function(s) {
