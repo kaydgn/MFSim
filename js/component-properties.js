@@ -3275,20 +3275,38 @@ function veShiftControllerStep(state, params) {
     }
   }
   
-  // Adım 3: Lockup modunda upshift (2L → 3L → ... → 6L) — DEĞİŞMEDİ
+  // Adım 3: Lockup modunda upshift (2L → 3L → ... → 6L)
+  // Lineer formül: N_out >= a × ESL + b (per-gear kalibrasyon)
+  // Fallback: N_engine >= refRPM - lockupOffset (eski sabit ofset)
   if(state.mode === 'LOCKUP') {
-    var N_shift = refRPM - params.lockupOffset;
-    if(N_eng >= N_shift) {
-      var nextIdx = state.gearIndex + 1;
-      if(nextIdx < lockupGears.length && lockupGears[nextIdx].lockup) {
+    var nextIdx = state.gearIndex + 1;
+    if(nextIdx < lockupGears.length && lockupGears[nextIdx].lockup) {
+      var i_gear_lu = parseFloat(lockupGears[state.gearIndex].ratio) || 1.0;
+      var N_out_lu = N_eng / i_gear_lu;  // Lockup modda SR=1
+      var fromName = (state.gearIndex + 1) + 'L';
+      var toName = (state.gearIndex + 2) + 'L';
+      var shiftKey = fromName + toName;
+      var luTriggered = false;
+
+      if(params.lockupShifts && params.lockupShifts[shiftKey]) {
+        var ls = params.lockupShifts[shiftKey];
+        var threshold_lu = ls.a * refRPM + ls.b;
+        if(ls.minCap !== undefined) threshold_lu = Math.max(threshold_lu, ls.minCap);
+        if(N_out_lu >= threshold_lu) luTriggered = true;
+      } else {
+        // Eski yöntem: sabit lockupOffset
+        var N_shift = refRPM - params.lockupOffset;
+        if(N_eng >= N_shift) luTriggered = true;
+      }
+
+      if(luTriggered) {
         result.gear = lockupGears[nextIdx].name;
         result.gearIndex = nextIdx;
         result.mode = 'LOCKUP';
         result.shifted = true;
-        result.shiftType = 'lockup-upshift';
+        result.shiftType = 'lockup-upshift (' + shiftKey + ')';
         return result;
       }
-      // Son vites — shift yapma
     }
   }
   
@@ -3396,25 +3414,43 @@ function getGearboxPropertiesHTML(node) {
     html += '<tr><td colspan="2" style="padding:3px 8px; font-size:0.52rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><span style="color:var(--accent-primary);">ℹ</span> iSCAAN raporlarındaki "Shift Speed &amp; Strategy" değeri. Genellikle motor governed hızına eşittir. Farklıysa buraya girin.</td></tr>';
     
     // Shift profili parametreleri (readonly)
-    var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || {lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3593};
+    var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || {lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3594};
     var roStyle = 'width:100%; padding:4px; font-size:0.68rem; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:3px; text-align:right; cursor:default;';
-    
-    html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Lockup Shift Offset <span style="color:var(--text-muted); font-weight:400;">[rpm]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-lockup-offset-' + node.id + '" value="' + spData.lockupOffset + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
-    html += '</tr>';
-    
+
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">1C→2C Oran <span style="color:var(--text-muted); font-weight:400;">[N_out/N_ref]</span></th>';
     html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-sr-shift-' + node.id + '" value="' + (spData.shift1C2C_outRatio || 0.2150) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
     html += '</tr>';
-    
+
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">2C→2L Oran <span style="color:var(--text-muted); font-weight:400;">[N_out/N_ref]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-sr-lockup-' + node.id + '" value="' + (spData.shift2C2L_outRatio || 0.3593) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-sr-lockup-' + node.id + '" value="' + (spData.shift2C2L_outRatio || 0.3594) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
     html += '</tr>';
-    
-    html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Converter-mod geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. 3200 SP: 5 rapor (3 motor, 2 TC). 4000 SP: 3 rapor (3 motor, 2 TC). 4500 SP: 1 rapor. N_out = N_engine × SR / i_gear.</td></tr>';
+
+    html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Converter-mod geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. N_out = N_engine × SR / i_gear.</td></tr>';
+
+    // Lockup-mod geçiş parametreleri (per-gear kalibrasyon varsa göster)
+    if(spData.lockupShifts) {
+      html += '<tr style="border-bottom:1px solid var(--border-color);">';
+      html += '<th colspan="2" style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); font-weight:500; color:var(--text-secondary); font-size:0.66rem;">Lockup Geçişleri <span style="color:var(--text-muted); font-weight:400;">[N_out = a×ESL + b]</span></th>';
+      html += '</tr>';
+      Object.keys(spData.lockupShifts).forEach(function(sk) {
+        var ls = spData.lockupShifts[sk];
+        var label = sk.replace(/(\d+L)(\d+L)/, '$1→$2');
+        var formula = ls.a + ' × ESL ' + (ls.b >= 0 ? '+ ' : '− ') + Math.abs(ls.b);
+        var capNote = ls.minCap !== undefined ? ' (min: ' + ls.minCap + ')' : '';
+        html += '<tr style="border-bottom:1px solid var(--border-color);">';
+        html += '<th style="padding:4px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--text-secondary); font-size:0.64rem;">' + label + '</th>';
+        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.64rem; color:var(--text-secondary);">' + formula + capNote + '</td>';
+        html += '</tr>';
+      });
+    } else {
+      // Eski sabit ofset göster
+      html += '<tr style="border-bottom:1px solid var(--border-color);">';
+      html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Lockup Shift Offset <span style="color:var(--text-muted); font-weight:400;">[rpm]</span></th>';
+      html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-lockup-offset-' + node.id + '" value="' + spData.lockupOffset + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+      html += '</tr>';
+    }
     
     // Vites Sayısı (İleri)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -3699,17 +3735,91 @@ function stopVEFTGearResize() {
 }
 
 // ===== SHIFT PROFİLLERİ =====
+// Lockup-mod geçişleri lineer formülle modellenir:
+//   N_out_threshold = a × ESL + b
+// Burada:
+//   N_out = Şanzıman çıkış devri (lockup modda N_engine / i_gear)
+//   ESL = Engine Speed Limit (governed RPM)
+//   a = eğim (≈ 1 / i_gear), b = kalibrasyon ofseti
+//   S4 için minCap: minimum N_out eşiği (formül altına düşmesini engeller)
 var VE_FT_SHIFT_PROFILES = {
   allison3200sp_s1: {
     name: 'Allison 3200 SP — S1 Performance',
     family: '3000',
-    lockupOffset: 75,
+    lockupOffset: 75,    // Geriye uyumluluk (lockupShifts yoksa kullanılır)
     // Converter-mod geçiş oranları (N_out / N_shift_ref)
     // iSCAAN çapraz validasyondan türetildi (5 rapor, 3 motor, 2 TC)
     shift1C2C_outRatio: 0.2150,   // 1C→2C: N_out ≥ 0.2150 × N_shift_ref
-    shift2C2L_outRatio: 0.3593,   // 2C→2L: N_out ≥ 0.3593 × N_shift_ref
+    shift2C2L_outRatio: 0.3594,   // 2C→2L: N_out ≥ 0.3594 × N_shift_ref
     shiftRefRPM: null,    // null = motor governed kullan (varsayılan)
+    // Lockup-mod geçişleri: N_out = a × ESL + b
+    // S1: b ≈ -75 / i_gear → N_engine ≥ N_gov - 75 ile eşdeğer
+    lockupShifts: {
+      '2L3L': { a: 0.5361, b: -39.6 },   // 2L→3L, i_gear ≈ 1.8654, max hata ±0.4 rpm
+      '3L4L': { a: 0.7100, b: -54.0 },   // 3L→4L, i_gear ≈ 1.4085, max hata ±0.0 rpm
+      '4L5L': { a: 1.0000, b: -75.0 },   // 4L→5L, i_gear = 1.0000, max hata ±0.0 rpm
+      '5L6L': { a: 1.3337, b: -100.1 }   // 5L→6L, i_gear ≈ 0.7498, max hata ±0.5 rpm
+    },
     // Eski SR/η bazlı değerler (referans, artık kullanılmıyor)
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison3200sp_s2: {
+    name: 'Allison 3200 SP — S2 Performance',
+    family: '3000',
+    lockupOffset: 0,     // Geriye uyumluluk (b=0 → offset yok)
+    shift1C2C_outRatio: 0.2150,   // 1C→2C: tüm kalibrasyonlarda aynı
+    shift2C2L_outRatio: 0.3522,   // 2C→2L: N_out ≥ 0.3522 × N_shift_ref
+    shiftRefRPM: null,
+    // Lockup-mod geçişleri: N_out = a × ESL + b
+    // S2: b = 0 → Geçiş tam N_gov'da, ofset yok
+    lockupShifts: {
+      '2L3L': { a: 0.4828, b: 0 },       // 2L→3L, i_gear ≈ 2.0712, max hata ±0.5 rpm
+      '3L4L': { a: 0.6385, b: 0 },       // 3L→4L, i_gear ≈ 1.5663, max hata ±0.5 rpm
+      '4L5L': { a: 0.9000, b: 0 },       // 4L→5L, i_gear ≈ 1.1111, max hata ±0.0 rpm
+      '5L6L': { a: 1.2000, b: 0 }        // 5L→6L, i_gear ≈ 0.8333, max hata ±0.0 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison3200sp_s3: {
+    name: 'Allison 3200 SP — S3 Economy',
+    family: '3000',
+    lockupOffset: -100,  // Geriye uyumluluk (pozitif b → erken geçiş)
+    shift1C2C_outRatio: 0.2150,   // 1C→2C: tüm kalibrasyonlarda aynı
+    shift2C2L_outRatio: 0.3468,   // 2C→2L: N_out ≥ 0.3468 × N_shift_ref
+    shiftRefRPM: null,
+    // Lockup-mod geçişleri: N_out = a × ESL + b
+    // S3: b > 0 → Erken geçiş (ekonomik), düşük eğim (düşük efektif oran)
+    // Not: 5L→6L nonlineer davranış gösterir (max hata 6.8 rpm)
+    lockupShifts: {
+      '2L3L': { a: 0.4258, b: 70.8 },    // 2L→3L, i_gear ≈ 2.3484, max hata ±0.4 rpm
+      '3L4L': { a: 0.6000, b: 100.0 },   // 3L→4L, i_gear ≈ 1.6667, max hata ±0.0 rpm
+      '4L5L': { a: 0.8000, b: 134.0 },   // 4L→5L, i_gear ≈ 1.2500, max hata ±0.0 rpm
+      '5L6L': { a: 0.9256, b: 141.5 }    // 5L→6L, i_gear ≈ 1.0803, max hata ±6.8 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison3200sp_s4: {
+    name: 'Allison 3200 SP — S4 Economy',
+    family: '3000',
+    lockupOffset: 50,    // Geriye uyumluluk (yaklaşık)
+    shift1C2C_outRatio: 0.2150,   // 1C→2C: tüm kalibrasyonlarda aynı
+    shift2C2L_outRatio: 0.3326,   // 2C→2L: N_out ≥ 0.3326 × N_shift_ref
+    shiftRefRPM: null,
+    // Lockup-mod geçişleri: N_out = a × ESL + b
+    // S4: minCap tanımlı — formül düşük ESL'de minimum eşiğin altına düşmesini engeller
+    // Not: 2L→3L nonlineer davranış gösterir (max hata 6.2 rpm)
+    lockupShifts: {
+      '2L3L': { a: 0.4088, b: 4.9, minCap: 724 },     // 2L→3L, i_gear ≈ 2.4460, max hata ±6.2 rpm
+      '3L4L': { a: 0.6000, b: -50.0, minCap: 1020 },   // 3L→4L, i_gear ≈ 1.6667, max hata ±0.0 rpm
+      '4L5L': { a: 0.8000, b: -66.0, minCap: 1360 },   // 4L→5L, i_gear ≈ 1.2500, max hata ±0.0 rpm
+      '5L6L': { a: 1.0000, b: -45.0 }                   // 5L→6L, i_gear ≈ 1.0000, max hata ±0.0 rpm
+    },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
@@ -3764,7 +3874,13 @@ function onVEFTGBParamChange(nodeId) {
       if(srLkEl) srLkEl.value = spData.shift2C2L_outRatio || 0.3593;
       node.data.lockupOffset = spData.lockupOffset;
       node.data.shift1C2C_outRatio = spData.shift1C2C_outRatio || 0.2150;
-      node.data.shift2C2L_outRatio = spData.shift2C2L_outRatio || 0.3593;
+      node.data.shift2C2L_outRatio = spData.shift2C2L_outRatio || 0.3594;
+      // Lockup-mod per-gear kalibrasyon verilerini kopyala
+      if(spData.lockupShifts) {
+        node.data.lockupShifts = JSON.parse(JSON.stringify(spData.lockupShifts));
+      } else {
+        delete node.data.lockupShifts;
+      }
       // Eski parametreleri de koru (geriye uyumluluk)
       node.data.srShift1C2C = spData.srShift1C2C;
       node.data.srLockup2C2L = spData.srLockup2C2L;

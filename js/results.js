@@ -656,12 +656,23 @@ function veRenderDetailedReport(filter) {
   
   // ═══ KONTROL ═══
   var spName = R.shiftProfile.replace(/_/g, ' ').toUpperCase();
+  var spDataRes = VE_FT_SHIFT_PROFILES[R.shiftProfile] || {};
   var gLow = R.gearData.length > 0 ? R.gearData[0].name : '1';
   var gHigh = R.gearData.length > 0 ? R.gearData[R.gearData.length - 1].name : '6';
   var controlHTML = '';
   controlHTML += row('Shift Profili', spName);
-  controlHTML += row('Vites Geçiş Hızı ve Strateji', R.shiftRefRPM + ' rpm — S1 Performans');
-  controlHTML += row('Kilitleme Ofseti', R.lockupOffset + ' rpm');
+  controlHTML += row('Vites Geçiş Hızı ve Strateji', R.shiftRefRPM + ' rpm');
+  if(spDataRes.lockupShifts) {
+    var luSummary = Object.keys(spDataRes.lockupShifts).map(function(sk) {
+      var ls = spDataRes.lockupShifts[sk];
+      var thr = ls.a * R.shiftRefRPM + ls.b;
+      if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+      return sk.replace(/(\d+L)(\d+L)/, '$1\u2192$2') + ': ' + Math.round(thr) + ' rpm';
+    }).join(', ');
+    controlHTML += row('Lockup Geçişleri', luSummary);
+  } else {
+    controlHTML += row('Kilitleme Ofseti', R.lockupOffset + ' rpm');
+  }
   controlHTML += row('Ana Mod: Vitesler', 'Düşük = ' + gLow + ', Başlangıç = ' + gLow + ', Yüksek = ' + gHigh + ' (' + gLow + '-' + gLow + '-' + gHigh + ')');
   controlHTML = tableWrap(controlHTML);
   

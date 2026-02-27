@@ -297,10 +297,22 @@ function veSolverRunProfessional() {
         }
         var spLogData = VE_FT_SHIFT_PROFILES[gd.shiftProfile || 'allison3200sp_s1'] || {};
         var refForLog = logRefRPM || (function(){ var eN = nodes.find(function(n){return n.type==='engine'||n.type==='engine-brake';}); return eN ? (parseFloat(((eN.data||{}).motorSpecs||{}).governedSpeed)||parseFloat((eN.data||{}).governedRpm)||0) : 0; })();
-        if(refForLog && spLogData.lockupOffset) {
-          log('  Lockup shift    : ' + (refForLog - spLogData.lockupOffset) + ' rpm (ref - ' + spLogData.lockupOffset + ')', 'dim');
+        if(refForLog && (spLogData.lockupOffset || spLogData.lockupShifts)) {
           if(spLogData.shift1C2C_outRatio) log('  1C→2C eşik      : N_out = ' + Math.round(spLogData.shift1C2C_outRatio * refForLog) + ' (' + spLogData.shift1C2C_outRatio + ' × ' + refForLog + ')', 'dim');
           if(spLogData.shift2C2L_outRatio) log('  2C→2L eşik      : N_out = ' + Math.round(spLogData.shift2C2L_outRatio * refForLog) + ' (' + spLogData.shift2C2L_outRatio + ' × ' + refForLog + ')', 'dim');
+          if(spLogData.lockupShifts) {
+            log('  Lockup geçişleri: N_out = a × ESL + b (per-gear kalibrasyon)', 'dim');
+            Object.keys(spLogData.lockupShifts).forEach(function(sk) {
+              var ls = spLogData.lockupShifts[sk];
+              var thr = ls.a * refForLog + ls.b;
+              if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+              var label = sk.replace(/(\d+L)(\d+L)/, '$1→$2');
+              var capNote = ls.minCap !== undefined ? ', cap=' + ls.minCap : '';
+              log('    ' + label + ': N_out ≥ ' + thr.toFixed(1) + ' (' + ls.a + '×' + refForLog + (ls.b >= 0 ? '+' : '') + ls.b + capNote + ')', 'dim');
+            });
+          } else {
+            log('  Lockup shift    : ' + (refForLog - spLogData.lockupOffset) + ' rpm (ref - ' + spLogData.lockupOffset + ')', 'dim');
+          }
         }
         fwd.forEach(function(g) {
           log('    ' + g.name + ': i=' + g.ratio + ', η=' + g.eff + '%, ' + (g.lockup ? 'Lockup' : 'Converter'), 'dim');
@@ -870,14 +882,31 @@ function veSolverRunProfessional() {
                 var statusIcon = '✓';
                 var statusNote = '';
                 
-                // Lockup vites geçişlerinde N_engine ≈ N_shift_lockup kontrol et
+                // Lockup vites geçişlerinde doğrulama
                 if(isLockToLock) {
-                  var expectedRPM = ss.N_shift_lockup || (governed - 75);
-                  var rpmDiff = Math.abs((s.N_engine || 0) - expectedRPM);
-                  if(rpmDiff > 10) {
-                    statusIcon = '⚠';
-                    statusNote = ' (beklenen: ' + expectedRPM + ' rpm, fark: ' + rpmDiff.toFixed(0) + ')';
-                    shiftErrors++;
+                  var spValData = VE_FT_SHIFT_PROFILES[gd.shiftProfile || 'allison3200sp_s1'] || {};
+                  var valShiftKey = fromMode + toMode;  // örn. '2L3L'
+                  if(spValData.lockupShifts && spValData.lockupShifts[valShiftKey]) {
+                    // Per-gear kalibrasyon: N_out = a × ESL + b
+                    var lsV = spValData.lockupShifts[valShiftKey];
+                    var expectedNout = lsV.a * governed + lsV.b;
+                    if(lsV.minCap !== undefined) expectedNout = Math.max(expectedNout, lsV.minCap);
+                    var actualNout = s.N_out || 0;
+                    var noutDiff = Math.abs(actualNout - expectedNout);
+                    if(noutDiff > 15) {
+                      statusIcon = '⚠';
+                      statusNote = ' (N_out beklenen: ' + expectedNout.toFixed(0) + ', gerçek: ' + actualNout.toFixed(0) + ', fark: ' + noutDiff.toFixed(0) + ')';
+                      shiftErrors++;
+                    }
+                  } else {
+                    // Eski yöntem: sabit lockupOffset
+                    var expectedRPM = ss.N_shift_lockup || (governed - 75);
+                    var rpmDiff = Math.abs((s.N_engine || 0) - expectedRPM);
+                    if(rpmDiff > 10) {
+                      statusIcon = '⚠';
+                      statusNote = ' (beklenen: ' + expectedRPM + ' rpm, fark: ' + rpmDiff.toFixed(0) + ')';
+                      shiftErrors++;
+                    }
                   }
                 }
                 

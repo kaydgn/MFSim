@@ -1727,6 +1727,7 @@ function veGenerateFTTxtReport(sim) {
   var lockupOffset = R.lockupOffset || 75;
   var shiftRefRPM = R.shiftRefRPM || R.governed || 2200;
   var lockupRPM = shiftRefRPM - lockupOffset;
+  var spDataReport = VE_FT_SHIFT_PROFILES[R.shiftProfile] || {};
 
   // Aksesuar toplami
   var accTotal = 0, accTotalStd = 0;
@@ -1901,8 +1902,20 @@ function veGenerateFTTxtReport(sim) {
   r += '  ' + ln('-', 38) + '\n';
   r += pRow('Shift Profili', ascii(shiftProfile));
   r += pRow('Shift Referans RPM', numI(shiftRefRPM) + ' rpm');
-  r += pRow('Kilitleme Ofseti', numI(lockupOffset) + ' rpm');
-  r += pRow('Kilitleme Gecis RPM', numI(lockupRPM) + ' rpm');
+  if(spDataReport.lockupShifts) {
+    r += '  Lockup Gecisleri (N_out = a x ESL + b):\n';
+    Object.keys(spDataReport.lockupShifts).forEach(function(sk) {
+      var ls = spDataReport.lockupShifts[sk];
+      var thr = ls.a * shiftRefRPM + ls.b;
+      if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+      var label = sk.replace(/(\d+L)(\d+L)/, '$1->$2');
+      var capNote = ls.minCap !== undefined ? ' (cap=' + ls.minCap + ')' : '';
+      r += pRow('  ' + label, 'N_out >= ' + numI(thr) + ' rpm (a=' + ls.a + ', b=' + ls.b + capNote + ')');
+    });
+  } else {
+    r += pRow('Kilitleme Ofseti', numI(lockupOffset) + ' rpm');
+    r += pRow('Kilitleme Gecis RPM', numI(lockupRPM) + ' rpm');
+  }
   var lowGear = 1, highGear = (R.gearData || []).length;
   r += pRow('Vites Araligi', 'Dusuk=' + lowGear + ', Basla=' + lowGear + ', Yuksek=' + highGear);
   r += '\n\n';

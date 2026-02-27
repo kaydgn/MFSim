@@ -425,14 +425,14 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   // Shift profili
   var shiftProfile = gbd.shiftProfile || 'allison3200sp_s1';
-  var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || { lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3593 };
+  var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || { lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3594 };
   var lockupOffset = spData.lockupOffset || 75;
   // Shift Referans RPM: profilde tanımlıysa onu kullan, yoksa motor governed
   var shiftRefRPM = spData.shiftRefRPM || gbd.shiftRefRPM || governedSpeed;
   // Converter-mod geçiş oranları (N_out / N_shift_ref)
   var SHIFT_1C_2C_OUT_RATIO = spData.shift1C2C_outRatio || 0.2150;
-  var SHIFT_2C_2L_OUT_RATIO = spData.shift2C2L_outRatio || 0.3593;
-  var N_shift_lockup = shiftRefRPM - lockupOffset; // Lockup moddaki shift RPM'i
+  var SHIFT_2C_2L_OUT_RATIO = spData.shift2C2L_outRatio || 0.3594;
+  var N_shift_lockup = shiftRefRPM - lockupOffset; // Lockup moddaki shift RPM'i (lockupShifts yoksa fallback)
 
   // Şanzıman iç ataleti (basitleştirilmiş — gearbox bileşeninde yok, sabit varsayım)
   var I_trans = 1.0;
@@ -513,7 +513,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   // Kurallar (N_out = Şanzıman çıkış devri = N_engine × SR / i_gear):
   //   1C→2C: N_out ≥ SHIFT_1C_2C_OUT_RATIO × N_shift_ref  (0.2150)
   //   2C→2L: N_out ≥ SHIFT_2C_2L_OUT_RATIO × N_shift_ref  (0.3593)
-  //   2L→3L...6L: N_engine ≥ N_governed - lockupOffset     (değişmedi)
+  //   2L→3L...6L: N_out ≥ a × ESL + b (per-gear) veya N_engine ≥ N_governed - lockupOffset (fallback)
 
   var shiftState = {
     gearIdx: 0,
@@ -569,17 +569,35 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         }
       }
     } else {
-      // ── LOCKUP MOD (DEĞİŞMEDİ) ──
-      // gL → (g+1)L: N_engine ≥ N_shift_lockup (= N_shift_ref - lockupOffset)
-      if(g < maxGear && N_engine >= N_shift_lockup) {
+      // ── LOCKUP MOD ──
+      // Lineer formül: N_out >= a × ESL + b (per-gear kalibrasyon)
+      // Fallback: N_engine >= N_shift_lockup (eski sabit ofset yöntemi)
+      if(g < maxGear) {
+        var i_gear_lu = parseFloat(getCurrentGearData().ratio) || 1.0;
+        var N_out_lu = N_engine / i_gear_lu;  // Lockup modda SR=1
         var fromName = (g + 1) + 'L';
         var toName = (g + 2) + 'L';
-        shiftState.shiftHistory.push({
-          t: t, fromGear: g, toGear: g + 1, fromMode: fromName, toMode: toName,
-          v_kmh: v_kmh, N_engine: N_engine, SR: SR
-        });
-        shiftState.gearIdx = g + 1;
-        shifted = true;
+        var shiftKey = fromName + toName;     // örn. '2L3L', '3L4L'
+        var luShiftTriggered = false;
+
+        if(spData.lockupShifts && spData.lockupShifts[shiftKey]) {
+          var ls = spData.lockupShifts[shiftKey];
+          var threshold_lu = ls.a * shiftRefRPM + ls.b;
+          if(ls.minCap !== undefined) threshold_lu = Math.max(threshold_lu, ls.minCap);
+          if(N_out_lu >= threshold_lu) luShiftTriggered = true;
+        } else {
+          // Eski yöntem: sabit lockupOffset
+          if(N_engine >= N_shift_lockup) luShiftTriggered = true;
+        }
+
+        if(luShiftTriggered) {
+          shiftState.shiftHistory.push({
+            t: t, fromGear: g, toGear: g + 1, fromMode: fromName, toMode: toName,
+            v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_lu
+          });
+          shiftState.gearIdx = g + 1;
+          shifted = true;
+        }
       }
     }
 
