@@ -277,7 +277,11 @@ function veSolverRun() {
         window.veSimResults = simResult;
 
         // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
-        _veSolveOtherTopologies();
+        try {
+          _veSolveOtherTopologies();
+        } catch(_otErr) {
+          console.warn('[MFSim] Ek topoloji çözümünde hata:', _otErr.message);
+        }
 
         var totalTime = simResult.time[simResult.time.length - 1];
         var ss = simResult.solverStats || {};
