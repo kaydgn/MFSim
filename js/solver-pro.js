@@ -1151,7 +1151,11 @@ function veSolverRunProfessional() {
         }
         
         // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
-        _veSolveOtherTopologies({ log: log, logSpacer: logSpacer });
+        try {
+          _veSolveOtherTopologies({ log: log, logSpacer: logSpacer });
+        } catch(_otErr) {
+          log('⚠ Ek topoloji çözümünde hata: ' + _otErr.message, 'warn');
+        }
 
         // Sonuçlar sayfasını güncelle
         if(typeof veUpdateResultsTree === 'function') {

@@ -2082,17 +2082,10 @@ function veRenderTXTReport() {
   html += '</div>';
   html += '</div>';
 
-  // TXT content area
-  html += '<div style="flex:1; overflow-y:auto; background:#1e1e2e; padding:20px 0;">';
-  html += '<div style="max-width:1100px; margin:0 auto; background:#282a36; border-radius:6px; box-shadow:0 2px 12px rgba(0,0,0,0.3); overflow:hidden;">';
-  // File tab bar
-  html += '<div style="padding:6px 16px; background:#21222c; border-bottom:1px solid #44475a; display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:0.65rem; color:#6272a4;">📄</span>';
-  html += '<span style="font-size:0.68rem; color:#f8f8f2; font-family:monospace;">' + downloadName + '</span>';
-  html += '<span style="font-size:0.58rem; color:#6272a4; margin-left:auto;">' + (txtContent.split('\n').length) + ' satır</span>';
-  html += '</div>';
-  // Pre content
-  html += '<pre id="ve-txt-report-content" style="margin:0; padding:20px 24px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:#f8f8f2; white-space:pre; overflow-x:auto; tab-size:4;">';
+  // TXT content area — düz belge görünümü
+  html += '<div style="flex:1; overflow-y:auto; background:#e8eaed; padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:#fff; border-radius:4px; box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:#222; white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   html += '</pre>';
   html += '</div></div>';
