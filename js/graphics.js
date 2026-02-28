@@ -1354,11 +1354,11 @@ function veGenerateTXTReport(steps, p) {
   
   // ── BMC BAŞLIK ──
   r += '\n' + ln('=', W) + '\n\n';
-  r += pad(' ######    ###  ###    ######', W, 'center') + '\n';
-  r += pad(' ##   ##   ## ## ##   ##     ', W, 'center') + '\n';
-  r += pad(' ######    ##    ##   ##     ', W, 'center') + '\n';
-  r += pad(' ##   ##   ##    ##   ##     ', W, 'center') + '\n';
-  r += pad(' ######    ##    ##    ######', W, 'center') + '\n\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n';
+  r += pad(' ##   ##  ###  ###   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ## ## ##   ##      ', W, 'center') + '\n';
+  r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
   r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
   r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
   r += ln('=', W) + '\n\n';
@@ -1742,11 +1742,11 @@ function veGenerateFTTxtReport(sim) {
   // BMC BASLIK
   // ════════════════════════════════════════════════════════════════════════
   r += '\n' + ln('=', W) + '\n\n';
-  r += pad('######    ##   ##    ######', W, 'center') + '\n';
-  r += pad('##   ##   ### ###   ##     ', W, 'center') + '\n';
-  r += pad('######    ## # ##   ##     ', W, 'center') + '\n';
-  r += pad('##   ##   ##   ##   ##     ', W, 'center') + '\n';
-  r += pad('######    ##   ##    ######', W, 'center') + '\n\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n';
+  r += pad(' ##   ##  ###  ###   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ## ## ##   ##      ', W, 'center') + '\n';
+  r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
   r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
   r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
   r += ln('=', W) + '\n\n';
