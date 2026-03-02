@@ -1902,6 +1902,16 @@ function veGenerateFTTxtReport(sim) {
   r += '  ' + ln('-', 38) + '\n';
   r += pRow('Shift Profili', ascii(shiftProfile));
   r += pRow('Shift Referans RPM', numI(shiftRefRPM) + ' rpm');
+  // Converter geçişleri
+  if(spDataReport.converterShifts) {
+    var csR = spDataReport.converterShifts;
+    if(csR['1C2C']) r += pRow('1C->2C', 'N_out >= ' + num(csR['1C2C'].a * shiftRefRPM + (csR['1C2C'].b || 0), 1) + ' (a=' + csR['1C2C'].a + ', b=' + (csR['1C2C'].b || 0) + ')');
+    if(csR['2C2L'] && csR['2C2L'].type === 'segmented') {
+      r += pRow('2C->2L (ESL>=' + csR['2C2L'].linear.validFrom + ')', 'N_out >= ' + num(csR['2C2L'].linear.a * shiftRefRPM + csR['2C2L'].linear.b, 1) + ' (a=' + csR['2C2L'].linear.a + ', b=' + csR['2C2L'].linear.b + ')');
+      if(csR['2C2L'].lookup) r += pRow('2C->2L (lookup)', csR['2C2L'].lookup.map(function(p) { return 'ESL=' + p[0] + ':' + p[1]; }).join(', '));
+    }
+  }
+  // Lockup geçişleri
   if(spDataReport.lockupShifts) {
     r += '  Lockup Gecisleri (N_out = a x ESL + b):\n';
     Object.keys(spDataReport.lockupShifts).forEach(function(sk) {

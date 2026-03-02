@@ -3238,18 +3238,43 @@ function veShiftControllerStep(state, params) {
     return (parseInt(a.name.replace('F','')) || 0) - (parseInt(b.name.replace('F','')) || 0);
   });
   
-  // N_out / N_shift_ref oran bazlı converter-mod geçiş sabitleri
+  // Converter-mod geçiş sabitleri (fallback oran, converterShifts yoksa)
   var SHIFT_1C_2C_OUT_RATIO = params.shift1C2C_outRatio || 0.2150;
-  var SHIFT_2C_2L_OUT_RATIO = params.shift2C2L_outRatio || 0.3593;
-  
+  var SHIFT_2C_2L_OUT_RATIO = params.shift2C2L_outRatio || 0.3594;
+  var csParams = params.converterShifts || null;
+
+  // Segmentli 2C→2L eşiği hesaplama
+  function _calc2C2LThreshold(esl) {
+    if(!csParams || !csParams['2C2L']) return SHIFT_2C_2L_OUT_RATIO * esl;
+    var cs2L = csParams['2C2L'];
+    if(cs2L.type === 'segmented') {
+      if(esl >= cs2L.linear.validFrom) return cs2L.linear.a * esl + cs2L.linear.b;
+      var lk = cs2L.lookup;
+      if(!lk || lk.length === 0) return cs2L.linear.a * esl + cs2L.linear.b;
+      if(esl <= lk[0][0]) return lk[0][1];
+      for(var li = 0; li < lk.length - 1; li++) {
+        if(esl >= lk[li][0] && esl <= lk[li + 1][0]) {
+          var frac = (esl - lk[li][0]) / (lk[li + 1][0] - lk[li][0]);
+          return lk[li][1] + frac * (lk[li + 1][1] - lk[li][1]);
+        }
+      }
+      return lk[lk.length - 1][1];
+    }
+    return cs2L.a * esl + (cs2L.b || 0);
+  }
+
   // Adım 1: Converter modunda 1C → 2C
   if(state.mode === 'CONVERTER' && state.gearIndex === 0) {
-    // N_out = N_engine × SR / i_gear
     var allFwdGears = gears.filter(function(g) { return g.name && g.name.charAt(0) === 'F'; });
     allFwdGears.sort(function(a, b) { return (parseInt(a.name.replace('F',''))||0) - (parseInt(b.name.replace('F',''))||0); });
     var i_gear_F1 = allFwdGears.length > 0 ? (parseFloat(allFwdGears[0].ratio) || 1.0) : 1.0;
     var N_out = N_eng * SR / i_gear_F1;
-    var threshold_1C2C = SHIFT_1C_2C_OUT_RATIO * refRPM;
+    var threshold_1C2C;
+    if(csParams && csParams['1C2C']) {
+      threshold_1C2C = csParams['1C2C'].a * refRPM + (csParams['1C2C'].b || 0);
+    } else {
+      threshold_1C2C = SHIFT_1C_2C_OUT_RATIO * refRPM;
+    }
     if(N_out >= threshold_1C2C) {
       result.gear = lockupGears.length > 1 ? lockupGears[1].name : state.gear;
       result.gearIndex = 1;
@@ -3259,14 +3284,14 @@ function veShiftControllerStep(state, params) {
       return result;
     }
   }
-  
+
   // Adım 2: Converter → Lockup (2C → 2L)
   if(state.mode === 'CONVERTER' && state.gearIndex === 1) {
     var allFwdGears2 = gears.filter(function(g) { return g.name && g.name.charAt(0) === 'F'; });
     allFwdGears2.sort(function(a, b) { return (parseInt(a.name.replace('F',''))||0) - (parseInt(b.name.replace('F',''))||0); });
     var i_gear_F2 = allFwdGears2.length > 1 ? (parseFloat(allFwdGears2[1].ratio) || 1.0) : 1.0;
     var N_out_2 = N_eng * SR / i_gear_F2;
-    var threshold_2C2L = SHIFT_2C_2L_OUT_RATIO * refRPM;
+    var threshold_2C2L = _calc2C2LThreshold(refRPM);
     if(N_out_2 >= threshold_2C2L) {
       result.mode = 'LOCKUP';
       result.shifted = true;
@@ -3417,17 +3442,47 @@ function getGearboxPropertiesHTML(node) {
     var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || {lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3594};
     var roStyle = 'width:100%; padding:4px; font-size:0.68rem; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:3px; text-align:right; cursor:default;';
 
-    html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">1C→2C Oran <span style="color:var(--text-muted); font-weight:400;">[N_out/N_ref]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-sr-shift-' + node.id + '" value="' + (spData.shift1C2C_outRatio || 0.2150) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
-    html += '</tr>';
+    // Converter-mod geçiş parametreleri
+    if(spData.converterShifts) {
+      // Lineer/segmentli converter model (örn. 4500SP)
+      var cs = spData.converterShifts;
+      html += '<tr style="border-bottom:1px solid var(--border-color);">';
+      html += '<th colspan="2" style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); font-weight:500; color:var(--text-secondary); font-size:0.66rem;">Converter Geçişleri <span style="color:var(--text-muted); font-weight:400;">[N_out = a×ESL + b]</span></th>';
+      html += '</tr>';
+      if(cs['1C2C']) {
+        html += '<tr style="border-bottom:1px solid var(--border-color);">';
+        html += '<th style="padding:4px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--text-secondary); font-size:0.64rem;">1C→2C</th>';
+        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.64rem; color:var(--text-secondary);">' + cs['1C2C'].a + ' × ESL ' + (cs['1C2C'].b >= 0 ? '+ ' : '− ') + Math.abs(cs['1C2C'].b || 0) + '</td>';
+        html += '</tr>';
+      }
+      if(cs['2C2L']) {
+        var cs2L = cs['2C2L'];
+        html += '<tr style="border-bottom:1px solid var(--border-color);">';
+        html += '<th style="padding:4px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--text-secondary); font-size:0.64rem;">2C→2L</th>';
+        if(cs2L.type === 'segmented') {
+          var linStr = cs2L.linear.a + ' × ESL ' + (cs2L.linear.b >= 0 ? '+ ' : '− ') + Math.abs(cs2L.linear.b);
+          var lookupStr = cs2L.lookup.map(function(p) { return p[0] + ':' + p[1]; }).join(', ');
+          html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.62rem; color:var(--text-secondary); line-height:1.3;">ESL ≥ ' + cs2L.linear.validFrom + ': ' + linStr + '<br>ESL &lt; ' + cs2L.linear.validFrom + ': Lookup [' + lookupStr + ']</td>';
+        } else {
+          html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.64rem; color:var(--text-secondary);">' + cs2L.a + ' × ESL ' + ((cs2L.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(cs2L.b || 0) + '</td>';
+        }
+        html += '</tr>';
+      }
+      html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Converter-mod geçişleri lineer/segmentli model ile hesaplanır. N_out = N_engine × SR / i_gear.</td></tr>';
+    } else {
+      // Basit oran bazlı converter model (3200SP, 4000SP)
+      html += '<tr style="border-bottom:1px solid var(--border-color);">';
+      html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">1C→2C Oran <span style="color:var(--text-muted); font-weight:400;">[N_out/N_ref]</span></th>';
+      html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-sr-shift-' + node.id + '" value="' + (spData.shift1C2C_outRatio || 0.2150) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+      html += '</tr>';
 
-    html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">2C→2L Oran <span style="color:var(--text-muted); font-weight:400;">[N_out/N_ref]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-sr-lockup-' + node.id + '" value="' + (spData.shift2C2L_outRatio || 0.3594) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
-    html += '</tr>';
+      html += '<tr style="border-bottom:1px solid var(--border-color);">';
+      html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">2C→2L Oran <span style="color:var(--text-muted); font-weight:400;">[N_out/N_ref]</span></th>';
+      html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-sr-lockup-' + node.id + '" value="' + (spData.shift2C2L_outRatio || 0.3594) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
+      html += '</tr>';
 
-    html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Converter-mod geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. N_out = N_engine × SR / i_gear.</td></tr>';
+      html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Converter-mod geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. N_out = N_engine × SR / i_gear.</td></tr>';
+    }
 
     // Lockup-mod geçiş parametreleri (per-gear kalibrasyon varsa göster)
     if(spData.lockupShifts) {
@@ -3838,10 +3893,108 @@ var VE_FT_SHIFT_PROFILES = {
   allison4500sp_s1: {
     name: 'Allison 4500 SP — S1 Performance',
     family: '4000',
-    lockupOffset: 75,
-    shift1C2C_outRatio: 0.1595,   // 1C→2C: N_out ≥ 0.1595 × N_shift_ref
-    shift2C2L_outRatio: 0.3026,   // 2C→2L: N_out ≥ 0.3026 × N_shift_ref
-    shiftRefRPM: null,    // null = motor governed kullan (varsayılan)
+    lockupOffset: 75,    // Geriye uyumluluk
+    shift1C2C_outRatio: 0.1592,   // Yaklaşık (converterShifts varsa o kullanılır)
+    shift2C2L_outRatio: null,     // Segmentli model — basit oran yok
+    shiftRefRPM: null,
+    // Converter-mod geçişleri: Lineer + segmentli model
+    // 3200SP'den farklı olarak basit oran yerine N_out = a × ESL + b kullanır
+    converterShifts: {
+      '1C2C': { a: 0.1592, b: 0.9 },              // N_out ≥ 0.1592 × ESL + 0.9, max hata ±0.5 rpm
+      '2C2L': {
+        type: 'segmented',
+        linear: { a: 0.0800, b: 111.0, validFrom: 1800 }, // ESL ≥ 1800: max hata ±0.0 rpm
+        lookup: [[1600, 230], [1700, 242]]                  // ESL < 1800: lookup tablosu
+      }
+    },
+    // Lockup-mod geçişleri: N_out = a × ESL + b
+    // S1: N_engine = ESL - 75 (3200SP S1 ile birebir aynı kural)
+    lockupShifts: {
+      '2L3L': { a: 0.4522, b: -34.6 },   // i_gear ≈ 2.2115, max hata ±0.4 rpm
+      '3L4L': { a: 0.6540, b: -49.0 },   // i_gear ≈ 1.5291, max hata ±0.4 rpm
+      '4L5L': { a: 1.0000, b: -75.0 },   // i_gear = 1.0000, max hata ±0.0 rpm
+      '5L6L': { a: 1.3086, b: -98.7 }    // i_gear ≈ 0.7642, max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison4500sp_s2: {
+    name: 'Allison 4500 SP — S2 Performance',
+    family: '4000',
+    lockupOffset: 0,     // Geriye uyumluluk (b ≈ 0)
+    shift1C2C_outRatio: 0.1592,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.1592, b: 0.9 },
+      '2C2L': {
+        type: 'segmented',
+        linear: { a: 0.0800, b: 111.0, validFrom: 1800 },
+        lookup: [[1600, 230], [1700, 242]]
+      }
+    },
+    // Lockup-mod: N_engine = 0.9 × ESL (3200SP S2 ile birebir aynı kural)
+    lockupShifts: {
+      '2L3L': { a: 0.4067, b: -0.2, minCap: 667 },  // i_gear ≈ 2.2115, max hata ±0.4 rpm
+      '3L4L': { a: 0.5888, b: -0.7, minCap: 997 },   // i_gear ≈ 1.5291, max hata ±0.5 rpm
+      '4L5L': { a: 0.9000, b: 0 },                    // i_gear ≈ 1.0000, max hata ±0.0 rpm
+      '5L6L': { a: 1.1776, b: -0.1 }                  // i_gear ≈ 0.7642, max hata ±0.4 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison4500sp_s3: {
+    name: 'Allison 4500 SP — S3 Economy',
+    family: '4000',
+    lockupOffset: -100,  // Geriye uyumluluk (yaklaşık)
+    shift1C2C_outRatio: 0.1592,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.1592, b: 0.9 },
+      '2C2L': {
+        type: 'segmented',
+        linear: { a: 0.0800, b: 111.0, validFrom: 1800 },
+        lookup: [[1600, 230], [1700, 242]]
+      }
+    },
+    // Lockup-mod: Her viteste ayrı parametreler
+    // Not: 2L→3L hafif nonlineerlik (2.8 rpm), 5L→6L önemli nonlineerlik (11.7 rpm)
+    // Not: 3L→4L parametreleri S1 ile aynı
+    lockupShifts: {
+      '2L3L': { a: 0.3945, b: 60.6 },    // i_gear ≈ 2.2115, max hata ±2.8 rpm
+      '3L4L': { a: 0.6540, b: -49.0 },   // i_gear ≈ 1.5291, max hata ±0.4 rpm (S1 ile aynı)
+      '4L5L': { a: 0.7850, b: 130.8 },   // i_gear ≈ 1.0000, max hata ±0.3 rpm
+      '5L6L': { a: 0.9843, b: -8.5 }     // i_gear ≈ 0.7642, max hata ±11.7 rpm (nonlineer)
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison4500sp_s4: {
+    name: 'Allison 4500 SP — S4 Economy',
+    family: '4000',
+    lockupOffset: 50,    // Geriye uyumluluk (yaklaşık)
+    shift1C2C_outRatio: 0.1592,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.1592, b: 0.9 },
+      '2C2L': {
+        type: 'segmented',
+        linear: { a: 0.0800, b: 111.0, validFrom: 1800 },
+        lookup: [[1600, 230], [1700, 242]]
+      }
+    },
+    // Lockup-mod: minCap destekli (düşük ESL koruması)
+    lockupShifts: {
+      '2L3L': { a: 0.3923, b: -32.5, minCap: 667 },   // i_gear ≈ 2.2115, max hata ±0.4 rpm
+      '3L4L': { a: 0.6000, b: -50.0, minCap: 1020 },   // i_gear ≈ 1.5291, max hata ±0.0 rpm
+      '4L5L': { a: 0.7850, b: -65.2, minCap: 1335 },   // i_gear ≈ 1.0000, max hata ±0.3 rpm
+      '5L6L': { a: 1.0000, b: -45.0 }                   // i_gear ≈ 0.7642, max hata ±0.0 rpm
+    },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
@@ -3880,6 +4033,12 @@ function onVEFTGBParamChange(nodeId) {
         node.data.lockupShifts = JSON.parse(JSON.stringify(spData.lockupShifts));
       } else {
         delete node.data.lockupShifts;
+      }
+      // Converter-mod lineer/segmentli model verilerini kopyala
+      if(spData.converterShifts) {
+        node.data.converterShifts = JSON.parse(JSON.stringify(spData.converterShifts));
+      } else {
+        delete node.data.converterShifts;
       }
       // Eski parametreleri de koru (geriye uyumluluk)
       node.data.srShift1C2C = spData.srShift1C2C;

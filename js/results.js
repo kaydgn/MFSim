@@ -662,6 +662,17 @@ function veRenderDetailedReport(filter) {
   var controlHTML = '';
   controlHTML += row('Shift Profili', spName);
   controlHTML += row('Vites Geçiş Hızı ve Strateji', R.shiftRefRPM + ' rpm');
+  // Converter geçişleri
+  if(spDataRes.converterShifts) {
+    var csRes = spDataRes.converterShifts;
+    var convParts = [];
+    if(csRes['1C2C']) convParts.push('1C\u21922C: ' + Math.round(csRes['1C2C'].a * R.shiftRefRPM + (csRes['1C2C'].b || 0)) + ' rpm');
+    if(csRes['2C2L'] && csRes['2C2L'].type === 'segmented') {
+      convParts.push('2C\u21922L: ' + Math.round(csRes['2C2L'].linear.a * R.shiftRefRPM + csRes['2C2L'].linear.b) + ' rpm (ESL\u2265' + csRes['2C2L'].linear.validFrom + ')');
+    }
+    if(convParts.length > 0) controlHTML += row('Converter Geçişleri', convParts.join(', '));
+  }
+  // Lockup geçişleri
   if(spDataRes.lockupShifts) {
     var luSummary = Object.keys(spDataRes.lockupShifts).map(function(sk) {
       var ls = spDataRes.lockupShifts[sk];

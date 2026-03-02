@@ -511,9 +511,40 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   //   isLockup: false = converter mod, true = lockup mod
   //
   // Kurallar (N_out = Şanzıman çıkış devri = N_engine × SR / i_gear):
-  //   1C→2C: N_out ≥ SHIFT_1C_2C_OUT_RATIO × N_shift_ref  (0.2150)
-  //   2C→2L: N_out ≥ SHIFT_2C_2L_OUT_RATIO × N_shift_ref  (0.3593)
+  //   1C→2C: converterShifts varsa a×ESL+b, yoksa oran × N_shift_ref
+  //   2C→2L: converterShifts varsa segmentli/lineer, yoksa oran × N_shift_ref
   //   2L→3L...6L: N_out ≥ a × ESL + b (per-gear) veya N_engine ≥ N_governed - lockupOffset (fallback)
+
+  // Converter geçiş eşiği hesaplama (converterShifts desteği)
+  var csData = spData.converterShifts || null;
+
+  /**
+   * Segmentli 2C→2L eşiğini hesaplar.
+   * ESL ≥ validFrom → lineer model, ESL < validFrom → lookup interpolasyon.
+   */
+  function calc2C2LThreshold(esl) {
+    if(!csData || !csData['2C2L']) return SHIFT_2C_2L_OUT_RATIO * esl;
+    var cs2L = csData['2C2L'];
+    if(cs2L.type === 'segmented') {
+      if(esl >= cs2L.linear.validFrom) {
+        return cs2L.linear.a * esl + cs2L.linear.b;
+      }
+      // Lookup tablosu interpolasyonu
+      var lk = cs2L.lookup;
+      if(!lk || lk.length === 0) return cs2L.linear.a * esl + cs2L.linear.b;
+      if(esl <= lk[0][0]) return lk[0][1];
+      if(esl >= lk[lk.length - 1][0]) return lk[lk.length - 1][1];
+      for(var li = 0; li < lk.length - 1; li++) {
+        if(esl >= lk[li][0] && esl <= lk[li + 1][0]) {
+          var frac = (esl - lk[li][0]) / (lk[li + 1][0] - lk[li][0]);
+          return lk[li][1] + frac * (lk[li + 1][1] - lk[li][1]);
+        }
+      }
+      return lk[lk.length - 1][1];
+    }
+    // Basit lineer model
+    return cs2L.a * esl + (cs2L.b || 0);
+  }
 
   var shiftState = {
     gearIdx: 0,
@@ -527,8 +558,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   /**
    * Shift kararı — her adımda çağrılır.
-   * Converter-mod geçişleri N_out/N_shift_ref oranına göre.
-   * Lockup-mod geçişleri N_engine ≥ N_shift_ref - offset.
+   * Converter-mod: converterShifts varsa lineer/segmentli, yoksa oran bazlı.
+   * Lockup-mod: lockupShifts varsa per-gear lineer, yoksa sabit ofset.
    * @returns {boolean} — shift yapıldı mı
    */
   function checkShift(t, N_engine, SR, tau, v_kmh) {
@@ -544,20 +575,24 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       var N_out = N_engine * SR / i_gear_current;
 
       if(g === 0) {
-        // 1C → 2C: N_out ≥ SHIFT_1C_2C_OUT_RATIO × N_shift_ref
-        var threshold_1C2C = SHIFT_1C_2C_OUT_RATIO * shiftRefRPM;
+        // 1C → 2C: converterShifts varsa a×ESL+b, yoksa oran×N_ref
+        var threshold_1C2C;
+        if(csData && csData['1C2C']) {
+          threshold_1C2C = csData['1C2C'].a * shiftRefRPM + (csData['1C2C'].b || 0);
+        } else {
+          threshold_1C2C = SHIFT_1C_2C_OUT_RATIO * shiftRefRPM;
+        }
         if(N_out >= threshold_1C2C) {
           shiftState.shiftHistory.push({
             t: t, fromGear: g, toGear: 1, fromMode: '1C', toMode: '2C',
             v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out
           });
           shiftState.gearIdx = 1;
-          // Hâlâ converter modda
           shifted = true;
         }
       } else if(g === 1) {
-        // 2C → 2L: N_out ≥ SHIFT_2C_2L_OUT_RATIO × N_shift_ref
-        var threshold_2C2L = SHIFT_2C_2L_OUT_RATIO * shiftRefRPM;
+        // 2C → 2L: converterShifts varsa segmentli/lineer, yoksa oran×N_ref
+        var threshold_2C2L = calc2C2LThreshold(shiftRefRPM);
         if(N_out >= threshold_2C2L) {
           shiftState.shiftHistory.push({
             t: t, fromGear: 1, toGear: 1, fromMode: '2C', toMode: '2L',
