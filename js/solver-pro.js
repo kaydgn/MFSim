@@ -298,8 +298,28 @@ function veSolverRunProfessional() {
         var spLogData = VE_FT_SHIFT_PROFILES[gd.shiftProfile || 'allison3200sp_s1'] || {};
         var refForLog = logRefRPM || (function(){ var eN = nodes.find(function(n){return n.type==='engine'||n.type==='engine-brake';}); return eN ? (parseFloat(((eN.data||{}).motorSpecs||{}).governedSpeed)||parseFloat((eN.data||{}).governedRpm)||0) : 0; })();
         if(refForLog && (spLogData.lockupOffset || spLogData.lockupShifts)) {
-          if(spLogData.shift1C2C_outRatio) log('  1C→2C eşik      : N_out = ' + Math.round(spLogData.shift1C2C_outRatio * refForLog) + ' (' + spLogData.shift1C2C_outRatio + ' × ' + refForLog + ')', 'dim');
-          if(spLogData.shift2C2L_outRatio) log('  2C→2L eşik      : N_out = ' + Math.round(spLogData.shift2C2L_outRatio * refForLog) + ' (' + spLogData.shift2C2L_outRatio + ' × ' + refForLog + ')', 'dim');
+          // Converter geçişleri
+          if(spLogData.converterShifts) {
+            var csLog = spLogData.converterShifts;
+            if(csLog['1C2C']) {
+              var thr1C = csLog['1C2C'].a * refForLog + (csLog['1C2C'].b || 0);
+              log('  1C→2C eşik      : N_out = ' + Math.round(thr1C) + ' (' + csLog['1C2C'].a + '×' + refForLog + '+' + (csLog['1C2C'].b || 0) + ')', 'dim');
+            }
+            if(csLog['2C2L']) {
+              var cs2L = csLog['2C2L'];
+              if(cs2L.type === 'segmented') {
+                var thr2L = cs2L.linear.a * refForLog + cs2L.linear.b;
+                log('  2C→2L eşik      : N_out = ' + Math.round(thr2L) + ' (' + cs2L.linear.a + '×' + refForLog + '+' + cs2L.linear.b + ', ESL≥' + cs2L.linear.validFrom + ')', 'dim');
+                if(cs2L.lookup) log('  2C→2L lookup    : ' + cs2L.lookup.map(function(p) { return p[0] + '→' + p[1]; }).join(', '), 'dim');
+              } else {
+                var thr2Ls = (cs2L.a || 0) * refForLog + (cs2L.b || 0);
+                log('  2C→2L eşik      : N_out = ' + Math.round(thr2Ls) + ' (' + (cs2L.a || 0) + '×' + refForLog + '+' + (cs2L.b || 0) + ')', 'dim');
+              }
+            }
+          } else {
+            if(spLogData.shift1C2C_outRatio) log('  1C→2C eşik      : N_out = ' + Math.round(spLogData.shift1C2C_outRatio * refForLog) + ' (' + spLogData.shift1C2C_outRatio + ' × ' + refForLog + ')', 'dim');
+            if(spLogData.shift2C2L_outRatio) log('  2C→2L eşik      : N_out = ' + Math.round(spLogData.shift2C2L_outRatio * refForLog) + ' (' + spLogData.shift2C2L_outRatio + ' × ' + refForLog + ')', 'dim');
+          }
           if(spLogData.lockupShifts) {
             log('  Lockup geçişleri: N_out = a × ESL + b (per-gear kalibrasyon)', 'dim');
             Object.keys(spLogData.lockupShifts).forEach(function(sk) {
