@@ -1616,24 +1616,9 @@ function getRoadPropertiesHTML(node) {
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">🗺️ Güzergah Haritası</div>';
   html += '<button onclick="veExpandRoadMap(\'' + node.id + '\')" title="Haritayı büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:3px; cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
   html += '</div>';
-  html += '<p style="font-size:0.56rem; color:var(--text-muted); margin-bottom:6px; line-height:1.3;">Haritada noktaları tıklayarak güzergah belirleyin. OSRM ile otomatik rota ve yükseklik hesabı yapılır.</p>';
-  
   // Harita container
   html += '<div id="ve-road-map-' + node.id + '" style="width:100%; height:220px; border-radius:6px; border:1px solid var(--border-color); margin-bottom:6px; background:var(--bg-secondary); position:relative;"></div>';
-  
-  // Harita butonları
-  html += '<div style="display:flex; gap:3px; margin-bottom:6px; flex-wrap:wrap;">';
-  html += '<button onclick="veCalcRouteOSRM(\'' + node.id + '\')" style="flex:1; padding:4px 5px; font-size:0.58rem; background:#1b5e20; color:white; border:none; border-radius:3px; cursor:pointer;">🛣️ OSRM Rota</button>';
-  html += '<button onclick="veCalcElevation(\'' + node.id + '\')" style="flex:1; padding:4px 5px; font-size:0.58rem; background:#e65100; color:white; border:none; border-radius:3px; cursor:pointer;">📐 Eğim Hesapla</button>';
-  html += '<button onclick="veClearRoute(\'' + node.id + '\')" style="padding:4px 6px; font-size:0.58rem; background:var(--accent-danger); color:white; border:none; border-radius:3px; cursor:pointer;">🗑️</button>';
-  html += '</div>';
-  
-  // Segment aralığı
-  html += '<div style="display:flex; align-items:center; gap:4px; margin-bottom:6px; font-size:0.58rem;">';
-  html += '<label style="color:var(--text-muted); white-space:nowrap;">Segment aralığı:</label>';
-  html += '<select id="ve-road-segment-' + node.id + '" style="padding:2px 3px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; font-size:0.58rem;">';
-  html += '<option value="100">~100m</option><option value="200">~200m</option><option value="300" selected>~300m</option><option value="500">~500m</option>';
-  html += '</select></div>';
+  html += '<p style="font-size:0.54rem; color:var(--text-muted); margin:0; line-height:1.3; text-align:center; opacity:0.8;">Özellikler için haritayı büyültün ⛶</p>';
   
   // Sonuç kutusu
   html += '<div id="ve-road-route-result-' + node.id + '" style="display:none; background:var(--bg-secondary); padding:8px; border-radius:6px; border:1px solid var(--border-color); margin-top:4px;">';
