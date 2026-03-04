@@ -1498,6 +1498,8 @@ function _drRedrawChart(canvas) {
     veRenderAccelChart(id, d.chartData, d.title);
   } else if(d.type === 'ftUpshift') {
     veRenderFTUpshiftChart(id, d.data);
+  } else if(d.type === 'distGrade') {
+    veRenderDistGradeProfile(id, d.segments);
   }
 }
 
@@ -1580,7 +1582,7 @@ function _drChartMouseMove(e) {
     var dy = e.clientY - _drChartPan.startY;
     var xRange = (d.baseXMax - d.baseXMin) / z.scale;
     z.cx = _drChartPan.startCX - dx / d.plotW * xRange;
-    if(d.type === 'grade') {
+    if(d.type === 'grade' || d.type === 'distGrade') {
       var yRange = (d.baseYMax - d.baseYMin) / z.scale;
       z.cy = _drChartPan.startCY + dy / d.plotH * yRange;
     }
@@ -1655,6 +1657,23 @@ function _drChartMouseMove(e) {
       html += '<div>Hız: <b style="color:#60a5fa;">' + snapSpeed.toFixed(1) + '</b> km/h</div>';
       if(tVal !== null) html += '<div>Süre: <b style="color:#4a86c8;">' + tVal.toFixed(2) + '</b> s</div>';
       if(dValI !== null) html += '<div>Mesafe: <b style="color:#c0392b;">' + Math.round(dValI) + '</b> m</div>';
+    }
+  } else if(d.type === 'distGrade') {
+    // Hangi segmentte olduğunu bul
+    var dps = d.dataPoints;
+    for(var si = 0; si < dps.length; si++) {
+      var spx1 = d.padL + (dps[si].xStart - d.xMin) / (d.xMax - d.xMin) * d.plotW;
+      var spx2 = d.padL + (dps[si].xEnd - d.xMin) / (d.xMax - d.xMin) * d.plotW;
+      if(mx >= spx1 && mx <= spx2) {
+        snapOk = true;
+        var segLabel = d.totalDist > 5000 ? (dps[si].xStart / 1000).toFixed(2) + ' — ' + (dps[si].xEnd / 1000).toFixed(2) + ' km' : dps[si].xStart.toFixed(0) + ' — ' + dps[si].xEnd.toFixed(0) + ' m';
+        html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Segment ' + (si + 1) + '</div>';
+        html += '<div>Mesafe: <b style="color:#60a5fa;">' + segLabel + '</b></div>';
+        html += '<div>Uzunluk: <b style="color:#60a5fa;">' + dps[si].mesafe.toFixed(0) + '</b> m</div>';
+        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? '#4caf50' : (dps[si].grade < -0.5 ? '#ef5350' : '#8b95a5')) + ';">' + (dps[si].grade > 0 ? '↓' : (dps[si].grade < 0 ? '↑' : '→')) + ' %' + dps[si].grade.toFixed(1) + '</b></div>';
+        html += '<div>Δh: <b style="color:#60a5fa;">' + dps[si].deltaH.toFixed(1) + '</b> m</div>';
+        break;
+      }
     }
   }
 
