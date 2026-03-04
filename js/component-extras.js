@@ -346,6 +346,7 @@ function getScenarioPropertiesHTML(node) {
     full_brake: 'Tam fren',
     partial_throttle: 'Kısmi gaz',
     full_throttle: 'Tam gaz',
+    performance_analysis: 'Performans Analizi',
     custom: 'Özel'
   };
   
@@ -364,7 +365,7 @@ function getScenarioPropertiesHTML(node) {
   html += '</select></td></tr>';
   
   // Gaz pedal oranı
-  var showThrottle = ['partial_throttle','full_throttle','custom'].indexOf(scenarioType) > -1;
+  var showThrottle = ['partial_throttle','full_throttle','performance_analysis','custom'].indexOf(scenarioType) > -1;
   html += '<tr id="ve-scenario-throttle-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showThrottle?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Gaz pedal oranı [%]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="number" id="ve-scenario-throttle-' + node.id + '" value="' + throttle + '" step="5" min="0" max="100" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
   
   // Fren kuvveti
@@ -389,10 +390,10 @@ function onVEScenarioChange(nodeId) {
     var t = typeEl.value;
     var thRow = el('ve-scenario-throttle-row-' + nodeId);
     var brRow = el('ve-scenario-brake-row-' + nodeId);
-    if(thRow) thRow.style.display = ['partial_throttle','full_throttle','custom'].indexOf(t) > -1 ? '' : 'none';
+    if(thRow) thRow.style.display = ['partial_throttle','full_throttle','performance_analysis','custom'].indexOf(t) > -1 ? '' : 'none';
     if(brRow) brRow.style.display = (t === 'full_brake' || t === 'custom') ? '' : 'none';
-    // Tam gaz: otomatik 100%
-    if(t === 'full_throttle') { var thEl = el('ve-scenario-throttle-' + nodeId); if(thEl) thEl.value = 100; node.data.throttle = 100; }
+    // Tam gaz / Performans Analizi: otomatik 100%
+    if(t === 'full_throttle' || t === 'performance_analysis') { var thEl = el('ve-scenario-throttle-' + nodeId); if(thEl) thEl.value = 100; node.data.throttle = 100; }
   }
   var thEl2 = el('ve-scenario-throttle-' + nodeId);
   var brEl = el('ve-scenario-brake-' + nodeId);
