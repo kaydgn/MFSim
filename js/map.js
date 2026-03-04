@@ -803,6 +803,7 @@ function veCalcDistGradeProfile(nodeId) {
   profileDiv.innerHTML = '<div style="position:relative;">' +
     '<canvas id="' + canvasId + '" style="width:100%; cursor:crosshair; border-radius:4px;"></canvas>' +
     '<div id="' + canvasId + '-tooltip" class="dr-chart-tooltip"></div>' +
+    '<button onclick="veExpandProfileChart(\'' + nodeId + '\')" title="Grafiği büyüt" style="position:absolute; top:4px; right:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:rgba(30,36,48,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:3px; cursor:pointer; font-size:0.7rem; color:var(--text-secondary); transition:all 0.12s; z-index:2;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(30,36,48,0.7)\';this.style.color=\'var(--text-secondary)\'">⛶</button>' +
     '</div>' +
     '<div style="display:flex; justify-content:center; gap:12px; margin-top:4px; font-size:0.52rem; color:var(--text-muted);">' +
     '<span>Scroll: Zoom</span><span style="opacity:0.4;">│</span>' +
@@ -821,7 +822,7 @@ function veRenderDistGradeProfile(canvasId, segments) {
   if(!canvas || !segments || segments.length < 1) return;
 
   var parentW = canvas.parentElement.clientWidth || 400;
-  var chartH = 180;
+  var chartH = canvas._dgExpandedH || 180;
   var dpr = window.devicePixelRatio || 1;
   canvas.width = parentW * dpr;
   canvas.height = chartH * dpr;
@@ -832,15 +833,23 @@ function veRenderDistGradeProfile(canvasId, segments) {
   ctx.scale(dpr, dpr);
   var W = parentW, H = chartH;
 
-  var padL = 38, padR = 10, padT = 24, padB = 30;
+  var padL = 42, padR = 12, padT = 26, padB = 34;
   var plotW = W - padL - padR, plotH = H - padT - padB;
 
-  // Veri noktaları: kümülatif mesafe vs eğim
+  // Veri noktaları: her segmentin ortasındaki eğim değeri (çizgi grafiği için)
   var cumDist = 0;
   var dataPoints = [];
+  var linePoints = []; // çizgi grafiği noktaları: {x: mesafe, y: eğim}
   for(var i = 0; i < segments.length; i++) {
+    var midX = cumDist + segments[i].mesafe / 2;
     dataPoints.push({ xStart: cumDist, xEnd: cumDist + segments[i].mesafe, grade: segments[i].egim, deltaH: segments[i].deltaH, mesafe: segments[i].mesafe });
+    linePoints.push({ x: midX, y: segments[i].egim });
     cumDist += segments[i].mesafe;
+  }
+  // Başlangıç ve bitiş noktaları ekle (uçlarda kesilmesin)
+  if(linePoints.length > 0) {
+    linePoints.unshift({ x: 0, y: linePoints[0].y });
+    linePoints.push({ x: cumDist, y: linePoints[linePoints.length - 1].y });
   }
 
   var totalDist = cumDist;
@@ -884,6 +893,7 @@ function veRenderDistGradeProfile(canvasId, segments) {
   var textColor = cs.getPropertyValue('--text-secondary').trim() || '#8b95a5';
   var headColor = cs.getPropertyValue('--text-heading').trim() || '#e0e0e0';
   var borderColor = cs.getPropertyValue('--border-color').trim() || '#2a3040';
+  var accentColor = cs.getPropertyValue('--accent-primary').trim() || '#3b82f6';
   var successColor = cs.getPropertyValue('--accent-success').trim() || '#4caf50';
   var dangerColor = cs.getPropertyValue('--accent-danger').trim() || '#ef5350';
 
@@ -919,30 +929,31 @@ function veRenderDistGradeProfile(canvasId, segments) {
   // X etiketleri (mesafe)
   ctx.textAlign = 'center';
   var xStep;
-  if(totalDist <= 2000) xStep = 200;
+  if(totalDist <= 500) xStep = 50;
+  else if(totalDist <= 2000) xStep = 200;
   else if(totalDist <= 5000) xStep = 500;
   else if(totalDist <= 20000) xStep = 2000;
   else xStep = 5000;
   for(var lx = 0; lx <= xMax; lx += xStep) {
     if(lx < xMin) continue;
     var label = totalDist > 5000 ? (lx / 1000).toFixed(1) : lx.toFixed(0);
-    ctx.fillText(label, toX(lx), H - padB + 13);
+    ctx.fillText(label, toX(lx), H - padB + 14);
   }
 
   // Eksen başlıkları
   ctx.fillStyle = headColor; ctx.font = '600 9.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(totalDist > 5000 ? 'Mesafe (km)' : 'Mesafe (m)', padL + plotW / 2, H - 3);
-  ctx.save(); ctx.translate(9, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
+  ctx.save(); ctx.translate(10, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.fillText('Eğim (%)', 0, 0); ctx.restore();
 
   // Başlık
   ctx.fillStyle = headColor; ctx.font = '600 10.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('Mesafe — Eğim Profili', padL + plotW / 2, 13);
+  ctx.fillText('Mesafe — Eğim Profili', padL + plotW / 2, 14);
 
   // Zoom göstergesi
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = 'rgba(106,27,154,0.85)'; ctx.font = '600 8px Segoe UI, sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(zs.toFixed(1) + 'x', W - padR, padT - 4);
+    ctx.fillText(zs.toFixed(1) + 'x', W - padR - 26, padT - 4);
   }
 
   // Çizim alanı kırp
@@ -951,40 +962,65 @@ function veRenderDistGradeProfile(canvasId, segments) {
   ctx.rect(padL, padT, plotW, plotH);
   ctx.clip();
 
-  // Segment çubukları
+  // ── Gradient dolgu (çizgi altı) ──
   var zeroY = toY(0);
-  for(var si = 0; si < dataPoints.length; si++) {
-    var dp = dataPoints[si];
-    var x1 = toX(dp.xStart), x2 = toX(dp.xEnd);
-    var barY = toY(dp.grade);
-    var barW = x2 - x1;
-    if(barW < 0.5) barW = 0.5;
-
-    // Dolgu rengi
-    var fillColor = dp.grade > 0.5 ? successColor : (dp.grade < -0.5 ? dangerColor : textColor);
-
-    // Dolgu (yarı saydam)
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = fillColor;
-    if(dp.grade >= 0) {
-      ctx.fillRect(x1, barY, barW, zeroY - barY);
-    } else {
-      ctx.fillRect(x1, zeroY, barW, barY - zeroY);
-    }
-    ctx.globalAlpha = 1.0;
-
-    // Üst kenar çizgisi
-    ctx.strokeStyle = fillColor; ctx.lineWidth = 2;
+  if(linePoints.length >= 2) {
+    // Pozitif bölge (iniş = yeşil gradient)
     ctx.beginPath();
-    ctx.moveTo(x1, barY); ctx.lineTo(x1 + barW, barY);
-    ctx.stroke();
+    ctx.moveTo(toX(linePoints[0].x), zeroY);
+    for(var gi = 0; gi < linePoints.length; gi++) {
+      var px = toX(linePoints[gi].x);
+      var py = toY(Math.max(0, linePoints[gi].y));
+      if(gi === 0) ctx.lineTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.lineTo(toX(linePoints[linePoints.length - 1].x), zeroY);
+    ctx.closePath();
+    var gradPos = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+    gradPos.addColorStop(0, 'rgba(76,175,80,0.35)');
+    gradPos.addColorStop(1, 'rgba(76,175,80,0.03)');
+    ctx.fillStyle = gradPos;
+    ctx.fill();
 
-    // Segment ayırıcı
-    if(si > 0) {
-      ctx.strokeStyle = borderColor; ctx.lineWidth = 0.5;
-      ctx.setLineDash([2, 2]);
-      ctx.beginPath(); ctx.moveTo(x1, padT); ctx.lineTo(x1, H - padB); ctx.stroke();
-      ctx.setLineDash([]);
+    // Negatif bölge (çıkış = kırmızı gradient)
+    ctx.beginPath();
+    ctx.moveTo(toX(linePoints[0].x), zeroY);
+    for(var ni = 0; ni < linePoints.length; ni++) {
+      var npx = toX(linePoints[ni].x);
+      var npy = toY(Math.min(0, linePoints[ni].y));
+      ctx.lineTo(npx, npy);
+    }
+    ctx.lineTo(toX(linePoints[linePoints.length - 1].x), zeroY);
+    ctx.closePath();
+    var gradNeg = ctx.createLinearGradient(0, padT, 0, padT + plotH);
+    gradNeg.addColorStop(0, 'rgba(239,83,80,0.03)');
+    gradNeg.addColorStop(1, 'rgba(239,83,80,0.35)');
+    ctx.fillStyle = gradNeg;
+    ctx.fill();
+  }
+
+  // ── Ana çizgi ──
+  if(linePoints.length >= 2) {
+    ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    // Çizgiyi renk segmentleriyle çiz
+    for(var li = 0; li < linePoints.length - 1; li++) {
+      var p1 = linePoints[li], p2 = linePoints[li + 1];
+      var avgGrade = (p1.y + p2.y) / 2;
+      ctx.strokeStyle = avgGrade > 0.5 ? successColor : (avgGrade < -0.5 ? dangerColor : accentColor);
+      ctx.beginPath();
+      ctx.moveTo(toX(p1.x), toY(p1.y));
+      ctx.lineTo(toX(p2.x), toY(p2.y));
+      ctx.stroke();
+    }
+
+    // Veri noktaları (sadece segment ortaları, uç noktalar değil)
+    for(var pi = 1; pi < linePoints.length - 1; pi++) {
+      var pt = linePoints[pi];
+      var ptx = toX(pt.x), pty = toY(pt.y);
+      if(ptx < padL - 5 || ptx > W - padR + 5) continue;
+      ctx.beginPath(); ctx.arc(ptx, pty, 3, 0, Math.PI * 2);
+      var ptColor = pt.y > 0.5 ? successColor : (pt.y < -0.5 ? dangerColor : accentColor);
+      ctx.fillStyle = bgColor; ctx.fill();
+      ctx.strokeStyle = ptColor; ctx.lineWidth = 1.5; ctx.stroke();
     }
   }
 
@@ -992,7 +1028,7 @@ function veRenderDistGradeProfile(canvasId, segments) {
 
   // Etkileşim verisi kaydet
   canvas._drChart = {
-    type: 'distGrade', segments: segments, dataPoints: dataPoints,
+    type: 'distGrade', segments: segments, dataPoints: dataPoints, linePoints: linePoints,
     padL: padL, padR: padR, padT: padT, padB: padB,
     plotW: plotW, plotH: plotH, xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax,
     baseXMin: baseXMin, baseXMax: baseXMax, baseYMin: baseYMin, baseYMax: baseYMax,
@@ -1012,6 +1048,65 @@ function veRenderDistGradeProfile(canvasId, segments) {
   }
 }
 
+
+// ═══ Profil grafiği büyütme modalı ═══
+function veExpandProfileChart(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data || !node.data.routeSegments) {
+    showToast('Profil verisi bulunamadı', 'warning'); return;
+  }
+
+  // Overlay
+  var overlay = document.createElement('div');
+  overlay.id = 've-profile-modal-overlay';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:100001; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);';
+
+  // Modal
+  var modal = document.createElement('div');
+  modal.style.cssText = 'width:100%; max-width:1100px; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); border-radius:6px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+
+  // Header
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">📊 Mesafe — Eğim Profili</span>' +
+    '<div style="display:flex; align-items:center; gap:8px;">' +
+    '<span style="font-size:0.56rem; color:var(--text-muted);">Scroll: Zoom &nbsp;│&nbsp; Sağ Tık+Sürükle: Kaydır &nbsp;│&nbsp; Çift Tık: Sıfırla</span>' +
+    '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:3px; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button></div>';
+  modal.appendChild(header);
+
+  // Chart container
+  var chartBox = document.createElement('div');
+  chartBox.style.cssText = 'padding:16px; position:relative;';
+  var expandCanvasId = 've-road-distgrade-expanded-' + nodeId;
+  chartBox.innerHTML = '<canvas id="' + expandCanvasId + '" style="width:100%; cursor:crosshair; border-radius:4px;"></canvas>' +
+    '<div id="' + expandCanvasId + '-tooltip" class="dr-chart-tooltip"></div>';
+  modal.appendChild(chartBox);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // ESC kapatma
+  var escHandler = function(e) { if(e.key === 'Escape') veCloseProfileModal(); };
+  document.addEventListener('keydown', escHandler);
+  overlay._veEscHandler = escHandler;
+  overlay.addEventListener('mousedown', function(e) { if(e.target === overlay) veCloseProfileModal(); });
+
+  // Render (büyük boyut)
+  setTimeout(function() {
+    var expandCanvas = document.getElementById(expandCanvasId);
+    if(expandCanvas) {
+      expandCanvas._dgExpandedH = 500;
+      veRenderDistGradeProfile(expandCanvasId, node.data.routeSegments);
+    }
+  }, 50);
+}
+
+function veCloseProfileModal() {
+  var overlay = document.getElementById('ve-profile-modal-overlay');
+  if(!overlay) return;
+  if(overlay._veEscHandler) document.removeEventListener('keydown', overlay._veEscHandler);
+  overlay.remove();
+}
 
 // Sonlandırıcı bileşeni özellikleri
 function getTerminatorPropertiesHTML(node) {
