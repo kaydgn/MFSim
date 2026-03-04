@@ -10,16 +10,18 @@ var VE_MODULES = {
     components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
     defaultScenario: 'coast',
     scenarios: ['coast'],
-    requiresFull: true
+    requiresFull: true,
+    requiredComponents: ['scenario']
   },
   'full-throttle': {
     name: 'Tam Gaz Hızlanma',
     icon: '',
     description: 'Tam gaz hızlanma performansı, 0-100 km/h, elastik hızlanma',
     components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
-    defaultScenario: 'full_throttle',
-    scenarios: ['full_throttle'],
-    requiresFull: true
+    defaultScenario: 'performance_analysis',
+    scenarios: ['performance_analysis'],
+    requiresFull: true,
+    requiredComponents: ['scenario']
   },
   'performance': {
     name: 'Araç Performans Hesaplama',
