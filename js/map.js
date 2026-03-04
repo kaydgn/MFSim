@@ -58,6 +58,11 @@ function veExpandRoadMap(nodeId) {
     '<label style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap;">Segment:</label>' +
     '<select id="ve-road-segment-' + nodeId + '" style="padding:3px 4px; font-size:0.62rem; background:var(--bg-tertiary,#1a1f2e); color:var(--text-primary,#e0e0e0); border:1px solid var(--border-color,#2a3040); border-radius:3px;">' + segOptHtml + '</select>' +
     '</div>' +
+    '<div style="display:inline-flex; align-items:center; gap:4px; margin-left:4px;">' +
+    '<label style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap;">Yumuşatma:</label>' +
+    '<select id="ve-road-smooth-' + nodeId + '" style="padding:3px 4px; font-size:0.62rem; background:var(--bg-tertiary,#1a1f2e); color:var(--text-primary,#e0e0e0); border:1px solid var(--border-color,#2a3040); border-radius:3px;">' +
+    '<option value="0">Yok</option><option value="1">Hafif</option><option value="2" selected>Orta</option><option value="3">Güçlü</option></select>' +
+    '</div>' +
     '<span style="flex:1;"></span>' +
     '<span id="ve-map-modal-info" style="font-size:0.6rem; color:var(--text-muted);">Haritaya tıklayarak nokta ekleyin</span>';
   modal.appendChild(toolbar);
@@ -536,30 +541,45 @@ function veCalcElevation(nodeId, onComplete) {
 
     // ── Yükseklik yumuşatma (SRTM gürültüsünü azalt) ──
     // Gaussian-ağırlıklı hareketli ortalama, uç noktalar sabit kalır
-    if(coords.length >= 5) {
+    // Yumuşatma seviyesi: 0=yok, 1=hafif, 2=orta, 3=güçlü
+    var smoothEl = document.getElementById('ve-road-smooth-' + nodeId);
+    var smoothLevel = smoothEl ? parseInt(smoothEl.value) : 2;
+
+    if(smoothLevel > 0 && coords.length >= 4) {
       var rawElev = coords.map(function(c) { return c.elevation; });
       var n = rawElev.length;
-      // Pencere boyutu: nokta sayısına göre adaptif (min 3, max n/3)
-      var halfWin = Math.max(1, Math.min(Math.floor(n / 6), 8));
-      var smoothed = rawElev.slice(); // kopya
-      for(var si = 1; si < n - 1; si++) {
-        var wSum = 0, vSum = 0;
-        for(var wi = -halfWin; wi <= halfWin; wi++) {
-          var idx = si + wi;
-          if(idx < 0 || idx >= n) continue;
+      // Pencere boyutu: seviyeye ve nokta sayısına göre adaptif
+      var maxWin = Math.max(2, Math.floor(n / 3));
+      var halfWinBase;
+      if(smoothLevel === 1) halfWinBase = Math.max(1, Math.min(Math.floor(n / 10), 3));
+      else if(smoothLevel === 2) halfWinBase = Math.max(2, Math.min(Math.floor(n / 5), 8));
+      else halfWinBase = Math.max(3, Math.min(Math.floor(n / 3), 15));
+      var halfWin = Math.min(halfWinBase, maxWin);
+
+      // Çoklu geçiş: güçlü modda 2 geçiş, diğerlerinde 1
+      var passes = smoothLevel >= 3 ? 2 : 1;
+      var current = rawElev.slice();
+      for(var pass = 0; pass < passes; pass++) {
+        var smoothed = current.slice();
+        for(var si = 1; si < n - 1; si++) {
+          var wSum = 0, vSum = 0;
           var sigma = halfWin / 2.0;
-          var gw = Math.exp(-(wi * wi) / (2 * sigma * sigma));
-          wSum += gw;
-          vSum += gw * rawElev[idx];
+          for(var wi = -halfWin; wi <= halfWin; wi++) {
+            var idx = si + wi;
+            if(idx < 0 || idx >= n) continue;
+            var gw = Math.exp(-(wi * wi) / (2 * sigma * sigma));
+            wSum += gw;
+            vSum += gw * current[idx];
+          }
+          smoothed[si] = vSum / wSum;
         }
-        smoothed[si] = vSum / wSum;
+        smoothed[0] = rawElev[0];
+        smoothed[n - 1] = rawElev[n - 1];
+        current = smoothed;
       }
-      // Başlangıç ve bitiş noktaları sabit kalır
-      smoothed[0] = rawElev[0];
-      smoothed[n - 1] = rawElev[n - 1];
       // Uygula
       for(var ui = 0; ui < n; ui++) {
-        coords[ui].elevation = smoothed[ui];
+        coords[ui].elevation = current[ui];
       }
     }
 
