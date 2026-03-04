@@ -533,7 +533,36 @@ function veCalcElevation(nodeId, onComplete) {
     for(var i = 0; i < coords.length; i++) {
       coords[i].elevation = data.results[i].elevation;
     }
-    
+
+    // ── Yükseklik yumuşatma (SRTM gürültüsünü azalt) ──
+    // Gaussian-ağırlıklı hareketli ortalama, uç noktalar sabit kalır
+    if(coords.length >= 5) {
+      var rawElev = coords.map(function(c) { return c.elevation; });
+      var n = rawElev.length;
+      // Pencere boyutu: nokta sayısına göre adaptif (min 3, max n/3)
+      var halfWin = Math.max(1, Math.min(Math.floor(n / 6), 8));
+      var smoothed = rawElev.slice(); // kopya
+      for(var si = 1; si < n - 1; si++) {
+        var wSum = 0, vSum = 0;
+        for(var wi = -halfWin; wi <= halfWin; wi++) {
+          var idx = si + wi;
+          if(idx < 0 || idx >= n) continue;
+          var sigma = halfWin / 2.0;
+          var gw = Math.exp(-(wi * wi) / (2 * sigma * sigma));
+          wSum += gw;
+          vSum += gw * rawElev[idx];
+        }
+        smoothed[si] = vSum / wSum;
+      }
+      // Başlangıç ve bitiş noktaları sabit kalır
+      smoothed[0] = rawElev[0];
+      smoothed[n - 1] = rawElev[n - 1];
+      // Uygula
+      for(var ui = 0; ui < n; ui++) {
+        coords[ui].elevation = smoothed[ui];
+      }
+    }
+
     // Toplam mesafe ve segment hesapla
     var toplamMesafe = 0;
     var segmentler = [];
