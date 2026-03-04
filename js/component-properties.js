@@ -3879,6 +3879,99 @@ var VE_FT_SHIFT_PROFILES = {
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
   },
+  allison3500sp_s1: {
+    name: 'Allison 3500 SP — S1 Performance',
+    family: '3000',
+    lockupOffset: 75,    // Geriye uyumluluk
+    shift1C2C_outRatio: 0.1635,   // Yaklaşık (converterShifts varsa o kullanılır)
+    shift2C2L_outRatio: null,     // Lineer model — basit oran yok
+    shiftRefRPM: null,
+    // Converter-mod geçişleri: Lineer model
+    // 1C→2C tüm kalibrasyonlarda aynı, 2C→2L kalibrasyon bazlı
+    // Kaynak: 44 VEPS kalibrasyon raporu (CIN: CI-83000-91D-3)
+    converterShifts: {
+      '1C2C': { a: 0.1635, b: -0.3 },             // max hata ±0.4 rpm
+      '2C2L': { a: 0.2915, b: 13.4 }               // max hata ±8.1 rpm
+    },
+    // Lockup-mod: N_engine = ESL - 75 (3200SP/4500SP S1 ile aynı kural)
+    lockupShifts: {
+      '2L3L': { a: 0.4439, b: -33.4 },   // i_gear ≈ 2.253, max hata ±0.4 rpm
+      '3L4L': { a: 0.6514, b: -48.3 },   // i_gear ≈ 1.534, max hata ±0.5 rpm
+      '4L5L': { a: 1.0000, b: -75.0 },   // i_gear = 1.000, max hata ±0.0 rpm
+      '5L6L': { a: 1.3354, b: -99.9 }    // i_gear ≈ 0.749, max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison3500sp_s2: {
+    name: 'Allison 3500 SP — S2 Performance',
+    family: '3000',
+    lockupOffset: 0,     // Geriye uyumluluk (b ≈ 0)
+    shift1C2C_outRatio: 0.1635,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.1635, b: -0.3 },
+      '2C2L': { a: 0.2862, b: 12.1 }               // max hata ±8.0 rpm
+    },
+    // Lockup-mod: N_engine = 0.9 × ESL (3200SP/4500SP S2 ile aynı kural)
+    lockupShifts: {
+      '2L3L': { a: 0.4000, b: -1.0, minCap: 665 },  // i_gear ≈ 2.253, max hata ±0.0 rpm
+      '3L4L': { a: 0.5865, b: 0, minCap: 994 },      // i_gear ≈ 1.534, max hata ±0.4 rpm
+      '4L5L': { a: 0.9000, b: 0 },                    // i_gear ≈ 1.000, max hata ±0.0 rpm
+      '5L6L': { a: 1.2022, b: -0.6 }                  // i_gear ≈ 0.749, max hata ±0.4 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison3500sp_s3: {
+    name: 'Allison 3500 SP — S3 Economy',
+    family: '3000',
+    lockupOffset: -100,  // Geriye uyumluluk (yaklaşık)
+    shift1C2C_outRatio: 0.1635,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.1635, b: -0.3 },
+      '2C2L': { a: 0.2800, b: 15.0 }
+    },
+    // Lockup-mod: Her viteste ayrı parametreler
+    // Not: 2L→3L hafif nonlineer (6.1 rpm), 5L→6L yüksek ESL'de nonlineer (4.0 rpm)
+    // Not: 3L→4L S1 ile birebir aynı (N_engine = ESL - 75)
+    lockupShifts: {
+      '2L3L': { a: 0.4015, b: 40.7 },    // i_gear ≈ 2.253, max hata ±6.1 rpm (nonlineer)
+      '3L4L': { a: 0.6514, b: -48.3 },   // i_gear ≈ 1.534, max hata ±0.5 rpm (S1 ile aynı)
+      '4L5L': { a: 0.8011, b: 134.0 },   // i_gear ≈ 1.000, max hata ±0.5 rpm
+      '5L6L': { a: 0.9241, b: 148.4 }    // i_gear ≈ 0.749, max hata ±4.0 rpm (nonlineer)
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison3500sp_s4: {
+    name: 'Allison 3500 SP — S4 Economy',
+    family: '3000',
+    lockupOffset: 50,    // Geriye uyumluluk (yaklaşık)
+    shift1C2C_outRatio: 0.1635,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.1635, b: -0.3 },
+      '2C2L': { a: 0.2691, b: 14.0 }               // max hata ±9.5 rpm
+    },
+    // Lockup-mod: minCap destekli (düşük ESL koruması)
+    lockupShifts: {
+      '2L3L': { a: 0.3915, b: -33.6, minCap: 665 },   // i_gear ≈ 2.253, max hata ±0.5 rpm
+      '3L4L': { a: 0.6000, b: -50.0, minCap: 1020 },   // i_gear ≈ 1.534, max hata ±0.0 rpm
+      '4L5L': { a: 0.8007, b: -65.4, minCap: 1362 },   // i_gear ≈ 1.000, max hata ±0.6 rpm
+      '5L6L': { a: 1.0000, b: -45.0 }                   // i_gear ≈ 0.749, max hata ±0.0 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
   allison4000sp_s1: {
     name: 'Allison 4000 SP — S1 Performance',
     family: '4000',
@@ -4280,7 +4373,7 @@ var VE_GEARBOX_PRESETS = {
   '3500SP': {
     name: 'Allison | 3500SP',
     family: '3000',
-    calibrated: false,
+    calibrated: true,
     gears: [
       {gear: '1', ratio: 4.59, note: ''},
       {gear: '2', ratio: 2.25, note: ''},
