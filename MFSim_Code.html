@@ -208,7 +208,7 @@
 #tab-bar button:hover{color:var(--text-primary);background:var(--bg-tertiary);}
 #tab-bar button.active{color:var(--accent-primary);border-bottom-color:var(--accent-primary);background:var(--bg-tertiary);}
 .ve-tab-group{display:flex;align-items:center;gap:0;}
-.ve-sub-tabs{display:none;align-items:center;gap:0;margin-left:0;border-left:1px solid var(--border-color);padding-left:2px;}
+.ve-sub-tabs{display:none;align-items:center;gap:0;margin-left:0;padding-left:2px;}
 .ve-sub-tabs.visible{display:flex;}
 .ve-sub-tab{background:none;border:none;color:var(--text-muted);padding:4px 8px;cursor:pointer;font-size:0.62rem;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}
 .ve-sub-tab:hover{color:var(--text-primary);background:var(--bg-tertiary);}
@@ -1742,7 +1742,7 @@
 
 <!-- ═══ LOGIN SCREEN (Gunmetal Theme) ═══ -->
 <div id="mfsim-login-overlay" style="position:fixed; inset:0; z-index:999999; background:linear-gradient(135deg, #d5d8dc 0%, #e8eaed 40%, #dcdfe3 100%); display:flex; align-items:center; justify-content:center; font-family:system-ui,-apple-system,sans-serif;">
-  <div style="width:360px; padding:40px; background:#f1f3f5; border:1px solid #c4c9d0; border-radius:16px; box-shadow:0 25px 80px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06);">
+  <div style="width:360px; padding:40px; background:#f1f3f5; border:1px solid #c4c9d0; border-radius:0; box-shadow:0 25px 80px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06);">
     <div style="text-align:center; margin-bottom:28px;">
       <div style="font-size:1.3rem; font-weight:700; color:#0d0f13; letter-spacing:0.5px;">MFSim</div>
       <div style="font-size:0.7rem; color:#8590a2; margin-top:4px;">Motor Fren Simulasyon Yazılımı</div>
@@ -1848,7 +1848,6 @@ function mfsimLogout() {
     </div>
   </div>
   <div class="ve-tab-group">
-    <button class="active" id="tab-btn-editor">Görsel Editör</button>
     <div class="ve-sub-tabs visible" id="ve-sub-tabs">
       <button class="ve-sub-tab active" onclick="veSubTabDegistir('anasayfa')" data-subtab="anasayfa">Ana Sayfa</button>
       <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>

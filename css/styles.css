@@ -199,7 +199,7 @@
 #tab-bar button:hover{color:var(--text-primary);background:var(--bg-tertiary);}
 #tab-bar button.active{color:var(--accent-primary);border-bottom-color:var(--accent-primary);background:var(--bg-tertiary);}
 .ve-tab-group{display:flex;align-items:center;gap:0;}
-.ve-sub-tabs{display:none;align-items:center;gap:0;margin-left:0;border-left:1px solid var(--border-color);padding-left:2px;}
+.ve-sub-tabs{display:none;align-items:center;gap:0;margin-left:0;padding-left:2px;}
 .ve-sub-tabs.visible{display:flex;}
 .ve-sub-tab{background:none;border:none;color:var(--text-muted);padding:4px 8px;cursor:pointer;font-size:0.62rem;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}
 .ve-sub-tab:hover{color:var(--text-primary);background:var(--bg-tertiary);}
