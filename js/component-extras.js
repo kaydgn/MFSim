@@ -1644,7 +1644,15 @@ function getRoadPropertiesHTML(node) {
   html += '</div></div>';
   
   html += '</div>'; // harita wrapper
-  
+
+  // ===== YOL PROFİLLERİ =====
+  html += '<div id="ve-road-profiles-' + node.id + '" style="display:none; background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:12px; border:1px solid var(--border-color);">';
+  html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">';
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">📊 Yol Profilleri</div>';
+  html += '</div>';
+  html += '<div id="ve-road-profiles-content-' + node.id + '"></div>';
+  html += '</div>';
+
   // ===== EĞİM PARAMETRELERİ =====
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin:8px 0 6px 0;">📐 Eğim Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
