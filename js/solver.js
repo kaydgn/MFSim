@@ -238,10 +238,15 @@ function veSolverValidate() {
   }
   
   container.innerHTML = html;
+  return allOk;
 }
 
 function veSolverRun() {
-  veSolverValidate();
+  var valid = veSolverValidate();
+  if(!valid) {
+    showToast('Eksik bileşenler var — önce topolojiyi tamamlayın', 'error');
+    return;
+  }
   
   var progressEl = document.getElementById('ve-solver-progress');
   var progressFill = document.getElementById('ve-solver-progress-fill');
