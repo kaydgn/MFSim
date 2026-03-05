@@ -21099,6 +21099,11 @@ function veExpandRoadMap(nodeId) {
     '<label style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap;">Segment:</label>' +
     '<select id="ve-road-segment-' + nodeId + '" style="padding:3px 4px; font-size:0.62rem; background:var(--bg-tertiary,#1a1f2e); color:var(--text-primary,#e0e0e0); border:1px solid var(--border-color,#2a3040); border-radius:3px;">' + segOptHtml + '</select>' +
     '</div>' +
+    '<div style="display:inline-flex; align-items:center; gap:4px; margin-left:4px;">' +
+    '<label style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap;">Yumuşatma:</label>' +
+    '<select id="ve-road-smooth-' + nodeId + '" style="padding:3px 4px; font-size:0.62rem; background:var(--bg-tertiary,#1a1f2e); color:var(--text-primary,#e0e0e0); border:1px solid var(--border-color,#2a3040); border-radius:3px;">' +
+    '<option value="0">Yok</option><option value="1">SavGol Hafif</option><option value="2" selected>SavGol Orta</option><option value="3">SavGol Güçlü</option></select>' +
+    '</div>' +
     '<span style="flex:1;"></span>' +
     '<span id="ve-map-modal-info" style="font-size:0.6rem; color:var(--text-muted);">Haritaya tıklayarak nokta ekleyin</span>';
   modal.appendChild(toolbar);
@@ -21529,20 +21534,28 @@ function veCalcElevation(nodeId, onComplete) {
   if(!node) return;
   
   var coords = [];
+  var targetSegInterval = 300; // Kullanıcının istediği final segment aralığı
   if(node.data && node.data.routeCoords && node.data.routeCoords.length >= 2) {
-    // OSRM rotasından noktalar (fazla nokta varsa adaptive sampling yap)
+    // OSRM rotasından noktalar — OVERSAMPLING stratejisi:
+    // 1) İnce aralıklarla örnekle (oversampling)
+    // 2) SavGol ile smooth et
+    // 3) Sonuç olarak hedef segment aralığında grade hesapla
     var rc = node.data.routeCoords;
     var segEl = document.getElementById('ve-road-segment-' + nodeId);
-    var segInterval = segEl ? parseInt(segEl.value) : 300;
-    
-    // Adaptive sampling: rotayı belirli aralıklarla örnekle
+    targetSegInterval = segEl ? parseInt(segEl.value) : 300;
+
+    // Oversampling: hedef segment'in 1/4'ü kadar ince örnekle (min 25m)
+    // Bu, SavGol'e daha fazla veri noktası sağlayarak daha iyi fit yapmasını sağlar
+    var oversampleInterval = Math.max(25, Math.min(Math.floor(targetSegInterval / 4), 100));
+
+    // Rota boyunca kümülatif mesafe hesapla
     coords.push({lat: rc[0][0], lng: rc[0][1]});
     var cumDist = 0;
     var lastSampled = 0;
     for(var i = 1; i < rc.length; i++) {
       var d = veHesaplaMesafe(rc[i-1][0], rc[i-1][1], rc[i][0], rc[i][1]);
       cumDist += d;
-      if(cumDist - lastSampled >= segInterval || i === rc.length - 1) {
+      if(cumDist - lastSampled >= oversampleInterval || i === rc.length - 1) {
         coords.push({lat: rc[i][0], lng: rc[i][1]});
         lastSampled = cumDist;
       }
@@ -21576,31 +21589,170 @@ function veCalcElevation(nodeId, onComplete) {
     }
 
     // ── Yükseklik yumuşatma (SRTM gürültüsünü azalt) ──
-    // Gaussian-ağırlıklı hareketli ortalama, uç noktalar sabit kalır
-    if(coords.length >= 5) {
-      var rawElev = coords.map(function(c) { return c.elevation; });
-      var n = rawElev.length;
-      // Pencere boyutu: nokta sayısına göre adaptif (min 3, max n/3)
-      var halfWin = Math.max(1, Math.min(Math.floor(n / 6), 8));
-      var smoothed = rawElev.slice(); // kopya
-      for(var si = 1; si < n - 1; si++) {
-        var wSum = 0, vSum = 0;
-        for(var wi = -halfWin; wi <= halfWin; wi++) {
-          var idx = si + wi;
-          if(idx < 0 || idx >= n) continue;
-          var sigma = halfWin / 2.0;
-          var gw = Math.exp(-(wi * wi) / (2 * sigma * sigma));
-          wSum += gw;
-          vSum += gw * rawElev[idx];
+    // Savitzky-Golay filtresi: polynomial fit ile gerçek eğim korunur, sadece gürültü temizlenir
+    // Yumuşatma seviyesi: 0=yok, 1=hafif, 2=orta, 3=güçlü
+    var smoothEl = document.getElementById('ve-road-smooth-' + nodeId);
+    var smoothLevel = smoothEl ? parseInt(smoothEl.value) : 2;
+
+    // Ham veriyi kaydet (raw vs smoothed karşılaştırma için)
+    var rawElevations = coords.map(function(c) { return c.elevation; });
+    if(!node.data) node.data = {};
+    node.data.rawElevations = rawElevations.slice();
+
+    if(smoothLevel > 0 && coords.length >= 4) {
+      var n = rawElevations.length;
+
+      // ── Adım 1: Elevation outlier temizliği (IQR tabanlı) ──
+      // SRTM verisinde ara sıra ±30m spike'lar olabiliyor
+      var current = rawElevations.slice();
+      if(n >= 5) {
+        var windowIQR = Math.min(7, Math.floor(n / 3));
+        for(var oi = 1; oi < n - 1; oi++) {
+          // Komşu penceredeki değerleri topla
+          var neighbors = [];
+          for(var nj = Math.max(0, oi - windowIQR); nj <= Math.min(n - 1, oi + windowIQR); nj++) {
+            if(nj !== oi) neighbors.push(current[nj]);
+          }
+          neighbors.sort(function(a, b) { return a - b; });
+          var q1 = neighbors[Math.floor(neighbors.length * 0.25)];
+          var q3 = neighbors[Math.floor(neighbors.length * 0.75)];
+          var iqr = q3 - q1;
+          var fence = Math.max(iqr * 2.5, 15); // Minimum ±15m tolerans
+          var median = neighbors[Math.floor(neighbors.length / 2)];
+          if(Math.abs(current[oi] - median) > fence) {
+            // Spike — komşu medyan ile değiştir
+            current[oi] = median;
+          }
         }
-        smoothed[si] = vSum / wSum;
       }
-      // Başlangıç ve bitiş noktaları sabit kalır
-      smoothed[0] = rawElev[0];
-      smoothed[n - 1] = rawElev[n - 1];
+
+      // ── Adım 2: Savitzky-Golay filtresi ──
+      // 2. derece (kuadratik) polynomial fit — eğimi korur, gürültüyü temizler
+      // SavGol pencere boyutu: seviyeye göre adaptif
+      var halfWinBase;
+      if(smoothLevel === 1) halfWinBase = Math.max(2, Math.min(Math.floor(n / 12), 4));
+      else if(smoothLevel === 2) halfWinBase = Math.max(3, Math.min(Math.floor(n / 6), 10));
+      else halfWinBase = Math.max(5, Math.min(Math.floor(n / 4), 18));
+      var halfWin = Math.min(halfWinBase, Math.floor((n - 1) / 2));
+      var winSize = 2 * halfWin + 1;
+
+      // SavGol katsayılarını hesapla (2. derece polynomial)
+      // Vandermonde matrisi: J[i][k] = i^k, i = -halfWin..halfWin, k = 0..polyOrder
+      var polyOrder = 2;
+      function _veSavGolCoeffs(hw, order) {
+        var m = 2 * hw + 1;
+        // J matrisi (m x (order+1))
+        var J = [];
+        for(var ri = 0; ri < m; ri++) {
+          J[ri] = [];
+          var x = ri - hw;
+          for(var ci = 0; ci <= order; ci++) {
+            J[ri][ci] = Math.pow(x, ci);
+          }
+        }
+        // (J^T J) hesapla: (order+1) x (order+1)
+        var ncols = order + 1;
+        var JtJ = [];
+        for(var r = 0; r < ncols; r++) {
+          JtJ[r] = [];
+          for(var c = 0; c < ncols; c++) {
+            var s = 0;
+            for(var k = 0; k < m; k++) s += J[k][r] * J[k][c];
+            JtJ[r][c] = s;
+          }
+        }
+        // (J^T J)^-1: Gauss-Jordan ile
+        var aug = [];
+        for(var r = 0; r < ncols; r++) {
+          aug[r] = JtJ[r].slice();
+          for(var c = 0; c < ncols; c++) aug[r].push(r === c ? 1 : 0);
+        }
+        for(var col = 0; col < ncols; col++) {
+          // Pivot
+          var maxVal = Math.abs(aug[col][col]), maxRow = col;
+          for(var r = col + 1; r < ncols; r++) {
+            if(Math.abs(aug[r][col]) > maxVal) { maxVal = Math.abs(aug[r][col]); maxRow = r; }
+          }
+          var tmp = aug[col]; aug[col] = aug[maxRow]; aug[maxRow] = tmp;
+          var piv = aug[col][col];
+          if(Math.abs(piv) < 1e-12) continue;
+          for(var c = 0; c < 2 * ncols; c++) aug[col][c] /= piv;
+          for(var r = 0; r < ncols; r++) {
+            if(r === col) continue;
+            var f = aug[r][col];
+            for(var c = 0; c < 2 * ncols; c++) aug[r][c] -= f * aug[col][c];
+          }
+        }
+        var inv = [];
+        for(var r = 0; r < ncols; r++) {
+          inv[r] = [];
+          for(var c = 0; c < ncols; c++) inv[r][c] = aug[r][ncols + c];
+        }
+        // SavGol katsayıları: ((J^T J)^-1 J^T) ilk satırı (smoothing row)
+        var coeffs = [];
+        for(var i = 0; i < m; i++) {
+          var c0 = 0;
+          for(var k = 0; k < ncols; k++) c0 += inv[0][k] * J[i][k];
+          coeffs.push(c0);
+        }
+        return coeffs;
+      }
+
+      var sgCoeffs = _veSavGolCoeffs(halfWin, polyOrder);
+
+      // Çoklu geçiş: güçlü modda 2 geçiş, diğerlerinde 1
+      var passes = smoothLevel >= 3 ? 2 : 1;
+      for(var pass = 0; pass < passes; pass++) {
+        var smoothed = current.slice();
+        for(var si = halfWin; si < n - halfWin; si++) {
+          var val = 0;
+          for(var ci = 0; ci < sgCoeffs.length; ci++) {
+            val += sgCoeffs[ci] * current[si - halfWin + ci];
+          }
+          smoothed[si] = val;
+        }
+        // Kenar noktaları: küçük pencereli SavGol (daralarak)
+        for(var ei = 1; ei < halfWin && ei < n - 1; ei++) {
+          var edgeHW = ei;
+          var edgeCoeffs = _veSavGolCoeffs(edgeHW, Math.min(polyOrder, 2 * edgeHW));
+          // Sol kenar
+          var vL = 0;
+          for(var ec = 0; ec < edgeCoeffs.length; ec++) vL += edgeCoeffs[ec] * current[ei - edgeHW + ec];
+          smoothed[ei] = vL;
+          // Sağ kenar
+          var ri2 = n - 1 - ei;
+          var vR = 0;
+          for(var ec2 = 0; ec2 < edgeCoeffs.length; ec2++) vR += edgeCoeffs[ec2] * current[ri2 - edgeHW + ec2];
+          smoothed[ri2] = vR;
+        }
+        // Uç noktaları koru
+        smoothed[0] = current[0];
+        smoothed[n - 1] = current[n - 1];
+        current = smoothed;
+      }
       // Uygula
       for(var ui = 0; ui < n; ui++) {
-        coords[ui].elevation = smoothed[ui];
+        coords[ui].elevation = current[ui];
+      }
+    }
+
+    // ── Adım 3: Downsample — oversampled + smoothed veriyi hedef segment aralığına indir ──
+    // Fine noktalardan hesaplanan smooth elevation, hedef segment'lere daraltılır
+    if(coords.length > 3 && targetSegInterval) {
+      var dsCumDist = 0;
+      var dsLastSampled = 0;
+      var dsCoords = [coords[0]];
+      for(var dsi = 1; dsi < coords.length; dsi++) {
+        var dsD = veHesaplaMesafe(coords[dsi-1].lat, coords[dsi-1].lng, coords[dsi].lat, coords[dsi].lng);
+        dsCumDist += dsD;
+        if(dsCumDist - dsLastSampled >= targetSegInterval || dsi === coords.length - 1) {
+          dsCoords.push(coords[dsi]);
+          dsLastSampled = dsCumDist;
+        }
+      }
+      // Sadece yeterli nokta varsa downsample uygula
+      if(dsCoords.length >= 2 && dsCoords.length < coords.length) {
+        coords = dsCoords;
       }
     }
 
@@ -21609,15 +21761,46 @@ function veCalcElevation(nodeId, onComplete) {
     var segmentler = [];
     var MAX_EGIM = 25;
     
+    // Önce tüm ham eğimleri hesapla
+    var rawGrades = [];
     for(var s = 0; s < coords.length - 1; s++) {
       var s1 = coords[s], s2 = coords[s+1];
       var sMesafe = veHesaplaMesafe(s1.lat, s1.lng, s2.lat, s2.lng);
       var sDh = s1.elevation - s2.elevation; // iniş=pozitif, çıkış=negatif
-      var sEgim = sMesafe > 0 ? (sDh / sMesafe) * 100 : 0;
-      if(Math.abs(sEgim) > MAX_EGIM) sEgim = sEgim > 0 ? MAX_EGIM : -MAX_EGIM;
-      
-      segmentler.push({ mesafe: sMesafe, egim: sEgim, deltaH: sDh });
-      toplamMesafe += sMesafe;
+      var sEgim = sMesafe > 0.1 ? (sDh / sMesafe) * 100 : 0;
+      rawGrades.push({ mesafe: sMesafe, egim: sEgim, deltaH: sDh });
+    }
+
+    // ── Adaptif eğim kırpma (IQR tabanlı) ──
+    // Statik ±25% yerine, rota bağlamına göre dinamik sınır
+    if(rawGrades.length >= 3) {
+      var allGrades = rawGrades.map(function(g) { return g.egim; }).sort(function(a, b) { return a - b; });
+      var gQ1 = allGrades[Math.floor(allGrades.length * 0.25)];
+      var gQ3 = allGrades[Math.floor(allGrades.length * 0.75)];
+      var gIQR = gQ3 - gQ1;
+      // Üst sınır: Q3 + 3×IQR veya ±25%, hangisi büyükse
+      var adaptiveMax = Math.max(MAX_EGIM, gQ3 + 3 * gIQR);
+      var adaptiveMin = Math.min(-MAX_EGIM, gQ1 - 3 * gIQR);
+      // Ama yine de fiziksel sınır aşılamasın (±40% bile dik kayalık)
+      adaptiveMax = Math.min(adaptiveMax, 40);
+      adaptiveMin = Math.max(adaptiveMin, -40);
+
+      for(var gi = 0; gi < rawGrades.length; gi++) {
+        if(rawGrades[gi].egim > adaptiveMax) rawGrades[gi].egim = adaptiveMax;
+        if(rawGrades[gi].egim < adaptiveMin) rawGrades[gi].egim = adaptiveMin;
+      }
+    } else {
+      // Az segment varsa statik clamp
+      for(var gi2 = 0; gi2 < rawGrades.length; gi2++) {
+        if(Math.abs(rawGrades[gi2].egim) > MAX_EGIM) {
+          rawGrades[gi2].egim = rawGrades[gi2].egim > 0 ? MAX_EGIM : -MAX_EGIM;
+        }
+      }
+    }
+
+    for(var s3 = 0; s3 < rawGrades.length; s3++) {
+      segmentler.push(rawGrades[s3]);
+      toplamMesafe += rawGrades[s3].mesafe;
     }
     
     // Genel yükseklik farkı ve ortalama eğim
@@ -21747,7 +21930,16 @@ function veCalcElevation(nodeId, onComplete) {
     var altEl = document.getElementById('ve-road-alt-' + nodeId);
     if(altEl && !altEl.value) { altEl.value = Math.round(ortYukseklik); node.data.altitude = ortYukseklik; }
     
-    showToast('✅ Eğim hesaplandı: %' + ortEgim.toFixed(1) + ' (' + segmentler.length + ' segment)');
+    // Smoothing istatistikleri
+    var smoothInfo = '';
+    if(smoothLevel > 0 && node.data.rawElevations && node.data.rawElevations.length > 0) {
+      var rawFirst = node.data.rawElevations[0];
+      var rawLast = node.data.rawElevations[node.data.rawElevations.length - 1];
+      var rawDh = rawFirst - rawLast;
+      var rawGrade = toplamMesafe > 0 ? (rawDh / toplamMesafe) * 100 : 0;
+      smoothInfo = ' | Ham: %' + rawGrade.toFixed(1) + ' → Filtre: %' + ortEgim.toFixed(1);
+    }
+    showToast('✅ Eğim hesaplandı: %' + ortEgim.toFixed(1) + ' (' + segmentler.length + ' seg)' + smoothInfo);
 
     // Callback (profil oluşturma vb.)
     if(typeof onComplete === 'function') onComplete();
@@ -22094,6 +22286,14 @@ function veRenderDistGradeProfile(canvasId, segments) {
     }
   }
 
+  ctx.restore();
+
+  // ── SavGol filtre bilgisi ──
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,152,0,0.6)';
+  ctx.font = '600 7.5px Segoe UI, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('SavGol Filtre', W - padR - 4, padT + 12);
   ctx.restore();
 
   // Etkileşim verisi kaydet
