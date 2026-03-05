@@ -1499,7 +1499,7 @@ function _drRedrawChart(canvas) {
   } else if(d.type === 'ftUpshift') {
     veRenderFTUpshiftChart(id, d.data);
   } else if(d.type === 'distGrade') {
-    veRenderDistGradeProfile(id, d.segments);
+    veRenderDistGradeProfile(id, d.segments, d.nodeId);
   }
 }
 
