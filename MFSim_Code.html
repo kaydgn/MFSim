@@ -21675,6 +21675,88 @@ function veHesaplaMesafe(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+// ── 3 katmanlı yükseklik API: Open-Meteo → Open Topo Data → Open-Elevation ──
+function veFetchElevations(coords) {
+  var lats = coords.map(function(c) { return c.lat; });
+  var lngs = coords.map(function(c) { return c.lng; });
+
+  // 1) Open-Meteo: GET, max 1000 nokta, Copernicus DEM 90m
+  function tryOpenMeteo() {
+    // Open-Meteo URL uzunluk limiti nedeniyle chunk'lara böl (max 1000 nokta)
+    var chunkSize = 1000;
+    var chunks = [];
+    for(var i = 0; i < lats.length; i += chunkSize) {
+      chunks.push({ lats: lats.slice(i, i + chunkSize), lngs: lngs.slice(i, i + chunkSize) });
+    }
+    return chunks.reduce(function(promise, chunk) {
+      return promise.then(function(acc) {
+        var url = 'https://api.open-meteo.com/v1/elevation?latitude=' + chunk.lats.join(',') + '&longitude=' + chunk.lngs.join(',');
+        return fetch(url).then(function(r) {
+          if(!r.ok) throw new Error('Open-Meteo HTTP ' + r.status);
+          return r.json();
+        }).then(function(data) {
+          if(!data.elevation || data.elevation.length !== chunk.lats.length) throw new Error('Open-Meteo eksik veri');
+          return acc.concat(data.elevation);
+        });
+      });
+    }, Promise.resolve([]));
+  }
+
+  // 2) Open Topo Data: GET, max 100 nokta, SRTM 30m, cubic interpolasyon
+  function tryOpenTopoData() {
+    var chunkSize = 100;
+    var chunks = [];
+    for(var i = 0; i < lats.length; i += chunkSize) {
+      chunks.push(lats.slice(i, i + chunkSize).map(function(lat, j) { return lat + ',' + lngs[i + j]; }));
+    }
+    // Sıralı istekler (1/sn rate limit)
+    return chunks.reduce(function(promise, chunk, idx) {
+      return promise.then(function(acc) {
+        var delay = idx > 0 ? new Promise(function(res) { setTimeout(res, 1100); }) : Promise.resolve();
+        return delay.then(function() {
+          var url = 'https://api.opentopodata.org/v1/srtm30m?locations=' + chunk.join('|') + '&interpolation=cubic';
+          return fetch(url).then(function(r) {
+            if(!r.ok) throw new Error('OpenTopoData HTTP ' + r.status);
+            return r.json();
+          }).then(function(data) {
+            if(!data.results || data.results.length !== chunk.length) throw new Error('OpenTopoData eksik veri');
+            return acc.concat(data.results.map(function(r) { return r.elevation; }));
+          });
+        });
+      });
+    }, Promise.resolve([]));
+  }
+
+  // 3) Open-Elevation: POST, SRTM 30m (mevcut - son çare)
+  function tryOpenElevation() {
+    var locations = coords.map(function(c) { return {latitude: c.lat, longitude: c.lng}; });
+    return fetch('https://api.open-elevation.com/api/v1/lookup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({locations: locations})
+    }).then(function(r) {
+      if(!r.ok) throw new Error('Open-Elevation HTTP ' + r.status);
+      return r.json();
+    }).then(function(data) {
+      if(!data.results || data.results.length < coords.length) throw new Error('Open-Elevation eksik veri');
+      return data.results.map(function(r) { return r.elevation; });
+    });
+  }
+
+  // Fallback zinciri
+  return tryOpenMeteo()
+    .catch(function(e) {
+      console.warn('Open-Meteo başarısız, Open Topo Data deneniyor...', e.message);
+      showToast('⚠️ Open-Meteo yanıt vermedi, alternatif deneniyor...', 'warning');
+      return tryOpenTopoData();
+    })
+    .catch(function(e) {
+      console.warn('Open Topo Data başarısız, Open-Elevation deneniyor...', e.message);
+      showToast('⚠️ Alternatif API yanıt vermedi, son seçenek deneniyor...', 'warning');
+      return tryOpenElevation();
+    });
+}
+
 function veCalcElevation(nodeId, onComplete) {
   // OSRM rota noktaları veya haritadaki marker'ları kullan
   var node = nodes.find(function(n) { return n.id === nodeId; });
@@ -21718,21 +21800,12 @@ function veCalcElevation(nodeId, onComplete) {
   
   showToast('⏳ Yükseklik verisi alınıyor... (' + coords.length + ' nokta)');
   
-  // Open-Elevation API
-  var locations = coords.map(function(c) { return {latitude: c.lat, longitude: c.lng}; });
-  
-  fetch('https://api.open-elevation.com/api/v1/lookup', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({locations: locations})
-  })
-  .then(function(r) { if(!r.ok) throw new Error('API hatası'); return r.json(); })
-  .then(function(data) {
-    if(!data.results || data.results.length < coords.length) throw new Error('Eksik veri');
-    
+  // 3 katmanlı elevation API (Open-Meteo → Open Topo Data → Open-Elevation)
+  veFetchElevations(coords)
+  .then(function(elevations) {
     // Yükseklikleri eşleştir
     for(var i = 0; i < coords.length; i++) {
-      coords[i].elevation = data.results[i].elevation;
+      coords[i].elevation = elevations[i];
     }
 
     // ── Yükseklik yumuşatma (SRTM gürültüsünü azalt) ──
