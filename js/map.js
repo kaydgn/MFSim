@@ -22,7 +22,8 @@ function veExpandRoadMap(nodeId) {
   
   // Modal
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:100%; max-width:1100px; height:85vh; max-height:820px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:4px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  modal.id = 've-map-modal';
+  modal.style.cssText = 'width:80%; max-width:1100px; min-width:480px; height:85vh; max-height:820px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:4px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); position:relative;';
   
   // Header
   var markerCount = (veRoadMarkers[nodeId] || []).length;
@@ -57,9 +58,49 @@ function veExpandRoadMap(nodeId) {
   footer.innerHTML = '<span>Sol tık: Nokta ekle</span><span style="opacity:0.4;">│</span><span>Marker tık: Sonraki noktaları sil</span><span style="opacity:0.4;">│</span><span>Scroll: Zoom</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
   modal.appendChild(footer);
   
+  // ── Sol ve sağ kenar resize tutamaçları ──
+  var handleCSS = 'position:absolute; top:0; width:6px; height:100%; cursor:ew-resize; z-index:10; background:transparent; transition:background 0.15s;';
+  var leftHandle = document.createElement('div');
+  leftHandle.style.cssText = handleCSS + 'left:-3px;';
+  leftHandle.addEventListener('mouseenter', function() { this.style.background = 'rgba(var(--accent-primary-rgb, 59,130,246), 0.5)'; });
+  leftHandle.addEventListener('mouseleave', function() { this.style.background = 'transparent'; });
+  var rightHandle = document.createElement('div');
+  rightHandle.style.cssText = handleCSS + 'right:-3px;';
+  rightHandle.addEventListener('mouseenter', function() { this.style.background = 'rgba(var(--accent-primary-rgb, 59,130,246), 0.5)'; });
+  rightHandle.addEventListener('mouseleave', function() { this.style.background = 'transparent'; });
+  modal.appendChild(leftHandle);
+  modal.appendChild(rightHandle);
+
+  function _veStartResize(e, side) {
+    e.preventDefault();
+    e.stopPropagation();
+    var startX = e.clientX;
+    var startW = modal.offsetWidth;
+    var overlayW = overlay.clientWidth;
+    var minW = 480;
+
+    function onMove(ev) {
+      var dx = ev.clientX - startX;
+      var newW = side === 'left' ? startW - dx : startW + dx;
+      newW = Math.max(minW, Math.min(newW, overlayW - 40));
+      modal.style.width = newW + 'px';
+      modal.style.maxWidth = newW + 'px';
+      if(map) map.invalidateSize();
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if(map) map.invalidateSize();
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+  leftHandle.addEventListener('mousedown', function(e) { _veStartResize(e, 'left'); });
+  rightHandle.addEventListener('mousedown', function(e) { _veStartResize(e, 'right'); });
+
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
-  
+
   // Haritayı modal'a taşı
   mapContainer.style.width = '100%';
   mapContainer.style.height = '100%';
@@ -1178,6 +1219,12 @@ function veCalcDistGradeProfile(nodeId) {
     return;
   }
 
+  // Mevcut ayarları koru (HTML yeniden oluşturulmadan önce oku)
+  var prevSegEl = document.getElementById('ve-road-segment-' + nodeId);
+  var prevSmoothEl = document.getElementById('ve-road-smooth-' + nodeId);
+  var savedSegValue = prevSegEl ? prevSegEl.value : null;
+  var savedSmoothValue = prevSmoothEl ? prevSmoothEl.value : null;
+
   var segments = node.data.routeSegments;
 
   // Mesafe-ağırlıklı ortalama eğim hesapla (tüm rota)
@@ -1203,6 +1250,7 @@ function veCalcDistGradeProfile(nodeId) {
       '</select></div>' +
       '<div style="display:inline-flex; align-items:center; gap:3px;">' +
       '<label style="font-size:0.56rem; color:var(--text-muted); white-space:nowrap;">Filtre:</label>' +
+      '<span title="Savitzky-Golay filtresi: SRTM uydu verisindeki gürültüyü temizler.\nYok = Ham veri (gürültülü)\nHafif = Hafif düzeltme, detay korunur\nOrta = Dengeli (önerilen)\nGüçlü = Agresif yumuşatma, küçük tepeler kaybolabilir" style="cursor:help; font-size:0.6rem; color:var(--text-muted); opacity:0.7; margin-left:-1px;">ⓘ</span>' +
       '<select id="ve-road-smooth-' + nodeId + '" style="padding:2px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px;">' +
       '<option value="0">Yok</option><option value="1">SavGol Hafif</option><option value="2" selected>SavGol Orta</option><option value="3">SavGol G\u00fc\u00e7l\u00fc</option>' +
       '</select></div>' +
@@ -1240,6 +1288,15 @@ function veCalcDistGradeProfile(nodeId) {
     }
     var panelCanvasId = 've-road-distgrade-canvas-' + nodeId;
     profileDiv.innerHTML = _buildProfileHTML(panelCanvasId);
+    // Kaydedilmiş ayarları geri yükle
+    if(savedSegValue !== null) {
+      var newSegEl = document.getElementById('ve-road-segment-' + nodeId);
+      if(newSegEl) newSegEl.value = savedSegValue;
+    }
+    if(savedSmoothValue !== null) {
+      var newSmoothEl = document.getElementById('ve-road-smooth-' + nodeId);
+      if(newSmoothEl) newSmoothEl.value = savedSmoothValue;
+    }
     setTimeout(function() {
       veRenderDistGradeProfile(panelCanvasId, segments, nodeId);
       // Profil bölümüne scroll
