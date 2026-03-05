@@ -4243,6 +4243,7 @@ function veUpdateBoundarySummaryBtn(bx, by, bw, bh) {
     veShowTopologySummary();
   });
   canvas.appendChild(btn);
+}
 
 // Toast bildirimi göster (sağdan gelen)
 function showToast(message, type) {
