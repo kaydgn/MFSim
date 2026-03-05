@@ -1632,8 +1632,24 @@ function getRoadPropertiesHTML(node) {
 
   // ===== YOL PROFİLLERİ =====
   html += '<div id="ve-road-profiles-' + node.id + '" style="display:none; background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:12px; border:1px solid var(--border-color);">';
-  html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">';
+  html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">📊 Yol Profilleri</div>';
+  html += '</div>';
+  // Profil ayar kontrolleri
+  html += '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px; padding:6px 8px; background:var(--bg-secondary); border-radius:6px; border:1px solid var(--border-color);">';
+  html += '<div style="display:inline-flex; align-items:center; gap:4px;">';
+  html += '<label style="font-size:0.58rem; color:var(--text-muted); white-space:nowrap;">Segment:</label>';
+  html += '<select id="ve-road-segment-' + node.id + '" style="padding:3px 4px; font-size:0.6rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px;">';
+  html += '<option value="3">3m</option><option value="5">5m</option><option value="10">10m</option><option value="25">25m</option><option value="50">50m</option><option value="100">100m</option><option value="200">200m</option><option value="300" selected>300m</option><option value="500">500m</option>';
+  html += '</select></div>';
+  html += '<div style="display:inline-flex; align-items:center; gap:4px;">';
+  html += '<label style="font-size:0.58rem; color:var(--text-muted); white-space:nowrap;">Filtre:</label>';
+  html += '<select id="ve-road-smooth-' + node.id + '" style="padding:3px 4px; font-size:0.6rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px;">';
+  html += '<option value="0">Yok</option><option value="1">SavGol Hafif</option><option value="2" selected>SavGol Orta</option><option value="3">SavGol G\u00fc\u00e7l\u00fc</option>';
+  html += '</select></div>';
+  html += '<button onclick="veUpdateProfiles(\'' + node.id + '\')" style="padding:4px 10px; font-size:0.6rem; font-weight:600; background:#1b5e20; color:white; border:none; border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:3px;">🔄 G\u00fcncelle</button>';
+  html += '<span style="flex:1;"></span>';
+  html += '<span id="ve-road-profile-stats-' + node.id + '" style="font-size:0.54rem; color:var(--text-muted);"></span>';
   html += '</div>';
   html += '<div id="ve-road-profiles-content-' + node.id + '"></div>';
   html += '</div>';
