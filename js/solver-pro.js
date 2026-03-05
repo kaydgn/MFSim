@@ -182,19 +182,27 @@ function veSolverRunProfessional() {
     log('  Motor         : ' + (hasEngine ? '✓ Bulundu' : '✗ EKSİK'), hasEngine ? 'ok' : 'err');
     log('  Araç          : ' + (hasVehicle ? '✓ Bulundu' : '✗ EKSİK'), hasVehicle ? 'ok' : 'err');
     log('  Tekerlek      : ' + (hasWheel ? '✓ Bulundu' : '✗ EKSİK'), hasWheel ? 'ok' : 'err');
-    if(veActiveModule === 'full-throttle') {
-      // FT modda Yol ve Senaryo opsiyonel
-      if(hasRoad) log('  Yol           : ✓ Bulundu (opsiyonel)', 'dim');
+    // Senaryo bileşeni zorunlu kontrolü
+    var _mod = veGetActiveModule();
+    var _scenarioRequired = _mod.requiredComponents && _mod.requiredComponents.indexOf('scenario') > -1;
+    if(_scenarioRequired) {
+      log('  Senaryo       : ' + (hasScenario ? '✓ Bulundu' : '✗ EKSİK — zorunlu bileşen'), hasScenario ? 'ok' : 'err');
+    } else {
       if(hasScenario) log('  Senaryo       : ✓ Bulundu (opsiyonel)', 'dim');
+    }
+    if(veActiveModule === 'full-throttle') {
+      if(hasRoad) log('  Yol           : ✓ Bulundu (opsiyonel)', 'dim');
     } else {
       log('  Yol           : ' + (hasRoad ? '✓ Bulundu' : '✗ EKSİK'), hasRoad ? 'ok' : 'err');
-      log('  Senaryo       : ' + (hasScenario ? '✓ Bulundu' : '✗ EKSİK'), hasScenario ? 'ok' : 'err');
     }
     log('  Çözücü        : ' + (hasSolver ? '✓ Bulundu' : '✗ EKSİK'), hasSolver ? 'ok' : 'err');
     logSpacer();
     
     if(!hasEngine || !hasSolver) {
       log('KRİTİK: Motor ve Çözücü bileşenleri zorunludur!', 'err');
+    }
+    if(_scenarioRequired && !hasScenario) {
+      log('KRİTİK: Senaryolar bileşeni bu modülde zorunludur!', 'err');
     }
     
     // Zincir kontrolü

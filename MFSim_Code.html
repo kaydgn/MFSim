@@ -18055,19 +18055,27 @@ function veSolverRunProfessional() {
     log('  Motor         : ' + (hasEngine ? '✓ Bulundu' : '✗ EKSİK'), hasEngine ? 'ok' : 'err');
     log('  Araç          : ' + (hasVehicle ? '✓ Bulundu' : '✗ EKSİK'), hasVehicle ? 'ok' : 'err');
     log('  Tekerlek      : ' + (hasWheel ? '✓ Bulundu' : '✗ EKSİK'), hasWheel ? 'ok' : 'err');
-    if(veActiveModule === 'full-throttle') {
-      // FT modda Yol ve Senaryo opsiyonel
-      if(hasRoad) log('  Yol           : ✓ Bulundu (opsiyonel)', 'dim');
+    // Senaryo bileşeni zorunlu kontrolü
+    var _mod = veGetActiveModule();
+    var _scenarioRequired = _mod.requiredComponents && _mod.requiredComponents.indexOf('scenario') > -1;
+    if(_scenarioRequired) {
+      log('  Senaryo       : ' + (hasScenario ? '✓ Bulundu' : '✗ EKSİK — zorunlu bileşen'), hasScenario ? 'ok' : 'err');
+    } else {
       if(hasScenario) log('  Senaryo       : ✓ Bulundu (opsiyonel)', 'dim');
+    }
+    if(veActiveModule === 'full-throttle') {
+      if(hasRoad) log('  Yol           : ✓ Bulundu (opsiyonel)', 'dim');
     } else {
       log('  Yol           : ' + (hasRoad ? '✓ Bulundu' : '✗ EKSİK'), hasRoad ? 'ok' : 'err');
-      log('  Senaryo       : ' + (hasScenario ? '✓ Bulundu' : '✗ EKSİK'), hasScenario ? 'ok' : 'err');
     }
     log('  Çözücü        : ' + (hasSolver ? '✓ Bulundu' : '✗ EKSİK'), hasSolver ? 'ok' : 'err');
     logSpacer();
     
     if(!hasEngine || !hasSolver) {
       log('KRİTİK: Motor ve Çözücü bileşenleri zorunludur!', 'err');
+    }
+    if(_scenarioRequired && !hasScenario) {
+      log('KRİTİK: Senaryolar bileşeni bu modülde zorunludur!', 'err');
     }
     
     // Zincir kontrolü
@@ -19526,7 +19534,7 @@ function getScenarioPropertiesHTML(node) {
   html += '</select></td></tr>';
   
   // Gaz pedal oranı
-  var showThrottle = ['partial_throttle','full_throttle','performance_analysis','custom'].indexOf(scenarioType) > -1;
+  var showThrottle = ['partial_throttle','full_throttle','custom'].indexOf(scenarioType) > -1;
   html += '<tr id="ve-scenario-throttle-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showThrottle?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Gaz pedal oranı [%]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="number" id="ve-scenario-throttle-' + node.id + '" value="' + throttle + '" step="5" min="0" max="100" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
   
   // Fren kuvveti
@@ -19551,10 +19559,10 @@ function onVEScenarioChange(nodeId) {
     var t = typeEl.value;
     var thRow = el('ve-scenario-throttle-row-' + nodeId);
     var brRow = el('ve-scenario-brake-row-' + nodeId);
-    if(thRow) thRow.style.display = ['partial_throttle','full_throttle','performance_analysis','custom'].indexOf(t) > -1 ? '' : 'none';
+    if(thRow) thRow.style.display = ['partial_throttle','full_throttle','custom'].indexOf(t) > -1 ? '' : 'none';
     if(brRow) brRow.style.display = (t === 'full_brake' || t === 'custom') ? '' : 'none';
-    // Tam gaz / Performans Analizi: otomatik 100%
-    if(t === 'full_throttle' || t === 'performance_analysis') { var thEl = el('ve-scenario-throttle-' + nodeId); if(thEl) thEl.value = 100; node.data.throttle = 100; }
+    // Tam gaz: otomatik 100%
+    if(t === 'full_throttle') { var thEl = el('ve-scenario-throttle-' + nodeId); if(thEl) thEl.value = 100; node.data.throttle = 100; }
   }
   var thEl2 = el('ve-scenario-throttle-' + nodeId);
   var brEl = el('ve-scenario-brake-' + nodeId);
@@ -24958,10 +24966,15 @@ function veSolverValidate() {
   }
   
   container.innerHTML = html;
+  return allOk;
 }
 
 function veSolverRun() {
-  veSolverValidate();
+  var valid = veSolverValidate();
+  if(!valid) {
+    showToast('Eksik bileşenler var — önce topolojiyi tamamlayın', 'error');
+    return;
+  }
   
   var progressEl = document.getElementById('ve-solver-progress');
   var progressFill = document.getElementById('ve-solver-progress-fill');
