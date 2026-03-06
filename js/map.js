@@ -1250,12 +1250,11 @@ function veCalcDistGradeProfile(nodeId) {
   var elevFirst = gpsSamples && gpsSamples.length > 0 ? gpsSamples[0].elev : 0;
   var elevLast = gpsSamples && gpsSamples.length > 0 ? gpsSamples[gpsSamples.length - 1].elev : 0;
 
-  // Profil HTML şablonu (hem modal hem properties paneli için ortak)
+  // Profil HTML şablonu (sadece Rakım Profili GPS)
   function _buildProfileHTML(canvasId) {
     var altCanvasId = canvasId.replace('distgrade', 'altitude');
-    return (gpsSamples ? (
-      // ── Rakım Profili ──
-      '<div style="position:relative; margin-bottom:8px;">' +
+    if(!gpsSamples) return '<div style="color:var(--text-muted); font-size:0.6rem; padding:8px;">GPS verisi bulunamadı.</div>';
+    return '<div style="position:relative; margin-bottom:8px;">' +
       '<canvas id="' + altCanvasId + '" style="width:100%; cursor:crosshair; border-radius:4px;"></canvas>' +
       '<div id="' + altCanvasId + '-tooltip" class="dr-chart-tooltip"></div>' +
       '<button onclick="veExpandProfileChart(\'' + nodeId + '\', \'altitude\')" title="Grafiği büyüt" style="position:absolute; top:4px; right:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:rgba(30,36,48,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:3px; cursor:pointer; font-size:0.7rem; color:var(--text-secondary); transition:all 0.12s; z-index:2;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(30,36,48,0.7)\';this.style.color=\'var(--text-secondary)\'">⛶</button>' +
@@ -1268,13 +1267,6 @@ function veCalcDistGradeProfile(nodeId) {
       '<span style="color:var(--text-muted);">Δh:</span><span style="color:var(--accent-warning); font-weight:700;">' + (elevFirst - elevLast).toFixed(1) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
       '<span id="ve-alt-selection-info-' + nodeId + '" style="color:var(--text-muted); font-style:italic;">Büyük ekranda (⛶) eğim çizgisi çizebilirsiniz</span>' +
-      '</div>'
-    ) : '') +
-    // ── Eğim Profili ──
-    '<div style="position:relative;">' +
-      '<canvas id="' + canvasId + '" style="width:100%; cursor:crosshair; border-radius:4px;"></canvas>' +
-      '<div id="' + canvasId + '-tooltip" class="dr-chart-tooltip"></div>' +
-      '<button onclick="veExpandProfileChart(\'' + nodeId + '\', \'grade\')" title="Grafiği büyüt" style="position:absolute; top:4px; right:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:rgba(30,36,48,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:3px; cursor:pointer; font-size:0.7rem; color:var(--text-secondary); transition:all 0.12s; z-index:2;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(30,36,48,0.7)\';this.style.color=\'var(--text-secondary)\'">⛶</button>' +
       '</div>' +
       // Ayar kontrolleri (segment + filtre + güncelle)
       '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; padding:6px 8px; background:var(--bg-tertiary); border-radius:5px; border:1px solid var(--border-color);">' +
@@ -1291,23 +1283,8 @@ function veCalcDistGradeProfile(nodeId) {
       '</select></div>' +
       '<button onclick="veUpdateProfiles(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.58rem; font-weight:600; background:#1b5e20; color:white; border:none; border-radius:3px; cursor:pointer;">🔄 G\u00fcncelle</button>' +
       '<span style="flex:1;"></span>' +
-      '<span style="font-size:0.54rem; color:var(--text-muted);">' + segments.length + ' seg | ' + (totalDist / 1000).toFixed(2) + ' km</span>' +
-      '</div>' +
-      // Ortalama eğim bilgi kutusu
-      '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:4px; padding:6px 8px; background:var(--bg-secondary); border-radius:5px; border:1px solid var(--border-color); font-size:0.6rem;">' +
-      '<span style="color:var(--text-muted);">Ağırlıklı Ort:</span>' +
-      '<span style="color:var(--accent-warning); font-weight:700; font-size:0.7rem;">%' + avgGrade.toFixed(2) + '</span>' +
-      '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
-      '<span style="color:var(--text-muted);">Min:</span><span style="color:var(--accent-danger); font-weight:600;">%' + minGr.toFixed(1) + '</span>' +
-      '<span style="color:var(--text-muted);">Max:</span><span style="color:var(--accent-success); font-weight:600;">%' + maxGr.toFixed(1) + '</span>' +
-      '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
-      '<span id="ve-road-selection-grade-' + nodeId + '" style="color:var(--text-muted); font-style:italic;">Sol tık+sürükle ile bölge seçin</span>' +
-      '</div>' +
-      '<div style="display:flex; justify-content:center; gap:12px; margin-top:3px; font-size:0.5rem; color:var(--text-muted);">' +
-      '<span>Scroll: Zoom</span><span style="opacity:0.4;">│</span>' +
-      '<span>Sol Tık+Sürükle: Bölge Seç</span><span style="opacity:0.4;">│</span>' +
-      '<span>Sağ Tık+Sürükle: Kaydır</span><span style="opacity:0.4;">│</span>' +
-      '<span>Çift Tık: Sıfırla</span></div>';
+      '<span style="font-size:0.54rem; color:var(--text-muted);">' + (gpsSamples ? gpsSamples.length + ' sample' : '') + ' | ' + (totalDist / 1000).toFixed(2) + ' km</span>' +
+      '</div>';
   }
 
   // Properties paneldeki profil bölümüne yaz
@@ -1338,8 +1315,6 @@ function veCalcDistGradeProfile(nodeId) {
         var altCanvasId = panelCanvasId.replace('distgrade', 'altitude');
         veRenderAltitudeProfile(altCanvasId, gpsSamples, nodeId);
       }
-      // Eğim profili
-      veRenderDistGradeProfile(panelCanvasId, segments, nodeId);
       // Profil bölümüne scroll
       profilesSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
@@ -1843,7 +1818,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     var avgInterval = (totalDist / (pts.length - 1));
     sampleInfo += ' @ ~' + avgInterval.toFixed(0) + 'm';
   }
-  ctx.fillText('RAKIM PROFİLİ (GPS) — ' + sampleInfo, padL + plotW / 2, 14);
+  ctx.fillText('Rakım profili (GPS) — ' + sampleInfo, padL + plotW / 2, 14);
 
   // Zoom göstergesi
   if(zs > 1.05 || zs < 0.95) {
@@ -2016,7 +1991,7 @@ function _veAltUpdateLineList(nodeId) {
     var l = lines[i];
     var egimIcon = l.grade > 1 ? '↓' : (l.grade < -1 ? '↑' : '→');
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:' + l.color + ';"></span></td>';
+    html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:' + l.color + '; color:#000; font-size:0.5rem; font-weight:700;">' + (i + 1) + '</span></td>';
     html += '<td style="padding:2px 4px; text-align:right; font-weight:600; color:' + l.color + ';">' + egimIcon + ' %' + l.grade.toFixed(2) + '</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + l.deltaH.toFixed(1) + 'm</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + (l.dist / 1000).toFixed(2) + 'km</td>';
@@ -2075,7 +2050,7 @@ function veExpandProfileChart(nodeId, chartType) {
   modal.style.cssText = 'width:100%; max-width:1200px; max-height:90vh; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); border-radius:6px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
   // Header
-  var headerTitle = isAlt ? '📊 Rakım Profili (GPS) — Eğim Çizgisi Çizme' : '📊 Mesafe — Eğim Profili';
+  var headerTitle = isAlt ? '📊 Rakım profili (GPS) — Eğim çizgisi çizme' : '📊 Mesafe — Eğim profili';
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
   header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">' + headerTitle + '</span>' +
@@ -2100,19 +2075,10 @@ function veExpandProfileChart(nodeId, chartType) {
     controlBox.innerHTML =
       '<div style="flex:1; min-width:0;">' +
         '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
-          '<span style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">📐 Eğim Çizgileri</span>' +
-          '<button onclick="veAltClearGradeLinesUI(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.56rem; background:var(--accent-danger); color:white; border:none; border-radius:3px; cursor:pointer; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">🗑 Tümünü Sil</button>' +
+          '<span style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">📐 Eğim çizgileri</span>' +
+          '<button onclick="veAltClearGradeLinesUI(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.56rem; background:var(--accent-danger); color:white; border:none; border-radius:3px; cursor:pointer; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">Tümünü sil</button>' +
         '</div>' +
         '<div id="ve-alt-line-list-' + nodeId + '" style="max-height:140px; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px; padding:4px; background:var(--bg-tertiary);"></div>' +
-      '</div>' +
-      '<div style="width:200px; flex-shrink:0; padding:8px; background:var(--bg-tertiary); border-radius:6px; border:1px solid var(--border-color);">' +
-        '<div style="font-size:0.6rem; color:var(--text-muted); margin-bottom:6px;">Nasıl Kullanılır:</div>' +
-        '<div style="font-size:0.56rem; color:var(--text-secondary); line-height:1.6;">' +
-          '1. Grafik üzerinde <b style="color:#ffeb3b;">sol tık</b> ile başlangıç noktası belirleyin<br>' +
-          '2. İkinci <b style="color:#ffeb3b;">sol tık</b> ile bitiş noktası belirleyin<br>' +
-          '3. Eğim çizgisi otomatik hesaplanır ve kaydedilir<br>' +
-          '4. İstediğiniz kadar çizgi ekleyin' +
-        '</div>' +
       '</div>';
     modal.appendChild(controlBox);
   }
@@ -2149,6 +2115,27 @@ function _veAltAttachDrawEvents(canvas, nodeId) {
   canvas._altDrawAttached = true;
   canvas._altDrawState = null; // null | {x1, y1} — ilk tıklama bekliyor veya başlangıç noktası seçildi
 
+  // Mevcut çizgilerin uç noktalarına snap mesafesi (piksel)
+  var SNAP_PX = 20;
+
+  // En yakın çizgi uç noktasını bul (piksel mesafesine göre)
+  function _findSnapEndpoint(d, mx) {
+    var lines = _veAltGradeLines[nodeId] || [];
+    if(lines.length === 0) return null;
+    var bestDist = Infinity, bestSnap = null;
+    for(var i = 0; i < lines.length; i++) {
+      var l = lines[i];
+      // Her çizginin başlangıç ve bitiş noktasını kontrol et
+      var pts = [{x: l.x1, y: l.y1}, {x: l.x2, y: l.y2}];
+      for(var j = 0; j < pts.length; j++) {
+        var px = d.padL + (pts[j].x - d.xMin) / (d.xMax - d.xMin) * d.plotW;
+        var dist = Math.abs(mx - px);
+        if(dist < bestDist) { bestDist = dist; bestSnap = pts[j]; }
+      }
+    }
+    return bestDist <= SNAP_PX ? bestSnap : null;
+  }
+
   canvas.addEventListener('mousedown', function(e) {
     if(e.button !== 0) return; // sadece sol tık
     var d = canvas._drChart;
@@ -2163,6 +2150,13 @@ function _veAltAttachDrawEvents(canvas, nodeId) {
     xVal = Math.max(0, Math.min(d.totalDist, xVal));
     var yVal = _veAltInterpElev(d.pts, xVal);
 
+    // Mevcut çizgi uç noktasına snap
+    var snap = _findSnapEndpoint(d, mx);
+    if(snap) {
+      xVal = snap.x;
+      yVal = snap.y;
+    }
+
     if(!canvas._altDrawState) {
       // İlk tıklama: başlangıç noktası
       var lines = _veAltGradeLines[nodeId] || [];
@@ -2174,28 +2168,53 @@ function _veAltAttachDrawEvents(canvas, nodeId) {
       // İkinci tıklama: bitiş noktası → çizgiyi kaydet
       var state = canvas._altDrawState;
       veAltAddGradeLine(nodeId, state.x1, state.y1, xVal, yVal);
-      canvas._altDrawState = null;
-      canvas._altDrawPreview = null;
-      canvas.style.cursor = 'crosshair';
       _veAltUpdateLineList(nodeId);
+
+      // Otomatik olarak bu çizginin bitişinden yeni çizgi başlat
+      var lines2 = _veAltGradeLines[nodeId] || [];
+      var nextColor2 = _veAltGradeLineColors[lines2.length % _veAltGradeLineColors.length];
+      canvas._altDrawState = { x1: xVal, y1: yVal, color: nextColor2 };
+      canvas._altDrawPreview = { x1: xVal, y1: yVal, x2: xVal, y2: yVal, color: nextColor2 };
+      canvas.style.cursor = 'crosshair';
       _veAltRedrawAll(nodeId);
     }
   });
 
   canvas.addEventListener('mousemove', function(e) {
-    if(!canvas._altDrawState) return;
     var d = canvas._drChart;
     if(!d) return;
     var rect = canvas.getBoundingClientRect();
     var mx = e.clientX - rect.left;
+
+    if(!canvas._altDrawState) {
+      // Çizim modunda değilken, uç noktaya yakınsa cursor değiştir
+      var snap = _findSnapEndpoint(d, mx);
+      canvas.style.cursor = snap ? 'pointer' : 'crosshair';
+      return;
+    }
+
     var xVal = d.fromX(mx);
     xVal = Math.max(0, Math.min(d.totalDist, xVal));
     var yVal = _veAltInterpElev(d.pts, xVal);
+
+    // Snap kontrolü (çizim sırasında da)
+    var snap2 = _findSnapEndpoint(d, mx);
+    if(snap2) { xVal = snap2.x; yVal = snap2.y; }
+
     canvas._altDrawPreview = {
       x1: canvas._altDrawState.x1, y1: canvas._altDrawState.y1,
       x2: xVal, y2: yVal, color: canvas._altDrawState.color
     };
     _drRedrawChart(canvas);
+  });
+
+  // ESC ile çizimi iptal et
+  document.addEventListener('keydown', function(e) {
+    if(e.key === 'Escape' && canvas._altDrawState) {
+      canvas._altDrawState = null;
+      canvas._altDrawPreview = null;
+      _drRedrawChart(canvas);
+    }
   });
 }
 
