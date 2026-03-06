@@ -1500,6 +1500,8 @@ function _drRedrawChart(canvas) {
     veRenderFTUpshiftChart(id, d.data);
   } else if(d.type === 'distGrade') {
     veRenderDistGradeProfile(id, d.segments, d.nodeId);
+  } else if(d.type === 'altProfile') {
+    veRenderAltitudeProfile(id, d.elevData, d.nodeId);
   }
 }
 
@@ -1582,7 +1584,7 @@ function _drChartMouseMove(e) {
     var dy = e.clientY - _drChartPan.startY;
     var xRange = (d.baseXMax - d.baseXMin) / z.scale;
     z.cx = _drChartPan.startCX - dx / d.plotW * xRange;
-    if(d.type === 'grade' || d.type === 'distGrade') {
+    if(d.type === 'grade' || d.type === 'distGrade' || d.type === 'altProfile') {
       var yRange = (d.baseYMax - d.baseYMin) / z.scale;
       z.cy = _drChartPan.startCY + dy / d.plotH * yRange;
     }
@@ -1674,6 +1676,25 @@ function _drChartMouseMove(e) {
         html += '<div>Δh: <b style="color:#60a5fa;">' + dps[si].deltaH.toFixed(1) + '</b> m</div>';
         break;
       }
+    }
+  } else if(d.type === 'altProfile') {
+    // Rakım profilinde en yakın noktayı bul
+    var aptXVal = d.fromX(mx);
+    if(aptXVal >= 0 && aptXVal <= d.totalDist && d.pts && d.pts.length >= 2) {
+      snapOk = true;
+      // İnterpolasyon ile yükseklik bul
+      var aptElev = d.pts[d.pts.length - 1].elev;
+      for(var ak = 0; ak < d.pts.length - 1; ak++) {
+        if(aptXVal >= d.pts[ak].dist && aptXVal <= d.pts[ak+1].dist) {
+          var at = (aptXVal - d.pts[ak].dist) / (d.pts[ak+1].dist - d.pts[ak].dist);
+          aptElev = d.pts[ak].elev + at * (d.pts[ak+1].elev - d.pts[ak].elev);
+          break;
+        }
+      }
+      var aptDistLabel = d.totalDist > 5000 ? (aptXVal / 1000).toFixed(2) + ' km' : aptXVal.toFixed(0) + ' m';
+      html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Rakım Profili</div>';
+      html += '<div>Mesafe: <b style="color:#60a5fa;">' + aptDistLabel + '</b></div>';
+      html += '<div>Rakım: <b style="color:#b39ddb;">' + aptElev.toFixed(1) + '</b> m</div>';
     }
   }
 
