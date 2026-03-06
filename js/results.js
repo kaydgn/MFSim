@@ -1501,7 +1501,7 @@ function _drRedrawChart(canvas) {
   } else if(d.type === 'distGrade') {
     veRenderDistGradeProfile(id, d.segments, d.nodeId);
   } else if(d.type === 'altProfile') {
-    veRenderAltitudeProfile(id, d.elevData, d.nodeId);
+    veRenderAltitudeProfile(id, d.gpsSamples, d.nodeId);
   }
 }
 

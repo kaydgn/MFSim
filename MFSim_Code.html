@@ -3855,7 +3855,7 @@ function _drRedrawChart(canvas) {
   } else if(d.type === 'distGrade') {
     veRenderDistGradeProfile(id, d.segments, d.nodeId);
   } else if(d.type === 'altProfile') {
-    veRenderAltitudeProfile(id, d.elevData, d.nodeId);
+    veRenderAltitudeProfile(id, d.gpsSamples, d.nodeId);
   }
 }
 
@@ -21955,6 +21955,17 @@ function veCalcElevation(nodeId, onComplete) {
       }
     }
 
+    // ── GPS Sensör Verisi: Smooth edilmiş ince örnekleri kaydet (downsample öncesi) ──
+    // Bu veri, Rakım Profili grafiği için kullanılacak (GPS sensör simülasyonu)
+    var gpsSamples = [];
+    var gpsCumDist = 0;
+    gpsSamples.push({ dist: 0, elev: coords[0].elevation, lat: coords[0].lat, lng: coords[0].lng });
+    for(var gi = 1; gi < coords.length; gi++) {
+      gpsCumDist += veHesaplaMesafe(coords[gi-1].lat, coords[gi-1].lng, coords[gi].lat, coords[gi].lng);
+      gpsSamples.push({ dist: gpsCumDist, elev: coords[gi].elevation, lat: coords[gi].lat, lng: coords[gi].lng });
+    }
+    node.data.gpsSamples = gpsSamples;
+
     // ── Adım 3: Downsample — oversampled + smoothed veriyi hedef segment aralığına indir ──
     // Fine noktalardan hesaplanan smooth elevation, hedef segment'lere daraltılır
     if(coords.length > 3 && targetSegInterval) {
@@ -22291,15 +22302,15 @@ function veCalcDistGradeProfile(nodeId) {
   var maxGr = -Infinity, minGr = Infinity;
   segments.forEach(function(seg) { if(seg.egim > maxGr) maxGr = seg.egim; if(seg.egim < minGr) minGr = seg.egim; });
 
-  // Rakım + Eğim yükseklik verileri
-  var elevData = (node.data && node.data.routeElevations) ? node.data.routeElevations : null;
-  var elevFirst = elevData && elevData.length > 0 ? elevData[0].elevation : 0;
-  var elevLast = elevData && elevData.length > 0 ? elevData[elevData.length - 1].elevation : 0;
+  // GPS sensör verileri (smooth edilmiş ince örnekler)
+  var gpsSamples = (node.data && node.data.gpsSamples) ? node.data.gpsSamples : null;
+  var elevFirst = gpsSamples && gpsSamples.length > 0 ? gpsSamples[0].elev : 0;
+  var elevLast = gpsSamples && gpsSamples.length > 0 ? gpsSamples[gpsSamples.length - 1].elev : 0;
 
   // Profil HTML şablonu (hem modal hem properties paneli için ortak)
   function _buildProfileHTML(canvasId) {
     var altCanvasId = canvasId.replace('distgrade', 'altitude');
-    return (elevData ? (
+    return (gpsSamples ? (
       // ── Rakım Profili ──
       '<div style="position:relative; margin-bottom:8px;">' +
       '<canvas id="' + altCanvasId + '" style="width:100%; cursor:crosshair; border-radius:4px;"></canvas>' +
@@ -22313,7 +22324,7 @@ function veCalcDistGradeProfile(nodeId) {
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
       '<span style="color:var(--text-muted);">Δh:</span><span style="color:var(--accent-warning); font-weight:700;">' + (elevFirst - elevLast).toFixed(1) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
-      '<span id="ve-alt-selection-info-' + nodeId + '" style="color:var(--text-muted); font-style:italic;">Sol tık+sürükle ile eğim ölçün</span>' +
+      '<span id="ve-alt-selection-info-' + nodeId + '" style="color:var(--text-muted); font-style:italic;">Büyük ekranda (⛶) eğim çizgisi çizebilirsiniz</span>' +
       '</div>'
     ) : '') +
     // ── Eğim Profili ──
@@ -22380,9 +22391,9 @@ function veCalcDistGradeProfile(nodeId) {
     }
     setTimeout(function() {
       // Rakım profili
-      if(elevData) {
+      if(gpsSamples) {
         var altCanvasId = panelCanvasId.replace('distgrade', 'altitude');
-        veRenderAltitudeProfile(altCanvasId, elevData, nodeId);
+        veRenderAltitudeProfile(altCanvasId, gpsSamples, nodeId);
       }
       // Eğim profili
       veRenderDistGradeProfile(panelCanvasId, segments, nodeId);
@@ -22760,11 +22771,29 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
 }
 
 
-// ═══ RAKIM PROFİLİ (GPS tarzı yükseklik grafiği) ═══
-function veRenderAltitudeProfile(canvasId, elevData, nodeId) {
-  var canvas = document.getElementById(canvasId);
-  if(!canvas || !elevData || elevData.length < 2) return;
+// ═══ RAKIM PROFİLİ (GPS Sensör tarzı yükseklik grafiği) ═══
+// Kaydedilmiş eğim çizgileri: nodeId → [{x1, y1, x2, y2, grade, dist, deltaH, color}]
+var _veAltGradeLines = {};
+var _veAltGradeLineColors = ['#ffeb3b', '#ff9800', '#4caf50', '#2196f3', '#e91e63', '#00bcd4', '#ff5722', '#8bc34a'];
 
+function _veAltInterpElev(pts, dist) {
+  if(!pts || pts.length < 2) return 0;
+  if(dist <= pts[0].dist) return pts[0].elev;
+  if(dist >= pts[pts.length - 1].dist) return pts[pts.length - 1].elev;
+  for(var k = 0; k < pts.length - 1; k++) {
+    if(dist >= pts[k].dist && dist <= pts[k+1].dist) {
+      var t = (pts[k+1].dist - pts[k].dist) > 0.01 ? (dist - pts[k].dist) / (pts[k+1].dist - pts[k].dist) : 0;
+      return pts[k].elev + t * (pts[k+1].elev - pts[k].elev);
+    }
+  }
+  return pts[pts.length - 1].elev;
+}
+
+function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
+  var canvas = document.getElementById(canvasId);
+  if(!canvas || !gpsSamples || gpsSamples.length < 2) return;
+
+  var pts = gpsSamples; // [{dist, elev}, ...]
   var parentW = canvas.parentElement.clientWidth || 400;
   var chartH = canvas._dgExpandedH || 180;
   var dpr = window.devicePixelRatio || 1;
@@ -22779,15 +22808,7 @@ function veRenderAltitudeProfile(canvasId, elevData, nodeId) {
   var padL = 48, padR = 12, padT = 26, padB = 34;
   var plotW = W - padL - padR, plotH = H - padT - padB;
 
-  // Kümülatif mesafe ve yükseklik dizisi
-  var pts = []; // {dist, elev}
-  var cumDist = 0;
-  pts.push({ dist: 0, elev: elevData[0].elevation });
-  for(var i = 1; i < elevData.length; i++) {
-    cumDist += veHesaplaMesafe(elevData[i-1].lat, elevData[i-1].lng, elevData[i].lat, elevData[i].lng);
-    pts.push({ dist: cumDist, elev: elevData[i].elevation });
-  }
-  var totalDist = cumDist;
+  var totalDist = pts[pts.length - 1].dist;
 
   // Y aralığı
   var elevMin = Infinity, elevMax = -Infinity;
@@ -22874,7 +22895,12 @@ function veRenderAltitudeProfile(canvasId, elevData, nodeId) {
 
   // Başlık
   ctx.fillStyle = headColor; ctx.font = '600 10.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('RAKIM PROFİLİ (GPS)', padL + plotW / 2, 14);
+  var sampleInfo = pts.length + ' sample';
+  if(pts.length > 1) {
+    var avgInterval = (totalDist / (pts.length - 1));
+    sampleInfo += ' @ ~' + avgInterval.toFixed(0) + 'm';
+  }
+  ctx.fillText('RAKIM PROFİLİ (GPS) — ' + sampleInfo, padL + plotW / 2, 14);
 
   // Zoom göstergesi
   if(zs > 1.05 || zs < 0.95) {
@@ -22904,7 +22930,7 @@ function veRenderAltitudeProfile(canvasId, elevData, nodeId) {
     ctx.fill();
   }
 
-  // ── Ana çizgi (mor — Dewesoft tarzı) ──
+  // ── Ana çizgi (mor — GPS tarzı) ──
   if(pts.length >= 2) {
     ctx.strokeStyle = '#b39ddb';
     ctx.lineWidth = 2;
@@ -22918,36 +22944,72 @@ function veRenderAltitudeProfile(canvasId, elevData, nodeId) {
     ctx.stroke();
   }
 
-  // ── Bölge seçimi overlay ──
-  if(canvas._dgSelection) {
-    var sel = canvas._dgSelection;
-    var selX1 = Math.max(padL, toX(sel.xStart));
-    var selX2 = Math.min(padL + plotW, toX(sel.xEnd));
-    if(selX2 > selX1) {
-      // Seçim kutusu
-      ctx.fillStyle = 'rgba(255,152,0,0.12)';
-      ctx.fillRect(selX1, padT, selX2 - selX1, plotH);
-      ctx.strokeStyle = '#ff9800';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([3, 2]);
-      ctx.strokeRect(selX1, padT, selX2 - selX1, plotH);
-      ctx.setLineDash([]);
-      // Seçili bölgenin başlangıç ve bitiş yükseklikleri arası eğim çizgisi
-      if(sel.startElev !== undefined && sel.endElev !== undefined) {
-        ctx.strokeStyle = '#ffeb3b';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 2]);
-        ctx.beginPath();
-        ctx.moveTo(selX1, toY(sel.startElev));
-        ctx.lineTo(selX2, toY(sel.endElev));
-        ctx.stroke();
-        ctx.setLineDash([]);
-        // Eğim etiketi
-        ctx.fillStyle = '#ffeb3b';
-        ctx.font = '700 9px Segoe UI, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('Eğim: %' + sel.avgGrade.toFixed(2) + '  Δh: ' + sel.deltaH.toFixed(1) + 'm', (selX1 + selX2) / 2, Math.min(toY(sel.startElev), toY(sel.endElev)) - 6);
-      }
+  // ── Kaydedilmiş eğim çizgileri ──
+  var lines = _veAltGradeLines[nodeId] || [];
+  for(var gli = 0; gli < lines.length; gli++) {
+    var gl = lines[gli];
+    var glX1 = toX(gl.x1), glY1 = toY(gl.y1);
+    var glX2 = toX(gl.x2), glY2 = toY(gl.y2);
+    // Çizgi
+    ctx.strokeStyle = gl.color;
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(glX1, glY1);
+    ctx.lineTo(glX2, glY2);
+    ctx.stroke();
+    // Uç noktalar (daire)
+    ctx.fillStyle = gl.color;
+    ctx.beginPath(); ctx.arc(glX1, glY1, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(glX2, glY2, 4, 0, Math.PI * 2); ctx.fill();
+    // Eğim etiketi (çizgi ortası)
+    var glMidX = (glX1 + glX2) / 2;
+    var glMidY = Math.min(glY1, glY2) - 8;
+    ctx.fillStyle = gl.color;
+    ctx.font = '700 9px Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    var glLabel = '%' + gl.grade.toFixed(2) + '  Δh:' + gl.deltaH.toFixed(1) + 'm';
+    // Arka plan kutusu
+    var glLabelW = ctx.measureText(glLabel).width + 8;
+    ctx.fillStyle = 'rgba(15,18,24,0.8)';
+    ctx.fillRect(glMidX - glLabelW / 2, glMidY - 9, glLabelW, 14);
+    ctx.fillStyle = gl.color;
+    ctx.fillText(glLabel, glMidX, glMidY + 1);
+    // Numara
+    ctx.fillStyle = 'rgba(15,18,24,0.85)';
+    ctx.beginPath(); ctx.arc(glX1 + 10, glY1 - 10, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = gl.color;
+    ctx.font = '700 8px Segoe UI, sans-serif';
+    ctx.fillText('' + (gli + 1), glX1 + 10, glY1 - 7);
+  }
+
+  // ── Çizim önizleme (aktif çizgi çizme) ──
+  if(canvas._altDrawPreview) {
+    var dp = canvas._altDrawPreview;
+    ctx.strokeStyle = dp.color;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 3]);
+    ctx.beginPath();
+    ctx.moveTo(toX(dp.x1), toY(dp.y1));
+    ctx.lineTo(toX(dp.x2), toY(dp.y2));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Başlangıç noktası
+    ctx.fillStyle = dp.color;
+    ctx.beginPath(); ctx.arc(toX(dp.x1), toY(dp.y1), 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(toX(dp.x2), toY(dp.y2), 4, 0, Math.PI * 2); ctx.fill();
+    // Anlık eğim bilgisi
+    var pvDist = Math.abs(dp.x2 - dp.x1);
+    if(pvDist > 0.5) {
+      var pvDh = dp.y1 - dp.y2;
+      var pvGrade = (pvDh / pvDist) * 100;
+      ctx.fillStyle = dp.color;
+      ctx.font = '700 10px Segoe UI, sans-serif';
+      ctx.textAlign = 'center';
+      var pvLabel = '%' + pvGrade.toFixed(2) + '  Δh:' + pvDh.toFixed(1) + 'm  (' + (pvDist/1000).toFixed(2) + 'km)';
+      var pvMidX = (toX(dp.x1) + toX(dp.x2)) / 2;
+      var pvMidY = Math.min(toY(dp.y1), toY(dp.y2)) - 14;
+      ctx.fillText(pvLabel, pvMidX, pvMidY);
     }
   }
 
@@ -22955,7 +23017,7 @@ function veRenderAltitudeProfile(canvasId, elevData, nodeId) {
 
   // Etkileşim verisi
   canvas._drChart = {
-    type: 'altProfile', pts: pts, elevData: elevData,
+    type: 'altProfile', pts: pts, gpsSamples: gpsSamples,
     padL: padL, padR: padR, padT: padT, padB: padB,
     plotW: plotW, plotH: plotH, xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax,
     baseXMin: baseXMin, baseXMax: baseXMax, baseYMin: baseYMin, baseYMax: baseYMax,
@@ -22973,68 +23035,77 @@ function veRenderAltitudeProfile(canvasId, elevData, nodeId) {
     canvas.addEventListener('mouseleave', _drChartMouseLeave);
     canvas.addEventListener('dblclick', _drChartDblClick);
     canvas.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-
-    // ── Bölge seçimi (sol tık + sürükle) — eğim hesabı ──
-    canvas.addEventListener('mousedown', function(e) {
-      if(e.button !== 0) return;
-      var d = canvas._drChart;
-      if(!d || d.type !== 'altProfile') return;
-      var rect = canvas.getBoundingClientRect();
-      var mx = e.clientX - rect.left;
-      var my = e.clientY - rect.top;
-      if(mx < d.padL || mx > d.W - d.padR || my < d.padT || my > d.padT + d.plotH) return;
-      canvas._dgSelecting = true;
-      canvas._dgSelStartX = d.fromX(mx);
-      canvas._dgSelection = null;
-    });
-    canvas.addEventListener('mousemove', function(e) {
-      if(!canvas._dgSelecting) return;
-      var d = canvas._drChart;
-      if(!d || d.type !== 'altProfile') return;
-      var rect = canvas.getBoundingClientRect();
-      var mx = e.clientX - rect.left;
-      var xVal = d.fromX(mx);
-      var x1 = Math.max(0, Math.min(canvas._dgSelStartX, xVal));
-      var x2 = Math.min(d.totalDist, Math.max(canvas._dgSelStartX, xVal));
-      if(x2 - x1 < 1) return;
-
-      // Seçimin başlangıç ve bitiş yüksekliklerini bul (interpolasyon)
-      function interpElev(dist) {
-        for(var k = 0; k < d.pts.length - 1; k++) {
-          if(dist >= d.pts[k].dist && dist <= d.pts[k+1].dist) {
-            var t = (dist - d.pts[k].dist) / (d.pts[k+1].dist - d.pts[k].dist);
-            return d.pts[k].elev + t * (d.pts[k+1].elev - d.pts[k].elev);
-          }
-        }
-        return d.pts[d.pts.length - 1].elev;
-      }
-      var e1 = interpElev(x1), e2 = interpElev(x2);
-      var dh = e1 - e2; // pozitif = iniş
-      var selDist = x2 - x1;
-      var selGrade = selDist > 0.1 ? (dh / selDist) * 100 : 0;
-
-      canvas._dgSelection = { xStart: x1, xEnd: x2, startElev: e1, endElev: e2, deltaH: dh, avgGrade: selGrade, dist: selDist };
-      _drRedrawChart(canvas);
-
-      // Bilgi kutusunu güncelle
-      var nid = d.nodeId;
-      if(nid) {
-        var selEl = document.getElementById('ve-alt-selection-info-' + nid);
-        if(selEl) {
-          selEl.innerHTML = '<span style="color:#ffeb3b; font-weight:700;">Eğim: %' + selGrade.toFixed(2) + '</span>' +
-            '<span style="color:var(--text-muted); margin-left:6px;">Δh: ' + dh.toFixed(1) + 'm (' + (selDist / 1000).toFixed(2) + ' km)</span>';
-          selEl.style.fontStyle = 'normal';
-        }
-      }
-    });
-    canvas.addEventListener('mouseup', function(e) {
-      if(e.button !== 0) return;
-      canvas._dgSelecting = false;
-    });
-    canvas.addEventListener('mouseleave', function() {
-      canvas._dgSelecting = false;
-    });
   }
+}
+
+// ═══ Eğim çizgisi çizme/silme yönetimi ═══
+function veAltAddGradeLine(nodeId, x1, y1, x2, y2) {
+  if(!_veAltGradeLines[nodeId]) _veAltGradeLines[nodeId] = [];
+  var lines = _veAltGradeLines[nodeId];
+  var color = _veAltGradeLineColors[lines.length % _veAltGradeLineColors.length];
+  var dist = Math.abs(x2 - x1);
+  var deltaH = y1 - y2; // pozitif = iniş
+  var grade = dist > 0.1 ? (deltaH / dist) * 100 : 0;
+  lines.push({ x1: Math.min(x1, x2), y1: x1 < x2 ? y1 : y2, x2: Math.max(x1, x2), y2: x1 < x2 ? y2 : y1, grade: grade, dist: dist, deltaH: deltaH, color: color });
+  return lines[lines.length - 1];
+}
+
+function veAltRemoveGradeLine(nodeId, index) {
+  if(!_veAltGradeLines[nodeId]) return;
+  _veAltGradeLines[nodeId].splice(index, 1);
+}
+
+function veAltClearGradeLines(nodeId) {
+  _veAltGradeLines[nodeId] = [];
+}
+
+function _veAltUpdateLineList(nodeId) {
+  var listEl = document.getElementById('ve-alt-line-list-' + nodeId);
+  if(!listEl) return;
+  var lines = _veAltGradeLines[nodeId] || [];
+  if(lines.length === 0) {
+    listEl.innerHTML = '<div style="color:var(--text-muted); font-style:italic; font-size:0.58rem; padding:4px 0;">Henüz eğim çizgisi yok. Grafikte sol tık ile çizin.</div>';
+    return;
+  }
+  var html = '<table style="width:100%; font-size:0.58rem; border-collapse:collapse;">';
+  html += '<thead><tr style="background:var(--bg-tertiary);"><th style="padding:3px 4px; text-align:center; border-bottom:1px solid var(--border-color); width:24px;">#</th><th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Eğim</th><th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Δh</th><th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Mesafe</th><th style="padding:3px 4px; text-align:center; border-bottom:1px solid var(--border-color); width:24px;"></th></tr></thead><tbody>';
+  for(var i = 0; i < lines.length; i++) {
+    var l = lines[i];
+    var egimIcon = l.grade > 1 ? '↓' : (l.grade < -1 ? '↑' : '→');
+    html += '<tr style="border-bottom:1px solid var(--border-color);">';
+    html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:' + l.color + ';"></span></td>';
+    html += '<td style="padding:2px 4px; text-align:right; font-weight:600; color:' + l.color + ';">' + egimIcon + ' %' + l.grade.toFixed(2) + '</td>';
+    html += '<td style="padding:2px 4px; text-align:right;">' + l.deltaH.toFixed(1) + 'm</td>';
+    html += '<td style="padding:2px 4px; text-align:right;">' + (l.dist / 1000).toFixed(2) + 'km</td>';
+    html += '<td style="padding:2px 4px; text-align:center;"><button onclick="veAltRemoveGradeLineUI(\'' + nodeId + '\',' + i + ')" style="background:none; border:none; cursor:pointer; color:var(--accent-danger); font-size:0.7rem; padding:0; line-height:1;" title="Sil">✕</button></td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  listEl.innerHTML = html;
+}
+
+function veAltRemoveGradeLineUI(nodeId, index) {
+  veAltRemoveGradeLine(nodeId, index);
+  _veAltUpdateLineList(nodeId);
+  // Canvas'ları yeniden çiz
+  _veAltRedrawAll(nodeId);
+}
+
+function veAltClearGradeLinesUI(nodeId) {
+  veAltClearGradeLines(nodeId);
+  _veAltUpdateLineList(nodeId);
+  _veAltRedrawAll(nodeId);
+}
+
+function _veAltRedrawAll(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data || !node.data.gpsSamples) return;
+  // Panel canvas
+  var panelCanvas = document.getElementById('ve-road-altitude-canvas-' + nodeId);
+  if(panelCanvas) veRenderAltitudeProfile('ve-road-altitude-canvas-' + nodeId, node.data.gpsSamples, nodeId);
+  // Expanded canvas
+  var expCanvas = document.getElementById('ve-road-altitude-expanded-' + nodeId);
+  if(expCanvas) veRenderAltitudeProfile('ve-road-altitude-expanded-' + nodeId, node.data.gpsSamples, nodeId);
 }
 
 
@@ -23044,8 +23115,8 @@ function veExpandProfileChart(nodeId, chartType) {
   if(!node || !node.data) { showToast('Profil verisi bulunamadı', 'warning'); return; }
 
   var isAlt = (chartType === 'altitude');
-  if(isAlt && (!node.data.routeElevations || node.data.routeElevations.length < 2)) {
-    showToast('Rakım verisi bulunamadı', 'warning'); return;
+  if(isAlt && (!node.data.gpsSamples || node.data.gpsSamples.length < 2)) {
+    showToast('GPS rakım verisi bulunamadı', 'warning'); return;
   }
   if(!isAlt && (!node.data.routeSegments || node.data.routeSegments.length < 1)) {
     showToast('Eğim verisi bulunamadı', 'warning'); return;
@@ -23058,15 +23129,16 @@ function veExpandProfileChart(nodeId, chartType) {
 
   // Modal
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:100%; max-width:1100px; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); border-radius:6px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  modal.style.cssText = 'width:100%; max-width:1200px; max-height:90vh; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); border-radius:6px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
   // Header
-  var headerTitle = isAlt ? '📊 Rakım Profili (GPS)' : '📊 Mesafe — Eğim Profili';
+  var headerTitle = isAlt ? '📊 Rakım Profili (GPS) — Eğim Çizgisi Çizme' : '📊 Mesafe — Eğim Profili';
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
   header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">' + headerTitle + '</span>' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
-    '<span style="font-size:0.56rem; color:var(--text-muted);">Scroll: Zoom &nbsp;│&nbsp; ' + (isAlt ? 'Sol Tık+Sürükle: Eğim Ölç &nbsp;│&nbsp; ' : '') + 'Sağ Tık+Sürükle: Kaydır &nbsp;│&nbsp; Çift Tık: Sıfırla</span>' +
+    (isAlt ? '<span style="font-size:0.56rem; color:var(--text-muted);">Sol Tık: Eğim Çizgisi Çiz &nbsp;│&nbsp; Scroll: Zoom &nbsp;│&nbsp; Sağ Tık+Sürükle: Kaydır &nbsp;│&nbsp; Çift Tık: Sıfırla</span>' :
+    '<span style="font-size:0.56rem; color:var(--text-muted);">Scroll: Zoom &nbsp;│&nbsp; Sağ Tık+Sürükle: Kaydır &nbsp;│&nbsp; Çift Tık: Sıfırla</span>') +
     '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:3px; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button></div>';
   modal.appendChild(header);
 
@@ -23077,6 +23149,30 @@ function veExpandProfileChart(nodeId, chartType) {
   chartBox.innerHTML = '<canvas id="' + expandCanvasId + '" style="width:100%; cursor:crosshair; border-radius:4px;"></canvas>' +
     '<div id="' + expandCanvasId + '-tooltip" class="dr-chart-tooltip"></div>';
   modal.appendChild(chartBox);
+
+  // Altitude profile: eğim çizgileri kontrol paneli
+  if(isAlt) {
+    var controlBox = document.createElement('div');
+    controlBox.style.cssText = 'padding:0 16px 16px 16px; display:flex; gap:12px; align-items:flex-start;';
+    controlBox.innerHTML =
+      '<div style="flex:1; min-width:0;">' +
+        '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
+          '<span style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">📐 Eğim Çizgileri</span>' +
+          '<button onclick="veAltClearGradeLinesUI(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.56rem; background:var(--accent-danger); color:white; border:none; border-radius:3px; cursor:pointer; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">🗑 Tümünü Sil</button>' +
+        '</div>' +
+        '<div id="ve-alt-line-list-' + nodeId + '" style="max-height:140px; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px; padding:4px; background:var(--bg-tertiary);"></div>' +
+      '</div>' +
+      '<div style="width:200px; flex-shrink:0; padding:8px; background:var(--bg-tertiary); border-radius:6px; border:1px solid var(--border-color);">' +
+        '<div style="font-size:0.6rem; color:var(--text-muted); margin-bottom:6px;">Nasıl Kullanılır:</div>' +
+        '<div style="font-size:0.56rem; color:var(--text-secondary); line-height:1.6;">' +
+          '1. Grafik üzerinde <b style="color:#ffeb3b;">sol tık</b> ile başlangıç noktası belirleyin<br>' +
+          '2. İkinci <b style="color:#ffeb3b;">sol tık</b> ile bitiş noktası belirleyin<br>' +
+          '3. Eğim çizgisi otomatik hesaplanır ve kaydedilir<br>' +
+          '4. İstediğiniz kadar çizgi ekleyin' +
+        '</div>' +
+      '</div>';
+    modal.appendChild(controlBox);
+  }
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
@@ -23093,7 +23189,10 @@ function veExpandProfileChart(nodeId, chartType) {
     if(expandCanvas) {
       expandCanvas._dgExpandedH = 500;
       if(isAlt) {
-        veRenderAltitudeProfile(expandCanvasId, node.data.routeElevations, nodeId);
+        veRenderAltitudeProfile(expandCanvasId, node.data.gpsSamples, nodeId);
+        // Eğim çizgisi çizme eventlerini bağla
+        _veAltAttachDrawEvents(expandCanvas, nodeId);
+        _veAltUpdateLineList(nodeId);
       } else {
         veRenderDistGradeProfile(expandCanvasId, node.data.routeSegments, nodeId);
       }
@@ -23101,11 +23200,76 @@ function veExpandProfileChart(nodeId, chartType) {
   }, 50);
 }
 
+// ═══ Büyük ekranda eğim çizgisi çizme event'leri ═══
+function _veAltAttachDrawEvents(canvas, nodeId) {
+  if(canvas._altDrawAttached) return;
+  canvas._altDrawAttached = true;
+  canvas._altDrawState = null; // null | {x1, y1} — ilk tıklama bekliyor veya başlangıç noktası seçildi
+
+  canvas.addEventListener('mousedown', function(e) {
+    if(e.button !== 0) return; // sadece sol tık
+    var d = canvas._drChart;
+    if(!d || d.type !== 'altProfile') return;
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+    // Sadece plot alanı içinde
+    if(mx < d.padL || mx > d.W - d.padR || my < d.padT || my > d.padT + d.plotH) return;
+
+    var xVal = d.fromX(mx);
+    xVal = Math.max(0, Math.min(d.totalDist, xVal));
+    var yVal = _veAltInterpElev(d.pts, xVal);
+
+    if(!canvas._altDrawState) {
+      // İlk tıklama: başlangıç noktası
+      var lines = _veAltGradeLines[nodeId] || [];
+      var nextColor = _veAltGradeLineColors[lines.length % _veAltGradeLineColors.length];
+      canvas._altDrawState = { x1: xVal, y1: yVal, color: nextColor };
+      canvas._altDrawPreview = { x1: xVal, y1: yVal, x2: xVal, y2: yVal, color: nextColor };
+      canvas.style.cursor = 'crosshair';
+    } else {
+      // İkinci tıklama: bitiş noktası → çizgiyi kaydet
+      var state = canvas._altDrawState;
+      veAltAddGradeLine(nodeId, state.x1, state.y1, xVal, yVal);
+      canvas._altDrawState = null;
+      canvas._altDrawPreview = null;
+      canvas.style.cursor = 'crosshair';
+      _veAltUpdateLineList(nodeId);
+      _veAltRedrawAll(nodeId);
+    }
+  });
+
+  canvas.addEventListener('mousemove', function(e) {
+    if(!canvas._altDrawState) return;
+    var d = canvas._drChart;
+    if(!d) return;
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var xVal = d.fromX(mx);
+    xVal = Math.max(0, Math.min(d.totalDist, xVal));
+    var yVal = _veAltInterpElev(d.pts, xVal);
+    canvas._altDrawPreview = {
+      x1: canvas._altDrawState.x1, y1: canvas._altDrawState.y1,
+      x2: xVal, y2: yVal, color: canvas._altDrawState.color
+    };
+    _drRedrawChart(canvas);
+  });
+}
+
 function veCloseProfileModal() {
   var overlay = document.getElementById('ve-profile-modal-overlay');
   if(!overlay) return;
   if(overlay._veEscHandler) document.removeEventListener('keydown', overlay._veEscHandler);
   overlay.remove();
+  // Panel canvas'ını da güncelle (modal'dan eklenen çizgiler panel'de de görünsün)
+  // Tüm açık altitude canvas'larını yeniden çiz
+  var allAltCanvases = document.querySelectorAll('[id^="ve-road-altitude-canvas-"]');
+  allAltCanvases.forEach(function(c) {
+    var d = c._drChart;
+    if(d && d.type === 'altProfile' && d.nodeId) {
+      _veAltRedrawAll(d.nodeId);
+    }
+  });
 }
 
 // Sonlandırıcı bileşeni özellikleri
