@@ -703,21 +703,13 @@ function veCalcElevation(nodeId, onComplete) {
   // OSRM rota noktaları veya haritadaki marker'ları kullan
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node) return;
-  
-  var coords = [];
-  var targetSegInterval = 300; // Kullanıcının istediği final segment aralığı
-  if(node.data && node.data.routeCoords && node.data.routeCoords.length >= 2) {
-    // OSRM rotasından noktalar — OVERSAMPLING stratejisi:
-    // 1) İnce aralıklarla örnekle (oversampling)
-    // 2) SavGol ile smooth et
-    // 3) Sonuç olarak hedef segment aralığında grade hesapla
-    var rc = node.data.routeCoords;
-    var segEl = document.getElementById('ve-road-segment-' + nodeId);
-    targetSegInterval = segEl ? parseInt(segEl.value) : 300;
 
-    // Oversampling: hedef segment'in 1/4'ü kadar ince örnekle (min 25m)
-    // Bu, SavGol'e daha fazla veri noktası sağlayarak daha iyi fit yapmasını sağlar
-    var oversampleInterval = Math.max(25, Math.min(Math.floor(targetSegInterval / 4), 100));
+  var coords = [];
+  if(node.data && node.data.routeCoords && node.data.routeCoords.length >= 2) {
+    var rc = node.data.routeCoords;
+
+    // GPS sensör simülasyonu: 10 Hz @ 60 km/h ≈ 1.67m aralıklarla örnekle
+    var sampleInterval = 1.67;
 
     // Rota boyunca kümülatif mesafe hesapla
     coords.push({lat: rc[0][0], lng: rc[0][1]});
@@ -726,7 +718,7 @@ function veCalcElevation(nodeId, onComplete) {
     for(var i = 1; i < rc.length; i++) {
       var d = veHesaplaMesafe(rc[i-1][0], rc[i-1][1], rc[i][0], rc[i][1]);
       cumDist += d;
-      if(cumDist - lastSampled >= oversampleInterval || i === rc.length - 1) {
+      if(cumDist - lastSampled >= sampleInterval || i === rc.length - 1) {
         coords.push({lat: rc[i][0], lng: rc[i][1]});
         lastSampled = cumDist;
       }
@@ -737,11 +729,11 @@ function veCalcElevation(nodeId, onComplete) {
     if(markers.length < 2) { showToast('En az 2 nokta veya OSRM rotası gerekli', 'warning'); return; }
     markers.forEach(function(m) { var ll = m.getLatLng(); coords.push({lat: ll.lat, lng: ll.lng}); });
   }
-  
+
   if(coords.length < 2) { showToast('Yetersiz nokta', 'warning'); return; }
-  
+
   showToast('⏳ Yükseklik verisi alınıyor... (' + coords.length + ' nokta)');
-  
+
   // 3 katmanlı elevation API (Open-Meteo → Open Topo Data → Open-Elevation)
   veFetchElevations(coords)
   .then(function(elevations) {
@@ -752,13 +744,13 @@ function veCalcElevation(nodeId, onComplete) {
 
     // ── Yükseklik yumuşatma (SRTM gürültüsünü azalt) ──
     // Savitzky-Golay filtresi: polynomial fit ile gerçek eğim korunur, sadece gürültü temizlenir
-    // Yumuşatma seviyesi: 0=yok, 1=hafif, 2=orta, 3=güçlü
     var smoothEl = document.getElementById('ve-road-smooth-' + nodeId);
     var smoothLevel = smoothEl ? parseInt(smoothEl.value) : 2;
-
-    // Ham veriyi kaydet (raw vs smoothed karşılaştırma için)
-    var rawElevations = coords.map(function(c) { return c.elevation; });
     if(!node.data) node.data = {};
+    node.data.smoothLevel = smoothLevel;
+
+    // Ham veriyi kaydet
+    var rawElevations = coords.map(function(c) { return c.elevation; });
     node.data.rawElevations = rawElevations.slice();
 
     if(smoothLevel > 0 && coords.length >= 4) {
@@ -909,210 +901,52 @@ function veCalcElevation(nodeId, onComplete) {
     }
     node.data.gpsSamples = gpsSamples;
 
-    // ── Adım 3: Downsample — oversampled + smoothed veriyi hedef segment aralığına indir ──
-    // Fine noktalardan hesaplanan smooth elevation, hedef segment'lere daraltılır
-    if(coords.length > 3 && targetSegInterval) {
-      var dsCumDist = 0;
-      var dsLastSampled = 0;
-      var dsCoords = [coords[0]];
-      for(var dsi = 1; dsi < coords.length; dsi++) {
-        var dsD = veHesaplaMesafe(coords[dsi-1].lat, coords[dsi-1].lng, coords[dsi].lat, coords[dsi].lng);
-        dsCumDist += dsD;
-        if(dsCumDist - dsLastSampled >= targetSegInterval || dsi === coords.length - 1) {
-          dsCoords.push(coords[dsi]);
-          dsLastSampled = dsCumDist;
-        }
-      }
-      // Sadece yeterli nokta varsa downsample uygula
-      if(dsCoords.length >= 2 && dsCoords.length < coords.length) {
-        coords = dsCoords;
-      }
-    }
-
-    // Toplam mesafe ve segment hesapla
-    var toplamMesafe = 0;
-    var segmentler = [];
-    var MAX_EGIM = 25;
-    
-    // Önce tüm ham eğimleri hesapla
-    var rawGrades = [];
-    for(var s = 0; s < coords.length - 1; s++) {
-      var s1 = coords[s], s2 = coords[s+1];
-      var sMesafe = veHesaplaMesafe(s1.lat, s1.lng, s2.lat, s2.lng);
-      var sDh = s1.elevation - s2.elevation; // iniş=pozitif, çıkış=negatif
-      var sEgim = sMesafe > 0.1 ? (sDh / sMesafe) * 100 : 0;
-      rawGrades.push({ mesafe: sMesafe, egim: sEgim, deltaH: sDh });
-    }
-
-    // ── Adaptif eğim kırpma (IQR tabanlı) ──
-    // Statik ±25% yerine, rota bağlamına göre dinamik sınır
-    if(rawGrades.length >= 3) {
-      var allGrades = rawGrades.map(function(g) { return g.egim; }).sort(function(a, b) { return a - b; });
-      var gQ1 = allGrades[Math.floor(allGrades.length * 0.25)];
-      var gQ3 = allGrades[Math.floor(allGrades.length * 0.75)];
-      var gIQR = gQ3 - gQ1;
-      // Üst sınır: Q3 + 3×IQR veya ±25%, hangisi büyükse
-      var adaptiveMax = Math.max(MAX_EGIM, gQ3 + 3 * gIQR);
-      var adaptiveMin = Math.min(-MAX_EGIM, gQ1 - 3 * gIQR);
-      // Ama yine de fiziksel sınır aşılamasın (±40% bile dik kayalık)
-      adaptiveMax = Math.min(adaptiveMax, 40);
-      adaptiveMin = Math.max(adaptiveMin, -40);
-
-      for(var gi = 0; gi < rawGrades.length; gi++) {
-        if(rawGrades[gi].egim > adaptiveMax) rawGrades[gi].egim = adaptiveMax;
-        if(rawGrades[gi].egim < adaptiveMin) rawGrades[gi].egim = adaptiveMin;
-      }
-    } else {
-      // Az segment varsa statik clamp
-      for(var gi2 = 0; gi2 < rawGrades.length; gi2++) {
-        if(Math.abs(rawGrades[gi2].egim) > MAX_EGIM) {
-          rawGrades[gi2].egim = rawGrades[gi2].egim > 0 ? MAX_EGIM : -MAX_EGIM;
-        }
-      }
-    }
-
-    for(var s3 = 0; s3 < rawGrades.length; s3++) {
-      segmentler.push(rawGrades[s3]);
-      toplamMesafe += rawGrades[s3].mesafe;
-    }
-    
-    // Genel yükseklik farkı ve ortalama eğim
-    var ilk = coords[0], son = coords[coords.length - 1];
-    var yukseklikFark = ilk.elevation - son.elevation;
-    var ortEgim = toplamMesafe > 0 ? (yukseklikFark / toplamMesafe) * 100 : 0;
-    
-    // Ortalama yükseklik
+    // Toplam mesafe ve ortalama yükseklik
+    var toplamMesafe = gpsSamples.length > 1 ? gpsSamples[gpsSamples.length - 1].dist : 0;
     var topYuk = 0;
-    coords.forEach(function(c) { topYuk += c.elevation; });
-    var ortYukseklik = topYuk / coords.length;
-    
+    gpsSamples.forEach(function(s) { topYuk += s.elev; });
+    var ortYukseklik = gpsSamples.length > 0 ? topYuk / gpsSamples.length : 0;
+    var elevFirst = gpsSamples[0].elev;
+    var elevLast = gpsSamples[gpsSamples.length - 1].elev;
+    var yukseklikFark = elevFirst - elevLast;
+
+    // Node verisine kaydet
+    node.data.routeAvgAltitude = ortYukseklik;
+    node.data.routeTotalDist = toplamMesafe;
+
+    // routeElevations: harita markerları için ~300m aralıklarla downsample
+    // (ince veri gpsSamples'da zaten mevcut, haritada binlerce nokta göstermeye gerek yok)
+    var dsInterval = 300;
+    var dsElev = [{ lat: coords[0].lat, lng: coords[0].lng, elevation: coords[0].elevation }];
+    var dsCumDist = 0, dsLastSampled = 0;
+    for(var di = 1; di < coords.length; di++) {
+      dsCumDist += veHesaplaMesafe(coords[di-1].lat, coords[di-1].lng, coords[di].lat, coords[di].lng);
+      if(dsCumDist - dsLastSampled >= dsInterval || di === coords.length - 1) {
+        dsElev.push({ lat: coords[di].lat, lng: coords[di].lng, elevation: coords[di].elevation });
+        dsLastSampled = dsCumDist;
+      }
+    }
+    node.data.routeElevations = dsElev;
+
     // Sonuçları göster
     var resultDiv = document.getElementById('ve-road-route-result-' + nodeId);
     var distDiv = document.getElementById('ve-road-dist-' + nodeId);
     var dhDiv = document.getElementById('ve-road-dh-' + nodeId);
-    var gradeDiv = document.getElementById('ve-road-avggrade-' + nodeId);
     if(resultDiv) resultDiv.style.display = 'block';
-    if(distDiv) distDiv.textContent = (toplamMesafe/1000).toFixed(2) + ' km';
+    if(distDiv) distDiv.textContent = (toplamMesafe / 1000).toFixed(2) + ' km';
     if(dhDiv) dhDiv.textContent = yukseklikFark.toFixed(0) + ' m';
-    if(gradeDiv) gradeDiv.textContent = '%' + ortEgim.toFixed(1);
-    
-    // Detaylı segment tablosu
-    var segTable = document.getElementById('ve-road-seg-table-' + nodeId);
-    if(!segTable && resultDiv) {
-      segTable = document.createElement('div');
-      segTable.id = 've-road-seg-table-' + nodeId;
-      resultDiv.appendChild(segTable);
-    }
-    if(segTable) {
-      var thtml = '<div style="margin-top:8px; max-height:180px; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px;">';
-      thtml += '<table style="width:100%; font-size:0.56rem; border-collapse:collapse;">';
-      thtml += '<thead><tr style="background:var(--bg-tertiary); position:sticky; top:0;">';
-      thtml += '<th style="padding:3px 4px; text-align:center; border-bottom:1px solid var(--border-color);">#</th>';
-      thtml += '<th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Mesafe [m]</th>';
-      thtml += '<th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Δh [m]</th>';
-      thtml += '<th style="padding:3px 4px; text-align:right; border-bottom:1px solid var(--border-color);">Eğim [%]</th>';
-      thtml += '</tr></thead><tbody>';
-      
-      segmentler.forEach(function(seg, i) {
-        var egimColor = seg.egim > 2 ? 'var(--accent-success)' : (seg.egim < -2 ? 'var(--accent-danger)' : 'var(--text-secondary)');
-        var egimIcon = seg.egim > 1 ? '↓' : (seg.egim < -1 ? '↑' : '→');
-        thtml += '<tr style="border-bottom:1px solid var(--border-color);">';
-        thtml += '<td style="padding:2px 4px; text-align:center; color:var(--text-muted);">' + (i+1) + '</td>';
-        thtml += '<td style="padding:2px 4px; text-align:right;">' + seg.mesafe.toFixed(0) + '</td>';
-        thtml += '<td style="padding:2px 4px; text-align:right;">' + seg.deltaH.toFixed(1) + '</td>';
-        thtml += '<td style="padding:2px 4px; text-align:right; color:' + egimColor + '; font-weight:600;">' + egimIcon + ' %' + seg.egim.toFixed(1) + '</td>';
-        thtml += '</tr>';
-      });
-      
-      thtml += '</tbody></table></div>';
-      segTable.innerHTML = thtml;
-    }
-    
-    // Node verisine kaydet
-    if(!node.data) node.data = {};
-    node.data.routeSegments = segmentler;
-    node.data.routeAvgGrade = ortEgim;
-    node.data.routeAvgAltitude = ortYukseklik;
-    node.data.routeTotalDist = toplamMesafe;
-    node.data.routeElevations = coords.map(function(c) {
-      return { lat: c.lat, lng: c.lng, elevation: c.elevation };
-    });
-    
-    // ═══ SEGMENT NOKTALARINI HARİTADA GÖSTER ═══
-    var map = veRoadMaps[nodeId];
-    if(map) {
-      // Eski segment markerlarını temizle
-      if(veRoadSegMarkers[nodeId]) {
-        veRoadSegMarkers[nodeId].forEach(function(m) { try { map.removeLayer(m); } catch(e){} });
-      }
-      veRoadSegMarkers[nodeId] = [];
-      
-      var cumDist = 0;
-      for(var pi = 0; pi < coords.length; pi++) {
-        var pt = coords[pi];
-        var isEndpoint = (pi === 0 || pi === coords.length - 1);
-        
-        // Kümülatif mesafe hesapla
-        if(pi > 0) {
-          cumDist += veHesaplaMesafe(coords[pi-1].lat, coords[pi-1].lng, pt.lat, pt.lng);
-        }
-        
-        var cm = L.circleMarker([pt.lat, pt.lng], {
-          radius: isEndpoint ? 6 : 3.5,
-          color: isEndpoint ? '#fff' : '#ffa726',
-          fillColor: isEndpoint ? '#4fc3f7' : '#ffa726',
-          fillOpacity: isEndpoint ? 1 : 0.8,
-          weight: isEndpoint ? 2 : 1.2
-        }).addTo(map);
-        
-        // Tooltip: nokta bilgisi
-        var ttHtml = '<b>' + (isEndpoint ? (pi === 0 ? 'BAŞLANGIÇ' : 'BİTİŞ') : 'Nokta ' + (pi + 1)) + '</b>';
-        ttHtml += '<br>Mesafe: ' + (cumDist / 1000).toFixed(2) + ' km';
-        if(pt.elevation !== undefined && pt.elevation !== null) {
-          ttHtml += '<br>Yükseklik: ' + pt.elevation.toFixed(0) + ' m';
-        }
-        if(pi < segmentler.length) {
-          ttHtml += '<br>Segment eğim: %' + segmentler[pi].egim.toFixed(1);
-        }
-        cm.bindTooltip(ttHtml, { direction: 'top', offset: [0, -6] });
-        
-        veRoadSegMarkers[nodeId].push(cm);
-      }
-    }
-    
-    // Segment bilgi kutusunu güncelle
-    var segBilgi = document.getElementById('ve-road-segment-bilgi-' + nodeId);
-    if(segBilgi) {
-      var maxE = 0, minE = 0;
-      segmentler.forEach(function(seg) { if(seg.egim > maxE) maxE = seg.egim; if(seg.egim < minE) minE = seg.egim; });
-      segBilgi.innerHTML = '<div style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.6rem;">' +
-        '<span style="color:var(--accent-primary);">📏 <b>' + (toplamMesafe/1000).toFixed(2) + ' km</b></span>' +
-        '<span style="color:var(--accent-success);">📊 <b>' + segmentler.length + '</b> seg.</span>' +
-        '<span style="color:var(--accent-warning);">📐 Ort: <b>%' + ortEgim.toFixed(1) + '</b></span>' +
-        '<span style="color:var(--accent-danger);">⬆️ Max: <b>%' + maxE.toFixed(1) + '</b></span>' +
-        '</div>';
-    }
-    
-    // Segment modundaysa eğim alanını otomatik doldur
-    var egimModeEl = document.getElementById('ve-road-egimmode-' + nodeId);
-    if(egimModeEl && egimModeEl.value === 'segment') {
-      node.data.grade = ortEgim;
-    }
-    
-    // Yüksekliği ortam parametrelerine aktar
+
+    // ═══ ORTAM PARAMETRELERİNİ OTOMATİK DOLDUR ═══
+    // Yükseklik
     var altEl = document.getElementById('ve-road-alt-' + nodeId);
-    if(altEl && !altEl.value) { altEl.value = Math.round(ortYukseklik); node.data.altitude = ortYukseklik; }
-    
-    // Smoothing istatistikleri
-    var smoothInfo = '';
-    if(smoothLevel > 0 && node.data.rawElevations && node.data.rawElevations.length > 0) {
-      var rawFirst = node.data.rawElevations[0];
-      var rawLast = node.data.rawElevations[node.data.rawElevations.length - 1];
-      var rawDh = rawFirst - rawLast;
-      var rawGrade = toplamMesafe > 0 ? (rawDh / toplamMesafe) * 100 : 0;
-      smoothInfo = ' | Ham: %' + rawGrade.toFixed(1) + ' → Filtre: %' + ortEgim.toFixed(1);
-    }
-    showToast('✅ Eğim hesaplandı: %' + ortEgim.toFixed(1) + ' (' + segmentler.length + ' seg)' + smoothInfo);
+    if(altEl) { altEl.value = Math.round(ortYukseklik); node.data.altitude = ortYukseklik; }
+    // Sıcaklık (boşsa ISA standart 15°C)
+    var tempEl = document.getElementById('ve-road-temp-' + nodeId);
+    if(tempEl && !tempEl.value) { tempEl.value = '15'; node.data.temperature = 15; }
+    // Hava yoğunluğunu otomatik hesapla (ISA modeli)
+    veCalcAirDensityRoad(nodeId);
+
+    showToast('✅ Rakım verisi okundu: ' + gpsSamples.length + ' sample, ' + (toplamMesafe / 1000).toFixed(2) + ' km');
 
     // Callback (profil oluşturma vb.)
     if(typeof onComplete === 'function') onComplete();
@@ -1180,9 +1014,27 @@ function veUpdateProfiles(nodeId) {
     return;
   }
   showToast('Profil güncelleniyor...');
-  // Mevcut rota koordinatları üzerinde yeniden elevation fetch + smooth + profile
   veCalcElevation(nodeId, function() {
     veCalcDistGradeProfile(nodeId);
+    showToast('Profil güncellendi');
+  });
+}
+
+// Büyük ekrandan filtre güncellemesi — elevation yeniden alır, expanded canvas'ı yeniler
+function veUpdateProfilesExpanded(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data || !node.data.routeCoords || node.data.routeCoords.length < 2) {
+    showToast('Rota verisi bulunamadı', 'warning'); return;
+  }
+  showToast('Profil güncelleniyor...');
+  veCalcElevation(nodeId, function() {
+    veCalcDistGradeProfile(nodeId);
+    // Expanded canvas'ı yenile
+    var expCanvas = document.getElementById('ve-road-altitude-expanded-' + nodeId);
+    if(expCanvas && node.data.gpsSamples) {
+      veRenderAltitudeProfile('ve-road-altitude-expanded-' + nodeId, node.data.gpsSamples, nodeId);
+      _veAltUpdateLineList(nodeId);
+    }
     showToast('Profil güncellendi');
   });
 }
@@ -1225,30 +1077,15 @@ function veToggleDistGradeProfile(nodeId) {
 
 function veCalcDistGradeProfile(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
-  if(!node || !node.data || !node.data.routeSegments || node.data.routeSegments.length < 1) {
+  if(!node || !node.data || !node.data.gpsSamples || node.data.gpsSamples.length < 2) {
     showToast('Önce rota hesaplayın (en az 2 nokta gerekli)', 'warning');
     return;
   }
 
-  // Mevcut ayarları koru (HTML yeniden oluşturulmadan önce oku)
-  var prevSegEl = document.getElementById('ve-road-segment-' + nodeId);
-  var prevSmoothEl = document.getElementById('ve-road-smooth-' + nodeId);
-  var savedSegValue = prevSegEl ? prevSegEl.value : null;
-  var savedSmoothValue = prevSmoothEl ? prevSmoothEl.value : null;
-
-  var segments = node.data.routeSegments;
-
-  // Mesafe-ağırlıklı ortalama eğim hesapla (tüm rota)
-  var totalDist = 0, weightedGrade = 0;
-  segments.forEach(function(seg) { totalDist += seg.mesafe; weightedGrade += seg.egim * seg.mesafe; });
-  var avgGrade = totalDist > 0 ? weightedGrade / totalDist : 0;
-  var maxGr = -Infinity, minGr = Infinity;
-  segments.forEach(function(seg) { if(seg.egim > maxGr) maxGr = seg.egim; if(seg.egim < minGr) minGr = seg.egim; });
-
-  // GPS sensör verileri (smooth edilmiş ince örnekler)
-  var gpsSamples = (node.data && node.data.gpsSamples) ? node.data.gpsSamples : null;
-  var elevFirst = gpsSamples && gpsSamples.length > 0 ? gpsSamples[0].elev : 0;
-  var elevLast = gpsSamples && gpsSamples.length > 0 ? gpsSamples[gpsSamples.length - 1].elev : 0;
+  var gpsSamples = node.data.gpsSamples;
+  var totalDist = gpsSamples[gpsSamples.length - 1].dist;
+  var elevFirst = gpsSamples[0].elev;
+  var elevLast = gpsSamples[gpsSamples.length - 1].elev;
 
   // Profil HTML şablonu (sadece Rakım Profili GPS)
   function _buildProfileHTML(canvasId) {
@@ -1266,24 +1103,6 @@ function veCalcDistGradeProfile(nodeId) {
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
       '<span style="color:var(--text-muted);">Δh:</span><span style="color:var(--accent-warning); font-weight:700;">' + (elevFirst - elevLast).toFixed(1) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
-      '<span id="ve-alt-selection-info-' + nodeId + '" style="color:var(--text-muted); font-style:italic;">Büyük ekranda (⛶) eğim çizgisi çizebilirsiniz</span>' +
-      '</div>' +
-      // Ayar kontrolleri (segment + filtre + güncelle)
-      '<div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; padding:6px 8px; background:var(--bg-tertiary); border-radius:5px; border:1px solid var(--border-color);">' +
-      '<div style="display:inline-flex; align-items:center; gap:3px;">' +
-      '<label style="font-size:0.56rem; color:var(--text-muted); white-space:nowrap;">Segment:</label>' +
-      '<select id="ve-road-segment-' + nodeId + '" style="padding:2px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px;">' +
-      '<option value="3">3m</option><option value="5">5m</option><option value="10">10m</option><option value="25">25m</option><option value="50">50m</option><option value="100">100m</option><option value="200">200m</option><option value="300" selected>300m</option><option value="500">500m</option>' +
-      '</select></div>' +
-      '<div style="display:inline-flex; align-items:center; gap:3px;">' +
-      '<label style="font-size:0.56rem; color:var(--text-muted); white-space:nowrap;">Filtre:</label>' +
-      '<span title="Savitzky-Golay filtresi: SRTM uydu verisindeki gürültüyü temizler.\nYok = Ham veri (gürültülü)\nHafif = Hafif düzeltme, detay korunur\nOrta = Dengeli (önerilen)\nGüçlü = Agresif yumuşatma, küçük tepeler kaybolabilir" style="cursor:help; font-size:0.6rem; color:var(--text-muted); opacity:0.7; margin-left:-1px;">ⓘ</span>' +
-      '<select id="ve-road-smooth-' + nodeId + '" style="padding:2px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px;">' +
-      '<option value="0">Yok</option><option value="1">SavGol Hafif</option><option value="2" selected>SavGol Orta</option><option value="3">SavGol G\u00fc\u00e7l\u00fc</option>' +
-      '</select></div>' +
-      '<button onclick="veUpdateProfiles(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.58rem; font-weight:600; background:#1b5e20; color:white; border:none; border-radius:3px; cursor:pointer;">Güncelle</button>' +
-      '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.58rem; font-weight:600; background:#1565c0; color:white; border:none; border-radius:3px; cursor:pointer;">↔ Yönü çevir</button>' +
-      '<span style="flex:1;"></span>' +
       '<span style="font-size:0.54rem; color:var(--text-muted);">' + (gpsSamples ? gpsSamples.length + ' sample' : '') + ' | ' + (totalDist / 1000).toFixed(2) + ' km</span>' +
       '</div>';
   }
@@ -1301,21 +1120,9 @@ function veCalcDistGradeProfile(nodeId) {
     }
     var panelCanvasId = 've-road-distgrade-canvas-' + nodeId;
     profileDiv.innerHTML = _buildProfileHTML(panelCanvasId);
-    // Kaydedilmiş ayarları geri yükle
-    if(savedSegValue !== null) {
-      var newSegEl = document.getElementById('ve-road-segment-' + nodeId);
-      if(newSegEl) newSegEl.value = savedSegValue;
-    }
-    if(savedSmoothValue !== null) {
-      var newSmoothEl = document.getElementById('ve-road-smooth-' + nodeId);
-      if(newSmoothEl) newSmoothEl.value = savedSmoothValue;
-    }
     setTimeout(function() {
-      // Rakım profili
-      if(gpsSamples) {
-        var altCanvasId = panelCanvasId.replace('distgrade', 'altitude');
-        veRenderAltitudeProfile(altCanvasId, gpsSamples, nodeId);
-      }
+      var altCanvasId = panelCanvasId.replace('distgrade', 'altitude');
+      veRenderAltitudeProfile(altCanvasId, gpsSamples, nodeId);
       // Profil bölümüne scroll
       profilesSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
@@ -2125,12 +1932,21 @@ function veExpandProfileChart(nodeId, chartType) {
   modal.style.cssText = 'width:100%; max-width:1200px; max-height:90vh; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); border-radius:6px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
   // Header
-  var headerTitle = isAlt ? '📊 Rakım profili (GPS)' : '📊 Mesafe — Eğim profili';
+  var curSmooth = (node.data && node.data.smoothLevel !== undefined) ? node.data.smoothLevel : 2;
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">' + headerTitle + '</span>' +
+  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">📊 Rakım profili (GPS)</span>' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
-    (isAlt ? '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:0.6rem; font-weight:600; background:#1565c0; color:white; border:none; border-radius:3px; cursor:pointer;">↔ Yönü çevir</button>' : '') +
+    '<div style="display:inline-flex; align-items:center; gap:3px;">' +
+    '<label style="font-size:0.56rem; color:var(--text-muted);">Filtre:</label>' +
+    '<select id="ve-road-smooth-' + nodeId + '" style="padding:2px 3px; font-size:0.56rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px;">' +
+    '<option value="0"' + (curSmooth === 0 ? ' selected' : '') + '>Yok</option>' +
+    '<option value="1"' + (curSmooth === 1 ? ' selected' : '') + '>SavGol Hafif</option>' +
+    '<option value="2"' + (curSmooth === 2 ? ' selected' : '') + '>SavGol Orta</option>' +
+    '<option value="3"' + (curSmooth === 3 ? ' selected' : '') + '>SavGol Güçlü</option>' +
+    '</select></div>' +
+    '<button onclick="veUpdateProfilesExpanded(\'' + nodeId + '\')" style="padding:4px 10px; font-size:0.6rem; font-weight:600; background:#1b5e20; color:white; border:none; border-radius:3px; cursor:pointer;">Güncelle</button>' +
+    '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:0.6rem; font-weight:600; background:#1565c0; color:white; border:none; border-radius:3px; cursor:pointer;">↔ Yönü çevir</button>' +
     '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:3px; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button></div>';
   modal.appendChild(header);
 
@@ -2284,6 +2100,16 @@ function _veAltAttachDrawEvents(canvas, nodeId) {
   // ESC ile çizimi iptal et
   document.addEventListener('keydown', function(e) {
     if(e.key === 'Escape' && canvas._altDrawState) {
+      canvas._altDrawState = null;
+      canvas._altDrawPreview = null;
+      _drRedrawChart(canvas);
+    }
+  });
+
+  // Sağ tık ile çizimi iptal et
+  canvas.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    if(canvas._altDrawState) {
       canvas._altDrawState = null;
       canvas._altDrawPreview = null;
       _drRedrawChart(canvas);
