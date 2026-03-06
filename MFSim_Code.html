@@ -22338,7 +22338,8 @@ function veCalcDistGradeProfile(nodeId) {
       '<select id="ve-road-smooth-' + nodeId + '" style="padding:2px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px;">' +
       '<option value="0">Yok</option><option value="1">SavGol Hafif</option><option value="2" selected>SavGol Orta</option><option value="3">SavGol G\u00fc\u00e7l\u00fc</option>' +
       '</select></div>' +
-      '<button onclick="veUpdateProfiles(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.58rem; font-weight:600; background:#1b5e20; color:white; border:none; border-radius:3px; cursor:pointer;">🔄 G\u00fcncelle</button>' +
+      '<button onclick="veUpdateProfiles(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.58rem; font-weight:600; background:#1b5e20; color:white; border:none; border-radius:3px; cursor:pointer;">Güncelle</button>' +
+      '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.58rem; font-weight:600; background:#1565c0; color:white; border:none; border-radius:3px; cursor:pointer;">↔ Yönü çevir</button>' +
       '<span style="flex:1;"></span>' +
       '<span style="font-size:0.54rem; color:var(--text-muted);">' + (gpsSamples ? gpsSamples.length + ' sample' : '') + ' | ' + (totalDist / 1000).toFixed(2) + ' km</span>' +
       '</div>';
@@ -22883,6 +22884,13 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     ctx.fillText(zs.toFixed(1) + 'x', W - padR - 26, padT - 4);
   }
 
+  // Başlangıç / Bitiş etiketleri
+  ctx.font = '600 8px Segoe UI, sans-serif';
+  ctx.fillStyle = '#4caf50'; ctx.textAlign = 'left';
+  ctx.fillText('Başlangıç ▸', padL + 4, H - padB - 4);
+  ctx.fillStyle = '#ef5350'; ctx.textAlign = 'right';
+  ctx.fillText('◂ Bitiş', W - padR - 4, H - padB - 4);
+
   // Çizim alanı kırp
   ctx.save();
   ctx.beginPath();
@@ -23018,10 +23026,14 @@ function veAltAddGradeLine(nodeId, x1, y1, x2, y2) {
   if(!_veAltGradeLines[nodeId]) _veAltGradeLines[nodeId] = [];
   var lines = _veAltGradeLines[nodeId];
   var color = _veAltGradeLineColors[lines.length % _veAltGradeLineColors.length];
-  var dist = Math.abs(x2 - x1);
-  var deltaH = y1 - y2; // pozitif = iniş
+  // Her zaman sol→sağ (rota yönü) olarak sırala
+  var lx = Math.min(x1, x2), rx = Math.max(x1, x2);
+  var ly = (x1 <= x2) ? y1 : y2;
+  var ry = (x1 <= x2) ? y2 : y1;
+  var dist = rx - lx;
+  var deltaH = ly - ry; // pozitif = iniş (sol yüksek, sağ düşük)
   var grade = dist > 0.1 ? (deltaH / dist) * 100 : 0;
-  lines.push({ x1: Math.min(x1, x2), y1: x1 < x2 ? y1 : y2, x2: Math.max(x1, x2), y2: x1 < x2 ? y2 : y1, grade: grade, dist: dist, deltaH: deltaH, color: color });
+  lines.push({ x1: lx, y1: ly, x2: rx, y2: ry, grade: grade, dist: dist, deltaH: deltaH, color: color });
   return lines[lines.length - 1];
 }
 
@@ -23083,6 +23095,68 @@ function _veAltRedrawAll(nodeId) {
   if(expCanvas) veRenderAltitudeProfile('ve-road-altitude-expanded-' + nodeId, node.data.gpsSamples, nodeId);
 }
 
+// ═══ Profil yönünü çevir ═══
+function veAltReverseDirection(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data || !node.data.gpsSamples || node.data.gpsSamples.length < 2) {
+    showToast('Çevrilecek veri yok', 'warning'); return;
+  }
+
+  // gpsSamples'ı ters çevir: elevation'ları reverse, distance'ları yeniden hesapla
+  var samples = node.data.gpsSamples;
+  var totalDist = samples[samples.length - 1].dist;
+  var reversed = [];
+  for(var i = samples.length - 1; i >= 0; i--) {
+    reversed.push({
+      dist: totalDist - samples[i].dist,
+      elev: samples[i].elev,
+      lat: samples[i].lat,
+      lng: samples[i].lng
+    });
+  }
+  node.data.gpsSamples = reversed;
+
+  // routeElevations'ı da ters çevir
+  if(node.data.routeElevations && node.data.routeElevations.length > 0) {
+    node.data.routeElevations.reverse();
+  }
+
+  // routeSegments'ı ters çevir ve eğim sign'larını flip
+  if(node.data.routeSegments && node.data.routeSegments.length > 0) {
+    node.data.routeSegments.reverse();
+    node.data.routeSegments.forEach(function(seg) {
+      seg.egim = -seg.egim;
+      seg.deltaH = -seg.deltaH;
+    });
+    // Ortalama eğimi de güncelle
+    if(node.data.routeAvgGrade !== undefined) {
+      node.data.routeAvgGrade = -node.data.routeAvgGrade;
+    }
+  }
+
+  // Eğim çizgilerini temizle (yönle birlikte anlamını kaybeder)
+  veAltClearGradeLines(nodeId);
+  _veAltUpdateLineList(nodeId);
+
+  // Zoom'ları sıfırla (çevirme sonrası garip görünmesin)
+  var panelCanvasEl = document.getElementById('ve-road-altitude-canvas-' + nodeId);
+  if(panelCanvasEl) { delete _drChartZoom['ve-road-altitude-canvas-' + nodeId]; }
+  var expCanvasEl = document.getElementById('ve-road-altitude-expanded-' + nodeId);
+  if(expCanvasEl) { delete _drChartZoom['ve-road-altitude-expanded-' + nodeId]; }
+
+  // Yeniden çiz
+  _veAltRedrawAll(nodeId);
+
+  // Bilgi kutusundaki başlangıç/bitiş değerlerini güncelle
+  var selInfo = document.getElementById('ve-alt-selection-info-' + nodeId);
+  if(selInfo) {
+    selInfo.innerHTML = '<span style="color:#1565c0; font-weight:600;">Yön çevrildi</span>';
+    selInfo.style.fontStyle = 'normal';
+  }
+
+  showToast('Profil yönü çevrildi');
+}
+
 
 // ═══ Profil grafiği büyütme modalı ═══
 function veExpandProfileChart(nodeId, chartType) {
@@ -23112,7 +23186,8 @@ function veExpandProfileChart(nodeId, chartType) {
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
   header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">' + headerTitle + '</span>' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
-    (isAlt ? '<span style="font-size:0.56rem; color:var(--text-muted);">Sol Tık: Eğim Çizgisi Çiz &nbsp;│&nbsp; Scroll: Zoom &nbsp;│&nbsp; Sağ Tık+Sürükle: Kaydır &nbsp;│&nbsp; Çift Tık: Sıfırla</span>' :
+    (isAlt ? '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:0.6rem; font-weight:600; background:#1565c0; color:white; border:none; border-radius:3px; cursor:pointer;">↔ Yönü çevir</button>' +
+    '<span style="font-size:0.56rem; color:var(--text-muted);">Sol Tık: Eğim Çizgisi Çiz &nbsp;│&nbsp; Scroll: Zoom &nbsp;│&nbsp; Sağ Tık+Sürükle: Kaydır &nbsp;│&nbsp; Çift Tık: Sıfırla</span>' :
     '<span style="font-size:0.56rem; color:var(--text-muted);">Scroll: Zoom &nbsp;│&nbsp; Sağ Tık+Sürükle: Kaydır &nbsp;│&nbsp; Çift Tık: Sıfırla</span>') +
     '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:3px; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button></div>';
   modal.appendChild(header);
