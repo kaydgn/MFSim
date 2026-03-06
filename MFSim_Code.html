@@ -21765,8 +21765,8 @@ function veCalcElevation(nodeId, onComplete) {
   if(node.data && node.data.routeCoords && node.data.routeCoords.length >= 2) {
     var rc = node.data.routeCoords;
 
-    // GPS sensör simülasyonu: sabit ~30m aralıklarla örnekle (10 Hz @ ~100 km/h)
-    var sampleInterval = 30;
+    // GPS sensör simülasyonu: 10 Hz @ 60 km/h ≈ 1.67m aralıklarla örnekle
+    var sampleInterval = 1.67;
 
     // Rota boyunca kümülatif mesafe hesapla
     coords.push({lat: rc[0][0], lng: rc[0][1]});
@@ -21970,9 +21970,20 @@ function veCalcElevation(nodeId, onComplete) {
     // Node verisine kaydet
     node.data.routeAvgAltitude = ortYukseklik;
     node.data.routeTotalDist = toplamMesafe;
-    node.data.routeElevations = coords.map(function(c) {
-      return { lat: c.lat, lng: c.lng, elevation: c.elevation };
-    });
+
+    // routeElevations: harita markerları için ~300m aralıklarla downsample
+    // (ince veri gpsSamples'da zaten mevcut, haritada binlerce nokta göstermeye gerek yok)
+    var dsInterval = 300;
+    var dsElev = [{ lat: coords[0].lat, lng: coords[0].lng, elevation: coords[0].elevation }];
+    var dsCumDist = 0, dsLastSampled = 0;
+    for(var di = 1; di < coords.length; di++) {
+      dsCumDist += veHesaplaMesafe(coords[di-1].lat, coords[di-1].lng, coords[di].lat, coords[di].lng);
+      if(dsCumDist - dsLastSampled >= dsInterval || di === coords.length - 1) {
+        dsElev.push({ lat: coords[di].lat, lng: coords[di].lng, elevation: coords[di].elevation });
+        dsLastSampled = dsCumDist;
+      }
+    }
+    node.data.routeElevations = dsElev;
 
     // Sonuçları göster
     var resultDiv = document.getElementById('ve-road-route-result-' + nodeId);
