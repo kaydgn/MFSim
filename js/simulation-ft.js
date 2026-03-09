@@ -1527,7 +1527,8 @@ function veScaleFTDataForTransfer(ftDataOrig, ratioOrig, ratioNew, etaOrig, etaN
     var te_new = orig.te_kN * rFactor * (etaNew / etaOrig);
     var v_ms = v_new / 3.6;
     var f_aero = 0.5 * rho * Cd * A * v_ms * v_ms / 1000;
-    var f_roll = Crr * m_kg * g / 1000;
+    var Crr_eff = FT_SOLVER.getCrrEffective(Crr, v_ms);
+    var f_roll = Crr_eff * m_kg * g / 1000;
     var dp_new = te_new - f_roll - f_aero;
     scaled.push({ gear: orig.gear, v_kmh: Math.round(v_new * 100) / 100, dp_kN: dp_new, te_kN: te_new });
   }
@@ -1575,14 +1576,45 @@ function veCalculateGradeability(simResult) {
     var lowGear = trGears[1]; // İkinci kademe = düşük kademe (yüksek oran)
     var lowRatio = lowGear.ratio;
     var lowEta = lowGear.eff;
-    
-    var Cd = rs.cd || 0.9;
-    var A = rs.frontalArea || (rs.height * rs.width) || 8.0;
-    var Crr = rs.crr || 0.0035;
-    
-    var ftDataLow = veScaleFTDataForTransfer(ftData, activeRatio, lowRatio, activeEta, lowEta, m_kg, Cd, A, Crr);
-    result.low = veCalcGradeForRatio(ftDataLow, m_kg, lowRatio, true);
-    result.low.label = 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')';
+
+    // Gerçek Low range simülasyon sonuçları varsa onları kullan (ölçekleme yerine)
+    var allRangeRes = typeof window !== 'undefined' ? window._veFTAllRangeResults : null;
+    var lowKademe = lowGear.kademe || 'Low';
+    var lowSimResult = allRangeRes ? allRangeRes[lowKademe] : null;
+
+    var ftDataLow;
+    if(lowSimResult && lowSimResult.speed && lowSimResult.DP && lowSimResult.DP.length > 2) {
+      // Gerçek simülasyon verisinden FT tablo oluştur
+      ftDataLow = [];
+      for(var li = 0; li < lowSimResult.speed.length; li++) {
+        if(typeof lowSimResult.DP[li] !== 'number' || isNaN(lowSimResult.DP[li])) continue;
+        ftDataLow.push({
+          gear: lowSimResult.gearMode ? lowSimResult.gearMode[li] : '',
+          v_kmh: lowSimResult.speed[li],
+          dp_kN: lowSimResult.DP[li],
+          te_kN: lowSimResult.TE ? lowSimResult.TE[li] : 0
+        });
+      }
+      // Shift noktalarını temizle
+      var cleanedLow = [];
+      for(var cli = 0; cli < ftDataLow.length; cli++) {
+        if(cli < ftDataLow.length - 1 && Math.abs(ftDataLow[cli+1].v_kmh - ftDataLow[cli].v_kmh) < 0.05) continue;
+        cleanedLow.push(ftDataLow[cli]);
+      }
+      ftDataLow = cleanedLow.length > 2 ? cleanedLow : ftDataLow;
+    } else {
+      // Fallback: ölçekleme (gerçek sim yoksa)
+      var Cd = rs.cd || 0.9;
+      var A = rs.frontalArea || (rs.height * rs.width) || 8.0;
+      var Crr = rs.crr || 0.0035;
+      ftDataLow = veScaleFTDataForTransfer(ftData, activeRatio, lowRatio, activeEta, lowEta, m_kg, Cd, A, Crr);
+    }
+
+    if(ftDataLow.length >= 2) {
+      result.low = veCalcGradeForRatio(ftDataLow, m_kg, lowRatio, true);
+      result.low.label = 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')';
+      result.low.source = lowSimResult ? 'simulation' : 'scaling';
+    }
   }
   
   return result;
