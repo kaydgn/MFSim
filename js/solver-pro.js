@@ -697,6 +697,20 @@ function veSolverRunProfessional() {
         var t0 = performance.now();
         var simResult;
         if(veActiveModule === 'full-throttle') {
+          // ── SEGMENT BAZLI SÜRÜŞ ANALİZİ KONTROLÜ ──
+          var _solverNode = nodes.find(function(n) { return n.type === 'solver'; });
+          var _solverData = _solverNode ? (_solverNode.data || {}) : {};
+          var _scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
+          var _scenData = _scenarioNode ? (_scenarioNode.data || {}) : {};
+          var _hasSegDrive = _solverData.accelDecelAnalysis && _scenData.roadSegments && _scenData.roadSegments.length > 0;
+
+          if(_hasSegDrive) {
+            // ── SEGMENT BAZLI SÜRÜŞ (Hızlanma-Yavaşlama) ──
+            var _segInitSpeed = parseFloat(_scenData.segInitSpeed) || 0;
+            simResult = veFTRunSegmentDrive(_scenData.roadSegments, _segInitSpeed);
+            window._veFTAllRangeResults = null;
+            window._veFTTransferGears = null;
+          } else {
           // ── TÜM TRANSFER KADEMELERİ İÇİN AYRI HESAP ──
           var _trNode = nodes.find(function(n) { return n.type === 'transfer'; });
           var _trd = _trNode ? (_trNode.data || {}) : {};
@@ -704,17 +718,18 @@ function veSolverRunProfessional() {
             { kademe: 'High', ratio: 1.054, eff: 97.00 },
             { kademe: 'Low', ratio: 2.337, eff: 97.00 }
           ];
-          
+
           var allRangeResults = {};
           _ftTrGears.forEach(function(g) {
             allRangeResults[g.kademe] = veFTRunSimulationEngine(g.kademe);
           });
-          
+
           // İlk kademeyi ana sonuç olarak kullan (grafik/sinyal için)
           simResult = allRangeResults[_ftTrGears[0].kademe];
           // Circular ref önlemek için ayrı değişkenlerde tut
           window._veFTAllRangeResults = allRangeResults;
           window._veFTTransferGears = _ftTrGears;
+          }
         } else {
           simResult = veRunSimulationEngine();
         }
@@ -736,7 +751,7 @@ function veSolverRunProfessional() {
         
         var totalSteps = simResult.time.length;
         var finalTime = simResult.solverStats ? (simResult.solverStats.steps * (simResult.solverStats.dt || 0.01)) : simResult.time[totalSteps - 1];
-        var mode = simResult.mode === 'partial' ? 'Kısmi Analiz' : simResult.mode === 'full-throttle' ? 'Tam Gaz Hızlanma' : 'Tam Analiz';
+        var mode = simResult.mode === 'partial' ? 'Kısmi Analiz' : simResult.mode === 'full-throttle' ? 'Tam Gaz Hızlanma' : simResult.mode === 'segment-drive' ? 'Hızlanma-Yavaşlama' : 'Tam Analiz';
         
         log('Entegrasyon tamamlandı (' + elapsed + ' s).', 'ok');
         logSpacer();
@@ -785,6 +800,22 @@ function veSolverRunProfessional() {
             }
           }
         }
+        // ── Segment Sürüş: Segment Özet Tablosu ──
+        if(simResult.mode === 'segment-drive' && simResult.segmentSummary) {
+          logSpacer();
+          log('Segment Bazlı Özet:', 'info');
+          simResult.segmentSummary.forEach(function(ss) {
+            var cmdLabel = ss.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
+            log('  Seg ' + ss.no + ' [' + cmdLabel + ', %' + ss.grade.toFixed(1) + ']: ' +
+              ss.startSpeed_kmh.toFixed(1) + ' → ' + ss.endSpeed_kmh.toFixed(1) + ' km/h, ' +
+              ss.actualDist.toFixed(0) + 'm, ' + ss.duration.toFixed(1) + 's');
+          });
+          if(simResult.solverStats) {
+            log('  Toplam mesafe: ' + simResult.solverStats.totalDistance.toFixed(0) + ' m', 'dim');
+            log('  Son hız: ' + simResult.solverStats.finalSpeed_kmh.toFixed(1) + ' km/h', 'dim');
+          }
+        }
+
         // ── Tam Gaz: Vites Geçiş Tablosu (tüm kademeler) ──
         if(simResult.mode === 'full-throttle' && window._veFTAllRangeResults) {
           var trGears = window._veFTTransferGears || [{ kademe: 'High' }];

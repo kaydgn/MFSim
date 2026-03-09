@@ -7534,6 +7534,17 @@ function getSolverPropertiesHTML(node) {
   html += '<input type="checkbox" id="ve-solver-perfanalysis-' + node.id + '" ' + (perfAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
   html += '<div><div style="font-weight:600;">Performans Analizi</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Tam gaz hızlanma, 0-100 km/h, elastik hızlanma, gradeability</div></div>';
   html += '</label>';
+
+  // Hızlanma-Yavaşlama checkbox (segment bazlı sürüş)
+  var accelDecel = d.accelDecelAnalysis || false;
+  var scenNode = nodes.find(function(n) { return n.type === 'scenario'; });
+  var hasRoadSegs = scenNode && scenNode.data && scenNode.data.roadSegments && scenNode.data.roadSegments.length > 0;
+  if(ftMode && hasRoadSegs) {
+    html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.66rem; color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
+    html += '<input type="checkbox" id="ve-solver-acceldecel-' + node.id + '" ' + (accelDecel ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
+    html += '<div><div style="font-weight:600;">Hızlanma-Yavaşlama</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Segment bazlı sürüş analizi — güzergah üzerinde hızlanma/yavaşlama profili</div></div>';
+    html += '</label>';
+  }
   html += '</div>';
 
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -7710,6 +7721,10 @@ function onVESolverParamChange(nodeId) {
   // Performans Analizi checkbox
   var perfEl = el('ve-solver-perfanalysis-' + nodeId);
   if(perfEl) node.data.performanceAnalysis = perfEl.checked;
+
+  // Hızlanma-Yavaşlama checkbox
+  var adEl = el('ve-solver-acceldecel-' + nodeId);
+  if(adEl) node.data.accelDecelAnalysis = adEl.checked;
 
   // FT modu parametreleri
   var ftDtEl = el('ve-solver-ftdt-' + nodeId);

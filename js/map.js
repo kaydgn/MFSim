@@ -1888,7 +1888,7 @@ function veTransferSegmentsToScenario(roadNodeId) {
 }
 
 // Senaryo segmentleri tablo HTML'i
-function _veScenarioSegmentsTableHTML(segments) {
+function _veScenarioSegmentsTableHTML(segments, editable) {
   if(!segments || segments.length === 0) return '';
   var html = '<table style="width:100%; font-size:0.62rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<thead><tr style="background:var(--bg-tertiary);">' +
@@ -1896,7 +1896,8 @@ function _veScenarioSegmentsTableHTML(segments) {
     '<th style="padding:4px 6px; text-align:left; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Tip</th>' +
     '<th style="padding:4px 6px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Eğim (%)</th>' +
     '<th style="padding:4px 6px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Mesafe (m)</th>' +
-    '<th style="padding:4px 6px; text-align:right; border-bottom:1px solid var(--border-color);">Δh (m)</th>' +
+    '<th style="padding:4px 6px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Δh (m)</th>' +
+    '<th style="padding:4px 6px; text-align:center; border-bottom:1px solid var(--border-color);">Komut</th>' +
     '</tr></thead><tbody>';
   for(var i = 0; i < segments.length; i++) {
     var s = segments[i];
@@ -1908,16 +1909,38 @@ function _veScenarioSegmentsTableHTML(segments) {
     } else {
       egimIcon = '→'; egimLabel = 'Düz yol'; egimColor = 'var(--text-secondary)';
     }
+    var cmd = s.command || 'full_throttle';
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<td style="padding:3px 6px; text-align:center; border-right:1px solid var(--border-color); font-weight:600;">' + s.no + '</td>';
     html += '<td style="padding:3px 6px; text-align:left; border-right:1px solid var(--border-color); color:' + egimColor + '; white-space:nowrap;">' + egimIcon + ' ' + egimLabel + '</td>';
     html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color); font-weight:600; color:' + egimColor + ';">' + s.grade.toFixed(2) + '</td>';
     html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color);">' + s.distance.toFixed(0) + '</td>';
-    html += '<td style="padding:3px 6px; text-align:right;">' + s.deltaH.toFixed(1) + '</td>';
+    html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color);">' + s.deltaH.toFixed(1) + '</td>';
+    if(editable) {
+      html += '<td style="padding:2px 4px; text-align:center;"><select data-seg-idx="' + i + '" onchange="onVESegmentCommandChange(this)" style="padding:2px 4px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px;">';
+      html += '<option value="full_throttle"' + (cmd === 'full_throttle' ? ' selected' : '') + '>Tam gaz</option>';
+      html += '<option value="coast"' + (cmd === 'coast' ? ' selected' : '') + '>Gaz kesme</option>';
+      html += '</select></td>';
+    } else {
+      var cmdLabel = cmd === 'coast' ? 'Gaz kesme' : 'Tam gaz';
+      var cmdColor = cmd === 'coast' ? 'var(--accent-warning, #e65100)' : 'var(--accent-success)';
+      html += '<td style="padding:3px 6px; text-align:center; font-weight:600; color:' + cmdColor + '; font-size:0.58rem;">' + cmdLabel + '</td>';
+    }
     html += '</tr>';
   }
   html += '</tbody></table>';
   return html;
+}
+
+// ═══ Segment komut değişikliği (Tam gaz / Gaz kesme) ═══
+function onVESegmentCommandChange(selectEl) {
+  var idx = parseInt(selectEl.getAttribute('data-seg-idx'));
+  var val = selectEl.value;
+  var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
+  if(!scenarioNode || !scenarioNode.data || !scenarioNode.data.roadSegments) return;
+  if(idx >= 0 && idx < scenarioNode.data.roadSegments.length) {
+    scenarioNode.data.roadSegments[idx].command = val;
+  }
 }
 
 // ═══ Profil yönünü çevir ═══
