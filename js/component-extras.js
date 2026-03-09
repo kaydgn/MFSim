@@ -1703,36 +1703,19 @@ function onVERoadParamChange(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node) return;
   if(!node.data) node.data = {};
-  
+
   var el = function(id) { return document.getElementById(id); };
   var gradeEl = el('ve-road-grade-' + nodeId);
-  var timeModeEl = el('ve-road-timemode-' + nodeId);
-  var durationEl = el('ve-road-duration-' + nodeId);
-  var maxTimeEl = el('ve-road-maxtime-' + nodeId);
   var altEl = el('ve-road-alt-' + nodeId);
   var tempEl = el('ve-road-temp-' + nodeId);
   var densEl = el('ve-road-density-' + nodeId);
   var egimEl = el('ve-road-egimmode-' + nodeId);
-  
+
   if(gradeEl) node.data.grade = parseFloat(gradeEl.value);
-  if(timeModeEl) node.data.timeMode = timeModeEl.value;
-  if(durationEl) node.data.duration = parseFloat(durationEl.value) || '';
-  if(maxTimeEl) node.data.maxSimTime = parseFloat(maxTimeEl.value) || 300;
   if(altEl) node.data.altitude = parseFloat(altEl.value) || '';
   if(tempEl) node.data.temperature = parseFloat(tempEl.value) || '';
   if(densEl) node.data.airDensity = parseFloat(densEl.value) || '';
   if(egimEl) node.data.egimMode = egimEl.value;
-}
-
-function onVERoadTimeModeChange(nodeId) {
-  var timeModeEl = document.getElementById('ve-road-timemode-' + nodeId);
-  if(!timeModeEl) return;
-  var mode = timeModeEl.value;
-  var durRow = document.getElementById('ve-road-duration-row-' + nodeId);
-  var maxRow = document.getElementById('ve-road-maxtime-row-' + nodeId);
-  if(durRow) durRow.style.display = (mode === 'stop') ? 'none' : '';
-  if(maxRow) maxRow.style.display = (mode === 'stop') ? '' : 'none';
-  onVERoadParamChange(nodeId);
 }
 
 // Leaflet harita sistemi - her node için ayrı harita instance
