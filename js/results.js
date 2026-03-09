@@ -397,6 +397,13 @@ function veUpdateResultsTree() {
     html += '<div class="ve-tree-row" onclick="veRenderTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="TXT rapor önizleme">';
     html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor (TXT)</span></div>';
     html += '</div>';
+    // Hızlanma-Yavaşlama TXT raporu (segment drive varsa)
+    if(window.veSimResults && window.veSimResults.segmentDrive && window.veSimResults.segmentDrive.segmentSummary) {
+      html += '<div style="margin-top:2px;">';
+      html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
+      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
+      html += '</div>';
+    }
   }
   
   tree.innerHTML = html;
@@ -2021,6 +2028,14 @@ function veRenderTXTReport() {
 
   if(typeof veActiveModule !== 'undefined' && veActiveModule === 'full-throttle') {
     txtContent = veGenerateFTTxtReport(sim);
+    // Segment drive sonucu varsa ayrı rapor olarak ekle
+    if(sim.segmentDrive && sim.segmentDrive.segmentSummary && typeof veGenerateSegmentDriveTxtReport === 'function') {
+      var _sep = ''; for(var _si = 0; _si < 80; _si++) _sep += '=';
+      txtContent += '\n\n' + _sep + '\n';
+      txtContent += '               EK: HIZLANMA-YAVASLAMA SEGMENT ANALIZI\n';
+      txtContent += _sep + '\n\n';
+      txtContent += veGenerateSegmentDriveTxtReport(sim);
+    }
     downloadName = 'BMC_TamGaz_Rapor_' + dateStr + '.txt';
   } else {
     // Motor freni raporu — veGenerateReport ile aynı veri hazırlama
@@ -2142,6 +2157,54 @@ function veRenderTXTReport() {
   html += '</div></div>';
 
   // Store content for download
+  window._veTxtPreviewContent = txtContent;
+  window._veTxtPreviewFilename = downloadName;
+
+  overlay.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+
+function veRenderSegmentDriveTXTReport() {
+  var overlay = document.getElementById('ve-report-overlay');
+  if(!overlay) return;
+
+  var sim = window.veSimResults;
+  if(!sim || !sim.segmentDrive || !sim.segmentDrive.segmentSummary) {
+    showToast('Segment sürüş verisi bulunamadı — önce simülasyon çalıştırın', 'warning');
+    return;
+  }
+
+  if(typeof veGenerateSegmentDriveTxtReport !== 'function') {
+    showToast('Rapor fonksiyonu bulunamadı', 'warning');
+    return;
+  }
+
+  var txtContent = veGenerateSegmentDriveTxtReport(sim);
+  var now = new Date();
+  var dateStr = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+  var downloadName = 'BMC_HizlanmaYavaslama_Rapor_' + dateStr + '.txt';
+
+  if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
+
+  var html = '';
+  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
+  html += '<div style="display:flex; align-items:center; gap:8px;">';
+  html += '<span style="font-size:1rem;">📄</span>';
+  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Hızlanma-Yavaşlama Raporu (TXT)</span>';
+  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
+  html += '</div>';
+  html += '<div style="display:flex; align-items:center; gap:6px;">';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'#1d4ed8\';this.style.color=\'#1d4ed8\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '</div>';
+  html += '</div>';
+  html += '<div style="flex:1; overflow-y:auto; background:#e8eaed; padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:#fff; border-radius:4px; box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:#222; white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  html += '</pre>';
+  html += '</div></div>';
+
   window._veTxtPreviewContent = txtContent;
   window._veTxtPreviewFilename = downloadName;
 

@@ -1999,7 +1999,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   var res_F_grade = [], res_F_rolling = [], res_F_aero = [], res_F_net = [], res_distance = [];
   var res_gearMode = [], res_SR = [], res_TE = [], res_DP = [];
   var res_segment = [], res_command = [], res_heatRej = [], res_T_output = [];
-  var res_P_engine = [], res_P_wheel = [];
+  var res_P_engine = [], res_P_wheel = [], res_F_engine_drag = [];
 
   var sampleInterval = Math.max(1, Math.round(0.05 / dt));
   var lastSampleStep = -sampleInterval;
@@ -2018,6 +2018,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     res_DP.push((ph.F_traction - Math.abs(ph.F_rolling) - Math.abs(ph.F_aero)) / 1000);
     res_segment.push(segIdx); res_command.push(ph.command || 'full_throttle');
     res_heatRej.push(ph.heatRejection_kW); res_T_output.push(ph.T_output);
+    res_F_engine_drag.push(ph.F_engine_drag || 0);
     var omE = ph.N_engine * 2 * Math.PI / 60;
     res_P_engine.push(ph.T_engine * omE / 1000); res_P_wheel.push(ph.F_traction * v_rec / 1000);
   }
@@ -2100,7 +2101,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     distance: res_distance, accel: res_accel,
     gearMode: res_gearMode, SR: res_SR, TE: res_TE, DP: res_DP,
     heatRejection: res_heatRej, T_output: res_T_output,
-    P_engine: res_P_engine, P_wheel: res_P_wheel,
+    P_engine: res_P_engine, P_wheel: res_P_wheel, F_engine_drag: res_F_engine_drag,
     segment: res_segment, command: res_command, segmentSummary: segmentSummary,
     solverStats: {
       method: method, dt: dt, steps: globalStep, maxTime: maxTime,
