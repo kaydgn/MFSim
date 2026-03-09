@@ -380,9 +380,22 @@ function getScenarioPropertiesHTML(node) {
   html += '<div id="ve-scenario-segments-' + node.id + '" style="margin-top:10px;' + (hasSegs ? '' : ' display:none;') + '">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📐 Yol Eğim Segmentleri</div>';
   if(hasSegs) {
-    html += _veScenarioSegmentsTableHTML(d.roadSegments);
+    html += _veScenarioSegmentsTableHTML(d.roadSegments, true);
   }
   html += '</div>';
+
+  // Başlangıç koşulları (segment bazlı sürüş analizi için)
+  if(hasSegs) {
+    var segInitSpeed = d.segInitSpeed !== undefined ? d.segInitSpeed : 0;
+    html += '<div style="margin-top:10px; padding:10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px;">';
+    html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Başlangıç Koşulları</div>';
+    html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse;">';
+    html += '<tr><th style="padding:5px 6px; text-align:left; width:50%; font-weight:500; color:var(--text-secondary);">Başlangıç hızı [km/h]</th>';
+    html += '<td style="padding:5px 6px;"><input type="number" id="ve-scenario-seg-initspeed-' + node.id + '" value="' + segInitSpeed + '" step="5" min="0" max="200" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
+    html += '</table>';
+    html += '<div style="font-size:0.54rem; color:var(--text-muted); margin-top:4px; line-height:1.3;">Segment bazlı sürüş analizi için aracın ilk segmente giriş hızı.</div>';
+    html += '</div>';
+  }
 
   html += '</div>';
   return html;
@@ -409,6 +422,10 @@ function onVEScenarioChange(nodeId) {
   var brEl = el('ve-scenario-brake-' + nodeId);
   if(thEl2) node.data.throttle = parseFloat(thEl2.value) || 0;
   if(brEl) node.data.brakeForce = parseFloat(brEl.value) || 0;
+
+  // Segment başlangıç hızı
+  var segSpeedEl = el('ve-scenario-seg-initspeed-' + nodeId);
+  if(segSpeedEl) node.data.segInitSpeed = parseFloat(segSpeedEl.value) || 0;
 }
 
 // ===== COAST-DOWN BİLEŞENİ =====
