@@ -1893,17 +1893,25 @@ function _veScenarioSegmentsTableHTML(segments) {
   var html = '<table style="width:100%; font-size:0.62rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<thead><tr style="background:var(--bg-tertiary);">' +
     '<th style="padding:4px 6px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); width:28px;">#</th>' +
+    '<th style="padding:4px 6px; text-align:left; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Tip</th>' +
     '<th style="padding:4px 6px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Eğim (%)</th>' +
     '<th style="padding:4px 6px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Mesafe (m)</th>' +
     '<th style="padding:4px 6px; text-align:right; border-bottom:1px solid var(--border-color);">Δh (m)</th>' +
     '</tr></thead><tbody>';
   for(var i = 0; i < segments.length; i++) {
     var s = segments[i];
-    var egimIcon = s.grade > 1 ? '↓' : (s.grade < -1 ? '↑' : '→');
-    var egimColor = s.grade > 0.5 ? 'var(--accent-success)' : (s.grade < -0.5 ? 'var(--accent-danger)' : 'var(--text-secondary)');
+    var egimIcon, egimLabel, egimColor;
+    if(s.grade > 0.5) {
+      egimIcon = '↓'; egimLabel = 'Yokuş aşağı'; egimColor = 'var(--accent-success)';
+    } else if(s.grade < -0.5) {
+      egimIcon = '↑'; egimLabel = 'Yokuş yukarı'; egimColor = 'var(--accent-danger)';
+    } else {
+      egimIcon = '→'; egimLabel = 'Düz yol'; egimColor = 'var(--text-secondary)';
+    }
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<td style="padding:3px 6px; text-align:center; border-right:1px solid var(--border-color); font-weight:600;">' + s.no + '</td>';
-    html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color); font-weight:600; color:' + egimColor + ';">' + egimIcon + ' ' + s.grade.toFixed(2) + '</td>';
+    html += '<td style="padding:3px 6px; text-align:left; border-right:1px solid var(--border-color); color:' + egimColor + '; white-space:nowrap;">' + egimIcon + ' ' + egimLabel + '</td>';
+    html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color); font-weight:600; color:' + egimColor + ';">' + s.grade.toFixed(2) + '</td>';
     html += '<td style="padding:3px 6px; text-align:right; border-right:1px solid var(--border-color);">' + s.distance.toFixed(0) + '</td>';
     html += '<td style="padding:3px 6px; text-align:right;">' + s.deltaH.toFixed(1) + '</td>';
     html += '</tr>';
