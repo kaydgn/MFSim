@@ -2013,7 +2013,10 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
 
   for(var si = 0; si < segments.length; si++) {
     var seg = segments[si];
-    active_grade_pct = seg.grade || 0;
+    // Harita konvansiyonu: grade > 0 = yokuş aşağı, grade < 0 = yokuş yukarı
+    // Fizik motoru konvansiyonu: grade_pct > 0 = yokuş yukarı (direnç artar)
+    // İşaret çevirisi gerekli
+    active_grade_pct = -(seg.grade || 0);
     var seg_dist = seg.distance || 0;
     var seg_command = seg.command || 'full_throttle';
 
@@ -2062,7 +2065,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     lastSampleStep = globalStep;
 
     segmentSummary.push({
-      segIdx: si, no: seg.no || (si + 1), command: seg_command, grade: active_grade_pct,
+      segIdx: si, no: seg.no || (si + 1), command: seg_command, grade: seg.grade || 0,
       targetDist: seg_dist, actualDist: segDist,
       startSpeed_kmh: segStartSpeed, endSpeed_kmh: v * 3.6,
       maxSpeed_kmh: segMaxSpeed, minSpeed_kmh: segMinSpeed, duration: t - segStartTime
