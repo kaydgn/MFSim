@@ -1103,7 +1103,7 @@ function veCalcDistGradeProfile(nodeId) {
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
       '<span style="color:var(--text-muted);">Δh:</span><span style="color:var(--accent-warning); font-weight:700;">' + (elevFirst - elevLast).toFixed(1) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">│</span>' +
-      '<span style="font-size:0.54rem; color:var(--text-muted);">' + (gpsSamples ? gpsSamples.length + ' sample' : '') + ' | ' + (totalDist / 1000).toFixed(2) + ' km</span>' +
+      '<span style="font-size:0.54rem; color:var(--text-muted);">' + (gpsSamples ? gpsSamples.length + ' sample' : '') + ' | ' + totalDist.toFixed(0) + ' m</span>' +
       '</div>';
   }
 
@@ -1240,7 +1240,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
     ctx.fillText('%' + ly.toFixed(0), padL - 4, toY(ly) + 3);
   }
 
-  // X etiketleri (mesafe)
+  // X etiketleri (mesafe — her zaman metre)
   ctx.textAlign = 'center';
   var xStep;
   if(totalDist <= 500) xStep = 50;
@@ -1250,13 +1250,12 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
   else xStep = 5000;
   for(var lx = 0; lx <= xMax; lx += xStep) {
     if(lx < xMin) continue;
-    var label = totalDist > 5000 ? (lx / 1000).toFixed(1) : lx.toFixed(0);
-    ctx.fillText(label, toX(lx), H - padB + 14);
+    ctx.fillText(lx.toFixed(0), toX(lx), H - padB + 14);
   }
 
   // Eksen başlıkları
   ctx.fillStyle = headColor; ctx.font = '600 9.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(totalDist > 5000 ? 'Mesafe (km)' : 'Mesafe (m)', padL + plotW / 2, H - 3);
+  ctx.fillText('Mesafe (m)', padL + plotW / 2, H - 3);
   ctx.save(); ctx.translate(10, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.fillText('Eğim (%)', 0, 0); ctx.restore();
 
@@ -1481,7 +1480,7 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
         var selEl = document.getElementById('ve-road-selection-grade-' + nid);
         if(selEl) {
           selEl.innerHTML = '<span style="color:#ffeb3b; font-weight:700;">Seçim: %' + selAvg.toFixed(2) + '</span>' +
-            '<span style="color:var(--text-muted); margin-left:6px;">(' + (selDist / 1000).toFixed(2) + ' km)</span>';
+            '<span style="color:var(--text-muted); margin-left:6px;">(' + selDist.toFixed(0) + ' m)</span>';
           selEl.style.fontStyle = 'normal';
         }
       }
@@ -1599,7 +1598,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
     ctx.fillText(ly.toFixed(0) + 'm', padL - 4, toY(ly) + 3);
   }
 
-  // X etiketleri (mesafe)
+  // X etiketleri (mesafe — her zaman metre)
   ctx.textAlign = 'center';
   var xStep;
   if(totalDist <= 500) xStep = 50;
@@ -1609,13 +1608,12 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
   else xStep = 5000;
   for(var lx = 0; lx <= xMax; lx += xStep) {
     if(lx < xMin) continue;
-    var label = totalDist > 5000 ? (lx / 1000).toFixed(1) : lx.toFixed(0);
-    ctx.fillText(label, toX(lx), H - padB + 14);
+    ctx.fillText(lx.toFixed(0), toX(lx), H - padB + 14);
   }
 
   // Eksen başlıkları
   ctx.fillStyle = headColor; ctx.font = '600 9.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText(totalDist > 5000 ? 'Mesafe (km)' : 'Mesafe (m)', padL + plotW / 2, H - 3);
+  ctx.fillText('Mesafe (m)', padL + plotW / 2, H - 3);
   ctx.save(); ctx.translate(10, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.fillText('Rakım (m)', 0, 0); ctx.restore();
 
@@ -1743,7 +1741,7 @@ function veRenderAltitudeProfile(canvasId, gpsSamples, nodeId) {
       ctx.fillStyle = dp.color;
       ctx.font = '700 10px Segoe UI, sans-serif';
       ctx.textAlign = 'center';
-      var pvLabel = '%' + pvGrade.toFixed(2) + '  Δh:' + pvDh.toFixed(1) + 'm  (' + (pvDist/1000).toFixed(2) + 'km)';
+      var pvLabel = '%' + pvGrade.toFixed(2) + '  Δh:' + pvDh.toFixed(1) + 'm  (' + pvDist.toFixed(0) + 'm)';
       var pvMidX = (toX(dp.x1) + toX(dp.x2)) / 2;
       var pvMidY = Math.min(toY(dp.y1), toY(dp.y2)) - 14;
       ctx.fillText(pvLabel, pvMidX, pvMidY);
@@ -1817,7 +1815,7 @@ function _veAltUpdateLineList(nodeId) {
     html += '<td style="padding:2px 4px; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:' + l.color + '; color:#000; font-size:0.5rem; font-weight:700;">' + (i + 1) + '</span></td>';
     html += '<td style="padding:2px 4px; text-align:right; font-weight:600; color:' + l.color + ';">' + egimIcon + ' %' + l.grade.toFixed(2) + '</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + l.deltaH.toFixed(1) + 'm</td>';
-    html += '<td style="padding:2px 4px; text-align:right;">' + (l.dist / 1000).toFixed(2) + 'km</td>';
+    html += '<td style="padding:2px 4px; text-align:right;">' + l.dist.toFixed(0) + 'm</td>';
     html += '<td style="padding:2px 4px; text-align:center;"><button onclick="veAltRemoveGradeLineUI(\'' + nodeId + '\',' + i + ')" style="background:none; border:none; cursor:pointer; color:var(--accent-danger); font-size:0.7rem; padding:0; line-height:1;" title="Sil">✕</button></td>';
     html += '</tr>';
   }

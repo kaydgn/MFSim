@@ -1668,7 +1668,7 @@ function _drChartMouseMove(e) {
       var spx2 = d.padL + (dps[si].xEnd - d.xMin) / (d.xMax - d.xMin) * d.plotW;
       if(mx >= spx1 && mx <= spx2) {
         snapOk = true;
-        var segLabel = d.totalDist > 5000 ? (dps[si].xStart / 1000).toFixed(2) + ' — ' + (dps[si].xEnd / 1000).toFixed(2) + ' km' : dps[si].xStart.toFixed(0) + ' — ' + dps[si].xEnd.toFixed(0) + ' m';
+        var segLabel = dps[si].xStart.toFixed(0) + ' — ' + dps[si].xEnd.toFixed(0) + ' m';
         html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Segment ' + (si + 1) + '</div>';
         html += '<div>Mesafe: <b style="color:#60a5fa;">' + segLabel + '</b></div>';
         html += '<div>Uzunluk: <b style="color:#60a5fa;">' + dps[si].mesafe.toFixed(0) + '</b> m</div>';
@@ -1691,7 +1691,7 @@ function _drChartMouseMove(e) {
           break;
         }
       }
-      var aptDistLabel = d.totalDist > 5000 ? (aptXVal / 1000).toFixed(2) + ' km' : aptXVal.toFixed(0) + ' m';
+      var aptDistLabel = aptXVal.toFixed(0) + ' m';
       html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Rakım Profili</div>';
       html += '<div>Mesafe: <b style="color:#60a5fa;">' + aptDistLabel + '</b></div>';
       html += '<div>Rakım: <b style="color:#b39ddb;">' + aptElev.toFixed(1) + '</b> m</div>';
