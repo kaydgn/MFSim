@@ -19176,21 +19176,15 @@ function veSolverRunProfessional() {
         var t0 = performance.now();
         var simResult;
         if(veActiveModule === 'full-throttle') {
-          // ── SEGMENT BAZLI SÜRÜŞ ANALİZİ KONTROLÜ ──
+          // ── SOLVER NODE VE SENARYO VERİLERİ ──
           var _solverNode = nodes.find(function(n) { return n.type === 'solver'; });
           var _solverData = _solverNode ? (_solverNode.data || {}) : {};
           var _scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
           var _scenData = _scenarioNode ? (_scenarioNode.data || {}) : {};
+          var _hasPerfAnalysis = _solverData.performanceAnalysis !== false; // varsayılan açık
           var _hasSegDrive = _solverData.accelDecelAnalysis && _scenData.roadSegments && _scenData.roadSegments.length > 0;
 
-          if(_hasSegDrive) {
-            // ── SEGMENT BAZLI SÜRÜŞ (Hızlanma-Yavaşlama) ──
-            var _segInitSpeed = parseFloat(_scenData.segInitSpeed) || 0;
-            simResult = veFTRunSegmentDrive(_scenData.roadSegments, _segInitSpeed);
-            window._veFTAllRangeResults = null;
-            window._veFTTransferGears = null;
-          } else {
-          // ── TÜM TRANSFER KADEMELERİ İÇİN AYRI HESAP ──
+          // ── 1) PERFORMANS ANALİZİ (Tam Gaz Hızlanma — her zaman çalışır) ──
           var _trNode = nodes.find(function(n) { return n.type === 'transfer'; });
           var _trd = _trNode ? (_trNode.data || {}) : {};
           var _ftTrGears = _trd.ftTrGears || [
@@ -19203,11 +19197,16 @@ function veSolverRunProfessional() {
             allRangeResults[g.kademe] = veFTRunSimulationEngine(g.kademe);
           });
 
-          // İlk kademeyi ana sonuç olarak kullan (grafik/sinyal için)
           simResult = allRangeResults[_ftTrGears[0].kademe];
-          // Circular ref önlemek için ayrı değişkenlerde tut
           window._veFTAllRangeResults = allRangeResults;
           window._veFTTransferGears = _ftTrGears;
+
+          // ── 2) SEGMENT BAZLI SÜRÜŞ (Hızlanma-Yavaşlama — opsiyonel) ──
+          if(_hasSegDrive) {
+            var _segInitSpeed = parseFloat(_scenData.segInitSpeed) || 0;
+            var segDriveResult = veFTRunSegmentDrive(_scenData.roadSegments, _segInitSpeed);
+            // Ana sonuca segment drive verilerini ekle
+            simResult.segmentDrive = segDriveResult;
           }
         } else {
           simResult = veRunSimulationEngine();
@@ -19230,9 +19229,19 @@ function veSolverRunProfessional() {
         
         var totalSteps = simResult.time.length;
         var finalTime = simResult.solverStats ? (simResult.solverStats.steps * (simResult.solverStats.dt || 0.01)) : simResult.time[totalSteps - 1];
-        var mode = simResult.mode === 'partial' ? 'Kısmi Analiz' : simResult.mode === 'full-throttle' ? 'Tam Gaz Hızlanma' : simResult.mode === 'segment-drive' ? 'Hızlanma-Yavaşlama' : 'Tam Analiz';
+        var mode = simResult.mode === 'partial' ? 'Kısmi Analiz' : simResult.mode === 'full-throttle' ? 'Tam Gaz Hızlanma' : 'Tam Analiz';
         
         log('Entegrasyon tamamlandı (' + elapsed + ' s).', 'ok');
+
+        // Segment drive da çalıştıysa çift analiz modunu belirt
+        var _hasSegDriveResult = simResult.segmentDrive && simResult.segmentDrive.segmentSummary;
+        if(_hasSegDriveResult && simResult.mode === 'full-throttle') {
+          logSpacer();
+          log('═══════════════════════════════════════════', 'info');
+          log('PERFORMANS ANALİZİ (Tam Gaz Hızlanma)', 'info');
+          log('═══════════════════════════════════════════', 'info');
+        }
+
         logSpacer();
         log('Sonuç Özeti:', 'info');
         log('  Analiz modu     : ' + mode);
@@ -19243,7 +19252,7 @@ function veSolverRunProfessional() {
         if(simResult.speed && simResult.speed.length > 0) {
           var v0 = simResult.speed[0];
           var vF = simResult.speed[totalSteps - 1];
-          var vMax = simResult.solverStats ? simResult.solverStats.maxSpeed_kmh : Math.max.apply(null, simResult.speed);
+          var vMax = (simResult.solverStats && simResult.solverStats.maxSpeed_kmh !== undefined) ? simResult.solverStats.maxSpeed_kmh : Math.max.apply(null, simResult.speed);
           var vMin = Math.min.apply(null, simResult.speed);
           log('  Başlangıç hız   : ' + v0.toFixed(2) + ' km/h');
           log('  Son hız         : ' + vF.toFixed(2) + ' km/h');
@@ -19279,19 +19288,43 @@ function veSolverRunProfessional() {
             }
           }
         }
-        // ── Segment Sürüş: Segment Özet Tablosu ──
-        if(simResult.mode === 'segment-drive' && simResult.segmentSummary) {
+        // ── Segment Sürüş: Hızlanma-Yavaşlama Özet Tablosu ──
+        var _segDrv = simResult.segmentDrive;
+        if(_segDrv && _segDrv.segmentSummary) {
+          logSpacer();
+          log('═══════════════════════════════════════════', 'info');
+          log('HIZLANMA-YAVAŞLAMA ANALİZİ', 'info');
+          log('═══════════════════════════════════════════', 'info');
           logSpacer();
           log('Segment Bazlı Özet:', 'info');
-          simResult.segmentSummary.forEach(function(ss) {
+          _segDrv.segmentSummary.forEach(function(ss) {
             var cmdLabel = ss.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
-            log('  Seg ' + ss.no + ' [' + cmdLabel + ', %' + ss.grade.toFixed(1) + ']: ' +
+            var cmdIcon = ss.command === 'coast' ? '⏸' : '▶';
+            log('  ' + cmdIcon + ' Seg ' + ss.no + ' [' + cmdLabel + ', %' + ss.grade.toFixed(1) + ']: ' +
               ss.startSpeed_kmh.toFixed(1) + ' → ' + ss.endSpeed_kmh.toFixed(1) + ' km/h, ' +
               ss.actualDist.toFixed(0) + 'm, ' + ss.duration.toFixed(1) + 's');
           });
-          if(simResult.solverStats) {
-            log('  Toplam mesafe: ' + simResult.solverStats.totalDistance.toFixed(0) + ' m', 'dim');
-            log('  Son hız: ' + simResult.solverStats.finalSpeed_kmh.toFixed(1) + ' km/h', 'dim');
+          if(_segDrv.solverStats) {
+            var _sds = _segDrv.solverStats;
+            logSpacer();
+            log('  Başlangıç hızı : ' + _sds.initSpeed_kmh.toFixed(1) + ' km/h');
+            log('  Son hız        : ' + _sds.finalSpeed_kmh.toFixed(1) + ' km/h');
+            log('  Toplam mesafe  : ' + _sds.totalDistance.toFixed(0) + ' m');
+            log('  Toplam adım   : ' + _sds.steps);
+            log('  Segment sayısı : ' + _sds.segments);
+            if(_sds.shiftHistory && _sds.shiftHistory.length > 0) {
+              logSpacer();
+              log('  Vites geçişleri (' + _sds.shiftHistory.length + '):', 'dim');
+              _sds.shiftHistory.forEach(function(sh) {
+                log('    t=' + sh.t.toFixed(2) + 's | ' + sh.fromMode + ' → ' + sh.toMode + ' | V=' + sh.v_kmh.toFixed(1) + ' km/h', 'dim');
+              });
+            }
+          }
+          if(_segDrv.speed && _segDrv.speed.length > 0) {
+            var _sdMaxV = Math.max.apply(null, _segDrv.speed);
+            var _sdMinV = Math.min.apply(null, _segDrv.speed);
+            log('  Maks. hız      : ' + _sdMaxV.toFixed(1) + ' km/h');
+            log('  Min. hız       : ' + _sdMinV.toFixed(1) + ' km/h');
           }
         }
 
