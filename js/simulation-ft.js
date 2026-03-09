@@ -807,6 +807,17 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   var res_heatRej = [];        // Heat Rejection [kW]
   var res_T_output = [];       // TC/Lockup çıkış torku [Nm]
 
+  // ── ENERJİ DENGESİ DİZİLERİ ──
+  var res_P_engine = [];       // Motor gücü [kW] = T_engine × ω_engine
+  var res_P_wheel = [];        // Tekerlek gücü [kW] = F_traction × V (= WP)
+  var res_P_TC_heat = [];      // TC ısı kaybı [kW]
+  var res_P_rolling = [];      // Yuvarlanma direnci gücü [kW]
+  var res_P_aero = [];         // Aerodinamik kayıp gücü [kW]
+  var res_P_grade = [];        // Eğim gücü [kW]
+  var res_P_accel = [];        // Hızlanma gücü [kW] = m_eff × a × V
+  var res_P_drivetrain = [];   // Güç aktarma kaybı [kW] = P_engine - P_TC - P_wheel
+  var res_eta_total = [];      // Toplam verim [%] = P_wheel / P_engine
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ANA SİMÜLASYON DÖNGÜSÜ — RK4
   // ═══════════════════════════════════════════════════════════════════════════
@@ -879,6 +890,29 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
     // Heat Rejection [kW]
     res_heatRej.push(ph.heatRejection_kW);
+
+    // ── ENERJİ DENGESİ HESABI ──
+    var omega_eng_eb = ph.N_engine * 2 * Math.PI / 60;
+    var P_eng_kW = ph.T_engine * omega_eng_eb / 1000;
+    var P_whl_kW = ph.F_traction * v_rec / 1000;
+    var P_roll_kW = Math.abs(ph.F_rolling) * v_rec / 1000;
+    var P_aero_kW = Math.abs(ph.F_aero) * v_rec / 1000;
+    var P_grade_kW = ph.F_grade * v_rec / 1000;        // İşaretli: pozitif = yokuş yukarı
+    var P_accel_kW = ph.m_eff * ph.accel * v_rec / 1000;
+    var P_tc_kW = ph.heatRejection_kW;
+    var P_dt_kW = P_eng_kW - P_tc_kW - P_whl_kW;       // Güç aktarma kaybı (dolaylı)
+    if(P_dt_kW < 0) P_dt_kW = 0;                        // Sayısal kararlılık
+    var eta_tot = P_eng_kW > 0.1 ? (P_whl_kW / P_eng_kW * 100) : 0;
+
+    res_P_engine.push(P_eng_kW);
+    res_P_wheel.push(P_whl_kW);
+    res_P_TC_heat.push(P_tc_kW);
+    res_P_rolling.push(P_roll_kW);
+    res_P_aero.push(P_aero_kW);
+    res_P_grade.push(P_grade_kW);
+    res_P_accel.push(P_accel_kW);
+    res_P_drivetrain.push(P_dt_kW);
+    res_eta_total.push(eta_tot);
 
     // Per-component signals
     if(engineNode && nodeData[engineNode.id]) {
@@ -1234,7 +1268,49 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     shift2C2L_outRatio: SHIFT_2C_2L_OUT_RATIO,
     N_shift_lockup: N_shift_lockup,
     shiftRefRPM: shiftRefRPM,
-    pumpTorqueDrop: pumpTorqueDrop
+    pumpTorqueDrop: pumpTorqueDrop,
+    // Enerji dengesi özet istatistikleri
+    energyBalance: (function() {
+      var n = res_P_engine.length;
+      if(n === 0) return null;
+      var maxPeng = 0, maxPwhl = 0, maxPtc = 0, maxPdt = 0;
+      var sumPeng = 0, sumPwhl = 0, sumPtc = 0, sumPdt = 0;
+      var sumProll = 0, sumPaero = 0, sumPgrade = 0, sumPaccel = 0;
+      var maxEta = 0, minEta = 100, sumEta = 0, etaCount = 0;
+      var maxResidual = 0;
+      for(var ei = 0; ei < n; ei++) {
+        var pe = res_P_engine[ei];
+        var pw = res_P_wheel[ei];
+        var pt = res_P_TC_heat[ei];
+        var pd = res_P_drivetrain[ei];
+        if(pe > maxPeng) maxPeng = pe;
+        if(pw > maxPwhl) maxPwhl = pw;
+        if(pt > maxPtc) maxPtc = pt;
+        if(pd > maxPdt) maxPdt = pd;
+        sumPeng += pe; sumPwhl += pw; sumPtc += pt; sumPdt += pd;
+        sumProll += res_P_rolling[ei];
+        sumPaero += res_P_aero[ei];
+        sumPgrade += res_P_grade[ei];
+        sumPaccel += res_P_accel[ei];
+        var eta = res_eta_total[ei];
+        if(pe > 1) {
+          if(eta > maxEta) maxEta = eta;
+          if(eta < minEta) minEta = eta;
+          sumEta += eta; etaCount++;
+        }
+        // Artık: P_wheel - (P_roll + P_aero + P_grade + P_accel)
+        var residual = Math.abs(pw - (res_P_rolling[ei] + res_P_aero[ei] + res_P_grade[ei] + res_P_accel[ei]));
+        if(residual > maxResidual) maxResidual = residual;
+      }
+      return {
+        maxP_engine: maxPeng, maxP_wheel: maxPwhl, maxP_TC_heat: maxPtc, maxP_drivetrain: maxPdt,
+        avgP_engine: sumPeng / n, avgP_wheel: sumPwhl / n, avgP_TC_heat: sumPtc / n, avgP_drivetrain: sumPdt / n,
+        avgP_rolling: sumProll / n, avgP_aero: sumPaero / n, avgP_grade: sumPgrade / n, avgP_accel: sumPaccel / n,
+        eta_max: maxEta, eta_min: etaCount > 0 ? minEta : 0, eta_avg: etaCount > 0 ? sumEta / etaCount : 0,
+        maxResidual_kW: maxResidual,
+        samples: n
+      };
+    })()
   };
 
   return {
@@ -1264,6 +1340,16 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     WP: res_WP,
     netGrade: res_netGrade,
     heatRejection: res_heatRej,
+    // ── Enerji Dengesi ──
+    P_engine: res_P_engine,
+    P_wheel: res_P_wheel,
+    P_TC_heat: res_P_TC_heat,
+    P_rolling: res_P_rolling,
+    P_aero: res_P_aero,
+    P_grade: res_P_grade,
+    P_accel: res_P_accel,
+    P_drivetrain: res_P_drivetrain,
+    eta_total: res_eta_total,
     solverStats: solverStats,
     reportSnapshot: (function() {
       var _vd = vehicleNode ? (vehicleNode.data || {}) : {};

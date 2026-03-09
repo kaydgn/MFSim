@@ -2349,10 +2349,74 @@ function veGenerateFTTxtReport(sim) {
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
-  // 9. PERFORMANS OZETI
+  // 9. ENERJI DENGESI ANALIZI
   // ════════════════════════════════════════════════════════════════════════
   r += ln('=', W) + '\n';
-  r += pad('9. PERFORMANS OZETI', W, 'center') + '\n';
+  r += pad('9. ENERJI DENGESI ANALIZI', W, 'center') + '\n';
+  r += ln('=', W) + '\n\n';
+
+  var eb = ss.energyBalance;
+  if (eb) {
+    r += '  Motor → Tork Konv. → Sanziman → Tekerlek → Yol\n';
+    r += '  ' + ln('-', 60) + '\n\n';
+
+    // Güç akışı tablosu
+    r += '  GUC AKISI DAGILIMI\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += '  ' + pad('Guc Bileseni', 30) + pad('Maks [kW]', 12, 'right') + pad('Ort [kW]', 12, 'right') + '\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += '  ' + pad('Motor Gucu (P_engine)', 30) + pad(num(eb.maxP_engine, 1), 12, 'right') + pad(num(eb.avgP_engine, 1), 12, 'right') + '\n';
+    r += '  ' + pad('TC Isi Kaybi (P_TC)', 30) + pad(num(eb.maxP_TC_heat, 1), 12, 'right') + pad(num(eb.avgP_TC_heat, 1), 12, 'right') + '\n';
+    r += '  ' + pad('Guc Aktarma Kaybi (P_dt)', 30) + pad(num(eb.maxP_drivetrain, 1), 12, 'right') + pad(num(eb.avgP_drivetrain, 1), 12, 'right') + '\n';
+    r += '  ' + pad('Tekerlek Gucu (P_wheel)', 30) + pad(num(eb.maxP_wheel, 1), 12, 'right') + pad(num(eb.avgP_wheel, 1), 12, 'right') + '\n';
+    r += '  ' + ln('-', 60) + '\n\n';
+
+    // Tekerlek güç dağılımı
+    r += '  TEKERLEK GUCU DAGILIMI (Ortalama)\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += '  ' + pad('Yuvarlanma Direnci (P_rolling)', 38) + pad(num(eb.avgP_rolling, 1), 10, 'right') + ' kW\n';
+    r += '  ' + pad('Aerodinamik Suruklenme (P_aero)', 38) + pad(num(eb.avgP_aero, 1), 10, 'right') + ' kW\n';
+    r += '  ' + pad('Egim Direnci (P_grade)', 38) + pad(num(eb.avgP_grade, 1), 10, 'right') + ' kW\n';
+    r += '  ' + pad('Hizlanma Gucu (P_accel)', 38) + pad(num(eb.avgP_accel, 1), 10, 'right') + ' kW\n';
+    r += '  ' + ln('-', 60) + '\n\n';
+
+    // Verim
+    r += '  TOPLAM VERIM\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += pRow('Ortalama Verim (eta_avg)', '%' + num(eb.eta_avg, 1));
+    r += pRow('Minimum Verim (eta_min)', '%' + num(eb.eta_min, 1));
+    r += pRow('Maksimum Verim (eta_max)', '%' + num(eb.eta_max, 1));
+    r += '\n';
+
+    // Kayıp dağılım yüzdeleri
+    if (eb.avgP_engine > 0.1) {
+      var pctTC = eb.avgP_TC_heat / eb.avgP_engine * 100;
+      var pctDT = eb.avgP_drivetrain / eb.avgP_engine * 100;
+      var pctWheel = eb.avgP_wheel / eb.avgP_engine * 100;
+      r += '  KAYIP DAGILIMI (Motor gucune oranla)\n';
+      r += '  ' + ln('-', 60) + '\n';
+      r += pRow('Tekerlege aktarilan', '%' + num(pctWheel, 1));
+      r += pRow('TC isi kaybi', '%' + num(pctTC, 1));
+      r += pRow('Guc aktarma kaybi', '%' + num(pctDT, 1));
+      r += '\n';
+    }
+
+    // Newton dengesi doğrulama
+    r += '  DOGRULAMA\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += pRow('Newton dengesi artigi (maks)', num(eb.maxResidual_kW, 3) + ' kW');
+    r += pRow('Durum', eb.maxResidual_kW < 0.5 ? 'BASARILI' : 'SAPMA TESPIT EDILDI');
+    r += pRow('Analiz edilen nokta sayisi', String(eb.samples));
+  } else {
+    r += '  Enerji dengesi verisi bulunamadi.\n';
+  }
+  r += '\n\n';
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 10. PERFORMANS OZETI
+  // ════════════════════════════════════════════════════════════════════════
+  r += ln('=', W) + '\n';
+  r += pad('10. PERFORMANS OZETI', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
 
   // Box table

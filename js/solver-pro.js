@@ -1034,8 +1034,8 @@ function veSolverRunProfessional() {
               log('  ✗ Lockup modu: ' + lockSR_err + ' noktada SR ≠ 1.0', 'err');
             }
             
-            // ── 5. Enerji Tutarlılığı (Basit) ──
-            // TE×V ≈ WP kontrolü — makul aralıkta mı?
+            // ── 5. Enerji Dengesi Analizi ──
+            // 5a. Temel kontrol: TE×V ≈ WP
             var energyErrors = 0;
             for(var ei = 1; ei < sLen; ei++) {
               var v_ms = sData[ei] / 3.6;
@@ -1048,6 +1048,41 @@ function veSolverRunProfessional() {
               log('  ✓ Enerji tutarlılığı: WP = TE × V doğrulandı', 'ok');
             } else {
               log('  ⚠ Enerji tutarlılığı: ' + energyErrors + ' noktada WP ≠ TE×V (>0.5 kW fark)', 'warn');
+            }
+
+            // 5b. Güç akışı dağılımı (enerji dengesi dizileri varsa)
+            var eb = ss.energyBalance;
+            if(eb) {
+              logSpacer();
+              log('ENERJİ DENGESİ — GÜÇ AKIŞI:', 'info');
+              log('  ┌─────────────────────────────────────────────────┐');
+              log('  │  Güç Bileşeni            │  Maks [kW] │ Ort [kW]│');
+              log('  ├─────────────────────────────────────────────────┤');
+              log('  │  Motor Gücü (P_engine)    │ ' + pad(eb.maxP_engine.toFixed(1), 9) + '  │ ' + pad(eb.avgP_engine.toFixed(1), 7) + ' │');
+              log('  │  TC Isı Kaybı (P_TC)      │ ' + pad(eb.maxP_TC_heat.toFixed(1), 9) + '  │ ' + pad(eb.avgP_TC_heat.toFixed(1), 7) + ' │');
+              log('  │  Güç Aktarma Kaybı (P_dt) │ ' + pad(eb.maxP_drivetrain.toFixed(1), 9) + '  │ ' + pad(eb.avgP_drivetrain.toFixed(1), 7) + ' │');
+              log('  │  Tekerlek Gücü (P_wheel)  │ ' + pad(eb.maxP_wheel.toFixed(1), 9) + '  │ ' + pad(eb.avgP_wheel.toFixed(1), 7) + ' │');
+              log('  ├─────────────────────────────────────────────────┤');
+              log('  │  Yuvarlanma (P_rolling)    │             │ ' + pad(eb.avgP_rolling.toFixed(1), 7) + ' │');
+              log('  │  Aerodinamik (P_aero)      │             │ ' + pad(eb.avgP_aero.toFixed(1), 7) + ' │');
+              log('  │  Eğim (P_grade)            │             │ ' + pad(eb.avgP_grade.toFixed(1), 7) + ' │');
+              log('  │  Hızlanma (P_accel)        │             │ ' + pad(eb.avgP_accel.toFixed(1), 7) + ' │');
+              log('  └─────────────────────────────────────────────────┘');
+              log('  Toplam verim: η = ' + eb.eta_avg.toFixed(1) + '% (ort.) | ' + eb.eta_min.toFixed(1) + '% (min) | ' + eb.eta_max.toFixed(1) + '% (maks)');
+              log('  Maks. artık (residual): ' + eb.maxResidual_kW.toFixed(3) + ' kW (' + eb.samples + ' nokta)');
+              if(eb.maxResidual_kW < 0.5) {
+                log('  ✓ Newton dengesi: F_traction = F_resist + m_eff × a doğrulandı', 'ok');
+              } else {
+                log('  ⚠ Newton dengesi sapması: ' + eb.maxResidual_kW.toFixed(3) + ' kW', 'warn');
+              }
+
+              // Kayıp dağılımı yüzdeleri (ortalama üzerinden)
+              if(eb.avgP_engine > 0.1) {
+                var pctTC = eb.avgP_TC_heat / eb.avgP_engine * 100;
+                var pctDT = eb.avgP_drivetrain / eb.avgP_engine * 100;
+                var pctWheel = eb.avgP_wheel / eb.avgP_engine * 100;
+                log('  Güç dağılımı: Tekerlek ' + pctWheel.toFixed(1) + '% | TC ısı ' + pctTC.toFixed(1) + '% | Drivetrain ' + pctDT.toFixed(1) + '%', 'dim');
+              }
             }
             
             // ── 6. Fiziksel Sınır Kontrolleri ──
