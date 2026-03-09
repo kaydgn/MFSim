@@ -372,8 +372,19 @@ function getScenarioPropertiesHTML(node) {
   html += '<tr id="ve-scenario-brake-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showBrake?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Fren kuvveti [N]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="number" id="ve-scenario-brake-' + node.id + '" value="' + brakeForce + '" step="100" min="0" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
   
   html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Senaryo tipi seçimi simülasyon davranışını belirler.</td></tr>';
-  
-  html += '</table></div>';
+
+  html += '</table>';
+
+  // Yol segmentleri tablosu (haritadan aktarılan)
+  var hasSegs = d.roadSegments && d.roadSegments.length > 0;
+  html += '<div id="ve-scenario-segments-' + node.id + '" style="margin-top:10px;' + (hasSegs ? '' : ' display:none;') + '">';
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📐 Yol Eğim Segmentleri</div>';
+  if(hasSegs) {
+    html += _veScenarioSegmentsTableHTML(d.roadSegments);
+  }
+  html += '</div>';
+
+  html += '</div>';
   return html;
 }
 
