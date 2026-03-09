@@ -2043,6 +2043,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     var segStartSpeed = v * 3.6, segStartTime = t, segDist = 0;
     var segMaxSpeed = v * 3.6, segMinSpeed = v * 3.6;
 
+    var stallCounter = 0;
     while(segDist < seg_dist && globalStep < maxSteps) {
       var ph = calcStepPhysics(v, seg_command);
 
@@ -2076,7 +2077,21 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       var vk = v * 3.6;
       if(vk > segMaxSpeed) segMaxSpeed = vk;
       if(vk < segMinSpeed) segMinSpeed = vk;
-      if(v <= 0.01) { v = 0; break; }
+
+      // Araç durduysa: ivme pozitifse (tam gaz veya yokuş aşağı) devam edebilir,
+      // aksi halde bu segmentte ilerleme yok → segmenti bitir (sonrakine geç)
+      if(v <= 0.01) {
+        v = 0;
+        if(ph.accel <= 0.001) {
+          // Net kuvvet negatif veya sıfır — bu segmentte araç hareket edemez
+          stallCounter++;
+          if(stallCounter > 10) break; // Sonsuz döngü koruması
+        } else {
+          stallCounter = 0; // Pozitif ivme var, kalkış mümkün
+        }
+      } else {
+        stallCounter = 0;
+      }
     }
 
     totalDist += segDist;
@@ -2091,7 +2106,10 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       maxSpeed_kmh: segMaxSpeed, minSpeed_kmh: segMinSpeed, duration: t - segStartTime
     });
 
-    if(globalStep >= maxSteps || v <= 0.01) break;
+    if(globalStep >= maxSteps) break;
+    // Araç durduysa (v≈0): sonraki segmente geç — tam gaz segmentinde sıfırdan
+    // kalkış mümkün, yokuş aşağı gaz kesme segmentinde yerçekimi ile hareket mümkün.
+    // Bu yüzden döngüyü kırmıyoruz, sadece sonraki segmentte v=0'dan devam ediyoruz.
   }
 
   return {
