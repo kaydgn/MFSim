@@ -1951,13 +1951,32 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       heatRejection_kW = T_pump > 0 ? Math.max(0, T_pump * omE * (1 - SR * tau) / 1000) : 0;
     }
 
+    // Motor sürükleme kuvveti (coast modunda motor kompresyon direnci)
+    // Motor tekerlek tarafından çevriliyor: kompresyon + sürtünme + pompa kaybı
+    // Ampirik: T_drag ≈ 0.025 × V_displacement × (N/1000)  [Nm]
+    // Basitleştirilmiş: BMEP motoring ≈ 40-80 kPa (tipik dizel)
+    var F_engine_drag = 0;
+    if(isCoast && v_ms > 0.5) {
+      // Motor sürükleme torku: displacement bazlı ampirik model
+      // T_motoring = C_drag × N_engine [Nm], C_drag ≈ displacement [L] × 0.012
+      var displacement_L = parseFloat(specs.displacement) || 7.0; // Varsayılan 7L dizel
+      var T_motoring = displacement_L * 0.012 * N_engine / 60; // Basitleştirilmiş
+      // Daha gerçekçi: BMEP_motoring ≈ 50 kPa → T = BMEP × V_d / (4π)
+      var V_d = displacement_L / 1000; // m³
+      var BMEP_motoring = 50000; // Pa (50 kPa — tipik dizel motoring pressure)
+      T_motoring = BMEP_motoring * V_d / (4 * Math.PI); // Nm
+      // Tekerlekteki frenleme kuvveti (güç aktarma zinciri üzerinden)
+      var i_total_coast = i_gear * i_propshaft * i_transfer * i_axle;
+      F_engine_drag = T_motoring * i_total_coast / r_tire;
+    }
+
     var F_traction = isCoast ? 0 : FT_SOLVER.limitByGrip(
       FT_SOLVER.calcTractiveEffort(T_output, i_gear, eta_gear, i_propshaft, psEff, i_transfer, eta_transfer, i_axle, eta_axle, r_tire),
       F_grip
     );
 
     var resist = FT_SOLVER.calcResistForces(v_ms, { m: m_vehicle, Crr: Crr, surfFactor: surfFactor, Cd: Cd, A: A_frontal, rho: rho, grade_pct: active_grade_pct });
-    var F_net = F_traction - resist.F_total;
+    var F_net = F_traction - resist.F_total - F_engine_drag;
 
     var mEff = FT_SOLVER.calcEquivalentMass({
       m_vehicle: m_vehicle, r_tire: r_tire, i_gear: i_gear, i_propshaft: i_propshaft, i_transfer: i_transfer, i_axle: i_axle,
@@ -1968,7 +1987,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     return {
       accel: F_net / mEff.m_eff, N_engine: N_engine, T_engine: T_engine, T_pump: T_pump || 0,
       T_output: T_output, SR: SR, tau: tau, tcEta: tcEta, heatRejection_kW: heatRejection_kW,
-      F_traction: F_traction, F_rolling: resist.F_rolling, F_aero: resist.F_aero,
+      F_traction: F_traction, F_engine_drag: F_engine_drag, F_rolling: resist.F_rolling, F_aero: resist.F_aero,
       F_grade: resist.F_grade, F_resist: resist.F_total, F_net: F_net,
       m_eff: mEff.m_eff, i_gear: i_gear, eta_gear: eta_gear,
       gearIdx: shiftState.gearIdx, gearName: gearData.name, isLockup: isLU, command: command
@@ -2087,7 +2106,16 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       method: method, dt: dt, steps: globalStep, maxTime: maxTime,
       shiftHistory: shiftState.shiftHistory, transferRange: activeTransfer,
       segments: segments.length, totalDistance: totalDist,
-      initSpeed_kmh: initSpeed_kmh || 0, finalSpeed_kmh: v * 3.6
+      initSpeed_kmh: initSpeed_kmh || 0, finalSpeed_kmh: v * 3.6,
+      // Güç aktarma zinciri parametreleri (doğrulama için)
+      i_transfer: i_transfer, eta_transfer: eta_transfer,
+      i_axle: i_axle, eta_axle: eta_axle,
+      r_tire: r_tire, m_vehicle: m_vehicle,
+      Crr: Crr, Cd: Cd, A_frontal: A_frontal,
+      forwardGears: forwardGears.map(function(g) { return {name: g.name, ratio: g.ratio, eff: g.eff}; }),
+      finalGear: getCurrentGearData().name,
+      finalGearIdx: shiftState.gearIdx,
+      isLockup: shiftState.isLockup
     }
   };
 }
