@@ -346,7 +346,6 @@ function getScenarioPropertiesHTML(node) {
     full_brake: 'Tam fren',
     partial_throttle: 'Kısmi gaz',
     full_throttle: 'Tam gaz',
-    performance_analysis: 'Performans Analizi',
     custom: 'Özel'
   };
   

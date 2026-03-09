@@ -7526,8 +7526,18 @@ function getSolverPropertiesHTML(node) {
   html += '<span style="font-size:0.52rem; font-weight:600; color:' + moduleColor + '; background:' + moduleColor + '18; padding:2px 7px; border-radius:3px; border:1px solid ' + moduleColor + '30; letter-spacing:0.03em; text-transform:uppercase;">' + moduleLabel + '</span>';
   html += '</div>';
   
+  // ===== ÇÖZÜM KÜMESİ =====
+  var perfAnalysis = d.performanceAnalysis || false;
+  html += '<div style="margin-bottom:10px;">';
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Çözüm Kümesi</div>';
+  html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.66rem; color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
+  html += '<input type="checkbox" id="ve-solver-perfanalysis-' + node.id + '" ' + (perfAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
+  html += '<div><div style="font-weight:600;">Performans Analizi</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Tam gaz hızlanma, 0-100 km/h, elastik hızlanma, gradeability</div></div>';
+  html += '</label>';
+  html += '</div>';
+
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
-  
+
   // Zaman modu
   
   if(!ftMode) {
@@ -7697,6 +7707,10 @@ function onVESolverParamChange(nodeId) {
   if(atolEl) node.data.atol = parseFloat(atolEl.value) || 1e-6;
   if(rtolEl) node.data.rtol = parseFloat(rtolEl.value) || 1e-4;
   
+  // Performans Analizi checkbox
+  var perfEl = el('ve-solver-perfanalysis-' + nodeId);
+  if(perfEl) node.data.performanceAnalysis = perfEl.checked;
+
   // FT modu parametreleri
   var ftDtEl = el('ve-solver-ftdt-' + nodeId);
   if(ftDtEl) node.data.ftDt = parseFloat(ftDtEl.value) || 0.01;
