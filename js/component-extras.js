@@ -1390,11 +1390,9 @@ function getVehiclePropertiesHTML(node) {
     var ftWidth = d.ftWidth !== undefined ? d.ftWidth : 2.500;
     var ftCd = d.ftCd !== undefined ? d.ftCd : 0.900;
     var ftRho = d.ftRho !== undefined ? d.ftRho : 1.225;
-    var ftGrade = d.ftGrade !== undefined ? d.ftGrade : 0.0;
-    
+
     var ftA = ftHeight * ftWidth;
     var ftCdA = ftCd * ftA;
-    var ftGradeAngle = Math.atan(ftGrade / 100) * 180 / Math.PI;
     
     var roStyle = 'width:100%; padding:4px; font-size:0.68rem; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:3px; text-align:right; cursor:default;';
     
@@ -1461,26 +1459,6 @@ function getVehiclePropertiesHTML(node) {
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Hava Yoğunluğu (ρ) <span style="color:var(--text-muted); font-weight:400;">[kg/m³]</span></th>';
     html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-rho-' + node.id + '" value="' + ftRho + '" step="0.001" min="0.1" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
-    
-    html += '</table>';
-    html += '</div>';
-    
-    // ── 3. YOL KOŞULLARI ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Yol Koşulları</div>';
-    html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
-    
-    html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Yol Eğimi <span style="color:var(--text-muted); font-weight:400;">[%]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-grade-' + node.id + '" value="' + ftGrade + '" step="0.1" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
-    html += '</tr>';
-    
-    html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Eğim Açısı <span style="color:var(--text-muted); font-weight:400;">[°]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-ftv-grade-angle-' + node.id + '" value="' + ftGradeAngle.toFixed(2) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
-    html += '</tr>';
-    
-    html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.58rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Pozitif değer = yokuş yukarı, negatif = yokuş aşağı. %100 eğim = 45°.</td></tr>';
     
     html += '</table>';
     html += '</div>';
@@ -1610,18 +1588,14 @@ function onVEFTVehicleParamChange(nodeId) {
   if(g('width')) node.data.ftWidth = parseFloat(g('width').value) || 2.500;
   if(g('cd')) node.data.ftCd = parseFloat(g('cd').value) || 0.900;
   if(g('rho')) node.data.ftRho = parseFloat(g('rho').value) || 1.225;
-  if(g('grade')) node.data.ftGrade = parseFloat(g('grade').value) || 0.0;
   
   // Readonly alanları güncelle
   var h = node.data.ftHeight || 3.200;
   var w = node.data.ftWidth || 2.500;
   var cd = node.data.ftCd || 0.900;
   var A = h * w;
-  var grade = node.data.ftGrade || 0.0;
-  
   if(g('area')) g('area').value = A.toFixed(3);
   if(g('cda')) g('cda').value = (cd * A).toFixed(3);
-  if(g('grade-angle')) g('grade-angle').value = (Math.atan(grade / 100) * 180 / Math.PI).toFixed(2);
 }
 
 // Yol özellikleri - eğim, mesafe, zaman

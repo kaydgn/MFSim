@@ -442,13 +442,11 @@ function veSolverRunProfessional() {
       if(veActiveModule === 'full-throttle') {
         // FT mod alanları
         var mass = parseFloat(vd.ftGVW);
-        var grade = parseFloat(vd.ftGrade) || 0;
         var cd = parseFloat(vd.ftCd) || 0.900;
         var h = parseFloat(vd.ftHeight) || 3.2;
         var w = parseFloat(vd.ftWidth) || 2.5;
         var rho = parseFloat(vd.ftRho) || 1.225;
         log('  Araç ağırlığı   : ' + (mass || '—') + ' kg', mass > 0 ? 'ok' : 'err');
-        log('  Eğim            : %' + grade, 'dim');
         log('  Cd              : ' + cd, 'dim');
         log('  Frontal alan    : ' + (h * w).toFixed(2) + ' m² (' + h + '×' + w + ')', 'dim');
         log('  Hava yoğunluğu  : ' + rho + ' kg/m³', 'dim');
