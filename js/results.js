@@ -2144,7 +2144,9 @@ function veRenderTXTReport() {
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
   html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'#1d4ed8\';this.style.color=\'#1d4ed8\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
-  html += '<button onclick="veDownloadWordFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'#2b6cb0\';this.style.color=\'#2b6cb0\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📄 Word İndir</button>';
+  if(typeof veActiveModule === 'undefined' || veActiveModule !== 'full-throttle') {
+    html += '<button onclick="veDownloadWordFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid #2b6cb0; border-radius:4px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; cursor:pointer;" onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'1\'">📄 Word İndir</button>';
+  }
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
