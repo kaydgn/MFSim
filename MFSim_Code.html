@@ -24646,7 +24646,10 @@ function veGenerateTopologySummary() {
 function veShowTopologySummary() {
   veCloseFileMenu();
   if(nodes.length === 0) { showToast('Topolojide bileşen yok', 'warning'); return; }
-  
+
+  // Açık paneldeki DOM değerlerini node.data'ya flush et
+  if(typeof veFlushOpenPanelData === 'function') veFlushOpenPanelData();
+
   var summary = veGenerateTopologySummary();
   
   // Modal popup olarak göster
@@ -24730,6 +24733,7 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
 function veExportSummaryTXT() {
   veCloseFileMenu();
   if(nodes.length === 0) { showToast('Topolojide bileşen yok', 'warning'); return; }
+  if(typeof veFlushOpenPanelData === 'function') veFlushOpenPanelData();
   var summary = veGenerateTopologySummary();
   var blob = new Blob([summary], {type:'text/plain;charset=utf-8'});
   var defaultName = 'topoloji_ozeti_' + new Date().toISOString().slice(0,10) + '.txt';
