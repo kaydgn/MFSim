@@ -1150,7 +1150,7 @@ function veShowRaporModal() {
         '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Rapor Formatı:</label>' +
         '<select id="ve-rapor-format" onchange="var w=document.getElementById(\'ve-rapor-zaman-wrap\');if(w)w.style.display=this.value===\'csv\'?\'block\':\'none\';" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">' +
           '<option value="txt" selected>TXT (Metin Dosyası — Tam Rapor)</option>' +
-          '<option value="doc">DOC (Word Belgesi — Profesyonel Rapor)</option>' +
+          (veActiveModule !== 'full-throttle' ? '<option value="doc">DOC (Word Belgesi — Profesyonel Rapor)</option>' : '') +
           '<option value="csv">CSV (Excel Uyumlu — Sadece Veri)</option>' +
         '</select>' +
       '</div>' +
