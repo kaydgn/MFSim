@@ -1726,3 +1726,71 @@
   margin-bottom:12px;
 }
 
+/* ===== ANNOTATIONS (Gruplama Çerçevesi & Yazı Etiketi) ===== */
+.ve-annotation{
+  position:absolute;
+  z-index:1;
+  cursor:move;
+  user-select:none;
+}
+.ve-annotation-frame{
+  border:2px dashed var(--text-muted);
+  border-radius:6px;
+  background:transparent;
+  min-width:80px;
+  min-height:40px;
+}
+.ve-annotation-frame .ve-annotation-label{
+  position:absolute;
+  top:-9px;
+  left:10px;
+  background:var(--bg-primary);
+  padding:0 6px;
+  font-size:0.68rem;
+  font-weight:600;
+  white-space:nowrap;
+  line-height:1;
+}
+.ve-annotation-frame .ve-annotation-resize{
+  position:absolute;
+  right:-4px;
+  bottom:-4px;
+  width:10px;
+  height:10px;
+  cursor:se-resize;
+  background:var(--text-muted);
+  opacity:0;
+  border-radius:2px;
+  transition:opacity 0.15s;
+}
+.ve-annotation-frame:hover .ve-annotation-resize,
+.ve-annotation-frame.annot-selected .ve-annotation-resize{
+  opacity:0.6;
+}
+.ve-annotation-text{
+  white-space:nowrap;
+}
+.ve-annotation-text .ve-annotation-content{
+  font-weight:600;
+  line-height:1.2;
+}
+.ve-annotation.annot-selected{
+  outline:2px solid var(--accent-primary);
+  outline-offset:3px;
+}
+.ve-annotation-edit-input{
+  background:var(--bg-input);
+  border:1px solid var(--accent-primary);
+  border-radius:3px;
+  padding:2px 4px;
+  outline:none;
+  font-weight:600;
+  width:auto;
+  min-width:60px;
+}
+.ve-category-tools{
+  border-top:1px solid var(--border-color);
+  margin-top:6px;
+  padding-top:6px;
+}
+

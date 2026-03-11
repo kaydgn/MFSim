@@ -140,6 +140,7 @@ function clearSelection() {
     if(el) el.classList.remove('selected');
   });
   selectedNodes = [];
+  if(typeof clearAnnotationSelection === 'function') clearAnnotationSelection();
   showEmptyProperties();
 }
 

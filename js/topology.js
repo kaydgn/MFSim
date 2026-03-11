@@ -28,7 +28,8 @@ function veSerializeCurrentState() {
     undoStack: JSON.parse(JSON.stringify(undoStack)),
     redoStack: JSON.parse(JSON.stringify(redoStack)),
     simResults: (function() { try { return window.veSimResults ? JSON.parse(JSON.stringify(window.veSimResults)) : null; } catch(e) { return null; } })(),
-    resultSlots: JSON.parse(JSON.stringify(veResultSlots))
+    resultSlots: JSON.parse(JSON.stringify(veResultSlots)),
+    annotations: (typeof serializeAnnotations === 'function') ? serializeAnnotations() : []
   };
 }
 
@@ -155,6 +156,8 @@ function veClearCanvasDOM() {
   nodes = [];
   connections = [];
   selectedNodes = [];
+  if(typeof clearAnnotationDOM === 'function') clearAnnotationDOM();
+  if(typeof annotations !== 'undefined') { annotations = []; selectedAnnotations = []; }
 }
 
 function veLoadTabState(tab) {
@@ -169,6 +172,7 @@ function veLoadTabState(tab) {
     redoStack = [];
     window.veSimResults = null;
     veResultSlots = [{},{},{},{}];
+    if(typeof restoreAnnotations === 'function') restoreAnnotations([]);
     updateCanvasTransform();
     updateAllConnections();
     updateNodeCount();
@@ -191,6 +195,7 @@ function veLoadTabState(tab) {
   } else {
     nodes = [];
     connections = [];
+    if(typeof restoreAnnotations === 'function') restoreAnnotations(s.annotations || []);
     updateAllConnections();
     updateNodeCount();
   }
