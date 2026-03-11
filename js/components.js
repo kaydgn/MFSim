@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'M. Freni Performans',
     icon: '',
     description: 'Motor freni performansı, yokuş iniş analizi, retarder etkinliği',
-    components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
     defaultScenario: 'coast',
     scenarios: ['coast'],
     requiresFull: true,
@@ -17,7 +17,7 @@ var VE_MODULES = {
     name: 'Tam Gaz Hızlanma',
     icon: '',
     description: 'Tam gaz hızlanma performansı, 0-100 km/h, elastik hızlanma',
-    components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle'],
     requiresFull: true
@@ -26,7 +26,7 @@ var VE_MODULES = {
     name: 'Araç Performans Hesaplama',
     icon: '',
     description: 'Hızlanma, maksimum hız, elastik performans',
-    components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','solver','road','parametric'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','solver','road','parametric'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle'],
     requiresFull: true
@@ -35,7 +35,7 @@ var VE_MODULES = {
     name: 'Yakıt Tüketimi Analizi',
     icon: '',
     description: 'Sürüş çevrimi, yakıt tüketimi, emisyon hesaplama',
-    components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','scenario','solver','road'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','scenario','solver','road'],
     defaultScenario: 'drive_cycle',
     scenarios: ['drive_cycle','custom'],
     requiresFull: true
@@ -202,9 +202,15 @@ var componentDefs = {
     outputs: 1
   },
   'ec-matching': {
-    name: 'Motor-TC Eşleştirme',
+    name: 'Motor-Konvertör Eşleştirme',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4"/><circle cx="30" cy="42" r="14" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="30" cy="42" r="6" fill="var(--text-secondary, #666)"/><path d="M48 42 L56 42" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linecap="round"/><path d="M52 38 L56 42 L52 46" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/><path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    inputs: 0,
+    inputs: 1,
+    outputs: 0
+  },
+  'engine-gearbox-matching': {
+    name: 'Motor-Şanzıman Eşleştirme',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><rect x="20" y="28" width="25" height="40" rx="3" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><line x1="25" y1="42" x2="40" y2="42" stroke="var(--text-muted, #888)" stroke-width="2"/><line x1="25" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="2"/><line x1="25" y1="58" x2="40" y2="58" stroke="var(--text-muted, #888)" stroke-width="2"/><path d="M48 48 L56 48" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round"/><path d="M52 44 L56 48 L52 52" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/><path d="M20 74 L40 74 L55 66 L70 74 L85 74" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    inputs: 1,
     outputs: 0
   },
   'shift-controller': {
@@ -355,6 +361,13 @@ var COMPONENT_SIGNALS = {
       {id: 'sr_at_governed', name: 'SR @ Governed', unit: '−'},
       {id: 'min_engine_speed', name: 'Min Motor Devri', unit: 'rpm'},
       {id: 'recommended_tc', name: 'Önerilen Konvertör', unit: '−'}
+    ]
+  },
+  'engine-gearbox-matching': {
+    outputs: [
+      {id: 'power_at_gov', name: 'Motor Gücü@Gov', unit: 'kW'},
+      {id: 'torque_at_gov', name: 'Motor Torku@Gov', unit: 'Nm'},
+      {id: 'recommended_gb', name: 'Önerilen Şanzıman', unit: '−'}
     ]
   },
   'gearbox': {
