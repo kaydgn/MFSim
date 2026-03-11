@@ -10,10 +10,36 @@
 
 var fs = require('fs');
 var path = require('path');
+var vm = require('vm');
 
 var ROOT = __dirname;
 var INDEX = path.join(ROOT, 'index.html');
 var OUTPUT = path.join(ROOT, 'MFSim_Code.html');
+
+// ── 0) Syntax kontrolü: tüm JS dosyalarını derle, hata varsa dur
+var jsDir = path.join(ROOT, 'js');
+var jsFiles = fs.readdirSync(jsDir).filter(function(f) { return f.endsWith('.js'); });
+var syntaxErrors = [];
+
+jsFiles.forEach(function(file) {
+  var fullPath = path.join(jsDir, file);
+  var code = fs.readFileSync(fullPath, 'utf8');
+  try {
+    new vm.Script(code, { filename: file });
+  } catch(e) {
+    syntaxErrors.push({ file: 'js/' + file, error: e.message });
+  }
+});
+
+if (syntaxErrors.length > 0) {
+  console.error('\n✗ Syntax hatası bulundu! Build iptal edildi.\n');
+  syntaxErrors.forEach(function(err) {
+    console.error('  ' + err.file + ': ' + err.error);
+  });
+  console.error('');
+  process.exit(1);
+}
+console.log('  Syntax kontrolü: ' + jsFiles.length + ' JS dosyası OK');
 
 // index.html oku
 var html = fs.readFileSync(INDEX, 'utf8');

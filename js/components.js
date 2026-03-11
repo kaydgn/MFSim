@@ -10,7 +10,8 @@ var VE_MODULES = {
     components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
     defaultScenario: 'coast',
     scenarios: ['coast'],
-    requiresFull: true
+    requiresFull: true,
+    requiredComponents: ['scenario']
   },
   'full-throttle': {
     name: 'Tam Gaz Hızlanma',
