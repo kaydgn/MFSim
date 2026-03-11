@@ -1665,6 +1665,19 @@ function veGenerateFTTxtReport(sim) {
 
   // ECM hesaplamasi
   var _ecmResults = [];
+  // Şanzıman giriş limitleri
+  var _gbLimits = { grossInputPower: R.gbGrossInputPower || null, grossInputTorque: R.gbGrossInputTorque || null, maxOutputSpeed: R.gbMaxOutputSpeed || null };
+  // Governed devirdeki tork ve güç
+  var _torqueAtGov = 0;
+  if (R.torqueData && R.torqueData.length >= 2) {
+    var _tdg = R.torqueData;
+    if (R.governed <= _tdg[0].rpm) _torqueAtGov = _tdg[0].torque;
+    else if (R.governed >= _tdg[_tdg.length-1].rpm) _torqueAtGov = _tdg[_tdg.length-1].torque;
+    else { for (var _gi = 0; _gi < _tdg.length - 1; _gi++) { if (_tdg[_gi].rpm <= R.governed && R.governed <= _tdg[_gi+1].rpm) { var _gf = (R.governed - _tdg[_gi].rpm) / (_tdg[_gi+1].rpm - _tdg[_gi].rpm); _torqueAtGov = _tdg[_gi].torque + _gf * (_tdg[_gi+1].torque - _tdg[_gi].torque); break; } } }
+  }
+  var _powerAtGov = _torqueAtGov * R.governed * Math.PI / 30000;
+  var _c9ok = _gbLimits.grossInputPower !== null ? _powerAtGov <= _gbLimits.grossInputPower : true;
+  var _c10ok = _gbLimits.grossInputTorque !== null ? _torqueAtGov <= _gbLimits.grossInputTorque : true;
   try {
     if (R.torqueData && R.torqueData.length > 2 && typeof VE_FT_TC_PRESETS !== 'undefined' && typeof veGetFamilyTCKeys === 'function') {
       var _tcKeys = veGetFamilyTCKeys();
@@ -1712,9 +1725,13 @@ function veGenerateFTTxtReport(sim) {
         var c5 = minN >= (peakTorqueRpm - 50);
         var c7 = tTS <= (R.turbineRating || 3320);
         var c8 = srG >= 0.80;
-        var sc = (c5 ? 1 : 0) + (c7 ? 1 : 0) + (c8 ? 1 : 0);
-        var st = sc === 3 ? 'recommended' : sc === 2 ? 'caution' : 'not-recommended';
-        _ecmResults.push({ key: key, name: tc.name || key, stallTau: sTau, stallSpeed: sSpeed, minSpeed: minN, srGov: srG, tTurbineStall: tTS, c5ok: c5, c7ok: c7, c8ok: c8, status: st, score: sc });
+        var st, sc;
+        if (!_c9ok || !_c10ok) { st = 'unacceptable'; sc = 0; }
+        else if (!c7) { st = 'unacceptable'; sc = 0; }
+        else if (!c5) { st = 'not-recommended'; sc = 1; }
+        else if (!c8) { st = 'caution'; sc = 2; }
+        else { st = 'recommended'; sc = 3; }
+        _ecmResults.push({ key: key, name: tc.name || key, stallTau: sTau, stallSpeed: sSpeed, minSpeed: minN, srGov: srG, tTurbineStall: tTS, c5ok: c5, c7ok: c7, c8ok: c8, c9ok: _c9ok, c10ok: _c10ok, status: st, score: sc });
         } catch(tcErr) { console.warn('[MFSim] ECM hesaplama hatası (' + key + '):', tcErr.message); }
       });
       _ecmResults.sort(function(a, b) { return b.score - a.score || b.srGov - a.srGov; });
@@ -1731,6 +1748,7 @@ function veGenerateFTTxtReport(sim) {
   var lockupOffset = R.lockupOffset || 75;
   var shiftRefRPM = R.shiftRefRPM || R.governed || 2200;
   var lockupRPM = shiftRefRPM - lockupOffset;
+  var spDataReport = VE_FT_SHIFT_PROFILES[R.shiftProfile] || {};
 
   // Aksesuar toplami
   var accTotal = 0, accTotalStd = 0;
@@ -1905,8 +1923,30 @@ function veGenerateFTTxtReport(sim) {
   r += '  ' + ln('-', 38) + '\n';
   r += pRow('Shift Profili', ascii(shiftProfile));
   r += pRow('Shift Referans RPM', numI(shiftRefRPM) + ' rpm');
-  r += pRow('Kilitleme Ofseti', numI(lockupOffset) + ' rpm');
-  r += pRow('Kilitleme Gecis RPM', numI(lockupRPM) + ' rpm');
+  // Converter geçişleri
+  if(spDataReport.converterShifts) {
+    var csR = spDataReport.converterShifts;
+    if(csR['1C2C']) r += pRow('1C->2C', 'N_out >= ' + num(csR['1C2C'].a * shiftRefRPM + (csR['1C2C'].b || 0), 1) + ' (a=' + csR['1C2C'].a + ', b=' + (csR['1C2C'].b || 0) + ')');
+    if(csR['2C2L'] && csR['2C2L'].type === 'segmented') {
+      r += pRow('2C->2L (ESL>=' + csR['2C2L'].linear.validFrom + ')', 'N_out >= ' + num(csR['2C2L'].linear.a * shiftRefRPM + csR['2C2L'].linear.b, 1) + ' (a=' + csR['2C2L'].linear.a + ', b=' + csR['2C2L'].linear.b + ')');
+      if(csR['2C2L'].lookup) r += pRow('2C->2L (lookup)', csR['2C2L'].lookup.map(function(p) { return 'ESL=' + p[0] + ':' + p[1]; }).join(', '));
+    }
+  }
+  // Lockup geçişleri
+  if(spDataReport.lockupShifts) {
+    r += '  Lockup Gecisleri (N_out = a x ESL + b):\n';
+    Object.keys(spDataReport.lockupShifts).forEach(function(sk) {
+      var ls = spDataReport.lockupShifts[sk];
+      var thr = ls.a * shiftRefRPM + ls.b;
+      if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+      var label = sk.replace(/(\d+L)(\d+L)/, '$1->$2');
+      var capNote = ls.minCap !== undefined ? ' (cap=' + ls.minCap + ')' : '';
+      r += pRow('  ' + label, 'N_out >= ' + numI(thr) + ' rpm (a=' + ls.a + ', b=' + ls.b + capNote + ')');
+    });
+  } else {
+    r += pRow('Kilitleme Ofseti', numI(lockupOffset) + ' rpm');
+    r += pRow('Kilitleme Gecis RPM', numI(lockupRPM) + ' rpm');
+  }
   var lowGear = 1, highGear = (R.gearData || []).length;
   r += pRow('Vites Araligi', 'Dusuk=' + lowGear + ', Basla=' + lowGear + ', Yuksek=' + highGear);
   r += '\n\n';
@@ -1925,10 +1965,22 @@ function veGenerateFTTxtReport(sim) {
   r += pRow('Governed Devir', numI(R.governed) + ' rpm');
   r += pRow('Pompa Dusumu', num(R.pumpDrop || 17.6, 1) + ' N.m');
   r += pRow('Turbin Limiti', numI(R.turbineRating || 3320) + ' N.m');
+  if (_gbLimits.grossInputPower !== null) r += pRow('Giris Guc Limiti', _gbLimits.grossInputPower + ' kW');
+  if (_gbLimits.grossInputTorque !== null) r += pRow('Giris Tork Limiti', _gbLimits.grossInputTorque + ' N.m');
+  r += pRow('Gov. Guc', numI(_powerAtGov) + ' kW' + (_gbLimits.grossInputPower !== null ? ' (C9: ' + (_c9ok ? 'OK' : 'ASILIYOR') + ')' : ''));
+  r += pRow('Gov. Tork', numI(_torqueAtGov) + ' N.m' + (_gbLimits.grossInputTorque !== null ? ' (C10: ' + (_c10ok ? 'OK' : 'ASILIYOR') + ')' : ''));
   r += '\n';
 
   if (_ecmResults.length > 0) {
     var ecmW = 97;
+
+    if (!_c9ok || !_c10ok) {
+      r += '  *** UYARI: SANZIMAN GIRIS LIMITI ASILIYOR ***\n';
+      if (!_c9ok) r += '  C9 : Motor gucu (' + numI(_powerAtGov) + ' kW) > Giris guc limiti (' + _gbLimits.grossInputPower + ' kW)\n';
+      if (!_c10ok) r += '  C10: Motor torku (' + numI(_torqueAtGov) + ' N.m) > Giris tork limiti (' + _gbLimits.grossInputTorque + ' N.m)\n';
+      r += '\n';
+    }
+
     r += '  ECM SONUCLARI\n';
     r += '  ' + ln('-', ecmW) + '\n';
     r += '  ' + pad('Durum', 15) + pad('Konvertor', 18) + pad('Stall t', 9, 'right') + pad('Stall rpm', 11, 'right');
@@ -1955,7 +2007,10 @@ function veGenerateFTTxtReport(sim) {
     r += '  KRITER ACIKLAMALARI\n';
     r += '  C5 : Minimum pump hizi >= pik tork devri (OK/NO)\n';
     r += '  C7 : Stall\'da turbin torku <= turbin limiti (OK/NO)\n';
-    r += '  C8 : Governed\'da hiz orani >= 0.80 (OK/!!)\n\n';
+    r += '  C8 : Governed\'da hiz orani >= 0.80 (OK/!!)\n';
+    if (_gbLimits.grossInputPower !== null) r += '  C9 : Motor gucu@governed <= giris guc limiti (OK/ASILIYOR)\n';
+    if (_gbLimits.grossInputTorque !== null) r += '  C10: Motor torku@governed <= giris tork limiti (OK/ASILIYOR)\n';
+    r += '\n';
 
     // Secili TC yorum
     var selTC = _ecmResults.find(function(e) { return e.name === R.tcName; }) || _ecmResults[0];
@@ -2330,10 +2385,74 @@ function veGenerateFTTxtReport(sim) {
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
-  // 9. PERFORMANS OZETI
+  // 9. ENERJI DENGESI ANALIZI
   // ════════════════════════════════════════════════════════════════════════
   r += ln('=', W) + '\n';
-  r += pad('9. PERFORMANS OZETI', W, 'center') + '\n';
+  r += pad('9. ENERJI DENGESI ANALIZI', W, 'center') + '\n';
+  r += ln('=', W) + '\n\n';
+
+  var eb = ss.energyBalance;
+  if (eb) {
+    r += '  Motor → Tork Konv. → Sanziman → Tekerlek → Yol\n';
+    r += '  ' + ln('-', 60) + '\n\n';
+
+    // Güç akışı tablosu
+    r += '  GUC AKISI DAGILIMI\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += '  ' + pad('Guc Bileseni', 30) + pad('Maks [kW]', 12, 'right') + pad('Ort [kW]', 12, 'right') + '\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += '  ' + pad('Motor Gucu (P_engine)', 30) + pad(num(eb.maxP_engine, 1), 12, 'right') + pad(num(eb.avgP_engine, 1), 12, 'right') + '\n';
+    r += '  ' + pad('TC Isi Kaybi (P_TC)', 30) + pad(num(eb.maxP_TC_heat, 1), 12, 'right') + pad(num(eb.avgP_TC_heat, 1), 12, 'right') + '\n';
+    r += '  ' + pad('Guc Aktarma Kaybi (P_dt)', 30) + pad(num(eb.maxP_drivetrain, 1), 12, 'right') + pad(num(eb.avgP_drivetrain, 1), 12, 'right') + '\n';
+    r += '  ' + pad('Tekerlek Gucu (P_wheel)', 30) + pad(num(eb.maxP_wheel, 1), 12, 'right') + pad(num(eb.avgP_wheel, 1), 12, 'right') + '\n';
+    r += '  ' + ln('-', 60) + '\n\n';
+
+    // Tekerlek güç dağılımı
+    r += '  TEKERLEK GUCU DAGILIMI (Ortalama)\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += '  ' + pad('Yuvarlanma Direnci (P_rolling)', 38) + pad(num(eb.avgP_rolling, 1), 10, 'right') + ' kW\n';
+    r += '  ' + pad('Aerodinamik Suruklenme (P_aero)', 38) + pad(num(eb.avgP_aero, 1), 10, 'right') + ' kW\n';
+    r += '  ' + pad('Egim Direnci (P_grade)', 38) + pad(num(eb.avgP_grade, 1), 10, 'right') + ' kW\n';
+    r += '  ' + pad('Hizlanma Gucu (P_accel)', 38) + pad(num(eb.avgP_accel, 1), 10, 'right') + ' kW\n';
+    r += '  ' + ln('-', 60) + '\n\n';
+
+    // Verim
+    r += '  TOPLAM VERIM\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += pRow('Ortalama Verim (eta_avg)', '%' + num(eb.eta_avg, 1));
+    r += pRow('Minimum Verim (eta_min)', '%' + num(eb.eta_min, 1));
+    r += pRow('Maksimum Verim (eta_max)', '%' + num(eb.eta_max, 1));
+    r += '\n';
+
+    // Kayıp dağılım yüzdeleri
+    if (eb.avgP_engine > 0.1) {
+      var pctTC = eb.avgP_TC_heat / eb.avgP_engine * 100;
+      var pctDT = eb.avgP_drivetrain / eb.avgP_engine * 100;
+      var pctWheel = eb.avgP_wheel / eb.avgP_engine * 100;
+      r += '  KAYIP DAGILIMI (Motor gucune oranla)\n';
+      r += '  ' + ln('-', 60) + '\n';
+      r += pRow('Tekerlege aktarilan', '%' + num(pctWheel, 1));
+      r += pRow('TC isi kaybi', '%' + num(pctTC, 1));
+      r += pRow('Guc aktarma kaybi', '%' + num(pctDT, 1));
+      r += '\n';
+    }
+
+    // Newton dengesi doğrulama
+    r += '  DOGRULAMA\n';
+    r += '  ' + ln('-', 60) + '\n';
+    r += pRow('Newton dengesi artigi (maks)', num(eb.maxResidual_kW, 3) + ' kW');
+    r += pRow('Durum', eb.maxResidual_kW < 0.5 ? 'BASARILI' : 'SAPMA TESPIT EDILDI');
+    r += pRow('Analiz edilen nokta sayisi', String(eb.samples));
+  } else {
+    r += '  Enerji dengesi verisi bulunamadi.\n';
+  }
+  r += '\n\n';
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 10. PERFORMANS OZETI
+  // ════════════════════════════════════════════════════════════════════════
+  r += ln('=', W) + '\n';
+  r += pad('10. PERFORMANS OZETI', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
 
   // Box table
@@ -2487,6 +2606,7 @@ function veGenerateFTTxtReport(sim) {
 
   return r;
 }
+
 
 function veClearAllResults() {
   // Tüm slotları temizle

@@ -425,14 +425,14 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   // Shift profili
   var shiftProfile = gbd.shiftProfile || 'allison3200sp_s1';
-  var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || { lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3593 };
+  var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || { lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3594 };
   var lockupOffset = spData.lockupOffset || 75;
   // Shift Referans RPM: profilde tanımlıysa onu kullan, yoksa motor governed
   var shiftRefRPM = spData.shiftRefRPM || gbd.shiftRefRPM || governedSpeed;
   // Converter-mod geçiş oranları (N_out / N_shift_ref)
   var SHIFT_1C_2C_OUT_RATIO = spData.shift1C2C_outRatio || 0.2150;
-  var SHIFT_2C_2L_OUT_RATIO = spData.shift2C2L_outRatio || 0.3593;
-  var N_shift_lockup = shiftRefRPM - lockupOffset; // Lockup moddaki shift RPM'i
+  var SHIFT_2C_2L_OUT_RATIO = spData.shift2C2L_outRatio || 0.3594;
+  var N_shift_lockup = shiftRefRPM - lockupOffset; // Lockup moddaki shift RPM'i (lockupShifts yoksa fallback)
 
   // Şanzıman iç ataleti (basitleştirilmiş — gearbox bileşeninde yok, sabit varsayım)
   var I_trans = 1.0;
@@ -511,9 +511,40 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   //   isLockup: false = converter mod, true = lockup mod
   //
   // Kurallar (N_out = Şanzıman çıkış devri = N_engine × SR / i_gear):
-  //   1C→2C: N_out ≥ SHIFT_1C_2C_OUT_RATIO × N_shift_ref  (0.2150)
-  //   2C→2L: N_out ≥ SHIFT_2C_2L_OUT_RATIO × N_shift_ref  (0.3593)
-  //   2L→3L...6L: N_engine ≥ N_governed - lockupOffset     (değişmedi)
+  //   1C→2C: converterShifts varsa a×ESL+b, yoksa oran × N_shift_ref
+  //   2C→2L: converterShifts varsa segmentli/lineer, yoksa oran × N_shift_ref
+  //   2L→3L...6L: N_out ≥ a × ESL + b (per-gear) veya N_engine ≥ N_governed - lockupOffset (fallback)
+
+  // Converter geçiş eşiği hesaplama (converterShifts desteği)
+  var csData = spData.converterShifts || null;
+
+  /**
+   * Segmentli 2C→2L eşiğini hesaplar.
+   * ESL ≥ validFrom → lineer model, ESL < validFrom → lookup interpolasyon.
+   */
+  function calc2C2LThreshold(esl) {
+    if(!csData || !csData['2C2L']) return SHIFT_2C_2L_OUT_RATIO * esl;
+    var cs2L = csData['2C2L'];
+    if(cs2L.type === 'segmented') {
+      if(esl >= cs2L.linear.validFrom) {
+        return cs2L.linear.a * esl + cs2L.linear.b;
+      }
+      // Lookup tablosu interpolasyonu
+      var lk = cs2L.lookup;
+      if(!lk || lk.length === 0) return cs2L.linear.a * esl + cs2L.linear.b;
+      if(esl <= lk[0][0]) return lk[0][1];
+      if(esl >= lk[lk.length - 1][0]) return lk[lk.length - 1][1];
+      for(var li = 0; li < lk.length - 1; li++) {
+        if(esl >= lk[li][0] && esl <= lk[li + 1][0]) {
+          var frac = (esl - lk[li][0]) / (lk[li + 1][0] - lk[li][0]);
+          return lk[li][1] + frac * (lk[li + 1][1] - lk[li][1]);
+        }
+      }
+      return lk[lk.length - 1][1];
+    }
+    // Basit lineer model
+    return cs2L.a * esl + (cs2L.b || 0);
+  }
 
   var shiftState = {
     gearIdx: 0,
@@ -527,8 +558,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   /**
    * Shift kararı — her adımda çağrılır.
-   * Converter-mod geçişleri N_out/N_shift_ref oranına göre.
-   * Lockup-mod geçişleri N_engine ≥ N_shift_ref - offset.
+   * Converter-mod: converterShifts varsa lineer/segmentli, yoksa oran bazlı.
+   * Lockup-mod: lockupShifts varsa per-gear lineer, yoksa sabit ofset.
    * @returns {boolean} — shift yapıldı mı
    */
   function checkShift(t, N_engine, SR, tau, v_kmh) {
@@ -544,20 +575,24 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       var N_out = N_engine * SR / i_gear_current;
 
       if(g === 0) {
-        // 1C → 2C: N_out ≥ SHIFT_1C_2C_OUT_RATIO × N_shift_ref
-        var threshold_1C2C = SHIFT_1C_2C_OUT_RATIO * shiftRefRPM;
+        // 1C → 2C: converterShifts varsa a×ESL+b, yoksa oran×N_ref
+        var threshold_1C2C;
+        if(csData && csData['1C2C']) {
+          threshold_1C2C = csData['1C2C'].a * shiftRefRPM + (csData['1C2C'].b || 0);
+        } else {
+          threshold_1C2C = SHIFT_1C_2C_OUT_RATIO * shiftRefRPM;
+        }
         if(N_out >= threshold_1C2C) {
           shiftState.shiftHistory.push({
             t: t, fromGear: g, toGear: 1, fromMode: '1C', toMode: '2C',
             v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out
           });
           shiftState.gearIdx = 1;
-          // Hâlâ converter modda
           shifted = true;
         }
       } else if(g === 1) {
-        // 2C → 2L: N_out ≥ SHIFT_2C_2L_OUT_RATIO × N_shift_ref
-        var threshold_2C2L = SHIFT_2C_2L_OUT_RATIO * shiftRefRPM;
+        // 2C → 2L: converterShifts varsa segmentli/lineer, yoksa oran×N_ref
+        var threshold_2C2L = calc2C2LThreshold(shiftRefRPM);
         if(N_out >= threshold_2C2L) {
           shiftState.shiftHistory.push({
             t: t, fromGear: 1, toGear: 1, fromMode: '2C', toMode: '2L',
@@ -569,17 +604,35 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         }
       }
     } else {
-      // ── LOCKUP MOD (DEĞİŞMEDİ) ──
-      // gL → (g+1)L: N_engine ≥ N_shift_lockup (= N_shift_ref - lockupOffset)
-      if(g < maxGear && N_engine >= N_shift_lockup) {
+      // ── LOCKUP MOD ──
+      // Lineer formül: N_out >= a × ESL + b (per-gear kalibrasyon)
+      // Fallback: N_engine >= N_shift_lockup (eski sabit ofset yöntemi)
+      if(g < maxGear) {
+        var i_gear_lu = parseFloat(getCurrentGearData().ratio) || 1.0;
+        var N_out_lu = N_engine / i_gear_lu;  // Lockup modda SR=1
         var fromName = (g + 1) + 'L';
         var toName = (g + 2) + 'L';
-        shiftState.shiftHistory.push({
-          t: t, fromGear: g, toGear: g + 1, fromMode: fromName, toMode: toName,
-          v_kmh: v_kmh, N_engine: N_engine, SR: SR
-        });
-        shiftState.gearIdx = g + 1;
-        shifted = true;
+        var shiftKey = fromName + toName;     // örn. '2L3L', '3L4L'
+        var luShiftTriggered = false;
+
+        if(spData.lockupShifts && spData.lockupShifts[shiftKey]) {
+          var ls = spData.lockupShifts[shiftKey];
+          var threshold_lu = ls.a * shiftRefRPM + ls.b;
+          if(ls.minCap !== undefined) threshold_lu = Math.max(threshold_lu, ls.minCap);
+          if(N_out_lu >= threshold_lu) luShiftTriggered = true;
+        } else {
+          // Eski yöntem: sabit lockupOffset
+          if(N_engine >= N_shift_lockup) luShiftTriggered = true;
+        }
+
+        if(luShiftTriggered) {
+          shiftState.shiftHistory.push({
+            t: t, fromGear: g, toGear: g + 1, fromMode: fromName, toMode: toName,
+            v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_lu
+          });
+          shiftState.gearIdx = g + 1;
+          shifted = true;
+        }
       }
     }
 
@@ -754,6 +807,17 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   var res_heatRej = [];        // Heat Rejection [kW]
   var res_T_output = [];       // TC/Lockup çıkış torku [Nm]
 
+  // ── ENERJİ DENGESİ DİZİLERİ ──
+  var res_P_engine = [];       // Motor gücü [kW] = T_engine × ω_engine
+  var res_P_wheel = [];        // Tekerlek gücü [kW] = F_traction × V (= WP)
+  var res_P_TC_heat = [];      // TC ısı kaybı [kW]
+  var res_P_rolling = [];      // Yuvarlanma direnci gücü [kW]
+  var res_P_aero = [];         // Aerodinamik kayıp gücü [kW]
+  var res_P_grade = [];        // Eğim gücü [kW]
+  var res_P_accel = [];        // Hızlanma gücü [kW] = m_eff × a × V
+  var res_P_drivetrain = [];   // Güç aktarma kaybı [kW] = P_engine - P_TC - P_wheel
+  var res_eta_total = [];      // Toplam verim [%] = P_wheel / P_engine
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ANA SİMÜLASYON DÖNGÜSÜ — RK4
   // ═══════════════════════════════════════════════════════════════════════════
@@ -826,6 +890,29 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
     // Heat Rejection [kW]
     res_heatRej.push(ph.heatRejection_kW);
+
+    // ── ENERJİ DENGESİ HESABI ──
+    var omega_eng_eb = ph.N_engine * 2 * Math.PI / 60;
+    var P_eng_kW = ph.T_engine * omega_eng_eb / 1000;
+    var P_whl_kW = ph.F_traction * v_rec / 1000;
+    var P_roll_kW = Math.abs(ph.F_rolling) * v_rec / 1000;
+    var P_aero_kW = Math.abs(ph.F_aero) * v_rec / 1000;
+    var P_grade_kW = ph.F_grade * v_rec / 1000;        // İşaretli: pozitif = yokuş yukarı
+    var P_accel_kW = ph.m_eff * ph.accel * v_rec / 1000;
+    var P_tc_kW = ph.heatRejection_kW;
+    var P_dt_kW = P_eng_kW - P_tc_kW - P_whl_kW;       // Güç aktarma kaybı (dolaylı)
+    if(P_dt_kW < 0) P_dt_kW = 0;                        // Sayısal kararlılık
+    var eta_tot = P_eng_kW > 0.1 ? (P_whl_kW / P_eng_kW * 100) : 0;
+
+    res_P_engine.push(P_eng_kW);
+    res_P_wheel.push(P_whl_kW);
+    res_P_TC_heat.push(P_tc_kW);
+    res_P_rolling.push(P_roll_kW);
+    res_P_aero.push(P_aero_kW);
+    res_P_grade.push(P_grade_kW);
+    res_P_accel.push(P_accel_kW);
+    res_P_drivetrain.push(P_dt_kW);
+    res_eta_total.push(eta_tot);
 
     // Per-component signals
     if(engineNode && nodeData[engineNode.id]) {
@@ -1181,7 +1268,49 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     shift2C2L_outRatio: SHIFT_2C_2L_OUT_RATIO,
     N_shift_lockup: N_shift_lockup,
     shiftRefRPM: shiftRefRPM,
-    pumpTorqueDrop: pumpTorqueDrop
+    pumpTorqueDrop: pumpTorqueDrop,
+    // Enerji dengesi özet istatistikleri
+    energyBalance: (function() {
+      var n = res_P_engine.length;
+      if(n === 0) return null;
+      var maxPeng = 0, maxPwhl = 0, maxPtc = 0, maxPdt = 0;
+      var sumPeng = 0, sumPwhl = 0, sumPtc = 0, sumPdt = 0;
+      var sumProll = 0, sumPaero = 0, sumPgrade = 0, sumPaccel = 0;
+      var maxEta = 0, minEta = 100, sumEta = 0, etaCount = 0;
+      var maxResidual = 0;
+      for(var ei = 0; ei < n; ei++) {
+        var pe = res_P_engine[ei];
+        var pw = res_P_wheel[ei];
+        var pt = res_P_TC_heat[ei];
+        var pd = res_P_drivetrain[ei];
+        if(pe > maxPeng) maxPeng = pe;
+        if(pw > maxPwhl) maxPwhl = pw;
+        if(pt > maxPtc) maxPtc = pt;
+        if(pd > maxPdt) maxPdt = pd;
+        sumPeng += pe; sumPwhl += pw; sumPtc += pt; sumPdt += pd;
+        sumProll += res_P_rolling[ei];
+        sumPaero += res_P_aero[ei];
+        sumPgrade += res_P_grade[ei];
+        sumPaccel += res_P_accel[ei];
+        var eta = res_eta_total[ei];
+        if(pe > 1) {
+          if(eta > maxEta) maxEta = eta;
+          if(eta < minEta) minEta = eta;
+          sumEta += eta; etaCount++;
+        }
+        // Artık: P_wheel - (P_roll + P_aero + P_grade + P_accel)
+        var residual = Math.abs(pw - (res_P_rolling[ei] + res_P_aero[ei] + res_P_grade[ei] + res_P_accel[ei]));
+        if(residual > maxResidual) maxResidual = residual;
+      }
+      return {
+        maxP_engine: maxPeng, maxP_wheel: maxPwhl, maxP_TC_heat: maxPtc, maxP_drivetrain: maxPdt,
+        avgP_engine: sumPeng / n, avgP_wheel: sumPwhl / n, avgP_TC_heat: sumPtc / n, avgP_drivetrain: sumPdt / n,
+        avgP_rolling: sumProll / n, avgP_aero: sumPaero / n, avgP_grade: sumPgrade / n, avgP_accel: sumPaccel / n,
+        eta_max: maxEta, eta_min: etaCount > 0 ? minEta : 0, eta_avg: etaCount > 0 ? sumEta / etaCount : 0,
+        maxResidual_kW: maxResidual,
+        samples: n
+      };
+    })()
   };
 
   return {
@@ -1211,6 +1340,16 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     WP: res_WP,
     netGrade: res_netGrade,
     heatRejection: res_heatRej,
+    // ── Enerji Dengesi ──
+    P_engine: res_P_engine,
+    P_wheel: res_P_wheel,
+    P_TC_heat: res_P_TC_heat,
+    P_rolling: res_P_rolling,
+    P_aero: res_P_aero,
+    P_grade: res_P_grade,
+    P_accel: res_P_accel,
+    P_drivetrain: res_P_drivetrain,
+    eta_total: res_eta_total,
     solverStats: solverStats,
     reportSnapshot: (function() {
       var _vd = vehicleNode ? (vehicleNode.data || {}) : {};
@@ -1250,7 +1389,10 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         transferName: _trN, transferGears: ftTrGears.map(function(tr){return{kademe:tr.kademe||tr.mode||'',ratio:parseFloat(tr.ratio||tr.oran)||1.0,eff:parseFloat(tr.eff||tr.verim)||97};}),
         hasTransfer: !!transferNode,
         pumpDrop: pumpTorqueDrop,
-        turbineRating: (function(){ var ecmN = nodes.find(function(n){return n.type==='ec-matching';}); return ecmN && ecmN.data ? (ecmN.data.turbineRating||3320) : 3320; })()
+        turbineRating: (function(){ var ecmN = nodes.find(function(n){return n.type==='ec-matching';}); return ecmN && ecmN.data ? (ecmN.data.turbineRating||3320) : 3320; })(),
+        gbGrossInputPower: _gbP ? (_gbP.grossInputPower || null) : null,
+        gbGrossInputTorque: _gbP ? (_gbP.grossInputTorque || null) : null,
+        gbMaxOutputSpeed: _gbP ? (_gbP.maxOutputSpeed || null) : null
       };
     })()
   };
@@ -1388,7 +1530,8 @@ function veScaleFTDataForTransfer(ftDataOrig, ratioOrig, ratioNew, etaOrig, etaN
     var te_new = orig.te_kN * rFactor * (etaNew / etaOrig);
     var v_ms = v_new / 3.6;
     var f_aero = 0.5 * rho * Cd * A * v_ms * v_ms / 1000;
-    var f_roll = Crr * m_kg * g / 1000;
+    var Crr_eff = FT_SOLVER.getCrrEffective(Crr, v_ms);
+    var f_roll = Crr_eff * m_kg * g / 1000;
     var dp_new = te_new - f_roll - f_aero;
     scaled.push({ gear: orig.gear, v_kmh: Math.round(v_new * 100) / 100, dp_kN: dp_new, te_kN: te_new });
   }
@@ -1436,14 +1579,45 @@ function veCalculateGradeability(simResult) {
     var lowGear = trGears[1]; // İkinci kademe = düşük kademe (yüksek oran)
     var lowRatio = lowGear.ratio;
     var lowEta = lowGear.eff;
-    
-    var Cd = rs.cd || 0.9;
-    var A = rs.frontalArea || (rs.height * rs.width) || 8.0;
-    var Crr = rs.crr || 0.0035;
-    
-    var ftDataLow = veScaleFTDataForTransfer(ftData, activeRatio, lowRatio, activeEta, lowEta, m_kg, Cd, A, Crr);
-    result.low = veCalcGradeForRatio(ftDataLow, m_kg, lowRatio, true);
-    result.low.label = 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')';
+
+    // Gerçek Low range simülasyon sonuçları varsa onları kullan (ölçekleme yerine)
+    var allRangeRes = typeof window !== 'undefined' ? window._veFTAllRangeResults : null;
+    var lowKademe = lowGear.kademe || 'Low';
+    var lowSimResult = allRangeRes ? allRangeRes[lowKademe] : null;
+
+    var ftDataLow;
+    if(lowSimResult && lowSimResult.speed && lowSimResult.DP && lowSimResult.DP.length > 2) {
+      // Gerçek simülasyon verisinden FT tablo oluştur
+      ftDataLow = [];
+      for(var li = 0; li < lowSimResult.speed.length; li++) {
+        if(typeof lowSimResult.DP[li] !== 'number' || isNaN(lowSimResult.DP[li])) continue;
+        ftDataLow.push({
+          gear: lowSimResult.gearMode ? lowSimResult.gearMode[li] : '',
+          v_kmh: lowSimResult.speed[li],
+          dp_kN: lowSimResult.DP[li],
+          te_kN: lowSimResult.TE ? lowSimResult.TE[li] : 0
+        });
+      }
+      // Shift noktalarını temizle
+      var cleanedLow = [];
+      for(var cli = 0; cli < ftDataLow.length; cli++) {
+        if(cli < ftDataLow.length - 1 && Math.abs(ftDataLow[cli+1].v_kmh - ftDataLow[cli].v_kmh) < 0.05) continue;
+        cleanedLow.push(ftDataLow[cli]);
+      }
+      ftDataLow = cleanedLow.length > 2 ? cleanedLow : ftDataLow;
+    } else {
+      // Fallback: ölçekleme (gerçek sim yoksa)
+      var Cd = rs.cd || 0.9;
+      var A = rs.frontalArea || (rs.height * rs.width) || 8.0;
+      var Crr = rs.crr || 0.0035;
+      ftDataLow = veScaleFTDataForTransfer(ftData, activeRatio, lowRatio, activeEta, lowEta, m_kg, Cd, A, Crr);
+    }
+
+    if(ftDataLow.length >= 2) {
+      result.low = veCalcGradeForRatio(ftDataLow, m_kg, lowRatio, true);
+      result.low.label = 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')';
+      result.low.source = lowSimResult ? 'simulation' : 'scaling';
+    }
   }
   
   return result;
@@ -1526,7 +1700,444 @@ function veCalculateAcceleration(simResult) {
       rows: veExtractAccelMilestones(lowSpeed, time, distance, lowMaxSpeed)
     };
   }
-  
+
   return result;
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// SEGMENT BAZLI SÜRÜŞ ANALİZİ (HIZLANMA-YAVAŞLAMA)
+// ════════════════════════════════════════════════════════════════════════════
+// Her segmentte "Tam gaz" veya "Gaz kesme" komutu uygulanır.
+// Segment sınırlarında hız sürekli, eğim ve komut süreksiz.
+// Entegratör her segment sınırında sıfırlanır (restart).
+// ════════════════════════════════════════════════════════════════════════════
+
+function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
+  if(!segments || segments.length === 0) throw new Error('Segment verisi bulunamadı');
+
+  // ── BİLEŞEN DÜĞÜMLERİNİ BUL ──
+  var chain = veGetPowertrainChain();
+  if(chain.length === 0) throw new Error('Güç aktarma zinciri bulunamadı');
+
+  var engineNode = chain.find(function(n) { return n.type === 'engine'; });
+  var tcNode = chain.find(function(n) { return n.type === 'torque-converter'; });
+  var gearboxNode = chain.find(function(n) { return n.type === 'gearbox'; });
+  var propshaftNodes = chain.filter(function(n) { return n.type === 'propshaft'; });
+  var transferNode = chain.find(function(n) { return n.type === 'transfer'; });
+  var diffNode = chain.find(function(n) { return n.type === 'differential' && n.isMasterDiff; })
+                || chain.find(function(n) { return n.type === 'differential'; });
+  var wheelNode = chain.find(function(n) { return n.type === 'wheel' && n.isMasterWheel; })
+                || chain.find(function(n) { return n.type === 'wheel'; });
+  var vehicleNode = nodes.find(function(n) { return n.type === 'vehicle'; });
+  var solverNode = nodes.find(function(n) { return n.type === 'solver'; });
+
+  if(!engineNode) throw new Error('Motor bileşeni eksik');
+  if(!vehicleNode) throw new Error('Araç bileşeni eksik');
+  if(!wheelNode) throw new Error('Tekerlek bileşeni eksik');
+
+  for(var _vi = 0; _vi < 4; _vi++) veResetChartView(_vi);
+
+  // ── MOTOR PARAMETRELERİ ──
+  var ed = engineNode.data || {};
+  var specs = ed.motorSpecs || {};
+  var torqueTable = ed.torqueData || [];
+  if(torqueTable.length < 2) throw new Error('Motor tork tablosu eksik');
+
+  var governedSpeed = parseFloat(specs.governedSpeed) || parseFloat(ed.governedRpm) || 2100;
+  var noLoadGoverned = parseFloat(specs.noLoadGoverned) || 2350;
+  var idleRpm = parseFloat(specs.idleRpm) || 700;
+  var I_engine = parseFloat(specs.inertia) || 1.431;
+
+  var grossMotorTorqueFn = FT_SOLVER.createMotorTorqueFn(torqueTable, governedSpeed, noLoadGoverned);
+
+  // ── AKSESUAR KAYIPLARI ──
+  var accList = ed.accessories || [];
+  var accTotalFanLoss = 0, accTotalOtherLoss = 0;
+  accList.forEach(function(a) {
+    var loss = parseFloat(a.userLoss) || 0;
+    if(loss <= 0) return;
+    if(a.name && a.name.toLowerCase().indexOf('fan') >= 0) accTotalFanLoss += loss;
+    else accTotalOtherLoss += loss;
+  });
+  var hasAccessoryLoss = (accTotalFanLoss + accTotalOtherLoss) > 0;
+
+  function motorTorqueFn(rpm) {
+    var T_gross = grossMotorTorqueFn(rpm);
+    if(!hasAccessoryLoss || rpm <= 0) return T_gross;
+    var ratio = rpm / governedSpeed;
+    var P_loss_kW = accTotalFanLoss * ratio * ratio * ratio + accTotalOtherLoss * ratio;
+    var omega = 2 * Math.PI * rpm / 60;
+    return Math.max(0, T_gross - P_loss_kW * 1000 / omega);
+  }
+
+  // ── TORK KONVERTÖRÜ ──
+  var tcd = tcNode ? (tcNode.data || {}) : {};
+  var tcDataArr = tcd.tcData || [];
+  var pumpTorqueDrop = tcd.pumpTorqueDrop !== undefined ? parseFloat(tcd.pumpTorqueDrop) : 17.6;
+  var I_conv = 0.5, I_conv_turbine = 0.3;
+  var tcFns = FT_SOLVER.createTCFunctions(tcDataArr);
+  var hasTCData = tcDataArr.length >= 2;
+
+  // ── ŞANZIMAN ──
+  var gbd = gearboxNode ? (gearboxNode.data || {}) : {};
+  var ftGearData = gbd.ftGearData || VE_FT_GB_DEFAULT_GEARS;
+  var forwardGears = ftGearData.filter(function(g) { return g.name && g.name.charAt(0) !== 'R'; });
+  if(forwardGears.length === 0) throw new Error('İleri vites verisi bulunamadı');
+
+  var shiftProfile = gbd.shiftProfile || 'allison3200sp_s1';
+  var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || { lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3594 };
+  var lockupOffset = spData.lockupOffset || 75;
+  var shiftRefRPM = spData.shiftRefRPM || gbd.shiftRefRPM || governedSpeed;
+  var SHIFT_1C_2C_OUT_RATIO = spData.shift1C2C_outRatio || 0.2150;
+  var SHIFT_2C_2L_OUT_RATIO = spData.shift2C2L_outRatio || 0.3594;
+  var N_shift_lockup = shiftRefRPM - lockupOffset;
+  var I_trans = 1.0;
+
+  var csData = spData.converterShifts || null;
+  function _sdCalc2C2LThreshold(esl) {
+    if(!csData || !csData['2C2L']) return SHIFT_2C_2L_OUT_RATIO * esl;
+    var cs2L = csData['2C2L'];
+    if(cs2L.type === 'segmented') {
+      if(esl >= cs2L.linear.validFrom) return cs2L.linear.a * esl + cs2L.linear.b;
+      var lk = cs2L.lookup;
+      if(!lk || lk.length === 0) return cs2L.linear.a * esl + cs2L.linear.b;
+      if(esl <= lk[0][0]) return lk[0][1];
+      if(esl >= lk[lk.length - 1][0]) return lk[lk.length - 1][1];
+      for(var li = 0; li < lk.length - 1; li++) {
+        if(esl >= lk[li][0] && esl <= lk[li + 1][0]) {
+          var frac = (esl - lk[li][0]) / (lk[li + 1][0] - lk[li][0]);
+          return lk[li][1] + frac * (lk[li + 1][1] - lk[li][1]);
+        }
+      }
+      return lk[lk.length - 1][1];
+    }
+    return cs2L.a * esl + (cs2L.b || 0);
+  }
+
+  // ── PROPŞAFT ──
+  var psEff = 1.0, I_propshaft = 0.0;
+  propshaftNodes.forEach(function(ps) {
+    var psd = ps.data || {};
+    psEff *= (parseFloat(psd.psEff) || 98.60) / 100;
+    I_propshaft += parseFloat(psd.psInertia) || 0.5;
+  });
+  var i_propshaft = 1.0;
+
+  // ── TRANSFER CASE ──
+  var trd = transferNode ? (transferNode.data || {}) : {};
+  var ftTrGears = trd.ftTrGears || [
+    { kademe: 'High', ratio: 1.054, eff: 97.00 },
+    { kademe: 'Low', ratio: 2.337, eff: 97.00 }
+  ];
+  var ftTrActive = transferRangeOverride || ftTrGears[0].kademe;
+  var activeTransfer = ftTrGears.find(function(r) { return r.kademe === ftTrActive; }) || ftTrGears[0];
+  var i_transfer = parseFloat(activeTransfer.ratio || activeTransfer.oran) || 1.054;
+  var eta_transfer = (parseFloat(activeTransfer.eff || activeTransfer.verim) || 97) / 100;
+  var I_tc = 0.3;
+
+  // ── DİFERANSİYEL ──
+  var dfd = diffNode ? (diffNode.data || {}) : {};
+  var i_axle = parseFloat(dfd.diffRatio) || 6.54;
+  var eta_axle = (parseFloat(dfd.efficiency) || 96) / 100;
+  var I_axle_inertia = parseFloat(dfd.diffInertia) || 1.0;
+
+  // ── TEKERLEK ──
+  var wd = wheelNode ? (wheelNode.data || {}) : {};
+  var r_tire = parseFloat(wd.ftTireRadius) || 0.573;
+  var I_tire = parseFloat(wd.ftTireInertia) || 56.0;
+  var Crr = parseFloat(wd.ftCrr) || 0.0035;
+  var surfFactor = parseFloat(wd.ftSurfaceFactor) || 1.00;
+
+  // ── ARAÇ ──
+  var vd = vehicleNode.data || {};
+  var m_vehicle = parseFloat(vd.ftGVW) || 14900;
+  var drivenPct = (parseFloat(vd.ftDrivenWeight) || 100) / 100;
+  var A_frontal = (parseFloat(vd.ftHeight) || 3.200) * (parseFloat(vd.ftWidth) || 2.500);
+  var Cd = parseFloat(vd.ftCd) || 0.900;
+  var rho = parseFloat(vd.ftRho) || 1.225;
+  var F_grip = 0.70 * m_vehicle * drivenPct * 9.81;
+
+  // ── ÇÖZÜCÜ ──
+  var sd = solverNode ? (solverNode.data || {}) : {};
+  var dt = parseFloat(sd.ftDt) || 0.01;
+  var method = sd.method || 'rk4';
+  var maxTime = parseFloat(sd.maxSimTime) || 300;
+
+  // ═══ VİTES GEÇİŞ DURUMU MAKİNESİ ═══
+  var shiftState = { gearIdx: 0, isLockup: false, shiftHistory: [] };
+
+  function getCurrentGearData() {
+    return forwardGears[shiftState.gearIdx] || forwardGears[0];
+  }
+
+  function checkShift(t_s, N_engine, SR, tau, v_kmh) {
+    var g = shiftState.gearIdx, isLU = shiftState.isLockup, maxGear = forwardGears.length - 1, shifted = false;
+    if(!isLU) {
+      var i_gc = parseFloat(getCurrentGearData().ratio) || 1.0;
+      var N_out = N_engine * SR / i_gc;
+      if(g === 0) {
+        var th1C = (csData && csData['1C2C']) ? csData['1C2C'].a * shiftRefRPM + (csData['1C2C'].b || 0) : SHIFT_1C_2C_OUT_RATIO * shiftRefRPM;
+        if(N_out >= th1C) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:1,fromMode:'1C',toMode:'2C',v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out}); shiftState.gearIdx = 1; shifted = true; }
+      } else if(g === 1) {
+        if(N_out >= _sdCalc2C2LThreshold(shiftRefRPM)) { shiftState.shiftHistory.push({t:t_s,fromGear:1,toGear:1,fromMode:'2C',toMode:'2L',v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out,eta:SR*tau}); shiftState.isLockup = true; shifted = true; }
+      }
+    } else if(g < maxGear) {
+      var i_glu = parseFloat(getCurrentGearData().ratio) || 1.0;
+      var N_out_lu = N_engine / i_glu;
+      var fN = (g+1)+'L', tN = (g+2)+'L', sK = fN+tN, triggered = false;
+      if(spData.lockupShifts && spData.lockupShifts[sK]) { var ls = spData.lockupShifts[sK]; var thlu = ls.a*shiftRefRPM+ls.b; if(ls.minCap!==undefined) thlu=Math.max(thlu,ls.minCap); if(N_out_lu>=thlu) triggered=true; }
+      else { if(N_engine>=N_shift_lockup) triggered=true; }
+      if(triggered) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:g+1,fromMode:fN,toMode:tN,v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out_lu}); shiftState.gearIdx=g+1; shifted=true; }
+    }
+    return shifted;
+  }
+
+  // ═══ BAŞLANGIÇ HIZINDAN VİTES BELİRLEME ═══
+  function initializeFromSpeed(v_ms) {
+    if(v_ms < 0.1) { shiftState.gearIdx = 0; shiftState.isLockup = false; return; }
+    for(var gi = forwardGears.length - 1; gi >= 0; gi--) {
+      var i_g = parseFloat(forwardGears[gi].ratio) || 1.0;
+      var N_eng = FT_SOLVER.speedToTurbineRpm(v_ms, i_g, i_propshaft, i_transfer, i_axle, r_tire);
+      if(N_eng >= idleRpm && N_eng <= governedSpeed + 200) { shiftState.gearIdx = gi; shiftState.isLockup = true; return; }
+    }
+    shiftState.gearIdx = 0;
+    shiftState.isLockup = (v_ms > 2.0);
+  }
+
+  // Aktif segment eğimi
+  var active_grade_pct = 0;
+
+  // ═══ PER-STEP FİZİK ═══
+  var LOCKUP_HEAT_COEFFICIENTS = {
+    1:{a:0.002995,b:0.5519}, 2:{a:0.002995,b:0.5519}, 3:{a:0.003071,b:0.0304},
+    4:{a:0.003470,b:-2.1427}, 5:{a:0.004852,b:-1.9591}, 6:{a:0.006967,b:-4.1326}
+  };
+
+  function calcStepPhysics(v_ms, command) {
+    if(v_ms < 0) v_ms = 0;
+    var gearData = getCurrentGearData();
+    var i_gear = parseFloat(gearData.ratio) || 1.0;
+    var eta_gear = (parseFloat(gearData.eff) || 98) / 100;
+    var isLU = shiftState.isLockup;
+    var isCoast = (command === 'coast');
+
+    var N_engine, T_engine, T_output, T_pump, SR, tau, tcEta, heatRejection_kW = 0;
+
+    if(!hasTCData || isLU) {
+      N_engine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
+      if(N_engine < idleRpm) N_engine = idleRpm;
+      if(isCoast) { T_engine = 0; T_pump = 0; T_output = 0; }
+      else {
+        T_engine = motorTorqueFn(N_engine);
+        T_pump = T_engine - pumpTorqueDrop;
+        T_output = T_pump - (10.0 + 0.00367 * N_engine);
+        if(T_output < 0) T_output = 0;
+      }
+      SR = 1.0; tau = 1.0; tcEta = 1.0;
+      var gn = shiftState.gearIdx + 1;
+      var hc = LOCKUP_HEAT_COEFFICIENTS[gn] || LOCKUP_HEAT_COEFFICIENTS[2];
+      heatRejection_kW = Math.max(0, hc.a * N_engine + hc.b);
+    } else {
+      var N_turbine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
+      if(N_turbine < 0) N_turbine = 0;
+      if(isCoast) {
+        N_engine = N_turbine > 0 ? N_turbine * 1.05 : idleRpm;
+        T_engine = 0; T_pump = 0; T_output = 0;
+        SR = N_turbine > 0 ? N_turbine / N_engine : 0;
+        tau = tcFns.tau(SR); tcEta = SR * tau;
+      } else {
+        var tcR = FT_SOLVER.solveTCOperatingPoint(N_turbine, motorTorqueFn, tcFns, pumpTorqueDrop, {N_min:idleRpm, N_max:noLoadGoverned+100});
+        N_engine = tcR.N_engine; T_engine = tcR.T_engine; T_pump = tcR.T_pump;
+        T_output = tcR.T_turbine; SR = tcR.SR; tau = tcR.tau; tcEta = tcR.eta;
+      }
+      var omE = N_engine * 2 * Math.PI / 60;
+      heatRejection_kW = T_pump > 0 ? Math.max(0, T_pump * omE * (1 - SR * tau) / 1000) : 0;
+    }
+
+    // Motor sürükleme kuvveti (coast modunda motor kompresyon direnci)
+    // Motor tekerlek tarafından çevriliyor: kompresyon + sürtünme + pompa kaybı
+    // Ampirik: T_drag ≈ 0.025 × V_displacement × (N/1000)  [Nm]
+    // Basitleştirilmiş: BMEP motoring ≈ 40-80 kPa (tipik dizel)
+    var F_engine_drag = 0;
+    if(isCoast && v_ms > 0.5) {
+      // Motor sürükleme torku: displacement bazlı ampirik model
+      // T_motoring = C_drag × N_engine [Nm], C_drag ≈ displacement [L] × 0.012
+      var displacement_L = parseFloat(specs.displacement) || 7.0; // Varsayılan 7L dizel
+      var T_motoring = displacement_L * 0.012 * N_engine / 60; // Basitleştirilmiş
+      // Daha gerçekçi: BMEP_motoring ≈ 50 kPa → T = BMEP × V_d / (4π)
+      var V_d = displacement_L / 1000; // m³
+      var BMEP_motoring = 50000; // Pa (50 kPa — tipik dizel motoring pressure)
+      T_motoring = BMEP_motoring * V_d / (4 * Math.PI); // Nm
+      // Tekerlekteki frenleme kuvveti (güç aktarma zinciri üzerinden)
+      var i_total_coast = i_gear * i_propshaft * i_transfer * i_axle;
+      F_engine_drag = T_motoring * i_total_coast / r_tire;
+    }
+
+    var F_traction = isCoast ? 0 : FT_SOLVER.limitByGrip(
+      FT_SOLVER.calcTractiveEffort(T_output, i_gear, eta_gear, i_propshaft, psEff, i_transfer, eta_transfer, i_axle, eta_axle, r_tire),
+      F_grip
+    );
+
+    var resist = FT_SOLVER.calcResistForces(v_ms, { m: m_vehicle, Crr: Crr, surfFactor: surfFactor, Cd: Cd, A: A_frontal, rho: rho, grade_pct: active_grade_pct });
+    var F_net = F_traction - resist.F_total - F_engine_drag;
+
+    var mEff = FT_SOLVER.calcEquivalentMass({
+      m_vehicle: m_vehicle, r_tire: r_tire, i_gear: i_gear, i_propshaft: i_propshaft, i_transfer: i_transfer, i_axle: i_axle,
+      I_engine: I_engine, I_conv: I_conv, I_conv_turbine: I_conv_turbine, I_trans: I_trans, I_propshaft: I_propshaft,
+      I_tc: I_tc, I_axle: I_axle_inertia, I_tire: I_tire, isLockup: isLU
+    });
+
+    return {
+      accel: F_net / mEff.m_eff, N_engine: N_engine, T_engine: T_engine, T_pump: T_pump || 0,
+      T_output: T_output, SR: SR, tau: tau, tcEta: tcEta, heatRejection_kW: heatRejection_kW,
+      F_traction: F_traction, F_engine_drag: F_engine_drag, F_rolling: resist.F_rolling, F_aero: resist.F_aero,
+      F_grade: resist.F_grade, F_resist: resist.F_total, F_net: F_net,
+      m_eff: mEff.m_eff, i_gear: i_gear, eta_gear: eta_gear,
+      gearIdx: shiftState.gearIdx, gearName: gearData.name, isLockup: isLU, command: command
+    };
+  }
+
+  // ═══ SONUÇ DİZİLERİ ═══
+  var timeArr = [], res_speed = [], res_rpm = [], res_engineTorque = [], res_accel = [];
+  var res_F_grade = [], res_F_rolling = [], res_F_aero = [], res_F_net = [], res_distance = [];
+  var res_gearMode = [], res_SR = [], res_TE = [], res_DP = [];
+  var res_segment = [], res_command = [], res_heatRej = [], res_T_output = [];
+  var res_P_engine = [], res_P_wheel = [], res_F_engine_drag = [];
+
+  var sampleInterval = Math.max(1, Math.round(0.05 / dt));
+  var lastSampleStep = -sampleInterval;
+  var globalStep = 0;
+
+  function recordStep(t_rec, v_rec, dist_rec, ph, segIdx) {
+    timeArr.push(parseFloat(t_rec.toFixed(4)));
+    var v_kmh = v_rec * 3.6;
+    res_speed.push(v_kmh); res_rpm.push(ph.N_engine); res_engineTorque.push(ph.T_engine);
+    res_F_grade.push(ph.F_grade); res_F_rolling.push(ph.F_rolling); res_F_aero.push(ph.F_aero);
+    res_F_net.push(ph.F_net); res_distance.push(dist_rec); res_accel.push(ph.accel);
+    var gNum = ph.gearName.replace(/[^0-9]/g, '');
+    res_gearMode.push(gNum + (ph.isLockup ? 'L' : 'C'));
+    res_SR.push(ph.isLockup ? 1.0 : ph.SR);
+    res_TE.push(ph.F_traction / 1000);
+    res_DP.push((ph.F_traction - Math.abs(ph.F_rolling) - Math.abs(ph.F_aero)) / 1000);
+    res_segment.push(segIdx); res_command.push(ph.command || 'full_throttle');
+    res_heatRej.push(ph.heatRejection_kW); res_T_output.push(ph.T_output);
+    res_F_engine_drag.push(ph.F_engine_drag || 0);
+    var omE = ph.N_engine * 2 * Math.PI / 60;
+    res_P_engine.push(ph.T_engine * omE / 1000); res_P_wheel.push(ph.F_traction * v_rec / 1000);
+  }
+
+  // ═══ ANA SEGMENT DÖNGÜSÜ ═══
+  var v = (initSpeed_kmh || 0) / 3.6;
+  var t = 0, totalDist = 0;
+  var maxSteps = Math.ceil(maxTime / dt);
+  var segmentSummary = [];
+
+  initializeFromSpeed(v);
+
+  for(var si = 0; si < segments.length; si++) {
+    var seg = segments[si];
+    // Harita konvansiyonu: grade > 0 = yokuş aşağı, grade < 0 = yokuş yukarı
+    // Fizik motoru konvansiyonu: grade_pct > 0 = yokuş yukarı (direnç artar)
+    // İşaret çevirisi gerekli
+    active_grade_pct = -(seg.grade || 0);
+    var seg_dist = seg.distance || 0;
+    var seg_command = seg.command || 'full_throttle';
+
+    var segStartSpeed = v * 3.6, segStartTime = t, segDist = 0;
+    var segMaxSpeed = v * 3.6, segMinSpeed = v * 3.6;
+
+    var stallCounter = 0;
+    while(segDist < seg_dist && globalStep < maxSteps) {
+      var ph = calcStepPhysics(v, seg_command);
+
+      if(globalStep - lastSampleStep >= sampleInterval || globalStep === 0) {
+        recordStep(t, v, totalDist + segDist, ph, si);
+        lastSampleStep = globalStep;
+      }
+
+      if(seg_command === 'full_throttle') {
+        checkShift(t, ph.N_engine, ph.SR, ph.tau, v * 3.6);
+      }
+
+      // Entegrasyon
+      var dv;
+      if(method === 'euler') { dv = ph.accel * dt; }
+      else if(method === 'heun') {
+        var a2h = calcStepPhysics(v + ph.accel * dt, seg_command).accel;
+        dv = (ph.accel + a2h) / 2 * dt;
+      } else {
+        var k1 = ph.accel;
+        var k2 = calcStepPhysics(v + k1 * dt / 2, seg_command).accel;
+        var k3 = calcStepPhysics(v + k2 * dt / 2, seg_command).accel;
+        var k4 = calcStepPhysics(v + k3 * dt, seg_command).accel;
+        dv = (k1 + 2*k2 + 2*k3 + k4) / 6 * dt;
+      }
+
+      var v_new = Math.max(0, v + dv);
+      segDist += (v + v_new) / 2 * dt;
+      v = v_new; t += dt; globalStep++;
+
+      var vk = v * 3.6;
+      if(vk > segMaxSpeed) segMaxSpeed = vk;
+      if(vk < segMinSpeed) segMinSpeed = vk;
+
+      // Araç durduysa: ivme pozitifse (tam gaz veya yokuş aşağı) devam edebilir,
+      // aksi halde bu segmentte ilerleme yok → segmenti bitir (sonrakine geç)
+      if(v <= 0.01) {
+        v = 0;
+        if(ph.accel <= 0.001) {
+          // Net kuvvet negatif veya sıfır — bu segmentte araç hareket edemez
+          stallCounter++;
+          if(stallCounter > 10) break; // Sonsuz döngü koruması
+        } else {
+          stallCounter = 0; // Pozitif ivme var, kalkış mümkün
+        }
+      } else {
+        stallCounter = 0;
+      }
+    }
+
+    totalDist += segDist;
+    var phEnd = calcStepPhysics(v, seg_command);
+    recordStep(t, v, totalDist, phEnd, si);
+    lastSampleStep = globalStep;
+
+    segmentSummary.push({
+      segIdx: si, no: seg.no || (si + 1), command: seg_command, grade: seg.grade || 0,
+      targetDist: seg_dist, actualDist: segDist,
+      startSpeed_kmh: segStartSpeed, endSpeed_kmh: v * 3.6,
+      maxSpeed_kmh: segMaxSpeed, minSpeed_kmh: segMinSpeed, duration: t - segStartTime
+    });
+
+    if(globalStep >= maxSteps) break;
+    // Araç durduysa (v≈0): sonraki segmente geç — tam gaz segmentinde sıfırdan
+    // kalkış mümkün, yokuş aşağı gaz kesme segmentinde yerçekimi ile hareket mümkün.
+    // Bu yüzden döngüyü kırmıyoruz, sadece sonraki segmentte v=0'dan devam ediyoruz.
+  }
+
+  return {
+    time: timeArr, mode: 'segment-drive',
+    speed: res_speed, rpm: res_rpm, engineTorque: res_engineTorque,
+    F_grade: res_F_grade, F_rolling: res_F_rolling, F_aero: res_F_aero, F_net: res_F_net,
+    distance: res_distance, accel: res_accel,
+    gearMode: res_gearMode, SR: res_SR, TE: res_TE, DP: res_DP,
+    heatRejection: res_heatRej, T_output: res_T_output,
+    P_engine: res_P_engine, P_wheel: res_P_wheel, F_engine_drag: res_F_engine_drag,
+    segment: res_segment, command: res_command, segmentSummary: segmentSummary,
+    solverStats: {
+      method: method, dt: dt, steps: globalStep, maxTime: maxTime,
+      shiftHistory: shiftState.shiftHistory, transferRange: activeTransfer,
+      segments: segments.length, totalDistance: totalDist,
+      initSpeed_kmh: initSpeed_kmh || 0, finalSpeed_kmh: v * 3.6,
+      // Güç aktarma zinciri parametreleri (doğrulama için)
+      i_transfer: i_transfer, eta_transfer: eta_transfer,
+      i_axle: i_axle, eta_axle: eta_axle,
+      r_tire: r_tire, m_vehicle: m_vehicle,
+      Crr: Crr, Cd: Cd, A_frontal: A_frontal,
+      forwardGears: forwardGears.map(function(g) { return {name: g.name, ratio: g.ratio, eff: g.eff}; }),
+      finalGear: getCurrentGearData().name,
+      finalGearIdx: shiftState.gearIdx,
+      isLockup: shiftState.isLockup
+    }
+  };
+}

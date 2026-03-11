@@ -139,6 +139,7 @@ function veSolverValidate() {
   var hasRoad = nodes.some(function(n) { return n.type === 'road'; });
   var hasDiff = nodes.some(function(n) { return n.type === 'differential'; });
   var hasTerminator = nodes.some(function(n) { return n.type === 'terminator'; });
+  var hasScenario = nodes.some(function(n) { return n.type === 'scenario'; });
   
   // Terminator bağlı mı?
   var terminatorConnected = false;
@@ -165,7 +166,16 @@ function veSolverValidate() {
   }
   
   addItem(hasEngine, 'Motor / Motor Freni bileşeni', hasEngine ? 'mevcut' : 'eksik');
-  
+
+  // Senaryo bileşeni zorunlu kontrolü
+  var mod = veGetActiveModule();
+  var scenarioRequired = mod.requiredComponents && mod.requiredComponents.indexOf('scenario') > -1;
+  if(scenarioRequired) {
+    addItem(hasScenario, 'Senaryolar bileşeni', hasScenario ? 'mevcut' : 'eksik — zorunlu bileşen');
+  } else if(hasScenario) {
+    addInfo('Senaryolar bileşeni mevcut (opsiyonel)');
+  }
+
   if(hasTerminator && terminatorConnected) {
     // Kısmi analiz modu — sonlandırıcıya kadar hesap yapılacak
     addInfo('<span style="color:var(--accent-danger);font-weight:600;">Kısmi Analiz Modu</span> — Sonlandırıcı tespit edildi, zincir sonlandırıcıya kadar hesaplanacak');
@@ -228,10 +238,15 @@ function veSolverValidate() {
   }
   
   container.innerHTML = html;
+  return allOk;
 }
 
 function veSolverRun() {
-  veSolverValidate();
+  var valid = veSolverValidate();
+  if(!valid) {
+    showToast('Eksik bileşenler var — önce topolojiyi tamamlayın', 'error');
+    return;
+  }
   
   var progressEl = document.getElementById('ve-solver-progress');
   var progressFill = document.getElementById('ve-solver-progress-fill');

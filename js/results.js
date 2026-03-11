@@ -402,6 +402,13 @@ function veUpdateResultsTree() {
     html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'mf\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
     html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
     html += '</div>';
+    // Hızlanma-Yavaşlama TXT raporu (segment drive varsa)
+    if(window.veSimResults && window.veSimResults.segmentDrive && window.veSimResults.segmentDrive.segmentSummary) {
+      html += '<div style="margin-top:2px;">';
+      html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
+      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
+      html += '</div>';
+    }
   }
   
   tree.innerHTML = html;
@@ -666,12 +673,34 @@ function veRenderDetailedReport(filter) {
   
   // ═══ KONTROL ═══
   var spName = R.shiftProfile.replace(/_/g, ' ').toUpperCase();
+  var spDataRes = VE_FT_SHIFT_PROFILES[R.shiftProfile] || {};
   var gLow = R.gearData.length > 0 ? R.gearData[0].name : '1';
   var gHigh = R.gearData.length > 0 ? R.gearData[R.gearData.length - 1].name : '6';
   var controlHTML = '';
   controlHTML += row('Shift Profili', spName);
-  controlHTML += row('Vites Geçiş Hızı ve Strateji', R.shiftRefRPM + ' rpm — S1 Performans');
-  controlHTML += row('Kilitleme Ofseti', R.lockupOffset + ' rpm');
+  controlHTML += row('Vites Geçiş Hızı ve Strateji', R.shiftRefRPM + ' rpm');
+  // Converter geçişleri
+  if(spDataRes.converterShifts) {
+    var csRes = spDataRes.converterShifts;
+    var convParts = [];
+    if(csRes['1C2C']) convParts.push('1C\u21922C: ' + Math.round(csRes['1C2C'].a * R.shiftRefRPM + (csRes['1C2C'].b || 0)) + ' rpm');
+    if(csRes['2C2L'] && csRes['2C2L'].type === 'segmented') {
+      convParts.push('2C\u21922L: ' + Math.round(csRes['2C2L'].linear.a * R.shiftRefRPM + csRes['2C2L'].linear.b) + ' rpm (ESL\u2265' + csRes['2C2L'].linear.validFrom + ')');
+    }
+    if(convParts.length > 0) controlHTML += row('Converter Geçişleri', convParts.join(', '));
+  }
+  // Lockup geçişleri
+  if(spDataRes.lockupShifts) {
+    var luSummary = Object.keys(spDataRes.lockupShifts).map(function(sk) {
+      var ls = spDataRes.lockupShifts[sk];
+      var thr = ls.a * R.shiftRefRPM + ls.b;
+      if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+      return sk.replace(/(\d+L)(\d+L)/, '$1\u2192$2') + ': ' + Math.round(thr) + ' rpm';
+    }).join(', ');
+    controlHTML += row('Lockup Geçişleri', luSummary);
+  } else {
+    controlHTML += row('Kilitleme Ofseti', R.lockupOffset + ' rpm');
+  }
   controlHTML += row('Ana Mod: Vitesler', 'Düşük = ' + gLow + ', Başlangıç = ' + gLow + ', Yüksek = ' + gHigh + ' (' + gLow + '-' + gLow + '-' + gHigh + ')');
   controlHTML = tableWrap(controlHTML);
   
@@ -735,7 +764,19 @@ function veRenderDetailedReport(filter) {
     var _td = R.torqueData;
     var _peakT = 0, _peakRPM = 0;
     _td.forEach(function(d){ if(d.torque > _peakT){_peakT = d.torque; _peakRPM = d.rpm;} });
-    
+
+    // Governed devirdeki tork ve güç (C9/C10)
+    var _rGbLimits = { grossInputPower: R.gbGrossInputPower || null, grossInputTorque: R.gbGrossInputTorque || null };
+    var _rTorqueAtGov = 0;
+    if(_td.length >= 2) {
+      if(_gov <= _td[0].rpm) _rTorqueAtGov = _td[0].torque;
+      else if(_gov >= _td[_td.length-1].rpm) _rTorqueAtGov = _td[_td.length-1].torque;
+      else { for(var _ri=0;_ri<_td.length-1;_ri++){if(_td[_ri].rpm<=_gov&&_gov<=_td[_ri+1].rpm){var _rf=(_gov-_td[_ri].rpm)/(_td[_ri+1].rpm-_td[_ri].rpm);_rTorqueAtGov=_td[_ri].torque+_rf*(_td[_ri+1].torque-_td[_ri].torque);break;}}}
+    }
+    var _rPowerAtGov = _rTorqueAtGov * _gov * Math.PI / 30000;
+    var _rc9ok = _rGbLimits.grossInputPower !== null ? _rPowerAtGov <= _rGbLimits.grossInputPower : true;
+    var _rc10ok = _rGbLimits.grossInputTorque !== null ? _rTorqueAtGov <= _rGbLimits.grossInputTorque : true;
+
     // İnterpolasyon fonksiyonları
     function _interpT(rpm){
       if(rpm<=_td[0].rpm)return _td[0].torque; if(rpm>=_td[_td.length-1].rpm)return _td[_td.length-1].torque;
@@ -743,11 +784,11 @@ function veRenderDetailedReport(filter) {
     }
     function _interpTD(rpm){if(rpm<=_gov)return _interpT(rpm);if(rpm>=_nlg)return 0;return _interpT(_gov)*(1-(rpm-_gov)/(_nlg-_gov));}
     function _interpKp(tcD,sr){sr=Math.max(0,Math.min(0.99,sr));for(var i=0;i<tcD.length-1;i++){if(tcD[i].sr<=sr&&sr<=tcD[i+1].sr){var f=(sr-tcD[i].sr)/(tcD[i+1].sr-tcD[i].sr);return tcD[i].kpump+f*(tcD[i+1].kpump-tcD[i].kpump);}}return tcD[tcD.length-1].kpump;}
-    
+
     function _findStall(tcD){var kp0=tcD[0].kpump;var lo=600,hi=3500;for(var i=0;i<50;i++){var m=(lo+hi)/2;var tA=_interpTD(m)-_pDrop;var tB=(m*m)/(kp0*kp0);if(tA>tB)lo=m;else hi=m;if(hi-lo<0.5)break;}return(lo+hi)/2;}
     function _findSRGov(tcD){var tp=_interpT(_gov)-_pDrop;if(tp<=0)return 0;var kpN=_gov/Math.sqrt(tp);for(var i=0;i<tcD.length-1;i++){var k1=tcD[i].kpump,k2=tcD[i+1].kpump;if((k1<=kpN&&kpN<=k2)||(k2<=kpN&&kpN<=k1)){var f=(kpN-k1)/(k2-k1);if(f>=0&&f<=1)return tcD[i].sr+f*(tcD[i+1].sr-tcD[i].sr);}}return kpN>tcD[tcD.length-1].kpump?0.99:0.50;}
     function _findMinN(tcD){var mn=9999;for(var nt=0;nt<=_gov*1.05;nt+=15){var lo=Math.max(nt+1,600),hi=_nlg+100;for(var it=0;it<45;it++){var m=(lo+hi)/2;if(m<=nt){lo=m;continue;}var sr=nt/m;sr=Math.max(0,Math.min(0.99,sr));var kp=_interpKp(tcD,sr);var tA=_interpTD(m)-_pDrop;var tB=(m*m)/(kp*kp);if(tA>tB)lo=m;else hi=m;if(hi-lo<1)break;}var nE=(lo+hi)/2;if(nE<mn&&nE>500)mn=nE;}return mn;}
-    
+
     var _tcKeys = veGetFamilyTCKeys();
     var _ecmResults = [];
     _tcKeys.forEach(function(key){
@@ -755,11 +796,13 @@ function veRenderDetailedReport(filter) {
       var ss = _findStall(tcD); var srG = _findSRGov(tcD); var minN = _findMinN(tcD);
       var sTau = tcD[0].tau; var tPS = _interpTD(ss)-_pDrop; var tTS = tPS * sTau;
       var c5 = minN >= _peakRPM - 50; var c7 = tTS <= _tRating; var c8 = srG >= 0.80;
-      var st, sc; if(!c7){st='unacceptable';sc=0;}else if(!c5){st='not-recommended';sc=1;}else if(!c8){st='caution';sc=2;}else{st='recommended';sc=3;}
-      _ecmResults.push({key:key, name:tc.name, stallTau:sTau, stallSpeed:ss, minSpeed:minN, srGov:srG, tTurbineStall:tTS, c5ok:c5, c7ok:c7, c8ok:c8, status:st, score:sc});
+      var st, sc;
+      if(!_rc9ok || !_rc10ok){st='unacceptable';sc=0;}
+      else if(!c7){st='unacceptable';sc=0;}else if(!c5){st='not-recommended';sc=1;}else if(!c8){st='caution';sc=2;}else{st='recommended';sc=3;}
+      _ecmResults.push({key:key, name:tc.name, stallTau:sTau, stallSpeed:ss, minSpeed:minN, srGov:srG, tTurbineStall:tTS, c5ok:c5, c7ok:c7, c8ok:c8, c9ok:_rc9ok, c10ok:_rc10ok, status:st, score:sc});
     });
     _ecmResults.sort(function(a,b){return b.score-a.score||b.srGov-a.srGov;});
-    
+
     // Motor bilgisi
     ecmHTML += '<table style="width:100%; border-collapse:collapse; background:#fff; margin-bottom:12px;">';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; width:230px; font-size:0.73rem;">Motor</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + R.engineName + '</td></tr>';
@@ -767,6 +810,8 @@ function veRenderDetailedReport(filter) {
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Governed Devir</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _gov + ' rpm</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Pompa Düşümü</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _pDrop + ' N·m</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Türbin Limiti</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:#222; font-size:0.73rem;">' + _tRating + ' N·m</td></tr>';
+    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Giriş Güç Limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:' + (_rc9ok ? '#222' : '#dc2626') + '; font-size:0.73rem;">' + _rPowerAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputPower + ' kW ' + (_rc9ok ? '✅' : '❌') + '</td></tr>';
+    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; color:#555; font-size:0.73rem;">Giriş Tork Limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid #eaeaea; font-weight:600; color:' + (_rc10ok ? '#222' : '#dc2626') + '; font-size:0.73rem;">' + _rTorqueAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputTorque + ' N·m ' + (_rc10ok ? '✅' : '❌') + '</td></tr>';
     ecmHTML += '</table>';
     
     // Tablo
@@ -1481,6 +1526,10 @@ function _drRedrawChart(canvas) {
     veRenderAccelChart(id, d.chartData, d.title);
   } else if(d.type === 'ftUpshift') {
     veRenderFTUpshiftChart(id, d.data);
+  } else if(d.type === 'distGrade') {
+    veRenderDistGradeProfile(id, d.segments, d.nodeId);
+  } else if(d.type === 'altProfile') {
+    veRenderAltitudeProfile(id, d.gpsSamples, d.nodeId);
   }
 }
 
@@ -1563,7 +1612,7 @@ function _drChartMouseMove(e) {
     var dy = e.clientY - _drChartPan.startY;
     var xRange = (d.baseXMax - d.baseXMin) / z.scale;
     z.cx = _drChartPan.startCX - dx / d.plotW * xRange;
-    if(d.type === 'grade') {
+    if(d.type === 'grade' || d.type === 'distGrade' || d.type === 'altProfile') {
       var yRange = (d.baseYMax - d.baseYMin) / z.scale;
       z.cy = _drChartPan.startCY + dy / d.plotH * yRange;
     }
@@ -1638,6 +1687,42 @@ function _drChartMouseMove(e) {
       html += '<div>Hız: <b style="color:#60a5fa;">' + snapSpeed.toFixed(1) + '</b> km/h</div>';
       if(tVal !== null) html += '<div>Süre: <b style="color:#4a86c8;">' + tVal.toFixed(2) + '</b> s</div>';
       if(dValI !== null) html += '<div>Mesafe: <b style="color:#c0392b;">' + Math.round(dValI) + '</b> m</div>';
+    }
+  } else if(d.type === 'distGrade') {
+    // Hangi segmentte olduğunu bul
+    var dps = d.dataPoints;
+    for(var si = 0; si < dps.length; si++) {
+      var spx1 = d.padL + (dps[si].xStart - d.xMin) / (d.xMax - d.xMin) * d.plotW;
+      var spx2 = d.padL + (dps[si].xEnd - d.xMin) / (d.xMax - d.xMin) * d.plotW;
+      if(mx >= spx1 && mx <= spx2) {
+        snapOk = true;
+        var segLabel = dps[si].xStart.toFixed(0) + ' — ' + dps[si].xEnd.toFixed(0) + ' m';
+        html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Segment ' + (si + 1) + '</div>';
+        html += '<div>Mesafe: <b style="color:#60a5fa;">' + segLabel + '</b></div>';
+        html += '<div>Uzunluk: <b style="color:#60a5fa;">' + dps[si].mesafe.toFixed(0) + '</b> m</div>';
+        html += '<div>Eğim: <b style="color:' + (dps[si].grade > 0.5 ? '#4caf50' : (dps[si].grade < -0.5 ? '#ef5350' : '#8b95a5')) + ';">' + (dps[si].grade > 0 ? '↓' : (dps[si].grade < 0 ? '↑' : '→')) + ' %' + dps[si].grade.toFixed(1) + '</b></div>';
+        html += '<div>Δh: <b style="color:#60a5fa;">' + dps[si].deltaH.toFixed(1) + '</b> m</div>';
+        break;
+      }
+    }
+  } else if(d.type === 'altProfile') {
+    // Rakım profilinde en yakın noktayı bul
+    var aptXVal = d.fromX(mx);
+    if(aptXVal >= 0 && aptXVal <= d.totalDist && d.pts && d.pts.length >= 2) {
+      snapOk = true;
+      // İnterpolasyon ile yükseklik bul
+      var aptElev = d.pts[d.pts.length - 1].elev;
+      for(var ak = 0; ak < d.pts.length - 1; ak++) {
+        if(aptXVal >= d.pts[ak].dist && aptXVal <= d.pts[ak+1].dist) {
+          var at = (aptXVal - d.pts[ak].dist) / (d.pts[ak+1].dist - d.pts[ak].dist);
+          aptElev = d.pts[ak].elev + at * (d.pts[ak+1].elev - d.pts[ak].elev);
+          break;
+        }
+      }
+      var aptDistLabel = aptXVal.toFixed(0) + ' m';
+      html = '<div style="font-weight:600; color:#fff; margin-bottom:3px;">Rakım Profili</div>';
+      html += '<div>Mesafe: <b style="color:#60a5fa;">' + aptDistLabel + '</b></div>';
+      html += '<div>Rakım: <b style="color:#b39ddb;">' + aptElev.toFixed(1) + '</b> m</div>';
     }
   }
 
@@ -1965,6 +2050,14 @@ function veRenderTXTReport(reportType) {
 
   if(reportType === 'ft') {
     txtContent = veGenerateFTTxtReport(sim);
+    // Segment drive sonucu varsa ayrı rapor olarak ekle
+    if(sim.segmentDrive && sim.segmentDrive.segmentSummary && typeof veGenerateSegmentDriveTxtReport === 'function') {
+      var _sep = ''; for(var _si = 0; _si < 80; _si++) _sep += '=';
+      txtContent += '\n\n' + _sep + '\n';
+      txtContent += '               EK: HIZLANMA-YAVASLAMA SEGMENT ANALIZI\n';
+      txtContent += _sep + '\n\n';
+      txtContent += veGenerateSegmentDriveTxtReport(sim);
+    }
     downloadName = 'BMC_TamGaz_Rapor_' + dateStr + '.txt';
     reportTitle = 'Tam Gaz Hızlanma Raporu (TXT)';
   } else if(reportType === 'mf') {
@@ -2088,6 +2181,54 @@ function veRenderTXTReport(reportType) {
   html += '</div></div>';
 
   // Store content for download
+  window._veTxtPreviewContent = txtContent;
+  window._veTxtPreviewFilename = downloadName;
+
+  overlay.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+
+function veRenderSegmentDriveTXTReport() {
+  var overlay = document.getElementById('ve-report-overlay');
+  if(!overlay) return;
+
+  var sim = window.veSimResults;
+  if(!sim || !sim.segmentDrive || !sim.segmentDrive.segmentSummary) {
+    showToast('Segment sürüş verisi bulunamadı — önce simülasyon çalıştırın', 'warning');
+    return;
+  }
+
+  if(typeof veGenerateSegmentDriveTxtReport !== 'function') {
+    showToast('Rapor fonksiyonu bulunamadı', 'warning');
+    return;
+  }
+
+  var txtContent = veGenerateSegmentDriveTxtReport(sim);
+  var now = new Date();
+  var dateStr = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+  var downloadName = 'BMC_HizlanmaYavaslama_Rapor_' + dateStr + '.txt';
+
+  if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
+
+  var html = '';
+  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
+  html += '<div style="display:flex; align-items:center; gap:8px;">';
+  html += '<span style="font-size:1rem;">📄</span>';
+  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Hızlanma-Yavaşlama Raporu (TXT)</span>';
+  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
+  html += '</div>';
+  html += '<div style="display:flex; align-items:center; gap:6px;">';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'#1d4ed8\';this.style.color=\'#1d4ed8\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '</div>';
+  html += '</div>';
+  html += '<div style="flex:1; overflow-y:auto; background:#e8eaed; padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:#fff; border-radius:4px; box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:#222; white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  html += '</pre>';
+  html += '</div></div>';
+
   window._veTxtPreviewContent = txtContent;
   window._veTxtPreviewFilename = downloadName;
 
@@ -4142,7 +4283,9 @@ function veUpdateBoundary() {
   
   // Eski sınır elemanlarını temizle
   svg.querySelectorAll('.ve-boundary-rect').forEach(function(el) { el.remove(); });
-  
+  var oldBtn = document.getElementById('ve-boundary-summary-btn');
+  if(oldBtn) oldBtn.remove();
+
   if(!veBoundaryVisible || nodes.length === 0) return;
   
   // Bileşenlerin sınır kutusunu hesapla (sensör hariç)
@@ -4183,6 +4326,31 @@ function veUpdateBoundary() {
   rect.style.cssText = 'fill:none; stroke:var(--border-hover); stroke-width:1.5; stroke-dasharray:8,5; opacity:0.55; pointer-events:none;';
   if(svg.firstChild) { svg.insertBefore(rect, svg.firstChild); }
   else { svg.appendChild(rect); }
+
+  // Topoloji Özeti butonu — boundary sağ alt köşesine
+  veUpdateBoundarySummaryBtn(bx, by, bw, bh);
+}
+
+function veUpdateBoundarySummaryBtn(bx, by, bw, bh) {
+  // Eski butonu temizle
+  var old = document.getElementById('ve-boundary-summary-btn');
+  if(old) old.remove();
+
+  var canvas = document.getElementById('ve-canvas');
+  if(!canvas) return;
+
+  var btn = document.createElement('div');
+  btn.id = 've-boundary-summary-btn';
+  btn.className = 've-boundary-summary-btn';
+  btn.title = 'Topoloji özetini göster';
+  btn.innerHTML = '📊';
+  btn.style.left = (bx + bw - 38) + 'px';
+  btn.style.top = (by + bh - 38) + 'px';
+  btn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    veShowTopologySummary();
+  });
+  canvas.appendChild(btn);
 }
 
 // Toast bildirimi göster (sağdan gelen)

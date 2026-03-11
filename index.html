@@ -12,7 +12,7 @@
 
 <!-- ═══ LOGIN SCREEN (Gunmetal Theme) ═══ -->
 <div id="mfsim-login-overlay" style="position:fixed; inset:0; z-index:999999; background:linear-gradient(135deg, #d5d8dc 0%, #e8eaed 40%, #dcdfe3 100%); display:flex; align-items:center; justify-content:center; font-family:system-ui,-apple-system,sans-serif;">
-  <div style="width:360px; padding:40px; background:#f1f3f5; border:1px solid #c4c9d0; border-radius:16px; box-shadow:0 25px 80px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06);">
+  <div style="width:360px; padding:40px; background:#f1f3f5; border:1px solid #c4c9d0; border-radius:0; box-shadow:0 25px 80px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06);">
     <div style="text-align:center; margin-bottom:28px;">
       <div style="font-size:1.3rem; font-weight:700; color:#0d0f13; letter-spacing:0.5px;">MFSim</div>
       <div style="font-size:0.7rem; color:#8590a2; margin-top:4px;">Motor Fren Simulasyon Yazılımı</div>
@@ -45,15 +45,12 @@
       <div class="ve-menu-item" onclick="veLoadTopology()">📂 Proje Aç</div>
       <div class="ve-menu-item" onclick="veSaveTopology()">💾 Projeyi Kaydet</div>
       <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="veShowTopologySummary()">📊 Topoloji Özeti</div>
-      <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veClearAll()">🗑️ Projeyi Temizle</div>
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;">🔒 Çıkış Yap</div>
     </div>
   </div>
   <div class="ve-tab-group">
-    <button class="active" id="tab-btn-editor">Görsel Editör</button>
     <div class="ve-sub-tabs visible" id="ve-sub-tabs">
       <button class="ve-sub-tab active" onclick="veSubTabDegistir('anasayfa')" data-subtab="anasayfa">Ana Sayfa</button>
       <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
@@ -265,10 +262,23 @@
                 <path d="M25 62 L40 57 L55 67 L70 50 L85 60" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg> <span class="ve-comp-label">Parametrik Analiz</span></div>
           </div>
-          
+
+          <div class="ve-category ve-category-tools" data-always-visible="true">
+            <div class="ve-category-title">Araçlar</div>
+            <div class="ve-annotation-tool ve-component" draggable="true" data-annotation-type="frame">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="10" y="10" width="80" height="65" rx="4" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="10,6"/>
+                <text x="50" y="95" text-anchor="middle" font-size="24" fill="currentColor" opacity="0.6">Grup</text>
+              </svg> <span class="ve-comp-label">Gruplama Çerçevesi</span></div>
+            <div class="ve-annotation-tool ve-component" draggable="true" data-annotation-type="text">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <text x="50" y="70" text-anchor="middle" font-size="72" font-weight="700" fill="currentColor">T</text>
+              </svg> <span class="ve-comp-label">Yazı Etiketi</span></div>
+          </div>
+
         </div>
       </div>
-      
+
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
         <div class="ve-tab-bar" id="ve-tab-bar"></div>
@@ -500,6 +510,7 @@
 <script src="js/solver-pro.js"></script>
 <script src="js/component-extras.js"></script>
 <script src="js/map.js"></script>
+<script src="js/annotations.js"></script>
 <script src="js/state.js"></script>
 <script src="js/topology.js"></script>
 <script src="js/toolbar.js"></script>
