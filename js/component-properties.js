@@ -5517,19 +5517,30 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
 
     // Tablo
     h += '<div style="overflow-x:auto;">';
-    h += '<table style="width:100%; border-collapse:collapse; font-size:0.62rem; min-width:500px;">';
+    h += '<table style="width:100%; border-collapse:collapse; font-size:0.58rem; table-layout:fixed;">';
+    h += '<colgroup>';
+    h += '<col style="width:28px;">';   // Durum (ikon)
+    h += '<col style="width:auto;">';   // Şanzıman
+    h += '<col style="width:32px;">';   // Vites
+    h += '<col style="width:38px;">';   // Güç
+    h += '<col style="width:40px;">';   // Tork
+    h += '<col style="width:40px;">';   // Türbin
+    h += '<col style="width:40px;">';   // Max Çkş
+    h += '<col style="width:24px;">';   // C9
+    h += '<col style="width:24px;">';   // C10
+    h += '<col style="width:34px;">';   // Seç
+    h += '</colgroup>';
     h += '<thead><tr style="background:var(--bg-tertiary);">';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Durum</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Şanzıman</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">Aile</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">Vites</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C9: Giriş Güç Limiti">Güç<br>Limit</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C10: Giriş Tork Limiti">Tork<br>Limit</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">Türbin<br>Tork</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">Max<br>Çıkış</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C9</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C10</th>';
-    h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);"></th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:600; color:var(--text-heading); font-size:0.55rem;" title="Durum">⊘</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Şanzıman</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">V</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C9: Giriş Güç Limiti (kW)">Güç</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C10: Giriş Tork Limiti (Nm)">Tork</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="Net Türbin Torku (Nm)">Türb.</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="Maks. Çıkış Hızı (rpm)">Çkş</th>';
+    h += '<th style="padding:3px 1px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C9</th>';
+    h += '<th style="padding:3px 1px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C10</th>';
+    h += '<th style="padding:3px 1px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);"></th>';
     h += '</tr></thead><tbody>';
 
     results.forEach(function(r) {
@@ -5554,20 +5565,21 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       var borderLeft = isSelected ? '3px solid var(--accent-primary)' : 'none';
       var calMark = r.calibrated ? ' ✦' : '';
 
-      h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';">';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); white-space:nowrap;"><span style="font-size:0.6rem; font-weight:600; color:' + statusColor + ';">' + statusIcon + ' ' + statusText + '</span></td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + r.name + calMark + (isSelected ? ' <span style="font-size:0.5rem; background:var(--accent-primary); color:white; padding:1px 4px; border-radius:3px;">SEÇİLİ</span>' : '') + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-secondary); font-size:0.58rem;">' + r.family + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.gearCount + 'V</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? r.grossInputPower + ' kW' : '—') + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? r.grossInputTorque + ' Nm' : '—') + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.netTurbineTorque !== null ? r.netTurbineTorque + ' Nm' : '—') + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? r.maxOutputSpeed + ' rpm' : '—') + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">' + (r.score < 0 ? '—' : (r.c9ok ? '✅' : '❌')) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">' + (r.score < 0 ? '—' : (r.c10ok ? '✅' : '❌')) + '</td>';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">';
+      // Şanzıman adını kısalt: "Allison | 4000SP" → "4000SP"
+      var shortName = r.name.replace(/^Allison\s*\|\s*/i, '');
+      h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';" title="' + statusText + ': ' + r.name + '">';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center;" title="' + statusText + '"><span style="font-size:0.6rem;">' + statusIcon + '</span></td>';
+      h += '<td style="padding:2px 3px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + shortName + calMark + (isSelected ? ' <span style="font-size:0.45rem; background:var(--accent-primary); color:white; padding:0 3px; border-radius:2px;">✔</span>' : '') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.gearCount + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? r.grossInputPower : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? r.grossInputTorque : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.netTurbineTorque !== null ? r.netTurbineTorque : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? r.maxOutputSpeed : '—') + '</td>';
+      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c9ok ? '✅' : '❌')) + '</td>';
+      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c10ok ? '✅' : '❌')) + '</td>';
+      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center;">';
       if(r.status !== 'unacceptable' && r.score >= 0) {
-        h += '<button onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:2px 8px; font-size:0.58rem; background:' + (isSelected ? 'var(--bg-tertiary)' : 'var(--accent-primary)') + '; color:' + (isSelected ? 'var(--text-muted)' : 'white') + '; border:1px solid ' + (isSelected ? 'var(--border-color)' : 'transparent') + '; border-radius:3px; cursor:' + (isSelected ? 'default' : 'pointer') + '; white-space:nowrap;"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? 'Seçili' : 'Seç') + '</button>';
+        h += '<button onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:0.52rem; background:' + (isSelected ? 'var(--bg-tertiary)' : 'var(--accent-primary)') + '; color:' + (isSelected ? 'var(--text-muted)' : 'white') + '; border:1px solid ' + (isSelected ? 'var(--border-color)' : 'transparent') + '; border-radius:2px; cursor:' + (isSelected ? 'default' : 'pointer') + ';"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
       }
       h += '</td>';
       h += '</tr>';
