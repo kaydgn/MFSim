@@ -721,6 +721,7 @@ function veLoadTopology() {
                 el.style.display = mod.components.indexOf(type) > -1 ? '' : 'none';
               });
               document.querySelectorAll('.ve-category').forEach(function(cat) {
+                if(cat.getAttribute('data-always-visible')) return;
                 var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
                 cat.style.display = visibleComps.length === 0 ? 'none' : '';
               });

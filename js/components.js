@@ -136,8 +136,9 @@ function veApplyModuleChange(moduleId) {
     }
   });
   
-  // Boş kategorileri gizle
+  // Boş kategorileri gizle (Araçlar hariç)
   document.querySelectorAll('.ve-category').forEach(function(cat) {
+    if(cat.getAttribute('data-always-visible')) return;
     var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
     if(visibleComps.length === 0) {
       cat.style.display = 'none';
@@ -145,7 +146,7 @@ function veApplyModuleChange(moduleId) {
       cat.style.display = '';
     }
   });
-  
+
   showToast(mod.name + ' modülü aktif', 'info');
 }
 
@@ -177,6 +178,7 @@ function veSelectModuleFromOverlay(moduleId) {
       }
     });
     document.querySelectorAll('.ve-category').forEach(function(cat) {
+      if(cat.getAttribute('data-always-visible')) return;
       var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
       cat.style.display = visibleComps.length === 0 ? 'none' : '';
     });

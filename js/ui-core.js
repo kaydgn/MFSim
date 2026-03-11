@@ -32,11 +32,12 @@ document.addEventListener('DOMContentLoaded', function() {
   var overlayVisible = moduleOverlay && moduleOverlay.style.display !== 'none';
   
   if(overlayVisible) {
-    // Overlay açıkken tüm sidebar bileşenlerini gizle
+    // Overlay açıkken tüm sidebar bileşenlerini gizle (Araçlar hariç)
     document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
       el.style.display = 'none';
     });
     document.querySelectorAll('.ve-category').forEach(function(cat) {
+      if(cat.getAttribute('data-always-visible')) return;
       cat.style.display = 'none';
     });
   } else {
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
       document.querySelectorAll('.ve-category').forEach(function(cat) {
+        if(cat.getAttribute('data-always-visible')) return; // Araçlar kategorisi her zaman görünür
         var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
         if(visibleComps.length === 0) {
           cat.style.display = 'none';
@@ -227,13 +229,27 @@ document.addEventListener('DOMContentLoaded', function() {
           var nodeEl = document.getElementById(node.id);
           if(nodeEl) {
             var nodeRect = nodeEl.getBoundingClientRect();
-            
+
             if(nodeRect.left < boxRect.right && nodeRect.right > boxRect.left &&
                nodeRect.top < boxRect.bottom && nodeRect.bottom > boxRect.top) {
               addToSelection(node);
             }
           }
         });
+
+        // Annotations da seçim kutusuna dahil
+        if(typeof annotations !== 'undefined' && typeof selectAnnotation === 'function') {
+          annotations.forEach(function(annot) {
+            var annotEl = document.getElementById(annot.id);
+            if(annotEl) {
+              var annotRect = annotEl.getBoundingClientRect();
+              if(annotRect.left < boxRect.right && annotRect.right > boxRect.left &&
+                 annotRect.top < boxRect.bottom && annotRect.bottom > boxRect.top) {
+                selectAnnotation(annot);
+              }
+            }
+          });
+        }
       }
       
       // Seçim kutusunu gizle ve sıfırla
@@ -368,6 +384,10 @@ document.addEventListener('DOMContentLoaded', function() {
       if(selectedNodes.length > 0) {
         e.preventDefault();
         deleteSelectedNodes();
+      }
+      if(typeof selectedAnnotations !== 'undefined' && selectedAnnotations.length > 0) {
+        e.preventDefault();
+        deleteSelectedAnnotations();
       }
     }
     
