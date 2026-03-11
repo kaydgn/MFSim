@@ -48,6 +48,7 @@ function renderAnnotation(annot) {
       '<div class="ve-annotation-label" style="color:' + annot.color + '; font-size:' + annot.fontSize + 'px;">' +
         escapeHtml(annot.text) +
       '</div>' +
+      '<div class="ve-annotation-drag" title="Sürükle">✥</div>' +
       '<div class="ve-annotation-resize" data-annot="' + annot.id + '"></div>';
   } else {
     el.style.color = annot.color;
@@ -77,10 +78,18 @@ function setupAnnotationInteractions(el, annot) {
   var isDragging = false;
   var dragStart = {x: 0, y: 0};
 
-  // Sürükleme
+  // Frame: sürükleme sadece drag handle ve label'dan başlar
+  // Text: tüm elemandan sürüklenebilir (zaten küçük)
+  var dragTargetSelector = annot.type === 'frame'
+    ? '.ve-annotation-drag, .ve-annotation-label'
+    : null;
+
   el.addEventListener('mousedown', function(e) {
     if(e.target.classList.contains('ve-annotation-resize')) return;
     if(e.button !== 0) return;
+
+    // Frame ise sadece drag handle veya label'dan sürükleme başlasın
+    if(dragTargetSelector && !e.target.closest(dragTargetSelector)) return;
 
     isDragging = true;
     dragStart = {x: e.clientX - annot.x * canvasZoom, y: e.clientY - annot.y * canvasZoom};
@@ -124,12 +133,15 @@ function setupAnnotationInteractions(el, annot) {
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
 
-  // Çift tıklama → metin düzenleme
-  el.addEventListener('dblclick', function(e) {
-    e.stopPropagation();
-    e.preventDefault();
-    editAnnotationText(annot);
-  });
+  // Çift tıklama → metin düzenleme (frame: label üzerinden, text: tüm eleman)
+  var dblTarget = (annot.type === 'frame') ? el.querySelector('.ve-annotation-label') : el;
+  if(dblTarget) {
+    dblTarget.addEventListener('dblclick', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      editAnnotationText(annot);
+    });
+  }
 
   // Boyutlandırma (sadece frame)
   if(annot.type === 'frame') {
@@ -162,11 +174,16 @@ function setupAnnotationInteractions(el, annot) {
     }
   }
 
-  // Sağ tık → bağlam menüsü
-  el.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    showAnnotationContextMenu(e, annot);
+  // Sağ tık → bağlam menüsü (frame: label ve drag handle üzerinden, text: tüm eleman)
+  var ctxTargets = annot.type === 'frame'
+    ? el.querySelectorAll('.ve-annotation-label, .ve-annotation-drag')
+    : [el];
+  Array.prototype.forEach.call(ctxTargets, function(target) {
+    target.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      showAnnotationContextMenu(e, annot);
+    });
   });
 }
 
