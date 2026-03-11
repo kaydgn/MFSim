@@ -1944,6 +1944,19 @@ function veGenerateFTTxtReport(sim) {
 
   // ECM hesaplamasi
   var _ecmResults = [];
+  // Şanzıman giriş limitleri
+  var _gbLimits = { grossInputPower: R.gbGrossInputPower || null, grossInputTorque: R.gbGrossInputTorque || null, maxOutputSpeed: R.gbMaxOutputSpeed || null };
+  // Governed devirdeki tork ve güç
+  var _torqueAtGov = 0;
+  if (R.torqueData && R.torqueData.length >= 2) {
+    var _tdg = R.torqueData;
+    if (R.governed <= _tdg[0].rpm) _torqueAtGov = _tdg[0].torque;
+    else if (R.governed >= _tdg[_tdg.length-1].rpm) _torqueAtGov = _tdg[_tdg.length-1].torque;
+    else { for (var _gi = 0; _gi < _tdg.length - 1; _gi++) { if (_tdg[_gi].rpm <= R.governed && R.governed <= _tdg[_gi+1].rpm) { var _gf = (R.governed - _tdg[_gi].rpm) / (_tdg[_gi+1].rpm - _tdg[_gi].rpm); _torqueAtGov = _tdg[_gi].torque + _gf * (_tdg[_gi+1].torque - _tdg[_gi].torque); break; } } }
+  }
+  var _powerAtGov = _torqueAtGov * R.governed * Math.PI / 30000;
+  var _c9ok = _gbLimits.grossInputPower !== null ? _powerAtGov <= _gbLimits.grossInputPower : true;
+  var _c10ok = _gbLimits.grossInputTorque !== null ? _torqueAtGov <= _gbLimits.grossInputTorque : true;
   try {
     if (R.torqueData && R.torqueData.length > 2 && typeof VE_FT_TC_PRESETS !== 'undefined' && typeof veGetFamilyTCKeys === 'function') {
       var _tcKeys = veGetFamilyTCKeys();
@@ -1991,9 +2004,13 @@ function veGenerateFTTxtReport(sim) {
         var c5 = minN >= (peakTorqueRpm - 50);
         var c7 = tTS <= (R.turbineRating || 3320);
         var c8 = srG >= 0.80;
-        var sc = (c5 ? 1 : 0) + (c7 ? 1 : 0) + (c8 ? 1 : 0);
-        var st = sc === 3 ? 'recommended' : sc === 2 ? 'caution' : 'not-recommended';
-        _ecmResults.push({ key: key, name: tc.name || key, stallTau: sTau, stallSpeed: sSpeed, minSpeed: minN, srGov: srG, tTurbineStall: tTS, c5ok: c5, c7ok: c7, c8ok: c8, status: st, score: sc });
+        var st, sc;
+        if (!_c9ok || !_c10ok) { st = 'unacceptable'; sc = 0; }
+        else if (!c7) { st = 'unacceptable'; sc = 0; }
+        else if (!c5) { st = 'not-recommended'; sc = 1; }
+        else if (!c8) { st = 'caution'; sc = 2; }
+        else { st = 'recommended'; sc = 3; }
+        _ecmResults.push({ key: key, name: tc.name || key, stallTau: sTau, stallSpeed: sSpeed, minSpeed: minN, srGov: srG, tTurbineStall: tTS, c5ok: c5, c7ok: c7, c8ok: c8, c9ok: _c9ok, c10ok: _c10ok, status: st, score: sc });
         } catch(tcErr) { console.warn('[MFSim] ECM hesaplama hatası (' + key + '):', tcErr.message); }
       });
       _ecmResults.sort(function(a, b) { return b.score - a.score || b.srGov - a.srGov; });
@@ -2227,10 +2244,22 @@ function veGenerateFTTxtReport(sim) {
   r += pRow('Governed Devir', numI(R.governed) + ' rpm');
   r += pRow('Pompa Dusumu', num(R.pumpDrop || 17.6, 1) + ' N.m');
   r += pRow('Turbin Limiti', numI(R.turbineRating || 3320) + ' N.m');
+  if (_gbLimits.grossInputPower !== null) r += pRow('Giris Guc Limiti', _gbLimits.grossInputPower + ' kW');
+  if (_gbLimits.grossInputTorque !== null) r += pRow('Giris Tork Limiti', _gbLimits.grossInputTorque + ' N.m');
+  r += pRow('Gov. Guc', numI(_powerAtGov) + ' kW' + (_gbLimits.grossInputPower !== null ? ' (C9: ' + (_c9ok ? 'OK' : 'ASILIYOR') + ')' : ''));
+  r += pRow('Gov. Tork', numI(_torqueAtGov) + ' N.m' + (_gbLimits.grossInputTorque !== null ? ' (C10: ' + (_c10ok ? 'OK' : 'ASILIYOR') + ')' : ''));
   r += '\n';
 
   if (_ecmResults.length > 0) {
     var ecmW = 97;
+
+    if (!_c9ok || !_c10ok) {
+      r += '  *** UYARI: SANZIMAN GIRIS LIMITI ASILIYOR ***\n';
+      if (!_c9ok) r += '  C9 : Motor gucu (' + numI(_powerAtGov) + ' kW) > Giris guc limiti (' + _gbLimits.grossInputPower + ' kW)\n';
+      if (!_c10ok) r += '  C10: Motor torku (' + numI(_torqueAtGov) + ' N.m) > Giris tork limiti (' + _gbLimits.grossInputTorque + ' N.m)\n';
+      r += '\n';
+    }
+
     r += '  ECM SONUCLARI\n';
     r += '  ' + ln('-', ecmW) + '\n';
     r += '  ' + pad('Durum', 15) + pad('Konvertor', 18) + pad('Stall t', 9, 'right') + pad('Stall rpm', 11, 'right');
@@ -2257,7 +2286,10 @@ function veGenerateFTTxtReport(sim) {
     r += '  KRITER ACIKLAMALARI\n';
     r += '  C5 : Minimum pump hizi >= pik tork devri (OK/NO)\n';
     r += '  C7 : Stall\'da turbin torku <= turbin limiti (OK/NO)\n';
-    r += '  C8 : Governed\'da hiz orani >= 0.80 (OK/!!)\n\n';
+    r += '  C8 : Governed\'da hiz orani >= 0.80 (OK/!!)\n';
+    if (_gbLimits.grossInputPower !== null) r += '  C9 : Motor gucu@governed <= giris guc limiti (OK/ASILIYOR)\n';
+    if (_gbLimits.grossInputTorque !== null) r += '  C10: Motor torku@governed <= giris tork limiti (OK/ASILIYOR)\n';
+    r += '\n';
 
     // Secili TC yorum
     var selTC = _ecmResults.find(function(e) { return e.name === R.tcName; }) || _ecmResults[0];

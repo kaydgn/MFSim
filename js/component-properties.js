@@ -3391,7 +3391,22 @@ function getGearboxPropertiesHTML(node) {
     html += '</select>';
     html += '</div>';
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Kalibrasyon mevcut">✦</span> = Kalibrasyon mevcut (shift profili tanımlı)</div>';
-    
+
+    // Şanzıman limitleri bilgi kutusu
+    if(ftGBPreset && VE_GEARBOX_PRESETS[ftGBPreset]) {
+      var _lp = VE_GEARBOX_PRESETS[ftGBPreset];
+      if(_lp.grossInputPower || _lp.grossInputTorque || _lp.netTurbineTorque || _lp.maxOutputSpeed) {
+        html += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px; margin-bottom:8px; font-size:0.6rem; line-height:1.5;">';
+        html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:2px; font-size:0.62rem;">Şanzıman Limitleri</div>';
+        html += '<div style="display:flex; flex-wrap:wrap; gap:4px 12px; color:var(--text-secondary);">';
+        if(_lp.grossInputPower) html += '<span>Giriş Güç: <b style="color:var(--text-primary);">' + _lp.grossInputPower + ' kW</b></span>';
+        if(_lp.grossInputTorque) html += '<span>Giriş Tork: <b style="color:var(--text-primary);">' + _lp.grossInputTorque + ' Nm</b></span>';
+        if(_lp.netTurbineTorque) html += '<span>Türbin Tork: <b style="color:var(--text-primary);">' + _lp.netTurbineTorque + ' Nm</b></span>';
+        if(_lp.maxOutputSpeed) html += '<span>Max Çıkış: <b style="color:var(--text-primary);">' + _lp.maxOutputSpeed + ' rpm</b></span>';
+        html += '</div></div>';
+      }
+    }
+
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
     // Shift Profili — şanzıman ailesine göre filtrelenmiş
@@ -4245,9 +4260,35 @@ function onVEFTGBPresetSelect(nodeId, value) {
     }
   }
   
+  // Şanzıman limitleri: netTurbineTorque → EC-Matching turbineRating otomatik güncelle
+  if(preset.netTurbineTorque) {
+    var ecmNode = nodes.find(function(n) { return n.type === 'ec-matching'; });
+    if(ecmNode) {
+      if(!ecmNode.data) ecmNode.data = {};
+      ecmNode.data.turbineRating = preset.netTurbineTorque;
+      var trEl = document.getElementById('ecm-turbine-rating-' + ecmNode.id);
+      if(trEl) trEl.value = preset.netTurbineTorque;
+    }
+  }
+  // Şanzıman limit verilerini gearbox node'a da kaydet
+  node.data.gbGrossInputPower = preset.grossInputPower;
+  node.data.gbGrossInputTorque = preset.grossInputTorque;
+  node.data.gbNetTurbineTorque = preset.netTurbineTorque;
+  node.data.gbMaxOutputSpeed = preset.maxOutputSpeed;
+
+  // Şanzıman limitleri bilgi mesajı
+  var limitsInfo = [];
+  if(preset.grossInputPower) limitsInfo.push('Giriş Güç: ' + preset.grossInputPower + ' kW');
+  if(preset.grossInputTorque) limitsInfo.push('Giriş Tork: ' + preset.grossInputTorque + ' Nm');
+  if(preset.netTurbineTorque) limitsInfo.push('Türbin Tork: ' + preset.netTurbineTorque + ' Nm');
+  if(preset.maxOutputSpeed) limitsInfo.push('Max Çıkış: ' + preset.maxOutputSpeed + ' rpm');
+  if(limitsInfo.length > 0) {
+    showToast('Şanzıman limitleri: ' + limitsInfo.join(' | '), 'info');
+  }
+
   // Şanzıman ailesi değiştiğinde TC dropdown'ını güncelle
   veRefreshTCDropdownForFamily();
-  
+
   // Shift profili dropdown'ını ve readonly parametreleri yenilemek için paneli yeniden çiz
   showNodeProperties(node);
 }
@@ -4277,6 +4318,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 1000SP',
     family: '1000_2000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.10, note: ''},
       {gear: '2', ratio: 1.81, note: ''},
@@ -4291,6 +4336,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 2100SP',
     family: '1000_2000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.10, note: ''},
       {gear: '2', ratio: 1.81, note: ''},
@@ -4305,6 +4354,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 2200SP',
     family: '1000_2000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.10, note: ''},
       {gear: '2', ratio: 1.81, note: ''},
@@ -4319,6 +4372,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 2350SP',
     family: '1000_2000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.10, note: ''},
       {gear: '2', ratio: 1.81, note: ''},
@@ -4333,6 +4390,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 2500SP',
     family: '1000_2000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.51, note: ''},
       {gear: '2', ratio: 1.90, note: ''},
@@ -4347,6 +4408,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 3000SP',
     family: '3000',
     calibrated: true,
+    grossInputPower: 261,
+    grossInputTorque: 1424,
+    netTurbineTorque: 2305,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 3.49, note: ''},
       {gear: '2', ratio: 1.86, note: ''},
@@ -4361,6 +4426,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 3200SP',
     family: '3000',
     calibrated: true,
+    grossInputPower: 336,
+    grossInputTorque: 1695,
+    netTurbineTorque: 2305,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 3.49, note: ''},
       {gear: '2', ratio: 1.86, note: ''},
@@ -4375,6 +4444,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 3500SP',
     family: '3000',
     calibrated: true,
+    grossInputPower: 246,
+    grossInputTorque: 1335,
+    netTurbineTorque: 2034,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 4.59, note: ''},
       {gear: '2', ratio: 2.25, note: ''},
@@ -4389,6 +4462,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 3700SP',
     family: '3000',
     calibrated: false,
+    grossInputPower: 246,
+    grossInputTorque: 1186,
+    netTurbineTorque: 1996,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 6.93, note: ''},
       {gear: '2', ratio: 4.18, note: ''},
@@ -4404,6 +4481,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4000SP',
     family: '4000',
     calibrated: true,
+    grossInputPower: 485,
+    grossInputTorque: 2544,
+    netTurbineTorque: 3795,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 3.51, note: ''},
       {gear: '2', ratio: 1.91, note: ''},
@@ -4418,6 +4499,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4500SP',
     family: '4000',
     calibrated: true,
+    grossInputPower: 451,
+    grossInputTorque: 2400,
+    netTurbineTorque: 3525,
+    maxOutputSpeed: 3525,
     gears: [
       {gear: '1', ratio: 4.70, note: ''},
       {gear: '2', ratio: 2.21, note: ''},
@@ -4432,6 +4517,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4700SP',
     family: '4000',
     calibrated: false,
+    grossInputPower: 451,
+    grossInputTorque: 2508,
+    netTurbineTorque: 4067,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 7.63, note: ''},
       {gear: '2', ratio: 3.51, note: ''},
@@ -4447,6 +4536,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4800SP',
     family: '4000',
     calibrated: false,
+    grossInputPower: 597,
+    grossInputTorque: 2644,
+    netTurbineTorque: 4067,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 7.63, note: ''},
       {gear: '2', ratio: 3.51, note: ''},
@@ -4462,6 +4555,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4900SP',
     family: '4000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 7.63, note: ''},
       {gear: '2', ratio: 3.51, note: ''},
@@ -4662,7 +4759,7 @@ function getECMatchingPropertiesHTML(node) {
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:55%;">Şanzıman Türbin Torku Limiti [N·m]</th>';
   html += '<td style="padding:4px 6px; border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="number" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
-  html += '<tr><td colspan="2" style="padding:4px 8px; font-size:0.58rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">C7 kontrolü için kullanılır. Allison 3000 SP: ~3320 N·m (2450 lb-ft). 3500 SP: ~4750 N·m.</td></tr>';
+  html += '<tr><td colspan="2" style="padding:4px 8px; font-size:0.58rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir (Net Turbine Torque limiti).</td></tr>';
   html += '</table>';
   html += '</div>';
   
@@ -4700,7 +4797,20 @@ function runECMatchingAnalysis(nodeId) {
   if(!node.data) node.data = {};
   
   var turbineRating = node.data.turbineRating || 3320;
-  
+
+  // Şanzıman limit verilerini al
+  var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+  var gbLimits = { grossInputPower: null, grossInputTorque: null, maxOutputSpeed: null };
+  if(gbNode && gbNode.data) {
+    var gbKey = gbNode.data.ftGBPreset || gbNode.data.selectedGearbox || '';
+    if(gbKey && VE_GEARBOX_PRESETS[gbKey]) {
+      var gbPreset = VE_GEARBOX_PRESETS[gbKey];
+      gbLimits.grossInputPower = gbPreset.grossInputPower;
+      gbLimits.grossInputTorque = gbPreset.grossInputTorque;
+      gbLimits.maxOutputSpeed = gbPreset.maxOutputSpeed;
+    }
+  }
+
   // Motor bileşenini bul
   var engineNode = nodes.find(function(n) { return n.type === 'engine' && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
   
@@ -4725,16 +4835,50 @@ function runECMatchingAnalysis(nodeId) {
   torqueData.forEach(function(d) {
     if(d.torque > peakT) { peakT = d.torque; peakRPM = d.rpm; }
   });
-  
+
+  // Governed devirdeki tork ve güç hesabı (C9/C10 kontrolleri için)
+  var torqueAtGov = 0;
+  if(torqueData.length >= 2) {
+    // İnterpolasyon
+    if(governed <= torqueData[0].rpm) torqueAtGov = torqueData[0].torque;
+    else if(governed >= torqueData[torqueData.length-1].rpm) torqueAtGov = torqueData[torqueData.length-1].torque;
+    else {
+      for(var ti = 0; ti < torqueData.length - 1; ti++) {
+        if(torqueData[ti].rpm <= governed && governed <= torqueData[ti+1].rpm) {
+          var tf = (governed - torqueData[ti].rpm) / (torqueData[ti+1].rpm - torqueData[ti].rpm);
+          torqueAtGov = torqueData[ti].torque + tf * (torqueData[ti+1].torque - torqueData[ti].torque);
+          break;
+        }
+      }
+    }
+  }
+  var powerAtGov = torqueAtGov * governed * Math.PI / 30000; // kW = T(Nm) * RPM * π / 30000
+
+  // C9/C10 kontrolleri
+  var c9ok = true, c10ok = true;
+  if(gbLimits.grossInputPower !== null) c9ok = powerAtGov <= gbLimits.grossInputPower;
+  if(gbLimits.grossInputTorque !== null) c10ok = torqueAtGov <= gbLimits.grossInputTorque;
+
   // Motor bilgi paneli
   if(infoEl) {
+    var c9c10html = '';
+    if(gbLimits.grossInputPower !== null || gbLimits.grossInputTorque !== null) {
+      c9c10html += '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">';
+      c9c10html += '<span>Governed Güç: <b style="color:' + (c9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + powerAtGov.toFixed(0) + ' kW</b>';
+      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:0.55rem; color:' + (c9ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputPower + ' kW ' + (c9ok ? '✅' : '❌') + ')</span>';
+      c9c10html += '</span>';
+      c9c10html += '<span>Governed Tork: <b style="color:' + (c10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + torqueAtGov.toFixed(0) + ' Nm</b>';
+      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:0.55rem; color:' + (c10ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputTorque + ' Nm ' + (c10ok ? '✅' : '❌') + ')</span>';
+      c9c10html += '</span>';
+      c9c10html += '</div>';
+    }
     infoEl.innerHTML = '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px;">' +
       '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">🔧 ' + engineName + '</div>' +
       '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
       '<span>Peak Tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
       '<span>Governed: <b style="color:var(--text-primary);">' + governed + ' rpm</b></span>' +
       '<span>Pump Düşüm: <b style="color:var(--text-primary);">' + pumpDrop + ' N·m</b></span>' +
-      '</div></div>';
+      '</div>' + c9c10html + '</div>';
   }
   
   // Motor tork interpolasyon fonksiyonu
@@ -4863,19 +5007,20 @@ function runECMatchingAnalysis(nodeId) {
     var c7ok = tTurbineStall <= turbineRating;
     // C8: SR at governed >= 0.80
     var c8ok = srGov >= 0.80;
-    
+
     var status, score;
-    if(!c7ok) { status = 'unacceptable'; score = 0; }
+    if(!c9ok || !c10ok) { status = 'unacceptable'; score = 0; }
+    else if(!c7ok) { status = 'unacceptable'; score = 0; }
     else if(!c5ok) { status = 'not-recommended'; score = 1; }
     else if(!c8ok) { status = 'caution'; score = 2; }
     else { status = 'recommended'; score = 3; }
-    
+
     results.push({
       key: key, name: tc.name, stallTau: stallTau,
       stallSpeed: stallSpeed, minSpeed: minSpeed,
       srGov: srGov, tTurbineStall: tTurbineStall,
       couplingSR: couplingSR,
-      c5ok: c5ok, c7ok: c7ok, c8ok: c8ok,
+      c5ok: c5ok, c7ok: c7ok, c8ok: c8ok, c9ok: c9ok, c10ok: c10ok,
       status: status, score: score
     });
   });
@@ -4895,10 +5040,22 @@ function runECMatchingAnalysis(nodeId) {
     h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).<br>';
     h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + peakRPM + ' rpm): Konvertör fazında motorun ulaştığı minimum devir. Altına düşerse motor lugging yapar.<br>';
     h += '<b style="color:var(--text-primary);">C7</b> — Stall Türbin Torku ≤ ' + turbineRating.toFixed(0) + ' N·m: Stall\'da türbin torku şanzıman limitini aşmamalı.<br>';
-    h += '<b style="color:var(--text-primary);">C8</b> — SR @ Governed ≥ 0.80: Governed hızda kayma oranı. Düşükse loose match → performans kaybı (lockup\'ta sorun yok).';
+    h += '<b style="color:var(--text-primary);">C8</b> — SR @ Governed ≥ 0.80: Governed hızda kayma oranı. Düşükse loose match → performans kaybı (lockup\'ta sorun yok).<br>';
+    if(gbLimits.grossInputPower !== null) h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov ≤ ' + gbLimits.grossInputPower + ' kW: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
+    if(gbLimits.grossInputTorque !== null) h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov ≤ ' + gbLimits.grossInputTorque + ' N·m: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.';
     h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color); font-size:0.55rem; color:var(--text-muted); font-style:italic;">Referans Doküman: TD-148G</div>';
     h += '</div></div></div>';
     
+    // C9/C10 uyarı bandı (şanzıman seviyesi kontroller)
+    if(!c9ok || !c10ok) {
+      h += '<div style="margin-bottom:8px; padding:8px 10px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px;">';
+      h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-danger);">❌ Şanzıman Giriş Limiti Aşılıyor</div>';
+      h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">';
+      if(!c9ok) h += 'C9: Motor gücü (' + powerAtGov.toFixed(0) + ' kW) > Şanzıman giriş güç limiti (' + gbLimits.grossInputPower + ' kW)<br>';
+      if(!c10ok) h += 'C10: Motor torku (' + torqueAtGov.toFixed(0) + ' Nm) > Şanzıman giriş tork limiti (' + gbLimits.grossInputTorque + ' Nm)';
+      h += '</div></div>';
+    }
+
     // Tablo
     h += '<div style="overflow-x:auto;">';
     h += '<table style="width:100%; border-collapse:collapse; font-size:0.62rem; min-width:420px;">';

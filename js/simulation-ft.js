@@ -1389,7 +1389,10 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         transferName: _trN, transferGears: ftTrGears.map(function(tr){return{kademe:tr.kademe||tr.mode||'',ratio:parseFloat(tr.ratio||tr.oran)||1.0,eff:parseFloat(tr.eff||tr.verim)||97};}),
         hasTransfer: !!transferNode,
         pumpDrop: pumpTorqueDrop,
-        turbineRating: (function(){ var ecmN = nodes.find(function(n){return n.type==='ec-matching';}); return ecmN && ecmN.data ? (ecmN.data.turbineRating||3320) : 3320; })()
+        turbineRating: (function(){ var ecmN = nodes.find(function(n){return n.type==='ec-matching';}); return ecmN && ecmN.data ? (ecmN.data.turbineRating||3320) : 3320; })(),
+        gbGrossInputPower: _gbP ? (_gbP.grossInputPower || null) : null,
+        gbGrossInputTorque: _gbP ? (_gbP.grossInputTorque || null) : null,
+        gbMaxOutputSpeed: _gbP ? (_gbP.maxOutputSpeed || null) : null
       };
     })()
   };
