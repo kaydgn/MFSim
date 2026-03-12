@@ -21,18 +21,14 @@ document.addEventListener('DOMContentLoaded', function() {
   
   if(!canvas || !canvasWrapper) return;
   
-  // veActiveModule senkronizasyonu — dropdown'dan oku
-  if(!veActiveModule) {
-    var modSel = document.getElementById('ve-module-select');
-    if(modSel && modSel.value) veActiveModule = modSel.value;
-  }
-  
-  // Başlangıç modül filtrelemesi — overlay gösteriliyorsa tüm bileşenleri gizle
+  // Tek modül — veActiveModule sabit
+  veActiveModule = 'full-throttle';
+
+  // Overlay gösteriliyorsa bileşenleri gizle, değilse tümünü göster
   var moduleOverlay = document.getElementById('ve-module-overlay');
   var overlayVisible = moduleOverlay && moduleOverlay.style.display !== 'none';
-  
+
   if(overlayVisible) {
-    // Overlay açıkken tüm sidebar bileşenlerini gizle (Araçlar hariç)
     document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
       el.style.display = 'none';
     });
@@ -41,27 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
       cat.style.display = 'none';
     });
   } else {
-    var initMod = VE_MODULES[veActiveModule];
-    if(initMod) {
-      var allComps = document.querySelectorAll('.ve-component[data-type]');
-      allComps.forEach(function(el) {
-        var type = el.getAttribute('data-type');
-        if(initMod.components.indexOf(type) > -1) {
-          el.style.display = '';
-        } else {
-          el.style.display = 'none';
-        }
-      });
-      document.querySelectorAll('.ve-category').forEach(function(cat) {
-        if(cat.getAttribute('data-always-visible')) return; // Araçlar kategorisi her zaman görünür
-        var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
-        if(visibleComps.length === 0) {
-          cat.style.display = 'none';
-        } else {
-          cat.style.display = '';
-        }
-      });
-    }
+    veShowAllSidebarComponents();
   }
   
   // Başlangıç transform

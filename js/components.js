@@ -1,190 +1,55 @@
 // ============================================================================
-// ALT MODÜL SİSTEMİ
+// ANA MODÜL SİSTEMİ
 // ============================================================================
-// Her modül kendi bileşen paleti, senaryo seti ve çözücü mantığını tanımlar.
+// Tüm bileşenler tek bir ana modülde birleştirilmiştir.
 var VE_MODULES = {
-  'engine-brake': {
-    name: 'M. Freni Performans',
-    icon: '',
-    description: 'Motor freni performansı, yokuş iniş analizi, retarder etkinliği',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
-    defaultScenario: 'coast',
-    scenarios: ['coast'],
-    requiresFull: true,
-    requiredComponents: ['scenario']
-  },
   'full-throttle': {
-    name: 'Tam Gaz Hızlanma',
+    name: 'Ana Sayfa',
     icon: '',
-    description: 'Tam gaz hızlanma performansı, 0-100 km/h, elastik hızlanma',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
+    description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma, motor freni ve performans analizi',
+    components: ['engine','engine-brake','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
     defaultScenario: 'full_throttle',
-    scenarios: ['full_throttle'],
-    requiresFull: true
-  },
-  'performance': {
-    name: 'Araç Performans Hesaplama',
-    icon: '',
-    description: 'Hızlanma, maksimum hız, elastik performans',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','solver','road','parametric'],
-    defaultScenario: 'full_throttle',
-    scenarios: ['full_throttle','partial_throttle'],
-    requiresFull: true
-  },
-  'fuel': {
-    name: 'Yakıt Tüketimi Analizi',
-    icon: '',
-    description: 'Sürüş çevrimi, yakıt tüketimi, emisyon hesaplama',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','scenario','solver','road'],
-    defaultScenario: 'drive_cycle',
-    scenarios: ['drive_cycle','custom'],
+    scenarios: ['full_throttle','coast','partial_throttle','full_brake','custom'],
     requiresFull: true
   }
 };
 
-var veActiveModule = '';
+var veActiveModule = 'full-throttle';
 
 function veOnModuleChange(moduleId) {
-  if(!VE_MODULES[moduleId]) return;
-  if(moduleId === veActiveModule) return;
-  
-  // Topolojide bileşen varsa kaydetmeyi sor
-  if(nodes.length > 0) {
-    var overlay = document.createElement('div');
-    overlay.id = 've-module-confirm-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;';
-    
-    var mod = VE_MODULES[moduleId];
-    var dialog = document.createElement('div');
-    dialog.style.cssText = 'background:var(--bg-secondary);border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);border:1px solid var(--border-color);';
-    dialog.innerHTML = '<div style="font-size:0.95rem;font-weight:600;color:var(--text-heading);margin-bottom:12px;">Modül Değişikliği</div>' +
-      '<p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;margin-bottom:8px;">' +
-      '<b>' + mod.name + '</b> modülüne geçiş yapmak üzeresiniz. Modüller arası matematik altyapı farklı olduğundan mevcut topoloji temizlenecektir.</p>' +
-      '<p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;margin-bottom:16px;">Mevcut topolojiyi kaydetmek ister misiniz?</p>' +
-      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-      '<button id="ve-mod-cancel" style="padding:7px 16px;font-size:0.75rem;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);border-radius:6px;cursor:pointer;">Vazgeç</button>' +
-      '<button id="ve-mod-discard" style="padding:7px 16px;font-size:0.75rem;border:none;background:#dc2626;color:white;border-radius:6px;cursor:pointer;">Kaydetmeden Geç</button>' +
-      '<button id="ve-mod-save" style="padding:7px 16px;font-size:0.75rem;border:none;background:var(--accent-primary);color:white;border-radius:6px;cursor:pointer;font-weight:600;">Kaydet ve Geç</button>' +
-      '</div>';
-    overlay.appendChild(dialog);
-    document.body.appendChild(overlay);
-    
-    document.getElementById('ve-mod-cancel').onclick = function() {
-      overlay.remove();
-      // Dropdown'ı eski değere geri al
-      var sel = document.getElementById('ve-module-select');
-      if(sel) sel.value = veActiveModule;
-    };
-    document.getElementById('ve-mod-discard').onclick = function() {
-      overlay.remove();
-      veApplyModuleChange(moduleId);
-    };
-    document.getElementById('ve-mod-save').onclick = function() {
-      overlay.remove();
-      // Önce mevcut topolojiyi dosyaya kaydet
-      if(typeof veSaveTopology === 'function') {
-        veSaveTopology();
-      }
-      veApplyModuleChange(moduleId);
-    };
-    return;
-  }
-  
-  veApplyModuleChange(moduleId);
+  // Tek modül — değişiklik gerekmez
 }
 
 function veApplyModuleChange(moduleId) {
-  var mod = VE_MODULES[moduleId];
-  veActiveModule = moduleId;
-  
-  // Overlay'ı gizle
+  // Tek modül — overlay'ı gizle ve tüm bileşenleri göster
+  veActiveModule = 'full-throttle';
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
-  
-  // Topolojiyi temizle
-  nodes.forEach(function(n) {
-    var el = document.getElementById(n.id);
-    if(el) el.remove();
-  });
-  nodes = [];
-  connections = [];
-  selectedNodes = [];
-  
-  // SVG bağlantılarını temizle
-  var svgLayer = document.getElementById('ve-connections-layer');
-  if(svgLayer) svgLayer.innerHTML = '';
-  
-  // Sim sonuçlarını temizle
-  window.veSimResults = null;
-  
-  // Undo/redo sıfırla
-  undoStack = [];
-  redoStack = [];
-  
-  // Properties panelini sıfırla
-  showEmptyProperties();
-  updateNodeCount();
-  
-  // Sidebar bileşenlerini güncelle
-  var allComps = document.querySelectorAll('.ve-component[data-type]');
-  allComps.forEach(function(el) {
-    var type = el.getAttribute('data-type');
-    if(mod.components.indexOf(type) > -1) {
-      el.style.display = '';
-    } else {
-      el.style.display = 'none';
-    }
-  });
-  
-  // Boş kategorileri gizle (Araçlar hariç)
-  document.querySelectorAll('.ve-category').forEach(function(cat) {
-    if(cat.getAttribute('data-always-visible')) return;
-    var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
-    if(visibleComps.length === 0) {
-      cat.style.display = 'none';
-    } else {
-      cat.style.display = '';
-    }
-  });
-
-  showToast(mod.name + ' modülü aktif', 'info');
+  veShowAllSidebarComponents();
 }
 
 function veGetActiveModule() {
-  return VE_MODULES[veActiveModule] || VE_MODULES['engine-brake'];
+  return VE_MODULES['full-throttle'];
 }
 
 function veSelectModuleFromOverlay(moduleId) {
   // Overlay'ı gizle
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
-  
-  // Modülü seç
-  var sel = document.getElementById('ve-module-select');
-  if(sel) sel.value = moduleId;
-  
-  veActiveModule = moduleId;
-  
-  // Sidebar filtreleme
-  var mod = VE_MODULES[moduleId];
-  if(mod) {
-    var allComps = document.querySelectorAll('.ve-component[data-type]');
-    allComps.forEach(function(el) {
-      var type = el.getAttribute('data-type');
-      if(mod.components.indexOf(type) > -1) {
-        el.style.display = '';
-      } else {
-        el.style.display = 'none';
-      }
-    });
-    document.querySelectorAll('.ve-category').forEach(function(cat) {
-      if(cat.getAttribute('data-always-visible')) return;
-      var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
-      cat.style.display = visibleComps.length === 0 ? 'none' : '';
-    });
-  }
-  
-  showToast(mod.name + ' modülü aktif', 'info');
+
+  veActiveModule = 'full-throttle';
+  veShowAllSidebarComponents();
+  showToast('Ana Sayfa aktif', 'info');
+}
+
+// Tüm sidebar bileşenlerini göster (modül filtreleme yok)
+function veShowAllSidebarComponents() {
+  document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
+    el.style.display = '';
+  });
+  document.querySelectorAll('.ve-category').forEach(function(cat) {
+    cat.style.display = '';
+  });
 }
 
 // Bileşen tanımları (SVG sembolleri)

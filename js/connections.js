@@ -760,11 +760,8 @@ function deleteControlPoint(conn, cp) {
 // ═══════════════════════════════════════════════════════════════════════════
 var _veAutoSyncInterval = setInterval(function() {
   if(!nodes || nodes.length === 0) return;
-  // veActiveModule senkronizasyonu
-  if(!veActiveModule) {
-    var modSel = document.getElementById('ve-module-select');
-    if(modSel && modSel.value) veActiveModule = modSel.value;
-  }
+  // Tek modül — veActiveModule sabit
+  if(!veActiveModule) veActiveModule = 'full-throttle';
   nodes.forEach(function(node) {
     if(!node || !node.id) return;
     if(!node.data) node.data = {};

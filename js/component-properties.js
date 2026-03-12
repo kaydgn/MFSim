@@ -7996,13 +7996,10 @@ function getSolverPropertiesHTML(node) {
   
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
   
-  // Başlık — modül göstergesiyle
-  var ftMode = veActiveModule === 'full-throttle';
-  var moduleLabel = ftMode ? 'Tam Gaz Hızlanma' : 'Motor Freni';
-  var moduleColor = ftMode ? '#2e7d32' : '#1565c0';
+  // Başlık
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
   html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Çözücü Ayarları</div>';
-  html += '<span style="font-size:0.52rem; font-weight:600; color:' + moduleColor + '; background:' + moduleColor + '18; padding:2px 7px; border-radius:3px; border:1px solid ' + moduleColor + '30; letter-spacing:0.03em; text-transform:uppercase;">' + moduleLabel + '</span>';
+  html += '<span style="font-size:0.52rem; font-weight:600; color:#2e7d32; background:#2e7d3218; padding:2px 7px; border-radius:3px; border:1px solid #2e7d3230; letter-spacing:0.03em; text-transform:uppercase;">MFSim</span>';
   html += '</div>';
   
   // ===== ÇÖZÜM KÜMESİ =====
@@ -8157,7 +8154,7 @@ function onVESolverParamChange(nodeId) {
     var stopRow = el('ve-solver-stopspeed-row-' + nodeId);
     if(durRow) durRow.style.display = isStop ? 'none' : '';
     if(maxRow) maxRow.style.display = isStop ? '' : 'none';
-    if(stopRow) stopRow.style.display = (isStop && veActiveModule !== 'full-throttle') ? '' : 'none';
+    if(stopRow) stopRow.style.display = 'none';
   }
   if(durEl) node.data.duration = parseFloat(durEl.value) || 60;
   if(maxEl) node.data.maxSimTime = parseFloat(maxEl.value) || 300;

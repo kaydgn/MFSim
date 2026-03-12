@@ -83,16 +83,8 @@
       
       <!-- Sol Panel - Bileşenler -->
       <div class="ve-sidebar" id="ve-sidebar">
-        <div class="ve-module-selector">
-          <div class="ve-module-label">Alt Modül</div>
-          <select id="ve-module-select" onchange="veOnModuleChange(this.value)">
-            <option value="" disabled selected>— Modül Seçiniz —</option>
-            <option value="engine-brake">M. Freni Performans</option>
-            <option value="full-throttle">Tam Gaz Hızlanma</option>
-            <option value="performance" disabled>Araç Performans Hesaplama (yakında)</option>
-            <option value="fuel" disabled>Yakıt Tüketimi Analizi (yakında)</option>
-          </select>
-        </div>
+        <!-- Modül seçici kaldırıldı — tek ana modül -->
+        <input type="hidden" id="ve-module-select" value="full-throttle">
         <div class="ve-sidebar-header">📦 Bileşenler</div>
         <div class="ve-sidebar-resizer" id="ve-sidebar-resizer"></div>
         <div class="ve-sidebar-content">
@@ -107,6 +99,13 @@
                 <rect x="63" y="10" width="12" height="14" fill="currentColor" opacity="0.6"/>
                 <line x1="85" y1="48" x2="100" y2="48" stroke="currentColor" stroke-width="6"/>
               </svg> <span class="ve-comp-label">Motor</span></div>
+            <div class="ve-component" draggable="true" data-type="engine-brake">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="6"/>
+                <circle cx="50" cy="50" r="20" fill="currentColor" opacity="0.3"/>
+                <rect x="15" y="46" width="20" height="8" fill="currentColor"/>
+                <rect x="65" y="46" width="20" height="8" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Motor Freni</span></div>
           </div>
           
           <div class="ve-category">
@@ -303,21 +302,9 @@
               <div class="ve-module-overlay" id="ve-module-overlay">
                 <div class="ve-module-overlay-title">MFSim — Modül Seçimi</div>
                 <div class="ve-module-overlay-grid">
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('engine-brake')">
-                    <div class="ve-module-card-name">M. Freni Performans</div>
-                    <div class="ve-module-card-desc">Yokuş inişte motor freni ve retarder ile araç yavaşlama davranışını simüle eder. Fren torku, ısı reddi ve durma mesafesi hesaplar.</div>
-                  </div>
                   <div class="ve-module-card" onclick="veSelectModuleFromOverlay('full-throttle')">
-                    <div class="ve-module-card-name">Tam Gaz Hızlanma</div>
-                    <div class="ve-module-card-desc">Duruştan maksimum hıza kadar tam gaz ivmelenmeyi simüle eder. Tork konvertör eşleştirmesi, vites geçişleri ve çekiş kuvveti analizi yapar.</div>
-                  </div>
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('performance')" style="opacity:0.45; cursor:not-allowed; pointer-events:none;">
-                    <div class="ve-module-card-name">Araç Performans <span style="font-size:0.6em;color:var(--accent-primary);">Yakında</span></div>
-                    <div class="ve-module-card-desc">Elastik hızlanma, tırmanma kapasitesi, maksimum hız ve çekiş diyagramı hesaplamaları.</div>
-                  </div>
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('fuel')" style="opacity:0.45; cursor:not-allowed; pointer-events:none;">
-                    <div class="ve-module-card-name">Yakıt Tüketimi <span style="font-size:0.6em;color:var(--accent-primary);">Yakında</span></div>
-                    <div class="ve-module-card-desc">Sürüş çevrimi üzerinde anlık ve toplam yakıt tüketimi, CO₂ emisyonu ve enerji akışı analizi.</div>
+                    <div class="ve-module-card-name">Ana Sayfa</div>
+                    <div class="ve-module-card-desc">Araç güç aktarma organları simülasyonu — tam gaz hızlanma, motor freni ve performans analizi.</div>
                   </div>
                 </div>
               </div>

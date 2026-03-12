@@ -2,15 +2,8 @@
 // ============================================================================
 
 function veSolverRunProfessional() {
-  // ── veActiveModule güvenlik kontrolü ──
-  // Sayfa yenileme veya undo/redo sonrası veActiveModule boş kalabilir.
-  // Dropdown'dan oku ve senkronize et.
-  if(!veActiveModule) {
-    var modSel = document.getElementById('ve-module-select');
-    if(modSel && modSel.value) {
-      veActiveModule = modSel.value;
-    }
-  }
+  // Tek modül — veActiveModule her zaman 'full-throttle'
+  if(!veActiveModule) veActiveModule = 'full-throttle';
 
   // Modal oluştur
   var overlay = document.createElement('div');
@@ -29,7 +22,7 @@ function veSolverRunProfessional() {
       '<span style="width:8px;height:8px;border-radius:1px;background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
       '<span style="width:8px;height:8px;border-radius:1px;background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
     '</div>' +
-    '<div style="font-weight:700;font-size:0.78rem;color:var(--text-heading);letter-spacing:0.06em;text-transform:uppercase;">' + (veActiveModule === 'full-throttle' ? 'Tam Gaz Hızlanma' : 'Motor Freni') + ' — Çözücü</div>' +
+    '<div style="font-weight:700;font-size:0.78rem;color:var(--text-heading);letter-spacing:0.06em;text-transform:uppercase;">MFSim — Çözücü</div>' +
   '</div>' +
   '<div style="display:flex;align-items:center;gap:5px;">' +
     '<button id="ve-solver-log-dl" style="display:none;padding:3px 9px;font-size:0.58rem;font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:1px;color:var(--text-muted);cursor:pointer;letter-spacing:0.03em;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'">📥 LOG</button>' +
@@ -76,7 +69,7 @@ function veSolverRunProfessional() {
     var a = document.createElement('a');
     a.href = url;
     var now2 = new Date();
-    var prefix = veActiveModule === 'full-throttle' ? 'BMC_FT_Log_' : 'BMC_Solver_Log_';
+    var prefix = 'MFSim_Log_';
     a.download = prefix + now2.getFullYear() + String(now2.getMonth()+1).padStart(2,'0') + String(now2.getDate()).padStart(2,'0') + '_' + String(now2.getHours()).padStart(2,'0') + String(now2.getMinutes()).padStart(2,'0') + '.txt';
     document.body.appendChild(a);
     a.click();
@@ -190,11 +183,7 @@ function veSolverRunProfessional() {
     } else {
       if(hasScenario) log('  Senaryo       : ✓ Bulundu (opsiyonel)', 'dim');
     }
-    if(veActiveModule === 'full-throttle') {
-      if(hasRoad) log('  Yol           : ✓ Bulundu (opsiyonel)', 'dim');
-    } else {
-      log('  Yol           : ' + (hasRoad ? '✓ Bulundu' : '✗ EKSİK'), hasRoad ? 'ok' : 'err');
-    }
+    if(hasRoad) log('  Yol           : ✓ Bulundu (opsiyonel)', 'dim');
     log('  Çözücü        : ' + (hasSolver ? '✓ Bulundu' : '✗ EKSİK'), hasSolver ? 'ok' : 'err');
     logSpacer();
     
