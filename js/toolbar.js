@@ -705,28 +705,11 @@ function veLoadTopology() {
           
           veActiveTabIdx = Math.min(data.activeTabIdx || 0, veTabs.length - 1);
           
-          // Aktif modülü yükle (FT vs MF vs diğer)
-          if(data.activeModule && VE_MODULES[data.activeModule]) {
-            veActiveModule = data.activeModule;
-            var modSel = document.getElementById('ve-module-select');
-            if(modSel) modSel.value = veActiveModule;
-            // Modül overlay'ını gizle (proje yüklenmişse modül seçilmiş demektir)
-            var moduleOverlay = document.getElementById('ve-module-overlay');
-            if(moduleOverlay) moduleOverlay.style.display = 'none';
-            // Sidebar bileşenlerini modüle göre filtrele
-            var mod = VE_MODULES[veActiveModule];
-            if(mod) {
-              document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
-                var type = el.getAttribute('data-type');
-                el.style.display = mod.components.indexOf(type) > -1 ? '' : 'none';
-              });
-              document.querySelectorAll('.ve-category').forEach(function(cat) {
-                if(cat.getAttribute('data-always-visible')) return;
-                var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
-                cat.style.display = visibleComps.length === 0 ? 'none' : '';
-              });
-            }
-          }
+          // Tek modül — her zaman full-throttle
+          veActiveModule = 'full-throttle';
+          var moduleOverlay = document.getElementById('ve-module-overlay');
+          if(moduleOverlay) moduleOverlay.style.display = 'none';
+          veShowAllSidebarComponents();
           
           veLoadTabState(veTabs[veActiveTabIdx]);
           

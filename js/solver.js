@@ -72,21 +72,17 @@ function _veSolveOtherTopologies(options) {
         connections = _tempConns;
 
         var _otherResult;
-        if(veActiveModule === 'full-throttle') {
-          // Transfer dişli oranlarını iterasyonla gez
-          var _trN = _tempNodes.find(function(n) { return n.type === 'transfer'; });
-          var _trd = _trN ? (_trN.data || {}) : {};
-          var _ftTrG = _trd.ftTrGears || [
-            { kademe: 'High', ratio: 1.054, eff: 97.00 }
-          ];
-          var _allRR = {};
-          _ftTrG.forEach(function(g) {
-            _allRR[g.kademe] = veFTRunSimulationEngine(g.kademe);
-          });
-          _otherResult = _allRR[_ftTrG[0].kademe];
-        } else {
-          _otherResult = veRunSimulationEngine();
-        }
+        // Transfer dişli oranlarını iterasyonla gez
+        var _trN = _tempNodes.find(function(n) { return n.type === 'transfer'; });
+        var _trd = _trN ? (_trN.data || {}) : {};
+        var _ftTrG = _trd.ftTrGears || [
+          { kademe: 'High', ratio: 1.054, eff: 97.00 }
+        ];
+        var _allRR = {};
+        _ftTrG.forEach(function(g) {
+          _allRR[g.kademe] = veFTRunSimulationEngine(g.kademe);
+        });
+        _otherResult = _allRR[_ftTrG[0].kademe];
 
         _otherTab.state.simResults = _otherResult;
         _solvedCount++;
@@ -284,7 +280,7 @@ function veSolverRun() {
           summaryEl.innerHTML = '<table style="width:100%;font-size:0.72rem;">' + summaryRows + '</table>';
         }
         
-        var simResult = veActiveModule === 'full-throttle' ? veFTRunSimulationEngine() : veRunSimulationEngine();
+        var simResult = veFTRunSimulationEngine();
         
         progressFill.style.width = '100%';
         progressText.textContent = 'Tamamlandı!';
