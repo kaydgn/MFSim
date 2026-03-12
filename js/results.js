@@ -392,18 +392,16 @@ function veUpdateResultsTree() {
     html += '</div>';
     html += '</div>'; // children of Detaylı Rapor
     html += '</div>';
-    // Detaylı Rapor (TXT) — ağaç öğesi
+    // Tam Gaz Hızlanma Raporu (TXT) — ağaç öğesi
     html += '<div style="margin-top:2px;">';
-    html += '<div class="ve-tree-row" onclick="veRenderTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="TXT rapor önizleme">';
-    html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor (TXT)</span></div>';
+    html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Tam Gaz Hızlanma TXT rapor önizleme">';
+    html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Tam Gaz Hızlanma Raporu (TXT)</span></div>';
     html += '</div>';
-    // Hızlanma-Yavaşlama TXT raporu (segment drive varsa)
-    if(window.veSimResults && window.veSimResults.segmentDrive && window.veSimResults.segmentDrive.segmentSummary) {
-      html += '<div style="margin-top:2px;">';
-      html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
-      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
-      html += '</div>';
-    }
+    // Hızlanma-Yavaşlama Raporu (TXT) — ağaç öğesi
+    html += '<div style="margin-top:2px;">';
+    html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
+    html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
+    html += '</div>';
   }
   
   tree.innerHTML = html;
@@ -2026,7 +2024,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
 }
 
 // ═══════ TXT RAPOR ÖNİZLEME ═══════
-function veRenderTXTReport() {
+function veRenderTXTReport(reportType) {
   var overlay = document.getElementById('ve-report-overlay');
   if(!overlay) return;
 
@@ -2039,112 +2037,14 @@ function veRenderTXTReport() {
   // TXT içeriğini üret
   var txtContent = '';
   var downloadName = '';
+  var reportTitle = '';
   var now = new Date();
   var dateStr = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
 
-  if(typeof veActiveModule !== 'undefined' && veActiveModule === 'full-throttle') {
+  if(reportType === 'ft') {
     txtContent = veGenerateFTTxtReport(sim);
-    // Segment drive sonucu varsa ayrı rapor olarak ekle
-    if(sim.segmentDrive && sim.segmentDrive.segmentSummary && typeof veGenerateSegmentDriveTxtReport === 'function') {
-      var _sep = ''; for(var _si = 0; _si < 80; _si++) _sep += '=';
-      txtContent += '\n\n' + _sep + '\n';
-      txtContent += '               EK: HIZLANMA-YAVASLAMA SEGMENT ANALIZI\n';
-      txtContent += _sep + '\n\n';
-      txtContent += veGenerateSegmentDriveTxtReport(sim);
-    }
     downloadName = 'BMC_TamGaz_Rapor_' + dateStr + '.txt';
-  } else {
-    // Motor freni raporu — veGenerateReport ile aynı veri hazırlama
-    var zamanAdimi = 0.5;
-    var hazirlayan = (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemiş';
-
-    var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
-    var gearboxNode = nodes.find(function(n) { return n.type === 'gearbox'; });
-    var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
-    var transferNode = nodes.find(function(n) { return n.type === 'transfer'; });
-    var diffNode = nodes.find(function(n) { return n.type === 'differential' && n.isMasterDiff; })
-                 || nodes.find(function(n) { return n.type === 'differential'; });
-    var wheelNode = nodes.find(function(n) { return n.type === 'wheel'; });
-    var vehicleNode = nodes.find(function(n) { return n.type === 'vehicle'; });
-    var roadNode = nodes.find(function(n) { return n.type === 'road'; });
-    var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
-    var solverNode = nodes.find(function(n) { return n.type === 'solver'; });
-
-    var ed = engineNode ? (engineNode.data || {}) : {};
-    var gd = gearboxNode ? (gearboxNode.data || {}) : {};
-    var td = tcNode ? (tcNode.data || {}) : {};
-    var trd = transferNode ? (transferNode.data || {}) : {};
-    var dd = diffNode ? (diffNode.data || {}) : {};
-    var wd = wheelNode ? (wheelNode.data || {}) : {};
-    var vd = vehicleNode ? (vehicleNode.data || {}) : {};
-    var rd = roadNode ? (roadNode.data || {}) : {};
-    var scd = scenarioNode ? (scenarioNode.data || {}) : {};
-    var sd = solverNode ? (solverNode.data || {}) : {};
-
-    var mass = parseFloat(vd.mass) || 20000;
-    var r_wheel = parseFloat(wd.radius) || 0.5;
-    var i_diff = parseFloat(dd.ratio) || 1;
-    var i_transfer = parseFloat(trd.ratio) || 1;
-    var i_torque = parseFloat(td.ratio) || 1;
-    var slopePercent = parseFloat(rd.grade) || 0;
-    var Crr = parseFloat(rd.crr) || parseFloat(vd.crr) || 0.008;
-    var Cd = parseFloat(vd.cd) || 0.7;
-    var A = parseFloat(vd.frontalArea) || 8;
-    var rho = parseFloat(vd.airDensity) || 1.225;
-    var delta = parseFloat(vd.rotatingMassFactor) || 1.08;
-    var aktarmaVerim = parseFloat(gd.efficiency) || parseFloat(dd.efficiency) || 93;
-    var mfVerim = (parseFloat(ed.verim) || 100);
-
-    var gearRatios = gd.gearRatios || [];
-    var currentGear = sim.gearUsed || 1;
-    var i_gear = gearRatios.length >= currentGear ? (parseFloat(gearRatios[currentGear - 1]) || 1) : 1;
-    var vitesAdi = currentGear + '. Vites';
-    var i_total = i_diff * i_transfer * i_gear * i_torque;
-    var thetaRad = Math.atan(slopePercent / 100);
-    var thetaDeg = thetaRad * 180 / Math.PI;
-    var v_start_kmh = sim.speed ? sim.speed[0] : 0;
-    var simSure = sim.time[sim.time.length - 1];
-
-    var steps = [];
-    var tIdx = 0;
-    for(var t = 0; t <= simSure + 0.0001; t += zamanAdimi) {
-      while(tIdx < sim.time.length - 1 && sim.time[tIdx + 1] <= t + zamanAdimi * 0.01) tIdx++;
-      if(tIdx >= sim.time.length) break;
-      var v_kmh = sim.speed ? sim.speed[tIdx] : 0;
-      var rpm = sim.rpm ? sim.rpm[tIdx] : 0;
-      var T_mf = sim.engineTorque ? Math.abs(sim.engineTorque[tIdx]) : 0;
-      var F_grade_val = sim.F_grade ? sim.F_grade[tIdx] : 0;
-      var F_roll_val = sim.F_rolling ? sim.F_rolling[tIdx] : 0;
-      var F_aero_val = sim.F_aero ? sim.F_aero[tIdx] : 0;
-      var F_net_val = sim.F_net ? sim.F_net[tIdx] : 0;
-      var accel_val = sim.accel ? sim.accel[tIdx] : 0;
-      var dist_val = sim.distance ? sim.distance[tIdx] : 0;
-      var F_brake_val = (T_mf * i_total * (aktarmaVerim / 100) * (mfVerim / 100)) / r_wheel;
-      steps.push({
-        t: sim.time[tIdx], v_kmh: v_kmh, rpm: rpm, T_mf: T_mf,
-        F_brake: F_brake_val, F_roll: Math.abs(F_roll_val), F_aero: Math.abs(F_aero_val),
-        F_grade: Math.abs(F_grade_val), F_net: F_net_val, a: accel_val,
-        dv: v_kmh - v_start_kmh, s: dist_val
-      });
-    }
-
-    if(steps.length === 0) { showToast('Adım oluşturulamadı', 'warning'); return; }
-
-    txtContent = veGenerateTXTReport(steps, {
-      tarih: now.toLocaleDateString('tr-TR'), saat: now.toLocaleTimeString('tr-TR'), hazirlayan: hazirlayan,
-      mass: mass, r_wheel: r_wheel, i_diff: i_diff, i_transfer: i_transfer,
-      i_gear: i_gear, i_torque: i_torque, i_total: i_total,
-      delta: delta, aktarmaVerim: aktarmaVerim, mfVerim: mfVerim,
-      slopePercent: slopePercent, thetaDeg: thetaDeg,
-      Crr: Crr, Cd: Cd, A: A, rho: rho,
-      v_start_kmh: v_start_kmh, simSure: simSure,
-      vitesAdi: vitesAdi, zamanAdimi: zamanAdimi,
-      motorAdi: engineNode ? (engineNode.customName || (componentDefs[engineNode.type] ? componentDefs[engineNode.type].name : '')) : '',
-      senaryoAdi: scd.scenarioType === 'coast' ? 'Serbest İniş' : (scd.scenarioType === 'partial_throttle' ? 'Kısmi Gaz' : 'Motor Freni Analizi'),
-      solverMethod: sd.method || 'euler',
-      gearRatios: gearRatios, currentGear: currentGear
-    });
-    downloadName = 'BMC_MotorFreni_VE_Rapor_' + dateStr + '.txt';
+    reportTitle = 'Tam Gaz Hızlanma Raporu (TXT)';
   }
 
   if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
@@ -2155,14 +2055,11 @@ function veRenderTXTReport() {
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
   html += '<span style="font-size:1rem;">📄</span>';
-  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Detaylı Rapor (TXT)</span>';
+  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">' + reportTitle + '</span>';
   html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
   html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'#1d4ed8\';this.style.color=\'#1d4ed8\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
-  if(typeof veActiveModule === 'undefined' || veActiveModule !== 'full-throttle') {
-    html += '<button onclick="veDownloadWordFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid #2b6cb0; border-radius:4px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; cursor:pointer;" onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'1\'">📄 Word İndir</button>';
-  }
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
@@ -2245,121 +2142,6 @@ function veDownloadTXTFromPreview() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showToast('TXT rapor indirildi', 'success');
-}
-
-function veDownloadWordFromPreview() {
-  var sim = window.veSimResults;
-  if(!sim || !sim.time || sim.time.length === 0) {
-    showToast('Rapor verisi bulunamadı', 'warning'); return;
-  }
-
-  // Motor freni modülü için Word raporu oluştur
-  if(typeof veActiveModule !== 'undefined' && veActiveModule === 'full-throttle') {
-    showToast('Word raporu şu an yalnızca Motor Freni modülü için desteklenmektedir', 'warning'); return;
-  }
-
-  var now = new Date();
-  var zamanAdimi = 0.5;
-  var hazirlayan = 'Belirtilmemiş';
-
-  var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
-  var gearboxNode = nodes.find(function(n) { return n.type === 'gearbox'; });
-  var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
-  var transferNode = nodes.find(function(n) { return n.type === 'transfer'; });
-  var diffNode = nodes.find(function(n) { return n.type === 'differential' && n.isMasterDiff; })
-               || nodes.find(function(n) { return n.type === 'differential'; });
-  var wheelNode = nodes.find(function(n) { return n.type === 'wheel'; });
-  var vehicleNode = nodes.find(function(n) { return n.type === 'vehicle'; });
-  var roadNode = nodes.find(function(n) { return n.type === 'road'; });
-  var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
-  var solverNode = nodes.find(function(n) { return n.type === 'solver'; });
-
-  var ed = engineNode ? (engineNode.data || {}) : {};
-  var gd = gearboxNode ? (gearboxNode.data || {}) : {};
-  var td = tcNode ? (tcNode.data || {}) : {};
-  var trd = transferNode ? (transferNode.data || {}) : {};
-  var dd = diffNode ? (diffNode.data || {}) : {};
-  var wd = wheelNode ? (wheelNode.data || {}) : {};
-  var vd = vehicleNode ? (vehicleNode.data || {}) : {};
-  var rd = roadNode ? (roadNode.data || {}) : {};
-  var scd = scenarioNode ? (scenarioNode.data || {}) : {};
-  var sd = solverNode ? (solverNode.data || {}) : {};
-
-  var mass = parseFloat(vd.mass) || 20000;
-  var r_wheel = parseFloat(wd.radius) || 0.5;
-  var i_diff = parseFloat(dd.ratio) || 1;
-  var i_transfer = parseFloat(trd.ratio) || 1;
-  var i_torque = parseFloat(td.ratio) || 1;
-  var slopePercent = parseFloat(rd.grade) || 0;
-  var Crr = parseFloat(rd.crr) || parseFloat(vd.crr) || 0.008;
-  var Cd = parseFloat(vd.cd) || 0.7;
-  var A = parseFloat(vd.frontalArea) || 8;
-  var rho = parseFloat(vd.airDensity) || 1.225;
-  var delta = parseFloat(vd.rotatingMassFactor) || 1.08;
-  var aktarmaVerim = parseFloat(gd.efficiency) || parseFloat(dd.efficiency) || 93;
-  var mfVerim = (parseFloat(ed.verim) || 100);
-
-  var gearRatios = gd.gearRatios || [];
-  var currentGear = sim.gearUsed || 1;
-  var i_gear = gearRatios.length >= currentGear ? (parseFloat(gearRatios[currentGear - 1]) || 1) : 1;
-  var vitesAdi = currentGear + '. Vites';
-  var i_total = i_diff * i_transfer * i_gear * i_torque;
-  var thetaRad = Math.atan(slopePercent / 100);
-  var thetaDeg = thetaRad * 180 / Math.PI;
-  var v_start_kmh = sim.speed ? sim.speed[0] : 0;
-  var simSure = sim.time[sim.time.length - 1];
-
-  var steps = [];
-  var tIdx = 0;
-  for(var t = 0; t <= simSure + 0.0001; t += zamanAdimi) {
-    while(tIdx < sim.time.length - 1 && sim.time[tIdx + 1] <= t + zamanAdimi * 0.01) tIdx++;
-    if(tIdx >= sim.time.length) break;
-    var v_kmh = sim.speed ? sim.speed[tIdx] : 0;
-    var rpm = sim.rpm ? sim.rpm[tIdx] : 0;
-    var T_mf = sim.engineTorque ? Math.abs(sim.engineTorque[tIdx]) : 0;
-    var F_grade_val = sim.F_grade ? sim.F_grade[tIdx] : 0;
-    var F_roll_val = sim.F_rolling ? sim.F_rolling[tIdx] : 0;
-    var F_aero_val = sim.F_aero ? sim.F_aero[tIdx] : 0;
-    var F_net_val = sim.F_net ? sim.F_net[tIdx] : 0;
-    var accel_val = sim.accel ? sim.accel[tIdx] : 0;
-    var dist_val = sim.distance ? sim.distance[tIdx] : 0;
-    var F_brake_val = (T_mf * i_total * (aktarmaVerim / 100) * (mfVerim / 100)) / r_wheel;
-    steps.push({
-      t: sim.time[tIdx], v_kmh: v_kmh, rpm: rpm, T_mf: T_mf,
-      F_brake: F_brake_val, F_roll: Math.abs(F_roll_val), F_aero: Math.abs(F_aero_val),
-      F_grade: Math.abs(F_grade_val), F_net: F_net_val, a: accel_val,
-      dv: v_kmh - v_start_kmh, s: dist_val
-    });
-  }
-
-  if(steps.length === 0) { showToast('Adım oluşturulamadı', 'warning'); return; }
-
-  var wordContent = veGenerateWordReport(steps, {
-    tarih: now.toLocaleDateString('tr-TR'), saat: now.toLocaleTimeString('tr-TR'), hazirlayan: hazirlayan,
-    mass: mass, r_wheel: r_wheel, i_diff: i_diff, i_transfer: i_transfer,
-    i_gear: i_gear, i_torque: i_torque, i_total: i_total,
-    delta: delta, aktarmaVerim: aktarmaVerim, mfVerim: mfVerim,
-    slopePercent: slopePercent, thetaDeg: thetaDeg,
-    Crr: Crr, Cd: Cd, A: A, rho: rho,
-    v_start_kmh: v_start_kmh, simSure: simSure,
-    vitesAdi: vitesAdi, zamanAdimi: zamanAdimi,
-    motorAdi: engineNode ? (engineNode.customName || (componentDefs[engineNode.type] ? componentDefs[engineNode.type].name : '')) : '',
-    senaryoAdi: scd.scenarioType === 'coast' ? 'Serbest İniş' : (scd.scenarioType === 'partial_throttle' ? 'Kısmi Gaz' : 'Motor Freni Analizi'),
-    solverMethod: sd.method || 'euler',
-    gearRatios: gearRatios, currentGear: currentGear
-  });
-
-  var dateStr = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
-  var blob = new Blob([wordContent], { type: 'application/msword' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'BMC_MotorFreni_Rapor_' + dateStr + '.doc';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('Word rapor indirildi', 'success');
 }
 
 function veCloseDetailedReport() {

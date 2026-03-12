@@ -1739,6 +1739,8 @@
   background:transparent;
   min-width:80px;
   min-height:40px;
+  pointer-events:none;
+  cursor:default;
 }
 .ve-annotation-frame .ve-annotation-label{
   position:absolute;
@@ -1750,6 +1752,31 @@
   font-weight:600;
   white-space:nowrap;
   line-height:1;
+  pointer-events:auto;
+  cursor:move;
+}
+.ve-annotation-frame .ve-annotation-drag{
+  position:absolute;
+  top:-5px;
+  right:-5px;
+  width:16px;
+  height:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:10px;
+  background:var(--bg-secondary);
+  border:1px solid var(--border-color);
+  border-radius:3px;
+  cursor:move;
+  opacity:0.5;
+  transition:opacity 0.15s;
+  pointer-events:auto;
+  color:var(--text-muted);
+  line-height:1;
+}
+.ve-annotation-frame .ve-annotation-drag:hover{
+  opacity:1;
 }
 .ve-annotation-frame .ve-annotation-resize{
   position:absolute;
@@ -1759,13 +1786,13 @@
   height:10px;
   cursor:se-resize;
   background:var(--text-muted);
-  opacity:0;
+  opacity:0.35;
   border-radius:2px;
   transition:opacity 0.15s;
+  pointer-events:auto;
 }
-.ve-annotation-frame:hover .ve-annotation-resize,
-.ve-annotation-frame.annot-selected .ve-annotation-resize{
-  opacity:0.6;
+.ve-annotation-frame .ve-annotation-resize:hover{
+  opacity:0.8;
 }
 .ve-annotation-text{
   white-space:nowrap;
@@ -1777,6 +1804,9 @@
 .ve-annotation.annot-selected{
   outline:2px solid var(--accent-primary);
   outline-offset:3px;
+}
+.ve-annotation-frame.annot-selected{
+  border-color:var(--accent-primary);
 }
 .ve-annotation-edit-input{
   background:var(--bg-input);
