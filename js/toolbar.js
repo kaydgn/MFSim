@@ -452,21 +452,103 @@ function veGenerateTopologySummary() {
     lines.push('');
   });
 
-  // ── BAĞLANTILAR ──
-  if(connections.length > 0) {
-    lines.push(sep);
-    lines.push('  BAĞLANTILAR (' + connections.length + ' adet)');
-    lines.push(sep);
-    connections.forEach(function(c, i) {
-      var fNode = nodes.find(function(n){return n.id===c.from;});
-      var tNode = nodes.find(function(n){return n.id===c.to;});
-      var fName = fNode ? (fNode.customName || (componentDefs[fNode.type]||{}).name || c.from) : c.from;
-      var tName = tNode ? (tNode.customName || (componentDefs[tNode.type]||{}).name || c.to) : c.to;
-      var sInfo = c.sensorId ? ' [sensör bağlı]' : '';
-      lines.push('  ' + (i+1) + '. ' + fName + ' [' + (c.fromPort||'output') + '] ──→ ' + tName + ' [' + (c.toPort||'input') + ']' + sInfo);
-    });
-    lines.push('');
+  // ── GÜÇ AKTARMA ZİNCİRİ DİYAGRAMI ──
+  lines.push(sep);
+  lines.push('  GÜÇ AKTARMA ZİNCİRİ');
+  lines.push(sep);
+
+  // Zincir tiplerini sırala (sensör, solver, road, scenario, coast-down hariç)
+  var chainTypes = ['engine','engine-brake','torque-converter','ec-matching','gearbox',
+    'shift-controller','propshaft','transfer','differential','wheel'];
+  var skipTypes = ['sensor','sensor-wizard','solver','road','scenario','coast-down',
+    'vehicle','parametric','terminator'];
+
+  // Bağlantı grafiğinden zinciri oluştur
+  function buildChain() {
+    // Motoru bul (başlangıç noktası)
+    var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    if(!engineNode) return [];
+
+    var visited = {};
+    var chain = [];
+
+    function walk(nodeId) {
+      if(visited[nodeId]) return;
+      visited[nodeId] = true;
+      var node = nodes.find(function(n) { return n.id === nodeId; });
+      if(!node) return;
+      if(skipTypes.indexOf(node.type) >= 0) return;
+      chain.push(node);
+
+      // Bu node'dan çıkan bağlantıları bul
+      connections.forEach(function(c) {
+        if(c.from === nodeId) walk(c.to);
+      });
+    }
+
+    walk(engineNode.id);
+    return chain;
   }
+
+  var chain = buildChain();
+  if(chain.length > 0) {
+    // Kısa etiket oluştur
+    function chainLabel(node) {
+      var d = node.data || {};
+      var name = node.customName || (componentDefs[node.type]||{}).name || node.type;
+      var info = '';
+      if(node.type === 'engine' || node.type === 'engine-brake') {
+        info = d.governedRpm ? d.governedRpm + ' d/d' : '';
+      } else if(node.type === 'torque-converter') {
+        info = d.isLocked !== false ? 'Lock-up' : 'τ=' + (d.tcRatio||1.0);
+      } else if(node.type === 'gearbox') {
+        var gr = d.selectedGear || '?';
+        var ratio = d.selectedGearRatio || '?';
+        info = gr + '. vites, i=' + ratio;
+      } else if(node.type === 'transfer') {
+        info = (d.selectedMode||'?') + ', i=' + (d.selectedRatio||'?');
+      } else if(node.type === 'propshaft') {
+        info = 'η=' + (d.psEff||100) + '%';
+      } else if(node.type === 'differential') {
+        info = 'i=' + (d.diffRatio||'?');
+      } else if(node.type === 'wheel') {
+        info = 'r=' + (d.wheelRadius||'?') + 'm';
+      }
+      return name + (info ? ' (' + info + ')' : '');
+    }
+
+    // Tek satır akış
+    var flowParts = chain.map(function(n) { return chainLabel(n); });
+    var flowLine = flowParts.join(' → ');
+
+    // Satır çok uzunsa parçala
+    if(flowLine.length <= 65) {
+      lines.push('  ' + flowLine);
+    } else {
+      lines.push('  ' + flowParts[0]);
+      for(var fi = 1; fi < flowParts.length; fi++) {
+        lines.push('    → ' + flowParts[fi]);
+      }
+    }
+  } else {
+    lines.push('  (Motor bileşeni bulunamadı veya bağlantı yok)');
+  }
+
+  // Araç ve yol bilgisini de ekle
+  var vehN = nodes.find(function(n){return n.type==='vehicle';});
+  var roadN = nodes.find(function(n){return n.type==='road';});
+  if(vehN || roadN) {
+    lines.push('');
+    if(vehN) {
+      var vd = vehN.data||{};
+      lines.push('  Araç   : ' + (vd.mass||vd.ftGVW||20000) + ' kg, V₀=' + (vd.initialSpeed||0) + ' km/h, Cd=' + (vd.cd||vd.ftCd||0.65));
+    }
+    if(roadN) {
+      var rd = roadN.data||{};
+      lines.push('  Yol    : %' + (rd.grade!==undefined?rd.grade:0) + ' eğim, ' + (rd.altitude||0) + ' m, ' + (rd.temperature!==undefined?rd.temperature:15) + ' °C');
+    }
+  }
+  lines.push('');
 
   // ── VERİM HESABI ──
   var gbN = nodes.find(function(n){return n.type==='gearbox';});
@@ -479,35 +561,135 @@ function veGenerateTopologySummary() {
   var dfE = dfN && dfN.data && dfN.data.efficiency !== undefined ? parseFloat(dfN.data.efficiency) : 96;
 
   lines.push(sep);
-  lines.push('  AKTARMA ORGANLARI VERİM HESABI');
+  lines.push('  AKTARMA ORGANLARI');
   lines.push(sep);
-  lines.push('  Şanzıman Verimi      : %' + gbE + (gbN ? '' : ' (varsayılan)'));
-  lines.push('  Transfer Verimi      : %' + trE + (trN ? '' : ' (varsayılan)'));
-  if(psN) lines.push('  Propshaft Verimi     : %' + psE);
-  lines.push('  Diferansiyel Verimi  : %' + dfE + (dfN ? '' : ' (varsayılan)'));
+
+  // Verim
+  lines.push('  Verim:');
+  lines.push('    Şanzıman           : %' + gbE + (gbN ? '' : ' (varsayılan)'));
+  lines.push('    Transfer           : %' + trE + (trN ? '' : ' (varsayılan)'));
+  if(psN) lines.push('    Propshaft          : %' + psE);
+  lines.push('    Diferansiyel       : %' + dfE + (dfN ? '' : ' (varsayılan)'));
   var toplamV = (gbE/100) * (trE/100) * (psE/100) * (dfE/100) * 100;
-  lines.push('  ' + thin.substring(2));
-  lines.push('  TOPLAM VERİM         : %' + toplamV.toFixed(2));
+  lines.push('    ' + thin.substring(4));
+  lines.push('    TOPLAM VERİM       : %' + toplamV.toFixed(2));
   lines.push('');
 
-  // ── AKTARMA ORANI ──
-  lines.push(sep);
-  lines.push('  TOPLAM AKTARMA ORANI');
-  lines.push(sep);
+  // Aktarma oranı
   var tcN = nodes.find(function(n){return n.type==='torque-converter';});
   var iG = gbN && gbN.data ? (parseFloat(gbN.data.selectedGearRatio) || 1) : 1;
   var iT = trN && trN.data ? (parseFloat(trN.data.selectedRatio) || 1) : 1;
   var iD = dfN && dfN.data ? (parseFloat(dfN.data.diffRatio) || 1) : 1;
   var iC = tcN && tcN.data ? (tcN.data.isLocked !== false ? 1.0 : (parseFloat(tcN.data.tcRatio) || 1)) : 1;
   var iTot = iG * iT * iD * iC;
-  lines.push('  Şanzıman Oranı       : ' + iG.toFixed(3));
-  lines.push('  Transfer Oranı       : ' + iT.toFixed(3));
-  lines.push('  Diferansiyel Oranı   : ' + iD.toFixed(3));
-  lines.push('  TC Çarpanı           : ' + iC.toFixed(3) + (tcN && tcN.data && tcN.data.isLocked !== false ? ' (kilitli)' : ''));
-  lines.push('  ' + thin.substring(2));
-  lines.push('  TOPLAM ORAN          : ' + iTot.toFixed(3));
+  lines.push('  Aktarma Oranları:');
+  lines.push('    Şanzıman           : ' + iG.toFixed(3));
+  lines.push('    Transfer           : ' + iT.toFixed(3));
+  lines.push('    Diferansiyel       : ' + iD.toFixed(3));
+  if(tcN) lines.push('    TC Çarpanı         : ' + iC.toFixed(3) + (tcN.data && tcN.data.isLocked !== false ? ' (kilitli)' : ''));
+  lines.push('    ' + thin.substring(4));
+  lines.push('    TOPLAM ORAN        : ' + iTot.toFixed(3));
   lines.push('');
 
+  // ── VALİDASYON / UYARILAR ──
+  lines.push(sep);
+  lines.push('  TOPOLOJİ KONTROLÜ');
+  lines.push(sep);
+  var warnings = [];
+  var checks = [];
+
+  // Zorunlu bileşen kontrolü
+  var hasEngine = nodes.some(function(n){return n.type==='engine'||n.type==='engine-brake';});
+  var hasGearbox = nodes.some(function(n){return n.type==='gearbox';});
+  var hasDiff = nodes.some(function(n){return n.type==='differential';});
+  var hasWheel = nodes.some(function(n){return n.type==='wheel';});
+  var hasVehicle = nodes.some(function(n){return n.type==='vehicle';});
+  var hasSolver = nodes.some(function(n){return n.type==='solver';});
+  var hasRoad = nodes.some(function(n){return n.type==='road';});
+
+  if(!hasEngine)  warnings.push('Motor bileşeni eksik');
+  if(!hasGearbox) warnings.push('Şanzıman bileşeni eksik');
+  if(!hasDiff)    warnings.push('Diferansiyel bileşeni eksik');
+  if(!hasWheel)   warnings.push('Tekerlek bileşeni eksik');
+  if(!hasVehicle) warnings.push('Araç bileşeni eksik');
+  if(!hasSolver)  warnings.push('Solver bileşeni eksik');
+  if(!hasRoad)    warnings.push('Yol bileşeni eksik');
+
+  // Bağlantı kontrolü — her bileşenin portları bağlı mı?
+  nodes.forEach(function(n) {
+    if(skipTypes.indexOf(n.type) >= 0 && n.type !== 'vehicle') return;
+    var def = componentDefs[n.type] || {};
+    var name = n.customName || def.name || n.type;
+    // Giriş portu kontrolü
+    if(def.inputs && def.inputs > 0) {
+      var hasInput = connections.some(function(c) { return c.to === n.id; });
+      if(!hasInput) warnings.push(name + ' — giriş portu bağlı değil');
+    }
+    // Çıkış portu kontrolü (tekerlek ve terminatör hariç)
+    if(def.outputs && def.outputs > 0 && n.type !== 'wheel' && n.type !== 'terminator') {
+      var hasOutput = connections.some(function(c) { return c.from === n.id; });
+      if(!hasOutput) warnings.push(name + ' — çıkış portu bağlı değil');
+    }
+  });
+
+  // Veri tutarlılığı kontrolleri
+  if(hasEngine) {
+    var engN = nodes.find(function(n){return n.type==='engine'||n.type==='engine-brake';});
+    var ed = engN ? engN.data||{} : {};
+    var mD = ed.motorData || ed.torqueData;
+    if(!mD || mD.length === 0) warnings.push('Motor tork tablosu boş');
+    if(!ed.governedRpm && !(ed.motorSpecs && ed.motorSpecs.governedSpeed)) warnings.push('Motor governed RPM tanımsız');
+  }
+  if(hasGearbox) {
+    var gN = nodes.find(function(n){return n.type==='gearbox';});
+    var gd = gN ? gN.data||{} : {};
+    if(!gd.gearData && !gd.ftGearData) warnings.push('Şanzıman vites tablosu boş');
+    if(!gd.selectedGear && !gd.selectedGearRatio) warnings.push('Şanzıman vites seçilmemiş');
+  }
+  if(hasWheel) {
+    var wN = nodes.find(function(n){return n.type==='wheel' && n.isMasterWheel;}) || nodes.find(function(n){return n.type==='wheel';});
+    var wd = wN ? wN.data||{} : {};
+    var crr = wd.rollingResistance;
+    if(crr !== undefined && crr !== null && crr !== '') {
+      var crrN = parseFloat(crr);
+      if(!isNaN(crrN)) {
+        if(crrN < 0.002) warnings.push('Tekerlek Crr (' + crrN + ') alışılmadık düşük — doğrulayın');
+        if(crrN > 0.02) warnings.push('Tekerlek Crr (' + crrN + ') alışılmadık yüksek — doğrulayın');
+      }
+    }
+  }
+  var trNode = nodes.find(function(n){return n.type==='transfer';});
+  if(trNode) {
+    var td = trNode.data||{};
+    if(td.transferData && td.transferData.length > 0 && !td.selectedMode) {
+      warnings.push('Transfer kademe tablosu var ama mod seçilmemiş');
+    }
+  }
+
+  // Simülasyon hazırlık kontrolleri
+  if(hasEngine && hasGearbox && hasDiff && hasWheel && hasVehicle && hasSolver && hasRoad) {
+    checks.push('Tüm zorunlu bileşenler mevcut');
+  }
+  if(chain.length >= 4) {
+    checks.push('Güç aktarma zinciri bağlı (' + chain.length + ' bileşen)');
+  }
+
+  // Yazdır
+  if(checks.length > 0) {
+    checks.forEach(function(c) {
+      lines.push('  ✓ ' + c);
+    });
+  }
+  if(warnings.length > 0) {
+    if(checks.length > 0) lines.push('');
+    warnings.forEach(function(w) {
+      lines.push('  ⚠ ' + w);
+    });
+  }
+  if(checks.length === 0 && warnings.length === 0) {
+    lines.push('  ✓ Kontrol edilecek öğe yok');
+  }
+  lines.push('');
   lines.push(sep);
 
   return lines.join('\n');
