@@ -7988,14 +7988,15 @@ function onVEDiffParamChange(nodeId) {
 // ===== TEKERLEK ÖZELLİKLERİ =====
 function getSolverPropertiesHTML(node) {
   var d = node.data || {};
+  var ftMode = veActiveModule === 'full-throttle';
   var timeMode = d.timeMode || 'manual';
   var duration = d.duration !== undefined ? d.duration : 60;
   var maxSimTime = d.maxSimTime !== undefined ? d.maxSimTime : 300;
   var stopSpeed = d.stopSpeed !== undefined ? d.stopSpeed : 2;
   var resolution = d.resolution !== undefined ? d.resolution : 200;
-  
+
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
+
   // Başlık
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
   html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Çözücü Ayarları</div>';
