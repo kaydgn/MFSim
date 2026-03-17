@@ -309,7 +309,7 @@ function _veRestoreRoute(nodeId, node, map) {
       var ttHtml = '<b>' + (isEndpoint ? (pi === 0 ? 'BAŞLANGIÇ' : 'BİTİŞ') : 'Nokta ' + (pi + 1)) + '</b>';
       ttHtml += '<br>Mesafe: ' + (cumDist / 1000).toFixed(2) + ' km';
       if(pt.elevation !== undefined) ttHtml += '<br>Yükseklik: ' + pt.elevation.toFixed(0) + ' m';
-      if(pi < segs.length) ttHtml += '<br>Segment eğim: %' + segs[pi].egim.toFixed(1);
+      if(pi < segs.length && segs[pi] && segs[pi].egim !== undefined) ttHtml += '<br>Segment eğim: %' + segs[pi].egim.toFixed(1);
       cm.bindTooltip(ttHtml, { direction: 'top', offset: [0, -6] });
       veRoadSegMarkers[nodeId].push(cm);
     }
@@ -321,7 +321,7 @@ function _veRestoreRoute(nodeId, node, map) {
     if(segBilgi) {
       var segs2 = node.data.routeSegments;
       var maxE = 0, minE = 0;
-      segs2.forEach(function(seg) { if(seg.egim > maxE) maxE = seg.egim; if(seg.egim < minE) minE = seg.egim; });
+      segs2.forEach(function(seg) { var e = seg && seg.egim !== undefined ? seg.egim : 0; if(e > maxE) maxE = e; if(e < minE) minE = e; });
       var td = node.data.routeTotalDist || 0;
       segBilgi.innerHTML = '<div style="display:flex; gap:8px; flex-wrap:wrap; font-size:0.6rem;">' +
         '<span style="color:var(--accent-primary);">📏 <b>' + (td / 1000).toFixed(2) + ' km</b></span>' +
