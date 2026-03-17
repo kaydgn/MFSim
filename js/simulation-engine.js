@@ -364,11 +364,41 @@ function veRunSimulationEngine() {
           omega = v_veh * totalRatio / rWheel;
           rpm = omega * 60 / (2 * Math.PI);
         }
-        // Downshift: RPM < alt vitesin eşiği ve alt vites varsa (1. ve 2. viteste motor freni pasif)
+        // Downshift: RPM < alt vitesin eşiği ve alt vites varsa
         else if(currentGear > 1 && gearRatios[currentGear - 2]) {
           var lowerGearRatio = parseFloat(gearRatios[currentGear - 2]) || gearRatio;
-          var downshiftThreshold = upshiftThreshold * (gearRatio / lowerGearRatio);
-          if(rpm < downshiftThreshold) {
+          var _dsTriggered = false;
+
+          // Kalibre edilmiş downshift eşikleri varsa kullan
+          var _spKey = gbData ? gbData.shiftProfile : null;
+          var _spDs = _spKey && typeof VE_FT_SHIFT_PROFILES !== 'undefined' && VE_FT_SHIFT_PROFILES[_spKey] ? VE_FT_SHIFT_PROFILES[_spKey].downshiftThresholds : null;
+          if(_spDs) {
+            var _dsKey = currentGear + 'to' + (currentGear - 1);
+            var _dsEntry = _spDs[_dsKey];
+            if(_dsEntry) {
+              var _esl = governedRpm;
+              var _N_out = rpm / gearRatio;
+              var _dsTh;
+              if(_dsEntry.type === 'piecewise') {
+                _dsTh = (_esl <= _dsEntry.breakpoint) ? (_dsEntry.low.a * _esl + (_dsEntry.low.b || 0)) : (_dsEntry.high.a * _esl + (_dsEntry.high.b || 0));
+              } else if(_dsEntry.type === 'segments') {
+                for(var _si = 0; _si < _dsEntry.segments.length; _si++) { var _sg = _dsEntry.segments[_si]; if((_sg.maxESL !== undefined && _esl <= _sg.maxESL) || _si === _dsEntry.segments.length - 1) { _dsTh = _sg.cap !== undefined ? _sg.cap : (_sg.a * _esl + (_sg.b || 0)); break; } }
+              } else if(_dsEntry.capValue !== undefined && _dsEntry.capBelow !== undefined && _esl < _dsEntry.capBelow) {
+                _dsTh = _dsEntry.capValue;
+              } else {
+                _dsTh = _dsEntry.a * _esl + (_dsEntry.b || 0);
+              }
+              if(_N_out < _dsTh) _dsTriggered = true;
+            }
+          }
+
+          // Fallback: eski yöntem (kalibre veri yoksa)
+          if(!_dsTriggered && !_spDs) {
+            var downshiftThreshold = upshiftThreshold * (gearRatio / lowerGearRatio);
+            if(rpm < downshiftThreshold) _dsTriggered = true;
+          }
+
+          if(_dsTriggered) {
             var v_veh2 = omega * rWheel / totalRatio;
             currentGear--;
             gearRatio = lowerGearRatio;
@@ -678,8 +708,38 @@ function veRunSimulationEngine() {
           _rk45_gearEvents.push({ t: t_eval, gear: _rk45_lastGear, type: 'up' });
         } else if(_rk45_lastGear > 1 && gearRatios[_rk45_lastGear - 2]) {
           var lwGR = parseFloat(gearRatios[_rk45_lastGear - 2]) || _rk45_lastRatio;
-          var dnT = upT * (_rk45_lastRatio / lwGR);
-          if(rpm_check < dnT) {
+          var _rk45DsTrig = false;
+
+          // Kalibre downshift eşikleri
+          var _rk45SpKey = gbData ? gbData.shiftProfile : null;
+          var _rk45SpDs = _rk45SpKey && typeof VE_FT_SHIFT_PROFILES !== 'undefined' && VE_FT_SHIFT_PROFILES[_rk45SpKey] ? VE_FT_SHIFT_PROFILES[_rk45SpKey].downshiftThresholds : null;
+          if(_rk45SpDs) {
+            var _rk45DsK = _rk45_lastGear + 'to' + (_rk45_lastGear - 1);
+            var _rk45DsE = _rk45SpDs[_rk45DsK];
+            if(_rk45DsE) {
+              var _rk45Esl = governedRpm;
+              var _rk45Nout = rpm_check / _rk45_lastRatio;
+              var _rk45Th;
+              if(_rk45DsE.type === 'piecewise') {
+                _rk45Th = (_rk45Esl <= _rk45DsE.breakpoint) ? (_rk45DsE.low.a * _rk45Esl + (_rk45DsE.low.b || 0)) : (_rk45DsE.high.a * _rk45Esl + (_rk45DsE.high.b || 0));
+              } else if(_rk45DsE.type === 'segments') {
+                for(var _rsi = 0; _rsi < _rk45DsE.segments.length; _rsi++) { var _rsg = _rk45DsE.segments[_rsi]; if((_rsg.maxESL !== undefined && _rk45Esl <= _rsg.maxESL) || _rsi === _rk45DsE.segments.length - 1) { _rk45Th = _rsg.cap !== undefined ? _rsg.cap : (_rsg.a * _rk45Esl + (_rsg.b || 0)); break; } }
+              } else if(_rk45DsE.capValue !== undefined && _rk45DsE.capBelow !== undefined && _rk45Esl < _rk45DsE.capBelow) {
+                _rk45Th = _rk45DsE.capValue;
+              } else {
+                _rk45Th = _rk45DsE.a * _rk45Esl + (_rk45DsE.b || 0);
+              }
+              if(_rk45Nout < _rk45Th) _rk45DsTrig = true;
+            }
+          }
+
+          // Fallback: eski yöntem
+          if(!_rk45DsTrig && !_rk45SpDs) {
+            var dnT = upT * (_rk45_lastRatio / lwGR);
+            if(rpm_check < dnT) _rk45DsTrig = true;
+          }
+
+          if(_rk45DsTrig) {
             _rk45_lastGear--;
             _rk45_lastRatio = lwGR;
             _rk45_lastTotalRatio = _rk45_lastRatio * transferRatio * diffRatio * tcEffTorqueRatio;

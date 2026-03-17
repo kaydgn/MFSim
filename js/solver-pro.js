@@ -321,11 +321,13 @@ function veSolverRunProfessional() {
             log('  Lockup geçişleri: N_out = a × ESL + b (per-gear kalibrasyon)', 'dim');
             Object.keys(spLogData.lockupShifts).forEach(function(sk) {
               var ls = spLogData.lockupShifts[sk];
-              var thr = ls.a * refForLog + ls.b;
-              if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+              var thr = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(ls, refForLog) : (ls.a * refForLog + (ls.b || 0));
               var label = sk.replace(/(\d+L)(\d+L)/, '$1→$2');
-              var capNote = ls.minCap !== undefined ? ', cap=' + ls.minCap : '';
-              log('    ' + label + ': N_out ≥ ' + thr.toFixed(1) + ' (' + ls.a + '×' + refForLog + (ls.b >= 0 ? '+' : '') + ls.b + capNote + ')', 'dim');
+              var detail = '';
+              if(ls.type === 'segments') { detail = 'segments'; }
+              else if(ls.type === 'piecewise') { detail = 'piecewise'; }
+              else { detail = ls.a + '×' + refForLog + (ls.b >= 0 ? '+' : '') + ls.b; if(ls.capValue !== undefined) detail += ', cap=' + ls.capValue + '<' + ls.capBelow; else if(ls.minCap !== undefined) detail += ', cap=' + ls.minCap; }
+              log('    ' + label + ': N_out ≥ ' + thr.toFixed(1) + ' (' + detail + ')', 'dim');
             });
           } else {
             log('  Lockup shift    : ' + (refForLog - spLogData.lockupOffset) + ' rpm (ref - ' + spLogData.lockupOffset + ')', 'dim');
@@ -1014,8 +1016,7 @@ function veSolverRunProfessional() {
                   if(spValData.lockupShifts && spValData.lockupShifts[valShiftKey]) {
                     // Per-gear kalibrasyon: N_out = a × ESL + b
                     var lsV = spValData.lockupShifts[valShiftKey];
-                    var expectedNout = lsV.a * governed + lsV.b;
-                    if(lsV.minCap !== undefined) expectedNout = Math.max(expectedNout, lsV.minCap);
+                    var expectedNout = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(lsV, governed) : (lsV.a * governed + (lsV.b || 0));
                     var actualNout = s.N_out || 0;
                     var noutDiff = Math.abs(actualNout - expectedNout);
                     if(noutDiff > 15) {

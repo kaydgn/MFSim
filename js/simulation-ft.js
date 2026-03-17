@@ -546,6 +546,43 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     return cs2L.a * esl + (cs2L.b || 0);
   }
 
+  // Downshift eşik verileri
+  var dsData = spData.downshiftThresholds || null;
+
+  /**
+   * Downshift N_out eşiğini hesaplar.
+   * Desteklenen formatlar:
+   *   { a, b }                                     → lineer: N_out = a × ESL + b
+   *   { a, b, capValue, capBelow }                  → cap'li lineer
+   *   { type:'piecewise', breakpoint, low, high }   → parçalı lineer (2 segment)
+   *   { type:'segments', segments: [{maxESL, a, b, cap}, ...] } → çok segmentli
+   * @param {object} ds   — downshift threshold tanımı
+   * @param {number} esl  — Engine Speed Limit (governed)
+   * @returns {number}    — N_out eşik değeri
+   */
+  function calcDownshiftThreshold(ds, esl) {
+    if(!ds) return 0;
+    if(ds.type === 'piecewise') {
+      if(esl <= ds.breakpoint) return ds.low.a * esl + (ds.low.b || 0);
+      return ds.high.a * esl + (ds.high.b || 0);
+    }
+    if(ds.type === 'segments') {
+      for(var si = 0; si < ds.segments.length; si++) {
+        var seg = ds.segments[si];
+        if(seg.maxESL !== undefined && esl <= seg.maxESL) {
+          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+        }
+        if(si === ds.segments.length - 1) {
+          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+        }
+      }
+    }
+    if(ds.capValue !== undefined && ds.capBelow !== undefined && esl < ds.capBelow) {
+      return ds.capValue;
+    }
+    return ds.a * esl + (ds.b || 0);
+  }
+
   var shiftState = {
     gearIdx: 0,
     isLockup: false,   // Başlangıç: 1C (converter mod)
@@ -617,8 +654,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
         if(spData.lockupShifts && spData.lockupShifts[shiftKey]) {
           var ls = spData.lockupShifts[shiftKey];
-          var threshold_lu = ls.a * shiftRefRPM + ls.b;
-          if(ls.minCap !== undefined) threshold_lu = Math.max(threshold_lu, ls.minCap);
+          var threshold_lu = calcDownshiftThreshold(ls, shiftRefRPM);
           if(N_out_lu >= threshold_lu) luShiftTriggered = true;
         } else {
           // Eski yöntem: sabit lockupOffset
@@ -631,6 +667,37 @@ function veFTRunSimulationEngine(transferRangeOverride) {
             v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_lu
           });
           shiftState.gearIdx = g + 1;
+          shifted = true;
+        }
+      }
+    }
+
+    // ── DOWNSHIFT KONTROLÜ ──
+    // Lockup modda: N_out < downshift eşiği → alt vitese düş
+    // Converter modda: downshift uygulanmaz (henüz hızlanma aşamasında)
+    if(!shifted && dsData && isLU && g > 0) {
+      var i_gear_ds = parseFloat(getCurrentGearData().ratio) || 1.0;
+      var N_out_ds = N_engine / i_gear_ds;  // Lockup modda SR=1
+      // Downshift key: (g+1)to(g) formatında, örn. gear 5 (6. vites) → '6to5'
+      var dsKey = (g + 1) + 'to' + g;
+      var dsEntry = dsData[dsKey];
+
+      if(dsEntry) {
+        var dsThreshold = calcDownshiftThreshold(dsEntry, shiftRefRPM);
+        if(N_out_ds < dsThreshold) {
+          var dsFromName = (g + 1) + 'L';
+          var dsToName = g + 'L';
+          // 2→1 özel durum: converter moda geçiş (1C)
+          if(g === 1) {
+            dsToName = '1C';
+            shiftState.isLockup = false;
+          }
+          shiftState.shiftHistory.push({
+            t: t, fromGear: g, toGear: g - 1, fromMode: dsFromName, toMode: dsToName,
+            v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_ds,
+            isDownshift: true
+          });
+          shiftState.gearIdx = g - 1;
           shifted = true;
         }
       }

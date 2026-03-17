@@ -3221,6 +3221,40 @@ function veRefreshShiftSchedule() {
   }
 }
 
+/**
+ * Lockup shift eşiğini hesaplar (upshift ve downshift için ortak).
+ * Desteklenen formatlar:
+ *   { a, b }                                     → lineer: N_out = a × ESL + b
+ *   { a, b, minCap }                             → min cap'li lineer
+ *   { a, b, capValue, capBelow }                  → cap'li lineer (ESL < capBelow → capValue)
+ *   { type:'piecewise', breakpoint, low, high }   → parçalı lineer (2 segment)
+ *   { type:'segments', segments: [{maxESL, a, b, cap}, ...] } → çok segmentli
+ */
+function calcLockupShiftThreshold(ls, esl) {
+  if(!ls) return 0;
+  if(ls.type === 'piecewise') {
+    if(esl <= ls.breakpoint) return ls.low.a * esl + (ls.low.b || 0);
+    return ls.high.a * esl + (ls.high.b || 0);
+  }
+  if(ls.type === 'segments') {
+    for(var si = 0; si < ls.segments.length; si++) {
+      var seg = ls.segments[si];
+      if(seg.maxESL !== undefined && esl <= seg.maxESL) {
+        return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+      }
+      if(si === ls.segments.length - 1) {
+        return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+      }
+    }
+  }
+  if(ls.capValue !== undefined && ls.capBelow !== undefined && esl < ls.capBelow) {
+    return ls.capValue;
+  }
+  var thr = ls.a * esl + (ls.b || 0);
+  if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+  return thr;
+}
+
 // ===== SHIFT CONTROLLER RUNTIME ALGORİTMASI =====
 // Her simülasyon zaman adımında çağrılır
 function veShiftControllerStep(state, params) {
@@ -3324,8 +3358,7 @@ function veShiftControllerStep(state, params) {
 
       if(params.lockupShifts && params.lockupShifts[shiftKey]) {
         var ls = params.lockupShifts[shiftKey];
-        var threshold_lu = ls.a * refRPM + ls.b;
-        if(ls.minCap !== undefined) threshold_lu = Math.max(threshold_lu, ls.minCap);
+        var threshold_lu = calcLockupShiftThreshold(ls, refRPM);
         if(N_out_lu >= threshold_lu) luTriggered = true;
       } else {
         // Eski yöntem: sabit lockupOffset
@@ -3520,11 +3553,25 @@ function getGearboxPropertiesHTML(node) {
       Object.keys(spData.lockupShifts).forEach(function(sk) {
         var ls = spData.lockupShifts[sk];
         var label = sk.replace(/(\d+L)(\d+L)/, '$1→$2');
-        var formula = ls.a + ' × ESL ' + (ls.b >= 0 ? '+ ' : '− ') + Math.abs(ls.b);
-        var capNote = ls.minCap !== undefined ? ' (min: ' + ls.minCap + ')' : '';
+        var formula;
+        if(ls.type === 'piecewise') {
+          var lowF = ls.low.a + ' × ESL ' + ((ls.low.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ls.low.b || 0);
+          var highF = ls.high.a + ' × ESL ' + ((ls.high.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ls.high.b || 0);
+          formula = 'ESL ≤ ' + ls.breakpoint + ': ' + lowF + '<br>ESL &gt; ' + ls.breakpoint + ': ' + highF;
+        } else if(ls.type === 'segments') {
+          formula = ls.segments.map(function(seg, i) {
+            if(seg.cap !== undefined) return 'ESL ≤ ' + seg.maxESL + ': ' + seg.cap + ' (cap)';
+            var f = seg.a + ' × ESL ' + ((seg.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(seg.b || 0);
+            return seg.maxESL ? ('ESL ≤ ' + seg.maxESL + ': ' + f) : f;
+          }).join('<br>');
+        } else {
+          formula = ls.a + ' × ESL ' + ((ls.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ls.b || 0);
+          if(ls.capValue !== undefined) formula += ' (cap: ' + ls.capValue + ', ESL &lt; ' + ls.capBelow + ')';
+          else if(ls.minCap !== undefined) formula += ' (min: ' + ls.minCap + ')';
+        }
         html += '<tr style="border-bottom:1px solid var(--border-color);">';
         html += '<th style="padding:4px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--text-secondary); font-size:0.64rem;">' + label + '</th>';
-        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.64rem; color:var(--text-secondary);">' + formula + capNote + '</td>';
+        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.64rem; color:var(--text-secondary);">' + formula + '</td>';
         html += '</tr>';
       });
     } else {
@@ -3534,7 +3581,43 @@ function getGearboxPropertiesHTML(node) {
       html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-lockup-offset-' + node.id + '" value="' + spData.lockupOffset + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
       html += '</tr>';
     }
-    
+
+    // Downshift eşikleri (varsa göster)
+    if(spData.downshiftThresholds) {
+      html += '<tr style="border-bottom:1px solid var(--border-color);">';
+      html += '<th colspan="2" style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); font-weight:500; color:var(--accent-warning); font-size:0.66rem;">Downshift Eşikleri <span style="color:var(--text-muted); font-weight:400;">[N_out &lt; threshold → alt vites]</span></th>';
+      html += '</tr>';
+      // Sıralı gösterim: büyük vitesten küçüğe
+      var dsKeys = Object.keys(spData.downshiftThresholds).sort(function(a, b) {
+        var na = parseInt(a); var nb = parseInt(b);
+        return nb - na; // 6to5, 5to4, 4to3, 3to2, 2to1
+      });
+      dsKeys.forEach(function(dk) {
+        var ds = spData.downshiftThresholds[dk];
+        var label = dk.replace(/(\d+)to(\d+)/, '$1→$2');
+        var formula;
+        if(ds.type === 'piecewise') {
+          var lowF = ds.low.a + ' × ESL ' + ((ds.low.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.low.b || 0);
+          var highF = ds.high.a + ' × ESL ' + ((ds.high.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.high.b || 0);
+          formula = 'ESL ≤ ' + ds.breakpoint + ': ' + lowF + '<br>ESL &gt; ' + ds.breakpoint + ': ' + highF;
+        } else if(ds.type === 'segments') {
+          formula = ds.segments.map(function(seg) {
+            if(seg.cap !== undefined) return 'ESL ≤ ' + seg.maxESL + ': ' + seg.cap + ' (cap)';
+            var f = seg.a + ' × ESL ' + ((seg.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(seg.b || 0);
+            return seg.maxESL ? ('ESL ≤ ' + seg.maxESL + ': ' + f) : f;
+          }).join('<br>');
+        } else {
+          formula = ds.a + ' × ESL ' + ((ds.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.b || 0);
+          if(ds.capValue !== undefined) formula += ' (cap: ' + ds.capValue + ', ESL &lt; ' + ds.capBelow + ')';
+        }
+        html += '<tr style="border-bottom:1px solid var(--border-color);">';
+        html += '<th style="padding:4px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--accent-warning); font-size:0.64rem;">' + label + '</th>';
+        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.62rem; color:var(--text-secondary); line-height:1.3;">' + formula + '</td>';
+        html += '</tr>';
+      });
+      html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Araç yavaşlarken N_out eşiğin altına düşerse alt vitese geçilir. Oran tabanlı formüller (N_engine = k × ESL). Histerezis: upshift &gt; downshift.</td></tr>';
+    }
+
     // Vites Sayısı (İleri)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Vites Sayısı (İleri)</th>';
@@ -4123,6 +4206,136 @@ var VE_FT_SHIFT_PROFILES = {
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
+  },
+  // ════════════════════════════════════════════════════════════════════════
+  // ALLISON 2500SP — 1000/2000 SERİSİ
+  // ════════════════════════════════════════════════════════════════════════
+  // Kaynak: 44 adet VEPS kalibrasyon raporu (CIN: B1-81000-43C-9, ESL 1600-2600 rpm, S1-S4)
+  // Vites oranları (KaATCC): 1st=3.512, 2nd=1.896, 3rd=1.439, 4th=1.000, 5th=0.737, 6th=0.643
+  // 1→2 tüm kalibrasyonlarda aynı: N_out = 0.2133 × ESL (konvertör modu, max hata ±0.4 rpm)
+  allison2500sp_s1: {
+    name: 'Allison 2500 SP — S1 Performance',
+    family: '1000_2000',
+    lockupOffset: 75,
+    shift1C2C_outRatio: 0.2133,   // Tüm kalibrasyonlarda aynı (konvertör modu)
+    shift2C2L_outRatio: 0.3594,
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod — N_engine = ESL - 75 kuralı
+    lockupShifts: {
+      '2L3L': { a: 0.5275, b: -39.7 },   // max hata ±0.5 rpm
+      '3L4L': { a: 0.6950, b: -52.2 },   // max hata ±0.3 rpm
+      '4L5L': { a: 1.0000, b: -75.0 },   // max hata ±0.0 rpm
+      '5L6L': { a: 1.3577, b: -101.8 }   // max hata ±0.5 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '3to2': { a: 0.4171, b: 0 },    // max hata ±0.4 rpm
+      '4to3': { a: 0.6100, b: 0 },    // max hata ±0.0 rpm
+      '5to4': { a: 0.8826, b: 0 },    // max hata ±0.5 rpm
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 1.3550, b: -300.8 },   // ESL ≤ 2000, max hata ±0.3 rpm
+        high: { a: 1.2037, b: 1.4 }       // ESL ≥ 2100, max hata ±0.5 rpm
+      },
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }  // max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  // S2 Performance — N_engine = 0.90 × ESL kuralı (oransal, offset yok)
+  // Histerezis: 4→5/5→4 = 100 rpm, 5→6/6→5 ≈ 203 rpm, 3→4/4→3 ≈ 69 rpm
+  allison2500sp_s2: {
+    name: 'Allison 2500 SP — S2 Performance',
+    family: '1000_2000',
+    lockupOffset: 0,
+    shift1C2C_outRatio: 0.2133,
+    shift2C2L_outRatio: 0.3594,
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod — N_engine ≈ 0.90 × ESL
+    lockupShifts: {
+      '2L3L': { a: 0.4750, b: 0 },                                     // max hata ±1.0 rpm
+      '3L4L': { a: 0.6257, b: -0.4, capValue: 1020, capBelow: 1700 },  // ESL=1600: cap 1020, max hata ±0.5 rpm
+      '4L5L': { a: 0.9000, b: 0 },                                     // max hata ±0.0 rpm
+      '5L6L': { a: 1.2221, b: 0 }                                      // max hata ±1.0 rpm
+    },
+    // Downshift eşikleri: S2 Performance
+    downshiftThresholds: {
+      '3to2': { a: 0.4171, b: 0 },                                     // S1 ile aynı, max hata ±0.4 rpm
+      '4to3': { a: 0.6256, b: -69.6, capValue: 950, capBelow: 1700 },  // max hata ±0.5 rpm
+      '5to4': { a: 0.9000, b: -100 },                                  // max hata ±0.0 rpm
+      '6to5': { a: 1.2218, b: -203.2 },                                // max hata ±0.5 rpm (S2'de parçalı yok: tekil lineer)
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }   // S1 ile aynı, max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  // S3 Economy — Her shift kendi formülüne sahip (tek bir kural yok)
+  // Histerezis: 3→4/4→3 ≈ 99 rpm, 4→5/5→4 ≈ 136 rpm, 5→6/6→5 ≈ 136 rpm
+  allison2500sp_s3: {
+    name: 'Allison 2500 SP — S3 Economy',
+    family: '1000_2000',
+    lockupOffset: 0,
+    shift1C2C_outRatio: 0.2133,
+    shift2C2L_outRatio: 0.3594,
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod — per-gear bağımsız formüller
+    lockupShifts: {
+      '2L3L': { a: 0.4171, b: 69.4 },    // max hata ±0.4 rpm
+      '3L4L': { a: 0.6000, b: 100 },     // max hata ±0.0 rpm
+      '4L5L': { a: 0.8146, b: 135.9 },   // max hata ±0.5 rpm
+      '5L6L': { a: 0.9326, b: 154.8 }    // max hata ±1.0 rpm
+    },
+    // Downshift eşikleri: S3 Economy
+    downshiftThresholds: {
+      '3to2': { a: 0.4171, b: 0 },                                     // S1 ile aynı, max hata ±0.4 rpm
+      '4to3': { a: 0.6000, b: 0, capValue: 976, capBelow: 1700 },      // ESL=1600: cap 976, max hata ±0.0 rpm
+      '5to4': { a: 0.8150, b: 0 },                                     // max hata ±0.3 rpm
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 0.9560, b: -39.8 },   // ESL ≤ 2000, max hata ±3.0 rpm
+        high: { a: 1.0000, b: -125 }     // ESL ≥ 2100, max hata ±0.0 rpm
+      },
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }   // S1 ile aynı, max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  // S4 Economy — Düşük ESL'lerde cap paternli, en konservatif kalibrasyon
+  // Histerezis: 3→4/4→3 ≈ 55 rpm, 4→5/5→4 ≈ 80 rpm, 5→6/6→5 ≈ 80 rpm
+  allison2500sp_s4: {
+    name: 'Allison 2500 SP — S4 Economy',
+    family: '1000_2000',
+    lockupOffset: 0,
+    shift1C2C_outRatio: 0.2133,
+    shift2C2L_outRatio: 0.3594,
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod — düşük ESL'lerde cap paternli
+    lockupShifts: {
+      '2L3L': { type: 'segments', segments: [
+        { maxESL: 1700, cap: 709 },                   // ESL ≤ 1700: cap
+        { maxESL: 2100, a: 0.3540, b: 98.7 },         // 1800 ≤ ESL ≤ 2100, max hata ±0.3 rpm
+        {              a: 0.4160, b: -32.4 }           // ESL ≥ 2200, max hata ±0.4 rpm
+      ]},
+      '3L4L': { a: 0.6000, b: -50, capValue: 1020, capBelow: 1800 },   // ESL ≤ 1700: cap, max hata ±0.0 rpm
+      '4L5L': { a: 0.8143, b: -67.2, capValue: 1385, capBelow: 1800 }, // ESL ≤ 1700: cap, max hata ±0.0 rpm
+      '5L6L': { a: 1.0000, b: -45 }                                    // max hata ±0.0 rpm
+    },
+    // Downshift eşikleri: S4 Economy
+    downshiftThresholds: {
+      '3to2': { type: 'segments', segments: [
+        { maxESL: 1700, cap: 639 },                   // ESL ≤ 1700: cap
+        { maxESL: 2100, a: 0.3530, b: 26.9 },         // 1800 ≤ ESL ≤ 2100, max hata ±0.4 rpm
+        {              a: 0.4170, b: -69.4 }           // ESL ≥ 2200, max hata ±0.4 rpm
+      ]},
+      '4to3': { a: 0.6000, b: -100, capValue: 920, capBelow: 1800 },   // ESL ≤ 1700: cap, max hata ±0.0 rpm
+      '5to4': { a: 0.8140, b: -134.4, capValue: 1249, capBelow: 1800 },// ESL ≤ 1700: cap, max hata ±0.4 rpm
+      '6to5': { a: 1.0000, b: -125 },                                  // max hata ±0.0 rpm
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }   // S1 ile aynı, max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
   }
 };
 
@@ -4164,6 +4377,12 @@ function onVEFTGBParamChange(nodeId) {
         node.data.converterShifts = JSON.parse(JSON.stringify(spData.converterShifts));
       } else {
         delete node.data.converterShifts;
+      }
+      // Downshift eşiklerini kopyala
+      if(spData.downshiftThresholds) {
+        node.data.downshiftThresholds = JSON.parse(JSON.stringify(spData.downshiftThresholds));
+      } else {
+        delete node.data.downshiftThresholds;
       }
       // Eski parametreleri de koru (geriye uyumluluk)
       node.data.srShift1C2C = spData.srShift1C2C;
@@ -4405,7 +4624,7 @@ var VE_GEARBOX_PRESETS = {
   '2500SP': {
     name: 'Allison | 2500SP',
     family: '1000_2000',
-    calibrated: false,
+    calibrated: true,
     grossInputPower: null,
     grossInputTorque: null,
     netTurbineTorque: null,
