@@ -1861,7 +1861,9 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   var sd = solverNode ? (solverNode.data || {}) : {};
   var dt = parseFloat(sd.ftDt) || 0.01;
   var method = sd.method || 'rk4';
-  var maxTime = parseFloat(sd.maxSimTime) || 300;
+  // Segment sayısına göre maxTime — her segment için en az 60s ayır
+  var baseMaxTime = parseFloat(sd.maxSimTime) || 300;
+  var maxTime = Math.max(baseMaxTime, segments.length * 60);
 
   // ═══ VİTES GEÇİŞ DURUMU MAKİNESİ ═══
   var shiftState = { gearIdx: 0, isLockup: false, shiftHistory: [] };
