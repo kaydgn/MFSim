@@ -3533,7 +3533,37 @@ function getGearboxPropertiesHTML(node) {
       html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-lockup-offset-' + node.id + '" value="' + spData.lockupOffset + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
       html += '</tr>';
     }
-    
+
+    // Downshift eşikleri (varsa göster)
+    if(spData.downshiftThresholds) {
+      html += '<tr style="border-bottom:1px solid var(--border-color);">';
+      html += '<th colspan="2" style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); font-weight:500; color:var(--accent-warning); font-size:0.66rem;">Downshift Eşikleri <span style="color:var(--text-muted); font-weight:400;">[N_out &lt; threshold → alt vites]</span></th>';
+      html += '</tr>';
+      // Sıralı gösterim: büyük vitesten küçüğe
+      var dsKeys = Object.keys(spData.downshiftThresholds).sort(function(a, b) {
+        var na = parseInt(a); var nb = parseInt(b);
+        return nb - na; // 6to5, 5to4, 4to3, 3to2, 2to1
+      });
+      dsKeys.forEach(function(dk) {
+        var ds = spData.downshiftThresholds[dk];
+        var label = dk.replace(/(\d+)to(\d+)/, '$1→$2');
+        var formula;
+        if(ds.type === 'piecewise') {
+          var lowF = ds.low.a + ' × ESL ' + ((ds.low.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.low.b || 0);
+          var highF = ds.high.a + ' × ESL ' + ((ds.high.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.high.b || 0);
+          formula = 'ESL ≤ ' + ds.breakpoint + ': ' + lowF + '<br>ESL &gt; ' + ds.breakpoint + ': ' + highF;
+        } else {
+          formula = ds.a + ' × ESL ' + ((ds.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.b || 0);
+          if(ds.capValue !== undefined) formula += ' (cap: ' + ds.capValue + ', ESL &lt; ' + ds.capBelow + ')';
+        }
+        html += '<tr style="border-bottom:1px solid var(--border-color);">';
+        html += '<th style="padding:4px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--accent-warning); font-size:0.64rem;">' + label + '</th>';
+        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.62rem; color:var(--text-secondary); line-height:1.3;">' + formula + '</td>';
+        html += '</tr>';
+      });
+      html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Araç yavaşlarken N_out eşiğin altına düşerse alt vitese geçilir. Oran tabanlı formüller (N_engine = k × ESL). Histerezis: upshift &gt; downshift.</td></tr>';
+    }
+
     // Vites Sayısı (İleri)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Vites Sayısı (İleri)</th>';
@@ -4122,6 +4152,51 @@ var VE_FT_SHIFT_PROFILES = {
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
+  },
+  // ════════════════════════════════════════════════════════════════════════
+  // ALLISON 2500SP — 1000/2000 SERİSİ
+  // ════════════════════════════════════════════════════════════════════════
+  // Kaynak: 11 adet VEPS kalibrasyon raporu (S1 Performance, ESL 1600-2600 rpm)
+  // Vites oranları (KaATCC): 1st=3.512, 2nd=1.896, 3rd=1.439, 4th=1.000, 5th=0.737, 6th=0.643
+  allison2500sp_s1: {
+    name: 'Allison 2500 SP — S1 Performance',
+    family: '1000_2000',
+    lockupOffset: 75,
+    shift1C2C_outRatio: 0.2150,   // Varsayılan (TC bağımlı)
+    shift2C2L_outRatio: 0.3594,   // Varsayılan
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod geçişleri — N_engine = ESL - 75 kuralı
+    // N_out = (ESL - 75) / i_gear
+    lockupShifts: {
+      '2L3L': { a: 0.5274, b: -39.6 },   // i_gear = 1.896
+      '3L4L': { a: 0.6949, b: -52.1 },   // i_gear = 1.439
+      '4L5L': { a: 1.0000, b: -75.0 },   // i_gear = 1.000
+      '5L6L': { a: 1.3569, b: -101.8 }   // i_gear = 0.737
+    },
+    // Downshift eşikleri: N_out < threshold → (gear - 1) vitese düş
+    // Kaynak: VEPS PrimaryMode [16] (tam gaz, %100 throttle), ESL 1600-2600 rpm
+    // Upshift'lerden farklı olarak oran tabanlı (N_engine = k × ESL, sabit offset yok)
+    // Histerezis: downshift > upshift (pozitif), avlanmayı (hunting) önler
+    downshiftThresholds: {
+      // 3→2, 4→3, 5→4: Saf oransal (N_out = k × ESL, b = 0)
+      // N_engine/ESL oranları: 3→2: 0.60, 4→3: 0.61, 5→4: 0.65
+      '3to2': { a: 0.4171, b: 0 },    // N_engine = 0.60 × ESL, max hata ±0.4 rpm
+      '4to3': { a: 0.6100, b: 0 },    // N_engine = 0.61 × ESL, max hata ±0.0 rpm
+      '5to4': { a: 0.8826, b: 0 },    // N_engine = 0.65 × ESL, max hata ±0.5 rpm
+      // 6→5: Parçalı lineer — ESL 2000/2100 sınırında eğim değişikliği
+      // Düşük ESL'de farklı eğim + negatif offset (TC/konvertör eşleşmesi kaynaklı)
+      // ESL ≥ 2100: N_engine = 0.774 × ESL (saf oransal)
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 1.3550, b: -300.8 },   // ESL ≤ 2000, max hata ±0.3 rpm
+        high: { a: 1.2037, b: 1.4 }       // ESL ≥ 2100, max hata ±0.5 rpm
+      },
+      // 2→1: Konvertör mod etkisi — ESL 1600'de sabit cap (312 rpm)
+      // ESL ≥ 1700'de lineer model aktif
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }  // max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
   }
 };
 
@@ -4163,6 +4238,12 @@ function onVEFTGBParamChange(nodeId) {
         node.data.converterShifts = JSON.parse(JSON.stringify(spData.converterShifts));
       } else {
         delete node.data.converterShifts;
+      }
+      // Downshift eşiklerini kopyala
+      if(spData.downshiftThresholds) {
+        node.data.downshiftThresholds = JSON.parse(JSON.stringify(spData.downshiftThresholds));
+      } else {
+        delete node.data.downshiftThresholds;
       }
       // Eski parametreleri de koru (geriye uyumluluk)
       node.data.srShift1C2C = spData.srShift1C2C;
@@ -4404,7 +4485,7 @@ var VE_GEARBOX_PRESETS = {
   '2500SP': {
     name: 'Allison | 2500SP',
     family: '1000_2000',
-    calibrated: false,
+    calibrated: true,
     grossInputPower: null,
     grossInputTorque: null,
     netTurbineTorque: null,

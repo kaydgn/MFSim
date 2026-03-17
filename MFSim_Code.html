@@ -11962,7 +11962,37 @@ function getGearboxPropertiesHTML(node) {
       html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-lockup-offset-' + node.id + '" value="' + spData.lockupOffset + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
       html += '</tr>';
     }
-    
+
+    // Downshift eşikleri (varsa göster)
+    if(spData.downshiftThresholds) {
+      html += '<tr style="border-bottom:1px solid var(--border-color);">';
+      html += '<th colspan="2" style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); font-weight:500; color:var(--accent-warning); font-size:0.66rem;">Downshift Eşikleri <span style="color:var(--text-muted); font-weight:400;">[N_out &lt; threshold → alt vites]</span></th>';
+      html += '</tr>';
+      // Sıralı gösterim: büyük vitesten küçüğe
+      var dsKeys = Object.keys(spData.downshiftThresholds).sort(function(a, b) {
+        var na = parseInt(a); var nb = parseInt(b);
+        return nb - na; // 6to5, 5to4, 4to3, 3to2, 2to1
+      });
+      dsKeys.forEach(function(dk) {
+        var ds = spData.downshiftThresholds[dk];
+        var label = dk.replace(/(\d+)to(\d+)/, '$1→$2');
+        var formula;
+        if(ds.type === 'piecewise') {
+          var lowF = ds.low.a + ' × ESL ' + ((ds.low.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.low.b || 0);
+          var highF = ds.high.a + ' × ESL ' + ((ds.high.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.high.b || 0);
+          formula = 'ESL ≤ ' + ds.breakpoint + ': ' + lowF + '<br>ESL &gt; ' + ds.breakpoint + ': ' + highF;
+        } else {
+          formula = ds.a + ' × ESL ' + ((ds.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.b || 0);
+          if(ds.capValue !== undefined) formula += ' (cap: ' + ds.capValue + ', ESL &lt; ' + ds.capBelow + ')';
+        }
+        html += '<tr style="border-bottom:1px solid var(--border-color);">';
+        html += '<th style="padding:4px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--accent-warning); font-size:0.64rem;">' + label + '</th>';
+        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.62rem; color:var(--text-secondary); line-height:1.3;">' + formula + '</td>';
+        html += '</tr>';
+      });
+      html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Araç yavaşlarken N_out eşiğin altına düşerse alt vitese geçilir. Oran tabanlı formüller (N_engine = k × ESL). Histerezis: upshift &gt; downshift.</td></tr>';
+    }
+
     // Vites Sayısı (İleri)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Vites Sayısı (İleri)</th>';
@@ -12551,6 +12581,51 @@ var VE_FT_SHIFT_PROFILES = {
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
+  },
+  // ════════════════════════════════════════════════════════════════════════
+  // ALLISON 2500SP — 1000/2000 SERİSİ
+  // ════════════════════════════════════════════════════════════════════════
+  // Kaynak: 11 adet VEPS kalibrasyon raporu (S1 Performance, ESL 1600-2600 rpm)
+  // Vites oranları (KaATCC): 1st=3.512, 2nd=1.896, 3rd=1.439, 4th=1.000, 5th=0.737, 6th=0.643
+  allison2500sp_s1: {
+    name: 'Allison 2500 SP — S1 Performance',
+    family: '1000_2000',
+    lockupOffset: 75,
+    shift1C2C_outRatio: 0.2150,   // Varsayılan (TC bağımlı)
+    shift2C2L_outRatio: 0.3594,   // Varsayılan
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod geçişleri — N_engine = ESL - 75 kuralı
+    // N_out = (ESL - 75) / i_gear
+    lockupShifts: {
+      '2L3L': { a: 0.5274, b: -39.6 },   // i_gear = 1.896
+      '3L4L': { a: 0.6949, b: -52.1 },   // i_gear = 1.439
+      '4L5L': { a: 1.0000, b: -75.0 },   // i_gear = 1.000
+      '5L6L': { a: 1.3569, b: -101.8 }   // i_gear = 0.737
+    },
+    // Downshift eşikleri: N_out < threshold → (gear - 1) vitese düş
+    // Kaynak: VEPS PrimaryMode [16] (tam gaz, %100 throttle), ESL 1600-2600 rpm
+    // Upshift'lerden farklı olarak oran tabanlı (N_engine = k × ESL, sabit offset yok)
+    // Histerezis: downshift > upshift (pozitif), avlanmayı (hunting) önler
+    downshiftThresholds: {
+      // 3→2, 4→3, 5→4: Saf oransal (N_out = k × ESL, b = 0)
+      // N_engine/ESL oranları: 3→2: 0.60, 4→3: 0.61, 5→4: 0.65
+      '3to2': { a: 0.4171, b: 0 },    // N_engine = 0.60 × ESL, max hata ±0.4 rpm
+      '4to3': { a: 0.6100, b: 0 },    // N_engine = 0.61 × ESL, max hata ±0.0 rpm
+      '5to4': { a: 0.8826, b: 0 },    // N_engine = 0.65 × ESL, max hata ±0.5 rpm
+      // 6→5: Parçalı lineer — ESL 2000/2100 sınırında eğim değişikliği
+      // Düşük ESL'de farklı eğim + negatif offset (TC/konvertör eşleşmesi kaynaklı)
+      // ESL ≥ 2100: N_engine = 0.774 × ESL (saf oransal)
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 1.3550, b: -300.8 },   // ESL ≤ 2000, max hata ±0.3 rpm
+        high: { a: 1.2037, b: 1.4 }       // ESL ≥ 2100, max hata ±0.5 rpm
+      },
+      // 2→1: Konvertör mod etkisi — ESL 1600'de sabit cap (312 rpm)
+      // ESL ≥ 1700'de lineer model aktif
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }  // max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
   }
 };
 
@@ -12592,6 +12667,12 @@ function onVEFTGBParamChange(nodeId) {
         node.data.converterShifts = JSON.parse(JSON.stringify(spData.converterShifts));
       } else {
         delete node.data.converterShifts;
+      }
+      // Downshift eşiklerini kopyala
+      if(spData.downshiftThresholds) {
+        node.data.downshiftThresholds = JSON.parse(JSON.stringify(spData.downshiftThresholds));
+      } else {
+        delete node.data.downshiftThresholds;
       }
       // Eski parametreleri de koru (geriye uyumluluk)
       node.data.srShift1C2C = spData.srShift1C2C;
@@ -12833,7 +12914,7 @@ var VE_GEARBOX_PRESETS = {
   '2500SP': {
     name: 'Allison | 2500SP',
     family: '1000_2000',
-    calibrated: false,
+    calibrated: true,
     grossInputPower: null,
     grossInputTorque: null,
     netTurbineTorque: null,
@@ -17164,6 +17245,31 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     return cs2L.a * esl + (cs2L.b || 0);
   }
 
+  // Downshift eşik verileri
+  var dsData = spData.downshiftThresholds || null;
+
+  /**
+   * Downshift N_out eşiğini hesaplar.
+   * Desteklenen formatlar:
+   *   { a, b }                                     → lineer: N_out = a × ESL + b
+   *   { a, b, capValue, capBelow }                  → cap'li lineer
+   *   { type:'piecewise', breakpoint, low, high }   → parçalı lineer
+   * @param {object} ds   — downshift threshold tanımı
+   * @param {number} esl  — Engine Speed Limit (governed)
+   * @returns {number}    — N_out eşik değeri
+   */
+  function calcDownshiftThreshold(ds, esl) {
+    if(!ds) return 0;
+    if(ds.type === 'piecewise') {
+      if(esl <= ds.breakpoint) return ds.low.a * esl + (ds.low.b || 0);
+      return ds.high.a * esl + (ds.high.b || 0);
+    }
+    if(ds.capValue !== undefined && ds.capBelow !== undefined && esl < ds.capBelow) {
+      return ds.capValue;
+    }
+    return ds.a * esl + (ds.b || 0);
+  }
+
   var shiftState = {
     gearIdx: 0,
     isLockup: false,   // Başlangıç: 1C (converter mod)
@@ -17249,6 +17355,37 @@ function veFTRunSimulationEngine(transferRangeOverride) {
             v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_lu
           });
           shiftState.gearIdx = g + 1;
+          shifted = true;
+        }
+      }
+    }
+
+    // ── DOWNSHIFT KONTROLÜ ──
+    // Lockup modda: N_out < downshift eşiği → alt vitese düş
+    // Converter modda: downshift uygulanmaz (henüz hızlanma aşamasında)
+    if(!shifted && dsData && isLU && g > 0) {
+      var i_gear_ds = parseFloat(getCurrentGearData().ratio) || 1.0;
+      var N_out_ds = N_engine / i_gear_ds;  // Lockup modda SR=1
+      // Downshift key: (g+1)to(g) formatında, örn. gear 5 (6. vites) → '6to5'
+      var dsKey = (g + 1) + 'to' + g;
+      var dsEntry = dsData[dsKey];
+
+      if(dsEntry) {
+        var dsThreshold = calcDownshiftThreshold(dsEntry, shiftRefRPM);
+        if(N_out_ds < dsThreshold) {
+          var dsFromName = (g + 1) + 'L';
+          var dsToName = g + 'L';
+          // 2→1 özel durum: converter moda geçiş (1C)
+          if(g === 1) {
+            dsToName = '1C';
+            shiftState.isLockup = false;
+          }
+          shiftState.shiftHistory.push({
+            t: t, fromGear: g, toGear: g - 1, fromMode: dsFromName, toMode: dsToName,
+            v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_ds,
+            isDownshift: true
+          });
+          shiftState.gearIdx = g - 1;
           shifted = true;
         }
       }
@@ -25498,11 +25635,39 @@ function veRunSimulationEngine() {
           omega = v_veh * totalRatio / rWheel;
           rpm = omega * 60 / (2 * Math.PI);
         }
-        // Downshift: RPM < alt vitesin eşiği ve alt vites varsa (1. ve 2. viteste motor freni pasif)
+        // Downshift: RPM < alt vitesin eşiği ve alt vites varsa
         else if(currentGear > 1 && gearRatios[currentGear - 2]) {
           var lowerGearRatio = parseFloat(gearRatios[currentGear - 2]) || gearRatio;
-          var downshiftThreshold = upshiftThreshold * (gearRatio / lowerGearRatio);
-          if(rpm < downshiftThreshold) {
+          var _dsTriggered = false;
+
+          // Kalibre edilmiş downshift eşikleri varsa kullan
+          var _spKey = gbData ? gbData.shiftProfile : null;
+          var _spDs = _spKey && typeof VE_FT_SHIFT_PROFILES !== 'undefined' && VE_FT_SHIFT_PROFILES[_spKey] ? VE_FT_SHIFT_PROFILES[_spKey].downshiftThresholds : null;
+          if(_spDs) {
+            var _dsKey = currentGear + 'to' + (currentGear - 1);
+            var _dsEntry = _spDs[_dsKey];
+            if(_dsEntry) {
+              var _esl = governedRpm;
+              var _N_out = rpm / gearRatio;
+              var _dsTh;
+              if(_dsEntry.type === 'piecewise') {
+                _dsTh = (_esl <= _dsEntry.breakpoint) ? (_dsEntry.low.a * _esl + (_dsEntry.low.b || 0)) : (_dsEntry.high.a * _esl + (_dsEntry.high.b || 0));
+              } else if(_dsEntry.capValue !== undefined && _dsEntry.capBelow !== undefined && _esl < _dsEntry.capBelow) {
+                _dsTh = _dsEntry.capValue;
+              } else {
+                _dsTh = _dsEntry.a * _esl + (_dsEntry.b || 0);
+              }
+              if(_N_out < _dsTh) _dsTriggered = true;
+            }
+          }
+
+          // Fallback: eski yöntem (kalibre veri yoksa)
+          if(!_dsTriggered && !_spDs) {
+            var downshiftThreshold = upshiftThreshold * (gearRatio / lowerGearRatio);
+            if(rpm < downshiftThreshold) _dsTriggered = true;
+          }
+
+          if(_dsTriggered) {
             var v_veh2 = omega * rWheel / totalRatio;
             currentGear--;
             gearRatio = lowerGearRatio;
@@ -25812,8 +25977,36 @@ function veRunSimulationEngine() {
           _rk45_gearEvents.push({ t: t_eval, gear: _rk45_lastGear, type: 'up' });
         } else if(_rk45_lastGear > 1 && gearRatios[_rk45_lastGear - 2]) {
           var lwGR = parseFloat(gearRatios[_rk45_lastGear - 2]) || _rk45_lastRatio;
-          var dnT = upT * (_rk45_lastRatio / lwGR);
-          if(rpm_check < dnT) {
+          var _rk45DsTrig = false;
+
+          // Kalibre downshift eşikleri
+          var _rk45SpKey = gbData ? gbData.shiftProfile : null;
+          var _rk45SpDs = _rk45SpKey && typeof VE_FT_SHIFT_PROFILES !== 'undefined' && VE_FT_SHIFT_PROFILES[_rk45SpKey] ? VE_FT_SHIFT_PROFILES[_rk45SpKey].downshiftThresholds : null;
+          if(_rk45SpDs) {
+            var _rk45DsK = _rk45_lastGear + 'to' + (_rk45_lastGear - 1);
+            var _rk45DsE = _rk45SpDs[_rk45DsK];
+            if(_rk45DsE) {
+              var _rk45Esl = governedRpm;
+              var _rk45Nout = rpm_check / _rk45_lastRatio;
+              var _rk45Th;
+              if(_rk45DsE.type === 'piecewise') {
+                _rk45Th = (_rk45Esl <= _rk45DsE.breakpoint) ? (_rk45DsE.low.a * _rk45Esl + (_rk45DsE.low.b || 0)) : (_rk45DsE.high.a * _rk45Esl + (_rk45DsE.high.b || 0));
+              } else if(_rk45DsE.capValue !== undefined && _rk45DsE.capBelow !== undefined && _rk45Esl < _rk45DsE.capBelow) {
+                _rk45Th = _rk45DsE.capValue;
+              } else {
+                _rk45Th = _rk45DsE.a * _rk45Esl + (_rk45DsE.b || 0);
+              }
+              if(_rk45Nout < _rk45Th) _rk45DsTrig = true;
+            }
+          }
+
+          // Fallback: eski yöntem
+          if(!_rk45DsTrig && !_rk45SpDs) {
+            var dnT = upT * (_rk45_lastRatio / lwGR);
+            if(rpm_check < dnT) _rk45DsTrig = true;
+          }
+
+          if(_rk45DsTrig) {
             _rk45_lastGear--;
             _rk45_lastRatio = lwGR;
             _rk45_lastTotalRatio = _rk45_lastRatio * transferRatio * diffRatio * tcEffTorqueRatio;
