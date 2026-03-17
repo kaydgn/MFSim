@@ -654,8 +654,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
         if(spData.lockupShifts && spData.lockupShifts[shiftKey]) {
           var ls = spData.lockupShifts[shiftKey];
-          var threshold_lu = ls.a * shiftRefRPM + ls.b;
-          if(ls.minCap !== undefined) threshold_lu = Math.max(threshold_lu, ls.minCap);
+          var threshold_lu = calcDownshiftThreshold(ls, shiftRefRPM);
           if(N_out_lu >= threshold_lu) luShiftTriggered = true;
         } else {
           // Eski yöntem: sabit lockupOffset

@@ -1933,11 +1933,13 @@ function veGenerateFTTxtReport(sim) {
     r += '  Lockup Gecisleri (N_out = a x ESL + b):\n';
     Object.keys(spDataReport.lockupShifts).forEach(function(sk) {
       var ls = spDataReport.lockupShifts[sk];
-      var thr = ls.a * shiftRefRPM + ls.b;
-      if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+      var thr = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(ls, shiftRefRPM) : (ls.a * shiftRefRPM + (ls.b || 0));
       var label = sk.replace(/(\d+L)(\d+L)/, '$1->$2');
-      var capNote = ls.minCap !== undefined ? ' (cap=' + ls.minCap + ')' : '';
-      r += pRow('  ' + label, 'N_out >= ' + numI(thr) + ' rpm (a=' + ls.a + ', b=' + ls.b + capNote + ')');
+      var detail = '';
+      if(ls.type === 'segments') { detail = 'segments'; }
+      else if(ls.type === 'piecewise') { detail = 'piecewise'; }
+      else { detail = 'a=' + ls.a + ', b=' + ls.b; if(ls.capValue !== undefined) detail += ', cap=' + ls.capValue; else if(ls.minCap !== undefined) detail += ', cap=' + ls.minCap; }
+      r += pRow('  ' + label, 'N_out >= ' + numI(thr) + ' rpm (' + detail + ')');
     });
   } else {
     r += pRow('Kilitleme Ofseti', numI(lockupOffset) + ' rpm');
