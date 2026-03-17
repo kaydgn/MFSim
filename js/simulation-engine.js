@@ -381,6 +381,8 @@ function veRunSimulationEngine() {
               var _dsTh;
               if(_dsEntry.type === 'piecewise') {
                 _dsTh = (_esl <= _dsEntry.breakpoint) ? (_dsEntry.low.a * _esl + (_dsEntry.low.b || 0)) : (_dsEntry.high.a * _esl + (_dsEntry.high.b || 0));
+              } else if(_dsEntry.type === 'segments') {
+                for(var _si = 0; _si < _dsEntry.segments.length; _si++) { var _sg = _dsEntry.segments[_si]; if((_sg.maxESL !== undefined && _esl <= _sg.maxESL) || _si === _dsEntry.segments.length - 1) { _dsTh = _sg.cap !== undefined ? _sg.cap : (_sg.a * _esl + (_sg.b || 0)); break; } }
               } else if(_dsEntry.capValue !== undefined && _dsEntry.capBelow !== undefined && _esl < _dsEntry.capBelow) {
                 _dsTh = _dsEntry.capValue;
               } else {
@@ -720,6 +722,8 @@ function veRunSimulationEngine() {
               var _rk45Th;
               if(_rk45DsE.type === 'piecewise') {
                 _rk45Th = (_rk45Esl <= _rk45DsE.breakpoint) ? (_rk45DsE.low.a * _rk45Esl + (_rk45DsE.low.b || 0)) : (_rk45DsE.high.a * _rk45Esl + (_rk45DsE.high.b || 0));
+              } else if(_rk45DsE.type === 'segments') {
+                for(var _rsi = 0; _rsi < _rk45DsE.segments.length; _rsi++) { var _rsg = _rk45DsE.segments[_rsi]; if((_rsg.maxESL !== undefined && _rk45Esl <= _rsg.maxESL) || _rsi === _rk45DsE.segments.length - 1) { _rk45Th = _rsg.cap !== undefined ? _rsg.cap : (_rsg.a * _rk45Esl + (_rsg.b || 0)); break; } }
               } else if(_rk45DsE.capValue !== undefined && _rk45DsE.capBelow !== undefined && _rk45Esl < _rk45DsE.capBelow) {
                 _rk45Th = _rk45DsE.capValue;
               } else {

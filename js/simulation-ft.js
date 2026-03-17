@@ -554,7 +554,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
    * Desteklenen formatlar:
    *   { a, b }                                     → lineer: N_out = a × ESL + b
    *   { a, b, capValue, capBelow }                  → cap'li lineer
-   *   { type:'piecewise', breakpoint, low, high }   → parçalı lineer
+   *   { type:'piecewise', breakpoint, low, high }   → parçalı lineer (2 segment)
+   *   { type:'segments', segments: [{maxESL, a, b, cap}, ...] } → çok segmentli
    * @param {object} ds   — downshift threshold tanımı
    * @param {number} esl  — Engine Speed Limit (governed)
    * @returns {number}    — N_out eşik değeri
@@ -564,6 +565,17 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     if(ds.type === 'piecewise') {
       if(esl <= ds.breakpoint) return ds.low.a * esl + (ds.low.b || 0);
       return ds.high.a * esl + (ds.high.b || 0);
+    }
+    if(ds.type === 'segments') {
+      for(var si = 0; si < ds.segments.length; si++) {
+        var seg = ds.segments[si];
+        if(seg.maxESL !== undefined && esl <= seg.maxESL) {
+          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+        }
+        if(si === ds.segments.length - 1) {
+          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+        }
+      }
     }
     if(ds.capValue !== undefined && ds.capBelow !== undefined && esl < ds.capBelow) {
       return ds.capValue;
