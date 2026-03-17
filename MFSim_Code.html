@@ -12626,6 +12626,39 @@ var VE_FT_SHIFT_PROFILES = {
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
+  },
+  // Kaynak: 11 adet VEPS kalibrasyon raporu (S2 Performance, CIN: B1-81000-43C-9, ESL 1600-2600 rpm)
+  // S1 ile farklar: 4→3, 5→4, 6→5 daha düşük eşikler (araç daha uzun süre yüksek viteste kalır)
+  // Histerezis çok düzenli: 4→5/5→4 = 100 rpm, 5→6/6→5 ≈ 203 rpm, 3→4/4→3 ≈ 69 rpm
+  allison2500sp_s2: {
+    name: 'Allison 2500 SP — S2 Performance',
+    family: '1000_2000',
+    lockupOffset: 0,
+    shift1C2C_outRatio: 0.2150,
+    shift2C2L_outRatio: 0.3594,
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod geçişleri — S2 kuralı (N_engine ≈ ESL, offset ≈ 0)
+    lockupShifts: {
+      '2L3L': { a: 0.4828, b: 0 },       // i_gear = 1.896
+      '3L4L': { a: 0.6949, b: 0 },       // i_gear = 1.439
+      '4L5L': { a: 1.0000, b: 0 },       // i_gear = 1.000
+      '5L6L': { a: 1.3569, b: 0 }        // i_gear = 0.737
+    },
+    // Downshift eşikleri: S2 Performance
+    // 2→1, 3→2: S1 ile birebir aynı
+    // 4→3: Parçalı — ESL=1600 cap 950, ESL ≥ 1700 lineer (S1'den ~35 rpm düşük)
+    // 5→4: Mükemmel lineer, sıfır hata (S1'den ~63 rpm düşük)
+    // 6→5: Tekil lineer — S1'deki parçalı yapı yok (S1'den ~153 rpm düşük)
+    downshiftThresholds: {
+      '3to2': { a: 0.4171, b: 0 },                                     // S1 ile aynı, max hata ±0.4 rpm
+      '4to3': { a: 0.6256, b: -69.6, capValue: 950, capBelow: 1700 },  // max hata ±0.5 rpm, ESL=1600 cap
+      '5to4': { a: 0.9000, b: -100 },                                  // max hata ±0.0 rpm (mükemmel lineer)
+      '6to5': { a: 1.2218, b: -203.2 },                                // max hata ±0.5 rpm, tekil lineer
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }   // S1 ile aynı, max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
   }
 };
 
