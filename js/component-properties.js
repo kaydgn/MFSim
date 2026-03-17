@@ -3426,13 +3426,13 @@ function getGearboxPropertiesHTML(node) {
     Object.keys(VE_GEARBOX_PRESETS).forEach(function(gk) {
       var gp = VE_GEARBOX_PRESETS[gk];
       var fwdC = gp.gears.filter(function(g) { return g.gear !== 'R'; }).length;
-      var calM = gp.calibrated ? ' ✦' : '';
+      var calM = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '');
       var gSel = (gk === ftGBPreset) ? ' selected' : '';
       html += '<option value="' + gk + '"' + gSel + '>' + gp.name + ' (' + fwdC + 'V)' + calM + '</option>';
     });
     html += '</select>';
     html += '</div>';
-    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Kalibrasyon mevcut">✦</span> = Kalibrasyon mevcut (shift profili tanımlı)</div>';
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
     if(hasEGM) {
       html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:4px; font-size:0.58rem; color:var(--accent-primary); line-height:1.4;">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
@@ -3707,14 +3707,14 @@ function getGearboxPropertiesHTML(node) {
   Object.keys(VE_GEARBOX_PRESETS).forEach(function(key) {
     var gp = VE_GEARBOX_PRESETS[key];
     var fwdCount = gp.gears.filter(function(g) { return g.gear !== 'R'; }).length;
-    var calMark = gp.calibrated ? ' ✦' : '';
+    var calMark = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '');
     var sel = (key === selectedGearbox) ? ' selected' : '';
     html += '<option value="' + key + '"' + sel + '>' + gp.name + ' (' + fwdCount + 'V)' + calMark + '</option>';
   });
   html += '<option value="__new__">➕ Manuel Giriş</option>';
   html += '</select>';
   html += '</div>';
-  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Bu şanzıman için vites geçiş kalibrasyonu (shift profili) tanımlıdır">✦</span> = Kalibrasyon mevcut (shift profili tanımlı)</div>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
   if(_hasEGM2) {
     html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:4px; font-size:0.58rem; color:var(--accent-primary); line-height:1.4;">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
   }
@@ -4625,6 +4625,7 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 2500SP',
     family: '1000_2000',
     calibrated: true,
+    downshiftCalibrated: true,
     grossInputPower: null,
     grossInputTorque: null,
     netTurbineTorque: null,
@@ -5701,6 +5702,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       name: preset.name,
       family: preset.family || '—',
       calibrated: preset.calibrated || false,
+      downshiftCalibrated: preset.downshiftCalibrated || false,
       grossInputPower: preset.grossInputPower,
       grossInputTorque: preset.grossInputTorque,
       netTurbineTorque: preset.netTurbineTorque,
@@ -5782,7 +5784,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
                         r.status === 'unacceptable' ? 'var(--accent-danger)' : 'var(--text-muted)';
       var isSelected = r.key === selectedGB;
       var borderLeft = isSelected ? '3px solid var(--accent-primary)' : 'none';
-      var calMark = r.calibrated ? ' ✦' : '';
+      var calMark = (r.calibrated ? ' ✦' : '') + (r.downshiftCalibrated ? ' ✧' : '');
 
       // Şanzıman adını kısalt: "Allison | 4000SP" → "4000SP"
       var shortName = r.name.replace(/^Allison\s*\|\s*/i, '');
@@ -5797,9 +5799,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c9ok ? '✅' : '❌')) + '</td>';
       h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c10ok ? '✅' : '❌')) + '</td>';
       h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center;">';
-      if(r.status !== 'unacceptable' && r.score >= 0) {
-        h += '<button onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:0.52rem; background:' + (isSelected ? 'var(--bg-tertiary)' : 'var(--accent-primary)') + '; color:' + (isSelected ? 'var(--text-muted)' : 'white') + '; border:1px solid ' + (isSelected ? 'var(--border-color)' : 'transparent') + '; border-radius:2px; cursor:' + (isSelected ? 'default' : 'pointer') + ';"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
-      }
+      h += '<button onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:0.52rem; background:' + (isSelected ? 'var(--bg-tertiary)' : 'var(--accent-primary)') + '; color:' + (isSelected ? 'var(--text-muted)' : 'white') + '; border:1px solid ' + (isSelected ? 'var(--border-color)' : 'transparent') + '; border-radius:2px; cursor:' + (isSelected ? 'default' : 'pointer') + ';"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
       h += '</td>';
       h += '</tr>';
     });
