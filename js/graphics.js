@@ -2883,6 +2883,145 @@ function veGenerateSegmentDriveTxtReport(sim) {
 
 
   // ════════════════════════════════════════════════════════════════════════
+  // 3. ROTA / ORTAM BİLGİLERİ
+  // ════════════════════════════════════════════════════════════════════════
+  var roadNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.type === 'road'; }) : null;
+  var rdData = roadNode ? (roadNode.data || {}) : {};
+  var hasRouteData = rdData.routeTotalDist || (rdData.gpsSamples && rdData.gpsSamples.length > 0) || (rdData.routeSegments && rdData.routeSegments.length > 0);
+
+  if (hasRouteData) {
+    r += ln('=', W) + '\n';
+    r += pad('3. ROTA / ORTAM BILGILERI', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    // ── Genel Rota Bilgileri ──
+    r += '  GENEL ROTA BILGILERI\n';
+    r += '  ' + ln('-', 50) + '\n';
+    var routeTotalDist = rdData.routeTotalDist || 0;
+    r += pRow('Toplam Rota Mesafesi', num(routeTotalDist / 1000, 2) + ' km (' + numI(routeTotalDist) + ' m)');
+    if (rdData.routeAvgGrade !== undefined) {
+      r += pRow('Ortalama Egim', '%' + num(rdData.routeAvgGrade, 1));
+    }
+    if (rdData.routeAvgAltitude !== undefined) {
+      r += pRow('Ortalama Yukseklik', numI(rdData.routeAvgAltitude) + ' m');
+    }
+    // Yükseklik farkı (başlangıç - bitiş)
+    if (rdData.gpsSamples && rdData.gpsSamples.length >= 2) {
+      var elevFirst = rdData.gpsSamples[0].elev;
+      var elevLast = rdData.gpsSamples[rdData.gpsSamples.length - 1].elev;
+      var deltaElev = elevFirst - elevLast;
+      r += pRow('Baslangic Yuksekligi', numI(elevFirst) + ' m');
+      r += pRow('Bitis Yuksekligi', numI(elevLast) + ' m');
+      r += pRow('Yukseklik Farki (dH)', num(deltaElev, 1) + ' m' + (deltaElev > 0 ? ' (inis)' : deltaElev < 0 ? ' (cikis)' : ''));
+      var elevMax = elevFirst, elevMin = elevFirst;
+      rdData.gpsSamples.forEach(function(s) {
+        if (s.elev > elevMax) elevMax = s.elev;
+        if (s.elev < elevMin) elevMin = s.elev;
+      });
+      r += pRow('Maks. Yukseklik', numI(elevMax) + ' m');
+      r += pRow('Min. Yukseklik', numI(elevMin) + ' m');
+    }
+    r += '\n';
+
+    // ── Ortam Koşulları ──
+    r += '  ORTAM KOSULLARI\n';
+    r += '  ' + ln('-', 50) + '\n';
+    r += pRow('Yukseklik (Kullanici)', (rdData.altitude || '-') + ' m');
+    r += pRow('Sicaklik', (rdData.temperature || '-') + ' C');
+    r += pRow('Hava Yogunlugu', rdData.airDensity ? (num(parseFloat(rdData.airDensity), 4) + ' kg/m3') : 'Varsayilan (1.225 kg/m3)');
+    r += '\n';
+
+    // ── Rota Segment Tablosu ──
+    if (rdData.routeSegments && rdData.routeSegments.length > 0) {
+      var rSegs = rdData.routeSegments;
+      r += '  ROTA SEGMENTLERI (Harita Verisi)\n';
+      var rSegTW = 62;
+      r += '  ' + ln('-', rSegTW) + '\n';
+      r += '  ' + pad('No', 5) + pad('Mesafe [m]', 12, 'right') + pad('Egim [%]', 10, 'right');
+      r += pad('dH [m]', 10, 'right') + pad('Kum. Mes. [m]', 15, 'right') + pad('Yon', 12, 'right') + '\n';
+      r += '  ' + ln('-', rSegTW) + '\n';
+
+      var rCumDist = 0, rTotalDH = 0;
+      rSegs.forEach(function(rs, ri) {
+        var mesafe = rs.mesafe || 0;
+        var egim = rs.egim || 0;
+        var dh = rs.deltaH || (mesafe * Math.sin(Math.atan(egim / 100)));
+        rCumDist += mesafe;
+        rTotalDH += dh;
+        var yon = egim > 0.5 ? 'Inis' : (egim < -0.5 ? 'Cikis' : 'Duz');
+
+        r += '  ' + pad(String(ri + 1), 5);
+        r += pad(numI(mesafe), 12, 'right');
+        r += pad(num(egim, 2), 10, 'right');
+        r += pad(num(dh, 1), 10, 'right');
+        r += pad(numI(rCumDist), 15, 'right');
+        r += pad(yon, 12, 'right');
+        r += '\n';
+      });
+      r += '  ' + ln('-', rSegTW) + '\n';
+      r += '  ' + pad('TOPLAM', 5) + pad(numI(rCumDist), 12, 'right');
+      r += pad('', 10) + pad(num(rTotalDH, 1), 10, 'right') + '\n';
+      r += '  ' + ln('-', rSegTW) + '\n\n';
+    }
+
+    // ── Yükseklik Profili (ASCII art basitleştirilmiş) ──
+    if (rdData.gpsSamples && rdData.gpsSamples.length >= 2) {
+      var gps = rdData.gpsSamples;
+      r += '  YUKSEKLIK PROFILI\n';
+      r += '  ' + ln('-', 74) + '\n';
+
+      // Profil verisi: her ~500m'de bir nokta örnekle (en fazla 60 satır)
+      var profW = 60; // karakter genişliği
+      var profH = 12; // satır yüksekliği
+      var eMin = gps[0].elev, eMax = gps[0].elev;
+      gps.forEach(function(s) { if (s.elev < eMin) eMin = s.elev; if (s.elev > eMax) eMax = s.elev; });
+      var eRange = eMax - eMin;
+      if (eRange < 1) eRange = 1; // sıfır bölme koruması
+
+      // Örnekleme: profW kadar nokta
+      var profData = [];
+      for (var pi = 0; pi < profW; pi++) {
+        var frac = pi / (profW - 1);
+        var targetDist = frac * gps[gps.length - 1].dist;
+        // En yakın GPS noktasını bul
+        var closest = gps[0];
+        for (var gi = 1; gi < gps.length; gi++) {
+          if (Math.abs(gps[gi].dist - targetDist) < Math.abs(closest.dist - targetDist)) {
+            closest = gps[gi];
+          }
+        }
+        profData.push(closest.elev);
+      }
+
+      // ASCII çizim (üstten alta)
+      for (var row = profH - 1; row >= 0; row--) {
+        var rowElev = eMin + (row / (profH - 1)) * eRange;
+        var label = pad(numI(rowElev) + 'm', 7, 'right');
+        var line = '  ' + label + ' |';
+        for (var col = 0; col < profW; col++) {
+          var normElev = (profData[col] - eMin) / eRange * (profH - 1);
+          if (Math.round(normElev) === row) {
+            line += '*';
+          } else if (normElev > row) {
+            line += '.';
+          } else {
+            line += ' ';
+          }
+        }
+        r += line + '\n';
+      }
+      r += '  ' + pad('', 7) + ' +' + ln('-', profW) + '\n';
+      r += '  ' + pad('', 7) + '  ' + pad('0', 1) + pad(num(gps[gps.length - 1].dist / 1000, 1) + 'km', profW - 1, 'right') + '\n\n';
+    }
+
+    r += '\n';
+    sectionNum = 4; // sonraki bölüm numarası
+  } else {
+    sectionNum = 3; // rota verisi yoksa 3'ten devam
+  }
+
+
+  // ════════════════════════════════════════════════════════════════════════
   // Raporun geri kalanını her transfer kademesi için oluştur
   // ════════════════════════════════════════════════════════════════════════
   var trGearKeys = [];
@@ -2893,7 +3032,7 @@ function veGenerateSegmentDriveTxtReport(sim) {
   }
   var hasMultiTransfer = trGearKeys.length > 1 && sdAll;
 
-  var sectionNum = 3;
+  // sectionNum zaten yukarıda rota bölümü varlığına göre ayarlandı (3 veya 4)
 
   trGearKeys.forEach(function(trKey, trIdx) {
     var sd = (trKey === '__primary__') ? sdPrimary : (sdAll[trKey] || sdPrimary);
