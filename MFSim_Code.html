@@ -18307,7 +18307,9 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   var sd = solverNode ? (solverNode.data || {}) : {};
   var dt = parseFloat(sd.ftDt) || 0.01;
   var method = sd.method || 'rk4';
-  var maxTime = parseFloat(sd.maxSimTime) || 300;
+  // Segment sayısına göre maxTime — her segment için en az 60s ayır
+  var baseMaxTime = parseFloat(sd.maxSimTime) || 300;
+  var maxTime = Math.max(baseMaxTime, segments.length * 60);
 
   // ═══ VİTES GEÇİŞ DURUMU MAKİNESİ ═══
   var shiftState = { gearIdx: 0, isLockup: false, shiftHistory: [] };
@@ -19326,6 +19328,10 @@ function veSolverRunProfessional() {
             simResult.segmentDrive = segDriveAllRanges[_ftTrGears[0].kademe];
             simResult.segmentDriveAllRanges = segDriveAllRanges;
             simResult.segmentDriveTransferGears = _ftTrGears;
+            // Orijinal segment girdi verisini sakla (TXT raporu için)
+            simResult.segmentDriveInputSegments = _scenData.roadSegments.map(function(s) {
+              return { no: s.no, grade: s.grade, distance: s.distance, deltaH: s.deltaH, command: s.command || 'full_throttle' };
+            });
           }
         } else {
           simResult = veRunSimulationEngine();
@@ -19417,6 +19423,16 @@ function veSolverRunProfessional() {
           log('HIZLANMA-YAVAŞLAMA ANALİZİ', 'info');
           log('═══════════════════════════════════════════', 'info');
 
+          // Girdi segmentlerini logla
+          var _inputSegs = simResult.segmentDriveInputSegments || [];
+          if(_inputSegs.length > 0) {
+            log('Girdi Segmentleri (' + _inputSegs.length + ' adet):', 'info');
+            _inputSegs.forEach(function(iseg) {
+              var cmdL = iseg.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
+              log('  Seg ' + iseg.no + ': mesafe=' + (iseg.distance || 0).toFixed(0) + 'm, eğim=%' + (iseg.grade || 0).toFixed(2) + ', komut=' + cmdL);
+            });
+          }
+
           _sdTrGears.forEach(function(trg) {
             var _segDrv = _sdAllRes[trg.kademe];
             if(!_segDrv || !_segDrv.segmentSummary) return;
@@ -19436,7 +19452,12 @@ function veSolverRunProfessional() {
                   '  A=' + (_sds.A_frontal || 0).toFixed(2) + 'm²', 'dim');
             }
 
-            log('Segment Bazlı Özet:', 'info');
+            var _computedSegs = _segDrv.segmentSummary.length;
+            var _expectedSegs = _inputSegs.length || _sds.segments || 0;
+            log('Segment Bazlı Özet (' + _computedSegs + '/' + _expectedSegs + ' segment hesaplandı):', 'info');
+            if(_computedSegs < _expectedSegs) {
+              log('  ⚠ UYARI: ' + (_expectedSegs - _computedSegs) + ' segment hesaplanamadı!', 'error');
+            }
             _segDrv.segmentSummary.forEach(function(ss) {
               var cmdLabel = ss.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
               var cmdIcon = ss.command === 'coast' ? '⏸' : '▶';
@@ -31170,12 +31191,16 @@ function veGenerateSegmentDriveTxtReport(sim) {
   r += pad('1. SEGMENT TANIMI (GIRDI)', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
 
+  // Orijinal segment girdi verisi (simülasyon sonucundan bağımsız)
+  var inputSegments = sim.segmentDriveInputSegments || [];
+  var segSummary = sdPrimary.segmentSummary;
+
   r += pRow('Baslangic Hizi', num(ss0.initSpeed_kmh, 1) + ' km/h');
-  r += pRow('Toplam Segment Sayisi', String(ss0.segments || sdPrimary.segmentSummary.length));
+  r += pRow('Toplam Segment Sayisi', String(inputSegments.length || ss0.segments || segSummary.length));
   r += '\n';
 
-  // Segment tablosu
-  var segSummary = sdPrimary.segmentSummary;
+  // Girdi tablosu — orijinal segment verisinden oluştur
+  var inputSegs = inputSegments.length > 0 ? inputSegments : segSummary;
   var segTW = 74;
   r += '  ' + ln('-', segTW) + '\n';
   r += '  ' + pad('No', 5) + pad('Mesafe [m]', 12, 'right') + pad('Egim [%]', 10, 'right');
@@ -31183,16 +31208,17 @@ function veGenerateSegmentDriveTxtReport(sim) {
   r += '  ' + ln('-', segTW) + '\n';
 
   var toplamMesafe = 0, toplamDeltaH = 0;
-  segSummary.forEach(function(seg) {
+  inputSegs.forEach(function(seg, idx) {
     var komutStr = seg.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
     var grade = seg.grade || 0;
-    var mesafe = seg.targetDist || seg.actualDist || 0;
-    var dH = mesafe * Math.sin(Math.atan(grade / 100));
+    // Orijinal girdi: seg.distance, segmentSummary: seg.targetDist
+    var mesafe = seg.distance || seg.targetDist || seg.actualDist || 0;
+    var dH = seg.deltaH || (mesafe * Math.sin(Math.atan(grade / 100)));
     var yonStr = grade > 0.01 ? 'Yokus asagi' : (grade < -0.01 ? 'Yokus yukari' : 'Duz');
     toplamMesafe += mesafe;
     toplamDeltaH += dH;
 
-    r += '  ' + pad(String(seg.no), 5);
+    r += '  ' + pad(String(seg.no || (idx + 1)), 5);
     r += pad(numI(mesafe), 12, 'right');
     r += pad(num(grade, 2), 10, 'right');
     r += pad(num(dH, 1), 9, 'right');

@@ -2667,12 +2667,16 @@ function veGenerateSegmentDriveTxtReport(sim) {
   r += pad('1. SEGMENT TANIMI (GIRDI)', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
 
+  // Orijinal segment girdi verisi (simülasyon sonucundan bağımsız)
+  var inputSegments = sim.segmentDriveInputSegments || [];
+  var segSummary = sdPrimary.segmentSummary;
+
   r += pRow('Baslangic Hizi', num(ss0.initSpeed_kmh, 1) + ' km/h');
-  r += pRow('Toplam Segment Sayisi', String(ss0.segments || sdPrimary.segmentSummary.length));
+  r += pRow('Toplam Segment Sayisi', String(inputSegments.length || ss0.segments || segSummary.length));
   r += '\n';
 
-  // Segment tablosu
-  var segSummary = sdPrimary.segmentSummary;
+  // Girdi tablosu — orijinal segment verisinden oluştur
+  var inputSegs = inputSegments.length > 0 ? inputSegments : segSummary;
   var segTW = 74;
   r += '  ' + ln('-', segTW) + '\n';
   r += '  ' + pad('No', 5) + pad('Mesafe [m]', 12, 'right') + pad('Egim [%]', 10, 'right');
@@ -2680,16 +2684,17 @@ function veGenerateSegmentDriveTxtReport(sim) {
   r += '  ' + ln('-', segTW) + '\n';
 
   var toplamMesafe = 0, toplamDeltaH = 0;
-  segSummary.forEach(function(seg) {
+  inputSegs.forEach(function(seg, idx) {
     var komutStr = seg.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
     var grade = seg.grade || 0;
-    var mesafe = seg.targetDist || seg.actualDist || 0;
-    var dH = mesafe * Math.sin(Math.atan(grade / 100));
+    // Orijinal girdi: seg.distance, segmentSummary: seg.targetDist
+    var mesafe = seg.distance || seg.targetDist || seg.actualDist || 0;
+    var dH = seg.deltaH || (mesafe * Math.sin(Math.atan(grade / 100)));
     var yonStr = grade > 0.01 ? 'Yokus asagi' : (grade < -0.01 ? 'Yokus yukari' : 'Duz');
     toplamMesafe += mesafe;
     toplamDeltaH += dH;
 
-    r += '  ' + pad(String(seg.no), 5);
+    r += '  ' + pad(String(seg.no || (idx + 1)), 5);
     r += pad(numI(mesafe), 12, 'right');
     r += pad(num(grade, 2), 10, 'right');
     r += pad(num(dH, 1), 9, 'right');

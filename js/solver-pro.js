@@ -734,6 +734,10 @@ function veSolverRunProfessional() {
             simResult.segmentDrive = segDriveAllRanges[_ftTrGears[0].kademe];
             simResult.segmentDriveAllRanges = segDriveAllRanges;
             simResult.segmentDriveTransferGears = _ftTrGears;
+            // Orijinal segment girdi verisini sakla (TXT raporu için)
+            simResult.segmentDriveInputSegments = _scenData.roadSegments.map(function(s) {
+              return { no: s.no, grade: s.grade, distance: s.distance, deltaH: s.deltaH, command: s.command || 'full_throttle' };
+            });
           }
         } else {
           simResult = veRunSimulationEngine();
@@ -825,6 +829,16 @@ function veSolverRunProfessional() {
           log('HIZLANMA-YAVAŞLAMA ANALİZİ', 'info');
           log('═══════════════════════════════════════════', 'info');
 
+          // Girdi segmentlerini logla
+          var _inputSegs = simResult.segmentDriveInputSegments || [];
+          if(_inputSegs.length > 0) {
+            log('Girdi Segmentleri (' + _inputSegs.length + ' adet):', 'info');
+            _inputSegs.forEach(function(iseg) {
+              var cmdL = iseg.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
+              log('  Seg ' + iseg.no + ': mesafe=' + (iseg.distance || 0).toFixed(0) + 'm, eğim=%' + (iseg.grade || 0).toFixed(2) + ', komut=' + cmdL);
+            });
+          }
+
           _sdTrGears.forEach(function(trg) {
             var _segDrv = _sdAllRes[trg.kademe];
             if(!_segDrv || !_segDrv.segmentSummary) return;
@@ -844,7 +858,12 @@ function veSolverRunProfessional() {
                   '  A=' + (_sds.A_frontal || 0).toFixed(2) + 'm²', 'dim');
             }
 
-            log('Segment Bazlı Özet:', 'info');
+            var _computedSegs = _segDrv.segmentSummary.length;
+            var _expectedSegs = _inputSegs.length || _sds.segments || 0;
+            log('Segment Bazlı Özet (' + _computedSegs + '/' + _expectedSegs + ' segment hesaplandı):', 'info');
+            if(_computedSegs < _expectedSegs) {
+              log('  ⚠ UYARI: ' + (_expectedSegs - _computedSegs) + ' segment hesaplanamadı!', 'error');
+            }
             _segDrv.segmentSummary.forEach(function(ss) {
               var cmdLabel = ss.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
               var cmdIcon = ss.command === 'coast' ? '⏸' : '▶';
