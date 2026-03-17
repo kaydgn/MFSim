@@ -2083,13 +2083,14 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       // Araç durduysa: ivme pozitifse (tam gaz veya yokuş aşağı) devam edebilir,
       // aksi halde bu segmentte ilerleme yok → segmenti bitir (sonrakine geç)
       if(v <= 0.01) {
-        v = 0;
         if(ph.accel <= 0.001) {
           // Net kuvvet negatif veya sıfır — bu segmentte araç hareket edemez
+          v = 0;
           stallCounter++;
           if(stallCounter > 10) break; // Sonsuz döngü koruması
         } else {
-          stallCounter = 0; // Pozitif ivme var, kalkış mümkün
+          // Pozitif ivme var — sıfıra çekme, kalkışa izin ver
+          stallCounter = 0;
         }
       } else {
         stallCounter = 0;
