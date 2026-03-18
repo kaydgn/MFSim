@@ -202,6 +202,8 @@ function showNodeProperties(node) {
     html += getSensorWizardPropertiesHTML(node);
   } else if(node.type === 'terminator') {
     html += getTerminatorPropertiesHTML(node);
+  } else if(node.type === 'gear-shift') {
+    html += getGearShiftPropertiesHTML(node);
   } else {
     html += getDefaultPropertiesHTML(node);
   }
@@ -8429,5 +8431,14 @@ function onVESolverParamChange(nodeId) {
   var ftRtolEl = el('ve-solver-ftrtol-' + nodeId);
   if(ftAtolEl) node.data.ftAtol = parseFloat(ftAtolEl.value) || 1e-6;
   if(ftRtolEl) node.data.ftRtol = parseFloat(ftRtolEl.value) || 1e-4;
+}
+
+// ===== VİTES GEÇİŞLERİ ÖZELLİKLERİ =====
+function getGearShiftPropertiesHTML(node) {
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  html += '<div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Parametreler</div>';
+  html += '<div style="font-size:0.8rem; color:var(--text-secondary);">Bu bileşen için henüz parametre tanımlanmamış.</div>';
+  html += '</div>';
+  return html;
 }
 
