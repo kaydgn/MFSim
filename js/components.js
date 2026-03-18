@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma, motor freni ve performans analizi',
-    components: ['engine','engine-brake','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
+    components: ['engine','engine-brake','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','coast','partial_throttle','full_brake','custom'],
     requiresFull: true
@@ -180,6 +180,12 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><text x="50" y="40" text-anchor="middle" font-size="28" font-weight="700" fill="var(--accent-primary, #3b82f6)">P</text><path d="M25 60 L40 55 L55 65 L70 48 L85 58" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="60" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="55" cy="65" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="85" cy="58" r="3" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 0,
     outputs: 0
+  },
+  'gear-shift': {
+    name: 'Vites Geçişleri',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><circle cx="35" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="35" cy="60" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="60" r="6" fill="var(--text-secondary, #666)"/><path d="M35 35 L35 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><path d="M35 60 L65 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="60" r="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="2"/></svg>',
+    inputs: 0,
+    outputs: 0
   }
 };
 
@@ -340,6 +346,12 @@ var COMPONENT_SIGNALS = {
     outputs: [
       {id: 'sc_throttle', name: 'Gaz Pedalı', unit: '%'},
       {id: 'sc_brake', name: 'Fren Kuvveti', unit: 'N'}
+    ]
+  },
+  'gear-shift': {
+    outputs: [
+      {id: 'current_gear', name: 'Aktif Vites', unit: '−'},
+      {id: 'shift_time', name: 'Geçiş Süresi', unit: 's'}
     ]
   }
 };

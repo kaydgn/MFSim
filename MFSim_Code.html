@@ -2087,6 +2087,18 @@ function mfsimLogout() {
                 <path d="M35 32 L50 43 L65 55" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="4,3"/>
               </svg> <span class="ve-comp-label">Şanzıman Kontrol</span>
             </div>
+            <div class="ve-component" draggable="true" data-type="gear-shift">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="35" cy="35" r="6" fill="currentColor"/>
+                <circle cx="65" cy="35" r="6" fill="currentColor"/>
+                <circle cx="35" cy="60" r="6" fill="currentColor"/>
+                <circle cx="65" cy="60" r="6" fill="currentColor"/>
+                <path d="M35 35 L35 60" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                <path d="M35 60 L65 60" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="35" cy="60" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+              </svg> <span class="ve-comp-label">Vites Geçişleri</span>
+            </div>
             <div class="ve-component" draggable="true" data-type="propshaft">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <line x1="5" y1="50" x2="95" y2="50" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
@@ -6958,7 +6970,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma, motor freni ve performans analizi',
-    components: ['engine','engine-brake','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
+    components: ['engine','engine-brake','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','coast','partial_throttle','full_brake','custom'],
     requiresFull: true
@@ -7131,6 +7143,12 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><text x="50" y="40" text-anchor="middle" font-size="28" font-weight="700" fill="var(--accent-primary, #3b82f6)">P</text><path d="M25 60 L40 55 L55 65 L70 48 L85 58" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="60" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="55" cy="65" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="85" cy="58" r="3" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 0,
     outputs: 0
+  },
+  'gear-shift': {
+    name: 'Vites Geçişleri',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><circle cx="35" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="35" cy="60" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="60" r="6" fill="var(--text-secondary, #666)"/><path d="M35 35 L35 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><path d="M35 60 L65 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="60" r="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="2"/></svg>',
+    inputs: 0,
+    outputs: 0
   }
 };
 
@@ -7291,6 +7309,12 @@ var COMPONENT_SIGNALS = {
     outputs: [
       {id: 'sc_throttle', name: 'Gaz Pedalı', unit: '%'},
       {id: 'sc_brake', name: 'Fren Kuvveti', unit: 'N'}
+    ]
+  },
+  'gear-shift': {
+    outputs: [
+      {id: 'current_gear', name: 'Aktif Vites', unit: '−'},
+      {id: 'shift_time', name: 'Geçiş Süresi', unit: 's'}
     ]
   }
 };
@@ -8813,6 +8837,8 @@ function showNodeProperties(node) {
     html += getSensorWizardPropertiesHTML(node);
   } else if(node.type === 'terminator') {
     html += getTerminatorPropertiesHTML(node);
+  } else if(node.type === 'gear-shift') {
+    html += getGearShiftPropertiesHTML(node);
   } else {
     html += getDefaultPropertiesHTML(node);
   }
@@ -17040,6 +17066,15 @@ function onVESolverParamChange(nodeId) {
   var ftRtolEl = el('ve-solver-ftrtol-' + nodeId);
   if(ftAtolEl) node.data.ftAtol = parseFloat(ftAtolEl.value) || 1e-6;
   if(ftRtolEl) node.data.ftRtol = parseFloat(ftRtolEl.value) || 1e-4;
+}
+
+// ===== VİTES GEÇİŞLERİ ÖZELLİKLERİ =====
+function getGearShiftPropertiesHTML(node) {
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  html += '<div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Parametreler</div>';
+  html += '<div style="font-size:0.8rem; color:var(--text-secondary);">Bu bileşen için henüz parametre tanımlanmamış.</div>';
+  html += '</div>';
+  return html;
 }
 
 
