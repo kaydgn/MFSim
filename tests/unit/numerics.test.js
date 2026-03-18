@@ -1,6 +1,6 @@
 /**
  * numerics.js birim testleri
- * PCHIP spline, RK45 solver ve enerji dengesi testleri
+ * PCHIP spline, RK45 solver (FSAL, Dense Output, Stiffness Detection) ve enerji dengesi testleri
  */
 
 const fs = require('fs');
@@ -170,6 +170,192 @@ describe('veRK45Solve', () => {
 
     const lastV = result.v[result.v.length - 1];
     expect(lastV).toBeCloseTo(0, 1);
+  });
+
+  test('stiffnessDetected alanı döndürür', () => {
+    const f = (t, v) => -v;
+    const result = veRK45Solve(f, 0, 10, 5);
+    expect(result).toHaveProperty('stiffnessDetected');
+    expect(typeof result.stiffnessDetected).toBe('boolean');
+  });
+
+  test('normal problemlerde stiffness algılanmaz', () => {
+    const f = (t, v) => -0.5 * v;
+    const result = veRK45Solve(f, 0, 10, 5, { atol: 1e-6, rtol: 1e-4 });
+    expect(result.stiffnessDetected).toBe(false);
+  });
+});
+
+// ── FSAL (First Same As Last) ──
+
+describe('FSAL optimizasyonu', () => {
+  test('FSAL ile f(t,v) çağrı sayısı azalır', () => {
+    let callCount = 0;
+    const f = (t, v) => { callCount++; return -0.1 * v; };
+    const result = veRK45Solve(f, 0, 10, 5, { atol: 1e-6, rtol: 1e-4 });
+
+    // FSAL olmadan: 7 çağrı/adım. FSAL ile: 6 çağrı/adım (ilk adım hariç).
+    // İlk adım 7 + sonraki adımlar 6 → toplam < 7 * totalSteps
+    const maxCallsWithoutFSAL = 7 * result.totalSteps;
+    const expectedWithFSAL = 7 + 6 * (result.totalSteps - 1); // = 6*totalSteps + 1
+    expect(callCount).toBeLessThanOrEqual(expectedWithFSAL);
+    expect(callCount).toBeLessThan(maxCallsWithoutFSAL);
+  });
+
+  test('FSAL sonucu etkilemez (doğruluk korunur)', () => {
+    // Üstel azalma: dv/dt = -v, analitik: v(t) = 10*e^(-t)
+    const f = (t, v) => -v;
+    const result = veRK45Solve(f, 0, 10, 3, { atol: 1e-8, rtol: 1e-6 });
+    const lastV = result.v[result.v.length - 1];
+    expect(lastV).toBeCloseTo(10 * Math.exp(-3), 3);
+  });
+
+  test('onAccept true dönünce FSAL geçersizleşir (ek f çağrısı)', () => {
+    let callCount = 0;
+    let acceptCalls = 0;
+    const f = (t, v) => { callCount++; return -0.1 * v; };
+
+    // Her adımda FSAL'ı geçersizleştir → her adım 7 çağrı olmalı
+    const onAccept = (t, v, dt) => { acceptCalls++; return true; };
+
+    const result = veRK45Solve(f, 0, 10, 2, {
+      atol: 1e-6, rtol: 1e-4, onAccept: onAccept
+    });
+
+    // onAccept her kabul edilen adımda çağrılmalı
+    expect(acceptCalls).toBe(result.totalSteps);
+    // FSAL geçersiz → her adım 7 çağrı
+    expect(callCount).toBe(7 * result.totalSteps);
+  });
+});
+
+// ── Dense Output (Hermite Kübik İnterpolasyon) ──
+
+describe('veDenseOutputHermite', () => {
+  test('uç noktalarda tam değer verir', () => {
+    // theta=0 → v0, theta=1 → v1
+    expect(veDenseOutputHermite(10, 20, 1.0, 5, 5, 0)).toBeCloseTo(10, 10);
+    expect(veDenseOutputHermite(10, 20, 1.0, 5, 5, 1)).toBeCloseTo(20, 10);
+  });
+
+  test('sabit hızda (f=0) lineer interpolasyona eşit', () => {
+    // v0=10, v1=10, f0=0, f1=0 → tüm theta'larda 10
+    for (let theta = 0; theta <= 1; theta += 0.1) {
+      expect(veDenseOutputHermite(10, 10, 1.0, 0, 0, theta)).toBeCloseTo(10, 10);
+    }
+  });
+
+  test('sabit ivmede analitik çözümle eşleşir', () => {
+    // dv/dt = 2 (sabit), h=1, v0=0, v1=2, f0=2, f1=2
+    // Analitik: v(theta) = 2*theta*h = 2*theta
+    const h = 1.0;
+    for (let theta = 0; theta <= 1; theta += 0.25) {
+      const hermite = veDenseOutputHermite(0, 2, h, 2, 2, theta);
+      expect(hermite).toBeCloseTo(2 * theta, 8);
+    }
+  });
+
+  test('lineerden daha doğru sonuç verir (parabolik hareket)', () => {
+    // dv/dt = -2t, v(0)=10, v(1)=9, f(0)=0, f(1)=-2
+    // Analitik: v(t) = 10 - t^2
+    // t=0.5'te: v(0.5) = 10 - 0.25 = 9.75
+    const v0 = 10, v1 = 9, h = 1.0, f0 = 0, f1 = -2;
+    const theta = 0.5;
+    const hermiteVal = veDenseOutputHermite(v0, v1, h, f0, f1, theta);
+    const linearVal = v0 + theta * (v1 - v0); // 9.5
+    const exact = 9.75;
+
+    // Hermite, analitik çözüme lineerden daha yakın olmalı
+    expect(Math.abs(hermiteVal - exact)).toBeLessThan(Math.abs(linearVal - exact));
+  });
+
+  test('RK45 çıktısında dense output kullanılır', () => {
+    // Parabolik problem: dv/dt = -2t, v(0)=10
+    // Analitik: v(t) = 10 - t^2
+    const f = (t, v) => -2 * t;
+    const result = veRK45Solve(f, 0, 10, 2, {
+      atol: 1e-8, rtol: 1e-6, outputDt: 0.5
+    });
+
+    // t=0.5'teki çıktı noktası dense output ile hesaplanmış olmalı
+    const idx05 = result.t.findIndex(t => Math.abs(t - 0.5) < 0.01);
+    if (idx05 >= 0) {
+      const exact = 10 - 0.25; // v(0.5) = 9.75
+      expect(result.v[idx05]).toBeCloseTo(exact, 2);
+    }
+
+    // t=1.0'deki çıktı noktası
+    const idx10 = result.t.findIndex(t => Math.abs(t - 1.0) < 0.01);
+    if (idx10 >= 0) {
+      const exact = 10 - 1.0; // v(1.0) = 9.0
+      expect(result.v[idx10]).toBeCloseTo(exact, 2);
+    }
+  });
+});
+
+// ── Stiffness Detection ──
+
+describe('Stiffness Detection', () => {
+  test('çok sert problemde stiffness algılanır', () => {
+    // dv/dt = -1000*(v - sin(t)) + cos(t), lambda=-1000
+    // Kararlılık sınırı: dt ≈ 0.003
+    // dtMin=0.003 olarak ayarlandığında solver dtMin civarında takılır
+    // → 20+ ardışık adım dtMin'de → stiffness algılanır
+    const f = (t, v) => -1000 * (v - Math.sin(t)) + Math.cos(t);
+    const result = veRK45Solve(f, 0, 0, 0.5, {
+      atol: 1e-6, rtol: 1e-4,
+      dtMin: 0.003,
+      dtMax: 0.01,
+      dtInit: 0.005,
+      maxSteps: 500
+    });
+
+    expect(result.stiffnessDetected).toBe(true);
+  });
+
+  test('onReject callback reddedilen adımlarda çağrılır', () => {
+    let rejectCount = 0;
+    // Sert problem
+    const f = (t, v) => -500 * v;
+    const result = veRK45Solve(f, 0, 100, 0.1, {
+      dtInit: 0.05, // kasıtlı olarak büyük başlangıç adımı
+      dtMin: 1e-8,
+      onReject: () => { rejectCount++; }
+    });
+
+    // Reddedilen adımlarda onReject çağrılmış olmalı
+    expect(rejectCount).toBe(result.rejected);
+  });
+});
+
+// ── onAccept Callback ──
+
+describe('onAccept callback', () => {
+  test('her kabul edilen adımda çağrılır', () => {
+    let acceptCalls = 0;
+    const f = (t, v) => -0.5 * v;
+    const result = veRK45Solve(f, 0, 10, 5, {
+      onAccept: (t, v, dt) => { acceptCalls++; return false; }
+    });
+    expect(acceptCalls).toBe(result.totalSteps);
+  });
+
+  test('t, v, dt parametreleri doğru aktarılır', () => {
+    const acceptLog = [];
+    const f = (t, v) => -1; // dv/dt = -1
+    const result = veRK45Solve(f, 0, 10, 3, {
+      onAccept: (t, v, dt) => {
+        acceptLog.push({ t, v, dt });
+        return false;
+      }
+    });
+
+    // Tüm kayıtlarda t > 0, v >= 0, dt > 0 olmalı
+    acceptLog.forEach(entry => {
+      expect(entry.t).toBeGreaterThan(0);
+      expect(entry.v).toBeGreaterThanOrEqual(0);
+      expect(entry.dt).toBeGreaterThan(0);
+    });
   });
 });
 
