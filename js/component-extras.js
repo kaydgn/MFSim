@@ -872,10 +872,10 @@ function cdwApplyResults(nodeId) {
   var cdTransferred = false;
   if(isFinite(cdCFD) && vehicleNode) {
     if(!vehicleNode.data) vehicleNode.data = {};
-    vehicleNode.data.cd = cdCFD;
+    vehicleNode.data.ftCd = cdCFD;
     cdTransferred = true;
     // Eğer Vehicle properties açıksa input'u güncelle
-    var vCdEl = document.getElementById('ve-vehicle-cd-' + vehicleNode.id);
+    var vCdEl = document.getElementById('ve-ftv-cd-' + vehicleNode.id);
     if(vCdEl) vCdEl.value = cdCFD;
   }
 
@@ -1210,9 +1210,10 @@ function onVEWheelParamChange(nodeId) {
   var crrEl = document.getElementById('ve-wheel-crr-' + nodeId);
   var deltaEl = document.getElementById('ve-wheel-delta-' + nodeId);
   
-  if(radiusEl) node.data.wheelRadius = parseFloat(radiusEl.value) || 0.60876;
-  if(crrEl) node.data.rollingResistance = parseFloat(crrEl.value) || 0.010;
-  if(deltaEl) node.data.rotatingMass = parseFloat(deltaEl.value) || 1.08;
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+  if(radiusEl) node.data.wheelRadius = pf(radiusEl.value, 0.60876);
+  if(crrEl) node.data.rollingResistance = pf(crrEl.value, 0.010);
+  if(deltaEl) node.data.rotatingMass = pf(deltaEl.value, 1.08);
   
   // Master tekerlek → diğer tekerlekleri senkronize et
   if(node.isMasterWheel) {
@@ -1240,11 +1241,12 @@ function onVEFTWheelParamChange(nodeId) {
   var crrEl = document.getElementById('ve-ftwh-crr-' + nodeId);
   var surfaceEl = document.getElementById('ve-ftwh-surface-' + nodeId);
   
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
   if(nameEl) node.data.ftTireName = nameEl.value || 'Michelin XZL 395/85R20';
-  if(radiusEl) node.data.ftTireRadius = parseFloat(radiusEl.value) || 0.573;
-  if(inertiaEl) node.data.ftTireInertia = parseFloat(inertiaEl.value) || 56.0;
-  if(crrEl) node.data.ftCrr = parseFloat(crrEl.value) || 0.0035;
-  if(surfaceEl) node.data.ftSurfaceFactor = parseFloat(surfaceEl.value) || 1.00;
+  if(radiusEl) node.data.ftTireRadius = pf(radiusEl.value, 0.573);
+  if(inertiaEl) node.data.ftTireInertia = pf(inertiaEl.value, 56.0);
+  if(crrEl) node.data.ftCrr = pf(crrEl.value, 0.0035);
+  if(surfaceEl) node.data.ftSurfaceFactor = pf(surfaceEl.value, 1.00);
   
   // rev/km güncelle
   var r = node.data.ftTireRadius;
@@ -1558,10 +1560,11 @@ function onVEVehicleParamChange(nodeId) {
   
   var el = function(suffix) { return document.getElementById('ve-vehicle-' + suffix + '-' + nodeId); };
   
-  if(el('mass')) node.data.mass = parseFloat(el('mass').value) || '';
-  if(el('speed')) node.data.initialSpeed = parseFloat(el('speed').value) || '';
-  if(el('cd')) node.data.cd = parseFloat(el('cd').value) || 0.65;
-  if(el('area')) node.data.frontalArea = parseFloat(el('area').value) || 6.7;
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+  if(el('mass')) node.data.mass = pf(el('mass').value, '');
+  if(el('speed')) node.data.initialSpeed = pf(el('speed').value, '');
+  if(el('cd')) node.data.cd = pf(el('cd').value, 0.65);
+  if(el('area')) node.data.frontalArea = pf(el('area').value, 6.7);
   if(el('autoshift')) node.data.autoShift = el('autoshift').checked;
 }
 
@@ -1572,18 +1575,19 @@ function onVEFTVehicleParamChange(nodeId) {
   
   var g = function(suffix) { return document.getElementById('ve-ftv-' + suffix + '-' + nodeId); };
   
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
   if(g('name')) node.data.ftVehName = g('name').value || 'BMC 4x4 2.5T';
-  if(g('gvw')) node.data.ftGVW = parseFloat(g('gvw').value) || 14900;
-  if(g('driven')) node.data.ftDrivenWeight = parseFloat(g('driven').value) || 100;
-  if(g('height')) node.data.ftHeight = parseFloat(g('height').value) || 3.200;
-  if(g('width')) node.data.ftWidth = parseFloat(g('width').value) || 2.500;
-  if(g('cd')) node.data.ftCd = parseFloat(g('cd').value) || 0.900;
-  if(g('rho')) node.data.ftRho = parseFloat(g('rho').value) || 1.225;
-  
+  if(g('gvw')) node.data.ftGVW = pf(g('gvw').value, 14900);
+  if(g('driven')) node.data.ftDrivenWeight = pf(g('driven').value, 100);
+  if(g('height')) node.data.ftHeight = pf(g('height').value, 3.200);
+  if(g('width')) node.data.ftWidth = pf(g('width').value, 2.500);
+  if(g('cd')) node.data.ftCd = pf(g('cd').value, 0.900);
+  if(g('rho')) node.data.ftRho = pf(g('rho').value, 1.225);
+
   // Readonly alanları güncelle
-  var h = node.data.ftHeight || 3.200;
-  var w = node.data.ftWidth || 2.500;
-  var cd = node.data.ftCd || 0.900;
+  var h = node.data.ftHeight !== undefined ? node.data.ftHeight : 3.200;
+  var w = node.data.ftWidth !== undefined ? node.data.ftWidth : 2.500;
+  var cd = node.data.ftCd !== undefined ? node.data.ftCd : 0.900;
   var A = h * w;
   if(g('area')) g('area').value = A.toFixed(3);
   if(g('cda')) g('cda').value = (cd * A).toFixed(3);
@@ -1677,9 +1681,10 @@ function onVERoadParamChange(nodeId) {
   var egimEl = el('ve-road-egimmode-' + nodeId);
 
   if(gradeEl) node.data.grade = parseFloat(gradeEl.value);
-  if(altEl) node.data.altitude = parseFloat(altEl.value) || '';
-  if(tempEl) node.data.temperature = parseFloat(tempEl.value) || '';
-  if(densEl) node.data.airDensity = parseFloat(densEl.value) || '';
+  var pfOrEmpty = function(v) { var n = parseFloat(v); return isNaN(n) ? '' : n; };
+  if(altEl) node.data.altitude = pfOrEmpty(altEl.value);
+  if(tempEl) node.data.temperature = pfOrEmpty(tempEl.value);
+  if(densEl) node.data.airDensity = pfOrEmpty(densEl.value);
   if(egimEl) node.data.egimMode = egimEl.value;
 }
 

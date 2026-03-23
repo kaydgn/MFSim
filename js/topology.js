@@ -98,7 +98,7 @@ function veFlushOpenPanelData() {
           onVETCParamChange(nid);
         }
         break;
-      case 'transfer-case':
+      case 'transfer':
         if(isFT) {
           onVEFTTransferParamChange(nid);
         } else {
