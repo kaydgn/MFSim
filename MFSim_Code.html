@@ -17628,10 +17628,12 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       SR = 1.0;
       tau = 1.0;
       tcEta = eta_lockup;
-      // Lockup ısı reddi: P_engine × (1 - eta_lockup)
-      var omega_eng_lu = N_engine * 2 * Math.PI / 60;
-      var P_engine_lu_kW = T_engine * omega_eng_lu / 1000;
-      heatRejection_kW = Math.max(0, P_engine_lu_kW * (1 - eta_lockup));
+      // Lockup ısı reddi: per-gear RPM-bağımlı lineer model (iSCAAN uyumu)
+      // Heat_lockup = a × N_engine + b  [kW]
+      // Şanzıman mekanik kayıpları (dişli sürtünmesi, yatak, yağ kesme) devire bağlı artar
+      var gearNum = shiftState.gearIdx + 1; // 1-indexed
+      var hrCoeff = LOCKUP_HEAT_COEFFICIENTS[gearNum] || LOCKUP_HEAT_COEFFICIENTS[2];
+      heatRejection_kW = Math.max(0, hrCoeff.a * N_engine + hrCoeff.b);
     } else {
       // ── CONVERTER MOD ──
       // N_turbine'i hızdan hesapla
@@ -17661,9 +17663,11 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       heatRejection_kW = Math.max(0, P_heat_converter) + Math.max(0, P_heat_gear_mech);
     }
 
-    // Çekme kuvveti (per-gear verim)
+    // Çekme kuvveti — şanzıman kayıpları tork kaybı modeli (deltaT_lockup / TC eta)
+    // ile zaten hesaplandığından eta_gear TE formülünden çıkarıldı (iSCAAN uyumu).
+    // eta_gear sadece rapor/sinyal amaçlı saklanıyor.
     var F_traction = FT_SOLVER.calcTractiveEffort(
-      T_output, i_gear, eta_gear, i_propshaft, psEff,
+      T_output, i_gear, 1.0, i_propshaft, psEff,
       i_transfer, eta_transfer, i_axle, eta_axle, r_tire
     );
 
@@ -18631,25 +18635,42 @@ function veCalculateAcceleration(simResult) {
   if(rs.hasTransfer && trGears.length > 1) {
     var lowGear = trGears[1];
     var lowRatio = lowGear.ratio;
-    var rFactor = lowRatio / activeRatio;
-    
-    // Düşük kademede max hız düşer (hız ters orantılı)
-    var maxSpeedLow = maxSpeed / rFactor;
-    
-    // Düşük kademe hızlanma: transfer oranı farkını hesaba kat
-    // Daha yüksek tork ama daha düşük max hız
-    // Hız ölçekleme: her hız noktası rFactor ile bölünür
-    // Süre ölçekleme: yaklaşık aynı kalır (daha yüksek tork ≈ daha yüksek ivme, ama daha yüksek efektif kütle)
-    // Basitleştirilmiş: düşük kademe FT'yi ölçekle
-    var lowSpeed = speed.map(function(v) { return v / rFactor; });
-    var lowMaxSpeed = Math.round(maxSpeedLow * 10) / 10;
-    
-    result.low = {
-      transferRatio: lowRatio,
-      label: 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')',
-      maxSpeed: lowMaxSpeed,
-      rows: veExtractAccelMilestones(lowSpeed, time, distance, lowMaxSpeed)
-    };
+
+    // Gerçek düşük kademe simülasyon sonuçları varsa onları kullan
+    var allRangeRes = typeof window !== 'undefined' ? window._veFTAllRangeResults : null;
+    var lowKademe = lowGear.kademe || 'Low';
+    var lowSimResult = allRangeRes ? allRangeRes[lowKademe] : null;
+
+    if(lowSimResult && lowSimResult.speed && lowSimResult.time && lowSimResult.distance) {
+      // Gerçek simülasyon verisi — doğru ivme, doğru eşdeğer kütle
+      var lowSS = lowSimResult.solverStats || {};
+      var lowMaxSpeed = lowSS.maxSpeed_kmh || Math.max.apply(null, lowSimResult.speed);
+      result.low = {
+        transferRatio: lowRatio,
+        label: 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')',
+        maxSpeed: Math.round(lowMaxSpeed * 10) / 10,
+        rows: veExtractAccelMilestones(lowSimResult.speed, lowSimResult.time, lowSimResult.distance, lowMaxSpeed),
+        source: 'simulation'
+      };
+    } else {
+      // Fallback: ölçekleme (gerçek sim yoksa)
+      // Tork artışı ivmeyi artırır, eşdeğer kütle artışını hesaba kat
+      var rFactor = lowRatio / activeRatio;
+      var maxSpeedLow = maxSpeed / rFactor;
+      // Süre ölçekleme: düşük kademede net ivme ≈ rFactor kat daha yüksek (tork artışı > atalet artışı)
+      // Basit yaklaşım: süreyi rFactor'e böl (tork orantılı ivme artışı)
+      var lowSpeed = speed.map(function(v) { return v / rFactor; });
+      var lowTime = time.map(function(t) { return t / rFactor; });
+      var lowDist = distance.map(function(d) { return d / (rFactor * rFactor); });
+      var lowMaxSpeedRound = Math.round(maxSpeedLow * 10) / 10;
+      result.low = {
+        transferRatio: lowRatio,
+        label: 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')',
+        maxSpeed: lowMaxSpeedRound,
+        rows: veExtractAccelMilestones(lowSpeed, lowTime, lowDist, lowMaxSpeedRound),
+        source: 'scaling'
+      };
+    }
   }
 
   return result;
@@ -18895,9 +18916,10 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       SR = 1.0; tau = 1.0;
       var eta_lu2_val = tcd.etaLockup || 0.965;
       tcEta = isCoast ? 1.0 : eta_lu2_val;
-      var omLU2 = N_engine * 2 * Math.PI / 60;
-      var P_eng_lu2 = T_engine * omLU2 / 1000;
-      heatRejection_kW = isCoast ? 0 : Math.max(0, P_eng_lu2 * (1 - eta_lu2_val));
+      // Per-gear RPM-bağımlı lockup HR (iSCAAN uyumu)
+      var gearNum2 = shiftState.gearIdx + 1;
+      var hrCoeff2 = LOCKUP_HEAT_COEFFICIENTS[gearNum2] || LOCKUP_HEAT_COEFFICIENTS[2];
+      heatRejection_kW = isCoast ? 0 : Math.max(0, hrCoeff2.a * N_engine + hrCoeff2.b);
     } else {
       var N_turbine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
       if(N_turbine < 0) N_turbine = 0;
@@ -18945,7 +18967,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     }
 
     var F_traction = isCoast ? 0 : FT_SOLVER.limitByGrip(
-      FT_SOLVER.calcTractiveEffort(T_output, i_gear, eta_gear, i_propshaft, psEff, i_transfer, eta_transfer, i_axle, eta_axle, r_tire),
+      FT_SOLVER.calcTractiveEffort(T_output, i_gear, 1.0, i_propshaft, psEff, i_transfer, eta_transfer, i_axle, eta_axle, r_tire),
       F_grip
     );
 
