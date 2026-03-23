@@ -328,22 +328,19 @@ function veDetachSensor(sensorNode) {
 function getScenarioPropertiesHTML(node) {
   var d = node.data || {};
   var throttle = d.throttle !== undefined ? d.throttle : 0;
-  var brakeForce = d.brakeForce !== undefined ? d.brakeForce : 0;
-  
+
   // Modüle göre izin verilen senaryolar
   var mod = veGetActiveModule();
-  var allowedScenarios = mod.scenarios || ['coast','full_brake','full_throttle','partial_throttle','custom'];
-  
+  var allowedScenarios = mod.scenarios || ['full_throttle','partial_throttle','custom'];
+
   // Varsayılan senaryo: modülün default'u veya kayıtlı değer (izinli ise)
-  var scenarioType = d.scenarioType || mod.defaultScenario || 'coast';
+  var scenarioType = d.scenarioType || mod.defaultScenario || 'full_throttle';
   if(allowedScenarios.indexOf(scenarioType) === -1) {
     scenarioType = allowedScenarios[0];
     if(!d.scenarioType) { if(!node.data) node.data = {}; node.data.scenarioType = scenarioType; }
   }
   
   var scenarioLabels = {
-    coast: 'Boşta sürüş (Coast)',
-    full_brake: 'Tam fren',
     partial_throttle: 'Kısmi gaz',
     full_throttle: 'Tam gaz',
     custom: 'Özel'
@@ -366,10 +363,6 @@ function getScenarioPropertiesHTML(node) {
   // Gaz pedal oranı
   var showThrottle = ['partial_throttle','full_throttle','custom'].indexOf(scenarioType) > -1;
   html += '<tr id="ve-scenario-throttle-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showThrottle?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Gaz pedal oranı [%]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="number" id="ve-scenario-throttle-' + node.id + '" value="' + throttle + '" step="5" min="0" max="100" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
-  
-  // Fren kuvveti
-  var showBrake = scenarioType === 'full_brake' || scenarioType === 'custom';
-  html += '<tr id="ve-scenario-brake-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showBrake?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Fren kuvveti [N]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="number" id="ve-scenario-brake-' + node.id + '" value="' + brakeForce + '" step="100" min="0" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
   
   html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Senaryo tipi seçimi simülasyon davranışını belirler.</td></tr>';
 
@@ -412,16 +405,12 @@ function onVEScenarioChange(nodeId) {
     node.data.scenarioType = typeEl.value;
     var t = typeEl.value;
     var thRow = el('ve-scenario-throttle-row-' + nodeId);
-    var brRow = el('ve-scenario-brake-row-' + nodeId);
     if(thRow) thRow.style.display = ['partial_throttle','full_throttle','custom'].indexOf(t) > -1 ? '' : 'none';
-    if(brRow) brRow.style.display = (t === 'full_brake' || t === 'custom') ? '' : 'none';
     // Tam gaz: otomatik 100%
     if(t === 'full_throttle') { var thEl = el('ve-scenario-throttle-' + nodeId); if(thEl) thEl.value = 100; node.data.throttle = 100; }
   }
   var thEl2 = el('ve-scenario-throttle-' + nodeId);
-  var brEl = el('ve-scenario-brake-' + nodeId);
   if(thEl2) node.data.throttle = parseFloat(thEl2.value) || 0;
-  if(brEl) node.data.brakeForce = parseFloat(brEl.value) || 0;
 
   // Segment başlangıç hızı
   var segSpeedEl = el('ve-scenario-seg-initspeed-' + nodeId);
@@ -910,7 +899,7 @@ function veUpdateWarnings() {
   var warnings = [];
   if(nodes.length === 0) { /* Boş topoloji - uyarı yok */ }
   else {
-    var hasEngine = nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var hasEngine = nodes.some(function(n) { return n.type === 'engine'; });
     var hasGearbox = nodes.some(function(n) { return n.type === 'gearbox'; });
     var hasWheel = nodes.some(function(n) { return n.type === 'wheel'; });
     var hasVehicle = nodes.some(function(n) { return n.type === 'vehicle'; });
@@ -943,7 +932,7 @@ function veUpdateWarnings() {
     }
     
     // Bağlantı uyarıları - aktarma bileşenleri bağlantısız olmamalı
-    var driveTypes = ['engine','engine-brake','gearbox','transfer','differential','torque-converter','wheel'];
+    var driveTypes = ['engine','gearbox','transfer','differential','torque-converter','wheel'];
     nodes.forEach(function(n) {
       if(driveTypes.indexOf(n.type) === -1) return;
       var def = componentDefs[n.type];

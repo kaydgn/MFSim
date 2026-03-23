@@ -150,8 +150,8 @@ function veGenerateTopologySummary() {
     lines.push('│     Tip: ' + node.type + '  |  ID: ' + node.id);
     lines.push('├' + thin.substring(1));
 
-    // ── MOTOR / ENGINE-BRAKE ──
-    if(node.type === 'engine' || node.type === 'engine-brake') {
+    // ── MOTOR ──
+    if(node.type === 'engine') {
       lines.push('│  Kategori           : ' + v(d.motorCategory || d.mfCategory));
       lines.push('│  Preset             : ' + v(d.mfMotorPreset || d.ftMotorPreset));
       lines.push('│  Governed RPM       : ' + v(d.governedRpm, '—', ' d/d'));
@@ -266,7 +266,7 @@ function veGenerateTopologySummary() {
       if(d.kFactor) lines.push('│  K-Faktörü          : ' + d.kFactor);
       if(d.pumpTorqueDrop) lines.push('│  Pompa Tork Düşüşü : ' + d.pumpTorqueDrop);
       // Uyumluluk bilgisi — motor ve şanzıman ile eşleştirme
-      var tcEngNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+      var tcEngNode = nodes.find(function(n) { return n.type === 'engine'; });
       var tcGbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
       if(tcEngNode || tcGbNode) {
         lines.push('│');
@@ -383,10 +383,9 @@ function veGenerateTopologySummary() {
 
     // ── SENARYO ──
     if(node.type === 'scenario') {
-      var stMap = {coast:'Boşta Sürüş (Coast)',full_brake:'Tam Fren',full_throttle:'Tam Gaz',partial_throttle:'Kısmi Gaz',custom:'Özel'};
-      lines.push('│  Senaryo Tipi       : ' + (stMap[d.scenarioType] || d.scenarioType || 'Coast'));
+      var stMap = {full_throttle:'Tam Gaz',partial_throttle:'Kısmi Gaz',custom:'Özel'};
+      lines.push('│  Senaryo Tipi       : ' + (stMap[d.scenarioType] || d.scenarioType || 'Tam Gaz'));
       if(d.throttle !== undefined) lines.push('│  Gaz Pedalı         : %' + d.throttle);
-      if(d.brakeForce) lines.push('│  Fren Kuvveti       : ' + d.brakeForce + ' N');
     }
 
     // ── COAST-DOWN ──
@@ -458,7 +457,7 @@ function veGenerateTopologySummary() {
   lines.push(sep);
 
   // Zincir tiplerini sırala (sensör, solver, road, scenario, coast-down hariç)
-  var chainTypes = ['engine','engine-brake','torque-converter','ec-matching','gearbox',
+  var chainTypes = ['engine','torque-converter','ec-matching','gearbox',
     'shift-controller','propshaft','transfer','differential','wheel'];
   var skipTypes = ['sensor','sensor-wizard','solver','road','scenario','coast-down',
     'vehicle','parametric','terminator'];
@@ -466,7 +465,7 @@ function veGenerateTopologySummary() {
   // Bağlantı grafiğinden zinciri oluştur
   function buildChain() {
     // Motoru bul (başlangıç noktası)
-    var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
     if(!engineNode) return [];
 
     var visited = {};
@@ -497,7 +496,7 @@ function veGenerateTopologySummary() {
       var d = node.data || {};
       var name = node.customName || (componentDefs[node.type]||{}).name || node.type;
       var info = '';
-      if(node.type === 'engine' || node.type === 'engine-brake') {
+      if(node.type === 'engine') {
         info = d.governedRpm ? d.governedRpm + ' d/d' : '';
       } else if(node.type === 'torque-converter') {
         info = d.isLocked !== false ? 'Lock-up' : 'τ=' + (d.tcRatio||1.0);
@@ -599,7 +598,7 @@ function veGenerateTopologySummary() {
   var checks = [];
 
   // Zorunlu bileşen kontrolü
-  var hasEngine = nodes.some(function(n){return n.type==='engine'||n.type==='engine-brake';});
+  var hasEngine = nodes.some(function(n){return n.type==='engine';});
   var hasGearbox = nodes.some(function(n){return n.type==='gearbox';});
   var hasDiff = nodes.some(function(n){return n.type==='differential';});
   var hasWheel = nodes.some(function(n){return n.type==='wheel';});
@@ -634,7 +633,7 @@ function veGenerateTopologySummary() {
 
   // Veri tutarlılığı kontrolleri
   if(hasEngine) {
-    var engN = nodes.find(function(n){return n.type==='engine'||n.type==='engine-brake';});
+    var engN = nodes.find(function(n){return n.type==='engine';});
     var ed = engN ? engN.data||{} : {};
     var mD = ed.motorData || ed.torqueData;
     if(!mD || mD.length === 0) warnings.push('Motor tork tablosu boş');

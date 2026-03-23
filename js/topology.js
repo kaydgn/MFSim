@@ -59,7 +59,6 @@ function veFlushOpenPanelData() {
   try {
     switch(node.type) {
       case 'engine':
-      case 'engine-brake':
         onVEMotorDataChange(nid);
         if(isFT) {
           onVEFTSpecChange(nid);

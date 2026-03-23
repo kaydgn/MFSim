@@ -190,30 +190,12 @@ describe('veEnergyBalance', () => {
 
     // Sıfır kuvvet → hız sabit kalmalı
     for (let i = 0; i < 100; i++) {
-      eb.addStep(v0, v0, 0.1, 0, 0, 0, 0, 0);
+      eb.addStep(v0, v0, 0.1, 0, 0, 0, 0);
     }
 
     const result = eb.getError(v0);
     expect(result.error_J).toBeCloseTo(0, 6);
     expect(result.error_pct).toBeCloseTo(0, 6);
-  });
-
-  test('frenleme enerjisi doğru birikir', () => {
-    const eb = veEnergyBalance();
-    const mass = 1000;
-    eb.init(mass, 20);
-
-    // 10 adımda 20→0 m/s fren
-    const dt = 0.5;
-    for (let i = 0; i < 10; i++) {
-      const v_old = 20 - i * 2;
-      const v_new = 20 - (i + 1) * 2;
-      eb.addStep(v_old, v_new, dt, 0, 0, 0, 0, -1000);
-    }
-
-    const result = eb.getError(0);
-    expect(result.breakdown.W_brake).toBeLessThan(0);
-    expect(result.breakdown.KE_final).toBe(0);
   });
 
   test('breakdown tüm alanları içerir', () => {
@@ -232,6 +214,5 @@ describe('veEnergyBalance', () => {
     expect(result.breakdown).toHaveProperty('W_rolling');
     expect(result.breakdown).toHaveProperty('W_aero');
     expect(result.breakdown).toHaveProperty('W_grade');
-    expect(result.breakdown).toHaveProperty('W_brake');
   });
 });

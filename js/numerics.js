@@ -322,11 +322,10 @@ function veEnergyBalance() {
   // Factory: parametre alıp tracker döndürür
   return {
     KE_initial: 0,
-    W_engine: 0,        // Motor freni işi (negatif = enerji çekme)
+    W_engine: 0,        // Motor işi
     W_rolling: 0,       // Yuvarlanma kayıp
     W_aero: 0,          // Hava direnci kayıp
     W_grade: 0,         // Eğim potansiyel enerji değişimi
-    W_brake: 0,         // Mekanik fren işi
     
     init: function(mass, v0) {
       this.KE_initial = 0.5 * mass * v0 * v0;
@@ -334,13 +333,12 @@ function veEnergyBalance() {
     },
     
     // Her zaman adımında çağır
-    addStep: function(v_old, v_new, dt, F_engine, F_rolling, F_aero, F_grade, F_brake) {
+    addStep: function(v_old, v_new, dt, F_engine, F_rolling, F_aero, F_grade) {
       var ds = 0.5 * (v_old + v_new) * dt; // Trapezoidal mesafe
       this.W_engine += F_engine * ds;
       this.W_rolling += F_rolling * ds;
       this.W_aero += F_aero * ds;
       this.W_grade += F_grade * ds;
-      this.W_brake += F_brake * ds;
     },
     
     // Enerji hatası hesapla
@@ -348,8 +346,8 @@ function veEnergyBalance() {
       var KE_final = 0.5 * this.mass * v_final * v_final;
       var deltaKE = KE_final - this.KE_initial;
       
-      // Enerji korunumu: ΔKE = W_grade - W_rolling - W_aero - W_brake + W_engine
-      var W_net = this.W_grade - this.W_rolling - this.W_aero - this.W_brake + this.W_engine;
+      // Enerji korunumu: ΔKE = W_grade - W_rolling - W_aero + W_engine
+      var W_net = this.W_grade - this.W_rolling - this.W_aero + this.W_engine;
       var error = deltaKE - W_net;
       var totalEnergy = Math.abs(this.KE_initial) + Math.abs(this.W_grade) + Math.abs(this.W_rolling) + Math.abs(this.W_aero) + Math.abs(this.W_engine);
       var relError = totalEnergy > 0 ? Math.abs(error) / totalEnergy : 0;
@@ -366,8 +364,7 @@ function veEnergyBalance() {
           W_engine: this.W_engine,
           W_rolling: this.W_rolling,
           W_aero: this.W_aero,
-          W_grade: this.W_grade,
-          W_brake: this.W_brake
+          W_grade: this.W_grade
         }
       };
     }

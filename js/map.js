@@ -2296,7 +2296,7 @@ function getTerminatorPropertiesHTML(node) {
       var nd = nodes.find(function(n) { return n.id === nodeId; });
       if(!nd) return;
       // Sadece güç aktarım bileşenlerini dahil et
-      var driveTypes = ['engine','engine-brake','torque-converter','gearbox','transfer','differential','wheel'];
+      var driveTypes = ['engine','torque-converter','gearbox','transfer','differential','wheel'];
       if(driveTypes.indexOf(nd.type) > -1) {
         chain.unshift(nd);
       }
@@ -2339,7 +2339,7 @@ function getTerminatorPropertiesHTML(node) {
       
       // Bileşen tipine göre çıkış sinyalleri
       var signals = [];
-      if(lastNode.type === 'engine' || lastNode.type === 'engine-brake') {
+      if(lastNode.type === 'engine') {
         signals = ['Tork (Nm)', 'Güç (kW)', 'Devir (rpm)'];
       } else if(lastNode.type === 'torque-converter') {
         signals = ['Çıkış Torku (Nm)', 'Çıkış Devri (rpm)', 'Tork Oranı', 'Kayma Oranı'];

@@ -8,7 +8,7 @@ var TopologyMath = {
     var warnings = [];
     
     // En az bir motor ve bir araç olmalı
-    var hasEngine = nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var hasEngine = nodes.some(function(n) { return n.type === 'engine'; });
     var hasVehicle = nodes.some(function(n) { return n.type === 'vehicle'; });
     
     if(!hasEngine) errors.push('Topolojide motor bileşeni eksik');
@@ -130,7 +130,7 @@ var TopologyMath = {
     
     var chain = [];
     var visited = {};
-    var driveTypes = ['engine','engine-brake','torque-converter','gearbox','transfer','differential','wheel'];
+    var driveTypes = ['engine','torque-converter','gearbox','transfer','differential','wheel'];
     
     function traceUp(nodeId) {
       if(visited[nodeId]) return;
@@ -160,7 +160,7 @@ var TopologyMath = {
     chain.forEach(function(nd) {
       var step = { nodeId: nd.id, type: nd.type, name: nd.customName || (componentDefs[nd.type] || {}).name || nd.type };
       
-      if(nd.type === 'engine' || nd.type === 'engine-brake') {
+      if(nd.type === 'engine') {
         var tq = TopologyMath.interpolateMotorValue(nd.id, inputRpm, 'torque');
         var pw = TopologyMath.interpolateMotorValue(nd.id, inputRpm, 'power');
         result.torque = tq || 0;

@@ -69,7 +69,6 @@ describe('VE_MODULES — tek modül yapısı', () => {
   test('tüm bileşen tipleri components listesinde', () => {
     var comps = VE_MODULES['full-throttle'].components;
     expect(comps).toContain('engine');
-    expect(comps).toContain('engine-brake');
     expect(comps).toContain('torque-converter');
     expect(comps).toContain('gearbox');
     expect(comps).toContain('propshaft');
@@ -85,9 +84,7 @@ describe('VE_MODULES — tek modül yapısı', () => {
   test('tüm senaryo tipleri tanımlı', () => {
     var scenarios = VE_MODULES['full-throttle'].scenarios;
     expect(scenarios).toContain('full_throttle');
-    expect(scenarios).toContain('coast');
     expect(scenarios).toContain('partial_throttle');
-    expect(scenarios).toContain('full_brake');
     expect(scenarios).toContain('custom');
   });
 });
@@ -166,36 +163,3 @@ describe('veShowAllSidebarComponents', () => {
   });
 });
 
-// ═════════════════════════════════════════════════════════════════════
-// componentDefs — engine-brake bileşeni
-// ═════════════════════════════════════════════════════════════════════
-describe('componentDefs — motor freni bileşeni', () => {
-  test('engine-brake bileşeni tanımlı', () => {
-    expect(componentDefs['engine-brake']).toBeDefined();
-  });
-
-  test('engine-brake ismi "Motor Freni"', () => {
-    expect(componentDefs['engine-brake'].name).toBe('Motor Freni');
-  });
-
-  test('engine-brake 1 giriş 1 çıkış portuna sahip', () => {
-    expect(componentDefs['engine-brake'].inputs).toBe(1);
-    expect(componentDefs['engine-brake'].outputs).toBe(1);
-  });
-});
-
-// ═════════════════════════════════════════════════════════════════════
-// COMPONENT_SIGNALS — engine-brake sinyalleri
-// ═════════════════════════════════════════════════════════════════════
-describe('COMPONENT_SIGNALS — engine-brake', () => {
-  test('engine-brake sinyalleri tanımlı', () => {
-    expect(COMPONENT_SIGNALS['engine-brake']).toBeDefined();
-    expect(COMPONENT_SIGNALS['engine-brake'].outputs).toBeDefined();
-  });
-
-  test('engine-brake fren torku sinyali var', () => {
-    var signals = COMPONENT_SIGNALS['engine-brake'].outputs;
-    var hasBrakeTorque = signals.some(function(s) { return s.id === 'torque'; });
-    expect(hasBrakeTorque).toBe(true);
-  });
-});

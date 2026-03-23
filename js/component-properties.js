@@ -164,7 +164,7 @@ function showNodeProperties(node) {
   html += '<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:12px; text-align:center;">ID: ' + node.id + '</div>';
   
   // Node tipine göre özel içerik
-  if(node.type === 'engine' || node.type === 'engine-brake') {
+  if(node.type === 'engine') {
     html += getEnginePropertiesHTML(node);
   } else if(node.type === 'gearbox') {
     html += getGearboxPropertiesHTML(node);
@@ -210,7 +210,7 @@ function showNodeProperties(node) {
   content.innerHTML = html;
   
   // Motor bileşeni için grafik çiz ve kategori dropdown'ı doldur
-  if(node.type === 'engine' || node.type === 'engine-brake') {
+  if(node.type === 'engine') {
     setTimeout(function() {
       // Kategori dropdown'ını doldur
       onVEMotorCategoryChange(node.id);
@@ -340,37 +340,6 @@ function getEnginePropertiesHTML(node) {
     html += '</div>';
     
     // ft-extra KAPATILMIYOR — data area ve aksesuar kayıpları da içinde olacak
-    
-  } else {
-    // ── MOTOR FRENİ PERFORMANS: Kategori seçici + preset sistemi ──
-    html += '<p style="font-size:0.68rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">Elinizde devre bağlı motor freni tork ve güç değerleri varsa <b>Fren Bazlı</b>, sadece motora ait devre bağlı tork-güç eğrileri varsa <b>Orijinal Data</b> seçeneğini seçiniz.</p>';
-    
-    // Motor Seçici - Kategori sistemi
-    var savedCategory = nodeData.mfCategory || 'fren';
-    html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
-    html += '<select id="ve-motor-category-' + node.id + '" onchange="onVEMotorCategoryChange(\'' + node.id + '\')" style="width:110px; font-size:0.7rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">';
-    html += '<option value="fren"' + (savedCategory === 'fren' ? ' selected' : '') + '>Fren Bazlı</option>';
-    html += '<option value="orjinal"' + (savedCategory === 'orjinal' ? ' selected' : '') + '>Orijinal Data</option>';
-    html += '</select>';
-    html += '<select id="ve-motor-select-' + node.id + '" onchange="onVEMotorSelectChange(\'' + node.id + '\', this.value)" style="flex:1; font-size:0.7rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">';
-    html += '<option value="">-- Seçiniz --</option>';
-    // Kayıtlı kategoriye göre seçenekleri doldur
-    var savedMotorPreset = nodeData.mfMotorPreset || '';
-    var catPresets = VE_MOTOR_PRESETS[savedCategory] || {};
-    Object.keys(catPresets).forEach(function(key) {
-      if(key !== 'placeholder') {
-        var sel = (key === savedMotorPreset) ? ' selected' : '';
-        html += '<option value="' + key + '"' + sel + '>' + catPresets[key].name + '</option>';
-      }
-    });
-    html += '</select>';
-    html += '</div>';
-    
-    // Motor seçilmediğinde gösterilecek bilgi mesajı
-    html += '<div id="ve-motor-placeholder-' + node.id + '" style="display:' + (hasData ? 'none' : 'block') + '; padding:20px; text-align:center; background:var(--bg-tertiary); border-radius:8px; margin-bottom:12px;">';
-    html += '<div style="font-size:2rem; margin-bottom:8px;">🔧</div>';
-    html += '<div style="font-size:0.75rem; color:var(--text-muted);">Motor verilerini görüntülemek için<br>yukarıdan bir motor seçin.</div>';
-    html += '</div>';
   }
   
   // ===== VERİ ALANI (Motor seçildiğinde gösterilecek) =====
@@ -652,78 +621,6 @@ function stopVETableResize() {
   document.removeEventListener('mousemove', doVETableResize);
   document.removeEventListener('mouseup', stopVETableResize);
 }
-
-// Motor kategori ve seçim fonksiyonları
-var VE_MOTOR_PRESETS = {
-  fren: {
-    'cummins_x15': {
-      name: 'Cummins X15 (Motor Freni)',
-      data: [
-        {rpm: 800, torque: 380, power: 32},
-        {rpm: 1000, torque: 520, power: 55},
-        {rpm: 1200, torque: 680, power: 85},
-        {rpm: 1400, torque: 820, power: 120},
-        {rpm: 1600, torque: 950, power: 159},
-        {rpm: 1800, torque: 1050, power: 198},
-        {rpm: 2000, torque: 1120, power: 235},
-        {rpm: 2100, torque: 1150, power: 253}
-      ]
-    },
-    'bmcp_azra': {
-      name: 'BMCP Azra Motoru',
-      data: [
-        {rpm: 1000, torque: 377, power: 39},
-        {rpm: 1100, torque: 391, power: 45},
-        {rpm: 1200, torque: 411, power: 52},
-        {rpm: 1300, torque: 429, power: 58},
-        {rpm: 1400, torque: 454, power: 67},
-        {rpm: 1500, torque: 492, power: 77},
-        {rpm: 1600, torque: 524, power: 88},
-        {rpm: 1700, torque: 547, power: 97},
-        {rpm: 1800, torque: 595, power: 112},
-        {rpm: 1900, torque: 640, power: 127},
-        {rpm: 2000, torque: 693, power: 145},
-        {rpm: 2100, torque: 745, power: 164},
-        {rpm: 2200, torque: 779, power: 179},
-        {rpm: 2300, torque: 806, power: 194},
-        {rpm: 2400, torque: 824, power: 207},
-        {rpm: 2500, torque: 832, power: 218},
-        {rpm: 2600, torque: 811, power: 221}
-      ]
-    },
-    'paccar_mx13': {
-      name: 'PACCAR MX-13',
-      data: [
-        {rpm: 800, torque: 420, power: 35},
-        {rpm: 1000, torque: 580, power: 61},
-        {rpm: 1200, torque: 750, power: 94},
-        {rpm: 1400, torque: 890, power: 130},
-        {rpm: 1600, torque: 1020, power: 171},
-        {rpm: 1800, torque: 1130, power: 213},
-        {rpm: 2000, torque: 1200, power: 251}
-      ]
-    },
-    'volvo_d13': {
-      name: 'Volvo D13 (VEB+)',
-      data: [
-        {rpm: 800, torque: 350, power: 29},
-        {rpm: 1000, torque: 490, power: 51},
-        {rpm: 1200, torque: 640, power: 81},
-        {rpm: 1400, torque: 780, power: 114},
-        {rpm: 1600, torque: 920, power: 154},
-        {rpm: 1800, torque: 1040, power: 196},
-        {rpm: 2000, torque: 1140, power: 239},
-        {rpm: 2100, torque: 1180, power: 260}
-      ]
-    }
-  },
-  orjinal: {
-    'placeholder': {
-      name: '(Yakında eklenecek)',
-      data: []
-    }
-  }
-};
 
 // Tam Gaz Hızlanma modülü motor preset'leri (net değerler — aksesuar kayıpları düşülmüş)
 // 34 VPA Motor Kataloğu + 2 ek preset = 36 motor
@@ -2005,28 +1902,7 @@ var VE_FT_MOTOR_PRESETS = {
 };
 
 function onVEMotorCategoryChange(nodeId) {
-  var categoryEl = document.getElementById('ve-motor-category-' + nodeId);
-  var selectEl = document.getElementById('ve-motor-select-' + nodeId);
-  if(!categoryEl || !selectEl) return;
-  
-  var category = categoryEl.value;
-  // Kategori seçimini kaydet
-  var node = nodes.find(function(n) { return n.id === nodeId; });
-  if(node) { if(!node.data) node.data = {}; node.data.mfCategory = category; }
-  
-  var presets = VE_MOTOR_PRESETS[category] || {};
-  
-  selectEl.innerHTML = '<option value="">-- Seçiniz --</option>';
-  selectEl.innerHTML += '<option value="__new__">➕ Yeni Motor</option>';
-  
-  Object.keys(presets).forEach(function(key) {
-    if(key !== 'placeholder') {
-      var opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = presets[key].name;
-      selectEl.appendChild(opt);
-    }
-  });
+  // Artık tek kategori — FT motor presetleri kullanılıyor
 }
 
 function getVEMotorRowHTML(nodeId, rpm, torque, power) {
@@ -2252,14 +2128,15 @@ function onVEMotorSelectChange(nodeId, value) {
     return;
   }
   
-  // Preset motor seçildiyse verileri yükle
-  var categoryEl = document.getElementById('ve-motor-category-' + nodeId);
-  var category = categoryEl ? categoryEl.value : 'fren';
-  var presets = VE_MOTOR_PRESETS[category] || {};
-  
-  if(!presets[value]) return;
-  
-  var preset = presets[value];
+  // Preset motor seçildiyse verileri yükle — artık sadece FT preset sistemi var
+  var presets = {};
+  var preset = null;
+
+  // FT motor presetlerini kontrol et
+  if(typeof VE_FT_MOTOR_PRESETS !== 'undefined' && VE_FT_MOTOR_PRESETS[value]) {
+    preset = VE_FT_MOTOR_PRESETS[value];
+  }
+  if(!preset) return;
   
   preset.data.forEach(function(row) {
     var tr = document.createElement('tr');
@@ -2364,7 +2241,7 @@ function onVEFTMotorSelect(nodeId, value) {
 // ═══════════════════════════════════════════════════════════════
 function getEngineGovernedSpeed() {
   // Motor bileşeninden governed speed oku
-  var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
   if(!engineNode || !engineNode.data) return 0;
   var specs = engineNode.data.motorSpecs || {};
   return parseFloat(specs.governedSpeed) || parseFloat(engineNode.data.governedRpm) || 0;
@@ -2995,7 +2872,7 @@ function getShiftControllerPropertiesHTML(node) {
   
   // Şanzıman ve motor bileşenlerinden veri çek
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
-  var engNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var engNode = nodes.find(function(n) { return n.type === 'engine'; });
   var diffNode = nodes.find(function(n) { return n.type === 'differential' && n.isMasterDiff; })
                || nodes.find(function(n) { return n.type === 'differential'; });
   var transNode = nodes.find(function(n) { return n.type === 'transfer'; });
@@ -3374,7 +3251,7 @@ function getGearboxPropertiesHTML(node) {
     
     // Motordan governed speed çekmeye çalış
     var autoGoverned = '';
-    var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
     if(engineNode && engineNode.data) {
       var esp = engineNode.data.motorSpecs || {};
       autoGoverned = esp.governedSpeed || engineNode.data.governedRpm || '';
@@ -4831,7 +4708,7 @@ function runECMatchingAnalysis(nodeId) {
   var engineNode = findConnectedEngine(nodeId);
   if(!engineNode) {
     // Geri uyumluluk: bağlantı yoksa global arama
-    engineNode = nodes.find(function(n) { return (n.type === 'engine' || n.type === 'engine-brake') && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
+    engineNode = nodes.find(function(n) { return (n.type === 'engine') && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
   }
 
   var infoEl = document.getElementById('ecm-engine-info-' + nodeId);
@@ -5351,7 +5228,7 @@ function findConnectedEngine(nodeId) {
     if(conn.to === nodeId) {
       // Bağlı kaynak node'u bul
       var srcNode = nodes.find(function(n) { return n.id === conn.from; });
-      if(srcNode && (srcNode.type === 'engine' || srcNode.type === 'engine-brake')) {
+      if(srcNode && (srcNode.type === 'engine')) {
         return srcNode;
       }
     }
@@ -5667,7 +5544,7 @@ function ecmExpandChart(nodeId) {
   
   // Motor verisini topla (önce bağlantı, yoksa global)
   var engineNode = findConnectedEngine(nodeId);
-  if(!engineNode) engineNode = nodes.find(function(n) { return (n.type === 'engine' || n.type === 'engine-brake') && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
+  if(!engineNode) engineNode = nodes.find(function(n) { return (n.type === 'engine') && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
   if(!engineNode) { showToast('⚠ Motor bileşeni bulunamadı', 'warning'); return; }
   
   var torqueData = engineNode.data.torqueData || [];
@@ -7988,12 +7865,7 @@ function onVEDiffParamChange(nodeId) {
 // ===== TEKERLEK ÖZELLİKLERİ =====
 function getSolverPropertiesHTML(node) {
   var d = node.data || {};
-  var ftMode = veActiveModule === 'full-throttle';
-  var timeMode = d.timeMode || 'manual';
-  var duration = d.duration !== undefined ? d.duration : 60;
   var maxSimTime = d.maxSimTime !== undefined ? d.maxSimTime : 300;
-  var stopSpeed = d.stopSpeed !== undefined ? d.stopSpeed : 2;
-  var resolution = d.resolution !== undefined ? d.resolution : 200;
 
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
 
@@ -8016,7 +7888,7 @@ function getSolverPropertiesHTML(node) {
   var accelDecel = d.accelDecelAnalysis || false;
   var scenNode = nodes.find(function(n) { return n.type === 'scenario'; });
   var hasRoadSegs = scenNode && scenNode.data && scenNode.data.roadSegments && scenNode.data.roadSegments.length > 0;
-  if(ftMode && hasRoadSegs) {
+  if(hasRoadSegs) {
     html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.66rem; color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
     html += '<input type="checkbox" id="ve-solver-acceldecel-' + node.id + '" ' + (accelDecel ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
     html += '<div><div style="font-weight:600;">Hızlanma-Yavaşlama</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Segment bazlı sürüş analizi — güzergah üzerinde hızlanma/yavaşlama profili</div></div>';
@@ -8026,71 +7898,27 @@ function getSolverPropertiesHTML(node) {
 
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
 
-  // Zaman modu
-  
-  if(!ftMode) {
-    // Motor Freni modu: zaman modu seçimi
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Zaman modu</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-timemode-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="manual"' + (timeMode==='manual'?' selected':'') + '>Zamanı ben veriyorum</option><option value="stop"' + (timeMode==='stop'?' selected':'') + '>Durma analizi</option></select></td></tr>';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary);">"Zamanı ben veriyorum": Belirli bir süre için simülasyon yapar. "Durma analizi": Araç durana kadar (veya maks. süreye kadar) simüle eder.</td></tr>';
-  } else {
-    // FT modu: zaman modu gizli, otomatik "maks hıza kadar"
-    html += '<input type="hidden" id="ve-solver-timemode-' + node.id + '" value="stop">';
-  }
-  
-  // Süre (belirli süre modunda — FT modda gizle)
-  html += '<tr id="ve-solver-dur-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (ftMode || timeMode==='stop'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Geçen süre [s]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-solver-duration-' + node.id + '" value="' + duration + '" step="1" min="1" placeholder="60" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"></td></tr>';
-  
-  // Maks süre
-  var maxTimeLabel = ftMode ? 'Maks. süre (güvenlik) [s]' : 'Maks. süre [s]';
-  if(ftMode) {
-    // FT modda güvenlik limiti gizli input olarak kalır (kullanıcıya gösterilmez)
-    html += '<input type="hidden" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '">';
-  } else {
-    html += '<tr id="ve-solver-maxtime-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (timeMode!=='stop'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">' + maxTimeLabel + '</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '" step="10" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"></td></tr>';
-  }
-  
-  
-  // Durma hızı eşiği (FT modda daima gizle)
-  var hideStopSpeed = ftMode || timeMode !== 'stop';
-  html += '<tr id="ve-solver-stopspeed-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (hideStopSpeed?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Durma eşiği [km/h]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-solver-stopspeed-' + node.id + '" value="' + stopSpeed + '" step="0.5" min="0" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"></td></tr>';
-  
-  // Çözünürlük ve Çözüm yöntemi (FT modda gizle — sabit dt=0.01, RK4)
-  if(!ftMode) {
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözünürlük (adım)</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-resolution-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="100"' + (resolution==100?' selected':'') + '>100</option><option value="200"' + (resolution==200?' selected':'') + '>200</option><option value="500"' + (resolution==500?' selected':'') + '>500</option><option value="1000"' + (resolution==1000?' selected':'') + '>1000</option></select></td></tr>';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary);">Toplam simülasyon süresini seçilen adım sayısına bölerek Δt hesaplanır.</td></tr>';
-  }
-  
+  // Zaman modu: otomatik "maks hıza kadar"
+  html += '<input type="hidden" id="ve-solver-timemode-' + node.id + '" value="stop">';
+  html += '<input type="hidden" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '">';
+
   // Çözüm yöntemi
-  var method = d.method || 'euler';
+  var method = d.method || 'rk4';
   var isAdaptive = method === 'rk45';
-  if(!ftMode) {
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözüm yöntemi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-method-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="euler"' + (method==='euler'?' selected':'') + '>Basit Euler</option><option value="heun"' + (method==='heun'?' selected':'') + '>Heun (2. derece)</option><option value="ralston"' + (method==='ralston'?' selected':'') + '>Ralston (2. derece, optimal)</option><option value="rk4"' + (method==='rk4'?' selected':'') + '>RK4 (4. derece)</option><option value="rk45"' + (method==='rk45'?' selected':'') + '>⚡ RK45 Dormand-Prince (adaptif)</option></select></td></tr>';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>Euler</b>: Hızlı, büyük adımlarda hata birikir. <b>Heun</b>: Daha stabil, iyi denge. <b>Ralston</b>: Optimal 2. derece. <b>RK4</b>: Yüksek doğruluk, sabit adım. <b>RK45</b>: Adaptif adım — MATLAB ode45 yöntemi, süreksizlik algılama ve enerji dengesi.</td></tr>';
-  } else {
-    // FT modda da yöntem seçimi aktif
-    var ftMethod = d.method || 'rk4';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözüm yöntemi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-method-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="euler"' + (ftMethod==='euler'?' selected':'') + '>Euler (1. derece)</option><option value="heun"' + (ftMethod==='heun'?' selected':'') + '>Heun (2. derece)</option><option value="ralston"' + (ftMethod==='ralston'?' selected':'') + '>Ralston (2. derece, optimal)</option><option value="rk4"' + (ftMethod==='rk4'?' selected':'') + '>RK4 (4. derece)</option><option value="rk45"' + (ftMethod==='rk45'?' selected':'') + '>⚡ RK45 Dormand-Prince (adaptif)</option></select></td></tr>';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>Euler</b>: Hızlı, düşük doğruluk. <b>Heun</b>: İyi denge. <b>Ralston</b>: Optimal 2. derece. <b>RK4</b>: Yüksek doğruluk (önerilen). <b>RK45</b>: Adaptif adım — otomatik hassasiyet kontrolü.</td></tr>';
-    
-    // Sabit adım büyüklüğü (RK45 dışında)
-    var ftDt = d.ftDt || 0.01;
-    var showDtRow = ftMethod !== 'rk45';
-    html += '<tr id="ve-solver-ftdt-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showDtRow ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Adım büyüklüğü Δt [s]</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-ftdt-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="0.05"' + (ftDt==0.05?' selected':'') + '>0.05 (hızlı)</option><option value="0.02"' + (ftDt==0.02?' selected':'') + '>0.02</option><option value="0.01"' + (ftDt==0.01?' selected':'') + '>0.01 (varsayılan)</option><option value="0.005"' + (ftDt==0.005?' selected':'') + '>0.005 (hassas)</option><option value="0.001"' + (ftDt==0.001?' selected':'') + '>0.001 (çok hassas)</option></select></td></tr>';
-    
-    // RK45 tolerans ayarları (FT modu)
-    var ftAtol = d.ftAtol !== undefined ? d.ftAtol : 1e-6;
-    var ftRtol = d.ftRtol !== undefined ? d.ftRtol : 1e-4;
-    var showFtTol = ftMethod === 'rk45';
-    html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="padding:6px; background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
-    html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
-  }
-  
-  // RK45 tolerans ayarları (sadece rk45 seçildiğinde ve motor freni modunda görünür)
-  var atol = d.atol !== undefined ? d.atol : 1e-6;
-  var rtol = d.rtol !== undefined ? d.rtol : 1e-4;
-  var showTol = !ftMode && isAdaptive;
-  html += '<tr id="ve-solver-tol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showTol ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="padding:6px; background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-atol-' + node.id + '" value="' + atol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-rtol-' + node.id + '" value="' + rtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
-  html += '<tr id="ve-solver-tol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showTol ? 'display:none;' : '') + '"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s cinsinden). <b>RTol</b>: Bağıl tolerans. Küçük → daha hassas ama daha çok adım. Varsayılan: 10⁻⁶ / 10⁻⁴</td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözüm yöntemi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-method-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="euler"' + (method==='euler'?' selected':'') + '>Euler (1. derece)</option><option value="heun"' + (method==='heun'?' selected':'') + '>Heun (2. derece)</option><option value="ralston"' + (method==='ralston'?' selected':'') + '>Ralston (2. derece, optimal)</option><option value="rk4"' + (method==='rk4'?' selected':'') + '>RK4 (4. derece)</option><option value="rk45"' + (method==='rk45'?' selected':'') + '>⚡ RK45 Dormand-Prince (adaptif)</option></select></td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>Euler</b>: Hızlı, düşük doğruluk. <b>Heun</b>: İyi denge. <b>Ralston</b>: Optimal 2. derece. <b>RK4</b>: Yüksek doğruluk (önerilen). <b>RK45</b>: Adaptif adım — otomatik hassasiyet kontrolü.</td></tr>';
+
+  // Sabit adım büyüklüğü (RK45 dışında)
+  var ftDt = d.ftDt || 0.01;
+  var showDtRow = method !== 'rk45';
+  html += '<tr id="ve-solver-ftdt-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showDtRow ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Adım büyüklüğü Δt [s]</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-ftdt-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="0.05"' + (ftDt==0.05?' selected':'') + '>0.05 (hızlı)</option><option value="0.02"' + (ftDt==0.02?' selected':'') + '>0.02</option><option value="0.01"' + (ftDt==0.01?' selected':'') + '>0.01 (varsayılan)</option><option value="0.005"' + (ftDt==0.005?' selected':'') + '>0.005 (hassas)</option><option value="0.001"' + (ftDt==0.001?' selected':'') + '>0.001 (çok hassas)</option></select></td></tr>';
+
+  // RK45 tolerans ayarları
+  var ftAtol = d.ftAtol !== undefined ? d.ftAtol : 1e-6;
+  var ftRtol = d.ftRtol !== undefined ? d.ftRtol : 1e-4;
+  var showFtTol = method === 'rk45';
+  html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="padding:6px; background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
+  html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
   
   html += '</table>';
   

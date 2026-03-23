@@ -22,30 +22,23 @@ const mapCode = fs.readFileSync(path.join(__dirname, '../../js/map.js'), 'utf8')
 // getSolverPropertiesHTML — ftMode tanımsız hatası
 // ═════════════════════════════════════════════════════════════════════
 describe('getSolverPropertiesHTML — ftMode tanımı', () => {
-  test('ftMode değişkeni getSolverPropertiesHTML içinde tanımlı', () => {
+  test('getSolverPropertiesHTML fonksiyonu tanımlı', () => {
     // Fonksiyon gövdesini çıkar
     var fnStart = cpCode.indexOf('function getSolverPropertiesHTML(node)');
     expect(fnStart).toBeGreaterThan(-1);
-
-    // ftMode tanımının fonksiyon içinde var olduğunu kontrol et
-    var fnBody = cpCode.substring(fnStart, fnStart + 500);
-    expect(fnBody).toMatch(/var\s+ftMode\s*=/);
   });
 
-  test('ftMode veActiveModule ile belirleniyor', () => {
+  test('ftMode kaldırıldı — tek modül olduğu için artık gerekli değil', () => {
     var fnStart = cpCode.indexOf('function getSolverPropertiesHTML(node)');
-    var fnBody = cpCode.substring(fnStart, fnStart + 500);
-    expect(fnBody).toContain("veActiveModule === 'full-throttle'");
+    var fnBody = cpCode.substring(fnStart, fnStart + 2000);
+    // ftMode artık kullanılmıyor, tek modül (full-throttle) olduğu için
+    expect(fnBody).not.toMatch(/var\s+ftMode\s*=/);
   });
 
-  test('ftMode kullanıldığı her yerde tanımdan sonra geliyor', () => {
+  test('fonksiyon solver ayarları HTML üretiyor', () => {
     var fnStart = cpCode.indexOf('function getSolverPropertiesHTML(node)');
-    var defPos = cpCode.indexOf('var ftMode', fnStart);
-    expect(defPos).toBeGreaterThan(fnStart);
-
-    // ftMode kullanılan ilk yer tanımdan sonra olmalı
-    var firstUse = cpCode.indexOf('ftMode', defPos + 10);
-    expect(firstUse).toBeGreaterThan(defPos);
+    var fnBody = cpCode.substring(fnStart, fnStart + 500);
+    expect(fnBody).toContain('node.data');
   });
 
   // ftMode mantığını izole test et

@@ -131,11 +131,11 @@ describe('_veSolveOtherTopologies — temel', () => {
     expect(veRunSimulationEngine).not.toHaveBeenCalled();
   });
 
-  test('engine-brake tipini motor olarak kabul eder', () => {
+  test('motor bileşeni olan topolojiyi çözer', () => {
     veActiveTabIdx = 0;
     veTabs = [
       makeTab('Aktif', [{ id: 'e1', type: 'engine', data: {} }]),
-      makeTab('Frensiz', [{ id: 'eb1', type: 'engine-brake', data: {} }])
+      makeTab('Diğer', [{ id: 'e2', type: 'engine', data: {} }])
     ];
     _veSolveOtherTopologies();
     expect(veFTRunSimulationEngine).toHaveBeenCalled();

@@ -6,10 +6,10 @@ var VE_MODULES = {
   'full-throttle': {
     name: 'Ana Sayfa',
     icon: '',
-    description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma, motor freni ve performans analizi',
-    components: ['engine','engine-brake','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
+    description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
     defaultScenario: 'full_throttle',
-    scenarios: ['full_throttle','coast','partial_throttle','full_brake','custom'],
+    scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
   }
 };
@@ -96,14 +96,6 @@ var componentDefs = {
     inputs: 0,
     outputs: 1
   },
-  'engine-brake': {
-    name: 'Motor Freni',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="none" stroke="var(--text-secondary, #666)" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="var(--text-muted, #888)"/><rect x="15" y="46" width="20" height="8" fill="var(--accent-danger, #f44336)"/><rect x="65" y="46" width="20" height="8" fill="var(--accent-danger, #f44336)"/></svg>',
-    inputs: 1,
-    outputs: 1
-  },
-
-
   'transfer': {
     name: 'Transfer Kutusu',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="25" y="20" width="50" height="60" fill="var(--text-secondary, #666)" rx="4"/><rect x="10" y="35" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="30" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="62" width="20" height="8" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="12" fill="var(--text-muted, #888)"/></svg>',
@@ -190,15 +182,6 @@ var COMPONENT_SIGNALS = {
       {id: 'rpm', name: 'Motor Devri', unit: 'rpm'},
       {id: 'torque', name: 'Net Motor Torku', unit: 'Nm'},
       {id: 'power', name: 'Motor Gücü', unit: 'kW'},
-      {id: 'brake_torque', name: 'Motor Freni Torku', unit: 'Nm'},
-      {id: 'angular_vel', name: 'Açısal Hız', unit: 'rad/s'}
-    ]
-  },
-  'engine-brake': {
-    outputs: [
-      {id: 'rpm', name: 'Devir', unit: 'rpm'},
-      {id: 'torque', name: 'Fren Torku', unit: 'Nm'},
-      {id: 'power', name: 'Fren Gücü', unit: 'kW'},
       {id: 'angular_vel', name: 'Açısal Hız', unit: 'rad/s'}
     ]
   },
