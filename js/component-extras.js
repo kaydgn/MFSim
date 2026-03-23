@@ -872,10 +872,10 @@ function cdwApplyResults(nodeId) {
   var cdTransferred = false;
   if(isFinite(cdCFD) && vehicleNode) {
     if(!vehicleNode.data) vehicleNode.data = {};
-    vehicleNode.data.cd = cdCFD;
+    vehicleNode.data.ftCd = cdCFD;
     cdTransferred = true;
     // Eğer Vehicle properties açıksa input'u güncelle
-    var vCdEl = document.getElementById('ve-vehicle-cd-' + vehicleNode.id);
+    var vCdEl = document.getElementById('ve-ftv-cd-' + vehicleNode.id);
     if(vCdEl) vCdEl.value = cdCFD;
   }
 
