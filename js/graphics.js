@@ -1584,7 +1584,7 @@ function veGenerateTXTReport(steps, p) {
   r += pad('GUC GRUBU MUDURLUGU', W, 'center') + '\n';
   r += ln('-', W) + '\n\n';
   r += '  Hazirlayan        : ' + (p.hazirlayan || 'Belirtilmemis') + '\n';
-  r += '  Iletisim          : kerem.aydogan@bmc.com.tr\n\n';
+  r += '  Iletisim          : ' + veNameToEmail(p.hazirlayan || '') + '\n\n';
   r += ln('-', W) + '\n';
   r += pad('Bu rapor BMC Motor Freni Performans Hesaplama Programi', W, 'center') + '\n';
   r += pad('ile olusturulmustur. Hesaplamalar teorik modellere dayanmaktadir.', W, 'center') + '\n';
@@ -1595,6 +1595,14 @@ function veGenerateTXTReport(steps, p) {
   return r;
 }
 
+
+function veNameToEmail(name) {
+  var tr = {'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u','Ç':'c','Ğ':'g','İ':'i','Ö':'o','Ş':'s','Ü':'u'};
+  var s = name.trim().toLowerCase().replace(/[çğıöşüÇĞİÖŞÜ]/g, function(c){ return tr[c] || c; });
+  var parts = s.split(/\s+/).filter(function(p){ return p.length > 0; });
+  if(parts.length === 0) return '';
+  return parts.join('.') + '@bmc.com.tr';
+}
 
 function veGenerateFTTxtReport(sim) {
   var W = 80;
@@ -2592,7 +2600,7 @@ function veGenerateFTTxtReport(sim) {
   r += ln('-', W) + '\n\n';
 
   r += pRow('Hazirlayan', ascii(hazirlayan));
-  r += pRow('Iletisim', 'kerem.aydogan@bmc.com.tr');
+  r += pRow('Iletisim', veNameToEmail(hazirlayan));
   r += '\n';
 
   r += ln('-', W) + '\n';
@@ -3461,7 +3469,7 @@ function veGenerateSegmentDriveTxtReport(sim) {
   r += ln('-', W) + '\n\n';
 
   r += pRow('Hazirlayan', ascii(hazirlayan));
-  r += pRow('Iletisim', 'kerem.aydogan@bmc.com.tr');
+  r += pRow('Iletisim', veNameToEmail(hazirlayan));
   r += '\n';
 
   r += ln('-', W) + '\n';
