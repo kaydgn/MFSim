@@ -379,15 +379,17 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   var grossMotorTorqueFn = FT_SOLVER.createMotorTorqueFn(torqueTable, governedSpeed, noLoadGoverned);
 
   // ── AKSESUAR KAYIPLARI ──
-  // Fan: P ∝ N³, Diğerleri: P ∝ N (kW cinsinden, governed RPM referans)
+  // Fan: P ∝ N³ (kavramalı/clutch) veya sabit (on) | Diğerleri: P ∝ N (doğrusal)
   var accList = ed.accessories || [];
   var accTotalFanLoss = 0;   // Fan kayıp [kW] @ governed
   var accTotalOtherLoss = 0; // Diğer kayıp [kW] @ governed
+  var accFanMode = 'clutch'; // 'on' = sabit (iSCAAN uyumlu), 'clutch' = N³ ölçekli
   accList.forEach(function(a) {
     var loss = parseFloat(a.userLoss) || 0;
     if(loss <= 0) return;
     if(a.name && a.name.toLowerCase().indexOf('fan') >= 0) {
       accTotalFanLoss += loss;
+      if(a.fanMode) accFanMode = a.fanMode;
     } else {
       accTotalOtherLoss += loss;
     }
@@ -399,8 +401,15 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     var T_gross = grossMotorTorqueFn(rpm);
     if(!hasAccessoryLoss || rpm <= 0) return T_gross;
     var ratio = rpm / governedSpeed;
-    var P_loss_kW = accTotalFanLoss * ratio * ratio * ratio
-                  + accTotalOtherLoss * ratio;
+    var P_fan_kW;
+    if(accFanMode === 'on') {
+      // iSCAAN uyumlu: Fan kaybı tüm devirlerde sabit (governed hızdaki değer)
+      P_fan_kW = accTotalFanLoss;
+    } else {
+      // Kavramalı fan: P ∝ N³
+      P_fan_kW = accTotalFanLoss * ratio * ratio * ratio;
+    }
+    var P_loss_kW = P_fan_kW + accTotalOtherLoss * ratio;
     var omega = 2 * Math.PI * rpm / 60;
     var T_loss = P_loss_kW * 1000 / omega;
     return Math.max(0, T_gross - T_loss);
@@ -546,6 +555,43 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     return cs2L.a * esl + (cs2L.b || 0);
   }
 
+  // Downshift eşik verileri
+  var dsData = spData.downshiftThresholds || null;
+
+  /**
+   * Downshift N_out eşiğini hesaplar.
+   * Desteklenen formatlar:
+   *   { a, b }                                     → lineer: N_out = a × ESL + b
+   *   { a, b, capValue, capBelow }                  → cap'li lineer
+   *   { type:'piecewise', breakpoint, low, high }   → parçalı lineer (2 segment)
+   *   { type:'segments', segments: [{maxESL, a, b, cap}, ...] } → çok segmentli
+   * @param {object} ds   — downshift threshold tanımı
+   * @param {number} esl  — Engine Speed Limit (governed)
+   * @returns {number}    — N_out eşik değeri
+   */
+  function calcDownshiftThreshold(ds, esl) {
+    if(!ds) return 0;
+    if(ds.type === 'piecewise') {
+      if(esl <= ds.breakpoint) return ds.low.a * esl + (ds.low.b || 0);
+      return ds.high.a * esl + (ds.high.b || 0);
+    }
+    if(ds.type === 'segments') {
+      for(var si = 0; si < ds.segments.length; si++) {
+        var seg = ds.segments[si];
+        if(seg.maxESL !== undefined && esl <= seg.maxESL) {
+          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+        }
+        if(si === ds.segments.length - 1) {
+          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+        }
+      }
+    }
+    if(ds.capValue !== undefined && ds.capBelow !== undefined && esl < ds.capBelow) {
+      return ds.capValue;
+    }
+    return ds.a * esl + (ds.b || 0);
+  }
+
   var shiftState = {
     gearIdx: 0,
     isLockup: false,   // Başlangıç: 1C (converter mod)
@@ -617,8 +663,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
         if(spData.lockupShifts && spData.lockupShifts[shiftKey]) {
           var ls = spData.lockupShifts[shiftKey];
-          var threshold_lu = ls.a * shiftRefRPM + ls.b;
-          if(ls.minCap !== undefined) threshold_lu = Math.max(threshold_lu, ls.minCap);
+          var threshold_lu = calcDownshiftThreshold(ls, shiftRefRPM);
           if(N_out_lu >= threshold_lu) luShiftTriggered = true;
         } else {
           // Eski yöntem: sabit lockupOffset
@@ -636,6 +681,37 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       }
     }
 
+    // ── DOWNSHIFT KONTROLÜ ──
+    // Lockup modda: N_out < downshift eşiği → alt vitese düş
+    // Converter modda: downshift uygulanmaz (henüz hızlanma aşamasında)
+    if(!shifted && dsData && isLU && g > 0) {
+      var i_gear_ds = parseFloat(getCurrentGearData().ratio) || 1.0;
+      var N_out_ds = N_engine / i_gear_ds;  // Lockup modda SR=1
+      // Downshift key: (g+1)to(g) formatında, örn. gear 5 (6. vites) → '6to5'
+      var dsKey = (g + 1) + 'to' + g;
+      var dsEntry = dsData[dsKey];
+
+      if(dsEntry) {
+        var dsThreshold = calcDownshiftThreshold(dsEntry, shiftRefRPM);
+        if(N_out_ds < dsThreshold) {
+          var dsFromName = (g + 1) + 'L';
+          var dsToName = g + 'L';
+          // 2→1 özel durum: converter moda geçiş (1C)
+          if(g === 1) {
+            dsToName = '1C';
+            shiftState.isLockup = false;
+          }
+          shiftState.shiftHistory.push({
+            t: t, fromGear: g, toGear: g - 1, fromMode: dsFromName, toMode: dsToName,
+            v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_ds,
+            isDownshift: true
+          });
+          shiftState.gearIdx = g - 1;
+          shifted = true;
+        }
+      }
+    }
+
     return shifted;
   }
 
@@ -647,7 +723,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     if(v_ms < 0) v_ms = 0;
     var gearData = getCurrentGearData();
     var i_gear = parseFloat(gearData.ratio) || 1.0;
-    var eta_gear = (parseFloat(gearData.eff) || 98) / 100;
+    var eta_gear = (parseFloat(gearData.eff) || 100) / 100;
     var isLU = shiftState.isLockup;
 
     var N_engine, T_engine, T_output, T_pump, SR, tau, tcEta;
@@ -675,16 +751,18 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       // Lockup kayıpları: pump torque drop + lockup klaç sürtünmesi
       var deltaT_lockup = 10.0 + 0.00367 * N_engine;
       T_pump = T_engine - pumpTorqueDrop;
-      T_output = T_pump - deltaT_lockup;
-      if(T_output < 0) T_output = 0;
+      var T_net_lockup = T_pump - deltaT_lockup;
+      if(T_net_lockup < 0) T_net_lockup = 0;
+      // Lockup iç verim: pompa drag + klaç sürtünmesi + gear mekanik kayıp
+      var eta_lockup = tcd.etaLockup || 0.965;
+      T_output = T_net_lockup * eta_lockup;
       SR = 1.0;
       tau = 1.0;
-      tcEta = 1.0;
-      // Lockup ısı reddi: per-gear lineer model
-      // Heat = a(gear) × N_engine + b(gear)  [kW]
-      var currentGearNum = shiftState.gearIdx + 1;  // 1-indexed
-      var heatCoeff = LOCKUP_HEAT_COEFFICIENTS[currentGearNum] || LOCKUP_HEAT_COEFFICIENTS[2];
-      heatRejection_kW = Math.max(0, heatCoeff.a * N_engine + heatCoeff.b);
+      tcEta = eta_lockup;
+      // Lockup ısı reddi: P_engine × (1 - eta_lockup)
+      var omega_eng_lu = N_engine * 2 * Math.PI / 60;
+      var P_engine_lu_kW = T_engine * omega_eng_lu / 1000;
+      heatRejection_kW = Math.max(0, P_engine_lu_kW * (1 - eta_lockup));
     } else {
       // ── CONVERTER MOD ──
       // N_turbine'i hızdan hesapla
@@ -699,14 +777,19 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       N_engine = tcResult.N_engine;
       T_engine = tcResult.T_engine;
       T_pump = tcResult.T_pump;
-      T_output = tcResult.T_turbine;  // Türbin torku → şanzımana girer
+      var T_turbine_raw = tcResult.T_turbine;  // Türbin torku (TC çıkışı)
       SR = tcResult.SR;
       tau = tcResult.tau;
-      tcEta = tcResult.eta;
-      // Converter ısı reddi: Q = T_pump × ω_engine × (1 - SR × τ)
+      // Konvertör iç verim: pompa verimsizliği + gear mekanik kayıp
+      var eta_conv_internal = tcd.etaConvInternal || 0.975;
+      T_output = T_turbine_raw * eta_conv_internal;
+      tcEta = tcResult.eta * eta_conv_internal;
+      // Converter ısı reddi: TC kaybı + gear mekanik kayıp ısısı
       var omega_eng = N_engine * 2 * Math.PI / 60;
-      heatRejection_kW = T_pump * omega_eng * (1 - SR * tau) / 1000;
-      if(heatRejection_kW < 0) heatRejection_kW = 0;
+      var P_heat_converter = T_pump * omega_eng * (1 - SR * tau) / 1000;
+      var P_turbine_kW = T_turbine_raw * (N_engine * SR) * 2 * Math.PI / 60 / 1000;
+      var P_heat_gear_mech = P_turbine_kW * (1 - eta_conv_internal);
+      heatRejection_kW = Math.max(0, P_heat_converter) + Math.max(0, P_heat_gear_mech);
     }
 
     // Çekme kuvveti (per-gear verim)
@@ -1752,11 +1835,14 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   // ── AKSESUAR KAYIPLARI ──
   var accList = ed.accessories || [];
   var accTotalFanLoss = 0, accTotalOtherLoss = 0;
+  var accFanMode = 'clutch';
   accList.forEach(function(a) {
     var loss = parseFloat(a.userLoss) || 0;
     if(loss <= 0) return;
-    if(a.name && a.name.toLowerCase().indexOf('fan') >= 0) accTotalFanLoss += loss;
-    else accTotalOtherLoss += loss;
+    if(a.name && a.name.toLowerCase().indexOf('fan') >= 0) {
+      accTotalFanLoss += loss;
+      if(a.fanMode) accFanMode = a.fanMode;
+    } else accTotalOtherLoss += loss;
   });
   var hasAccessoryLoss = (accTotalFanLoss + accTotalOtherLoss) > 0;
 
@@ -1764,7 +1850,8 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     var T_gross = grossMotorTorqueFn(rpm);
     if(!hasAccessoryLoss || rpm <= 0) return T_gross;
     var ratio = rpm / governedSpeed;
-    var P_loss_kW = accTotalFanLoss * ratio * ratio * ratio + accTotalOtherLoss * ratio;
+    var P_fan_kW = (accFanMode === 'on') ? accTotalFanLoss : accTotalFanLoss * ratio * ratio * ratio;
+    var P_loss_kW = P_fan_kW + accTotalOtherLoss * ratio;
     var omega = 2 * Math.PI * rpm / 60;
     return Math.max(0, T_gross - P_loss_kW * 1000 / omega);
   }
@@ -1860,7 +1947,9 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   var sd = solverNode ? (solverNode.data || {}) : {};
   var dt = parseFloat(sd.ftDt) || 0.01;
   var method = sd.method || 'rk4';
-  var maxTime = parseFloat(sd.maxSimTime) || 300;
+  // Segment sayısına göre maxTime — her segment için en az 60s ayır
+  var baseMaxTime = parseFloat(sd.maxSimTime) || 300;
+  var maxTime = Math.max(baseMaxTime, segments.length * 60);
 
   // ═══ VİTES GEÇİŞ DURUMU MAKİNESİ ═══
   var shiftState = { gearIdx: 0, isLockup: false, shiftHistory: [] };
@@ -1916,7 +2005,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     if(v_ms < 0) v_ms = 0;
     var gearData = getCurrentGearData();
     var i_gear = parseFloat(gearData.ratio) || 1.0;
-    var eta_gear = (parseFloat(gearData.eff) || 98) / 100;
+    var eta_gear = (parseFloat(gearData.eff) || 100) / 100;
     var isLU = shiftState.isLockup;
     var isCoast = (command === 'coast');
 
@@ -1929,13 +2018,17 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       else {
         T_engine = motorTorqueFn(N_engine);
         T_pump = T_engine - pumpTorqueDrop;
-        T_output = T_pump - (10.0 + 0.00367 * N_engine);
-        if(T_output < 0) T_output = 0;
+        var T_net_lu2 = T_pump - (10.0 + 0.00367 * N_engine);
+        if(T_net_lu2 < 0) T_net_lu2 = 0;
+        var eta_lockup2 = tcd.etaLockup || 0.965;
+        T_output = T_net_lu2 * eta_lockup2;
       }
-      SR = 1.0; tau = 1.0; tcEta = 1.0;
-      var gn = shiftState.gearIdx + 1;
-      var hc = LOCKUP_HEAT_COEFFICIENTS[gn] || LOCKUP_HEAT_COEFFICIENTS[2];
-      heatRejection_kW = Math.max(0, hc.a * N_engine + hc.b);
+      SR = 1.0; tau = 1.0;
+      var eta_lu2_val = tcd.etaLockup || 0.965;
+      tcEta = isCoast ? 1.0 : eta_lu2_val;
+      var omLU2 = N_engine * 2 * Math.PI / 60;
+      var P_eng_lu2 = T_engine * omLU2 / 1000;
+      heatRejection_kW = isCoast ? 0 : Math.max(0, P_eng_lu2 * (1 - eta_lu2_val));
     } else {
       var N_turbine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
       if(N_turbine < 0) N_turbine = 0;
@@ -1947,10 +2040,20 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       } else {
         var tcR = FT_SOLVER.solveTCOperatingPoint(N_turbine, motorTorqueFn, tcFns, pumpTorqueDrop, {N_min:idleRpm, N_max:noLoadGoverned+100});
         N_engine = tcR.N_engine; T_engine = tcR.T_engine; T_pump = tcR.T_pump;
-        T_output = tcR.T_turbine; SR = tcR.SR; tau = tcR.tau; tcEta = tcR.eta;
+        var T_turb_raw2 = tcR.T_turbine;
+        var eta_ci2 = tcd.etaConvInternal || 0.975;
+        T_output = T_turb_raw2 * eta_ci2;
+        SR = tcR.SR; tau = tcR.tau; tcEta = tcR.eta * eta_ci2;
       }
       var omE = N_engine * 2 * Math.PI / 60;
-      heatRejection_kW = T_pump > 0 ? Math.max(0, T_pump * omE * (1 - SR * tau) / 1000) : 0;
+      if(isCoast) {
+        heatRejection_kW = 0;
+      } else {
+        var P_heat_conv2 = T_pump > 0 ? Math.max(0, T_pump * omE * (1 - SR * tau) / 1000) : 0;
+        var P_turb2_kW = T_turb_raw2 * (N_engine * SR) * 2 * Math.PI / 60 / 1000;
+        var P_heat_gm2 = P_turb2_kW * (1 - (tcd.etaConvInternal || 0.975));
+        heatRejection_kW = P_heat_conv2 + Math.max(0, P_heat_gm2);
+      }
     }
 
     // Motor sürükleme kuvveti (coast modunda motor kompresyon direnci)
@@ -2083,13 +2186,14 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       // Araç durduysa: ivme pozitifse (tam gaz veya yokuş aşağı) devam edebilir,
       // aksi halde bu segmentte ilerleme yok → segmenti bitir (sonrakine geç)
       if(v <= 0.01) {
-        v = 0;
         if(ph.accel <= 0.001) {
           // Net kuvvet negatif veya sıfır — bu segmentte araç hareket edemez
+          v = 0;
           stallCounter++;
           if(stallCounter > 10) break; // Sonsuz döngü koruması
         } else {
-          stallCounter = 0; // Pozitif ivme var, kalkış mümkün
+          // Pozitif ivme var — sıfıra çekme, kalkışa izin ver
+          stallCounter = 0;
         }
       } else {
         stallCounter = 0;

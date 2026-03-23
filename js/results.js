@@ -682,8 +682,7 @@ function veRenderDetailedReport(filter) {
   if(spDataRes.lockupShifts) {
     var luSummary = Object.keys(spDataRes.lockupShifts).map(function(sk) {
       var ls = spDataRes.lockupShifts[sk];
-      var thr = ls.a * R.shiftRefRPM + ls.b;
-      if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+      var thr = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(ls, R.shiftRefRPM) : (ls.a * R.shiftRefRPM + (ls.b || 0));
       return sk.replace(/(\d+L)(\d+L)/, '$1\u2192$2') + ': ' + Math.round(thr) + ' rpm';
     }).join(', ');
     controlHTML += row('Lockup Geçişleri', luSummary);
