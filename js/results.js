@@ -2685,8 +2685,20 @@ function veBuildFTUpshiftsHTML(sim, R) {
     var activeEta = trGears[0].eff || 97;
     var Cd = rs.cd || 0.9, A = rs.frontalArea || 8.0, Crr = rs.crr || 0.0035;
     var m_kg = ss.m_vehicle || rs.gvw || 15000;
-    
-    var stepsLow = _ftBuildLowRangeSteps(sim, activeRatio, lowRatio, activeEta, lowEta, m_kg, Cd, A, Crr, rs);
+
+    // Gerçek düşük kademe simülasyonu varsa onu kullan (ölçekleme yerine)
+    var allRangeRes = typeof window !== 'undefined' ? window._veFTAllRangeResults : null;
+    var lowKademe = lowGear.kademe || 'Low';
+    var lowSimResult = allRangeRes ? allRangeRes[lowKademe] : null;
+
+    var stepsLow;
+    if(lowSimResult && lowSimResult.speed && lowSimResult.speed.length > 2) {
+      // Gerçek simülasyon verisi — doğru TE, DP, HR, vites geçişleri
+      stepsLow = veBuildFTStepsFromSim(lowSimResult, 'low');
+    } else {
+      // Fallback: ölçekleme (gerçek sim yoksa)
+      stepsLow = _ftBuildLowRangeSteps(sim, activeRatio, lowRatio, activeEta, lowEta, m_kg, Cd, A, Crr, rs);
+    }
     _ftUpshiftData['ftUpshiftChartLow'] = stepsLow;
     
     if(stepsLow.length > 0) {

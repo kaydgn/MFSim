@@ -1530,12 +1530,14 @@ function getVehiclePropertiesHTML(node) {
 }
 
 // Toplam aktarma verimi hesapla (bağlı bileşenlerden)
+// Not: Şanzıman kayıpları per-gear tork kaybı modeli (deltaT_lockup / HR katsayıları)
+// ile hesaplandığından toplam verim formülüne dahil edilmez (iSCAAN uyumu).
 function veCalcTotalDriveEfficiency() {
   var eff = 1.0;
   var isFT = veActiveModule === 'full-throttle';
   nodes.forEach(function(n) {
-    if(n.type === 'gearbox' && n.data && n.data.efficiency) eff *= (parseFloat(n.data.efficiency) || 97) / 100;
-    else if(n.type === 'gearbox') eff *= 0.97;
+    // Şanzıman verimi: tork kaybı modeli ile hesaplandığından TE formülüne dahil değil
+    // (gearbox tipi atlanıyor — çift sayım önlenir)
     if(n.type === 'transfer' && n.data && n.data.efficiency) eff *= (parseFloat(n.data.efficiency) || 98) / 100;
     else if(n.type === 'transfer') eff *= 0.97;
     // FT modda sadece master diff sayılır
