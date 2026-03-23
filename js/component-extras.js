@@ -1277,7 +1277,7 @@ var VE_TIRE_PRESETS = [
   { id:'285_70r195',  name:'285/70 R19,5',  radius:0.435, inertia:7.90,  group:'R19.5', usage:'Orta Ticari / Bölgesel' },
   { id:'305_70r195',  name:'305/70 R19,5',  radius:0.450, inertia:9.20,  group:'R19.5', usage:'Orta Ticari / Bölgesel' },
   { id:'335_80r20',   name:'335/80 R20',    radius:0.494, inertia:15.84, group:'R20',   usage:'Ağır Ticari / Uzun Yol' },
-  { id:'365_80r20',   name:'365/80 R20',    radius:0.521, inertia:21.00, group:'R20',   usage:'Ağır Askeri / Özel' },
+  { id:'365_80r20',   name:'365/80 R20',    radius:0.522, inertia:21.00, group:'R20',   usage:'Ağır Askeri / Özel' },
   { id:'1200_r20',    name:'12,00 R20',     radius:0.547, inertia:19.50, group:'R20',   usage:'Ağır Askeri / Özel' },
   { id:'365_85r20',   name:'365/85 R20',    radius:0.552, inertia:22.50, group:'R20',   usage:'Ağır Askeri / Özel' },
   { id:'395_85r20',   name:'395/85 R20',    radius:0.574, inertia:27.90, group:'R20',   usage:'Ekstra Ağır / Arazi' },
