@@ -42,7 +42,7 @@ function _veSolveOtherTopologies(options) {
         continue;
       }
 
-      var _hasEngine = _otherTab.state.nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+      var _hasEngine = _otherTab.state.nodes.some(function(n) { return n.type === 'engine'; });
       if(!_hasEngine) {
         if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' — motor bileşeni yok, atlandı', 'warn');
         continue;
@@ -128,7 +128,7 @@ function veSolverValidate() {
   var allOk = true;
   
   // Bileşen kontrolleri
-  var hasEngine = nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var hasEngine = nodes.some(function(n) { return n.type === 'engine'; });
   var hasGearbox = nodes.some(function(n) { return n.type === 'gearbox'; });
   var hasWheel = nodes.some(function(n) { return n.type === 'wheel'; });
   var hasVehicle = nodes.some(function(n) { return n.type === 'vehicle'; });
@@ -161,7 +161,7 @@ function veSolverValidate() {
     html += '<div class="ve-validation-item" style="font-size:0.75rem;"><span>ℹ️</span><span>' + label + '</span></div>';
   }
   
-  addItem(hasEngine, 'Motor / Motor Freni bileşeni', hasEngine ? 'mevcut' : 'eksik');
+  addItem(hasEngine, 'Motor bileşeni', hasEngine ? 'mevcut' : 'eksik');
 
   // Senaryo bileşeni zorunlu kontrolü
   var mod = veGetActiveModule();
@@ -204,7 +204,7 @@ function veSolverValidate() {
   
   // Veri kontrolleri
   if(hasEngine) {
-    var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
     var hasData = engineNode && engineNode.data && engineNode.data.torqueData && engineNode.data.torqueData.length >= 2;
     addItem(hasData, 'Motor tork verileri', hasData ? engineNode.data.torqueData.length + ' veri noktası' : 'eksik veya yetersiz');
   }

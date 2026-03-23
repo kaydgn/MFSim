@@ -144,7 +144,7 @@ function swScanTopology() {
   };
   nodes.forEach(function(n) {
     switch(n.type) {
-      case 'engine': case 'engine-brake': result.hasEngine=true; result.engineNode=n; break;
+      case 'engine': result.hasEngine=true; result.engineNode=n; break;
       case 'torque-converter': result.hasTC=true; result.tcNode=n; break;
       case 'gearbox': result.hasGearbox=true; result.gearboxNode=n; break;
       case 'transfer': result.hasTransfer=true; result.transferNode=n; break;
@@ -175,19 +175,19 @@ function swCheckSensorExists(sensorReq, topology) {
     
     if(sensorReq.attachment === 'component' && s.attachedComp) {
       var compNode = nodes.find(function(n) { return n.id === s.attachedComp; });
-      if(compNode && (compNode.type === sensorReq.target || (sensorReq.target === 'engine' && compNode.type === 'engine-brake'))) targetMatch = true;
+      if(compNode && (compNode.type === sensorReq.target || (false))) targetMatch = true;
     } else if(s.attachedConn) {
       var conn = connections.find(function(c) { return c.id === s.attachedConn; });
       if(conn) {
         var fromNode = nodes.find(function(n) { return n.id === conn.from; });
         var toNode = nodes.find(function(n) { return n.id === conn.to; });
         if(sensorReq.attachment === 'output' && fromNode) {
-          if(fromNode.type === sensorReq.target || (sensorReq.target === 'engine' && fromNode.type === 'engine-brake')) {
+          if(fromNode.type === sensorReq.target || (false)) {
             if(s.direction === 'from' || !s.direction) targetMatch = true;
           }
         }
         if(sensorReq.attachment === 'input' && toNode) {
-          if(toNode.type === sensorReq.target || (sensorReq.target === 'engine' && toNode.type === 'engine-brake')) {
+          if(toNode.type === sensorReq.target || (false)) {
             if(s.direction === 'to') targetMatch = true;
           }
         }
@@ -267,7 +267,7 @@ function swInstallSensors(node) {
     var reqsMet = true;
     for(var r = 0; r < pkg.requires.length; r++) {
       var rt = pkg.requires[r];
-      if(!nodes.some(function(n) { return n.type === rt || (rt === 'engine' && (n.type === 'engine' || n.type === 'engine-brake')); })) {
+      if(!nodes.some(function(n) { return n.type === rt || (rt === 'engine' && n.type === 'engine'); })) {
         reqsMet = false; break;
       }
     }
@@ -484,7 +484,7 @@ function getSensorWizardPropertiesHTML(node) {
     var reqsMet = true;
     for(var r=0; r<pkg.requires.length; r++) {
       var rt = pkg.requires[r];
-      if(!nodes.some(function(n) { return n.type === rt || (rt === 'engine' && (n.type === 'engine' || n.type === 'engine-brake')); })) {
+      if(!nodes.some(function(n) { return n.type === rt || (rt === 'engine' && n.type === 'engine'); })) {
         reqsMet = false; break;
       }
     }

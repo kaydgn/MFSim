@@ -14,7 +14,7 @@ function veRunSimulationEngine() {
   var isPartial = chain._isPartial || false;
   
   // Bileşenleri bul
-  var engineNode = chain.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var engineNode = chain.find(function(n) { return n.type === 'engine'; });
   var tcNode = chain.find(function(n) { return n.type === 'torque-converter'; });
   var gearboxNode = chain.find(function(n) { return n.type === 'gearbox'; });
   var propshaftNodes = chain.filter(function(n) { return n.type === 'propshaft'; });
@@ -27,7 +27,7 @@ function veRunSimulationEngine() {
   var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
   var solverNode = nodes.find(function(n) { return n.type === 'solver'; });
   
-  if(!engineNode) throw new Error('Motor/Motor Freni bileşeni eksik');
+  if(!engineNode) throw new Error('Motor bileşeni eksik');
   
   // Propşaft konumları: zincirdeki sıraya göre transfer öncesi/sonrası ayır
   var propshaftPreTransfer = [];  // Şanzıman → Transfer arası
@@ -86,10 +86,8 @@ function veRunSimulationEngine() {
   
   // ====== SENARYO ======
   var scd = scenarioNode ? (scenarioNode.data || {}) : {};
-  var scenarioType = scd.scenarioType || 'coast';
-  var brakeForce = parseFloat(scd.brakeForce) || 0;
+  var scenarioType = scd.scenarioType || 'full_throttle';
   var throttlePct = scenarioType === 'partial_throttle' ? ((parseFloat(scd.throttle) || 50) / 100) : 1.0;
-  if(scenarioType === 'coast') throttlePct = 0;
   
   // ====== ÇÖZÜCÜ PARAMETRELERİ ======
   var sd = solverNode ? (solverNode.data || {}) : {};
@@ -319,13 +317,7 @@ function veRunSimulationEngine() {
       
       // Senaryo bazlı tork
       var T_net = 0;
-      if(scenarioType === 'coast') {
-        // Motor freni: negatif tork (kompresyon freni)
-        T_net = -T_engine_raw;
-      } else if(scenarioType === 'full_brake') {
-        // Motor freni + mekanik fren
-        T_net = -T_engine_raw - brakeForce * 0.01; // basitleştirilmiş
-      } else if(scenarioType === 'full_throttle') {
+      if(scenarioType === 'full_throttle') {
         T_net = T_engine_raw;
       } else if(scenarioType === 'partial_throttle') {
         T_net = T_engine_raw * throttlePct;
@@ -345,7 +337,7 @@ function veRunSimulationEngine() {
       var rpm = omega * 60 / (2 * Math.PI);
       
       // Rölanti altına düşmesin
-      if(rpm < idleRpm * 0.5 && scenarioType !== 'coast') {
+      if(rpm < idleRpm * 0.5) {
         rpm = idleRpm * 0.5;
         omega = rpm * 2 * Math.PI / 60;
       }
@@ -421,7 +413,7 @@ function veRunSimulationEngine() {
         nd_eng.rpm.push(st.rpm);
         nd_eng.torque.push(st.T_engine);
         nd_eng.power.push(st.T_engine * st.rpm * Math.PI / 30 / 1000); // kW
-        if(nd_eng.brake_torque) nd_eng.brake_torque.push(st.T_engine);
+
         if(nd_eng.angular_vel) nd_eng.angular_vel.push(omega);
       }
       
@@ -584,50 +576,24 @@ function veRunSimulationEngine() {
     var v_kmh = v_ms * 3.6;
     
     // Motor torku
-    // Motor freni senaryolarında: governor geçerli DEĞİL (motor tekerlek tarafından çevriliyor)
-    // Governor sadece yakıt enjeksiyonunu sınırlar, retardasyon torkunu değil
     var T_engine_raw, T_engine = 0;
-    
-    if(scenarioType === 'coast' || scenarioType === 'full_brake') {
-      // ── MOTOR FRENİ: Gerçek RPM ile tork interpolasyonu ──
-      // Tork tablosu dışına çıkıyorsa: tablonun en yüksek RPM değerinde sabitle
-      var brakeRpm = rpm;
-      if(torqueTable.length > 0) {
-        var maxTableRpm = torqueTable[torqueTable.length - 1].rpm;
-        if(brakeRpm > maxTableRpm) brakeRpm = maxTableRpm;
-      }
-      T_engine_raw = interpTorque(brakeRpm);
-      
-      // Motor freni aktiflik kuralı:
-      // 1) 20 km/h altında motor freni devre dışı
-      // 2) Otomatik vites aktifse 1. ve 2. viteste motor freni devre dışı
-      var motorFreniAktif = true;
-      if(v_kmh < 20) motorFreniAktif = false;
-      if(autoShift && (currentGear <= 2)) motorFreniAktif = false;
-      
-      if(motorFreniAktif) {
-        T_engine = -T_engine_raw;
-      } else {
-        T_engine = 0;
-      }
-    } else {
-      // ── TAHRİK: Governor RPM sınırlaması geçerli ──
-      var effRpm = Math.min(rpm, governedRpm);
-      T_engine_raw = interpTorque(effRpm);
-      
-      // Governor tepkisi: rpm > governedRpm → tork kademeli kesme
-      if(rpm > governedRpm * 1.02) {
-        T_engine_raw = 0;
-      } else if(rpm > governedRpm) {
-        var overshoot = (rpm - governedRpm) / (governedRpm * 0.02);
-        T_engine_raw *= (1 - overshoot);
-      }
-      
-      if(scenarioType === 'full_throttle') {
-        T_engine = T_engine_raw;
-      } else if(scenarioType === 'partial_throttle') {
-        T_engine = T_engine_raw * throttlePct;
-      }
+
+    // Governor RPM sınırlaması geçerli
+    var effRpm = Math.min(rpm, governedRpm);
+    T_engine_raw = interpTorque(effRpm);
+
+    // Governor tepkisi: rpm > governedRpm → tork kademeli kesme
+    if(rpm > governedRpm * 1.02) {
+      T_engine_raw = 0;
+    } else if(rpm > governedRpm) {
+      var overshoot = (rpm - governedRpm) / (governedRpm * 0.02);
+      T_engine_raw *= (1 - overshoot);
+    }
+
+    if(scenarioType === 'full_throttle') {
+      T_engine = T_engine_raw;
+    } else if(scenarioType === 'partial_throttle') {
+      T_engine = T_engine_raw * throttlePct;
     }
     
     // Tekerlekteki kuvvet
@@ -638,9 +604,8 @@ function veRunSimulationEngine() {
     var Crr_eff = (typeof FT_SOLVER !== 'undefined' && FT_SOLVER.getCrrEffective) ? FT_SOLVER.getCrrEffective(Crr, v_ms) : Crr;
     var F_rolling = mass * g * Math.cos(gradeRad) * Crr_eff;
     var F_aero = 0.5 * rho * Cd * A * v_ms * v_ms;
-    var F_brake = brakeForce;
-    
-    var F_net = F_grade - F_rolling - F_aero - F_brake + F_engine;
+
+    var F_net = F_grade - F_rolling - F_aero + F_engine;
     var m_eff = mass * rotMass;
     
     return {
@@ -705,34 +670,20 @@ function veRunSimulationEngine() {
       var T_raw, T_engine = 0;
       var v_kmh = v_eval * 3.6;
 
-      if(scenarioType === 'coast' || scenarioType === 'full_brake') {
-        // Motor freni: governor yok, gerçek RPM kullanılır
-        var brakeRpm = rpm;
-        if(torqueTable.length > 0) {
-          var maxTR = torqueTable[torqueTable.length - 1].rpm;
-          if(brakeRpm > maxTR) brakeRpm = maxTR;
-        }
-        T_raw = interpTorque(brakeRpm);
-        var mfAktif = true;
-        if(v_kmh < 20) mfAktif = false;
-        if(autoShift && (_rk45_lastGear <= 2)) mfAktif = false;
-        if(mfAktif) T_engine = -T_raw;
-      } else {
-        // Tahrik: governor geçerli
-        var effRpm = Math.min(rpm, governedRpm);
-        T_raw = interpTorque(effRpm);
-        if(rpm > governedRpm * 1.02) T_raw = 0;
-        else if(rpm > governedRpm) T_raw *= (1 - (rpm - governedRpm) / (governedRpm * 0.02));
-        if(scenarioType === 'full_throttle') T_engine = T_raw;
-        else if(scenarioType === 'partial_throttle') T_engine = T_raw * throttlePct;
-      }
+      // Governor geçerli
+      var effRpm = Math.min(rpm, governedRpm);
+      T_raw = interpTorque(effRpm);
+      if(rpm > governedRpm * 1.02) T_raw = 0;
+      else if(rpm > governedRpm) T_raw *= (1 - (rpm - governedRpm) / (governedRpm * 0.02));
+      if(scenarioType === 'full_throttle') T_engine = T_raw;
+      else if(scenarioType === 'partial_throttle') T_engine = T_raw * throttlePct;
 
       var F_engine = T_engine * _rk45_lastTotalRatio * totalEff / rWheel;
       var F_grade = mass * g * Math.sin(gradeRad);
       var Crr_eff_rk = (typeof FT_SOLVER !== 'undefined' && FT_SOLVER.getCrrEffective) ? FT_SOLVER.getCrrEffective(Crr, v_eval) : Crr;
       var F_rolling = mass * g * Math.cos(gradeRad) * Crr_eff_rk;
       var F_aero = 0.5 * rho * Cd * A * v_eval * v_eval;
-      var F_net = F_grade - F_rolling - F_aero - brakeForce + F_engine;
+      var F_net = F_grade - F_rolling - F_aero + F_engine;
 
       return F_net / (mass * rotMass);
     }
@@ -870,7 +821,7 @@ function veRunSimulationEngine() {
         dist += 0.5 * (v_prev + v_ri) * dt_ri;
         
         // Enerji dengesi
-        energyTracker.addStep(v_prev, v_ri, dt_ri, st_ri.F_engine, st_ri.F_rolling, st_ri.F_aero, st_ri.F_grade, brakeForce);
+        energyTracker.addStep(v_prev, v_ri, dt_ri, st_ri.F_engine, st_ri.F_rolling, st_ri.F_aero, st_ri.F_grade);
       }
       res_distance.push(dist);
       
@@ -883,7 +834,7 @@ function veRunSimulationEngine() {
         ne.rpm.push(st_ri.rpm);
         ne.torque.push(st_ri.T_engine);
         ne.power.push(st_ri.T_engine * st_ri.rpm * Math.PI / 30 / 1000);
-        if(ne.brake_torque) ne.brake_torque.push(st_ri.T_engine);
+
         if(ne.angular_vel) ne.angular_vel.push(st_ri.rpm * 2 * Math.PI / 60);
       }
       
@@ -1019,7 +970,7 @@ function veRunSimulationEngine() {
       ne.rpm.push(st2.rpm);
       ne.torque.push(st2.T_engine);
       ne.power.push(st2.T_engine * st2.rpm * Math.PI / 30 / 1000);
-      if(ne.brake_torque) ne.brake_torque.push(st2.T_engine);
+
       if(ne.angular_vel) ne.angular_vel.push(st2.rpm * 2 * Math.PI / 60);
     }
     
@@ -1145,7 +1096,7 @@ function veRunSimulationEngine() {
       dist += 0.5 * (v_old + v) * dt;
       
       // Enerji dengesi (klasik solverlar)
-      energyTracker.addStep(v_old, v, dt, st2.F_engine, st2.F_rolling, st2.F_aero, st2.F_grade, brakeForce);
+      energyTracker.addStep(v_old, v, dt, st2.F_engine, st2.F_rolling, st2.F_aero, st2.F_grade);
     }
     
     // Durma kontrolü

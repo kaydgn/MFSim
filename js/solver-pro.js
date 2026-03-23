@@ -164,7 +164,7 @@ function veSolverRunProfessional() {
   addStep(function() {
     setProgress(10);
     // Zorunlu bileşen kontrolü
-    var hasEngine = nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var hasEngine = nodes.some(function(n) { return n.type === 'engine'; });
     var hasVehicle = nodes.some(function(n) { return n.type === 'vehicle'; });
     var hasSolver = nodes.some(function(n) { return n.type === 'solver'; });
     var hasWheel = nodes.some(function(n) { return n.type === 'wheel'; });
@@ -237,7 +237,7 @@ function veSolverRunProfessional() {
   
   addStep(function() {
     // Motor
-    var eng = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var eng = nodes.find(function(n) { return n.type === 'engine'; });
     if(eng) {
       var ed = eng.data || {};
       var rows = ed.torqueData || [];
@@ -287,13 +287,13 @@ function veSolverRunProfessional() {
           log('  Shift Ref. RPM  : ' + logRefRPM + ' (kullanıcı tanımlı)', 'dim');
         } else {
           // governed speed'i bul
-          var engN = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+          var engN = nodes.find(function(n) { return n.type === 'engine'; });
           var engSp = engN ? ((engN.data || {}).motorSpecs || {}) : {};
           var govLog = parseFloat(engSp.governedSpeed) || parseFloat((engN || {}).data ? engN.data.governedRpm : 0) || 0;
           if(govLog) log('  Shift Ref. RPM  : ' + govLog + ' (motor governed)', 'dim');
         }
         var spLogData = VE_FT_SHIFT_PROFILES[gd.shiftProfile || 'allison3200sp_s1'] || {};
-        var refForLog = logRefRPM || (function(){ var eN = nodes.find(function(n){return n.type==='engine'||n.type==='engine-brake';}); return eN ? (parseFloat(((eN.data||{}).motorSpecs||{}).governedSpeed)||parseFloat((eN.data||{}).governedRpm)||0) : 0; })();
+        var refForLog = logRefRPM || (function(){ var eN = nodes.find(function(n){return n.type==='engine';}); return eN ? (parseFloat(((eN.data||{}).motorSpecs||{}).governedSpeed)||parseFloat((eN.data||{}).governedRpm)||0) : 0; })();
         if(refForLog && (spLogData.lockupOffset || spLogData.lockupShifts)) {
           // Converter geçişleri
           if(spLogData.converterShifts) {
@@ -444,7 +444,7 @@ function veSolverRunProfessional() {
         log('  Başlangıç hızı  : 0 km/h (sabit — tam gaz kalkış)', 'dim');
         if(!mass || mass <= 0) log('  ✗ Araç ağırlığı (GVW) girişi gerekli!', 'err');
       } else {
-        // Motor Freni alanları
+        // Diğer mod alanları
         var mass = parseFloat(vd.mass);
         var speed = parseFloat(vd.initialSpeed);
         log('  Araç ağırlığı   : ' + (mass || '—') + ' kg', mass > 0 ? 'ok' : 'err');
@@ -543,7 +543,7 @@ function veSolverRunProfessional() {
         log('  Bitiş koşulu   : F_net ≤ 0 (son vites, çekiş = direnç)', 'dim');
         log('  Tork interpol.  : PCHIP Spline (C¹ sürekli)', 'dim');
       } else {
-        // Motor Freni modu
+        // Diğer mod
         var mLabel = sd.method === 'heun' ? 'Heun (2. derece)' : sd.method === 'rk4' ? 'RK4 (4. derece)' : sd.method === 'rk45' ? 'RK45 Dormand-Prince (adaptif)' : sd.method === 'ralston' ? 'Ralston (2. derece)' : 'Basit Euler';
         var simTime = sd.timeMode === 'stop' ? (sd.maxSimTime || 300) : (sd.duration || 60);
         var res = sd.resolution || 200;
@@ -675,7 +675,7 @@ function veSolverRunProfessional() {
         log('    Önerilen süre: ' + Math.ceil(_estTime * 1.3) + ' s veya "Durma Analizi" kullanın', 'warn');
       }
     }
-    } // end motor freni
+    } // end validation
     log('Hesap başlıyor...');
     logSpacer();
     
@@ -1231,7 +1231,7 @@ function veSolverRunProfessional() {
           logSpacer();
 
         } else if(simResult.speed && simResult.speed.length > 0 && simResult.F_grade) {
-          // ── MOTOR FRENİ KUVVET DENGESİ ANALİZİ ──
+          // ── KUVVET DENGESİ ANALİZİ ──
           logSpacer();
           log('═══════════════════════════════════════════', 'head');
           log('  KUVVET DENGESİ ANALİZİ', 'head');
@@ -1242,22 +1242,17 @@ function veSolverRunProfessional() {
           var Fr0 = simResult.F_rolling ? simResult.F_rolling[0] : 0;
           var Fa0 = simResult.F_aero ? simResult.F_aero[0] : 0;
           var Fn0 = simResult.F_net ? simResult.F_net[0] : 0;
-          var Te0 = simResult.engineTorque ? Math.abs(simResult.engineTorque[0]) : 0;
-          var Fb0 = Math.abs(Fg0) > 0 ? (Math.abs(Fr0) + Math.abs(Fa0) + (Math.abs(Fn0 - Fg0 + Math.abs(Fr0) + Math.abs(Fa0)))) : 0;
-          Fb0 = Math.abs(Fg0 - Math.abs(Fr0) - Math.abs(Fa0) - Fn0);
-          var topDirenc0 = Math.abs(Fr0) + Math.abs(Fa0) + Fb0;
+          var topDirenc0 = Math.abs(Fr0) + Math.abs(Fa0);
           var kap0 = Math.abs(Fg0) > 0 ? (topDirenc0 / Math.abs(Fg0)) * 100 : 0;
           
           log('┌─ t=0 (Başlangıç Anı) ─────────────────', 'info');
           log('│ Hız              : ' + simResult.speed[0].toFixed(1) + ' km/h', 'dim');
           log('│ Motor Devri      : ' + (simResult.rpm ? simResult.rpm[0].toFixed(0) : '—') + ' d/d', 'dim');
-          log('│ Motor Freni Torku: ' + Te0.toFixed(0) + ' Nm', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
           log('│   Eğim Kuvveti    (F_grade) : +' + Math.abs(Fg0).toFixed(0) + ' N  (hızlandırıcı)');
           log('│   Yuvarlanma Dir. (F_roll)  : -' + Math.abs(Fr0).toFixed(0) + ' N  (frenleme)');
           log('│   Hava Direnci    (F_aero)  : -' + Math.abs(Fa0).toFixed(0) + ' N  (frenleme)');
-          log('│   Motor Freni     (F_brake) : -' + Fb0.toFixed(0) + ' N  (frenleme)');
           log('│   ─────────────────────────────');
           log('│   TOPLAM DİRENÇ            : ' + topDirenc0.toFixed(0) + ' N');
           log('│   NET KUVVET               : ' + (Fn0 >= 0 ? '+' : '') + Fn0.toFixed(0) + ' N' + (Fn0 > 10 ? '  → hızlanıyor' : (Fn0 < -10 ? '  → yavaşlıyor' : '  → dengede')));
@@ -1273,21 +1268,17 @@ function veSolverRunProfessional() {
           var FrL = simResult.F_rolling ? simResult.F_rolling[li] : 0;
           var FaL = simResult.F_aero ? simResult.F_aero[li] : 0;
           var FnL = simResult.F_net ? simResult.F_net[li] : 0;
-          var TeL = simResult.engineTorque ? Math.abs(simResult.engineTorque[li]) : 0;
-          var FbL = Math.abs(FgL - Math.abs(FrL) - Math.abs(FaL) - FnL);
-          var topDirencL = Math.abs(FrL) + Math.abs(FaL) + FbL;
+          var topDirencL = Math.abs(FrL) + Math.abs(FaL);
           var kapL = Math.abs(FgL) > 0 ? (topDirencL / Math.abs(FgL)) * 100 : 0;
           
           log('┌─ t=' + simResult.time[li].toFixed(1) + 's (Bitiş Anı) ─────────────────', 'info');
           log('│ Hız              : ' + simResult.speed[li].toFixed(1) + ' km/h', 'dim');
           log('│ Motor Devri      : ' + (simResult.rpm ? simResult.rpm[li].toFixed(0) : '—') + ' d/d', 'dim');
-          log('│ Motor Freni Torku: ' + TeL.toFixed(0) + ' Nm', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
           log('│   Eğim Kuvveti    (F_grade) : +' + Math.abs(FgL).toFixed(0) + ' N');
           log('│   Yuvarlanma Dir. (F_roll)  : -' + Math.abs(FrL).toFixed(0) + ' N');
           log('│   Hava Direnci    (F_aero)  : -' + Math.abs(FaL).toFixed(0) + ' N');
-          log('│   Motor Freni     (F_brake) : -' + FbL.toFixed(0) + ' N');
           log('│   ─────────────────────────────');
           log('│   TOPLAM DİRENÇ            : ' + topDirencL.toFixed(0) + ' N');
           log('│   NET KUVVET               : ' + (FnL >= 0 ? '+' : '') + FnL.toFixed(0) + ' N' + (FnL > 10 ? '  → hızlanıyor' : (FnL < -10 ? '  → yavaşlıyor' : '  → dengede')));
@@ -1301,11 +1292,11 @@ function veSolverRunProfessional() {
           var hizDeg = simResult.speed[li] - simResult.speed[0];
           log('KUVVET DENGESİ DEĞERLENDİRMESİ:', 'info');
           if(kap0 >= 100 && kapL >= 100) {
-            log('  ✓ Motor freni tüm süre boyunca YETERLİ', 'ok');
+            log('  ✓ Direnç kuvvetleri tüm süre boyunca YETERLİ', 'ok');
           } else if(kap0 >= 100) {
-            log('  ⚠ Motor freni başlangıçta yeterli, sonda yetersiz', 'warn');
+            log('  ⚠ Direnç kuvvetleri başlangıçta yeterli, sonda yetersiz', 'warn');
           } else {
-            log('  ✗ Motor freni YETERSİZ — ek frenleme gerekli', 'err');
+            log('  ✗ Direnç kuvvetleri YETERSİZ', 'err');
           }
           log('  Hız değişimi: ' + (hizDeg >= 0 ? '+' : '') + hizDeg.toFixed(2) + ' km/h (' + (hizDeg > 0.5 ? 'hızlandı' : (hizDeg < -0.5 ? 'yavaşladı' : 'dengede')) + ')');
           logSpacer();
@@ -1386,7 +1377,7 @@ function veSolverRunProfessional() {
 // Bağlantılardan güç aktarma zincirini otomatik çıkar
 function veGetPowertrainChain() {
   // Motor (kaynak) bul → bağlantıları takip et → Sonlandırıcı veya zincir sonuna kadar
-  var engineNodes = nodes.filter(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var engineNodes = nodes.filter(function(n) { return n.type === 'engine'; });
   if(engineNodes.length === 0) return [];
   
   var chain = [];

@@ -29,7 +29,7 @@ function veGetSensorData(sensorId, signalOverride) {
 
     // Hedef bileşeni bul
     var compNode = tabNodes.find(function(n) {
-      return n.type === compType || (compType === 'engine' && n.type === 'engine-brake');
+      return n.type === compType;
     });
 
     // nodeData'dan doğrudan oku
@@ -195,8 +195,6 @@ function veGetSensorData(sensorId, signalOverride) {
   // ====== MOTOR SİNYALLERİ FALLBACK ======
   if(sig === 'rpm' && r.rpm && r.rpm.length > 0) return r.rpm;
   if(sig === 'torque' && r.engineTorque && r.engineTorque.length > 0) return r.engineTorque;
-  if(sig === 'brake_torque' && r.engineTorque && r.engineTorque.length > 0) return r.engineTorque;
-  
   // ====== TC SİNYALLERİ FALLBACK ======
   if(sig === 'speed_ratio' && r.SR) return r.SR;
   if(sig === 'torque_ratio' && r.tau) return r.tau;
@@ -1204,7 +1202,7 @@ function veGenerateReport() {
   }
   
   // Bileşen verilerini topla
-  var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
   var gearboxNode = nodes.find(function(n) { return n.type === 'gearbox'; });
   var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
   var transferNode = nodes.find(function(n) { return n.type === 'transfer'; });
@@ -1308,7 +1306,7 @@ function veGenerateReport() {
     v_start_kmh: v_start_kmh, simSure: simSure,
     vitesAdi: vitesAdi, zamanAdimi: zamanAdimi,
     motorAdi: engineNode ? (engineNode.customName || (componentDefs[engineNode.type] ? componentDefs[engineNode.type].name : '')) : '',
-    senaryoAdi: scd.scenarioType === 'coast' ? 'Serbest İniş' : (scd.scenarioType === 'partial_throttle' ? 'Kısmi Gaz' : 'Motor Freni Analizi'),
+    senaryoAdi: scd.scenarioType === 'partial_throttle' ? 'Kısmi Gaz' : 'Tam Gaz Analizi',
     solverMethod: sd.method || 'euler',
     gearRatios: gearRatios, currentGear: currentGear
   };

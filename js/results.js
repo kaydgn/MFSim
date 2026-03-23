@@ -146,7 +146,7 @@ function veUpdateResultsTree() {
       }
       
       // Güç aktarma bileşenleri
-      var driveTypes = ['engine','engine-brake','torque-converter','gearbox','transfer','differential','wheel'];
+      var driveTypes = ['engine','torque-converter','gearbox','transfer','differential','wheel'];
       driveTypes.forEach(function(type) {
         var comps = tabNodeObjs.filter(function(n) { return n.type === type; });
         comps.forEach(function(comp) {
@@ -244,7 +244,7 @@ function veUpdateResultsTree() {
 
           var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
           if(compType === 'engine') {
-            var engN = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+            var engN = tabNodeObjs.find(function(n) { return n.type === 'engine'; });
             if(engN) compName = componentDefs[engN.type] ? componentDefs[engN.type].name : compName;
           }
 
@@ -260,10 +260,6 @@ function veUpdateResultsTree() {
             // Sinyal bilgisini COMPONENT_SIGNALS'tan al
             var sigInfo = null;
             var lookupType = compType;
-            if(compType === 'engine') {
-              var engN2 = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
-              if(engN2) lookupType = engN2.type;
-            }
             if(COMPONENT_SIGNALS[lookupType]) {
               sigInfo = (COMPONENT_SIGNALS[lookupType].outputs || []).find(function(s) { return s.id === ws.signal; });
             }
@@ -3420,19 +3416,11 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
 
     // Sinyal bilgisini bul
     var sigInfo = null;
-    var effectiveType = compType;
-    if(compType === 'engine') {
-      var engNode = tabNodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
-      if(engNode) effectiveType = engNode.type;
-    }
-    if(COMPONENT_SIGNALS[effectiveType]) {
-      sigInfo = (COMPONENT_SIGNALS[effectiveType].outputs || []).find(function(s) { return s.id === signalId; });
-    }
-    if(!sigInfo && COMPONENT_SIGNALS[compType]) {
+    if(COMPONENT_SIGNALS[compType]) {
       sigInfo = (COMPONENT_SIGNALS[compType].outputs || []).find(function(s) { return s.id === signalId; });
     }
 
-    var compName = componentDefs[effectiveType] ? componentDefs[effectiveType].name : compType;
+    var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
     var displayName = '[SW] ' + compName + ' — ' + (sigInfo ? sigInfo.name : signalId);
     slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
     veRenderSlot(slotIdx);
@@ -3510,12 +3498,7 @@ function veAddSensorToSlot(slotIdx, sensorId) {
   // ── Sihirbaz sanal sensörü: ~compType formatı — tüm sinyalleri ekle ──
   if(sensorId.charAt(0) === '~') {
     var compType = sensorId.substring(1);
-    var effectiveType = compType;
-    if(compType === 'engine') {
-      var engNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
-      if(engNode) effectiveType = engNode.type;
-    }
-    var allSigs = (COMPONENT_SIGNALS[effectiveType] || COMPONENT_SIGNALS[compType] || {}).outputs || [];
+    var allSigs = (COMPONENT_SIGNALS[compType] || {}).outputs || [];
     allSigs.forEach(function(sig) {
       veAddSignalToSlot(slotIdx, sensorId, sig.id);
     });
@@ -3802,7 +3785,7 @@ function veGetAvailableXAxisOptions(slotIdx) {
 
   // 3) Topolojideki bileşen sinyalleri
   var tabNodes = nodes || [];
-  var compOrder = ['engine','engine-brake','torque-converter','gearbox','shift-controller','transfer','propshaft','differential','wheel','vehicle','road','solver'];
+  var compOrder = ['engine','torque-converter','gearbox','shift-controller','transfer','propshaft','differential','wheel','vehicle','road','solver'];
   var added = {};
 
   compOrder.forEach(function(compType) {

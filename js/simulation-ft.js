@@ -1003,7 +1003,6 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       if(ne.rpm) ne.rpm.push(ph.N_engine);
       if(ne.torque) ne.torque.push(ph.T_engine);
       if(ne.power) ne.power.push(ph.T_engine * ph.N_engine * Math.PI / 30 / 1000);
-      if(ne.brake_torque) ne.brake_torque.push(0);
       if(ne.angular_vel) ne.angular_vel.push(ph.N_engine * 2 * Math.PI / 60);
     }
 
