@@ -1665,9 +1665,15 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   });
   var peakHP = peakPower * 1.341;
 
-  // FT Steps
+  // FT Steps — High range: ana simülasyondan
   var stepsHigh = (typeof veBuildFTStepsFromSim === 'function') ? veBuildFTStepsFromSim(sim, 'high') : [];
-  var stepsLow = (typeof veBuildFTStepsFromSim === 'function') ? veBuildFTStepsFromSim(sim, 'low') : [];
+  // Low range: gerçek düşük kademe simülasyonundan (ölçekleme yerine)
+  var _allRangeRes = (typeof window !== 'undefined') ? window._veFTAllRangeResults : null;
+  var _lowKademe = (R.transferGears && R.transferGears.length > 1) ? (R.transferGears[1].kademe || 'Low') : 'Low';
+  var _lowSim = _allRangeRes ? _allRangeRes[_lowKademe] : null;
+  var stepsLow = (typeof veBuildFTStepsFromSim === 'function' && _lowSim && _lowSim.speed && _lowSim.speed.length > 2)
+    ? veBuildFTStepsFromSim(_lowSim, 'low')
+    : [];
 
   // ECM hesaplamasi
   var _ecmResults = [];
@@ -2071,7 +2077,8 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     var psEff = 1.0;
     (R.propshafts || []).forEach(function(ps) { psEff *= (ps.eff / 100); });
     var ratio = R.diffRatio * trRatio;
-    var eff = (R.diffEff / 100) * (trEff / 100) * psEff * (R.gbEff / 100) * 100;
+    // Şanzıman verimi dahil değil — per-gear tork kaybı modeli ile hesaplanıyor (iSCAAN uyumu)
+    var eff = (R.diffEff / 100) * (trEff / 100) * psEff * 100;
     var nv = (ratio * 1000) / (R.tireRadius * 2 * Math.PI * 60);
     return { ratio: ratio, eff: eff, nv: nv };
   }
