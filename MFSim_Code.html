@@ -10644,9 +10644,10 @@ function onVEMotorParamChange(nodeId) {
   var verimEl = document.getElementById('ve-mf-verim-' + nodeId);
   var governedEl = document.getElementById('ve-governed-rpm-' + nodeId);
   
-  if(verimEl) node.data.verim = parseFloat(verimEl.value) || 100;
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+  if(verimEl) node.data.verim = pf(verimEl.value, 100);
   if(governedEl) {
-    node.data.governedRpm = parseFloat(governedEl.value) || 2100;
+    node.data.governedRpm = pf(governedEl.value, 2100);
     // motorSpecs varsa orayı da güncelle
     if(node.data.motorSpecs) node.data.motorSpecs.governedSpeed = node.data.governedRpm;
     propagateGovernedSpeed();
@@ -13018,7 +13019,7 @@ function onVEGearboxEffChange(nodeId) {
   if(!node) return;
   if(!node.data) node.data = {};
   var el = document.getElementById('ve-gearbox-eff-' + nodeId);
-  if(el) node.data.efficiency = parseFloat(el.value) || 97;
+  if(el) { var n = parseFloat(el.value); node.data.efficiency = isNaN(n) ? 97 : n; }
 }
 
 // Şanzıman satır HTML'i
@@ -13507,7 +13508,7 @@ function onECMParamChange(nodeId) {
   if(!node) return;
   if(!node.data) node.data = {};
   var ratingEl = document.getElementById('ecm-turbine-rating-' + nodeId);
-  if(ratingEl) node.data.turbineRating = parseFloat(ratingEl.value) || 3320;
+  if(ratingEl) { var n = parseFloat(ratingEl.value); node.data.turbineRating = isNaN(n) ? 3320 : n; }
   runECMatchingAnalysis(nodeId);
 }
 
@@ -16130,7 +16131,7 @@ function onVETCParamChange(nodeId) {
   }
   
   if(ratioEl && !lockedEl.checked) {
-    node.data.tcRatio = parseFloat(ratioEl.value) || 1.0;
+    var n = parseFloat(ratioEl.value); node.data.tcRatio = isNaN(n) ? 1.0 : n;
   }
 }
 
@@ -16323,7 +16324,7 @@ function onVETransferEffChange(nodeId) {
   if(!node) return;
   if(!node.data) node.data = {};
   var el = document.getElementById('ve-transfer-eff-' + nodeId);
-  if(el) node.data.efficiency = parseFloat(el.value) || 98;
+  if(el) { var n = parseFloat(el.value); node.data.efficiency = isNaN(n) ? 98 : n; }
 }
 
 function onVEFTTransferParamChange(nodeId) {
@@ -16331,9 +16332,10 @@ function onVEFTTransferParamChange(nodeId) {
   if(!node) return;
   if(!node.data) node.data = {};
   
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
   var nameEl = document.getElementById('ve-fttr-name-' + nodeId);
   if(nameEl) node.data.ftTrName = nameEl.value || 'İki Kademeli';
-  
+
   // Kademe tablosunu oku
   var gears = node.data.ftTrGears || [
     { kademe: 'High', ratio: 1.054, eff: 97.00 },
@@ -16342,8 +16344,8 @@ function onVEFTTransferParamChange(nodeId) {
   gears.forEach(function(g, idx) {
     var rEl = document.getElementById('ve-fttr-ratio-' + nodeId + '-' + idx);
     var eEl = document.getElementById('ve-fttr-eff-' + nodeId + '-' + idx);
-    if(rEl) g.ratio = parseFloat(rEl.value) || g.ratio;
-    if(eEl) g.eff = parseFloat(eEl.value) || g.eff;
+    if(rEl) g.ratio = pf(rEl.value, g.ratio);
+    if(eEl) g.eff = pf(eEl.value, g.eff);
   });
   node.data.ftTrGears = gears;
 }
@@ -16577,9 +16579,10 @@ function onVEPropshaftParamChange(nodeId) {
   var nameEl = document.getElementById('ve-ps-name-' + nodeId);
   var effEl = document.getElementById('ve-ps-eff-' + nodeId);
   var inerEl = document.getElementById('ve-ps-inertia-' + nodeId);
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
   if(nameEl) node.data.psName = nameEl.value || 'Tek Parça — Çift Mafsal';
-  if(effEl) node.data.psEff = parseFloat(effEl.value) || 98.60;
-  if(inerEl) node.data.psInertia = parseFloat(inerEl.value) || 0.5;
+  if(effEl) node.data.psEff = pf(effEl.value, 98.60);
+  if(inerEl) node.data.psInertia = pf(inerEl.value, 0.5);
 }
 
 // ===== DİFERANSİYEL ÖZELLİKLERİ =====
@@ -16683,10 +16686,11 @@ function onVEDiffParamChange(nodeId) {
   var ratioEl = document.getElementById('ve-diff-ratio-' + nodeId);
   var effEl = document.getElementById('ve-diff-eff-' + nodeId);
   
-  if(ratioEl) node.data.diffRatio = parseFloat(ratioEl.value) || 6.54;
-  if(effEl) node.data.efficiency = parseFloat(effEl.value) || 96;
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+  if(ratioEl) node.data.diffRatio = pf(ratioEl.value, 6.54);
+  if(effEl) node.data.efficiency = pf(effEl.value, 96);
   var inerEl = document.getElementById('ve-diff-inertia-' + nodeId);
-  if(inerEl) node.data.diffInertia = parseFloat(inerEl.value) || 1.0;
+  if(inerEl) node.data.diffInertia = pf(inerEl.value, 1.0);
 }
 
 // ===== TEKERLEK ÖZELLİKLERİ =====
@@ -16812,10 +16816,11 @@ function onVESolverParamChange(nodeId) {
     if(maxRow) maxRow.style.display = isStop ? '' : 'none';
     if(stopRow) stopRow.style.display = 'none';
   }
-  if(durEl) node.data.duration = parseFloat(durEl.value) || 60;
-  if(maxEl) node.data.maxSimTime = parseFloat(maxEl.value) || 300;
-  if(ssEl) node.data.stopSpeed = parseFloat(ssEl.value) || 2;
-  
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+  if(durEl) node.data.duration = pf(durEl.value, 60);
+  if(maxEl) node.data.maxSimTime = pf(maxEl.value, 300);
+  if(ssEl) node.data.stopSpeed = pf(ssEl.value, 2);
+
   // Çözünürlük → dt hesapla
   if(resEl) {
     var steps = parseInt(resEl.value) || 200;
@@ -16847,8 +16852,8 @@ function onVESolverParamChange(nodeId) {
   // RK45 tolerans parametreleri (MF modu)
   var atolEl = el('ve-solver-atol-' + nodeId);
   var rtolEl = el('ve-solver-rtol-' + nodeId);
-  if(atolEl) node.data.atol = parseFloat(atolEl.value) || 1e-6;
-  if(rtolEl) node.data.rtol = parseFloat(rtolEl.value) || 1e-4;
+  if(atolEl) node.data.atol = pf(atolEl.value, 1e-6);
+  if(rtolEl) node.data.rtol = pf(rtolEl.value, 1e-4);
   
   // Performans Analizi checkbox
   var perfEl = el('ve-solver-perfanalysis-' + nodeId);
@@ -16860,11 +16865,11 @@ function onVESolverParamChange(nodeId) {
 
   // FT modu parametreleri
   var ftDtEl = el('ve-solver-ftdt-' + nodeId);
-  if(ftDtEl) node.data.ftDt = parseFloat(ftDtEl.value) || 0.01;
+  if(ftDtEl) node.data.ftDt = pf(ftDtEl.value, 0.01);
   var ftAtolEl = el('ve-solver-ftatol-' + nodeId);
   var ftRtolEl = el('ve-solver-ftrtol-' + nodeId);
-  if(ftAtolEl) node.data.ftAtol = parseFloat(ftAtolEl.value) || 1e-6;
-  if(ftRtolEl) node.data.ftRtol = parseFloat(ftRtolEl.value) || 1e-4;
+  if(ftAtolEl) node.data.ftAtol = pf(ftAtolEl.value, 1e-6);
+  if(ftRtolEl) node.data.ftRtol = pf(ftRtolEl.value, 1e-4);
 }
 
 // ===== VİTES GEÇİŞLERİ ÖZELLİKLERİ =====
@@ -21782,9 +21787,10 @@ function onVEWheelParamChange(nodeId) {
   var crrEl = document.getElementById('ve-wheel-crr-' + nodeId);
   var deltaEl = document.getElementById('ve-wheel-delta-' + nodeId);
   
-  if(radiusEl) node.data.wheelRadius = parseFloat(radiusEl.value) || 0.60876;
-  if(crrEl) node.data.rollingResistance = parseFloat(crrEl.value) || 0.010;
-  if(deltaEl) node.data.rotatingMass = parseFloat(deltaEl.value) || 1.08;
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+  if(radiusEl) node.data.wheelRadius = pf(radiusEl.value, 0.60876);
+  if(crrEl) node.data.rollingResistance = pf(crrEl.value, 0.010);
+  if(deltaEl) node.data.rotatingMass = pf(deltaEl.value, 1.08);
   
   // Master tekerlek → diğer tekerlekleri senkronize et
   if(node.isMasterWheel) {
@@ -21812,11 +21818,12 @@ function onVEFTWheelParamChange(nodeId) {
   var crrEl = document.getElementById('ve-ftwh-crr-' + nodeId);
   var surfaceEl = document.getElementById('ve-ftwh-surface-' + nodeId);
   
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
   if(nameEl) node.data.ftTireName = nameEl.value || 'Michelin XZL 395/85R20';
-  if(radiusEl) node.data.ftTireRadius = parseFloat(radiusEl.value) || 0.573;
-  if(inertiaEl) node.data.ftTireInertia = parseFloat(inertiaEl.value) || 56.0;
-  if(crrEl) node.data.ftCrr = parseFloat(crrEl.value) || 0.0035;
-  if(surfaceEl) node.data.ftSurfaceFactor = parseFloat(surfaceEl.value) || 1.00;
+  if(radiusEl) node.data.ftTireRadius = pf(radiusEl.value, 0.573);
+  if(inertiaEl) node.data.ftTireInertia = pf(inertiaEl.value, 56.0);
+  if(crrEl) node.data.ftCrr = pf(crrEl.value, 0.0035);
+  if(surfaceEl) node.data.ftSurfaceFactor = pf(surfaceEl.value, 1.00);
   
   // rev/km güncelle
   var r = node.data.ftTireRadius;
@@ -22130,10 +22137,11 @@ function onVEVehicleParamChange(nodeId) {
   
   var el = function(suffix) { return document.getElementById('ve-vehicle-' + suffix + '-' + nodeId); };
   
-  if(el('mass')) node.data.mass = parseFloat(el('mass').value) || '';
-  if(el('speed')) node.data.initialSpeed = parseFloat(el('speed').value) || '';
-  if(el('cd')) node.data.cd = parseFloat(el('cd').value) || 0.65;
-  if(el('area')) node.data.frontalArea = parseFloat(el('area').value) || 6.7;
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+  if(el('mass')) node.data.mass = pf(el('mass').value, '');
+  if(el('speed')) node.data.initialSpeed = pf(el('speed').value, '');
+  if(el('cd')) node.data.cd = pf(el('cd').value, 0.65);
+  if(el('area')) node.data.frontalArea = pf(el('area').value, 6.7);
   if(el('autoshift')) node.data.autoShift = el('autoshift').checked;
 }
 
@@ -22144,18 +22152,19 @@ function onVEFTVehicleParamChange(nodeId) {
   
   var g = function(suffix) { return document.getElementById('ve-ftv-' + suffix + '-' + nodeId); };
   
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
   if(g('name')) node.data.ftVehName = g('name').value || 'BMC 4x4 2.5T';
-  if(g('gvw')) node.data.ftGVW = parseFloat(g('gvw').value) || 14900;
-  if(g('driven')) node.data.ftDrivenWeight = parseFloat(g('driven').value) || 100;
-  if(g('height')) node.data.ftHeight = parseFloat(g('height').value) || 3.200;
-  if(g('width')) node.data.ftWidth = parseFloat(g('width').value) || 2.500;
-  if(g('cd')) node.data.ftCd = parseFloat(g('cd').value) || 0.900;
-  if(g('rho')) node.data.ftRho = parseFloat(g('rho').value) || 1.225;
-  
+  if(g('gvw')) node.data.ftGVW = pf(g('gvw').value, 14900);
+  if(g('driven')) node.data.ftDrivenWeight = pf(g('driven').value, 100);
+  if(g('height')) node.data.ftHeight = pf(g('height').value, 3.200);
+  if(g('width')) node.data.ftWidth = pf(g('width').value, 2.500);
+  if(g('cd')) node.data.ftCd = pf(g('cd').value, 0.900);
+  if(g('rho')) node.data.ftRho = pf(g('rho').value, 1.225);
+
   // Readonly alanları güncelle
-  var h = node.data.ftHeight || 3.200;
-  var w = node.data.ftWidth || 2.500;
-  var cd = node.data.ftCd || 0.900;
+  var h = node.data.ftHeight !== undefined ? node.data.ftHeight : 3.200;
+  var w = node.data.ftWidth !== undefined ? node.data.ftWidth : 2.500;
+  var cd = node.data.ftCd !== undefined ? node.data.ftCd : 0.900;
   var A = h * w;
   if(g('area')) g('area').value = A.toFixed(3);
   if(g('cda')) g('cda').value = (cd * A).toFixed(3);
@@ -22249,9 +22258,10 @@ function onVERoadParamChange(nodeId) {
   var egimEl = el('ve-road-egimmode-' + nodeId);
 
   if(gradeEl) node.data.grade = parseFloat(gradeEl.value);
-  if(altEl) node.data.altitude = parseFloat(altEl.value) || '';
-  if(tempEl) node.data.temperature = parseFloat(tempEl.value) || '';
-  if(densEl) node.data.airDensity = parseFloat(densEl.value) || '';
+  var pfOrEmpty = function(v) { var n = parseFloat(v); return isNaN(n) ? '' : n; };
+  if(altEl) node.data.altitude = pfOrEmpty(altEl.value);
+  if(tempEl) node.data.temperature = pfOrEmpty(tempEl.value);
+  if(densEl) node.data.airDensity = pfOrEmpty(densEl.value);
   if(egimEl) node.data.egimMode = egimEl.value;
 }
 
@@ -25836,7 +25846,7 @@ function veFlushOpenPanelData() {
           onVETCParamChange(nid);
         }
         break;
-      case 'transfer-case':
+      case 'transfer':
         if(isFT) {
           onVEFTTransferParamChange(nid);
         } else {
