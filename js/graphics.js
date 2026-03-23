@@ -1604,7 +1604,7 @@ function veNameToEmail(name) {
   return parts.join('.') + '@bmc.com.tr';
 }
 
-function veGenerateFTTxtReport(sim) {
+function veGenerateFTTxtReport(sim, optHazirlayan) {
   var W = 80;
   var WW = 130;
 
@@ -1649,7 +1649,7 @@ function veGenerateFTTxtReport(sim) {
   var G = sim.gradeability;
   var A = sim.acceleration;
   var ss = sim.solverStats || {};
-  var hazirlayan = (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
+  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
@@ -2713,7 +2713,7 @@ window.addEventListener('resize', function() {
 
 
 // ═══════ HIZLANMA-YAVASLAMA SEGMENT ANALIZI TXT RAPOR ═══════
-function veGenerateSegmentDriveTxtReport(sim) {
+function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   var W = 80;
   var WW = 140;
 
@@ -2758,7 +2758,7 @@ function veGenerateSegmentDriveTxtReport(sim) {
   }
 
   var R = sim.reportSnapshot || {};
-  var hazirlayan = (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
+  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');

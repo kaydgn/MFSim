@@ -4565,6 +4565,7 @@ function veRenderTXTReport(reportType) {
   // Store content for download
   window._veTxtPreviewContent = txtContent;
   window._veTxtPreviewFilename = downloadName;
+  window._veTxtPreviewReportType = reportType;
 
   overlay.innerHTML = html;
   overlay.style.display = 'flex';
@@ -4613,25 +4614,84 @@ function veRenderSegmentDriveTXTReport() {
 
   window._veTxtPreviewContent = txtContent;
   window._veTxtPreviewFilename = downloadName;
+  window._veTxtPreviewReportType = 'sd';
 
   overlay.innerHTML = html;
   overlay.style.display = 'flex';
 }
 
 function veDownloadTXTFromPreview() {
-  var content = window._veTxtPreviewContent;
-  var filename = window._veTxtPreviewFilename;
-  if(!content) { showToast('İndirilecek içerik bulunamadı', 'warning'); return; }
-  var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = filename || 'rapor.txt';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('TXT rapor indirildi', 'success');
+  if(!window._veTxtPreviewContent) { showToast('İndirilecek içerik bulunamadı', 'warning'); return; }
+
+  // Mini modal — yazar adı sor
+  var ov = document.createElement('div');
+  ov.id = 've-txt-author-overlay';
+  ov.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center;';
+  ov.addEventListener('mousedown', function(e) { if(e.target === ov) ov.remove(); });
+
+  var box = document.createElement('div');
+  box.style.cssText = 'width:340px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  box.innerHTML = '' +
+    '<div style="padding:10px 14px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); display:flex; align-items:center; justify-content:space-between;">' +
+      '<span style="font-size:0.82rem; font-weight:700; color:#e2e8f0;">📥 TXT Rapor İndir</span>' +
+      '<button onclick="document.getElementById(\'ve-txt-author-overlay\').remove()" style="width:24px; height:24px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:3px; color:#e2e8f0; cursor:pointer; font-size:0.85rem;">✕</button>' +
+    '</div>' +
+    '<div style="padding:14px 16px;">' +
+      '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Yazar Adı:</label>' +
+      '<input type="text" id="ve-txt-author-input" placeholder="İsim Soyisim" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; box-sizing:border-box;">' +
+      '<div id="ve-txt-author-email" style="margin-top:6px; font-size:0.65rem; color:var(--text-muted); min-height:1.2em;"></div>' +
+      '<button id="ve-txt-author-ok" style="width:100%; margin-top:10px; padding:8px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:5px; font-size:0.78rem; font-weight:700; cursor:pointer;">📥 İndir</button>' +
+    '</div>';
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+
+  var inp = document.getElementById('ve-txt-author-input');
+  var emailDiv = document.getElementById('ve-txt-author-email');
+
+  inp.addEventListener('input', function() {
+    var email = (typeof veNameToEmail === 'function') ? veNameToEmail(inp.value) : '';
+    emailDiv.textContent = email ? ('İletişim: ' + email) : '';
+  });
+
+  inp.addEventListener('keydown', function(e) {
+    if(e.key === 'Enter') document.getElementById('ve-txt-author-ok').click();
+  });
+
+  document.getElementById('ve-txt-author-ok').addEventListener('click', function() {
+    var authorName = inp.value.trim() || 'Belirtilmemis';
+    var sim = window.veSimResults;
+    var rType = window._veTxtPreviewReportType;
+    var content = '';
+
+    if(rType === 'ft' && typeof veGenerateFTTxtReport === 'function') {
+      content = veGenerateFTTxtReport(sim, authorName);
+    } else if(rType === 'sd' && typeof veGenerateSegmentDriveTxtReport === 'function') {
+      content = veGenerateSegmentDriveTxtReport(sim, authorName);
+    } else {
+      content = window._veTxtPreviewContent;
+    }
+
+    var filename = window._veTxtPreviewFilename || 'rapor.txt';
+    var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Önizlemeyi de güncelle
+    window._veTxtPreviewContent = content;
+    var preEl = document.getElementById('ve-txt-report-content');
+    if(preEl) preEl.textContent = content;
+
+    ov.remove();
+    showToast('TXT rapor indirildi', 'success');
+  });
+
+  setTimeout(function() { inp.focus(); }, 50);
 }
 
 function veCloseDetailedReport() {
@@ -31451,7 +31511,7 @@ function veNameToEmail(name) {
   return parts.join('.') + '@bmc.com.tr';
 }
 
-function veGenerateFTTxtReport(sim) {
+function veGenerateFTTxtReport(sim, optHazirlayan) {
   var W = 80;
   var WW = 130;
 
@@ -31496,7 +31556,7 @@ function veGenerateFTTxtReport(sim) {
   var G = sim.gradeability;
   var A = sim.acceleration;
   var ss = sim.solverStats || {};
-  var hazirlayan = (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
+  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
@@ -32560,7 +32620,7 @@ window.addEventListener('resize', function() {
 
 
 // ═══════ HIZLANMA-YAVASLAMA SEGMENT ANALIZI TXT RAPOR ═══════
-function veGenerateSegmentDriveTxtReport(sim) {
+function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   var W = 80;
   var WW = 140;
 
@@ -32605,7 +32665,7 @@ function veGenerateSegmentDriveTxtReport(sim) {
   }
 
   var R = sim.reportSnapshot || {};
-  var hazirlayan = (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
+  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
