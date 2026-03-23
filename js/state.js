@@ -32,7 +32,8 @@ function saveState() {
         lineType: c.lineType || 'curve',
         controlPoints: c.controlPoints || []
       };
-    })))
+    }))),
+    annotations: (typeof serializeAnnotations === 'function') ? serializeAnnotations() : []
   };
   
   undoStack.push(state);
@@ -312,6 +313,11 @@ function restoreState(state) {
   updateAllConnections();
   updateNodeCount();
   clearSelection();
+
+  // Annotasyonları geri yükle
+  if(typeof restoreAnnotations === 'function') {
+    restoreAnnotations(state.annotations || []);
+  }
 
   // Sensör sihirbazı görsellerini güncelle
   if(typeof swRefreshAllWizardVisuals === 'function') swRefreshAllWizardVisuals();

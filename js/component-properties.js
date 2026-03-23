@@ -140,6 +140,7 @@ function clearSelection() {
     if(el) el.classList.remove('selected');
   });
   selectedNodes = [];
+  if(typeof clearAnnotationSelection === 'function') clearAnnotationSelection();
   showEmptyProperties();
 }
 
@@ -163,7 +164,7 @@ function showNodeProperties(node) {
   html += '<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:12px; text-align:center;">ID: ' + node.id + '</div>';
   
   // Node tipine göre özel içerik
-  if(node.type === 'engine' || node.type === 'engine-brake') {
+  if(node.type === 'engine') {
     html += getEnginePropertiesHTML(node);
   } else if(node.type === 'gearbox') {
     html += getGearboxPropertiesHTML(node);
@@ -173,6 +174,8 @@ function showNodeProperties(node) {
     html += getTorqueConverterPropertiesHTML(node);
   } else if(node.type === 'ec-matching') {
     html += getECMatchingPropertiesHTML(node);
+  } else if(node.type === 'engine-gearbox-matching') {
+    html += getEngineGearboxMatchingHTML(node);
   } else if(node.type === 'transfer') {
     html += getTransferPropertiesHTML(node);
   } else if(node.type === 'propshaft') {
@@ -199,6 +202,8 @@ function showNodeProperties(node) {
     html += getSensorWizardPropertiesHTML(node);
   } else if(node.type === 'terminator') {
     html += getTerminatorPropertiesHTML(node);
+  } else if(node.type === 'gear-shift') {
+    html += getGearShiftPropertiesHTML(node);
   } else {
     html += getDefaultPropertiesHTML(node);
   }
@@ -207,7 +212,7 @@ function showNodeProperties(node) {
   content.innerHTML = html;
   
   // Motor bileşeni için grafik çiz ve kategori dropdown'ı doldur
-  if(node.type === 'engine' || node.type === 'engine-brake') {
+  if(node.type === 'engine') {
     setTimeout(function() {
       // Kategori dropdown'ını doldur
       onVEMotorCategoryChange(node.id);
@@ -227,6 +232,12 @@ function showNodeProperties(node) {
   if(node.type === 'ec-matching') {
     setTimeout(function() {
       runECMatchingAnalysis(node.id);
+    }, 150);
+  }
+  // Motor-Şanzıman Eşleştirme bileşeni: analizi çalıştır
+  if(node.type === 'engine-gearbox-matching') {
+    setTimeout(function() {
+      runEngineGearboxMatchingAnalysis(node.id);
     }, 150);
   }
   
@@ -331,37 +342,6 @@ function getEnginePropertiesHTML(node) {
     html += '</div>';
     
     // ft-extra KAPATILMIYOR — data area ve aksesuar kayıpları da içinde olacak
-    
-  } else {
-    // ── MOTOR FRENİ PERFORMANS: Kategori seçici + preset sistemi ──
-    html += '<p style="font-size:0.68rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">Elinizde devre bağlı motor freni tork ve güç değerleri varsa <b>Fren Bazlı</b>, sadece motora ait devre bağlı tork-güç eğrileri varsa <b>Orijinal Data</b> seçeneğini seçiniz.</p>';
-    
-    // Motor Seçici - Kategori sistemi
-    var savedCategory = nodeData.mfCategory || 'fren';
-    html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
-    html += '<select id="ve-motor-category-' + node.id + '" onchange="onVEMotorCategoryChange(\'' + node.id + '\')" style="width:110px; font-size:0.7rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">';
-    html += '<option value="fren"' + (savedCategory === 'fren' ? ' selected' : '') + '>Fren Bazlı</option>';
-    html += '<option value="orjinal"' + (savedCategory === 'orjinal' ? ' selected' : '') + '>Orijinal Data</option>';
-    html += '</select>';
-    html += '<select id="ve-motor-select-' + node.id + '" onchange="onVEMotorSelectChange(\'' + node.id + '\', this.value)" style="flex:1; font-size:0.7rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">';
-    html += '<option value="">-- Seçiniz --</option>';
-    // Kayıtlı kategoriye göre seçenekleri doldur
-    var savedMotorPreset = nodeData.mfMotorPreset || '';
-    var catPresets = VE_MOTOR_PRESETS[savedCategory] || {};
-    Object.keys(catPresets).forEach(function(key) {
-      if(key !== 'placeholder') {
-        var sel = (key === savedMotorPreset) ? ' selected' : '';
-        html += '<option value="' + key + '"' + sel + '>' + catPresets[key].name + '</option>';
-      }
-    });
-    html += '</select>';
-    html += '</div>';
-    
-    // Motor seçilmediğinde gösterilecek bilgi mesajı
-    html += '<div id="ve-motor-placeholder-' + node.id + '" style="display:' + (hasData ? 'none' : 'block') + '; padding:20px; text-align:center; background:var(--bg-tertiary); border-radius:8px; margin-bottom:12px;">';
-    html += '<div style="font-size:2rem; margin-bottom:8px;">🔧</div>';
-    html += '<div style="font-size:0.75rem; color:var(--text-muted);">Motor verilerini görüntülemek için<br>yukarıdan bir motor seçin.</div>';
-    html += '</div>';
   }
   
   // ===== VERİ ALANI (Motor seçildiğinde gösterilecek) =====
@@ -643,78 +623,6 @@ function stopVETableResize() {
   document.removeEventListener('mousemove', doVETableResize);
   document.removeEventListener('mouseup', stopVETableResize);
 }
-
-// Motor kategori ve seçim fonksiyonları
-var VE_MOTOR_PRESETS = {
-  fren: {
-    'cummins_x15': {
-      name: 'Cummins X15 (Motor Freni)',
-      data: [
-        {rpm: 800, torque: 380, power: 32},
-        {rpm: 1000, torque: 520, power: 55},
-        {rpm: 1200, torque: 680, power: 85},
-        {rpm: 1400, torque: 820, power: 120},
-        {rpm: 1600, torque: 950, power: 159},
-        {rpm: 1800, torque: 1050, power: 198},
-        {rpm: 2000, torque: 1120, power: 235},
-        {rpm: 2100, torque: 1150, power: 253}
-      ]
-    },
-    'bmcp_azra': {
-      name: 'BMCP Azra Motoru',
-      data: [
-        {rpm: 1000, torque: 377, power: 39},
-        {rpm: 1100, torque: 391, power: 45},
-        {rpm: 1200, torque: 411, power: 52},
-        {rpm: 1300, torque: 429, power: 58},
-        {rpm: 1400, torque: 454, power: 67},
-        {rpm: 1500, torque: 492, power: 77},
-        {rpm: 1600, torque: 524, power: 88},
-        {rpm: 1700, torque: 547, power: 97},
-        {rpm: 1800, torque: 595, power: 112},
-        {rpm: 1900, torque: 640, power: 127},
-        {rpm: 2000, torque: 693, power: 145},
-        {rpm: 2100, torque: 745, power: 164},
-        {rpm: 2200, torque: 779, power: 179},
-        {rpm: 2300, torque: 806, power: 194},
-        {rpm: 2400, torque: 824, power: 207},
-        {rpm: 2500, torque: 832, power: 218},
-        {rpm: 2600, torque: 811, power: 221}
-      ]
-    },
-    'paccar_mx13': {
-      name: 'PACCAR MX-13',
-      data: [
-        {rpm: 800, torque: 420, power: 35},
-        {rpm: 1000, torque: 580, power: 61},
-        {rpm: 1200, torque: 750, power: 94},
-        {rpm: 1400, torque: 890, power: 130},
-        {rpm: 1600, torque: 1020, power: 171},
-        {rpm: 1800, torque: 1130, power: 213},
-        {rpm: 2000, torque: 1200, power: 251}
-      ]
-    },
-    'volvo_d13': {
-      name: 'Volvo D13 (VEB+)',
-      data: [
-        {rpm: 800, torque: 350, power: 29},
-        {rpm: 1000, torque: 490, power: 51},
-        {rpm: 1200, torque: 640, power: 81},
-        {rpm: 1400, torque: 780, power: 114},
-        {rpm: 1600, torque: 920, power: 154},
-        {rpm: 1800, torque: 1040, power: 196},
-        {rpm: 2000, torque: 1140, power: 239},
-        {rpm: 2100, torque: 1180, power: 260}
-      ]
-    }
-  },
-  orjinal: {
-    'placeholder': {
-      name: '(Yakında eklenecek)',
-      data: []
-    }
-  }
-};
 
 // Tam Gaz Hızlanma modülü motor preset'leri (net değerler — aksesuar kayıpları düşülmüş)
 // 34 VPA Motor Kataloğu + 2 ek preset = 36 motor
@@ -1996,28 +1904,7 @@ var VE_FT_MOTOR_PRESETS = {
 };
 
 function onVEMotorCategoryChange(nodeId) {
-  var categoryEl = document.getElementById('ve-motor-category-' + nodeId);
-  var selectEl = document.getElementById('ve-motor-select-' + nodeId);
-  if(!categoryEl || !selectEl) return;
-  
-  var category = categoryEl.value;
-  // Kategori seçimini kaydet
-  var node = nodes.find(function(n) { return n.id === nodeId; });
-  if(node) { if(!node.data) node.data = {}; node.data.mfCategory = category; }
-  
-  var presets = VE_MOTOR_PRESETS[category] || {};
-  
-  selectEl.innerHTML = '<option value="">-- Seçiniz --</option>';
-  selectEl.innerHTML += '<option value="__new__">➕ Yeni Motor</option>';
-  
-  Object.keys(presets).forEach(function(key) {
-    if(key !== 'placeholder') {
-      var opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = presets[key].name;
-      selectEl.appendChild(opt);
-    }
-  });
+  // Artık tek kategori — FT motor presetleri kullanılıyor
 }
 
 function getVEMotorRowHTML(nodeId, rpm, torque, power) {
@@ -2243,14 +2130,15 @@ function onVEMotorSelectChange(nodeId, value) {
     return;
   }
   
-  // Preset motor seçildiyse verileri yükle
-  var categoryEl = document.getElementById('ve-motor-category-' + nodeId);
-  var category = categoryEl ? categoryEl.value : 'fren';
-  var presets = VE_MOTOR_PRESETS[category] || {};
-  
-  if(!presets[value]) return;
-  
-  var preset = presets[value];
+  // Preset motor seçildiyse verileri yükle — artık sadece FT preset sistemi var
+  var presets = {};
+  var preset = null;
+
+  // FT motor presetlerini kontrol et
+  if(typeof VE_FT_MOTOR_PRESETS !== 'undefined' && VE_FT_MOTOR_PRESETS[value]) {
+    preset = VE_FT_MOTOR_PRESETS[value];
+  }
+  if(!preset) return;
   
   preset.data.forEach(function(row) {
     var tr = document.createElement('tr');
@@ -2355,7 +2243,7 @@ function onVEFTMotorSelect(nodeId, value) {
 // ═══════════════════════════════════════════════════════════════
 function getEngineGovernedSpeed() {
   // Motor bileşeninden governed speed oku
-  var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
   if(!engineNode || !engineNode.data) return 0;
   var specs = engineNode.data.motorSpecs || {};
   return parseFloat(specs.governedSpeed) || parseFloat(engineNode.data.governedRpm) || 0;
@@ -2986,7 +2874,7 @@ function getShiftControllerPropertiesHTML(node) {
   
   // Şanzıman ve motor bileşenlerinden veri çek
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
-  var engNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var engNode = nodes.find(function(n) { return n.type === 'engine'; });
   var diffNode = nodes.find(function(n) { return n.type === 'differential' && n.isMasterDiff; })
                || nodes.find(function(n) { return n.type === 'differential'; });
   var transNode = nodes.find(function(n) { return n.type === 'transfer'; });
@@ -3212,6 +3100,40 @@ function veRefreshShiftSchedule() {
   }
 }
 
+/**
+ * Lockup shift eşiğini hesaplar (upshift ve downshift için ortak).
+ * Desteklenen formatlar:
+ *   { a, b }                                     → lineer: N_out = a × ESL + b
+ *   { a, b, minCap }                             → min cap'li lineer
+ *   { a, b, capValue, capBelow }                  → cap'li lineer (ESL < capBelow → capValue)
+ *   { type:'piecewise', breakpoint, low, high }   → parçalı lineer (2 segment)
+ *   { type:'segments', segments: [{maxESL, a, b, cap}, ...] } → çok segmentli
+ */
+function calcLockupShiftThreshold(ls, esl) {
+  if(!ls) return 0;
+  if(ls.type === 'piecewise') {
+    if(esl <= ls.breakpoint) return ls.low.a * esl + (ls.low.b || 0);
+    return ls.high.a * esl + (ls.high.b || 0);
+  }
+  if(ls.type === 'segments') {
+    for(var si = 0; si < ls.segments.length; si++) {
+      var seg = ls.segments[si];
+      if(seg.maxESL !== undefined && esl <= seg.maxESL) {
+        return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+      }
+      if(si === ls.segments.length - 1) {
+        return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+      }
+    }
+  }
+  if(ls.capValue !== undefined && ls.capBelow !== undefined && esl < ls.capBelow) {
+    return ls.capValue;
+  }
+  var thr = ls.a * esl + (ls.b || 0);
+  if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+  return thr;
+}
+
 // ===== SHIFT CONTROLLER RUNTIME ALGORİTMASI =====
 // Her simülasyon zaman adımında çağrılır
 function veShiftControllerStep(state, params) {
@@ -3315,8 +3237,7 @@ function veShiftControllerStep(state, params) {
 
       if(params.lockupShifts && params.lockupShifts[shiftKey]) {
         var ls = params.lockupShifts[shiftKey];
-        var threshold_lu = ls.a * refRPM + ls.b;
-        if(ls.minCap !== undefined) threshold_lu = Math.max(threshold_lu, ls.minCap);
+        var threshold_lu = calcLockupShiftThreshold(ls, refRPM);
         if(N_out_lu >= threshold_lu) luTriggered = true;
       } else {
         // Eski yöntem: sabit lockupOffset
@@ -3365,7 +3286,7 @@ function getGearboxPropertiesHTML(node) {
     
     // Motordan governed speed çekmeye çalış
     var autoGoverned = '';
-    var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
     if(engineNode && engineNode.data) {
       var esp = engineNode.data.motorSpecs || {};
       autoGoverned = esp.governedSpeed || engineNode.data.governedRpm || '';
@@ -3377,20 +3298,39 @@ function getGearboxPropertiesHTML(node) {
     
     // Şanzıman Preset Seçici
     var ftGBPreset = nodeData.ftGBPreset || '';
+    var hasEGM = nodes.some(function(n) { return n.type === 'engine-gearbox-matching'; });
     html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
-    html += '<select id="ve-ft-gb-preset-' + node.id + '" onchange="onVEFTGBPresetSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:0.68rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">';
+    html += '<select id="ve-ft-gb-preset-' + node.id + '"' + (hasEGM ? ' disabled' : '') + ' onchange="onVEFTGBPresetSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:0.68rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;' + (hasEGM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
     html += '<option value="">-- Şanzıman Preset (' + Object.keys(VE_GEARBOX_PRESETS).length + ') --</option>';
     Object.keys(VE_GEARBOX_PRESETS).forEach(function(gk) {
       var gp = VE_GEARBOX_PRESETS[gk];
       var fwdC = gp.gears.filter(function(g) { return g.gear !== 'R'; }).length;
-      var calM = gp.calibrated ? ' ✦' : '';
+      var calM = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '');
       var gSel = (gk === ftGBPreset) ? ' selected' : '';
       html += '<option value="' + gk + '"' + gSel + '>' + gp.name + ' (' + fwdC + 'V)' + calM + '</option>';
     });
     html += '</select>';
     html += '</div>';
-    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Kalibrasyon mevcut">✦</span> = Kalibrasyon mevcut (shift profili tanımlı)</div>';
-    
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
+    if(hasEGM) {
+      html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:4px; font-size:0.58rem; color:var(--accent-primary); line-height:1.4;">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+    }
+
+    // Şanzıman limitleri bilgi kutusu
+    if(ftGBPreset && VE_GEARBOX_PRESETS[ftGBPreset]) {
+      var _lp = VE_GEARBOX_PRESETS[ftGBPreset];
+      if(_lp.grossInputPower || _lp.grossInputTorque || _lp.netTurbineTorque || _lp.maxOutputSpeed) {
+        html += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px; margin-bottom:8px; font-size:0.6rem; line-height:1.5;">';
+        html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:2px; font-size:0.62rem;">Şanzıman Limitleri</div>';
+        html += '<div style="display:flex; flex-wrap:wrap; gap:4px 12px; color:var(--text-secondary);">';
+        if(_lp.grossInputPower) html += '<span>Giriş Güç: <b style="color:var(--text-primary);">' + _lp.grossInputPower + ' kW</b></span>';
+        if(_lp.grossInputTorque) html += '<span>Giriş Tork: <b style="color:var(--text-primary);">' + _lp.grossInputTorque + ' Nm</b></span>';
+        if(_lp.netTurbineTorque) html += '<span>Türbin Tork: <b style="color:var(--text-primary);">' + _lp.netTurbineTorque + ' Nm</b></span>';
+        if(_lp.maxOutputSpeed) html += '<span>Max Çıkış: <b style="color:var(--text-primary);">' + _lp.maxOutputSpeed + ' rpm</b></span>';
+        html += '</div></div>';
+      }
+    }
+
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
     // Shift Profili — şanzıman ailesine göre filtrelenmiş
@@ -3492,11 +3432,25 @@ function getGearboxPropertiesHTML(node) {
       Object.keys(spData.lockupShifts).forEach(function(sk) {
         var ls = spData.lockupShifts[sk];
         var label = sk.replace(/(\d+L)(\d+L)/, '$1→$2');
-        var formula = ls.a + ' × ESL ' + (ls.b >= 0 ? '+ ' : '− ') + Math.abs(ls.b);
-        var capNote = ls.minCap !== undefined ? ' (min: ' + ls.minCap + ')' : '';
+        var formula;
+        if(ls.type === 'piecewise') {
+          var lowF = ls.low.a + ' × ESL ' + ((ls.low.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ls.low.b || 0);
+          var highF = ls.high.a + ' × ESL ' + ((ls.high.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ls.high.b || 0);
+          formula = 'ESL ≤ ' + ls.breakpoint + ': ' + lowF + '<br>ESL &gt; ' + ls.breakpoint + ': ' + highF;
+        } else if(ls.type === 'segments') {
+          formula = ls.segments.map(function(seg, i) {
+            if(seg.cap !== undefined) return 'ESL ≤ ' + seg.maxESL + ': ' + seg.cap + ' (cap)';
+            var f = seg.a + ' × ESL ' + ((seg.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(seg.b || 0);
+            return seg.maxESL ? ('ESL ≤ ' + seg.maxESL + ': ' + f) : f;
+          }).join('<br>');
+        } else {
+          formula = ls.a + ' × ESL ' + ((ls.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ls.b || 0);
+          if(ls.capValue !== undefined) formula += ' (cap: ' + ls.capValue + ', ESL &lt; ' + ls.capBelow + ')';
+          else if(ls.minCap !== undefined) formula += ' (min: ' + ls.minCap + ')';
+        }
         html += '<tr style="border-bottom:1px solid var(--border-color);">';
         html += '<th style="padding:4px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--text-secondary); font-size:0.64rem;">' + label + '</th>';
-        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.64rem; color:var(--text-secondary);">' + formula + capNote + '</td>';
+        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.64rem; color:var(--text-secondary);">' + formula + '</td>';
         html += '</tr>';
       });
     } else {
@@ -3506,7 +3460,43 @@ function getGearboxPropertiesHTML(node) {
       html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-gb-lockup-offset-' + node.id + '" value="' + spData.lockupOffset + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
       html += '</tr>';
     }
-    
+
+    // Downshift eşikleri (varsa göster)
+    if(spData.downshiftThresholds) {
+      html += '<tr style="border-bottom:1px solid var(--border-color);">';
+      html += '<th colspan="2" style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); font-weight:500; color:var(--accent-warning); font-size:0.66rem;">Downshift Eşikleri <span style="color:var(--text-muted); font-weight:400;">[N_out &lt; threshold → alt vites]</span></th>';
+      html += '</tr>';
+      // Sıralı gösterim: büyük vitesten küçüğe
+      var dsKeys = Object.keys(spData.downshiftThresholds).sort(function(a, b) {
+        var na = parseInt(a); var nb = parseInt(b);
+        return nb - na; // 6to5, 5to4, 4to3, 3to2, 2to1
+      });
+      dsKeys.forEach(function(dk) {
+        var ds = spData.downshiftThresholds[dk];
+        var label = dk.replace(/(\d+)to(\d+)/, '$1→$2');
+        var formula;
+        if(ds.type === 'piecewise') {
+          var lowF = ds.low.a + ' × ESL ' + ((ds.low.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.low.b || 0);
+          var highF = ds.high.a + ' × ESL ' + ((ds.high.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.high.b || 0);
+          formula = 'ESL ≤ ' + ds.breakpoint + ': ' + lowF + '<br>ESL &gt; ' + ds.breakpoint + ': ' + highF;
+        } else if(ds.type === 'segments') {
+          formula = ds.segments.map(function(seg) {
+            if(seg.cap !== undefined) return 'ESL ≤ ' + seg.maxESL + ': ' + seg.cap + ' (cap)';
+            var f = seg.a + ' × ESL ' + ((seg.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(seg.b || 0);
+            return seg.maxESL ? ('ESL ≤ ' + seg.maxESL + ': ' + f) : f;
+          }).join('<br>');
+        } else {
+          formula = ds.a + ' × ESL ' + ((ds.b || 0) >= 0 ? '+ ' : '− ') + Math.abs(ds.b || 0);
+          if(ds.capValue !== undefined) formula += ' (cap: ' + ds.capValue + ', ESL &lt; ' + ds.capBelow + ')';
+        }
+        html += '<tr style="border-bottom:1px solid var(--border-color);">';
+        html += '<th style="padding:4px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:400; color:var(--accent-warning); font-size:0.64rem;">' + label + '</th>';
+        html += '<td style="padding:4px 6px; background:var(--bg-tertiary); font-size:0.62rem; color:var(--text-secondary); line-height:1.3;">' + formula + '</td>';
+        html += '</tr>';
+      });
+      html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Araç yavaşlarken N_out eşiğin altına düşerse alt vitese geçilir. Oran tabanlı formüller (N_engine = k × ESL). Histerezis: upshift &gt; downshift.</td></tr>';
+    }
+
     // Vites Sayısı (İleri)
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Vites Sayısı (İleri)</th>';
@@ -3589,21 +3579,25 @@ function getGearboxPropertiesHTML(node) {
   html += '<p style="font-size:0.68rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">Test sırasında kullanılan şanzımanın vites oranlarını giriniz veya hazır şanzıman seçiniz.</p>';
   
   // Şanzıman Seçici
+  var _hasEGM2 = nodes.some(function(n) { return n.type === 'engine-gearbox-matching'; });
   html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
-  html += '<select id="ve-gearbox-select-' + node.id + '" onchange="onVEGearboxSelectChange(\'' + node.id + '\', this.value)" style="flex:1; font-size:0.7rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">';
+  html += '<select id="ve-gearbox-select-' + node.id + '"' + (_hasEGM2 ? ' disabled' : '') + ' onchange="onVEGearboxSelectChange(\'' + node.id + '\', this.value)" style="flex:1; font-size:0.7rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;' + (_hasEGM2 ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
   html += '<option value="">-- Şanzıman Seçiniz (' + Object.keys(VE_GEARBOX_PRESETS).length + ' preset) --</option>';
   Object.keys(VE_GEARBOX_PRESETS).forEach(function(key) {
     var gp = VE_GEARBOX_PRESETS[key];
     var fwdCount = gp.gears.filter(function(g) { return g.gear !== 'R'; }).length;
-    var calMark = gp.calibrated ? ' ✦' : '';
+    var calMark = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '');
     var sel = (key === selectedGearbox) ? ' selected' : '';
     html += '<option value="' + key + '"' + sel + '>' + gp.name + ' (' + fwdCount + 'V)' + calMark + '</option>';
   });
   html += '<option value="__new__">➕ Manuel Giriş</option>';
   html += '</select>';
   html += '</div>';
-  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Bu şanzıman için vites geçiş kalibrasyonu (shift profili) tanımlıdır">✦</span> = Kalibrasyon mevcut (shift profili tanımlı)</div>';
-  
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
+  if(_hasEGM2) {
+    html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:4px; font-size:0.58rem; color:var(--accent-primary); line-height:1.4;">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+  }
+
   // Veri alanı
   html += '<div id="ve-gearbox-data-area-' + node.id + '" style="display:' + (hasData || selectedGearbox ? 'block' : 'none') + ';">';
   
@@ -4091,6 +4085,136 @@ var VE_FT_SHIFT_PROFILES = {
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
+  },
+  // ════════════════════════════════════════════════════════════════════════
+  // ALLISON 2500SP — 1000/2000 SERİSİ
+  // ════════════════════════════════════════════════════════════════════════
+  // Kaynak: 44 adet VEPS kalibrasyon raporu (CIN: B1-81000-43C-9, ESL 1600-2600 rpm, S1-S4)
+  // Vites oranları (KaATCC): 1st=3.512, 2nd=1.896, 3rd=1.439, 4th=1.000, 5th=0.737, 6th=0.643
+  // 1→2 tüm kalibrasyonlarda aynı: N_out = 0.2133 × ESL (konvertör modu, max hata ±0.4 rpm)
+  allison2500sp_s1: {
+    name: 'Allison 2500 SP — S1 Performance',
+    family: '1000_2000',
+    lockupOffset: 75,
+    shift1C2C_outRatio: 0.2133,   // Tüm kalibrasyonlarda aynı (konvertör modu)
+    shift2C2L_outRatio: 0.3594,
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod — N_engine = ESL - 75 kuralı
+    lockupShifts: {
+      '2L3L': { a: 0.5275, b: -39.7 },   // max hata ±0.5 rpm
+      '3L4L': { a: 0.6950, b: -52.2 },   // max hata ±0.3 rpm
+      '4L5L': { a: 1.0000, b: -75.0 },   // max hata ±0.0 rpm
+      '5L6L': { a: 1.3577, b: -101.8 }   // max hata ±0.5 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '3to2': { a: 0.4171, b: 0 },    // max hata ±0.4 rpm
+      '4to3': { a: 0.6100, b: 0 },    // max hata ±0.0 rpm
+      '5to4': { a: 0.8826, b: 0 },    // max hata ±0.5 rpm
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 1.3550, b: -300.8 },   // ESL ≤ 2000, max hata ±0.3 rpm
+        high: { a: 1.2037, b: 1.4 }       // ESL ≥ 2100, max hata ±0.5 rpm
+      },
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }  // max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  // S2 Performance — N_engine = 0.90 × ESL kuralı (oransal, offset yok)
+  // Histerezis: 4→5/5→4 = 100 rpm, 5→6/6→5 ≈ 203 rpm, 3→4/4→3 ≈ 69 rpm
+  allison2500sp_s2: {
+    name: 'Allison 2500 SP — S2 Performance',
+    family: '1000_2000',
+    lockupOffset: 0,
+    shift1C2C_outRatio: 0.2133,
+    shift2C2L_outRatio: 0.3594,
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod — N_engine ≈ 0.90 × ESL
+    lockupShifts: {
+      '2L3L': { a: 0.4750, b: 0 },                                     // max hata ±1.0 rpm
+      '3L4L': { a: 0.6257, b: -0.4, capValue: 1020, capBelow: 1700 },  // ESL=1600: cap 1020, max hata ±0.5 rpm
+      '4L5L': { a: 0.9000, b: 0 },                                     // max hata ±0.0 rpm
+      '5L6L': { a: 1.2221, b: 0 }                                      // max hata ±1.0 rpm
+    },
+    // Downshift eşikleri: S2 Performance
+    downshiftThresholds: {
+      '3to2': { a: 0.4171, b: 0 },                                     // S1 ile aynı, max hata ±0.4 rpm
+      '4to3': { a: 0.6256, b: -69.6, capValue: 950, capBelow: 1700 },  // max hata ±0.5 rpm
+      '5to4': { a: 0.9000, b: -100 },                                  // max hata ±0.0 rpm
+      '6to5': { a: 1.2218, b: -203.2 },                                // max hata ±0.5 rpm (S2'de parçalı yok: tekil lineer)
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }   // S1 ile aynı, max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  // S3 Economy — Her shift kendi formülüne sahip (tek bir kural yok)
+  // Histerezis: 3→4/4→3 ≈ 99 rpm, 4→5/5→4 ≈ 136 rpm, 5→6/6→5 ≈ 136 rpm
+  allison2500sp_s3: {
+    name: 'Allison 2500 SP — S3 Economy',
+    family: '1000_2000',
+    lockupOffset: 0,
+    shift1C2C_outRatio: 0.2133,
+    shift2C2L_outRatio: 0.3594,
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod — per-gear bağımsız formüller
+    lockupShifts: {
+      '2L3L': { a: 0.4171, b: 69.4 },    // max hata ±0.4 rpm
+      '3L4L': { a: 0.6000, b: 100 },     // max hata ±0.0 rpm
+      '4L5L': { a: 0.8146, b: 135.9 },   // max hata ±0.5 rpm
+      '5L6L': { a: 0.9326, b: 154.8 }    // max hata ±1.0 rpm
+    },
+    // Downshift eşikleri: S3 Economy
+    downshiftThresholds: {
+      '3to2': { a: 0.4171, b: 0 },                                     // S1 ile aynı, max hata ±0.4 rpm
+      '4to3': { a: 0.6000, b: 0, capValue: 976, capBelow: 1700 },      // ESL=1600: cap 976, max hata ±0.0 rpm
+      '5to4': { a: 0.8150, b: 0 },                                     // max hata ±0.3 rpm
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 0.9560, b: -39.8 },   // ESL ≤ 2000, max hata ±3.0 rpm
+        high: { a: 1.0000, b: -125 }     // ESL ≥ 2100, max hata ±0.0 rpm
+      },
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }   // S1 ile aynı, max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  // S4 Economy — Düşük ESL'lerde cap paternli, en konservatif kalibrasyon
+  // Histerezis: 3→4/4→3 ≈ 55 rpm, 4→5/5→4 ≈ 80 rpm, 5→6/6→5 ≈ 80 rpm
+  allison2500sp_s4: {
+    name: 'Allison 2500 SP — S4 Economy',
+    family: '1000_2000',
+    lockupOffset: 0,
+    shift1C2C_outRatio: 0.2133,
+    shift2C2L_outRatio: 0.3594,
+    shiftRefRPM: null,
+    // Upshift: Lockup-mod — düşük ESL'lerde cap paternli
+    lockupShifts: {
+      '2L3L': { type: 'segments', segments: [
+        { maxESL: 1700, cap: 709 },                   // ESL ≤ 1700: cap
+        { maxESL: 2100, a: 0.3540, b: 98.7 },         // 1800 ≤ ESL ≤ 2100, max hata ±0.3 rpm
+        {              a: 0.4160, b: -32.4 }           // ESL ≥ 2200, max hata ±0.4 rpm
+      ]},
+      '3L4L': { a: 0.6000, b: -50, capValue: 1020, capBelow: 1800 },   // ESL ≤ 1700: cap, max hata ±0.0 rpm
+      '4L5L': { a: 0.8143, b: -67.2, capValue: 1385, capBelow: 1800 }, // ESL ≤ 1700: cap, max hata ±0.0 rpm
+      '5L6L': { a: 1.0000, b: -45 }                                    // max hata ±0.0 rpm
+    },
+    // Downshift eşikleri: S4 Economy
+    downshiftThresholds: {
+      '3to2': { type: 'segments', segments: [
+        { maxESL: 1700, cap: 639 },                   // ESL ≤ 1700: cap
+        { maxESL: 2100, a: 0.3530, b: 26.9 },         // 1800 ≤ ESL ≤ 2100, max hata ±0.4 rpm
+        {              a: 0.4170, b: -69.4 }           // ESL ≥ 2200, max hata ±0.4 rpm
+      ]},
+      '4to3': { a: 0.6000, b: -100, capValue: 920, capBelow: 1800 },   // ESL ≤ 1700: cap, max hata ±0.0 rpm
+      '5to4': { a: 0.8140, b: -134.4, capValue: 1249, capBelow: 1800 },// ESL ≤ 1700: cap, max hata ±0.4 rpm
+      '6to5': { a: 1.0000, b: -125 },                                  // max hata ±0.0 rpm
+      '2to1': { a: 0.1067, b: 150.8, capValue: 312, capBelow: 1700 }   // S1 ile aynı, max hata ±0.5 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
   }
 };
 
@@ -4132,6 +4256,12 @@ function onVEFTGBParamChange(nodeId) {
         node.data.converterShifts = JSON.parse(JSON.stringify(spData.converterShifts));
       } else {
         delete node.data.converterShifts;
+      }
+      // Downshift eşiklerini kopyala
+      if(spData.downshiftThresholds) {
+        node.data.downshiftThresholds = JSON.parse(JSON.stringify(spData.downshiftThresholds));
+      } else {
+        delete node.data.downshiftThresholds;
       }
       // Eski parametreleri de koru (geriye uyumluluk)
       node.data.srShift1C2C = spData.srShift1C2C;
@@ -4244,9 +4374,35 @@ function onVEFTGBPresetSelect(nodeId, value) {
     }
   }
   
+  // Şanzıman limitleri: netTurbineTorque → EC-Matching turbineRating otomatik güncelle
+  if(preset.netTurbineTorque) {
+    var ecmNode = nodes.find(function(n) { return n.type === 'ec-matching'; });
+    if(ecmNode) {
+      if(!ecmNode.data) ecmNode.data = {};
+      ecmNode.data.turbineRating = preset.netTurbineTorque;
+      var trEl = document.getElementById('ecm-turbine-rating-' + ecmNode.id);
+      if(trEl) trEl.value = preset.netTurbineTorque;
+    }
+  }
+  // Şanzıman limit verilerini gearbox node'a da kaydet
+  node.data.gbGrossInputPower = preset.grossInputPower;
+  node.data.gbGrossInputTorque = preset.grossInputTorque;
+  node.data.gbNetTurbineTorque = preset.netTurbineTorque;
+  node.data.gbMaxOutputSpeed = preset.maxOutputSpeed;
+
+  // Şanzıman limitleri bilgi mesajı
+  var limitsInfo = [];
+  if(preset.grossInputPower) limitsInfo.push('Giriş Güç: ' + preset.grossInputPower + ' kW');
+  if(preset.grossInputTorque) limitsInfo.push('Giriş Tork: ' + preset.grossInputTorque + ' Nm');
+  if(preset.netTurbineTorque) limitsInfo.push('Türbin Tork: ' + preset.netTurbineTorque + ' Nm');
+  if(preset.maxOutputSpeed) limitsInfo.push('Max Çıkış: ' + preset.maxOutputSpeed + ' rpm');
+  if(limitsInfo.length > 0) {
+    showToast('Şanzıman limitleri: ' + limitsInfo.join(' | '), 'info');
+  }
+
   // Şanzıman ailesi değiştiğinde TC dropdown'ını güncelle
   veRefreshTCDropdownForFamily();
-  
+
   // Shift profili dropdown'ını ve readonly parametreleri yenilemek için paneli yeniden çiz
   showNodeProperties(node);
 }
@@ -4276,6 +4432,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 1000SP',
     family: '1000_2000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.10, note: ''},
       {gear: '2', ratio: 1.81, note: ''},
@@ -4290,6 +4450,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 2100SP',
     family: '1000_2000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.10, note: ''},
       {gear: '2', ratio: 1.81, note: ''},
@@ -4304,6 +4468,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 2200SP',
     family: '1000_2000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.10, note: ''},
       {gear: '2', ratio: 1.81, note: ''},
@@ -4318,6 +4486,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 2350SP',
     family: '1000_2000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.10, note: ''},
       {gear: '2', ratio: 1.81, note: ''},
@@ -4331,7 +4503,12 @@ var VE_GEARBOX_PRESETS = {
   '2500SP': {
     name: 'Allison | 2500SP',
     family: '1000_2000',
-    calibrated: false,
+    calibrated: true,
+    downshiftCalibrated: true,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 3.51, note: ''},
       {gear: '2', ratio: 1.90, note: ''},
@@ -4346,6 +4523,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 3000SP',
     family: '3000',
     calibrated: true,
+    grossInputPower: 261,
+    grossInputTorque: 1424,
+    netTurbineTorque: 2305,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 3.49, note: ''},
       {gear: '2', ratio: 1.86, note: ''},
@@ -4360,6 +4541,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 3200SP',
     family: '3000',
     calibrated: true,
+    grossInputPower: 336,
+    grossInputTorque: 1695,
+    netTurbineTorque: 2305,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 3.49, note: ''},
       {gear: '2', ratio: 1.86, note: ''},
@@ -4374,6 +4559,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 3500SP',
     family: '3000',
     calibrated: true,
+    grossInputPower: 246,
+    grossInputTorque: 1335,
+    netTurbineTorque: 2034,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 4.59, note: ''},
       {gear: '2', ratio: 2.25, note: ''},
@@ -4388,6 +4577,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 3700SP',
     family: '3000',
     calibrated: false,
+    grossInputPower: 246,
+    grossInputTorque: 1186,
+    netTurbineTorque: 1996,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 6.93, note: ''},
       {gear: '2', ratio: 4.18, note: ''},
@@ -4403,6 +4596,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4000SP',
     family: '4000',
     calibrated: true,
+    grossInputPower: 485,
+    grossInputTorque: 2544,
+    netTurbineTorque: 3795,
+    maxOutputSpeed: 3600,
     gears: [
       {gear: '1', ratio: 3.51, note: ''},
       {gear: '2', ratio: 1.91, note: ''},
@@ -4417,6 +4614,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4500SP',
     family: '4000',
     calibrated: true,
+    grossInputPower: 451,
+    grossInputTorque: 2400,
+    netTurbineTorque: 3525,
+    maxOutputSpeed: 3525,
     gears: [
       {gear: '1', ratio: 4.70, note: ''},
       {gear: '2', ratio: 2.21, note: ''},
@@ -4431,6 +4632,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4700SP',
     family: '4000',
     calibrated: false,
+    grossInputPower: 451,
+    grossInputTorque: 2508,
+    netTurbineTorque: 4067,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 7.63, note: ''},
       {gear: '2', ratio: 3.51, note: ''},
@@ -4446,6 +4651,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4800SP',
     family: '4000',
     calibrated: false,
+    grossInputPower: 597,
+    grossInputTorque: 2644,
+    netTurbineTorque: 4067,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 7.63, note: ''},
       {gear: '2', ratio: 3.51, note: ''},
@@ -4461,6 +4670,10 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4900SP',
     family: '4000',
     calibrated: false,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
     gears: [
       {gear: '1', ratio: 7.63, note: ''},
       {gear: '2', ratio: 3.51, note: ''},
@@ -4644,8 +4857,8 @@ function getECMatchingPropertiesHTML(node) {
   
   // Başlık
   html += '<div style="padding:12px; border-bottom:2px solid var(--accent-warning); background:linear-gradient(135deg, rgba(245,158,11,0.08), transparent);">';
-  html += '<div style="font-size:0.85rem; font-weight:700; color:var(--accent-warning); margin-bottom:4px;">⚙ Motor — Tork Konvertörü Eşleştirme Analizi</div>';
-  html += '<div style="font-size:0.62rem; color:var(--text-secondary); line-height:1.4;">Allison TD-148G standardına göre motor-konvertör uyumluluğunu analiz eder. Tüm mevcut konvertör presetlerini otomatik olarak tarar ve C4/C5/C7/C8 kontrollerini uygular.</div>';
+  html += '<div style="font-size:0.85rem; font-weight:700; color:var(--accent-warning); margin-bottom:4px;">⚙ Motor — Konvertör Eşleştirme Analizi</div>';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); line-height:1.4;">Motor çıkış portuna bağlanmalıdır. Allison TD-148G standardına göre motor-konvertör uyumluluğunu analiz eder. C4/C5/C7/C8/C9/C10 kontrollerini uygular.</div>';
   html += '</div>';
   
   // Motor algılama bilgisi
@@ -4661,7 +4874,7 @@ function getECMatchingPropertiesHTML(node) {
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:55%;">Şanzıman Türbin Torku Limiti [N·m]</th>';
   html += '<td style="padding:4px 6px; border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="number" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
-  html += '<tr><td colspan="2" style="padding:4px 8px; font-size:0.58rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">C7 kontrolü için kullanılır. Allison 3000 SP: ~3320 N·m (2450 lb-ft). 3500 SP: ~4750 N·m.</td></tr>';
+  html += '<tr><td colspan="2" style="padding:4px 8px; font-size:0.58rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir (Net Turbine Torque limiti).</td></tr>';
   html += '</table>';
   html += '</div>';
   
@@ -4699,15 +4912,32 @@ function runECMatchingAnalysis(nodeId) {
   if(!node.data) node.data = {};
   
   var turbineRating = node.data.turbineRating || 3320;
-  
-  // Motor bileşenini bul
-  var engineNode = nodes.find(function(n) { return n.type === 'engine' && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
-  
+
+  // Şanzıman limit verilerini al
+  var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+  var gbLimits = { grossInputPower: null, grossInputTorque: null, maxOutputSpeed: null };
+  if(gbNode && gbNode.data) {
+    var gbKey = gbNode.data.ftGBPreset || gbNode.data.selectedGearbox || '';
+    if(gbKey && VE_GEARBOX_PRESETS[gbKey]) {
+      var gbPreset = VE_GEARBOX_PRESETS[gbKey];
+      gbLimits.grossInputPower = gbPreset.grossInputPower;
+      gbLimits.grossInputTorque = gbPreset.grossInputTorque;
+      gbLimits.maxOutputSpeed = gbPreset.maxOutputSpeed;
+    }
+  }
+
+  // Bağlı motor bileşenini bul (önce bağlantı, yoksa global arama)
+  var engineNode = findConnectedEngine(nodeId);
+  if(!engineNode) {
+    // Geri uyumluluk: bağlantı yoksa global arama
+    engineNode = nodes.find(function(n) { return (n.type === 'engine') && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
+  }
+
   var infoEl = document.getElementById('ecm-engine-info-' + nodeId);
   var resultsEl = document.getElementById('ecm-results-' + nodeId);
-  
-  if(!engineNode) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px; font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşeni bulunamadı veya tork verisi girilmemiş. Lütfen önce motor bileşenini ekleyin ve tork-devir verilerini girin.</div>';
+
+  if(!engineNode || !engineNode.data || !engineNode.data.torqueData || engineNode.data.torqueData.length < 2) {
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px; font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     return;
   }
   
@@ -4724,16 +4954,50 @@ function runECMatchingAnalysis(nodeId) {
   torqueData.forEach(function(d) {
     if(d.torque > peakT) { peakT = d.torque; peakRPM = d.rpm; }
   });
-  
+
+  // Governed devirdeki tork ve güç hesabı (C9/C10 kontrolleri için)
+  var torqueAtGov = 0;
+  if(torqueData.length >= 2) {
+    // İnterpolasyon
+    if(governed <= torqueData[0].rpm) torqueAtGov = torqueData[0].torque;
+    else if(governed >= torqueData[torqueData.length-1].rpm) torqueAtGov = torqueData[torqueData.length-1].torque;
+    else {
+      for(var ti = 0; ti < torqueData.length - 1; ti++) {
+        if(torqueData[ti].rpm <= governed && governed <= torqueData[ti+1].rpm) {
+          var tf = (governed - torqueData[ti].rpm) / (torqueData[ti+1].rpm - torqueData[ti].rpm);
+          torqueAtGov = torqueData[ti].torque + tf * (torqueData[ti+1].torque - torqueData[ti].torque);
+          break;
+        }
+      }
+    }
+  }
+  var powerAtGov = torqueAtGov * governed * Math.PI / 30000; // kW = T(Nm) * RPM * π / 30000
+
+  // C9/C10 kontrolleri
+  var c9ok = true, c10ok = true;
+  if(gbLimits.grossInputPower !== null) c9ok = powerAtGov <= gbLimits.grossInputPower;
+  if(gbLimits.grossInputTorque !== null) c10ok = torqueAtGov <= gbLimits.grossInputTorque;
+
   // Motor bilgi paneli
   if(infoEl) {
+    var c9c10html = '';
+    if(gbLimits.grossInputPower !== null || gbLimits.grossInputTorque !== null) {
+      c9c10html += '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">';
+      c9c10html += '<span>Governed Güç: <b style="color:' + (c9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + powerAtGov.toFixed(0) + ' kW</b>';
+      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:0.55rem; color:' + (c9ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputPower + ' kW ' + (c9ok ? '✅' : '❌') + ')</span>';
+      c9c10html += '</span>';
+      c9c10html += '<span>Governed Tork: <b style="color:' + (c10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + torqueAtGov.toFixed(0) + ' Nm</b>';
+      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:0.55rem; color:' + (c10ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputTorque + ' Nm ' + (c10ok ? '✅' : '❌') + ')</span>';
+      c9c10html += '</span>';
+      c9c10html += '</div>';
+    }
     infoEl.innerHTML = '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px;">' +
       '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">🔧 ' + engineName + '</div>' +
       '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
       '<span>Peak Tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
       '<span>Governed: <b style="color:var(--text-primary);">' + governed + ' rpm</b></span>' +
       '<span>Pump Düşüm: <b style="color:var(--text-primary);">' + pumpDrop + ' N·m</b></span>' +
-      '</div></div>';
+      '</div>' + c9c10html + '</div>';
   }
   
   // Motor tork interpolasyon fonksiyonu
@@ -4862,19 +5126,20 @@ function runECMatchingAnalysis(nodeId) {
     var c7ok = tTurbineStall <= turbineRating;
     // C8: SR at governed >= 0.80
     var c8ok = srGov >= 0.80;
-    
+
     var status, score;
-    if(!c7ok) { status = 'unacceptable'; score = 0; }
+    if(!c9ok || !c10ok) { status = 'unacceptable'; score = 0; }
+    else if(!c7ok) { status = 'unacceptable'; score = 0; }
     else if(!c5ok) { status = 'not-recommended'; score = 1; }
     else if(!c8ok) { status = 'caution'; score = 2; }
     else { status = 'recommended'; score = 3; }
-    
+
     results.push({
       key: key, name: tc.name, stallTau: stallTau,
       stallSpeed: stallSpeed, minSpeed: minSpeed,
       srGov: srGov, tTurbineStall: tTurbineStall,
       couplingSR: couplingSR,
-      c5ok: c5ok, c7ok: c7ok, c8ok: c8ok,
+      c5ok: c5ok, c7ok: c7ok, c8ok: c8ok, c9ok: c9ok, c10ok: c10ok,
       status: status, score: score
     });
   });
@@ -4894,10 +5159,22 @@ function runECMatchingAnalysis(nodeId) {
     h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).<br>';
     h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + peakRPM + ' rpm): Konvertör fazında motorun ulaştığı minimum devir. Altına düşerse motor lugging yapar.<br>';
     h += '<b style="color:var(--text-primary);">C7</b> — Stall Türbin Torku ≤ ' + turbineRating.toFixed(0) + ' N·m: Stall\'da türbin torku şanzıman limitini aşmamalı.<br>';
-    h += '<b style="color:var(--text-primary);">C8</b> — SR @ Governed ≥ 0.80: Governed hızda kayma oranı. Düşükse loose match → performans kaybı (lockup\'ta sorun yok).';
+    h += '<b style="color:var(--text-primary);">C8</b> — SR @ Governed ≥ 0.80: Governed hızda kayma oranı. Düşükse loose match → performans kaybı (lockup\'ta sorun yok).<br>';
+    if(gbLimits.grossInputPower !== null) h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov ≤ ' + gbLimits.grossInputPower + ' kW: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
+    if(gbLimits.grossInputTorque !== null) h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov ≤ ' + gbLimits.grossInputTorque + ' N·m: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.';
     h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color); font-size:0.55rem; color:var(--text-muted); font-style:italic;">Referans Doküman: TD-148G</div>';
     h += '</div></div></div>';
     
+    // C9/C10 uyarı bandı (şanzıman seviyesi kontroller)
+    if(!c9ok || !c10ok) {
+      h += '<div style="margin-bottom:8px; padding:8px 10px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px;">';
+      h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-danger);">❌ Şanzıman Giriş Limiti Aşılıyor</div>';
+      h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">';
+      if(!c9ok) h += 'C9: Motor gücü (' + powerAtGov.toFixed(0) + ' kW) > Şanzıman giriş güç limiti (' + gbLimits.grossInputPower + ' kW)<br>';
+      if(!c10ok) h += 'C10: Motor torku (' + torqueAtGov.toFixed(0) + ' Nm) > Şanzıman giriş tork limiti (' + gbLimits.grossInputTorque + ' Nm)';
+      h += '</div></div>';
+    }
+
     // Tablo
     h += '<div style="overflow-x:auto;">';
     h += '<table style="width:100%; border-collapse:collapse; font-size:0.62rem; min-width:420px;">';
@@ -5165,6 +5442,301 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   ctx.fillText('── Stall   --- 0.80 SR', ml + pw - 100, ly);
 }
 
+// ── Bağlantı üzerinden motor bileşenini bul ──
+function findConnectedEngine(nodeId) {
+  // Bu node'un input portuna bağlı connection'ı bul
+  for(var ci = 0; ci < connections.length; ci++) {
+    var conn = connections[ci];
+    if(conn.to === nodeId) {
+      // Bağlı kaynak node'u bul
+      var srcNode = nodes.find(function(n) { return n.id === conn.from; });
+      if(srcNode && (srcNode.type === 'engine')) {
+        return srcNode;
+      }
+    }
+  }
+  return null;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MOTOR-ŞANZIMAN EŞLEŞTİRME BİLEŞENİ
+// ════════════════════════════════════════════════════════════════════════════
+
+function getEngineGearboxMatchingHTML(node) {
+  var html = '';
+
+  // Başlık
+  html += '<div style="padding:12px; border-bottom:2px solid var(--accent-primary); background:linear-gradient(135deg, rgba(59,130,246,0.08), transparent);">';
+  html += '<div style="font-size:0.85rem; font-weight:700; color:var(--accent-primary); margin-bottom:4px;">⚙ Motor — Şanzıman Eşleştirme Analizi</div>';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); line-height:1.4;">Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetlerini C9/C10 kriterleri ile analiz eder.</div>';
+  html += '</div>';
+
+  // Motor bağlantı durumu
+  html += '<div id="egm-engine-info-' + node.id + '" style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';
+  html += '<div style="font-size:0.65rem; color:var(--text-muted);">Motor bağlantısı kontrol ediliyor...</div>';
+  html += '</div>';
+
+  // Analiz sonuç tablosu
+  html += '<div id="egm-results-' + node.id + '" style="padding:10px 12px;">';
+  html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.68rem;">Analiz bekleniyor... Motor bileşenine bağlandığında otomatik çalışır.</div>';
+  html += '</div>';
+
+  return html;
+}
+
+function runEngineGearboxMatchingAnalysis(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node) return;
+
+  var infoEl = document.getElementById('egm-engine-info-' + nodeId);
+  var resultsEl = document.getElementById('egm-results-' + nodeId);
+
+  // Bağlı motoru bul
+  var engineNode = findConnectedEngine(nodeId);
+  if(!engineNode) {
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px; font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(resultsEl) resultsEl.innerHTML = '';
+    return;
+  }
+
+  var torqueData = engineNode.data ? (engineNode.data.torqueData || []) : [];
+  if(torqueData.length < 2) {
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:6px; font-size:0.65rem; color:var(--accent-warning);">⚠ Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
+    if(resultsEl) resultsEl.innerHTML = '';
+    return;
+  }
+
+  var motorSpecs = engineNode.data.motorSpecs || {};
+  var governed = motorSpecs.governedSpeed || engineNode.data.governedRpm || 2100;
+  var engineName = engineNode.data.motorName || engineNode.customName || 'Motor';
+
+  // Peak torque
+  var peakT = 0, peakRPM = 0;
+  torqueData.forEach(function(d) { if(d.torque > peakT) { peakT = d.torque; peakRPM = d.rpm; } });
+
+  // Governed devirdeki tork ve güç
+  var torqueAtGov = 0;
+  if(governed <= torqueData[0].rpm) torqueAtGov = torqueData[0].torque;
+  else if(governed >= torqueData[torqueData.length-1].rpm) torqueAtGov = torqueData[torqueData.length-1].torque;
+  else {
+    for(var ti = 0; ti < torqueData.length - 1; ti++) {
+      if(torqueData[ti].rpm <= governed && governed <= torqueData[ti+1].rpm) {
+        var tf = (governed - torqueData[ti].rpm) / (torqueData[ti+1].rpm - torqueData[ti].rpm);
+        torqueAtGov = torqueData[ti].torque + tf * (torqueData[ti+1].torque - torqueData[ti].torque);
+        break;
+      }
+    }
+  }
+  var powerAtGov = torqueAtGov * governed * Math.PI / 30000;
+
+  // Motor bilgi paneli
+  if(infoEl) {
+    infoEl.innerHTML = '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px;">' +
+      '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">🔧 ' + engineName + '</div>' +
+      '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
+      '<span>Peak Tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
+      '<span>Governed: <b style="color:var(--text-primary);">' + governed + ' rpm</b></span>' +
+      '</div>' +
+      '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">' +
+      '<span>Güç@Gov: <b style="color:var(--text-primary);">' + powerAtGov.toFixed(0) + ' kW</b></span>' +
+      '<span>Tork@Gov: <b style="color:var(--text-primary);">' + torqueAtGov.toFixed(0) + ' N·m</b></span>' +
+      '</div></div>';
+  }
+
+  // Tüm şanzıman presetlerini analiz et
+  var results = [];
+  Object.keys(VE_GEARBOX_PRESETS).forEach(function(gbKey) {
+    var preset = VE_GEARBOX_PRESETS[gbKey];
+
+    var c9ok = true, c10ok = true;
+    var c9detail = '—', c10detail = '—';
+    var maxOutOk = true;
+
+    if(preset.grossInputPower !== null) {
+      c9ok = powerAtGov <= preset.grossInputPower;
+      c9detail = preset.grossInputPower + ' kW';
+    }
+    if(preset.grossInputTorque !== null) {
+      c10ok = torqueAtGov <= preset.grossInputTorque;
+      c10detail = preset.grossInputTorque + ' N·m';
+    }
+
+    var status, score;
+    if(preset.grossInputPower === null && preset.grossInputTorque === null) {
+      status = 'no-data'; score = -1;
+    } else if(!c9ok || !c10ok) {
+      status = 'unacceptable'; score = 0;
+    } else {
+      // Marjları hesapla
+      var powerMargin = preset.grossInputPower !== null ? ((preset.grossInputPower - powerAtGov) / preset.grossInputPower * 100) : 100;
+      var torqueMargin = preset.grossInputTorque !== null ? ((preset.grossInputTorque - torqueAtGov) / preset.grossInputTorque * 100) : 100;
+      var minMargin = Math.min(powerMargin, torqueMargin);
+      if(minMargin >= 15) { status = 'recommended'; score = 3; }
+      else if(minMargin >= 5) { status = 'caution'; score = 2; }
+      else { status = 'tight'; score = 1; }
+    }
+
+    results.push({
+      key: gbKey,
+      name: preset.name,
+      family: preset.family || '—',
+      calibrated: preset.calibrated || false,
+      downshiftCalibrated: preset.downshiftCalibrated || false,
+      grossInputPower: preset.grossInputPower,
+      grossInputTorque: preset.grossInputTorque,
+      netTurbineTorque: preset.netTurbineTorque,
+      maxOutputSpeed: preset.maxOutputSpeed,
+      c9ok: c9ok, c10ok: c10ok,
+      c9detail: c9detail, c10detail: c10detail,
+      status: status, score: score,
+      gearCount: preset.gears.filter(function(g) { return g.gear !== 'R'; }).length
+    });
+  });
+
+  // Sıralama: score desc, sonra isim
+  results.sort(function(a, b) { return b.score - a.score || a.name.localeCompare(b.name); });
+
+  // Seçili şanzıman
+  var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+  var selectedGB = (gbNode && gbNode.data) ? (gbNode.data.ftGBPreset || '') : '';
+
+  // Tablo oluştur
+  if(resultsEl) {
+    var h = '';
+    h += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">';
+    h += '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading);">Şanzıman Uyumluluk Tablosu</div>';
+    h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.egm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.egm-info-tip\').style.display=\'none\'">';
+    h += '<div style="width:16px; height:16px; border-radius:50%; background:var(--bg-tertiary); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; cursor:help; font-size:0.55rem; font-weight:700; color:var(--text-secondary);">i</div>';
+    h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
+    h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:0.65rem;">Kontrol Kriterleri</div>';
+    h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + powerAtGov.toFixed(0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
+    h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + torqueAtGov.toFixed(0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
+    h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color);">';
+    h += '<span style="color:var(--accent-success);">Önerilen</span>: ≥15% marj | <span style="color:var(--accent-warning);">Dikkat</span>: 5-15% marj | <span style="color:#f97316;">Sıkı</span>: &lt;5% marj | <span style="color:var(--accent-danger);">Uyumsuz</span>: Limit aşılıyor';
+    h += '</div></div></div></div>';
+
+    // Tablo
+    h += '<div style="overflow-x:auto;">';
+    h += '<table style="width:100%; border-collapse:collapse; font-size:0.58rem; table-layout:fixed;">';
+    h += '<colgroup>';
+    h += '<col style="width:28px;">';   // Durum (ikon)
+    h += '<col style="width:auto;">';   // Şanzıman
+    h += '<col style="width:32px;">';   // Vites
+    h += '<col style="width:38px;">';   // Güç
+    h += '<col style="width:40px;">';   // Tork
+    h += '<col style="width:40px;">';   // Türbin
+    h += '<col style="width:40px;">';   // Max Çkş
+    h += '<col style="width:24px;">';   // C9
+    h += '<col style="width:24px;">';   // C10
+    h += '<col style="width:34px;">';   // Seç
+    h += '</colgroup>';
+    h += '<thead><tr style="background:var(--bg-tertiary);">';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:600; color:var(--text-heading); font-size:0.55rem;" title="Durum">⊘</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Şanzıman</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">V</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C9: Giriş Güç Limiti (kW)">Güç</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C10: Giriş Tork Limiti (Nm)">Tork</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="Net Türbin Torku (Nm)">Türb.</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="Maks. Çıkış Hızı (rpm)">Çkş</th>';
+    h += '<th style="padding:3px 1px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C9</th>';
+    h += '<th style="padding:3px 1px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C10</th>';
+    h += '<th style="padding:3px 1px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);"></th>';
+    h += '</tr></thead><tbody>';
+
+    results.forEach(function(r) {
+      var bgColor = r.status === 'recommended' ? 'rgba(22,163,74,0.06)' :
+                    r.status === 'caution' ? 'rgba(217,119,6,0.06)' :
+                    r.status === 'tight' ? 'rgba(249,115,22,0.06)' :
+                    r.status === 'unacceptable' ? 'rgba(220,38,38,0.06)' :
+                    'transparent';
+      var statusIcon = r.status === 'recommended' ? '✅' :
+                       r.status === 'caution' ? '⚠️' :
+                       r.status === 'tight' ? '⚠️' :
+                       r.status === 'unacceptable' ? '❌' : '—';
+      var statusText = r.status === 'recommended' ? 'Önerilen' :
+                       r.status === 'caution' ? 'Dikkat' :
+                       r.status === 'tight' ? 'Sıkı' :
+                       r.status === 'unacceptable' ? 'Uyumsuz' : 'Veri Yok';
+      var statusColor = r.status === 'recommended' ? 'var(--accent-success)' :
+                        r.status === 'caution' ? 'var(--accent-warning)' :
+                        r.status === 'tight' ? '#f97316' :
+                        r.status === 'unacceptable' ? 'var(--accent-danger)' : 'var(--text-muted)';
+      var isSelected = r.key === selectedGB;
+      var borderLeft = isSelected ? '3px solid var(--accent-primary)' : 'none';
+      var calMark = (r.calibrated ? ' ✦' : '') + (r.downshiftCalibrated ? ' ✧' : '');
+
+      // Şanzıman adını kısalt: "Allison | 4000SP" → "4000SP"
+      var shortName = r.name.replace(/^Allison\s*\|\s*/i, '');
+      h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';" title="' + statusText + ': ' + r.name + '">';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center;" title="' + statusText + '"><span style="font-size:0.6rem;">' + statusIcon + '</span></td>';
+      h += '<td style="padding:2px 3px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + shortName + calMark + (isSelected ? ' <span style="font-size:0.45rem; background:var(--accent-primary); color:white; padding:0 3px; border-radius:2px;">✔</span>' : '') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.gearCount + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? r.grossInputPower : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? r.grossInputTorque : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.netTurbineTorque !== null ? r.netTurbineTorque : '—') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? r.maxOutputSpeed : '—') + '</td>';
+      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c9ok ? '✅' : '❌')) + '</td>';
+      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c10ok ? '✅' : '❌')) + '</td>';
+      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center;">';
+      h += '<button onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:0.52rem; background:' + (isSelected ? 'var(--bg-tertiary)' : 'var(--accent-primary)') + '; color:' + (isSelected ? 'var(--text-muted)' : 'white') + '; border:1px solid ' + (isSelected ? 'var(--border-color)' : 'transparent') + '; border-radius:2px; cursor:' + (isSelected ? 'default' : 'pointer') + ';"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
+      h += '</td>';
+      h += '</tr>';
+    });
+
+    h += '</tbody></table></div>';
+
+    // Önerilen şanzıman özeti
+    var recommended = results.filter(function(r) { return r.status === 'recommended'; });
+    if(recommended.length > 0) {
+      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.25); border-radius:6px;">';
+      h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-success);">🏆 Önerilen Şanzımanlar (' + recommended.length + ')</div>';
+      h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">' + recommended.map(function(r) { return r.name; }).join(', ') + '</div>';
+      h += '</div>';
+    } else {
+      var acceptable = results.filter(function(r) { return r.score > 0; });
+      if(acceptable.length > 0) {
+        h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(217,119,6,0.08); border:1px solid rgba(217,119,6,0.25); border-radius:6px;">';
+        h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-warning);">⚠ Tam uyumlu şanzıman bulunamadı</div>';
+        h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">En iyi seçenekler: ' + acceptable.map(function(r) { return r.name; }).join(', ') + '</div>';
+        h += '</div>';
+      }
+    }
+
+    resultsEl.innerHTML = h;
+  }
+}
+
+// Şanzıman seçimi (Eşleştirme bileşeninden → Gearbox bileşenine)
+function egmSelectGearbox(egmNodeId, gbPresetKey) {
+  var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+  if(!gbNode) {
+    showToast('⚠ Şanzıman bileşeni bulunamadı. Önce canvas\'a ekleyin.', 'warning');
+    return;
+  }
+
+  // Gearbox bileşenine preset yükle (mevcut fonksiyonu kullan)
+  onVEFTGBPresetSelect(gbNode.id, gbPresetKey);
+
+  // EC-Matching varsa turbineRating'i de güncelle
+  var preset = VE_GEARBOX_PRESETS[gbPresetKey];
+  if(preset && preset.netTurbineTorque) {
+    var ecmNode = nodes.find(function(n) { return n.type === 'ec-matching'; });
+    if(ecmNode) {
+      if(!ecmNode.data) ecmNode.data = {};
+      ecmNode.data.turbineRating = preset.netTurbineTorque;
+      var trEl = document.getElementById('ecm-turbine-rating-' + ecmNode.id);
+      if(trEl) trEl.value = preset.netTurbineTorque;
+      // EC-Matching analizini yeniden çalıştır
+      runECMatchingAnalysis(ecmNode.id);
+    }
+  }
+
+  showToast('✅ ' + preset.name + ' → Şanzıman bileşenine yüklendi', 'success');
+
+  // Tabloyu güncelle (seçili satırı göster)
+  runEngineGearboxMatchingAnalysis(egmNodeId);
+}
+
 // ── TC bileşenine konvertör yükle ──
 function ecmSelectConverter(ecmNodeId, tcPresetKey) {
   var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
@@ -5191,8 +5763,9 @@ function ecmExpandChart(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node) return;
   
-  // Motor verisini topla
-  var engineNode = nodes.find(function(n) { return n.type === 'engine' && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
+  // Motor verisini topla (önce bağlantı, yoksa global)
+  var engineNode = findConnectedEngine(nodeId);
+  if(!engineNode) engineNode = nodes.find(function(n) { return (n.type === 'engine') && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
   if(!engineNode) { showToast('⚠ Motor bileşeni bulunamadı', 'warning'); return; }
   
   var torqueData = engineNode.data.torqueData || [];
@@ -5908,8 +6481,12 @@ function getTorqueConverterPropertiesHTML(node) {
     }
     var _familyLabels = {'1000_2000': '1000/2000 Serisi', '3000': '3000 Serisi', '4000': '4000 Serisi'};
     
+    var hasECM = nodes.some(function(n) { return n.type === 'ec-matching'; });
     html += '<div style="margin-bottom:10px;">';
-    html += '<select id="ve-tc-select-' + node.id + '" onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:0.7rem; padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px;">';
+    if(hasECM) {
+      html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:4px; font-size:0.58rem; color:var(--accent-warning); line-height:1.4;">🔒 Konvertör seçimi Motor-Konvertör Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+    }
+    html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:0.7rem; padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px;' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
     html += '<option value="">-- Konvertör Seçiniz --</option>';
     
     if(!_gbFamily) {
@@ -7509,90 +8086,60 @@ function onVEDiffParamChange(nodeId) {
 // ===== TEKERLEK ÖZELLİKLERİ =====
 function getSolverPropertiesHTML(node) {
   var d = node.data || {};
-  var timeMode = d.timeMode || 'manual';
-  var duration = d.duration !== undefined ? d.duration : 60;
   var maxSimTime = d.maxSimTime !== undefined ? d.maxSimTime : 300;
-  var stopSpeed = d.stopSpeed !== undefined ? d.stopSpeed : 2;
-  var resolution = d.resolution !== undefined ? d.resolution : 200;
-  
+
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  // Başlık — modül göstergesiyle
-  var ftMode = veActiveModule === 'full-throttle';
-  var moduleLabel = ftMode ? 'Tam Gaz Hızlanma' : 'Motor Freni';
-  var moduleColor = ftMode ? '#2e7d32' : '#1565c0';
+
+  // Başlık
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
   html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Çözücü Ayarları</div>';
-  html += '<span style="font-size:0.52rem; font-weight:600; color:' + moduleColor + '; background:' + moduleColor + '18; padding:2px 7px; border-radius:3px; border:1px solid ' + moduleColor + '30; letter-spacing:0.03em; text-transform:uppercase;">' + moduleLabel + '</span>';
+  html += '<span style="font-size:0.52rem; font-weight:600; color:#2e7d32; background:#2e7d3218; padding:2px 7px; border-radius:3px; border:1px solid #2e7d3230; letter-spacing:0.03em; text-transform:uppercase;">MFSim</span>';
   html += '</div>';
   
+  // ===== ÇÖZÜM KÜMESİ =====
+  var perfAnalysis = d.performanceAnalysis || false;
+  html += '<div style="margin-bottom:10px;">';
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Çözüm Kümesi</div>';
+  html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.66rem; color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
+  html += '<input type="checkbox" id="ve-solver-perfanalysis-' + node.id + '" ' + (perfAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
+  html += '<div><div style="font-weight:600;">Performans Analizi</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Tam gaz hızlanma, 0-100 km/h, elastik hızlanma, gradeability</div></div>';
+  html += '</label>';
+
+  // Hızlanma-Yavaşlama checkbox (segment bazlı sürüş)
+  var accelDecel = d.accelDecelAnalysis || false;
+  var scenNode = nodes.find(function(n) { return n.type === 'scenario'; });
+  var hasRoadSegs = scenNode && scenNode.data && scenNode.data.roadSegments && scenNode.data.roadSegments.length > 0;
+  if(hasRoadSegs) {
+    html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.66rem; color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
+    html += '<input type="checkbox" id="ve-solver-acceldecel-' + node.id + '" ' + (accelDecel ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
+    html += '<div><div style="font-weight:600;">Hızlanma-Yavaşlama</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Segment bazlı sürüş analizi — güzergah üzerinde hızlanma/yavaşlama profili</div></div>';
+    html += '</label>';
+  }
+  html += '</div>';
+
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
-  
-  // Zaman modu
-  
-  if(!ftMode) {
-    // Motor Freni modu: zaman modu seçimi
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Zaman modu</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-timemode-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="manual"' + (timeMode==='manual'?' selected':'') + '>Zamanı ben veriyorum</option><option value="stop"' + (timeMode==='stop'?' selected':'') + '>Durma analizi</option></select></td></tr>';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary);">"Zamanı ben veriyorum": Belirli bir süre için simülasyon yapar. "Durma analizi": Araç durana kadar (veya maks. süreye kadar) simüle eder.</td></tr>';
-  } else {
-    // FT modu: zaman modu gizli, otomatik "maks hıza kadar"
-    html += '<input type="hidden" id="ve-solver-timemode-' + node.id + '" value="stop">';
-  }
-  
-  // Süre (belirli süre modunda — FT modda gizle)
-  html += '<tr id="ve-solver-dur-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (ftMode || timeMode==='stop'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Geçen süre [s]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-solver-duration-' + node.id + '" value="' + duration + '" step="1" min="1" placeholder="60" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"></td></tr>';
-  
-  // Maks süre
-  var maxTimeLabel = ftMode ? 'Maks. süre (güvenlik) [s]' : 'Maks. süre [s]';
-  if(ftMode) {
-    // FT modda güvenlik limiti gizli input olarak kalır (kullanıcıya gösterilmez)
-    html += '<input type="hidden" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '">';
-  } else {
-    html += '<tr id="ve-solver-maxtime-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (timeMode!=='stop'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">' + maxTimeLabel + '</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '" step="10" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"></td></tr>';
-  }
-  
-  
-  // Durma hızı eşiği (FT modda daima gizle)
-  var hideStopSpeed = ftMode || timeMode !== 'stop';
-  html += '<tr id="ve-solver-stopspeed-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (hideStopSpeed?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Durma eşiği [km/h]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-solver-stopspeed-' + node.id + '" value="' + stopSpeed + '" step="0.5" min="0" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVESolverParamChange(\'' + node.id + '\')"></td></tr>';
-  
-  // Çözünürlük ve Çözüm yöntemi (FT modda gizle — sabit dt=0.01, RK4)
-  if(!ftMode) {
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözünürlük (adım)</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-resolution-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="100"' + (resolution==100?' selected':'') + '>100</option><option value="200"' + (resolution==200?' selected':'') + '>200</option><option value="500"' + (resolution==500?' selected':'') + '>500</option><option value="1000"' + (resolution==1000?' selected':'') + '>1000</option></select></td></tr>';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary);">Toplam simülasyon süresini seçilen adım sayısına bölerek Δt hesaplanır.</td></tr>';
-  }
-  
+
+  // Zaman modu: otomatik "maks hıza kadar"
+  html += '<input type="hidden" id="ve-solver-timemode-' + node.id + '" value="stop">';
+  html += '<input type="hidden" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '">';
+
   // Çözüm yöntemi
-  var method = d.method || 'euler';
+  var method = d.method || 'rk4';
   var isAdaptive = method === 'rk45';
-  if(!ftMode) {
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözüm yöntemi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-method-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="euler"' + (method==='euler'?' selected':'') + '>Basit Euler</option><option value="heun"' + (method==='heun'?' selected':'') + '>Heun (2. derece)</option><option value="ralston"' + (method==='ralston'?' selected':'') + '>Ralston (2. derece, optimal)</option><option value="rk4"' + (method==='rk4'?' selected':'') + '>RK4 (4. derece)</option><option value="rk45"' + (method==='rk45'?' selected':'') + '>⚡ RK45 Dormand-Prince (adaptif)</option></select></td></tr>';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>Euler</b>: Hızlı, büyük adımlarda hata birikir. <b>Heun</b>: Daha stabil, iyi denge. <b>Ralston</b>: Optimal 2. derece. <b>RK4</b>: Yüksek doğruluk, sabit adım. <b>RK45</b>: Adaptif adım — MATLAB ode45 yöntemi, süreksizlik algılama ve enerji dengesi.</td></tr>';
-  } else {
-    // FT modda da yöntem seçimi aktif
-    var ftMethod = d.method || 'rk4';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözüm yöntemi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-method-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="euler"' + (ftMethod==='euler'?' selected':'') + '>Euler (1. derece)</option><option value="heun"' + (ftMethod==='heun'?' selected':'') + '>Heun (2. derece)</option><option value="ralston"' + (ftMethod==='ralston'?' selected':'') + '>Ralston (2. derece, optimal)</option><option value="rk4"' + (ftMethod==='rk4'?' selected':'') + '>RK4 (4. derece)</option><option value="rk45"' + (ftMethod==='rk45'?' selected':'') + '>⚡ RK45 Dormand-Prince (adaptif)</option></select></td></tr>';
-    html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>Euler</b>: Hızlı, düşük doğruluk. <b>Heun</b>: İyi denge. <b>Ralston</b>: Optimal 2. derece. <b>RK4</b>: Yüksek doğruluk (önerilen). <b>RK45</b>: Adaptif adım — otomatik hassasiyet kontrolü.</td></tr>';
-    
-    // Sabit adım büyüklüğü (RK45 dışında)
-    var ftDt = d.ftDt || 0.01;
-    var showDtRow = ftMethod !== 'rk45';
-    html += '<tr id="ve-solver-ftdt-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showDtRow ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Adım büyüklüğü Δt [s]</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-ftdt-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="0.05"' + (ftDt==0.05?' selected':'') + '>0.05 (hızlı)</option><option value="0.02"' + (ftDt==0.02?' selected':'') + '>0.02</option><option value="0.01"' + (ftDt==0.01?' selected':'') + '>0.01 (varsayılan)</option><option value="0.005"' + (ftDt==0.005?' selected':'') + '>0.005 (hassas)</option><option value="0.001"' + (ftDt==0.001?' selected':'') + '>0.001 (çok hassas)</option></select></td></tr>';
-    
-    // RK45 tolerans ayarları (FT modu)
-    var ftAtol = d.ftAtol !== undefined ? d.ftAtol : 1e-6;
-    var ftRtol = d.ftRtol !== undefined ? d.ftRtol : 1e-4;
-    var showFtTol = ftMethod === 'rk45';
-    html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="padding:6px; background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
-    html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
-  }
-  
-  // RK45 tolerans ayarları (sadece rk45 seçildiğinde ve motor freni modunda görünür)
-  var atol = d.atol !== undefined ? d.atol : 1e-6;
-  var rtol = d.rtol !== undefined ? d.rtol : 1e-4;
-  var showTol = !ftMode && isAdaptive;
-  html += '<tr id="ve-solver-tol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showTol ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="padding:6px; background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-atol-' + node.id + '" value="' + atol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-rtol-' + node.id + '" value="' + rtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
-  html += '<tr id="ve-solver-tol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showTol ? 'display:none;' : '') + '"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s cinsinden). <b>RTol</b>: Bağıl tolerans. Küçük → daha hassas ama daha çok adım. Varsayılan: 10⁻⁶ / 10⁻⁴</td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Çözüm yöntemi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-method-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="euler"' + (method==='euler'?' selected':'') + '>Euler (1. derece)</option><option value="heun"' + (method==='heun'?' selected':'') + '>Heun (2. derece)</option><option value="ralston"' + (method==='ralston'?' selected':'') + '>Ralston (2. derece, optimal)</option><option value="rk4"' + (method==='rk4'?' selected':'') + '>RK4 (4. derece)</option><option value="rk45"' + (method==='rk45'?' selected':'') + '>⚡ RK45 Dormand-Prince (adaptif)</option></select></td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>Euler</b>: Hızlı, düşük doğruluk. <b>Heun</b>: İyi denge. <b>Ralston</b>: Optimal 2. derece. <b>RK4</b>: Yüksek doğruluk (önerilen). <b>RK45</b>: Adaptif adım — otomatik hassasiyet kontrolü.</td></tr>';
+
+  // Sabit adım büyüklüğü (RK45 dışında)
+  var ftDt = d.ftDt || 0.01;
+  var showDtRow = method !== 'rk45';
+  html += '<tr id="ve-solver-ftdt-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showDtRow ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Adım büyüklüğü Δt [s]</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-solver-ftdt-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="0.05"' + (ftDt==0.05?' selected':'') + '>0.05 (hızlı)</option><option value="0.02"' + (ftDt==0.02?' selected':'') + '>0.02</option><option value="0.01"' + (ftDt==0.01?' selected':'') + '>0.01 (varsayılan)</option><option value="0.005"' + (ftDt==0.005?' selected':'') + '>0.005 (hassas)</option><option value="0.001"' + (ftDt==0.001?' selected':'') + '>0.001 (çok hassas)</option></select></td></tr>';
+
+  // RK45 tolerans ayarları
+  var ftAtol = d.ftAtol !== undefined ? d.ftAtol : 1e-6;
+  var ftRtol = d.ftRtol !== undefined ? d.ftRtol : 1e-4;
+  var showFtTol = method === 'rk45';
+  html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="padding:6px; background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
+  html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
   
   html += '</table>';
   
@@ -7657,7 +8204,7 @@ function onVESolverParamChange(nodeId) {
     var stopRow = el('ve-solver-stopspeed-row-' + nodeId);
     if(durRow) durRow.style.display = isStop ? 'none' : '';
     if(maxRow) maxRow.style.display = isStop ? '' : 'none';
-    if(stopRow) stopRow.style.display = (isStop && veActiveModule !== 'full-throttle') ? '' : 'none';
+    if(stopRow) stopRow.style.display = 'none';
   }
   if(durEl) node.data.duration = parseFloat(durEl.value) || 60;
   if(maxEl) node.data.maxSimTime = parseFloat(maxEl.value) || 300;
@@ -7697,6 +8244,14 @@ function onVESolverParamChange(nodeId) {
   if(atolEl) node.data.atol = parseFloat(atolEl.value) || 1e-6;
   if(rtolEl) node.data.rtol = parseFloat(rtolEl.value) || 1e-4;
   
+  // Performans Analizi checkbox
+  var perfEl = el('ve-solver-perfanalysis-' + nodeId);
+  if(perfEl) node.data.performanceAnalysis = perfEl.checked;
+
+  // Hızlanma-Yavaşlama checkbox
+  var adEl = el('ve-solver-acceldecel-' + nodeId);
+  if(adEl) node.data.accelDecelAnalysis = adEl.checked;
+
   // FT modu parametreleri
   var ftDtEl = el('ve-solver-ftdt-' + nodeId);
   if(ftDtEl) node.data.ftDt = parseFloat(ftDtEl.value) || 0.01;
@@ -7704,5 +8259,14 @@ function onVESolverParamChange(nodeId) {
   var ftRtolEl = el('ve-solver-ftrtol-' + nodeId);
   if(ftAtolEl) node.data.ftAtol = parseFloat(ftAtolEl.value) || 1e-6;
   if(ftRtolEl) node.data.ftRtol = parseFloat(ftRtolEl.value) || 1e-4;
+}
+
+// ===== VİTES GEÇİŞLERİ ÖZELLİKLERİ =====
+function getGearShiftPropertiesHTML(node) {
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  html += '<div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Parametreler</div>';
+  html += '<div style="font-size:0.8rem; color:var(--text-secondary);">Bu bileşen için henüz parametre tanımlanmamış.</div>';
+  html += '</div>';
+  return html;
 }
 

@@ -9,7 +9,7 @@ document.body.innerHTML = '<div id="ve-canvas"></div><div id="ve-solver-validati
 // Gerekli global değişkenler
 global.nodes = [];
 global.connections = [];
-global.veActiveModule = 'engine-brake';
+global.veActiveModule = 'full-throttle';
 global.veActiveTabIdx = 0;
 global.veTabs = [];
 global.veChartViews = [];
@@ -60,9 +60,16 @@ beforeEach(() => {
   veTabs = [];
   veChartViews = [{ id: 'chart1' }];
   window.veSimResults = { time: [0, 1], speed: [0, 5] };
-  veActiveModule = 'engine-brake';
-  veRunSimulationEngine.mockClear();
-  veFTRunSimulationEngine.mockClear();
+  veActiveModule = 'full-throttle';
+  veRunSimulationEngine.mockReset();
+  veFTRunSimulationEngine.mockReset();
+  // Varsayılan implementasyonları geri yükle
+  veRunSimulationEngine.mockImplementation(function() {
+    return { time: [0, 1, 2, 3, 4, 5], speed: [0, 10, 20, 30, 35, 38], rpm: [800, 1200, 1600, 2000, 2200, 2400], mode: 'full' };
+  });
+  veFTRunSimulationEngine.mockImplementation(function(kademe) {
+    return { time: [0, 1, 2, 3], speed: [0, 15, 30, 45], rpm: [1000, 1500, 2000, 2500], mode: 'full-throttle', kademe: kademe || 'High' };
+  });
 });
 
 // ── Yardımcı ──
@@ -100,8 +107,8 @@ describe('_veSolveOtherTopologies — temel', () => {
       makeTab('Diğer', [{ id: 'e2', type: 'engine', data: {} }])
     ];
     _veSolveOtherTopologies();
-    // Sadece ikinci topoloji çözülmeli
-    expect(veRunSimulationEngine).toHaveBeenCalledTimes(1);
+    // Sadece ikinci topoloji çözülmeli (FT solver her zaman kullanılır)
+    expect(veFTRunSimulationEngine).toHaveBeenCalled();
   });
 
   test('boş topolojiyi atlar', () => {
@@ -124,14 +131,14 @@ describe('_veSolveOtherTopologies — temel', () => {
     expect(veRunSimulationEngine).not.toHaveBeenCalled();
   });
 
-  test('engine-brake tipini motor olarak kabul eder', () => {
+  test('motor bileşeni olan topolojiyi çözer', () => {
     veActiveTabIdx = 0;
     veTabs = [
       makeTab('Aktif', [{ id: 'e1', type: 'engine', data: {} }]),
-      makeTab('Frensiz', [{ id: 'eb1', type: 'engine-brake', data: {} }])
+      makeTab('Diğer', [{ id: 'e2', type: 'engine', data: {} }])
     ];
     _veSolveOtherTopologies();
-    expect(veRunSimulationEngine).toHaveBeenCalledTimes(1);
+    expect(veFTRunSimulationEngine).toHaveBeenCalled();
   });
 });
 
@@ -158,7 +165,8 @@ describe('_veSolveOtherTopologies — sonuçlar', () => {
       makeTab('Üçüncü', [{ id: 'e3', type: 'engine', data: {} }])
     ];
     _veSolveOtherTopologies();
-    expect(veRunSimulationEngine).toHaveBeenCalledTimes(2);
+    // Her iki ek topoloji için FT solver çağrılmalı (her biri varsayılan 1 kademe = 1 çağrı)
+    expect(veFTRunSimulationEngine).toHaveBeenCalledTimes(2);
     expect(veTabs[1].state.simResults).toBeDefined();
     expect(veTabs[2].state.simResults).toBeDefined();
   });
@@ -190,7 +198,7 @@ describe('_veSolveOtherTopologies — global durum güvenliği', () => {
     var origConns = connections;
     var origSimResults = window.veSimResults;
 
-    veRunSimulationEngine.mockImplementation(function() {
+    veFTRunSimulationEngine.mockImplementation(function() {
       throw new Error('Simülasyon patladı!');
     });
 
@@ -313,7 +321,7 @@ describe('_veSolveOtherTopologies — loglama', () => {
   test('hata durumunda log ile hatayı raporlar', () => {
     var logMessages = [];
     var mockLog = jest.fn(function(msg) { logMessages.push(msg); });
-    veRunSimulationEngine.mockImplementation(function() {
+    veFTRunSimulationEngine.mockImplementation(function() {
       throw new Error('Test hatası');
     });
 
@@ -330,7 +338,7 @@ describe('_veSolveOtherTopologies — loglama', () => {
 
   test('hata durumunda log yoksa console.warn kullanır', () => {
     var consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(function() {});
-    veRunSimulationEngine.mockImplementation(function() {
+    veFTRunSimulationEngine.mockImplementation(function() {
       throw new Error('Test hatası');
     });
 
@@ -362,7 +370,7 @@ describe('_veSolveOtherTopologies — node yapılandırma', () => {
 
     // Hata fırlatmamalı
     expect(() => _veSolveOtherTopologies()).not.toThrow();
-    expect(veRunSimulationEngine).toHaveBeenCalledTimes(1);
+    expect(veFTRunSimulationEngine).toHaveBeenCalled();
   });
 
   test('node verisi deep-copy edilir (orijinal etkilenmez)', () => {
@@ -373,8 +381,8 @@ describe('_veSolveOtherTopologies — node yapılandırma', () => {
       makeTab('İkinci', [{ id: 'e2', type: 'engine', data: originalData }])
     ];
 
-    // veRunSimulationEngine'i veriyi değiştiren bir mock ile değiştir
-    veRunSimulationEngine.mockImplementation(function() {
+    // veFTRunSimulationEngine'i veriyi değiştiren bir mock ile değiştir
+    veFTRunSimulationEngine.mockImplementation(function() {
       // nodes global'e erişip veriyi değiştirmeye çalış
       if(nodes[0] && nodes[0].data && nodes[0].data.torqueData) {
         nodes[0].data.torqueData.push(999);

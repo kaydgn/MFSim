@@ -2,15 +2,8 @@
 // ============================================================================
 
 function veSolverRunProfessional() {
-  // ── veActiveModule güvenlik kontrolü ──
-  // Sayfa yenileme veya undo/redo sonrası veActiveModule boş kalabilir.
-  // Dropdown'dan oku ve senkronize et.
-  if(!veActiveModule) {
-    var modSel = document.getElementById('ve-module-select');
-    if(modSel && modSel.value) {
-      veActiveModule = modSel.value;
-    }
-  }
+  // Tek modül — veActiveModule her zaman 'full-throttle'
+  if(!veActiveModule) veActiveModule = 'full-throttle';
 
   // Modal oluştur
   var overlay = document.createElement('div');
@@ -29,7 +22,7 @@ function veSolverRunProfessional() {
       '<span style="width:8px;height:8px;border-radius:1px;background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
       '<span style="width:8px;height:8px;border-radius:1px;background:var(--bg-tertiary);border:1px solid var(--border-color);display:inline-block;"></span>' +
     '</div>' +
-    '<div style="font-weight:700;font-size:0.78rem;color:var(--text-heading);letter-spacing:0.06em;text-transform:uppercase;">' + (veActiveModule === 'full-throttle' ? 'Tam Gaz Hızlanma' : 'Motor Freni') + ' — Çözücü</div>' +
+    '<div style="font-weight:700;font-size:0.78rem;color:var(--text-heading);letter-spacing:0.06em;text-transform:uppercase;">MFSim — Çözücü</div>' +
   '</div>' +
   '<div style="display:flex;align-items:center;gap:5px;">' +
     '<button id="ve-solver-log-dl" style="display:none;padding:3px 9px;font-size:0.58rem;font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:1px;color:var(--text-muted);cursor:pointer;letter-spacing:0.03em;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'">📥 LOG</button>' +
@@ -76,7 +69,7 @@ function veSolverRunProfessional() {
     var a = document.createElement('a');
     a.href = url;
     var now2 = new Date();
-    var prefix = veActiveModule === 'full-throttle' ? 'BMC_FT_Log_' : 'BMC_Solver_Log_';
+    var prefix = 'MFSim_Log_';
     a.download = prefix + now2.getFullYear() + String(now2.getMonth()+1).padStart(2,'0') + String(now2.getDate()).padStart(2,'0') + '_' + String(now2.getHours()).padStart(2,'0') + String(now2.getMinutes()).padStart(2,'0') + '.txt';
     document.body.appendChild(a);
     a.click();
@@ -171,7 +164,7 @@ function veSolverRunProfessional() {
   addStep(function() {
     setProgress(10);
     // Zorunlu bileşen kontrolü
-    var hasEngine = nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var hasEngine = nodes.some(function(n) { return n.type === 'engine'; });
     var hasVehicle = nodes.some(function(n) { return n.type === 'vehicle'; });
     var hasSolver = nodes.some(function(n) { return n.type === 'solver'; });
     var hasWheel = nodes.some(function(n) { return n.type === 'wheel'; });
@@ -190,11 +183,7 @@ function veSolverRunProfessional() {
     } else {
       if(hasScenario) log('  Senaryo       : ✓ Bulundu (opsiyonel)', 'dim');
     }
-    if(veActiveModule === 'full-throttle') {
-      if(hasRoad) log('  Yol           : ✓ Bulundu (opsiyonel)', 'dim');
-    } else {
-      log('  Yol           : ' + (hasRoad ? '✓ Bulundu' : '✗ EKSİK'), hasRoad ? 'ok' : 'err');
-    }
+    if(hasRoad) log('  Yol           : ✓ Bulundu (opsiyonel)', 'dim');
     log('  Çözücü        : ' + (hasSolver ? '✓ Bulundu' : '✗ EKSİK'), hasSolver ? 'ok' : 'err');
     logSpacer();
     
@@ -248,7 +237,7 @@ function veSolverRunProfessional() {
   
   addStep(function() {
     // Motor
-    var eng = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var eng = nodes.find(function(n) { return n.type === 'engine'; });
     if(eng) {
       var ed = eng.data || {};
       var rows = ed.torqueData || [];
@@ -298,13 +287,13 @@ function veSolverRunProfessional() {
           log('  Shift Ref. RPM  : ' + logRefRPM + ' (kullanıcı tanımlı)', 'dim');
         } else {
           // governed speed'i bul
-          var engN = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+          var engN = nodes.find(function(n) { return n.type === 'engine'; });
           var engSp = engN ? ((engN.data || {}).motorSpecs || {}) : {};
           var govLog = parseFloat(engSp.governedSpeed) || parseFloat((engN || {}).data ? engN.data.governedRpm : 0) || 0;
           if(govLog) log('  Shift Ref. RPM  : ' + govLog + ' (motor governed)', 'dim');
         }
         var spLogData = VE_FT_SHIFT_PROFILES[gd.shiftProfile || 'allison3200sp_s1'] || {};
-        var refForLog = logRefRPM || (function(){ var eN = nodes.find(function(n){return n.type==='engine'||n.type==='engine-brake';}); return eN ? (parseFloat(((eN.data||{}).motorSpecs||{}).governedSpeed)||parseFloat((eN.data||{}).governedRpm)||0) : 0; })();
+        var refForLog = logRefRPM || (function(){ var eN = nodes.find(function(n){return n.type==='engine';}); return eN ? (parseFloat(((eN.data||{}).motorSpecs||{}).governedSpeed)||parseFloat((eN.data||{}).governedRpm)||0) : 0; })();
         if(refForLog && (spLogData.lockupOffset || spLogData.lockupShifts)) {
           // Converter geçişleri
           if(spLogData.converterShifts) {
@@ -332,11 +321,13 @@ function veSolverRunProfessional() {
             log('  Lockup geçişleri: N_out = a × ESL + b (per-gear kalibrasyon)', 'dim');
             Object.keys(spLogData.lockupShifts).forEach(function(sk) {
               var ls = spLogData.lockupShifts[sk];
-              var thr = ls.a * refForLog + ls.b;
-              if(ls.minCap !== undefined) thr = Math.max(thr, ls.minCap);
+              var thr = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(ls, refForLog) : (ls.a * refForLog + (ls.b || 0));
               var label = sk.replace(/(\d+L)(\d+L)/, '$1→$2');
-              var capNote = ls.minCap !== undefined ? ', cap=' + ls.minCap : '';
-              log('    ' + label + ': N_out ≥ ' + thr.toFixed(1) + ' (' + ls.a + '×' + refForLog + (ls.b >= 0 ? '+' : '') + ls.b + capNote + ')', 'dim');
+              var detail = '';
+              if(ls.type === 'segments') { detail = 'segments'; }
+              else if(ls.type === 'piecewise') { detail = 'piecewise'; }
+              else { detail = ls.a + '×' + refForLog + (ls.b >= 0 ? '+' : '') + ls.b; if(ls.capValue !== undefined) detail += ', cap=' + ls.capValue + '<' + ls.capBelow; else if(ls.minCap !== undefined) detail += ', cap=' + ls.minCap; }
+              log('    ' + label + ': N_out ≥ ' + thr.toFixed(1) + ' (' + detail + ')', 'dim');
             });
           } else {
             log('  Lockup shift    : ' + (refForLog - spLogData.lockupOffset) + ' rpm (ref - ' + spLogData.lockupOffset + ')', 'dim');
@@ -442,20 +433,18 @@ function veSolverRunProfessional() {
       if(veActiveModule === 'full-throttle') {
         // FT mod alanları
         var mass = parseFloat(vd.ftGVW);
-        var grade = parseFloat(vd.ftGrade) || 0;
         var cd = parseFloat(vd.ftCd) || 0.900;
         var h = parseFloat(vd.ftHeight) || 3.2;
         var w = parseFloat(vd.ftWidth) || 2.5;
         var rho = parseFloat(vd.ftRho) || 1.225;
         log('  Araç ağırlığı   : ' + (mass || '—') + ' kg', mass > 0 ? 'ok' : 'err');
-        log('  Eğim            : %' + grade, 'dim');
         log('  Cd              : ' + cd, 'dim');
         log('  Frontal alan    : ' + (h * w).toFixed(2) + ' m² (' + h + '×' + w + ')', 'dim');
         log('  Hava yoğunluğu  : ' + rho + ' kg/m³', 'dim');
         log('  Başlangıç hızı  : 0 km/h (sabit — tam gaz kalkış)', 'dim');
         if(!mass || mass <= 0) log('  ✗ Araç ağırlığı (GVW) girişi gerekli!', 'err');
       } else {
-        // Motor Freni alanları
+        // Diğer mod alanları
         var mass = parseFloat(vd.mass);
         var speed = parseFloat(vd.initialSpeed);
         log('  Araç ağırlığı   : ' + (mass || '—') + ' kg', mass > 0 ? 'ok' : 'err');
@@ -554,7 +543,7 @@ function veSolverRunProfessional() {
         log('  Bitiş koşulu   : F_net ≤ 0 (son vites, çekiş = direnç)', 'dim');
         log('  Tork interpol.  : PCHIP Spline (C¹ sürekli)', 'dim');
       } else {
-        // Motor Freni modu
+        // Diğer mod
         var mLabel = sd.method === 'heun' ? 'Heun (2. derece)' : sd.method === 'rk4' ? 'RK4 (4. derece)' : sd.method === 'rk45' ? 'RK45 Dormand-Prince (adaptif)' : sd.method === 'ralston' ? 'Ralston (2. derece)' : 'Basit Euler';
         var simTime = sd.timeMode === 'stop' ? (sd.maxSimTime || 300) : (sd.duration || 60);
         var res = sd.resolution || 200;
@@ -686,7 +675,7 @@ function veSolverRunProfessional() {
         log('    Önerilen süre: ' + Math.ceil(_estTime * 1.3) + ' s veya "Durma Analizi" kullanın', 'warn');
       }
     }
-    } // end motor freni
+    } // end validation
     log('Hesap başlıyor...');
     logSpacer();
     
@@ -697,24 +686,48 @@ function veSolverRunProfessional() {
         var t0 = performance.now();
         var simResult;
         if(veActiveModule === 'full-throttle') {
-          // ── TÜM TRANSFER KADEMELERİ İÇİN AYRI HESAP ──
+          // ── SOLVER NODE VE SENARYO VERİLERİ ──
+          var _solverNode = nodes.find(function(n) { return n.type === 'solver'; });
+          var _solverData = _solverNode ? (_solverNode.data || {}) : {};
+          var _scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
+          var _scenData = _scenarioNode ? (_scenarioNode.data || {}) : {};
+          var _hasPerfAnalysis = _solverData.performanceAnalysis !== false; // varsayılan açık
+          var _hasSegDrive = _solverData.accelDecelAnalysis && _scenData.roadSegments && _scenData.roadSegments.length > 0;
+
+          // ── 1) PERFORMANS ANALİZİ (Tam Gaz Hızlanma — her zaman çalışır) ──
           var _trNode = nodes.find(function(n) { return n.type === 'transfer'; });
           var _trd = _trNode ? (_trNode.data || {}) : {};
           var _ftTrGears = _trd.ftTrGears || [
             { kademe: 'High', ratio: 1.054, eff: 97.00 },
             { kademe: 'Low', ratio: 2.337, eff: 97.00 }
           ];
-          
+
           var allRangeResults = {};
           _ftTrGears.forEach(function(g) {
             allRangeResults[g.kademe] = veFTRunSimulationEngine(g.kademe);
           });
-          
-          // İlk kademeyi ana sonuç olarak kullan (grafik/sinyal için)
+
           simResult = allRangeResults[_ftTrGears[0].kademe];
-          // Circular ref önlemek için ayrı değişkenlerde tut
           window._veFTAllRangeResults = allRangeResults;
           window._veFTTransferGears = _ftTrGears;
+
+          // ── 2) SEGMENT BAZLI SÜRÜŞ (Hızlanma-Yavaşlama — opsiyonel) ──
+          if(_hasSegDrive) {
+            var _segInitSpeed = parseFloat(_scenData.segInitSpeed) || 0;
+            // Tüm transfer kademeleri için ayrı hesap
+            var segDriveAllRanges = {};
+            _ftTrGears.forEach(function(g) {
+              segDriveAllRanges[g.kademe] = veFTRunSegmentDrive(_scenData.roadSegments, _segInitSpeed, g.kademe);
+            });
+            // İlk kademeyi ana sonuç olarak kullan
+            simResult.segmentDrive = segDriveAllRanges[_ftTrGears[0].kademe];
+            simResult.segmentDriveAllRanges = segDriveAllRanges;
+            simResult.segmentDriveTransferGears = _ftTrGears;
+            // Orijinal segment girdi verisini sakla (TXT raporu için)
+            simResult.segmentDriveInputSegments = _scenData.roadSegments.map(function(s) {
+              return { no: s.no, grade: s.grade, distance: s.distance, deltaH: s.deltaH, command: s.command || 'full_throttle' };
+            });
+          }
         } else {
           simResult = veRunSimulationEngine();
         }
@@ -739,6 +752,16 @@ function veSolverRunProfessional() {
         var mode = simResult.mode === 'partial' ? 'Kısmi Analiz' : simResult.mode === 'full-throttle' ? 'Tam Gaz Hızlanma' : 'Tam Analiz';
         
         log('Entegrasyon tamamlandı (' + elapsed + ' s).', 'ok');
+
+        // Segment drive da çalıştıysa çift analiz modunu belirt
+        var _hasSegDriveResult = simResult.segmentDrive && simResult.segmentDrive.segmentSummary;
+        if(_hasSegDriveResult && simResult.mode === 'full-throttle') {
+          logSpacer();
+          log('═══════════════════════════════════════════', 'info');
+          log('PERFORMANS ANALİZİ (Tam Gaz Hızlanma)', 'info');
+          log('═══════════════════════════════════════════', 'info');
+        }
+
         logSpacer();
         log('Sonuç Özeti:', 'info');
         log('  Analiz modu     : ' + mode);
@@ -749,7 +772,7 @@ function veSolverRunProfessional() {
         if(simResult.speed && simResult.speed.length > 0) {
           var v0 = simResult.speed[0];
           var vF = simResult.speed[totalSteps - 1];
-          var vMax = simResult.solverStats ? simResult.solverStats.maxSpeed_kmh : Math.max.apply(null, simResult.speed);
+          var vMax = (simResult.solverStats && simResult.solverStats.maxSpeed_kmh !== undefined) ? simResult.solverStats.maxSpeed_kmh : Math.max.apply(null, simResult.speed);
           var vMin = Math.min.apply(null, simResult.speed);
           log('  Başlangıç hız   : ' + v0.toFixed(2) + ' km/h');
           log('  Son hız         : ' + vF.toFixed(2) + ' km/h');
@@ -785,6 +808,82 @@ function veSolverRunProfessional() {
             }
           }
         }
+        // ── Segment Sürüş: Hızlanma-Yavaşlama Özet Tablosu ──
+        if(simResult.segmentDriveAllRanges && simResult.segmentDriveTransferGears) {
+          var _sdTrGears = simResult.segmentDriveTransferGears;
+          var _sdAllRes = simResult.segmentDriveAllRanges;
+
+          logSpacer();
+          log('═══════════════════════════════════════════', 'info');
+          log('HIZLANMA-YAVAŞLAMA ANALİZİ', 'info');
+          log('═══════════════════════════════════════════', 'info');
+
+          // Girdi segmentlerini logla
+          var _inputSegs = simResult.segmentDriveInputSegments || [];
+          if(_inputSegs.length > 0) {
+            log('Girdi Segmentleri (' + _inputSegs.length + ' adet):', 'info');
+            _inputSegs.forEach(function(iseg) {
+              var cmdL = iseg.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
+              log('  Seg ' + iseg.no + ': mesafe=' + (iseg.distance || 0).toFixed(0) + 'm, eğim=%' + (iseg.grade || 0).toFixed(2) + ', komut=' + cmdL);
+            });
+          }
+
+          _sdTrGears.forEach(function(trg) {
+            var _segDrv = _sdAllRes[trg.kademe];
+            if(!_segDrv || !_segDrv.segmentSummary) return;
+            var _sds = _segDrv.solverStats || {};
+
+            logSpacer();
+            var trLabel = trg.kademe + ' (i=' + (parseFloat(trg.ratio || trg.oran) || 0).toFixed(3) + ')';
+            log('Transfer: ' + trLabel, 'info');
+
+            // Güç aktarma parametreleri
+            if(_sds.i_axle) {
+              log('  i_axle=' + _sds.i_axle.toFixed(3) +
+                  '  r_tire=' + (_sds.r_tire || 0).toFixed(3) + 'm' +
+                  '  GVW=' + (_sds.m_vehicle || 0).toFixed(0) + 'kg' +
+                  '  Crr=' + (_sds.Crr || 0).toFixed(4) +
+                  '  Cd=' + (_sds.Cd || 0).toFixed(3) +
+                  '  A=' + (_sds.A_frontal || 0).toFixed(2) + 'm²', 'dim');
+            }
+
+            var _computedSegs = _segDrv.segmentSummary.length;
+            var _expectedSegs = _inputSegs.length || _sds.segments || 0;
+            log('Segment Bazlı Özet (' + _computedSegs + '/' + _expectedSegs + ' segment hesaplandı):', 'info');
+            if(_computedSegs < _expectedSegs) {
+              log('  ⚠ UYARI: ' + (_expectedSegs - _computedSegs) + ' segment hesaplanamadı!', 'error');
+            }
+            _segDrv.segmentSummary.forEach(function(ss) {
+              var cmdLabel = ss.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
+              var cmdIcon = ss.command === 'coast' ? '⏸' : '▶';
+              log('  ' + cmdIcon + ' Seg ' + ss.no + ' [' + cmdLabel + ', %' + ss.grade.toFixed(1) + ']: ' +
+                ss.startSpeed_kmh.toFixed(1) + ' → ' + ss.endSpeed_kmh.toFixed(1) + ' km/h, ' +
+                ss.actualDist.toFixed(0) + 'm, ' + ss.duration.toFixed(1) + 's');
+            });
+
+            logSpacer();
+            log('  Başlangıç hızı : ' + _sds.initSpeed_kmh.toFixed(1) + ' km/h');
+            log('  Son hız        : ' + _sds.finalSpeed_kmh.toFixed(1) + ' km/h');
+            log('  Toplam mesafe  : ' + _sds.totalDistance.toFixed(0) + ' m');
+            log('  Toplam adım   : ' + _sds.steps);
+            log('  Son vites      : ' + (_sds.finalGear || '—') + (_sds.isLockup ? ' (Lockup)' : ' (Converter)'));
+
+            if(_sds.shiftHistory && _sds.shiftHistory.length > 0) {
+              log('  Vites geçişleri (' + _sds.shiftHistory.length + '):', 'dim');
+              _sds.shiftHistory.forEach(function(sh) {
+                log('    t=' + sh.t.toFixed(2) + 's | ' + sh.fromMode + ' → ' + sh.toMode + ' | V=' + sh.v_kmh.toFixed(1) + ' km/h', 'dim');
+              });
+            }
+
+            if(_segDrv.speed && _segDrv.speed.length > 0) {
+              var _sdMaxV = Math.max.apply(null, _segDrv.speed);
+              var _sdMinV = Math.min.apply(null, _segDrv.speed);
+              log('  Maks. hız      : ' + _sdMaxV.toFixed(1) + ' km/h');
+              log('  Min. hız       : ' + _sdMinV.toFixed(1) + ' km/h');
+            }
+          });
+        }
+
         // ── Tam Gaz: Vites Geçiş Tablosu (tüm kademeler) ──
         if(simResult.mode === 'full-throttle' && window._veFTAllRangeResults) {
           var trGears = window._veFTTransferGears || [{ kademe: 'High' }];
@@ -917,8 +1016,7 @@ function veSolverRunProfessional() {
                   if(spValData.lockupShifts && spValData.lockupShifts[valShiftKey]) {
                     // Per-gear kalibrasyon: N_out = a × ESL + b
                     var lsV = spValData.lockupShifts[valShiftKey];
-                    var expectedNout = lsV.a * governed + lsV.b;
-                    if(lsV.minCap !== undefined) expectedNout = Math.max(expectedNout, lsV.minCap);
+                    var expectedNout = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(lsV, governed) : (lsV.a * governed + (lsV.b || 0));
                     var actualNout = s.N_out || 0;
                     var noutDiff = Math.abs(actualNout - expectedNout);
                     if(noutDiff > 15) {
@@ -1034,8 +1132,8 @@ function veSolverRunProfessional() {
               log('  ✗ Lockup modu: ' + lockSR_err + ' noktada SR ≠ 1.0', 'err');
             }
             
-            // ── 5. Enerji Tutarlılığı (Basit) ──
-            // TE×V ≈ WP kontrolü — makul aralıkta mı?
+            // ── 5. Enerji Dengesi Analizi ──
+            // 5a. Temel kontrol: TE×V ≈ WP
             var energyErrors = 0;
             for(var ei = 1; ei < sLen; ei++) {
               var v_ms = sData[ei] / 3.6;
@@ -1048,6 +1146,41 @@ function veSolverRunProfessional() {
               log('  ✓ Enerji tutarlılığı: WP = TE × V doğrulandı', 'ok');
             } else {
               log('  ⚠ Enerji tutarlılığı: ' + energyErrors + ' noktada WP ≠ TE×V (>0.5 kW fark)', 'warn');
+            }
+
+            // 5b. Güç akışı dağılımı (enerji dengesi dizileri varsa)
+            var eb = ss.energyBalance;
+            if(eb) {
+              logSpacer();
+              log('ENERJİ DENGESİ — GÜÇ AKIŞI:', 'info');
+              log('  ┌─────────────────────────────────────────────────┐');
+              log('  │  Güç Bileşeni            │  Maks [kW] │ Ort [kW]│');
+              log('  ├─────────────────────────────────────────────────┤');
+              log('  │  Motor Gücü (P_engine)    │ ' + pad(eb.maxP_engine.toFixed(1), 9) + '  │ ' + pad(eb.avgP_engine.toFixed(1), 7) + ' │');
+              log('  │  TC Isı Kaybı (P_TC)      │ ' + pad(eb.maxP_TC_heat.toFixed(1), 9) + '  │ ' + pad(eb.avgP_TC_heat.toFixed(1), 7) + ' │');
+              log('  │  Güç Aktarma Kaybı (P_dt) │ ' + pad(eb.maxP_drivetrain.toFixed(1), 9) + '  │ ' + pad(eb.avgP_drivetrain.toFixed(1), 7) + ' │');
+              log('  │  Tekerlek Gücü (P_wheel)  │ ' + pad(eb.maxP_wheel.toFixed(1), 9) + '  │ ' + pad(eb.avgP_wheel.toFixed(1), 7) + ' │');
+              log('  ├─────────────────────────────────────────────────┤');
+              log('  │  Yuvarlanma (P_rolling)    │             │ ' + pad(eb.avgP_rolling.toFixed(1), 7) + ' │');
+              log('  │  Aerodinamik (P_aero)      │             │ ' + pad(eb.avgP_aero.toFixed(1), 7) + ' │');
+              log('  │  Eğim (P_grade)            │             │ ' + pad(eb.avgP_grade.toFixed(1), 7) + ' │');
+              log('  │  Hızlanma (P_accel)        │             │ ' + pad(eb.avgP_accel.toFixed(1), 7) + ' │');
+              log('  └─────────────────────────────────────────────────┘');
+              log('  Toplam verim: η = ' + eb.eta_avg.toFixed(1) + '% (ort.) | ' + eb.eta_min.toFixed(1) + '% (min) | ' + eb.eta_max.toFixed(1) + '% (maks)');
+              log('  Maks. artık (residual): ' + eb.maxResidual_kW.toFixed(3) + ' kW (' + eb.samples + ' nokta)');
+              if(eb.maxResidual_kW < 0.5) {
+                log('  ✓ Newton dengesi: F_traction = F_resist + m_eff × a doğrulandı', 'ok');
+              } else {
+                log('  ⚠ Newton dengesi sapması: ' + eb.maxResidual_kW.toFixed(3) + ' kW', 'warn');
+              }
+
+              // Kayıp dağılımı yüzdeleri (ortalama üzerinden)
+              if(eb.avgP_engine > 0.1) {
+                var pctTC = eb.avgP_TC_heat / eb.avgP_engine * 100;
+                var pctDT = eb.avgP_drivetrain / eb.avgP_engine * 100;
+                var pctWheel = eb.avgP_wheel / eb.avgP_engine * 100;
+                log('  Güç dağılımı: Tekerlek ' + pctWheel.toFixed(1) + '% | TC ısı ' + pctTC.toFixed(1) + '% | Drivetrain ' + pctDT.toFixed(1) + '%', 'dim');
+              }
             }
             
             // ── 6. Fiziksel Sınır Kontrolleri ──
@@ -1098,7 +1231,7 @@ function veSolverRunProfessional() {
           logSpacer();
 
         } else if(simResult.speed && simResult.speed.length > 0 && simResult.F_grade) {
-          // ── MOTOR FRENİ KUVVET DENGESİ ANALİZİ ──
+          // ── KUVVET DENGESİ ANALİZİ ──
           logSpacer();
           log('═══════════════════════════════════════════', 'head');
           log('  KUVVET DENGESİ ANALİZİ', 'head');
@@ -1109,22 +1242,17 @@ function veSolverRunProfessional() {
           var Fr0 = simResult.F_rolling ? simResult.F_rolling[0] : 0;
           var Fa0 = simResult.F_aero ? simResult.F_aero[0] : 0;
           var Fn0 = simResult.F_net ? simResult.F_net[0] : 0;
-          var Te0 = simResult.engineTorque ? Math.abs(simResult.engineTorque[0]) : 0;
-          var Fb0 = Math.abs(Fg0) > 0 ? (Math.abs(Fr0) + Math.abs(Fa0) + (Math.abs(Fn0 - Fg0 + Math.abs(Fr0) + Math.abs(Fa0)))) : 0;
-          Fb0 = Math.abs(Fg0 - Math.abs(Fr0) - Math.abs(Fa0) - Fn0);
-          var topDirenc0 = Math.abs(Fr0) + Math.abs(Fa0) + Fb0;
+          var topDirenc0 = Math.abs(Fr0) + Math.abs(Fa0);
           var kap0 = Math.abs(Fg0) > 0 ? (topDirenc0 / Math.abs(Fg0)) * 100 : 0;
           
           log('┌─ t=0 (Başlangıç Anı) ─────────────────', 'info');
           log('│ Hız              : ' + simResult.speed[0].toFixed(1) + ' km/h', 'dim');
           log('│ Motor Devri      : ' + (simResult.rpm ? simResult.rpm[0].toFixed(0) : '—') + ' d/d', 'dim');
-          log('│ Motor Freni Torku: ' + Te0.toFixed(0) + ' Nm', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
           log('│   Eğim Kuvveti    (F_grade) : +' + Math.abs(Fg0).toFixed(0) + ' N  (hızlandırıcı)');
           log('│   Yuvarlanma Dir. (F_roll)  : -' + Math.abs(Fr0).toFixed(0) + ' N  (frenleme)');
           log('│   Hava Direnci    (F_aero)  : -' + Math.abs(Fa0).toFixed(0) + ' N  (frenleme)');
-          log('│   Motor Freni     (F_brake) : -' + Fb0.toFixed(0) + ' N  (frenleme)');
           log('│   ─────────────────────────────');
           log('│   TOPLAM DİRENÇ            : ' + topDirenc0.toFixed(0) + ' N');
           log('│   NET KUVVET               : ' + (Fn0 >= 0 ? '+' : '') + Fn0.toFixed(0) + ' N' + (Fn0 > 10 ? '  → hızlanıyor' : (Fn0 < -10 ? '  → yavaşlıyor' : '  → dengede')));
@@ -1140,21 +1268,17 @@ function veSolverRunProfessional() {
           var FrL = simResult.F_rolling ? simResult.F_rolling[li] : 0;
           var FaL = simResult.F_aero ? simResult.F_aero[li] : 0;
           var FnL = simResult.F_net ? simResult.F_net[li] : 0;
-          var TeL = simResult.engineTorque ? Math.abs(simResult.engineTorque[li]) : 0;
-          var FbL = Math.abs(FgL - Math.abs(FrL) - Math.abs(FaL) - FnL);
-          var topDirencL = Math.abs(FrL) + Math.abs(FaL) + FbL;
+          var topDirencL = Math.abs(FrL) + Math.abs(FaL);
           var kapL = Math.abs(FgL) > 0 ? (topDirencL / Math.abs(FgL)) * 100 : 0;
           
           log('┌─ t=' + simResult.time[li].toFixed(1) + 's (Bitiş Anı) ─────────────────', 'info');
           log('│ Hız              : ' + simResult.speed[li].toFixed(1) + ' km/h', 'dim');
           log('│ Motor Devri      : ' + (simResult.rpm ? simResult.rpm[li].toFixed(0) : '—') + ' d/d', 'dim');
-          log('│ Motor Freni Torku: ' + TeL.toFixed(0) + ' Nm', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
           log('│   Eğim Kuvveti    (F_grade) : +' + Math.abs(FgL).toFixed(0) + ' N');
           log('│   Yuvarlanma Dir. (F_roll)  : -' + Math.abs(FrL).toFixed(0) + ' N');
           log('│   Hava Direnci    (F_aero)  : -' + Math.abs(FaL).toFixed(0) + ' N');
-          log('│   Motor Freni     (F_brake) : -' + FbL.toFixed(0) + ' N');
           log('│   ─────────────────────────────');
           log('│   TOPLAM DİRENÇ            : ' + topDirencL.toFixed(0) + ' N');
           log('│   NET KUVVET               : ' + (FnL >= 0 ? '+' : '') + FnL.toFixed(0) + ' N' + (FnL > 10 ? '  → hızlanıyor' : (FnL < -10 ? '  → yavaşlıyor' : '  → dengede')));
@@ -1168,11 +1292,11 @@ function veSolverRunProfessional() {
           var hizDeg = simResult.speed[li] - simResult.speed[0];
           log('KUVVET DENGESİ DEĞERLENDİRMESİ:', 'info');
           if(kap0 >= 100 && kapL >= 100) {
-            log('  ✓ Motor freni tüm süre boyunca YETERLİ', 'ok');
+            log('  ✓ Direnç kuvvetleri tüm süre boyunca YETERLİ', 'ok');
           } else if(kap0 >= 100) {
-            log('  ⚠ Motor freni başlangıçta yeterli, sonda yetersiz', 'warn');
+            log('  ⚠ Direnç kuvvetleri başlangıçta yeterli, sonda yetersiz', 'warn');
           } else {
-            log('  ✗ Motor freni YETERSİZ — ek frenleme gerekli', 'err');
+            log('  ✗ Direnç kuvvetleri YETERSİZ', 'err');
           }
           log('  Hız değişimi: ' + (hizDeg >= 0 ? '+' : '') + hizDeg.toFixed(2) + ' km/h (' + (hizDeg > 0.5 ? 'hızlandı' : (hizDeg < -0.5 ? 'yavaşladı' : 'dengede')) + ')');
           logSpacer();
@@ -1253,7 +1377,7 @@ function veSolverRunProfessional() {
 // Bağlantılardan güç aktarma zincirini otomatik çıkar
 function veGetPowertrainChain() {
   // Motor (kaynak) bul → bağlantıları takip et → Sonlandırıcı veya zincir sonuna kadar
-  var engineNodes = nodes.filter(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var engineNodes = nodes.filter(function(n) { return n.type === 'engine'; });
   if(engineNodes.length === 0) return [];
   
   var chain = [];

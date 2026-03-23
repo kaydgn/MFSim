@@ -1,189 +1,55 @@
 // ============================================================================
-// ALT MODÜL SİSTEMİ
+// ANA MODÜL SİSTEMİ
 // ============================================================================
-// Her modül kendi bileşen paleti, senaryo seti ve çözücü mantığını tanımlar.
+// Tüm bileşenler tek bir ana modülde birleştirilmiştir.
 var VE_MODULES = {
-  'engine-brake': {
-    name: 'M. Freni Performans',
-    icon: '',
-    description: 'Motor freni performansı, yokuş iniş analizi, retarder etkinliği',
-    components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
-    defaultScenario: 'coast',
-    scenarios: ['coast'],
-    requiresFull: true,
-    requiredComponents: ['scenario']
-  },
   'full-throttle': {
-    name: 'Tam Gaz Hızlanma',
+    name: 'Ana Sayfa',
     icon: '',
-    description: 'Tam gaz hızlanma performansı, 0-100 km/h, elastik hızlanma',
-    components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
-    defaultScenario: 'performance_analysis',
-    scenarios: ['performance_analysis'],
-    requiresFull: true,
-    requiredComponents: ['scenario']
-  },
-  'performance': {
-    name: 'Araç Performans Hesaplama',
-    icon: '',
-    description: 'Hızlanma, maksimum hız, elastik performans',
-    components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','solver','road','parametric'],
+    description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
     defaultScenario: 'full_throttle',
-    scenarios: ['full_throttle','partial_throttle'],
-    requiresFull: true
-  },
-  'fuel': {
-    name: 'Yakıt Tüketimi Analizi',
-    icon: '',
-    description: 'Sürüş çevrimi, yakıt tüketimi, emisyon hesaplama',
-    components: ['engine','torque-converter','ec-matching','gearbox','shift-controller','transfer','differential','wheel','vehicle','sensor','sensor-wizard','scenario','solver','road'],
-    defaultScenario: 'drive_cycle',
-    scenarios: ['drive_cycle','custom'],
+    scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
   }
 };
 
-var veActiveModule = '';
+var veActiveModule = 'full-throttle';
 
 function veOnModuleChange(moduleId) {
-  if(!VE_MODULES[moduleId]) return;
-  if(moduleId === veActiveModule) return;
-  
-  // Topolojide bileşen varsa kaydetmeyi sor
-  if(nodes.length > 0) {
-    var overlay = document.createElement('div');
-    overlay.id = 've-module-confirm-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999999;display:flex;align-items:center;justify-content:center;';
-    
-    var mod = VE_MODULES[moduleId];
-    var dialog = document.createElement('div');
-    dialog.style.cssText = 'background:var(--bg-secondary);border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);border:1px solid var(--border-color);';
-    dialog.innerHTML = '<div style="font-size:0.95rem;font-weight:600;color:var(--text-heading);margin-bottom:12px;">Modül Değişikliği</div>' +
-      '<p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;margin-bottom:8px;">' +
-      '<b>' + mod.name + '</b> modülüne geçiş yapmak üzeresiniz. Modüller arası matematik altyapı farklı olduğundan mevcut topoloji temizlenecektir.</p>' +
-      '<p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;margin-bottom:16px;">Mevcut topolojiyi kaydetmek ister misiniz?</p>' +
-      '<div style="display:flex;gap:8px;justify-content:flex-end;">' +
-      '<button id="ve-mod-cancel" style="padding:7px 16px;font-size:0.75rem;border:1px solid var(--border-color);background:var(--bg-tertiary);color:var(--text-primary);border-radius:6px;cursor:pointer;">Vazgeç</button>' +
-      '<button id="ve-mod-discard" style="padding:7px 16px;font-size:0.75rem;border:none;background:#dc2626;color:white;border-radius:6px;cursor:pointer;">Kaydetmeden Geç</button>' +
-      '<button id="ve-mod-save" style="padding:7px 16px;font-size:0.75rem;border:none;background:var(--accent-primary);color:white;border-radius:6px;cursor:pointer;font-weight:600;">Kaydet ve Geç</button>' +
-      '</div>';
-    overlay.appendChild(dialog);
-    document.body.appendChild(overlay);
-    
-    document.getElementById('ve-mod-cancel').onclick = function() {
-      overlay.remove();
-      // Dropdown'ı eski değere geri al
-      var sel = document.getElementById('ve-module-select');
-      if(sel) sel.value = veActiveModule;
-    };
-    document.getElementById('ve-mod-discard').onclick = function() {
-      overlay.remove();
-      veApplyModuleChange(moduleId);
-    };
-    document.getElementById('ve-mod-save').onclick = function() {
-      overlay.remove();
-      // Önce mevcut topolojiyi dosyaya kaydet
-      if(typeof veSaveTopology === 'function') {
-        veSaveTopology();
-      }
-      veApplyModuleChange(moduleId);
-    };
-    return;
-  }
-  
-  veApplyModuleChange(moduleId);
+  // Tek modül — değişiklik gerekmez
 }
 
 function veApplyModuleChange(moduleId) {
-  var mod = VE_MODULES[moduleId];
-  veActiveModule = moduleId;
-  
-  // Overlay'ı gizle
+  // Tek modül — overlay'ı gizle ve tüm bileşenleri göster
+  veActiveModule = 'full-throttle';
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
-  
-  // Topolojiyi temizle
-  nodes.forEach(function(n) {
-    var el = document.getElementById(n.id);
-    if(el) el.remove();
-  });
-  nodes = [];
-  connections = [];
-  selectedNodes = [];
-  
-  // SVG bağlantılarını temizle
-  var svgLayer = document.getElementById('ve-connections-layer');
-  if(svgLayer) svgLayer.innerHTML = '';
-  
-  // Sim sonuçlarını temizle
-  window.veSimResults = null;
-  
-  // Undo/redo sıfırla
-  undoStack = [];
-  redoStack = [];
-  
-  // Properties panelini sıfırla
-  showEmptyProperties();
-  updateNodeCount();
-  
-  // Sidebar bileşenlerini güncelle
-  var allComps = document.querySelectorAll('.ve-component[data-type]');
-  allComps.forEach(function(el) {
-    var type = el.getAttribute('data-type');
-    if(mod.components.indexOf(type) > -1) {
-      el.style.display = '';
-    } else {
-      el.style.display = 'none';
-    }
-  });
-  
-  // Boş kategorileri gizle
-  document.querySelectorAll('.ve-category').forEach(function(cat) {
-    var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
-    if(visibleComps.length === 0) {
-      cat.style.display = 'none';
-    } else {
-      cat.style.display = '';
-    }
-  });
-  
-  showToast(mod.name + ' modülü aktif', 'info');
+  veShowAllSidebarComponents();
 }
 
 function veGetActiveModule() {
-  return VE_MODULES[veActiveModule] || VE_MODULES['engine-brake'];
+  return VE_MODULES['full-throttle'];
 }
 
 function veSelectModuleFromOverlay(moduleId) {
   // Overlay'ı gizle
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
-  
-  // Modülü seç
-  var sel = document.getElementById('ve-module-select');
-  if(sel) sel.value = moduleId;
-  
-  veActiveModule = moduleId;
-  
-  // Sidebar filtreleme
-  var mod = VE_MODULES[moduleId];
-  if(mod) {
-    var allComps = document.querySelectorAll('.ve-component[data-type]');
-    allComps.forEach(function(el) {
-      var type = el.getAttribute('data-type');
-      if(mod.components.indexOf(type) > -1) {
-        el.style.display = '';
-      } else {
-        el.style.display = 'none';
-      }
-    });
-    document.querySelectorAll('.ve-category').forEach(function(cat) {
-      var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
-      cat.style.display = visibleComps.length === 0 ? 'none' : '';
-    });
-  }
-  
-  showToast(mod.name + ' modülü aktif', 'info');
+
+  veActiveModule = 'full-throttle';
+  veShowAllSidebarComponents();
+  showToast('Ana Sayfa aktif', 'info');
+}
+
+// Tüm sidebar bileşenlerini göster (modül filtreleme yok)
+function veShowAllSidebarComponents() {
+  document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
+    el.style.display = '';
+  });
+  document.querySelectorAll('.ve-category').forEach(function(cat) {
+    cat.style.display = '';
+  });
 }
 
 // Bileşen tanımları (SVG sembolleri)
@@ -201,9 +67,15 @@ var componentDefs = {
     outputs: 1
   },
   'ec-matching': {
-    name: 'Motor-TC Eşleştirme',
+    name: 'Motor-Konvertör Eşleştirme',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4"/><circle cx="30" cy="42" r="14" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="30" cy="42" r="6" fill="var(--text-secondary, #666)"/><path d="M48 42 L56 42" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linecap="round"/><path d="M52 38 L56 42 L52 46" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/><path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-    inputs: 0,
+    inputs: 1,
+    outputs: 0
+  },
+  'engine-gearbox-matching': {
+    name: 'Motor-Şanzıman Eşleştirme',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><rect x="20" y="28" width="25" height="40" rx="3" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><line x1="25" y1="42" x2="40" y2="42" stroke="var(--text-muted, #888)" stroke-width="2"/><line x1="25" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="2"/><line x1="25" y1="58" x2="40" y2="58" stroke="var(--text-muted, #888)" stroke-width="2"/><path d="M48 48 L56 48" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round"/><path d="M52 44 L56 48 L52 52" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/><path d="M20 74 L40 74 L55 66 L70 74 L85 74" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    inputs: 1,
     outputs: 0
   },
   'shift-controller': {
@@ -224,14 +96,6 @@ var componentDefs = {
     inputs: 0,
     outputs: 1
   },
-  'engine-brake': {
-    name: 'Motor Freni',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><circle cx="50" cy="50" r="35" fill="none" stroke="var(--text-secondary, #666)" stroke-width="6"/><circle cx="50" cy="50" r="20" fill="var(--text-muted, #888)"/><rect x="15" y="46" width="20" height="8" fill="var(--accent-danger, #f44336)"/><rect x="65" y="46" width="20" height="8" fill="var(--accent-danger, #f44336)"/></svg>',
-    inputs: 1,
-    outputs: 1
-  },
-
-
   'transfer': {
     name: 'Transfer Kutusu',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="25" y="20" width="50" height="60" fill="var(--text-secondary, #666)" rx="4"/><rect x="10" y="35" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="30" width="20" height="8" fill="var(--text-muted, #888)"/><rect x="70" y="62" width="20" height="8" fill="var(--text-muted, #888)"/><circle cx="50" cy="50" r="12" fill="var(--text-muted, #888)"/></svg>',
@@ -308,6 +172,12 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><text x="50" y="40" text-anchor="middle" font-size="28" font-weight="700" fill="var(--accent-primary, #3b82f6)">P</text><path d="M25 60 L40 55 L55 65 L70 48 L85 58" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="60" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="55" cy="65" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="85" cy="58" r="3" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 0,
     outputs: 0
+  },
+  'gear-shift': {
+    name: 'Vites Geçişleri',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><circle cx="35" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="35" cy="60" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="60" r="6" fill="var(--text-secondary, #666)"/><path d="M35 35 L35 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><path d="M35 60 L65 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="60" r="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="2"/></svg>',
+    inputs: 0,
+    outputs: 0
   }
 };
 
@@ -318,15 +188,6 @@ var COMPONENT_SIGNALS = {
       {id: 'rpm', name: 'Motor Devri', unit: 'rpm'},
       {id: 'torque', name: 'Net Motor Torku', unit: 'Nm'},
       {id: 'power', name: 'Motor Gücü', unit: 'kW'},
-      {id: 'brake_torque', name: 'Motor Freni Torku', unit: 'Nm'},
-      {id: 'angular_vel', name: 'Açısal Hız', unit: 'rad/s'}
-    ]
-  },
-  'engine-brake': {
-    outputs: [
-      {id: 'rpm', name: 'Devir', unit: 'rpm'},
-      {id: 'torque', name: 'Fren Torku', unit: 'Nm'},
-      {id: 'power', name: 'Fren Gücü', unit: 'kW'},
       {id: 'angular_vel', name: 'Açısal Hız', unit: 'rad/s'}
     ]
   },
@@ -354,6 +215,13 @@ var COMPONENT_SIGNALS = {
       {id: 'sr_at_governed', name: 'SR @ Governed', unit: '−'},
       {id: 'min_engine_speed', name: 'Min Motor Devri', unit: 'rpm'},
       {id: 'recommended_tc', name: 'Önerilen Konvertör', unit: '−'}
+    ]
+  },
+  'engine-gearbox-matching': {
+    outputs: [
+      {id: 'power_at_gov', name: 'Motor Gücü@Gov', unit: 'kW'},
+      {id: 'torque_at_gov', name: 'Motor Torku@Gov', unit: 'Nm'},
+      {id: 'recommended_gb', name: 'Önerilen Şanzıman', unit: '−'}
     ]
   },
   'gearbox': {
@@ -461,6 +329,12 @@ var COMPONENT_SIGNALS = {
     outputs: [
       {id: 'sc_throttle', name: 'Gaz Pedalı', unit: '%'},
       {id: 'sc_brake', name: 'Fren Kuvveti', unit: 'N'}
+    ]
+  },
+  'gear-shift': {
+    outputs: [
+      {id: 'current_gear', name: 'Aktif Vites', unit: '−'},
+      {id: 'shift_time', name: 'Geçiş Süresi', unit: 's'}
     ]
   }
 };

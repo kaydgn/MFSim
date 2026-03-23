@@ -157,7 +157,7 @@ function veGenerateTopologySummary() {
 
     // ── MOTOR / ENGINE-BRAKE ──
     if(node.type === 'engine' || node.type === 'engine-brake') {
-      lines.push('│  Kategori           : ' + v(d.mfCategory));
+      lines.push('│  Kategori           : ' + v(d.motorCategory || d.mfCategory));
       lines.push('│  Preset             : ' + v(d.mfMotorPreset || d.ftMotorPreset));
       lines.push('│  Governed RPM       : ' + v(d.governedRpm, '—', ' d/d'));
       lines.push('│  Verim              : %' + v(d.verim, 100));
@@ -275,10 +275,27 @@ function veGenerateTopologySummary() {
       if(d.tcName) lines.push('│  Adı                : ' + d.tcName);
       lines.push('│  Tork Çarpanı       : ' + v(d.tcRatio, 1.0));
       lines.push('│  Kilit Durumu       : ' + (d.isLocked !== false ? 'Kilitli (Lock-up)' : 'Kilitsiz'));
-      if(d.pumpTorqueDrop) lines.push('│  Pompa Tork Düşüşü : %' + d.pumpTorqueDrop);
+      if(d.kFactor) lines.push('│  K-Faktörü          : ' + d.kFactor);
+      if(d.pumpTorqueDrop) lines.push('│  Pompa Tork Düşüşü : ' + d.pumpTorqueDrop);
       // TC Kalibrasyon tablosu
       if(d.tcData && d.tcData.length > 0) {
         lines.push('│  Kalibrasyon        : ' + d.tcData.length + ' veri noktası');
+      }
+      // Uyumluluk bilgisi — motor ve şanzıman ile eşleştirme
+      var tcEngNode = nodes.find(function(n) { return n.type === 'engine'; });
+      var tcGbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+      if(tcEngNode || tcGbNode) {
+        lines.push('│');
+        lines.push('│  Bağlı Bileşenler:');
+        if(tcEngNode) {
+          var eName = tcEngNode.customName || (tcEngNode.data && (tcEngNode.data.mfMotorPreset || tcEngNode.data.ftMotorPreset)) || (componentDefs[tcEngNode.type]||{}).name || '?';
+          var eGov = tcEngNode.data ? (tcEngNode.data.governedRpm || '') : '';
+          lines.push('│    Motor            : ' + eName + (eGov ? ' (' + eGov + ' d/d)' : ''));
+        }
+        if(tcGbNode) {
+          var gName = tcGbNode.customName || (tcGbNode.data && (tcGbNode.data.selectedGearbox || tcGbNode.data.ftGBPreset)) || (componentDefs[tcGbNode.type]||{}).name || '?';
+          lines.push('│    Şanzıman         : ' + gName);
+        }
       }
     }
 
@@ -418,9 +435,9 @@ function veGenerateTopologySummary() {
 
     // ── SENARYO ──
     if(node.type === 'scenario') {
-      var stMap = {coast:'Boşta Sürüş (Coast)',full_brake:'Tam Fren',full_throttle:'Tam Gaz',partial_throttle:'Kısmi Gaz',custom:'Özel',performance_analysis:'Performans Analizi',drive_cycle:'Sürüş Çevrimi'};
-      lines.push('│  Senaryo Tipi       : ' + (stMap[d.scenarioType] || d.scenarioType || 'Coast'));
-      if(d.throttle !== undefined && d.throttle !== null && d.throttle !== '') lines.push('│  Gaz Pedalı         : %' + d.throttle);
+      var stMap = {full_throttle:'Tam Gaz',partial_throttle:'Kısmi Gaz',custom:'Özel'};
+      lines.push('│  Senaryo Tipi       : ' + (stMap[d.scenarioType] || d.scenarioType || 'Tam Gaz'));
+      if(d.throttle !== undefined) lines.push('│  Gaz Pedalı         : %' + d.throttle);
       if(d.brakeForce) lines.push('│  Fren Kuvveti       : ' + d.brakeForce + ' N');
     }
 
@@ -498,7 +515,7 @@ function veGenerateTopologySummary() {
   lines.push(sep);
 
   // Zincir tiplerini sırala (sensör, solver, road, scenario, coast-down hariç)
-  var chainTypes = ['engine','engine-brake','torque-converter','ec-matching','gearbox',
+  var chainTypes = ['engine','torque-converter','ec-matching','gearbox',
     'shift-controller','propshaft','transfer','differential','wheel'];
   var skipTypes = ['sensor','sensor-wizard','solver','road','scenario','coast-down',
     'vehicle','parametric','terminator'];
@@ -506,7 +523,7 @@ function veGenerateTopologySummary() {
   // Bağlantı grafiğinden zinciri oluştur
   function buildChain() {
     // Motoru bul (başlangıç noktası)
-    var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
     if(!engineNode) return [];
 
     var visited = {};
@@ -537,7 +554,7 @@ function veGenerateTopologySummary() {
       var d = node.data || {};
       var name = node.customName || (componentDefs[node.type]||{}).name || node.type;
       var info = '';
-      if(node.type === 'engine' || node.type === 'engine-brake') {
+      if(node.type === 'engine') {
         info = d.governedRpm ? d.governedRpm + ' d/d' : '';
       } else if(node.type === 'torque-converter') {
         info = d.isLocked !== false ? 'Lock-up' : 'τ=' + (d.tcRatio||1.0);
@@ -648,7 +665,7 @@ function veGenerateTopologySummary() {
   var checks = [];
 
   // Zorunlu bileşen kontrolü
-  var hasEngine = nodes.some(function(n){return n.type==='engine'||n.type==='engine-brake';});
+  var hasEngine = nodes.some(function(n){return n.type==='engine';});
   var hasGearbox = nodes.some(function(n){return n.type==='gearbox';});
   var hasDiff = nodes.some(function(n){return n.type==='differential';});
   var hasWheel = nodes.some(function(n){return n.type==='wheel';});
@@ -683,7 +700,7 @@ function veGenerateTopologySummary() {
 
   // Veri tutarlılığı kontrolleri
   if(hasEngine) {
-    var engN = nodes.find(function(n){return n.type==='engine'||n.type==='engine-brake';});
+    var engN = nodes.find(function(n){return n.type==='engine';});
     var ed = engN ? engN.data||{} : {};
     var mD = ed.torqueData;
     if(!mD || mD.length === 0) warnings.push('Motor tork tablosu boş');
@@ -936,27 +953,11 @@ function veLoadTopology() {
           
           veActiveTabIdx = Math.min(data.activeTabIdx || 0, veTabs.length - 1);
           
-          // Aktif modülü yükle (FT vs MF vs diğer)
-          if(data.activeModule && VE_MODULES[data.activeModule]) {
-            veActiveModule = data.activeModule;
-            var modSel = document.getElementById('ve-module-select');
-            if(modSel) modSel.value = veActiveModule;
-            // Modül overlay'ını gizle (proje yüklenmişse modül seçilmiş demektir)
-            var moduleOverlay = document.getElementById('ve-module-overlay');
-            if(moduleOverlay) moduleOverlay.style.display = 'none';
-            // Sidebar bileşenlerini modüle göre filtrele
-            var mod = VE_MODULES[veActiveModule];
-            if(mod) {
-              document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
-                var type = el.getAttribute('data-type');
-                el.style.display = mod.components.indexOf(type) > -1 ? '' : 'none';
-              });
-              document.querySelectorAll('.ve-category').forEach(function(cat) {
-                var visibleComps = cat.querySelectorAll('.ve-component:not([style*="display: none"])');
-                cat.style.display = visibleComps.length === 0 ? 'none' : '';
-              });
-            }
-          }
+          // Tek modül — her zaman full-throttle
+          veActiveModule = 'full-throttle';
+          var moduleOverlay = document.getElementById('ve-module-overlay');
+          if(moduleOverlay) moduleOverlay.style.display = 'none';
+          veShowAllSidebarComponents();
           
           veLoadTabState(veTabs[veActiveTabIdx]);
           

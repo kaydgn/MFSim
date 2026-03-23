@@ -42,7 +42,7 @@ function _veSolveOtherTopologies(options) {
         continue;
       }
 
-      var _hasEngine = _otherTab.state.nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+      var _hasEngine = _otherTab.state.nodes.some(function(n) { return n.type === 'engine'; });
       if(!_hasEngine) {
         if(options && options.log) log('[' + (_ti+1) + '/' + veTabs.length + '] ' + _otherTab.name + ' — motor bileşeni yok, atlandı', 'warn');
         continue;
@@ -72,21 +72,17 @@ function _veSolveOtherTopologies(options) {
         connections = _tempConns;
 
         var _otherResult;
-        if(veActiveModule === 'full-throttle') {
-          // Transfer dişli oranlarını iterasyonla gez
-          var _trN = _tempNodes.find(function(n) { return n.type === 'transfer'; });
-          var _trd = _trN ? (_trN.data || {}) : {};
-          var _ftTrG = _trd.ftTrGears || [
-            { kademe: 'High', ratio: 1.054, eff: 97.00 }
-          ];
-          var _allRR = {};
-          _ftTrG.forEach(function(g) {
-            _allRR[g.kademe] = veFTRunSimulationEngine(g.kademe);
-          });
-          _otherResult = _allRR[_ftTrG[0].kademe];
-        } else {
-          _otherResult = veRunSimulationEngine();
-        }
+        // Transfer dişli oranlarını iterasyonla gez
+        var _trN = _tempNodes.find(function(n) { return n.type === 'transfer'; });
+        var _trd = _trN ? (_trN.data || {}) : {};
+        var _ftTrG = _trd.ftTrGears || [
+          { kademe: 'High', ratio: 1.054, eff: 97.00 }
+        ];
+        var _allRR = {};
+        _ftTrG.forEach(function(g) {
+          _allRR[g.kademe] = veFTRunSimulationEngine(g.kademe);
+        });
+        _otherResult = _allRR[_ftTrG[0].kademe];
 
         _otherTab.state.simResults = _otherResult;
         _solvedCount++;
@@ -132,7 +128,7 @@ function veSolverValidate() {
   var allOk = true;
   
   // Bileşen kontrolleri
-  var hasEngine = nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+  var hasEngine = nodes.some(function(n) { return n.type === 'engine'; });
   var hasGearbox = nodes.some(function(n) { return n.type === 'gearbox'; });
   var hasWheel = nodes.some(function(n) { return n.type === 'wheel'; });
   var hasVehicle = nodes.some(function(n) { return n.type === 'vehicle'; });
@@ -165,7 +161,7 @@ function veSolverValidate() {
     html += '<div class="ve-validation-item" style="font-size:0.75rem;"><span>ℹ️</span><span>' + label + '</span></div>';
   }
   
-  addItem(hasEngine, 'Motor / Motor Freni bileşeni', hasEngine ? 'mevcut' : 'eksik');
+  addItem(hasEngine, 'Motor bileşeni', hasEngine ? 'mevcut' : 'eksik');
 
   // Senaryo bileşeni zorunlu kontrolü
   var mod = veGetActiveModule();
@@ -208,7 +204,7 @@ function veSolverValidate() {
   
   // Veri kontrolleri
   if(hasEngine) {
-    var engineNode = nodes.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
     var hasData = engineNode && engineNode.data && engineNode.data.torqueData && engineNode.data.torqueData.length >= 2;
     addItem(hasData, 'Motor tork verileri', hasData ? engineNode.data.torqueData.length + ' veri noktası' : 'eksik veya yetersiz');
   }
@@ -284,7 +280,7 @@ function veSolverRun() {
           summaryEl.innerHTML = '<table style="width:100%;font-size:0.72rem;">' + summaryRows + '</table>';
         }
         
-        var simResult = veActiveModule === 'full-throttle' ? veFTRunSimulationEngine() : veRunSimulationEngine();
+        var simResult = veFTRunSimulationEngine();
         
         progressFill.style.width = '100%';
         progressText.textContent = 'Tamamlandı!';
@@ -335,6 +331,7 @@ function veSolverRun() {
             if(ss.dtMin !== undefined) rhtml += '<tr><td>dt aralığı:</td><td style="text-align:right; font-weight:600; font-family:monospace;">' + ss.dtMin.toExponential(2) + ' → ' + ss.dtMax.toExponential(2) + ' s</td></tr>';
             if(ss.maxError !== undefined) rhtml += '<tr><td>Maks yerel hata:</td><td style="text-align:right; font-weight:600; font-family:monospace;">' + ss.maxError.toExponential(2) + '</td></tr>';
             if(ss.events && ss.events.length > 0) rhtml += '<tr><td>Algılanan olaylar:</td><td style="text-align:right; font-weight:600;">' + ss.events.length + '</td></tr>';
+            if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:#ef4444;">⚠️ Sertlik Uyarısı</td></tr><tr><td colspan="2" style="font-size:0.6rem; color:#ef4444;">Problem sert (stiff) olabilir. Adım boyutu sürekli minimumda veya ardışık redler algılandı. Tolerans değerlerini gevşetmeyi veya simülasyon parametrelerini gözden geçirmeyi deneyin.</td></tr>';
           }
           
           // Enerji dengesi (tüm yöntemler için)

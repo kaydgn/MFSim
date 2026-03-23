@@ -2,7 +2,7 @@
 <html lang="tr" data-theme="slate">
 <head>
   <meta charset="UTF-8" />
-  <title>MFSim — Motor Freni Simülasyon</title>
+  <title>MFSim — Araç Performans Simülasyonu</title>
   <!-- Leaflet - Harita için -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -15,7 +15,7 @@
   <div style="width:360px; padding:40px; background:#f1f3f5; border:1px solid #c4c9d0; border-radius:0; box-shadow:0 25px 80px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06);">
     <div style="text-align:center; margin-bottom:28px;">
       <div style="font-size:1.3rem; font-weight:700; color:#0d0f13; letter-spacing:0.5px;">MFSim</div>
-      <div style="font-size:0.7rem; color:#8590a2; margin-top:4px;">Motor Fren Simulasyon Yazılımı</div>
+      <div style="font-size:0.7rem; color:#8590a2; margin-top:4px;">Araç Performans Simülasyon Yazılımı</div>
     </div>
     <div style="margin-bottom:20px;">
       <label style="display:block; font-size:0.68rem; color:#4a5060; margin-bottom:6px; font-weight:500;">Şifre</label>
@@ -83,16 +83,8 @@
       
       <!-- Sol Panel - Bileşenler -->
       <div class="ve-sidebar" id="ve-sidebar">
-        <div class="ve-module-selector">
-          <div class="ve-module-label">Alt Modül</div>
-          <select id="ve-module-select" onchange="veOnModuleChange(this.value)">
-            <option value="" disabled selected>— Modül Seçiniz —</option>
-            <option value="engine-brake">M. Freni Performans</option>
-            <option value="full-throttle">Tam Gaz Hızlanma</option>
-            <option value="performance" disabled>Araç Performans Hesaplama (yakında)</option>
-            <option value="fuel" disabled>Yakıt Tüketimi Analizi (yakında)</option>
-          </select>
-        </div>
+        <!-- Modül seçici kaldırıldı — tek ana modül -->
+        <input type="hidden" id="ve-module-select" value="full-throttle">
         <div class="ve-sidebar-header">📦 Bileşenler</div>
         <div class="ve-sidebar-resizer" id="ve-sidebar-resizer"></div>
         <div class="ve-sidebar-content">
@@ -132,7 +124,21 @@
                 <path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/>
                 <path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              <span class="ve-comp-label">Motor-TC Eşleştirme</span>
+              <span class="ve-comp-label">Motor-Konvertör Eşleştirme</span>
+            </div>
+            <div class="ve-component" draggable="true" data-type="engine-gearbox-matching">
+              <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
+                <rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/>
+                <rect x="20" y="28" width="25" height="40" rx="3" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
+                <line x1="25" y1="42" x2="40" y2="42" stroke="var(--text-muted, #888)" stroke-width="2"/>
+                <line x1="25" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="2"/>
+                <line x1="25" y1="58" x2="40" y2="58" stroke="var(--text-muted, #888)" stroke-width="2"/>
+                <path d="M48 48 L56 48" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round"/>
+                <path d="M52 44 L56 48 L52 52" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
+                <path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="ve-comp-label">Motor-Şanzıman Eşleştirme</span>
             </div>
             <div class="ve-component" draggable="true" data-type="gearbox">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -154,6 +160,18 @@
                 <circle cx="65" cy="55" r="5" fill="currentColor"/>
                 <path d="M35 32 L50 43 L65 55" stroke="currentColor" stroke-width="2" fill="none" stroke-dasharray="4,3"/>
               </svg> <span class="ve-comp-label">Şanzıman Kontrol</span>
+            </div>
+            <div class="ve-component" draggable="true" data-type="gear-shift">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="35" cy="35" r="6" fill="currentColor"/>
+                <circle cx="65" cy="35" r="6" fill="currentColor"/>
+                <circle cx="35" cy="60" r="6" fill="currentColor"/>
+                <circle cx="65" cy="60" r="6" fill="currentColor"/>
+                <path d="M35 35 L35 60" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                <path d="M35 60 L65 60" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="35" cy="60" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+              </svg> <span class="ve-comp-label">Vites Geçişleri</span>
             </div>
             <div class="ve-component" draggable="true" data-type="propshaft">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -262,10 +280,23 @@
                 <path d="M25 62 L40 57 L55 67 L70 50 L85 60" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg> <span class="ve-comp-label">Parametrik Analiz</span></div>
           </div>
-          
+
+          <div class="ve-category ve-category-tools" data-always-visible="true">
+            <div class="ve-category-title">Araçlar</div>
+            <div class="ve-annotation-tool ve-component" draggable="true" data-annotation-type="frame">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="10" y="10" width="80" height="65" rx="4" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="10,6"/>
+                <text x="50" y="95" text-anchor="middle" font-size="24" fill="currentColor" opacity="0.6">Grup</text>
+              </svg> <span class="ve-comp-label">Gruplama Çerçevesi</span></div>
+            <div class="ve-annotation-tool ve-component" draggable="true" data-annotation-type="text">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <text x="50" y="70" text-anchor="middle" font-size="72" font-weight="700" fill="currentColor">T</text>
+              </svg> <span class="ve-comp-label">Yazı Etiketi</span></div>
+          </div>
+
         </div>
       </div>
-      
+
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
         <div class="ve-tab-bar" id="ve-tab-bar"></div>
@@ -276,21 +307,9 @@
               <div class="ve-module-overlay" id="ve-module-overlay">
                 <div class="ve-module-overlay-title">MFSim — Modül Seçimi</div>
                 <div class="ve-module-overlay-grid">
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('engine-brake')">
-                    <div class="ve-module-card-name">M. Freni Performans</div>
-                    <div class="ve-module-card-desc">Yokuş inişte motor freni ve retarder ile araç yavaşlama davranışını simüle eder. Fren torku, ısı reddi ve durma mesafesi hesaplar.</div>
-                  </div>
                   <div class="ve-module-card" onclick="veSelectModuleFromOverlay('full-throttle')">
-                    <div class="ve-module-card-name">Tam Gaz Hızlanma</div>
-                    <div class="ve-module-card-desc">Duruştan maksimum hıza kadar tam gaz ivmelenmeyi simüle eder. Tork konvertör eşleştirmesi, vites geçişleri ve çekiş kuvveti analizi yapar.</div>
-                  </div>
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('performance')" style="opacity:0.45; cursor:not-allowed; pointer-events:none;">
-                    <div class="ve-module-card-name">Araç Performans <span style="font-size:0.6em;color:var(--accent-primary);">Yakında</span></div>
-                    <div class="ve-module-card-desc">Elastik hızlanma, tırmanma kapasitesi, maksimum hız ve çekiş diyagramı hesaplamaları.</div>
-                  </div>
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('fuel')" style="opacity:0.45; cursor:not-allowed; pointer-events:none;">
-                    <div class="ve-module-card-name">Yakıt Tüketimi <span style="font-size:0.6em;color:var(--accent-primary);">Yakında</span></div>
-                    <div class="ve-module-card-desc">Sürüş çevrimi üzerinde anlık ve toplam yakıt tüketimi, CO₂ emisyonu ve enerji akışı analizi.</div>
+                    <div class="ve-module-card-name">Ana Sayfa</div>
+                    <div class="ve-module-card-desc">Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi.</div>
                   </div>
                 </div>
               </div>
@@ -497,6 +516,7 @@
 <script src="js/solver-pro.js"></script>
 <script src="js/component-extras.js"></script>
 <script src="js/map.js"></script>
+<script src="js/annotations.js"></script>
 <script src="js/state.js"></script>
 <script src="js/topology.js"></script>
 <script src="js/toolbar.js"></script>

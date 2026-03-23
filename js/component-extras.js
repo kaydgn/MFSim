@@ -328,25 +328,21 @@ function veDetachSensor(sensorNode) {
 function getScenarioPropertiesHTML(node) {
   var d = node.data || {};
   var throttle = d.throttle !== undefined ? d.throttle : 0;
-  var brakeForce = d.brakeForce !== undefined ? d.brakeForce : 0;
-  
+
   // Modüle göre izin verilen senaryolar
   var mod = veGetActiveModule();
-  var allowedScenarios = mod.scenarios || ['coast','full_brake','full_throttle','partial_throttle','custom'];
-  
+  var allowedScenarios = mod.scenarios || ['full_throttle','partial_throttle','custom'];
+
   // Varsayılan senaryo: modülün default'u veya kayıtlı değer (izinli ise)
-  var scenarioType = d.scenarioType || mod.defaultScenario || 'coast';
+  var scenarioType = d.scenarioType || mod.defaultScenario || 'full_throttle';
   if(allowedScenarios.indexOf(scenarioType) === -1) {
     scenarioType = allowedScenarios[0];
     if(!d.scenarioType) { if(!node.data) node.data = {}; node.data.scenarioType = scenarioType; }
   }
   
   var scenarioLabels = {
-    coast: 'Boşta sürüş (Coast)',
-    full_brake: 'Tam fren',
     partial_throttle: 'Kısmi gaz',
     full_throttle: 'Tam gaz',
-    performance_analysis: 'Performans Analizi',
     custom: 'Özel'
   };
   
@@ -368,13 +364,33 @@ function getScenarioPropertiesHTML(node) {
   var showThrottle = ['partial_throttle','full_throttle','custom'].indexOf(scenarioType) > -1;
   html += '<tr id="ve-scenario-throttle-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showThrottle?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Gaz pedal oranı [%]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="number" id="ve-scenario-throttle-' + node.id + '" value="' + throttle + '" step="5" min="0" max="100" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
   
-  // Fren kuvveti
-  var showBrake = scenarioType === 'full_brake' || scenarioType === 'custom';
-  html += '<tr id="ve-scenario-brake-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showBrake?'display:none;':'') + '"><th style="padding:7px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Fren kuvveti [N]</th><td style="padding:7px; background:var(--bg-tertiary);"><input type="number" id="ve-scenario-brake-' + node.id + '" value="' + brakeForce + '" step="100" min="0" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
-  
   html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Senaryo tipi seçimi simülasyon davranışını belirler.</td></tr>';
-  
-  html += '</table></div>';
+
+  html += '</table>';
+
+  // Yol segmentleri tablosu (haritadan aktarılan)
+  var hasSegs = d.roadSegments && d.roadSegments.length > 0;
+  html += '<div id="ve-scenario-segments-' + node.id + '" style="margin-top:10px;' + (hasSegs ? '' : ' display:none;') + '">';
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📐 Yol Eğim Segmentleri</div>';
+  if(hasSegs) {
+    html += _veScenarioSegmentsTableHTML(d.roadSegments, true);
+  }
+  html += '</div>';
+
+  // Başlangıç koşulları (segment bazlı sürüş analizi için)
+  if(hasSegs) {
+    var segInitSpeed = d.segInitSpeed !== undefined ? d.segInitSpeed : 0;
+    html += '<div style="margin-top:10px; padding:10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px;">';
+    html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Başlangıç Koşulları</div>';
+    html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse;">';
+    html += '<tr><th style="padding:5px 6px; text-align:left; width:50%; font-weight:500; color:var(--text-secondary);">Başlangıç hızı [km/h]</th>';
+    html += '<td style="padding:5px 6px;"><input type="number" id="ve-scenario-seg-initspeed-' + node.id + '" value="' + segInitSpeed + '" step="5" min="0" max="200" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
+    html += '</table>';
+    html += '<div style="font-size:0.54rem; color:var(--text-muted); margin-top:4px; line-height:1.3;">Segment bazlı sürüş analizi için aracın ilk segmente giriş hızı.</div>';
+    html += '</div>';
+  }
+
+  html += '</div>';
   return html;
 }
 
@@ -389,16 +405,16 @@ function onVEScenarioChange(nodeId) {
     node.data.scenarioType = typeEl.value;
     var t = typeEl.value;
     var thRow = el('ve-scenario-throttle-row-' + nodeId);
-    var brRow = el('ve-scenario-brake-row-' + nodeId);
     if(thRow) thRow.style.display = ['partial_throttle','full_throttle','custom'].indexOf(t) > -1 ? '' : 'none';
-    if(brRow) brRow.style.display = (t === 'full_brake' || t === 'custom') ? '' : 'none';
     // Tam gaz: otomatik 100%
     if(t === 'full_throttle') { var thEl = el('ve-scenario-throttle-' + nodeId); if(thEl) thEl.value = 100; node.data.throttle = 100; }
   }
   var thEl2 = el('ve-scenario-throttle-' + nodeId);
-  var brEl = el('ve-scenario-brake-' + nodeId);
   if(thEl2) node.data.throttle = parseFloat(thEl2.value) || 0;
-  if(brEl) node.data.brakeForce = parseFloat(brEl.value) || 0;
+
+  // Segment başlangıç hızı
+  var segSpeedEl = el('ve-scenario-seg-initspeed-' + nodeId);
+  if(segSpeedEl) node.data.segInitSpeed = parseFloat(segSpeedEl.value) || 0;
 }
 
 // ===== COAST-DOWN BİLEŞENİ =====
@@ -883,7 +899,7 @@ function veUpdateWarnings() {
   var warnings = [];
   if(nodes.length === 0) { /* Boş topoloji - uyarı yok */ }
   else {
-    var hasEngine = nodes.some(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+    var hasEngine = nodes.some(function(n) { return n.type === 'engine'; });
     var hasGearbox = nodes.some(function(n) { return n.type === 'gearbox'; });
     var hasWheel = nodes.some(function(n) { return n.type === 'wheel'; });
     var hasVehicle = nodes.some(function(n) { return n.type === 'vehicle'; });
@@ -916,7 +932,7 @@ function veUpdateWarnings() {
     }
     
     // Bağlantı uyarıları - aktarma bileşenleri bağlantısız olmamalı
-    var driveTypes = ['engine','engine-brake','gearbox','transfer','differential','torque-converter','wheel'];
+    var driveTypes = ['engine','gearbox','transfer','differential','torque-converter','wheel'];
     nodes.forEach(function(n) {
       if(driveTypes.indexOf(n.type) === -1) return;
       var def = componentDefs[n.type];
@@ -1250,7 +1266,7 @@ var VE_TIRE_PRESETS = [
   { id:'285_70r195',  name:'285/70 R19,5',  radius:0.435, inertia:7.90,  group:'R19.5', usage:'Orta Ticari / Bölgesel' },
   { id:'305_70r195',  name:'305/70 R19,5',  radius:0.450, inertia:9.20,  group:'R19.5', usage:'Orta Ticari / Bölgesel' },
   { id:'335_80r20',   name:'335/80 R20',    radius:0.494, inertia:15.84, group:'R20',   usage:'Ağır Ticari / Uzun Yol' },
-  { id:'365_80r20',   name:'365/80 R20',    radius:0.521, inertia:21.00, group:'R20',   usage:'Ağır Askeri / Özel' },
+  { id:'365_80r20',   name:'365/80 R20',    radius:0.522, inertia:21.00, group:'R20',   usage:'Ağır Askeri / Özel' },
   { id:'1200_r20',    name:'12,00 R20',     radius:0.547, inertia:19.50, group:'R20',   usage:'Ağır Askeri / Özel' },
   { id:'365_85r20',   name:'365/85 R20',    radius:0.552, inertia:22.50, group:'R20',   usage:'Ağır Askeri / Özel' },
   { id:'395_85r20',   name:'395/85 R20',    radius:0.574, inertia:27.90, group:'R20',   usage:'Ekstra Ağır / Arazi' },
@@ -1363,11 +1379,9 @@ function getVehiclePropertiesHTML(node) {
     var ftWidth = d.ftWidth !== undefined ? d.ftWidth : 2.500;
     var ftCd = d.ftCd !== undefined ? d.ftCd : 0.900;
     var ftRho = d.ftRho !== undefined ? d.ftRho : 1.225;
-    var ftGrade = d.ftGrade !== undefined ? d.ftGrade : 0.0;
-    
+
     var ftA = ftHeight * ftWidth;
     var ftCdA = ftCd * ftA;
-    var ftGradeAngle = Math.atan(ftGrade / 100) * 180 / Math.PI;
     
     var roStyle = 'width:100%; padding:4px; font-size:0.68rem; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:3px; text-align:right; cursor:default;';
     
@@ -1434,26 +1448,6 @@ function getVehiclePropertiesHTML(node) {
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Hava Yoğunluğu (ρ) <span style="color:var(--text-muted); font-weight:400;">[kg/m³]</span></th>';
     html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-rho-' + node.id + '" value="' + ftRho + '" step="0.001" min="0.1" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
-    
-    html += '</table>';
-    html += '</div>';
-    
-    // ── 3. YOL KOŞULLARI ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Yol Koşulları</div>';
-    html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
-    
-    html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Yol Eğimi <span style="color:var(--text-muted); font-weight:400;">[%]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ftv-grade-' + node.id + '" value="' + ftGrade + '" step="0.1" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEFTVehicleParamChange(\'' + node.id + '\')"></td>';
-    html += '</tr>';
-    
-    html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Eğim Açısı <span style="color:var(--text-muted); font-weight:400;">[°]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-ftv-grade-angle-' + node.id + '" value="' + ftGradeAngle.toFixed(2) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
-    html += '</tr>';
-    
-    html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.58rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.4;">Pozitif değer = yokuş yukarı, negatif = yokuş aşağı. %100 eğim = 45°.</td></tr>';
     
     html += '</table>';
     html += '</div>';
@@ -1583,18 +1577,14 @@ function onVEFTVehicleParamChange(nodeId) {
   if(g('width')) node.data.ftWidth = parseFloat(g('width').value) || 2.500;
   if(g('cd')) node.data.ftCd = parseFloat(g('cd').value) || 0.900;
   if(g('rho')) node.data.ftRho = parseFloat(g('rho').value) || 1.225;
-  if(g('grade')) node.data.ftGrade = parseFloat(g('grade').value) || 0.0;
   
   // Readonly alanları güncelle
   var h = node.data.ftHeight || 3.200;
   var w = node.data.ftWidth || 2.500;
   var cd = node.data.ftCd || 0.900;
   var A = h * w;
-  var grade = node.data.ftGrade || 0.0;
-  
   if(g('area')) g('area').value = A.toFixed(3);
   if(g('cda')) g('cda').value = (cd * A).toFixed(3);
-  if(g('grade-angle')) g('grade-angle').value = (Math.atan(grade / 100) * 180 / Math.PI).toFixed(2);
 }
 
 // Yol özellikleri - eğim, mesafe, zaman
@@ -1633,9 +1623,7 @@ function getRoadPropertiesHTML(node) {
 
   // ===== YOL PROFİLLERİ =====
   html += '<div id="ve-road-profiles-' + node.id + '" style="display:none; background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:12px; border:1px solid var(--border-color);">';
-  html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">📊 Yol Profilleri</div>';
-  html += '</div>';
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📊 Yol Profilleri</div>';
   html += '<div id="ve-road-profiles-content-' + node.id + '"></div>';
   html += '</div>';
 
@@ -1678,36 +1666,19 @@ function onVERoadParamChange(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node) return;
   if(!node.data) node.data = {};
-  
+
   var el = function(id) { return document.getElementById(id); };
   var gradeEl = el('ve-road-grade-' + nodeId);
-  var timeModeEl = el('ve-road-timemode-' + nodeId);
-  var durationEl = el('ve-road-duration-' + nodeId);
-  var maxTimeEl = el('ve-road-maxtime-' + nodeId);
   var altEl = el('ve-road-alt-' + nodeId);
   var tempEl = el('ve-road-temp-' + nodeId);
   var densEl = el('ve-road-density-' + nodeId);
   var egimEl = el('ve-road-egimmode-' + nodeId);
-  
+
   if(gradeEl) node.data.grade = parseFloat(gradeEl.value);
-  if(timeModeEl) node.data.timeMode = timeModeEl.value;
-  if(durationEl) node.data.duration = parseFloat(durationEl.value) || '';
-  if(maxTimeEl) node.data.maxSimTime = parseFloat(maxTimeEl.value) || 300;
   if(altEl) node.data.altitude = parseFloat(altEl.value) || '';
   if(tempEl) node.data.temperature = parseFloat(tempEl.value) || '';
   if(densEl) node.data.airDensity = parseFloat(densEl.value) || '';
   if(egimEl) node.data.egimMode = egimEl.value;
-}
-
-function onVERoadTimeModeChange(nodeId) {
-  var timeModeEl = document.getElementById('ve-road-timemode-' + nodeId);
-  if(!timeModeEl) return;
-  var mode = timeModeEl.value;
-  var durRow = document.getElementById('ve-road-duration-row-' + nodeId);
-  var maxRow = document.getElementById('ve-road-maxtime-row-' + nodeId);
-  if(durRow) durRow.style.display = (mode === 'stop') ? 'none' : '';
-  if(maxRow) maxRow.style.display = (mode === 'stop') ? '' : 'none';
-  onVERoadParamChange(nodeId);
 }
 
 // Leaflet harita sistemi - her node için ayrı harita instance

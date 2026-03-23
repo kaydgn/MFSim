@@ -54,11 +54,10 @@ describe('swScanTopology', () => {
     expect(result.engineNode.id).toBe('e1');
   });
 
-  test('motor freni bileşeni algılar (engine-brake)', () => {
+  test('engine-brake tipi artık motor olarak algılanmaz', () => {
     nodes = [makeNode('engine-brake', 'eb1')];
     var result = swScanTopology();
-    expect(result.hasEngine).toBe(true);
-    expect(result.engineNode.id).toBe('eb1');
+    expect(result.hasEngine).toBe(false);
   });
 
   test('tam zinciri algılar (chainComplete)', () => {
@@ -138,14 +137,14 @@ describe('swCheckSensorExists', () => {
     expect(result.sensorNode.id).toBe('s1');
   });
 
-  test('engine-brake tipi engine olarak eşleşir', () => {
+  test('engine-brake tipi artık engine olarak eşleşmez', () => {
     nodes = [
       makeNode('engine-brake', 'eb1'),
       makeNode('sensor', 's1', { attachedComponent: 'eb1', sensorDirection: 'from', selectedSignal: 'rpm' })
     ];
     var topo = swScanTopology();
     var result = swCheckSensorExists({ target: 'engine', attachment: 'component', signal: 'rpm' }, topo);
-    expect(result.matched).toBe(true);
+    expect(result.matched).toBe(false);
   });
 
   test('yanlış sinyal eşleşmez', () => {
@@ -235,7 +234,7 @@ describe('swInstallSensors', () => {
     expect(wizNode.data.installedPackages).toContain('traction-analysis');
   });
 
-  test('engine-brake tipi motor olarak sayılır', () => {
+  test('engine-brake tipi artık motor olarak sayılmaz', () => {
     nodes = [
       makeNode('engine-brake', 'eb1'),
       makeNode('vehicle', 'v1')
@@ -246,7 +245,7 @@ describe('swInstallSensors', () => {
 
     swInstallSensors(wizNode);
 
-    expect(wizNode.data.installedPackages).toContain('engine-analysis');
+    expect(wizNode.data.installedPackages).not.toContain('engine-analysis');
   });
 
   test('tam zincirde tüm uygun paketler kurulur', () => {
