@@ -3475,6 +3475,72 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     r += '        = arccos(' + num(geo.x, 4) + ' / ' + num(inp.R_eff, 3) + ')\n';
     r += '        = ' + num(geo.theta_deg, 2) + ' derece\n';
     r += '\n';
+    // ── TORK GEREKSİNİMİ ANALİZİ ──
+    var trq = obs.torqueAnalysis;
+    if(trq) {
+      r += ln('=', W) + '\n  TORK GEREKSINIMI ANALIZI\n' + ln('=', W) + '\n\n';
+
+      r += pRow('Arac Agirligi (W=m*g)', num(trq.W, 1) + ' N');
+      r += '  Formul: W = ' + num(inp.mass, 0) + ' kg x ' + num(trq.g, 2) + ' m/s^2 = ' + num(trq.W, 1) + ' N\n';
+      r += '\n';
+
+      // Senaryo A
+      r += '  ' + ln('-', 50) + '\n';
+      r += '  SENARYO A: On Teker Engelde\n';
+      r += '  ' + ln('-', 50) + '\n';
+      r += '  Mesnet: Arka teker temas noktasi\n';
+      r += '  Yatay mesafe (D_on) = L + x = ' + num(trq.L, 3) + ' + ' + num(geo.x, 4) + ' = ' + num(trq.D_front, 4) + ' m\n\n';
+      r += pRow('On Aks Reaksiyonu (N_f)', num(trq.N_f, 1) + ' N');
+      r += '  Formul: N_f = W*a2 / (L+x)\n';
+      r += '        = ' + num(trq.W, 1) + ' * ' + num(inp.a2, 3) + ' / ' + num(trq.D_front, 4) + '\n';
+      r += '        = ' + num(trq.N_f, 1) + ' N\n\n';
+      r += pRow('Tek Teker Yuku (N_f1)', num(trq.N_f1, 1) + ' N');
+      r += '  Formul: N_f1 = N_f / 2 = ' + num(trq.N_f, 1) + ' / 2 = ' + num(trq.N_f1, 1) + ' N\n\n';
+      r += pRow('Gereken Tork (T_on)', num(trq.T_req_front, 1) + ' Nm');
+      r += '  Formul: T_on = N_f1 * x = ' + num(trq.N_f1, 1) + ' * ' + num(geo.x, 4) + ' = ' + num(trq.T_req_front, 1) + ' Nm\n';
+      r += '\n';
+
+      // Senaryo B
+      r += '  ' + ln('-', 50) + '\n';
+      r += '  SENARYO B: Arka Teker Engelde\n';
+      r += '  ' + ln('-', 50) + '\n';
+      r += '  Mesnet: On teker temas noktasi\n';
+      if(trq.D_rear <= 0) {
+        r += '  *** UYARI: L - x <= 0 — arka teker analizi yapilamaz ***\n';
+      } else {
+        r += '  Yatay mesafe (D_arka) = L - x = ' + num(trq.L, 3) + ' - ' + num(geo.x, 4) + ' = ' + num(trq.D_rear, 4) + ' m\n\n';
+        r += pRow('Arka Aks Reaksiyonu (N_r)', num(trq.N_r, 1) + ' N');
+        r += '  Formul: N_r = W*a1 / (L-x)\n';
+        r += '        = ' + num(trq.W, 1) + ' * ' + num(inp.a1, 3) + ' / ' + num(trq.D_rear, 4) + '\n';
+        r += '        = ' + num(trq.N_r, 1) + ' N\n\n';
+        r += pRow('Tek Teker Yuku (N_r1)', num(trq.N_r1, 1) + ' N');
+        r += '  Formul: N_r1 = N_r / 2 = ' + num(trq.N_r, 1) + ' / 2 = ' + num(trq.N_r1, 1) + ' N\n\n';
+        r += pRow('Gereken Tork (T_arka)', num(trq.T_req_rear, 1) + ' Nm');
+        r += '  Formul: T_arka = N_r1 * x = ' + num(trq.N_r1, 1) + ' * ' + num(geo.x, 4) + ' = ' + num(trq.T_req_rear, 1) + ' Nm\n';
+      }
+      r += '\n';
+
+      // Karşılaştırma
+      r += '  ' + ln('=', 50) + '\n';
+      r += '  KARSILASTIRMA\n';
+      r += '  ' + ln('=', 50) + '\n';
+      r += pRow('On Teker Tork Gereks.', num(trq.T_req_front, 1) + ' Nm');
+      if(isFinite(trq.T_req_rear)) {
+        r += pRow('Arka Teker Tork Gereks.', num(trq.T_req_rear, 1) + ' Nm');
+      } else {
+        r += pRow('Arka Teker Tork Gereks.', 'Hesaplanamadi (L-x<=0)');
+      }
+      r += '\n';
+      r += '  Kritik Senaryo: ' + ascii(trq.criticalScenario) + '\n';
+      r += '  Kritik Tork Gereksinimi: ' + num(trq.T_req_critical, 1) + ' Nm (tek teker basina)\n';
+      r += '\n';
+      if(isFinite(trq.T_req_rear) && isFinite(trq.T_req_front) && trq.T_req_front > 0) {
+        var ratio = trq.T_req_rear / trq.T_req_front;
+        r += '  Arka/On oran: ' + num(ratio, 2) + 'x — arka teker ' + num((ratio - 1) * 100, 1) + '% daha fazla tork gerektirir.\n';
+        r += '  Neden: Ayni x degeri icin (L+x) > (L-x) oldugundan N_r > N_f\'dir.\n';
+      }
+      r += '\n';
+    }
   }
   r += '\n';
 
