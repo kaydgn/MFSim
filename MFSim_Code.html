@@ -4651,6 +4651,13 @@ function veRenderObstacleCrossingTXTReport() {
 
   if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
 
+  var obs = sim.obstacleCrossing;
+  var dec = obs ? obs.decision : null;
+  var geo = obs ? obs.geometry : null;
+  var stl = obs ? obs.stallAnalysis : null;
+  var trq = obs ? obs.torqueAnalysis : null;
+  var inp = obs ? obs.inputParams : null;
+
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
@@ -4664,6 +4671,107 @@ function veRenderObstacleCrossingTXTReport() {
   html += '</div>';
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:#e8eaed; padding:20px 0;">';
+
+  // ── SONUÇ EKRANI — Görsel Özet Kartları ──
+  if(dec && geo && stl && stl.hasData && trq) {
+    var overallBg = dec.overallPass ? 'linear-gradient(135deg, #065f46 0%, #047857 100%)' : 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)';
+    var overallText = dec.overallPass ? 'ENGEL ASILABILIR' : 'ENGEL ASILAMAZ';
+
+    function _obsColorMap(c) {
+      if(c === 'green') return { bg: '#ecfdf5', border: '#059669', text: '#065f46', badge: '#059669' };
+      if(c === 'yellow') return { bg: '#fffbeb', border: '#d97706', text: '#92400e', badge: '#d97706' };
+      return { bg: '#fef2f2', border: '#dc2626', text: '#991b1b', badge: '#dc2626' };
+    }
+    var fc = _obsColorMap(dec.frontColor);
+    var rc = _obsColorMap(dec.rearColor);
+
+    html += '<div style="max-width:1100px; margin:0 auto 16px auto;">';
+
+    // Genel karar banner
+    html += '<div style="background:' + overallBg + '; border-radius:6px; padding:16px 24px; margin-bottom:12px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">';
+    html += '<div style="font-size:1.4rem; font-weight:800; color:#fff; letter-spacing:2px;">' + overallText + '</div>';
+    html += '<div style="font-size:0.68rem; color:rgba(255,255,255,0.8); margin-top:4px;">h = ' + (inp.h * 1000).toFixed(0) + ' mm | R_eff = ' + (inp.R_eff * 1000).toFixed(0) + ' mm | h/R = ' + geo.hR_ratio.toFixed(3) + ' [' + geo.difficultyLabel + ']</div>';
+    html += '</div>';
+
+    // Geometri + Stall özet satırı
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;">';
+
+    // Geometri kartı
+    html += '<div style="background:#fff; border-radius:5px; padding:12px 14px; box-shadow:0 1px 4px rgba(0,0,0,0.08);">';
+    html += '<div style="font-size:0.65rem; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Geometri</div>';
+    html += '<div style="font-size:0.62rem; color:#374151; line-height:1.8;">';
+    html += 'R<sub>eff</sub> = ' + (inp.R_eff * 1000).toFixed(1) + ' mm<br>';
+    html += 'h = ' + (inp.h * 1000).toFixed(1) + ' mm<br>';
+    html += 'Moment kolu x = ' + (geo.x * 1000).toFixed(1) + ' mm<br>';
+    html += '&theta; = ' + geo.theta_deg.toFixed(1) + '&deg;';
+    html += '</div></div>';
+
+    // Stall kartı
+    html += '<div style="background:#fff; border-radius:5px; padding:12px 14px; box-shadow:0 1px 4px rgba(0,0,0,0.08);">';
+    html += '<div style="font-size:0.65rem; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Stall Dengesi</div>';
+    html += '<div style="font-size:0.62rem; color:#374151; line-height:1.8;">';
+    html += 'Stall devri = ' + stl.N_stall.toFixed(0) + ' RPM<br>';
+    html += 'Motor torku = ' + stl.T_engine_stall.toFixed(1) + ' Nm<br>';
+    html += 'TR<sub>stall</sub> = ' + stl.TR_stall.toFixed(3) + '<br>';
+    html += 'Vites: ' + stl.gearName + ' (i=' + stl.gearRatio.toFixed(3) + ')';
+    html += '</div></div>';
+
+    // Teker torku kartı
+    html += '<div style="background:#fff; border-radius:5px; padding:12px 14px; box-shadow:0 1px 4px rgba(0,0,0,0.08);">';
+    html += '<div style="font-size:0.65rem; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Teker Torku</div>';
+    html += '<div style="font-size:1.3rem; font-weight:800; color:#1e40af; margin-bottom:4px;">' + dec.T_wheel.toFixed(0) + ' <span style="font-size:0.7rem; font-weight:500;">Nm</span></div>';
+    html += '<div style="font-size:0.58rem; color:#6b7280;">tek teker ba\u015f\u0131na (n<sub>d</sub>=' + stl.n_d + ')</div>';
+    html += '</div>';
+
+    html += '</div>';
+
+    // Ön teker / Arka teker karşılaştırma kartları
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">';
+
+    // Ön teker kartı
+    html += '<div style="background:' + fc.bg + '; border:2px solid ' + fc.border + '; border-radius:5px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.06);">';
+    html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">';
+    html += '<span style="font-size:0.72rem; font-weight:700; color:' + fc.text + ';">\u00D6n Teker</span>';
+    var frontLabel = dec.frontPass ? 'A\u015EAR' : 'A\u015EAMAZ';
+    html += '<span style="background:' + fc.badge + '; color:#fff; font-size:0.62rem; font-weight:700; padding:3px 10px; border-radius:3px;">' + frontLabel + '</span>';
+    html += '</div>';
+    html += '<div style="font-size:0.62rem; color:' + fc.text + '; line-height:1.7;">';
+    html += 'T<sub>req</sub> = ' + dec.T_req_front.toFixed(1) + ' Nm<br>';
+    html += 'T<sub>wheel</sub> = ' + dec.T_wheel.toFixed(1) + ' Nm<br>';
+    var fSign = dec.frontMarginPct >= 0 ? '+' : '';
+    html += 'Marj = <b style="font-size:0.78rem;">' + fSign + dec.frontMarginPct.toFixed(1) + '%</b>';
+    html += ' (' + fSign + dec.frontMarginNm.toFixed(1) + ' Nm)';
+    if(dec.frontColor === 'yellow') html += '<br><span style="color:#d97706; font-weight:600;">K\u0131lpay\u0131 — dikkatli olunmal\u0131</span>';
+    html += '</div></div>';
+
+    // Arka teker kartı
+    html += '<div style="background:' + rc.bg + '; border:2px solid ' + rc.border + '; border-radius:5px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.06);">';
+    html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">';
+    html += '<span style="font-size:0.72rem; font-weight:700; color:' + rc.text + ';">Arka Teker</span>';
+    if(isFinite(dec.T_req_rear)) {
+      var rearLabel = dec.rearPass ? 'A\u015EAR' : 'A\u015EAMAZ';
+      html += '<span style="background:' + rc.badge + '; color:#fff; font-size:0.62rem; font-weight:700; padding:3px 10px; border-radius:3px;">' + rearLabel + '</span>';
+    } else {
+      html += '<span style="background:#6b7280; color:#fff; font-size:0.62rem; font-weight:700; padding:3px 10px; border-radius:3px;">HESAPLANAMADI</span>';
+    }
+    html += '</div>';
+    html += '<div style="font-size:0.62rem; color:' + rc.text + '; line-height:1.7;">';
+    if(isFinite(dec.T_req_rear)) {
+      html += 'T<sub>req</sub> = ' + dec.T_req_rear.toFixed(1) + ' Nm<br>';
+      html += 'T<sub>wheel</sub> = ' + dec.T_wheel.toFixed(1) + ' Nm<br>';
+      var rSign = dec.rearMarginPct >= 0 ? '+' : '';
+      html += 'Marj = <b style="font-size:0.78rem;">' + rSign + dec.rearMarginPct.toFixed(1) + '%</b>';
+      html += ' (' + rSign + dec.rearMarginNm.toFixed(1) + ' Nm)';
+      if(dec.rearColor === 'yellow') html += '<br><span style="color:#d97706; font-weight:600;">K\u0131lpay\u0131 — dikkatli olunmal\u0131</span>';
+    } else {
+      html += 'L - x &le; 0 — hesaplanam\u0131yor';
+    }
+    html += '</div></div>';
+
+    html += '</div>';
+    html += '</div>';
+  }
+
   html += '<div style="max-width:1100px; margin:0 auto; background:#fff; border-radius:4px; box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
   html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:#222; white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -19613,13 +19721,60 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
 
   result.stallAnalysis = stallResult;
 
-  // Engel aşma kararı: T_wheel vs T_req_critical
+  // ── ADIM 5: KARŞILAŞTIRMA & NİHAİ KARAR ──
   if(stallResult && stallResult.hasData) {
-    result.canCross = stallResult.T_wheel >= T_req_critical;
-    result.torqueMargin = stallResult.T_wheel - T_req_critical;
-    result.torqueRatio = stallResult.T_wheel / T_req_critical;
+    var Tw = stallResult.T_wheel;
+
+    // Ön teker: T_wheel vs T_req_ön
+    var frontPass = Tw >= T_req_front;
+    var frontMarginPct = T_req_front > 0 ? ((Tw - T_req_front) / T_req_front) * 100 : Infinity;
+
+    // Arka teker: T_wheel vs T_req_arka
+    var rearPass, rearMarginPct;
+    if(isFinite(T_req_rear) && T_req_rear > 0) {
+      rearPass = Tw >= T_req_rear;
+      rearMarginPct = ((Tw - T_req_rear) / T_req_rear) * 100;
+    } else {
+      rearPass = false;
+      rearMarginPct = -Infinity;
+    }
+
+    // Genel karar: her iki teker de aşmalı
+    var overallPass = frontPass && rearPass;
+
+    // Marj renk sınıflandırması: <0 kırmızı, 0-5 sarı, >5 yeşil
+    function marginColor(pct) {
+      if(pct < 0) return 'red';
+      if(pct <= 5) return 'yellow';
+      return 'green';
+    }
+
+    result.decision = {
+      T_wheel: Tw,
+      // Ön teker
+      frontPass: frontPass,
+      frontMarginNm: Tw - T_req_front,
+      frontMarginPct: frontMarginPct,
+      frontColor: marginColor(frontMarginPct),
+      T_req_front: T_req_front,
+      // Arka teker
+      rearPass: rearPass,
+      rearMarginNm: isFinite(T_req_rear) ? Tw - T_req_rear : -Infinity,
+      rearMarginPct: rearMarginPct,
+      rearColor: isFinite(rearMarginPct) ? marginColor(rearMarginPct) : 'red',
+      T_req_rear: T_req_rear,
+      // Genel
+      overallPass: overallPass
+    };
+
+    result.canCross = overallPass;
+    result.torqueMargin = Math.min(Tw - T_req_front, isFinite(T_req_rear) ? Tw - T_req_rear : -Infinity);
+    result.torqueRatio = isFinite(T_req_rear) && T_req_rear > 0
+      ? Math.min(Tw / T_req_front, Tw / T_req_rear)
+      : (T_req_front > 0 ? Tw / T_req_front : 0);
   } else {
     result.canCross = true; // Veri eksik, geometrik geçerlilik yeterli
+    result.decision = null;
   }
 
   result.timestamp = new Date().toISOString();
@@ -34126,26 +34281,90 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += '  olan etkilesimiyle belirlenir, teker yaricapinin bunda hicbir rolu yoktur.\n';
       r += '\n';
 
-      // Karar
-      r += '  ' + ln('=', 50) + '\n';
-      r += '  ENGEL ASMA KARARI\n';
-      r += '  ' + ln('=', 50) + '\n';
-      r += pRow('Mevcut Teker Torku (T_wheel)', num(stl.T_wheel, 1) + ' Nm');
-      if(trq) {
-        r += pRow('Gereken Tork (Kritik)', num(trq.T_req_critical, 1) + ' Nm  (' + ascii(trq.criticalScenario) + ')');
-      }
-      if(obs.torqueRatio !== undefined) {
-        r += pRow('Tork Orani (T_wheel/T_req)', num(obs.torqueRatio, 2) + 'x');
-        r += pRow('Tork Marji', num(obs.torqueMargin, 1) + ' Nm');
-      }
-      r += '\n';
-      if(obs.canCross) {
-        r += '  >>> SONUC: ENGEL ASILAB' + 'ILIR <<<\n';
-        r += '  Mevcut teker torku, gereken torku karsilamaktadir.\n';
-      } else {
-        r += '  >>> SONUC: ENGEL ASILAMAZ <<<\n';
-        r += '  Mevcut teker torku yetersizdir. Daha dusuk vites veya\n';
-        r += '  transfer Low kademe ile tekrar degerlendirilmelidir.\n';
+      // ── ADIM 5: KARŞILAŞTIRMA & NİHAİ KARAR ──
+      var dec = obs.decision;
+      if(dec) {
+        r += ln('=', W) + '\n  KARSILASTIRMA & NIHAI KARAR\n' + ln('=', W) + '\n\n';
+
+        // Özet tablo
+        r += '  ' + ln('-', 60) + '\n';
+        r += '  GEOMETRI OZETI\n';
+        r += '  ' + ln('-', 60) + '\n';
+        r += pRow('Yuklu Lastik Yaricapi (R_eff)', num(inp.R_eff, 3) + ' m');
+        r += pRow('Engel Yuksekligi (h)', num(inp.h, 3) + ' m');
+        r += pRow('h/R Orani', num(geo.hR_ratio, 3) + '  [' + ascii(geo.difficultyLabel) + ']');
+        r += pRow('Moment Kolu (x)', num(geo.x, 4) + ' m');
+        r += pRow('Merkez-Kose Acisi (theta)', num(geo.theta_deg, 2) + ' derece');
+        r += '\n';
+
+        // Stall özet
+        r += '  ' + ln('-', 60) + '\n';
+        r += '  STALL DENGE OZETI\n';
+        r += '  ' + ln('-', 60) + '\n';
+        r += pRow('Stall Denge Devri', num(stl.N_stall, 0) + ' RPM');
+        r += pRow('Motor Torku @ Stall', num(stl.T_engine_stall, 1) + ' Nm');
+        r += pRow('Teker Torku (T_wheel)', num(dec.T_wheel, 1) + ' Nm');
+        r += '\n';
+
+        // Ön teker bölümü
+        r += '  ' + ln('-', 60) + '\n';
+        r += '  ON TEKER ANALIZI\n';
+        r += '  ' + ln('-', 60) + '\n';
+        r += pRow('Gereken Tork (T_req_on)', num(dec.T_req_front, 1) + ' Nm');
+        r += pRow('Mevcut Tork (T_wheel)', num(dec.T_wheel, 1) + ' Nm');
+        var frontMarjStr = (dec.frontMarginPct >= 0 ? '+' : '') + num(dec.frontMarginPct, 1) + '%';
+        var frontMarjNmStr = (dec.frontMarginNm >= 0 ? '+' : '') + num(dec.frontMarginNm, 1) + ' Nm';
+        r += pRow('Tork Marji', frontMarjStr + '  (' + frontMarjNmStr + ')');
+        var frontSonuc = dec.frontPass ? 'ASAR' : 'ASAMAZ';
+        var frontEtiket = dec.frontColor === 'yellow' ? ' (kilpayi)' : '';
+        r += pRow('Sonuc', '>>> ' + frontSonuc + ' <<<' + frontEtiket);
+        r += '\n';
+
+        // Arka teker bölümü
+        r += '  ' + ln('-', 60) + '\n';
+        r += '  ARKA TEKER ANALIZI\n';
+        r += '  ' + ln('-', 60) + '\n';
+        if(isFinite(dec.T_req_rear)) {
+          r += pRow('Gereken Tork (T_req_arka)', num(dec.T_req_rear, 1) + ' Nm');
+          r += pRow('Mevcut Tork (T_wheel)', num(dec.T_wheel, 1) + ' Nm');
+          var rearMarjStr = (dec.rearMarginPct >= 0 ? '+' : '') + num(dec.rearMarginPct, 1) + '%';
+          var rearMarjNmStr = (dec.rearMarginNm >= 0 ? '+' : '') + num(dec.rearMarginNm, 1) + ' Nm';
+          r += pRow('Tork Marji', rearMarjStr + '  (' + rearMarjNmStr + ')');
+          var rearSonuc = dec.rearPass ? 'ASAR' : 'ASAMAZ';
+          var rearEtiket = dec.rearColor === 'yellow' ? ' (kilpayi)' : '';
+          r += pRow('Sonuc', '>>> ' + rearSonuc + ' <<<' + rearEtiket);
+        } else {
+          r += '  *** Hesaplanamadi (L-x<=0) ***\n';
+        }
+        r += '\n';
+
+        // Genel karar
+        r += '  ' + ln('#', 60) + '\n';
+        r += '  ' + ln('#', 60) + '\n';
+        if(dec.overallPass) {
+          r += '       >>>   G E N E L   S O N U C :   A S A R   <<<\n';
+        } else {
+          r += '       >>>   G E N E L   S O N U C :   A S A M A Z   <<<\n';
+        }
+        r += '  ' + ln('#', 60) + '\n';
+        r += '  ' + ln('#', 60) + '\n';
+        r += '\n';
+
+        if(dec.overallPass) {
+          r += '  Her iki teker de engeli asmak icin yeterli torka sahiptir.\n';
+          if(dec.rearColor === 'yellow') {
+            r += '  UYARI: Arka teker marji cok dusuk (%' + num(dec.rearMarginPct, 1) + '). Dikkatli olunmalidir.\n';
+          }
+        } else {
+          r += '  Aracin engeli tamamen asmasi icin her iki tekerin de asmasi gerekir.\n';
+          if(dec.frontPass && !dec.rearPass) {
+            r += '  On teker asiyor ancak arka teker asamiyor.\n';
+          } else if(!dec.frontPass && !dec.rearPass) {
+            r += '  Her iki teker de yetersiz torka sahiptir.\n';
+          }
+          r += '  Oneri: Daha dusuk vites veya transfer Low kademe ile tekrar degerlendiriniz.\n';
+        }
+        r += '\n';
       }
       r += '\n';
     } else if(stl && !stl.hasData) {
