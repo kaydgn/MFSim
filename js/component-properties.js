@@ -815,6 +815,47 @@ var VE_FT_MOTOR_PRESETS = {
       {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
+  'isb45_210_fr94198': {
+    name: 'ISB4.5 210 | FR94198',
+    specs: {
+      displacement: 4.50,
+      idleRpm: 800,
+      governedSpeed: 2500,
+      noLoadGoverned: 2850,
+      inertia: 0.4993
+    },
+    data: [
+      {rpm: 800, torque: 366.0, power: 30.7},
+      {rpm: 900, torque: 400.8, power: 37.7},
+      {rpm: 1000, torque: 446.0, power: 46.7},
+      {rpm: 1100, torque: 495.0, power: 57.0},
+      {rpm: 1200, torque: 527.0, power: 66.2},
+      {rpm: 1300, torque: 576.0, power: 78.4},
+      {rpm: 1400, torque: 702.0, power: 102.9},
+      {rpm: 1500, torque: 759.0, power: 119.2},
+      {rpm: 1600, torque: 759.0, power: 127.2},
+      {rpm: 1700, torque: 759.0, power: 135.1},
+      {rpm: 1800, torque: 759.0, power: 143.1},
+      {rpm: 1900, torque: 739.0, power: 147.8},
+      {rpm: 2000, torque: 719.0, power: 150.6},
+      {rpm: 2100, torque: 698.0, power: 153.5},
+      {rpm: 2200, torque: 678.0, power: 156.2},
+      {rpm: 2300, torque: 650.0, power: 156.6},
+      {rpm: 2400, torque: 621.0, power: 156.1},
+      {rpm: 2500, torque: 550.0, power: 144.0},
+      {rpm: 2530, torque: 515.0, power: 136.4},
+      {rpm: 2600, torque: 400.0, power: 108.9},
+      {rpm: 2850, torque: 0.0, power: 0.0}
+    ],
+    accessories: [
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 16.1, userLoss: 16.1},
+      {name: 'Alternatör / Jeneratör', standardLoss: 1.6, userLoss: 1.6},
+      {name: 'Hava Kompresörü', standardLoss: 0.8, userLoss: 0.8},
+      {name: 'Direksiyon Pompası', standardLoss: 0.8, userLoss: 0.8},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
+    ]
+  },
   'isb45e3_185_fr92152': {
     name: 'ISB4.5e3 185 | FR92152',
     specs: {
