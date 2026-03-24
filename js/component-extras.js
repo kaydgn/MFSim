@@ -479,11 +479,187 @@ function onVECoastDownChange(nodeId) {
 
 // ===== ENGEL GEÇME BİLEŞENİ =====
 function getObstacleCrossingPropertiesHTML(node) {
+  var d = node.data || {};
+  var nid = node.id;
+
+  // Topolojiden otomatik değerleri çek
+  var vehicleNode = nodes.find(function(n) { return n.type === 'vehicle'; });
+  var wheelNode = nodes.find(function(n) { return n.type === 'wheel' && n.isMasterWheel; })
+                || nodes.find(function(n) { return n.type === 'wheel'; });
+  var gearboxNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+
+  var vd = vehicleNode ? (vehicleNode.data || {}) : {};
+  var wd = wheelNode ? (wheelNode.data || {}) : {};
+  var gd = gearboxNode ? (gearboxNode.data || {}) : {};
+
+  // Araç ağırlığı (FT modundan)
+  var autoMass = vd.ftGVW !== undefined ? vd.ftGVW : 14900;
+
+  // Lastik bilgileri (FT modundan)
+  var autoTireName = wd.ftTireName || 'Michelin XZL 395/85R20';
+  var autoTireRadius = wd.ftTireRadius !== undefined ? wd.ftTireRadius : 0.573;
+
+  // Kullanıcı girdileri
+  var a1 = d.a1 !== undefined ? d.a1 : '';
+  var a2 = d.a2 !== undefined ? d.a2 : '';
+  var obsHeight = d.obstacleHeight !== undefined ? d.obstacleHeight : '';
+  var loadedTireRadius = d.loadedTireRadius !== undefined ? d.loadedTireRadius : '';
+
+  // Dingil mesafesi otomatik hesap
+  var a1Val = parseFloat(a1);
+  var a2Val = parseFloat(a2);
+  var wheelbaseStr = (!isNaN(a1Val) && !isNaN(a2Val) && a1Val > 0 && a2Val > 0) ? (a1Val + a2Val).toFixed(3) : '—';
+
+  // Şanzıman vitesleri
+  var ftGears = gd.ftGearData || (typeof VE_FT_GB_DEFAULT_GEARS !== 'undefined' ? VE_FT_GB_DEFAULT_GEARS : []);
+  var selectedGearIdx = d.selectedGearIdx !== undefined ? d.selectedGearIdx : 0;
+  var selectedGearRatio = (ftGears.length > 0 && selectedGearIdx < ftGears.length) ? ftGears[selectedGearIdx].ratio : '—';
+
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
   html += '<div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Parametreler</div>';
-  html += '<div style="font-size:0.8rem; color:var(--text-secondary);">Bu bileşen için henüz parametre tanımlanmamış.</div>';
+
+  // ═══════ ARAÇ PARAMETRELERİ ═══════
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Araç Parametreleri</div>';
+  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
+
+  // Araç ağırlığı (otomatik)
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:50%; font-weight:500; color:var(--text-secondary);">Araç Ağırlığı <span style="color:var(--text-muted); font-weight:400;">[kg]</span></th>';
+  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;">' + autoMass + ' <span style="font-size:0.52rem; color:var(--text-muted); font-weight:400;">( Araç )</span></td>';
+  html += '</tr>';
+
+  // a₁ — ağırlık merkezi-ön aks mesafesi
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Ağ. Merkezi–Ön Aks <span style="color:var(--text-muted); font-weight:400;">a₁ [m]</span></th>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-a1-' + nid + '" value="' + a1 + '" step="0.001" min="0" placeholder="2.100" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '</tr>';
+
+  // a₂ — ağırlık merkezi-arka aks mesafesi
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Ağ. Merkezi–Arka Aks <span style="color:var(--text-muted); font-weight:400;">a₂ [m]</span></th>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-a2-' + nid + '" value="' + a2 + '" step="0.001" min="0" placeholder="1.900" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '</tr>';
+
+  // Dingil mesafesi L (otomatik)
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Dingil Mesafesi <span style="color:var(--text-muted); font-weight:400;">L [m]</span></th>';
+  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;"><span id="ve-obs-wheelbase-' + nid + '">' + wheelbaseStr + '</span> <span style="font-size:0.52rem; color:var(--text-muted); font-weight:400;">( a₁+a₂ )</span></td>';
+  html += '</tr>';
+
+  html += '</table>';
+
+  // ═══════ ENGEL PARAMETRELERİ ═══════
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Engel Parametreleri</div>';
+  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
+
+  // Engel yüksekliği h
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:50%; font-weight:500; color:var(--text-secondary);">Engel Yüksekliği <span style="color:var(--text-muted); font-weight:400;">h [m]</span></th>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-height-' + nid + '" value="' + obsHeight + '" step="0.01" min="0" placeholder="0.50" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '</tr>';
+
+  html += '</table>';
+
+  // ═══════ LASTİK PARAMETRELERİ ═══════
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Lastik Parametreleri</div>';
+  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
+
+  // Lastik (otomatik)
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:50%; font-weight:500; color:var(--text-secondary);">Lastik</th>';
+  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right; font-size:0.62rem;">' + autoTireName + ' <span style="font-size:0.52rem; color:var(--text-muted); font-weight:400;">( Lastik )</span></td>';
+  html += '</tr>';
+
+  // Yuvarlanma Yarıçapı (otomatik)
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yuvarlanma Yarıçapı <span style="color:var(--text-muted); font-weight:400;">[m]</span></th>';
+  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;">' + autoTireRadius + ' <span style="font-size:0.52rem; color:var(--text-muted); font-weight:400;">( Lastik )</span></td>';
+  html += '</tr>';
+
+  // Yüklü Lastik Yarıçapı (kullanıcı girer)
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yüklü Lastik Yarıçapı <span style="color:var(--text-muted); font-weight:400;">R<sub>eff</sub> [m]</span></th>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-loaded-radius-' + nid + '" value="' + loadedTireRadius + '" step="0.001" min="0" placeholder="0.540" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '</tr>';
+  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:0.52rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Yüklü koşulda ve köşe teması göz önünde bulundurularak girilmelidir. Lastiğin zemine temas ettiği andaki efektif yarıçaptır.</td></tr>';
+
+  html += '</table>';
+
+  // ═══════ AKTARMA PARAMETRELERİ ═══════
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Aktarma Parametreleri</div>';
+  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
+
+  // Kaçıncı vites? (dropdown)
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:50%; font-weight:500; color:var(--text-secondary);">Kaçıncı Vites?</th>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><select id="ve-obs-gear-' + nid + '" onchange="onVEObstacleCrossingChange(\'' + nid + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">';
+  if(ftGears.length > 0) {
+    ftGears.forEach(function(g, idx) {
+      html += '<option value="' + idx + '"' + (idx === selectedGearIdx ? ' selected' : '') + '>' + g.name + ' (i=' + g.ratio + ')</option>';
+    });
+  } else {
+    html += '<option value="0">Şanzıman bileşeni bulunamadı</option>';
+  }
+  html += '</select></td>';
+  html += '</tr>';
+
+  // Vites oranı (otomatik)
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Vites Oranı <span style="color:var(--text-muted); font-weight:400;">i<sub>g</sub></span></th>';
+  html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;"><span id="ve-obs-gear-ratio-' + nid + '">' + selectedGearRatio + '</span> <span style="font-size:0.52rem; color:var(--text-muted); font-weight:400;">( Şanzıman )</span></td>';
+  html += '</tr>';
+
+  html += '</table>';
+
   html += '</div>';
   return html;
+}
+
+function onVEObstacleCrossingChange(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node) return;
+  if(!node.data) node.data = {};
+
+  var elFn = function(id) { return document.getElementById(id); };
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+
+  // a₁, a₂
+  var a1El = elFn('ve-obs-a1-' + nodeId);
+  var a2El = elFn('ve-obs-a2-' + nodeId);
+  if(a1El) node.data.a1 = pf(a1El.value, undefined);
+  if(a2El) node.data.a2 = pf(a2El.value, undefined);
+
+  // Dingil mesafesi otomatik güncelle
+  var wbEl = elFn('ve-obs-wheelbase-' + nodeId);
+  if(wbEl) {
+    var a1v = parseFloat(a1El ? a1El.value : '');
+    var a2v = parseFloat(a2El ? a2El.value : '');
+    wbEl.textContent = (!isNaN(a1v) && !isNaN(a2v) && a1v > 0 && a2v > 0) ? (a1v + a2v).toFixed(3) : '—';
+  }
+
+  // Engel yüksekliği
+  var hEl = elFn('ve-obs-height-' + nodeId);
+  if(hEl) node.data.obstacleHeight = pf(hEl.value, undefined);
+
+  // Yüklü lastik yarıçapı
+  var lrEl = elFn('ve-obs-loaded-radius-' + nodeId);
+  if(lrEl) node.data.loadedTireRadius = pf(lrEl.value, undefined);
+
+  // Seçilen vites
+  var gearEl = elFn('ve-obs-gear-' + nodeId);
+  if(gearEl) {
+    node.data.selectedGearIdx = parseInt(gearEl.value) || 0;
+    // Vites oranı göstergesini güncelle
+    var gearboxNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+    var gd = gearboxNode ? (gearboxNode.data || {}) : {};
+    var ftGears = gd.ftGearData || (typeof VE_FT_GB_DEFAULT_GEARS !== 'undefined' ? VE_FT_GB_DEFAULT_GEARS : []);
+    var ratioEl = elFn('ve-obs-gear-ratio-' + nodeId);
+    if(ratioEl && ftGears.length > 0 && node.data.selectedGearIdx < ftGears.length) {
+      ratioEl.textContent = ftGears[node.data.selectedGearIdx].ratio;
+    }
+  }
+
+  if(typeof saveState === 'function') saveState();
 }
 
 // ===== COAST-DOWN SİHİRBAZI =====
