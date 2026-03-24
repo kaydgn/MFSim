@@ -815,6 +815,47 @@ var VE_FT_MOTOR_PRESETS = {
       {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
   },
+  'isb45_210_fr94198': {
+    name: 'ISB4.5 210 | FR94198',
+    specs: {
+      displacement: 4.50,
+      idleRpm: 800,
+      governedSpeed: 2500,
+      noLoadGoverned: 2850,
+      inertia: 0.4993
+    },
+    data: [
+      {rpm: 800, torque: 366.0, power: 30.7},
+      {rpm: 900, torque: 400.8, power: 37.7},
+      {rpm: 1000, torque: 446.0, power: 46.7},
+      {rpm: 1100, torque: 495.0, power: 57.0},
+      {rpm: 1200, torque: 527.0, power: 66.2},
+      {rpm: 1300, torque: 576.0, power: 78.4},
+      {rpm: 1400, torque: 702.0, power: 102.9},
+      {rpm: 1500, torque: 759.0, power: 119.2},
+      {rpm: 1600, torque: 759.0, power: 127.2},
+      {rpm: 1700, torque: 759.0, power: 135.1},
+      {rpm: 1800, torque: 759.0, power: 143.1},
+      {rpm: 1900, torque: 739.0, power: 147.8},
+      {rpm: 2000, torque: 719.0, power: 150.6},
+      {rpm: 2100, torque: 698.0, power: 153.5},
+      {rpm: 2200, torque: 678.0, power: 156.2},
+      {rpm: 2300, torque: 650.0, power: 156.6},
+      {rpm: 2400, torque: 621.0, power: 156.1},
+      {rpm: 2500, torque: 550.0, power: 144.0},
+      {rpm: 2530, torque: 515.0, power: 136.4},
+      {rpm: 2600, torque: 400.0, power: 108.9},
+      {rpm: 2850, torque: 0.0, power: 0.0}
+    ],
+    accessories: [
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 16.1, userLoss: 16.1},
+      {name: 'Alternatör / Jeneratör', standardLoss: 1.6, userLoss: 1.6},
+      {name: 'Hava Kompresörü', standardLoss: 0.8, userLoss: 0.8},
+      {name: 'Direksiyon Pompası', standardLoss: 0.8, userLoss: 0.8},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
+    ]
+  },
   'isb45e3_185_fr92152': {
     name: 'ISB4.5e3 185 | FR92152',
     specs: {
@@ -3308,13 +3349,13 @@ function getGearboxPropertiesHTML(node) {
     Object.keys(VE_GEARBOX_PRESETS).forEach(function(gk) {
       var gp = VE_GEARBOX_PRESETS[gk];
       var fwdC = gp.gears.filter(function(g) { return g.gear !== 'R'; }).length;
-      var calM = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '');
+      var calM = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '') + (gp.partialData ? ' ★' : '');
       var gSel = (gk === ftGBPreset) ? ' selected' : '';
       html += '<option value="' + gk + '"' + gSel + '>' + gp.name + ' (' + fwdC + 'V)' + calM + '</option>';
     });
     html += '</select>';
     html += '</div>';
-    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon &nbsp; <span style="color:#e53e3e;" title="Eksik veri — sadece vites oranları mevcut">★</span> = Eksik veri</div>';
     if(hasEGM) {
       html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:4px; font-size:0.58rem; color:var(--accent-primary); line-height:1.4;">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
@@ -3589,14 +3630,14 @@ function getGearboxPropertiesHTML(node) {
   Object.keys(VE_GEARBOX_PRESETS).forEach(function(key) {
     var gp = VE_GEARBOX_PRESETS[key];
     var fwdCount = gp.gears.filter(function(g) { return g.gear !== 'R'; }).length;
-    var calMark = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '');
+    var calMark = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '') + (gp.partialData ? ' ★' : '');
     var sel = (key === selectedGearbox) ? ' selected' : '';
     html += '<option value="' + key + '"' + sel + '>' + gp.name + ' (' + fwdCount + 'V)' + calMark + '</option>';
   });
   html += '<option value="__new__">➕ Manuel Giriş</option>';
   html += '</select>';
   html += '</div>';
-  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon &nbsp; <span style="color:#e53e3e;" title="Eksik veri — sadece vites oranları mevcut">★</span> = Eksik veri</div>';
   if(_hasEGM2) {
     html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:4px; font-size:0.58rem; color:var(--accent-primary); line-height:1.4;">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
   }
@@ -4687,6 +4728,28 @@ var VE_GEARBOX_PRESETS = {
       {gear: '7', ratio: 0.64, note: ''},
       {gear: 'R', ratio: -4.80, note: 'Geri'}
     ]
+  },
+  '2957SP_WIDE': {
+    name: 'Allison | 2957 SP Wide',
+    family: '',
+    calibrated: false,
+    partialData: true,
+    grossInputPower: null,
+    grossInputTorque: null,
+    netTurbineTorque: null,
+    maxOutputSpeed: null,
+    gears: [
+      {gear: '1', ratio: 4.822, note: ''},
+      {gear: '2', ratio: 3.512, note: ''},
+      {gear: '3', ratio: 2.852, note: ''},
+      {gear: '4', ratio: 1.896, note: ''},
+      {gear: '5', ratio: 1.439, note: ''},
+      {gear: '6', ratio: 1.000, note: ''},
+      {gear: '7', ratio: 0.736, note: ''},
+      {gear: '8', ratio: 0.643, note: ''},
+      {gear: '9', ratio: 0.568, note: ''},
+      {gear: 'R', ratio: -5.085, note: 'Geri'}
+    ]
   }
 };
 
@@ -5666,7 +5729,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
                         r.status === 'unacceptable' ? 'var(--accent-danger)' : 'var(--text-muted)';
       var isSelected = r.key === selectedGB;
       var borderLeft = isSelected ? '3px solid var(--accent-primary)' : 'none';
-      var calMark = (r.calibrated ? ' ✦' : '') + (r.downshiftCalibrated ? ' ✧' : '');
+      var calMark = (r.calibrated ? ' ✦' : '') + (r.downshiftCalibrated ? ' ✧' : '') + (r.partialData ? ' ★' : '');
 
       // Şanzıman adını kısalt: "Allison | 4000SP" → "4000SP"
       var shortName = r.name.replace(/^Allison\s*\|\s*/i, '');
