@@ -2758,6 +2758,10 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var maxTime = opts.maxTime || 30.0;         // Maksimum simülasyon süresi (s)
   var stallTimeout = opts.stallTimeout || 2.0; // Stall tespit süresi (s)
 
+  // ECM Rate Limiter parametreleri
+  var dN_dt_max = opts.dN_dt_max || 550;     // Maksimum devir artış hızı (RPM/s)
+  var ECM_aktif = false;                      // ECM Tq Limit modu başlangıçta pasif
+
   var inp = obsResult.inputParams;
   var stl = obsResult.stallAnalysis;
   if(!stl || !stl.hasData) {
@@ -2957,11 +2961,13 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       phi_new = phi - dPhi;
     }
 
-    // ── Hesap 9: Motor devri güncelleme ──
-    var N_engine_new;
+    // ── Hesap 9: Motor devri güncelleme (3 aşamalı) ──
+
+    // Aşama A — Ham motor devri hesabı
+    var N_ham;
     if(SR > 0.80) {
       // Coupling bölgesi: motor türbini takip eder
-      N_engine_new = (SR > 0.01) ? N_turbin / SR : N_engine;
+      N_ham = (SR > 0.01) ? N_turbin / SR : N_engine;
     } else {
       // Konvertör bölgesi: serbest ivmelenme
       var J_eff = J_engine + J_tc;
@@ -2969,8 +2975,35 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       var alpha_engine = (T_engine - T_pump_load) / J_eff;
       var omega_engine = N_engine * 2 * Math.PI / 60;
       var omega_new = omega_engine + alpha_engine * dt;
-      N_engine_new = omega_new * 60 / (2 * Math.PI);
+      N_ham = omega_new * 60 / (2 * Math.PI);
     }
+
+    // Aşama B — ECM Tq Limit tetikleme kontrolü
+    // Aktifleşme: DD >= 90%, T_req ciddi direnç, motor rölantiden çıkmış
+    if(DD >= 90 && isFinite(T_req_anlik) && T_req_anlik > T_wheel * 0.70 && N_engine > 1200) {
+      ECM_aktif = true;
+    }
+    // Devre dışı kalma: engel direnci önemli ölçüde düşmüş
+    if(ECM_aktif && isFinite(T_req_anlik) && T_req_anlik < T_wheel * 0.30) {
+      ECM_aktif = false;
+    }
+
+    // Aşama C — Rate Limiter uygulaması
+    var N_engine_new;
+    var ecm_limited = false;
+    if(ECM_aktif) {
+      var dN_hesaplanan = N_ham - N_engine;
+      var dN_max = dN_dt_max * dt;
+      if(dN_hesaplanan > dN_max) {
+        N_engine_new = N_engine + dN_max;
+        ecm_limited = true;
+      } else {
+        N_engine_new = N_ham;
+      }
+    } else {
+      N_engine_new = N_ham;
+    }
+
     // Sınırla
     N_engine_new = Math.max(idleRpm, Math.min(governedSpeed, N_engine_new));
 
@@ -3030,6 +3063,18 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     prev_v = v_new;
     prev_phi = phi_new;
 
+    // ── ECM milestone tespiti ──
+    if(ECM_aktif && !_ms[msPrefix + 'ecm_on']) {
+      addMilestone(msPrefix + 'ecm_on', 'ECM Tq Limit aktif — devir artisi sinirlandirildi', {
+        N_engine: N_engine_new, T_engine: T_engine, T_wheel: T_wheel, T_req: T_req_anlik, DD: DD
+      });
+    }
+    if(!ECM_aktif && _ms[msPrefix + 'ecm_on'] && !_ms[msPrefix + 'ecm_off']) {
+      addMilestone(msPrefix + 'ecm_off', 'ECM Tq Limit devre disi — motor serbest', {
+        N_engine: N_engine_new, T_engine: T_engine, T_wheel: T_wheel, T_req: T_req_anlik
+      });
+    }
+
     // ── Veri kaydı ──
     if(stepCount % logInterval === 0 || stepCount === 1) {
       log.push({
@@ -3047,7 +3092,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         F_net: F_net,
         KE: 0.5 * mass * v_new * v_new,
         DD: DD,
-        phase: phase
+        phase: phase,
+        ecm: ECM_aktif
       });
     }
 
@@ -3068,6 +3114,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         N_engine_new = idleRpm;
         stallCheckStart = -1; // Stall sayacını sıfırla
         prev_T_wheel_vs_req = false; // Arka teker için sıfırla
+        ECM_aktif = false; // Arka teker için ECM sıfırla
         addMilestone('r_contact', 'Arka teker engel kosesine temas', {
           phi_deg: phi_new * 180 / Math.PI, v: v_new, N_engine: N_engine_new
         });
@@ -3170,7 +3217,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       J_engine_source: (isFinite(J_engine_from_spec) && J_engine_from_spec > 0) ? 'motor bileseni' : 'varsayilan',
       J_tc: J_tc,
       momentumCarry: false,
-      phi_start_deg: phi_start * 180 / Math.PI
+      phi_start_deg: phi_start * 180 / Math.PI,
+      dN_dt_max: dN_dt_max
     },
     // Zaman serisi
     log: log
