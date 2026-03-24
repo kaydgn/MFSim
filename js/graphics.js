@@ -3613,6 +3613,13 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += pRow('Teker Torku (T_wheel)', num(dec.T_wheel, 1) + ' Nm');
         r += '\n';
 
+        // Marj durum etiketi: sözel ifade
+        function marjDurum(pct, pass) {
+          if(!pass) return 'YETERSIZ';
+          if(pct <= 5) return 'KILPAYI — dikkatli olunmali';
+          return 'YETERLI';
+        }
+
         // Ön teker bölümü
         r += '  ' + ln('-', 60) + '\n';
         r += '  ON TEKER ANALIZI\n';
@@ -3622,9 +3629,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         var frontMarjStr = (dec.frontMarginPct >= 0 ? '+' : '') + num(dec.frontMarginPct, 1) + '%';
         var frontMarjNmStr = (dec.frontMarginNm >= 0 ? '+' : '') + num(dec.frontMarginNm, 1) + ' Nm';
         r += pRow('Tork Marji', frontMarjStr + '  (' + frontMarjNmStr + ')');
+        r += pRow('Durum', marjDurum(dec.frontMarginPct, dec.frontPass));
         var frontSonuc = dec.frontPass ? 'ASAR' : 'ASAMAZ';
-        var frontEtiket = dec.frontColor === 'yellow' ? ' (kilpayi)' : '';
-        r += pRow('Sonuc', '>>> ' + frontSonuc + ' <<<' + frontEtiket);
+        r += pRow('Sonuc', '>>> ' + frontSonuc + ' <<<');
         r += '\n';
 
         // Arka teker bölümü
@@ -3637,9 +3644,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           var rearMarjStr = (dec.rearMarginPct >= 0 ? '+' : '') + num(dec.rearMarginPct, 1) + '%';
           var rearMarjNmStr = (dec.rearMarginNm >= 0 ? '+' : '') + num(dec.rearMarginNm, 1) + ' Nm';
           r += pRow('Tork Marji', rearMarjStr + '  (' + rearMarjNmStr + ')');
+          r += pRow('Durum', marjDurum(dec.rearMarginPct, dec.rearPass));
           var rearSonuc = dec.rearPass ? 'ASAR' : 'ASAMAZ';
-          var rearEtiket = dec.rearColor === 'yellow' ? ' (kilpayi)' : '';
-          r += pRow('Sonuc', '>>> ' + rearSonuc + ' <<<' + rearEtiket);
+          r += pRow('Sonuc', '>>> ' + rearSonuc + ' <<<');
         } else {
           r += '  *** Hesaplanamadi (L-x<=0) ***\n';
         }

@@ -4651,13 +4651,6 @@ function veRenderObstacleCrossingTXTReport() {
 
   if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
 
-  var obs = sim.obstacleCrossing;
-  var dec = obs ? obs.decision : null;
-  var geo = obs ? obs.geometry : null;
-  var stl = obs ? obs.stallAnalysis : null;
-  var trq = obs ? obs.torqueAnalysis : null;
-  var inp = obs ? obs.inputParams : null;
-
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
@@ -4671,107 +4664,6 @@ function veRenderObstacleCrossingTXTReport() {
   html += '</div>';
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:#e8eaed; padding:20px 0;">';
-
-  // ── SONUÇ EKRANI — Görsel Özet Kartları ──
-  if(dec && geo && stl && stl.hasData && trq) {
-    var overallBg = dec.overallPass ? 'linear-gradient(135deg, #065f46 0%, #047857 100%)' : 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)';
-    var overallText = dec.overallPass ? 'ENGEL ASILABILIR' : 'ENGEL ASILAMAZ';
-
-    function _obsColorMap(c) {
-      if(c === 'green') return { bg: '#ecfdf5', border: '#059669', text: '#065f46', badge: '#059669' };
-      if(c === 'yellow') return { bg: '#fffbeb', border: '#d97706', text: '#92400e', badge: '#d97706' };
-      return { bg: '#fef2f2', border: '#dc2626', text: '#991b1b', badge: '#dc2626' };
-    }
-    var fc = _obsColorMap(dec.frontColor);
-    var rc = _obsColorMap(dec.rearColor);
-
-    html += '<div style="max-width:1100px; margin:0 auto 16px auto;">';
-
-    // Genel karar banner
-    html += '<div style="background:' + overallBg + '; border-radius:6px; padding:16px 24px; margin-bottom:12px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.15);">';
-    html += '<div style="font-size:1.4rem; font-weight:800; color:#fff; letter-spacing:2px;">' + overallText + '</div>';
-    html += '<div style="font-size:0.68rem; color:rgba(255,255,255,0.8); margin-top:4px;">h = ' + (inp.h * 1000).toFixed(0) + ' mm | R_eff = ' + (inp.R_eff * 1000).toFixed(0) + ' mm | h/R = ' + geo.hR_ratio.toFixed(3) + ' [' + geo.difficultyLabel + ']</div>';
-    html += '</div>';
-
-    // Geometri + Stall özet satırı
-    html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:12px;">';
-
-    // Geometri kartı
-    html += '<div style="background:#fff; border-radius:5px; padding:12px 14px; box-shadow:0 1px 4px rgba(0,0,0,0.08);">';
-    html += '<div style="font-size:0.65rem; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Geometri</div>';
-    html += '<div style="font-size:0.62rem; color:#374151; line-height:1.8;">';
-    html += 'R<sub>eff</sub> = ' + (inp.R_eff * 1000).toFixed(1) + ' mm<br>';
-    html += 'h = ' + (inp.h * 1000).toFixed(1) + ' mm<br>';
-    html += 'Moment kolu x = ' + (geo.x * 1000).toFixed(1) + ' mm<br>';
-    html += '&theta; = ' + geo.theta_deg.toFixed(1) + '&deg;';
-    html += '</div></div>';
-
-    // Stall kartı
-    html += '<div style="background:#fff; border-radius:5px; padding:12px 14px; box-shadow:0 1px 4px rgba(0,0,0,0.08);">';
-    html += '<div style="font-size:0.65rem; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Stall Dengesi</div>';
-    html += '<div style="font-size:0.62rem; color:#374151; line-height:1.8;">';
-    html += 'Stall devri = ' + stl.N_stall.toFixed(0) + ' RPM<br>';
-    html += 'Motor torku = ' + stl.T_engine_stall.toFixed(1) + ' Nm<br>';
-    html += 'TR<sub>stall</sub> = ' + stl.TR_stall.toFixed(3) + '<br>';
-    html += 'Vites: ' + stl.gearName + ' (i=' + stl.gearRatio.toFixed(3) + ')';
-    html += '</div></div>';
-
-    // Teker torku kartı
-    html += '<div style="background:#fff; border-radius:5px; padding:12px 14px; box-shadow:0 1px 4px rgba(0,0,0,0.08);">';
-    html += '<div style="font-size:0.65rem; font-weight:700; color:#6b7280; text-transform:uppercase; margin-bottom:8px;">Teker Torku</div>';
-    html += '<div style="font-size:1.3rem; font-weight:800; color:#1e40af; margin-bottom:4px;">' + dec.T_wheel.toFixed(0) + ' <span style="font-size:0.7rem; font-weight:500;">Nm</span></div>';
-    html += '<div style="font-size:0.58rem; color:#6b7280;">tek teker ba\u015f\u0131na (n<sub>d</sub>=' + stl.n_d + ')</div>';
-    html += '</div>';
-
-    html += '</div>';
-
-    // Ön teker / Arka teker karşılaştırma kartları
-    html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">';
-
-    // Ön teker kartı
-    html += '<div style="background:' + fc.bg + '; border:2px solid ' + fc.border + '; border-radius:5px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.06);">';
-    html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">';
-    html += '<span style="font-size:0.72rem; font-weight:700; color:' + fc.text + ';">\u00D6n Teker</span>';
-    var frontLabel = dec.frontPass ? 'A\u015EAR' : 'A\u015EAMAZ';
-    html += '<span style="background:' + fc.badge + '; color:#fff; font-size:0.62rem; font-weight:700; padding:3px 10px; border-radius:3px;">' + frontLabel + '</span>';
-    html += '</div>';
-    html += '<div style="font-size:0.62rem; color:' + fc.text + '; line-height:1.7;">';
-    html += 'T<sub>req</sub> = ' + dec.T_req_front.toFixed(1) + ' Nm<br>';
-    html += 'T<sub>wheel</sub> = ' + dec.T_wheel.toFixed(1) + ' Nm<br>';
-    var fSign = dec.frontMarginPct >= 0 ? '+' : '';
-    html += 'Marj = <b style="font-size:0.78rem;">' + fSign + dec.frontMarginPct.toFixed(1) + '%</b>';
-    html += ' (' + fSign + dec.frontMarginNm.toFixed(1) + ' Nm)';
-    if(dec.frontColor === 'yellow') html += '<br><span style="color:#d97706; font-weight:600;">K\u0131lpay\u0131 — dikkatli olunmal\u0131</span>';
-    html += '</div></div>';
-
-    // Arka teker kartı
-    html += '<div style="background:' + rc.bg + '; border:2px solid ' + rc.border + '; border-radius:5px; padding:14px 16px; box-shadow:0 1px 4px rgba(0,0,0,0.06);">';
-    html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">';
-    html += '<span style="font-size:0.72rem; font-weight:700; color:' + rc.text + ';">Arka Teker</span>';
-    if(isFinite(dec.T_req_rear)) {
-      var rearLabel = dec.rearPass ? 'A\u015EAR' : 'A\u015EAMAZ';
-      html += '<span style="background:' + rc.badge + '; color:#fff; font-size:0.62rem; font-weight:700; padding:3px 10px; border-radius:3px;">' + rearLabel + '</span>';
-    } else {
-      html += '<span style="background:#6b7280; color:#fff; font-size:0.62rem; font-weight:700; padding:3px 10px; border-radius:3px;">HESAPLANAMADI</span>';
-    }
-    html += '</div>';
-    html += '<div style="font-size:0.62rem; color:' + rc.text + '; line-height:1.7;">';
-    if(isFinite(dec.T_req_rear)) {
-      html += 'T<sub>req</sub> = ' + dec.T_req_rear.toFixed(1) + ' Nm<br>';
-      html += 'T<sub>wheel</sub> = ' + dec.T_wheel.toFixed(1) + ' Nm<br>';
-      var rSign = dec.rearMarginPct >= 0 ? '+' : '';
-      html += 'Marj = <b style="font-size:0.78rem;">' + rSign + dec.rearMarginPct.toFixed(1) + '%</b>';
-      html += ' (' + rSign + dec.rearMarginNm.toFixed(1) + ' Nm)';
-      if(dec.rearColor === 'yellow') html += '<br><span style="color:#d97706; font-weight:600;">K\u0131lpay\u0131 — dikkatli olunmal\u0131</span>';
-    } else {
-      html += 'L - x &le; 0 — hesaplanam\u0131yor';
-    }
-    html += '</div></div>';
-
-    html += '</div>';
-    html += '</div>';
-  }
-
   html += '<div style="max-width:1100px; margin:0 auto; background:#fff; border-radius:4px; box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
   html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:#222; white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -34306,6 +34198,13 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += pRow('Teker Torku (T_wheel)', num(dec.T_wheel, 1) + ' Nm');
         r += '\n';
 
+        // Marj durum etiketi: sözel ifade
+        function marjDurum(pct, pass) {
+          if(!pass) return 'YETERSIZ';
+          if(pct <= 5) return 'KILPAYI — dikkatli olunmali';
+          return 'YETERLI';
+        }
+
         // Ön teker bölümü
         r += '  ' + ln('-', 60) + '\n';
         r += '  ON TEKER ANALIZI\n';
@@ -34315,9 +34214,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         var frontMarjStr = (dec.frontMarginPct >= 0 ? '+' : '') + num(dec.frontMarginPct, 1) + '%';
         var frontMarjNmStr = (dec.frontMarginNm >= 0 ? '+' : '') + num(dec.frontMarginNm, 1) + ' Nm';
         r += pRow('Tork Marji', frontMarjStr + '  (' + frontMarjNmStr + ')');
+        r += pRow('Durum', marjDurum(dec.frontMarginPct, dec.frontPass));
         var frontSonuc = dec.frontPass ? 'ASAR' : 'ASAMAZ';
-        var frontEtiket = dec.frontColor === 'yellow' ? ' (kilpayi)' : '';
-        r += pRow('Sonuc', '>>> ' + frontSonuc + ' <<<' + frontEtiket);
+        r += pRow('Sonuc', '>>> ' + frontSonuc + ' <<<');
         r += '\n';
 
         // Arka teker bölümü
@@ -34330,9 +34229,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           var rearMarjStr = (dec.rearMarginPct >= 0 ? '+' : '') + num(dec.rearMarginPct, 1) + '%';
           var rearMarjNmStr = (dec.rearMarginNm >= 0 ? '+' : '') + num(dec.rearMarginNm, 1) + ' Nm';
           r += pRow('Tork Marji', rearMarjStr + '  (' + rearMarjNmStr + ')');
+          r += pRow('Durum', marjDurum(dec.rearMarginPct, dec.rearPass));
           var rearSonuc = dec.rearPass ? 'ASAR' : 'ASAMAZ';
-          var rearEtiket = dec.rearColor === 'yellow' ? ' (kilpayi)' : '';
-          r += pRow('Sonuc', '>>> ' + rearSonuc + ' <<<' + rearEtiket);
+          r += pRow('Sonuc', '>>> ' + rearSonuc + ' <<<');
         } else {
           r += '  *** Hesaplanamadi (L-x<=0) ***\n';
         }
