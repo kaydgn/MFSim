@@ -2373,7 +2373,68 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
     hR_ratio: hR_ratio,
     difficultyLabel: difficultyLabel
   };
-  result.canCross = true; // Geometrik olarak geçerli, sonraki adımlarda kuvvet analizi belirleyecek
+
+  // ── ADIM 3: TORK GEREKSİNİMİ HESABI ──
+  var g = 9.81;
+  var W = mass * g; // Toplam ağırlık kuvveti [N]
+  var L = wheelbase;
+
+  // Dingil mesafesi kontrolü
+  if(L <= 0) {
+    result.geometryFail = true;
+    result.geometryFailReason = 'Dingil mesafesi (L=a1+a2) tanımlı değil veya sıfır.';
+    return result;
+  }
+
+  // Senaryo A — Ön teker engelde
+  // Arka teker temas noktası etrafında moment dengesi
+  // D_ön = L + x  (P noktası ön aksın x kadar ilerisinde)
+  var D_front = L + x;
+  var N_f = W * a2 / D_front;          // Ön akstaki toplam reaksiyon [N]
+  var N_f1 = N_f / 2;                   // Tek tekere düşen yük [N]
+  var T_req_front = N_f1 * x;           // Tek teker tork gereksinimi [Nm]
+
+  // Senaryo B — Arka teker engelde
+  // Ön teker temas noktası etrafında moment dengesi
+  // D_arka = L - x  (P noktası arka aksın x kadar gerisinde)
+  var D_rear = L - x;
+
+  // L - x <= 0 kontrolü (çok küçük dingil mesafeli araçlarda teorik)
+  var N_r, N_r1, T_req_rear;
+  if(D_rear <= 0) {
+    N_r = Infinity;
+    N_r1 = Infinity;
+    T_req_rear = Infinity;
+  } else {
+    N_r = W * a1 / D_rear;             // Arka akstaki toplam reaksiyon [N]
+    N_r1 = N_r / 2;                     // Tek tekere düşen yük [N]
+    T_req_rear = N_r1 * x;              // Tek teker tork gereksinimi [Nm]
+  }
+
+  // Kritik senaryo belirleme (daha yüksek tork gereksinimi)
+  var T_req_critical = Math.max(T_req_front, T_req_rear);
+  var criticalScenario = T_req_rear >= T_req_front ? 'Arka teker' : 'Ön teker';
+
+  result.torqueAnalysis = {
+    g: g,
+    W: W,
+    L: L,
+    // Senaryo A — Ön teker
+    D_front: D_front,
+    N_f: N_f,
+    N_f1: N_f1,
+    T_req_front: T_req_front,
+    // Senaryo B — Arka teker
+    D_rear: D_rear,
+    N_r: N_r,
+    N_r1: N_r1,
+    T_req_rear: T_req_rear,
+    // Özet
+    T_req_critical: T_req_critical,
+    criticalScenario: criticalScenario
+  };
+
+  result.canCross = true; // Geometrik olarak geçerli
 
   result.timestamp = new Date().toISOString();
   return result;
