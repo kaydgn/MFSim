@@ -583,6 +583,14 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '</tr>';
   html += '<tr><td colspan="2" style="padding:4px 6px; font-size:0.52rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Yüklü koşulda ve köşe teması göz önünde bulundurularak girilmelidir. Lastiğin zemine temas ettiği andaki efektif yarıçaptır.</td></tr>';
 
+  // Köşe defleksiyonu
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Köşe Defleksiyonu <span style="color:var(--text-muted); font-weight:400;">δ<sub>corner</sub> [mm]</span></th>';
+  var cornerDefl = (node.data.cornerDeflection !== undefined && node.data.cornerDeflection !== null) ? node.data.cornerDeflection : '';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-corner-defl-' + nid + '" value="' + cornerDefl + '" step="1" min="0" max="100" placeholder="15" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '</tr>';
+  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:0.52rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Engel köşesinde oluşan ek lastik ezilmesi. Tipik değerler: sert lastik / düşük yük için 5–10 mm, normal koşullar için 10–20 mm, yumuşak lastik / ağır yük için 20–30 mm. Boş bırakılırsa köşe düzeltmesi yapılmaz.</td></tr>';
+
   html += '</table>';
 
   // ═══════ AKTARMA PARAMETRELERİ ═══════
@@ -644,6 +652,13 @@ function onVEObstacleCrossingChange(nodeId) {
   // Yüklü lastik yarıçapı
   var lrEl = elFn('ve-obs-loaded-radius-' + nodeId);
   if(lrEl) node.data.loadedTireRadius = pf(lrEl.value, undefined);
+
+  // Köşe defleksiyonu
+  var cdEl = elFn('ve-obs-corner-defl-' + nodeId);
+  if(cdEl) {
+    var cdVal = cdEl.value.trim();
+    node.data.cornerDeflection = cdVal === '' ? undefined : pf(cdVal, undefined);
+  }
 
   // Seçilen vites
   var gearEl = elFn('ve-obs-gear-' + nodeId);

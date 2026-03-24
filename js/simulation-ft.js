@@ -2287,6 +2287,9 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
   var wheelbase = a1 + a2;
   var h = parseFloat(obsData.obstacleHeight) || 0;
   var R_eff = parseFloat(obsData.loadedTireRadius) || 0;
+  var cornerDeflection = (obsData.cornerDeflection !== undefined && obsData.cornerDeflection !== null)
+    ? parseFloat(obsData.cornerDeflection) : NaN;
+  var hasCornerDefl = isFinite(cornerDeflection) && cornerDeflection > 0;
 
   // Şanzıman vites oranı
   var gearboxNode = nodes.find(function(n) { return n.type === 'gearbox'; });
@@ -2313,7 +2316,8 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
       tireName: tireName,
       rollingRadius: rollingRadius,
       gearName: gearName,
-      gearRatio: gearRatio
+      gearRatio: gearRatio,
+      cornerDeflection: hasCornerDefl ? cornerDeflection : null
     },
     geometry: {},
     canCross: false,
@@ -2640,6 +2644,89 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
   } else {
     result.canCross = true; // Veri eksik, geometrik geçerlilik yeterli
     result.decision = null;
+  }
+
+  // ── ADIM 5b: KÖŞE DEFLEKSİYONU DÜZELTMESİ (opsiyonel) ──
+  if(hasCornerDefl && stallResult && stallResult.hasData) {
+    var R_corner = R_eff - (cornerDeflection / 1000);
+
+    // Geçerlilik kontrolü
+    if(R_corner > 0 && h < R_corner && h !== R_corner) {
+      var Tw_c = stallResult.T_wheel; // T_wheel değişmez
+      var x_c = Math.sqrt(2 * R_corner * h - h * h);
+      var theta_c_rad = Math.acos(x_c / R_corner);
+      var theta_c_deg = theta_c_rad * 180 / Math.PI;
+      var hR_c = h / R_corner;
+      var diffLabel_c;
+      if(hR_c < 0.5) diffLabel_c = 'Kolay';
+      else if(hR_c < 0.75) diffLabel_c = 'Orta';
+      else diffLabel_c = 'Zor';
+
+      // Tork gereksinimleri
+      var D_front_c = L + x_c;
+      var N_f_c = W * a2 / D_front_c;
+      var T_req_front_c = (N_f_c / 2) * x_c;
+
+      var D_rear_c = L - x_c;
+      var T_req_rear_c;
+      if(D_rear_c <= 0) {
+        T_req_rear_c = Infinity;
+      } else {
+        var N_r_c = W * a1 / D_rear_c;
+        T_req_rear_c = (N_r_c / 2) * x_c;
+      }
+
+      // Karar
+      var frontPass_c = Tw_c >= T_req_front_c;
+      var frontMarginPct_c = T_req_front_c > 0 ? ((Tw_c - T_req_front_c) / T_req_front_c) * 100 : Infinity;
+      var rearPass_c, rearMarginPct_c;
+      if(isFinite(T_req_rear_c) && T_req_rear_c > 0) {
+        rearPass_c = Tw_c >= T_req_rear_c;
+        rearMarginPct_c = ((Tw_c - T_req_rear_c) / T_req_rear_c) * 100;
+      } else {
+        rearPass_c = false;
+        rearMarginPct_c = -Infinity;
+      }
+      var overallPass_c = frontPass_c && rearPass_c;
+
+      function marginColor_c(pct) {
+        if(pct < 0) return 'red';
+        if(pct <= 5) return 'yellow';
+        return 'green';
+      }
+
+      result.cornerCorrection = {
+        R_corner: R_corner,
+        cornerDeflection: cornerDeflection,
+        geometry: {
+          x: x_c,
+          theta_rad: theta_c_rad,
+          theta_deg: theta_c_deg,
+          hR_ratio: hR_c,
+          difficultyLabel: diffLabel_c
+        },
+        torqueAnalysis: {
+          D_front: D_front_c,
+          T_req_front: T_req_front_c,
+          D_rear: D_rear_c,
+          T_req_rear: T_req_rear_c
+        },
+        decision: {
+          T_wheel: Tw_c,
+          frontPass: frontPass_c,
+          frontMarginNm: Tw_c - T_req_front_c,
+          frontMarginPct: frontMarginPct_c,
+          frontColor: marginColor_c(frontMarginPct_c),
+          T_req_front: T_req_front_c,
+          rearPass: rearPass_c,
+          rearMarginNm: isFinite(T_req_rear_c) ? Tw_c - T_req_rear_c : -Infinity,
+          rearMarginPct: rearMarginPct_c,
+          rearColor: isFinite(rearMarginPct_c) ? marginColor_c(rearMarginPct_c) : 'red',
+          T_req_rear: T_req_rear_c,
+          overallPass: overallPass_c
+        }
+      };
+    }
   }
 
   result.timestamp = new Date().toISOString();
