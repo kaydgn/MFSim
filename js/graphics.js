@@ -3541,6 +3541,82 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       }
       r += '\n';
     }
+
+    // ── STALL DENGE NOKTASI & MEVCUT TEKER TORKU ──
+    var stl = obs.stallAnalysis;
+    if(stl && stl.hasData) {
+      r += ln('=', W) + '\n  STALL DENGE NOKTASI & MEVCUT TEKER TORKU\n' + ln('=', W) + '\n\n';
+
+      // Aşama 1 — Stall denge noktası
+      r += '  ' + ln('-', 50) + '\n';
+      r += '  ASAMA 1: Motor-Konvertor Stall Dengesi\n';
+      r += '  ' + ln('-', 50) + '\n';
+      r += '  Arac durgunken (SR=0) turbin kilitlidir. Motor devir artirirken\n';
+      r += '  TC pump\'in absorbe ettigi tork kuadratik artar:\n';
+      r += '    T_pump = (N / K_pump)^2\n\n';
+      r += pRow('Stall K-faktor (K_pump)', num(stl.K_pump_stall, 2) + ' RPM/sqrt(Nm)');
+      r += pRow('Pump Tork Dusumu', num(stl.pumpTorqueDrop, 1) + ' Nm');
+      r += '\n';
+      r += '  Tarama: Rolantiden governed devire 1 RPM adimla\n';
+      r += '  T_motor_mevcut = T_motor_egrisi(N) - dusum\n';
+      r += '  Kosul: T_motor_mevcut >= T_pump olan son RPM\n\n';
+      r += pRow('Stall Denge Devri', num(stl.N_stall, 0) + ' RPM');
+      r += pRow('Motor Torku @ Stall', num(stl.T_engine_stall, 1) + ' Nm');
+      r += pRow('Pump Absorbe Torku', num(stl.T_pump_stall, 1) + ' Nm');
+      r += pRow('Stall Tork Orani (TR)', num(stl.TR_stall, 3));
+      r += '\n';
+
+      // Aşama 2 — Aktarma zinciri
+      r += '  ' + ln('-', 50) + '\n';
+      r += '  ASAMA 2: Aktarma Zincirinden Teker Torkuna\n';
+      r += '  ' + ln('-', 50) + '\n';
+      r += '  T_wheel = T_eng_stall x TR_stall x i_g x i_tr x i_diff x eta_total / n_d\n\n';
+      r += pRow('Vites', ascii(stl.gearName) + '  (i_g = ' + num(stl.gearRatio, 3) + ', eta = ' + num(stl.eta_gear * 100, 1) + '%)');
+      r += pRow('Transfer Kademe', ascii(stl.transferName) + '  (i_tr = ' + num(stl.i_transfer, 3) + ', eta = ' + num(stl.eta_transfer * 100, 1) + '%)');
+      r += pRow('Diferansiyel Orani', 'i_diff = ' + num(stl.i_axle, 3) + '  (eta = ' + num(stl.eta_axle * 100, 1) + '%)');
+      r += pRow('Propshaft Verimi', num(stl.eta_prop * 100, 2) + '%');
+      r += pRow('Toplam Verim (eta_total)', num(stl.eta_total * 100, 2) + '%');
+      r += pRow('Tahrikli Teker Sayisi (n_d)', stl.n_d);
+      r += '\n';
+      r += '  T_wheel = ' + num(stl.T_engine_stall, 1) + ' x ' + num(stl.TR_stall, 3);
+      r += ' x ' + num(stl.gearRatio, 3) + ' x ' + num(stl.i_transfer, 3);
+      r += ' x ' + num(stl.i_axle, 3) + ' x ' + num(stl.eta_total, 4);
+      r += ' / ' + stl.n_d + '\n';
+      r += '  T_wheel = ' + num(stl.T_wheel, 1) + ' Nm (tek teker basina)\n\n';
+
+      r += '  NOT: T_wheel, R_eff\'ten bagimsizdir. Stall dengesi motorun TC pump\'la\n';
+      r += '  olan etkilesimiyle belirlenir, teker yaricapinin bunda hicbir rolu yoktur.\n';
+      r += '\n';
+
+      // Karar
+      r += '  ' + ln('=', 50) + '\n';
+      r += '  ENGEL ASMA KARARI\n';
+      r += '  ' + ln('=', 50) + '\n';
+      r += pRow('Mevcut Teker Torku (T_wheel)', num(stl.T_wheel, 1) + ' Nm');
+      if(trq) {
+        r += pRow('Gereken Tork (Kritik)', num(trq.T_req_critical, 1) + ' Nm  (' + ascii(trq.criticalScenario) + ')');
+      }
+      if(obs.torqueRatio !== undefined) {
+        r += pRow('Tork Orani (T_wheel/T_req)', num(obs.torqueRatio, 2) + 'x');
+        r += pRow('Tork Marji', num(obs.torqueMargin, 1) + ' Nm');
+      }
+      r += '\n';
+      if(obs.canCross) {
+        r += '  >>> SONUC: ENGEL ASILAB' + 'ILIR <<<\n';
+        r += '  Mevcut teker torku, gereken torku karsilamaktadir.\n';
+      } else {
+        r += '  >>> SONUC: ENGEL ASILAMAZ <<<\n';
+        r += '  Mevcut teker torku yetersizdir. Daha dusuk vites veya\n';
+        r += '  transfer Low kademe ile tekrar degerlendirilmelidir.\n';
+      }
+      r += '\n';
+    } else if(stl && !stl.hasData) {
+      r += ln('=', W) + '\n  STALL DENGE NOKTASI & MEVCUT TEKER TORKU\n' + ln('=', W) + '\n\n';
+      r += '  *** HESAPLAMA YAPILAMADI ***\n';
+      if(stl.missingEngine) r += '  - Motor bileseninde tork egrisi verisi eksik.\n';
+      if(stl.missingTC) r += '  - Tork konvertor bileseninde TC verisi eksik.\n';
+      r += '\n';
+    }
   }
   r += '\n';
 
