@@ -2743,11 +2743,18 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
 function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var opts = dynOpts || {};
   var dt = opts.dt || 0.001;                  // Zaman adımı (s) — varsayılan 1 ms
-  var rampTime = opts.rampTime || 2.0;        // Gaz pedalı rampa süresi (s)
+  var rampTime = opts.rampTime || 0.5;        // Gaz pedalı rampa süresi (s)
   var Cr = opts.Cr || 0.015;                  // Yuvarlanma direnci katsayısı
-  var J_engine = opts.J_engine || 2.5;        // Motor ataleti (kg·m²)
+
+  // Motor ataleti: önce opts'tan, yoksa motor bileşeninden oku
+  var engineNode_dyn = nodes.find(function(n) { return n.type === 'engine'; });
+  var ed_dyn = engineNode_dyn ? (engineNode_dyn.data || {}) : {};
+  var specs_dyn = ed_dyn.motorSpecs || {};
+  var J_engine_from_spec = parseFloat(specs_dyn.inertia);
+  var J_engine = opts.J_engine || (isFinite(J_engine_from_spec) && J_engine_from_spec > 0 ? J_engine_from_spec : 0.50);
+
   var J_tc = opts.J_tc || 0.3;               // TC pump ataleti (kg·m²)
-  var momentumCarry = opts.momentumCarry !== undefined ? opts.momentumCarry : true;
+  var momentumCarry = false;                  // Arka teker her zaman v=0'dan başlar
   var maxTime = opts.maxTime || 30.0;         // Maksimum simülasyon süresi (s)
   var stallTimeout = opts.stallTimeout || 2.0; // Stall tespit süresi (s)
 
@@ -3056,10 +3063,9 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         // Arka teker fazına geç
         phase = 'rear';
         phi_new = phi_start; // Arka teker için sıfırla
-        if(!momentumCarry) {
-          v_new = 0;
-          N_engine_new = idleRpm;
-        }
+        // Arka teker engele değdiğinde araç durur — momentum taşınmaz
+        v_new = 0;
+        N_engine_new = idleRpm;
         stallCheckStart = -1; // Stall sayacını sıfırla
         prev_T_wheel_vs_req = false; // Arka teker için sıfırla
         addMilestone('r_contact', 'Arka teker engel kosesine temas', {
@@ -3161,8 +3167,9 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       rampTime: rampTime,
       Cr: Cr,
       J_engine: J_engine,
+      J_engine_source: (isFinite(J_engine_from_spec) && J_engine_from_spec > 0) ? 'motor bileseni' : 'varsayilan',
       J_tc: J_tc,
-      momentumCarry: momentumCarry,
+      momentumCarry: false,
       phi_start_deg: phi_start * 180 / Math.PI
     },
     // Zaman serisi
