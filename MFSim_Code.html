@@ -21284,86 +21284,11 @@ function onVECoastDownChange(nodeId) {
 
 // ===== ENGEL GEÇME BİLEŞENİ =====
 function getObstacleCrossingPropertiesHTML(node) {
-  var d = node.data || {};
-  var obsType = d.obstacleType || 'trench';
-  var obsWidth = d.obstacleWidth !== undefined ? d.obstacleWidth : '';
-  var obsHeight = d.obstacleHeight !== undefined ? d.obstacleHeight : '';
-  var obsDepth = d.obstacleDepth !== undefined ? d.obstacleDepth : '';
-  var approachAngle = d.approachAngle !== undefined ? d.approachAngle : '';
-  var departureAngle = d.departureAngle !== undefined ? d.departureAngle : '';
-  var rampAngle = d.rampAngle !== undefined ? d.rampAngle : '';
-
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Engel Geçme Parametreleri</div>';
-  html += '<p style="font-size:0.56rem; color:var(--text-muted); margin-bottom:10px; line-height:1.3;">Engel tipi ve boyutlarini tanimlayarak aracin engel gecme kabiliyetini analiz edin. Cozucu bileseninde "Engel Atlama Analizi" secenegini aktif edin.</p>';
-
-  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
-
-  // Engel tipi
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Engel tipi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-obs-type-' + node.id + '" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="trench"' + (obsType==='trench'?' selected':'') + '>Hendek</option><option value="vertical-wall"' + (obsType==='vertical-wall'?' selected':'') + '>Dikey Duvar</option><option value="ramp"' + (obsType==='ramp'?' selected':'') + '>Rampa</option></select></td></tr>';
-
-  // Hendek genişliği
-  html += '<tr id="ve-obs-width-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (obsType==='vertical-wall'?' display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Engel genisligi [m]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-width-' + node.id + '" value="' + obsWidth + '" step="0.01" min="0" placeholder="0.80" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
-
-  // Engel yüksekliği
-  html += '<tr id="ve-obs-height-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (obsType==='trench'?' display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Engel yuksekligi [m]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-height-' + node.id + '" value="' + obsHeight + '" step="0.01" min="0" placeholder="0.50" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
-
-  // Hendek derinliği
-  html += '<tr id="ve-obs-depth-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (obsType!=='trench'?' display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Hendek derinligi [m]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-depth-' + node.id + '" value="' + obsDepth + '" step="0.01" min="0" placeholder="0.40" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
-
-  // Yaklaşma açısı
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yaklasma acisi [°]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-approach-' + node.id + '" value="' + approachAngle + '" step="0.1" min="0" max="90" placeholder="45" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
-
-  // Ayrılma açısı
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Ayrilma acisi [°]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-departure-' + node.id + '" value="' + departureAngle + '" step="0.1" min="0" max="90" placeholder="35" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
-
-  // Rampa açısı (sadece rampa modunda)
-  html += '<tr id="ve-obs-ramp-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (obsType!=='ramp'?' display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Rampa acisi [°]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-ramp-' + node.id + '" value="' + rampAngle + '" step="0.1" min="0" max="90" placeholder="30" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
-
-  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Engel Gecme modulu topolojiye dahilse, Cozucu bileseninde "Engel Atlama Analizi" secenegi otomatik gorunur.</td></tr>';
-
-  html += '</table></div>';
+  html += '<div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Parametreler</div>';
+  html += '<div style="font-size:0.8rem; color:var(--text-secondary);">Bu bileşen için henüz parametre tanımlanmamış.</div>';
+  html += '</div>';
   return html;
-}
-
-function onVEObstacleCrossingChange(nodeId) {
-  var node = nodes.find(function(n) { return n.id === nodeId; });
-  if(!node) return;
-  if(!node.data) node.data = {};
-
-  var elFn = function(id) { return document.getElementById(id); };
-  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
-
-  var typeEl = elFn('ve-obs-type-' + nodeId);
-  if(typeEl) {
-    node.data.obstacleType = typeEl.value;
-    var t = typeEl.value;
-    // Satır görünürlükleri
-    var widthRow = elFn('ve-obs-width-row-' + nodeId);
-    var heightRow = elFn('ve-obs-height-row-' + nodeId);
-    var depthRow = elFn('ve-obs-depth-row-' + nodeId);
-    var rampRow = elFn('ve-obs-ramp-row-' + nodeId);
-    if(widthRow) widthRow.style.display = (t === 'vertical-wall') ? 'none' : '';
-    if(heightRow) heightRow.style.display = (t === 'trench') ? 'none' : '';
-    if(depthRow) depthRow.style.display = (t === 'trench') ? '' : 'none';
-    if(rampRow) rampRow.style.display = (t === 'ramp') ? '' : 'none';
-  }
-
-  var wEl = elFn('ve-obs-width-' + nodeId);
-  if(wEl) node.data.obstacleWidth = pf(wEl.value, 0);
-  var hEl = elFn('ve-obs-height-' + nodeId);
-  if(hEl) node.data.obstacleHeight = pf(hEl.value, 0);
-  var dEl = elFn('ve-obs-depth-' + nodeId);
-  if(dEl) node.data.obstacleDepth = pf(dEl.value, 0);
-  var aEl = elFn('ve-obs-approach-' + nodeId);
-  if(aEl) node.data.approachAngle = pf(aEl.value, 0);
-  var dpEl = elFn('ve-obs-departure-' + nodeId);
-  if(dpEl) node.data.departureAngle = pf(dpEl.value, 0);
-  var rEl = elFn('ve-obs-ramp-' + nodeId);
-  if(rEl) node.data.rampAngle = pf(rEl.value, 0);
-
-  if(typeof saveState === 'function') saveState();
 }
 
 // ===== COAST-DOWN SİHİRBAZI =====
