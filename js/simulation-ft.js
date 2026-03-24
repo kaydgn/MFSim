@@ -2586,13 +2586,60 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
 
   result.stallAnalysis = stallResult;
 
-  // Engel aşma kararı: T_wheel vs T_req_critical
+  // ── ADIM 5: KARŞILAŞTIRMA & NİHAİ KARAR ──
   if(stallResult && stallResult.hasData) {
-    result.canCross = stallResult.T_wheel >= T_req_critical;
-    result.torqueMargin = stallResult.T_wheel - T_req_critical;
-    result.torqueRatio = stallResult.T_wheel / T_req_critical;
+    var Tw = stallResult.T_wheel;
+
+    // Ön teker: T_wheel vs T_req_ön
+    var frontPass = Tw >= T_req_front;
+    var frontMarginPct = T_req_front > 0 ? ((Tw - T_req_front) / T_req_front) * 100 : Infinity;
+
+    // Arka teker: T_wheel vs T_req_arka
+    var rearPass, rearMarginPct;
+    if(isFinite(T_req_rear) && T_req_rear > 0) {
+      rearPass = Tw >= T_req_rear;
+      rearMarginPct = ((Tw - T_req_rear) / T_req_rear) * 100;
+    } else {
+      rearPass = false;
+      rearMarginPct = -Infinity;
+    }
+
+    // Genel karar: her iki teker de aşmalı
+    var overallPass = frontPass && rearPass;
+
+    // Marj renk sınıflandırması: <0 kırmızı, 0-5 sarı, >5 yeşil
+    function marginColor(pct) {
+      if(pct < 0) return 'red';
+      if(pct <= 5) return 'yellow';
+      return 'green';
+    }
+
+    result.decision = {
+      T_wheel: Tw,
+      // Ön teker
+      frontPass: frontPass,
+      frontMarginNm: Tw - T_req_front,
+      frontMarginPct: frontMarginPct,
+      frontColor: marginColor(frontMarginPct),
+      T_req_front: T_req_front,
+      // Arka teker
+      rearPass: rearPass,
+      rearMarginNm: isFinite(T_req_rear) ? Tw - T_req_rear : -Infinity,
+      rearMarginPct: rearMarginPct,
+      rearColor: isFinite(rearMarginPct) ? marginColor(rearMarginPct) : 'red',
+      T_req_rear: T_req_rear,
+      // Genel
+      overallPass: overallPass
+    };
+
+    result.canCross = overallPass;
+    result.torqueMargin = Math.min(Tw - T_req_front, isFinite(T_req_rear) ? Tw - T_req_rear : -Infinity);
+    result.torqueRatio = isFinite(T_req_rear) && T_req_rear > 0
+      ? Math.min(Tw / T_req_front, Tw / T_req_rear)
+      : (T_req_front > 0 ? Tw / T_req_front : 0);
   } else {
     result.canCross = true; // Veri eksik, geometrik geçerlilik yeterli
+    result.decision = null;
   }
 
   result.timestamp = new Date().toISOString();
