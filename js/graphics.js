@@ -3749,10 +3749,10 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += pRow('Zaman Adimi (dt)', num(dyn.dt * 1000, 1) + ' ms');
       r += pRow('Gaz Pedali Rampa Suresi', num(dyn.params.rampTime, 1) + ' s');
       r += pRow('Yuvarlanma Direnci (Cr)', num(dyn.params.Cr, 4));
-      r += pRow('Motor Ataleti (J_engine)', num(dyn.params.J_engine, 2) + ' kg.m2');
+      r += pRow('Motor Ataleti (J_engine)', num(dyn.params.J_engine, 4) + ' kg.m2  (' + (dyn.params.J_engine_source || 'varsayilan') + ')');
       r += pRow('TC Pump Ataleti (J_tc)', num(dyn.params.J_tc, 2) + ' kg.m2');
       r += pRow('Baslangic Acisi (phi_start)', num(dyn.params.phi_start_deg, 2) + ' derece');
-      r += pRow('Momentum Tasima', dyn.params.momentumCarry ? 'Evet (on fazdan arka faza hiz korunur)' : 'Hayir (arka faz v=0\'dan baslar)');
+      r += pRow('Arka Teker Baslangic', 'v=0 (momentum tasinmaz, durustan baslar)');
       r += '\n';
 
       // ┌─────────────────────────────────────────────┐
