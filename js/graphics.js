@@ -3728,147 +3728,297 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   // ── ADIM 6: DİNAMİK SİMÜLASYON SONUÇLARI ──
   var dyn = sim.obstacleDynamic;
   if(dyn) {
-    r += ln('=', W) + '\n  DINAMIK SIMULASYON (Zaman Adimli Model)\n' + ln('=', W) + '\n\n';
+    r += '\n';
+    r += '  ' + ln('*', 68) + '\n';
+    r += '  *' + pad('', 66) + '*\n';
+    r += '  *' + pad('DINAMIK SIMULASYON', 66, 'center') + '*\n';
+    r += '  *' + pad('Zaman Adimli Engel Atlama Modeli', 66, 'center') + '*\n';
+    r += '  *' + pad('', 66) + '*\n';
+    r += '  ' + ln('*', 68) + '\n\n';
 
     if(!dyn.success && !dyn.log) {
-      // Simülasyon hiç çalışmadı
       r += '  *** ' + ascii(dyn.reason) + ' ***\n\n';
     } else {
-      // Simülasyon parametreleri
-      r += '  ' + ln('-', 60) + '\n';
-      r += '  SIMULASYON PARAMETRELERI\n';
-      r += '  ' + ln('-', 60) + '\n';
+
+      // ┌─────────────────────────────────────────────┐
+      //  SIMULASYON PARAMETRELERI
+      // └─────────────────────────────────────────────┘
+      r += '  +' + ln('-', 64) + '+\n';
+      r += '  |' + pad(' SIMULASYON PARAMETRELERI', 64) + '|\n';
+      r += '  +' + ln('-', 64) + '+\n';
       r += pRow('Zaman Adimi (dt)', num(dyn.dt * 1000, 1) + ' ms');
       r += pRow('Gaz Pedali Rampa Suresi', num(dyn.params.rampTime, 1) + ' s');
       r += pRow('Yuvarlanma Direnci (Cr)', num(dyn.params.Cr, 4));
       r += pRow('Motor Ataleti (J_engine)', num(dyn.params.J_engine, 2) + ' kg.m2');
       r += pRow('TC Pump Ataleti (J_tc)', num(dyn.params.J_tc, 2) + ' kg.m2');
       r += pRow('Baslangic Acisi (phi_start)', num(dyn.params.phi_start_deg, 2) + ' derece');
-      r += pRow('Momentum Tasima', dyn.params.momentumCarry ? 'Evet (hiz korunur)' : 'Hayir (v=0\'dan baslar)');
+      r += pRow('Momentum Tasima', dyn.params.momentumCarry ? 'Evet (on fazdan arka faza hiz korunur)' : 'Hayir (arka faz v=0\'dan baslar)');
       r += '\n';
 
-      // Genel sonuç
-      r += '  ' + ln('-', 60) + '\n';
-      r += '  SIMULASYON SONUCU\n';
-      r += '  ' + ln('-', 60) + '\n';
-      r += pRow('Durum', dyn.success ? 'BASARILI — Engel asildi' : 'BASARISIZ — ' + ascii(dyn.reason));
-      r += pRow('Toplam Sure', num(dyn.totalTime, 3) + ' s');
-      r += pRow('Toplam Adim', dyn.totalSteps.toString());
+      // ┌─────────────────────────────────────────────┐
+      //  GENEL SONUC BANNER
+      // └─────────────────────────────────────────────┘
+      r += '  +' + ln('=', 64) + '+\n';
+      if(dyn.success) {
+        r += '  |' + pad('>>> BASARILI — ENGEL ASILDI <<<', 64, 'center') + '|\n';
+      } else {
+        r += '  |' + pad('>>> BASARISIZ — ENGEL ASILAMADI <<<', 64, 'center') + '|\n';
+      }
+      r += '  |' + pad('Toplam Sure: ' + num(dyn.totalTime, 3) + ' s  |  Adim Sayisi: ' + dyn.totalSteps, 64, 'center') + '|\n';
+      r += '  +' + ln('=', 64) + '+\n';
+      if(!dyn.success) {
+        r += '  Sebep: ' + ascii(dyn.reason) + '\n';
+      }
       r += '\n';
 
-      // Ön teker faz özeti
-      r += '  ' + ln('-', 60) + '\n';
-      r += '  ON TEKER FAZI\n';
-      r += '  ' + ln('-', 60) + '\n';
+      // ┌─────────────────────────────────────────────┐
+      //  ONEMLI OLAYLAR (MILESTONES) KRONOLOJISI
+      // └─────────────────────────────────────────────┘
+      var ms = dyn.milestones || [];
+      if(ms.length > 0) {
+        r += '  +' + ln('-', 64) + '+\n';
+        r += '  |' + pad(' ONEMLI OLAYLAR KRONOLOJISI', 64) + '|\n';
+        r += '  +' + ln('-', 64) + '+\n\n';
+
+        // Tablo başlığı
+        r += '   ' + pad('Zaman', 9) + pad('Faz', 7) + 'Olay\n';
+        r += '   ' + ln('-', 9) + ln('-', 7) + ln('-', 44) + '\n';
+
+        for(var mi = 0; mi < ms.length; mi++) {
+          var m = ms[mi];
+          var mTime = pad(num(m.t, 3) + ' s', 9, 'right');
+          var mPhase = pad(m.phase === 'front' ? '[On]' : '[Arka]', 7);
+          var mLabel = ascii(m.label);
+
+          r += '   ' + mTime + mPhase + mLabel + '\n';
+
+          // Detay satırları (milestone'a bağlı ek bilgiler)
+          var det = [];
+          if(m.T_wheel !== undefined && m.T_req !== undefined) {
+            det.push('T_wheel=' + num(m.T_wheel, 0) + ' Nm, T_req=' + (isFinite(m.T_req) ? num(m.T_req, 0) : '---') + ' Nm');
+          }
+          if(m.v !== undefined) {
+            det.push('v=' + num(m.v, 4) + ' m/s (' + num(m.v * 3.6, 2) + ' km/h)');
+          }
+          if(m.N_engine !== undefined) {
+            det.push('N_engine=' + num(m.N_engine, 0) + ' RPM');
+          }
+          if(m.KE !== undefined) {
+            det.push('KE=' + num(m.KE, 0) + ' J');
+          }
+          if(m.DD !== undefined) {
+            det.push('DD=' + num(m.DD, 1) + '%');
+          }
+          if(m.phi_deg !== undefined) {
+            det.push('phi=' + num(m.phi_deg, 2) + ' derece');
+          }
+          if(m.margin_pct !== undefined) {
+            det.push('marj=' + (m.margin_pct >= 0 ? '+' : '') + num(m.margin_pct, 1) + '%');
+          }
+          if(m.duration !== undefined) {
+            det.push('sure=' + num(m.duration, 3) + ' s');
+          }
+          if(det.length > 0) {
+            r += '   ' + pad('', 16) + '  ' + det.join(', ') + '\n';
+          }
+        }
+        r += '\n';
+      }
+
+      // ┌─────────────────────────────────────────────┐
+      //  FAZ OZET KARTLARI
+      // └─────────────────────────────────────────────┘
+
+      // ── Ön Teker Fazı ──
+      r += '  +' + ln('-', 64) + '+\n';
+      r += '  |' + pad(' ON TEKER FAZI', 64) + '|\n';
+      r += '  +' + ln('-', 64) + '+\n';
       if(dyn.frontCompleted) {
-        r += pRow('Durum', 'Tamamlandi');
-        r += pRow('Tamamlanma Suresi', num(dyn.frontCompletionTime, 3) + ' s');
+        r += pRow('Sonuc', 'TAMAMLANDI');
+        r += pRow('Toplam Sure', num(dyn.frontCompletionTime, 3) + ' s');
         r += pRow('Cikis Hizi', num(dyn.frontCompletionSpeed, 3) + ' m/s (' + num(dyn.frontCompletionSpeed * 3.6, 2) + ' km/h)');
       } else {
-        r += pRow('Durum', dyn.stallPhase === 'front' ? 'TAKILDI (stall)' : 'Tamamlanamadi');
+        r += pRow('Sonuc', dyn.stallPhase === 'front' ? 'TAKILDI (stall)' : 'Tamamlanamadi');
       }
-      r += pRow('Tepe T_req', num(dyn.frontStats.peakTreq, 1) + ' Nm');
+      r += pRow('Tepe T_req (en zor an)', num(dyn.frontStats.peakTreq, 1) + ' Nm  @ t=' + num(dyn.frontStats.peakTreqTime, 3) + ' s');
       r += pRow('Tepe T_wheel', num(dyn.frontStats.peakTwheel, 1) + ' Nm');
+      var fTorkRatio = dyn.frontStats.peakTreq > 0 ? (dyn.frontStats.peakTwheel / dyn.frontStats.peakTreq) : 0;
+      r += pRow('Tork Orani (Twhl/Treq)', num(fTorkRatio, 3) + (fTorkRatio >= 1 ? '  (yeterli)' : '  (yetersiz)'));
       r += pRow('Maks. Hiz', num(dyn.frontStats.maxSpeed, 3) + ' m/s (' + num(dyn.frontStats.maxSpeed * 3.6, 2) + ' km/h)');
       r += '\n';
 
-      // Arka teker faz özeti
-      r += '  ' + ln('-', 60) + '\n';
-      r += '  ARKA TEKER FAZI\n';
-      r += '  ' + ln('-', 60) + '\n';
+      // ── Arka Teker Fazı ──
+      r += '  +' + ln('-', 64) + '+\n';
+      r += '  |' + pad(' ARKA TEKER FAZI', 64) + '|\n';
+      r += '  +' + ln('-', 64) + '+\n';
       if(!dyn.frontCompleted) {
         r += '  (On teker tamamlanamadigi icin arka teker fazina gecilemedi.)\n';
       } else {
         if(dyn.success) {
-          r += pRow('Durum', 'Tamamlandi');
+          r += pRow('Sonuc', 'TAMAMLANDI');
         } else {
-          r += pRow('Durum', dyn.stallPhase === 'rear' ? 'TAKILDI (stall)' : 'Tamamlanamadi');
+          r += pRow('Sonuc', dyn.stallPhase === 'rear' ? 'TAKILDI (stall)' : 'Tamamlanamadi');
         }
-        r += pRow('Tepe T_req', num(dyn.rearStats.peakTreq, 1) + ' Nm');
+        r += pRow('Tepe T_req (en zor an)', num(dyn.rearStats.peakTreq, 1) + ' Nm  @ t=' + num(dyn.rearStats.peakTreqTime, 3) + ' s');
         r += pRow('Tepe T_wheel', num(dyn.rearStats.peakTwheel, 1) + ' Nm');
+        var rTorkRatio = dyn.rearStats.peakTreq > 0 ? (dyn.rearStats.peakTwheel / dyn.rearStats.peakTreq) : 0;
+        r += pRow('Tork Orani (Twhl/Treq)', num(rTorkRatio, 3) + (rTorkRatio >= 1 ? '  (yeterli)' : '  (yetersiz)'));
         r += pRow('Maks. Hiz', num(dyn.rearStats.maxSpeed, 3) + ' m/s (' + num(dyn.rearStats.maxSpeed * 3.6, 2) + ' km/h)');
       }
       r += '\n';
 
-      // Karşılaştırma notu: Statik vs Dinamik
-      r += '  ' + ln('-', 60) + '\n';
-      r += '  STATIK vs DINAMIK KARSILASTIRMA\n';
-      r += '  ' + ln('-', 60) + '\n';
+      // ┌─────────────────────────────────────────────┐
+      //  STATIK vs DINAMIK KARSILASTIRMA
+      // └─────────────────────────────────────────────┘
+      r += '  +' + ln('-', 64) + '+\n';
+      r += '  |' + pad(' STATIK vs DINAMIK KARSILASTIRMA', 64) + '|\n';
+      r += '  +' + ln('-', 64) + '+\n';
       if(obs && obs.decision) {
         var sDec = obs.decision;
-        r += pRow('Statik Analiz Sonucu', sDec.overallPass ? 'ASAR' : 'ASAMAZ');
-        r += pRow('Dinamik Simulasyon Sonucu', dyn.success ? 'ASAR' : 'ASAMAZ');
+        r += '\n';
+        r += '   Kriter                Statik          Dinamik\n';
+        r += '   ' + ln('-', 55) + '\n';
+        r += '   ' + pad('Genel Sonuc', 22) + pad(sDec.overallPass ? 'ASAR' : 'ASAMAZ', 16) + (dyn.success ? 'ASAR' : 'ASAMAZ') + '\n';
+        r += '   ' + pad('On Teker', 22) + pad(sDec.frontPass ? 'Asar' : 'Asamaz', 16) + (dyn.frontCompleted ? 'Asti' : 'Asamadi') + '\n';
+        if(isFinite(sDec.T_req_rear)) {
+          r += '   ' + pad('Arka Teker', 22) + pad(sDec.rearPass ? 'Asar' : 'Asamaz', 16) + (dyn.success ? 'Asti' : 'Asamadi') + '\n';
+        }
+        r += '   ' + pad('On T_req', 22) + pad(num(sDec.T_req_front, 0) + ' Nm', 16) + num(dyn.frontStats.peakTreq, 0) + ' Nm (tepe)\n';
+        if(isFinite(sDec.T_req_rear)) {
+          r += '   ' + pad('Arka T_req', 22) + pad(num(sDec.T_req_rear, 0) + ' Nm', 16) + num(dyn.rearStats.peakTreq, 0) + ' Nm (tepe)\n';
+        }
+        r += '   ' + ln('-', 55) + '\n';
+        r += '\n';
+
         if(sDec.overallPass && !dyn.success) {
-          r += '\n  NOT: Statik analiz engelin asilabildigini gosteriyor ancak dinamik\n';
+          r += '  UYARI: Statik analiz engelin asilabildigini gosteriyor ancak dinamik\n';
           r += '  simulasyonda arac takiliyor. Bu, gaz pedali rampasindan veya atalet\n';
           r += '  etkilerinden kaynaklanabilir.\n';
         } else if(!sDec.overallPass && dyn.success) {
-          r += '\n  NOT: Statik analizde yetersiz tork gorulse de dinamik simulasyonda\n';
-          r += '  aracin momentumu sayesinde engel asilabilmektedir.\n';
+          r += '  NOT: Statik analizde yetersiz tork gorulse de dinamik simulasyonda\n';
+          r += '  aracin momentumu sayesinde engel asilabilmektedir. Dinamik modelde\n';
+          r += '  moment kolu surekli azalarak T_req duser — statik model ise en kotu\n';
+          r += '  ani (sabit x) baz alir.\n';
         } else if(sDec.overallPass && dyn.success) {
-          r += '\n  Her iki analiz de engelin asilabilecegini dogrulamaktadir.\n';
+          r += '  Her iki analiz de engelin asilabilecegini dogrulamaktadir.\n';
         } else {
-          r += '\n  Her iki analiz de engelin asilamayacagini dogrulamaktadir.\n';
+          r += '  Her iki analiz de engelin asilamayacagini dogrulamaktadir.\n';
         }
       }
       r += '\n';
 
-      // Zaman serisi tablosu
-      r += '  ' + ln('-', 60) + '\n';
-      r += '  ZAMAN SERISI VERILERI\n';
-      r += '  ' + ln('-', 60) + '\n\n';
-
-      // Tablo başlığı
-      var cols = [
-        { h: 't(s)',    w: 7 },
-        { h: 'v(m/s)',  w: 8 },
-        { h: 'N_eng',   w: 7 },
-        { h: 'T_eng',   w: 7 },
-        { h: 'TR',      w: 6 },
-        { h: 'SR',      w: 6 },
-        { h: 'T_whl',   w: 8 },
-        { h: 'T_req',   w: 8 },
-        { h: 'phi(d)',  w: 8 },
-        { h: 'F_itme',  w: 8 },
-        { h: 'F_eng',   w: 8 },
-        { h: 'F_net',   w: 8 },
-        { h: 'KE(J)',   w: 9 },
-        { h: 'Faz',     w: 5 }
-      ];
-
-      // Başlık satırı
-      var hdr = '  ';
-      for(var ci = 0; ci < cols.length; ci++) {
-        hdr += pad(cols[ci].h, cols[ci].w, 'right') + ' ';
-      }
-      r += hdr + '\n';
-      r += '  ' + ln('-', hdr.length - 2) + '\n';
-
-      // Veri satırları
+      // ┌─────────────────────────────────────────────┐
+      //  ZAMAN SERISI VERILERI
+      // └─────────────────────────────────────────────┘
       var logData = dyn.log || [];
-      for(var li = 0; li < logData.length; li++) {
-        var d = logData[li];
-        var row = '  ';
-        row += pad(num(d.t, 3), 7, 'right') + ' ';
-        row += pad(num(d.v, 4), 8, 'right') + ' ';
-        row += pad(num(d.N_engine, 0), 7, 'right') + ' ';
-        row += pad(num(d.T_engine, 0), 7, 'right') + ' ';
-        row += pad(num(d.TR, 3), 6, 'right') + ' ';
-        row += pad(num(d.SR, 3), 6, 'right') + ' ';
-        row += pad(num(d.T_wheel, 0), 8, 'right') + ' ';
-        row += pad(isFinite(d.T_req) ? num(d.T_req, 0) : '---', 8, 'right') + ' ';
-        row += pad(num(d.phi_deg, 2), 8, 'right') + ' ';
-        row += pad(num(d.F_itme, 0), 8, 'right') + ' ';
-        row += pad(num(d.F_engel, 0), 8, 'right') + ' ';
-        row += pad(num(d.F_net, 0), 8, 'right') + ' ';
-        row += pad(num(d.KE, 0), 9, 'right') + ' ';
-        row += pad(d.phase === 'front' ? 'On' : 'Arka', 5, 'right') + ' ';
-        r += row + '\n';
+      if(logData.length > 0) {
+        r += '  +' + ln('-', 64) + '+\n';
+        r += '  |' + pad(' ZAMAN SERISI VERILERI', 64) + '|\n';
+        r += '  +' + ln('-', 64) + '+\n\n';
+
+        // Milestone zamanlarını bir set'e topla (annotate etmek için)
+        var msTimeMap = {};
+        if(ms.length > 0) {
+          for(var msi = 0; msi < ms.length; msi++) {
+            var msT = Math.round(ms[msi].t * 1000); // ms cinsine çevir, key olarak kullan
+            msTimeMap[msT] = ms[msi];
+          }
+        }
+
+        // Kolon tanımları
+        var cols = [
+          { h: 't(s)',    w: 7 },
+          { h: 'v(m/s)',  w: 8 },
+          { h: 'N_eng',   w: 7 },
+          { h: 'T_eng',   w: 7 },
+          { h: 'TR',      w: 6 },
+          { h: 'SR',      w: 6 },
+          { h: 'T_whl',   w: 8 },
+          { h: 'T_req',   w: 8 },
+          { h: 'phi(d)',  w: 8 },
+          { h: 'F_net',   w: 9 },
+          { h: 'KE(J)',   w: 9 },
+          { h: 'Faz',     w: 5 }
+        ];
+
+        // Başlık satırları
+        var hdr = '  ';
+        for(var ci = 0; ci < cols.length; ci++) {
+          hdr += pad(cols[ci].h, cols[ci].w, 'right') + ' ';
+        }
+        r += hdr + '\n';
+        r += '  ' + ln('=', hdr.length - 2) + '\n';
+
+        // Veri satırları
+        var prevPhase = '';
+        for(var li = 0; li < logData.length; li++) {
+          var d = logData[li];
+
+          // Faz değişim ayracı
+          if(d.phase !== prevPhase && prevPhase !== '') {
+            r += '  ' + ln('.', hdr.length - 2) + '\n';
+            r += '  ' + pad('>>> FAZ GECISI: ' + (d.phase === 'rear' ? 'ON TEKER -> ARKA TEKER' : 'ARKA TEKER TAMAMLANDI') + ' <<<', hdr.length - 2, 'center') + '\n';
+            r += '  ' + ln('.', hdr.length - 2) + '\n';
+          }
+          prevPhase = d.phase;
+
+          // Milestone annotation kontrolü
+          var rowTimeMs = Math.round(d.t * 1000);
+          var matchedMs = msTimeMap[rowTimeMs];
+          // Yakın arama (+-5ms tolerans)
+          if(!matchedMs) {
+            for(var msk in msTimeMap) {
+              if(msTimeMap.hasOwnProperty(msk) && Math.abs(parseInt(msk) - rowTimeMs) <= 5 && !msTimeMap[msk]._used) {
+                matchedMs = msTimeMap[msk];
+                break;
+              }
+            }
+          }
+
+          // Milestone satır öncesi annotation
+          if(matchedMs && !matchedMs._used) {
+            matchedMs._used = true;
+            r += '  ' + pad('>>> ' + ascii(matchedMs.label), hdr.length - 2) + '\n';
+          }
+
+          // Veri satırı
+          var row = '  ';
+          row += pad(num(d.t, 3), 7, 'right') + ' ';
+          row += pad(num(d.v, 4), 8, 'right') + ' ';
+          row += pad(num(d.N_engine, 0), 7, 'right') + ' ';
+          row += pad(num(d.T_engine, 0), 7, 'right') + ' ';
+          row += pad(num(d.TR, 3), 6, 'right') + ' ';
+          row += pad(num(d.SR, 3), 6, 'right') + ' ';
+          row += pad(num(d.T_wheel, 0), 8, 'right') + ' ';
+          row += pad(isFinite(d.T_req) ? num(d.T_req, 0) : '---', 8, 'right') + ' ';
+          row += pad(num(d.phi_deg, 2), 8, 'right') + ' ';
+          row += pad(num(d.F_net, 0), 9, 'right') + ' ';
+          row += pad(num(d.KE, 0), 9, 'right') + ' ';
+          row += pad(d.phase === 'front' ? 'On' : 'Arka', 5, 'right') + ' ';
+          r += row + '\n';
+        }
+        r += '  ' + ln('=', hdr.length - 2) + '\n';
+        r += '\n';
+        r += '  Toplam ' + logData.length + ' kayit, ~' + num(dyn.dt * logData.length, 1) + ' s surec.\n';
+        r += '  (Veriler ~10 ms aralikla kaydedilmistir. ">>>" ile baslayan satirlar onemli olaylari gosterir.)\n';
+        r += '\n';
+
+        // Kolon açıklamaları
+        r += '  Kolon Aciklamalari:\n';
+        r += '    t(s)    = Simulasyon zamani (saniye)\n';
+        r += '    v(m/s)  = Arac hizi (metre/saniye)\n';
+        r += '    N_eng   = Motor devri (RPM)\n';
+        r += '    T_eng   = Motor torku (Nm)\n';
+        r += '    TR      = Tork konvertor tork orani\n';
+        r += '    SR      = Tork konvertor hiz orani (N_turbin/N_motor)\n';
+        r += '    T_whl   = Tek teker torku (Nm)\n';
+        r += '    T_req   = Anlik gerekli tork — tek teker (Nm)\n';
+        r += '    phi(d)  = Acisal konum (derece, +: tirmanis, 0: tepe, -: inis)\n';
+        r += '    F_net   = Net kuvvet (N) = F_itme - F_engel - F_yuvarlanma\n';
+        r += '    KE(J)   = Kinetik enerji (Joule) = 0.5 x m x v2\n';
+        r += '    Faz     = Hangi tekerin engelde oldugu (On/Arka)\n';
+        r += '\n';
       }
-      r += '\n';
-      r += '  Toplam ' + logData.length + ' kayit.\n';
-      r += '  (Veriler ~10 ms aralikla kaydedilmistir.)\n';
-      r += '\n';
     }
   }
 
