@@ -728,6 +728,15 @@ function veSolverRunProfessional() {
               return { no: s.no, grade: s.grade, distance: s.distance, deltaH: s.deltaH, command: s.command || 'full_throttle' };
             });
           }
+
+          // ── 3) ENGEL ATLAMA ANALİZİ (opsiyonel — obstacle-crossing bileşeni gerektirir) ──
+          var _obsNode = nodes.find(function(n) { return n.type === 'obstacle-crossing'; });
+          var _hasObsCross = _solverData.obstacleCrossingAnalysis && _obsNode;
+          if(_hasObsCross) {
+            var obsData = _obsNode.data || {};
+            var obsCrossResult = veFTRunObstacleCrossingAnalysis(obsData);
+            simResult.obstacleCrossing = obsCrossResult;
+          }
         } else {
           simResult = veRunSimulationEngine();
         }

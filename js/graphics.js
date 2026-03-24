@@ -3352,4 +3352,148 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   return r;
 }
 
+// ===== ENGEL ATLAMA TXT RAPORU =====
+function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
+  var W = 80;
+
+  function ln(ch, len) { var s = ''; for (var i = 0; i < len; i++) s += ch; return s; }
+  function pad(str, len, align) {
+    str = String(str);
+    if (align === 'right') { while (str.length < len) str = ' ' + str; return str; }
+    if (align === 'center') {
+      var l = Math.floor((len - str.length) / 2);
+      var r2 = len - str.length - l;
+      var sp = ''; for (var i = 0; i < l; i++) sp += ' ';
+      var sp2 = ''; for (var i = 0; i < r2; i++) sp2 += ' ';
+      return sp + str + sp2;
+    }
+    while (str.length < len) str += ' ';
+    return str;
+  }
+  function num(v, d) { return isFinite(v) ? v.toFixed(d) : '-'; }
+  function pRow(label, value, indent) {
+    indent = indent || '  ';
+    var labelW = 32;
+    return indent + pad(label, labelW) + ': ' + value + '\n';
+  }
+  function ascii(s) {
+    return String(s)
+      .replace(/ğ/g,'g').replace(/Ğ/g,'G')
+      .replace(/ü/g,'u').replace(/Ü/g,'U')
+      .replace(/ş/g,'s').replace(/Ş/g,'S')
+      .replace(/ı/g,'i').replace(/İ/g,'I')
+      .replace(/ö/g,'o').replace(/Ö/g,'O')
+      .replace(/ç/g,'c').replace(/Ç/g,'C');
+  }
+
+  var obs = sim.obstacleCrossing;
+  if (!obs) {
+    return '(Rapor olusturulamadi: Engel Atlama simulasyon verisi bulunamadi.)\n';
+  }
+
+  var inp = obs.inputParams || {};
+  var analysis = obs.analysis || {};
+  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
+  var now = new Date();
+  var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
+  var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+  var raporNo = 'BMC-OBS-' + now.getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+
+  var typeLabels = { 'trench': 'Hendek', 'vertical-wall': 'Dikey Duvar', 'ramp': 'Rampa' };
+  var typeLabel = typeLabels[obs.obstacleType] || obs.obstacleType;
+
+  var r = '';
+
+  // BASLIK
+  r += '\n' + ln('=', W) + '\n\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n';
+  r += pad(' ##   ##  ###  ###   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ## ## ##   ##      ', W, 'center') + '\n';
+  r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
+  r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
+  r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
+  r += ln('=', W) + '\n\n';
+  r += pad('+' + ln('-', 44) + '+', W, 'center') + '\n';
+  r += pad('|   ENGEL ATLAMA ANALIZI RAPORU   |', W, 'center') + '\n';
+  r += pad('+' + ln('-', 44) + '+', W, 'center') + '\n\n';
+
+  // 1. RAPOR BILGILERI
+  r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
+  r += pRow('Rapor Tarihi', tarih);
+  r += pRow('Rapor Saati', saat);
+  r += pRow('Rapor No', raporNo);
+  r += pRow('Hazirlayan', ascii(hazirlayan));
+  r += pRow('Hesaplama Modu', 'Engel Atlama Analizi');
+  r += '\n';
+
+  // 2. ARAC PARAMETRELERI
+  r += ln('-', W) + '\n  ARAC PARAMETRELERI\n' + ln('-', W) + '\n';
+  r += pRow('Arac Kutle', num(inp.mass, 0) + ' kg');
+  r += pRow('Tekerlek Yaricapi', num(inp.wheelRadius, 3) + ' m');
+  r += pRow('Dingil Mesafesi', num(inp.wheelbase, 3) + ' m');
+  r += '\n';
+
+  // 3. ENGEL PARAMETRELERI
+  r += ln('-', W) + '\n  ENGEL PARAMETRELERI\n' + ln('-', W) + '\n';
+  r += pRow('Engel Tipi', ascii(typeLabel));
+
+  if(obs.obstacleType === 'trench') {
+    r += pRow('Hendek Genisligi', num(inp.obstacleWidth, 2) + ' m');
+    r += pRow('Hendek Derinligi', num(inp.obstacleDepth, 2) + ' m');
+  } else if(obs.obstacleType === 'vertical-wall') {
+    r += pRow('Duvar Yuksekligi', num(inp.obstacleHeight, 2) + ' m');
+  } else if(obs.obstacleType === 'ramp') {
+    r += pRow('Rampa Acisi', num(inp.rampAngle, 1) + ' derece');
+    r += pRow('Engel Genisligi', num(inp.obstacleWidth, 2) + ' m');
+    r += pRow('Engel Yuksekligi', num(inp.obstacleHeight, 2) + ' m');
+  }
+
+  r += pRow('Yaklasma Acisi', num(inp.approachAngle, 1) + ' derece');
+  r += pRow('Ayrilma Acisi', num(inp.departureAngle, 1) + ' derece');
+  r += '\n';
+
+  // 4. ANALIZ SONUCLARI
+  r += ln('=', W) + '\n  ANALIZ SONUCLARI\n' + ln('=', W) + '\n\n';
+
+  if(obs.obstacleType === 'trench') {
+    r += pRow('Hendek Genisligi', num(analysis.trenchWidth, 2) + ' m');
+    r += pRow('Maks Gecebilir Genislik', num(analysis.maxTrenchWidth, 2) + ' m');
+  } else if(obs.obstacleType === 'vertical-wall') {
+    r += pRow('Duvar Yuksekligi', num(analysis.wallHeight, 2) + ' m');
+    r += pRow('Maks Gecebilir Yukseklik', num(analysis.maxWallHeight, 2) + ' m');
+  } else if(obs.obstacleType === 'ramp') {
+    r += pRow('Rampa Acisi', num(analysis.rampAngle, 1) + ' derece');
+    r += pRow('Yaklasma Acisi Yeterli', analysis.approachOk ? 'EVET' : 'HAYIR');
+    r += pRow('Ayrilma Acisi Yeterli', analysis.departureOk ? 'EVET' : 'HAYIR');
+  }
+
+  r += '\n';
+  r += '  ' + ln('-', 40) + '\n';
+  r += '  SONUC: ' + (obs.canCross ? '*** ENGEL GECEBiLiR ***' : '*** ENGEL GECEMEZ ***') + '\n';
+  r += '  ' + ln('-', 40) + '\n\n';
+
+  // Notlar
+  if(obs.notes && obs.notes.length > 0) {
+    r += ln('-', W) + '\n  NOTLAR\n' + ln('-', W) + '\n';
+    obs.notes.forEach(function(note, idx) {
+      r += '  ' + (idx + 1) + '. ' + ascii(note) + '\n';
+    });
+    r += '\n';
+  }
+
+  // FERAGAT
+  r += ln('-', W) + '\n';
+  r += pad('FERAGATNAME', W, 'center') + '\n';
+  r += ln('-', W) + '\n';
+  r += pad('Bu rapor MFSim Engel Atlama Analizi Programi', W, 'center') + '\n';
+  r += pad('ile otomatik olusturulmustur. Hesaplamalar', W, 'center') + '\n';
+  r += pad('teorik modellere dayanmaktadir. Gercek test sonuclari ile', W, 'center') + '\n';
+  r += pad('dogrulama yapilmasi onerilir.', W, 'center') + '\n';
+  r += ln('-', W) + '\n\n';
+
+  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
+
+  return r;
+}
 

@@ -2198,6 +2198,13 @@ function mfsimLogout() {
                 <text x="50" y="42" text-anchor="middle" font-size="32" font-weight="700" fill="currentColor">P</text>
                 <path d="M25 62 L40 57 L55 67 L70 50 L85 60" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg> <span class="ve-comp-label">Parametrik Analiz</span></div>
+            <div class="ve-component" draggable="true" data-type="obstacle-crossing">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M5 75 L30 75 L40 40 L60 40 L70 75 L95 75" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="5" y1="80" x2="95" y2="80" stroke="currentColor" stroke-width="3"/>
+                <circle cx="20" cy="75" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="80" cy="75" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
+              </svg> <span class="ve-comp-label">Engel Geçme</span></div>
           </div>
 
           <div class="ve-category ve-category-tools" data-always-visible="true">
@@ -2893,6 +2900,13 @@ function veUpdateResultsTree() {
     html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
     html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
     html += '</div>';
+    // Engel Atlama Raporu (TXT) — ağaç öğesi (yalnızca veri varsa)
+    if(window.veSimResults && window.veSimResults.obstacleCrossing) {
+      html += '<div style="margin-top:2px;">';
+      html += '<div class="ve-tree-row" onclick="veRenderObstacleCrossingTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Engel Atlama TXT rapor önizleme">';
+      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Engel Atlama Raporu (TXT)</span></div>';
+      html += '</div>';
+    }
   }
   
   tree.innerHTML = html;
@@ -4615,6 +4629,50 @@ function veRenderSegmentDriveTXTReport() {
   window._veTxtPreviewContent = txtContent;
   window._veTxtPreviewFilename = downloadName;
   window._veTxtPreviewReportType = 'sd';
+
+  overlay.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+
+function veRenderObstacleCrossingTXTReport() {
+  var overlay = document.getElementById('ve-report-overlay');
+  if(!overlay) return;
+
+  var sim = window.veSimResults;
+  if(!sim || !sim.obstacleCrossing) {
+    showToast('Engel atlama verisi bulunamadı — önce simülasyon çalıştırın', 'warning');
+    return;
+  }
+
+  var txtContent = veGenerateObstacleCrossingTxtReport(sim);
+  var now = new Date();
+  var dateStr = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+  var downloadName = 'BMC_EngelAtlama_Rapor_' + dateStr + '.txt';
+
+  if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
+
+  var html = '';
+  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
+  html += '<div style="display:flex; align-items:center; gap:8px;">';
+  html += '<span style="font-size:1rem;">📄</span>';
+  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Engel Atlama Raporu (TXT)</span>';
+  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
+  html += '</div>';
+  html += '<div style="display:flex; align-items:center; gap:6px;">';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'#1d4ed8\';this.style.color=\'#1d4ed8\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '</div>';
+  html += '</div>';
+  html += '<div style="flex:1; overflow-y:auto; background:#e8eaed; padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:#fff; border-radius:4px; box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:#222; white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  html += '</pre>';
+  html += '</div></div>';
+
+  window._veTxtPreviewContent = txtContent;
+  window._veTxtPreviewFilename = downloadName;
+  window._veTxtPreviewReportType = 'obs';
 
   overlay.innerHTML = html;
   overlay.style.display = 'flex';
@@ -7018,7 +7076,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -7183,6 +7241,13 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><text x="50" y="40" text-anchor="middle" font-size="28" font-weight="700" fill="var(--accent-primary, #3b82f6)">P</text><path d="M25 60 L40 55 L55 65 L70 48 L85 58" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="60" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="55" cy="65" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="85" cy="58" r="3" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 0,
     outputs: 0
+  },
+  'obstacle-crossing': {
+    name: 'Engel Geçme',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M5 75 L30 75 L40 40 L60 40 L70 75 L95 75" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><line x1="5" y1="80" x2="95" y2="80" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="20" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><circle cx="80" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><path d="M42 38 L50 25 L58 38" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    maxInstances: 1
   },
   'gear-shift': {
     name: 'Vites Geçişleri',
@@ -8858,6 +8923,8 @@ function showNodeProperties(node) {
     html += getScenarioPropertiesHTML(node);
   } else if(node.type === 'coast-down') {
     html += getCoastDownPropertiesHTML(node);
+  } else if(node.type === 'obstacle-crossing') {
+    html += getObstacleCrossingPropertiesHTML(node);
   } else if(node.type === 'solver') {
     html += getSolverPropertiesHTML(node);
   } else if(node.type === 'road') {
@@ -16785,6 +16852,16 @@ function getSolverPropertiesHTML(node) {
     html += '<div><div style="font-weight:600;">Hızlanma-Yavaşlama</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Segment bazlı sürüş analizi — güzergah üzerinde hızlanma/yavaşlama profili</div></div>';
     html += '</label>';
   }
+
+  // Engel Atlama Analizi checkbox (obstacle-crossing bileşeni gerektirir)
+  var obsCrossAnalysis = d.obstacleCrossingAnalysis || false;
+  var obsNode = nodes.find(function(n) { return n.type === 'obstacle-crossing'; });
+  if(obsNode) {
+    html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.66rem; color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
+    html += '<input type="checkbox" id="ve-solver-obscross-' + node.id + '" ' + (obsCrossAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
+    html += '<div><div style="font-weight:600;">Engel Atlama Analizi</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Engel geçme kabiliyeti analizi — hendek, rampa ve dikey engel hesaplamaları</div></div>';
+    html += '</label>';
+  }
   html += '</div>';
 
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -16922,6 +16999,10 @@ function onVESolverParamChange(nodeId) {
   // Hızlanma-Yavaşlama checkbox
   var adEl = el('ve-solver-acceldecel-' + nodeId);
   if(adEl) node.data.accelDecelAnalysis = adEl.checked;
+
+  // Engel Atlama Analizi checkbox
+  var ocEl = el('ve-solver-obscross-' + nodeId);
+  if(ocEl) node.data.obstacleCrossingAnalysis = ocEl.checked;
 
   // FT modu parametreleri
   var ftDtEl = el('ve-solver-ftdt-' + nodeId);
@@ -19213,6 +19294,84 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   };
 }
 
+// ===== ENGEL ATLAMA ANALİZİ =====
+function veFTRunObstacleCrossingAnalysis(obsData) {
+  // Araç ve tekerlek verilerini topla
+  var vehicleNode = nodes.find(function(n) { return n.type === 'vehicle'; });
+  var wheelNode = nodes.find(function(n) { return n.type === 'wheel' && n.isMasterWheel; })
+                || nodes.find(function(n) { return n.type === 'wheel'; });
+
+  if(!vehicleNode) throw new Error('Engel Atlama: Arac bileseni eksik');
+  if(!wheelNode) throw new Error('Engel Atlama: Tekerlek bileseni eksik');
+
+  var vd = vehicleNode.data || {};
+  var wd = wheelNode.data || {};
+
+  var mass = parseFloat(vd.mass) || 20000;
+  var wheelRadius = parseFloat(wd.wheelRadius) || 0.525;
+  var wheelbase = parseFloat(vd.wheelbase) || 4.0;
+
+  var obstacleType = obsData.obstacleType || 'trench';
+  var obstacleWidth = parseFloat(obsData.obstacleWidth) || 0;
+  var obstacleHeight = parseFloat(obsData.obstacleHeight) || 0;
+  var obstacleDepth = parseFloat(obsData.obstacleDepth) || 0;
+  var approachAngle = parseFloat(obsData.approachAngle) || 0;
+  var departureAngle = parseFloat(obsData.departureAngle) || 0;
+  var rampAngle = parseFloat(obsData.rampAngle) || 0;
+
+  // Sonuç objesi — ileride detaylı matematik eklenecek
+  var result = {
+    obstacleType: obstacleType,
+    inputParams: {
+      mass: mass,
+      wheelRadius: wheelRadius,
+      wheelbase: wheelbase,
+      obstacleWidth: obstacleWidth,
+      obstacleHeight: obstacleHeight,
+      obstacleDepth: obstacleDepth,
+      approachAngle: approachAngle,
+      departureAngle: departureAngle,
+      rampAngle: rampAngle
+    },
+    analysis: {},
+    canCross: false,
+    notes: []
+  };
+
+  // Temel geometrik kontroller (placeholder — matematik sonra detaylandirilacak)
+  if(obstacleType === 'trench') {
+    // Hendek gecme: tekerlek capi > hendek genisligi kontrolu
+    var maxTrenchWidth = 2 * wheelRadius * 0.9;
+    result.analysis.maxTrenchWidth = maxTrenchWidth;
+    result.analysis.trenchWidth = obstacleWidth;
+    result.canCross = obstacleWidth <= maxTrenchWidth;
+    result.notes.push('Hendek genisligi: ' + obstacleWidth.toFixed(2) + ' m');
+    result.notes.push('Maks gecebilir hendek genisligi (geometrik): ' + maxTrenchWidth.toFixed(2) + ' m');
+  } else if(obstacleType === 'vertical-wall') {
+    // Dikey duvar: tekerlek yaricapi ile karsilastirma
+    var maxWallHeight = wheelRadius * 0.7;
+    result.analysis.maxWallHeight = maxWallHeight;
+    result.analysis.wallHeight = obstacleHeight;
+    result.canCross = obstacleHeight <= maxWallHeight;
+    result.notes.push('Duvar yuksekligi: ' + obstacleHeight.toFixed(2) + ' m');
+    result.notes.push('Maks gecebilir duvar yuksekligi (geometrik): ' + maxWallHeight.toFixed(2) + ' m');
+  } else if(obstacleType === 'ramp') {
+    // Rampa: yaklasma/ayrilma acisi kontrolu
+    var canApproach = approachAngle >= rampAngle;
+    var canDepart = departureAngle >= rampAngle;
+    result.analysis.rampAngle = rampAngle;
+    result.analysis.approachOk = canApproach;
+    result.analysis.departureOk = canDepart;
+    result.canCross = canApproach && canDepart;
+    result.notes.push('Rampa acisi: ' + rampAngle.toFixed(1) + ' derece');
+    result.notes.push('Yaklasma acisi: ' + approachAngle.toFixed(1) + ' derece (' + (canApproach ? 'YETERLI' : 'YETERSIZ') + ')');
+    result.notes.push('Ayrilma acisi: ' + departureAngle.toFixed(1) + ' derece (' + (canDepart ? 'YETERLI' : 'YETERSIZ') + ')');
+  }
+
+  result.timestamp = new Date().toISOString();
+  return result;
+}
+
 </script>
 <script>
 // PROFESYONEL SOLVER - ANSYS-TARZI HESAPLAMA MOTORU
@@ -19944,6 +20103,15 @@ function veSolverRunProfessional() {
             simResult.segmentDriveInputSegments = _scenData.roadSegments.map(function(s) {
               return { no: s.no, grade: s.grade, distance: s.distance, deltaH: s.deltaH, command: s.command || 'full_throttle' };
             });
+          }
+
+          // ── 3) ENGEL ATLAMA ANALİZİ (opsiyonel — obstacle-crossing bileşeni gerektirir) ──
+          var _obsNode = nodes.find(function(n) { return n.type === 'obstacle-crossing'; });
+          var _hasObsCross = _solverData.obstacleCrossingAnalysis && _obsNode;
+          if(_hasObsCross) {
+            var obsData = _obsNode.data || {};
+            var obsCrossResult = veFTRunObstacleCrossingAnalysis(obsData);
+            simResult.obstacleCrossing = obsCrossResult;
           }
         } else {
           simResult = veRunSimulationEngine();
@@ -21112,6 +21280,90 @@ function onVECoastDownChange(nodeId) {
     var resultEl = el('ve-cd-result-' + nodeId);
     if(resultEl) resultEl.textContent = '—';
   }
+}
+
+// ===== ENGEL GEÇME BİLEŞENİ =====
+function getObstacleCrossingPropertiesHTML(node) {
+  var d = node.data || {};
+  var obsType = d.obstacleType || 'trench';
+  var obsWidth = d.obstacleWidth !== undefined ? d.obstacleWidth : '';
+  var obsHeight = d.obstacleHeight !== undefined ? d.obstacleHeight : '';
+  var obsDepth = d.obstacleDepth !== undefined ? d.obstacleDepth : '';
+  var approachAngle = d.approachAngle !== undefined ? d.approachAngle : '';
+  var departureAngle = d.departureAngle !== undefined ? d.departureAngle : '';
+  var rampAngle = d.rampAngle !== undefined ? d.rampAngle : '';
+
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+
+  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Engel Geçme Parametreleri</div>';
+  html += '<p style="font-size:0.56rem; color:var(--text-muted); margin-bottom:10px; line-height:1.3;">Engel tipi ve boyutlarini tanimlayarak aracin engel gecme kabiliyetini analiz edin. Cozucu bileseninde "Engel Atlama Analizi" secenegini aktif edin.</p>';
+
+  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+
+  // Engel tipi
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Engel tipi</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-obs-type-' + node.id + '" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;"><option value="trench"' + (obsType==='trench'?' selected':'') + '>Hendek</option><option value="vertical-wall"' + (obsType==='vertical-wall'?' selected':'') + '>Dikey Duvar</option><option value="ramp"' + (obsType==='ramp'?' selected':'') + '>Rampa</option></select></td></tr>';
+
+  // Hendek genişliği
+  html += '<tr id="ve-obs-width-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (obsType==='vertical-wall'?' display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Engel genisligi [m]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-width-' + node.id + '" value="' + obsWidth + '" step="0.01" min="0" placeholder="0.80" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
+
+  // Engel yüksekliği
+  html += '<tr id="ve-obs-height-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (obsType==='trench'?' display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Engel yuksekligi [m]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-height-' + node.id + '" value="' + obsHeight + '" step="0.01" min="0" placeholder="0.50" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
+
+  // Hendek derinliği
+  html += '<tr id="ve-obs-depth-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (obsType!=='trench'?' display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Hendek derinligi [m]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-depth-' + node.id + '" value="' + obsDepth + '" step="0.01" min="0" placeholder="0.40" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
+
+  // Yaklaşma açısı
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Yaklasma acisi [°]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-approach-' + node.id + '" value="' + approachAngle + '" step="0.1" min="0" max="90" placeholder="45" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
+
+  // Ayrılma açısı
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Ayrilma acisi [°]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-departure-' + node.id + '" value="' + departureAngle + '" step="0.1" min="0" max="90" placeholder="35" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
+
+  // Rampa açısı (sadece rampa modunda)
+  html += '<tr id="ve-obs-ramp-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (obsType!=='ramp'?' display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Rampa acisi [°]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-ramp-' + node.id + '" value="' + rampAngle + '" step="0.1" min="0" max="90" placeholder="30" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + node.id + '\')"></td></tr>';
+
+  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Engel Gecme modulu topolojiye dahilse, Cozucu bileseninde "Engel Atlama Analizi" secenegi otomatik gorunur.</td></tr>';
+
+  html += '</table></div>';
+  return html;
+}
+
+function onVEObstacleCrossingChange(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node) return;
+  if(!node.data) node.data = {};
+
+  var elFn = function(id) { return document.getElementById(id); };
+  var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+
+  var typeEl = elFn('ve-obs-type-' + nodeId);
+  if(typeEl) {
+    node.data.obstacleType = typeEl.value;
+    var t = typeEl.value;
+    // Satır görünürlükleri
+    var widthRow = elFn('ve-obs-width-row-' + nodeId);
+    var heightRow = elFn('ve-obs-height-row-' + nodeId);
+    var depthRow = elFn('ve-obs-depth-row-' + nodeId);
+    var rampRow = elFn('ve-obs-ramp-row-' + nodeId);
+    if(widthRow) widthRow.style.display = (t === 'vertical-wall') ? 'none' : '';
+    if(heightRow) heightRow.style.display = (t === 'trench') ? 'none' : '';
+    if(depthRow) depthRow.style.display = (t === 'trench') ? '' : 'none';
+    if(rampRow) rampRow.style.display = (t === 'ramp') ? '' : 'none';
+  }
+
+  var wEl = elFn('ve-obs-width-' + nodeId);
+  if(wEl) node.data.obstacleWidth = pf(wEl.value, 0);
+  var hEl = elFn('ve-obs-height-' + nodeId);
+  if(hEl) node.data.obstacleHeight = pf(hEl.value, 0);
+  var dEl = elFn('ve-obs-depth-' + nodeId);
+  if(dEl) node.data.obstacleDepth = pf(dEl.value, 0);
+  var aEl = elFn('ve-obs-approach-' + nodeId);
+  if(aEl) node.data.approachAngle = pf(aEl.value, 0);
+  var dpEl = elFn('ve-obs-departure-' + nodeId);
+  if(dpEl) node.data.departureAngle = pf(dpEl.value, 0);
+  var rEl = elFn('ve-obs-ramp-' + nodeId);
+  if(rEl) node.data.rampAngle = pf(rEl.value, 0);
+
+  if(typeof saveState === 'function') saveState();
 }
 
 // ===== COAST-DOWN SİHİRBAZI =====
@@ -33283,6 +33535,150 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   return r;
 }
 
+// ===== ENGEL ATLAMA TXT RAPORU =====
+function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
+  var W = 80;
+
+  function ln(ch, len) { var s = ''; for (var i = 0; i < len; i++) s += ch; return s; }
+  function pad(str, len, align) {
+    str = String(str);
+    if (align === 'right') { while (str.length < len) str = ' ' + str; return str; }
+    if (align === 'center') {
+      var l = Math.floor((len - str.length) / 2);
+      var r2 = len - str.length - l;
+      var sp = ''; for (var i = 0; i < l; i++) sp += ' ';
+      var sp2 = ''; for (var i = 0; i < r2; i++) sp2 += ' ';
+      return sp + str + sp2;
+    }
+    while (str.length < len) str += ' ';
+    return str;
+  }
+  function num(v, d) { return isFinite(v) ? v.toFixed(d) : '-'; }
+  function pRow(label, value, indent) {
+    indent = indent || '  ';
+    var labelW = 32;
+    return indent + pad(label, labelW) + ': ' + value + '\n';
+  }
+  function ascii(s) {
+    return String(s)
+      .replace(/ğ/g,'g').replace(/Ğ/g,'G')
+      .replace(/ü/g,'u').replace(/Ü/g,'U')
+      .replace(/ş/g,'s').replace(/Ş/g,'S')
+      .replace(/ı/g,'i').replace(/İ/g,'I')
+      .replace(/ö/g,'o').replace(/Ö/g,'O')
+      .replace(/ç/g,'c').replace(/Ç/g,'C');
+  }
+
+  var obs = sim.obstacleCrossing;
+  if (!obs) {
+    return '(Rapor olusturulamadi: Engel Atlama simulasyon verisi bulunamadi.)\n';
+  }
+
+  var inp = obs.inputParams || {};
+  var analysis = obs.analysis || {};
+  var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
+  var now = new Date();
+  var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
+  var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+  var raporNo = 'BMC-OBS-' + now.getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+
+  var typeLabels = { 'trench': 'Hendek', 'vertical-wall': 'Dikey Duvar', 'ramp': 'Rampa' };
+  var typeLabel = typeLabels[obs.obstacleType] || obs.obstacleType;
+
+  var r = '';
+
+  // BASLIK
+  r += '\n' + ln('=', W) + '\n\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n';
+  r += pad(' ##   ##  ###  ###   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ## ## ##   ##      ', W, 'center') + '\n';
+  r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
+  r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
+  r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
+  r += ln('=', W) + '\n\n';
+  r += pad('+' + ln('-', 44) + '+', W, 'center') + '\n';
+  r += pad('|   ENGEL ATLAMA ANALIZI RAPORU   |', W, 'center') + '\n';
+  r += pad('+' + ln('-', 44) + '+', W, 'center') + '\n\n';
+
+  // 1. RAPOR BILGILERI
+  r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
+  r += pRow('Rapor Tarihi', tarih);
+  r += pRow('Rapor Saati', saat);
+  r += pRow('Rapor No', raporNo);
+  r += pRow('Hazirlayan', ascii(hazirlayan));
+  r += pRow('Hesaplama Modu', 'Engel Atlama Analizi');
+  r += '\n';
+
+  // 2. ARAC PARAMETRELERI
+  r += ln('-', W) + '\n  ARAC PARAMETRELERI\n' + ln('-', W) + '\n';
+  r += pRow('Arac Kutle', num(inp.mass, 0) + ' kg');
+  r += pRow('Tekerlek Yaricapi', num(inp.wheelRadius, 3) + ' m');
+  r += pRow('Dingil Mesafesi', num(inp.wheelbase, 3) + ' m');
+  r += '\n';
+
+  // 3. ENGEL PARAMETRELERI
+  r += ln('-', W) + '\n  ENGEL PARAMETRELERI\n' + ln('-', W) + '\n';
+  r += pRow('Engel Tipi', ascii(typeLabel));
+
+  if(obs.obstacleType === 'trench') {
+    r += pRow('Hendek Genisligi', num(inp.obstacleWidth, 2) + ' m');
+    r += pRow('Hendek Derinligi', num(inp.obstacleDepth, 2) + ' m');
+  } else if(obs.obstacleType === 'vertical-wall') {
+    r += pRow('Duvar Yuksekligi', num(inp.obstacleHeight, 2) + ' m');
+  } else if(obs.obstacleType === 'ramp') {
+    r += pRow('Rampa Acisi', num(inp.rampAngle, 1) + ' derece');
+    r += pRow('Engel Genisligi', num(inp.obstacleWidth, 2) + ' m');
+    r += pRow('Engel Yuksekligi', num(inp.obstacleHeight, 2) + ' m');
+  }
+
+  r += pRow('Yaklasma Acisi', num(inp.approachAngle, 1) + ' derece');
+  r += pRow('Ayrilma Acisi', num(inp.departureAngle, 1) + ' derece');
+  r += '\n';
+
+  // 4. ANALIZ SONUCLARI
+  r += ln('=', W) + '\n  ANALIZ SONUCLARI\n' + ln('=', W) + '\n\n';
+
+  if(obs.obstacleType === 'trench') {
+    r += pRow('Hendek Genisligi', num(analysis.trenchWidth, 2) + ' m');
+    r += pRow('Maks Gecebilir Genislik', num(analysis.maxTrenchWidth, 2) + ' m');
+  } else if(obs.obstacleType === 'vertical-wall') {
+    r += pRow('Duvar Yuksekligi', num(analysis.wallHeight, 2) + ' m');
+    r += pRow('Maks Gecebilir Yukseklik', num(analysis.maxWallHeight, 2) + ' m');
+  } else if(obs.obstacleType === 'ramp') {
+    r += pRow('Rampa Acisi', num(analysis.rampAngle, 1) + ' derece');
+    r += pRow('Yaklasma Acisi Yeterli', analysis.approachOk ? 'EVET' : 'HAYIR');
+    r += pRow('Ayrilma Acisi Yeterli', analysis.departureOk ? 'EVET' : 'HAYIR');
+  }
+
+  r += '\n';
+  r += '  ' + ln('-', 40) + '\n';
+  r += '  SONUC: ' + (obs.canCross ? '*** ENGEL GECEBiLiR ***' : '*** ENGEL GECEMEZ ***') + '\n';
+  r += '  ' + ln('-', 40) + '\n\n';
+
+  // Notlar
+  if(obs.notes && obs.notes.length > 0) {
+    r += ln('-', W) + '\n  NOTLAR\n' + ln('-', W) + '\n';
+    obs.notes.forEach(function(note, idx) {
+      r += '  ' + (idx + 1) + '. ' + ascii(note) + '\n';
+    });
+    r += '\n';
+  }
+
+  // FERAGAT
+  r += ln('-', W) + '\n';
+  r += pad('FERAGATNAME', W, 'center') + '\n';
+  r += ln('-', W) + '\n';
+  r += pad('Bu rapor MFSim Engel Atlama Analizi Programi', W, 'center') + '\n';
+  r += pad('ile otomatik olusturulmustur. Hesaplamalar', W, 'center') + '\n';
+  r += pad('teorik modellere dayanmaktadir. Gercek test sonuclari ile', W, 'center') + '\n';
+  r += pad('dogrulama yapilmasi onerilir.', W, 'center') + '\n';
+  r += ln('-', W) + '\n\n';
+
+  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
+
+  return r;
+}
 
 
 </script>

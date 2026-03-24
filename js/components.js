@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -172,6 +172,13 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><text x="50" y="40" text-anchor="middle" font-size="28" font-weight="700" fill="var(--accent-primary, #3b82f6)">P</text><path d="M25 60 L40 55 L55 65 L70 48 L85 58" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="25" cy="60" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="55" cy="65" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="85" cy="58" r="3" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 0,
     outputs: 0
+  },
+  'obstacle-crossing': {
+    name: 'Engel Geçme',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M5 75 L30 75 L40 40 L60 40 L70 75 L95 75" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><line x1="5" y1="80" x2="95" y2="80" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="20" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><circle cx="80" cy="75" r="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><path d="M42 38 L50 25 L58 38" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    maxInstances: 1
   },
   'gear-shift': {
     name: 'Vites Geçişleri',
