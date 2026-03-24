@@ -736,6 +736,14 @@ function veSolverRunProfessional() {
             var obsData = _obsNode.data || {};
             var obsCrossResult = veFTRunObstacleCrossingAnalysis(obsData);
             simResult.obstacleCrossing = obsCrossResult;
+            // Dinamik simülasyonu da çalıştır (statik analiz başarılıysa)
+            if(obsCrossResult && obsCrossResult.stallAnalysis && obsCrossResult.stallAnalysis.hasData && !obsCrossResult.geometryFail) {
+              try {
+                simResult.obstacleDynamic = veFTRunObstacleDynamicSim(obsCrossResult);
+              } catch(e) {
+                simResult.obstacleDynamic = { success: false, reason: 'Dinamik simulasyon hatasi: ' + e.message };
+              }
+            }
           }
         } else {
           simResult = veRunSimulationEngine();

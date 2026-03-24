@@ -2732,3 +2732,357 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
   result.timestamp = new Date().toISOString();
   return result;
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ENGEL ATLAMA — DİNAMİK SİMÜLASYON (Zaman Adımlı)
+// ══════════════════════════════════════════════════════════════════════════════
+// Mevcut statik analizin sonuçlarını ve aktarma zinciri verilerini kullanarak
+// zaman adımlı dinamik modelleme yapar.
+// obsResult: veFTRunObstacleCrossingAnalysis() sonucu
+// dynOpts: { dt, rampTime, Cr, J_engine, J_tc, momentumCarry }
+function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
+  var opts = dynOpts || {};
+  var dt = opts.dt || 0.001;                  // Zaman adımı (s) — varsayılan 1 ms
+  var rampTime = opts.rampTime || 2.0;        // Gaz pedalı rampa süresi (s)
+  var Cr = opts.Cr || 0.015;                  // Yuvarlanma direnci katsayısı
+  var J_engine = opts.J_engine || 2.5;        // Motor ataleti (kg·m²)
+  var J_tc = opts.J_tc || 0.3;               // TC pump ataleti (kg·m²)
+  var momentumCarry = opts.momentumCarry !== undefined ? opts.momentumCarry : true;
+  var maxTime = opts.maxTime || 30.0;         // Maksimum simülasyon süresi (s)
+  var stallTimeout = opts.stallTimeout || 2.0; // Stall tespit süresi (s)
+
+  var inp = obsResult.inputParams;
+  var stl = obsResult.stallAnalysis;
+  if(!stl || !stl.hasData) {
+    return { success: false, reason: 'Stall analiz verisi eksik.' };
+  }
+
+  var mass = inp.mass;
+  var R_eff = inp.R_eff;
+  var h = inp.h;
+  var a1 = inp.a1;
+  var a2 = inp.a2;
+  var L = inp.wheelbase;
+  var g_const = 9.81;
+  var W = mass * g_const;
+  var n_d = stl.n_d;
+
+  // Aktarma oranları
+  var i_g = stl.gearRatio;
+  var i_tr = stl.i_transfer;
+  var i_diff = stl.i_axle;
+  var eta_total = stl.eta_total;
+  var i_total = i_g * i_tr * i_diff;
+
+  // Motor ve TC bileşenlerini yeniden oluştur
+  var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
+  var ed = engineNode ? (engineNode.data || {}) : {};
+  var torqueTable = ed.torqueData || [];
+  var specs = ed.motorSpecs || {};
+  var governedSpeed = parseFloat(specs.governedSpeed || ed.governedRpm) || 2100;
+  var noLoadGoverned = parseFloat(specs.noLoadGoverned) || (governedSpeed + 200);
+  var idleRpm = parseFloat(specs.idleRpm) || 700;
+
+  var grossMotorTorqueFn = FT_SOLVER.createMotorTorqueFn(torqueTable, governedSpeed, noLoadGoverned);
+
+  // Aksesuar kayıpları
+  var accList = ed.accessories || [];
+  var accTotalFanLoss = 0, accTotalOtherLoss = 0, accFanMode = 'clutch';
+  accList.forEach(function(a) {
+    var loss = parseFloat(a.userLoss) || 0;
+    if(loss <= 0) return;
+    if(a.name && a.name.toLowerCase().indexOf('fan') >= 0) {
+      accTotalFanLoss += loss;
+      if(a.fanMode) accFanMode = a.fanMode;
+    } else {
+      accTotalOtherLoss += loss;
+    }
+  });
+  var hasAccessoryLoss = (accTotalFanLoss + accTotalOtherLoss) > 0;
+
+  function motorTorqueFn(rpm) {
+    var T_gross = grossMotorTorqueFn(rpm);
+    if(!hasAccessoryLoss || rpm <= 0) return T_gross;
+    var ratio = rpm / governedSpeed;
+    var P_fan_kW = (accFanMode === 'on') ? accTotalFanLoss : accTotalFanLoss * ratio * ratio * ratio;
+    var P_loss_kW = P_fan_kW + accTotalOtherLoss * ratio;
+    var omega = 2 * Math.PI * rpm / 60;
+    var T_loss = P_loss_kW * 1000 / omega;
+    return Math.max(0, T_gross - T_loss);
+  }
+
+  // TC fonksiyonları
+  var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
+  var tcd = tcNode ? (tcNode.data || {}) : {};
+  var tcDataArr = tcd.tcData || [];
+  var pumpTorqueDrop = tcd.pumpTorqueDrop !== undefined ? parseFloat(tcd.pumpTorqueDrop) : 17.6;
+  var tcFns = FT_SOLVER.createTCFunctions(tcDataArr);
+
+  // Başlangıç açısı
+  var x0 = Math.sqrt(2 * R_eff * h - h * h);
+  var phi_start = Math.asin(x0 / R_eff);
+
+  // Durum değişkenleri
+  var v = 0;
+  var N_engine = idleRpm;
+  var t = 0;
+  var phi = phi_start;
+  var phase = 'front'; // 'front' veya 'rear'
+  var frontCompleted = false;
+  var frontCompletionTime = 0;
+  var frontCompletionSpeed = 0;
+  var stallDetected = false;
+  var stallPhase = '';
+  var simComplete = false;
+  var simSuccess = false;
+  var reason = '';
+  var stallCheckStart = -1; // Gaz %100 ve v=0 olduğu ilk an
+
+  // Zaman serisi verileri (belirli aralıklarla kaydet, bellek için)
+  var log = [];
+  var logInterval = Math.max(1, Math.round(0.01 / dt)); // ~10 ms aralıklarla
+  var stepCount = 0;
+  var maxSteps = Math.ceil(maxTime / dt);
+
+  // Rölanti torku yaklaşımı
+  var T_idle_ratio = 0.21;
+
+  // Faz özet verileri
+  var frontPeakTreq = 0, frontPeakTwheel = 0, frontMaxSpeed = 0;
+  var rearPeakTreq = 0, rearPeakTwheel = 0, rearMaxSpeed = 0;
+
+  // ── ANA DÖNGÜ ──
+  while(stepCount < maxSteps && !simComplete) {
+    stepCount++;
+
+    // ── Hesap 1: Sürücü talebi (DD) ──
+    var DD;
+    if(t < rampTime) {
+      DD = (t / rampTime) * 100;
+    } else {
+      DD = 100;
+    }
+
+    // ── Hesap 2: TC hız oranı (SR) ──
+    var N_turbin = (v > 1e-6) ? (v / R_eff) * i_total * 60 / (2 * Math.PI) : 0;
+    var SR = (N_engine > 0) ? Math.min(0.99, N_turbin / N_engine) : 0;
+
+    // ── Hesap 3: TC tork oranı (TR) ──
+    var TR = tcFns.tau(SR);
+
+    // ── Hesap 4: Motor torku ──
+    var T_full_load = motorTorqueFn(N_engine);
+    var T_idle = T_full_load * T_idle_ratio;
+    var T_engine;
+    if(DD >= 100) {
+      T_engine = T_full_load;
+    } else if(DD > 0) {
+      T_engine = T_idle + (T_full_load - T_idle) * DD / 100;
+    } else {
+      T_engine = T_idle;
+    }
+
+    // ── Hesap 5: Teker torku (tek teker) ──
+    var T_wheel = T_engine * TR * i_g * i_tr * i_diff * eta_total / n_d;
+
+    // ── Hesap 6: Anlık gerekli tork ──
+    var moment_kolu = R_eff * Math.sin(phi);
+    var T_req_anlik = 0;
+    var N_aks = 0; // Aktif akstaki toplam reaksiyon (ikiye bölünmemiş)
+    if(moment_kolu > 0) {
+      if(phase === 'front') {
+        var D_on = L + moment_kolu;
+        N_aks = W * a2 / D_on;
+        T_req_anlik = (N_aks / 2) * moment_kolu;
+      } else {
+        var D_arka = L - moment_kolu;
+        if(D_arka > 0) {
+          N_aks = W * a1 / D_arka;
+          T_req_anlik = (N_aks / 2) * moment_kolu;
+        } else {
+          N_aks = Infinity;
+          T_req_anlik = Infinity;
+        }
+      }
+    }
+    // moment_kolu <= 0: tepeyi geçmiş, T_req = 0
+
+    // ── Hesap 7: Net kuvvet ve ivme ──
+    var F_itme = T_wheel * n_d / R_eff;
+    var F_engel = 0;
+    if(moment_kolu > 0 && isFinite(N_aks)) {
+      F_engel = N_aks * moment_kolu / R_eff;
+    }
+    var F_yuvarlanma = W * Cr;
+    var F_net = F_itme - F_engel - F_yuvarlanma;
+    var acc = F_net / mass;
+
+    // Durma koruması: hız sıfır ve net kuvvet negatifse ivme sıfır
+    if(v < 1e-9 && F_net <= 0) {
+      acc = 0;
+    }
+
+    // ── Hesap 8: Hız ve açı güncelleme ──
+    var v_new = Math.max(0, v + acc * dt);
+    var phi_new = phi;
+    if(v_new > 1e-9) {
+      var dPhi = v_new / R_eff * dt;
+      phi_new = phi - dPhi;
+    }
+
+    // ── Hesap 9: Motor devri güncelleme ──
+    var N_engine_new;
+    if(SR > 0.80) {
+      // Coupling bölgesi: motor türbini takip eder
+      N_engine_new = (SR > 0.01) ? N_turbin / SR : N_engine;
+    } else {
+      // Konvertör bölgesi: serbest ivmelenme
+      var J_eff = J_engine + J_tc;
+      var T_pump_load = T_engine * Math.max(0.05, SR) * 0.5;
+      var alpha_engine = (T_engine - T_pump_load) / J_eff;
+      var omega_engine = N_engine * 2 * Math.PI / 60;
+      var omega_new = omega_engine + alpha_engine * dt;
+      N_engine_new = omega_new * 60 / (2 * Math.PI);
+    }
+    // Sınırla
+    N_engine_new = Math.max(idleRpm, Math.min(governedSpeed, N_engine_new));
+
+    // ── Faz özet istatistikler ──
+    if(phase === 'front') {
+      if(T_req_anlik > frontPeakTreq) frontPeakTreq = T_req_anlik;
+      if(T_wheel > frontPeakTwheel) frontPeakTwheel = T_wheel;
+      if(v_new > frontMaxSpeed) frontMaxSpeed = v_new;
+    } else {
+      if(T_req_anlik > rearPeakTreq) rearPeakTreq = T_req_anlik;
+      if(T_wheel > rearPeakTwheel) rearPeakTwheel = T_wheel;
+      if(v_new > rearMaxSpeed) rearMaxSpeed = v_new;
+    }
+
+    // ── Veri kaydı ──
+    if(stepCount % logInterval === 0 || stepCount === 1) {
+      log.push({
+        t: t,
+        v: v_new,
+        N_engine: N_engine_new,
+        T_engine: T_engine,
+        TR: TR,
+        SR: SR,
+        T_wheel: T_wheel,
+        T_req: T_req_anlik,
+        phi_deg: phi_new * 180 / Math.PI,
+        F_itme: F_itme,
+        F_engel: F_engel,
+        F_net: F_net,
+        KE: 0.5 * mass * v_new * v_new,
+        DD: DD,
+        phase: phase
+      });
+    }
+
+    // ── Hesap 10: Faz geçişi kontrolü ──
+    if(phi_new <= -phi_start) {
+      if(phase === 'front') {
+        frontCompleted = true;
+        frontCompletionTime = t;
+        frontCompletionSpeed = v_new;
+        // Arka teker fazına geç
+        phase = 'rear';
+        phi_new = phi_start; // Arka teker için sıfırla
+        if(!momentumCarry) {
+          v_new = 0;
+          N_engine_new = idleRpm;
+        }
+        stallCheckStart = -1; // Stall sayacını sıfırla
+      } else {
+        // Arka teker de aştı — başarılı
+        simComplete = true;
+        simSuccess = true;
+        reason = 'Her iki teker de engeli basariyla asti.';
+      }
+    }
+
+    // ── Stall kontrolü ──
+    if(!simComplete && v_new < 1e-9 && DD >= 99.9 && isFinite(T_req_anlik) && T_wheel < T_req_anlik) {
+      if(stallCheckStart < 0) {
+        stallCheckStart = t;
+      } else if(t - stallCheckStart >= stallTimeout) {
+        stallDetected = true;
+        stallPhase = phase;
+        simComplete = true;
+        simSuccess = false;
+        reason = (phase === 'front' ? 'On' : 'Arka') + ' teker fazinda arac takildi (stall). T_wheel (' +
+                 T_wheel.toFixed(0) + ' Nm) < T_req (' + T_req_anlik.toFixed(0) + ' Nm).';
+      }
+    } else {
+      if(v_new > 1e-6) stallCheckStart = -1;
+    }
+
+    // Zaman aşımı kontrolü
+    if(!simComplete && t >= maxTime) {
+      simComplete = true;
+      simSuccess = false;
+      reason = 'Maksimum simulasyon suresi asildi (' + maxTime + ' s).';
+    }
+
+    // Durumları güncelle
+    v = v_new;
+    phi = phi_new;
+    N_engine = N_engine_new;
+    t += dt;
+  }
+
+  // Son kayıt
+  log.push({
+    t: t,
+    v: v,
+    N_engine: N_engine,
+    T_engine: 0,
+    TR: 0,
+    SR: 0,
+    T_wheel: 0,
+    T_req: 0,
+    phi_deg: phi * 180 / Math.PI,
+    F_itme: 0,
+    F_engel: 0,
+    F_net: 0,
+    KE: 0.5 * mass * v * v,
+    DD: 100,
+    phase: phase
+  });
+
+  return {
+    success: simSuccess,
+    reason: reason,
+    totalTime: t,
+    totalSteps: stepCount,
+    dt: dt,
+    // Faz bilgileri
+    frontCompleted: frontCompleted,
+    frontCompletionTime: frontCompletionTime,
+    frontCompletionSpeed: frontCompletionSpeed,
+    stallDetected: stallDetected,
+    stallPhase: stallPhase,
+    // Faz istatistikleri
+    frontStats: {
+      peakTreq: frontPeakTreq,
+      peakTwheel: frontPeakTwheel,
+      maxSpeed: frontMaxSpeed
+    },
+    rearStats: {
+      peakTreq: rearPeakTreq,
+      peakTwheel: rearPeakTwheel,
+      maxSpeed: rearMaxSpeed
+    },
+    // Parametreler
+    params: {
+      rampTime: rampTime,
+      Cr: Cr,
+      J_engine: J_engine,
+      J_tc: J_tc,
+      momentumCarry: momentumCarry,
+      phi_start_deg: phi_start * 180 / Math.PI
+    },
+    // Zaman serisi
+    log: log
+  };
+}
