@@ -2274,72 +2274,106 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
   var wheelNode = nodes.find(function(n) { return n.type === 'wheel' && n.isMasterWheel; })
                 || nodes.find(function(n) { return n.type === 'wheel'; });
 
-  if(!vehicleNode) throw new Error('Engel Atlama: Arac bileseni eksik');
-  if(!wheelNode) throw new Error('Engel Atlama: Tekerlek bileseni eksik');
+  if(!vehicleNode) throw new Error('Engel Atlama: Araç bileşeni eksik');
+  if(!wheelNode) throw new Error('Engel Atlama: Tekerlek bileşeni eksik');
 
   var vd = vehicleNode.data || {};
   var wd = wheelNode.data || {};
 
-  var mass = parseFloat(vd.mass) || 20000;
-  var wheelRadius = parseFloat(wd.wheelRadius) || 0.525;
-  var wheelbase = parseFloat(vd.wheelbase) || 4.0;
+  // Parametreleri oku
+  var mass = parseFloat(vd.ftGVW) || 14900;
+  var a1 = parseFloat(obsData.a1) || 0;
+  var a2 = parseFloat(obsData.a2) || 0;
+  var wheelbase = a1 + a2;
+  var h = parseFloat(obsData.obstacleHeight) || 0;
+  var R_eff = parseFloat(obsData.loadedTireRadius) || 0;
 
-  var obstacleType = obsData.obstacleType || 'trench';
-  var obstacleWidth = parseFloat(obsData.obstacleWidth) || 0;
-  var obstacleHeight = parseFloat(obsData.obstacleHeight) || 0;
-  var obstacleDepth = parseFloat(obsData.obstacleDepth) || 0;
-  var approachAngle = parseFloat(obsData.approachAngle) || 0;
-  var departureAngle = parseFloat(obsData.departureAngle) || 0;
-  var rampAngle = parseFloat(obsData.rampAngle) || 0;
+  // Şanzıman vites oranı
+  var gearboxNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+  var gd = gearboxNode ? (gearboxNode.data || {}) : {};
+  var ftGears = gd.ftGearData || (typeof VE_FT_GB_DEFAULT_GEARS !== 'undefined' ? VE_FT_GB_DEFAULT_GEARS : []);
+  var selectedGearIdx = obsData.selectedGearIdx !== undefined ? obsData.selectedGearIdx : 0;
+  var selectedGear = ftGears.length > 0 && selectedGearIdx < ftGears.length ? ftGears[selectedGearIdx] : null;
+  var gearRatio = selectedGear ? selectedGear.ratio : 0;
+  var gearName = selectedGear ? selectedGear.name : '—';
 
-  // Sonuç objesi — ileride detaylı matematik eklenecek
+  // Lastik bilgileri (otomatik)
+  var tireName = wd.ftTireName || 'Michelin XZL 395/85R20';
+  var rollingRadius = wd.ftTireRadius !== undefined ? wd.ftTireRadius : 0.573;
+
+  // Sonuç objesi
   var result = {
-    obstacleType: obstacleType,
     inputParams: {
       mass: mass,
-      wheelRadius: wheelRadius,
+      a1: a1,
+      a2: a2,
       wheelbase: wheelbase,
-      obstacleWidth: obstacleWidth,
-      obstacleHeight: obstacleHeight,
-      obstacleDepth: obstacleDepth,
-      approachAngle: approachAngle,
-      departureAngle: departureAngle,
-      rampAngle: rampAngle
+      h: h,
+      R_eff: R_eff,
+      tireName: tireName,
+      rollingRadius: rollingRadius,
+      gearName: gearName,
+      gearRatio: gearRatio
     },
-    analysis: {},
+    geometry: {},
     canCross: false,
+    geometryFail: false,
+    geometryFailReason: '',
     notes: []
   };
 
-  // Temel geometrik kontroller (placeholder — matematik sonra detaylandirilacak)
-  if(obstacleType === 'trench') {
-    // Hendek gecme: tekerlek capi > hendek genisligi kontrolu
-    var maxTrenchWidth = 2 * wheelRadius * 0.9;
-    result.analysis.maxTrenchWidth = maxTrenchWidth;
-    result.analysis.trenchWidth = obstacleWidth;
-    result.canCross = obstacleWidth <= maxTrenchWidth;
-    result.notes.push('Hendek genisligi: ' + obstacleWidth.toFixed(2) + ' m');
-    result.notes.push('Maks gecebilir hendek genisligi (geometrik): ' + maxTrenchWidth.toFixed(2) + ' m');
-  } else if(obstacleType === 'vertical-wall') {
-    // Dikey duvar: tekerlek yaricapi ile karsilastirma
-    var maxWallHeight = wheelRadius * 0.7;
-    result.analysis.maxWallHeight = maxWallHeight;
-    result.analysis.wallHeight = obstacleHeight;
-    result.canCross = obstacleHeight <= maxWallHeight;
-    result.notes.push('Duvar yuksekligi: ' + obstacleHeight.toFixed(2) + ' m');
-    result.notes.push('Maks gecebilir duvar yuksekligi (geometrik): ' + maxWallHeight.toFixed(2) + ' m');
-  } else if(obstacleType === 'ramp') {
-    // Rampa: yaklasma/ayrilma acisi kontrolu
-    var canApproach = approachAngle >= rampAngle;
-    var canDepart = departureAngle >= rampAngle;
-    result.analysis.rampAngle = rampAngle;
-    result.analysis.approachOk = canApproach;
-    result.analysis.departureOk = canDepart;
-    result.canCross = canApproach && canDepart;
-    result.notes.push('Rampa acisi: ' + rampAngle.toFixed(1) + ' derece');
-    result.notes.push('Yaklasma acisi: ' + approachAngle.toFixed(1) + ' derece (' + (canApproach ? 'YETERLI' : 'YETERSIZ') + ')');
-    result.notes.push('Ayrilma acisi: ' + departureAngle.toFixed(1) + ' derece (' + (canDepart ? 'YETERLI' : 'YETERSIZ') + ')');
+  // ── GEOMETRİK GEÇERLİLİK KONTROLÜ ──
+  if(R_eff <= 0) {
+    result.geometryFail = true;
+    result.geometryFailReason = 'Yüklü lastik yarıçapı (R_eff) tanımlı değil veya sıfır.';
+    return result;
   }
+  if(h <= 0) {
+    result.geometryFail = true;
+    result.geometryFailReason = 'Engel yüksekliği (h) tanımlı değil veya sıfır.';
+    return result;
+  }
+  if(h > R_eff) {
+    result.geometryFail = true;
+    result.geometryFailReason = 'Engel yüksekliği teker yarıçapını aşıyor (h=' + h.toFixed(3) + ' m > R_eff=' + R_eff.toFixed(3) + ' m), geometrik olarak aşılamaz.';
+    return result;
+  }
+  if(h === R_eff) {
+    result.geometryFail = true;
+    result.geometryFailReason = 'Engel yüksekliği teker yarıçapına eşit (h=R_eff=' + R_eff.toFixed(3) + ' m). Moment kolu x=0, pratikte aşılamaz.';
+    return result;
+  }
+
+  // ── GEOMETRİ HESAPLARI (h < R_eff) ──
+
+  // 1) Köşe moment kolu x = √(2·R_eff·h − h²)
+  var x = Math.sqrt(2 * R_eff * h - h * h);
+
+  // 2) Merkez-köşe açısı θ = arccos(x / R_eff)
+  var theta_rad = Math.acos(x / R_eff);
+  var theta_deg = theta_rad * 180 / Math.PI;
+
+  // 3) h/R oranı
+  var hR_ratio = h / R_eff;
+
+  // Zorluk değerlendirmesi
+  var difficultyLabel;
+  if(hR_ratio < 0.5) {
+    difficultyLabel = 'Kolay';
+  } else if(hR_ratio < 0.75) {
+    difficultyLabel = 'Orta';
+  } else {
+    difficultyLabel = 'Zor';
+  }
+
+  result.geometry = {
+    x: x,
+    theta_rad: theta_rad,
+    theta_deg: theta_deg,
+    hR_ratio: hR_ratio,
+    difficultyLabel: difficultyLabel
+  };
+  result.canCross = true; // Geometrik olarak geçerli, sonraki adımlarda kuvvet analizi belirleyecek
 
   result.timestamp = new Date().toISOString();
   return result;
