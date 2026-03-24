@@ -3593,20 +3593,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       if(dec) {
         r += ln('=', W) + '\n  KARSILASTIRMA & NIHAI KARAR\n' + ln('=', W) + '\n\n';
 
-        // Özet tablo
+        // Stall özet (her iki sonuç için ortak)
         r += '  ' + ln('-', 60) + '\n';
-        r += '  GEOMETRI OZETI\n';
-        r += '  ' + ln('-', 60) + '\n';
-        r += pRow('Yuklu Lastik Yaricapi (R_eff)', num(inp.R_eff, 3) + ' m');
-        r += pRow('Engel Yuksekligi (h)', num(inp.h, 3) + ' m');
-        r += pRow('h/R Orani', num(geo.hR_ratio, 3) + '  [' + ascii(geo.difficultyLabel) + ']');
-        r += pRow('Moment Kolu (x)', num(geo.x, 4) + ' m');
-        r += pRow('Merkez-Kose Acisi (theta)', num(geo.theta_deg, 2) + ' derece');
-        r += '\n';
-
-        // Stall özet
-        r += '  ' + ln('-', 60) + '\n';
-        r += '  STALL DENGE OZETI\n';
+        r += '  STALL DENGE OZETI (her iki hesap icin ortak)\n';
         r += '  ' + ln('-', 60) + '\n';
         r += pRow('Stall Denge Devri', num(stl.N_stall, 0) + ' RPM');
         r += pRow('Motor Torku @ Stall', num(stl.T_engine_stall, 1) + ' Nm');
@@ -3620,42 +3609,75 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           return 'YETERLI';
         }
 
-        // Ön teker bölümü
-        r += '  ' + ln('-', 60) + '\n';
-        r += '  ON TEKER ANALIZI\n';
-        r += '  ' + ln('-', 60) + '\n';
-        r += pRow('Gereken Tork (T_req_on)', num(dec.T_req_front, 1) + ' Nm');
-        r += pRow('Mevcut Tork (T_wheel)', num(dec.T_wheel, 1) + ' Nm');
-        var frontMarjStr = (dec.frontMarginPct >= 0 ? '+' : '') + num(dec.frontMarginPct, 1) + '%';
-        var frontMarjNmStr = (dec.frontMarginNm >= 0 ? '+' : '') + num(dec.frontMarginNm, 1) + ' Nm';
-        r += pRow('Tork Marji', frontMarjStr + '  (' + frontMarjNmStr + ')');
-        r += pRow('Durum', marjDurum(dec.frontMarginPct, dec.frontPass));
-        var frontSonuc = dec.frontPass ? 'ASAR' : 'ASAMAZ';
-        r += pRow('Sonuc', '>>> ' + frontSonuc + ' <<<');
-        r += '\n';
+        // ── Yardımcı: tek sonuç bloğu yazdır ──
+        function writeResultBlock(label, rEff, geoObj, decObj) {
+          var blk = '';
+          blk += '  ' + ln('=', 60) + '\n';
+          blk += '  ' + label + '\n';
+          blk += '  ' + ln('=', 60) + '\n\n';
 
-        // Arka teker bölümü
-        r += '  ' + ln('-', 60) + '\n';
-        r += '  ARKA TEKER ANALIZI\n';
-        r += '  ' + ln('-', 60) + '\n';
-        if(isFinite(dec.T_req_rear)) {
-          r += pRow('Gereken Tork (T_req_arka)', num(dec.T_req_rear, 1) + ' Nm');
-          r += pRow('Mevcut Tork (T_wheel)', num(dec.T_wheel, 1) + ' Nm');
-          var rearMarjStr = (dec.rearMarginPct >= 0 ? '+' : '') + num(dec.rearMarginPct, 1) + '%';
-          var rearMarjNmStr = (dec.rearMarginNm >= 0 ? '+' : '') + num(dec.rearMarginNm, 1) + ' Nm';
-          r += pRow('Tork Marji', rearMarjStr + '  (' + rearMarjNmStr + ')');
-          r += pRow('Durum', marjDurum(dec.rearMarginPct, dec.rearPass));
-          var rearSonuc = dec.rearPass ? 'ASAR' : 'ASAMAZ';
-          r += pRow('Sonuc', '>>> ' + rearSonuc + ' <<<');
-        } else {
-          r += '  *** Hesaplanamadi (L-x<=0) ***\n';
+          // Geometri
+          blk += pRow('Efektif Yaricap', num(rEff, 4) + ' m');
+          blk += pRow('Engel Yuksekligi (h)', num(inp.h, 3) + ' m');
+          blk += pRow('h/R Orani', num(geoObj.hR_ratio, 3) + '  [' + ascii(geoObj.difficultyLabel) + ']');
+          blk += pRow('Moment Kolu (x)', num(geoObj.x, 4) + ' m');
+          blk += pRow('Merkez-Kose Acisi (theta)', num(geoObj.theta_deg, 2) + ' derece');
+          blk += '\n';
+
+          // Ön teker
+          blk += '  On Teker:\n';
+          blk += pRow('  Gereken Tork (T_req)', num(decObj.T_req_front, 1) + ' Nm');
+          blk += pRow('  Mevcut Tork (T_wheel)', num(decObj.T_wheel, 1) + ' Nm');
+          var fMs = (decObj.frontMarginPct >= 0 ? '+' : '') + num(decObj.frontMarginPct, 1) + '%';
+          var fMn = (decObj.frontMarginNm >= 0 ? '+' : '') + num(decObj.frontMarginNm, 1) + ' Nm';
+          blk += pRow('  Marj', fMs + '  (' + fMn + ')');
+          blk += pRow('  Durum', marjDurum(decObj.frontMarginPct, decObj.frontPass));
+          blk += pRow('  Sonuc', decObj.frontPass ? 'ASAR' : 'ASAMAZ');
+          blk += '\n';
+
+          // Arka teker
+          blk += '  Arka Teker:\n';
+          if(isFinite(decObj.T_req_rear)) {
+            blk += pRow('  Gereken Tork (T_req)', num(decObj.T_req_rear, 1) + ' Nm');
+            blk += pRow('  Mevcut Tork (T_wheel)', num(decObj.T_wheel, 1) + ' Nm');
+            var rMs = (decObj.rearMarginPct >= 0 ? '+' : '') + num(decObj.rearMarginPct, 1) + '%';
+            var rMn = (decObj.rearMarginNm >= 0 ? '+' : '') + num(decObj.rearMarginNm, 1) + ' Nm';
+            blk += pRow('  Marj', rMs + '  (' + rMn + ')');
+            blk += pRow('  Durum', marjDurum(decObj.rearMarginPct, decObj.rearPass));
+            blk += pRow('  Sonuc', decObj.rearPass ? 'ASAR' : 'ASAMAZ');
+          } else {
+            blk += '    *** Hesaplanamadi (L-x<=0) ***\n';
+          }
+          blk += '\n';
+
+          // Genel karar
+          blk += '  Genel Karar: ' + (decObj.overallPass ? 'ASAR' : 'ASAMAZ') + '\n';
+          blk += '\n';
+          return blk;
         }
-        r += '\n';
 
-        // Genel karar
+        // ── SONUC 1: Düz zemin R_eff ile ──
+        r += writeResultBlock('SONUC 1: DUZ ZEMIN EFEKTIF YARICAPI ILE (R_eff)', inp.R_eff, geo, dec);
+
+        // ── SONUC 2: Köşe defleksiyonu düzeltmesi ile ──
+        var cc = obs.cornerCorrection;
+        if(cc) {
+          r += writeResultBlock(
+            'SONUC 2: KOSE DEFLEKSIYONU DUZELTMESI ILE (R_corner)',
+            cc.R_corner, cc.geometry, cc.decision
+          );
+          // Ek bilgi satırı
+          r += pRow('Kose Ek Defleksiyonu (delta_corner)', num(cc.cornerDeflection, 0) + ' mm');
+          r += pRow('R_corner = R_eff - delta/1000', num(inp.R_eff, 4) + ' - ' + num(cc.cornerDeflection / 1000, 4) + ' = ' + num(cc.R_corner, 4) + ' m');
+          r += '\n';
+        }
+
+        // ── Nihai genel sonuç ──
         r += '  ' + ln('#', 60) + '\n';
         r += '  ' + ln('#', 60) + '\n';
-        if(dec.overallPass) {
+        // Nihai karar: eğer köşe düzeltmesi varsa o dikkate alınır
+        var finalDec = cc ? cc.decision : dec;
+        if(finalDec.overallPass) {
           r += '       >>>   G E N E L   S O N U C :   A S A R   <<<\n';
         } else {
           r += '       >>>   G E N E L   S O N U C :   A S A M A Z   <<<\n';
@@ -3664,19 +3686,31 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '  ' + ln('#', 60) + '\n';
         r += '\n';
 
-        if(dec.overallPass) {
-          r += '  Her iki teker de engeli asmak icin yeterli torka sahiptir.\n';
-          if(dec.rearColor === 'yellow') {
-            r += '  UYARI: Arka teker marji cok dusuk (%' + num(dec.rearMarginPct, 1) + '). Dikkatli olunmalidir.\n';
+        if(cc) {
+          r += '  (Nihai karar, kose defleksiyonu duzeltmeli sonuca (R_corner) dayanmaktadir.)\n';
+          // İki sonuç arasındaki farkı özetle
+          if(dec.overallPass && !cc.decision.overallPass) {
+            r += '  UYARI: Duz zemin R_eff ile arac engeli asiyor, ancak kose ezilmesi\n';
+            r += '         hesaba katildiginda ASAMAZ sonucu ortaya cikmaktadir.\n';
+          } else if(!dec.overallPass && cc.decision.overallPass) {
+            r += '  NOT: Kose ezilmesi, moment kolunu kisaltarak tork gereksinimini azaltmistir.\n';
+            r += '       R_corner ile arac engeli asabilir durumdadir.\n';
           }
         } else {
-          r += '  Aracin engeli tamamen asmasi icin her iki tekerin de asmasi gerekir.\n';
-          if(dec.frontPass && !dec.rearPass) {
-            r += '  On teker asiyor ancak arka teker asamiyor.\n';
-          } else if(!dec.frontPass && !dec.rearPass) {
-            r += '  Her iki teker de yetersiz torka sahiptir.\n';
+          if(dec.overallPass) {
+            r += '  Her iki teker de engeli asmak icin yeterli torka sahiptir.\n';
+            if(dec.rearColor === 'yellow') {
+              r += '  UYARI: Arka teker marji cok dusuk (%' + num(dec.rearMarginPct, 1) + '). Dikkatli olunmalidir.\n';
+            }
+          } else {
+            r += '  Aracin engeli tamamen asmasi icin her iki tekerin de asmasi gerekir.\n';
+            if(dec.frontPass && !dec.rearPass) {
+              r += '  On teker asiyor ancak arka teker asamiyor.\n';
+            } else if(!dec.frontPass && !dec.rearPass) {
+              r += '  Her iki teker de yetersiz torka sahiptir.\n';
+            }
+            r += '  Oneri: Daha dusuk vites veya transfer Low kademe ile tekrar degerlendiriniz.\n';
           }
-          r += '  Oneri: Daha dusuk vites veya transfer Low kademe ile tekrar degerlendiriniz.\n';
         }
         r += '\n';
       }
