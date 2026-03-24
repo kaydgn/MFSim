@@ -3392,15 +3392,12 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   }
 
   var inp = obs.inputParams || {};
-  var analysis = obs.analysis || {};
+  var geo = obs.geometry || {};
   var hazirlayan = optHazirlayan || (document.getElementById('ve-rapor-hazirlayan') || {}).value || 'Belirtilmemis';
   var now = new Date();
   var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
   var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
   var raporNo = 'BMC-OBS-' + now.getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
-
-  var typeLabels = { 'trench': 'Hendek', 'vertical-wall': 'Dikey Duvar', 'ramp': 'Rampa' };
-  var typeLabel = typeLabels[obs.obstacleType] || obs.obstacleType;
 
   var r = '';
 
@@ -3429,58 +3426,57 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
 
   // 2. ARAC PARAMETRELERI
   r += ln('-', W) + '\n  ARAC PARAMETRELERI\n' + ln('-', W) + '\n';
-  r += pRow('Arac Kutle', num(inp.mass, 0) + ' kg');
-  r += pRow('Tekerlek Yaricapi', num(inp.wheelRadius, 3) + ' m');
-  r += pRow('Dingil Mesafesi', num(inp.wheelbase, 3) + ' m');
+  r += pRow('Arac Kutle (GVW)', num(inp.mass, 0) + ' kg');
+  r += pRow('Ag. Merkezi-On Aks (a1)', num(inp.a1, 3) + ' m');
+  r += pRow('Ag. Merkezi-Arka Aks (a2)', num(inp.a2, 3) + ' m');
+  r += pRow('Dingil Mesafesi (L=a1+a2)', num(inp.wheelbase, 3) + ' m');
   r += '\n';
 
   // 3. ENGEL PARAMETRELERI
   r += ln('-', W) + '\n  ENGEL PARAMETRELERI\n' + ln('-', W) + '\n';
-  r += pRow('Engel Tipi', ascii(typeLabel));
-
-  if(obs.obstacleType === 'trench') {
-    r += pRow('Hendek Genisligi', num(inp.obstacleWidth, 2) + ' m');
-    r += pRow('Hendek Derinligi', num(inp.obstacleDepth, 2) + ' m');
-  } else if(obs.obstacleType === 'vertical-wall') {
-    r += pRow('Duvar Yuksekligi', num(inp.obstacleHeight, 2) + ' m');
-  } else if(obs.obstacleType === 'ramp') {
-    r += pRow('Rampa Acisi', num(inp.rampAngle, 1) + ' derece');
-    r += pRow('Engel Genisligi', num(inp.obstacleWidth, 2) + ' m');
-    r += pRow('Engel Yuksekligi', num(inp.obstacleHeight, 2) + ' m');
-  }
-
-  r += pRow('Yaklasma Acisi', num(inp.approachAngle, 1) + ' derece');
-  r += pRow('Ayrilma Acisi', num(inp.departureAngle, 1) + ' derece');
+  r += pRow('Engel Yuksekligi (h)', num(inp.h, 3) + ' m');
   r += '\n';
 
-  // 4. ANALIZ SONUCLARI
-  r += ln('=', W) + '\n  ANALIZ SONUCLARI\n' + ln('=', W) + '\n\n';
-
-  if(obs.obstacleType === 'trench') {
-    r += pRow('Hendek Genisligi', num(analysis.trenchWidth, 2) + ' m');
-    r += pRow('Maks Gecebilir Genislik', num(analysis.maxTrenchWidth, 2) + ' m');
-  } else if(obs.obstacleType === 'vertical-wall') {
-    r += pRow('Duvar Yuksekligi', num(analysis.wallHeight, 2) + ' m');
-    r += pRow('Maks Gecebilir Yukseklik', num(analysis.maxWallHeight, 2) + ' m');
-  } else if(obs.obstacleType === 'ramp') {
-    r += pRow('Rampa Acisi', num(analysis.rampAngle, 1) + ' derece');
-    r += pRow('Yaklasma Acisi Yeterli', analysis.approachOk ? 'EVET' : 'HAYIR');
-    r += pRow('Ayrilma Acisi Yeterli', analysis.departureOk ? 'EVET' : 'HAYIR');
-  }
-
+  // 4. LASTIK PARAMETRELERI
+  r += ln('-', W) + '\n  LASTIK PARAMETRELERI\n' + ln('-', W) + '\n';
+  r += pRow('Lastik', ascii(inp.tireName));
+  r += pRow('Yuvarlanma Yaricapi', num(inp.rollingRadius, 3) + ' m');
+  r += pRow('Yuklu Lastik Yaricapi (R_eff)', num(inp.R_eff, 3) + ' m');
   r += '\n';
-  r += '  ' + ln('-', 40) + '\n';
-  r += '  SONUC: ' + (obs.canCross ? '*** ENGEL GECEBiLiR ***' : '*** ENGEL GECEMEZ ***') + '\n';
-  r += '  ' + ln('-', 40) + '\n\n';
 
-  // Notlar
-  if(obs.notes && obs.notes.length > 0) {
-    r += ln('-', W) + '\n  NOTLAR\n' + ln('-', W) + '\n';
-    obs.notes.forEach(function(note, idx) {
-      r += '  ' + (idx + 1) + '. ' + ascii(note) + '\n';
-    });
+  // 5. AKTARMA PARAMETRELERI
+  r += ln('-', W) + '\n  AKTARMA PARAMETRELERI\n' + ln('-', W) + '\n';
+  r += pRow('Secilen Vites', ascii(inp.gearName));
+  r += pRow('Vites Orani (i_g)', num(inp.gearRatio, 3));
+  r += '\n';
+
+  // 6. GEOMETRI ANALIZI
+  r += ln('=', W) + '\n  GEOMETRI ANALIZI\n' + ln('=', W) + '\n\n';
+
+  if(obs.geometryFail) {
+    r += '  *** GEOMETRIK GECERLILIK BASARISIZ ***\n\n';
+    r += '  Sebep: ' + ascii(obs.geometryFailReason) + '\n\n';
+    r += '  Hesaplama bu noktada durduruldu.\n';
+  } else {
+    r += pRow('h / R_eff orani', num(geo.hR_ratio, 4) + '  (' + ascii(geo.difficultyLabel) + ')');
+    r += '\n';
+    r += '  Zorluk Skalasi:\n';
+    r += '    < 0.50  : Kolay\n';
+    r += '    0.50-0.75: Orta\n';
+    r += '    > 0.75  : Zor\n';
+    r += '\n';
+    r += pRow('Kose Moment Kolu (x)', num(geo.x, 4) + ' m');
+    r += '  Formul: x = sqrt(2*R_eff*h - h^2)\n';
+    r += '        = sqrt(2*' + num(inp.R_eff, 3) + '*' + num(inp.h, 3) + ' - ' + num(inp.h, 3) + '^2)\n';
+    r += '        = ' + num(geo.x, 4) + ' m\n';
+    r += '\n';
+    r += pRow('Merkez-Kose Acisi (theta)', num(geo.theta_deg, 2) + ' derece  (' + num(geo.theta_rad, 4) + ' rad)');
+    r += '  Formul: theta = arccos(x / R_eff)\n';
+    r += '        = arccos(' + num(geo.x, 4) + ' / ' + num(inp.R_eff, 3) + ')\n';
+    r += '        = ' + num(geo.theta_deg, 2) + ' derece\n';
     r += '\n';
   }
+  r += '\n';
 
   // FERAGAT
   r += ln('-', W) + '\n';
