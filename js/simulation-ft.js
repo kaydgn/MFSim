@@ -2266,3 +2266,81 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     }
   };
 }
+
+// ===== ENGEL ATLAMA ANALİZİ =====
+function veFTRunObstacleCrossingAnalysis(obsData) {
+  // Araç ve tekerlek verilerini topla
+  var vehicleNode = nodes.find(function(n) { return n.type === 'vehicle'; });
+  var wheelNode = nodes.find(function(n) { return n.type === 'wheel' && n.isMasterWheel; })
+                || nodes.find(function(n) { return n.type === 'wheel'; });
+
+  if(!vehicleNode) throw new Error('Engel Atlama: Arac bileseni eksik');
+  if(!wheelNode) throw new Error('Engel Atlama: Tekerlek bileseni eksik');
+
+  var vd = vehicleNode.data || {};
+  var wd = wheelNode.data || {};
+
+  var mass = parseFloat(vd.mass) || 20000;
+  var wheelRadius = parseFloat(wd.wheelRadius) || 0.525;
+  var wheelbase = parseFloat(vd.wheelbase) || 4.0;
+
+  var obstacleType = obsData.obstacleType || 'trench';
+  var obstacleWidth = parseFloat(obsData.obstacleWidth) || 0;
+  var obstacleHeight = parseFloat(obsData.obstacleHeight) || 0;
+  var obstacleDepth = parseFloat(obsData.obstacleDepth) || 0;
+  var approachAngle = parseFloat(obsData.approachAngle) || 0;
+  var departureAngle = parseFloat(obsData.departureAngle) || 0;
+  var rampAngle = parseFloat(obsData.rampAngle) || 0;
+
+  // Sonuç objesi — ileride detaylı matematik eklenecek
+  var result = {
+    obstacleType: obstacleType,
+    inputParams: {
+      mass: mass,
+      wheelRadius: wheelRadius,
+      wheelbase: wheelbase,
+      obstacleWidth: obstacleWidth,
+      obstacleHeight: obstacleHeight,
+      obstacleDepth: obstacleDepth,
+      approachAngle: approachAngle,
+      departureAngle: departureAngle,
+      rampAngle: rampAngle
+    },
+    analysis: {},
+    canCross: false,
+    notes: []
+  };
+
+  // Temel geometrik kontroller (placeholder — matematik sonra detaylandirilacak)
+  if(obstacleType === 'trench') {
+    // Hendek gecme: tekerlek capi > hendek genisligi kontrolu
+    var maxTrenchWidth = 2 * wheelRadius * 0.9;
+    result.analysis.maxTrenchWidth = maxTrenchWidth;
+    result.analysis.trenchWidth = obstacleWidth;
+    result.canCross = obstacleWidth <= maxTrenchWidth;
+    result.notes.push('Hendek genisligi: ' + obstacleWidth.toFixed(2) + ' m');
+    result.notes.push('Maks gecebilir hendek genisligi (geometrik): ' + maxTrenchWidth.toFixed(2) + ' m');
+  } else if(obstacleType === 'vertical-wall') {
+    // Dikey duvar: tekerlek yaricapi ile karsilastirma
+    var maxWallHeight = wheelRadius * 0.7;
+    result.analysis.maxWallHeight = maxWallHeight;
+    result.analysis.wallHeight = obstacleHeight;
+    result.canCross = obstacleHeight <= maxWallHeight;
+    result.notes.push('Duvar yuksekligi: ' + obstacleHeight.toFixed(2) + ' m');
+    result.notes.push('Maks gecebilir duvar yuksekligi (geometrik): ' + maxWallHeight.toFixed(2) + ' m');
+  } else if(obstacleType === 'ramp') {
+    // Rampa: yaklasma/ayrilma acisi kontrolu
+    var canApproach = approachAngle >= rampAngle;
+    var canDepart = departureAngle >= rampAngle;
+    result.analysis.rampAngle = rampAngle;
+    result.analysis.approachOk = canApproach;
+    result.analysis.departureOk = canDepart;
+    result.canCross = canApproach && canDepart;
+    result.notes.push('Rampa acisi: ' + rampAngle.toFixed(1) + ' derece');
+    result.notes.push('Yaklasma acisi: ' + approachAngle.toFixed(1) + ' derece (' + (canApproach ? 'YETERLI' : 'YETERSIZ') + ')');
+    result.notes.push('Ayrilma acisi: ' + departureAngle.toFixed(1) + ' derece (' + (canDepart ? 'YETERLI' : 'YETERSIZ') + ')');
+  }
+
+  result.timestamp = new Date().toISOString();
+  return result;
+}

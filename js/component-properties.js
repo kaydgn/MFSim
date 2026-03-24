@@ -192,6 +192,8 @@ function showNodeProperties(node) {
     html += getScenarioPropertiesHTML(node);
   } else if(node.type === 'coast-down') {
     html += getCoastDownPropertiesHTML(node);
+  } else if(node.type === 'obstacle-crossing') {
+    html += getObstacleCrossingPropertiesHTML(node);
   } else if(node.type === 'solver') {
     html += getSolverPropertiesHTML(node);
   } else if(node.type === 'road') {
@@ -8119,6 +8121,16 @@ function getSolverPropertiesHTML(node) {
     html += '<div><div style="font-weight:600;">Hızlanma-Yavaşlama</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Segment bazlı sürüş analizi — güzergah üzerinde hızlanma/yavaşlama profili</div></div>';
     html += '</label>';
   }
+
+  // Engel Atlama Analizi checkbox (obstacle-crossing bileşeni gerektirir)
+  var obsCrossAnalysis = d.obstacleCrossingAnalysis || false;
+  var obsNode = nodes.find(function(n) { return n.type === 'obstacle-crossing'; });
+  if(obsNode) {
+    html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.66rem; color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
+    html += '<input type="checkbox" id="ve-solver-obscross-' + node.id + '" ' + (obsCrossAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
+    html += '<div><div style="font-weight:600;">Engel Atlama Analizi</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Engel geçme kabiliyeti analizi — hendek, rampa ve dikey engel hesaplamaları</div></div>';
+    html += '</label>';
+  }
   html += '</div>';
 
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -8256,6 +8268,10 @@ function onVESolverParamChange(nodeId) {
   // Hızlanma-Yavaşlama checkbox
   var adEl = el('ve-solver-acceldecel-' + nodeId);
   if(adEl) node.data.accelDecelAnalysis = adEl.checked;
+
+  // Engel Atlama Analizi checkbox
+  var ocEl = el('ve-solver-obscross-' + nodeId);
+  if(ocEl) node.data.obstacleCrossingAnalysis = ocEl.checked;
 
   // FT modu parametreleri
   var ftDtEl = el('ve-solver-ftdt-' + nodeId);
