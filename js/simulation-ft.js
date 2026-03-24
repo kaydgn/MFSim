@@ -2434,7 +2434,166 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
     criticalScenario: criticalScenario
   };
 
-  result.canCross = true; // Geometrik olarak geçerli
+  // ── ADIM 4: STALL DENGE NOKTASI & MEVCUT TEKER TORKU ──
+
+  // Motor bileşeni
+  var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
+  var ed = engineNode ? (engineNode.data || {}) : {};
+  var torqueTable = ed.torqueData || [];
+  var specs = ed.motorSpecs || {};
+  var governedSpeed = parseFloat(specs.governedSpeed || ed.governedRpm) || 2100;
+  var noLoadGoverned = parseFloat(specs.noLoadGoverned) || (governedSpeed + 200);
+  var idleRpm = parseFloat(specs.idleRpm) || 700;
+
+  // Motor tork fonksiyonu (PCHIP + governor) — BRÜT
+  var grossMotorTorqueFn = FT_SOLVER.createMotorTorqueFn(torqueTable, governedSpeed, noLoadGoverned);
+
+  // Aksesuar kayıpları (net motor torku)
+  var accList = ed.accessories || [];
+  var accTotalFanLoss = 0, accTotalOtherLoss = 0;
+  var accFanMode = 'clutch';
+  accList.forEach(function(a) {
+    var loss = parseFloat(a.userLoss) || 0;
+    if(loss <= 0) return;
+    if(a.name && a.name.toLowerCase().indexOf('fan') >= 0) {
+      accTotalFanLoss += loss;
+      if(a.fanMode) accFanMode = a.fanMode;
+    } else {
+      accTotalOtherLoss += loss;
+    }
+  });
+  var hasAccessoryLoss = (accTotalFanLoss + accTotalOtherLoss) > 0;
+
+  function motorTorqueFn(rpm) {
+    var T_gross = grossMotorTorqueFn(rpm);
+    if(!hasAccessoryLoss || rpm <= 0) return T_gross;
+    var ratio = rpm / governedSpeed;
+    var P_fan_kW = (accFanMode === 'on') ? accTotalFanLoss : accTotalFanLoss * ratio * ratio * ratio;
+    var P_loss_kW = P_fan_kW + accTotalOtherLoss * ratio;
+    var omega = 2 * Math.PI * rpm / 60;
+    var T_loss = P_loss_kW * 1000 / omega;
+    return Math.max(0, T_gross - T_loss);
+  }
+
+  // Tork konvertörü bileşeni
+  var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
+  var tcd = tcNode ? (tcNode.data || {}) : {};
+  var tcDataArr = tcd.tcData || [];
+  var pumpTorqueDrop = tcd.pumpTorqueDrop !== undefined ? parseFloat(tcd.pumpTorqueDrop) : 17.6;
+  var tcFns = FT_SOLVER.createTCFunctions(tcDataArr);
+  var hasTCData = tcDataArr.length >= 2;
+  var hasEngineData = torqueTable.length >= 2;
+
+  // Stall K_pump (SR=0)
+  var K_pump_stall = tcFns.kpump(0);
+  var TR_stall = tcFns.tau(0);
+
+  // Transfer case bileşeni
+  var transferNode = nodes.find(function(n) { return n.type === 'transfer'; });
+  var trd = transferNode ? (transferNode.data || {}) : {};
+  var ftTrGears = trd.ftTrGears || [
+    { kademe: 'High', ratio: 1.054, eff: 97.00 },
+    { kademe: 'Low', ratio: 2.337, eff: 97.00 }
+  ];
+  // Engel aşma için Low kademe kullan (varsayılan)
+  var activeTransfer = ftTrGears.length > 1 ? ftTrGears[ftTrGears.length - 1] : ftTrGears[0];
+  // Eğer obsData'da transferIdx belirtilmişse onu kullan
+  if(obsData.transferIdx !== undefined && obsData.transferIdx < ftTrGears.length) {
+    activeTransfer = ftTrGears[obsData.transferIdx];
+  }
+  var i_transfer = parseFloat(activeTransfer.ratio || activeTransfer.oran) || 1.054;
+  var eta_transfer = (parseFloat(activeTransfer.eff || activeTransfer.verim) || 97) / 100;
+  var transferName = activeTransfer.kademe || 'High';
+
+  // Diferansiyel bileşeni
+  var diffNode = nodes.find(function(n) { return n.type === 'differential'; });
+  var dfd = diffNode ? (diffNode.data || {}) : {};
+  var i_axle = parseFloat(dfd.diffRatio) || 6.54;
+  var eta_axle = (parseFloat(dfd.efficiency) || 96) / 100;
+
+  // Propşaft verimi
+  var propshaftNodes = nodes.filter(function(n) { return n.type === 'propshaft'; });
+  var eta_prop = 1.0;
+  propshaftNodes.forEach(function(ps) {
+    var psd = ps.data || {};
+    eta_prop *= (parseFloat(psd.psEff) || 98.60) / 100;
+  });
+
+  // Vites verimi
+  var eta_gear = selectedGear ? (parseFloat(selectedGear.eff) || 98) / 100 : 0.98;
+
+  // Tahrikli teker sayısı (transfer kilitli + diff kilitli = 4, değilse 2)
+  var n_d = 4; // Askeri araç varsayımı: 4x4, transfer ve diff kilitli
+  var drivenPct = (parseFloat(vd.ftDrivenWeight) || 100) / 100;
+  if(drivenPct < 1.0) n_d = 2;
+
+  // Stall denge noktası hesabı
+  var stallResult = null;
+  if(hasEngineData && hasTCData) {
+    // Rölantiden governed RPM'e kadar tarama: T_motor_mevcut ≥ T_pump olan son RPM
+    var N_stall = idleRpm;
+    var T_engine_stall = 0;
+    var T_pump_stall = 0;
+
+    for(var rpm = Math.ceil(idleRpm); rpm <= governedSpeed; rpm += 1) {
+      var T_motor_mevcut = motorTorqueFn(rpm) - pumpTorqueDrop;
+      var T_pump_abs = (rpm * rpm) / (K_pump_stall * K_pump_stall); // T_pump = (N / K_pump)²
+      if(T_motor_mevcut >= T_pump_abs) {
+        N_stall = rpm;
+        T_engine_stall = motorTorqueFn(rpm); // Eğriden okunan tork (düşüm öncesi)
+        T_pump_stall = T_pump_abs;
+      } else {
+        break; // Pump yükü motoru geçti, denge bulundu
+      }
+    }
+
+    // Toplam mekanik verim: η_total = η_prop × η_axle × η_tc(transfer)
+    var eta_total = eta_prop * eta_axle * eta_transfer * eta_gear;
+
+    // Aktarma zincirinden teker torkuna:
+    // T_wheel = T_engine_stall × TR_stall × i_g × i_tr × i_diff × η_total / n_d
+    var T_wheel = T_engine_stall * TR_stall * gearRatio * i_transfer * i_axle * eta_total / n_d;
+
+    stallResult = {
+      hasData: true,
+      N_stall: N_stall,
+      T_engine_stall: T_engine_stall,
+      T_pump_stall: T_pump_stall,
+      pumpTorqueDrop: pumpTorqueDrop,
+      K_pump_stall: K_pump_stall,
+      TR_stall: TR_stall,
+      // Aktarma zinciri parametreleri
+      gearName: gearName,
+      gearRatio: gearRatio,
+      eta_gear: eta_gear,
+      transferName: transferName,
+      i_transfer: i_transfer,
+      eta_transfer: eta_transfer,
+      i_axle: i_axle,
+      eta_axle: eta_axle,
+      eta_prop: eta_prop,
+      eta_total: eta_total,
+      n_d: n_d,
+      T_wheel: T_wheel
+    };
+  } else {
+    stallResult = {
+      hasData: false,
+      missingEngine: !hasEngineData,
+      missingTC: !hasTCData
+    };
+  }
+
+  result.stallAnalysis = stallResult;
+
+  // Engel aşma kararı: T_wheel vs T_req_critical
+  if(stallResult && stallResult.hasData) {
+    result.canCross = stallResult.T_wheel >= T_req_critical;
+    result.torqueMargin = stallResult.T_wheel - T_req_critical;
+    result.torqueRatio = stallResult.T_wheel / T_req_critical;
+  } else {
+    result.canCross = true; // Veri eksik, geometrik geçerlilik yeterli
+  }
 
   result.timestamp = new Date().toISOString();
   return result;
