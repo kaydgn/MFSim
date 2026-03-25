@@ -19922,18 +19922,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     stepCount++;
 
     // ── Hesap 1: Sürücü talebi (DD) ──
-    // Ön teker: DD_initial'dan %100'e lineer rampa (rampTime süresinde)
-    // Arka teker: sürücü zaten gaza basmış durumda → anında %100
-    var DD;
-    if(phase === 'rear') {
-      DD = 100;
-    } else {
-      if(t < rampTime) {
-        DD = DD_initial + (100 - DD_initial) * (t / rampTime);
-      } else {
-        DD = 100;
-      }
-    }
+    // Engel senaryosunda sürücü tam gaz — DD her zaman %100
+    var DD = 100;
 
     // ── Hesap 2: TC hız oranı (SR) ──
     var N_turbin = (v > 1e-6) ? (v / R_eff) * i_total * 60 / (2 * Math.PI) : 0;
@@ -19943,16 +19933,9 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var TR = tcFns.tau(SR);
 
     // ── Hesap 4: Motor torku ──
+    // DD=%100 sabit — motor her zaman tam yük tork eğrisinde çalışır
     var T_full_load = motorTorqueFn(N_engine);
-    var T_idle = T_full_load * T_idle_ratio;
-    var T_engine;
-    if(DD >= 100) {
-      T_engine = T_full_load;
-    } else if(DD > 0) {
-      T_engine = T_idle + (T_full_load - T_idle) * DD / 100;
-    } else {
-      T_engine = T_idle;
-    }
+    var T_engine = T_full_load;
 
     // ── Hesap 5: Teker torku (tek teker) ──
     var T_wheel = T_engine * TR * i_g * i_tr * i_diff * eta_total / n_d;
