@@ -2758,9 +2758,13 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var maxTime = opts.maxTime || 30.0;         // Maksimum simülasyon süresi (s)
   var stallTimeout = opts.stallTimeout || 2.0; // Stall tespit süresi (s)
 
-  // ECM Rate Limiter parametreleri
-  var dN_dt_max = opts.dN_dt_max || 550;     // Maksimum devir artış hızı (RPM/s)
-  var ECM_aktif = false;                      // ECM Tq Limit modu başlangıçta pasif
+  // TC Sıvı Ataleti parametreleri
+  // Konvertör kabuğu içindeki ATF sıvısının rotasyonel ataleti.
+  // Motor sadece rotor+pump impeller değil, dönen sıvıyı da ivmelendirmek zorunda.
+  // SR=0 (stall): J_eff maksimum, SR=1 (lockup): J_eff = sadece mekanik.
+  // Uzman kalibrasyonu: 1C modda stall dengesine oturma ~4-4.5 s → J_fluid ≈ 7.5
+  var J_fluid = opts.J_fluid || 7.5;         // TC sıvı ataleti (kg·m²) — SR=0'daki ek atalet
+  var J_fluid_exp = opts.J_fluid_exp || 1.0;  // SR bağımlılık üssü: J_eff = J_mech + J_fluid*(1-SR)^n
 
   var inp = obsResult.inputParams;
   var stl = obsResult.stallAnalysis;
@@ -2887,11 +2891,17 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     stepCount++;
 
     // ── Hesap 1: Sürücü talebi (DD) ──
+    // Ön teker: sürücü gazı kademeli olarak basar (lineer rampa)
+    // Arka teker: sürücü zaten gaza basmış durumda → anında %100
     var DD;
-    if(t < rampTime) {
-      DD = (t / rampTime) * 100;
-    } else {
+    if(phase === 'rear') {
       DD = 100;
+    } else {
+      if(t < rampTime) {
+        DD = (t / rampTime) * 100;
+      } else {
+        DD = 100;
+      }
     }
 
     // ── Hesap 2: TC hız oranı (SR) ──
@@ -2961,51 +2971,48 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       phi_new = phi - dPhi;
     }
 
-    // ── Hesap 9: Motor devri güncelleme (3 aşamalı) ──
+    // ── Hesap 9: Motor devri güncelleme — TC sıvı dinamiği modeli ──
+    //
+    // Fizik: Motor, TC pump'ın quadratic yükü ve sıvı ataleti ile dengelenir.
+    //   T_pump(N) = (N / K_pump)²          — pump'ın absorbe ettiği tork
+    //   T_net = T_engine(N) - T_pump(N) - pump_drop
+    //   J_eff(SR) = J_mech + J_fluid*(1-SR)^n  — SR'ye bağlı efektif atalet
+    //   alpha = T_net / J_eff              — açısal ivmelenme
+    //
+    // Motor doğal olarak stall devrinde (~N_stall) stabilize olur.
+    // Governed devrine (2500 RPM) asla ulaşamaz — TC pump yükü baskın.
+    // ECM rate limiter YOK — yavaş devir artışı tamamen sıvı ataleti.
 
-    // Aşama A — Ham motor devri hesabı
-    var N_ham;
-    if(SR > 0.80) {
-      // Coupling bölgesi: motor türbini takip eder
-      N_ham = (SR > 0.01) ? N_turbin / SR : N_engine;
-    } else {
-      // Konvertör bölgesi: serbest ivmelenme
-      var J_eff = J_engine + J_tc;
-      var T_pump_load = T_engine * Math.max(0.05, SR) * 0.5;
-      var alpha_engine = (T_engine - T_pump_load) / J_eff;
-      var omega_engine = N_engine * 2 * Math.PI / 60;
-      var omega_new = omega_engine + alpha_engine * dt;
-      N_ham = omega_new * 60 / (2 * Math.PI);
+    // TC pump quadratic yükü: T_pump = (N / K_pump)²
+    var K_pump_val = (tcFns.data && tcFns.data.length > 0) ? tcFns.kpump(Math.max(0, SR)) : 84.0;
+    var T_pump_absorbed = (N_engine / K_pump_val) * (N_engine / K_pump_val);
+
+    // Net tork: motor çıkışı - pump yükü - mekanik kayıplar
+    var T_net_engine = T_engine - T_pump_absorbed - pumpTorqueDrop;
+
+    // SR'ye bağlı efektif atalet
+    // SR=0 (stall): sıvı tamamen durgun → maksimum atalet
+    // SR→1 (lockup): sıvı motor ile birlikte dönüyor → minimum atalet
+    var J_mech = J_engine + J_tc;
+    var SR_factor = Math.pow(Math.max(0, 1 - SR), J_fluid_exp);
+    var J_eff = J_mech + J_fluid * SR_factor;
+
+    // Açısal ivmelenme
+    var alpha_engine = 0;
+    if(T_net_engine > 0) {
+      alpha_engine = T_net_engine / J_eff;
+    } else if(T_net_engine < 0 && N_engine > idleRpm) {
+      // Negatif net tork: motor yavaşlıyor (stall üzerindeyse)
+      alpha_engine = T_net_engine / J_eff;
     }
 
-    // Aşama B — ECM Tq Limit tetikleme kontrolü
-    // Aktifleşme: DD >= 90%, T_req ciddi direnç, motor rölantiden çıkmış
-    if(DD >= 90 && isFinite(T_req_anlik) && T_req_anlik > T_wheel * 0.70 && N_engine > 1200) {
-      ECM_aktif = true;
-    }
-    // Devre dışı kalma: engel direnci önemli ölçüde düşmüş
-    if(ECM_aktif && isFinite(T_req_anlik) && T_req_anlik < T_wheel * 0.30) {
-      ECM_aktif = false;
-    }
+    // RPM güncelleme
+    var omega_engine = N_engine * 2 * Math.PI / 60;
+    var omega_new = omega_engine + alpha_engine * dt;
+    var N_engine_new = omega_new * 60 / (2 * Math.PI);
 
-    // Aşama C — Rate Limiter uygulaması
-    var N_engine_new;
-    var ecm_limited = false;
-    if(ECM_aktif) {
-      var dN_hesaplanan = N_ham - N_engine;
-      var dN_max = dN_dt_max * dt;
-      if(dN_hesaplanan > dN_max) {
-        N_engine_new = N_engine + dN_max;
-        ecm_limited = true;
-      } else {
-        N_engine_new = N_ham;
-      }
-    } else {
-      N_engine_new = N_ham;
-    }
-
-    // Sınırla
-    N_engine_new = Math.max(idleRpm, Math.min(governedSpeed, N_engine_new));
+    // Sınırla: rölanti altına düşmesin
+    N_engine_new = Math.max(idleRpm, N_engine_new);
 
     // ── Faz özet istatistikler ──
     if(phase === 'front') {
@@ -3063,18 +3070,6 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     prev_v = v_new;
     prev_phi = phi_new;
 
-    // ── ECM milestone tespiti ──
-    if(ECM_aktif && !_ms[msPrefix + 'ecm_on']) {
-      addMilestone(msPrefix + 'ecm_on', 'ECM Tq Limit aktif — devir artisi sinirlandirildi', {
-        N_engine: N_engine_new, T_engine: T_engine, T_wheel: T_wheel, T_req: T_req_anlik, DD: DD
-      });
-    }
-    if(!ECM_aktif && _ms[msPrefix + 'ecm_on'] && !_ms[msPrefix + 'ecm_off']) {
-      addMilestone(msPrefix + 'ecm_off', 'ECM Tq Limit devre disi — motor serbest', {
-        N_engine: N_engine_new, T_engine: T_engine, T_wheel: T_wheel, T_req: T_req_anlik
-      });
-    }
-
     // ── Veri kaydı ──
     if(stepCount % logInterval === 0 || stepCount === 1) {
       log.push({
@@ -3093,7 +3088,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         KE: 0.5 * mass * v_new * v_new,
         DD: DD,
         phase: phase,
-        ecm: ECM_aktif
+        ecm: false
       });
     }
 
@@ -3114,7 +3109,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         N_engine_new = idleRpm;
         stallCheckStart = -1; // Stall sayacını sıfırla
         prev_T_wheel_vs_req = false; // Arka teker için sıfırla
-        ECM_aktif = false; // Arka teker için ECM sıfırla
+        // (ECM kaldırıldı — TC sıvı dinamiği modeli kullanılıyor)
         addMilestone('r_contact', 'Arka teker engel kosesine temas', {
           phi_deg: phi_new * 180 / Math.PI, v: v_new, N_engine: N_engine_new
         });
@@ -3218,7 +3213,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       J_tc: J_tc,
       momentumCarry: false,
       phi_start_deg: phi_start * 180 / Math.PI,
-      dN_dt_max: dN_dt_max
+      J_fluid: J_fluid,
+      J_fluid_exp: J_fluid_exp
     },
     // Zaman serisi
     log: log
