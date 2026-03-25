@@ -19863,7 +19863,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   // dengelediğinden T_net ≈ sabit kalır → sabit J_eff ile doğrusal RPM artışı elde edilir.
   // SR'ye bağlı model gereksiz — CAN verisindeki doğrusal profille uyumsuz S-eğrisi üretir.
   // Kalibrasyon: CAN-bus dN/dt ≈ 580 RPM/s, T_net ≈ 280 Nm → J_eff ≈ 4.3 kg·m²
-  var J_fluid = opts.J_fluid || 3.5;         // TC sıvı ataleti (kg·m²) — J_eff = J_mech + J_fluid
+  var J_fluid = opts.J_fluid || 7.0;         // TC sıvı ataleti (kg·m²) — üretici eğrisi + uzman kalibrasyonu (4-4.5s)
 
   var inp = obsResult.inputParams;
   var stl = obsResult.stallAnalysis;
@@ -19933,7 +19933,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
   var tcd = tcNode ? (tcNode.data || {}) : {};
   var tcDataArr = tcd.tcData || [];
-  var pumpTorqueDrop = tcd.pumpTorqueDrop !== undefined ? parseFloat(tcd.pumpTorqueDrop) : 17.6;
+  var pumpTorqueDrop = tcd.pumpTorqueDrop !== undefined ? parseFloat(tcd.pumpTorqueDrop) : 14.9;
   var tcFns = FT_SOLVER.createTCFunctions(tcDataArr);
 
   // Başlangıç açısı
