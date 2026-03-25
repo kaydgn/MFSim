@@ -3591,6 +3591,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += pRow('J_eff (toplam)', num(dyn.params.J_engine + dyn.params.J_tc + dyn.params.J_fluid, 2) + ' kg.m2  [J_engine + J_tc + J_fluid]');
       r += pRow('Baslangic Acisi (phi_start)', num(dyn.params.phi_start_deg, 2) + ' derece');
       r += pRow('Arka Teker Baslangic', 'v=0 (momentum tasinmaz, durustan baslar)');
+      if(dyn.params.gbTorqueLimit && dyn.params.gbTorqueLimit > 0) {
+        r += pRow('Sanziman Cikis Tork Limiti', num(dyn.params.gbTorqueLimit, 0) + ' Nm');
+      }
       r += '\n';
 
       // ┌─────────────────────────────────────────────┐
@@ -3717,6 +3720,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         }
 
         // Kolon tanımları
+        var hasGbLimit = dyn.params.gbTorqueLimit && dyn.params.gbTorqueLimit > 0;
         var cols = [
           { h: 't(s)',    w: 7 },
           { h: 'v(m/s)',  w: 8 },
@@ -3724,6 +3728,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           { h: 'T_eng',   w: 7 },
           { h: 'TR',      w: 6 },
           { h: 'SR',      w: 6 },
+          { h: 'T_gb',    w: 8 },
           { h: 'T_whl',   w: 8 },
           { h: 'T_req',   w: 8 },
           { h: 'phi(d)',  w: 8 },
@@ -3780,6 +3785,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           row += pad(num(d.T_engine, 0), 7, 'right') + ' ';
           row += pad(num(d.TR, 3), 6, 'right') + ' ';
           row += pad(num(d.SR, 3), 6, 'right') + ' ';
+          var gbStr = num(d.T_gb_out, 0);
+          if(d.T_gb_lim) gbStr += '*';
+          row += pad(gbStr, 8, 'right') + ' ';
           row += pad(num(d.T_wheel, 0), 8, 'right') + ' ';
           row += pad(isFinite(d.T_req) ? num(d.T_req, 0) : '---', 8, 'right') + ' ';
           row += pad(num(d.phi_deg, 2), 8, 'right') + ' ';
@@ -3802,6 +3810,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '    T_eng   = Motor torku (Nm)\n';
         r += '    TR      = Tork konvertor tork orani\n';
         r += '    SR      = Tork konvertor hiz orani (N_turbin/N_motor)\n';
+        r += '    T_gb    = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = limit uygulanmis, limit: ' + num(dyn.params.gbTorqueLimit, 0) + ' Nm)' : '') + '\n';
         r += '    T_whl   = Tek teker torku (Nm)\n';
         r += '    T_req   = Anlik gerekli tork — tek teker (Nm)\n';
         r += '    phi(d)  = Acisal konum (derece, +: tirmanis, 0: tepe, -: inis)\n';
