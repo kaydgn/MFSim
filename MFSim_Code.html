@@ -19770,7 +19770,8 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
 function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var opts = dynOpts || {};
   var dt = opts.dt || 0.001;                  // Zaman adımı (s) — varsayılan 1 ms
-  var rampTime = opts.rampTime || 0.5;        // Gaz pedalı rampa süresi (s)
+  var rampTime = opts.rampTime || 0.42;       // Gaz pedalı rampa süresi (s)
+  var DD_initial = opts.DD_initial || 9;      // DD başlangıç değeri (%) — sürücü ayağı pedalde
   var Cr = opts.Cr || 0.015;                  // Yuvarlanma direnci katsayısı
 
   // Motor ataleti: önce opts'tan, yoksa motor bileşeninden oku
@@ -19918,14 +19919,14 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     stepCount++;
 
     // ── Hesap 1: Sürücü talebi (DD) ──
-    // Ön teker: sürücü gazı kademeli olarak basar (lineer rampa)
+    // Ön teker: DD_initial'dan %100'e lineer rampa (rampTime süresinde)
     // Arka teker: sürücü zaten gaza basmış durumda → anında %100
     var DD;
     if(phase === 'rear') {
       DD = 100;
     } else {
       if(t < rampTime) {
-        DD = (t / rampTime) * 100;
+        DD = DD_initial + (100 - DD_initial) * (t / rampTime);
       } else {
         DD = 100;
       }
@@ -20233,6 +20234,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // Parametreler
     params: {
       rampTime: rampTime,
+      DD_initial: DD_initial,
       Cr: Cr,
       J_engine: J_engine,
       J_engine_source: (isFinite(J_engine_from_spec) && J_engine_from_spec > 0) ? 'motor bileseni' : 'varsayilan',
@@ -34928,7 +34930,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += '  |' + pad(' SIMULASYON PARAMETRELERI', 64) + '|\n';
       r += '  +' + ln('-', 64) + '+\n';
       r += pRow('Zaman Adimi (dt)', num(dyn.dt * 1000, 1) + ' ms');
-      r += pRow('Gaz Pedali Rampa Suresi', num(dyn.params.rampTime, 1) + ' s');
+      r += pRow('Gaz Pedali Rampa Suresi', num(dyn.params.rampTime, 2) + ' s  (DD: %' + num(dyn.params.DD_initial, 0) + ' -> %100)');
       r += pRow('Yuvarlanma Direnci (Cr)', num(dyn.params.Cr, 4));
       r += pRow('Motor Ataleti (J_engine)', num(dyn.params.J_engine, 4) + ' kg.m2  (' + (dyn.params.J_engine_source || 'varsayilan') + ')');
       r += pRow('TC Pump Ataleti (J_tc)', num(dyn.params.J_tc, 2) + ' kg.m2');
