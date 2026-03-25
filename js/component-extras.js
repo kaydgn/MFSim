@@ -617,6 +617,14 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;"><span id="ve-obs-gear-ratio-' + nid + '">' + selectedGearRatio + '</span> <span style="font-size:0.52rem; color:var(--text-muted); font-weight:400;">( Şanzıman )</span></td>';
   html += '</tr>';
 
+  // Şanzıman çıkış tork limiti (kullanıcı girer)
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Şanzıman Çıkış Tork Limiti <span style="color:var(--text-muted); font-weight:400;">[Nm]</span></th>';
+  var gbTorqueLimit = (node.data.gbTorqueLimit !== undefined && node.data.gbTorqueLimit !== null) ? node.data.gbTorqueLimit : '';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-gb-torque-limit-' + nid + '" value="' + gbTorqueLimit + '" step="10" min="0" placeholder="ör: 3200" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '</tr>';
+  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:0.52rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Şanzıman çıkışındaki maksimum tork değeri. Girilirse şanzıman çıkış torku bu değerle sınırlandırılır. Boş bırakılırsa sınırlama uygulanmaz.</td></tr>';
+
   html += '</table>';
 
   html += '</div>';
@@ -658,6 +666,13 @@ function onVEObstacleCrossingChange(nodeId) {
   if(cdEl) {
     var cdVal = cdEl.value.trim();
     node.data.cornerDeflection = cdVal === '' ? undefined : pf(cdVal, undefined);
+  }
+
+  // Şanzıman çıkış tork limiti
+  var gbTlEl = elFn('ve-obs-gb-torque-limit-' + nodeId);
+  if(gbTlEl) {
+    var gbTlVal = gbTlEl.value.trim();
+    node.data.gbTorqueLimit = gbTlVal === '' ? undefined : pf(gbTlVal, undefined);
   }
 
   // Seçilen vites

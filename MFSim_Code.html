@@ -19320,6 +19320,11 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
     ? parseFloat(obsData.cornerDeflection) : NaN;
   var hasCornerDefl = isFinite(cornerDeflection) && cornerDeflection > 0;
 
+  // Şanzıman çıkış tork limiti
+  var gbTorqueLimit = (obsData.gbTorqueLimit !== undefined && obsData.gbTorqueLimit !== null)
+    ? parseFloat(obsData.gbTorqueLimit) : NaN;
+  var hasGbTorqueLimit = isFinite(gbTorqueLimit) && gbTorqueLimit > 0;
+
   // Şanzıman vites oranı
   var gearboxNode = nodes.find(function(n) { return n.type === 'gearbox'; });
   var gd = gearboxNode ? (gearboxNode.data || {}) : {};
@@ -19346,7 +19351,8 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
       rollingRadius: rollingRadius,
       gearName: gearName,
       gearRatio: gearRatio,
-      cornerDeflection: hasCornerDefl ? cornerDeflection : null
+      cornerDeflection: hasCornerDefl ? cornerDeflection : null,
+      gbTorqueLimit: hasGbTorqueLimit ? gbTorqueLimit : null
     },
     geometry: {},
     canCross: false,
@@ -19814,6 +19820,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var g_const = 9.81;
   var W = mass * g_const;
   var n_d = stl.n_d;
+  var gbTorqueLimit_dyn = (inp.gbTorqueLimit && inp.gbTorqueLimit > 0) ? inp.gbTorqueLimit : null;
 
   // Aktarma oranları
   var i_g = stl.gearRatio;
@@ -19939,8 +19946,18 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var T_full_load = motorTorqueFn(N_engine);
     var T_engine = T_full_load;
 
-    // ── Hesap 5: Teker torku (tek teker) ──
-    var T_wheel = T_engine * TR * i_g * i_tr * i_diff * eta_total / n_d;
+    // ── Hesap 5: Şanzıman çıkış torku ve teker torku ──
+    // T_gb_out = T_engine × TR × i_g  (şanzıman çıkışındaki tork)
+    var T_gb_out = T_engine * TR * i_g;
+    var T_gb_limited = false;
+    if(gbTorqueLimit_dyn && T_gb_out > gbTorqueLimit_dyn) {
+      T_gb_out = gbTorqueLimit_dyn;
+      T_gb_limited = true;
+    }
+    // T_wheel = T_gb_out × i_tr × i_diff × η_downstream / n_d
+    // η_downstream = η_total / η_gear (şanzıman verimi gb_out'ta zaten yansımış)
+    var eta_downstream = stl.eta_gear > 0 ? eta_total / stl.eta_gear : eta_total;
+    var T_wheel = T_gb_out * eta_downstream * i_tr * i_diff / n_d;
 
     // ── Hesap 6: Anlık gerekli tork ──
     var moment_kolu = R_eff * Math.sin(phi);
@@ -20097,6 +20114,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         T_engine: T_engine,
         TR: TR,
         SR: SR,
+        T_gb_out: T_gb_out,
+        T_gb_lim: T_gb_limited,
         T_wheel: T_wheel,
         T_req: T_req_anlik,
         phi_deg: phi_new * 180 / Math.PI,
@@ -20105,8 +20124,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         F_net: F_net,
         KE: 0.5 * mass * v_new * v_new,
         DD: DD,
-        phase: phase,
-        ecm: false
+        phase: phase
       });
     }
 
@@ -20232,7 +20250,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       J_tc: J_tc,
       momentumCarry: false,
       phi_start_deg: phi_start * 180 / Math.PI,
-      J_fluid: J_fluid
+      J_fluid: J_fluid,
+      gbTorqueLimit: gbTorqueLimit_dyn
     },
     // Zaman serisi
     log: log
@@ -22297,6 +22316,14 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '<td style="padding:6px 8px; background:var(--bg-secondary); color:var(--text-primary); font-weight:500; text-align:right;"><span id="ve-obs-gear-ratio-' + nid + '">' + selectedGearRatio + '</span> <span style="font-size:0.52rem; color:var(--text-muted); font-weight:400;">( Şanzıman )</span></td>';
   html += '</tr>';
 
+  // Şanzıman çıkış tork limiti (kullanıcı girer)
+  html += '<tr style="border-bottom:1px solid var(--border-color);">';
+  html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Şanzıman Çıkış Tork Limiti <span style="color:var(--text-muted); font-weight:400;">[Nm]</span></th>';
+  var gbTorqueLimit = (node.data.gbTorqueLimit !== undefined && node.data.gbTorqueLimit !== null) ? node.data.gbTorqueLimit : '';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-obs-gb-torque-limit-' + nid + '" value="' + gbTorqueLimit + '" step="10" min="0" placeholder="ör: 3200" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; text-align:right;" onchange="onVEObstacleCrossingChange(\'' + nid + '\')"></td>';
+  html += '</tr>';
+  html += '<tr><td colspan="2" style="padding:4px 6px; font-size:0.52rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Şanzıman çıkışındaki maksimum tork değeri. Girilirse şanzıman çıkış torku bu değerle sınırlandırılır. Boş bırakılırsa sınırlama uygulanmaz.</td></tr>';
+
   html += '</table>';
 
   html += '</div>';
@@ -22338,6 +22365,13 @@ function onVEObstacleCrossingChange(nodeId) {
   if(cdEl) {
     var cdVal = cdEl.value.trim();
     node.data.cornerDeflection = cdVal === '' ? undefined : pf(cdVal, undefined);
+  }
+
+  // Şanzıman çıkış tork limiti
+  var gbTlEl = elFn('ve-obs-gb-torque-limit-' + nodeId);
+  if(gbTlEl) {
+    var gbTlVal = gbTlEl.value.trim();
+    node.data.gbTorqueLimit = gbTlVal === '' ? undefined : pf(gbTlVal, undefined);
   }
 
   // Seçilen vites
@@ -34765,6 +34799,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += pRow('J_eff (toplam)', num(dyn.params.J_engine + dyn.params.J_tc + dyn.params.J_fluid, 2) + ' kg.m2  [J_engine + J_tc + J_fluid]');
       r += pRow('Baslangic Acisi (phi_start)', num(dyn.params.phi_start_deg, 2) + ' derece');
       r += pRow('Arka Teker Baslangic', 'v=0 (momentum tasinmaz, durustan baslar)');
+      if(dyn.params.gbTorqueLimit && dyn.params.gbTorqueLimit > 0) {
+        r += pRow('Sanziman Cikis Tork Limiti', num(dyn.params.gbTorqueLimit, 0) + ' Nm');
+      }
       r += '\n';
 
       // ┌─────────────────────────────────────────────┐
@@ -34891,6 +34928,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         }
 
         // Kolon tanımları
+        var hasGbLimit = dyn.params.gbTorqueLimit && dyn.params.gbTorqueLimit > 0;
         var cols = [
           { h: 't(s)',    w: 7 },
           { h: 'v(m/s)',  w: 8 },
@@ -34898,6 +34936,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           { h: 'T_eng',   w: 7 },
           { h: 'TR',      w: 6 },
           { h: 'SR',      w: 6 },
+          { h: 'T_gb',    w: 8 },
           { h: 'T_whl',   w: 8 },
           { h: 'T_req',   w: 8 },
           { h: 'phi(d)',  w: 8 },
@@ -34954,6 +34993,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           row += pad(num(d.T_engine, 0), 7, 'right') + ' ';
           row += pad(num(d.TR, 3), 6, 'right') + ' ';
           row += pad(num(d.SR, 3), 6, 'right') + ' ';
+          var gbStr = num(d.T_gb_out, 0);
+          if(d.T_gb_lim) gbStr += '*';
+          row += pad(gbStr, 8, 'right') + ' ';
           row += pad(num(d.T_wheel, 0), 8, 'right') + ' ';
           row += pad(isFinite(d.T_req) ? num(d.T_req, 0) : '---', 8, 'right') + ' ';
           row += pad(num(d.phi_deg, 2), 8, 'right') + ' ';
@@ -34976,6 +35018,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '    T_eng   = Motor torku (Nm)\n';
         r += '    TR      = Tork konvertor tork orani\n';
         r += '    SR      = Tork konvertor hiz orani (N_turbin/N_motor)\n';
+        r += '    T_gb    = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = limit uygulanmis, limit: ' + num(dyn.params.gbTorqueLimit, 0) + ' Nm)' : '') + '\n';
         r += '    T_whl   = Tek teker torku (Nm)\n';
         r += '    T_req   = Anlik gerekli tork — tek teker (Nm)\n';
         r += '    phi(d)  = Acisal konum (derece, +: tirmanis, 0: tepe, -: inis)\n';

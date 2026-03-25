@@ -2291,6 +2291,11 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
     ? parseFloat(obsData.cornerDeflection) : NaN;
   var hasCornerDefl = isFinite(cornerDeflection) && cornerDeflection > 0;
 
+  // Şanzıman çıkış tork limiti
+  var gbTorqueLimit = (obsData.gbTorqueLimit !== undefined && obsData.gbTorqueLimit !== null)
+    ? parseFloat(obsData.gbTorqueLimit) : NaN;
+  var hasGbTorqueLimit = isFinite(gbTorqueLimit) && gbTorqueLimit > 0;
+
   // Şanzıman vites oranı
   var gearboxNode = nodes.find(function(n) { return n.type === 'gearbox'; });
   var gd = gearboxNode ? (gearboxNode.data || {}) : {};
@@ -2317,7 +2322,8 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
       rollingRadius: rollingRadius,
       gearName: gearName,
       gearRatio: gearRatio,
-      cornerDeflection: hasCornerDefl ? cornerDeflection : null
+      cornerDeflection: hasCornerDefl ? cornerDeflection : null,
+      gbTorqueLimit: hasGbTorqueLimit ? gbTorqueLimit : null
     },
     geometry: {},
     canCross: false,
@@ -2785,6 +2791,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var g_const = 9.81;
   var W = mass * g_const;
   var n_d = stl.n_d;
+  var gbTorqueLimit_dyn = (inp.gbTorqueLimit && inp.gbTorqueLimit > 0) ? inp.gbTorqueLimit : null;
 
   // Aktarma oranları
   var i_g = stl.gearRatio;
@@ -2910,8 +2917,18 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var T_full_load = motorTorqueFn(N_engine);
     var T_engine = T_full_load;
 
-    // ── Hesap 5: Teker torku (tek teker) ──
-    var T_wheel = T_engine * TR * i_g * i_tr * i_diff * eta_total / n_d;
+    // ── Hesap 5: Şanzıman çıkış torku ve teker torku ──
+    // T_gb_out = T_engine × TR × i_g  (şanzıman çıkışındaki tork)
+    var T_gb_out = T_engine * TR * i_g;
+    var T_gb_limited = false;
+    if(gbTorqueLimit_dyn && T_gb_out > gbTorqueLimit_dyn) {
+      T_gb_out = gbTorqueLimit_dyn;
+      T_gb_limited = true;
+    }
+    // T_wheel = T_gb_out × i_tr × i_diff × η_downstream / n_d
+    // η_downstream = η_total / η_gear (şanzıman verimi gb_out'ta zaten yansımış)
+    var eta_downstream = stl.eta_gear > 0 ? eta_total / stl.eta_gear : eta_total;
+    var T_wheel = T_gb_out * eta_downstream * i_tr * i_diff / n_d;
 
     // ── Hesap 6: Anlık gerekli tork ──
     var moment_kolu = R_eff * Math.sin(phi);
@@ -3068,6 +3085,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         T_engine: T_engine,
         TR: TR,
         SR: SR,
+        T_gb_out: T_gb_out,
+        T_gb_lim: T_gb_limited,
         T_wheel: T_wheel,
         T_req: T_req_anlik,
         phi_deg: phi_new * 180 / Math.PI,
@@ -3076,8 +3095,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         F_net: F_net,
         KE: 0.5 * mass * v_new * v_new,
         DD: DD,
-        phase: phase,
-        ecm: false
+        phase: phase
       });
     }
 
@@ -3203,7 +3221,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       J_tc: J_tc,
       momentumCarry: false,
       phi_start_deg: phi_start * 180 / Math.PI,
-      J_fluid: J_fluid
+      J_fluid: J_fluid,
+      gbTorqueLimit: gbTorqueLimit_dyn
     },
     // Zaman serisi
     log: log
