@@ -2743,7 +2743,8 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
 function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var opts = dynOpts || {};
   var dt = opts.dt || 0.001;                  // Zaman adımı (s) — varsayılan 1 ms
-  var rampTime = opts.rampTime || 0.5;        // Gaz pedalı rampa süresi (s)
+  var rampTime = opts.rampTime || 0.42;       // Gaz pedalı rampa süresi (s)
+  var DD_initial = opts.DD_initial || 9;      // DD başlangıç değeri (%) — sürücü ayağı pedalde
   var Cr = opts.Cr || 0.015;                  // Yuvarlanma direnci katsayısı
 
   // Motor ataleti: önce opts'tan, yoksa motor bileşeninden oku
@@ -2891,14 +2892,14 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     stepCount++;
 
     // ── Hesap 1: Sürücü talebi (DD) ──
-    // Ön teker: sürücü gazı kademeli olarak basar (lineer rampa)
+    // Ön teker: DD_initial'dan %100'e lineer rampa (rampTime süresinde)
     // Arka teker: sürücü zaten gaza basmış durumda → anında %100
     var DD;
     if(phase === 'rear') {
       DD = 100;
     } else {
       if(t < rampTime) {
-        DD = (t / rampTime) * 100;
+        DD = DD_initial + (100 - DD_initial) * (t / rampTime);
       } else {
         DD = 100;
       }
@@ -3206,6 +3207,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // Parametreler
     params: {
       rampTime: rampTime,
+      DD_initial: DD_initial,
       Cr: Cr,
       J_engine: J_engine,
       J_engine_source: (isFinite(J_engine_from_spec) && J_engine_from_spec > 0) ? 'motor bileseni' : 'varsayilan',

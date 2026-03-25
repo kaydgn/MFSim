@@ -3747,7 +3747,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += '  |' + pad(' SIMULASYON PARAMETRELERI', 64) + '|\n';
       r += '  +' + ln('-', 64) + '+\n';
       r += pRow('Zaman Adimi (dt)', num(dyn.dt * 1000, 1) + ' ms');
-      r += pRow('Gaz Pedali Rampa Suresi', num(dyn.params.rampTime, 1) + ' s');
+      r += pRow('Gaz Pedali Rampa Suresi', num(dyn.params.rampTime, 2) + ' s  (DD: %' + num(dyn.params.DD_initial, 0) + ' -> %100)');
       r += pRow('Yuvarlanma Direnci (Cr)', num(dyn.params.Cr, 4));
       r += pRow('Motor Ataleti (J_engine)', num(dyn.params.J_engine, 4) + ' kg.m2  (' + (dyn.params.J_engine_source || 'varsayilan') + ')');
       r += pRow('TC Pump Ataleti (J_tc)', num(dyn.params.J_tc, 2) + ' kg.m2');
