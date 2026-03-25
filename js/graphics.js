@@ -3753,8 +3753,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += pRow('TC Pump Ataleti (J_tc)', num(dyn.params.J_tc, 2) + ' kg.m2');
       r += pRow('Baslangic Acisi (phi_start)', num(dyn.params.phi_start_deg, 2) + ' derece');
       r += pRow('Arka Teker Baslangic', 'v=0 (momentum tasinmaz, durustan baslar)');
-      r += pRow('TC Sivi Ataleti (J_fluid)', num(dyn.params.J_fluid, 2) + ' kg.m2  (SR=0 ek atalet)');
-      r += pRow('J_fluid SR Ussel (n)', num(dyn.params.J_fluid_exp, 1) + '  [J_eff = J_mech + J_fluid*(1-SR)^n]');
+      r += pRow('TC Sivi Ataleti (J_fluid)', num(dyn.params.J_fluid, 2) + ' kg.m2  [J_eff = J_mech + J_fluid = sabit]');
       r += '\n';
 
       // ┌─────────────────────────────────────────────┐

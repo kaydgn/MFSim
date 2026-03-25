@@ -19848,13 +19848,13 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var maxTime = opts.maxTime || 30.0;         // Maksimum simülasyon süresi (s)
   var stallTimeout = opts.stallTimeout || 2.0; // Stall tespit süresi (s)
 
-  // TC Sıvı Ataleti parametreleri
+  // TC Sıvı Ataleti parametresi
   // Konvertör kabuğu içindeki ATF sıvısının rotasyonel ataleti.
-  // Motor sadece rotor+pump impeller değil, dönen sıvıyı da ivmelendirmek zorunda.
-  // SR=0 (stall): J_eff maksimum, SR=1 (lockup): J_eff = sadece mekanik.
-  // Uzman kalibrasyonu: CAN verisinden engel koşulunda ortalama J_eff ~4-5 kg·m² → J_fluid ≈ 3.5
-  var J_fluid = opts.J_fluid || 3.5;         // TC sıvı ataleti (kg·m²) — engel senaryosu kalibrasyonu
-  var J_fluid_exp = opts.J_fluid_exp || 1.0;  // SR bağımlılık üssü: J_eff = J_mech + J_fluid*(1-SR)^n
+  // CAN-bus doğrulaması: motor tork artışı ile TC pump quadratic yükü birbirini
+  // dengelediğinden T_net ≈ sabit kalır → sabit J_eff ile doğrusal RPM artışı elde edilir.
+  // SR'ye bağlı model gereksiz — CAN verisindeki doğrusal profille uyumsuz S-eğrisi üretir.
+  // Kalibrasyon: CAN-bus dN/dt ≈ 580 RPM/s, T_net ≈ 280 Nm → J_eff ≈ 4.3 kg·m²
+  var J_fluid = opts.J_fluid || 3.5;         // TC sıvı ataleti (kg·m²) — J_eff = J_mech + J_fluid
 
   var inp = obsResult.inputParams;
   var stl = obsResult.stallAnalysis;
@@ -20080,12 +20080,11 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // Net tork: motor çıkışı - pump yükü - mekanik kayıplar
     var T_net_engine = T_engine - T_pump_absorbed - pumpTorqueDrop;
 
-    // SR'ye bağlı efektif atalet
-    // SR=0 (stall): sıvı tamamen durgun → maksimum atalet
-    // SR→1 (lockup): sıvı motor ile birlikte dönüyor → minimum atalet
+    // Efektif atalet: mekanik parçalar + TC sıvı ataleti (sabit)
+    // CAN-bus doğrulaması: T_net ≈ sabit olduğundan sabit J_eff
+    // doğrusal RPM artış profili üretir (CAN ile uyumlu).
     var J_mech = J_engine + J_tc;
-    var SR_factor = Math.pow(Math.max(0, 1 - SR), J_fluid_exp);
-    var J_eff = J_mech + J_fluid * SR_factor;
+    var J_eff = J_mech + J_fluid;
 
     // Açısal ivmelenme
     var alpha_engine = 0;
@@ -20303,8 +20302,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       J_tc: J_tc,
       momentumCarry: false,
       phi_start_deg: phi_start * 180 / Math.PI,
-      J_fluid: J_fluid,
-      J_fluid_exp: J_fluid_exp
+      J_fluid: J_fluid
     },
     // Zaman serisi
     log: log
@@ -34999,8 +34997,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += pRow('TC Pump Ataleti (J_tc)', num(dyn.params.J_tc, 2) + ' kg.m2');
       r += pRow('Baslangic Acisi (phi_start)', num(dyn.params.phi_start_deg, 2) + ' derece');
       r += pRow('Arka Teker Baslangic', 'v=0 (momentum tasinmaz, durustan baslar)');
-      r += pRow('TC Sivi Ataleti (J_fluid)', num(dyn.params.J_fluid, 2) + ' kg.m2  (SR=0 ek atalet)');
-      r += pRow('J_fluid SR Ussel (n)', num(dyn.params.J_fluid_exp, 1) + '  [J_eff = J_mech + J_fluid*(1-SR)^n]');
+      r += pRow('TC Sivi Ataleti (J_fluid)', num(dyn.params.J_fluid, 2) + ' kg.m2  [J_eff = J_mech + J_fluid = sabit]');
       r += '\n';
 
       // ┌─────────────────────────────────────────────┐
