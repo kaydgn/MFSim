@@ -19852,8 +19852,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   // Konvertör kabuğu içindeki ATF sıvısının rotasyonel ataleti.
   // Motor sadece rotor+pump impeller değil, dönen sıvıyı da ivmelendirmek zorunda.
   // SR=0 (stall): J_eff maksimum, SR=1 (lockup): J_eff = sadece mekanik.
-  // Uzman kalibrasyonu: 1C modda stall dengesine oturma ~4-4.5 s → J_fluid ≈ 7.5
-  var J_fluid = opts.J_fluid || 7.5;         // TC sıvı ataleti (kg·m²) — SR=0'daki ek atalet
+  // Uzman kalibrasyonu: CAN verisinden engel koşulunda ortalama J_eff ~4-5 kg·m² → J_fluid ≈ 3.5
+  var J_fluid = opts.J_fluid || 3.5;         // TC sıvı ataleti (kg·m²) — engel senaryosu kalibrasyonu
   var J_fluid_exp = opts.J_fluid_exp || 1.0;  // SR bağımlılık üssü: J_eff = J_mech + J_fluid*(1-SR)^n
 
   var inp = obsResult.inputParams;
