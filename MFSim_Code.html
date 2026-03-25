@@ -19864,7 +19864,10 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   }
 
   var mass = inp.mass;
-  var R_eff = inp.R_eff;
+  // Köşe defleksiyonu varsa R_corner kullan (statik analizle tutarlılık)
+  var R_eff = (obsResult.cornerCorrection && obsResult.cornerCorrection.R_corner > 0)
+            ? obsResult.cornerCorrection.R_corner
+            : inp.R_eff;
   var h = inp.h;
   var a1 = inp.a1;
   var a2 = inp.a2;
