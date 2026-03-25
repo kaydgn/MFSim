@@ -3455,47 +3455,56 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   }
   r += '\n';
 
-  // 5. MOTOR VERILERI
+  // 5-6. MOTOR & TORK KONVERTOR VERILERI (yan yana)
   var _engNode = nodes.find(function(n) { return n.type === 'engine'; });
   var _engD = _engNode ? (_engNode.data || {}) : {};
   var _engSpecs = _engD.motorSpecs || {};
   var _engTorqueData = _engD.torqueData || [];
-  r += ln('-', W) + '\n  MOTOR VERILERI\n' + ln('-', W) + '\n';
-  var motorAdi = _engNode ? (_engNode.customName || '') : '';
-  if(motorAdi) r += pRow('Motor', ascii(motorAdi));
-  if(_engSpecs.governedSpeed) r += pRow('Governed Devir', num(parseFloat(_engSpecs.governedSpeed), 0) + ' RPM');
-  if(_engSpecs.idleRpm) r += pRow('Rolanti Devir', num(parseFloat(_engSpecs.idleRpm), 0) + ' RPM');
-  if(_engSpecs.inertia) r += pRow('Motor Ataleti', num(parseFloat(_engSpecs.inertia), 4) + ' kg.m2');
-  // Motor tork eğrisi tablosu
-  if(_engTorqueData.length > 0) {
-    r += '\n  Motor Tork Egrisi:\n';
-    r += '    ' + pad('RPM', 8, 'right') + pad('Tork (Nm)', 12, 'right') + '\n';
-    r += '    ' + ln('-', 20) + '\n';
-    for(var ti = 0; ti < _engTorqueData.length; ti++) {
-      var tp = _engTorqueData[ti];
-      r += '    ' + pad(num(tp.rpm || tp.x, 0), 8, 'right') + pad(num(tp.torque || tp.y, 1), 12, 'right') + '\n';
-    }
-  }
-  r += '\n';
-
-  // 6. TORK KONVERTOR VERILERI
   var _tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
   var _tcD = _tcNode ? (_tcNode.data || {}) : {};
   var _tcDataArr = _tcD.tcData || [];
-  r += ln('-', W) + '\n  TORK KONVERTOR VERILERI\n' + ln('-', W) + '\n';
+
+  var motorAdi = _engNode ? (_engNode.customName || '') : '';
   var tcAdi = _tcNode ? (_tcNode.customName || '') : '';
-  if(tcAdi) r += pRow('Konvertor', ascii(tcAdi));
-  if(_tcD.pumpTorqueDrop !== undefined) r += pRow('Pump Tork Dusumu', num(parseFloat(_tcD.pumpTorqueDrop), 1) + ' Nm');
-  if(_tcDataArr.length > 0) {
-    r += '\n  TC Karakteristik Tablosu:\n';
-    r += '    ' + pad('SR', 8, 'right') + pad('K_pump', 10, 'right') + pad('TR', 8, 'right') + '\n';
-    r += '    ' + ln('-', 26) + '\n';
-    for(var tci = 0; tci < _tcDataArr.length; tci++) {
-      var tc = _tcDataArr[tci];
-      r += '    ' + pad(num(tc.sr, 3), 8, 'right') + pad(num(tc.kpump, 2), 10, 'right') + pad(num(tc.tau, 3), 8, 'right') + '\n';
-    }
-  }
+
+  r += ln('-', W) + '\n  MOTOR & TORK KONVERTOR VERILERI\n' + ln('-', W) + '\n';
+
+  // Üst bilgiler yan yana
+  var cL = 38, cR = 38;
+  if(motorAdi) r += '  ' + pad('Motor: ' + ascii(motorAdi), cL) + (tcAdi ? 'TC: ' + ascii(tcAdi) : '') + '\n';
+  var govStr = _engSpecs.governedSpeed ? num(parseFloat(_engSpecs.governedSpeed), 0) + ' RPM' : '-';
+  var idlStr = _engSpecs.idleRpm ? num(parseFloat(_engSpecs.idleRpm), 0) + ' RPM' : '-';
+  var ineStr = _engSpecs.inertia ? num(parseFloat(_engSpecs.inertia), 4) + ' kg.m2' : '-';
+  var pdStr = _tcD.pumpTorqueDrop !== undefined ? num(parseFloat(_tcD.pumpTorqueDrop), 1) + ' Nm' : '-';
+  r += '  ' + pad('Governed: ' + govStr, cL) + 'Pump Dusumu: ' + pdStr + '\n';
+  r += '  ' + pad('Rolanti: ' + idlStr, cL) + '\n';
+  r += '  ' + pad('Atalet: ' + ineStr, cL) + '\n';
   r += '\n';
+
+  // Tablolar yan yana
+  var maxRows = Math.max(_engTorqueData.length, _tcDataArr.length);
+  if(maxRows > 0) {
+    // Başlıklar
+    r += '  ' + pad('Motor Tork Egrisi', cL) + 'TC Karakteristik\n';
+    r += '  ' + pad(pad('RPM', 7, 'right') + pad('Tork(Nm)', 11, 'right'), cL);
+    r += pad('SR', 7, 'right') + pad('K_pump', 9, 'right') + pad('TR', 7, 'right') + '\n';
+    r += '  ' + pad(ln('-', 18), cL) + ln('-', 23) + '\n';
+
+    for(var ri = 0; ri < maxRows; ri++) {
+      var leftStr = '';
+      if(ri < _engTorqueData.length) {
+        var tp = _engTorqueData[ri];
+        leftStr = pad(num(tp.rpm || tp.x, 0), 7, 'right') + pad(num(tp.torque || tp.y, 1), 11, 'right');
+      }
+      var rightStr = '';
+      if(ri < _tcDataArr.length) {
+        var tc = _tcDataArr[ri];
+        rightStr = pad(num(tc.sr, 3), 7, 'right') + pad(num(tc.kpump, 2), 9, 'right') + pad(num(tc.tau, 3), 7, 'right');
+      }
+      r += '  ' + pad(leftStr, cL) + rightStr + '\n';
+    }
+    r += '\n';
+  }
 
   // 7. AKTARMA PARAMETRELERI
   var stl = obs.stallAnalysis;
@@ -3612,59 +3621,8 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       }
       r += '\n';
 
-      // ┌─────────────────────────────────────────────┐
-      //  ONEMLI OLAYLAR (MILESTONES) KRONOLOJISI
-      // └─────────────────────────────────────────────┘
+      // Milestones — zaman serisi tablosunda annotate edilecek
       var ms = dyn.milestones || [];
-      if(ms.length > 0) {
-        r += '  +' + ln('-', 64) + '+\n';
-        r += '  |' + pad(' ONEMLI OLAYLAR KRONOLOJISI', 64) + '|\n';
-        r += '  +' + ln('-', 64) + '+\n\n';
-
-        // Tablo başlığı
-        r += '   ' + pad('Zaman', 9) + pad('Faz', 7) + 'Olay\n';
-        r += '   ' + ln('-', 9) + ln('-', 7) + ln('-', 44) + '\n';
-
-        for(var mi = 0; mi < ms.length; mi++) {
-          var m = ms[mi];
-          var mTime = pad(num(m.t, 3) + ' s', 9, 'right');
-          var mPhase = pad(m.phase === 'front' ? '[On]' : '[Arka]', 7);
-          var mLabel = ascii(m.label);
-
-          r += '   ' + mTime + mPhase + mLabel + '\n';
-
-          // Detay satırları (milestone'a bağlı ek bilgiler)
-          var det = [];
-          if(m.T_wheel !== undefined && m.T_req !== undefined) {
-            det.push('T_wheel=' + num(m.T_wheel, 0) + ' Nm, T_req=' + (isFinite(m.T_req) ? num(m.T_req, 0) : '---') + ' Nm');
-          }
-          if(m.v !== undefined) {
-            det.push('v=' + num(m.v, 4) + ' m/s (' + num(m.v * 3.6, 2) + ' km/h)');
-          }
-          if(m.N_engine !== undefined) {
-            det.push('N_engine=' + num(m.N_engine, 0) + ' RPM');
-          }
-          if(m.KE !== undefined) {
-            det.push('KE=' + num(m.KE, 0) + ' J');
-          }
-          if(m.DD !== undefined) {
-            det.push('DD=' + num(m.DD, 1) + '%');
-          }
-          if(m.phi_deg !== undefined) {
-            det.push('phi=' + num(m.phi_deg, 2) + ' derece');
-          }
-          if(m.margin_pct !== undefined) {
-            det.push('marj=' + (m.margin_pct >= 0 ? '+' : '') + num(m.margin_pct, 1) + '%');
-          }
-          if(m.duration !== undefined) {
-            det.push('sure=' + num(m.duration, 3) + ' s');
-          }
-          if(det.length > 0) {
-            r += '   ' + pad('', 16) + '  ' + det.join(', ') + '\n';
-          }
-        }
-        r += '\n';
-      }
 
       // ┌─────────────────────────────────────────────┐
       //  DINAMIK MODELIN TEMEL FARKI: ACI DEGISIMI
@@ -3722,19 +3680,18 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         // Kolon tanımları
         var hasGbLimit = dyn.params.gbTorqueLimit && dyn.params.gbTorqueLimit > 0;
         var cols = [
-          { h: 't(s)',    w: 7 },
-          { h: 'v(m/s)',  w: 8 },
-          { h: 'N_eng',   w: 7 },
-          { h: 'T_eng',   w: 7 },
-          { h: 'TR',      w: 6 },
-          { h: 'SR',      w: 6 },
-          { h: 'T_gb',    w: 8 },
-          { h: 'T_whl',   w: 8 },
-          { h: 'T_req',   w: 8 },
-          { h: 'phi(d)',  w: 8 },
-          { h: 'F_net',   w: 9 },
-          { h: 'KE(J)',   w: 9 },
-          { h: 'Faz',     w: 5 }
+          { h: 't(s)',     w: 7 },
+          { h: 'v(km/h)',  w: 8 },
+          { h: 'N_eng',    w: 7 },
+          { h: 'T_eng',    w: 7 },
+          { h: 'TR',       w: 6 },
+          { h: 'SR',       w: 6 },
+          { h: 'T_gb',     w: 8 },
+          { h: 'T_whl',    w: 8 },
+          { h: 'T_req',    w: 8 },
+          { h: 'phi(d)',   w: 8 },
+          { h: 'F_net',    w: 9 },
+          { h: 'KE(J)',    w: 9 }
         ];
 
         // Başlık satırları
@@ -3780,7 +3737,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           // Veri satırı
           var row = '  ';
           row += pad(num(d.t, 3), 7, 'right') + ' ';
-          row += pad(num(d.v, 4), 8, 'right') + ' ';
+          row += pad(num(d.v * 3.6, 2), 8, 'right') + ' ';
           row += pad(num(d.N_engine, 0), 7, 'right') + ' ';
           row += pad(num(d.T_engine, 0), 7, 'right') + ' ';
           row += pad(num(d.TR, 3), 6, 'right') + ' ';
@@ -3793,7 +3750,6 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           row += pad(num(d.phi_deg, 2), 8, 'right') + ' ';
           row += pad(num(d.F_net, 0), 9, 'right') + ' ';
           row += pad(num(d.KE, 0), 9, 'right') + ' ';
-          row += pad(d.phase === 'front' ? 'On' : 'Arka', 5, 'right') + ' ';
           r += row + '\n';
         }
         r += '  ' + ln('=', hdr.length - 2) + '\n';
@@ -3804,19 +3760,19 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
 
         // Kolon açıklamaları
         r += '  Kolon Aciklamalari:\n';
-        r += '    t(s)    = Simulasyon zamani (saniye)\n';
-        r += '    v(m/s)  = Arac hizi (metre/saniye)\n';
-        r += '    N_eng   = Motor devri (RPM)\n';
-        r += '    T_eng   = Motor torku (Nm)\n';
-        r += '    TR      = Tork konvertor tork orani\n';
-        r += '    SR      = Tork konvertor hiz orani (N_turbin/N_motor)\n';
-        r += '    T_gb    = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = limit uygulanmis, limit: ' + num(dyn.params.gbTorqueLimit, 0) + ' Nm)' : '') + '\n';
-        r += '    T_whl   = Tek teker torku (Nm)\n';
-        r += '    T_req   = Anlik gerekli tork — tek teker (Nm)\n';
-        r += '    phi(d)  = Acisal konum (derece, +: tirmanis, 0: tepe, -: inis)\n';
-        r += '    F_net   = Net kuvvet (N) = F_itme - F_engel - F_yuvarlanma\n';
-        r += '    KE(J)   = Kinetik enerji (Joule) = 0.5 x m x v2\n';
-        r += '    Faz     = Hangi tekerin engelde oldugu (On/Arka)\n';
+        r += '    t(s)     = Simulasyon zamani (saniye)\n';
+        r += '    v(km/h)  = Arac hizi (kilometre/saat)\n';
+        r += '    N_eng    = Motor devri (RPM)\n';
+        r += '    T_eng    = Motor torku (Nm)\n';
+        r += '    TR       = Tork konvertor tork orani\n';
+        r += '    SR       = Tork konvertor hiz orani (N_turbin/N_motor)\n';
+        r += '    T_gb     = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = limit uygulanmis, limit: ' + num(dyn.params.gbTorqueLimit, 0) + ' Nm)' : '') + '\n';
+        r += '    T_whl    = Tek teker torku (Nm)\n';
+        r += '    T_req    = Anlik gerekli tork — tek teker (Nm)\n';
+        r += '    phi(d)   = Acisal konum (derece, +: tirmanis, 0: tepe, -: inis)\n';
+        r += '    F_net    = Net kuvvet (N) = F_itme - F_engel - F_yuvarlanma\n';
+        r += '    KE(J)    = Kinetik enerji (Joule) = 0.5 x m x v2\n';
+        r += '    >>>      = Onemli olay (milestone)\n';
         r += '\n';
       }
     }
