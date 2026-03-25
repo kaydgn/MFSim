@@ -3420,7 +3420,13 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   r += pRow('Rapor Tarihi', tarih);
   r += pRow('Rapor Saati', saat);
   r += pRow('Rapor No', raporNo);
+  // Hazırlayan: Ad Soyad + e-posta
+  var hazParts = ascii(hazirlayan).split(/\s+/);
+  var hazAd = hazParts.length > 0 ? hazParts[0] : '';
+  var hazSoyad = hazParts.length > 1 ? hazParts.slice(1).join(' ') : '';
   r += pRow('Hazirlayan', ascii(hazirlayan));
+  var hazEmail = (typeof veNameToEmail === 'function') ? veNameToEmail(hazirlayan) : '';
+  if(hazEmail) r += pRow('Iletisim', hazEmail);
   r += pRow('Hesaplama Modu', 'Engel Atlama Analizi');
   r += '\n';
 
@@ -3442,286 +3448,116 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   r += pRow('Lastik', ascii(inp.tireName));
   r += pRow('Yuvarlanma Yaricapi', num(inp.rollingRadius, 3) + ' m');
   r += pRow('Yuklu Lastik Yaricapi (R_eff)', num(inp.R_eff, 3) + ' m');
+  if(inp.cornerDeflection) {
+    var R_corner_val = inp.R_eff - inp.cornerDeflection / 1000;
+    r += pRow('Kose Defleksiyonu (delta)', num(inp.cornerDeflection, 0) + ' mm');
+    r += pRow('Kose Yaricapi (R_corner)', num(R_corner_val, 4) + ' m');
+  }
   r += '\n';
 
-  // 5. AKTARMA PARAMETRELERI
+  // 5. MOTOR VERILERI
+  var _engNode = nodes.find(function(n) { return n.type === 'engine'; });
+  var _engD = _engNode ? (_engNode.data || {}) : {};
+  var _engSpecs = _engD.motorSpecs || {};
+  var _engTorqueData = _engD.torqueData || [];
+  r += ln('-', W) + '\n  MOTOR VERILERI\n' + ln('-', W) + '\n';
+  var motorAdi = _engNode ? (_engNode.customName || '') : '';
+  if(motorAdi) r += pRow('Motor', ascii(motorAdi));
+  if(_engSpecs.governedSpeed) r += pRow('Governed Devir', num(parseFloat(_engSpecs.governedSpeed), 0) + ' RPM');
+  if(_engSpecs.idleRpm) r += pRow('Rolanti Devir', num(parseFloat(_engSpecs.idleRpm), 0) + ' RPM');
+  if(_engSpecs.inertia) r += pRow('Motor Ataleti', num(parseFloat(_engSpecs.inertia), 4) + ' kg.m2');
+  // Motor tork eğrisi tablosu
+  if(_engTorqueData.length > 0) {
+    r += '\n  Motor Tork Egrisi:\n';
+    r += '    ' + pad('RPM', 8, 'right') + pad('Tork (Nm)', 12, 'right') + '\n';
+    r += '    ' + ln('-', 20) + '\n';
+    for(var ti = 0; ti < _engTorqueData.length; ti++) {
+      var tp = _engTorqueData[ti];
+      r += '    ' + pad(num(tp.rpm || tp.x, 0), 8, 'right') + pad(num(tp.torque || tp.y, 1), 12, 'right') + '\n';
+    }
+  }
+  r += '\n';
+
+  // 6. TORK KONVERTOR VERILERI
+  var _tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
+  var _tcD = _tcNode ? (_tcNode.data || {}) : {};
+  var _tcDataArr = _tcD.tcData || [];
+  r += ln('-', W) + '\n  TORK KONVERTOR VERILERI\n' + ln('-', W) + '\n';
+  var tcAdi = _tcNode ? (_tcNode.customName || '') : '';
+  if(tcAdi) r += pRow('Konvertor', ascii(tcAdi));
+  if(_tcD.pumpTorqueDrop !== undefined) r += pRow('Pump Tork Dusumu', num(parseFloat(_tcD.pumpTorqueDrop), 1) + ' Nm');
+  if(_tcDataArr.length > 0) {
+    r += '\n  TC Karakteristik Tablosu:\n';
+    r += '    ' + pad('SR', 8, 'right') + pad('K_pump', 10, 'right') + pad('TR', 8, 'right') + '\n';
+    r += '    ' + ln('-', 26) + '\n';
+    for(var tci = 0; tci < _tcDataArr.length; tci++) {
+      var tc = _tcDataArr[tci];
+      r += '    ' + pad(num(tc.sr, 3), 8, 'right') + pad(num(tc.kpump, 2), 10, 'right') + pad(num(tc.tau, 3), 8, 'right') + '\n';
+    }
+  }
+  r += '\n';
+
+  // 7. AKTARMA PARAMETRELERI
+  var stl = obs.stallAnalysis;
   r += ln('-', W) + '\n  AKTARMA PARAMETRELERI\n' + ln('-', W) + '\n';
-  r += pRow('Secilen Vites', ascii(inp.gearName));
-  r += pRow('Vites Orani (i_g)', num(inp.gearRatio, 3));
+  r += pRow('Secilen Vites', '1C  (' + ascii(inp.gearName) + ', i_g = ' + num(inp.gearRatio, 3) + ')');
+  if(stl && stl.hasData) {
+    r += pRow('Transfer Kademe', ascii(stl.transferName) + '  (i_tr = ' + num(stl.i_transfer, 3) + ', eta = ' + num(stl.eta_transfer * 100, 1) + '%)');
+    r += pRow('Diferansiyel Orani', 'i_diff = ' + num(stl.i_axle, 3) + '  (eta = ' + num(stl.eta_axle * 100, 1) + '%)');
+    r += pRow('Propshaft Verimi', num(stl.eta_prop * 100, 2) + '%');
+    r += pRow('Toplam Verim (eta_total)', num(stl.eta_total * 100, 2) + '%');
+    r += pRow('Tahrikli Teker Sayisi (n_d)', stl.n_d);
+  }
   r += '\n';
 
-  // 6. GEOMETRI ANALIZI
-  r += ln('=', W) + '\n  GEOMETRI ANALIZI\n' + ln('=', W) + '\n\n';
+  // 8. TORK GEREKSINIMI — Ön ve Arka yan yana
+  var trq = obs.torqueAnalysis;
 
   if(obs.geometryFail) {
     r += '  *** GEOMETRIK GECERLILIK BASARISIZ ***\n\n';
     r += '  Sebep: ' + ascii(obs.geometryFailReason) + '\n\n';
     r += '  Hesaplama bu noktada durduruldu.\n';
-  } else {
-    r += pRow('h / R_eff orani', num(geo.hR_ratio, 4) + '  (' + ascii(geo.difficultyLabel) + ')');
-    r += '\n';
-    r += '  Zorluk Skalasi:\n';
-    r += '    < 0.50  : Kolay\n';
-    r += '    0.50-0.75: Orta\n';
-    r += '    > 0.75  : Zor\n';
-    r += '\n';
-    r += pRow('Kose Moment Kolu (x)', num(geo.x, 4) + ' m');
-    r += '  Formul: x = sqrt(2*R_eff*h - h^2)\n';
-    r += '        = sqrt(2*' + num(inp.R_eff, 3) + '*' + num(inp.h, 3) + ' - ' + num(inp.h, 3) + '^2)\n';
-    r += '        = ' + num(geo.x, 4) + ' m\n';
-    r += '\n';
-    r += pRow('Merkez-Kose Acisi (theta)', num(geo.theta_deg, 2) + ' derece  (' + num(geo.theta_rad, 4) + ' rad)');
-    r += '  Formul: theta = arccos(x / R_eff)\n';
-    r += '        = arccos(' + num(geo.x, 4) + ' / ' + num(inp.R_eff, 3) + ')\n';
-    r += '        = ' + num(geo.theta_deg, 2) + ' derece\n';
-    r += '\n';
-    // ── TORK GEREKSİNİMİ ANALİZİ ──
-    var trq = obs.torqueAnalysis;
-    if(trq) {
-      r += ln('=', W) + '\n  TORK GEREKSINIMI ANALIZI\n' + ln('=', W) + '\n\n';
+  } else if(trq) {
+    r += ln('=', W) + '\n  TORK GEREKSINIMI ANALIZI (Statik)\n' + ln('=', W) + '\n\n';
+    r += '  W = ' + num(inp.mass, 0) + ' kg x 9.81 = ' + num(trq.W, 0) + ' N\n';
+    r += '  x = sqrt(2*R*h - h^2) = ' + num(geo.x, 4) + ' m\n\n';
 
-      r += pRow('Arac Agirligi (W=m*g)', num(trq.W, 1) + ' N');
-      r += '  Formul: W = ' + num(inp.mass, 0) + ' kg x ' + num(trq.g, 2) + ' m/s^2 = ' + num(trq.W, 1) + ' N\n';
-      r += '\n';
-
-      // Senaryo A
-      r += '  ' + ln('-', 50) + '\n';
-      r += '  SENARYO A: On Teker Engelde\n';
-      r += '  ' + ln('-', 50) + '\n';
-      r += '  Mesnet: Arka teker temas noktasi\n';
-      r += '  Yatay mesafe (D_on) = L + x = ' + num(trq.L, 3) + ' + ' + num(geo.x, 4) + ' = ' + num(trq.D_front, 4) + ' m\n\n';
-      r += pRow('On Aks Reaksiyonu (N_f)', num(trq.N_f, 1) + ' N');
-      r += '  Formul: N_f = W*a2 / (L+x)\n';
-      r += '        = ' + num(trq.W, 1) + ' * ' + num(inp.a2, 3) + ' / ' + num(trq.D_front, 4) + '\n';
-      r += '        = ' + num(trq.N_f, 1) + ' N\n\n';
-      r += pRow('Tek Teker Yuku (N_f1)', num(trq.N_f1, 1) + ' N');
-      r += '  Formul: N_f1 = N_f / 2 = ' + num(trq.N_f, 1) + ' / 2 = ' + num(trq.N_f1, 1) + ' N\n\n';
-      r += pRow('Gereken Tork (T_on)', num(trq.T_req_front, 1) + ' Nm');
-      r += '  Formul: T_on = N_f1 * x = ' + num(trq.N_f1, 1) + ' * ' + num(geo.x, 4) + ' = ' + num(trq.T_req_front, 1) + ' Nm\n';
-      r += '\n';
-
-      // Senaryo B
-      r += '  ' + ln('-', 50) + '\n';
-      r += '  SENARYO B: Arka Teker Engelde\n';
-      r += '  ' + ln('-', 50) + '\n';
-      r += '  Mesnet: On teker temas noktasi\n';
-      if(trq.D_rear <= 0) {
-        r += '  *** UYARI: L - x <= 0 — arka teker analizi yapilamaz ***\n';
-      } else {
-        r += '  Yatay mesafe (D_arka) = L - x = ' + num(trq.L, 3) + ' - ' + num(geo.x, 4) + ' = ' + num(trq.D_rear, 4) + ' m\n\n';
-        r += pRow('Arka Aks Reaksiyonu (N_r)', num(trq.N_r, 1) + ' N');
-        r += '  Formul: N_r = W*a1 / (L-x)\n';
-        r += '        = ' + num(trq.W, 1) + ' * ' + num(inp.a1, 3) + ' / ' + num(trq.D_rear, 4) + '\n';
-        r += '        = ' + num(trq.N_r, 1) + ' N\n\n';
-        r += pRow('Tek Teker Yuku (N_r1)', num(trq.N_r1, 1) + ' N');
-        r += '  Formul: N_r1 = N_r / 2 = ' + num(trq.N_r, 1) + ' / 2 = ' + num(trq.N_r1, 1) + ' N\n\n';
-        r += pRow('Gereken Tork (T_arka)', num(trq.T_req_rear, 1) + ' Nm');
-        r += '  Formul: T_arka = N_r1 * x = ' + num(trq.N_r1, 1) + ' * ' + num(geo.x, 4) + ' = ' + num(trq.T_req_rear, 1) + ' Nm\n';
-      }
-      r += '\n';
-
-      // Karşılaştırma
-      r += '  ' + ln('=', 50) + '\n';
-      r += '  KARSILASTIRMA\n';
-      r += '  ' + ln('=', 50) + '\n';
-      r += pRow('On Teker Tork Gereks.', num(trq.T_req_front, 1) + ' Nm');
-      if(isFinite(trq.T_req_rear)) {
-        r += pRow('Arka Teker Tork Gereks.', num(trq.T_req_rear, 1) + ' Nm');
-      } else {
-        r += pRow('Arka Teker Tork Gereks.', 'Hesaplanamadi (L-x<=0)');
-      }
-      r += '\n';
-      r += '  Kritik Senaryo: ' + ascii(trq.criticalScenario) + '\n';
-      r += '  Kritik Tork Gereksinimi: ' + num(trq.T_req_critical, 1) + ' Nm (tek teker basina)\n';
-      r += '\n';
-      if(isFinite(trq.T_req_rear) && isFinite(trq.T_req_front) && trq.T_req_front > 0) {
-        var ratio = trq.T_req_rear / trq.T_req_front;
-        r += '  Arka/On oran: ' + num(ratio, 2) + 'x — arka teker ' + num((ratio - 1) * 100, 1) + '% daha fazla tork gerektirir.\n';
-        r += '  Neden: Ayni x degeri icin (L+x) > (L-x) oldugundan N_r > N_f\'dir.\n';
-      }
+    // Yan yana tablo
+    var colW = 36;
+    r += '  ' + pad('ON TEKER ENGELDE', colW) + 'ARKA TEKER ENGELDE\n';
+    r += '  ' + ln('-', colW) + ln('-', colW) + '\n';
+    r += '  ' + pad('D = L + x = ' + num(trq.D_front, 4) + ' m', colW);
+    if(trq.D_rear > 0) {
+      r += 'D = L - x = ' + num(trq.D_rear, 4) + ' m\n';
+    } else {
+      r += '*** L-x <= 0 ***\n';
+    }
+    r += '  ' + pad('N_f = W*a2/D = ' + num(trq.N_f, 0) + ' N', colW);
+    if(trq.D_rear > 0) {
+      r += 'N_r = W*a1/D = ' + num(trq.N_r, 0) + ' N\n';
+    } else {
       r += '\n';
     }
-
-    // ── STALL DENGE NOKTASI & MEVCUT TEKER TORKU ──
-    var stl = obs.stallAnalysis;
-    if(stl && stl.hasData) {
-      r += ln('=', W) + '\n  STALL DENGE NOKTASI & MEVCUT TEKER TORKU\n' + ln('=', W) + '\n\n';
-
-      // Aşama 1 — Stall denge noktası
-      r += '  ' + ln('-', 50) + '\n';
-      r += '  ASAMA 1: Motor-Konvertor Stall Dengesi\n';
-      r += '  ' + ln('-', 50) + '\n';
-      r += '  Arac durgunken (SR=0) turbin kilitlidir. Motor devir artirirken\n';
-      r += '  TC pump\'in absorbe ettigi tork kuadratik artar:\n';
-      r += '    T_pump = (N / K_pump)^2\n\n';
-      r += pRow('Stall K-faktor (K_pump)', num(stl.K_pump_stall, 2) + ' RPM/sqrt(Nm)');
-      r += pRow('Pump Tork Dusumu', num(stl.pumpTorqueDrop, 1) + ' Nm');
-      r += '\n';
-      r += '  Tarama: Rolantiden governed devire 1 RPM adimla\n';
-      r += '  T_motor_mevcut = T_motor_egrisi(N) - dusum\n';
-      r += '  Kosul: T_motor_mevcut >= T_pump olan son RPM\n\n';
-      r += pRow('Stall Denge Devri', num(stl.N_stall, 0) + ' RPM');
-      r += pRow('Motor Torku @ Stall', num(stl.T_engine_stall, 1) + ' Nm');
-      r += pRow('Pump Absorbe Torku', num(stl.T_pump_stall, 1) + ' Nm');
-      r += pRow('Stall Tork Orani (TR)', num(stl.TR_stall, 3));
-      r += '\n';
-
-      // Aşama 2 — Aktarma zinciri
-      r += '  ' + ln('-', 50) + '\n';
-      r += '  ASAMA 2: Aktarma Zincirinden Teker Torkuna\n';
-      r += '  ' + ln('-', 50) + '\n';
-      r += '  T_wheel = T_eng_stall x TR_stall x i_g x i_tr x i_diff x eta_total / n_d\n\n';
-      r += pRow('Vites', ascii(stl.gearName) + '  (i_g = ' + num(stl.gearRatio, 3) + ', eta = ' + num(stl.eta_gear * 100, 1) + '%)');
-      r += pRow('Transfer Kademe', ascii(stl.transferName) + '  (i_tr = ' + num(stl.i_transfer, 3) + ', eta = ' + num(stl.eta_transfer * 100, 1) + '%)');
-      r += pRow('Diferansiyel Orani', 'i_diff = ' + num(stl.i_axle, 3) + '  (eta = ' + num(stl.eta_axle * 100, 1) + '%)');
-      r += pRow('Propshaft Verimi', num(stl.eta_prop * 100, 2) + '%');
-      r += pRow('Toplam Verim (eta_total)', num(stl.eta_total * 100, 2) + '%');
-      r += pRow('Tahrikli Teker Sayisi (n_d)', stl.n_d);
-      r += '\n';
-      r += '  T_wheel = ' + num(stl.T_engine_stall, 1) + ' x ' + num(stl.TR_stall, 3);
-      r += ' x ' + num(stl.gearRatio, 3) + ' x ' + num(stl.i_transfer, 3);
-      r += ' x ' + num(stl.i_axle, 3) + ' x ' + num(stl.eta_total, 4);
-      r += ' / ' + stl.n_d + '\n';
-      r += '  T_wheel = ' + num(stl.T_wheel, 1) + ' Nm (tek teker basina)\n\n';
-
-      r += '  NOT: T_wheel, R_eff\'ten bagimsizdir. Stall dengesi motorun TC pump\'la\n';
-      r += '  olan etkilesimiyle belirlenir, teker yaricapinin bunda hicbir rolu yoktur.\n';
-      r += '\n';
-
-      // ── ADIM 5: KARŞILAŞTIRMA & NİHAİ KARAR ──
-      var dec = obs.decision;
-      if(dec) {
-        r += ln('=', W) + '\n  KARSILASTIRMA & NIHAI KARAR\n' + ln('=', W) + '\n\n';
-
-        // Stall özet (her iki sonuç için ortak)
-        r += '  ' + ln('-', 60) + '\n';
-        r += '  STALL DENGE OZETI (her iki hesap icin ortak)\n';
-        r += '  ' + ln('-', 60) + '\n';
-        r += pRow('Stall Denge Devri', num(stl.N_stall, 0) + ' RPM');
-        r += pRow('Motor Torku @ Stall', num(stl.T_engine_stall, 1) + ' Nm');
-        r += pRow('Teker Torku (T_wheel)', num(dec.T_wheel, 1) + ' Nm');
-        r += '\n';
-
-        // Marj durum etiketi: sözel ifade
-        function marjDurum(pct, pass) {
-          if(!pass) return 'YETERSIZ';
-          if(pct <= 5) return 'KILPAYI — dikkatli olunmali';
-          return 'YETERLI';
-        }
-
-        // ── Yardımcı: tek sonuç bloğu yazdır ──
-        function writeResultBlock(label, rEff, geoObj, decObj) {
-          var blk = '';
-          blk += '  ' + ln('=', 60) + '\n';
-          blk += '  ' + label + '\n';
-          blk += '  ' + ln('=', 60) + '\n\n';
-
-          // Geometri
-          blk += pRow('Efektif Yaricap', num(rEff, 4) + ' m');
-          blk += pRow('Engel Yuksekligi (h)', num(inp.h, 3) + ' m');
-          blk += pRow('h/R Orani', num(geoObj.hR_ratio, 3) + '  [' + ascii(geoObj.difficultyLabel) + ']');
-          blk += pRow('Moment Kolu (x)', num(geoObj.x, 4) + ' m');
-          blk += pRow('Merkez-Kose Acisi (theta)', num(geoObj.theta_deg, 2) + ' derece');
-          blk += '\n';
-
-          // Ön teker
-          blk += '  On Teker:\n';
-          blk += pRow('  Gereken Tork (T_req)', num(decObj.T_req_front, 1) + ' Nm');
-          blk += pRow('  Mevcut Tork (T_wheel)', num(decObj.T_wheel, 1) + ' Nm');
-          var fMs = (decObj.frontMarginPct >= 0 ? '+' : '') + num(decObj.frontMarginPct, 1) + '%';
-          var fMn = (decObj.frontMarginNm >= 0 ? '+' : '') + num(decObj.frontMarginNm, 1) + ' Nm';
-          blk += pRow('  Marj', fMs + '  (' + fMn + ')');
-          blk += pRow('  Durum', marjDurum(decObj.frontMarginPct, decObj.frontPass));
-          blk += pRow('  Sonuc', decObj.frontPass ? 'ASAR' : 'ASAMAZ');
-          blk += '\n';
-
-          // Arka teker
-          blk += '  Arka Teker:\n';
-          if(isFinite(decObj.T_req_rear)) {
-            blk += pRow('  Gereken Tork (T_req)', num(decObj.T_req_rear, 1) + ' Nm');
-            blk += pRow('  Mevcut Tork (T_wheel)', num(decObj.T_wheel, 1) + ' Nm');
-            var rMs = (decObj.rearMarginPct >= 0 ? '+' : '') + num(decObj.rearMarginPct, 1) + '%';
-            var rMn = (decObj.rearMarginNm >= 0 ? '+' : '') + num(decObj.rearMarginNm, 1) + ' Nm';
-            blk += pRow('  Marj', rMs + '  (' + rMn + ')');
-            blk += pRow('  Durum', marjDurum(decObj.rearMarginPct, decObj.rearPass));
-            blk += pRow('  Sonuc', decObj.rearPass ? 'ASAR' : 'ASAMAZ');
-          } else {
-            blk += '    *** Hesaplanamadi (L-x<=0) ***\n';
-          }
-          blk += '\n';
-
-          // Genel karar
-          blk += '  Genel Karar: ' + (decObj.overallPass ? 'ASAR' : 'ASAMAZ') + '\n';
-          blk += '\n';
-          return blk;
-        }
-
-        // ── SONUC 1: Düz zemin R_eff ile ──
-        r += writeResultBlock('SONUC 1: DUZ ZEMIN EFEKTIF YARICAPI ILE (R_eff)', inp.R_eff, geo, dec);
-
-        // ── SONUC 2: Köşe defleksiyonu düzeltmesi ile ──
-        var cc = obs.cornerCorrection;
-        if(cc) {
-          r += writeResultBlock(
-            'SONUC 2: KOSE DEFLEKSIYONU DUZELTMESI ILE (R_corner)',
-            cc.R_corner, cc.geometry, cc.decision
-          );
-          // Ek bilgi satırı
-          r += pRow('Kose Ek Defleksiyonu (delta_corner)', num(cc.cornerDeflection, 0) + ' mm');
-          r += pRow('R_corner = R_eff - delta/1000', num(inp.R_eff, 4) + ' - ' + num(cc.cornerDeflection / 1000, 4) + ' = ' + num(cc.R_corner, 4) + ' m');
-          r += '\n';
-        }
-
-        // ── Nihai genel sonuç ──
-        r += '  ' + ln('#', 60) + '\n';
-        r += '  ' + ln('#', 60) + '\n';
-        // Nihai karar: eğer köşe düzeltmesi varsa o dikkate alınır
-        var finalDec = cc ? cc.decision : dec;
-        if(finalDec.overallPass) {
-          r += '       >>>   G E N E L   S O N U C :   A S A R   <<<\n';
-        } else {
-          r += '       >>>   G E N E L   S O N U C :   A S A M A Z   <<<\n';
-        }
-        r += '  ' + ln('#', 60) + '\n';
-        r += '  ' + ln('#', 60) + '\n';
-        r += '\n';
-
-        if(cc) {
-          r += '  (Nihai karar, kose defleksiyonu duzeltmeli sonuca (R_corner) dayanmaktadir.)\n';
-          // İki sonuç arasındaki farkı özetle
-          if(dec.overallPass && !cc.decision.overallPass) {
-            r += '  UYARI: Duz zemin R_eff ile arac engeli asiyor, ancak kose ezilmesi\n';
-            r += '         hesaba katildiginda ASAMAZ sonucu ortaya cikmaktadir.\n';
-          } else if(!dec.overallPass && cc.decision.overallPass) {
-            r += '  NOT: Kose ezilmesi, moment kolunu kisaltarak tork gereksinimini azaltmistir.\n';
-            r += '       R_corner ile arac engeli asabilir durumdadir.\n';
-          }
-        } else {
-          if(dec.overallPass) {
-            r += '  Her iki teker de engeli asmak icin yeterli torka sahiptir.\n';
-            if(dec.rearColor === 'yellow') {
-              r += '  UYARI: Arka teker marji cok dusuk (%' + num(dec.rearMarginPct, 1) + '). Dikkatli olunmalidir.\n';
-            }
-          } else {
-            r += '  Aracin engeli tamamen asmasi icin her iki tekerin de asmasi gerekir.\n';
-            if(dec.frontPass && !dec.rearPass) {
-              r += '  On teker asiyor ancak arka teker asamiyor.\n';
-            } else if(!dec.frontPass && !dec.rearPass) {
-              r += '  Her iki teker de yetersiz torka sahiptir.\n';
-            }
-            r += '  Oneri: Daha dusuk vites veya transfer Low kademe ile tekrar degerlendiriniz.\n';
-          }
-        }
-        r += '\n';
-      }
-      r += '\n';
-    } else if(stl && !stl.hasData) {
-      r += ln('=', W) + '\n  STALL DENGE NOKTASI & MEVCUT TEKER TORKU\n' + ln('=', W) + '\n\n';
-      r += '  *** HESAPLAMA YAPILAMADI ***\n';
-      if(stl.missingEngine) r += '  - Motor bileseninde tork egrisi verisi eksik.\n';
-      if(stl.missingTC) r += '  - Tork konvertor bileseninde TC verisi eksik.\n';
+    r += '  ' + pad('N_f1 = N_f/2 = ' + num(trq.N_f1, 0) + ' N', colW);
+    if(trq.D_rear > 0) {
+      r += 'N_r1 = N_r/2 = ' + num(trq.N_r1, 0) + ' N\n';
+    } else {
       r += '\n';
     }
+    r += '  ' + ln('-', colW) + ln('-', colW) + '\n';
+    r += '  ' + pad('T_req_on = ' + num(trq.T_req_front, 1) + ' Nm', colW);
+    if(isFinite(trq.T_req_rear)) {
+      r += 'T_req_arka = ' + num(trq.T_req_rear, 1) + ' Nm\n';
+    } else {
+      r += 'Hesaplanamadi\n';
+    }
+    r += '\n';
+    r += '  Kritik senaryo: ' + ascii(trq.criticalScenario) + ' (' + num(trq.T_req_critical, 1) + ' Nm)\n';
+    if(isFinite(trq.T_req_rear) && trq.T_req_front > 0) {
+      var ratio = trq.T_req_rear / trq.T_req_front;
+      r += '  Arka/On oran: ' + num(ratio, 2) + 'x\n';
+    }
+    r += '\n';
   }
   r += '\n';
 
@@ -3747,13 +3583,14 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += '  |' + pad(' SIMULASYON PARAMETRELERI', 64) + '|\n';
       r += '  +' + ln('-', 64) + '+\n';
       r += pRow('Zaman Adimi (dt)', num(dyn.dt * 1000, 1) + ' ms');
-      r += pRow('Gaz Pedali Rampa Suresi', num(dyn.params.rampTime, 2) + ' s  (DD: %' + num(dyn.params.DD_initial, 0) + ' -> %100)');
+      r += pRow('Surucu Talebi (DD)', '%100 sabit (tam gaz)');
       r += pRow('Yuvarlanma Direnci (Cr)', num(dyn.params.Cr, 4));
       r += pRow('Motor Ataleti (J_engine)', num(dyn.params.J_engine, 4) + ' kg.m2  (' + (dyn.params.J_engine_source || 'varsayilan') + ')');
       r += pRow('TC Pump Ataleti (J_tc)', num(dyn.params.J_tc, 2) + ' kg.m2');
+      r += pRow('TC Sivi Ataleti (J_fluid)', num(dyn.params.J_fluid, 2) + ' kg.m2');
+      r += pRow('J_eff (toplam)', num(dyn.params.J_engine + dyn.params.J_tc + dyn.params.J_fluid, 2) + ' kg.m2  [J_engine + J_tc + J_fluid]');
       r += pRow('Baslangic Acisi (phi_start)', num(dyn.params.phi_start_deg, 2) + ' derece');
       r += pRow('Arka Teker Baslangic', 'v=0 (momentum tasinmaz, durustan baslar)');
-      r += pRow('TC Sivi Ataleti (J_fluid)', num(dyn.params.J_fluid, 2) + ' kg.m2  [J_eff = J_mech + J_fluid = sabit]');
       r += '\n';
 
       // ┌─────────────────────────────────────────────┐
@@ -3827,85 +3664,38 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       }
 
       // ┌─────────────────────────────────────────────┐
-      //  FAZ OZET KARTLARI
-      // └─────────────────────────────────────────────┘
-
-      // ── Ön Teker Fazı ──
-      r += '  +' + ln('-', 64) + '+\n';
-      r += '  |' + pad(' ON TEKER FAZI', 64) + '|\n';
-      r += '  +' + ln('-', 64) + '+\n';
-      if(dyn.frontCompleted) {
-        r += pRow('Sonuc', 'TAMAMLANDI');
-        r += pRow('Toplam Sure', num(dyn.frontCompletionTime, 3) + ' s');
-        r += pRow('Cikis Hizi', num(dyn.frontCompletionSpeed, 3) + ' m/s (' + num(dyn.frontCompletionSpeed * 3.6, 2) + ' km/h)');
-      } else {
-        r += pRow('Sonuc', dyn.stallPhase === 'front' ? 'TAKILDI (stall)' : 'Tamamlanamadi');
-      }
-      r += pRow('Tepe T_req (en zor an)', num(dyn.frontStats.peakTreq, 1) + ' Nm  @ t=' + num(dyn.frontStats.peakTreqTime, 3) + ' s');
-      r += pRow('Tepe T_wheel', num(dyn.frontStats.peakTwheel, 1) + ' Nm');
-      var fTorkRatio = dyn.frontStats.peakTreq > 0 ? (dyn.frontStats.peakTwheel / dyn.frontStats.peakTreq) : 0;
-      r += pRow('Tork Orani (Twhl/Treq)', num(fTorkRatio, 3) + (fTorkRatio >= 1 ? '  (yeterli)' : '  (yetersiz)'));
-      r += pRow('Maks. Hiz', num(dyn.frontStats.maxSpeed, 3) + ' m/s (' + num(dyn.frontStats.maxSpeed * 3.6, 2) + ' km/h)');
-      r += '\n';
-
-      // ── Arka Teker Fazı ──
-      r += '  +' + ln('-', 64) + '+\n';
-      r += '  |' + pad(' ARKA TEKER FAZI', 64) + '|\n';
-      r += '  +' + ln('-', 64) + '+\n';
-      if(!dyn.frontCompleted) {
-        r += '  (On teker tamamlanamadigi icin arka teker fazina gecilemedi.)\n';
-      } else {
-        if(dyn.success) {
-          r += pRow('Sonuc', 'TAMAMLANDI');
-        } else {
-          r += pRow('Sonuc', dyn.stallPhase === 'rear' ? 'TAKILDI (stall)' : 'Tamamlanamadi');
-        }
-        r += pRow('Tepe T_req (en zor an)', num(dyn.rearStats.peakTreq, 1) + ' Nm  @ t=' + num(dyn.rearStats.peakTreqTime, 3) + ' s');
-        r += pRow('Tepe T_wheel', num(dyn.rearStats.peakTwheel, 1) + ' Nm');
-        var rTorkRatio = dyn.rearStats.peakTreq > 0 ? (dyn.rearStats.peakTwheel / dyn.rearStats.peakTreq) : 0;
-        r += pRow('Tork Orani (Twhl/Treq)', num(rTorkRatio, 3) + (rTorkRatio >= 1 ? '  (yeterli)' : '  (yetersiz)'));
-        r += pRow('Maks. Hiz', num(dyn.rearStats.maxSpeed, 3) + ' m/s (' + num(dyn.rearStats.maxSpeed * 3.6, 2) + ' km/h)');
-      }
-      r += '\n';
-
-      // ┌─────────────────────────────────────────────┐
-      //  STATIK vs DINAMIK KARSILASTIRMA
+      //  DINAMIK MODELIN TEMEL FARKI: ACI DEGISIMI
       // └─────────────────────────────────────────────┘
       r += '  +' + ln('-', 64) + '+\n';
-      r += '  |' + pad(' STATIK vs DINAMIK KARSILASTIRMA', 64) + '|\n';
-      r += '  +' + ln('-', 64) + '+\n';
-      if(obs && obs.decision) {
-        var sDec = obs.decision;
-        r += '\n';
-        r += '   Kriter                Statik          Dinamik\n';
-        r += '   ' + ln('-', 55) + '\n';
-        r += '   ' + pad('Genel Sonuc', 22) + pad(sDec.overallPass ? 'ASAR' : 'ASAMAZ', 16) + (dyn.success ? 'ASAR' : 'ASAMAZ') + '\n';
-        r += '   ' + pad('On Teker', 22) + pad(sDec.frontPass ? 'Asar' : 'Asamaz', 16) + (dyn.frontCompleted ? 'Asti' : 'Asamadi') + '\n';
-        if(isFinite(sDec.T_req_rear)) {
-          r += '   ' + pad('Arka Teker', 22) + pad(sDec.rearPass ? 'Asar' : 'Asamaz', 16) + (dyn.success ? 'Asti' : 'Asamadi') + '\n';
-        }
-        r += '   ' + pad('On T_req', 22) + pad(num(sDec.T_req_front, 0) + ' Nm', 16) + num(dyn.frontStats.peakTreq, 0) + ' Nm (tepe)\n';
-        if(isFinite(sDec.T_req_rear)) {
-          r += '   ' + pad('Arka T_req', 22) + pad(num(sDec.T_req_rear, 0) + ' Nm', 16) + num(dyn.rearStats.peakTreq, 0) + ' Nm (tepe)\n';
-        }
-        r += '   ' + ln('-', 55) + '\n';
-        r += '\n';
+      r += '  |' + pad(' DINAMIK MODEL: TEKER-ZEMIN ACI DEGISIMI (phi)', 64) + '|\n';
+      r += '  +' + ln('-', 64) + '+\n\n';
 
-        if(sDec.overallPass && !dyn.success) {
-          r += '  UYARI: Statik analiz engelin asilabildigini gosteriyor ancak dinamik\n';
-          r += '  simulasyonda arac takiliyor. Bu, gaz pedali rampasindan veya atalet\n';
-          r += '  etkilerinden kaynaklanabilir.\n';
-        } else if(!sDec.overallPass && dyn.success) {
-          r += '  NOT: Statik analizde yetersiz tork gorulse de dinamik simulasyonda\n';
-          r += '  aracin momentumu sayesinde engel asilabilmektedir. Dinamik modelde\n';
-          r += '  moment kolu surekli azalarak T_req duser — statik model ise en kotu\n';
-          r += '  ani (sabit x) baz alir.\n';
-        } else if(sDec.overallPass && dyn.success) {
-          r += '  Her iki analiz de engelin asilabilecegini dogrulamaktadir.\n';
-        } else {
-          r += '  Her iki analiz de engelin asilamayacagini dogrulamaktadir.\n';
-        }
-      }
+      r += '  Statik modelde moment kolu sabit x degeridir ve en kotu ani\n';
+      r += '  (teker engele ilk degdigi an) temsil eder. Dinamik modelde ise\n';
+      r += '  teker, engelin kose noktasi P etrafinda bir yay cizer.\n\n';
+
+      r += '  phi acisi: P-merkez dogrusunun dikey ile yaptigi acidir.\n\n';
+
+      r += '    phi = +' + num(dyn.params.phi_start_deg, 1) + ' derece  Baslangic (teker engele dayanir)\n';
+      r += '    |     Moment kolu = R_eff x sin(phi) = x (maksimum)\n';
+      r += '    |     T_req en yuksek, tirmanis en zor\n';
+      r += '    |     Teker P uzerinde donmeye baslar, phi azalir\n';
+      r += '    v\n';
+      r += '    phi = 0 derece     Tepe noktasi (merkez P\'nin tam ustunde)\n';
+      r += '    |     Moment kolu = 0, T_req = 0\n';
+      r += '    |     Yercekimi direnci sifir\n';
+      r += '    v\n';
+      r += '    phi = -' + num(dyn.params.phi_start_deg, 1) + ' derece  Teker engeli asti\n';
+      r += '          Moment kolu negatif, yercekimi artik lehimize\n\n';
+
+      r += '  Sonuc: Statik modeldeki sabit T_req yerine, gercekte teker\n';
+      r += '  harekete baslayinca T_req surekli azalir. Bu, statik modelin\n';
+      r += '  "asamaz" dedigi durumlarda bile aracin momentumuyla engeli\n';
+      r += '  asabilecegi anlamina gelir.\n\n';
+
+      r += '  Formul:  moment_kolu(phi) = R_eff x sin(phi)\n';
+      r += '           T_req(phi) = [W x a / (L +/- moment_kolu)] / 2 x moment_kolu\n';
+      r += '           phi > 0: tirmanis (direnç)  |  phi <= 0: inis (yardim)\n';
       r += '\n';
 
       // ┌─────────────────────────────────────────────┐

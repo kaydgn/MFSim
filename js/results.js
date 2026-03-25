@@ -2223,6 +2223,8 @@ function veDownloadTXTFromPreview() {
       content = veGenerateFTTxtReport(sim, authorName);
     } else if(rType === 'sd' && typeof veGenerateSegmentDriveTxtReport === 'function') {
       content = veGenerateSegmentDriveTxtReport(sim, authorName);
+    } else if(rType === 'obs' && typeof veGenerateObstacleCrossingTxtReport === 'function') {
+      content = veGenerateObstacleCrossingTxtReport(sim, authorName);
     } else {
       content = window._veTxtPreviewContent;
     }
