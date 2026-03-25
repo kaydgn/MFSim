@@ -20077,9 +20077,12 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // Governed devrine (2500 RPM) asla ulaşamaz — TC pump yükü baskın.
     // ECM rate limiter YOK — yavaş devir artışı tamamen sıvı ataleti.
 
-    // TC pump quadratic yükü: T_pump = (N / K_pump)²
-    var K_pump_val = (tcFns.data && tcFns.data.length > 0) ? tcFns.kpump(Math.max(0, SR)) : 84.0;
-    var T_pump_absorbed = (N_engine / K_pump_val) * (N_engine / K_pump_val);
+    // TC pump quadratic yükü: T_pump = (N / K_pump_stall)²
+    // Stall K-factor kullanılır (SR=0). SR arttığında K_pump steady-state'te artar
+    // ama transient'te TC sıvı ataleti bu geçişi geciktirir. CAN doğrulaması:
+    // gerçek dN/dt neredeyse sabit (~580 RPM/s) — pump yükü SR ile anında düşmüyor.
+    var K_pump_stall = (tcFns.data && tcFns.data.length > 0) ? tcFns.kpump(0) : 84.0;
+    var T_pump_absorbed = (N_engine / K_pump_stall) * (N_engine / K_pump_stall);
 
     // Net tork: motor çıkışı - pump yükü - mekanik kayıplar
     var T_net_engine = T_engine - T_pump_absorbed - pumpTorqueDrop;
