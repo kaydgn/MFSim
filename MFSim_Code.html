@@ -20096,7 +20096,9 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     if(moment_kolu > 0 && isFinite(N_aks)) {
       F_engel = N_aks * moment_kolu / R_eff;
     }
-    var F_yuvarlanma = W * Cr;
+    // Yuvarlanma direnci sadece araç hareket halindeyken uygulanır
+    // v=0'da lastik yuvarlanmadığından Cr direnci oluşmaz
+    var F_yuvarlanma = (v > 1e-6) ? W * Cr : 0;
     var F_net = F_itme - F_engel - F_yuvarlanma;
     var acc = F_net / mass;
 
