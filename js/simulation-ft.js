@@ -3047,10 +3047,16 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // moment_kolu <= 0: tepeyi geçmiş, T_req = 0
 
     // ── Hesap 7: Net kuvvet ve ivme ──
-    // Engeldeki akstaki tekerlerin itme kuvveti (n_obstacle = 2)
-    // Diğer aks düz zeminde — engel kuvvetine katkısı yok
-    var n_obstacle = 2;  // engeldeki teker sayısı
-    var F_itme = T_wheel * n_obstacle / R_eff;
+    // İtme kuvveti: engeldeki aks + düz zemindeki aksın katkısı
+    // Engeldeki 2 teker: direkt tork → moment = T_wheel × 2
+    // Düz zemindeki 2 teker: yatay kuvvet F = T_wheel × 2 / R_flat
+    //   Bu kuvvetin P'ye moment kolu = h (engel yüksekliği)
+    //   Moment = (T_wheel × 2 / R_flat) × h
+    // Toplam moment = 2 × T_wheel × (1 + h / R_flat)
+    // Efektif n = 2 × (1 + h / R_flat)
+    var R_flat = inp.R_eff;  // düz zemindeki teker yarıçapı (yüklü, deforme değil)
+    var n_eff = 2 * (1 + h / R_flat);
+    var F_itme = T_wheel * n_eff / R_eff;
     var F_engel = 0;
     if(moment_kolu > 0 && isFinite(N_aks)) {
       F_engel = N_aks * moment_kolu / R_eff;
