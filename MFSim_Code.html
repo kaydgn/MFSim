@@ -19824,8 +19824,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   // CAN-bus doğrulaması: motor tork artışı ile TC pump quadratic yükü birbirini
   // dengelediğinden T_net ≈ sabit kalır → sabit J_eff ile doğrusal RPM artışı elde edilir.
   // SR'ye bağlı model gereksiz — CAN verisindeki doğrusal profille uyumsuz S-eğrisi üretir.
-  // Kalibrasyon: CAN-bus dN/dt ≈ 580 RPM/s, T_net ≈ 280 Nm → J_eff ≈ 4.3 kg·m²
-  var J_fluid = opts.J_fluid || 7.0;         // TC sıvı ataleti (kg·m²) — üretici eğrisi + uzman kalibrasyonu (4-4.5s)
+  // Kalibrasyon: T_pump×TR modeli ile yeniden kalibre — ön faz ~2.4s hedefi
+  var J_fluid = opts.J_fluid || 4.5;         // TC sıvı ataleti (kg·m²) — T_pump×TR modeli ile yeniden kalibre
 
   var inp = obsResult.inputParams;
   var stl = obsResult.stallAnalysis;
@@ -19956,11 +19956,11 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
 
     var matchPoint = '';
     if(sr_m === 0) matchPoint = 'Stall';
-    else if(eta_tc_m >= 0.695 && eta_tc_m < 0.705) matchPoint = '70 Percent';
-    else if(eta_tc_m >= 0.795 && eta_tc_m < 0.805) matchPoint = '80 Percent';
-    else if(eta_tc_m >= 0.845 && eta_tc_m < 0.855) matchPoint = '85 Percent';
-    else if(Math.abs(TR_m - 1.0) < 0.015) matchPoint = 'Coupling';
-    else if(N_m >= governedSpeed - 5) matchPoint = 'Governed';
+    else if(eta_tc_m >= 0.69 && eta_tc_m < 0.71) matchPoint = '70 Percent';
+    else if(eta_tc_m >= 0.79 && eta_tc_m < 0.81) matchPoint = '80 Percent';
+    else if(eta_tc_m >= 0.84 && eta_tc_m < 0.86) matchPoint = '85 Percent';
+    else if(Math.abs(TR_m - 1.0) < 0.02) matchPoint = 'Coupling';
+    else if(N_m >= governedSpeed - 10) matchPoint = 'Governed';
 
     matchTable.push({
       SR: sr_m,
