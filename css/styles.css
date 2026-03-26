@@ -140,6 +140,26 @@
       --shadow-color: rgba(34, 24, 58, 0.08);
     }
     
+    /* Tema: Claude — Anthropic'in sıcak toprak tonları */
+    [data-theme="claude"] {
+      --bg-primary: #faf6f1;
+      --bg-secondary: #fff8f0;
+      --bg-tertiary: #f0ebe4;
+      --bg-input: #fffcf8;
+      --border-color: #e0d5c8;
+      --border-light: #e8ddd2;
+      --border-hover: #c4a882;
+      --text-primary: #2d2015;
+      --text-secondary: #5c4a38;
+      --text-muted: #9a8978;
+      --text-heading: #1a1008;
+      --accent-primary: #da7756;
+      --accent-success: #2e8b57;
+      --accent-warning: #c45a3c;
+      --accent-danger: #b83a2a;
+      --shadow-color: rgba(44, 32, 21, 0.08);
+    }
+
     /* Tema Seçici Stilleri */
     .theme-selector {
       display: flex;
