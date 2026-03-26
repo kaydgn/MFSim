@@ -19936,6 +19936,13 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       if(Math.abs(residual) < 0.1) break;
     }
 
+    // Denge bulunamadıysa (motor torku her yerde pump'tan yüksek): governed hız kullan
+    var T_eng_check = motorTorqueFn(N_m);
+    var T_pump_check = (N_m / K_m) * (N_m / K_m);
+    if(N_m <= idleRpm + 5 || (T_eng_check - T_pump_check - pumpTorqueDrop) > 50) {
+      N_m = governedSpeed;
+    }
+
     var T_eng_final = motorTorqueFn(N_m);
     var T_pump_final = (N_m / K_m) * (N_m / K_m);
     var T_turbine_m = T_pump_final * TR_m;
