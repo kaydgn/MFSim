@@ -3735,6 +3735,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           { h: 'SR',       w: 6 },
           { h: 'T_gb',     w: 8 },
           { h: 'T_whl',    w: 8 },
+          { h: 'T_whl_e',  w: 8 },
           { h: 'T_req',    w: 8 },
           { h: 'phi(d)',   w: 8 },
           { h: 'F_net',    w: 9 },
@@ -3793,6 +3794,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           if(d.T_gb_lim) gbStr += '*';
           row += pad(gbStr, 8, 'right') + ' ';
           row += pad(num(d.T_wheel, 0), 8, 'right') + ' ';
+          var n_eff_r = 2 * (1 + (inp.h || 0) / (inp.R_eff || 1));
+          var T_whl_eff = d.T_wheel * n_eff_r / 2;
+          row += pad(num(T_whl_eff, 0), 8, 'right') + ' ';
           row += pad(isFinite(d.T_req) ? num(d.T_req, 0) : '---', 8, 'right') + ' ';
           row += pad(num(d.phi_deg, 2), 8, 'right') + ' ';
           row += pad(num(d.F_net, 0), 9, 'right') + ' ';
@@ -3816,6 +3820,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '    SR       = Tork konvertor hiz orani (N_turbin/N_motor)\n';
         r += '    T_gb     = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = limit uygulanmis, limit: ' + num(dyn.params.gbTorqueLimit, 0) + ' Nm)' : '') + '\n';
         r += '    T_whl    = Tek teker torku (Nm)\n';
+        r += '    T_whl_e  = Efektif tek teker torku (Nm) = T_whl x n_eff/2 (duz zemindeki aks katkisi dahil)\n';
         r += '    T_req    = Anlik gerekli tork — tek teker (Nm)\n';
         r += '    phi(d)   = Acisal konum (derece, +: tirmanis, 0: tepe, -: inis)\n';
         r += '    F_net    = Net kuvvet (N) = F_itme - F_engel - F_yuvarlanma\n';
