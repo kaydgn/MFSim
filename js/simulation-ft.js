@@ -2561,8 +2561,12 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
     var eta_total = eta_prop * eta_axle * eta_transfer * eta_gear;
 
     // Aktarma zincirinden teker torkuna:
-    // T_wheel = T_engine_stall × TR_stall × i_g × i_tr × i_diff × η_total / n_d
-    var T_wheel = T_engine_stall * TR_stall * gearRatio * i_transfer * i_axle * eta_total / n_d;
+    // T_turbine = T_pump × TR (T_engine × TR DEĞİL — SCAAN doğrulaması)
+    // Motor torkun bir kısmı dönen kütlelerin ivmelenmesine gider,
+    // sadece T_pump sıvı üzerinden türbine aktarılır.
+    // Stall dengesinde T_pump ≈ T_engine - pump_drop, fark küçük ama prensip önemli.
+    var T_turbine_stall = T_pump_stall * TR_stall;
+    var T_wheel = T_turbine_stall * gearRatio * eta_total * i_transfer * i_axle / n_d;
 
     stallResult = {
       hasData: true,
@@ -2844,6 +2848,81 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var pumpTorqueDrop = tcd.pumpTorqueDrop !== undefined ? parseFloat(tcd.pumpTorqueDrop) : 14.9;
   var tcFns = FT_SOLVER.createTCFunctions(tcDataArr);
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // MOTOR-KONVERTÖR EŞLEŞME TABLOSU (SCAAN Tarzı)
+  // ══════════════════════════════════════════════════════════════════════════
+  // Her SR için steady-state denge noktasını hesapla:
+  //   T_engine(N) = T_pump(N, SR) + pump_drop  →  N_match bulunur
+  //   T_turbine = T_pump × TR(SR)   (T_engine × TR DEĞİL — SCAAN doğrulaması)
+  //   T_gb = T_turbine × i_g × η_gear
+  //   T_wheel = T_gb × i_tr × i_diff × η_downstream / n_d
+  // ══════════════════════════════════════════════════════════════════════════
+
+  var matchTable = [];
+  var K_pump_0 = (tcFns.data && tcFns.data.length > 0) ? tcFns.kpump(0) : 84.0;
+
+  // Verim ayrıştırması
+  var eta_gear_val = stl.eta_gear || 1.0;
+  var eta_downstream_base = eta_gear_val > 0 ? eta_total / eta_gear_val : eta_total;
+
+  var matchSRs = [0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.634, 0.70, 0.75, 0.80, 0.825, 0.85, 0.875, 0.91, 0.924, 0.939, 0.95, 0.975, 0.99];
+  for(var mi = 0; mi < matchSRs.length; mi++) {
+    var sr_m = matchSRs[mi];
+    var K_m = (tcFns.data && tcFns.data.length > 0) ? tcFns.kpump(sr_m) : 84.0;
+    var TR_m = tcFns.tau(sr_m);
+
+    // Denge noktası: T_engine(N) = (N / K_m)² + pump_drop
+    var N_m = 2000;
+    for(var iter = 0; iter < 100; iter++) {
+      var T_eng_m = motorTorqueFn(N_m);
+      var T_pump_m = (N_m / K_m) * (N_m / K_m);
+      var residual = T_eng_m - T_pump_m - pumpTorqueDrop;
+      var dTe = (motorTorqueFn(N_m + 1) - motorTorqueFn(N_m - 1)) / 2;
+      var dTp = 2 * N_m / (K_m * K_m);
+      var dR = dTe - dTp;
+      if(Math.abs(dR) < 1e-8) break;
+      N_m = N_m - residual / dR;
+      N_m = Math.max(idleRpm, Math.min(noLoadGoverned, N_m));
+      if(Math.abs(residual) < 0.1) break;
+    }
+
+    var T_eng_final = motorTorqueFn(N_m);
+    var T_pump_final = (N_m / K_m) * (N_m / K_m);
+    var T_turbine_m = T_pump_final * TR_m;
+    var T_gb_m = T_turbine_m * i_g * eta_gear_val;
+    var T_wheel_m = T_gb_m * i_tr * i_diff * eta_downstream_base / n_d;
+
+    var eta_tc_m = sr_m > 0 ? (sr_m * TR_m) : 0;
+    var P_eng_kW = T_eng_final * N_m * 2 * Math.PI / 60 / 1000;
+    var P_turb_kW = T_turbine_m * (N_m * sr_m) * 2 * Math.PI / 60 / 1000;
+    var Q_reject_kW = P_eng_kW - P_turb_kW;
+
+    var matchPoint = '';
+    if(sr_m === 0) matchPoint = 'Stall';
+    else if(eta_tc_m >= 0.695 && eta_tc_m < 0.705) matchPoint = '70 Percent';
+    else if(eta_tc_m >= 0.795 && eta_tc_m < 0.805) matchPoint = '80 Percent';
+    else if(eta_tc_m >= 0.845 && eta_tc_m < 0.855) matchPoint = '85 Percent';
+    else if(Math.abs(TR_m - 1.0) < 0.015) matchPoint = 'Coupling';
+    else if(N_m >= governedSpeed - 5) matchPoint = 'Governed';
+
+    matchTable.push({
+      SR: sr_m,
+      TR: TR_m,
+      K_pump: K_m,
+      N_engine: Math.round(N_m),
+      T_engine: Math.round(T_eng_final * 10) / 10,
+      P_engine_kW: Math.round(P_eng_kW * 10) / 10,
+      T_pump: Math.round(T_pump_final * 10) / 10,
+      T_turbine: Math.round(T_turbine_m * 10) / 10,
+      T_gb_out: Math.round(T_gb_m * 10) / 10,
+      T_wheel: Math.round(T_wheel_m * 10) / 10,
+      P_turbine_kW: Math.round(P_turb_kW * 10) / 10,
+      Q_reject_kW: Math.round(Q_reject_kW * 100) / 100,
+      eta_tc: Math.round(eta_tc_m * 1000) / 1000,
+      matchPoint: matchPoint
+    });
+  }
+
   // Başlangıç açısı
   var x0 = Math.sqrt(2 * R_eff * h - h * h);
   var phi_start = Math.asin(x0 / R_eff);
@@ -2918,19 +2997,25 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var T_full_load = motorTorqueFn(N_engine);
     var T_engine = T_full_load;
 
+    // ── Hesap 4b: Pump torku (TC sıvı yükü) ──
+    // T_pump = (N / K_pump_stall)² — pump'ın sıvıya uyguladığı tork
+    // Stall K-factor kullanılır (SR=0): transient'te TC sıvı ataleti
+    // K_pump'ın SR ile değişimini geciktirir → sabit K_pump yaklaşımı.
+    var T_pump_absorbed = (N_engine / K_pump_0) * (N_engine / K_pump_0);
+
     // ── Hesap 5: Şanzıman çıkış torku ve teker torku ──
-    // T_gb_out = T_engine × TR × i_g  (şanzıman çıkışındaki tork)
-    var T_gb_out = T_engine * TR * i_g;
+    // SCAAN doğrulaması: T_turbine = T_pump × TR  (T_engine × TR DEĞİL!)
+    // Motor torkun bir kısmı dönen kütlelerin ivmelenmesine gider (J_eff × α).
+    // Sadece T_pump sıvı üzerinden türbine aktarılır.
+    var T_turbine = T_pump_absorbed * TR;
+    var T_gb_out = T_turbine * i_g * eta_gear_val;
     var T_gb_limited = false;
     if(gbTorqueLimit_dyn && T_gb_out > gbTorqueLimit_dyn) {
       T_gb_out = gbTorqueLimit_dyn;
       T_gb_limited = true;
     }
-    // T_wheel = T_gb_out × η_gear × i_tr × i_diff × η_downstream / n_d
-    // Önce şanzıman verimi, sonra downstream verimler
-    var T_gb_actual = T_gb_out * (stl.eta_gear || 1.0);
-    var eta_downstream = stl.eta_gear > 0 ? eta_total / stl.eta_gear : eta_total;
-    var T_wheel = T_gb_actual * eta_downstream * i_tr * i_diff / n_d;
+    // T_wheel = T_gb_out × i_tr × i_diff × η_downstream / n_d
+    var T_wheel = T_gb_out * eta_downstream_base * i_tr * i_diff / n_d;
 
     // ── Hesap 6: Anlık gerekli tork ──
     var moment_kolu = R_eff * Math.sin(phi);
@@ -2985,21 +3070,16 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // ── Hesap 9: Motor devri güncelleme — TC sıvı dinamiği modeli ──
     //
     // Fizik: Motor, TC pump'ın quadratic yükü ve sıvı ataleti ile dengelenir.
-    //   T_pump(N) = (N / K_pump)²          — pump'ın absorbe ettiği tork
+    //   T_pump(N) = (N / K_pump_stall)²  — Hesap 4b'de hesaplandı
     //   T_net = T_engine(N) - T_pump(N) - pump_drop
-    //   J_eff(SR) = J_mech + J_fluid*(1-SR)^n  — SR'ye bağlı efektif atalet
+    //   J_eff = J_mech + J_fluid (sabit)
     //   alpha = T_net / J_eff              — açısal ivmelenme
     //
     // Motor doğal olarak stall devrinde (~N_stall) stabilize olur.
     // Governed devrine (2500 RPM) asla ulaşamaz — TC pump yükü baskın.
     // ECM rate limiter YOK — yavaş devir artışı tamamen sıvı ataleti.
 
-    // TC pump quadratic yükü: T_pump = (N / K_pump_stall)²
-    // Stall K-factor kullanılır (SR=0). SR arttığında K_pump steady-state'te artar
-    // ama transient'te TC sıvı ataleti bu geçişi geciktirir. CAN doğrulaması:
-    // gerçek dN/dt neredeyse sabit (~580 RPM/s) — pump yükü SR ile anında düşmüyor.
-    var K_pump_stall = (tcFns.data && tcFns.data.length > 0) ? tcFns.kpump(0) : 84.0;
-    var T_pump_absorbed = (N_engine / K_pump_stall) * (N_engine / K_pump_stall);
+    // T_pump_absorbed zaten Hesap 4b'de hesaplandı: (N_engine / K_pump_0)²
 
     // Net tork: motor çıkışı - pump yükü - mekanik kayıplar
     var T_net_engine = T_engine - T_pump_absorbed - pumpTorqueDrop;
@@ -3090,6 +3170,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         v: v_new,
         N_engine: N_engine_new,
         T_engine: T_engine,
+        T_pump: T_pump_absorbed,
+        T_turbine: T_turbine,
         TR: TR,
         SR: SR,
         T_gb_out: T_gb_out,
@@ -3229,6 +3311,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     },
     // Milestone olayları
     milestones: milestones,
+    // Motor-Konvertör Eşleşme Tablosu
+    matchTable: matchTable,
     // Parametreler
     params: {
       rampTime: rampTime,
