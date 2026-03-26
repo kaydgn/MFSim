@@ -3754,8 +3754,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         }
         r += '  ' + ln('=', hdr.length - 2) + '\n';
         r += '\n';
-        r += '  Toplam ' + logData.length + ' kayit, ~' + num(dyn.dt * logData.length, 1) + ' s surec.\n';
-        r += '  (Veriler ~10 ms aralikla kaydedilmistir. ">>>" ile baslayan satirlar onemli olaylari gosterir.)\n';
+        var logMs = dyn.params.logIntervalSec ? dyn.params.logIntervalSec * 1000 : 10;
+        r += '  Toplam ' + logData.length + ' kayit, ~' + num(dyn.totalTime, 2) + ' s surec.\n';
+        r += '  (Veriler ' + num(logMs, 0) + ' ms aralikla kaydedilmistir. ">>>" ile baslayan satirlar onemli olaylari gosterir.)\n';
         r += '\n';
 
         // Kolon açıklamaları

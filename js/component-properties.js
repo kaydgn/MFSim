@@ -8130,6 +8130,21 @@ function getSolverPropertiesHTML(node) {
     html += '<input type="checkbox" id="ve-solver-obscross-' + node.id + '" ' + (obsCrossAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
     html += '<div><div style="font-weight:600;">Engel Atlama Analizi</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Engel geçme kabiliyeti analizi — hendek, rampa ve dikey engel hesaplamaları</div></div>';
     html += '</label>';
+
+    // Log kaydı aralığı (Engel Atlama checkbox açıkken göster)
+    var obsLogInterval = d.obsLogInterval || 0.01;
+    html += '<div id="ve-solver-obslog-wrap-' + node.id + '" style="margin-top:4px; margin-left:23px; padding:5px 10px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:4px;' + (!obsCrossAnalysis ? 'display:none;' : '') + '">';
+    html += '<label style="font-size:0.62rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">';
+    html += 'Log kaydı:';
+    html += '<select id="ve-solver-obslog-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px;">';
+    html += '<option value="0.001"' + (obsLogInterval == 0.001 ? ' selected' : '') + '>1 ms (cok detayli)</option>';
+    html += '<option value="0.005"' + (obsLogInterval == 0.005 ? ' selected' : '') + '>5 ms</option>';
+    html += '<option value="0.01"' + (obsLogInterval == 0.01 ? ' selected' : '') + '>10 ms (varsayilan)</option>';
+    html += '<option value="0.05"' + (obsLogInterval == 0.05 ? ' selected' : '') + '>50 ms</option>';
+    html += '<option value="0.1"' + (obsLogInterval == 0.1 ? ' selected' : '') + '>100 ms (ozet)</option>';
+    html += '</select>';
+    html += '</label>';
+    html += '</div>';
   }
   html += '</div>';
 
@@ -8269,9 +8284,15 @@ function onVESolverParamChange(nodeId) {
   var adEl = el('ve-solver-acceldecel-' + nodeId);
   if(adEl) node.data.accelDecelAnalysis = adEl.checked;
 
-  // Engel Atlama Analizi checkbox
+  // Engel Atlama Analizi checkbox + log aralığı
   var ocEl = el('ve-solver-obscross-' + nodeId);
-  if(ocEl) node.data.obstacleCrossingAnalysis = ocEl.checked;
+  if(ocEl) {
+    node.data.obstacleCrossingAnalysis = ocEl.checked;
+    var obsLogWrap = document.getElementById('ve-solver-obslog-wrap-' + nodeId);
+    if(obsLogWrap) obsLogWrap.style.display = ocEl.checked ? '' : 'none';
+  }
+  var obsLogEl = el('ve-solver-obslog-' + nodeId);
+  if(obsLogEl) node.data.obsLogInterval = parseFloat(obsLogEl.value) || 0.01;
 
   // FT modu parametreleri
   var ftDtEl = el('ve-solver-ftdt-' + nodeId);

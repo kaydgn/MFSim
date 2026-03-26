@@ -739,7 +739,9 @@ function veSolverRunProfessional() {
             // Dinamik simülasyonu da çalıştır (statik analiz başarılıysa)
             if(obsCrossResult && obsCrossResult.stallAnalysis && obsCrossResult.stallAnalysis.hasData && !obsCrossResult.geometryFail) {
               try {
-                simResult.obstacleDynamic = veFTRunObstacleDynamicSim(obsCrossResult);
+                var _dynOpts = {};
+                if(_solverData.obsLogInterval) _dynOpts.logInterval = parseFloat(_solverData.obsLogInterval);
+                simResult.obstacleDynamic = veFTRunObstacleDynamicSim(obsCrossResult, _dynOpts);
               } catch(e) {
                 simResult.obstacleDynamic = { success: false, reason: 'Dinamik simulasyon hatasi: ' + e.message };
               }
