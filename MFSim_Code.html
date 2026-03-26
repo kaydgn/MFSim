@@ -19824,8 +19824,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   // CAN-bus doğrulaması: motor tork artışı ile TC pump quadratic yükü birbirini
   // dengelediğinden T_net ≈ sabit kalır → sabit J_eff ile doğrusal RPM artışı elde edilir.
   // SR'ye bağlı model gereksiz — CAN verisindeki doğrusal profille uyumsuz S-eğrisi üretir.
-  // Kalibrasyon: T_pump×TR modeli ile yeniden kalibre — ön faz ~2.4s hedefi
-  var J_fluid = opts.J_fluid || 4.5;         // TC sıvı ataleti (kg·m²) — T_pump×TR modeli ile yeniden kalibre
+  // Kalibrasyon: CAN dN/dt ~700 RPM/s, sim ~490 → oran 1.4x → J_eff = 5.3/1.4 ≈ 3.8 → J_fluid ≈ 3.0
+  var J_fluid = opts.J_fluid || 3.0;         // TC sıvı ataleti (kg·m²) — CAN dN/dt kalibrasyonu
 
   var inp = obsResult.inputParams;
   var stl = obsResult.stallAnalysis;
