@@ -3135,20 +3135,31 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     }
 
     // ── Stall kontrolü ──
+    // Motor devri artarken T_wheel de artıyor — stall kararı vermek için
+    // motorun stall dengesine oturmasını beklemek gerekir.
+    // Koşul: v=0 VE T_wheel < T_req VE motor devri artışı durmuş (dN/dt ≈ 0)
+    var motorSettled = (N_engine_new > 0 && Math.abs(N_engine_new - N_engine) / dt < 5.0);
     if(!simComplete && v_new < 1e-9 && DD >= 99.9 && isFinite(T_req_anlik) && T_wheel < T_req_anlik) {
-      if(stallCheckStart < 0) {
-        stallCheckStart = t;
-      } else if(t - stallCheckStart >= stallTimeout) {
-        stallDetected = true;
-        stallPhase = phase;
-        simComplete = true;
-        simSuccess = false;
-        reason = (phase === 'front' ? 'On' : 'Arka') + ' teker fazinda arac takildi (stall). T_wheel (' +
-                 T_wheel.toFixed(0) + ' Nm) < T_req (' + T_req_anlik.toFixed(0) + ' Nm).';
-        addMilestone(phase === 'front' ? 'f_stall' : 'r_stall',
-          (phase === 'front' ? 'On' : 'Arka') + ' teker: STALL — arac takildi', {
-          T_wheel: T_wheel, T_req: T_req_anlik, N_engine: N_engine_new, phi_deg: phi_new * 180 / Math.PI
-        });
+      if(motorSettled) {
+        // Motor stall dengesine ulaştı ve T_wheel hâlâ yetersiz → gerçek stall
+        if(stallCheckStart < 0) {
+          stallCheckStart = t;
+        } else if(t - stallCheckStart >= 0.5) {
+          // Motor settle olduktan sonra 0.5s daha bekle (kararlılık)
+          stallDetected = true;
+          stallPhase = phase;
+          simComplete = true;
+          simSuccess = false;
+          reason = (phase === 'front' ? 'On' : 'Arka') + ' teker fazinda arac takildi (stall). T_wheel (' +
+                   T_wheel.toFixed(0) + ' Nm) < T_req (' + T_req_anlik.toFixed(0) + ' Nm).';
+          addMilestone(phase === 'front' ? 'f_stall' : 'r_stall',
+            (phase === 'front' ? 'On' : 'Arka') + ' teker: STALL — arac takildi', {
+            T_wheel: T_wheel, T_req: T_req_anlik, N_engine: N_engine_new, phi_deg: phi_new * 180 / Math.PI
+          });
+        }
+      } else {
+        // Motor hâlâ devir artırıyor — stall sayacını sıfırla
+        stallCheckStart = -1;
       }
     } else {
       if(v_new > 1e-6) stallCheckStart = -1;
