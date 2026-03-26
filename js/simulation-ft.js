@@ -2926,10 +2926,11 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       T_gb_out = gbTorqueLimit_dyn;
       T_gb_limited = true;
     }
-    // T_wheel = T_gb_out × i_tr × i_diff × η_downstream / n_d
-    // η_downstream = η_total / η_gear (şanzıman verimi gb_out'ta zaten yansımış)
+    // T_wheel = T_gb_out × η_gear × i_tr × i_diff × η_downstream / n_d
+    // Önce şanzıman verimi, sonra downstream verimler
+    var T_gb_actual = T_gb_out * (stl.eta_gear || 1.0);
     var eta_downstream = stl.eta_gear > 0 ? eta_total / stl.eta_gear : eta_total;
-    var T_wheel = T_gb_out * eta_downstream * i_tr * i_diff / n_d;
+    var T_wheel = T_gb_actual * eta_downstream * i_tr * i_diff / n_d;
 
     // ── Hesap 6: Anlık gerekli tork ──
     var moment_kolu = R_eff * Math.sin(phi);
