@@ -19982,7 +19982,10 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // moment_kolu <= 0: tepeyi geçmiş, T_req = 0
 
     // ── Hesap 7: Net kuvvet ve ivme ──
-    var F_itme = T_wheel * n_d / R_eff;
+    // Engeldeki akstaki tekerlerin itme kuvveti (n_obstacle = 2)
+    // Diğer aks düz zeminde — engel kuvvetine katkısı yok
+    var n_obstacle = 2;  // engeldeki teker sayısı
+    var F_itme = T_wheel * n_obstacle / R_eff;
     var F_engel = 0;
     if(moment_kolu > 0 && isFinite(N_aks)) {
       F_engel = N_aks * moment_kolu / R_eff;
