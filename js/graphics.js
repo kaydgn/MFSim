@@ -3672,41 +3672,6 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       var ms = dyn.milestones || [];
 
       // ┌─────────────────────────────────────────────┐
-      //  DINAMIK MODELIN TEMEL FARKI: ACI DEGISIMI
-      // └─────────────────────────────────────────────┘
-      r += '  +' + ln('-', 64) + '+\n';
-      r += '  |' + pad(' DINAMIK MODEL: TEKER-ZEMIN ACI DEGISIMI (phi)', 64) + '|\n';
-      r += '  +' + ln('-', 64) + '+\n\n';
-
-      r += '  Statik modelde moment kolu sabit x degeridir ve en kotu ani\n';
-      r += '  (teker engele ilk degdigi an) temsil eder. Dinamik modelde ise\n';
-      r += '  teker, engelin kose noktasi P etrafinda bir yay cizer.\n\n';
-
-      r += '  phi acisi: P-merkez dogrusunun dikey ile yaptigi acidir.\n\n';
-
-      r += '    phi = +' + num(dyn.params.phi_start_deg, 1) + ' derece  Baslangic (teker engele dayanir)\n';
-      r += '    |     Moment kolu = R_eff x sin(phi) = x (maksimum)\n';
-      r += '    |     T_req en yuksek, tirmanis en zor\n';
-      r += '    |     Teker P uzerinde donmeye baslar, phi azalir\n';
-      r += '    v\n';
-      r += '    phi = 0 derece     Tepe noktasi (merkez P\'nin tam ustunde)\n';
-      r += '    |     Moment kolu = 0, T_req = 0\n';
-      r += '    |     Yercekimi direnci sifir\n';
-      r += '    v\n';
-      r += '    phi = -' + num(dyn.params.phi_start_deg, 1) + ' derece  Teker engeli asti\n';
-      r += '          Moment kolu negatif, yercekimi artik lehimize\n\n';
-
-      r += '  Sonuc: Statik modeldeki sabit T_req yerine, gercekte teker\n';
-      r += '  harekete baslayinca T_req surekli azalir. Bu, statik modelin\n';
-      r += '  "asamaz" dedigi durumlarda bile aracin momentumuyla engeli\n';
-      r += '  asabilecegi anlamina gelir.\n\n';
-
-      r += '  Formul:  moment_kolu(phi) = R_eff x sin(phi)\n';
-      r += '           T_req(phi) = [W x a / (L +/- moment_kolu)] / 2 x moment_kolu\n';
-      r += '           phi > 0: tirmanis (direnç)  |  phi <= 0: inis (yardim)\n';
-      r += '\n';
-
-      // ┌─────────────────────────────────────────────┐
       //  ZAMAN SERISI VERILERI
       // └─────────────────────────────────────────────┘
       var logData = dyn.log || [];
@@ -3776,10 +3741,37 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
             }
           }
 
-          // Milestone satır öncesi annotation
+          // Milestone satır öncesi annotation (detaylı)
           if(matchedMs && !matchedMs._used) {
             matchedMs._used = true;
-            r += '  ' + pad('>>> ' + ascii(matchedMs.label), hdr.length - 2) + '\n';
+            var mLbl = '>>> ' + ascii(matchedMs.label);
+            // Detay bilgilerini topla
+            var mDet = [];
+            if(matchedMs.T_wheel !== undefined && matchedMs.T_req !== undefined) {
+              mDet.push('T_whl=' + num(matchedMs.T_wheel, 0) + ' Nm');
+              mDet.push('T_req=' + (isFinite(matchedMs.T_req) ? num(matchedMs.T_req, 0) : '---') + ' Nm');
+            }
+            if(matchedMs.v !== undefined) {
+              mDet.push('v=' + num(matchedMs.v * 3.6, 2) + ' km/h');
+            }
+            if(matchedMs.N_engine !== undefined) {
+              mDet.push('N=' + num(matchedMs.N_engine, 0) + ' RPM');
+            }
+            if(matchedMs.KE !== undefined && matchedMs.KE > 0) {
+              mDet.push('KE=' + num(matchedMs.KE, 0) + ' J');
+            }
+            if(matchedMs.margin_pct !== undefined) {
+              mDet.push('marj=' + (matchedMs.margin_pct >= 0 ? '+' : '') + num(matchedMs.margin_pct, 1) + '%');
+            }
+            if(matchedMs.duration !== undefined) {
+              mDet.push('sure=' + num(matchedMs.duration, 3) + ' s');
+            }
+            r += '  ' + ln('-', hdr.length - 2) + '\n';
+            r += '  ' + mLbl + '\n';
+            if(mDet.length > 0) {
+              r += '  ' + pad('', 4) + mDet.join('  |  ') + '\n';
+            }
+            r += '  ' + ln('-', hdr.length - 2) + '\n';
           }
 
           // Veri satırı
@@ -3794,8 +3786,10 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           if(d.T_gb_lim) gbStr += '*';
           row += pad(gbStr, 8, 'right') + ' ';
           row += pad(num(d.T_wheel, 0), 8, 'right') + ' ';
-          var n_eff_r = 2 * (1 + (inp.h || 0) / (inp.R_eff || 1));
-          var T_whl_eff = d.T_wheel * n_eff_r / 2;
+          // T_whl_eff(φ) = T_whl × [1 + (R_corner / R_eff) × cos(φ)]
+          var phi_rad = (d.phi_deg || 0) * Math.PI / 180;
+          var R_c = (obs.cornerCorrection && obs.cornerCorrection.R_corner > 0) ? obs.cornerCorrection.R_corner : inp.R_eff;
+          var T_whl_eff = d.T_wheel * (1 + (R_c / (inp.R_eff || 1)) * Math.cos(phi_rad));
           row += pad(num(T_whl_eff, 0), 8, 'right') + ' ';
           row += pad(isFinite(d.T_req) ? num(d.T_req, 0) : '---', 8, 'right') + ' ';
           row += pad(num(d.phi_deg, 2), 8, 'right') + ' ';
@@ -3820,7 +3814,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '    SR       = Tork konvertor hiz orani (N_turbin/N_motor)\n';
         r += '    T_gb     = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = limit uygulanmis, limit: ' + num(dyn.params.gbTorqueLimit, 0) + ' Nm)' : '') + '\n';
         r += '    T_whl    = Tek teker torku (Nm)\n';
-        r += '    T_whl_e  = Efektif tek teker torku (Nm) = T_whl x n_eff/2 (duz zemindeki aks katkisi dahil)\n';
+        r += '    T_whl_e  = Efektif tek teker torku (Nm) = T_whl x [1 + (R_corner/R_eff) x cos(phi)]\n';
         r += '    T_req    = Anlik gerekli tork — tek teker (Nm)\n';
         r += '    phi(d)   = Acisal konum (derece, +: tirmanis, 0: tepe, -: inis)\n';
         r += '    F_net    = Net kuvvet (N) = F_itme - F_engel - F_yuvarlanma\n';
