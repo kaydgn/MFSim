@@ -3506,6 +3506,53 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     r += '\n';
   }
 
+  // MOTOR-KONVERTÖR EŞLEŞME TABLOSU + ŞANZIMAN ÇIKIŞ TABLOSU
+  var dyn = sim.obstacleDynamic;
+  var mt = dyn ? dyn.matchTable : null;
+  if(mt && mt.length > 0) {
+    r += ln('-', W) + '\n  MOTOR-KONVERTOR ESLEME TABLOSU (Converter Mode)\n' + ln('-', W) + '\n\n';
+
+    // Başlık
+    r += '  ' + pad('SR', 7, 'right') + pad('TR', 7, 'right') + pad('N_eng', 7, 'right');
+    r += pad('T_eng', 8, 'right') + pad('P_eng', 8, 'right');
+    r += pad('T_turb', 8, 'right') + pad('P_turb', 8, 'right');
+    r += pad('Q_rej', 8, 'right') + '  Match Point\n';
+    r += '  ' + ln('-', 69) + '\n';
+
+    for(var mti = 0; mti < mt.length; mti++) {
+      var mp = mt[mti];
+      r += '  ' + pad(num(mp.SR, 3), 7, 'right') + pad(num(mp.TR, 3), 7, 'right') + pad(num(mp.N_engine, 0), 7, 'right');
+      r += pad(num(mp.T_engine, 1), 8, 'right') + pad(num(mp.P_engine_kW, 1), 8, 'right');
+      r += pad(num(mp.T_turbine, 1), 8, 'right') + pad(num(mp.P_turbine_kW, 1), 8, 'right');
+      r += pad(num(mp.Q_reject_kW, 2), 8, 'right');
+      r += (mp.matchPoint ? '  ' + mp.matchPoint : '') + '\n';
+    }
+    r += '\n';
+    r += '  Not: T_turbine = T_pump x TR (SCAAN dogrulama). T_pump = (N / K_pump)^2.\n';
+    r += '\n';
+
+    // ŞANZIMAN ÇIKIŞ TABLOSU
+    var gearLabel = inp.gearName ? ascii(inp.gearName) : '1C';
+    r += ln('-', W) + '\n  SANZIMAN CIKIS TABLOSU (Gear ' + gearLabel + ' - Converter Mode)\n' + ln('-', W) + '\n\n';
+
+    r += '  ' + pad('SR', 7, 'right') + pad('N_eng', 7, 'right') + pad('T_eng', 8, 'right') + pad('P_eng', 8, 'right');
+    r += pad('N_out', 8, 'right') + pad('T_gb', 8, 'right') + pad('P_gb', 8, 'right');
+    r += pad('Q_rej', 8, 'right') + '  Match Point\n';
+    r += '  ' + ln('-', 70) + '\n';
+
+    for(var mti2 = 0; mti2 < mt.length; mti2++) {
+      var mp2 = mt[mti2];
+      var N_out = Math.round(mp2.N_engine * mp2.SR * (inp.gearRatio || 1));
+      var P_gb_kW = mp2.T_gb_out > 0 && N_out > 0 ? (mp2.T_gb_out * N_out * 2 * Math.PI / 60 / 1000) : mp2.P_turbine_kW;
+      r += '  ' + pad(num(mp2.SR, 3), 7, 'right') + pad(num(mp2.N_engine, 0), 7, 'right');
+      r += pad(num(mp2.T_engine, 1), 8, 'right') + pad(num(mp2.P_engine_kW, 1), 8, 'right');
+      r += pad(num(N_out, 0), 8, 'right') + pad(num(mp2.T_gb_out, 1), 8, 'right');
+      r += pad(num(P_gb_kW, 1), 8, 'right') + pad(num(mp2.Q_reject_kW, 2), 8, 'right');
+      r += (mp2.matchPoint ? '  ' + mp2.matchPoint : '') + '\n';
+    }
+    r += '\n';
+  }
+
   // 7. AKTARMA PARAMETRELERI
   var stl = obs.stallAnalysis;
   r += ln('-', W) + '\n  AKTARMA PARAMETRELERI\n' + ln('-', W) + '\n';
