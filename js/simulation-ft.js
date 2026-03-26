@@ -2864,9 +2864,10 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var reason = '';
   var stallCheckStart = -1; // Gaz %100 ve v=0 olduğu ilk an
 
-  // Zaman serisi verileri (belirli aralıklarla kaydet, bellek için)
+  // Zaman serisi verileri (kullanıcı seçimine göre kaydet)
   var log = [];
-  var logInterval = Math.max(1, Math.round(0.01 / dt)); // ~10 ms aralıklarla
+  var logIntervalSec = opts.logInterval || 0.01; // varsayılan 10 ms
+  var logInterval = Math.max(1, Math.round(logIntervalSec / dt));
   var stepCount = 0;
   var maxSteps = Math.ceil(maxTime / dt);
 
@@ -3236,7 +3237,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       momentumCarry: false,
       phi_start_deg: phi_start * 180 / Math.PI,
       J_fluid: J_fluid,
-      gbTorqueLimit: gbTorqueLimit_dyn
+      gbTorqueLimit: gbTorqueLimit_dyn,
+      logIntervalSec: logIntervalSec
     },
     // Zaman serisi
     log: log
