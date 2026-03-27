@@ -2865,19 +2865,66 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   var eta_gear_val = stl.eta_gear || 1.0;
   var eta_downstream_base = eta_gear_val > 0 ? eta_total / eta_gear_val : eta_total;
 
+  // ── T_gb limit → Motor tork yüzdesi dönüşümü ──
+  // Kullanıcı T_gb_limit girerse, program iteratif olarak motor tork yüzdesini bulur.
+  // T_gb = T_pump × TR_stall × i_g × η_gear  ve  T_pump = (N / K_pump_0)²
+  // T_motor_limited(N) = T_gross(N) × pct
+  // Stall dengesi: T_gross(N) × pct = T_pump(N) + pump_drop  iterasyonla çözülür.
+  var motorTorquePct = 1.0;  // varsayılan: %100 (limit yok)
+  if(gbTorqueLimit_dyn) {
+    var TR_0 = tcFns.tau(0);
+    // İlk tahmin: stall'dan ters hesap
+    var T_pump_target = gbTorqueLimit_dyn / (TR_0 * i_g * eta_gear_val);
+    var N_stall_est = K_pump_0 * Math.sqrt(Math.max(0, T_pump_target));
+    N_stall_est = Math.max(idleRpm, Math.min(governedSpeed, N_stall_est));
+
+    // İteratif çözüm (2-5 iterasyon yeterli)
+    for(var pctIter = 0; pctIter < 10; pctIter++) {
+      var T_gross_at_stall = motorTorqueFn(N_stall_est);
+      if(T_gross_at_stall <= 0) break;
+      var T_motor_needed = T_pump_target + pumpTorqueDrop;
+      motorTorquePct = T_motor_needed / T_gross_at_stall;
+      motorTorquePct = Math.max(0.1, Math.min(1.0, motorTorquePct));
+
+      // Yeni stall RPM hesapla: T_gross(N) × pct = (N/K)² + pump_drop
+      var N_new = idleRpm;
+      for(var rpm2 = Math.ceil(idleRpm); rpm2 <= governedSpeed; rpm2 += 1) {
+        var T_lim = motorTorqueFn(rpm2) * motorTorquePct;
+        var T_p = (rpm2 / K_pump_0) * (rpm2 / K_pump_0);
+        if(T_lim >= T_p + pumpTorqueDrop) {
+          N_new = rpm2;
+        } else {
+          break;
+        }
+      }
+
+      // Yakınsama kontrolü
+      if(Math.abs(N_new - N_stall_est) < 1) break;
+      N_stall_est = N_new;
+
+      // T_pump_target'ı güncelle (stall RPM değişti)
+      T_pump_target = (N_stall_est / K_pump_0) * (N_stall_est / K_pump_0);
+    }
+  }
+
+  // Limitli motor tork fonksiyonu
+  var motorTorqueLimitedFn = function(rpm) {
+    return motorTorqueFn(rpm) * motorTorquePct;
+  };
+
   var matchSRs = [0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.634, 0.70, 0.75, 0.80, 0.825, 0.85, 0.875, 0.91, 0.924, 0.939, 0.95, 0.975, 0.99];
   for(var mi = 0; mi < matchSRs.length; mi++) {
     var sr_m = matchSRs[mi];
     var K_m = (tcFns.data && tcFns.data.length > 0) ? tcFns.kpump(sr_m) : 84.0;
     var TR_m = tcFns.tau(sr_m);
 
-    // Denge noktası: T_engine(N) = (N / K_m)² + pump_drop
+    // Denge noktası: T_engine_limited(N) = (N / K_m)² + pump_drop
     var N_m = 2000;
     for(var iter = 0; iter < 100; iter++) {
-      var T_eng_m = motorTorqueFn(N_m);
+      var T_eng_m = motorTorqueLimitedFn(N_m);
       var T_pump_m = (N_m / K_m) * (N_m / K_m);
       var residual = T_eng_m - T_pump_m - pumpTorqueDrop;
-      var dTe = (motorTorqueFn(N_m + 1) - motorTorqueFn(N_m - 1)) / 2;
+      var dTe = (motorTorqueLimitedFn(N_m + 1) - motorTorqueLimitedFn(N_m - 1)) / 2;
       var dTp = 2 * N_m / (K_m * K_m);
       var dR = dTe - dTp;
       if(Math.abs(dR) < 1e-8) break;
@@ -2887,13 +2934,13 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     }
 
     // Denge bulunamadıysa (motor torku her yerde pump'tan yüksek): governed hız kullan
-    var T_eng_check = motorTorqueFn(N_m);
+    var T_eng_check = motorTorqueLimitedFn(N_m);
     var T_pump_check = (N_m / K_m) * (N_m / K_m);
     if(N_m <= idleRpm + 5 || (T_eng_check - T_pump_check - pumpTorqueDrop) > 50) {
       N_m = governedSpeed;
     }
 
-    var T_eng_final = motorTorqueFn(N_m);
+    var T_eng_final = motorTorqueLimitedFn(N_m);
     var T_pump_final = (N_m / K_m) * (N_m / K_m);
     var T_turbine_m = T_pump_final * TR_m;
     var T_gb_m = T_turbine_m * i_g * eta_gear_val;
@@ -3000,9 +3047,10 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var TR = tcFns.tau(SR);
 
     // ── Hesap 4: Motor torku ──
-    // DD=%100 sabit — motor her zaman tam yük tork eğrisinde çalışır
+    // T_gb limit varsa motor tork yüzdesi uygulanır (fiziksel ölçekleme)
+    // Hard-cut yok — motor eğrisi × motorTorquePct ile doğal davranış
     var T_full_load = motorTorqueFn(N_engine);
-    var T_engine = T_full_load;
+    var T_engine = T_full_load * motorTorquePct;
 
     // ── Hesap 4b: Pump torku (TC sıvı yükü) ──
     // T_pump = (N / K_pump_stall)² — pump'ın sıvıya uyguladığı tork
@@ -3016,11 +3064,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // Sadece T_pump sıvı üzerinden türbine aktarılır.
     var T_turbine = T_pump_absorbed * TR;
     var T_gb_out = T_turbine * i_g * eta_gear_val;
-    var T_gb_limited = false;
-    if(gbTorqueLimit_dyn && T_gb_out > gbTorqueLimit_dyn) {
-      T_gb_out = gbTorqueLimit_dyn;
-      T_gb_limited = true;
-    }
+    var T_gb_limited = (motorTorquePct < 1.0);  // limit aktifse işaretle
     // T_wheel = T_gb_out × i_tr × i_diff × η_downstream / n_d
     var T_wheel = T_gb_out * eta_downstream_base * i_tr * i_diff / n_d;
 
@@ -3339,6 +3383,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
       phi_start_deg: phi_start * 180 / Math.PI,
       J_fluid: J_fluid,
       gbTorqueLimit: gbTorqueLimit_dyn,
+      motorTorquePct: motorTorquePct,
       logIntervalSec: logIntervalSec
     },
     // Zaman serisi

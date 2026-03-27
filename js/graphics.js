@@ -3649,6 +3649,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       r += pRow('Arka Teker Baslangic', 'v=0 (momentum tasinmaz, durustan baslar)');
       if(dyn.params.gbTorqueLimit && dyn.params.gbTorqueLimit > 0) {
         r += pRow('Sanziman Cikis Tork Limiti', num(dyn.params.gbTorqueLimit, 0) + ' Nm');
+        if(dyn.params.motorTorquePct && dyn.params.motorTorquePct < 1.0) {
+          r += pRow('Motor Tork Yuzdesi', '%' + num(dyn.params.motorTorquePct * 100, 1) + '  (T_gb limitinden hesaplandi)');
+        }
       }
       r += '\n';
 
@@ -3812,7 +3815,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '    T_eng    = Motor torku (Nm)\n';
         r += '    TR       = Tork konvertor tork orani\n';
         r += '    SR       = Tork konvertor hiz orani (N_turbin/N_motor)\n';
-        r += '    T_gb     = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = limit uygulanmis, limit: ' + num(dyn.params.gbTorqueLimit, 0) + ' Nm)' : '') + '\n';
+        r += '    T_gb     = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = motor tork yuzdesi %' + num((dyn.params.motorTorquePct || 1) * 100, 1) + ' uygulanmis)' : '') + '\n';
         r += '    T_whl    = Tek teker torku (Nm)\n';
         r += '    T_whl_e  = Efektif tek teker torku (Nm) = T_whl x [1 + (R_corner/R_eff) x cos(phi)]\n';
         r += '    T_req    = Anlik gerekli tork — tek teker (Nm)\n';
