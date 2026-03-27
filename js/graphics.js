@@ -2268,6 +2268,175 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
+  // CONVERTER MODE (MOTOR-KONVERTOR ESLEME TABLOSU)
+  // ════════════════════════════════════════════════════════════════════════
+  if (R.tcData && R.tcData.length >= 2 && R.torqueData && R.torqueData.length >= 2) {
+    var _cmW = 130;
+    var _cmTcFns = FT_SOLVER.createTCFunctions(R.tcData);
+    var _cmMotorFn = FT_SOLVER.createMotorTorqueFn(R.torqueData, R.governed, R.noLoad);
+    var _cmPumpDrop = R.pumpDrop || 17.6;
+    var _cmIdleRpm = R.idleRpm || 700;
+    var _cmGovSpeed = R.governed || 2100;
+    var _cmNoLoad = R.noLoad || 2350;
+    var _cmCouplingSR = _cmTcFns.couplingSR || 0.88;
+
+    // Temel SR listesi
+    var _cmBaseSRs = [0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.634, 0.70, 0.75, 0.80, 0.825, 0.90, 0.925, 0.935, 0.945, 0.950, 0.975, 0.99];
+
+    // Match point SR'lerini bul (η = SR × TR hedef değerlere ulaştığı noktalar)
+    var _cmSpecialSRs = [];
+    var _cmTargets = [
+      { eta: 0.70, label: '70 Percent' },
+      { eta: 0.80, label: '80 Percent' },
+      { eta: 0.85, label: '85 Percent' }
+    ];
+    // Her hedef η için SR'yi bisection ile bul
+    for (var _ti = 0; _ti < _cmTargets.length; _ti++) {
+      var _target = _cmTargets[_ti].eta;
+      var _srLo = 0.01, _srHi = _cmCouplingSR;
+      for (var _bi = 0; _bi < 50; _bi++) {
+        var _srMid = (_srLo + _srHi) / 2;
+        var _etaMid = _srMid * _cmTcFns.tau(_srMid);
+        if (_etaMid < _target) _srLo = _srMid; else _srHi = _srMid;
+        if (Math.abs(_srHi - _srLo) < 0.0005) break;
+      }
+      var _srFound = Math.round((_srLo + _srHi) / 2 * 1000) / 1000;
+      _cmSpecialSRs.push(_srFound);
+    }
+    // Coupling noktası
+    _cmSpecialSRs.push(Math.round(_cmCouplingSR * 1000) / 1000);
+
+    // Özel SR'leri temel listeye ekle (henüz yoksa)
+    for (var _si = 0; _si < _cmSpecialSRs.length; _si++) {
+      var _exists = false;
+      for (var _ei = 0; _ei < _cmBaseSRs.length; _ei++) {
+        if (Math.abs(_cmBaseSRs[_ei] - _cmSpecialSRs[_si]) < 0.003) { _exists = true; break; }
+      }
+      if (!_exists) _cmBaseSRs.push(_cmSpecialSRs[_si]);
+    }
+    _cmBaseSRs.sort(function(a, b) { return a - b; });
+
+    // Governed SR'yi bul ve ekle — governed'da motor devri governed'a eşit olduğundaki SR
+    // Bu, T_engine(gov) − pumpDrop = (gov / K_pump(SR))² denkleminden SR bulunur
+    var _cmTengGov = _cmMotorFn(_cmGovSpeed);
+    var _cmTpumpGov = _cmTengGov - _cmPumpDrop;
+    if (_cmTpumpGov > 0) {
+      var _cmKneeded = _cmGovSpeed / Math.sqrt(_cmTpumpGov);
+      // K_pump(SR) = _cmKneeded olan SR'yi bul — K_pump genelde SR ile artar
+      var _cmSrGov = 0;
+      for (var _ki = 0; _ki < 990; _ki++) {
+        var _srTest = _ki / 1000;
+        var _kTest = _cmTcFns.kpump(_srTest);
+        if (_kTest >= _cmKneeded) { _cmSrGov = _srTest; break; }
+      }
+      if (_cmSrGov > 0) {
+        // Daha hassas bisection
+        var _sgLo = Math.max(0, _cmSrGov - 0.01), _sgHi = Math.min(0.99, _cmSrGov + 0.01);
+        for (var _sgi = 0; _sgi < 30; _sgi++) {
+          var _sgMid = (_sgLo + _sgHi) / 2;
+          if (_cmTcFns.kpump(_sgMid) < _cmKneeded) _sgLo = _sgMid; else _sgHi = _sgMid;
+        }
+        _cmSrGov = Math.round((_sgLo + _sgHi) / 2 * 1000) / 1000;
+        var _govExists = false;
+        for (var _ge = 0; _ge < _cmBaseSRs.length; _ge++) {
+          if (Math.abs(_cmBaseSRs[_ge] - _cmSrGov) < 0.003) { _govExists = true; break; }
+        }
+        if (!_govExists) {
+          _cmBaseSRs.push(_cmSrGov);
+          _cmBaseSRs.sort(function(a, b) { return a - b; });
+        }
+      }
+    }
+
+    // Her SR için denge noktasını hesapla
+    var _cmTable = [];
+    for (var _ci = 0; _ci < _cmBaseSRs.length; _ci++) {
+      var _sr = _cmBaseSRs[_ci];
+      var _Km = _cmTcFns.kpump(_sr);
+      var _TRm = _cmTcFns.tau(_sr);
+
+      // Newton-Raphson: T_engine(N) − pumpDrop = (N / K_pump)²
+      var _Nm = 2000;
+      for (var _it = 0; _it < 100; _it++) {
+        var _Te = _cmMotorFn(_Nm);
+        var _Tp = (_Nm / _Km) * (_Nm / _Km);
+        var _res = _Te - _Tp - _cmPumpDrop;
+        var _dTe = (_cmMotorFn(_Nm + 1) - _cmMotorFn(_Nm - 1)) / 2;
+        var _dTp = 2 * _Nm / (_Km * _Km);
+        var _dR = _dTe - _dTp;
+        if (Math.abs(_dR) < 1e-8) break;
+        _Nm = _Nm - _res / _dR;
+        _Nm = Math.max(_cmIdleRpm, Math.min(_cmNoLoad, _Nm));
+        if (Math.abs(_res) < 0.1) break;
+      }
+
+      var _TeF = _cmMotorFn(_Nm);
+      var _TpF = (_Nm / _Km) * (_Nm / _Km);
+      var _TtF = _TpF * _TRm;
+      var _NtF = _Nm * _sr;
+      var _PeF = _TeF * _Nm * 2 * Math.PI / 60 / 1000;
+      var _PtF = _TtF * _NtF * 2 * Math.PI / 60 / 1000;
+      var _QrF = _PeF - _PtF;
+      var _etaF = _sr * _TRm;
+
+      // Match point belirleme
+      var _mpF = '';
+      if (_sr === 0) _mpF = 'Stall';
+      else if (Math.abs(_etaF - 0.70) < 0.015) _mpF = '70 Percent';
+      else if (Math.abs(_etaF - 0.80) < 0.015) _mpF = '80 Percent';
+      else if (Math.abs(_etaF - 0.85) < 0.015) _mpF = '85 Percent';
+      else if (Math.abs(_TRm - 1.0) < 0.01) _mpF = 'Coupling';
+      if (_Nm >= _cmGovSpeed - 10 && _mpF === '') _mpF = 'Governed';
+
+      _cmTable.push({
+        SR: _sr, TR: _TRm, N_engine: Math.round(_Nm), T_engine: Math.round(_TeF * 10) / 10,
+        P_engine: Math.round(_PeF * 10) / 10, N_turbine: Math.round(_NtF),
+        T_turbine: Math.round(_TtF * 10) / 10, P_turbine: Math.round(_PtF * 10) / 10,
+        Q_reject: Math.round(_QrF * 100) / 100, matchPoint: _mpF
+      });
+    }
+
+    // Tabloyu renderla
+    r += ln('=', _cmW) + '\n';
+    r += pad('CONVERTER MODE (All Ranges)', _cmW, 'center') + '\n';
+    r += ln('=', _cmW) + '\n\n';
+
+    r += '  ' + pad('Engine Fan', 18) + pad('Air Conditioning', 22) + pad('Engine Power', 30) + 'Vehicle Parameters\n';
+    r += '  ' + ln('-', _cmW - 4) + '\n';
+    r += '  ' + pad('On', 18) + pad('Off', 22) + pad('Standard Power Curve', 30) + 'Standard\n\n';
+
+    // Tablo başlığı
+    r += '  ' + pad('Speed', 8, 'right') + pad('Torque', 8, 'right') + pad('Engine', 8, 'right');
+    r += pad('Net Engine', 12, 'right') + pad('Net Engine', 12, 'right');
+    r += pad('Turbine', 10, 'right') + pad('Turbine', 10, 'right') + pad('Turbine', 10, 'right');
+    r += pad('Converter Heat', 16, 'right') + '  Match\n';
+    r += '  ' + pad('Ratio', 8, 'right') + pad('Ratio', 8, 'right') + pad('Speed', 8, 'right');
+    r += pad('Torque (N-m)', 12, 'right') + pad('Power (kW)', 12, 'right');
+    r += pad('Speed', 10, 'right') + pad('Torque (N-m)', 10, 'right') + pad('Power (kW)', 10, 'right');
+    r += pad('Rejection (kW)', 16, 'right') + '  Point\n';
+    r += '  ' + pad('', 8, 'right') + pad('', 8, 'right') + pad('(rpm)', 8, 'right');
+    r += pad('', 12, 'right') + pad('', 12, 'right');
+    r += pad('(rpm)', 10, 'right') + pad('', 10, 'right') + pad('', 10, 'right');
+    r += pad('', 16, 'right') + '\n';
+    r += '  ' + ln('-', _cmW - 4) + '\n';
+
+    for (var _ri = 0; _ri < _cmTable.length; _ri++) {
+      var _row = _cmTable[_ri];
+      r += '  ' + pad(num(_row.SR, 3), 8, 'right') + pad(num(_row.TR, 3), 8, 'right');
+      r += pad(numI(_row.N_engine), 8, 'right') + pad(num(_row.T_engine, 1), 12, 'right');
+      r += pad(num(_row.P_engine, 1), 12, 'right') + pad(numI(_row.N_turbine), 10, 'right');
+      r += pad(num(_row.T_turbine, 1), 10, 'right') + pad(num(_row.P_turbine, 1), 10, 'right');
+      r += pad(num(_row.Q_reject, 2), 16, 'right');
+      r += (_row.matchPoint ? '  ' + _row.matchPoint : '') + '\n';
+    }
+
+    r += '  ' + ln('-', _cmW - 4) + '\n';
+    r += '\n  Not: T_turbine = T_pump x TR.  T_pump = (N_engine / K_pump)^2.  Deduction = ' + num(_cmPumpDrop, 1) + ' N.m.\n';
+    r += '       T_engine(N) - Deduction = T_pump(N)  denklemi Newton-Raphson ile cozulmustur.\n';
+    r += '\n\n';
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
   // 8. TAM GAZ OTOMATIK VITES GECISLERI (DETAYLI)
   // ════════════════════════════════════════════════════════════════════════
   r += ln('=', WW) + '\n';
