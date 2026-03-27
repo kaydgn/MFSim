@@ -35413,24 +35413,29 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         var _trArkaIdeal = _pW * _a1ideal * _px / (2 * (_pL - _px));
         var _mOnIdeal = _pTw > 0 ? ((_pTw - _trOnIdeal) / _trOnIdeal * 100) : 0;
         r += '  T_req (esit): ' + num(_trOnIdeal, 0) + ' Nm  (marj: +' + num(_mOnIdeal, 1) + '%)\n';
-        r += '  Referans: Arka dingil\n\n';
+        r += '  Referans: Arka dingil  |  Dingil mesafesi (L): ' + num(_pL, 3) + ' m\n\n';
 
         var _yukler = [200, 500, 1000, 1500, 2000];
-        r += '    ' + pad('Yuk (kg)', 12) + pad('Tasima (m)', 14) + 'Yon\n';
-        r += '    ' + ln('-', 38) + '\n';
+        r += '    ' + pad('Yuk (kg)', 12) + pad('Tasima (m)', 14) + pad('Yon', 8) + 'Not\n';
+        r += '    ' + ln('-', 58) + '\n';
         for(var _yi = 0; _yi < _yukler.length; _yi++) {
           var _yP = _yukler[_yi];
-          var _yD = _pMass * _deltaA2 / _yP;
-          var _yYon = _yD > 0 ? 'one' : 'arkaya';
-          r += '    ' + pad(_yP.toString(), 12) + pad(num(Math.abs(_yD), 2), 14) + _yYon + '\n';
+          var _yD = Math.abs(_pMass * _deltaA2 / _yP);
+          var _yYon = _deltaA2 > 0 ? 'one' : 'arkaya';
+          var _yNot = '';
+          if(_yD > _pL) _yNot = 'dingil mesafesini asiyor — uygulanamaz';
+          else if(_yD > _pL * 0.75) _yNot = 'pratik degil';
+          else if(_yD >= 0.3 && _yD <= 3.0) _yNot = 'uygulanabilir';
+          else if(_yD < 0.3) _yNot = 'cok kisa mesafe';
+          r += '    ' + pad(_yP.toString(), 12) + pad(num(_yD, 2), 14) + pad(_yYon, 8) + _yNot + '\n';
         }
         r += '\n';
 
-        // En pratik öneri bul (1-3m arası taşıma)
+        // En pratik öneri bul (dingil mesafesi içinde, 0.3-3m arası)
         var _bestYuk = null, _bestD = null;
         for(var _yi2 = 0; _yi2 < _yukler.length; _yi2++) {
           var _d2 = Math.abs(_pMass * _deltaA2 / _yukler[_yi2]);
-          if(_d2 >= 0.3 && _d2 <= 3.0) {
+          if(_d2 >= 0.3 && _d2 <= Math.min(3.0, _pL)) {
             if(!_bestYuk || Math.abs(_d2 - 1.5) < Math.abs(_bestD - 1.5)) {
               _bestYuk = _yukler[_yi2];
               _bestD = _d2;
@@ -35440,7 +35445,18 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         if(_bestYuk) {
           r += '  ONERI: ' + _bestYuk + ' kg yuku arka dingilden ' + num(_bestD, 2) + ' m ' + (_deltaA2 > 0 ? 'one' : 'arkaya') + ' tasimak,\n';
           r += '  her iki tekerin de engeli esit marjla (+' + num(_mOnIdeal, 1) + '%) asmasini saglar.\n';
+        } else {
+          // Hiçbir yük miktarı pratik aralıkta değilse
+          var _allOver = true;
+          for(var _yc = 0; _yc < _yukler.length; _yc++) {
+            if(Math.abs(_pMass * _deltaA2 / _yukler[_yc]) <= _pL) { _allOver = false; break; }
+          }
+          if(_allOver) {
+            r += '  UYARI: Hesaplanan tasima mesafeleri dingil mesafesini (L=' + num(_pL, 3) + ' m)\n';
+            r += '  asiyor. Mevcut yuk dagilimi ile optimum noktaya ulasilamiyor.\n';
+          }
         }
+        r += '  NOT: Tasima mesafesi dingil mesafesini (L=' + num(_pL, 3) + ' m) asmamalidir.\n';
         r += '\n';
       }
     }
