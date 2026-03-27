@@ -34843,20 +34843,29 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   var _tcNodeR = nodes.find(function(n) { return n.type === 'torque-converter'; });
   var _trNodeR = nodes.find(function(n) { return n.type === 'transfer'; });
   var _diffNodeR = nodes.find(function(n) { return n.type === 'differential'; });
+  var _wheelNodeR = nodes.find(function(n) { return n.type === 'wheel'; });
+  var _propNodeR = nodes.find(function(n) { return n.type === 'propshaft'; });
+  var _brakeNodeR = nodes.find(function(n) { return n.type === 'retarder' || n.type === 'brake'; });
+  var _obsNodeR = nodes.find(function(n) { return n.type === 'obstacle-crossing'; });
 
-  var vehicleName = _vehNode ? (_vehNode.customName || '') : '';
-  var engineNameR = _engNodeR ? (_engNodeR.data.motorName || _engNodeR.customName || '') : '';
-  var gearboxNameR = _gbNodeR ? (_gbNodeR.customName || '') : '';
-  var tcNameR = _tcNodeR ? (_tcNodeR.customName || '') : '';
-  var transferNameR = _trNodeR ? (_trNodeR.customName || '') : '';
-  var diffNameR = _diffNodeR ? (_diffNodeR.customName || '') : '';
+  // Bileşen adı alma yardımcısı: customName → data.motorName → def.name → type
+  function _cName(nd) {
+    if(!nd) return '';
+    var cn = nd.customName || '';
+    if(!cn && nd.data && nd.data.motorName) cn = nd.data.motorName;
+    if(!cn && typeof componentDefs !== 'undefined' && componentDefs[nd.type]) cn = componentDefs[nd.type].name;
+    if(!cn) cn = nd.type;
+    return ascii(cn);
+  }
+
+  var vehicleName = _vehNode ? (_vehNode.customName || _vehD.ftVehicleName || '') : '';
 
   // 1. RAPOR BILGILERI
   r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
   r += pRow('Rapor Tarihi', tarih);
   r += pRow('Rapor Saati', saat);
   r += pRow('Rapor No', raporNo);
-  if(vehicleName) r += pRow('Arac', ascii(vehicleName));
+  r += pRow('Arac', vehicleName ? ascii(vehicleName) : 'Belirtilmemis');
   r += pRow('Hazirlayan', ascii(hazirlayan));
   var hazEmail = (typeof veNameToEmail === 'function') ? veNameToEmail(hazirlayan) : '';
   if(hazEmail) r += pRow('Iletisim', hazEmail);
@@ -34871,14 +34880,25 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   r += pRow('Dingil Mesafesi (L=a1+a2)', num(inp.wheelbase, 3) + ' m');
   r += '\n';
 
-  // 2b. KONFIGURASYON
+  // 2b. KONFIGURASYON — topolojideki tüm bileşenler
   r += ln('-', W) + '\n  KONFIGURASYON\n' + ln('-', W) + '\n';
-  if(engineNameR) r += pRow('Motor', ascii(engineNameR));
-  if(tcNameR) r += pRow('Tork Konvertor', ascii(tcNameR));
-  if(gearboxNameR) r += pRow('Sanziman', ascii(gearboxNameR));
-  if(transferNameR) r += pRow('Transfer Kutusu', ascii(transferNameR));
-  if(diffNameR) r += pRow('Diferansiyel', ascii(diffNameR));
+  if(_engNodeR) r += pRow('Motor', _cName(_engNodeR));
+  if(_tcNodeR) r += pRow('Tork Konvertor', _cName(_tcNodeR));
+  if(_gbNodeR) r += pRow('Sanziman', _cName(_gbNodeR));
+  if(_trNodeR) r += pRow('Transfer Kutusu', _cName(_trNodeR));
+  if(_propNodeR) r += pRow('Propshaft', _cName(_propNodeR));
+  if(_diffNodeR) r += pRow('Diferansiyel', _cName(_diffNodeR));
+  if(_wheelNodeR) r += pRow('Teker', _cName(_wheelNodeR));
   r += pRow('Lastik', ascii(inp.tireName));
+  if(_brakeNodeR) r += pRow('Fren / Retarder', _cName(_brakeNodeR));
+  if(_obsNodeR) r += pRow('Engel Gecme', _cName(_obsNodeR));
+  // Topolojideki diğer bileşenler
+  var _listedTypes = ['vehicle','engine','torque-converter','gearbox','transfer','propshaft','differential','wheel','retarder','brake','obstacle-crossing','solver'];
+  nodes.forEach(function(nd) {
+    if(_listedTypes.indexOf(nd.type) < 0 && nd.type !== 'road') {
+      r += pRow(ascii(nd.type), _cName(nd));
+    }
+  });
   r += '\n';
 
   // 3. ENGEL PARAMETRELERI
@@ -35279,9 +35299,17 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   var _pStl = obs ? obs.stallAnalysis : null;
 
   var _loadTransferEnabled = inp.loadTransferAnalysis || false;
+  // Dinamik simülasyon sonucu da kontrol et — dinamik'te her iki faz da başarılıysa parametrik gereksiz
+  var _dynResult = sim.obstacleDynamic;
+  var _dynSuccess = _dynResult && _dynResult.success;
   if(_loadTransferEnabled && _pFinalDec && _pTrq && _pStl && _pStl.hasData && isFinite(_pFinalDec.T_req_rear)) {
     var onGecti = _pFinalDec.frontPass;
     var arkaGecti = _pFinalDec.rearPass;
+    // Dinamik sonuç varsa onu da dikkate al
+    if(_dynResult) {
+      onGecti = onGecti || (_dynResult.frontCompleted || false);
+      arkaGecti = arkaGecti || _dynSuccess;
+    }
     var tekTarafGecti = (onGecti && !arkaGecti) || (!onGecti && arkaGecti);
 
     if(tekTarafGecti) {
@@ -35433,39 +35461,46 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '  Hedef: AG merkezini ' + num(Math.abs(_deltaA2), 3) + ' m ' + _yon + ' kaydirmak\n';
         r += '  Optimum: a1=' + num(_a1ideal, 3) + ' m, a2=' + num(_a2ideal, 3) + ' m\n';
         r += '  T_req (esit): ' + num(_trOnIdeal, 0) + ' Nm  (marj: +' + num(_mOnIdeal, 1) + '%)\n';
-        r += '  Gerekli moment: m x Da2 = ' + num(_pMass, 0) + ' x ' + num(Math.abs(_deltaA2), 3) + ' = ' + num(_moment, 0) + ' kg.m\n';
-        r += '  Formul: P x d = ' + num(_moment, 0) + ' kg.m  ->  P = ' + num(_moment, 0) + ' / d\n';
+        r += '  Gerekli moment: P x d = ' + num(_moment, 0) + ' kg.m\n';
         r += '  Dingil mesafesi (L): ' + num(_pL, 3) + ' m\n\n';
 
-        // Mesafe bazlı tablo: her mesafe için minimum yük
-        var _mesafeler = [0.50, 0.75, 1.00, 1.25, 1.50, 2.00, 2.50, 3.00, 3.50];
-        // Dingil mesafesine yakın bir adım da ekle
-        if(_pL > 3.5 && _pL <= 5.0) {
+        // Mesafe bazlı tablo: her mesafe için minimum yük — sadece dingil içindekiler
+        var _mesafeler = [];
+        for(var _mStep = 0.5; _mStep <= _pL + 0.01; _mStep += 0.5) {
+          _mesafeler.push(Math.round(Math.min(_mStep, _pL) * 100) / 100);
+        }
+        // Son eleman tam dingil mesafesini ekle (tekrar olmasın)
+        if(_mesafeler.length > 0 && Math.abs(_mesafeler[_mesafeler.length - 1] - _pL) > 0.01) {
           _mesafeler.push(Math.round(_pL * 100) / 100);
         }
-        _mesafeler.sort(function(a, b) { return a - b; });
 
-        r += '    ' + pad('Mesafe (m)', 14) + pad('Min. Yuk (kg)', 16) + pad('Yon', 10) + 'Not\n';
-        r += '    ' + ln('-', 62) + '\n';
+        r += '    ' + pad('Mesafe (m)', 14) + pad('Min. Yuk (kg)', 16) + pad('Yon', 10) + '\n';
+        r += '    ' + ln('-', 40) + '\n';
         for(var _mi2 = 0; _mi2 < _mesafeler.length; _mi2++) {
           var _d = _mesafeler[_mi2];
-          if(_d > _pL + 0.01) continue;  // dingil mesafesini aşanları gösterme
           var _minP = Math.ceil(_moment / _d);
-          var _not2 = '';
-          if(Math.abs(_d - _pL) < 0.01) _not2 = 'sinir (= dingil mesafesi)';
-          else if(_d <= 1.0) _not2 = 'uygulanabilir';
-          else if(_d <= 2.0) _not2 = 'uygulanabilir';
-          else if(_d <= 3.0) _not2 = 'uygulanabilir';
-          else _not2 = 'uzun mesafe';
-          r += '    ' + pad(num(_d, 2), 14) + pad(_minP.toString(), 16) + pad(_yon, 10) + _not2 + '\n';
+          var _sinir = (Math.abs(_d - _pL) < 0.01) ? '  (L)' : '';
+          r += '    ' + pad(num(_d, 2), 14) + pad(_minP.toString(), 16) + pad(_yon, 10) + _sinir + '\n';
         }
         r += '\n';
 
-        r += '  OKUMA REHBERI:\n';
-        r += '    "1.5 metre one tasiyabilecegim yer var, kac kg tasimaliyim?"\n';
-        r += '    -> En az ' + Math.ceil(_moment / 1.5) + ' kg.\n';
-        r += '    "500 kg tasiyabilirim, kac metre olmali?"\n';
-        r += '    -> En az ' + num(_moment / 500, 2) + ' m ' + _yon + '.\n';
+        // Pratik örnekler — gerçekçi değerlerle
+        r += '  OKUMA ORNEKLERI:\n';
+        // Mesafe bilinen senaryo
+        var _ornekD = Math.min(1.5, _pL);
+        var _ornekP = Math.ceil(_moment / _ornekD);
+        r += '    Soru: "' + num(_ornekD, 1) + ' m ' + _yon + ' tasiyabilecegim yer var, kac kg gerekli?"\n';
+        r += '    Yanit: En az ' + _ornekP + ' kg.\n\n';
+        // Yük bilinen senaryo
+        var _ornekP2 = Math.min(1000, Math.ceil(_pMass * 0.15));
+        var _ornekD2 = _moment / _ornekP2;
+        if(_ornekD2 <= _pL) {
+          r += '    Soru: "' + _ornekP2 + ' kg tasiyabilirim, ne kadar mesafe olmali?"\n';
+          r += '    Yanit: En az ' + num(_ornekD2, 2) + ' m ' + _yon + '.\n';
+        } else {
+          r += '    Soru: "' + _ornekP2 + ' kg tasiyabilirim, yeterli mi?"\n';
+          r += '    Yanit: Hayir, gerekli mesafe ' + num(_ornekD2, 2) + ' m — dingil mesafesini (L=' + num(_pL, 3) + ' m) asiyor.\n';
+        }
         r += '\n';
         r += '  NOT: Tasima mesafesi dingil mesafesini (L=' + num(_pL, 3) + ' m) asmamalidir.\n';
         r += '\n';
