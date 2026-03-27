@@ -3584,15 +3584,28 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   r += pad('|   ENGEL ATLAMA ANALIZI RAPORU   |', W, 'center') + '\n';
   r += pad('+' + ln('-', 44) + '+', W, 'center') + '\n\n';
 
+  // Topoloji bileşen isimlerini topla
+  var _vehNode = nodes.find(function(n) { return n.type === 'vehicle'; });
+  var _vehD = _vehNode ? (_vehNode.data || {}) : {};
+  var _engNodeR = nodes.find(function(n) { return n.type === 'engine'; });
+  var _gbNodeR = nodes.find(function(n) { return n.type === 'gearbox'; });
+  var _tcNodeR = nodes.find(function(n) { return n.type === 'torque-converter'; });
+  var _trNodeR = nodes.find(function(n) { return n.type === 'transfer'; });
+  var _diffNodeR = nodes.find(function(n) { return n.type === 'differential'; });
+
+  var vehicleName = _vehNode ? (_vehNode.customName || '') : '';
+  var engineNameR = _engNodeR ? (_engNodeR.data.motorName || _engNodeR.customName || '') : '';
+  var gearboxNameR = _gbNodeR ? (_gbNodeR.customName || '') : '';
+  var tcNameR = _tcNodeR ? (_tcNodeR.customName || '') : '';
+  var transferNameR = _trNodeR ? (_trNodeR.customName || '') : '';
+  var diffNameR = _diffNodeR ? (_diffNodeR.customName || '') : '';
+
   // 1. RAPOR BILGILERI
   r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
   r += pRow('Rapor Tarihi', tarih);
   r += pRow('Rapor Saati', saat);
   r += pRow('Rapor No', raporNo);
-  // Hazırlayan: Ad Soyad + e-posta
-  var hazParts = ascii(hazirlayan).split(/\s+/);
-  var hazAd = hazParts.length > 0 ? hazParts[0] : '';
-  var hazSoyad = hazParts.length > 1 ? hazParts.slice(1).join(' ') : '';
+  if(vehicleName) r += pRow('Arac', ascii(vehicleName));
   r += pRow('Hazirlayan', ascii(hazirlayan));
   var hazEmail = (typeof veNameToEmail === 'function') ? veNameToEmail(hazirlayan) : '';
   if(hazEmail) r += pRow('Iletisim', hazEmail);
@@ -3605,6 +3618,16 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   r += pRow('Ag. Merkezi-On Aks (a1)', num(inp.a1, 3) + ' m');
   r += pRow('Ag. Merkezi-Arka Aks (a2)', num(inp.a2, 3) + ' m');
   r += pRow('Dingil Mesafesi (L=a1+a2)', num(inp.wheelbase, 3) + ' m');
+  r += '\n';
+
+  // 2b. KONFIGURASYON
+  r += ln('-', W) + '\n  KONFIGURASYON\n' + ln('-', W) + '\n';
+  if(engineNameR) r += pRow('Motor', ascii(engineNameR));
+  if(tcNameR) r += pRow('Tork Konvertor', ascii(tcNameR));
+  if(gearboxNameR) r += pRow('Sanziman', ascii(gearboxNameR));
+  if(transferNameR) r += pRow('Transfer Kutusu', ascii(transferNameR));
+  if(diffNameR) r += pRow('Diferansiyel', ascii(diffNameR));
+  r += pRow('Lastik', ascii(inp.tireName));
   r += '\n';
 
   // 3. ENGEL PARAMETRELERI
@@ -3852,12 +3875,20 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '  |' + pad(' ZAMAN SERISI VERILERI', 64) + '|\n';
         r += '  +' + ln('-', 64) + '+\n\n';
 
-        // Milestone zamanlarını bir set'e topla (annotate etmek için)
-        var msTimeMap = {};
+        // Milestone'ları log satırlarıyla eşleştir
+        // Her milestone için en yakın log satırının index'ini bul
+        var msForRow = {};  // logIndex → [milestone, ...]
         if(ms.length > 0) {
           for(var msi = 0; msi < ms.length; msi++) {
-            var msT = Math.round(ms[msi].t * 1000); // ms cinsine çevir, key olarak kullan
-            msTimeMap[msT] = ms[msi];
+            var msTime = ms[msi].t;
+            var bestIdx = 0;
+            var bestDiff = Infinity;
+            for(var si = 0; si < logData.length; si++) {
+              var diff = Math.abs(logData[si].t - msTime);
+              if(diff < bestDiff) { bestDiff = diff; bestIdx = si; }
+            }
+            if(!msForRow[bestIdx]) msForRow[bestIdx] = [];
+            msForRow[bestIdx].push(ms[msi]);
           }
         }
 
@@ -3900,22 +3931,10 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           }
           prevPhase = d.phase;
 
-          // Milestone annotation kontrolü
-          var rowTimeMs = Math.round(d.t * 1000);
-          var matchedMs = msTimeMap[rowTimeMs];
-          // Yakın arama (+-5ms tolerans)
-          if(!matchedMs) {
-            for(var msk in msTimeMap) {
-              if(msTimeMap.hasOwnProperty(msk) && Math.abs(parseInt(msk) - rowTimeMs) <= 5 && !msTimeMap[msk]._used) {
-                matchedMs = msTimeMap[msk];
-                break;
-              }
-            }
-          }
-
-          // Milestone satır öncesi annotation (detaylı)
-          if(matchedMs && !matchedMs._used) {
-            matchedMs._used = true;
+          // Milestone annotation — bu satıra eşleşmiş tüm milestone'ları göster
+          var rowMilestones = msForRow[li] || [];
+          for(var rmi = 0; rmi < rowMilestones.length; rmi++) {
+            var matchedMs = rowMilestones[rmi];
             var mLbl = '>>> ' + ascii(matchedMs.label);
             // Detay bilgilerini topla
             var mDet = [];
@@ -3937,6 +3956,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
             }
             if(matchedMs.duration !== undefined) {
               mDet.push('sure=' + num(matchedMs.duration, 3) + ' s');
+            }
+            if(matchedMs.T_gb_out !== undefined) {
+              mDet.push('T_gb=' + num(matchedMs.T_gb_out, 0) + ' Nm');
             }
             r += '  ' + ln('-', hdr.length - 2) + '\n';
             r += '  ' + mLbl + '\n';
