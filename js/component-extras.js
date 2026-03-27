@@ -627,6 +627,15 @@ function getObstacleCrossingPropertiesHTML(node) {
 
   html += '</table>';
 
+  // ═══════ PARAMETRİK ÇALIŞMA ═══════
+  var loadTransferEnabled = node.data.loadTransferAnalysis || false;
+  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Parametrik Çalışma</div>';
+
+  html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:0.66rem; color:var(--text-primary); margin-bottom:6px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
+  html += '<input type="checkbox" id="ve-obs-load-transfer-' + nid + '" ' + (loadTransferEnabled ? 'checked' : '') + ' onchange="onVEObstacleCrossingChange(\'' + nid + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
+  html += '<div><div style="font-weight:600;">Yük Transferi Analizi</div><div style="font-size:0.52rem; color:var(--text-muted); margin-top:2px;">Ağırlık merkezi kaymasıyla engel aşma kabiliyetinin parametrik analizi. Sonuçlar TXT raporunda gösterilir.</div></div>';
+  html += '</label>';
+
   html += '</div>';
   return html;
 }
@@ -688,6 +697,10 @@ function onVEObstacleCrossingChange(nodeId) {
       ratioEl.textContent = ftGears[node.data.selectedGearIdx].ratio;
     }
   }
+
+  // Yük transferi analizi checkbox
+  var ltEl = elFn('ve-obs-load-transfer-' + nodeId);
+  if(ltEl) node.data.loadTransferAnalysis = ltEl.checked;
 
   if(typeof saveState === 'function') saveState();
 }
