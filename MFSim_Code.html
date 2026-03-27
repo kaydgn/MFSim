@@ -20162,6 +20162,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
   }
 
   // Önceki adımdaki bazı değerler (değişim tespiti için)
+  var gbLimitActivated = false;  // T_gb henüz limite ulaşmadı
   var prev_v = 0;
   var prev_phi = phi_start;
   var prev_T_wheel_vs_req = false; // T_wheel >= T_req miydi?
@@ -20181,17 +20182,28 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // ── Hesap 3: TC tork oranı (TR) ──
     var TR = tcFns.tau(SR);
 
-    // ── Hesap 4: Motor torku ──
-    // T_gb limit varsa motor tork yüzdesi uygulanır (fiziksel ölçekleme)
-    // Hard-cut yok — motor eğrisi × motorTorquePct ile doğal davranış
-    var T_full_load = motorTorqueFn(N_engine);
-    var T_engine = T_full_load * motorTorquePct;
-
-    // ── Hesap 4b: Pump torku (TC sıvı yükü) ──
+    // ── Hesap 4b: Pump torku (TC sıvı yükü) — önce hesaplanır ──
     // T_pump = (N / K_pump_stall)² — pump'ın sıvıya uyguladığı tork
     // Stall K-factor kullanılır (SR=0): transient'te TC sıvı ataleti
     // K_pump'ın SR ile değişimini geciktirir → sabit K_pump yaklaşımı.
     var T_pump_absorbed = (N_engine / K_pump_0) * (N_engine / K_pump_0);
+
+    // ── T_gb limit aktivasyon kontrolü ──
+    // T_gb'yi tam yükte hesapla, limite ulaştı mı bak
+    var T_turbine_check = T_pump_absorbed * TR;
+    var T_gb_check = T_turbine_check * i_g * eta_gear_val;
+    if(gbTorqueLimit_dyn && !gbLimitActivated && T_gb_check >= gbTorqueLimit_dyn) {
+      gbLimitActivated = true;
+      addMilestone(msPrefix + 'gb_limit', (phase === 'front' ? 'On' : 'Arka') + ' teker: T_gb limite ulasti (' + Math.round(gbTorqueLimit_dyn) + ' Nm), motor tork %' + (motorTorquePct * 100).toFixed(1) + ' ile sinirlandirildi', {
+        T_gb_out: T_gb_check, N_engine: N_engine
+      });
+    }
+
+    // ── Hesap 4: Motor torku ──
+    // T_gb limite ulaşmadan: motor tam yükte çalışır (%100)
+    // T_gb limite ulaştıktan sonra: motor tork yüzdesi uygulanır
+    var T_full_load = motorTorqueFn(N_engine);
+    var T_engine = gbLimitActivated ? (T_full_load * motorTorquePct) : T_full_load;
 
     // ── Hesap 5: Şanzıman çıkış torku ve teker torku ──
     // SCAAN doğrulaması: T_turbine = T_pump × TR  (T_engine × TR DEĞİL!)
@@ -20199,7 +20211,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     // Sadece T_pump sıvı üzerinden türbine aktarılır.
     var T_turbine = T_pump_absorbed * TR;
     var T_gb_out = T_turbine * i_g * eta_gear_val;
-    var T_gb_limited = (motorTorquePct < 1.0);  // limit aktifse işaretle
+    var T_gb_limited = gbLimitActivated;
     // T_wheel = T_gb_out × i_tr × i_diff × η_downstream / n_d
     var T_wheel = T_gb_out * eta_downstream_base * i_tr * i_diff / n_d;
 
@@ -20398,6 +20410,7 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
         N_engine_new = idleRpm;
         stallCheckStart = -1; // Stall sayacını sıfırla
         prev_T_wheel_vs_req = false; // Arka teker için sıfırla
+        gbLimitActivated = false;   // Arka teker için T_gb limiti tekrar tetiklenebilir
         // (ECM kaldırıldı — TC sıvı dinamiği modeli kullanılıyor)
         addMilestone('r_contact', 'Arka teker engel kosesine temas', {
           phi_deg: phi_new * 180 / Math.PI, v: v_new, N_engine: N_engine_new
