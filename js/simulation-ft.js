@@ -2324,7 +2324,8 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
       gearName: gearName,
       gearRatio: gearRatio,
       cornerDeflection: hasCornerDefl ? cornerDeflection : null,
-      gbTorqueLimit: hasGbTorqueLimit ? gbTorqueLimit : null
+      gbTorqueLimit: hasGbTorqueLimit ? gbTorqueLimit : null,
+      loadTransferAnalysis: obsData.loadTransferAnalysis || false
     },
     geometry: {},
     canCross: false,
