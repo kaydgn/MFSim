@@ -4019,6 +4019,212 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     }
   }
 
+  // ── PARAMETRIK ÇALIŞMA: YÜK TRANSFERİ ANALİZİ ──
+  // Koşul: ön geçiyor + arka takılıyor VEYA tam tersi
+  var _pDec = obs ? obs.decision : null;
+  var _pCc = obs ? obs.cornerCorrection : null;
+  var _pFinalDec = _pCc ? _pCc.decision : _pDec;
+  var _pTrq = obs ? obs.torqueAnalysis : null;
+  var _pStl = obs ? obs.stallAnalysis : null;
+
+  if(_pFinalDec && _pTrq && _pStl && _pStl.hasData && isFinite(_pFinalDec.T_req_rear)) {
+    var onGecti = _pFinalDec.frontPass;
+    var arkaGecti = _pFinalDec.rearPass;
+    var tekTarafGecti = (onGecti && !arkaGecti) || (!onGecti && arkaGecti);
+
+    if(tekTarafGecti) {
+      r += '\n';
+      r += ln('=', W) + '\n  PARAMETRIK CALISMA: YUK TRANSFERI ANALIZI\n' + ln('=', W) + '\n\n';
+
+      if(onGecti && !arkaGecti) {
+        r += '  Mevcut durumda on teker engeli asiyor ancak arka teker asamiyor.\n';
+      } else {
+        r += '  Mevcut durumda arka teker engeli asiyor ancak on teker asamiyor.\n';
+      }
+      r += '  Bu bolum, agirlik merkezini kaydirarak her iki tekerin de engeli\n';
+      r += '  asabilecegi kosullari arastirmaktadir.\n\n';
+
+      // Kullanılan geometri (köşe düzeltmesi varsa onu kullan)
+      var _pGeo = _pCc ? _pCc.geometry : geo;
+      var _pR = _pCc ? _pCc.R_corner : inp.R_eff;
+      var _px = _pGeo.x;
+      var _pL = inp.wheelbase;
+      var _pW = inp.mass * 9.81;
+      var _pTw = _pFinalDec.T_wheel;
+      var _pA1 = inp.a1;
+      var _pA2 = inp.a2;
+      var _pMass = inp.mass;
+      var _pYuk = 500; // sabit parametrik yük miktarı
+
+      // ── MEVCUT DURUM ──
+      r += '  +' + ln('-', 64) + '+\n';
+      r += '  |' + pad(' MEVCUT DURUM', 64) + '|\n';
+      r += '  +' + ln('-', 64) + '+\n';
+      r += pRow('a1 (AG merkezi-On aks)', num(_pA1, 3) + ' m');
+      r += pRow('a2 (AG merkezi-Arka aks)', num(_pA2, 3) + ' m');
+      r += pRow('T_wheel', num(_pTw, 0) + ' Nm');
+      var _pTrOn = _pFinalDec.T_req_front;
+      var _pTrArka = _pFinalDec.T_req_rear;
+      var _pMarjOn = _pTrOn > 0 ? ((_pTw - _pTrOn) / _pTrOn * 100) : 0;
+      var _pMarjArka = _pTrArka > 0 ? ((_pTw - _pTrArka) / _pTrArka * 100) : 0;
+      r += pRow('T_req_on', num(_pTrOn, 0) + ' Nm  (marj: ' + (_pMarjOn >= 0 ? '+' : '') + num(_pMarjOn, 1) + '%)' + (_pMarjOn < 0 ? '  <- YETERSIZ' : ''));
+      r += pRow('T_req_arka', num(_pTrArka, 0) + ' Nm  (marj: ' + (_pMarjArka >= 0 ? '+' : '') + num(_pMarjArka, 1) + '%)' + (_pMarjArka < 0 ? '  <- YETERSIZ' : ''));
+      r += '\n';
+
+      // ── PARAMETRIK TARAMA ──
+      r += '  +' + ln('-', 64) + '+\n';
+      r += '  |' + pad(' PARAMETRIK TARAMA (' + _pYuk + ' kg yuk, arka dingil referansli)', 64) + '|\n';
+      r += '  +' + ln('-', 64) + '+\n\n';
+
+      // Tablo başlığı
+      r += '  ' + pad('Poz(m)', 8) + pad('a1(m)', 8) + pad('a2(m)', 8);
+      r += pad('T_req_on', 10) + pad('T_req_ar', 10);
+      r += pad('On', 8) + pad('Arka', 8) + 'Durum\n';
+      r += '  ' + ln('-', 68) + '\n';
+
+      // Tarama: -2.0'dan +3.0'a 0.25m adımla
+      var _pOptD = null, _pOptMarjMin = -Infinity;
+      var _pMinPassD = null; // ilk kez her iki teker de geçtiği pozisyon
+      var _pMaxPassD = null; // son geçtiği pozisyon (diğer teker takılmadan)
+
+      for(var _pd = -2.0; _pd <= 3.01; _pd += 0.25) {
+        var _pdRound = Math.round(_pd * 100) / 100;
+        // Yükü _pdRound metre kaydırdığımızda ağırlık merkezi kayması
+        var _dA2 = _pYuk * _pdRound / _pMass;
+        var _a2n = _pA2 + _dA2;
+        var _a1n = _pL - _a2n;
+
+        // Sınır kontrolü
+        if(_a1n <= 0 || _a2n <= 0 || _a2n >= _pL) continue;
+
+        // T_req hesabı
+        var _trOn = _pW * _a2n * _px / (2 * (_pL + _px));
+        var _trArka = _pW * _a1n * _px / (2 * (_pL - _px));
+        var _onOk = _pTw >= _trOn;
+        var _arkaOk = isFinite(_trArka) && _pTw >= _trArka;
+        var _durum = (_onOk && _arkaOk) ? 'OK' : '-';
+        var _etiket = '';
+        if(Math.abs(_pdRound) < 0.001) _etiket = '  [mevcut]';
+
+        // Optimum: ön ve arka marjlar eşit olduğu nokta
+        if(_onOk && _arkaOk) {
+          var _mOn = (_pTw - _trOn) / _trOn * 100;
+          var _mArka = (_pTw - _trArka) / _trArka * 100;
+          var _minMarj = Math.min(_mOn, _mArka);
+          if(_minMarj > _pOptMarjMin) {
+            _pOptMarjMin = _minMarj;
+            _pOptD = _pdRound;
+          }
+          if(_pMinPassD === null) _pMinPassD = _pdRound;
+          _pMaxPassD = _pdRound;
+        }
+
+        r += '  ' + pad((_pdRound >= 0 ? '+' : '') + num(_pdRound, 2), 8);
+        r += pad(num(_a1n, 3), 8) + pad(num(_a2n, 3), 8);
+        r += pad(num(_trOn, 0), 10) + pad(num(_trArka, 0), 10);
+        r += pad(_onOk ? 'ASAR' : 'ASAMAZ', 8) + pad(_arkaOk ? 'ASAR' : 'ASAMAZ', 8);
+        r += _durum + _etiket + '\n';
+      }
+      r += '\n';
+
+      // ── SONUÇ ──
+      r += '  +' + ln('-', 64) + '+\n';
+      r += '  |' + pad(' SONUC', 64) + '|\n';
+      r += '  +' + ln('-', 64) + '+\n';
+
+      if(_pMinPassD !== null) {
+        var _yon = _pMinPassD > 0 ? 'one' : 'arkaya';
+        r += '  ' + _pYuk + ' kg yuk icin: en az ' + (_pMinPassD >= 0 ? '+' : '') + num(_pMinPassD, 2) + ' m ' + _yon + ' kaydirilmalidir.\n';
+        if(_pOptD !== null) {
+          // Optimum noktadaki marjları hesapla
+          var _dA2opt = _pYuk * _pOptD / _pMass;
+          var _a2opt = _pA2 + _dA2opt;
+          var _a1opt = _pL - _a2opt;
+          var _trOnOpt = _pW * _a2opt * _px / (2 * (_pL + _px));
+          var _trArkaOpt = _pW * _a1opt * _px / (2 * (_pL - _px));
+          var _mOnOpt = (_pTw - _trOnOpt) / _trOnOpt * 100;
+          var _mArkaOpt = (_pTw - _trArkaOpt) / _trArkaOpt * 100;
+          var _yonOpt = _pOptD > 0 ? 'one' : 'arkaya';
+          r += '  Optimum pozisyon: ' + (_pOptD >= 0 ? '+' : '') + num(_pOptD, 2) + ' m ' + _yonOpt;
+          r += ' (On marj: +' + num(_mOnOpt, 1) + '%, Arka marj: +' + num(_mArkaOpt, 1) + '%)\n';
+        }
+        if(_pMaxPassD !== null && _pMaxPassD < 3.0) {
+          var _yonMax = _pMaxPassD > 0 ? 'one' : 'arkaya';
+          r += '  Uyari: ' + (_pMaxPassD >= 0 ? '+' : '') + num(_pMaxPassD, 2) + ' m\'den sonra diger teker kritik bolgeye girer.\n';
+        }
+      } else {
+        r += '  ' + _pYuk + ' kg yuk transferi ile her iki tekerin de asmasi saglanamiyor.\n';
+        r += '  Daha fazla yuk veya farkli bir yaklasim degerlendirilmelidir.\n';
+      }
+      r += '\n';
+
+      // ── GEREKLI YÜK TAŞIMA (optimum noktaya ulaşmak için) ──
+      // Optimum a1, a2: T_req_ön = T_req_arka olduğu nokta
+      // a₂_opt × (L-x) = a₁_opt × (L+x)  ve  a₁+a₂=L
+      var _a2ideal = _pL * (_pL + _px) / (2 * _pL);
+      var _a1ideal = _pL - _a2ideal;
+      var _deltaA2 = _a2ideal - _pA2;
+
+      if(Math.abs(_deltaA2) > 0.001) {
+        r += '  +' + ln('-', 64) + '+\n';
+        r += '  |' + pad(' GEREKLI YUK TASIMA (optimum noktaya ulasmak icin)', 64) + '|\n';
+        r += '  +' + ln('-', 64) + '+\n';
+        r += '  Hedef: AG merkezini ' + num(Math.abs(_deltaA2), 3) + ' m ' + (_deltaA2 > 0 ? 'one' : 'arkaya') + ' kaydirmak\n';
+        r += '  Optimum: a1=' + num(_a1ideal, 3) + ' m, a2=' + num(_a2ideal, 3) + ' m\n';
+        // Optimumdaki T_req
+        var _trOnIdeal = _pW * _a2ideal * _px / (2 * (_pL + _px));
+        var _trArkaIdeal = _pW * _a1ideal * _px / (2 * (_pL - _px));
+        var _mOnIdeal = _pTw > 0 ? ((_pTw - _trOnIdeal) / _trOnIdeal * 100) : 0;
+        r += '  T_req (esit): ' + num(_trOnIdeal, 0) + ' Nm  (marj: +' + num(_mOnIdeal, 1) + '%)\n';
+        r += '  Referans: Arka dingil  |  Dingil mesafesi (L): ' + num(_pL, 3) + ' m\n\n';
+
+        var _yukler = [200, 500, 1000, 1500, 2000];
+        r += '    ' + pad('Yuk (kg)', 12) + pad('Tasima (m)', 14) + pad('Yon', 8) + 'Not\n';
+        r += '    ' + ln('-', 58) + '\n';
+        for(var _yi = 0; _yi < _yukler.length; _yi++) {
+          var _yP = _yukler[_yi];
+          var _yD = Math.abs(_pMass * _deltaA2 / _yP);
+          var _yYon = _deltaA2 > 0 ? 'one' : 'arkaya';
+          var _yNot = '';
+          if(_yD > _pL) _yNot = 'dingil mesafesini asiyor — uygulanamaz';
+          else if(_yD > _pL * 0.75) _yNot = 'pratik degil';
+          else if(_yD >= 0.3 && _yD <= 3.0) _yNot = 'uygulanabilir';
+          else if(_yD < 0.3) _yNot = 'cok kisa mesafe';
+          r += '    ' + pad(_yP.toString(), 12) + pad(num(_yD, 2), 14) + pad(_yYon, 8) + _yNot + '\n';
+        }
+        r += '\n';
+
+        // En pratik öneri bul (dingil mesafesi içinde, 0.3-3m arası)
+        var _bestYuk = null, _bestD = null;
+        for(var _yi2 = 0; _yi2 < _yukler.length; _yi2++) {
+          var _d2 = Math.abs(_pMass * _deltaA2 / _yukler[_yi2]);
+          if(_d2 >= 0.3 && _d2 <= Math.min(3.0, _pL)) {
+            if(!_bestYuk || Math.abs(_d2 - 1.5) < Math.abs(_bestD - 1.5)) {
+              _bestYuk = _yukler[_yi2];
+              _bestD = _d2;
+            }
+          }
+        }
+        if(_bestYuk) {
+          r += '  ONERI: ' + _bestYuk + ' kg yuku arka dingilden ' + num(_bestD, 2) + ' m ' + (_deltaA2 > 0 ? 'one' : 'arkaya') + ' tasimak,\n';
+          r += '  her iki tekerin de engeli esit marjla (+' + num(_mOnIdeal, 1) + '%) asmasini saglar.\n';
+        } else {
+          // Hiçbir yük miktarı pratik aralıkta değilse
+          var _allOver = true;
+          for(var _yc = 0; _yc < _yukler.length; _yc++) {
+            if(Math.abs(_pMass * _deltaA2 / _yukler[_yc]) <= _pL) { _allOver = false; break; }
+          }
+          if(_allOver) {
+            r += '  UYARI: Hesaplanan tasima mesafeleri dingil mesafesini (L=' + num(_pL, 3) + ' m)\n';
+            r += '  asiyor. Mevcut yuk dagilimi ile optimum noktaya ulasilamiyor.\n';
+          }
+        }
+        r += '  NOT: Tasima mesafesi dingil mesafesini (L=' + num(_pL, 3) + ' m) asmamalidir.\n';
+        r += '\n';
+      }
+    }
+  }
+
   // FERAGAT
   r += ln('-', W) + '\n';
   r += pad('FERAGATNAME', W, 'center') + '\n';
