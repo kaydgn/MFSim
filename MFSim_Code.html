@@ -927,51 +927,16 @@
 }
 .ve-node[data-type="sensor"] .ve-resize-handle{display:none;}
 
-.ve-node[data-type="sensor-wizard"] .ve-node-box{
-  border-radius:6px;
-  border:2px solid var(--accent-warning, #f59e0b);
-  background:rgba(245,158,11,0.06);
-}
-.ve-node[data-type="sensor-wizard"] .ve-node-label{
-  color:var(--accent-warning, #f59e0b);
-  font-size:0.5rem;
-}
-.ve-node[data-type="sensor-wizard"] .ve-selection-border{
-  border-color:var(--accent-warning, #f59e0b);
-}
-.ve-node[data-type="sensor-wizard"]:hover .ve-node-box{
-  border-color:#d97706;
-  box-shadow:0 0 8px rgba(245,158,11,0.4);
-}
 .ve-node[data-type="sensor-wizard"] .ve-resize-handle{display:none;}
 
-/* Sensör Sihirbazı - sensörler kurulu */
-.ve-node[data-type="sensor-wizard"].sw-installed .ve-node-box{
-  border-color:#22c55e;
-  background:rgba(34,197,94,0.10);
-  box-shadow:0 0 10px rgba(34,197,94,0.25);
-}
-.ve-node[data-type="sensor-wizard"].sw-installed .ve-node-label{
-  color:#22c55e;
-}
-.ve-node[data-type="sensor-wizard"].sw-installed .ve-selection-border{
-  border-color:#22c55e;
-}
-.ve-node[data-type="sensor-wizard"].sw-installed:hover .ve-node-box{
-  border-color:#16a34a;
-  box-shadow:0 0 14px rgba(34,197,94,0.4);
-}
-/* Sensör Sihirbazı - kısmen kurulu */
-.ve-node[data-type="sensor-wizard"].sw-partial .ve-node-box{
-  border-color:#f59e0b;
-  background:rgba(245,158,11,0.10);
-  box-shadow:0 0 8px rgba(245,158,11,0.2);
-}
-.ve-node[data-type="sensor-wizard"].sw-partial .ve-node-label{
-  color:#f59e0b;
-}
-.ve-node[data-type="sensor-wizard"].sw-partial .ve-selection-border{
-  border-color:#f59e0b;
+/* Sensör Sihirbazı - kurulu rozeti */
+.sw-check-badge{
+  position:absolute;
+  top:-4px;right:-4px;
+  font-size:11px;
+  line-height:1;
+  pointer-events:none;
+  z-index:5;
 }
 
 /* ===== SENSÖR SİHİRBAZI — Properties Panel ===== */
@@ -7614,7 +7579,7 @@ var componentDefs = {
   },
   'sensor-wizard': {
     name: 'Sensör Sihirbazı',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4"/><circle cx="30" cy="36" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="30" cy="36" r="4" fill="var(--text-secondary, #666)"/><path d="M30 46 L30 56" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" stroke-linecap="round"/><circle cx="55" cy="36" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="55" cy="36" r="4" fill="var(--text-secondary, #666)"/><path d="M55 46 L55 56" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" stroke-linecap="round"/><circle cx="80" cy="36" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="80" cy="36" r="4" fill="var(--text-secondary, #666)"/><path d="M80 46 L80 56" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" stroke-linecap="round"/><path d="M20 62 L40 62 L55 58 L70 62 L88 62" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 72 L35 72 M45 72 L65 72 M75 72 L88 72" stroke="var(--text-muted, #888)" stroke-width="2" stroke-linecap="round" stroke-dasharray="3,3"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--text-secondary, #999)" stroke-width="4"/><circle cx="30" cy="36" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="30" cy="36" r="4" fill="var(--text-secondary, #666)"/><path d="M30 46 L30 56" stroke="var(--text-secondary, #666)" stroke-width="2.5" stroke-linecap="round"/><circle cx="55" cy="36" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="55" cy="36" r="4" fill="var(--text-secondary, #666)"/><path d="M55 46 L55 56" stroke="var(--text-secondary, #666)" stroke-width="2.5" stroke-linecap="round"/><circle cx="80" cy="36" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/><circle cx="80" cy="36" r="4" fill="var(--text-secondary, #666)"/><path d="M80 46 L80 56" stroke="var(--text-secondary, #666)" stroke-width="2.5" stroke-linecap="round"/><path d="M20 62 L40 62 L55 58 L70 62 L88 62" stroke="var(--text-secondary, #666)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 72 L35 72 M45 72 L65 72 M75 72 L88 72" stroke="var(--text-muted, #888)" stroke-width="2" stroke-linecap="round" stroke-dasharray="3,3"/></svg>',
     inputs: 0,
     outputs: 0,
     maxInstances: 1
@@ -8318,21 +8283,17 @@ function swUpdateWizardVisual(node) {
   var el = document.getElementById(node.id);
   if(!el) return;
 
-  // Önceki durumu temizle
-  el.classList.remove('sw-installed', 'sw-partial');
+  // Mevcut rozeti kaldır
+  var oldBadge = el.querySelector('.sw-check-badge');
+  if(oldBadge) oldBadge.remove();
 
   if(node.data && node.data.sensorsInstalled) {
-    // Tüm paketler kurulu mu kontrol et
-    var totalPkgs = 0;
-    SENSOR_PACKAGES.forEach(function(pkg) {
-      if(pkg.sensors.length > 0) totalPkgs++;
-    });
-    var installedCount = (node.data.installedPackages || []).length;
-
-    if(installedCount >= totalPkgs) {
-      el.classList.add('sw-installed');
-    } else if(installedCount > 0) {
-      el.classList.add('sw-installed');
+    var box = el.querySelector('.ve-node-box');
+    if(box) {
+      var badge = document.createElement('span');
+      badge.className = 'sw-check-badge';
+      badge.textContent = '\u2705';
+      box.appendChild(badge);
     }
   }
 }
