@@ -886,9 +886,6 @@
   position:absolute;
   cursor:move;
   user-select:none;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
 }
 
 .ve-node-box{
@@ -1073,8 +1070,9 @@
   font-size:0.7rem;
   color:var(--text-primary);
   text-align:center;
+  width:100%;
   white-space:nowrap;
-  pointer-events:none;
+  overflow:visible;
 }
 .ve-wheel-master-badge{
   position:absolute;
@@ -9046,6 +9044,7 @@ function createNode(type, x, y, width, height) {
   nodeEl.id = nodeId;
   nodeEl.style.left = x + 'px';
   nodeEl.style.top = y + 'px';
+  nodeEl.style.width = node.width + 'px';
   nodeEl.setAttribute('data-type', type);
   
   var html = '<div class="ve-node-box" style="width:' + node.width + 'px; height:' + node.height + 'px;">';
@@ -36586,6 +36585,7 @@ function doResize(e) {
   if(nodeEl) {
     nodeEl.style.left = newX + 'px';
     nodeEl.style.top = newY + 'px';
+    nodeEl.style.width = newWidth + 'px';
     var box = nodeEl.querySelector('.ve-node-box');
     if(box) {
       box.style.width = newWidth + 'px';

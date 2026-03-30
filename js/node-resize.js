@@ -126,6 +126,7 @@ function doResize(e) {
   if(nodeEl) {
     nodeEl.style.left = newX + 'px';
     nodeEl.style.top = newY + 'px';
+    nodeEl.style.width = newWidth + 'px';
     var box = nodeEl.querySelector('.ve-node-box');
     if(box) {
       box.style.width = newWidth + 'px';
