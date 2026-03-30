@@ -5257,7 +5257,11 @@ function runECMatchingAnalysis(nodeId) {
     h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">C8</th>';
     h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);"></th>';
     h += '</tr></thead><tbody>';
-    
+
+    // Kullanıcının TC bileşeninde seçtiği konvertörü belirle
+    var _tcNodeForSel = nodes.find(function(n) { return n.type === 'torque-converter'; });
+    var _selectedTCKey = (_tcNodeForSel && _tcNodeForSel.data && _tcNodeForSel.data.tcPresetKey) ? _tcNodeForSel.data.tcPresetKey : '';
+
     results.forEach(function(r, idx) {
       var bgColor = r.status === 'recommended' ? 'rgba(22,163,74,0.06)' :
                     r.status === 'caution' ? 'rgba(217,119,6,0.06)' :
@@ -5275,8 +5279,8 @@ function runECMatchingAnalysis(nodeId) {
                         r.status === 'caution' ? 'var(--accent-warning)' :
                         r.status === 'not-recommended' ? 'var(--accent-warning)' :
                         'var(--accent-danger)';
-      var isBest = idx === 0 && r.status === 'recommended';
-      var borderLeft = isBest ? '3px solid var(--accent-success)' : 'none';
+      var isSelected = r.key === _selectedTCKey;
+      var borderLeft = isSelected ? '3px solid var(--accent-success)' : 'none';
       
       h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';">';
       h += '<td style="padding:4px; border:1px solid var(--border-color); white-space:nowrap;"><span style="font-size:0.6rem; font-weight:600; color:' + statusColor + ';">' + statusIcon + ' ' + statusText + '</span></td>';
@@ -5830,6 +5834,9 @@ function ecmSelectConverter(ecmNodeId, tcPresetKey) {
   if(selEl) selEl.value = tcPresetKey;
   
   showToast('✅ ' + VE_FT_TC_PRESETS[tcPresetKey].name + ' → TC bileşenine yüklendi', 'success');
+
+  // Tabloyu yeniden çiz (seçili satır çentiğini güncelle)
+  runECMatchingAnalysis(ecmNodeId);
 }
 
 // ── FULLSCREEN INTERACTIVE CHART ──
