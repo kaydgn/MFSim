@@ -482,21 +482,17 @@ function swUpdateWizardVisual(node) {
   var el = document.getElementById(node.id);
   if(!el) return;
 
-  // Önceki durumu temizle
-  el.classList.remove('sw-installed', 'sw-partial');
+  // Mevcut rozeti kaldır
+  var oldBadge = el.querySelector('.sw-check-badge');
+  if(oldBadge) oldBadge.remove();
 
   if(node.data && node.data.sensorsInstalled) {
-    // Tüm paketler kurulu mu kontrol et
-    var totalPkgs = 0;
-    SENSOR_PACKAGES.forEach(function(pkg) {
-      if(pkg.sensors.length > 0) totalPkgs++;
-    });
-    var installedCount = (node.data.installedPackages || []).length;
-
-    if(installedCount >= totalPkgs) {
-      el.classList.add('sw-installed');
-    } else if(installedCount > 0) {
-      el.classList.add('sw-installed');
+    var box = el.querySelector('.ve-node-box');
+    if(box) {
+      var badge = document.createElement('span');
+      badge.className = 'sw-check-badge';
+      badge.textContent = '\u2705';
+      box.appendChild(badge);
     }
   }
 }
