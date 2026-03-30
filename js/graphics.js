@@ -1236,8 +1236,8 @@ function veShowRaporModal() {
       '<div style="margin-bottom:14px;">' +
         '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Rapor Formatı:</label>' +
         '<select id="ve-rapor-format" onchange="var w=document.getElementById(\'ve-rapor-zaman-wrap\');if(w)w.style.display=this.value===\'csv\'?\'block\':\'none\';" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;">' +
-          '<option value="txt" selected>TXT (Metin Dosyası — Tam Rapor)</option>' +
-          '<option value="csv">CSV (Excel Uyumlu — Sadece Veri)</option>' +
+          (veActiveModule === 'full-throttle' ? '<option value="txt" selected>TXT (Metin Dosyası — Tam Rapor)</option>' : '') +
+          '<option value="csv"' + (veActiveModule !== 'full-throttle' ? ' selected' : '') + '>CSV (Excel Uyumlu — Sadece Veri)</option>' +
         '</select>' +
       '</div>' +
       '<button onclick="veGenerateReport()" style="width:100%; padding:10px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:6px; font-size:0.82rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">📥 BMC Raporu Oluştur ve İndir</button>' +
@@ -1381,43 +1381,22 @@ function veGenerateReport() {
   if(steps.length === 0) { showToast('Adım oluşturulamadı', 'warning'); return; }
   
   var now = new Date();
-  var tarih = now.toLocaleDateString('tr-TR');
-  var saat = now.toLocaleTimeString('tr-TR');
   var report = '';
   
-  var reportParams = {
-    tarih: tarih, saat: saat, hazirlayan: hazirlayan,
-    mass: mass, r_wheel: r_wheel, i_diff: i_diff, i_transfer: i_transfer,
-    i_gear: i_gear, i_torque: i_torque, i_total: i_total,
-    delta: delta, aktarmaVerim: aktarmaVerim, mfVerim: mfVerim,
-    slopePercent: slopePercent, thetaDeg: thetaDeg,
-    Crr: Crr, Cd: Cd, A: A, rho: rho,
-    v_start_kmh: v_start_kmh, simSure: simSure,
-    vitesAdi: vitesAdi, zamanAdimi: zamanAdimi,
-    motorAdi: engineNode ? (engineNode.customName || (componentDefs[engineNode.type] ? componentDefs[engineNode.type].name : '')) : '',
-    senaryoAdi: scd.scenarioType === 'partial_throttle' ? 'Kısmi Gaz' : 'Tam Gaz Analizi',
-    solverMethod: sd.method || 'euler',
-    gearRatios: gearRatios, currentGear: currentGear
-  };
+  // CSV format
+  report = 'Zaman [s];Hız [km/sa];Motor Devri [d/d];Tork [Nm];F_brake [N];F_roll [N];F_aero [N];F_grade [N];F_net [N];İvme [m/s²];Δv [km/sa];Mesafe [m]\n';
+  steps.forEach(function(s) {
+    report += s.t.toFixed(2) + ';' + s.v_kmh.toFixed(2) + ';' + s.rpm.toFixed(0) + ';' + s.T_mf.toFixed(0) + ';' +
+      s.F_brake.toFixed(0) + ';' + s.F_roll.toFixed(0) + ';' + s.F_aero.toFixed(0) + ';' + s.F_grade.toFixed(0) + ';' +
+      s.F_net.toFixed(0) + ';' + s.a.toFixed(4) + ';' + s.dv.toFixed(2) + ';' + s.s.toFixed(1) + '\n';
+  });
 
-  if(format === 'txt') {
-    report = veGenerateTXTReport(steps, reportParams);
-  } else {
-    // CSV format
-    report = 'Zaman [s];Hız [km/sa];Motor Devri [d/d];Tork [Nm];F_brake [N];F_roll [N];F_aero [N];F_grade [N];F_net [N];İvme [m/s²];Δv [km/sa];Mesafe [m]\n';
-    steps.forEach(function(s) {
-      report += s.t.toFixed(2) + ';' + s.v_kmh.toFixed(2) + ';' + s.rpm.toFixed(0) + ';' + s.T_mf.toFixed(0) + ';' +
-        s.F_brake.toFixed(0) + ';' + s.F_roll.toFixed(0) + ';' + s.F_aero.toFixed(0) + ';' + s.F_grade.toFixed(0) + ';' +
-        s.F_net.toFixed(0) + ';' + s.a.toFixed(4) + ';' + s.dv.toFixed(2) + ';' + s.s.toFixed(1) + '\n';
-    });
-  }
-
-  var mimeType = format === 'txt' ? 'text/plain;charset=utf-8' : 'text/csv;charset=utf-8';
+  var mimeType = 'text/csv;charset=utf-8';
   var blob = new Blob([report], { type: mimeType });
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url;
-  a.download = 'BMC_MotorFreni_VE_Rapor_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + '.' + format;
+  a.download = 'BMC_MotorFreni_VE_Rapor_' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1426,264 +1405,6 @@ function veGenerateReport() {
   veCloseRaporModal();
   showToast('Rapor indirildi (' + steps.length + ' adım)', 'success');
 }
-
-function veGenerateTXTReport(steps, p) {
-  var W = 80;
-  var WW = 120;
-  function ln(ch, len) { var s = ''; for(var i = 0; i < len; i++) s += ch; return s; }
-  function pad(str, len, align) {
-    str = String(str);
-    if(align === 'right') { while(str.length < len) str = ' ' + str; return str; }
-    if(align === 'center') { var l = Math.floor((len - str.length) / 2); var r = len - str.length - l; var sp = ''; for(var i=0;i<l;i++) sp+=' '; var sp2=''; for(var i=0;i<r;i++) sp2+=' '; return sp + str + sp2; }
-    while(str.length < len) str += ' '; return str;
-  }
-  function num(v, d) { return isFinite(v) ? v.toFixed(d) : '-'; }
-  function numI(v) { return isFinite(v) ? Math.round(v).toString() : '-'; }
-  
-  var r = '';
-  
-  // ── BMC BAŞLIK ──
-  r += '\n' + ln('=', W) + '\n\n';
-  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n';
-  r += pad(' ##   ##  ###  ###   ##      ', W, 'center') + '\n';
-  r += pad(' ######   ## ## ##   ##      ', W, 'center') + '\n';
-  r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
-  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
-  r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
-  r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
-  r += ln('=', W) + '\n\n';
-  r += pad('+' + ln('-', 45) + '+', W, 'center') + '\n';
-  r += pad('|     MOTOR FRENI PERFORMANS HESAP RAPORU     |', W, 'center') + '\n';
-
-  r += pad('+' + ln('-', 45) + '+', W, 'center') + '\n\n';
-  
-  // ── RAPOR BİLGİLERİ ──
-  r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
-  r += '  Rapor Tarihi       : ' + p.tarih + '\n';
-  r += '  Rapor Saati        : ' + p.saat + '\n';
-  r += '  Senaryo Adi        : ' + p.senaryoAdi + '\n';
-  r += '  Hesaplama Modu     : MFSim Zamana Bagli Analiz\n';
-  r += '  Cozucu Metodu      : ' + (p.solverMethod === 'rk45' ? 'RK4/5 Adaptif' : p.solverMethod === 'rk4' ? 'RK4' : p.solverMethod === 'heun' ? 'Heun' : 'Euler') + '\n';
-  r += '  Rapor Zaman Adimi  : ' + p.zamanAdimi + ' sn\n';
-  r += '  Rapor No           : BMC-VE-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000) + '\n';
-  r += ln('-', W) + '\n\n';
-  
-  // ── GİRDİ PARAMETRELERİ ──
-  r += ln('-', W) + '\n' + pad('GIRDI PARAMETRELERI', W, 'center') + '\n' + ln('-', W) + '\n\n';
-  
-  r += 'ARAC OZELLIKLERI\n';
-  r += '  Arac Agirligi (m)         : ' + num(p.mass, 0) + ' kg\n';
-  r += '  Teker Yaricapi (r)        : ' + num(p.r_wheel, 4) + ' m\n';
-  if(p.motorAdi) r += '  Motor / Motor Freni       : ' + p.motorAdi + '\n';
-  r += '  Diferansiyel Orani        : ' + num(p.i_diff, 2) + '\n';
-  r += '  Transfer Kutusu Orani     : ' + num(p.i_transfer, 2) + '\n';
-  r += '  Sanziman Orani            : ' + num(p.i_gear, 2) + '  [' + p.vitesAdi + ']\n';
-  r += '  Tork Konvertoru Orani     : ' + num(p.i_torque, 2) + '\n';
-  r += '  Toplam Aktarma Orani      : ' + num(p.i_total, 2) + '\n';
-  r += '  Doner Kutle Faktoru (d)   : ' + num(p.delta, 2) + '\n';
-  r += '  Aktarma Verimi (n_tr)     : ' + num(p.aktarmaVerim, 0) + '%\n';
-  r += '  Motor Freni Verimi (n_mf) : ' + num(p.mfVerim, 0) + '%\n\n';
-  
-  r += 'ARAZI OZELLIKLERI\n';
-  r += '  Yol Egimi                 : ' + num(p.slopePercent, 1) + ' %\n';
-  r += '  Egim Acisi (theta)        : ' + num(p.thetaDeg, 3) + ' derece\n';
-  r += '  Yuvarlanma Direnci (Crr)  : ' + num(p.Crr, 4) + '\n';
-  r += '  Hava Yogunlugu (rho)      : ' + num(p.rho, 3) + ' kg/m3\n\n';
-  
-  r += 'AERODINAMIK\n';
-  r += '  Suruklenme Katsayisi (Cd) : ' + num(p.Cd, 2) + '\n';
-  r += '  Frontal Alan (A)          : ' + num(p.A, 2) + ' m2\n\n';
-  r += ln('-', W) + '\n\n';
-  
-  // ── BAŞLANGIÇ KUVVET ANALİZİ ──
-  if(steps.length > 0) {
-    var s0 = steps[0];
-    r += ln('-', W) + '\n' + pad('BASLANGIC KUVVET ANALIZI (t=0)', W, 'center') + '\n' + ln('-', W) + '\n\n';
-    r += 'Baslangic Hizi (v0)         : ' + num(s0.v_kmh, 1) + ' km/sa (' + num(s0.v_kmh / 3.6, 2) + ' m/s)\n';
-    r += 'Motor Devri (n0)            : ' + numI(s0.rpm) + ' d/d\n\n';
-    
-    r += 'KUVVETLER\n';
-    r += '  Egim Kuvveti (F_grade)    : +' + numI(s0.F_grade) + ' N  (araci hizlandirir)\n';
-    r += '  Yuvarlanma Direnci (F_roll): -' + numI(s0.F_roll) + ' N  (frenleme)\n';
-    r += '  Hava Direnci (F_aero)     : -' + numI(s0.F_aero) + ' N  (frenleme)\n';
-    r += '  Motor Freni (F_brake)     : -' + numI(s0.F_brake) + ' N  (frenleme)\n';
-    r += '  ' + ln('-', 45) + '\n';
-    var F_toplam = s0.F_roll + s0.F_aero + s0.F_brake;
-    r += '  TOPLAM DIRENC             : ' + numI(F_toplam) + ' N\n';
-    r += '  NET KUVVET (F_net)        : ' + (s0.F_net >= 0 ? '+' : '') + numI(s0.F_net) + ' N';
-    r += s0.F_net > 0 ? '  (arac hizlaniyor)\n' : (s0.F_net < 0 ? '  (arac yavasliyor)\n' : '  (denge)\n');
-    r += '\n';
-    
-    r += 'MOTOR FRENI DETAYI\n';
-    r += '  Motor Freni Torku (T_mf)  : ' + numI(s0.T_mf) + ' Nm @ ' + numI(s0.rpm) + ' d/d\n';
-    r += '  Tekerlek Freni Kuvveti    : ' + numI(s0.F_brake) + ' N\n\n';
-    
-    if(s0.F_grade > 0) {
-      var kapasite = (F_toplam / s0.F_grade) * 100;
-      r += 'PERFORMANS DEGERLENDIRMESI\n';
-      r += '  Motor Freni Kapasitesi    : ' + num(kapasite, 1) + '%\n';
-      if(kapasite >= 100) r += '  Durum                     : YETERLI - Motor freni araci kontrol edebilir\n';
-      else r += '  Durum                     : YETERSIZ - Arac yavasca hizlanacak\n';
-    }
-    r += '\n' + ln('-', W) + '\n\n';
-  }
-  
-  // ── ZAMAN ADIMLI TABLO ──
-  r += ln('=', WW) + '\n' + pad('ZAMAN ADIMLI DIFERANSIYEL HESAPLAMA', WW, 'center') + '\n' + ln('=', WW) + '\n';
-  r += pad('t', 7, 'right') + pad('v', 10, 'right') + pad('n', 9, 'right');
-  r += pad('T_mf', 9, 'right') + pad('F_brake', 10, 'right') + pad('F_roll', 9, 'right');
-  r += pad('F_aero', 9, 'right') + pad('F_grade', 10, 'right') + pad('F_net', 10, 'right');
-  r += pad('a', 9, 'right') + pad('dv', 10, 'right') + pad('s', 9, 'right') + '\n';
-  r += pad('[s]', 7, 'right') + pad('[km/sa]', 10, 'right') + pad('[d/d]', 9, 'right');
-  r += pad('[Nm]', 9, 'right') + pad('[N]', 10, 'right') + pad('[N]', 9, 'right');
-  r += pad('[N]', 9, 'right') + pad('[N]', 10, 'right') + pad('[N]', 10, 'right');
-  r += pad('[m/s2]', 9, 'right') + pad('[km/sa]', 10, 'right') + pad('[m]', 9, 'right') + '\n';
-  r += ln('-', WW) + '\n';
-  
-  steps.forEach(function(s) {
-    r += pad(num(s.t, 1), 7, 'right');
-    r += pad(num(s.v_kmh, 2), 10, 'right');
-    r += pad(numI(s.rpm), 9, 'right');
-    r += pad(numI(s.T_mf), 9, 'right');
-    r += pad('-' + numI(s.F_brake), 10, 'right');
-    r += pad('-' + numI(s.F_roll), 9, 'right');
-    r += pad('-' + numI(s.F_aero), 9, 'right');
-    r += pad('+' + numI(s.F_grade), 10, 'right');
-    r += pad((s.F_net >= 0 ? '+' : '') + numI(s.F_net), 10, 'right');
-    r += pad((s.a >= 0 ? '+' : '') + num(s.a, 3), 9, 'right');
-    r += pad((s.dv >= 0 ? '+' : '') + num(s.dv, 2), 10, 'right');
-    r += pad(num(s.s, 1), 9, 'right') + '\n';
-  });
-  r += ln('=', WW) + '\n\n';
-  
-  // ── SÜTUN AÇIKLAMALARI ──
-  r += 'SUTUN ACIKLAMALARI:\n';
-  r += '  t       : Zaman [saniye]\n';
-  r += '  v       : Anlik hiz [km/sa]\n';
-  r += '  n       : Motor devri [d/d]\n';
-  r += '  T_mf    : Motor freni torku [Nm]\n';
-  r += '  F_brake : Motor freni kuvveti [N] (negatif = frenleme)\n';
-  r += '  F_roll  : Yuvarlanma direnci [N]\n';
-  r += '  F_aero  : Hava direnci [N]\n';
-  r += '  F_grade : Egim kuvveti [N] (pozitif = yokus asagi ivme)\n';
-  r += '  F_net   : Net kuvvet [N]\n';
-  r += '  a       : Ivme [m/s2]\n';
-  r += '  dv      : Baslangictan hiz farki [km/sa]\n';
-  r += '  s       : Toplam kat edilen mesafe [m]\n\n';
-  
-  // ── SONUÇLAR ──
-  if(steps.length > 1) {
-    var sL = steps[steps.length - 1];
-    var vArr = steps.map(function(s) { return s.v_kmh; });
-    var aArr = steps.map(function(s) { return s.a; });
-    var rArr = steps.map(function(s) { return s.rpm; });
-    var tArr = steps.map(function(s) { return s.T_mf; });
-    function avg(arr) { var s=0; for(var i=0;i<arr.length;i++) s+=arr[i]; return arr.length>0?s/arr.length:0; }
-    function minV(arr) { var m=Infinity; for(var i=0;i<arr.length;i++) if(arr[i]<m) m=arr[i]; return m; }
-    function maxV(arr) { var m=-Infinity; for(var i=0;i<arr.length;i++) if(arr[i]>m) m=arr[i]; return m; }
-    
-    r += ln('-', W) + '\n' + pad('HESAPLAMA SONUCLARI', W, 'center') + '\n' + ln('-', W) + '\n\n';
-    
-    r += 'SIMULASYON OZETI\n';
-    r += '  Toplam Sure               : ' + num(sL.t, 1) + ' sn\n';
-    r += '  Toplam Mesafe             : ' + num(sL.s, 1) + ' m\n';
-    r += '  Baslangic Hizi            : ' + num(p.v_start_kmh, 2) + ' km/sa\n';
-    r += '  Bitis Hizi                : ' + num(sL.v_kmh, 2) + ' km/sa\n';
-    var hizDeg = sL.v_kmh - p.v_start_kmh;
-    r += '  Hiz Degisimi              : ' + (hizDeg >= 0 ? '+' : '') + num(hizDeg, 2) + ' km/sa';
-    r += hizDeg > 0.5 ? ' (hizlandi)\n' : (hizDeg < -0.5 ? ' (yavasladi)\n' : ' (dengede)\n');
-    r += '\n';
-    
-    r += 'ORTALAMA DEGERLER\n';
-    r += '  Ortalama Hiz              : ' + num(avg(vArr), 1) + ' km/sa\n';
-    r += '  Ortalama Ivme             : ' + (avg(aArr) >= 0 ? '+' : '') + num(avg(aArr), 4) + ' m/s2\n';
-    r += '  Ortalama Motor Devri      : ' + numI(avg(rArr)) + ' d/d\n';
-    r += '  Ortalama Motor Freni Torku: ' + numI(avg(tArr)) + ' Nm\n\n';
-    
-    r += 'MINIMUM / MAKSIMUM\n';
-    r += '  Min Hiz                   : ' + num(minV(vArr), 2) + ' km/sa\n';
-    r += '  Max Hiz                   : ' + num(maxV(vArr), 2) + ' km/sa\n';
-    r += '  Min Motor Devri           : ' + numI(minV(rArr)) + ' d/d\n';
-    r += '  Max Motor Devri           : ' + numI(maxV(rArr)) + ' d/d\n\n';
-    
-    r += 'SONUC DEGERLENDIRMESI\n';
-    if(hizDeg > 2) {
-      r += '  UYARI: Motor freni bu kosullarda yetersiz kalmaktadir.\n';
-      r += '  Arac simulasyon suresince ' + num(hizDeg, 2) + ' km/sa hizlanmistir.\n\n';
-      r += '  ONERILER:\n';
-      r += '  - Bir alt vitese gecilmesi onerilir\n';
-      r += '  - Servis freni destegi gerekebilir\n';
-    } else if(hizDeg < -2) {
-      r += '  BASARILI: Motor freni etkili bir sekilde calismaktadir.\n';
-      r += '  Arac simulasyon suresince ' + num(Math.abs(hizDeg), 2) + ' km/sa yavasmistir.\n';
-    } else {
-      r += '  DENGE: Arac yaklasik sabit hizda ilerlemektedir.\n';
-      r += '  Motor freni egim kuvvetini dengelemektedir.\n';
-    }
-    r += '\n';
-  }
-  
-  // ── VİTES KARŞILAŞTIRMA ──
-  if(p.gearRatios && p.gearRatios.length > 0 && p.slopePercent > 0 && steps.length > 0) {
-    r += ln('-', W) + '\n' + pad('VITES BAZLI PERFORMANS KARSILASTIRMASI', W, 'center') + '\n' + ln('-', W) + '\n\n';
-    r += pad('Vites', 12) + pad('Oran', 10, 'right') + pad('Kapasite', 12, 'right') + pad('Durum', 16, 'right') + '\n';
-    r += ln('-', 50) + '\n';
-    
-    var g = 9.81;
-    var F_gr = p.mass * g * Math.sin(Math.atan(p.slopePercent / 100));
-    
-    for(var gi = 0; gi < p.gearRatios.length; gi++) {
-      var gr = parseFloat(p.gearRatios[gi]) || 0;
-      if(gr <= 0) continue;
-      var iT = p.i_diff * p.i_transfer * gr * p.i_torque;
-      var s0rpm = (p.v_start_kmh / 3.6 / p.r_wheel) * iT * 9.549;
-      var s0T = steps[0].T_mf;
-      var s0Fb = (s0T * iT * (p.aktarmaVerim / 100) * (p.mfVerim / 100)) / p.r_wheel;
-      var s0Fr = p.Crr * p.mass * g;
-      var s0Fa = 0.5 * p.rho * p.Cd * p.A * Math.pow(p.v_start_kmh / 3.6, 2);
-      var kap = ((s0Fb + s0Fr + s0Fa) / F_gr) * 100;
-      var durum = kap >= 120 ? 'Fazlasiyla' : (kap >= 100 ? 'Yeterli' : (kap >= 80 ? 'Sinirda' : 'Yetersiz'));
-      var mevcut = (gi + 1) === p.currentGear;
-      r += pad((gi + 1) + '. Vites' + (mevcut ? ' *' : ''), 12) + pad(num(gr, 2), 10, 'right') + pad('%' + num(kap, 0), 12, 'right') + pad(durum, 16, 'right') + '\n';
-    }
-    r += ln('-', 50) + '\n';
-    r += '* = Mevcut secili vites\n\n';
-  }
-  
-  // ── FORMÜLLER ──
-  r += ln('-', W) + '\n' + pad('HESAPLAMA METODOLOJISI', W, 'center') + '\n' + ln('-', W) + '\n\n';
-  r += 'KULLANILAN FORMULLER\n\n';
-  r += '1. Egim Kuvveti:       F_grade = m x g x sin(theta)\n';
-  r += '2. Yuvarlanma Direnci: F_roll  = Crr x m x g x cos(theta)\n';
-  r += '3. Hava Direnci:       F_aero  = 0.5 x rho x Cd x A x v^2\n';
-  r += '4. Motor Freni:        T_wheel = T_mf x i_total x n_tr x n_mf\n';
-  r += '                       F_brake = T_wheel / r_wheel\n';
-  r += '5. Hareket Denklemi:   F_net   = F_grade - F_roll - F_aero - F_brake\n';
-  r += '                       a       = F_net / (m x delta)\n\n';
-  
-  r += 'SAYISAL COZUM PARAMETRELERI\n';
-  r += '  Integrasyon Metodu        : ' + (p.solverMethod === 'rk45' ? 'RK4/5 Adaptif' : p.solverMethod === 'rk4' ? 'RK4' : p.solverMethod === 'heun' ? 'Heun' : 'Euler') + '\n';
-  r += '  Rapor Zaman Adimi (dt)    : ' + p.zamanAdimi + ' sn\n';
-  r += '  Toplam Adim Sayisi        : ' + steps.length + '\n\n';
-  
-  // ── RAPOR SONU ──
-  r += ln('-', W) + '\n' + pad('RAPOR SONU', W, 'center') + '\n' + ln('=', W) + '\n\n';
-  r += ln('-', W) + '\n';
-  r += pad('BMC OTOMOTIV SANAYI VE TICARET A.S.', W, 'center') + '\n';
-  r += pad('GUC GRUBU MUDURLUGU', W, 'center') + '\n';
-  r += ln('-', W) + '\n\n';
-  r += '  Hazirlayan        : ' + (p.hazirlayan || 'Belirtilmemis') + '\n';
-  r += '  Iletisim          : ' + veNameToEmail(p.hazirlayan || '') + '\n\n';
-  r += ln('-', W) + '\n';
-  r += pad('Bu rapor BMC Motor Freni Performans Hesaplama Programi', W, 'center') + '\n';
-  r += pad('ile olusturulmustur. Hesaplamalar teorik modellere dayanmaktadir.', W, 'center') + '\n';
-  r += pad('Gercek test sonuclari ile dogrulama yapilmasi onerilir.', W, 'center') + '\n';
-  r += ln('-', W) + '\n\n';
-  r += pad('(c) ' + new Date().getFullYear() + ' BMC Otomotiv - Tum Haklari Saklidir', W, 'center') + '\n\n';
-  
-  return r;
-}
-
 
 function veNameToEmail(name) {
   var tr = {'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u','Ç':'c','Ğ':'g','İ':'i','Ö':'o','Ş':'s','Ü':'u'};
