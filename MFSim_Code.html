@@ -149,24 +149,104 @@
       --shadow-color: rgba(34, 24, 58, 0.08);
     }
     
-    /* Tema: Claude — Anthropic'in sıcak toprak tonları */
+    /* Tema: Silver — Figma/Linear tarzı temiz gümüş */
+    [data-theme="silver"] {
+      --bg-primary: #f7f8fa;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #eef0f4;
+      --bg-input: #ffffff;
+      --border-color: #d4d8e1;
+      --border-light: #e2e5ec;
+      --border-hover: #b0b7c5;
+      --text-primary: #1a1f2e;
+      --text-secondary: #525b6e;
+      --text-muted: #8d95a5;
+      --text-heading: #0e1320;
+      --accent-primary: #4f7df5;
+      --accent-success: #18a04e;
+      --accent-warning: #e08c13;
+      --accent-danger: #e03e3e;
+      --shadow-color: rgba(0, 0, 0, 0.07);
+    }
+
+    /* Tema: Ash — VS Code Light+ tarzı sıcak kül gri */
+    [data-theme="ash"] {
+      --bg-primary: #f5f5f3;
+      --bg-secondary: #fafaf8;
+      --bg-tertiary: #eaeae7;
+      --bg-input: #fefefe;
+      --border-color: #d5d5d0;
+      --border-light: #e0e0dc;
+      --border-hover: #b5b5ae;
+      --text-primary: #222220;
+      --text-secondary: #555550;
+      --text-muted: #8a8a82;
+      --text-heading: #111110;
+      --accent-primary: #4a7fc7;
+      --accent-success: #3a8a4e;
+      --accent-warning: #c48820;
+      --accent-danger: #c44040;
+      --shadow-color: rgba(0, 0, 0, 0.08);
+    }
+
+    /* Tema: Pearl — Notion/Apple tarzı inci beyaz */
+    [data-theme="pearl"] {
+      --bg-primary: #fafbfc;
+      --bg-secondary: #ffffff;
+      --bg-tertiary: #f0f1f3;
+      --bg-input: #ffffff;
+      --border-color: #e0e2e6;
+      --border-light: #e8eaed;
+      --border-hover: #c0c4cc;
+      --text-primary: #1b1e24;
+      --text-secondary: #4e535e;
+      --text-muted: #9098a6;
+      --text-heading: #0c0e12;
+      --accent-primary: #2d6fe6;
+      --accent-success: #1a9a50;
+      --accent-warning: #d49318;
+      --accent-danger: #d43d3d;
+      --shadow-color: rgba(0, 0, 0, 0.06);
+    }
+
+    /* Tema: Steel — CAD/mühendislik tarzı çelik gri */
+    [data-theme="steel"] {
+      --bg-primary: #e4e7ec;
+      --bg-secondary: #edf0f5;
+      --bg-tertiary: #d8dce4;
+      --bg-input: #f2f4f8;
+      --border-color: #c2c8d4;
+      --border-light: #ced4de;
+      --border-hover: #9aa3b4;
+      --text-primary: #1c2030;
+      --text-secondary: #4a5068;
+      --text-muted: #7a8298;
+      --text-heading: #101422;
+      --accent-primary: #3d5ba9;
+      --accent-success: #2e7d46;
+      --accent-warning: #b87a10;
+      --accent-danger: #b83838;
+      --shadow-color: rgba(0, 0, 0, 0.10);
+    }
+
+    /* Tema: Claude — Claude Code koyu sıcak kahve */
     [data-theme="claude"] {
-      --bg-primary: #faf6f1;
-      --bg-secondary: #fff8f0;
-      --bg-tertiary: #f0ebe4;
-      --bg-input: #fffcf8;
-      --border-color: #e0d5c8;
-      --border-light: #e8ddd2;
-      --border-hover: #c4a882;
-      --text-primary: #2d2015;
-      --text-secondary: #5c4a38;
-      --text-muted: #9a8978;
-      --text-heading: #1a1008;
-      --accent-primary: #da7756;
-      --accent-success: #2e8b57;
-      --accent-warning: #c45a3c;
-      --accent-danger: #b83a2a;
-      --shadow-color: rgba(44, 32, 21, 0.08);
+      --bg-primary: #2b2520;
+      --bg-secondary: #231e1a;
+      --bg-tertiary: #342e28;
+      --bg-input: #1c1815;
+      --border-color: #3d352e;
+      --border-light: #453c34;
+      --border-hover: #5a4f44;
+      --text-primary: #e0d6ca;
+      --text-secondary: #9c9080;
+      --text-muted: #6b6055;
+      --text-heading: #f0e8dc;
+      --accent-primary: #d4835e;
+      --accent-success: #5a9a6a;
+      --accent-warning: #c89545;
+      --accent-danger: #c45a4a;
+      --shadow-color: rgba(0, 0, 0, 0.4);
     }
 
     /* Tema Seçici Stilleri */
@@ -2001,14 +2081,18 @@ function mfsimLogout() {
       <optgroup label="Koyu">
         <option value="slate">Midnight</option>
         <option value="cream">Carbon</option>
+        <option value="claude">Claude</option>
       </optgroup>
       <optgroup label="Açık">
+        <option value="silver">Silver</option>
+        <option value="pearl">Pearl</option>
+        <option value="ash">Ash</option>
+        <option value="steel">Steel</option>
         <option value="light">Gunmetal</option>
         <option value="arctic">Arctic</option>
         <option value="sand">Sand</option>
         <option value="forest">Forest</option>
         <option value="iris">Iris</option>
-        <option value="claude">Claude</option>
       </optgroup>
     </select>
   </span>
