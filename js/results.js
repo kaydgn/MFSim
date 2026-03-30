@@ -4401,6 +4401,18 @@ function veCycleGridDensity() {
 // ===== TOPOLOJİ SINIR ÇERÇEVESİ (AVL-stil kesikli çizgi) =====
 var veBoundaryVisible = true;
 var veBoundaryPadding = 50; // Bileşenlerden uzaklık (px)
+var veBoundaryOpacity = 0.55;
+var _veBoundaryOpacitySteps = [0.2, 0.35, 0.55, 0.75, 1.0];
+
+function veCycleBoundaryOpacity() {
+  var idx = _veBoundaryOpacitySteps.indexOf(veBoundaryOpacity);
+  idx = (idx + 1) % _veBoundaryOpacitySteps.length;
+  veBoundaryOpacity = _veBoundaryOpacitySteps[idx];
+  veUpdateBoundary();
+  var btn = document.getElementById('ve-boundary-opacity-btn');
+  if(btn) btn.title = 'Sınır Opaklığı: ' + Math.round(veBoundaryOpacity * 100) + '%';
+  showToast('Sınır opaklığı: %' + Math.round(veBoundaryOpacity * 100));
+}
 
 function veToggleBoundary() {
   veBoundaryVisible = !veBoundaryVisible;
@@ -4456,7 +4468,7 @@ function veUpdateBoundary() {
   rect.setAttribute('rx', '6');
   rect.setAttribute('ry', '6');
   // Tema rengi: koyu temalarda border-hover, açık temalarda koyu gri
-  rect.style.cssText = 'fill:none; stroke:var(--border-hover); stroke-width:1.5; stroke-dasharray:8,5; opacity:0.55; pointer-events:none;';
+  rect.style.cssText = 'fill:none; stroke:var(--border-hover); stroke-width:1.5; stroke-dasharray:8,5; opacity:' + veBoundaryOpacity + '; pointer-events:none;';
   if(svg.firstChild) { svg.insertBefore(rect, svg.firstChild); }
   else { svg.appendChild(rect); }
 
