@@ -138,6 +138,10 @@ function veFlushOpenPanelData() {
       case 'road':
         onVERoadParamChange(nid);
         break;
+      case 'ec-matching':
+        var ecmRatingEl = document.getElementById('ecm-turbine-rating-' + nid);
+        if(ecmRatingEl) { var ecmVal = parseFloat(ecmRatingEl.value); node.data.turbineRating = isNaN(ecmVal) ? 3320 : ecmVal; }
+        break;
     }
   } catch(e) {
     // Panel açık değilse DOM elemanları bulunamaz — debug için logla

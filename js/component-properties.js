@@ -4992,12 +4992,8 @@ function runECMatchingAnalysis(nodeId) {
     }
   }
 
-  // Bağlı motor bileşenini bul (önce bağlantı, yoksa global arama)
+  // Bağlı motor bileşenini bul (yalnızca bağlantı üzerinden)
   var engineNode = findConnectedEngine(nodeId);
-  if(!engineNode) {
-    // Geri uyumluluk: bağlantı yoksa global arama
-    engineNode = nodes.find(function(n) { return (n.type === 'engine') && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
-  }
 
   var infoEl = document.getElementById('ecm-engine-info-' + nodeId);
   var resultsEl = document.getElementById('ecm-results-' + nodeId);
@@ -5013,7 +5009,7 @@ function runECMatchingAnalysis(nodeId) {
   var governed = motorSpecs.governedSpeed || engineNode.data.governedRpm || 2100;
   var noLoadGov = motorSpecs.noLoadGoverned || governed + 200;
   var engineName = engineNode.data.motorName || engineNode.customName || 'Motor';
-  var pumpDrop = 17.6; // Allison 3000 family default
+  var defaultPumpDrop = 17.6; // Allison 3000 family default (bilgi panelinde gösterilir)
   
   // Peak torque bul
   var peakT = 0, peakRPM = 0;
@@ -5062,7 +5058,7 @@ function runECMatchingAnalysis(nodeId) {
       '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
       '<span>Peak Tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
       '<span>Governed: <b style="color:var(--text-primary);">' + governed + ' rpm</b></span>' +
-      '<span>Pump Düşüm: <b style="color:var(--text-primary);">' + pumpDrop + ' N·m</b></span>' +
+      '<span>Pump Düşüm: <b style="color:var(--text-primary);">TC\'ye bağlı</b></span>' +
       '</div>' + c9c10html + '</div>';
   }
   
@@ -5115,7 +5111,7 @@ function runECMatchingAnalysis(nodeId) {
   }
   
   // Stall speed hesabı (bisection)
-  function findStallSpeed(tcData) {
+  function findStallSpeed(tcData, pumpDrop) {
     var kp0 = tcData[0].kpump;
     var lo = 600, hi = 3500;
     for(var i = 0; i < 50; i++) {
@@ -5127,12 +5123,13 @@ function runECMatchingAnalysis(nodeId) {
     }
     return (lo + hi) / 2;
   }
-  
+
   // SR at governed hesabı
-  function findSRAtGoverned(tcData) {
+  function findSRAtGoverned(tcData, pumpDrop) {
     var tPump = interpT(governed) - pumpDrop;
     if(tPump <= 0) return 0;
     var kpNeeded = governed / Math.sqrt(tPump);
+    // TC veri tablosunda kpNeeded'in bulunduğu SR aralığını ara
     for(var i = 0; i < tcData.length - 1; i++) {
       var kp1 = tcData[i].kpump, kp2 = tcData[i+1].kpump;
       var sr1 = tcData[i].sr, sr2 = tcData[i+1].sr;
@@ -5141,12 +5138,14 @@ function runECMatchingAnalysis(nodeId) {
         if(f >= 0 && f <= 1) return sr1 + f * (sr2 - sr1);
       }
     }
-    if(kpNeeded > tcData[tcData.length-1].kpump) return 0.99;
-    return 0.50;
+    // kpNeeded TC tablosunun üst sınırını aşıyorsa → konvertör neredeyse kilitli
+    if(kpNeeded > tcData[tcData.length-1].kpump) return tcData[tcData.length-1].sr;
+    // kpNeeded TC tablosunun alt sınırının altındaysa → TC veri aralığı yetersiz, stall bölgesinde
+    return tcData[0].sr;
   }
-  
+
   // Min engine speed hesabı (converter fazında)
-  function findMinEngineSpeed(tcData) {
+  function findMinEngineSpeed(tcData, pumpDrop) {
     var minN = 9999;
     for(var nt = 0; nt <= governed * 1.05; nt += 15) {
       var lo = Math.max(nt + 1, 600), hi = noLoadGov + 100;
@@ -5172,10 +5171,11 @@ function runECMatchingAnalysis(nodeId) {
   veGetFamilyTCKeys().forEach(function(key) {
     var tc = VE_FT_TC_PRESETS[key];
     var tcData = tc.data;
-    
-    var stallSpeed = findStallSpeed(tcData);
-    var srGov = findSRAtGoverned(tcData);
-    var minSpeed = findMinEngineSpeed(tcData);
+    var pumpDrop = tc.pumpTorqueDrop !== undefined ? tc.pumpTorqueDrop : defaultPumpDrop;
+
+    var stallSpeed = findStallSpeed(tcData, pumpDrop);
+    var srGov = findSRAtGoverned(tcData, pumpDrop);
+    var minSpeed = findMinEngineSpeed(tcData, pumpDrop);
     var stallTau = tcData[0].tau;
     var tPumpStall = interpTWithDroop(stallSpeed) - pumpDrop;
     var tTurbineStall = tPumpStall * stallTau;
@@ -5315,8 +5315,16 @@ function runECMatchingAnalysis(nodeId) {
     resultsEl.innerHTML = h;
   }
   
+  // Chart için ortalama pump drop hesapla (motor eğrisi gösterimi)
+  var chartPumpDrop = defaultPumpDrop;
+  if(results.length > 0) {
+    var sumDrop = 0;
+    results.forEach(function(r) { var tc = VE_FT_TC_PRESETS[r.key]; sumDrop += (tc && tc.pumpTorqueDrop !== undefined) ? tc.pumpTorqueDrop : defaultPumpDrop; });
+    chartPumpDrop = sumDrop / results.length;
+  }
+
   // Absorption chart çiz
-  drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDrop, results);
+  drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, chartPumpDrop, results);
 }
 
 // ── ABSORPTION CHART ──
@@ -5499,7 +5507,11 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
         ctx.fillStyle = isDark ? '#0a0c10' : '#f8f9fa'; ctx.fill();
       }
     });
-  } catch(err) { console.warn('ECM small chart dots error:', err); }
+  } catch(err) {
+    console.warn('ECM small chart dots error:', err);
+    ctx.fillStyle = '#f59e0b'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('⚠ Kesişim hesaplama hatası', ml + 4, mt + ph - 4);
+  }
   
   // Legend (sağ üst)
   ctx.font = '7px sans-serif'; ctx.textAlign = 'left';
@@ -5829,19 +5841,25 @@ function ecmExpandChart(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node) return;
   
-  // Motor verisini topla (önce bağlantı, yoksa global)
+  // Motor verisini bağlantı üzerinden bul
   var engineNode = findConnectedEngine(nodeId);
-  if(!engineNode) engineNode = nodes.find(function(n) { return (n.type === 'engine') && n.data && n.data.torqueData && n.data.torqueData.length > 2; });
-  if(!engineNode) { showToast('⚠ Motor bileşeni bulunamadı', 'warning'); return; }
+  if(!engineNode) { showToast('⚠ Motor bileşeni bağlı değil — lütfen giriş portunu Motor çıkışına bağlayın', 'warning'); return; }
   
   var torqueData = engineNode.data.torqueData || [];
   var motorSpecs = engineNode.data.motorSpecs || {};
   var governed = motorSpecs.governedSpeed || engineNode.data.governedRpm || 2100;
   var noLoadGov = motorSpecs.noLoadGoverned || governed + 200;
-  var pumpDrop = 17.6;
   var engineName = engineNode.data.motorName || engineNode.customName || 'Motor';
-  
-  _ecmModalData = { torqueData: torqueData, governed: governed, noLoadGov: noLoadGov, pumpDrop: pumpDrop, engineName: engineName };
+  // Modal chart için ortalama pump drop hesapla
+  var tcKeys = veGetFamilyTCKeys();
+  var modalPumpDrop = 17.6;
+  if(tcKeys.length > 0) {
+    var sumD = 0;
+    tcKeys.forEach(function(k) { var tc = VE_FT_TC_PRESETS[k]; sumD += (tc && tc.pumpTorqueDrop !== undefined) ? tc.pumpTorqueDrop : 17.6; });
+    modalPumpDrop = sumD / tcKeys.length;
+  }
+
+  _ecmModalData = { torqueData: torqueData, governed: governed, noLoadGov: noLoadGov, pumpDrop: modalPumpDrop, engineName: engineName };
   _ecmModalActive = nodeId;
   _ecmZoom = { scale: 1.0, centerRPM: null, centerT: null };
   
@@ -6245,6 +6263,8 @@ function ecmDrawModalChart() {
     });
   } catch(err) {
     console.warn('ECM intersection dots error:', err);
+    ctx.fillStyle = '#f59e0b'; ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText('⚠ Kesişim hesaplama hatası', ml + 6, mt + ph - 8);
   }
   
   // Restore clip
