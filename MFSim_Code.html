@@ -32141,6 +32141,33 @@ function veGetSensorData(sensorId, signalOverride, dataSource) {
       src = r.segmentDrive;
     }
 
+    // Engel Atlama tab'ı aktifse, obstacleDynamic.log dizisinden oku
+    if(typeof veActiveSolverTabId !== 'undefined' && veActiveSolverTabId === 'obstacle'
+       && r.obstacleDynamic && r.obstacleDynamic.log && r.obstacleDynamic.log.length > 1) {
+      var obsLog = r.obstacleDynamic.log;
+      // log[].property → sinyal eşleme
+      var obsMap = {
+        'rpm': 'N_engine', 'torque': 'T_engine', 'power': null,
+        'v_speed': 'v', 'speed': 'v',
+        'T_wheel': 'T_wheel', 'T_req': 'T_req', 'T_pump': 'T_pump', 'T_turbine': 'T_turbine',
+        'speed_ratio': 'SR', 'torque_ratio': 'TR',
+        'phi_deg': 'phi_deg', 'F_itme': 'F_itme', 'F_engel': 'F_engel', 'F_net': 'F_net',
+        'DD': 'DD', 'KE': 'KE', 'T_gb_out': 'T_gb_out', 'T_gb_lim': 'T_gb_lim'
+      };
+      var obsKey = obsMap[sig];
+      if(obsKey && obsLog[0][obsKey] !== undefined) {
+        return obsLog.map(function(e) { return e[obsKey]; });
+      }
+      // power = T_engine * N_engine / 9549
+      if(sig === 'power' && obsLog[0].T_engine !== undefined && obsLog[0].N_engine !== undefined) {
+        return obsLog.map(function(e) { return e.T_engine * e.N_engine / 9549; });
+      }
+      // v_speed → km/h dönüşümü (log'da m/s)
+      if(sig === 'v_speed' && obsLog[0].v !== undefined) {
+        return obsLog.map(function(e) { return e.v * 3.6; });
+      }
+    }
+
     // Hedef bileşeni bul
     var compNode = tabNodes.find(function(n) {
       return n.type === compType;
@@ -32196,7 +32223,13 @@ function veGetSensorData(sensorId, signalOverride, dataSource) {
       });
     }
     // Zaman
-    if(sig === 'time' && src.time) return src.time;
+    if(sig === 'time') {
+      if(typeof veActiveSolverTabId !== 'undefined' && veActiveSolverTabId === 'obstacle'
+         && r.obstacleDynamic && r.obstacleDynamic.log && r.obstacleDynamic.log.length > 1) {
+        return r.obstacleDynamic.log.map(function(e) { return e.t; });
+      }
+      if(src.time) return src.time;
+    }
 
     return null;
   }
@@ -32313,7 +32346,13 @@ function veGetSensorData(sensorId, signalOverride, dataSource) {
   if(sig === 'wheel_power' && r.WP) return r.WP;
   if(sig === 'net_grade' && r.netGrade) return r.netGrade;
   if(sig === 'heat_rejection' && r.heatRejection) return r.heatRejection;
-  if(sig === 'time' && r.time) return r.time;
+  if(sig === 'time') {
+    if(typeof veActiveSolverTabId !== 'undefined' && veActiveSolverTabId === 'obstacle'
+       && r.obstacleDynamic && r.obstacleDynamic.log && r.obstacleDynamic.log.length > 1) {
+      return r.obstacleDynamic.log.map(function(e) { return e.t; });
+    }
+    if(r.time) return r.time;
+  }
   
   // ====== SHIFT CONTROLLER FALLBACK ======
   if(sig === 'gear_mode' && r.gearMode) return r.gearMode;
@@ -32420,6 +32459,9 @@ function veRenderChart(slotIdx) {
   if(!timeArr) {
     if(slotDataSource === 'segmentDrive' && r && r.segmentDrive && r.segmentDrive.time) {
       timeArr = r.segmentDrive.time;
+    } else if(typeof veActiveSolverTabId !== 'undefined' && veActiveSolverTabId === 'obstacle'
+       && r && r.obstacleDynamic && r.obstacleDynamic.log && r.obstacleDynamic.log.length > 1) {
+      timeArr = r.obstacleDynamic.log.map(function(e) { return e.t; });
     } else {
       timeArr = (r && r.time) ? r.time : null;
     }
