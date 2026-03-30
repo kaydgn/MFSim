@@ -1779,6 +1779,49 @@
 }
 .ve-tree-signal:hover{background:rgba(59,130,246,0.1);}
 .ve-tree-signal:active{cursor:grabbing;opacity:0.6;}
+
+/* Solver Tab Bar */
+.ve-solver-tab-bar{
+  display:flex;
+  gap:0;
+  padding:0;
+  border-bottom:1px solid var(--border-color);
+  background:var(--bg-tertiary);
+  flex-shrink:0;
+  overflow-x:auto;
+}
+.ve-solver-tab-bar::-webkit-scrollbar{display:none;}
+.ve-solver-tab{
+  flex:1;
+  min-width:0;
+  padding:6px 4px;
+  font-size:0.62rem;
+  font-weight:500;
+  color:var(--text-muted);
+  background:transparent;
+  border:none;
+  border-bottom:2px solid transparent;
+  cursor:pointer;
+  transition:all 0.15s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.ve-solver-tab:hover{
+  color:var(--text-primary);
+  background:var(--bg-secondary);
+}
+.ve-solver-tab.active{
+  color:var(--accent-primary);
+  font-weight:700;
+  border-bottom-color:var(--accent-primary);
+  background:var(--bg-secondary);
+}
+
 /* Detaylı Rapor */
 .dr-section{border-bottom:none;padding:0 12px;}
 .dr-hdr{

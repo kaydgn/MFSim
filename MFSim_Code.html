@@ -1788,6 +1788,49 @@
 }
 .ve-tree-signal:hover{background:rgba(59,130,246,0.1);}
 .ve-tree-signal:active{cursor:grabbing;opacity:0.6;}
+
+/* Solver Tab Bar */
+.ve-solver-tab-bar{
+  display:flex;
+  gap:0;
+  padding:0;
+  border-bottom:1px solid var(--border-color);
+  background:var(--bg-tertiary);
+  flex-shrink:0;
+  overflow-x:auto;
+}
+.ve-solver-tab-bar::-webkit-scrollbar{display:none;}
+.ve-solver-tab{
+  flex:1;
+  min-width:0;
+  padding:6px 4px;
+  font-size:0.62rem;
+  font-weight:500;
+  color:var(--text-muted);
+  background:transparent;
+  border:none;
+  border-bottom:2px solid transparent;
+  cursor:pointer;
+  transition:all 0.15s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.ve-solver-tab:hover{
+  color:var(--text-primary);
+  background:var(--bg-secondary);
+}
+.ve-solver-tab.active{
+  color:var(--accent-primary);
+  font-weight:700;
+  border-bottom-color:var(--accent-primary);
+  background:var(--bg-secondary);
+}
+
 /* Detaylı Rapor */
 .dr-section{border-bottom:none;padding:0 12px;}
 .dr-hdr{
@@ -2472,7 +2515,10 @@ function mfsimLogout() {
         <div style="padding:8px 12px; background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:6px;">
           <span style="font-size:0.85rem; font-weight:700; color:var(--text-heading);">📊 Data Browser</span>
         </div>
-        
+
+        <!-- Solver Tab Bar -->
+        <div id="ve-solver-tab-bar" class="ve-solver-tab-bar" style="display:none;"></div>
+
         <!-- Arama -->
         <div style="padding:4px 8px; border-bottom:1px solid var(--border-color);">
           <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input); color:var(--text-primary);">
@@ -2623,6 +2669,7 @@ function veSubTabDegistir(tabName) {
   
   // Sonuçlar sayfası açıldığında data browser güncelle
   if(tabName === 'sonuclar') {
+    if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
     veUpdateResultsTree();
     veInitResultSlots();
   }
@@ -2630,18 +2677,100 @@ function veSubTabDegistir(tabName) {
 
 </script>
 <script>
+// ===== SONUÇLAR: SOLVER TAB SİSTEMİ =====
+var veSolverTabDefs = [
+  { id: 'performance',  name: 'Performans Analizi',  icon: '🏎️', resultKey: 'speed' },
+  { id: 'accel-decel',  name: 'Hızlanma-Yavaşlama',  icon: '🛤️', resultKey: 'segmentDrive' },
+  { id: 'obstacle',     name: 'Engel Atlama',         icon: '🧱', resultKey: 'obstacleCrossing' }
+];
+var veActiveSolverTabId = 'performance';
+var veSolverTabSlots = {};  // { tabId: [{},{},{},{}] }
+var veSolverTabCollapsed = {}; // { tabId: [false,false,false,false] }
+
+function veGetAvailableSolverTabs() {
+  var r = window.veSimResults;
+  if(!r) return [];
+  var tabs = [];
+  veSolverTabDefs.forEach(function(def) {
+    if(def.id === 'performance' && r.speed) tabs.push(def);
+    else if(def.id === 'accel-decel' && r.segmentDrive && r.segmentDrive.segmentSummary) tabs.push(def);
+    else if(def.id === 'obstacle' && r.obstacleCrossing) tabs.push(def);
+  });
+  return tabs;
+}
+
+function veUpdateSolverTabs() {
+  var container = document.getElementById('ve-solver-tab-bar');
+  if(!container) return;
+  var tabs = veGetAvailableSolverTabs();
+
+  if(tabs.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = 'flex';
+
+  // Aktif tab hala geçerli mi?
+  var activeValid = tabs.some(function(t) { return t.id === veActiveSolverTabId; });
+  if(!activeValid) veActiveSolverTabId = tabs[0].id;
+
+  var html = '';
+  tabs.forEach(function(tab) {
+    var isActive = tab.id === veActiveSolverTabId;
+    html += '<button class="ve-solver-tab' + (isActive ? ' active' : '') + '" onclick="veSwitchSolverTab(\'' + tab.id + '\')" title="' + tab.name + '">';
+    html += '<span>' + tab.icon + '</span> ' + tab.name;
+    html += '</button>';
+  });
+  container.innerHTML = html;
+}
+
+function veSwitchSolverTab(tabId) {
+  if(tabId === veActiveSolverTabId) return;
+
+  // Mevcut tab'ın slot durumunu kaydet
+  veSolverTabSlots[veActiveSolverTabId] = veResultSlots.map(function(s) { return Object.assign({}, s); });
+  veSolverTabCollapsed[veActiveSolverTabId] = veSlotCollapsed.slice();
+
+  veActiveSolverTabId = tabId;
+
+  // Yeni tab'ın slot durumunu geri yükle (yoksa boş oluştur)
+  if(veSolverTabSlots[tabId]) {
+    veResultSlots = veSolverTabSlots[tabId].map(function(s) { return Object.assign({}, s); });
+    veSlotCollapsed = veSolverTabCollapsed[tabId] ? veSolverTabCollapsed[tabId].slice() : [false,false,false,false];
+  } else {
+    veResultSlots = [{},{},{},{}];
+    veSlotCollapsed = [false,false,false,false];
+  }
+
+  // UI güncelle
+  veUpdateSolverTabs();
+  veUpdateResultsTree();
+
+  // Slotları yeniden renderla
+  for(var i = 0; i < 4; i++) {
+    if(veResultSlots[i].sensors && veResultSlots[i].sensors.length > 0) {
+      veRenderSlot(i);
+    } else {
+      veRenderSlotPicker(i);
+    }
+  }
+}
+
 // ===== SONUÇLAR: DATA BROWSER AĞACI =====
 function veUpdateResultsTree() {
   var tree = document.getElementById('ve-results-tree');
   if(!tree) return;
-  
+
+  // Solver tab bar'ı güncelle
+  veUpdateSolverTabs();
+
   var projectName = 'MFSim Projesi';
   var nameBtn = document.getElementById('ve-project-name-btn');
   if(nameBtn) {
     var t = nameBtn.textContent.replace('⚙','').replace('▾','').trim();
     if(t && t !== 'MFSim') projectName = t;
   }
-  
+
   // Aktif sekmeyi kaydet (güncel nodes/connections)
   if(veTabs.length > 0) veSaveActiveTabState();
   
@@ -2976,62 +3105,91 @@ function veUpdateResultsTree() {
     html += '</div></div></div>';
   }
 
-  // Detaylı Rapor — expandable ağaç öğesi with sub-sections
+  // Detaylı Rapor — aktif solver tab'a göre filtrelenmiş
   if(window.veSimResults) {
-    html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
-    // Parent node
-    html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
-    html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
-    html += '<span class="icon">📋</span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
-    html += '</div>';
-    // Children
-    html += '<div class="ve-tree-children">';
-    // Girdi Özeti group
-    html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
-    html += '<span onclick="veRenderDetailedReport(\'girdi\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Girdi Özeti">';
-    html += '<span class="icon" style="font-size:0.6rem;">📑</span><span style="font-size:0.68rem;">Girdi Özeti</span></span></div>';
-    html += '<div class="ve-tree-children">';
-    var girdiSubs = [
-      {id:'platform', icon:'🚛', label:'Platform'},
-      {id:'engine', icon:'⚙️', label:'Motor'},
-      {id:'transmission', icon:'🔧', label:'Şanzıman'},
-      {id:'ecm', icon:'🌀', label:'Konvertör Değerlendirmesi'},
-      {id:'driveline', icon:'⛓️', label:'Aktarma Organları'}
-    ];
-    girdiSubs.forEach(function(s) {
-      html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'' + s.id + '\')" style="cursor:pointer; padding-left:24px;" title="' + s.label + '">';
-      html += '<span class="icon" style="font-size:0.58rem;">' + s.icon + '</span><span style="font-size:0.66rem;">' + s.label + '</span></div>';
-    });
-    html += '</div>';
-    // Araç Performans Özeti group
-    html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
-    html += '<span onclick="veRenderDetailedReport(\'performans\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Araç Performans Özeti">';
-    html += '<span class="icon" style="font-size:0.6rem;">📊</span><span style="font-size:0.68rem;">Araç Performans Özeti</span></span></div>';
-    html += '<div class="ve-tree-children">';
-    html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-grade\')" style="cursor:pointer; padding-left:24px;" title="Eğim Kabiliyeti">';
-    html += '<span class="icon" style="font-size:0.58rem;">⛰️</span><span style="font-size:0.66rem;">Eğim Kabiliyeti</span></div>';
-    html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-accel\')" style="cursor:pointer; padding-left:24px;" title="Hızlanma">';
-    html += '<span class="icon" style="font-size:0.58rem;">🏎️</span><span style="font-size:0.66rem;">Hızlanma</span></div>';
-    html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-upshifts\')" style="cursor:pointer; padding-left:24px;" title="Vites Geçişleri (Detaylı)">';
-    html += '<span class="icon" style="font-size:0.58rem;">📊</span><span style="font-size:0.66rem;">Vites Geçişleri (Detaylı)</span></div>';
-    html += '</div>';
-    html += '</div>'; // children of Detaylı Rapor
-    html += '</div>';
-    // Tam Gaz Hızlanma Raporu (TXT) — ağaç öğesi
-    html += '<div style="margin-top:2px;">';
-    html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Tam Gaz Hızlanma TXT rapor önizleme">';
-    html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Tam Gaz Hızlanma Raporu (TXT)</span></div>';
-    html += '</div>';
-    // Hızlanma-Yavaşlama Raporu (TXT) — ağaç öğesi
-    html += '<div style="margin-top:2px;">';
-    html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
-    html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
-    html += '</div>';
-    // Engel Atlama Raporu (TXT) — ağaç öğesi (yalnızca veri varsa)
-    if(window.veSimResults && window.veSimResults.obstacleCrossing) {
+    var _activeTab = veActiveSolverTabId;
+
+    // === PERFORMANS ANALİZİ tab'ı ===
+    if(_activeTab === 'performance') {
+      html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
+      html += '<span class="icon">📋</span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
+      html += '</div>';
+      html += '<div class="ve-tree-children">';
+      // Girdi Özeti group
+      html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span onclick="veRenderDetailedReport(\'girdi\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Girdi Özeti">';
+      html += '<span class="icon" style="font-size:0.6rem;">📑</span><span style="font-size:0.68rem;">Girdi Özeti</span></span></div>';
+      html += '<div class="ve-tree-children">';
+      var girdiSubs = [
+        {id:'platform', icon:'🚛', label:'Platform'},
+        {id:'engine', icon:'⚙️', label:'Motor'},
+        {id:'transmission', icon:'🔧', label:'Şanzıman'},
+        {id:'ecm', icon:'🌀', label:'Konvertör Değerlendirmesi'},
+        {id:'driveline', icon:'⛓️', label:'Aktarma Organları'}
+      ];
+      girdiSubs.forEach(function(s) {
+        html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'' + s.id + '\')" style="cursor:pointer; padding-left:24px;" title="' + s.label + '">';
+        html += '<span class="icon" style="font-size:0.58rem;">' + s.icon + '</span><span style="font-size:0.66rem;">' + s.label + '</span></div>';
+      });
+      html += '</div>';
+      // Araç Performans Özeti group
+      html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span onclick="veRenderDetailedReport(\'performans\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Araç Performans Özeti">';
+      html += '<span class="icon" style="font-size:0.6rem;">📊</span><span style="font-size:0.68rem;">Araç Performans Özeti</span></span></div>';
+      html += '<div class="ve-tree-children">';
+      html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-grade\')" style="cursor:pointer; padding-left:24px;" title="Eğim Kabiliyeti">';
+      html += '<span class="icon" style="font-size:0.58rem;">⛰️</span><span style="font-size:0.66rem;">Eğim Kabiliyeti</span></div>';
+      html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-accel\')" style="cursor:pointer; padding-left:24px;" title="Hızlanma">';
+      html += '<span class="icon" style="font-size:0.58rem;">🏎️</span><span style="font-size:0.66rem;">Hızlanma</span></div>';
+      html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-upshifts\')" style="cursor:pointer; padding-left:24px;" title="Vites Geçişleri (Detaylı)">';
+      html += '<span class="icon" style="font-size:0.58rem;">📊</span><span style="font-size:0.66rem;">Vites Geçişleri (Detaylı)</span></div>';
+      html += '</div>';
+      html += '</div></div>';
+      // Tam Gaz Hızlanma Raporu (TXT)
+      html += '<div style="margin-top:2px;">';
+      html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Tam Gaz Hızlanma TXT rapor önizleme">';
+      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Tam Gaz Hızlanma Raporu (TXT)</span></div>';
+      html += '</div>';
+    }
+
+    // === HIZLANMA-YAVAŞLAMA tab'ı ===
+    if(_activeTab === 'accel-decel') {
+      html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
+      html += '<span class="icon">📋</span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
+      html += '</div>';
+      html += '<div class="ve-tree-children">';
+      // Girdi Özeti (tüm tablarda ortak)
+      html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'girdi\')" style="cursor:pointer; padding-left:10px;" title="Girdi Özeti">';
+      html += '<span class="icon" style="font-size:0.6rem;">📑</span><span style="font-size:0.68rem;">Girdi Özeti</span></div>';
+      html += '</div></div>';
+      // Hızlanma-Yavaşlama Raporu (TXT)
+      html += '<div style="margin-top:2px;">';
+      html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
+      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
+      html += '</div>';
+    }
+
+    // === ENGEL ATLAMA tab'ı ===
+    if(_activeTab === 'obstacle' && window.veSimResults.obstacleCrossing) {
+      html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
+      html += '<span class="icon">📋</span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
+      html += '</div>';
+      html += '<div class="ve-tree-children">';
+      html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'girdi\')" style="cursor:pointer; padding-left:10px;" title="Girdi Özeti">';
+      html += '<span class="icon" style="font-size:0.6rem;">📑</span><span style="font-size:0.68rem;">Girdi Özeti</span></div>';
+      html += '</div></div>';
+      // Engel Atlama Raporu (TXT)
       html += '<div style="margin-top:2px;">';
       html += '<div class="ve-tree-row" onclick="veRenderObstacleCrossingTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Engel Atlama TXT rapor önizleme">';
       html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Engel Atlama Raporu (TXT)</span></div>';
@@ -22009,6 +22167,9 @@ function veSolverRunProfessional() {
         }
 
         // Sonuçlar sayfasını güncelle
+        if(typeof veUpdateSolverTabs === 'function') {
+          veUpdateSolverTabs();
+        }
         if(typeof veUpdateResultsTree === 'function') {
           veUpdateResultsTree();
         }
@@ -34453,10 +34614,16 @@ function veClearAllResults() {
   
   // Simülasyon verilerini temizle
   window.veSimResults = null;
-  
+
+  // Solver tab state'ini temizle
+  veSolverTabSlots = {};
+  veSolverTabCollapsed = {};
+  veActiveSolverTabId = 'performance';
+  if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
+
   // Chart view'ları sıfırla
   for(var j = 0; j < 4; j++) veResetChartView(j);
-  
+
   showToast('Tüm sonuçlar temizlendi', 'success');
 }
 
