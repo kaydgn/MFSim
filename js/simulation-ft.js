@@ -1466,7 +1466,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         idleRpm: parseFloat(_specs.idleRpm)||700, engineInertia: I_engine,
         accessories: (_ed.accessories||[]).map(function(a){return{name:a.name,standardLoss:parseFloat(a.standardLoss)||0,userLoss:parseFloat(a.userLoss)||0};}),
         torqueData: (ed.torqueData||ed.motorData||[]).map(function(p){return{rpm:p.rpm,torque:p.torque,power:p.power};}),
-        fanLossGov: accTotalFanLoss, otherLossGov: accTotalOtherLoss,
+        fanLossGov: accTotalFanLoss, otherLossGov: accTotalOtherLoss, accFanMode: accFanMode,
         gbName: _gbP ? _gbP.name : (_gbd.gbName||'—'), gbFamily: _gbP ? (_gbP.family||'—') : '—', gbEff: parseFloat(_gbd.efficiency)||97, tcName: _tcN,
         shiftProfile: shiftProfile, shiftRefRPM: shiftRefRPM, lockupOffset: lockupOffset,
         gearData: forwardGears.map(function(g){return{name:g.name,ratio:g.ratio};}),
