@@ -2361,12 +2361,42 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   if (R.tcData && R.tcData.length >= 2 && R.torqueData && R.torqueData.length >= 2) {
     var _cmTcFns = FT_SOLVER.createTCFunctions(R.tcData);
-    var _cmMotorFn = FT_SOLVER.createMotorTorqueFn(R.torqueData, R.governed, R.noLoad);
+    var _cmGrossMotorFn = FT_SOLVER.createMotorTorqueFn(R.torqueData, R.governed, R.noLoad);
     var _cmPumpDrop = R.pumpDrop || 17.6;
     var _cmIdleRpm = R.idleRpm || 700;
     var _cmGovSpeed = R.governed || 2100;
     var _cmNoLoad = R.noLoad || 2350;
-    var _cmCouplingSR = _cmTcFns.couplingSR || 0.88;
+    var _cmFanLoss = R.fanLossGov || 0;
+    var _cmOtherLoss = R.otherLossGov || 0;
+    var _cmFanMode = R.accFanMode || 'on';
+    var _cmHasAccLoss = (_cmFanLoss + _cmOtherLoss) > 0;
+
+    // NET motor tork fonksiyonu (brut - aksesuar kayiplari)
+    // iSCAAN "Net Torque Fan On" egrisine karsilik gelir
+    function _cmNetMotorFn(rpm) {
+      var T_gross = _cmGrossMotorFn(rpm);
+      if (!_cmHasAccLoss || rpm <= 0) return T_gross;
+      var ratio = rpm / _cmGovSpeed;
+      var P_fan_kW = (_cmFanMode === 'on') ? _cmFanLoss : _cmFanLoss * ratio * ratio * ratio;
+      var P_loss_kW = P_fan_kW + _cmOtherLoss * ratio;
+      var omega = 2 * Math.PI * rpm / 60;
+      var T_loss = omega > 0 ? P_loss_kW * 1000 / omega : 0;
+      return Math.max(0, T_gross - T_loss);
+    }
+
+    // Coupling SR — interpolasyonla hassas hesapla (tau = 1.0 gecis noktasi)
+    var _cmCouplingSR = 0.88;
+    var _cmTcD = R.tcData.slice().sort(function(a, b) { return a.sr - b.sr; });
+    for (var _cpi = 0; _cpi < _cmTcD.length - 1; _cpi++) {
+      var _t1 = _cmTcD[_cpi].tau, _t2 = _cmTcD[_cpi + 1].tau;
+      if (_t1 > 1.0 && _t2 <= 1.0) {
+        var _f = (_t1 - 1.0) / (_t1 - _t2);
+        _cmCouplingSR = _cmTcD[_cpi].sr + _f * (_cmTcD[_cpi + 1].sr - _cmTcD[_cpi].sr);
+        break;
+      }
+      if (Math.abs(_t1 - 1.0) < 0.005) { _cmCouplingSR = _cmTcD[_cpi].sr; break; }
+    }
+    _cmCouplingSR = Math.round(_cmCouplingSR * 1000) / 1000;
 
     // Temel SR listesi
     var _cmBaseSRs = [0.00, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.634, 0.70, 0.75, 0.80, 0.825, 0.90, 0.925, 0.935, 0.945, 0.950, 0.975, 0.99];
@@ -2386,7 +2416,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       _cmSpecialSRs.push(Math.round((_srLo + _srHi) / 2 * 1000) / 1000);
     }
     // Coupling noktasi
-    _cmSpecialSRs.push(Math.round(_cmCouplingSR * 1000) / 1000);
+    _cmSpecialSRs.push(_cmCouplingSR);
 
     // Ozel SR'leri temel listeye ekle (henuz yoksa)
     for (var _si = 0; _si < _cmSpecialSRs.length; _si++) {
@@ -2398,9 +2428,9 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     }
     _cmBaseSRs.sort(function(a, b) { return a - b; });
 
-    // Governed SR'yi bul: T_engine(gov) - pumpDrop = (gov / K_pump(SR))^2
-    var _cmTengGov = _cmMotorFn(_cmGovSpeed);
-    var _cmTpumpGov = _cmTengGov - _cmPumpDrop;
+    // Governed SR'yi bul: T_net(gov) - pumpDrop = (gov / K_pump(SR))^2
+    var _cmTnetGov = _cmNetMotorFn(_cmGovSpeed);
+    var _cmTpumpGov = _cmTnetGov - _cmPumpDrop;
     if (_cmTpumpGov > 0) {
       var _cmKneeded = _cmGovSpeed / Math.sqrt(_cmTpumpGov);
       var _cmSrGov = 0;
@@ -2433,22 +2463,30 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       var _Km = _cmTcFns.kpump(_sr);
       var _TRm = _cmTcFns.tau(_sr);
 
-      // Newton-Raphson: T_engine(N) - pumpDrop = (N / K_pump)^2
-      var _Nm = 2000;
-      for (var _it = 0; _it < 100; _it++) {
-        var _Te = _cmMotorFn(_Nm);
-        var _Tp = (_Nm / _Km) * (_Nm / _Km);
-        var _res = _Te - _Tp - _cmPumpDrop;
-        var _dTe = (_cmMotorFn(_Nm + 1) - _cmMotorFn(_Nm - 1)) / 2;
-        var _dTp = 2 * _Nm / (_Km * _Km);
-        var _dR = _dTe - _dTp;
-        if (Math.abs(_dR) < 1e-8) break;
-        _Nm = _Nm - _res / _dR;
-        _Nm = Math.max(_cmIdleRpm, Math.min(_cmNoLoad, _Nm));
-        if (Math.abs(_res) < 0.1) break;
+      // Bisection: T_net(N) - pumpDrop - (N / K_pump)^2 = 0
+      // Governed oncesi bolge icin cozum — noLoadGoverned'a kadar tarama
+      var _bLo = _cmIdleRpm, _bHi = _cmGovSpeed;
+      var _fLo = _cmNetMotorFn(_bLo) - _cmPumpDrop - (_bLo / _Km) * (_bLo / _Km);
+      var _fHi = _cmNetMotorFn(_bHi) - _cmPumpDrop - (_bHi / _Km) * (_bHi / _Km);
+
+      // Eger governed'da hala fazla tork varsa, governed'i cozum olarak kullan
+      var _Nm;
+      if (_fHi > 0) {
+        _Nm = _cmGovSpeed;
+      } else if (_fLo < 0) {
+        _Nm = _cmIdleRpm;
+      } else {
+        // Bisection cozumu
+        for (var _it = 0; _it < 60; _it++) {
+          var _bMid = (_bLo + _bHi) / 2;
+          var _fMid = _cmNetMotorFn(_bMid) - _cmPumpDrop - (_bMid / _Km) * (_bMid / _Km);
+          if (Math.abs(_fMid) < 0.05) { _bLo = _bMid; _bHi = _bMid; break; }
+          if (_fLo * _fMid > 0) { _bLo = _bMid; _fLo = _fMid; } else { _bHi = _bMid; _fHi = _fMid; }
+        }
+        _Nm = (_bLo + _bHi) / 2;
       }
 
-      var _TeF = _cmMotorFn(_Nm);
+      var _TeF = _cmNetMotorFn(_Nm);
       var _TpF = (_Nm / _Km) * (_Nm / _Km);
       var _TtF = _TpF * _TRm;
       var _NtF = _Nm * _sr;
