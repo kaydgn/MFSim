@@ -34594,16 +34594,15 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       var _TRm = _cmTcFns.tau(_sr);
 
       // Bisection: T_net(N) - pumpDrop - (N / K_pump)^2 = 0
-      // Governed oncesi bolge icin cozum — noLoadGoverned'a kadar tarama
-      var _bLo = _cmIdleRpm, _bHi = _cmGovSpeed;
+      // Droop bolgesi dahil — ust sinir noLoadGoverned
+      var _bLo = _cmIdleRpm, _bHi = _cmNoLoad;
       var _fLo = _cmNetMotorFn(_bLo) - _cmPumpDrop - (_bLo / _Km) * (_bLo / _Km);
       var _fHi = _cmNetMotorFn(_bHi) - _cmPumpDrop - (_bHi / _Km) * (_bHi / _Km);
 
-      // Eger governed'da hala fazla tork varsa, governed'i cozum olarak kullan
+      // noLoad'da tork=0 oldugu icin fHi her zaman negatif olmali.
+      // Eger idle'da bile motor torku yetersizse, idle kullan.
       var _Nm;
-      if (_fHi > 0) {
-        _Nm = _cmGovSpeed;
-      } else if (_fLo < 0) {
+      if (_fLo < 0) {
         _Nm = _cmIdleRpm;
       } else {
         // Bisection cozumu
@@ -34632,7 +34631,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       else if (Math.abs(_etaF - 0.80) < 0.015) _mpF = 'Yuzde 80';
       else if (Math.abs(_etaF - 0.85) < 0.015) _mpF = 'Yuzde 85';
       else if (Math.abs(_TRm - 1.0) < 0.01) _mpF = 'Kavrama';
-      if (_Nm >= _cmGovSpeed - 10 && _mpF === '') _mpF = 'Governed';
+      if (_Nm >= _cmGovSpeed - 5 && _mpF === '') _mpF = 'Governed';
 
       _cmTable.push({
         SR: _sr, TR: _TRm, N_engine: Math.round(_Nm), T_engine: Math.round(_TeF * 10) / 10,
