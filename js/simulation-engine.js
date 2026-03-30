@@ -155,7 +155,13 @@ function veRunSimulationEngine() {
   if(gbData) {
     gearRatio = parseFloat(gbData.selectedGearRatio) || (gearRatios ? (parseFloat(gearRatios[currentGear - 1]) || 1.0) : 1.0);
   }
-  var gbEff = gbData ? (parseFloat(gbData.efficiency) || 97) / 100 : 0.97;
+  // Evrensel dişli verimi — FT_SOLVER varsa dinamik, yoksa sabit fallback
+  var _gbEffFallback = gbData ? (parseFloat(gbData.efficiency) || 97) / 100 : 0.97;
+  var _gbUseUniversal = (typeof FT_SOLVER !== 'undefined' && typeof FT_SOLVER.calcGearEfficiency === 'function');
+  function gbEffFn(i_gear, N_turb) {
+    return _gbUseUniversal ? FT_SOLVER.calcGearEfficiency(i_gear, N_turb || 0) : _gbEffFallback;
+  }
+  var gbEff = gbEffFn(gearRatio, 0); // Başlangıç değeri (stall)
   var autoShift = vehicleNode && vehicleNode.data ? (vehicleNode.data.autoShift || false) : false;
   
   var trData = transferNode ? (transferNode.data || {}) : null;
@@ -240,7 +246,8 @@ function veRunSimulationEngine() {
   // ====== TOPLAM ORAN (tam mod için) ======
   // Klasik: iTotal = iDiff * iTfer * iGear * iTC
   var totalRatio = gearRatio * transferRatio * diffRatio * tcEffTorqueRatio;
-  var totalEff = gbEff * trEff * dfEff * psTotalEff;
+  var totalEff = gbEffFn(gearRatio, 0) * trEff * dfEff * psTotalEff;
+  function _updateTotalEff(iGear, nTurb) { totalEff = gbEffFn(iGear, nTurb || 0) * trEff * dfEff * psTotalEff; }
   
   // ====== TC MODEL ======
   // Kilitli: direkt bağlantı (ratio 1:1)
@@ -352,6 +359,7 @@ function veRunSimulationEngine() {
           currentGear++;
           gearRatio = parseFloat(gearRatios[currentGear - 1]) || gearRatio;
           totalRatio = gearRatio * transferRatio * diffRatio * tcEffTorqueRatio;
+          _updateTotalEff(gearRatio);
           // Aynı araç hızında yeni motor devri
           omega = v_veh * totalRatio / rWheel;
           rpm = omega * 60 / (2 * Math.PI);
@@ -395,6 +403,7 @@ function veRunSimulationEngine() {
             currentGear--;
             gearRatio = lowerGearRatio;
             totalRatio = gearRatio * transferRatio * diffRatio * tcEffTorqueRatio;
+          _updateTotalEff(gearRatio);
             omega = v_veh2 * totalRatio / rWheel;
             rpm = omega * 60 / (2 * Math.PI);
           }
@@ -443,7 +452,8 @@ function veRunSimulationEngine() {
       if(gearboxNode && nodeData[gearboxNode.id]) {
         var nd_gb = nodeData[gearboxNode.id];
         var gbOutRpm = propRpm / gearRatio;
-        var gbOutTorque = propTorque * gearRatio * gbEff;
+        var _gbEffStep = gbEffFn(gearRatio, propRpm);
+        var gbOutTorque = propTorque * gearRatio * _gbEffStep;
         
         nd_gb.rpm_in.push(propRpm);
         nd_gb.torque_in.push(propTorque);
@@ -851,10 +861,11 @@ function veRunSimulationEngine() {
       if(gearboxNode && nodeData[gearboxNode.id]) {
         var ngR = nodeData[gearboxNode.id];
         ngR.rpm_in.push(propRpmR); ngR.torque_in.push(propTorqueR);
-        ngR.rpm_out.push(propRpmR / gearRatio); ngR.torque_out.push(propTorqueR * gearRatio * gbEff);
-        ngR.power_out.push(propTorqueR * gearRatio * gbEff * (propRpmR / gearRatio) * Math.PI / 30 / 1000);
+        var _gbEffR = gbEffFn(gearRatio, propRpmR);
+        ngR.rpm_out.push(propRpmR / gearRatio); ngR.torque_out.push(propTorqueR * gearRatio * _gbEffR);
+        ngR.power_out.push(propTorqueR * gearRatio * _gbEffR * (propRpmR / gearRatio) * Math.PI / 30 / 1000);
         ngR.gear.push(currentGear); ngR.ratio.push(gearRatio);
-        propRpmR = propRpmR / gearRatio; propTorqueR = propTorqueR * gearRatio * gbEff;
+        propRpmR = propRpmR / gearRatio; propTorqueR = propTorqueR * gearRatio * _gbEffR;
       }
       
       if(propshaftPreTransfer.length > 0) {
@@ -943,6 +954,7 @@ function veRunSimulationEngine() {
           currentGear--;
           gearRatio = lowerGR;
           totalRatio = gearRatio * transferRatio * diffRatio * tcEffTorqueRatio;
+          _updateTotalEff(gearRatio);
         }
       }
     }
@@ -996,12 +1008,13 @@ function veRunSimulationEngine() {
       ng.rpm_in.push(propRpm2);
       ng.torque_in.push(propTorque2);
       ng.rpm_out.push(propRpm2 / gearRatio);
-      ng.torque_out.push(propTorque2 * gearRatio * gbEff);
-      ng.power_out.push(propTorque2 * gearRatio * gbEff * (propRpm2 / gearRatio) * Math.PI / 30 / 1000);
+      var _gbEffC = gbEffFn(gearRatio, propRpm2);
+      ng.torque_out.push(propTorque2 * gearRatio * _gbEffC);
+      ng.power_out.push(propTorque2 * gearRatio * _gbEffC * (propRpm2 / gearRatio) * Math.PI / 30 / 1000);
       ng.gear.push(currentGear);
       ng.ratio.push(gearRatio);
       propRpm2 = propRpm2 / gearRatio;
-      propTorque2 = propTorque2 * gearRatio * gbEff;
+      propTorque2 = propTorque2 * gearRatio * _gbEffC;
     }
     
     // Propşaft (Şanzıman → Transfer arası)

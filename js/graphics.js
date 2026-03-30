@@ -2001,7 +2001,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   r += '  ' + ln('-', 38) + '\n';
   r += pRow('Sanziman Modeli', ascii(R.gbName));
   r += pRow('Sanziman Ailesi', ascii(R.gbFamily));
-  r += pRow('Sanziman Verimi', num(R.gbEff, 1) + '%');
+  r += pRow('Sanziman Verimi', 'Evrensel Model: eta = 1 - |ln(i)| x (0.0175 + 2.93e-6 x N_turbin)');
   r += pRow('Tork Konvertoru', ascii(R.tcName));
   r += '\n';
 
@@ -2562,8 +2562,6 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     var _pgGears = R.allGearData || R.gearData || [];
     if (_pgGears.length > 0 && _cmTable.length > 0) {
 
-      // Per-gear varsayilan verim tablosu (lockup analizi ile tutarli)
-      var _pgDefaultEff = { 'F1': 97.5, 'F2': 98.7, 'F3': 98.7, 'F4': 99.3, 'F5': 98.0, 'F6': 97.1, 'R1': 97.0 };
       // Kolon genislikleri
       var _pg = [9, 9, 12, 12, 10, 12, 10, 12, 16];
       var _pgTW = 0; for (var _pwi = 0; _pwi < _pg.length; _pwi++) _pgTW += _pg[_pwi];
@@ -2572,7 +2570,10 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
         var _gear = _pgGears[_gi];
         var _gName = _gear.name || ('F' + (_gi + 1));
         var _gRatio = parseFloat(_gear.ratio) || 1.0;
-        var _gEff = _gear.eff ? parseFloat(_gear.eff) / 100 : (_pgDefaultEff[_gName] ? _pgDefaultEff[_gName] / 100 : (R.gbEff || 97) / 100);
+
+        // Stall ve governed verimlerini evrensel formulle hesapla (basliga yazilacak)
+        var _effStall = FT_SOLVER.calcGearEfficiency(_gRatio, 0);
+        var _effGov = FT_SOLVER.calcGearEfficiency(_gRatio, _cmTable.length > 0 ? _cmTable[_cmTable.length - 1].N_turbine : 0);
 
         r += '  ' + ln('-', _pgTW) + '\n';
         r += '  Vites ' + ascii(_gName) + ' (Oran = ' + num(_gRatio, 3) + ') - Konvertor Modu\n';
@@ -2594,7 +2595,9 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
         for (var _pri = 0; _pri < _cmTable.length; _pri++) {
           var _pr = _cmTable[_pri];
-          var _N_out = (_pr.SR * _pr.N_engine) / _gRatio;
+          var _N_turb_pg = _pr.N_turbine; // SR x N_engine (converter mode)
+          var _gEff = FT_SOLVER.calcGearEfficiency(_gRatio, _N_turb_pg);
+          var _N_out = _N_turb_pg / _gRatio;
           var _T_out = _pr.T_turbine * _gRatio * _gEff;
           var _P_out = _T_out * (2 * Math.PI * _N_out / 60) / 1000;
           var _Q_gb = _pr.P_engine - _P_out;
@@ -2607,7 +2610,8 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
         }
 
         r += '  ' + ln('-', _pgTW) + '\n';
-        r += '  Disli Verimi: ' + num(_gEff * 100, 1) + '%\n';
+        r += '  Disli Verimi: ' + num(_effStall * 100, 2) + '% (stall) ~ ' + num(_effGov * 100, 2) + '% (governed)\n';
+        r += '  Formul: eta = 1 - |ln(i)| x (0.0175 + 2.93e-6 x N_turbin)\n';
         r += '\n';
       }
 
