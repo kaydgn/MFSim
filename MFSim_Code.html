@@ -998,6 +998,7 @@
 .sw-tab:last-child{border-right:none;}
 .sw-tab:hover{background:var(--bg-tertiary);color:var(--text-primary);}
 .sw-tab.active{background:var(--accent-primary);color:white;font-weight:600;}
+.sw-tab.disabled{opacity:0.4;cursor:not-allowed;pointer-events:none;}
 .sw-tab .sw-tab-count{
   display:inline-block;min-width:14px;height:14px;line-height:14px;
   font-size:0.5rem;border-radius:7px;text-align:center;margin-left:3px;
@@ -8095,6 +8096,37 @@ function swScanTopology() {
   return result;
 }
 
+// Çözücü bileşeninde aktif olan çözüm kümelerini döndür
+function swGetActiveSolverTabs() {
+  var active = {};
+  var solverNode = nodes.find(function(n) { return n.type === 'solver'; });
+  if(!solverNode) return active;
+  var d = solverNode.data || {};
+
+  // Performans Analizi — varsayılan olarak açık
+  if(d.performanceAnalysis !== false) {
+    active['performance'] = true;
+  }
+
+  // Hızlanma-Yavaşlama — çözücüde tıklanmış + senaryo yol segmentleri var
+  if(d.accelDecelAnalysis) {
+    var scenNode = nodes.find(function(n) { return n.type === 'scenario'; });
+    if(scenNode && scenNode.data && scenNode.data.roadSegments && scenNode.data.roadSegments.length > 0) {
+      active['accel-decel'] = true;
+    }
+  }
+
+  // Engel Atlama — çözücüde tıklanmış + engel bileşeni mevcut
+  if(d.obstacleCrossingAnalysis) {
+    var obsNode = nodes.find(function(n) { return n.type === 'obstacle-crossing'; });
+    if(obsNode) {
+      active['obstacle'] = true;
+    }
+  }
+
+  return active;
+}
+
 function swCheckSensorExists(sensorReq, topology) {
   for(var i=0; i<topology.existingSensors.length; i++) {
     var s = topology.existingSensors[i];
@@ -8224,11 +8256,19 @@ var SW_DIAGRAM_SIGNALS = {
 function swInstallSensors(node) {
   if(!node || node.type !== 'sensor-wizard') return;
   var topo = swScanTopology();
+  var activeTabs = swGetActiveSolverTabs();
 
   var installedPkgs = [];
   var activeSensors = [];
+  var skippedTabs = [];
 
   SENSOR_PACKAGES.forEach(function(pkg) {
+    // Çözüm kümesi aktif mi?
+    if(pkg.solverTab && !activeTabs[pkg.solverTab]) {
+      if(skippedTabs.indexOf(pkg.solverTab) === -1) skippedTabs.push(pkg.solverTab);
+      return;
+    }
+
     // Bileşen gereksinimleri karşılanıyor mu?
     var reqsMet = true;
     for(var r = 0; r < pkg.requires.length; r++) {
@@ -8257,7 +8297,9 @@ function swInstallSensors(node) {
 
   swUpdateWizardVisual(node);
   if(typeof saveState === 'function') saveState();
-  if(typeof showToast === 'function') showToast(installedPkgs.length + ' paket kuruldu (' + activeSensors.length + ' sensör)', 'success');
+  var toastMsg = installedPkgs.length + ' paket kuruldu (' + activeSensors.length + ' sensör)';
+  if(skippedTabs.length > 0) toastMsg += ' — ' + skippedTabs.length + ' çözüm kümesi devre dışı';
+  if(typeof showToast === 'function') showToast(toastMsg, 'success');
 
   // Properties panelini yenile
   showNodeProperties(node);
@@ -8400,6 +8442,7 @@ function getSensorWizardPropertiesHTML(node) {
   html += '</div>';
 
   // ── Çözüm Kümesi Tabları ──
+  var activeTabs = swGetActiveSolverTabs();
   var solverTabs = [
     { id:'performance', name:'Performans', icon:'🏎️' },
     { id:'accel-decel', name:'Hızl.-Yavaşl.', icon:'🛤️' },
@@ -8408,20 +8451,39 @@ function getSensorWizardPropertiesHTML(node) {
 
   // Her tab için paket sayısını hesapla
   solverTabs.forEach(function(st) {
+    st.enabled = !!activeTabs[st.id];
     st.pkgCount = SENSOR_PACKAGES.filter(function(p) { return p.solverTab === st.id; }).length;
     st.installedCount = SENSOR_PACKAGES.filter(function(p) {
       return p.solverTab === st.id && installedPkgs.indexOf(p.id) > -1;
     }).length;
   });
 
+  // Aktif tab devre dışıysa ilk aktif tab'a geç
+  var currentTabInfo = solverTabs.find(function(st) { return st.id === swActiveTab; });
+  if(currentTabInfo && !currentTabInfo.enabled) {
+    var firstEnabled = solverTabs.find(function(st) { return st.enabled; });
+    if(firstEnabled) { swActiveTab = firstEnabled.id; }
+  }
+
   html += '<div class="sw-section">';
   html += '<div class="sw-section-title">Diyagram Paketleri</div>';
   html += '<div class="sw-tab-bar">';
   solverTabs.forEach(function(st) {
     var isActive = swActiveTab === st.id;
-    html += '<button class="sw-tab' + (isActive ? ' active' : '') + '" onclick="swSwitchTab(\'' + st.id + '\')">';
+    var disabled = !st.enabled;
+    html += '<button class="sw-tab' + (isActive ? ' active' : '') + (disabled ? ' disabled' : '') + '"';
+    if(disabled) {
+      html += ' title="Çözücü bileşeninden bu çözüm kümesini etkinleştirin"';
+    } else {
+      html += ' onclick="swSwitchTab(\'' + st.id + '\')"';
+    }
+    html += '>';
     html += st.icon + ' ' + st.name;
-    html += '<span class="sw-tab-count">' + (isInstalled ? st.installedCount : st.pkgCount) + '</span>';
+    if(disabled) {
+      html += '<span class="sw-tab-count" style="opacity:0.5;">kapalı</span>';
+    } else {
+      html += '<span class="sw-tab-count">' + (isInstalled ? st.installedCount : st.pkgCount) + '</span>';
+    }
     html += '</button>';
   });
   html += '</div>';

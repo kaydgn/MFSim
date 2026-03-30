@@ -989,6 +989,7 @@
 .sw-tab:last-child{border-right:none;}
 .sw-tab:hover{background:var(--bg-tertiary);color:var(--text-primary);}
 .sw-tab.active{background:var(--accent-primary);color:white;font-weight:600;}
+.sw-tab.disabled{opacity:0.4;cursor:not-allowed;pointer-events:none;}
 .sw-tab .sw-tab-count{
   display:inline-block;min-width:14px;height:14px;line-height:14px;
   font-size:0.5rem;border-radius:7px;text-align:center;margin-left:3px;
