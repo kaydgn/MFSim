@@ -40,6 +40,7 @@ function veSubTabDegistir(tabName) {
   
   // Sonuçlar sayfası açıldığında data browser güncelle
   if(tabName === 'sonuclar') {
+    if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
     veUpdateResultsTree();
     veInitResultSlots();
   }

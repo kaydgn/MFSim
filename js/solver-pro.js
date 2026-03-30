@@ -1329,6 +1329,9 @@ function veSolverRunProfessional() {
         }
 
         // Sonuçlar sayfasını güncelle
+        if(typeof veUpdateSolverTabs === 'function') {
+          veUpdateSolverTabs();
+        }
         if(typeof veUpdateResultsTree === 'function') {
           veUpdateResultsTree();
         }

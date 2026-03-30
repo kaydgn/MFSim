@@ -2808,10 +2808,16 @@ function veClearAllResults() {
   
   // Simülasyon verilerini temizle
   window.veSimResults = null;
-  
+
+  // Solver tab state'ini temizle
+  veSolverTabSlots = {};
+  veSolverTabCollapsed = {};
+  veActiveSolverTabId = 'performance';
+  if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
+
   // Chart view'ları sıfırla
   for(var j = 0; j < 4; j++) veResetChartView(j);
-  
+
   showToast('Tüm sonuçlar temizlendi', 'success');
 }
 
