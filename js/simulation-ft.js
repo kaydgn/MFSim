@@ -309,7 +309,20 @@ var FT_SOLVER = (function() {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 8. YARDIMCI
+  // 8. EVRENSEL SANZIMAN DISLI VERIMI
+  // ═══════════════════════════════════════════════════════════════════════════
+  // η_gear = 1 − |ln(i_gear)| × (0.0175 + 0.00000293 × N_turbine)
+  // i_gear = 1.000 (direct drive) → η = 1.000 (kayıpsız)
+  // iSCAAN doğrulaması: 7 vites, 2 mod, ≤0.1% hata.
+  function calcGearEfficiency(i_gear, N_turbine) {
+    if(!i_gear || i_gear === 1.0) return 1.0;
+    var absLnRatio = Math.abs(Math.log(i_gear));
+    var eta = 1 - absLnRatio * (0.0175 + 0.00000293 * (N_turbine || 0));
+    return Math.max(0.90, Math.min(1.0, eta));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 9. YARDIMCI
   // ═══════════════════════════════════════════════════════════════════════════
   function msToKmh(v) { return v * 3.6; }
   function kmhToMs(v) { return v / 3.6; }
@@ -327,6 +340,7 @@ var FT_SOLVER = (function() {
     getCrrEffective: getCrrEffective,
     speedToTurbineRpm: speedToTurbineRpm, turbineRpmToSpeed: turbineRpmToSpeed,
     calcAccessoryTorque: calcAccessoryTorque,
+    calcGearEfficiency: calcGearEfficiency,
     msToKmh: msToKmh, kmhToMs: kmhToMs
   };
 })();
@@ -723,7 +737,6 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     if(v_ms < 0) v_ms = 0;
     var gearData = getCurrentGearData();
     var i_gear = parseFloat(gearData.ratio) || 1.0;
-    var eta_gear = (parseFloat(gearData.eff) || 100) / 100;
     var isLU = shiftState.isLockup;
 
     var N_engine, T_engine, T_output, T_pump, SR, tau, tcEta;
@@ -793,6 +806,10 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       var P_heat_gear_mech = P_turbine_kW * (1 - eta_conv_internal);
       heatRejection_kW = Math.max(0, P_heat_converter) + Math.max(0, P_heat_gear_mech);
     }
+
+    // Evrensel dişli verimi: η = 1 − |ln(i)| × (0.0175 + 2.93e-6 × N_turbine)
+    var _N_turb_for_eff = isLU ? N_engine : (N_engine * SR);
+    var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_for_eff);
 
     // Çekme kuvveti — şanzıman kayıpları tork kaybı modeli (deltaT_lockup / TC eta)
     // ile zaten hesaplandığından eta_gear TE formülünden çıkarıldı (iSCAAN uyumu).
@@ -2028,7 +2045,6 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     if(v_ms < 0) v_ms = 0;
     var gearData = getCurrentGearData();
     var i_gear = parseFloat(gearData.ratio) || 1.0;
-    var eta_gear = (parseFloat(gearData.eff) || 100) / 100;
     var isLU = shiftState.isLockup;
     var isCoast = (command === 'coast');
 
@@ -2098,6 +2114,10 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       var i_total_coast = i_gear * i_propshaft * i_transfer * i_axle;
       F_engine_drag = T_motoring * i_total_coast / r_tire;
     }
+
+    // Evrensel dişli verimi
+    var _N_turb_eff2 = isLU ? N_engine : (N_engine * SR);
+    var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_eff2);
 
     var F_traction = isCoast ? 0 : FT_SOLVER.limitByGrip(
       FT_SOLVER.calcTractiveEffort(T_output, i_gear, 1.0, i_propshaft, psEff, i_transfer, eta_transfer, i_axle, eta_axle, r_tire),
@@ -2532,8 +2552,8 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
     eta_prop *= (parseFloat(psd.psEff) || 98.60) / 100;
   });
 
-  // Vites verimi
-  var eta_gear = selectedGear ? (parseFloat(selectedGear.eff) || 98) / 100 : 0.98;
+  // Vites verimi — evrensel formül (stall'da N_turbine=0)
+  var eta_gear = selectedGear ? FT_SOLVER.calcGearEfficiency(parseFloat(selectedGear.ratio) || 1.0, 0) : 0.98;
 
   // Tahrikli teker sayısı (transfer kilitli + diff kilitli = 4, değilse 2)
   var n_d = 4; // Askeri araç varsayımı: 4x4, transfer ve diff kilitli
@@ -2946,7 +2966,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var T_eng_final = motorTorqueLimitedFn(N_m);
     var T_pump_final = (N_m / K_m) * (N_m / K_m);
     var T_turbine_m = T_pump_final * TR_m;
-    var T_gb_m = T_turbine_m * i_g * eta_gear_val;
+    var _eta_gear_m = FT_SOLVER.calcGearEfficiency(i_g, N_m * sr_m);
+    var T_gb_m = T_turbine_m * i_g * _eta_gear_m;
     var T_wheel_m = T_gb_m * i_tr * i_diff * eta_downstream_base / n_d;
 
     var eta_tc_m = sr_m > 0 ? (sr_m * TR_m) : 0;

@@ -18060,7 +18060,20 @@ var FT_SOLVER = (function() {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // 8. YARDIMCI
+  // 8. EVRENSEL SANZIMAN DISLI VERIMI
+  // ═══════════════════════════════════════════════════════════════════════════
+  // η_gear = 1 − |ln(i_gear)| × (0.0175 + 0.00000293 × N_turbine)
+  // i_gear = 1.000 (direct drive) → η = 1.000 (kayıpsız)
+  // iSCAAN doğrulaması: 7 vites, 2 mod, ≤0.1% hata.
+  function calcGearEfficiency(i_gear, N_turbine) {
+    if(!i_gear || i_gear === 1.0) return 1.0;
+    var absLnRatio = Math.abs(Math.log(i_gear));
+    var eta = 1 - absLnRatio * (0.0175 + 0.00000293 * (N_turbine || 0));
+    return Math.max(0.90, Math.min(1.0, eta));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 9. YARDIMCI
   // ═══════════════════════════════════════════════════════════════════════════
   function msToKmh(v) { return v * 3.6; }
   function kmhToMs(v) { return v / 3.6; }
@@ -18078,6 +18091,7 @@ var FT_SOLVER = (function() {
     getCrrEffective: getCrrEffective,
     speedToTurbineRpm: speedToTurbineRpm, turbineRpmToSpeed: turbineRpmToSpeed,
     calcAccessoryTorque: calcAccessoryTorque,
+    calcGearEfficiency: calcGearEfficiency,
     msToKmh: msToKmh, kmhToMs: kmhToMs
   };
 })();
@@ -18474,7 +18488,6 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     if(v_ms < 0) v_ms = 0;
     var gearData = getCurrentGearData();
     var i_gear = parseFloat(gearData.ratio) || 1.0;
-    var eta_gear = (parseFloat(gearData.eff) || 100) / 100;
     var isLU = shiftState.isLockup;
 
     var N_engine, T_engine, T_output, T_pump, SR, tau, tcEta;
@@ -18544,6 +18557,10 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       var P_heat_gear_mech = P_turbine_kW * (1 - eta_conv_internal);
       heatRejection_kW = Math.max(0, P_heat_converter) + Math.max(0, P_heat_gear_mech);
     }
+
+    // Evrensel dişli verimi: η = 1 − |ln(i)| × (0.0175 + 2.93e-6 × N_turbine)
+    var _N_turb_for_eff = isLU ? N_engine : (N_engine * SR);
+    var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_for_eff);
 
     // Çekme kuvveti — şanzıman kayıpları tork kaybı modeli (deltaT_lockup / TC eta)
     // ile zaten hesaplandığından eta_gear TE formülünden çıkarıldı (iSCAAN uyumu).
@@ -19779,7 +19796,6 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     if(v_ms < 0) v_ms = 0;
     var gearData = getCurrentGearData();
     var i_gear = parseFloat(gearData.ratio) || 1.0;
-    var eta_gear = (parseFloat(gearData.eff) || 100) / 100;
     var isLU = shiftState.isLockup;
     var isCoast = (command === 'coast');
 
@@ -19849,6 +19865,10 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       var i_total_coast = i_gear * i_propshaft * i_transfer * i_axle;
       F_engine_drag = T_motoring * i_total_coast / r_tire;
     }
+
+    // Evrensel dişli verimi
+    var _N_turb_eff2 = isLU ? N_engine : (N_engine * SR);
+    var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_eff2);
 
     var F_traction = isCoast ? 0 : FT_SOLVER.limitByGrip(
       FT_SOLVER.calcTractiveEffort(T_output, i_gear, 1.0, i_propshaft, psEff, i_transfer, eta_transfer, i_axle, eta_axle, r_tire),
@@ -20283,8 +20303,8 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
     eta_prop *= (parseFloat(psd.psEff) || 98.60) / 100;
   });
 
-  // Vites verimi
-  var eta_gear = selectedGear ? (parseFloat(selectedGear.eff) || 98) / 100 : 0.98;
+  // Vites verimi — evrensel formül (stall'da N_turbine=0)
+  var eta_gear = selectedGear ? FT_SOLVER.calcGearEfficiency(parseFloat(selectedGear.ratio) || 1.0, 0) : 0.98;
 
   // Tahrikli teker sayısı (transfer kilitli + diff kilitli = 4, değilse 2)
   var n_d = 4; // Askeri araç varsayımı: 4x4, transfer ve diff kilitli
@@ -20697,7 +20717,8 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
     var T_eng_final = motorTorqueLimitedFn(N_m);
     var T_pump_final = (N_m / K_m) * (N_m / K_m);
     var T_turbine_m = T_pump_final * TR_m;
-    var T_gb_m = T_turbine_m * i_g * eta_gear_val;
+    var _eta_gear_m = FT_SOLVER.calcGearEfficiency(i_g, N_m * sr_m);
+    var T_gb_m = T_turbine_m * i_g * _eta_gear_m;
     var T_wheel_m = T_gb_m * i_tr * i_diff * eta_downstream_base / n_d;
 
     var eta_tc_m = sr_m > 0 ? (sr_m * TR_m) : 0;
@@ -31146,7 +31167,13 @@ function veRunSimulationEngine() {
   if(gbData) {
     gearRatio = parseFloat(gbData.selectedGearRatio) || (gearRatios ? (parseFloat(gearRatios[currentGear - 1]) || 1.0) : 1.0);
   }
-  var gbEff = gbData ? (parseFloat(gbData.efficiency) || 97) / 100 : 0.97;
+  // Evrensel dişli verimi — FT_SOLVER varsa dinamik, yoksa sabit fallback
+  var _gbEffFallback = gbData ? (parseFloat(gbData.efficiency) || 97) / 100 : 0.97;
+  var _gbUseUniversal = (typeof FT_SOLVER !== 'undefined' && typeof FT_SOLVER.calcGearEfficiency === 'function');
+  function gbEffFn(i_gear, N_turb) {
+    return _gbUseUniversal ? FT_SOLVER.calcGearEfficiency(i_gear, N_turb || 0) : _gbEffFallback;
+  }
+  var gbEff = gbEffFn(gearRatio, 0); // Başlangıç değeri (stall)
   var autoShift = vehicleNode && vehicleNode.data ? (vehicleNode.data.autoShift || false) : false;
   
   var trData = transferNode ? (transferNode.data || {}) : null;
@@ -31231,7 +31258,8 @@ function veRunSimulationEngine() {
   // ====== TOPLAM ORAN (tam mod için) ======
   // Klasik: iTotal = iDiff * iTfer * iGear * iTC
   var totalRatio = gearRatio * transferRatio * diffRatio * tcEffTorqueRatio;
-  var totalEff = gbEff * trEff * dfEff * psTotalEff;
+  var totalEff = gbEffFn(gearRatio, 0) * trEff * dfEff * psTotalEff;
+  function _updateTotalEff(iGear, nTurb) { totalEff = gbEffFn(iGear, nTurb || 0) * trEff * dfEff * psTotalEff; }
   
   // ====== TC MODEL ======
   // Kilitli: direkt bağlantı (ratio 1:1)
@@ -31343,6 +31371,7 @@ function veRunSimulationEngine() {
           currentGear++;
           gearRatio = parseFloat(gearRatios[currentGear - 1]) || gearRatio;
           totalRatio = gearRatio * transferRatio * diffRatio * tcEffTorqueRatio;
+          _updateTotalEff(gearRatio);
           // Aynı araç hızında yeni motor devri
           omega = v_veh * totalRatio / rWheel;
           rpm = omega * 60 / (2 * Math.PI);
@@ -31386,6 +31415,7 @@ function veRunSimulationEngine() {
             currentGear--;
             gearRatio = lowerGearRatio;
             totalRatio = gearRatio * transferRatio * diffRatio * tcEffTorqueRatio;
+          _updateTotalEff(gearRatio);
             omega = v_veh2 * totalRatio / rWheel;
             rpm = omega * 60 / (2 * Math.PI);
           }
@@ -31434,7 +31464,8 @@ function veRunSimulationEngine() {
       if(gearboxNode && nodeData[gearboxNode.id]) {
         var nd_gb = nodeData[gearboxNode.id];
         var gbOutRpm = propRpm / gearRatio;
-        var gbOutTorque = propTorque * gearRatio * gbEff;
+        var _gbEffStep = gbEffFn(gearRatio, propRpm);
+        var gbOutTorque = propTorque * gearRatio * _gbEffStep;
         
         nd_gb.rpm_in.push(propRpm);
         nd_gb.torque_in.push(propTorque);
@@ -31842,10 +31873,11 @@ function veRunSimulationEngine() {
       if(gearboxNode && nodeData[gearboxNode.id]) {
         var ngR = nodeData[gearboxNode.id];
         ngR.rpm_in.push(propRpmR); ngR.torque_in.push(propTorqueR);
-        ngR.rpm_out.push(propRpmR / gearRatio); ngR.torque_out.push(propTorqueR * gearRatio * gbEff);
-        ngR.power_out.push(propTorqueR * gearRatio * gbEff * (propRpmR / gearRatio) * Math.PI / 30 / 1000);
+        var _gbEffR = gbEffFn(gearRatio, propRpmR);
+        ngR.rpm_out.push(propRpmR / gearRatio); ngR.torque_out.push(propTorqueR * gearRatio * _gbEffR);
+        ngR.power_out.push(propTorqueR * gearRatio * _gbEffR * (propRpmR / gearRatio) * Math.PI / 30 / 1000);
         ngR.gear.push(currentGear); ngR.ratio.push(gearRatio);
-        propRpmR = propRpmR / gearRatio; propTorqueR = propTorqueR * gearRatio * gbEff;
+        propRpmR = propRpmR / gearRatio; propTorqueR = propTorqueR * gearRatio * _gbEffR;
       }
       
       if(propshaftPreTransfer.length > 0) {
@@ -31934,6 +31966,7 @@ function veRunSimulationEngine() {
           currentGear--;
           gearRatio = lowerGR;
           totalRatio = gearRatio * transferRatio * diffRatio * tcEffTorqueRatio;
+          _updateTotalEff(gearRatio);
         }
       }
     }
@@ -31987,12 +32020,13 @@ function veRunSimulationEngine() {
       ng.rpm_in.push(propRpm2);
       ng.torque_in.push(propTorque2);
       ng.rpm_out.push(propRpm2 / gearRatio);
-      ng.torque_out.push(propTorque2 * gearRatio * gbEff);
-      ng.power_out.push(propTorque2 * gearRatio * gbEff * (propRpm2 / gearRatio) * Math.PI / 30 / 1000);
+      var _gbEffC = gbEffFn(gearRatio, propRpm2);
+      ng.torque_out.push(propTorque2 * gearRatio * _gbEffC);
+      ng.power_out.push(propTorque2 * gearRatio * _gbEffC * (propRpm2 / gearRatio) * Math.PI / 30 / 1000);
       ng.gear.push(currentGear);
       ng.ratio.push(gearRatio);
       propRpm2 = propRpm2 / gearRatio;
-      propTorque2 = propTorque2 * gearRatio * gbEff;
+      propTorque2 = propTorque2 * gearRatio * _gbEffC;
     }
     
     // Propşaft (Şanzıman → Transfer arası)
@@ -34132,7 +34166,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   r += '  ' + ln('-', 38) + '\n';
   r += pRow('Sanziman Modeli', ascii(R.gbName));
   r += pRow('Sanziman Ailesi', ascii(R.gbFamily));
-  r += pRow('Sanziman Verimi', num(R.gbEff, 1) + '%');
+  r += pRow('Sanziman Verimi', 'Evrensel Model: eta = 1 - |ln(i)| x (0.0175 + 2.93e-6 x N_turbin)');
   r += pRow('Tork Konvertoru', ascii(R.tcName));
   r += '\n';
 
@@ -34693,8 +34727,6 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     var _pgGears = R.allGearData || R.gearData || [];
     if (_pgGears.length > 0 && _cmTable.length > 0) {
 
-      // Per-gear varsayilan verim tablosu (lockup analizi ile tutarli)
-      var _pgDefaultEff = { 'F1': 97.5, 'F2': 98.7, 'F3': 98.7, 'F4': 99.3, 'F5': 98.0, 'F6': 97.1, 'R1': 97.0 };
       // Kolon genislikleri
       var _pg = [9, 9, 12, 12, 10, 12, 10, 12, 16];
       var _pgTW = 0; for (var _pwi = 0; _pwi < _pg.length; _pwi++) _pgTW += _pg[_pwi];
@@ -34703,7 +34735,10 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
         var _gear = _pgGears[_gi];
         var _gName = _gear.name || ('F' + (_gi + 1));
         var _gRatio = parseFloat(_gear.ratio) || 1.0;
-        var _gEff = _gear.eff ? parseFloat(_gear.eff) / 100 : (_pgDefaultEff[_gName] ? _pgDefaultEff[_gName] / 100 : (R.gbEff || 97) / 100);
+
+        // Stall ve governed verimlerini evrensel formulle hesapla (basliga yazilacak)
+        var _effStall = FT_SOLVER.calcGearEfficiency(_gRatio, 0);
+        var _effGov = FT_SOLVER.calcGearEfficiency(_gRatio, _cmTable.length > 0 ? _cmTable[_cmTable.length - 1].N_turbine : 0);
 
         r += '  ' + ln('-', _pgTW) + '\n';
         r += '  Vites ' + ascii(_gName) + ' (Oran = ' + num(_gRatio, 3) + ') - Konvertor Modu\n';
@@ -34725,7 +34760,9 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
         for (var _pri = 0; _pri < _cmTable.length; _pri++) {
           var _pr = _cmTable[_pri];
-          var _N_out = (_pr.SR * _pr.N_engine) / _gRatio;
+          var _N_turb_pg = _pr.N_turbine; // SR x N_engine (converter mode)
+          var _gEff = FT_SOLVER.calcGearEfficiency(_gRatio, _N_turb_pg);
+          var _N_out = _N_turb_pg / _gRatio;
           var _T_out = _pr.T_turbine * _gRatio * _gEff;
           var _P_out = _T_out * (2 * Math.PI * _N_out / 60) / 1000;
           var _Q_gb = _pr.P_engine - _P_out;
@@ -34738,7 +34775,8 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
         }
 
         r += '  ' + ln('-', _pgTW) + '\n';
-        r += '  Disli Verimi: ' + num(_gEff * 100, 1) + '%\n';
+        r += '  Disli Verimi: ' + num(_effStall * 100, 2) + '% (stall) ~ ' + num(_effGov * 100, 2) + '% (governed)\n';
+        r += '  Formul: eta = 1 - |ln(i)| x (0.0175 + 2.93e-6 x N_turbin)\n';
         r += '\n';
       }
 
