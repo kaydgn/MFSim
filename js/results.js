@@ -4428,8 +4428,6 @@ function veUpdateBoundary() {
   
   // Eski sınır elemanlarını temizle
   svg.querySelectorAll('.ve-boundary-rect').forEach(function(el) { el.remove(); });
-  var oldBtn = document.getElementById('ve-boundary-summary-btn');
-  if(oldBtn) oldBtn.remove();
 
   if(!veBoundaryVisible || nodes.length === 0) return;
   
@@ -4472,30 +4470,6 @@ function veUpdateBoundary() {
   if(svg.firstChild) { svg.insertBefore(rect, svg.firstChild); }
   else { svg.appendChild(rect); }
 
-  // Topoloji Özeti butonu — boundary sağ alt köşesine
-  veUpdateBoundarySummaryBtn(bx, by, bw, bh);
-}
-
-function veUpdateBoundarySummaryBtn(bx, by, bw, bh) {
-  // Eski butonu temizle
-  var old = document.getElementById('ve-boundary-summary-btn');
-  if(old) old.remove();
-
-  var canvas = document.getElementById('ve-canvas');
-  if(!canvas) return;
-
-  var btn = document.createElement('div');
-  btn.id = 've-boundary-summary-btn';
-  btn.className = 've-boundary-summary-btn';
-  btn.title = 'Topoloji özetini göster';
-  btn.innerHTML = '📊';
-  btn.style.left = (bx + bw - 38) + 'px';
-  btn.style.top = (by + bh - 38) + 'px';
-  btn.addEventListener('click', function(e) {
-    e.stopPropagation();
-    veShowTopologySummary();
-  });
-  canvas.appendChild(btn);
 }
 
 // Toast bildirimi göster (sağdan gelen)
