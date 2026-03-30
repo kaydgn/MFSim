@@ -886,6 +886,9 @@
   position:absolute;
   cursor:move;
   user-select:none;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 
 .ve-node-box{
@@ -1104,10 +1107,8 @@
   font-size:0.7rem;
   color:var(--text-primary);
   text-align:center;
-  width:100%;
-  overflow:hidden;
-  text-overflow:ellipsis;
   white-space:nowrap;
+  pointer-events:none;
 }
 .ve-wheel-master-badge{
   position:absolute;
@@ -7182,6 +7183,18 @@ function veCycleGridDensity() {
 // ===== TOPOLOJİ SINIR ÇERÇEVESİ (AVL-stil kesikli çizgi) =====
 var veBoundaryVisible = true;
 var veBoundaryPadding = 50; // Bileşenlerden uzaklık (px)
+var veBoundaryOpacity = 0.55;
+var _veBoundaryOpacitySteps = [0.2, 0.35, 0.55, 0.75, 1.0];
+
+function veCycleBoundaryOpacity() {
+  var idx = _veBoundaryOpacitySteps.indexOf(veBoundaryOpacity);
+  idx = (idx + 1) % _veBoundaryOpacitySteps.length;
+  veBoundaryOpacity = _veBoundaryOpacitySteps[idx];
+  veUpdateBoundary();
+  var btn = document.getElementById('ve-boundary-opacity-btn');
+  if(btn) btn.title = 'Sınır Opaklığı: ' + Math.round(veBoundaryOpacity * 100) + '%';
+  showToast('Sınır opaklığı: %' + Math.round(veBoundaryOpacity * 100));
+}
 
 function veToggleBoundary() {
   veBoundaryVisible = !veBoundaryVisible;
@@ -7237,7 +7250,7 @@ function veUpdateBoundary() {
   rect.setAttribute('rx', '6');
   rect.setAttribute('ry', '6');
   // Tema rengi: koyu temalarda border-hover, açık temalarda koyu gri
-  rect.style.cssText = 'fill:none; stroke:var(--border-hover); stroke-width:1.5; stroke-dasharray:8,5; opacity:0.55; pointer-events:none;';
+  rect.style.cssText = 'fill:none; stroke:var(--border-hover); stroke-width:1.5; stroke-dasharray:8,5; opacity:' + veBoundaryOpacity + '; pointer-events:none;';
   if(svg.firstChild) { svg.insertBefore(rect, svg.firstChild); }
   else { svg.appendChild(rect); }
 
@@ -28404,6 +28417,7 @@ function veRenderTabs() {
   html += '<button class="ve-toolbar-btn" id="ve-grid-btn" onclick="veToggleGrid()" title="Grid Göster/Gizle" style="opacity:' + (typeof veGridVisible !== 'undefined' && veGridVisible ? '1' : '0.4') + ';">⊞</button>';
   html += '<button class="ve-toolbar-btn" id="ve-grid-density-btn" onclick="veCycleGridDensity()" title="Grid: ' + (typeof veGridLabels !== 'undefined' ? veGridLabels[veGridDensity] : 'Normal') + '">╬</button>';
   html += '<button class="ve-toolbar-btn" id="ve-boundary-btn" onclick="veToggleBoundary()" title="Sınır Göster/Gizle" style="opacity:' + (typeof veBoundaryVisible !== 'undefined' && veBoundaryVisible ? '1' : '0.4') + ';">▢</button>';
+  html += '<button class="ve-toolbar-btn" id="ve-boundary-opacity-btn" onclick="veCycleBoundaryOpacity()" title="Sınır Opaklığı: ' + (typeof veBoundaryOpacity !== 'undefined' ? Math.round(veBoundaryOpacity * 100) : '55') + '%">◐</button>';
   
   bar.innerHTML = html;
 }

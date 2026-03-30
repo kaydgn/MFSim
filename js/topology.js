@@ -437,6 +437,7 @@ function veRenderTabs() {
   html += '<button class="ve-toolbar-btn" id="ve-grid-btn" onclick="veToggleGrid()" title="Grid Göster/Gizle" style="opacity:' + (typeof veGridVisible !== 'undefined' && veGridVisible ? '1' : '0.4') + ';">⊞</button>';
   html += '<button class="ve-toolbar-btn" id="ve-grid-density-btn" onclick="veCycleGridDensity()" title="Grid: ' + (typeof veGridLabels !== 'undefined' ? veGridLabels[veGridDensity] : 'Normal') + '">╬</button>';
   html += '<button class="ve-toolbar-btn" id="ve-boundary-btn" onclick="veToggleBoundary()" title="Sınır Göster/Gizle" style="opacity:' + (typeof veBoundaryVisible !== 'undefined' && veBoundaryVisible ? '1' : '0.4') + ';">▢</button>';
+  html += '<button class="ve-toolbar-btn" id="ve-boundary-opacity-btn" onclick="veCycleBoundaryOpacity()" title="Sınır Opaklığı: ' + (typeof veBoundaryOpacity !== 'undefined' ? Math.round(veBoundaryOpacity * 100) : '55') + '%">◐</button>';
   
   bar.innerHTML = html;
 }

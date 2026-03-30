@@ -877,6 +877,9 @@
   position:absolute;
   cursor:move;
   user-select:none;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 
 .ve-node-box{
@@ -1095,10 +1098,8 @@
   font-size:0.7rem;
   color:var(--text-primary);
   text-align:center;
-  width:100%;
-  overflow:hidden;
-  text-overflow:ellipsis;
   white-space:nowrap;
+  pointer-events:none;
 }
 .ve-wheel-master-badge{
   position:absolute;
