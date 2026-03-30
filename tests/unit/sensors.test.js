@@ -202,7 +202,7 @@ describe('swInstallSensors', () => {
   });
 
   test('sadece vehicle varsa performance ve traction paketlerini kurar', () => {
-    nodes = [makeNode('vehicle', 'v1')];
+    nodes = [makeNode('vehicle', 'v1'), makeNode('solver', 'sol1', { performanceAnalysis: true })];
     var wizNode = makeNode('sensor-wizard', 'sw1');
     wizNode.data = {};
     nodes.push(wizNode);
@@ -222,7 +222,8 @@ describe('swInstallSensors', () => {
   test('motor + araç varsa engine-analysis paketi de kurulur', () => {
     nodes = [
       makeNode('engine', 'e1'),
-      makeNode('vehicle', 'v1')
+      makeNode('vehicle', 'v1'),
+      makeNode('solver', 'sol1', { performanceAnalysis: true })
     ];
     var wizNode = makeNode('sensor-wizard', 'sw1');
     wizNode.data = {};
@@ -238,7 +239,8 @@ describe('swInstallSensors', () => {
   test('engine-brake tipi artık motor olarak sayılmaz', () => {
     nodes = [
       makeNode('engine-brake', 'eb1'),
-      makeNode('vehicle', 'v1')
+      makeNode('vehicle', 'v1'),
+      makeNode('solver', 'sol1', { performanceAnalysis: true })
     ];
     var wizNode = makeNode('sensor-wizard', 'sw1');
     wizNode.data = {};
@@ -255,7 +257,8 @@ describe('swInstallSensors', () => {
       makeNode('torque-converter', 'tc1'),
       makeNode('gearbox', 'gb1'),
       makeNode('shift-controller', 'sc1'),
-      makeNode('vehicle', 'v1')
+      makeNode('vehicle', 'v1'),
+      makeNode('solver', 'sol1', { performanceAnalysis: true })
     ];
     var wizNode = makeNode('sensor-wizard', 'sw1');
     wizNode.data = {};
@@ -272,7 +275,7 @@ describe('swInstallSensors', () => {
   });
 
   test('her sensörde doğru metadata bulunur', () => {
-    nodes = [makeNode('vehicle', 'v1')];
+    nodes = [makeNode('vehicle', 'v1'), makeNode('solver', 'sol1', { performanceAnalysis: true })];
     var wizNode = makeNode('sensor-wizard', 'sw1');
     wizNode.data = {};
     nodes.push(wizNode);
@@ -286,6 +289,36 @@ describe('swInstallSensors', () => {
       expect(s).toHaveProperty('signal');
       expect(s).toHaveProperty('label');
     });
+  });
+
+  test('çözücü yoksa hiçbir paket kurulmaz', () => {
+    nodes = [makeNode('vehicle', 'v1')];
+    var wizNode = makeNode('sensor-wizard', 'sw1');
+    wizNode.data = {};
+    nodes.push(wizNode);
+
+    swInstallSensors(wizNode);
+
+    expect(wizNode.data.sensorsInstalled).toBe(true);
+    expect(wizNode.data.installedPackages).toEqual([]);
+  });
+
+  test('devre dışı çözüm kümeleri için sensör kurulmaz', () => {
+    nodes = [
+      makeNode('engine', 'e1'),
+      makeNode('vehicle', 'v1'),
+      makeNode('solver', 'sol1', { performanceAnalysis: true, accelDecelAnalysis: false }),
+      makeNode('scenario', 'scen1', { roadSegments: [{ type: 'accel' }] })
+    ];
+    var wizNode = makeNode('sensor-wizard', 'sw1');
+    wizNode.data = {};
+    nodes.push(wizNode);
+
+    swInstallSensors(wizNode);
+
+    expect(wizNode.data.installedPackages).toContain('performance');
+    expect(wizNode.data.installedPackages).not.toContain('sd-speed-profile');
+    expect(wizNode.data.installedPackages).not.toContain('sd-forces');
   });
 });
 
