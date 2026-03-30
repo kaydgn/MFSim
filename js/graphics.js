@@ -2563,7 +2563,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     if (_pgGears.length > 0 && _cmTable.length > 0) {
 
       // Per-gear varsayilan verim tablosu (lockup analizi ile tutarli)
-      var _pgDefaultEff = { 'F1': 97.5, 'F2': 98.5, 'F3': 98.7, 'F4': 99.3, 'F5': 98.0, 'F6': 97.1, 'R1': 97.0 };
+      var _pgDefaultEff = { 'F1': 97.5, 'F2': 98.7, 'F3': 98.7, 'F4': 99.3, 'F5': 98.0, 'F6': 97.1, 'R1': 97.0 };
       // Kolon genislikleri
       var _pg = [9, 9, 12, 12, 10, 12, 10, 12, 16];
       var _pgTW = 0; for (var _pwi = 0; _pwi < _pg.length; _pwi++) _pgTW += _pg[_pwi];
