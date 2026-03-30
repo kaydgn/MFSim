@@ -481,7 +481,7 @@
   color:var(--text-primary);
   font-size:0.68rem;
   cursor:grab;
-  transition:all 0.15s;
+  transition:border-color 0.2s, box-shadow 0.2s, background 0.2s;
   display:flex;
   align-items:center;
   gap:8px;
@@ -542,7 +542,7 @@
 .ve-component:hover{
   border-color:var(--accent-primary);
   background:var(--bg-input);
-  transform:translateX(4px);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--accent-primary) 18%, transparent), 0 2px 8px var(--shadow-color);
 }
 
 .ve-canvas-area{
