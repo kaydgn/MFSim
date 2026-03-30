@@ -495,18 +495,6 @@ function veUpdateResultsTree() {
     // === HIZLANMA-YAVAŞLAMA tab'ı ===
     if(_activeTab === 'accel-decel') {
       html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
-      html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
-      html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
-      html += '<span class="icon">📋</span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
-      html += '</div>';
-      html += '<div class="ve-tree-children">';
-      // Girdi Özeti (tüm tablarda ortak)
-      html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'girdi\')" style="cursor:pointer; padding-left:10px;" title="Girdi Özeti">';
-      html += '<span class="icon" style="font-size:0.6rem;">📑</span><span style="font-size:0.68rem;">Girdi Özeti</span></div>';
-      html += '</div></div>';
-      // Hızlanma-Yavaşlama Raporu (TXT)
-      html += '<div style="margin-top:2px;">';
       html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
       html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
       html += '</div>';
@@ -515,17 +503,6 @@ function veUpdateResultsTree() {
     // === ENGEL ATLAMA tab'ı ===
     if(_activeTab === 'obstacle' && window.veSimResults.obstacleCrossing) {
       html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
-      html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
-      html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
-      html += '<span class="icon">📋</span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
-      html += '</div>';
-      html += '<div class="ve-tree-children">';
-      html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'girdi\')" style="cursor:pointer; padding-left:10px;" title="Girdi Özeti">';
-      html += '<span class="icon" style="font-size:0.6rem;">📑</span><span style="font-size:0.68rem;">Girdi Özeti</span></div>';
-      html += '</div></div>';
-      // Engel Atlama Raporu (TXT)
-      html += '<div style="margin-top:2px;">';
       html += '<div class="ve-tree-row" onclick="veRenderObstacleCrossingTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Engel Atlama TXT rapor önizleme">';
       html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Engel Atlama Raporu (TXT)</span></div>';
       html += '</div>';
@@ -1259,6 +1236,28 @@ function _drGetZoom(id) {
   return _drChartZoom[id];
 }
 
+// Helper: CSS tema renklerini canvas için oku (cache'li)
+var _drTC = null;
+function _drThemeColors() {
+  var s = getComputedStyle(document.documentElement);
+  _drTC = {
+    bg:        s.getPropertyValue('--bg-secondary').trim() || '#ffffff',
+    bgAlt:     s.getPropertyValue('--bg-tertiary').trim() || '#f5f6f8',
+    text:      s.getPropertyValue('--text-primary').trim() || '#222',
+    textSec:   s.getPropertyValue('--text-secondary').trim() || '#555',
+    textMuted: s.getPropertyValue('--text-muted').trim() || '#999',
+    border:    s.getPropertyValue('--border-light').trim() || '#eaeaea',
+    accent:    s.getPropertyValue('--accent-primary').trim() || '#3b82f6',
+    axisLine:  s.getPropertyValue('--border-hover').trim() || '#aaa'
+  };
+  return _drTC;
+}
+// Tema değiştiğinde cache'i sıfırla
+var _origChangeTheme = typeof changeTheme === 'function' ? changeTheme : null;
+if(_origChangeTheme) {
+  changeTheme = function(id) { _origChangeTheme(id); _drTC = null; };
+}
+
 function veRenderGradeChart(canvasId, data, title, showLabels) {
   var canvas = document.getElementById(canvasId);
   if(!canvas || !data || data.length < 2) return;
@@ -1309,11 +1308,11 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   function fromY(py) { return yMin + (padT + plotH - py) / plotH * (yMax - yMin); }
   
   // Background
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = (_drTC||_drThemeColors()).bg;
   ctx.fillRect(0, 0, W, H);
   
   // Grid
-  ctx.strokeStyle = '#eaeaea'; ctx.lineWidth = 0.5;
+  ctx.strokeStyle = (_drTC||_drThemeColors()).border; ctx.lineWidth = 0.5;
   var yStep = (yMax - yMin) <= 15 ? 2 : (yMax - yMin) <= 40 ? 5 : 10;
   for(var gy = Math.ceil(yMin / yStep) * yStep; gy <= yMax; gy += yStep) {
     ctx.beginPath(); ctx.moveTo(padL, toY(gy)); ctx.lineTo(W - padR, toY(gy)); ctx.stroke();
@@ -1324,11 +1323,11 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   }
   
   // Axes
-  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+  ctx.strokeStyle = (_drTC||_drThemeColors()).axisLine; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H - padB); ctx.lineTo(W - padR, H - padB); ctx.stroke();
   
   // Labels
-  ctx.fillStyle = '#777'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = (_drTC||_drThemeColors()).textMuted; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) {
     ctx.fillText(lx.toFixed(0), toX(lx), H - padB + 16);
   }
@@ -1338,13 +1337,13 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   }
   
   // Axis titles
-  ctx.fillStyle = '#555'; ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = (_drTC||_drThemeColors()).textSec; ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('Araç Hızı (km/h)', padL + plotW / 2, H - 6);
   ctx.save(); ctx.translate(16, padT + plotH / 2); ctx.rotate(-Math.PI / 2);
   ctx.fillText('Net % Eğim', 0, 0); ctx.restore();
   
   // Title
-  ctx.fillStyle = '#222'; ctx.font = '600 13px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = (_drTC||_drThemeColors()).text; ctx.font = '600 13px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText(title, padL + plotW / 2, 20);
   
   // Zoom indicator
@@ -1375,17 +1374,17 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
     var pp = visiblePts[pi];
     if(pp.x < padL - 5 || pp.x > W - padR + 5 || pp.y < padT - 5 || pp.y > H - padB + 5) continue;
     ctx.beginPath(); ctx.arc(pp.x, pp.y, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2; ctx.stroke();
   }
   
   // Labels
   if(showLabels) {
-    ctx.font = '10px Segoe UI, sans-serif'; ctx.fillStyle = '#333'; ctx.textAlign = 'left';
+    ctx.font = '10px Segoe UI, sans-serif'; ctx.fillStyle = (_drTC||_drThemeColors()).textSec; ctx.textAlign = 'left';
     visiblePts.forEach(function(p) {
       if(!p.label) return;
       if(p.x < padL || p.x > W - padR || p.y < padT || p.y > H - padB) return;
       ctx.beginPath(); ctx.moveTo(p.x + 7, p.y); ctx.lineTo(p.x + 20, p.y);
-      ctx.strokeStyle = '#888'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.strokeStyle = (_drTC||_drThemeColors()).textMuted; ctx.lineWidth = 1; ctx.stroke();
       ctx.fillText(p.label, p.x + 22, p.y + 3);
     });
   }
@@ -1500,10 +1499,10 @@ function veRenderAccelChart(canvasId, chartData, title) {
   function fromX(px) { return xMin + (px - padL) / plotW * (xMax - xMin); }
   
   // Background
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fillRect(0, 0, W, H);
   
   // Title
-  ctx.fillStyle = '#222'; ctx.font = '600 13px Segoe UI, sans-serif';
+  ctx.fillStyle = (_drTC||_drThemeColors()).text; ctx.font = '600 13px Segoe UI, sans-serif';
   ctx.textAlign = 'center'; ctx.fillText(title, W / 2, 20);
   
   // Zoom indicator
@@ -1513,7 +1512,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
   }
   
   // Grid
-  ctx.strokeStyle = '#eaeaea'; ctx.lineWidth = 0.5;
+  ctx.strokeStyle = (_drTC||_drThemeColors()).border; ctx.lineWidth = 0.5;
   var tStep = yTMax <= 10 ? 2 : yTMax <= 30 ? 5 : 10;
   for(var gt = 0; gt <= yTMax; gt += tStep) {
     ctx.beginPath(); ctx.moveTo(padL, toYT(gt)); ctx.lineTo(W - padR, toYT(gt)); ctx.stroke();
@@ -1524,7 +1523,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
   }
   
   // Axes
-  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+  ctx.strokeStyle = (_drTC||_drThemeColors()).axisLine; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H - padB); ctx.lineTo(W - padR, H - padB); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(W - padR, padT); ctx.lineTo(W - padR, H - padB); ctx.stroke();
   
@@ -1542,9 +1541,9 @@ function veRenderAccelChart(canvasId, chartData, title) {
   ctx.font = '600 11.5px Segoe UI, sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Mesafe (m)', 0, 0); ctx.restore();
   
   // X labels
-  ctx.fillStyle = '#777'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = (_drTC||_drThemeColors()).textMuted; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) { ctx.fillText(lx.toString(), toX(lx), H - padB + 16); }
-  ctx.fillStyle = '#555'; ctx.font = '600 11.5px Segoe UI, sans-serif';
+  ctx.fillStyle = (_drTC||_drThemeColors()).textSec; ctx.font = '600 11.5px Segoe UI, sans-serif';
   ctx.fillText('Araç Hızı (km/h)', padL + plotW / 2, H - 6);
   
   // Clip to plot area
@@ -1565,7 +1564,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
     var tpx = toX(tp[tpi].x), tpy = toYT(tp[tpi].y);
     if(tpx < padL - 5 || tpx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(tpx, tpy, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2; ctx.stroke();
   }
   
   // Distance line (red)
@@ -1580,7 +1579,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
     var ddpx = toX(dp[dpi].x), ddpy = toYD(dp[dpi].y);
     if(ddpx < padL - 5 || ddpx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(ddpx, ddpy, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
   }
   
   // Restore from clip
@@ -1591,12 +1590,12 @@ function veRenderAccelChart(canvasId, chartData, title) {
   ctx.font = '11px Segoe UI, sans-serif';
   ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
-  ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Süre (s)', legX + 30, legY + 4);
   legY += 18;
   ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
-  ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#c0392b'; ctx.fillText('Mesafe (m)', legX + 30, legY + 4);
   
   // Store interaction data
@@ -1943,10 +1942,10 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   
   // Clear
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fillRect(0, 0, W, H);
   
   // Grid
-  ctx.strokeStyle = '#eaeaea'; ctx.lineWidth = 0.5;
+  ctx.strokeStyle = (_drTC||_drThemeColors()).border; ctx.lineWidth = 0.5;
   var pwrStep = basePwrMax <= 100 ? 20 : basePwrMax <= 200 ? 40 : basePwrMax <= 400 ? 50 : 100;
   for(var gp = Math.ceil(pwrMin / pwrStep) * pwrStep; gp <= pwrMax; gp += pwrStep) {
     var gy = toYP(gp);
@@ -1961,7 +1960,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   }
   
   // Axes
-  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+  ctx.strokeStyle = (_drTC||_drThemeColors()).axisLine; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(margin.left, margin.top); ctx.lineTo(margin.left, H - margin.bottom);
   ctx.lineTo(W - margin.right, H - margin.bottom); ctx.lineTo(W - margin.right, margin.top); ctx.stroke();
   
@@ -1996,13 +1995,13 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   ctx.restore();
   
   // X labels
-  ctx.fillStyle = '#777'; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = (_drTC||_drThemeColors()).textMuted; ctx.font = '11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   for(var r = Math.ceil(rpmMin / rpmStep) * rpmStep; r <= rpmMax; r += rpmStep) {
     var lx = toX(r);
     if(lx < margin.left + 10 || lx > W - margin.right - 10) continue;
     ctx.fillText(r.toLocaleString('tr-TR'), lx, H - margin.bottom + 16);
   }
-  ctx.fillStyle = '#555'; ctx.font = '600 11.5px Segoe UI, sans-serif';
+  ctx.fillStyle = (_drTC||_drThemeColors()).textSec; ctx.font = '600 11.5px Segoe UI, sans-serif';
   ctx.fillText('Devir (rpm)', margin.left + pw/2, H - 6);
   
   // Left Y labels (Power - blue)
@@ -2040,7 +2039,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
     var y = ly + i * 17;
     ctx.strokeStyle = it.color; ctx.lineWidth = 2.5; ctx.setLineDash(it.dash ? [6,3] : []);
     ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(lx + 24, y); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = '#666'; ctx.font = '10px Segoe UI, sans-serif'; ctx.textAlign = 'left';
+    ctx.fillStyle = (_drTC||_drThemeColors()).textMuted; ctx.font = '10px Segoe UI, sans-serif'; ctx.textAlign = 'left';
     ctx.fillText(it.label, lx + 30, y + 3);
   });
   
@@ -2633,7 +2632,7 @@ function _drEcmRedraw() {
   var W = rect.width, H = rect.height;
   var _td = R.torqueData, _gov = R.governed, _nlg = R.noLoad, _pDrop = R.pumpDrop || 17.6;
   
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fillRect(0, 0, W, H);
   
   var ml = 58, mr = 20, mt = 20, mb = 44;
   var pw = W - ml - mr, ph = H - mt - mb;
@@ -2664,13 +2663,13 @@ function _drEcmRedraw() {
   // Grid
   var tRange=maxT-minT, tStep=tRange>2000?500:tRange>800?200:tRange>400?100:50;
   var rRange=maxRPM-minRPM, rStep=rRange>2000?500:rRange>1000?200:100;
-  ctx.strokeStyle='#e8e8e8'; ctx.lineWidth=0.5;
-  for(var gt=Math.ceil(minT/tStep)*tStep;gt<=maxT;gt+=tStep){ctx.beginPath();ctx.moveTo(ml,yP(gt));ctx.lineTo(ml+pw,yP(gt));ctx.stroke();ctx.fillStyle='#94a3b8';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(gt,ml-5,yP(gt)+3);}
-  for(var gr=Math.ceil(minRPM/rStep)*rStep;gr<=maxRPM;gr+=rStep){ctx.beginPath();ctx.moveTo(xP(gr),mt);ctx.lineTo(xP(gr),mt+ph);ctx.stroke();ctx.fillStyle='#94a3b8';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(gr,xP(gr),mt+ph+16);}
+  ctx.strokeStyle=(_drTC||_drThemeColors()).border; ctx.lineWidth=0.5;
+  for(var gt=Math.ceil(minT/tStep)*tStep;gt<=maxT;gt+=tStep){ctx.beginPath();ctx.moveTo(ml,yP(gt));ctx.lineTo(ml+pw,yP(gt));ctx.stroke();ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(gt,ml-5,yP(gt)+3);}
+  for(var gr=Math.ceil(minRPM/rStep)*rStep;gr<=maxRPM;gr+=rStep){ctx.beginPath();ctx.moveTo(xP(gr),mt);ctx.lineTo(xP(gr),mt+ph);ctx.stroke();ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(gr,xP(gr),mt+ph+16);}
   
   // Axes
-  ctx.strokeStyle='#bbb';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
-  ctx.fillStyle='#475569';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('Pompa Devri — RPM',ml+pw/2,H-6);
+  ctx.strokeStyle=(_drTC||_drThemeColors()).axisLine;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(ml,mt);ctx.lineTo(ml,mt+ph);ctx.lineTo(ml+pw,mt+ph);ctx.stroke();
+  ctx.fillStyle=(_drTC||_drThemeColors()).textSec;ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('Pompa Devri — RPM',ml+pw/2,H-6);
   ctx.save();ctx.translate(14,mt+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Pompa Torku — N·m',0,0);ctx.restore();
   
   // Clip to plot area
@@ -2700,7 +2699,7 @@ function _drEcmRedraw() {
   var mLbl=_td[0];if(mLbl.rpm>minRPM&&mLbl.rpm<maxRPM)ctx.fillText('Motor (Net − '+_pDrop+')',xP(mLbl.rpm)+4,yP(mLbl.torque-_pDrop)-8);
   
   // Governed line
-  if(_gov>minRPM&&_gov<maxRPM){ctx.beginPath();ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.moveTo(xP(_gov),mt);ctx.lineTo(xP(_gov),mt+ph);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle='#64748b';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText('Gov '+_gov,xP(_gov),mt+ph+28);}
+  if(_gov>minRPM&&_gov<maxRPM){ctx.beginPath();ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.moveTo(xP(_gov),mt);ctx.lineTo(xP(_gov),mt+ph);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText('Gov '+_gov,xP(_gov),mt+ph+28);}
   
   // Intersection dots
   try{var _pts=[];_td.forEach(function(d){_pts.push({rpm:d.rpm,torque:Math.max(0,d.torque-_pDrop)});});_pts.push({rpm:_nlg,torque:0});
@@ -2708,14 +2707,14 @@ function _drEcmRedraw() {
   var _sf=Math.ceil(_pts[0].rpm),_sl=Math.floor(_pts[_pts.length-1].rpm);
   tcKeys.forEach(function(key,ci){var tc=VE_FT_TC_PRESETS[key];var kpS=tc.data[0].kpump;var color=tcColors[ci%tcColors.length];if(!kpS||kpS<=0)return;
   var wa=false,fR=0,fT=0;for(var sr=_sf;sr<=_sl;sr++){var mV=_lu[sr]||0;var cV=(sr*sr)/(kpS*kpS);if(mV>cV+1)wa=true;else if(wa&&mV>0&&cV>=mV){fR=sr;fT=cV;break;}}
-  if(fR>0&&fT>0&&fR>minRPM&&fR<maxRPM&&fT>minT&&fT<maxT){ctx.beginPath();ctx.arc(xP(fR),yP(fT),5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.beginPath();ctx.arc(xP(fR),yP(fT),2,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();}
+  if(fR>0&&fT>0&&fR>minRPM&&fR<maxRPM&&fT>minT&&fT<maxT){ctx.beginPath();ctx.arc(xP(fR),yP(fT),5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.beginPath();ctx.arc(xP(fR),yP(fT),2,0,Math.PI*2);ctx.fillStyle=(_drTC||_drThemeColors()).bg;ctx.fill();}
   });}catch(e){ console.warn('[MFSim] TC stall nokta çizim hatası:', e); }
   
   // Restore from clip
   ctx.restore();
   
   // Legend
-  ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillStyle='#64748b';ctx.fillText('── Durma   --- 0.80 SR',ml+pw-120,mt+14);
+  ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillStyle=(_drTC||_drThemeColors()).textMuted;ctx.fillText('── Durma   --- 0.80 SR',ml+pw-120,mt+14);
 }
 
 
@@ -3116,10 +3115,10 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   function fromX(px) { return xMin + (px - padL) / plotW * (xMax - xMin); }
   
   // Background
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fillRect(0, 0, W, H);
   
   // Grid
-  ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 0.5;
+  ctx.strokeStyle = (_drTC||_drThemeColors()).border; ctx.lineWidth = 0.5;
   var xStep = (xMax - xMin) <= 50 ? 5 : (xMax - xMin) <= 100 ? 10 : 20;
   for(var gx = Math.ceil(xMin / xStep) * xStep; gx <= xMax; gx += xStep) {
     ctx.beginPath(); ctx.moveTo(toX(gx), padT); ctx.lineTo(toX(gx), H - padB); ctx.stroke();
@@ -3130,12 +3129,12 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   }
   
   // Axes
-  ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1;
+  ctx.strokeStyle = (_drTC||_drThemeColors()).axisLine; ctx.lineWidth = 1;
   ctx.beginPath(); ctx.moveTo(padL, padT); ctx.lineTo(padL, H - padB); ctx.lineTo(W - padR, H - padB); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(W - padR, padT); ctx.lineTo(W - padR, H - padB); ctx.stroke();
   
   // X labels
-  ctx.fillStyle = '#475569'; ctx.font = '600 11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = (_drTC||_drThemeColors()).textSec; ctx.font = '600 11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
   for(var lx = Math.ceil(xMin / xStep) * xStep; lx <= xMax; lx += xStep) {
     ctx.fillText(lx.toString(), toX(lx), H - padB + 16);
   }
@@ -3185,7 +3184,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
     var epx = toX(steps[epi].speed), epy = toYR(steps[epi].engineRPM);
     if(epx < padL - 5 || epx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(epx, epy, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill();
     ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2; ctx.stroke();
   }
   
@@ -3201,7 +3200,7 @@ function veRenderFTUpshiftChart(canvasId, steps) {
     var gpx = toX(steps[gpi].speed), gpy = toYG(steps[gpi].netGrade);
     if(gpx < padL - 5 || gpx > W - padR + 5) continue;
     ctx.beginPath(); ctx.arc(gpx, gpy, 4.5, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill();
     ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2; ctx.stroke();
   }
   
@@ -3213,13 +3212,13 @@ function veRenderFTUpshiftChart(canvasId, steps) {
   ctx.font = '11px Segoe UI, sans-serif';
   ctx.strokeStyle = '#4a86c8'; ctx.lineWidth = 2.5; ctx.setLineDash([]);
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
-  ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#4a86c8'; ctx.textAlign = 'left'; ctx.fillText('Motor Devri (rpm)', legX + 30, legY + 4);
   
   legY += 18;
   ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(legX, legY); ctx.lineTo(legX + 24, legY); ctx.stroke();
-  ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(legX + 12, legY, 3.5, 0, Math.PI * 2); ctx.fillStyle = (_drTC||_drThemeColors()).bg; ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#c0392b'; ctx.fillText('Net Eğim (%)', legX + 30, legY + 4);
   
   // Store interaction data (same structure as grade/accel charts)
