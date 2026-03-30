@@ -2,7 +2,7 @@
 // GRAFİK VE TABLO RENDERLAMA
 // ============================================================================
 
-function veGetSensorData(sensorId, signalOverride) {
+function veGetSensorData(sensorId, signalOverride, dataSource) {
   // Cross-tab sensör desteği: @tabIdx:sensorId formatı
   var tabNodes = nodes;
   var tabConns = connections;
@@ -20,6 +20,20 @@ function veGetSensorData(sensorId, signalOverride) {
     r = tab.state.simResults || null;
   }
 
+  // ====== ENGEL ATLAMA matchTable ERİŞİMİ ======
+  // obs-match hedefi: obstacleDynamic.matchTable'dan sütun okur
+  if(sensorId === '~obs-match') {
+    var sig = signalOverride;
+    if(!r || !sig) return null;
+    var dynResult = r.obstacleDynamic;
+    if(!dynResult || !dynResult.matchTable || dynResult.matchTable.length === 0) return null;
+    var col = [];
+    dynResult.matchTable.forEach(function(row) {
+      if(row[sig] !== undefined) col.push(row[sig]);
+    });
+    return col.length > 0 ? col : null;
+  }
+
   // ====== SIHIRBAZ DOĞRUDAN BİLEŞEN ERİŞİMİ ======
   // ~compType formatı: fiziksel sensör olmadan doğrudan bileşen verisine erişim
   if(sensorId.charAt(0) === '~') {
@@ -27,49 +41,68 @@ function veGetSensorData(sensorId, signalOverride) {
     var sig = signalOverride;
     if(!r || !sig) return null;
 
+    // dataSource belirtilmişse alt sonuç kümesinden oku
+    var src = r;
+    if(dataSource === 'segmentDrive' && r.segmentDrive) {
+      src = r.segmentDrive;
+    }
+
     // Hedef bileşeni bul
     var compNode = tabNodes.find(function(n) {
       return n.type === compType;
     });
 
-    // nodeData'dan doğrudan oku
-    if(compNode && r.nodeData && r.nodeData[compNode.id]) {
+    // nodeData'dan doğrudan oku (yalnızca ana sonuçlar için — segmentDrive'da nodeData yok)
+    if(!dataSource && compNode && r.nodeData && r.nodeData[compNode.id]) {
       var compData = r.nodeData[compNode.id];
       if(compData[sig] && compData[sig].length > 0) return compData[sig];
     }
 
-    // Fallback: top-level veSimResults'tan oku (aşağıdaki fallback mantığı)
+    // Fallback: top-level dizilerden oku
     // Araç sinyalleri
-    if(sig === 'v_speed') return r.speed || null;
-    if(sig === 'v_accel') return r.accel || null;
-    if(sig === 'v_distance') return r.distance || null;
+    if(sig === 'v_speed') return src.speed || null;
+    if(sig === 'v_accel') return src.accel || null;
+    if(sig === 'v_distance') return src.distance || null;
     // Yol sinyalleri
-    if(sig === 'r_rolling_force') return r.F_rolling || null;
-    if(sig === 'r_aero_force') return r.F_aero || null;
-    if(sig === 'r_total_resist' && r.F_rolling && r.F_aero) {
+    if(sig === 'r_rolling_force') return src.F_rolling || null;
+    if(sig === 'r_aero_force') return src.F_aero || null;
+    if(sig === 'r_grade_force') return src.F_grade || null;
+    if(sig === 'r_net_force') return src.F_net || null;
+    if(sig === 'r_total_resist' && src.F_rolling && src.F_aero) {
       var tr2 = [];
-      for(var j2 = 0; j2 < r.F_rolling.length; j2++) tr2.push(r.F_rolling[j2] + r.F_aero[j2]);
+      for(var j2 = 0; j2 < src.F_rolling.length; j2++) tr2.push(src.F_rolling[j2] + src.F_aero[j2] + (src.F_grade ? src.F_grade[j2] : 0));
       return tr2;
     }
     // Solver sinyalleri
-    if(sig === 'tractive_effort' && r.TE) return r.TE;
-    if(sig === 'drawbar_pull' && r.DP) return r.DP;
-    if(sig === 'wheel_power' && r.WP) return r.WP;
+    if(sig === 'tractive_effort' && src.TE) return src.TE;
+    if(sig === 'drawbar_pull' && src.DP) return src.DP;
+    if(sig === 'wheel_power') return src.WP || src.P_wheel || null;
+    if(sig === 'engine_drag_force') return src.F_engine_drag || null;
     // Motor sinyalleri
-    if(sig === 'rpm' && r.rpm) return r.rpm;
-    if(sig === 'torque' && r.engineTorque) return r.engineTorque;
-    if(sig === 'power' && r.rpm && r.engineTorque) {
+    if(sig === 'rpm' && src.rpm) return src.rpm;
+    if(sig === 'torque' && src.engineTorque) return src.engineTorque;
+    if(sig === 'power' && src.rpm && src.engineTorque) {
       var pw2 = [];
-      for(var i2 = 0; i2 < r.rpm.length; i2++) pw2.push(r.engineTorque[i2] * r.rpm[i2] / 9549);
+      for(var i2 = 0; i2 < src.rpm.length; i2++) pw2.push(src.engineTorque[i2] * src.rpm[i2] / 9549);
       return pw2;
     }
+    if(sig === 'power' && src.P_engine) return src.P_engine;
     // TC sinyalleri
-    if(sig === 'speed_ratio' && r.SR) return r.SR;
-    if(sig === 'torque_ratio' && r.tau) return r.tau;
-    if(sig === 'efficiency' && r.tcEta) return r.tcEta.map(function(e) { return e * 100; });
-    if(sig === 'slip' && r.SR) return r.SR.map(function(sr) { return (1 - sr) * 100; });
+    if(sig === 'speed_ratio' && src.SR) return src.SR;
+    if(sig === 'torque_ratio' && src.tau) return src.tau;
+    if(sig === 'efficiency' && src.tcEta) return src.tcEta.map(function(e) { return e * 100; });
+    if(sig === 'slip' && src.SR) return src.SR.map(function(sr) { return (1 - sr) * 100; });
+    if(sig === 'heat_rejection') return src.heatRejection || null;
+    // Şanzıman Kontrol
+    if(sig === 'current_gear' && src.gearMode) {
+      return src.gearMode.map(function(g) {
+        if(typeof g === 'number') return g;
+        var m = String(g).match(/(\d+)/);
+        return m ? parseInt(m[1]) : 0;
+      });
+    }
     // Zaman
-    if(sig === 'time' && r.time) return r.time;
+    if(sig === 'time' && src.time) return src.time;
 
     return null;
   }
@@ -266,6 +299,10 @@ function veRenderChart(slotIdx) {
   var r = window.veSimResults;
   var timeArr = null;
 
+  // dataSource: slot veya X-axis'te tanımlı veri kaynağı
+  var slotDataSource = slot._dataSource || null;
+  var xAxisDS = (slot.xAxis && slot.xAxis._dataSource) ? slot.xAxis._dataSource : slotDataSource;
+
   // Özel X ekseni desteği (sanal sensör veya fiziksel sensör)
   if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
     if(slot.xAxis.id.charAt(0) === '~') {
@@ -273,7 +310,7 @@ function veRenderChart(slotIdx) {
       var xParts = slot.xAxis.id.substring(1).split(':');
       var xCompType = xParts[0];
       var xSignal = xParts.slice(1).join(':');
-      timeArr = veGetSensorData('~' + xCompType, xSignal);
+      timeArr = veGetSensorData('~' + xCompType, xSignal, xAxisDS);
     } else {
       // sensorId:signal formatı (fiziksel sensör verisi)
       var xColonIdx = slot.xAxis.id.indexOf(':');
@@ -285,9 +322,13 @@ function veRenderChart(slotIdx) {
     }
   }
 
-  // Standart zaman ekseni
+  // Standart zaman ekseni — dataSource'a göre doğru time dizisini seç
   if(!timeArr) {
-    timeArr = (r && r.time) ? r.time : null;
+    if(slotDataSource === 'segmentDrive' && r && r.segmentDrive && r.segmentDrive.time) {
+      timeArr = r.segmentDrive.time;
+    } else {
+      timeArr = (r && r.time) ? r.time : null;
+    }
   }
 
   // Cross-tab sensör varsa, her sensörün kaynağından zaman dizisi ara
@@ -327,12 +368,13 @@ function veRenderChart(slotIdx) {
   // ====== VERİ TOPLA ======
   var datasets = [];
   slot.sensors.forEach(function(s, idx) {
-    var data = veGetSensorData(s.id, s.signal);
+    var sDS = s._dataSource || slotDataSource;
+    var data = veGetSensorData(s.id, s.signal, sDS);
     // Veri bulunamadıysa boş dizi — asla başka sensörün verisini kullanma!
     if(!data || data.length === 0) data = null;
     datasets.push({data: data, color: colors[idx % colors.length], name: s.name, unit: s.unit || '', _noData: !data});
   });
-  
+
   // Tüm sensörler boşsa çık
   var hasAnyData = datasets.some(function(ds) { return !ds._noData; });
   if(!hasAnyData) return;
@@ -1010,17 +1052,17 @@ function veRenderTable(slotIdx) {
   // X ekseni verisini belirle
   var r = window.veSimResults;
   var timeArr = null;
+  var slotDataSource = slot._dataSource || null;
+  var xAxisDS = (slot.xAxis && slot.xAxis._dataSource) ? slot.xAxis._dataSource : slotDataSource;
 
   // Özel X ekseni desteği (sanal sensör veya fiziksel sensör)
   if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
     if(slot.xAxis.id.charAt(0) === '~') {
-      // ~compType:signal formatı (sanal sensör / bileşen verisi)
       var xParts = slot.xAxis.id.substring(1).split(':');
       var xCompType = xParts[0];
       var xSignal = xParts.slice(1).join(':');
-      timeArr = veGetSensorData('~' + xCompType, xSignal);
+      timeArr = veGetSensorData('~' + xCompType, xSignal, xAxisDS);
     } else {
-      // sensorId:signal formatı (fiziksel sensör verisi)
       var xColonIdx = slot.xAxis.id.indexOf(':');
       if(xColonIdx > 0) {
         var xSensorId = slot.xAxis.id.substring(0, xColonIdx);
@@ -1031,7 +1073,11 @@ function veRenderTable(slotIdx) {
   }
 
   if(!timeArr) {
-    timeArr = (r && r.time) ? r.time : null;
+    if(slotDataSource === 'segmentDrive' && r && r.segmentDrive && r.segmentDrive.time) {
+      timeArr = r.segmentDrive.time;
+    } else {
+      timeArr = (r && r.time) ? r.time : null;
+    }
   }
 
   slot.sensors.forEach(function(s) {
@@ -1051,7 +1097,8 @@ function veRenderTable(slotIdx) {
   var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   var datasets = [];
   slot.sensors.forEach(function(s) {
-    var data = veGetSensorData(s.id, s.signal);
+    var sDS = s._dataSource || slotDataSource;
+    var data = veGetSensorData(s.id, s.signal, sDS);
     datasets.push(data); // null olabilir
   });
   

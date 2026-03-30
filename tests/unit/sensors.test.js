@@ -54,10 +54,11 @@ describe('swScanTopology', () => {
     expect(result.engineNode.id).toBe('e1');
   });
 
-  test('engine-brake tipi artık motor olarak algılanmaz', () => {
+  test('engine-brake tipi motor olarak algılanır', () => {
     nodes = [makeNode('engine-brake', 'eb1')];
     var result = swScanTopology();
-    expect(result.hasEngine).toBe(false);
+    expect(result.hasEngine).toBe(true);
+    expect(result.engineNode.id).toBe('eb1');
   });
 
   test('tam zinciri algılar (chainComplete)', () => {

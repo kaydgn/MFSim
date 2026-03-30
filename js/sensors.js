@@ -3,8 +3,12 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 
 var SENSOR_PACKAGES = [
+  // ══════════════════════════════════════════════════════════════
+  //  PERFORMANS ANALİZİ (Tam Gaz Hızlanma) — solverTab: 'performance'
+  // ══════════════════════════════════════════════════════════════
   {
     id: 'performance', name: 'Performans Eğrileri', icon: '🏁', priority: 'essential',
+    solverTab: 'performance',
     description: 'Temel hızlanma performansı: hız-zaman, mesafe-zaman, ivme eğrileri',
     requires: ['vehicle'],
     diagrams: [
@@ -25,6 +29,7 @@ var SENSOR_PACKAGES = [
   },
   {
     id: 'engine-analysis', name: 'Motor Çalışma Analizi', icon: '⚙️', priority: 'essential',
+    solverTab: 'performance',
     description: 'Motor devri, tork ve güç eğrileri — motorun hızlanma boyunca nasıl çalıştığını gösterir',
     requires: ['engine'],
     diagrams: [
@@ -45,6 +50,7 @@ var SENSOR_PACKAGES = [
   },
   {
     id: 'tc-analysis', name: 'Tork Konvertör Analizi', icon: '🌀', priority: 'recommended',
+    solverTab: 'performance',
     description: 'TC çalışma noktası, tork çarpanı, verim ve kayma analizi',
     requires: ['torque-converter'],
     diagrams: [
@@ -70,6 +76,7 @@ var SENSOR_PACKAGES = [
   },
   {
     id: 'traction-analysis', name: 'Çekiş Kuvveti Analizi', icon: '💪', priority: 'essential',
+    solverTab: 'performance',
     description: 'Tekerlekte çekiş kuvveti, direnç kuvvetleri ve net çekiş gücü',
     requires: ['vehicle'],
     diagrams: [
@@ -94,6 +101,7 @@ var SENSOR_PACKAGES = [
   },
   {
     id: 'shift-analysis', name: 'Vites Geçiş Analizi', icon: '🔄', priority: 'recommended',
+    solverTab: 'performance',
     description: 'Vites değişim noktaları, şanzıman çıkış parametreleri ve shift kalitesi',
     requires: ['gearbox', 'shift-controller'],
     diagrams: [
@@ -114,6 +122,7 @@ var SENSOR_PACKAGES = [
   },
   {
     id: 'comparison', name: 'Karşılaştırma Diyagramları', icon: '⚖️', priority: 'advanced',
+    solverTab: 'performance',
     description: 'Transfer kademe karşılaştırması, verimlilik zinciri ve ileri analizler',
     requires: ['vehicle', 'engine', 'torque-converter'],
     dependsOn: ['performance', 'engine-analysis', 'tc-analysis', 'traction-analysis'],
@@ -130,6 +139,124 @@ var SENSOR_PACKAGES = [
         note:'Arka plan BSFC kontur haritası motor veritabanından gelir.' }
     ],
     sensors: []
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  HIZLANMA-YAVAŞLAMA (Segment-Drive) — solverTab: 'accel-decel'
+  // ══════════════════════════════════════════════════════════════
+  {
+    id: 'sd-speed-profile', name: 'Hız ve Mesafe Profili', icon: '🛤️', priority: 'essential',
+    solverTab: 'accel-decel',
+    description: 'Segment bazlı hız, mesafe ve ivme profilleri — sürüş çevriminin genel görünümü',
+    requires: ['vehicle'],
+    diagrams: [
+      { id:'sd-v-t', name:'Araç Hızı – Zaman', xAxis:'Zaman (s)', yAxis:'Hız (km/h)',
+        significance:'Sürüş çevriminin ana profili. Tam gaz segmentlerinde hız yükselir, serbest segmentlerde düşer. Segment sınırları kırılma noktaları olarak görünür.' },
+      { id:'sd-s-t', name:'Mesafe – Zaman', xAxis:'Zaman (s)', yAxis:'Mesafe (m)',
+        significance:'Toplam kat edilen mesafe. Eğimi hıza eşit. Tam gaz bölümlerinde dik, serbest bölümlerde düzleşir. Segment mesafelerini doğrulamak için kullanılır.' },
+      { id:'sd-a-t', name:'İvme – Zaman', xAxis:'Zaman (s)', yAxis:'İvme (m/s²)',
+        significance:'Segment geçişlerinde ani ivme değişimleri, yük güvenliği ve sürücü konforu analizi. Negatif değerler yavaşlama fazlarını gösterir.' }
+    ],
+    sensors: [
+      { target:'vehicle', attachment:'component', signal:'v_speed', label:'Araç → Araç Hızı (km/h)' },
+      { target:'vehicle', attachment:'component', signal:'v_distance', label:'Araç → Mesafe (m)' },
+      { target:'vehicle', attachment:'component', signal:'v_accel', label:'Araç → İvme (m/s²)' }
+    ]
+  },
+  {
+    id: 'sd-forces', name: 'Kuvvet ve Direnç Analizi', icon: '⚡', priority: 'essential',
+    solverTab: 'accel-decel',
+    description: 'Segment bazlı çekiş, direnç ve eğim kuvvetleri — arazi etkisini gösterir',
+    requires: ['vehicle', 'engine'],
+    diagrams: [
+      { id:'sd-fnet-t', name:'Net Kuvvet – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)',
+        significance:'Pozitif değerler hızlanma, negatif değerler yavaşlama. Eğim değişimlerinde ani sıçrama görülür. Serbest segmentlerde motor freni etkisi.' },
+      { id:'sd-forces-t', name:'Kuvvet Bileşenleri – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)',
+        significance:'Eğim, yuvarlanma ve aero dirençlerinin zamana bağlı profili. Eğimli segmentlerde F_grade baskın, yüksek hızda F_aero baskın.' },
+      { id:'sd-grade-t', name:'Eğim Kuvveti – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)',
+        significance:'Her segmentteki eğimin yarattığı kuvvet. Pozitif değer yokuş yukarı, negatif yokuş aşağı. Segment geçişlerinde basamak değişimi.' }
+    ],
+    sensors: [
+      { target:'road', attachment:'component', signal:'r_rolling_force', label:'Yol → Yuvarlanma Direnci (N)' },
+      { target:'road', attachment:'component', signal:'r_aero_force', label:'Yol → Aerodinamik Direnç (N)' },
+      { target:'road', attachment:'component', signal:'r_grade_force', label:'Yol → Eğim Kuvveti (N)' },
+      { target:'road', attachment:'component', signal:'r_net_force', label:'Yol → Net Kuvvet (N)' }
+    ]
+  },
+  {
+    id: 'sd-powertrain', name: 'Güç Aktarma Profili', icon: '⚙️', priority: 'recommended',
+    solverTab: 'accel-decel',
+    description: 'Motor devri, tork, güç ve vites değişimleri — segment bazlı güç aktarma davranışı',
+    requires: ['engine', 'gearbox'],
+    diagrams: [
+      { id:'sd-rpm-t', name:'Motor Devri – Zaman', xAxis:'Zaman (s)', yAxis:'Motor Devri (rpm)',
+        significance:'Serbest fazda devir düşer, tam gaz fazında tırmanır. Segment geçişlerinde devir profili yeniden şekillenir. Motorun hangi bölgede çalıştığını gösterir.' },
+      { id:'sd-power-t', name:'Motor ve Tekerlek Gücü – Zaman', xAxis:'Zaman (s)', yAxis:'Güç (kW)',
+        significance:'Tam gaz segmentlerinde motor tam güçte, serbest segmentlerde güç düşer. İkisi arası fark drivetrain kaybı.' },
+      { id:'sd-gear-t', name:'Vites Profili – Zaman', xAxis:'Zaman (s)', yAxis:'Vites',
+        significance:'Segment bazlı vites değişim profili. Yavaşlama sonrası düşük vitese iniş, tekrar hızlanmada adım adım yükseliş.' },
+      { id:'sd-te-t', name:'Çekiş Kuvveti – Zaman', xAxis:'Zaman (s)', yAxis:'Çekiş Kuvveti (kN)',
+        significance:'Tam gaz segmentlerinde yüksek TE, serbest segmentlerde sıfıra yakın veya negatif (motor freni). Segment sınırlarında ani değişim.' }
+    ],
+    sensors: [
+      { target:'engine', attachment:'output', signal:'rpm', label:'Motor → Devir (rpm)' },
+      { target:'engine', attachment:'output', signal:'power', label:'Motor → Güç (kW)' },
+      { target:'shift-controller', attachment:'component', signal:'current_gear', label:'Vites Kontrol → Aktif Vites' },
+      { target:'solver', attachment:'component', signal:'tractive_effort', label:'Çözücü → Çekiş Kuvveti (kN)' }
+    ]
+  },
+  {
+    id: 'sd-thermal', name: 'Isı Reddi ve Verimlilik', icon: '🌡️', priority: 'advanced',
+    solverTab: 'accel-decel',
+    description: 'TC ısı kaybı ve motor fren kuvveti — termal yük ve enerji dağılımı',
+    requires: ['torque-converter', 'engine'],
+    diagrams: [
+      { id:'sd-heat-t', name:'TC Isı Reddi – Zaman', xAxis:'Zaman (s)', yAxis:'Isı Reddi (kW)',
+        significance:'Tork konvertördeki enerji kaybının termal profili. Düşük hızlarda ve serbest fazlarda yüksek ısı üretimi. Soğutma sistemi tasarımı için kritik.' },
+      { id:'sd-edrag-t', name:'Motor Fren Kuvveti – Zaman', xAxis:'Zaman (s)', yAxis:'Kuvvet (N)',
+        significance:'Serbest (coast) fazında motorun yarattığı fren kuvveti. Motor frenli yokuş iniş analizleri için temel veri.' }
+    ],
+    sensors: [
+      { target:'torque-converter', attachment:'component', signal:'heat_rejection', label:'TC → Isı Reddi (kW)' },
+      { target:'engine', attachment:'output', signal:'torque', label:'Motor → Fren Torku (Nm)' }
+    ]
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  ENGEL ATLAMA — solverTab: 'obstacle'
+  // ══════════════════════════════════════════════════════════════
+  {
+    id: 'obs-torque', name: 'Tork ve Kuvvet Analizi', icon: '🧱', priority: 'essential',
+    solverTab: 'obstacle',
+    description: 'Engel atlama için gerekli tork, mevcut tork kapasitesi ve güvenlik marjı',
+    requires: ['vehicle', 'engine', 'torque-converter'],
+    diagrams: [
+      { id:'obs-match-torque', name:'Motor-TC Eşleşme Tork Profili', xAxis:'Hız Oranı (SR)', yAxis:'Tork (Nm)',
+        significance:'SR=0 (stall) → SR=1.0 (lockup) aralığında motor torku, pump torku, türbin torku ve tekerlek torku. Stall noktasındaki tekerlek torku engel atlama kapasitesini belirler.' },
+      { id:'obs-match-power', name:'Motor-TC Eşleşme Güç Profili', xAxis:'Hız Oranı (SR)', yAxis:'Güç (kW)',
+        significance:'Motor gücü ve türbin gücünün SR\'ye bağlı değişimi. Stall\'da güç sıfır (v=0), artan SR ile güç yükselir. TC verim kaybı iki eğri arası fark.' }
+    ],
+    sensors: [
+      { target:'engine', attachment:'output', signal:'torque', label:'Motor → Tork (Nm)' },
+      { target:'torque-converter', attachment:'output', signal:'torque_out', label:'TC → Türbin Torku (Nm)' },
+      { target:'torque-converter', attachment:'component', signal:'heat_rejection', label:'TC → Isı Reddi (kW)' }
+    ]
+  },
+  {
+    id: 'obs-thermal', name: 'Termal ve Verimlilik Analizi', icon: '🌡️', priority: 'recommended',
+    solverTab: 'obstacle',
+    description: 'Engel atlama sırasında TC ısı üretimi, verim ve kayma profilleri',
+    requires: ['torque-converter'],
+    diagrams: [
+      { id:'obs-match-heat', name:'TC Isı Reddi – Hız Oranı', xAxis:'Hız Oranı (SR)', yAxis:'Isı Reddi (kW)',
+        significance:'Stall\'da tüm enerji ısıya dönüşür. SR arttıkça ısı azalır. Engel atlama genelde düşük SR bölgesinde gerçekleşir — soğutma kapasitesi kritik.' },
+      { id:'obs-match-eta', name:'TC Verimi – Hız Oranı', xAxis:'Hız Oranı (SR)', yAxis:'Verim (%)',
+        significance:'TC verimi engel atlama bölgesinde (SR<0.3) çok düşük. Enerji kaybının büyüklüğünü gösterir. Soğutma sistemi boyutlandırma girdisi.' }
+    ],
+    sensors: [
+      { target:'torque-converter', attachment:'component', signal:'efficiency', label:'TC → Verim (%)' },
+      { target:'torque-converter', attachment:'component', signal:'slip', label:'TC → Kayma (%)' }
+    ]
   }
 ];
 
@@ -144,7 +271,7 @@ function swScanTopology() {
   };
   nodes.forEach(function(n) {
     switch(n.type) {
-      case 'engine': result.hasEngine=true; result.engineNode=n; break;
+      case 'engine': case 'engine-brake': result.hasEngine=true; result.engineNode=n; break;
       case 'torque-converter': result.hasTC=true; result.tcNode=n; break;
       case 'gearbox': result.hasGearbox=true; result.gearboxNode=n; break;
       case 'transfer': result.hasTransfer=true; result.transferNode=n; break;
@@ -248,7 +375,46 @@ var SW_DIAGRAM_SIGNALS = {
   'transfer-compare':  { x:{target:'time'}, y:[{target:'vehicle', signal:'v_speed', name:'Araç Hızı', unit:'km/h'}] },
   'efficiency-chain':  { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'torque-converter', signal:'efficiency', name:'TC Verimi', unit:'%'}] },
   'te-envelope':       { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'solver', signal:'tractive_effort', name:'TE Zarf', unit:'kN'}] },
-  'bsfc-map':          { x:{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'}, y:[{target:'engine', signal:'torque', name:'Motor Torku', unit:'Nm'}] }
+  'bsfc-map':          { x:{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'}, y:[{target:'engine', signal:'torque', name:'Motor Torku', unit:'Nm'}] },
+
+  // ── Hızlanma-Yavaşlama (Segment-Drive) ──
+  'sd-v-t':      { x:{target:'time'}, y:[{target:'vehicle', signal:'v_speed', name:'Araç Hızı', unit:'km/h'}], dataSource:'segmentDrive' },
+  'sd-s-t':      { x:{target:'time'}, y:[{target:'vehicle', signal:'v_distance', name:'Mesafe', unit:'m'}], dataSource:'segmentDrive' },
+  'sd-a-t':      { x:{target:'time'}, y:[{target:'vehicle', signal:'v_accel', name:'İvme', unit:'m/s²'}], dataSource:'segmentDrive' },
+  'sd-fnet-t':   { x:{target:'time'}, y:[{target:'road', signal:'r_net_force', name:'Net Kuvvet', unit:'N'}], dataSource:'segmentDrive' },
+  'sd-forces-t': { x:{target:'time'}, y:[
+    {target:'road', signal:'r_grade_force', name:'Eğim Kuvveti', unit:'N'},
+    {target:'road', signal:'r_rolling_force', name:'Yuvarlanma Direnci', unit:'N'},
+    {target:'road', signal:'r_aero_force', name:'Aerodinamik Direnç', unit:'N'}
+  ], dataSource:'segmentDrive' },
+  'sd-grade-t':  { x:{target:'time'}, y:[{target:'road', signal:'r_grade_force', name:'Eğim Kuvveti', unit:'N'}], dataSource:'segmentDrive' },
+  'sd-rpm-t':    { x:{target:'time'}, y:[{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'}], dataSource:'segmentDrive' },
+  'sd-power-t':  { x:{target:'time'}, y:[
+    {target:'engine', signal:'power', name:'Motor Gücü', unit:'kW'},
+    {target:'solver', signal:'wheel_power', name:'Tekerlek Gücü', unit:'kW'}
+  ], dataSource:'segmentDrive' },
+  'sd-gear-t':   { x:{target:'time'}, y:[{target:'shift-controller', signal:'current_gear', name:'Aktif Vites', unit:'−'}], dataSource:'segmentDrive' },
+  'sd-te-t':     { x:{target:'time'}, y:[{target:'solver', signal:'tractive_effort', name:'Çekiş Kuvveti', unit:'kN'}], dataSource:'segmentDrive' },
+  'sd-heat-t':   { x:{target:'time'}, y:[{target:'torque-converter', signal:'heat_rejection', name:'Isı Reddi', unit:'kW'}], dataSource:'segmentDrive' },
+  'sd-edrag-t':  { x:{target:'time'}, y:[{target:'solver', signal:'engine_drag_force', name:'Motor Fren Kuvveti', unit:'N'}], dataSource:'segmentDrive' },
+
+  // ── Engel Atlama (Obstacle) — matchTable tabanlı ──
+  'obs-match-torque': { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'}, y:[
+    {target:'obs-match', signal:'T_engine', name:'Motor Torku', unit:'Nm'},
+    {target:'obs-match', signal:'T_pump', name:'Pump Torku', unit:'Nm'},
+    {target:'obs-match', signal:'T_turbine', name:'Türbin Torku', unit:'Nm'},
+    {target:'obs-match', signal:'T_wheel', name:'Tekerlek Torku', unit:'Nm'}
+  ], dataSource:'obstacleDynamic' },
+  'obs-match-power':  { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'}, y:[
+    {target:'obs-match', signal:'P_engine_kW', name:'Motor Gücü', unit:'kW'},
+    {target:'obs-match', signal:'P_turbine_kW', name:'Türbin Gücü', unit:'kW'}
+  ], dataSource:'obstacleDynamic' },
+  'obs-match-heat':   { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'}, y:[
+    {target:'obs-match', signal:'Q_reject_kW', name:'Isı Reddi', unit:'kW'}
+  ], dataSource:'obstacleDynamic' },
+  'obs-match-eta':    { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'}, y:[
+    {target:'obs-match', signal:'eta_tc', name:'TC Verimi', unit:'−'}
+  ], dataSource:'obstacleDynamic' }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -376,101 +542,106 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   ov.onclick = function(e) { if(e.target === ov) ov.remove(); };
 }
 
+var swActiveTab = 'performance';
+
+function swSwitchTab(tabId) {
+  swActiveTab = tabId;
+  var wizNode = nodes.find(function(n) { return n.type === 'sensor-wizard'; });
+  if(wizNode) showNodeProperties(wizNode);
+}
+
 function getSensorWizardPropertiesHTML(node) {
   var topo = swScanTopology();
   var isInstalled = node.data && node.data.sensorsInstalled;
   var installedPkgs = (node.data && node.data.installedPackages) || [];
-  var html = '<div style="border-top:1px solid var(--border-color);padding-top:12px;">';
+  var html = '<div class="sw-panel">';
 
-  // ── Kurulum Durumu Başlığı ──
+  // ── Durum Çubuğu ──
   if(isInstalled) {
-    html += '<div style="padding:8px 10px;border-radius:6px;margin-bottom:10px;background:rgba(34,197,94,0.10);border:1px solid rgba(34,197,94,0.3);">';
-    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">';
-    html += '<span style="font-size:0.9rem;">✅</span>';
-    html += '<span style="font-size:0.7rem;font-weight:700;color:#22c55e;">Sensörler Kurulu</span>';
+    var sCount = (node.data.activeSensors || []).length;
+    html += '<div class="sw-status-bar installed">';
+    html += '<span class="sw-status-dot"></span>';
+    html += '<span>Sensörler Kurulu</span>';
+    html += '<span style="margin-left:auto;font-weight:400;font-size:0.56rem;opacity:0.8;">' + installedPkgs.length + ' paket, ' + sCount + ' sensör</span>';
     html += '</div>';
-    html += '<div style="font-size:0.58rem;color:var(--text-secondary);line-height:1.4;">';
-    html += installedPkgs.length + ' paket aktif, ' + ((node.data.activeSensors || []).length) + ' sanal sensör';
-    html += '</div>';
+  } else {
+    html += '<div class="sw-status-bar not-installed">';
+    html += '<span class="sw-status-dot"></span>';
+    html += '<span>Sensörler Kurulmadı</span>';
     html += '</div>';
   }
 
   // ── Topoloji Durumu ──
-  html += '<div style="font-size:0.72rem;font-weight:700;color:var(--accent-warning,#f59e0b);margin-bottom:8px;">📡 Topoloji Durumu</div>';
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;font-size:0.62rem;margin-bottom:10px;padding:8px;background:var(--bg-tertiary);border-radius:6px;border:1px solid var(--border-color);">';
+  html += '<div class="sw-section">';
+  html += '<div class="sw-section-title">Topoloji Durumu</div>';
+  html += '<div class="sw-topo-grid">';
   var topoItems = [
     {k:'Motor', v:topo.hasEngine}, {k:'Tork Konvertör', v:topo.hasTC},
     {k:'Şanzıman', v:topo.hasGearbox}, {k:'Transfer Kutusu', v:topo.hasTransfer},
-    {k:'Son Dişli / Diff.', v:topo.hasDiff}, {k:'Araç', v:topo.hasVehicle},
+    {k:'Diferansiyel', v:topo.hasDiff}, {k:'Araç', v:topo.hasVehicle},
     {k:'Yol / Ortam', v:topo.hasRoad}, {k:'Şanz. Kontrol', v:topo.hasShiftCtrl}
   ];
   topoItems.forEach(function(ti) {
-    html += '<div style="display:flex;align-items:center;gap:3px;">';
-    html += '<span style="color:' + (ti.v ? '#22c55e' : '#ef4444') + ';">' + (ti.v ? '✅' : '❌') + '</span>';
-    html += '<span style="color:' + (ti.v ? 'var(--text-primary)' : 'var(--text-muted)') + ';">' + ti.k + '</span>';
+    html += '<div class="sw-topo-item">';
+    html += '<span class="sw-dot ' + (ti.v ? 'ok' : 'missing') + '"></span>';
+    html += '<span style="' + (ti.v ? '' : 'opacity:0.5;') + '">' + ti.k + '</span>';
     html += '</div>';
   });
   html += '</div>';
-
-  // Zincir durumu
-  html += '<div style="font-size:0.62rem;padding:5px 8px;border-radius:4px;margin-bottom:12px;' + (topo.chainComplete ? 'background:rgba(34,197,94,0.08);color:#16a34a;' : 'background:rgba(239,68,68,0.08);color:#dc2626;') + '">';
-  html += topo.chainComplete ? '✅ Zincir: Motor → … → Araç tamamlanmış' : '⚠️ Güç aktarma zinciri tamamlanmamış!';
+  html += '<div class="sw-chain-bar ' + (topo.chainComplete ? 'ok' : 'fail') + '">';
+  html += topo.chainComplete ? 'Zincir tamamlanmış: Motor → TC → Şanzıman → Araç' : 'Güç aktarma zinciri tamamlanmamış';
+  html += '</div>';
   html += '</div>';
 
-  // ── Sensörleri Kur / Kaldır Butonu ──
-  html += '<div style="text-align:center;margin-bottom:12px;">';
+  // ── Butonlar ──
+  html += '<div class="sw-btn-row">';
   if(!isInstalled) {
-    html += '<button onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swInstallSensors(w);" style="padding:6px 18px;font-size:0.68rem;font-weight:600;background:#22c55e;color:white;border:none;border-radius:6px;cursor:pointer;box-shadow:0 2px 8px rgba(34,197,94,0.3);transition:all 0.15s;" onmouseover="this.style.background=\'#16a34a\'" onmouseout="this.style.background=\'#22c55e\'">📡 Sensörleri Kur</button>';
+    html += '<button class="sw-btn sw-btn-primary" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swInstallSensors(w);">Sensörleri Kur</button>';
   } else {
-    html += '<button onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swRemoveSensors(w);" style="padding:5px 14px;font-size:0.6rem;background:var(--bg-tertiary);color:var(--accent-danger,#ef4444);border:1px solid var(--accent-danger,#ef4444);border-radius:5px;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.background=\'rgba(239,68,68,0.1)\'" onmouseout="this.style.background=\'var(--bg-tertiary)\'">Sensörleri Kaldır</button>';
-    html += ' <button onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swInstallSensors(w);" style="padding:5px 14px;font-size:0.6rem;background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border-color);border-radius:5px;cursor:pointer;" title="Topoloji değişiklikleri sonrası yeniden kur">🔄 Yeniden Kur</button>';
+    html += '<button class="sw-btn sw-btn-danger" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swRemoveSensors(w);">Kaldır</button>';
+    html += '<button class="sw-btn sw-btn-outline" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)swInstallSensors(w);" title="Topoloji değişikliği sonrası yeniden kur">Yeniden Kur</button>';
   }
   html += '</div>';
 
-  // Kurulu paketler özeti (kuruluysa)
-  if(isInstalled && installedPkgs.length > 0) {
-    html += '<div style="font-size:0.62rem;color:var(--text-muted);margin-bottom:4px;">Kurulu Paketler:</div>';
-    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">';
-    installedPkgs.forEach(function(pkgId) {
-      var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
-      if(pkg) {
-        html += '<span style="padding:2px 6px;font-size:0.55rem;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.3);border-radius:10px;">' + pkg.icon + ' ' + pkg.name + '</span>';
-      }
-    });
-    html += '</div>';
-  }
+  // ── Çözüm Kümesi Tabları ──
+  var solverTabs = [
+    { id:'performance', name:'Performans', icon:'🏎️' },
+    { id:'accel-decel', name:'Hızl.-Yavaşl.', icon:'🛤️' },
+    { id:'obstacle', name:'Engel Atlama', icon:'🧱' }
+  ];
 
-  // Sensör sayısı özeti (kurulu değilse fiziksel sensörleri say)
-  if(!isInstalled) {
-    var totalReq = 0, totalMatched = 0;
-    SENSOR_PACKAGES.forEach(function(pkg) {
-      pkg.sensors.forEach(function(sReq) {
-        totalReq++;
-        if(swCheckSensorExists(sReq, topo).matched) totalMatched++;
-      });
-    });
+  // Her tab için paket sayısını hesapla
+  solverTabs.forEach(function(st) {
+    st.pkgCount = SENSOR_PACKAGES.filter(function(p) { return p.solverTab === st.id; }).length;
+    st.installedCount = SENSOR_PACKAGES.filter(function(p) {
+      return p.solverTab === st.id && installedPkgs.indexOf(p.id) > -1;
+    }).length;
+  });
 
-    var pct = totalReq > 0 ? Math.round(totalMatched / totalReq * 100) : 0;
-    html += '<div style="font-size:0.62rem;color:var(--text-muted);margin-bottom:4px;">Fiziksel Sensör Durumu: <b style="color:var(--text-primary);">' + totalMatched + ' / ' + totalReq + '</b> bağlı</div>';
-    html += '<div style="height:6px;background:var(--bg-tertiary);border-radius:3px;margin-bottom:12px;overflow:hidden;border:1px solid var(--border-color);">';
-    html += '<div style="height:100%;width:' + pct + '%;background:' + (pct === 100 ? '#22c55e' : pct > 0 ? '#f59e0b' : 'var(--bg-tertiary)') + ';border-radius:3px;transition:width 0.3s;"></div>';
-    html += '</div>';
-  }
+  html += '<div class="sw-section">';
+  html += '<div class="sw-section-title">Diyagram Paketleri</div>';
+  html += '<div class="sw-tab-bar">';
+  solverTabs.forEach(function(st) {
+    var isActive = swActiveTab === st.id;
+    html += '<button class="sw-tab' + (isActive ? ' active' : '') + '" onclick="swSwitchTab(\'' + st.id + '\')">';
+    html += st.icon + ' ' + st.name;
+    html += '<span class="sw-tab-count">' + (isInstalled ? st.installedCount : st.pkgCount) + '</span>';
+    html += '</button>';
+  });
+  html += '</div>';
 
-  // ── Diyagram Paketleri ──
-  html += '<div style="font-size:0.72rem;font-weight:700;color:var(--accent-warning,#f59e0b);margin-bottom:8px;">📦 Diyagram Paketleri</div>';
+  // ── Aktif Tab'ın Paketleri ──
+  var tabPkgs = SENSOR_PACKAGES.filter(function(p) { return p.solverTab === swActiveTab; });
 
-  SENSOR_PACKAGES.forEach(function(pkg, pkgIdx) {
+  tabPkgs.forEach(function(pkg) {
     var pkgInstalled = isInstalled && installedPkgs.indexOf(pkg.id) > -1;
     var pkgMatched = 0, pkgTotal = pkg.sensors.length;
     var sensorStatuses = [];
 
     if(isInstalled) {
-      // Kuruluysa: paket ID'si kurulu paketler listesinde mi?
       pkg.sensors.forEach(function(sReq) {
-        var matched = pkgInstalled;
-        sensorStatuses.push(matched);
-        if(matched) pkgMatched++;
+        sensorStatuses.push(pkgInstalled);
+        if(pkgInstalled) pkgMatched++;
       });
     } else {
       pkg.sensors.forEach(function(sReq) {
@@ -480,7 +651,6 @@ function getSensorWizardPropertiesHTML(node) {
       });
     }
 
-    // Gerekli bileşenler var mı?
     var reqsMet = true;
     for(var r=0; r<pkg.requires.length; r++) {
       var rt = pkg.requires[r];
@@ -489,85 +659,78 @@ function getSensorWizardPropertiesHTML(node) {
       }
     }
 
-    // Durum ikonu
-    var statusIcon = '⬜', statusColor = '#94a3b8';
-    if(!reqsMet) { statusIcon = '⚠️'; statusColor = '#ef4444'; }
-    else if(pkgInstalled) { statusIcon = '✅'; statusColor = '#22c55e'; }
-    else if(pkgTotal === 0 && pkg.dependsOn) { statusIcon = '🔗'; statusColor = '#6b7280'; }
-    else if(pkgMatched === pkgTotal && pkgTotal > 0) { statusIcon = '✅'; statusColor = '#22c55e'; }
-    else if(pkgMatched > 0) { statusIcon = '🔶'; statusColor = '#f59e0b'; }
-
-    // Öncelik bordür rengi
-    var prioColor = pkg.priority === 'essential' ? '#22c55e' : pkg.priority === 'recommended' ? '#3b82f6' : '#a855f7';
+    // Badge durumu
+    var badgeClass = 'miss', badgeText = '--';
+    if(!reqsMet) { badgeClass = 'miss'; badgeText = 'eksik'; }
+    else if(pkgInstalled) { badgeClass = 'ok'; badgeText = 'kurulu'; }
+    else if(pkgTotal > 0 && pkgMatched === pkgTotal) { badgeClass = 'ok'; badgeText = pkgMatched + '/' + pkgTotal; }
+    else if(pkgMatched > 0) { badgeClass = 'partial'; badgeText = pkgMatched + '/' + pkgTotal; }
+    else if(pkgTotal > 0) { badgeText = '0/' + pkgTotal; }
+    else if(pkg.dependsOn) { badgeText = 'bağımlı'; }
 
     var expanded = swExpandedPkg[pkg.id];
 
-    html += '<div style="border-left:3px solid ' + prioColor + ';margin-bottom:6px;border-radius:4px;background:var(--bg-secondary);border:1px solid var(--border-color);overflow:hidden;">';
+    html += '<div class="sw-pkg-card">';
 
     // Başlık
-    html += '<div onclick="swTogglePkg(\'' + pkg.id + '\')" style="display:flex;align-items:center;gap:6px;padding:7px 8px;cursor:pointer;font-size:0.65rem;user-select:none;" onmouseover="this.style.background=\'var(--bg-tertiary)\'" onmouseout="this.style.background=\'transparent\'">';
-    html += '<span style="font-size:0.6rem;opacity:0.5;">' + (expanded ? '▼' : '▶') + '</span>';
-    html += '<span>' + pkg.icon + '</span>';
-    html += '<span style="flex:1;font-weight:600;color:var(--text-primary);">' + pkg.name + '</span>';
-    if(pkgInstalled) {
-      html += '<span style="font-size:0.58rem;color:#22c55e;font-weight:600;">✅ kurulu</span>';
-    } else if(pkgTotal > 0) {
-      html += '<span style="font-size:0.58rem;color:' + statusColor + ';font-weight:600;">' + pkgMatched + '/' + pkgTotal + ' ' + statusIcon + '</span>';
-    } else {
-      html += '<span style="font-size:0.58rem;color:' + statusColor + ';">' + statusIcon + ' bağımlı</span>';
-    }
+    html += '<div class="sw-pkg-header" onclick="swTogglePkg(\'' + pkg.id + '\')">';
+    html += '<span class="sw-pkg-arrow">' + (expanded ? '▼' : '▶') + '</span>';
+    html += '<span class="sw-pkg-name">' + pkg.name + '</span>';
+    html += '<span class="sw-pkg-badge ' + badgeClass + '">' + badgeText + '</span>';
     html += '</div>';
 
     // Genişletilmiş içerik
     if(expanded) {
-      html += '<div style="padding:0 8px 8px;border-top:1px solid var(--border-color);">';
-      html += '<div style="font-size:0.58rem;color:var(--text-muted);margin:6px 0 4px;line-height:1.4;">' + pkg.description + '</div>';
+      html += '<div class="sw-pkg-body">';
+      html += '<div class="sw-pkg-desc">' + pkg.description + '</div>';
 
       // Sensörler
       if(pkg.sensors.length > 0) {
-        html += '<div style="font-size:0.6rem;font-weight:600;color:var(--text-secondary);margin:8px 0 4px;">Sensörler:</div>';
+        html += '<div class="sw-pkg-sub">Sensörler</div>';
         pkg.sensors.forEach(function(sReq, sIdx) {
           var matched = sensorStatuses[sIdx];
-          html += '<div style="display:flex;align-items:center;gap:4px;padding:3px 0;font-size:0.58rem;">';
-          html += '<span style="color:' + (matched ? '#22c55e' : (reqsMet ? '#94a3b8' : '#ef4444')) + ';">' + (matched ? '✅' : (reqsMet ? '⬜' : '⚠️')) + '</span>';
-          html += '<span style="color:' + (matched ? 'var(--text-primary)' : 'var(--text-secondary)') + ';">' + sReq.label + '</span>';
+          html += '<div class="sw-sensor-row">';
+          html += '<span class="sw-dot ' + (matched ? 'green' : (reqsMet ? 'gray' : 'red')) + '"></span>';
+          html += '<span style="' + (matched ? '' : 'opacity:0.6;') + '">' + sReq.label + '</span>';
           html += '</div>';
         });
       } else if(pkg.dependsOn) {
-        html += '<div style="font-size:0.58rem;color:var(--text-muted);margin:6px 0;font-style:italic;">Bu paket için ek sensör gerekmez — diğer paketlerin sensörlerini kullanır.</div>';
+        html += '<div class="sw-pkg-desc" style="font-style:italic;">Ek sensör gerektirmez — diğer paketlerin verilerini kullanır.</div>';
       }
 
       // Diyagramlar
-      html += '<div style="font-size:0.6rem;font-weight:600;color:var(--text-secondary);margin:10px 0 4px;">Oluşacak Diyagramlar:</div>';
+      html += '<div class="sw-pkg-sub">Diyagramlar</div>';
       pkg.diagrams.forEach(function(d, dIdx) {
-        var diagramReady = pkgInstalled || ((pkgTotal === 0 && pkg.dependsOn) ? false : (pkgMatched === pkgTotal && pkgTotal > 0));
-        html += '<div style="display:flex;align-items:center;gap:4px;padding:2px 0;font-size:0.58rem;">';
-        html += '<span style="color:' + (diagramReady ? '#22c55e' : '#6b7280') + ';">' + (diagramReady ? '✅' : '🔒') + '</span>';
-        html += '<span style="flex:1;color:' + (diagramReady ? 'var(--text-primary)' : 'var(--text-muted)') + ';">' + d.name + '</span>';
-        html += '<button onclick="event.stopPropagation();swShowDiagramInfo(\'' + pkg.id + '\',' + dIdx + ')" style="padding:1px 4px;font-size:0.52rem;background:transparent;color:var(--text-muted);border:1px solid var(--border-color);border-radius:3px;cursor:pointer;" title="Diyagram bilgisi">ℹ️</button>';
+        var ready = pkgInstalled || ((pkgTotal === 0 && pkg.dependsOn) ? false : (pkgMatched === pkgTotal && pkgTotal > 0));
+        html += '<div class="sw-diag-row">';
+        html += '<span class="sw-dot ' + (ready ? 'green' : 'gray') + '"></span>';
+        html += '<span style="flex:1;' + (ready ? '' : 'opacity:0.6;') + '">' + d.name + '</span>';
+        html += '<button class="sw-info-btn" onclick="event.stopPropagation();swShowDiagramInfo(\'' + pkg.id + '\',' + dIdx + ')" title="Diyagram bilgisi">i</button>';
         html += '</div>';
       });
 
-      html += '</div>'; // expanded content
+      html += '</div>';
     }
 
-    html += '</div>'; // package card
+    html += '</div>';
   });
+
+  html += '</div>'; // sw-section
 
   // ── Alt bilgi ──
   if(isInstalled) {
-    html += '<div style="font-size:0.55rem;color:var(--text-muted);margin-top:8px;padding:6px 8px;background:var(--bg-tertiary);border-radius:4px;line-height:1.5;">';
-    html += '💡 Simülasyon tamamlandıktan sonra Sonuçlar sekmesinde <b>Sihirbaz Diyagramları</b> ağacından diyagramları sürükle-bırak ile oluşturabilirsiniz.';
+    html += '<div class="sw-footer">';
+    html += 'Simülasyon tamamlandıktan sonra <b>Sonuçlar</b> sekmesinde Sihirbaz Diyagramları ağacından diyagramları sürükle-bırak ile panellere ekleyebilirsiniz.';
     html += '</div>';
   } else {
-    html += '<div style="font-size:0.55rem;color:var(--text-muted);margin-top:8px;padding:6px 8px;background:var(--bg-tertiary);border-radius:4px;line-height:1.5;">';
-    html += '💡 <b>Sensörleri Kur</b> butonuna tıklayarak tüm uygun sensörleri otomatik olarak kurabilirsiniz. Sensörler topoloji üzerinde görünmez — sihirbaz bileşeni üzerinden yönetilir.';
+    html += '<div class="sw-footer">';
+    html += '<b>Sensörleri Kur</b> ile tüm uygun sensörleri otomatik kurabilirsiniz. Sensörler topoloji üzerinde görünmez — sihirbaz bileşeni içinde yönetilir.';
     html += '</div>';
   }
 
-  // Yenile butonu
-  html += '<div style="text-align:center;margin-top:8px;">';
-  html += '<button onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)showNodeProperties(w);" style="padding:4px 12px;font-size:0.6rem;background:var(--bg-tertiary);color:var(--text-secondary);border:1px solid var(--border-color);border-radius:4px;cursor:pointer;">🔄 Durumu Yenile</button>';
+  // Yenile
+  html += '<div style="text-align:center;margin-top:6px;">';
+  html += '<button class="sw-btn sw-btn-outline" style="font-size:0.56rem;padding:3px 10px;" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)showNodeProperties(w);">Durumu Yenile</button>';
   html += '</div>';
 
   html += '</div>';
