@@ -374,56 +374,70 @@ function veUpdateResultsTree() {
   
   html += '</div></div>';
 
-  // ── Sihirbaz Diyagramları ağacı ──
-  // Sensör sihirbazı kuruluysa ve simülasyon varsa göster
+  // ── Sihirbaz Diyagramları ağacı (aktif solver tab'a göre filtrelenir) ──
   var wizNode = nodes.find(function(n) { return n.type === 'sensor-wizard'; });
   var wizInstalled = wizNode && wizNode.data && wizNode.data.sensorsInstalled;
   var wizPkgs = wizInstalled ? (wizNode.data.installedPackages || []) : [];
   if(wizInstalled && wizPkgs.length > 0 && typeof SENSOR_PACKAGES !== 'undefined') {
     var hasSimForWiz = !!window.veSimResults;
-    html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
-    html += '<div class="ve-tree-item">';
-    html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
-    html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
-    html += '<span class="icon">🧙</span>';
-    html += '<span style="font-weight:600; color:var(--accent-success);">Sihirbaz Diyagramları</span>';
-    html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + wizPkgs.length + ' paket</span>';
-    html += '</div>';
-    html += '<div class="ve-tree-children open">';
+    var _activeTab = typeof veActiveSolverTabId !== 'undefined' ? veActiveSolverTabId : 'performance';
 
-    wizPkgs.forEach(function(pkgId) {
+    // Aktif solver tab'a ait paketleri filtrele
+    var filteredPkgs = wizPkgs.filter(function(pkgId) {
       var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
-      if(!pkg) return;
-
-      html += '<div class="ve-tree-item">';
-      html += '<div class="ve-tree-row" style="padding-left:16px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
-      html += '<span class="icon">' + pkg.icon + '</span>';
-      html += '<span style="font-weight:500;">' + pkg.name + '</span>';
-      html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + pkg.diagrams.length + '</span>';
-      html += '</div>';
-      html += '<div class="ve-tree-children">';
-
-      pkg.diagrams.forEach(function(diag, dIdx) {
-        var diagSigDef = (typeof SW_DIAGRAM_SIGNALS !== 'undefined') ? SW_DIAGRAM_SIGNALS[diag.id] : null;
-        var canDrag = hasSimForWiz && !!diagSigDef;
-        var diagStyle = canDrag
-          ? 'cursor:grab; color:var(--text-primary);'
-          : 'cursor:default; color:var(--text-muted); opacity:0.6;';
-        var dragAttr = canDrag
-          ? ' onmousedown="veStartWizardDiagDrag(event,\'' + pkgId + '\',' + dIdx + ')"'
-          : '';
-
-        html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
-        html += '<span>' + (canDrag ? '📊' : '🔒') + '</span> ' + diag.name;
-        if(diag.note) html += ' <span style="font-size:0.5rem; color:var(--accent-warning);">⚠</span>';
-        html += '</div>';
-      });
-
-      html += '</div></div>';
+      return pkg && pkg.solverTab === _activeTab;
     });
 
-    html += '</div></div></div>';
+    if(filteredPkgs.length > 0) {
+      var totalDiags = 0;
+      filteredPkgs.forEach(function(pkgId) {
+        var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
+        if(pkg) totalDiags += pkg.diagrams.length;
+      });
+
+      html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      html += '<div class="ve-tree-item">';
+      html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
+      html += '<span class="icon">🧙</span>';
+      html += '<span style="font-weight:600; color:var(--accent-success);">Sihirbaz Diyagramları</span>';
+      html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + totalDiags + ' diyagram</span>';
+      html += '</div>';
+      html += '<div class="ve-tree-children open">';
+
+      filteredPkgs.forEach(function(pkgId) {
+        var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
+        if(!pkg) return;
+
+        html += '<div class="ve-tree-item">';
+        html += '<div class="ve-tree-row" style="padding-left:16px;">';
+        html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
+        html += '<span style="font-weight:500;">' + pkg.name + '</span>';
+        html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + pkg.diagrams.length + '</span>';
+        html += '</div>';
+        html += '<div class="ve-tree-children">';
+
+        pkg.diagrams.forEach(function(diag, dIdx) {
+          var diagSigDef = (typeof SW_DIAGRAM_SIGNALS !== 'undefined') ? SW_DIAGRAM_SIGNALS[diag.id] : null;
+          var canDrag = hasSimForWiz && !!diagSigDef;
+          var diagStyle = canDrag
+            ? 'cursor:grab; color:var(--text-primary);'
+            : 'cursor:default; color:var(--text-muted); opacity:0.6;';
+          var dragAttr = canDrag
+            ? ' onmousedown="veStartWizardDiagDrag(event,\'' + pkgId + '\',' + dIdx + ')"'
+            : '';
+
+          html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
+          html += '<span>' + (canDrag ? '📊' : '🔒') + '</span> ' + diag.name;
+          if(diag.note) html += ' <span style="font-size:0.5rem; color:var(--accent-warning);">⚠</span>';
+          html += '</div>';
+        });
+
+        html += '</div></div>';
+      });
+
+      html += '</div></div></div>';
+    }
   }
 
   // Detaylı Rapor — aktif solver tab'a göre filtrelenmiş
@@ -3608,6 +3622,15 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
     };
   }
 
+  // dataSource etiketi (segmentDrive, obstacleDynamic vb.)
+  var ds = sigDef.dataSource || null;
+  if(ds) slot._dataSource = ds;
+
+  // X ekseni için de dataSource sakla
+  if(ds && slot.xAxis && slot.xAxis.id !== 'time') {
+    slot.xAxis._dataSource = ds;
+  }
+
   // Y eksen sinyallerini ekle
   sigDef.y.forEach(function(ySig) {
     var entry = {
@@ -3616,6 +3639,7 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
       name: ySig.name || ySig.signal,
       unit: ySig.unit || ''
     };
+    if(ds) entry._dataSource = ds;
     // Çakışma kontrolü
     if(!slot.sensors.some(function(s) { return s.id === entry.id && s.signal === entry.signal; })) {
       slot.sensors.push(entry);
