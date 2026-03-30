@@ -19220,7 +19220,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         fanLossGov: accTotalFanLoss, otherLossGov: accTotalOtherLoss, accFanMode: accFanMode,
         gbName: _gbP ? _gbP.name : (_gbd.gbName||'—'), gbFamily: _gbP ? (_gbP.family||'—') : '—', gbEff: parseFloat(_gbd.efficiency)||97, tcName: _tcN,
         shiftProfile: shiftProfile, shiftRefRPM: shiftRefRPM, lockupOffset: lockupOffset,
-        gearData: forwardGears.map(function(g){return{name:g.name,ratio:g.ratio};}),
+        gearData: forwardGears.map(function(g){return{name:g.name,ratio:g.ratio,eff:g.eff};}),
+        allGearData: ftGearData.map(function(g){return{name:g.name,ratio:g.ratio,eff:g.eff};}),
         propshafts: propshaftNodes.map(function(ps,i){var psd=ps.data||{};return{name:ps.customName||('Kardan Mili'+(propshaftNodes.length>1?' '+(i+1):'')),eff:parseFloat(psd.psEff)||98.60};}),
         diffName: diffNode?(diffNode.customName||'Aks'):'Aks', diffRatio: i_axle, diffEff: (eta_axle*100),
         transferName: _trN, transferGears: ftTrGears.map(function(tr){return{kademe:tr.kademe||tr.mode||'',ratio:parseFloat(tr.ratio||tr.oran)||1.0,eff:parseFloat(tr.eff||tr.verim)||97};}),
@@ -34683,8 +34684,66 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
     r += '  ' + ln('-', _cmTW) + '\n\n';
     r += '  Not: T_turbin = T_pompa x TR.  T_pompa = (N_motor / K_pompa)^2.  Dusurme = ' + num(_cmPumpDrop, 1) + ' N.m.\n';
-    r += '       T_motor(N) - Dusurme = T_pompa(N)  denklemi Newton-Raphson ile cozulmustur.\n';
+    r += '       T_motor(N) - Dusurme = T_pompa(N)  denklemi bisection ile cozulmustur.\n';
     r += '\n\n';
+
+    // ══════════════════════════════════════════════════════════════════════
+    // SANZIMAN CIKIS PERFORMANS OZETI — KONVERTOR MODU (Per-Gear)
+    // ══════════════════════════════════════════════════════════════════════
+    var _pgGears = R.allGearData || R.gearData || [];
+    if (_pgGears.length > 0 && _cmTable.length > 0) {
+
+      // Per-gear varsayilan verim tablosu (lockup analizi ile tutarli)
+      var _pgDefaultEff = { 'F1': 97.5, 'F2': 98.5, 'F3': 98.7, 'F4': 99.3, 'F5': 98.0, 'F6': 97.1, 'R1': 97.0 };
+      // Kolon genislikleri
+      var _pg = [9, 9, 12, 12, 10, 12, 10, 12, 16];
+      var _pgTW = 0; for (var _pwi = 0; _pwi < _pg.length; _pwi++) _pgTW += _pg[_pwi];
+
+      for (var _gi = 0; _gi < _pgGears.length; _gi++) {
+        var _gear = _pgGears[_gi];
+        var _gName = _gear.name || ('F' + (_gi + 1));
+        var _gRatio = parseFloat(_gear.ratio) || 1.0;
+        var _gEff = _gear.eff ? parseFloat(_gear.eff) / 100 : (_pgDefaultEff[_gName] ? _pgDefaultEff[_gName] / 100 : (R.gbEff || 97) / 100);
+
+        r += '  ' + ln('-', _pgTW) + '\n';
+        r += '  Vites ' + ascii(_gName) + ' (Oran = ' + num(_gRatio, 3) + ') - Konvertor Modu\n';
+        r += '  ' + ln('-', _pgTW) + '\n\n';
+
+        // Baslik satir 1
+        r += '  ' + pad('Hiz', _pg[0], 'right') + pad('Motor', _pg[1], 'right');
+        r += pad('Net Motor', _pg[2], 'right') + pad('Net Motor', _pg[3], 'right');
+        r += pad('Sanziman', _pg[4], 'right') + pad('Sanziman', _pg[5], 'right');
+        r += pad('Sanziman', _pg[6], 'right') + pad('Sanziman', _pg[7], 'right');
+        r += pad('Esleme', _pg[8], 'right') + '\n';
+        // Baslik satir 2
+        r += '  ' + pad('Orani', _pg[0], 'right') + pad('Devri', _pg[1], 'right');
+        r += pad('Torku (N-m)', _pg[2], 'right') + pad('Gucu (kW)', _pg[3], 'right');
+        r += pad('Cikis (rpm)', _pg[4], 'right') + pad('Cikis (N-m)', _pg[5], 'right');
+        r += pad('Cikis (kW)', _pg[6], 'right') + pad('Isi (kW)', _pg[7], 'right');
+        r += pad('Noktasi', _pg[8], 'right') + '\n';
+        r += '  ' + ln('-', _pgTW) + '\n';
+
+        for (var _pri = 0; _pri < _cmTable.length; _pri++) {
+          var _pr = _cmTable[_pri];
+          var _N_out = (_pr.SR * _pr.N_engine) / _gRatio;
+          var _T_out = _pr.T_turbine * _gRatio * _gEff;
+          var _P_out = _T_out * (2 * Math.PI * _N_out / 60) / 1000;
+          var _Q_gb = _pr.P_engine - _P_out;
+
+          r += '  ' + pad(num(_pr.SR, 3), _pg[0], 'right') + pad(numI(_pr.N_engine), _pg[1], 'right');
+          r += pad(num(_pr.T_engine, 1), _pg[2], 'right') + pad(num(_pr.P_engine, 1), _pg[3], 'right');
+          r += pad(numI(Math.round(_N_out)), _pg[4], 'right') + pad(num(_T_out, 1), _pg[5], 'right');
+          r += pad(num(_P_out, 1), _pg[6], 'right') + pad(num(_Q_gb, 2), _pg[7], 'right');
+          r += pad(_pr.matchPoint || '', _pg[8], 'right') + '\n';
+        }
+
+        r += '  ' + ln('-', _pgTW) + '\n';
+        r += '  Disli Verimi: ' + num(_gEff * 100, 1) + '%\n';
+        r += '\n';
+      }
+
+      r += '\n';
+    }
   }
 
   // ════════════════════════════════════════════════════════════════════════
