@@ -433,6 +433,7 @@ function createNode(type, x, y, width, height) {
   nodeEl.id = nodeId;
   nodeEl.style.left = x + 'px';
   nodeEl.style.top = y + 'px';
+  nodeEl.style.width = node.width + 'px';
   nodeEl.setAttribute('data-type', type);
   
   var html = '<div class="ve-node-box" style="width:' + node.width + 'px; height:' + node.height + 'px;">';
