@@ -507,6 +507,14 @@ function veUpdateResultsTree() {
       html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Engel Atlama Raporu (TXT)</span></div>';
       html += '</div>';
     }
+
+    // === TOPOLOJİ RAPORU (tüm tab'larda) ===
+    if(typeof nodes !== 'undefined' && nodes.length > 0) {
+      html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
+      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
+      html += '</div>';
+    }
   }
   
   tree.innerHTML = html;
@@ -2295,6 +2303,51 @@ function veRenderObstacleCrossingTXTReport() {
   window._veTxtPreviewContent = txtContent;
   window._veTxtPreviewFilename = downloadName;
   window._veTxtPreviewReportType = 'obs';
+
+  overlay.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+
+function veRenderTopologyTXTReport() {
+  var overlay = document.getElementById('ve-report-overlay');
+  if(!overlay) return;
+
+  if(typeof nodes === 'undefined' || nodes.length === 0) {
+    showToast('Topolojide bileşen yok', 'warning');
+    return;
+  }
+
+  if(typeof veFlushOpenPanelData === 'function') veFlushOpenPanelData();
+
+  var txtContent = veGenerateTopologyTxtReport();
+  var now = new Date();
+  var dateStr = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+  var downloadName = 'BMC_Topoloji_Rapor_' + dateStr + '.txt';
+
+  if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
+
+  var html = '';
+  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
+  html += '<div style="display:flex; align-items:center; gap:8px;">';
+  html += '<span style="font-size:1rem;">📄</span>';
+  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Topoloji Detay Raporu (TXT)</span>';
+  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
+  html += '</div>';
+  html += '<div style="display:flex; align-items:center; gap:6px;">';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '</div>';
+  html += '</div>';
+  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:4px; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  html += '</pre>';
+  html += '</div></div>';
+
+  window._veTxtPreviewContent = txtContent;
+  window._veTxtPreviewFilename = downloadName;
+  window._veTxtPreviewReportType = 'topo';
 
   overlay.innerHTML = html;
   overlay.style.display = 'flex';

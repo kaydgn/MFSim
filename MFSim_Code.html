@@ -3227,6 +3227,14 @@ function veUpdateResultsTree() {
       html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Engel Atlama Raporu (TXT)</span></div>';
       html += '</div>';
     }
+
+    // === TOPOLOJİ RAPORU (tüm tab'larda) ===
+    if(typeof nodes !== 'undefined' && nodes.length > 0) {
+      html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
+      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
+      html += '</div>';
+    }
   }
   
   tree.innerHTML = html;
@@ -5015,6 +5023,51 @@ function veRenderObstacleCrossingTXTReport() {
   window._veTxtPreviewContent = txtContent;
   window._veTxtPreviewFilename = downloadName;
   window._veTxtPreviewReportType = 'obs';
+
+  overlay.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+
+function veRenderTopologyTXTReport() {
+  var overlay = document.getElementById('ve-report-overlay');
+  if(!overlay) return;
+
+  if(typeof nodes === 'undefined' || nodes.length === 0) {
+    showToast('Topolojide bileşen yok', 'warning');
+    return;
+  }
+
+  if(typeof veFlushOpenPanelData === 'function') veFlushOpenPanelData();
+
+  var txtContent = veGenerateTopologyTxtReport();
+  var now = new Date();
+  var dateStr = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+  var downloadName = 'BMC_Topoloji_Rapor_' + dateStr + '.txt';
+
+  if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
+
+  var html = '';
+  html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
+  html += '<div style="display:flex; align-items:center; gap:8px;">';
+  html += '<span style="font-size:1rem;">📄</span>';
+  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Topoloji Detay Raporu (TXT)</span>';
+  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
+  html += '</div>';
+  html += '<div style="display:flex; align-items:center; gap:6px;">';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '</div>';
+  html += '</div>';
+  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:4px; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  html += '</pre>';
+  html += '</div></div>';
+
+  window._veTxtPreviewContent = txtContent;
+  window._veTxtPreviewFilename = downloadName;
+  window._veTxtPreviewReportType = 'topo';
 
   overlay.innerHTML = html;
   overlay.style.display = 'flex';
@@ -34122,6 +34175,574 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   r += pad('dogrulama yapilmasi onerilir.', W, 'center') + '\n';
   r += ln('-', W) + '\n\n';
 
+  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
+
+  return r;
+}
+
+function veGenerateTopologyTxtReport(optHazirlayan) {
+  var W = 80;
+
+  function ln(ch, len) { var s = ''; for (var i = 0; i < len; i++) s += ch; return s; }
+  function pad(str, len, align) {
+    str = String(str);
+    if (align === 'right') { while (str.length < len) str = ' ' + str; return str; }
+    if (align === 'center') {
+      var l = Math.floor((len - str.length) / 2);
+      var r2 = len - str.length - l;
+      var sp = ''; for (var i = 0; i < l; i++) sp += ' ';
+      var sp2 = ''; for (var i = 0; i < r2; i++) sp2 += ' ';
+      return sp + str + sp2;
+    }
+    while (str.length < len) str += ' ';
+    return str;
+  }
+  function num(v, d) { return isFinite(v) ? v.toFixed(d) : '-'; }
+  function numI(v) { return isFinite(v) ? Math.round(v).toString() : '-'; }
+  function pRow(label, value, indent) {
+    indent = indent || '  ';
+    var labelW = 32;
+    return indent + pad(label, labelW) + ': ' + value + '\n';
+  }
+  function ascii(s) {
+    return String(s || '')
+      .replace(/ğ/g,'g').replace(/Ğ/g,'G')
+      .replace(/ü/g,'u').replace(/Ü/g,'U')
+      .replace(/ş/g,'s').replace(/Ş/g,'S')
+      .replace(/ı/g,'i').replace(/İ/g,'I')
+      .replace(/ö/g,'o').replace(/Ö/g,'O')
+      .replace(/ç/g,'c').replace(/Ç/g,'C');
+  }
+
+  var hazirlayan = optHazirlayan || 'Belirtilmemis';
+  var now = new Date();
+  var tarih = String(now.getDate()).padStart(2,'0') + '.' + String(now.getMonth()+1).padStart(2,'0') + '.' + now.getFullYear();
+  var saat = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0') + ':' + String(now.getSeconds()).padStart(2,'0');
+  var raporNo = 'BMC-TOPO-' + now.getFullYear() + '-' + String(Math.floor(Math.random() * 9000) + 1000);
+
+  // Topoloji bilesenlerini topla
+  var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
+  var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
+  var tcNode = nodes.find(function(n) { return n.type === 'torque-converter'; });
+  var trNode = nodes.find(function(n) { return n.type === 'transfer'; });
+  var diffNode = nodes.find(function(n) { return n.type === 'differential' && n.isMasterDiff; }) || nodes.find(function(n) { return n.type === 'differential'; });
+  var wheelNode = nodes.find(function(n) { return n.type === 'wheel' && n.isMasterWheel; }) || nodes.find(function(n) { return n.type === 'wheel'; });
+  var vehNode = nodes.find(function(n) { return n.type === 'vehicle'; });
+  var roadNode = nodes.find(function(n) { return n.type === 'road'; });
+  var scenNode = nodes.find(function(n) { return n.type === 'scenario'; });
+  var solverNode = nodes.find(function(n) { return n.type === 'solver'; });
+  var propNode = nodes.find(function(n) { return n.type === 'propshaft'; });
+  var obsNode = nodes.find(function(n) { return n.type === 'obstacle-crossing'; });
+  var brakeNode = nodes.find(function(n) { return n.type === 'retarder' || n.type === 'brake'; });
+
+  var ed = engineNode ? (engineNode.data || {}) : {};
+  var gd = gbNode ? (gbNode.data || {}) : {};
+  var td = tcNode ? (tcNode.data || {}) : {};
+  var trd = trNode ? (trNode.data || {}) : {};
+  var dd = diffNode ? (diffNode.data || {}) : {};
+  var wd = wheelNode ? (wheelNode.data || {}) : {};
+  var vd = vehNode ? (vehNode.data || {}) : {};
+  var rd = roadNode ? (roadNode.data || {}) : {};
+  var scd = scenNode ? (scenNode.data || {}) : {};
+  var sd = solverNode ? (solverNode.data || {}) : {};
+  var psd = propNode ? (propNode.data || {}) : {};
+
+  var modNames = {'engine-brake':'Motor Freni Performans','full-throttle':'Tam Gaz Hizlanma','performance':'Arac Performans','fuel':'Yakit Tuketimi'};
+  var modLabel = modNames[veActiveModule] || veActiveModule || '-';
+
+  var r = '';
+
+  // ═══ BMC BASLIK ═══
+  r += '\n' + ln('=', W) + '\n\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n';
+  r += pad(' ##   ##  ###  ###   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ## ## ##   ##      ', W, 'center') + '\n';
+  r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
+  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
+  r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
+  r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
+  r += ln('=', W) + '\n\n';
+  r += pad('+' + ln('-', 40) + '+', W, 'center') + '\n';
+  r += pad('|       TOPOLOJI DETAY RAPORU       |', W, 'center') + '\n';
+  r += pad('+' + ln('-', 40) + '+', W, 'center') + '\n\n';
+
+  // ═══ RAPOR BILGILERI ═══
+  r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
+  r += pRow('Rapor Tarihi', tarih);
+  r += pRow('Rapor Saati', saat);
+  r += pRow('Rapor No', raporNo);
+  r += pRow('Hazirlayan', ascii(hazirlayan));
+  r += pRow('Proje Adi', ascii(veProjectName || 'Belirtilmemis'));
+  r += pRow('Aktif Modul', modLabel);
+  r += pRow('Bilesen Sayisi', String(nodes.length));
+  r += pRow('Baglanti Sayisi', String(connections.length));
+  r += ln('-', W) + '\n\n';
+
+  // ═══ TOPOLOJI BILESEN LISTESI ═══
+  r += ln('=', W) + '\n';
+  r += pad('TOPOLOJI BILESEN LISTESI', W, 'center') + '\n';
+  r += ln('=', W) + '\n\n';
+  var tblW = 68;
+  r += '  ' + pad('No', 4) + pad('Tip', 22) + pad('Ad', 28) + pad('Konum (x,y)', 14, 'right') + '\n';
+  r += '  ' + ln('-', tblW) + '\n';
+  nodes.forEach(function(n, i) {
+    var tipAd = (componentDefs[n.type] ? componentDefs[n.type].name : n.type);
+    var ad = n.customName || tipAd;
+    r += '  ' + pad(String(i + 1), 4) + pad(ascii(tipAd), 22) + pad(ascii(ad), 28) + pad(numI(n.x) + ',' + numI(n.y), 14, 'right') + '\n';
+  });
+  r += '  ' + ln('-', tblW) + '\n\n\n';
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 1. MOTOR
+  // ════════════════════════════════════════════════════════════════════════
+  var secNo = 1;
+  if (engineNode) {
+    var ms = ed.motorSpecs || {};
+    var engName = engineNode.customName || ascii(ed.ftMotorPreset || ed.mfMotorPreset || '-');
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. MOTOR', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  MOTOR OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    r += pRow('Motor Tanimi', ascii(engName));
+    if (ms.displacement) r += pRow('Silindir Hacmi', num(ms.displacement, 2) + ' L');
+    if (ms.governedSpeed) r += pRow('Governed Devir', numI(ms.governedSpeed) + ' rpm');
+    if (ms.noLoadGoverned) r += pRow('No-Load Governed', numI(ms.noLoadGoverned) + ' rpm');
+    if (ms.idleRpm) r += pRow('Rolanti Devri', numI(ms.idleRpm) + ' rpm');
+    if (ms.inertia) r += pRow('Motor Ataleti', num(ms.inertia, 4) + ' kg.m2');
+    if (ed.verim !== undefined) r += pRow('Motor Freni Verimi', num(ed.verim, 0) + '%');
+    r += '\n';
+
+    // Tork/Guc tablosu
+    var tData = ed.torqueData || [];
+    if (tData.length > 0) {
+      // Pik değerleri hesapla
+      var pkT = 0, pkTr = 0, pkP = 0, pkPr = 0;
+      tData.forEach(function(p) {
+        var rpm = p.rpm || p.x || 0;
+        var torque = p.torque || p.y || 0;
+        var pw = p.power || (torque * rpm * Math.PI / 30000);
+        if (torque > pkT) { pkT = torque; pkTr = rpm; }
+        if (pw > pkP) { pkP = pw; pkPr = rpm; }
+      });
+      r += pRow('Pik Tork', num(pkT, 1) + ' N.m @ ' + numI(pkTr) + ' rpm');
+      r += pRow('Pik Guc', num(pkP, 1) + ' kW (' + numI(pkP * 1.341) + ' HP) @ ' + numI(pkPr) + ' rpm');
+      r += '\n';
+
+      r += '  MOTOR TORK / GUC VERISI\n';
+      r += '  ' + ln('-', 40) + '\n';
+      r += '  ' + pad('Devir', 9, 'right') + pad('Tork', 14, 'right') + pad('Guc', 14, 'right') + '\n';
+      r += '  ' + pad('[rpm]', 9, 'right') + pad('[N.m]', 14, 'right') + pad('[kW]', 14, 'right') + '\n';
+      r += '  ' + ln('-', 40) + '\n';
+      tData.forEach(function(p) {
+        var rpm = p.rpm || p.x || 0;
+        var torque = p.torque || p.y || 0;
+        var pw = p.power || (torque * rpm * Math.PI / 30000);
+        var tag = '';
+        if (Math.abs(rpm - pkTr) < 5) tag = '  Pik Tork';
+        else if (Math.abs(rpm - pkPr) < 5) tag = '  Pik Guc';
+        else if (ms.governedSpeed && Math.abs(rpm - ms.governedSpeed) < 5) tag = '  Governed';
+        r += '  ' + pad(numI(rpm), 9, 'right') + pad(num(torque, 1), 14, 'right') + pad(num(pw, 1), 14, 'right') + tag + '\n';
+      });
+      r += '  ' + ln('-', 40) + '\n';
+    }
+
+    // Aksesuar kayiplari
+    if (ed.accessories && ed.accessories.length > 0) {
+      r += '\n  AKSESUAR KAYIPLARI\n';
+      r += '  ' + ln('-', 52) + '\n';
+      r += '  ' + pad('Aksesuar', 26) + pad('Std (kW)', 13, 'right') + pad('Kullanici (kW)', 13, 'right') + '\n';
+      r += '  ' + ln('-', 52) + '\n';
+      var aStd = 0, aUsr = 0;
+      ed.accessories.forEach(function(a) {
+        r += '  ' + pad(ascii(a.name), 26) + pad(num(a.standardLoss, 1), 13, 'right') + pad(num(a.userLoss, 1), 13, 'right') + '\n';
+        aStd += (a.standardLoss || 0);
+        aUsr += (a.userLoss || 0);
+      });
+      r += '  ' + ln('-', 52) + '\n';
+      r += '  ' + pad('TOPLAM', 26) + pad(num(aStd, 1), 13, 'right') + pad(num(aUsr, 1), 13, 'right') + '\n';
+      r += '  ' + ln('-', 52) + '\n';
+    }
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 2. TORK KONVERTORU
+  // ════════════════════════════════════════════════════════════════════════
+  if (tcNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. TORK KONVERTORU', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  KONVERTOR OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    r += pRow('Konvertor Adi', ascii(td.tcName || td.tcPresetKey || '-'));
+    if (td.pumpTorqueDrop !== undefined) r += pRow('Pompa Tork Dusumu', num(td.pumpTorqueDrop, 1) + ' N.m');
+    if (td.tcRatio !== undefined) r += pRow('TC Orani (M.Freni)', num(td.tcRatio, 2));
+    r += pRow('Kilit Durumu', td.isLocked ? 'Kilitli' : 'Acik');
+    r += '\n';
+
+    var tcData = td.tcData || [];
+    if (tcData.length > 0) {
+      r += '  KONVERTOR KARAKTERISTIK VERISI\n';
+      r += '  ' + ln('-', 52) + '\n';
+      r += '  ' + pad('SR', 10, 'right') + pad('K_pump', 14, 'right') + pad('Tork Orani', 14, 'right') + pad('Verim', 14, 'right') + '\n';
+      r += '  ' + pad('[-]', 10, 'right') + pad('[rpm/sqrt(Nm)]', 14, 'right') + pad('(tau) [-]', 14, 'right') + pad('[%]', 14, 'right') + '\n';
+      r += '  ' + ln('-', 52) + '\n';
+      tcData.forEach(function(p) {
+        var eff = (p.sr && p.tau) ? (p.sr * p.tau * 100) : (p.efficiency || 0);
+        r += '  ' + pad(num(p.sr, 3), 10, 'right') + pad(num(p.kpump, 3), 14, 'right') + pad(num(p.tau, 3), 14, 'right') + pad(num(eff, 1), 14, 'right') + '\n';
+      });
+      r += '  ' + ln('-', 52) + '\n';
+    }
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 3. SANZIMAN
+  // ════════════════════════════════════════════════════════════════════════
+  if (gbNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. SANZIMAN', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  SANZIMAN OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    r += pRow('Sanziman Modeli', ascii(gd.gbName || gd.selectedGearbox || gd.ftGBPreset || '-'));
+    if (gd.efficiency !== undefined) r += pRow('Verim', num(gd.efficiency, 1) + '%');
+    if (gd.forwardGears) r += pRow('Ileri Vites Sayisi', String(gd.forwardGears));
+    if (gd.reverseGears) r += pRow('Geri Vites Sayisi', String(gd.reverseGears));
+    if (gd.shiftProfile) r += pRow('Shift Profili', ascii(gd.shiftProfile));
+    if (gd.shiftRefRPM) r += pRow('Shift Referans RPM', numI(gd.shiftRefRPM) + ' rpm');
+    r += '\n';
+
+    // FT gear data
+    var gears = gd.ftGearData || gd.gearData || [];
+    if (gears.length > 0) {
+      r += '  VITES ORANLARI\n';
+      r += '  ' + ln('-', 44) + '\n';
+      r += '  ' + pad('Vites', 8) + pad('Oran', 14, 'right') + pad('Verim (%)', 14, 'right') + '\n';
+      r += '  ' + ln('-', 44) + '\n';
+      gears.forEach(function(g, i) {
+        var ratio = g.ratio || g.y || parseFloat(g) || 0;
+        var eff = g.eff || g.efficiency || '-';
+        r += '  ' + pad(String(g.name || g.gear || (i + 1)), 8) + pad(num(ratio, 3), 14, 'right') + pad(eff !== '-' ? num(eff, 1) : '-', 14, 'right') + '\n';
+      });
+      r += '  ' + ln('-', 44) + '\n';
+    } else if (gd.gearRatios && gd.gearRatios.length > 0) {
+      r += '  VITES ORANLARI\n';
+      r += '  ' + ln('-', 30) + '\n';
+      r += '  ' + pad('Vites', 8) + pad('Oran', 14, 'right') + '\n';
+      r += '  ' + ln('-', 30) + '\n';
+      gd.gearRatios.forEach(function(ratio, i) {
+        r += '  ' + pad(String(i + 1), 8) + pad(num(parseFloat(ratio), 3), 14, 'right') + '\n';
+      });
+      r += '  ' + ln('-', 30) + '\n';
+    }
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 4. TRANSFER KUTUSU
+  // ════════════════════════════════════════════════════════════════════════
+  if (trNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. TRANSFER KUTUSU', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  TRANSFER OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    var trName = trNode.customName || trd.ftTrName || trd.ftTrPreset || '-';
+    r += pRow('Transfer Adi', ascii(trName));
+    if (trd.efficiency !== undefined) r += pRow('Verim', num(trd.efficiency, 1) + '%');
+    r += '\n';
+
+    var trGears = trd.ftTrGears || trd.transferData || [];
+    if (trGears.length > 0) {
+      r += '  TRANSFER KADEMELERI\n';
+      r += '  ' + ln('-', 44) + '\n';
+      r += '  ' + pad('Kademe', 16) + pad('Oran', 14, 'right') + pad('Verim (%)', 14, 'right') + '\n';
+      r += '  ' + ln('-', 44) + '\n';
+      trGears.forEach(function(tg) {
+        var kd = tg.kademe || tg.mode || '-';
+        var ratio = tg.ratio || tg.oran || 0;
+        var eff = tg.eff || tg.verim || trd.efficiency || '-';
+        r += '  ' + pad(ascii(kd), 16) + pad(num(ratio, 3), 14, 'right') + pad(eff !== '-' ? num(eff, 1) : '-', 14, 'right') + '\n';
+      });
+      r += '  ' + ln('-', 44) + '\n';
+    } else {
+      if (trd.selectedMode) r += pRow('Secili Mod', ascii(trd.selectedMode));
+      if (trd.selectedRatio) r += pRow('Secili Oran', num(trd.selectedRatio, 3));
+    }
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 5. PROPSAFT
+  // ════════════════════════════════════════════════════════════════════════
+  if (propNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. PROPSAFT (KARDAN MILI)', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  PROPSAFT OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    r += pRow('Tanim', ascii(psd.psName || propNode.customName || '-'));
+    r += pRow('Oran', '1.000 (Direkt)');
+    if (psd.psEff !== undefined) r += pRow('Verim', num(psd.psEff, 2) + '%');
+    if (psd.psInertia !== undefined) r += pRow('Atalet', num(psd.psInertia, 4) + ' kg.m2');
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 6. DIFERANSIYEL
+  // ════════════════════════════════════════════════════════════════════════
+  if (diffNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. DIFERANSIYEL', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  DIFERANSIYEL OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    r += pRow('Tanim', ascii(diffNode.customName || '-'));
+    if (dd.diffRatio !== undefined) r += pRow('Diferansiyel Orani', num(dd.diffRatio, 3));
+    else if (dd.ratio !== undefined) r += pRow('Diferansiyel Orani', num(dd.ratio, 3));
+    if (dd.efficiency !== undefined) r += pRow('Verim', num(dd.efficiency, 1) + '%');
+    if (dd.diffInertia !== undefined) r += pRow('Atalet', num(dd.diffInertia, 4) + ' kg.m2');
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 7. TEKERLEK / LASTIK
+  // ════════════════════════════════════════════════════════════════════════
+  if (wheelNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. TEKERLEK / LASTIK', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  LASTIK OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    if (wd.ftTireName) r += pRow('Lastik Adi', ascii(wd.ftTireName));
+    var tireR = wd.ftTireRadius || wd.wheelRadius || wd.radius || 0;
+    if (tireR) {
+      r += pRow('Yuvarlanma Yaricapi', num(tireR, 4) + ' m');
+      r += pRow('Lastik Devir/km', numI(Math.round(1000 / (2 * Math.PI * tireR))) + ' devir/km');
+    }
+    var crr = wd.ftCrr || wd.rollingResistance || wd.crr || 0;
+    if (crr) r += pRow('Yuvarlanma Direnci (Crr)', num(crr, 4));
+    if (wd.ftSurfaceFactor !== undefined) r += pRow('Yuzey Faktoru', num(wd.ftSurfaceFactor, 2));
+    if (wd.ftTireInertia !== undefined) r += pRow('Lastik/Tekerlek Ataleti', num(wd.ftTireInertia, 4) + ' kg.m2');
+    if (wd.rotatingMass !== undefined) r += pRow('Doner Kutle Faktoru', num(wd.rotatingMass, 2));
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 8. ARAC
+  // ════════════════════════════════════════════════════════════════════════
+  if (vehNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. ARAC', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  ARAC OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    if (vd.ftVehName || vd.ftVehicleName) r += pRow('Arac Adi', ascii(vd.ftVehName || vd.ftVehicleName));
+    var mass = vd.ftGVW || vd.mass || 0;
+    if (mass) r += pRow('Brut Arac Agirligi (GVW)', numI(mass) + ' kg');
+    if (vd.initialSpeed !== undefined) r += pRow('Baslangic Hizi', num(vd.initialSpeed, 1) + ' km/sa');
+    r += '\n';
+
+    r += '  AERODINAMIK\n';
+    r += '  ' + ln('-', 38) + '\n';
+    var cd = vd.ftCd || vd.cd || 0;
+    if (cd) r += pRow('Suruklenme Katsayisi (Cd)', num(cd, 3));
+    var fa = vd.frontalArea || ((vd.ftHeight || 0) * (vd.ftWidth || 0)) || 0;
+    if (fa) r += pRow('Alin Alani (A)', num(fa, 2) + ' m2');
+    if (vd.ftHeight) r += pRow('Yukseklik', num(vd.ftHeight, 3) + ' m');
+    if (vd.ftWidth) r += pRow('Genislik', num(vd.ftWidth, 3) + ' m');
+    var rho = vd.ftRho || vd.airDensity || 0;
+    if (rho) r += pRow('Hava Yogunlugu (rho)', num(rho, 3) + ' kg/m3');
+    if (cd && fa) r += pRow('CdA', num(cd * fa, 3) + ' m2');
+    if (vd.autoShift !== undefined) r += pRow('Otomatik Vites', vd.autoShift ? 'Evet' : 'Hayir');
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 9. YOL / ORTAM
+  // ════════════════════════════════════════════════════════════════════════
+  if (roadNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. YOL / ORTAM', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  YOL OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    if (rd.grade !== undefined) r += pRow('Yol Egimi', num(rd.grade, 1) + '%');
+    if (rd.egimMode) r += pRow('Egim Modu', rd.egimMode === 'segment' ? 'Segment (Rota)' : 'Manuel (Sabit)');
+    if (rd.altitude !== undefined) r += pRow('Rakım', num(rd.altitude, 0) + ' m');
+    if (rd.temperature !== undefined) r += pRow('Sicaklik', num(rd.temperature, 1) + ' C');
+    if (rd.airDensity !== undefined) r += pRow('Hava Yogunlugu', num(rd.airDensity, 4) + ' kg/m3');
+    r += '\n';
+
+    // Yol segmentleri
+    var segs = rd.roadSegments || [];
+    if (segs.length > 0) {
+      r += '  YOL SEGMENTLERI (' + segs.length + ' segment)\n';
+      r += '  ' + ln('-', 58) + '\n';
+      r += '  ' + pad('No', 5) + pad('Mesafe [m]', 12, 'right') + pad('Egim [%]', 11, 'right') + pad('Delta H [m]', 13, 'right') + pad('Komut', 17) + '\n';
+      r += '  ' + ln('-', 58) + '\n';
+      segs.forEach(function(s, i) {
+        r += '  ' + pad(String(s.no || (i+1)), 5) + pad(num(s.distance, 1), 12, 'right') + pad(num(s.grade, 1), 11, 'right') + pad(num(s.deltaH, 1), 13, 'right') + pad(ascii(s.command || '-'), 17) + '\n';
+      });
+      r += '  ' + ln('-', 58) + '\n';
+    }
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 10. SENARYO
+  // ════════════════════════════════════════════════════════════════════════
+  if (scenNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. SENARYO', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  SENARYO OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    var stMap = {'full_throttle':'Tam Gaz','partial_throttle':'Kismi Gaz','custom':'Ozel'};
+    r += pRow('Senaryo Tipi', stMap[scd.scenarioType] || scd.scenarioType || '-');
+    if (scd.throttle !== undefined) r += pRow('Gaz Pedali', num(scd.throttle, 0) + '%');
+    if (scd.segInitSpeed !== undefined) r += pRow('Baslangic Hizi', num(scd.segInitSpeed, 1) + ' km/sa');
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 11. COZUCU
+  // ════════════════════════════════════════════════════════════════════════
+  if (solverNode) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. COZUCU', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  COZUCU OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    var mMap = {'euler':'Euler (1. derece)','heun':'Heun (2. derece)','ralston':'Ralston (2. derece)','rk4':'RK4 (4. derece)','rk45':'RK4/5 Adaptif (Dormand-Prince)'};
+    r += pRow('Sayisal Yontem', mMap[sd.method] || sd.method || 'euler');
+    if (sd.maxSimTime !== undefined) r += pRow('Maks. Simulasyon Suresi', num(sd.maxSimTime, 0) + ' s');
+    if (sd.ftDt !== undefined) r += pRow('Zaman Adimi (dt)', num(sd.ftDt, 4) + ' s');
+    if (sd.ftAtol !== undefined) r += pRow('Mutlak Tolerans (atol)', sd.ftAtol);
+    if (sd.ftRtol !== undefined) r += pRow('Bagil Tolerans (rtol)', sd.ftRtol);
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // 12. ENGEL GECME (varsa)
+  // ════════════════════════════════════════════════════════════════════════
+  if (obsNode) {
+    var od = obsNode.data || {};
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. ENGEL GECME', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  ENGEL GECME PARAMETRELERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    if (od.obstacleHeight !== undefined) r += pRow('Engel Yuksekligi', num(od.obstacleHeight, 3) + ' m');
+    if (od.a1 !== undefined) r += pRow('Agirlik Merkezi - On Aks', num(od.a1, 3) + ' m');
+    if (od.a2 !== undefined) r += pRow('Agirlik Merkezi - Arka Aks', num(od.a2, 3) + ' m');
+    if (od.a1 && od.a2) r += pRow('Aks Acikligi (L)', num(od.a1 + od.a2, 3) + ' m');
+    if (od.loadedTireRadius !== undefined) r += pRow('Yuklu Lastik Yari.', num(od.loadedTireRadius, 4) + ' m');
+    if (od.cornerDeflection !== undefined) r += pRow('Kose Defleksiyonu', num(od.cornerDeflection, 1) + ' mm');
+    if (od.gbTorqueLimit !== undefined) r += pRow('Sanziman Tork Limiti', numI(od.gbTorqueLimit) + ' N.m');
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // FREN / RETARDER (varsa)
+  // ════════════════════════════════════════════════════════════════════════
+  if (brakeNode) {
+    var bd = brakeNode.data || {};
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. FREN / RETARDER', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    r += '  FREN OZELLIKLERI\n';
+    r += '  ' + ln('-', 38) + '\n';
+    r += pRow('Bilesen Tipi', brakeNode.type === 'retarder' ? 'Retarder' : 'Fren');
+    r += pRow('Tanim', ascii(brakeNode.customName || '-'));
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // TOPLAM AKTARMA ORANLARI (özet)
+  // ════════════════════════════════════════════════════════════════════════
+  var diffR = dd.diffRatio || dd.ratio || 0;
+  if (diffR > 0) {
+    r += ln('=', W) + '\n';
+    r += pad(secNo + '. TOPLAM AKTARMA OZETI', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+
+    var trGsum = trd.ftTrGears || trd.transferData || [];
+    var gearsSum = gd.ftGearData || gd.gearData || [];
+    var gearRatiosArr = gd.gearRatios || [];
+    var tireRsum = wd.ftTireRadius || wd.wheelRadius || wd.radius || 0.5;
+    var psEffSum = psd.psEff ? (psd.psEff / 100) : 1.0;
+    var diffEffSum = dd.efficiency ? (dd.efficiency / 100) : 1.0;
+
+    if (trGsum.length > 0) {
+      r += '  ' + ln('-', 68) + '\n';
+      r += '  ' + pad('Kademe', 14) + pad('Diff', 10, 'right') + pad('Transfer', 10, 'right') + pad('Toplam', 12, 'right') + pad('N/V', 12, 'right') + pad('Verim', 10, 'right') + '\n';
+      r += '  ' + pad('', 14) + pad('Orani', 10, 'right') + pad('Orani', 10, 'right') + pad('Oran', 12, 'right') + pad('[rpm/kph]', 12, 'right') + pad('[%]', 10, 'right') + '\n';
+      r += '  ' + ln('-', 68) + '\n';
+      trGsum.forEach(function(tg) {
+        var trR = tg.ratio || tg.oran || 1;
+        var trE = tg.eff || tg.verim || (trd.efficiency || 97);
+        var totalR = diffR * trR;
+        var totalEff = diffEffSum * (trE / 100) * psEffSum * 100;
+        var nv = (totalR * 1000) / (tireRsum * 2 * Math.PI * 60);
+        r += '  ' + pad(ascii(tg.kademe || tg.mode || '-'), 14) + pad(num(diffR, 3), 10, 'right') + pad(num(trR, 3), 10, 'right') + pad(num(totalR, 3), 12, 'right') + pad(num(nv, 3), 12, 'right') + pad(num(totalEff, 1), 10, 'right') + '\n';
+      });
+      r += '  ' + ln('-', 68) + '\n';
+    } else {
+      var totalSingle = diffR;
+      var nvSingle = (totalSingle * 1000) / (tireRsum * 2 * Math.PI * 60);
+      r += pRow('Diferansiyel Orani', num(diffR, 3));
+      r += pRow('Toplam Aktarma Orani', num(totalSingle, 3));
+      r += pRow('N/V (rpm/kph)', num(nvSingle, 3));
+      r += pRow('Toplam Verim', num(diffEffSum * psEffSum * 100, 1) + '%');
+    }
+    r += '\n\n';
+    secNo++;
+  }
+
+  // ═══ RAPOR SONU ═══
+  r += ln('-', W) + '\n';
+  r += pad('RAPOR SONU', W, 'center') + '\n';
+  r += ln('=', W) + '\n\n';
+  r += ln('-', W) + '\n';
+  r += pad('BMC OTOMOTIV SANAYI VE TICARET A.S.', W, 'center') + '\n';
+  r += pad('GUC GRUBU MUDURLUGU', W, 'center') + '\n';
+  r += ln('-', W) + '\n\n';
+  r += pRow('Hazirlayan', ascii(hazirlayan));
+  r += pRow('Iletisim', veNameToEmail(hazirlayan));
+  r += '\n';
+  r += ln('-', W) + '\n';
+  r += pad('Bu rapor BMC MFSim Topoloji Detay Raporu olarak', W, 'center') + '\n';
+  r += pad('otomatik olusturulmustur.', W, 'center') + '\n';
+  r += ln('-', W) + '\n\n';
   r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
 
   return r;
