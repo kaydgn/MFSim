@@ -485,6 +485,13 @@ function veUpdateResultsTree() {
       html += '<span class="icon" style="font-size:0.58rem;">📊</span><span style="font-size:0.66rem;">Vites Geçişleri (Detaylı)</span></div>';
       html += '</div>';
       html += '</div></div>';
+      // Topoloji Raporu (TXT) — modül raporunun üstünde
+      if(typeof nodes !== 'undefined' && nodes.length > 0) {
+        html += '<div style="margin-top:2px;">';
+        html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
+        html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
+        html += '</div>';
+      }
       // Tam Gaz Hızlanma Raporu (TXT)
       html += '<div style="margin-top:2px;">';
       html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Tam Gaz Hızlanma TXT rapor önizleme">';
@@ -495,6 +502,11 @@ function veUpdateResultsTree() {
     // === HIZLANMA-YAVAŞLAMA tab'ı ===
     if(_activeTab === 'accel-decel') {
       html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      // Topoloji Raporu (TXT) — modül raporunun üstünde
+      if(typeof nodes !== 'undefined' && nodes.length > 0) {
+        html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
+        html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
+      }
       html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
       html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
       html += '</div>';
@@ -503,16 +515,13 @@ function veUpdateResultsTree() {
     // === ENGEL ATLAMA tab'ı ===
     if(_activeTab === 'obstacle' && window.veSimResults.obstacleCrossing) {
       html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      // Topoloji Raporu (TXT) — modül raporunun üstünde
+      if(typeof nodes !== 'undefined' && nodes.length > 0) {
+        html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
+        html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
+      }
       html += '<div class="ve-tree-row" onclick="veRenderObstacleCrossingTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Engel Atlama TXT rapor önizleme">';
       html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Engel Atlama Raporu (TXT)</span></div>';
-      html += '</div>';
-    }
-
-    // === TOPOLOJİ RAPORU (tüm tab'larda) ===
-    if(typeof nodes !== 'undefined' && nodes.length > 0) {
-      html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
-      html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
-      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
       html += '</div>';
     }
   }
