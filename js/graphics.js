@@ -4010,26 +4010,51 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   var dyn = sim.obstacleDynamic;
   var mt = dyn ? dyn.matchTable : null;
   if(mt && mt.length > 0) {
-    r += ln('-', W) + '\n  MOTOR-KONVERTOR ESLEME TABLOSU (Converter Mode)\n' + ln('-', W) + '\n\n';
+    // FT raporuyla aynı kolon genişlikleri
+    var _c = [9, 9, 9, 12, 12, 10, 12, 10, 14, 16];
+    var _cmTW = 0; for (var _wi = 0; _wi < _c.length; _wi++) _cmTW += _c[_wi];
 
-    // Başlık
-    r += '  ' + pad('SR', 7, 'right') + pad('TR', 7, 'right') + pad('N_eng', 7, 'right');
-    r += pad('T_eng', 8, 'right') + pad('P_eng', 8, 'right');
-    r += pad('T_turb', 8, 'right') + pad('P_turb', 8, 'right');
-    r += pad('Q_rej', 8, 'right') + '  Match Point\n';
-    r += '  ' + ln('-', 69) + '\n';
+    r += ln('=', _cmTW + 4) + '\n';
+    r += pad('KONVERTOR MODU (Tum Kademeler)', _cmTW + 4, 'center') + '\n';
+    r += ln('=', _cmTW + 4) + '\n\n';
+
+    r += '  ' + pad('Motor Fani', 16) + pad('Klima', 16) + pad('Motor Gucu', 30) + 'Arac Parametreleri\n';
+    r += '  ' + ln('-', _cmTW) + '\n';
+    r += '  ' + pad('Acik', 16) + pad('Kapali', 16) + pad('Standart Guc Egrisi', 30) + 'Standart\n\n';
+
+    // Tablo basligi — satir 1
+    r += '  ' + pad('Hiz', _c[0], 'right') + pad('Tork', _c[1], 'right') + pad('Motor', _c[2], 'right');
+    r += pad('Net Motor', _c[3], 'right') + pad('Net Motor', _c[4], 'right');
+    r += pad('Turbin', _c[5], 'right') + pad('Turbin', _c[6], 'right') + pad('Turbin', _c[7], 'right');
+    r += pad('Konvertor Isi', _c[8], 'right') + pad('Esleme', _c[9], 'right') + '\n';
+    // Tablo basligi — satir 2
+    r += '  ' + pad('Orani', _c[0], 'right') + pad('Orani', _c[1], 'right') + pad('Devri', _c[2], 'right');
+    r += pad('Torku (N-m)', _c[3], 'right') + pad('Gucu (kW)', _c[4], 'right');
+    r += pad('Devri', _c[5], 'right') + pad('Torku (N-m)', _c[6], 'right') + pad('Gucu (kW)', _c[7], 'right');
+    r += pad('Reddi (kW)', _c[8], 'right') + pad('Noktasi', _c[9], 'right') + '\n';
+    // Tablo basligi — satir 3 (birimler)
+    r += '  ' + pad('', _c[0], 'right') + pad('', _c[1], 'right') + pad('(rpm)', _c[2], 'right');
+    r += pad('', _c[3], 'right') + pad('', _c[4], 'right');
+    r += pad('(rpm)', _c[5], 'right') + pad('', _c[6], 'right') + pad('', _c[7], 'right');
+    r += pad('', _c[8], 'right') + pad('', _c[9], 'right') + '\n';
+    r += '  ' + ln('-', _cmTW) + '\n';
 
     for(var mti = 0; mti < mt.length; mti++) {
       var mp = mt[mti];
-      r += '  ' + pad(num(mp.SR, 3), 7, 'right') + pad(num(mp.TR, 3), 7, 'right') + pad(num(mp.N_engine, 0), 7, 'right');
-      r += pad(num(mp.T_engine, 1), 8, 'right') + pad(num(mp.P_engine_kW, 1), 8, 'right');
-      r += pad(num(mp.T_turbine, 1), 8, 'right') + pad(num(mp.P_turbine_kW, 1), 8, 'right');
-      r += pad(num(mp.Q_reject_kW, 2), 8, 'right');
-      r += (mp.matchPoint ? '  ' + mp.matchPoint : '') + '\n';
+      var _Nt = Math.round(mp.N_engine * mp.SR);
+      r += '  ' + pad(num(mp.SR, 3), _c[0], 'right') + pad(num(mp.TR, 3), _c[1], 'right');
+      r += pad(numI(mp.N_engine), _c[2], 'right') + pad(num(mp.T_engine, 1), _c[3], 'right');
+      r += pad(num(mp.P_engine_kW, 1), _c[4], 'right') + pad(numI(_Nt), _c[5], 'right');
+      r += pad(num(mp.T_turbine, 1), _c[6], 'right') + pad(num(mp.P_turbine_kW, 1), _c[7], 'right');
+      r += pad(num(mp.Q_reject_kW, 2), _c[8], 'right');
+      r += pad(mp.matchPoint || '', _c[9], 'right') + '\n';
     }
-    r += '\n';
-    r += '  Not: T_turbine = T_pump x TR (SCAAN dogrulama). T_pump = (N / K_pump)^2.\n';
-    r += '\n';
+    r += '  ' + ln('-', _cmTW) + '\n\n';
+
+    var _ptd = (inp.pumpTorqueDrop !== undefined) ? inp.pumpTorqueDrop : 17.6;
+    r += '  Not: T_turbin = T_pompa x TR.  T_pompa = (N_motor / K_pompa)^2.  Dusurme = ' + num(_ptd, 1) + ' N.m.\n';
+    r += '       T_motor(N) - Dusurme = T_pompa(N)  denklemi bisection ile cozulmustur.\n';
+    r += '\n\n';
 
     // ŞANZIMAN ÇIKIŞ TABLOSU
     var gearLabel = inp.gearName ? ascii(inp.gearName) : '1C';
