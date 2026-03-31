@@ -33112,14 +33112,18 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
   var revPerKm = Math.round(1000 / (2 * Math.PI * R.tireRadius));
 
-  r += '  ALAN VE AGIRLIK' + pad('', 22) + 'LASTIKLER\n';
-  r += '  ' + ln('-', 38) + '  ' + ln('-', 38) + '\n';
-  r += pad(pRow('Alin Alani', num(R.frontalArea, 3) + ' m2'), 40) + pRow('Secili Lastik', ascii(R.tireName));
-  r += pad(pRow('Yukseklik / Genislik', num(R.height, 3) + ' / ' + num(R.width, 3) + ' m'), 40) + pRow('Lastik Devir/km', revPerKm + ' devir/km');
-  r += pad(pRow('Aerodinamik Direnc (Cd)', num(R.cd, 3)), 40) + pRow('Lastik Yuvarlanma Yari.', num(R.tireRadius, 3) + ' m');
-  r += pad(pRow('Brut Arac Agirligi (GVW)', numI(R.gvw) + ' kg'), 40) + pRow('Yuvarlanma Direnci (Crr)', num(R.crr, 4));
-  r += pad('', 40) + pRow('Yuzey Faktoru', num(R.surfFactor || 1.0, 2));
-  r += pad('', 40) + pRow('Lastik/Tekerlek Ataleti', num(R.tireInertia, 4) + ' kg.m2');
+  // Yan yana satır yardımcısı (\n olmadan)
+  function pCol(label, value) { return '  ' + pad(label, 28) + ': ' + value; }
+  var CW = 42;
+
+  r += '  ALAN VE AGIRLIK' + pad('', CW - 18) + 'LASTIKLER\n';
+  r += '  ' + ln('-', CW - 4) + '  ' + ln('-', CW - 4) + '\n';
+  r += pad(pCol('Alin Alani', num(R.frontalArea, 3) + ' m2'), CW) + pCol('Secili Lastik', ascii(R.tireName)) + '\n';
+  r += pad(pCol('Yukseklik / Genislik', num(R.height, 3) + ' / ' + num(R.width, 3) + ' m'), CW) + pCol('Lastik Devir/km', revPerKm + ' devir/km') + '\n';
+  r += pad(pCol('Aerodinamik Direnc (Cd)', num(R.cd, 3)), CW) + pCol('Lastik Yuvarlanma Yari.', num(R.tireRadius, 3) + ' m') + '\n';
+  r += pad(pCol('Brut Arac Agirligi (GVW)', numI(R.gvw) + ' kg'), CW) + pCol('Yuvarlanma Direnci (Crr)', num(R.crr, 4)) + '\n';
+  r += pad('', CW) + pCol('Yuzey Faktoru', num(R.surfFactor || 1.0, 2)) + '\n';
+  r += pad('', CW) + pCol('Lastik/Tekerlek Ataleti', num(R.tireInertia, 4) + ' kg.m2') + '\n';
   r += '\n\n';
 
 
@@ -34010,9 +34014,10 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   r += pRow('Baglanti Sayisi', String(connections.length));
   r += ln('-', W) + '\n\n';
 
+  var secNo = 1;
 
   // ════════════════════════════════════════════════════════════════════════
-  // 8. ARAC
+  // ARAC
   // ════════════════════════════════════════════════════════════════════════
   if (vehNode) {
     r += ln('=', W) + '\n';
@@ -34045,9 +34050,8 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
 
 
   // ════════════════════════════════════════════════════════════════════════
-  // 1. MOTOR
+  // MOTOR
   // ════════════════════════════════════════════════════════════════════════
-  var secNo = 1;
   if (engineNode) {
     var ms = ed.motorSpecs || {};
     var engName = engineNode.customName || ascii(ed.ftMotorPreset || ed.mfMotorPreset || '-');
@@ -34084,7 +34088,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
 
       // Sol taraf: tork tablosu satırları
       var leftLines = [];
-      var LW = 42;
+      var LW = 44;
       leftLines.push('  MOTOR TORK / GUC VERISI');
       leftLines.push('  ' + ln('-', 38));
       leftLines.push('  ' + pad('Devir', 9, 'right') + pad('Tork', 14, 'right') + pad('Guc', 14, 'right'));
