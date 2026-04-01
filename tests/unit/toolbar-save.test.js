@@ -175,6 +175,55 @@ describe('veShowSaveDialog - uygulama-içi kaydet diyaloğu', () => {
     expect(document.getElementById('ve-save-dialog-overlay')).not.toBeNull();
   });
 
+  test('showSaveFilePicker varsa OS diyaloğu kullanılır', async () => {
+    var blob = new Blob(['{"test":1}'], {type: 'application/json'});
+
+    var mockWritable = {
+      write: jest.fn().mockResolvedValue(undefined),
+      close: jest.fn().mockResolvedValue(undefined)
+    };
+    var mockHandle = {
+      createWritable: jest.fn().mockResolvedValue(mockWritable)
+    };
+    window.showSaveFilePicker = jest.fn().mockResolvedValue(mockHandle);
+
+    veShowSaveDialog('proje_2026.json', blob, 'Kaydedildi');
+    document.getElementById('ve-save-confirm').click();
+
+    expect(window.showSaveFilePicker).toHaveBeenCalledWith(
+      expect.objectContaining({ suggestedName: 'proje_2026.json' })
+    );
+
+    // Promise zincirinin tamamlanmasını bekle
+    await new Promise(r => setTimeout(r, 50));
+
+    expect(mockHandle.createWritable).toHaveBeenCalled();
+    expect(mockWritable.write).toHaveBeenCalledWith(blob);
+    expect(mockWritable.close).toHaveBeenCalled();
+    expect(showToast).toHaveBeenCalledWith('Kaydedildi');
+
+    delete window.showSaveFilePicker;
+  });
+
+  test('showSaveFilePicker iptal edilirse hata göstermez', async () => {
+    var blob = new Blob(['test'], {type: 'text/plain'});
+    showToast.mockClear();
+
+    window.showSaveFilePicker = jest.fn().mockRejectedValue(
+      Object.assign(new Error('User cancelled'), { name: 'AbortError' })
+    );
+
+    veShowSaveDialog('test.json', blob, 'ok');
+    document.getElementById('ve-save-confirm').click();
+
+    await new Promise(r => setTimeout(r, 50));
+
+    // AbortError durumunda toast gösterilmemeli
+    expect(showToast).not.toHaveBeenCalledWith('Kaydetme başarısız', 'warning');
+
+    delete window.showSaveFilePicker;
+  });
+
   test('.txt uzantılı dosyalar da desteklenir', () => {
     var blob = new Blob(['ozet'], {type: 'text/plain'});
     veShowSaveDialog('ozet_raporu.txt', blob, 'ok');
