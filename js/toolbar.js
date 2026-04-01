@@ -157,15 +157,43 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
     fileName += ext;
     overlay.remove();
 
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast(toastMsg);
+    if (window.showSaveFilePicker) {
+      var mimeType = blob.type || 'application/json';
+      var extClean = ext.replace(/^\./, '');
+      window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{
+          description: extClean.toUpperCase() + ' dosyası',
+          accept: {}
+        }]
+      }).then(function(handle) {
+        // accept nesnesini dinamik oluştur
+        handle.createWritable().then(function(writable) {
+          writable.write(blob).then(function() {
+            return writable.close();
+          }).then(function() {
+            showToast(toastMsg);
+          });
+        });
+      }).catch(function(err) {
+        // Kullanıcı iptal ettiyse sessizce geç
+        if (err.name !== 'AbortError') {
+          console.error('Kaydetme hatası:', err);
+          showToast('Kaydetme başarısız', 'warning');
+        }
+      });
+    } else {
+      // showSaveFilePicker desteklenmeyen tarayıcılar için fallback
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(toastMsg);
+    }
   }
 
   document.getElementById('ve-save-confirm').onclick = doSave;
