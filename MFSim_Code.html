@@ -13207,6 +13207,17 @@ var VE_FT_SHIFT_PROFILES = {
       '4L5L': { a: 1.0000, b: -75.0 },   // 4L→5L, i_gear = 1.0000, max hata ±0.0 rpm
       '5L6L': { a: 1.3337, b: -100.1 }   // 5L→6L, i_gear ≈ 0.7498, max hata ±0.5 rpm
     },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 1.333, b: -298.8 },                                     // ESL ≤ 2000, max hata ±0.5 rpm
+        high: { a: 1.1877, b: 0 }                                          // ESL ≥ 2100, max hata ±0.5 rpm
+      },
+      '5to4': { a: 0.8670, b: -0.2 },                                      // max hata ±0.5 rpm
+      '4to3': { a: 0.6100, b: 0 },                                         // max hata ±0.0 rpm
+      '3to2': { a: 0.4253, b: 1.1 },                                       // max hata ±1.4 rpm
+      '2to1': { a: 0.3222, b: -27.6 }                                      // 2L→2C, max hata ±0.4 rpm
+    },
     // Eski SR/η bazlı değerler (referans, artık kullanılmıyor)
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
@@ -13226,6 +13237,14 @@ var VE_FT_SHIFT_PROFILES = {
       '3L4L': { a: 0.6385, b: 0 },       // 3L→4L, i_gear ≈ 1.5663, max hata ±0.5 rpm
       '4L5L': { a: 0.9000, b: 0 },       // 4L→5L, i_gear ≈ 1.1111, max hata ±0.0 rpm
       '5L6L': { a: 1.2000, b: 0 }        // 5L→6L, i_gear ≈ 0.8333, max hata ±0.0 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.2008, b: -200.9 },                                    // max hata ±0.5 rpm
+      '5to4': { a: 0.9000, b: -100 },                                      // max hata ±0.0 rpm
+      '4to3': { a: 0.6385, b: -70.6 },                                     // max hata ±0.5 rpm
+      '3to2': { a: 0.4253, b: 1.1 },                                       // max hata ±1.4 rpm (S1 ile aynı)
+      '2to1': { a: 0.3222, b: -27.6 }                                      // 2L→2C, max hata ±0.4 rpm
     },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
@@ -13247,6 +13266,14 @@ var VE_FT_SHIFT_PROFILES = {
       '4L5L': { a: 0.8000, b: 134.0 },   // 4L→5L, i_gear ≈ 1.2500, max hata ±0.0 rpm
       '5L6L': { a: 0.9256, b: 141.5 }    // 5L→6L, i_gear ≈ 1.0803, max hata ±6.8 rpm
     },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.0000, b: -125 },                                      // max hata ±0.0 rpm
+      '5to4': { a: 0.8011, b: -2 },                                        // max hata ±0.5 rpm
+      '4to3': { a: 0.6000, b: 0 },                                         // max hata ±0.0 rpm
+      '3to2': { a: 0.4253, b: 1.1 },                                       // max hata ±1.4 rpm (S1 ile aynı)
+      '2to1': { a: 0.3222, b: -27.6 }                                      // 2L→2C, max hata ±0.4 rpm
+    },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
@@ -13263,9 +13290,20 @@ var VE_FT_SHIFT_PROFILES = {
     // Not: 2L→3L nonlineer davranış gösterir (max hata 6.2 rpm)
     lockupShifts: {
       '2L3L': { a: 0.4088, b: 4.9, minCap: 724 },     // 2L→3L, i_gear ≈ 2.4460, max hata ±6.2 rpm
-      '3L4L': { a: 0.6000, b: -50.0, minCap: 1020 },   // 3L→4L, i_gear ≈ 1.6667, max hata ±0.0 rpm
+      '3L4L': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.23, b: 632 },                     // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.6, b: -50 }                       // ESL ≥ 1800, max hata ±0.0 rpm
+      },
       '4L5L': { a: 0.8000, b: -66.0, minCap: 1360 },   // 4L→5L, i_gear ≈ 1.2500, max hata ±0.0 rpm
       '5L6L': { a: 1.0000, b: -45.0 }                   // 5L→6L, i_gear ≈ 1.0000, max hata ±0.0 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.0000, b: -125 },                                      // max hata ±0.0 rpm
+      '5to4': { a: 0.8000, b: -133, capValue: 1227, capBelow: 1800 },      // ESL<1800: cap 1227, max hata ±0.0 rpm
+      '4to3': { a: 0.6000, b: -100, capValue: 920, capBelow: 1800 },       // ESL<1800: cap 920, max hata ±0.0 rpm
+      '3to2': { a: 0.4000, b: -67, capValue: 653, capBelow: 1800 },        // ESL<1800: cap 653, max hata ±1.0 rpm
+      '2to1': { a: 0.3255, b: -35.9, capValue: 488, capBelow: 1700 }       // 2L→2C, max hata ±3.0 rpm
     },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
@@ -13592,6 +13630,150 @@ var VE_FT_SHIFT_PROFILES = {
       '2to1': { type: 'piecewise', breakpoint: 1700,
         low:  { a: 0.15, b: 171 },                                         // ESL ≤ 1700, max hata ±0.0 rpm
         high: { a: 0.28, b: -50 }                                          // ESL ≥ 1800, max hata ±0.0 rpm
+      }
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  // ════════════════════════════════════════════════════════════════════════
+  // ALLISON 4700SP — 4000 SERİSİ (7 ileri vites, Creeper dahil)
+  // ════════════════════════════════════════════════════════════════════════
+  // Kaynak: VEPS kalibrasyon verileri (ESL 1600-2600 rpm, S1-S4)
+  // Vites oranları: C=7.630, 1st=3.510, 2nd=1.906, 3rd=1.429, 4th=1.000, 5th=0.737, 6th=0.639
+  // Not: Shift tablosundaki vitesler 1-6 (C vitesi shift profili dışında)
+  allison4700sp_s1: {
+    name: 'Allison 4700 SP — S1 Performance',
+    family: '4000',
+    lockupOffset: 75,
+    shift1C2C_outRatio: 0.2137,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.2137, b: -0.1 },               // max hata ±0.5 rpm
+      '2C2L': { a: 0.3451, b: 14.8 }                 // max hata ±10.1 rpm (nonlineer)
+    },
+    // Lockup-mod: N_engine = ESL - 75 kuralı
+    // Not: 3L→4L düşük ESL'de nonlineer — piecewise model
+    lockupShifts: {
+      '2L3L': { a: 0.5250, b: -40.2 },                // max hata ±0.3 rpm
+      '3L4L': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.5, b: 287 },                     // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.7, b: -53 }                      // ESL ≥ 1800, max hata ±0.0 rpm
+      },
+      '4L5L': { a: 1.0000, b: -75.0 },                // max hata ±0.0 rpm
+      '5L6L': { a: 1.3567, b: -101.8 }                // max hata ±0.4 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { type: 'piecewise', breakpoint: 2100,
+        low:  { a: 1.3574, b: -306.7 },                                    // ESL ≤ 2100, max hata ±0.4 rpm
+        high: { a: 1.212, b: 2 }                                           // ESL ≥ 2200, max hata ±0.4 rpm
+      },
+      '5to4': { a: 0.8821, b: -0.6 },                                      // max hata ±0.4 rpm
+      '4to3': { a: 0.6100, b: 0 },                                         // max hata ±0.0 rpm
+      '3to2': { a: 0.4200, b: 0 },                                         // max hata ±0.0 rpm
+      '2to1': { a: 0.3150, b: -26.8 }                                      // 2L→2C, max hata ±0.3 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison4700sp_s2: {
+    name: 'Allison 4700 SP — S2 Performance',
+    family: '4000',
+    lockupOffset: 0,
+    shift1C2C_outRatio: 0.2137,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.2137, b: -0.1 },
+      '2C2L': { a: 0.3383, b: 14.3 }                 // max hata ±9.5 rpm (nonlineer)
+    },
+    // Lockup-mod: Düşük ESL'de nonlineer — 3L4L piecewise
+    lockupShifts: {
+      '2L3L': { a: 0.4723, b: -0.3 },                 // max hata ±0.5 rpm
+      '3L4L': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.51, b: 204 },                    // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.63, b: 0 }                       // ESL ≥ 1800, max hata ±0.0 rpm
+      },
+      '4L5L': { a: 0.9000, b: 0 },                    // max hata ±0.0 rpm
+      '5L6L': { a: 1.2201, b: 2.2 }                   // max hata ±1.7 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.2213, b: -204 },                                      // max hata ±0.5 rpm
+      '5to4': { a: 0.9000, b: -100 },                                      // max hata ±0.0 rpm
+      '4to3': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.51, b: 134 },                                         // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.63, b: -70 }                                          // ESL ≥ 1800, max hata ±0.0 rpm
+      },
+      '3to2': { a: 0.4200, b: 0 },                                         // max hata ±0.0 rpm
+      '2to1': { a: 0.3150, b: -26.8 }                                      // 2L→2C, max hata ±0.3 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison4700sp_s3: {
+    name: 'Allison 4700 SP — S3 Economy',
+    family: '4000',
+    lockupOffset: -100,
+    shift1C2C_outRatio: 0.2137,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.2137, b: -0.1 },
+      '2C2L': { a: 0.3311, b: 17 }                   // max hata ±0.5 rpm
+    },
+    lockupShifts: {
+      '2L3L': { a: 0.4200, b: 70 },                   // max hata ±0.0 rpm
+      '3L4L': { a: 0.6000, b: 100 },                  // max hata ±0.0 rpm
+      '4L5L': { a: 0.8142, b: 135.2 },                // max hata ±0.4 rpm
+      '5L6L': { a: 0.9387, b: 157 }                   // max hata ±0.5 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 0.94, b: -2 },                                          // ESL ≤ 2000, max hata ±0.0 rpm
+        high: { a: 1.0, b: -125 }                                          // ESL ≥ 2100, max hata ±0.0 rpm
+      },
+      '5to4': { a: 0.8140, b: 0 },                                         // max hata ±0.4 rpm
+      '4to3': { a: 0.6000, b: 0 },                                         // max hata ±0.0 rpm
+      '3to2': { a: 0.4200, b: 0 },                                         // max hata ±0.0 rpm
+      '2to1': { a: 0.3150, b: -26.8 }                                      // 2L→2C, max hata ±0.3 rpm
+    },
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.83
+  },
+  allison4700sp_s4: {
+    name: 'Allison 4700 SP — S4 Economy',
+    family: '4000',
+    lockupOffset: 50,
+    shift1C2C_outRatio: 0.2137,
+    shift2C2L_outRatio: null,
+    shiftRefRPM: null,
+    converterShifts: {
+      '1C2C': { a: 0.2137, b: -0.1 },
+      '2C2L': { a: 0.319, b: 14.5 }                  // max hata ±10.1 rpm (nonlineer)
+    },
+    // Lockup-mod: minCap/cap destekli (düşük ESL koruması)
+    lockupShifts: {
+      '2L3L': { a: 0.4095, b: -10, minCap: 714 },    // max hata ±0.5 rpm
+      '3L4L': { a: 0.6000, b: -50, capValue: 1020, capBelow: 1800 },  // max hata ±0.0 rpm
+      '4L5L': { a: 0.8143, b: -68.5, minCap: 1384 }, // max hata ±0.5 rpm
+      '5L6L': { a: 1.0000, b: -45.0 }                 // max hata ±0.0 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.0000, b: -125 },                                      // max hata ±0.0 rpm
+      '5to4': { a: 0.8138, b: -135.2, capValue: 1248, capBelow: 1800 },    // ESL<1800: cap 1248, max hata ±0.5 rpm
+      '4to3': { a: 0.6000, b: -100, capValue: 920, capBelow: 1800 },       // ESL<1800: cap 920, max hata ±0.0 rpm
+      '3to2': { a: 0.4200, b: -70, capValue: 644, capBelow: 1800 },        // ESL<1800: cap 644, max hata ±1.0 rpm
+      '2to1': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.26, b: 61 },                                          // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.3217, b: -43 }                                        // ESL ≥ 1800, max hata ±1.4 rpm
       }
     },
     srShift1C2C: 0.78,
@@ -14053,6 +14235,7 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 3200SP',
     family: '3000',
     calibrated: true,
+    downshiftCalibrated: true,
     grossInputPower: 336,
     grossInputTorque: 1695,
     netTurbineTorque: 2305,
@@ -14145,7 +14328,8 @@ var VE_GEARBOX_PRESETS = {
   '4700SP': {
     name: 'Allison | 4700SP',
     family: '4000',
-    calibrated: false,
+    calibrated: true,
+    downshiftCalibrated: true,
     grossInputPower: 451,
     grossInputTorque: 2508,
     netTurbineTorque: 4067,
