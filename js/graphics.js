@@ -3885,10 +3885,23 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   var _brakeNodeR = nodes.find(function(n) { return n.type === 'retarder' || n.type === 'brake'; });
   var _obsNodeR = nodes.find(function(n) { return n.type === 'obstacle-crossing'; });
 
-  // Bileşen adı alma yardımcısı: customName → data.motorName → def.name → type
+  // Bileşen adı alma yardımcısı: customName → tipe özel preset/model adı → def.name → type
   function _cName(nd) {
     if(!nd) return '';
     var cn = nd.customName || '';
+    if(!cn) {
+      var d = nd.data || {};
+      // Tipe özel anlamlı isim araması
+      if(nd.type === 'engine') cn = d.ftMotorPreset || d.mfMotorPreset || (d.motorSpecs && d.motorSpecs.displacement ? d.motorSpecs.displacement + 'L Motor' : '');
+      else if(nd.type === 'gearbox') cn = d.gbName || d.selectedGearbox || d.ftGBPreset || '';
+      else if(nd.type === 'torque-converter') cn = d.tcName || d.tcPresetKey || '';
+      else if(nd.type === 'transfer') cn = d.ftTrName || d.ftTrPreset || '';
+      else if(nd.type === 'differential') cn = d.diffRatio ? ('i=' + parseFloat(d.diffRatio).toFixed(3)) : '';
+      else if(nd.type === 'wheel') cn = d.ftTireName || (d.ftTireRadius ? ('R=' + parseFloat(d.ftTireRadius).toFixed(3) + 'm') : '') || (d.wheelRadius ? ('R=' + parseFloat(d.wheelRadius).toFixed(3) + 'm') : '');
+      else if(nd.type === 'propshaft') cn = d.psName || '';
+      else if(nd.type === 'vehicle') cn = d.ftVehName || d.ftVehicleName || '';
+      else if(nd.type === 'obstacle-crossing') cn = d.obstacleHeight ? ('h=' + parseFloat(d.obstacleHeight).toFixed(3) + 'm') : '';
+    }
     if(!cn && nd.data && nd.data.motorName) cn = nd.data.motorName;
     if(!cn && typeof componentDefs !== 'undefined' && componentDefs[nd.type]) cn = componentDefs[nd.type].name;
     if(!cn) cn = nd.type;
@@ -3925,7 +3938,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   if(_trNodeR) r += pRow('Transfer Kutusu', _cName(_trNodeR));
   if(_propNodeR) r += pRow('Propshaft', _cName(_propNodeR));
   if(_diffNodeR) r += pRow('Diferansiyel', _cName(_diffNodeR));
-  if(_wheelNodeR) r += pRow('Teker', _cName(_wheelNodeR));
+  if(_wheelNodeR) r += pRow('Tekerlek / Lastik', _cName(_wheelNodeR));
   r += pRow('Lastik', ascii(inp.tireName));
   if(_brakeNodeR) r += pRow('Fren / Retarder', _cName(_brakeNodeR));
   if(_obsNodeR) r += pRow('Engel Gecme', _cName(_obsNodeR));
