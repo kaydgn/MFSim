@@ -585,25 +585,26 @@ function veFTRunSimulationEngine(transferRangeOverride) {
    */
   function calcDownshiftThreshold(ds, esl) {
     if(!ds) return 0;
+    var result;
     if(ds.type === 'piecewise') {
-      if(esl <= ds.breakpoint) return ds.low.a * esl + (ds.low.b || 0);
-      return ds.high.a * esl + (ds.high.b || 0);
-    }
-    if(ds.type === 'segments') {
+      result = (esl <= ds.breakpoint) ? (ds.low.a * esl + (ds.low.b || 0)) : (ds.high.a * esl + (ds.high.b || 0));
+    } else if(ds.type === 'segments') {
       for(var si = 0; si < ds.segments.length; si++) {
         var seg = ds.segments[si];
-        if(seg.maxESL !== undefined && esl <= seg.maxESL) {
-          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
-        }
-        if(si === ds.segments.length - 1) {
-          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+        if((seg.maxESL !== undefined && esl <= seg.maxESL) || si === ds.segments.length - 1) {
+          result = seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+          break;
         }
       }
+      if(result === undefined) result = 0;
+    } else if(ds.capValue !== undefined && ds.capBelow !== undefined && esl < ds.capBelow) {
+      result = ds.capValue;
+    } else {
+      result = ds.a * esl + (ds.b || 0);
     }
-    if(ds.capValue !== undefined && ds.capBelow !== undefined && esl < ds.capBelow) {
-      return ds.capValue;
-    }
-    return ds.a * esl + (ds.b || 0);
+    // minCap: minimum eşik değeri (formül altına düşmesini engeller)
+    if(ds.minCap !== undefined && result < ds.minCap) result = ds.minCap;
+    return result;
   }
 
   var shiftState = {

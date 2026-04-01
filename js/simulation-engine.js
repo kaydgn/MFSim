@@ -388,6 +388,8 @@ function veRunSimulationEngine() {
               } else {
                 _dsTh = _dsEntry.a * _esl + (_dsEntry.b || 0);
               }
+              // minCap: minimum eşik değeri (formül altına düşmesini engeller)
+              if(_dsEntry.minCap !== undefined && _dsTh < _dsEntry.minCap) _dsTh = _dsEntry.minCap;
               if(_N_out < _dsTh) _dsTriggered = true;
             }
           }

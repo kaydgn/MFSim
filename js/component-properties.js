@@ -3938,6 +3938,20 @@ var VE_FT_SHIFT_PROFILES = {
       '4L5L': { a: 1.0000, b: -75.0 },   // i_gear = 1.000, max hata ±0.0 rpm
       '5L6L': { a: 1.3354, b: -99.9 }    // i_gear ≈ 0.749, max hata ±0.5 rpm
     },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 1.335, b: -299.8 },                                     // ESL ≤ 2000, max hata ±0.3 rpm
+        high: { a: 1.19, b: 0 }                                            // ESL ≥ 2100, max hata ±0.3 rpm
+      },
+      '5to4': { a: 0.8687, b: -1.2 },                                      // max hata ±0.5 rpm
+      '4to3': { a: 0.6514, b: -113.4 },                                    // max hata ±0.5 rpm
+      '3to2': { type: 'piecewise', breakpoint: 1800,
+        low:  { a: 0.445, b: -97.2 },                                      // ESL ≤ 1800, max hata ±0.5 rpm
+        high: { a: 0.3914, b: -1.0 }                                       // ESL ≥ 1900, max hata ±0.5 rpm
+      },
+      '2to1': { a: 0.2662, b: -21.9 }                                      // 2L→2C, max hata ±0.5 rpm
+    },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
@@ -3954,11 +3968,29 @@ var VE_FT_SHIFT_PROFILES = {
       '2C2L': { a: 0.2862, b: 12.1 }               // max hata ±8.0 rpm
     },
     // Lockup-mod: N_engine = 0.9 × ESL (3200SP/4500SP S2 ile aynı kural)
+    // Düşük ESL'de nonlineer davranış — 2L3L: minCap, 3L4L: piecewise model
     lockupShifts: {
-      '2L3L': { a: 0.4000, b: -1.0, minCap: 665 },  // i_gear ≈ 2.253, max hata ±0.0 rpm
-      '3L4L': { a: 0.5865, b: 0, minCap: 994 },      // i_gear ≈ 1.534, max hata ±0.4 rpm
+      '2L3L': { a: 0.4000, b: -1.0, minCap: 665 },   // i_gear ≈ 2.253, max hata ±0.0 rpm
+      '3L4L': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.26, b: 578 },                    // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.5865, b: 0 }                     // ESL ≥ 1800, max hata ±0.4 rpm
+      },
       '4L5L': { a: 0.9000, b: 0 },                    // i_gear ≈ 1.000, max hata ±0.0 rpm
       '5L6L': { a: 1.2022, b: -0.6 }                  // i_gear ≈ 0.749, max hata ±0.4 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.2017, b: -199.9 },                                    // max hata ±0.4 rpm
+      '5to4': { a: 0.9000, b: -100 },                                      // max hata ±0.0 rpm
+      '4to3': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.26, b: 513 },                                         // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.5862, b: -64.3 }                                      // ESL ≥ 1800, max hata ±0.6 rpm
+      },
+      '3to2': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.14, b: 379 },                                         // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.4, b: -63 }                                           // ESL ≥ 1800, max hata ±0.0 rpm
+      },
+      '2to1': { a: 0.2662, b: -21.9 }                                      // 2L→2C, max hata ±0.5 rpm
     },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
@@ -3984,6 +4016,17 @@ var VE_FT_SHIFT_PROFILES = {
       '4L5L': { a: 0.8011, b: 134.0 },   // i_gear ≈ 1.000, max hata ±0.5 rpm
       '5L6L': { a: 0.9241, b: 148.4 }    // i_gear ≈ 0.749, max hata ±4.0 rpm (nonlineer)
     },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.0000, b: -125 },                                      // max hata ±0.0 rpm
+      '5to4': { a: 0.8013, b: 0 },                                         // max hata ±0.5 rpm
+      '4to3': { a: 0.6514, b: -113.4 },                                    // max hata ±0.5 rpm (S1 ile aynı)
+      '3to2': { type: 'piecewise', breakpoint: 1800,
+        low:  { a: 0.445, b: -97.2 },                                      // ESL ≤ 1800, max hata ±0.5 rpm
+        high: { a: 0.3914, b: -1.0 }                                       // ESL ≥ 1900, max hata ±0.5 rpm
+      },
+      '2to1': { a: 0.2662, b: -21.9 }                                      // 2L→2C, max hata ±0.5 rpm
+    },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
@@ -3999,12 +4042,29 @@ var VE_FT_SHIFT_PROFILES = {
       '1C2C': { a: 0.1635, b: -0.3 },
       '2C2L': { a: 0.2691, b: 14.0 }               // max hata ±9.5 rpm
     },
-    // Lockup-mod: minCap destekli (düşük ESL koruması)
+    // Lockup-mod: minCap/piecewise destekli (düşük ESL koruması)
     lockupShifts: {
-      '2L3L': { a: 0.3915, b: -33.6, minCap: 665 },   // i_gear ≈ 2.253, max hata ±0.5 rpm
-      '3L4L': { a: 0.6000, b: -50.0, minCap: 1020 },   // i_gear ≈ 1.534, max hata ±0.0 rpm
+      '2L3L': { a: 0.3915, b: -33.6, minCap: 665 },    // i_gear ≈ 2.253, max hata ±0.5 rpm
+      '3L4L': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.26, b: 578 },                      // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.6, b: -50 }                        // ESL ≥ 1800, max hata ±0.0 rpm
+      },
       '4L5L': { a: 0.8007, b: -65.4, minCap: 1362 },   // i_gear ≈ 1.000, max hata ±0.6 rpm
       '5L6L': { a: 1.0000, b: -45.0 }                   // i_gear ≈ 0.749, max hata ±0.0 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.0000, b: -125 },                                      // max hata ±0.0 rpm (S3 ile aynı)
+      '5to4': { a: 0.8015, b: -134, capValue: 1229, capBelow: 1800 },      // ESL<1800: cap 1229, max hata ±0.5 rpm
+      '4to3': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: -0.09, b: 1073 },                                       // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.6, b: -100 }                                          // ESL ≥ 1800, max hata ±0.0 rpm
+      },
+      '3to2': { a: 0.39, b: -63, capValue: 600, capBelow: 1800 },          // ESL<1800: cap 600, max hata ±0.0 rpm
+      '2to1': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.14, b: 180 },                                         // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.2757, b: -51.1 }                                      // ESL ≥ 1800, max hata ±0.6 rpm
+      }
     },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
