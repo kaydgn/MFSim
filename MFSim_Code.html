@@ -35416,16 +35416,22 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   r += pRow('Hesaplama Modu', 'Engel Atlama Analizi');
   r += '\n';
 
-  // 2. ARAC PARAMETRELERI
-  r += ln('-', W) + '\n  ARAC PARAMETRELERI\n' + ln('-', W) + '\n';
+  // ════════════════════════════════════════════════════════════════════════
+  // 1. ARAC PARAMETRELERI
+  // ════════════════════════════════════════════════════════════════════════
+  r += '\n' + ln('=', W) + '\n';
+  r += pad('1. ARAC PARAMETRELERI', W, 'center') + '\n';
+  r += ln('=', W) + '\n\n';
   r += pRow('Arac Kutle (GVW)', num(inp.mass, 0) + ' kg');
   r += pRow('Ag. Merkezi-On Aks (a1)', num(inp.a1, 3) + ' m');
   r += pRow('Ag. Merkezi-Arka Aks (a2)', num(inp.a2, 3) + ' m');
   r += pRow('Dingil Mesafesi (L=a1+a2)', num(inp.wheelbase, 3) + ' m');
   r += '\n';
 
-  // 2b. KONFIGURASYON — topolojideki tüm bileşenler
-  r += ln('-', W) + '\n  KONFIGURASYON\n' + ln('-', W) + '\n';
+  // KONFIGURASYON alt bölümü
+  r += '\n';
+  r += '  KONFIGURASYON\n';
+  r += '  ' + ln('-', 38) + '\n';
   if(_engNodeR) r += pRow('Motor', _cName(_engNodeR));
   if(_tcNodeR) r += pRow('Tork Konvertor', _cName(_tcNodeR));
   if(_gbNodeR) r += pRow('Sanziman', _cName(_gbNodeR));
@@ -35445,13 +35451,20 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   });
   r += '\n';
 
-  // 3. ENGEL PARAMETRELERI
-  r += ln('-', W) + '\n  ENGEL PARAMETRELERI\n' + ln('-', W) + '\n';
+  // ════════════════════════════════════════════════════════════════════════
+  // 2. ENGEL PARAMETRELERI
+  // ════════════════════════════════════════════════════════════════════════
+  r += '\n' + ln('=', W) + '\n';
+  r += pad('2. ENGEL VE LASTIK PARAMETRELERI', W, 'center') + '\n';
+  r += ln('=', W) + '\n\n';
+  r += '  ENGEL PARAMETRELERI\n';
+  r += '  ' + ln('-', 38) + '\n';
   r += pRow('Engel Yuksekligi (h)', num(inp.h, 3) + ' m');
   r += '\n';
 
-  // 4. LASTIK PARAMETRELERI
-  r += ln('-', W) + '\n  LASTIK PARAMETRELERI\n' + ln('-', W) + '\n';
+  r += '\n';
+  r += '  LASTIK PARAMETRELERI\n';
+  r += '  ' + ln('-', 38) + '\n';
   r += pRow('Lastik', ascii(inp.tireName));
   r += pRow('Yuvarlanma Yaricapi', num(inp.rollingRadius, 3) + ' m');
   r += pRow('Yuklu Lastik Yaricapi (R_eff)', num(inp.R_eff, 3) + ' m');
@@ -35474,7 +35487,12 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   var motorAdi = _engNode ? (_engNode.customName || '') : '';
   var tcAdi = _tcNode ? (_tcNode.customName || '') : '';
 
-  r += ln('-', W) + '\n  MOTOR & TORK KONVERTOR VERILERI\n' + ln('-', W) + '\n';
+  // ════════════════════════════════════════════════════════════════════════
+  // 3. MOTOR & TORK KONVERTOR VERILERI
+  // ════════════════════════════════════════════════════════════════════════
+  r += '\n' + ln('=', W) + '\n';
+  r += pad('3. MOTOR & TORK KONVERTOR VERILERI', W, 'center') + '\n';
+  r += ln('=', W) + '\n\n';
 
   // Üst bilgiler yan yana
   var cL = 38, cR = 38;
@@ -35565,7 +35583,8 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
 
     // ŞANZIMAN ÇIKIŞ TABLOSU
     var gearLabel = inp.gearName ? ascii(inp.gearName) : '1C';
-    r += ln('-', W) + '\n  SANZIMAN CIKIS TABLOSU (Gear ' + gearLabel + ' - Converter Mode)\n' + ln('-', W) + '\n\n';
+    r += '\n  SANZIMAN CIKIS TABLOSU (Gear ' + gearLabel + ' - Converter Mode)\n';
+    r += '  ' + ln('-', 60) + '\n\n';
 
     r += '  ' + pad('SR', 7, 'right') + pad('N_eng', 7, 'right') + pad('T_eng', 8, 'right') + pad('P_eng', 8, 'right');
     r += pad('N_out', 8, 'right') + pad('T_gb', 8, 'right') + pad('P_gb', 8, 'right');
@@ -35606,7 +35625,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     r += '  Sebep: ' + ascii(obs.geometryFailReason) + '\n\n';
     r += '  Hesaplama bu noktada durduruldu.\n';
   } else if(trq) {
-    r += ln('=', W) + '\n  TORK GEREKSINIMI ANALIZI (Statik)\n' + ln('=', W) + '\n\n';
+    r += ln('=', W) + '\n';
+    r += pad('5. TORK GEREKSINIMI ANALIZI (Statik)', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
     r += '  W = ' + num(inp.mass, 0) + ' kg x 9.81 = ' + num(trq.W, 0) + ' N\n';
     r += '  x = sqrt(2*R*h - h^2) = ' + num(geo.x, 4) + ' m\n\n';
 
@@ -35649,16 +35670,15 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   }
   r += '\n';
 
-  // ── ADIM 6: DİNAMİK SİMÜLASYON SONUÇLARI ──
+  // ════════════════════════════════════════════════════════════════════════
+  // 6. DİNAMİK SİMÜLASYON SONUÇLARI
+  // ════════════════════════════════════════════════════════════════════════
   var dyn = sim.obstacleDynamic;
   if(dyn) {
-    r += '\n';
-    r += '  ' + ln('*', 68) + '\n';
-    r += '  *' + pad('', 66) + '*\n';
-    r += '  *' + pad('DINAMIK SIMULASYON', 66, 'center') + '*\n';
-    r += '  *' + pad('Zaman Adimli Engel Atlama Modeli', 66, 'center') + '*\n';
-    r += '  *' + pad('', 66) + '*\n';
-    r += '  ' + ln('*', 68) + '\n\n';
+    r += '\n' + ln('=', W) + '\n';
+    r += pad('6. DINAMIK SIMULASYON SONUCLARI', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+    r += '  ' + pad('Zaman Adimli Engel Atlama Modeli', W - 4, 'center') + '\n\n';
 
     if(!dyn.success && !dyn.log) {
       r += '  *** ' + ascii(dyn.reason) + ' ***\n\n';
@@ -35881,7 +35901,9 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
 
     if(tekTarafGecti) {
       r += '\n';
-      r += ln('=', W) + '\n  PARAMETRIK CALISMA: YUK TRANSFERI ANALIZI\n' + ln('=', W) + '\n\n';
+      r += ln('=', W) + '\n';
+      r += pad('7. PARAMETRIK CALISMA: YUK TRANSFERI ANALIZI', W, 'center') + '\n';
+      r += ln('=', W) + '\n\n';
 
       if(onGecti && !arkaGecti) {
         r += '  Mevcut durumda on teker engeli asiyor ancak arka teker asamiyor.\n';
@@ -36037,6 +36059,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   // FERAGAT
   r += ln('-', W) + '\n';
   r += pad('FERAGATNAME', W, 'center') + '\n';
+  r += ln('=', W) + '\n\n';
   r += ln('-', W) + '\n';
   r += pad('Bu rapor MFSim Engel Atlama Analizi Programi', W, 'center') + '\n';
   r += pad('ile otomatik olusturulmustur. Hesaplamalar', W, 'center') + '\n';
