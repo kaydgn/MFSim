@@ -3828,6 +3828,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     return str;
   }
   function num(v, d) { return isFinite(v) ? v.toFixed(d) : '-'; }
+  function numI(v) { return isFinite(v) ? Math.round(v).toString() : '-'; }
   function pRow(label, value, indent) {
     indent = indent || '  ';
     var labelW = 32;
