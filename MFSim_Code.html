@@ -13398,6 +13398,17 @@ var VE_FT_SHIFT_PROFILES = {
       '4L5L': { a: 1.0000, b: -75.0 },   // i_gear = 1.0000, max hata ±0.0 rpm
       '5L6L': { a: 1.3086, b: -98.7 }    // i_gear ≈ 0.7642, max hata ±0.5 rpm
     },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { type: 'piecewise', breakpoint: 1800,
+        low:  { a: 1.31, b: -297 },                                        // ESL ≤ 1800, max hata ±0.4 rpm
+        high: { a: 1.1544, b: -1 }                                         // ESL ≥ 1900, max hata ±0.4 rpm
+      },
+      '5to4': { a: 0.8500, b: 1 },                                         // max hata ±0.0 rpm
+      '4to3': { a: 0.6542, b: -114.8 },                                    // max hata ±0.4 rpm
+      '3to2': { a: 0.3931, b: -1.7 },                                      // max hata ±1.3 rpm
+      '2to1': { a: 0.2711, b: -22.6 }                                      // 2L→2C, max hata ±0.5 rpm
+    },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
@@ -13418,11 +13429,29 @@ var VE_FT_SHIFT_PROFILES = {
       }
     },
     // Lockup-mod: N_engine = 0.9 × ESL (3200SP S2 ile birebir aynı kural)
+    // Düşük ESL'de nonlineer davranış — 2L3L: minCap, 3L4L: piecewise model
     lockupShifts: {
-      '2L3L': { a: 0.4067, b: -0.2, minCap: 667 },  // i_gear ≈ 2.2115, max hata ±0.4 rpm
-      '3L4L': { a: 0.5888, b: -0.7, minCap: 997 },   // i_gear ≈ 1.5291, max hata ±0.5 rpm
+      '2L3L': { a: 0.4067, b: -0.2, minCap: 667 },   // i_gear ≈ 2.2115, max hata ±0.4 rpm
+      '3L4L': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.23, b: 629 },                    // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.5888, b: -0.7 }                  // ESL ≥ 1800, max hata ±0.6 rpm
+      },
       '4L5L': { a: 0.9000, b: 0 },                    // i_gear ≈ 1.0000, max hata ±0.0 rpm
       '5L6L': { a: 1.1776, b: -0.1 }                  // i_gear ≈ 0.7642, max hata ±0.4 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.1774, b: -195.8 },                                    // max hata ±0.4 rpm
+      '5to4': { a: 0.9000, b: -100 },                                      // max hata ±0.0 rpm
+      '4to3': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.23, b: 564 },                                         // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.5883, b: -64.9 }                                      // ESL ≥ 1800, max hata ±0.5 rpm
+      },
+      '3to2': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.24, b: 220 },                                         // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.4065, b: -63 }                                        // ESL ≥ 1800, max hata ±0.4 rpm
+      },
+      '2to1': { a: 0.2711, b: -22.6 }                                      // 2L→2C, max hata ±0.5 rpm
     },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
@@ -13452,6 +13481,14 @@ var VE_FT_SHIFT_PROFILES = {
       '4L5L': { a: 0.7850, b: 130.8 },   // i_gear ≈ 1.0000, max hata ±0.3 rpm
       '5L6L': { a: 0.9843, b: -8.5 }     // i_gear ≈ 0.7642, max hata ±11.7 rpm (nonlineer)
     },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.0000, b: -125 },                                      // max hata ±0.0 rpm
+      '5to4': { a: 0.7850, b: 0.2 },                                       // max hata ±0.3 rpm
+      '4to3': { a: 0.6542, b: -114.8 },                                    // max hata ±0.4 rpm (S1 ile aynı)
+      '3to2': { a: 0.3931, b: -1.7 },                                      // max hata ±1.3 rpm
+      '2to1': { a: 0.2711, b: -22.6 }                                      // 2L→2C, max hata ±0.5 rpm
+    },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
@@ -13471,12 +13508,29 @@ var VE_FT_SHIFT_PROFILES = {
         lookup: [[1600, 230], [1700, 242]]
       }
     },
-    // Lockup-mod: minCap destekli (düşük ESL koruması)
+    // Lockup-mod: minCap/piecewise destekli (düşük ESL koruması)
     lockupShifts: {
-      '2L3L': { a: 0.3923, b: -32.5, minCap: 667 },   // i_gear ≈ 2.2115, max hata ±0.4 rpm
-      '3L4L': { a: 0.6000, b: -50.0, minCap: 1020 },   // i_gear ≈ 1.5291, max hata ±0.0 rpm
+      '2L3L': { a: 0.3923, b: -32.5, minCap: 667 },    // i_gear ≈ 2.2115, max hata ±0.5 rpm
+      '3L4L': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.23, b: 629 },                      // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.6, b: -50 }                        // ESL ≥ 1800, max hata ±0.0 rpm
+      },
       '4L5L': { a: 0.7850, b: -65.2, minCap: 1335 },   // i_gear ≈ 1.0000, max hata ±0.3 rpm
       '5L6L': { a: 1.0000, b: -45.0 }                   // i_gear ≈ 0.7642, max hata ±0.0 rpm
+    },
+    // Downshift eşikleri: N_out < threshold → alt vitese düş
+    downshiftThresholds: {
+      '6to5': { a: 1.0000, b: -125 },                                      // max hata ±0.0 rpm (S3 ile aynı)
+      '5to4': { a: 0.7850, b: -130.8, capValue: 1204, capBelow: 1800 },    // ESL<1800: cap 1204, max hata ±0.3 rpm
+      '4to3': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: -0.12, b: 1124 },                                       // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.6, b: -100 }                                          // ESL ≥ 1800, max hata ±0.0 rpm
+      },
+      '3to2': { a: 0.3927, b: -66, capValue: 602, capBelow: 1800 },        // ESL<1800: cap 602, max hata ±0.5 rpm
+      '2to1': { type: 'piecewise', breakpoint: 1700,
+        low:  { a: 0.15, b: 171 },                                         // ESL ≤ 1700, max hata ±0.0 rpm
+        high: { a: 0.28, b: -50 }                                          // ESL ≥ 1800, max hata ±0.0 rpm
+      }
     },
     srShift1C2C: 0.78,
     srLockup2C2L: 0.85,
@@ -14011,6 +14065,7 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 4500SP',
     family: '4000',
     calibrated: true,
+    downshiftCalibrated: true,
     grossInputPower: 451,
     grossInputTorque: 2400,
     netTurbineTorque: 3525,
