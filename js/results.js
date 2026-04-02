@@ -429,7 +429,7 @@ function veUpdateResultsTree() {
 
           html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
           var is3dDiag = diagSigDef && diagSigDef.z;
-          var diagEmoji = canDrag ? (is3dDiag ? '🗺️' : '📊') : '🔒';
+          var diagEmoji = canDrag ? (is3dDiag ? '🔮' : '📊') : '🔒';
           html += '<span>' + diagEmoji + '</span> ' + diag.name;
           if(diag.note) html += ' <span style="font-size:0.5rem; color:var(--accent-warning);">⚠</span>';
           html += '</div>';
@@ -3523,7 +3523,6 @@ function veRefreshAllCharts() {
     if(!s.sensors || s.sensors.length === 0) continue;
     if(!window.veSimResults) continue;
     if(s.type === 'line') veRenderChart(i);
-    else if(s.type === 'surface') veRenderSurface(i);
     else if(s.type === 'scatter3d') veRender3DScatter(i);
   }
 }
@@ -3535,7 +3534,6 @@ function veRenderSlotPicker(slotIdx) {
   var items = [
     {type:'line', icon:'📈', label:'Çizgi\nGrafik'},
     {type:'table', icon:'📋', label:'Tablo'},
-    {type:'surface', icon:'🗺️', label:'3B Yüzey\nDiyagramı'},
     {type:'scatter3d', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="g3d" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><line x1="6" y1="34" x2="6" y2="6" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="34" y2="34" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="18" y2="24" stroke="#94a3b8" stroke-width="1.2"/><circle cx="14" cy="18" r="2.8" fill="url(#g3d)" opacity="0.9"/><circle cx="22" cy="24" r="2.2" fill="#3b82f6" opacity="0.7"/><circle cx="28" cy="14" r="3" fill="url(#g3d)" opacity="0.95"/><circle cx="18" cy="28" r="2" fill="#8b5cf6" opacity="0.65"/><circle cx="26" cy="20" r="2.5" fill="#3b82f6" opacity="0.8"/><circle cx="11" cy="26" r="1.8" fill="#8b5cf6" opacity="0.6"/><circle cx="30" cy="28" r="2.3" fill="url(#g3d)" opacity="0.75"/></svg>', label:'3D\nGrafik'}
   ];
   
@@ -3672,11 +3670,10 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   }
 
   var slot = veResultSlots[slotIdx];
-  // 3D mi 2D mi?
   var is3D = !!sigDef.z;
 
   // Slot'u temizle ve yeni diyagram ile doldur
-  slot.type = is3D ? 'surface' : 'line';
+  slot.type = is3D ? 'scatter3d' : 'line';
   slot.sensors = [];
   slot.yAxisLock = {};
   delete slot.zAxis;
@@ -3687,55 +3684,44 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   if(ds) slot._dataSource = ds;
   else delete slot._dataSource;
 
-  // X ekseni ayarla
-  if(sigDef.x.target === 'time') {
-    slot.xAxis = { id:'time', name:'Zaman [s]', unit:'s' };
-  } else {
-    slot.xAxis = {
-      id: '~' + sigDef.x.target + ':' + sigDef.x.signal,
-      name: (sigDef.x.name || sigDef.x.signal) + ' [' + (sigDef.x.unit || '') + ']',
-      unit: sigDef.x.unit || ''
+  // Sinyal oluşturma yardımcı fonksiyonu
+  function makeSensorEntry(def) {
+    if(def.target === 'time') {
+      return { id:'~time', signal:'time', name:'Zaman', unit:'s' };
+    }
+    return {
+      id: '~' + def.target,
+      signal: def.signal,
+      name: def.name || def.signal,
+      unit: def.unit || ''
     };
-  }
-  if(ds && slot.xAxis && slot.xAxis.id !== 'time') {
-    slot.xAxis._dataSource = ds;
   }
 
   if(is3D) {
-    // 3B yüzey: Y ekseni tek sinyal, Z ekseni renk skalası
-    var ySig = sigDef.y[0];
-    if(ySig.target === 'time') {
-      slot.sensors = [{ id:'~time', signal:'time', name:'Zaman', unit:'s' }];
-    } else {
-      slot.sensors = [{
-        id: '~' + ySig.target,
-        signal: ySig.signal,
-        name: ySig.name || ySig.signal,
-        unit: ySig.unit || ''
-      }];
-    }
-    if(ds) slot.sensors[0]._dataSource = ds;
-
-    // Z ekseni
-    if(sigDef.z.target === 'time') {
-      slot.zAxis = { id:'time', name:'Zaman [s]', unit:'s' };
-    } else {
-      slot.zAxis = {
-        id: '~' + sigDef.z.target + ':' + sigDef.z.signal,
-        name: (sigDef.z.name || sigDef.z.signal) + ' [' + (sigDef.z.unit || '') + ']',
-        unit: sigDef.z.unit || ''
-      };
-    }
-    if(ds && slot.zAxis.id !== 'time') slot.zAxis._dataSource = ds;
+    // scatter3d: sensors[0]=X, sensors[1]=Y, sensors[2]=Z
+    var xEntry = makeSensorEntry(sigDef.x);
+    var yEntry = makeSensorEntry(sigDef.y[0]);
+    var zEntry = makeSensorEntry(sigDef.z);
+    if(ds) { xEntry._dataSource = ds; yEntry._dataSource = ds; zEntry._dataSource = ds; }
+    slot.sensors = [xEntry, yEntry, zEntry];
+    // scatter3d X ekseni ilk sensörden gelir, ama uyumluluk için xAxis de ayarla
+    slot.xAxis = { id: xEntry.id + ':' + xEntry.signal, name: xEntry.name + ' [' + xEntry.unit + ']', unit: xEntry.unit };
   } else {
-    // 2D: Y eksen sinyallerini ekle
-    sigDef.y.forEach(function(ySig) {
-      var entry = {
-        id: '~' + ySig.target,
-        signal: ySig.signal,
-        name: ySig.name || ySig.signal,
-        unit: ySig.unit || ''
+    // 2D: X ekseni ayarla
+    if(sigDef.x.target === 'time') {
+      slot.xAxis = { id:'time', name:'Zaman [s]', unit:'s' };
+    } else {
+      slot.xAxis = {
+        id: '~' + sigDef.x.target + ':' + sigDef.x.signal,
+        name: (sigDef.x.name || sigDef.x.signal) + ' [' + (sigDef.x.unit || '') + ']',
+        unit: sigDef.x.unit || ''
       };
+    }
+    if(ds && slot.xAxis.id !== 'time') slot.xAxis._dataSource = ds;
+
+    // Y eksen sinyallerini ekle
+    sigDef.y.forEach(function(ySig) {
+      var entry = makeSensorEntry(ySig);
       if(ds) entry._dataSource = ds;
       if(!slot.sensors.some(function(s) { return s.id === entry.id && s.signal === entry.signal; })) {
         slot.sensors.push(entry);
@@ -3744,7 +3730,7 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   }
 
   veRenderSlot(slotIdx);
-  var icon = is3D ? '🗺️' : '📊';
+  var icon = is3D ? '🔮' : '📊';
   if(typeof showToast === 'function') showToast(icon + ' ' + diag.name + ' diyagramı eklendi', 'success');
 }
 
@@ -4002,7 +3988,7 @@ function veRenderSlot(slotIdx) {
   
   var type = slot.type || 'line';
   var sensors = slot.sensors || [];
-  var typeName = type === 'line' ? '📈' : (type === 'surface' ? '🗺️' : (type === 'scatter3d' ? '🔮' : '📋'));
+  var typeName = type === 'line' ? '📈' : (type === 'scatter3d' ? '🔮' : '📋');
 
   // Tab başlığını güncelle
   var tab = document.getElementById('ve-rslot-tab-' + slotIdx);
@@ -4018,9 +4004,9 @@ function veRenderSlot(slotIdx) {
   var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   
   if(sensors.length === 0) {
-    var emptyIcon = type === 'line' ? '📈' : (type === 'surface' ? '🗺️' : (type === 'scatter3d' ? '🔮' : '📋'));
-    var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'surface' ? '3B Yüzey Diyagramı' : (type === 'scatter3d' ? '3D Scatter Grafik' : 'Veri Tablosu'));
-    var emptyHint = type === 'surface' ? 'Sihirbaz diyagramlarından 3B diyagram sürükleyin' : (type === 'scatter3d' ? 'Data Browser\'dan en az 3 sinyal sürükleyin (X, Y, Z)' : 'Data Browser\'dan sensör sürükleyin');
+    var emptyIcon = type === 'line' ? '📈' : (type === 'scatter3d' ? '🔮' : '📋');
+    var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'scatter3d' ? '3D Grafik' : 'Veri Tablosu');
+    var emptyHint = type === 'scatter3d' ? 'Data Browser\'dan en az 3 sinyal sürükleyin veya sihirbaz diyagramı ekleyin' : 'Data Browser\'dan sensör sürükleyin';
     var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted);">';
     html += '<div style="font-size:2.2rem; margin-bottom:10px;">' + emptyIcon + '</div>';
     html += '<div style="font-size:0.82rem; font-weight:600;">' + emptyName + '</div>';
@@ -4066,21 +4052,6 @@ function veRenderSlot(slotIdx) {
     html += '<span>' + xName + '</span>';
     html += '<span class="ve-xaxis-arrow">▲</span>';
     html += '</span>';
-    html += '</div>';
-  } else if(type === 'surface') {
-    // ── 3B Yüzey modu ──
-    html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '">';
-    html += '<canvas id="ve-chart-canvas-' + slotIdx + '" style="position:absolute;left:0;top:0;width:100%;height:100%;"></canvas>';
-    html += '<div class="ve-chart-tooltip" id="ve-tooltip-' + slotIdx + '"></div>';
-    html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
-    html += '<div style="font-size:1.5rem; margin-bottom:6px;">🗺️</div>Simülasyon sonrası 3B yüzey görünecek</div>';
-    html += '</div>';
-    // Eksen bilgisi
-    var xLabel3d = slot.xAxis ? slot.xAxis.name : 'X';
-    var yLabel3d = (sensors.length > 0) ? (sensors[0].name + (sensors[0].unit ? ' [' + sensors[0].unit + ']' : '')) : 'Y';
-    var zLabel3d = slot.zAxis ? (slot.zAxis.name || 'Z') : 'Z';
-    html += '<div class="ve-slot-axis-x" style="font-size:0.58rem;">';
-    html += '<span style="opacity:0.7;">X: ' + xLabel3d + '  |  Y: ' + yLabel3d + '  |  Z (renk): ' + zLabel3d + '</span>';
     html += '</div>';
   } else if(type === 'scatter3d') {
     // ── 3D Scatter modu ──
@@ -4135,8 +4106,8 @@ function veRenderSlot(slotIdx) {
     html += '</div>';
   }
   
-  // Legend — Tablo modu için altta, grafik/surface/3D modu için chart içinde overlay olarak zaten eklendi
-  if(type !== 'line' && type !== 'surface' && type !== 'scatter3d') {
+  // Legend — Tablo modu için altta, grafik/3D modu için chart içinde overlay olarak zaten eklendi
+  if(type !== 'line' && type !== 'scatter3d') {
     html += '<div class="ve-slot-legend">';
     sensors.forEach(function(s, i) {
       var c = colors[i % colors.length];
@@ -4158,9 +4129,6 @@ function veRenderSlot(slotIdx) {
     if(window.veSimResults) veRenderChart(slotIdx);
     veInitChartInteraction(slotIdx);
     veInitLegendDrag(slotIdx);
-  } else if(type === 'surface') {
-    if(window.veSimResults) veRenderSurface(slotIdx);
-    veInitSurfaceInteraction(slotIdx);
   } else if(type === 'scatter3d') {
     if(window.veSimResults) veRender3DScatter(slotIdx);
     veInitLegendDrag(slotIdx);
@@ -4447,8 +4415,6 @@ function veSetSlotXAxis(slotIdx, optIdx) {
     if(slot.type === 'line') {
       veResetChartView(slotIdx);
       veRenderChart(slotIdx);
-    } else if(slot.type === 'surface') {
-      veRenderSurface(slotIdx);
     } else if(slot.type === 'scatter3d') {
       veRender3DScatter(slotIdx);
     } else {
