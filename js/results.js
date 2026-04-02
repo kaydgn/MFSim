@@ -4001,6 +4001,20 @@ function veRenderSlot(slotIdx) {
     html += '<div class="ve-chart-tooltip" id="ve-tooltip-' + slotIdx + '"></div>';
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
     html += '<div style="font-size:1.5rem; margin-bottom:6px;">📈</div>Simülasyon sonrası grafik görünecek</div>';
+    // ── Grafik içi legend (overlay, sürüklenebilir) ──
+    if(sensors.length > 0) {
+      html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
+      sensors.forEach(function(s, i) {
+        var c = colors[i % colors.length];
+        html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
+        html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
+        html += '<span>' + s.name + '</span>';
+        if(s.unit) html += ' <span style="opacity:0.55; font-size:0.6rem;">[' + s.unit + ']</span>';
+        html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
+        html += '</span>';
+      });
+      html += '</div>';
+    }
     html += '</div>';
     // ── Eksen kontrol çubuğu (dinamik — veRenderChart tarafından güncellenir) ──
     html += '<div class="ve-axis-ctrl" id="ve-axis-ctrl-' + slotIdx + '" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
@@ -4036,18 +4050,20 @@ function veRenderSlot(slotIdx) {
     html += '</div>';
   }
   
-  // Legend (her iki mod için) — X butonu ile kaldırma destekli
-  html += '<div class="ve-slot-legend">';
-  sensors.forEach(function(s, i) {
-    var c = colors[i % colors.length];
-    html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
-    html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
-    html += '<span>' + s.name + '</span>';
-    if(s.unit) html += ' <span style="opacity:0.55; font-size:0.6rem;">[' + s.unit + ']</span>';
-    html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
-    html += '</span>';
-  });
-  html += '</div>';
+  // Legend — Tablo modu için altta, grafik modu için chart içinde overlay olarak zaten eklendi
+  if(type !== 'line') {
+    html += '<div class="ve-slot-legend">';
+    sensors.forEach(function(s, i) {
+      var c = colors[i % colors.length];
+      html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
+      html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
+      html += '<span>' + s.name + '</span>';
+      if(s.unit) html += ' <span style="opacity:0.55; font-size:0.6rem;">[' + s.unit + ']</span>';
+      html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
+      html += '</span>';
+    });
+    html += '</div>';
+  }
   html += '</div>';
   
   body.innerHTML = html;
@@ -4056,9 +4072,79 @@ function veRenderSlot(slotIdx) {
     veResetChartView(slotIdx);
     if(window.veSimResults) veRenderChart(slotIdx);
     veInitChartInteraction(slotIdx);
+    veInitLegendDrag(slotIdx);
   } else {
     if(window.veSimResults) veRenderTable(slotIdx);
   }
+}
+
+// ===== LEGEND SÜRÜKLEME (DRAG) =====
+function veInitLegendDrag(slotIdx) {
+  var legend = document.getElementById('ve-chart-legend-' + slotIdx);
+  if(!legend) return;
+
+  var isDragging = false;
+  var startX = 0, startY = 0;
+  var startLeft = 0, startBottom = 0;
+
+  legend.addEventListener('mousedown', function(e) {
+    // ✕ butonuna tıklanırsa sürükleme başlatma
+    if(e.target.classList.contains('ve-legend-remove')) return;
+    isDragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    var style = window.getComputedStyle(legend);
+    startLeft = parseInt(style.left) || 0;
+    // bottom yerine top kullan (ilk seferde bottom'dan top'a dönüştür)
+    if(!legend._usesTop) {
+      var parent = legend.parentElement;
+      var parentRect = parent.getBoundingClientRect();
+      var legendRect = legend.getBoundingClientRect();
+      var topVal = legendRect.top - parentRect.top;
+      legend.style.bottom = 'auto';
+      legend.style.top = topVal + 'px';
+      legend._usesTop = true;
+      startBottom = topVal; // artık top olarak kullanılıyor
+    } else {
+      startBottom = parseInt(legend.style.top) || 0;
+    }
+    legend.style.cursor = 'grabbing';
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if(!isDragging) return;
+    var dx = e.clientX - startX;
+    var dy = e.clientY - startY;
+    var newLeft = startLeft + dx;
+    var newTop = startBottom + dy;
+
+    // Sınır kontrolü
+    var parent = legend.parentElement;
+    if(parent) {
+      var pw = parent.clientWidth;
+      var ph = parent.clientHeight;
+      var lw = legend.offsetWidth;
+      var lh = legend.offsetHeight;
+      if(newLeft < 0) newLeft = 0;
+      if(newLeft + lw > pw) newLeft = pw - lw;
+      if(newTop < 0) newTop = 0;
+      if(newTop + lh > ph) newTop = ph - lh;
+    }
+
+    legend.style.left = newLeft + 'px';
+    legend.style.top = newTop + 'px';
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  document.addEventListener('mouseup', function() {
+    if(isDragging) {
+      isDragging = false;
+      legend.style.cursor = '';
+    }
+  });
 }
 
 // ===== LEJANTTAN SENSÖR KALDIRMA =====
