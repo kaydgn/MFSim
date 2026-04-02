@@ -34,6 +34,19 @@ function veGetSensorData(sensorId, signalOverride, dataSource) {
     return col.length > 0 ? col : null;
   }
 
+  // obs-log hedefi: obstacleDynamic.log dizisinden sütun okur
+  if(sensorId === '~obs-log') {
+    var sig = signalOverride;
+    if(!r || !sig) return null;
+    var dynResult = r.obstacleDynamic;
+    if(!dynResult || !dynResult.log || dynResult.log.length === 0) return null;
+    var col = [];
+    dynResult.log.forEach(function(row) {
+      if(row[sig] !== undefined) col.push(row[sig]);
+    });
+    return col.length > 0 ? col : null;
+  }
+
   // ====== SIHIRBAZ DOĞRUDAN BİLEŞEN ERİŞİMİ ======
   // ~compType formatı: fiziksel sensör olmadan doğrudan bileşen verisine erişim
   if(sensorId.charAt(0) === '~') {
@@ -1216,6 +1229,391 @@ function veRenderTable(slotIdx) {
   rows.push(sumRow('ORT', false, function(ds) { var s = 0; for(var j = 0; j < ds.length; j++) s += ds[j]; return ds.length > 0 ? s / ds.length : 0; }));
   
   tbody.innerHTML = rows.join('');
+}
+
+// ═══════ 3D YÜZEY DİYAGRAMI (SURFACE / HEATMAP) ═══════
+
+// Renk skalası: mavi → cyan → yeşil → sarı → kırmızı
+function veSurfaceColorScale(t) {
+  // t: 0..1 normalize değer
+  t = Math.max(0, Math.min(1, t));
+  var r, g, b;
+  if(t < 0.25) {
+    var s = t / 0.25;
+    r = 0; g = Math.round(s * 255); b = 255;
+  } else if(t < 0.5) {
+    var s = (t - 0.25) / 0.25;
+    r = 0; g = 255; b = Math.round((1 - s) * 255);
+  } else if(t < 0.75) {
+    var s = (t - 0.5) / 0.25;
+    r = Math.round(s * 255); g = 255; b = 0;
+  } else {
+    var s = (t - 0.75) / 0.25;
+    r = 255; g = Math.round((1 - s) * 255); b = 0;
+  }
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+
+function veRenderSurface(slotIdx) {
+  var slot = veResultSlots[slotIdx];
+  if(!slot || !slot.zAxis) return;
+
+  var canvas = document.getElementById('ve-chart-canvas-' + slotIdx);
+  var placeholder = document.getElementById('ve-chart-placeholder-' + slotIdx);
+  if(!canvas) return;
+
+  var r = window.veSimResults;
+  if(!r) return;
+
+  var slotDS = slot._dataSource || null;
+
+  // X, Y, Z veri dizilerini al
+  function getAxisData(axisDef) {
+    if(!axisDef) return null;
+    if(axisDef.id === 'time') {
+      if(slotDS === 'segmentDrive' && r.segmentDrive && r.segmentDrive.time) return r.segmentDrive.time;
+      return r.time || null;
+    }
+    if(axisDef.id && axisDef.id.charAt(0) === '~') {
+      var parts = axisDef.id.substring(1).split(':');
+      return veGetSensorData('~' + parts[0], parts.slice(1).join(':'), axisDef._dataSource || slotDS);
+    }
+    return null;
+  }
+
+  function getSensorData(sensorDef) {
+    if(!sensorDef) return null;
+    // Y ekseni zaman ise direkt zaman dizisini döndür
+    if(sensorDef.id === '~time' || sensorDef.signal === 'time') {
+      if(slotDS === 'segmentDrive' && r.segmentDrive && r.segmentDrive.time) return r.segmentDrive.time;
+      return r.time || null;
+    }
+    return veGetSensorData(sensorDef.id, sensorDef.signal, sensorDef._dataSource || slotDS);
+  }
+
+  var xData = getAxisData(slot.xAxis);
+  var yData = slot.sensors && slot.sensors[0] ? getSensorData(slot.sensors[0]) : null;
+  var zData = getAxisData(slot.zAxis);
+
+  if(!xData || !yData || !zData) return;
+
+  // Veri uzunluklarını eşitle
+  var N = Math.min(xData.length, yData.length, zData.length);
+  if(N < 3) return;
+
+  if(placeholder) placeholder.style.display = 'none';
+
+  var parent = canvas.parentElement;
+  var W = parent.clientWidth;
+  var H = parent.clientHeight;
+  if(W < 100 || H < 100) return;
+
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Padding
+  var padL = 62, padR = 70, padT = 32, padB = 40;
+  var cw = W - padL - padR;
+  var ch = H - padT - padB;
+  if(cw < 60 || ch < 40) return;
+
+  // Veri aralıkları
+  var xMin = Infinity, xMax = -Infinity;
+  var yMin = Infinity, yMax = -Infinity;
+  var zMin = Infinity, zMax = -Infinity;
+  for(var i = 0; i < N; i++) {
+    var xv = xData[i], yv = yData[i], zv = zData[i];
+    if(isFinite(xv)) { if(xv < xMin) xMin = xv; if(xv > xMax) xMax = xv; }
+    if(isFinite(yv)) { if(yv < yMin) yMin = yv; if(yv > yMax) yMax = yv; }
+    if(isFinite(zv)) { if(zv < zMin) zMin = zv; if(zv > zMax) zMax = zv; }
+  }
+  if(!isFinite(xMin) || !isFinite(yMin) || !isFinite(zMin)) return;
+  if(xMax === xMin) xMax = xMin + 1;
+  if(yMax === yMin) yMax = yMin + 1;
+  if(zMax === zMin) zMax = zMin + 1;
+
+  // Grid oluştur (scatter noktalarını grid hücrelerine bin'le)
+  var gridX = Math.min(80, Math.max(20, Math.floor(cw / 6)));
+  var gridY = Math.min(60, Math.max(15, Math.floor(ch / 6)));
+  var grid = [];
+  var gridCount = [];
+  for(var gy = 0; gy < gridY; gy++) {
+    grid[gy] = [];
+    gridCount[gy] = [];
+    for(var gx = 0; gx < gridX; gx++) {
+      grid[gy][gx] = 0;
+      gridCount[gy][gx] = 0;
+    }
+  }
+
+  for(var i = 0; i < N; i++) {
+    var xv = xData[i], yv = yData[i], zv = zData[i];
+    if(!isFinite(xv) || !isFinite(yv) || !isFinite(zv)) continue;
+    var gx = Math.floor((xv - xMin) / (xMax - xMin) * (gridX - 1));
+    var gy = Math.floor((yv - yMin) / (yMax - yMin) * (gridY - 1));
+    gx = Math.max(0, Math.min(gridX - 1, gx));
+    gy = Math.max(0, Math.min(gridY - 1, gy));
+    grid[gy][gx] += zv;
+    gridCount[gy][gx]++;
+  }
+
+  // Ortalama al ve boş hücreleri interpolasyon ile doldur
+  for(var gy = 0; gy < gridY; gy++) {
+    for(var gx = 0; gx < gridX; gx++) {
+      if(gridCount[gy][gx] > 0) {
+        grid[gy][gx] /= gridCount[gy][gx];
+      }
+    }
+  }
+  // Boş hücreleri en yakın komşu ile doldur
+  var maxPass = 5;
+  for(var pass = 0; pass < maxPass; pass++) {
+    var changed = false;
+    for(var gy = 0; gy < gridY; gy++) {
+      for(var gx = 0; gx < gridX; gx++) {
+        if(gridCount[gy][gx] > 0) continue;
+        var sum = 0, cnt = 0;
+        for(var dy = -1; dy <= 1; dy++) {
+          for(var dx = -1; dx <= 1; dx++) {
+            if(dx === 0 && dy === 0) continue;
+            var ny = gy + dy, nx = gx + dx;
+            if(ny >= 0 && ny < gridY && nx >= 0 && nx < gridX && gridCount[ny][nx] > 0) {
+              sum += grid[ny][nx]; cnt++;
+            }
+          }
+        }
+        if(cnt > 0) {
+          grid[gy][gx] = sum / cnt;
+          gridCount[gy][gx] = 1;
+          changed = true;
+        }
+      }
+    }
+    if(!changed) break;
+  }
+
+  // Arka plan
+  ctx.fillStyle = 'var(--bg-primary, #1a1a2e)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Hücre boyutları
+  var cellW = cw / gridX;
+  var cellH = ch / gridY;
+
+  // Heatmap çiz
+  for(var gy = 0; gy < gridY; gy++) {
+    for(var gx = 0; gx < gridX; gx++) {
+      if(gridCount[gy][gx] === 0) continue;
+      var t = (grid[gy][gx] - zMin) / (zMax - zMin);
+      ctx.fillStyle = veSurfaceColorScale(t);
+      // Y ekseni ters (yüksek değer yukarıda)
+      var px = padL + gx * cellW;
+      var py = padT + (gridY - 1 - gy) * cellH;
+      ctx.fillRect(px, py, cellW + 0.5, cellH + 0.5);
+    }
+  }
+
+  // Izgaralar (hafif)
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 0.5;
+  var gridLines = 5;
+  for(var i = 0; i <= gridLines; i++) {
+    var x = padL + (cw / gridLines) * i;
+    ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + ch); ctx.stroke();
+    var y = padT + (ch / gridLines) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + cw, y); ctx.stroke();
+  }
+
+  // Eksen çerçeve
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(padL, padT, cw, ch);
+
+  // Eksen etiketleri
+  ctx.fillStyle = 'var(--text-secondary, #aaa)';
+  ctx.font = '0.6rem sans-serif';
+  ctx.textAlign = 'center';
+
+  // X ekseni (alt)
+  var xTicks = 5;
+  for(var i = 0; i <= xTicks; i++) {
+    var val = xMin + (xMax - xMin) * i / xTicks;
+    var px = padL + cw * i / xTicks;
+    ctx.fillText(veFormatTooltipVal(val), px, padT + ch + 14);
+    ctx.beginPath();
+    ctx.moveTo(px, padT + ch); ctx.lineTo(px, padT + ch + 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.stroke();
+  }
+  // X ekseni başlığı
+  var xLabel = slot.xAxis ? slot.xAxis.name : 'X';
+  ctx.font = '600 0.62rem sans-serif';
+  ctx.fillText(xLabel, padL + cw / 2, padT + ch + 32);
+
+  // Y ekseni (sol)
+  ctx.textAlign = 'right';
+  ctx.font = '0.6rem sans-serif';
+  var yTicks = 5;
+  for(var i = 0; i <= yTicks; i++) {
+    var val = yMin + (yMax - yMin) * i / yTicks;
+    var py = padT + ch - ch * i / yTicks;
+    ctx.fillText(veFormatTooltipVal(val), padL - 6, py + 3);
+    ctx.beginPath();
+    ctx.moveTo(padL - 4, py); ctx.lineTo(padL, py);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.stroke();
+  }
+  // Y ekseni başlığı
+  var yLabel = slot.sensors && slot.sensors[0] ? (slot.sensors[0].name + (slot.sensors[0].unit ? ' [' + slot.sensors[0].unit + ']' : '')) : 'Y';
+  ctx.save();
+  ctx.translate(12, padT + ch / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.font = '600 0.62rem sans-serif';
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+
+  // Z renk skalası (sağ kenar)
+  var barX = W - padR + 12;
+  var barW = 14;
+  var barH = ch;
+  var barY = padT;
+  for(var i = 0; i < barH; i++) {
+    var t = 1 - i / barH;
+    ctx.fillStyle = veSurfaceColorScale(t);
+    ctx.fillRect(barX, barY + i, barW, 1.5);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  // Z skalası etiketleri
+  ctx.fillStyle = 'var(--text-secondary, #aaa)';
+  ctx.font = '0.55rem sans-serif';
+  ctx.textAlign = 'left';
+  var zTicks = 5;
+  for(var i = 0; i <= zTicks; i++) {
+    var val = zMin + (zMax - zMin) * i / zTicks;
+    var py = barY + barH - barH * i / zTicks;
+    ctx.fillText(veFormatTooltipVal(val), barX + barW + 4, py + 3);
+  }
+  // Z ekseni başlığı
+  var zLabel = slot.zAxis ? (slot.zAxis.name || 'Z') : 'Z';
+  ctx.save();
+  ctx.translate(barX + barW + 4, padT - 6);
+  ctx.textAlign = 'left';
+  ctx.font = '600 0.58rem sans-serif';
+  ctx.fillText(zLabel, 0, 0);
+  ctx.restore();
+
+  // Sol üst: diyagram başlığı
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '600 0.64rem sans-serif';
+  ctx.textAlign = 'left';
+  var title = (slot.sensors && slot.sensors[0] ? slot.sensors[0].name : '') + ' — 3B Yüzey';
+  ctx.fillText(title, padL + 6, padT + 14);
+
+  // İstatistik bilgisi (sağ üst)
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '0.55rem sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('Z min: ' + veFormatTooltipVal(zMin) + '  max: ' + veFormatTooltipVal(zMax), padL + cw - 4, padT + 14);
+  ctx.fillText(N + ' veri noktası  |  ' + gridX + '×' + gridY + ' grid', padL + cw - 4, padT + 26);
+}
+
+// 3D yüzey için mouse hover tooltip
+function veInitSurfaceInteraction(slotIdx) {
+  var canvas = document.getElementById('ve-chart-canvas-' + slotIdx);
+  if(!canvas) return;
+
+  canvas.addEventListener('mousemove', function(e) {
+    var slot = veResultSlots[slotIdx];
+    if(!slot || slot.type !== 'surface' || !slot.zAxis) return;
+
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+
+    var tooltip = document.getElementById('ve-tooltip-' + slotIdx);
+    if(!tooltip) return;
+
+    var padL = 62, padR = 70, padT = 32, padB = 40;
+    var cw = rect.width - padL - padR;
+    var ch = rect.height - padT - padB;
+
+    if(mx < padL || mx > padL + cw || my < padT || my > padT + ch) {
+      tooltip.style.display = 'none';
+      return;
+    }
+
+    var xFrac = (mx - padL) / cw;
+    var yFrac = 1 - (my - padT) / ch;
+
+    var r = window.veSimResults;
+    if(!r) { tooltip.style.display = 'none'; return; }
+
+    var slotDS = slot._dataSource || null;
+    // Aralıkları tekrar hesapla (basitlik için)
+    var xData, yData, zData;
+    if(slot.xAxis && slot.xAxis.id === 'time') {
+      xData = (slotDS === 'segmentDrive' && r.segmentDrive) ? r.segmentDrive.time : r.time;
+    } else if(slot.xAxis && slot.xAxis.id && slot.xAxis.id.charAt(0) === '~') {
+      var p = slot.xAxis.id.substring(1).split(':');
+      xData = veGetSensorData('~' + p[0], p.slice(1).join(':'), slot.xAxis._dataSource || slotDS);
+    }
+    if(slot.sensors && slot.sensors[0]) {
+      yData = veGetSensorData(slot.sensors[0].id, slot.sensors[0].signal, slot.sensors[0]._dataSource || slotDS);
+    }
+    if(slot.zAxis && slot.zAxis.id && slot.zAxis.id.charAt(0) === '~') {
+      var p = slot.zAxis.id.substring(1).split(':');
+      zData = veGetSensorData('~' + p[0], p.slice(1).join(':'), slot.zAxis._dataSource || slotDS);
+    } else if(slot.zAxis && slot.zAxis.id === 'time') {
+      zData = (slotDS === 'segmentDrive' && r.segmentDrive) ? r.segmentDrive.time : r.time;
+    }
+
+    if(!xData || !yData || !zData) { tooltip.style.display = 'none'; return; }
+
+    var xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+    var N = Math.min(xData.length, yData.length, zData.length);
+    for(var i = 0; i < N; i++) {
+      if(isFinite(xData[i])) { if(xData[i] < xMin) xMin = xData[i]; if(xData[i] > xMax) xMax = xData[i]; }
+      if(isFinite(yData[i])) { if(yData[i] < yMin) yMin = yData[i]; if(yData[i] > yMax) yMax = yData[i]; }
+    }
+
+    var xVal = xMin + xFrac * (xMax - xMin);
+    var yVal = yMin + yFrac * (yMax - yMin);
+
+    // En yakın Z değerini bul
+    var bestDist = Infinity, bestZ = 0;
+    for(var i = 0; i < N; i++) {
+      var dx = (xData[i] - xVal) / (xMax - xMin || 1);
+      var dy = (yData[i] - yVal) / (yMax - yMin || 1);
+      var d = dx * dx + dy * dy;
+      if(d < bestDist) { bestDist = d; bestZ = zData[i]; }
+    }
+
+    var xName = slot.xAxis ? slot.xAxis.name : 'X';
+    var yName = slot.sensors && slot.sensors[0] ? slot.sensors[0].name : 'Y';
+    var zName = slot.zAxis ? slot.zAxis.name : 'Z';
+
+    tooltip.innerHTML = '<span style="color:#3b82f6;">' + xName + ': ' + veFormatTooltipVal(xVal) + '</span><br>' +
+                        '<span style="color:#22c55e;">' + yName + ': ' + veFormatTooltipVal(yVal) + '</span><br>' +
+                        '<span style="color:#f59e0b;">' + zName + ': ' + veFormatTooltipVal(bestZ) + '</span>';
+    tooltip.style.display = 'block';
+    tooltip.style.left = (mx + 14) + 'px';
+    tooltip.style.top = (my - 10) + 'px';
+  });
+
+  canvas.addEventListener('mouseleave', function() {
+    var tooltip = document.getElementById('ve-tooltip-' + slotIdx);
+    if(tooltip) tooltip.style.display = 'none';
+  });
 }
 
 function veExportResults() {

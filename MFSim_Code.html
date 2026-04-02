@@ -3248,7 +3248,9 @@ function veUpdateResultsTree() {
             : '';
 
           html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
-          html += '<span>' + (canDrag ? '📊' : '🔒') + '</span> ' + diag.name;
+          var is3dDiag = diagSigDef && diagSigDef.z;
+          var diagEmoji = canDrag ? (is3dDiag ? '🗺️' : '📊') : '🔒';
+          html += '<span>' + diagEmoji + '</span> ' + diag.name;
           if(diag.note) html += ' <span style="font-size:0.5rem; color:var(--accent-warning);">⚠</span>';
           html += '</div>';
         });
@@ -6337,9 +6339,11 @@ function veSlotToggle(slotIdx) {
 
 function veRefreshAllCharts() {
   for(var i = 0; i < 4; i++) {
-    if(veResultSlots[i].type === 'line' && veResultSlots[i].sensors && veResultSlots[i].sensors.length > 0) {
-      if(window.veSimResults) veRenderChart(i);
-    }
+    var s = veResultSlots[i];
+    if(!s.sensors || s.sensors.length === 0) continue;
+    if(!window.veSimResults) continue;
+    if(s.type === 'line') veRenderChart(i);
+    else if(s.type === 'surface') veRenderSurface(i);
   }
 }
 
@@ -6349,7 +6353,8 @@ function veRenderSlotPicker(slotIdx) {
   
   var items = [
     {type:'line', icon:'📈', label:'Çizgi\nGrafik'},
-    {type:'table', icon:'📋', label:'Tablo'}
+    {type:'table', icon:'📋', label:'Tablo'},
+    {type:'surface', icon:'🗺️', label:'3B Yüzey\nDiyagramı'}
   ];
   
   var html = '<div class="ve-slot-picker">';
@@ -6485,50 +6490,80 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   }
 
   var slot = veResultSlots[slotIdx];
+  // 3D mi 2D mi?
+  var is3D = !!sigDef.z;
+
   // Slot'u temizle ve yeni diyagram ile doldur
-  slot.type = 'line';
+  slot.type = is3D ? 'surface' : 'line';
   slot.sensors = [];
   slot.yAxisLock = {};
+  delete slot.zAxis;
   if(typeof veChartViews !== 'undefined') veChartViews[slotIdx] = { panX:0, panY:0, zoomX:1, zoomY:1 };
+
+  // dataSource etiketi (segmentDrive, obstacleDynamic vb.)
+  var ds = sigDef.dataSource || null;
+  if(ds) slot._dataSource = ds;
+  else delete slot._dataSource;
 
   // X ekseni ayarla
   if(sigDef.x.target === 'time') {
     slot.xAxis = { id:'time', name:'Zaman [s]', unit:'s' };
   } else {
-    // X ekseni bir bileşen sinyali — ilk Y sinyalinden önce eklenmeli
     slot.xAxis = {
       id: '~' + sigDef.x.target + ':' + sigDef.x.signal,
       name: (sigDef.x.name || sigDef.x.signal) + ' [' + (sigDef.x.unit || '') + ']',
       unit: sigDef.x.unit || ''
     };
   }
-
-  // dataSource etiketi (segmentDrive, obstacleDynamic vb.)
-  var ds = sigDef.dataSource || null;
-  if(ds) slot._dataSource = ds;
-
-  // X ekseni için de dataSource sakla
   if(ds && slot.xAxis && slot.xAxis.id !== 'time') {
     slot.xAxis._dataSource = ds;
   }
 
-  // Y eksen sinyallerini ekle
-  sigDef.y.forEach(function(ySig) {
-    var entry = {
-      id: '~' + ySig.target,
-      signal: ySig.signal,
-      name: ySig.name || ySig.signal,
-      unit: ySig.unit || ''
-    };
-    if(ds) entry._dataSource = ds;
-    // Çakışma kontrolü
-    if(!slot.sensors.some(function(s) { return s.id === entry.id && s.signal === entry.signal; })) {
-      slot.sensors.push(entry);
+  if(is3D) {
+    // 3B yüzey: Y ekseni tek sinyal, Z ekseni renk skalası
+    var ySig = sigDef.y[0];
+    if(ySig.target === 'time') {
+      slot.sensors = [{ id:'~time', signal:'time', name:'Zaman', unit:'s' }];
+    } else {
+      slot.sensors = [{
+        id: '~' + ySig.target,
+        signal: ySig.signal,
+        name: ySig.name || ySig.signal,
+        unit: ySig.unit || ''
+      }];
     }
-  });
+    if(ds) slot.sensors[0]._dataSource = ds;
+
+    // Z ekseni
+    if(sigDef.z.target === 'time') {
+      slot.zAxis = { id:'time', name:'Zaman [s]', unit:'s' };
+    } else {
+      slot.zAxis = {
+        id: '~' + sigDef.z.target + ':' + sigDef.z.signal,
+        name: (sigDef.z.name || sigDef.z.signal) + ' [' + (sigDef.z.unit || '') + ']',
+        unit: sigDef.z.unit || ''
+      };
+    }
+    if(ds && slot.zAxis.id !== 'time') slot.zAxis._dataSource = ds;
+  } else {
+    // 2D: Y eksen sinyallerini ekle
+    sigDef.y.forEach(function(ySig) {
+      var entry = {
+        id: '~' + ySig.target,
+        signal: ySig.signal,
+        name: ySig.name || ySig.signal,
+        unit: ySig.unit || ''
+      };
+      if(ds) entry._dataSource = ds;
+      if(!slot.sensors.some(function(s) { return s.id === entry.id && s.signal === entry.signal; })) {
+        slot.sensors.push(entry);
+      }
+    });
+  }
 
   veRenderSlot(slotIdx);
-  if(typeof showToast === 'function') showToast('📊 ' + diag.name + ' diyagramı eklendi', 'success');
+  var icon = is3D ? '🗺️' : '📊';
+  if(typeof showToast === 'function') showToast(icon + ' ' + diag.name + ' diyagramı eklendi', 'success');
 }
 
 // Tek sinyal slot'a ekle
@@ -6785,7 +6820,7 @@ function veRenderSlot(slotIdx) {
   
   var type = slot.type || 'line';
   var sensors = slot.sensors || [];
-  var typeName = type === 'line' ? '📈' : '📋';
+  var typeName = type === 'line' ? '📈' : (type === 'surface' ? '🗺️' : '📋');
   
   // Tab başlığını güncelle
   var tab = document.getElementById('ve-rslot-tab-' + slotIdx);
@@ -6800,10 +6835,13 @@ function veRenderSlot(slotIdx) {
   var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   
   if(sensors.length === 0) {
+    var emptyIcon = type === 'line' ? '📈' : (type === 'surface' ? '🗺️' : '📋');
+    var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'surface' ? '3B Yüzey Diyagramı' : 'Veri Tablosu');
+    var emptyHint = type === 'surface' ? 'Sihirbaz diyagramlarından 3B diyagram sürükleyin' : 'Data Browser\'dan sensör sürükleyin';
     var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted);">';
-    html += '<div style="font-size:2.2rem; margin-bottom:10px;">' + (type === 'line' ? '📈' : '📋') + '</div>';
-    html += '<div style="font-size:0.82rem; font-weight:600;">' + (type === 'line' ? 'Çizgi Grafik' : 'Veri Tablosu') + '</div>';
-    html += '<div style="font-size:0.72rem; margin-top:6px; opacity:0.7;">Data Browser\'dan sensör sürükleyin</div>';
+    html += '<div style="font-size:2.2rem; margin-bottom:10px;">' + emptyIcon + '</div>';
+    html += '<div style="font-size:0.82rem; font-weight:600;">' + emptyName + '</div>';
+    html += '<div style="font-size:0.72rem; margin-top:6px; opacity:0.7;">' + emptyHint + '</div>';
     html += '</div>';
     body.innerHTML = html;
     return;
@@ -6846,6 +6884,21 @@ function veRenderSlot(slotIdx) {
     html += '<span class="ve-xaxis-arrow">▲</span>';
     html += '</span>';
     html += '</div>';
+  } else if(type === 'surface') {
+    // ── 3B Yüzey modu ──
+    html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '">';
+    html += '<canvas id="ve-chart-canvas-' + slotIdx + '" style="position:absolute;left:0;top:0;width:100%;height:100%;"></canvas>';
+    html += '<div class="ve-chart-tooltip" id="ve-tooltip-' + slotIdx + '"></div>';
+    html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
+    html += '<div style="font-size:1.5rem; margin-bottom:6px;">🗺️</div>Simülasyon sonrası 3B yüzey görünecek</div>';
+    html += '</div>';
+    // Eksen bilgisi
+    var xLabel3d = slot.xAxis ? slot.xAxis.name : 'X';
+    var yLabel3d = (sensors.length > 0) ? (sensors[0].name + (sensors[0].unit ? ' [' + sensors[0].unit + ']' : '')) : 'Y';
+    var zLabel3d = slot.zAxis ? (slot.zAxis.name || 'Z') : 'Z';
+    html += '<div class="ve-slot-axis-x" style="font-size:0.58rem;">';
+    html += '<span style="opacity:0.7;">X: ' + xLabel3d + '  |  Y: ' + yLabel3d + '  |  Z (renk): ' + zLabel3d + '</span>';
+    html += '</div>';
   } else {
     // ── Tablo modu ──
     html += '<div style="overflow:auto; width:100%; height:100%; flex:1;">';
@@ -6870,8 +6923,8 @@ function veRenderSlot(slotIdx) {
     html += '</div>';
   }
   
-  // Legend — Tablo modu için altta, grafik modu için chart içinde overlay olarak zaten eklendi
-  if(type !== 'line') {
+  // Legend — Tablo modu için altta, grafik ve surface modu için chart içinde overlay olarak zaten eklendi
+  if(type !== 'line' && type !== 'surface') {
     html += '<div class="ve-slot-legend">';
     sensors.forEach(function(s, i) {
       var c = colors[i % colors.length];
@@ -6893,6 +6946,9 @@ function veRenderSlot(slotIdx) {
     if(window.veSimResults) veRenderChart(slotIdx);
     veInitChartInteraction(slotIdx);
     veInitLegendDrag(slotIdx);
+  } else if(type === 'surface') {
+    if(window.veSimResults) veRenderSurface(slotIdx);
+    veInitSurfaceInteraction(slotIdx);
   } else {
     if(window.veSimResults) veRenderTable(slotIdx);
   }
@@ -7176,6 +7232,8 @@ function veSetSlotXAxis(slotIdx, optIdx) {
     if(slot.type === 'line') {
       veResetChartView(slotIdx);
       veRenderChart(slotIdx);
+    } else if(slot.type === 'surface') {
+      veRenderSurface(slotIdx);
     } else {
       veRenderTable(slotIdx);
     }
@@ -8265,6 +8323,77 @@ var SENSOR_PACKAGES = [
       { target:'torque-converter', attachment:'component', signal:'efficiency', label:'TC → Verim (%)' },
       { target:'torque-converter', attachment:'component', signal:'slip', label:'TC → Kayma (%)' }
     ]
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  3B YÜZEY DİYAGRAMLARI — Performans
+  // ══════════════════════════════════════════════════════════════
+  {
+    id: '3d-perf', name: '3B Performans Yüzeyleri', icon: '🗺️', priority: 'advanced',
+    solverTab: 'performance',
+    description: '3 boyutlu yüzey diyagramları: motor haritası, çekiş kuvveti, TC verimi, güç akışı, direnç ve ivme',
+    requires: ['vehicle', 'engine'],
+    diagrams: [
+      { id:'3d-engine-map', name:'Motor Çalışma Haritası (3B)', xAxis:'RPM', yAxis:'Tork (Nm)', zAxis:'Güç (kW)',
+        significance:'Motor devri × tork × güç yüzeyini 3 boyutlu gösterir. Heatmap üzerinden maksimum güç bölgesi kolayca okunur.' },
+      { id:'3d-te-gear', name:'Çekiş Kuvveti Yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Vites', zAxis:'TE (kN)',
+        significance:'Her viteste hıza bağlı çekiş kuvveti — gradeability ve tırmanma kapasitesi analizi. Vites geçiş bölgeleri renk geçişi olarak görülür.' },
+      { id:'3d-tc-eff', name:'TC Verim Yüzeyi (3B)', xAxis:'Hız Oranı (SR)', yAxis:'Pump Torku (Nm)', zAxis:'Verim (%)',
+        significance:'Tork konvertörün hangi SR-tork bölgesinde ne kadar verimli olduğu. Lockup stratejisi belirlemek için kritik yüzey.' },
+      { id:'3d-power-flow', name:'Güç Akışı Yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Zaman (s)', zAxis:'Motor Gücü (kW)',
+        significance:'Motor gücünün hız ve zamana göre dağılımı — drivetrain kayıp haritası. Yüksek güç bölgeleri kırmızı, düşük bölgeler mavi.' },
+      { id:'3d-resist-map', name:'Direnç Dağılım Yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Zaman (s)', zAxis:'Toplam Direnç (N)',
+        significance:'Yuvarlanma + aero + eğim dirençlerinin hız ve zamana göre evrimi. Aerodinamik baskınlık bölgesi net olarak görülür.' },
+      { id:'3d-accel-rpm', name:'İvme-Hız-RPM Haritası (3B)', xAxis:'Hız (km/h)', yAxis:'Motor Devri (rpm)', zAxis:'İvme (m/s²)',
+        significance:'Hangi hız-devir kombinasyonunda ne kadar ivme alındığı — vites geçiş noktalarının optimizasyonu için ideal yüzey.' }
+    ],
+    sensors: []
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  3B YÜZEY DİYAGRAMLARI — Hızlanma-Yavaşlama
+  // ══════════════════════════════════════════════════════════════
+  {
+    id: '3d-sd', name: '3B Segment Yüzeyleri', icon: '🗺️', priority: 'advanced',
+    solverTab: 'accel-decel',
+    description: '3 boyutlu yüzey diyagramları: hız-mesafe-eğim, kuvvet, ısı, güç-devir, çekiş-direnç',
+    requires: ['vehicle', 'engine'],
+    diagrams: [
+      { id:'3d-sd-speed-grade', name:'Hız-Mesafe-Eğim Profili (3B)', xAxis:'Mesafe (m)', yAxis:'Eğim Kuvveti (N)', zAxis:'Hız (km/h)',
+        significance:'Yol profilinde eğime bağlı hız gelişimi. Segment geçişlerinde hız düşüşü/artışı renk değişimi olarak görülür.' },
+      { id:'3d-sd-force-grade', name:'Kuvvet-Hız-Eğim Yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Eğim Kuvveti (N)', zAxis:'Net Kuvvet (N)',
+        significance:'Farklı eğimlerde mevcut net kuvvet — tırmanamama sınırını gösteren kritik yüzey. Sıfır geçişi kırmızıdan maviye geçiş noktasıdır.' },
+      { id:'3d-sd-heat', name:'TC Isı Reddi Haritası (3B)', xAxis:'Zaman (s)', yAxis:'Hız (km/h)', zAxis:'TC Isı Reddi (kW)',
+        significance:'Hızlanma-yavaşlama çevrimlerinde TC termal yüklenme haritası. Yoğun ısı bölgeleri soğutma sistemi boyutlandırma girdisi.' },
+      { id:'3d-sd-power-rpm', name:'Güç-RPM-Vites Yüzeyi (3B)', xAxis:'Motor Devri (rpm)', yAxis:'Vites', zAxis:'Motor Gücü (kW)',
+        significance:'Her viteste motor devrinin güç üretimine etkisi. Shift kalibrasyon doğrulama — vites geçişlerinde güç kaybı görünür.' },
+      { id:'3d-sd-te-resist', name:'Çekiş-Direnç Yüzeyi (3B)', xAxis:'Zaman (s)', yAxis:'Çekiş Kuvveti (kN)', zAxis:'Toplam Direnç (N)',
+        significance:'Çekiş kuvveti ile direncin zamanla ilişkisi. Hızlanma/yavaşlama geçiş anları renk kontrastı olarak görülür.' }
+    ],
+    sensors: []
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  3B YÜZEY DİYAGRAMLARI — Engel Atlama
+  // ══════════════════════════════════════════════════════════════
+  {
+    id: '3d-obs', name: '3B Engel Atlama Yüzeyleri', icon: '🗺️', priority: 'advanced',
+    solverTab: 'obstacle',
+    description: '3 boyutlu yüzey diyagramları: tork eşleme, kuvvet-açı, enerji, güç-verim, itme-reaksiyon',
+    requires: ['torque-converter'],
+    diagrams: [
+      { id:'3d-obs-torque', name:'Tork Eşleme Yüzeyi (3B)', xAxis:'Hız Oranı (SR)', yAxis:'Motor Torku (Nm)', zAxis:'Tekerlek Torku (Nm)',
+        significance:'Stall→lockup aralığında motor-tekerlek tork transferi. Engel aşma kapasitesinin temeli — yüksek tekerlek torku bölgeleri kırmızı renkte.' },
+      { id:'3d-obs-force-angle', name:'Kuvvet-Açı-Zaman (3B)', xAxis:'Zaman (s)', yAxis:'Tekerlek Açısı (°)', zAxis:'Net Kuvvet (N)',
+        significance:'Engel üzerinde ilerlerken kuvvetlerin açı ve zamanla değişimi. Kritik temas noktası ve kuvvet dağılımı net olarak görülür.' },
+      { id:'3d-obs-energy', name:'Enerji-Hız-Açı (3B)', xAxis:'Tekerlek Açısı (°)', yAxis:'Hız (m/s)', zAxis:'Kinetik Enerji (J)',
+        significance:'Engel tırmanırken kinetik enerji dağılımı. Momentum kaybının nerede gerçekleştiğini gösterir.' },
+      { id:'3d-obs-power-eff', name:'Güç-SR-Verim Yüzeyi (3B)', xAxis:'Hız Oranı (SR)', yAxis:'Motor Gücü (kW)', zAxis:'TC Verimi (−)',
+        significance:'Hız oranına göre güç ve verim ilişkisi. Optimum çalışma noktası seçimi için ideal yüzey.' },
+      { id:'3d-obs-push-react', name:'İtme-Engel Kuvveti Yüzeyi (3B)', xAxis:'Zaman (s)', yAxis:'İtme Kuvveti (N)', zAxis:'Engel Reaksiyon (N)',
+        significance:'Lastik itme kuvveti vs engel direnci. Aşma/aşamama sınırı renk geçişi olarak net şekilde görülür.' }
+    ],
+    sensors: []
   }
 ];
 
@@ -8453,7 +8582,65 @@ var SW_DIAGRAM_SIGNALS = {
   ], dataSource:'obstacleDynamic' },
   'obs-match-eta':    { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'}, y:[
     {target:'obs-match', signal:'eta_tc', name:'TC Verimi', unit:'−'}
-  ], dataSource:'obstacleDynamic' }
+  ], dataSource:'obstacleDynamic' },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // 3B YÜZEY DİYAGRAMLARI (surface)  —  x, y[0], z formatı
+  // ══════════════════════════════════════════════════════════════════════
+
+  // ── Performans Analizi 3B ──
+  '3d-engine-map':    { x:{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'},
+    y:[{target:'engine', signal:'torque', name:'Motor Torku', unit:'Nm'}],
+    z:{target:'engine', signal:'power', name:'Motor Gücü [kW]', unit:'kW'} },
+  '3d-te-gear':       { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'shift-controller', signal:'current_gear', name:'Aktif Vites', unit:'−'}],
+    z:{target:'solver', signal:'tractive_effort', name:'Çekiş Kuvveti [kN]', unit:'kN'} },
+  '3d-tc-eff':        { x:{target:'torque-converter', signal:'speed_ratio', name:'Hız Oranı (SR)', unit:'−'},
+    y:[{target:'torque-converter', signal:'torque_in', name:'Pump Torku', unit:'Nm'}],
+    z:{target:'torque-converter', signal:'efficiency', name:'TC Verimi [%]', unit:'%'} },
+  '3d-power-flow':    { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'time', signal:'time', name:'Zaman', unit:'s'}],
+    z:{target:'engine', signal:'power', name:'Motor Gücü [kW]', unit:'kW'} },
+  '3d-resist-map':    { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'time', signal:'time', name:'Zaman', unit:'s'}],
+    z:{target:'road', signal:'r_total_resist', name:'Toplam Direnç [N]', unit:'N'} },
+  '3d-accel-rpm':     { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'}],
+    z:{target:'vehicle', signal:'v_accel', name:'İvme [m/s²]', unit:'m/s²'} },
+
+  // ── Hızlanma-Yavaşlama 3B ──
+  '3d-sd-speed-grade': { x:{target:'vehicle', signal:'v_distance', name:'Mesafe', unit:'m'},
+    y:[{target:'road', signal:'r_grade_force', name:'Eğim Kuvveti', unit:'N'}],
+    z:{target:'vehicle', signal:'v_speed', name:'Hız [km/h]', unit:'km/h'}, dataSource:'segmentDrive' },
+  '3d-sd-force-grade': { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'road', signal:'r_grade_force', name:'Eğim Kuvveti', unit:'N'}],
+    z:{target:'road', signal:'r_net_force', name:'Net Kuvvet [N]', unit:'N'}, dataSource:'segmentDrive' },
+  '3d-sd-heat':        { x:{target:'time'},
+    y:[{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}],
+    z:{target:'torque-converter', signal:'heat_rejection', name:'TC Isı Reddi [kW]', unit:'kW'}, dataSource:'segmentDrive' },
+  '3d-sd-power-rpm':   { x:{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'},
+    y:[{target:'shift-controller', signal:'current_gear', name:'Aktif Vites', unit:'−'}],
+    z:{target:'engine', signal:'power', name:'Motor Gücü [kW]', unit:'kW'}, dataSource:'segmentDrive' },
+  '3d-sd-te-resist':   { x:{target:'time'},
+    y:[{target:'solver', signal:'tractive_effort', name:'Çekiş Kuvveti', unit:'kN'}],
+    z:{target:'road', signal:'r_total_resist', name:'Toplam Direnç [N]', unit:'N'}, dataSource:'segmentDrive' },
+
+  // ── Engel Atlama 3B ──
+  '3d-obs-torque':     { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'},
+    y:[{target:'obs-match', signal:'T_engine', name:'Motor Torku', unit:'Nm'}],
+    z:{target:'obs-match', signal:'T_wheel', name:'Tekerlek Torku [Nm]', unit:'Nm'}, dataSource:'obstacleDynamic' },
+  '3d-obs-force-angle':{ x:{target:'obs-log', signal:'t', name:'Zaman', unit:'s'},
+    y:[{target:'obs-log', signal:'phi_deg', name:'Tekerlek Açısı', unit:'°'}],
+    z:{target:'obs-log', signal:'F_net', name:'Net Kuvvet [N]', unit:'N'}, dataSource:'obstacleDynamic' },
+  '3d-obs-energy':     { x:{target:'obs-log', signal:'phi_deg', name:'Tekerlek Açısı', unit:'°'},
+    y:[{target:'obs-log', signal:'v', name:'Hız', unit:'m/s'}],
+    z:{target:'obs-log', signal:'KE', name:'Kinetik Enerji [J]', unit:'J'}, dataSource:'obstacleDynamic' },
+  '3d-obs-power-eff':  { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'},
+    y:[{target:'obs-match', signal:'P_engine_kW', name:'Motor Gücü', unit:'kW'}],
+    z:{target:'obs-match', signal:'eta_tc', name:'TC Verimi [−]', unit:'−'}, dataSource:'obstacleDynamic' },
+  '3d-obs-push-react': { x:{target:'obs-log', signal:'t', name:'Zaman', unit:'s'},
+    y:[{target:'obs-log', signal:'F_itme', name:'İtme Kuvveti', unit:'N'}],
+    z:{target:'obs-log', signal:'F_engel', name:'Engel Reaksiyon [N]', unit:'N'}, dataSource:'obstacleDynamic' }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -8574,10 +8761,13 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   }
   var html = '<div style="background:var(--bg-primary,#fff);border-radius:0;padding:20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);color:var(--text-primary,#333);">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-  html += '<span style="font-weight:700;font-size:0.9rem;">📊 ' + d.name + '</span>';
+  var diagIcon = d.zAxis ? '🗺️' : '📊';
+  html += '<span style="font-weight:700;font-size:0.9rem;">' + diagIcon + ' ' + d.name + '</span>';
   html += '<button onclick="document.getElementById(\'sw-info-overlay\').remove()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted,#999);">✕</button>';
   html += '</div>';
-  html += '<div style="font-size:0.72rem;color:var(--text-secondary,#666);margin-bottom:8px;"><b>X:</b> ' + d.xAxis + ' &nbsp; <b>Y:</b> ' + (Array.isArray(d.yAxis) ? d.yAxis.join(' / ') : d.yAxis) + '</div>';
+  var axisInfo = '<b>X:</b> ' + d.xAxis + ' &nbsp; <b>Y:</b> ' + (Array.isArray(d.yAxis) ? d.yAxis.join(' / ') : d.yAxis);
+  if(d.zAxis) axisInfo += ' &nbsp; <b>Z (renk):</b> ' + d.zAxis;
+  html += '<div style="font-size:0.72rem;color:var(--text-secondary,#666);margin-bottom:8px;">' + axisInfo + '</div>';
   html += '<div style="font-size:0.72rem;line-height:1.5;color:var(--text-primary,#333);border-top:1px solid var(--border-color,#eee);padding-top:10px;">' + d.significance + '</div>';
   if(d.note) {
     html += '<div style="font-size:0.68rem;color:#f59e0b;margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.08);border-radius:0;">⚠️ ' + d.note + '</div>';
@@ -32528,6 +32718,19 @@ function veGetSensorData(sensorId, signalOverride, dataSource) {
     return col.length > 0 ? col : null;
   }
 
+  // obs-log hedefi: obstacleDynamic.log dizisinden sütun okur
+  if(sensorId === '~obs-log') {
+    var sig = signalOverride;
+    if(!r || !sig) return null;
+    var dynResult = r.obstacleDynamic;
+    if(!dynResult || !dynResult.log || dynResult.log.length === 0) return null;
+    var col = [];
+    dynResult.log.forEach(function(row) {
+      if(row[sig] !== undefined) col.push(row[sig]);
+    });
+    return col.length > 0 ? col : null;
+  }
+
   // ====== SIHIRBAZ DOĞRUDAN BİLEŞEN ERİŞİMİ ======
   // ~compType formatı: fiziksel sensör olmadan doğrudan bileşen verisine erişim
   if(sensorId.charAt(0) === '~') {
@@ -33710,6 +33913,391 @@ function veRenderTable(slotIdx) {
   rows.push(sumRow('ORT', false, function(ds) { var s = 0; for(var j = 0; j < ds.length; j++) s += ds[j]; return ds.length > 0 ? s / ds.length : 0; }));
   
   tbody.innerHTML = rows.join('');
+}
+
+// ═══════ 3D YÜZEY DİYAGRAMI (SURFACE / HEATMAP) ═══════
+
+// Renk skalası: mavi → cyan → yeşil → sarı → kırmızı
+function veSurfaceColorScale(t) {
+  // t: 0..1 normalize değer
+  t = Math.max(0, Math.min(1, t));
+  var r, g, b;
+  if(t < 0.25) {
+    var s = t / 0.25;
+    r = 0; g = Math.round(s * 255); b = 255;
+  } else if(t < 0.5) {
+    var s = (t - 0.25) / 0.25;
+    r = 0; g = 255; b = Math.round((1 - s) * 255);
+  } else if(t < 0.75) {
+    var s = (t - 0.5) / 0.25;
+    r = Math.round(s * 255); g = 255; b = 0;
+  } else {
+    var s = (t - 0.75) / 0.25;
+    r = 255; g = Math.round((1 - s) * 255); b = 0;
+  }
+  return 'rgb(' + r + ',' + g + ',' + b + ')';
+}
+
+function veRenderSurface(slotIdx) {
+  var slot = veResultSlots[slotIdx];
+  if(!slot || !slot.zAxis) return;
+
+  var canvas = document.getElementById('ve-chart-canvas-' + slotIdx);
+  var placeholder = document.getElementById('ve-chart-placeholder-' + slotIdx);
+  if(!canvas) return;
+
+  var r = window.veSimResults;
+  if(!r) return;
+
+  var slotDS = slot._dataSource || null;
+
+  // X, Y, Z veri dizilerini al
+  function getAxisData(axisDef) {
+    if(!axisDef) return null;
+    if(axisDef.id === 'time') {
+      if(slotDS === 'segmentDrive' && r.segmentDrive && r.segmentDrive.time) return r.segmentDrive.time;
+      return r.time || null;
+    }
+    if(axisDef.id && axisDef.id.charAt(0) === '~') {
+      var parts = axisDef.id.substring(1).split(':');
+      return veGetSensorData('~' + parts[0], parts.slice(1).join(':'), axisDef._dataSource || slotDS);
+    }
+    return null;
+  }
+
+  function getSensorData(sensorDef) {
+    if(!sensorDef) return null;
+    // Y ekseni zaman ise direkt zaman dizisini döndür
+    if(sensorDef.id === '~time' || sensorDef.signal === 'time') {
+      if(slotDS === 'segmentDrive' && r.segmentDrive && r.segmentDrive.time) return r.segmentDrive.time;
+      return r.time || null;
+    }
+    return veGetSensorData(sensorDef.id, sensorDef.signal, sensorDef._dataSource || slotDS);
+  }
+
+  var xData = getAxisData(slot.xAxis);
+  var yData = slot.sensors && slot.sensors[0] ? getSensorData(slot.sensors[0]) : null;
+  var zData = getAxisData(slot.zAxis);
+
+  if(!xData || !yData || !zData) return;
+
+  // Veri uzunluklarını eşitle
+  var N = Math.min(xData.length, yData.length, zData.length);
+  if(N < 3) return;
+
+  if(placeholder) placeholder.style.display = 'none';
+
+  var parent = canvas.parentElement;
+  var W = parent.clientWidth;
+  var H = parent.clientHeight;
+  if(W < 100 || H < 100) return;
+
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  var ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Padding
+  var padL = 62, padR = 70, padT = 32, padB = 40;
+  var cw = W - padL - padR;
+  var ch = H - padT - padB;
+  if(cw < 60 || ch < 40) return;
+
+  // Veri aralıkları
+  var xMin = Infinity, xMax = -Infinity;
+  var yMin = Infinity, yMax = -Infinity;
+  var zMin = Infinity, zMax = -Infinity;
+  for(var i = 0; i < N; i++) {
+    var xv = xData[i], yv = yData[i], zv = zData[i];
+    if(isFinite(xv)) { if(xv < xMin) xMin = xv; if(xv > xMax) xMax = xv; }
+    if(isFinite(yv)) { if(yv < yMin) yMin = yv; if(yv > yMax) yMax = yv; }
+    if(isFinite(zv)) { if(zv < zMin) zMin = zv; if(zv > zMax) zMax = zv; }
+  }
+  if(!isFinite(xMin) || !isFinite(yMin) || !isFinite(zMin)) return;
+  if(xMax === xMin) xMax = xMin + 1;
+  if(yMax === yMin) yMax = yMin + 1;
+  if(zMax === zMin) zMax = zMin + 1;
+
+  // Grid oluştur (scatter noktalarını grid hücrelerine bin'le)
+  var gridX = Math.min(80, Math.max(20, Math.floor(cw / 6)));
+  var gridY = Math.min(60, Math.max(15, Math.floor(ch / 6)));
+  var grid = [];
+  var gridCount = [];
+  for(var gy = 0; gy < gridY; gy++) {
+    grid[gy] = [];
+    gridCount[gy] = [];
+    for(var gx = 0; gx < gridX; gx++) {
+      grid[gy][gx] = 0;
+      gridCount[gy][gx] = 0;
+    }
+  }
+
+  for(var i = 0; i < N; i++) {
+    var xv = xData[i], yv = yData[i], zv = zData[i];
+    if(!isFinite(xv) || !isFinite(yv) || !isFinite(zv)) continue;
+    var gx = Math.floor((xv - xMin) / (xMax - xMin) * (gridX - 1));
+    var gy = Math.floor((yv - yMin) / (yMax - yMin) * (gridY - 1));
+    gx = Math.max(0, Math.min(gridX - 1, gx));
+    gy = Math.max(0, Math.min(gridY - 1, gy));
+    grid[gy][gx] += zv;
+    gridCount[gy][gx]++;
+  }
+
+  // Ortalama al ve boş hücreleri interpolasyon ile doldur
+  for(var gy = 0; gy < gridY; gy++) {
+    for(var gx = 0; gx < gridX; gx++) {
+      if(gridCount[gy][gx] > 0) {
+        grid[gy][gx] /= gridCount[gy][gx];
+      }
+    }
+  }
+  // Boş hücreleri en yakın komşu ile doldur
+  var maxPass = 5;
+  for(var pass = 0; pass < maxPass; pass++) {
+    var changed = false;
+    for(var gy = 0; gy < gridY; gy++) {
+      for(var gx = 0; gx < gridX; gx++) {
+        if(gridCount[gy][gx] > 0) continue;
+        var sum = 0, cnt = 0;
+        for(var dy = -1; dy <= 1; dy++) {
+          for(var dx = -1; dx <= 1; dx++) {
+            if(dx === 0 && dy === 0) continue;
+            var ny = gy + dy, nx = gx + dx;
+            if(ny >= 0 && ny < gridY && nx >= 0 && nx < gridX && gridCount[ny][nx] > 0) {
+              sum += grid[ny][nx]; cnt++;
+            }
+          }
+        }
+        if(cnt > 0) {
+          grid[gy][gx] = sum / cnt;
+          gridCount[gy][gx] = 1;
+          changed = true;
+        }
+      }
+    }
+    if(!changed) break;
+  }
+
+  // Arka plan
+  ctx.fillStyle = 'var(--bg-primary, #1a1a2e)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Hücre boyutları
+  var cellW = cw / gridX;
+  var cellH = ch / gridY;
+
+  // Heatmap çiz
+  for(var gy = 0; gy < gridY; gy++) {
+    for(var gx = 0; gx < gridX; gx++) {
+      if(gridCount[gy][gx] === 0) continue;
+      var t = (grid[gy][gx] - zMin) / (zMax - zMin);
+      ctx.fillStyle = veSurfaceColorScale(t);
+      // Y ekseni ters (yüksek değer yukarıda)
+      var px = padL + gx * cellW;
+      var py = padT + (gridY - 1 - gy) * cellH;
+      ctx.fillRect(px, py, cellW + 0.5, cellH + 0.5);
+    }
+  }
+
+  // Izgaralar (hafif)
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 0.5;
+  var gridLines = 5;
+  for(var i = 0; i <= gridLines; i++) {
+    var x = padL + (cw / gridLines) * i;
+    ctx.beginPath(); ctx.moveTo(x, padT); ctx.lineTo(x, padT + ch); ctx.stroke();
+    var y = padT + (ch / gridLines) * i;
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + cw, y); ctx.stroke();
+  }
+
+  // Eksen çerçeve
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(padL, padT, cw, ch);
+
+  // Eksen etiketleri
+  ctx.fillStyle = 'var(--text-secondary, #aaa)';
+  ctx.font = '0.6rem sans-serif';
+  ctx.textAlign = 'center';
+
+  // X ekseni (alt)
+  var xTicks = 5;
+  for(var i = 0; i <= xTicks; i++) {
+    var val = xMin + (xMax - xMin) * i / xTicks;
+    var px = padL + cw * i / xTicks;
+    ctx.fillText(veFormatTooltipVal(val), px, padT + ch + 14);
+    ctx.beginPath();
+    ctx.moveTo(px, padT + ch); ctx.lineTo(px, padT + ch + 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.stroke();
+  }
+  // X ekseni başlığı
+  var xLabel = slot.xAxis ? slot.xAxis.name : 'X';
+  ctx.font = '600 0.62rem sans-serif';
+  ctx.fillText(xLabel, padL + cw / 2, padT + ch + 32);
+
+  // Y ekseni (sol)
+  ctx.textAlign = 'right';
+  ctx.font = '0.6rem sans-serif';
+  var yTicks = 5;
+  for(var i = 0; i <= yTicks; i++) {
+    var val = yMin + (yMax - yMin) * i / yTicks;
+    var py = padT + ch - ch * i / yTicks;
+    ctx.fillText(veFormatTooltipVal(val), padL - 6, py + 3);
+    ctx.beginPath();
+    ctx.moveTo(padL - 4, py); ctx.lineTo(padL, py);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.stroke();
+  }
+  // Y ekseni başlığı
+  var yLabel = slot.sensors && slot.sensors[0] ? (slot.sensors[0].name + (slot.sensors[0].unit ? ' [' + slot.sensors[0].unit + ']' : '')) : 'Y';
+  ctx.save();
+  ctx.translate(12, padT + ch / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.font = '600 0.62rem sans-serif';
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+
+  // Z renk skalası (sağ kenar)
+  var barX = W - padR + 12;
+  var barW = 14;
+  var barH = ch;
+  var barY = padT;
+  for(var i = 0; i < barH; i++) {
+    var t = 1 - i / barH;
+    ctx.fillStyle = veSurfaceColorScale(t);
+    ctx.fillRect(barX, barY + i, barW, 1.5);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  // Z skalası etiketleri
+  ctx.fillStyle = 'var(--text-secondary, #aaa)';
+  ctx.font = '0.55rem sans-serif';
+  ctx.textAlign = 'left';
+  var zTicks = 5;
+  for(var i = 0; i <= zTicks; i++) {
+    var val = zMin + (zMax - zMin) * i / zTicks;
+    var py = barY + barH - barH * i / zTicks;
+    ctx.fillText(veFormatTooltipVal(val), barX + barW + 4, py + 3);
+  }
+  // Z ekseni başlığı
+  var zLabel = slot.zAxis ? (slot.zAxis.name || 'Z') : 'Z';
+  ctx.save();
+  ctx.translate(barX + barW + 4, padT - 6);
+  ctx.textAlign = 'left';
+  ctx.font = '600 0.58rem sans-serif';
+  ctx.fillText(zLabel, 0, 0);
+  ctx.restore();
+
+  // Sol üst: diyagram başlığı
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '600 0.64rem sans-serif';
+  ctx.textAlign = 'left';
+  var title = (slot.sensors && slot.sensors[0] ? slot.sensors[0].name : '') + ' — 3B Yüzey';
+  ctx.fillText(title, padL + 6, padT + 14);
+
+  // İstatistik bilgisi (sağ üst)
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '0.55rem sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('Z min: ' + veFormatTooltipVal(zMin) + '  max: ' + veFormatTooltipVal(zMax), padL + cw - 4, padT + 14);
+  ctx.fillText(N + ' veri noktası  |  ' + gridX + '×' + gridY + ' grid', padL + cw - 4, padT + 26);
+}
+
+// 3D yüzey için mouse hover tooltip
+function veInitSurfaceInteraction(slotIdx) {
+  var canvas = document.getElementById('ve-chart-canvas-' + slotIdx);
+  if(!canvas) return;
+
+  canvas.addEventListener('mousemove', function(e) {
+    var slot = veResultSlots[slotIdx];
+    if(!slot || slot.type !== 'surface' || !slot.zAxis) return;
+
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left;
+    var my = e.clientY - rect.top;
+
+    var tooltip = document.getElementById('ve-tooltip-' + slotIdx);
+    if(!tooltip) return;
+
+    var padL = 62, padR = 70, padT = 32, padB = 40;
+    var cw = rect.width - padL - padR;
+    var ch = rect.height - padT - padB;
+
+    if(mx < padL || mx > padL + cw || my < padT || my > padT + ch) {
+      tooltip.style.display = 'none';
+      return;
+    }
+
+    var xFrac = (mx - padL) / cw;
+    var yFrac = 1 - (my - padT) / ch;
+
+    var r = window.veSimResults;
+    if(!r) { tooltip.style.display = 'none'; return; }
+
+    var slotDS = slot._dataSource || null;
+    // Aralıkları tekrar hesapla (basitlik için)
+    var xData, yData, zData;
+    if(slot.xAxis && slot.xAxis.id === 'time') {
+      xData = (slotDS === 'segmentDrive' && r.segmentDrive) ? r.segmentDrive.time : r.time;
+    } else if(slot.xAxis && slot.xAxis.id && slot.xAxis.id.charAt(0) === '~') {
+      var p = slot.xAxis.id.substring(1).split(':');
+      xData = veGetSensorData('~' + p[0], p.slice(1).join(':'), slot.xAxis._dataSource || slotDS);
+    }
+    if(slot.sensors && slot.sensors[0]) {
+      yData = veGetSensorData(slot.sensors[0].id, slot.sensors[0].signal, slot.sensors[0]._dataSource || slotDS);
+    }
+    if(slot.zAxis && slot.zAxis.id && slot.zAxis.id.charAt(0) === '~') {
+      var p = slot.zAxis.id.substring(1).split(':');
+      zData = veGetSensorData('~' + p[0], p.slice(1).join(':'), slot.zAxis._dataSource || slotDS);
+    } else if(slot.zAxis && slot.zAxis.id === 'time') {
+      zData = (slotDS === 'segmentDrive' && r.segmentDrive) ? r.segmentDrive.time : r.time;
+    }
+
+    if(!xData || !yData || !zData) { tooltip.style.display = 'none'; return; }
+
+    var xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
+    var N = Math.min(xData.length, yData.length, zData.length);
+    for(var i = 0; i < N; i++) {
+      if(isFinite(xData[i])) { if(xData[i] < xMin) xMin = xData[i]; if(xData[i] > xMax) xMax = xData[i]; }
+      if(isFinite(yData[i])) { if(yData[i] < yMin) yMin = yData[i]; if(yData[i] > yMax) yMax = yData[i]; }
+    }
+
+    var xVal = xMin + xFrac * (xMax - xMin);
+    var yVal = yMin + yFrac * (yMax - yMin);
+
+    // En yakın Z değerini bul
+    var bestDist = Infinity, bestZ = 0;
+    for(var i = 0; i < N; i++) {
+      var dx = (xData[i] - xVal) / (xMax - xMin || 1);
+      var dy = (yData[i] - yVal) / (yMax - yMin || 1);
+      var d = dx * dx + dy * dy;
+      if(d < bestDist) { bestDist = d; bestZ = zData[i]; }
+    }
+
+    var xName = slot.xAxis ? slot.xAxis.name : 'X';
+    var yName = slot.sensors && slot.sensors[0] ? slot.sensors[0].name : 'Y';
+    var zName = slot.zAxis ? slot.zAxis.name : 'Z';
+
+    tooltip.innerHTML = '<span style="color:#3b82f6;">' + xName + ': ' + veFormatTooltipVal(xVal) + '</span><br>' +
+                        '<span style="color:#22c55e;">' + yName + ': ' + veFormatTooltipVal(yVal) + '</span><br>' +
+                        '<span style="color:#f59e0b;">' + zName + ': ' + veFormatTooltipVal(bestZ) + '</span>';
+    tooltip.style.display = 'block';
+    tooltip.style.left = (mx + 14) + 'px';
+    tooltip.style.top = (my - 10) + 'px';
+  });
+
+  canvas.addEventListener('mouseleave', function() {
+    var tooltip = document.getElementById('ve-tooltip-' + slotIdx);
+    if(tooltip) tooltip.style.display = 'none';
+  });
 }
 
 function veExportResults() {
