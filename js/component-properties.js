@@ -62,7 +62,7 @@ function showInfoPopup(infoKey) {
   
   var popup = document.createElement('div');
   popup.id = 've-info-popup';
-  popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:10005; max-width:400px; padding:20px;';
+  popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:2px; box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:10005; max-width:400px; padding:20px;';
   
   popup.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
     '<h3 style="margin:0; font-size:1rem; color:var(--text-heading);">' + info.title + '</h3>' +
@@ -314,7 +314,7 @@ function getEnginePropertiesHTML(node) {
     html += '</div>';
     
     // Placeholder (veri yoksa)
-    html += '<div id="ve-motor-placeholder-' + node.id + '" style="display:' + (hasData ? 'none' : 'block') + '; padding:20px; text-align:center; background:var(--bg-tertiary); border-radius:8px; margin-bottom:12px;">';
+    html += '<div id="ve-motor-placeholder-' + node.id + '" style="display:' + (hasData ? 'none' : 'block') + '; padding:20px; text-align:center; background:var(--bg-tertiary); border-radius:2px; margin-bottom:12px;">';
     html += '<div style="font-size:1.5rem; margin-bottom:8px;">⚡</div>';
     html += '<div style="font-size:0.75rem; color:var(--text-muted);">Yukarıdan bir motor seçin<br>veya Manuel Giriş ile veri girin.</div>';
     html += '</div>';
@@ -323,7 +323,7 @@ function getEnginePropertiesHTML(node) {
     var sp = nodeData.motorSpecs || {};
     html += '<div id="ve-ft-extra-' + node.id + '" style="display:' + (hasData ? 'block' : 'none') + ';">';
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:12px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-bottom:12px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Motor Parametreleri</div>';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
@@ -351,7 +351,7 @@ function getEnginePropertiesHTML(node) {
   html += '<div id="ve-motor-data-area-' + node.id + '" style="display:' + (showDataArea ? 'block' : 'none') + ';">';
   
   // Veri Tablosu - resize edilebilir
-  html += '<div id="ve-motor-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:6px 6px 0 0; border-bottom:none;">';
+  html += '<div id="ve-motor-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:2px 6px 0 0; border-bottom:none;">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
@@ -388,13 +388,13 @@ function getEnginePropertiesHTML(node) {
   html += '</div>';
   
   // ===== GRAFİK =====
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:12px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-bottom:12px;">';
   html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">';
   html += '<span style="font-size:0.75rem; font-weight:600; color:var(--text-heading);">Tork & Güç Eğrisi</span>';
   html += '<button onclick="showInfoPopup(\'torkGucEgrisi\')" style="width:16px; height:16px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.6rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
   html += '<button onclick="updateVEMotorChart(\'' + node.id + '\')" style="padding:3px 8px; font-size:0.65rem; background:var(--accent-primary); color:white; border:none; border-radius:4px; cursor:pointer;">Güncelle</button>';
   html += '</div>';
-  html += '<canvas id="ve-motor-chart-' + node.id + '" style="width:100%; height:200px; background:var(--bg-input); border-radius:6px;"></canvas>';
+  html += '<canvas id="ve-motor-chart-' + node.id + '" style="width:100%; height:200px; background:var(--bg-input); border-radius:2px;"></canvas>';
   html += '<div style="display:flex; justify-content:center; gap:16px; margin-top:6px; font-size:0.65rem;">';
   html += '<span style="color:#4aa3ff;">● Tork [Nm]</span>';
   html += '<span style="color:#ff6b6b;">● Güç [kW]</span>';
@@ -402,7 +402,7 @@ function getEnginePropertiesHTML(node) {
   html += '</div>';
   
   // ===== EĞRİ YAKLAŞIMI =====
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:12px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-bottom:12px;">';
   html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">Eğri Yaklaşımı <button onclick="showInfoPopup(\'egriYaklaşımı\')" style="width:16px; height:16px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.6rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button></div>';
   
   html += '<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">';
@@ -433,7 +433,7 @@ function getEnginePropertiesHTML(node) {
   if(isFullThrottle) {
     // ── TAM GAZ: AKSESUAR KAYIPLARI (ft-extra wrapper zaten üstte açıldı) ──
     var accessories = nodeData.accessories || [];
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:12px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:12px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Aksesuar Kayıpları</div>';
     html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Brüt güçten net güce geçiş için aksesuar kayıplarını tanımlayın. Toplam kayıp, her devirdeki güçten düşülür.</p>';
     
@@ -472,7 +472,7 @@ function getEnginePropertiesHTML(node) {
     
     html += '</tbody></table>';
     html += '<div style="margin-top:8px; text-align:right;">';
-    html += '<button onclick="onVEApplyAccLosses(\'' + node.id + '\')" style="padding:6px 16px; font-size:0.7rem; font-weight:600; background:var(--accent-primary); color:white; border:none; border-radius:5px; cursor:pointer;">Kayıpları Uygula</button>';
+    html += '<button onclick="onVEApplyAccLosses(\'' + node.id + '\')" style="padding:6px 16px; font-size:0.7rem; font-weight:600; background:var(--accent-primary); color:white; border:none; border-radius:2px; cursor:pointer;">Kayıpları Uygula</button>';
     html += '</div>';
     html += '</div>';
     
@@ -504,12 +504,12 @@ function getEnginePropertiesHTML(node) {
       });
     }
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:12px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:12px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Net Değerler</div>';
     html += '<p style="font-size:0.56rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Governed Speed (' + initGoverned + ' rpm) değerindeki aksesuar kaybı: ' + totalUserLoss.toFixed(1) + ' kW. Fan → RPM³, diğerleri → RPM oranında ölçeklenir.</p>';
     
     // Net tablo
-    html += '<div id="ve-net-table-wrapper-' + node.id + '" style="max-height:180px; overflow-y:auto; margin-bottom:8px; border:1px solid var(--border-color); border-radius:6px;">';
+    html += '<div id="ve-net-table-wrapper-' + node.id + '" style="max-height:180px; overflow-y:auto; margin-bottom:8px; border:1px solid var(--border-color); border-radius:2px;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-secondary); z-index:1;">';
     html += '<tr>';
@@ -537,7 +537,7 @@ function getEnginePropertiesHTML(node) {
     html += '</tbody></table></div>';
     
     // Net grafik
-    html += '<div style="position:relative; background:var(--bg-input); border-radius:6px; border:1px solid var(--border-color); padding:4px;">';
+    html += '<div style="position:relative; background:var(--bg-input); border-radius:2px; border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-net-chart-' + node.id + '" style="width:100%; height:200px;"></canvas>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.6rem; color:var(--text-muted);">';
@@ -553,7 +553,7 @@ function getEnginePropertiesHTML(node) {
     
   } else {
     // ── MOTOR FRENİ: Orijinal parametreler ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:12px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:12px;">';
   html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:10px; display:flex; align-items:center; gap:6px;">Motor Freni Parametreleri <button onclick="showInfoPopup(\'motorFreniParametreleri\')" style="width:16px; height:16px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.6rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button></div>';
   
   // Kenarlıklı tablo - daha okunaklı renkler
@@ -2970,7 +2970,7 @@ function getShiftControllerPropertiesHTML(node) {
   var N_shift_lockup = shiftRefRPM > 0 ? (shiftRefRPM - lockupOffset) : 0;
   
   // Profil adı
-  html += '<div style="background:var(--bg-secondary); border-radius:6px; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border-color);">';
+  html += '<div style="background:var(--bg-secondary); border-radius:2px; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border-color);">';
   html += '<div style="font-size:0.62rem; color:var(--text-muted);">Aktif Shift Profili</div>';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">' + profileName + '</div>';
   if(shiftRefRPM !== governed) {
@@ -2984,7 +2984,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
   
   // ── 5a. LOCKUP MODE SHIFT TABLOSU ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Lockup Mode Shift Tablosu</div>';
   html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">N<sub>shift_lockup</sub> = N<sub>shift_ref</sub> − Lockup_Shift_Offset = ' + shiftRefRPM + ' − ' + lockupOffset + ' = <b>' + N_shift_lockup + ' rpm</b></p>';
   
@@ -2999,7 +2999,7 @@ function getShiftControllerPropertiesHTML(node) {
       return na - nb;
     });
     
-    html += '<div style="max-height:200px; overflow-y:auto; border:1px solid var(--border-color); border-radius:6px;">';
+    html += '<div style="max-height:200px; overflow-y:auto; border:1px solid var(--border-color); border-radius:2px;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.66rem;">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-secondary); z-index:1;">';
     html += '<tr>';
@@ -3037,7 +3037,7 @@ function getShiftControllerPropertiesHTML(node) {
   var shift1C2C_outRatio = spData.shift1C2C_outRatio || 0.2150;
   var shift2C2L_outRatio = spData.shift2C2L_outRatio || 0.3593;
   
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Converter Mode Shift Mantığı</div>';
   html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Converter-mod geçişleri şanzıman çıkış devri oranına (N_out / N_shift_ref) göre belirlenir. Bu oranlar motordan bağımsızdır — farklı governed RPM\'li motorlarda da doğru shift noktası verir.</p>';
   
@@ -3061,7 +3061,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</tbody></table>';
   
   // Shift mantığı kuralları
-  html += '<div style="background:var(--bg-input); border-radius:5px; padding:8px 10px; margin-bottom:8px; border:1px solid var(--border-color); font-family:monospace; font-size:0.6rem; line-height:1.6; color:var(--text-secondary);">';
+  html += '<div style="background:var(--bg-input); border-radius:2px; padding:8px 10px; margin-bottom:8px; border:1px solid var(--border-color); font-family:monospace; font-size:0.6rem; line-height:1.6; color:var(--text-secondary);">';
   html += '1C → 2C: shift @ N_out ≥ ' + shift1C2C_outRatio + ' × N_shift_ref<br>';
   html += '2C → 2L: shift @ N_out ≥ ' + shift2C2L_outRatio + ' × N_shift_ref (lockup engage)';
   html += '</div>';
@@ -3074,10 +3074,10 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
 
   // ── SHIFT CONTROLLER ALGORİTMASI (Görsel) ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Shift Controller Algoritması</div>';
   
-  var codeStyle = 'background:var(--bg-input); border-radius:5px; padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:0.55rem; line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
+  var codeStyle = 'background:var(--bg-input); border-radius:2px; padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:0.55rem; line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
   
   html += '<div style="' + codeStyle + '">';
   html += '<span style="color:var(--text-muted);">Girdiler: N_engine, SR, V_vehicle, current_gear, mode</span>\n\n';
@@ -3117,7 +3117,7 @@ function getShiftControllerPropertiesHTML(node) {
   // Shift sırası görsel
   html += '<div style="font-size:0.65rem; font-weight:600; color:var(--text-heading); margin-top:10px; margin-bottom:6px;">Shift Sırası — ' + profileName + ', full throttle (WOT):</div>';
   
-  html += '<div style="background:var(--bg-input); border-radius:5px; padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:0.55rem; line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
+  html += '<div style="background:var(--bg-input); border-radius:2px; padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:0.55rem; line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
   html += '<span style="color:var(--accent-primary); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>\n';
   html += ' │                              └ Son vites, governed\'a kadar\n';
   html += ' │                     └ N_eng >= N_ref−' + lockupOffset + ' → 6L\n';
@@ -3337,7 +3337,7 @@ function getGearboxPropertiesHTML(node) {
     }
     var displayGoverned = gbGovernedSpeed || autoGoverned || '';
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Şanzıman Parametreleri</div>';
     
     // Şanzıman Preset Seçici
@@ -3364,7 +3364,7 @@ function getGearboxPropertiesHTML(node) {
     if(ftGBPreset && VE_GEARBOX_PRESETS[ftGBPreset]) {
       var _lp = VE_GEARBOX_PRESETS[ftGBPreset];
       if(_lp.grossInputPower || _lp.grossInputTorque || _lp.netTurbineTorque || _lp.maxOutputSpeed) {
-        html += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; padding:6px 8px; margin-bottom:8px; font-size:0.6rem; line-height:1.5;">';
+        html += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:2px; padding:6px 8px; margin-bottom:8px; font-size:0.6rem; line-height:1.5;">';
         html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:2px; font-size:0.62rem;">Şanzıman Limitleri</div>';
         html += '<div style="display:flex; flex-wrap:wrap; gap:4px 12px; color:var(--text-secondary);">';
         if(_lp.grossInputPower) html += '<span>Giriş Güç: <b style="color:var(--text-primary);">' + _lp.grossInputPower + ' kW</b></span>';
@@ -3581,7 +3581,7 @@ function getGearboxPropertiesHTML(node) {
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Vites Oranları ve Verimler</div>';
     html += '<p style="font-size:0.6rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Her vites için oranı, mekanik verimi ve lockup desteğini girin.</p>';
     
-    html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:6px 6px 0 0; border-bottom:none;">';
+    html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:2px 6px 0 0; border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
     html += '<tr>';
@@ -3646,7 +3646,7 @@ function getGearboxPropertiesHTML(node) {
   html += '<div id="ve-gearbox-data-area-' + node.id + '" style="display:' + (hasData || selectedGearbox ? 'block' : 'none') + ';">';
   
   // Vites Tablosu
-  html += '<div id="ve-gearbox-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:6px 6px 0 0; border-bottom:none;">';
+  html += '<div id="ve-gearbox-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:2px 6px 0 0; border-bottom:none;">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
@@ -3678,7 +3678,7 @@ function getGearboxPropertiesHTML(node) {
   html += '</div>'; // ve-gearbox-data-area
   
   // ===== TEST BAŞLANGIÇ VİTESİ =====
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:12px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:12px;">';
   html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:10px; display:flex; align-items:center; gap:6px;">Test Başlangıç Vitesi <button onclick="showInfoPopup(\'testVitesi\')" style="width:16px; height:16px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.6rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button></div>';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -3702,7 +3702,7 @@ function getGearboxPropertiesHTML(node) {
   
   // ===== VERİM =====
   var gearboxEfficiency = nodeData.efficiency !== undefined ? nodeData.efficiency : 97;
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:12px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:12px;">';
   html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Verim</div>';
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -5255,7 +5255,7 @@ function getECMatchingPropertiesHTML(node) {
   html += '<div style="font-size:0.68rem; font-weight:600; color:var(--text-heading);">Motor Eğrisi × Konvertör Kapasiteleri</div>';
   html += '<button onclick="ecmExpandChart(\'' + node.id + '\')" title="Diyagramı büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:3px; cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
   html += '</div>';
-  html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color); border-radius:6px;"></canvas>';
+  html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color); border-radius:2px;"></canvas>';
   html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:4px; line-height:1.3;">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0.80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0.80 SR çalışma noktalarını verir.</div>';
   html += '</div>';
   
@@ -5299,7 +5299,7 @@ function runECMatchingAnalysis(nodeId) {
   var resultsEl = document.getElementById('ecm-results-' + nodeId);
 
   if(!engineNode || !engineNode.data || !engineNode.data.torqueData || engineNode.data.torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px; font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:2px; font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     return;
   }
   
@@ -5353,7 +5353,7 @@ function runECMatchingAnalysis(nodeId) {
       c9c10html += '</span>';
       c9c10html += '</div>';
     }
-    infoEl.innerHTML = '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px;">' +
+    infoEl.innerHTML = '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:2px; padding:8px 10px;">' +
       '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">🔧 ' + engineName + '</div>' +
       '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
       '<span>Peak Tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
@@ -5520,7 +5520,7 @@ function runECMatchingAnalysis(nodeId) {
     h += '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading);">Konvertör Uyumluluk Tablosu</div>';
     h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.ecm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.ecm-info-tip\').style.display=\'none\'">';
     h += '<div style="width:16px; height:16px; border-radius:50%; background:var(--bg-tertiary); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; cursor:help; font-size:0.55rem; font-weight:700; color:var(--text-secondary); transition:all 0.15s;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-tertiary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">i</div>';
-    h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
+    h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:2px; box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:0.65rem;">Kontrol Kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).<br>';
     h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + peakRPM + ' rpm): Konvertör fazında motorun ulaştığı minimum devir. Altına düşerse motor lugging yapar.<br>';
@@ -5533,7 +5533,7 @@ function runECMatchingAnalysis(nodeId) {
     
     // C9/C10 uyarı bandı (şanzıman seviyesi kontroller)
     if(!c9ok || !c10ok) {
-      h += '<div style="margin-bottom:8px; padding:8px 10px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px;">';
+      h += '<div style="margin-bottom:8px; padding:8px 10px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:2px;">';
       h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-danger);">❌ Şanzıman Giriş Limiti Aşılıyor</div>';
       h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">';
       if(!c9ok) h += 'C9: Motor gücü (' + powerAtGov.toFixed(0) + ' kW) > Şanzıman giriş güç limiti (' + gbLimits.grossInputPower + ' kW)<br>';
@@ -5605,12 +5605,12 @@ function runECMatchingAnalysis(nodeId) {
     
     // Önerilen konvertör özeti
     if(results.length > 0 && results[0].status === 'recommended') {
-      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.25); border-radius:6px;">';
+      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.25); border-radius:2px;">';
       h += '<div style="font-size:0.7rem; font-weight:700; color:var(--accent-success);">🏆 Önerilen: ' + results[0].name + '</div>';
       h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">Stall: ' + results[0].stallSpeed.toFixed(0) + ' rpm | SR@Gov: ' + results[0].srGov.toFixed(3) + ' | T_turb: ' + results[0].tTurbineStall.toFixed(0) + ' N·m</div>';
       h += '</div>';
     } else if(results.length > 0) {
-      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(217,119,6,0.08); border:1px solid rgba(217,119,6,0.25); border-radius:6px;">';
+      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(217,119,6,0.08); border:1px solid rgba(217,119,6,0.25); border-radius:2px;">';
       h += '<div style="font-size:0.7rem; font-weight:700; color:var(--accent-warning);">⚠ Tam uyumlu konvertör bulunamadı</div>';
       h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">En iyi seçenek: ' + results[0].name + ' (SR@Gov: ' + results[0].srGov.toFixed(3) + '). Lockup modunda çalışacağından performans kabul edilebilir olabilir.</div>';
       h += '</div>';
@@ -5876,14 +5876,14 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
   // Bağlı motoru bul
   var engineNode = findConnectedEngine(nodeId);
   if(!engineNode) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:6px; font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:2px; font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
 
   var torqueData = engineNode.data ? (engineNode.data.torqueData || []) : [];
   if(torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:6px; font-size:0.65rem; color:var(--accent-warning);">⚠ Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:2px; font-size:0.65rem; color:var(--accent-warning);">⚠ Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
@@ -5913,7 +5913,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
 
   // Motor bilgi paneli
   if(infoEl) {
-    infoEl.innerHTML = '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px;">' +
+    infoEl.innerHTML = '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:2px; padding:8px 10px;">' +
       '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">🔧 ' + engineName + '</div>' +
       '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
       '<span>Peak Tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
@@ -5989,7 +5989,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading);">Şanzıman Uyumluluk Tablosu</div>';
     h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.egm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.egm-info-tip\').style.display=\'none\'">';
     h += '<div style="width:16px; height:16px; border-radius:50%; background:var(--bg-tertiary); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; cursor:help; font-size:0.55rem; font-weight:700; color:var(--text-secondary);">i</div>';
-    h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
+    h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:2px; box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:0.65rem;">Kontrol Kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + powerAtGov.toFixed(0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
     h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + torqueAtGov.toFixed(0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
@@ -6070,14 +6070,14 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     // Önerilen şanzıman özeti
     var recommended = results.filter(function(r) { return r.status === 'recommended'; });
     if(recommended.length > 0) {
-      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.25); border-radius:6px;">';
+      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.25); border-radius:2px;">';
       h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-success);">🏆 Önerilen Şanzımanlar (' + recommended.length + ')</div>';
       h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">' + recommended.map(function(r) { return r.name; }).join(', ') + '</div>';
       h += '</div>';
     } else {
       var acceptable = results.filter(function(r) { return r.score > 0; });
       if(acceptable.length > 0) {
-        h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(217,119,6,0.08); border:1px solid rgba(217,119,6,0.25); border-radius:6px;">';
+        h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(217,119,6,0.08); border:1px solid rgba(217,119,6,0.25); border-radius:2px;">';
         h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-warning);">⚠ Tam uyumlu şanzıman bulunamadı</div>';
         h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">En iyi seçenekler: ' + acceptable.map(function(r) { return r.name; }).join(', ') + '</div>';
         h += '</div>';
@@ -6190,7 +6190,7 @@ function ecmExpandChart(nodeId) {
   var chartBox = document.createElement('div');
   chartBox.style.cssText = 'flex:1; position:relative; min-height:0; padding:10px;';
   chartBox.innerHTML = '<canvas id="ecm-modal-canvas" style="width:100%; height:100%; display:block; border-radius:4px;"></canvas>' +
-    '<div id="ecm-modal-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary, #151a22); border:1px solid var(--border-light, #222b3a); border-radius:6px; padding:8px 12px; font-size:0.65rem; color:var(--text-primary, #c8d1dc); line-height:1.5; box-shadow:0 4px 16px rgba(0,0,0,0.5); z-index:10; max-width:260px; white-space:nowrap;"></div>' +
+    '<div id="ecm-modal-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary, #151a22); border:1px solid var(--border-light, #222b3a); border-radius:2px; padding:8px 12px; font-size:0.65rem; color:var(--text-primary, #c8d1dc); line-height:1.5; box-shadow:0 4px 16px rgba(0,0,0,0.5); z-index:10; max-width:260px; white-space:nowrap;"></div>' +
     '<div id="ecm-modal-crosshair-v" style="position:absolute; top:0; width:1px; height:100%; background:rgba(255,255,255,0.12); pointer-events:none; display:none; z-index:5;"></div>' +
     '<div id="ecm-modal-crosshair-h" style="position:absolute; left:0; width:100%; height:1px; background:rgba(255,255,255,0.12); pointer-events:none; display:none; z-index:5;"></div>';
   modal.appendChild(chartBox);
@@ -6879,7 +6879,7 @@ function getTorqueConverterPropertiesHTML(node) {
     if(hasECM) {
       html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:4px; font-size:0.58rem; color:var(--accent-warning); line-height:1.4;">🔒 Konvertör seçimi Motor-Konvertör Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
-    html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:0.7rem; padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px;' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
+    html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:0.7rem; padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:2px;' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
     html += '<option value="">-- Konvertör Seçiniz --</option>';
     
     if(!_gbFamily) {
@@ -6920,7 +6920,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div id="ve-tc-desc-' + node.id + '" style="font-size:0.52rem; color:var(--text-muted); margin-top:3px; line-height:1.3; min-height:12px;">' + selDesc + '</div>';
     html += '</div>';
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Konvertör Parametreleri</div>';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
@@ -6938,7 +6938,7 @@ function getTorqueConverterPropertiesHTML(node) {
     
     html += '<div id="ve-tc-data-area-' + node.id + '" style="margin-top:10px;">';
     html += '<p style="font-size:0.62rem; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">Tork konvertörünün absorption characteristics değerlerini girin. <b>SR</b> (Speed Ratio) = Türbin Devri / Pump Devri. <b>K<sub>pump</sub></b> = Pump K-Factor [rpm/√(N·m)]. <b>τ</b> = Tork Oranı (Türbin Torku / Pump Torku).</p>';
-    html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:6px 6px 0 0; border-bottom:none;">';
+    html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:2px 6px 0 0; border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
     html += '<tr>';
@@ -6977,9 +6977,9 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</div>';
     
     // ── GRAFİK 1: Tork Oranı & Verim Eğrisi ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:12px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:12px;">';
     html += '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Tork Oranı & Verim Eğrisi</div>';
-    html += '<div style="position:relative; background:var(--bg-input); border-radius:6px; border:1px solid var(--border-color); padding:4px;">';
+    html += '<div style="position:relative; background:var(--bg-input); border-radius:2px; border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-tc-chart-tau-' + node.id + '" style="width:100%; height:200px;"></canvas>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.6rem; color:var(--text-muted);">';
@@ -6990,9 +6990,9 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</div>';
     
     // ── GRAFİK 2: K_pump Eğrisi ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:10px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:10px;">';
     html += '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">K<sub>pump</sub> Eğrisi</div>';
-    html += '<div style="position:relative; background:var(--bg-input); border-radius:6px; border:1px solid var(--border-color); padding:4px;">';
+    html += '<div style="position:relative; background:var(--bg-input); border-radius:2px; border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-tc-chart-kpump-' + node.id + '" style="width:100%; height:180px;"></canvas>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.6rem; color:var(--text-muted);">';
@@ -7946,7 +7946,7 @@ function getTransferPropertiesHTML(node) {
     }
     var ftTrGears = nodeData.ftTrGears;
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Transfer Case Parametreleri</div>';
     
     // Transfer Case Preset Seçici
@@ -7985,7 +7985,7 @@ function getTransferPropertiesHTML(node) {
     html += '<div style="margin-top:10px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Kademe Tablosu</div>';
     
-    html += '<div style="border:1px solid var(--border-color); border-radius:6px; overflow:hidden;">';
+    html += '<div style="border:1px solid var(--border-color); border-radius:2px; overflow:hidden;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
     html += '<thead style="background:var(--bg-tertiary);">';
     html += '<tr>';
@@ -8010,7 +8010,7 @@ function getTransferPropertiesHTML(node) {
     html += '</div>';
     
     // ── BİLGİ NOTU ──
-    html += '<div style="background:var(--bg-secondary); border-radius:6px; padding:8px 10px; margin-top:10px; border:1px solid var(--border-color);">';
+    html += '<div style="background:var(--bg-secondary); border-radius:2px; padding:8px 10px; margin-top:10px; border:1px solid var(--border-color);">';
     html += '<p style="font-size:0.58rem; color:var(--text-muted); line-height:1.4; margin:0;">⚡ Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır. Sonuçlar her kademe için ayrı iSCAAN tablosu olarak raporlanır.</p>';
     html += '</div>';
     
@@ -8040,7 +8040,7 @@ function getTransferPropertiesHTML(node) {
   html += '</div>';
   
   // Kademe Tablosu
-  html += '<div id="ve-transfer-table-wrapper-' + node.id + '" style="max-height:150px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:6px 6px 0 0; border-bottom:none;">';
+  html += '<div id="ve-transfer-table-wrapper-' + node.id + '" style="max-height:150px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:2px 6px 0 0; border-bottom:none;">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
@@ -8071,7 +8071,7 @@ function getTransferPropertiesHTML(node) {
   html += '</div>';
   
   // Aktif Kademe Seçimi
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:12px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:12px;">';
   html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Aktif Kademe</div>';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -8092,7 +8092,7 @@ function getTransferPropertiesHTML(node) {
   
   // ===== VERİM =====
   var transferEfficiency = nodeData.efficiency !== undefined ? nodeData.efficiency : 98;
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:12px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:12px;">';
   html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Verim</div>';
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -8323,7 +8323,7 @@ function getPropshaftPropertiesHTML(node) {
   html += '<button onclick="showInfoPopup(\'propshaftVerileri\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
   html += '</div>';
   
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px;">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px;">';
   html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Propşaft Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   
@@ -8405,9 +8405,9 @@ function getDifferentialPropertiesHTML(node) {
       var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
       html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
       html += '<span>Diferansiyel Parametreleri</span>';
-      html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:8px; border:1px solid var(--border-color);">SLAVE</span>';
+      html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:2px; border:1px solid var(--border-color);">SLAVE</span>';
       html += '</div>';
-      html += '<div style="background:var(--bg-tertiary); border-radius:6px; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
+      html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
       html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + (masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
       html += '</div>';
@@ -8424,7 +8424,7 @@ function getDifferentialPropertiesHTML(node) {
   html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
   html += '<span>Diferansiyel Parametreleri</span>';
   if(isFullThrottle) {
-    html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:8px;">★ MASTER</span>';
+    html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:2px;">★ MASTER</span>';
   }
   html += '<button onclick="showInfoPopup(\'diferansiyel\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;' + (isFullThrottle ? ' margin-left:auto;' : '') + '" title="Bilgi">?</button>';
   html += '</div>';

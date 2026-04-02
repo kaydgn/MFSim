@@ -27,7 +27,7 @@ function veExpandRoadMap(nodeId) {
   
   // Header
   var markerCount = (veRoadMarkers[nodeId] || []).length;
-  var badge = markerCount > 0 ? ' <span style="font-size:0.6rem; padding:1px 6px; background:var(--accent-primary); color:#fff; border-radius:8px; margin-left:6px;">' + markerCount + ' nokta</span>' : '';
+  var badge = markerCount > 0 ? ' <span style="font-size:0.6rem; padding:1px 6px; background:var(--accent-primary); color:#fff; border-radius:2px; margin-left:6px;">' + markerCount + ' nokta</span>' : '';
   
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
@@ -352,7 +352,7 @@ function veSearchLocation(nodeId) {
   var searchDiv = document.createElement('div');
   searchDiv.id = 've-map-search-' + nodeId;
   searchDiv.style.cssText = 'position:absolute; top:8px; left:50px; right:50px; z-index:1000; display:flex; gap:3px;';
-  searchDiv.innerHTML = '<input type="text" placeholder="Konum veya adres ara..." style="flex:1; padding:6px 8px; font-size:0.72rem; border:2px solid #2196f3; border-radius:6px; outline:none; background:white; color:#333; box-shadow:0 2px 8px rgba(0,0,0,0.2);"><button style="padding:6px 10px; background:#2196f3; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.68rem; white-space:nowrap;">Ara</button>';
+  searchDiv.innerHTML = '<input type="text" placeholder="Konum veya adres ara..." style="flex:1; padding:6px 8px; font-size:0.72rem; border:2px solid #2196f3; border-radius:2px; outline:none; background:white; color:#333; box-shadow:0 2px 8px rgba(0,0,0,0.2);"><button style="padding:6px 10px; background:#2196f3; color:white; border:none; border-radius:2px; cursor:pointer; font-size:0.68rem; white-space:nowrap;">Ara</button>';
   container.style.position = 'relative';
   container.appendChild(searchDiv);
   
@@ -1098,7 +1098,7 @@ function veCalcDistGradeProfile(nodeId) {
       '<div id="' + altCanvasId + '-tooltip" class="dr-chart-tooltip"></div>' +
       '<button onclick="veExpandProfileChart(\'' + nodeId + '\', \'altitude\')" title="Grafiği büyüt" style="position:absolute; top:4px; right:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:rgba(30,36,48,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:3px; cursor:pointer; font-size:0.7rem; color:var(--text-secondary); transition:all 0.12s; z-index:2;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(30,36,48,0.7)\';this.style.color=\'var(--text-secondary)\'">⛶</button>' +
       '</div>' +
-      '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:5px 8px; background:var(--bg-secondary); border-radius:5px; border:1px solid var(--border-color); font-size:0.58rem;">' +
+      '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:5px 8px; background:var(--bg-secondary); border-radius:2px; border:1px solid var(--border-color); font-size:0.58rem;">' +
       '<span style="color:var(--text-muted);">Başlangıç:</span><span style="color:#b39ddb; font-weight:600;">' + elevFirst.toFixed(0) + 'm</span>' +
       '<span style="color:var(--text-muted); opacity:0.4;">→</span>' +
       '<span style="color:var(--text-muted);">Bitiş:</span><span style="color:#b39ddb; font-weight:600;">' + elevLast.toFixed(0) + 'm</span>' +
@@ -1122,7 +1122,7 @@ function veCalcDistGradeProfile(nodeId) {
     }
     var panelCanvasId = 've-road-distgrade-canvas-' + nodeId;
     profileDiv.innerHTML = _buildProfileHTML(panelCanvasId) +
-      '<button onclick="veTransferSegmentsToScenario(\'' + nodeId + '\')" style="width:100%; margin-top:6px; padding:7px 10px; font-size:0.66rem; font-weight:600; background:var(--accent-primary, #3b82f6); color:#fff; border:none; border-radius:5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.15s; opacity:0.9;" onmouseover="this.style.opacity=\'1\';this.style.boxShadow=\'0 2px 8px rgba(59,130,246,0.35)\'" onmouseleave="this.style.opacity=\'0.9\';this.style.boxShadow=\'none\'">📤 Eğim Segmentlerini Senaryolara Aktar</button>';
+      '<button onclick="veTransferSegmentsToScenario(\'' + nodeId + '\')" style="width:100%; margin-top:6px; padding:7px 10px; font-size:0.66rem; font-weight:600; background:var(--accent-primary, #3b82f6); color:#fff; border:none; border-radius:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.15s; opacity:0.9;" onmouseover="this.style.opacity=\'1\';this.style.boxShadow=\'0 2px 8px rgba(59,130,246,0.35)\'" onmouseleave="this.style.opacity=\'0.9\';this.style.boxShadow=\'none\'">📤 Eğim Segmentlerini Senaryolara Aktar</button>';
     setTimeout(function() {
       var altCanvasId = panelCanvasId.replace('distgrade', 'altitude');
       veRenderAltitudeProfile(altCanvasId, gpsSamples, nodeId);
@@ -2063,7 +2063,7 @@ function veExpandProfileChart(nodeId, chartType) {
 
   // Modal
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:100%; max-width:1200px; max-height:90vh; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); border-radius:6px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  modal.style.cssText = 'width:100%; max-width:1200px; max-height:90vh; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); border-radius:2px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
   // Header
   var curSmooth = (node.data && node.data.smoothLevel !== undefined) ? node.data.smoothLevel : 2;
@@ -2273,7 +2273,7 @@ function getTerminatorPropertiesHTML(node) {
   var html = '';
   
   // Açıklama
-  html += '<div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:10px 12px; margin-bottom:12px;">';
+  html += '<div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:2px; padding:10px 12px; margin-bottom:12px;">';
   html += '<div style="font-size:0.72rem; color:var(--accent-danger); font-weight:600; margin-bottom:4px;">✂️ Hesap Sonlandırma Noktası</div>';
   html += '<div style="font-size:0.68rem; color:var(--text-secondary); line-height:1.5;">Bu bileşen, güç akış zincirini burada keser. Çözücü, bu noktaya kadar olan bileşenlerin hesabını yapar ve durur. Tam model kurmadan kısmi analizler yapmanızı sağlar.</div>';
   html += '</div>';
@@ -2282,7 +2282,7 @@ function getTerminatorPropertiesHTML(node) {
   var inConn = connections.find(function(c) { return c.to === node.id; });
   
   if(!inConn) {
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:12px; text-align:center;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:12px; text-align:center;">';
     html += '<div style="font-size:0.75rem; color:var(--text-muted);">⚠️ Henüz bir bileşene bağlanmadı</div>';
     html += '<div style="font-size:0.65rem; color:var(--text-muted); margin-top:4px;">Bir bileşenin çıkış portuna bağlayın</div>';
     html += '</div>';
@@ -2318,7 +2318,7 @@ function getTerminatorPropertiesHTML(node) {
         var def = componentDefs[nd.type] || {};
         var name = nd.customName || def.name || nd.type;
         var isLast = idx === chain.length - 1;
-        html += '<div style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:' + (isLast ? 'rgba(239,68,68,0.08)' : 'var(--bg-tertiary)') + '; border-radius:5px; font-size:0.7rem;">';
+        html += '<div style="display:flex; align-items:center; gap:6px; padding:5px 8px; background:' + (isLast ? 'rgba(239,68,68,0.08)' : 'var(--bg-tertiary)') + '; border-radius:2px; font-size:0.7rem;">';
         html += '<span style="color:var(--text-muted); font-size:0.6rem; width:14px; text-align:center;">' + (idx + 1) + '</span>';
         html += '<span style="color:var(--text-primary);">' + name + '</span>';
         if(isLast) {
@@ -2356,7 +2356,7 @@ function getTerminatorPropertiesHTML(node) {
       if(signals.length > 0) {
         html += '<div style="display:flex; flex-wrap:wrap; gap:4px;">';
         signals.forEach(function(s) {
-          html += '<span style="font-size:0.62rem; background:var(--bg-tertiary); border:1px solid var(--border-color); padding:2px 7px; border-radius:10px; color:var(--text-secondary);">' + s + '</span>';
+          html += '<span style="font-size:0.62rem; background:var(--bg-tertiary); border:1px solid var(--border-color); padding:2px 7px; border-radius:2px; color:var(--text-secondary);">' + s + '</span>';
         });
         html += '</div>';
       }
@@ -2425,7 +2425,7 @@ function showMultipleSelection() {
   html += '<div style="font-size:2rem; margin-bottom:12px;">📦</div>';
   html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:8px;">' + selectedNodes.length + ' bileşen seçili</div>';
   html += '<div style="margin-top:16px;">';
-  html += '<button onclick="deleteSelectedNodes()" style="width:100%; padding:8px; background:var(--accent-danger); color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.8rem;">🗑️ Seçilenleri Sil</button>';
+  html += '<button onclick="deleteSelectedNodes()" style="width:100%; padding:8px; background:var(--accent-danger); color:white; border:none; border-radius:2px; cursor:pointer; font-size:0.8rem;">🗑️ Seçilenleri Sil</button>';
   html += '</div>';
   html += '</div>';
   

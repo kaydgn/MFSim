@@ -962,7 +962,7 @@ function veRenderDetailedReport(filter) {
     }
     
     // Chart alanı — interactive wrapper
-    ecmHTML += '<div id="dr-ecm-chart-wrap" style="margin-top:14px; position:relative; max-width:800px; margin:0 auto; height:450px; border:1px solid var(--border-color); border-radius:6px; overflow:hidden; background:var(--bg-secondary); cursor:crosshair;">';
+    ecmHTML += '<div id="dr-ecm-chart-wrap" style="margin-top:14px; position:relative; max-width:800px; margin:0 auto; height:450px; border:1px solid var(--border-color); border-radius:2px; overflow:hidden; background:var(--bg-secondary); cursor:crosshair;">';
     ecmHTML += '<canvas id="dr-ecm-chart" style="width:100%; height:100%; display:block;"></canvas>';
     ecmHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:0.58rem; color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır</div>';
     ecmHTML += '<span id="dr-ecm-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:0.62rem; font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:3px;" onclick="drEcmResetZoom()">🔍 1.0×</span>';
@@ -2372,7 +2372,7 @@ function veDownloadTXTFromPreview() {
   ov.addEventListener('mousedown', function(e) { if(e.target === ov) ov.remove(); });
 
   var box = document.createElement('div');
-  box.style.cssText = 'width:340px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  box.style.cssText = 'width:340px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:2px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
   box.innerHTML = '' +
     '<div style="padding:10px 14px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); display:flex; align-items:center; justify-content:space-between;">' +
       '<span style="font-size:0.82rem; font-weight:700; color:#e2e8f0;">📥 TXT Rapor İndir</span>' +
@@ -2382,7 +2382,7 @@ function veDownloadTXTFromPreview() {
       '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Yazar Adı:</label>' +
       '<input type="text" id="ve-txt-author-input" placeholder="İsim Soyisim" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; box-sizing:border-box;">' +
       '<div id="ve-txt-author-email" style="margin-top:6px; font-size:0.65rem; color:var(--text-muted); min-height:1.2em;"></div>' +
-      '<button id="ve-txt-author-ok" style="width:100%; margin-top:10px; padding:8px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:5px; font-size:0.78rem; font-weight:700; cursor:pointer;">📥 İndir</button>' +
+      '<button id="ve-txt-author-ok" style="width:100%; margin-top:10px; padding:8px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:2px; font-size:0.78rem; font-weight:700; cursor:pointer;">📥 İndir</button>' +
     '</div>';
   ov.appendChild(box);
   document.body.appendChild(ov);
