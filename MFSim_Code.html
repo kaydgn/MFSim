@@ -10020,6 +10020,8 @@ function showNodeProperties(node) {
   }
 }
 
+</script>
+<script>
 // Motor / Motor Freni özellikleri - TAM VERSİYON
 function getEnginePropertiesHTML(node) {
   var nodeData = node.data || {};
@@ -12673,6 +12675,9 @@ function polyFit(x, y, degree) {
   return coeffs;
 }
 
+
+</script>
+<script>
 // Şanzıman özellikleri
 // ===== ŞANZIMAN KONTROL ÖZELLİKLERİ =====
 function getShiftControllerPropertiesHTML(node) {
@@ -14984,6 +14989,9 @@ function onVEGearboxDataChange(nodeId) {
   updateVEGearSelectOptions(nodeId);
 }
 
+
+</script>
+<script>
 // ===== MOTOR-TC EŞLEŞTİRME BİLEŞENİ =====
 
 function getECMatchingPropertiesHTML(node) {
@@ -16612,6 +16620,9 @@ function ecmModalMouseLeave(e) {
   if(crossH) crossH.style.display = 'none';
 }
 
+
+</script>
+<script>
 // ===== TORK KONVERTÖRÜ ÖZELLİKLERİ =====
 function getTorqueConverterPropertiesHTML(node) {
   var nodeData = node.data || {};
@@ -17690,6 +17701,9 @@ function onVETCParamChange(nodeId) {
   }
 }
 
+
+</script>
+<script>
 // ===== TRANSFER KUTUSU ÖZELLİKLERİ =====
 function getTransferPropertiesHTML(node) {
   var nodeData = node.data || {};
@@ -18248,6 +18262,9 @@ function onVEDiffParamChange(nodeId) {
   if(inerEl) node.data.diffInertia = pf(inerEl.value, 1.0);
 }
 
+
+</script>
+<script>
 // ===== TEKERLEK ÖZELLİKLERİ =====
 function getSolverPropertiesHTML(node) {
   var d = node.data || {};

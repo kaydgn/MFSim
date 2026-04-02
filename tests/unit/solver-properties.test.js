@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Kaynak dosyaları oku (eval etmeden, sadece içerik kontrolü için)
-const cpCode = fs.readFileSync(path.join(__dirname, '../../js/component-properties.js'), 'utf8');
+const cpCode = fs.readFileSync(path.join(__dirname, '../../js/cp-solver.js'), 'utf8');
 const mapCode = fs.readFileSync(path.join(__dirname, '../../js/map.js'), 'utf8');
 
 // ═════════════════════════════════════════════════════════════════════
