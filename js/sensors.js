@@ -263,9 +263,9 @@ var SENSOR_PACKAGES = [
   //  3B YÜZEY DİYAGRAMLARI — Performans
   // ══════════════════════════════════════════════════════════════
   {
-    id: '3d-perf', name: '3B Performans Yüzeyleri', icon: '🗺️', priority: 'advanced',
+    id: '3d-perf', name: '3D Performans Diyagramları', icon: '🔮', priority: 'advanced',
     solverTab: 'performance',
-    description: '3 boyutlu yüzey diyagramları: motor haritası, çekiş kuvveti, TC verimi, güç akışı, direnç ve ivme',
+    description: '3 boyutlu diyagramlar: motor haritası, çekiş kuvveti, TC verimi, güç akışı, direnç ve ivme',
     requires: ['vehicle', 'engine'],
     diagrams: [
       { id:'3d-engine-map', name:'Motor Çalışma Haritası (3B)', xAxis:'RPM', yAxis:'Tork (Nm)', zAxis:'Güç (kW)',
@@ -288,9 +288,9 @@ var SENSOR_PACKAGES = [
   //  3B YÜZEY DİYAGRAMLARI — Hızlanma-Yavaşlama
   // ══════════════════════════════════════════════════════════════
   {
-    id: '3d-sd', name: '3B Segment Yüzeyleri', icon: '🗺️', priority: 'advanced',
+    id: '3d-sd', name: '3D Segment Diyagramları', icon: '🔮', priority: 'advanced',
     solverTab: 'accel-decel',
-    description: '3 boyutlu yüzey diyagramları: hız-mesafe-eğim, kuvvet, ısı, güç-devir, çekiş-direnç',
+    description: '3 boyutlu diyagramlar: hız-mesafe-eğim, kuvvet, ısı, güç-devir, çekiş-direnç',
     requires: ['vehicle', 'engine'],
     diagrams: [
       { id:'3d-sd-speed-grade', name:'Hız-Mesafe-Eğim Profili (3B)', xAxis:'Mesafe (m)', yAxis:'Eğim Kuvveti (N)', zAxis:'Hız (km/h)',
@@ -311,9 +311,9 @@ var SENSOR_PACKAGES = [
   //  3B YÜZEY DİYAGRAMLARI — Engel Atlama
   // ══════════════════════════════════════════════════════════════
   {
-    id: '3d-obs', name: '3B Engel Atlama Yüzeyleri', icon: '🗺️', priority: 'advanced',
+    id: '3d-obs', name: '3D Engel Atlama Diyagramları', icon: '🔮', priority: 'advanced',
     solverTab: 'obstacle',
-    description: '3 boyutlu yüzey diyagramları: tork eşleme, kuvvet-açı, enerji, güç-verim, itme-reaksiyon',
+    description: '3 boyutlu diyagramlar: tork eşleme, kuvvet-açı, enerji, güç-verim, itme-reaksiyon',
     requires: ['torque-converter'],
     diagrams: [
       { id:'3d-obs-torque', name:'Tork Eşleme Yüzeyi (3B)', xAxis:'Hız Oranı (SR)', yAxis:'Motor Torku (Nm)', zAxis:'Tekerlek Torku (Nm)',
@@ -695,7 +695,7 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   }
   var html = '<div style="background:var(--bg-primary,#fff);border-radius:0;padding:20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);color:var(--text-primary,#333);">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-  var diagIcon = d.zAxis ? '🗺️' : '📊';
+  var diagIcon = d.zAxis ? '🔮' : '📊';
   html += '<span style="font-weight:700;font-size:0.9rem;">' + diagIcon + ' ' + d.name + '</span>';
   html += '<button onclick="document.getElementById(\'sw-info-overlay\').remove()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted,#999);">✕</button>';
   html += '</div>';
