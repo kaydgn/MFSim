@@ -32336,6 +32336,35 @@ function veRenderChart(slotIdx) {
   // Tüm sensörler boşsa çık
   var hasAnyData = datasets.some(function(ds) { return !ds._noData; });
   if(!hasAnyData) return;
+
+  // ====== X EKSENİ SIRALAMA (zaman dışı X ekseni için) ======
+  // X ekseni zaman değilse (ör. RPM), veri noktalarını X değerine göre sırala
+  // Böylece çizgiler doğru sırada çizilir (ileri-geri gitmez)
+  var isCustomXAxis = slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time';
+  if(isCustomXAxis && timeArr && timeArr.length > 1) {
+    // Sıralı indeks dizisi oluştur
+    var sortedIndices = [];
+    for(var si = 0; si < timeArr.length; si++) sortedIndices.push(si);
+    var origTimeArr = timeArr;
+    sortedIndices.sort(function(a, b) { return origTimeArr[a] - origTimeArr[b]; });
+
+    // timeArr'ı sıralı kopyala
+    var sortedTime = new Array(timeArr.length);
+    for(var si = 0; si < sortedIndices.length; si++) {
+      sortedTime[si] = timeArr[sortedIndices[si]];
+    }
+    timeArr = sortedTime;
+
+    // Her dataset'in verisini aynı sırayla yeniden düzenle
+    datasets.forEach(function(ds) {
+      if(ds._noData || !ds.data) return;
+      var sortedData = new Array(ds.data.length);
+      for(var si = 0; si < sortedIndices.length && si < ds.data.length; si++) {
+        sortedData[si] = ds.data[sortedIndices[si]];
+      }
+      ds.data = sortedData;
+    });
+  }
   
   // ====== DUAL Y-AXIS: Birimlere göre grupla ======
   var unitGroups = [];
