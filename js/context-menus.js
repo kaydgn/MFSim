@@ -8,7 +8,7 @@ function createNodeContextMenu() {
   var menu = document.createElement('div');
   menu.id = 've-node-context-menu';
   menu.className = 've-context-menu';
-  menu.style.cssText = 'display:none; position:fixed; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:10001; min-width:200px; padding:4px 0;';
+  menu.style.cssText = 'display:none; position:fixed; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:2px; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:10001; min-width:200px; padding:4px 0;';
   
   menu.innerHTML = '<div class="ve-context-item" data-action="toggle-axis"><span>🔄</span> Yatay ↔ Dikey</div>' +
     '<div class="ve-context-divider"></div>' +
@@ -155,7 +155,7 @@ function createPortContextMenu() {
   var menu = document.createElement('div');
   menu.id = 've-port-context-menu';
   menu.className = 've-context-menu';
-  menu.style.cssText = 'display:none; position:fixed; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:10001; min-width:140px; padding:4px 0;';
+  menu.style.cssText = 'display:none; position:fixed; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:2px; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:10001; min-width:140px; padding:4px 0;';
   
   menu.innerHTML = `
     <div class="ve-context-item" data-action="top">
@@ -318,7 +318,7 @@ function createConnectionContextMenu() {
   var menu = document.createElement('div');
   menu.id = 've-connection-context-menu';
   menu.className = 've-context-menu';
-  menu.style.cssText = 'display:none; position:fixed; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:10001; min-width:150px; padding:4px 0;';
+  menu.style.cssText = 'display:none; position:fixed; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:2px; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:10001; min-width:150px; padding:4px 0;';
   
   menu.innerHTML = `
     <div class="ve-context-item" data-action="curve">

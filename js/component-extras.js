@@ -380,7 +380,7 @@ function getScenarioPropertiesHTML(node) {
   // Başlangıç koşulları (segment bazlı sürüş analizi için)
   if(hasSegs) {
     var segInitSpeed = d.segInitSpeed !== undefined ? d.segInitSpeed : 0;
-    html += '<div style="margin-top:10px; padding:10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:6px;">';
+    html += '<div style="margin-top:10px; padding:10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:2px;">';
     html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Başlangıç Koşulları</div>';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse;">';
     html += '<tr><th style="padding:5px 6px; text-align:left; width:50%; font-weight:500; color:var(--text-secondary);">Başlangıç hızı [km/h]</th>';
@@ -441,7 +441,7 @@ function getCoastDownPropertiesHTML(node) {
   html += '<tr id="ve-cd-crr-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (method==='test'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Crr [-]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-cd-crr-' + node.id + '" value="' + crr + '" step="0.001" min="0" placeholder="0.015" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right;" onchange="onVECoastDownChange(\'' + node.id + '\')"></td></tr>';
   
   // Sihirbaz butonu - sadece test modunda
-  html += '<tr id="ve-cd-wizard-row-' + node.id + '" style="' + (method!=='test'?'display:none;':'') + '"><td colspan="2" style="padding:8px 6px; background:var(--bg-tertiary);"><button onclick="veOpenCoastDownWizard(\'' + node.id + '\')" style="width:100%; padding:8px 10px; font-size:0.72rem; font-weight:600; background:linear-gradient(135deg, var(--accent-primary), #2563eb); color:white; border:none; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:opacity 0.15s;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'">🧙 Sihirbazı Çalıştır</button></td></tr>';
+  html += '<tr id="ve-cd-wizard-row-' + node.id + '" style="' + (method!=='test'?'display:none;':'') + '"><td colspan="2" style="padding:8px 6px; background:var(--bg-tertiary);"><button onclick="veOpenCoastDownWizard(\'' + node.id + '\')" style="width:100%; padding:8px 10px; font-size:0.72rem; font-weight:600; background:linear-gradient(135deg, var(--accent-primary), #2563eb); color:white; border:none; border-radius:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:opacity 0.15s;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'">🧙 Sihirbazı Çalıştır</button></td></tr>';
 
   // Sonuç - sadece test modunda anlamlı
   html += '<tr id="ve-cd-result-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (method!=='test'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Hesaplanan Crr</th><td style="padding:6px; background:var(--bg-tertiary);"><span id="ve-cd-result-' + node.id + '" style="font-weight:600; color:var(--accent-primary);">' + (method==='test' && crr ? crr : '—') + '</span></td></tr>';
@@ -1235,9 +1235,9 @@ function getWheelPropertiesHTML(node) {
       var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
       html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
       html += '<span>Tekerlek Verileri</span>';
-      html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:8px; border:1px solid var(--border-color);">SLAVE</span>';
+      html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:2px; border:1px solid var(--border-color);">SLAVE</span>';
       html += '</div>';
-      html += '<div style="background:var(--bg-tertiary); border-radius:6px; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
+      html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
       html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + (masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
       html += '</div>';
@@ -1257,11 +1257,11 @@ function getWheelPropertiesHTML(node) {
     
     html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
     html += '<span>Tekerlek Verileri</span>';
-    html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:8px;">★ MASTER</span>';
+    html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:2px;">★ MASTER</span>';
     html += '<button onclick="showInfoPopup(\'tekerlek\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; margin-left:auto;" title="Bilgi">?</button>';
     html += '</div>';
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Tekerlek Parametreleri</div>';
     
     // Lastik Preset Seçici
@@ -1350,9 +1350,9 @@ function getWheelPropertiesHTML(node) {
   if(!isMaster) {
     html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
     html += '<span>Tekerlek Parametreleri</span>';
-    html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:8px; border:1px solid var(--border-color);">SLAVE</span>';
+    html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:2px; border:1px solid var(--border-color);">SLAVE</span>';
     html += '</div>';
-    html += '<div style="background:var(--bg-tertiary); border-radius:6px; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
     html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + (masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
     html += '</div>';
     html += '</div>';
@@ -1368,7 +1368,7 @@ function getWheelPropertiesHTML(node) {
   // Başlık
   html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
   html += '<span>Tekerlek Parametreleri</span>';
-  html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:8px;">★ MASTER</span>';
+  html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:2px;">★ MASTER</span>';
   html += '<button onclick="showInfoPopup(\'tekerlek\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; margin-left:auto;" title="Bilgi">?</button>';
   html += '</div>';
   
@@ -1622,7 +1622,7 @@ function getVehiclePropertiesHTML(node) {
     html += '</div>';
     
     // ── 1. ARAÇ PARAMETRELERİ ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Araç Parametreleri</div>';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
@@ -1645,7 +1645,7 @@ function getVehiclePropertiesHTML(node) {
     html += '</div>';
     
     // ── 2. AERODİNAMİK PARAMETRELERİ ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-top:10px;">';
+    html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-top:10px;">';
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Aerodinamik Parametreleri</div>';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
@@ -1836,17 +1836,17 @@ function getRoadPropertiesHTML(node) {
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
   
   // ===== GÜZERGAH / HARİTA =====
-  html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:12px; border:1px solid var(--border-color);">';
+  html += '<div style="background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-bottom:12px; border:1px solid var(--border-color);">';
   html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">🗺️ Güzergah Haritası</div>';
   html += '<button onclick="veExpandRoadMap(\'' + node.id + '\')" title="Haritayı büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:3px; cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
   html += '</div>';
   // Harita container
-  html += '<div id="ve-road-map-' + node.id + '" style="width:100%; height:220px; border-radius:6px; border:1px solid var(--border-color); margin-bottom:6px; background:var(--bg-secondary); position:relative;"></div>';
+  html += '<div id="ve-road-map-' + node.id + '" style="width:100%; height:220px; border-radius:2px; border:1px solid var(--border-color); margin-bottom:6px; background:var(--bg-secondary); position:relative;"></div>';
   html += '<p style="font-size:0.54rem; color:var(--text-muted); margin:0; line-height:1.3; text-align:center; opacity:0.8;">Özellikler için haritayı büyültün ⛶</p>';
   
   // Sonuç kutusu
-  html += '<div id="ve-road-route-result-' + node.id + '" style="display:none; background:var(--bg-secondary); padding:8px; border-radius:6px; border:1px solid var(--border-color); margin-top:4px;">';
+  html += '<div id="ve-road-route-result-' + node.id + '" style="display:none; background:var(--bg-secondary); padding:8px; border-radius:2px; border:1px solid var(--border-color); margin-top:4px;">';
   html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; text-align:center; font-size:0.62rem;">';
   html += '<div><div style="color:var(--text-muted); font-size:0.56rem;">Mesafe</div><div id="ve-road-dist-' + node.id + '" style="color:var(--accent-primary); font-weight:600;">-</div></div>';
   html += '<div><div style="color:var(--text-muted); font-size:0.56rem;">Δh</div><div id="ve-road-dh-' + node.id + '" style="color:var(--accent-success); font-weight:600;">-</div></div>';
@@ -1856,7 +1856,7 @@ function getRoadPropertiesHTML(node) {
   html += '</div>'; // harita wrapper
 
   // ===== YOL PROFİLLERİ =====
-  html += '<div id="ve-road-profiles-' + node.id + '" style="display:none; background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:12px; border:1px solid var(--border-color);">';
+  html += '<div id="ve-road-profiles-' + node.id + '" style="display:none; background:var(--bg-tertiary); border-radius:2px; padding:10px; margin-bottom:12px; border:1px solid var(--border-color);">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📊 Yol Profilleri</div>';
   html += '<div id="ve-road-profiles-content-' + node.id + '"></div>';
   html += '</div>';
@@ -1927,7 +1927,7 @@ function getParametricPropertiesHTML(node) {
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
   
   html += '<div style="font-size:0.8rem; font-weight:600; color:var(--accent-primary); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
-  html += '<span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; background:var(--accent-primary); color:white; font-weight:800; font-size:0.7rem;">P</span>';
+  html += '<span style="display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:2px; background:var(--accent-primary); color:white; font-weight:800; font-size:0.7rem;">P</span>';
   html += ' Parametrik Analiz</div>';
   
   html += '<p style="font-size:0.6rem; color:var(--text-muted); margin-bottom:12px; line-height:1.4;">';
@@ -1935,7 +1935,7 @@ function getParametricPropertiesHTML(node) {
   html += 'Parametre eklemek için bileşen özelliklerindeki <span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--accent-primary);color:white;font-size:0.5rem;font-weight:800;">P</span> butonlarını kullanın.</p>';
   
   // Durum göstergesi
-  html += '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:8px; padding:10px; margin-bottom:12px;">';
+  html += '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:2px; padding:10px; margin-bottom:12px;">';
   
   if(params.length === 0) {
     html += '<div style="text-align:center; padding:12px 0;">';
@@ -1950,7 +1950,7 @@ function getParametricPropertiesHTML(node) {
       var compNode = nodes.find(function(n) { return n.id === p.compId; });
       var compName = compNode ? (compNode.customName || (componentDefs[compNode.type] ? componentDefs[compNode.type].name : p.compType)) : p.compType;
       
-      html += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:6px; padding:8px; margin-bottom:6px; position:relative;">';
+      html += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:2px; padding:8px; margin-bottom:6px; position:relative;">';
       
       // Başlık satırı
       html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">';
@@ -1999,7 +1999,7 @@ function getParametricPropertiesHTML(node) {
     });
     
     if(allValid && params.length > 0) {
-      html += '<div style="margin-top:8px; padding:6px 10px; background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(139,92,246,0.1)); border:1px solid var(--accent-primary); border-radius:6px; text-align:center;">';
+      html += '<div style="margin-top:8px; padding:6px 10px; background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(139,92,246,0.1)); border:1px solid var(--accent-primary); border-radius:2px; text-align:center;">';
       html += '<span style="font-size:0.65rem; font-weight:600; color:var(--accent-primary);">Toplam: ' + totalRuns + ' simülasyon koşusu</span>';
       if(totalRuns > 100) {
         html += '<div style="font-size:0.52rem; color:var(--accent-warning); margin-top:2px;">⚠️ Yüksek koşu sayısı — uzun sürebilir</div>';
@@ -2011,7 +2011,7 @@ function getParametricPropertiesHTML(node) {
   html += '</div>';
   
   // Açıklama
-  html += '<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4; padding:8px; background:var(--bg-tertiary); border-radius:6px; border:1px solid var(--border-color);">';
+  html += '<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4; padding:8px; background:var(--bg-tertiary); border-radius:2px; border:1px solid var(--border-color);">';
   html += '💡 <strong>Kullanım:</strong> Bileşen özelliklerindeki sayısal girdilerin yanındaki ';
   html += '<span style="display:inline-flex;align-items:center;justify-content:center;width:12px;height:12px;border-radius:50%;background:var(--accent-primary);color:white;font-size:0.45rem;font-weight:800;">P</span>';
   html += ' butonuna tıklayarak parametreleri buraya ekleyin. Simülasyon tüm kombinasyonları otomatik çalıştırır.';
