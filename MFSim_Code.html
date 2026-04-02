@@ -6,6 +6,8 @@
   <!-- Leaflet - Harita için -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Plotly.js - 3D Scatter grafikler için -->
+  <script src="https://cdn.plot.ly/plotly-gl3d-2.35.2.min.js"></script>
   <style>
     /* ========== TEMA DEĞİŞKENLERİ ========== */
     
@@ -1746,7 +1748,7 @@
   display:flex;align-items:center;justify-content:center;
 }
 /* Chart type icons grid (boş slot durumu) */
-.ve-slot-picker{display:grid;grid-template-columns:repeat(2, 80px);gap:10px;padding:20px;}
+.ve-slot-picker{display:grid;grid-template-columns:repeat(3, 80px);gap:10px;padding:20px;}
 .ve-slot-pick-item{
   display:flex;flex-direction:column;align-items:center;gap:6px;
   padding:14px 6px;border-radius:0;cursor:pointer;
@@ -2571,7 +2573,7 @@ function mfsimLogout() {
         <div class="ve-warnings-panel" id="ve-warnings-panel">
           <div class="ve-warnings-header" onclick="veToggleWarnings()">
             <span>⚠️ Uyarılar</span>
-            <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:10px;font-size:0.6rem;font-weight:600;">0</span>
+            <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:0;font-size:0.6rem;font-weight:600;">0</span>
             <span id="ve-warnings-toggle" style="margin-left:auto;font-size:0.7rem;">▲</span>
           </div>
           <div class="ve-warnings-body" id="ve-warnings-body">
@@ -2662,7 +2664,7 @@ function mfsimLogout() {
 
         <!-- Arama -->
         <div style="padding:4px 8px; border-bottom:1px solid var(--border-color);">
-          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input); color:var(--text-primary);">
+          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:0; background:var(--bg-input); color:var(--text-primary);">
         </div>
         
         <!-- Tree -->
@@ -2670,8 +2672,8 @@ function mfsimLogout() {
         
         <!-- Aksiyon Butonları -->
         <div style="padding:6px 8px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
-          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
-          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
+          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
+          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
         </div>
       </div>
       
@@ -6344,6 +6346,7 @@ function veRefreshAllCharts() {
     if(!window.veSimResults) continue;
     if(s.type === 'line') veRenderChart(i);
     else if(s.type === 'surface') veRenderSurface(i);
+    else if(s.type === 'scatter3d') veRender3DScatter(i);
   }
 }
 
@@ -6354,7 +6357,8 @@ function veRenderSlotPicker(slotIdx) {
   var items = [
     {type:'line', icon:'📈', label:'Çizgi\nGrafik'},
     {type:'table', icon:'📋', label:'Tablo'},
-    {type:'surface', icon:'🗺️', label:'3B Yüzey\nDiyagramı'}
+    {type:'surface', icon:'🗺️', label:'3B Yüzey\nDiyagramı'},
+    {type:'scatter3d', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="g3d" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><line x1="6" y1="34" x2="6" y2="6" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="34" y2="34" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="18" y2="24" stroke="#94a3b8" stroke-width="1.2"/><circle cx="14" cy="18" r="2.8" fill="url(#g3d)" opacity="0.9"/><circle cx="22" cy="24" r="2.2" fill="#3b82f6" opacity="0.7"/><circle cx="28" cy="14" r="3" fill="url(#g3d)" opacity="0.95"/><circle cx="18" cy="28" r="2" fill="#8b5cf6" opacity="0.65"/><circle cx="26" cy="20" r="2.5" fill="#3b82f6" opacity="0.8"/><circle cx="11" cy="26" r="1.8" fill="#8b5cf6" opacity="0.6"/><circle cx="30" cy="28" r="2.3" fill="url(#g3d)" opacity="0.75"/></svg>', label:'3D\nGrafik'}
   ];
   
   var html = '<div class="ve-slot-picker">';
@@ -6820,24 +6824,25 @@ function veRenderSlot(slotIdx) {
   
   var type = slot.type || 'line';
   var sensors = slot.sensors || [];
-  var typeName = type === 'line' ? '📈' : (type === 'surface' ? '🗺️' : '📋');
-  
+  var typeName = type === 'line' ? '📈' : (type === 'surface' ? '🗺️' : (type === 'scatter3d' ? '🔮' : '📋'));
+
   // Tab başlığını güncelle
   var tab = document.getElementById('ve-rslot-tab-' + slotIdx);
   if(tab) {
     if(sensors.length > 0) {
       tab.textContent = typeName + ' ' + sensors.map(function(s){return s.name;}).join(', ');
     } else {
-      tab.textContent = typeName + ' ' + (type === 'line' ? 'Grafik' : 'Tablo') + ' ' + (slotIdx + 1);
+      var typeLabel = type === 'line' ? 'Grafik' : (type === 'scatter3d' ? '3D Grafik' : 'Tablo');
+      tab.textContent = typeName + ' ' + typeLabel + ' ' + (slotIdx + 1);
     }
   }
   
   var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   
   if(sensors.length === 0) {
-    var emptyIcon = type === 'line' ? '📈' : (type === 'surface' ? '🗺️' : '📋');
-    var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'surface' ? '3B Yüzey Diyagramı' : 'Veri Tablosu');
-    var emptyHint = type === 'surface' ? 'Sihirbaz diyagramlarından 3B diyagram sürükleyin' : 'Data Browser\'dan sensör sürükleyin';
+    var emptyIcon = type === 'line' ? '📈' : (type === 'surface' ? '🗺️' : (type === 'scatter3d' ? '🔮' : '📋'));
+    var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'surface' ? '3B Yüzey Diyagramı' : (type === 'scatter3d' ? '3D Scatter Grafik' : 'Veri Tablosu'));
+    var emptyHint = type === 'surface' ? 'Sihirbaz diyagramlarından 3B diyagram sürükleyin' : (type === 'scatter3d' ? 'Data Browser\'dan en az 3 sinyal sürükleyin (X, Y, Z)' : 'Data Browser\'dan sensör sürükleyin');
     var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted);">';
     html += '<div style="font-size:2.2rem; margin-bottom:10px;">' + emptyIcon + '</div>';
     html += '<div style="font-size:0.82rem; font-weight:600;">' + emptyName + '</div>';
@@ -6899,6 +6904,35 @@ function veRenderSlot(slotIdx) {
     html += '<div class="ve-slot-axis-x" style="font-size:0.58rem;">';
     html += '<span style="opacity:0.7;">X: ' + xLabel3d + '  |  Y: ' + yLabel3d + '  |  Z (renk): ' + zLabel3d + '</span>';
     html += '</div>';
+  } else if(type === 'scatter3d') {
+    // ── 3D Scatter modu ──
+    html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '" style="overflow:hidden;">';
+    html += '<div id="ve-3d-container-' + slotIdx + '" style="position:absolute;left:0;top:0;width:100%;height:100%;"></div>';
+    html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
+    html += '<div style="font-size:1.5rem; margin-bottom:6px;">🔮</div>';
+    if(sensors.length < 3) {
+      html += 'En az 3 sinyal gerekli (X, Y, Z) — şu an ' + sensors.length + ' sinyal var';
+    } else {
+      html += 'Simülasyon sonrası 3D grafik görünecek';
+    }
+    html += '</div>';
+    // ── 3D grafik içi legend ──
+    if(sensors.length > 0) {
+      html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
+      sensors.forEach(function(s, i) {
+        var c = colors[i % colors.length];
+        var axisLabel = i === 0 ? 'X' : (i === 1 ? 'Y' : (i === 2 ? 'Z' : ''));
+        html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
+        if(axisLabel) html += '<span style="font-weight:700; font-size:0.6rem; opacity:0.7; margin-right:2px;">' + axisLabel + ':</span>';
+        html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
+        html += '<span>' + s.name + '</span>';
+        if(s.unit) html += ' <span style="opacity:0.55; font-size:0.6rem;">[' + s.unit + ']</span>';
+        html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
+        html += '</span>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
   } else {
     // ── Tablo modu ──
     html += '<div style="overflow:auto; width:100%; height:100%; flex:1;">';
@@ -6923,8 +6957,8 @@ function veRenderSlot(slotIdx) {
     html += '</div>';
   }
   
-  // Legend — Tablo modu için altta, grafik ve surface modu için chart içinde overlay olarak zaten eklendi
-  if(type !== 'line' && type !== 'surface') {
+  // Legend — Tablo modu için altta, grafik/surface/3D modu için chart içinde overlay olarak zaten eklendi
+  if(type !== 'line' && type !== 'surface' && type !== 'scatter3d') {
     html += '<div class="ve-slot-legend">';
     sensors.forEach(function(s, i) {
       var c = colors[i % colors.length];
@@ -6949,6 +6983,9 @@ function veRenderSlot(slotIdx) {
   } else if(type === 'surface') {
     if(window.veSimResults) veRenderSurface(slotIdx);
     veInitSurfaceInteraction(slotIdx);
+  } else if(type === 'scatter3d') {
+    if(window.veSimResults) veRender3DScatter(slotIdx);
+    veInitLegendDrag(slotIdx);
   } else {
     if(window.veSimResults) veRenderTable(slotIdx);
   }
@@ -7234,6 +7271,8 @@ function veSetSlotXAxis(slotIdx, optIdx) {
       veRenderChart(slotIdx);
     } else if(slot.type === 'surface') {
       veRenderSurface(slotIdx);
+    } else if(slot.type === 'scatter3d') {
+      veRender3DScatter(slotIdx);
     } else {
       veRenderTable(slotIdx);
     }
@@ -10081,7 +10120,7 @@ function getEnginePropertiesHTML(node) {
   html += '<div id="ve-motor-data-area-' + node.id + '" style="display:' + (showDataArea ? 'block' : 'none') + ';">';
   
   // Veri Tablosu - resize edilebilir
-  html += '<div id="ve-motor-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+  html += '<div id="ve-motor-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
@@ -10105,7 +10144,7 @@ function getEnginePropertiesHTML(node) {
   html += '</tbody></table></div>';
   
   // Resize handle
-  html += '<div id="ve-table-resizer-' + node.id + '" style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0 0 6px 6px; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVETableResize(event, \'' + node.id + '\')">';
+  html += '<div id="ve-table-resizer-' + node.id + '" style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVETableResize(event, \'' + node.id + '\')">';
   html += '<div style="width:30px; height:3px; background:var(--border-color); border-radius:0;"></div>';
   html += '</div>';
   
@@ -12797,7 +12836,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
   
   // Bilgi kutusu
-  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0 5px 5px 0; padding:8px 10px; font-size:0.57rem; color:var(--text-muted); line-height:1.5; font-style:italic;">';
+  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0; padding:8px 10px; font-size:0.57rem; color:var(--text-muted); line-height:1.5; font-style:italic;">';
   html += '"N_out = N_engine × SR / i_gear (şanzıman çıkış devri). Geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. 3200 SP: 2 motor, 4000 SP: 3 motor + 2 TC ile doğrulanmış."';
   html += '</div>';
   
@@ -13311,7 +13350,7 @@ function getGearboxPropertiesHTML(node) {
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Vites Oranları ve Verimler</div>';
     html += '<p style="font-size:0.6rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Her vites için oranı, mekanik verimi ve lockup desteğini girin.</p>';
     
-    html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+    html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
     html += '<tr>';
@@ -13330,7 +13369,7 @@ function getGearboxPropertiesHTML(node) {
     html += '</tbody></table></div>';
     
     // Resize handle
-    html += '<div style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0 0 6px 6px; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVEFTGearTableResize(event, \'' + node.id + '\')">';
+    html += '<div style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVEFTGearTableResize(event, \'' + node.id + '\')">';
     html += '<div style="width:30px; height:3px; background:var(--border-color); border-radius:0;"></div>';
     html += '</div>';
     
@@ -13376,7 +13415,7 @@ function getGearboxPropertiesHTML(node) {
   html += '<div id="ve-gearbox-data-area-' + node.id + '" style="display:' + (hasData || selectedGearbox ? 'block' : 'none') + ';">';
   
   // Vites Tablosu
-  html += '<div id="ve-gearbox-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+  html += '<div id="ve-gearbox-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
@@ -13399,7 +13438,7 @@ function getGearboxPropertiesHTML(node) {
   html += '</tbody></table></div>';
   
   // Tablo altı butonlar
-  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0 0 6px 6px;">';
+  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0;">';
   html += '<button onclick="addVEGearboxRow(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
   html += '<button onclick="clearVEGearboxTable(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-warning); color:white; border:none; border-radius:0; cursor:pointer;">Tümünü Sil</button>';
   html += '<button onclick="saveVEGearboxValues(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-success); color:white; border:none; border-radius:0; cursor:pointer;">💾 Kaydet</button>';
@@ -16668,7 +16707,7 @@ function getTorqueConverterPropertiesHTML(node) {
     
     html += '<div id="ve-tc-data-area-' + node.id + '" style="margin-top:10px;">';
     html += '<p style="font-size:0.62rem; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">Tork konvertörünün absorption characteristics değerlerini girin. <b>SR</b> (Speed Ratio) = Türbin Devri / Pump Devri. <b>K<sub>pump</sub></b> = Pump K-Factor [rpm/√(N·m)]. <b>τ</b> = Tork Oranı (Türbin Torku / Pump Torku).</p>';
-    html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+    html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
     html += '<tr>';
@@ -16689,7 +16728,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</tbody></table></div>';
     
     // Resize handle
-    html += '<div style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0 0 6px 6px; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVETCTableResize(event, \'' + node.id + '\')">';
+    html += '<div style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVETCTableResize(event, \'' + node.id + '\')">';
     html += '<div style="width:30px; height:3px; background:var(--border-color); border-radius:0;"></div>';
     html += '</div>';
     
@@ -17770,7 +17809,7 @@ function getTransferPropertiesHTML(node) {
   html += '</div>';
   
   // Kademe Tablosu
-  html += '<div id="ve-transfer-table-wrapper-' + node.id + '" style="max-height:150px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+  html += '<div id="ve-transfer-table-wrapper-' + node.id + '" style="max-height:150px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
@@ -17795,7 +17834,7 @@ function getTransferPropertiesHTML(node) {
   html += '</tbody></table></div>';
   
   // Tablo altı butonlar
-  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0 0 6px 6px;">';
+  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0;">';
   html += '<button onclick="addVETransferRow(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
   html += '<button onclick="clearVETransferTable(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-warning); color:white; border:none; border-radius:0; cursor:pointer;">Temizle</button>';
   html += '</div>';
@@ -30440,8 +30479,8 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
     '<label style="font-size:0.8rem;color:var(--text-muted,#aaa);display:block;margin-bottom:6px;">Dosya adı</label>' +
     '<div style="display:flex;align-items:center;gap:0;">' +
       '<input id="ve-save-filename" type="text" value="' + nameOnly.replace(/"/g, '&quot;') + '" ' +
-        'style="flex:1;padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:0 0 0 8px;font-size:0.85rem;outline:none;" />' +
-      '<span style="padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-muted,#888);border:1px solid var(--border-color,#444);border-left:none;border-radius:0 8px 8px 0;font-size:0.85rem;white-space:nowrap;">' + ext + '</span>' +
+        'style="flex:1;padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:0;font-size:0.85rem;outline:none;" />' +
+      '<span style="padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-muted,#888);border:1px solid var(--border-color,#444);border-left:none;border-radius:0;font-size:0.85rem;white-space:nowrap;">' + ext + '</span>' +
     '</div>' +
     '<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">' +
       '<button id="ve-save-cancel" style="padding:7px 18px;background:var(--bg-tertiary,#222);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:0;cursor:pointer;font-size:0.8rem;">İptal</button>' +
@@ -37826,6 +37865,146 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
 
   return r;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 3D SCATTER GRAFİK (Plotly.js)
+// ═══════════════════════════════════════════════════════════════
+
+function veRender3DScatter(slotIdx) {
+  var slot = veResultSlots[slotIdx];
+  if(!slot || !slot.sensors || slot.sensors.length < 3) return;
+
+  var container = document.getElementById('ve-3d-container-' + slotIdx);
+  var placeholder = document.getElementById('ve-chart-placeholder-' + slotIdx);
+  if(!container) return;
+
+  // Plotly yüklü mü kontrol et
+  if(typeof Plotly === 'undefined') {
+    if(placeholder) {
+      placeholder.innerHTML = '<div style="font-size:1.5rem; margin-bottom:6px;">⚠️</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
+      placeholder.style.display = '';
+    }
+    return;
+  }
+
+  var r = window.veSimResults;
+  if(!r) return;
+
+  var sensors = slot.sensors;
+  var slotDataSource = slot._dataSource || null;
+
+  // İlk 3 sensörden X, Y, Z verilerini al
+  var axisData = [];
+  for(var ai = 0; ai < 3; ai++) {
+    var s = sensors[ai];
+    var sDS = s._dataSource || slotDataSource;
+    var data = veGetSensorData(s.id, s.signal, sDS);
+    if(!data || data.length === 0) return;
+    axisData.push(data);
+  }
+
+  var n = Math.min(axisData[0].length, axisData[1].length, axisData[2].length);
+  if(n < 2) return;
+
+  // Veriyi sample et (performans için maks 3000 nokta)
+  var step = Math.max(1, Math.floor(n / 3000));
+  var xVals = [], yVals = [], zVals = [], colorVals = [];
+  for(var i = 0; i < n; i += step) {
+    var xv = axisData[0][i], yv = axisData[1][i], zv = axisData[2][i];
+    if(isFinite(xv) && isFinite(yv) && isFinite(zv)) {
+      xVals.push(xv);
+      yVals.push(yv);
+      zVals.push(zv);
+      colorVals.push(zv); // Z değerine göre renk
+    }
+  }
+
+  if(xVals.length < 2) return;
+
+  if(placeholder) placeholder.style.display = 'none';
+
+  // Tema renklerini al
+  var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  var bgColor = isDark ? 'rgba(30,32,40,0.0)' : 'rgba(255,255,255,0.0)';
+  var gridColor = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.15)';
+  var textColor = isDark ? 'rgba(203,213,225,0.8)' : 'rgba(71,85,105,0.9)';
+
+  var xLabel = sensors[0].name + (sensors[0].unit ? ' [' + sensors[0].unit + ']' : '');
+  var yLabel = sensors[1].name + (sensors[1].unit ? ' [' + sensors[1].unit + ']' : '');
+  var zLabel = sensors[2].name + (sensors[2].unit ? ' [' + sensors[2].unit + ']' : '');
+
+  var trace = {
+    x: xVals, y: yVals, z: zVals,
+    mode: 'markers',
+    type: 'scatter3d',
+    marker: {
+      size: 2.5,
+      color: colorVals,
+      colorscale: [
+        [0, '#3b82f6'],
+        [0.25, '#6366f1'],
+        [0.5, '#8b5cf6'],
+        [0.75, '#d946ef'],
+        [1, '#ef4444']
+      ],
+      opacity: 0.8,
+      colorbar: {
+        title: { text: zLabel, font: { size: 10, color: textColor } },
+        thickness: 12,
+        len: 0.6,
+        tickfont: { size: 9, color: textColor },
+        outlinewidth: 0,
+        bgcolor: 'rgba(0,0,0,0)',
+        xpad: 4
+      }
+    },
+    hovertemplate:
+      '<b>' + sensors[0].name + ':</b> %{x:.2f}<br>' +
+      '<b>' + sensors[1].name + ':</b> %{y:.2f}<br>' +
+      '<b>' + sensors[2].name + ':</b> %{z:.2f}<extra></extra>'
+  };
+
+  var layout = {
+    scene: {
+      xaxis: {
+        title: { text: xLabel, font: { size: 10, color: textColor } },
+        gridcolor: gridColor, zerolinecolor: gridColor,
+        tickfont: { size: 9, color: textColor },
+        backgroundcolor: bgColor, showbackground: true
+      },
+      yaxis: {
+        title: { text: yLabel, font: { size: 10, color: textColor } },
+        gridcolor: gridColor, zerolinecolor: gridColor,
+        tickfont: { size: 9, color: textColor },
+        backgroundcolor: bgColor, showbackground: true
+      },
+      zaxis: {
+        title: { text: zLabel, font: { size: 10, color: textColor } },
+        gridcolor: gridColor, zerolinecolor: gridColor,
+        tickfont: { size: 9, color: textColor },
+        backgroundcolor: bgColor, showbackground: true
+      },
+      bgcolor: bgColor,
+      camera: {
+        eye: { x: 1.6, y: 1.6, z: 1.0 },
+        center: { x: 0, y: 0, z: -0.1 }
+      }
+    },
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    margin: { l: 0, r: 0, t: 0, b: 0 },
+    showlegend: false
+  };
+
+  var config = {
+    responsive: true,
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+    displaylogo: false
+  };
+
+  Plotly.newPlot(container, [trace], layout, config);
 }
 
 

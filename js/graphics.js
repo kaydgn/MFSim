@@ -5144,3 +5144,143 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
   return r;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 3D SCATTER GRAFİK (Plotly.js)
+// ═══════════════════════════════════════════════════════════════
+
+function veRender3DScatter(slotIdx) {
+  var slot = veResultSlots[slotIdx];
+  if(!slot || !slot.sensors || slot.sensors.length < 3) return;
+
+  var container = document.getElementById('ve-3d-container-' + slotIdx);
+  var placeholder = document.getElementById('ve-chart-placeholder-' + slotIdx);
+  if(!container) return;
+
+  // Plotly yüklü mü kontrol et
+  if(typeof Plotly === 'undefined') {
+    if(placeholder) {
+      placeholder.innerHTML = '<div style="font-size:1.5rem; margin-bottom:6px;">⚠️</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
+      placeholder.style.display = '';
+    }
+    return;
+  }
+
+  var r = window.veSimResults;
+  if(!r) return;
+
+  var sensors = slot.sensors;
+  var slotDataSource = slot._dataSource || null;
+
+  // İlk 3 sensörden X, Y, Z verilerini al
+  var axisData = [];
+  for(var ai = 0; ai < 3; ai++) {
+    var s = sensors[ai];
+    var sDS = s._dataSource || slotDataSource;
+    var data = veGetSensorData(s.id, s.signal, sDS);
+    if(!data || data.length === 0) return;
+    axisData.push(data);
+  }
+
+  var n = Math.min(axisData[0].length, axisData[1].length, axisData[2].length);
+  if(n < 2) return;
+
+  // Veriyi sample et (performans için maks 3000 nokta)
+  var step = Math.max(1, Math.floor(n / 3000));
+  var xVals = [], yVals = [], zVals = [], colorVals = [];
+  for(var i = 0; i < n; i += step) {
+    var xv = axisData[0][i], yv = axisData[1][i], zv = axisData[2][i];
+    if(isFinite(xv) && isFinite(yv) && isFinite(zv)) {
+      xVals.push(xv);
+      yVals.push(yv);
+      zVals.push(zv);
+      colorVals.push(zv); // Z değerine göre renk
+    }
+  }
+
+  if(xVals.length < 2) return;
+
+  if(placeholder) placeholder.style.display = 'none';
+
+  // Tema renklerini al
+  var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  var bgColor = isDark ? 'rgba(30,32,40,0.0)' : 'rgba(255,255,255,0.0)';
+  var gridColor = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.15)';
+  var textColor = isDark ? 'rgba(203,213,225,0.8)' : 'rgba(71,85,105,0.9)';
+
+  var xLabel = sensors[0].name + (sensors[0].unit ? ' [' + sensors[0].unit + ']' : '');
+  var yLabel = sensors[1].name + (sensors[1].unit ? ' [' + sensors[1].unit + ']' : '');
+  var zLabel = sensors[2].name + (sensors[2].unit ? ' [' + sensors[2].unit + ']' : '');
+
+  var trace = {
+    x: xVals, y: yVals, z: zVals,
+    mode: 'markers',
+    type: 'scatter3d',
+    marker: {
+      size: 2.5,
+      color: colorVals,
+      colorscale: [
+        [0, '#3b82f6'],
+        [0.25, '#6366f1'],
+        [0.5, '#8b5cf6'],
+        [0.75, '#d946ef'],
+        [1, '#ef4444']
+      ],
+      opacity: 0.8,
+      colorbar: {
+        title: { text: zLabel, font: { size: 10, color: textColor } },
+        thickness: 12,
+        len: 0.6,
+        tickfont: { size: 9, color: textColor },
+        outlinewidth: 0,
+        bgcolor: 'rgba(0,0,0,0)',
+        xpad: 4
+      }
+    },
+    hovertemplate:
+      '<b>' + sensors[0].name + ':</b> %{x:.2f}<br>' +
+      '<b>' + sensors[1].name + ':</b> %{y:.2f}<br>' +
+      '<b>' + sensors[2].name + ':</b> %{z:.2f}<extra></extra>'
+  };
+
+  var layout = {
+    scene: {
+      xaxis: {
+        title: { text: xLabel, font: { size: 10, color: textColor } },
+        gridcolor: gridColor, zerolinecolor: gridColor,
+        tickfont: { size: 9, color: textColor },
+        backgroundcolor: bgColor, showbackground: true
+      },
+      yaxis: {
+        title: { text: yLabel, font: { size: 10, color: textColor } },
+        gridcolor: gridColor, zerolinecolor: gridColor,
+        tickfont: { size: 9, color: textColor },
+        backgroundcolor: bgColor, showbackground: true
+      },
+      zaxis: {
+        title: { text: zLabel, font: { size: 10, color: textColor } },
+        gridcolor: gridColor, zerolinecolor: gridColor,
+        tickfont: { size: 9, color: textColor },
+        backgroundcolor: bgColor, showbackground: true
+      },
+      bgcolor: bgColor,
+      camera: {
+        eye: { x: 1.6, y: 1.6, z: 1.0 },
+        center: { x: 0, y: 0, z: -0.1 }
+      }
+    },
+    paper_bgcolor: 'rgba(0,0,0,0)',
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    margin: { l: 0, r: 0, t: 0, b: 0 },
+    showlegend: false
+  };
+
+  var config = {
+    responsive: true,
+    displayModeBar: true,
+    modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+    displaylogo: false
+  };
+
+  Plotly.newPlot(container, [trace], layout, config);
+}
+

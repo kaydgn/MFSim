@@ -6,6 +6,8 @@
   <!-- Leaflet - Harita için -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Plotly.js - 3D Scatter grafikler için -->
+  <script src="https://cdn.plot.ly/plotly-gl3d-2.35.2.min.js"></script>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -341,7 +343,7 @@
         <div class="ve-warnings-panel" id="ve-warnings-panel">
           <div class="ve-warnings-header" onclick="veToggleWarnings()">
             <span>⚠️ Uyarılar</span>
-            <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:10px;font-size:0.6rem;font-weight:600;">0</span>
+            <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:0;font-size:0.6rem;font-weight:600;">0</span>
             <span id="ve-warnings-toggle" style="margin-left:auto;font-size:0.7rem;">▲</span>
           </div>
           <div class="ve-warnings-body" id="ve-warnings-body">
@@ -432,7 +434,7 @@
 
         <!-- Arama -->
         <div style="padding:4px 8px; border-bottom:1px solid var(--border-color);">
-          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input); color:var(--text-primary);">
+          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:0; background:var(--bg-input); color:var(--text-primary);">
         </div>
         
         <!-- Tree -->
@@ -440,8 +442,8 @@
         
         <!-- Aksiyon Butonları -->
         <div style="padding:6px 8px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
-          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
-          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
+          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
+          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
         </div>
       </div>
       
