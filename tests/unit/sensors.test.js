@@ -389,6 +389,12 @@ describe('SENSOR_PACKAGES yapısı', () => {
         expect(ySig).toHaveProperty('name');
         expect(ySig).toHaveProperty('unit');
       });
+      // 3B diyagramlarda z ekseni
+      if(sig.z) {
+        expect(sig.z).toHaveProperty('target');
+        expect(sig.z).toHaveProperty('signal');
+        expect(sig.z).toHaveProperty('name');
+      }
     });
   });
 });
