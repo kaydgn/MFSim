@@ -2573,7 +2573,7 @@ function mfsimLogout() {
         <div class="ve-warnings-panel" id="ve-warnings-panel">
           <div class="ve-warnings-header" onclick="veToggleWarnings()">
             <span>⚠️ Uyarılar</span>
-            <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:10px;font-size:0.6rem;font-weight:600;">0</span>
+            <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:0;font-size:0.6rem;font-weight:600;">0</span>
             <span id="ve-warnings-toggle" style="margin-left:auto;font-size:0.7rem;">▲</span>
           </div>
           <div class="ve-warnings-body" id="ve-warnings-body">
@@ -2664,7 +2664,7 @@ function mfsimLogout() {
 
         <!-- Arama -->
         <div style="padding:4px 8px; border-bottom:1px solid var(--border-color);">
-          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input); color:var(--text-primary);">
+          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:0; background:var(--bg-input); color:var(--text-primary);">
         </div>
         
         <!-- Tree -->
@@ -2672,8 +2672,8 @@ function mfsimLogout() {
         
         <!-- Aksiyon Butonları -->
         <div style="padding:6px 8px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
-          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
-          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
+          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
+          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
         </div>
       </div>
       
@@ -9932,7 +9932,7 @@ function getEnginePropertiesHTML(node) {
   html += '<div id="ve-motor-data-area-' + node.id + '" style="display:' + (showDataArea ? 'block' : 'none') + ';">';
   
   // Veri Tablosu - resize edilebilir
-  html += '<div id="ve-motor-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+  html += '<div id="ve-motor-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
@@ -9956,7 +9956,7 @@ function getEnginePropertiesHTML(node) {
   html += '</tbody></table></div>';
   
   // Resize handle
-  html += '<div id="ve-table-resizer-' + node.id + '" style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0 0 6px 6px; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVETableResize(event, \'' + node.id + '\')">';
+  html += '<div id="ve-table-resizer-' + node.id + '" style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVETableResize(event, \'' + node.id + '\')">';
   html += '<div style="width:30px; height:3px; background:var(--border-color); border-radius:0;"></div>';
   html += '</div>';
   
@@ -12648,7 +12648,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
   
   // Bilgi kutusu
-  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0 5px 5px 0; padding:8px 10px; font-size:0.57rem; color:var(--text-muted); line-height:1.5; font-style:italic;">';
+  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0; padding:8px 10px; font-size:0.57rem; color:var(--text-muted); line-height:1.5; font-style:italic;">';
   html += '"N_out = N_engine × SR / i_gear (şanzıman çıkış devri). Geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. 3200 SP: 2 motor, 4000 SP: 3 motor + 2 TC ile doğrulanmış."';
   html += '</div>';
   
@@ -13162,7 +13162,7 @@ function getGearboxPropertiesHTML(node) {
     html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Vites Oranları ve Verimler</div>';
     html += '<p style="font-size:0.6rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Her vites için oranı, mekanik verimi ve lockup desteğini girin.</p>';
     
-    html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+    html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
     html += '<tr>';
@@ -13181,7 +13181,7 @@ function getGearboxPropertiesHTML(node) {
     html += '</tbody></table></div>';
     
     // Resize handle
-    html += '<div style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0 0 6px 6px; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVEFTGearTableResize(event, \'' + node.id + '\')">';
+    html += '<div style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVEFTGearTableResize(event, \'' + node.id + '\')">';
     html += '<div style="width:30px; height:3px; background:var(--border-color); border-radius:0;"></div>';
     html += '</div>';
     
@@ -13227,7 +13227,7 @@ function getGearboxPropertiesHTML(node) {
   html += '<div id="ve-gearbox-data-area-' + node.id + '" style="display:' + (hasData || selectedGearbox ? 'block' : 'none') + ';">';
   
   // Vites Tablosu
-  html += '<div id="ve-gearbox-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+  html += '<div id="ve-gearbox-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
@@ -13250,7 +13250,7 @@ function getGearboxPropertiesHTML(node) {
   html += '</tbody></table></div>';
   
   // Tablo altı butonlar
-  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0 0 6px 6px;">';
+  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0;">';
   html += '<button onclick="addVEGearboxRow(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
   html += '<button onclick="clearVEGearboxTable(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-warning); color:white; border:none; border-radius:0; cursor:pointer;">Tümünü Sil</button>';
   html += '<button onclick="saveVEGearboxValues(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-success); color:white; border:none; border-radius:0; cursor:pointer;">💾 Kaydet</button>';
@@ -16519,7 +16519,7 @@ function getTorqueConverterPropertiesHTML(node) {
     
     html += '<div id="ve-tc-data-area-' + node.id + '" style="margin-top:10px;">';
     html += '<p style="font-size:0.62rem; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">Tork konvertörünün absorption characteristics değerlerini girin. <b>SR</b> (Speed Ratio) = Türbin Devri / Pump Devri. <b>K<sub>pump</sub></b> = Pump K-Factor [rpm/√(N·m)]. <b>τ</b> = Tork Oranı (Türbin Torku / Pump Torku).</p>';
-    html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+    html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
     html += '<tr>';
@@ -16540,7 +16540,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</tbody></table></div>';
     
     // Resize handle
-    html += '<div style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0 0 6px 6px; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVETCTableResize(event, \'' + node.id + '\')">';
+    html += '<div style="height:8px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-top:none; border-radius:0; cursor:ns-resize; display:flex; align-items:center; justify-content:center;" onmousedown="startVETCTableResize(event, \'' + node.id + '\')">';
     html += '<div style="width:30px; height:3px; background:var(--border-color); border-radius:0;"></div>';
     html += '</div>';
     
@@ -17621,7 +17621,7 @@ function getTransferPropertiesHTML(node) {
   html += '</div>';
   
   // Kademe Tablosu
-  html += '<div id="ve-transfer-table-wrapper-' + node.id + '" style="max-height:150px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0 6px 0 0; border-bottom:none;">';
+  html += '<div id="ve-transfer-table-wrapper-' + node.id + '" style="max-height:150px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
@@ -17646,7 +17646,7 @@ function getTransferPropertiesHTML(node) {
   html += '</tbody></table></div>';
   
   // Tablo altı butonlar
-  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0 0 6px 6px;">';
+  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0;">';
   html += '<button onclick="addVETransferRow(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
   html += '<button onclick="clearVETransferTable(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-warning); color:white; border:none; border-radius:0; cursor:pointer;">Temizle</button>';
   html += '</div>';
@@ -30291,8 +30291,8 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
     '<label style="font-size:0.8rem;color:var(--text-muted,#aaa);display:block;margin-bottom:6px;">Dosya adı</label>' +
     '<div style="display:flex;align-items:center;gap:0;">' +
       '<input id="ve-save-filename" type="text" value="' + nameOnly.replace(/"/g, '&quot;') + '" ' +
-        'style="flex:1;padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:0 0 0 8px;font-size:0.85rem;outline:none;" />' +
-      '<span style="padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-muted,#888);border:1px solid var(--border-color,#444);border-left:none;border-radius:0 8px 8px 0;font-size:0.85rem;white-space:nowrap;">' + ext + '</span>' +
+        'style="flex:1;padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:0;font-size:0.85rem;outline:none;" />' +
+      '<span style="padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-muted,#888);border:1px solid var(--border-color,#444);border-left:none;border-radius:0;font-size:0.85rem;white-space:nowrap;">' + ext + '</span>' +
     '</div>' +
     '<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">' +
       '<button id="ve-save-cancel" style="padding:7px 18px;background:var(--bg-tertiary,#222);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:0;cursor:pointer;font-size:0.8rem;">İptal</button>' +
