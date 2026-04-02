@@ -20449,6 +20449,33 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   var I_trans = 1.0;
 
   var csData = spData.converterShifts || null;
+  var dsData = spData.downshiftThresholds || null;
+
+  function _sdCalcDownshiftThreshold(ds, esl) {
+    if(!ds) return 0;
+    if(ds.type === 'piecewise') {
+      if(esl <= ds.breakpoint) return ds.low.a * esl + (ds.low.b || 0);
+      return ds.high.a * esl + (ds.high.b || 0);
+    }
+    if(ds.type === 'segments') {
+      for(var si = 0; si < ds.segments.length; si++) {
+        var seg = ds.segments[si];
+        if(seg.maxESL !== undefined && esl <= seg.maxESL) {
+          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+        }
+        if(si === ds.segments.length - 1) {
+          return seg.cap !== undefined ? seg.cap : (seg.a * esl + (seg.b || 0));
+        }
+      }
+    }
+    if(ds.capValue !== undefined && ds.capBelow !== undefined && esl < ds.capBelow) {
+      return ds.capValue;
+    }
+    var thr = ds.a * esl + (ds.b || 0);
+    if(ds.minCap !== undefined) thr = Math.max(thr, ds.minCap);
+    return thr;
+  }
+
   function _sdCalc2C2LThreshold(esl) {
     if(!csData || !csData['2C2L']) return SHIFT_2C_2L_OUT_RATIO * esl;
     var cs2L = csData['2C2L'];
@@ -20527,25 +20554,96 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     return forwardGears[shiftState.gearIdx] || forwardGears[0];
   }
 
-  function checkShift(t_s, N_engine, SR, tau, v_kmh) {
+  function checkShift(t_s, N_engine, SR, tau, v_kmh, ph, command) {
     var g = shiftState.gearIdx, isLU = shiftState.isLockup, maxGear = forwardGears.length - 1, shifted = false;
-    if(!isLU) {
-      var i_gc = parseFloat(getCurrentGearData().ratio) || 1.0;
-      var N_out = N_engine * SR / i_gc;
-      if(g === 0) {
-        var th1C = (csData && csData['1C2C']) ? csData['1C2C'].a * shiftRefRPM + (csData['1C2C'].b || 0) : SHIFT_1C_2C_OUT_RATIO * shiftRefRPM;
-        if(N_out >= th1C) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:1,fromMode:'1C',toMode:'2C',v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out}); shiftState.gearIdx = 1; shifted = true; }
-      } else if(g === 1) {
-        if(N_out >= _sdCalc2C2LThreshold(shiftRefRPM)) { shiftState.shiftHistory.push({t:t_s,fromGear:1,toGear:1,fromMode:'2C',toMode:'2L',v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out,eta:SR*tau}); shiftState.isLockup = true; shifted = true; }
+
+    // ── UPSHIFT (sadece tam gaz modda) ──
+    if(command !== 'coast') {
+      if(!isLU) {
+        var i_gc = parseFloat(getCurrentGearData().ratio) || 1.0;
+        var N_out = N_engine * SR / i_gc;
+        if(g === 0) {
+          var th1C = (csData && csData['1C2C']) ? csData['1C2C'].a * shiftRefRPM + (csData['1C2C'].b || 0) : SHIFT_1C_2C_OUT_RATIO * shiftRefRPM;
+          if(N_out >= th1C) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:1,fromMode:'1C',toMode:'2C',v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out}); shiftState.gearIdx = 1; shifted = true; }
+        } else if(g === 1) {
+          if(N_out >= _sdCalc2C2LThreshold(shiftRefRPM)) { shiftState.shiftHistory.push({t:t_s,fromGear:1,toGear:1,fromMode:'2C',toMode:'2L',v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out,eta:SR*tau}); shiftState.isLockup = true; shifted = true; }
+        }
+      } else if(g < maxGear) {
+        var i_glu = parseFloat(getCurrentGearData().ratio) || 1.0;
+        var N_out_lu = N_engine / i_glu;
+        var fN = (g+1)+'L', tN = (g+2)+'L', sK = fN+tN, triggered = false;
+        if(spData.lockupShifts && spData.lockupShifts[sK]) { var ls = spData.lockupShifts[sK]; var thlu = ls.a*shiftRefRPM+ls.b; if(ls.minCap!==undefined) thlu=Math.max(thlu,ls.minCap); if(N_out_lu>=thlu) triggered=true; }
+        else { if(N_engine>=N_shift_lockup) triggered=true; }
+        if(triggered) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:g+1,fromMode:fN,toMode:tN,v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out_lu}); shiftState.gearIdx=g+1; shifted=true; }
       }
-    } else if(g < maxGear) {
-      var i_glu = parseFloat(getCurrentGearData().ratio) || 1.0;
-      var N_out_lu = N_engine / i_glu;
-      var fN = (g+1)+'L', tN = (g+2)+'L', sK = fN+tN, triggered = false;
-      if(spData.lockupShifts && spData.lockupShifts[sK]) { var ls = spData.lockupShifts[sK]; var thlu = ls.a*shiftRefRPM+ls.b; if(ls.minCap!==undefined) thlu=Math.max(thlu,ls.minCap); if(N_out_lu>=thlu) triggered=true; }
-      else { if(N_engine>=N_shift_lockup) triggered=true; }
-      if(triggered) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:g+1,fromMode:fN,toMode:tN,v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out_lu}); shiftState.gearIdx=g+1; shifted=true; }
     }
+
+    // ── DOWNSHIFT (her iki modda da) ──
+    if(!shifted && dsData && g > 0) {
+      var tractionDeficit = ph && ph.F_traction < ph.F_resist;
+
+      if(isLU) {
+        // Lockup modda downshift
+        var i_gear_ds = parseFloat(getCurrentGearData().ratio) || 1.0;
+        var N_out_ds = N_engine / i_gear_ds;
+        var dsKey = (g + 1) + 'to' + g;
+        var dsEntry = dsData[dsKey];
+
+        if(dsEntry && tractionDeficit) {
+          var dsThreshold = _sdCalcDownshiftThreshold(dsEntry, shiftRefRPM);
+          if(N_out_ds < dsThreshold) {
+            // Over-rev koruması: alt viteste motor governed'ı aşar mı?
+            if(g > 0) {
+              var i_lower = parseFloat(forwardGears[g - 1].ratio) || 1.0;
+              var N_eng_after = N_out_ds * i_lower;
+              if(N_eng_after > governedSpeed * 1.05) {
+                return false; // Over-rev riski
+              }
+            }
+
+            var dsFromName = (g + 1) + 'L';
+            var dsToName = g + 'L';
+            if(g === 1) {
+              dsToName = '1C';
+              shiftState.isLockup = false;
+            }
+
+            shiftState.shiftHistory.push({
+              t: t_s, fromGear: g, toGear: g - 1,
+              fromMode: dsFromName, toMode: dsToName,
+              v_kmh: v_kmh, N_engine: N_engine, SR: 1.0, N_out: N_out_ds,
+              isDownshift: true,
+              F_traction: ph ? ph.F_traction : 0,
+              F_resist: ph ? ph.F_resist : 0
+            });
+            shiftState.gearIdx = g - 1;
+            shifted = true;
+          }
+        }
+      } else if(g === 1) {
+        // Converter modda 2C → 1C downshift
+        var i_gear_conv = parseFloat(getCurrentGearData().ratio) || 1.0;
+        var N_out_conv = N_engine * SR / i_gear_conv;
+        var dsEntry2C = dsData['2to1'];
+
+        if(dsEntry2C && tractionDeficit) {
+          var dsThreshold2C = _sdCalcDownshiftThreshold(dsEntry2C, shiftRefRPM);
+          if(N_out_conv < dsThreshold2C) {
+            shiftState.shiftHistory.push({
+              t: t_s, fromGear: 1, toGear: 0,
+              fromMode: '2C', toMode: '1C',
+              v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_conv,
+              isDownshift: true,
+              F_traction: ph ? ph.F_traction : 0,
+              F_resist: ph ? ph.F_resist : 0
+            });
+            shiftState.gearIdx = 0;
+            shifted = true;
+          }
+        }
+      }
+    }
+
     return shifted;
   }
 
@@ -20720,6 +20818,8 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
 
     var segStartSpeed = v * 3.6, segStartTime = t, segDist = 0;
     var segMaxSpeed = v * 3.6, segMinSpeed = v * 3.6;
+    var segStartGear = res_gearMode.length > 0 ? res_gearMode[res_gearMode.length - 1] : ((shiftState.gearIdx + 1) + (shiftState.isLockup ? 'L' : 'C'));
+    var segDownshiftCount = 0;
 
     var stallCounter = 0;
     while(segDist < seg_dist && globalStep < maxSteps) {
@@ -20730,8 +20830,13 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
         lastSampleStep = globalStep;
       }
 
-      if(seg_command === 'full_throttle') {
-        checkShift(t, ph.N_engine, ph.SR, ph.tau, v * 3.6);
+      // Her iki modda da shift kontrolü yap (upshift sadece full_throttle, downshift her ikisinde)
+      var shiftHistLenBefore = shiftState.shiftHistory.length;
+      checkShift(t, ph.N_engine, ph.SR, ph.tau, v * 3.6, ph, seg_command);
+      // Downshift sayacını güncelle
+      if(shiftState.shiftHistory.length > shiftHistLenBefore) {
+        var lastShift = shiftState.shiftHistory[shiftState.shiftHistory.length - 1];
+        if(lastShift.isDownshift) segDownshiftCount++;
       }
 
       // Entegrasyon
@@ -20778,11 +20883,13 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     recordStep(t, v, totalDist, phEnd, si);
     lastSampleStep = globalStep;
 
+    var segEndGear = res_gearMode.length > 0 ? res_gearMode[res_gearMode.length - 1] : ((shiftState.gearIdx + 1) + (shiftState.isLockup ? 'L' : 'C'));
     segmentSummary.push({
       segIdx: si, no: seg.no || (si + 1), command: seg_command, grade: seg.grade || 0,
       targetDist: seg_dist, actualDist: segDist,
       startSpeed_kmh: segStartSpeed, endSpeed_kmh: v * 3.6,
-      maxSpeed_kmh: segMaxSpeed, minSpeed_kmh: segMinSpeed, duration: t - segStartTime
+      maxSpeed_kmh: segMaxSpeed, minSpeed_kmh: segMinSpeed, duration: t - segStartTime,
+      startGear: segStartGear, endGear: segEndGear, downshiftCount: segDownshiftCount
     });
 
     if(globalStep >= maxSteps) break;
@@ -35678,12 +35785,12 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += pad(sectionNum + '. SEGMENT BAZLI SONUC OZETI', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    var sumTW = 106;
+    var sumTW = 120;
     r += '  ' + ln('-', sumTW) + '\n';
     r += '  ' + pad('No', 4) + pad('Komut', 12) + pad('Egim %', 8, 'right');
     r += pad('Mesafe m', 10, 'right') + pad('V_giris', 10, 'right') + pad('V_cikis', 10, 'right');
     r += pad('dV', 8, 'right') + pad('V_max', 9, 'right') + pad('V_min', 9, 'right');
-    r += pad('Sure s', 9, 'right') + pad('Son Vites', 11, 'right') + pad('Durum', 8) + '\n';
+    r += pad('Sure s', 9, 'right') + pad('Bas.Vites', 10, 'right') + pad('Bit.Vites', 10, 'right') + pad('DS', 4, 'right') + pad('Durum', 10) + '\n';
     r += '  ' + ln('-', sumTW) + '\n';
 
     var totalTime = 0;
@@ -35707,7 +35814,9 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       r += pad(num(seg.maxSpeed_kmh, 1), 9, 'right');
       r += pad(num(seg.minSpeed_kmh, 1), 9, 'right');
       r += pad(num(seg.duration, 1), 9, 'right');
-      r += pad('', 11, 'right');  // Son vites — segment summary'de yok, boş bırak
+      r += pad(ascii(String(seg.startGear || '')), 10, 'right');
+      r += pad(ascii(String(seg.endGear || '')), 10, 'right');
+      r += pad(String(seg.downshiftCount || 0), 4, 'right');
       r += '  ' + durum;
       r += '\n';
     });
@@ -35717,6 +35826,8 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     var v0 = segSum.length > 0 ? segSum[0].startSpeed_kmh : 0;
     var vF = segSum.length > 0 ? segSum[segSum.length - 1].endSpeed_kmh : 0;
     var dvTotal = vF - v0;
+    var totalDownshifts = 0;
+    segSum.forEach(function(s) { totalDownshifts += (s.downshiftCount || 0); });
     r += '  ' + pad('TOPLAM', 4 + 12);
     r += pad('', 8);
     r += pad(numI(ssSd.totalDistance || 0), 10, 'right');
@@ -35726,6 +35837,9 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += pad('', 9);
     r += pad('', 9);
     r += pad(num(totalTime, 1), 9, 'right');
+    r += pad('', 10);
+    r += pad('', 10);
+    r += pad(String(totalDownshifts), 4, 'right');
     r += '\n';
     r += '  ' + ln('-', sumTW) + '\n\n';
 
@@ -35781,6 +35895,13 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       var v_kmh = sd.speed ? sd.speed[idx] : 0;
       var rpm = sd.rpm ? sd.rpm[idx] : 0;
       var gear = sd.gearMode ? sd.gearMode[idx] : '';
+      // Vites değişim işareti: önceki satırla karşılaştır
+      if (idx > 0 && sd.gearMode && sd.gearMode[idx] !== sd.gearMode[idx - 1]) {
+        var prevGearNum = parseInt(sd.gearMode[idx - 1]) || 0;
+        var curGearNum = parseInt(sd.gearMode[idx]) || 0;
+        if (curGearNum < prevGearNum) gear = gear + 'v';
+        else if (curGearNum > prevGearNum) gear = gear + '^';
+      }
       var F_te = sd.TE ? (sd.TE[idx] * 1000) : 0;  // kN → N
       var F_roll = sd.F_rolling ? sd.F_rolling[idx] : 0;
       var F_aero = sd.F_aero ? sd.F_aero[idx] : 0;
@@ -35829,9 +35950,91 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '  P_tek [kW]   : Tekerlek gucu\n\n\n';
 
 
+    // ── VITES GECIS OLAYLARI (SHIFT LOG) ──
+    var shiftHist = ssSd.shiftHistory || [];
+    if (shiftHist.length > 0) {
+      r += ln('=', WW) + '\n';
+      r += pad((sectionNum + 2) + '. VITES GECIS OLAYLARI (SHIFT LOG)', WW, 'center') + '\n';
+      r += ln('=', WW) + '\n\n';
+
+      var slTW = 90;
+      r += '  ' + ln('-', slTW) + '\n';
+      r += '  ' + pad('t [s]', 9, 'right') + pad('Seg', 5, 'right') + pad('Gecis', 14);
+      r += pad('v [km/h]', 10, 'right') + pad('N_eng [rpm]', 12, 'right') + pad('N_out [rpm]', 12, 'right');
+      r += pad('Tip', 14) + pad('F_cek/F_dir', 14, 'right') + '\n';
+      r += '  ' + ln('-', slTW) + '\n';
+
+      var totalUpshifts = 0, totalDownshiftsLog = 0;
+      var minGear = 99, minGearSeg = 0, minGearTime = 0;
+      var maxGear = 0;
+
+      shiftHist.forEach(function(sh) {
+        var isDS = sh.isDownshift;
+        if (isDS) totalDownshiftsLog++; else totalUpshifts++;
+
+        // Segment bul
+        var shSeg = 1;
+        for (var si2 = 0; si2 < segSum.length; si2++) {
+          var segEnd = 0;
+          for (var sj = 0; sj <= si2; sj++) segEnd += (segSum[sj].duration || 0);
+          if (sh.t <= segEnd + 0.001) { shSeg = segSum[si2].no || (si2 + 1); break; }
+        }
+
+        var gecisStr = ascii(sh.fromMode + ' -> ' + sh.toMode);
+        var tipStr = isDS ? 'Downshift' : (sh.toMode && sh.toMode.indexOf('L') >= 0 && sh.fromMode && sh.fromMode.indexOf('C') >= 0 ? 'Lockup' : 'Upshift');
+        if (sh.fromMode === '1C' && sh.toMode === '2C') tipStr = 'Baslangic';
+
+        var fStr = '';
+        if (isDS && sh.F_traction !== undefined && sh.F_resist !== undefined) {
+          fStr = numI(sh.F_traction) + '/' + numI(sh.F_resist);
+        }
+
+        // Min/max gear tracking
+        var toGearNum = sh.toGear;
+        if (toGearNum < minGear) { minGear = toGearNum; minGearSeg = shSeg; minGearTime = sh.t; }
+        if (toGearNum > maxGear) { maxGear = toGearNum; }
+
+        r += '  ' + pad(num(sh.t, 2), 9, 'right');
+        r += pad(String(shSeg), 5, 'right');
+        r += ' ' + pad(gecisStr, 13);
+        r += pad(num(sh.v_kmh, 1), 10, 'right');
+        r += pad(numI(sh.N_engine), 12, 'right');
+        r += pad(numI(sh.N_out), 12, 'right');
+        r += ' ' + pad(tipStr, 13);
+        r += pad(fStr, 14, 'right');
+        r += '\n';
+      });
+      r += '  ' + ln('-', slTW) + '\n\n';
+
+      // Özet
+      r += '  OZET:\n';
+      r += pRow('Toplam Upshift', String(totalUpshifts));
+      r += pRow('Toplam Downshift', String(totalDownshiftsLog));
+
+      // Minimum vites bilgisi
+      if (minGear < 99) {
+        var minGearName = (minGear + 1) + 'L';
+        r += pRow('Minimum Vites', minGearName + ' (Segment ' + minGearSeg + ', t=' + num(minGearTime, 1) + 's)');
+      }
+      var maxGearName = (maxGear + 1) + 'L';
+      r += pRow('Maksimum Vites', maxGearName);
+
+      // Kaskad downshift kontrolü
+      var hasCascade = false, cascadeInfo = '';
+      for (var ci = 1; ci < shiftHist.length; ci++) {
+        if (shiftHist[ci].isDownshift && shiftHist[ci - 1].isDownshift) {
+          hasCascade = true;
+          cascadeInfo = ascii(shiftHist[ci - 1].fromMode + '->' + shiftHist[ci - 1].toMode + ', ' + shiftHist[ci].fromMode + '->' + shiftHist[ci].toMode);
+          break;
+        }
+      }
+      r += pRow('Kaskad Downshift', hasCascade ? ('Evet (' + cascadeInfo + ')') : 'Hayir');
+      r += '\n\n';
+    }
+
     // ── PERFORMANS DEGERLENDIRME ──
     r += ln('=', W) + '\n';
-    r += pad((sectionNum + 2) + '. PERFORMANS DEGERLENDIRME', W, 'center') + '\n';
+    r += pad((sectionNum + 2 + (shiftHist.length > 0 ? 1 : 0)) + '. PERFORMANS DEGERLENDIRME', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
     // Genel özet
@@ -35860,6 +36063,11 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       r += '    Hiz: ' + num(seg.startSpeed_kmh, 1) + ' -> ' + num(seg.endSpeed_kmh, 1) + ' km/h';
       r += ' (dV = ' + (dv >= 0 ? '+' : '') + num(dv, 1) + ' km/h)\n';
       r += '    Mesafe: ' + numI(seg.actualDist || seg.targetDist) + ' m, Sure: ' + num(seg.duration, 1) + ' s\n';
+      if (seg.startGear || seg.endGear) {
+        r += '    Vites: ' + ascii(String(seg.startGear || '?')) + ' -> ' + ascii(String(seg.endGear || '?'));
+        if (seg.downshiftCount > 0) r += ' (' + seg.downshiftCount + ' downshift)';
+        r += '\n';
+      }
 
       // Yorum
       if (seg.endSpeed_kmh < 1.0) {
@@ -35882,6 +36090,43 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
 
     r += pRow('Maksimum Hiz', num(globalMaxSpeed, 1) + ' km/h');
     r += pRow('Minimum Hiz', num(globalMinSpeed, 1) + ' km/h');
+
+    // Vites bilgileri
+    var shHistCrit = ssSd.shiftHistory || [];
+    var critTotalDS = 0;
+    var critMinGear = 99, critMinGearSeg = 0, critMinGearTime = 0;
+    shHistCrit.forEach(function(sh) {
+      if (sh.isDownshift) critTotalDS++;
+      if (sh.toGear < critMinGear) {
+        critMinGear = sh.toGear;
+        // Segment bul
+        for (var si3 = 0; si3 < segSum.length; si3++) {
+          var sEnd = 0;
+          for (var sj3 = 0; sj3 <= si3; sj3++) sEnd += (segSum[sj3].duration || 0);
+          if (sh.t <= sEnd + 0.001) { critMinGearSeg = segSum[si3].no || (si3 + 1); break; }
+        }
+        critMinGearTime = sh.t;
+      }
+    });
+    if (critTotalDS > 0) {
+      r += pRow('Toplam Downshift Sayisi', String(critTotalDS));
+      if (critMinGear < 99) {
+        r += pRow('Minimum Vites', (critMinGear + 1) + 'L (Segment ' + critMinGearSeg + ', t=' + num(critMinGearTime, 1) + 's)');
+      }
+      // Kaskad downshift
+      var critCascade = false, critCascadeInfo = '';
+      for (var ci2 = 1; ci2 < shHistCrit.length; ci2++) {
+        if (shHistCrit[ci2].isDownshift && shHistCrit[ci2 - 1].isDownshift) {
+          critCascade = true;
+          critCascadeInfo = ascii(shHistCrit[ci2].fromMode + '->' + shHistCrit[ci2].toMode);
+          break;
+        }
+      }
+      if (critCascade) {
+        r += pRow('Kaskad Downshift', 'Evet (' + critCascadeInfo + ')');
+      }
+    }
+
     if (hasStall) {
       r += '  >> UYARI: Arac bir veya daha fazla segmentte durma noktasina gelmistir.\n';
       r += '     Daha uygun vites veya guzergah secimi degerlendirilmelidir.\n';
