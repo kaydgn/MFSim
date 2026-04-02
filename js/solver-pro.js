@@ -11,7 +11,7 @@ function veSolverRunProfessional() {
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.72);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
   
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:780px;max-width:94vw;max-height:58vh;background:var(--bg-primary);border:2px solid var(--border-color);border-radius:2px;box-shadow:0 4px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;';
+  modal.style.cssText = 'width:780px;max-width:94vw;max-height:58vh;background:var(--bg-primary);border:2px solid var(--border-color);border-radius:0;box-shadow:0 4px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;';
   
   // Header — keskin, iç içe pencere
   var header = document.createElement('div');

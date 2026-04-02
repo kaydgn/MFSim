@@ -564,7 +564,7 @@ function swShowDiagramInfo(pkgId, diagIdx) {
     ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;';
     document.body.appendChild(ov);
   }
-  var html = '<div style="background:var(--bg-primary,#fff);border-radius:2px;padding:20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);color:var(--text-primary,#333);">';
+  var html = '<div style="background:var(--bg-primary,#fff);border-radius:0;padding:20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);color:var(--text-primary,#333);">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
   html += '<span style="font-weight:700;font-size:0.9rem;">📊 ' + d.name + '</span>';
   html += '<button onclick="document.getElementById(\'sw-info-overlay\').remove()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted,#999);">✕</button>';
@@ -572,7 +572,7 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   html += '<div style="font-size:0.72rem;color:var(--text-secondary,#666);margin-bottom:8px;"><b>X:</b> ' + d.xAxis + ' &nbsp; <b>Y:</b> ' + (Array.isArray(d.yAxis) ? d.yAxis.join(' / ') : d.yAxis) + '</div>';
   html += '<div style="font-size:0.72rem;line-height:1.5;color:var(--text-primary,#333);border-top:1px solid var(--border-color,#eee);padding-top:10px;">' + d.significance + '</div>';
   if(d.note) {
-    html += '<div style="font-size:0.68rem;color:#f59e0b;margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.08);border-radius:2px;">⚠️ ' + d.note + '</div>';
+    html += '<div style="font-size:0.68rem;color:#f59e0b;margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.08);border-radius:0;">⚠️ ' + d.note + '</div>';
   }
   html += '</div>';
   ov.innerHTML = html;
