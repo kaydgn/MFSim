@@ -4005,8 +4005,8 @@ function veRenderSlot(slotIdx) {
   
   if(sensors.length === 0) {
     var emptyIcon = type === 'line' ? '📈' : (type === 'scatter3d' ? '🔮' : '📋');
-    var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'scatter3d' ? '3D Grafik' : 'Veri Tablosu');
-    var emptyHint = type === 'scatter3d' ? 'Data Browser\'dan en az 3 sinyal sürükleyin veya sihirbaz diyagramı ekleyin' : 'Data Browser\'dan sensör sürükleyin';
+    var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'scatter3d' ? '3D Scatter Grafik' : 'Veri Tablosu');
+    var emptyHint = type === 'scatter3d' ? 'Data Browser\'dan en az 2 sinyal sürükleyin (X, Y). 3. sinyal Z olur.' : 'Data Browser\'dan sensör sürükleyin';
     var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted);">';
     html += '<div style="font-size:2.2rem; margin-bottom:10px;">' + emptyIcon + '</div>';
     html += '<div style="font-size:0.82rem; font-weight:600;">' + emptyName + '</div>';
@@ -4059,18 +4059,19 @@ function veRenderSlot(slotIdx) {
     html += '<div id="ve-3d-container-' + slotIdx + '" style="position:absolute;left:0;top:0;width:100%;height:100%;"></div>';
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
     html += '<div style="font-size:1.5rem; margin-bottom:6px;">🔮</div>';
-    if(sensors.length < 3) {
-      html += 'En az 3 sinyal gerekli (X, Y, Z) — şu an ' + sensors.length + ' sinyal var';
+    if(sensors.length < 2) {
+      html += 'En az 2 sinyal sürükleyin (X, Y). 3. sinyal Z ekseni olur, yoksa zaman kullanılır.';
     } else {
       html += 'Simülasyon sonrası 3D grafik görünecek';
     }
     html += '</div>';
     // ── 3D grafik içi legend ──
     if(sensors.length > 0) {
+      var axisLabels3d = ['X', 'Y', 'Z'];
       html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
       sensors.forEach(function(s, i) {
         var c = colors[i % colors.length];
-        var axisLabel = i === 0 ? 'X' : (i === 1 ? 'Y' : (i === 2 ? 'Z' : ''));
+        var axisLabel = axisLabels3d[i] || '';
         html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
         if(axisLabel) html += '<span style="font-weight:700; font-size:0.6rem; opacity:0.7; margin-right:2px;">' + axisLabel + ':</span>';
         html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
@@ -4079,6 +4080,13 @@ function veRenderSlot(slotIdx) {
         html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
         html += '</span>';
       });
+      // Z ekseni yoksa zaman bilgisi göster
+      if(sensors.length === 2) {
+        html += '<span class="ve-slot-legend-item" style="background:rgba(148,163,184,0.1); color:var(--text-muted); border:1px solid rgba(148,163,184,0.2);">';
+        html += '<span style="font-weight:700; font-size:0.6rem; opacity:0.7; margin-right:2px;">Z:</span>';
+        html += '<span>Zaman [s]</span>';
+        html += '</span>';
+      }
       html += '</div>';
     }
     html += '</div>';

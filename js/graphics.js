@@ -4765,7 +4765,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
 
 function veRender3DScatter(slotIdx) {
   var slot = veResultSlots[slotIdx];
-  if(!slot || !slot.sensors || slot.sensors.length < 3) return;
+  if(!slot || !slot.sensors || slot.sensors.length < 2) return;
 
   var container = document.getElementById('ve-3d-container-' + slotIdx);
   var placeholder = document.getElementById('ve-chart-placeholder-' + slotIdx);
@@ -4786,116 +4786,184 @@ function veRender3DScatter(slotIdx) {
   var sensors = slot.sensors;
   var slotDataSource = slot._dataSource || null;
 
-  // İlk 3 sensörden X, Y, Z verilerini al
-  var axisData = [];
-  for(var ai = 0; ai < 3; ai++) {
-    var s = sensors[ai];
+  // Zaman dizisini al (varsayılan Z ekseni veya 2-sensörlü modda Z olarak kullanılır)
+  var timeArr = null;
+  if(r && r.time) timeArr = r.time;
+  if(slotDataSource === 'segmentDrive' && r.segmentDrive && r.segmentDrive.time) timeArr = r.segmentDrive.time;
+
+  // Sensör verilerini topla
+  var sensorData = [];
+  sensors.forEach(function(s) {
     var sDS = s._dataSource || slotDataSource;
     var data = veGetSensorData(s.id, s.signal, sDS);
-    if(!data || data.length === 0) return;
-    axisData.push(data);
-  }
+    sensorData.push(data);
+  });
 
-  var n = Math.min(axisData[0].length, axisData[1].length, axisData[2].length);
+  // X ve Y ekseni verileri (ilk 2 sensör)
+  var xData = sensorData[0];
+  var yData = sensorData[1];
+  if(!xData || !yData || xData.length === 0 || yData.length === 0) return;
+
+  // Z ekseni: 3. sensör varsa kullan, yoksa zaman dizisi
+  var zData = null;
+  var zSensor = null;
+  if(sensors.length >= 3 && sensorData[2] && sensorData[2].length > 0) {
+    zData = sensorData[2];
+    zSensor = sensors[2];
+  } else if(timeArr) {
+    zData = timeArr;
+    zSensor = { name: 'Zaman', unit: 's' };
+  }
+  if(!zData) return;
+
+  var n = Math.min(xData.length, yData.length, zData.length);
   if(n < 2) return;
 
-  // Veriyi sample et (performans için maks 3000 nokta)
-  var step = Math.max(1, Math.floor(n / 3000));
-  var xVals = [], yVals = [], zVals = [], colorVals = [];
+  // Veriyi sample et (performans için maks 5000 nokta)
+  var maxPts = 5000;
+  var step = Math.max(1, Math.floor(n / maxPts));
+  var xVals = [], yVals = [], zVals = [];
   for(var i = 0; i < n; i += step) {
-    var xv = axisData[0][i], yv = axisData[1][i], zv = axisData[2][i];
+    var xv = xData[i], yv = yData[i], zv = zData[i];
     if(isFinite(xv) && isFinite(yv) && isFinite(zv)) {
       xVals.push(xv);
       yVals.push(yv);
       zVals.push(zv);
-      colorVals.push(zv); // Z değerine göre renk
     }
   }
 
   if(xVals.length < 2) return;
-
   if(placeholder) placeholder.style.display = 'none';
 
-  // Tema renklerini al
-  var isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  var bgColor = isDark ? 'rgba(30,32,40,0.0)' : 'rgba(255,255,255,0.0)';
-  var gridColor = isDark ? 'rgba(148,163,184,0.15)' : 'rgba(100,116,139,0.15)';
-  var textColor = isDark ? 'rgba(203,213,225,0.8)' : 'rgba(71,85,105,0.9)';
+  // Tema
+  var theme = document.documentElement.getAttribute('data-theme') || 'slate';
+  var isDark = theme !== 'light';
+  var sceneBg = isDark ? 'rgb(26,28,35)' : 'rgb(248,250,252)';
+  var gridColor = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(100,116,139,0.12)';
+  var lineColor = isDark ? 'rgba(148,163,184,0.25)' : 'rgba(100,116,139,0.25)';
+  var textColor = isDark ? '#94a3b8' : '#475569';
+  var paperBg = isDark ? 'rgb(22,24,30)' : 'rgb(255,255,255)';
 
   var xLabel = sensors[0].name + (sensors[0].unit ? ' [' + sensors[0].unit + ']' : '');
   var yLabel = sensors[1].name + (sensors[1].unit ? ' [' + sensors[1].unit + ']' : '');
-  var zLabel = sensors[2].name + (sensors[2].unit ? ' [' + sensors[2].unit + ']' : '');
+  var zLabel = zSensor.name + (zSensor.unit ? ' [' + zSensor.unit + ']' : '');
 
+  // Renk skalası: Z değerine göre, profesyonel görünüm
+  var colorscale = [
+    [0,    '#0ea5e9'],
+    [0.2,  '#3b82f6'],
+    [0.4,  '#6366f1'],
+    [0.6,  '#8b5cf6'],
+    [0.8,  '#d946ef'],
+    [1,    '#f43e5c']
+  ];
+
+  // Ana scatter trace
   var trace = {
     x: xVals, y: yVals, z: zVals,
     mode: 'markers',
     type: 'scatter3d',
     marker: {
-      size: 2.5,
-      color: colorVals,
-      colorscale: [
-        [0, '#3b82f6'],
-        [0.25, '#6366f1'],
-        [0.5, '#8b5cf6'],
-        [0.75, '#d946ef'],
-        [1, '#ef4444']
-      ],
-      opacity: 0.8,
+      size: 3,
+      color: zVals,
+      colorscale: colorscale,
+      opacity: 0.85,
+      line: { width: 0.3, color: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
       colorbar: {
-        title: { text: zLabel, font: { size: 10, color: textColor } },
-        thickness: 12,
-        len: 0.6,
-        tickfont: { size: 9, color: textColor },
+        title: { text: zLabel, font: { size: 10, color: textColor, family: 'system-ui, -apple-system, sans-serif' } },
+        thickness: 14,
+        len: 0.55,
+        y: 0.5,
+        tickfont: { size: 9, color: textColor, family: 'system-ui, -apple-system, sans-serif' },
         outlinewidth: 0,
         bgcolor: 'rgba(0,0,0,0)',
-        xpad: 4
+        xpad: 8,
+        tickformat: '.4~g'
       }
     },
     hovertemplate:
-      '<b>' + sensors[0].name + ':</b> %{x:.2f}<br>' +
-      '<b>' + sensors[1].name + ':</b> %{y:.2f}<br>' +
-      '<b>' + sensors[2].name + ':</b> %{z:.2f}<extra></extra>'
+      '<b>%{xaxis.title.text}:</b> %{x:.4~g}<br>' +
+      '<b>%{yaxis.title.text}:</b> %{y:.4~g}<br>' +
+      '<b>%{zaxis.title.text}:</b> %{z:.4~g}<extra></extra>',
+    hoverlabel: {
+      bgcolor: isDark ? 'rgba(30,32,40,0.95)' : 'rgba(255,255,255,0.95)',
+      bordercolor: isDark ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.4)',
+      font: { size: 11, color: isDark ? '#e2e8f0' : '#1e293b', family: 'system-ui, -apple-system, sans-serif' }
+    }
+  };
+
+  // XY düzlemine projeksiyon (gölge) trace
+  var zMin = Math.min.apply(null, zVals);
+  var projTrace = {
+    x: xVals, y: yVals,
+    z: xVals.map(function() { return zMin; }),
+    mode: 'markers',
+    type: 'scatter3d',
+    marker: {
+      size: 1.5,
+      color: isDark ? 'rgba(99,102,241,0.10)' : 'rgba(99,102,241,0.08)',
+      symbol: 'circle'
+    },
+    hoverinfo: 'skip',
+    showlegend: false
+  };
+
+  var axisTemplate = {
+    gridcolor: gridColor,
+    zerolinecolor: lineColor,
+    showbackground: true,
+    backgroundcolor: sceneBg,
+    showspikes: false,
+    tickfont: { size: 9, color: textColor, family: 'system-ui, -apple-system, sans-serif' },
+    titlefont: { size: 11, color: textColor, family: 'system-ui, -apple-system, sans-serif' },
+    tickformat: '.4~g',
+    linecolor: lineColor,
+    linewidth: 1
   };
 
   var layout = {
     scene: {
-      xaxis: {
-        title: { text: xLabel, font: { size: 10, color: textColor } },
-        gridcolor: gridColor, zerolinecolor: gridColor,
-        tickfont: { size: 9, color: textColor },
-        backgroundcolor: bgColor, showbackground: true
-      },
-      yaxis: {
-        title: { text: yLabel, font: { size: 10, color: textColor } },
-        gridcolor: gridColor, zerolinecolor: gridColor,
-        tickfont: { size: 9, color: textColor },
-        backgroundcolor: bgColor, showbackground: true
-      },
-      zaxis: {
-        title: { text: zLabel, font: { size: 10, color: textColor } },
-        gridcolor: gridColor, zerolinecolor: gridColor,
-        tickfont: { size: 9, color: textColor },
-        backgroundcolor: bgColor, showbackground: true
-      },
-      bgcolor: bgColor,
+      xaxis: Object.assign({}, axisTemplate, {
+        title: { text: xLabel, font: axisTemplate.titlefont }
+      }),
+      yaxis: Object.assign({}, axisTemplate, {
+        title: { text: yLabel, font: axisTemplate.titlefont }
+      }),
+      zaxis: Object.assign({}, axisTemplate, {
+        title: { text: zLabel, font: axisTemplate.titlefont }
+      }),
+      bgcolor: sceneBg,
       camera: {
-        eye: { x: 1.6, y: 1.6, z: 1.0 },
-        center: { x: 0, y: 0, z: -0.1 }
-      }
+        eye: { x: 1.5, y: 1.5, z: 0.9 },
+        center: { x: 0, y: 0, z: -0.08 },
+        up: { x: 0, y: 0, z: 1 }
+      },
+      aspectmode: 'auto'
     },
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
+    paper_bgcolor: paperBg,
+    plot_bgcolor: paperBg,
     margin: { l: 0, r: 0, t: 0, b: 0 },
-    showlegend: false
+    showlegend: false,
+    font: { family: 'system-ui, -apple-system, sans-serif' }
   };
 
   var config = {
     responsive: true,
     displayModeBar: true,
-    modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'],
+    modeBarButtonsToRemove: ['toImage', 'sendDataToCloud', 'hoverClosest3d'],
+    modeBarStyle: { bgcolor: 'transparent' },
     displaylogo: false
   };
 
-  Plotly.newPlot(container, [trace], layout, config);
+  Plotly.newPlot(container, [trace, projTrace], layout, config);
+
+  // Plotly modebar'ı uygulamanın temasına uyumlu hale getir
+  var modeBar = container.querySelector('.modebar');
+  if(modeBar) {
+    modeBar.style.opacity = '0.5';
+    modeBar.style.transition = 'opacity 0.2s';
+    container.addEventListener('mouseenter', function() { if(modeBar) modeBar.style.opacity = '0.9'; });
+    container.addEventListener('mouseleave', function() { if(modeBar) modeBar.style.opacity = '0.5'; });
+  }
 }
 
