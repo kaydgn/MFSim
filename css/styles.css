@@ -273,6 +273,68 @@
       box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
     }
 
+    /* ===== LOGIN EKRANI ===== */
+    .mfsim-login-overlay{
+      position:fixed; inset:0; z-index:999999;
+      background:var(--bg-primary);
+      display:flex; align-items:center; justify-content:center;
+      font-family:system-ui,-apple-system,sans-serif;
+    }
+    .mfsim-login-card{
+      width:360px; padding:40px;
+      background:var(--bg-secondary);
+      border:1px solid var(--border-color);
+      border-radius:12px;
+      box-shadow:0 25px 80px var(--shadow-color), 0 4px 20px var(--shadow-color);
+    }
+    .mfsim-login-title{
+      font-size:1.3rem; font-weight:700;
+      color:var(--text-heading);
+      letter-spacing:0.5px;
+    }
+    .mfsim-login-subtitle{
+      font-size:0.7rem;
+      color:var(--text-muted);
+      margin-top:4px;
+    }
+    .mfsim-login-label{
+      display:block; font-size:0.68rem;
+      color:var(--text-secondary);
+      margin-bottom:6px; font-weight:500;
+    }
+    .mfsim-login-input{
+      width:100%; padding:10px 14px; font-size:0.85rem;
+      background:var(--bg-input);
+      color:var(--text-primary);
+      border:1px solid var(--border-color);
+      border-radius:8px; outline:none;
+      box-sizing:border-box;
+      transition:border-color 0.2s;
+    }
+    .mfsim-login-input:focus{
+      border-color:var(--accent-primary);
+      box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-primary) 15%, transparent);
+    }
+    .mfsim-login-btn{
+      width:100%; padding:10px; font-size:0.82rem; font-weight:600;
+      background:var(--accent-primary);
+      color:#fff; border:none; border-radius:8px;
+      cursor:pointer; transition:opacity 0.2s;
+      letter-spacing:0.3px;
+    }
+    .mfsim-login-btn:hover{ opacity:0.88; }
+    .mfsim-login-error{
+      margin-top:12px; font-size:0.68rem;
+      color:var(--accent-danger);
+      text-align:center; min-height:18px;
+    }
+    .mfsim-login-remember{
+      display:flex; align-items:center; justify-content:center;
+      gap:6px; font-size:0.62rem;
+      color:var(--text-muted);
+      cursor:pointer; user-select:none;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -1274,16 +1336,18 @@
   position:fixed;
   top:80px;
   right:-350px;
-  background:rgba(0,0,0,0.9);
-  color:#fff;
+  background:var(--bg-secondary);
+  color:var(--text-primary);
   padding:12px 20px;
   border-radius:8px 0 0 8px;
   font-size:0.85rem;
   z-index:10000;
   transition:right 0.3s ease;
   max-width:320px;
-  box-shadow:-4px 4px 12px rgba(0,0,0,0.3);
-  border-left:4px solid #4ade80;
+  box-shadow:-4px 4px 12px var(--shadow-color);
+  border:1px solid var(--border-color);
+  border-left:4px solid var(--accent-success);
+  border-right:none;
 }
 
 .ve-toast.show{
@@ -1291,11 +1355,11 @@
 }
 
 .ve-toast.warning{
-  border-left-color:#fbbf24;
+  border-left-color:var(--accent-warning);
 }
 
 .ve-toast.error{
-  border-left-color:#f87171;
+  border-left-color:var(--accent-danger);
 }
 
 /* Onay gerektiren toast */
@@ -1303,16 +1367,18 @@
   position:fixed;
   top:80px;
   right:-400px;
-  background:rgba(30,30,30,0.98);
-  color:#fff;
+  background:var(--bg-secondary);
+  color:var(--text-primary);
   padding:16px 20px;
   border-radius:8px 0 0 8px;
   font-size:0.85rem;
   z-index:10001;
   transition:right 0.3s ease;
   max-width:350px;
-  box-shadow:-4px 4px 16px rgba(0,0,0,0.4);
-  border-left:4px solid #f87171;
+  box-shadow:-4px 4px 16px var(--shadow-color);
+  border:1px solid var(--border-color);
+  border-left:4px solid var(--accent-danger);
+  border-right:none;
 }
 
 .ve-toast-confirm.show{
@@ -1336,25 +1402,26 @@
   border-radius:4px;
   font-size:0.8rem;
   cursor:pointer;
-  transition:background 0.2s;
+  transition:background 0.2s, opacity 0.2s;
 }
 
 .ve-toast-confirm-btn.cancel{
-  background:#444;
-  color:#fff;
+  background:var(--bg-tertiary);
+  color:var(--text-primary);
+  border:1px solid var(--border-color);
 }
 
 .ve-toast-confirm-btn.cancel:hover{
-  background:#555;
+  background:var(--border-color);
 }
 
 .ve-toast-confirm-btn.confirm{
-  background:#f87171;
+  background:var(--accent-danger);
   color:#fff;
 }
 
 .ve-toast-confirm-btn.confirm:hover{
-  background:#ef4444;
+  opacity:0.85;
 }
 
 .ve-warnings-panel{

@@ -10,25 +10,23 @@
 </head>
 <body>
 
-<!-- ═══ LOGIN SCREEN (Gunmetal Theme) ═══ -->
-<div id="mfsim-login-overlay" style="position:fixed; inset:0; z-index:999999; background:linear-gradient(135deg, #d5d8dc 0%, #e8eaed 40%, #dcdfe3 100%); display:flex; align-items:center; justify-content:center; font-family:system-ui,-apple-system,sans-serif;">
-  <div style="width:360px; padding:40px; background:#f1f3f5; border:1px solid #c4c9d0; border-radius:0; box-shadow:0 25px 80px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06);">
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="mfsim-login-overlay" class="mfsim-login-overlay">
+  <div class="mfsim-login-card">
     <div style="text-align:center; margin-bottom:28px;">
-      <div style="font-size:1.3rem; font-weight:700; color:#0d0f13; letter-spacing:0.5px;">MFSim</div>
-      <div style="font-size:0.7rem; color:#8590a2; margin-top:4px;">Araç Performans Simülasyon Yazılımı</div>
+      <div class="mfsim-login-title">MFSim</div>
+      <div class="mfsim-login-subtitle">Araç Performans Simülasyon Yazılımı</div>
     </div>
     <div style="margin-bottom:20px;">
-      <label style="display:block; font-size:0.68rem; color:#4a5060; margin-bottom:6px; font-weight:500;">Şifre</label>
-      <input type="password" id="mfsim-login-password" placeholder="Şifrenizi giriniz" autocomplete="current-password"
-        style="width:100%; padding:10px 14px; font-size:0.85rem; background:#f8f9fa; color:#1a1d23; border:1px solid #c4c9d0; border-radius:8px; outline:none; box-sizing:border-box; transition:border-color 0.2s;"
-        onfocus="this.style.borderColor='#1d4ed8'" onblur="this.style.borderColor='#c4c9d0'"
+      <label class="mfsim-login-label">Şifre</label>
+      <input type="password" id="mfsim-login-password" class="mfsim-login-input" placeholder="Şifrenizi giriniz" autocomplete="current-password"
         onkeydown="if(event.key==='Enter') mfsimLogin()">
     </div>
-    <button onclick="mfsimLogin()" style="width:100%; padding:10px; font-size:0.82rem; font-weight:600; background:linear-gradient(135deg,#1d4ed8,#1e40af); color:white; border:none; border-radius:8px; cursor:pointer; transition:opacity 0.2s; letter-spacing:0.3px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Giriş Yap</button>
-    <div id="mfsim-login-error" style="margin-top:12px; font-size:0.68rem; color:#b91c1c; text-align:center; min-height:18px;"></div>
+    <button onclick="mfsimLogin()" class="mfsim-login-btn">Giriş Yap</button>
+    <div id="mfsim-login-error" class="mfsim-login-error"></div>
     <div style="margin-top:20px; text-align:center;">
-      <label style="display:flex; align-items:center; justify-content:center; gap:6px; font-size:0.62rem; color:#8590a2; cursor:pointer; user-select:none;">
-        <input type="checkbox" id="mfsim-login-remember" checked style="accent-color:#1d4ed8;"> Beni hatırla
+      <label class="mfsim-login-remember">
+        <input type="checkbox" id="mfsim-login-remember" checked style="accent-color:var(--accent-primary);"> Beni hatırla
       </label>
     </div>
   </div>
