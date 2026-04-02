@@ -3517,9 +3517,11 @@ function veSlotToggle(slotIdx) {
 
 function veRefreshAllCharts() {
   for(var i = 0; i < 4; i++) {
-    if(veResultSlots[i].type === 'line' && veResultSlots[i].sensors && veResultSlots[i].sensors.length > 0) {
-      if(window.veSimResults) veRenderChart(i);
-    }
+    var s = veResultSlots[i];
+    if(!s.sensors || s.sensors.length === 0) continue;
+    if(!window.veSimResults) continue;
+    if(s.type === 'line') veRenderChart(i);
+    else if(s.type === 'scatter3d') veRender3DScatter(i);
   }
 }
 
@@ -3529,7 +3531,8 @@ function veRenderSlotPicker(slotIdx) {
   
   var items = [
     {type:'line', icon:'📈', label:'Çizgi\nGrafik'},
-    {type:'table', icon:'📋', label:'Tablo'}
+    {type:'table', icon:'📋', label:'Tablo'},
+    {type:'scatter3d', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="g3d" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><line x1="6" y1="34" x2="6" y2="6" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="34" y2="34" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="18" y2="24" stroke="#94a3b8" stroke-width="1.2"/><circle cx="14" cy="18" r="2.8" fill="url(#g3d)" opacity="0.9"/><circle cx="22" cy="24" r="2.2" fill="#3b82f6" opacity="0.7"/><circle cx="28" cy="14" r="3" fill="url(#g3d)" opacity="0.95"/><circle cx="18" cy="28" r="2" fill="#8b5cf6" opacity="0.65"/><circle cx="26" cy="20" r="2.5" fill="#3b82f6" opacity="0.8"/><circle cx="11" cy="26" r="1.8" fill="#8b5cf6" opacity="0.6"/><circle cx="30" cy="28" r="2.3" fill="url(#g3d)" opacity="0.75"/></svg>', label:'3D\nGrafik'}
   ];
   
   var html = '<div class="ve-slot-picker">';
@@ -3965,25 +3968,29 @@ function veRenderSlot(slotIdx) {
   
   var type = slot.type || 'line';
   var sensors = slot.sensors || [];
-  var typeName = type === 'line' ? '📈' : '📋';
-  
+  var typeName = type === 'line' ? '📈' : (type === 'scatter3d' ? '🔮' : '📋');
+
   // Tab başlığını güncelle
   var tab = document.getElementById('ve-rslot-tab-' + slotIdx);
   if(tab) {
     if(sensors.length > 0) {
       tab.textContent = typeName + ' ' + sensors.map(function(s){return s.name;}).join(', ');
     } else {
-      tab.textContent = typeName + ' ' + (type === 'line' ? 'Grafik' : 'Tablo') + ' ' + (slotIdx + 1);
+      var typeLabel = type === 'line' ? 'Grafik' : (type === 'scatter3d' ? '3D Grafik' : 'Tablo');
+      tab.textContent = typeName + ' ' + typeLabel + ' ' + (slotIdx + 1);
     }
   }
   
   var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   
   if(sensors.length === 0) {
+    var emptyIcon = type === 'line' ? '📈' : (type === 'scatter3d' ? '🔮' : '📋');
+    var emptyLabel = type === 'line' ? 'Çizgi Grafik' : (type === 'scatter3d' ? '3D Scatter Grafik' : 'Veri Tablosu');
+    var emptyHint = type === 'scatter3d' ? 'Data Browser\'dan en az 3 sinyal sürükleyin (X, Y, Z)' : 'Data Browser\'dan sensör sürükleyin';
     var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted);">';
-    html += '<div style="font-size:2.2rem; margin-bottom:10px;">' + (type === 'line' ? '📈' : '📋') + '</div>';
-    html += '<div style="font-size:0.82rem; font-weight:600;">' + (type === 'line' ? 'Çizgi Grafik' : 'Veri Tablosu') + '</div>';
-    html += '<div style="font-size:0.72rem; margin-top:6px; opacity:0.7;">Data Browser\'dan sensör sürükleyin</div>';
+    html += '<div style="font-size:2.2rem; margin-bottom:10px;">' + emptyIcon + '</div>';
+    html += '<div style="font-size:0.82rem; font-weight:600;">' + emptyLabel + '</div>';
+    html += '<div style="font-size:0.72rem; margin-top:6px; opacity:0.7;">' + emptyHint + '</div>';
     html += '</div>';
     body.innerHTML = html;
     return;
@@ -4026,6 +4033,35 @@ function veRenderSlot(slotIdx) {
     html += '<span class="ve-xaxis-arrow">▲</span>';
     html += '</span>';
     html += '</div>';
+  } else if(type === 'scatter3d') {
+    // ── 3D Scatter modu ──
+    html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '" style="overflow:hidden;">';
+    html += '<div id="ve-3d-container-' + slotIdx + '" style="position:absolute;left:0;top:0;width:100%;height:100%;"></div>';
+    html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
+    html += '<div style="font-size:1.5rem; margin-bottom:6px;">🔮</div>';
+    if(sensors.length < 3) {
+      html += 'En az 3 sinyal gerekli (X, Y, Z) — şu an ' + sensors.length + ' sinyal var';
+    } else {
+      html += 'Simülasyon sonrası 3D grafik görünecek';
+    }
+    html += '</div>';
+    // ── 3D grafik içi legend ──
+    if(sensors.length > 0) {
+      html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
+      sensors.forEach(function(s, i) {
+        var c = colors[i % colors.length];
+        var axisLabel = i === 0 ? 'X' : (i === 1 ? 'Y' : (i === 2 ? 'Z' : ''));
+        html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
+        if(axisLabel) html += '<span style="font-weight:700; font-size:0.6rem; opacity:0.7; margin-right:2px;">' + axisLabel + ':</span>';
+        html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
+        html += '<span>' + s.name + '</span>';
+        if(s.unit) html += ' <span style="opacity:0.55; font-size:0.6rem;">[' + s.unit + ']</span>';
+        html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
+        html += '</span>';
+      });
+      html += '</div>';
+    }
+    html += '</div>';
   } else {
     // ── Tablo modu ──
     html += '<div style="overflow:auto; width:100%; height:100%; flex:1;">';
@@ -4050,8 +4086,8 @@ function veRenderSlot(slotIdx) {
     html += '</div>';
   }
   
-  // Legend — Tablo modu için altta, grafik modu için chart içinde overlay olarak zaten eklendi
-  if(type !== 'line') {
+  // Legend — Tablo modu için altta, grafik/3D modu için chart içinde overlay olarak zaten eklendi
+  if(type !== 'line' && type !== 'scatter3d') {
     html += '<div class="ve-slot-legend">';
     sensors.forEach(function(s, i) {
       var c = colors[i % colors.length];
@@ -4072,6 +4108,9 @@ function veRenderSlot(slotIdx) {
     veResetChartView(slotIdx);
     if(window.veSimResults) veRenderChart(slotIdx);
     veInitChartInteraction(slotIdx);
+    veInitLegendDrag(slotIdx);
+  } else if(type === 'scatter3d') {
+    if(window.veSimResults) veRender3DScatter(slotIdx);
     veInitLegendDrag(slotIdx);
   } else {
     if(window.veSimResults) veRenderTable(slotIdx);
