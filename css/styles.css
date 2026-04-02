@@ -1808,6 +1808,15 @@
   border-right:1px solid var(--border-color);
 }
 .ve-slot-legend{display:flex;gap:5px;padding:4px 8px 5px;flex-wrap:wrap;flex-shrink:0;background:var(--bg-secondary);border-top:1px solid var(--border-color);}
+.ve-chart-legend-overlay{
+  position:absolute;bottom:8px;left:8px;z-index:15;
+  display:flex;gap:4px;flex-wrap:wrap;max-width:calc(100% - 16px);
+  padding:4px 7px 5px;border-radius:6px;cursor:grab;
+  background:var(--bg-primary);border:1px solid var(--border-color);
+  box-shadow:0 2px 8px rgba(0,0,0,0.12);
+  opacity:0.92;transition:opacity 0.15s;
+}
+.ve-chart-legend-overlay:hover{opacity:1;}
 .ve-slot-legend-item{
   font-size:0.68rem;padding:3px 8px;border-radius:4px;
   display:flex;align-items:center;gap:4px;cursor:default;transition:all 0.15s;
