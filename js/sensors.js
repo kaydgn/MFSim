@@ -257,6 +257,77 @@ var SENSOR_PACKAGES = [
       { target:'torque-converter', attachment:'component', signal:'efficiency', label:'TC → Verim (%)' },
       { target:'torque-converter', attachment:'component', signal:'slip', label:'TC → Kayma (%)' }
     ]
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  3B YÜZEY DİYAGRAMLARI — Performans
+  // ══════════════════════════════════════════════════════════════
+  {
+    id: '3d-perf', name: '3B Performans Yüzeyleri', icon: '🗺️', priority: 'advanced',
+    solverTab: 'performance',
+    description: '3 boyutlu yüzey diyagramları: motor haritası, çekiş kuvveti, TC verimi, güç akışı, direnç ve ivme',
+    requires: ['vehicle', 'engine'],
+    diagrams: [
+      { id:'3d-engine-map', name:'Motor Çalışma Haritası (3B)', xAxis:'RPM', yAxis:'Tork (Nm)', zAxis:'Güç (kW)',
+        significance:'Motor devri × tork × güç yüzeyini 3 boyutlu gösterir. Heatmap üzerinden maksimum güç bölgesi kolayca okunur.' },
+      { id:'3d-te-gear', name:'Çekiş Kuvveti Yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Vites', zAxis:'TE (kN)',
+        significance:'Her viteste hıza bağlı çekiş kuvveti — gradeability ve tırmanma kapasitesi analizi. Vites geçiş bölgeleri renk geçişi olarak görülür.' },
+      { id:'3d-tc-eff', name:'TC Verim Yüzeyi (3B)', xAxis:'Hız Oranı (SR)', yAxis:'Pump Torku (Nm)', zAxis:'Verim (%)',
+        significance:'Tork konvertörün hangi SR-tork bölgesinde ne kadar verimli olduğu. Lockup stratejisi belirlemek için kritik yüzey.' },
+      { id:'3d-power-flow', name:'Güç Akışı Yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Zaman (s)', zAxis:'Motor Gücü (kW)',
+        significance:'Motor gücünün hız ve zamana göre dağılımı — drivetrain kayıp haritası. Yüksek güç bölgeleri kırmızı, düşük bölgeler mavi.' },
+      { id:'3d-resist-map', name:'Direnç Dağılım Yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Zaman (s)', zAxis:'Toplam Direnç (N)',
+        significance:'Yuvarlanma + aero + eğim dirençlerinin hız ve zamana göre evrimi. Aerodinamik baskınlık bölgesi net olarak görülür.' },
+      { id:'3d-accel-rpm', name:'İvme-Hız-RPM Haritası (3B)', xAxis:'Hız (km/h)', yAxis:'Motor Devri (rpm)', zAxis:'İvme (m/s²)',
+        significance:'Hangi hız-devir kombinasyonunda ne kadar ivme alındığı — vites geçiş noktalarının optimizasyonu için ideal yüzey.' }
+    ],
+    sensors: []
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  3B YÜZEY DİYAGRAMLARI — Hızlanma-Yavaşlama
+  // ══════════════════════════════════════════════════════════════
+  {
+    id: '3d-sd', name: '3B Segment Yüzeyleri', icon: '🗺️', priority: 'advanced',
+    solverTab: 'accel-decel',
+    description: '3 boyutlu yüzey diyagramları: hız-mesafe-eğim, kuvvet, ısı, güç-devir, çekiş-direnç',
+    requires: ['vehicle', 'engine'],
+    diagrams: [
+      { id:'3d-sd-speed-grade', name:'Hız-Mesafe-Eğim Profili (3B)', xAxis:'Mesafe (m)', yAxis:'Eğim Kuvveti (N)', zAxis:'Hız (km/h)',
+        significance:'Yol profilinde eğime bağlı hız gelişimi. Segment geçişlerinde hız düşüşü/artışı renk değişimi olarak görülür.' },
+      { id:'3d-sd-force-grade', name:'Kuvvet-Hız-Eğim Yüzeyi (3B)', xAxis:'Hız (km/h)', yAxis:'Eğim Kuvveti (N)', zAxis:'Net Kuvvet (N)',
+        significance:'Farklı eğimlerde mevcut net kuvvet — tırmanamama sınırını gösteren kritik yüzey. Sıfır geçişi kırmızıdan maviye geçiş noktasıdır.' },
+      { id:'3d-sd-heat', name:'TC Isı Reddi Haritası (3B)', xAxis:'Zaman (s)', yAxis:'Hız (km/h)', zAxis:'TC Isı Reddi (kW)',
+        significance:'Hızlanma-yavaşlama çevrimlerinde TC termal yüklenme haritası. Yoğun ısı bölgeleri soğutma sistemi boyutlandırma girdisi.' },
+      { id:'3d-sd-power-rpm', name:'Güç-RPM-Vites Yüzeyi (3B)', xAxis:'Motor Devri (rpm)', yAxis:'Vites', zAxis:'Motor Gücü (kW)',
+        significance:'Her viteste motor devrinin güç üretimine etkisi. Shift kalibrasyon doğrulama — vites geçişlerinde güç kaybı görünür.' },
+      { id:'3d-sd-te-resist', name:'Çekiş-Direnç Yüzeyi (3B)', xAxis:'Zaman (s)', yAxis:'Çekiş Kuvveti (kN)', zAxis:'Toplam Direnç (N)',
+        significance:'Çekiş kuvveti ile direncin zamanla ilişkisi. Hızlanma/yavaşlama geçiş anları renk kontrastı olarak görülür.' }
+    ],
+    sensors: []
+  },
+
+  // ══════════════════════════════════════════════════════════════
+  //  3B YÜZEY DİYAGRAMLARI — Engel Atlama
+  // ══════════════════════════════════════════════════════════════
+  {
+    id: '3d-obs', name: '3B Engel Atlama Yüzeyleri', icon: '🗺️', priority: 'advanced',
+    solverTab: 'obstacle',
+    description: '3 boyutlu yüzey diyagramları: tork eşleme, kuvvet-açı, enerji, güç-verim, itme-reaksiyon',
+    requires: ['torque-converter'],
+    diagrams: [
+      { id:'3d-obs-torque', name:'Tork Eşleme Yüzeyi (3B)', xAxis:'Hız Oranı (SR)', yAxis:'Motor Torku (Nm)', zAxis:'Tekerlek Torku (Nm)',
+        significance:'Stall→lockup aralığında motor-tekerlek tork transferi. Engel aşma kapasitesinin temeli — yüksek tekerlek torku bölgeleri kırmızı renkte.' },
+      { id:'3d-obs-force-angle', name:'Kuvvet-Açı-Zaman (3B)', xAxis:'Zaman (s)', yAxis:'Tekerlek Açısı (°)', zAxis:'Net Kuvvet (N)',
+        significance:'Engel üzerinde ilerlerken kuvvetlerin açı ve zamanla değişimi. Kritik temas noktası ve kuvvet dağılımı net olarak görülür.' },
+      { id:'3d-obs-energy', name:'Enerji-Hız-Açı (3B)', xAxis:'Tekerlek Açısı (°)', yAxis:'Hız (m/s)', zAxis:'Kinetik Enerji (J)',
+        significance:'Engel tırmanırken kinetik enerji dağılımı. Momentum kaybının nerede gerçekleştiğini gösterir.' },
+      { id:'3d-obs-power-eff', name:'Güç-SR-Verim Yüzeyi (3B)', xAxis:'Hız Oranı (SR)', yAxis:'Motor Gücü (kW)', zAxis:'TC Verimi (−)',
+        significance:'Hız oranına göre güç ve verim ilişkisi. Optimum çalışma noktası seçimi için ideal yüzey.' },
+      { id:'3d-obs-push-react', name:'İtme-Engel Kuvveti Yüzeyi (3B)', xAxis:'Zaman (s)', yAxis:'İtme Kuvveti (N)', zAxis:'Engel Reaksiyon (N)',
+        significance:'Lastik itme kuvveti vs engel direnci. Aşma/aşamama sınırı renk geçişi olarak net şekilde görülür.' }
+    ],
+    sensors: []
   }
 ];
 
@@ -445,7 +516,65 @@ var SW_DIAGRAM_SIGNALS = {
   ], dataSource:'obstacleDynamic' },
   'obs-match-eta':    { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'}, y:[
     {target:'obs-match', signal:'eta_tc', name:'TC Verimi', unit:'−'}
-  ], dataSource:'obstacleDynamic' }
+  ], dataSource:'obstacleDynamic' },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // 3B YÜZEY DİYAGRAMLARI (surface)  —  x, y[0], z formatı
+  // ══════════════════════════════════════════════════════════════════════
+
+  // ── Performans Analizi 3B ──
+  '3d-engine-map':    { x:{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'},
+    y:[{target:'engine', signal:'torque', name:'Motor Torku', unit:'Nm'}],
+    z:{target:'engine', signal:'power', name:'Motor Gücü [kW]', unit:'kW'} },
+  '3d-te-gear':       { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'shift-controller', signal:'current_gear', name:'Aktif Vites', unit:'−'}],
+    z:{target:'solver', signal:'tractive_effort', name:'Çekiş Kuvveti [kN]', unit:'kN'} },
+  '3d-tc-eff':        { x:{target:'torque-converter', signal:'speed_ratio', name:'Hız Oranı (SR)', unit:'−'},
+    y:[{target:'torque-converter', signal:'torque_in', name:'Pump Torku', unit:'Nm'}],
+    z:{target:'torque-converter', signal:'efficiency', name:'TC Verimi [%]', unit:'%'} },
+  '3d-power-flow':    { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'time', signal:'time', name:'Zaman', unit:'s'}],
+    z:{target:'engine', signal:'power', name:'Motor Gücü [kW]', unit:'kW'} },
+  '3d-resist-map':    { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'time', signal:'time', name:'Zaman', unit:'s'}],
+    z:{target:'road', signal:'r_total_resist', name:'Toplam Direnç [N]', unit:'N'} },
+  '3d-accel-rpm':     { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'}],
+    z:{target:'vehicle', signal:'v_accel', name:'İvme [m/s²]', unit:'m/s²'} },
+
+  // ── Hızlanma-Yavaşlama 3B ──
+  '3d-sd-speed-grade': { x:{target:'vehicle', signal:'v_distance', name:'Mesafe', unit:'m'},
+    y:[{target:'road', signal:'r_grade_force', name:'Eğim Kuvveti', unit:'N'}],
+    z:{target:'vehicle', signal:'v_speed', name:'Hız [km/h]', unit:'km/h'}, dataSource:'segmentDrive' },
+  '3d-sd-force-grade': { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'},
+    y:[{target:'road', signal:'r_grade_force', name:'Eğim Kuvveti', unit:'N'}],
+    z:{target:'road', signal:'r_net_force', name:'Net Kuvvet [N]', unit:'N'}, dataSource:'segmentDrive' },
+  '3d-sd-heat':        { x:{target:'time'},
+    y:[{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}],
+    z:{target:'torque-converter', signal:'heat_rejection', name:'TC Isı Reddi [kW]', unit:'kW'}, dataSource:'segmentDrive' },
+  '3d-sd-power-rpm':   { x:{target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'},
+    y:[{target:'shift-controller', signal:'current_gear', name:'Aktif Vites', unit:'−'}],
+    z:{target:'engine', signal:'power', name:'Motor Gücü [kW]', unit:'kW'}, dataSource:'segmentDrive' },
+  '3d-sd-te-resist':   { x:{target:'time'},
+    y:[{target:'solver', signal:'tractive_effort', name:'Çekiş Kuvveti', unit:'kN'}],
+    z:{target:'road', signal:'r_total_resist', name:'Toplam Direnç [N]', unit:'N'}, dataSource:'segmentDrive' },
+
+  // ── Engel Atlama 3B ──
+  '3d-obs-torque':     { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'},
+    y:[{target:'obs-match', signal:'T_engine', name:'Motor Torku', unit:'Nm'}],
+    z:{target:'obs-match', signal:'T_wheel', name:'Tekerlek Torku [Nm]', unit:'Nm'}, dataSource:'obstacleDynamic' },
+  '3d-obs-force-angle':{ x:{target:'obs-log', signal:'t', name:'Zaman', unit:'s'},
+    y:[{target:'obs-log', signal:'phi_deg', name:'Tekerlek Açısı', unit:'°'}],
+    z:{target:'obs-log', signal:'F_net', name:'Net Kuvvet [N]', unit:'N'}, dataSource:'obstacleDynamic' },
+  '3d-obs-energy':     { x:{target:'obs-log', signal:'phi_deg', name:'Tekerlek Açısı', unit:'°'},
+    y:[{target:'obs-log', signal:'v', name:'Hız', unit:'m/s'}],
+    z:{target:'obs-log', signal:'KE', name:'Kinetik Enerji [J]', unit:'J'}, dataSource:'obstacleDynamic' },
+  '3d-obs-power-eff':  { x:{target:'obs-match', signal:'SR', name:'Hız Oranı (SR)', unit:'−'},
+    y:[{target:'obs-match', signal:'P_engine_kW', name:'Motor Gücü', unit:'kW'}],
+    z:{target:'obs-match', signal:'eta_tc', name:'TC Verimi [−]', unit:'−'}, dataSource:'obstacleDynamic' },
+  '3d-obs-push-react': { x:{target:'obs-log', signal:'t', name:'Zaman', unit:'s'},
+    y:[{target:'obs-log', signal:'F_itme', name:'İtme Kuvveti', unit:'N'}],
+    z:{target:'obs-log', signal:'F_engel', name:'Engel Reaksiyon [N]', unit:'N'}, dataSource:'obstacleDynamic' }
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -566,10 +695,13 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   }
   var html = '<div style="background:var(--bg-primary,#fff);border-radius:0;padding:20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);color:var(--text-primary,#333);">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-  html += '<span style="font-weight:700;font-size:0.9rem;">📊 ' + d.name + '</span>';
+  var diagIcon = d.zAxis ? '🗺️' : '📊';
+  html += '<span style="font-weight:700;font-size:0.9rem;">' + diagIcon + ' ' + d.name + '</span>';
   html += '<button onclick="document.getElementById(\'sw-info-overlay\').remove()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted,#999);">✕</button>';
   html += '</div>';
-  html += '<div style="font-size:0.72rem;color:var(--text-secondary,#666);margin-bottom:8px;"><b>X:</b> ' + d.xAxis + ' &nbsp; <b>Y:</b> ' + (Array.isArray(d.yAxis) ? d.yAxis.join(' / ') : d.yAxis) + '</div>';
+  var axisInfo = '<b>X:</b> ' + d.xAxis + ' &nbsp; <b>Y:</b> ' + (Array.isArray(d.yAxis) ? d.yAxis.join(' / ') : d.yAxis);
+  if(d.zAxis) axisInfo += ' &nbsp; <b>Z (renk):</b> ' + d.zAxis;
+  html += '<div style="font-size:0.72rem;color:var(--text-secondary,#666);margin-bottom:8px;">' + axisInfo + '</div>';
   html += '<div style="font-size:0.72rem;line-height:1.5;color:var(--text-primary,#333);border-top:1px solid var(--border-color,#eee);padding-top:10px;">' + d.significance + '</div>';
   if(d.note) {
     html += '<div style="font-size:0.68rem;color:#f59e0b;margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.08);border-radius:0;">⚠️ ' + d.note + '</div>';
