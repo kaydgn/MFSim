@@ -1821,11 +1821,11 @@
 .ve-slot-legend{display:flex;gap:5px;padding:4px 8px 5px;flex-wrap:wrap;flex-shrink:0;background:var(--bg-secondary);border-top:1px solid var(--border-color);}
 .ve-chart-legend-overlay{
   position:absolute;bottom:8px;left:8px;z-index:15;
-  display:flex;gap:4px;flex-wrap:wrap;max-width:calc(100% - 16px);
-  padding:4px 7px 5px;border-radius:6px;cursor:grab;
+  display:flex;flex-direction:column;gap:2px;max-width:50%;
+  padding:5px 8px 6px;border-radius:6px;cursor:grab;
   background:var(--bg-primary);border:1px solid var(--border-color);
   box-shadow:0 2px 8px rgba(0,0,0,0.12);
-  opacity:0.92;transition:opacity 0.15s;
+  opacity:0.88;transition:opacity 0.15s;
 }
 .ve-chart-legend-overlay:hover{opacity:1;}
 .ve-slot-legend-item{
@@ -6874,13 +6874,6 @@ function veRenderSlot(slotIdx) {
     // ── Eksen kontrol çubuğu (dinamik — veRenderChart tarafından güncellenir) ──
     html += '<div class="ve-axis-ctrl" id="ve-axis-ctrl-' + slotIdx + '" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
     html += '</div>';
-    var xName = slot.xAxis ? slot.xAxis.name : 'Zaman [s]';
-    html += '<div class="ve-slot-axis-x" id="ve-xaxis-area-' + slotIdx + '">';
-    html += '<span class="ve-xaxis-btn" onclick="veShowXAxisPicker(' + slotIdx + ',event)" title="X eksenini değiştir">';
-    html += '<span>' + xName + '</span>';
-    html += '<span class="ve-xaxis-arrow">▲</span>';
-    html += '</span>';
-    html += '</div>';
   } else if(type === 'scatter3d') {
     // ── 3D Scatter modu ──
     html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '" style="overflow:hidden;">';
@@ -7172,8 +7165,11 @@ function veShowXAxisPicker(slotIdx, e) {
   // Diğer açık dropdown'ları kapat
   document.querySelectorAll('.ve-xaxis-dropdown').forEach(function(d) { d.remove(); });
 
+  // Dropdown'ın bağlanacağı parent: tablo modunda ve-xaxis-area, grafik modunda chart-area
   var area = document.getElementById('ve-xaxis-area-' + slotIdx);
-  if(!area) return;
+  var chartArea = document.getElementById('ve-chart-area-' + slotIdx);
+  var parentEl = area || chartArea;
+  if(!parentEl) return;
 
   var options = veGetAvailableXAxisOptions(slotIdx);
 
@@ -7198,7 +7194,15 @@ function veShowXAxisPicker(slotIdx, e) {
   dd.innerHTML = html;
   // Options verilerini dropdown'a bağla
   dd._options = options;
-  area.appendChild(dd);
+
+  // Grafik modunda (chart-area parent): dropdown'ı altta ortada konumla
+  if(!area && chartArea) {
+    dd.style.position = 'absolute';
+    dd.style.bottom = '6px';
+    dd.style.left = '50%';
+    dd.style.transform = 'translateX(-50%)';
+  }
+  parentEl.appendChild(dd);
 
   // Dropdown dışına tıklayınca kapat
   setTimeout(function() {
@@ -33481,12 +33485,23 @@ function veRenderChart(slotIdx) {
     ctx.fillText(veFormatAxisVal(xv), gx, margin.top + ph + 7);
   }
 
-  // X ekseni başlığı (canvas üzerinde, altta ortada)
+  // X ekseni başlığı (canvas üzerinde, altta ortada) — tıklanabilir
   var xAxisName = (slot.xAxis ? slot.xAxis.name : 'Zaman [s]');
-  ctx.fillStyle = 'rgba(160,160,180,0.9)';
+  ctx.fillStyle = 'rgba(59,130,246,0.85)';
   ctx.font = '600 11px -apple-system,system-ui,sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText(xAxisName, margin.left + pw / 2, margin.top + ph + 22);
+  var xTitleX = margin.left + pw / 2;
+  var xTitleY = margin.top + ph + 22;
+  var xTitleW = ctx.measureText(xAxisName).width;
+  // Küçük ok işareti ekle (tıklanabilirlik ipucu)
+  ctx.fillText(xAxisName + ' \u25B2', xTitleX, xTitleY);
+  // Tıklama alanını meta'ya kaydet
+  slot._chartMeta.xTitleHit = {
+    x: xTitleX - xTitleW / 2 - 8,
+    y: xTitleY - 2,
+    w: xTitleW + 24,
+    h: 16
+  };
 
   // Sol eksen çerçeve + alt çerçeve
   ctx.strokeStyle = 'rgba(128,128,128,0.35)';
@@ -33579,10 +33594,28 @@ function veInitChartInteraction(slotIdx) {
       return;
     }
     veChartShowTooltip(slotIdx, e);
+    // X eksen başlığı üzerinde cursor değiştir
+    var slotM = veResultSlots[slotIdx];
+    var metaM = slotM && slotM._chartMeta;
+    if(metaM && metaM.xTitleHit && !isPanning && !panPending) {
+      var rectM = area.getBoundingClientRect();
+      var scMx = rectM.width / metaM.w;
+      var scMy = rectM.height / metaM.h;
+      var mxM = e.clientX - rectM.left;
+      var myM = e.clientY - rectM.top;
+      var hitM = metaM.xTitleHit;
+      if(mxM >= hitM.x * scMx && mxM <= (hitM.x + hitM.w) * scMx &&
+         myM >= hitM.y * scMy && myM <= (hitM.y + hitM.h) * scMy) {
+        area.style.cursor = 'pointer';
+      } else {
+        area.style.cursor = '';
+      }
+    }
   });
 
   area.addEventListener('mouseleave', function() {
     if(!isPanning && !panPending) veChartHideTooltip(slotIdx);
+    area.style.cursor = '';
   });
 
   // Sol tık veya sağ tık: pan başlat
@@ -33616,10 +33649,29 @@ function veInitChartInteraction(slotIdx) {
   });
 
   document.addEventListener('mouseup', function(e) {
+    var wasPanPending = panPending;
+    var wasPanning = isPanning;
     if(isPanning || panPending) {
       isPanning = false;
       panPending = false;
       area.style.cursor = '';
+    }
+    // Pan başlamadıysa (sadece click) → X ekseni başlığına tıklama kontrolü
+    if(wasPanPending && !wasPanning && e.button === 0) {
+      var slot2 = veResultSlots[slotIdx];
+      var m2 = slot2 && slot2._chartMeta;
+      if(m2 && m2.xTitleHit) {
+        var rect2 = area.getBoundingClientRect();
+        var scX = rect2.width / m2.w;
+        var scY = rect2.height / m2.h;
+        var cx = e.clientX - rect2.left;
+        var cy = e.clientY - rect2.top;
+        var hit = m2.xTitleHit;
+        if(cx >= hit.x * scX && cx <= (hit.x + hit.w) * scX &&
+           cy >= hit.y * scY && cy <= (hit.y + hit.h) * scY) {
+          veShowXAxisPicker(slotIdx, e);
+        }
+      }
     }
   });
   
