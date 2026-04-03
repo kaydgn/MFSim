@@ -9,6 +9,12 @@
   <!-- Plotly.js - 3D Scatter grafikler için -->
   <script src="https://cdn.plot.ly/plotly-gl3d-2.35.2.min.js"></script>
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="pwa/manifest.json" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="pwa/icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="MFSim" />
 </head>
 <body>
 
@@ -550,6 +556,12 @@
 <script src="js/node-resize.js"></script>
 <script src="js/context-menus.js"></script>
 <script src="js/connections.js"></script>
+
+<script>
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('pwa/sw.js').catch(function(){});
+}
+</script>
 
 </body>
 </html>
