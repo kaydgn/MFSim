@@ -19,10 +19,10 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  auto-pr-merge-deploy:
-    environment:
-      name: github-pages
+  auto-pr-merge:
     runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
     steps:
       - uses: actions/checkout@v4
 
@@ -93,22 +93,26 @@ jobs:
               merge_method: 'merge'
             });
             console.log(`Merged PR #${prNumber}`);
+            core.setOutput('merged', 'true');
 
-      # ═══ GITHUB PAGES DEPLOY ═══
-      - name: Checkout main after merge
-        if: success()
-        run: |
-          git fetch origin main
-          git checkout origin/main
+  deploy:
+    needs: auto-pr-merge
+    if: needs.auto-pr-merge.outputs.merged == 'true'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Setup Pages
-        if: success()
         uses: actions/configure-pages@v5
         with:
           enablement: true
 
       - name: Create site directory
-        if: success()
         run: |
           mkdir -p _site/pwa
           cp MFSim_Code.html _site/index.html
@@ -117,10 +121,8 @@ jobs:
           cp pwa/sw.js _site/pwa/sw.js
 
       - name: Upload artifact
-        if: success()
         uses: actions/upload-pages-artifact@v3
 
       - name: Deploy to GitHub Pages
-        if: success()
         id: deployment
         uses: actions/deploy-pages@v4
