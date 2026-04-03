@@ -177,11 +177,17 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
     html += '<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:3px;">Pull Request #' + info.prNumber + '</div>';
     html += '<div style="font-weight:600; color:var(--text-heading); line-height:1.4;">' + info.prTitle + '</div>';
     if(info.prBody) {
-      var bodyPreview = info.prBody.replace(/[#*`>\-]/g, '').trim();
-      if(bodyPreview.length > 200) bodyPreview = bodyPreview.substring(0, 197) + '...';
-      if(bodyPreview) {
-        html += '<div style="color:var(--text-secondary); font-size:0.72rem; margin-top:4px; line-height:1.4;">' + bodyPreview + '</div>';
-      }
+      // Markdown'ı basit HTML'e çevir
+      var bodyHtml = info.prBody
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+        .replace(/\*(.+?)\*/g, '<i>$1</i>')
+        .replace(/`(.+?)`/g, '<code style="background:var(--bg-primary); padding:1px 4px;">$1</code>')
+        .replace(/^### (.+)$/gm, '<div style="font-weight:600; margin-top:8px;">$1</div>')
+        .replace(/^## (.+)$/gm, '<div style="font-weight:600; font-size:0.8rem; margin-top:8px;">$1</div>')
+        .replace(/^- (.+)$/gm, '• $1')
+        .replace(/\n/g, '<br>');
+      html += '<div style="color:var(--text-secondary); font-size:0.72rem; margin-top:6px; line-height:1.5; max-height:300px; overflow-y:auto; padding-right:4px;">' + bodyHtml + '</div>';
     }
     html += '</div>';
   } else {
