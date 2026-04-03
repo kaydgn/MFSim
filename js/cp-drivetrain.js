@@ -3,14 +3,15 @@ function getTransferPropertiesHTML(node) {
   var nodeData = node.data || {};
   var isFullThrottle = veActiveModule === 'full-throttle';
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
+  var html = '<div class="sw-panel">';
+
   // Başlık
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+  html += '<div class="sw-status-bar installed">';
+  html += '<span class="sw-status-dot"></span>';
   html += '<span>Transfer Kutusu Verileri</span>';
-  html += '<button onclick="showInfoPopup(\'transferKutusu\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'transferKutusu\')" title="Bilgi">?</button>';
   html += '</div>';
-  
+
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Transfer Case Parametreleri ──
     var ftTrName = nodeData.ftTrName || 'İki Kademeli';
@@ -23,8 +24,9 @@ function getTransferPropertiesHTML(node) {
     }
     var ftTrGears = nodeData.ftTrGears;
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Transfer Case Parametreleri</div>';
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Transfer Case Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
     
     // Transfer Case Preset Seçici
     var ftTrPreset = nodeData.ftTrPreset || '';
@@ -56,11 +58,11 @@ function getTransferPropertiesHTML(node) {
     html += '</tr>';
     
     html += '</table>';
-    html += '</div>';
-    
+    html += '</div></div>';
+
     // ── KADEME TABLOSU ──
     html += '<div style="margin-top:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Kademe Tablosu</div>';
+    html += '<div class="sw-section-title">Kademe Tablosu</div>';
     
     html += '<div style="border:1px solid var(--border-color); border-radius:0; overflow:hidden;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
@@ -87,9 +89,7 @@ function getTransferPropertiesHTML(node) {
     html += '</div>';
     
     // ── BİLGİ NOTU ──
-    html += '<div style="background:var(--bg-secondary); border-radius:0; padding:8px 10px; margin-top:10px; border:1px solid var(--border-color);">';
-    html += '<p style="font-size:0.58rem; color:var(--text-muted); line-height:1.4; margin:0;">⚡ Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır. Sonuçlar her kademe için ayrı iSCAAN tablosu olarak raporlanır.</p>';
-    html += '</div>';
+    html += '<div class="sw-pkg-desc">⚡ Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır. Sonuçlar her kademe için ayrı iSCAAN tablosu olarak raporlanır.</div>';
     
     html += '</div>';
     return html;
@@ -100,7 +100,7 @@ function getTransferPropertiesHTML(node) {
   var selectedMode = nodeData.selectedMode || '';
   var selectedRatio = nodeData.selectedRatio || '';
   
-  html += '<p style="font-size:0.68rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">Transfer kutusu kademelerini ve oranlarını tanımlayınız.</p>';
+  html += '<div class="sw-pkg-desc">Transfer kutusu kademelerini ve oranlarını tanımlayınız.</div>';
   
   // Transfer Kutusu Marka/Model Seçici
   html += '<div style="display:flex; gap:4px; margin-bottom:8px; align-items:center;">';
@@ -142,14 +142,15 @@ function getTransferPropertiesHTML(node) {
   html += '</tbody></table></div>';
   
   // Tablo altı butonlar
-  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0;">';
-  html += '<button onclick="addVETransferRow(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
-  html += '<button onclick="clearVETransferTable(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-warning); color:white; border:none; border-radius:0; cursor:pointer;">Temizle</button>';
+  html += '<div class="sw-btn-row">';
+  html += '<button class="sw-btn sw-btn-primary" onclick="addVETransferRow(\'' + node.id + '\')">+ Satır Ekle</button>';
+  html += '<button class="sw-btn" onclick="clearVETransferTable(\'' + node.id + '\')">Temizle</button>';
   html += '</div>';
   
   // Aktif Kademe Seçimi
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-top:12px;">';
-  html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Aktif Kademe</div>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px; margin-top:12px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aktif Kademe</span></div>';
+  html += '<div class="sw-pkg-body">';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -165,19 +166,20 @@ function getTransferPropertiesHTML(node) {
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-transfer-ratio-' + node.id + '" value="' + selectedRatio + '" readonly style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right; cursor:not-allowed;"></td>';
   html += '</tr>';
   html += '</table>';
-  html += '</div>';
-  
+  html += '</div></div>';
+
   // ===== VERİM =====
   var transferEfficiency = nodeData.efficiency !== undefined ? nodeData.efficiency : 98;
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-top:12px;">';
-  html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Verim</div>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px; margin-top:12px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Verim</span></div>';
+  html += '<div class="sw-pkg-body">';
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:55%; font-weight:500; color:var(--text-secondary);">Transfer kutusu verimi [%]</th>';
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-transfer-eff-' + node.id + '" value="' + transferEfficiency + '" step="0.5" min="80" max="100" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVETransferEffChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.62rem; color:var(--text-muted); background:var(--bg-secondary);">Tipik değer: %95–98</td></tr>';
-  html += '</table></div>';
+  html += '</table></div></div>';
   
   html += '</div>';
   return html;
@@ -393,15 +395,17 @@ function getPropshaftPropertiesHTML(node) {
   var psEff = d.psEff !== undefined ? d.psEff : 98.60;
   var psInertia = d.psInertia !== undefined ? d.psInertia : 0.5;
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+  var html = '<div class="sw-panel">';
+
+  html += '<div class="sw-status-bar installed">';
+  html += '<span class="sw-status-dot"></span>';
   html += '<span>Propşaft Verileri</span>';
-  html += '<button onclick="showInfoPopup(\'propshaftVerileri\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'propshaftVerileri\')" title="Bilgi">?</button>';
   html += '</div>';
-  
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-  html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Propşaft Parametreleri</div>';
+
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Propşaft Parametreleri</span></div>';
+  html += '<div class="sw-pkg-body">';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   
   // Propşaft Adı
@@ -430,7 +434,7 @@ function getPropshaftPropertiesHTML(node) {
   html += '</tr>';
   
   html += '</table>';
-  html += '</div>';
+  html += '</div></div>';
   html += '</div>';
   return html;
 }
@@ -479,12 +483,13 @@ function getDifferentialPropertiesHTML(node) {
 
     // Slave diferansiyel: sadece görsel
     if(!isMaster) {
-      var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-      html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+      var html = '<div class="sw-panel">';
+      html += '<div class="sw-status-bar not-installed">';
+      html += '<span class="sw-status-dot"></span>';
       html += '<span>Diferansiyel Parametreleri</span>';
       html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
       html += '</div>';
-      html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
+      html += '<div class="sw-pkg-desc">';
       html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + (masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
       html += '</div>';
@@ -495,15 +500,16 @@ function getDifferentialPropertiesHTML(node) {
   var diffRatio = nodeData.diffRatio;
   var efficiency = nodeData.efficiency;
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
+  var html = '<div class="sw-panel">';
+
   // Başlık
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+  html += '<div class="sw-status-bar installed">';
+  html += '<span class="sw-status-dot"></span>';
   html += '<span>Diferansiyel Parametreleri</span>';
   if(isFullThrottle) {
     html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
   }
-  html += '<button onclick="showInfoPopup(\'diferansiyel\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;' + (isFullThrottle ? ' margin-left:auto;' : '') + '" title="Bilgi">?</button>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'diferansiyel\')" title="Bilgi">?</button>';
   html += '</div>';
   
   // Tablo
