@@ -348,9 +348,7 @@ function getScenarioPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-status-bar">';
-  html += '<span>Senaryo Parametreleri</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">' + title + '</div>';
   html += '<div class="sw-pkg-desc">Sürüş senaryosunu tanımlayın. Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</div>';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -432,9 +430,7 @@ function getCoastDownPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-status-bar">';
-  html += '<span>📉 Coast-Down Parametreleri</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">' + title + '</div>';
   html += '<div class="sw-pkg-desc">Coast-Down test verilerinden yuvarlanma direnci katsayısı (Crr) hesaplanır. Bu değer Tekerlek bileşenine otomatik aktarılır.</div>';
   
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -521,9 +517,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   var selectedGearRatio = (ftGears.length > 0 && selectedGearIdx < ftGears.length) ? ftGears[selectedGearIdx].ratio : '—';
 
   var html = '<div class="sw-panel">';
-  html += '<div class="sw-status-bar">';
-  html += '<span>Parametreler</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">' + title + '</div>';
 
   // ═══════ ARAÇ PARAMETRELERİ ═══════
   html += '<div class="sw-section-title">Araç Parametreleri</div>';
@@ -1240,10 +1234,7 @@ function getWheelPropertiesHTML(node) {
     // Slave tekerlek: sadece görsel
     if(!isMaster) {
       var html = '<div class="sw-panel">';
-      html += '<div class="sw-status-bar">';
-      html += '<span>Tekerlek Verileri</span>';
-      html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
-      html += '</div>';
+      html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek Verileri <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span></div>';
       html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
       html += '<div class="sw-pkg-body">';
       html += '<div class="sw-pkg-desc">';
@@ -1265,11 +1256,7 @@ function getWheelPropertiesHTML(node) {
     
     var html = '<div class="sw-panel">';
 
-    html += '<div class="sw-status-bar">';
-    html += '<span>Tekerlek Verileri</span>';
-    html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
-    html += '<button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button>';
-    html += '</div>';
+    html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek Verileri <span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
 
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tekerlek Parametreleri</span></div>';
@@ -1359,10 +1346,7 @@ function getWheelPropertiesHTML(node) {
 
   // Slave tekerlek: sadece görsel, veri girdisi yok
   if(!isMaster) {
-    html += '<div class="sw-status-bar">';
-    html += '<span>Tekerlek Parametreleri</span>';
-    html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
-    html += '</div>';
+    html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek Parametreleri <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span></div>';
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-body">';
     html += '<div class="sw-pkg-desc">';
@@ -1380,11 +1364,7 @@ function getWheelPropertiesHTML(node) {
   var html = '<div class="sw-panel">';
 
   // Başlık
-  html += '<div class="sw-status-bar">';
-  html += '<span>Tekerlek Parametreleri</span>';
-  html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
-  html += '<button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button>';
-  html += '</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek Parametreleri <span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
   
   // Lastik Preset Seçici
   var mfTirePresetId = nodeData.tirePreset || '';
@@ -1631,9 +1611,7 @@ function getVehiclePropertiesHTML(node) {
     
     var html = '<div class="sw-panel">';
 
-    html += '<div class="sw-status-bar">';
-    html += '<span>Araç Verileri</span>';
-    html += '</div>';
+    html += '<div class="sw-section-title">' + title + '</div>';
 
     // ── 1. ARAÇ PARAMETRELERİ ──
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
@@ -1711,9 +1689,7 @@ function getVehiclePropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-status-bar">';
-  html += '<span>Araç Parametreleri</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">' + title + '</div>';
 
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
 

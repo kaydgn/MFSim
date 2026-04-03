@@ -10358,16 +10358,6 @@ function getEnginePropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  // ===== MOTOR VERİLERİ — Durum Çubuğu =====
-  var statusClass = hasData ? 'installed' : 'not-installed';
-  var statusText = hasData ? 'Motor Verisi Yüklendi' : 'Motor Verisi Girilmedi';
-  var statusExtra = hasData ? rows.length + ' veri noktası' : '';
-  html += '<div class="sw-status-bar ' + statusClass + '">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>' + statusText + '</span>';
-  if(statusExtra) html += '<span style="margin-left:auto;font-weight:400;font-size:0.56rem;opacity:0.8;">' + statusExtra + '</span>';
-  html += '</div>';
-  
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA ──
     html += '<div class="sw-section-title">Motor Seçimi</div>';
@@ -13031,13 +13021,8 @@ function getShiftControllerPropertiesHTML(node) {
 
   // Status bar — veri durumunu göster
   var hasData = !!(nodes.find(function(n) { return n.type === 'gearbox'; }) && nodes.find(function(n) { return n.type === 'engine'; }));
-  html += '<div class="sw-status-bar ' + (hasData ? 'installed' : 'not-installed') + '">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>' + (hasData ? 'Veri Yüklendi' : 'Veri Girilmedi') + '</span>';
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'shiftController\')" title="Bilgi">?</button>';
-  html += '</div>';
 
-  html += '<div class="sw-section-title">Shift Schedule (Vites Geçiş Takvimi)</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Shift Schedule (Vites Geçiş Takvimi) <button class="sw-info-btn" onclick="showInfoPopup(\'shiftController\')" title="Bilgi">?</button></div>';
 
   html += '<div class="sw-pkg-desc">Bu bileşen otomatik şanzıman vites geçiş stratejisini kontrol eder. Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</div>';
   
@@ -13443,15 +13428,7 @@ function getGearboxPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  // Status bar
-  var hasData = !!(nodeData.ftGearData || nodeData.gearData && nodeData.gearData.length > 0 || nodeData.selectedGearbox);
-  html += '<div class="sw-status-bar ' + (hasData ? 'installed' : 'not-installed') + '">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>' + (hasData ? 'Veri Yüklendi' : 'Veri Girilmedi') + '</span>';
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'sanzimanVerileri\')" title="Bilgi">?</button>';
-  html += '</div>';
-
-  html += '<div class="sw-section-title">Şanzıman Verileri</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Şanzıman Verileri <button class="sw-info-btn" onclick="showInfoPopup(\'sanzimanVerileri\')" title="Bilgi">?</button></div>';
 
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Şanzıman Parametreleri ──
@@ -15364,10 +15341,7 @@ function getECMatchingPropertiesHTML(node) {
   
   // Başlık
   html += '<div class="sw-panel">';
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>⚙ Motor — Konvertör Eşleştirme Analizi</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">Motor — Konvertör Eşleştirme Analizi</div>';
   html += '<div class="sw-pkg-desc">Motor çıkış portuna bağlanmalıdır. Allison TD-148G standardına göre motor-konvertör uyumluluğunu analiz eder. C4/C5/C7/C8/C9/C10 kontrollerini uygular.</div>';
   
   // Motor algılama bilgisi
@@ -15997,10 +15971,7 @@ function getEngineGearboxMatchingHTML(node) {
 
   // Başlık
   html += '<div class="sw-panel">';
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>⚙ Motor — Şanzıman Eşleştirme Analizi</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">Motor — Şanzıman Eşleştirme Analizi</div>';
   html += '<div class="sw-pkg-desc">Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetlerini C9/C10 kriterleri ile analiz eder.</div>';
 
   // Motor bağlantı durumu
@@ -17009,15 +16980,6 @@ function getTorqueConverterPropertiesHTML(node) {
 
   var html = '<div class="sw-panel">';
 
-  // ===== DURUM ÇUBUĞU =====
-  var statusClass = hasData ? 'installed' : 'not-installed';
-  var statusText = hasData ? 'Konvertör Verisi Yüklendi' : 'Konvertör Verisi Girilmedi';
-  html += '<div class="sw-status-bar ' + statusClass + '">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>' + statusText + '</span>';
-  if(hasData) html += '<span style="margin-left:auto;font-weight:400;font-size:0.56rem;opacity:0.8;">' + tcRows.length + ' veri noktası</span>';
-  html += '</div>';
-  
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Konvertör Parametreleri ──
     var tcPresetKey = nodeData.tcPresetKey || '';
@@ -18102,12 +18064,7 @@ function getTransferPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  // Başlık
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>Transfer Kutusu Verileri</span>';
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'transferKutusu\')" title="Bilgi">?</button>';
-  html += '</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Transfer Kutusu <button class="sw-info-btn" onclick="showInfoPopup(\'transferKutusu\')" title="Bilgi">?</button></div>';
 
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Transfer Case Parametreleri ──
@@ -18494,11 +18451,7 @@ function getPropshaftPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>Propşaft Verileri</span>';
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'propshaftVerileri\')" title="Bilgi">?</button>';
-  html += '</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Propşaft <button class="sw-info-btn" onclick="showInfoPopup(\'propshaftVerileri\')" title="Bilgi">?</button></div>';
 
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Propşaft Parametreleri</span></div>';
@@ -18581,11 +18534,7 @@ function getDifferentialPropertiesHTML(node) {
     // Slave diferansiyel: sadece görsel
     if(!isMaster) {
       var html = '<div class="sw-panel">';
-      html += '<div class="sw-status-bar not-installed">';
-      html += '<span class="sw-status-dot"></span>';
-      html += '<span>Diferansiyel Parametreleri</span>';
-      html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
-      html += '</div>';
+      html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.52rem; font-weight:600; padding:1px 5px; border:1px solid var(--border-color);">SLAVE</span></div>';
       html += '<div class="sw-pkg-desc">';
       html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + (masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
@@ -18600,14 +18549,11 @@ function getDifferentialPropertiesHTML(node) {
   var html = '<div class="sw-panel">';
 
   // Başlık
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>Diferansiyel Parametreleri</span>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel';
   if(isFullThrottle) {
-    html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
+    html += ' <span style="background:#f59e0b; color:#000; font-size:0.52rem; font-weight:700; padding:1px 5px;">★ MASTER</span>';
   }
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'diferansiyel\')" title="Bilgi">?</button>';
-  html += '</div>';
+  html += ' <button class="sw-info-btn" onclick="showInfoPopup(\'diferansiyel\')" title="Bilgi">?</button></div>';
   
   // Tablo
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -24601,9 +24547,7 @@ function getScenarioPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-status-bar">';
-  html += '<span>Senaryo Parametreleri</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">' + title + '</div>';
   html += '<div class="sw-pkg-desc">Sürüş senaryosunu tanımlayın. Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</div>';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -24685,9 +24629,7 @@ function getCoastDownPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-status-bar">';
-  html += '<span>📉 Coast-Down Parametreleri</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">' + title + '</div>';
   html += '<div class="sw-pkg-desc">Coast-Down test verilerinden yuvarlanma direnci katsayısı (Crr) hesaplanır. Bu değer Tekerlek bileşenine otomatik aktarılır.</div>';
   
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -24774,9 +24716,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   var selectedGearRatio = (ftGears.length > 0 && selectedGearIdx < ftGears.length) ? ftGears[selectedGearIdx].ratio : '—';
 
   var html = '<div class="sw-panel">';
-  html += '<div class="sw-status-bar">';
-  html += '<span>Parametreler</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">' + title + '</div>';
 
   // ═══════ ARAÇ PARAMETRELERİ ═══════
   html += '<div class="sw-section-title">Araç Parametreleri</div>';
@@ -25493,10 +25433,7 @@ function getWheelPropertiesHTML(node) {
     // Slave tekerlek: sadece görsel
     if(!isMaster) {
       var html = '<div class="sw-panel">';
-      html += '<div class="sw-status-bar">';
-      html += '<span>Tekerlek Verileri</span>';
-      html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
-      html += '</div>';
+      html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek Verileri <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span></div>';
       html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
       html += '<div class="sw-pkg-body">';
       html += '<div class="sw-pkg-desc">';
@@ -25518,11 +25455,7 @@ function getWheelPropertiesHTML(node) {
     
     var html = '<div class="sw-panel">';
 
-    html += '<div class="sw-status-bar">';
-    html += '<span>Tekerlek Verileri</span>';
-    html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
-    html += '<button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button>';
-    html += '</div>';
+    html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek Verileri <span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
 
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tekerlek Parametreleri</span></div>';
@@ -25612,10 +25545,7 @@ function getWheelPropertiesHTML(node) {
 
   // Slave tekerlek: sadece görsel, veri girdisi yok
   if(!isMaster) {
-    html += '<div class="sw-status-bar">';
-    html += '<span>Tekerlek Parametreleri</span>';
-    html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
-    html += '</div>';
+    html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek Parametreleri <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span></div>';
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-body">';
     html += '<div class="sw-pkg-desc">';
@@ -25633,11 +25563,7 @@ function getWheelPropertiesHTML(node) {
   var html = '<div class="sw-panel">';
 
   // Başlık
-  html += '<div class="sw-status-bar">';
-  html += '<span>Tekerlek Parametreleri</span>';
-  html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
-  html += '<button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button>';
-  html += '</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Tekerlek Parametreleri <span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span> <button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button></div>';
   
   // Lastik Preset Seçici
   var mfTirePresetId = nodeData.tirePreset || '';
@@ -25884,9 +25810,7 @@ function getVehiclePropertiesHTML(node) {
     
     var html = '<div class="sw-panel">';
 
-    html += '<div class="sw-status-bar">';
-    html += '<span>Araç Verileri</span>';
-    html += '</div>';
+    html += '<div class="sw-section-title">' + title + '</div>';
 
     // ── 1. ARAÇ PARAMETRELERİ ──
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
@@ -25964,9 +25888,7 @@ function getVehiclePropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-status-bar">';
-  html += '<span>Araç Parametreleri</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">' + title + '</div>';
 
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
 

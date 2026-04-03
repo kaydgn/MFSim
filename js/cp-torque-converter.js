@@ -8,15 +8,6 @@ function getTorqueConverterPropertiesHTML(node) {
 
   var html = '<div class="sw-panel">';
 
-  // ===== DURUM ÇUBUĞU =====
-  var statusClass = hasData ? 'installed' : 'not-installed';
-  var statusText = hasData ? 'Konvertör Verisi Yüklendi' : 'Konvertör Verisi Girilmedi';
-  html += '<div class="sw-status-bar ' + statusClass + '">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>' + statusText + '</span>';
-  if(hasData) html += '<span style="margin-left:auto;font-weight:400;font-size:0.56rem;opacity:0.8;">' + tcRows.length + ' veri noktası</span>';
-  html += '</div>';
-  
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Konvertör Parametreleri ──
     var tcPresetKey = nodeData.tcPresetKey || '';

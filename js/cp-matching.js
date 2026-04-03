@@ -6,10 +6,7 @@ function getECMatchingPropertiesHTML(node) {
   
   // Başlık
   html += '<div class="sw-panel">';
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>⚙ Motor — Konvertör Eşleştirme Analizi</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">Motor — Konvertör Eşleştirme Analizi</div>';
   html += '<div class="sw-pkg-desc">Motor çıkış portuna bağlanmalıdır. Allison TD-148G standardına göre motor-konvertör uyumluluğunu analiz eder. C4/C5/C7/C8/C9/C10 kontrollerini uygular.</div>';
   
   // Motor algılama bilgisi
@@ -639,10 +636,7 @@ function getEngineGearboxMatchingHTML(node) {
 
   // Başlık
   html += '<div class="sw-panel">';
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>⚙ Motor — Şanzıman Eşleştirme Analizi</span>';
-  html += '</div>';
+  html += '<div class="sw-section-title">Motor — Şanzıman Eşleştirme Analizi</div>';
   html += '<div class="sw-pkg-desc">Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetlerini C9/C10 kriterleri ile analiz eder.</div>';
 
   // Motor bağlantı durumu
