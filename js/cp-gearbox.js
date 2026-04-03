@@ -778,17 +778,18 @@ function getGearboxPropertiesHTML(node) {
   html += '</tbody></table></div>';
   
   // Tablo altı butonlar
-  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0;">';
-  html += '<button onclick="addVEGearboxRow(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
-  html += '<button onclick="clearVEGearboxTable(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-warning); color:white; border:none; border-radius:0; cursor:pointer;">Tümünü Sil</button>';
-  html += '<button onclick="saveVEGearboxValues(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-success); color:white; border:none; border-radius:0; cursor:pointer;">💾 Kaydet</button>';
+  html += '<div class="sw-btn-row" style="margin:8px 0;">';
+  html += '<button class="sw-btn sw-btn-outline" onclick="addVEGearboxRow(\'' + node.id + '\')">+ Satır Ekle</button>';
+  html += '<button class="sw-btn sw-btn-danger" onclick="clearVEGearboxTable(\'' + node.id + '\')">Tümünü Sil</button>';
+  html += '<button class="sw-btn sw-btn-primary" onclick="saveVEGearboxValues(\'' + node.id + '\')">Kaydet</button>';
   html += '</div>';
   
   html += '</div>'; // ve-gearbox-data-area
   
   // ===== TEST BAŞLANGIÇ VİTESİ =====
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-top:12px;">';
-  html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:10px; display:flex; align-items:center; gap:6px;">Test Başlangıç Vitesi <button onclick="showInfoPopup(\'testVitesi\')" style="width:16px; height:16px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.6rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button></div>';
+  html += '<div class="sw-pkg-card" style="margin-top:12px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Test Başlangıç Vitesi</span> <button class="sw-info-btn" onclick="showInfoPopup(\'testVitesi\')" title="Bilgi">?</button></div>';
+  html += '<div class="sw-pkg-body">';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -805,22 +806,24 @@ function getGearboxPropertiesHTML(node) {
   html += '</tr>';
   html += '</table>';
   
-  html += '<p style="font-size:0.62rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">Önce yukarıdan şanzıman seçin, ardından test başlangıç vitesini belirleyin.</p>';
-  
-  html += '</div>';
+  html += '<div class="sw-pkg-desc">Önce yukarıdan şanzıman seçin, ardından test başlangıç vitesini belirleyin.</div>';
+
+  html += '</div></div>';
   
   // ===== VERİM =====
   var gearboxEfficiency = nodeData.efficiency !== undefined ? nodeData.efficiency : 97;
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-top:12px;">';
-  html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Verim</div>';
+  html += '<div class="sw-pkg-card" style="margin-top:12px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Verim</span></div>';
+  html += '<div class="sw-pkg-body">';
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:55%; font-weight:500; color:var(--text-secondary);">Şanzıman verimi [%]</th>';
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-gearbox-eff-' + node.id + '" value="' + gearboxEfficiency + '" step="0.5" min="80" max="100" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVEGearboxEffChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.62rem; color:var(--text-muted); background:var(--bg-secondary);">Tipik değer: %95–98</td></tr>';
-  html += '</table></div>';
-  
+  html += '</table>';
+  html += '</div></div>';
+
   } // end motor freni else
 
   html += '</div>';
