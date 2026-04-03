@@ -317,7 +317,7 @@ function veUpdateResultsTree() {
           wizCompGroups[key].push(ws);
         });
 
-        var wizCompOrder = ['engine','torque-converter','gearbox','shift-controller','vehicle','road','solver'];
+        var wizCompOrder = ['engine','torque-converter','gearbox','shift-controller','transfer','propshaft','differential','wheel','vehicle','road','solver'];
         wizCompOrder.forEach(function(compType) {
           var sensors = wizCompGroups[compType];
           if(!sensors || sensors.length === 0) return;
@@ -327,7 +327,7 @@ function veUpdateResultsTree() {
             var engN = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
             if(engN && componentDefs[engN.type]) compName = componentDefs[engN.type].name;
           }
-          var compIcon = compType === 'vehicle' ? '🚗' : compType === 'road' ? '🛤️' : compType === 'solver' ? '📐' : '⚙️';
+          var compIcon = compType === 'vehicle' ? '🚗' : compType === 'road' ? '🛤️' : compType === 'solver' ? '📐' : compType === 'wheel' ? '🛞' : compType === 'transfer' ? '🔀' : compType === 'propshaft' ? '🔩' : '⚙️';
 
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
