@@ -39020,7 +39020,7 @@ function veShowDeployDetails() {
 function _veCheckDeploy(callback) {
   var dot = document.getElementById('ve-deploy-dot');
 
-  fetch('https://api.github.com/repos/' + DEPLOY_REPO + '/actions/runs?per_page=1&branch=main')
+  fetch('https://api.github.com/repos/' + DEPLOY_REPO + '/actions/runs?per_page=1')
     .then(function(r) {
       if(r.status === 403 || r.status === 429) {
         if(dot) { dot.className = 've-deploy-dot ve-deploy-ratelimit'; dot.title = 'API limiti — birkaç dakika bekleyin'; }
