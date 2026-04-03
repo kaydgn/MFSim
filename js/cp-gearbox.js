@@ -1,14 +1,19 @@
 // Şanzıman özellikleri
 // ===== ŞANZIMAN KONTROL ÖZELLİKLERİ =====
 function getShiftControllerPropertiesHTML(node) {
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
-  html += '<span>Shift Schedule (Vites Geçiş Takvimi)</span>';
-  html += '<button onclick="showInfoPopup(\'shiftController\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
+  var html = '<div class="sw-panel">';
+
+  // Status bar — veri durumunu göster
+  var hasData = !!(nodes.find(function(n) { return n.type === 'gearbox'; }) && nodes.find(function(n) { return n.type === 'engine'; }));
+  html += '<div class="sw-status-bar ' + (hasData ? 'installed' : 'not-installed') + '">';
+  html += '<span class="sw-status-dot"></span>';
+  html += '<span>' + (hasData ? 'Veri Yüklendi' : 'Veri Girilmedi') + '</span>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'shiftController\')" title="Bilgi">?</button>';
   html += '</div>';
-  
-  html += '<p style="font-size:0.62rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">Bu bileşen otomatik şanzıman vites geçiş stratejisini kontrol eder. Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</p>';
+
+  html += '<div class="sw-section-title">Shift Schedule (Vites Geçiş Takvimi)</div>';
+
+  html += '<div class="sw-pkg-desc">Bu bileşen otomatik şanzıman vites geçiş stratejisini kontrol eder. Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</div>';
   
   // Şanzıman ve motor bileşenlerinden veri çek
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
@@ -64,26 +69,28 @@ function getShiftControllerPropertiesHTML(node) {
   var N_shift_lockup = shiftRefRPM > 0 ? (shiftRefRPM - lockupOffset) : 0;
   
   // Profil adı
-  html += '<div style="background:var(--bg-secondary); border-radius:0; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border-color);">';
-  html += '<div style="font-size:0.62rem; color:var(--text-muted);">Aktif Shift Profili</div>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aktif Shift Profili</span></div>';
+  html += '<div class="sw-pkg-body">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">' + profileName + '</div>';
   if(shiftRefRPM !== governed) {
     html += '<div style="font-size:0.58rem; color:var(--accent-warning); margin-top:2px;">Shift Ref. RPM: ' + shiftRefRPM + ' (motor governed: ' + governed + ')</div>';
   }
-  html += '</div>';
-  
+  html += '</div></div>';
+
   // Güncelle butonu
-  html += '<div style="display:flex; justify-content:flex-end; margin-bottom:8px;">';
-  html += '<button onclick="veRefreshShiftSchedule()" style="padding:4px 12px; font-size:0.68rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">Güncelle</button>';
+  html += '<div class="sw-btn-row" style="margin:8px 0; justify-content:flex-end;">';
+  html += '<button class="sw-btn sw-btn-primary" onclick="veRefreshShiftSchedule()">Güncelle</button>';
   html += '</div>';
   
   // ── 5a. LOCKUP MODE SHIFT TABLOSU ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-bottom:10px;">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Lockup Mode Shift Tablosu</div>';
-  html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">N<sub>shift_lockup</sub> = N<sub>shift_ref</sub> − Lockup_Shift_Offset = ' + shiftRefRPM + ' − ' + lockupOffset + ' = <b>' + N_shift_lockup + ' rpm</b></p>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Lockup Mode Shift Tablosu</span></div>';
+  html += '<div class="sw-pkg-body">';
+  html += '<div class="sw-pkg-desc">N<sub>shift_lockup</sub> = N<sub>shift_ref</sub> − Lockup_Shift_Offset = ' + shiftRefRPM + ' − ' + lockupOffset + ' = <b>' + N_shift_lockup + ' rpm</b></div>';
   
   if(governed <= 0) {
-    html += '<div style="padding:10px; text-align:center; font-size:0.68rem; color:var(--accent-danger);">⚠ Governed speed tanımlı değil. Önce Motor veya Şanzıman bileşeninde Governed Speed giriniz.</div>';
+    html += '<div class="sw-chain-bar fail">⚠ Governed speed tanımlı değil. Önce Motor veya Şanzıman bileşeninde Governed Speed giriniz.</div>';
   } else {
     // Lockup destekli ileri vitesler (F2 ve üstü lockup shift yapabilir)
     var lockupGears = ftGears.filter(function(g) { return g.lockup && g.name && g.name.charAt(0) === 'F'; });
@@ -121,19 +128,20 @@ function getShiftControllerPropertiesHTML(node) {
     
     // Bilgilendirme
     if(!diffNode || (i_diff <= 1.01 && !diffData.diffRatio)) {
-      html += '<p style="font-size:0.55rem; color:var(--accent-warning); margin-top:6px; line-height:1.3;">⚠ Diferansiyel oranı tanımlı değil (i_diff=' + i_diff.toFixed(3) + '). Diferansiyel bileşenini kontrol edin.</p>';
+      html += '<div class="sw-chain-bar fail">⚠ Diferansiyel oranı tanımlı değil (i_diff=' + i_diff.toFixed(3) + '). Diferansiyel bileşenini kontrol edin.</div>';
     }
   }
   
-  html += '</div>';
-  
+  html += '</div></div>';
+
   // ── 5b. CONVERTER MODE SHIFT MANTIĞI ──
   var shift1C2C_outRatio = spData.shift1C2C_outRatio || 0.2150;
   var shift2C2L_outRatio = spData.shift2C2L_outRatio || 0.3593;
-  
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-bottom:10px;">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Converter Mode Shift Mantığı</div>';
-  html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Converter-mod geçişleri şanzıman çıkış devri oranına (N_out / N_shift_ref) göre belirlenir. Bu oranlar motordan bağımsızdır — farklı governed RPM\'li motorlarda da doğru shift noktası verir.</p>';
+
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Converter Mode Shift Mantığı</span></div>';
+  html += '<div class="sw-pkg-body">';
+  html += '<div class="sw-pkg-desc">Converter-mod geçişleri şanzıman çıkış devri oranına (N_out / N_shift_ref) göre belirlenir. Bu oranlar motordan bağımsızdır — farklı governed RPM\'li motorlarda da doğru shift noktası verir.</div>';
   
   // Parametre tablosu
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.64rem; border:1px solid var(--border-color); margin-bottom:8px;">';
@@ -161,15 +169,16 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
   
   // Bilgi kutusu
-  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0; padding:8px 10px; font-size:0.57rem; color:var(--text-muted); line-height:1.5; font-style:italic;">';
+  html += '<div class="sw-pkg-desc" style="border-left:3px solid var(--accent-primary); padding:8px 10px; font-style:italic;">';
   html += '"N_out = N_engine × SR / i_gear (şanzıman çıkış devri). Geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. 3200 SP: 2 motor, 4000 SP: 3 motor + 2 TC ile doğrulanmış."';
   html += '</div>';
-  
-  html += '</div>';
+
+  html += '</div></div>';
 
   // ── SHIFT CONTROLLER ALGORİTMASI (Görsel) ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-bottom:10px;">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Shift Controller Algoritması</div>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Shift Controller Algoritması</span></div>';
+  html += '<div class="sw-pkg-body">';
   
   var codeStyle = 'background:var(--bg-input); border-radius:0; padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:0.55rem; line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
   
@@ -209,7 +218,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
   
   // Shift sırası görsel
-  html += '<div style="font-size:0.65rem; font-weight:600; color:var(--text-heading); margin-top:10px; margin-bottom:6px;">Shift Sırası — ' + profileName + ', full throttle (WOT):</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Shift Sırası — ' + profileName + ', full throttle (WOT):</div>';
   
   html += '<div style="background:var(--bg-input); border-radius:0; padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:0.55rem; line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
   html += '<span style="color:var(--accent-primary); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>\n';
@@ -221,8 +230,8 @@ function getShiftControllerPropertiesHTML(node) {
   html += ' │ └ N_out >= ' + shift2C2L_outRatio + '×N_ref → lockup engage\n';
   html += ' └ N_out >= ' + shift1C2C_outRatio + '×N_ref → 2C';
   html += '</div>';
-  
-  html += '</div>';
+
+  html += '</div></div>';
 
   html += '</div>';
   return html;
@@ -406,14 +415,18 @@ function getGearboxPropertiesHTML(node) {
   var nodeData = node.data || {};
   var isFullThrottle = veActiveModule === 'full-throttle';
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  // Başlık
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
-  html += '<span>Şanzıman Verileri</span>';
-  html += '<button onclick="showInfoPopup(\'sanzimanVerileri\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
+  var html = '<div class="sw-panel">';
+
+  // Status bar
+  var hasData = !!(nodeData.ftGearData || nodeData.gearData && nodeData.gearData.length > 0 || nodeData.selectedGearbox);
+  html += '<div class="sw-status-bar ' + (hasData ? 'installed' : 'not-installed') + '">';
+  html += '<span class="sw-status-dot"></span>';
+  html += '<span>' + (hasData ? 'Veri Yüklendi' : 'Veri Girilmedi') + '</span>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'sanzimanVerileri\')" title="Bilgi">?</button>';
   html += '</div>';
-  
+
+  html += '<div class="sw-section-title">Şanzıman Verileri</div>';
+
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Şanzıman Parametreleri ──
     var gbName = nodeData.gbName || 'Allison 3200 SP';
@@ -431,8 +444,9 @@ function getGearboxPropertiesHTML(node) {
     }
     var displayGoverned = gbGovernedSpeed || autoGoverned || '';
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Şanzıman Parametreleri</div>';
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Şanzıman Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
     
     // Şanzıman Preset Seçici
     var ftGBPreset = nodeData.ftGBPreset || '';
@@ -451,7 +465,7 @@ function getGearboxPropertiesHTML(node) {
     html += '</div>';
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon &nbsp; <span style="color:#e53e3e;" title="Eksik veri — sadece vites oranları mevcut">★</span> = Eksik veri</div>';
     if(hasEGM) {
-      html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:0; font-size:0.58rem; color:var(--accent-primary); line-height:1.4;">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+      html += '<div class="sw-chain-bar fail">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
 
     // Şanzıman limitleri bilgi kutusu
@@ -665,15 +679,16 @@ function getGearboxPropertiesHTML(node) {
     }
     
     html += '</table>';
-    html += '</div>'; // close Şanzıman Parametreleri
+    html += '</div></div>'; // close sw-pkg-body + sw-pkg-card Şanzıman Parametreleri
     
     // ── VİTES ORANLARI VE VERİMLER TABLOSU ──
     var ftGearData = nodeData.ftGearData || VE_FT_GB_DEFAULT_GEARS;
     var ftGearTableHeight = nodeData.ftGearTableHeight || 220;
     
-    html += '<div style="margin-top:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Vites Oranları ve Verimler</div>';
-    html += '<p style="font-size:0.6rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Her vites için oranı, mekanik verimi ve lockup desteğini girin.</p>';
+    html += '<div class="sw-pkg-card" style="margin-top:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Vites Oranları ve Verimler</span></div>';
+    html += '<div class="sw-pkg-body">';
+    html += '<div class="sw-pkg-desc">Her vites için oranı, mekanik verimi ve lockup desteğini girin.</div>';
     
     html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
@@ -699,12 +714,12 @@ function getGearboxPropertiesHTML(node) {
     html += '</div>';
     
     // Butonlar
-    html += '<div style="display:flex; gap:4px; margin-top:8px;">';
-    html += '<button onclick="addVEFTGearRow(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
-    html += '<button onclick="clearVEFTGearTable(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">Tümünü Sil</button>';
-    html += '<button onclick="saveVEFTGearData(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:#1e5a3f; color:white; border:none; border-radius:0; cursor:pointer;">Kaydet</button>';
+    html += '<div class="sw-btn-row" style="margin:8px 0;">';
+    html += '<button class="sw-btn sw-btn-outline" onclick="addVEFTGearRow(\'' + node.id + '\')">+ Satır Ekle</button>';
+    html += '<button class="sw-btn sw-btn-danger" onclick="clearVEFTGearTable(\'' + node.id + '\')">Tümünü Sil</button>';
+    html += '<button class="sw-btn sw-btn-primary" onclick="saveVEFTGearData(\'' + node.id + '\')">Kaydet</button>';
     html += '</div>';
-    html += '</div>';
+    html += '</div></div>';
   } else {
     // ── MOTOR FRENİ: Mevcut parametreler ──
   var gearData = nodeData.gearData || [];
@@ -714,7 +729,7 @@ function getGearboxPropertiesHTML(node) {
   var tableHeight = nodeData.tableHeight || 150;
   var hasData = gearData.length > 0;
   
-  html += '<p style="font-size:0.68rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">Test sırasında kullanılan şanzımanın vites oranlarını giriniz veya hazır şanzıman seçiniz.</p>';
+  html += '<div class="sw-pkg-desc">Test sırasında kullanılan şanzımanın vites oranlarını giriniz veya hazır şanzıman seçiniz.</div>';
   
   // Şanzıman Seçici
   var _hasEGM2 = nodes.some(function(n) { return n.type === 'engine-gearbox-matching'; });
@@ -733,7 +748,7 @@ function getGearboxPropertiesHTML(node) {
   html += '</div>';
   html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon &nbsp; <span style="color:#e53e3e;" title="Eksik veri — sadece vites oranları mevcut">★</span> = Eksik veri</div>';
   if(_hasEGM2) {
-    html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:0; font-size:0.58rem; color:var(--accent-primary); line-height:1.4;">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+    html += '<div class="sw-chain-bar fail">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
   }
 
   // Veri alanı

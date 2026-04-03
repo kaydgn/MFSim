@@ -346,10 +346,12 @@ function getScenarioPropertiesHTML(node) {
     custom: 'Özel'
   };
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Senaryo Parametreleri</div>';
-  html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:10px; line-height:1.3;">Sürüş senaryosunu tanımlayın. Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</p>';
+  var html = '<div class="sw-panel">';
+
+  html += '<div class="sw-status-bar">';
+  html += '<span>Senaryo Parametreleri</span>';
+  html += '</div>';
+  html += '<div class="sw-pkg-desc">Sürüş senaryosunu tanımlayın. Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</div>';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   
@@ -371,7 +373,7 @@ function getScenarioPropertiesHTML(node) {
   // Yol segmentleri tablosu (haritadan aktarılan)
   var hasSegs = d.roadSegments && d.roadSegments.length > 0;
   html += '<div id="ve-scenario-segments-' + node.id + '" style="margin-top:10px;' + (hasSegs ? '' : ' display:none;') + '">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📐 Yol Eğim Segmentleri</div>';
+  html += '<div class="sw-section-title">📐 Yol Eğim Segmentleri</div>';
   if(hasSegs) {
     html += _veScenarioSegmentsTableHTML(d.roadSegments, true);
   }
@@ -380,14 +382,15 @@ function getScenarioPropertiesHTML(node) {
   // Başlangıç koşulları (segment bazlı sürüş analizi için)
   if(hasSegs) {
     var segInitSpeed = d.segInitSpeed !== undefined ? d.segInitSpeed : 0;
-    html += '<div style="margin-top:10px; padding:10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0;">';
-    html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Başlangıç Koşulları</div>';
+    html += '<div class="sw-pkg-card" style="margin-top:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Başlangıç Koşulları</span></div>';
+    html += '<div class="sw-pkg-body">';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse;">';
     html += '<tr><th style="padding:5px 6px; text-align:left; width:50%; font-weight:500; color:var(--text-secondary);">Başlangıç hızı [km/h]</th>';
     html += '<td style="padding:5px 6px;"><input type="number" id="ve-scenario-seg-initspeed-' + node.id + '" value="' + segInitSpeed + '" step="5" min="0" max="200" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
     html += '</table>';
-    html += '<div style="font-size:0.54rem; color:var(--text-muted); margin-top:4px; line-height:1.3;">Segment bazlı sürüş analizi için aracın ilk segmente giriş hızı.</div>';
-    html += '</div>';
+    html += '<div class="sw-pkg-desc">Segment bazlı sürüş analizi için aracın ilk segmente giriş hızı.</div>';
+    html += '</div></div>'; // sw-pkg-body + sw-pkg-card
   }
 
   html += '</div>';
@@ -427,10 +430,12 @@ function getCoastDownPropertiesHTML(node) {
   var t1 = d.t1 !== undefined ? d.t1 : '';
   var t2 = d.t2 !== undefined ? d.t2 : '';
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">📉 Coast-Down Parametreleri</div>';
-  html += '<p style="font-size:0.56rem; color:var(--text-muted); margin-bottom:10px; line-height:1.3;">Coast-Down test verilerinden yuvarlanma direnci katsayısı (Crr) hesaplanır. Bu değer Tekerlek bileşenine otomatik aktarılır.</p>';
+  var html = '<div class="sw-panel">';
+
+  html += '<div class="sw-status-bar">';
+  html += '<span>📉 Coast-Down Parametreleri</span>';
+  html += '</div>';
+  html += '<div class="sw-pkg-desc">Coast-Down test verilerinden yuvarlanma direnci katsayısı (Crr) hesaplanır. Bu değer Tekerlek bileşenine otomatik aktarılır.</div>';
   
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   
@@ -515,11 +520,13 @@ function getObstacleCrossingPropertiesHTML(node) {
   var selectedGearIdx = d.selectedGearIdx !== undefined ? d.selectedGearIdx : 0;
   var selectedGearRatio = (ftGears.length > 0 && selectedGearIdx < ftGears.length) ? ftGears[selectedGearIdx].ratio : '—';
 
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  html += '<div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Parametreler</div>';
+  var html = '<div class="sw-panel">';
+  html += '<div class="sw-status-bar">';
+  html += '<span>Parametreler</span>';
+  html += '</div>';
 
   // ═══════ ARAÇ PARAMETRELERİ ═══════
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Araç Parametreleri</div>';
+  html += '<div class="sw-section-title">Araç Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
 
   // Araç ağırlığı (otomatik)
@@ -549,7 +556,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '</table>';
 
   // ═══════ ENGEL PARAMETRELERİ ═══════
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Engel Parametreleri</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Engel Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
 
   // Engel yüksekliği h
@@ -561,7 +568,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '</table>';
 
   // ═══════ LASTİK PARAMETRELERİ ═══════
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Lastik Parametreleri</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Lastik Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
 
   // Lastik (otomatik)
@@ -594,7 +601,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '</table>';
 
   // ═══════ AKTARMA PARAMETRELERİ ═══════
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Aktarma Parametreleri</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Aktarma Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
 
   // Kaçıncı vites? (dropdown)
@@ -629,7 +636,7 @@ function getObstacleCrossingPropertiesHTML(node) {
 
   // ═══════ PARAMETRİK ÇALIŞMA ═══════
   var loadTransferEnabled = node.data.loadTransferAnalysis || false;
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Parametrik Çalışma</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Parametrik Çalışma</div>';
 
   html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.66rem; color:var(--text-primary); margin-bottom:6px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
   html += '<input type="checkbox" id="ve-obs-load-transfer-' + nid + '" ' + (loadTransferEnabled ? 'checked' : '') + ' onchange="onVEObstacleCrossingChange(\'' + nid + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
@@ -1232,14 +1239,17 @@ function getWheelPropertiesHTML(node) {
     
     // Slave tekerlek: sadece görsel
     if(!isMaster) {
-      var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-      html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+      var html = '<div class="sw-panel">';
+      html += '<div class="sw-status-bar">';
       html += '<span>Tekerlek Verileri</span>';
       html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
       html += '</div>';
-      html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
+      html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+      html += '<div class="sw-pkg-body">';
+      html += '<div class="sw-pkg-desc">';
       html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + (masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
+      html += '</div></div>';
       html += '</div>';
       return html;
     }
@@ -1253,16 +1263,17 @@ function getWheelPropertiesHTML(node) {
     var ftSurfaceFactor = nodeData.ftSurfaceFactor !== undefined ? nodeData.ftSurfaceFactor : 1.00;
     var revPerKm = ftTireRadius > 0 ? (1000 / (2 * Math.PI * ftTireRadius)).toFixed(1) : '—';
     
-    var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-    
-    html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+    var html = '<div class="sw-panel">';
+
+    html += '<div class="sw-status-bar">';
     html += '<span>Tekerlek Verileri</span>';
     html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
-    html += '<button onclick="showInfoPopup(\'tekerlek\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; margin-left:auto;" title="Bilgi">?</button>';
+    html += '<button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button>';
     html += '</div>';
-    
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Tekerlek Parametreleri</div>';
+
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tekerlek Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
     
     // Lastik Preset Seçici
     var ftTirePresetId = nodeData.ftTirePreset || '';
@@ -1313,13 +1324,13 @@ function getWheelPropertiesHTML(node) {
     html += '</tr>';
     
     html += '</table>';
-    html += '</div>';
-    html += '</div>';
+    html += '</div></div>'; // sw-pkg-body + sw-pkg-card
+    html += '</div>'; // sw-panel
     return html;
   }
-  
+
   // ── MOTOR FRENİ / DİĞER MODÜLLER: Mevcut panel ──
-  
+
   // Master tekerlek kontrolü: eğer master yoksa veya silinmişse, ilk tekerleği master yap
   var wheelNodes = nodes.filter(function(n) { return n.type === 'wheel'; });
   var hasMaster = wheelNodes.some(function(n) { return n.isMasterWheel; });
@@ -1344,17 +1355,20 @@ function getWheelPropertiesHTML(node) {
     nodeData = masterNode.data;
   }
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
+  var html = '<div class="sw-panel">';
+
   // Slave tekerlek: sadece görsel, veri girdisi yok
   if(!isMaster) {
-    html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+    html += '<div class="sw-status-bar">';
     html += '<span>Tekerlek Parametreleri</span>';
     html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
     html += '</div>';
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-body">';
+    html += '<div class="sw-pkg-desc">';
     html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + (masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
     html += '</div>';
+    html += '</div></div>';
     html += '</div>';
     return html;
   }

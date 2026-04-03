@@ -13027,14 +13027,19 @@ function polyFit(x, y, degree) {
 // Şanzıman özellikleri
 // ===== ŞANZIMAN KONTROL ÖZELLİKLERİ =====
 function getShiftControllerPropertiesHTML(node) {
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
-  html += '<span>Shift Schedule (Vites Geçiş Takvimi)</span>';
-  html += '<button onclick="showInfoPopup(\'shiftController\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
+  var html = '<div class="sw-panel">';
+
+  // Status bar — veri durumunu göster
+  var hasData = !!(nodes.find(function(n) { return n.type === 'gearbox'; }) && nodes.find(function(n) { return n.type === 'engine'; }));
+  html += '<div class="sw-status-bar ' + (hasData ? 'installed' : 'not-installed') + '">';
+  html += '<span class="sw-status-dot"></span>';
+  html += '<span>' + (hasData ? 'Veri Yüklendi' : 'Veri Girilmedi') + '</span>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'shiftController\')" title="Bilgi">?</button>';
   html += '</div>';
-  
-  html += '<p style="font-size:0.62rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">Bu bileşen otomatik şanzıman vites geçiş stratejisini kontrol eder. Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</p>';
+
+  html += '<div class="sw-section-title">Shift Schedule (Vites Geçiş Takvimi)</div>';
+
+  html += '<div class="sw-pkg-desc">Bu bileşen otomatik şanzıman vites geçiş stratejisini kontrol eder. Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</div>';
   
   // Şanzıman ve motor bileşenlerinden veri çek
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
@@ -13090,26 +13095,28 @@ function getShiftControllerPropertiesHTML(node) {
   var N_shift_lockup = shiftRefRPM > 0 ? (shiftRefRPM - lockupOffset) : 0;
   
   // Profil adı
-  html += '<div style="background:var(--bg-secondary); border-radius:0; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border-color);">';
-  html += '<div style="font-size:0.62rem; color:var(--text-muted);">Aktif Shift Profili</div>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aktif Shift Profili</span></div>';
+  html += '<div class="sw-pkg-body">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">' + profileName + '</div>';
   if(shiftRefRPM !== governed) {
     html += '<div style="font-size:0.58rem; color:var(--accent-warning); margin-top:2px;">Shift Ref. RPM: ' + shiftRefRPM + ' (motor governed: ' + governed + ')</div>';
   }
-  html += '</div>';
-  
+  html += '</div></div>';
+
   // Güncelle butonu
-  html += '<div style="display:flex; justify-content:flex-end; margin-bottom:8px;">';
-  html += '<button onclick="veRefreshShiftSchedule()" style="padding:4px 12px; font-size:0.68rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">Güncelle</button>';
+  html += '<div class="sw-btn-row" style="margin:8px 0; justify-content:flex-end;">';
+  html += '<button class="sw-btn sw-btn-primary" onclick="veRefreshShiftSchedule()">Güncelle</button>';
   html += '</div>';
   
   // ── 5a. LOCKUP MODE SHIFT TABLOSU ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-bottom:10px;">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Lockup Mode Shift Tablosu</div>';
-  html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">N<sub>shift_lockup</sub> = N<sub>shift_ref</sub> − Lockup_Shift_Offset = ' + shiftRefRPM + ' − ' + lockupOffset + ' = <b>' + N_shift_lockup + ' rpm</b></p>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Lockup Mode Shift Tablosu</span></div>';
+  html += '<div class="sw-pkg-body">';
+  html += '<div class="sw-pkg-desc">N<sub>shift_lockup</sub> = N<sub>shift_ref</sub> − Lockup_Shift_Offset = ' + shiftRefRPM + ' − ' + lockupOffset + ' = <b>' + N_shift_lockup + ' rpm</b></div>';
   
   if(governed <= 0) {
-    html += '<div style="padding:10px; text-align:center; font-size:0.68rem; color:var(--accent-danger);">⚠ Governed speed tanımlı değil. Önce Motor veya Şanzıman bileşeninde Governed Speed giriniz.</div>';
+    html += '<div class="sw-chain-bar fail">⚠ Governed speed tanımlı değil. Önce Motor veya Şanzıman bileşeninde Governed Speed giriniz.</div>';
   } else {
     // Lockup destekli ileri vitesler (F2 ve üstü lockup shift yapabilir)
     var lockupGears = ftGears.filter(function(g) { return g.lockup && g.name && g.name.charAt(0) === 'F'; });
@@ -13147,19 +13154,20 @@ function getShiftControllerPropertiesHTML(node) {
     
     // Bilgilendirme
     if(!diffNode || (i_diff <= 1.01 && !diffData.diffRatio)) {
-      html += '<p style="font-size:0.55rem; color:var(--accent-warning); margin-top:6px; line-height:1.3;">⚠ Diferansiyel oranı tanımlı değil (i_diff=' + i_diff.toFixed(3) + '). Diferansiyel bileşenini kontrol edin.</p>';
+      html += '<div class="sw-chain-bar fail">⚠ Diferansiyel oranı tanımlı değil (i_diff=' + i_diff.toFixed(3) + '). Diferansiyel bileşenini kontrol edin.</div>';
     }
   }
   
-  html += '</div>';
-  
+  html += '</div></div>';
+
   // ── 5b. CONVERTER MODE SHIFT MANTIĞI ──
   var shift1C2C_outRatio = spData.shift1C2C_outRatio || 0.2150;
   var shift2C2L_outRatio = spData.shift2C2L_outRatio || 0.3593;
-  
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-bottom:10px;">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Converter Mode Shift Mantığı</div>';
-  html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Converter-mod geçişleri şanzıman çıkış devri oranına (N_out / N_shift_ref) göre belirlenir. Bu oranlar motordan bağımsızdır — farklı governed RPM\'li motorlarda da doğru shift noktası verir.</p>';
+
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Converter Mode Shift Mantığı</span></div>';
+  html += '<div class="sw-pkg-body">';
+  html += '<div class="sw-pkg-desc">Converter-mod geçişleri şanzıman çıkış devri oranına (N_out / N_shift_ref) göre belirlenir. Bu oranlar motordan bağımsızdır — farklı governed RPM\'li motorlarda da doğru shift noktası verir.</div>';
   
   // Parametre tablosu
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.64rem; border:1px solid var(--border-color); margin-bottom:8px;">';
@@ -13187,15 +13195,16 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
   
   // Bilgi kutusu
-  html += '<div style="background:var(--bg-secondary); border-left:3px solid var(--accent-primary); border-radius:0; padding:8px 10px; font-size:0.57rem; color:var(--text-muted); line-height:1.5; font-style:italic;">';
+  html += '<div class="sw-pkg-desc" style="border-left:3px solid var(--accent-primary); padding:8px 10px; font-style:italic;">';
   html += '"N_out = N_engine × SR / i_gear (şanzıman çıkış devri). Geçiş oranları iSCAAN çapraz validasyondan türetilmiştir. 3200 SP: 2 motor, 4000 SP: 3 motor + 2 TC ile doğrulanmış."';
   html += '</div>';
-  
-  html += '</div>';
+
+  html += '</div></div>';
 
   // ── SHIFT CONTROLLER ALGORİTMASI (Görsel) ──
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-bottom:10px;">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Shift Controller Algoritması</div>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Shift Controller Algoritması</span></div>';
+  html += '<div class="sw-pkg-body">';
   
   var codeStyle = 'background:var(--bg-input); border-radius:0; padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:0.55rem; line-height:1.7; color:var(--text-secondary); overflow-x:auto; white-space:pre;';
   
@@ -13235,7 +13244,7 @@ function getShiftControllerPropertiesHTML(node) {
   html += '</div>';
   
   // Shift sırası görsel
-  html += '<div style="font-size:0.65rem; font-weight:600; color:var(--text-heading); margin-top:10px; margin-bottom:6px;">Shift Sırası — ' + profileName + ', full throttle (WOT):</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Shift Sırası — ' + profileName + ', full throttle (WOT):</div>';
   
   html += '<div style="background:var(--bg-input); border-radius:0; padding:10px; border:1px solid var(--border-color); font-family:monospace; font-size:0.55rem; line-height:1.8; color:var(--text-secondary); overflow-x:auto; white-space:pre;">';
   html += '<span style="color:var(--accent-primary); font-weight:600;">1C → 2C → 2L → 3L → 4L → 5L → 6L</span>\n';
@@ -13247,8 +13256,8 @@ function getShiftControllerPropertiesHTML(node) {
   html += ' │ └ N_out >= ' + shift2C2L_outRatio + '×N_ref → lockup engage\n';
   html += ' └ N_out >= ' + shift1C2C_outRatio + '×N_ref → 2C';
   html += '</div>';
-  
-  html += '</div>';
+
+  html += '</div></div>';
 
   html += '</div>';
   return html;
@@ -13432,14 +13441,18 @@ function getGearboxPropertiesHTML(node) {
   var nodeData = node.data || {};
   var isFullThrottle = veActiveModule === 'full-throttle';
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  // Başlık
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
-  html += '<span>Şanzıman Verileri</span>';
-  html += '<button onclick="showInfoPopup(\'sanzimanVerileri\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
+  var html = '<div class="sw-panel">';
+
+  // Status bar
+  var hasData = !!(nodeData.ftGearData || nodeData.gearData && nodeData.gearData.length > 0 || nodeData.selectedGearbox);
+  html += '<div class="sw-status-bar ' + (hasData ? 'installed' : 'not-installed') + '">';
+  html += '<span class="sw-status-dot"></span>';
+  html += '<span>' + (hasData ? 'Veri Yüklendi' : 'Veri Girilmedi') + '</span>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'sanzimanVerileri\')" title="Bilgi">?</button>';
   html += '</div>';
-  
+
+  html += '<div class="sw-section-title">Şanzıman Verileri</div>';
+
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Şanzıman Parametreleri ──
     var gbName = nodeData.gbName || 'Allison 3200 SP';
@@ -13457,8 +13470,9 @@ function getGearboxPropertiesHTML(node) {
     }
     var displayGoverned = gbGovernedSpeed || autoGoverned || '';
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Şanzıman Parametreleri</div>';
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Şanzıman Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
     
     // Şanzıman Preset Seçici
     var ftGBPreset = nodeData.ftGBPreset || '';
@@ -13477,7 +13491,7 @@ function getGearboxPropertiesHTML(node) {
     html += '</div>';
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon &nbsp; <span style="color:#e53e3e;" title="Eksik veri — sadece vites oranları mevcut">★</span> = Eksik veri</div>';
     if(hasEGM) {
-      html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.2); border-radius:0; font-size:0.58rem; color:var(--accent-primary); line-height:1.4;">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+      html += '<div class="sw-chain-bar fail">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
 
     // Şanzıman limitleri bilgi kutusu
@@ -13691,15 +13705,16 @@ function getGearboxPropertiesHTML(node) {
     }
     
     html += '</table>';
-    html += '</div>'; // close Şanzıman Parametreleri
+    html += '</div></div>'; // close sw-pkg-body + sw-pkg-card Şanzıman Parametreleri
     
     // ── VİTES ORANLARI VE VERİMLER TABLOSU ──
     var ftGearData = nodeData.ftGearData || VE_FT_GB_DEFAULT_GEARS;
     var ftGearTableHeight = nodeData.ftGearTableHeight || 220;
     
-    html += '<div style="margin-top:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Vites Oranları ve Verimler</div>';
-    html += '<p style="font-size:0.6rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Her vites için oranı, mekanik verimi ve lockup desteğini girin.</p>';
+    html += '<div class="sw-pkg-card" style="margin-top:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Vites Oranları ve Verimler</span></div>';
+    html += '<div class="sw-pkg-body">';
+    html += '<div class="sw-pkg-desc">Her vites için oranı, mekanik verimi ve lockup desteğini girin.</div>';
     
     html += '<div id="ve-ftgear-table-wrapper-' + node.id + '" style="max-height:' + ftGearTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
@@ -13725,12 +13740,12 @@ function getGearboxPropertiesHTML(node) {
     html += '</div>';
     
     // Butonlar
-    html += '<div style="display:flex; gap:4px; margin-top:8px;">';
-    html += '<button onclick="addVEFTGearRow(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
-    html += '<button onclick="clearVEFTGearTable(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">Tümünü Sil</button>';
-    html += '<button onclick="saveVEFTGearData(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:#1e5a3f; color:white; border:none; border-radius:0; cursor:pointer;">Kaydet</button>';
+    html += '<div class="sw-btn-row" style="margin:8px 0;">';
+    html += '<button class="sw-btn sw-btn-outline" onclick="addVEFTGearRow(\'' + node.id + '\')">+ Satır Ekle</button>';
+    html += '<button class="sw-btn sw-btn-danger" onclick="clearVEFTGearTable(\'' + node.id + '\')">Tümünü Sil</button>';
+    html += '<button class="sw-btn sw-btn-primary" onclick="saveVEFTGearData(\'' + node.id + '\')">Kaydet</button>';
     html += '</div>';
-    html += '</div>';
+    html += '</div></div>';
   } else {
     // ── MOTOR FRENİ: Mevcut parametreler ──
   var gearData = nodeData.gearData || [];
@@ -15345,10 +15360,12 @@ function getECMatchingPropertiesHTML(node) {
   var html = '';
   
   // Başlık
-  html += '<div style="padding:12px; border-bottom:2px solid var(--accent-warning); background:linear-gradient(135deg, rgba(245,158,11,0.08), transparent);">';
-  html += '<div style="font-size:0.85rem; font-weight:700; color:var(--accent-warning); margin-bottom:4px;">⚙ Motor — Konvertör Eşleştirme Analizi</div>';
-  html += '<div style="font-size:0.62rem; color:var(--text-secondary); line-height:1.4;">Motor çıkış portuna bağlanmalıdır. Allison TD-148G standardına göre motor-konvertör uyumluluğunu analiz eder. C4/C5/C7/C8/C9/C10 kontrollerini uygular.</div>';
+  html += '<div class="sw-panel">';
+  html += '<div class="sw-status-bar installed">';
+  html += '<span class="sw-status-dot"></span>';
+  html += '<span>⚙ Motor — Konvertör Eşleştirme Analizi</span>';
   html += '</div>';
+  html += '<div class="sw-pkg-desc">Motor çıkış portuna bağlanmalıdır. Allison TD-148G standardına göre motor-konvertör uyumluluğunu analiz eder. C4/C5/C7/C8/C9/C10 kontrollerini uygular.</div>';
   
   // Motor algılama bilgisi
   html += '<div id="ecm-engine-info-' + node.id + '" style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';
@@ -15357,15 +15374,17 @@ function getECMatchingPropertiesHTML(node) {
   
   // Şanzıman Türbin Torku Rating
   var turbineRating = nd.turbineRating || 3320;
-  html += '<div style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Şanzıman Türbin Torku Limiti</span></div>';
+  html += '<div class="sw-pkg-body">';
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
   html += '<tr>';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:55%;">Şanzıman Türbin Torku Limiti [N·m]</th>';
   html += '<td style="padding:4px 6px; border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="number" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
-  html += '<tr><td colspan="2" style="padding:4px 8px; font-size:0.58rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir (Net Turbine Torque limiti).</td></tr>';
   html += '</table>';
-  html += '</div>';
+  html += '<div class="sw-pkg-desc">C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir (Net Turbine Torque limiti).</div>';
+  html += '</div></div>';
   
   // Analiz sonuç tablosu
   html += '<div id="ecm-results-' + node.id + '" style="padding:10px 12px;">';
@@ -15373,15 +15392,17 @@ function getECMatchingPropertiesHTML(node) {
   html += '</div>';
   
   // Absorption chart canvas
-  html += '<div style="padding:0 12px 12px 12px;">';
-  html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">';
-  html += '<div style="font-size:0.68rem; font-weight:600; color:var(--text-heading);">Motor Eğrisi × Konvertör Kapasiteleri</div>';
-  html += '<button onclick="ecmExpandChart(\'' + node.id + '\')" title="Diyagramı büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Motor Eğrisi × Konvertör Kapasiteleri</span></div>';
+  html += '<div class="sw-pkg-body">';
+  html += '<div class="sw-btn-row" style="justify-content:flex-end; margin-bottom:6px;">';
+  html += '<button class="sw-btn sw-btn-primary" onclick="ecmExpandChart(\'' + node.id + '\')" title="Diyagramı büyüt">⛶ Büyüt</button>';
   html += '</div>';
   html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color); border-radius:0;"></canvas>';
-  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:4px; line-height:1.3;">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0.80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0.80 SR çalışma noktalarını verir.</div>';
-  html += '</div>';
-  
+  html += '<div class="sw-pkg-desc">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0.80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0.80 SR çalışma noktalarını verir.</div>';
+  html += '</div></div>';
+  html += '</div>'; // close sw-panel
+
   return html;
 }
 
@@ -15476,13 +15497,14 @@ function runECMatchingAnalysis(nodeId) {
       c9c10html += '</span>';
       c9c10html += '</div>';
     }
-    infoEl.innerHTML = '<div style="background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0; padding:8px 10px;">' +
-      '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">🔧 ' + engineName + '</div>' +
+    infoEl.innerHTML = '<div class="sw-pkg-card" style="margin-bottom:10px;">' +
+      '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">🔧 ' + engineName + '</span></div>' +
+      '<div class="sw-pkg-body">' +
       '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
       '<span>Peak Tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
       '<span>Governed: <b style="color:var(--text-primary);">' + governed + ' rpm</b></span>' +
       '<span>Pump Düşüm: <b style="color:var(--text-primary);">TC\'ye bağlı</b></span>' +
-      '</div>' + c9c10html + '</div>';
+      '</div>' + c9c10html + '</div></div>';
   }
   
   // Motor tork interpolasyon fonksiyonu
@@ -15640,9 +15662,9 @@ function runECMatchingAnalysis(nodeId) {
   if(resultsEl) {
     var h = '';
     h += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">';
-    h += '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading);">Konvertör Uyumluluk Tablosu</div>';
+    h += '<div class="sw-section-title">Konvertör Uyumluluk Tablosu</div>';
     h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.ecm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.ecm-info-tip\').style.display=\'none\'">';
-    h += '<div style="width:16px; height:16px; border-radius:50%; background:var(--bg-tertiary); border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; cursor:help; font-size:0.55rem; font-weight:700; color:var(--text-secondary); transition:all 0.15s;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-tertiary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">i</div>';
+    h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
     h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:0.65rem;">Kontrol Kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).<br>';
@@ -15718,7 +15740,7 @@ function runECMatchingAnalysis(nodeId) {
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">' + (r.c8ok ? '✅' : '⚠️') + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">';
       if(r.status !== 'unacceptable') {
-        h += '<button onclick="ecmSelectConverter(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:2px 8px; font-size:0.58rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer; white-space:nowrap;" title="Bu konvertörü TC bileşenine yükle">Seç</button>';
+        h += '<button class="sw-btn sw-btn-primary" onclick="ecmSelectConverter(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:2px 8px; font-size:0.58rem;" title="Bu konvertörü TC bileşenine yükle">Seç</button>';
       }
       h += '</td>';
       h += '</tr>';
@@ -15728,14 +15750,14 @@ function runECMatchingAnalysis(nodeId) {
     
     // Önerilen konvertör özeti
     if(results.length > 0 && results[0].status === 'recommended') {
-      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.25); border-radius:0;">';
-      h += '<div style="font-size:0.7rem; font-weight:700; color:var(--accent-success);">🏆 Önerilen: ' + results[0].name + '</div>';
-      h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">Stall: ' + results[0].stallSpeed.toFixed(0) + ' rpm | SR@Gov: ' + results[0].srGov.toFixed(3) + ' | T_turb: ' + results[0].tTurbineStall.toFixed(0) + ' N·m</div>';
+      h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-success);">';
+      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-success);">🏆 Önerilen: ' + results[0].name + '</span></div>';
+      h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">Stall: ' + results[0].stallSpeed.toFixed(0) + ' rpm | SR@Gov: ' + results[0].srGov.toFixed(3) + ' | T_turb: ' + results[0].tTurbineStall.toFixed(0) + ' N·m</div></div>';
       h += '</div>';
     } else if(results.length > 0) {
-      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(217,119,6,0.08); border:1px solid rgba(217,119,6,0.25); border-radius:0;">';
-      h += '<div style="font-size:0.7rem; font-weight:700; color:var(--accent-warning);">⚠ Tam uyumlu konvertör bulunamadı</div>';
-      h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">En iyi seçenek: ' + results[0].name + ' (SR@Gov: ' + results[0].srGov.toFixed(3) + '). Lockup modunda çalışacağından performans kabul edilebilir olabilir.</div>';
+      h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-warning);">';
+      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-warning);">⚠ Tam uyumlu konvertör bulunamadı</span></div>';
+      h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">En iyi seçenek: ' + results[0].name + ' (SR@Gov: ' + results[0].srGov.toFixed(3) + '). Lockup modunda çalışacağından performans kabul edilebilir olabilir.</div></div>';
       h += '</div>';
     }
     
@@ -15971,10 +15993,12 @@ function getEngineGearboxMatchingHTML(node) {
   var html = '';
 
   // Başlık
-  html += '<div style="padding:12px; border-bottom:2px solid var(--accent-primary); background:linear-gradient(135deg, rgba(59,130,246,0.08), transparent);">';
-  html += '<div style="font-size:0.85rem; font-weight:700; color:var(--accent-primary); margin-bottom:4px;">⚙ Motor — Şanzıman Eşleştirme Analizi</div>';
-  html += '<div style="font-size:0.62rem; color:var(--text-secondary); line-height:1.4;">Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetlerini C9/C10 kriterleri ile analiz eder.</div>';
+  html += '<div class="sw-panel">';
+  html += '<div class="sw-status-bar installed">';
+  html += '<span class="sw-status-dot"></span>';
+  html += '<span>⚙ Motor — Şanzıman Eşleştirme Analizi</span>';
   html += '</div>';
+  html += '<div class="sw-pkg-desc">Motor çıkış portuna bağlanmalıdır. Motor verilerine göre uyumlu şanzıman presetlerini C9/C10 kriterleri ile analiz eder.</div>';
 
   // Motor bağlantı durumu
   html += '<div id="egm-engine-info-' + node.id + '" style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';
@@ -15985,6 +16009,8 @@ function getEngineGearboxMatchingHTML(node) {
   html += '<div id="egm-results-' + node.id + '" style="padding:10px 12px;">';
   html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.68rem;">Analiz bekleniyor... Motor bileşenine bağlandığında otomatik çalışır.</div>';
   html += '</div>';
+
+  html += '</div>'; // close sw-panel
 
   return html;
 }
@@ -18070,14 +18096,15 @@ function getTransferPropertiesHTML(node) {
   var nodeData = node.data || {};
   var isFullThrottle = veActiveModule === 'full-throttle';
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
+  var html = '<div class="sw-panel">';
+
   // Başlık
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+  html += '<div class="sw-status-bar installed">';
+  html += '<span class="sw-status-dot"></span>';
   html += '<span>Transfer Kutusu Verileri</span>';
-  html += '<button onclick="showInfoPopup(\'transferKutusu\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'transferKutusu\')" title="Bilgi">?</button>';
   html += '</div>';
-  
+
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Transfer Case Parametreleri ──
     var ftTrName = nodeData.ftTrName || 'İki Kademeli';
@@ -18090,8 +18117,9 @@ function getTransferPropertiesHTML(node) {
     }
     var ftTrGears = nodeData.ftTrGears;
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Transfer Case Parametreleri</div>';
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Transfer Case Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
     
     // Transfer Case Preset Seçici
     var ftTrPreset = nodeData.ftTrPreset || '';
@@ -18123,11 +18151,11 @@ function getTransferPropertiesHTML(node) {
     html += '</tr>';
     
     html += '</table>';
-    html += '</div>';
-    
+    html += '</div></div>';
+
     // ── KADEME TABLOSU ──
     html += '<div style="margin-top:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Kademe Tablosu</div>';
+    html += '<div class="sw-section-title">Kademe Tablosu</div>';
     
     html += '<div style="border:1px solid var(--border-color); border-radius:0; overflow:hidden;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
@@ -18154,9 +18182,7 @@ function getTransferPropertiesHTML(node) {
     html += '</div>';
     
     // ── BİLGİ NOTU ──
-    html += '<div style="background:var(--bg-secondary); border-radius:0; padding:8px 10px; margin-top:10px; border:1px solid var(--border-color);">';
-    html += '<p style="font-size:0.58rem; color:var(--text-muted); line-height:1.4; margin:0;">⚡ Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır. Sonuçlar her kademe için ayrı iSCAAN tablosu olarak raporlanır.</p>';
-    html += '</div>';
+    html += '<div class="sw-pkg-desc">⚡ Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır. Sonuçlar her kademe için ayrı iSCAAN tablosu olarak raporlanır.</div>';
     
     html += '</div>';
     return html;
@@ -18167,7 +18193,7 @@ function getTransferPropertiesHTML(node) {
   var selectedMode = nodeData.selectedMode || '';
   var selectedRatio = nodeData.selectedRatio || '';
   
-  html += '<p style="font-size:0.68rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">Transfer kutusu kademelerini ve oranlarını tanımlayınız.</p>';
+  html += '<div class="sw-pkg-desc">Transfer kutusu kademelerini ve oranlarını tanımlayınız.</div>';
   
   // Transfer Kutusu Marka/Model Seçici
   html += '<div style="display:flex; gap:4px; margin-bottom:8px; align-items:center;">';
@@ -18209,14 +18235,15 @@ function getTransferPropertiesHTML(node) {
   html += '</tbody></table></div>';
   
   // Tablo altı butonlar
-  html += '<div style="display:flex; gap:4px; background:var(--bg-tertiary); padding:6px; border:1px solid var(--border-color); border-radius:0;">';
-  html += '<button onclick="addVETransferRow(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
-  html += '<button onclick="clearVETransferTable(\'' + node.id + '\')" style="flex:1; padding:4px 8px; font-size:0.65rem; background:var(--accent-warning); color:white; border:none; border-radius:0; cursor:pointer;">Temizle</button>';
+  html += '<div class="sw-btn-row">';
+  html += '<button class="sw-btn sw-btn-primary" onclick="addVETransferRow(\'' + node.id + '\')">+ Satır Ekle</button>';
+  html += '<button class="sw-btn" onclick="clearVETransferTable(\'' + node.id + '\')">Temizle</button>';
   html += '</div>';
   
   // Aktif Kademe Seçimi
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-top:12px;">';
-  html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Aktif Kademe</div>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px; margin-top:12px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aktif Kademe</span></div>';
+  html += '<div class="sw-pkg-body">';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -18232,19 +18259,20 @@ function getTransferPropertiesHTML(node) {
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-transfer-ratio-' + node.id + '" value="' + selectedRatio + '" readonly style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right; cursor:not-allowed;"></td>';
   html += '</tr>';
   html += '</table>';
-  html += '</div>';
-  
+  html += '</div></div>';
+
   // ===== VERİM =====
   var transferEfficiency = nodeData.efficiency !== undefined ? nodeData.efficiency : 98;
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-top:12px;">';
-  html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Verim</div>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px; margin-top:12px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Verim</span></div>';
+  html += '<div class="sw-pkg-body">';
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:55%; font-weight:500; color:var(--text-secondary);">Transfer kutusu verimi [%]</th>';
   html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-transfer-eff-' + node.id + '" value="' + transferEfficiency + '" step="0.5" min="80" max="100" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVETransferEffChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.62rem; color:var(--text-muted); background:var(--bg-secondary);">Tipik değer: %95–98</td></tr>';
-  html += '</table></div>';
+  html += '</table></div></div>';
   
   html += '</div>';
   return html;
@@ -18460,15 +18488,17 @@ function getPropshaftPropertiesHTML(node) {
   var psEff = d.psEff !== undefined ? d.psEff : 98.60;
   var psInertia = d.psInertia !== undefined ? d.psInertia : 0.5;
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+  var html = '<div class="sw-panel">';
+
+  html += '<div class="sw-status-bar installed">';
+  html += '<span class="sw-status-dot"></span>';
   html += '<span>Propşaft Verileri</span>';
-  html += '<button onclick="showInfoPopup(\'propshaftVerileri\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'propshaftVerileri\')" title="Bilgi">?</button>';
   html += '</div>';
-  
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-  html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Propşaft Parametreleri</div>';
+
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Propşaft Parametreleri</span></div>';
+  html += '<div class="sw-pkg-body">';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   
   // Propşaft Adı
@@ -18497,7 +18527,7 @@ function getPropshaftPropertiesHTML(node) {
   html += '</tr>';
   
   html += '</table>';
-  html += '</div>';
+  html += '</div></div>';
   html += '</div>';
   return html;
 }
@@ -18546,12 +18576,13 @@ function getDifferentialPropertiesHTML(node) {
 
     // Slave diferansiyel: sadece görsel
     if(!isMaster) {
-      var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-      html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+      var html = '<div class="sw-panel">';
+      html += '<div class="sw-status-bar not-installed">';
+      html += '<span class="sw-status-dot"></span>';
       html += '<span>Diferansiyel Parametreleri</span>';
       html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
       html += '</div>';
-      html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
+      html += '<div class="sw-pkg-desc">';
       html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + (masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
       html += '</div>';
@@ -18562,15 +18593,16 @@ function getDifferentialPropertiesHTML(node) {
   var diffRatio = nodeData.diffRatio;
   var efficiency = nodeData.efficiency;
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
+  var html = '<div class="sw-panel">';
+
   // Başlık
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+  html += '<div class="sw-status-bar installed">';
+  html += '<span class="sw-status-dot"></span>';
   html += '<span>Diferansiyel Parametreleri</span>';
   if(isFullThrottle) {
     html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
   }
-  html += '<button onclick="showInfoPopup(\'diferansiyel\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;' + (isFullThrottle ? ' margin-left:auto;' : '') + '" title="Bilgi">?</button>';
+  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'diferansiyel\')" title="Bilgi">?</button>';
   html += '</div>';
   
   // Tablo
@@ -24563,10 +24595,12 @@ function getScenarioPropertiesHTML(node) {
     custom: 'Özel'
   };
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Senaryo Parametreleri</div>';
-  html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:10px; line-height:1.3;">Sürüş senaryosunu tanımlayın. Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</p>';
+  var html = '<div class="sw-panel">';
+
+  html += '<div class="sw-status-bar">';
+  html += '<span>Senaryo Parametreleri</span>';
+  html += '</div>';
+  html += '<div class="sw-pkg-desc">Sürüş senaryosunu tanımlayın. Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</div>';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   
@@ -24588,7 +24622,7 @@ function getScenarioPropertiesHTML(node) {
   // Yol segmentleri tablosu (haritadan aktarılan)
   var hasSegs = d.roadSegments && d.roadSegments.length > 0;
   html += '<div id="ve-scenario-segments-' + node.id + '" style="margin-top:10px;' + (hasSegs ? '' : ' display:none;') + '">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📐 Yol Eğim Segmentleri</div>';
+  html += '<div class="sw-section-title">📐 Yol Eğim Segmentleri</div>';
   if(hasSegs) {
     html += _veScenarioSegmentsTableHTML(d.roadSegments, true);
   }
@@ -24597,14 +24631,15 @@ function getScenarioPropertiesHTML(node) {
   // Başlangıç koşulları (segment bazlı sürüş analizi için)
   if(hasSegs) {
     var segInitSpeed = d.segInitSpeed !== undefined ? d.segInitSpeed : 0;
-    html += '<div style="margin-top:10px; padding:10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0;">';
-    html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Başlangıç Koşulları</div>';
+    html += '<div class="sw-pkg-card" style="margin-top:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Başlangıç Koşulları</span></div>';
+    html += '<div class="sw-pkg-body">';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse;">';
     html += '<tr><th style="padding:5px 6px; text-align:left; width:50%; font-weight:500; color:var(--text-secondary);">Başlangıç hızı [km/h]</th>';
     html += '<td style="padding:5px 6px;"><input type="number" id="ve-scenario-seg-initspeed-' + node.id + '" value="' + segInitSpeed + '" step="5" min="0" max="200" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVEScenarioChange(\'' + node.id + '\')"></td></tr>';
     html += '</table>';
-    html += '<div style="font-size:0.54rem; color:var(--text-muted); margin-top:4px; line-height:1.3;">Segment bazlı sürüş analizi için aracın ilk segmente giriş hızı.</div>';
-    html += '</div>';
+    html += '<div class="sw-pkg-desc">Segment bazlı sürüş analizi için aracın ilk segmente giriş hızı.</div>';
+    html += '</div></div>'; // sw-pkg-body + sw-pkg-card
   }
 
   html += '</div>';
@@ -24644,10 +24679,12 @@ function getCoastDownPropertiesHTML(node) {
   var t1 = d.t1 !== undefined ? d.t1 : '';
   var t2 = d.t2 !== undefined ? d.t2 : '';
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">📉 Coast-Down Parametreleri</div>';
-  html += '<p style="font-size:0.56rem; color:var(--text-muted); margin-bottom:10px; line-height:1.3;">Coast-Down test verilerinden yuvarlanma direnci katsayısı (Crr) hesaplanır. Bu değer Tekerlek bileşenine otomatik aktarılır.</p>';
+  var html = '<div class="sw-panel">';
+
+  html += '<div class="sw-status-bar">';
+  html += '<span>📉 Coast-Down Parametreleri</span>';
+  html += '</div>';
+  html += '<div class="sw-pkg-desc">Coast-Down test verilerinden yuvarlanma direnci katsayısı (Crr) hesaplanır. Bu değer Tekerlek bileşenine otomatik aktarılır.</div>';
   
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   
@@ -24732,11 +24769,13 @@ function getObstacleCrossingPropertiesHTML(node) {
   var selectedGearIdx = d.selectedGearIdx !== undefined ? d.selectedGearIdx : 0;
   var selectedGearRatio = (ftGears.length > 0 && selectedGearIdx < ftGears.length) ? ftGears[selectedGearIdx].ratio : '—';
 
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  html += '<div style="font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; margin-bottom:8px;">Parametreler</div>';
+  var html = '<div class="sw-panel">';
+  html += '<div class="sw-status-bar">';
+  html += '<span>Parametreler</span>';
+  html += '</div>';
 
   // ═══════ ARAÇ PARAMETRELERİ ═══════
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Araç Parametreleri</div>';
+  html += '<div class="sw-section-title">Araç Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
 
   // Araç ağırlığı (otomatik)
@@ -24766,7 +24805,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '</table>';
 
   // ═══════ ENGEL PARAMETRELERİ ═══════
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Engel Parametreleri</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Engel Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
 
   // Engel yüksekliği h
@@ -24778,7 +24817,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '</table>';
 
   // ═══════ LASTİK PARAMETRELERİ ═══════
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Lastik Parametreleri</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Lastik Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
 
   // Lastik (otomatik)
@@ -24811,7 +24850,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '</table>';
 
   // ═══════ AKTARMA PARAMETRELERİ ═══════
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Aktarma Parametreleri</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Aktarma Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
 
   // Kaçıncı vites? (dropdown)
@@ -24846,7 +24885,7 @@ function getObstacleCrossingPropertiesHTML(node) {
 
   // ═══════ PARAMETRİK ÇALIŞMA ═══════
   var loadTransferEnabled = node.data.loadTransferAnalysis || false;
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px; margin-top:10px;">Parametrik Çalışma</div>';
+  html += '<div class="sw-section-title" style="margin-top:10px;">Parametrik Çalışma</div>';
 
   html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.66rem; color:var(--text-primary); margin-bottom:6px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
   html += '<input type="checkbox" id="ve-obs-load-transfer-' + nid + '" ' + (loadTransferEnabled ? 'checked' : '') + ' onchange="onVEObstacleCrossingChange(\'' + nid + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
@@ -25449,14 +25488,17 @@ function getWheelPropertiesHTML(node) {
     
     // Slave tekerlek: sadece görsel
     if(!isMaster) {
-      var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-      html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+      var html = '<div class="sw-panel">';
+      html += '<div class="sw-status-bar">';
       html += '<span>Tekerlek Verileri</span>';
       html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
       html += '</div>';
-      html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; font-size:0.65rem; color:var(--text-muted); line-height:1.5;">';
+      html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+      html += '<div class="sw-pkg-body">';
+      html += '<div class="sw-pkg-desc">';
       html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + (masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
+      html += '</div></div>';
       html += '</div>';
       return html;
     }
@@ -25470,16 +25512,17 @@ function getWheelPropertiesHTML(node) {
     var ftSurfaceFactor = nodeData.ftSurfaceFactor !== undefined ? nodeData.ftSurfaceFactor : 1.00;
     var revPerKm = ftTireRadius > 0 ? (1000 / (2 * Math.PI * ftTireRadius)).toFixed(1) : '—';
     
-    var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-    
-    html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+    var html = '<div class="sw-panel">';
+
+    html += '<div class="sw-status-bar">';
     html += '<span>Tekerlek Verileri</span>';
     html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
-    html += '<button onclick="showInfoPopup(\'tekerlek\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; margin-left:auto;" title="Bilgi">?</button>';
+    html += '<button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button>';
     html += '</div>';
-    
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Tekerlek Parametreleri</div>';
+
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tekerlek Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
     
     // Lastik Preset Seçici
     var ftTirePresetId = nodeData.ftTirePreset || '';
@@ -25530,13 +25573,13 @@ function getWheelPropertiesHTML(node) {
     html += '</tr>';
     
     html += '</table>';
-    html += '</div>';
-    html += '</div>';
+    html += '</div></div>'; // sw-pkg-body + sw-pkg-card
+    html += '</div>'; // sw-panel
     return html;
   }
-  
+
   // ── MOTOR FRENİ / DİĞER MODÜLLER: Mevcut panel ──
-  
+
   // Master tekerlek kontrolü: eğer master yoksa veya silinmişse, ilk tekerleği master yap
   var wheelNodes = nodes.filter(function(n) { return n.type === 'wheel'; });
   var hasMaster = wheelNodes.some(function(n) { return n.isMasterWheel; });
