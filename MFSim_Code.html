@@ -16974,12 +16974,18 @@ function getTorqueConverterPropertiesHTML(node) {
   var nodeData = node.data || {};
   var isFullThrottle = veActiveModule === 'full-throttle';
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  // Başlık
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
-  html += '<span>Tork Konvertörü</span>';
-  html += '<button onclick="showInfoPopup(\'torkKonvertoru\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center;" title="Bilgi">?</button>';
+  var tcRows = nodeData.tcData || [];
+  var hasData = tcRows.length > 0;
+
+  var html = '<div class="sw-panel">';
+
+  // ===== DURUM ÇUBUĞU =====
+  var statusClass = hasData ? 'installed' : 'not-installed';
+  var statusText = hasData ? 'Konvertör Verisi Yüklendi' : 'Konvertör Verisi Girilmedi';
+  html += '<div class="sw-status-bar ' + statusClass + '">';
+  html += '<span class="sw-status-dot"></span>';
+  html += '<span>' + statusText + '</span>';
+  if(hasData) html += '<span style="margin-left:auto;font-weight:400;font-size:0.56rem;opacity:0.8;">' + tcRows.length + ' veri noktası</span>';
   html += '</div>';
   
   if(isFullThrottle) {
@@ -17000,10 +17006,12 @@ function getTorqueConverterPropertiesHTML(node) {
     }
     var _familyLabels = {'1000_2000': '1000/2000 Serisi', '3000': '3000 Serisi', '4000': '4000 Serisi'};
     
+    html += '<div class="sw-section-title">Konvertör Seçimi</div>';
+
     var hasECM = nodes.some(function(n) { return n.type === 'ec-matching'; });
     html += '<div style="margin-bottom:10px;">';
     if(hasECM) {
-      html += '<div style="padding:5px 8px; margin-bottom:6px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.2); border-radius:0; font-size:0.58rem; color:var(--accent-warning); line-height:1.4;">🔒 Konvertör seçimi Motor-Konvertör Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+      html += '<div class="sw-chain-bar fail" style="margin-bottom:6px;">🔒 Konvertör seçimi Motor-Konvertör Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
     html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:0.7rem; padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
     html += '<option value="">-- Konvertör Seçiniz --</option>';
@@ -17046,8 +17054,9 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div id="ve-tc-desc-' + node.id + '" style="font-size:0.52rem; color:var(--text-muted); margin-top:3px; line-height:1.3; min-height:12px;">' + selDesc + '</div>';
     html += '</div>';
     
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Konvertör Parametreleri</div>';
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Konvertör Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -17056,14 +17065,14 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</tr>';
     
     html += '</table>';
-    html += '</div>';
-    
+    html += '</div></div>'; // sw-pkg-body + sw-pkg-card
+
     // ── TC VERİ TABLOSU: SR, K_pump, τ ──
-    var tcRows = nodeData.tcData || [];
     var tcTableHeight = nodeData.tcTableHeight || 180;
-    
+
     html += '<div id="ve-tc-data-area-' + node.id + '" style="margin-top:10px;">';
-    html += '<p style="font-size:0.62rem; color:var(--text-muted); margin-bottom:8px; line-height:1.4;">Tork konvertörünün absorption characteristics değerlerini girin. <b>SR</b> (Speed Ratio) = Türbin Devri / Pump Devri. <b>K<sub>pump</sub></b> = Pump K-Factor [rpm/√(N·m)]. <b>τ</b> = Tork Oranı (Türbin Torku / Pump Torku).</p>';
+    html += '<div class="sw-section-title">Konvertör Veri Tablosu</div>';
+    html += '<div class="sw-pkg-desc" style="margin-bottom:8px;"><b>SR</b> = Türbin/Pump Devir Oranı. <b>K<sub>pump</sub></b> = Pump K-Factor [rpm/√(N·m)]. <b>τ</b> = Tork Oranı.</div>';
     html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:0; border-bottom:none;">';
     html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
@@ -17090,41 +17099,43 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</div>';
     
     // Butonlar
-    html += '<div style="display:flex; gap:4px; margin-top:8px;">';
-    html += '<button onclick="addVETCRow(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">+ Satır Ekle</button>';
-    html += '<button onclick="clearVETCTable(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">Tümünü Sil</button>';
-    html += '<button onclick="deleteVETCData(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer;">Veriyi Temizle</button>';
-    html += '<button onclick="saveVETCData(\'' + node.id + '\')" style="flex:1; padding:5px; font-size:0.68rem; background:#1e5a3f; color:white; border:none; border-radius:0; cursor:pointer;">Kaydet</button>';
+    html += '<div class="sw-btn-row" style="margin:8px 0;">';
+    html += '<button class="sw-btn sw-btn-outline" onclick="addVETCRow(\'' + node.id + '\')">+ Satır Ekle</button>';
+    html += '<button class="sw-btn sw-btn-outline" onclick="clearVETCTable(\'' + node.id + '\')">Tümünü Sil</button>';
+    html += '<button class="sw-btn sw-btn-danger" onclick="deleteVETCData(\'' + node.id + '\')">Veriyi Temizle</button>';
+    html += '<button class="sw-btn sw-btn-primary" onclick="saveVETCData(\'' + node.id + '\')">Kaydet</button>';
     html += '</div>';
-    
+
     // Güncelle butonu
-    html += '<div style="display:flex; justify-content:flex-end; margin-top:10px; margin-bottom:2px;">';
-    html += '<button onclick="updateVETCCharts(\'' + node.id + '\')" style="padding:4px 12px; font-size:0.68rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer;">Güncelle</button>';
+    html += '<div class="sw-btn-row" style="justify-content:flex-end; margin-bottom:2px;">';
+    html += '<button class="sw-btn sw-btn-primary" style="font-size:0.56rem;padding:3px 10px;" onclick="updateVETCCharts(\'' + node.id + '\')">Güncelle</button>';
     html += '</div>';
     
     // ── GRAFİK 1: Tork Oranı & Verim Eğrisi ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-top:12px;">';
-    html += '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">Tork Oranı & Verim Eğrisi</div>';
-    html += '<div style="position:relative; background:var(--bg-input); border-radius:0; border:1px solid var(--border-color); padding:4px;">';
+    html += '<div class="sw-pkg-card" style="margin-top:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tork Oranı & Verim Eğrisi</span></div>';
+    html += '<div class="sw-pkg-body">';
+    html += '<div style="position:relative; background:var(--bg-input); border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-tc-chart-tau-' + node.id + '" style="width:100%; height:200px;"></canvas>';
     html += '</div>';
-    html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.6rem; color:var(--text-muted);">';
+    html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.56rem; color:var(--text-muted);">';
     html += '<span style="color:#4aa3ff;">● τ Tork Oranı</span>';
     html += '<span style="color:#ff6b6b;">● η Verim [%]</span>';
     html += '<span style="color:var(--text-muted); opacity:0.5;">┆ Coupling (SR=0.88)</span>';
     html += '</div>';
-    html += '</div>';
+    html += '</div></div>';
     
     // ── GRAFİK 2: K_pump Eğrisi ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-top:10px;">';
-    html += '<div style="font-size:0.7rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">K<sub>pump</sub> Eğrisi</div>';
-    html += '<div style="position:relative; background:var(--bg-input); border-radius:0; border:1px solid var(--border-color); padding:4px;">';
+    html += '<div class="sw-pkg-card" style="margin-top:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">K<sub>pump</sub> Eğrisi</span></div>';
+    html += '<div class="sw-pkg-body">';
+    html += '<div style="position:relative; background:var(--bg-input); border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-tc-chart-kpump-' + node.id + '" style="width:100%; height:180px;"></canvas>';
     html += '</div>';
-    html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.6rem; color:var(--text-muted);">';
+    html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.56rem; color:var(--text-muted);">';
     html += '<span style="color:#a78bfa;">● K<sub>pump</sub> [rpm/√Nm]</span>';
     html += '</div>';
-    html += '</div>';
+    html += '</div></div>';
     
     html += '</div>'; // tc-data-area close
     
@@ -17132,8 +17143,11 @@ function getTorqueConverterPropertiesHTML(node) {
     // ── MOTOR FRENİ: Mevcut parametreler ──
     var tcRatio = nodeData.tcRatio !== undefined ? nodeData.tcRatio : 1.0;
     var isLocked = nodeData.isLocked !== undefined ? nodeData.isLocked : true;
-    
-    html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+
+    html += '<div class="sw-pkg-card">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Konvertör Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
+    html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Konvertör kilidi</th>';
@@ -17159,8 +17173,9 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</tr>';
     
     html += '</table>';
+    html += '</div></div>'; // sw-pkg-body + sw-pkg-card
   }
-  
+
   html += '</div>';
   return html;
 }
