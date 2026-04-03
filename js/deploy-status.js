@@ -5,7 +5,7 @@
 // ============================================================================
 
 var DEPLOY_REPO = 'kaydgn/MFSim';
-var DEPLOY_BUILD_SHA = '__BUILD_SHA__'; // Build sırasında son commit SHA ile değiştirilir
+var DEPLOY_RUN_ID = '__DEPLOY_RUN_ID__'; // Workflow sırasında run ID ile değiştirilir
 
 // ═══ 🔄 REFRESH BUTONU ═══
 function veRefreshApp() {
@@ -18,11 +18,11 @@ function veRefreshApp() {
     if(!info || !dot) return;
 
     if(info.status === 'completed' && info.conclusion === 'success') {
-      // Bu sayfanın build SHA'sı ile API'den gelen commit SHA'sı aynı mı?
-      var buildSha = DEPLOY_BUILD_SHA;
-      var isNewer = true; // varsayılan: güncelleme var
-      if(buildSha && buildSha !== '__BUILD_SHA__' && info.headSha) {
-        isNewer = !info.headSha.startsWith(buildSha) && !buildSha.startsWith(info.headSha);
+      // Bu sayfa hangi workflow run'dan deploy edildi?
+      var runId = DEPLOY_RUN_ID;
+      var isNewer = true;
+      if(runId && runId !== '__DEPLOY_RUN_ID__' && info.runId) {
+        isNewer = String(info.runId) !== String(runId);
       }
       if(isNewer) {
         _veShowPopup(dot, info, '🔔 Güncelleme Mevcut', true);
@@ -85,6 +85,7 @@ function _veCheckDeploy(callback) {
 
       var run = data.workflow_runs[0];
       var info = {
+        runId: run.id,
         status: run.status,
         conclusion: run.conclusion,
         branch: run.head_branch,
