@@ -1376,14 +1376,14 @@ function getWheelPropertiesHTML(node) {
   var wheelRadius = nodeData.wheelRadius !== undefined ? nodeData.wheelRadius : 0.60876;
   var rollingResistance = nodeData.rollingResistance !== undefined ? nodeData.rollingResistance : 0.010;
   var rotatingMass = nodeData.rotatingMass !== undefined ? nodeData.rotatingMass : 1.08;
-  
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
+
+  var html = '<div class="sw-panel">';
+
   // Başlık
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+  html += '<div class="sw-status-bar">';
   html += '<span>Tekerlek Parametreleri</span>';
   html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
-  html += '<button onclick="showInfoPopup(\'tekerlek\')" style="width:18px; height:18px; border-radius:50%; background:var(--accent-primary); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; margin-left:auto;" title="Bilgi">?</button>';
+  html += '<button onclick="showInfoPopup(\'tekerlek\')" class="sw-info-btn" title="Bilgi">?</button>';
   html += '</div>';
   
   // Lastik Preset Seçici
@@ -1629,15 +1629,16 @@ function getVehiclePropertiesHTML(node) {
     
     var roStyle = 'width:100%; padding:4px; font-size:0.68rem; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:0; text-align:right; cursor:default;';
     
-    var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-    
-    html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px; display:flex; align-items:center; gap:6px;">';
+    var html = '<div class="sw-panel">';
+
+    html += '<div class="sw-status-bar">';
     html += '<span>Araç Verileri</span>';
     html += '</div>';
-    
+
     // ── 1. ARAÇ PARAMETRELERİ ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Araç Parametreleri</div>';
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Araç Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -1656,11 +1657,12 @@ function getVehiclePropertiesHTML(node) {
     html += '</tr>';
     
     html += '</table>';
-    html += '</div>';
-    
+    html += '</div></div>'; // sw-pkg-body + sw-pkg-card
+
     // ── 2. AERODİNAMİK PARAMETRELERİ ──
-    html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-top:10px;">';
-    html += '<div style="font-size:0.75rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Aerodinamik Parametreleri</div>';
+    html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+    html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aerodinamik Parametreleri</span></div>';
+    html += '<div class="sw-pkg-body">';
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
@@ -1694,12 +1696,12 @@ function getVehiclePropertiesHTML(node) {
     html += '</tr>';
     
     html += '</table>';
-    html += '</div>';
-    
-    html += '</div>';
+    html += '</div></div>'; // sw-pkg-body + sw-pkg-card
+
+    html += '</div>'; // sw-panel
     return html;
   }
-  
+
   // ── MOTOR FRENİ / DİĞER MODÜLLER: Mevcut panel ──
   var mass = d.mass !== undefined ? d.mass : '';
   var initialSpeed = d.initialSpeed !== undefined ? d.initialSpeed : '';
@@ -1707,12 +1709,14 @@ function getVehiclePropertiesHTML(node) {
   var frontalArea = d.frontalArea !== undefined ? d.frontalArea : 6.7;
   var autoShift = d.autoShift !== undefined ? d.autoShift : false;
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
-  html += '<div style="font-size:0.8rem; font-weight:600; color:var(--text-heading); margin-bottom:8px;">Araç Parametreleri</div>';
-  
+  var html = '<div class="sw-panel">';
+
+  html += '<div class="sw-status-bar">';
+  html += '<span>Araç Parametreleri</span>';
+  html += '</div>';
+
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
-  
+
   // Araç ağırlığı
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:55%; font-weight:500; color:var(--text-secondary);">Araç ağırlığı [kg]</th>';
@@ -1847,17 +1851,18 @@ function getRoadPropertiesHTML(node) {
   var airDensity = d.airDensity !== undefined ? d.airDensity : '';
   var egimMode = d.egimMode || 'manuel';
   
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
-  
+  var html = '<div class="sw-panel">';
+
   // ===== GÜZERGAH / HARİTA =====
-  html += '<div style="background:var(--bg-tertiary); border-radius:0; padding:10px; margin-bottom:12px; border:1px solid var(--border-color);">';
-  html += '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading);">🗺️ Güzergah Haritası</div>';
+  html += '<div class="sw-pkg-card" style="margin-bottom:12px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;">';
+  html += '<span class="sw-pkg-name">🗺️ Güzergah Haritası</span>';
   html += '<button onclick="veExpandRoadMap(\'' + node.id + '\')" title="Haritayı büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
-  html += '</div>';
+  html += '</div>'; // sw-pkg-header
+  html += '<div class="sw-pkg-body">';
   // Harita container
   html += '<div id="ve-road-map-' + node.id + '" style="width:100%; height:220px; border-radius:0; border:1px solid var(--border-color); margin-bottom:6px; background:var(--bg-secondary); position:relative;"></div>';
-  html += '<p style="font-size:0.54rem; color:var(--text-muted); margin:0; line-height:1.3; text-align:center; opacity:0.8;">Özellikler için haritayı büyültün ⛶</p>';
+  html += '<div class="sw-pkg-desc" style="text-align:center; opacity:0.8;">Özellikler için haritayı büyültün ⛶</div>';
   
   // Sonuç kutusu
   html += '<div id="ve-road-route-result-' + node.id + '" style="display:none; background:var(--bg-secondary); padding:8px; border-radius:0; border:1px solid var(--border-color); margin-top:4px;">';
@@ -1867,16 +1872,19 @@ function getRoadPropertiesHTML(node) {
   html += '<div><div style="color:var(--text-muted); font-size:0.56rem;">Ort. Eğim</div><div id="ve-road-avggrade-' + node.id + '" style="color:var(--accent-warning); font-weight:600;">-</div></div>';
   html += '</div></div>';
   
-  html += '</div>'; // harita wrapper
+  html += '</div></div>'; // sw-pkg-body + sw-pkg-card (harita)
 
   // ===== YOL PROFİLLERİ =====
-  html += '<div id="ve-road-profiles-' + node.id + '" style="display:none; background:var(--bg-tertiary); border-radius:0; padding:10px; margin-bottom:12px; border:1px solid var(--border-color);">';
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📊 Yol Profilleri</div>';
+  html += '<div id="ve-road-profiles-' + node.id + '" style="display:none;">';
+  html += '<div class="sw-pkg-card" style="margin-bottom:12px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">📊 Yol Profilleri</span></div>';
+  html += '<div class="sw-pkg-body">';
   html += '<div id="ve-road-profiles-content-' + node.id + '"></div>';
-  html += '</div>';
+  html += '</div></div>'; // sw-pkg-body + sw-pkg-card
+  html += '</div>'; // profiles wrapper
 
   // ===== EĞİM PARAMETRELERİ =====
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin:8px 0 6px 0;">📐 Eğim Parametreleri</div>';
+  html += '<div class="sw-section-title" style="margin:8px 0 6px 0;">📐 Eğim Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   
   // Eğim modu

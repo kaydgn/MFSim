@@ -855,7 +855,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c9ok ? '✅' : '❌')) + '</td>';
       h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c10ok ? '✅' : '❌')) + '</td>';
       h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center;">';
-      h += '<button onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:0.52rem; background:' + (isSelected ? 'var(--bg-tertiary)' : 'var(--accent-primary)') + '; color:' + (isSelected ? 'var(--text-muted)' : 'white') + '; border:1px solid ' + (isSelected ? 'var(--border-color)' : 'transparent') + '; border-radius:0; cursor:' + (isSelected ? 'default' : 'pointer') + ';"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
+      h += '<button class="sw-btn ' + (isSelected ? '' : 'sw-btn-primary') + '" onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:0.52rem;' + (isSelected ? ' opacity:0.5; cursor:default;' : '') + '"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
       h += '</td>';
       h += '</tr>';
     });
@@ -865,16 +865,16 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     // Önerilen şanzıman özeti
     var recommended = results.filter(function(r) { return r.status === 'recommended'; });
     if(recommended.length > 0) {
-      h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(22,163,74,0.08); border:1px solid rgba(22,163,74,0.25); border-radius:0;">';
-      h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-success);">🏆 Önerilen Şanzımanlar (' + recommended.length + ')</div>';
-      h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">' + recommended.map(function(r) { return r.name; }).join(', ') + '</div>';
+      h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-success);">';
+      h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-success);">🏆 Önerilen Şanzımanlar (' + recommended.length + ')</span></div>';
+      h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">' + recommended.map(function(r) { return r.name; }).join(', ') + '</div></div>';
       h += '</div>';
     } else {
       var acceptable = results.filter(function(r) { return r.score > 0; });
       if(acceptable.length > 0) {
-        h += '<div style="margin-top:8px; padding:8px 10px; background:rgba(217,119,6,0.08); border:1px solid rgba(217,119,6,0.25); border-radius:0;">';
-        h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-warning);">⚠ Tam uyumlu şanzıman bulunamadı</div>';
-        h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">En iyi seçenekler: ' + acceptable.map(function(r) { return r.name; }).join(', ') + '</div>';
+        h += '<div class="sw-pkg-card" style="margin-top:8px; border-left:3px solid var(--accent-warning);">';
+        h += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name" style="color:var(--accent-warning);">⚠ Tam uyumlu şanzıman bulunamadı</span></div>';
+        h += '<div class="sw-pkg-body"><div class="sw-pkg-desc">En iyi seçenekler: ' + acceptable.map(function(r) { return r.name; }).join(', ') + '</div></div>';
         h += '</div>';
       }
     }
