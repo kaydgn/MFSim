@@ -39801,14 +39801,6 @@ function _veApplyUpdate() {
   if(popup) {
     popup.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-heading);"><div style="font-size:1.5rem; margin-bottom:8px;">🔄</div>Güncelleniyor...</div>';
   }
-  // Güncellenen deploy ID'sini kaydet
-  var dot = document.getElementById('ve-deploy-dot');
-  if(dot) {
-    var raw = dot.getAttribute('data-deploy-info');
-    if(raw) {
-      try { var info = JSON.parse(raw); localStorage.setItem('ve-deploy-known-id', String(info.id)); } catch(e) {}
-    }
-  }
   localStorage.setItem('ve-deploy-refreshed', '1');
 
   // Service worker cache'ini temizle, sonra sayfayı yenile
@@ -39832,10 +39824,17 @@ function _veApplyUpdate() {
 
 // ═══ SAYFA BAŞLANGIÇ ═══
 document.addEventListener('DOMContentLoaded', function() {
+  // Sayfa yüklendiğinde mevcut deploy ID'sini kaydet
+  // Böylece 🔄 tıklandığında yeni deploy gelip gelmediği anlaşılır
+  _veCheckDeploy(function(info) {
+    if(info && info.id) {
+      localStorage.setItem('ve-deploy-known-id', String(info.id));
+    }
+  });
+
   var wasRefreshed = localStorage.getItem('ve-deploy-refreshed');
   if(wasRefreshed) {
     localStorage.removeItem('ve-deploy-refreshed');
-    // Güncelleme tamamlandı — API'ye sormadan doğrudan göster
     setTimeout(function() {
       var dot = document.getElementById('ve-deploy-dot');
       if(dot) {
@@ -39843,7 +39842,7 @@ document.addEventListener('DOMContentLoaded', function() {
         dot.title = '✅ Güncel';
       }
       _veShowRefreshedPopup();
-    }, 500);
+    }, 1500);
   }
 });
 
