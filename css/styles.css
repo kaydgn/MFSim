@@ -2193,4 +2193,17 @@
   0%, 100% { opacity:1; transform:scale(1); }
   50% { opacity:0.5; transform:scale(0.8); }
 }
+.ve-deploy-refresh {
+  cursor:pointer;
+  font-size:0.7rem;
+  margin-right:6px;
+  opacity:0.5;
+  transition: opacity 0.2s, transform 0.3s;
+  vertical-align:middle;
+  user-select:none;
+}
+.ve-deploy-refresh:hover {
+  opacity:1;
+  transform:rotate(90deg);
+}
 

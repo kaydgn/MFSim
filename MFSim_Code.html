@@ -2204,6 +2204,19 @@
   0%, 100% { opacity:1; transform:scale(1); }
   50% { opacity:0.5; transform:scale(0.8); }
 }
+.ve-deploy-refresh {
+  cursor:pointer;
+  font-size:0.7rem;
+  margin-right:6px;
+  opacity:0.5;
+  transition: opacity 0.2s, transform 0.3s;
+  vertical-align:middle;
+  user-select:none;
+}
+.ve-deploy-refresh:hover {
+  opacity:1;
+  transform:rotate(90deg);
+}
 
 
 </style>
@@ -2327,6 +2340,7 @@ function mfsimLogout() {
   </div>
   <span class="theme-selector" style="margin-left:auto;">
     <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
+    <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al">🔄</span>
     <label for="theme-select" class="theme-selector-label">🎨</label>
     <select id="theme-select" onchange="changeTheme(this.value)">
       <optgroup label="Koyu">
@@ -39055,7 +39069,12 @@ function _veFormatDeployDate(isoStr) {
   return d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'});
 }
 
-function veShowDeployDetails() {
+function veRefreshApp() {
+  localStorage.setItem('ve-deploy-refreshed', '1');
+  location.reload(true);
+}
+
+function veShowDeployDetails(titleOverride) {
   var dot = document.getElementById('ve-deploy-dot');
   if(!dot) return;
   var raw = dot.getAttribute('data-deploy-info');
@@ -39088,7 +39107,8 @@ function veShowDeployDetails() {
   var html = '';
   // Başlık
   html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
-  html += '<span style="font-weight:600; color:var(--text-heading); font-size:0.85rem;">Son Güncelleme</span>';
+  var popupTitle = titleOverride || 'Son Güncelleme';
+  html += '<span style="font-weight:600; color:var(--text-heading); font-size:0.85rem;">' + popupTitle + '</span>';
   html += '<button onclick="document.getElementById(\'ve-deploy-popup\').remove()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>';
   html += '</div>';
 
@@ -39150,8 +39170,79 @@ function veShowDeployDetails() {
 
 // Sayfa yüklenince başlat
 document.addEventListener('DOMContentLoaded', function() {
-  setTimeout(veCheckDeployStatus, 2000);
+  var wasRefreshed = localStorage.getItem('ve-deploy-refreshed');
+  if(wasRefreshed) {
+    localStorage.removeItem('ve-deploy-refreshed');
+    // Refresh sonrası: durum bilgisini çek, sonra "Program Güncellendi" popup'ını aç
+    setTimeout(function() {
+      _veCheckAndShowUpdated();
+    }, 1500);
+  } else {
+    setTimeout(veCheckDeployStatus, 2000);
+  }
 });
+
+function _veCheckAndShowUpdated() {
+  var dot = document.getElementById('ve-deploy-dot');
+  var tooltip = document.getElementById('ve-deploy-tooltip');
+  if(!dot) return;
+
+  fetch('https://api.github.com/repos/' + DEPLOY_REPO + '/actions/runs?per_page=1&branch=main')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if(!data.workflow_runs || data.workflow_runs.length === 0) return;
+      var run = data.workflow_runs[0];
+      var info = {
+        status: run.status,
+        conclusion: run.conclusion,
+        branch: run.head_branch,
+        message: run.head_commit ? run.head_commit.message : '',
+        author: run.head_commit ? run.head_commit.author.name : '',
+        date: run.updated_at,
+        url: run.html_url,
+        prTitle: '',
+        prNumber: 0,
+        prBody: '',
+        prUrl: ''
+      };
+
+      // Durumu göster
+      if(run.status === 'completed' && run.conclusion === 'success') {
+        _veSetDeployState(dot, tooltip, 'success', info);
+      } else if(run.status === 'in_progress' || run.status === 'queued') {
+        _veSetDeployState(dot, tooltip, 'pending', info);
+      } else {
+        _veSetDeployState(dot, tooltip, 'error', info);
+      }
+
+      // PR bilgisini çek ve popup aç
+      var prMatch = info.message.match(/Merge pull request #(\d+)/);
+      if(prMatch) {
+        info.prNumber = parseInt(prMatch[1]);
+        fetch('https://api.github.com/repos/' + DEPLOY_REPO + '/pulls/' + info.prNumber)
+          .then(function(r) { return r.json(); })
+          .then(function(pr) {
+            info.prTitle = pr.title || '';
+            info.prBody = pr.body || '';
+            info.prUrl = pr.html_url || '';
+            dot.setAttribute('data-deploy-info', JSON.stringify(info));
+            veShowDeployDetails('✅ Program Güncellendi');
+          })
+          .catch(function() {
+            dot.setAttribute('data-deploy-info', JSON.stringify(info));
+            veShowDeployDetails('✅ Program Güncellendi');
+          });
+      } else {
+        dot.setAttribute('data-deploy-info', JSON.stringify(info));
+        veShowDeployDetails('✅ Program Güncellendi');
+      }
+      _veScheduleNextCheck(DEPLOY_CHECK_INTERVAL);
+    })
+    .catch(function() {
+      _veSetDeployState(dot, tooltip, 'offline', null);
+      _veScheduleNextCheck(DEPLOY_CHECK_INTERVAL);
+    });
+}
 
 </script>
 
