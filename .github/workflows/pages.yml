@@ -29,8 +29,11 @@ jobs:
 
       - name: Create site directory
         run: |
-          mkdir -p _site
+          mkdir -p _site/pwa
           cp MFSim_Code.html _site/index.html
+          cp pwa/manifest.json _site/pwa/manifest.json
+          cp pwa/icon.svg _site/pwa/icon.svg
+          cp pwa/sw.js _site/pwa/sw.js
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

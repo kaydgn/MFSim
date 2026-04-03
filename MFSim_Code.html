@@ -2174,6 +2174,12 @@
 
 
 </style>
+  <link rel="manifest" href="pwa/manifest.json" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="pwa/icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="MFSim" />
 </head>
 <body>
 
@@ -38897,6 +38903,12 @@ setTimeout(function() {
   }
 }, 500);
 
+</script>
+
+<script>
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('pwa/sw.js').catch(function(){});
+}
 </script>
 
 </body>
