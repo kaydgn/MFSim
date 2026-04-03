@@ -69,9 +69,14 @@ html = html.replace(
       process.exit(1);
     }
     var js = fs.readFileSync(fullPath, 'utf8');
-    // Build zamanını deploy-status.js'e göm
+    // Son commit SHA'sını deploy-status.js'e göm
     if (jsPath === 'js/deploy-status.js') {
-      js = js.replace('__BUILD_TIME__', new Date().toISOString());
+      try {
+        var sha = require('child_process').execSync('git rev-parse HEAD').toString().trim();
+        js = js.replace('__BUILD_SHA__', sha);
+      } catch(e) {
+        // git yoksa placeholder kalır
+      }
     }
     console.log('  JS inline:', jsPath, '(' + js.length + ' karakter)');
     return '<script>\n' + js + '\n</script>';
