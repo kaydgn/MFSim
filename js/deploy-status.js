@@ -5,6 +5,7 @@
 // ============================================================================
 
 var DEPLOY_REPO = 'kaydgn/MFSim';
+var DEPLOY_BUILD_TIME = '__BUILD_TIME__'; // Build sırasında gerçek tarihle değiştirilir
 
 // ═══ 🔄 REFRESH BUTONU ═══
 function veRefreshApp() {
@@ -17,12 +18,19 @@ function veRefreshApp() {
     if(!info || !dot) return;
 
     if(info.status === 'completed' && info.conclusion === 'success') {
-      // Bu deploy'u zaten almış mıyız?
-      var knownId = localStorage.getItem('ve-deploy-known-id');
-      if(knownId && knownId === String(info.id)) {
-        _veShowPopup(dot, info, '✅ Program Güncel', false);
+      // Deploy tarihi, bu sayfanın build tarihinden yeni mi?
+      var buildTime = DEPLOY_BUILD_TIME;
+      var isNewer = false;
+      if(buildTime && buildTime !== '__BUILD_TIME__' && info.date) {
+        isNewer = new Date(info.date) > new Date(buildTime);
       } else {
+        // Build time yoksa (lokal geliştirme), her zaman güncelleme göster
+        isNewer = true;
+      }
+      if(isNewer) {
         _veShowPopup(dot, info, '🔔 Güncelleme Mevcut', true);
+      } else {
+        _veShowPopup(dot, info, '✅ Program Güncel', false);
       }
     } else if(info.status === 'in_progress' || info.status === 'queued') {
       _veShowPopup(dot, info, '⏳ Deploy Devam Ediyor', false);
@@ -260,14 +268,6 @@ function _veApplyUpdate() {
 
 // ═══ SAYFA BAŞLANGIÇ ═══
 document.addEventListener('DOMContentLoaded', function() {
-  // Sayfa yüklendiğinde mevcut deploy ID'sini kaydet
-  // Böylece 🔄 tıklandığında yeni deploy gelip gelmediği anlaşılır
-  _veCheckDeploy(function(info) {
-    if(info && info.id) {
-      localStorage.setItem('ve-deploy-known-id', String(info.id));
-    }
-  });
-
   var wasRefreshed = localStorage.getItem('ve-deploy-refreshed');
   if(wasRefreshed) {
     localStorage.removeItem('ve-deploy-refreshed');
@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', function() {
         dot.title = '✅ Güncel';
       }
       _veShowRefreshedPopup();
-    }, 1500);
+    }, 1000);
   }
 });
 
