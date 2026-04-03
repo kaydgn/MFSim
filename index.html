@@ -62,6 +62,7 @@
       <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
     </div>
   </div>
+  <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
   <span class="theme-selector" style="margin-left:auto;">
     <label for="theme-select" class="theme-selector-label">🎨</label>
     <select id="theme-select" onchange="changeTheme(this.value)">
@@ -556,6 +557,7 @@
 <script src="js/node-resize.js"></script>
 <script src="js/context-menus.js"></script>
 <script src="js/connections.js"></script>
+<script src="js/deploy-status.js"></script>
 
 <script>
 if('serviceWorker' in navigator) {
