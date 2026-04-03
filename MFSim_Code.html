@@ -3129,7 +3129,7 @@ function veUpdateResultsTree() {
         });
       }
 
-      // ── Sihirbaz Sanal Sensörleri ──
+      // ── Sihirbaz Sanal Sensörleri (bileşen grupları olarak) ──
       if(tabWizSensors.length > 0) {
         // Sanal sensörleri bileşen tipine göre grupla
         var wizCompGroups = {};
@@ -3139,8 +3139,6 @@ function veUpdateResultsTree() {
           wizCompGroups[key].push(ws);
         });
 
-        html += '<div style="padding:4px 0 2px 32px; font-size:0.65rem; color:var(--accent-success); font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">🧙 Sihirbaz Sensörleri</div>';
-
         var wizCompOrder = ['engine','torque-converter','gearbox','shift-controller','vehicle','road','solver'];
         wizCompOrder.forEach(function(compType) {
           var sensors = wizCompGroups[compType];
@@ -3148,41 +3146,36 @@ function veUpdateResultsTree() {
 
           var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
           if(compType === 'engine') {
-            var engN = tabNodeObjs.find(function(n) { return n.type === 'engine'; });
-            if(engN) compName = componentDefs[engN.type] ? componentDefs[engN.type].name : compName;
+            var engN = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
+            if(engN && componentDefs[engN.type]) compName = componentDefs[engN.type].name;
           }
+          var compIcon = compType === 'vehicle' ? '🚗' : compType === 'road' ? '🛤️' : compType === 'solver' ? '📐' : '⚙️';
 
           html += '<div class="ve-tree-item">';
-          html += '<div class="ve-tree-sensor" style="padding-left:36px;">';
-          html += '<span class="arrow" onclick="event.stopPropagation();veToggleTree(this.closest(\'.ve-tree-item\').querySelector(\'.ve-tree-sensor\'))" style="font-size:0.55rem; width:12px; cursor:pointer; color:var(--text-muted);">▶</span>';
-          html += '<span>🧙</span> ' + compName;
+          html += '<div class="ve-tree-row" style="padding-left:32px;">';
+          html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
+          html += '<span class="icon">' + compIcon + '</span><span>' + compName + '</span>';
           html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + sensors.length + ' sinyal</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
 
           sensors.forEach(function(ws) {
-            // Sinyal bilgisini COMPONENT_SIGNALS'tan al
             var sigInfo = null;
-            var lookupType = compType;
-            if(COMPONENT_SIGNALS[lookupType]) {
-              sigInfo = (COMPONENT_SIGNALS[lookupType].outputs || []).find(function(s) { return s.id === ws.signal; });
-            }
-            if(!sigInfo && COMPONENT_SIGNALS[compType]) {
+            if(COMPONENT_SIGNALS[compType]) {
               sigInfo = (COMPONENT_SIGNALS[compType].outputs || []).find(function(s) { return s.id === ws.signal; });
             }
-
             var sigName = sigInfo ? sigInfo.name : ws.signal;
             var sigUnit = sigInfo ? sigInfo.unit : '';
             var wizSensorId = '~' + compType;
 
-            html += '<div class="ve-tree-signal" style="padding-left:52px;" onmousedown="veStartSignalDrag(event,\'' + wizSensorId + '\',\'' + ws.signal + '\')" title="' + sigName + ' (' + sigUnit + ') — Sürükle">';
+            html += '<div class="ve-tree-signal" style="padding-left:48px;" onmousedown="veStartSignalDrag(event,\'' + wizSensorId + '\',\'' + ws.signal + '\')" title="' + sigName + ' (' + sigUnit + ') — Sürükle">';
             html += '<span>📊</span> ' + sigName + ' <span style="font-size:0.55rem; color:var(--text-muted);">(' + sigUnit + ')</span>';
             html += '</div>';
           });
 
           // Tümünü Ekle
-          html += '<div class="ve-tree-signal" style="padding-left:52px; color:var(--accent-success); font-style:italic;" onmousedown="veStartSensorDrag(event,\'~' + compType + '\')" title="Tüm sinyalleri sürükle">';
-          html += '<span>📦</span> Tümünü Ekle (' + sensors.length + ' sinyal)';
+          html += '<div class="ve-tree-signal" style="padding-left:48px; color:var(--accent-success); font-style:italic;" onmousedown="veStartSensorDrag(event,\'~' + compType + '\')" title="Tüm sinyalleri sürükle">';
+          html += '📦 Tümünü Ekle (' + sensors.length + ' sinyal)';
           html += '</div>';
           html += '</div></div>';
         });
@@ -3196,7 +3189,7 @@ function veUpdateResultsTree() {
   
   html += '</div></div>';
 
-  // ── Sihirbaz Diyagramları ağacı (aktif solver tab'a göre filtrelenir) ──
+  // ── Diyagramlar (sihirbaz paketlerinden, aktif solver tab'a göre filtrelenir) ──
   var wizNode = nodes.find(function(n) { return n.type === 'sensor-wizard'; });
   var wizInstalled = wizNode && wizNode.data && wizNode.data.sensorsInstalled;
   var wizPkgs = wizInstalled ? (wizNode.data.installedPackages || []) : [];
@@ -3204,7 +3197,6 @@ function veUpdateResultsTree() {
     var hasSimForWiz = !!window.veSimResults;
     var _activeTab = typeof veActiveSolverTabId !== 'undefined' ? veActiveSolverTabId : 'performance';
 
-    // Aktif solver tab'a ait paketleri filtrele
     var filteredPkgs = wizPkgs.filter(function(pkgId) {
       var pkg = SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; });
       return pkg && pkg.solverTab === _activeTab;
@@ -3221,9 +3213,9 @@ function veUpdateResultsTree() {
       html += '<div class="ve-tree-item">';
       html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
       html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
-      html += '<span class="icon">🧙</span>';
-      html += '<span style="font-weight:600; color:var(--accent-success);">Sihirbaz Diyagramları</span>';
-      html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + totalDiags + ' diyagram</span>';
+      html += '<span class="icon">📊</span>';
+      html += '<span style="font-weight:600;">Diyagramlar</span>';
+      html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + totalDiags + '</span>';
       html += '</div>';
       html += '<div class="ve-tree-children open">';
 
@@ -3234,7 +3226,7 @@ function veUpdateResultsTree() {
         html += '<div class="ve-tree-item">';
         html += '<div class="ve-tree-row" style="padding-left:16px;">';
         html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
-        html += '<span style="font-weight:500;">' + pkg.name + '</span>';
+        html += '<span>' + pkg.name + '</span>';
         html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + pkg.diagrams.length + '</span>';
         html += '</div>';
         html += '<div class="ve-tree-children">';
@@ -3249,10 +3241,10 @@ function veUpdateResultsTree() {
             ? ' onmousedown="veStartWizardDiagDrag(event,\'' + pkgId + '\',' + dIdx + ')"'
             : '';
 
-          html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
           var is3dDiag = diagSigDef && diagSigDef.z;
-          var diagEmoji = canDrag ? (is3dDiag ? '🔮' : '📊') : '🔒';
-          html += '<span>' + diagEmoji + '</span> ' + diag.name;
+          var diagIcon = canDrag ? (is3dDiag ? '🔮' : '📈') : '🔒';
+          html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
+          html += diagIcon + ' ' + diag.name;
           if(diag.note) html += ' <span style="font-size:0.5rem; color:var(--accent-warning);">⚠</span>';
           html += '</div>';
         });
