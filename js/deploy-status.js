@@ -27,26 +27,49 @@ function veCheckDeployStatus() {
         message: run.head_commit ? run.head_commit.message : '',
         author: run.head_commit ? run.head_commit.author.name : '',
         date: run.updated_at,
-        url: run.html_url
+        url: run.html_url,
+        prTitle: '',
+        prNumber: 0,
+        prBody: ''
       };
 
-      if(run.status === 'in_progress' || run.status === 'queued') {
-        _veSetDeployState(dot, tooltip, 'pending', info);
-        // Daha sık kontrol et
-        _veScheduleNextCheck(10000);
-        return;
-      }
-      if(run.status === 'completed' && run.conclusion === 'success') {
-        _veSetDeployState(dot, tooltip, 'success', info);
+      // Merge commit ise PR bilgisini çek
+      var prMatch = info.message.match(/Merge pull request #(\d+)/);
+      if(prMatch) {
+        info.prNumber = parseInt(prMatch[1]);
+        fetch('https://api.github.com/repos/' + DEPLOY_REPO + '/pulls/' + info.prNumber)
+          .then(function(r) { return r.json(); })
+          .then(function(pr) {
+            info.prTitle = pr.title || '';
+            info.prBody = pr.body || '';
+            info.prUrl = pr.html_url || '';
+            _veFinalizeDeploy(dot, tooltip, run, info);
+          })
+          .catch(function() {
+            _veFinalizeDeploy(dot, tooltip, run, info);
+          });
       } else {
-        _veSetDeployState(dot, tooltip, 'error', info);
+        _veFinalizeDeploy(dot, tooltip, run, info);
       }
-      _veScheduleNextCheck(DEPLOY_CHECK_INTERVAL);
     })
     .catch(function() {
       _veSetDeployState(dot, tooltip, 'offline', null);
       _veScheduleNextCheck(DEPLOY_CHECK_INTERVAL);
     });
+}
+
+function _veFinalizeDeploy(dot, tooltip, run, info) {
+  if(run.status === 'in_progress' || run.status === 'queued') {
+    _veSetDeployState(dot, tooltip, 'pending', info);
+    _veScheduleNextCheck(10000);
+    return;
+  }
+  if(run.status === 'completed' && run.conclusion === 'success') {
+    _veSetDeployState(dot, tooltip, 'success', info);
+  } else {
+    _veSetDeployState(dot, tooltip, 'error', info);
+  }
+  _veScheduleNextCheck(DEPLOY_CHECK_INTERVAL);
 }
 
 function _veScheduleNextCheck(ms) {
@@ -119,25 +142,57 @@ function veShowDeployDetails() {
 
   var popup = document.createElement('div');
   popup.id = 've-deploy-popup';
-  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:320px; padding:16px; font-size:0.78rem;';
+  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:360px; padding:16px; font-size:0.78rem;';
 
-  popup.innerHTML =
-    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">' +
-      '<span style="font-weight:600; color:var(--text-heading);">Son Deploy</span>' +
-      '<button onclick="document.getElementById(\'ve-deploy-popup\').remove()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>' +
-    '</div>' +
-    '<div style="margin-bottom:8px;">' +
-      '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:' + statusColor + '; margin-right:6px;"></span>' +
-      '<span style="color:' + statusColor + '; font-weight:600;">' + statusText + '</span>' +
-      '<span style="color:var(--text-muted); margin-left:8px;">' + dateStr + '</span>' +
-    '</div>' +
-    '<div style="color:var(--text-primary); margin-bottom:6px; line-height:1.4;">' + msg + '</div>' +
-    '<div style="color:var(--text-muted); font-size:0.7rem;">' +
-      '👤 ' + info.author + '<br>' +
-      '🕐 ' + fullDate + '<br>' +
-      '🌿 ' + info.branch +
-    '</div>' +
-    '<a href="' + info.url + '" target="_blank" rel="noopener" style="display:inline-block; margin-top:10px; font-size:0.7rem; color:var(--accent-primary); text-decoration:none;">GitHub Actions\'da Görüntüle →</a>';
+  var html = '';
+  // Başlık
+  html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
+  html += '<span style="font-weight:600; color:var(--text-heading); font-size:0.85rem;">Son Güncelleme</span>';
+  html += '<button onclick="document.getElementById(\'ve-deploy-popup\').remove()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>';
+  html += '</div>';
+
+  // Durum satırı
+  html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; padding:8px 10px; background:var(--bg-primary); border-left:3px solid ' + statusColor + ';">';
+  html += '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:' + statusColor + '; flex-shrink:0;"></span>';
+  html += '<span style="color:' + statusColor + '; font-weight:600;">' + statusText + '</span>';
+  html += '<span style="color:var(--text-muted); margin-left:auto; font-size:0.7rem;">' + dateStr + '</span>';
+  html += '</div>';
+
+  // PR bilgisi varsa göster
+  if(info.prTitle) {
+    html += '<div style="margin-bottom:10px;">';
+    html += '<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:3px;">Pull Request #' + info.prNumber + '</div>';
+    html += '<div style="font-weight:600; color:var(--text-heading); line-height:1.4;">' + info.prTitle + '</div>';
+    if(info.prBody) {
+      // PR body'nin ilk 200 karakteri
+      var bodyPreview = info.prBody.replace(/[#*`>\-]/g, '').trim();
+      if(bodyPreview.length > 200) bodyPreview = bodyPreview.substring(0, 197) + '...';
+      if(bodyPreview) {
+        html += '<div style="color:var(--text-secondary); font-size:0.72rem; margin-top:4px; line-height:1.4;">' + bodyPreview + '</div>';
+      }
+    }
+    html += '</div>';
+  } else {
+    // PR değilse commit mesajını göster
+    html += '<div style="color:var(--text-primary); margin-bottom:10px; line-height:1.4;">' + msg + '</div>';
+  }
+
+  // Detay bilgileri
+  html += '<div style="color:var(--text-muted); font-size:0.7rem; border-top:1px solid var(--border-color); padding-top:10px; line-height:1.8;">';
+  html += '👤 ' + info.author;
+  html += '<br>🕐 ' + fullDate;
+  html += '<br>🌿 ' + info.branch;
+  html += '</div>';
+
+  // Linkler
+  html += '<div style="margin-top:10px; display:flex; gap:12px;">';
+  if(info.prUrl) {
+    html += '<a href="' + info.prUrl + '" target="_blank" rel="noopener" style="font-size:0.7rem; color:var(--accent-primary); text-decoration:none;">PR Detayı →</a>';
+  }
+  html += '<a href="' + info.url + '" target="_blank" rel="noopener" style="font-size:0.7rem; color:var(--accent-primary); text-decoration:none;">Actions Log →</a>';
+  html += '</div>';
+
+  popup.innerHTML = html;
 
   document.body.appendChild(popup);
 
