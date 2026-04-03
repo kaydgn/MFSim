@@ -26133,10 +26133,11 @@ function getRoadPropertiesHTML(node) {
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">📊 Yol Profilleri</span></div>';
   html += '<div class="sw-pkg-body">';
   html += '<div id="ve-road-profiles-content-' + node.id + '"></div>';
-  html += '</div>';
+  html += '</div></div>'; // sw-pkg-body + sw-pkg-card
+  html += '</div>'; // profiles wrapper
 
   // ===== EĞİM PARAMETRELERİ =====
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin:8px 0 6px 0;">📐 Eğim Parametreleri</div>';
+  html += '<div class="sw-section-title" style="margin:8px 0 6px 0;">📐 Eğim Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   
   // Eğim modu
@@ -26154,7 +26155,7 @@ function getRoadPropertiesHTML(node) {
   html += '</table>';
   
   // ===== ORTAM PARAMETRELERİ =====
-  html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin:10px 0 6px 0;">🌡️ Ortam</div>';
+  html += '<div class="sw-section-title" style="margin:10px 0 6px 0;">🌡️ Ortam</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Yükseklik [m]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-road-alt-' + node.id + '" value="' + altitude + '" step="50" min="0" placeholder="500" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVERoadParamChange(\'' + node.id + '\')"></td></tr>';
   html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Sıcaklık [°C]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-road-temp-' + node.id + '" value="' + temperature + '" step="1" placeholder="25" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVERoadParamChange(\'' + node.id + '\')"></td></tr>';
