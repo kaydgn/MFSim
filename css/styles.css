@@ -2195,6 +2195,11 @@
   background:#6b7280;
   box-shadow:none;
 }
+.ve-deploy-ratelimit {
+  background:#f59e0b;
+  box-shadow:none;
+  opacity:0.5;
+}
 @keyframes deployPulse {
   0%, 100% { opacity:1; transform:scale(1); }
   50% { opacity:0.5; transform:scale(0.8); }

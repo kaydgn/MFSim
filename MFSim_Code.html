@@ -2206,6 +2206,11 @@
   background:#6b7280;
   box-shadow:none;
 }
+.ve-deploy-ratelimit {
+  background:#f59e0b;
+  box-shadow:none;
+  opacity:0.5;
+}
 @keyframes deployPulse {
   0%, 100% { opacity:1; transform:scale(1); }
   50% { opacity:0.5; transform:scale(0.8); }
@@ -39538,10 +39543,11 @@ setTimeout(function() {
 // ============================================================================
 
 var DEPLOY_REPO = 'kaydgn/MFSim';
-var DEPLOY_POLL_INTERVAL = 10000; // 10 saniye
+var DEPLOY_POLL_INTERVAL = 120000; // 2 dakika (GitHub API limiti: 60 istek/saat)
 var _deployTimerId = null;
 var _deployKnownRunId = null; // Sayfa yüklendiğindeki son deploy ID
 var _deployInitDone = false;
+var _deployRateLimited = false; // API rate limit durumu
 
 // ═══ ANA KONTROL FONKSİYONU ═══
 function veCheckDeployStatus(onComplete) {
@@ -39549,8 +39555,28 @@ function veCheckDeployStatus(onComplete) {
   if(!dot) return;
 
   fetch('https://api.github.com/repos/' + DEPLOY_REPO + '/actions/runs?per_page=1&branch=main')
-    .then(function(r) { return r.json(); })
+    .then(function(r) {
+      // Rate limit kontrolü
+      if(r.status === 403 || r.status === 429) {
+        _deployRateLimited = true;
+        var retryAfter = r.headers.get('Retry-After');
+        var waitMs = retryAfter ? parseInt(retryAfter) * 1000 : 300000; // 5 dk varsayılan
+        _veSetDeployDot(dot, 'ratelimit', null);
+        _veScheduleNextCheck(waitMs);
+        if(onComplete) onComplete(null);
+        return null;
+      }
+      if(!r.ok) {
+        _veSetDeployDot(dot, 'offline', null);
+        _veScheduleNextCheck();
+        if(onComplete) onComplete(null);
+        return null;
+      }
+      _deployRateLimited = false;
+      return r.json();
+    })
     .then(function(data) {
+      if(!data) return; // Hata durumunda zaten işlendi
       if(!data.workflow_runs || data.workflow_runs.length === 0) {
         _veSetDeployDot(dot, 'unknown', null);
         _veScheduleNextCheck();
@@ -39632,9 +39658,10 @@ function _veFetchPRInfo(info, callback) {
 }
 
 // ═══ ZAMANLAYICI ═══
-function _veScheduleNextCheck() {
+function _veScheduleNextCheck(overrideMs) {
   if(_deployTimerId) clearTimeout(_deployTimerId);
-  _deployTimerId = setTimeout(function() { veCheckDeployStatus(); }, DEPLOY_POLL_INTERVAL);
+  var ms = overrideMs || DEPLOY_POLL_INTERVAL;
+  _deployTimerId = setTimeout(function() { veCheckDeployStatus(); }, ms);
 }
 
 // ═══ DOT DURUMU AYARLA ═══
@@ -39642,7 +39669,9 @@ function _veSetDeployDot(dot, state, info) {
   dot.className = 've-deploy-dot ve-deploy-' + state;
 
   if(!info) {
-    dot.title = state === 'offline' ? 'Bağlantı yok' : 'Durum bilinmiyor';
+    if(state === 'offline') dot.title = 'Bağlantı yok';
+    else if(state === 'ratelimit') dot.title = 'API limiti aşıldı — birkaç dakika sonra tekrar denenecek';
+    else dot.title = 'Durum bilinmiyor';
     return;
   }
 
@@ -39780,7 +39809,25 @@ function _veApplyUpdate() {
     popup.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-heading);"><div style="font-size:1.5rem; margin-bottom:8px;">🔄</div>Güncelleniyor...</div>';
   }
   localStorage.setItem('ve-deploy-refreshed', '1');
-  setTimeout(function() { location.reload(true); }, 500);
+
+  // Service worker cache'ini temizle, sonra sayfayı yenile
+  if('caches' in window) {
+    caches.keys().then(function(names) {
+      return Promise.all(names.map(function(n) { return caches.delete(n); }));
+    }).then(function() {
+      // SW varsa unregister et ki yeni versiyonu alsın
+      if(navigator.serviceWorker) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          regs.forEach(function(r) { r.unregister(); });
+          location.reload(true);
+        });
+      } else {
+        location.reload(true);
+      }
+    });
+  } else {
+    location.reload(true);
+  }
 }
 
 // ═══ YEŞİL NOKTAYA TIKLAMA (Son güncelleme detayları) ═══
