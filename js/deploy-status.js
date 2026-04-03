@@ -5,7 +5,7 @@
 // ============================================================================
 
 var DEPLOY_REPO = 'kaydgn/MFSim';
-var DEPLOY_BUILD_TIME = '__BUILD_TIME__'; // Build sırasında gerçek tarihle değiştirilir
+var DEPLOY_BUILD_SHA = '__BUILD_SHA__'; // Build sırasında son commit SHA ile değiştirilir
 
 // ═══ 🔄 REFRESH BUTONU ═══
 function veRefreshApp() {
@@ -18,14 +18,11 @@ function veRefreshApp() {
     if(!info || !dot) return;
 
     if(info.status === 'completed' && info.conclusion === 'success') {
-      // Deploy tarihi, bu sayfanın build tarihinden yeni mi?
-      var buildTime = DEPLOY_BUILD_TIME;
-      var isNewer = false;
-      if(buildTime && buildTime !== '__BUILD_TIME__' && info.date) {
-        isNewer = new Date(info.date) > new Date(buildTime);
-      } else {
-        // Build time yoksa (lokal geliştirme), her zaman güncelleme göster
-        isNewer = true;
+      // Bu sayfanın build SHA'sı ile API'den gelen commit SHA'sı aynı mı?
+      var buildSha = DEPLOY_BUILD_SHA;
+      var isNewer = true; // varsayılan: güncelleme var
+      if(buildSha && buildSha !== '__BUILD_SHA__' && info.headSha) {
+        isNewer = !info.headSha.startsWith(buildSha) && !buildSha.startsWith(info.headSha);
       }
       if(isNewer) {
         _veShowPopup(dot, info, '🔔 Güncelleme Mevcut', true);
@@ -95,6 +92,7 @@ function _veCheckDeploy(callback) {
         author: run.head_commit ? run.head_commit.author.name : '',
         date: run.updated_at,
         url: run.html_url,
+        headSha: run.head_sha || '',
         prTitle: '', prNumber: 0, prBody: '', prUrl: ''
       };
 
