@@ -4046,13 +4046,6 @@ function veRenderSlot(slotIdx) {
     // ── Eksen kontrol çubuğu (dinamik — veRenderChart tarafından güncellenir) ──
     html += '<div class="ve-axis-ctrl" id="ve-axis-ctrl-' + slotIdx + '" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
     html += '</div>';
-    var xName = slot.xAxis ? slot.xAxis.name : 'Zaman [s]';
-    html += '<div class="ve-slot-axis-x" id="ve-xaxis-area-' + slotIdx + '">';
-    html += '<span class="ve-xaxis-btn" onclick="veShowXAxisPicker(' + slotIdx + ',event)" title="X eksenini değiştir">';
-    html += '<span>' + xName + '</span>';
-    html += '<span class="ve-xaxis-arrow">▲</span>';
-    html += '</span>';
-    html += '</div>';
   } else if(type === 'scatter3d') {
     // ── 3D Scatter modu ──
     html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '" style="overflow:hidden;">';
@@ -4344,8 +4337,11 @@ function veShowXAxisPicker(slotIdx, e) {
   // Diğer açık dropdown'ları kapat
   document.querySelectorAll('.ve-xaxis-dropdown').forEach(function(d) { d.remove(); });
 
+  // Dropdown'ın bağlanacağı parent: tablo modunda ve-xaxis-area, grafik modunda chart-area
   var area = document.getElementById('ve-xaxis-area-' + slotIdx);
-  if(!area) return;
+  var chartArea = document.getElementById('ve-chart-area-' + slotIdx);
+  var parentEl = area || chartArea;
+  if(!parentEl) return;
 
   var options = veGetAvailableXAxisOptions(slotIdx);
 
@@ -4370,7 +4366,15 @@ function veShowXAxisPicker(slotIdx, e) {
   dd.innerHTML = html;
   // Options verilerini dropdown'a bağla
   dd._options = options;
-  area.appendChild(dd);
+
+  // Grafik modunda (chart-area parent): dropdown'ı altta ortada konumla
+  if(!area && chartArea) {
+    dd.style.position = 'absolute';
+    dd.style.bottom = '6px';
+    dd.style.left = '50%';
+    dd.style.transform = 'translateX(-50%)';
+  }
+  parentEl.appendChild(dd);
 
   // Dropdown dışına tıklayınca kapat
   setTimeout(function() {

@@ -761,12 +761,23 @@ function veRenderChart(slotIdx) {
     ctx.fillText(veFormatAxisVal(xv), gx, margin.top + ph + 7);
   }
 
-  // X ekseni başlığı (canvas üzerinde, altta ortada)
+  // X ekseni başlığı (canvas üzerinde, altta ortada) — tıklanabilir
   var xAxisName = (slot.xAxis ? slot.xAxis.name : 'Zaman [s]');
-  ctx.fillStyle = 'rgba(160,160,180,0.9)';
+  ctx.fillStyle = 'rgba(59,130,246,0.85)';
   ctx.font = '600 11px -apple-system,system-ui,sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText(xAxisName, margin.left + pw / 2, margin.top + ph + 22);
+  var xTitleX = margin.left + pw / 2;
+  var xTitleY = margin.top + ph + 22;
+  var xTitleW = ctx.measureText(xAxisName).width;
+  // Küçük ok işareti ekle (tıklanabilirlik ipucu)
+  ctx.fillText(xAxisName + ' \u25B2', xTitleX, xTitleY);
+  // Tıklama alanını meta'ya kaydet
+  slot._chartMeta.xTitleHit = {
+    x: xTitleX - xTitleW / 2 - 8,
+    y: xTitleY - 2,
+    w: xTitleW + 24,
+    h: 16
+  };
 
   // Sol eksen çerçeve + alt çerçeve
   ctx.strokeStyle = 'rgba(128,128,128,0.35)';
@@ -859,10 +870,28 @@ function veInitChartInteraction(slotIdx) {
       return;
     }
     veChartShowTooltip(slotIdx, e);
+    // X eksen başlığı üzerinde cursor değiştir
+    var slotM = veResultSlots[slotIdx];
+    var metaM = slotM && slotM._chartMeta;
+    if(metaM && metaM.xTitleHit && !isPanning && !panPending) {
+      var rectM = area.getBoundingClientRect();
+      var scMx = rectM.width / metaM.w;
+      var scMy = rectM.height / metaM.h;
+      var mxM = e.clientX - rectM.left;
+      var myM = e.clientY - rectM.top;
+      var hitM = metaM.xTitleHit;
+      if(mxM >= hitM.x * scMx && mxM <= (hitM.x + hitM.w) * scMx &&
+         myM >= hitM.y * scMy && myM <= (hitM.y + hitM.h) * scMy) {
+        area.style.cursor = 'pointer';
+      } else {
+        area.style.cursor = '';
+      }
+    }
   });
 
   area.addEventListener('mouseleave', function() {
     if(!isPanning && !panPending) veChartHideTooltip(slotIdx);
+    area.style.cursor = '';
   });
 
   // Sol tık veya sağ tık: pan başlat
@@ -896,10 +925,29 @@ function veInitChartInteraction(slotIdx) {
   });
 
   document.addEventListener('mouseup', function(e) {
+    var wasPanPending = panPending;
+    var wasPanning = isPanning;
     if(isPanning || panPending) {
       isPanning = false;
       panPending = false;
       area.style.cursor = '';
+    }
+    // Pan başlamadıysa (sadece click) → X ekseni başlığına tıklama kontrolü
+    if(wasPanPending && !wasPanning && e.button === 0) {
+      var slot2 = veResultSlots[slotIdx];
+      var m2 = slot2 && slot2._chartMeta;
+      if(m2 && m2.xTitleHit) {
+        var rect2 = area.getBoundingClientRect();
+        var scX = rect2.width / m2.w;
+        var scY = rect2.height / m2.h;
+        var cx = e.clientX - rect2.left;
+        var cy = e.clientY - rect2.top;
+        var hit = m2.xTitleHit;
+        if(cx >= hit.x * scX && cx <= (hit.x + hit.w) * scX &&
+           cy >= hit.y * scY && cy <= (hit.y + hit.h) * scY) {
+          veShowXAxisPicker(slotIdx, e);
+        }
+      }
     }
   });
   
