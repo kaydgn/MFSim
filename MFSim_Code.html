@@ -38980,9 +38980,14 @@ function veRefreshApp() {
     if(btn) btn.style.animation = '';
     if(!info || !dot) return;
 
-    // Deploy başarılıysa "Güncelleme Mevcut" popup'ı + "Şimdi Güncelle" butonu
     if(info.status === 'completed' && info.conclusion === 'success') {
-      _veShowPopup(dot, info, '🔔 Güncelleme Mevcut', true);
+      // Bu deploy'u zaten almış mıyız?
+      var knownId = localStorage.getItem('ve-deploy-known-id');
+      if(knownId && knownId === String(info.id)) {
+        _veShowPopup(dot, info, '✅ Program Güncel', false);
+      } else {
+        _veShowPopup(dot, info, '🔔 Güncelleme Mevcut', true);
+      }
     } else if(info.status === 'in_progress' || info.status === 'queued') {
       _veShowPopup(dot, info, '⏳ Deploy Devam Ediyor', false);
     } else {
@@ -39189,6 +39194,14 @@ function _veApplyUpdate() {
   var popup = document.getElementById('ve-deploy-popup');
   if(popup) {
     popup.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-heading);"><div style="font-size:1.5rem; margin-bottom:8px;">🔄</div>Güncelleniyor...</div>';
+  }
+  // Güncellenen deploy ID'sini kaydet
+  var dot = document.getElementById('ve-deploy-dot');
+  if(dot) {
+    var raw = dot.getAttribute('data-deploy-info');
+    if(raw) {
+      try { var info = JSON.parse(raw); localStorage.setItem('ve-deploy-known-id', String(info.id)); } catch(e) {}
+    }
   }
   localStorage.setItem('ve-deploy-refreshed', '1');
 
