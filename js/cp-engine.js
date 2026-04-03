@@ -13,16 +13,6 @@ function getEnginePropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  // ===== MOTOR VERİLERİ — Durum Çubuğu =====
-  var statusClass = hasData ? 'installed' : 'not-installed';
-  var statusText = hasData ? 'Motor Verisi Yüklendi' : 'Motor Verisi Girilmedi';
-  var statusExtra = hasData ? rows.length + ' veri noktası' : '';
-  html += '<div class="sw-status-bar ' + statusClass + '">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>' + statusText + '</span>';
-  if(statusExtra) html += '<span style="margin-left:auto;font-weight:400;font-size:0.56rem;opacity:0.8;">' + statusExtra + '</span>';
-  html += '</div>';
-  
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA ──
     html += '<div class="sw-section-title">Motor Seçimi</div>';

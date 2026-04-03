@@ -5,12 +5,7 @@ function getTransferPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  // Başlık
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>Transfer Kutusu Verileri</span>';
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'transferKutusu\')" title="Bilgi">?</button>';
-  html += '</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Transfer Kutusu <button class="sw-info-btn" onclick="showInfoPopup(\'transferKutusu\')" title="Bilgi">?</button></div>';
 
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Transfer Case Parametreleri ──
@@ -397,11 +392,7 @@ function getPropshaftPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>Propşaft Verileri</span>';
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'propshaftVerileri\')" title="Bilgi">?</button>';
-  html += '</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Propşaft <button class="sw-info-btn" onclick="showInfoPopup(\'propshaftVerileri\')" title="Bilgi">?</button></div>';
 
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Propşaft Parametreleri</span></div>';
@@ -484,11 +475,7 @@ function getDifferentialPropertiesHTML(node) {
     // Slave diferansiyel: sadece görsel
     if(!isMaster) {
       var html = '<div class="sw-panel">';
-      html += '<div class="sw-status-bar not-installed">';
-      html += '<span class="sw-status-dot"></span>';
-      html += '<span>Diferansiyel Parametreleri</span>';
-      html += '<span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.55rem; font-weight:600; padding:1px 5px; border-radius:0; border:1px solid var(--border-color);">SLAVE</span>';
-      html += '</div>';
+      html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.52rem; font-weight:600; padding:1px 5px; border:1px solid var(--border-color);">SLAVE</span></div>';
       html += '<div class="sw-pkg-desc">';
       html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + (masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
@@ -503,14 +490,11 @@ function getDifferentialPropertiesHTML(node) {
   var html = '<div class="sw-panel">';
 
   // Başlık
-  html += '<div class="sw-status-bar installed">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>Diferansiyel Parametreleri</span>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel';
   if(isFullThrottle) {
-    html += '<span style="background:#f59e0b; color:#000; font-size:0.55rem; font-weight:700; padding:1px 5px; border-radius:0;">★ MASTER</span>';
+    html += ' <span style="background:#f59e0b; color:#000; font-size:0.52rem; font-weight:700; padding:1px 5px;">★ MASTER</span>';
   }
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'diferansiyel\')" title="Bilgi">?</button>';
-  html += '</div>';
+  html += ' <button class="sw-info-btn" onclick="showInfoPopup(\'diferansiyel\')" title="Bilgi">?</button></div>';
   
   // Tablo
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';

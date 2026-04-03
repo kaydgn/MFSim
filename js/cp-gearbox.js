@@ -5,13 +5,8 @@ function getShiftControllerPropertiesHTML(node) {
 
   // Status bar — veri durumunu göster
   var hasData = !!(nodes.find(function(n) { return n.type === 'gearbox'; }) && nodes.find(function(n) { return n.type === 'engine'; }));
-  html += '<div class="sw-status-bar ' + (hasData ? 'installed' : 'not-installed') + '">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>' + (hasData ? 'Veri Yüklendi' : 'Veri Girilmedi') + '</span>';
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'shiftController\')" title="Bilgi">?</button>';
-  html += '</div>';
 
-  html += '<div class="sw-section-title">Shift Schedule (Vites Geçiş Takvimi)</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Shift Schedule (Vites Geçiş Takvimi) <button class="sw-info-btn" onclick="showInfoPopup(\'shiftController\')" title="Bilgi">?</button></div>';
 
   html += '<div class="sw-pkg-desc">Bu bileşen otomatik şanzıman vites geçiş stratejisini kontrol eder. Converter modda SR eşiklerine göre upshift, lockup modda RPM eşiklerine göre shift kararı verilir.</div>';
   
@@ -417,15 +412,7 @@ function getGearboxPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  // Status bar
-  var hasData = !!(nodeData.ftGearData || nodeData.gearData && nodeData.gearData.length > 0 || nodeData.selectedGearbox);
-  html += '<div class="sw-status-bar ' + (hasData ? 'installed' : 'not-installed') + '">';
-  html += '<span class="sw-status-dot"></span>';
-  html += '<span>' + (hasData ? 'Veri Yüklendi' : 'Veri Girilmedi') + '</span>';
-  html += '<button class="sw-info-btn" onclick="showInfoPopup(\'sanzimanVerileri\')" title="Bilgi">?</button>';
-  html += '</div>';
-
-  html += '<div class="sw-section-title">Şanzıman Verileri</div>';
+  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Şanzıman Verileri <button class="sw-info-btn" onclick="showInfoPopup(\'sanzimanVerileri\')" title="Bilgi">?</button></div>';
 
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Şanzıman Parametreleri ──
