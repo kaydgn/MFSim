@@ -2206,4 +2206,8 @@
   opacity:1;
   transform:rotate(90deg);
 }
+@keyframes deploySpin {
+  from { transform:rotate(0deg); }
+  to { transform:rotate(360deg); }
+}
 
