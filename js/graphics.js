@@ -925,29 +925,28 @@ function veInitChartInteraction(slotIdx) {
   });
 
   document.addEventListener('mouseup', function(e) {
-    var wasPanPending = panPending;
-    var wasPanning = isPanning;
     if(isPanning || panPending) {
       isPanning = false;
       panPending = false;
       area.style.cursor = '';
     }
-    // Pan başlamadıysa (sadece click) → X ekseni başlığına tıklama kontrolü
-    if(wasPanPending && !wasPanning && e.button === 0) {
-      var slot2 = veResultSlots[slotIdx];
-      var m2 = slot2 && slot2._chartMeta;
-      if(m2 && m2.xTitleHit) {
-        var rect2 = area.getBoundingClientRect();
-        var scX = rect2.width / m2.w;
-        var scY = rect2.height / m2.h;
-        var cx = e.clientX - rect2.left;
-        var cy = e.clientY - rect2.top;
-        var hit = m2.xTitleHit;
-        if(cx >= hit.x * scX && cx <= (hit.x + hit.w) * scX &&
-           cy >= hit.y * scY && cy <= (hit.y + hit.h) * scY) {
-          veShowXAxisPicker(slotIdx, e);
-        }
-      }
+  });
+
+  // X ekseni başlığına tıklama (plot alanı dışında, ayrı click handler gerekli)
+  area.addEventListener('click', function(e) {
+    var slot2 = veResultSlots[slotIdx];
+    var m2 = slot2 && slot2._chartMeta;
+    if(!m2 || !m2.xTitleHit) return;
+    var rect2 = area.getBoundingClientRect();
+    var scX = rect2.width / m2.w;
+    var scY = rect2.height / m2.h;
+    var cx = e.clientX - rect2.left;
+    var cy = e.clientY - rect2.top;
+    var hit = m2.xTitleHit;
+    if(cx >= hit.x * scX && cx <= (hit.x + hit.w) * scX &&
+       cy >= hit.y * scY && cy <= (hit.y + hit.h) * scY) {
+      e.stopPropagation();
+      veShowXAxisPicker(slotIdx, e);
     }
   });
   
