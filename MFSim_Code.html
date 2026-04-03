@@ -39791,18 +39791,46 @@ document.addEventListener('DOMContentLoaded', function() {
   var wasRefreshed = localStorage.getItem('ve-deploy-refreshed');
   if(wasRefreshed) {
     localStorage.removeItem('ve-deploy-refreshed');
-    // Güncelleme sonrası: bilgiyi çek, "Program Güncellendi" popup'ı aç
+    // Güncelleme tamamlandı — API'ye sormadan doğrudan göster
     setTimeout(function() {
-      _veCheckDeploy(function(info) {
-        if(info) {
-          var dot = document.getElementById('ve-deploy-dot');
-          _veShowPopup(dot, info, '✅ Program Güncellendi', false);
-        }
-      });
-    }, 1500);
+      var dot = document.getElementById('ve-deploy-dot');
+      if(dot) {
+        dot.className = 've-deploy-dot ve-deploy-success';
+        dot.title = '✅ Güncel';
+      }
+      _veShowRefreshedPopup();
+    }, 500);
   }
-  // Otomatik sorgu yok — sadece 🔄 butonuyla veya yeşil noktayla kontrol edilir
 });
+
+// Güncelleme sonrası basit popup (API çağırmaz)
+function _veShowRefreshedPopup() {
+  var existing = document.getElementById('ve-deploy-popup');
+  if(existing) existing.remove();
+
+  var popup = document.createElement('div');
+  popup.id = 've-deploy-popup';
+  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:360px; padding:16px; font-size:0.78rem;';
+
+  popup.innerHTML =
+    '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
+      '<span style="font-weight:600; color:#22c55e; font-size:0.85rem;">✅ Program Güncellendi</span>' +
+      '<button onclick="document.getElementById(\'ve-deploy-popup\').remove()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>' +
+    '</div>' +
+    '<div style="color:var(--text-secondary); line-height:1.5;">Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.</div>';
+
+  document.body.appendChild(popup);
+
+  setTimeout(function() {
+    document.addEventListener('click', function _close(e) {
+      var p = document.getElementById('ve-deploy-popup');
+      if(p && !p.contains(e.target)) {
+        p.remove();
+        document.removeEventListener('click', _close);
+      }
+    });
+  }, 100);
+}
 
 </script>
 
