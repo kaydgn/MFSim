@@ -121,6 +121,223 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
+    id: 'gearbox-analysis', name: 'Şanzıman Detay Analizi', icon: '⚙️', priority: 'recommended',
+    solverTab: 'performance',
+    description: 'Şanzıman giriş/çıkış devir-tork, güç kaybı, verim ve vites oranı profilleri',
+    requires: ['gearbox'],
+    diagrams: [
+      { id:'gb-io-torque', name:'Şanzıman Giriş/Çıkış Torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
+        significance:'Giriş ve çıkış torku farkı → şanzıman dişli kayıpları. Her vites geçişinde tork çarpanı değişimi görülür.' },
+      { id:'gb-io-rpm', name:'Şanzıman Giriş/Çıkış Devri – Hız', xAxis:'Hız (km/h)', yAxis:'Devir (rpm)',
+        significance:'Giriş devri (TC çıkışı) ve çıkış devri (propşaft). Oranları aktif vites oranını verir.' },
+      { id:'gb-power-loss', name:'Şanzıman Güç Kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç Kaybı (kW)',
+        significance:'Dişli, rulman ve yağ kayıpları toplamı. Yüksek torkta ve yüksek devirdeki kayıp artışı net olarak görülür.' },
+      { id:'gb-efficiency', name:'Şanzıman Verimi – Hız', xAxis:'Hız (km/h)', yAxis:'Verim (%)',
+        significance:'Vites bazında verim profili. Converter modda daha düşük, lockup modda daha yüksek verim beklenir.' },
+      { id:'gb-ratio-t', name:'Vites Oranı – Zaman', xAxis:'Zaman (s)', yAxis:'Vites Oranı (−)',
+        significance:'Anlık vites oranı profili. Basamak fonksiyonu şeklinde değişir, her shift noktası net görülür.' }
+    ],
+    sensors: [
+      { target:'gearbox', attachment:'input', signal:'rpm_in', label:'Şanzıman Girişi → Giriş Devri (rpm)' },
+      { target:'gearbox', attachment:'input', signal:'torque_in', label:'Şanzıman Girişi → Giriş Torku (Nm)' },
+      { target:'gearbox', attachment:'component', signal:'power_in', label:'Şanzıman → Giriş Gücü (kW)' },
+      { target:'gearbox', attachment:'component', signal:'power_out', label:'Şanzıman → Çıkış Gücü (kW)' },
+      { target:'gearbox', attachment:'component', signal:'power_loss', label:'Şanzıman → Güç Kaybı (kW)' },
+      { target:'gearbox', attachment:'component', signal:'gear', label:'Şanzıman → Aktif Vites (−)' },
+      { target:'gearbox', attachment:'component', signal:'ratio', label:'Şanzıman → Vites Oranı (−)' },
+      { target:'gearbox', attachment:'component', signal:'gear_mode', label:'Şanzıman → Vites Modu (C/L)' },
+      { target:'gearbox', attachment:'component', signal:'efficiency', label:'Şanzıman → Verim (%)' }
+    ]
+  },
+  {
+    id: 'transfer-analysis', name: 'Transfer Kutusu Analizi', icon: '🔀', priority: 'recommended',
+    solverTab: 'performance',
+    description: 'Transfer kutusu giriş/çıkış devir-tork ve güç kaybı profilleri',
+    requires: ['transfer'],
+    diagrams: [
+      { id:'tf-io-torque', name:'Transfer Giriş/Çıkış Torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
+        significance:'Kademe oranına bağlı tork çarpanı. Hi/Lo kademe geçişlerinde tork değişimi görülür.' },
+      { id:'tf-power-loss', name:'Transfer Güç Kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç Kaybı (kW)',
+        significance:'Transfer kutusu dişli ve rulman kayıpları. Yüksek tork bölgelerinde artan kayıp profili.' }
+    ],
+    sensors: [
+      { target:'transfer', attachment:'input', signal:'rpm_in', label:'Transfer Girişi → Giriş Devri (rpm)' },
+      { target:'transfer', attachment:'input', signal:'torque_in', label:'Transfer Girişi → Giriş Torku (Nm)' },
+      { target:'transfer', attachment:'output', signal:'rpm_out', label:'Transfer Çıkışı → Çıkış Devri (rpm)' },
+      { target:'transfer', attachment:'output', signal:'torque_out', label:'Transfer Çıkışı → Çıkış Torku (Nm)' },
+      { target:'transfer', attachment:'component', signal:'power_in', label:'Transfer → Giriş Gücü (kW)' },
+      { target:'transfer', attachment:'component', signal:'power_out', label:'Transfer → Çıkış Gücü (kW)' },
+      { target:'transfer', attachment:'component', signal:'power_loss', label:'Transfer → Güç Kaybı (kW)' }
+    ]
+  },
+  {
+    id: 'propshaft-analysis', name: 'Propşaft Analizi', icon: '🔩', priority: 'optional',
+    solverTab: 'performance',
+    description: 'Propşaft devir-tork ve güç iletim kaybı profilleri',
+    requires: ['propshaft'],
+    diagrams: [
+      { id:'ps-io-torque', name:'Propşaft Giriş/Çıkış Torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
+        significance:'Propşaft boyunca tork iletim kaybı. Burulma ve rulman kayıpları farktan okunur.' },
+      { id:'ps-power-loss', name:'Propşaft Güç Kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç Kaybı (kW)',
+        significance:'Propşaft mekanik kayıpları — genellikle küçük ama yüksek devirlerde artabilir.' }
+    ],
+    sensors: [
+      { target:'propshaft', attachment:'input', signal:'rpm_in', label:'Propşaft Girişi → Giriş Devri (rpm)' },
+      { target:'propshaft', attachment:'input', signal:'torque_in', label:'Propşaft Girişi → Giriş Torku (Nm)' },
+      { target:'propshaft', attachment:'output', signal:'rpm_out', label:'Propşaft Çıkışı → Çıkış Devri (rpm)' },
+      { target:'propshaft', attachment:'output', signal:'torque_out', label:'Propşaft Çıkışı → Çıkış Torku (Nm)' },
+      { target:'propshaft', attachment:'component', signal:'power_in', label:'Propşaft → Giriş Gücü (kW)' },
+      { target:'propshaft', attachment:'component', signal:'power_out', label:'Propşaft → Çıkış Gücü (kW)' },
+      { target:'propshaft', attachment:'component', signal:'power_loss', label:'Propşaft → Güç Kaybı (kW)' }
+    ]
+  },
+  {
+    id: 'diff-analysis', name: 'Diferansiyel Analizi', icon: '⚙️', priority: 'optional',
+    solverTab: 'performance',
+    description: 'Diferansiyel giriş/çıkış devir-tork ve güç kaybı profilleri',
+    requires: ['differential'],
+    diagrams: [
+      { id:'diff-io-torque', name:'Diferansiyel Giriş/Çıkış Torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
+        significance:'Diferansiyel oranı ve kayıpları sonrası yarım aks torku. Son kademe tork çarpanı görülür.' },
+      { id:'diff-power-loss', name:'Diferansiyel Güç Kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç Kaybı (kW)',
+        significance:'Konik dişli ve rulman kayıpları — genellikle yüksek hız ve yüksek torkta artar.' }
+    ],
+    sensors: [
+      { target:'differential', attachment:'input', signal:'rpm_in', label:'Diferansiyel Girişi → Giriş Devri (rpm)' },
+      { target:'differential', attachment:'input', signal:'torque_in', label:'Diferansiyel Girişi → Giriş Torku (Nm)' },
+      { target:'differential', attachment:'output', signal:'rpm_out', label:'Diferansiyel Çıkışı → Yarım Aks Devri (rpm)' },
+      { target:'differential', attachment:'output', signal:'torque_out', label:'Diferansiyel Çıkışı → Yarım Aks Torku (Nm)' },
+      { target:'differential', attachment:'component', signal:'power_in', label:'Diferansiyel → Giriş Gücü (kW)' },
+      { target:'differential', attachment:'component', signal:'power_out', label:'Diferansiyel → Çıkış Gücü (kW)' },
+      { target:'differential', attachment:'component', signal:'power_loss', label:'Diferansiyel → Güç Kaybı (kW)' }
+    ]
+  },
+  {
+    id: 'wheel-analysis', name: 'Tekerlek Analizi', icon: '🛞', priority: 'recommended',
+    solverTab: 'performance',
+    description: 'Tekerlek devri, torku, çekiş kuvveti ve eğim kapasitesi profilleri',
+    requires: ['wheel'],
+    diagrams: [
+      { id:'wh-force-v', name:'Tekerlek Çekiş Kuvveti – Hız', xAxis:'Hız (km/h)', yAxis:'Kuvvet (N)',
+        significance:'Tekerlek yüzeyindeki net çekiş kuvveti. Lastik-zemin etkileşiminin doğrudan göstergesi.' },
+      { id:'wh-torque-v', name:'Tekerlek Torku – Hız', xAxis:'Hız (km/h)', yAxis:'Tork (Nm)',
+        significance:'Tekerleğe ulaşan net tork. Tüm drivetrain kayıpları sonrası nihai tork değeri.' },
+      { id:'wh-te-dp-v', name:'TE ve DP – Hız', xAxis:'Hız (km/h)', yAxis:'Kuvvet (kN)',
+        significance:'Çekiş Kuvveti (TE) ve Drawbar Pull (DP) tekerlekten ölçüm. DP = TE − direnç, sıfır noktası max hız.' },
+      { id:'wh-grade-v', name:'Eğim Kapasitesi – Hız', xAxis:'Hız (km/h)', yAxis:'Eğim (%)',
+        significance:'Her hızda aracın tırmanabildiği maksimum eğim yüzdesi. Düşük hızda yüksek, yüksek hızda düşen profil.' }
+    ],
+    sensors: [
+      { target:'wheel', attachment:'component', signal:'rpm_in', label:'Tekerlek → Devir (rpm)' },
+      { target:'wheel', attachment:'component', signal:'torque_in', label:'Tekerlek → Tork (Nm)' },
+      { target:'wheel', attachment:'component', signal:'speed', label:'Tekerlek → Hız (km/h)' },
+      { target:'wheel', attachment:'component', signal:'force', label:'Tekerlek → Çekiş Kuvveti (N)' },
+      { target:'wheel', attachment:'component', signal:'power_out', label:'Tekerlek → Güç (kW)' },
+      { target:'wheel', attachment:'component', signal:'tractive_effort', label:'Tekerlek → TE (kN)' },
+      { target:'wheel', attachment:'component', signal:'drawbar_pull', label:'Tekerlek → DP (kN)' },
+      { target:'wheel', attachment:'component', signal:'net_grade', label:'Tekerlek → Eğim Kapasitesi (%)' }
+    ]
+  },
+  {
+    id: 'vehicle-extended', name: 'Araç Ek Sinyaller', icon: '🚗', priority: 'optional',
+    solverTab: 'performance',
+    description: 'Kinetik enerji, yavaşlama (g) ve eşdeğer kütle profilleri',
+    requires: ['vehicle'],
+    diagrams: [
+      { id:'ve-ke-v', name:'Kinetik Enerji – Hız', xAxis:'Hız (km/h)', yAxis:'Kinetik Enerji (kJ)',
+        significance:'Araç kinetik enerjisinin hızla ilişkisi. Fren enerji geri kazanımı ve çarpışma güvenliği analizleri için temel veri.' },
+      { id:'ve-decel-v', name:'Yavaşlama (g) – Hız', xAxis:'Hız (km/h)', yAxis:'Yavaşlama (g)',
+        significance:'Aracın g cinsinden yavaşlama kapasitesi. Sürücü konforu ve yük güvenliği sınırlarının kontrolü.' }
+    ],
+    sensors: [
+      { target:'vehicle', attachment:'component', signal:'v_accel_g', label:'Araç → İvme (g)' },
+      { target:'vehicle', attachment:'component', signal:'v_decel_g', label:'Araç → Yavaşlama (g)' },
+      { target:'vehicle', attachment:'component', signal:'v_kinetic_energy', label:'Araç → Kinetik Enerji (kJ)' },
+      { target:'vehicle', attachment:'component', signal:'v_effective_mass', label:'Araç → Eşdeğer Kütle (kg)' }
+    ]
+  },
+  {
+    id: 'road-extended', name: 'Yol Ek Sinyaller', icon: '🛣️', priority: 'optional',
+    solverTab: 'performance',
+    description: 'Anlık eğim yüzdesi ve aktif segment numarası profilleri',
+    requires: ['road'],
+    diagrams: [
+      { id:'rd-grade-t', name:'Anlık Eğim – Zaman', xAxis:'Zaman (s)', yAxis:'Eğim (%)',
+        significance:'Zamana bağlı eğim profili. Sabit eğimli simülasyonda düz çizgi, segment bazlı simülasyonda basamak fonksiyonu.' }
+    ],
+    sensors: [
+      { target:'road', attachment:'component', signal:'r_current_grade', label:'Yol → Anlık Eğim (%)' },
+      { target:'road', attachment:'component', signal:'r_current_segment', label:'Yol → Aktif Segment (#)' }
+    ]
+  },
+  {
+    id: 'tc-extended', name: 'TC Ek Sinyaller', icon: '🌀', priority: 'optional',
+    solverTab: 'performance',
+    description: 'TC devir, güç ve K-Factor profilleri',
+    requires: ['torque-converter'],
+    diagrams: [
+      { id:'tc-kfactor-v', name:'K-Factor – Hız', xAxis:'Hız (km/h)', yAxis:'K-Factor (rpm/√Nm)',
+        significance:'Tork konvertörün K-Factor eğrisi. Stall K-factor motor-TC eşleşmesinin temel parametresidir.' },
+      { id:'tc-power-loss-v', name:'TC Güç Kaybı – Hız', xAxis:'Hız (km/h)', yAxis:'Güç Kaybı (kW)',
+        significance:'Tork konvertörde kaybedilen güç. Stall\'da en yüksek, lockup\'ta sıfıra yakın.' }
+    ],
+    sensors: [
+      { target:'torque-converter', attachment:'input', signal:'rpm_in', label:'TC Girişi → Pompa Devri (rpm)' },
+      { target:'torque-converter', attachment:'output', signal:'rpm_out', label:'TC Çıkışı → Türbin Devri (rpm)' },
+      { target:'torque-converter', attachment:'component', signal:'power_in', label:'TC → Giriş Gücü (kW)' },
+      { target:'torque-converter', attachment:'component', signal:'power_out', label:'TC → Çıkış Gücü (kW)' },
+      { target:'torque-converter', attachment:'component', signal:'power_loss', label:'TC → Güç Kaybı (kW)' },
+      { target:'torque-converter', attachment:'component', signal:'kfactor', label:'TC → K-Factor (rpm/√Nm)' }
+    ]
+  },
+  {
+    id: 'engine-extended', name: 'Motor Ek Sinyaller', icon: '⚙️', priority: 'optional',
+    solverTab: 'performance',
+    description: 'Motor açısal hız profili',
+    requires: ['engine'],
+    diagrams: [
+      { id:'eng-angvel-t', name:'Açısal Hız – Zaman', xAxis:'Zaman (s)', yAxis:'Açısal Hız (rad/s)',
+        significance:'Motorun açısal hız profili (rad/s). Atalet ve titreşim analizlerinde kullanılan temel büyüklük.' }
+    ],
+    sensors: [
+      { target:'engine', attachment:'output', signal:'angular_vel', label:'Motor Çıkışı → Açısal Hız (rad/s)' }
+    ]
+  },
+  {
+    id: 'shift-ctrl-extended', name: 'Vites Kontrol Ek Sinyaller', icon: '🔄', priority: 'optional',
+    solverTab: 'performance',
+    description: 'Lockup durumu, şanzıman çıkış devri ve devir oranı profilleri',
+    requires: ['shift-controller'],
+    diagrams: [
+      { id:'sc-lockup-t', name:'Lockup Durumu – Zaman', xAxis:'Zaman (s)', yAxis:'Lockup (0/1)',
+        significance:'TC lockup clutch durumu. 0=converter modu (kaymalı), 1=lockup modu (kilitli). Geçiş noktaları kritik.' },
+      { id:'sc-nout-t', name:'Şanzıman Çıkış Devri – Zaman', xAxis:'Zaman (s)', yAxis:'Çıkış Devri (rpm)',
+        significance:'Şanzıman çıkış devri profili. Shift kalibrasyon ve vites oranı doğrulaması için kullanılır.' }
+    ],
+    sensors: [
+      { target:'shift-controller', attachment:'component', signal:'gear_mode', label:'Vites Kontrol → Vites Modu' },
+      { target:'shift-controller', attachment:'component', signal:'lockup_state', label:'Vites Kontrol → Lockup Durumu (0/1)' },
+      { target:'shift-controller', attachment:'component', signal:'n_output', label:'Vites Kontrol → Çıkış Devri (rpm)' },
+      { target:'shift-controller', attachment:'component', signal:'n_out_ratio', label:'Vites Kontrol → N_out Oranı (−)' }
+    ]
+  },
+  {
+    id: 'solver-extended', name: 'Çözücü Ek Sinyaller', icon: '📐', priority: 'optional',
+    solverTab: 'performance',
+    description: 'Eğim kapasitesi ve toplam ısı reddi profilleri',
+    requires: ['solver'],
+    diagrams: [
+      { id:'sol-grade-v', name:'Net Eğim Kapasitesi – Hız', xAxis:'Hız (km/h)', yAxis:'Eğim (%)',
+        significance:'Her hızda aracın tırmanabildiği maksimum eğim. Gradeability tablosunun diyagram karşılığı.' },
+      { id:'sol-heat-v', name:'Toplam Isı Reddi – Hız', xAxis:'Hız (km/h)', yAxis:'Isı Reddi (kW)',
+        significance:'Tüm bileşenlerden toplam ısı reddi. Soğutma sistemi boyutlandırmasının en temel verisi.' }
+    ],
+    sensors: [
+      { target:'solver', attachment:'component', signal:'net_grade', label:'Çözücü → Eğim Kapasitesi (%)' },
+      { target:'solver', attachment:'component', signal:'heat_rejection', label:'Çözücü → Toplam Isı Reddi (kW)' }
+    ]
+  },
+  {
     id: 'comparison', name: 'Karşılaştırma Diyagramları', icon: '⚖️', priority: 'advanced',
     solverTab: 'performance',
     description: 'Transfer kademe karşılaştırması, verimlilik zinciri ve ileri analizler',
@@ -334,9 +551,13 @@ var SENSOR_PACKAGES = [
 function swScanTopology() {
   var result = {
     hasEngine:false, hasTC:false, hasGearbox:false, hasTransfer:false,
-    hasDiff:false, hasVehicle:false, hasRoad:false, hasShiftCtrl:false, hasSolver:false,
+    hasDiff:false, hasPropshaft:false, hasWheel:false, hasVehicle:false,
+    hasRoad:false, hasShiftCtrl:false, hasSolver:false, hasScenario:false,
+    hasGearShift:false, hasObstacleCrossing:false,
     engineNode:null, tcNode:null, gearboxNode:null, transferNode:null,
-    diffNode:null, vehicleNode:null, roadNode:null, shiftCtrlNode:null, solverNode:null,
+    diffNode:null, propshaftNode:null, wheelNode:null, vehicleNode:null,
+    roadNode:null, shiftCtrlNode:null, solverNode:null, scenarioNode:null,
+    gearShiftNode:null, obstacleCrossingNode:null,
     existingSensors: [],
     chainComplete: false
   };
@@ -347,10 +568,15 @@ function swScanTopology() {
       case 'gearbox': result.hasGearbox=true; result.gearboxNode=n; break;
       case 'transfer': result.hasTransfer=true; result.transferNode=n; break;
       case 'differential': result.hasDiff=true; result.diffNode=n; break;
+      case 'propshaft': result.hasPropshaft=true; result.propshaftNode=n; break;
+      case 'wheel': result.hasWheel=true; result.wheelNode=n; break;
       case 'vehicle': result.hasVehicle=true; result.vehicleNode=n; break;
       case 'road': result.hasRoad=true; result.roadNode=n; break;
       case 'shift-controller': result.hasShiftCtrl=true; result.shiftCtrlNode=n; break;
       case 'solver': result.hasSolver=true; result.solverNode=n; break;
+      case 'scenario': result.hasScenario=true; result.scenarioNode=n; break;
+      case 'gear-shift': result.hasGearShift=true; result.gearShiftNode=n; break;
+      case 'obstacle-crossing': result.hasObstacleCrossing=true; result.obstacleCrossingNode=n; break;
       case 'sensor':
         result.existingSensors.push({
           node:n,
@@ -473,6 +699,60 @@ var SW_DIAGRAM_SIGNALS = {
     {target:'engine', signal:'rpm', name:'Motor Devri', unit:'rpm'},
     {target:'shift-controller', signal:'current_gear', name:'Aktif Vites', unit:'−'}
   ]},
+  // Şanzıman Detay
+  'gb-io-torque': { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[
+    {target:'gearbox', signal:'torque_in', name:'Giriş Torku', unit:'Nm'},
+    {target:'gearbox', signal:'torque_out', name:'Çıkış Torku', unit:'Nm'}
+  ]},
+  'gb-io-rpm':    { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[
+    {target:'gearbox', signal:'rpm_in', name:'Giriş Devri', unit:'rpm'},
+    {target:'gearbox', signal:'rpm_out', name:'Çıkış Devri', unit:'rpm'}
+  ]},
+  'gb-power-loss':{ x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'gearbox', signal:'power_loss', name:'Güç Kaybı', unit:'kW'}] },
+  'gb-efficiency':{ x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'gearbox', signal:'efficiency', name:'Verim', unit:'%'}] },
+  'gb-ratio-t':   { x:{target:'time'}, y:[{target:'gearbox', signal:'ratio', name:'Vites Oranı', unit:'−'}] },
+  // Transfer Kutusu
+  'tf-io-torque': { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[
+    {target:'transfer', signal:'torque_in', name:'Giriş Torku', unit:'Nm'},
+    {target:'transfer', signal:'torque_out', name:'Çıkış Torku', unit:'Nm'}
+  ]},
+  'tf-power-loss':{ x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'transfer', signal:'power_loss', name:'Güç Kaybı', unit:'kW'}] },
+  // Propşaft
+  'ps-io-torque': { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[
+    {target:'propshaft', signal:'torque_in', name:'Giriş Torku', unit:'Nm'},
+    {target:'propshaft', signal:'torque_out', name:'Çıkış Torku', unit:'Nm'}
+  ]},
+  'ps-power-loss':{ x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'propshaft', signal:'power_loss', name:'Güç Kaybı', unit:'kW'}] },
+  // Diferansiyel
+  'diff-io-torque':{ x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[
+    {target:'differential', signal:'torque_in', name:'Giriş Torku', unit:'Nm'},
+    {target:'differential', signal:'torque_out', name:'Yarım Aks Torku', unit:'Nm'}
+  ]},
+  'diff-power-loss':{ x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'differential', signal:'power_loss', name:'Güç Kaybı', unit:'kW'}] },
+  // Tekerlek
+  'wh-force-v':   { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'wheel', signal:'force', name:'Çekiş Kuvveti', unit:'N'}] },
+  'wh-torque-v':  { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'wheel', signal:'torque_in', name:'Tekerlek Torku', unit:'Nm'}] },
+  'wh-te-dp-v':   { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[
+    {target:'wheel', signal:'tractive_effort', name:'Çekiş Kuvveti (TE)', unit:'kN'},
+    {target:'wheel', signal:'drawbar_pull', name:'Drawbar Pull (DP)', unit:'kN'}
+  ]},
+  'wh-grade-v':   { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'wheel', signal:'net_grade', name:'Eğim Kapasitesi', unit:'%'}] },
+  // Araç Ek
+  've-ke-v':      { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'vehicle', signal:'v_kinetic_energy', name:'Kinetik Enerji', unit:'kJ'}] },
+  've-decel-v':   { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'vehicle', signal:'v_decel_g', name:'Yavaşlama', unit:'g'}] },
+  // Yol Ek
+  'rd-grade-t':   { x:{target:'time'}, y:[{target:'road', signal:'r_current_grade', name:'Anlık Eğim', unit:'%'}] },
+  // TC Ek
+  'tc-kfactor-v':    { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'torque-converter', signal:'kfactor', name:'K-Factor', unit:'rpm/√Nm'}] },
+  'tc-power-loss-v': { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'torque-converter', signal:'power_loss', name:'Güç Kaybı', unit:'kW'}] },
+  // Motor Ek
+  'eng-angvel-t':    { x:{target:'time'}, y:[{target:'engine', signal:'angular_vel', name:'Açısal Hız', unit:'rad/s'}] },
+  // Vites Kontrol Ek
+  'sc-lockup-t':     { x:{target:'time'}, y:[{target:'shift-controller', signal:'lockup_state', name:'Lockup Durumu', unit:'0/1'}] },
+  'sc-nout-t':       { x:{target:'time'}, y:[{target:'shift-controller', signal:'n_output', name:'Çıkış Devri', unit:'rpm'}] },
+  // Çözücü Ek
+  'sol-grade-v':     { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'solver', signal:'net_grade', name:'Eğim Kapasitesi', unit:'%'}] },
+  'sol-heat-v':      { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'solver', signal:'heat_rejection', name:'Toplam Isı Reddi', unit:'kW'}] },
   // Karşılaştırma
   'transfer-compare':  { x:{target:'time'}, y:[{target:'vehicle', signal:'v_speed', name:'Araç Hızı', unit:'km/h'}] },
   'efficiency-chain':  { x:{target:'vehicle', signal:'v_speed', name:'Hız', unit:'km/h'}, y:[{target:'torque-converter', signal:'efficiency', name:'TC Verimi', unit:'%'}] },
@@ -746,9 +1026,11 @@ function getSensorWizardPropertiesHTML(node) {
   html += '<div class="sw-topo-grid">';
   var topoItems = [
     {k:'Motor', v:topo.hasEngine}, {k:'Tork Konvertör', v:topo.hasTC},
-    {k:'Şanzıman', v:topo.hasGearbox}, {k:'Transfer Kutusu', v:topo.hasTransfer},
-    {k:'Diferansiyel', v:topo.hasDiff}, {k:'Araç', v:topo.hasVehicle},
-    {k:'Yol / Ortam', v:topo.hasRoad}, {k:'Şanz. Kontrol', v:topo.hasShiftCtrl}
+    {k:'Şanzıman', v:topo.hasGearbox}, {k:'Şanz. Kontrol', v:topo.hasShiftCtrl},
+    {k:'Transfer Kutusu', v:topo.hasTransfer}, {k:'Propşaft', v:topo.hasPropshaft},
+    {k:'Diferansiyel', v:topo.hasDiff}, {k:'Tekerlek', v:topo.hasWheel},
+    {k:'Araç', v:topo.hasVehicle}, {k:'Yol / Ortam', v:topo.hasRoad},
+    {k:'Senaryo', v:topo.hasScenario}, {k:'Vites Geçişleri', v:topo.hasGearShift}
   ];
   topoItems.forEach(function(ti) {
     html += '<div class="sw-topo-item">';
