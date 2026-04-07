@@ -780,7 +780,7 @@ function veRenderSnapshot(paneIdx) {
       }
       
       html += '</div>';
-      html += '<div class="ve-node-label">' + (n.customName || def.name) + '</div>';
+      html += '<div class="ve-node-label">' + escapeHTML(n.customName || def.name) + '</div>';
       
       if(n.type === 'wheel' && n.isMasterWheel) {
         html += '<div class="ve-wheel-master-badge" title="Master Tekerlek">★</div>';

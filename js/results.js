@@ -253,7 +253,7 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
           html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensors > 0 ? '▶' : ' ') + '</span>';
-          html += '<span class="icon">⚙️</span><span>' + name + '</span>';
+          html += '<span class="icon">⚙️</span><span>' + escapeHTML(name) + '</span>';
           html += ' <span style="font-size:0.6rem; color:var(--accent-primary); margin-left:auto; opacity:0.7;">' + totalSensors + '</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
@@ -286,7 +286,7 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
           html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
-          html += '<span class="icon">' + icon + '</span><span>' + name + '</span>';
+          html += '<span class="icon">' + icon + '</span><span>' + escapeHTML(name) + '</span>';
           html += ' <span style="font-size:0.6rem; color:var(--accent-warning); margin-left:auto; opacity:0.7;">' + directSensors.length + '</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
@@ -303,7 +303,7 @@ function veUpdateResultsTree() {
         html += '<div style="padding:4px 0 2px 32px; font-size:0.65rem; color:var(--text-muted); font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">Bağlı olmayan</div>';
         unbound.forEach(function(sn) {
           html += '<div class="ve-tree-sensor" style="padding-left:36px; opacity:0.5;">';
-          html += '<span>📌</span> ' + (sn.customName || 'Sensör') + '</div>';
+          html += '<span>📌</span> ' + escapeHTML(sn.customName || 'Sensör') + '</div>';
         });
       }
 

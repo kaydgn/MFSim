@@ -1238,7 +1238,7 @@ function getWheelPropertiesHTML(node) {
       html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
       html += '<div class="sw-pkg-body">';
       html += '<div class="sw-pkg-desc">';
-      html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + (masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
+      html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
       html += '</div></div>';
       html += '</div>';
@@ -1350,7 +1350,7 @@ function getWheelPropertiesHTML(node) {
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-body">';
     html += '<div class="sw-pkg-desc">';
-    html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + (masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
+    html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
     html += '</div>';
     html += '</div></div>';
     html += '</div>';
