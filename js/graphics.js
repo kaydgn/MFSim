@@ -358,7 +358,7 @@ function veShowYAxisLockPopup(slotIdx, axIdx, color, unit, e) {
   popup.style.top = e.clientY + 'px';
 
   popup.innerHTML =
-    '<div style="font-weight:700; color:' + color + '; font-size:0.7rem; text-align:center;">[' + unit + '] Eksen Aralığı</div>' +
+    '<div style="font-weight:700; color:' + color + '; font-size:0.7rem; text-align:center; border-bottom:1px solid ' + color + '30; padding-bottom:4px;">[' + unit + '] Eksen Aralığı</div>' +
     '<div style="display:flex; align-items:center; gap:4px;">' +
       '<label style="font-size:0.65rem; opacity:0.7; width:28px;">Min</label>' +
       '<input type="number" id="ve-yp-min" value="' + minVal + '" step="any" placeholder="Oto" style="width:70px; padding:2px 4px; font-size:0.68rem; border:1px solid ' + color + '60; border-radius:3px; background:var(--bg-input,#fff); color:var(--text-primary,#333); text-align:center;">' +
