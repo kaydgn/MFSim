@@ -55,7 +55,7 @@ function veExpandRoadMap(nodeId) {
   // Footer
   var footer = document.createElement('div');
   footer.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:0.58rem; color:var(--text-muted);';
-  footer.innerHTML = '<span>Sol tık: Nokta ekle</span><span style="opacity:0.4;">│</span><span>Marker tık: Sonraki noktaları sil</span><span style="opacity:0.4;">│</span><span>Scroll: Zoom</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
+  footer.innerHTML = '<span>Sol tık: Rota noktası ekle</span><span style="opacity:0.4;">│</span><span>Rota üzerine tık: 📍 Referans noktası</span><span style="opacity:0.4;">│</span><span>Scroll: Zoom</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
   modal.appendChild(footer);
   
   // ── Sol ve sağ kenar resize tutamaçları ──
@@ -253,7 +253,8 @@ function _veRestoreRoute(nodeId, node, map) {
   // OSRM rota çizgisini geri çiz
   var latlngs = rc.map(function(c) { return [c[0], c[1]]; });
   if(veRoadOSRMlines[nodeId]) { try { map.removeLayer(veRoadOSRMlines[nodeId]); } catch(e){} }
-  veRoadOSRMlines[nodeId] = L.polyline(latlngs, { color: '#4caf50', weight: 4 }).addTo(map);
+  veRoadOSRMlines[nodeId] = L.polyline(latlngs, { color: '#1a3a6b', weight: 4 }).addTo(map);
+  _veAttachRouteClickForWaypoint(nodeId);
   map.fitBounds(veRoadOSRMlines[nodeId].getBounds(), { padding: [20, 20] });
 
   // Başlangıç ve bitiş marker'larını koy
@@ -479,8 +480,12 @@ function veCalcRouteAndProfiles(nodeId) {
       // Eski OSRM çizgisi sil
       if(veRoadOSRMlines[nodeId]) { map.removeLayer(veRoadOSRMlines[nodeId]); }
 
-      veRoadOSRMlines[nodeId] = L.polyline(latlngs, { color: '#4caf50', weight: 4 }).addTo(map);
+      veRoadOSRMlines[nodeId] = L.polyline(latlngs, { color: '#1a3a6b', weight: 4 }).addTo(map);
+      _veAttachRouteClickForWaypoint(nodeId);
       map.fitBounds(veRoadOSRMlines[nodeId].getBounds(), { padding: [20, 20] });
+
+      // Kesikli çizgiyi kaldır (OSRM rotası artık görünür)
+      if(veRoadPolylines[nodeId]) { map.removeLayer(veRoadPolylines[nodeId]); veRoadPolylines[nodeId] = null; }
 
       var distKm = (route.distance / 1000).toFixed(2);
       showToast('Rota bulundu: ' + distKm + ' km — Yükseklik verisi alınıyor...');
@@ -529,9 +534,13 @@ function veCalcRouteOSRM(nodeId) {
       // Eski OSRM çizgisi sil
       if(veRoadOSRMlines[nodeId]) { map.removeLayer(veRoadOSRMlines[nodeId]); }
       
-      veRoadOSRMlines[nodeId] = L.polyline(latlngs, { color: '#4caf50', weight: 4 }).addTo(map);
+      veRoadOSRMlines[nodeId] = L.polyline(latlngs, { color: '#1a3a6b', weight: 4 }).addTo(map);
+      _veAttachRouteClickForWaypoint(nodeId);
       map.fitBounds(veRoadOSRMlines[nodeId].getBounds(), { padding: [20, 20] });
-      
+
+      // Kesikli çizgiyi kaldır
+      if(veRoadPolylines[nodeId]) { map.removeLayer(veRoadPolylines[nodeId]); veRoadPolylines[nodeId] = null; }
+
       var distKm = (route.distance / 1000).toFixed(2);
       var pointCount = latlngs.length;
       showToast('Rota bulundu: ' + distKm + ' km (' + pointCount + ' nokta)');
@@ -1654,6 +1663,37 @@ function _veWaypointRestore(nodeId) {
   if(_veRouteWaypoints[nodeId] && _veRouteWaypoints[nodeId].length > 0) return; // zaten yüklü
   _veRouteWaypoints[nodeId] = node.data.routeWaypoints.map(function(w) {
     return { id: w.id, name: w.name, dist: w.dist, elev: w.elev, lat: w.lat, lng: w.lng, auto: !!w.auto };
+  });
+}
+
+// OSRM rota çizgisine waypoint ekleme click handler'ı bağla
+function _veAttachRouteClickForWaypoint(nodeId) {
+  var line = veRoadOSRMlines[nodeId];
+  if(!line) return;
+  // Mevcut handler varsa kaldır
+  line.off('click');
+  line.on('click', function(e) {
+    L.DomEvent.stopPropagation(e); // Harita click'ini engelle
+    var node = nodes.find(function(n) { return n.id === nodeId; });
+    if(!node || !node.data || !node.data.gpsSamples || node.data.gpsSamples.length < 2) {
+      showToast('Önce rota hesaplayın', 'warning'); return;
+    }
+    // Tıklanan noktanın rota üzerindeki en yakın mesafesini bul
+    var clickLatLng = e.latlng;
+    var pts = node.data.gpsSamples;
+    var bestDist = Infinity, bestRouteDist = 0;
+    for(var i = 0; i < pts.length; i++) {
+      var d = Math.pow(pts[i].lat - clickLatLng.lat, 2) + Math.pow(pts[i].lng - clickLatLng.lng, 2);
+      if(d < bestDist) { bestDist = d; bestRouteDist = pts[i].dist; }
+    }
+    // İsimlendirme dialog'u aç
+    _veWaypointNameDialog(nodeId, bestRouteDist, function(name) {
+      veAddRouteWaypoint(nodeId, bestRouteDist, name);
+      _veWaypointUpdateList(nodeId);
+      _veAltRedrawAll(nodeId);
+      _veWaypointShowOnMap(nodeId);
+      showToast('📍 Referans noktası eklendi: ' + name);
+    });
   });
 }
 
