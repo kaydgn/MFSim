@@ -33458,8 +33458,8 @@ function veShowYAxisLockPopup(slotIdx, axIdx, color, unit, e) {
       '<input type="number" id="ve-yp-max" value="' + maxVal + '" step="any" placeholder="Oto" style="width:70px; padding:2px 4px; font-size:0.68rem; border:1px solid ' + color + '60; border-radius:3px; background:var(--bg-input,#fff); color:var(--text-primary,#333); text-align:center; outline-color:' + color + ';">' +
     '</div>' +
     '<div style="display:flex; gap:4px; justify-content:center;">' +
-      '<button id="ve-yp-apply" style="padding:2px 10px; font-size:0.65rem; background:' + color + '; color:#fff; border:none; border-radius:3px; cursor:pointer;">Uygula</button>' +
-      '<button id="ve-yp-auto" style="padding:2px 10px; font-size:0.65rem; background:transparent; color:' + color + '; border:1px solid ' + color + '60; border-radius:3px; cursor:pointer;">↺ Oto</button>' +
+      '<button id="ve-yp-apply" style="padding:2px 10px; font-size:0.65rem; background:' + color + '; color:#fff; border:none; border-radius:3px; cursor:pointer; transition:opacity 0.15s;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">Uygula</button>' +
+      '<button id="ve-yp-auto" style="padding:2px 10px; font-size:0.65rem; background:transparent; color:' + color + '; border:1px solid ' + color + '60; border-radius:3px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background=\'' + color + '10\'" onmouseout="this.style.background=\'transparent\'">↺ Oto</button>' +
     '</div>';
 
   document.body.appendChild(popup);
