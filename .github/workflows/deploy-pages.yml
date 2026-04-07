@@ -8,8 +8,6 @@ on:
     workflows: ["Auto PR + Merge"]
     types:
       - completed
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
