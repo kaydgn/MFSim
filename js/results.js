@@ -4035,9 +4035,7 @@ function veRenderSlot(slotIdx) {
       html += '</div>';
     }
     html += '</div>';
-    // ── Eksen kontrol çubuğu (dinamik — veRenderChart tarafından güncellenir) ──
-    html += '<div class="ve-axis-ctrl" id="ve-axis-ctrl-' + slotIdx + '" style="display:flex; align-items:center; gap:3px; padding:2px 4px; border-top:1px solid var(--border-color); font-size:0.58rem; color:var(--text-muted); flex-shrink:0; background:var(--bg-secondary); flex-wrap:wrap;">';
-    html += '</div>';
+    // Eksen kontrolü: Y birim etiketine çift tıklayınca popup açılır
   } else if(type === 'scatter3d') {
     // ── 3D Scatter modu ──
     html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '" style="overflow:hidden;">';
