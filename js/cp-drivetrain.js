@@ -477,7 +477,7 @@ function getDifferentialPropertiesHTML(node) {
       var html = '<div class="sw-panel">';
       html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.52rem; font-weight:600; padding:1px 5px; border:1px solid var(--border-color);">SLAVE</span></div>';
       html += '<div class="sw-pkg-desc">';
-      html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + (masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
+      html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
       html += '</div>';
       return html;

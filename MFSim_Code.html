@@ -3144,7 +3144,7 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
           html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensors > 0 ? '▶' : ' ') + '</span>';
-          html += '<span class="icon">⚙️</span><span>' + name + '</span>';
+          html += '<span class="icon">⚙️</span><span>' + escapeHTML(name) + '</span>';
           html += ' <span style="font-size:0.6rem; color:var(--accent-primary); margin-left:auto; opacity:0.7;">' + totalSensors + '</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
@@ -3177,7 +3177,7 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
           html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
-          html += '<span class="icon">' + icon + '</span><span>' + name + '</span>';
+          html += '<span class="icon">' + icon + '</span><span>' + escapeHTML(name) + '</span>';
           html += ' <span style="font-size:0.6rem; color:var(--accent-warning); margin-left:auto; opacity:0.7;">' + directSensors.length + '</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
@@ -3194,7 +3194,7 @@ function veUpdateResultsTree() {
         html += '<div style="padding:4px 0 2px 32px; font-size:0.65rem; color:var(--text-muted); font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">Bağlı olmayan</div>';
         unbound.forEach(function(sn) {
           html += '<div class="ve-tree-sensor" style="padding-left:36px; opacity:0.5;">';
-          html += '<span>📌</span> ' + (sn.customName || 'Sensör') + '</div>';
+          html += '<span>📌</span> ' + escapeHTML(sn.customName || 'Sensör') + '</div>';
         });
       }
 
@@ -9355,6 +9355,12 @@ function getSensorWizardPropertiesHTML(node) {
 
 </script>
 <script>
+// HTML escape — kullanıcı girdisini innerHTML'e güvenli ekleme
+function escapeHTML(str) {
+  if(typeof str !== 'string') return str;
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // Canvas transform uygula
 function updateCanvasTransform() {
   var canvas = document.getElementById('ve-canvas');
@@ -18536,7 +18542,7 @@ function getDifferentialPropertiesHTML(node) {
       var html = '<div class="sw-panel">';
       html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.52rem; font-weight:600; padding:1px 5px; border:1px solid var(--border-color);">SLAVE</span></div>';
       html += '<div class="sw-pkg-desc">';
-      html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + (masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
+      html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
       html += '</div>';
       return html;
@@ -18714,7 +18720,7 @@ function getSolverPropertiesHTML(node) {
     html += '<div style="display:flex; flex-wrap:wrap; align-items:center; gap:3px;">';
     chain.forEach(function(n, i) {
       if(i > 0) html += '<span style="color:var(--text-muted); font-size:0.48rem;">→</span>';
-      html += '<span style="color:var(--accent-primary); font-weight:500; background:var(--bg-tertiary); padding:1px 6px; border-radius:0; border:1px solid var(--border-color); font-size:0.54rem;">' + (n.customName || n.def.name) + '</span>';
+      html += '<span style="color:var(--accent-primary); font-weight:500; background:var(--bg-tertiary); padding:1px 6px; border-radius:0; border:1px solid var(--border-color); font-size:0.54rem;">' + escapeHTML(n.customName || n.def.name) + '</span>';
     });
     html += '</div>';
   } else {
@@ -25437,7 +25443,7 @@ function getWheelPropertiesHTML(node) {
       html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
       html += '<div class="sw-pkg-body">';
       html += '<div class="sw-pkg-desc">';
-      html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + (masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
+      html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
       html += '</div></div>';
       html += '</div>';
@@ -25549,7 +25555,7 @@ function getWheelPropertiesHTML(node) {
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-body">';
     html += '<div class="sw-pkg-desc">';
-    html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + (masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
+    html += 'Bu tekerlek görsel amaçlıdır. Tüm parametreler Master tekerlek' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Tekerlek') + ')' : '') + ' üzerinden tanımlanır.';
     html += '</div>';
     html += '</div></div>';
     html += '</div>';
@@ -29407,7 +29413,7 @@ function restoreState(state) {
     html += '<div class="ve-resize-handle ve-resize-s" data-handle="s"></div>';
     html += '<div class="ve-resize-handle ve-resize-sw" data-handle="sw"></div>';
     html += '<div class="ve-resize-handle ve-resize-w" data-handle="w"></div>';
-    html += '<div class="ve-node-label">' + (node.customName || def.name) + '</div>';
+    html += '<div class="ve-node-label">' + escapeHTML(node.customName || def.name) + '</div>';
     
     // Master tekerlek badge'i
     if(node.type === 'wheel' && node.isMasterWheel) {
@@ -30376,7 +30382,7 @@ function veRenderSnapshot(paneIdx) {
       }
       
       html += '</div>';
-      html += '<div class="ve-node-label">' + (n.customName || def.name) + '</div>';
+      html += '<div class="ve-node-label">' + escapeHTML(n.customName || def.name) + '</div>';
       
       if(n.type === 'wheel' && n.isMasterWheel) {
         html += '<div class="ve-wheel-master-badge" title="Master Tekerlek">★</div>';

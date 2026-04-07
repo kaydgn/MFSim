@@ -104,7 +104,7 @@ function getSolverPropertiesHTML(node) {
     html += '<div style="display:flex; flex-wrap:wrap; align-items:center; gap:3px;">';
     chain.forEach(function(n, i) {
       if(i > 0) html += '<span style="color:var(--text-muted); font-size:0.48rem;">→</span>';
-      html += '<span style="color:var(--accent-primary); font-weight:500; background:var(--bg-tertiary); padding:1px 6px; border-radius:0; border:1px solid var(--border-color); font-size:0.54rem;">' + (n.customName || n.def.name) + '</span>';
+      html += '<span style="color:var(--accent-primary); font-weight:500; background:var(--bg-tertiary); padding:1px 6px; border-radius:0; border:1px solid var(--border-color); font-size:0.54rem;">' + escapeHTML(n.customName || n.def.name) + '</span>';
     });
     html += '</div>';
   } else {
