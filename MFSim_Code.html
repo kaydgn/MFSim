@@ -24547,7 +24547,7 @@ function getScenarioPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-section-title">' + title + '</div>';
+  html += '<div class="sw-section-title">Senaryo Parametreleri</div>';
   html += '<div class="sw-pkg-desc">Sürüş senaryosunu tanımlayın. Bu bileşen topolojiye dahilse ilgili parametreler aktif olur.</div>';
   
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -24629,7 +24629,7 @@ function getCoastDownPropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-section-title">' + title + '</div>';
+  html += '<div class="sw-section-title">Coast-Down Parametreleri</div>';
   html += '<div class="sw-pkg-desc">Coast-Down test verilerinden yuvarlanma direnci katsayısı (Crr) hesaplanır. Bu değer Tekerlek bileşenine otomatik aktarılır.</div>';
   
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -24716,7 +24716,6 @@ function getObstacleCrossingPropertiesHTML(node) {
   var selectedGearRatio = (ftGears.length > 0 && selectedGearIdx < ftGears.length) ? ftGears[selectedGearIdx].ratio : '—';
 
   var html = '<div class="sw-panel">';
-  html += '<div class="sw-section-title">' + title + '</div>';
 
   // ═══════ ARAÇ PARAMETRELERİ ═══════
   html += '<div class="sw-section-title">Araç Parametreleri</div>';
@@ -25810,8 +25809,6 @@ function getVehiclePropertiesHTML(node) {
     
     var html = '<div class="sw-panel">';
 
-    html += '<div class="sw-section-title">' + title + '</div>';
-
     // ── 1. ARAÇ PARAMETRELERİ ──
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Araç Parametreleri</span></div>';
@@ -25888,7 +25885,7 @@ function getVehiclePropertiesHTML(node) {
   
   var html = '<div class="sw-panel">';
 
-  html += '<div class="sw-section-title">' + title + '</div>';
+  html += '<div class="sw-section-title">Araç Parametreleri</div>';
 
   html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
 
