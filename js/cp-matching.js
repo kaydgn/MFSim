@@ -33,14 +33,14 @@ function getECMatchingPropertiesHTML(node) {
   html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.68rem;">Analiz bekleniyor... Motor bileşeni tanımlandığında otomatik çalışır.</div>';
   html += '</div>';
   
-  // Absorption chart canvas
+  // Absorption chart canvas — Büyüt butonu canvas üzerinde
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Motor Eğrisi × Konvertör Kapasiteleri</span></div>';
   html += '<div class="sw-pkg-body">';
-  html += '<div class="sw-btn-row" style="justify-content:flex-end; margin-bottom:6px;">';
-  html += '<button class="sw-btn sw-btn-primary" onclick="ecmExpandChart(\'' + node.id + '\')" title="Diyagramı büyüt">⛶ Büyüt</button>';
+  html += '<div style="position:relative;">';
+  html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color);"></canvas>';
+  html += '<button class="sw-btn sw-btn-outline" onclick="ecmExpandChart(\'' + node.id + '\')" title="Diyagramı büyüt" style="position:absolute; top:6px; right:6px; font-size:0.54rem; padding:2px 6px; opacity:0.7;">⛶ Büyüt</button>';
   html += '</div>';
-  html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color); border-radius:0;"></canvas>';
   html += '<div class="sw-pkg-desc">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0.80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0.80 SR çalışma noktalarını verir.</div>';
   html += '</div></div>';
   html += '</div>'; // close sw-panel
@@ -425,43 +425,47 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   var ctx = canvas.getContext('2d');
   var W = canvas.width, H = canvas.height;
   
-  // Temizle
-  var isDark = document.documentElement.getAttribute('data-theme') !== 'light' && 
-               document.documentElement.getAttribute('data-theme') !== 'arctic' &&
-               document.documentElement.getAttribute('data-theme') !== 'sand';
-  ctx.fillStyle = isDark ? '#0a0c10' : '#f8f9fa';
+  // Temizle — tema renklerini oku
+  var tc = (typeof _drThemeColors === 'function') ? (_drTC || _drThemeColors()) : {bg:'#0a0c10', border:'#1c2333', textMuted:'#4a5568', textSec:'#7a8599', axisLine:'#333'};
+  // Koyu/açık tema tespiti: bg renginin parlaklığına bak
+  var _bgHex = tc.bg.replace('#','');
+  var _bgR = parseInt(_bgHex.substring(0,2),16)||0;
+  var _bgG = parseInt(_bgHex.substring(2,4),16)||0;
+  var _bgB = parseInt(_bgHex.substring(4,6),16)||0;
+  var isDark = (_bgR + _bgG + _bgB) / 3 < 128;
+  ctx.fillStyle = tc.bg;
   ctx.fillRect(0, 0, W, H);
-  
+
   // Marjlar
   var ml = 52, mr = 16, mt = 16, mb = 36;
   var pw = W - ml - mr, ph = H - mt - mb;
-  
+
   // Veri aralıkları
   var maxRPM = noLoadGov + 100;
   var minRPM = 400;
   var maxT = 0;
   torqueData.forEach(function(d) { if(d.torque > maxT) maxT = d.torque; });
   maxT = Math.ceil(maxT / 200) * 200 + 200;
-  
+
   function xPos(rpm) { return ml + (rpm - minRPM) / (maxRPM - minRPM) * pw; }
   function yPos(t) { return mt + ph - (t / maxT) * ph; }
-  
+
   // Grid
-  ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+  ctx.strokeStyle = tc.border;
   ctx.lineWidth = 0.5;
   for(var gt = 0; gt <= maxT; gt += 200) {
     ctx.beginPath(); ctx.moveTo(ml, yPos(gt)); ctx.lineTo(ml + pw, yPos(gt)); ctx.stroke();
-    ctx.fillStyle = isDark ? '#4a5568' : '#94a3b8'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = tc.textMuted; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
     ctx.fillText(gt, ml - 4, yPos(gt) + 3);
   }
   for(var gr = minRPM; gr <= maxRPM; gr += 200) {
     ctx.beginPath(); ctx.moveTo(xPos(gr), mt); ctx.lineTo(xPos(gr), mt + ph); ctx.stroke();
-    ctx.fillStyle = isDark ? '#4a5568' : '#94a3b8'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = tc.textMuted; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText(gr, xPos(gr), mt + ph + 14);
   }
-  
+
   // Eksen etiketleri
-  ctx.fillStyle = isDark ? '#7a8599' : '#475569'; ctx.font = '10px sans-serif';
+  ctx.fillStyle = tc.textSec; ctx.font = '10px sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText('Pump Speed — RPM', ml + pw/2, H - 4);
   ctx.save(); ctx.translate(12, mt + ph/2); ctx.rotate(-Math.PI/2);
@@ -1056,12 +1060,12 @@ function ecmDrawModalChart() {
   var W = rect.width, H = rect.height;
   
   var d = _ecmModalData;
-  var isDark = document.documentElement.getAttribute('data-theme') !== 'light' && 
-               document.documentElement.getAttribute('data-theme') !== 'arctic' &&
-               document.documentElement.getAttribute('data-theme') !== 'sand';
-  
+  var tc = (typeof _drThemeColors === 'function') ? (_drTC || _drThemeColors()) : {bg:'#0a0c10', border:'#1c2333', textMuted:'#4a5568', textSec:'#7a8599'};
+  var _bgHex2 = tc.bg.replace('#','');
+  var isDark = ((parseInt(_bgHex2.substring(0,2),16)||0) + (parseInt(_bgHex2.substring(2,4),16)||0) + (parseInt(_bgHex2.substring(4,6),16)||0)) / 3 < 128;
+
   // Background
-  ctx.fillStyle = isDark ? '#080a0e' : '#f8f9fa';
+  ctx.fillStyle = tc.bg;
   ctx.fillRect(0, 0, W, H);
   
   // Margins
@@ -1109,8 +1113,8 @@ function ecmDrawModalChart() {
   function torqueFromY(y) { return minT + (mt + ph - y) / ph * (maxT - minT); }
   
   // Grid
-  var gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-  var textColor = isDark ? '#4a5568' : '#94a3b8';
+  var gridColor = tc.border;
+  var textColor = tc.textMuted;
   ctx.font = '11px system-ui, sans-serif';
   
   // Grid — adaptive step sizes based on visible range
@@ -1135,7 +1139,7 @@ function ecmDrawModalChart() {
   }
   
   // Axis labels
-  ctx.fillStyle = isDark ? '#7a8599' : '#475569'; ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = tc.textSec; ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'center';
   ctx.fillText('Pump Speed — RPM', ml + pw/2, H - 8);
   ctx.save(); ctx.translate(16, mt + ph/2); ctx.rotate(-Math.PI/2);
   ctx.fillText('Pump Torque — N·m', 0, 0); ctx.restore();
