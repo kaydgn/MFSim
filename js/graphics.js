@@ -1619,17 +1619,18 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   var revPerKm = Math.round(1000 / (2 * Math.PI * R.tireRadius));
 
   // Yan yana satır yardımcısı (\n olmadan)
-  function pCol(label, value) { return '  ' + pad(label, 28) + ': ' + value; }
-  var CW = 42;
+  var CW = 40;
+  var CLW = 24; // kolon label genişliği
+  function pCol(label, value) { return '  ' + pad(label, CLW) + ': ' + value; }
 
-  r += '  ALAN VE AGIRLIK' + pad('', CW - 18) + 'LASTIKLER\n';
-  r += '  ' + ln('-', CW - 4) + '  ' + ln('-', CW - 4) + '\n';
-  r += pad(pCol('Alin Alani', num(R.frontalArea, 3) + ' m2'), CW) + pCol('Secili Lastik', ascii(R.tireName)) + '\n';
-  r += pad(pCol('Yukseklik / Genislik', num(R.height, 3) + ' / ' + num(R.width, 3) + ' m'), CW) + pCol('Lastik Devir/km', revPerKm + ' devir/km') + '\n';
-  r += pad(pCol('Aerodinamik Direnc (Cd)', num(R.cd, 3)), CW) + pCol('Lastik Yuvarlanma Yari.', num(R.tireRadius, 3) + ' m') + '\n';
-  r += pad(pCol('Brut Arac Agirligi (GVW)', numI(R.gvw) + ' kg'), CW) + pCol('Yuvarlanma Direnci (Crr)', num(R.crr, 4)) + '\n';
-  r += pad('', CW) + pCol('Yuzey Faktoru', num(R.surfFactor || 1.0, 2)) + '\n';
-  r += pad('', CW) + pCol('Lastik/Tekerlek Ataleti', num(R.tireInertia, 4) + ' kg.m2') + '\n';
+  r += '  ALAN VE AGIRLIK' + pad('', CW - 16) + 'LASTIKLER\n';
+  r += '  ' + ln('-', CW - 4) + '    ' + ln('-', CW - 4) + '\n';
+  r += pad(pCol('Alin Alani', num(R.frontalArea, 3) + ' m2'), CW) + '    ' + pCol('Secili Lastik', ascii(R.tireName)) + '\n';
+  r += pad(pCol('Yuk. / Gen.', num(R.height, 3) + ' / ' + num(R.width, 3) + ' m'), CW) + '    ' + pCol('Lastik Devir/km', revPerKm + ' devir/km') + '\n';
+  r += pad(pCol('Aerodinamik Cd', num(R.cd, 3)), CW) + '    ' + pCol('Yuvarlanma Yari.', num(R.tireRadius, 3) + ' m') + '\n';
+  r += pad(pCol('Brut Agirlik (GVW)', numI(R.gvw) + ' kg'), CW) + '    ' + pCol('Yuvarlanma Dir. Crr', num(R.crr, 4)) + '\n';
+  r += pad('', CW) + '    ' + pCol('Yuzey Faktoru', num(R.surfFactor || 1.0, 2)) + '\n';
+  r += pad('', CW) + '    ' + pCol('Lastik/Teker Ataleti', num(R.tireInertia, 4) + ' kg.m2') + '\n';
   r += '\n\n';
 
 
