@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,8 +29,6 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Create site directory
         run: |
@@ -38,6 +37,7 @@ jobs:
           cp pwa/manifest.json _site/pwa/manifest.json
           cp pwa/icon.svg _site/pwa/icon.svg
           cp pwa/sw.js _site/pwa/sw.js
+          touch _site/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
