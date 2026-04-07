@@ -1,13 +1,6 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (Manual)
 
 on:
-  push:
-    branches:
-      - main
-  workflow_run:
-    workflows: ["Auto PR + Merge"]
-    types:
-      - completed
   workflow_dispatch:
 
 permissions:
@@ -19,15 +12,11 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
-# Node 24 uyumluluk ayarı
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   deploy:
-    if: >
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

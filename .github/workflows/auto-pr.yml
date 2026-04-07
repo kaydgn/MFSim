@@ -1,4 +1,4 @@
-name: Auto PR + Merge
+name: Auto PR + Merge + Deploy
 
 on:
   push:
@@ -8,6 +8,12 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -15,6 +21,8 @@ env:
 jobs:
   auto-pr-merge:
     runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
     steps:
       - uses: actions/checkout@v4
 
@@ -86,3 +94,34 @@ jobs:
             });
             console.log(`Merged PR #${prNumber}`);
             core.setOutput('merged', 'true');
+
+  deploy:
+    needs: auto-pr-merge
+    if: needs.auto-pr-merge.outputs.merged == 'true'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Create site directory
+        run: |
+          mkdir -p _site/pwa
+          cp MFSim_Code.html _site/index.html
+          cp pwa/manifest.json _site/pwa/manifest.json
+          cp pwa/icon.svg _site/pwa/icon.svg
+          cp pwa/sw.js _site/pwa/sw.js
+          touch _site/.nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
