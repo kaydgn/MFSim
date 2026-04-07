@@ -1,13 +1,6 @@
-name: Deploy to GitHub Pages
+name: Deploy to GitHub Pages (Manual)
 
 on:
-  push:
-    branches:
-      - main
-  workflow_run:
-    workflows: ["Auto PR + Merge"]
-    types:
-      - completed
   workflow_dispatch:
 
 permissions:
@@ -24,9 +17,6 @@ env:
 
 jobs:
   deploy:
-    if: >
-      github.event_name != 'workflow_run' ||
-      github.event.workflow_run.conclusion == 'success'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
