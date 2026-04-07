@@ -3509,12 +3509,9 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
 
   // Girdi tablosu — orijinal segment verisinden oluştur
   var inputSegs = inputSegments.length > 0 ? inputSegments : segSummary;
-  var hasWpInfo = inputSegs.some(function(s) { return s.startWaypoint || s.endWaypoint; });
-  var segTW = hasWpInfo ? 110 : 74;
+  var segTW = 74;
   r += '  ' + ln('-', segTW) + '\n';
-  r += '  ' + pad('No', 5);
-  if(hasWpInfo) r += pad('Guzergah', 36);
-  r += pad('Mesafe [m]', 12, 'right') + pad('Egim [%]', 10, 'right');
+  r += '  ' + pad('No', 5) + pad('Mesafe [m]', 12, 'right') + pad('Egim [%]', 10, 'right');
   r += pad('dH [m]', 9, 'right') + pad('Komut', 16, 'right') + pad('Yon', 22, 'right') + '\n';
   r += '  ' + ln('-', segTW) + '\n';
 
@@ -3530,13 +3527,6 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     toplamDeltaH += dH;
 
     r += '  ' + pad(String(seg.no || (idx + 1)), 5);
-    if(hasWpInfo) {
-      var wpLabel = '';
-      if(seg.startWaypoint && seg.endWaypoint) wpLabel = ascii(seg.startWaypoint) + ' -> ' + ascii(seg.endWaypoint);
-      else if(seg.startWaypoint) wpLabel = ascii(seg.startWaypoint) + ' ->';
-      else if(seg.endWaypoint) wpLabel = '-> ' + ascii(seg.endWaypoint);
-      r += pad(wpLabel, 36);
-    }
     r += pad(numI(mesafe), 12, 'right');
     r += pad(num(grade, 2), 10, 'right');
     r += pad(num(dH, 1), 9, 'right');
@@ -3545,9 +3535,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '\n';
   });
   r += '  ' + ln('-', segTW) + '\n';
-  r += '  ' + pad('TOPLAM', 5);
-  if(hasWpInfo) r += pad('', 36);
-  r += pad(numI(toplamMesafe), 12, 'right');
+  r += '  ' + pad('TOPLAM', 5) + pad(numI(toplamMesafe), 12, 'right');
   r += pad('', 10) + pad(num(toplamDeltaH, 1), 9, 'right') + '\n';
   r += '  ' + ln('-', segTW) + '\n\n';
 
@@ -3628,21 +3616,16 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += pad(sectionNum + '. SEGMENT BAZLI SONUC OZETI', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    // Waypoint bilgisi var mı
-    var _hasWpResult = inputSegs.some(function(s) { return s.startWaypoint || s.endWaypoint; });
-    var wpColW = _hasWpResult ? 30 : 0;
-    var sumTW = 120 + wpColW;
+    var sumTW = 120;
     r += '  ' + ln('-', sumTW) + '\n';
-    r += '  ' + pad('No', 4);
-    if(_hasWpResult) r += pad('Guzergah', wpColW);
-    r += pad('Komut', 12) + pad('Egim %', 8, 'right');
+    r += '  ' + pad('No', 4) + pad('Komut', 12) + pad('Egim %', 8, 'right');
     r += pad('Mesafe m', 10, 'right') + pad('V_giris', 10, 'right') + pad('V_cikis', 10, 'right');
     r += pad('dV', 8, 'right') + pad('V_max', 9, 'right') + pad('V_min', 9, 'right');
     r += pad('Sure s', 9, 'right') + pad('Bas.Vites', 10, 'right') + pad('Bit.Vites', 10, 'right') + pad('DS', 4, 'right') + pad('Durum', 10) + '\n';
     r += '  ' + ln('-', sumTW) + '\n';
 
     var totalTime = 0;
-    segSum.forEach(function(seg, segIdx) {
+    segSum.forEach(function(seg) {
       var komut = seg.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
       var dv = seg.endSpeed_kmh - seg.startSpeed_kmh;
       var durum = '';
@@ -3653,14 +3636,6 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       totalTime += seg.duration || 0;
 
       r += '  ' + pad(String(seg.no), 4);
-      if(_hasWpResult) {
-        var _inSeg = inputSegs[segIdx] || {};
-        var _wpStr = '';
-        if(_inSeg.startWaypoint && _inSeg.endWaypoint) _wpStr = ascii(_inSeg.startWaypoint) + '->' + ascii(_inSeg.endWaypoint);
-        else if(_inSeg.startWaypoint) _wpStr = ascii(_inSeg.startWaypoint) + '->';
-        else if(_inSeg.endWaypoint) _wpStr = '->' + ascii(_inSeg.endWaypoint);
-        r += pad(_wpStr.substring(0, wpColW - 1), wpColW);
-      }
       r += pad(ascii(komut), 12);
       r += pad(num(seg.grade, 2), 8, 'right');
       r += pad(numI(seg.actualDist || seg.targetDist), 10, 'right');
@@ -3684,7 +3659,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     var dvTotal = vF - v0;
     var totalDownshifts = 0;
     segSum.forEach(function(s) { totalDownshifts += (s.downshiftCount || 0); });
-    r += '  ' + pad('TOPLAM', 4 + (_hasWpResult ? wpColW : 0) + 12);
+    r += '  ' + pad('TOPLAM', 4 + 12);
     r += pad('', 8);
     r += pad(numI(ssSd.totalDistance || 0), 10, 'right');
     r += pad(num(v0, 1), 10, 'right');

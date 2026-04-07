@@ -23,7 +23,7 @@ function veExpandRoadMap(nodeId) {
   // Modal
   var modal = document.createElement('div');
   modal.id = 've-map-modal';
-  modal.style.cssText = 'width:80%; max-width:1100px; min-width:480px; height:85vh; max-height:820px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); position:relative;';
+  modal.style.cssText = 'width:90%; max-width:1500px; min-width:480px; height:88vh; max-height:900px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); position:relative;';
   
   // Header
   var markerCount = (veRoadMarkers[nodeId] || []).length;
@@ -1798,11 +1798,9 @@ function _veWaypointUpdateList(nodeId) {
     html += '<td style="padding:2px 4px; text-align:right;">' + (w.dist / 1000).toFixed(2) + ' km</td>';
     html += '<td style="padding:2px 4px; text-align:right;">' + w.elev.toFixed(0) + ' m</td>';
     html += '<td style="padding:2px 4px; text-align:center;">';
+    html += '<button onclick="veWaypointRenameUI(\'' + nodeId + '\',\'' + w.id + '\')" style="background:none; border:none; cursor:pointer; color:var(--text-secondary); font-size:0.6rem; padding:0 2px;" title="İsim değiştir">✏️</button>';
     if(!w.auto) {
-      html += '<button onclick="veWaypointRenameUI(\'' + nodeId + '\',\'' + w.id + '\')" style="background:none; border:none; cursor:pointer; color:var(--text-secondary); font-size:0.6rem; padding:0 2px;" title="İsim değiştir">✏️</button>';
       html += '<button onclick="veWaypointRemoveUI(\'' + nodeId + '\',\'' + w.id + '\')" style="background:none; border:none; cursor:pointer; color:var(--accent-danger); font-size:0.6rem; padding:0 2px;" title="Sil">✕</button>';
-    } else {
-      html += '<span style="font-size:0.5rem; color:var(--text-muted);">oto</span>';
     }
     html += '</td>';
     html += '</tr>';
@@ -2545,7 +2543,7 @@ function veExpandProfileChart(nodeId, chartType) {
           '<button onclick="veWaypointClearAllUI(\'' + nodeId + '\')" style="padding:3px 8px; font-size:0.56rem; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer; opacity:0.8;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.8">Tümünü sil</button>' +
         '</div>' +
         '<div id="ve-wp-list-' + nodeId + '" style="max-height:140px; overflow-y:auto; border:1px solid var(--border-color); border-radius:0; padding:4px; background:var(--bg-tertiary);"></div>' +
-        '<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px; opacity:0.7;">Sağ tık ile grafik üzerinde referans noktası ekleyin</div>' +
+        '<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px; opacity:0.7;">Haritada rota çizgisi üzerine tıklayarak referans noktası ekleyin</div>' +
       '</div>';
     modal.appendChild(controlBox);
   }
@@ -2684,30 +2682,14 @@ function _veAltAttachDrawEvents(canvas, nodeId) {
     }
   });
 
-  // Sağ tık: çizim modundaysa iptal et, değilse waypoint ekle
+  // Sağ tık: çizim modundaysa iptal et
   canvas.addEventListener('contextmenu', function(e) {
     e.preventDefault();
     if(canvas._altDrawState) {
       canvas._altDrawState = null;
       canvas._altDrawPreview = null;
       _drRedrawChart(canvas);
-      return;
     }
-    // Waypoint ekleme — plot alanı içinde mi kontrol
-    var d = canvas._drChart;
-    if(!d || d.type !== 'altProfile') return;
-    var rect = canvas.getBoundingClientRect();
-    var mx = e.clientX - rect.left;
-    var my = e.clientY - rect.top;
-    if(mx < d.padL || mx > d.W - d.padR || my < d.padT || my > d.padT + d.plotH) return;
-    var xVal = d.fromX(mx);
-    xVal = Math.max(0, Math.min(d.totalDist, xVal));
-    _veWaypointNameDialog(nodeId, xVal, function(name) {
-      veAddRouteWaypoint(nodeId, xVal, name);
-      _veWaypointUpdateList(nodeId);
-      _veAltRedrawAll(nodeId);
-      _veWaypointShowOnMap(nodeId);
-    });
   });
 }
 
