@@ -1520,7 +1520,26 @@
 }
 .ve-properties-content th,
 .ve-properties-content td{
-  padding:3px 5px !important;
+  padding:5px 8px !important;
+}
+.ve-properties-content table input[type="number"],
+.ve-properties-content table input[type="text"],
+.ve-properties-content table select{
+  width:100%;
+  padding:4px 6px;
+  text-align:right;
+  background:var(--bg-input);
+  color:var(--text-primary);
+  border:1px solid var(--border-color);
+  border-radius:0;
+  box-sizing:border-box;
+}
+.ve-properties-content table th{
+  text-align:left;
+  font-weight:500;
+  color:var(--text-secondary);
+  background:var(--bg-tertiary);
+  border-right:1px solid var(--border-color);
 }
 
 .ve-prop-empty{
