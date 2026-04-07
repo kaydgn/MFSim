@@ -1,0 +1,62 @@
+name: Auto PR + Merge
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  auto-pr-and-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Create or update PR and merge
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          echo "Branch: $BRANCH"
+
+          # Check if a PR already exists for this branch
+          EXISTING_PR=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+
+          if [ -z "$EXISTING_PR" ]; then
+            echo "Creating new PR..."
+            PR_URL=$(gh pr create \
+              --title "Auto PR: ${BRANCH}" \
+              --body "Automated PR from branch \`${BRANCH}\`." \
+              --base main \
+              --head "$BRANCH")
+            echo "PR created: $PR_URL"
+            PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --state open --json number --jq '.[0].number')
+          else
+            echo "PR already exists: #${EXISTING_PR}"
+            PR_NUMBER=$EXISTING_PR
+          fi
+
+          echo "Merging PR #${PR_NUMBER}..."
+          gh pr merge "$PR_NUMBER" --squash --admin
+          echo "PR #${PR_NUMBER} merged successfully!"
