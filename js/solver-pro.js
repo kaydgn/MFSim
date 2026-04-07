@@ -725,8 +725,15 @@ function veSolverRunProfessional() {
             simResult.segmentDriveTransferGears = _ftTrGears;
             // Orijinal segment girdi verisini sakla (TXT raporu için)
             simResult.segmentDriveInputSegments = _scenData.roadSegments.map(function(s) {
-              return { no: s.no, grade: s.grade, distance: s.distance, deltaH: s.deltaH, command: s.command || 'full_throttle' };
+              var seg = { no: s.no, grade: s.grade, distance: s.distance, deltaH: s.deltaH, command: s.command || 'full_throttle' };
+              if(s.startWaypoint) seg.startWaypoint = s.startWaypoint;
+              if(s.endWaypoint) seg.endWaypoint = s.endWaypoint;
+              return seg;
             });
+            // Waypoint bilgisini de sakla
+            if(_scenData.routeWaypoints) {
+              simResult.routeWaypoints = _scenData.routeWaypoints;
+            }
           }
 
           // ── 3) ENGEL ATLAMA ANALİZİ (opsiyonel — obstacle-crossing bileşeni gerektirir) ──
