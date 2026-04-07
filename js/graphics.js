@@ -2594,12 +2594,12 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
 
       // Sol taraf: tork tablosu satırları
       var leftLines = [];
-      var LW = 44;
+      var LW = 46;
       leftLines.push('  MOTOR TORK / GUC VERISI');
-      leftLines.push('  ' + ln('-', 38));
+      leftLines.push('  ' + ln('-', 40));
       leftLines.push('  ' + pad('Devir', 9, 'right') + pad('Tork', 14, 'right') + pad('Guc', 14, 'right'));
       leftLines.push('  ' + pad('[rpm]', 9, 'right') + pad('[N.m]', 14, 'right') + pad('[kW]', 14, 'right'));
-      leftLines.push('  ' + ln('-', 38));
+      leftLines.push('  ' + ln('-', 40));
       tData.forEach(function(p) {
         var rpm = p.rpm || p.x || 0;
         var torque = p.torque || p.y || 0;
@@ -2610,7 +2610,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
         else if (ms.governedSpeed && Math.abs(rpm - ms.governedSpeed) < 5) tag = ' *G';
         leftLines.push('  ' + pad(numI(rpm), 9, 'right') + pad(num(torque, 1), 14, 'right') + pad(num(pw, 1), 14, 'right') + tag);
       });
-      leftLines.push('  ' + ln('-', 38));
+      leftLines.push('  ' + ln('-', 40));
       leftLines.push('  *T=Pik Tork  *P=Pik Guc  *G=Governed');
 
       // Sağ taraf: aksesuar kayıpları satırları
@@ -2618,18 +2618,20 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
       if (ed.accessories && ed.accessories.length > 0) {
         var aStd = 0, aUsr = 0;
         rightLines.push('AKSESUAR KAYIPLARI');
-        rightLines.push(ln('-', 34));
-        rightLines.push(pad('Aksesuar', 16) + pad('Std', 9, 'right') + pad('Usr', 9, 'right'));
-        rightLines.push(pad('', 16) + pad('[kW]', 9, 'right') + pad('[kW]', 9, 'right'));
-        rightLines.push(ln('-', 34));
+        rightLines.push(ln('-', 36));
+        rightLines.push(pad('Aksesuar', 20) + pad('Std', 8, 'right') + pad('Usr', 8, 'right'));
+        rightLines.push(pad('', 20) + pad('[kW]', 8, 'right') + pad('[kW]', 8, 'right'));
+        rightLines.push(ln('-', 36));
         ed.accessories.forEach(function(a) {
-          rightLines.push(pad(ascii(a.name), 16) + pad(num(a.standardLoss, 1), 9, 'right') + pad(num(a.userLoss, 1), 9, 'right'));
+          var aName = ascii(a.name);
+          if (aName.length > 20) aName = aName.substring(0, 18) + '..';
+          rightLines.push(pad(aName, 20) + pad(num(a.standardLoss, 1), 8, 'right') + pad(num(a.userLoss, 1), 8, 'right'));
           aStd += (a.standardLoss || 0);
           aUsr += (a.userLoss || 0);
         });
-        rightLines.push(ln('-', 34));
-        rightLines.push(pad('TOPLAM', 16) + pad(num(aStd, 1), 9, 'right') + pad(num(aUsr, 1), 9, 'right'));
-        rightLines.push(ln('-', 34));
+        rightLines.push(ln('-', 36));
+        rightLines.push(pad('TOPLAM', 20) + pad(num(aStd, 1), 8, 'right') + pad(num(aUsr, 1), 8, 'right'));
+        rightLines.push(ln('-', 36));
       }
 
       // Yan yana birleştir
