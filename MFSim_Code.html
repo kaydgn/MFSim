@@ -21132,6 +21132,8 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   var noLoadGoverned = parseFloat(specs.noLoadGoverned) || 2350;
   var idleRpm = parseFloat(specs.idleRpm) || 700;
   var I_engine = parseFloat(specs.inertia) || 1.431;
+  var displacement_L = parseFloat(specs.displacement) || 7.0;
+  var V_d_m3 = displacement_L / 1000; // Motor hacmi [m³]
 
   var grossMotorTorqueFn = FT_SOLVER.createMotorTorqueFn(torqueTable, governedSpeed, noLoadGoverned);
 
@@ -21417,9 +21419,22 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       if(isCoast) { T_engine = 0; T_pump = 0; T_output = 0; }
       else {
         T_engine = motorTorqueFn(N_engine);
+        // (b) Governed üstünde motor motoring direnci (kompresyon + sürtünme + pompalama)
+        // motorTorqueFn daima ≥ 0 döndürür, ama noLoadGoverned üstünde yakıt kesilir
+        // ve tekerlekler motoru sürer → kompresör gibi çalışır → negatif tork
+        if(N_engine > noLoadGoverned && T_engine <= 0) {
+          var BMEP_mot = 50000; // 50 kPa bazal motoring basıncı
+          // (a) Rev limiter: aşırı devir bölgesinde motoring direnci progresif artar
+          if(N_engine > noLoadGoverned + 200) {
+            var overRevFrac = Math.min((N_engine - noLoadGoverned - 200) / 500, 3.0);
+            BMEP_mot *= (1 + 4 * overRevFrac);
+          }
+          T_engine = -(BMEP_mot * V_d_m3 / (4 * Math.PI));
+        }
         T_pump = T_engine - pumpTorqueDrop;
         var T_net_lu2 = T_pump - (10.0 + 0.00367 * N_engine);
-        if(T_net_lu2 < 0) T_net_lu2 = 0;
+        // (b) Negatif T_net = motor freni — clamping kaldırıldı
+        // Governed üstünde veya yüksek TC kayıplarında motor enerji emer
         var eta_lockup2 = tcd.etaLockup || 0.965;
         T_output = T_net_lu2 * eta_lockup2;
       }
@@ -21463,15 +21478,15 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     // Basitleştirilmiş: BMEP motoring ≈ 40-80 kPa (tipik dizel)
     var F_engine_drag = 0;
     if(isCoast && v_ms > 0.5) {
-      // Motor sürükleme torku: displacement bazlı ampirik model
-      // T_motoring = C_drag × N_engine [Nm], C_drag ≈ displacement [L] × 0.012
-      var displacement_L = parseFloat(specs.displacement) || 7.0; // Varsayılan 7L dizel
-      var T_motoring = displacement_L * 0.012 * N_engine / 60; // Basitleştirilmiş
-      // Daha gerçekçi: BMEP_motoring ≈ 50 kPa → T = BMEP × V_d / (4π)
-      var V_d = displacement_L / 1000; // m³
-      var BMEP_motoring = 50000; // Pa (50 kPa — tipik dizel motoring pressure)
-      T_motoring = BMEP_motoring * V_d / (4 * Math.PI); // Nm
-      // Tekerlekteki frenleme kuvveti (güç aktarma zinciri üzerinden)
+      // RPM-bağımlı motoring torku: sürtünme ve pompalama kayıpları devirle artar
+      var rpmRatio = N_engine / governedSpeed;
+      var BMEP_coast = 50000 * (0.5 + 0.5 * rpmRatio); // ~25 kPa @ idle, 50 kPa @ governed
+      // Rev limiter: governed üstünde motoring direnci progresif artar
+      if(N_engine > noLoadGoverned) {
+        var overRevFrac_c = Math.min((N_engine - noLoadGoverned) / 500, 3.0);
+        BMEP_coast *= (1 + 4 * overRevFrac_c);
+      }
+      var T_motoring = BMEP_coast * V_d_m3 / (4 * Math.PI);
       var i_total_coast = i_gear * i_propshaft * i_transfer * i_axle;
       F_engine_drag = T_motoring * i_total_coast / r_tire;
     }
@@ -21480,10 +21495,11 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     var _N_turb_eff2 = isLU ? N_engine : (N_engine * SR);
     var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_eff2);
 
-    var F_traction = isCoast ? 0 : FT_SOLVER.limitByGrip(
-      FT_SOLVER.calcTractiveEffort(T_output, i_gear, 1.0, i_propshaft, psEff, i_transfer, eta_transfer, i_axle, eta_axle, r_tire),
-      F_grip
+    // (c) Negatif F_traction = motor freni → driving grip limiti uygulanmaz
+    var F_traction_raw = isCoast ? 0 : FT_SOLVER.calcTractiveEffort(
+      T_output, i_gear, 1.0, i_propshaft, psEff, i_transfer, eta_transfer, i_axle, eta_axle, r_tire
     );
+    var F_traction = F_traction_raw < 0 ? F_traction_raw : FT_SOLVER.limitByGrip(F_traction_raw, F_grip);
 
     var resist = FT_SOLVER.calcResistForces(v_ms, { m: m_vehicle, Crr: Crr, surfFactor: surfFactor, Cd: Cd, A: A_frontal, rho: rho, grade_pct: active_grade_pct });
     var F_net = F_traction - resist.F_total - F_engine_drag;
