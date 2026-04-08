@@ -1815,9 +1815,6 @@ function onVEFTVehicleParamChange(nodeId) {
 // Yol özellikleri - eğim, mesafe, zaman
 function getRoadPropertiesHTML(node) {
   var d = node.data || {};
-  var altitude = d.altitude !== undefined ? d.altitude : '';
-  var temperature = d.temperature !== undefined ? d.temperature : '';
-  var airDensity = d.airDensity !== undefined ? d.airDensity : '';
   var egimMode = d.egimMode || 'segment';
 
   var html = '<div class="sw-panel">';
@@ -1863,20 +1860,11 @@ function getRoadPropertiesHTML(node) {
 
   html += '</div>'; // segment-content wrapper
 
-  // ===== ORTAM PARAMETRELERİ =====
-  html += '<div class="sw-section-title" style="margin:10px 0 6px 0;">🌡️ Ortam</div>';
-  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Yükseklik [m]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-road-alt-' + node.id + '" value="' + altitude + '" step="50" min="0" placeholder="500" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVERoadParamChange(\'' + node.id + '\')"></td></tr>';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Sıcaklık [°C]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-road-temp-' + node.id + '" value="' + temperature + '" step="1" placeholder="25" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVERoadParamChange(\'' + node.id + '\')"></td></tr>';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Hava yoğ. [kg/m³]</th><td style="padding:6px; background:var(--bg-tertiary);"><div style="display:flex;gap:3px;"><input type="number" id="ve-road-density-' + node.id + '" value="' + airDensity + '" readonly style="flex:1; padding:4px; font-size:0.68rem; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right; cursor:not-allowed;"><button onclick="veCalcAirDensityRoad(\'' + node.id + '\')" style="padding:4px 6px; font-size:0.56rem; background:var(--accent-primary); color:white; border:none; border-radius:0; cursor:pointer; white-space:nowrap;">ISA</button></div></td></tr>';
-  html += '<tr><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary);">ISA: Yükseklik+Sıcaklık ile otomatik hesaplanır</td></tr>';
-  html += '</table>';
-  
   html += '</div>';
-  
+
   // Haritayı otomatik yükle (showNodeProperties çağrıldığında)
   html += '<div id="ve-road-autoinit-' + node.id + '" data-autoinit="roadmap" data-node="' + node.id + '" style="display:none;"></div>';
-  
+
   return html;
 }
 
@@ -1886,15 +1874,7 @@ function onVERoadParamChange(nodeId) {
   if(!node.data) node.data = {};
 
   var el = function(id) { return document.getElementById(id); };
-  var altEl = el('ve-road-alt-' + nodeId);
-  var tempEl = el('ve-road-temp-' + nodeId);
-  var densEl = el('ve-road-density-' + nodeId);
   var egimEl = el('ve-road-egimmode-' + nodeId);
-
-  var pfOrEmpty = function(v) { var n = parseFloat(v); return isNaN(n) ? '' : n; };
-  if(altEl) node.data.altitude = pfOrEmpty(altEl.value);
-  if(tempEl) node.data.temperature = pfOrEmpty(tempEl.value);
-  if(densEl) node.data.airDensity = pfOrEmpty(densEl.value);
   if(egimEl) node.data.egimMode = egimEl.value;
 }
 
