@@ -4189,8 +4189,22 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     trGearKeys.forEach(function(trKey) {
       var sd2 = sdAll[trKey] || sdPrimary;
       var sum2 = sd2.segmentSummary || [];
+      var ss2 = sd2.solverStats || {};
       var stalled = sum2.some(function(s) { return s.endSpeed_kmh < 1.0; });
-      r += pad(stalled ? 'DURDU' : 'TAMAMLADI', 24, 'right');
+      var totalRouteDist = 0, totalActualDist = 0, totalTime2 = 0;
+      sum2.forEach(function(s) {
+        totalRouteDist += s.targetDist || 0;
+        totalActualDist += s.actualDist || 0;
+        totalTime2 += s.duration || 0;
+      });
+      var routeComplete = totalActualDist >= totalRouteDist - 1;
+      var timeExceeded = totalTime2 >= (ss2.maxTime || 9999) - 0.1;
+      var status;
+      if(stalled) status = 'DURDU';
+      else if(!routeComplete && timeExceeded) status = 'SURE LIMITI';
+      else if(!routeComplete) status = 'EKSIK';
+      else status = 'TAMAMLADI';
+      r += pad(status, 24, 'right');
     });
     r += '\n';
 
