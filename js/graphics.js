@@ -3801,9 +3801,9 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += pad('[kW]', 9, 'right') + pad('[kW]', 9, 'right') + '\n';
     r += '  ' + ln('-', WW - 4) + '\n';
 
-    // Veri satırları — her 0.5 saniyede bir örnekleme
+    // Veri satırları — kullanıcı tarafından belirlenen zaman adımıyla örnekleme
     var timeArr = sd.time || [];
-    var sampleInterval = 0.5;
+    var sampleInterval = sim.sdReportInterval || 0.5;
     var prevSeg = -1;
 
     for (var tTarget = 0; tTarget <= (timeArr[timeArr.length - 1] || 0) + 0.001; tTarget += sampleInterval) {

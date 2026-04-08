@@ -734,6 +734,8 @@ function veSolverRunProfessional() {
             if(_scenData.routeWaypoints) {
               simResult.routeWaypoints = _scenData.routeWaypoints;
             }
+            // Rapor zaman adımı
+            simResult.sdReportInterval = parseFloat(_solverData.sdReportInterval) || 0.5;
           }
 
           // ── 3) ENGEL ATLAMA ANALİZİ (opsiyonel — obstacle-crossing bileşeni gerektirir) ──
