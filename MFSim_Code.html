@@ -18666,6 +18666,21 @@ function getSolverPropertiesHTML(node) {
     html += '<input type="checkbox" id="ve-solver-acceldecel-' + node.id + '" ' + (accelDecel ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
     html += '<div><div style="font-weight:600;">Hızlanma-Yavaşlama</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Segment bazlı sürüş analizi — güzergah üzerinde hızlanma/yavaşlama profili</div></div>';
     html += '</label>';
+
+    // Rapor zaman adımı (Hızlanma-Yavaşlama checkbox açıkken göster)
+    var sdReportInterval = d.sdReportInterval || 0.5;
+    html += '<div id="ve-solver-sdinterval-wrap-' + node.id + '" style="margin-top:4px; margin-left:23px; padding:5px 10px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0;' + (!accelDecel ? 'display:none;' : '') + '">';
+    html += '<label style="font-size:0.62rem; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">';
+    html += 'Rapor zaman adımı:';
+    html += '<select id="ve-solver-sdinterval-' + node.id + '" onchange="onVESolverParamChange(\'' + node.id + '\')" style="padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;">';
+    html += '<option value="0.5"' + (sdReportInterval == 0.5 ? ' selected' : '') + '>0.5 s (varsayılan)</option>';
+    html += '<option value="1"' + (sdReportInterval == 1 ? ' selected' : '') + '>1 s</option>';
+    html += '<option value="2"' + (sdReportInterval == 2 ? ' selected' : '') + '>2 s</option>';
+    html += '<option value="5"' + (sdReportInterval == 5 ? ' selected' : '') + '>5 s</option>';
+    html += '<option value="10"' + (sdReportInterval == 10 ? ' selected' : '') + '>10 s</option>';
+    html += '</select>';
+    html += '</label>';
+    html += '</div>';
   }
 
   // Engel Atlama Analizi checkbox (obstacle-crossing bileşeni gerektirir)
@@ -18826,9 +18841,15 @@ function onVESolverParamChange(nodeId) {
   var perfEl = el('ve-solver-perfanalysis-' + nodeId);
   if(perfEl) node.data.performanceAnalysis = perfEl.checked;
 
-  // Hızlanma-Yavaşlama checkbox
+  // Hızlanma-Yavaşlama checkbox + rapor zaman adımı
   var adEl = el('ve-solver-acceldecel-' + nodeId);
-  if(adEl) node.data.accelDecelAnalysis = adEl.checked;
+  if(adEl) {
+    node.data.accelDecelAnalysis = adEl.checked;
+    var sdIntWrap = document.getElementById('ve-solver-sdinterval-wrap-' + nodeId);
+    if(sdIntWrap) sdIntWrap.style.display = adEl.checked ? '' : 'none';
+  }
+  var sdIntEl = el('ve-solver-sdinterval-' + nodeId);
+  if(sdIntEl) node.data.sdReportInterval = parseFloat(sdIntEl.value) || 0.5;
 
   // Engel Atlama Analizi checkbox + log aralığı
   var ocEl = el('ve-solver-obscross-' + nodeId);
@@ -23518,6 +23539,8 @@ function veSolverRunProfessional() {
             if(_scenData.routeWaypoints) {
               simResult.routeWaypoints = _scenData.routeWaypoints;
             }
+            // Rapor zaman adımı
+            simResult.sdReportInterval = parseFloat(_solverData.sdReportInterval) || 0.5;
           }
 
           // ── 3) ENGEL ATLAMA ANALİZİ (opsiyonel — obstacle-crossing bileşeni gerektirir) ──
@@ -37359,9 +37382,9 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += pad('[kW]', 9, 'right') + pad('[kW]', 9, 'right') + '\n';
     r += '  ' + ln('-', WW - 4) + '\n';
 
-    // Veri satırları — her 0.5 saniyede bir örnekleme
+    // Veri satırları — kullanıcı tarafından belirlenen zaman adımıyla örnekleme
     var timeArr = sd.time || [];
-    var sampleInterval = 0.5;
+    var sampleInterval = sim.sdReportInterval || 0.5;
     var prevSeg = -1;
 
     for (var tTarget = 0; tTarget <= (timeArr[timeArr.length - 1] || 0) + 0.001; tTarget += sampleInterval) {
