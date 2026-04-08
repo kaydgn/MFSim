@@ -1815,14 +1815,9 @@ function onVEFTVehicleParamChange(nodeId) {
 // Yol özellikleri - eğim, mesafe, zaman
 function getRoadPropertiesHTML(node) {
   var d = node.data || {};
-  var grade = d.grade !== undefined ? d.grade : '';
-  var timeMode = d.timeMode || 'manual';
-  var duration = d.duration !== undefined ? d.duration : '';
-  var maxSimTime = d.maxSimTime !== undefined ? d.maxSimTime : 300;
   var altitude = d.altitude !== undefined ? d.altitude : '';
   var temperature = d.temperature !== undefined ? d.temperature : '';
   var airDensity = d.airDensity !== undefined ? d.airDensity : '';
-  var egimMode = d.egimMode || 'manuel';
   
   var html = '<div class="sw-panel">';
 
@@ -1856,24 +1851,6 @@ function getRoadPropertiesHTML(node) {
   html += '</div></div>'; // sw-pkg-body + sw-pkg-card
   html += '</div>'; // profiles wrapper
 
-  // ===== EĞİM PARAMETRELERİ =====
-  html += '<div class="sw-section-title" style="margin:8px 0 6px 0;">📐 Eğim Parametreleri</div>';
-  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
-  
-  // Eğim modu
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Eğim modu</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-road-egimmode-' + node.id + '" onchange="onVERoadEgimModeChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;"><option value="manuel"' + (egimMode==='manuel'?' selected':'') + '>Manuel (Tek değer)</option><option value="segment"' + (egimMode==='segment'?' selected':'') + '>Segment Bazlı</option></select></td></tr>';
-  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:4px 6px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary);">"Manuel": Sabit eğim. "Segment": Güzergah eğimlerini kullanır.</td></tr>';
-  
-  // Manuel eğim girişi
-  html += '<tr id="ve-road-grade-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (egimMode==='segment'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Arazi eğimi [%]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-road-grade-' + node.id + '" value="' + grade + '" step="0.1" placeholder="Örn. 12" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVERoadParamChange(\'' + node.id + '\')"></td></tr>';
-  html += '<tr id="ve-road-grade-hint-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (egimMode==='segment'?'display:none;':'') + '"><td colspan="2" style="padding:4px 6px; font-size:0.56rem; color:var(--text-muted); background:var(--bg-secondary);">Pozitif=iniş (yokuş aşağı), negatif=çıkış (yokuş yukarı)</td></tr>';
-  
-  // Segment bilgi kutusu
-  html += '<tr id="ve-road-segment-info-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (egimMode!=='segment'?'display:none;':'') + '"><td colspan="2" style="padding:6px; background:var(--bg-secondary);"><div id="ve-road-segment-bilgi-' + node.id + '" style="font-size:0.62rem; color:var(--text-muted);">Henüz güzergah hesaplanmadı. Haritadan rota belirleyip "Eğim Hesapla" yapın.</div></td></tr>';
-  
-  
-  html += '</table>';
-  
   // ===== ORTAM PARAMETRELERİ =====
   html += '<div class="sw-section-title" style="margin:10px 0 6px 0;">🌡️ Ortam</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -1897,18 +1874,14 @@ function onVERoadParamChange(nodeId) {
   if(!node.data) node.data = {};
 
   var el = function(id) { return document.getElementById(id); };
-  var gradeEl = el('ve-road-grade-' + nodeId);
   var altEl = el('ve-road-alt-' + nodeId);
   var tempEl = el('ve-road-temp-' + nodeId);
   var densEl = el('ve-road-density-' + nodeId);
-  var egimEl = el('ve-road-egimmode-' + nodeId);
 
-  if(gradeEl) node.data.grade = parseFloat(gradeEl.value);
   var pfOrEmpty = function(v) { var n = parseFloat(v); return isNaN(n) ? '' : n; };
   if(altEl) node.data.altitude = pfOrEmpty(altEl.value);
   if(tempEl) node.data.temperature = pfOrEmpty(tempEl.value);
   if(densEl) node.data.airDensity = pfOrEmpty(densEl.value);
-  if(egimEl) node.data.egimMode = egimEl.value;
 }
 
 // Leaflet harita sistemi - her node için ayrı harita instance

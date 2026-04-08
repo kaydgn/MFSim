@@ -182,8 +182,21 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   var drivenPct = (parseFloat(vd.ftDrivenWeight) || 100) / 100;
   var A_frontal = (parseFloat(vd.ftHeight) || 3.200) * (parseFloat(vd.ftWidth) || 2.500);
   var Cd = parseFloat(vd.ftCd) || 0.900;
-  var rho = parseFloat(vd.ftRho) || 1.225;
   var F_grip = 0.70 * m_vehicle * drivenPct * 9.81;
+
+  // ── DİNAMİK HAVA YOĞUNLUĞU (ISA MODELİ) ──
+  // Yol bileşeninden başlangıç yüksekliğini al, yoksa araç verisindeki rho'yu kullan
+  var roadNode = nodes.find(function(n) { return n.type === 'road'; });
+  var rdData = roadNode ? (roadNode.data || {}) : {};
+  var _isaP0 = 101325, _isaT0 = 288.15, _isaL = 0.0065, _isaR = 287.05, _isaG = 9.80665;
+  var _isaTamb = 20; // Varsayılan ortam sıcaklığı [°C]
+  var currentAltitude = parseFloat(rdData.altitude) || 0;
+  function calcISADensity(h) {
+    var Tk = _isaTamb + 273.15;
+    var P = _isaP0 * Math.pow(1 - _isaL * h / _isaT0, _isaG / (_isaR * _isaL));
+    return P / (_isaR * Tk);
+  }
+  var rho = calcISADensity(currentAltitude);
 
   // ── ÇÖZÜCÜ ──
   var sd = solverNode ? (solverNode.data || {}) : {};
@@ -476,6 +489,14 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     var seg_dist = seg.distance || 0;
     var seg_command = seg.command || 'full_throttle';
 
+    // İrtifa değişimine göre hava yoğunluğunu güncelle (ISA modeli)
+    // deltaH konvansiyonu: pozitif = iniş (yükseklik azalır), negatif = çıkış (yükseklik artar)
+    // Gerçek irtifa değişimi = -deltaH (iniş → irtifa düşer, çıkış → irtifa artar)
+    if(seg.deltaH) {
+      currentAltitude -= seg.deltaH;
+      rho = calcISADensity(Math.max(0, currentAltitude));
+    }
+
     var segStartSpeed = v * 3.6, segStartTime = t, segDist = 0;
     var segMaxSpeed = v * 3.6, segMinSpeed = v * 3.6;
     var segStartGear = res_gearMode.length > 0 ? res_gearMode[res_gearMode.length - 1] : ((shiftState.gearIdx + 1) + (shiftState.isLockup ? 'L' : 'C'));
@@ -549,7 +570,8 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       targetDist: seg_dist, actualDist: segDist,
       startSpeed_kmh: segStartSpeed, endSpeed_kmh: v * 3.6,
       maxSpeed_kmh: segMaxSpeed, minSpeed_kmh: segMinSpeed, duration: t - segStartTime,
-      startGear: segStartGear, endGear: segEndGear, downshiftCount: segDownshiftCount
+      startGear: segStartGear, endGear: segEndGear, downshiftCount: segDownshiftCount,
+      altitude: currentAltitude, rho: rho
     });
 
     if(globalStep >= maxSteps) break;
@@ -576,7 +598,8 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       i_transfer: i_transfer, eta_transfer: eta_transfer,
       i_axle: i_axle, eta_axle: eta_axle,
       r_tire: r_tire, m_vehicle: m_vehicle,
-      Crr: Crr, Cd: Cd, A_frontal: A_frontal,
+      Crr: Crr, Cd: Cd, A_frontal: A_frontal, rho_initial: calcISADensity(parseFloat(rdData.altitude) || 0), rho_final: rho,
+      initAltitude: parseFloat(rdData.altitude) || 0, finalAltitude: currentAltitude, ambientTemp_C: _isaTamb,
       forwardGears: forwardGears.map(function(g) { return {name: g.name, ratio: g.ratio, eff: g.eff}; }),
       finalGear: getCurrentGearData().name,
       finalGearIdx: shiftState.gearIdx,
