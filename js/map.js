@@ -1000,7 +1000,29 @@ function onVERoadEgimModeChange(nodeId) {
   var segContent = document.getElementById('ve-road-segment-content-' + nodeId);
   if(segContent) segContent.style.display = (mode === 'segment') ? '' : 'none';
 
+  // Manuel içerik göster/gizle
+  var manuelContent = document.getElementById('ve-road-manuel-content-' + nodeId);
+  if(manuelContent) manuelContent.style.display = (mode === 'manuel') ? '' : 'none';
+
   onVERoadParamChange(nodeId);
+
+  // Manuel modda profili çiz (varsa)
+  if(mode === 'manuel') {
+    var node = nodes.find(function(n) { return n.id === nodeId; });
+    if(node && node.data && node.data.manualSegments && node.data.manualSegments.length > 0) {
+      _veManualSegRefresh(nodeId);
+    }
+  }
+
+  // Solver properties panelini yenile (checkbox'lar değişir)
+  var solverNode = nodes.find(function(n) { return n.type === 'solver'; });
+  if(solverNode && typeof showNodeProperties === 'function') {
+    // Eğer solver paneli açıksa yenile
+    var currentPanel = document.querySelector('.ve-props-active');
+    if(currentPanel && currentPanel.getAttribute('data-node-id') === solverNode.id) {
+      showNodeProperties(solverNode);
+    }
+  }
 }
 
 function veCalcAirDensityRoad(nodeId) {
