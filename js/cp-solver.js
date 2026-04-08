@@ -20,11 +20,24 @@ function getSolverPropertiesHTML(node) {
   html += '<div><div style="font-weight:600;">Performans Analizi</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Tam gaz hızlanma, 0-100 km/h, elastik hızlanma, gradeability</div></div>';
   html += '</label>';
 
-  // Hızlanma-Yavaşlama checkbox (segment bazlı sürüş)
+  // Yol bileşeninin eğim modunu kontrol et
+  var roadNode = nodes.find(function(n) { return n.type === 'road'; });
+  var roadEgimMode = (roadNode && roadNode.data && roadNode.data.egimMode) ? roadNode.data.egimMode : 'segment';
+
+  // Kullanıcı Girişli Eğim Analizi checkbox (road egimMode === 'manuel' ise göster)
+  var manualGradeAnalysis = d.manualGradeAnalysis || false;
+  if(roadNode && roadEgimMode === 'manuel') {
+    html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.66rem; color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
+    html += '<input type="checkbox" id="ve-solver-manualgrade-' + node.id + '" ' + (manualGradeAnalysis ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
+    html += '<div><div style="font-weight:600;">Kullanıcı Girişli Eğim Analizi</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Manuel eğim değerleri ile hızlanma/yavaşlama analizi</div></div>';
+    html += '</label>';
+  }
+
+  // Hızlanma-Yavaşlama checkbox (segment bazlı sürüş — road egimMode === 'segment' ise göster)
   var accelDecel = d.accelDecelAnalysis || false;
   var scenNode = nodes.find(function(n) { return n.type === 'scenario'; });
   var hasRoadSegs = scenNode && scenNode.data && scenNode.data.roadSegments && scenNode.data.roadSegments.length > 0;
-  if(hasRoadSegs) {
+  if(hasRoadSegs && roadEgimMode === 'segment') {
     html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; margin-top:6px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.66rem; color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
     html += '<input type="checkbox" id="ve-solver-acceldecel-' + node.id + '" ' + (accelDecel ? 'checked' : '') + ' onchange="onVESolverParamChange(\'' + node.id + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
     html += '<div><div style="font-weight:600;">Hızlanma-Yavaşlama</div><div style="font-size:0.54rem; color:var(--text-muted); margin-top:2px;">Segment bazlı sürüş analizi — güzergah üzerinde hızlanma/yavaşlama profili</div></div>';
@@ -203,6 +216,10 @@ function onVESolverParamChange(nodeId) {
   // Performans Analizi checkbox
   var perfEl = el('ve-solver-perfanalysis-' + nodeId);
   if(perfEl) node.data.performanceAnalysis = perfEl.checked;
+
+  // Kullanıcı Girişli Eğim Analizi checkbox
+  var mgEl = el('ve-solver-manualgrade-' + nodeId);
+  if(mgEl) node.data.manualGradeAnalysis = mgEl.checked;
 
   // Hızlanma-Yavaşlama checkbox + rapor zaman adımı
   var adEl = el('ve-solver-acceldecel-' + nodeId);

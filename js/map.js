@@ -995,22 +995,11 @@ function onVERoadEgimModeChange(nodeId) {
   var sel = document.getElementById('ve-road-egimmode-' + nodeId);
   if(!sel) return;
   var mode = sel.value;
-  
-  // Manuel satırları
-  var gradeRow = document.getElementById('ve-road-grade-row-' + nodeId);
-  var gradeHint = document.getElementById('ve-road-grade-hint-' + nodeId);
-  // Segment bilgi kutusu
-  var segInfo = document.getElementById('ve-road-segment-info-' + nodeId);
-  if(mode === 'segment') {
-    if(gradeRow) gradeRow.style.display = 'none';
-    if(gradeHint) gradeHint.style.display = 'none';
-    if(segInfo) segInfo.style.display = '';
-  } else {
-    if(gradeRow) gradeRow.style.display = '';
-    if(gradeHint) gradeHint.style.display = '';
-    if(segInfo) segInfo.style.display = 'none';
-  }
-  
+
+  // Segment bazlı içerik (harita + profiller) göster/gizle
+  var segContent = document.getElementById('ve-road-segment-content-' + nodeId);
+  if(segContent) segContent.style.display = (mode === 'segment') ? '' : 'none';
+
   onVERoadParamChange(nodeId);
 }
 

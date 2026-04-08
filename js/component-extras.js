@@ -1818,8 +1818,18 @@ function getRoadPropertiesHTML(node) {
   var altitude = d.altitude !== undefined ? d.altitude : '';
   var temperature = d.temperature !== undefined ? d.temperature : '';
   var airDensity = d.airDensity !== undefined ? d.airDensity : '';
-  
+  var egimMode = d.egimMode || 'segment';
+
   var html = '<div class="sw-panel">';
+
+  // ===== EĞİM PARAMETRELERİ =====
+  html += '<div class="sw-section-title" style="margin:0 0 6px 0;">📐 Eğim Parametreleri</div>';
+  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:40%; font-weight:500; color:var(--text-secondary);">Eğim Modu</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-road-egimmode-' + node.id + '" onchange="onVERoadEgimModeChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;"><option value="manuel"' + (egimMode==='manuel'?' selected':'') + '>Manuel (Kullanıcı Girişli)</option><option value="segment"' + (egimMode==='segment'?' selected':'') + '>Segment Bazlı (Harita Tabanlı)</option></select></td></tr>';
+  html += '</table>';
+
+  // ===== SEGMENT BAZLI İÇERİK (Harita + Profiller) =====
+  html += '<div id="ve-road-segment-content-' + node.id + '" style="' + (egimMode==='manuel'?'display:none;':'') + '">';
 
   // ===== GÜZERGAH / HARİTA =====
   html += '<div class="sw-pkg-card" style="margin-bottom:12px;">';
@@ -1851,6 +1861,8 @@ function getRoadPropertiesHTML(node) {
   html += '</div></div>'; // sw-pkg-body + sw-pkg-card
   html += '</div>'; // profiles wrapper
 
+  html += '</div>'; // segment-content wrapper
+
   // ===== ORTAM PARAMETRELERİ =====
   html += '<div class="sw-section-title" style="margin:10px 0 6px 0;">🌡️ Ortam</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
@@ -1877,11 +1889,13 @@ function onVERoadParamChange(nodeId) {
   var altEl = el('ve-road-alt-' + nodeId);
   var tempEl = el('ve-road-temp-' + nodeId);
   var densEl = el('ve-road-density-' + nodeId);
+  var egimEl = el('ve-road-egimmode-' + nodeId);
 
   var pfOrEmpty = function(v) { var n = parseFloat(v); return isNaN(n) ? '' : n; };
   if(altEl) node.data.altitude = pfOrEmpty(altEl.value);
   if(tempEl) node.data.temperature = pfOrEmpty(tempEl.value);
   if(densEl) node.data.airDensity = pfOrEmpty(densEl.value);
+  if(egimEl) node.data.egimMode = egimEl.value;
 }
 
 // Leaflet harita sistemi - her node için ayrı harita instance
