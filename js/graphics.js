@@ -3611,75 +3611,173 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       r += ln('*', W) + '\n\n';
     }
 
-    // ── SEGMENT BAZLI OZET TABLO ──
+    // ── GUZERGAH BAZLI SONUC OZETI ──
     r += ln('=', W) + '\n';
-    r += pad(sectionNum + '. SEGMENT BAZLI SONUC OZETI', W, 'center') + '\n';
+    r += pad(sectionNum + '. GUZERGAH BAZLI SONUC OZETI', W, 'center') + '\n';
     r += ln('=', W) + '\n\n';
 
-    var sumTW = 120;
-    r += '  ' + ln('-', sumTW) + '\n';
-    r += '  ' + pad('No', 4) + pad('Komut', 12) + pad('Egim %', 8, 'right');
-    r += pad('Mesafe m', 10, 'right') + pad('V_giris', 10, 'right') + pad('V_cikis', 10, 'right');
-    r += pad('dV', 8, 'right') + pad('V_max', 9, 'right') + pad('V_min', 9, 'right');
-    r += pad('Sure s', 9, 'right') + pad('Bas.Vites', 10, 'right') + pad('Bit.Vites', 10, 'right') + pad('DS', 4, 'right') + pad('Durum', 10) + '\n';
-    r += '  ' + ln('-', sumTW) + '\n';
-
-    var totalTime = 0;
+    // Kümülatif mesafe ve süre hesapla (segment bazında)
+    var cumDist = 0, cumTime = 0;
+    var segCumDist = []; // her segmentin başlangıç kümülatif mesafesi
     segSum.forEach(function(seg) {
-      var komut = seg.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
-      var dv = seg.endSpeed_kmh - seg.startSpeed_kmh;
-      var durum = '';
-      if (seg.endSpeed_kmh < 1.0) durum = 'DURDU';
-      else if (dv > 1) durum = 'HIZLANDI';
-      else if (dv < -1) durum = 'YAVASLADI';
-      else durum = 'SABIT';
-      totalTime += seg.duration || 0;
-
-      r += '  ' + pad(String(seg.no), 4);
-      r += pad(ascii(komut), 12);
-      r += pad(num(seg.grade, 2), 8, 'right');
-      r += pad(numI(seg.actualDist || seg.targetDist), 10, 'right');
-      r += pad(num(seg.startSpeed_kmh, 1), 10, 'right');
-      r += pad(num(seg.endSpeed_kmh, 1), 10, 'right');
-      r += pad((dv >= 0 ? '+' : '') + num(dv, 1), 8, 'right');
-      r += pad(num(seg.maxSpeed_kmh, 1), 9, 'right');
-      r += pad(num(seg.minSpeed_kmh, 1), 9, 'right');
-      r += pad(num(seg.duration, 1), 9, 'right');
-      r += pad(ascii(String(seg.startGear || '')), 10, 'right');
-      r += pad(ascii(String(seg.endGear || '')), 10, 'right');
-      r += pad(String(seg.downshiftCount || 0), 4, 'right');
-      r += '  ' + durum;
-      r += '\n';
+      segCumDist.push(cumDist);
+      cumDist += (seg.actualDist || seg.targetDist || 0);
+      cumTime += (seg.duration || 0);
     });
-    r += '  ' + ln('-', sumTW) + '\n';
-
-    // Toplam satırı
+    var totalTime = cumTime;
     var v0 = segSum.length > 0 ? segSum[0].startSpeed_kmh : 0;
     var vF = segSum.length > 0 ? segSum[segSum.length - 1].endSpeed_kmh : 0;
-    var dvTotal = vF - v0;
-    var totalDownshifts = 0;
-    segSum.forEach(function(s) { totalDownshifts += (s.downshiftCount || 0); });
-    r += '  ' + pad('TOPLAM', 4 + 12);
-    r += pad('', 8);
-    r += pad(numI(ssSd.totalDistance || 0), 10, 'right');
-    r += pad(num(v0, 1), 10, 'right');
-    r += pad(num(vF, 1), 10, 'right');
-    r += pad((dvTotal >= 0 ? '+' : '') + num(dvTotal, 1), 8, 'right');
-    r += pad('', 9);
-    r += pad('', 9);
-    r += pad(num(totalTime, 1), 9, 'right');
-    r += pad('', 10);
-    r += pad('', 10);
-    r += pad(String(totalDownshifts), 4, 'right');
-    r += '\n';
-    r += '  ' + ln('-', sumTW) + '\n\n';
 
-    // Durum açıklamaları
-    r += '  DURUM KODLARI\n';
-    r += '  HIZLANDI  : Segment sonunda hiz artisi > 1 km/h\n';
-    r += '  YAVASLADI : Segment sonunda hiz dususu > 1 km/h\n';
-    r += '  SABIT     : Hiz degisimi +/-1 km/h araliginda\n';
-    r += '  DURDU     : Arac durma noktasina geldi (< 1 km/h)\n\n\n';
+    // Waypoint'ler varsa: guzergah anlatimi
+    if(routeWaypoints.length >= 2) {
+      // Her waypoint icin: o noktaya en yakin segment'i bul ve aracin durumunu yaz
+      var wpCumTime = [];
+      var wpSpeed = [];
+      var wpGear = [];
+      for(var wi = 0; wi < routeWaypoints.length; wi++) {
+        var wpDist = routeWaypoints[wi].dist;
+        // Bu mesafeye en yakin segmenti ve icindeki durumu bul
+        var bestSegIdx = 0;
+        var d2 = 0;
+        for(var si = 0; si < segSum.length; si++) {
+          var segStart = segCumDist[si];
+          var segEnd = segStart + (segSum[si].actualDist || segSum[si].targetDist || 0);
+          if(wpDist >= segStart && wpDist <= segEnd + 0.1) { bestSegIdx = si; break; }
+          if(segEnd < wpDist) bestSegIdx = si;
+        }
+        // Segment icindeki ilerleme orani
+        var bSeg = segSum[bestSegIdx];
+        var segStartD = segCumDist[bestSegIdx];
+        var segLen = bSeg.actualDist || bSeg.targetDist || 1;
+        var ratio = Math.max(0, Math.min(1, (wpDist - segStartD) / segLen));
+        // Interpolasyon: hiz
+        var spd = bSeg.startSpeed_kmh + ratio * (bSeg.endSpeed_kmh - bSeg.startSpeed_kmh);
+        wpSpeed.push(spd);
+        // Sure: onceki segmentlerin toplam suresi + bu segmentteki oran
+        var tBefore = 0;
+        for(var si2 = 0; si2 < bestSegIdx; si2++) tBefore += (segSum[si2].duration || 0);
+        tBefore += ratio * (bSeg.duration || 0);
+        wpCumTime.push(tBefore);
+        // Vites
+        wpGear.push(ratio < 0.5 ? (bSeg.startGear || '') : (bSeg.endGear || ''));
+      }
+
+      r += '  GUZERGAH AKISI\n';
+      r += '  ' + ln('-', W - 4) + '\n\n';
+
+      for(var wi2 = 0; wi2 < routeWaypoints.length; wi2++) {
+        var wp = routeWaypoints[wi2];
+        var wpDistKm = wp.dist / 1000;
+
+        r += '  >> Arac "' + ascii(wp.name) + '" noktasinda\n';
+        r += '     Konum   : km ' + num(wpDistKm, 2) + ' | Rakim: ' + numI(wp.elev) + ' m\n';
+        r += '     Hiz     : ' + num(wpSpeed[wi2], 1) + ' km/h';
+        if(wpGear[wi2]) r += ' | Vites: ' + ascii(String(wpGear[wi2]));
+        r += '\n';
+        r += '     Sure    : ' + num(wpCumTime[wi2], 1) + ' s\n';
+
+        // Sonraki waypoint'e olan bolum bilgisi
+        if(wi2 < routeWaypoints.length - 1) {
+          var wpNext = routeWaypoints[wi2 + 1];
+          var aradaki = wpNext.dist - wp.dist;
+          var araSure = wpCumTime[wi2 + 1] - wpCumTime[wi2];
+          var dhFark = wp.elev - wpNext.elev;
+          var ortEgim = aradaki > 0.1 ? (dhFark / aradaki * 100) : 0;
+          var egimYon = ortEgim > 0.5 ? 'inis' : (ortEgim < -0.5 ? 'cikis' : 'duz');
+
+          r += '\n     ' + ln('.', 40) + '\n';
+          r += '     ' + ascii(wp.name) + '  -->  ' + ascii(wpNext.name) + '\n';
+          r += '     Mesafe: ' + num(aradaki / 1000, 2) + ' km';
+          r += ' | dh: ' + num(dhFark, 0) + ' m';
+          r += ' | Ort. egim: %' + num(ortEgim, 2) + ' (' + egimYon + ')';
+          r += '\n     Gecis suresi: ' + num(araSure, 1) + ' s';
+          var ortHiz = araSure > 0 ? (aradaki / 1000) / (araSure / 3600) : 0;
+          r += ' | Ort. hiz: ' + num(ortHiz, 1) + ' km/h';
+          r += '\n\n';
+        } else {
+          r += '\n';
+        }
+      }
+
+      r += '  ' + ln('-', W - 4) + '\n\n';
+
+      // Genel ozet
+      r += '  GENEL OZET\n';
+      r += '  ' + ln('-', 50) + '\n';
+      r += pRow('Toplam Mesafe', num(cumDist / 1000, 2) + ' km');
+      r += pRow('Toplam Sure', num(totalTime, 1) + ' s (' + num(totalTime / 60, 1) + ' dk)');
+      r += pRow('Baslangic Hizi', num(v0, 1) + ' km/h');
+      r += pRow('Bitis Hizi', num(vF, 1) + ' km/h');
+      r += pRow('Hiz Degisimi', (vF - v0 >= 0 ? '+' : '') + num(vF - v0, 1) + ' km/h');
+      var totalDownshifts = 0;
+      segSum.forEach(function(s) { totalDownshifts += (s.downshiftCount || 0); });
+      r += pRow('Toplam Vites Dususu', String(totalDownshifts));
+      r += '  ' + ln('-', 50) + '\n\n\n';
+
+    } else {
+      // Waypoint yoksa: eski segment tablosu
+      var sumTW = 120;
+      r += '  ' + ln('-', sumTW) + '\n';
+      r += '  ' + pad('No', 4) + pad('Komut', 12) + pad('Egim %', 8, 'right');
+      r += pad('Mesafe m', 10, 'right') + pad('V_giris', 10, 'right') + pad('V_cikis', 10, 'right');
+      r += pad('dV', 8, 'right') + pad('V_max', 9, 'right') + pad('V_min', 9, 'right');
+      r += pad('Sure s', 9, 'right') + pad('Bas.Vites', 10, 'right') + pad('Bit.Vites', 10, 'right') + pad('DS', 4, 'right') + pad('Durum', 10) + '\n';
+      r += '  ' + ln('-', sumTW) + '\n';
+
+      var totalTime = 0;
+      segSum.forEach(function(seg) {
+        var komut = seg.command === 'coast' ? 'Gaz Kesme' : 'Tam Gaz';
+        var dv = seg.endSpeed_kmh - seg.startSpeed_kmh;
+        var durum = '';
+        if (seg.endSpeed_kmh < 1.0) durum = 'DURDU';
+        else if (dv > 1) durum = 'HIZLANDI';
+        else if (dv < -1) durum = 'YAVASLADI';
+        else durum = 'SABIT';
+        totalTime += seg.duration || 0;
+
+        r += '  ' + pad(String(seg.no), 4);
+        r += pad(ascii(komut), 12);
+        r += pad(num(seg.grade, 2), 8, 'right');
+        r += pad(numI(seg.actualDist || seg.targetDist), 10, 'right');
+        r += pad(num(seg.startSpeed_kmh, 1), 10, 'right');
+        r += pad(num(seg.endSpeed_kmh, 1), 10, 'right');
+        r += pad((dv >= 0 ? '+' : '') + num(dv, 1), 8, 'right');
+        r += pad(num(seg.maxSpeed_kmh, 1), 9, 'right');
+        r += pad(num(seg.minSpeed_kmh, 1), 9, 'right');
+        r += pad(num(seg.duration, 1), 9, 'right');
+        r += pad(ascii(String(seg.startGear || '')), 10, 'right');
+        r += pad(ascii(String(seg.endGear || '')), 10, 'right');
+        r += pad(String(seg.downshiftCount || 0), 4, 'right');
+        r += '  ' + durum;
+        r += '\n';
+      });
+      r += '  ' + ln('-', sumTW) + '\n';
+      var v0 = segSum.length > 0 ? segSum[0].startSpeed_kmh : 0;
+      var vF = segSum.length > 0 ? segSum[segSum.length - 1].endSpeed_kmh : 0;
+      var dvTotal = vF - v0;
+      var totalDownshifts = 0;
+      segSum.forEach(function(s) { totalDownshifts += (s.downshiftCount || 0); });
+      r += '  ' + pad('TOPLAM', 4 + 12);
+      r += pad('', 8);
+      r += pad(numI(ssSd.totalDistance || 0), 10, 'right');
+      r += pad(num(v0, 1), 10, 'right');
+      r += pad(num(vF, 1), 10, 'right');
+      r += pad((dvTotal >= 0 ? '+' : '') + num(dvTotal, 1), 8, 'right');
+      r += pad('', 9);
+      r += pad('', 9);
+      r += pad(num(totalTime, 1), 9, 'right');
+      r += pad('', 10);
+      r += pad('', 10);
+      r += pad(String(totalDownshifts), 4, 'right');
+      r += '\n';
+      r += '  ' + ln('-', sumTW) + '\n\n';
+
+      r += '  DURUM KODLARI\n';
+      r += '  HIZLANDI  : Segment sonunda hiz artisi > 1 km/h\n';
+      r += '  YAVASLADI : Segment sonunda hiz dususu > 1 km/h\n';
+      r += '  SABIT     : Hiz degisimi +/-1 km/h araliginda\n';
+      r += '  DURDU     : Arac durma noktasina geldi (< 1 km/h)\n\n\n';
+    }
 
 
     // ── ZAMANSAL DIFERANSIYEL HESAPLAMA TABLOSU ──
@@ -3717,9 +3815,26 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       var segIdx = sd.segment ? sd.segment[idx] : 0;
       var cmdStr = sd.command ? (sd.command[idx] === 'coast' ? 'Gaz Kes.' : 'Tam Gaz') : '';
 
-      // Segment geçişinde ayırıcı
+      // Segment geçişinde ayırıcı — waypoint varsa noktayı belirt
       if (prevSeg >= 0 && segIdx !== prevSeg) {
-        r += '  ' + ln('.', Math.floor((WW - 4) / 2)) + '  [Seg ' + (prevSeg + 1) + ' -> ' + (segIdx + 1) + ']\n';
+        var _segTransDist = sd.distance ? sd.distance[idx] : 0;
+        var _segTransLabel = '';
+        if(routeWaypoints.length >= 2) {
+          // Gecis mesafesine en yakin waypoint'i bul
+          var _closestWp = null, _closestD = Infinity;
+          for(var _wi = 0; _wi < routeWaypoints.length; _wi++) {
+            var _wd = Math.abs(routeWaypoints[_wi].dist - _segTransDist);
+            if(_wd < _closestD) { _closestD = _wd; _closestWp = routeWaypoints[_wi]; }
+          }
+          if(_closestWp && _closestD < 2000) {
+            _segTransLabel = '  >> ' + ascii(_closestWp.name) + ' civari (km ' + num(_segTransDist / 1000, 2) + ')';
+          } else {
+            _segTransLabel = '  [km ' + num(_segTransDist / 1000, 2) + ' | egim degisimi]';
+          }
+        } else {
+          _segTransLabel = '  [Seg ' + (prevSeg + 1) + ' -> ' + (segIdx + 1) + ']';
+        }
+        r += '  ' + ln('.', Math.floor((WW - 4) / 2)) + _segTransLabel + '\n';
       }
       prevSeg = segIdx;
 
