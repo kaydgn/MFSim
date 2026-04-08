@@ -3604,6 +3604,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     var sd = (trKey === '__primary__') ? sdPrimary : (sdAll[trKey] || sdPrimary);
     var ssSd = sd.solverStats || {};
     var segSum = sd.segmentSummary || [];
+    var _noLoadGov = ssSd.noLoadGoverned || 0;
 
     if (hasMultiTransfer) {
       r += ln('*', W) + '\n';
@@ -3862,7 +3863,9 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
       r += pad(String(segIdx + 1), 5, 'right');
       r += ' ' + pad(ascii(cmdStr), 9);
       r += pad(num(v_kmh, 1), 9, 'right');
-      r += pad(numI(rpm), 8, 'right');
+      var rpmStr = numI(rpm);
+      if(_noLoadGov > 0 && rpm > _noLoadGov) rpmStr += '!';
+      r += pad(rpmStr, 8, 'right');
       r += ' ' + pad(ascii(String(gear)), 6);
       r += pad(numI(F_te), 10, 'right');
       r += pad(numI(F_roll), 9, 'right');
@@ -3883,7 +3886,7 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
     r += '  Seg          : Aktif segment numarasi\n';
     r += '  Komut        : Surucu komutu (Tam Gaz / Gaz Kesme)\n';
     r += '  v [km/h]     : Arac hizi\n';
-    r += '  n [rpm]      : Motor devri\n';
+    r += '  n [rpm]      : Motor devri (! = no-load governed ustu, yakit yok)\n';
     r += '  Vites        : Aktif vites kademesi (C=Konvertor, L=Lockup)\n';
     r += '  F_cekis [N]  : Tekerlek cevresindeki cekis kuvveti\n';
     r += '  F_yuv [N]    : Yuvarlanma direnc kuvveti\n';

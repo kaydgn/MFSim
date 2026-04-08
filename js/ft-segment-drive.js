@@ -43,6 +43,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   var I_engine = parseFloat(specs.inertia) || 1.431;
   var displacement_L = parseFloat(specs.displacement) || 7.0;
   var V_d_m3 = displacement_L / 1000; // Motor hacmi [m³]
+  var mechanicalLimit = governedSpeed * 1.30; // Motorun mekanik devir sınırı
 
   var grossMotorTorqueFn = FT_SOLVER.createMotorTorqueFn(torqueTable, governedSpeed, noLoadGoverned);
 
@@ -333,10 +334,10 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
         // ve tekerlekler motoru sürer → kompresör gibi çalışır → negatif tork
         if(N_engine > noLoadGoverned && T_engine <= 0) {
           var BMEP_mot = 50000; // 50 kPa bazal motoring basıncı
-          // (a) Rev limiter: aşırı devir bölgesinde motoring direnci progresif artar
-          if(N_engine > noLoadGoverned + 200) {
-            var overRevFrac = Math.min((N_engine - noLoadGoverned - 200) / 500, 3.0);
-            BMEP_mot *= (1 + 4 * overRevFrac);
+          // (a) Mekanik limit: governed×1.30 üstünde sert duvar
+          if(N_engine > mechanicalLimit) {
+            var overRevFrac = Math.min((N_engine - mechanicalLimit) / 200, 5.0);
+            BMEP_mot *= (1 + 10 * overRevFrac);
           }
           T_engine = -(BMEP_mot * V_d_m3 / (4 * Math.PI));
         }
@@ -390,10 +391,10 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       // RPM-bağımlı motoring torku: sürtünme ve pompalama kayıpları devirle artar
       var rpmRatio = N_engine / governedSpeed;
       var BMEP_coast = 50000 * (0.5 + 0.5 * rpmRatio); // ~25 kPa @ idle, 50 kPa @ governed
-      // Rev limiter: governed üstünde motoring direnci progresif artar
-      if(N_engine > noLoadGoverned) {
-        var overRevFrac_c = Math.min((N_engine - noLoadGoverned) / 500, 3.0);
-        BMEP_coast *= (1 + 4 * overRevFrac_c);
+      // Mekanik limit: governed×1.30 üstünde sert duvar
+      if(N_engine > mechanicalLimit) {
+        var overRevFrac_c = Math.min((N_engine - mechanicalLimit) / 200, 5.0);
+        BMEP_coast *= (1 + 10 * overRevFrac_c);
       }
       var T_motoring = BMEP_coast * V_d_m3 / (4 * Math.PI);
       var i_total_coast = i_gear * i_propshaft * i_transfer * i_axle;
@@ -579,7 +580,10 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       forwardGears: forwardGears.map(function(g) { return {name: g.name, ratio: g.ratio, eff: g.eff}; }),
       finalGear: getCurrentGearData().name,
       finalGearIdx: shiftState.gearIdx,
-      isLockup: shiftState.isLockup
+      isLockup: shiftState.isLockup,
+      governedSpeed: governedSpeed,
+      noLoadGoverned: noLoadGoverned,
+      mechanicalLimit: mechanicalLimit
     }
   };
 }
