@@ -26141,6 +26141,41 @@ function getRoadPropertiesHTML(node) {
   html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:40%; font-weight:500; color:var(--text-secondary);">Eğim Modu</th><td style="padding:6px; background:var(--bg-tertiary);"><select id="ve-road-egimmode-' + node.id + '" onchange="onVERoadEgimModeChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;"><option value="manuel"' + (egimMode==='manuel'?' selected':'') + '>Manuel (Kullanıcı Girişli)</option><option value="segment"' + (egimMode==='segment'?' selected':'') + '>Segment Bazlı (Harita Tabanlı)</option></select></td></tr>';
   html += '</table>';
 
+  // ===== MANUEL İÇERİK (Kullanıcı Girişli Segmentler) =====
+  var manualSegs = d.manualSegments || [];
+  html += '<div id="ve-road-manuel-content-' + node.id + '" style="' + (egimMode==='segment'?'display:none;':'') + '">';
+
+  // Segment tablosu
+  html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  html += '<div class="sw-pkg-header" style="cursor:default;">';
+  html += '<span class="sw-pkg-name">📋 Segment Tablosu</span>';
+  html += '<button onclick="veManualSegAdd(\'' + node.id + '\')" title="Segment ekle" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--accent-success); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.9rem; font-weight:700; flex-shrink:0;">+</button>';
+  html += '</div>';
+  html += '<div class="sw-pkg-body" style="padding:0;">';
+  html += '<div id="ve-road-mseg-table-' + node.id + '">';
+  html += _veManualSegTableHTML(node.id, manualSegs);
+  html += '</div>';
+  html += '</div></div>';
+
+  // Özet kutusu
+  html += '<div id="ve-road-mseg-summary-' + node.id + '" style="' + (manualSegs.length === 0 ? 'display:none;' : '') + 'background:var(--bg-secondary); padding:8px; border:1px solid var(--border-color); margin-bottom:10px;">';
+  html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; text-align:center; font-size:0.62rem;">';
+  html += '<div><div style="color:var(--text-muted); font-size:0.56rem;">Toplam Mesafe</div><div id="ve-road-mseg-totdist-' + node.id + '" style="color:var(--accent-primary); font-weight:600;">-</div></div>';
+  html += '<div><div style="color:var(--text-muted); font-size:0.56rem;">Δh</div><div id="ve-road-mseg-totdh-' + node.id + '" style="color:var(--accent-success); font-weight:600;">-</div></div>';
+  html += '<div><div style="color:var(--text-muted); font-size:0.56rem;">Segment</div><div id="ve-road-mseg-count-' + node.id + '" style="color:var(--accent-warning); font-weight:600;">-</div></div>';
+  html += '</div></div>';
+
+  // Profil diyagramı (canvas)
+  html += '<div id="ve-road-mseg-profile-wrap-' + node.id + '" style="' + (manualSegs.length === 0 ? 'display:none;' : '') + '">';
+  html += '<div class="sw-pkg-card">';
+  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">📊 Yol Profili</span></div>';
+  html += '<div class="sw-pkg-body" style="padding:6px;">';
+  html += '<canvas id="ve-road-mseg-canvas-' + node.id + '" width="380" height="160" style="width:100%; height:160px; border:1px solid var(--border-color); background:var(--bg-secondary);"></canvas>';
+  html += '</div></div>';
+  html += '</div>';
+
+  html += '</div>'; // manuel-content wrapper
+
   // ===== SEGMENT BAZLI İÇERİK (Harita + Profiller) =====
   html += '<div id="ve-road-segment-content-' + node.id + '" style="' + (egimMode==='manuel'?'display:none;':'') + '">';
 
@@ -26192,6 +26227,310 @@ function onVERoadParamChange(nodeId) {
   var el = function(id) { return document.getElementById(id); };
   var egimEl = el('ve-road-egimmode-' + nodeId);
   if(egimEl) node.data.egimMode = egimEl.value;
+}
+
+// ===== MANUEL SEGMENT TABLOSU VE PROFİL =====
+
+function _veManualSegTableHTML(nodeId, segs) {
+  if(!segs || segs.length === 0) {
+    return '<div style="padding:14px; text-align:center; font-size:0.62rem; color:var(--text-muted);">Henüz segment eklenmedi.<br><span style="opacity:0.7;">Yukarıdaki <b>+</b> butonuyla segment ekleyin.</span></div>';
+  }
+  var html = '<table style="width:100%; font-size:0.62rem; border-collapse:collapse;">';
+  html += '<thead><tr style="background:var(--bg-tertiary);">';
+  html += '<th style="padding:4px 5px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); width:22px;">#</th>';
+  html += '<th style="padding:4px 5px; text-align:left; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Ad</th>';
+  html += '<th style="padding:4px 5px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Yön</th>';
+  html += '<th style="padding:4px 5px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Eğim (%)</th>';
+  html += '<th style="padding:4px 5px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Mesafe (m)</th>';
+  html += '<th style="padding:4px 5px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Δh (m)</th>';
+  html += '<th style="padding:4px 5px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Komut</th>';
+  html += '<th style="padding:4px 3px; text-align:center; border-bottom:1px solid var(--border-color); width:22px;"></th>';
+  html += '</tr></thead><tbody>';
+  for(var i = 0; i < segs.length; i++) {
+    var s = segs[i];
+    var dir = s.direction || 'flat';
+    var dirIcon = dir === 'down' ? '↓' : dir === 'up' ? '↑' : '→';
+    var dirColor = dir === 'down' ? 'var(--accent-success)' : dir === 'up' ? 'var(--accent-danger)' : 'var(--text-secondary)';
+    html += '<tr style="border-bottom:1px solid var(--border-color);">';
+    html += '<td style="padding:2px 4px; text-align:center; border-right:1px solid var(--border-color); font-weight:600; color:var(--text-muted);">' + (i + 1) + '</td>';
+    // Ad
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="text" value="' + (s.name || 'Segment ' + (i+1)) + '" data-idx="' + i + '" data-field="name" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:0.6rem; background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:0;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
+    // Yön
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color); text-align:center;"><select data-idx="' + i + '" data-field="direction" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="padding:2px; font-size:0.58rem; background:var(--bg-input); color:' + dirColor + '; border:1px solid var(--border-color); border-radius:0; font-weight:600;">';
+    html += '<option value="down"' + (dir==='down'?' selected':'') + ' style="color:var(--accent-success);">↓ İniş</option>';
+    html += '<option value="up"' + (dir==='up'?' selected':'') + ' style="color:var(--accent-danger);">↑ Çıkış</option>';
+    html += '<option value="flat"' + (dir==='flat'?' selected':'') + ' style="color:var(--text-secondary);">→ Düz</option>';
+    html += '</select></td>';
+    // Eğim %
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="number" value="' + (s.gradePct || 0) + '" data-idx="' + i + '" data-field="gradePct" step="0.5" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:0.6rem; background:var(--bg-input); color:' + dirColor + '; border:1px solid transparent; border-radius:0; text-align:right; font-weight:600;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
+    // Mesafe
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="number" value="' + (s.distance || 0) + '" data-idx="' + i + '" data-field="distance" step="50" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:0.6rem; background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:0; text-align:right;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
+    // Δh (hesaplanan, sadece okunur)
+    var deltaH = _veManualSegCalcDH(s);
+    html += '<td style="padding:2px 4px; text-align:right; border-right:1px solid var(--border-color); color:' + dirColor + '; font-weight:500;">' + deltaH.toFixed(1) + '</td>';
+    // Komut
+    var cmd = s.command || 'full_throttle';
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color); text-align:center;"><select data-idx="' + i + '" data-field="command" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="padding:2px; font-size:0.56rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;">';
+    html += '<option value="full_throttle"' + (cmd==='full_throttle'?' selected':'') + '>Tam gaz</option>';
+    html += '<option value="coast"' + (cmd==='coast'?' selected':'') + '>Gaz kesme</option>';
+    html += '</select></td>';
+    // Sil
+    html += '<td style="padding:1px 2px; text-align:center;"><button onclick="veManualSegRemove(\'' + nodeId + '\',' + i + ')" title="Sil" style="width:18px; height:18px; display:flex; align-items:center; justify-content:center; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.65rem; font-weight:700;">×</button></td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+function _veManualSegCalcDH(s) {
+  var dist = parseFloat(s.distance) || 0;
+  var pct = parseFloat(s.gradePct) || 0;
+  var dir = s.direction || 'flat';
+  if(dir === 'flat') return 0;
+  // deltaH = distance * tan(atan(grade/100)) ≈ distance * grade/100 (küçük açılar için)
+  var dh = dist * pct / 100;
+  // Harita konvansiyonu: pozitif deltaH = iniş (yükseklik azalır)
+  // up → irtifa artar → deltaH negatif, down → irtifa azalır → deltaH pozitif
+  return dir === 'up' ? -dh : dh;
+}
+
+function _veManualSegToRoadSegment(s, idx) {
+  var dir = s.direction || 'flat';
+  var pct = parseFloat(s.gradePct) || 0;
+  var dist = parseFloat(s.distance) || 0;
+  // Harita konvansiyonu: grade > 0 = yokuş aşağı, grade < 0 = yokuş yukarı
+  var grade = dir === 'down' ? pct : dir === 'up' ? -pct : 0;
+  var deltaH = _veManualSegCalcDH(s);
+  return {
+    no: idx + 1,
+    grade: grade,
+    distance: dist,
+    deltaH: deltaH,
+    command: s.command || 'full_throttle'
+  };
+}
+
+function veManualSegAdd(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node) return;
+  if(!node.data) node.data = {};
+  if(!node.data.manualSegments) node.data.manualSegments = [];
+  var idx = node.data.manualSegments.length;
+  node.data.manualSegments.push({
+    name: 'Segment ' + (idx + 1),
+    direction: 'down',
+    gradePct: 6,
+    distance: 1000,
+    command: 'full_throttle'
+  });
+  _veManualSegRefresh(nodeId);
+}
+
+function veManualSegRemove(nodeId, idx) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data || !node.data.manualSegments) return;
+  node.data.manualSegments.splice(idx, 1);
+  _veManualSegRefresh(nodeId);
+}
+
+function veManualSegUpdate(nodeId, inputEl) {
+  var idx = parseInt(inputEl.getAttribute('data-idx'));
+  var field = inputEl.getAttribute('data-field');
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data || !node.data.manualSegments) return;
+  var seg = node.data.manualSegments[idx];
+  if(!seg) return;
+  if(field === 'name') {
+    seg.name = inputEl.value;
+  } else if(field === 'direction') {
+    seg.direction = inputEl.value;
+    if(inputEl.value === 'flat') seg.gradePct = 0;
+  } else if(field === 'gradePct') {
+    seg.gradePct = Math.abs(parseFloat(inputEl.value)) || 0;
+  } else if(field === 'distance') {
+    seg.distance = Math.abs(parseFloat(inputEl.value)) || 0;
+  } else if(field === 'command') {
+    seg.command = inputEl.value;
+  }
+  _veManualSegRefresh(nodeId);
+}
+
+function _veManualSegRefresh(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data) return;
+  var segs = node.data.manualSegments || [];
+
+  // Tablo yenile
+  var tableDiv = document.getElementById('ve-road-mseg-table-' + nodeId);
+  if(tableDiv) tableDiv.innerHTML = _veManualSegTableHTML(nodeId, segs);
+
+  // Segment'leri roadSegments formatına çevir ve senaryoya aktar
+  var roadSegments = segs.map(function(s, i) { return _veManualSegToRoadSegment(s, i); });
+  var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
+  if(scenarioNode) {
+    if(!scenarioNode.data) scenarioNode.data = {};
+    scenarioNode.data.roadSegments = roadSegments;
+  }
+  // Road node'a da kaydet
+  node.data.routeSegments = roadSegments;
+
+  // Özet güncelle
+  var summaryDiv = document.getElementById('ve-road-mseg-summary-' + nodeId);
+  var profileDiv = document.getElementById('ve-road-mseg-profile-wrap-' + nodeId);
+  if(segs.length === 0) {
+    if(summaryDiv) summaryDiv.style.display = 'none';
+    if(profileDiv) profileDiv.style.display = 'none';
+    return;
+  }
+  if(summaryDiv) summaryDiv.style.display = '';
+  if(profileDiv) profileDiv.style.display = '';
+
+  var totDist = 0, totDH = 0;
+  for(var i = 0; i < roadSegments.length; i++) {
+    totDist += roadSegments[i].distance;
+    totDH += roadSegments[i].deltaH;
+  }
+  var distEl = document.getElementById('ve-road-mseg-totdist-' + nodeId);
+  var dhEl = document.getElementById('ve-road-mseg-totdh-' + nodeId);
+  var cntEl = document.getElementById('ve-road-mseg-count-' + nodeId);
+  if(distEl) distEl.textContent = totDist >= 1000 ? (totDist / 1000).toFixed(2) + ' km' : totDist.toFixed(0) + ' m';
+  if(dhEl) dhEl.textContent = totDH.toFixed(1) + ' m';
+  if(cntEl) cntEl.textContent = segs.length + ' adet';
+
+  // Profil diyagramını çiz
+  _veManualSegDrawProfile(nodeId, segs);
+}
+
+function _veManualSegDrawProfile(nodeId, segs) {
+  var canvas = document.getElementById('ve-road-mseg-canvas-' + nodeId);
+  if(!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if(!segs || segs.length === 0) return;
+
+  // Yükseklik profilini hesapla
+  var points = [{x: 0, y: 0}];
+  var cumDist = 0;
+  for(var i = 0; i < segs.length; i++) {
+    var dist = parseFloat(segs[i].distance) || 0;
+    var dh = _veManualSegCalcDH(segs[i]);
+    cumDist += dist;
+    // deltaH: pozitif = iniş (yükseklik azalır) → y azalır
+    // Profilde y yukarı = yüksek irtifa. deltaH pozitif = iniş → y düşer → -deltaH
+    points.push({x: cumDist, y: points[points.length - 1].y - dh});
+  }
+
+  if(cumDist <= 0) return;
+
+  var yMin = Infinity, yMax = -Infinity;
+  for(var j = 0; j < points.length; j++) {
+    if(points[j].y < yMin) yMin = points[j].y;
+    if(points[j].y > yMax) yMax = points[j].y;
+  }
+  // Düz yolda padding ekle
+  if(yMax - yMin < 1) { yMin -= 5; yMax += 5; }
+  var yRange = yMax - yMin;
+  var pad = {l: 42, r: 10, t: 12, b: 28};
+  var pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
+
+  function toX(d) { return pad.l + (d / cumDist) * pw; }
+  function toY(elev) { return pad.t + ph - ((elev - yMin) / yRange) * ph; }
+
+  // Arka plan grid
+  ctx.strokeStyle = 'rgba(128,128,128,0.15)';
+  ctx.lineWidth = 0.5;
+  for(var gy = 0; gy <= 4; gy++) {
+    var yy = pad.t + (gy / 4) * ph;
+    ctx.beginPath(); ctx.moveTo(pad.l, yy); ctx.lineTo(W - pad.r, yy); ctx.stroke();
+  }
+
+  // Segment alanlarını renklendirme
+  var segStart = 0;
+  for(var si = 0; si < segs.length; si++) {
+    var sd = parseFloat(segs[si].distance) || 0;
+    var dir = segs[si].direction || 'flat';
+    var x1 = toX(segStart), x2 = toX(segStart + sd);
+    var fillColor = dir === 'down' ? 'rgba(34,197,94,0.08)' : dir === 'up' ? 'rgba(239,68,68,0.08)' : 'rgba(128,128,128,0.04)';
+    ctx.fillStyle = fillColor;
+    ctx.fillRect(x1, pad.t, x2 - x1, ph);
+    // Segment sınır çizgisi
+    if(si > 0) {
+      ctx.strokeStyle = 'rgba(128,128,128,0.3)';
+      ctx.lineWidth = 0.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(x1, pad.t); ctx.lineTo(x1, pad.t + ph); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // Segment ismi
+    var midX = (x1 + x2) / 2;
+    ctx.fillStyle = 'rgba(128,128,128,0.6)';
+    ctx.font = '9px sans-serif';
+    ctx.textAlign = 'center';
+    var segLabel = segs[si].name || ('S' + (si + 1));
+    if(segLabel.length > 10) segLabel = segLabel.substring(0, 9) + '…';
+    ctx.fillText(segLabel, midX, pad.t + 10);
+    segStart += sd;
+  }
+
+  // Yükseklik dolgu
+  ctx.beginPath();
+  ctx.moveTo(toX(points[0].x), toY(points[0].y));
+  for(var k = 1; k < points.length; k++) {
+    ctx.lineTo(toX(points[k].x), toY(points[k].y));
+  }
+  ctx.lineTo(toX(points[points.length - 1].x), pad.t + ph);
+  ctx.lineTo(toX(points[0].x), pad.t + ph);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(59,130,246,0.12)';
+  ctx.fill();
+
+  // Yükseklik çizgisi — segment segment renklendir
+  var ptIdx = 0;
+  for(var m = 0; m < segs.length; m++) {
+    var ddir = segs[m].direction || 'flat';
+    var lineColor = ddir === 'down' ? '#22c55e' : ddir === 'up' ? '#ef4444' : '#3b82f6';
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(toX(points[ptIdx].x), toY(points[ptIdx].y));
+    ctx.lineTo(toX(points[ptIdx + 1].x), toY(points[ptIdx + 1].y));
+    ctx.stroke();
+    ptIdx++;
+  }
+
+  // Nokta markerlar
+  for(var n = 0; n < points.length; n++) {
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath();
+    ctx.arc(toX(points[n].x), toY(points[n].y), 3, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+
+  // Eksenler
+  ctx.strokeStyle = 'rgba(128,128,128,0.5)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t + ph); ctx.lineTo(W - pad.r, pad.t + ph);
+  ctx.stroke();
+
+  // Y ekseni etiketleri (irtifa)
+  ctx.fillStyle = 'rgba(128,128,128,0.7)';
+  ctx.font = '9px sans-serif';
+  ctx.textAlign = 'right';
+  for(var ly = 0; ly <= 4; ly++) {
+    var val = yMin + (1 - ly / 4) * yRange;
+    ctx.fillText(val.toFixed(0) + ' m', pad.l - 3, pad.t + (ly / 4) * ph + 3);
+  }
+
+  // X ekseni etiketleri (mesafe)
+  ctx.textAlign = 'center';
+  for(var lx = 0; lx <= 4; lx++) {
+    var dVal = (lx / 4) * cumDist;
+    var label = dVal >= 1000 ? (dVal / 1000).toFixed(1) + ' km' : dVal.toFixed(0) + ' m';
+    ctx.fillText(label, toX(dVal), H - 4);
+  }
 }
 
 // Leaflet harita sistemi - her node için ayrı harita instance
@@ -27364,7 +27703,29 @@ function onVERoadEgimModeChange(nodeId) {
   var segContent = document.getElementById('ve-road-segment-content-' + nodeId);
   if(segContent) segContent.style.display = (mode === 'segment') ? '' : 'none';
 
+  // Manuel içerik göster/gizle
+  var manuelContent = document.getElementById('ve-road-manuel-content-' + nodeId);
+  if(manuelContent) manuelContent.style.display = (mode === 'manuel') ? '' : 'none';
+
   onVERoadParamChange(nodeId);
+
+  // Manuel modda profili çiz (varsa)
+  if(mode === 'manuel') {
+    var node = nodes.find(function(n) { return n.id === nodeId; });
+    if(node && node.data && node.data.manualSegments && node.data.manualSegments.length > 0) {
+      _veManualSegRefresh(nodeId);
+    }
+  }
+
+  // Solver properties panelini yenile (checkbox'lar değişir)
+  var solverNode = nodes.find(function(n) { return n.type === 'solver'; });
+  if(solverNode && typeof showNodeProperties === 'function') {
+    // Eğer solver paneli açıksa yenile
+    var currentPanel = document.querySelector('.ve-props-active');
+    if(currentPanel && currentPanel.getAttribute('data-node-id') === solverNode.id) {
+      showNodeProperties(solverNode);
+    }
+  }
 }
 
 function veCalcAirDensityRoad(nodeId) {
