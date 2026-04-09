@@ -26165,6 +26165,11 @@ function getRoadPropertiesHTML(node) {
   html += '<div><div style="color:var(--text-muted); font-size:0.56rem;">Segment</div><div id="ve-road-mseg-count-' + node.id + '" style="color:var(--accent-warning); font-weight:600;">-</div></div>';
   html += '</div></div>';
 
+  // Senaryoya aktar butonu
+  html += '<div id="ve-road-mseg-transfer-' + node.id + '" style="' + (manualSegs.length === 0 ? 'display:none;' : '') + 'margin-bottom:10px;">';
+  html += '<button onclick="veManualSegTransfer(\'' + node.id + '\')" style="width:100%; padding:8px 10px; font-size:0.66rem; font-weight:600; background:linear-gradient(135deg, var(--accent-primary), #2563eb); color:white; border:none; border-radius:0; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:opacity 0.15s;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'">📤 Segmentleri Senaryolar Bileşenine Aktar</button>';
+  html += '</div>';
+
   // Profil diyagramı (canvas)
   html += '<div id="ve-road-mseg-profile-wrap-' + node.id + '" style="' + (manualSegs.length === 0 ? 'display:none;' : '') + '">';
   html += '<div class="sw-pkg-card">';
@@ -26235,47 +26240,40 @@ function _veManualSegTableHTML(nodeId, segs) {
   if(!segs || segs.length === 0) {
     return '<div style="padding:14px; text-align:center; font-size:0.62rem; color:var(--text-muted);">Henüz segment eklenmedi.<br><span style="opacity:0.7;">Yukarıdaki <b>+</b> butonuyla segment ekleyin.</span></div>';
   }
-  var html = '<table style="width:100%; font-size:0.62rem; border-collapse:collapse;">';
+  var html = '<table style="width:100%; font-size:0.62rem; border-collapse:collapse; table-layout:fixed;">';
+  html += '<colgroup><col style="width:24px;"><col><col style="width:62px;"><col style="width:58px;"><col style="width:68px;"><col style="width:50px;"><col style="width:22px;"></colgroup>';
   html += '<thead><tr style="background:var(--bg-tertiary);">';
-  html += '<th style="padding:4px 5px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); width:22px;">#</th>';
-  html += '<th style="padding:4px 5px; text-align:left; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Ad</th>';
-  html += '<th style="padding:4px 5px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Yön</th>';
-  html += '<th style="padding:4px 5px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Eğim (%)</th>';
-  html += '<th style="padding:4px 5px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Mesafe (m)</th>';
-  html += '<th style="padding:4px 5px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Δh (m)</th>';
-  html += '<th style="padding:4px 5px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Komut</th>';
-  html += '<th style="padding:4px 3px; text-align:center; border-bottom:1px solid var(--border-color); width:22px;"></th>';
+  html += '<th style="padding:4px 3px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">#</th>';
+  html += '<th style="padding:4px 4px; text-align:left; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Ad</th>';
+  html += '<th style="padding:4px 3px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Yön</th>';
+  html += '<th style="padding:4px 3px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Eğim %</th>';
+  html += '<th style="padding:4px 3px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Mesafe m</th>';
+  html += '<th style="padding:4px 3px; text-align:right; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color);">Δh m</th>';
+  html += '<th style="padding:4px 2px; text-align:center; border-bottom:1px solid var(--border-color);"></th>';
   html += '</tr></thead><tbody>';
   for(var i = 0; i < segs.length; i++) {
     var s = segs[i];
     var dir = s.direction || 'flat';
-    var dirIcon = dir === 'down' ? '↓' : dir === 'up' ? '↑' : '→';
     var dirColor = dir === 'down' ? 'var(--accent-success)' : dir === 'up' ? 'var(--accent-danger)' : 'var(--text-secondary)';
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<td style="padding:2px 4px; text-align:center; border-right:1px solid var(--border-color); font-weight:600; color:var(--text-muted);">' + (i + 1) + '</td>';
+    html += '<td style="padding:2px 3px; text-align:center; border-right:1px solid var(--border-color); font-weight:600; color:var(--text-muted);">' + (i + 1) + '</td>';
     // Ad
-    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="text" value="' + (s.name || 'Segment ' + (i+1)) + '" data-idx="' + i + '" data-field="name" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:0.6rem; background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:0;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="text" value="' + (s.name || 'Segment ' + (i+1)) + '" data-idx="' + i + '" data-field="name" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:0; box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
     // Yön
-    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color); text-align:center;"><select data-idx="' + i + '" data-field="direction" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="padding:2px; font-size:0.58rem; background:var(--bg-input); color:' + dirColor + '; border:1px solid var(--border-color); border-radius:0; font-weight:600;">';
-    html += '<option value="down"' + (dir==='down'?' selected':'') + ' style="color:var(--accent-success);">↓ İniş</option>';
-    html += '<option value="up"' + (dir==='up'?' selected':'') + ' style="color:var(--accent-danger);">↑ Çıkış</option>';
-    html += '<option value="flat"' + (dir==='flat'?' selected':'') + ' style="color:var(--text-secondary);">→ Düz</option>';
+    html += '<td style="padding:1px 1px; border-right:1px solid var(--border-color); text-align:center;"><select data-idx="' + i + '" data-field="direction" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 1px; font-size:0.56rem; background:var(--bg-input); color:' + dirColor + '; border:1px solid var(--border-color); border-radius:0; font-weight:600;">';
+    html += '<option value="down"' + (dir==='down'?' selected':'') + '>↓ İniş</option>';
+    html += '<option value="up"' + (dir==='up'?' selected':'') + '>↑ Çıkış</option>';
+    html += '<option value="flat"' + (dir==='flat'?' selected':'') + '>→ Düz</option>';
     html += '</select></td>';
     // Eğim %
-    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="number" value="' + (s.gradePct || 0) + '" data-idx="' + i + '" data-field="gradePct" step="0.5" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:0.6rem; background:var(--bg-input); color:' + dirColor + '; border:1px solid transparent; border-radius:0; text-align:right; font-weight:600;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="number" value="' + (s.gradePct || 0) + '" data-idx="' + i + '" data-field="gradePct" step="0.5" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:0.58rem; background:var(--bg-input); color:' + dirColor + '; border:1px solid transparent; border-radius:0; text-align:right; font-weight:600; box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
     // Mesafe
-    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="number" value="' + (s.distance || 0) + '" data-idx="' + i + '" data-field="distance" step="50" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:0.6rem; background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:0; text-align:right;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
+    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color);"><input type="number" value="' + (s.distance || 0) + '" data-idx="' + i + '" data-field="distance" step="50" min="0" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="width:100%; padding:2px 3px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid transparent; border-radius:0; text-align:right; box-sizing:border-box;" onfocus="this.style.borderColor=\'var(--accent-primary)\'" onblur="this.style.borderColor=\'transparent\'"></td>';
     // Δh (hesaplanan, sadece okunur)
     var deltaH = _veManualSegCalcDH(s);
-    html += '<td style="padding:2px 4px; text-align:right; border-right:1px solid var(--border-color); color:' + dirColor + '; font-weight:500;">' + deltaH.toFixed(1) + '</td>';
-    // Komut
-    var cmd = s.command || 'full_throttle';
-    html += '<td style="padding:1px 2px; border-right:1px solid var(--border-color); text-align:center;"><select data-idx="' + i + '" data-field="command" onchange="veManualSegUpdate(\'' + nodeId + '\',this)" style="padding:2px; font-size:0.56rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;">';
-    html += '<option value="full_throttle"' + (cmd==='full_throttle'?' selected':'') + '>Tam gaz</option>';
-    html += '<option value="coast"' + (cmd==='coast'?' selected':'') + '>Gaz kesme</option>';
-    html += '</select></td>';
+    html += '<td style="padding:2px 3px; text-align:right; border-right:1px solid var(--border-color); color:' + dirColor + '; font-weight:500;">' + deltaH.toFixed(1) + '</td>';
     // Sil
-    html += '<td style="padding:1px 2px; text-align:center;"><button onclick="veManualSegRemove(\'' + nodeId + '\',' + i + ')" title="Sil" style="width:18px; height:18px; display:flex; align-items:center; justify-content:center; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.65rem; font-weight:700;">×</button></td>';
+    html += '<td style="padding:1px 1px; text-align:center;"><button onclick="veManualSegRemove(\'' + nodeId + '\',' + i + ')" title="Sil" style="width:18px; height:18px; display:flex; align-items:center; justify-content:center; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.65rem; font-weight:700;">×</button></td>';
     html += '</tr>';
   }
   html += '</tbody></table>';
@@ -26306,7 +26304,7 @@ function _veManualSegToRoadSegment(s, idx) {
     grade: grade,
     distance: dist,
     deltaH: deltaH,
-    command: s.command || 'full_throttle'
+    command: 'full_throttle'
   };
 }
 
@@ -26320,8 +26318,7 @@ function veManualSegAdd(nodeId) {
     name: 'Segment ' + (idx + 1),
     direction: 'down',
     gradePct: 6,
-    distance: 1000,
-    command: 'full_throttle'
+    distance: 1000
   });
   _veManualSegRefresh(nodeId);
 }
@@ -26349,8 +26346,6 @@ function veManualSegUpdate(nodeId, inputEl) {
     seg.gradePct = Math.abs(parseFloat(inputEl.value)) || 0;
   } else if(field === 'distance') {
     seg.distance = Math.abs(parseFloat(inputEl.value)) || 0;
-  } else if(field === 'command') {
-    seg.command = inputEl.value;
   }
   _veManualSegRefresh(nodeId);
 }
@@ -26364,26 +26359,23 @@ function _veManualSegRefresh(nodeId) {
   var tableDiv = document.getElementById('ve-road-mseg-table-' + nodeId);
   if(tableDiv) tableDiv.innerHTML = _veManualSegTableHTML(nodeId, segs);
 
-  // Segment'leri roadSegments formatına çevir ve senaryoya aktar
+  // Segment'leri roadSegments formatına çevir — road node'a kaydet
   var roadSegments = segs.map(function(s, i) { return _veManualSegToRoadSegment(s, i); });
-  var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
-  if(scenarioNode) {
-    if(!scenarioNode.data) scenarioNode.data = {};
-    scenarioNode.data.roadSegments = roadSegments;
-  }
-  // Road node'a da kaydet
   node.data.routeSegments = roadSegments;
 
   // Özet güncelle
   var summaryDiv = document.getElementById('ve-road-mseg-summary-' + nodeId);
   var profileDiv = document.getElementById('ve-road-mseg-profile-wrap-' + nodeId);
+  var transferDiv = document.getElementById('ve-road-mseg-transfer-' + nodeId);
   if(segs.length === 0) {
     if(summaryDiv) summaryDiv.style.display = 'none';
     if(profileDiv) profileDiv.style.display = 'none';
+    if(transferDiv) transferDiv.style.display = 'none';
     return;
   }
   if(summaryDiv) summaryDiv.style.display = '';
   if(profileDiv) profileDiv.style.display = '';
+  if(transferDiv) transferDiv.style.display = '';
 
   var totDist = 0, totDH = 0;
   for(var i = 0; i < roadSegments.length; i++) {
@@ -26399,6 +26391,28 @@ function _veManualSegRefresh(nodeId) {
 
   // Profil diyagramını çiz
   _veManualSegDrawProfile(nodeId, segs);
+}
+
+function veManualSegTransfer(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data || !node.data.routeSegments || node.data.routeSegments.length === 0) {
+    showToast('Aktarılacak segment bulunamadı', 'warning'); return;
+  }
+  var scenarioNode = nodes.find(function(n) { return n.type === 'scenario'; });
+  if(!scenarioNode) {
+    showToast('Topolojide Senaryolar bileşeni bulunamadı. Önce ekleyin.', 'warning'); return;
+  }
+  if(!scenarioNode.data) scenarioNode.data = {};
+  scenarioNode.data.roadSegments = node.data.routeSegments.slice();
+
+  // Senaryo properties panelindeki segment tablosunu güncelle
+  var segTable = document.getElementById('ve-scenario-segments-' + scenarioNode.id);
+  if(segTable) {
+    segTable.innerHTML = _veScenarioSegmentsTableHTML(scenarioNode.data.roadSegments, true);
+    segTable.style.display = 'block';
+  }
+
+  showToast(node.data.routeSegments.length + ' segment Senaryolar bileşenine aktarıldı');
 }
 
 function _veManualSegDrawProfile(nodeId, segs) {
