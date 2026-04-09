@@ -1857,7 +1857,10 @@ function getRoadPropertiesHTML(node) {
   // Profil diyagramı (canvas)
   html += '<div id="ve-road-mseg-profile-wrap-' + node.id + '" style="' + (manualSegs.length === 0 ? 'display:none;' : '') + '">';
   html += '<div class="sw-pkg-card">';
-  html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">📊 Yol Profili</span></div>';
+  html += '<div class="sw-pkg-header" style="cursor:default;">';
+  html += '<span class="sw-pkg-name">📊 Yol Profili</span>';
+  html += '<button onclick="veManualSegExpandProfile(\'' + node.id + '\')" title="Profili büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
+  html += '</div>';
   html += '<div class="sw-pkg-body" style="padding:6px;">';
   html += '<canvas id="ve-road-mseg-canvas-' + node.id + '" width="380" height="160" style="width:100%; height:160px; border:1px solid var(--border-color); background:var(--bg-secondary);"></canvas>';
   html += '</div></div>';
@@ -2099,12 +2102,86 @@ function veManualSegTransfer(nodeId) {
   showToast(node.data.routeSegments.length + ' segment Senaryolar bileşenine aktarıldı');
 }
 
-function _veManualSegDrawProfile(nodeId, segs) {
-  var canvas = document.getElementById('ve-road-mseg-canvas-' + nodeId);
+// ── Manuel profil büyültme modal ──
+var _veManualProfileModalNodeId = null;
+
+function veManualSegExpandProfile(nodeId) {
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data || !node.data.manualSegments || node.data.manualSegments.length === 0) return;
+
+  // Zaten açıksa kapat
+  if(_veManualProfileModalNodeId === nodeId) { veCloseManualProfileModal(); return; }
+
+  _veManualProfileModalNodeId = nodeId;
+
+  // Overlay
+  var overlay = document.createElement('div');
+  overlay.id = 've-mseg-profile-overlay';
+  overlay.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.82); display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);';
+  overlay.onclick = function(e) { if(e.target === overlay) veCloseManualProfileModal(); };
+
+  // Modal
+  var modal = document.createElement('div');
+  modal.style.cssText = 'width:90%; max-width:1200px; height:70vh; max-height:700px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+
+  // Header
+  var segs = node.data.manualSegments;
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">📊 Yol Profili <span style="font-size:0.62rem; font-weight:400; color:var(--text-muted); margin-left:8px;">' + segs.length + ' segment</span></span>' +
+    '<button onclick="veCloseManualProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button>';
+  modal.appendChild(header);
+
+  // Canvas container
+  var canvasBox = document.createElement('div');
+  canvasBox.style.cssText = 'flex:1; padding:12px; min-height:0;';
+  var canvas = document.createElement('canvas');
+  canvas.id = 've-road-mseg-canvas-expanded-' + nodeId;
+  canvas.style.cssText = 'width:100%; height:100%; border:1px solid var(--border-color); background:var(--bg-secondary);';
+  canvasBox.appendChild(canvas);
+  modal.appendChild(canvasBox);
+
+  // Footer
+  var footer = document.createElement('div');
+  footer.style.cssText = 'padding:6px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:0.58rem; color:var(--text-muted); text-align:center;';
+  footer.textContent = 'ESC — Kapat';
+  modal.appendChild(footer);
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // Canvas boyutunu ayarla ve çiz
+  requestAnimationFrame(function() {
+    canvas.width = canvas.offsetWidth * (window.devicePixelRatio || 1);
+    canvas.height = canvas.offsetHeight * (window.devicePixelRatio || 1);
+    var ctx = canvas.getContext('2d');
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+    _veManualSegDrawProfile(nodeId, segs, canvas);
+  });
+
+  // ESC tuşu ile kapat
+  document.addEventListener('keydown', _veManualProfileEscHandler);
+}
+
+function _veManualProfileEscHandler(e) {
+  if(e.key === 'Escape') veCloseManualProfileModal();
+}
+
+function veCloseManualProfileModal() {
+  _veManualProfileModalNodeId = null;
+  var overlay = document.getElementById('ve-mseg-profile-overlay');
+  if(overlay) overlay.remove();
+  document.removeEventListener('keydown', _veManualProfileEscHandler);
+}
+
+function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
+  var canvas = targetCanvas || document.getElementById('ve-road-mseg-canvas-' + nodeId);
   if(!canvas) return;
   var ctx = canvas.getContext('2d');
-  var W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
+  // Expanded modal: CSS boyutlarını kullan, küçük panel: pixel boyutlarını kullan
+  var W = targetCanvas ? (canvas.offsetWidth || canvas.width) : canvas.width;
+  var H = targetCanvas ? (canvas.offsetHeight || canvas.height) : canvas.height;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   if(!segs || segs.length === 0) return;
 
