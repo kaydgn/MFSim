@@ -5063,6 +5063,212 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
     }
   }
 
+  // ════════════════════════════════════════════════════════════════════════
+  // 8. MATEMATIKSEL ALTYAPI — Hesaplama Teorisi ve Formuller
+  // ════════════════════════════════════════════════════════════════════════
+  r += '\n' + ln('=', W) + '\n';
+  r += pad('8. MATEMATIKSEL ALTYAPI', W, 'center') + '\n';
+  r += ln('=', W) + '\n\n';
+  r += '  Bu bolumde raporun dayandigi fiziksel model ve matematiksel\n';
+  r += '  formuller aciklanmaktadir. Her adimda sizin kendi girdileriniz\n';
+  r += '  ile somut sayisal ornekler gosterilmistir.\n\n';
+
+  // --- A. GEOMETRIK TEMEL ---
+  r += ln('-', W) + '\n';
+  r += '  A. GEOMETRIK TEMEL — Teker-Engel Temas Noktasi\n';
+  r += ln('-', W) + '\n\n';
+  r += '  Dairesel bir tekerin dik engel kosesine temas ettigi anda, teker ile\n';
+  r += '  engel arasindaki tek temas noktasi kosenin kendisidir (P noktasi).\n';
+  r += '  Teker merkezi (M) ile P arasindaki yatay uzaklik "moment kolu" olup\n';
+  r += '  Pisagor bagintisi ile hesaplanir:\n\n';
+  r += '      x^2 + (R - h)^2 = R^2    =>    x = sqrt(2*R*h - h*h)\n\n';
+  r += '  Merkez-kose acisi:  theta = arccos(x / R)\n';
+  r += '  Zorluk kriteri   :  h/R orani  ( <0.50 Kolay, <0.75 Orta, >=0.75 Zor )\n\n';
+  if(!obs.geometryFail && geo && isFinite(geo.x)) {
+    r += '  Sizin degerleriniz:\n';
+    r += '    R_eff = ' + num(inp.R_eff, 3) + ' m,   h = ' + num(inp.h, 3) + ' m\n';
+    r += '    x     = sqrt(2 * ' + num(inp.R_eff, 3) + ' * ' + num(inp.h, 3) + ' - '
+      + num(inp.h, 3) + '^2) = ' + num(geo.x, 4) + ' m\n';
+    r += '    theta = arccos(' + num(geo.x, 4) + ' / ' + num(inp.R_eff, 3) + ') = '
+      + num(geo.theta_deg, 2) + ' derece\n';
+    r += '    h/R   = ' + num(geo.hR_ratio, 3) + '   =>   Zorluk: '
+      + ascii(geo.difficultyLabel) + '\n';
+  } else {
+    r += '  (Geometrik gecerlilik saglanmadigi icin sayisal ornek gosterilemedi.)\n';
+  }
+  r += '\n';
+
+  // --- B. STATIK TORK GEREKSINIMI ---
+  r += ln('-', W) + '\n';
+  r += '  B. STATIK TORK GEREKSINIMI — Moment Dengesi\n';
+  r += ln('-', W) + '\n\n';
+  r += '  Teker engele dayandigi anda arac, karsi aksin yer temas noktasi\n';
+  r += '  etrafinda donmeye direnir. Bu pivot etrafinda moment dengesi\n';
+  r += '  kurulursa engele gelen dusey yuk bulunur; buradan tekerin uretmesi\n';
+  r += '  gereken cevirme torku cikarilir.\n\n';
+  r += '  SENARYO A — On Teker Engelde:\n';
+  r += '    Pivot = arka teker temas noktasi\n';
+  r += '    Pivot-P yatay uzakligi :  D = L + x\n';
+  r += '    On akstaki toplam yuk  :  N_f   = W * a2 / (L + x)\n';
+  r += '    Tek tekere dusen yuk   :  N_f1  = N_f / 2\n';
+  r += '    Gerekli teker torku    :  T_req_on = N_f1 * x\n\n';
+  r += '  SENARYO B — Arka Teker Engelde:\n';
+  r += '    Pivot = on teker temas noktasi,  D = L - x\n';
+  r += '    N_r = W * a1 / (L - x),  T_req_arka = (N_r / 2) * x\n';
+  r += '    L - x <= 0 ise arka senaryo matematiksel olarak cozulemez.\n\n';
+  r += '  Simetri nedeniyle genelde |N_r| > |N_f| oldugundan ARKA teker\n';
+  r += '  senaryosu kritik (daha yuksek T_req gerektiren) senaryodur.\n\n';
+  if(trq && !obs.geometryFail) {
+    r += '  Sizin degerleriniz:\n';
+    r += '    W = m*g = ' + num(inp.mass, 0) + ' * 9.81 = ' + num(trq.W, 0) + ' N\n';
+    r += '    L = a1 + a2 = ' + num(inp.a1, 3) + ' + ' + num(inp.a2, 3) + ' = '
+      + num(inp.wheelbase, 3) + ' m,    x = ' + num(geo.x, 4) + ' m\n\n';
+    r += '    On teker :  D = ' + num(trq.D_front, 4) + ' m\n';
+    r += '                N_f  = ' + num(trq.W, 0) + ' * ' + num(inp.a2, 3) + ' / '
+      + num(trq.D_front, 4) + ' = ' + num(trq.N_f, 0) + ' N\n';
+    r += '                T_req_on   = ' + num(trq.N_f1, 0) + ' * ' + num(geo.x, 4)
+      + ' = ' + num(trq.T_req_front, 1) + ' Nm\n';
+    if(isFinite(trq.T_req_rear)) {
+      r += '    Arka teker: D = ' + num(trq.D_rear, 4) + ' m\n';
+      r += '                N_r  = ' + num(trq.W, 0) + ' * ' + num(inp.a1, 3) + ' / '
+        + num(trq.D_rear, 4) + ' = ' + num(trq.N_r, 0) + ' N\n';
+      r += '                T_req_arka = ' + num(trq.N_r1, 0) + ' * ' + num(geo.x, 4)
+        + ' = ' + num(trq.T_req_rear, 1) + ' Nm\n';
+    } else {
+      r += '    Arka teker: L - x <= 0, senaryo cozulemedi.\n';
+    }
+    r += '    Kritik   : ' + ascii(trq.criticalScenario) + ' (T_req = '
+      + num(trq.T_req_critical, 1) + ' Nm)\n';
+  }
+  r += '\n';
+
+  // --- C. MEVCUT TEKER TORKU ---
+  r += ln('-', W) + '\n';
+  r += '  C. MEVCUT TEKER TORKU — Motor/Konvertor/Aktarma Zinciri\n';
+  r += ln('-', W) + '\n\n';
+  r += '  Arac durdugunda (v=0, SR=0) motor, tork konvertor pompasina yuk\n';
+  r += '  bindirir. Pompa yuku kuadratiktir:\n\n';
+  r += '      T_pump(N) = (N / K_pump)^2\n\n';
+  r += '  Motor governed devrine ulasamaz; stall denge noktasi:\n\n';
+  r += '      T_motor_net(N) - pump_drop = T_pump(N)   =>   N_stall\n\n';
+  r += '  Bu denklem 1 RPM adimla taranir (bisection/iteratif olarak cozulur).\n\n';
+  r += '  ONEMLI FIZIKSEL AYRIM (SCAAN dogrulamasi):\n';
+  r += '    Motor torkunun bir kismi donen kutlelerin ivmelenmesine gider.\n';
+  r += '    Akiskan yoluyla turbine aktarilan sadece pompa torkudur:\n\n';
+  r += '        T_turbine = T_pump x TR        (T_engine x TR DEGIL!)\n\n';
+  r += '    TR: torque ratio (tau), TC karakteristik egrisinden okunur.\n\n';
+  r += '  Aktarma zinciri (stall anindaki teker torku):\n\n';
+  r += '      T_wheel = T_turbine * i_g * eta_gear\n';
+  r += '                         * i_tr  * eta_tr\n';
+  r += '                         * i_diff * eta_diff\n';
+  r += '                         * eta_propshaft\n';
+  r += '                         / n_d\n\n';
+  r += '  n_d: tahrikli teker sayisi (transfer+diff kilitli 4x4 => n_d = 4).\n\n';
+  if(stl && stl.hasData) {
+    r += '  Sizin konfigurasyonunuz (stall):\n';
+    r += '    N_stall              = ' + num(stl.N_stall, 0) + ' RPM\n';
+    r += '    K_pump(SR=0)         = ' + num(stl.K_pump_stall, 2) + '\n';
+    r += '    T_pump               = (' + num(stl.N_stall, 0) + ' / '
+      + num(stl.K_pump_stall, 2) + ')^2 = ' + num(stl.T_pump_stall, 1) + ' Nm\n';
+    r += '    TR (SR=0)            = ' + num(stl.TR_stall, 3) + '\n';
+    r += '    T_turbine            = ' + num(stl.T_pump_stall, 1) + ' * '
+      + num(stl.TR_stall, 3) + ' = ' + num(stl.T_pump_stall * stl.TR_stall, 1) + ' Nm\n';
+    r += '    i_g (' + ascii(stl.gearName) + ')        = ' + num(stl.gearRatio, 3) + '\n';
+    r += '    i_tr (' + ascii(stl.transferName) + ')      = ' + num(stl.i_transfer, 3)
+      + '    (eta = ' + num(stl.eta_transfer * 100, 1) + '%)\n';
+    r += '    i_diff               = ' + num(stl.i_axle, 3)
+      + '    (eta = ' + num(stl.eta_axle * 100, 1) + '%)\n';
+    r += '    eta_total            = ' + num(stl.eta_total * 100, 2) + '%\n';
+    r += '    n_d                  = ' + stl.n_d + '\n';
+    r += '    T_wheel (tek teker)  = ' + num(stl.T_wheel, 1) + ' Nm\n';
+  } else {
+    r += '  (Motor/TC verisi eksik oldugu icin sayisal ornek gosterilemedi.)\n';
+  }
+  r += '\n';
+
+  // --- D. DINAMIK SIMULASYON ---
+  r += ln('-', W) + '\n';
+  r += '  D. DINAMIK SIMULASYON — Zaman Adimli Model\n';
+  r += ln('-', W) + '\n\n';
+  r += '  Statik analiz "teorik olarak gecer mi?" sorusunu, dinamik sim ise\n';
+  r += '  "zaman icinde gercekten gecebilir mi, hizlanma profili nasil?"\n';
+  r += '  sorusunu cevaplar. Her dt (tipik 1 ms) adimda su denklemler\n';
+  r += '  entegre edilir:\n\n';
+  r += '  1) KINEMATIK:\n';
+  r += '       v_new   = max(0, v + a*dt)\n';
+  r += '       phi_new = phi - (v / R_eff) * dt        (phi: teker-kose acisi)\n\n';
+  r += '  2) ANLIK MOMENT KOLU (phi degistikce degisir):\n';
+  r += '       moment_kolu = R_eff * sin(phi)\n';
+  r += '       T_req(t)    = (N_aks / 2) * moment_kolu\n';
+  r += '     phi=phi_start iken moment_kolu=x (statikle ayni), phi=0 tepede\n';
+  r += '     moment_kolu=0 ve T_req=0 olur.\n\n';
+  r += '  3) EFEKTIF TAHRIKLI TEKER SAYISI n_eff(phi):\n';
+  r += '     Engeldeki 2 teker kose etrafinda DOGRUDAN moment uygular.\n';
+  r += '     Duz zemindeki 2 teker ise araci yatay iter; bu itme de P kosesi\n';
+  r += '     etrafinda moment uretir, moment kolu ~ R*cos(phi):\n\n';
+  r += '       n_eff(phi) = 2 * [ 1 + (R_corner / R_flat) * cos(phi) ]\n\n';
+  r += '     phi = phi_start (temas)  : cos kucuk, n_eff ~ 2.5\n';
+  r += '     phi = 0          (tepe)  : cos = 1, n_eff ~ 4.0\n\n';
+  r += '  4) KUVVET DENGESI:\n';
+  r += '       F_itme  = T_wheel * n_eff / R_eff\n';
+  r += '       F_engel = N_aks * moment_kolu / R_eff\n';
+  r += '       F_net   = F_itme - F_engel\n';
+  r += '       a       = F_net / m\n';
+  r += '     (Yuvarlanma direnci engel kuvveti yaninda ihmal edilir.)\n\n';
+  r += '  5) MOTOR DINAMIGI (Newton rotasyonel):\n';
+  r += '       T_net   = T_engine(N) - T_pump(N) - pump_drop\n';
+  r += '       J_eff   = J_engine + J_tc + J_fluid\n';
+  r += '       alpha   = T_net / J_eff\n';
+  r += '       N_new   = N + alpha * dt * 60/(2*pi)\n\n';
+  r += '     J_fluid ~ 3.0 kg.m2 = TC kabugundaki ATF sivi ataleti,\n';
+  r += '     CAN-bus dN/dt olcumleriyle kalibre edilmistir.\n\n';
+  r += '  6) FAZ GECISI:\n';
+  r += '     phi <= -phi_start olunca on teker engeli asmistir. Arka faz\n';
+  r += '     baslar; arka teker engele degdiginde arac duracagi icin v ve\n';
+  r += '     motor devri sifirlanir (momentum tasinmaz varsayimi).\n\n';
+  r += '  7) STALL TESPITI:\n';
+  r += '     v ~ 0 ve DD=%100 ve T_wheel < T_req ve motor dN/dt < 5 RPM/s\n';
+  r += '     kosulu 0.5 s boyunca saglanirsa arac "takildi" (stall).\n\n';
+  if(dyn && dyn.params) {
+    r += '  Sizin dinamik simulasyonunuzda kullanilan degerler:\n';
+    r += '    dt       = ' + num(dyn.dt * 1000, 1) + ' ms\n';
+    r += '    J_engine = ' + num(dyn.params.J_engine, 3) + ' kg.m2\n';
+    r += '    J_tc     = ' + num(dyn.params.J_tc, 3) + ' kg.m2\n';
+    r += '    J_fluid  = ' + num(dyn.params.J_fluid, 3) + ' kg.m2\n';
+    r += '    J_eff    = ' + num(dyn.params.J_engine + dyn.params.J_tc + dyn.params.J_fluid, 3)
+      + ' kg.m2  (toplam)\n';
+    r += '    phi_start= ' + num(dyn.params.phi_start_deg, 2) + ' derece\n';
+  } else {
+    r += '  (Dinamik simulasyon calistirilmadigi icin sayisal ornek yok.)\n';
+  }
+  r += '\n';
+
+  // --- E. KARAR KRITERI ---
+  r += ln('-', W) + '\n';
+  r += '  E. KARAR KRITERI\n';
+  r += ln('-', W) + '\n\n';
+  r += '  Basari kosulu: HER IKI teker de engeli asmalidir.\n\n';
+  r += '      On teker gecer   <=>   T_wheel >= T_req_on\n';
+  r += '      Arka teker gecer <=>   T_wheel >= T_req_arka\n';
+  r += '      Genel basari     <=>   Her iki kosul birden saglanir\n\n';
+  r += '  Marj yuzdesi:  marj% = (T_wheel - T_req) / T_req * 100\n';
+  r += '      < 0 %     : Yetersiz  (kirmizi)\n';
+  r += '      0 - 5 %   : Sinirda   (sari)\n';
+  r += '      > 5 %     : Guvenli   (yesil)\n\n';
+
+  // --- F. KAYNAK VE DOGRULAMA ---
+  r += ln('-', W) + '\n';
+  r += '  F. KAYNAK VE DOGRULAMA\n';
+  r += ln('-', W) + '\n\n';
+  r += '  - Geometri : Klasik Pisagor analizi (askeri arac literaturu).\n';
+  r += '  - TC modeli: T_turbine = T_pump x TR — SCAAN (Allison) dogrulamasi.\n';
+  r += '  - Vites verimi (evrensel): eta = 1 - |ln(i_g)|*(0.0175 + 2.93e-6*N),\n';
+  r += '    iSCAAN performans modeli ile 7 vites 2 mod dogrulamasi (<=0.1% hata).\n';
+  r += '  - J_fluid kalibrasyonu: CAN-bus dN/dt olcumleriyle fit edilmistir.\n';
+  r += '  - Tum interpolasyonlar PCHIP (monoton-korumali kubik) spline ile\n';
+  r += '    yapilmistir (tork egrisi, K_pump(SR), tau(SR)).\n';
+  r += '\n';
+
   // FERAGAT
   r += ln('-', W) + '\n';
   r += pad('FERAGATNAME', W, 'center') + '\n';
