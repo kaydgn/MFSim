@@ -2202,9 +2202,9 @@ function veRenderTXTReport(reportType) {
   html += '</div>';
 
   // TXT content area — düz belge görünümü
-  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0; text-align:center;">';
-  html += '<div style="display:inline-block; text-align:left; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden; text-align:center;">';
+  html += '<pre id="ve-txt-report-content" style="display:inline-block; text-align:left; margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   html += '</pre>';
   html += '</div></div>';
@@ -2252,9 +2252,9 @@ function veRenderSegmentDriveTXTReport() {
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
-  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0; text-align:center;">';
-  html += '<div style="display:inline-block; text-align:left; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden; text-align:center;">';
+  html += '<pre id="ve-txt-report-content" style="display:inline-block; text-align:left; margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   html += '</pre>';
   html += '</div></div>';
@@ -2296,9 +2296,9 @@ function veRenderObstacleCrossingTXTReport() {
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
-  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0; text-align:center;">';
-  html += '<div style="display:inline-block; text-align:left; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden; text-align:center;">';
+  html += '<pre id="ve-txt-report-content" style="display:inline-block; text-align:left; margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   html += '</pre>';
   html += '</div></div>';
@@ -2341,9 +2341,9 @@ function veRenderTopologyTXTReport() {
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
-  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0; text-align:center;">';
-  html += '<div style="display:inline-block; text-align:left; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden; text-align:center;">';
+  html += '<pre id="ve-txt-report-content" style="display:inline-block; text-align:left; margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   html += '</pre>';
   html += '</div></div>';
