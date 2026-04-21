@@ -709,10 +709,12 @@ function onVEFTTCSelect(nodeId, value) {
   
   if(value && value !== 'manual' && VE_FT_TC_PRESETS[value]) {
     var preset = VE_FT_TC_PRESETS[value];
-    
-    // Parametreleri doldur
-    if(nameEl) { nameEl.value = preset.name; node.data.tcName = preset.name; }
-    if(dropEl) { dropEl.value = preset.pumpTorqueDrop; node.data.pumpTorqueDrop = preset.pumpTorqueDrop; }
+
+    // Parametreleri doldur — isim verisini DOM'dan bağımsız yaz (panel kapalıyken de güncellenmeli)
+    node.data.tcName = preset.name;
+    node.data.pumpTorqueDrop = preset.pumpTorqueDrop;
+    if(nameEl) nameEl.value = preset.name;
+    if(dropEl) dropEl.value = preset.pumpTorqueDrop;
     if(descEl) { descEl.textContent = preset.description || ''; }
     
     // Tabloyu doldur
@@ -732,8 +734,10 @@ function onVEFTTCSelect(nodeId, value) {
     
   } else if(value === 'manual') {
     // Manuel: temizle
-    if(nameEl) { nameEl.value = ''; node.data.tcName = ''; }
-    if(dropEl) { dropEl.value = 0; node.data.pumpTorqueDrop = 0; }
+    node.data.tcName = '';
+    node.data.pumpTorqueDrop = 0;
+    if(nameEl) nameEl.value = '';
+    if(dropEl) dropEl.value = 0;
     if(descEl) { descEl.textContent = ''; }
     if(tbody) {
       tbody.innerHTML = '';
