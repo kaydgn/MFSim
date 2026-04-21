@@ -5319,14 +5319,6 @@ function veDownloadTXTFromPreview() {
       content = window._veTxtPreviewContent;
     }
 
-    // Rapor icerigi 80 karakter genisligindedir. A4 portrait'te yazdirirken
-    // sola yaslanmamasi icin her satirin basina bos karakterler ekleyerek
-    // bloku sayfa icinde ortalanmis halde indir.
-    var leftPad = '                    '; // 20 bosluk (A4 portrait ~%70 scale icin)
-    content = content.split('\n').map(function(line) {
-      return line.length > 0 ? leftPad + line : line;
-    }).join('\n');
-
     var filename = window._veTxtPreviewFilename || 'rapor.txt';
     var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     var url = URL.createObjectURL(blob);
