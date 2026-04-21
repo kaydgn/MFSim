@@ -6,29 +6,35 @@
   <!-- Leaflet - Harita için -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Plotly.js - 3D Scatter grafikler için -->
+  <script src="https://cdn.plot.ly/plotly-gl3d-2.35.2.min.js"></script>
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="manifest" href="pwa/manifest.json" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" type="image/svg+xml" href="pwa/icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="MFSim" />
 </head>
 <body>
 
-<!-- ═══ LOGIN SCREEN (Gunmetal Theme) ═══ -->
-<div id="mfsim-login-overlay" style="position:fixed; inset:0; z-index:999999; background:linear-gradient(135deg, #d5d8dc 0%, #e8eaed 40%, #dcdfe3 100%); display:flex; align-items:center; justify-content:center; font-family:system-ui,-apple-system,sans-serif;">
-  <div style="width:360px; padding:40px; background:#f1f3f5; border:1px solid #c4c9d0; border-radius:0; box-shadow:0 25px 80px rgba(0,0,0,0.12), 0 4px 20px rgba(0,0,0,0.06);">
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div id="mfsim-login-overlay" class="mfsim-login-overlay">
+  <div class="mfsim-login-card">
     <div style="text-align:center; margin-bottom:28px;">
-      <div style="font-size:1.3rem; font-weight:700; color:#0d0f13; letter-spacing:0.5px;">MFSim</div>
-      <div style="font-size:0.7rem; color:#8590a2; margin-top:4px;">Araç Performans Simülasyon Yazılımı</div>
+      <div class="mfsim-login-title">MFSim</div>
+      <div class="mfsim-login-subtitle">Araç Performans Simülasyon Yazılımı</div>
     </div>
     <div style="margin-bottom:20px;">
-      <label style="display:block; font-size:0.68rem; color:#4a5060; margin-bottom:6px; font-weight:500;">Şifre</label>
-      <input type="password" id="mfsim-login-password" placeholder="Şifrenizi giriniz" autocomplete="current-password"
-        style="width:100%; padding:10px 14px; font-size:0.85rem; background:#f8f9fa; color:#1a1d23; border:1px solid #c4c9d0; border-radius:8px; outline:none; box-sizing:border-box; transition:border-color 0.2s;"
-        onfocus="this.style.borderColor='#1d4ed8'" onblur="this.style.borderColor='#c4c9d0'"
+      <label class="mfsim-login-label">Şifre</label>
+      <input type="password" id="mfsim-login-password" class="mfsim-login-input" placeholder="Şifrenizi giriniz" autocomplete="current-password"
         onkeydown="if(event.key==='Enter') mfsimLogin()">
     </div>
-    <button onclick="mfsimLogin()" style="width:100%; padding:10px; font-size:0.82rem; font-weight:600; background:linear-gradient(135deg,#1d4ed8,#1e40af); color:white; border:none; border-radius:8px; cursor:pointer; transition:opacity 0.2s; letter-spacing:0.3px;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Giriş Yap</button>
-    <div id="mfsim-login-error" style="margin-top:12px; font-size:0.68rem; color:#b91c1c; text-align:center; min-height:18px;"></div>
+    <button onclick="mfsimLogin()" class="mfsim-login-btn">Giriş Yap</button>
+    <div id="mfsim-login-error" class="mfsim-login-error"></div>
     <div style="margin-top:20px; text-align:center;">
-      <label style="display:flex; align-items:center; justify-content:center; gap:6px; font-size:0.62rem; color:#8590a2; cursor:pointer; user-select:none;">
-        <input type="checkbox" id="mfsim-login-remember" checked style="accent-color:#1d4ed8;"> Beni hatırla
+      <label class="mfsim-login-remember">
+        <input type="checkbox" id="mfsim-login-remember" checked style="accent-color:var(--accent-primary);"> Beni hatırla
       </label>
     </div>
   </div>
@@ -57,6 +63,8 @@
     </div>
   </div>
   <span class="theme-selector" style="margin-left:auto;">
+    <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
+    <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al">🔄</span>
     <label for="theme-select" class="theme-selector-label">🎨</label>
     <select id="theme-select" onchange="changeTheme(this.value)">
       <optgroup label="Koyu">
@@ -343,7 +351,7 @@
         <div class="ve-warnings-panel" id="ve-warnings-panel">
           <div class="ve-warnings-header" onclick="veToggleWarnings()">
             <span>⚠️ Uyarılar</span>
-            <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:10px;font-size:0.6rem;font-weight:600;">0</span>
+            <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:0;font-size:0.6rem;font-weight:600;">0</span>
             <span id="ve-warnings-toggle" style="margin-left:auto;font-size:0.7rem;">▲</span>
           </div>
           <div class="ve-warnings-body" id="ve-warnings-body">
@@ -434,7 +442,7 @@
 
         <!-- Arama -->
         <div style="padding:4px 8px; border-bottom:1px solid var(--border-color);">
-          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input); color:var(--text-primary);">
+          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:0; background:var(--bg-input); color:var(--text-primary);">
         </div>
         
         <!-- Tree -->
@@ -442,8 +450,8 @@
         
         <!-- Aksiyon Butonları -->
         <div style="padding:6px 8px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
-          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
-          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:3px; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
+          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
+          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
         </div>
       </div>
       
@@ -526,8 +534,16 @@
 <script src="js/components.js"></script>
 <script src="js/sensors.js"></script>
 <script src="js/ui-core.js"></script>
-<script src="js/component-properties.js"></script>
-<script src="js/simulation-ft.js"></script>
+<script src="js/cp-core.js"></script>
+<script src="js/cp-engine.js"></script>
+<script src="js/cp-gearbox.js"></script>
+<script src="js/cp-matching.js"></script>
+<script src="js/cp-torque-converter.js"></script>
+<script src="js/cp-drivetrain.js"></script>
+<script src="js/cp-solver.js"></script>
+<script src="js/ft-performance.js"></script>
+<script src="js/ft-segment-drive.js"></script>
+<script src="js/ft-obstacle.js"></script>
 <script src="js/solver-pro.js"></script>
 <script src="js/component-extras.js"></script>
 <script src="js/map.js"></script>
@@ -542,6 +558,13 @@
 <script src="js/node-resize.js"></script>
 <script src="js/context-menus.js"></script>
 <script src="js/connections.js"></script>
+<script src="js/deploy-status.js"></script>
+
+<script>
+if('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('pwa/sw.js').catch(function(){});
+}
+</script>
 
 </body>
 </html>

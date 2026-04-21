@@ -69,6 +69,10 @@ html = html.replace(
       process.exit(1);
     }
     var js = fs.readFileSync(fullPath, 'utf8');
+    // Workflow run ID'sini deploy-status.js'e göm (GITHUB_RUN_ID env var)
+    if (jsPath === 'js/deploy-status.js' && process.env.GITHUB_RUN_ID) {
+      js = js.replace('__DEPLOY_RUN_ID__', process.env.GITHUB_RUN_ID);
+    }
     console.log('  JS inline:', jsPath, '(' + js.length + ' karakter)');
     return '<script>\n' + js + '\n</script>';
   }

@@ -452,7 +452,7 @@ function veShowTabMenu(e, idx) {
   
   var menu = document.createElement('div');
   menu.id = 've-tab-context-menu';
-  menu.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + e.clientY + 'px;z-index:200000;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.3);padding:4px 0;min-width:150px;';
+  menu.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + e.clientY + 'px;z-index:200000;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:0;box-shadow:0 4px 16px rgba(0,0,0,0.3);padding:4px 0;min-width:150px;';
   
   var items = [
     { label: '✏️ Yeniden Adlandır', fn: function() { veRenameTab(idx); } },
@@ -780,7 +780,7 @@ function veRenderSnapshot(paneIdx) {
       }
       
       html += '</div>';
-      html += '<div class="ve-node-label">' + (n.customName || def.name) + '</div>';
+      html += '<div class="ve-node-label">' + escapeHTML(n.customName || def.name) + '</div>';
       
       if(n.type === 'wheel' && n.isMasterWheel) {
         html += '<div class="ve-wheel-master-badge" title="Master Tekerlek">★</div>';

@@ -104,22 +104,32 @@ describe('swScanTopology', () => {
       makeNode('torque-converter', 'tc1'),
       makeNode('gearbox', 'gb1'),
       makeNode('transfer', 'tr1'),
+      makeNode('propshaft', 'ps1'),
       makeNode('differential', 'd1'),
+      makeNode('wheel', 'w1'),
       makeNode('vehicle', 'v1'),
       makeNode('road', 'r1'),
       makeNode('shift-controller', 'sc1'),
-      makeNode('solver', 'so1')
+      makeNode('solver', 'so1'),
+      makeNode('scenario', 'scen1'),
+      makeNode('gear-shift', 'gs1'),
+      makeNode('obstacle-crossing', 'obs1')
     ];
     var result = swScanTopology();
     expect(result.hasEngine).toBe(true);
     expect(result.hasTC).toBe(true);
     expect(result.hasGearbox).toBe(true);
     expect(result.hasTransfer).toBe(true);
+    expect(result.hasPropshaft).toBe(true);
     expect(result.hasDiff).toBe(true);
+    expect(result.hasWheel).toBe(true);
     expect(result.hasVehicle).toBe(true);
     expect(result.hasRoad).toBe(true);
     expect(result.hasShiftCtrl).toBe(true);
     expect(result.hasSolver).toBe(true);
+    expect(result.hasScenario).toBe(true);
+    expect(result.hasGearShift).toBe(true);
+    expect(result.hasObstacleCrossing).toBe(true);
   });
 });
 
@@ -303,6 +313,39 @@ describe('swInstallSensors', () => {
     expect(wizNode.data.installedPackages).toEqual([]);
   });
 
+  test('tam zincirde yeni bileşen paketleri de kurulur', () => {
+    nodes = [
+      makeNode('engine', 'e1'),
+      makeNode('torque-converter', 'tc1'),
+      makeNode('gearbox', 'gb1'),
+      makeNode('shift-controller', 'sc1'),
+      makeNode('transfer', 'tr1'),
+      makeNode('propshaft', 'ps1'),
+      makeNode('differential', 'd1'),
+      makeNode('wheel', 'w1'),
+      makeNode('vehicle', 'v1'),
+      makeNode('road', 'r1'),
+      makeNode('solver', 'sol1', { performanceAnalysis: true })
+    ];
+    var wizNode = makeNode('sensor-wizard', 'sw1');
+    wizNode.data = {};
+    nodes.push(wizNode);
+
+    swInstallSensors(wizNode);
+
+    expect(wizNode.data.installedPackages).toContain('gearbox-analysis');
+    expect(wizNode.data.installedPackages).toContain('transfer-analysis');
+    expect(wizNode.data.installedPackages).toContain('propshaft-analysis');
+    expect(wizNode.data.installedPackages).toContain('diff-analysis');
+    expect(wizNode.data.installedPackages).toContain('wheel-analysis');
+    expect(wizNode.data.installedPackages).toContain('vehicle-extended');
+    expect(wizNode.data.installedPackages).toContain('road-extended');
+    expect(wizNode.data.installedPackages).toContain('tc-extended');
+    expect(wizNode.data.installedPackages).toContain('engine-extended');
+    expect(wizNode.data.installedPackages).toContain('shift-ctrl-extended');
+    expect(wizNode.data.installedPackages).toContain('solver-extended');
+  });
+
   test('devre dışı çözüm kümeleri için sensör kurulmaz', () => {
     nodes = [
       makeNode('engine', 'e1'),
@@ -389,6 +432,12 @@ describe('SENSOR_PACKAGES yapısı', () => {
         expect(ySig).toHaveProperty('name');
         expect(ySig).toHaveProperty('unit');
       });
+      // 3B diyagramlarda z ekseni
+      if(sig.z) {
+        expect(sig.z).toHaveProperty('target');
+        expect(sig.z).toHaveProperty('signal');
+        expect(sig.z).toHaveProperty('name');
+      }
     });
   });
 });

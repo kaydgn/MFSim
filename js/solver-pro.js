@@ -11,7 +11,7 @@ function veSolverRunProfessional() {
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.72);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
   
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:780px;max-width:94vw;max-height:58vh;background:var(--bg-primary);border:2px solid var(--border-color);border-radius:2px;box-shadow:0 4px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;';
+  modal.style.cssText = 'width:780px;max-width:94vw;max-height:58vh;background:var(--bg-primary);border:2px solid var(--border-color);border-radius:0;box-shadow:0 4px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;';
   
   // Header — keskin, iç içe pencere
   var header = document.createElement('div');
@@ -725,8 +725,17 @@ function veSolverRunProfessional() {
             simResult.segmentDriveTransferGears = _ftTrGears;
             // Orijinal segment girdi verisini sakla (TXT raporu için)
             simResult.segmentDriveInputSegments = _scenData.roadSegments.map(function(s) {
-              return { no: s.no, grade: s.grade, distance: s.distance, deltaH: s.deltaH, command: s.command || 'full_throttle' };
+              var seg = { no: s.no, grade: s.grade, distance: s.distance, deltaH: s.deltaH, command: s.command || 'full_throttle' };
+              if(s.startWaypoint) seg.startWaypoint = s.startWaypoint;
+              if(s.endWaypoint) seg.endWaypoint = s.endWaypoint;
+              return seg;
             });
+            // Waypoint bilgisini de sakla
+            if(_scenData.routeWaypoints) {
+              simResult.routeWaypoints = _scenData.routeWaypoints;
+            }
+            // Rapor zaman adımı
+            simResult.sdReportInterval = parseFloat(_solverData.sdReportInterval) || 0.5;
           }
 
           // ── 3) ENGEL ATLAMA ANALİZİ (opsiyonel — obstacle-crossing bileşeni gerektirir) ──

@@ -126,7 +126,7 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
   overlay.onclick = function(e) { if(e.target === overlay) overlay.remove(); };
 
   var modal = document.createElement('div');
-  modal.style.cssText = 'background:var(--bg-secondary,#1a1a2e);color:var(--text-primary,#e0e0e0);border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,0.4);border:1px solid var(--border-color,#333);';
+  modal.style.cssText = 'background:var(--bg-secondary,#1a1a2e);color:var(--text-primary,#e0e0e0);border-radius:0;padding:24px;max-width:420px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,0.4);border:1px solid var(--border-color,#333);';
 
   var nameOnly = defaultName.replace(/\.[^.]+$/, '');
   var ext = defaultName.slice(nameOnly.length);
@@ -136,12 +136,12 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
     '<label style="font-size:0.8rem;color:var(--text-muted,#aaa);display:block;margin-bottom:6px;">Dosya adı</label>' +
     '<div style="display:flex;align-items:center;gap:0;">' +
       '<input id="ve-save-filename" type="text" value="' + nameOnly.replace(/"/g, '&quot;') + '" ' +
-        'style="flex:1;padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:8px 0 0 8px;font-size:0.85rem;outline:none;" />' +
-      '<span style="padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-muted,#888);border:1px solid var(--border-color,#444);border-left:none;border-radius:0 8px 8px 0;font-size:0.85rem;white-space:nowrap;">' + ext + '</span>' +
+        'style="flex:1;padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:0;font-size:0.85rem;outline:none;" />' +
+      '<span style="padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-muted,#888);border:1px solid var(--border-color,#444);border-left:none;border-radius:0;font-size:0.85rem;white-space:nowrap;">' + ext + '</span>' +
     '</div>' +
     '<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">' +
-      '<button id="ve-save-cancel" style="padding:7px 18px;background:var(--bg-tertiary,#222);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:8px;cursor:pointer;font-size:0.8rem;">İptal</button>' +
-      '<button id="ve-save-confirm" style="padding:7px 18px;background:var(--accent-primary,#3b82f6);color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.8rem;font-weight:600;">Kaydet</button>' +
+      '<button id="ve-save-cancel" style="padding:7px 18px;background:var(--bg-tertiary,#222);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:0;cursor:pointer;font-size:0.8rem;">İptal</button>' +
+      '<button id="ve-save-confirm" style="padding:7px 18px;background:var(--accent-primary,#3b82f6);color:white;border:none;border-radius:0;cursor:pointer;font-size:0.8rem;font-weight:600;">Kaydet</button>' +
     '</div>';
 
   overlay.appendChild(modal);
@@ -157,15 +157,43 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
     fileName += ext;
     overlay.remove();
 
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast(toastMsg);
+    if (window.showSaveFilePicker) {
+      var mimeType = blob.type || 'application/json';
+      var extClean = ext.replace(/^\./, '');
+      window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{
+          description: extClean.toUpperCase() + ' dosyası',
+          accept: {}
+        }]
+      }).then(function(handle) {
+        // accept nesnesini dinamik oluştur
+        handle.createWritable().then(function(writable) {
+          writable.write(blob).then(function() {
+            return writable.close();
+          }).then(function() {
+            showToast(toastMsg);
+          });
+        });
+      }).catch(function(err) {
+        // Kullanıcı iptal ettiyse sessizce geç
+        if (err.name !== 'AbortError') {
+          console.error('Kaydetme hatası:', err);
+          showToast('Kaydetme başarısız', 'warning');
+        }
+      });
+    } else {
+      // showSaveFilePicker desteklenmeyen tarayıcılar için fallback
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(toastMsg);
+    }
   }
 
   document.getElementById('ve-save-confirm').onclick = doSave;

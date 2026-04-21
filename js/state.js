@@ -166,7 +166,7 @@ function restoreState(state) {
     html += '<div class="ve-resize-handle ve-resize-s" data-handle="s"></div>';
     html += '<div class="ve-resize-handle ve-resize-sw" data-handle="sw"></div>';
     html += '<div class="ve-resize-handle ve-resize-w" data-handle="w"></div>';
-    html += '<div class="ve-node-label">' + (node.customName || def.name) + '</div>';
+    html += '<div class="ve-node-label">' + escapeHTML(node.customName || def.name) + '</div>';
     
     // Master tekerlek badge'i
     if(node.type === 'wheel' && node.isMasterWheel) {

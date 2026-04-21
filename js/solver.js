@@ -224,11 +224,11 @@ function veSolverValidate() {
   // Sonuç
   if(allOk) {
     var modeText = (hasTerminator && terminatorConnected) ? 'Kısmi analiz' : 'Tam analiz';
-    html += '<div style="margin-top:12px;padding:10px;background:rgba(76,175,80,0.1);border-radius:6px;border:1px solid rgba(76,175,80,0.3);text-align:center;font-size:0.8rem;color:var(--accent-success);font-weight:600;">✅ ' + modeText + ' - hesaplamaya hazır</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:rgba(76,175,80,0.1);border-radius:0;border:1px solid rgba(76,175,80,0.3);text-align:center;font-size:0.8rem;color:var(--accent-success);font-weight:600;">✅ ' + modeText + ' - hesaplamaya hazır</div>';
     document.getElementById('ve-solver-run-btn').disabled = false;
     document.getElementById('ve-solver-run-btn').style.opacity = '1';
   } else {
-    html += '<div style="margin-top:12px;padding:10px;background:rgba(244,67,54,0.1);border-radius:6px;border:1px solid rgba(244,67,54,0.3);text-align:center;font-size:0.8rem;color:var(--accent-danger);font-weight:600;">❌ Eksikler var - hesaplama yapılamaz</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:rgba(244,67,54,0.1);border-radius:0;border:1px solid rgba(244,67,54,0.3);text-align:center;font-size:0.8rem;color:var(--accent-danger);font-weight:600;">❌ Eksikler var - hesaplama yapılamaz</div>';
     document.getElementById('ve-solver-run-btn').disabled = true;
     document.getElementById('ve-solver-run-btn').style.opacity = '0.5';
   }
@@ -302,26 +302,26 @@ function veSolverRun() {
         rhtml += '<div style="font-size:0.65rem; color:var(--text-muted); margin-top:2px;">' + (simResult.mode === 'partial' ? '✂️ Kısmi Analiz Modu' : '🔗 Tam Analiz Modu') + '</div></div>';
         
         rhtml += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">';
-        rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:6px; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Toplam Süre</div><div style="font-size:1rem; font-weight:700; color:var(--accent-primary);">' + totalTime.toFixed(1) + ' s</div></div>';
-        rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:6px; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Çıktı Noktası</div><div style="font-size:1rem; font-weight:700; color:var(--accent-success);">' + simResult.time.length + '</div></div>';
+        rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:0; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Toplam Süre</div><div style="font-size:1rem; font-weight:700; color:var(--accent-primary);">' + totalTime.toFixed(1) + ' s</div></div>';
+        rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:0; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Çıktı Noktası</div><div style="font-size:1rem; font-weight:700; color:var(--accent-success);">' + simResult.time.length + '</div></div>';
         
         if(simResult.mode === 'partial') {
           var maxRpm = Math.max.apply(null, simResult.rpm);
           var finalRpm = simResult.rpm[simResult.rpm.length - 1];
-          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:6px; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Maks Devir</div><div style="font-size:1rem; font-weight:700; color:#ef4444;">' + maxRpm.toFixed(0) + ' rpm</div></div>';
-          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:6px; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Son Devir</div><div style="font-size:1rem; font-weight:700; color:#f59e0b;">' + finalRpm.toFixed(0) + ' rpm</div></div>';
+          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:0; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Maks Devir</div><div style="font-size:1rem; font-weight:700; color:#ef4444;">' + maxRpm.toFixed(0) + ' rpm</div></div>';
+          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:0; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Son Devir</div><div style="font-size:1rem; font-weight:700; color:#f59e0b;">' + finalRpm.toFixed(0) + ' rpm</div></div>';
         } else {
           var maxV = Math.max.apply(null, simResult.speed);
           var finalV = simResult.speed[simResult.speed.length - 1];
-          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:6px; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Maks Hız</div><div style="font-size:1rem; font-weight:700; color:#ef4444;">' + maxV.toFixed(2) + ' km/h</div></div>';
-          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:6px; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Son Hız</div><div style="font-size:1rem; font-weight:700; color:#f59e0b;">' + finalV.toFixed(2) + ' km/h</div></div>';
+          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:0; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Maks Hız</div><div style="font-size:1rem; font-weight:700; color:#ef4444;">' + maxV.toFixed(2) + ' km/h</div></div>';
+          rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:0; border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Son Hız</div><div style="font-size:1rem; font-weight:700; color:#f59e0b;">' + finalV.toFixed(2) + ' km/h</div></div>';
         }
         
         rhtml += '</div>';
         
         // ── Solver İstatistikleri Kartı ──
         if(ss.method) {
-          rhtml += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:8px; padding:10px; margin-bottom:10px;">';
+          rhtml += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; padding:10px; margin-bottom:10px;">';
           rhtml += '<div style="font-size:0.68rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📊 Solver İstatistikleri</div>';
           rhtml += '<table style="width:100%; font-size:0.65rem; color:var(--text-secondary);">';
           
