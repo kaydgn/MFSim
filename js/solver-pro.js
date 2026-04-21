@@ -743,18 +743,42 @@ function veSolverRunProfessional() {
           var _hasObsCross = _solverData.obstacleCrossingAnalysis && _obsNode;
           if(_hasObsCross) {
             var obsData = _obsNode.data || {};
-            var obsCrossResult = veFTRunObstacleCrossingAnalysis(obsData);
-            simResult.obstacleCrossing = obsCrossResult;
-            // Dinamik simülasyonu da çalıştır (statik analiz başarılıysa)
-            if(obsCrossResult && obsCrossResult.stallAnalysis && obsCrossResult.stallAnalysis.hasData && !obsCrossResult.geometryFail) {
-              try {
-                var _dynOpts = {};
-                if(_solverData.obsLogInterval) _dynOpts.logInterval = parseFloat(_solverData.obsLogInterval);
-                simResult.obstacleDynamic = veFTRunObstacleDynamicSim(obsCrossResult, _dynOpts);
-              } catch(e) {
-                simResult.obstacleDynamic = { success: false, reason: 'Dinamik simulasyon hatasi: ' + e.message };
+            // Transfer kademeleri — her biri icin ayri statik + dinamik analiz
+            var _obsTrNode = nodes.find(function(n) { return n.type === 'transfer'; });
+            var _obsTrd = _obsTrNode ? (_obsTrNode.data || {}) : {};
+            var _obsFtTrGears = _obsTrd.ftTrGears || [
+              { kademe: 'High', ratio: 1.054, eff: 97.00 },
+              { kademe: 'Low', ratio: 2.337, eff: 97.00 }
+            ];
+            var _obsByTransfer = [];
+            for(var _oti = 0; _oti < _obsFtTrGears.length; _oti++) {
+              var _oTrObsData = {};
+              for(var _k in obsData) { if(obsData.hasOwnProperty(_k)) _oTrObsData[_k] = obsData[_k]; }
+              _oTrObsData.transferIdx = _oti;
+              var _obsCrossRes_i = veFTRunObstacleCrossingAnalysis(_oTrObsData);
+              var _obsDynRes_i = null;
+              if(_obsCrossRes_i && _obsCrossRes_i.stallAnalysis && _obsCrossRes_i.stallAnalysis.hasData && !_obsCrossRes_i.geometryFail) {
+                try {
+                  var _dynOpts_i = {};
+                  if(_solverData.obsLogInterval) _dynOpts_i.logInterval = parseFloat(_solverData.obsLogInterval);
+                  _obsDynRes_i = veFTRunObstacleDynamicSim(_obsCrossRes_i, _dynOpts_i);
+                } catch(e) {
+                  _obsDynRes_i = { success: false, reason: 'Dinamik simulasyon hatasi: ' + e.message };
+                }
               }
+              _obsByTransfer.push({
+                kademe: _obsFtTrGears[_oti].kademe || ('Kademe ' + (_oti + 1)),
+                ratio: parseFloat(_obsFtTrGears[_oti].ratio) || 1,
+                eff: parseFloat(_obsFtTrGears[_oti].eff) || 97,
+                obstacleCrossing: _obsCrossRes_i,
+                obstacleDynamic: _obsDynRes_i
+              });
             }
+            // Varsayilan olarak son kademe (Low) ana sonuc alanlarinda — geriye donuk uyumluluk
+            var _obsDefaultIdx = _obsFtTrGears.length - 1;
+            simResult.obstacleCrossing = _obsByTransfer[_obsDefaultIdx].obstacleCrossing;
+            simResult.obstacleDynamic = _obsByTransfer[_obsDefaultIdx].obstacleDynamic;
+            simResult.obstacleByTransfer = _obsByTransfer;
           }
         } else {
           simResult = veRunSimulationEngine();

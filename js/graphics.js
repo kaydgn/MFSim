@@ -4730,20 +4730,52 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
       }
       r += '\n';
 
-      // Milestones — zaman serisi tablosunda annotate edilecek
-      var ms = dyn.milestones || [];
-
       // ┌─────────────────────────────────────────────┐
-      //  ZAMAN SERISI VERILERI
+      //  ZAMAN SERISI VERILERI — her transfer kademesi icin ayri tablo
       // └─────────────────────────────────────────────┘
-      var logData = dyn.log || [];
-      if(logData.length > 0) {
+      var _transferRuns = sim.obstacleByTransfer;
+      if(!_transferRuns || _transferRuns.length === 0) {
+        // Geriye donuk: tek kademe (mevcut dyn/obs)
+        _transferRuns = [{
+          kademe: (dyn.stallAnalysis && dyn.stallAnalysis.transferName) || (obs.stallAnalysis && obs.stallAnalysis.transferName) || 'Varsayilan',
+          ratio: (obs.stallAnalysis && obs.stallAnalysis.i_transfer) || null,
+          obstacleDynamic: dyn,
+          obstacleCrossing: obs
+        }];
+      }
+
+      for(var _tri = 0; _tri < _transferRuns.length; _tri++) {
+        var _trRun = _transferRuns[_tri];
+        var _trDyn = _trRun.obstacleDynamic;
+        if(!_trDyn || !_trDyn.log || _trDyn.log.length === 0) continue;
+        var _trObs = _trRun.obstacleCrossing || obs;
+        var _trInp = (_trObs && _trObs.inputParams) || inp;
+        var logData = _trDyn.log;
+        var ms = _trDyn.milestones || [];
+
+        // Bolum basligi (kademe bilgisiyle)
         r += '  +' + ln('-', 64) + '+\n';
-        r += '  |' + pad(' ZAMAN SERISI VERILERI', 64) + '|\n';
+        var _trLbl = ' ZAMAN SERISI VERILERI';
+        if(_transferRuns.length > 1 || _trRun.ratio != null) {
+          _trLbl += ' -- ' + ascii(_trRun.kademe) + ' KADEME';
+          if(_trRun.ratio != null) _trLbl += ' (i_tr=' + num(_trRun.ratio, 3) + ')';
+        }
+        r += '  |' + pad(_trLbl, 64) + '|\n';
         r += '  +' + ln('-', 64) + '+\n\n';
 
-        // Milestone'ları log satırlarıyla eşleştir
-        // Her milestone için en yakın log satırının index'ini bul
+        // Mini sonuc banner — birden fazla kademe varken her birinin durumu
+        if(_transferRuns.length > 1) {
+          var _miniLbl = _trDyn.success
+            ? '>>> BASARILI: Engel asildi'
+            : '>>> BASARISIZ: Engel asilamadi';
+          r += '  ' + pad(_miniLbl + '  |  Sure: ' + num(_trDyn.totalTime, 3) + ' s  |  Adim: ' + _trDyn.totalSteps, 64, 'center') + '\n';
+          if(!_trDyn.success && _trDyn.reason) {
+            r += '  ' + pad('Sebep: ' + ascii(_trDyn.reason), 64, 'center') + '\n';
+          }
+          r += '\n';
+        }
+
+        // Milestone'lari log satirlariyla eslestir
         var msForRow = {};  // logIndex → [milestone, ...]
         if(ms.length > 0) {
           for(var msi = 0; msi < ms.length; msi++) {
@@ -4759,8 +4791,8 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           }
         }
 
-        // Kolon tanımları
-        var hasGbLimit = dyn.params.gbTorqueLimit && dyn.params.gbTorqueLimit > 0;
+        // Kolon tanimlari
+        var hasGbLimit = _trDyn.params && _trDyn.params.gbTorqueLimit && _trDyn.params.gbTorqueLimit > 0;
         var cols = [
           { h: 't(s)',     w: 7 },
           { h: 'v(km/h)',  w: 8 },
@@ -4777,7 +4809,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           { h: 'KE(J)',    w: 9 }
         ];
 
-        // Başlık satırları
+        // Baslik satirlari
         var hdr = '  ';
         for(var ci = 0; ci < cols.length; ci++) {
           hdr += pad(cols[ci].h, cols[ci].w, 'right') + ' ';
@@ -4785,12 +4817,12 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += hdr + '\n';
         r += '  ' + ln('=', hdr.length - 2) + '\n';
 
-        // Veri satırları
+        // Veri satirlari
         var prevPhase = '';
         for(var li = 0; li < logData.length; li++) {
           var d = logData[li];
 
-          // Faz değişim ayracı
+          // Faz degisim ayraci
           if(d.phase !== prevPhase && prevPhase !== '') {
             r += '  ' + ln('.', hdr.length - 2) + '\n';
             r += '  ' + pad('>>> FAZ GECISI: ' + (d.phase === 'rear' ? 'ON TEKER -> ARKA TEKER' : 'ARKA TEKER TAMAMLANDI') + ' <<<', hdr.length - 2, 'center') + '\n';
@@ -4798,12 +4830,11 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           }
           prevPhase = d.phase;
 
-          // Milestone annotation — bu satıra eşleşmiş tüm milestone'ları göster
+          // Milestone annotation
           var rowMilestones = msForRow[li] || [];
           for(var rmi = 0; rmi < rowMilestones.length; rmi++) {
             var matchedMs = rowMilestones[rmi];
             var mLbl = '>>> ' + ascii(matchedMs.label);
-            // Detay bilgilerini topla
             var mDet = [];
             if(matchedMs.T_wheel !== undefined && matchedMs.T_req !== undefined) {
               mDet.push('T_whl=' + num(matchedMs.T_wheel, 0) + ' Nm');
@@ -4835,7 +4866,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
             r += '  ' + ln('-', hdr.length - 2) + '\n';
           }
 
-          // Veri satırı
+          // Veri satiri
           var row = '  ';
           row += pad(num(d.t, 3), 7, 'right') + ' ';
           row += pad(num(d.v * 3.6, 2), 8, 'right') + ' ';
@@ -4849,8 +4880,8 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
           row += pad(num(d.T_wheel, 0), 8, 'right') + ' ';
           // T_whl_eff(φ) = T_whl × [1 + (R_corner / R_eff) × cos(φ)]
           var phi_rad = (d.phi_deg || 0) * Math.PI / 180;
-          var R_c = (obs.cornerCorrection && obs.cornerCorrection.R_corner > 0) ? obs.cornerCorrection.R_corner : inp.R_eff;
-          var T_whl_eff = d.T_wheel * (1 + (R_c / (inp.R_eff || 1)) * Math.cos(phi_rad));
+          var R_c = (_trObs.cornerCorrection && _trObs.cornerCorrection.R_corner > 0) ? _trObs.cornerCorrection.R_corner : _trInp.R_eff;
+          var T_whl_eff = d.T_wheel * (1 + (R_c / (_trInp.R_eff || 1)) * Math.cos(phi_rad));
           row += pad(num(T_whl_eff, 0), 8, 'right') + ' ';
           row += pad(isFinite(d.T_req) ? num(d.T_req, 0) : '---', 8, 'right') + ' ';
           row += pad(num(d.phi_deg, 2), 8, 'right') + ' ';
@@ -4860,12 +4891,12 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         }
         r += '  ' + ln('=', hdr.length - 2) + '\n';
         r += '\n';
-        var logMs = dyn.params.logIntervalSec ? dyn.params.logIntervalSec * 1000 : 10;
-        r += '  Toplam ' + logData.length + ' kayit, ~' + num(dyn.totalTime, 2) + ' s surec.\n';
+        var logMs = (_trDyn.params && _trDyn.params.logIntervalSec) ? _trDyn.params.logIntervalSec * 1000 : 10;
+        r += '  Toplam ' + logData.length + ' kayit, ~' + num(_trDyn.totalTime, 2) + ' s surec.\n';
         r += '  (Veriler ' + num(logMs, 0) + ' ms aralikla kaydedilmistir. ">>>" ile baslayan satirlar onemli olaylari gosterir.)\n';
         r += '\n';
 
-        // Kolon açıklamaları
+        // Kolon aciklamalari
         r += '  Kolon Aciklamalari:\n';
         r += '    t(s)     = Simulasyon zamani (saniye)\n';
         r += '    v(km/h)  = Arac hizi (kilometre/saat)\n';
@@ -4873,7 +4904,7 @@ function veGenerateObstacleCrossingTxtReport(sim, optHazirlayan) {
         r += '    T_eng    = Motor torku (Nm)\n';
         r += '    TR       = Tork konvertor tork orani\n';
         r += '    SR       = Tork konvertor hiz orani (N_turbin/N_motor)\n';
-        r += '    T_gb     = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = motor tork yuzdesi %' + num((dyn.params.motorTorquePct || 1) * 100, 1) + ' uygulanmis)' : '') + '\n';
+        r += '    T_gb     = Sanziman cikis torku (Nm)' + (hasGbLimit ? '  (* = motor tork yuzdesi %' + num(((_trDyn.params && _trDyn.params.motorTorquePct) || 1) * 100, 1) + ' uygulanmis)' : '') + '\n';
         r += '    T_whl    = Tek teker torku (Nm)\n';
         r += '    T_whl_e  = Efektif tek teker torku (Nm) = T_whl x [1 + (R_corner/R_eff) x cos(phi)]\n';
         r += '    T_req    = Anlik gerekli tork — tek teker (Nm)\n';
