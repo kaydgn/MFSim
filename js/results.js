@@ -2203,8 +2203,8 @@ function veRenderTXTReport(reportType) {
 
   // TXT content area — düz belge görünümü
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
-  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden; text-align:center;">';
-  html += '<pre id="ve-txt-report-content" style="display:inline-block; text-align:left; margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   html += '</pre>';
   html += '</div></div>';
@@ -2253,8 +2253,8 @@ function veRenderSegmentDriveTXTReport() {
   html += '</div>';
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
-  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden; text-align:center;">';
-  html += '<pre id="ve-txt-report-content" style="display:inline-block; text-align:left; margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   html += '</pre>';
   html += '</div></div>';
@@ -2297,8 +2297,8 @@ function veRenderObstacleCrossingTXTReport() {
   html += '</div>';
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
-  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden; text-align:center;">';
-  html += '<pre id="ve-txt-report-content" style="display:inline-block; text-align:left; margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   html += '</pre>';
   html += '</div></div>';
@@ -2342,8 +2342,8 @@ function veRenderTopologyTXTReport() {
   html += '</div>';
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
-  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden; text-align:center;">';
-  html += '<pre id="ve-txt-report-content" style="display:inline-block; text-align:left; margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
+  html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
+  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
   html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   html += '</pre>';
   html += '</div></div>';
@@ -2408,14 +2408,6 @@ function veDownloadTXTFromPreview() {
     } else {
       content = window._veTxtPreviewContent;
     }
-
-    // Rapor icerigi 80 karakter genisligindedir. A4 portrait'te yazdirirken
-    // sola yaslanmamasi icin her satirin basina bos karakterler ekleyerek
-    // bloku sayfa icinde ortalanmis halde indir.
-    var leftPad = '                    '; // 20 bosluk (A4 portrait ~%70 scale icin)
-    content = content.split('\n').map(function(line) {
-      return line.length > 0 ? leftPad + line : line;
-    }).join('\n');
 
     var filename = window._veTxtPreviewFilename || 'rapor.txt';
     var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
