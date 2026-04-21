@@ -1779,18 +1779,21 @@ function onVEFTGBPresetSelect(nodeId, value) {
   if(!preset) return;
   
   node.data.ftGBPreset = value;
-  
-  // Şanzıman adı güncelle
+
+  // Şanzıman adı güncelle — isim/sayı verilerini DOM'dan bağımsız yaz
   var nameEl = document.getElementById('ve-gb-name-' + nodeId);
-  if(nameEl) { nameEl.value = preset.name; node.data.gbName = preset.name; }
-  
+  node.data.gbName = preset.name;
+  if(nameEl) nameEl.value = preset.name;
+
   // Vites sayıları güncelle
   var fwdGears = preset.gears.filter(function(g) { return g.gear !== 'R'; });
   var revGears = preset.gears.filter(function(g) { return g.gear === 'R'; });
   var fwdEl = document.getElementById('ve-gb-fwd-' + nodeId);
   var revEl = document.getElementById('ve-gb-rev-' + nodeId);
-  if(fwdEl) { fwdEl.value = fwdGears.length; node.data.forwardGears = fwdGears.length; }
-  if(revEl) { revEl.value = revGears.length; node.data.reverseGears = revGears.length; }
+  node.data.forwardGears = fwdGears.length;
+  node.data.reverseGears = revGears.length;
+  if(fwdEl) fwdEl.value = fwdGears.length;
+  if(revEl) revEl.value = revGears.length;
   
   // 3000SP/3200SP ise kalibre edilmiş veri kullan
   var ftGears = [];
