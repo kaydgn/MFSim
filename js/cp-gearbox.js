@@ -1526,6 +1526,55 @@ var VE_FT_SHIFT_PROFILES = {
     etaLockup2C2L: 0.83
   },
   // ════════════════════════════════════════════════════════════════════════
+  // ALLISON 1000SP — 1000/2000 SERİSİ (S1 Performance)
+  // ════════════════════════════════════════════════════════════════════════
+  // Kaynak: iSCAAN raporu 497-A367123-1 (1000SP + ISB4.5 + TC222)
+  // Vites oranları: F1=3.102, F2=1.811, F3=1.406, F4=1.000, F5=0.712, F6=0.614
+  // Evrensel S1: N_out = (ESL − 75) / i_gear, 5 aile × 44 VEPS ile ±1 rpm içinde doğrulandı
+  // Effective ESL=2605 rpm (ters-mühendislikle teyit — "2500 rpm Limiting" ≠ gerçek ESL)
+  // Converter shift'ler evrensel formül × i_F1 / i_F2 ile hesaplandı (TC-spesifik ufak sapma normal)
+  allison1000sp_s1: {
+    name: 'Allison 1000 SP — S1 Performance',
+    family: '1000_2000',
+    lockupOffset: 75,
+    shift1C2C_outRatio: 0.2418,      // = 0.75 / 3.102 (evrensel SR=0.75 × i_F1)
+    shift2C2L_outRatio: null,         // piecewise lineer — converterShifts üzerinden
+    shiftRefRPM: null,
+    // Converter-mod geçişleri: Evrensel formülün lineer karşılığı
+    // 1C→2C: N_out = 0.2418 × ESL  (TC222'de gerçek SR=0.77, evrensel 0.75 yaklaşımı → ±5-10 rpm)
+    // 2C→2L: Evrensel N_eng kuralı i_F2=1.811 ile N_out'a çevrildi — segmented model
+    converterShifts: {
+      '1C2C': { a: 0.2418, b: 0 },
+      '2C2L': {
+        type: 'segmented',
+        linear: { a: 0.3699, b: 0.22, validFrom: 1800 },  // ESL ≥ 1800: (0.6698×ESL+0.4)/1.811
+        lookup: [[1600, 607], [1700, 628]]                 // ESL < 1800: (0.39×ESL+476)/1.811
+      }
+    },
+    // Lockup-mod: Evrensel S1 kuralı — N_out = (ESL − 75) / i_gear
+    lockupShifts: {
+      '2L3L': { a: 0.5522, b: -41.4 },   // = 1/1.811, -75/1.811
+      '3L4L': { a: 0.7112, b: -53.3 },   // = 1/1.406, -75/1.406
+      '4L5L': { a: 1.0000, b: -75.0 },   // = 1/1.000, -75/1.000
+      '5L6L': { a: 1.4045, b: -105.3 }   // = 1/0.712, -75/0.712
+    },
+    // Downshift eşikleri: 2500SP S1'den 1000SP dişli oranlarına adapte edildi
+    // Kapalı gaz gözlemi: N_eng ≈ 1100 rpm (2L→2C için ≈1050) — Adım 5'te ölçümle karşılaştırılacak
+    downshiftThresholds: {
+      '3to2': { a: 0.4269, b: 0 },                                          // 2500SP × 1.439/1.406
+      '4to3': { a: 0.6100, b: 0 },                                          // i_F4=1.000 (değişiklik yok)
+      '5to4': { a: 0.9136, b: 0 },                                          // 2500SP × 0.737/0.712
+      '6to5': { type: 'piecewise', breakpoint: 2000,
+        low:  { a: 1.4190, b: -315.0 },                                     // 2500SP × 0.643/0.614
+        high: { a: 1.2606, b: 1.47 }
+      },
+      '2to1': { a: 0.1117, b: 157.9, capValue: 327, capBelow: 1700 }        // 2500SP × 1.896/1.811
+    },
+    srShift1C2C: 0.77,        // TC222'ye has, referans
+    srLockup2C2L: 0.87,       // gözlenen, referans
+    etaLockup2C2L: 0.83       // diğer profillerle tutarlı
+  },
+  // ════════════════════════════════════════════════════════════════════════
   // ALLISON 2500SP — 1000/2000 SERİSİ
   // ════════════════════════════════════════════════════════════════════════
   // Kaynak: 44 adet VEPS kalibrasyon raporu (CIN: B1-81000-43C-9, ESL 1600-2600 rpm, S1-S4)
