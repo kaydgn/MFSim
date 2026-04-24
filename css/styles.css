@@ -2206,6 +2206,11 @@
   box-shadow:0 0 6px rgba(245,158,11,0.5);
   animation: deployPulse 1.2s ease-in-out infinite;
 }
+.ve-deploy-update-available {
+  background:#3b82f6;
+  box-shadow:0 0 8px rgba(59,130,246,0.6);
+  animation: deployPulse 1.8s ease-in-out infinite;
+}
 .ve-deploy-error {
   background:#ef4444;
   box-shadow:0 0 6px rgba(239,68,68,0.5);
