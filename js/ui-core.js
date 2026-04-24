@@ -4,6 +4,67 @@ function escapeHTML(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// NODE DRAG: paylasilan state + tek seferlik global dinleyiciler
+// Her node icin document.addEventListener('mousemove'/'mouseup') eklemek yerine
+// tek sefer baglanan dinleyiciler bu state uzerinden calisir. Undo/redo veya
+// yeni node olusturmanin dinleyici yigmasini engeller.
+// ═══════════════════════════════════════════════════════════════════════════
+var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 } };
+
+function veAttachNodeDrag(nodeEl, node) {
+  nodeEl.addEventListener('mousedown', function(e) {
+    if(e.target.classList.contains('ve-node-port')) return;
+    if(e.target.classList.contains('ve-resize-handle')) return;
+    if(e.button !== 0) return;
+
+    _veNodeDrag.active = true;
+    _veNodeDrag.anchor = node;
+    _veNodeDrag.dragStart = { x: e.clientX - node.x * canvasZoom, y: e.clientY - node.y * canvasZoom };
+
+    if(!e.ctrlKey && selectedNodes.indexOf(node) === -1) clearSelection();
+    addToSelection(node);
+    e.stopPropagation();
+  });
+}
+
+(function() {
+  if(typeof document === 'undefined' || typeof document.addEventListener !== 'function') return;
+
+  document.addEventListener('mousemove', function(e) {
+    if(!_veNodeDrag.active) return;
+    if(typeof isResizing !== 'undefined' && isResizing) return;
+    var node = _veNodeDrag.anchor;
+    if(!node) return;
+
+    var dx = (e.clientX - _veNodeDrag.dragStart.x) / canvasZoom - node.x;
+    var dy = (e.clientY - _veNodeDrag.dragStart.y) / canvasZoom - node.y;
+
+    selectedNodes.forEach(function(n) { n.x += dx; n.y += dy; });
+
+    var snap = (typeof checkAlignment === 'function') ? checkAlignment(selectedNodes) : { snapX: 0, snapY: 0 };
+    if(snap.snapX !== 0 || snap.snapY !== 0) {
+      selectedNodes.forEach(function(n) { n.x += snap.snapX; n.y += snap.snapY; });
+    }
+
+    selectedNodes.forEach(function(n) {
+      var el = document.getElementById(n.id);
+      if(el) { el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; }
+    });
+
+    _veNodeDrag.dragStart = { x: e.clientX - node.x * canvasZoom, y: e.clientY - node.y * canvasZoom };
+    if(typeof updateAllConnections === 'function') updateAllConnections();
+  });
+
+  document.addEventListener('mouseup', function() {
+    if(!_veNodeDrag.active) return;
+    if(typeof showAlignmentGuides === 'function') showAlignmentGuides(null);
+    if(typeof saveState === 'function') saveState();
+    _veNodeDrag.active = false;
+    _veNodeDrag.anchor = null;
+  });
+})();
+
 // Canvas transform uygula
 function updateCanvasTransform() {
   var canvas = document.getElementById('ve-canvas');
@@ -534,75 +595,8 @@ function createNode(type, x, y, width, height) {
     showNodeContextMenu(e, node);
   });
   
-  // Node sürükleme
-  var isDragging = false;
-  var dragStart = {x: 0, y: 0};
-  
-  nodeEl.addEventListener('mousedown', function(e) {
-    if(e.target.classList.contains('ve-node-port')) return;
-    if(e.target.classList.contains('ve-resize-handle')) return;
-    if(e.button !== 0) return;
-    
-    isDragging = true;
-    dragStart = {x: e.clientX - node.x * canvasZoom, y: e.clientY - node.y * canvasZoom};
-    
-    if(!e.ctrlKey) {
-      if(selectedNodes.indexOf(node) === -1) {
-        clearSelection();
-      }
-    }
-    addToSelection(node);
-    
-    e.stopPropagation();
-  });
-  
-  document.addEventListener('mousemove', function(e) {
-    if(!isDragging || isResizing) return;
-    
-    var dx = (e.clientX - dragStart.x) / canvasZoom - node.x;
-    var dy = (e.clientY - dragStart.y) / canvasZoom - node.y;
-    
-    // Önce tüm node'ları geçici olarak hareket ettir
-    selectedNodes.forEach(function(n) {
-      n.x += dx;
-      n.y += dy;
-    });
-    
-    // Hizalama kontrolü
-    var snap = checkAlignment(selectedNodes);
-    
-    // Snap uygula
-    if(snap.snapX !== 0 || snap.snapY !== 0) {
-      selectedNodes.forEach(function(n) {
-        n.x += snap.snapX;
-        n.y += snap.snapY;
-      });
-    }
-    
-    // DOM'u güncelle
-    selectedNodes.forEach(function(n) {
-      var el = document.getElementById(n.id);
-      if(el) {
-        el.style.left = n.x + 'px';
-        el.style.top = n.y + 'px';
-      }
-    });
-    
-    dragStart = {x: e.clientX - node.x * canvasZoom, y: e.clientY - node.y * canvasZoom};
-    
-    // Bağlantıları güncelle
-    updateAllConnections();
-    
-
-  });
-  
-  document.addEventListener('mouseup', function() {
-    if(isDragging) {
-      showAlignmentGuides(null);
-      saveState();
-    }
-    isDragging = false;
-  });
+  // Node sürükleme — paylasilan tek-dinleyicili sistem (bkz. veAttachNodeDrag)
+  veAttachNodeDrag(nodeEl, node);
   
   // Port olayları - bağlantı oluşturma
   nodeEl.querySelectorAll('.ve-node-port').forEach(function(port) {
