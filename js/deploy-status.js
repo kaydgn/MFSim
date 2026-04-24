@@ -243,6 +243,13 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   html += '<br>🌿 ' + _veEscHtml(info.branch);
   html += '</div>';
 
+  // Otomatik kontrol ayarı
+  var autoOn = _veAutoCheckEnabled();
+  html += '<label style="margin-top:10px; display:flex; align-items:center; gap:6px; font-size:0.7rem; color:var(--text-muted); cursor:pointer; user-select:none;">';
+  html += '<input type="checkbox"' + (autoOn ? ' checked' : '') + ' onchange="_veToggleAutoCheck(this.checked)" style="margin:0; cursor:pointer;">';
+  html += 'Otomatik kontrol (15 dk)';
+  html += '</label>';
+
   // Son değişiklikler (changelog)
   if(info.changes && info.changes.length > 1) {
     var lastSeen = parseInt(localStorage.getItem('ve-deploy-last-seen-pr') || '0', 10);
@@ -361,6 +368,37 @@ function _veApplyUpdate() {
   }).catch(doReload);
 }
 
+// ═══ OTOMATİK KONTROL ═══
+// version.json kendi origin'imizden servis edildiği için rate-limit sorunu yok.
+// Sessiz: popup açmaz, sadece dot'u günceller; kullanıcı tıklarsa detay gelir.
+var VE_AUTOCHECK_INTERVAL_MS = 15 * 60 * 1000;
+
+function _veAutoCheck() {
+  try { sessionStorage.setItem('ve-deploy-last-auto-check', String(Date.now())); } catch(e) {}
+  _veCheckDeploy(function(info) {
+    if(!info) return;
+    var dot = document.getElementById('ve-deploy-dot');
+    if(!dot) return;
+    var runId = DEPLOY_RUN_ID;
+    var isNewer = false;
+    if(runId && runId !== '__DEPLOY_RUN_ID__' && info.runId) {
+      isNewer = String(info.runId) !== String(runId);
+    }
+    if(isNewer && info.status === 'completed' && info.conclusion === 'success') {
+      dot.className = 've-deploy-dot ve-deploy-update-available';
+      dot.title = '🔔 Yeni sürüm mevcut — tıklayın';
+    }
+  });
+}
+
+function _veToggleAutoCheck(on) {
+  localStorage.setItem('ve-deploy-autocheck', on ? 'on' : 'off');
+}
+
+function _veAutoCheckEnabled() {
+  return localStorage.getItem('ve-deploy-autocheck') !== 'off';
+}
+
 // ═══ SAYFA BAŞLANGIÇ ═══
 document.addEventListener('DOMContentLoaded', function() {
   var wasRefreshed = localStorage.getItem('ve-deploy-refreshed');
@@ -374,7 +412,26 @@ document.addEventListener('DOMContentLoaded', function() {
       }
       _veShowRefreshedPopup();
     }, 1000);
+    return;
   }
+
+  if(!_veAutoCheckEnabled()) return;
+
+  // Sayfa açılışı (2 sn gecikme — başlangıç yükünü rahatlat)
+  setTimeout(_veAutoCheck, 2000);
+
+  // Periyodik kontrol (yalnız sekme görünürken)
+  setInterval(function() {
+    if(document.visibilityState === 'visible') _veAutoCheck();
+  }, VE_AUTOCHECK_INTERVAL_MS);
+
+  // Sekme yeniden görünür olunca son kontrolden yeterince zaman geçtiyse tazele
+  document.addEventListener('visibilitychange', function() {
+    if(document.visibilityState !== 'visible') return;
+    var last = 0;
+    try { last = parseInt(sessionStorage.getItem('ve-deploy-last-auto-check') || '0', 10); } catch(e) {}
+    if(Date.now() - last > VE_AUTOCHECK_INTERVAL_MS) _veAutoCheck();
+  });
 });
 
 // Güncelleme sonrası basit popup (API çağırmaz)
