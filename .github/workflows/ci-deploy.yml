@@ -70,6 +70,11 @@ jobs:
           cp pwa/sw.js _site/pwa/sw.js
           touch _site/.nojekyll
 
+      - name: Generate version.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node gen-version.js _site
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
