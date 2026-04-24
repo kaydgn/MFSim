@@ -239,60 +239,8 @@ function restoreState(state) {
       });
     });
     
-    // Node sürükleme (tam destek - createNode ile aynı)
-    (function(theNode) {
-      var isDragging = false;
-      var dragStart = {x: 0, y: 0};
-      
-      nodeEl.addEventListener('mousedown', function(e) {
-        if(e.target.classList.contains('ve-node-port')) return;
-        if(e.target.classList.contains('ve-resize-handle')) return;
-        if(e.button !== 0) return;
-        
-        isDragging = true;
-        dragStart = {x: e.clientX - theNode.x * canvasZoom, y: e.clientY - theNode.y * canvasZoom};
-        
-        if(!e.ctrlKey && selectedNodes.indexOf(theNode) === -1) clearSelection();
-        addToSelection(theNode);
-        e.stopPropagation();
-      });
-      
-      document.addEventListener('mousemove', function(e) {
-        if(!isDragging) return;
-        
-        var dx = (e.clientX - dragStart.x) / canvasZoom - theNode.x;
-        var dy = (e.clientY - dragStart.y) / canvasZoom - theNode.y;
-        
-        selectedNodes.forEach(function(n) {
-          n.x += dx;
-          n.y += dy;
-        });
-        
-        var snap = checkAlignment(selectedNodes);
-        if(snap.snapX !== 0 || snap.snapY !== 0) {
-          selectedNodes.forEach(function(n) {
-            n.x += snap.snapX;
-            n.y += snap.snapY;
-          });
-        }
-        
-        selectedNodes.forEach(function(n) {
-          var el = document.getElementById(n.id);
-          if(el) {
-            el.style.left = n.x + 'px';
-            el.style.top = n.y + 'px';
-          }
-        });
-        
-        dragStart = {x: e.clientX - theNode.x * canvasZoom, y: e.clientY - theNode.y * canvasZoom};
-        updateAllConnections();
-      });
-      
-      document.addEventListener('mouseup', function() {
-        if(isDragging) { showAlignmentGuides(null); saveState(); }
-        isDragging = false;
-      });
-    })(node);
+    // Node sürükleme — paylasilan tek-dinleyicili sistem (ui-core.js)
+    veAttachNodeDrag(nodeEl, node);
     
     document.getElementById('ve-canvas').appendChild(nodeEl);
   });
