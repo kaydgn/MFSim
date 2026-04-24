@@ -61,9 +61,25 @@ for (const line of recent.split('\n')) {
     prNumber: parseInt(m[1], 10),
     message: cmsg,
     author: cauthor,
-    date: cdate
+    date: cdate,
+    title: '',
+    url: ''
   });
   if (changes.length >= 10) break;
+}
+
+// Her changelog girisi icin PR basligi/url'sini cek (aktif PR zaten cekildi)
+for (const c of changes) {
+  if (c.prNumber === prNumber) {
+    c.title = prTitle;
+    c.url = prUrl;
+    continue;
+  }
+  const pr = ghApi('repos/' + repo + '/pulls/' + c.prNumber);
+  if (pr) {
+    c.title = pr.title || '';
+    c.url = pr.html_url || '';
+  }
 }
 
 const out = {
@@ -95,7 +111,7 @@ console.log('✓ ' + outPath + ' yazildi (runId=' + (runId || 'N/A') + ', change
 const swPath = path.join(outDir, 'pwa', 'sw.js');
 if (fs.existsSync(swPath) && sha) {
   const shortSha = sha.slice(0, 7);
-  const swContent = fs.readFileSync(swPath, 'utf8').replace('__DEPLOY_SHA__', shortSha);
+  const swContent = fs.readFileSync(swPath, 'utf8').replace(/__DEPLOY_SHA__/g, shortSha);
   fs.writeFileSync(swPath, swContent);
   console.log('✓ ' + swPath + ' icindeki __DEPLOY_SHA__ → ' + shortSha);
 }

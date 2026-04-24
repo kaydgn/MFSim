@@ -41258,13 +41258,25 @@ function _veFormatDeployDate(isoStr) {
 }
 
 // ═══ POPUP GÖSTER ═══
+function _veEscHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function _veDismissPopup() {
+  var p = document.getElementById('ve-deploy-popup');
+  if(!p) return;
+  var pr = parseInt(p.getAttribute('data-pr-number') || '0', 10);
+  if(pr) localStorage.setItem('ve-deploy-last-seen-pr', String(pr));
+  p.remove();
+}
+
 function _veShowPopup(dot, info, title, showUpdateBtn) {
   var existing = document.getElementById('ve-deploy-popup');
   if(existing) existing.remove();
 
   var dateStr = _veFormatDeployDate(info.date);
   var fullDate = new Date(info.date).toLocaleString('tr-TR');
-  var msg = info.message.split('\n')[0];
+  var msg = (info.message || '').split('\n')[0];
 
   var isPending = info.status === 'in_progress' || info.status === 'queued';
   var isSuccess = info.status === 'completed' && info.conclusion === 'success';
@@ -41272,6 +41284,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 
   var popup = document.createElement('div');
   popup.id = 've-deploy-popup';
+  popup.setAttribute('data-pr-number', String(info.prNumber || 0));
   popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:360px; padding:16px; font-size:0.78rem;';
 
   var html = '';
@@ -41279,16 +41292,15 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   // Başlık
   html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
   html += '<span style="font-weight:600; color:' + titleColor + '; font-size:0.85rem;">' + title + '</span>';
-  html += '<button onclick="document.getElementById(\'ve-deploy-popup\').remove()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>';
+  html += '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>';
   html += '</div>';
 
   // PR bilgisi
   if(info.prTitle) {
     html += '<div style="margin-bottom:10px;">';
     html += '<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:3px;">Pull Request #' + info.prNumber + '</div>';
-    html += '<div style="font-weight:600; color:var(--text-heading); line-height:1.4;">' + info.prTitle + '</div>';
+    html += '<div style="font-weight:600; color:var(--text-heading); line-height:1.4;">' + _veEscHtml(info.prTitle) + '</div>';
     if(info.prBody) {
-      // Markdown'ı basit HTML'e çevir
       var bodyHtml = info.prBody
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
@@ -41302,15 +41314,49 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
     }
     html += '</div>';
   } else {
-    html += '<div style="color:var(--text-primary); margin-bottom:10px; line-height:1.4;">' + msg + '</div>';
+    html += '<div style="color:var(--text-primary); margin-bottom:10px; line-height:1.4;">' + _veEscHtml(msg) + '</div>';
   }
 
   // Detaylar
   html += '<div style="color:var(--text-muted); font-size:0.7rem; border-top:1px solid var(--border-color); padding-top:10px; line-height:1.8;">';
-  html += '👤 ' + info.author;
+  html += '👤 ' + _veEscHtml(info.author);
   html += '<br>🕐 ' + fullDate;
-  html += '<br>🌿 ' + info.branch;
+  html += '<br>🌿 ' + _veEscHtml(info.branch);
   html += '</div>';
+
+  // Son değişiklikler (changelog)
+  if(info.changes && info.changes.length > 1) {
+    var lastSeen = parseInt(localStorage.getItem('ve-deploy-last-seen-pr') || '0', 10);
+    var newCount = 0;
+    for(var k = 0; k < info.changes.length; k++) {
+      if(info.changes[k].prNumber && info.changes[k].prNumber > lastSeen) newCount++;
+    }
+    var summaryLabel = 'Son değişiklikler (' + info.changes.length + ')';
+    if(newCount > 0 && lastSeen > 0) {
+      summaryLabel += ' — <span style="color:#22c55e; font-weight:600;">' + newCount + ' yeni</span>';
+    }
+    html += '<details style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;"' + (showUpdateBtn ? ' open' : '') + '>';
+    html += '<summary style="cursor:pointer; font-weight:600; color:var(--text-heading); font-size:0.76rem;">' + summaryLabel + '</summary>';
+    html += '<div style="margin-top:8px; display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto;">';
+    for(var i = 0; i < info.changes.length; i++) {
+      var c = info.changes[i];
+      if(!c.prNumber) continue;
+      var isNew = lastSeen > 0 && c.prNumber > lastSeen;
+      var cTitle = c.title || c.message || ('PR #' + c.prNumber);
+      var cDate = _veFormatDeployDate(c.date);
+      var bg = isNew ? 'background:rgba(34,197,94,0.08); border-left:2px solid #22c55e; padding:4px 6px;' : 'padding:4px 6px; border-left:2px solid transparent;';
+      html += '<div style="font-size:0.72rem; line-height:1.4; ' + bg + '">';
+      if(c.url) {
+        html += '<a href="' + c.url + '" target="_blank" rel="noopener" style="color:var(--accent-primary); text-decoration:none; font-weight:600;">#' + c.prNumber + '</a> ';
+      } else {
+        html += '<span style="font-weight:600;">#' + c.prNumber + '</span> ';
+      }
+      html += '<span style="color:var(--text-primary);">' + _veEscHtml(cTitle) + '</span>';
+      html += '<div style="color:var(--text-muted); font-size:0.66rem; margin-top:1px;">' + _veEscHtml(c.author) + ' • ' + cDate + '</div>';
+      html += '</div>';
+    }
+    html += '</div></details>';
+  }
 
   // Güncelle butonu
   if(showUpdateBtn) {
@@ -41324,18 +41370,20 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   if(info.prUrl) {
     html += '<a href="' + info.prUrl + '" target="_blank" rel="noopener" style="font-size:0.7rem; color:var(--accent-primary); text-decoration:none;">PR Detayı →</a>';
   }
-  html += '<a href="' + info.url + '" target="_blank" rel="noopener" style="font-size:0.7rem; color:var(--accent-primary); text-decoration:none;">Actions Log →</a>';
+  if(info.url) {
+    html += '<a href="' + info.url + '" target="_blank" rel="noopener" style="font-size:0.7rem; color:var(--accent-primary); text-decoration:none;">Actions Log →</a>';
+  }
   html += '</div>';
 
   popup.innerHTML = html;
   document.body.appendChild(popup);
 
-  // Dışarı tıklayınca kapat
+  // Dışarı tıklayınca kapat (last-seen güncellemesi dahil)
   setTimeout(function() {
     document.addEventListener('click', function _close(e) {
       var p = document.getElementById('ve-deploy-popup');
       if(p && !p.contains(e.target) && e.target !== dot && e.target.id !== 've-deploy-refresh') {
-        p.remove();
+        _veDismissPopup();
         document.removeEventListener('click', _close);
       }
     });
@@ -41422,7 +41470,7 @@ function _veShowRefreshedPopup() {
   popup.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
       '<span style="font-weight:600; color:#22c55e; font-size:0.85rem;">✅ Program Güncellendi</span>' +
-      '<button onclick="document.getElementById(\'ve-deploy-popup\').remove()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>' +
+      '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>' +
     '</div>' +
     '<div style="color:var(--text-secondary); line-height:1.5;">Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.</div>';
 
