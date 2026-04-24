@@ -40371,12 +40371,6 @@ var TopologyMath = {
     return valueType === 'torque' ? data[data.length-1].torque : data[data.length-1].power;
   },
   
-  // Simülasyon adımı (placeholder)
-  simulateStep: function(dt) {
-    // TODO: Gerçek simülasyon mantığı buraya eklenecek
-    console.log('Simülasyon adımı: dt =', dt);
-  },
-  
   // Sonlandırıcı tespit — zincir nerede bitmeli?
   getChainEndpoints: function() {
     var endpoints = [];
