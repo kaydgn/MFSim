@@ -41343,6 +41343,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 }
 
 // ═══ GÜNCELLEME UYGULA ═══
+// Akış: SW'yi update'e zorla → yeni SW install olunca SKIP_WAITING → controllerchange → reload
 function _veApplyUpdate() {
   var popup = document.getElementById('ve-deploy-popup');
   if(popup) {
@@ -41350,23 +41351,47 @@ function _veApplyUpdate() {
   }
   localStorage.setItem('ve-deploy-refreshed', '1');
 
-  // Service worker cache'ini temizle, sonra sayfayı yenile
-  if('caches' in window) {
-    caches.keys().then(function(names) {
-      return Promise.all(names.map(function(n) { return caches.delete(n); }));
-    }).then(function() {
-      if(navigator.serviceWorker) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          regs.forEach(function(r) { r.unregister(); });
-          location.reload(true);
+  var reloaded = false;
+  function doReload() {
+    if(reloaded) return;
+    reloaded = true;
+    location.reload();
+  }
+
+  if(!navigator.serviceWorker) {
+    // SW yoksa (yerel file://, eski tarayıcı) klasik reload
+    doReload();
+    return;
+  }
+
+  navigator.serviceWorker.getRegistration().then(function(reg) {
+    if(!reg) { doReload(); return; }
+
+    // Yeni SW aktive olduğunda tarayıcı controller'ı değiştirir → o an reload et
+    navigator.serviceWorker.addEventListener('controllerchange', doReload);
+
+    // Zaten bekleyen bir SW varsa hemen skip waiting
+    if(reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+
+    // Yeni sürümü tetikle
+    reg.update().then(function() {
+      if(reg.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      }
+      if(reg.installing) {
+        reg.installing.addEventListener('statechange', function(e) {
+          if(e.target.state === 'installed' && reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
         });
-      } else {
-        location.reload(true);
       }
     });
-  } else {
-    location.reload(true);
-  }
+
+    // Güvenlik ağı: SW 4 sn içinde devreye girmezse yine de reload et
+    setTimeout(doReload, 4000);
+  }).catch(doReload);
 }
 
 // ═══ SAYFA BAŞLANGIÇ ═══

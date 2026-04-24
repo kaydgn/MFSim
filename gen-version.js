@@ -89,3 +89,13 @@ fs.mkdirSync(outDir, { recursive: true });
 const outPath = path.join(outDir, 'version.json');
 fs.writeFileSync(outPath, JSON.stringify(out, null, 2));
 console.log('✓ ' + outPath + ' yazildi (runId=' + (runId || 'N/A') + ', changes=' + changes.length + ')');
+
+// Service Worker icindeki __DEPLOY_SHA__ placeholder'ini gercek SHA ile degistir.
+// Her deploy'da SW dosyasi degisir → tarayici yeni SW tetikler → eski cache silinir.
+const swPath = path.join(outDir, 'pwa', 'sw.js');
+if (fs.existsSync(swPath) && sha) {
+  const shortSha = sha.slice(0, 7);
+  const swContent = fs.readFileSync(swPath, 'utf8').replace('__DEPLOY_SHA__', shortSha);
+  fs.writeFileSync(swPath, swContent);
+  console.log('✓ ' + swPath + ' icindeki __DEPLOY_SHA__ → ' + shortSha);
+}
