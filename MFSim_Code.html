@@ -41279,7 +41279,6 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   var existing = document.getElementById('ve-deploy-popup');
   if(existing) existing.remove();
 
-  var dateStr = _veFormatDeployDate(info.date);
   var fullDate = new Date(info.date).toLocaleString('tr-TR');
   var msg = (info.message || '').split('\n')[0];
 
