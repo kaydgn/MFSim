@@ -757,8 +757,12 @@ function deleteControlPoint(conn, cp) {
 // Sayfa yüklendiğinde ilk state'i kaydet
 // ═══════════════════════════════════════════════════════════════════════════
 // OTOMATİK DATA SENKRONİZASYON — 3 SN PERİYODİK
+// Sekme gizliyken durdurulur (visibilitychange), görünürken yeniden başlar.
 // ═══════════════════════════════════════════════════════════════════════════
-var _veAutoSyncInterval = setInterval(function() {
+var _veAutoSyncInterval = null;
+var VE_AUTO_SYNC_MS = 3000;
+
+function _veAutoSyncTick() {
   if(!nodes || nodes.length === 0) return;
   // Tek modül — veActiveModule sabit
   if(!veActiveModule) veActiveModule = 'full-throttle';
@@ -808,7 +812,28 @@ var _veAutoSyncInterval = setInterval(function() {
       }
     } catch(e) { console.warn('[MFSim] Auto-sync hatası (' + (node ? node.type : '?') + '):', e.message); }
   });
-}, 3000);
+}
+
+function veStartAutoSync() {
+  if(_veAutoSyncInterval) return;
+  _veAutoSyncInterval = setInterval(_veAutoSyncTick, VE_AUTO_SYNC_MS);
+}
+
+function veStopAutoSync() {
+  if(_veAutoSyncInterval) {
+    clearInterval(_veAutoSyncInterval);
+    _veAutoSyncInterval = null;
+  }
+}
+
+veStartAutoSync();
+
+if(typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+  document.addEventListener('visibilitychange', function() {
+    if(document.hidden) veStopAutoSync();
+    else veStartAutoSync();
+  });
+}
 
 setTimeout(function() {
   if(typeof saveState === 'function') {
