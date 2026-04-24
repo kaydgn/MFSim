@@ -228,6 +228,9 @@ function veRunSimulationEngine() {
     // RK45 segment modunda desteklenmiyor — RK4'e düşür
     if(method === 'rk45') {
       method = 'rk4';
+      var _msg = 'Segment modunda RK45 desteklenmiyor, sabit adımlı RK4 kullanıldı.';
+      console.warn('[MFSim] ' + _msg);
+      if(typeof showToast === 'function') showToast(_msg, 'info');
     }
   }
   
