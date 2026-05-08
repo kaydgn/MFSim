@@ -13519,13 +13519,13 @@ function getGearboxPropertiesHTML(node) {
     Object.keys(VE_GEARBOX_PRESETS).forEach(function(gk) {
       var gp = VE_GEARBOX_PRESETS[gk];
       var fwdC = gp.gears.filter(function(g) { return g.gear !== 'R'; }).length;
-      var calM = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '') + (gp.partialData ? ' ★' : '');
+      var calM = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '');
       var gSel = (gk === ftGBPreset) ? ' selected' : '';
       html += '<option value="' + gk + '"' + gSel + '>' + gp.name + ' (' + fwdC + 'V)' + calM + '</option>';
     });
     html += '</select>';
     html += '</div>';
-    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon &nbsp; <span style="color:#e53e3e;" title="Eksik veri — sadece vites oranları mevcut">★</span> = Eksik veri</div>';
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
     if(hasEGM) {
       html += '<div class="sw-chain-bar fail">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
@@ -13796,14 +13796,14 @@ function getGearboxPropertiesHTML(node) {
   Object.keys(VE_GEARBOX_PRESETS).forEach(function(key) {
     var gp = VE_GEARBOX_PRESETS[key];
     var fwdCount = gp.gears.filter(function(g) { return g.gear !== 'R'; }).length;
-    var calMark = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '') + (gp.partialData ? ' ★' : '');
+    var calMark = (gp.calibrated ? ' ✦' : '') + (gp.downshiftCalibrated ? ' ✧' : '');
     var sel = (key === selectedGearbox) ? ' selected' : '';
     html += '<option value="' + key + '"' + sel + '>' + gp.name + ' (' + fwdCount + 'V)' + calMark + '</option>';
   });
   html += '<option value="__new__">➕ Manuel Giriş</option>';
   html += '</select>';
   html += '</div>';
-  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon &nbsp; <span style="color:#e53e3e;" title="Eksik veri — sadece vites oranları mevcut">★</span> = Eksik veri</div>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
   if(_hasEGM2) {
     html += '<div class="sw-chain-bar fail">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
   }
@@ -15264,7 +15264,6 @@ var VE_GEARBOX_PRESETS = {
     name: 'Allison | 2957 SP Wide',
     family: '',
     calibrated: false,
-    partialData: true,
     grossInputPower: null,
     grossInputTorque: null,
     netTurbineTorque: null,
