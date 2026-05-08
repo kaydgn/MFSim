@@ -13547,11 +13547,7 @@ function getGearboxPropertiesHTML(node) {
 
     html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
     
-    // Shift Profili — şanzıman ailesine göre filtrelenmiş
-    var gbFamily = '';
-    if(ftGBPreset && VE_GEARBOX_PRESETS[ftGBPreset]) {
-      gbFamily = VE_GEARBOX_PRESETS[ftGBPreset].family || '';
-    }
+    // Shift Profili — yalnızca seçili şanzımana ait kalibrasyonlar
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Shift Profili</th>';
     html += '<td style="padding:4px 6px; background:var(--bg-tertiary);">';
@@ -13560,25 +13556,24 @@ function getGearboxPropertiesHTML(node) {
     var spFirstMatch = '';
     var spCurrentValid = false;
     Object.keys(VE_FT_SHIFT_PROFILES).forEach(function(spKey) {
-      var sp = VE_FT_SHIFT_PROFILES[spKey];
-      if(gbFamily && sp.family && sp.family !== gbFamily) return;
+      if(!ftGBPreset || veGetGearboxKeyFromShiftProfile(spKey) !== ftGBPreset) return;
       if(!spFirstMatch) spFirstMatch = spKey;
       if(spKey === shiftProfile) spCurrentValid = true;
       spCount++;
     });
-    // Eğer mevcut profil bu aileye ait değilse, ilk uyumlu profili seç
-    if(!spCurrentValid && spFirstMatch) {
+    // Eğer mevcut profil bu şanzımana ait değilse, ilk uyumlu profili seç (yoksa temizle)
+    if(!spCurrentValid) {
       shiftProfile = spFirstMatch;
       nodeData.shiftProfile = spFirstMatch;
     }
     Object.keys(VE_FT_SHIFT_PROFILES).forEach(function(spKey) {
+      if(!ftGBPreset || veGetGearboxKeyFromShiftProfile(spKey) !== ftGBPreset) return;
       var sp = VE_FT_SHIFT_PROFILES[spKey];
-      if(gbFamily && sp.family && sp.family !== gbFamily) return;
       var sel = (spKey === shiftProfile) ? ' selected' : '';
       html += '<option value="' + spKey + '"' + sel + '>' + sp.name + ' ✦</option>';
     });
     if(spCount === 0) {
-      html += '<option value="" disabled selected>— Bu aile için profil tanımlı değil —</option>';
+      html += '<option value="" disabled selected>— Bu şanzıman için kalibrasyon yok —</option>';
     }
     html += '</select>';
     html += '</td>';
@@ -14781,6 +14776,15 @@ var VE_FT_SHIFT_PROFILES = {
   }
 };
 
+// Profil adından şanzıman kodunu (preset key) çıkarır.
+// Örn: "Allison 3200 SP — S1 Performance" → "3200SP"
+function veGetGearboxKeyFromShiftProfile(spKey) {
+  var sp = VE_FT_SHIFT_PROFILES[spKey];
+  if(!sp || !sp.name) return '';
+  var m = sp.name.match(/Allison\s+(\d+)\s*SP/i);
+  return m ? (m[1] + 'SP') : '';
+}
+
 // Tam Gaz — Şanzıman parametre değişikliği
 function onVEFTGBParamChange(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
@@ -14921,15 +14925,13 @@ function onVEFTGBPresetSelect(nodeId, value) {
   
   saveVEFTGearData(nodeId);
   
-  // Şanzıman ailesi değiştiğinde shift profilini otomatik eşleştir
-  var newFamily = preset.family || '';
+  // Şanzıman değiştiğinde shift profilini bu şanzımana özel kalibrasyonla eşleştir
   var currentSP = node.data.shiftProfile || '';
-  var currentSPData = VE_FT_SHIFT_PROFILES[currentSP];
-  // Mevcut profil yeni aileyle uyumsuzsa → ilk uyumlu profili seç
-  if(!currentSPData || (currentSPData.family && currentSPData.family !== newFamily)) {
+  var currentMatchesGB = currentSP && veGetGearboxKeyFromShiftProfile(currentSP) === value;
+  if(!currentMatchesGB) {
     var matchKey = '';
     Object.keys(VE_FT_SHIFT_PROFILES).forEach(function(spk) {
-      if(!matchKey && VE_FT_SHIFT_PROFILES[spk].family === newFamily) matchKey = spk;
+      if(!matchKey && veGetGearboxKeyFromShiftProfile(spk) === value) matchKey = spk;
     });
     if(matchKey) {
       node.data.shiftProfile = matchKey;
@@ -14937,6 +14939,9 @@ function onVEFTGBPresetSelect(nodeId, value) {
       node.data.lockupOffset = msp.lockupOffset;
       node.data.shift1C2C_outRatio = msp.shift1C2C_outRatio;
       node.data.shift2C2L_outRatio = msp.shift2C2L_outRatio;
+    } else {
+      // Bu şanzıman için kalibrasyon yok → profil seçimini temizle
+      node.data.shiftProfile = '';
     }
   }
   
