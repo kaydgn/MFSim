@@ -75,7 +75,65 @@ function veFEAInitViewer(canvas, opts) {
     renderer: renderer,
     target: target,
     render: render,
+    // F2b: Geometri katmanı — primitifler / STL / STEP burada yaşar.
+    // Sahnenin diğer öğelerinden (grid, axes, ışıklar) ayrı tutulur ki
+    // clearGeometry() yardımcıları silmesin.
+    _geometryRoot: (function() {
+      var root = new THREE.Group();
+      root.name = 'feaGeometryRoot';
+      scene.add(root);
+      return root;
+    })(),
+    loadPrimitive: function(type, params) {
+      if(typeof veFEABuildPrimitiveMesh !== 'function') return null;
+      this.clearGeometry();
+      var mesh = veFEABuildPrimitiveMesh(type, params);
+      if(!mesh) return null;
+      this._geometryRoot.add(mesh);
+      this.zoomToFit(mesh);
+      render();
+      return mesh;
+    },
+    clearGeometry: function() {
+      // Group içindeki tüm child'ları sil + buffer cleanup
+      while(this._geometryRoot.children.length > 0) {
+        var c = this._geometryRoot.children[0];
+        this._geometryRoot.remove(c);
+        c.traverse(function(o) {
+          if(o.geometry && o.geometry.dispose) o.geometry.dispose();
+          if(o.material) {
+            if(Array.isArray(o.material)) o.material.forEach(function(m) { m.dispose && m.dispose(); });
+            else if(o.material.dispose) o.material.dispose();
+          }
+        });
+      }
+      render();
+    },
+    zoomToFit: function(object) {
+      var box = new THREE.Box3().setFromObject(object);
+      if(box.isEmpty()) return;
+      var size = box.getSize(new THREE.Vector3());
+      var center = box.getCenter(new THREE.Vector3());
+      var maxDim = Math.max(size.x, size.y, size.z);
+      if(maxDim <= 0) return;
+      var fov = camera.fov * (Math.PI / 180);
+      var distance = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
+      target.copy(center);
+      // Mevcut kamera yön vektörünü koru, sadece uzaklık değiştir
+      var dir = camera.position.clone().sub(target);
+      if(dir.lengthSq() < 1e-6) dir.set(1, 0.8, 1); // dejenere — varsayılan yön
+      dir.normalize().multiplyScalar(distance);
+      camera.position.copy(target).add(dir);
+      camera.near = Math.max(0.1, distance * 0.01);
+      camera.far = distance * 100;
+      camera.updateProjectionMatrix();
+      camera.lookAt(target);
+      // Orbit controls'un spherical state'ini senkronla
+      if(orbitHandle.sync) orbitHandle.sync();
+      render();
+    },
     dispose: function() {
+      this.clearGeometry();
       orbitHandle.dispose();
       renderer.dispose();
       // WebGL context cleanup
@@ -170,6 +228,11 @@ function veFEAAttachOrbitControls(canvas, camera, target, requestRender) {
   window.addEventListener('mouseup', onMouseUp);
 
   return {
+    // zoomToFit gibi dış çağrılar kamerayı değiştirir; spherical state'i
+    // mevcut camera pozisyonundan yeniden hesaplayarak senkronla.
+    sync: function() {
+      spherical.setFromVector3(camera.position.clone().sub(target));
+    },
     dispose: function() {
       canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('contextmenu', onContextMenu);
@@ -210,7 +273,68 @@ function veFEAInitGeometryViewerForNode(nodeId) {
     width: canvas.clientWidth || 240,
     height: canvas.clientHeight || 180
   });
-  if(viewer) veFEAViewerRegistry[nodeId] = viewer;
+  if(!viewer) return;
+  veFEAViewerRegistry[nodeId] = viewer;
+
+  // Kalıcı geometri state'i — node.data.geometry varsa otomatik yükle
+  if(typeof nodes !== 'undefined') {
+    var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
+    if(node && node.data && node.data.geometry && node.data.geometry.type) {
+      viewer.loadPrimitive(node.data.geometry.type, node.data.geometry.params);
+    }
+  }
+}
+
+// ─── Geometri uygulama köprüsü — cp-fea.js UI'sinden çağrılır ───────────────
+// nodeId üzerine primitif yükler, node.data.geometry'yi günceller, paneli
+// yeniden render eder (durum tablosu / "Geometriyi Sil" butonu güncellensin).
+function veFEAApplyPrimitive(nodeId, type, params) {
+  var viewer = veFEAViewerRegistry[nodeId];
+  if(!viewer) return;
+  var p = (typeof veFEANormalizePrimitiveParams === 'function')
+    ? veFEANormalizePrimitiveParams(type, params)
+    : params;
+  viewer.loadPrimitive(type, p);
+
+  // Persist
+  if(typeof nodes !== 'undefined') {
+    var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
+    if(node) {
+      node.data = node.data || {};
+      var stats = (typeof veFEAPrimitiveStats === 'function') ? veFEAPrimitiveStats(type, p) : null;
+      node.data.geometry = {
+        type: type,
+        params: p,
+        volume: stats ? stats.volume : null,
+        surfaceArea: stats ? stats.surfaceArea : null,
+        bbox: stats ? stats.bbox : null,
+        sourceLabel: (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(type) : type
+      };
+      if(typeof saveState === 'function') saveState();
+    }
+  }
+
+  // Panel yeniden render — durum tablosu güncellensin
+  if(typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
+    var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
+    if(n) showNodeProperties(n);
+  }
+}
+
+function veFEAClearGeometryForNode(nodeId) {
+  var viewer = veFEAViewerRegistry[nodeId];
+  if(viewer) viewer.clearGeometry();
+  if(typeof nodes !== 'undefined') {
+    var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
+    if(node && node.data) {
+      delete node.data.geometry;
+      if(typeof saveState === 'function') saveState();
+    }
+  }
+  if(typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
+    var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
+    if(n) showNodeProperties(n);
+  }
 }
 
 // ─── Tam ekran modal ────────────────────────────────────────────────────────
