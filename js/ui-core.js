@@ -119,14 +119,20 @@ document.addEventListener('DOMContentLoaded', function() {
     e.preventDefault();
     var type = e.dataTransfer.getData('component-type');
     if(!type || !componentDefs[type]) return;
-    
+
     var rect = canvasWrapper.getBoundingClientRect();
     // Canvas başlangıç offseti (CSS'de top:-3000px, left:-3000px)
     var canvasInitialOffset = 3000;
     // Mouse pozisyonunu canvas koordinatlarına çevir
     var x = (e.clientX - rect.left - canvasOffset.x) / canvasZoom + canvasInitialOffset - 40;
     var y = (e.clientY - rect.top - canvasOffset.y) / canvasZoom + canvasInitialOffset - 50;
-    
+
+    // FEA ebeveyni: tek bir node yerine 2×2 alt-blok zinciri üret
+    if(componentDefs[type].isFEAParent) {
+      spawnFEAChain(x, y);
+      return;
+    }
+
     createNode(type, x, y);
   });
   
@@ -455,7 +461,13 @@ function createCurvedPath(x1, y1, x2, y2) {
 function createNode(type, x, y, width, height) {
   var def = componentDefs[type];
   if(!def) return;
-  
+
+  // FEA ebeveyni asla doğrudan node olamaz — yalnız spawnFEAChain ile zincir üretir
+  if(def.isFEAParent) {
+    spawnFEAChain(x, y);
+    return;
+  }
+
   // maxInstances kontrolü
   if(def.maxInstances) {
     var existingCount = nodes.filter(function(n) { return n.type === type; }).length;
@@ -702,9 +714,64 @@ function createConnection(fromNodeId, toNodeId, fromPort, toPort) {
   
   updateAllConnections();
   updateNodeCount();
-  
+
   // TC ↔ Şanzıman bağlantısı kontrolü: Şanzıman Kontrol zorunluluğu
   veCheckShiftControllerRequired();
+}
+
+// ═══ Yapısal Analiz zinciri ═══════════════════════════════════════════════
+// 2×2 grid:  Geometri → Mesh   (üst sıra)
+//                ↓
+//            Sınır Koş. → Çözücü (alt sıra)
+// Bağlantı topolojisi (akış sırası): Geometri → Mesh → Sınır Koş. → Çözücü
+function spawnFEAChain(x, y) {
+  // Tekrar eklemeyi engelle (zincir başına bir kez kontrol)
+  var hasChain = nodes.some(function(n) {
+    return n.type === 'fea-geometry' || n.type === 'fea-mesh' ||
+           n.type === 'fea-bc' || n.type === 'fea-solver';
+  });
+  if(hasChain) {
+    if(typeof showToast === 'function') showToast('Yapısal Analiz zinciri zaten mevcut. Aynı projede bir tane bulundurabilirsiniz.', 'warning');
+    else if(typeof showNotification === 'function') showNotification('⚠️ Yapısal Analiz zinciri zaten mevcut.', 'warning');
+    return;
+  }
+
+  // 2×2 grid yerleşimi
+  var cellW = 65, cellH = 60;
+  var gapX = 80, gapY = 70;
+  var positions = {
+    'fea-geometry': { x: x,                   y: y },
+    'fea-mesh':     { x: x + cellW + gapX,    y: y },
+    'fea-bc':       { x: x,                   y: y + cellH + gapY },
+    'fea-solver':   { x: x + cellW + gapX,    y: y + cellH + gapY }
+  };
+
+  // Önce 4 node oluştur, sonra ID'leri toplayıp bağlantıları çek
+  var created = {};
+  ['fea-geometry','fea-mesh','fea-bc','fea-solver'].forEach(function(t) {
+    var idBefore = compCounter;
+    createNode(t, positions[t].x, positions[t].y);
+    // En son eklenen node'u yakala (createNode sonunda push edilir)
+    var newNode = nodes[nodes.length - 1];
+    if(newNode && newNode.type === t) {
+      created[t] = newNode.id;
+    }
+  });
+
+  // Bağlantılar: akış sırasına göre. Tüm 4 node oluştuysa kur.
+  if(created['fea-geometry'] && created['fea-mesh']) {
+    createConnection(created['fea-geometry'], created['fea-mesh'], 'output', 'input');
+  }
+  if(created['fea-mesh'] && created['fea-bc']) {
+    createConnection(created['fea-mesh'], created['fea-bc'], 'output', 'input');
+  }
+  if(created['fea-bc'] && created['fea-solver']) {
+    createConnection(created['fea-bc'], created['fea-solver'], 'output', 'input');
+  }
+
+  if(typeof showToast === 'function') {
+    showToast('Yapısal Analiz zinciri eklendi (4 bileşen, 3 bağlantı).', 'success');
+  }
 }
 
 // ═══ TC ↔ Şanzıman bağlantısında Şanzıman Kontrol zorunluluğu ═══

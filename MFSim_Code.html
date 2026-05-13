@@ -2637,6 +2637,18 @@ function mfsimLogout() {
           </div>
           
           <div class="ve-category">
+            <div class="ve-category-title">Yapısal Analiz</div>
+            <div class="ve-component" draggable="true" data-type="fea" title="Sürüklediğinizde Geometri → Mesh → Sınır Koşulları → Çözücü zincirini oluşturur">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="10" y="10" width="80" height="80" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
+                <path d="M20 30 L50 20 L80 30 L80 70 L50 80 L20 70 Z" fill="none" stroke="currentColor" stroke-width="3"/>
+                <line x1="50" y1="20" x2="50" y2="80" stroke="currentColor" stroke-width="2"/>
+                <line x1="20" y1="30" x2="80" y2="30" stroke="currentColor" stroke-width="2"/>
+                <line x1="20" y1="70" x2="80" y2="70" stroke="currentColor" stroke-width="2"/>
+              </svg> <span class="ve-comp-label">Yapısal Analiz</span></div>
+          </div>
+
+          <div class="ve-category">
             <div class="ve-category-title">Analiz</div>
             <div class="ve-component" draggable="true" data-type="parametric">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -7859,7 +7871,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','fea'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -8037,6 +8049,45 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><circle cx="35" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="35" cy="60" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="60" r="6" fill="var(--text-secondary, #666)"/><path d="M35 35 L35 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><path d="M35 60 L65 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="60" r="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="2"/></svg>',
     inputs: 0,
     outputs: 0
+  },
+  // ── Yapısal Analiz (FEA) zinciri ─────────────────────────────────────────
+  // 'fea' bir sidebar girdisidir; canvas'a sürüklendiğinde 4 alt blok üretir.
+  // Bu tip nodes[] dizisine asla doğrudan eklenmez (bkz. ui-core.js spawnFEAChain).
+  'fea': {
+    name: 'Yapısal Analiz',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><path d="M20 30 L50 20 L80 30 L80 70 L50 80 L20 70 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5"/><line x1="50" y1="20" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="80" y2="30" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="70" x2="80" y2="70" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/><line x1="80" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    maxInstances: 1,
+    isFEAParent: true
+  },
+  'fea-geometry': {
+    name: 'Geometri',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M20 35 L50 20 L80 35 L80 70 L50 85 L20 70 Z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><path d="M20 35 L50 50 L80 35" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><line x1="50" y1="50" x2="50" y2="85" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/></svg>',
+    inputs: 0,
+    outputs: 1,
+    isFEAChild: true
+  },
+  'fea-mesh': {
+    name: 'Mesh',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><polygon points="50,15 85,40 85,75 50,85 15,75 15,40" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3"/><line x1="50" y1="15" x2="50" y2="85" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="15" y1="40" x2="85" y2="40" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="15" y1="75" x2="85" y2="75" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="15" y1="40" x2="50" y2="85" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="85" y1="40" x2="50" y2="85" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="50" y1="15" x2="15" y2="75" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="50" y1="15" x2="85" y2="75" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/></svg>',
+    inputs: 1,
+    outputs: 1,
+    isFEAChild: true
+  },
+  'fea-bc': {
+    name: 'Sınır Koşulları',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="15" y1="80" x2="85" y2="80" stroke="var(--text-secondary, #666)" stroke-width="3"/><line x1="20" y1="80" x2="14" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><line x1="35" y1="80" x2="29" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><line x1="50" y1="80" x2="44" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><line x1="65" y1="80" x2="59" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><line x1="80" y1="80" x2="74" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><rect x="25" y="40" width="50" height="40" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><line x1="50" y1="10" x2="50" y2="38" stroke="var(--accent-danger, #ef4444)" stroke-width="4"/><polygon points="44,32 50,42 56,32" fill="var(--accent-danger, #ef4444)"/></svg>',
+    inputs: 1,
+    outputs: 1,
+    isFEAChild: true
+  },
+  'fea-solver': {
+    name: 'FEA Çözücü',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="6" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4"/><polygon points="38,28 38,72 70,50" fill="var(--accent-success, #22c55e)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg>',
+    inputs: 1,
+    outputs: 0,
+    isFEAChild: true
   }
 };
 
@@ -8194,6 +8245,17 @@ var COMPONENT_SIGNALS = {
     outputs: [
       {id: 'current_gear', name: 'Aktif Vites', unit: '−'},
       {id: 'shift_time', name: 'Geçiş Süresi', unit: 's'}
+    ]
+  },
+  // Yapısal Analiz çıktıları — şimdilik stub (F5/F6 ile dolacak)
+  'fea-solver': {
+    outputs: [
+      {id: 'max_von_mises', name: 'Maks. von Mises', unit: 'MPa'},
+      {id: 'max_displacement', name: 'Maks. Deplasman', unit: 'mm'},
+      {id: 'max_principal', name: 'Maks. Asal Gerilme', unit: 'MPa'},
+      {id: 'min_principal', name: 'Min. Asal Gerilme', unit: 'MPa'},
+      {id: 'safety_factor', name: 'Güvenlik Faktörü', unit: '−'},
+      {id: 'mass', name: 'Toplam Kütle', unit: 'kg'}
     ]
   }
 };
@@ -9535,14 +9597,20 @@ document.addEventListener('DOMContentLoaded', function() {
     e.preventDefault();
     var type = e.dataTransfer.getData('component-type');
     if(!type || !componentDefs[type]) return;
-    
+
     var rect = canvasWrapper.getBoundingClientRect();
     // Canvas başlangıç offseti (CSS'de top:-3000px, left:-3000px)
     var canvasInitialOffset = 3000;
     // Mouse pozisyonunu canvas koordinatlarına çevir
     var x = (e.clientX - rect.left - canvasOffset.x) / canvasZoom + canvasInitialOffset - 40;
     var y = (e.clientY - rect.top - canvasOffset.y) / canvasZoom + canvasInitialOffset - 50;
-    
+
+    // FEA ebeveyni: tek bir node yerine 2×2 alt-blok zinciri üret
+    if(componentDefs[type].isFEAParent) {
+      spawnFEAChain(x, y);
+      return;
+    }
+
     createNode(type, x, y);
   });
   
@@ -9871,7 +9939,13 @@ function createCurvedPath(x1, y1, x2, y2) {
 function createNode(type, x, y, width, height) {
   var def = componentDefs[type];
   if(!def) return;
-  
+
+  // FEA ebeveyni asla doğrudan node olamaz — yalnız spawnFEAChain ile zincir üretir
+  if(def.isFEAParent) {
+    spawnFEAChain(x, y);
+    return;
+  }
+
   // maxInstances kontrolü
   if(def.maxInstances) {
     var existingCount = nodes.filter(function(n) { return n.type === type; }).length;
@@ -10118,9 +10192,64 @@ function createConnection(fromNodeId, toNodeId, fromPort, toPort) {
   
   updateAllConnections();
   updateNodeCount();
-  
+
   // TC ↔ Şanzıman bağlantısı kontrolü: Şanzıman Kontrol zorunluluğu
   veCheckShiftControllerRequired();
+}
+
+// ═══ Yapısal Analiz zinciri ═══════════════════════════════════════════════
+// 2×2 grid:  Geometri → Mesh   (üst sıra)
+//                ↓
+//            Sınır Koş. → Çözücü (alt sıra)
+// Bağlantı topolojisi (akış sırası): Geometri → Mesh → Sınır Koş. → Çözücü
+function spawnFEAChain(x, y) {
+  // Tekrar eklemeyi engelle (zincir başına bir kez kontrol)
+  var hasChain = nodes.some(function(n) {
+    return n.type === 'fea-geometry' || n.type === 'fea-mesh' ||
+           n.type === 'fea-bc' || n.type === 'fea-solver';
+  });
+  if(hasChain) {
+    if(typeof showToast === 'function') showToast('Yapısal Analiz zinciri zaten mevcut. Aynı projede bir tane bulundurabilirsiniz.', 'warning');
+    else if(typeof showNotification === 'function') showNotification('⚠️ Yapısal Analiz zinciri zaten mevcut.', 'warning');
+    return;
+  }
+
+  // 2×2 grid yerleşimi
+  var cellW = 65, cellH = 60;
+  var gapX = 80, gapY = 70;
+  var positions = {
+    'fea-geometry': { x: x,                   y: y },
+    'fea-mesh':     { x: x + cellW + gapX,    y: y },
+    'fea-bc':       { x: x,                   y: y + cellH + gapY },
+    'fea-solver':   { x: x + cellW + gapX,    y: y + cellH + gapY }
+  };
+
+  // Önce 4 node oluştur, sonra ID'leri toplayıp bağlantıları çek
+  var created = {};
+  ['fea-geometry','fea-mesh','fea-bc','fea-solver'].forEach(function(t) {
+    var idBefore = compCounter;
+    createNode(t, positions[t].x, positions[t].y);
+    // En son eklenen node'u yakala (createNode sonunda push edilir)
+    var newNode = nodes[nodes.length - 1];
+    if(newNode && newNode.type === t) {
+      created[t] = newNode.id;
+    }
+  });
+
+  // Bağlantılar: akış sırasına göre. Tüm 4 node oluştuysa kur.
+  if(created['fea-geometry'] && created['fea-mesh']) {
+    createConnection(created['fea-geometry'], created['fea-mesh'], 'output', 'input');
+  }
+  if(created['fea-mesh'] && created['fea-bc']) {
+    createConnection(created['fea-mesh'], created['fea-bc'], 'output', 'input');
+  }
+  if(created['fea-bc'] && created['fea-solver']) {
+    createConnection(created['fea-bc'], created['fea-solver'], 'output', 'input');
+  }
+
+  if(typeof showToast === 'function') {
+    showToast('Yapısal Analiz zinciri eklendi (4 bileşen, 3 bağlantı).', 'success');
+  }
 }
 
 // ═══ TC ↔ Şanzıman bağlantısında Şanzıman Kontrol zorunluluğu ═══
@@ -10355,6 +10484,14 @@ function showNodeProperties(node) {
     html += getTerminatorPropertiesHTML(node);
   } else if(node.type === 'gear-shift') {
     html += getGearShiftPropertiesHTML(node);
+  } else if(node.type === 'fea-geometry') {
+    html += getFEAGeometryPropertiesHTML(node);
+  } else if(node.type === 'fea-mesh') {
+    html += getFEAMeshPropertiesHTML(node);
+  } else if(node.type === 'fea-bc') {
+    html += getFEABCPropertiesHTML(node);
+  } else if(node.type === 'fea-solver') {
+    html += getFEASolverPropertiesHTML(node);
   } else {
     html += getDefaultPropertiesHTML(node);
   }
@@ -19368,6 +19505,174 @@ function onVEGearShiftProfileChange(nodeId) {
   }
 }
 
+
+</script>
+<script>
+// ============================================================================
+// YAPISAL ANALİZ (FEA) — Kontrol Paneli İskeletleri
+// ============================================================================
+// Bu dosya FEA zincirinin 4 alt bileşeninin (Geometri, Mesh, Sınır Koşulları,
+// Çözücü) özellik panelini sağlar. F1 aşamasında yalnız iskelet vardır;
+// gerçek işlev sonraki fazlarda (F2-F6) dolacak:
+//   F2 → Geometri: Three.js viewer + OCCT.js + STEP/IGES/STL import
+//   F3 → Mesh: tet4/tet10, mesh boyu, kalite metrikleri
+//   F4 → Sınır Koşulları: fix/displacement/force/pressure
+//   F5 → Çözücü: sparse assembly + PCG + von Mises
+//   F6 → Post-process: kontur, deformasyon
+// ============================================================================
+
+function veFEAPhaseBadge(phase) {
+  return '<span style="font-size:0.52rem; font-weight:600; color:#b45309; background:#fef3c720; padding:2px 7px; border-radius:0; border:1px solid #f59e0b40; letter-spacing:0.03em; text-transform:uppercase;">' + phase + ' — yapım aşamasında</span>';
+}
+
+function veFEASectionTitle(text) {
+  return '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin:10px 0 6px;">' + text + '</div>';
+}
+
+function veFEAReadOnlyRow(label, value) {
+  return '<div style="display:flex; justify-content:space-between; align-items:center; padding:5px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); margin-bottom:4px; font-size:0.66rem;">' +
+    '<span style="color:var(--text-secondary);">' + label + '</span>' +
+    '<span style="font-weight:600; color:var(--text-primary);">' + value + '</span>' +
+    '</div>';
+}
+
+// ─── 1. GEOMETRİ ────────────────────────────────────────────────────────────
+function getFEAGeometryPropertiesHTML(node) {
+  var d = node.data || {};
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+
+  html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+  html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Geometri</div>';
+  html += veFEAPhaseBadge('Faz 2');
+  html += '</div>';
+
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
+    'CAD geometrisi (STEP, IGES, STL) yükleyin veya parametrik primitif tanımlayın. ' +
+    'Sonraki adım: <b>Mesh</b>.</div>';
+
+  html += veFEASectionTitle('Geometri Kaynağı');
+  html += '<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">';
+  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 Dosya İçe Aktar (STEP / IGES / STL) — F2</button>';
+  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📐 Parametrik Primitif (kutu / silindir / şaft) — F2</button>';
+  html += '</div>';
+
+  html += veFEASectionTitle('Durum');
+  html += veFEAReadOnlyRow('Yüklenen geometri', d.geometryName || '— (henüz yok)');
+  html += veFEAReadOnlyRow('Hacim', '—');
+  html += veFEAReadOnlyRow('Yüzey alanı', '—');
+  html += veFEAReadOnlyRow('Sınırlayıcı kutu', '—');
+
+  html += '</div>';
+  return html;
+}
+
+// ─── 2. MESH ────────────────────────────────────────────────────────────────
+function getFEAMeshPropertiesHTML(node) {
+  var d = node.data || {};
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+
+  html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+  html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Mesh</div>';
+  html += veFEAPhaseBadge('Faz 3');
+  html += '</div>';
+
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
+    'Geometriyi sonlu elemanlara böler. Eleman tipi ve boyu kalite/doğruluk dengesini belirler. ' +
+    'Önceki: <b>Geometri</b>, sonraki: <b>Sınır Koşulları</b>.</div>';
+
+  html += veFEASectionTitle('Eleman Tipi (F3)');
+  html += '<select disabled style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); margin-bottom:8px;">';
+  html += '<option>Tet10 (kuadratik tetra — önerilen)</option>';
+  html += '<option>Tet4 (lineer tetra — hızlı)</option>';
+  html += '<option>Hex8 + Tet10 hibrit</option>';
+  html += '</select>';
+
+  html += veFEASectionTitle('Mesh Boyu');
+  html += '<div style="display:flex; gap:4px; margin-bottom:8px;">';
+  html += '<button disabled style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed;">Coarse</button>';
+  html += '<button disabled style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed;">Medium</button>';
+  html += '<button disabled style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed;">Fine</button>';
+  html += '</div>';
+
+  html += veFEASectionTitle('Kalite Metrikleri');
+  html += veFEAReadOnlyRow('Düğüm sayısı', '—');
+  html += veFEAReadOnlyRow('Eleman sayısı', '—');
+  html += veFEAReadOnlyRow('Min. Jacobian', '—');
+  html += veFEAReadOnlyRow('Maks. aspect ratio', '—');
+
+  html += '</div>';
+  return html;
+}
+
+// ─── 3. SINIR KOŞULLARI ─────────────────────────────────────────────────────
+function getFEABCPropertiesHTML(node) {
+  var d = node.data || {};
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+
+  html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+  html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Sınır Koşulları</div>';
+  html += veFEAPhaseBadge('Faz 4');
+  html += '</div>';
+
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
+    'Malzeme, mesnetler ve yükler. Statik analiz için en az bir fix-support ve bir yük gereklidir.</div>';
+
+  html += veFEASectionTitle('Malzeme (F4)');
+  html += '<select disabled style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); margin-bottom:8px;">';
+  html += '<option>Yapısal Çelik (E=200 GPa, ν=0.30)</option>';
+  html += '<option>Alüminyum 6061 (E=69 GPa, ν=0.33)</option>';
+  html += '<option>Özel — manuel giriş…</option>';
+  html += '</select>';
+
+  html += veFEASectionTitle('Mesnetler');
+  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left; margin-bottom:6px;">+ Fixed Support — F4</button>';
+  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left; margin-bottom:8px;">+ Displacement — F4</button>';
+
+  html += veFEASectionTitle('Yükler');
+  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left; margin-bottom:6px;">+ Force (N) — F4</button>';
+  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left; margin-bottom:6px;">+ Pressure (MPa) — F4</button>';
+  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">+ Moment (Nm) — F4</button>';
+
+  html += '</div>';
+  return html;
+}
+
+// ─── 4. FEA ÇÖZÜCÜ ──────────────────────────────────────────────────────────
+function getFEASolverPropertiesHTML(node) {
+  var d = node.data || {};
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+
+  html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+  html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">FEA Çözücü</div>';
+  html += veFEAPhaseBadge('Faz 5');
+  html += '</div>';
+
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
+    'Lineer statik yapısal analiz: <code>[K]{u}={F}</code>. ' +
+    'Çözüm sonrası von Mises, asal gerilmeler ve deplasman hesaplanır.</div>';
+
+  html += veFEASectionTitle('Çözüm Türü');
+  html += '<div style="padding:6px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.66rem; color:var(--text-primary); margin-bottom:8px;">Lineer Statik (Static Structural)</div>';
+
+  html += veFEASectionTitle('Çözücü Ayarları (F5)');
+  html += '<select disabled style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); margin-bottom:6px;">';
+  html += '<option>Conjugate Gradient (Jacobi preconditioner) — varsayılan</option>';
+  html += '<option>Direct LDLᵀ (küçük modeller için)</option>';
+  html += '</select>';
+
+  html += '<button disabled style="width:100%; padding:8px 10px; font-size:0.7rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; margin-bottom:10px;">▶ Çöz — F5</button>';
+
+  html += veFEASectionTitle('Sonuçlar (F5/F6 — sensörle okunabilir)');
+  html += veFEAReadOnlyRow('Maks. von Mises', '—');
+  html += veFEAReadOnlyRow('Maks. deplasman', '—');
+  html += veFEAReadOnlyRow('Maks. asal gerilme', '—');
+  html += veFEAReadOnlyRow('Min. asal gerilme', '—');
+  html += veFEAReadOnlyRow('Güvenlik faktörü', '—');
+  html += veFEAReadOnlyRow('Toplam kütle', '—');
+
+  html += '</div>';
+  return html;
+}
 
 </script>
 <script>
