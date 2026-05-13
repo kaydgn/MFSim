@@ -306,6 +306,13 @@ function getFEAMeshPropertiesHTML(node) {
     '<input type="checkbox" id="ve-fea-mesh-curv-' + node.id + '"' + (curv.enabled ? ' checked' : '') + ' style="margin:0;">' +
     '<span>Eğrilik tabanlı incelt <span style="color:var(--text-muted);">(silindir/şaft çevresel)</span></span>' +
   '</label>';
+
+  // Web Worker — arka planda hesapla (büyük mesh için UI dondurmaz)
+  var useWorkerOn = settings.useWorker === true;
+  html += '<label style="display:flex; align-items:center; gap:6px; padding:5px 8px; margin-bottom:6px; background:var(--bg-secondary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
+    '<input type="checkbox" id="ve-fea-mesh-worker-' + node.id + '"' + (useWorkerOn ? ' checked' : '') + ' style="margin:0;">' +
+    '<span>Web Worker\'da hesapla <span style="color:var(--text-muted);">(büyük mesh için, UI dondurmaz)</span></span>' +
+  '</label>';
   html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; padding-left:24px;">' +
     '<label for="ve-fea-mesh-curv-ang-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">Maks yüzey açısı</label>' +
     '<input id="ve-fea-mesh-curv-ang-' + node.id + '" type="number" min="1" max="90" step="1" value="' + (curv.normalAngleDeg || 18) + '" style="width:60px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
@@ -589,6 +596,8 @@ function veFEASubmitMeshBuild(nodeId) {
       growthRate: localGrow,
       layerCount: localNlay
     };
+    var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);
+    meshNode.data.meshSettings.useWorker = !!(workerEl && workerEl.checked);
   }
   veFEABuildMeshForNode(nodeId);
 }

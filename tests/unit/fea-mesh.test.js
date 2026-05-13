@@ -400,6 +400,88 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAMeshFromGeometryViaWorker (Worker async + sync fallback)', () => {
+  beforeEach(() => {
+    // jsdom Worker desteklemiyor → her test sync fallback yoluna gider
+    VE_FEA_MESH_WORKER_FAILED = false;
+    VE_FEA_MESH_WORKER = null;
+    Object.keys(VE_FEA_MESH_WORKER_REQS).forEach((k) => delete VE_FEA_MESH_WORKER_REQS[k]);
+  });
+
+  test('Worker yokken sync fallback ile box mesh oluşur (Promise)', () => {
+    return veFEAMeshFromGeometryViaWorker(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5 }
+    ).then(function(mesh) {
+      expect(mesh).not.toBeNull();
+      expect(mesh.type).toBe('hex8');
+      expect(mesh.elements.length / 8).toBe(8);
+    });
+  });
+
+  test('Sync fallback ile cylinder mesh', () => {
+    return veFEAMeshFromGeometryViaWorker(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5 }
+    ).then(function(mesh) {
+      expect(mesh.type).toBe('wedge6');
+    });
+  });
+
+  test('Geçersiz geometri ile reject olur veya null mesh döner', () => {
+    return veFEAMeshFromGeometryViaWorker(null, {}).then(function(mesh) {
+      expect(mesh).toBeNull();
+    });
+  });
+
+  test('elementType tet4 + Worker fallback', () => {
+    return veFEAMeshFromGeometryViaWorker(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, elementType: 'tet4' }
+    ).then(function(mesh) {
+      expect(mesh.type).toBe('tet4');
+      expect(mesh.elements.length / 4).toBe(48);
+    });
+  });
+
+  test('Worker FAILED flag → ikinci çağrıda da sync fallback', () => {
+    VE_FEA_MESH_WORKER_FAILED = true;
+    return veFEAMeshFromGeometryViaWorker(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5 }
+    ).then(function(mesh) {
+      expect(mesh.type).toBe('hex8');
+    });
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Worker toggle UI', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Web Worker checkbox render edilir, default unchecked', () => {
+    var node = { id: 'mesh-w1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-worker-mesh-w1"/);
+    expect(html).toMatch(/Web Worker.*da hesapla/);
+    var match = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-worker-mesh-w1"[^>]*>/);
+    expect(match[0]).not.toMatch(/checked/);
+  });
+
+  test('Persisted useWorker:true → checkbox işaretli', () => {
+    var node = { id: 'mesh-w2', type: 'fea-mesh', data: { meshSettings: { size: 5, useWorker: true } } };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    var match = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-worker-mesh-w2"[^>]*>/);
+    expect(match[0]).toMatch(/checked/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEACombineMeshes (multi-body assembly)', () => {
   test('İki box mesh birleştirilir, eleman sayısı toplanır', () => {
     var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });

@@ -1736,6 +1736,75 @@ function veFEAComputeMeshMetrics(mesh) {
   };
 }
 
+// ─── Web Worker async mesh — UI thread'i bloke etmez ──────────────────────
+// Büyük mesh'lerde (>100k eleman tahmini) Worker'da hesapla, UI render'ı
+// dondurmaz. Worker yoksa veya hata varsa sync yola fallback.
+var VE_FEA_MESH_WORKER = null;
+var VE_FEA_MESH_WORKER_REQS = {};
+var VE_FEA_MESH_WORKER_FAILED = false;
+
+function _veFEAEnsureMeshWorker() {
+  if (VE_FEA_MESH_WORKER) return VE_FEA_MESH_WORKER;
+  if (VE_FEA_MESH_WORKER_FAILED) return null;
+  if (typeof Worker === 'undefined') { VE_FEA_MESH_WORKER_FAILED = true; return null; }
+  try {
+    // Dev: doğrudan path. Monolithic HTML için ileride inline blob URL desteği.
+    VE_FEA_MESH_WORKER = new Worker('js/fea-mesh-worker.js');
+    VE_FEA_MESH_WORKER.onmessage = function(e) {
+      var msg = e.data;
+      if (!msg || !msg.requestId) return;
+      var req = VE_FEA_MESH_WORKER_REQS[msg.requestId];
+      if (!req) return;
+      delete VE_FEA_MESH_WORKER_REQS[msg.requestId];
+      if (msg.type === 'meshResult') req.resolve(msg.result);
+      else if (msg.type === 'meshError') req.reject(new Error(msg.error || 'Worker hatası'));
+    };
+    VE_FEA_MESH_WORKER.onerror = function(err) {
+      console.error('[FEA Worker]', err.message || err);
+      VE_FEA_MESH_WORKER_FAILED = true;
+      // Bekleyen tüm istekleri reject et
+      Object.keys(VE_FEA_MESH_WORKER_REQS).forEach(function(rid) {
+        VE_FEA_MESH_WORKER_REQS[rid].reject(new Error('Worker hatası: ' + (err.message || 'unknown')));
+        delete VE_FEA_MESH_WORKER_REQS[rid];
+      });
+      try { VE_FEA_MESH_WORKER.terminate(); } catch (e2) {}
+      VE_FEA_MESH_WORKER = null;
+    };
+    return VE_FEA_MESH_WORKER;
+  } catch (err) {
+    console.warn('[FEA] Worker oluşturulamadı:', err);
+    VE_FEA_MESH_WORKER_FAILED = true;
+    return null;
+  }
+}
+
+// Mesh request'ini Worker'a gönder. Worker yoksa sync fallback.
+//   Returns: Promise<meshData>
+function veFEAMeshFromGeometryViaWorker(geometry, opts) {
+  return new Promise(function(resolve, reject) {
+    var worker = _veFEAEnsureMeshWorker();
+    if (!worker) {
+      // Sync fallback (test ortamı veya Worker desteklenmiyor)
+      try {
+        if (geometry && geometry.type === 'step' && typeof veFEAMeshFromGeometryAsync === 'function') {
+          veFEAMeshFromGeometryAsync(geometry, opts).then(resolve).catch(reject);
+        } else {
+          resolve(veFEAMeshFromGeometry(geometry, opts));
+        }
+      } catch (e) { reject(e); }
+      return;
+    }
+    var requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    VE_FEA_MESH_WORKER_REQS[requestId] = { resolve: resolve, reject: reject };
+    worker.postMessage({
+      type: 'meshFromGeometry',
+      requestId: requestId,
+      geometry: geometry,
+      opts: opts
+    });
+  });
+}
+
 // ─── Multi-body: mesh birleştirme + contact detection ─────────────────────
 // Birden fazla mesh'i tek bir mesh data'sı halinde birleştirir. Düğüm ID'leri
 // offset'lenir, elemanlar relabel olur, named selections prefix'lenir.

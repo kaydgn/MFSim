@@ -1093,6 +1093,7 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (settings.midSideNodes === undefined) settings.midSideNodes = false;
   if (!settings.curvatureRefinement) settings.curvatureRefinement = { enabled: false, normalAngleDeg: 18 };
   if (!settings.localSizing) settings.localSizing = { selection: 'none', biasStrength: 0 };
+  if (settings.useWorker === undefined) settings.useWorker = false;
 
   var t0 = Date.now();
   var meshOpts = {
@@ -1181,7 +1182,16 @@ function veFEABuildMeshForNode(meshNodeId) {
     if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
   };
 
-  if (needsAsync && typeof veFEAMeshFromGeometryAsync === 'function') {
+  if (settings.useWorker && typeof veFEAMeshFromGeometryViaWorker === 'function') {
+    if (typeof showToast === 'function') showToast('Mesh arka planda hesaplanıyor (Web Worker)...', 'info');
+    veFEAMeshFromGeometryViaWorker(geometry, meshOpts).then(finishMesh).catch(function(err) {
+      var msg = (err && err.message) ? err.message : String(err);
+      if (typeof showToast === 'function') showToast('Worker hatası, sync deneniyor: ' + msg, 'warning');
+      // Sync fallback
+      try { finishMesh(veFEAMeshFromGeometry(geometry, meshOpts)); }
+      catch (e2) { if (typeof showToast === 'function') showToast('Mesh hatası: ' + e2.message, 'error'); }
+    });
+  } else if (needsAsync && typeof veFEAMeshFromGeometryAsync === 'function') {
     if (typeof showToast === 'function') showToast('STEP mesh hesaplanıyor (voxelize)...', 'info');
     veFEAMeshFromGeometryAsync(geometry, meshOpts).then(finishMesh).catch(function(err) {
       var msg = (err && err.message) ? err.message : String(err);
