@@ -400,6 +400,145 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAApplyLocalSizing (boundary bias)', () => {
+  test('biasStrength=0 → no-op (düğümler değişmez)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var clone = veFEAApplyLocalSizing(m, { selection: 'faceXMin', biasStrength: 0 });
+    expect(clone).toBe(m); // no clone, original döner
+  });
+
+  test('faceXMin + strength=0.5 → X eksende düğümler -x\'e doğru kümeli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 2 });
+    var biased = veFEAApplyLocalSizing(m, { selection: 'faceXMin', biasStrength: 0.5 });
+    // Düğümlerin x-koordinatları min'e (=-5) doğru sıkışmalı.
+    // Orijinal uniform: -5, -3, -1, 1, 3, 5. Power p=2.5 ile:
+    // t=0→0, t=0.2→0.2^2.5=0.018, t=0.4→0.103, t=0.6→0.279, t=0.8→0.573, t=1→1
+    // Yeni x: -5, -4.82, -3.97, -2.21, 0.73, 5
+    var xs = [];
+    var n = biased.nodes.length / 3;
+    for (var i = 0; i < n; i++) xs.push(biased.nodes[i * 3]);
+    var uniqueXs = Array.from(new Set(xs.map(function(x){return x.toFixed(3);}))).map(Number).sort(function(a,b){return a-b;});
+    // İlk fark (en küçük dx) son farktan daha küçük olmalı
+    var firstDx = uniqueXs[1] - uniqueXs[0];
+    var lastDx = uniqueXs[uniqueXs.length - 1] - uniqueXs[uniqueXs.length - 2];
+    expect(firstDx).toBeLessThan(lastDx);
+  });
+
+  test('faceXMax + strength=0.5 → +x\'e doğru kümeli (ters yön)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 2 });
+    var biased = veFEAApplyLocalSizing(m, { selection: 'faceXMax', biasStrength: 0.5 });
+    var xs = [];
+    var n = biased.nodes.length / 3;
+    for (var i = 0; i < n; i++) xs.push(biased.nodes[i * 3]);
+    var uniqueXs = Array.from(new Set(xs.map(function(x){return x.toFixed(3);}))).map(Number).sort(function(a,b){return a-b;});
+    var firstDx = uniqueXs[1] - uniqueXs[0];
+    var lastDx = uniqueXs[uniqueXs.length - 1] - uniqueXs[uniqueXs.length - 2];
+    // Sıkışma max'ta → son dx küçük olmalı
+    expect(lastDx).toBeLessThan(firstDx);
+  });
+
+  test('Sınırlar korunur (minX, maxX değişmez)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 2 });
+    var biased = veFEAApplyLocalSizing(m, { selection: 'faceXMin', biasStrength: 0.8 });
+    var minX = Infinity, maxX = -Infinity;
+    var n = biased.nodes.length / 3;
+    for (var i = 0; i < n; i++) {
+      var x = biased.nodes[i * 3];
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+    }
+    expect(minX).toBeCloseTo(-5, 4);
+    expect(maxX).toBeCloseTo(5, 4);
+  });
+
+  test('Bilinmeyen selection → mesh aynen döner', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var out = veFEAApplyLocalSizing(m, { selection: 'unknownFace', biasStrength: 0.5 });
+    expect(out).toBe(m);
+  });
+
+  test('biasStrength clamp [0, 1]', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 2 });
+    var biased = veFEAApplyLocalSizing(m, { selection: 'faceXMin', biasStrength: 2.0 }); // > 1
+    // Clamp 1, exponent 4 — düğümler hâlâ -5'e yakın kümeli
+    expect(biased.nodes).not.toBe(m.nodes);
+  });
+
+  test('faceTop (silindir) + strength → Y eksende üst\'e kümeli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 5, height: 20 } }, { size: 5 });
+    var biased = veFEAApplyLocalSizing(m, { selection: 'faceTop', biasStrength: 0.6 });
+    var ys = [];
+    var n = biased.nodes.length / 3;
+    for (var i = 0; i < n; i++) ys.push(biased.nodes[i * 3 + 1]);
+    var uniqueYs = Array.from(new Set(ys.map(function(y){return y.toFixed(3);}))).map(Number).sort(function(a,b){return a-b;});
+    var firstDy = uniqueYs[1] - uniqueYs[0];
+    var lastDy = uniqueYs[uniqueYs.length - 1] - uniqueYs[uniqueYs.length - 2];
+    expect(lastDy).toBeLessThan(firstDy);
+  });
+
+  test('Eleman bağlantıları korunur (sadece düğüm konumu değişir)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var biased = veFEAApplyLocalSizing(m, { selection: 'faceXMin', biasStrength: 0.7 });
+    expect(biased.elements).toBe(m.elements); // aynı referans
+    expect(biased.elements.length).toBe(m.elements.length);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAMeshFromGeometry — localSizing entegrasyonu', () => {
+  test('opts.localSizing build sırasında uygulanır', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 2 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 2, localSizing: { selection: 'faceXMin', biasStrength: 0.5 } });
+    // Aynı eleman sayısı, farklı düğüm konumları
+    expect(m2.elements.length).toBe(m1.elements.length);
+    expect(m2.nodes).not.toBe(m1.nodes);
+    expect(m2.localSizingApplied).toBeDefined();
+  });
+
+  test('localSizing + midSideNodes birlikte çalışır', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, midSideNodes: true, localSizing: { selection: 'faceXMin', biasStrength: 0.5 } });
+    expect(m.type).toBe('hex20');
+    // Midpoint düğümleri biased corner'lardan hesaplandı
+    expect(m.nodes.length / 3).toBeGreaterThan(27);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Lokal yoğunlaştırma UI', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Dropdown + slider render edilir', () => {
+    var node = { id: 'mesh-ls1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-local-sel-mesh-ls1"/);
+    expect(html).toMatch(/id="ve-fea-mesh-local-bias-mesh-ls1"/);
+    expect(html).toMatch(/Lokal Yoğunlaştırma/);
+    expect(html).toMatch(/faceXMin/);
+    expect(html).toMatch(/faceXMax/);
+    expect(html).toMatch(/faceTop/);
+  });
+
+  test('Persisted ayarlar dropdown\'a yansır', () => {
+    var node = {
+      id: 'mesh-ls2',
+      type: 'fea-mesh',
+      data: { meshSettings: { size: 5, localSizing: { selection: 'faceYMax', biasStrength: 0.6 } } }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/value="faceYMax"\s+selected/);
+    expect(html).toMatch(/value="60"/);
+    expect(html).toMatch(/60%/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Curvature-based refinement', () => {
   test('Disabled (default): nC mevcut size-based hesaplama', () => {
     var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 10 });

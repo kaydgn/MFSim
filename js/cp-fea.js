@@ -243,6 +243,37 @@ function getFEAMeshPropertiesHTML(node) {
     '<span>Orta-kenar düğümler <span style="color:var(--text-muted);">(Quadratic: Tet10 / Hex20 / Wedge15)</span></span>' +
   '</label>';
 
+  // Lokal sizing (boundary bias) — auto named selection'a doğru kümele
+  var local = settings.localSizing || { selection: 'none', biasStrength: 0 };
+  html += veFEASectionTitle('Lokal Yoğunlaştırma (Beta)');
+  html += '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.4; margin-bottom:6px;">' +
+    'Mesh düğümlerini hedef yüzeye doğru kümeler (gerilme yığılması bölgeleri için). ' +
+    'Eksenli yüzeyler desteklenir (X−/X+/Y±/Z±).</div>';
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">' +
+    '<label for="ve-fea-mesh-local-sel-' + node.id + '" style="flex:0 0 auto; font-size:0.6rem; color:var(--text-secondary);">Hedef</label>' +
+    '<select id="ve-fea-mesh-local-sel-' + node.id + '" style="flex:1; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  var localFaces = [
+    ['none', '— Yok —'],
+    ['faceXMin', 'X− Yüzeyi'],
+    ['faceXMax', 'X+ Yüzeyi'],
+    ['faceYMin', 'Y− / Alt'],
+    ['faceYMax', 'Y+ / Üst'],
+    ['faceZMin', 'Z− Yüzeyi'],
+    ['faceZMax', 'Z+ Yüzeyi'],
+    ['faceBottom', 'Alt (silindir/şaft)'],
+    ['faceTop', 'Üst (silindir/şaft)']
+  ];
+  localFaces.forEach(function(f) {
+    var selectedAttr = (local.selection === f[0]) ? ' selected' : '';
+    html += '<option value="' + f[0] + '"' + selectedAttr + '>' + f[1] + '</option>';
+  });
+  html += '</select></div>';
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">' +
+    '<label for="ve-fea-mesh-local-bias-' + node.id + '" style="flex:0 0 auto; font-size:0.6rem; color:var(--text-secondary);">Yığılma</label>' +
+    '<input id="ve-fea-mesh-local-bias-' + node.id + '" type="range" min="0" max="100" step="5" value="' + Math.round(local.biasStrength * 100) + '" style="flex:1;">' +
+    '<span style="font-size:0.6rem; color:var(--text-muted); width:34px; text-align:right;">' + Math.round(local.biasStrength * 100) + '%</span>' +
+  '</div>';
+
   // Curvature-based refinement (silindir/şaft için çevresel)
   var curv = settings.curvatureRefinement || { enabled: false, normalAngleDeg: 18 };
   html += '<label style="display:flex; align-items:center; gap:6px; padding:5px 8px; margin-bottom:6px; background:var(--bg-secondary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
@@ -448,6 +479,12 @@ function veFEASubmitMeshBuild(nodeId) {
   if (!isFinite(curvAngDeg) || curvAngDeg <= 0) curvAngDeg = 18;
   if (curvAngDeg > 90) curvAngDeg = 90;
   if (curvAngDeg < 1) curvAngDeg = 1;
+  var localSelEl = document.getElementById('ve-fea-mesh-local-sel-' + nodeId);
+  var localBiasEl = document.getElementById('ve-fea-mesh-local-bias-' + nodeId);
+  var localSelection = (localSelEl && localSelEl.value) ? localSelEl.value : 'none';
+  var localBias = localBiasEl ? (parseFloat(localBiasEl.value) / 100) : 0;
+  if (!isFinite(localBias) || localBias < 0) localBias = 0;
+  if (localBias > 1) localBias = 1;
   var meshNode = nodes.find(function(n) { return n.id === nodeId; });
   if (meshNode) {
     meshNode.data = meshNode.data || {};
@@ -457,6 +494,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.elementType = elementType;
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
     meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };
+    meshNode.data.meshSettings.localSizing = { selection: localSelection, biasStrength: localBias };
   }
   veFEABuildMeshForNode(nodeId);
 }

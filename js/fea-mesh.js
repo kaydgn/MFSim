@@ -261,6 +261,13 @@ function veFEAMeshFromGeometry(geometry, opts) {
     mesh = _veFEAVoxelizeTrianglesToHex(parsed, size, geometry.type);
   }
 
+  // Lokal sizing (bias): yapısal mesh sonrasında düğüm konumlarını
+  // hedef yüze doğru kümele. Tet4/quadratic dönüşümlerinden ÖNCE uygulanır
+  // ki midpoint düğümleri doğru pozisyonda hesaplansın.
+  if (mesh && !mesh.error && opts.localSizing && opts.localSizing.selection &&
+      opts.localSizing.biasStrength > 0) {
+    mesh = veFEAApplyLocalSizing(mesh, opts.localSizing);
+  }
   // elementType: hex8/wedge6 → tet4 decomposition (yüzey tri3 etkilenmez)
   if (mesh && !mesh.error && elementType === 'tet4') {
     mesh = veFEAConvertMeshToTet4(mesh);
@@ -270,6 +277,59 @@ function veFEAMeshFromGeometry(geometry, opts) {
     mesh = veFEAEnrichToQuadratic(mesh);
   }
   return mesh;
+}
+
+// ─── Lokal sizing (boundary bias) ──────────────────────────────────────────
+// Adı verilen yüzeye doğru düğümleri power function ile kümele.
+//   localSizing = { selection: 'faceXMin', biasStrength: 0.7 }
+//   biasStrength ∈ [0, 1]: 0 = no bias, 1 = max cluster
+// Eksen yönlü yüzeyler desteklenir (X, Y, Z, top/bottom). Radyal yüzeyler
+// (faceSide, faceOuter, faceInner) henüz desteklenmez — sadece axial.
+function veFEAApplyLocalSizing(mesh, localSizing) {
+  if (!mesh || mesh.error || !mesh.namedSelections) return mesh;
+  if (!localSizing || !localSizing.selection) return mesh;
+  var strength = Number(localSizing.biasStrength);
+  if (!isFinite(strength) || strength <= 0) return mesh;
+  if (strength > 1) strength = 1;
+
+  var name = localSizing.selection;
+  var axis = -1, towardMax = false;
+  if (name === 'faceXMin') { axis = 0; towardMax = false; }
+  else if (name === 'faceXMax') { axis = 0; towardMax = true; }
+  else if (name === 'faceYMin' || name === 'faceBottom') { axis = 1; towardMax = false; }
+  else if (name === 'faceYMax' || name === 'faceTop')    { axis = 1; towardMax = true; }
+  else if (name === 'faceZMin') { axis = 2; towardMax = false; }
+  else if (name === 'faceZMax') { axis = 2; towardMax = true; }
+  else return mesh; // radyal yüzeyler ileride
+
+  var nodes = mesh.nodes;
+  var n = nodes.length / 3;
+  var minVal = Infinity, maxVal = -Infinity;
+  for (var i = 0; i < n; i++) {
+    var v = nodes[i * 3 + axis];
+    if (v < minVal) minVal = v;
+    if (v > maxVal) maxVal = v;
+  }
+  var range = maxVal - minVal;
+  if (range <= 0) return mesh;
+
+  // Power exponent: strength 0 → p=1 (lineer), strength 1 → p=4 (güçlü cluster)
+  var p = 1 + strength * 3;
+
+  var newNodes = new Float32Array(nodes);
+  for (var ii = 0; ii < n; ii++) {
+    var orig = newNodes[ii * 3 + axis];
+    var t = (orig - minVal) / range; // 0 at min, 1 at max
+    var tNew;
+    if (!towardMax) {
+      tNew = Math.pow(t, p);              // cluster near min
+    } else {
+      tNew = 1 - Math.pow(1 - t, p);      // cluster near max
+    }
+    newNodes[ii * 3 + axis] = minVal + tNew * range;
+  }
+
+  return Object.assign({}, mesh, { nodes: newNodes, localSizingApplied: localSizing });
 }
 
 // Async wrapper — STEP gibi parse'i Promise tabanlı geometriler için.
@@ -296,6 +356,10 @@ function veFEAMeshFromGeometryAsync(geometry, opts) {
         return _veFEAMeshFromParsedTriangles(parsed, 'step');
       }
       var hexMesh = _veFEAVoxelizeTrianglesToHex(parsed, size, 'step');
+      if (hexMesh && !hexMesh.error && opts.localSizing && opts.localSizing.selection &&
+          opts.localSizing.biasStrength > 0) {
+        hexMesh = veFEAApplyLocalSizing(hexMesh, opts.localSizing);
+      }
       if (hexMesh && !hexMesh.error && elementType === 'tet4') {
         hexMesh = veFEAConvertMeshToTet4(hexMesh);
       }
