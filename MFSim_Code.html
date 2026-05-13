@@ -20505,11 +20505,21 @@ function veFEAInitGeometryViewerForNode(nodeId) {
         var buf = veFEABase64ToArrayBuffer(g.rawDataB64);
         var parsed = veFEAParseSTL(buf);
         if(parsed) viewer.loadSTL(parsed);
-      } else if(g.type === 'step' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function' && typeof veFEAApplySTEP === 'function') {
-        // STEP yeniden parse: WASM zaten yüklüyse hemen, yoksa lazy
+      } else if(g.type === 'step' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function'
+                && typeof veFEAParseSTEPBuffer === 'function' && typeof veFEAStepMeshesToParsed === 'function') {
+        // STEP'i sessizce yeniden parse et + viewer'a yedir.
+        // ÖNEMLİ: veFEAApplySTEP'i ÇAĞIRMA — o fonksiyon persist + toast +
+        // showNodeProperties() tetikler ki bu dispatcher yoluyla yine bu
+        // auto-load bloğunu çağırır → sonsuz döngü (kullanıcının gördüğü hata).
         var stepBuf = veFEABase64ToArrayBuffer(g.rawDataB64);
-        // applySTEP toast'ları sıkıcı olur — auto-load için sessiz versiyon kullanmıyoruz şimdilik
-        veFEAApplySTEP(nodeId, stepBuf, g.sourceLabel || 'STEP');
+        veFEAParseSTEPBuffer(stepBuf).then(function(result) {
+          var parsed = veFEAStepMeshesToParsed(result);
+          if(parsed && parsed.triangleCount > 0 && viewer && typeof viewer.loadSTL === 'function') {
+            viewer.loadSTL(parsed);
+          }
+        }).catch(function(err) {
+          console.error('[FEA] STEP otomatik yeniden yukleme hatasi:', err);
+        });
       } else if(g.type === 'box' || g.type === 'cylinder' || g.type === 'shaft') {
         viewer.loadPrimitive(g.type, g.params);
       }

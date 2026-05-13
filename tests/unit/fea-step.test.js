@@ -277,6 +277,69 @@ describe('veFEAApplySTEP — uygulama akışı', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// ────────────────────────────────────────────────────────────────────────────
+// Regresyon: panel her açıldığında veFEAInitGeometryViewerForNode tetiklenir.
+// Eğer auto-load STEP'i applySTEP üzerinden yeniden yüklerse, applySTEP →
+// showNodeProperties → dispatcher → init → applySTEP zinciri sonsuz döngü
+// oluşturur (kullanıcı şikayeti: "sürekli toast, mesh gelmiyor").
+// Sessiz reload yolu kullanılmalı.
+describe('STEP auto-load sonsuz döngü koruması', () => {
+  beforeEach(() => {
+    Object.keys(veFEAViewerRegistry).forEach((k) => delete veFEAViewerRegistry[k]);
+    document.body.innerHTML = '';
+    global.showToast = jest.fn();
+    global.showNodeProperties = jest.fn();
+    global.saveState = jest.fn();
+  });
+
+  test('fea-viewer.js kaynağı: STEP auto-load veFEAApplySTEP çağırmamalı', () => {
+    // Statik kaynak kontrolü — sonsuz döngü regresyonunu yakalar
+    const viewerSrc = fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8');
+    // veFEAInitGeometryViewerForNode bloğunu izole et
+    const initStart = viewerSrc.indexOf('function veFEAInitGeometryViewerForNode');
+    expect(initStart).toBeGreaterThan(-1);
+    // STEP dalı applySTEP yerine ParseSTEPBuffer + Stepmeshes + viewer.loadSTL kullanmalı
+    const initEnd = viewerSrc.indexOf('\n}', initStart);
+    const initBody = viewerSrc.substring(initStart, initEnd);
+    // STEP branch'inde applySTEP referansı OLMAMALI
+    const stepBranchMatch = initBody.match(/g\.type === ['"]step['"][\s\S]*?(?=\}\s*else|\}\s*$)/);
+    expect(stepBranchMatch).not.toBeNull();
+    // Fonksiyon çağrısı yok — yorumda yalın metin geçebilir, sadece "(" ile takip eden çağrıları yasakla
+    expect(stepBranchMatch[0]).not.toMatch(/veFEAApplySTEP\s*\(/);
+    // Onun yerine sessiz parse zinciri olmalı
+    expect(stepBranchMatch[0]).toMatch(/veFEAParseSTEPBuffer/);
+    expect(stepBranchMatch[0]).toMatch(/veFEAStepMeshesToParsed/);
+    expect(stepBranchMatch[0]).toMatch(/viewer\.loadSTL/);
+  });
+
+  test('applySTEP sonrası tek bir saveState çağrısı yapılır (döngü değil)', async () => {
+    VE_FEA_OCCT_STATE.module = null;
+    VE_FEA_OCCT_STATE.loading = null;
+    global.occtimportjs = jest.fn(function() {
+      return Promise.resolve({
+        ReadStepFile: function() {
+          return {
+            success: true,
+            meshes: [{
+              attributes: { position: { array: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]) } },
+              index: { array: [0, 1, 2] }
+            }]
+          };
+        }
+      });
+    });
+    global.nodes = [{ id: 'cLoop', data: {} }];
+
+    veFEAApplySTEP('cLoop', new ArrayBuffer(64), 'pump.step');
+
+    // Yeterli Promise tick'i bekle
+    for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+
+    // saveState tam olarak 1 kez çağrılmalı (auto-load applySTEP'i tetiklemiyor)
+    expect(global.saveState).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('veFEAOnSTEPFileSelected', () => {
   test('null input ile sessiz çıkar', () => {
     expect(() => veFEAOnSTEPFileSelected(null, 'x')).not.toThrow();
