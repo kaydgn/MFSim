@@ -768,6 +768,18 @@ describe('veFEAApplyHeatMap köprüsü', () => {
     expect(() => veFEAApplyHeatMap('nonexistent', 'aspect')).not.toThrow();
   });
 
+  test('Solid mode: heatMapMetric="solid"', () => {
+    global.nodes = [{ id: 'mesh-h-s', type: 'fea-mesh', data: {} }];
+    veFEAApplyHeatMap('mesh-h-s', 'solid');
+    expect(global.nodes[0].data.heatMapMetric).toBe('solid');
+  });
+
+  test('Solid+Edges mode: heatMapMetric="solid-edges"', () => {
+    global.nodes = [{ id: 'mesh-h-se', type: 'fea-mesh', data: {} }];
+    veFEAApplyHeatMap('mesh-h-se', 'solid-edges');
+    expect(global.nodes[0].data.heatMapMetric).toBe('solid-edges');
+  });
+
   test('Mesh clear sonrası heatMapMetric temizlenir', () => {
     global.nodes = [
       { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
@@ -789,7 +801,7 @@ describe('cp-fea.js Mesh paneli — Heat Map seçici', () => {
     global.connections = [];
   });
 
-  test('Mesh varsa Heat Map dropdown render edilir (5 seçenek)', () => {
+  test('Mesh varsa Görünüm Modu dropdown render edilir (7 seçenek: 3 standart + 4 heat map)', () => {
     var node = {
       id: 'mesh-hm1',
       type: 'fea-mesh',
@@ -800,8 +812,10 @@ describe('cp-fea.js Mesh paneli — Heat Map seçici', () => {
     };
     global.nodes = [node];
     var html = getFEAMeshPropertiesHTML(node);
-    expect(html).toMatch(/Renk Haritası.*Heat Map/);
+    expect(html).toMatch(/Görünüm Modu/);
     expect(html).toMatch(/value="off"/);
+    expect(html).toMatch(/value="solid"/);
+    expect(html).toMatch(/value="solid-edges"/);
     expect(html).toMatch(/value="aspect"/);
     expect(html).toMatch(/value="skewness"/);
     expect(html).toMatch(/value="minAngle"/);

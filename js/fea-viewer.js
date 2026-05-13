@@ -231,6 +231,47 @@ function veFEAInitViewer(canvas, opts) {
       this.zoomToFit(line);
       return line;
     },
+    // Mesh'i sabit renkte solid yüzey olarak yedirir (heat map'siz).
+    // withEdges: true → siyah ince edge overlay'i de ekler
+    loadMeshSolid: function(meshData, withEdges) {
+      if (!meshData || typeof veFEAExtractSurfaceTriangles !== 'function') return null;
+      this.clearGeometry();
+      var surf = veFEAExtractSurfaceTriangles(meshData);
+      if (!surf || surf.positions.length === 0) return null;
+
+      var geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(surf.positions, 3));
+      geometry.computeVertexNormals();
+      var material = new THREE.MeshStandardMaterial({
+        color: 0x3b82f6,
+        metalness: 0.15,
+        roughness: 0.6,
+        side: THREE.DoubleSide,
+        flatShading: false
+      });
+      var solid = new THREE.Mesh(geometry, material);
+      solid.userData.feaMeshSolid = true;
+      this._geometryRoot.add(solid);
+
+      if (withEdges) {
+        var edgeVerts = veFEAMeshExtractEdges(meshData);
+        if (edgeVerts && edgeVerts.length > 0 && edgeVerts.length / 3 < 200000) {
+          var edgeGeo = new THREE.BufferGeometry();
+          edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
+          var edgeLine = new THREE.LineSegments(
+            edgeGeo,
+            new THREE.LineBasicMaterial({ color: 0x102444, transparent: true, opacity: 0.45 })
+          );
+          edgeLine.userData.feaMeshEdges = true;
+          this._geometryRoot.add(edgeLine);
+        }
+      }
+
+      this._meshData = meshData;
+      this._highlightedSelectionKey = null;
+      this.zoomToFit(solid);
+      return solid;
+    },
     // Mesh'i renk-kodlu solid olarak yedirir. perValues: Float32Array (eleman/değer),
     // min/max: legend için sınırlar. Boundary face'ler üçgenleştirilip vertex
     // colors ile renklendirilir.
@@ -1166,9 +1207,14 @@ function veFEAClearMeshForNode(meshNodeId) {
   if (typeof showNodeProperties === 'function' && meshNode) showNodeProperties(meshNode);
 }
 
-// Heat map metrik seçimini uygula — UI'dan çağrılır.
-// metric: 'aspect' | 'skewness' | 'minAngle' | 'jacobianRatio' | null (kapat)
-function veFEAApplyHeatMap(meshNodeId, metric) {
+// Mesh görünüm modu (wireframe / solid / heat map). UI'dan çağrılır.
+// mode değerleri:
+//   'off' / null  → wireframe (default)
+//   'solid'       → uniform solid (mavi)
+//   'solid-edges' → solid + ince edge overlay
+//   'aspect' | 'skewness' | 'minAngle' | 'jacobianRatio' → heat map
+// Eski isim veFEAApplyHeatMap geriye uyumluluk için korunur.
+function veFEAApplyHeatMap(meshNodeId, mode) {
   var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
   if (!meshNode) return;
   meshNode.data = meshNode.data || {};
@@ -1176,38 +1222,44 @@ function veFEAApplyHeatMap(meshNodeId, metric) {
   var viewer = veFEAViewerRegistry[meshNodeId];
   var meshData = veFEAMeshCache[meshNodeId];
 
-  if (!metric || metric === 'off' || metric === 'none') {
+  // Wireframe (off)
+  if (!mode || mode === 'off' || mode === 'none') {
     meshNode.data.heatMapMetric = null;
     if (viewer && meshData) viewer.loadMesh(meshData);
     if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
     return;
   }
 
-  meshNode.data.heatMapMetric = metric;
+  meshNode.data.heatMapMetric = mode;
   if (!viewer || !meshData) {
     if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
     return;
   }
-  if (typeof veFEAComputePerElementQuality !== 'function') return;
 
-  var values = veFEAComputePerElementQuality(meshData, metric);
+  // Solid modları (heat map'siz)
+  if (mode === 'solid' || mode === 'solid-edges') {
+    viewer.loadMeshSolid(meshData, mode === 'solid-edges');
+    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    return;
+  }
+
+  // Heat map modları
+  if (typeof veFEAComputePerElementQuality !== 'function') return;
+  var values = veFEAComputePerElementQuality(meshData, mode);
   if (!values) {
     if (typeof showToast === 'function') showToast('Heat map için kalite hesaplanamadı', 'warning');
     return;
   }
   // Renklendirme aralığı: pratik üst sınırlar (renk çözünürlüğü için clamp)
   var vMin, vMax;
-  if (metric === 'aspect') { vMin = 1; vMax = 20; }
-  else if (metric === 'skewness') { vMin = 0; vMax = 1; }
-  else if (metric === 'minAngle') { vMin = 0; vMax = 90; }
-  else if (metric === 'jacobianRatio') { vMin = 1; vMax = 40; }
+  if (mode === 'aspect') { vMin = 1; vMax = 20; }
+  else if (mode === 'skewness') { vMin = 0; vMax = 1; }
+  else if (mode === 'minAngle') { vMin = 0; vMax = 90; }
+  else if (mode === 'jacobianRatio') { vMin = 1; vMax = 40; }
   else { vMin = 0; vMax = 1; }
 
   // minAngle için ters renkleme: küçük açı = kötü = kırmızı.
-  // veFEAJetColor düşük t = mavi (iyi), yüksek t = kırmızı (kötü).
-  // Diğer metriklerde değer büyüdükçe kötü, doğal eşleşme.
-  // minAngle: değer küçük = kötü → t = 1 - normalized
-  if (metric === 'minAngle') {
+  if (mode === 'minAngle') {
     var inverted = new Float32Array(values.length);
     for (var i = 0; i < values.length; i++) inverted[i] = vMax - (values[i] - vMin);
     values = inverted;

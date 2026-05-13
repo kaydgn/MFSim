@@ -391,22 +391,29 @@ function getFEAMeshPropertiesHTML(node) {
     html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra otomatik hesaplanır.</div>';
   }
 
-  // ─── Renk Haritası (Heat Map) ──────────────────────────────────────────
-  html += veFEASectionTitle('Renk Haritası (Heat Map)');
+  // ─── Görünüm Modu (Wireframe / Solid / Heat Map) ───────────────────────
+  html += veFEASectionTitle('Görünüm Modu');
   if (hasMesh) {
-    var heatMapMetric = d.heatMapMetric || 'off';
+    var displayMode = d.heatMapMetric || 'off';
     html += '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">' +
-      'Eleman bazlı kalite değerini 3D mesh üzerinde renk-kodlu gösterir. ' +
-      'Mavi = iyi kalite, Kırmızı = kötü.</div>';
+      'Mesh\'in 3D önizlemede nasıl gösterileceğini seçin. Heat Map modları: ' +
+      'mavi = iyi kalite, kırmızı = kötü.</div>';
     html += '<select onchange="veFEAApplyHeatMap(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
-    html += '<option value="off"' + (heatMapMetric === 'off' || !d.heatMapMetric ? ' selected' : '') + '>Kapalı (Wireframe)</option>';
-    html += '<option value="aspect"' + (heatMapMetric === 'aspect' ? ' selected' : '') + '>Aspect Ratio</option>';
-    html += '<option value="skewness"' + (heatMapMetric === 'skewness' ? ' selected' : '') + '>Skewness</option>';
-    html += '<option value="minAngle"' + (heatMapMetric === 'minAngle' ? ' selected' : '') + '>Min İç Açı</option>';
-    html += '<option value="jacobianRatio"' + (heatMapMetric === 'jacobianRatio' ? ' selected' : '') + '>Jacobian Oranı</option>';
+    html += '<optgroup label="Standart">';
+    html += '<option value="off"' + (displayMode === 'off' || !d.heatMapMetric ? ' selected' : '') + '>Wireframe (kenarlar)</option>';
+    html += '<option value="solid"' + (displayMode === 'solid' ? ' selected' : '') + '>Solid (yüzey)</option>';
+    html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Solid + Edges</option>';
+    html += '</optgroup>';
+    html += '<optgroup label="Heat Map (Kalite)">';
+    html += '<option value="aspect"' + (displayMode === 'aspect' ? ' selected' : '') + '>Aspect Ratio</option>';
+    html += '<option value="skewness"' + (displayMode === 'skewness' ? ' selected' : '') + '>Skewness</option>';
+    html += '<option value="minAngle"' + (displayMode === 'minAngle' ? ' selected' : '') + '>Min İç Açı</option>';
+    html += '<option value="jacobianRatio"' + (displayMode === 'jacobianRatio' ? ' selected' : '') + '>Jacobian Oranı</option>';
+    html += '</optgroup>';
     html += '</select>';
-    if (d.heatMapMetric && d.heatMapMetric !== 'off') {
-      // Renk legend'ı
+    // Heat map modunda renk legend'ı
+    var isHeatMap = (displayMode === 'aspect' || displayMode === 'skewness' || displayMode === 'minAngle' || displayMode === 'jacobianRatio');
+    if (isHeatMap) {
       html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
         '<span style="font-size:0.55rem; color:var(--text-muted);">İyi</span>' +
         '<div style="flex:1; height:8px; background:linear-gradient(to right, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000); border:1px solid var(--border-color);"></div>' +
