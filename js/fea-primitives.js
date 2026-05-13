@@ -39,6 +39,15 @@ var VE_FEA_PRIMITIVES = {
       { key: 'length',      label: 'Uzunluk',     unit: 'mm', default: 120, min: 0.1, max: 10000 },
       { key: 'segments',    label: 'Çevresel Segment', unit: '−', default: 48, min: 8, max: 256, integer: true }
     ]
+  },
+  'rectTube': {
+    label: 'Dikdörtgen Profil (içi boş kutu)',
+    schema: [
+      { key: 'width',     label: 'Genişlik (X)',  unit: 'mm', default: 60, min: 1,    max: 5000 },
+      { key: 'height',    label: 'Yükseklik (Y)', unit: 'mm', default: 40, min: 1,    max: 5000 },
+      { key: 'thickness', label: 'Cidar kalınlığı', unit: 'mm', default: 4, min: 0.2, max: 500 },
+      { key: 'length',    label: 'Uzunluk (Z sweep)', unit: 'mm', default: 200, min: 1, max: 10000 }
+    ]
   }
 };
 
@@ -82,6 +91,11 @@ function veFEANormalizePrimitiveParams(type, params) {
   if(type === 'shaft' && out.innerRadius >= out.outerRadius) {
     out.innerRadius = Math.max(0, out.outerRadius - 1);
   }
+  // Rectangular tube: thickness < min(width, height) / 2
+  if(type === 'rectTube') {
+    var maxT = Math.min(out.width, out.height) / 2 - 0.1;
+    if(out.thickness >= maxT) out.thickness = Math.max(0.2, maxT);
+  }
   return out;
 }
 
@@ -109,6 +123,17 @@ function veFEAPrimitiveStats(type, params) {
     var endRing   = 2 * Math.PI * (R * R - r * r); // iki uç
     surfaceArea = sideOuter + sideInner + endRing;
     bbox = { x: 2 * R, y: L, z: 2 * R };
+  } else if(type === 'rectTube') {
+    var w = p.width, h = p.height, t = p.thickness, L2 = p.length;
+    var outerArea = w * h;
+    var innerArea = Math.max(0, (w - 2 * t) * (h - 2 * t));
+    volume = (outerArea - innerArea) * L2;
+    // Dış yüz + iç yüz + 2 halka uç
+    var outerPerim = 2 * (w + h);
+    var innerPerim = 2 * Math.max(0, (w - 2 * t) + (h - 2 * t));
+    var endRingArea = 2 * (outerArea - innerArea);
+    surfaceArea = outerPerim * L2 + innerPerim * L2 + endRingArea;
+    bbox = { x: w, y: h, z: L2 };
   }
 
   return { volume: volume, surfaceArea: surfaceArea, bbox: bbox, params: p };
@@ -138,6 +163,30 @@ function veFEABuildPrimitiveMesh(type, params) {
     ];
     geometry = new THREE.LatheGeometry(pts, p.segments);
     // LatheGeometry Y ekseni etrafında döner — silindir gibi
+  } else if(type === 'rectTube') {
+    // Dikdörtgen profil = dış kutu - iç kutu (ExtrudeGeometry ile delikli shape)
+    var w2 = p.width / 2, h2 = p.height / 2;
+    var iw2 = (p.width / 2) - p.thickness;
+    var ih2 = (p.height / 2) - p.thickness;
+    var shape = new THREE.Shape();
+    shape.moveTo(-w2, -h2);
+    shape.lineTo( w2, -h2);
+    shape.lineTo( w2,  h2);
+    shape.lineTo(-w2,  h2);
+    shape.lineTo(-w2, -h2);
+    if (iw2 > 0 && ih2 > 0) {
+      var hole = new THREE.Path();
+      hole.moveTo(-iw2, -ih2);
+      hole.lineTo( iw2, -ih2);
+      hole.lineTo( iw2,  ih2);
+      hole.lineTo(-iw2,  ih2);
+      hole.lineTo(-iw2, -ih2);
+      shape.holes.push(hole);
+    }
+    geometry = new THREE.ExtrudeGeometry(shape, { depth: p.length, bevelEnabled: false, steps: 1 });
+    // ExtrudeGeometry Z ekseninde +depth uzar; merkezi (cx, cy, depth/2)
+    // bizim convention'ımız: bbox merkezi orijin → translate Z by -depth/2
+    geometry.translate(0, 0, -p.length / 2);
   }
 
   if(!geometry) return null;

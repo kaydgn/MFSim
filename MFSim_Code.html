@@ -19588,6 +19588,15 @@ var VE_FEA_PRIMITIVES = {
       { key: 'length',      label: 'Uzunluk',     unit: 'mm', default: 120, min: 0.1, max: 10000 },
       { key: 'segments',    label: 'Çevresel Segment', unit: '−', default: 48, min: 8, max: 256, integer: true }
     ]
+  },
+  'rectTube': {
+    label: 'Dikdörtgen Profil (içi boş kutu)',
+    schema: [
+      { key: 'width',     label: 'Genişlik (X)',  unit: 'mm', default: 60, min: 1,    max: 5000 },
+      { key: 'height',    label: 'Yükseklik (Y)', unit: 'mm', default: 40, min: 1,    max: 5000 },
+      { key: 'thickness', label: 'Cidar kalınlığı', unit: 'mm', default: 4, min: 0.2, max: 500 },
+      { key: 'length',    label: 'Uzunluk (Z sweep)', unit: 'mm', default: 200, min: 1, max: 10000 }
+    ]
   }
 };
 
@@ -19631,6 +19640,11 @@ function veFEANormalizePrimitiveParams(type, params) {
   if(type === 'shaft' && out.innerRadius >= out.outerRadius) {
     out.innerRadius = Math.max(0, out.outerRadius - 1);
   }
+  // Rectangular tube: thickness < min(width, height) / 2
+  if(type === 'rectTube') {
+    var maxT = Math.min(out.width, out.height) / 2 - 0.1;
+    if(out.thickness >= maxT) out.thickness = Math.max(0.2, maxT);
+  }
   return out;
 }
 
@@ -19658,6 +19672,17 @@ function veFEAPrimitiveStats(type, params) {
     var endRing   = 2 * Math.PI * (R * R - r * r); // iki uç
     surfaceArea = sideOuter + sideInner + endRing;
     bbox = { x: 2 * R, y: L, z: 2 * R };
+  } else if(type === 'rectTube') {
+    var w = p.width, h = p.height, t = p.thickness, L2 = p.length;
+    var outerArea = w * h;
+    var innerArea = Math.max(0, (w - 2 * t) * (h - 2 * t));
+    volume = (outerArea - innerArea) * L2;
+    // Dış yüz + iç yüz + 2 halka uç
+    var outerPerim = 2 * (w + h);
+    var innerPerim = 2 * Math.max(0, (w - 2 * t) + (h - 2 * t));
+    var endRingArea = 2 * (outerArea - innerArea);
+    surfaceArea = outerPerim * L2 + innerPerim * L2 + endRingArea;
+    bbox = { x: w, y: h, z: L2 };
   }
 
   return { volume: volume, surfaceArea: surfaceArea, bbox: bbox, params: p };
@@ -19687,6 +19712,30 @@ function veFEABuildPrimitiveMesh(type, params) {
     ];
     geometry = new THREE.LatheGeometry(pts, p.segments);
     // LatheGeometry Y ekseni etrafında döner — silindir gibi
+  } else if(type === 'rectTube') {
+    // Dikdörtgen profil = dış kutu - iç kutu (ExtrudeGeometry ile delikli shape)
+    var w2 = p.width / 2, h2 = p.height / 2;
+    var iw2 = (p.width / 2) - p.thickness;
+    var ih2 = (p.height / 2) - p.thickness;
+    var shape = new THREE.Shape();
+    shape.moveTo(-w2, -h2);
+    shape.lineTo( w2, -h2);
+    shape.lineTo( w2,  h2);
+    shape.lineTo(-w2,  h2);
+    shape.lineTo(-w2, -h2);
+    if (iw2 > 0 && ih2 > 0) {
+      var hole = new THREE.Path();
+      hole.moveTo(-iw2, -ih2);
+      hole.lineTo( iw2, -ih2);
+      hole.lineTo( iw2,  ih2);
+      hole.lineTo(-iw2,  ih2);
+      hole.lineTo(-iw2, -ih2);
+      shape.holes.push(hole);
+    }
+    geometry = new THREE.ExtrudeGeometry(shape, { depth: p.length, bevelEnabled: false, steps: 1 });
+    // ExtrudeGeometry Z ekseninde +depth uzar; merkezi (cx, cy, depth/2)
+    // bizim convention'ımız: bbox merkezi orijin → translate Z by -depth/2
+    geometry.translate(0, 0, -p.length / 2);
   }
 
   if(!geometry) return null;
@@ -20468,6 +20517,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (geometry.type === 'box')      mesh = _veFEAMeshBox(geometry.params || {}, size);
   else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts);
   else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
+  else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
     var parsed = _veFEAParseSurfaceTriangles(geometry);
@@ -20767,6 +20817,7 @@ function _veFEAMeshCylinder(p, size, curvOpts) {
     elements: elements,
     nodesPerElement: 6,
     grid: { nRadial: nR, nCircum: nC, nAxial: nA },
+    sweepAxis: 'Y',
     namedSelections: _veFEACylinderNamedSelections(nR, nC, nA)
   };
 }
@@ -20867,6 +20918,7 @@ function _veFEAMeshShaft(p, size, curvOpts) {
     elements: elements,
     nodesPerElement: 8,
     grid: { nRadial: nR, nCircum: nC, nAxial: nA },
+    sweepAxis: 'Y',
     namedSelections: _veFEAShaftNamedSelections(nR, nC, nA)
   };
 }
@@ -20898,6 +20950,90 @@ function _veFEAShaftNamedSelections(nR, nC, nA) {
     faceTop:    { type: 'face', source: 'auto', label: 'Üst Halka (Y+)', nodeIds: annulusNodes(nA) },
     faceOuter:  { type: 'face', source: 'auto', label: 'Dış Yan Yüzey',  nodeIds: sideNodes(nR) },
     faceInner:  { type: 'face', source: 'auto', label: 'İç Yan Yüzey (Delik)', nodeIds: sideNodes(0) }
+  };
+}
+
+// ─── Rectangular tube (içi boş kutu) → Heks8 ─────────────────────────────
+// Sweep meshing örneği: 2D dikdörtgen halka (dış − iç) × eksenel Z extrude.
+// 4 kenar (alt, sağ, üst, sol) hex8 slab olarak ayrı ayrı meshlenir, ortak
+// köşelerde nodeId paylaşılır (dedup'lı). Tipik kullanım: kutu profili,
+// kanal, dikdörtgen tüp (chassis frame).
+function _veFEAMeshRectTube(p, size) {
+  var w = Math.max(1, p.width || 60);
+  var h = Math.max(1, p.height || 40);
+  var t = Math.max(0.2, p.thickness || 4);
+  var L = Math.max(1, p.length || 200);
+  var maxT = Math.min(w, h) / 2 - 0.1;
+  if (t >= maxT) t = Math.max(0.2, maxT);
+
+  var nT = Math.max(1, Math.round(t / size));     // cidar boyunca
+  var nW = Math.max(1, Math.round(w / size));     // dış genişlik boyunca
+  var nH = Math.max(1, Math.round(h / size));     // dış yükseklik boyunca
+  var nZ = Math.max(1, Math.round(L / size));     // sweep yönü
+  // Dış-iç ayrımı için cidar ile birlikte tüm w/h boyunca uniform grid
+  // mantıklı; sonra "iç dikdörtgen içinde kalan" hücreleri çıkar.
+  var dx = w / nW, dy = h / nH, dz = L / nZ;
+  var x0 = -w / 2, y0 = -h / 2, z0 = -L / 2;
+
+  // Node grid: (nW+1) × (nH+1) × (nZ+1) potansiyel; sadece kullanılanlar
+  var pitchY = nW + 1;
+  var pitchZ = (nW + 1) * (nH + 1);
+  var nodeMap = new Int32Array((nW + 1) * (nH + 1) * (nZ + 1));
+  for (var im = 0; im < nodeMap.length; im++) nodeMap[im] = -1;
+  var nodeList = [];
+  function getNode(i, j, k) {
+    var idx = i + j * pitchY + k * pitchZ;
+    var ex = nodeMap[idx];
+    if (ex >= 0) return ex;
+    var newIdx = nodeList.length / 3;
+    nodeList.push(x0 + i * dx, y0 + j * dy, z0 + k * dz);
+    nodeMap[idx] = newIdx;
+    return newIdx;
+  }
+
+  // İç bölge: |x - 0| < (w/2 - t) AND |y - 0| < (h/2 - t)
+  // Yani x ∈ (-w/2+t, w/2-t), y ∈ (-h/2+t, h/2-t)
+  // Hücre dışarıda kalıyorsa eklenir, içte boş.
+  var iw2 = w / 2 - t, ih2 = h / 2 - t;
+  var elements = [];
+  for (var k = 0; k < nZ; k++) {
+    for (var j = 0; j < nH; j++) {
+      for (var i = 0; i < nW; i++) {
+        // Hücre merkezi
+        var cx = x0 + (i + 0.5) * dx;
+        var cy = y0 + (j + 0.5) * dy;
+        // İç dikdörtgen içindeyse atla
+        if (Math.abs(cx) < iw2 && Math.abs(cy) < ih2) continue;
+        var n0 = getNode(i,     j,     k);
+        var n1 = getNode(i + 1, j,     k);
+        var n2 = getNode(i + 1, j + 1, k);
+        var n3 = getNode(i,     j + 1, k);
+        var n4 = getNode(i,     j,     k + 1);
+        var n5 = getNode(i + 1, j,     k + 1);
+        var n6 = getNode(i + 1, j + 1, k + 1);
+        var n7 = getNode(i,     j + 1, k + 1);
+        elements.push(n0, n1, n2, n3, n4, n5, n6, n7);
+      }
+    }
+  }
+
+  if (elements.length === 0) return null;
+
+  var nodes = new Float32Array(nodeList);
+  var elementsTA = new Uint32Array(elements);
+
+  // Named selections — bbox yön bazlı (voxel mesh ile aynı yaklaşım)
+  return {
+    type: 'hex8',
+    geometryType: 'rectTube',
+    nodes: nodes,
+    elements: elementsTA,
+    nodesPerElement: 8,
+    grid: { nW: nW, nH: nH, nZ: nZ, nT: nT, voxelCount: elementsTA.length / 8 },
+    sweepAxis: 'Z',
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
+      minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
+    })
   };
 }
 
@@ -22868,6 +23004,8 @@ function veFEABuildMeshForNode(meshNodeId) {
     var metrics = veFEAComputeMeshMetrics(meshData);
     metrics.computeMs = dt;
     metrics.voxelMode = !!meshData.voxelMode;
+    metrics.sweepAxis = meshData.sweepAxis || null;
+    metrics.geometryType = meshData.geometryType || null;
     // Jacobian / signed volume — solver-uygunluk kontrolü
     if (typeof veFEAComputeJacobianMetrics === 'function') {
       metrics.jacobian = veFEAComputeJacobianMetrics(meshData);
@@ -23764,6 +23902,9 @@ function getFEAMeshPropertiesHTML(node) {
   if (hasMesh) {
     var typeLabel = (typeof veFEAMeshLabel === 'function') ? veFEAMeshLabel(metrics.elementType) : metrics.elementType;
     html += veFEAReadOnlyRow('Eleman tipi', typeLabel);
+    if (metrics.sweepAxis) {
+      html += veFEAReadOnlyRow('Sweep ekseni', metrics.sweepAxis + ' (axial)');
+    }
     html += veFEAReadOnlyRow('Düğüm sayısı', metrics.nodeCount.toLocaleString('tr-TR'));
     html += veFEAReadOnlyRow('Eleman sayısı', metrics.elementCount.toLocaleString('tr-TR'));
     html += veFEAReadOnlyRow('Min eleman boyu', metrics.minSize.toFixed(2) + ' mm');

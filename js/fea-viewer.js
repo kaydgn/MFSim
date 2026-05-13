@@ -1128,6 +1128,8 @@ function veFEABuildMeshForNode(meshNodeId) {
     var metrics = veFEAComputeMeshMetrics(meshData);
     metrics.computeMs = dt;
     metrics.voxelMode = !!meshData.voxelMode;
+    metrics.sweepAxis = meshData.sweepAxis || null;
+    metrics.geometryType = meshData.geometryType || null;
     // Jacobian / signed volume — solver-uygunluk kontrolü
     if (typeof veFEAComputeJacobianMetrics === 'function') {
       metrics.jacobian = veFEAComputeJacobianMetrics(meshData);

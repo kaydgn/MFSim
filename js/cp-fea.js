@@ -327,6 +327,9 @@ function getFEAMeshPropertiesHTML(node) {
   if (hasMesh) {
     var typeLabel = (typeof veFEAMeshLabel === 'function') ? veFEAMeshLabel(metrics.elementType) : metrics.elementType;
     html += veFEAReadOnlyRow('Eleman tipi', typeLabel);
+    if (metrics.sweepAxis) {
+      html += veFEAReadOnlyRow('Sweep ekseni', metrics.sweepAxis + ' (axial)');
+    }
     html += veFEAReadOnlyRow('Düğüm sayısı', metrics.nodeCount.toLocaleString('tr-TR'));
     html += veFEAReadOnlyRow('Eleman sayısı', metrics.elementCount.toLocaleString('tr-TR'));
     html += veFEAReadOnlyRow('Min eleman boyu', metrics.minSize.toFixed(2) + ' mm');

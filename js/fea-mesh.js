@@ -249,6 +249,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (geometry.type === 'box')      mesh = _veFEAMeshBox(geometry.params || {}, size);
   else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts);
   else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
+  else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
     var parsed = _veFEAParseSurfaceTriangles(geometry);
@@ -548,6 +549,7 @@ function _veFEAMeshCylinder(p, size, curvOpts) {
     elements: elements,
     nodesPerElement: 6,
     grid: { nRadial: nR, nCircum: nC, nAxial: nA },
+    sweepAxis: 'Y',
     namedSelections: _veFEACylinderNamedSelections(nR, nC, nA)
   };
 }
@@ -648,6 +650,7 @@ function _veFEAMeshShaft(p, size, curvOpts) {
     elements: elements,
     nodesPerElement: 8,
     grid: { nRadial: nR, nCircum: nC, nAxial: nA },
+    sweepAxis: 'Y',
     namedSelections: _veFEAShaftNamedSelections(nR, nC, nA)
   };
 }
@@ -679,6 +682,90 @@ function _veFEAShaftNamedSelections(nR, nC, nA) {
     faceTop:    { type: 'face', source: 'auto', label: 'Üst Halka (Y+)', nodeIds: annulusNodes(nA) },
     faceOuter:  { type: 'face', source: 'auto', label: 'Dış Yan Yüzey',  nodeIds: sideNodes(nR) },
     faceInner:  { type: 'face', source: 'auto', label: 'İç Yan Yüzey (Delik)', nodeIds: sideNodes(0) }
+  };
+}
+
+// ─── Rectangular tube (içi boş kutu) → Heks8 ─────────────────────────────
+// Sweep meshing örneği: 2D dikdörtgen halka (dış − iç) × eksenel Z extrude.
+// 4 kenar (alt, sağ, üst, sol) hex8 slab olarak ayrı ayrı meshlenir, ortak
+// köşelerde nodeId paylaşılır (dedup'lı). Tipik kullanım: kutu profili,
+// kanal, dikdörtgen tüp (chassis frame).
+function _veFEAMeshRectTube(p, size) {
+  var w = Math.max(1, p.width || 60);
+  var h = Math.max(1, p.height || 40);
+  var t = Math.max(0.2, p.thickness || 4);
+  var L = Math.max(1, p.length || 200);
+  var maxT = Math.min(w, h) / 2 - 0.1;
+  if (t >= maxT) t = Math.max(0.2, maxT);
+
+  var nT = Math.max(1, Math.round(t / size));     // cidar boyunca
+  var nW = Math.max(1, Math.round(w / size));     // dış genişlik boyunca
+  var nH = Math.max(1, Math.round(h / size));     // dış yükseklik boyunca
+  var nZ = Math.max(1, Math.round(L / size));     // sweep yönü
+  // Dış-iç ayrımı için cidar ile birlikte tüm w/h boyunca uniform grid
+  // mantıklı; sonra "iç dikdörtgen içinde kalan" hücreleri çıkar.
+  var dx = w / nW, dy = h / nH, dz = L / nZ;
+  var x0 = -w / 2, y0 = -h / 2, z0 = -L / 2;
+
+  // Node grid: (nW+1) × (nH+1) × (nZ+1) potansiyel; sadece kullanılanlar
+  var pitchY = nW + 1;
+  var pitchZ = (nW + 1) * (nH + 1);
+  var nodeMap = new Int32Array((nW + 1) * (nH + 1) * (nZ + 1));
+  for (var im = 0; im < nodeMap.length; im++) nodeMap[im] = -1;
+  var nodeList = [];
+  function getNode(i, j, k) {
+    var idx = i + j * pitchY + k * pitchZ;
+    var ex = nodeMap[idx];
+    if (ex >= 0) return ex;
+    var newIdx = nodeList.length / 3;
+    nodeList.push(x0 + i * dx, y0 + j * dy, z0 + k * dz);
+    nodeMap[idx] = newIdx;
+    return newIdx;
+  }
+
+  // İç bölge: |x - 0| < (w/2 - t) AND |y - 0| < (h/2 - t)
+  // Yani x ∈ (-w/2+t, w/2-t), y ∈ (-h/2+t, h/2-t)
+  // Hücre dışarıda kalıyorsa eklenir, içte boş.
+  var iw2 = w / 2 - t, ih2 = h / 2 - t;
+  var elements = [];
+  for (var k = 0; k < nZ; k++) {
+    for (var j = 0; j < nH; j++) {
+      for (var i = 0; i < nW; i++) {
+        // Hücre merkezi
+        var cx = x0 + (i + 0.5) * dx;
+        var cy = y0 + (j + 0.5) * dy;
+        // İç dikdörtgen içindeyse atla
+        if (Math.abs(cx) < iw2 && Math.abs(cy) < ih2) continue;
+        var n0 = getNode(i,     j,     k);
+        var n1 = getNode(i + 1, j,     k);
+        var n2 = getNode(i + 1, j + 1, k);
+        var n3 = getNode(i,     j + 1, k);
+        var n4 = getNode(i,     j,     k + 1);
+        var n5 = getNode(i + 1, j,     k + 1);
+        var n6 = getNode(i + 1, j + 1, k + 1);
+        var n7 = getNode(i,     j + 1, k + 1);
+        elements.push(n0, n1, n2, n3, n4, n5, n6, n7);
+      }
+    }
+  }
+
+  if (elements.length === 0) return null;
+
+  var nodes = new Float32Array(nodeList);
+  var elementsTA = new Uint32Array(elements);
+
+  // Named selections — bbox yön bazlı (voxel mesh ile aynı yaklaşım)
+  return {
+    type: 'hex8',
+    geometryType: 'rectTube',
+    nodes: nodes,
+    elements: elementsTA,
+    nodesPerElement: 8,
+    grid: { nW: nW, nH: nH, nZ: nZ, nT: nT, voxelCount: elementsTA.length / 8 },
+    sweepAxis: 'Z',
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
+      minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
+    })
   };
 }
 

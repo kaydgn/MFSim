@@ -400,6 +400,96 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Rectangular tube (rectTube) primitif - sweep mesh', () => {
+  test('rectTube mesh oluşturulur (Heks8, Z sweep)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 100 } }, { size: 5 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('hex8');
+    expect(m.geometryType).toBe('rectTube');
+    expect(m.sweepAxis).toBe('Z');
+    expect(m.elements.length / 8).toBeGreaterThan(0);
+  });
+
+  test('İç dikdörtgen boş — eleman sayısı tam dolu kutudan az', () => {
+    var hollow = veFEAMeshFromGeometry({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 60 } }, { size: 5 });
+    var full = veFEAMeshFromGeometry({ type: 'box', params: { width: 60, height: 40, depth: 60 } }, { size: 5 });
+    expect(hollow.elements.length / 8).toBeLessThan(full.elements.length / 8);
+    // Hollow elementCount yaklaşık olarak: (12·8·12 - 2·6·12) = 1152 - 144 = 1008
+    // (kesin değer iç dikdörtgenin grid alignment'ına bağlı)
+  });
+
+  test('Thickness çok büyükse clamp (max = min(w,h)/2)', () => {
+    var p = veFEANormalizePrimitiveParams('rectTube', { width: 40, height: 30, thickness: 100, length: 50 });
+    expect(p.thickness).toBeLessThan(15); // min(40,30)/2 - 0.1 = 14.9
+    expect(p.thickness).toBeGreaterThan(0);
+  });
+
+  test('Tüm element indeksleri geçerli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 80 } }, { size: 10 });
+    var maxIdx = m.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < m.elements.length; i++) {
+      if (m.elements[i] < 0 || m.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+
+  test('Hacim hesabı: dış − iç × uzunluk', () => {
+    var stats = veFEAPrimitiveStats('rectTube', { width: 60, height: 40, thickness: 5, length: 100 });
+    // (60·40 - 50·30)·100 = (2400 - 1500)·100 = 90000 mm³
+    expect(stats.volume).toBeCloseTo(90000, 0);
+  });
+
+  test('Named selections üretilir', () => {
+    var m = veFEAMeshFromGeometry({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 80 } }, { size: 10 });
+    expect(m.namedSelections).toBeDefined();
+    expect(Object.keys(m.namedSelections).length).toBeGreaterThan(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('Sweep axis bilgisi mesh metrics\'e yansır', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.showToast = jest.fn();
+    global.showNodeProperties = jest.fn();
+    global.saveState = jest.fn();
+    Object.keys(veFEAMeshCache).forEach((k) => delete veFEAMeshCache[k]);
+  });
+
+  test('Silindir build → metrics.sweepAxis === "Y"', () => {
+    global.nodes = [
+      { id: 'geom-c', type: 'fea-geometry', data: { geometry: { type: 'cylinder', params: { radius: 10, height: 20 } } } },
+      { id: 'mesh-c', type: 'fea-mesh', data: { meshSettings: { size: 5 } } }
+    ];
+    global.connections = [{ from: 'geom-c', to: 'mesh-c' }];
+    veFEABuildMeshForNode('mesh-c');
+    expect(global.nodes[1].data.meshMetrics.sweepAxis).toBe('Y');
+  });
+
+  test('Box build → metrics.sweepAxis null/undefined', () => {
+    global.nodes = [
+      { id: 'geom-b', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
+      { id: 'mesh-b', type: 'fea-mesh', data: { meshSettings: { size: 5 } } }
+    ];
+    global.connections = [{ from: 'geom-b', to: 'mesh-b' }];
+    veFEABuildMeshForNode('mesh-b');
+    expect(global.nodes[1].data.meshMetrics.sweepAxis).toBeFalsy();
+  });
+
+  test('RectTube build → metrics.sweepAxis === "Z"', () => {
+    global.nodes = [
+      { id: 'geom-r', type: 'fea-geometry', data: { geometry: { type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 100 } } } },
+      { id: 'mesh-r', type: 'fea-mesh', data: { meshSettings: { size: 10 } } }
+    ];
+    global.connections = [{ from: 'geom-r', to: 'mesh-r' }];
+    veFEABuildMeshForNode('mesh-r');
+    expect(global.nodes[1].data.meshMetrics.sweepAxis).toBe('Z');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAApplyLocalSizing (boundary bias)', () => {
   test('biasStrength=0 → no-op (düğümler değişmez)', () => {
     var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
