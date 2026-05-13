@@ -22270,6 +22270,26 @@ function veFEAExtractSurfaceTriangles(meshData) {
   };
 }
 
+// ANSYS Mesh Quality Worksheet renkleri — threshold-based:
+//   value < warnLimit → yeşil (iyi)
+//   warnLimit ≤ value < errLimit → sarı (uyarı)
+//   value ≥ errLimit → kırmızı (hata)
+// inverted=true: küçük değer kötü (örn. minAngle).
+function veFEAThresholdColor(value, warnLimit, errLimit, inverted) {
+  if (!isFinite(value)) return [0.5, 0.5, 0.5];
+  var isErr, isWarn;
+  if (inverted) {
+    isErr  = value <= errLimit;
+    isWarn = !isErr && value <= warnLimit;
+  } else {
+    isErr  = value >= errLimit;
+    isWarn = !isErr && value >= warnLimit;
+  }
+  if (isErr)  return [0.93, 0.27, 0.27];   // ANSYS kırmızı (#ef4444)
+  if (isWarn) return [0.96, 0.62, 0.04];   // ANSYS sarı/turuncu (#f59e0b)
+  return [0.13, 0.77, 0.37];                // ANSYS yeşil (#22c55e)
+}
+
 // Jet color ramp: t ∈ [0,1] → [r, g, b] ∈ [0,1]³
 // Mavi (cold = iyi) → Cyan → Yeşil → Sarı → Kırmızı (hot = kötü)
 function veFEAJetColor(t) {
@@ -22929,6 +22949,26 @@ function veFEAHasThree() {
   return typeof window !== 'undefined' && typeof window.THREE !== 'undefined';
 }
 
+// ANSYS-style 2-tone gradient background texture (üst koyu → alt açık).
+// Three.js scene.background sabit renk veya texture kabul eder, gradient
+// için runtime canvas texture yaratırız (256x2 px, hızlı).
+function _veFEACreateGradientTexture(topHex, botHex) {
+  if (typeof document === 'undefined' || !veFEAHasThree()) return null;
+  var c = document.createElement('canvas');
+  c.width = 2; c.height = 256;
+  var ctx = c.getContext('2d');
+  if (!ctx) return null;
+  var grd = ctx.createLinearGradient(0, 0, 0, 256);
+  grd.addColorStop(0, topHex);
+  grd.addColorStop(1, botHex);
+  ctx.fillStyle = grd;
+  ctx.fillRect(0, 0, 2, 256);
+  var tex = new THREE.CanvasTexture(c);
+  if (tex.colorSpace !== undefined) tex.colorSpace = THREE.SRGBColorSpace || 'srgb';
+  tex.needsUpdate = true;
+  return tex;
+}
+
 // ─── Ana viewer kurulumu ────────────────────────────────────────────────────
 function veFEAInitViewer(canvas, opts) {
   if(!veFEAHasThree()) {
@@ -22942,7 +22982,13 @@ function veFEAInitViewer(canvas, opts) {
   var height = opts.height || canvas.clientHeight || 180;
 
   var scene = new THREE.Scene();
-  scene.background = new THREE.Color(opts.background || 0x1a1a1a);
+  // Background: 'ansys-gradient' (navy-to-light-blue), number (solid), veya undefined (dark)
+  // ANSYS Mechanical default'u: koyu navy üst → açık mavi alt gradient.
+  if (opts.background === 'ansys-gradient') {
+    scene.background = _veFEACreateGradientTexture('#0d2645', '#5a7fa8');
+  } else {
+    scene.background = new THREE.Color(opts.background || 0x1a1a1a);
+  }
 
   var camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 5000);
   camera.position.set(60, 50, 90);
@@ -22952,11 +22998,18 @@ function veFEAInitViewer(canvas, opts) {
   renderer.setPixelRatio(window.devicePixelRatio || 1);
   renderer.localClippingEnabled = true; // material.clippingPlanes etkili olsun
 
-  // Işıklar (sahnede grid/axes yok — sadece geometri ve aydınlatma)
-  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
-  var dir = new THREE.DirectionalLight(0xffffff, 0.85);
-  dir.position.set(80, 120, 60);
-  scene.add(dir);
+  // ─── Three-point lighting (ANSYS-style) ──────────────────────────────────
+  // ANSYS modeller uniform aydınlanmıs gozukur: subtle ambient + key + fill + rim
+  scene.add(new THREE.AmbientLight(0xffffff, 0.42));
+  var keyLight = new THREE.DirectionalLight(0xffffff, 0.75);
+  keyLight.position.set(80, 120, 60);
+  scene.add(keyLight);
+  var fillLight = new THREE.DirectionalLight(0xc8d8e8, 0.35);
+  fillLight.position.set(-80, 40, 80);
+  scene.add(fillLight);
+  var rimLight = new THREE.DirectionalLight(0xffe8c8, 0.25);
+  rimLight.position.set(0, -60, -100);
+  scene.add(rimLight);
 
   // Sahneye orbit hedefi
   var target = new THREE.Vector3(0, 0, 0);
@@ -23114,6 +23167,63 @@ function veFEAInitViewer(canvas, opts) {
           edgeLine.userData.feaMeshEdges = true;
           this._geometryRoot.add(edgeLine);
         }
+      }
+
+      this._meshData = meshData;
+      this._highlightedSelectionKey = null;
+      this.zoomToFit(solid);
+      return solid;
+    },
+    // ANSYS-style threshold renkli mesh — perElement değerlere göre yeşil/sarı/kırmızı.
+    // thresholds = { warnLimit, errLimit, inverted }
+    loadMeshThresholdMap: function(meshData, perValues, thresholds) {
+      if (!meshData || typeof veFEAExtractSurfaceTriangles !== 'function') return null;
+      this.clearGeometry();
+      var surf = veFEAExtractSurfaceTriangles(meshData);
+      if (!surf || surf.positions.length === 0) return null;
+      var positions = surf.positions;
+      var elementIds = surf.elementIds;
+      var triCount = elementIds.length;
+      var colors = new Float32Array(positions.length);
+      var warn = thresholds.warnLimit;
+      var err = thresholds.errLimit;
+      var inv = !!thresholds.inverted;
+      for (var i = 0; i < triCount; i++) {
+        var v = perValues ? perValues[elementIds[i]] : 0;
+        var rgb = (typeof veFEAThresholdColor === 'function')
+          ? veFEAThresholdColor(v, warn, err, inv) : [0.5, 0.5, 0.5];
+        for (var k = 0; k < 3; k++) {
+          colors[i * 9 + k * 3]     = rgb[0];
+          colors[i * 9 + k * 3 + 1] = rgb[1];
+          colors[i * 9 + k * 3 + 2] = rgb[2];
+        }
+      }
+      var geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geometry.computeVertexNormals();
+      var material = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        metalness: 0.0,
+        roughness: 0.7,
+        side: THREE.DoubleSide,
+        flatShading: false
+      });
+      var solid = new THREE.Mesh(geometry, material);
+      solid.userData.feaThresholdMap = true;
+      this._geometryRoot.add(solid);
+
+      // ANSYS-style: edge overlay (siyah, opaklık 0.45)
+      var edgeVerts = veFEAMeshExtractEdges(meshData);
+      if (edgeVerts && edgeVerts.length > 0 && edgeVerts.length / 3 < 200000) {
+        var edgeGeo = new THREE.BufferGeometry();
+        edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
+        var edgeLine = new THREE.LineSegments(
+          edgeGeo,
+          new THREE.LineBasicMaterial({ color: 0x102444, transparent: true, opacity: 0.45 })
+        );
+        edgeLine.userData.feaMeshEdges = true;
+        this._geometryRoot.add(edgeLine);
       }
 
       this._meshData = meshData;
@@ -23884,7 +23994,7 @@ function veFEAFitPreviewForNode(nodeId) {
 var veFEAMeshCache = {};
 
 // Mesh node panel açıldığında çağrılır — fea-geometry'den input alıp viewer kurar
-function veFEAInitMeshViewerForNode(nodeId) {
+function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
   var canvasId = 've-fea-mesh-canvas-' + nodeId;
   var canvas = document.getElementById(canvasId);
   if (!canvas) return;
@@ -23906,24 +24016,32 @@ function veFEAInitMeshViewerForNode(nodeId) {
     return;
   }
 
-  var viewer = veFEAInitViewer(canvas, {
+  // Modal viewer için ANSYS-style preset (gradient + gizmo); diğer call'lar
+  // (eski preview side-panel) için temel ayarlar.
+  var opts = viewerOpts || {};
+  var finalOpts = {
     width: canvas.clientWidth || 240,
-    height: canvas.clientHeight || 180
-  });
+    height: canvas.clientHeight || 180,
+    background: opts.background || 'ansys-gradient',
+    gizmo: opts.gizmo !== false  // default true (modal'da XYZ ekseni görünsün)
+  };
+  var viewer = veFEAInitViewer(canvas, finalOpts);
   if (!viewer) return;
   veFEAViewerRegistry[nodeId] = viewer;
 
   // Cache'te mesh varsa otomatik yedir
   if (veFEAMeshCache[nodeId]) {
     var node = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === nodeId; }) : null;
-    // Heat map aktifse renk-kodlu render; değilse wireframe + highlight
-    if (node && node.data && node.data.heatMapMetric && typeof veFEAApplyHeatMap === 'function') {
-      veFEAApplyHeatMap(nodeId, node.data.heatMapMetric);
-    } else {
+    // Display modu (ANSYS-style default: 'solid-edges' = Body Color)
+    var displayMode = (node && node.data && node.data.heatMapMetric) || 'solid-edges';
+    if (displayMode === 'off') {
+      // Eski Wireframe modu (LineSegments)
       viewer.loadMesh(veFEAMeshCache[nodeId]);
-      if (node && node.data && node.data.highlightedSelection && typeof viewer.highlightNamedSelection === 'function') {
-        viewer.highlightNamedSelection(node.data.highlightedSelection);
-      }
+    } else if (typeof veFEAApplyHeatMap === 'function') {
+      veFEAApplyHeatMap(nodeId, displayMode);
+    }
+    if (node && node.data && node.data.highlightedSelection && typeof viewer.highlightNamedSelection === 'function') {
+      viewer.highlightNamedSelection(node.data.highlightedSelection);
     }
   } else if (typeof veFEAFindUpstreamGeometryNode === 'function') {
     // Mesh henüz hesaplanmamış → upstream Geometri node'unu bul ve viewer'a
@@ -24159,7 +24277,28 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
     return;
   }
 
-  // Heat map modları
+  // Threshold (ANSYS Mesh Quality Worksheet stili: yeşil/sarı/kırmızı)
+  if (mode === 'threshold-aspect' || mode === 'threshold-skewness' ||
+      mode === 'threshold-minAngle' || mode === 'threshold-jacobian') {
+    if (typeof veFEAComputePerElementQuality !== 'function') return;
+    var thrMetric, thrWarn, thrErr, thrInverted;
+    if (mode === 'threshold-aspect')    { thrMetric = 'aspect';        thrWarn = 5;   thrErr = 20;  thrInverted = false; }
+    else if (mode === 'threshold-skewness') { thrMetric = 'skewness';   thrWarn = 0.5; thrErr = 0.85; thrInverted = false; }
+    else if (mode === 'threshold-minAngle') { thrMetric = 'minAngle';   thrWarn = 30;  thrErr = 15;  thrInverted = true; }
+    else if (mode === 'threshold-jacobian') { thrMetric = 'jacobianRatio'; thrWarn = 5; thrErr = 40; thrInverted = false; }
+    var thrVals = veFEAComputePerElementQuality(meshData, thrMetric);
+    if (!thrVals) {
+      if (typeof showToast === 'function') showToast('Threshold için kalite hesaplanamadı', 'warning');
+      return;
+    }
+    if (typeof viewer.loadMeshThresholdMap === 'function') {
+      viewer.loadMeshThresholdMap(meshData, thrVals, { warnLimit: thrWarn, errLimit: thrErr, inverted: thrInverted });
+    }
+    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    return;
+  }
+
+  // Heat map modları (rainbow)
   if (typeof veFEAComputePerElementQuality !== 'function') return;
   var values = veFEAComputePerElementQuality(meshData, mode);
   if (!values) {
@@ -25187,14 +25326,14 @@ function _veFEAEditorQualityHTML(node) {
     if (q.aspectRatio.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.aspectRatio.poorCount.toLocaleString('tr-TR') + ' eleman aspect > ' + q.aspectRatio.warnThreshold + '</div>';
     }
-    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı', '#3b82f6', function(v){return v.toFixed(1);});
+    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#3b82f6', function(v){return v.toFixed(1);}, { warnLimit: 5, errLimit: q.aspectRatio.warnThreshold || 20, inverted: false });
     html += veFEAReadOnlyRow('Skewness Min / Maks / Ort', (q.skewness.min || 0).toFixed(3) + ' / ' + (q.skewness.max || 0).toFixed(3) + ' / ' + (q.skewness.avg || 0).toFixed(3));
     if (q.skewness.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.skewness.poorCount.toLocaleString('tr-TR') + ' eleman skewness > ' + q.skewness.warnThreshold + '</div>';
     }
-    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı', '#f59e0b', function(v){return v.toFixed(2);});
+    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#f59e0b', function(v){return v.toFixed(2);}, { warnLimit: 0.5, errLimit: q.skewness.warnThreshold || 0.85, inverted: false });
     html += veFEAReadOnlyRow('Min / Maks iç açı', (q.angle.min || 0).toFixed(1) + '° / ' + (q.angle.max || 0).toFixed(1) + '°');
-    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece)', '#22c55e', function(v){return v.toFixed(0) + '°';});
+    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece — düşük=kötü, ters threshold)', '#22c55e', function(v){return v.toFixed(0) + '°';}, { warnLimit: 30, errLimit: 15, inverted: true });
   }
   return html;
 }
@@ -25239,15 +25378,22 @@ function _veFEAEditorDisplayHTML(node) {
   if (!hasMesh) {
     return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra kullanılabilir.</div>';
   }
-  var displayMode = d.heatMapMetric || 'off';
-  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">Mesh\'in 3D viewer\'da nasıl gösterileceğini seçin.</div>';
+  // ANSYS-style default: Body Color = Solid + Edges
+  var displayMode = d.heatMapMetric || 'solid-edges';
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">Mesh\'in 3D viewer\'da nasıl gösterileceğini seçin. ANSYS-style: <b>Body Color</b> (solid+edges) varsayılan.</div>';
   html += '<select onchange="veFEAApplyHeatMap(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
   html += '<optgroup label="Standart">';
-  html += '<option value="off"' + (displayMode === 'off' || !d.heatMapMetric ? ' selected' : '') + '>Wireframe (kenarlar)</option>';
+  html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Body Color (Solid + Edges)</option>';
   html += '<option value="solid"' + (displayMode === 'solid' ? ' selected' : '') + '>Solid (yüzey)</option>';
-  html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Solid + Edges</option>';
+  html += '<option value="off"' + (displayMode === 'off' ? ' selected' : '') + '>Wireframe (sadece kenarlar)</option>';
   html += '</optgroup>';
-  html += '<optgroup label="Heat Map (Kalite)">';
+  html += '<optgroup label="Kalite Eşiği (Mesh Quality Worksheet)">';
+  html += '<option value="threshold-aspect"' + (displayMode === 'threshold-aspect' ? ' selected' : '') + '>Aspect Ratio (yeşil/sarı/kırmızı)</option>';
+  html += '<option value="threshold-skewness"' + (displayMode === 'threshold-skewness' ? ' selected' : '') + '>Skewness (yeşil/sarı/kırmızı)</option>';
+  html += '<option value="threshold-minAngle"' + (displayMode === 'threshold-minAngle' ? ' selected' : '') + '>Min İç Açı (yeşil/sarı/kırmızı)</option>';
+  html += '<option value="threshold-jacobian"' + (displayMode === 'threshold-jacobian' ? ' selected' : '') + '>Jacobian Oranı (yeşil/sarı/kırmızı)</option>';
+  html += '</optgroup>';
+  html += '<optgroup label="Heat Map (Sürekli Rainbow)">';
   html += '<option value="aspect"' + (displayMode === 'aspect' ? ' selected' : '') + '>Aspect Ratio</option>';
   html += '<option value="skewness"' + (displayMode === 'skewness' ? ' selected' : '') + '>Skewness</option>';
   html += '<option value="minAngle"' + (displayMode === 'minAngle' ? ' selected' : '') + '>Min İç Açı</option>';
@@ -25255,11 +25401,21 @@ function _veFEAEditorDisplayHTML(node) {
   html += '</optgroup>';
   html += '</select>';
   var isHeatMap = (displayMode === 'aspect' || displayMode === 'skewness' || displayMode === 'minAngle' || displayMode === 'jacobianRatio');
+  var isThreshold = (displayMode === 'threshold-aspect' || displayMode === 'threshold-skewness' || displayMode === 'threshold-minAngle' || displayMode === 'threshold-jacobian');
   if (isHeatMap) {
     html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
       '<span style="font-size:0.55rem; color:var(--text-muted);">İyi</span>' +
       '<div style="flex:1; height:8px; background:linear-gradient(to right, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000); border:1px solid var(--border-color);"></div>' +
       '<span style="font-size:0.55rem; color:var(--text-muted);">Kötü</span>' +
+    '</div>';
+  } else if (isThreshold) {
+    html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
+      '<span style="display:inline-block; width:14px; height:10px; background:#22c55e;"></span>' +
+      '<span style="font-size:0.55rem; color:var(--text-muted);">İyi</span>' +
+      '<span style="display:inline-block; width:14px; height:10px; background:#f59e0b;"></span>' +
+      '<span style="font-size:0.55rem; color:var(--text-muted);">Uyarı</span>' +
+      '<span style="display:inline-block; width:14px; height:10px; background:#ef4444;"></span>' +
+      '<span style="font-size:0.55rem; color:var(--text-muted);">Hata</span>' +
     '</div>';
   }
   return html;
@@ -25340,8 +25496,11 @@ function veFEAReadOnlyRow(label, value) {
     '</div>';
 }
 
-// Histogram bar chart — kalite metrikleri için inline SVG-free render
-function veFEAHistogramHTML(hist, label, color, axisFmt) {
+// Histogram bar chart — kalite metrikleri için inline SVG-free render.
+// thresholds (opsiyonel): { warnLimit, errLimit, inverted } → her bin'i ANSYS
+// Mesh Quality Worksheet renkleriyle boyar (yeşil/sarı/kırmızı). thresholds
+// yoksa tüm bar'lar tek renk (`color`).
+function veFEAHistogramHTML(hist, label, color, axisFmt, thresholds) {
   if (!hist || !hist.bins || hist.bins.length === 0) return '';
   var maxCount = 0;
   for (var i = 0; i < hist.bins.length; i++) if (hist.bins[i] > maxCount) maxCount = hist.bins[i];
@@ -25353,8 +25512,14 @@ function veFEAHistogramHTML(hist, label, color, axisFmt) {
     var pct = maxCount > 0 ? (b / maxCount * 100) : 0;
     var binMin = hist.min + (hist.max - hist.min) * (idx / hist.binCount);
     var binMax = hist.min + (hist.max - hist.min) * ((idx + 1) / hist.binCount);
+    var binCenter = (binMin + binMax) / 2;
     var title = fmt(binMin) + '–' + fmt(binMax) + ': ' + b + ' eleman';
-    html += '<div title="' + title + '" style="flex:1; background:' + color + '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + ';"></div>';
+    var binColor = color;
+    if (thresholds && typeof veFEAThresholdColor === 'function') {
+      var rgb = veFEAThresholdColor(binCenter, thresholds.warnLimit, thresholds.errLimit, !!thresholds.inverted);
+      binColor = 'rgb(' + Math.round(rgb[0]*255) + ',' + Math.round(rgb[1]*255) + ',' + Math.round(rgb[2]*255) + ')';
+    }
+    html += '<div title="' + title + '" style="flex:1; background:' + binColor + '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + ';"></div>';
   });
   html += '</div>';
   html += '<div style="display:flex; justify-content:space-between; font-size:0.52rem; color:var(--text-muted); margin-top:2px;">' +

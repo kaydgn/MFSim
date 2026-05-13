@@ -26,8 +26,11 @@ function veFEAReadOnlyRow(label, value) {
     '</div>';
 }
 
-// Histogram bar chart — kalite metrikleri için inline SVG-free render
-function veFEAHistogramHTML(hist, label, color, axisFmt) {
+// Histogram bar chart — kalite metrikleri için inline SVG-free render.
+// thresholds (opsiyonel): { warnLimit, errLimit, inverted } → her bin'i ANSYS
+// Mesh Quality Worksheet renkleriyle boyar (yeşil/sarı/kırmızı). thresholds
+// yoksa tüm bar'lar tek renk (`color`).
+function veFEAHistogramHTML(hist, label, color, axisFmt, thresholds) {
   if (!hist || !hist.bins || hist.bins.length === 0) return '';
   var maxCount = 0;
   for (var i = 0; i < hist.bins.length; i++) if (hist.bins[i] > maxCount) maxCount = hist.bins[i];
@@ -39,8 +42,14 @@ function veFEAHistogramHTML(hist, label, color, axisFmt) {
     var pct = maxCount > 0 ? (b / maxCount * 100) : 0;
     var binMin = hist.min + (hist.max - hist.min) * (idx / hist.binCount);
     var binMax = hist.min + (hist.max - hist.min) * ((idx + 1) / hist.binCount);
+    var binCenter = (binMin + binMax) / 2;
     var title = fmt(binMin) + '–' + fmt(binMax) + ': ' + b + ' eleman';
-    html += '<div title="' + title + '" style="flex:1; background:' + color + '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + ';"></div>';
+    var binColor = color;
+    if (thresholds && typeof veFEAThresholdColor === 'function') {
+      var rgb = veFEAThresholdColor(binCenter, thresholds.warnLimit, thresholds.errLimit, !!thresholds.inverted);
+      binColor = 'rgb(' + Math.round(rgb[0]*255) + ',' + Math.round(rgb[1]*255) + ',' + Math.round(rgb[2]*255) + ')';
+    }
+    html += '<div title="' + title + '" style="flex:1; background:' + binColor + '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + ';"></div>';
   });
   html += '</div>';
   html += '<div style="display:flex; justify-content:space-between; font-size:0.52rem; color:var(--text-muted); margin-top:2px;">' +
