@@ -202,9 +202,13 @@ describe('js/fea-viewer.js API', () => {
 describe('fea-viewer kaynak refaktör güvenceleri', () => {
   const viewerSrc = fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8');
 
-  test('GridHelper / AxesHelper sahneye eklenmiyor (sadece geometri görünsün)', () => {
+  test('GridHelper hiç kullanılmıyor (ana sahnede de gizmo da yok)', () => {
     expect(viewerSrc).not.toMatch(/new\s+THREE\.GridHelper/);
-    expect(viewerSrc).not.toMatch(/new\s+THREE\.AxesHelper/);
+  });
+
+  test('Ana sahneye AxesHelper eklenmiyor (gizmo dışında kullanım yasak)', () => {
+    // scene.add(new THREE.AxesHelper...) yasaktır. gizmoScene.add(...) izinli.
+    expect(viewerSrc).not.toMatch(/\bscene\.add\s*\(\s*new\s+THREE\.AxesHelper/);
   });
 
   test('veFEAOpenFullscreenViewer node geometrisini viewer a yedirir', () => {
