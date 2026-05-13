@@ -196,6 +196,15 @@ function getFEAMeshPropertiesHTML(node) {
     '; font-size:0.62rem; color:var(--text-primary); margin-bottom:10px;">' +
     (geomOk ? '✓ ' : '⚠ ') + geomLabel + '</div>';
 
+  // Mesh modu — STL/STEP için kritik (Otomatik = voxel hacim Heks8)
+  var currentMode = settings.mode || 'auto';
+  html += veFEASectionTitle('Mesh Modu');
+  html += '<select id="ve-fea-mesh-mode-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:8px;">';
+  html += '<option value="auto"' + (currentMode === 'auto' ? ' selected' : '') + '>Otomatik (Primitif → yapısal, STL/STEP → voxel hacim)</option>';
+  html += '<option value="volume"' + (currentMode === 'volume' ? ' selected' : '') + '>Hacim (Heks8 voxel — FEA için)</option>';
+  html += '<option value="surface"' + (currentMode === 'surface' ? ' selected' : '') + '>Yüzey (Tri3 — sadece önizleme)</option>';
+  html += '</select>';
+
   // Mesh boyu input
   html += veFEASectionTitle('Mesh Boyu');
   html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">';
@@ -264,13 +273,17 @@ function veFEASetMeshSizePreset(nodeId, size) {
 function veFEASubmitMeshBuild(nodeId) {
   if (typeof nodes === 'undefined' || typeof veFEABuildMeshForNode !== 'function') return;
   var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
+  var modeSel = document.getElementById('ve-fea-mesh-mode-' + nodeId);
   var size = input ? parseFloat(input.value) : 10;
   if (!isFinite(size) || size <= 0) size = 10;
+  var mode = (modeSel && modeSel.value) ? modeSel.value : 'auto';
+  if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
   var meshNode = nodes.find(function(n) { return n.id === nodeId; });
   if (meshNode) {
     meshNode.data = meshNode.data || {};
     meshNode.data.meshSettings = meshNode.data.meshSettings || {};
     meshNode.data.meshSettings.size = size;
+    meshNode.data.meshSettings.mode = mode;
   }
   veFEABuildMeshForNode(nodeId);
 }

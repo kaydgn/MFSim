@@ -222,10 +222,12 @@ describe('STL yüzey mesh (vertex dedup)', () => {
     return ab;
   }
 
-  test('STL geometri → Tri3 mesh, dedup\'lı düğümler', () => {
+  test('STL geometri + mode "surface" → Tri3 mesh, dedup\'lı düğümler', () => {
+    // F3b sonrası default mode (auto) STL için voxel hex8 üretir.
+    // Yüzey Tri3 mesh için explicit "surface" mode gerek.
     var stlBuf = buildBinarySTLCube();
     var b64 = veFEAArrayBufferToBase64(stlBuf);
-    var m = veFEAMeshFromGeometry({ type: 'stl', rawDataB64: b64 }, { size: 5 });
+    var m = veFEAMeshFromGeometry({ type: 'stl', rawDataB64: b64 }, { size: 5, mode: 'surface' });
     expect(m).not.toBeNull();
     expect(m.type).toBe('tri3');
     expect(m.nodesPerElement).toBe(3);
