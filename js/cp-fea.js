@@ -29,6 +29,9 @@ function veFEAReadOnlyRow(label, value) {
 // ─── 1. GEOMETRİ ────────────────────────────────────────────────────────────
 function getFEAGeometryPropertiesHTML(node) {
   var d = node.data || {};
+  var geom = d.geometry; // { type, params, volume, surfaceArea, bbox, sourceLabel }
+  var hasGeom = !!(geom && geom.type);
+
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
 
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
@@ -37,7 +40,7 @@ function getFEAGeometryPropertiesHTML(node) {
   html += '</div>';
 
   html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
-    'CAD geometrisi (STEP, IGES, STL) yükleyin veya parametrik primitif tanımlayın. ' +
+    'Parametrik primitif tanımlayın veya CAD geometrisi yükleyin. ' +
     'Sonraki adım: <b>Mesh</b>.</div>';
 
   // ─── 3D ÖNİZLEME ──────────────────────────────────────────────────────
@@ -49,21 +52,95 @@ function getFEAGeometryPropertiesHTML(node) {
   html += '<button onclick="veFEAOpenFullscreenViewer(\'' + node.id + '\')" style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; margin-bottom:10px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">🔍 Tam Ekran Görüntüleyici</button>';
 
   // ─── GEOMETRİ KAYNAĞI ─────────────────────────────────────────────────
-  html += veFEASectionTitle('Geometri Kaynağı');
-  html += '<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">';
-  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 Dosya İçe Aktar (STL — sonraki PR)</button>';
-  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 Dosya İçe Aktar (STEP / IGES — OCCT.js ile)</button>';
-  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📐 Parametrik Primitif (kutu / silindir / şaft)</button>';
+  html += veFEASectionTitle('Parametrik Primitif');
+  html += '<div style="display:flex; gap:4px; margin-bottom:8px;">';
+  var types = (typeof veFEAPrimitiveTypes === 'function') ? veFEAPrimitiveTypes() : [];
+  types.forEach(function(t) {
+    var label = (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(t).split(' ')[0] : t;
+    var active = hasGeom && geom.type === t;
+    var border = active ? 'var(--accent-primary)' : 'var(--border-color)';
+    var bg = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
+    var color = active ? '#fff' : 'var(--text-primary)';
+    html += '<button onclick="veFEAToggleParamForm(\'' + node.id + '\', \'' + t + '\')" style="flex:1; padding:7px; font-size:0.64rem; background:' + bg + '; color:' + color + '; border:1px solid ' + border + '; cursor:pointer;">' + label + '</button>';
+  });
   html += '</div>';
 
+  // Aktif form (geometri yüklüyse onun formu açık; aksi halde gizli)
+  var activeType = hasGeom ? geom.type : null;
+  types.forEach(function(t) {
+    var schema = (typeof veFEAPrimitiveSchema === 'function') ? veFEAPrimitiveSchema(t) : null;
+    if(!schema) return;
+    var visible = activeType === t;
+    var params = (activeType === t && geom.params) ? geom.params
+               : ((typeof veFEAPrimitiveDefaults === 'function') ? veFEAPrimitiveDefaults(t) : {});
+
+    html += '<div id="ve-fea-form-' + node.id + '-' + t + '" style="display:' + (visible ? 'block' : 'none') + '; padding:8px; background:var(--bg-secondary); border:1px solid var(--border-color); margin-bottom:8px;">';
+    html += '<div style="font-size:0.62rem; color:var(--text-muted); margin-bottom:6px;">' + veFEAPrimitiveLabel(t) + ' parametreleri</div>';
+    schema.forEach(function(p) {
+      var iid = 've-fea-param-' + node.id + '-' + t + '-' + p.key;
+      html += '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px;">';
+      html += '<label for="' + iid + '" style="font-size:0.62rem; color:var(--text-secondary); flex:1;">' + p.label + '</label>';
+      html += '<input id="' + iid + '" type="number" value="' + params[p.key] + '" min="' + (p.min !== undefined ? p.min : '') + '" max="' + (p.max !== undefined ? p.max : '') + '" step="' + (p.integer ? '1' : '0.1') + '" style="width:75px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+      html += '<span style="font-size:0.55rem; color:var(--text-muted); width:18px;">' + p.unit + '</span>';
+      html += '</div>';
+    });
+    var btnLabel = visible ? '🔄 Güncelle' : '✓ Oluştur';
+    html += '<button onclick="veFEASubmitParamForm(\'' + node.id + '\', \'' + t + '\')" style="width:100%; padding:6px; margin-top:4px; font-size:0.65rem; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;">' + btnLabel + '</button>';
+    html += '</div>';
+  });
+
+  if(hasGeom) {
+    html += '<button onclick="veFEAClearGeometryForNode(\'' + node.id + '\')" style="width:100%; padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer; margin-bottom:10px;">🗑 Geometriyi Sil</button>';
+  }
+
+  // CAD import — F2c/F2d/OCCT için yer tutucu
+  html += veFEASectionTitle('CAD Dosya İçe Aktar');
+  html += '<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">';
+  html += '<button disabled style="padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 STL (sonraki PR)</button>';
+  html += '<button disabled style="padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 STEP / IGES (OCCT.js — Faz 2d)</button>';
+  html += '</div>';
+
+  // ─── DURUM ────────────────────────────────────────────────────────────
   html += veFEASectionTitle('Durum');
-  html += veFEAReadOnlyRow('Yüklenen geometri', d.geometryName || '— (henüz yok)');
-  html += veFEAReadOnlyRow('Hacim', '—');
-  html += veFEAReadOnlyRow('Yüzey alanı', '—');
-  html += veFEAReadOnlyRow('Sınırlayıcı kutu', '—');
+  if(hasGeom) {
+    html += veFEAReadOnlyRow('Yüklenen geometri', geom.sourceLabel || veFEAPrimitiveLabel(geom.type));
+    html += veFEAReadOnlyRow('Hacim',        (typeof veFEAFormatVolume === 'function') ? veFEAFormatVolume(geom.volume) : geom.volume + ' mm³');
+    html += veFEAReadOnlyRow('Yüzey alanı',  (typeof veFEAFormatArea === 'function') ? veFEAFormatArea(geom.surfaceArea) : geom.surfaceArea + ' mm²');
+    html += veFEAReadOnlyRow('Sınırlayıcı kutu', (typeof veFEAFormatBBox === 'function') ? veFEAFormatBBox(geom.bbox) : '—');
+  } else {
+    html += veFEAReadOnlyRow('Yüklenen geometri', '— (henüz yok)');
+    html += veFEAReadOnlyRow('Hacim', '—');
+    html += veFEAReadOnlyRow('Yüzey alanı', '—');
+    html += veFEAReadOnlyRow('Sınırlayıcı kutu', '—');
+  }
 
   html += '</div>';
   return html;
+}
+
+// ─── Geometri formu açıp/kapayıcı (sadece bir form bir anda açık olsun) ────
+function veFEAToggleParamForm(nodeId, type) {
+  var types = (typeof veFEAPrimitiveTypes === 'function') ? veFEAPrimitiveTypes() : [];
+  var clicked = document.getElementById('ve-fea-form-' + nodeId + '-' + type);
+  var willOpen = clicked && clicked.style.display === 'none';
+  types.forEach(function(t) {
+    var el = document.getElementById('ve-fea-form-' + nodeId + '-' + t);
+    if(el) el.style.display = (t === type && willOpen) ? 'block' : 'none';
+  });
+}
+
+// ─── Form değerlerini topla, normalize et, viewer'a uygula ─────────────────
+function veFEASubmitParamForm(nodeId, type) {
+  var schema = (typeof veFEAPrimitiveSchema === 'function') ? veFEAPrimitiveSchema(type) : null;
+  if(!schema) return;
+  var params = {};
+  schema.forEach(function(p) {
+    var el = document.getElementById('ve-fea-param-' + nodeId + '-' + type + '-' + p.key);
+    if(el) params[p.key] = parseFloat(el.value);
+  });
+  if(typeof veFEAApplyPrimitive === 'function') {
+    veFEAApplyPrimitive(nodeId, type, params);
+  }
 }
 
 // ─── 2. MESH ────────────────────────────────────────────────────────────────

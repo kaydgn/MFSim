@@ -19528,6 +19528,199 @@ function onVEGearShiftProfileChange(nodeId) {
 </script>
 <script>
 // ============================================================================
+// FEA PARAMETRİK PRİMİTİFLER
+// ============================================================================
+// Three.js mesh inşası + hacim / alan / bbox hesaplamaları + UI parametre
+// şeması. Bütün boyutlar mm cinsindendir. Hacim mm³, alan mm² olarak
+// hesaplanır; UI gerektiğinde m³ / m² / cm³ vb.'e dönüştürür.
+//
+// Public API:
+//   veFEAPrimitiveTypes()                → liste döner
+//   veFEAPrimitiveSchema(type)           → UI input şeması
+//   veFEAPrimitiveDefaults(type)         → varsayılan parametre nesnesi
+//   veFEABuildPrimitiveMesh(type, params) → THREE.Mesh (Three.js yoksa null)
+//   veFEAPrimitiveStats(type, params)    → { volume, surfaceArea, bbox }
+//   veFEAFormatVolume(mm3) / veFEAFormatArea(mm2) / veFEAFormatBBox(mm)
+// ============================================================================
+
+var VE_FEA_PRIMITIVES = {
+  'box': {
+    label: 'Kutu',
+    schema: [
+      { key: 'width',  label: 'Genişlik (X)',  unit: 'mm', default: 50, min: 0.1, max: 5000 },
+      { key: 'height', label: 'Yükseklik (Y)', unit: 'mm', default: 30, min: 0.1, max: 5000 },
+      { key: 'depth',  label: 'Derinlik (Z)',  unit: 'mm', default: 20, min: 0.1, max: 5000 }
+    ]
+  },
+  'cylinder': {
+    label: 'Silindir',
+    schema: [
+      { key: 'radius', label: 'Yarıçap',  unit: 'mm', default: 15, min: 0.1, max: 2500 },
+      { key: 'height', label: 'Yükseklik', unit: 'mm', default: 60, min: 0.1, max: 5000 },
+      { key: 'segments', label: 'Çevresel Segment', unit: '−', default: 48, min: 8, max: 256, integer: true }
+    ]
+  },
+  'shaft': {
+    label: 'Şaft (içi boş silindir)',
+    schema: [
+      { key: 'outerRadius', label: 'Dış Yarıçap', unit: 'mm', default: 20, min: 0.5, max: 2500 },
+      { key: 'innerRadius', label: 'İç Yarıçap (delik)', unit: 'mm', default: 8,  min: 0,   max: 2500 },
+      { key: 'length',      label: 'Uzunluk',     unit: 'mm', default: 120, min: 0.1, max: 10000 },
+      { key: 'segments',    label: 'Çevresel Segment', unit: '−', default: 48, min: 8, max: 256, integer: true }
+    ]
+  }
+};
+
+function veFEAPrimitiveTypes() {
+  return Object.keys(VE_FEA_PRIMITIVES);
+}
+
+function veFEAPrimitiveSchema(type) {
+  var def = VE_FEA_PRIMITIVES[type];
+  return def ? def.schema : null;
+}
+
+function veFEAPrimitiveLabel(type) {
+  var def = VE_FEA_PRIMITIVES[type];
+  return def ? def.label : type;
+}
+
+function veFEAPrimitiveDefaults(type) {
+  var schema = veFEAPrimitiveSchema(type);
+  if(!schema) return null;
+  var out = {};
+  schema.forEach(function(p) { out[p.key] = p.default; });
+  return out;
+}
+
+// Parametre nesnesini schema'ya göre clamp + tip dönüşümü uygula
+function veFEANormalizePrimitiveParams(type, params) {
+  var schema = veFEAPrimitiveSchema(type);
+  if(!schema) return params;
+  var defaults = veFEAPrimitiveDefaults(type);
+  var out = {};
+  schema.forEach(function(p) {
+    var v = (params && params[p.key] !== undefined) ? Number(params[p.key]) : defaults[p.key];
+    if(!isFinite(v)) v = defaults[p.key];
+    if(p.min !== undefined) v = Math.max(p.min, v);
+    if(p.max !== undefined) v = Math.min(p.max, v);
+    if(p.integer) v = Math.round(v);
+    out[p.key] = v;
+  });
+  // Shaft: iç yarıçap dış yarıçaptan küçük olmalı
+  if(type === 'shaft' && out.innerRadius >= out.outerRadius) {
+    out.innerRadius = Math.max(0, out.outerRadius - 1);
+  }
+  return out;
+}
+
+// ─── İstatistikler (geometriden bağımsız analitik formüller) ────────────────
+function veFEAPrimitiveStats(type, params) {
+  var p = veFEANormalizePrimitiveParams(type, params);
+  if(!p) return null;
+
+  var volume = 0, surfaceArea = 0, bbox;
+
+  if(type === 'box') {
+    volume = p.width * p.height * p.depth;
+    surfaceArea = 2 * (p.width * p.height + p.height * p.depth + p.width * p.depth);
+    bbox = { x: p.width, y: p.height, z: p.depth };
+  } else if(type === 'cylinder') {
+    volume = Math.PI * p.radius * p.radius * p.height;
+    surfaceArea = 2 * Math.PI * p.radius * p.height + 2 * Math.PI * p.radius * p.radius;
+    bbox = { x: 2 * p.radius, y: p.height, z: 2 * p.radius };
+  } else if(type === 'shaft') {
+    var R = p.outerRadius, r = p.innerRadius, L = p.length;
+    volume = Math.PI * (R * R - r * r) * L;
+    // Dış yan + iç yan + iki halka uç
+    var sideOuter = 2 * Math.PI * R * L;
+    var sideInner = 2 * Math.PI * r * L;
+    var endRing   = 2 * Math.PI * (R * R - r * r); // iki uç
+    surfaceArea = sideOuter + sideInner + endRing;
+    bbox = { x: 2 * R, y: L, z: 2 * R };
+  }
+
+  return { volume: volume, surfaceArea: surfaceArea, bbox: bbox, params: p };
+}
+
+// ─── Three.js mesh inşası ──────────────────────────────────────────────────
+function veFEABuildPrimitiveMesh(type, params) {
+  if(typeof THREE === 'undefined') return null;
+  var p = veFEANormalizePrimitiveParams(type, params);
+  var geometry = null;
+
+  if(type === 'box') {
+    geometry = new THREE.BoxGeometry(p.width, p.height, p.depth);
+  } else if(type === 'cylinder') {
+    geometry = new THREE.CylinderGeometry(p.radius, p.radius, p.height, p.segments);
+  } else if(type === 'shaft') {
+    // İçi boş silindir = dış silindir mesh'i + iç delik. Three.js'in
+    // CylinderGeometry'sinde delik yok; LatheGeometry ile yarım kesiti
+    // döndürerek halka kesitli silindir oluştur.
+    var halfL = p.length / 2;
+    var pts = [
+      new THREE.Vector2(p.innerRadius, -halfL),
+      new THREE.Vector2(p.outerRadius, -halfL),
+      new THREE.Vector2(p.outerRadius,  halfL),
+      new THREE.Vector2(p.innerRadius,  halfL),
+      new THREE.Vector2(p.innerRadius, -halfL)
+    ];
+    geometry = new THREE.LatheGeometry(pts, p.segments);
+    // LatheGeometry Y ekseni etrafında döner — silindir gibi
+  }
+
+  if(!geometry) return null;
+
+  // Standart malzeme
+  var material = new THREE.MeshStandardMaterial({
+    color: 0x3b82f6,
+    metalness: 0.3,
+    roughness: 0.55,
+    side: THREE.DoubleSide,
+    flatShading: false
+  });
+
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.feaPrimitive = { type: type, params: p };
+
+  // Tel çerçeve overlay — geometriyi görselleştirmeyi kolaylaştırır
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b, linewidth: 1 }));
+  mesh.add(line);
+
+  return mesh;
+}
+
+// ─── Birim formatlama yardımcıları ──────────────────────────────────────────
+function veFEAFormatVolume(mm3) {
+  if(!isFinite(mm3) || mm3 <= 0) return '—';
+  if(mm3 >= 1e9) return (mm3 / 1e9).toFixed(3) + ' m³';
+  if(mm3 >= 1e6) return (mm3 / 1e6).toFixed(2) + ' dm³';
+  if(mm3 >= 1e3) return (mm3 / 1e3).toFixed(2) + ' cm³';
+  return mm3.toFixed(1) + ' mm³';
+}
+
+function veFEAFormatArea(mm2) {
+  if(!isFinite(mm2) || mm2 <= 0) return '—';
+  if(mm2 >= 1e6) return (mm2 / 1e6).toFixed(3) + ' m²';
+  if(mm2 >= 1e4) return (mm2 / 1e4).toFixed(2) + ' dm²';
+  if(mm2 >= 1e2) return (mm2 / 1e2).toFixed(2) + ' cm²';
+  return mm2.toFixed(1) + ' mm²';
+}
+
+function veFEAFormatBBox(bbox) {
+  if(!bbox) return '—';
+  function fmt(v) {
+    if(v >= 1000) return (v / 1000).toFixed(2) + ' m';
+    if(v >= 10) return v.toFixed(1) + ' mm';
+    return v.toFixed(2) + ' mm';
+  }
+  return fmt(bbox.x) + ' × ' + fmt(bbox.y) + ' × ' + fmt(bbox.z);
+}
+
+</script>
+<script>
+// ============================================================================
 // FEA 3D VIEWER (Three.js tabanlı)
 // ============================================================================
 // Yapısal Analiz bileşenlerinin 3D sahnesini yöneten modül.
@@ -19604,7 +19797,65 @@ function veFEAInitViewer(canvas, opts) {
     renderer: renderer,
     target: target,
     render: render,
+    // F2b: Geometri katmanı — primitifler / STL / STEP burada yaşar.
+    // Sahnenin diğer öğelerinden (grid, axes, ışıklar) ayrı tutulur ki
+    // clearGeometry() yardımcıları silmesin.
+    _geometryRoot: (function() {
+      var root = new THREE.Group();
+      root.name = 'feaGeometryRoot';
+      scene.add(root);
+      return root;
+    })(),
+    loadPrimitive: function(type, params) {
+      if(typeof veFEABuildPrimitiveMesh !== 'function') return null;
+      this.clearGeometry();
+      var mesh = veFEABuildPrimitiveMesh(type, params);
+      if(!mesh) return null;
+      this._geometryRoot.add(mesh);
+      this.zoomToFit(mesh);
+      render();
+      return mesh;
+    },
+    clearGeometry: function() {
+      // Group içindeki tüm child'ları sil + buffer cleanup
+      while(this._geometryRoot.children.length > 0) {
+        var c = this._geometryRoot.children[0];
+        this._geometryRoot.remove(c);
+        c.traverse(function(o) {
+          if(o.geometry && o.geometry.dispose) o.geometry.dispose();
+          if(o.material) {
+            if(Array.isArray(o.material)) o.material.forEach(function(m) { m.dispose && m.dispose(); });
+            else if(o.material.dispose) o.material.dispose();
+          }
+        });
+      }
+      render();
+    },
+    zoomToFit: function(object) {
+      var box = new THREE.Box3().setFromObject(object);
+      if(box.isEmpty()) return;
+      var size = box.getSize(new THREE.Vector3());
+      var center = box.getCenter(new THREE.Vector3());
+      var maxDim = Math.max(size.x, size.y, size.z);
+      if(maxDim <= 0) return;
+      var fov = camera.fov * (Math.PI / 180);
+      var distance = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
+      target.copy(center);
+      // Mevcut kamera yön vektörünü koru, sadece uzaklık değiştir
+      var dir = camera.position.clone().sub(target);
+      if(dir.lengthSq() < 1e-6) dir.set(1, 0.8, 1); // dejenere — varsayılan yön
+      dir.normalize().multiplyScalar(distance);
+      camera.position.copy(target).add(dir);
+      camera.near = Math.max(0.1, distance * 0.01);
+      camera.far = distance * 100;
+      camera.updateProjectionMatrix();
+      camera.lookAt(target);
+      // Orbit controls'un spherical state'ini senkronla
+      if(orbitHandle.sync) orbitHandle.sync();
+      render();
+    },
     dispose: function() {
+      this.clearGeometry();
       orbitHandle.dispose();
       renderer.dispose();
       // WebGL context cleanup
@@ -19699,6 +19950,11 @@ function veFEAAttachOrbitControls(canvas, camera, target, requestRender) {
   window.addEventListener('mouseup', onMouseUp);
 
   return {
+    // zoomToFit gibi dış çağrılar kamerayı değiştirir; spherical state'i
+    // mevcut camera pozisyonundan yeniden hesaplayarak senkronla.
+    sync: function() {
+      spherical.setFromVector3(camera.position.clone().sub(target));
+    },
     dispose: function() {
       canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('contextmenu', onContextMenu);
@@ -19739,7 +19995,68 @@ function veFEAInitGeometryViewerForNode(nodeId) {
     width: canvas.clientWidth || 240,
     height: canvas.clientHeight || 180
   });
-  if(viewer) veFEAViewerRegistry[nodeId] = viewer;
+  if(!viewer) return;
+  veFEAViewerRegistry[nodeId] = viewer;
+
+  // Kalıcı geometri state'i — node.data.geometry varsa otomatik yükle
+  if(typeof nodes !== 'undefined') {
+    var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
+    if(node && node.data && node.data.geometry && node.data.geometry.type) {
+      viewer.loadPrimitive(node.data.geometry.type, node.data.geometry.params);
+    }
+  }
+}
+
+// ─── Geometri uygulama köprüsü — cp-fea.js UI'sinden çağrılır ───────────────
+// nodeId üzerine primitif yükler, node.data.geometry'yi günceller, paneli
+// yeniden render eder (durum tablosu / "Geometriyi Sil" butonu güncellensin).
+function veFEAApplyPrimitive(nodeId, type, params) {
+  var viewer = veFEAViewerRegistry[nodeId];
+  if(!viewer) return;
+  var p = (typeof veFEANormalizePrimitiveParams === 'function')
+    ? veFEANormalizePrimitiveParams(type, params)
+    : params;
+  viewer.loadPrimitive(type, p);
+
+  // Persist
+  if(typeof nodes !== 'undefined') {
+    var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
+    if(node) {
+      node.data = node.data || {};
+      var stats = (typeof veFEAPrimitiveStats === 'function') ? veFEAPrimitiveStats(type, p) : null;
+      node.data.geometry = {
+        type: type,
+        params: p,
+        volume: stats ? stats.volume : null,
+        surfaceArea: stats ? stats.surfaceArea : null,
+        bbox: stats ? stats.bbox : null,
+        sourceLabel: (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(type) : type
+      };
+      if(typeof saveState === 'function') saveState();
+    }
+  }
+
+  // Panel yeniden render — durum tablosu güncellensin
+  if(typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
+    var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
+    if(n) showNodeProperties(n);
+  }
+}
+
+function veFEAClearGeometryForNode(nodeId) {
+  var viewer = veFEAViewerRegistry[nodeId];
+  if(viewer) viewer.clearGeometry();
+  if(typeof nodes !== 'undefined') {
+    var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
+    if(node && node.data) {
+      delete node.data.geometry;
+      if(typeof saveState === 'function') saveState();
+    }
+  }
+  if(typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
+    var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
+    if(n) showNodeProperties(n);
+  }
 }
 
 // ─── Tam ekran modal ────────────────────────────────────────────────────────
@@ -19852,6 +20169,9 @@ function veFEAReadOnlyRow(label, value) {
 // ─── 1. GEOMETRİ ────────────────────────────────────────────────────────────
 function getFEAGeometryPropertiesHTML(node) {
   var d = node.data || {};
+  var geom = d.geometry; // { type, params, volume, surfaceArea, bbox, sourceLabel }
+  var hasGeom = !!(geom && geom.type);
+
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
 
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
@@ -19860,7 +20180,7 @@ function getFEAGeometryPropertiesHTML(node) {
   html += '</div>';
 
   html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
-    'CAD geometrisi (STEP, IGES, STL) yükleyin veya parametrik primitif tanımlayın. ' +
+    'Parametrik primitif tanımlayın veya CAD geometrisi yükleyin. ' +
     'Sonraki adım: <b>Mesh</b>.</div>';
 
   // ─── 3D ÖNİZLEME ──────────────────────────────────────────────────────
@@ -19872,21 +20192,95 @@ function getFEAGeometryPropertiesHTML(node) {
   html += '<button onclick="veFEAOpenFullscreenViewer(\'' + node.id + '\')" style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; margin-bottom:10px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">🔍 Tam Ekran Görüntüleyici</button>';
 
   // ─── GEOMETRİ KAYNAĞI ─────────────────────────────────────────────────
-  html += veFEASectionTitle('Geometri Kaynağı');
-  html += '<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">';
-  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 Dosya İçe Aktar (STL — sonraki PR)</button>';
-  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 Dosya İçe Aktar (STEP / IGES — OCCT.js ile)</button>';
-  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📐 Parametrik Primitif (kutu / silindir / şaft)</button>';
+  html += veFEASectionTitle('Parametrik Primitif');
+  html += '<div style="display:flex; gap:4px; margin-bottom:8px;">';
+  var types = (typeof veFEAPrimitiveTypes === 'function') ? veFEAPrimitiveTypes() : [];
+  types.forEach(function(t) {
+    var label = (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(t).split(' ')[0] : t;
+    var active = hasGeom && geom.type === t;
+    var border = active ? 'var(--accent-primary)' : 'var(--border-color)';
+    var bg = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
+    var color = active ? '#fff' : 'var(--text-primary)';
+    html += '<button onclick="veFEAToggleParamForm(\'' + node.id + '\', \'' + t + '\')" style="flex:1; padding:7px; font-size:0.64rem; background:' + bg + '; color:' + color + '; border:1px solid ' + border + '; cursor:pointer;">' + label + '</button>';
+  });
   html += '</div>';
 
+  // Aktif form (geometri yüklüyse onun formu açık; aksi halde gizli)
+  var activeType = hasGeom ? geom.type : null;
+  types.forEach(function(t) {
+    var schema = (typeof veFEAPrimitiveSchema === 'function') ? veFEAPrimitiveSchema(t) : null;
+    if(!schema) return;
+    var visible = activeType === t;
+    var params = (activeType === t && geom.params) ? geom.params
+               : ((typeof veFEAPrimitiveDefaults === 'function') ? veFEAPrimitiveDefaults(t) : {});
+
+    html += '<div id="ve-fea-form-' + node.id + '-' + t + '" style="display:' + (visible ? 'block' : 'none') + '; padding:8px; background:var(--bg-secondary); border:1px solid var(--border-color); margin-bottom:8px;">';
+    html += '<div style="font-size:0.62rem; color:var(--text-muted); margin-bottom:6px;">' + veFEAPrimitiveLabel(t) + ' parametreleri</div>';
+    schema.forEach(function(p) {
+      var iid = 've-fea-param-' + node.id + '-' + t + '-' + p.key;
+      html += '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:5px;">';
+      html += '<label for="' + iid + '" style="font-size:0.62rem; color:var(--text-secondary); flex:1;">' + p.label + '</label>';
+      html += '<input id="' + iid + '" type="number" value="' + params[p.key] + '" min="' + (p.min !== undefined ? p.min : '') + '" max="' + (p.max !== undefined ? p.max : '') + '" step="' + (p.integer ? '1' : '0.1') + '" style="width:75px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+      html += '<span style="font-size:0.55rem; color:var(--text-muted); width:18px;">' + p.unit + '</span>';
+      html += '</div>';
+    });
+    var btnLabel = visible ? '🔄 Güncelle' : '✓ Oluştur';
+    html += '<button onclick="veFEASubmitParamForm(\'' + node.id + '\', \'' + t + '\')" style="width:100%; padding:6px; margin-top:4px; font-size:0.65rem; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;">' + btnLabel + '</button>';
+    html += '</div>';
+  });
+
+  if(hasGeom) {
+    html += '<button onclick="veFEAClearGeometryForNode(\'' + node.id + '\')" style="width:100%; padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer; margin-bottom:10px;">🗑 Geometriyi Sil</button>';
+  }
+
+  // CAD import — F2c/F2d/OCCT için yer tutucu
+  html += veFEASectionTitle('CAD Dosya İçe Aktar');
+  html += '<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">';
+  html += '<button disabled style="padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 STL (sonraki PR)</button>';
+  html += '<button disabled style="padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 STEP / IGES (OCCT.js — Faz 2d)</button>';
+  html += '</div>';
+
+  // ─── DURUM ────────────────────────────────────────────────────────────
   html += veFEASectionTitle('Durum');
-  html += veFEAReadOnlyRow('Yüklenen geometri', d.geometryName || '— (henüz yok)');
-  html += veFEAReadOnlyRow('Hacim', '—');
-  html += veFEAReadOnlyRow('Yüzey alanı', '—');
-  html += veFEAReadOnlyRow('Sınırlayıcı kutu', '—');
+  if(hasGeom) {
+    html += veFEAReadOnlyRow('Yüklenen geometri', geom.sourceLabel || veFEAPrimitiveLabel(geom.type));
+    html += veFEAReadOnlyRow('Hacim',        (typeof veFEAFormatVolume === 'function') ? veFEAFormatVolume(geom.volume) : geom.volume + ' mm³');
+    html += veFEAReadOnlyRow('Yüzey alanı',  (typeof veFEAFormatArea === 'function') ? veFEAFormatArea(geom.surfaceArea) : geom.surfaceArea + ' mm²');
+    html += veFEAReadOnlyRow('Sınırlayıcı kutu', (typeof veFEAFormatBBox === 'function') ? veFEAFormatBBox(geom.bbox) : '—');
+  } else {
+    html += veFEAReadOnlyRow('Yüklenen geometri', '— (henüz yok)');
+    html += veFEAReadOnlyRow('Hacim', '—');
+    html += veFEAReadOnlyRow('Yüzey alanı', '—');
+    html += veFEAReadOnlyRow('Sınırlayıcı kutu', '—');
+  }
 
   html += '</div>';
   return html;
+}
+
+// ─── Geometri formu açıp/kapayıcı (sadece bir form bir anda açık olsun) ────
+function veFEAToggleParamForm(nodeId, type) {
+  var types = (typeof veFEAPrimitiveTypes === 'function') ? veFEAPrimitiveTypes() : [];
+  var clicked = document.getElementById('ve-fea-form-' + nodeId + '-' + type);
+  var willOpen = clicked && clicked.style.display === 'none';
+  types.forEach(function(t) {
+    var el = document.getElementById('ve-fea-form-' + nodeId + '-' + t);
+    if(el) el.style.display = (t === type && willOpen) ? 'block' : 'none';
+  });
+}
+
+// ─── Form değerlerini topla, normalize et, viewer'a uygula ─────────────────
+function veFEASubmitParamForm(nodeId, type) {
+  var schema = (typeof veFEAPrimitiveSchema === 'function') ? veFEAPrimitiveSchema(type) : null;
+  if(!schema) return;
+  var params = {};
+  schema.forEach(function(p) {
+    var el = document.getElementById('ve-fea-param-' + nodeId + '-' + type + '-' + p.key);
+    if(el) params[p.key] = parseFloat(el.value);
+  });
+  if(typeof veFEAApplyPrimitive === 'function') {
+    veFEAApplyPrimitive(nodeId, type, params);
+  }
 }
 
 // ─── 2. MESH ────────────────────────────────────────────────────────────────
