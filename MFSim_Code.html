@@ -23960,6 +23960,15 @@ function veFEAFitPreviewForNode(nodeId) {
 // In-memory mesh cache (büyük data persist edilmez; her session'da yeniden hesaplanır)
 var veFEAMeshCache = {};
 
+// Side panel + Mesh Editor modal'ini birlikte yeniler. State degisikliklerinde
+// (mesh build/clear, heat map toggle, named selection, refinement uygula)
+// her ikisinin de senkronize gostermesi icin tum eski showNodeProperties()
+// cagrilari bu helper'a yonlendirildi.
+function _veFEARefreshMeshUI(meshNode) {
+  if (typeof showNodeProperties === 'function' && meshNode) showNodeProperties(meshNode);
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
 // Mesh node panel açıldığında çağrılır — fea-geometry'den input alıp viewer kurar
 function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
   var canvasId = 've-fea-mesh-canvas-' + nodeId;
@@ -24133,7 +24142,7 @@ function veFEABuildMeshForNode(meshNodeId) {
           metrics.jacobian.ratioWarnThreshold + ')', 'info');
       }
     }
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
   };
 
   if (settings.useWorker && typeof veFEAMeshFromGeometryViaWorker === 'function') {
@@ -24170,7 +24179,7 @@ function veFEAClearMeshForNode(meshNodeId) {
   }
   var viewer = veFEAViewerRegistry[meshNodeId];
   if (viewer) viewer.clearGeometry();
-  if (typeof showNodeProperties === 'function' && meshNode) showNodeProperties(meshNode);
+  _veFEARefreshMeshUI(meshNode);
 }
 
 // Refinement önerisini uygula — UI butonundan çağrılır.
@@ -24226,20 +24235,20 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
   if (!mode || mode === 'off' || mode === 'none') {
     meshNode.data.heatMapMetric = null;
     if (viewer && meshData) viewer.loadMesh(meshData);
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
     return;
   }
 
   meshNode.data.heatMapMetric = mode;
   if (!viewer || !meshData) {
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
     return;
   }
 
   // Solid modları (heat map'siz)
   if (mode === 'solid' || mode === 'solid-edges') {
     viewer.loadMeshSolid(meshData, mode === 'solid-edges');
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
     return;
   }
 
@@ -24260,7 +24269,7 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
     if (typeof viewer.loadMeshThresholdMap === 'function') {
       viewer.loadMeshThresholdMap(meshData, thrVals, { warnLimit: thrWarn, errLimit: thrErr, inverted: thrInverted });
     }
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
     return;
   }
 
@@ -24287,7 +24296,7 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
   }
 
   viewer.loadMeshHeatMap(meshData, values, vMin, vMax);
-  if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+  _veFEARefreshMeshUI(meshNode);
 }
 
 // Named selection vurgulama köprüsü — cp-fea.js UI butonundan çağrılır.
@@ -24303,7 +24312,7 @@ function veFEAToggleNamedSelection(meshNodeId, key) {
   if (viewer && typeof viewer.highlightNamedSelection === 'function') {
     viewer.highlightNamedSelection(nextKey);
   }
-  if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+  _veFEARefreshMeshUI(meshNode);
 }
 
 function veFEAClearGeometryForNode(nodeId) {
@@ -24755,6 +24764,47 @@ function _veFEAEditorDefaultAccordionState() {
   };
 }
 
+// ─── Accordion'ları + toolbar'ı yenile (mesh state değişimleri için) ───────
+// Modal acikken mesh olusturulduğunda, silindiğinde veya named selection /
+// heat map toggle edildiğinde accordion içerikleri "Mesh olusturulduktan
+// sonra..." placeholder'ında takılı kalmasin diye tüm accordion body'lerini
+// yeniden inşa eder. Accordion expand/collapse state korunur (DOM body
+// elementi aynı, sadece içeriği değişir).
+function veFEAEditorRefreshAccordions() {
+  if (!_veFEAEditorActive || typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === _veFEAEditorActive; });
+  if (!node) return;
+
+  var updates = {
+    'defaults':    _veFEAEditorDefaultsHTML(node),
+    'sizing':      _veFEAEditorSizingHTML(node),
+    'inflation':   _veFEAEditorInflationHTML(node),
+    'quality':     _veFEAEditorQualityHTML(node),
+    'namedSel':    _veFEAEditorNamedSelHTML(node),
+    'display':     _veFEAEditorDisplayHTML(node),
+    'statistics':  _veFEAEditorStatisticsHTML(node),
+    'suggestions': _veFEAEditorSuggestionsHTML(node)
+  };
+  Object.keys(updates).forEach(function(k) {
+    var body = document.getElementById('ve-fea-acc-body-' + k);
+    if (body) body.innerHTML = updates[k];
+  });
+
+  // Toolbar — Mesh'i Sil + Export butonları mesh varlığına göre değişir
+  var oldToolbar = document.getElementById('ve-fea-mesh-editor-toolbar');
+  if (oldToolbar && oldToolbar.parentNode) {
+    var newToolbar = _veFEAEditorBuildToolbar(node);
+    oldToolbar.parentNode.replaceChild(newToolbar, oldToolbar);
+  }
+
+  // Footer — durum (düğüm/eleman/ms) güncellenir
+  var oldFooter = document.getElementById('ve-fea-mesh-editor-footer');
+  if (oldFooter && oldFooter.parentNode) {
+    var newFooter = _veFEAEditorBuildFooter(node);
+    oldFooter.parentNode.replaceChild(newFooter, oldFooter);
+  }
+}
+
 // ─── Modal aç ──────────────────────────────────────────────────────────────
 function veFEAOpenMeshEditor(nodeId) {
   if (_veFEAEditorActive) veFEACloseMeshEditor();
@@ -24955,6 +25005,7 @@ function _veFEAEditorBuildToolbar(node) {
   }
 
   var toolbar = document.createElement('div');
+  toolbar.id = 've-fea-mesh-editor-toolbar';
   toolbar.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;';
 
   // Mesh Oluştur (primary)
@@ -25001,6 +25052,7 @@ function _veFEAEditorBuildFooter(node) {
   var metrics = d.meshMetrics;
   var hasMesh = !!(d.meshActive && metrics);
   var footer = document.createElement('div');
+  footer.id = 've-fea-mesh-editor-footer';
   footer.style.cssText = 'display:flex; align-items:center; gap:12px; padding:6px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:0.6rem; color:var(--text-muted);';
   if (hasMesh) {
     var jacStatus = (metrics.jacobian && metrics.jacobian.valid) ? '<span style="color:var(--accent-success, #22c55e);">✓ Geçerli</span>' : (metrics.jacobian ? '<span style="color:var(--accent-danger, #ef4444);">✗ Hatalı</span>' : '');
