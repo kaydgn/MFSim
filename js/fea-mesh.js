@@ -122,6 +122,102 @@ function _veFEAWedgeMeshToTet4(wedgeMesh) {
   return _veFEAWrapTet4Mesh(wedgeMesh, tets, { convertedFromWedge: true });
 }
 
+// ─── Kuadratik enrichment (mid-side düğümler) ─────────────────────────────
+// Lineer → quadratic dönüşüm: Her kenarın orta noktasına yeni düğüm ekler.
+// Edge dedup via map<min(a,b)|max(a,b), newId> — paylaşılan kenarlar tek
+// düğüm kazanır. Tet4→Tet10 (6 yeni/eleman, paylaşımla daha az), Hex8→Hex20
+// (12 yeni/eleman), Wedge6→Wedge15 (9 yeni/eleman).
+//
+// Yapısal analizde quadratik elemanlar lineer mukabillerine göre gerilme
+// gradyanlarını çok daha iyi yakalar (özellikle bend / contact bölgelerinde).
+// Trade-off: 2-4× DOF artar → solver zamanı büyür.
+
+// Eleman tipine göre kenar şablonu — lineer eleman düğüm sırasından kenar
+// listesi (mid-side eklenmeden önce). Çıkış sırası eleman tipinin standart
+// quadratik düğüm sırasına uygun olmalı (ANSYS / Abaqus uyumu).
+var _VE_FEA_TET4_EDGES = [
+  [0, 1], [1, 2], [2, 0],
+  [0, 3], [1, 3], [2, 3]
+];
+var _VE_FEA_HEX8_EDGES = [
+  [0, 1], [1, 2], [2, 3], [3, 0],  // alt yüz
+  [4, 5], [5, 6], [6, 7], [7, 4],  // üst yüz
+  [0, 4], [1, 5], [2, 6], [3, 7]   // dikey
+];
+var _VE_FEA_WEDGE6_EDGES = [
+  [0, 1], [1, 2], [2, 0],  // alt üçgen
+  [3, 4], [4, 5], [5, 3],  // üst üçgen
+  [0, 3], [1, 4], [2, 5]   // dikey
+];
+
+function veFEAEnrichToQuadratic(meshData) {
+  if (!meshData || meshData.error) return meshData;
+  if (meshData.type === 'tet4')   return _veFEAGenericEnrich(meshData, _VE_FEA_TET4_EDGES,  'tet10', 10);
+  if (meshData.type === 'hex8')   return _veFEAGenericEnrich(meshData, _VE_FEA_HEX8_EDGES,  'hex20', 20);
+  if (meshData.type === 'wedge6') return _veFEAGenericEnrich(meshData, _VE_FEA_WEDGE6_EDGES, 'wedge15', 15);
+  return meshData; // tri3 / zaten quadratic
+}
+
+function _veFEAGenericEnrich(mesh, edgeTemplate, newType, newPerElement) {
+  var nodes = mesh.nodes;
+  var elements = mesh.elements;
+  var per = mesh.nodesPerElement;
+  var elCount = elements.length / per;
+  var origNodeCount = nodes.length / 3;
+
+  // Edge dedup map (string key — milyonlarca eleman için Map performanslı)
+  var edgeMap = new Map();
+  var midX = [], midY = [], midZ = [];
+
+  function getEdgeMidNode(a, b) {
+    var k = (a < b) ? (a + '|' + b) : (b + '|' + a);
+    var id = edgeMap.get(k);
+    if (id !== undefined) return id;
+    var newId = origNodeCount + midX.length;
+    midX.push((nodes[a * 3]     + nodes[b * 3])     / 2);
+    midY.push((nodes[a * 3 + 1] + nodes[b * 3 + 1]) / 2);
+    midZ.push((nodes[a * 3 + 2] + nodes[b * 3 + 2]) / 2);
+    edgeMap.set(k, newId);
+    return newId;
+  }
+
+  var newElements = new Uint32Array(elCount * newPerElement);
+  var p = 0;
+  for (var e = 0; e < elCount; e++) {
+    var off = e * per;
+    // Köşe düğümleri
+    for (var c = 0; c < per; c++) newElements[p++] = elements[off + c];
+    // Orta-kenar düğümleri
+    for (var i = 0; i < edgeTemplate.length; i++) {
+      var a = elements[off + edgeTemplate[i][0]];
+      var b = elements[off + edgeTemplate[i][1]];
+      newElements[p++] = getEdgeMidNode(a, b);
+    }
+  }
+
+  // Yeni düğüm array'i (orijinal corners + midpoints)
+  var nMid = midX.length;
+  var newNodes = new Float32Array((origNodeCount + nMid) * 3);
+  newNodes.set(nodes);
+  for (var m = 0; m < nMid; m++) {
+    newNodes[(origNodeCount + m) * 3]     = midX[m];
+    newNodes[(origNodeCount + m) * 3 + 1] = midY[m];
+    newNodes[(origNodeCount + m) * 3 + 2] = midZ[m];
+  }
+
+  return {
+    type: newType,
+    geometryType: mesh.geometryType,
+    nodes: newNodes,
+    elements: newElements,
+    nodesPerElement: newPerElement,
+    grid: mesh.grid,
+    namedSelections: mesh.namedSelections, // köşe nodeId'leri korunur
+    voxelMode: mesh.voxelMode || false,
+    enrichedFrom: mesh.type
+  };
+}
+
 function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
   var out = {
     type: 'tet4',
@@ -166,6 +262,10 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (mesh && !mesh.error && elementType === 'tet4') {
     mesh = veFEAConvertMeshToTet4(mesh);
   }
+  // midSideNodes: lineer → quadratic (Tet4→Tet10, Hex8→Hex20, Wedge6→Wedge15)
+  if (mesh && !mesh.error && opts.midSideNodes === true) {
+    mesh = veFEAEnrichToQuadratic(mesh);
+  }
   return mesh;
 }
 
@@ -194,7 +294,10 @@ function veFEAMeshFromGeometryAsync(geometry, opts) {
       }
       var hexMesh = _veFEAVoxelizeTrianglesToHex(parsed, size, 'step');
       if (hexMesh && !hexMesh.error && elementType === 'tet4') {
-        return veFEAConvertMeshToTet4(hexMesh);
+        hexMesh = veFEAConvertMeshToTet4(hexMesh);
+      }
+      if (hexMesh && !hexMesh.error && opts.midSideNodes === true) {
+        hexMesh = veFEAEnrichToQuadratic(hexMesh);
       }
       return hexMesh;
     });
@@ -878,9 +981,12 @@ function veFEAComputeMeshMetrics(mesh) {
   var elementCount = elements.length / per;
 
   var edges;
-  if (mesh.type === 'hex8')        edges = [[0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7]];
-  else if (mesh.type === 'wedge6') edges = [[0,1],[1,2],[2,0], [3,4],[4,5],[5,3], [0,3],[1,4],[2,5]];
-  else if (mesh.type === 'tet4')   edges = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+  if (mesh.type === 'hex8' || mesh.type === 'hex20')
+    edges = [[0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7]];
+  else if (mesh.type === 'wedge6' || mesh.type === 'wedge15')
+    edges = [[0,1],[1,2],[2,0], [3,4],[4,5],[5,3], [0,3],[1,4],[2,5]];
+  else if (mesh.type === 'tet4' || mesh.type === 'tet10')
+    edges = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
   else if (mesh.type === 'tri3')   edges = [[0,1],[1,2],[2,0]];
   else                              edges = [];
 
@@ -936,9 +1042,12 @@ function veFEAMeshExtractEdges(mesh) {
   if (!mesh) return null;
   var per = mesh.nodesPerElement;
   var edges;
-  if (mesh.type === 'hex8')        edges = [[0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7]];
-  else if (mesh.type === 'wedge6') edges = [[0,1],[1,2],[2,0], [3,4],[4,5],[5,3], [0,3],[1,4],[2,5]];
-  else if (mesh.type === 'tet4')   edges = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+  if (mesh.type === 'hex8' || mesh.type === 'hex20')
+    edges = [[0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7]];
+  else if (mesh.type === 'wedge6' || mesh.type === 'wedge15')
+    edges = [[0,1],[1,2],[2,0], [3,4],[4,5],[5,3], [0,3],[1,4],[2,5]];
+  else if (mesh.type === 'tet4' || mesh.type === 'tet10')
+    edges = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
   else if (mesh.type === 'tri3')   edges = [[0,1],[1,2],[2,0]];
   else                              edges = [];
 

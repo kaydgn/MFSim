@@ -400,6 +400,148 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAEnrichToQuadratic (Tet10/Hex20/Wedge15)', () => {
+  test('Hex8 → Hex20: nodesPerElement 8 → 20, eleman sayısı korunur', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var nEl = hex.elements.length / 8;
+    var q = veFEAEnrichToQuadratic(hex);
+    expect(q.type).toBe('hex20');
+    expect(q.nodesPerElement).toBe(20);
+    expect(q.elements.length / 20).toBe(nEl);
+    expect(q.enrichedFrom).toBe('hex8');
+  });
+
+  test('Tet4 → Tet10: nodesPerElement 4 → 10', () => {
+    var tet = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, elementType: 'tet4' });
+    var nEl = tet.elements.length / 4;
+    var q = veFEAEnrichToQuadratic(tet);
+    expect(q.type).toBe('tet10');
+    expect(q.nodesPerElement).toBe(10);
+    expect(q.elements.length / 10).toBe(nEl);
+  });
+
+  test('Wedge6 → Wedge15', () => {
+    var w = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    var nEl = w.elements.length / 6;
+    var q = veFEAEnrichToQuadratic(w);
+    expect(q.type).toBe('wedge15');
+    expect(q.nodesPerElement).toBe(15);
+    expect(q.elements.length / 15).toBe(nEl);
+  });
+
+  test('Edge dedup: ortak kenarlar tek midnode kazanır', () => {
+    // 2×1×1 hex (2 eleman, ortak yüz) — ortak 4 kenar bir kez sayılır
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 2, height: 1, depth: 1 } }, { size: 1 });
+    expect(hex.elements.length / 8).toBe(2);
+    var q = veFEAEnrichToQuadratic(hex);
+    // 2 hex × 12 kenar/hex = 24 toplam kenar, ortak 4 dedup → 20 benzersiz midnode
+    // Original 12 corner + 20 mid = 32 düğüm
+    var origNodes = hex.nodes.length / 3;
+    var newNodes = q.nodes.length / 3;
+    expect(newNodes - origNodes).toBe(20);
+  });
+
+  test('Midpoint düğüm konumu kenarın gerçek orta noktası', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 1, height: 1, depth: 1 } }, { size: 1 });
+    var q = veFEAEnrichToQuadratic(hex);
+    // İlk eleman (0,1,2,3,4,5,6,7 corner + 8,9,...,19 mid)
+    var corner0 = q.elements[0];
+    var corner1 = q.elements[1];
+    var mid01 = q.elements[8]; // ilk mid-node = (0,1) edge midpoint
+    var x0 = q.nodes[corner0 * 3], y0 = q.nodes[corner0 * 3 + 1], z0 = q.nodes[corner0 * 3 + 2];
+    var x1 = q.nodes[corner1 * 3], y1 = q.nodes[corner1 * 3 + 1], z1 = q.nodes[corner1 * 3 + 2];
+    var xm = q.nodes[mid01 * 3], ym = q.nodes[mid01 * 3 + 1], zm = q.nodes[mid01 * 3 + 2];
+    expect(xm).toBeCloseTo((x0 + x1) / 2, 5);
+    expect(ym).toBeCloseTo((y0 + y1) / 2, 5);
+    expect(zm).toBeCloseTo((z0 + z1) / 2, 5);
+  });
+
+  test('Named selections enriched mesh\'te de hâlâ geçerli (corner IDs)', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var q = veFEAEnrichToQuadratic(hex);
+    expect(q.namedSelections).toBeDefined();
+    expect(Object.keys(q.namedSelections).length).toBe(6);
+    var ids = q.namedSelections.faceXMin.nodeIds;
+    var maxIdx = q.nodes.length / 3 - 1;
+    for (var i = 0; i < ids.length; i++) {
+      expect(ids[i]).toBeLessThanOrEqual(maxIdx);
+    }
+  });
+
+  test('null/error/tri3 → no-op', () => {
+    expect(veFEAEnrichToQuadratic(null)).toBeNull();
+    var err = { error: 'voxel-too-many' };
+    expect(veFEAEnrichToQuadratic(err)).toBe(err);
+    var tri = { type: 'tri3', nodes: new Float32Array(0), elements: new Uint32Array(0), nodesPerElement: 3 };
+    expect(veFEAEnrichToQuadratic(tri).type).toBe('tri3');
+  });
+
+  test('Eleman indeksleri geçerli aralıkta', () => {
+    var tet = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, elementType: 'tet4' });
+    var q = veFEAEnrichToQuadratic(tet);
+    var maxIdx = q.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < q.elements.length; i++) {
+      if (q.elements[i] < 0 || q.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAMeshFromGeometry — midSideNodes opsiyonu', () => {
+  test('midSideNodes:false (default) → lineer eleman', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    expect(m.type).toBe('hex8');
+  });
+
+  test('midSideNodes:true + box → Hex20', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, midSideNodes: true });
+    expect(m.type).toBe('hex20');
+    expect(m.nodesPerElement).toBe(20);
+  });
+
+  test('midSideNodes:true + cylinder → Wedge15', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, midSideNodes: true });
+    expect(m.type).toBe('wedge15');
+  });
+
+  test('midSideNodes:true + elementType:tet4 → Tet10', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, elementType: 'tet4', midSideNodes: true });
+    expect(m.type).toBe('tet10');
+    expect(m.nodesPerElement).toBe(10);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Orta-kenar düğüm checkbox\'ı', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Checkbox render edilir, default unchecked', () => {
+    var node = { id: 'mesh-q1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-midnodes-mesh-q1"/);
+    expect(html).toMatch(/Orta-kenar düğümler/);
+    // Default kapali
+    var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-midnodes-mesh-q1"[^>]*>/);
+    expect(checkboxMatch).not.toBeNull();
+    expect(checkboxMatch[0]).not.toMatch(/checked/);
+  });
+
+  test('Persisted midSideNodes:true → checkbox işaretli', () => {
+    var node = { id: 'mesh-q2', type: 'fea-mesh', data: { meshSettings: { size: 5, midSideNodes: true } } };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-midnodes-mesh-q2"[^>]*>/);
+    expect(checkboxMatch[0]).toMatch(/checked/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeJacobianMetrics', () => {
   test('Kutu mesh için tüm elemanlar geçerli (no inverted/degenerate)', () => {
     var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });

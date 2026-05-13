@@ -213,6 +213,13 @@ function getFEAMeshPropertiesHTML(node) {
   html += '<option value="tet4"' + (currentElType === 'tet4' ? ' selected' : '') + '>Tet4 (Tetra — decomposition)</option>';
   html += '</select>';
 
+  // Kuadratik enrichment — orta-kenar düğümler (Tet10/Hex20/Wedge15)
+  var midSideOn = settings.midSideNodes === true;
+  html += '<label style="display:flex; align-items:center; gap:6px; padding:5px 8px; margin-bottom:8px; background:var(--bg-secondary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
+    '<input type="checkbox" id="ve-fea-mesh-midnodes-' + node.id + '"' + (midSideOn ? ' checked' : '') + ' style="margin:0;">' +
+    '<span>Orta-kenar düğümler <span style="color:var(--text-muted);">(Quadratic: Tet10 / Hex20 / Wedge15)</span></span>' +
+  '</label>';
+
   // Mesh boyu input
   html += veFEASectionTitle('Mesh Boyu');
   html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">';
@@ -344,6 +351,8 @@ function veFEASubmitMeshBuild(nodeId) {
   if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
   var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : 'auto';
   if (elementType !== 'auto' && elementType !== 'tet4') elementType = 'auto';
+  var midSideEl = document.getElementById('ve-fea-mesh-midnodes-' + nodeId);
+  var midSideNodes = !!(midSideEl && midSideEl.checked);
   var meshNode = nodes.find(function(n) { return n.id === nodeId; });
   if (meshNode) {
     meshNode.data = meshNode.data || {};
@@ -351,6 +360,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.size = size;
     meshNode.data.meshSettings.mode = mode;
     meshNode.data.meshSettings.elementType = elementType;
+    meshNode.data.meshSettings.midSideNodes = midSideNodes;
   }
   veFEABuildMeshForNode(nodeId);
 }

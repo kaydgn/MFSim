@@ -985,9 +985,15 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (!settings.size) settings.size = 10;
   if (!settings.mode) settings.mode = 'auto';
   if (!settings.elementType) settings.elementType = 'auto';
+  if (settings.midSideNodes === undefined) settings.midSideNodes = false;
 
   var t0 = Date.now();
-  var meshOpts = { size: settings.size, mode: settings.mode, elementType: settings.elementType };
+  var meshOpts = {
+    size: settings.size,
+    mode: settings.mode,
+    elementType: settings.elementType,
+    midSideNodes: settings.midSideNodes
+  };
 
   // STEP için async parse gerekebilir — promise-aware yol
   var needsAsync = (geometry.type === 'step');
