@@ -94,6 +94,16 @@ function veFEAInitViewer(canvas, opts) {
       render();
       return mesh;
     },
+    loadSTL: function(parsed) {
+      if(typeof veFEABuildSTLMesh !== 'function') return null;
+      this.clearGeometry();
+      var mesh = veFEABuildSTLMesh(parsed);
+      if(!mesh) return null;
+      this._geometryRoot.add(mesh);
+      this.zoomToFit(mesh);
+      render();
+      return mesh;
+    },
     clearGeometry: function() {
       // Group içindeki tüm child'ları sil + buffer cleanup
       while(this._geometryRoot.children.length > 0) {
@@ -280,7 +290,14 @@ function veFEAInitGeometryViewerForNode(nodeId) {
   if(typeof nodes !== 'undefined') {
     var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
     if(node && node.data && node.data.geometry && node.data.geometry.type) {
-      viewer.loadPrimitive(node.data.geometry.type, node.data.geometry.params);
+      var g = node.data.geometry;
+      if(g.type === 'stl' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function') {
+        var buf = veFEABase64ToArrayBuffer(g.rawDataB64);
+        var parsed = veFEAParseSTL(buf);
+        if(parsed) viewer.loadSTL(parsed);
+      } else if(g.type === 'box' || g.type === 'cylinder' || g.type === 'shaft') {
+        viewer.loadPrimitive(g.type, g.params);
+      }
     }
   }
 }
@@ -319,6 +336,75 @@ function veFEAApplyPrimitive(nodeId, type, params) {
     var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
     if(n) showNodeProperties(n);
   }
+}
+
+// ─── STL Apply köprüsü ─────────────────────────────────────────────────────
+// Maksimum dosya boyutu (proje kaydında saklamak için).
+var VE_FEA_STL_MAX_PERSIST_BYTES = 10 * 1024 * 1024; // 10 MB
+
+function veFEAApplySTL(nodeId, buffer, fileName) {
+  if(typeof veFEAParseSTL !== 'function') return;
+  var parsed = veFEAParseSTL(buffer);
+  if(!parsed || parsed.triangleCount === 0) {
+    if(typeof showToast === 'function') showToast('STL dosyası geçersiz veya boş', 'error');
+    return;
+  }
+
+  var viewer = veFEAViewerRegistry[nodeId];
+  if(viewer) viewer.loadSTL(parsed);
+
+  var stats = (typeof veFEAComputeMeshStats === 'function')
+    ? veFEAComputeMeshStats(parsed)
+    : { volume: 0, surfaceArea: 0, bbox: { x: 0, y: 0, z: 0 } };
+
+  var byteLength = (buffer && buffer.byteLength) || 0;
+  var canPersist = byteLength > 0 && byteLength <= VE_FEA_STL_MAX_PERSIST_BYTES;
+
+  if(typeof nodes !== 'undefined') {
+    var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
+    if(node) {
+      node.data = node.data || {};
+      node.data.geometry = {
+        type: 'stl',
+        sourceLabel: fileName || 'STL',
+        triangleCount: parsed.triangleCount,
+        fileSize: byteLength,
+        volume: stats.volume,
+        surfaceArea: stats.surfaceArea,
+        bbox: stats.bbox,
+        rawDataB64: canPersist ? veFEAArrayBufferToBase64(buffer) : null,
+        persistNote: canPersist
+          ? null
+          : ('Dosya ' + (byteLength / (1024*1024)).toFixed(1) + ' MB — proje kaydında saklanmıyor, yeniden yükleyin.')
+      };
+      if(typeof saveState === 'function') saveState();
+    }
+  }
+
+  if(typeof showToast === 'function') {
+    var sizeMB = (byteLength / (1024*1024)).toFixed(2);
+    showToast('STL yüklendi: ' + (fileName || '?') + ' (' + parsed.triangleCount + ' üçgen, ' + sizeMB + ' MB)', 'success');
+  }
+
+  if(typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
+    var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
+    if(n) showNodeProperties(n);
+  }
+}
+
+// File <input> change handler — cp-fea.js HTML'inden çağrılır
+function veFEAOnSTLFileSelected(input, nodeId) {
+  if(!input || !input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    veFEAApplySTL(nodeId, e.target.result, file.name);
+  };
+  reader.onerror = function() {
+    if(typeof showToast === 'function') showToast('Dosya okunamadı: ' + file.name, 'error');
+  };
+  reader.readAsArrayBuffer(file);
+  input.value = ''; // aynı dosyayı tekrar seçebilmek için
 }
 
 function veFEAClearGeometryForNode(nodeId) {
