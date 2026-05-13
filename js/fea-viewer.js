@@ -765,11 +765,12 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
     lastY = e.clientY;
 
     if(isOrbit) {
-      spherical.theta -= dx * 0.01;
-      spherical.phi = Math.max(0.05, Math.min(Math.PI - 0.05, spherical.phi - dy * 0.01));
+      // Hassasiyet katsayıları yumuşatıldı — daha kontrollü, profesyonel his
+      spherical.theta -= dx * 0.005;
+      spherical.phi = Math.max(0.05, Math.min(Math.PI - 0.05, spherical.phi - dy * 0.005));
       updateCamera();
     } else if(isPan) {
-      var panSpeed = spherical.radius * 0.0015;
+      var panSpeed = spherical.radius * 0.0008;
       // Kameraya göre right/up vektörlerini hesapla
       var camDir = camera.position.clone().sub(target).normalize();
       var right = new THREE.Vector3().crossVectors(camera.up, camDir).normalize();
@@ -787,7 +788,8 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
 
   function onWheel(e) {
     e.preventDefault();
-    var factor = e.deltaY > 0 ? 1.12 : 0.89;
+    // Zoom kademe oranı düşürüldü — tek scroll ile küçük adım, akıcı yaklaşım
+    var factor = e.deltaY > 0 ? 1.07 : 0.935;
     if(camera.isOrthographicCamera) {
       // Ortografik: frustum boyutu üzerinden zoom (mesafe görsel etki vermez)
       var newHalfW = (camera.right - camera.left) * factor / 2;

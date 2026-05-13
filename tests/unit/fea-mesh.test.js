@@ -757,7 +757,8 @@ describe('cp-fea.js Mesh paneli — Adaptive Refinement Önerileri', () => {
     var node = { id: 'mesh-ar1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     var html = _testRenderFullMeshUI(node);
-    expect(html).toMatch(/Adaptive Refinement Önerileri/);
+    // Accordion başlığı Türkçeleştirildi: "Adaptif İnceltme Önerileri"
+    expect(html).toMatch(/Adaptif İnceltme Önerileri/);
     expect(html).toMatch(/Mesh oluşturulduktan sonra öneriler gösterilir/);
   });
 

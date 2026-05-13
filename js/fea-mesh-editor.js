@@ -20,6 +20,7 @@
 var _veFEAEditorActive = null;  // şu an açık olan mesh node ID
 var _veFEAEditorOverlay = null;
 var _veFEAEditorEscHandler = null;
+var _veFEAEditorResizeObserver = null;  // modal viewer için container resize observer
 var _veFEAEditorAccordionState = {};  // { sectionKey: true (open) | false (closed) }
 
 // Default accordion durumu (ilk açılışta): Defaults + Sizing açık, geri kalanı kapalı
@@ -103,17 +104,70 @@ function veFEAOpenMeshEditor(nodeId) {
   };
   document.addEventListener('keydown', _veFEAEditorEscHandler);
 
-  // 3D viewer'ı modal canvas'a yedir (kısa gecikmeyle, DOM hazır olsun)
-  setTimeout(function() {
-    if (typeof veFEAInitMeshViewerForNode === 'function') {
-      veFEAInitMeshViewerForNode(nodeId);
+  // 3D viewer'ı modal canvas'a yedir. Canvas layout'u flexbox tarafından
+  // hesaplanmadan Three.js init edersek clientWidth=0 olur → WebGL renderer
+  // tiny boyutta kalır → real browser'da context loss / GPU crash ("üzgün yüz").
+  // requestAnimationFrame ile layout settle olmasını bekle, gerekirse retry.
+  _veFEASafeInitModalViewer(nodeId, 6);
+}
+
+function _veFEASafeInitModalViewer(nodeId, retries) {
+  if (_veFEAEditorActive !== nodeId) return; // modal kapanmış
+  if (typeof veFEAInitMeshViewerForNode !== 'function') return;
+  var canvas = document.getElementById('ve-fea-mesh-canvas-' + nodeId);
+  if (!canvas) {
+    if (retries > 0) {
+      requestAnimationFrame(function() { _veFEASafeInitModalViewer(nodeId, retries - 1); });
     }
-  }, 40);
+    return;
+  }
+  var w = canvas.clientWidth || (canvas.parentElement && canvas.parentElement.clientWidth) || 0;
+  var h = canvas.clientHeight || (canvas.parentElement && canvas.parentElement.clientHeight) || 0;
+  if ((w < 50 || h < 50) && retries > 0) {
+    // Layout henüz hazır değil → bir frame daha bekle
+    requestAnimationFrame(function() { _veFEASafeInitModalViewer(nodeId, retries - 1); });
+    return;
+  }
+  // Boyutlar tamamen başarısızsa fallback (modal görünür ama boyut 0 — modal
+  // kapalı olabilir veya görüntülenmiyor — sessizce çık)
+  if (w < 50 || h < 50) return;
+
+  // Canvas backing-buffer'ı explicit set et — WebGL renderer doğru başlatılsın
+  canvas.width = w;
+  canvas.height = h;
+
+  try {
+    veFEAInitMeshViewerForNode(nodeId);
+  } catch (err) {
+    console.error('[FEA Mesh Editor] viewer init hatası:', err);
+    return;
+  }
+
+  // Container resize'larında viewer'ı senkronize et (modal/panel resize)
+  if (typeof ResizeObserver !== 'undefined' && canvas.parentElement) {
+    if (_veFEAEditorResizeObserver) {
+      try { _veFEAEditorResizeObserver.disconnect(); } catch(e) {}
+    }
+    _veFEAEditorResizeObserver = new ResizeObserver(function() {
+      var c = document.getElementById('ve-fea-mesh-canvas-' + nodeId);
+      var v = veFEAViewerRegistry[nodeId];
+      if (!c || !v || typeof v.resize !== 'function') return;
+      var nw = c.clientWidth | 0;
+      var nh = c.clientHeight | 0;
+      if (nw > 0 && nh > 0) v.resize(nw, nh);
+    });
+    _veFEAEditorResizeObserver.observe(canvas.parentElement);
+  }
 }
 
 // ─── Modal kapat ───────────────────────────────────────────────────────────
 function veFEACloseMeshEditor() {
   if (!_veFEAEditorActive) return;
+  // ResizeObserver disconnect (canvas dispose'undan önce)
+  if (_veFEAEditorResizeObserver) {
+    try { _veFEAEditorResizeObserver.disconnect(); } catch (e) {}
+    _veFEAEditorResizeObserver = null;
+  }
   // Viewer dispose — canvas modal'la birlikte kaybolacak
   if (typeof veFEAViewerRegistry !== 'undefined' && veFEAViewerRegistry[_veFEAEditorActive]) {
     try { veFEAViewerRegistry[_veFEAEditorActive].dispose(); } catch (e) {}
@@ -256,14 +310,14 @@ function _veFEAEditorBuildLeftPanel(node) {
   panel.style.cssText = 'flex:0 0 400px; min-width:280px; max-width:720px; overflow-y:auto; overflow-x:hidden; background:var(--bg-primary, #0a0d14); border-right:1px solid var(--border-color);';
 
   var html = '';
-  html += _veFEAEditorAccordionSection('defaults',    'Defaults',                      _veFEAEditorDefaultsHTML(node));
-  html += _veFEAEditorAccordionSection('sizing',      'Sizing',                        _veFEAEditorSizingHTML(node));
-  html += _veFEAEditorAccordionSection('inflation',   'Inflation / Lokal Yoğunlaştırma', _veFEAEditorInflationHTML(node));
-  html += _veFEAEditorAccordionSection('quality',     'Quality — Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', _veFEAEditorQualityHTML(node));
-  html += _veFEAEditorAccordionSection('namedSel',    'Atanmış Yüzeyler (Named Selections)', _veFEAEditorNamedSelHTML(node));
-  html += _veFEAEditorAccordionSection('display',     'Display (Görünüm Modu)',        _veFEAEditorDisplayHTML(node));
-  html += _veFEAEditorAccordionSection('statistics',  'Statistics',                    _veFEAEditorStatisticsHTML(node));
-  html += _veFEAEditorAccordionSection('suggestions', 'Adaptive Refinement Önerileri', _veFEAEditorSuggestionsHTML(node));
+  html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
+  html += _veFEAEditorAccordionSection('sizing',      'Boyutlandırma',                 _veFEAEditorSizingHTML(node));
+  html += _veFEAEditorAccordionSection('inflation',   'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
+  html += _veFEAEditorAccordionSection('quality',     'Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', _veFEAEditorQualityHTML(node));
+  html += _veFEAEditorAccordionSection('namedSel',    'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
+  html += _veFEAEditorAccordionSection('display',     'Görünüm Modu',                  _veFEAEditorDisplayHTML(node));
+  html += _veFEAEditorAccordionSection('statistics',  'İstatistikler',                 _veFEAEditorStatisticsHTML(node));
+  html += _veFEAEditorAccordionSection('suggestions', 'Adaptif İnceltme Önerileri',    _veFEAEditorSuggestionsHTML(node));
   panel.innerHTML = html;
   return panel;
 }
