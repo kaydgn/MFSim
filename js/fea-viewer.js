@@ -1050,13 +1050,15 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (!settings.mode) settings.mode = 'auto';
   if (!settings.elementType) settings.elementType = 'auto';
   if (settings.midSideNodes === undefined) settings.midSideNodes = false;
+  if (!settings.curvatureRefinement) settings.curvatureRefinement = { enabled: false, normalAngleDeg: 18 };
 
   var t0 = Date.now();
   var meshOpts = {
     size: settings.size,
     mode: settings.mode,
     elementType: settings.elementType,
-    midSideNodes: settings.midSideNodes
+    midSideNodes: settings.midSideNodes,
+    curvatureRefinement: settings.curvatureRefinement
   };
 
   // STEP için async parse gerekebilir — promise-aware yol

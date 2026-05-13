@@ -20461,10 +20461,13 @@ function veFEAMeshFromGeometry(geometry, opts) {
   // elementType: 'auto' (native: hex8/wedge6) | 'tet4' (decomposition)
   var elementType = opts.elementType || 'auto';
 
+  // Curvature-based refinement: opts.curvatureRefinement = { enabled, normalAngleDeg }
+  // Eğrili yüzeylerde otomatik daha fine mesh (silindir/şaft çevresel segment)
+  var curvOpts = opts.curvatureRefinement || null;
   var mesh = null;
   if (geometry.type === 'box')      mesh = _veFEAMeshBox(geometry.params || {}, size);
-  else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size);
-  else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size);
+  else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts);
+  else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
     var parsed = _veFEAParseSurfaceTriangles(geometry);
@@ -20610,12 +20613,18 @@ function _veFEABoxNamedSelections(nx, ny, nz) {
 }
 
 // ─── Silindir → Wedge6 (disk triangulation + eksenel extrude) ──────────────
-function _veFEAMeshCylinder(p, size) {
+function _veFEAMeshCylinder(p, size, curvOpts) {
   var r  = Math.max(0.1, p.radius || 15);
   var h  = Math.max(0.1, p.height || 60);
   var nC = Math.max(6, Math.round(2 * Math.PI * r / size));
   var nR = Math.max(2, Math.round(r / size));
   var nA = Math.max(1, Math.round(h / size));
+  // Curvature refinement: max yüz açısı θ → nC ≥ 360/θ
+  if (curvOpts && curvOpts.enabled) {
+    var angDeg = Math.max(1, Math.min(90, Number(curvOpts.normalAngleDeg) || 18));
+    var nCByCurv = Math.ceil(360 / angDeg);
+    if (nCByCurv > nC) nC = nCByCurv;
+  }
   var halfH = h / 2;
 
   // Disk düğümleri: her layer'da 1 merkez + nR * nC halka düğümü
@@ -20726,7 +20735,7 @@ function _veFEACylinderNamedSelections(nR, nC, nA) {
 }
 
 // ─── Şaft (içi boş silindir) → Heks8 annulus ───────────────────────────────
-function _veFEAMeshShaft(p, size) {
+function _veFEAMeshShaft(p, size, curvOpts) {
   var rOut = Math.max(0.5, p.outerRadius || 20);
   var rIn  = Math.max(0,   p.innerRadius || 8);
   if (rIn >= rOut) rIn = Math.max(0, rOut - 1);
@@ -20734,6 +20743,12 @@ function _veFEAMeshShaft(p, size) {
   var nC = Math.max(8, Math.round(2 * Math.PI * rOut / size));
   var nR = Math.max(1, Math.round((rOut - rIn) / size));
   var nA = Math.max(1, Math.round(L / size));
+  // Curvature refinement: dış+iç yüzeyler için
+  if (curvOpts && curvOpts.enabled) {
+    var angDeg = Math.max(1, Math.min(90, Number(curvOpts.normalAngleDeg) || 18));
+    var nCByCurv = Math.ceil(360 / angDeg);
+    if (nCByCurv > nC) nC = nCByCurv;
+  }
 
   var perLayer = (nR + 1) * nC;
   var nNodes = perLayer * (nA + 1);
@@ -22711,13 +22726,15 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (!settings.mode) settings.mode = 'auto';
   if (!settings.elementType) settings.elementType = 'auto';
   if (settings.midSideNodes === undefined) settings.midSideNodes = false;
+  if (!settings.curvatureRefinement) settings.curvatureRefinement = { enabled: false, normalAngleDeg: 18 };
 
   var t0 = Date.now();
   var meshOpts = {
     size: settings.size,
     mode: settings.mode,
     elementType: settings.elementType,
-    midSideNodes: settings.midSideNodes
+    midSideNodes: settings.midSideNodes,
+    curvatureRefinement: settings.curvatureRefinement
   };
 
   // STEP için async parse gerekebilir — promise-aware yol
@@ -23545,6 +23562,18 @@ function getFEAMeshPropertiesHTML(node) {
     '<span>Orta-kenar düğümler <span style="color:var(--text-muted);">(Quadratic: Tet10 / Hex20 / Wedge15)</span></span>' +
   '</label>';
 
+  // Curvature-based refinement (silindir/şaft için çevresel)
+  var curv = settings.curvatureRefinement || { enabled: false, normalAngleDeg: 18 };
+  html += '<label style="display:flex; align-items:center; gap:6px; padding:5px 8px; margin-bottom:6px; background:var(--bg-secondary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
+    '<input type="checkbox" id="ve-fea-mesh-curv-' + node.id + '"' + (curv.enabled ? ' checked' : '') + ' style="margin:0;">' +
+    '<span>Eğrilik tabanlı incelt <span style="color:var(--text-muted);">(silindir/şaft çevresel)</span></span>' +
+  '</label>';
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; padding-left:24px;">' +
+    '<label for="ve-fea-mesh-curv-ang-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">Maks yüzey açısı</label>' +
+    '<input id="ve-fea-mesh-curv-ang-' + node.id + '" type="number" min="1" max="90" step="1" value="' + (curv.normalAngleDeg || 18) + '" style="width:60px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+    '<span style="font-size:0.55rem; color:var(--text-muted);">°</span>' +
+  '</div>';
+
   // Mesh boyu input
   html += veFEASectionTitle('Mesh Boyu');
   html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">';
@@ -23731,6 +23760,13 @@ function veFEASubmitMeshBuild(nodeId) {
   if (elementType !== 'auto' && elementType !== 'tet4') elementType = 'auto';
   var midSideEl = document.getElementById('ve-fea-mesh-midnodes-' + nodeId);
   var midSideNodes = !!(midSideEl && midSideEl.checked);
+  var curvEl = document.getElementById('ve-fea-mesh-curv-' + nodeId);
+  var curvAngEl = document.getElementById('ve-fea-mesh-curv-ang-' + nodeId);
+  var curvEnabled = !!(curvEl && curvEl.checked);
+  var curvAngDeg = curvAngEl ? parseFloat(curvAngEl.value) : 18;
+  if (!isFinite(curvAngDeg) || curvAngDeg <= 0) curvAngDeg = 18;
+  if (curvAngDeg > 90) curvAngDeg = 90;
+  if (curvAngDeg < 1) curvAngDeg = 1;
   var meshNode = nodes.find(function(n) { return n.id === nodeId; });
   if (meshNode) {
     meshNode.data = meshNode.data || {};
@@ -23739,6 +23775,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.mode = mode;
     meshNode.data.meshSettings.elementType = elementType;
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
+    meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };
   }
   veFEABuildMeshForNode(nodeId);
 }

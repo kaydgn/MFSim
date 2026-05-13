@@ -243,6 +243,18 @@ function getFEAMeshPropertiesHTML(node) {
     '<span>Orta-kenar düğümler <span style="color:var(--text-muted);">(Quadratic: Tet10 / Hex20 / Wedge15)</span></span>' +
   '</label>';
 
+  // Curvature-based refinement (silindir/şaft için çevresel)
+  var curv = settings.curvatureRefinement || { enabled: false, normalAngleDeg: 18 };
+  html += '<label style="display:flex; align-items:center; gap:6px; padding:5px 8px; margin-bottom:6px; background:var(--bg-secondary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
+    '<input type="checkbox" id="ve-fea-mesh-curv-' + node.id + '"' + (curv.enabled ? ' checked' : '') + ' style="margin:0;">' +
+    '<span>Eğrilik tabanlı incelt <span style="color:var(--text-muted);">(silindir/şaft çevresel)</span></span>' +
+  '</label>';
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; padding-left:24px;">' +
+    '<label for="ve-fea-mesh-curv-ang-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">Maks yüzey açısı</label>' +
+    '<input id="ve-fea-mesh-curv-ang-' + node.id + '" type="number" min="1" max="90" step="1" value="' + (curv.normalAngleDeg || 18) + '" style="width:60px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+    '<span style="font-size:0.55rem; color:var(--text-muted);">°</span>' +
+  '</div>';
+
   // Mesh boyu input
   html += veFEASectionTitle('Mesh Boyu');
   html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">';
@@ -429,6 +441,13 @@ function veFEASubmitMeshBuild(nodeId) {
   if (elementType !== 'auto' && elementType !== 'tet4') elementType = 'auto';
   var midSideEl = document.getElementById('ve-fea-mesh-midnodes-' + nodeId);
   var midSideNodes = !!(midSideEl && midSideEl.checked);
+  var curvEl = document.getElementById('ve-fea-mesh-curv-' + nodeId);
+  var curvAngEl = document.getElementById('ve-fea-mesh-curv-ang-' + nodeId);
+  var curvEnabled = !!(curvEl && curvEl.checked);
+  var curvAngDeg = curvAngEl ? parseFloat(curvAngEl.value) : 18;
+  if (!isFinite(curvAngDeg) || curvAngDeg <= 0) curvAngDeg = 18;
+  if (curvAngDeg > 90) curvAngDeg = 90;
+  if (curvAngDeg < 1) curvAngDeg = 1;
   var meshNode = nodes.find(function(n) { return n.id === nodeId; });
   if (meshNode) {
     meshNode.data = meshNode.data || {};
@@ -437,6 +456,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.mode = mode;
     meshNode.data.meshSettings.elementType = elementType;
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
+    meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };
   }
   veFEABuildMeshForNode(nodeId);
 }

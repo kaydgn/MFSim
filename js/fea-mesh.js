@@ -242,10 +242,13 @@ function veFEAMeshFromGeometry(geometry, opts) {
   // elementType: 'auto' (native: hex8/wedge6) | 'tet4' (decomposition)
   var elementType = opts.elementType || 'auto';
 
+  // Curvature-based refinement: opts.curvatureRefinement = { enabled, normalAngleDeg }
+  // Eğrili yüzeylerde otomatik daha fine mesh (silindir/şaft çevresel segment)
+  var curvOpts = opts.curvatureRefinement || null;
   var mesh = null;
   if (geometry.type === 'box')      mesh = _veFEAMeshBox(geometry.params || {}, size);
-  else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size);
-  else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size);
+  else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts);
+  else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
     var parsed = _veFEAParseSurfaceTriangles(geometry);
@@ -391,12 +394,18 @@ function _veFEABoxNamedSelections(nx, ny, nz) {
 }
 
 // ─── Silindir → Wedge6 (disk triangulation + eksenel extrude) ──────────────
-function _veFEAMeshCylinder(p, size) {
+function _veFEAMeshCylinder(p, size, curvOpts) {
   var r  = Math.max(0.1, p.radius || 15);
   var h  = Math.max(0.1, p.height || 60);
   var nC = Math.max(6, Math.round(2 * Math.PI * r / size));
   var nR = Math.max(2, Math.round(r / size));
   var nA = Math.max(1, Math.round(h / size));
+  // Curvature refinement: max yüz açısı θ → nC ≥ 360/θ
+  if (curvOpts && curvOpts.enabled) {
+    var angDeg = Math.max(1, Math.min(90, Number(curvOpts.normalAngleDeg) || 18));
+    var nCByCurv = Math.ceil(360 / angDeg);
+    if (nCByCurv > nC) nC = nCByCurv;
+  }
   var halfH = h / 2;
 
   // Disk düğümleri: her layer'da 1 merkez + nR * nC halka düğümü
@@ -507,7 +516,7 @@ function _veFEACylinderNamedSelections(nR, nC, nA) {
 }
 
 // ─── Şaft (içi boş silindir) → Heks8 annulus ───────────────────────────────
-function _veFEAMeshShaft(p, size) {
+function _veFEAMeshShaft(p, size, curvOpts) {
   var rOut = Math.max(0.5, p.outerRadius || 20);
   var rIn  = Math.max(0,   p.innerRadius || 8);
   if (rIn >= rOut) rIn = Math.max(0, rOut - 1);
@@ -515,6 +524,12 @@ function _veFEAMeshShaft(p, size) {
   var nC = Math.max(8, Math.round(2 * Math.PI * rOut / size));
   var nR = Math.max(1, Math.round((rOut - rIn) / size));
   var nA = Math.max(1, Math.round(L / size));
+  // Curvature refinement: dış+iç yüzeyler için
+  if (curvOpts && curvOpts.enabled) {
+    var angDeg = Math.max(1, Math.min(90, Number(curvOpts.normalAngleDeg) || 18));
+    var nCByCurv = Math.ceil(360 / angDeg);
+    if (nCByCurv > nC) nC = nCByCurv;
+  }
 
   var perLayer = (nR + 1) * nC;
   var nNodes = perLayer * (nA + 1);

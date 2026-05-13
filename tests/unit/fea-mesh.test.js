@@ -400,6 +400,97 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Curvature-based refinement', () => {
+  test('Disabled (default): nC mevcut size-based hesaplama', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 10 });
+    var nC = m.grid.nCircum;
+    // size=10 → nC = round(2π·10/10) = round(6.28) = 6
+    expect(nC).toBe(6);
+  });
+
+  test('Enabled normalAngleDeg=18° → nC ≥ 20 (silindir)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 10, curvatureRefinement: { enabled: true, normalAngleDeg: 18 } });
+    // 360/18 = 20 segment minimum
+    expect(m.grid.nCircum).toBeGreaterThanOrEqual(20);
+  });
+
+  test('Enabled normalAngleDeg=5° → çok daha fine (≥ 72 segment)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 10, curvatureRefinement: { enabled: true, normalAngleDeg: 5 } });
+    expect(m.grid.nCircum).toBeGreaterThanOrEqual(72);
+  });
+
+  test('Şaft için curvature refinement uygulanır', () => {
+    var m = veFEAMeshFromGeometry({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } },
+      { size: 20, curvatureRefinement: { enabled: true, normalAngleDeg: 18 } });
+    expect(m.grid.nCircum).toBeGreaterThanOrEqual(20);
+  });
+
+  test('Kutu mesh curvature\'dan etkilenmez (planar)', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, curvatureRefinement: { enabled: true, normalAngleDeg: 5 } });
+    expect(m1.elements.length).toBe(m2.elements.length);
+  });
+
+  test('Size-based nC daha büyükse curvature override etmez', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 100, height: 20 } },
+      { size: 5, curvatureRefinement: { enabled: true, normalAngleDeg: 60 } });
+    // size-based: nC ≈ round(2π·100/5) = round(125.6) = 126
+    // curvature: 360/60 = 6
+    // max(126, 6) = 126 → size kazandı
+    expect(m.grid.nCircum).toBeGreaterThan(6);
+  });
+
+  test('Bozuk normalAngleDeg değeri clamp edilir', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 10, curvatureRefinement: { enabled: true, normalAngleDeg: -5 } });
+    // Clamp 1 → çok büyük segment
+    expect(m.grid.nCircum).toBeGreaterThanOrEqual(360);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Curvature refinement UI', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Checkbox + açı input\'u render edilir', () => {
+    var node = { id: 'mesh-cr1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-curv-mesh-cr1"/);
+    expect(html).toMatch(/id="ve-fea-mesh-curv-ang-mesh-cr1"/);
+    expect(html).toMatch(/Eğrilik tabanlı incelt/);
+  });
+
+  test('Default değerler: disabled + 18°', () => {
+    var node = { id: 'mesh-cr2', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-curv-mesh-cr2"[^>]*>/);
+    expect(checkboxMatch[0]).not.toMatch(/checked/);
+    expect(html).toMatch(/value="18"/);
+  });
+
+  test('Persisted ayarlar UI\'da işaretlenir', () => {
+    var node = {
+      id: 'mesh-cr3',
+      type: 'fea-mesh',
+      data: { meshSettings: { size: 10, curvatureRefinement: { enabled: true, normalAngleDeg: 10 } } }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-curv-mesh-cr3"[^>]*>/);
+    expect(checkboxMatch[0]).toMatch(/checked/);
+    expect(html).toMatch(/value="10"/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputePerElementQuality (heat map için)', () => {
   test('aspect metriği — eleman sayısı kadar değer', () => {
     var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
