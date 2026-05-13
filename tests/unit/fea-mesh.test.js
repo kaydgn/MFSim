@@ -2507,3 +2507,49 @@ describe('veFEAInitMeshViewerForNode (graceful, Three.js olmadan)', () => {
     expect(() => veFEAInitMeshViewerForNode('t1')).not.toThrow();
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// Regresyon: fullscreen viewer Mesh node için cache'ten yüklemeli.
+// Kullanıcı raporu: "Mesh ekranındaki tam ekran görüntüleyici tam olarak
+// çalışmıyor. Mesh'li geometri tam olarak gelmiyor."
+describe('_veFEALoadNodeGeometryIntoViewer — Mesh node desteği', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    Object.keys(veFEAMeshCache).forEach((k) => delete veFEAMeshCache[k]);
+  });
+
+  test('Mesh node + cache\'te mesh varsa viewer.loadMesh çağrılır', () => {
+    global.nodes = [{ id: 'mesh-x', type: 'fea-mesh', data: { meshActive: true } }];
+    veFEAMeshCache['mesh-x'] = {
+      type: 'hex8', nodes: new Float32Array([0,0,0, 1,0,0]),
+      elements: new Uint32Array([]), nodesPerElement: 8
+    };
+    var loadMeshMock = jest.fn();
+    var loadSTLMock = jest.fn();
+    var loadPrimitiveMock = jest.fn();
+    var mockViewer = { loadMesh: loadMeshMock, loadSTL: loadSTLMock, loadPrimitive: loadPrimitiveMock };
+    _veFEALoadNodeGeometryIntoViewer(mockViewer, 'mesh-x');
+    expect(loadMeshMock).toHaveBeenCalledTimes(1);
+    expect(loadSTLMock).not.toHaveBeenCalled();
+    expect(loadPrimitiveMock).not.toHaveBeenCalled();
+  });
+
+  test('Mesh node + cache\'te mesh YOKsa hata atmaz', () => {
+    global.nodes = [{ id: 'mesh-empty', type: 'fea-mesh', data: {} }];
+    var loadMeshMock = jest.fn();
+    var mockViewer = { loadMesh: loadMeshMock };
+    expect(() => _veFEALoadNodeGeometryIntoViewer(mockViewer, 'mesh-empty')).not.toThrow();
+    expect(loadMeshMock).not.toHaveBeenCalled();
+  });
+
+  test('Geometry node yine eski davranışla yüklenir (primitif)', () => {
+    global.nodes = [{ id: 'g1', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } }];
+    var loadMeshMock = jest.fn();
+    var loadPrimitiveMock = jest.fn();
+    var mockViewer = { loadMesh: loadMeshMock, loadPrimitive: loadPrimitiveMock };
+    _veFEALoadNodeGeometryIntoViewer(mockViewer, 'g1');
+    expect(loadPrimitiveMock).toHaveBeenCalledTimes(1);
+    expect(loadPrimitiveMock).toHaveBeenCalledWith('box', expect.any(Object));
+    expect(loadMeshMock).not.toHaveBeenCalled();
+  });
+});

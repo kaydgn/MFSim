@@ -876,14 +876,26 @@ function veFEAInitGeometryViewerForNode(nodeId) {
   _veFEALoadNodeGeometryIntoViewer(viewer, nodeId);
 }
 
-// Verilen viewer'a node.data.geometry'yi sessizce uygular. Hem küçük preview
+// Verilen viewer'a node geometrisini/mesh'ini sessizce uygular. Hem küçük preview
 // hem fullscreen modal tarafından kullanılır. Persist veya toast yapmaz —
 // applySTEP/applyPrimitive zincirine girmez, dolayısıyla showNodeProperties
 // yeniden tetiklenmez (sonsuz döngü koruması).
 function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
   if(!viewer || typeof nodes === 'undefined') return;
   var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
-  if(!node || !node.data || !node.data.geometry || !node.data.geometry.type) return;
+  if(!node) return;
+
+  // Mesh node: in-memory cache'ten mesh data yedir (kullanıcı raporladığı
+  // "tam ekran mesh gelmiyor" sorununu çözer — mesh data node.data'da değil,
+  // veFEAMeshCache global cache'inde tutulur)
+  if (node.type === 'fea-mesh' &&
+      typeof veFEAMeshCache !== 'undefined' && veFEAMeshCache[nodeId] &&
+      typeof viewer.loadMesh === 'function') {
+    viewer.loadMesh(veFEAMeshCache[nodeId]);
+    return;
+  }
+
+  if(!node.data || !node.data.geometry || !node.data.geometry.type) return;
 
   var g = node.data.geometry;
   if(g.type === 'stl' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function' && typeof veFEAParseSTL === 'function') {

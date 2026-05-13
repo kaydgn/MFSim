@@ -59,12 +59,21 @@ html = html.replace(
   }
 );
 
-// ── 2a) Vendor JS: <script src="vendor/..."></script> → <script>içerik</script>
+// Yardimci: <script> tag'inin src disindaki attribute'larini koruyarak
+// inline ederken kullanir. type="text/x-mfsim-defer" / data-mfsim-label gibi
+// attribute'lar monolitik build'de de korunur — loader.js bunlari arar.
+function extractAttrs(rawAttrs) {
+  if (!rawAttrs) return '';
+  var trimmed = rawAttrs.trim();
+  return trimmed.length ? ' ' + trimmed : '';
+}
+
+// ── 2a) Vendor JS: <script ... src="vendor/..." ...></script> → inline.
 // Three.js gibi 3. parti kütüphaneler için ayrı eşleştirme. js/ deseninden ÖNCE
-// işlenir; sıralama korunur.
+// işlenir; sıralama korunur. Regex src'den onceki/sonraki attribute'lari yakalar.
 html = html.replace(
-  /<script\s+src="(vendor\/[^"]+)"\s*><\/script>/g,
-  function(match, vendorPath) {
+  /<script\b([^>]*?)\s+src="(vendor\/[^"]+)"([^>]*?)\s*>\s*<\/script>/g,
+  function(match, beforeAttrs, vendorPath, afterAttrs) {
     var fullPath = path.join(ROOT, vendorPath);
     if (!fs.existsSync(fullPath)) {
       console.error('HATA: Vendor dosyası bulunamadı:', fullPath);
@@ -73,14 +82,15 @@ html = html.replace(
     }
     var js = fs.readFileSync(fullPath, 'utf8');
     console.log('  Vendor inline:', vendorPath, '(' + js.length + ' karakter)');
-    return '<script>\n' + js + '\n</script>';
+    var attrs = extractAttrs(beforeAttrs) + extractAttrs(afterAttrs);
+    return '<script' + attrs + '>\n' + js + '\n</script>';
   }
 );
 
-// ── 2b) JS: <script src="js/..."></script> → <script>içerik</script>
+// ── 2b) JS: <script ... src="js/..." ...></script> → inline.
 html = html.replace(
-  /<script\s+src="(js\/[^"]+)"\s*><\/script>/g,
-  function(match, jsPath) {
+  /<script\b([^>]*?)\s+src="(js\/[^"]+)"([^>]*?)\s*>\s*<\/script>/g,
+  function(match, beforeAttrs, jsPath, afterAttrs) {
     var fullPath = path.join(ROOT, jsPath);
     if (!fs.existsSync(fullPath)) {
       console.error('HATA: JS dosyası bulunamadı:', fullPath);
@@ -92,7 +102,8 @@ html = html.replace(
       js = js.replace('__DEPLOY_RUN_ID__', process.env.GITHUB_RUN_ID);
     }
     console.log('  JS inline:', jsPath, '(' + js.length + ' karakter)');
-    return '<script>\n' + js + '\n</script>';
+    var attrs = extractAttrs(beforeAttrs) + extractAttrs(afterAttrs);
+    return '<script' + attrs + '>\n' + js + '\n</script>';
   }
 );
 
