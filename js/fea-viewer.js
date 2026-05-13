@@ -80,26 +80,6 @@ function veFEAHasThree() {
   return typeof window !== 'undefined' && typeof window.THREE !== 'undefined';
 }
 
-// ANSYS-style 2-tone gradient background texture (üst koyu → alt açık).
-// Three.js scene.background sabit renk veya texture kabul eder, gradient
-// için runtime canvas texture yaratırız (256x2 px, hızlı).
-function _veFEACreateGradientTexture(topHex, botHex) {
-  if (typeof document === 'undefined' || !veFEAHasThree()) return null;
-  var c = document.createElement('canvas');
-  c.width = 2; c.height = 256;
-  var ctx = c.getContext('2d');
-  if (!ctx) return null;
-  var grd = ctx.createLinearGradient(0, 0, 0, 256);
-  grd.addColorStop(0, topHex);
-  grd.addColorStop(1, botHex);
-  ctx.fillStyle = grd;
-  ctx.fillRect(0, 0, 2, 256);
-  var tex = new THREE.CanvasTexture(c);
-  if (tex.colorSpace !== undefined) tex.colorSpace = THREE.SRGBColorSpace || 'srgb';
-  tex.needsUpdate = true;
-  return tex;
-}
-
 // ─── Ana viewer kurulumu ────────────────────────────────────────────────────
 function veFEAInitViewer(canvas, opts) {
   if(!veFEAHasThree()) {
@@ -113,13 +93,7 @@ function veFEAInitViewer(canvas, opts) {
   var height = opts.height || canvas.clientHeight || 180;
 
   var scene = new THREE.Scene();
-  // Background: 'ansys-gradient' (navy-to-light-blue), number (solid), veya undefined (dark)
-  // ANSYS Mechanical default'u: koyu navy üst → açık mavi alt gradient.
-  if (opts.background === 'ansys-gradient') {
-    scene.background = _veFEACreateGradientTexture('#0d2645', '#5a7fa8');
-  } else {
-    scene.background = new THREE.Color(opts.background || 0x1a1a1a);
-  }
+  scene.background = new THREE.Color(opts.background || 0x1a1a1a);
 
   var camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 5000);
   camera.position.set(60, 50, 90);
@@ -129,18 +103,11 @@ function veFEAInitViewer(canvas, opts) {
   renderer.setPixelRatio(window.devicePixelRatio || 1);
   renderer.localClippingEnabled = true; // material.clippingPlanes etkili olsun
 
-  // ─── Three-point lighting (ANSYS-style) ──────────────────────────────────
-  // ANSYS modeller uniform aydınlanmıs gozukur: subtle ambient + key + fill + rim
-  scene.add(new THREE.AmbientLight(0xffffff, 0.42));
-  var keyLight = new THREE.DirectionalLight(0xffffff, 0.75);
-  keyLight.position.set(80, 120, 60);
-  scene.add(keyLight);
-  var fillLight = new THREE.DirectionalLight(0xc8d8e8, 0.35);
-  fillLight.position.set(-80, 40, 80);
-  scene.add(fillLight);
-  var rimLight = new THREE.DirectionalLight(0xffe8c8, 0.25);
-  rimLight.position.set(0, -60, -100);
-  scene.add(rimLight);
+  // Işıklar (sahnede grid/axes yok — sadece geometri ve aydınlatma)
+  scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+  var dir = new THREE.DirectionalLight(0xffffff, 0.85);
+  dir.position.set(80, 120, 60);
+  scene.add(dir);
 
   // Sahneye orbit hedefi
   var target = new THREE.Vector3(0, 0, 0);
@@ -293,7 +260,7 @@ function veFEAInitViewer(canvas, opts) {
           edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
           var edgeLine = new THREE.LineSegments(
             edgeGeo,
-            new THREE.LineBasicMaterial({ color: 0x102444, transparent: true, opacity: 0.45 })
+            new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.92 })
           );
           edgeLine.userData.feaMeshEdges = true;
           this._geometryRoot.add(edgeLine);
@@ -411,7 +378,7 @@ function veFEAInitViewer(canvas, opts) {
         edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
         var edgeLine = new THREE.LineSegments(
           edgeGeo,
-          new THREE.LineBasicMaterial({ color: 0x111111, transparent: true, opacity: 0.35 })
+          new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.85 })
         );
         edgeLine.userData.feaMeshEdges = true;
         this._geometryRoot.add(edgeLine);
@@ -1147,14 +1114,13 @@ function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
     return;
   }
 
-  // Modal viewer için ANSYS-style preset (gradient + gizmo); diğer call'lar
-  // (eski preview side-panel) için temel ayarlar.
+  // Modal viewer için sade ayarlar (program teması ile uyumlu) + triad gizmo
   var opts = viewerOpts || {};
   var finalOpts = {
     width: canvas.clientWidth || 240,
     height: canvas.clientHeight || 180,
-    background: opts.background || 'ansys-gradient',
-    gizmo: opts.gizmo !== false  // default true (modal'da XYZ ekseni görünsün)
+    background: opts.background,         // undefined ise default 0x1a1a1a
+    gizmo: opts.gizmo !== false          // default true (XYZ ekseni)
   };
   var viewer = veFEAInitViewer(canvas, finalOpts);
   if (!viewer) return;
