@@ -1045,6 +1045,10 @@ function veFEAApplyPrimitive(nodeId, type, params) {
         bbox: stats ? stats.bbox : null,
         sourceLabel: (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(type) : type
       };
+      // Topology: yüzey listesi mesh-öncesi tespit edilir (ANSYS-style)
+      if (typeof veFEAComputeGeometryTopology === 'function') {
+        node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
+      }
       if(typeof saveState === 'function') saveState();
     }
   }
@@ -1095,6 +1099,9 @@ function veFEAApplySTL(nodeId, buffer, fileName) {
           ? null
           : ('Dosya ' + (byteLength / (1024*1024)).toFixed(1) + ' MB — proje kaydında saklanmıyor, yeniden yükleyin.')
       };
+      if (typeof veFEAComputeGeometryTopology === 'function') {
+        node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
+      }
       if(typeof saveState === 'function') saveState();
     }
   }

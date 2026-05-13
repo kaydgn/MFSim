@@ -20554,6 +20554,9 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
             ? null
             : ('Dosya ' + (byteLength / (1024 * 1024)).toFixed(1) + ' MB — proje kaydında saklanmıyor, yeniden yükleyin.')
         };
+        if (typeof veFEAComputeGeometryTopology === 'function') {
+          node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
+        }
         if (typeof saveState === 'function') saveState();
       }
     }
@@ -20585,6 +20588,181 @@ function veFEAOnSTEPFileSelected(input, nodeId) {
   };
   reader.readAsArrayBuffer(file);
   input.value = '';
+}
+
+</script>
+<script type="text/x-mfsim-defer" data-mfsim-label="FEA: Topoloji...">
+// ============================================================================
+// FEA GEOMETRY TOPOLOGY
+// ============================================================================
+// ANSYS Workbench'in 2-aşamalı mesh sürecindeki ilk aşama: GEOMETRİ-BAZLI
+// topology tespiti. Mesh üretmeden ÖNCE geometriyi parse edip yüzeyleri,
+// kenarları ve köşeleri otomatik çıkarır. Mesher daha sonra bu topology'ye
+// conforming şekilde element üretir.
+//
+// Primitif tipleri (box/cylinder/shaft/rectTube) için topology trivial:
+//   - Statik face listesi geometriden analitik üretilir
+//   - Face ID'leri mesh sonrası namedSelections ile eşleşir (zaten aynı id'ler)
+// STL/STEP için: full BREP topology OCCT entegrasyonu gerek (Faz B+); şimdilik
+// tek "Yüzey" face olarak basitleştirildi.
+//
+// Topology data structure:
+//   {
+//     type, faces[], edges{count}, vertices{count},
+//     totalSurfaceArea, volume, bbox
+//   }
+// Her face:
+//   { id, label, type, area, normal?, radius?, length?, width?, height?, isHole? }
+//
+// Public API:
+//   veFEAComputeGeometryTopology(geometry) → topology nesnesi
+//   veFEATopologyFaceTypeLabel(type)       → "Düzlemsel" / "Silindirik" / ...
+// ============================================================================
+
+function veFEAComputeGeometryTopology(geometry) {
+  if (!geometry || !geometry.type) return null;
+  var p = geometry.params || {};
+  if (geometry.type === 'box')      return _veFEAToplBox(p);
+  if (geometry.type === 'cylinder') return _veFEAToplCylinder(p);
+  if (geometry.type === 'shaft')    return _veFEAToplShaft(p);
+  if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
+  if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
+  return null;
+}
+
+function veFEATopologyFaceTypeLabel(type) {
+  return ({
+    'planar':         'Düzlemsel',
+    'planar-annular': 'Halka (Düzlem)',
+    'cylindrical':    'Silindirik',
+    'triangulated':   'Üçgenlenmiş'
+  })[type] || type;
+}
+
+// ─── Kutu (box) — 6 yüzey, 12 kenar, 8 köşe ────────────────────────────────
+function _veFEAToplBox(p) {
+  var w = Math.max(0.1, p.width  || 50);
+  var h = Math.max(0.1, p.height || 30);
+  var d = Math.max(0.1, p.depth  || 20);
+  var faces = [
+    { id: 'faceXMin', label: 'X− Yüzeyi',           type: 'planar', normal: [-1, 0,  0], area: h * d, width: d, height: h },
+    { id: 'faceXMax', label: 'X+ Yüzeyi',           type: 'planar', normal: [ 1, 0,  0], area: h * d, width: d, height: h },
+    { id: 'faceYMin', label: 'Y− Yüzeyi (Alt)',     type: 'planar', normal: [ 0,-1,  0], area: w * d, width: w, height: d },
+    { id: 'faceYMax', label: 'Y+ Yüzeyi (Üst)',     type: 'planar', normal: [ 0, 1,  0], area: w * d, width: w, height: d },
+    { id: 'faceZMin', label: 'Z− Yüzeyi (Ön)',      type: 'planar', normal: [ 0, 0, -1], area: w * h, width: w, height: h },
+    { id: 'faceZMax', label: 'Z+ Yüzeyi (Arka)',    type: 'planar', normal: [ 0, 0,  1], area: w * h, width: w, height: h }
+  ];
+  return {
+    type: 'box',
+    faces: faces,
+    edges:    { count: 12 },
+    vertices: { count: 8 },
+    totalSurfaceArea: 2 * (w * h + w * d + h * d),
+    volume: w * h * d,
+    bbox: { x: w, y: h, z: d }
+  };
+}
+
+// ─── Silindir — 3 yüzey, 2 daire kenar, 0 köşe ─────────────────────────────
+function _veFEAToplCylinder(p) {
+  var r = Math.max(0.1, p.radius || 15);
+  var h = Math.max(0.1, p.height || 60);
+  var disk = Math.PI * r * r;
+  var side = 2 * Math.PI * r * h;
+  return {
+    type: 'cylinder',
+    faces: [
+      { id: 'faceBottom', label: 'Alt Disk (Y−)', type: 'planar',      normal: [0,-1,0], area: disk, radius: r },
+      { id: 'faceTop',    label: 'Üst Disk (Y+)', type: 'planar',      normal: [0, 1,0], area: disk, radius: r },
+      { id: 'faceSide',   label: 'Yan Yüzey (Radyal)', type: 'cylindrical',              area: side, radius: r, length: h }
+    ],
+    edges:    { count: 2 },   // üst + alt daire
+    vertices: { count: 0 },
+    totalSurfaceArea: 2 * disk + side,
+    volume: disk * h,
+    bbox: { x: 2 * r, y: h, z: 2 * r }
+  };
+}
+
+// ─── Şaft (içi boş silindir) — 4 yüzey, 4 daire kenar, 0 köşe ──────────────
+function _veFEAToplShaft(p) {
+  var rOut = Math.max(0.5, p.outerRadius || 20);
+  var rIn  = Math.max(0,   p.innerRadius || 8);
+  if (rIn >= rOut) rIn = Math.max(0, rOut - 1);
+  var L = Math.max(0.1, p.length || 120);
+  var ring  = Math.PI * (rOut * rOut - rIn * rIn);
+  var outer = 2 * Math.PI * rOut * L;
+  var inner = 2 * Math.PI * rIn  * L;
+  return {
+    type: 'shaft',
+    faces: [
+      { id: 'faceBottom', label: 'Alt Halka (Y−)',       type: 'planar-annular', normal: [0,-1,0], area: ring, outerRadius: rOut, innerRadius: rIn },
+      { id: 'faceTop',    label: 'Üst Halka (Y+)',       type: 'planar-annular', normal: [0, 1,0], area: ring, outerRadius: rOut, innerRadius: rIn },
+      { id: 'faceOuter',  label: 'Dış Yan Yüzey',        type: 'cylindrical',                       area: outer, radius: rOut, length: L },
+      { id: 'faceInner',  label: 'İç Yan Yüzey (Delik)', type: 'cylindrical',                       area: inner, radius: rIn,  length: L, isHole: true }
+    ],
+    edges:    { count: 4 },   // 2 dış + 2 iç daire
+    vertices: { count: 0 },
+    totalSurfaceArea: 2 * ring + outer + inner,
+    volume: ring * L,
+    bbox: { x: 2 * rOut, y: L, z: 2 * rOut }
+  };
+}
+
+// ─── Dikdörtgen profil (rectTube) — 8 yüzey (4 dış + 4 iç) ─────────────────
+function _veFEAToplRectTube(p) {
+  var w = Math.max(1, p.width || 60);
+  var h = Math.max(1, p.height || 40);
+  var t = Math.max(0.2, p.thickness || 4);
+  var L = Math.max(1, p.length || 200);
+  var iw = Math.max(0, w - 2 * t);
+  var ih = Math.max(0, h - 2 * t);
+  var outerSect = w * h;
+  var innerSect = iw * ih;
+  var ringSect  = outerSect - innerSect;
+  return {
+    type: 'rectTube',
+    faces: [
+      { id: 'faceZMin',     label: 'Alt Kesit (Z−)',       type: 'planar', normal: [0,0,-1], area: ringSect },
+      { id: 'faceZMax',     label: 'Üst Kesit (Z+)',       type: 'planar', normal: [0,0, 1], area: ringSect },
+      { id: 'faceXMin',     label: 'X− Dış Yan Yüzey',     type: 'planar', normal: [-1,0,0], area: h * L },
+      { id: 'faceXMax',     label: 'X+ Dış Yan Yüzey',     type: 'planar', normal: [ 1,0,0], area: h * L },
+      { id: 'faceYMin',     label: 'Y− Dış Yan Yüzey',     type: 'planar', normal: [0,-1,0], area: w * L },
+      { id: 'faceYMax',     label: 'Y+ Dış Yan Yüzey',     type: 'planar', normal: [0, 1,0], area: w * L },
+      { id: 'faceInnerXMin',label: 'X− İç Yüzey (boşluk)', type: 'planar', normal: [ 1,0,0], area: ih * L, isHole: true },
+      { id: 'faceInnerXMax',label: 'X+ İç Yüzey (boşluk)', type: 'planar', normal: [-1,0,0], area: ih * L, isHole: true },
+      { id: 'faceInnerYMin',label: 'Y− İç Yüzey (boşluk)', type: 'planar', normal: [0, 1,0], area: iw * L, isHole: true },
+      { id: 'faceInnerYMax',label: 'Y+ İç Yüzey (boşluk)', type: 'planar', normal: [0,-1,0], area: iw * L, isHole: true }
+    ],
+    edges:    { count: 16 },  // 8 outer + 8 inner
+    vertices: { count: 16 },
+    totalSurfaceArea: 2 * ringSect + 2 * (w + h) * L + 2 * (iw + ih) * L,
+    volume: ringSect * L,
+    bbox: { x: w, y: h, z: L }
+  };
+}
+
+// ─── STL / STEP — basitleştirilmiş (tek "Yüzey" face) ──────────────────────
+// Gerçek BREP topology (face/edge/vertex per OCCT primitive) Faz B'de OCCT
+// topology API ile eklenir. Şimdilik tüm üçgenler tek face altında toplanır.
+function _veFEAToplStlStep(geom) {
+  return {
+    type: geom.type,
+    faces: [
+      {
+        id: 'faceSurface',
+        label: 'Yüzey (Tüm üçgenler)',
+        type: 'triangulated',
+        area: geom.surfaceArea || 0,
+        triangleCount: geom.triangleCount || 0
+      }
+    ],
+    edges:    { count: 0 },
+    vertices: { count: 0 },
+    totalSurfaceArea: geom.surfaceArea || 0,
+    volume: geom.volume || 0,
+    bbox: geom.bbox || { x: 0, y: 0, z: 0 }
+  };
 }
 
 </script>
@@ -23914,6 +24092,10 @@ function veFEAApplyPrimitive(nodeId, type, params) {
         bbox: stats ? stats.bbox : null,
         sourceLabel: (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(type) : type
       };
+      // Topology: yüzey listesi mesh-öncesi tespit edilir (ANSYS-style)
+      if (typeof veFEAComputeGeometryTopology === 'function') {
+        node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
+      }
       if(typeof saveState === 'function') saveState();
     }
   }
@@ -23964,6 +24146,9 @@ function veFEAApplySTL(nodeId, buffer, fileName) {
           ? null
           : ('Dosya ' + (byteLength / (1024*1024)).toFixed(1) + ' MB — proje kaydında saklanmıyor, yeniden yükleyin.')
       };
+      if (typeof veFEAComputeGeometryTopology === 'function') {
+        node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
+      }
       if(typeof saveState === 'function') saveState();
     }
   }
@@ -24804,9 +24989,11 @@ var _veFEAEditorEscHandler = null;
 var _veFEAEditorResizeObserver = null;  // modal viewer için container resize observer
 var _veFEAEditorAccordionState = {};  // { sectionKey: true (open) | false (closed) }
 
-// Default accordion durumu (ilk açılışta): Defaults + Sizing açık, geri kalanı kapalı
+// Default accordion durumu (ilk açılışta): Topology + Defaults + Sizing açık.
+// Topology en ustte cunku ANSYS workflow: once geometriyi/yuzeyleri gor, sonra mesh.
 function _veFEAEditorDefaultAccordionState() {
   return {
+    topology: true,
     defaults: true,
     sizing: true,
     inflation: false,
@@ -24830,6 +25017,7 @@ function veFEAEditorRefreshAccordions() {
   if (!node) return;
 
   var updates = {
+    'topology':    _veFEAEditorTopologyHTML(node),
     'defaults':    _veFEAEditorDefaultsHTML(node),
     'sizing':      _veFEAEditorSizingHTML(node),
     'inflation':   _veFEAEditorInflationHTML(node),
@@ -25134,6 +25322,7 @@ function _veFEAEditorBuildLeftPanel(node) {
   panel.style.cssText = 'flex:0 0 400px; min-width:280px; max-width:720px; overflow-y:auto; overflow-x:hidden; background:var(--bg-primary, #0a0d14); border-right:1px solid var(--border-color);';
 
   var html = '';
+  html += _veFEAEditorAccordionSection('topology',    'Geometri Topolojisi',           _veFEAEditorTopologyHTML(node));
   html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
   html += _veFEAEditorAccordionSection('sizing',      'Boyutlandırma',                 _veFEAEditorSizingHTML(node));
   html += _veFEAEditorAccordionSection('inflation',   'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
@@ -25255,6 +25444,77 @@ function _veFEAEditorAttachModalResize(modal, overlay) {
 // ACCORDION İÇERİK BUILDER'LARI
 // ═══════════════════════════════════════════════════════════════════════════
 // (Mevcut cp-fea.js'teki control HTML'leri buraya taşındı)
+
+// Geometri Topolojisi — ANSYS-style "geometriyi/yüzeyleri tanımla → mesh at"
+// workflow'unun ilk aşaması. Upstream Geometry node'undan topology okunur
+// (mesh ÖNCESI tespit edilmiş face listesi).
+function _veFEAEditorTopologyHTML(node) {
+  // Upstream geometri node'unu bul
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
+    ? veFEAFindUpstreamGeometryNode(node.id) : null;
+  if (!geomNode || !geomNode.data || !geomNode.data.geometry) {
+    return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Upstream Geometri bağlantısı yok. Önce bir Geometri bileşeni tanımlayın ve bu Mesh node\'una bağlayın.</div>';
+  }
+  var geom = geomNode.data.geometry;
+  // Topology henuz hesaplanmadiysa on-the-fly hesapla (eski projeler icin)
+  var topo = geom.topology;
+  if (!topo && typeof veFEAComputeGeometryTopology === 'function') {
+    topo = veFEAComputeGeometryTopology(geom);
+  }
+  if (!topo || !topo.faces || topo.faces.length === 0) {
+    return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Bu geometri tipinde topology bilgisi yok.</div>';
+  }
+
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:8px;">' +
+    'Mesh atmadan önce geometriden otomatik tespit edilen yüzeyler. Mesher bu yüzeylere ' +
+    '<b>conforming</b> şekilde eleman üretir; her yüze ait düğümler otomatik named selection olur.</div>';
+
+  // Özet kutusu — alan/hacim/face/edge/vertex sayıları
+  function _fmtArea(a)  { return a >= 1e6 ? (a/1e6).toFixed(2)+' m²' : a >= 1e4 ? (a/1e4).toFixed(2)+' dm²' : a >= 1e2 ? (a/1e2).toFixed(2)+' cm²' : a.toFixed(1)+' mm²'; }
+  function _fmtVol(v)   { return v >= 1e9 ? (v/1e9).toFixed(3)+' m³' : v >= 1e6 ? (v/1e6).toFixed(2)+' dm³' : v >= 1e3 ? (v/1e3).toFixed(2)+' cm³' : v.toFixed(1)+' mm³'; }
+  html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:8px; font-size:0.6rem; display:grid; grid-template-columns:1fr 1fr; gap:3px 12px;">' +
+    '<span style="color:var(--text-secondary);">Yüzey sayısı</span><span style="text-align:right; font-weight:600;">' + topo.faces.length + '</span>' +
+    '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.edges ? topo.edges.count : 0) + '</span>' +
+    '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.vertices ? topo.vertices.count : 0) + '</span>' +
+    '<span style="color:var(--text-secondary);">Hacim</span><span style="text-align:right; font-weight:600;">' + _fmtVol(topo.volume || 0) + '</span>' +
+    '<span style="color:var(--text-secondary);">Toplam yüzey alanı</span><span style="text-align:right; font-weight:600;">' + _fmtArea(topo.totalSurfaceArea || 0) + '</span>' +
+  '</div>';
+
+  // Face listesi tablosu
+  html += '<div style="font-size:0.58rem; color:var(--text-secondary); margin-bottom:4px;">Yüzeyler:</div>';
+  topo.faces.forEach(function(f) {
+    var typeLabel = (typeof veFEATopologyFaceTypeLabel === 'function') ? veFEATopologyFaceTypeLabel(f.type) : f.type;
+    var typeColor = '#3b82f6';
+    if (f.type === 'cylindrical') typeColor = '#8b5cf6';
+    else if (f.type === 'planar-annular') typeColor = '#06b6d4';
+    else if (f.type === 'triangulated') typeColor = '#f59e0b';
+    var holeIcon = f.isHole ? '<span title="Delik / iç yüzey" style="color:#ef4444; margin-left:4px;">⌀</span>' : '';
+    var extra = '';
+    if (f.radius !== undefined) extra += ' · r=' + f.radius.toFixed(1) + 'mm';
+    if (f.length !== undefined) extra += ' · L=' + f.length.toFixed(1) + 'mm';
+    if (f.outerRadius !== undefined && f.innerRadius !== undefined) extra += ' · R=' + f.outerRadius.toFixed(1) + ' / r=' + f.innerRadius.toFixed(1) + 'mm';
+    if (f.normal) extra += ' · n=[' + f.normal.map(function(v){return v.toFixed(0);}).join(',') + ']';
+    html += '<div style="padding:5px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); margin-bottom:3px; font-size:0.6rem;">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
+        '<span style="display:flex; align-items:center; gap:6px;">' +
+          '<span style="font-family:monospace; font-size:0.56rem; padding:1px 5px; background:var(--bg-primary); color:var(--text-muted);">' + f.id + '</span>' +
+          '<span style="font-weight:600; color:var(--text-primary);">' + f.label + '</span>' +
+          holeIcon +
+        '</span>' +
+        '<span style="font-size:0.52rem; padding:1px 6px; background:' + typeColor + '20; color:' + typeColor + '; font-weight:600;">' + typeLabel + '</span>' +
+      '</div>' +
+      '<div style="font-size:0.55rem; color:var(--text-muted);">' +
+        'Alan: <b style="color:var(--text-secondary);">' + _fmtArea(f.area || 0) + '</b>' + extra +
+      '</div>' +
+    '</div>';
+  });
+
+  html += '<div style="font-size:0.52rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">' +
+    'ℹ Mesh oluşturulduktan sonra her yüze ait düğümler <b>Atanmış Yüzeyler</b> bölümünde göz atılabilir. ' +
+    'Sınır koşulları (F4) bu yüzeylere referansla uygulanır.</div>';
+
+  return html;
+}
 
 function _veFEAEditorDefaultsHTML(node) {
   var d = node.data || {};

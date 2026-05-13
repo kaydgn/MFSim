@@ -15,10 +15,109 @@ eval(fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-primitives.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-stl.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+  });
+
+  test('Upstream geometri yoksa "bağlantı yok" mesajı', () => {
+    var meshNode = { id: 'mesh-t1', type: 'fea-mesh', data: {} };
+    global.nodes = [meshNode];
+    var html = _veFEAEditorTopologyHTML(meshNode);
+    expect(html).toMatch(/Upstream Geometri bağlantısı yok/);
+  });
+
+  test('Kutu geometrisi: 6 face render edilir', () => {
+    var geomNode = {
+      id: 'g-t1', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 50, height: 30, depth: 20 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-t2', type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-t1', to: 'mesh-t2' }];
+    var html = _veFEAEditorTopologyHTML(meshNode);
+    expect(html).toMatch(/Yüzey sayısı/);
+    expect(html).toMatch(/faceXMin/);
+    expect(html).toMatch(/faceXMax/);
+    expect(html).toMatch(/faceYMin/);
+    expect(html).toMatch(/faceYMax/);
+    expect(html).toMatch(/faceZMin/);
+    expect(html).toMatch(/faceZMax/);
+    expect(html).toMatch(/Düzlemsel/);
+  });
+
+  test('Silindir: yan yüzeye "Silindirik" badge', () => {
+    var geomNode = {
+      id: 'g-t2', type: 'fea-geometry',
+      data: { geometry: { type: 'cylinder', params: { radius: 10, height: 20 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-t3', type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-t2', to: 'mesh-t3' }];
+    var html = _veFEAEditorTopologyHTML(meshNode);
+    expect(html).toMatch(/faceSide/);
+    expect(html).toMatch(/Silindirik/);
+    expect(html).toMatch(/r=10/); // radius
+  });
+
+  test('Şaft: iç yüzey delik (⌀) icon ile işaretli', () => {
+    var geomNode = {
+      id: 'g-t3', type: 'fea-geometry',
+      data: { geometry: { type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-t4', type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-t3', to: 'mesh-t4' }];
+    var html = _veFEAEditorTopologyHTML(meshNode);
+    expect(html).toMatch(/faceInner/);
+    expect(html).toMatch(/⌀/); // delik ikonu
+    expect(html).toMatch(/Halka.*Düzlem/);
+  });
+
+  test('Modal acildiginda topology accordion en üstte', () => {
+    var geomNode = {
+      id: 'g-t4', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-t5', type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-t4', to: 'mesh-t5' }];
+    veFEAOpenMeshEditor('mesh-t5');
+    var section = document.querySelector('[data-acc-section="topology"]');
+    expect(section).not.toBeNull();
+    // Sol panelde ilk accordion topology olmalı
+    var leftPanel = document.getElementById('ve-fea-mesh-editor-left-panel');
+    var firstSection = leftPanel.querySelector('[data-acc-section]');
+    expect(firstSection.getAttribute('data-acc-section')).toBe('topology');
+  });
+
+  test('Topology default expanded (Defaults + Sizing + Topology hepsi açık)', () => {
+    var geomNode = {
+      id: 'g-t5', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-t6', type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-t5', to: 'mesh-t6' }];
+    veFEAOpenMeshEditor('mesh-t6');
+    expect(document.getElementById('ve-fea-acc-body-topology').style.display).toBe('block');
+  });
+});
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('Side panel — sadeleştirilmiş Mesh özellikleri', () => {
