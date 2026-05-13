@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','fea'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -185,6 +185,45 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><circle cx="35" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="35" cy="60" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="60" r="6" fill="var(--text-secondary, #666)"/><path d="M35 35 L35 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><path d="M35 60 L65 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="60" r="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="2"/></svg>',
     inputs: 0,
     outputs: 0
+  },
+  // ── Yapısal Analiz (FEA) zinciri ─────────────────────────────────────────
+  // 'fea' bir sidebar girdisidir; canvas'a sürüklendiğinde 4 alt blok üretir.
+  // Bu tip nodes[] dizisine asla doğrudan eklenmez (bkz. ui-core.js spawnFEAChain).
+  'fea': {
+    name: 'Yapısal Analiz',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><path d="M20 30 L50 20 L80 30 L80 70 L50 80 L20 70 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5"/><line x1="50" y1="20" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="80" y2="30" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="70" x2="80" y2="70" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/><line x1="80" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    maxInstances: 1,
+    isFEAParent: true
+  },
+  'fea-geometry': {
+    name: 'Geometri',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M20 35 L50 20 L80 35 L80 70 L50 85 L20 70 Z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><path d="M20 35 L50 50 L80 35" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><line x1="50" y1="50" x2="50" y2="85" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/></svg>',
+    inputs: 0,
+    outputs: 1,
+    isFEAChild: true
+  },
+  'fea-mesh': {
+    name: 'Mesh',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><polygon points="50,15 85,40 85,75 50,85 15,75 15,40" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="3"/><line x1="50" y1="15" x2="50" y2="85" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="15" y1="40" x2="85" y2="40" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="15" y1="75" x2="85" y2="75" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="15" y1="40" x2="50" y2="85" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="85" y1="40" x2="50" y2="85" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="50" y1="15" x2="15" y2="75" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/><line x1="50" y1="15" x2="85" y2="75" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5"/></svg>',
+    inputs: 1,
+    outputs: 1,
+    isFEAChild: true
+  },
+  'fea-bc': {
+    name: 'Sınır Koşulları',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><line x1="15" y1="80" x2="85" y2="80" stroke="var(--text-secondary, #666)" stroke-width="3"/><line x1="20" y1="80" x2="14" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><line x1="35" y1="80" x2="29" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><line x1="50" y1="80" x2="44" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><line x1="65" y1="80" x2="59" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><line x1="80" y1="80" x2="74" y2="92" stroke="var(--text-secondary, #666)" stroke-width="2.5"/><rect x="25" y="40" width="50" height="40" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3"/><line x1="50" y1="10" x2="50" y2="38" stroke="var(--accent-danger, #ef4444)" stroke-width="4"/><polygon points="44,32 50,42 56,32" fill="var(--accent-danger, #ef4444)"/></svg>',
+    inputs: 1,
+    outputs: 1,
+    isFEAChild: true
+  },
+  'fea-solver': {
+    name: 'FEA Çözücü',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="6" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4"/><polygon points="38,28 38,72 70,50" fill="var(--accent-success, #22c55e)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg>',
+    inputs: 1,
+    outputs: 0,
+    isFEAChild: true
   }
 };
 
@@ -342,6 +381,17 @@ var COMPONENT_SIGNALS = {
     outputs: [
       {id: 'current_gear', name: 'Aktif Vites', unit: '−'},
       {id: 'shift_time', name: 'Geçiş Süresi', unit: 's'}
+    ]
+  },
+  // Yapısal Analiz çıktıları — şimdilik stub (F5/F6 ile dolacak)
+  'fea-solver': {
+    outputs: [
+      {id: 'max_von_mises', name: 'Maks. von Mises', unit: 'MPa'},
+      {id: 'max_displacement', name: 'Maks. Deplasman', unit: 'mm'},
+      {id: 'max_principal', name: 'Maks. Asal Gerilme', unit: 'MPa'},
+      {id: 'min_principal', name: 'Min. Asal Gerilme', unit: 'MPa'},
+      {id: 'safety_factor', name: 'Güvenlik Faktörü', unit: '−'},
+      {id: 'mass', name: 'Toplam Kütle', unit: 'kg'}
     ]
   }
 };

@@ -206,6 +206,14 @@ function showNodeProperties(node) {
     html += getTerminatorPropertiesHTML(node);
   } else if(node.type === 'gear-shift') {
     html += getGearShiftPropertiesHTML(node);
+  } else if(node.type === 'fea-geometry') {
+    html += getFEAGeometryPropertiesHTML(node);
+  } else if(node.type === 'fea-mesh') {
+    html += getFEAMeshPropertiesHTML(node);
+  } else if(node.type === 'fea-bc') {
+    html += getFEABCPropertiesHTML(node);
+  } else if(node.type === 'fea-solver') {
+    html += getFEASolverPropertiesHTML(node);
   } else {
     html += getDefaultPropertiesHTML(node);
   }
