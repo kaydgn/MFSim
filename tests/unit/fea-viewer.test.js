@@ -110,6 +110,12 @@ describe('package.json vendor-sync', () => {
 // ────────────────────────────────────────────────────────────────────────────
 describe('js/fea-viewer.js API', () => {
   beforeEach(() => {
+    // Açık fullscreen overlay'i sıfırla (artık <html>'in altında, body
+    // innerHTML temizliği yetmez — registry üzerinden dispose et)
+    if (typeof veFEACloseFullscreenViewer === 'function') veFEACloseFullscreenViewer();
+    // <html>'in altında kalan overlay artıklarını sil
+    var leftover = document.getElementById('ve-fea-fullscreen-overlay');
+    if (leftover && leftover.parentNode) leftover.parentNode.removeChild(leftover);
     // DOM temizle
     document.body.innerHTML = '';
     // Three.js global'i kalmasın (graceful fallback testleri için)
@@ -179,6 +185,45 @@ describe('js/fea-viewer.js API', () => {
     const evt = new window.KeyboardEvent('keydown', { key: 'Escape' });
     document.dispatchEvent(evt);
     expect(document.getElementById('ve-fea-fullscreen-overlay')).toBeNull();
+  });
+
+  test('fullscreen overlay maksimum z-index ile <html> altına eklenir', () => {
+    veFEAOpenFullscreenViewer('test-node');
+    const overlay = document.getElementById('ve-fea-fullscreen-overlay');
+    expect(overlay).not.toBeNull();
+    // z-index inline style'da olmalı — değer max int32 (2147483647)
+    expect(overlay.style.zIndex).toBe('2147483647');
+    // documentElement (html) doğrudan çocuğu olmalı (body değil)
+    expect(overlay.parentElement.tagName.toLowerCase()).toBe('html');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('fea-viewer kaynak refaktör güvenceleri', () => {
+  const viewerSrc = fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8');
+
+  test('GridHelper / AxesHelper sahneye eklenmiyor (sadece geometri görünsün)', () => {
+    expect(viewerSrc).not.toMatch(/new\s+THREE\.GridHelper/);
+    expect(viewerSrc).not.toMatch(/new\s+THREE\.AxesHelper/);
+  });
+
+  test('veFEAOpenFullscreenViewer node geometrisini viewer a yedirir', () => {
+    // Fullscreen modal'da geometri yüklenmesi unutulmuştu — bu test
+    // "büyüttüğümde geometriyi göremiyorum" hatasını regresyon olarak yakalar
+    const start = viewerSrc.indexOf('function veFEAOpenFullscreenViewer');
+    expect(start).toBeGreaterThan(-1);
+    const end = viewerSrc.indexOf('\nfunction ', start + 1);
+    const body = viewerSrc.substring(start, end > 0 ? end : viewerSrc.length);
+    expect(body).toMatch(/_veFEALoadNodeGeometryIntoViewer\s*\(\s*viewer\s*,\s*nodeId/);
+  });
+
+  test('_veFEALoadNodeGeometryIntoViewer helper tanımlı ve preview tarafından çağrılır', () => {
+    expect(viewerSrc).toMatch(/function _veFEALoadNodeGeometryIntoViewer/);
+    // veFEAInitGeometryViewerForNode helper'ı çağırmalı (DRY)
+    const initStart = viewerSrc.indexOf('function veFEAInitGeometryViewerForNode');
+    const initEnd = viewerSrc.indexOf('\n}', initStart);
+    const initBody = viewerSrc.substring(initStart, initEnd);
+    expect(initBody).toMatch(/_veFEALoadNodeGeometryIntoViewer/);
   });
 });
 

@@ -292,21 +292,19 @@ describe('STEP auto-load sonsuz döngü koruması', () => {
     global.saveState = jest.fn();
   });
 
-  test('fea-viewer.js kaynağı: STEP auto-load veFEAApplySTEP çağırmamalı', () => {
-    // Statik kaynak kontrolü — sonsuz döngü regresyonunu yakalar
+  test('_veFEALoadNodeGeometryIntoViewer: STEP dalı veFEAApplySTEP çağırmamalı', () => {
+    // Statik kaynak kontrolü — sonsuz döngü regresyonunu yakalar.
+    // Refactor sonrası STEP auto-load mantığı helper fonksiyona taşındı;
+    // hem küçük preview hem fullscreen modal bu helper'ı kullanır.
     const viewerSrc = fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8');
-    // veFEAInitGeometryViewerForNode bloğunu izole et
-    const initStart = viewerSrc.indexOf('function veFEAInitGeometryViewerForNode');
-    expect(initStart).toBeGreaterThan(-1);
-    // STEP dalı applySTEP yerine ParseSTEPBuffer + Stepmeshes + viewer.loadSTL kullanmalı
-    const initEnd = viewerSrc.indexOf('\n}', initStart);
-    const initBody = viewerSrc.substring(initStart, initEnd);
-    // STEP branch'inde applySTEP referansı OLMAMALI
-    const stepBranchMatch = initBody.match(/g\.type === ['"]step['"][\s\S]*?(?=\}\s*else|\}\s*$)/);
+    const start = viewerSrc.indexOf('function _veFEALoadNodeGeometryIntoViewer');
+    expect(start).toBeGreaterThan(-1);
+    const end = viewerSrc.indexOf('\n}', start);
+    const body = viewerSrc.substring(start, end);
+    const stepBranchMatch = body.match(/g\.type === ['"]step['"][\s\S]*?(?=\}\s*else|\}\s*$)/);
     expect(stepBranchMatch).not.toBeNull();
-    // Fonksiyon çağrısı yok — yorumda yalın metin geçebilir, sadece "(" ile takip eden çağrıları yasakla
+    // Fonksiyon çağrısı yok (yorumda yalın metin geçebilir)
     expect(stepBranchMatch[0]).not.toMatch(/veFEAApplySTEP\s*\(/);
-    // Onun yerine sessiz parse zinciri olmalı
     expect(stepBranchMatch[0]).toMatch(/veFEAParseSTEPBuffer/);
     expect(stepBranchMatch[0]).toMatch(/veFEAStepMeshesToParsed/);
     expect(stepBranchMatch[0]).toMatch(/viewer\.loadSTL/);

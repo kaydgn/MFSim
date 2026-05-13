@@ -20250,15 +20250,7 @@ function veFEAInitViewer(canvas, opts) {
   renderer.setSize(width, height, false);
   renderer.setPixelRatio(window.devicePixelRatio || 1);
 
-  // Grid (XZ düzlemi) — koyu/açık gri tonlar
-  var grid = new THREE.GridHelper(100, 20, 0x666666, 0x333333);
-  scene.add(grid);
-
-  // Eksen oklari (X kırmızı, Y yeşil, Z mavi)
-  var axes = new THREE.AxesHelper(35);
-  scene.add(axes);
-
-  // Işıklar
+  // Işıklar (sahnede grid/axes yok — sadece geometri ve aydınlatma)
   scene.add(new THREE.AmbientLight(0xffffff, 0.55));
   var dir = new THREE.DirectionalLight(0xffffff, 0.85);
   dir.position.set(80, 120, 60);
@@ -20496,34 +20488,37 @@ function veFEAInitGeometryViewerForNode(nodeId) {
   if(!viewer) return;
   veFEAViewerRegistry[nodeId] = viewer;
 
-  // Kalıcı geometri state'i — node.data.geometry varsa otomatik yükle
-  if(typeof nodes !== 'undefined') {
-    var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
-    if(node && node.data && node.data.geometry && node.data.geometry.type) {
-      var g = node.data.geometry;
-      if(g.type === 'stl' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function') {
-        var buf = veFEABase64ToArrayBuffer(g.rawDataB64);
-        var parsed = veFEAParseSTL(buf);
-        if(parsed) viewer.loadSTL(parsed);
-      } else if(g.type === 'step' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function'
-                && typeof veFEAParseSTEPBuffer === 'function' && typeof veFEAStepMeshesToParsed === 'function') {
-        // STEP'i sessizce yeniden parse et + viewer'a yedir.
-        // ÖNEMLİ: veFEAApplySTEP'i ÇAĞIRMA — o fonksiyon persist + toast +
-        // showNodeProperties() tetikler ki bu dispatcher yoluyla yine bu
-        // auto-load bloğunu çağırır → sonsuz döngü (kullanıcının gördüğü hata).
-        var stepBuf = veFEABase64ToArrayBuffer(g.rawDataB64);
-        veFEAParseSTEPBuffer(stepBuf).then(function(result) {
-          var parsed = veFEAStepMeshesToParsed(result);
-          if(parsed && parsed.triangleCount > 0 && viewer && typeof viewer.loadSTL === 'function') {
-            viewer.loadSTL(parsed);
-          }
-        }).catch(function(err) {
-          console.error('[FEA] STEP otomatik yeniden yukleme hatasi:', err);
-        });
-      } else if(g.type === 'box' || g.type === 'cylinder' || g.type === 'shaft') {
-        viewer.loadPrimitive(g.type, g.params);
+  // Node geometrisini viewer'a sessizce yedir (persist/toast YOK).
+  _veFEALoadNodeGeometryIntoViewer(viewer, nodeId);
+}
+
+// Verilen viewer'a node.data.geometry'yi sessizce uygular. Hem küçük preview
+// hem fullscreen modal tarafından kullanılır. Persist veya toast yapmaz —
+// applySTEP/applyPrimitive zincirine girmez, dolayısıyla showNodeProperties
+// yeniden tetiklenmez (sonsuz döngü koruması).
+function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
+  if(!viewer || typeof nodes === 'undefined') return;
+  var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
+  if(!node || !node.data || !node.data.geometry || !node.data.geometry.type) return;
+
+  var g = node.data.geometry;
+  if(g.type === 'stl' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function' && typeof veFEAParseSTL === 'function') {
+    var buf = veFEABase64ToArrayBuffer(g.rawDataB64);
+    var parsed = veFEAParseSTL(buf);
+    if(parsed) viewer.loadSTL(parsed);
+  } else if(g.type === 'step' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function'
+            && typeof veFEAParseSTEPBuffer === 'function' && typeof veFEAStepMeshesToParsed === 'function') {
+    var stepBuf = veFEABase64ToArrayBuffer(g.rawDataB64);
+    veFEAParseSTEPBuffer(stepBuf).then(function(result) {
+      var parsedStep = veFEAStepMeshesToParsed(result);
+      if(parsedStep && parsedStep.triangleCount > 0 && typeof viewer.loadSTL === 'function') {
+        viewer.loadSTL(parsedStep);
       }
-    }
+    }).catch(function(err) {
+      console.error('[FEA] STEP yeniden yukleme hatasi:', err);
+    });
+  } else if(g.type === 'box' || g.type === 'cylinder' || g.type === 'shaft') {
+    viewer.loadPrimitive(g.type, g.params);
   }
 }
 
@@ -20653,23 +20648,35 @@ function veFEAOpenFullscreenViewer(nodeId) {
   // Mevcut modal varsa kapat
   veFEACloseFullscreenViewer();
 
+  // <html>'in dogrudan cocugu olarak ekle — body altindaki sidebar/tab bar/
+  // canvas wrapper'larin z-index/transform context'lerinden tamamen ayrilir.
+  // Maksimum z-index ile garantili olarak ustte gosterilir.
   var overlay = document.createElement('div');
   overlay.id = 've-fea-fullscreen-overlay';
-  overlay.style.cssText = 'position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:10010; display:flex; flex-direction:column;';
+  overlay.style.cssText = [
+    'position:fixed',
+    'top:0', 'left:0', 'right:0', 'bottom:0',
+    'width:100vw', 'height:100vh',
+    'margin:0', 'padding:0',
+    'background:rgba(0,0,0,0.92)',
+    'z-index:2147483647',          // max int32 — başka hiçbir şeyin üstüne çıkamaz
+    'display:flex',
+    'flex-direction:column'
+  ].join(';') + ';';
 
   // Üst toolbar
   var toolbar = document.createElement('div');
-  toolbar.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-secondary, #2a2a2a); border-bottom:1px solid var(--border-color, #444);';
+  toolbar.style.cssText = 'flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#1f1f1f; border-bottom:1px solid #444; color:#fff;';
   toolbar.innerHTML =
     '<div style="display:flex; align-items:center; gap:12px;">' +
-      '<span style="font-size:0.85rem; font-weight:600; color:var(--text-heading, #fff);">Yapısal Analiz — 3D Görüntüleyici</span>' +
-      '<span style="font-size:0.6rem; color:var(--text-muted, #888);">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</span>' +
+      '<span style="font-size:0.85rem; font-weight:600;">Yapısal Analiz — 3D Görüntüleyici</span>' +
+      '<span style="font-size:0.6rem; color:#aaa;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</span>' +
     '</div>' +
-    '<button id="ve-fea-fullscreen-close" style="background:var(--accent-danger, #ef4444); color:#fff; border:none; padding:6px 14px; font-size:0.7rem; cursor:pointer;">✕ Kapat (Esc)</button>';
+    '<button id="ve-fea-fullscreen-close" style="background:#ef4444; color:#fff; border:none; padding:6px 14px; font-size:0.7rem; cursor:pointer;">✕ Kapat (Esc)</button>';
 
-  // Canvas konteyneri
+  // Canvas konteyneri — kalan tüm yüksekliği alır
   var canvasWrap = document.createElement('div');
-  canvasWrap.style.cssText = 'flex:1; position:relative; background:#1a1a1a;';
+  canvasWrap.style.cssText = 'flex:1 1 auto; position:relative; background:#1a1a1a; min-height:0; overflow:hidden;';
   var canvas = document.createElement('canvas');
   canvas.id = 've-fea-fullscreen-canvas';
   canvas.style.cssText = 'display:block; width:100%; height:100%;';
@@ -20677,23 +20684,30 @@ function veFEAOpenFullscreenViewer(nodeId) {
 
   overlay.appendChild(toolbar);
   overlay.appendChild(canvasWrap);
-  document.body.appendChild(overlay);
+  // body yerine documentElement (html) altina ekle — body'nin transform/filter/
+  // opacity context'leri overlay'i kapsamaz, z-index global kalir.
+  (document.documentElement || document.body).appendChild(overlay);
 
-  // Canvas gerçek piksel boyutuna ayarla
-  canvas.width = canvasWrap.clientWidth;
-  canvas.height = canvasWrap.clientHeight;
+  // Layout sonrasi gercek piksel boyutunu al
+  var w = canvasWrap.clientWidth || window.innerWidth;
+  var h = canvasWrap.clientHeight || (window.innerHeight - 50);
+  canvas.width = w;
+  canvas.height = h;
 
-  var viewer = veFEAInitViewer(canvas, {
-    width: canvas.width,
-    height: canvas.height
-  });
+  var viewer = veFEAInitViewer(canvas, { width: w, height: h });
+
+  // Node geometrisini fullscreen viewer'a da yedir (eski versiyonda
+  // unutulmustu — kullanici "buyuttugumde geometriyi goremiyorum" raporladi)
+  _veFEALoadNodeGeometryIntoViewer(viewer, nodeId);
 
   // Resize handler
   function onResize() {
     if(!viewer) return;
-    canvas.width = canvasWrap.clientWidth;
-    canvas.height = canvasWrap.clientHeight;
-    viewer.resize(canvas.width, canvas.height);
+    var nw = canvasWrap.clientWidth || window.innerWidth;
+    var nh = canvasWrap.clientHeight || (window.innerHeight - 50);
+    canvas.width = nw;
+    canvas.height = nh;
+    viewer.resize(nw, nh);
   }
   window.addEventListener('resize', onResize);
 
