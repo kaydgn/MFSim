@@ -20237,6 +20237,55 @@ var VE_FEA_STANDARD_VIEWS = {
   left:   { dir: [-1,  0,  0], up: [0, 1,  0] }
 };
 
+// Arka plan rengi preset'leri
+var VE_FEA_BG_PRESETS = {
+  dark:  0x1a1a1a,
+  light: 0xe8e8e8,
+  white: 0xffffff,
+  blue:  0x1e3a5f
+};
+
+// Edges hesaplama eşiği — bunun üzerinde mesh için edges atlanır (performans)
+var VE_FEA_EDGES_MAX_VERTICES = 30000;
+
+// Bir mesh'e edges line'ı lazy olarak ekler. setDisplayMode 'shaded-edges'
+// seçildiğinde visible=true yapılır.
+function _veFEAEnsureEdges(mesh) {
+  if (!mesh || !mesh.geometry || typeof THREE === 'undefined') return;
+  if (mesh.userData.feaEdgesAttached) return;
+  var posAttr = mesh.geometry.attributes && mesh.geometry.attributes.position;
+  var vertexCount = posAttr ? posAttr.count : 0;
+  if (vertexCount === 0 || vertexCount > VE_FEA_EDGES_MAX_VERTICES) {
+    mesh.userData.feaEdgesAttached = true; // çok büyük — bir daha denemiyoruz
+    return;
+  }
+  var edgesGeo = new THREE.EdgesGeometry(mesh.geometry, 30);
+  var line = new THREE.LineSegments(
+    edgesGeo,
+    new THREE.LineBasicMaterial({ color: 0x102444 })
+  );
+  line.userData.feaEdges = true;
+  line.visible = false; // setDisplayMode kontrol edecek
+  mesh.add(line);
+  mesh.userData.feaEdgesAttached = true;
+}
+
+// Mesh ve alt mesh'lerin material.clippingPlanes alanını günceller.
+function _veFEAApplyClipPlanesToObject(object, planes) {
+  if (!object) return;
+  var active = planes && planes.length ? planes : null;
+  object.traverse(function(obj) {
+    if (obj.isMesh && obj.material) {
+      var mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.forEach(function(m) {
+        m.clippingPlanes = active;
+        m.clipShadows = !!active;
+        m.needsUpdate = true;
+      });
+    }
+  });
+}
+
 function veFEAHasThree() {
   return typeof window !== 'undefined' && typeof window.THREE !== 'undefined';
 }
@@ -20262,6 +20311,7 @@ function veFEAInitViewer(canvas, opts) {
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
   renderer.setSize(width, height, false);
   renderer.setPixelRatio(window.devicePixelRatio || 1);
+  renderer.localClippingEnabled = true; // material.clippingPlanes etkili olsun
 
   // Işıklar (sahnede grid/axes yok — sadece geometri ve aydınlatma)
   scene.add(new THREE.AmbientLight(0xffffff, 0.55));
@@ -20354,8 +20404,9 @@ function veFEAInitViewer(canvas, opts) {
       var mesh = veFEABuildPrimitiveMesh(type, params);
       if(!mesh) return null;
       this._geometryRoot.add(mesh);
+      _veFEAEnsureEdges(mesh);
+      this._applyDisplayState(mesh);
       this.zoomToFit(mesh);
-      render();
       return mesh;
     },
     loadSTL: function(parsed) {
@@ -20364,9 +20415,44 @@ function veFEAInitViewer(canvas, opts) {
       var mesh = veFEABuildSTLMesh(parsed);
       if(!mesh) return null;
       this._geometryRoot.add(mesh);
+      _veFEAEnsureEdges(mesh);
+      this._applyDisplayState(mesh);
       this.zoomToFit(mesh);
-      render();
       return mesh;
+    },
+    // Display state'ini (mod, opaklık, clip planes) yeni eklenen mesh'e uygula
+    _applyDisplayState: function(mesh) {
+      this._applyDisplayModeToMesh(mesh);
+      this._applyOpacityToMesh(mesh);
+      _veFEAApplyClipPlanesToObject(mesh, this._clipPlanes);
+    },
+    _applyDisplayModeToMesh: function(mesh) {
+      var mode = this._displayMode;
+      mesh.traverse(function(obj) {
+        if (obj.isMesh && obj.material) {
+          var mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          mats.forEach(function(m) {
+            m.wireframe = (mode === 'wireframe');
+            m.visible = true;
+          });
+        }
+        if (obj.userData && obj.userData.feaEdges === true) {
+          obj.visible = (mode === 'shaded-edges');
+        }
+      });
+    },
+    _applyOpacityToMesh: function(mesh) {
+      var op = this._opacity;
+      mesh.traverse(function(obj) {
+        if (obj.isMesh && obj.material) {
+          var mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          mats.forEach(function(m) {
+            m.opacity = op;
+            m.transparent = (op < 1);
+            m.needsUpdate = true;
+          });
+        }
+      });
     },
     clearGeometry: function() {
       // Group içindeki tüm child'ları sil + buffer cleanup
@@ -20492,6 +20578,178 @@ function veFEAInitViewer(canvas, opts) {
       this.camera = camera;
       this.projection = type;
       if(orbitHandle.setCamera) orbitHandle.setCamera(camera);
+      render();
+    },
+    // ─── Grup B: Display modu / Opaklık / Arka plan ──────────────────────
+    _displayMode: 'shaded', // 'shaded' | 'shaded-edges' | 'wireframe'
+    _opacity: 1.0,
+    _backgroundColor: opts.background || 0x1a1a1a,
+    _clipPlanes: [],
+    _clipState: {
+      x: { enabled: false, offset: 0 },
+      y: { enabled: false, offset: 0 },
+      z: { enabled: false, offset: 0 }
+    },
+    setDisplayMode: function(mode) {
+      if(mode !== 'shaded' && mode !== 'shaded-edges' && mode !== 'wireframe') return;
+      this._displayMode = mode;
+      // Tüm mesh'lere uygula. Edges shaded-edges modunda lazy attach.
+      var self = this;
+      this._geometryRoot.traverse(function(obj) {
+        if (obj.isMesh) {
+          if (mode === 'shaded-edges') _veFEAEnsureEdges(obj);
+          self._applyDisplayModeToMesh(obj);
+        }
+      });
+      render();
+    },
+    setOpacity: function(value) {
+      var v = Number(value);
+      if (!isFinite(v)) return;
+      v = Math.max(0.05, Math.min(1, v));
+      this._opacity = v;
+      var self = this;
+      this._geometryRoot.traverse(function(obj) {
+        if (obj.isMesh) self._applyOpacityToMesh(obj);
+      });
+      render();
+    },
+    setBackground: function(colorOrPreset) {
+      var color;
+      if (typeof colorOrPreset === 'string' && VE_FEA_BG_PRESETS[colorOrPreset] !== undefined) {
+        color = VE_FEA_BG_PRESETS[colorOrPreset];
+      } else if (typeof colorOrPreset === 'number') {
+        color = colorOrPreset;
+      } else {
+        return;
+      }
+      this._backgroundColor = color;
+      scene.background = new THREE.Color(color);
+      render();
+    },
+    // ─── Grup C: Section view (clip plane'ler) ───────────────────────────
+    // axis: 'x' | 'y' | 'z', enabled: bool, offset: world space mesafe
+    setClipPlane: function(axis, enabled, offset) {
+      if (axis !== 'x' && axis !== 'y' && axis !== 'z') return;
+      var state = this._clipState[axis];
+      state.enabled = !!enabled;
+      if (typeof offset === 'number' && isFinite(offset)) state.offset = offset;
+      this._rebuildClipPlanes();
+    },
+    _rebuildClipPlanes: function() {
+      var planes = [];
+      var s = this._clipState;
+      // Plane normal'i +axis yönünde; constant = -offset (yarım uzayı offset'in negatif tarafı bırakır)
+      if (s.x.enabled) planes.push(new THREE.Plane(new THREE.Vector3(1, 0, 0), -s.x.offset));
+      if (s.y.enabled) planes.push(new THREE.Plane(new THREE.Vector3(0, 1, 0), -s.y.offset));
+      if (s.z.enabled) planes.push(new THREE.Plane(new THREE.Vector3(0, 0, 1), -s.z.offset));
+      this._clipPlanes = planes;
+      _veFEAApplyClipPlanesToObject(this._geometryRoot, planes);
+      render();
+    },
+    getClipBoundsForAxis: function(axis) {
+      // UI slider min/max için: bbox bounds döner
+      var box = new THREE.Box3();
+      if (this._geometryRoot.children.length > 0) box.setFromObject(this._geometryRoot);
+      if (box.isEmpty()) return { min: -100, max: 100 };
+      if (axis === 'x') return { min: box.min.x, max: box.max.x };
+      if (axis === 'y') return { min: box.min.y, max: box.max.y };
+      if (axis === 'z') return { min: box.min.z, max: box.max.z };
+      return { min: -100, max: 100 };
+    },
+    // ─── Grup C: Mesfe Ölçümü ───────────────────────────────────────────
+    _measurement: { active: false, points: [], group: null, distance: null, onChange: null },
+    isMeasuring: function() { return this._measurement.active; },
+    getMeasurementDistance: function() { return this._measurement.distance; },
+    startMeasurement: function(onChange) {
+      this._measurement.active = true;
+      this._measurement.onChange = (typeof onChange === 'function') ? onChange : null;
+      this._clearMeasurementGeometry();
+      this._measurement.points = [];
+      this._measurement.distance = null;
+      if (this._measurement.onChange) this._measurement.onChange({ phase: 'start' });
+    },
+    stopMeasurement: function() {
+      this._measurement.active = false;
+      this._clearMeasurementGeometry();
+      this._measurement.points = [];
+      var d = this._measurement.distance;
+      this._measurement.distance = null;
+      if (this._measurement.onChange) this._measurement.onChange({ phase: 'stop' });
+      this._measurement.onChange = null;
+      render();
+    },
+    _clearMeasurementGeometry: function() {
+      if (this._measurement.group) {
+        this._measurement.group.traverse(function(o) {
+          if (o.geometry && o.geometry.dispose) o.geometry.dispose();
+          if (o.material && o.material.dispose) o.material.dispose();
+        });
+        scene.remove(this._measurement.group);
+        this._measurement.group = null;
+      }
+    },
+    // Raycaster ile noktayı yakala — canvas mouse koordinatları normalize edilmiş
+    pickPointFromMouse: function(clientX, clientY) {
+      var rect = canvas.getBoundingClientRect();
+      var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+      var ny = -((clientY - rect.top) / rect.height) * 2 + 1;
+      var raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera({ x: nx, y: ny }, camera);
+      var hits = raycaster.intersectObject(this._geometryRoot, true);
+      // İlk gerçek mesh hit'i (edges/markers atla)
+      for (var i = 0; i < hits.length; i++) {
+        var o = hits[i].object;
+        if (o.isMesh && !(o.userData && o.userData.feaMarker) && !(o.userData && o.userData.feaEdges)) {
+          return hits[i].point.clone();
+        }
+      }
+      return null;
+    },
+    // Bir nokta ekle (canvas click handler'ından çağrılır). 2'ye ulaşınca mesafe hesaplanır.
+    addMeasurementPoint: function(point) {
+      if (!this._measurement.active || !point) return;
+      var m = this._measurement;
+      // 2'ye ulaşmışsa sıfırla, yeni ölçüme başla
+      if (m.points.length >= 2) {
+        this._clearMeasurementGeometry();
+        m.points = [];
+        m.distance = null;
+      }
+      m.points.push(point.clone());
+
+      // Marker mesh'i (küçük renkli küre)
+      if (!m.group) {
+        m.group = new THREE.Group();
+        m.group.userData.feaMeasurementGroup = true;
+        scene.add(m.group);
+      }
+      var box = new THREE.Box3();
+      if (this._geometryRoot.children.length > 0) box.setFromObject(this._geometryRoot);
+      var size = box.isEmpty() ? 50 : Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+      var radius = size * 0.012;
+      var color = (m.points.length === 1) ? 0x22c55e : 0x3b82f6;
+      var marker = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 16, 16),
+        new THREE.MeshBasicMaterial({ color: color, depthTest: false })
+      );
+      marker.position.copy(point);
+      marker.userData.feaMarker = true;
+      marker.renderOrder = 999;
+      m.group.add(marker);
+
+      if (m.points.length === 2) {
+        // İki nokta arası çizgi
+        var geo = new THREE.BufferGeometry().setFromPoints([m.points[0], m.points[1]]);
+        var line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xfbbf24, depthTest: false, linewidth: 2 }));
+        line.userData.feaMarker = true;
+        line.renderOrder = 998;
+        m.group.add(line);
+        m.distance = m.points[0].distanceTo(m.points[1]);
+        if (m.onChange) m.onChange({ phase: 'measured', distance: m.distance, p1: m.points[0], p2: m.points[1] });
+      } else if (m.points.length === 1 && m.onChange) {
+        m.onChange({ phase: 'first', p1: m.points[0] });
+      }
       render();
     },
     dispose: function() {
@@ -20820,6 +21078,55 @@ function veFEAClearGeometryForNode(nodeId) {
   }
 }
 
+// ─── Fullscreen UI helper'ları (ölçüm + kesit) ──────────────────────────────
+function _veFEAStartMeasurementUI(viewer, btn, panel, canvas) {
+  if (!viewer.startMeasurement) return;
+  panel.style.display = 'flex';
+  btn.setAttribute('data-active', 'true');
+  btn.style.background = '#3b82f6';
+  canvas.style.cursor = 'crosshair';
+  var statusEl = panel.querySelector('span[data-role="status"]');
+  viewer.startMeasurement(function(ev) {
+    if (ev.phase === 'start' || ev.phase === 'reset') {
+      statusEl.style.color = '#fbbf24';
+      statusEl.textContent = '📏 İlk noktayı tıklayın';
+    } else if (ev.phase === 'first') {
+      statusEl.style.color = '#fbbf24';
+      statusEl.textContent = '📏 İkinci noktayı tıklayın';
+    } else if (ev.phase === 'measured') {
+      statusEl.style.color = '#22c55e';
+      var d = ev.distance;
+      var unit = 'mm';
+      if (d > 1000) { d = d / 1000; unit = 'm'; }
+      statusEl.textContent = '📏 Mesfe: ' + d.toFixed(3) + ' ' + unit;
+    }
+  });
+}
+function _veFEAStopMeasurementUI(viewer, btn, panel, canvas) {
+  if (viewer && viewer.stopMeasurement) viewer.stopMeasurement();
+  panel.style.display = 'none';
+  btn.setAttribute('data-active', 'false');
+  btn.style.background = '#2a2a2a';
+  canvas.style.cursor = '';
+}
+function _veFEAInitClipPanel(viewer, panel) {
+  ['x','y','z'].forEach(function(axis) {
+    var row = panel.querySelector('div[data-axis="' + axis + '"]');
+    if (!row) return;
+    var slider = row.querySelector('input[data-role="offset"]');
+    var bounds = viewer.getClipBoundsForAxis(axis);
+    slider.min = bounds.min;
+    slider.max = bounds.max;
+    slider.step = Math.max(0.1, (bounds.max - bounds.min) / 200);
+    var state = viewer._clipState[axis];
+    slider.value = state.offset;
+    var check = row.querySelector('input[data-role="enable"]');
+    check.checked = state.enabled;
+    var valLabel = row.querySelector('span[data-role="value"]');
+    valLabel.textContent = state.enabled ? Number(slider.value).toFixed(1) : '—';
+  });
+}
+
 // ─── Tam ekran modal ────────────────────────────────────────────────────────
 function veFEAOpenFullscreenViewer(nodeId) {
   // Mevcut modal varsa kapat
@@ -20864,11 +21171,25 @@ function veFEAOpenFullscreenViewer(nodeId) {
       '<button data-view="right"  style="' + btnStyle + '" title="Sağ">Sağ</button>' +
       '<button data-view="left"   style="' + btnStyle + '" title="Sol">Sol</button>' +
       '<span style="' + sepStyle + '"></span>' +
-      // Sığdır
       '<button data-action="fit" style="' + btnStyle + '" title="Sığdır">⛶ Sığdır</button>' +
-      '<span style="' + sepStyle + '"></span>' +
-      // Projeksiyon toggle
       '<button data-action="proj" data-projection="perspective" style="' + btnStyle + '" title="Perspektif / Ortografik">Perspektif</button>' +
+      '<span style="' + sepStyle + '"></span>' +
+      // Grup B: display mode + opacity + bg
+      '<button data-action="mode" data-mode="shaded" style="' + btnStyle + '" title="Görüntü modu (tıklayarak değiştir)">Mod: Shaded</button>' +
+      '<label style="display:flex; align-items:center; gap:4px; font-size:0.6rem; color:#bbb;" title="Opaklık">' +
+        'Opk' +
+        '<input data-action="opacity" type="range" min="10" max="100" value="100" style="width:70px; vertical-align:middle;">' +
+      '</label>' +
+      '<select data-action="bg" style="' + btnStyle + '; min-width:auto; padding:5px 6px;" title="Arka plan">' +
+        '<option value="dark"  selected>BG: Koyu</option>' +
+        '<option value="light">BG: Açık</option>' +
+        '<option value="white">BG: Beyaz</option>' +
+        '<option value="blue">BG: Mavi</option>' +
+      '</select>' +
+      '<span style="' + sepStyle + '"></span>' +
+      // Grup C: ölçüm + kesit toggle'lar
+      '<button data-action="measure" data-active="false" style="' + btnStyle + '" title="Mesafe ölç">📏 Ölç</button>' +
+      '<button data-action="clip" data-active="false" style="' + btnStyle + '" title="Kesit görünümü">✂ Kesit</button>' +
     '</div>' +
     // Sağ: kapat
     '<button id="ve-fea-fullscreen-close" style="background:#ef4444; color:#fff; border:none; padding:6px 14px; font-size:0.7rem; cursor:pointer; white-space:nowrap;">✕ Kapat (Esc)</button>';
@@ -20880,6 +21201,34 @@ function veFEAOpenFullscreenViewer(nodeId) {
   canvas.id = 've-fea-fullscreen-canvas';
   canvas.style.cssText = 'display:block; width:100%; height:100%;';
   canvasWrap.appendChild(canvas);
+
+  // Ölçüm sonuç paneli — sağ alt köşede absolute
+  var measurePanel = document.createElement('div');
+  measurePanel.id = 've-fea-measure-panel';
+  measurePanel.style.cssText = 'display:none; position:absolute; bottom:14px; left:50%; transform:translateX(-50%); background:#1f1f1f; border:1px solid #555; color:#fff; padding:8px 14px; font-size:0.75rem; gap:12px; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+  measurePanel.innerHTML =
+    '<span data-role="status" style="color:#fbbf24;">📏 İlk noktayı tıklayın</span>' +
+    '<button data-role="reset" style="background:#2a2a2a; color:#ddd; border:1px solid #444; padding:4px 10px; font-size:0.66rem; cursor:pointer;">Sıfırla</button>' +
+    '<button data-role="close" style="background:#ef4444; color:#fff; border:none; padding:4px 10px; font-size:0.66rem; cursor:pointer;">Çık</button>';
+  canvasWrap.appendChild(measurePanel);
+
+  // Kesit slider paneli — sağ kenarda absolute
+  var clipPanel = document.createElement('div');
+  clipPanel.id = 've-fea-clip-panel';
+  clipPanel.style.cssText = 'display:none; position:absolute; top:12px; right:12px; background:#1f1f1f; border:1px solid #555; color:#fff; padding:10px 12px; font-size:0.7rem; min-width:240px; box-shadow:0 4px 12px rgba(0,0,0,0.4);';
+  clipPanel.innerHTML =
+    '<div style="font-weight:600; margin-bottom:8px; color:#fbbf24;">✂ Kesit Düzlemleri</div>' +
+    ['x','y','z'].map(function(ax) {
+      return '<div data-axis="' + ax + '" style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
+        '<label style="display:flex; align-items:center; gap:4px; min-width:50px;">' +
+          '<input type="checkbox" data-role="enable">' +
+          '<span style="font-weight:600;">' + ax.toUpperCase() + '</span>' +
+        '</label>' +
+        '<input type="range" data-role="offset" style="flex:1;">' +
+        '<span data-role="value" style="min-width:50px; text-align:right; font-family:monospace; font-size:0.65rem;">—</span>' +
+      '</div>';
+    }).join('');
+  canvasWrap.appendChild(clipPanel);
 
   overlay.appendChild(toolbar);
   overlay.appendChild(canvasWrap);
@@ -20938,6 +21287,103 @@ function veFEAOpenFullscreenViewer(nodeId) {
     viewer.setProjection(next);
     this.setAttribute('data-projection', next);
     this.textContent = (next === 'perspective') ? 'Perspektif' : 'Ortografik';
+  });
+
+  // Display mode toggle (Shaded → Shaded+Edges → Wireframe → Shaded)
+  var modeBtn = toolbar.querySelector('button[data-action="mode"]');
+  if (modeBtn) modeBtn.addEventListener('click', function() {
+    var cur = this.getAttribute('data-mode');
+    var next = (cur === 'shaded') ? 'shaded-edges'
+             : (cur === 'shaded-edges') ? 'wireframe'
+             : 'shaded';
+    this.setAttribute('data-mode', next);
+    var label = (next === 'shaded') ? 'Shaded'
+              : (next === 'shaded-edges') ? 'Shaded+Edges'
+              : 'Wireframe';
+    this.textContent = 'Mod: ' + label;
+    if (viewer && typeof viewer.setDisplayMode === 'function') viewer.setDisplayMode(next);
+  });
+
+  // Opaklık slider
+  var opacityInput = toolbar.querySelector('input[data-action="opacity"]');
+  if (opacityInput) opacityInput.addEventListener('input', function() {
+    if (!viewer || typeof viewer.setOpacity !== 'function') return;
+    viewer.setOpacity(parseInt(this.value, 10) / 100);
+  });
+
+  // Arka plan preset
+  var bgSelect = toolbar.querySelector('select[data-action="bg"]');
+  if (bgSelect) bgSelect.addEventListener('change', function() {
+    if (!viewer || typeof viewer.setBackground !== 'function') return;
+    viewer.setBackground(this.value);
+  });
+
+  // Ölçüm toggle
+  var measureBtn = toolbar.querySelector('button[data-action="measure"]');
+  if (measureBtn) measureBtn.addEventListener('click', function() {
+    if (!viewer) return;
+    var active = this.getAttribute('data-active') === 'true';
+    if (active) {
+      _veFEAStopMeasurementUI(viewer, measureBtn, measurePanel, canvas);
+    } else {
+      _veFEAStartMeasurementUI(viewer, measureBtn, measurePanel, canvas);
+    }
+  });
+
+  // Kesit toggle
+  var clipBtn = toolbar.querySelector('button[data-action="clip"]');
+  if (clipBtn) clipBtn.addEventListener('click', function() {
+    if (!viewer) return;
+    var active = this.getAttribute('data-active') === 'true';
+    if (active) {
+      clipPanel.style.display = 'none';
+      this.setAttribute('data-active', 'false');
+      this.style.background = '#2a2a2a';
+    } else {
+      _veFEAInitClipPanel(viewer, clipPanel);
+      clipPanel.style.display = 'block';
+      this.setAttribute('data-active', 'true');
+      this.style.background = '#3b82f6';
+    }
+  });
+
+  // Kesit panel slider handler'ları
+  clipPanel.querySelectorAll('div[data-axis]').forEach(function(row) {
+    var axis = row.getAttribute('data-axis');
+    var check = row.querySelector('input[data-role="enable"]');
+    var slider = row.querySelector('input[data-role="offset"]');
+    var valLabel = row.querySelector('span[data-role="value"]');
+    function update() {
+      var enabled = check.checked;
+      var offset = parseFloat(slider.value);
+      viewer.setClipPlane(axis, enabled, offset);
+      valLabel.textContent = enabled ? offset.toFixed(1) : '—';
+    }
+    check.addEventListener('change', update);
+    slider.addEventListener('input', update);
+  });
+
+  // Ölçüm modu için canvas click handler'ı
+  function onCanvasClick(e) {
+    if (!viewer || !viewer.isMeasuring || !viewer.isMeasuring()) return;
+    var pt = viewer.pickPointFromMouse(e.clientX, e.clientY);
+    if (pt) viewer.addMeasurementPoint(pt);
+  }
+  canvas.addEventListener('click', onCanvasClick);
+
+  // Ölçüm panel butonları
+  measurePanel.querySelector('button[data-role="reset"]').addEventListener('click', function() {
+    if (viewer && viewer.startMeasurement) {
+      // Yeniden başlat — onChange'ı koru
+      var prev = viewer._measurement && viewer._measurement.onChange;
+      viewer._clearMeasurementGeometry();
+      viewer._measurement.points = [];
+      viewer._measurement.distance = null;
+      if (prev) prev({ phase: 'reset' });
+    }
+  });
+  measurePanel.querySelector('button[data-role="close"]').addEventListener('click', function() {
+    _veFEAStopMeasurementUI(viewer, measureBtn, measurePanel, canvas);
   });
 
   // Temizlik için handle'ı sakla
