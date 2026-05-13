@@ -19,7 +19,22 @@ eval(fs.readFileSync(path.join(ROOT, 'js/fea-stl.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
+
+// Test helper — side panel sadeleştirildi. Mesh kontrolleri modal'da accordion
+// builder'larında. Geri-uyumlu testler için tümünü birleştirir.
+function _testRenderFullMeshUI(node) {
+  var toolbar = _veFEAEditorBuildToolbar(node);
+  var rightPanel = _veFEAEditorBuildRightPanel(node);
+  var leftPanel = _veFEAEditorBuildLeftPanel(node);
+  return (
+    getFEAMeshPropertiesHTML(node) +
+    toolbar.outerHTML +
+    leftPanel.outerHTML +
+    rightPanel.outerHTML
+  );
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Test fixture: 10×10×10 küp (CCW dış normal) — STL ile aynı
@@ -273,7 +288,7 @@ describe('cp-fea.js Mesh Modu dropdown', () => {
   test('Mesh Modu select rendering edilir (3 seçenek)', () => {
     var node = { id: 'mesh-m1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-mode-mesh-m1"/);
     expect(html).toMatch(/value="auto"/);
     expect(html).toMatch(/value="volume"/);
@@ -283,14 +298,14 @@ describe('cp-fea.js Mesh Modu dropdown', () => {
   test('Default mode "auto" seçili', () => {
     var node = { id: 'mesh-m2', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/value="auto"\s+selected/);
   });
 
   test('Persist edilmiş mode UI\'da işaretlenir', () => {
     var node = { id: 'mesh-m3', type: 'fea-mesh', data: { meshSettings: { size: 10, mode: 'surface' } } };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/value="surface"\s+selected/);
     // Mode dropdown'un içindeki "auto" seçili olmamalı (elementType dropdown auto seçili olabilir).
     var modeSelect = html.match(/<select id="ve-fea-mesh-mode-[\s\S]*?<\/select>/);
