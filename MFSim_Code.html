@@ -20224,6 +20224,19 @@ function veFEAOnSTEPFileSelected(input, nodeId) {
 // Aktif viewer kayıtları — panel her açıldığında eski viewer dispose edilir
 var veFEAViewerRegistry = {};
 
+// Standart CAD görünümlerinin kamera yönü (target'tan kameraya bakar).
+// Renderer Y-up varsayar; Top/Bottom'da kamera up vektörü -Z/+Z olarak
+// ayarlanir ki ekran düzleminde gimbal lock yaşanmasın.
+var VE_FEA_STANDARD_VIEWS = {
+  iso:    { dir: [ 1,  1,  1], up: [0, 1, 0] },
+  top:    { dir: [ 0,  1,  0], up: [0, 0, -1] },
+  bottom: { dir: [ 0, -1,  0], up: [0, 0,  1] },
+  front:  { dir: [ 0,  0,  1], up: [0, 1,  0] },
+  back:   { dir: [ 0,  0, -1], up: [0, 1,  0] },
+  right:  { dir: [ 1,  0,  0], up: [0, 1,  0] },
+  left:   { dir: [-1,  0,  0], up: [0, 1,  0] }
+};
+
 function veFEAHasThree() {
   return typeof window !== 'undefined' && typeof window.THREE !== 'undefined';
 }
@@ -20260,9 +20273,58 @@ function veFEAInitViewer(canvas, opts) {
   var target = new THREE.Vector3(0, 0, 0);
   camera.lookAt(target);
 
+  // Opsiyonel: Coordinate gizmo (sağ alt köşede mini XYZ ekseni)
+  // Sadece fullscreen modal'da etkin. Ana sahne render edildikten sonra
+  // viewport split (scissor) ile küçük bir bölgeye çizilir.
+  var gizmoScene = null;
+  var gizmoCamera = null;
+  if (opts.gizmo) {
+    gizmoScene = new THREE.Scene();
+    gizmoCamera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    gizmoScene.add(new THREE.AxesHelper(1.4));
+    // Eksen uçlarına renkli toplar — yön daha belirgin
+    var sphereGeo = new THREE.SphereGeometry(0.18, 12, 12);
+    [['x', 0xff4444, [1.4, 0, 0]],
+     ['y', 0x44ff44, [0, 1.4, 0]],
+     ['z', 0x4488ff, [0, 0, 1.4]]].forEach(function(item) {
+      var s = new THREE.Mesh(sphereGeo, new THREE.MeshBasicMaterial({ color: item[1] }));
+      s.position.set(item[2][0], item[2][1], item[2][2]);
+      gizmoScene.add(s);
+    });
+  }
+
   // Render fonksiyonu — gerektiğinde çağrılır (on-demand)
   function render() {
+    var w = canvas.width || width;
+    var h = canvas.height || height;
+    // Ana sahne
+    renderer.setViewport(0, 0, w, h);
+    renderer.setScissor(0, 0, w, h);
+    renderer.setScissorTest(false);
     renderer.render(scene, camera);
+
+    // Gizmo overlay (sağ alt 80×80 px)
+    if (gizmoScene && gizmoCamera) {
+      var gSize = 80;
+      var gx = w - gSize - 12;
+      var gy = 12; // WebGL alt-sol orijinli
+      // Ana kameranın yönünü gizmo kamerasına ata
+      var dir = new THREE.Vector3().subVectors(camera.position, target);
+      if (dir.lengthSq() < 1e-6) dir.set(1, 1, 1);
+      dir.normalize().multiplyScalar(3.5);
+      gizmoCamera.position.copy(dir);
+      gizmoCamera.up.copy(camera.up);
+      gizmoCamera.lookAt(0, 0, 0);
+
+      renderer.autoClear = false;
+      renderer.setViewport(gx, gy, gSize, gSize);
+      renderer.setScissor(gx, gy, gSize, gSize);
+      renderer.setScissorTest(true);
+      renderer.clearDepth();
+      renderer.render(gizmoScene, gizmoCamera);
+      renderer.autoClear = true;
+      renderer.setScissorTest(false);
+    }
   }
 
   // Manuel orbit/pan/zoom
@@ -20328,8 +20390,22 @@ function veFEAInitViewer(canvas, opts) {
       var center = box.getCenter(new THREE.Vector3());
       var maxDim = Math.max(size.x, size.y, size.z);
       if(maxDim <= 0) return;
-      var fov = camera.fov * (Math.PI / 180);
-      var distance = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
+      var distance;
+      if(camera.isOrthographicCamera) {
+        // Ortografik: frustum boyutunu bbox'a göre ayarla
+        var aspect = (canvas.width || width) / (canvas.height || height);
+        var halfH = maxDim * 0.9;
+        var halfW = halfH * aspect;
+        camera.left = -halfW;
+        camera.right = halfW;
+        camera.top = halfH;
+        camera.bottom = -halfH;
+        camera.updateProjectionMatrix();
+        distance = maxDim * 3; // pozisyon korunsa da target merkeze
+      } else {
+        var fov = camera.fov * (Math.PI / 180);
+        distance = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
+      }
       target.copy(center);
       // Mevcut kamera yön vektörünü koru, sadece uzaklık değiştir
       var dir = camera.position.clone().sub(target);
@@ -20342,6 +20418,80 @@ function veFEAInitViewer(canvas, opts) {
       camera.lookAt(target);
       // Orbit controls'un spherical state'ini senkronla
       if(orbitHandle.sync) orbitHandle.sync();
+      render();
+    },
+    // Parametre almadan tüm geometriyi sığdır (toolbar "Sığdır" düğmesi için)
+    fitToGeometry: function() {
+      if(this._geometryRoot.children.length === 0) return;
+      this.zoomToFit(this._geometryRoot);
+    },
+    // Standart CAD görünümleri: 'iso', 'top', 'bottom', 'front', 'back', 'right', 'left'
+    setStandardView: function(name) {
+      var v = VE_FEA_STANDARD_VIEWS[name];
+      if(!v) return;
+      // Geometri varsa bbox merkezi target, yoksa origin
+      var box = new THREE.Box3();
+      if(this._geometryRoot.children.length > 0) box.setFromObject(this._geometryRoot);
+      var center = box.isEmpty() ? new THREE.Vector3(0, 0, 0) : box.getCenter(new THREE.Vector3());
+      var size = box.isEmpty() ? new THREE.Vector3(50, 50, 50) : box.getSize(new THREE.Vector3());
+      var maxDim = Math.max(size.x, size.y, size.z, 10);
+      var aspect = (canvas.width || width) / (canvas.height || height);
+      var distance;
+      if(camera.isOrthographicCamera) {
+        var halfH = maxDim * 0.9;
+        var halfW = halfH * aspect;
+        camera.left = -halfW;
+        camera.right = halfW;
+        camera.top = halfH;
+        camera.bottom = -halfH;
+        camera.updateProjectionMatrix();
+        distance = maxDim * 3;
+      } else {
+        var fov = camera.fov * (Math.PI / 180);
+        distance = (maxDim / 2) / Math.tan(fov / 2) * 1.8;
+      }
+      target.copy(center);
+      camera.up.set(v.up[0], v.up[1], v.up[2]);
+      var dirVec = new THREE.Vector3(v.dir[0], v.dir[1], v.dir[2]).normalize().multiplyScalar(distance);
+      camera.position.copy(target).add(dirVec);
+      camera.lookAt(target);
+      camera.near = Math.max(0.1, distance * 0.01);
+      camera.far = distance * 100;
+      camera.updateProjectionMatrix();
+      if(orbitHandle.sync) orbitHandle.sync();
+      render();
+    },
+    // Projeksiyon değişimi: 'perspective' veya 'orthographic'. Kamera
+    // pozisyonu ve target korunur. Orbit handle yeni kamera referansını alır.
+    projection: 'perspective',
+    setProjection: function(type) {
+      if(type !== 'perspective' && type !== 'orthographic') return;
+      if(this.projection === type) return;
+      var oldPos = camera.position.clone();
+      var oldUp = camera.up.clone();
+      var aspect = (canvas.width || width) / (canvas.height || height);
+
+      var newCam;
+      if(type === 'orthographic') {
+        var box = new THREE.Box3();
+        if(this._geometryRoot.children.length > 0) box.setFromObject(this._geometryRoot);
+        var size = box.isEmpty() ? new THREE.Vector3(100, 100, 100) : box.getSize(new THREE.Vector3());
+        var maxDim = Math.max(size.x, size.y, size.z, 10);
+        var halfH = maxDim * 0.9;
+        var halfW = halfH * aspect;
+        newCam = new THREE.OrthographicCamera(-halfW, halfW, halfH, -halfH, 0.1, 5000);
+      } else {
+        newCam = new THREE.PerspectiveCamera(40, aspect, 0.1, 5000);
+      }
+      newCam.position.copy(oldPos);
+      newCam.up.copy(oldUp);
+      newCam.lookAt(target);
+
+      // closure'daki camera referansını güncelle (render() ve orbit handle bunu kullanır)
+      camera = newCam;
+      this.camera = camera;
+      this.projection = type;
+      if(orbitHandle.setCamera) orbitHandle.setCamera(camera);
       render();
     },
     dispose: function() {
@@ -20368,9 +20518,10 @@ function veFEAInitViewer(canvas, opts) {
 
 // ─── Manuel orbit / pan / zoom kontrolörü ───────────────────────────────────
 // OrbitControls eşdeğeri ama UMD bundle ile uyumlu (Three.js 0.149 jsm ESM-only)
-function veFEAAttachOrbitControls(canvas, camera, target, requestRender) {
+function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
   if(!veFEAHasThree()) return { dispose: function() {} };
 
+  var camera = cameraArg;
   var spherical = new THREE.Spherical();
   spherical.setFromVector3(camera.position.clone().sub(target));
 
@@ -20424,8 +20575,22 @@ function veFEAAttachOrbitControls(canvas, camera, target, requestRender) {
   function onWheel(e) {
     e.preventDefault();
     var factor = e.deltaY > 0 ? 1.12 : 0.89;
-    spherical.radius = Math.max(5, Math.min(2000, spherical.radius * factor));
-    updateCamera();
+    if(camera.isOrthographicCamera) {
+      // Ortografik: frustum boyutu üzerinden zoom (mesafe görsel etki vermez)
+      var newHalfW = (camera.right - camera.left) * factor / 2;
+      var newHalfH = (camera.top - camera.bottom) * factor / 2;
+      newHalfW = Math.max(1, Math.min(5000, newHalfW));
+      newHalfH = Math.max(1, Math.min(5000, newHalfH));
+      camera.left = -newHalfW;
+      camera.right = newHalfW;
+      camera.top = newHalfH;
+      camera.bottom = -newHalfH;
+      camera.updateProjectionMatrix();
+      requestRender();
+    } else {
+      spherical.radius = Math.max(5, Math.min(2000, spherical.radius * factor));
+      updateCamera();
+    }
   }
 
   function onContextMenu(e) {
@@ -20440,6 +20605,12 @@ function veFEAAttachOrbitControls(canvas, camera, target, requestRender) {
   window.addEventListener('mouseup', onMouseUp);
 
   return {
+    // setProjection ile kamera referansı değişir; orbit handle'ın da onu
+    // bilmesi gerek. closure'daki "camera" değişkenini yeniden atar.
+    setCamera: function(newCam) {
+      camera = newCam;
+      spherical.setFromVector3(camera.position.clone().sub(target));
+    },
     // zoomToFit gibi dış çağrılar kamerayı değiştirir; spherical state'i
     // mevcut camera pozisyonundan yeniden hesaplayarak senkronla.
     sync: function() {
@@ -20627,6 +20798,12 @@ function veFEAOnSTLFileSelected(input, nodeId) {
   input.value = ''; // aynı dosyayı tekrar seçebilmek için
 }
 
+// cp-fea.js "Sığdır" düğmesi için — preview viewer'ın geometriyi sığdırması
+function veFEAFitPreviewForNode(nodeId) {
+  var viewer = veFEAViewerRegistry[nodeId];
+  if(viewer && typeof viewer.fitToGeometry === 'function') viewer.fitToGeometry();
+}
+
 function veFEAClearGeometryForNode(nodeId) {
   var viewer = veFEAViewerRegistry[nodeId];
   if(viewer) viewer.clearGeometry();
@@ -20664,15 +20841,37 @@ function veFEAOpenFullscreenViewer(nodeId) {
     'flex-direction:column'
   ].join(';') + ';';
 
-  // Üst toolbar
+  // Üst toolbar — sol başlık, orta CAD kontrolleri, sağ kapat butonu
   var toolbar = document.createElement('div');
-  toolbar.style.cssText = 'flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:#1f1f1f; border-bottom:1px solid #444; color:#fff;';
+  toolbar.style.cssText = 'flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:#1f1f1f; border-bottom:1px solid #444; color:#fff; gap:14px;';
+
+  // Sol: başlık
+  var btnStyle = 'background:#2a2a2a; color:#ddd; border:1px solid #444; padding:5px 10px; font-size:0.66rem; cursor:pointer; min-width:42px;';
+  var sepStyle = 'display:inline-block; width:1px; height:18px; background:#444; margin:0 4px;';
+
   toolbar.innerHTML =
-    '<div style="display:flex; align-items:center; gap:12px;">' +
-      '<span style="font-size:0.85rem; font-weight:600;">Yapısal Analiz — 3D Görüntüleyici</span>' +
-      '<span style="font-size:0.6rem; color:#aaa;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</span>' +
+    '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' +
+      '<span style="font-size:0.78rem; font-weight:600; white-space:nowrap;">Yapısal Analiz</span>' +
     '</div>' +
-    '<button id="ve-fea-fullscreen-close" style="background:#ef4444; color:#fff; border:none; padding:6px 14px; font-size:0.7rem; cursor:pointer;">✕ Kapat (Esc)</button>';
+    // Orta: CAD kontrolleri
+    '<div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">' +
+      // Standart görünümler
+      '<button data-view="iso"    style="' + btnStyle + '" title="İzometrik">ISO</button>' +
+      '<button data-view="top"    style="' + btnStyle + '" title="Üst">Üst</button>' +
+      '<button data-view="bottom" style="' + btnStyle + '" title="Alt">Alt</button>' +
+      '<button data-view="front"  style="' + btnStyle + '" title="Ön">Ön</button>' +
+      '<button data-view="back"   style="' + btnStyle + '" title="Arka">Arka</button>' +
+      '<button data-view="right"  style="' + btnStyle + '" title="Sağ">Sağ</button>' +
+      '<button data-view="left"   style="' + btnStyle + '" title="Sol">Sol</button>' +
+      '<span style="' + sepStyle + '"></span>' +
+      // Sığdır
+      '<button data-action="fit" style="' + btnStyle + '" title="Sığdır">⛶ Sığdır</button>' +
+      '<span style="' + sepStyle + '"></span>' +
+      // Projeksiyon toggle
+      '<button data-action="proj" data-projection="perspective" style="' + btnStyle + '" title="Perspektif / Ortografik">Perspektif</button>' +
+    '</div>' +
+    // Sağ: kapat
+    '<button id="ve-fea-fullscreen-close" style="background:#ef4444; color:#fff; border:none; padding:6px 14px; font-size:0.7rem; cursor:pointer; white-space:nowrap;">✕ Kapat (Esc)</button>';
 
   // Canvas konteyneri — kalan tüm yüksekliği alır
   var canvasWrap = document.createElement('div');
@@ -20694,7 +20893,7 @@ function veFEAOpenFullscreenViewer(nodeId) {
   canvas.width = w;
   canvas.height = h;
 
-  var viewer = veFEAInitViewer(canvas, { width: w, height: h });
+  var viewer = veFEAInitViewer(canvas, { width: w, height: h, gizmo: true });
 
   // Node geometrisini fullscreen viewer'a da yedir (eski versiyonda
   // unutulmustu — kullanici "buyuttugumde geometriyi goremiyorum" raporladi)
@@ -20718,6 +20917,28 @@ function veFEAOpenFullscreenViewer(nodeId) {
   document.addEventListener('keydown', onKey);
 
   document.getElementById('ve-fea-fullscreen-close').addEventListener('click', veFEACloseFullscreenViewer);
+
+  // CAD toolbar butonları
+  toolbar.querySelectorAll('button[data-view]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      if(viewer && typeof viewer.setStandardView === 'function') {
+        viewer.setStandardView(this.getAttribute('data-view'));
+      }
+    });
+  });
+  var fitBtn = toolbar.querySelector('button[data-action="fit"]');
+  if(fitBtn) fitBtn.addEventListener('click', function() {
+    if(viewer && typeof viewer.fitToGeometry === 'function') viewer.fitToGeometry();
+  });
+  var projBtn = toolbar.querySelector('button[data-action="proj"]');
+  if(projBtn) projBtn.addEventListener('click', function() {
+    if(!viewer || typeof viewer.setProjection !== 'function') return;
+    var current = this.getAttribute('data-projection');
+    var next = (current === 'perspective') ? 'orthographic' : 'perspective';
+    viewer.setProjection(next);
+    this.setAttribute('data-projection', next);
+    this.textContent = (next === 'perspective') ? 'Perspektif' : 'Ortografik';
+  });
 
   // Temizlik için handle'ı sakla
   veFEAViewerRegistry['__fullscreen__'] = {
@@ -20792,7 +21013,10 @@ function getFEAGeometryPropertiesHTML(node) {
   html += '<canvas id="ve-fea-geom-canvas-' + node.id + '" width="240" height="180" style="display:block; width:100%; height:180px; cursor:grab;"></canvas>';
   html += '<div style="position:absolute; bottom:6px; left:8px; font-size:0.55rem; color:#888; pointer-events:none;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</div>';
   html += '</div>';
-  html += '<button onclick="veFEAOpenFullscreenViewer(\'' + node.id + '\')" style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; margin-bottom:10px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">🔍 Tam Ekran Görüntüleyici</button>';
+  html += '<div style="display:flex; gap:6px; margin-bottom:10px;">';
+  html += '<button onclick="veFEAFitPreviewForNode(\'' + node.id + '\')" style="flex:0 0 auto; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; white-space:nowrap;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'" title="Geometriyi sığdır">⛶ Sığdır</button>';
+  html += '<button onclick="veFEAOpenFullscreenViewer(\'' + node.id + '\')" style="flex:1 1 auto; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">🔍 Tam Ekran Görüntüleyici</button>';
+  html += '</div>';
 
   // ─── GEOMETRİ KAYNAĞI ─────────────────────────────────────────────────
   html += veFEASectionTitle('Parametrik Primitif');
