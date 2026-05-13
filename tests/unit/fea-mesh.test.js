@@ -400,6 +400,122 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEACombineMeshes (multi-body assembly)', () => {
+  test('İki box mesh birleştirilir, eleman sayısı toplanır', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 6, height: 6, depth: 6 } }, { size: 3 });
+    var asm = veFEACombineMeshes([m1, m2], ['part1', 'part2']);
+    expect(asm.type).toBe('hex8');
+    expect(asm.elements.length / 8).toBe(m1.elements.length / 8 + m2.elements.length / 8);
+    expect(asm.nodes.length / 3).toBe(m1.nodes.length / 3 + m2.nodes.length / 3);
+    expect(asm.isAssembly).toBe(true);
+  });
+
+  test('Body ranges üretilir', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 6, height: 6, depth: 6 } }, { size: 3 });
+    var asm = veFEACombineMeshes([m1, m2], ['A', 'B']);
+    expect(asm.bodyRanges.length).toBe(2);
+    expect(asm.bodyRanges[0].name).toBe('A');
+    expect(asm.bodyRanges[0].nodeStart).toBe(0);
+    expect(asm.bodyRanges[1].nodeStart).toBe(m1.nodes.length / 3);
+  });
+
+  test('Named selections prefix\'lenir', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 6, height: 6, depth: 6 } }, { size: 3 });
+    var asm = veFEACombineMeshes([m1, m2], ['A', 'B']);
+    expect(asm.namedSelections['A.faceXMin']).toBeDefined();
+    expect(asm.namedSelections['B.faceXMax']).toBeDefined();
+    expect(Object.keys(asm.namedSelections).length).toBe(12); // 6 + 6 yüzey
+  });
+
+  test('Element indeksleri offset\'li (ikinci mesh ID\'leri yer değişir)', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 6, height: 6, depth: 6 } }, { size: 3 });
+    var asm = veFEACombineMeshes([m1, m2], ['A', 'B']);
+    var offset = m1.nodes.length / 3;
+    var m1ElCount = m1.elements.length / 8;
+    // İlk m1 element'lerinin ID'si değişmez
+    expect(asm.elements[0]).toBe(m1.elements[0]);
+    // m2'nin ilk elementi offset'li olmalı
+    var asmM2Start = m1ElCount * 8;
+    expect(asm.elements[asmM2Start]).toBe(m2.elements[0] + offset);
+  });
+
+  test('Karma tipler (hex8 + wedge6) → error', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var wedge = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 5, height: 10 } }, { size: 5 });
+    var asm = veFEACombineMeshes([hex, wedge]);
+    expect(asm.error).toBe('mixed-element-types');
+  });
+
+  test('Boş liste → null', () => {
+    expect(veFEACombineMeshes([])).toBeNull();
+    expect(veFEACombineMeshes(null)).toBeNull();
+  });
+
+  test('Default isim üretimi (body1, body2, ...)', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 6, height: 6, depth: 6 } }, { size: 3 });
+    var asm = veFEACombineMeshes([m1, m2]);
+    expect(asm.namedSelections['body1.faceXMin']).toBeDefined();
+    expect(asm.namedSelections['body2.faceXMin']).toBeDefined();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEADetectContactPairs (tie-constraint adayları)', () => {
+  test('Aynı pozisyonda iki box → her tarafta yakın node çiftleri', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    // m2'yi aynı yere koy (üst üste) — tüm boundary node'lar çakışır
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var pairs = veFEADetectContactPairs([m1, m2], 0.01);
+    // 27 düğümden 26'sı boundary (1 iç hariç) → çakışan çiftler
+    expect(pairs.length).toBeGreaterThan(0);
+  });
+
+  test('Çok uzak iki mesh → çift yok', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    // m2'yi uzağa kaydır (manuel olarak)
+    var shifted = new Float32Array(m2.nodes);
+    for (var i = 0; i < shifted.length; i += 3) shifted[i] += 100;
+    var m2shifted = Object.assign({}, m2, { nodes: shifted });
+    var pairs = veFEADetectContactPairs([m1, m2shifted], 0.5);
+    expect(pairs.length).toBe(0);
+  });
+
+  test('Tolerance > 0 mesafe → çiftler bulunur', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    // m2'yi 0.05 mm kaydır
+    var shifted = new Float32Array(m2.nodes);
+    for (var i = 0; i < shifted.length; i += 3) shifted[i] += 0.05;
+    var m2sh = Object.assign({}, m2, { nodes: shifted });
+    var pairsNarrow = veFEADetectContactPairs([m1, m2sh], 0.01); // tolerance < shift
+    var pairsWide   = veFEADetectContactPairs([m1, m2sh], 0.5);  // tolerance > shift
+    expect(pairsNarrow.length).toBeLessThanOrEqual(pairsWide.length);
+    expect(pairsWide.length).toBeGreaterThan(0);
+  });
+
+  test('Tek mesh → boş liste', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    expect(veFEADetectContactPairs([m], 0.1)).toEqual([]);
+  });
+
+  test('Distance field doğru hesaplanır', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var pairs = veFEADetectContactPairs([m1, m2], 0.01);
+    if (pairs.length > 0) {
+      expect(pairs[0].distance).toBeGreaterThanOrEqual(0);
+      expect(pairs[0].distance).toBeLessThan(0.01);
+    }
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeRefinementSuggestions (adaptive heuristic)', () => {
   test('Inverted eleman → KRİTİK öneri reduceSize/0.5', () => {
     var metrics = {

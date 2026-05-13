@@ -1736,6 +1736,164 @@ function veFEAComputeMeshMetrics(mesh) {
   };
 }
 
+// ─── Multi-body: mesh birleştirme + contact detection ─────────────────────
+// Birden fazla mesh'i tek bir mesh data'sı halinde birleştirir. Düğüm ID'leri
+// offset'lenir, elemanlar relabel olur, named selections prefix'lenir.
+// Tüm mesh'lerin tipi aynı olmalı (hex8 + hex8, vb). Karma tipler (hex8 + wedge6)
+// 'mixed' tipinde döner ama uyumsuz elemanlar tek block'da olur.
+//
+// Kullanım (BC F4 öncesi multi-body assembly):
+//   var assembly = veFEACombineMeshes([meshA, meshB], ['body1', 'body2']);
+//
+// Output:
+//   { type, nodes, elements, nodesPerElement, namedSelections (prefixed),
+//     bodyRanges: [{ name, nodeStart, nodeEnd, elemStart, elemEnd }] }
+function veFEACombineMeshes(meshList, names) {
+  if (!Array.isArray(meshList) || meshList.length === 0) return null;
+  names = names || meshList.map(function(_, i) { return 'body' + (i + 1); });
+
+  // Tip uyumu — heterojen mesh'ler farklı per değerleri taşıyabilir
+  var firstValid = meshList.find(function(m) { return m && !m.error; });
+  if (!firstValid) return null;
+  var baseType = firstValid.type;
+  var basePer = firstValid.nodesPerElement;
+  var heterogeneous = false;
+  for (var i = 0; i < meshList.length; i++) {
+    var m = meshList[i];
+    if (!m || m.error) continue;
+    if (m.type !== baseType || m.nodesPerElement !== basePer) {
+      heterogeneous = true;
+      break;
+    }
+  }
+  if (heterogeneous) {
+    // Karma tipler şu an desteklenmiyor — açık hata
+    return { error: 'mixed-element-types', message: 'veFEACombineMeshes: tüm mesh\'ler aynı element tipinde olmalı (heterojen henüz desteklenmiyor)' };
+  }
+
+  // Toplam boyutlar
+  var totalNodes = 0, totalElems = 0;
+  meshList.forEach(function(m) {
+    if (!m || m.error) return;
+    totalNodes += m.nodes.length / 3;
+    totalElems += m.elements.length / m.nodesPerElement;
+  });
+  if (totalNodes === 0) return null;
+
+  var nodes = new Float32Array(totalNodes * 3);
+  var elements = new Uint32Array(totalElems * basePer);
+  var combinedNS = {};
+  var bodyRanges = [];
+
+  var nodeOffset = 0;
+  var elemPtr = 0;
+  meshList.forEach(function(m, idx) {
+    if (!m || m.error) return;
+    var name = names[idx] || ('body' + (idx + 1));
+    var nNodes = m.nodes.length / 3;
+    var nElems = m.elements.length / m.nodesPerElement;
+
+    // Düğümleri kopyala
+    nodes.set(m.nodes, nodeOffset * 3);
+
+    // Elemanları offset'le
+    for (var e = 0; e < m.elements.length; e++) {
+      elements[elemPtr * basePer + e] = m.elements[e] + nodeOffset;
+    }
+    elemPtr += nElems;
+
+    // Named selections prefix'le
+    if (m.namedSelections) {
+      Object.keys(m.namedSelections).forEach(function(k) {
+        var ns = m.namedSelections[k];
+        var offsetIds = new Uint32Array(ns.nodeIds.length);
+        for (var j = 0; j < ns.nodeIds.length; j++) {
+          offsetIds[j] = ns.nodeIds[j] + nodeOffset;
+        }
+        combinedNS[name + '.' + k] = {
+          type: ns.type,
+          source: ns.source,
+          label: name + ': ' + ns.label,
+          nodeIds: offsetIds
+        };
+      });
+    }
+
+    bodyRanges.push({
+      name: name,
+      nodeStart: nodeOffset,
+      nodeEnd: nodeOffset + nNodes - 1,
+      elemStart: elemPtr - nElems,
+      elemEnd: elemPtr - 1
+    });
+
+    nodeOffset += nNodes;
+  });
+
+  return {
+    type: baseType,
+    geometryType: 'assembly',
+    nodes: nodes,
+    elements: elements,
+    nodesPerElement: basePer,
+    namedSelections: combinedNS,
+    bodyRanges: bodyRanges,
+    isAssembly: true
+  };
+}
+
+// İki mesh arasındaki yakın boundary node çiftlerini bulur (tie-constraint
+// adayları). MVP: O(n²) tüm boundary node'lar arası kontrol; n > 10k için
+// spatial hash gerekir (ileride).
+//   meshList: array of mesh data
+//   tolerance: yakınlık eşiği (mm)
+//   Returns: [{ mesh1: idx, node1: id, mesh2: idx, node2: id, distance }]
+function veFEADetectContactPairs(meshList, tolerance) {
+  if (!Array.isArray(meshList) || meshList.length < 2) return [];
+  var tol = (typeof tolerance === 'number' && tolerance > 0) ? tolerance : 0.1;
+  var tol2 = tol * tol;
+
+  // Her mesh için boundary nodeId listesi + pozisyon array'i hazırla
+  var bodies = [];
+  meshList.forEach(function(m) {
+    if (!m || m.error) { bodies.push(null); return; }
+    var nodeCount = m.nodes.length / 3;
+    var degree = new Uint8Array(nodeCount);
+    for (var e = 0; e < m.elements.length; e++) {
+      if (degree[m.elements[e]] < 255) degree[m.elements[e]]++;
+    }
+    var boundary = [];
+    for (var n = 0; n < nodeCount; n++) {
+      if (degree[n] < 8) boundary.push(n);
+    }
+    bodies.push({ mesh: m, boundary: boundary });
+  });
+
+  var pairs = [];
+  for (var a = 0; a < bodies.length; a++) {
+    for (var b = a + 1; b < bodies.length; b++) {
+      var ba = bodies[a], bb = bodies[b];
+      if (!ba || !bb) continue;
+      var nodesA = ba.mesh.nodes;
+      var nodesB = bb.mesh.nodes;
+      for (var i = 0; i < ba.boundary.length; i++) {
+        var idA = ba.boundary[i];
+        var ax = nodesA[idA * 3], ay = nodesA[idA * 3 + 1], az = nodesA[idA * 3 + 2];
+        for (var j = 0; j < bb.boundary.length; j++) {
+          var idB = bb.boundary[j];
+          var bx = nodesB[idB * 3], by = nodesB[idB * 3 + 1], bz = nodesB[idB * 3 + 2];
+          var dx = ax - bx, dy = ay - by, dz = az - bz;
+          var d2 = dx * dx + dy * dy + dz * dz;
+          if (d2 < tol2) {
+            pairs.push({ mesh1: a, node1: idA, mesh2: b, node2: idB, distance: Math.sqrt(d2) });
+          }
+        }
+      }
+    }
+  }
+  return pairs;
+}
+
 // Named selections'tan UI/persistence için özet üretir (nodeIds hariç)
 //   { <key>: { label, type, source, nodeCount } }
 // Float32Array/Uint32Array JSON-serializable değildir; özet localStorage'a
