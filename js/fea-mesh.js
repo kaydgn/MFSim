@@ -1157,6 +1157,187 @@ function veFEAComputeQualityMetrics(meshData) {
   };
 }
 
+// ─── Per-element kalite değerleri (heat map için) ─────────────────────────
+// veFEAComputeQualityMetrics özet değerler döner; viewer renk için her eleman
+// için tek değer ister. Bu fonksiyon istenen metriği eleman array'i olarak verir.
+function veFEAComputePerElementQuality(meshData, metric) {
+  if (!meshData || meshData.error) return null;
+  var nodes = meshData.nodes;
+  var elements = meshData.elements;
+  var per = meshData.nodesPerElement;
+  var type = meshData.type;
+  var n = elements.length / per;
+  if (n === 0) return null;
+
+  var edges;
+  if (type === 'hex8' || type === 'hex20')
+    edges = [[0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7]];
+  else if (type === 'wedge6' || type === 'wedge15')
+    edges = [[0,1],[1,2],[2,0], [3,4],[4,5],[5,3], [0,3],[1,4],[2,5]];
+  else if (type === 'tet4' || type === 'tet10')
+    edges = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+  else if (type === 'tri3') edges = [[0,1],[1,2],[2,0]];
+  else return null;
+
+  var faces = _veFEAGetFaceTemplate(type);
+  var out = new Float32Array(n);
+
+  for (var e = 0; e < n; e++) {
+    var off = e * per;
+
+    if (metric === 'aspect') {
+      var minE = Infinity, maxE = -Infinity;
+      for (var i = 0; i < edges.length; i++) {
+        var a = elements[off + edges[i][0]] * 3;
+        var b = elements[off + edges[i][1]] * 3;
+        var dx = nodes[a]     - nodes[b];
+        var dy = nodes[a + 1] - nodes[b + 1];
+        var dz = nodes[a + 2] - nodes[b + 2];
+        var L = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (L < minE) minE = L;
+        if (L > maxE) maxE = L;
+      }
+      out[e] = (minE > 1e-12) ? (maxE / minE) : 999;
+
+    } else if (metric === 'skewness') {
+      var elemSkew = 0;
+      for (var f = 0; f < faces.length; f++) {
+        var face = faces[f];
+        var fLen = face.length;
+        var idealAng = (fLen === 3) ? 60 : 90;
+        for (var v = 0; v < fLen; v++) {
+          var prevNode = elements[off + face[(v + fLen - 1) % fLen]] * 3;
+          var currNode = elements[off + face[v]] * 3;
+          var nextNode = elements[off + face[(v + 1) % fLen]] * 3;
+          var ang = _veFEAInteriorAngleDeg(nodes, prevNode, currNode, nextNode);
+          var d1 = (180 - idealAng > 0) ? Math.max(0, ang - idealAng) / (180 - idealAng) : 0;
+          var d2 = (idealAng > 0)       ? Math.max(0, idealAng - ang) / idealAng       : 0;
+          var sk = Math.max(d1, d2);
+          if (sk > elemSkew) elemSkew = sk;
+        }
+      }
+      out[e] = elemSkew;
+
+    } else if (metric === 'minAngle') {
+      var elemMinA = Infinity;
+      for (var ff = 0; ff < faces.length; ff++) {
+        var fc = faces[ff];
+        var fL = fc.length;
+        for (var vv = 0; vv < fL; vv++) {
+          var pn = elements[off + fc[(vv + fL - 1) % fL]] * 3;
+          var cn = elements[off + fc[vv]] * 3;
+          var nn = elements[off + fc[(vv + 1) % fL]] * 3;
+          var aa = _veFEAInteriorAngleDeg(nodes, pn, cn, nn);
+          if (aa < elemMinA) elemMinA = aa;
+        }
+      }
+      out[e] = isFinite(elemMinA) ? elemMinA : 0;
+
+    } else if (metric === 'jacobianRatio') {
+      var vols;
+      if (type === 'tet4' || type === 'tet10') vols = [_veFEATetSignedVolume(nodes, elements, off, 0, 1, 2, 3)];
+      else if (type === 'hex8' || type === 'hex20') vols = _veFEAHexSubTetVolumes(nodes, elements, off);
+      else if (type === 'wedge6' || type === 'wedge15') vols = _veFEAWedgeSubTetVolumes(nodes, elements, off);
+      else { out[e] = 1; continue; }
+      var absMin = Infinity, absMax = -Infinity;
+      for (var k = 0; k < vols.length; k++) {
+        var av = Math.abs(vols[k]);
+        if (av < absMin) absMin = av;
+        if (av > absMax) absMax = av;
+      }
+      out[e] = (absMin > 1e-12) ? (absMax / absMin) : 999;
+    } else {
+      out[e] = 0;
+    }
+  }
+  return out;
+}
+
+// ─── Yüzey üçgeni çıkarımı (boundary face detection) ──────────────────────
+// Her face'i sıralı düğüm anahtarıyla hash'le; tek görünen = boundary.
+// Quadratic elemanlar için corner face'leri kullanılır.
+function veFEAExtractSurfaceTriangles(meshData) {
+  if (!meshData) return null;
+  var type = meshData.type;
+  var nodes = meshData.nodes;
+  var elements = meshData.elements;
+  var per = meshData.nodesPerElement;
+  var n = elements.length / per;
+  if (n === 0) return null;
+
+  // Tri3 → her eleman zaten yüzey
+  if (type === 'tri3') {
+    var positions = new Float32Array(n * 9);
+    var elemIds = new Uint32Array(n);
+    for (var i = 0; i < n; i++) {
+      for (var v = 0; v < 3; v++) {
+        var nid = elements[i * 3 + v];
+        positions[i * 9 + v * 3]     = nodes[nid * 3];
+        positions[i * 9 + v * 3 + 1] = nodes[nid * 3 + 1];
+        positions[i * 9 + v * 3 + 2] = nodes[nid * 3 + 2];
+      }
+      elemIds[i] = i;
+    }
+    return { positions: positions, elementIds: elemIds };
+  }
+
+  var faces = _veFEAGetFaceTemplate(type);
+  if (faces.length === 0) return null;
+
+  // Map<sorted_face_key, { count, ids, elementId }>
+  var faceMap = new Map();
+  for (var e = 0; e < n; e++) {
+    var off = e * per;
+    for (var f = 0; f < faces.length; f++) {
+      var face = faces[f];
+      var ids = new Array(face.length);
+      for (var ii = 0; ii < face.length; ii++) ids[ii] = elements[off + face[ii]];
+      var sorted = ids.slice().sort(function(a, b) { return a - b; });
+      var key = sorted.join('|');
+      var existing = faceMap.get(key);
+      if (existing) existing.count++;
+      else faceMap.set(key, { count: 1, ids: ids, elementId: e });
+    }
+  }
+
+  // Boundary'ler: count == 1 (interior count == 2)
+  var triPos = [];
+  var triElems = [];
+  faceMap.forEach(function(fm) {
+    if (fm.count !== 1) return;
+    var ids = fm.ids;
+    if (ids.length === 3) {
+      for (var v = 0; v < 3; v++) {
+        triPos.push(nodes[ids[v] * 3], nodes[ids[v] * 3 + 1], nodes[ids[v] * 3 + 2]);
+      }
+      triElems.push(fm.elementId);
+    } else if (ids.length === 4) {
+      // Quad → 2 üçgen (0,1,2) + (0,2,3)
+      [0, 1, 2, 0, 2, 3].forEach(function(idx, k) {
+        var nid = ids[idx];
+        triPos.push(nodes[nid * 3], nodes[nid * 3 + 1], nodes[nid * 3 + 2]);
+        if (k % 3 === 0) triElems.push(fm.elementId);
+      });
+    }
+  });
+
+  return {
+    positions: new Float32Array(triPos),
+    elementIds: new Uint32Array(triElems)
+  };
+}
+
+// Jet color ramp: t ∈ [0,1] → [r, g, b] ∈ [0,1]³
+// Mavi (cold = iyi) → Cyan → Yeşil → Sarı → Kırmızı (hot = kötü)
+function veFEAJetColor(t) {
+  if (!isFinite(t)) t = 0;
+  if (t < 0) t = 0; else if (t > 1) t = 1;
+  var r = Math.max(0, Math.min(1, 4 * t - 1.5));
+  var g = Math.max(0, Math.min(1, 4 * t - 0.5)) - Math.max(0, Math.min(1, 4 * t - 2.5));
+  var b = Math.max(0, Math.min(1, -4 * t + 2.5));
+  return [r, g, b];
+}
+
 // ─── Kalite metrikleri (basit: edge length, eleman sayısı) ─────────────────
 function veFEAComputeMeshMetrics(mesh) {
   if (!mesh) return null;

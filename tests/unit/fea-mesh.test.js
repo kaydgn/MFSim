@@ -400,6 +400,208 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputePerElementQuality (heat map için)', () => {
+  test('aspect metriği — eleman sayısı kadar değer', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var vals = veFEAComputePerElementQuality(m, 'aspect');
+    expect(vals.length).toBe(m.elements.length / m.nodesPerElement);
+    // Küp için her elemanın aspect'i ≈ 1
+    for (var i = 0; i < vals.length; i++) {
+      expect(vals[i]).toBeCloseTo(1, 2);
+    }
+  });
+
+  test('skewness metriği — küp için ≈ 0', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var vals = veFEAComputePerElementQuality(m, 'skewness');
+    for (var i = 0; i < vals.length; i++) {
+      expect(vals[i]).toBeCloseTo(0, 3);
+    }
+  });
+
+  test('minAngle metriği — küp için ≈ 90', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var vals = veFEAComputePerElementQuality(m, 'minAngle');
+    for (var i = 0; i < vals.length; i++) {
+      expect(vals[i]).toBeCloseTo(90, 1);
+    }
+  });
+
+  test('jacobianRatio metriği — küp için ≈ 1', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var vals = veFEAComputePerElementQuality(m, 'jacobianRatio');
+    for (var i = 0; i < vals.length; i++) {
+      expect(vals[i]).toBeCloseTo(1, 2);
+    }
+  });
+
+  test('null mesh → null', () => {
+    expect(veFEAComputePerElementQuality(null, 'aspect')).toBeNull();
+  });
+
+  test('Tet4 küp için tüm metrikler hesaplanır', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, elementType: 'tet4' });
+    var asp = veFEAComputePerElementQuality(m, 'aspect');
+    var sk = veFEAComputePerElementQuality(m, 'skewness');
+    expect(asp.length).toBe(48);
+    expect(sk.length).toBe(48);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAExtractSurfaceTriangles', () => {
+  test('Tek küp hex8 → 12 yüzey üçgeni (6 yüz × 2 tri)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 1, height: 1, depth: 1 } }, { size: 1 });
+    var surf = veFEAExtractSurfaceTriangles(m);
+    expect(surf.positions.length / 9).toBe(12);
+    expect(surf.elementIds.length).toBe(12);
+  });
+
+  test('2×1×1 hex (2 eleman, ortak iç yüz) → 10 yüz × 2 tri = 20', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 2, height: 1, depth: 1 } }, { size: 1 });
+    // 2 hex × 6 face = 12 face. Ortak 1 iç face × 2 = 2 (dahili). Boundary = 10
+    var surf = veFEAExtractSurfaceTriangles(m);
+    expect(surf.positions.length / 9).toBe(20); // 10 quad × 2 tri
+  });
+
+  test('Tri3 mesh için doğrudan elementler döner', () => {
+    var tri = {
+      type: 'tri3',
+      nodes: new Float32Array([0,0,0, 1,0,0, 0,1,0, 1,1,0]),
+      elements: new Uint32Array([0,1,2, 1,3,2]),
+      nodesPerElement: 3
+    };
+    var surf = veFEAExtractSurfaceTriangles(tri);
+    expect(surf.positions.length / 9).toBe(2);
+  });
+
+  test('null/boş için null', () => {
+    expect(veFEAExtractSurfaceTriangles(null)).toBeNull();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAJetColor', () => {
+  test('t=0 → mavi', () => {
+    var c = veFEAJetColor(0);
+    expect(c[0]).toBeCloseTo(0, 2); // R
+    expect(c[2]).toBeGreaterThan(0.5); // B
+  });
+
+  test('t=1 → kırmızı', () => {
+    var c = veFEAJetColor(1);
+    expect(c[0]).toBeGreaterThan(0.5); // R
+    expect(c[2]).toBeCloseTo(0, 2); // B
+  });
+
+  test('t=0.5 → yeşil/sarı civarı', () => {
+    var c = veFEAJetColor(0.5);
+    expect(c[1]).toBeGreaterThan(0.5); // G
+  });
+
+  test('out-of-range clamp', () => {
+    expect(veFEAJetColor(-1)[2]).toBeGreaterThan(0); // mavi
+    expect(veFEAJetColor(2)[0]).toBeGreaterThan(0); // kırmızı
+  });
+
+  test('NaN → t=0 (mavi)', () => {
+    var c = veFEAJetColor(NaN);
+    expect(c[2]).toBeGreaterThan(0); // B aktif → mavi tarafı
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAApplyHeatMap köprüsü', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.showToast = jest.fn();
+    global.showNodeProperties = jest.fn();
+    global.saveState = jest.fn();
+    Object.keys(veFEAMeshCache).forEach((k) => delete veFEAMeshCache[k]);
+    Object.keys(veFEAViewerRegistry).forEach((k) => delete veFEAViewerRegistry[k]);
+  });
+
+  test('metric set → heatMapMetric data\'ya yazılır', () => {
+    global.nodes = [{ id: 'mesh-h1', type: 'fea-mesh', data: {} }];
+    veFEAApplyHeatMap('mesh-h1', 'aspect');
+    expect(global.nodes[0].data.heatMapMetric).toBe('aspect');
+  });
+
+  test('"off" → heatMapMetric null', () => {
+    global.nodes = [{ id: 'mesh-h2', type: 'fea-mesh', data: { heatMapMetric: 'skewness' } }];
+    veFEAApplyHeatMap('mesh-h2', 'off');
+    expect(global.nodes[0].data.heatMapMetric).toBeNull();
+  });
+
+  test('Bilinmeyen node sessizce çıkar', () => {
+    expect(() => veFEAApplyHeatMap('nonexistent', 'aspect')).not.toThrow();
+  });
+
+  test('Mesh clear sonrası heatMapMetric temizlenir', () => {
+    global.nodes = [
+      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
+      { id: 'mesh-c', type: 'fea-mesh', data: { meshSettings: { size: 5 } } }
+    ];
+    global.connections = [{ from: 'geom-1', to: 'mesh-c' }];
+    veFEABuildMeshForNode('mesh-c');
+    veFEAApplyHeatMap('mesh-c', 'aspect');
+    expect(global.nodes[1].data.heatMapMetric).toBe('aspect');
+    veFEAClearMeshForNode('mesh-c');
+    expect(global.nodes[1].data.heatMapMetric).toBeUndefined();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Heat Map seçici', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Mesh varsa Heat Map dropdown render edilir (5 seçenek)', () => {
+    var node = {
+      id: 'mesh-hm1',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: { nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5 }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/Renk Haritası.*Heat Map/);
+    expect(html).toMatch(/value="off"/);
+    expect(html).toMatch(/value="aspect"/);
+    expect(html).toMatch(/value="skewness"/);
+    expect(html).toMatch(/value="minAngle"/);
+    expect(html).toMatch(/value="jacobianRatio"/);
+  });
+
+  test('Aktif heatMapMetric option\'ı seçili gelir', () => {
+    var node = {
+      id: 'mesh-hm2',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        heatMapMetric: 'skewness',
+        meshMetrics: { nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5 }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/value="skewness"\s+selected/);
+  });
+
+  test('Mesh yokken Heat Map kullanılamaz mesajı', () => {
+    var node = { id: 'mesh-hm3', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/Mesh oluşturulduktan sonra kullanılabilir/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeQualityMetrics', () => {
   test('Küp mesh için aspect ratio ≈ 1.0 (ideal küp)', () => {
     var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
