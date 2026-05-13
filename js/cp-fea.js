@@ -443,6 +443,20 @@ function getFEAMeshPropertiesHTML(node) {
     html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra öneriler gösterilir.</div>';
   }
 
+  // ─── Mesh Export (Abaqus / NASTRAN / VTK) ───────────────────────────────
+  html += veFEASectionTitle('Mesh Export');
+  if (hasMesh) {
+    html += '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">' +
+      'Mesh\'i standart FEA format\'ında dışa aktar. ANSYS, Abaqus, ParaView gibi araçlarda açılabilir.</div>';
+    html += '<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-bottom:8px;">';
+    html += '<button onclick="veFEAExportMeshForNode(\'' + node.id + '\', \'abaqus\')" style="padding:6px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="Abaqus .inp">📦 Abaqus<br><span style="font-size:0.5rem; color:var(--text-muted);">.inp</span></button>';
+    html += '<button onclick="veFEAExportMeshForNode(\'' + node.id + '\', \'nastran\')" style="padding:6px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="NASTRAN .nas">📦 NASTRAN<br><span style="font-size:0.5rem; color:var(--text-muted);">.nas</span></button>';
+    html += '<button onclick="veFEAExportMeshForNode(\'' + node.id + '\', \'vtk\')" style="padding:6px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="VTK ParaView">📦 VTK<br><span style="font-size:0.5rem; color:var(--text-muted);">.vtk</span></button>';
+    html += '</div>';
+  } else {
+    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra export edilebilir.</div>';
+  }
+
   // ─── Görünüm Modu (Wireframe / Solid / Heat Map) ───────────────────────
   html += veFEASectionTitle('Görünüm Modu');
   if (hasMesh) {
