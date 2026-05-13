@@ -555,8 +555,20 @@
 <script src="js/cp-solver.js"></script>
 <!-- Three.js (UMD, vendored from npm three@0.149.0) — FEA viewer için -->
 <script src="vendor/three.min.js"></script>
+
+<!--
+  OCCT (OpenCascade WebAssembly) — STEP/IGES import için lazy yüklenir.
+  Build sirasinda asagidaki placeholder'lar JS string ve WASM base64 olarak
+  window.__feaInline.occtScript / occtWasm icine inline edilir.
+  Dev modunda placeholder'lar yorum olarak kalir; fea-step.js dosyalari
+  dogrudan vendor/opencascade/'den indirir.
+-->
+<!-- INLINE_FILE: vendor/opencascade/occt-import-js.js as occtScript -->
+<!-- INLINE_FILE: vendor/opencascade/occt-import-js.wasm as occtWasm -->
+
 <script src="js/fea-primitives.js"></script>
 <script src="js/fea-stl.js"></script>
+<script src="js/fea-step.js"></script>
 <script src="js/fea-viewer.js"></script>
 <script src="js/cp-fea.js"></script>
 <script src="js/ft-performance.js"></script>

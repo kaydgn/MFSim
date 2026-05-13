@@ -9,7 +9,7 @@
     "test:unit": "jest --verbose",
     "test:e2e": "npx playwright test",
     "test:all": "jest --verbose && npx playwright test",
-    "vendor:sync": "node -e \"const fs=require('fs');fs.mkdirSync('vendor',{recursive:true});fs.copyFileSync('node_modules/three/build/three.min.js','vendor/three.min.js');console.log('vendor/three.min.js senkronize edildi')\"",
+    "vendor:sync": "node scripts/sync-vendor.js",
     "postinstall": "npm run vendor:sync"
   },
   "repository": {
@@ -26,6 +26,7 @@
     "jsdom": "^28.1.0"
   },
   "dependencies": {
+    "occt-import-js": "^0.0.23",
     "three": "^0.149.0"
   }
 }

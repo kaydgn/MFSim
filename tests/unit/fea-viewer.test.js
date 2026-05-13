@@ -88,9 +88,12 @@ describe('build.js vendor desteği', () => {
 describe('package.json vendor-sync', () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 
-  test("scripts['vendor:sync'] tanımlı", () => {
+  test("scripts['vendor:sync'] tanımlı (script dosyasına yönlendirir)", () => {
     expect(pkg.scripts['vendor:sync']).toBeDefined();
-    expect(pkg.scripts['vendor:sync']).toMatch(/three\.min\.js/);
+    expect(pkg.scripts['vendor:sync']).toMatch(/sync-vendor\.js/);
+    // scripts/sync-vendor.js içinde three.min.js geçmeli
+    const syncSrc = fs.readFileSync(path.join(ROOT, 'scripts/sync-vendor.js'), 'utf8');
+    expect(syncSrc).toMatch(/three\.min\.js/);
   });
 
   test('scripts.postinstall vendor:sync komutunu çalıştırır', () => {

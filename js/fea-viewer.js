@@ -295,6 +295,11 @@ function veFEAInitGeometryViewerForNode(nodeId) {
         var buf = veFEABase64ToArrayBuffer(g.rawDataB64);
         var parsed = veFEAParseSTL(buf);
         if(parsed) viewer.loadSTL(parsed);
+      } else if(g.type === 'step' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function' && typeof veFEAApplySTEP === 'function') {
+        // STEP yeniden parse: WASM zaten yüklüyse hemen, yoksa lazy
+        var stepBuf = veFEABase64ToArrayBuffer(g.rawDataB64);
+        // applySTEP toast'ları sıkıcı olur — auto-load için sessiz versiyon kullanmıyoruz şimdilik
+        veFEAApplySTEP(nodeId, stepBuf, g.sourceLabel || 'STEP');
       } else if(g.type === 'box' || g.type === 'cylinder' || g.type === 'shaft') {
         viewer.loadPrimitive(g.type, g.params);
       }
