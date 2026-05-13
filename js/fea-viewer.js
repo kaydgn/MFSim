@@ -868,15 +868,110 @@ function veFEAClearGeometryForNode(nodeId) {
   }
 }
 
+// ─── Kontrol paneli HTML şablonu (accordion yapı) ───────────────────────────
+function _veFEAControlsPanelHTML() {
+  var btnStyle = 'background:#2a2a2a; color:#ddd; border:1px solid #444; padding:5px 8px; font-size:0.66rem; cursor:pointer;';
+  var headerStyle = 'width:100%; padding:8px 12px; background:#252525; color:#fff; border:none; text-align:left; cursor:pointer; font-size:0.72rem; font-weight:600; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #333;';
+  var bodyStyle = 'padding:10px 12px; background:#1f1f1f; border-bottom:1px solid #333;';
+
+  function section(id, title, content) {
+    return '<div data-acc-id="' + id + '">' +
+      '<button data-acc-header="' + id + '" style="' + headerStyle + '">' +
+        '<span>' + title + '</span>' +
+        '<span data-acc-arrow style="font-size:0.65rem;">▼</span>' +
+      '</button>' +
+      '<div data-acc-body="' + id + '" style="' + bodyStyle + '">' + content + '</div>' +
+    '</div>';
+  }
+
+  // Panel header
+  var html = '<div style="padding:8px 12px; background:#2a2a2a; border-bottom:1px solid #444; font-weight:600; font-size:0.75rem;">⚙ Görüntüleyici Araçları</div>';
+
+  // ─── Görünüm ───
+  html += section('view', '🎯 Görünüm',
+    '<div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:4px; margin-bottom:6px;">' +
+      '<button data-view="iso"    style="' + btnStyle + '">ISO</button>' +
+      '<button data-view="top"    style="' + btnStyle + '">Üst</button>' +
+      '<button data-view="bottom" style="' + btnStyle + '">Alt</button>' +
+      '<button data-view="front"  style="' + btnStyle + '">Ön</button>' +
+      '<button data-view="back"   style="' + btnStyle + '">Arka</button>' +
+      '<button data-view="right"  style="' + btnStyle + '">Sağ</button>' +
+      '<button data-view="left"   style="' + btnStyle + '">Sol</button>' +
+    '</div>' +
+    '<div style="display:flex; gap:4px;">' +
+      '<button data-action="fit"  style="' + btnStyle + '; flex:1;">⛶ Sığdır</button>' +
+      '<button data-action="proj" data-projection="perspective" style="' + btnStyle + '; flex:1;">Perspektif</button>' +
+    '</div>'
+  );
+
+  // ─── Görüntü ───
+  html += section('display', '🎨 Görüntü',
+    '<button data-action="mode" data-mode="shaded" style="' + btnStyle + '; width:100%; margin-bottom:8px;">Mod: Shaded</button>' +
+    '<div style="margin-bottom:8px;">' +
+      '<div style="font-size:0.6rem; color:#bbb; margin-bottom:3px;">Opaklık</div>' +
+      '<input data-action="opacity" type="range" min="10" max="100" value="100" style="width:100%; vertical-align:middle;">' +
+    '</div>' +
+    '<div>' +
+      '<div style="font-size:0.6rem; color:#bbb; margin-bottom:3px;">Arka plan</div>' +
+      '<select data-action="bg" style="' + btnStyle + '; width:100%;">' +
+        '<option value="dark"  selected>Koyu</option>' +
+        '<option value="light">Açık</option>' +
+        '<option value="white">Beyaz</option>' +
+        '<option value="blue">Mavi</option>' +
+      '</select>' +
+    '</div>'
+  );
+
+  // ─── Etkileşim ───
+  var clipRows = ['x','y','z'].map(function(ax) {
+    return '<div data-axis="' + ax + '" style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
+      '<label style="display:flex; align-items:center; gap:3px; min-width:34px;">' +
+        '<input type="checkbox" data-role="enable">' +
+        '<span style="font-weight:600;">' + ax.toUpperCase() + '</span>' +
+      '</label>' +
+      '<input type="range" data-role="offset" style="flex:1; min-width:0;">' +
+      '<span data-role="value" style="min-width:42px; text-align:right; font-family:monospace; font-size:0.6rem;">—</span>' +
+    '</div>';
+  }).join('');
+
+  html += section('interaction', '📐 Etkileşim',
+    // Ölçüm
+    '<div style="margin-bottom:10px;">' +
+      '<button data-action="measure" data-active="false" style="' + btnStyle + '; width:100%; margin-bottom:6px;">📏 Mesafe Ölç</button>' +
+      '<div data-role="measure-status" style="display:none; padding:6px 8px; background:#2a2a2a; border:1px solid #444;">' +
+        '<div data-role="status" style="color:#fbbf24; margin-bottom:4px; font-size:0.66rem;">📏 İlk noktayı tıklayın</div>' +
+        '<div style="display:flex; gap:4px;">' +
+          '<button data-role="reset" style="' + btnStyle + '; flex:1; font-size:0.6rem; padding:4px;">Sıfırla</button>' +
+          '<button data-role="close" style="background:#ef4444; color:#fff; border:none; padding:4px; font-size:0.6rem; cursor:pointer; flex:1;">Çık</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    // Kesit
+    '<div>' +
+      '<button data-action="clip" data-active="false" style="' + btnStyle + '; width:100%; margin-bottom:6px;">✂ Kesit Düzlemi</button>' +
+      '<div data-role="clip-controls" style="display:none; padding:6px 8px; background:#2a2a2a; border:1px solid #444;">' + clipRows + '</div>' +
+    '</div>'
+  );
+
+  return html;
+}
+
 // ─── Fullscreen UI helper'ları (ölçüm + kesit) ──────────────────────────────
 function _veFEAStartMeasurementUI(viewer, btn, panel, canvas) {
-  if (!viewer.startMeasurement) return;
-  panel.style.display = 'flex';
+  if (!viewer || !viewer.startMeasurement) {
+    // viewer yoksa bile UI state güncellensin (tutarlı UX)
+    if (panel) panel.style.display = 'block';
+    if (btn) { btn.setAttribute('data-active', 'true'); btn.style.background = '#3b82f6'; }
+    if (canvas) canvas.style.cursor = 'crosshair';
+    return;
+  }
+  panel.style.display = 'block';
   btn.setAttribute('data-active', 'true');
   btn.style.background = '#3b82f6';
   canvas.style.cursor = 'crosshair';
-  var statusEl = panel.querySelector('span[data-role="status"]');
+  var statusEl = panel.querySelector('div[data-role="status"]') || panel.querySelector('span[data-role="status"]');
   viewer.startMeasurement(function(ev) {
+    if (!statusEl) return;
     if (ev.phase === 'start' || ev.phase === 'reset') {
       statusEl.style.color = '#fbbf24';
       statusEl.textContent = '📏 İlk noktayı tıklayın';
@@ -938,50 +1033,11 @@ function veFEAOpenFullscreenViewer(nodeId) {
     'flex-direction:column'
   ].join(';') + ';';
 
-  // Üst toolbar — sol başlık, orta CAD kontrolleri, sağ kapat butonu
+  // Üst toolbar — sade: sol başlık + sağ kapat
   var toolbar = document.createElement('div');
-  toolbar.style.cssText = 'flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:#1f1f1f; border-bottom:1px solid #444; color:#fff; gap:14px;';
-
-  // Sol: başlık
-  var btnStyle = 'background:#2a2a2a; color:#ddd; border:1px solid #444; padding:5px 10px; font-size:0.66rem; cursor:pointer; min-width:42px;';
-  var sepStyle = 'display:inline-block; width:1px; height:18px; background:#444; margin:0 4px;';
-
+  toolbar.style.cssText = 'flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:#1f1f1f; border-bottom:1px solid #444; color:#fff;';
   toolbar.innerHTML =
-    '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' +
-      '<span style="font-size:0.78rem; font-weight:600; white-space:nowrap;">Yapısal Analiz</span>' +
-    '</div>' +
-    // Orta: CAD kontrolleri
-    '<div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">' +
-      // Standart görünümler
-      '<button data-view="iso"    style="' + btnStyle + '" title="İzometrik">ISO</button>' +
-      '<button data-view="top"    style="' + btnStyle + '" title="Üst">Üst</button>' +
-      '<button data-view="bottom" style="' + btnStyle + '" title="Alt">Alt</button>' +
-      '<button data-view="front"  style="' + btnStyle + '" title="Ön">Ön</button>' +
-      '<button data-view="back"   style="' + btnStyle + '" title="Arka">Arka</button>' +
-      '<button data-view="right"  style="' + btnStyle + '" title="Sağ">Sağ</button>' +
-      '<button data-view="left"   style="' + btnStyle + '" title="Sol">Sol</button>' +
-      '<span style="' + sepStyle + '"></span>' +
-      '<button data-action="fit" style="' + btnStyle + '" title="Sığdır">⛶ Sığdır</button>' +
-      '<button data-action="proj" data-projection="perspective" style="' + btnStyle + '" title="Perspektif / Ortografik">Perspektif</button>' +
-      '<span style="' + sepStyle + '"></span>' +
-      // Grup B: display mode + opacity + bg
-      '<button data-action="mode" data-mode="shaded" style="' + btnStyle + '" title="Görüntü modu (tıklayarak değiştir)">Mod: Shaded</button>' +
-      '<label style="display:flex; align-items:center; gap:4px; font-size:0.6rem; color:#bbb;" title="Opaklık">' +
-        'Opk' +
-        '<input data-action="opacity" type="range" min="10" max="100" value="100" style="width:70px; vertical-align:middle;">' +
-      '</label>' +
-      '<select data-action="bg" style="' + btnStyle + '; min-width:auto; padding:5px 6px;" title="Arka plan">' +
-        '<option value="dark"  selected>BG: Koyu</option>' +
-        '<option value="light">BG: Açık</option>' +
-        '<option value="white">BG: Beyaz</option>' +
-        '<option value="blue">BG: Mavi</option>' +
-      '</select>' +
-      '<span style="' + sepStyle + '"></span>' +
-      // Grup C: ölçüm + kesit toggle'lar
-      '<button data-action="measure" data-active="false" style="' + btnStyle + '" title="Mesafe ölç">📏 Ölç</button>' +
-      '<button data-action="clip" data-active="false" style="' + btnStyle + '" title="Kesit görünümü">✂ Kesit</button>' +
-    '</div>' +
-    // Sağ: kapat
+    '<span style="font-size:0.82rem; font-weight:600;">Yapısal Analiz — 3D Görüntüleyici</span>' +
     '<button id="ve-fea-fullscreen-close" style="background:#ef4444; color:#fff; border:none; padding:6px 14px; font-size:0.7rem; cursor:pointer; white-space:nowrap;">✕ Kapat (Esc)</button>';
 
   // Canvas konteyneri — kalan tüm yüksekliği alır
@@ -992,33 +1048,29 @@ function veFEAOpenFullscreenViewer(nodeId) {
   canvas.style.cssText = 'display:block; width:100%; height:100%;';
   canvasWrap.appendChild(canvas);
 
-  // Ölçüm sonuç paneli — sağ alt köşede absolute
-  var measurePanel = document.createElement('div');
-  measurePanel.id = 've-fea-measure-panel';
-  measurePanel.style.cssText = 'display:none; position:absolute; bottom:14px; left:50%; transform:translateX(-50%); background:#1f1f1f; border:1px solid #555; color:#fff; padding:8px 14px; font-size:0.75rem; gap:12px; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.4);';
-  measurePanel.innerHTML =
-    '<span data-role="status" style="color:#fbbf24;">📏 İlk noktayı tıklayın</span>' +
-    '<button data-role="reset" style="background:#2a2a2a; color:#ddd; border:1px solid #444; padding:4px 10px; font-size:0.66rem; cursor:pointer;">Sıfırla</button>' +
-    '<button data-role="close" style="background:#ef4444; color:#fff; border:none; padding:4px 10px; font-size:0.66rem; cursor:pointer;">Çık</button>';
-  canvasWrap.appendChild(measurePanel);
+  // ─── Sağ üst kontrol paneli — accordion yapı ──────────────────────────
+  var controlsWrap = document.createElement('div');
+  controlsWrap.id = 've-fea-controls-wrap';
+  controlsWrap.style.cssText = 'position:absolute; top:14px; right:14px; display:flex; flex-direction:column; align-items:flex-end; gap:8px; max-height:calc(100% - 28px); pointer-events:none; z-index:5;';
 
-  // Kesit slider paneli — sağ kenarda absolute
-  var clipPanel = document.createElement('div');
-  clipPanel.id = 've-fea-clip-panel';
-  clipPanel.style.cssText = 'display:none; position:absolute; top:12px; right:12px; background:#1f1f1f; border:1px solid #555; color:#fff; padding:10px 12px; font-size:0.7rem; min-width:240px; box-shadow:0 4px 12px rgba(0,0,0,0.4);';
-  clipPanel.innerHTML =
-    '<div style="font-weight:600; margin-bottom:8px; color:#fbbf24;">✂ Kesit Düzlemleri</div>' +
-    ['x','y','z'].map(function(ax) {
-      return '<div data-axis="' + ax + '" style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
-        '<label style="display:flex; align-items:center; gap:4px; min-width:50px;">' +
-          '<input type="checkbox" data-role="enable">' +
-          '<span style="font-weight:600;">' + ax.toUpperCase() + '</span>' +
-        '</label>' +
-        '<input type="range" data-role="offset" style="flex:1;">' +
-        '<span data-role="value" style="min-width:50px; text-align:right; font-family:monospace; font-size:0.65rem;">—</span>' +
-      '</div>';
-    }).join('');
-  canvasWrap.appendChild(clipPanel);
+  var toggleBtn = document.createElement('button');
+  toggleBtn.id = 've-fea-controls-toggle';
+  toggleBtn.style.cssText = 'pointer-events:auto; background:#1f1f1fee; color:#fff; border:1px solid #555; width:38px; height:38px; cursor:pointer; font-size:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.4);';
+  toggleBtn.innerHTML = '⚙';
+  toggleBtn.title = 'Görüntüleyici araçları';
+
+  var panel = document.createElement('div');
+  panel.id = 've-fea-controls-panel';
+  panel.style.cssText = 'pointer-events:auto; display:none; width:280px; max-height:100%; overflow-y:auto; background:#1f1f1f; border:1px solid #555; color:#fff; font-size:0.7rem; box-shadow:0 4px 16px rgba(0,0,0,0.5);';
+  panel.innerHTML = _veFEAControlsPanelHTML();
+
+  controlsWrap.appendChild(toggleBtn);
+  controlsWrap.appendChild(panel);
+  canvasWrap.appendChild(controlsWrap);
+
+  // Geriye uyumluluk: ölçüm ve kesit referansları artık accordion içindeki div'ler
+  var measurePanel = panel.querySelector('[data-role="measure-status"]');
+  var clipPanel    = panel.querySelector('[data-role="clip-controls"]');
 
   overlay.appendChild(toolbar);
   overlay.appendChild(canvasWrap);
@@ -1057,30 +1109,50 @@ function veFEAOpenFullscreenViewer(nodeId) {
 
   document.getElementById('ve-fea-fullscreen-close').addEventListener('click', veFEACloseFullscreenViewer);
 
-  // CAD toolbar butonları
-  toolbar.querySelectorAll('button[data-view]').forEach(function(btn) {
+  // Kontrol paneli toggle
+  toggleBtn.addEventListener('click', function() {
+    var open = panel.style.display !== 'none';
+    panel.style.display = open ? 'none' : 'block';
+    toggleBtn.innerHTML = open ? '⚙' : '✕';
+    toggleBtn.title = open ? 'Görüntüleyici araçları' : 'Paneli kapat';
+  });
+
+  // Accordion header'lar — bir başlığa tıklayınca o bölümün gövdesi açılır/kapanır
+  panel.querySelectorAll('button[data-acc-header]').forEach(function(headerBtn) {
+    headerBtn.addEventListener('click', function() {
+      var id = this.getAttribute('data-acc-header');
+      var body = panel.querySelector('div[data-acc-body="' + id + '"]');
+      var arrow = this.querySelector('[data-acc-arrow]');
+      if (!body) return;
+      var isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      if (arrow) arrow.textContent = isOpen ? '▶' : '▼';
+    });
+  });
+
+  // ─── Görünüm kategorisi: standart görünümler + sığdır + projeksiyon ─
+  panel.querySelectorAll('button[data-view]').forEach(function(btn) {
     btn.addEventListener('click', function() {
-      if(viewer && typeof viewer.setStandardView === 'function') {
+      if (viewer && typeof viewer.setStandardView === 'function') {
         viewer.setStandardView(this.getAttribute('data-view'));
       }
     });
   });
-  var fitBtn = toolbar.querySelector('button[data-action="fit"]');
-  if(fitBtn) fitBtn.addEventListener('click', function() {
-    if(viewer && typeof viewer.fitToGeometry === 'function') viewer.fitToGeometry();
+  var fitBtn = panel.querySelector('button[data-action="fit"]');
+  if (fitBtn) fitBtn.addEventListener('click', function() {
+    if (viewer && typeof viewer.fitToGeometry === 'function') viewer.fitToGeometry();
   });
-  var projBtn = toolbar.querySelector('button[data-action="proj"]');
-  if(projBtn) projBtn.addEventListener('click', function() {
-    if(!viewer || typeof viewer.setProjection !== 'function') return;
+  var projBtn = panel.querySelector('button[data-action="proj"]');
+  if (projBtn) projBtn.addEventListener('click', function() {
     var current = this.getAttribute('data-projection');
     var next = (current === 'perspective') ? 'orthographic' : 'perspective';
-    viewer.setProjection(next);
     this.setAttribute('data-projection', next);
     this.textContent = (next === 'perspective') ? 'Perspektif' : 'Ortografik';
+    if (viewer && typeof viewer.setProjection === 'function') viewer.setProjection(next);
   });
 
-  // Display mode toggle (Shaded → Shaded+Edges → Wireframe → Shaded)
-  var modeBtn = toolbar.querySelector('button[data-action="mode"]');
+  // ─── Görüntü kategorisi: mod + opaklık + arka plan ──────────────────
+  var modeBtn = panel.querySelector('button[data-action="mode"]');
   if (modeBtn) modeBtn.addEventListener('click', function() {
     var cur = this.getAttribute('data-mode');
     var next = (cur === 'shaded') ? 'shaded-edges'
@@ -1093,35 +1165,27 @@ function veFEAOpenFullscreenViewer(nodeId) {
     this.textContent = 'Mod: ' + label;
     if (viewer && typeof viewer.setDisplayMode === 'function') viewer.setDisplayMode(next);
   });
-
-  // Opaklık slider
-  var opacityInput = toolbar.querySelector('input[data-action="opacity"]');
+  var opacityInput = panel.querySelector('input[data-action="opacity"]');
   if (opacityInput) opacityInput.addEventListener('input', function() {
     if (!viewer || typeof viewer.setOpacity !== 'function') return;
     viewer.setOpacity(parseInt(this.value, 10) / 100);
   });
-
-  // Arka plan preset
-  var bgSelect = toolbar.querySelector('select[data-action="bg"]');
+  var bgSelect = panel.querySelector('select[data-action="bg"]');
   if (bgSelect) bgSelect.addEventListener('change', function() {
     if (!viewer || typeof viewer.setBackground !== 'function') return;
     viewer.setBackground(this.value);
   });
 
-  // Ölçüm toggle
-  var measureBtn = toolbar.querySelector('button[data-action="measure"]');
+  // ─── Etkileşim kategorisi: ölçüm + kesit ─────────────────────────────
+  var measureBtn = panel.querySelector('button[data-action="measure"]');
   if (measureBtn) measureBtn.addEventListener('click', function() {
     if (!viewer) return;
     var active = this.getAttribute('data-active') === 'true';
-    if (active) {
-      _veFEAStopMeasurementUI(viewer, measureBtn, measurePanel, canvas);
-    } else {
-      _veFEAStartMeasurementUI(viewer, measureBtn, measurePanel, canvas);
-    }
+    if (active) _veFEAStopMeasurementUI(viewer, measureBtn, measurePanel, canvas);
+    else        _veFEAStartMeasurementUI(viewer, measureBtn, measurePanel, canvas);
   });
 
-  // Kesit toggle
-  var clipBtn = toolbar.querySelector('button[data-action="clip"]');
+  var clipBtn = panel.querySelector('button[data-action="clip"]');
   if (clipBtn) clipBtn.addEventListener('click', function() {
     if (!viewer) return;
     var active = this.getAttribute('data-active') === 'true';
