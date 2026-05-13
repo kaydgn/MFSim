@@ -267,12 +267,9 @@ function showNodeProperties(node) {
     }, 100);
   }
 
-  // FEA Mesh: mesh viewer'ını başlat (cache'te mesh varsa otomatik yedir)
-  if(node.type === 'fea-mesh') {
-    setTimeout(function() {
-      if(typeof veFEAInitMeshViewerForNode === 'function') {
-        veFEAInitMeshViewerForNode(node.id);
-      }
-    }, 100);
-  }
+  // FEA Mesh: side panel'de viewer YOK — Mesh Editör modal'i kendi viewer'ini
+  // yonetir. Bu block'tan viewer init kaldirildi cunku showNodeProperties
+  // her tetiklendiginde (build sonrasi, vb.) modal canvas'a ikinci kez
+  // WebGLRenderer kurulup eski gl context ile catismaya neden oluyordu.
+  // ("Cannot read properties of null (reading 'precision')" crash'i)
 }

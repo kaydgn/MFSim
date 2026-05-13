@@ -1076,6 +1076,13 @@ function veFEAInitMeshViewerForNode(nodeId) {
         viewer.highlightNamedSelection(node.data.highlightedSelection);
       }
     }
+  } else if (typeof veFEAFindUpstreamGeometryNode === 'function') {
+    // Mesh henüz hesaplanmamış → upstream Geometri node'unu bul ve viewer'a
+    // yedir (kullanıcı mesh oluşturmadan önce de geometriyi 3D olarak görsün)
+    var geomNode = veFEAFindUpstreamGeometryNode(nodeId);
+    if (geomNode && typeof _veFEALoadNodeGeometryIntoViewer === 'function') {
+      _veFEALoadNodeGeometryIntoViewer(viewer, geomNode.id);
+    }
   }
 }
 
