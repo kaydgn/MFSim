@@ -292,7 +292,10 @@ describe('cp-fea.js Mesh Modu dropdown', () => {
     global.nodes = [node];
     var html = getFEAMeshPropertiesHTML(node);
     expect(html).toMatch(/value="surface"\s+selected/);
-    expect(html).not.toMatch(/value="auto"\s+selected/);
+    // Mode dropdown'un içindeki "auto" seçili olmamalı (elementType dropdown auto seçili olabilir).
+    var modeSelect = html.match(/<select id="ve-fea-mesh-mode-[\s\S]*?<\/select>/);
+    expect(modeSelect).not.toBeNull();
+    expect(modeSelect[0]).not.toMatch(/value="auto"\s+selected/);
   });
 });
 
