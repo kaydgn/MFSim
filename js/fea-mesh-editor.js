@@ -37,6 +37,47 @@ function _veFEAEditorDefaultAccordionState() {
   };
 }
 
+// ─── Accordion'ları + toolbar'ı yenile (mesh state değişimleri için) ───────
+// Modal acikken mesh olusturulduğunda, silindiğinde veya named selection /
+// heat map toggle edildiğinde accordion içerikleri "Mesh olusturulduktan
+// sonra..." placeholder'ında takılı kalmasin diye tüm accordion body'lerini
+// yeniden inşa eder. Accordion expand/collapse state korunur (DOM body
+// elementi aynı, sadece içeriği değişir).
+function veFEAEditorRefreshAccordions() {
+  if (!_veFEAEditorActive || typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === _veFEAEditorActive; });
+  if (!node) return;
+
+  var updates = {
+    'defaults':    _veFEAEditorDefaultsHTML(node),
+    'sizing':      _veFEAEditorSizingHTML(node),
+    'inflation':   _veFEAEditorInflationHTML(node),
+    'quality':     _veFEAEditorQualityHTML(node),
+    'namedSel':    _veFEAEditorNamedSelHTML(node),
+    'display':     _veFEAEditorDisplayHTML(node),
+    'statistics':  _veFEAEditorStatisticsHTML(node),
+    'suggestions': _veFEAEditorSuggestionsHTML(node)
+  };
+  Object.keys(updates).forEach(function(k) {
+    var body = document.getElementById('ve-fea-acc-body-' + k);
+    if (body) body.innerHTML = updates[k];
+  });
+
+  // Toolbar — Mesh'i Sil + Export butonları mesh varlığına göre değişir
+  var oldToolbar = document.getElementById('ve-fea-mesh-editor-toolbar');
+  if (oldToolbar && oldToolbar.parentNode) {
+    var newToolbar = _veFEAEditorBuildToolbar(node);
+    oldToolbar.parentNode.replaceChild(newToolbar, oldToolbar);
+  }
+
+  // Footer — durum (düğüm/eleman/ms) güncellenir
+  var oldFooter = document.getElementById('ve-fea-mesh-editor-footer');
+  if (oldFooter && oldFooter.parentNode) {
+    var newFooter = _veFEAEditorBuildFooter(node);
+    oldFooter.parentNode.replaceChild(newFooter, oldFooter);
+  }
+}
+
 // ─── Modal aç ──────────────────────────────────────────────────────────────
 function veFEAOpenMeshEditor(nodeId) {
   if (_veFEAEditorActive) veFEACloseMeshEditor();
@@ -237,6 +278,7 @@ function _veFEAEditorBuildToolbar(node) {
   }
 
   var toolbar = document.createElement('div');
+  toolbar.id = 've-fea-mesh-editor-toolbar';
   toolbar.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;';
 
   // Mesh Oluştur (primary)
@@ -283,6 +325,7 @@ function _veFEAEditorBuildFooter(node) {
   var metrics = d.meshMetrics;
   var hasMesh = !!(d.meshActive && metrics);
   var footer = document.createElement('div');
+  footer.id = 've-fea-mesh-editor-footer';
   footer.style.cssText = 'display:flex; align-items:center; gap:12px; padding:6px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:0.6rem; color:var(--text-muted);';
   if (hasMesh) {
     var jacStatus = (metrics.jacobian && metrics.jacobian.valid) ? '<span style="color:var(--accent-success, #22c55e);">✓ Geçerli</span>' : (metrics.jacobian ? '<span style="color:var(--accent-danger, #ef4444);">✗ Hatalı</span>' : '');

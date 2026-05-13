@@ -1091,6 +1091,15 @@ function veFEAFitPreviewForNode(nodeId) {
 // In-memory mesh cache (büyük data persist edilmez; her session'da yeniden hesaplanır)
 var veFEAMeshCache = {};
 
+// Side panel + Mesh Editor modal'ini birlikte yeniler. State degisikliklerinde
+// (mesh build/clear, heat map toggle, named selection, refinement uygula)
+// her ikisinin de senkronize gostermesi icin tum eski showNodeProperties()
+// cagrilari bu helper'a yonlendirildi.
+function _veFEARefreshMeshUI(meshNode) {
+  if (typeof showNodeProperties === 'function' && meshNode) showNodeProperties(meshNode);
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
 // Mesh node panel açıldığında çağrılır — fea-geometry'den input alıp viewer kurar
 function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
   var canvasId = 've-fea-mesh-canvas-' + nodeId;
@@ -1264,7 +1273,7 @@ function veFEABuildMeshForNode(meshNodeId) {
           metrics.jacobian.ratioWarnThreshold + ')', 'info');
       }
     }
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
   };
 
   if (settings.useWorker && typeof veFEAMeshFromGeometryViaWorker === 'function') {
@@ -1301,7 +1310,7 @@ function veFEAClearMeshForNode(meshNodeId) {
   }
   var viewer = veFEAViewerRegistry[meshNodeId];
   if (viewer) viewer.clearGeometry();
-  if (typeof showNodeProperties === 'function' && meshNode) showNodeProperties(meshNode);
+  _veFEARefreshMeshUI(meshNode);
 }
 
 // Refinement önerisini uygula — UI butonundan çağrılır.
@@ -1357,20 +1366,20 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
   if (!mode || mode === 'off' || mode === 'none') {
     meshNode.data.heatMapMetric = null;
     if (viewer && meshData) viewer.loadMesh(meshData);
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
     return;
   }
 
   meshNode.data.heatMapMetric = mode;
   if (!viewer || !meshData) {
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
     return;
   }
 
   // Solid modları (heat map'siz)
   if (mode === 'solid' || mode === 'solid-edges') {
     viewer.loadMeshSolid(meshData, mode === 'solid-edges');
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
     return;
   }
 
@@ -1391,7 +1400,7 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
     if (typeof viewer.loadMeshThresholdMap === 'function') {
       viewer.loadMeshThresholdMap(meshData, thrVals, { warnLimit: thrWarn, errLimit: thrErr, inverted: thrInverted });
     }
-    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+    _veFEARefreshMeshUI(meshNode);
     return;
   }
 
@@ -1418,7 +1427,7 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
   }
 
   viewer.loadMeshHeatMap(meshData, values, vMin, vMax);
-  if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+  _veFEARefreshMeshUI(meshNode);
 }
 
 // Named selection vurgulama köprüsü — cp-fea.js UI butonundan çağrılır.
@@ -1434,7 +1443,7 @@ function veFEAToggleNamedSelection(meshNodeId, key) {
   if (viewer && typeof viewer.highlightNamedSelection === 'function') {
     viewer.highlightNamedSelection(nextKey);
   }
-  if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+  _veFEARefreshMeshUI(meshNode);
 }
 
 function veFEAClearGeometryForNode(nodeId) {
