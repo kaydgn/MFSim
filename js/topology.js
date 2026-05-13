@@ -498,7 +498,11 @@ function veShowTabMenu(e, idx) {
     veAddTab('Topoloji 1', true);
   }
   
-  if(document.readyState === 'loading') {
+  // DOM hazir degilse (sayfa parse asamasi) klasik DOMContentLoaded yeterli.
+  // Hazirsa ve MFSim Loader aktifse: interceptor kuyruga alir, tum moduller
+  // yuklendikten sonra calisir. Loader yoksa (eski cache senaryosu) setTimeout
+  // fallback'i kullan.
+  if(document.readyState === 'loading' || window.MFSimLoader) {
     document.addEventListener('DOMContentLoaded', initTabs);
   } else {
     setTimeout(initTabs, 100);

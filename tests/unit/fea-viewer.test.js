@@ -51,12 +51,14 @@ describe('index.html script sırası', () => {
   const indexPath = path.join(ROOT, 'index.html');
   const html = fs.readFileSync(indexPath, 'utf8');
 
+  // NOT: Modüller MFSim Loader tarafindan login sonrasi yuklenir; tag'lerde
+  // `type="text/x-mfsim-defer"` ve `data-mfsim-label` ek attribute'lari var.
   test('vendor/three.min.js script tag bulunur', () => {
-    expect(html).toMatch(/<script\s+src="vendor\/three\.min\.js"><\/script>/);
+    expect(html).toMatch(/<script\b[^>]*\bsrc="vendor\/three\.min\.js"[^>]*><\/script>/);
   });
 
   test('js/fea-viewer.js script tag bulunur', () => {
-    expect(html).toMatch(/<script\s+src="js\/fea-viewer\.js"><\/script>/);
+    expect(html).toMatch(/<script\b[^>]*\bsrc="js\/fea-viewer\.js"[^>]*><\/script>/);
   });
 
   test("sıra: three.min.js → fea-viewer.js → cp-fea.js (üçü de bu yönde)", () => {
