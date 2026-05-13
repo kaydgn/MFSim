@@ -669,13 +669,14 @@ function _veFEAEditorDisplayHTML(node) {
   if (!hasMesh) {
     return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra kullanılabilir.</div>';
   }
-  // ANSYS-style default: Body Color = Solid + Edges
-  var displayMode = d.heatMapMetric || 'solid-edges';
-  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">Mesh\'in 3D viewer\'da nasıl gösterileceğini seçin. ANSYS-style: <b>Body Color</b> (solid+edges) varsayılan.</div>';
+  // ANSYS-style default: Body Color = Geometri + Mesh Çizgileri
+  var displayMode = d.heatMapMetric || 'geom-mesh';
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">Mesh\'in 3D viewer\'da nasıl gösterileceğini seçin. ANSYS-style: <b>Body Color</b> (geometri + siyah mesh çizgileri) varsayılan.</div>';
   html += '<select onchange="veFEAApplyHeatMap(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
   html += '<optgroup label="Standart">';
-  html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Body Color (Solid + Edges)</option>';
-  html += '<option value="solid"' + (displayMode === 'solid' ? ' selected' : '') + '>Solid (yüzey)</option>';
+  html += '<option value="geom-mesh"' + (displayMode === 'geom-mesh' ? ' selected' : '') + '>Body Color (Geometri + Mesh Çizgileri)</option>';
+  html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Solid + Edges (Mesh yüzeyi)</option>';
+  html += '<option value="solid"' + (displayMode === 'solid' ? ' selected' : '') + '>Solid (Mesh yüzeyi)</option>';
   html += '<option value="off"' + (displayMode === 'off' ? ' selected' : '') + '>Wireframe (sadece kenarlar)</option>';
   html += '</optgroup>';
   html += '<optgroup label="Kalite Eşiği (Mesh Quality Worksheet)">';

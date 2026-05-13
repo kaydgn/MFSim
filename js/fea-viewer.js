@@ -272,6 +272,49 @@ function veFEAInitViewer(canvas, opts) {
       this.zoomToFit(solid);
       return solid;
     },
+    // ANSYS Body Color modu: orijinal geometri (primitif / STL / STEP) korunur,
+    // uzerine mesh element edges siyah cizgi olarak eklenir. ANSYS Mechanical'da
+    // mesh atildiktan sonra default goruntu: geometri yuzeyi + siyah mesh agi.
+    loadMeshOverGeometry: function(meshData, geomNodeId) {
+      if (!meshData) return null;
+      // 1. Geometriyi yedir (mevcut helper kendi clearGeometry yapar)
+      if (geomNodeId && typeof _veFEALoadNodeGeometryIntoViewer === 'function') {
+        _veFEALoadNodeGeometryIntoViewer(this, geomNodeId);
+      } else {
+        // Upstream geometri yok → mesh-derived solid yuzey yedir (fallback)
+        this.clearGeometry();
+        if (typeof veFEAExtractSurfaceTriangles === 'function') {
+          var surf = veFEAExtractSurfaceTriangles(meshData);
+          if (surf && surf.positions.length > 0) {
+            var sGeo = new THREE.BufferGeometry();
+            sGeo.setAttribute('position', new THREE.BufferAttribute(surf.positions, 3));
+            sGeo.computeVertexNormals();
+            var sMat = new THREE.MeshStandardMaterial({
+              color: 0x3b82f6, metalness: 0.15, roughness: 0.6, side: THREE.DoubleSide
+            });
+            this._geometryRoot.add(new THREE.Mesh(sGeo, sMat));
+          }
+        }
+      }
+      // 2. Mesh element edges (siyah, belirgin) — geometrinin uzerine overlay
+      if (typeof veFEAMeshExtractEdges === 'function') {
+        var edgeVerts = veFEAMeshExtractEdges(meshData);
+        if (edgeVerts && edgeVerts.length > 0 && edgeVerts.length / 3 < 200000) {
+          var eGeo = new THREE.BufferGeometry();
+          eGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
+          var eLine = new THREE.LineSegments(
+            eGeo,
+            new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.92 })
+          );
+          eLine.userData.feaMeshEdges = true;
+          this._geometryRoot.add(eLine);
+        }
+      }
+      this._meshData = meshData;
+      this._highlightedSelectionKey = null;
+      // zoomToFit gerekirse — geometri zaten yedirilirken yapildi
+      return null;
+    },
     // ANSYS-style threshold renkli mesh — perElement değerlere göre yeşil/sarı/kırmızı.
     // thresholds = { warnLimit, errLimit, inverted }
     loadMeshThresholdMap: function(meshData, perValues, thresholds) {
@@ -1138,10 +1181,10 @@ function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
   // Cache'te mesh varsa otomatik yedir
   if (veFEAMeshCache[nodeId]) {
     var node = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === nodeId; }) : null;
-    // Display modu (ANSYS-style default: 'solid-edges' = Body Color)
-    var displayMode = (node && node.data && node.data.heatMapMetric) || 'solid-edges';
+    // Display modu (ANSYS-style default: 'geom-mesh' = Geometri + siyah mesh edges)
+    var displayMode = (node && node.data && node.data.heatMapMetric) || 'geom-mesh';
     if (displayMode === 'off') {
-      // Eski Wireframe modu (LineSegments)
+      // Wireframe modu (LineSegments, sadece edges)
       viewer.loadMesh(veFEAMeshCache[nodeId]);
     } else if (typeof veFEAApplyHeatMap === 'function') {
       veFEAApplyHeatMap(nodeId, displayMode);
@@ -1247,14 +1290,16 @@ function veFEABuildMeshForNode(meshNodeId) {
 
     var viewer = veFEAViewerRegistry[meshNodeId];
     if (viewer) {
-      if (meshNode.data.heatMapMetric && typeof veFEAApplyHeatMap === 'function') {
-        // veFEAApplyHeatMap zaten cache + viewer.loadMeshHeatMap kullanır
-        veFEAApplyHeatMap(meshNodeId, meshNode.data.heatMapMetric);
-      } else {
+      // Default: ANSYS-style 'geom-mesh' (geometri + siyah mesh çizgileri).
+      // Kullanıcı bir display modu seçtiyse onu kullan.
+      var dispMode = meshNode.data.heatMapMetric || 'geom-mesh';
+      if (dispMode === 'off') {
         viewer.loadMesh(meshData);
-        if (meshNode.data.highlightedSelection && typeof viewer.highlightNamedSelection === 'function') {
-          viewer.highlightNamedSelection(meshNode.data.highlightedSelection);
-        }
+      } else if (typeof veFEAApplyHeatMap === 'function') {
+        veFEAApplyHeatMap(meshNodeId, dispMode);
+      }
+      if (meshNode.data.highlightedSelection && typeof viewer.highlightNamedSelection === 'function') {
+        viewer.highlightNamedSelection(meshNode.data.highlightedSelection);
       }
     }
 
@@ -1376,7 +1421,16 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
     return;
   }
 
-  // Solid modları (heat map'siz)
+  // ANSYS Body Color modu — Geometri + mesh edges (siyah çizgili)
+  if (mode === 'geom-mesh') {
+    var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
+      ? veFEAFindUpstreamGeometryNode(meshNodeId) : null;
+    viewer.loadMeshOverGeometry(meshData, geomNode ? geomNode.id : null);
+    _veFEARefreshMeshUI(meshNode);
+    return;
+  }
+
+  // Solid modları (heat map'siz, mesh-derived yüzey)
   if (mode === 'solid' || mode === 'solid-edges') {
     viewer.loadMeshSolid(meshData, mode === 'solid-edges');
     _veFEARefreshMeshUI(meshNode);
