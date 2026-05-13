@@ -19,7 +19,24 @@ eval(fs.readFileSync(path.join(ROOT, 'js/fea-stl.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
+
+// Test helper — side panel sadeleştirildi (Tier UI refactor). Mesh UI artık
+// modal'da accordion'lar olarak yaşıyor. Geri-uyumlu testler için bu helper
+// tüm accordion HTML builder'larını + side panel'i birleştirir.
+function _testRenderFullMeshUI(node) {
+  // Modal'ın tam içeriği: side panel + toolbar + sol accordion paneli + sağ viewer
+  var toolbar = _veFEAEditorBuildToolbar(node);
+  var rightPanel = _veFEAEditorBuildRightPanel(node);
+  var leftPanel = _veFEAEditorBuildLeftPanel(node);
+  return (
+    getFEAMeshPropertiesHTML(node) +
+    toolbar.outerHTML +
+    leftPanel.outerHTML +
+    rightPanel.outerHTML
+  );
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('veFEAMeshLabel', () => {
@@ -340,7 +357,7 @@ describe('cp-fea.js Mesh paneli render', () => {
   test('upstream geometri yoksa "bağlı değil" uyarısı', () => {
     var node = { id: 'mesh-x', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/bağlı değil/);
   });
 
@@ -350,7 +367,7 @@ describe('cp-fea.js Mesh paneli render', () => {
       { id: 'mesh-1', type: 'fea-mesh', data: {} }
     ];
     global.connections = [{ from: 'geom-1', to: 'mesh-1' }];
-    var html = getFEAMeshPropertiesHTML(global.nodes[1]);
+    var html = _testRenderFullMeshUI(global.nodes[1]);
     expect(html).toMatch(/Kutu|Geometri/);
     expect(html).not.toMatch(/bağlı değil/);
   });
@@ -358,16 +375,18 @@ describe('cp-fea.js Mesh paneli render', () => {
   test('canvas + Sığdır + Tam Ekran butonları render', () => {
     var node = { id: 'mesh-c', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-canvas-mesh-c"/);
     expect(html).toMatch(/veFEAFitPreviewForNode\('mesh-c'\)/);
-    expect(html).toMatch(/veFEAOpenFullscreenViewer\('mesh-c'\)/);
+    // veFEAOpenFullscreenViewer kaldırıldı — modal kendisi tam ekranı temsil ediyor
+    // Side panel'de "ÇALIŞTIR — Mesh Editörünü Aç" butonu var
+    expect(html).toMatch(/veFEAOpenMeshEditor/);
   });
 
   test('"Mesh Oluştur" butonu geometri yoksa disabled', () => {
     var node = { id: 'mesh-d', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/<button\s+disabled[^>]*onclick="veFEASubmitMeshBuild/);
   });
 
@@ -382,7 +401,7 @@ describe('cp-fea.js Mesh paneli render', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Heks8/);
     expect(html).toMatch(/27/);
     expect(html).toMatch(/Mesh.{0,4}i Sil/);
@@ -391,7 +410,7 @@ describe('cp-fea.js Mesh paneli render', () => {
   test('Coarse/Medium/Fine preset butonları render', () => {
     var node = { id: 'mesh-f', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Coarse/);
     expect(html).toMatch(/Medium/);
     expect(html).toMatch(/Fine/);
@@ -465,7 +484,7 @@ describe('cp-fea.js Mesh paneli — Worker toggle UI', () => {
   test('Web Worker checkbox render edilir, default unchecked', () => {
     var node = { id: 'mesh-w1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-worker-mesh-w1"/);
     expect(html).toMatch(/Web Worker.*da hesapla/);
     var match = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-worker-mesh-w1"[^>]*>/);
@@ -475,7 +494,7 @@ describe('cp-fea.js Mesh paneli — Worker toggle UI', () => {
   test('Persisted useWorker:true → checkbox işaretli', () => {
     var node = { id: 'mesh-w2', type: 'fea-mesh', data: { meshSettings: { size: 5, useWorker: true } } };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     var match = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-worker-mesh-w2"[^>]*>/);
     expect(match[0]).toMatch(/checked/);
   });
@@ -737,7 +756,7 @@ describe('cp-fea.js Mesh paneli — Adaptive Refinement Önerileri', () => {
   test('Mesh yokken placeholder mesajı', () => {
     var node = { id: 'mesh-ar1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Adaptive Refinement Önerileri/);
     expect(html).toMatch(/Mesh oluşturulduktan sonra öneriler gösterilir/);
   });
@@ -760,7 +779,7 @@ describe('cp-fea.js Mesh paneli — Adaptive Refinement Önerileri', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Mesh kalitesi iyi/);
   });
 
@@ -782,7 +801,7 @@ describe('cp-fea.js Mesh paneli — Adaptive Refinement Önerileri', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Ters\/dejenere/);
     expect(html).toMatch(/Uygula/);
     expect(html).toMatch(/veFEAApplyRefinementSuggestion/);
@@ -1098,7 +1117,7 @@ describe('cp-fea.js Mesh paneli — Inflation UI', () => {
   test('Default mode "power": bias slider gösterilir', () => {
     var node = { id: 'mesh-inf1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-local-bias-mesh-inf1"/);
     expect(html).not.toMatch(/id="ve-fea-mesh-local-first-mesh-inf1"/);
   });
@@ -1110,7 +1129,7 @@ describe('cp-fea.js Mesh paneli — Inflation UI', () => {
       data: { meshSettings: { size: 5, localSizing: { selection: 'faceXMin', biasMode: 'inflation', firstLayerThickness: 0.5, growthRate: 1.3, layerCount: 4 } } }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-local-first-mesh-inf2"/);
     expect(html).toMatch(/id="ve-fea-mesh-local-grow-mesh-inf2"/);
     expect(html).toMatch(/id="ve-fea-mesh-local-nlay-mesh-inf2"/);
@@ -1152,7 +1171,7 @@ describe('cp-fea.js Mesh paneli — Lokal yoğunlaştırma UI', () => {
   test('Dropdown + slider render edilir', () => {
     var node = { id: 'mesh-ls1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-local-sel-mesh-ls1"/);
     expect(html).toMatch(/id="ve-fea-mesh-local-bias-mesh-ls1"/);
     expect(html).toMatch(/Lokal Yoğunlaştırma/);
@@ -1168,7 +1187,7 @@ describe('cp-fea.js Mesh paneli — Lokal yoğunlaştırma UI', () => {
       data: { meshSettings: { size: 5, localSizing: { selection: 'faceYMax', biasStrength: 0.6 } } }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/value="faceYMax"\s+selected/);
     expect(html).toMatch(/value="60"/);
     expect(html).toMatch(/60%/);
@@ -1237,7 +1256,7 @@ describe('cp-fea.js Mesh paneli — Curvature refinement UI', () => {
   test('Checkbox + açı input\'u render edilir', () => {
     var node = { id: 'mesh-cr1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-curv-mesh-cr1"/);
     expect(html).toMatch(/id="ve-fea-mesh-curv-ang-mesh-cr1"/);
     expect(html).toMatch(/Eğrilik tabanlı incelt/);
@@ -1246,7 +1265,7 @@ describe('cp-fea.js Mesh paneli — Curvature refinement UI', () => {
   test('Default değerler: disabled + 18°', () => {
     var node = { id: 'mesh-cr2', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-curv-mesh-cr2"[^>]*>/);
     expect(checkboxMatch[0]).not.toMatch(/checked/);
     expect(html).toMatch(/value="18"/);
@@ -1259,7 +1278,7 @@ describe('cp-fea.js Mesh paneli — Curvature refinement UI', () => {
       data: { meshSettings: { size: 10, curvatureRefinement: { enabled: true, normalAngleDeg: 10 } } }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-curv-mesh-cr3"[^>]*>/);
     expect(checkboxMatch[0]).toMatch(/checked/);
     expect(html).toMatch(/value="10"/);
@@ -1448,7 +1467,7 @@ describe('cp-fea.js Mesh paneli — Heat Map seçici', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Görünüm Modu/);
     expect(html).toMatch(/value="off"/);
     expect(html).toMatch(/value="solid"/);
@@ -1470,14 +1489,14 @@ describe('cp-fea.js Mesh paneli — Heat Map seçici', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/value="skewness"\s+selected/);
   });
 
   test('Mesh yokken Heat Map kullanılamaz mesajı', () => {
     var node = { id: 'mesh-hm3', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Mesh oluşturulduktan sonra kullanılabilir/);
   });
 });
@@ -1586,7 +1605,7 @@ describe('cp-fea.js Mesh paneli — Kalite Metrikleri (histogram)', () => {
   test('Mesh yokken kalite mesajı gösterilir', () => {
     var node = { id: 'mesh-quality1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Kalite Metrikleri.*Aspect.*Skewness.*Açı/);
     expect(html).toMatch(/otomatik hesaplanır/);
   });
@@ -1612,7 +1631,7 @@ describe('cp-fea.js Mesh paneli — Kalite Metrikleri (histogram)', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Aspect Min.*1\.00/);
     expect(html).toMatch(/Skewness Min/);
     expect(html).toMatch(/Min.*Maks iç açı.*90/);
@@ -1643,9 +1662,9 @@ describe('cp-fea.js Mesh paneli — Kalite Metrikleri (histogram)', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
-    expect(html).toMatch(/7 eleman aspect > 20/);
-    expect(html).toMatch(/4 eleman skewness > 0\.85/);
+    var html = _testRenderFullMeshUI(node);
+    expect(html).toMatch(/7 eleman aspect (>|&gt;) 20/);
+    expect(html).toMatch(/4 eleman skewness (>|&gt;) 0\.85/);
   });
 });
 
@@ -1773,7 +1792,7 @@ describe('cp-fea.js Mesh paneli — Orta-kenar düğüm checkbox\'ı', () => {
   test('Checkbox render edilir, default unchecked', () => {
     var node = { id: 'mesh-q1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-midnodes-mesh-q1"/);
     expect(html).toMatch(/Orta-kenar düğümler/);
     // Default kapali
@@ -1785,7 +1804,7 @@ describe('cp-fea.js Mesh paneli — Orta-kenar düğüm checkbox\'ı', () => {
   test('Persisted midSideNodes:true → checkbox işaretli', () => {
     var node = { id: 'mesh-q2', type: 'fea-mesh', data: { meshSettings: { size: 5, midSideNodes: true } } };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-midnodes-mesh-q2"[^>]*>/);
     expect(checkboxMatch[0]).toMatch(/checked/);
   });
@@ -1925,7 +1944,7 @@ describe('cp-fea.js Mesh paneli — Jacobian/Geçerlilik bölümü', () => {
   test('Mesh yoksa "—" gösterilir', () => {
     var node = { id: 'mesh-j1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Jacobian.*Geçerlilik/);
   });
 
@@ -1947,7 +1966,7 @@ describe('cp-fea.js Mesh paneli — Jacobian/Geçerlilik bölümü', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/GEÇERLİ/);
     expect(html).toMatch(/22c55e/); // accent-success rengi
   });
@@ -1970,7 +1989,7 @@ describe('cp-fea.js Mesh paneli — Jacobian/Geçerlilik bölümü', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/HATALI/);
     expect(html).toMatch(/ef4444/); // accent-danger rengi
   });
@@ -1993,7 +2012,7 @@ describe('cp-fea.js Mesh paneli — Jacobian/Geçerlilik bölümü', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/7 eleman düşük kaliteli/);
   });
 });
@@ -2193,7 +2212,7 @@ describe('cp-fea.js Mesh paneli — Eleman Tipi seçici', () => {
   test('Eleman Tipi dropdown render edilir (2 seçenek)', () => {
     var node = { id: 'mesh-et1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-eltype-mesh-et1"/);
     expect(html).toMatch(/value="auto"/);
     expect(html).toMatch(/value="tet4"/);
@@ -2202,7 +2221,7 @@ describe('cp-fea.js Mesh paneli — Eleman Tipi seçici', () => {
   test('Default elementType "auto" seçili', () => {
     var node = { id: 'mesh-et2', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     // İki dropdown var (mode + elementType); elementType auto seçili olmalı
     expect(html).toMatch(/id="ve-fea-mesh-eltype-mesh-et2"[^>]*>[\s\S]*?value="auto"\s+selected/);
   });
@@ -2210,7 +2229,7 @@ describe('cp-fea.js Mesh paneli — Eleman Tipi seçici', () => {
   test('Persist edilmiş elementType UI\'da işaretlenir', () => {
     var node = { id: 'mesh-et3', type: 'fea-mesh', data: { meshSettings: { size: 10, mode: 'auto', elementType: 'tet4' } } };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/id="ve-fea-mesh-eltype-mesh-et3"[^>]*>[\s\S]*?value="tet4"\s+selected/);
   });
 });
@@ -2387,7 +2406,7 @@ describe('cp-fea.js Mesh paneli — Named Selections bölümü', () => {
   test('Mesh yoksa "Mesh oluşturulduktan sonra" mesajı', () => {
     var node = { id: 'mesh-ns1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/Atanmış Yüzeyler/);
     expect(html).toMatch(/Mesh oluşturulduktan sonra/);
   });
@@ -2406,7 +2425,7 @@ describe('cp-fea.js Mesh paneli — Named Selections bölümü', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     expect(html).toMatch(/X− Yüzeyi/);
     expect(html).toMatch(/X\+ Yüzeyi/);
     expect(html).toMatch(/AUTO/);
@@ -2428,7 +2447,7 @@ describe('cp-fea.js Mesh paneli — Named Selections bölümü', () => {
       }
     };
     global.nodes = [node];
-    var html = getFEAMeshPropertiesHTML(node);
+    var html = _testRenderFullMeshUI(node);
     // Aktif faceXMin için ◉ kullanılmalı
     expect(html).toMatch(/◉/);
     expect(html).toMatch(/○/);

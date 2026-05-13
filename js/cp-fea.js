@@ -183,9 +183,11 @@ function veFEASubmitParamForm(nodeId, type) {
 }
 
 // ─── 2. MESH ────────────────────────────────────────────────────────────────
+// Side panel sadeleştirildi (Tier UI refactor). Tüm mesh ayarları, kalite
+// metrikleri, named selections, heat map ve export modal pencerede:
+//   js/fea-mesh-editor.js → veFEAOpenMeshEditor(nodeId)
 function getFEAMeshPropertiesHTML(node) {
   var d = node.data || {};
-  var settings = d.meshSettings || { size: 10 };
   var metrics = d.meshMetrics;
   var hasMesh = !!(d.meshActive && metrics);
 
@@ -208,333 +210,54 @@ function getFEAMeshPropertiesHTML(node) {
   html += veFEAPhaseBadge('Faz 3a');
   html += '</div>';
 
-  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
-    'Geometriyi sonlu elemanlara böler. Yapısal mesh: kutu → Heks8, silindir → Wedge6, ' +
-    'şaft → Heks8 annulus. STL/STEP → Tri3 yüzey ağı. Hacim tetrahedralization F3b\'de.</div>';
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">' +
+    'Tüm mesh ayarları, kalite metrikleri, named selections, heat map ve export ' +
+    '<b>Mesh Editörü</b> penceresinde. Aşağıdaki butona tıklayın.</div>';
 
-  // Upstream bağlantı durumu
+  // Geometri Girdisi durumu
   html += veFEASectionTitle('Geometri Girdisi');
   html += '<div style="padding:6px 8px; background:' + (geomOk ? 'var(--bg-tertiary)' : 'rgba(245,158,11,0.08)') +
     '; border:1px solid ' + (geomOk ? 'var(--border-color)' : 'var(--accent-warning, #f59e0b)') +
     '; font-size:0.62rem; color:var(--text-primary); margin-bottom:10px;">' +
     (geomOk ? '✓ ' : '⚠ ') + geomLabel + '</div>';
 
-  // Mesh modu — STL/STEP için kritik (Otomatik = voxel hacim Heks8)
-  var currentMode = settings.mode || 'auto';
-  html += veFEASectionTitle('Mesh Modu');
-  html += '<select id="ve-fea-mesh-mode-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:8px;">';
-  html += '<option value="auto"' + (currentMode === 'auto' ? ' selected' : '') + '>Otomatik (Primitif → yapısal, STL/STEP → voxel hacim)</option>';
-  html += '<option value="volume"' + (currentMode === 'volume' ? ' selected' : '') + '>Hacim (Heks8 voxel — FEA için)</option>';
-  html += '<option value="surface"' + (currentMode === 'surface' ? ' selected' : '') + '>Yüzey (Tri3 — sadece önizleme)</option>';
-  html += '</select>';
-
-  // Eleman tipi — auto (native hex8/wedge6) veya tet4 decomposition
-  var currentElType = settings.elementType || 'auto';
-  html += veFEASectionTitle('Eleman Tipi');
-  html += '<select id="ve-fea-mesh-eltype-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:8px;">';
-  html += '<option value="auto"' + (currentElType === 'auto' ? ' selected' : '') + '>Otomatik (Heks8 / Wedge6 — native)</option>';
-  html += '<option value="tet4"' + (currentElType === 'tet4' ? ' selected' : '') + '>Tet4 (Tetra — decomposition)</option>';
-  html += '</select>';
-
-  // Kuadratik enrichment — orta-kenar düğümler (Tet10/Hex20/Wedge15)
-  var midSideOn = settings.midSideNodes === true;
-  html += '<label style="display:flex; align-items:center; gap:6px; padding:5px 8px; margin-bottom:8px; background:var(--bg-secondary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
-    '<input type="checkbox" id="ve-fea-mesh-midnodes-' + node.id + '"' + (midSideOn ? ' checked' : '') + ' style="margin:0;">' +
-    '<span>Orta-kenar düğümler <span style="color:var(--text-muted);">(Quadratic: Tet10 / Hex20 / Wedge15)</span></span>' +
-  '</label>';
-
-  // Lokal sizing (boundary bias) — auto named selection'a doğru kümele
-  var local = settings.localSizing || { selection: 'none', biasMode: 'power', biasStrength: 0, firstLayerThickness: 1, growthRate: 1.2, layerCount: 5 };
-  var biasMode = local.biasMode || 'power';
-  html += veFEASectionTitle('Lokal Yoğunlaştırma / Inflation (Beta)');
-  html += '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.4; margin-bottom:6px;">' +
-    'Mesh düğümlerini hedef yüzeye doğru kümeler. Power: sürekli güç fonksiyonu, ' +
-    'Inflation: geometric progression ile katmanlar (ANSYS-style).</div>';
-  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">' +
-    '<label for="ve-fea-mesh-local-sel-' + node.id + '" style="flex:0 0 auto; font-size:0.6rem; color:var(--text-secondary);">Hedef</label>' +
-    '<select id="ve-fea-mesh-local-sel-' + node.id + '" style="flex:1; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
-  var localFaces = [
-    ['none', '— Yok —'],
-    ['faceXMin', 'X− Yüzeyi'],
-    ['faceXMax', 'X+ Yüzeyi'],
-    ['faceYMin', 'Y− / Alt'],
-    ['faceYMax', 'Y+ / Üst'],
-    ['faceZMin', 'Z− Yüzeyi'],
-    ['faceZMax', 'Z+ Yüzeyi'],
-    ['faceBottom', 'Alt (silindir/şaft)'],
-    ['faceTop', 'Üst (silindir/şaft)']
-  ];
-  localFaces.forEach(function(f) {
-    var selectedAttr = (local.selection === f[0]) ? ' selected' : '';
-    html += '<option value="' + f[0] + '"' + selectedAttr + '>' + f[1] + '</option>';
-  });
-  html += '</select></div>';
-  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">' +
-    '<label for="ve-fea-mesh-local-mode-' + node.id + '" style="flex:0 0 auto; font-size:0.6rem; color:var(--text-secondary);">Mod</label>' +
-    '<select id="ve-fea-mesh-local-mode-' + node.id + '" style="flex:1; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
-      '<option value="power"' + (biasMode === 'power' ? ' selected' : '') + '>Güç fonksiyonu</option>' +
-      '<option value="inflation"' + (biasMode === 'inflation' ? ' selected' : '') + '>Inflation katmanları</option>' +
-    '</select></div>';
-  if (biasMode === 'power') {
-    html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">' +
-      '<label for="ve-fea-mesh-local-bias-' + node.id + '" style="flex:0 0 auto; font-size:0.6rem; color:var(--text-secondary);">Yığılma</label>' +
-      '<input id="ve-fea-mesh-local-bias-' + node.id + '" type="range" min="0" max="100" step="5" value="' + Math.round((local.biasStrength || 0) * 100) + '" style="flex:1;">' +
-      '<span style="font-size:0.6rem; color:var(--text-muted); width:34px; text-align:right;">' + Math.round((local.biasStrength || 0) * 100) + '%</span>' +
-    '</div>';
-  } else {
-    // Inflation params
-    html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">' +
-      '<label for="ve-fea-mesh-local-first-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">İlk katman kalınlığı</label>' +
-      '<input id="ve-fea-mesh-local-first-' + node.id + '" type="number" min="0.05" max="500" step="0.1" value="' + (local.firstLayerThickness || 1) + '" style="width:70px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
-      '<span style="font-size:0.55rem; color:var(--text-muted);">mm</span>' +
-    '</div>';
-    html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:4px;">' +
-      '<label for="ve-fea-mesh-local-grow-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">Büyüme oranı</label>' +
-      '<input id="ve-fea-mesh-local-grow-' + node.id + '" type="number" min="1.0" max="5.0" step="0.05" value="' + (local.growthRate || 1.2) + '" style="width:70px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
-      '<span style="font-size:0.55rem; color:var(--text-muted);">×</span>' +
-    '</div>';
-    html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">' +
-      '<label for="ve-fea-mesh-local-nlay-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">Katman sayısı</label>' +
-      '<input id="ve-fea-mesh-local-nlay-' + node.id + '" type="number" min="1" max="50" step="1" value="' + (local.layerCount || 5) + '" style="width:70px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
-      '<span style="font-size:0.55rem; color:var(--text-muted);">−</span>' +
-    '</div>';
-  }
-
-  // Curvature-based refinement (silindir/şaft için çevresel)
-  var curv = settings.curvatureRefinement || { enabled: false, normalAngleDeg: 18 };
-  html += '<label style="display:flex; align-items:center; gap:6px; padding:5px 8px; margin-bottom:6px; background:var(--bg-secondary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
-    '<input type="checkbox" id="ve-fea-mesh-curv-' + node.id + '"' + (curv.enabled ? ' checked' : '') + ' style="margin:0;">' +
-    '<span>Eğrilik tabanlı incelt <span style="color:var(--text-muted);">(silindir/şaft çevresel)</span></span>' +
-  '</label>';
-
-  // Web Worker — arka planda hesapla (büyük mesh için UI dondurmaz)
-  var useWorkerOn = settings.useWorker === true;
-  html += '<label style="display:flex; align-items:center; gap:6px; padding:5px 8px; margin-bottom:6px; background:var(--bg-secondary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
-    '<input type="checkbox" id="ve-fea-mesh-worker-' + node.id + '"' + (useWorkerOn ? ' checked' : '') + ' style="margin:0;">' +
-    '<span>Web Worker\'da hesapla <span style="color:var(--text-muted);">(büyük mesh için, UI dondurmaz)</span></span>' +
-  '</label>';
-  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; padding-left:24px;">' +
-    '<label for="ve-fea-mesh-curv-ang-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">Maks yüzey açısı</label>' +
-    '<input id="ve-fea-mesh-curv-ang-' + node.id + '" type="number" min="1" max="90" step="1" value="' + (curv.normalAngleDeg || 18) + '" style="width:60px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
-    '<span style="font-size:0.55rem; color:var(--text-muted);">°</span>' +
-  '</div>';
-
-  // Mesh boyu input
-  html += veFEASectionTitle('Mesh Boyu');
-  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">';
-  html += '<input id="ve-fea-mesh-size-' + node.id + '" type="number" min="0.5" max="500" step="0.5" value="' + settings.size + '" style="flex:1; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
-  html += '<span style="font-size:0.6rem; color:var(--text-muted);">mm</span>';
-  html += '</div>';
-  // Hızlı preset
-  html += '<div style="display:flex; gap:4px; margin-bottom:10px;">';
-  ['Coarse:20', 'Medium:10', 'Fine:5'].forEach(function(item) {
-    var parts = item.split(':');
-    html += '<button onclick="veFEASetMeshSizePreset(\'' + node.id + '\', ' + parts[1] + ')" style="flex:1; padding:5px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">' + parts[0] + '</button>';
-  });
-  html += '</div>';
-
-  // Oluştur butonu
-  var buildBtnStyle = geomOk
-    ? 'background:var(--accent-primary); color:#fff; cursor:pointer;'
-    : 'background:var(--bg-tertiary); color:var(--text-muted); cursor:not-allowed;';
-  html += '<button ' + (geomOk ? '' : 'disabled ') +
-    'onclick="veFEASubmitMeshBuild(\'' + node.id + '\')" style="width:100%; padding:8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); ' + buildBtnStyle + ' margin-bottom:10px;">▶ Mesh Oluştur</button>';
-
-  // 3D Preview
-  html += veFEASectionTitle('3D Önizleme');
-  html += '<div style="position:relative; border:1px solid var(--border-color); background:#1a1a1a; margin-bottom:8px;">';
-  html += '<canvas id="ve-fea-mesh-canvas-' + node.id + '" width="240" height="180" style="display:block; width:100%; height:180px; cursor:grab;"></canvas>';
-  html += '<div style="position:absolute; bottom:6px; left:8px; font-size:0.55rem; color:#888; pointer-events:none;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</div>';
-  html += '</div>';
-  html += '<div style="display:flex; gap:6px; margin-bottom:10px;">';
-  html += '<button onclick="veFEAFitPreviewForNode(\'' + node.id + '\')" style="flex:0 0 auto; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">⛶ Sığdır</button>';
-  html += '<button onclick="veFEAOpenFullscreenViewer(\'' + node.id + '\')" style="flex:1 1 auto; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">🔍 Tam Ekran Görüntüleyici</button>';
-  html += '</div>';
-
-  if (hasMesh) {
-    html += '<button onclick="veFEAClearMeshForNode(\'' + node.id + '\')" style="width:100%; padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer; margin-bottom:10px;">🗑 Mesh\'i Sil</button>';
-  }
-
-  // Metrikler
-  html += veFEASectionTitle('Kalite Metrikleri');
+  // Mesh Durumu
+  html += veFEASectionTitle('Mesh Durumu');
   if (hasMesh) {
     var typeLabel = (typeof veFEAMeshLabel === 'function') ? veFEAMeshLabel(metrics.elementType) : metrics.elementType;
-    html += veFEAReadOnlyRow('Eleman tipi', typeLabel);
-    if (metrics.sweepAxis) {
-      html += veFEAReadOnlyRow('Sweep ekseni', metrics.sweepAxis + ' (axial)');
-    }
-    html += veFEAReadOnlyRow('Düğüm sayısı', metrics.nodeCount.toLocaleString('tr-TR'));
-    html += veFEAReadOnlyRow('Eleman sayısı', metrics.elementCount.toLocaleString('tr-TR'));
-    html += veFEAReadOnlyRow('Min eleman boyu', metrics.minSize.toFixed(2) + ' mm');
-    html += veFEAReadOnlyRow('Maks eleman boyu', metrics.maxSize.toFixed(2) + ' mm');
-    html += veFEAReadOnlyRow('Ortalama eleman boyu', metrics.avgSize.toFixed(2) + ' mm');
-    if (metrics.computeMs !== undefined) {
-      html += veFEAReadOnlyRow('Hesaplama süresi', metrics.computeMs + ' ms');
-    }
+    var jacOk = metrics.jacobian ? metrics.jacobian.valid : true;
+    var jacColor = jacOk ? 'var(--accent-success, #22c55e)' : 'var(--accent-danger, #ef4444)';
+    html += '<div style="padding:8px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-primary); margin-bottom:10px;">' +
+      '<div style="display:flex; justify-content:space-between; margin-bottom:3px;">' +
+        '<span style="color:var(--text-secondary);">Eleman tipi</span>' +
+        '<span style="font-weight:600;">' + typeLabel + '</span>' +
+      '</div>' +
+      '<div style="display:flex; justify-content:space-between; margin-bottom:3px;">' +
+        '<span style="color:var(--text-secondary);">Düğüm / Eleman</span>' +
+        '<span style="font-weight:600;">' + metrics.nodeCount.toLocaleString('tr-TR') + ' / ' + metrics.elementCount.toLocaleString('tr-TR') + '</span>' +
+      '</div>' +
+      '<div style="display:flex; justify-content:space-between;">' +
+        '<span style="color:var(--text-secondary);">Geçerlilik</span>' +
+        '<span style="font-weight:600; color:' + jacColor + ';">' + (jacOk ? '✓ Geçerli' : '✗ Hatalı') + '</span>' +
+      '</div>' +
+    '</div>';
   } else {
-    html += veFEAReadOnlyRow('Düğüm sayısı', '—');
-    html += veFEAReadOnlyRow('Eleman sayısı', '—');
-    html += veFEAReadOnlyRow('Min eleman boyu', '—');
-    html += veFEAReadOnlyRow('Maks eleman boyu', '—');
+    html += '<div style="padding:8px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted); margin-bottom:10px;">— Henüz mesh hesaplanmadı</div>';
   }
 
-  // ─── Jacobian / Geçerlilik Kontrolü ─────────────────────────────────────
-  html += veFEASectionTitle('Jacobian / Geçerlilik');
-  if (hasMesh && metrics.jacobian) {
-    var jm = metrics.jacobian;
-    var statusColor = jm.valid ? 'var(--accent-success, #22c55e)' : 'var(--accent-danger, #ef4444)';
-    var statusText = jm.valid ? '✓ GEÇERLİ (tüm Jacobianlar pozitif)' : '✗ HATALI (ters/dejenere eleman var)';
-    html += '<div style="padding:6px 8px; background:' + (jm.valid ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)') +
-      '; border:1px solid ' + statusColor + '; font-size:0.62rem; color:' + statusColor + '; margin-bottom:6px; font-weight:600;">' +
-      statusText + '</div>';
-    html += veFEAReadOnlyRow('Ters dönmüş eleman', (jm.invertedCount || 0).toLocaleString('tr-TR'));
-    html += veFEAReadOnlyRow('Dejenere eleman', (jm.degenerateCount || 0).toLocaleString('tr-TR'));
-    html += veFEAReadOnlyRow('Min Jacobian oranı', (jm.minJacRatio || 0).toFixed(2));
-    html += veFEAReadOnlyRow('Maks Jacobian oranı', (jm.maxJacRatio || 0).toFixed(2));
-    html += veFEAReadOnlyRow('Ortalama Jacobian oranı', (jm.avgJacRatio || 0).toFixed(2));
-    if (jm.poorCount > 0) {
-      html += '<div style="padding:6px 8px; background:rgba(245,158,11,0.08); border-left:2px solid var(--accent-warning, #f59e0b); font-size:0.58rem; color:var(--accent-warning, #f59e0b); margin-top:4px;">' +
-        '⚠ ' + jm.poorCount.toLocaleString('tr-TR') + ' eleman düşük kaliteli (Jac oranı > ' + jm.ratioWarnThreshold + ')</div>';
-    }
-  } else {
-    html += veFEAReadOnlyRow('Durum', '—');
-  }
+  // ÇALIŞTIR — Mesh Editörünü Aç
+  html += '<button onclick="veFEAOpenMeshEditor(\'' + node.id + '\')" style="width:100%; padding:14px 16px; font-size:0.82rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.04em; transition:all 0.12s;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ ÇALIŞTIR — Mesh Editörünü Aç</button>';
 
-  // ─── Eleman Kalite Metrikleri (Aspect / Skewness / Açı) ─────────────────
-  html += veFEASectionTitle('Kalite Metrikleri (Aspect / Skewness / Açı)');
-  if (hasMesh && metrics.quality) {
-    var q = metrics.quality;
-    // Aspect ratio
-    html += veFEAReadOnlyRow('Aspect Min / Maks / Ort', (q.aspectRatio.min || 0).toFixed(2) + ' / ' + (q.aspectRatio.max || 0).toFixed(2) + ' / ' + (q.aspectRatio.avg || 0).toFixed(2));
-    if (q.aspectRatio.poorCount > 0) {
-      html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">' +
-        '⚠ ' + q.aspectRatio.poorCount.toLocaleString('tr-TR') + ' eleman aspect > ' + q.aspectRatio.warnThreshold + '</div>';
-    }
-    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı', '#3b82f6', function(v){return v.toFixed(1);});
-
-    // Skewness
-    html += veFEAReadOnlyRow('Skewness Min / Maks / Ort', (q.skewness.min || 0).toFixed(3) + ' / ' + (q.skewness.max || 0).toFixed(3) + ' / ' + (q.skewness.avg || 0).toFixed(3));
-    if (q.skewness.poorCount > 0) {
-      html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">' +
-        '⚠ ' + q.skewness.poorCount.toLocaleString('tr-TR') + ' eleman skewness > ' + q.skewness.warnThreshold + '</div>';
-    }
-    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı (0=ideal, 1=dejenere)', '#f59e0b', function(v){return v.toFixed(2);});
-
-    // İç açı
-    html += veFEAReadOnlyRow('Min / Maks iç açı', (q.angle.min || 0).toFixed(1) + '° / ' + (q.angle.max || 0).toFixed(1) + '°');
-    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece)', '#22c55e', function(v){return v.toFixed(0) + '°';});
-  } else {
-    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra otomatik hesaplanır.</div>';
-  }
-
-  // ─── Adaptive Refinement Önerileri ─────────────────────────────────────
-  html += veFEASectionTitle('Adaptive Refinement Önerileri');
-  if (hasMesh && typeof veFEAComputeRefinementSuggestions === 'function') {
-    var suggestions = veFEAComputeRefinementSuggestions(metrics);
-    suggestions.forEach(function(s) {
-      var color, bg, icon;
-      if (s.severity === 'critical') { color = 'var(--accent-danger, #ef4444)'; bg = 'rgba(239,68,68,0.08)'; icon = '✗'; }
-      else if (s.severity === 'warn') { color = 'var(--accent-warning, #f59e0b)'; bg = 'rgba(245,158,11,0.08)'; icon = '⚠'; }
-      else if (s.severity === 'info')  { color = 'var(--accent-info, #3b82f6)';  bg = 'rgba(59,130,246,0.08)'; icon = 'ℹ'; }
-      else { color = 'var(--accent-success, #22c55e)'; bg = 'rgba(34,197,94,0.08)'; icon = '✓'; }
-      html += '<div style="padding:6px 8px; background:' + bg + '; border-left:2px solid ' + color + '; font-size:0.6rem; color:' + color + '; margin-bottom:6px;">' +
-        icon + ' ' + s.message;
-      if (s.action) {
-        var actionType = s.action.type;
-        var actionDataJson = JSON.stringify(s.action).replace(/"/g, '&quot;');
-        html += '<button onclick=\'veFEAApplyRefinementSuggestion("' + node.id + '", "' + actionType + '", ' + JSON.stringify(s.action) + ')\' style="display:block; margin-top:4px; padding:4px 8px; font-size:0.58rem; background:' + color + '; color:#fff; border:none; cursor:pointer;">Uygula →</button>';
-      }
-      html += '</div>';
-    });
-  } else {
-    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra öneriler gösterilir.</div>';
-  }
-
-  // ─── Mesh Export (Abaqus / NASTRAN / VTK) ───────────────────────────────
-  html += veFEASectionTitle('Mesh Export');
-  if (hasMesh) {
-    html += '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">' +
-      'Mesh\'i standart FEA format\'ında dışa aktar. ANSYS, Abaqus, ParaView gibi araçlarda açılabilir.</div>';
-    html += '<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-bottom:8px;">';
-    html += '<button onclick="veFEAExportMeshForNode(\'' + node.id + '\', \'abaqus\')" style="padding:6px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="Abaqus .inp">📦 Abaqus<br><span style="font-size:0.5rem; color:var(--text-muted);">.inp</span></button>';
-    html += '<button onclick="veFEAExportMeshForNode(\'' + node.id + '\', \'nastran\')" style="padding:6px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="NASTRAN .nas">📦 NASTRAN<br><span style="font-size:0.5rem; color:var(--text-muted);">.nas</span></button>';
-    html += '<button onclick="veFEAExportMeshForNode(\'' + node.id + '\', \'vtk\')" style="padding:6px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="VTK ParaView">📦 VTK<br><span style="font-size:0.5rem; color:var(--text-muted);">.vtk</span></button>';
-    html += '</div>';
-  } else {
-    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra export edilebilir.</div>';
-  }
-
-  // ─── Görünüm Modu (Wireframe / Solid / Heat Map) ───────────────────────
-  html += veFEASectionTitle('Görünüm Modu');
-  if (hasMesh) {
-    var displayMode = d.heatMapMetric || 'off';
-    html += '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">' +
-      'Mesh\'in 3D önizlemede nasıl gösterileceğini seçin. Heat Map modları: ' +
-      'mavi = iyi kalite, kırmızı = kötü.</div>';
-    html += '<select onchange="veFEAApplyHeatMap(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
-    html += '<optgroup label="Standart">';
-    html += '<option value="off"' + (displayMode === 'off' || !d.heatMapMetric ? ' selected' : '') + '>Wireframe (kenarlar)</option>';
-    html += '<option value="solid"' + (displayMode === 'solid' ? ' selected' : '') + '>Solid (yüzey)</option>';
-    html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Solid + Edges</option>';
-    html += '</optgroup>';
-    html += '<optgroup label="Heat Map (Kalite)">';
-    html += '<option value="aspect"' + (displayMode === 'aspect' ? ' selected' : '') + '>Aspect Ratio</option>';
-    html += '<option value="skewness"' + (displayMode === 'skewness' ? ' selected' : '') + '>Skewness</option>';
-    html += '<option value="minAngle"' + (displayMode === 'minAngle' ? ' selected' : '') + '>Min İç Açı</option>';
-    html += '<option value="jacobianRatio"' + (displayMode === 'jacobianRatio' ? ' selected' : '') + '>Jacobian Oranı</option>';
-    html += '</optgroup>';
-    html += '</select>';
-    // Heat map modunda renk legend'ı
-    var isHeatMap = (displayMode === 'aspect' || displayMode === 'skewness' || displayMode === 'minAngle' || displayMode === 'jacobianRatio');
-    if (isHeatMap) {
-      html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
-        '<span style="font-size:0.55rem; color:var(--text-muted);">İyi</span>' +
-        '<div style="flex:1; height:8px; background:linear-gradient(to right, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000); border:1px solid var(--border-color);"></div>' +
-        '<span style="font-size:0.55rem; color:var(--text-muted);">Kötü</span>' +
-      '</div>';
-    }
-  } else {
-    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra kullanılabilir.</div>';
-  }
-
-  // ─── Named Selections (Atanmış Yüzeyler) ────────────────────────────────
-  html += veFEASectionTitle('Atanmış Yüzeyler (Named Selections)');
-  if (hasMesh && d.namedSelectionsSummary && Object.keys(d.namedSelectionsSummary).length > 0) {
-    html += '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">' +
-      'Otomatik üretilen düğüm grupları. Sınır koşulları bu yüzeylere referansla uygulanır. ' +
-      'Yüzeyi 3D önizlemede görüntülemek için satıra tıklayın.</div>';
-    var highlightKey = d.highlightedSelection || null;
-    Object.keys(d.namedSelectionsSummary).forEach(function(k) {
-      var ns = d.namedSelectionsSummary[k];
-      var isActive = (highlightKey === k);
-      var bg = isActive ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
-      var fg = isActive ? '#fff' : 'var(--text-primary)';
-      var iconColor = isActive ? '#fff' : 'var(--accent-warning, #f59e0b)';
-      var border = isActive ? 'var(--accent-primary)' : 'var(--border-color)';
-      var srcBadge = (ns.source === 'auto') ? 'AUTO' : 'MANUEL';
-      var srcBg = (ns.source === 'auto') ? '#64748b40' : '#22c55e40';
-      html += '<button onclick="veFEAToggleNamedSelection(\'' + node.id + '\', \'' + k + '\')" style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:6px 8px; margin-bottom:3px; background:' + bg + '; color:' + fg + '; border:1px solid ' + border + '; cursor:pointer; font-size:0.62rem; text-align:left;">' +
-        '<span style="display:flex; align-items:center; gap:6px;">' +
-          '<span style="color:' + iconColor + '; font-size:0.7rem;">' + (isActive ? '◉' : '○') + '</span>' +
-          '<span>' + ns.label + '</span>' +
-        '</span>' +
-        '<span style="display:flex; align-items:center; gap:6px;">' +
-          '<span style="font-size:0.5rem; padding:1px 5px; background:' + srcBg + '; color:' + fg + '; border-radius:0; letter-spacing:0.05em;">' + srcBadge + '</span>' +
-          '<span style="font-weight:600; opacity:0.85;">' + ns.nodeCount.toLocaleString('tr-TR') + ' düğüm</span>' +
-        '</span>' +
-      '</button>';
-    });
-  } else if (hasMesh) {
-    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">— (yüzey grubu üretilmedi)</div>';
-  } else {
-    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra otomatik atanır.</div>';
-  }
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); line-height:1.5; margin-top:8px; padding:0 2px;">' +
+    'Modal pencerede: <b>Defaults</b> (eleman tipi, sırası) · <b>Sizing</b> (boyut, curvature, worker) · ' +
+    '<b>Inflation</b> (power / inflation katmanları) · <b>Quality</b> (Jacobian, aspect, skewness, histogramlar) · ' +
+    '<b>Named Selections</b> · <b>Display</b> (heat map) · <b>Statistics</b> · <b>Adaptive Önerileri</b></div>';
 
   html += '</div>';
   return html;
 }
 
-// Mesh paneli UI köprüleri
+// Mesh paneli UI köprüleri — modal içinden DOM ID\'leri okuyup state\'i günceller.
 function veFEASetMeshSizePreset(nodeId, size) {
   var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
   if (input) input.value = size;
@@ -601,7 +324,6 @@ function veFEASubmitMeshBuild(nodeId) {
   }
   veFEABuildMeshForNode(nodeId);
 }
-
 // ─── 3. SINIR KOŞULLARI ─────────────────────────────────────────────────────
 function getFEABCPropertiesHTML(node) {
   var d = node.data || {};
