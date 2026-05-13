@@ -93,20 +93,28 @@ function getFEAGeometryPropertiesHTML(node) {
     html += '<button onclick="veFEAClearGeometryForNode(\'' + node.id + '\')" style="width:100%; padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer; margin-bottom:10px;">🗑 Geometriyi Sil</button>';
   }
 
-  // CAD import — F2c/F2d/OCCT için yer tutucu
+  // CAD import — STL aktif, STEP/IGES F2d için yer tutucu
   html += veFEASectionTitle('CAD Dosya İçe Aktar');
+  html += '<input type="file" id="ve-fea-stl-input-' + node.id + '" accept=".stl" style="display:none" onchange="veFEAOnSTLFileSelected(this, \'' + node.id + '\')">';
   html += '<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">';
-  html += '<button disabled style="padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 STL (sonraki PR)</button>';
+  html += '<button onclick="document.getElementById(\'ve-fea-stl-input-' + node.id + '\').click()" style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; text-align:left;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">📥 STL Yükle (binary veya ASCII)</button>';
   html += '<button disabled style="padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 STEP / IGES (OCCT.js — Faz 2d)</button>';
   html += '</div>';
 
   // ─── DURUM ────────────────────────────────────────────────────────────
   html += veFEASectionTitle('Durum');
   if(hasGeom) {
-    html += veFEAReadOnlyRow('Yüklenen geometri', geom.sourceLabel || veFEAPrimitiveLabel(geom.type));
-    html += veFEAReadOnlyRow('Hacim',        (typeof veFEAFormatVolume === 'function') ? veFEAFormatVolume(geom.volume) : geom.volume + ' mm³');
-    html += veFEAReadOnlyRow('Yüzey alanı',  (typeof veFEAFormatArea === 'function') ? veFEAFormatArea(geom.surfaceArea) : geom.surfaceArea + ' mm²');
+    var sourceName = geom.sourceLabel || (typeof veFEAPrimitiveLabel === 'function' ? veFEAPrimitiveLabel(geom.type) : geom.type);
+    html += veFEAReadOnlyRow('Yüklenen geometri', sourceName);
+    if(geom.type === 'stl' && geom.triangleCount) {
+      html += veFEAReadOnlyRow('Üçgen sayısı', geom.triangleCount.toLocaleString('tr-TR'));
+    }
+    html += veFEAReadOnlyRow('Hacim',        (typeof veFEAFormatVolume === 'function') ? veFEAFormatVolume(geom.volume) : (geom.volume + ' mm³'));
+    html += veFEAReadOnlyRow('Yüzey alanı',  (typeof veFEAFormatArea === 'function') ? veFEAFormatArea(geom.surfaceArea) : (geom.surfaceArea + ' mm²'));
     html += veFEAReadOnlyRow('Sınırlayıcı kutu', (typeof veFEAFormatBBox === 'function') ? veFEAFormatBBox(geom.bbox) : '—');
+    if(geom.persistNote) {
+      html += '<div style="margin-top:6px; padding:6px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); background:rgba(245,158,11,0.08);">⚠ ' + geom.persistNote + '</div>';
+    }
   } else {
     html += veFEAReadOnlyRow('Yüklenen geometri', '— (henüz yok)');
     html += veFEAReadOnlyRow('Hacim', '—');
