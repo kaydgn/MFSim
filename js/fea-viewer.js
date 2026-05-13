@@ -932,32 +932,62 @@ function veFEABuildMeshForNode(meshNodeId) {
   meshNode.data = meshNode.data || {};
   var settings = meshNode.data.meshSettings || {};
   if (!settings.size) settings.size = 10;
+  if (!settings.mode) settings.mode = 'auto';
 
   var t0 = Date.now();
-  var meshData = veFEAMeshFromGeometry(geometry, { size: settings.size });
-  if (!meshData) {
-    if (typeof showToast === 'function') showToast('Mesh oluşturulamadı (desteklenmeyen tip?)', 'error');
-    return;
+  var meshOpts = { size: settings.size, mode: settings.mode };
+
+  // STEP için async parse gerekebilir — promise-aware yol
+  var needsAsync = (geometry.type === 'step');
+  var finishMesh = function(meshData) {
+    if (!meshData) {
+      if (typeof showToast === 'function') showToast('Mesh oluşturulamadı (desteklenmeyen tip?)', 'error');
+      return;
+    }
+    if (meshData.error === 'voxel-too-many') {
+      if (typeof showToast === 'function') {
+        showToast('Mesh boyu çok küçük: ' + meshData.total.toLocaleString('tr-TR') +
+          ' voxel (üst sınır ' + VE_FEA_VOXEL_MAX_COUNT.toLocaleString('tr-TR') + '). Daha büyük mesh boyu seçin.', 'error');
+      }
+      return;
+    }
+    if (meshData.error === 'voxel-empty') {
+      if (typeof showToast === 'function') {
+        showToast('Hiçbir voxel iç bölgede değil. Mesh boyu çok büyük olabilir veya yüzey kapalı değil.', 'warning');
+      }
+      return;
+    }
+    var dt = Date.now() - t0;
+    var metrics = veFEAComputeMeshMetrics(meshData);
+    metrics.computeMs = dt;
+    metrics.voxelMode = !!meshData.voxelMode;
+
+    veFEAMeshCache[meshNodeId] = meshData;
+    meshNode.data.meshSettings = settings;
+    meshNode.data.meshMetrics = metrics;
+    meshNode.data.meshActive = true;
+    if (typeof saveState === 'function') saveState();
+
+    var viewer = veFEAViewerRegistry[meshNodeId];
+    if (viewer) viewer.loadMesh(meshData);
+
+    if (typeof showToast === 'function') {
+      showToast('Mesh oluşturuldu: ' + metrics.elementCount.toLocaleString('tr-TR') +
+        ' eleman, ' + metrics.nodeCount.toLocaleString('tr-TR') + ' düğüm (' + dt + ' ms)', 'success');
+    }
+    if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+  };
+
+  if (needsAsync && typeof veFEAMeshFromGeometryAsync === 'function') {
+    if (typeof showToast === 'function') showToast('STEP mesh hesaplanıyor (voxelize)...', 'info');
+    veFEAMeshFromGeometryAsync(geometry, meshOpts).then(finishMesh).catch(function(err) {
+      var msg = (err && err.message) ? err.message : String(err);
+      if (typeof showToast === 'function') showToast('Mesh hatası: ' + msg, 'error');
+      console.error('[FEA mesh]', err);
+    });
+  } else {
+    finishMesh(veFEAMeshFromGeometry(geometry, meshOpts));
   }
-  var dt = Date.now() - t0;
-
-  var metrics = veFEAComputeMeshMetrics(meshData);
-  metrics.computeMs = dt;
-
-  veFEAMeshCache[meshNodeId] = meshData;
-
-  meshNode.data.meshSettings = settings;
-  meshNode.data.meshMetrics = metrics;
-  meshNode.data.meshActive = true;
-  if (typeof saveState === 'function') saveState();
-
-  var viewer = veFEAViewerRegistry[meshNodeId];
-  if (viewer) viewer.loadMesh(meshData);
-
-  if (typeof showToast === 'function') {
-    showToast('Mesh oluşturuldu: ' + metrics.elementCount + ' eleman, ' + metrics.nodeCount + ' düğüm (' + dt + ' ms)', 'success');
-  }
-  if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
 }
 
 function veFEAClearMeshForNode(meshNodeId) {
