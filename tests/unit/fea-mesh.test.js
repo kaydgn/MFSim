@@ -400,6 +400,198 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeRefinementSuggestions (adaptive heuristic)', () => {
+  test('Inverted eleman → KRİTİK öneri reduceSize/0.5', () => {
+    var metrics = {
+      elementCount: 8,
+      jacobian: { invertedCount: 1, degenerateCount: 0, poorCount: 0, ratioWarnThreshold: 40 },
+      quality: { aspectRatio: { poorCount: 0, warnThreshold: 20 }, skewness: { poorCount: 0, warnThreshold: 0.85 } }
+    };
+    var sugs = veFEAComputeRefinementSuggestions(metrics);
+    expect(sugs.length).toBe(1);
+    expect(sugs[0].severity).toBe('critical');
+    expect(sugs[0].action.type).toBe('reduceSize');
+    expect(sugs[0].action.factor).toBeCloseTo(0.5, 2);
+  });
+
+  test('Dejenere eleman → KRİTİK öneri', () => {
+    var metrics = {
+      elementCount: 100,
+      jacobian: { invertedCount: 0, degenerateCount: 3, poorCount: 0, ratioWarnThreshold: 40 },
+      quality: { aspectRatio: { poorCount: 0, warnThreshold: 20 }, skewness: { poorCount: 0, warnThreshold: 0.85 } }
+    };
+    var sugs = veFEAComputeRefinementSuggestions(metrics);
+    expect(sugs[0].severity).toBe('critical');
+  });
+
+  test('Yüksek aspect %>5 → UYARI reduceSize/0.8', () => {
+    var metrics = {
+      elementCount: 100,
+      jacobian: { invertedCount: 0, degenerateCount: 0, poorCount: 0, ratioWarnThreshold: 40 },
+      quality: {
+        aspectRatio: { poorCount: 10, warnThreshold: 20 },
+        skewness: { poorCount: 0, warnThreshold: 0.85 }
+      }
+    };
+    var sugs = veFEAComputeRefinementSuggestions(metrics);
+    var warnSug = sugs.find(function(s) { return s.severity === 'warn'; });
+    expect(warnSug).toBeDefined();
+    expect(warnSug.action.type).toBe('reduceSize');
+    expect(warnSug.action.factor).toBeCloseTo(0.8, 2);
+  });
+
+  test('Yüksek skewness %>5 → UYARI reduceSize/0.85', () => {
+    var metrics = {
+      elementCount: 100,
+      jacobian: { invertedCount: 0, degenerateCount: 0, poorCount: 0, ratioWarnThreshold: 40 },
+      quality: {
+        aspectRatio: { poorCount: 0, warnThreshold: 20 },
+        skewness: { poorCount: 10, warnThreshold: 0.85 }
+      }
+    };
+    var sugs = veFEAComputeRefinementSuggestions(metrics);
+    var warnSug = sugs.find(function(s) { return s.severity === 'warn' && s.message.match(/skewness/); });
+    expect(warnSug).toBeDefined();
+  });
+
+  test('Tüm metrikler iyi → "Mesh kalitesi iyi" OK mesajı', () => {
+    var metrics = {
+      elementCount: 8,
+      jacobian: { invertedCount: 0, degenerateCount: 0, poorCount: 0, ratioWarnThreshold: 40 },
+      quality: { aspectRatio: { poorCount: 0, max: 1, warnThreshold: 20 }, skewness: { poorCount: 0, warnThreshold: 0.85 } }
+    };
+    var sugs = veFEAComputeRefinementSuggestions(metrics);
+    expect(sugs.length).toBe(1);
+    expect(sugs[0].severity).toBe('ok');
+    expect(sugs[0].message).toMatch(/iyi/);
+  });
+
+  test('Silindir sweep + yüksek aspect → curvature refinement önerisi', () => {
+    var metrics = {
+      elementCount: 100,
+      sweepAxis: 'Y',
+      jacobian: { invertedCount: 0, degenerateCount: 0, poorCount: 0, ratioWarnThreshold: 40 },
+      quality: {
+        aspectRatio: { poorCount: 0, max: 8, warnThreshold: 20 },
+        skewness: { poorCount: 0, warnThreshold: 0.85 }
+      }
+    };
+    var sugs = veFEAComputeRefinementSuggestions(metrics);
+    var curvSug = sugs.find(function(s) { return s.action && s.action.type === 'enableCurvature'; });
+    expect(curvSug).toBeDefined();
+  });
+
+  test('null metrics → boş öneri listesi', () => {
+    expect(veFEAComputeRefinementSuggestions(null)).toEqual([]);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAApplyRefinementSuggestion bridge', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.showToast = jest.fn();
+    global.showNodeProperties = jest.fn();
+    global.saveState = jest.fn();
+    Object.keys(veFEAMeshCache).forEach((k) => delete veFEAMeshCache[k]);
+  });
+
+  test('reduceSize action → meshSettings.size çarpan ile küçülür', () => {
+    global.nodes = [
+      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
+      { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 10 } } }
+    ];
+    global.connections = [{ from: 'geom-1', to: 'mesh-1' }];
+    veFEAApplyRefinementSuggestion('mesh-1', 'reduceSize', { factor: 0.5 });
+    expect(global.nodes[1].data.meshSettings.size).toBe(5);
+  });
+
+  test('enableCurvature action → settings.curvatureRefinement.enabled true', () => {
+    global.nodes = [
+      { id: 'geom-c', type: 'fea-geometry', data: { geometry: { type: 'cylinder', params: { radius: 10, height: 20 } } } },
+      { id: 'mesh-c', type: 'fea-mesh', data: { meshSettings: { size: 5 } } }
+    ];
+    global.connections = [{ from: 'geom-c', to: 'mesh-c' }];
+    veFEAApplyRefinementSuggestion('mesh-c', 'enableCurvature', { normalAngleDeg: 20 });
+    expect(global.nodes[1].data.meshSettings.curvatureRefinement.enabled).toBe(true);
+    expect(global.nodes[1].data.meshSettings.curvatureRefinement.normalAngleDeg).toBe(20);
+  });
+
+  test('Bilinmeyen action → no-op', () => {
+    global.nodes = [{ id: 'mesh-x', type: 'fea-mesh', data: { meshSettings: { size: 10 } } }];
+    expect(() => veFEAApplyRefinementSuggestion('mesh-x', 'unknown', {})).not.toThrow();
+    expect(global.nodes[0].data.meshSettings.size).toBe(10);
+  });
+
+  test('Bilinmeyen nodeId → sessizce çıkar', () => {
+    expect(() => veFEAApplyRefinementSuggestion('nonexistent', 'reduceSize', { factor: 0.5 })).not.toThrow();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Adaptive Refinement Önerileri', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Mesh yokken placeholder mesajı', () => {
+    var node = { id: 'mesh-ar1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/Adaptive Refinement Önerileri/);
+    expect(html).toMatch(/Mesh oluşturulduktan sonra öneriler gösterilir/);
+  });
+
+  test('Geçerli mesh + iyi metrikler → "iyi" mesajı', () => {
+    var node = {
+      id: 'mesh-ar2',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: {
+          nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5,
+          jacobian: { invertedCount: 0, degenerateCount: 0, poorCount: 0, ratioWarnThreshold: 40 },
+          quality: {
+            aspectRatio: { poorCount: 0, max: 1, warnThreshold: 20, histogram: { bins: [8,0,0,0,0,0,0,0,0,0], min: 1, max: 20, binCount: 10 } },
+            skewness: { poorCount: 0, warnThreshold: 0.85, histogram: { bins: [8,0,0,0,0,0,0,0,0,0], min: 0, max: 1, binCount: 10 } },
+            angle: { min: 90, max: 90, histogram: { bins: [0,0,0,0,0,8,0,0,0,0,0,0], min: 0, max: 180, binCount: 12 } }
+          }
+        }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/Mesh kalitesi iyi/);
+  });
+
+  test('Inverted eleman varsa "Uygula" butonu render edilir', () => {
+    var node = {
+      id: 'mesh-ar3',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: {
+          nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5,
+          jacobian: { invertedCount: 2, degenerateCount: 0, poorCount: 0, ratioWarnThreshold: 40 },
+          quality: {
+            aspectRatio: { poorCount: 0, max: 1, warnThreshold: 20, histogram: { bins: [8,0,0,0,0,0,0,0,0,0], min: 1, max: 20, binCount: 10 } },
+            skewness: { poorCount: 0, warnThreshold: 0.85, histogram: { bins: [8,0,0,0,0,0,0,0,0,0], min: 0, max: 1, binCount: 10 } },
+            angle: { min: 90, max: 90, histogram: { bins: [0,0,0,0,0,8,0,0,0,0,0,0], min: 0, max: 180, binCount: 12 } }
+          }
+        }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/Ters\/dejenere/);
+    expect(html).toMatch(/Uygula/);
+    expect(html).toMatch(/veFEAApplyRefinementSuggestion/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Rectangular tube (rectTube) primitif - sweep mesh', () => {
   test('rectTube mesh oluşturulur (Heks8, Z sweep)', () => {
     var m = veFEAMeshFromGeometry({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 100 } }, { size: 5 });

@@ -1209,6 +1209,40 @@ function veFEAClearMeshForNode(meshNodeId) {
   if (typeof showNodeProperties === 'function' && meshNode) showNodeProperties(meshNode);
 }
 
+// Refinement önerisini uygula — UI butonundan çağrılır.
+// suggestion.action.type:
+//   'reduceSize'      → settings.size *= factor + re-build
+//   'enableCurvature' → settings.curvatureRefinement enabled + re-build
+function veFEAApplyRefinementSuggestion(meshNodeId, actionType, actionData) {
+  var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  meshNode.data.meshSettings = meshNode.data.meshSettings || {};
+  var s = meshNode.data.meshSettings;
+
+  if (actionType === 'reduceSize') {
+    var factor = (actionData && actionData.factor) || 0.8;
+    if (factor < 0.05) factor = 0.05;
+    if (factor > 1) factor = 1;
+    var currentSize = s.size || 10;
+    s.size = Math.max(VE_FEA_MESH_MIN_SIZE, currentSize * factor);
+    if (typeof showToast === 'function') {
+      showToast('Mesh boyu ' + currentSize.toFixed(2) + ' → ' + s.size.toFixed(2) + ' mm. Yeniden meshleniyor...', 'info');
+    }
+  } else if (actionType === 'enableCurvature') {
+    s.curvatureRefinement = s.curvatureRefinement || {};
+    s.curvatureRefinement.enabled = true;
+    if (actionData && actionData.normalAngleDeg) s.curvatureRefinement.normalAngleDeg = actionData.normalAngleDeg;
+    if (typeof showToast === 'function') {
+      showToast('Curvature refinement aktif edildi (' + s.curvatureRefinement.normalAngleDeg + '°). Yeniden meshleniyor...', 'info');
+    }
+  } else {
+    return;
+  }
+
+  if (typeof veFEABuildMeshForNode === 'function') veFEABuildMeshForNode(meshNodeId);
+}
+
 // Mesh görünüm modu (wireframe / solid / heat map). UI'dan çağrılır.
 // mode değerleri:
 //   'off' / null  → wireframe (default)

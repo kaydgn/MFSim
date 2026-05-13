@@ -1419,6 +1419,96 @@ function veFEAComputeQualityMetrics(meshData) {
   };
 }
 
+// ─── Adaptive refinement önerileri (mesh kalite-tabanlı) ─────────────────
+// Solver F5 tamamlanana kadar gerçek "error indicator feedback" yok. Bu yöntem
+// quality + jacobian metriklerinden heuristic öneriler üretir:
+//   - Ters eleman → KRİTİK: mesh size %50 küçült (yeniden meshle)
+//   - Aspect/skewness/jacobian-ratio kötü oranı %5+ → UYARI: %20 küçült
+//   - Çok düşük kaliteli → INFO: lokal sizing dene
+//   - Tüm metrikler iyi → "mesh hazır" mesajı
+function veFEAComputeRefinementSuggestions(meshMetrics) {
+  if (!meshMetrics) return [];
+  var out = [];
+  var n = meshMetrics.elementCount || 1;
+  var jm = meshMetrics.jacobian;
+  var q = meshMetrics.quality;
+
+  // 1. Inverted / dejenere — KRİTİK
+  if (jm && (jm.invertedCount > 0 || jm.degenerateCount > 0)) {
+    out.push({
+      severity: 'critical',
+      message: 'Ters/dejenere eleman var (' + (jm.invertedCount + jm.degenerateCount) + '). Mesh boyu yarıya indirilmeli.',
+      action: { type: 'reduceSize', factor: 0.5 }
+    });
+    return out; // kritik durum, diğer önerilere bakma
+  }
+
+  // 2. Düşük aspect ratio oranı
+  if (q && q.aspectRatio.poorCount > 0) {
+    var pctA = q.aspectRatio.poorCount / n;
+    if (pctA > 0.05) {
+      out.push({
+        severity: 'warn',
+        message: q.aspectRatio.poorCount + ' eleman aspect > ' + q.aspectRatio.warnThreshold +
+          ' (%' + Math.round(pctA * 100) + '). Mesh boyu %20 küçültülmeli.',
+        action: { type: 'reduceSize', factor: 0.8 }
+      });
+    } else if (pctA > 0) {
+      out.push({
+        severity: 'info',
+        message: q.aspectRatio.poorCount + ' eleman aspect > ' + q.aspectRatio.warnThreshold +
+          ' (%' + (pctA * 100).toFixed(1) + '). Lokal sizing düşünülebilir.',
+        action: null
+      });
+    }
+  }
+
+  // 3. Skewness
+  if (q && q.skewness.poorCount > 0) {
+    var pctS = q.skewness.poorCount / n;
+    if (pctS > 0.05) {
+      out.push({
+        severity: 'warn',
+        message: q.skewness.poorCount + ' eleman skewness > ' + q.skewness.warnThreshold +
+          ' (%' + Math.round(pctS * 100) + '). Mesh boyu %15 küçültülmeli.',
+        action: { type: 'reduceSize', factor: 0.85 }
+      });
+    }
+  }
+
+  // 4. Jacobian oranı
+  if (jm && jm.poorCount > 0) {
+    var pctJ = jm.poorCount / n;
+    if (pctJ > 0.05) {
+      out.push({
+        severity: 'warn',
+        message: jm.poorCount + ' eleman Jacobian oranı > ' + jm.ratioWarnThreshold +
+          '. Lokal yoğunlaştırma veya curvature refinement deneyin.',
+        action: null
+      });
+    }
+  }
+
+  // 5. Çevresel curvature (silindir/şaft için)
+  if (meshMetrics.sweepAxis === 'Y' && q && q.aspectRatio.max > 5) {
+    out.push({
+      severity: 'info',
+      message: 'Eğrili yüzeyde aspect ratio yüksek. Curvature refinement aktif edin (Maks açı 18°).',
+      action: { type: 'enableCurvature', normalAngleDeg: 18 }
+    });
+  }
+
+  // Hiçbir öneri yoksa mesh OK
+  if (out.length === 0) {
+    out.push({
+      severity: 'ok',
+      message: 'Mesh kalitesi iyi. Tüm metrikler eşik değerlerin altında.',
+      action: null
+    });
+  }
+  return out;
+}
+
 // ─── Per-element kalite değerleri (heat map için) ─────────────────────────
 // veFEAComputeQualityMetrics özet değerler döner; viewer renk için her eleman
 // için tek değer ister. Bu fonksiyon istenen metriği eleman array'i olarak verir.

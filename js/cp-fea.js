@@ -380,11 +380,11 @@ function getFEAMeshPropertiesHTML(node) {
     html += '<div style="padding:6px 8px; background:' + (jm.valid ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)') +
       '; border:1px solid ' + statusColor + '; font-size:0.62rem; color:' + statusColor + '; margin-bottom:6px; font-weight:600;">' +
       statusText + '</div>';
-    html += veFEAReadOnlyRow('Ters dönmüş eleman', jm.invertedCount.toLocaleString('tr-TR'));
-    html += veFEAReadOnlyRow('Dejenere eleman', jm.degenerateCount.toLocaleString('tr-TR'));
-    html += veFEAReadOnlyRow('Min Jacobian oranı', jm.minJacRatio.toFixed(2));
-    html += veFEAReadOnlyRow('Maks Jacobian oranı', jm.maxJacRatio.toFixed(2));
-    html += veFEAReadOnlyRow('Ortalama Jacobian oranı', jm.avgJacRatio.toFixed(2));
+    html += veFEAReadOnlyRow('Ters dönmüş eleman', (jm.invertedCount || 0).toLocaleString('tr-TR'));
+    html += veFEAReadOnlyRow('Dejenere eleman', (jm.degenerateCount || 0).toLocaleString('tr-TR'));
+    html += veFEAReadOnlyRow('Min Jacobian oranı', (jm.minJacRatio || 0).toFixed(2));
+    html += veFEAReadOnlyRow('Maks Jacobian oranı', (jm.maxJacRatio || 0).toFixed(2));
+    html += veFEAReadOnlyRow('Ortalama Jacobian oranı', (jm.avgJacRatio || 0).toFixed(2));
     if (jm.poorCount > 0) {
       html += '<div style="padding:6px 8px; background:rgba(245,158,11,0.08); border-left:2px solid var(--accent-warning, #f59e0b); font-size:0.58rem; color:var(--accent-warning, #f59e0b); margin-top:4px;">' +
         '⚠ ' + jm.poorCount.toLocaleString('tr-TR') + ' eleman düşük kaliteli (Jac oranı > ' + jm.ratioWarnThreshold + ')</div>';
@@ -398,7 +398,7 @@ function getFEAMeshPropertiesHTML(node) {
   if (hasMesh && metrics.quality) {
     var q = metrics.quality;
     // Aspect ratio
-    html += veFEAReadOnlyRow('Aspect Min / Maks / Ort', q.aspectRatio.min.toFixed(2) + ' / ' + q.aspectRatio.max.toFixed(2) + ' / ' + q.aspectRatio.avg.toFixed(2));
+    html += veFEAReadOnlyRow('Aspect Min / Maks / Ort', (q.aspectRatio.min || 0).toFixed(2) + ' / ' + (q.aspectRatio.max || 0).toFixed(2) + ' / ' + (q.aspectRatio.avg || 0).toFixed(2));
     if (q.aspectRatio.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">' +
         '⚠ ' + q.aspectRatio.poorCount.toLocaleString('tr-TR') + ' eleman aspect > ' + q.aspectRatio.warnThreshold + '</div>';
@@ -406,7 +406,7 @@ function getFEAMeshPropertiesHTML(node) {
     html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı', '#3b82f6', function(v){return v.toFixed(1);});
 
     // Skewness
-    html += veFEAReadOnlyRow('Skewness Min / Maks / Ort', q.skewness.min.toFixed(3) + ' / ' + q.skewness.max.toFixed(3) + ' / ' + q.skewness.avg.toFixed(3));
+    html += veFEAReadOnlyRow('Skewness Min / Maks / Ort', (q.skewness.min || 0).toFixed(3) + ' / ' + (q.skewness.max || 0).toFixed(3) + ' / ' + (q.skewness.avg || 0).toFixed(3));
     if (q.skewness.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">' +
         '⚠ ' + q.skewness.poorCount.toLocaleString('tr-TR') + ' eleman skewness > ' + q.skewness.warnThreshold + '</div>';
@@ -414,10 +414,33 @@ function getFEAMeshPropertiesHTML(node) {
     html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı (0=ideal, 1=dejenere)', '#f59e0b', function(v){return v.toFixed(2);});
 
     // İç açı
-    html += veFEAReadOnlyRow('Min / Maks iç açı', q.angle.min.toFixed(1) + '° / ' + q.angle.max.toFixed(1) + '°');
+    html += veFEAReadOnlyRow('Min / Maks iç açı', (q.angle.min || 0).toFixed(1) + '° / ' + (q.angle.max || 0).toFixed(1) + '°');
     html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece)', '#22c55e', function(v){return v.toFixed(0) + '°';});
   } else {
     html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra otomatik hesaplanır.</div>';
+  }
+
+  // ─── Adaptive Refinement Önerileri ─────────────────────────────────────
+  html += veFEASectionTitle('Adaptive Refinement Önerileri');
+  if (hasMesh && typeof veFEAComputeRefinementSuggestions === 'function') {
+    var suggestions = veFEAComputeRefinementSuggestions(metrics);
+    suggestions.forEach(function(s) {
+      var color, bg, icon;
+      if (s.severity === 'critical') { color = 'var(--accent-danger, #ef4444)'; bg = 'rgba(239,68,68,0.08)'; icon = '✗'; }
+      else if (s.severity === 'warn') { color = 'var(--accent-warning, #f59e0b)'; bg = 'rgba(245,158,11,0.08)'; icon = '⚠'; }
+      else if (s.severity === 'info')  { color = 'var(--accent-info, #3b82f6)';  bg = 'rgba(59,130,246,0.08)'; icon = 'ℹ'; }
+      else { color = 'var(--accent-success, #22c55e)'; bg = 'rgba(34,197,94,0.08)'; icon = '✓'; }
+      html += '<div style="padding:6px 8px; background:' + bg + '; border-left:2px solid ' + color + '; font-size:0.6rem; color:' + color + '; margin-bottom:6px;">' +
+        icon + ' ' + s.message;
+      if (s.action) {
+        var actionType = s.action.type;
+        var actionDataJson = JSON.stringify(s.action).replace(/"/g, '&quot;');
+        html += '<button onclick=\'veFEAApplyRefinementSuggestion("' + node.id + '", "' + actionType + '", ' + JSON.stringify(s.action) + ')\' style="display:block; margin-top:4px; padding:4px 8px; font-size:0.58rem; background:' + color + '; color:#fff; border:none; cursor:pointer;">Uygula →</button>';
+      }
+      html += '</div>';
+    });
+  } else {
+    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra öneriler gösterilir.</div>';
   }
 
   // ─── Görünüm Modu (Wireframe / Solid / Heat Map) ───────────────────────
