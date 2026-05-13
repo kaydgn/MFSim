@@ -69,11 +69,17 @@ async function mfsimLogin() {
 }
 
 function mfsimShowApp() {
-  var overlay = document.getElementById('mfsim-login-overlay');
-  if(overlay) {
-    overlay.style.transition = 'opacity 0.3s ease';
-    overlay.style.opacity = '0';
-    setTimeout(function() { overlay.style.display = 'none'; }, 300);
+  // Loader varsa: login'i kapatip splash + modul yuklemesini baslat.
+  // Loader yoksa (eski sayfa, fallback): sadece login overlay'ini gizle.
+  if(window.MFSimLoader && typeof window.MFSimLoader.start === 'function') {
+    window.MFSimLoader.start();
+  } else {
+    var overlay = document.getElementById('mfsim-login-overlay');
+    if(overlay) {
+      overlay.style.transition = 'opacity 0.3s ease';
+      overlay.style.opacity = '0';
+      setTimeout(function() { overlay.style.display = 'none'; }, 300);
+    }
   }
 }
 
@@ -87,9 +93,13 @@ function mfsimLogout() {
 (function() {
   var stored = localStorage.getItem(MFSIM_AUTH_KEY) || sessionStorage.getItem(MFSIM_AUTH_KEY);
   if(stored === MFSIM_AUTH_HASH) {
-    // Zaten giriş yapılmış
+    // Zaten giriş yapılmış — login overlay'i hic gostermeden direk
+    // splash + modul yuklemesine gec.
     var overlay = document.getElementById('mfsim-login-overlay');
     if(overlay) overlay.style.display = 'none';
+    if(window.MFSimLoader && typeof window.MFSimLoader.start === 'function') {
+      window.MFSimLoader.start();
+    }
   } else {
     // Giriş gerekli — input'a focus
     setTimeout(function() {
