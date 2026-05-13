@@ -162,39 +162,117 @@ function veFEASubmitParamForm(nodeId, type) {
 // ─── 2. MESH ────────────────────────────────────────────────────────────────
 function getFEAMeshPropertiesHTML(node) {
   var d = node.data || {};
+  var settings = d.meshSettings || { size: 10 };
+  var metrics = d.meshMetrics;
+  var hasMesh = !!(d.meshActive && metrics);
+
+  // Upstream geometri bağlantısını kontrol et
+  var geomLabel = '— (bağlı değil)';
+  var geomOk = false;
+  if (typeof veFEAFindUpstreamGeometryNode === 'function') {
+    var gn = veFEAFindUpstreamGeometryNode(node.id);
+    if (gn && gn.data && gn.data.geometry && gn.data.geometry.type) {
+      geomLabel = (gn.customName || gn.def && gn.def.name || 'Geometri') + ' → ' + (gn.data.geometry.sourceLabel ||
+        (typeof veFEAPrimitiveLabel === 'function' ? veFEAPrimitiveLabel(gn.data.geometry.type) : gn.data.geometry.type));
+      geomOk = true;
+    }
+  }
+
   var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
 
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
   html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Mesh</div>';
-  html += veFEAPhaseBadge('Faz 3');
+  html += veFEAPhaseBadge('Faz 3a');
   html += '</div>';
 
   html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
-    'Geometriyi sonlu elemanlara böler. Eleman tipi ve boyu kalite/doğruluk dengesini belirler. ' +
-    'Önceki: <b>Geometri</b>, sonraki: <b>Sınır Koşulları</b>.</div>';
+    'Geometriyi sonlu elemanlara böler. Yapısal mesh: kutu → Heks8, silindir → Wedge6, ' +
+    'şaft → Heks8 annulus. STL/STEP → Tri3 yüzey ağı. Hacim tetrahedralization F3b\'de.</div>';
 
-  html += veFEASectionTitle('Eleman Tipi (F3)');
-  html += '<select disabled style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); margin-bottom:8px;">';
-  html += '<option>Tet10 (kuadratik tetra — önerilen)</option>';
-  html += '<option>Tet4 (lineer tetra — hızlı)</option>';
-  html += '<option>Hex8 + Tet10 hibrit</option>';
-  html += '</select>';
+  // Upstream bağlantı durumu
+  html += veFEASectionTitle('Geometri Girdisi');
+  html += '<div style="padding:6px 8px; background:' + (geomOk ? 'var(--bg-tertiary)' : 'rgba(245,158,11,0.08)') +
+    '; border:1px solid ' + (geomOk ? 'var(--border-color)' : 'var(--accent-warning, #f59e0b)') +
+    '; font-size:0.62rem; color:var(--text-primary); margin-bottom:10px;">' +
+    (geomOk ? '✓ ' : '⚠ ') + geomLabel + '</div>';
 
+  // Mesh boyu input
   html += veFEASectionTitle('Mesh Boyu');
-  html += '<div style="display:flex; gap:4px; margin-bottom:8px;">';
-  html += '<button disabled style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed;">Coarse</button>';
-  html += '<button disabled style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed;">Medium</button>';
-  html += '<button disabled style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed;">Fine</button>';
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">';
+  html += '<input id="ve-fea-mesh-size-' + node.id + '" type="number" min="0.5" max="500" step="0.5" value="' + settings.size + '" style="flex:1; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '<span style="font-size:0.6rem; color:var(--text-muted);">mm</span>';
+  html += '</div>';
+  // Hızlı preset
+  html += '<div style="display:flex; gap:4px; margin-bottom:10px;">';
+  ['Coarse:20', 'Medium:10', 'Fine:5'].forEach(function(item) {
+    var parts = item.split(':');
+    html += '<button onclick="veFEASetMeshSizePreset(\'' + node.id + '\', ' + parts[1] + ')" style="flex:1; padding:5px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">' + parts[0] + '</button>';
+  });
   html += '</div>';
 
+  // Oluştur butonu
+  var buildBtnStyle = geomOk
+    ? 'background:var(--accent-primary); color:#fff; cursor:pointer;'
+    : 'background:var(--bg-tertiary); color:var(--text-muted); cursor:not-allowed;';
+  html += '<button ' + (geomOk ? '' : 'disabled ') +
+    'onclick="veFEASubmitMeshBuild(\'' + node.id + '\')" style="width:100%; padding:8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); ' + buildBtnStyle + ' margin-bottom:10px;">▶ Mesh Oluştur</button>';
+
+  // 3D Preview
+  html += veFEASectionTitle('3D Önizleme');
+  html += '<div style="position:relative; border:1px solid var(--border-color); background:#1a1a1a; margin-bottom:8px;">';
+  html += '<canvas id="ve-fea-mesh-canvas-' + node.id + '" width="240" height="180" style="display:block; width:100%; height:180px; cursor:grab;"></canvas>';
+  html += '<div style="position:absolute; bottom:6px; left:8px; font-size:0.55rem; color:#888; pointer-events:none;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</div>';
+  html += '</div>';
+  html += '<div style="display:flex; gap:6px; margin-bottom:10px;">';
+  html += '<button onclick="veFEAFitPreviewForNode(\'' + node.id + '\')" style="flex:0 0 auto; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">⛶ Sığdır</button>';
+  html += '<button onclick="veFEAOpenFullscreenViewer(\'' + node.id + '\')" style="flex:1 1 auto; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">🔍 Tam Ekran Görüntüleyici</button>';
+  html += '</div>';
+
+  if (hasMesh) {
+    html += '<button onclick="veFEAClearMeshForNode(\'' + node.id + '\')" style="width:100%; padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer; margin-bottom:10px;">🗑 Mesh\'i Sil</button>';
+  }
+
+  // Metrikler
   html += veFEASectionTitle('Kalite Metrikleri');
-  html += veFEAReadOnlyRow('Düğüm sayısı', '—');
-  html += veFEAReadOnlyRow('Eleman sayısı', '—');
-  html += veFEAReadOnlyRow('Min. Jacobian', '—');
-  html += veFEAReadOnlyRow('Maks. aspect ratio', '—');
+  if (hasMesh) {
+    var typeLabel = (typeof veFEAMeshLabel === 'function') ? veFEAMeshLabel(metrics.elementType) : metrics.elementType;
+    html += veFEAReadOnlyRow('Eleman tipi', typeLabel);
+    html += veFEAReadOnlyRow('Düğüm sayısı', metrics.nodeCount.toLocaleString('tr-TR'));
+    html += veFEAReadOnlyRow('Eleman sayısı', metrics.elementCount.toLocaleString('tr-TR'));
+    html += veFEAReadOnlyRow('Min eleman boyu', metrics.minSize.toFixed(2) + ' mm');
+    html += veFEAReadOnlyRow('Maks eleman boyu', metrics.maxSize.toFixed(2) + ' mm');
+    html += veFEAReadOnlyRow('Ortalama eleman boyu', metrics.avgSize.toFixed(2) + ' mm');
+    if (metrics.computeMs !== undefined) {
+      html += veFEAReadOnlyRow('Hesaplama süresi', metrics.computeMs + ' ms');
+    }
+  } else {
+    html += veFEAReadOnlyRow('Düğüm sayısı', '—');
+    html += veFEAReadOnlyRow('Eleman sayısı', '—');
+    html += veFEAReadOnlyRow('Min eleman boyu', '—');
+    html += veFEAReadOnlyRow('Maks eleman boyu', '—');
+  }
 
   html += '</div>';
   return html;
+}
+
+// Mesh paneli UI köprüleri
+function veFEASetMeshSizePreset(nodeId, size) {
+  var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
+  if (input) input.value = size;
+}
+function veFEASubmitMeshBuild(nodeId) {
+  if (typeof nodes === 'undefined' || typeof veFEABuildMeshForNode !== 'function') return;
+  var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
+  var size = input ? parseFloat(input.value) : 10;
+  if (!isFinite(size) || size <= 0) size = 10;
+  var meshNode = nodes.find(function(n) { return n.id === nodeId; });
+  if (meshNode) {
+    meshNode.data = meshNode.data || {};
+    meshNode.data.meshSettings = meshNode.data.meshSettings || {};
+    meshNode.data.meshSettings.size = size;
+  }
+  veFEABuildMeshForNode(nodeId);
 }
 
 // ─── 3. SINIR KOŞULLARI ─────────────────────────────────────────────────────
