@@ -13,12 +13,12 @@
 
   // Her modul adimi arasi minimum gecikme. Toplam splash suresi yaklasik
   // (modul_sayisi * STEP_DELAY_MS) + gercek yukleme isi olur. ~42 modul icin
-  // 60ms ≈ 2.5s taban + actual work = profesyonel his. Cok hizli kapanmayi
-  // engeller, label'larin gozle takip edilmesine olanak verir.
-  var STEP_DELAY_MS = 60;
+  // 150ms ≈ 6.3s taban + actual work = profesyonel muhendislik yazilimi hissi.
+  // Her label rahatca okunabilir, kullanici neyin yuklendigini takip edebilir.
+  var STEP_DELAY_MS = 150;
   // Tum yuklemenin (script'ler bitti, splash kapanmadan onceki) minimum
   // toplam suresi. Gerçek is bu su̇reden hızlıysa fark kadar bekleriz.
-  var MIN_TOTAL_DURATION_MS = 2600;
+  var MIN_TOTAL_DURATION_MS = 6500;
 
   var started = false;
   var startTime = 0;
