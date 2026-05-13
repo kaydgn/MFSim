@@ -377,6 +377,57 @@ describe('viewer davranış testleri (Three.js mock)', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Sağ üst kontrol paneli — accordion yapısı', () => {
+  beforeEach(() => {
+    if (typeof veFEACloseFullscreenViewer === 'function') veFEACloseFullscreenViewer();
+    var leftover = document.getElementById('ve-fea-fullscreen-overlay');
+    if (leftover && leftover.parentNode) leftover.parentNode.removeChild(leftover);
+    document.body.innerHTML = '';
+    Object.keys(veFEAViewerRegistry).forEach((k) => delete veFEAViewerRegistry[k]);
+  });
+
+  test('Toggle butonu sağ üstte render edilir, panel default gizli', () => {
+    veFEAOpenFullscreenViewer('test-acc');
+    var toggleBtn = document.getElementById('ve-fea-controls-toggle');
+    var panel     = document.getElementById('ve-fea-controls-panel');
+    expect(toggleBtn).not.toBeNull();
+    expect(panel).not.toBeNull();
+    expect(panel.style.display).toBe('none');
+    expect(toggleBtn.innerHTML).toBe('⚙');
+  });
+
+  test('Toggle butonuna tıklanınca panel açılır ve buton işareti ✕ olur', () => {
+    veFEAOpenFullscreenViewer('test-acc');
+    var toggleBtn = document.getElementById('ve-fea-controls-toggle');
+    var panel     = document.getElementById('ve-fea-controls-panel');
+    toggleBtn.click();
+    expect(panel.style.display).toBe('block');
+    expect(toggleBtn.innerHTML).toBe('✕');
+    toggleBtn.click();
+    expect(panel.style.display).toBe('none');
+    expect(toggleBtn.innerHTML).toBe('⚙');
+  });
+
+  test('3 accordion kategorisi (view / display / interaction) render edilir', () => {
+    veFEAOpenFullscreenViewer('test-acc');
+    ['view','display','interaction'].forEach((id) => {
+      expect(document.querySelector('button[data-acc-header="' + id + '"]')).not.toBeNull();
+      expect(document.querySelector('div[data-acc-body="' + id + '"]')).not.toBeNull();
+    });
+  });
+
+  test('Accordion başlığına tıklayınca o bölüm açılır/kapanır', () => {
+    veFEAOpenFullscreenViewer('test-acc');
+    var header = document.querySelector('button[data-acc-header="view"]');
+    var body   = document.querySelector('div[data-acc-body="view"]');
+    expect(body.style.display).toBe(''); // default açık (display:block CSS'ten)
+    header.click();
+    expect(body.style.display).toBe('none');
+    header.click();
+    expect(body.style.display).toBe('block');
+  });
+});
+
 describe('Fullscreen toolbar — Grup B + C butonları render', () => {
   beforeEach(() => {
     if (typeof veFEACloseFullscreenViewer === 'function') veFEACloseFullscreenViewer();
@@ -410,20 +461,20 @@ describe('Fullscreen toolbar — Grup B + C butonları render', () => {
     expect(values).toEqual(['dark','light','white','blue']);
   });
 
-  test('Ölçüm panel başlangıçta gizli', () => {
+  test('Ölçüm status div\'i accordion içinde gizli olarak render edilir', () => {
     veFEAOpenFullscreenViewer('test-bc');
-    var panel = document.getElementById('ve-fea-measure-panel');
-    expect(panel).not.toBeNull();
-    expect(panel.style.display).toBe('none');
+    var statusDiv = document.querySelector('[data-role="measure-status"]');
+    expect(statusDiv).not.toBeNull();
+    expect(statusDiv.style.display).toBe('none');
   });
 
-  test('Kesit panel başlangıçta gizli ve 3 eksen satırı içerir', () => {
+  test('Kesit kontrolleri accordion içinde gizli + 3 eksen satırı', () => {
     veFEAOpenFullscreenViewer('test-bc');
-    var panel = document.getElementById('ve-fea-clip-panel');
-    expect(panel).not.toBeNull();
-    expect(panel.style.display).toBe('none');
+    var clipControls = document.querySelector('[data-role="clip-controls"]');
+    expect(clipControls).not.toBeNull();
+    expect(clipControls.style.display).toBe('none');
     ['x','y','z'].forEach((ax) => {
-      expect(panel.querySelector('div[data-axis="' + ax + '"]')).not.toBeNull();
+      expect(clipControls.querySelector('div[data-axis="' + ax + '"]')).not.toBeNull();
     });
   });
 
@@ -442,26 +493,28 @@ describe('Fullscreen toolbar — Grup B + C butonları render', () => {
     expect(modeBtn.getAttribute('data-mode')).toBe('shaded');
   });
 
-  test('Ölç butonu tıklanırsa ölçüm paneli görünür olur', () => {
+  test('Ölç butonu tıklanırsa ölçüm status div\'i görünür olur', () => {
     veFEAOpenFullscreenViewer('test-bc');
     var btn = document.querySelector('button[data-action="measure"]');
-    var panel = document.getElementById('ve-fea-measure-panel');
-    expect(panel.style.display).toBe('none');
+    var statusDiv = document.querySelector('[data-role="measure-status"]');
+    expect(statusDiv.style.display).toBe('none');
     expect(() => btn.click()).not.toThrow();
-    // viewer null olabilir (Three.js yok) — yine de hata atmamalı
+    // Three.js olmasa da UI durumu güncellenir (helper viewer-yoksa yolu)
+    if (btn.getAttribute('data-active') === 'true') {
+      expect(statusDiv.style.display).toBe('block');
+    }
   });
 
-  test('Kesit butonu tıklanırsa kesit paneli açılır/kapanır', () => {
+  test('Kesit butonu tıklanırsa kesit kontrolleri açılır/kapanır', () => {
     veFEAOpenFullscreenViewer('test-bc');
     var btn = document.querySelector('button[data-action="clip"]');
-    var panel = document.getElementById('ve-fea-clip-panel');
-    expect(panel.style.display).toBe('none');
+    var clipControls = document.querySelector('[data-role="clip-controls"]');
+    expect(clipControls.style.display).toBe('none');
     expect(() => btn.click()).not.toThrow();
-    // Açıldı mı?
     if (btn.getAttribute('data-active') === 'true') {
-      expect(panel.style.display).toBe('block');
+      expect(clipControls.style.display).toBe('block');
       btn.click();
-      expect(panel.style.display).toBe('none');
+      expect(clipControls.style.display).toBe('none');
     }
   });
 });
