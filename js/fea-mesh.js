@@ -971,6 +971,192 @@ function _veFEAWedgeSubTetVolumes(nodes, elements, off) {
   return out;
 }
 
+// ─── Eleman tipi için yüz şablonu (skewness/min-angle hesabı için) ─────────
+// Her face → ordered düğüm indeksi listesi (CCW outward normal)
+var _VE_FEA_TET4_FACES = [
+  [0, 1, 2], [0, 1, 3], [1, 2, 3], [2, 0, 3]
+];
+var _VE_FEA_HEX8_FACES = [
+  [0, 1, 2, 3], [4, 5, 6, 7],
+  [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]
+];
+var _VE_FEA_WEDGE6_FACES = [
+  [0, 1, 2], [3, 4, 5],
+  [0, 1, 4, 3], [1, 2, 5, 4], [2, 0, 3, 5]
+];
+
+function _veFEAGetFaceTemplate(type) {
+  if (type === 'tet4'   || type === 'tet10')   return _VE_FEA_TET4_FACES;
+  if (type === 'hex8'   || type === 'hex20')   return _VE_FEA_HEX8_FACES;
+  if (type === 'wedge6' || type === 'wedge15') return _VE_FEA_WEDGE6_FACES;
+  if (type === 'tri3') return [[0, 1, 2]];
+  return [];
+}
+
+// İki kenarın ortak köşedeki iç açısı (derece cinsinden).
+function _veFEAInteriorAngleDeg(nodes, prev, curr, next) {
+  var v1x = nodes[prev]     - nodes[curr];
+  var v1y = nodes[prev + 1] - nodes[curr + 1];
+  var v1z = nodes[prev + 2] - nodes[curr + 2];
+  var v2x = nodes[next]     - nodes[curr];
+  var v2y = nodes[next + 1] - nodes[curr + 1];
+  var v2z = nodes[next + 2] - nodes[curr + 2];
+  var dot = v1x * v2x + v1y * v2y + v1z * v2z;
+  var m1 = Math.sqrt(v1x * v1x + v1y * v1y + v1z * v1z);
+  var m2 = Math.sqrt(v2x * v2x + v2y * v2y + v2z * v2z);
+  if (m1 < 1e-12 || m2 < 1e-12) return 0;
+  var c = dot / (m1 * m2);
+  if (c > 1) c = 1; else if (c < -1) c = -1;
+  return Math.acos(c) * 180 / Math.PI;
+}
+
+// Histogram: [minVal, maxVal] aralığını binCount eşit dilime böler.
+function _veFEAHistogram(values, minVal, maxVal, binCount) {
+  var bins = new Uint32Array(binCount);
+  var range = maxVal - minVal;
+  if (range <= 0 || binCount <= 0) return { bins: [], min: minVal, max: maxVal, binCount: binCount };
+  for (var i = 0; i < values.length; i++) {
+    var v = values[i];
+    if (!isFinite(v)) continue;
+    var b = Math.floor((v - minVal) / range * binCount);
+    if (b < 0) b = 0;
+    if (b >= binCount) b = binCount - 1;
+    bins[b]++;
+  }
+  return {
+    bins: Array.from(bins),
+    min: minVal,
+    max: maxVal,
+    binCount: binCount
+  };
+}
+
+// ─── Kalite metrikleri: aspect ratio + skewness + iç açı ──────────────────
+// Aspect ratio (eleman bazında): max_edge / min_edge — 1.0 ideal, > 20 zayıf
+// Equiangular skewness (face bazında): max((θ_max - θ_ideal)/(180 - θ_ideal),
+//   (θ_ideal - θ_min)/θ_ideal). 0 = ideal, 1 = dejenere.
+//   θ_ideal: üçgen yüz için 60°, kare yüz için 90°
+// İç açı: tüm yüzlerin tüm köşe açıları — min ve max global histogram'a düşer.
+function veFEAComputeQualityMetrics(meshData) {
+  if (!meshData || meshData.error) return null;
+  var nodes = meshData.nodes;
+  var elements = meshData.elements;
+  var per = meshData.nodesPerElement;
+  var type = meshData.type;
+  var n = elements.length / per;
+  if (n === 0) return null;
+
+  // Sadece köşe düğümlerini kullan (quadratic için corner count'u tespit et)
+  var cornerCount;
+  if (type === 'tet10') cornerCount = 4;
+  else if (type === 'hex20') cornerCount = 8;
+  else if (type === 'wedge15') cornerCount = 6;
+  else cornerCount = per;
+
+  var edges;
+  if (type === 'hex8' || type === 'hex20')
+    edges = [[0,1],[1,2],[2,3],[3,0], [4,5],[5,6],[6,7],[7,4], [0,4],[1,5],[2,6],[3,7]];
+  else if (type === 'wedge6' || type === 'wedge15')
+    edges = [[0,1],[1,2],[2,0], [3,4],[4,5],[5,3], [0,3],[1,4],[2,5]];
+  else if (type === 'tet4' || type === 'tet10')
+    edges = [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3]];
+  else if (type === 'tri3') edges = [[0,1],[1,2],[2,0]];
+  else return null;
+
+  var faces = _veFEAGetFaceTemplate(type);
+
+  var aspectArr = new Float32Array(n);
+  var skewArr = new Float32Array(n);
+  var minAngleArr = new Float32Array(n);
+  var maxAngleArr = new Float32Array(n);
+  var poorAspect = 0;     // ar > 20
+  var poorSkew = 0;       // sk > 0.85
+
+  var gMinAr = Infinity, gMaxAr = -Infinity, sumAr = 0;
+  var gMinSk = Infinity, gMaxSk = -Infinity, sumSk = 0;
+  var gMinAng = Infinity, gMaxAng = -Infinity;
+
+  for (var e = 0; e < n; e++) {
+    var off = e * per;
+    // Aspect
+    var minE = Infinity, maxE = -Infinity;
+    for (var i = 0; i < edges.length; i++) {
+      var a = elements[off + edges[i][0]] * 3;
+      var b = elements[off + edges[i][1]] * 3;
+      var dx = nodes[a]     - nodes[b];
+      var dy = nodes[a + 1] - nodes[b + 1];
+      var dz = nodes[a + 2] - nodes[b + 2];
+      var L = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (L < minE) minE = L;
+      if (L > maxE) maxE = L;
+    }
+    var ar = (minE > 1e-12) ? (maxE / minE) : Infinity;
+    aspectArr[e] = ar;
+    if (isFinite(ar)) {
+      if (ar < gMinAr) gMinAr = ar;
+      if (ar > gMaxAr) gMaxAr = ar;
+      sumAr += ar;
+      if (ar > 20) poorAspect++;
+    }
+
+    // Skewness + min/max angle
+    var elemMinAng = Infinity, elemMaxAng = -Infinity, elemSkew = 0;
+    for (var f = 0; f < faces.length; f++) {
+      var face = faces[f];
+      var fLen = face.length;
+      var idealAng = (fLen === 3) ? 60 : 90;
+      for (var v = 0; v < fLen; v++) {
+        var prevNode = elements[off + face[(v + fLen - 1) % fLen]] * 3;
+        var currNode = elements[off + face[v]] * 3;
+        var nextNode = elements[off + face[(v + 1) % fLen]] * 3;
+        var ang = _veFEAInteriorAngleDeg(nodes, prevNode, currNode, nextNode);
+        if (ang < elemMinAng) elemMinAng = ang;
+        if (ang > elemMaxAng) elemMaxAng = ang;
+        var dev1 = (180 - idealAng > 0) ? Math.max(0, ang - idealAng) / (180 - idealAng) : 0;
+        var dev2 = (idealAng > 0)       ? Math.max(0, idealAng - ang) / idealAng       : 0;
+        var sk = Math.max(dev1, dev2);
+        if (sk > elemSkew) elemSkew = sk;
+      }
+    }
+    skewArr[e] = elemSkew;
+    minAngleArr[e] = elemMinAng;
+    maxAngleArr[e] = elemMaxAng;
+
+    if (elemMinAng < gMinAng) gMinAng = elemMinAng;
+    if (elemMaxAng > gMaxAng) gMaxAng = elemMaxAng;
+    if (elemSkew < gMinSk) gMinSk = elemSkew;
+    if (elemSkew > gMaxSk) gMaxSk = elemSkew;
+    sumSk += elemSkew;
+    if (elemSkew > 0.85) poorSkew++;
+  }
+
+  return {
+    elementCount: n,
+    cornerCount: cornerCount,
+    aspectRatio: {
+      min: isFinite(gMinAr) ? gMinAr : 0,
+      max: isFinite(gMaxAr) ? gMaxAr : 0,
+      avg: sumAr / n,
+      poorCount: poorAspect,
+      warnThreshold: 20,
+      histogram: _veFEAHistogram(aspectArr, 1, 20, 10)
+    },
+    skewness: {
+      min: isFinite(gMinSk) ? gMinSk : 0,
+      max: isFinite(gMaxSk) ? gMaxSk : 0,
+      avg: sumSk / n,
+      poorCount: poorSkew,
+      warnThreshold: 0.85,
+      histogram: _veFEAHistogram(skewArr, 0, 1, 10)
+    },
+    angle: {
+      min: isFinite(gMinAng) ? gMinAng : 0,
+      max: isFinite(gMaxAng) ? gMaxAng : 0,
+      histogram: _veFEAHistogram(minAngleArr, 0, 180, 12)
+    }
+  };
+}
+
 // ─── Kalite metrikleri (basit: edge length, eleman sayısı) ─────────────────
 function veFEAComputeMeshMetrics(mesh) {
   if (!mesh) return null;

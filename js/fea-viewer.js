@@ -1023,6 +1023,10 @@ function veFEABuildMeshForNode(meshNodeId) {
     if (typeof veFEAComputeJacobianMetrics === 'function') {
       metrics.jacobian = veFEAComputeJacobianMetrics(meshData);
     }
+    // Kalite metrikleri: aspect ratio + skewness + iç açı + histogram
+    if (typeof veFEAComputeQualityMetrics === 'function') {
+      metrics.quality = veFEAComputeQualityMetrics(meshData);
+    }
 
     veFEAMeshCache[meshNodeId] = meshData;
     meshNode.data.meshSettings = settings;

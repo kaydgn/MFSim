@@ -400,6 +400,173 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeQualityMetrics', () => {
+  test('Küp mesh için aspect ratio ≈ 1.0 (ideal küp)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.elementCount).toBe(8);
+    expect(q.aspectRatio.min).toBeCloseTo(1, 2);
+    expect(q.aspectRatio.max).toBeCloseTo(1, 2);
+    expect(q.aspectRatio.avg).toBeCloseTo(1, 2);
+    expect(q.aspectRatio.poorCount).toBe(0);
+  });
+
+  test('Küp mesh için skewness ≈ 0 (ideal yüzler)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.skewness.min).toBeCloseTo(0, 3);
+    expect(q.skewness.max).toBeCloseTo(0, 3);
+    expect(q.skewness.poorCount).toBe(0);
+  });
+
+  test('Küp mesh için iç açılar ≈ 90°', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.angle.min).toBeCloseTo(90, 1);
+    expect(q.angle.max).toBeCloseTo(90, 1);
+  });
+
+  test('Dikdörtgen prizma (10×30×5) için aspect > 1', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 30, depth: 5 } }, { size: 10 });
+    var q = veFEAComputeQualityMetrics(m);
+    // size=10 → 1×3×1 grid; her eleman 10×10×5 (z yönünde 5) → aspect = 10/5 = 2
+    expect(q.aspectRatio.min).toBeGreaterThan(1);
+    expect(q.aspectRatio.max).toBeGreaterThan(1.5);
+  });
+
+  test('Silindir wedge mesh için aspect ratio ≥ 1', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.aspectRatio.min).toBeGreaterThanOrEqual(1);
+    expect(q.elementCount).toBeGreaterThan(0);
+  });
+
+  test('Tet4 küp mesh için makul kalite', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, elementType: 'tet4' });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.elementCount).toBe(48); // 8 hex × 6 tet
+    // Tet4 6-split — bazı tetlerin aspect ratio'su yüksek olabilir ama hepsi geçerli
+    expect(q.aspectRatio.min).toBeGreaterThan(0);
+    expect(q.angle.min).toBeGreaterThan(0);
+    expect(q.angle.max).toBeLessThan(180);
+  });
+
+  test('Histogram bin sayıları doğru toplanır', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var q = veFEAComputeQualityMetrics(m);
+    var arSum = 0;
+    q.aspectRatio.histogram.bins.forEach(function(b) { arSum += b; });
+    expect(arSum).toBe(q.elementCount);
+    var skSum = 0;
+    q.skewness.histogram.bins.forEach(function(b) { skSum += b; });
+    expect(skSum).toBe(q.elementCount);
+  });
+
+  test('null/error mesh → null döner', () => {
+    expect(veFEAComputeQualityMetrics(null)).toBeNull();
+    expect(veFEAComputeQualityMetrics({ error: 'voxel-too-many' })).toBeNull();
+  });
+
+  test('Hex20 kuadratik mesh için corner-only kalite metrikleri', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, midSideNodes: true });
+    expect(m.type).toBe('hex20');
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.cornerCount).toBe(8);
+    expect(q.aspectRatio.min).toBeCloseTo(1, 2);
+  });
+
+  test('Build sonrası meshMetrics.quality eklenir', () => {
+    global.nodes = [
+      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
+      { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 5 } } }
+    ];
+    global.connections = [{ from: 'geom-1', to: 'mesh-1' }];
+    global.showToast = jest.fn();
+    global.showNodeProperties = jest.fn();
+    global.saveState = jest.fn();
+    Object.keys(veFEAMeshCache).forEach((k) => delete veFEAMeshCache[k]);
+    veFEABuildMeshForNode('mesh-1');
+    expect(global.nodes[1].data.meshMetrics.quality).toBeDefined();
+    expect(global.nodes[1].data.meshMetrics.quality.aspectRatio).toBeDefined();
+    expect(global.nodes[1].data.meshMetrics.quality.skewness).toBeDefined();
+    expect(global.nodes[1].data.meshMetrics.quality.angle).toBeDefined();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Kalite Metrikleri (histogram)', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Mesh yokken kalite mesajı gösterilir', () => {
+    var node = { id: 'mesh-quality1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/Kalite Metrikleri.*Aspect.*Skewness.*Açı/);
+    expect(html).toMatch(/otomatik hesaplanır/);
+  });
+
+  test('Quality metrics varsa aspect/skewness/açı satırları + histogram bar\'ları', () => {
+    var node = {
+      id: 'mesh-quality2',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: {
+          nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5,
+          quality: {
+            elementCount: 8, cornerCount: 8,
+            aspectRatio: { min: 1.0, max: 1.0, avg: 1.0, poorCount: 0, warnThreshold: 20,
+              histogram: { bins: [8,0,0,0,0,0,0,0,0,0], min: 1, max: 20, binCount: 10 } },
+            skewness: { min: 0, max: 0, avg: 0, poorCount: 0, warnThreshold: 0.85,
+              histogram: { bins: [8,0,0,0,0,0,0,0,0,0], min: 0, max: 1, binCount: 10 } },
+            angle: { min: 90, max: 90,
+              histogram: { bins: [0,0,0,0,0,8,0,0,0,0,0,0], min: 0, max: 180, binCount: 12 } }
+          }
+        }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/Aspect Min.*1\.00/);
+    expect(html).toMatch(/Skewness Min/);
+    expect(html).toMatch(/Min.*Maks iç açı.*90/);
+    // Histogram bar'ları render edildi
+    expect(html).toMatch(/Aspect Ratio histogramı/);
+    expect(html).toMatch(/Skewness histogramı/);
+    expect(html).toMatch(/Min iç açı histogramı/);
+  });
+
+  test('Poor aspect/skewness sayısı uyarı satırı', () => {
+    var node = {
+      id: 'mesh-quality3',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: {
+          nodeCount: 100, elementCount: 100, elementType: 'hex8', minSize: 1, maxSize: 10, avgSize: 5,
+          quality: {
+            elementCount: 100, cornerCount: 8,
+            aspectRatio: { min: 1, max: 50, avg: 10, poorCount: 7, warnThreshold: 20,
+              histogram: { bins: [50,30,10,5,5,0,0,0,0,0], min: 1, max: 20, binCount: 10 } },
+            skewness: { min: 0, max: 0.95, avg: 0.4, poorCount: 4, warnThreshold: 0.85,
+              histogram: { bins: [50,20,10,5,5,5,3,1,0,1], min: 0, max: 1, binCount: 10 } },
+            angle: { min: 15, max: 165,
+              histogram: { bins: [0,1,2,5,10,30,30,15,5,2,0,0], min: 0, max: 180, binCount: 12 } }
+          }
+        }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/7 eleman aspect > 20/);
+    expect(html).toMatch(/4 eleman skewness > 0\.85/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAEnrichToQuadratic (Tet10/Hex20/Wedge15)', () => {
   test('Hex8 → Hex20: nodesPerElement 8 → 20, eleman sayısı korunur', () => {
     var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });

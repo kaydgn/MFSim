@@ -26,6 +26,29 @@ function veFEAReadOnlyRow(label, value) {
     '</div>';
 }
 
+// Histogram bar chart — kalite metrikleri için inline SVG-free render
+function veFEAHistogramHTML(hist, label, color, axisFmt) {
+  if (!hist || !hist.bins || hist.bins.length === 0) return '';
+  var maxCount = 0;
+  for (var i = 0; i < hist.bins.length; i++) if (hist.bins[i] > maxCount) maxCount = hist.bins[i];
+  var fmt = axisFmt || function(v) { return v.toFixed(1); };
+  var html = '<div style="margin-bottom:8px;">';
+  html += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:3px;">' + label + '</div>';
+  html += '<div style="display:flex; align-items:flex-end; height:36px; gap:1px; background:var(--bg-secondary); padding:3px; border:1px solid var(--border-color);">';
+  hist.bins.forEach(function(b, idx) {
+    var pct = maxCount > 0 ? (b / maxCount * 100) : 0;
+    var binMin = hist.min + (hist.max - hist.min) * (idx / hist.binCount);
+    var binMax = hist.min + (hist.max - hist.min) * ((idx + 1) / hist.binCount);
+    var title = fmt(binMin) + '–' + fmt(binMax) + ': ' + b + ' eleman';
+    html += '<div title="' + title + '" style="flex:1; background:' + color + '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + ';"></div>';
+  });
+  html += '</div>';
+  html += '<div style="display:flex; justify-content:space-between; font-size:0.52rem; color:var(--text-muted); margin-top:2px;">' +
+    '<span>' + fmt(hist.min) + '</span><span>' + fmt(hist.max) + '</span></div>';
+  html += '</div>';
+  return html;
+}
+
 // ─── 1. GEOMETRİ ────────────────────────────────────────────────────────────
 function getFEAGeometryPropertiesHTML(node) {
   var d = node.data || {};
@@ -296,6 +319,33 @@ function getFEAMeshPropertiesHTML(node) {
     }
   } else {
     html += veFEAReadOnlyRow('Durum', '—');
+  }
+
+  // ─── Eleman Kalite Metrikleri (Aspect / Skewness / Açı) ─────────────────
+  html += veFEASectionTitle('Kalite Metrikleri (Aspect / Skewness / Açı)');
+  if (hasMesh && metrics.quality) {
+    var q = metrics.quality;
+    // Aspect ratio
+    html += veFEAReadOnlyRow('Aspect Min / Maks / Ort', q.aspectRatio.min.toFixed(2) + ' / ' + q.aspectRatio.max.toFixed(2) + ' / ' + q.aspectRatio.avg.toFixed(2));
+    if (q.aspectRatio.poorCount > 0) {
+      html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">' +
+        '⚠ ' + q.aspectRatio.poorCount.toLocaleString('tr-TR') + ' eleman aspect > ' + q.aspectRatio.warnThreshold + '</div>';
+    }
+    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı', '#3b82f6', function(v){return v.toFixed(1);});
+
+    // Skewness
+    html += veFEAReadOnlyRow('Skewness Min / Maks / Ort', q.skewness.min.toFixed(3) + ' / ' + q.skewness.max.toFixed(3) + ' / ' + q.skewness.avg.toFixed(3));
+    if (q.skewness.poorCount > 0) {
+      html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">' +
+        '⚠ ' + q.skewness.poorCount.toLocaleString('tr-TR') + ' eleman skewness > ' + q.skewness.warnThreshold + '</div>';
+    }
+    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı (0=ideal, 1=dejenere)', '#f59e0b', function(v){return v.toFixed(2);});
+
+    // İç açı
+    html += veFEAReadOnlyRow('Min / Maks iç açı', q.angle.min.toFixed(1) + '° / ' + q.angle.max.toFixed(1) + '°');
+    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece)', '#22c55e', function(v){return v.toFixed(0) + '°';});
+  } else {
+    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra otomatik hesaplanır.</div>';
   }
 
   // ─── Named Selections (Atanmış Yüzeyler) ────────────────────────────────
