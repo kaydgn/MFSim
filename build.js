@@ -96,6 +96,44 @@ html = html.replace(
   }
 );
 
+// ── 2c) Inline-resource placeholder'lari: <!-- INLINE_FILE: path [as kind] -->
+// Monolitik HTML'in tek-dosya olmasi gerektigi icin WASM/JS dosyalarini
+// HTML icine kaydirmamiz lazim. WASM binary base64, JS metin olarak somutlanir.
+//
+// Kullanim ornekleri:
+//   <!-- INLINE_FILE: vendor/opencascade/occt-import-js.js as occtScript -->
+//   <!-- INLINE_FILE: vendor/opencascade/occt-import-js.wasm as occtWasm -->
+//
+// Dev modunda (index.html'de) placeholder'lar HTML icinde durur; tarayici
+// onlari yorum olarak gorur, fea-step.js dosyalardan dinamik yukler.
+// Build sirasinda placeholder yerine window.__feaInline[kind] = <icerik>
+// atayan bir <script> blogu konur.
+html = html.replace(
+  /<!--\s*INLINE_FILE:\s*([^\s]+)\s+as\s+(\w+)\s*-->/g,
+  function(match, filePath, kind) {
+    var fullPath = path.join(ROOT, filePath);
+    if (!fs.existsSync(fullPath)) {
+      console.warn('  Inline atlandi (kaynak yok): ' + filePath + ' — "npm run vendor:sync" calistirin.');
+      return '<!-- INLINE_FILE skipped: ' + filePath + ' -->';
+    }
+    var isBinary = /\.(wasm|bin)$/i.test(filePath);
+    var content = fs.readFileSync(fullPath);
+    var script;
+    if (isBinary) {
+      var b64 = content.toString('base64');
+      script = '<script>(window.__feaInline=window.__feaInline||{}).' + kind +
+               '=' + JSON.stringify(b64) + ';</script>';
+      console.log('  Inline (base64):', filePath, '(' + (b64.length / 1024).toFixed(0) + ' KB)');
+    } else {
+      var text = content.toString('utf8');
+      script = '<script>(window.__feaInline=window.__feaInline||{}).' + kind +
+               '=' + JSON.stringify(text) + ';</script>';
+      console.log('  Inline (text):', filePath, '(' + (text.length / 1024).toFixed(0) + ' KB)');
+    }
+    return script;
+  }
+);
+
 // ── 3) Yaz
 fs.writeFileSync(OUTPUT, html, 'utf8');
 
