@@ -40,10 +40,20 @@ function getFEAGeometryPropertiesHTML(node) {
     'CAD geometrisi (STEP, IGES, STL) yükleyin veya parametrik primitif tanımlayın. ' +
     'Sonraki adım: <b>Mesh</b>.</div>';
 
+  // ─── 3D ÖNİZLEME ──────────────────────────────────────────────────────
+  html += veFEASectionTitle('3D Önizleme');
+  html += '<div style="position:relative; border:1px solid var(--border-color); background:#1a1a1a; margin-bottom:8px;">';
+  html += '<canvas id="ve-fea-geom-canvas-' + node.id + '" width="240" height="180" style="display:block; width:100%; height:180px; cursor:grab;"></canvas>';
+  html += '<div style="position:absolute; bottom:6px; left:8px; font-size:0.55rem; color:#888; pointer-events:none;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</div>';
+  html += '</div>';
+  html += '<button onclick="veFEAOpenFullscreenViewer(\'' + node.id + '\')" style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; margin-bottom:10px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">🔍 Tam Ekran Görüntüleyici</button>';
+
+  // ─── GEOMETRİ KAYNAĞI ─────────────────────────────────────────────────
   html += veFEASectionTitle('Geometri Kaynağı');
   html += '<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">';
-  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 Dosya İçe Aktar (STEP / IGES / STL) — F2</button>';
-  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📐 Parametrik Primitif (kutu / silindir / şaft) — F2</button>';
+  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 Dosya İçe Aktar (STL — sonraki PR)</button>';
+  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📥 Dosya İçe Aktar (STEP / IGES — OCCT.js ile)</button>';
+  html += '<button class="ve-fea-btn-disabled" disabled style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">📐 Parametrik Primitif (kutu / silindir / şaft)</button>';
   html += '</div>';
 
   html += veFEASectionTitle('Durum');

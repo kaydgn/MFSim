@@ -59,7 +59,25 @@ html = html.replace(
   }
 );
 
-// ── 2) JS: <script src="js/..."></script> → <script>içerik</script>
+// ── 2a) Vendor JS: <script src="vendor/..."></script> → <script>içerik</script>
+// Three.js gibi 3. parti kütüphaneler için ayrı eşleştirme. js/ deseninden ÖNCE
+// işlenir; sıralama korunur.
+html = html.replace(
+  /<script\s+src="(vendor\/[^"]+)"\s*><\/script>/g,
+  function(match, vendorPath) {
+    var fullPath = path.join(ROOT, vendorPath);
+    if (!fs.existsSync(fullPath)) {
+      console.error('HATA: Vendor dosyası bulunamadı:', fullPath);
+      console.error('  İpucu: "npm run vendor:sync" çalıştırın.');
+      process.exit(1);
+    }
+    var js = fs.readFileSync(fullPath, 'utf8');
+    console.log('  Vendor inline:', vendorPath, '(' + js.length + ' karakter)');
+    return '<script>\n' + js + '\n</script>';
+  }
+);
+
+// ── 2b) JS: <script src="js/..."></script> → <script>içerik</script>
 html = html.replace(
   /<script\s+src="(js\/[^"]+)"\s*><\/script>/g,
   function(match, jsPath) {

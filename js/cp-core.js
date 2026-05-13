@@ -257,4 +257,13 @@ function showNodeProperties(node) {
       veInitRoadMap(node.id);
     }, 400);
   }
+
+  // FEA Geometri: 3D viewer'ı başlat (Three.js)
+  if(node.type === 'fea-geometry') {
+    setTimeout(function() {
+      if(typeof veFEAInitGeometryViewerForNode === 'function') {
+        veFEAInitGeometryViewerForNode(node.id);
+      }
+    }, 100);
+  }
 }
