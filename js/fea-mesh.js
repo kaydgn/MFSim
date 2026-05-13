@@ -266,7 +266,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   // hedef yüze doğru kümele. Tet4/quadratic dönüşümlerinden ÖNCE uygulanır
   // ki midpoint düğümleri doğru pozisyonda hesaplansın.
   if (mesh && !mesh.error && opts.localSizing && opts.localSizing.selection &&
-      opts.localSizing.biasStrength > 0) {
+      opts.localSizing.selection !== 'none' && _veFEALocalSizingActive(opts.localSizing)) {
     mesh = veFEAApplyLocalSizing(mesh, opts.localSizing);
   }
   // elementType: hex8/wedge6 → tet4 decomposition (yüzey tri3 etkilenmez)
@@ -280,18 +280,36 @@ function veFEAMeshFromGeometry(geometry, opts) {
   return mesh;
 }
 
+function _veFEALocalSizingActive(ls) {
+  if (!ls) return false;
+  var mode = ls.biasMode || 'power';
+  if (mode === 'power') return Number(ls.biasStrength) > 0;
+  if (mode === 'inflation') {
+    var first = Number(ls.firstLayerThickness);
+    var nLayers = parseInt(ls.layerCount, 10);
+    return isFinite(first) && first > 0 && isFinite(nLayers) && nLayers >= 1;
+  }
+  return false;
+}
+
 // ─── Lokal sizing (boundary bias) ──────────────────────────────────────────
-// Adı verilen yüzeye doğru düğümleri power function ile kümele.
-//   localSizing = { selection: 'faceXMin', biasStrength: 0.7 }
-//   biasStrength ∈ [0, 1]: 0 = no bias, 1 = max cluster
+// Adı verilen yüzeye doğru düğümleri kümele. İki mod:
+//   - power: t → t^p (sürekli, sade)
+//   - inflation: geometric progression layer'ları + uniform interior
+//
+//   localSizing = {
+//     selection: 'faceXMin',
+//     biasMode: 'power' | 'inflation',  (default: 'power')
+//     biasStrength: 0.7,                (power mode)
+//     firstLayerThickness: 1,           (inflation mode, mm)
+//     growthRate: 1.2,                  (inflation mode)
+//     layerCount: 5                     (inflation mode)
+//   }
 // Eksen yönlü yüzeyler desteklenir (X, Y, Z, top/bottom). Radyal yüzeyler
 // (faceSide, faceOuter, faceInner) henüz desteklenmez — sadece axial.
 function veFEAApplyLocalSizing(mesh, localSizing) {
   if (!mesh || mesh.error || !mesh.namedSelections) return mesh;
   if (!localSizing || !localSizing.selection) return mesh;
-  var strength = Number(localSizing.biasStrength);
-  if (!isFinite(strength) || strength <= 0) return mesh;
-  if (strength > 1) strength = 1;
 
   var name = localSizing.selection;
   var axis = -1, towardMax = false;
@@ -301,7 +319,17 @@ function veFEAApplyLocalSizing(mesh, localSizing) {
   else if (name === 'faceYMax' || name === 'faceTop')    { axis = 1; towardMax = true; }
   else if (name === 'faceZMin') { axis = 2; towardMax = false; }
   else if (name === 'faceZMax') { axis = 2; towardMax = true; }
-  else return mesh; // radyal yüzeyler ileride
+  else return mesh;
+
+  var mode = localSizing.biasMode || 'power';
+  if (mode === 'inflation') return _veFEAApplyInflation(mesh, localSizing, axis, towardMax);
+  return _veFEAApplyPowerBias(mesh, localSizing, axis, towardMax);
+}
+
+function _veFEAApplyPowerBias(mesh, ls, axis, towardMax) {
+  var strength = Number(ls.biasStrength);
+  if (!isFinite(strength) || strength <= 0) return mesh;
+  if (strength > 1) strength = 1;
 
   var nodes = mesh.nodes;
   var n = nodes.length / 3;
@@ -313,24 +341,92 @@ function veFEAApplyLocalSizing(mesh, localSizing) {
   }
   var range = maxVal - minVal;
   if (range <= 0) return mesh;
-
-  // Power exponent: strength 0 → p=1 (lineer), strength 1 → p=4 (güçlü cluster)
   var p = 1 + strength * 3;
 
   var newNodes = new Float32Array(nodes);
   for (var ii = 0; ii < n; ii++) {
     var orig = newNodes[ii * 3 + axis];
-    var t = (orig - minVal) / range; // 0 at min, 1 at max
+    var t = (orig - minVal) / range;
     var tNew;
-    if (!towardMax) {
-      tNew = Math.pow(t, p);              // cluster near min
-    } else {
-      tNew = 1 - Math.pow(1 - t, p);      // cluster near max
-    }
+    if (!towardMax) tNew = Math.pow(t, p);
+    else            tNew = 1 - Math.pow(1 - t, p);
     newNodes[ii * 3 + axis] = minVal + tNew * range;
   }
+  return Object.assign({}, mesh, { nodes: newNodes, localSizingApplied: ls });
+}
 
-  return Object.assign({}, mesh, { nodes: newNodes, localSizingApplied: localSizing });
+// Inflation: first × growth^i kalınlığında k katman, kalan kısım uniform
+function _veFEAApplyInflation(mesh, ls, axis, towardMax) {
+  var firstLayer = Number(ls.firstLayerThickness);
+  var growth = Number(ls.growthRate);
+  var nLayers = parseInt(ls.layerCount, 10);
+  if (!isFinite(firstLayer) || firstLayer <= 0) return mesh;
+  if (!isFinite(growth) || growth <= 0) growth = 1.2;
+  if (growth > 5) growth = 5;
+  if (!isFinite(nLayers) || nLayers < 1) return mesh;
+  if (nLayers > 50) nLayers = 50;
+
+  var nodes = mesh.nodes;
+  var n = nodes.length / 3;
+  var minVal = Infinity, maxVal = -Infinity;
+  for (var i = 0; i < n; i++) {
+    var v = nodes[i * 3 + axis];
+    if (v < minVal) minVal = v;
+    if (v > maxVal) maxVal = v;
+  }
+  var L = maxVal - minVal;
+  if (L <= 0) return mesh;
+
+  // Eksenel düğüm sayısı (eşsiz pozisyonlar)
+  var posSet = {};
+  for (var ii = 0; ii < n; ii++) posSet[nodes[ii * 3 + axis].toFixed(6)] = true;
+  var sortedPos = Object.keys(posSet).map(Number).sort(function(a, b) { return a - b; });
+  var nAxis = sortedPos.length - 1; // interval sayısı
+  if (nAxis < 1) return mesh;
+
+  if (nLayers > nAxis) nLayers = nAxis;
+
+  // Inflation toplam kalınlığı
+  var inflTotal;
+  if (Math.abs(growth - 1) < 1e-6) inflTotal = firstLayer * nLayers;
+  else inflTotal = firstLayer * (Math.pow(growth, nLayers) - 1) / (growth - 1);
+  // Eksen boyunu aşıyorsa scale
+  if (inflTotal >= L * 0.95) {
+    var scale = (L * 0.95) / inflTotal;
+    firstLayer *= scale;
+    inflTotal *= scale;
+  }
+  var remaining = L - inflTotal;
+  var uniformN = nAxis - nLayers;
+  var uniformStep = uniformN > 0 ? (remaining / uniformN) : 0;
+
+  // Yeni eksen pozisyonları (boundary'den başlayarak)
+  var newRel = new Array(sortedPos.length);
+  newRel[0] = 0;
+  var cur = 0;
+  for (var li = 0; li < nLayers; li++) {
+    cur += firstLayer * Math.pow(growth, li);
+    newRel[li + 1] = cur;
+  }
+  for (var lj = 0; lj < uniformN; lj++) {
+    cur += uniformStep;
+    newRel[nLayers + lj + 1] = cur;
+  }
+
+  // Eşle: sortedPos[k] (orijinal) → newRel[k] (yeni, boundary'den uzaklık)
+  var origToNew = {};
+  for (var k = 0; k < sortedPos.length; k++) {
+    var newPos = towardMax ? (maxVal - newRel[k]) : (minVal + newRel[k]);
+    origToNew[sortedPos[k].toFixed(6)] = newPos;
+  }
+
+  var newNodes = new Float32Array(nodes);
+  for (var nn = 0; nn < n; nn++) {
+    var ok = newNodes[nn * 3 + axis].toFixed(6);
+    var nv = origToNew[ok];
+    if (nv !== undefined) newNodes[nn * 3 + axis] = nv;
+  }
+  return Object.assign({}, mesh, { nodes: newNodes, localSizingApplied: ls });
 }
 
 // Async wrapper — STEP gibi parse'i Promise tabanlı geometriler için.
@@ -358,7 +454,7 @@ function veFEAMeshFromGeometryAsync(geometry, opts) {
       }
       var hexMesh = _veFEAVoxelizeTrianglesToHex(parsed, size, 'step');
       if (hexMesh && !hexMesh.error && opts.localSizing && opts.localSizing.selection &&
-          opts.localSizing.biasStrength > 0) {
+          opts.localSizing.selection !== 'none' && _veFEALocalSizingActive(opts.localSizing)) {
         hexMesh = veFEAApplyLocalSizing(hexMesh, opts.localSizing);
       }
       if (hexMesh && !hexMesh.error && elementType === 'tet4') {

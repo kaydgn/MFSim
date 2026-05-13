@@ -575,6 +575,163 @@ describe('veFEAApplyLocalSizing (boundary bias)', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Inflation layers (biasMode: inflation)', () => {
+  test('Geometrik progresyon: ilk katman küçük, sonrakiler büyür', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 100, height: 20, depth: 20 } }, { size: 10 });
+    // size=10 → nx=10 cell, nx+1=11 nodes along X
+    var biased = veFEAApplyLocalSizing(m, {
+      selection: 'faceXMin',
+      biasMode: 'inflation',
+      firstLayerThickness: 1,
+      growthRate: 1.5,
+      layerCount: 4
+    });
+    // X-koordinatlarını topla, sırala
+    var xs = [];
+    var n = biased.nodes.length / 3;
+    for (var i = 0; i < n; i++) xs.push(biased.nodes[i * 3]);
+    var unique = Array.from(new Set(xs.map(function(x){return x.toFixed(4);}))).map(Number).sort(function(a,b){return a-b;});
+    // İlk 5 düğüm: -50 (boundary), -49, -47.5, -45.25, -41.875 (first=1, growth=1.5)
+    // Boundary at min = -50. After:
+    //   x0 = -50
+    //   x1 = -50 + 1 = -49
+    //   x2 = -50 + 1 + 1.5 = -47.5
+    //   x3 = -50 + 1 + 1.5 + 2.25 = -45.25
+    //   x4 = -50 + 1 + 1.5 + 2.25 + 3.375 = -41.875
+    expect(unique[0]).toBeCloseTo(-50, 3);
+    expect(unique[1]).toBeCloseTo(-49, 3);
+    expect(unique[2]).toBeCloseTo(-47.5, 3);
+    expect(unique[3]).toBeCloseTo(-45.25, 3);
+    expect(unique[4]).toBeCloseTo(-41.875, 3);
+    // İlk dx (1) son dx'ten çok daha küçük
+    var firstDx = unique[1] - unique[0];
+    var lastDx = unique[unique.length - 1] - unique[unique.length - 2];
+    expect(firstDx).toBeLessThan(lastDx);
+  });
+
+  test('Inflation toplam kalınlığı eksenden büyükse scale edilir', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 1 });
+    // Geometri 10 mm, inflation 4 katman × first=5 × growth=2 = 5*(15) = 75 mm
+    // Bu çok büyük, scale edilmeli
+    var biased = veFEAApplyLocalSizing(m, {
+      selection: 'faceXMin',
+      biasMode: 'inflation',
+      firstLayerThickness: 5,
+      growthRate: 2,
+      layerCount: 4
+    });
+    // Boundary değerleri aynen korunmalı
+    var xs = [];
+    var n = biased.nodes.length / 3;
+    for (var i = 0; i < n; i++) xs.push(biased.nodes[i * 3]);
+    var minX = Math.min.apply(null, xs);
+    var maxX = Math.max.apply(null, xs);
+    expect(minX).toBeCloseTo(-5, 3);
+    expect(maxX).toBeCloseTo(5, 3);
+  });
+
+  test('faceXMax: inflation max\'tan başlar (towardMax)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 100, height: 20, depth: 20 } }, { size: 10 });
+    var biased = veFEAApplyLocalSizing(m, {
+      selection: 'faceXMax',
+      biasMode: 'inflation',
+      firstLayerThickness: 1,
+      growthRate: 1.5,
+      layerCount: 4
+    });
+    var xs = [];
+    var n = biased.nodes.length / 3;
+    for (var i = 0; i < n; i++) xs.push(biased.nodes[i * 3]);
+    var unique = Array.from(new Set(xs.map(function(x){return x.toFixed(4);}))).map(Number).sort(function(a,b){return a-b;});
+    // En son iki düğüm boundary'ye en yakın olmalı
+    var lastDx = unique[unique.length - 1] - unique[unique.length - 2];
+    var firstDx = unique[1] - unique[0];
+    expect(lastDx).toBeLessThan(firstDx);
+  });
+
+  test('layerCount > nAxis → clamp', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    // size=5, w=10 → nx=2 interval (3 düğüm); layerCount=10 > 2 → clamp
+    var biased = veFEAApplyLocalSizing(m, {
+      selection: 'faceXMin',
+      biasMode: 'inflation',
+      firstLayerThickness: 0.5,
+      growthRate: 1.2,
+      layerCount: 10
+    });
+    expect(biased.nodes).not.toBe(m.nodes); // mesh değişti
+  });
+
+  test('Inflation invalid params → no-op', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var out = veFEAApplyLocalSizing(m, {
+      selection: 'faceXMin',
+      biasMode: 'inflation',
+      firstLayerThickness: -1, // invalid
+      growthRate: 1.2,
+      layerCount: 3
+    });
+    expect(out).toBe(m);
+  });
+
+  test('Element bağlantıları korunur (sadece düğüm konumları değişir)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 50, height: 10, depth: 10 } }, { size: 5 });
+    var biased = veFEAApplyLocalSizing(m, {
+      selection: 'faceXMin',
+      biasMode: 'inflation',
+      firstLayerThickness: 0.5,
+      growthRate: 1.3,
+      layerCount: 3
+    });
+    expect(biased.elements).toBe(m.elements);
+    expect(biased.elements.length).toBe(m.elements.length);
+  });
+
+  test('biasMode default=power: eski davranış korunur', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 2 });
+    var biased1 = veFEAApplyLocalSizing(m1, { selection: 'faceXMin', biasStrength: 0.5 });
+    var biased2 = veFEAApplyLocalSizing(m1, { selection: 'faceXMin', biasMode: 'power', biasStrength: 0.5 });
+    // İki yöntem de aynı sonucu vermeli
+    for (var i = 0; i < biased1.nodes.length; i++) {
+      expect(biased2.nodes[i]).toBeCloseTo(biased1.nodes[i], 6);
+    }
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Inflation UI', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Default mode "power": bias slider gösterilir', () => {
+    var node = { id: 'mesh-inf1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-local-bias-mesh-inf1"/);
+    expect(html).not.toMatch(/id="ve-fea-mesh-local-first-mesh-inf1"/);
+  });
+
+  test('Mode "inflation" persisted → first/grow/nlay inputlari', () => {
+    var node = {
+      id: 'mesh-inf2',
+      type: 'fea-mesh',
+      data: { meshSettings: { size: 5, localSizing: { selection: 'faceXMin', biasMode: 'inflation', firstLayerThickness: 0.5, growthRate: 1.3, layerCount: 4 } } }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-local-first-mesh-inf2"/);
+    expect(html).toMatch(/id="ve-fea-mesh-local-grow-mesh-inf2"/);
+    expect(html).toMatch(/id="ve-fea-mesh-local-nlay-mesh-inf2"/);
+    expect(html).toMatch(/value="inflation"\s+selected/);
+    expect(html).toMatch(/value="0\.5"/);
+    expect(html).toMatch(/value="1\.3"/);
+    expect(html).toMatch(/value="4"/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAMeshFromGeometry — localSizing entegrasyonu', () => {
   test('opts.localSizing build sırasında uygulanır', () => {
     var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 2 });
