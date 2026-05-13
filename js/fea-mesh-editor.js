@@ -574,14 +574,14 @@ function _veFEAEditorQualityHTML(node) {
     if (q.aspectRatio.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.aspectRatio.poorCount.toLocaleString('tr-TR') + ' eleman aspect > ' + q.aspectRatio.warnThreshold + '</div>';
     }
-    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı', '#3b82f6', function(v){return v.toFixed(1);});
+    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#3b82f6', function(v){return v.toFixed(1);}, { warnLimit: 5, errLimit: q.aspectRatio.warnThreshold || 20, inverted: false });
     html += veFEAReadOnlyRow('Skewness Min / Maks / Ort', (q.skewness.min || 0).toFixed(3) + ' / ' + (q.skewness.max || 0).toFixed(3) + ' / ' + (q.skewness.avg || 0).toFixed(3));
     if (q.skewness.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.skewness.poorCount.toLocaleString('tr-TR') + ' eleman skewness > ' + q.skewness.warnThreshold + '</div>';
     }
-    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı', '#f59e0b', function(v){return v.toFixed(2);});
+    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#f59e0b', function(v){return v.toFixed(2);}, { warnLimit: 0.5, errLimit: q.skewness.warnThreshold || 0.85, inverted: false });
     html += veFEAReadOnlyRow('Min / Maks iç açı', (q.angle.min || 0).toFixed(1) + '° / ' + (q.angle.max || 0).toFixed(1) + '°');
-    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece)', '#22c55e', function(v){return v.toFixed(0) + '°';});
+    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece — düşük=kötü, ters threshold)', '#22c55e', function(v){return v.toFixed(0) + '°';}, { warnLimit: 30, errLimit: 15, inverted: true });
   }
   return html;
 }
@@ -626,15 +626,22 @@ function _veFEAEditorDisplayHTML(node) {
   if (!hasMesh) {
     return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra kullanılabilir.</div>';
   }
-  var displayMode = d.heatMapMetric || 'off';
-  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">Mesh\'in 3D viewer\'da nasıl gösterileceğini seçin.</div>';
+  // ANSYS-style default: Body Color = Solid + Edges
+  var displayMode = d.heatMapMetric || 'solid-edges';
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">Mesh\'in 3D viewer\'da nasıl gösterileceğini seçin. ANSYS-style: <b>Body Color</b> (solid+edges) varsayılan.</div>';
   html += '<select onchange="veFEAApplyHeatMap(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
   html += '<optgroup label="Standart">';
-  html += '<option value="off"' + (displayMode === 'off' || !d.heatMapMetric ? ' selected' : '') + '>Wireframe (kenarlar)</option>';
+  html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Body Color (Solid + Edges)</option>';
   html += '<option value="solid"' + (displayMode === 'solid' ? ' selected' : '') + '>Solid (yüzey)</option>';
-  html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Solid + Edges</option>';
+  html += '<option value="off"' + (displayMode === 'off' ? ' selected' : '') + '>Wireframe (sadece kenarlar)</option>';
   html += '</optgroup>';
-  html += '<optgroup label="Heat Map (Kalite)">';
+  html += '<optgroup label="Kalite Eşiği (Mesh Quality Worksheet)">';
+  html += '<option value="threshold-aspect"' + (displayMode === 'threshold-aspect' ? ' selected' : '') + '>Aspect Ratio (yeşil/sarı/kırmızı)</option>';
+  html += '<option value="threshold-skewness"' + (displayMode === 'threshold-skewness' ? ' selected' : '') + '>Skewness (yeşil/sarı/kırmızı)</option>';
+  html += '<option value="threshold-minAngle"' + (displayMode === 'threshold-minAngle' ? ' selected' : '') + '>Min İç Açı (yeşil/sarı/kırmızı)</option>';
+  html += '<option value="threshold-jacobian"' + (displayMode === 'threshold-jacobian' ? ' selected' : '') + '>Jacobian Oranı (yeşil/sarı/kırmızı)</option>';
+  html += '</optgroup>';
+  html += '<optgroup label="Heat Map (Sürekli Rainbow)">';
   html += '<option value="aspect"' + (displayMode === 'aspect' ? ' selected' : '') + '>Aspect Ratio</option>';
   html += '<option value="skewness"' + (displayMode === 'skewness' ? ' selected' : '') + '>Skewness</option>';
   html += '<option value="minAngle"' + (displayMode === 'minAngle' ? ' selected' : '') + '>Min İç Açı</option>';
@@ -642,11 +649,21 @@ function _veFEAEditorDisplayHTML(node) {
   html += '</optgroup>';
   html += '</select>';
   var isHeatMap = (displayMode === 'aspect' || displayMode === 'skewness' || displayMode === 'minAngle' || displayMode === 'jacobianRatio');
+  var isThreshold = (displayMode === 'threshold-aspect' || displayMode === 'threshold-skewness' || displayMode === 'threshold-minAngle' || displayMode === 'threshold-jacobian');
   if (isHeatMap) {
     html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
       '<span style="font-size:0.55rem; color:var(--text-muted);">İyi</span>' +
       '<div style="flex:1; height:8px; background:linear-gradient(to right, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000); border:1px solid var(--border-color);"></div>' +
       '<span style="font-size:0.55rem; color:var(--text-muted);">Kötü</span>' +
+    '</div>';
+  } else if (isThreshold) {
+    html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
+      '<span style="display:inline-block; width:14px; height:10px; background:#22c55e;"></span>' +
+      '<span style="font-size:0.55rem; color:var(--text-muted);">İyi</span>' +
+      '<span style="display:inline-block; width:14px; height:10px; background:#f59e0b;"></span>' +
+      '<span style="font-size:0.55rem; color:var(--text-muted);">Uyarı</span>' +
+      '<span style="display:inline-block; width:14px; height:10px; background:#ef4444;"></span>' +
+      '<span style="font-size:0.55rem; color:var(--text-muted);">Hata</span>' +
     '</div>';
   }
   return html;

@@ -1679,6 +1679,26 @@ function veFEAExtractSurfaceTriangles(meshData) {
   };
 }
 
+// ANSYS Mesh Quality Worksheet renkleri — threshold-based:
+//   value < warnLimit → yeşil (iyi)
+//   warnLimit ≤ value < errLimit → sarı (uyarı)
+//   value ≥ errLimit → kırmızı (hata)
+// inverted=true: küçük değer kötü (örn. minAngle).
+function veFEAThresholdColor(value, warnLimit, errLimit, inverted) {
+  if (!isFinite(value)) return [0.5, 0.5, 0.5];
+  var isErr, isWarn;
+  if (inverted) {
+    isErr  = value <= errLimit;
+    isWarn = !isErr && value <= warnLimit;
+  } else {
+    isErr  = value >= errLimit;
+    isWarn = !isErr && value >= warnLimit;
+  }
+  if (isErr)  return [0.93, 0.27, 0.27];   // ANSYS kırmızı (#ef4444)
+  if (isWarn) return [0.96, 0.62, 0.04];   // ANSYS sarı/turuncu (#f59e0b)
+  return [0.13, 0.77, 0.37];                // ANSYS yeşil (#22c55e)
+}
+
 // Jet color ramp: t ∈ [0,1] → [r, g, b] ∈ [0,1]³
 // Mavi (cold = iyi) → Cyan → Yeşil → Sarı → Kırmızı (hot = kötü)
 function veFEAJetColor(t) {
