@@ -400,6 +400,213 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeJacobianMetrics', () => {
+  test('Kutu mesh için tüm elemanlar geçerli (no inverted/degenerate)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+    expect(jm.invertedCount).toBe(0);
+    expect(jm.degenerateCount).toBe(0);
+    expect(jm.elementCount).toBe(8);
+    expect(jm.minJacRatio).toBeCloseTo(1, 2); // küp → tüm sub-tet hacimleri eşit
+    expect(jm.maxJacRatio).toBeCloseTo(1, 2);
+  });
+
+  test('Silindir mesh için geçerli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+    expect(jm.invertedCount).toBe(0);
+  });
+
+  test('Şaft mesh için geçerli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } }, { size: 10 });
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+  });
+
+  test('Tet4 mesh için geçerli (tek tet → ratio 1.0)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, elementType: 'tet4' });
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+    expect(jm.elementCount).toBe(48); // 8 hex × 6 tet
+    // Her tet için ratio = max/min = 1/1 = 1 (tek sub-tet)
+    expect(jm.minJacRatio).toBeCloseTo(1, 4);
+    expect(jm.maxJacRatio).toBeCloseTo(1, 4);
+  });
+
+  test('Manuel ters dönmüş tet → invertedCount artar', () => {
+    // 4 düğüm, swap son ikisini → orientation flipped
+    var mesh = {
+      type: 'tet4',
+      nodes: new Float32Array([0,0,0,  1,0,0,  0,1,0,  0,0,1]),
+      elements: new Uint32Array([0, 1, 3, 2]), // 2 ve 3 swapped → inverted
+      nodesPerElement: 4
+    };
+    var jm = veFEAComputeJacobianMetrics(mesh);
+    expect(jm.invertedCount).toBe(1);
+    expect(jm.valid).toBe(false);
+    expect(jm.invertedIds).toContain(0);
+  });
+
+  test('Manuel dejenere tet (collapsed) → degenerateCount artar', () => {
+    // 4 düğüm coplanar (z=0) → volume = 0
+    var mesh = {
+      type: 'tet4',
+      nodes: new Float32Array([0,0,0,  1,0,0,  0,1,0,  1,1,0]),
+      elements: new Uint32Array([0, 1, 2, 3]),
+      nodesPerElement: 4
+    };
+    var jm = veFEAComputeJacobianMetrics(mesh);
+    expect(jm.degenerateCount).toBe(1);
+    expect(jm.valid).toBe(false);
+  });
+
+  test('null mesh → null döner', () => {
+    expect(veFEAComputeJacobianMetrics(null)).toBeNull();
+    expect(veFEAComputeJacobianMetrics({ error: 'voxel-too-many' })).toBeNull();
+  });
+
+  test('Voxel STL → tüm voxel hex geçerli', () => {
+    function buildCubeTriangles() {
+      return [
+        [0,0,0, 10,10,0, 10,0,0,  0,0,-1],
+        [0,0,0, 0,10,0, 10,10,0,  0,0,-1],
+        [0,0,10, 10,0,10, 10,10,10,  0,0,1],
+        [0,0,10, 10,10,10, 0,10,10,  0,0,1],
+        [0,0,0, 0,0,10, 0,10,10,  -1,0,0],
+        [0,0,0, 0,10,10, 0,10,0,  -1,0,0],
+        [10,0,0, 10,10,0, 10,10,10,  1,0,0],
+        [10,0,0, 10,10,10, 10,0,10,  1,0,0],
+        [0,0,0, 10,0,0, 10,0,10,  0,-1,0],
+        [0,0,0, 10,0,10, 0,0,10,  0,-1,0],
+        [0,10,0, 0,10,10, 10,10,10,  0,1,0],
+        [0,10,0, 10,10,10, 10,10,0,  0,1,0]
+      ];
+    }
+    var tris = buildCubeTriangles();
+    var ab = new ArrayBuffer(84 + tris.length * 50);
+    var view = new DataView(ab);
+    view.setUint32(80, tris.length, true);
+    var offset = 84;
+    for (var i = 0; i < tris.length; i++) {
+      var t = tris[i];
+      view.setFloat32(offset, t[9], true);
+      view.setFloat32(offset + 4, t[10], true);
+      view.setFloat32(offset + 8, t[11], true);
+      offset += 12;
+      for (var j = 0; j < 9; j++) view.setFloat32(offset + j * 4, t[j], true);
+      offset += 36;
+      view.setUint16(offset, 0, true);
+      offset += 2;
+    }
+    var b64 = veFEAArrayBufferToBase64(ab);
+    var m = veFEAMeshFromGeometry({ type: 'stl', rawDataB64: b64 }, { size: 5 });
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+    expect(jm.elementCount).toBe(8);
+  });
+
+  test('Jacobian metrics meshMetrics içine entegre olur (build sonrası)', () => {
+    global.nodes = [
+      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
+      { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 5 } } }
+    ];
+    global.connections = [{ from: 'geom-1', to: 'mesh-1' }];
+    global.showToast = jest.fn();
+    global.showNodeProperties = jest.fn();
+    global.saveState = jest.fn();
+    Object.keys(veFEAMeshCache).forEach((k) => delete veFEAMeshCache[k]);
+    veFEABuildMeshForNode('mesh-1');
+    expect(global.nodes[1].data.meshMetrics.jacobian).toBeDefined();
+    expect(global.nodes[1].data.meshMetrics.jacobian.valid).toBe(true);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Jacobian/Geçerlilik bölümü', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Mesh yoksa "—" gösterilir', () => {
+    var node = { id: 'mesh-j1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/Jacobian.*Geçerlilik/);
+  });
+
+  test('Geçerli mesh için "GEÇERLİ" mesajı yeşil', () => {
+    var node = {
+      id: 'mesh-j2',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: {
+          nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5,
+          jacobian: {
+            elementCount: 8, invertedCount: 0, degenerateCount: 0, poorCount: 0,
+            invertedIds: [], minVolume: 125, maxVolume: 125,
+            minJacRatio: 1.0, maxJacRatio: 1.0, avgJacRatio: 1.0,
+            ratioWarnThreshold: 40, valid: true
+          }
+        }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/GEÇERLİ/);
+    expect(html).toMatch(/22c55e/); // accent-success rengi
+  });
+
+  test('Ters eleman olan mesh için "HATALI" mesajı kırmızı', () => {
+    var node = {
+      id: 'mesh-j3',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: {
+          nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5,
+          jacobian: {
+            elementCount: 8, invertedCount: 2, degenerateCount: 0, poorCount: 0,
+            invertedIds: [3, 5], minVolume: -10, maxVolume: 125,
+            minJacRatio: 1.0, maxJacRatio: 100, avgJacRatio: 5.0,
+            ratioWarnThreshold: 40, valid: false
+          }
+        }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/HATALI/);
+    expect(html).toMatch(/ef4444/); // accent-danger rengi
+  });
+
+  test('Düşük kaliteli (poorCount > 0) için uyarı satırı', () => {
+    var node = {
+      id: 'mesh-j4',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: {
+          nodeCount: 27, elementCount: 100, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5,
+          jacobian: {
+            elementCount: 100, invertedCount: 0, degenerateCount: 0, poorCount: 7,
+            invertedIds: [], minVolume: 1, maxVolume: 125,
+            minJacRatio: 1.0, maxJacRatio: 80, avgJacRatio: 5.0,
+            ratioWarnThreshold: 40, valid: true
+          }
+        }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/7 eleman düşük kaliteli/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Tet4 decomposition (veFEAConvertMeshToTet4)', () => {
   test('Hex8 mesh → her Heks8 6 Tet4 olur', () => {
     var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });

@@ -20314,11 +20314,14 @@ function _veFEAHexMeshToTet4(hexMesh) {
   return _veFEAWrapTet4Mesh(hexMesh, tets, { convertedFromHex: true });
 }
 
-// Wedge6 → 3 Tet4
+// Wedge6 → 3 Tet4 (positive-orientation split)
+// Cylinder mesher convention: alt üçgen (0,1,2) normali -y yönünde (flipped),
+// üst üçgen apex'ler +y yönünde. Standard split (0,1,2,5)→(0,1,5,4)→(0,4,5,3)
+// negatif signed volume verir. (0,2,1,...) gibi swapped'da pozitif:
 var _VE_FEA_WEDGE_TET_SPLIT = [
-  [0, 1, 2, 5],
-  [0, 1, 5, 4],
-  [0, 4, 5, 3]
+  [0, 2, 1, 5],
+  [0, 1, 4, 5],
+  [0, 4, 3, 5]
 ];
 function _veFEAWedgeMeshToTet4(wedgeMesh) {
   var w = wedgeMesh.elements;
@@ -20964,6 +20967,124 @@ function _veFEAMeshFromParsedTriangles(parsed, geometryType) {
     elements: elements,
     nodesPerElement: 3
   };
+}
+
+// ─── Jacobian / signed volume metrikleri ──────────────────────────────────
+// Eleman tipinin sub-tetrahedronlarının signed volume'unu hesaplar.
+// Negatif veya çok küçük = inverted/degenerate (solver'da singular stiffness).
+// Jacobian ratio = max|V_i| / min|V_i| → 1.0 mükemmel; ANSYS uyarı eşiği ~40.
+//
+// Algoritma:
+//   - Tet4: kendisi (1 sub-tet)
+//   - Hex8: diagonal 0-6 split → 6 sub-tet
+//   - Wedge6: 3 sub-tet (wedge-to-tet decomposition ile aynı)
+//   - Tri3: 2D mesh — Jacobian değil, üçgen alan kontrolü
+function veFEAComputeJacobianMetrics(meshData, opts) {
+  if (!meshData || meshData.error) return null;
+  opts = opts || {};
+  var jacEps = opts.eps !== undefined ? opts.eps : 1e-10;
+  var ratioWarn = opts.ratioWarn || 40; // ANSYS varsayılan uyarı eşiği
+
+  var nodes = meshData.nodes;
+  var elements = meshData.elements;
+  var per = meshData.nodesPerElement;
+  var n = elements.length / per;
+  var type = meshData.type;
+
+  var invertedCount = 0;
+  var degenerateCount = 0;
+  var poorCount = 0; // ratio > ratioWarn
+  var minVol = Infinity;
+  var maxVol = -Infinity;
+  var minRatio = Infinity;
+  var maxRatio = -Infinity;
+  var sumRatio = 0;
+  var validRatioCount = 0;
+  var invertedIds = [];
+
+  for (var e = 0; e < n; e++) {
+    var off = e * per;
+    var vols;
+    if (type === 'tet4')        vols = [_veFEATetSignedVolume(nodes, elements, off, 0, 1, 2, 3)];
+    else if (type === 'hex8')   vols = _veFEAHexSubTetVolumes(nodes, elements, off);
+    else if (type === 'wedge6') vols = _veFEAWedgeSubTetVolumes(nodes, elements, off);
+    else continue;
+
+    var absMin = Infinity, absMax = -Infinity, anyNeg = false, anyDeg = false;
+    for (var i = 0; i < vols.length; i++) {
+      var v = vols[i];
+      var a = Math.abs(v);
+      if (v <= -jacEps) anyNeg = true;
+      if (a < jacEps) anyDeg = true;
+      if (a < absMin) absMin = a;
+      if (a > absMax) absMax = a;
+    }
+    var totalVol = 0;
+    for (var ii = 0; ii < vols.length; ii++) totalVol += vols[ii];
+
+    if (anyNeg) {
+      invertedCount++;
+      if (invertedIds.length < 20) invertedIds.push(e);
+    } else if (anyDeg) {
+      degenerateCount++;
+    }
+
+    if (totalVol < minVol) minVol = totalVol;
+    if (totalVol > maxVol) maxVol = totalVol;
+
+    if (absMin > jacEps) {
+      var ratio = absMax / absMin;
+      if (ratio < minRatio) minRatio = ratio;
+      if (ratio > maxRatio) maxRatio = ratio;
+      sumRatio += ratio;
+      validRatioCount++;
+      if (ratio > ratioWarn) poorCount++;
+    }
+  }
+
+  return {
+    elementCount: n,
+    invertedCount: invertedCount,
+    degenerateCount: degenerateCount,
+    poorCount: poorCount,
+    invertedIds: invertedIds, // ilk 20 tanesi (kullanıcı incelemesi için)
+    minVolume: isFinite(minVol) ? minVol : 0,
+    maxVolume: isFinite(maxVol) ? maxVol : 0,
+    minJacRatio: isFinite(minRatio) ? minRatio : 0,
+    maxJacRatio: isFinite(maxRatio) ? maxRatio : 0,
+    avgJacRatio: validRatioCount ? (sumRatio / validRatioCount) : 0,
+    ratioWarnThreshold: ratioWarn,
+    valid: invertedCount === 0 && degenerateCount === 0
+  };
+}
+
+function _veFEATetSignedVolume(nodes, elements, off, i0, i1, i2, i3) {
+  var a = elements[off + i0] * 3, b = elements[off + i1] * 3, c = elements[off + i2] * 3, d = elements[off + i3] * 3;
+  var v1x = nodes[b] - nodes[a], v1y = nodes[b+1] - nodes[a+1], v1z = nodes[b+2] - nodes[a+2];
+  var v2x = nodes[c] - nodes[a], v2y = nodes[c+1] - nodes[a+1], v2z = nodes[c+2] - nodes[a+2];
+  var v3x = nodes[d] - nodes[a], v3y = nodes[d+1] - nodes[a+1], v3z = nodes[d+2] - nodes[a+2];
+  var cx = v2y*v3z - v2z*v3y;
+  var cy = v2z*v3x - v2x*v3z;
+  var cz = v2x*v3y - v2y*v3x;
+  return (v1x*cx + v1y*cy + v1z*cz) / 6;
+}
+
+function _veFEAHexSubTetVolumes(nodes, elements, off) {
+  var T = _VE_FEA_HEX_TET_SPLIT;
+  var out = new Array(6);
+  for (var i = 0; i < 6; i++) {
+    out[i] = _veFEATetSignedVolume(nodes, elements, off, T[i][0], T[i][1], T[i][2], T[i][3]);
+  }
+  return out;
+}
+
+function _veFEAWedgeSubTetVolumes(nodes, elements, off) {
+  var T = _VE_FEA_WEDGE_TET_SPLIT;
+  var out = new Array(3);
+  for (var i = 0; i < 3; i++) {
+    out[i] = _veFEATetSignedVolume(nodes, elements, off, T[i][0], T[i][1], T[i][2], T[i][3]);
+  }
+  return out;
 }
 
 // ─── Kalite metrikleri (basit: edge length, eleman sayısı) ─────────────────
@@ -22077,6 +22198,10 @@ function veFEABuildMeshForNode(meshNodeId) {
     var metrics = veFEAComputeMeshMetrics(meshData);
     metrics.computeMs = dt;
     metrics.voxelMode = !!meshData.voxelMode;
+    // Jacobian / signed volume — solver-uygunluk kontrolü
+    if (typeof veFEAComputeJacobianMetrics === 'function') {
+      metrics.jacobian = veFEAComputeJacobianMetrics(meshData);
+    }
 
     veFEAMeshCache[meshNodeId] = meshData;
     meshNode.data.meshSettings = settings;
@@ -22100,6 +22225,17 @@ function veFEABuildMeshForNode(meshNodeId) {
     if (typeof showToast === 'function') {
       showToast('Mesh oluşturuldu: ' + metrics.elementCount.toLocaleString('tr-TR') +
         ' eleman, ' + metrics.nodeCount.toLocaleString('tr-TR') + ' düğüm (' + dt + ' ms)', 'success');
+      // Jacobian uyarıları (negatif/dejenere eleman varsa)
+      if (metrics.jacobian && !metrics.jacobian.valid) {
+        var jm = metrics.jacobian;
+        var parts = [];
+        if (jm.invertedCount > 0) parts.push(jm.invertedCount + ' ters dönmüş');
+        if (jm.degenerateCount > 0) parts.push(jm.degenerateCount + ' dejenere');
+        showToast('⚠ Mesh kalite uyarısı: ' + parts.join(', ') + ' eleman tespit edildi (solver patlayabilir)', 'warning');
+      } else if (metrics.jacobian && metrics.jacobian.poorCount > 0) {
+        showToast('Mesh kalite: ' + metrics.jacobian.poorCount + ' eleman düşük Jacobian oranlı (max ratio > ' +
+          metrics.jacobian.ratioWarnThreshold + ')', 'info');
+      }
     }
     if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
   };
@@ -22826,6 +22962,28 @@ function getFEAMeshPropertiesHTML(node) {
     html += veFEAReadOnlyRow('Eleman sayısı', '—');
     html += veFEAReadOnlyRow('Min eleman boyu', '—');
     html += veFEAReadOnlyRow('Maks eleman boyu', '—');
+  }
+
+  // ─── Jacobian / Geçerlilik Kontrolü ─────────────────────────────────────
+  html += veFEASectionTitle('Jacobian / Geçerlilik');
+  if (hasMesh && metrics.jacobian) {
+    var jm = metrics.jacobian;
+    var statusColor = jm.valid ? 'var(--accent-success, #22c55e)' : 'var(--accent-danger, #ef4444)';
+    var statusText = jm.valid ? '✓ GEÇERLİ (tüm Jacobianlar pozitif)' : '✗ HATALI (ters/dejenere eleman var)';
+    html += '<div style="padding:6px 8px; background:' + (jm.valid ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)') +
+      '; border:1px solid ' + statusColor + '; font-size:0.62rem; color:' + statusColor + '; margin-bottom:6px; font-weight:600;">' +
+      statusText + '</div>';
+    html += veFEAReadOnlyRow('Ters dönmüş eleman', jm.invertedCount.toLocaleString('tr-TR'));
+    html += veFEAReadOnlyRow('Dejenere eleman', jm.degenerateCount.toLocaleString('tr-TR'));
+    html += veFEAReadOnlyRow('Min Jacobian oranı', jm.minJacRatio.toFixed(2));
+    html += veFEAReadOnlyRow('Maks Jacobian oranı', jm.maxJacRatio.toFixed(2));
+    html += veFEAReadOnlyRow('Ortalama Jacobian oranı', jm.avgJacRatio.toFixed(2));
+    if (jm.poorCount > 0) {
+      html += '<div style="padding:6px 8px; background:rgba(245,158,11,0.08); border-left:2px solid var(--accent-warning, #f59e0b); font-size:0.58rem; color:var(--accent-warning, #f59e0b); margin-top:4px;">' +
+        '⚠ ' + jm.poorCount.toLocaleString('tr-TR') + ' eleman düşük kaliteli (Jac oranı > ' + jm.ratioWarnThreshold + ')</div>';
+    }
+  } else {
+    html += veFEAReadOnlyRow('Durum', '—');
   }
 
   // ─── Named Selections (Atanmış Yüzeyler) ────────────────────────────────

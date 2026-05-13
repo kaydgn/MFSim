@@ -1013,6 +1013,10 @@ function veFEABuildMeshForNode(meshNodeId) {
     var metrics = veFEAComputeMeshMetrics(meshData);
     metrics.computeMs = dt;
     metrics.voxelMode = !!meshData.voxelMode;
+    // Jacobian / signed volume — solver-uygunluk kontrolü
+    if (typeof veFEAComputeJacobianMetrics === 'function') {
+      metrics.jacobian = veFEAComputeJacobianMetrics(meshData);
+    }
 
     veFEAMeshCache[meshNodeId] = meshData;
     meshNode.data.meshSettings = settings;
@@ -1036,6 +1040,17 @@ function veFEABuildMeshForNode(meshNodeId) {
     if (typeof showToast === 'function') {
       showToast('Mesh oluşturuldu: ' + metrics.elementCount.toLocaleString('tr-TR') +
         ' eleman, ' + metrics.nodeCount.toLocaleString('tr-TR') + ' düğüm (' + dt + ' ms)', 'success');
+      // Jacobian uyarıları (negatif/dejenere eleman varsa)
+      if (metrics.jacobian && !metrics.jacobian.valid) {
+        var jm = metrics.jacobian;
+        var parts = [];
+        if (jm.invertedCount > 0) parts.push(jm.invertedCount + ' ters dönmüş');
+        if (jm.degenerateCount > 0) parts.push(jm.degenerateCount + ' dejenere');
+        showToast('⚠ Mesh kalite uyarısı: ' + parts.join(', ') + ' eleman tespit edildi (solver patlayabilir)', 'warning');
+      } else if (metrics.jacobian && metrics.jacobian.poorCount > 0) {
+        showToast('Mesh kalite: ' + metrics.jacobian.poorCount + ' eleman düşük Jacobian oranlı (max ratio > ' +
+          metrics.jacobian.ratioWarnThreshold + ')', 'info');
+      }
     }
     if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
   };

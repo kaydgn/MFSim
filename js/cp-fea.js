@@ -269,6 +269,28 @@ function getFEAMeshPropertiesHTML(node) {
     html += veFEAReadOnlyRow('Maks eleman boyu', '—');
   }
 
+  // ─── Jacobian / Geçerlilik Kontrolü ─────────────────────────────────────
+  html += veFEASectionTitle('Jacobian / Geçerlilik');
+  if (hasMesh && metrics.jacobian) {
+    var jm = metrics.jacobian;
+    var statusColor = jm.valid ? 'var(--accent-success, #22c55e)' : 'var(--accent-danger, #ef4444)';
+    var statusText = jm.valid ? '✓ GEÇERLİ (tüm Jacobianlar pozitif)' : '✗ HATALI (ters/dejenere eleman var)';
+    html += '<div style="padding:6px 8px; background:' + (jm.valid ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)') +
+      '; border:1px solid ' + statusColor + '; font-size:0.62rem; color:' + statusColor + '; margin-bottom:6px; font-weight:600;">' +
+      statusText + '</div>';
+    html += veFEAReadOnlyRow('Ters dönmüş eleman', jm.invertedCount.toLocaleString('tr-TR'));
+    html += veFEAReadOnlyRow('Dejenere eleman', jm.degenerateCount.toLocaleString('tr-TR'));
+    html += veFEAReadOnlyRow('Min Jacobian oranı', jm.minJacRatio.toFixed(2));
+    html += veFEAReadOnlyRow('Maks Jacobian oranı', jm.maxJacRatio.toFixed(2));
+    html += veFEAReadOnlyRow('Ortalama Jacobian oranı', jm.avgJacRatio.toFixed(2));
+    if (jm.poorCount > 0) {
+      html += '<div style="padding:6px 8px; background:rgba(245,158,11,0.08); border-left:2px solid var(--accent-warning, #f59e0b); font-size:0.58rem; color:var(--accent-warning, #f59e0b); margin-top:4px;">' +
+        '⚠ ' + jm.poorCount.toLocaleString('tr-TR') + ' eleman düşük kaliteli (Jac oranı > ' + jm.ratioWarnThreshold + ')</div>';
+    }
+  } else {
+    html += veFEAReadOnlyRow('Durum', '—');
+  }
+
   // ─── Named Selections (Atanmış Yüzeyler) ────────────────────────────────
   html += veFEASectionTitle('Atanmış Yüzeyler (Named Selections)');
   if (hasMesh && d.namedSelectionsSummary && Object.keys(d.namedSelectionsSummary).length > 0) {
