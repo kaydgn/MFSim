@@ -225,8 +225,51 @@ function veFEAInitViewer(canvas, opts) {
       );
       line.userData.feaMeshEdges = true;
       this._geometryRoot.add(line);
+      // Mesh node referansını sakla → highlightNamedSelection kullanır
+      this._meshData = meshData;
+      this._highlightedSelectionKey = null;
       this.zoomToFit(line);
       return line;
+    },
+    // Verilen named selection key'inin düğümlerini sahnede vurgular.
+    // null verilirse mevcut highlight kaldırılır.
+    highlightNamedSelection: function(key) {
+      // Önceki highlight'ı temizle
+      if (this._highlightMarker) {
+        this._geometryRoot.remove(this._highlightMarker);
+        if (this._highlightMarker.geometry && this._highlightMarker.geometry.dispose) this._highlightMarker.geometry.dispose();
+        if (this._highlightMarker.material && this._highlightMarker.material.dispose) this._highlightMarker.material.dispose();
+        this._highlightMarker = null;
+      }
+      this._highlightedSelectionKey = null;
+      if (!key || !this._meshData || !this._meshData.namedSelections) { render(); return; }
+      var ns = this._meshData.namedSelections[key];
+      if (!ns || !ns.nodeIds || ns.nodeIds.length === 0) { render(); return; }
+      // Bbox tabanlı marker boyutu
+      var box = new THREE.Box3().setFromObject(this._geometryRoot);
+      var size = box.isEmpty() ? 50 : Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+      var pointSize = Math.max(2.5, size * 0.012);
+      var nodes = this._meshData.nodes;
+      var positions = new Float32Array(ns.nodeIds.length * 3);
+      for (var i = 0; i < ns.nodeIds.length; i++) {
+        var nid = ns.nodeIds[i];
+        positions[i * 3]     = nodes[nid * 3];
+        positions[i * 3 + 1] = nodes[nid * 3 + 1];
+        positions[i * 3 + 2] = nodes[nid * 3 + 2];
+      }
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      var mat = new THREE.PointsMaterial({ color: 0xfbbf24, size: pointSize, sizeAttenuation: true, depthTest: false });
+      var pts = new THREE.Points(geo, mat);
+      pts.renderOrder = 999;
+      pts.userData.feaHighlight = true;
+      this._geometryRoot.add(pts);
+      this._highlightMarker = pts;
+      this._highlightedSelectionKey = key;
+      render();
+    },
+    getHighlightedSelectionKey: function() {
+      return this._highlightedSelectionKey || null;
     },
     // Display state'ini (mod, opaklık, clip planes) yeni eklenen mesh'e uygula
     _applyDisplayState: function(mesh) {
@@ -275,6 +318,9 @@ function veFEAInitViewer(canvas, opts) {
           }
         });
       }
+      this._highlightMarker = null;
+      this._highlightedSelectionKey = null;
+      this._meshData = null;
       render();
     },
     zoomToFit: function(object) {
@@ -906,6 +952,11 @@ function veFEAInitMeshViewerForNode(nodeId) {
   // Cache'te mesh varsa otomatik yedir
   if (veFEAMeshCache[nodeId]) {
     viewer.loadMesh(veFEAMeshCache[nodeId]);
+    // Önceki highlight varsa yeniden uygula
+    var node = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === nodeId; }) : null;
+    if (node && node.data && node.data.highlightedSelection && typeof viewer.highlightNamedSelection === 'function') {
+      viewer.highlightNamedSelection(node.data.highlightedSelection);
+    }
   }
 }
 
@@ -966,10 +1017,20 @@ function veFEABuildMeshForNode(meshNodeId) {
     meshNode.data.meshSettings = settings;
     meshNode.data.meshMetrics = metrics;
     meshNode.data.meshActive = true;
+    // Named selections özetini persistence için sakla (nodeIds hariç).
+    // Sınır Koşulları bloğu bu özetten yüzey seçeneklerini doldurur.
+    if (typeof veFEAComputeNamedSelectionsSummary === 'function') {
+      meshNode.data.namedSelectionsSummary = veFEAComputeNamedSelectionsSummary(meshData);
+    }
     if (typeof saveState === 'function') saveState();
 
     var viewer = veFEAViewerRegistry[meshNodeId];
-    if (viewer) viewer.loadMesh(meshData);
+    if (viewer) {
+      viewer.loadMesh(meshData);
+      if (meshNode.data.highlightedSelection && typeof viewer.highlightNamedSelection === 'function') {
+        viewer.highlightNamedSelection(meshNode.data.highlightedSelection);
+      }
+    }
 
     if (typeof showToast === 'function') {
       showToast('Mesh oluşturuldu: ' + metrics.elementCount.toLocaleString('tr-TR') +
@@ -996,11 +1057,29 @@ function veFEAClearMeshForNode(meshNodeId) {
   if (meshNode && meshNode.data) {
     delete meshNode.data.meshMetrics;
     delete meshNode.data.meshActive;
+    delete meshNode.data.namedSelectionsSummary;
+    delete meshNode.data.highlightedSelection;
     if (typeof saveState === 'function') saveState();
   }
   var viewer = veFEAViewerRegistry[meshNodeId];
   if (viewer) viewer.clearGeometry();
   if (typeof showNodeProperties === 'function' && meshNode) showNodeProperties(meshNode);
+}
+
+// Named selection vurgulama köprüsü — cp-fea.js UI butonundan çağrılır.
+// Aynı key ikinci kez tıklanırsa highlight kapatılır (toggle davranışı).
+function veFEAToggleNamedSelection(meshNodeId, key) {
+  var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  var current = meshNode.data.highlightedSelection || null;
+  var nextKey = (current === key) ? null : key;
+  meshNode.data.highlightedSelection = nextKey;
+  var viewer = veFEAViewerRegistry[meshNodeId];
+  if (viewer && typeof viewer.highlightNamedSelection === 'function') {
+    viewer.highlightNamedSelection(nextKey);
+  }
+  if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
 }
 
 function veFEAClearGeometryForNode(nodeId) {

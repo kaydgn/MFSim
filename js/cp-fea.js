@@ -261,6 +261,39 @@ function getFEAMeshPropertiesHTML(node) {
     html += veFEAReadOnlyRow('Maks eleman boyu', '—');
   }
 
+  // ─── Named Selections (Atanmış Yüzeyler) ────────────────────────────────
+  html += veFEASectionTitle('Atanmış Yüzeyler (Named Selections)');
+  if (hasMesh && d.namedSelectionsSummary && Object.keys(d.namedSelectionsSummary).length > 0) {
+    html += '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">' +
+      'Otomatik üretilen düğüm grupları. Sınır koşulları bu yüzeylere referansla uygulanır. ' +
+      'Yüzeyi 3D önizlemede görüntülemek için satıra tıklayın.</div>';
+    var highlightKey = d.highlightedSelection || null;
+    Object.keys(d.namedSelectionsSummary).forEach(function(k) {
+      var ns = d.namedSelectionsSummary[k];
+      var isActive = (highlightKey === k);
+      var bg = isActive ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
+      var fg = isActive ? '#fff' : 'var(--text-primary)';
+      var iconColor = isActive ? '#fff' : 'var(--accent-warning, #f59e0b)';
+      var border = isActive ? 'var(--accent-primary)' : 'var(--border-color)';
+      var srcBadge = (ns.source === 'auto') ? 'AUTO' : 'MANUEL';
+      var srcBg = (ns.source === 'auto') ? '#64748b40' : '#22c55e40';
+      html += '<button onclick="veFEAToggleNamedSelection(\'' + node.id + '\', \'' + k + '\')" style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:6px 8px; margin-bottom:3px; background:' + bg + '; color:' + fg + '; border:1px solid ' + border + '; cursor:pointer; font-size:0.62rem; text-align:left;">' +
+        '<span style="display:flex; align-items:center; gap:6px;">' +
+          '<span style="color:' + iconColor + '; font-size:0.7rem;">' + (isActive ? '◉' : '○') + '</span>' +
+          '<span>' + ns.label + '</span>' +
+        '</span>' +
+        '<span style="display:flex; align-items:center; gap:6px;">' +
+          '<span style="font-size:0.5rem; padding:1px 5px; background:' + srcBg + '; color:' + fg + '; border-radius:0; letter-spacing:0.05em;">' + srcBadge + '</span>' +
+          '<span style="font-weight:600; opacity:0.85;">' + ns.nodeCount.toLocaleString('tr-TR') + ' düğüm</span>' +
+        '</span>' +
+      '</button>';
+    });
+  } else if (hasMesh) {
+    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">— (yüzey grubu üretilmedi)</div>';
+  } else {
+    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra otomatik atanır.</div>';
+  }
+
   html += '</div>';
   return html;
 }

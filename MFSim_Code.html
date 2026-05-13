@@ -20242,6 +20242,19 @@ function veFEAOnSTEPFileSelected(input, nodeId) {
 var VE_FEA_MESH_MIN_SIZE = 0.5;  // mm — çok küçük değerleri clamp et
 var VE_FEA_VOXEL_MAX_COUNT = 5000000; // 5M voxel üst sınır (performans güvencesi)
 
+// Named selections veri modeli:
+//   mesh.namedSelections = {
+//     <key>: {
+//       type: 'face' | 'edge' | 'node' | 'element',
+//       source: 'auto' | 'manual',
+//       label: <görünür isim>,
+//       nodeIds: Uint32Array  // global düğüm indeksleri
+//     }
+//   }
+// Auto-generated selections geometriye göre otomatik üretilir (kutu→6 yüzey,
+// silindir→3 yüzey, şaft→4 yüzey, voxel→tek yüzey grubu).
+// Sınır Koşulları (F4) bu gruplara referansla yük/mesnet uygular.
+
 function veFEAMeshLabel(type) {
   return ({
     'hex8':   'Heks8',
@@ -20357,8 +20370,36 @@ function _veFEAMeshBox(p, size) {
     nodes: nodes,
     elements: elements,
     nodesPerElement: 8,
-    grid: { nx: nx, ny: ny, nz: nz }
+    grid: { nx: nx, ny: ny, nz: nz },
+    namedSelections: _veFEABoxNamedSelections(nx, ny, nz)
   };
+}
+
+// Kutu için 6 yüzey (XMin, XMax, YMin, YMax, ZMin, ZMax) — düğüm grupları
+function _veFEABoxNamedSelections(nx, ny, nz) {
+  var pitchY = (nx + 1);
+  var pitchZ = (nx + 1) * (ny + 1);
+  var sel = {};
+  function face(name, label, iLo, iHi, jLo, jHi, kLo, kHi) {
+    var size = (iHi - iLo + 1) * (jHi - jLo + 1) * (kHi - kLo + 1);
+    var ids = new Uint32Array(size);
+    var p = 0;
+    for (var k = kLo; k <= kHi; k++) {
+      for (var j = jLo; j <= jHi; j++) {
+        for (var i = iLo; i <= iHi; i++) {
+          ids[p++] = i + j * pitchY + k * pitchZ;
+        }
+      }
+    }
+    sel[name] = { type: 'face', source: 'auto', label: label, nodeIds: ids };
+  }
+  face('faceXMin', 'X− Yüzeyi', 0,  0,  0, ny, 0, nz);
+  face('faceXMax', 'X+ Yüzeyi', nx, nx, 0, ny, 0, nz);
+  face('faceYMin', 'Y− Yüzeyi (Alt)', 0, nx, 0,  0,  0, nz);
+  face('faceYMax', 'Y+ Yüzeyi (Üst)', 0, nx, ny, ny, 0, nz);
+  face('faceZMin', 'Z− Yüzeyi (Ön)',  0, nx, 0, ny, 0,  0);
+  face('faceZMax', 'Z+ Yüzeyi (Arka)', 0, nx, 0, ny, nz, nz);
+  return sel;
 }
 
 // ─── Silindir → Wedge6 (disk triangulation + eksenel extrude) ──────────────
@@ -20445,7 +20486,35 @@ function _veFEAMeshCylinder(p, size) {
     nodes: nodes,
     elements: elements,
     nodesPerElement: 6,
-    grid: { nRadial: nR, nCircum: nC, nAxial: nA }
+    grid: { nRadial: nR, nCircum: nC, nAxial: nA },
+    namedSelections: _veFEACylinderNamedSelections(nR, nC, nA)
+  };
+}
+
+// Silindir için 3 yüzey (Alt, Üst, Yan)
+function _veFEACylinderNamedSelections(nR, nC, nA) {
+  var perLayer = 1 + nR * nC;
+  function diskNode(layer, ring, circ) {
+    var base = layer * perLayer;
+    if (ring === 0) return base;
+    return base + 1 + (ring - 1) * nC + ((circ % nC + nC) % nC);
+  }
+  function diskNodes(layer) {
+    var ids = [diskNode(layer, 0, 0)];
+    for (var r = 1; r <= nR; r++) {
+      for (var c = 0; c < nC; c++) ids.push(diskNode(layer, r, c));
+    }
+    return new Uint32Array(ids);
+  }
+  var sideIds = new Uint32Array((nA + 1) * nC);
+  var p = 0;
+  for (var k = 0; k <= nA; k++) {
+    for (var c = 0; c < nC; c++) sideIds[p++] = diskNode(k, nR, c);
+  }
+  return {
+    faceBottom: { type: 'face', source: 'auto', label: 'Alt Disk (Y−)', nodeIds: diskNodes(0) },
+    faceTop:    { type: 'face', source: 'auto', label: 'Üst Disk (Y+)', nodeIds: diskNodes(nA) },
+    faceSide:   { type: 'face', source: 'auto', label: 'Yan Yüzey (Radyal)', nodeIds: sideIds }
   };
 }
 
@@ -20511,7 +20580,38 @@ function _veFEAMeshShaft(p, size) {
     nodes: nodes,
     elements: elements,
     nodesPerElement: 8,
-    grid: { nRadial: nR, nCircum: nC, nAxial: nA }
+    grid: { nRadial: nR, nCircum: nC, nAxial: nA },
+    namedSelections: _veFEAShaftNamedSelections(nR, nC, nA)
+  };
+}
+
+// Şaft için 4 yüzey (Alt, Üst, Dış Yan, İç Yan)
+function _veFEAShaftNamedSelections(nR, nC, nA) {
+  var perLayer = (nR + 1) * nC;
+  function annNode(layer, ring, circ) {
+    return layer * perLayer + ring * nC + ((circ % nC + nC) % nC);
+  }
+  function annulusNodes(layer) {
+    var ids = new Uint32Array((nR + 1) * nC);
+    var p = 0;
+    for (var r = 0; r <= nR; r++) {
+      for (var c = 0; c < nC; c++) ids[p++] = annNode(layer, r, c);
+    }
+    return ids;
+  }
+  function sideNodes(ring) {
+    var ids = new Uint32Array((nA + 1) * nC);
+    var p = 0;
+    for (var k = 0; k <= nA; k++) {
+      for (var c = 0; c < nC; c++) ids[p++] = annNode(k, ring, c);
+    }
+    return ids;
+  }
+  return {
+    faceBottom: { type: 'face', source: 'auto', label: 'Alt Halka (Y−)', nodeIds: annulusNodes(0) },
+    faceTop:    { type: 'face', source: 'auto', label: 'Üst Halka (Y+)', nodeIds: annulusNodes(nA) },
+    faceOuter:  { type: 'face', source: 'auto', label: 'Dış Yan Yüzey',  nodeIds: sideNodes(nR) },
+    faceInner:  { type: 'face', source: 'auto', label: 'İç Yan Yüzey (Delik)', nodeIds: sideNodes(0) }
   };
 }
 
@@ -20671,15 +20771,63 @@ function _veFEAVoxelizeTrianglesToHex(parsed, voxelSize, geometryType) {
 
   if (elements.length === 0) return { error: 'voxel-empty', nx: nx, ny: ny, nz: nz, total: nx*ny*nz };
 
+  var elementsTA = new Uint32Array(elements);
+  var nodesTA = new Float32Array(nodeList);
+
   return {
     type: 'hex8',
     geometryType: 'voxel-' + (geometryType || 'unknown'),
-    nodes: new Float32Array(nodeList),
-    elements: new Uint32Array(elements),
+    nodes: nodesTA,
+    elements: elementsTA,
     nodesPerElement: 8,
-    grid: { nx: nx, ny: ny, nz: nz, voxelCount: elements.length / 8 },
-    voxelMode: true
+    grid: { nx: nx, ny: ny, nz: nz, voxelCount: elementsTA.length / 8 },
+    voxelMode: true,
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodesTA, elementsTA, 8, { minX: minX, maxX: maxX, minY: minY, maxY: maxY, minZ: minZ, maxZ: maxZ })
   };
+}
+
+// Voxel mesh için yüzey nodları (degree-based): iç hex düğümleri 8 elemana bağlı,
+// yüzeydekiler daha az. Ayrıca bbox sınırlarına göre yön bazlı gruplandırma.
+function _veFEAVoxelMeshNamedSelections(nodes, elements, per, bbox) {
+  var nodeCount = nodes.length / 3;
+  var degree = new Uint8Array(nodeCount);
+  for (var e = 0; e < elements.length; e++) {
+    if (degree[elements[e]] < 255) degree[elements[e]]++;
+  }
+  var surfaceIds = [];
+  for (var n = 0; n < nodeCount; n++) {
+    if (degree[n] < 8) surfaceIds.push(n);
+  }
+  var sel = {
+    faceSurface: {
+      type: 'face', source: 'auto', label: 'Tüm Yüzey',
+      nodeIds: new Uint32Array(surfaceIds)
+    }
+  };
+  // bbox bilgisi varsa yön-bazlı gruplar da ekle (X−/X+/Y−/Y+/Z−/Z+)
+  if (bbox) {
+    var eps = 1e-3;
+    function addDir(name, label, axis, isMax) {
+      var lim = isMax ? bbox[axis === 'x' ? 'maxX' : axis === 'y' ? 'maxY' : 'maxZ']
+                      : bbox[axis === 'x' ? 'minX' : axis === 'y' ? 'minY' : 'minZ'];
+      var coord = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
+      var ids = [];
+      for (var i = 0; i < surfaceIds.length; i++) {
+        var id = surfaceIds[i];
+        if (Math.abs(nodes[id * 3 + coord] - lim) < eps) ids.push(id);
+      }
+      if (ids.length > 0) {
+        sel[name] = { type: 'face', source: 'auto', label: label, nodeIds: new Uint32Array(ids) };
+      }
+    }
+    addDir('faceXMin', 'X− Yüzeyi', 'x', false);
+    addDir('faceXMax', 'X+ Yüzeyi', 'x', true);
+    addDir('faceYMin', 'Y− Yüzeyi (Alt)', 'y', false);
+    addDir('faceYMax', 'Y+ Yüzeyi (Üst)', 'y', true);
+    addDir('faceZMin', 'Z− Yüzeyi (Ön)', 'z', false);
+    addDir('faceZMax', 'Z+ Yüzeyi (Arka)', 'z', true);
+  }
+  return sel;
 }
 
 // Parsed (vertices array, triangleCount) → dedup'lı tri3 mesh
@@ -20758,6 +20906,26 @@ function veFEAComputeMeshMetrics(mesh) {
     maxSize: edgeCount ? maxSize : 0,
     avgSize: edgeCount ? sumSize / edgeCount : 0
   };
+}
+
+// Named selections'tan UI/persistence için özet üretir (nodeIds hariç)
+//   { <key>: { label, type, source, nodeCount } }
+// Float32Array/Uint32Array JSON-serializable değildir; özet localStorage'a
+// güvenle yazılabilir. Tam veri her zaman veFEAMeshCache'de canlı durur.
+function veFEAComputeNamedSelectionsSummary(mesh) {
+  if (!mesh || !mesh.namedSelections) return {};
+  var sel = mesh.namedSelections;
+  var out = {};
+  Object.keys(sel).forEach(function(k) {
+    var ns = sel[k];
+    out[k] = {
+      label: ns.label,
+      type: ns.type,
+      source: ns.source,
+      nodeCount: ns.nodeIds ? ns.nodeIds.length : 0
+    };
+  });
+  return out;
 }
 
 // Mesh edges'i toplar (her edge tek kez) — viewer line render'ı için
@@ -21020,8 +21188,51 @@ function veFEAInitViewer(canvas, opts) {
       );
       line.userData.feaMeshEdges = true;
       this._geometryRoot.add(line);
+      // Mesh node referansını sakla → highlightNamedSelection kullanır
+      this._meshData = meshData;
+      this._highlightedSelectionKey = null;
       this.zoomToFit(line);
       return line;
+    },
+    // Verilen named selection key'inin düğümlerini sahnede vurgular.
+    // null verilirse mevcut highlight kaldırılır.
+    highlightNamedSelection: function(key) {
+      // Önceki highlight'ı temizle
+      if (this._highlightMarker) {
+        this._geometryRoot.remove(this._highlightMarker);
+        if (this._highlightMarker.geometry && this._highlightMarker.geometry.dispose) this._highlightMarker.geometry.dispose();
+        if (this._highlightMarker.material && this._highlightMarker.material.dispose) this._highlightMarker.material.dispose();
+        this._highlightMarker = null;
+      }
+      this._highlightedSelectionKey = null;
+      if (!key || !this._meshData || !this._meshData.namedSelections) { render(); return; }
+      var ns = this._meshData.namedSelections[key];
+      if (!ns || !ns.nodeIds || ns.nodeIds.length === 0) { render(); return; }
+      // Bbox tabanlı marker boyutu
+      var box = new THREE.Box3().setFromObject(this._geometryRoot);
+      var size = box.isEmpty() ? 50 : Math.max(box.getSize(new THREE.Vector3()).x, box.getSize(new THREE.Vector3()).y, box.getSize(new THREE.Vector3()).z);
+      var pointSize = Math.max(2.5, size * 0.012);
+      var nodes = this._meshData.nodes;
+      var positions = new Float32Array(ns.nodeIds.length * 3);
+      for (var i = 0; i < ns.nodeIds.length; i++) {
+        var nid = ns.nodeIds[i];
+        positions[i * 3]     = nodes[nid * 3];
+        positions[i * 3 + 1] = nodes[nid * 3 + 1];
+        positions[i * 3 + 2] = nodes[nid * 3 + 2];
+      }
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      var mat = new THREE.PointsMaterial({ color: 0xfbbf24, size: pointSize, sizeAttenuation: true, depthTest: false });
+      var pts = new THREE.Points(geo, mat);
+      pts.renderOrder = 999;
+      pts.userData.feaHighlight = true;
+      this._geometryRoot.add(pts);
+      this._highlightMarker = pts;
+      this._highlightedSelectionKey = key;
+      render();
+    },
+    getHighlightedSelectionKey: function() {
+      return this._highlightedSelectionKey || null;
     },
     // Display state'ini (mod, opaklık, clip planes) yeni eklenen mesh'e uygula
     _applyDisplayState: function(mesh) {
@@ -21070,6 +21281,9 @@ function veFEAInitViewer(canvas, opts) {
           }
         });
       }
+      this._highlightMarker = null;
+      this._highlightedSelectionKey = null;
+      this._meshData = null;
       render();
     },
     zoomToFit: function(object) {
@@ -21701,6 +21915,11 @@ function veFEAInitMeshViewerForNode(nodeId) {
   // Cache'te mesh varsa otomatik yedir
   if (veFEAMeshCache[nodeId]) {
     viewer.loadMesh(veFEAMeshCache[nodeId]);
+    // Önceki highlight varsa yeniden uygula
+    var node = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === nodeId; }) : null;
+    if (node && node.data && node.data.highlightedSelection && typeof viewer.highlightNamedSelection === 'function') {
+      viewer.highlightNamedSelection(node.data.highlightedSelection);
+    }
   }
 }
 
@@ -21761,10 +21980,20 @@ function veFEABuildMeshForNode(meshNodeId) {
     meshNode.data.meshSettings = settings;
     meshNode.data.meshMetrics = metrics;
     meshNode.data.meshActive = true;
+    // Named selections özetini persistence için sakla (nodeIds hariç).
+    // Sınır Koşulları bloğu bu özetten yüzey seçeneklerini doldurur.
+    if (typeof veFEAComputeNamedSelectionsSummary === 'function') {
+      meshNode.data.namedSelectionsSummary = veFEAComputeNamedSelectionsSummary(meshData);
+    }
     if (typeof saveState === 'function') saveState();
 
     var viewer = veFEAViewerRegistry[meshNodeId];
-    if (viewer) viewer.loadMesh(meshData);
+    if (viewer) {
+      viewer.loadMesh(meshData);
+      if (meshNode.data.highlightedSelection && typeof viewer.highlightNamedSelection === 'function') {
+        viewer.highlightNamedSelection(meshNode.data.highlightedSelection);
+      }
+    }
 
     if (typeof showToast === 'function') {
       showToast('Mesh oluşturuldu: ' + metrics.elementCount.toLocaleString('tr-TR') +
@@ -21791,11 +22020,29 @@ function veFEAClearMeshForNode(meshNodeId) {
   if (meshNode && meshNode.data) {
     delete meshNode.data.meshMetrics;
     delete meshNode.data.meshActive;
+    delete meshNode.data.namedSelectionsSummary;
+    delete meshNode.data.highlightedSelection;
     if (typeof saveState === 'function') saveState();
   }
   var viewer = veFEAViewerRegistry[meshNodeId];
   if (viewer) viewer.clearGeometry();
   if (typeof showNodeProperties === 'function' && meshNode) showNodeProperties(meshNode);
+}
+
+// Named selection vurgulama köprüsü — cp-fea.js UI butonundan çağrılır.
+// Aynı key ikinci kez tıklanırsa highlight kapatılır (toggle davranışı).
+function veFEAToggleNamedSelection(meshNodeId, key) {
+  var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  var current = meshNode.data.highlightedSelection || null;
+  var nextKey = (current === key) ? null : key;
+  meshNode.data.highlightedSelection = nextKey;
+  var viewer = veFEAViewerRegistry[meshNodeId];
+  if (viewer && typeof viewer.highlightNamedSelection === 'function') {
+    viewer.highlightNamedSelection(nextKey);
+  }
+  if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
 }
 
 function veFEAClearGeometryForNode(nodeId) {
@@ -22469,6 +22716,39 @@ function getFEAMeshPropertiesHTML(node) {
     html += veFEAReadOnlyRow('Eleman sayısı', '—');
     html += veFEAReadOnlyRow('Min eleman boyu', '—');
     html += veFEAReadOnlyRow('Maks eleman boyu', '—');
+  }
+
+  // ─── Named Selections (Atanmış Yüzeyler) ────────────────────────────────
+  html += veFEASectionTitle('Atanmış Yüzeyler (Named Selections)');
+  if (hasMesh && d.namedSelectionsSummary && Object.keys(d.namedSelectionsSummary).length > 0) {
+    html += '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">' +
+      'Otomatik üretilen düğüm grupları. Sınır koşulları bu yüzeylere referansla uygulanır. ' +
+      'Yüzeyi 3D önizlemede görüntülemek için satıra tıklayın.</div>';
+    var highlightKey = d.highlightedSelection || null;
+    Object.keys(d.namedSelectionsSummary).forEach(function(k) {
+      var ns = d.namedSelectionsSummary[k];
+      var isActive = (highlightKey === k);
+      var bg = isActive ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
+      var fg = isActive ? '#fff' : 'var(--text-primary)';
+      var iconColor = isActive ? '#fff' : 'var(--accent-warning, #f59e0b)';
+      var border = isActive ? 'var(--accent-primary)' : 'var(--border-color)';
+      var srcBadge = (ns.source === 'auto') ? 'AUTO' : 'MANUEL';
+      var srcBg = (ns.source === 'auto') ? '#64748b40' : '#22c55e40';
+      html += '<button onclick="veFEAToggleNamedSelection(\'' + node.id + '\', \'' + k + '\')" style="display:flex; align-items:center; justify-content:space-between; width:100%; padding:6px 8px; margin-bottom:3px; background:' + bg + '; color:' + fg + '; border:1px solid ' + border + '; cursor:pointer; font-size:0.62rem; text-align:left;">' +
+        '<span style="display:flex; align-items:center; gap:6px;">' +
+          '<span style="color:' + iconColor + '; font-size:0.7rem;">' + (isActive ? '◉' : '○') + '</span>' +
+          '<span>' + ns.label + '</span>' +
+        '</span>' +
+        '<span style="display:flex; align-items:center; gap:6px;">' +
+          '<span style="font-size:0.5rem; padding:1px 5px; background:' + srcBg + '; color:' + fg + '; border-radius:0; letter-spacing:0.05em;">' + srcBadge + '</span>' +
+          '<span style="font-weight:600; opacity:0.85;">' + ns.nodeCount.toLocaleString('tr-TR') + ' düğüm</span>' +
+        '</span>' +
+      '</button>';
+    });
+  } else if (hasMesh) {
+    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">— (yüzey grubu üretilmedi)</div>';
+  } else {
+    html += '<div style="padding:6px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra otomatik atanır.</div>';
   }
 
   html += '</div>';

@@ -400,6 +400,263 @@ describe('cp-fea.js Mesh paneli render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Named Selections — otomatik üretim', () => {
+  test('Kutu mesh 6 yüzey selection üretir', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    expect(m.namedSelections).toBeDefined();
+    var keys = Object.keys(m.namedSelections);
+    expect(keys).toContain('faceXMin');
+    expect(keys).toContain('faceXMax');
+    expect(keys).toContain('faceYMin');
+    expect(keys).toContain('faceYMax');
+    expect(keys).toContain('faceZMin');
+    expect(keys).toContain('faceZMax');
+    expect(keys.length).toBe(6);
+  });
+
+  test('Kutu 2×2×2: her yüzeyde (ny+1)*(nz+1) = 9 düğüm', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    // nx=ny=nz=2 → her face 3×3 = 9
+    expect(m.namedSelections.faceXMin.nodeIds.length).toBe(9);
+    expect(m.namedSelections.faceXMax.nodeIds.length).toBe(9);
+    expect(m.namedSelections.faceYMin.nodeIds.length).toBe(9);
+    expect(m.namedSelections.faceYMax.nodeIds.length).toBe(9);
+    expect(m.namedSelections.faceZMin.nodeIds.length).toBe(9);
+    expect(m.namedSelections.faceZMax.nodeIds.length).toBe(9);
+  });
+
+  test('Kutu XMin yüzeyindeki düğümlerin x-koordinatı geometrinin minX değerine eşit', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var ids = m.namedSelections.faceXMin.nodeIds;
+    for (var i = 0; i < ids.length; i++) {
+      expect(m.nodes[ids[i] * 3]).toBeCloseTo(-5, 5); // x0 = -w/2
+    }
+  });
+
+  test('Kutu YMax yüzeyindeki düğümlerin y-koordinatı maxY', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var ids = m.namedSelections.faceYMax.nodeIds;
+    for (var i = 0; i < ids.length; i++) {
+      expect(m.nodes[ids[i] * 3 + 1]).toBeCloseTo(5, 5);
+    }
+  });
+
+  test('Silindir mesh 3 yüzey selection üretir (Alt, Üst, Yan)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    var keys = Object.keys(m.namedSelections);
+    expect(keys).toContain('faceTop');
+    expect(keys).toContain('faceBottom');
+    expect(keys).toContain('faceSide');
+    expect(keys.length).toBe(3);
+  });
+
+  test('Silindir Alt disk düğümlerinin y-koordinatı -h/2', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    var ids = m.namedSelections.faceBottom.nodeIds;
+    for (var i = 0; i < ids.length; i++) {
+      expect(m.nodes[ids[i] * 3 + 1]).toBeCloseTo(-10, 5);
+    }
+  });
+
+  test('Silindir Yan yüzey düğümlerinin radyal mesafesi R', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    var ids = m.namedSelections.faceSide.nodeIds;
+    for (var i = 0; i < ids.length; i++) {
+      var x = m.nodes[ids[i] * 3];
+      var z = m.nodes[ids[i] * 3 + 2];
+      expect(Math.sqrt(x * x + z * z)).toBeCloseTo(10, 5);
+    }
+  });
+
+  test('Şaft mesh 4 yüzey selection üretir (Alt, Üst, Dış, İç)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } }, { size: 10 });
+    var keys = Object.keys(m.namedSelections);
+    expect(keys).toContain('faceTop');
+    expect(keys).toContain('faceBottom');
+    expect(keys).toContain('faceOuter');
+    expect(keys).toContain('faceInner');
+    expect(keys.length).toBe(4);
+  });
+
+  test('Şaft İç yüzey düğümlerinin radyal mesafesi iç yarıçap', () => {
+    var m = veFEAMeshFromGeometry({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } }, { size: 10 });
+    var ids = m.namedSelections.faceInner.nodeIds;
+    for (var i = 0; i < ids.length; i++) {
+      var x = m.nodes[ids[i] * 3];
+      var z = m.nodes[ids[i] * 3 + 2];
+      expect(Math.sqrt(x * x + z * z)).toBeCloseTo(8, 4);
+    }
+  });
+
+  test('Tüm selection nodeIds geçerli aralıkta', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var maxIdx = m.nodes.length / 3 - 1;
+    Object.keys(m.namedSelections).forEach(function(k) {
+      var ids = m.namedSelections[k].nodeIds;
+      for (var i = 0; i < ids.length; i++) {
+        expect(ids[i]).toBeGreaterThanOrEqual(0);
+        expect(ids[i]).toBeLessThanOrEqual(maxIdx);
+      }
+    });
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeNamedSelectionsSummary', () => {
+  test('mesh.namedSelections → { label, type, source, nodeCount } özet', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var summary = veFEAComputeNamedSelectionsSummary(m);
+    expect(Object.keys(summary).length).toBe(6);
+    expect(summary.faceXMin.nodeCount).toBe(9);
+    expect(summary.faceXMin.label).toMatch(/X−/);
+    expect(summary.faceXMin.type).toBe('face');
+    expect(summary.faceXMin.source).toBe('auto');
+    // nodeIds özet'te olmamalı (JSON-serializable kalsın)
+    expect(summary.faceXMin.nodeIds).toBeUndefined();
+  });
+
+  test('null mesh → {} döner', () => {
+    expect(veFEAComputeNamedSelectionsSummary(null)).toEqual({});
+    expect(veFEAComputeNamedSelectionsSummary({})).toEqual({});
+  });
+
+  test('Özet JSON-serializable (Float32Array/Uint32Array içermez)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    var summary = veFEAComputeNamedSelectionsSummary(m);
+    expect(() => JSON.stringify(summary)).not.toThrow();
+    var parsed = JSON.parse(JSON.stringify(summary));
+    expect(Object.keys(parsed).length).toBe(3);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAToggleNamedSelection köprüsü', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.showNodeProperties = jest.fn();
+    Object.keys(veFEAViewerRegistry).forEach((k) => delete veFEAViewerRegistry[k]);
+  });
+
+  test('Mevcut highlight yokken key → highlightedSelection = key', () => {
+    global.nodes = [{ id: 'mesh-1', type: 'fea-mesh', data: {} }];
+    veFEAToggleNamedSelection('mesh-1', 'faceXMin');
+    expect(global.nodes[0].data.highlightedSelection).toBe('faceXMin');
+  });
+
+  test('Aynı key tekrar → toggle (null)', () => {
+    global.nodes = [{ id: 'mesh-1', type: 'fea-mesh', data: { highlightedSelection: 'faceXMin' } }];
+    veFEAToggleNamedSelection('mesh-1', 'faceXMin');
+    expect(global.nodes[0].data.highlightedSelection).toBeNull();
+  });
+
+  test('Farklı key → highlight değişir', () => {
+    global.nodes = [{ id: 'mesh-1', type: 'fea-mesh', data: { highlightedSelection: 'faceXMin' } }];
+    veFEAToggleNamedSelection('mesh-1', 'faceYMax');
+    expect(global.nodes[0].data.highlightedSelection).toBe('faceYMax');
+  });
+
+  test('Bilinmeyen nodeId → sessizce çıkar', () => {
+    expect(() => veFEAToggleNamedSelection('nonexistent', 'foo')).not.toThrow();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Named Selections bölümü', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Mesh yoksa "Mesh oluşturulduktan sonra" mesajı', () => {
+    var node = { id: 'mesh-ns1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/Atanmış Yüzeyler/);
+    expect(html).toMatch(/Mesh oluşturulduktan sonra/);
+  });
+
+  test('namedSelectionsSummary varsa düğüm grupları listelenir', () => {
+    var node = {
+      id: 'mesh-ns2',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: { nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5 },
+        namedSelectionsSummary: {
+          faceXMin: { label: 'X− Yüzeyi', type: 'face', source: 'auto', nodeCount: 9 },
+          faceXMax: { label: 'X+ Yüzeyi', type: 'face', source: 'auto', nodeCount: 9 }
+        }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/X− Yüzeyi/);
+    expect(html).toMatch(/X\+ Yüzeyi/);
+    expect(html).toMatch(/AUTO/);
+    expect(html).toMatch(/veFEAToggleNamedSelection\('mesh-ns2', 'faceXMin'\)/);
+  });
+
+  test('Aktif highlight için ◉ ikonu, diğerleri için ○', () => {
+    var node = {
+      id: 'mesh-ns3',
+      type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: { nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5 },
+        highlightedSelection: 'faceXMin',
+        namedSelectionsSummary: {
+          faceXMin: { label: 'X− Yüzeyi', type: 'face', source: 'auto', nodeCount: 9 },
+          faceXMax: { label: 'X+ Yüzeyi', type: 'face', source: 'auto', nodeCount: 9 }
+        }
+      }
+    };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    // Aktif faceXMin için ◉ kullanılmalı
+    expect(html).toMatch(/◉/);
+    expect(html).toMatch(/○/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEABuildMeshForNode — namedSelectionsSummary persist', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.showToast = jest.fn();
+    global.showNodeProperties = jest.fn();
+    global.saveState = jest.fn();
+    Object.keys(veFEAMeshCache).forEach((k) => delete veFEAMeshCache[k]);
+  });
+
+  test('mesh hesaplandıktan sonra namedSelectionsSummary node.data\'ya kaydedilir', () => {
+    global.nodes = [
+      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
+      { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 5 } } }
+    ];
+    global.connections = [{ from: 'geom-1', to: 'mesh-1' }];
+    veFEABuildMeshForNode('mesh-1');
+    var summary = global.nodes[1].data.namedSelectionsSummary;
+    expect(summary).toBeDefined();
+    expect(Object.keys(summary).length).toBe(6);
+    expect(summary.faceXMin.nodeCount).toBe(9);
+  });
+
+  test('Mesh silindikten sonra namedSelectionsSummary da temizlenir', () => {
+    global.nodes = [
+      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
+      { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 5 } } }
+    ];
+    global.connections = [{ from: 'geom-1', to: 'mesh-1' }];
+    veFEABuildMeshForNode('mesh-1');
+    expect(global.nodes[1].data.namedSelectionsSummary).toBeDefined();
+    veFEAClearMeshForNode('mesh-1');
+    expect(global.nodes[1].data.namedSelectionsSummary).toBeUndefined();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAInitMeshViewerForNode (graceful, Three.js olmadan)', () => {
   beforeEach(() => {
     Object.keys(veFEAViewerRegistry).forEach((k) => delete veFEAViewerRegistry[k]);

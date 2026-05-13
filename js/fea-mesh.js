@@ -23,6 +23,19 @@
 var VE_FEA_MESH_MIN_SIZE = 0.5;  // mm — çok küçük değerleri clamp et
 var VE_FEA_VOXEL_MAX_COUNT = 5000000; // 5M voxel üst sınır (performans güvencesi)
 
+// Named selections veri modeli:
+//   mesh.namedSelections = {
+//     <key>: {
+//       type: 'face' | 'edge' | 'node' | 'element',
+//       source: 'auto' | 'manual',
+//       label: <görünür isim>,
+//       nodeIds: Uint32Array  // global düğüm indeksleri
+//     }
+//   }
+// Auto-generated selections geometriye göre otomatik üretilir (kutu→6 yüzey,
+// silindir→3 yüzey, şaft→4 yüzey, voxel→tek yüzey grubu).
+// Sınır Koşulları (F4) bu gruplara referansla yük/mesnet uygular.
+
 function veFEAMeshLabel(type) {
   return ({
     'hex8':   'Heks8',
@@ -138,8 +151,36 @@ function _veFEAMeshBox(p, size) {
     nodes: nodes,
     elements: elements,
     nodesPerElement: 8,
-    grid: { nx: nx, ny: ny, nz: nz }
+    grid: { nx: nx, ny: ny, nz: nz },
+    namedSelections: _veFEABoxNamedSelections(nx, ny, nz)
   };
+}
+
+// Kutu için 6 yüzey (XMin, XMax, YMin, YMax, ZMin, ZMax) — düğüm grupları
+function _veFEABoxNamedSelections(nx, ny, nz) {
+  var pitchY = (nx + 1);
+  var pitchZ = (nx + 1) * (ny + 1);
+  var sel = {};
+  function face(name, label, iLo, iHi, jLo, jHi, kLo, kHi) {
+    var size = (iHi - iLo + 1) * (jHi - jLo + 1) * (kHi - kLo + 1);
+    var ids = new Uint32Array(size);
+    var p = 0;
+    for (var k = kLo; k <= kHi; k++) {
+      for (var j = jLo; j <= jHi; j++) {
+        for (var i = iLo; i <= iHi; i++) {
+          ids[p++] = i + j * pitchY + k * pitchZ;
+        }
+      }
+    }
+    sel[name] = { type: 'face', source: 'auto', label: label, nodeIds: ids };
+  }
+  face('faceXMin', 'X− Yüzeyi', 0,  0,  0, ny, 0, nz);
+  face('faceXMax', 'X+ Yüzeyi', nx, nx, 0, ny, 0, nz);
+  face('faceYMin', 'Y− Yüzeyi (Alt)', 0, nx, 0,  0,  0, nz);
+  face('faceYMax', 'Y+ Yüzeyi (Üst)', 0, nx, ny, ny, 0, nz);
+  face('faceZMin', 'Z− Yüzeyi (Ön)',  0, nx, 0, ny, 0,  0);
+  face('faceZMax', 'Z+ Yüzeyi (Arka)', 0, nx, 0, ny, nz, nz);
+  return sel;
 }
 
 // ─── Silindir → Wedge6 (disk triangulation + eksenel extrude) ──────────────
@@ -226,7 +267,35 @@ function _veFEAMeshCylinder(p, size) {
     nodes: nodes,
     elements: elements,
     nodesPerElement: 6,
-    grid: { nRadial: nR, nCircum: nC, nAxial: nA }
+    grid: { nRadial: nR, nCircum: nC, nAxial: nA },
+    namedSelections: _veFEACylinderNamedSelections(nR, nC, nA)
+  };
+}
+
+// Silindir için 3 yüzey (Alt, Üst, Yan)
+function _veFEACylinderNamedSelections(nR, nC, nA) {
+  var perLayer = 1 + nR * nC;
+  function diskNode(layer, ring, circ) {
+    var base = layer * perLayer;
+    if (ring === 0) return base;
+    return base + 1 + (ring - 1) * nC + ((circ % nC + nC) % nC);
+  }
+  function diskNodes(layer) {
+    var ids = [diskNode(layer, 0, 0)];
+    for (var r = 1; r <= nR; r++) {
+      for (var c = 0; c < nC; c++) ids.push(diskNode(layer, r, c));
+    }
+    return new Uint32Array(ids);
+  }
+  var sideIds = new Uint32Array((nA + 1) * nC);
+  var p = 0;
+  for (var k = 0; k <= nA; k++) {
+    for (var c = 0; c < nC; c++) sideIds[p++] = diskNode(k, nR, c);
+  }
+  return {
+    faceBottom: { type: 'face', source: 'auto', label: 'Alt Disk (Y−)', nodeIds: diskNodes(0) },
+    faceTop:    { type: 'face', source: 'auto', label: 'Üst Disk (Y+)', nodeIds: diskNodes(nA) },
+    faceSide:   { type: 'face', source: 'auto', label: 'Yan Yüzey (Radyal)', nodeIds: sideIds }
   };
 }
 
@@ -292,7 +361,38 @@ function _veFEAMeshShaft(p, size) {
     nodes: nodes,
     elements: elements,
     nodesPerElement: 8,
-    grid: { nRadial: nR, nCircum: nC, nAxial: nA }
+    grid: { nRadial: nR, nCircum: nC, nAxial: nA },
+    namedSelections: _veFEAShaftNamedSelections(nR, nC, nA)
+  };
+}
+
+// Şaft için 4 yüzey (Alt, Üst, Dış Yan, İç Yan)
+function _veFEAShaftNamedSelections(nR, nC, nA) {
+  var perLayer = (nR + 1) * nC;
+  function annNode(layer, ring, circ) {
+    return layer * perLayer + ring * nC + ((circ % nC + nC) % nC);
+  }
+  function annulusNodes(layer) {
+    var ids = new Uint32Array((nR + 1) * nC);
+    var p = 0;
+    for (var r = 0; r <= nR; r++) {
+      for (var c = 0; c < nC; c++) ids[p++] = annNode(layer, r, c);
+    }
+    return ids;
+  }
+  function sideNodes(ring) {
+    var ids = new Uint32Array((nA + 1) * nC);
+    var p = 0;
+    for (var k = 0; k <= nA; k++) {
+      for (var c = 0; c < nC; c++) ids[p++] = annNode(k, ring, c);
+    }
+    return ids;
+  }
+  return {
+    faceBottom: { type: 'face', source: 'auto', label: 'Alt Halka (Y−)', nodeIds: annulusNodes(0) },
+    faceTop:    { type: 'face', source: 'auto', label: 'Üst Halka (Y+)', nodeIds: annulusNodes(nA) },
+    faceOuter:  { type: 'face', source: 'auto', label: 'Dış Yan Yüzey',  nodeIds: sideNodes(nR) },
+    faceInner:  { type: 'face', source: 'auto', label: 'İç Yan Yüzey (Delik)', nodeIds: sideNodes(0) }
   };
 }
 
@@ -452,15 +552,63 @@ function _veFEAVoxelizeTrianglesToHex(parsed, voxelSize, geometryType) {
 
   if (elements.length === 0) return { error: 'voxel-empty', nx: nx, ny: ny, nz: nz, total: nx*ny*nz };
 
+  var elementsTA = new Uint32Array(elements);
+  var nodesTA = new Float32Array(nodeList);
+
   return {
     type: 'hex8',
     geometryType: 'voxel-' + (geometryType || 'unknown'),
-    nodes: new Float32Array(nodeList),
-    elements: new Uint32Array(elements),
+    nodes: nodesTA,
+    elements: elementsTA,
     nodesPerElement: 8,
-    grid: { nx: nx, ny: ny, nz: nz, voxelCount: elements.length / 8 },
-    voxelMode: true
+    grid: { nx: nx, ny: ny, nz: nz, voxelCount: elementsTA.length / 8 },
+    voxelMode: true,
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodesTA, elementsTA, 8, { minX: minX, maxX: maxX, minY: minY, maxY: maxY, minZ: minZ, maxZ: maxZ })
   };
+}
+
+// Voxel mesh için yüzey nodları (degree-based): iç hex düğümleri 8 elemana bağlı,
+// yüzeydekiler daha az. Ayrıca bbox sınırlarına göre yön bazlı gruplandırma.
+function _veFEAVoxelMeshNamedSelections(nodes, elements, per, bbox) {
+  var nodeCount = nodes.length / 3;
+  var degree = new Uint8Array(nodeCount);
+  for (var e = 0; e < elements.length; e++) {
+    if (degree[elements[e]] < 255) degree[elements[e]]++;
+  }
+  var surfaceIds = [];
+  for (var n = 0; n < nodeCount; n++) {
+    if (degree[n] < 8) surfaceIds.push(n);
+  }
+  var sel = {
+    faceSurface: {
+      type: 'face', source: 'auto', label: 'Tüm Yüzey',
+      nodeIds: new Uint32Array(surfaceIds)
+    }
+  };
+  // bbox bilgisi varsa yön-bazlı gruplar da ekle (X−/X+/Y−/Y+/Z−/Z+)
+  if (bbox) {
+    var eps = 1e-3;
+    function addDir(name, label, axis, isMax) {
+      var lim = isMax ? bbox[axis === 'x' ? 'maxX' : axis === 'y' ? 'maxY' : 'maxZ']
+                      : bbox[axis === 'x' ? 'minX' : axis === 'y' ? 'minY' : 'minZ'];
+      var coord = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
+      var ids = [];
+      for (var i = 0; i < surfaceIds.length; i++) {
+        var id = surfaceIds[i];
+        if (Math.abs(nodes[id * 3 + coord] - lim) < eps) ids.push(id);
+      }
+      if (ids.length > 0) {
+        sel[name] = { type: 'face', source: 'auto', label: label, nodeIds: new Uint32Array(ids) };
+      }
+    }
+    addDir('faceXMin', 'X− Yüzeyi', 'x', false);
+    addDir('faceXMax', 'X+ Yüzeyi', 'x', true);
+    addDir('faceYMin', 'Y− Yüzeyi (Alt)', 'y', false);
+    addDir('faceYMax', 'Y+ Yüzeyi (Üst)', 'y', true);
+    addDir('faceZMin', 'Z− Yüzeyi (Ön)', 'z', false);
+    addDir('faceZMax', 'Z+ Yüzeyi (Arka)', 'z', true);
+  }
+  return sel;
 }
 
 // Parsed (vertices array, triangleCount) → dedup'lı tri3 mesh
@@ -539,6 +687,26 @@ function veFEAComputeMeshMetrics(mesh) {
     maxSize: edgeCount ? maxSize : 0,
     avgSize: edgeCount ? sumSize / edgeCount : 0
   };
+}
+
+// Named selections'tan UI/persistence için özet üretir (nodeIds hariç)
+//   { <key>: { label, type, source, nodeCount } }
+// Float32Array/Uint32Array JSON-serializable değildir; özet localStorage'a
+// güvenle yazılabilir. Tam veri her zaman veFEAMeshCache'de canlı durur.
+function veFEAComputeNamedSelectionsSummary(mesh) {
+  if (!mesh || !mesh.namedSelections) return {};
+  var sel = mesh.namedSelections;
+  var out = {};
+  Object.keys(sel).forEach(function(k) {
+    var ns = sel[k];
+    out[k] = {
+      label: ns.label,
+      type: ns.type,
+      source: ns.source,
+      nodeCount: ns.nodeIds ? ns.nodeIds.length : 0
+    };
+  });
+  return out;
 }
 
 // Mesh edges'i toplar (her edge tek kez) — viewer line render'ı için
