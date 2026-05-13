@@ -11,7 +11,17 @@
 (function() {
   'use strict';
 
+  // Her modul adimi arasi minimum gecikme. Toplam splash suresi yaklasik
+  // (modul_sayisi * STEP_DELAY_MS) + gercek yukleme isi olur. ~42 modul icin
+  // 60ms ≈ 2.5s taban + actual work = profesyonel his. Cok hizli kapanmayi
+  // engeller, label'larin gozle takip edilmesine olanak verir.
+  var STEP_DELAY_MS = 60;
+  // Tum yuklemenin (script'ler bitti, splash kapanmadan onceki) minimum
+  // toplam suresi. Gerçek is bu su̇reden hızlıysa fark kadar bekleriz.
+  var MIN_TOTAL_DURATION_MS = 2600;
+
   var started = false;
+  var startTime = 0;
   var ELS = {
     splash: 'mfsim-loading-screen',
     bar: 'mfsim-loading-bar',
@@ -123,7 +133,21 @@
     });
   }
 
+  function finalize(total) {
+    setProgress(total, total, 'Son hazırlıklar...');
+    // Moduller bitti — kuyruktaki DOMContentLoaded handler'larini calistir
+    flushDomReady();
+    // Minimum toplam sureyi bekle — gercek is daha hizliysa fark kadar
+    var elapsed = Date.now() - startTime;
+    var remaining = Math.max(0, MIN_TOTAL_DURATION_MS - elapsed);
+    setTimeout(function() {
+      setProgress(total, total, 'Tamamlandı');
+      setTimeout(hideSplash, 400);
+    }, remaining);
+  }
+
   function runLoader() {
+    startTime = Date.now();
     hideLogin();
     showSplash();
 
@@ -143,11 +167,7 @@
     var idx = 0;
     function next() {
       if (idx >= total) {
-        setProgress(total, total, 'Son hazırlıklar...');
-        // Moduller bitti — kuyruktaki DOMContentLoaded handler'larini calistir
-        flushDomReady();
-        setProgress(total, total, 'Tamamlandı');
-        setTimeout(hideSplash, 350);
+        finalize(total);
         return;
       }
       var ph = placeholders[idx];
@@ -157,15 +177,15 @@
         var msg = $(ELS.msg);
         if (msg) msg.textContent = label;
       }
-      // requestAnimationFrame ile bir frame yield et — progress bar render olsun
-      var raf = window.requestAnimationFrame || function(cb) { setTimeout(cb, 16); };
-      raf(function() {
+      // Her adim arasi kucuk gecikme — progress bar gozle takip edilebilsin,
+      // toplam yukleme profesyonel bir his versin.
+      setTimeout(function() {
         loadOne(ph).then(function() {
           idx++;
           setProgress(idx, total);
           next();
         });
-      });
+      }, STEP_DELAY_MS);
     }
     next();
   }
