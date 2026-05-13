@@ -210,6 +210,24 @@ function veFEAInitViewer(canvas, opts) {
       this.zoomToFit(mesh);
       return mesh;
     },
+    // F3: Mesh data → LineSegments (kenar wireframe)
+    loadMesh: function(meshData) {
+      if (!meshData || typeof veFEAMeshExtractEdges !== 'function') return null;
+      this.clearGeometry();
+      var edgeVerts = veFEAMeshExtractEdges(meshData);
+      if (!edgeVerts || edgeVerts.length === 0) return null;
+
+      var geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
+      var line = new THREE.LineSegments(
+        geometry,
+        new THREE.LineBasicMaterial({ color: 0x60a5fa })
+      );
+      line.userData.feaMeshEdges = true;
+      this._geometryRoot.add(line);
+      this.zoomToFit(line);
+      return line;
+    },
     // Display state'ini (mod, opaklık, clip planes) yeni eklenen mesh'e uygula
     _applyDisplayState: function(mesh) {
       this._applyDisplayModeToMesh(mesh);
@@ -850,6 +868,109 @@ function veFEAOnSTLFileSelected(input, nodeId) {
 function veFEAFitPreviewForNode(nodeId) {
   var viewer = veFEAViewerRegistry[nodeId];
   if(viewer && typeof viewer.fitToGeometry === 'function') viewer.fitToGeometry();
+}
+
+// In-memory mesh cache (büyük data persist edilmez; her session'da yeniden hesaplanır)
+var veFEAMeshCache = {};
+
+// Mesh node panel açıldığında çağrılır — fea-geometry'den input alıp viewer kurar
+function veFEAInitMeshViewerForNode(nodeId) {
+  var canvasId = 've-fea-mesh-canvas-' + nodeId;
+  var canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+
+  if (veFEAViewerRegistry[nodeId]) {
+    try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
+    delete veFEAViewerRegistry[nodeId];
+  }
+
+  if (!veFEAHasThree()) {
+    var ctx = canvas.getContext && canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#444';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#ddd';
+      ctx.font = '12px sans-serif';
+      ctx.fillText('Three.js yüklenmedi', 20, canvas.height / 2);
+    }
+    return;
+  }
+
+  var viewer = veFEAInitViewer(canvas, {
+    width: canvas.clientWidth || 240,
+    height: canvas.clientHeight || 180
+  });
+  if (!viewer) return;
+  veFEAViewerRegistry[nodeId] = viewer;
+
+  // Cache'te mesh varsa otomatik yedir
+  if (veFEAMeshCache[nodeId]) {
+    viewer.loadMesh(veFEAMeshCache[nodeId]);
+  }
+}
+
+// Geometri → Mesh node bağlantısını bul (upstream)
+function veFEAFindUpstreamGeometryNode(meshNodeId) {
+  if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  var conn = connections.find(function(c) { return c.to === meshNodeId; });
+  if (!conn) return null;
+  var geomNode = nodes.find(function(n) { return n.id === conn.from && n.type === 'fea-geometry'; });
+  return geomNode || null;
+}
+
+// Mesh oluştur — kullanıcı "Mesh Oluştur" butonuna tıklayınca
+function veFEABuildMeshForNode(meshNodeId) {
+  if (typeof veFEAMeshFromGeometry !== 'function') return;
+  var geomNode = veFEAFindUpstreamGeometryNode(meshNodeId);
+  if (!geomNode || !geomNode.data || !geomNode.data.geometry || !geomNode.data.geometry.type) {
+    if (typeof showToast === 'function') showToast('Önce geometri tanımlayın (Geometri bloğu)', 'warning');
+    return;
+  }
+  var geometry = geomNode.data.geometry;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  var settings = meshNode.data.meshSettings || {};
+  if (!settings.size) settings.size = 10;
+
+  var t0 = Date.now();
+  var meshData = veFEAMeshFromGeometry(geometry, { size: settings.size });
+  if (!meshData) {
+    if (typeof showToast === 'function') showToast('Mesh oluşturulamadı (desteklenmeyen tip?)', 'error');
+    return;
+  }
+  var dt = Date.now() - t0;
+
+  var metrics = veFEAComputeMeshMetrics(meshData);
+  metrics.computeMs = dt;
+
+  veFEAMeshCache[meshNodeId] = meshData;
+
+  meshNode.data.meshSettings = settings;
+  meshNode.data.meshMetrics = metrics;
+  meshNode.data.meshActive = true;
+  if (typeof saveState === 'function') saveState();
+
+  var viewer = veFEAViewerRegistry[meshNodeId];
+  if (viewer) viewer.loadMesh(meshData);
+
+  if (typeof showToast === 'function') {
+    showToast('Mesh oluşturuldu: ' + metrics.elementCount + ' eleman, ' + metrics.nodeCount + ' düğüm (' + dt + ' ms)', 'success');
+  }
+  if (typeof showNodeProperties === 'function') showNodeProperties(meshNode);
+}
+
+function veFEAClearMeshForNode(meshNodeId) {
+  delete veFEAMeshCache[meshNodeId];
+  var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
+  if (meshNode && meshNode.data) {
+    delete meshNode.data.meshMetrics;
+    delete meshNode.data.meshActive;
+    if (typeof saveState === 'function') saveState();
+  }
+  var viewer = veFEAViewerRegistry[meshNodeId];
+  if (viewer) viewer.clearGeometry();
+  if (typeof showNodeProperties === 'function' && meshNode) showNodeProperties(meshNode);
 }
 
 function veFEAClearGeometryForNode(nodeId) {

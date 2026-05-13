@@ -266,4 +266,13 @@ function showNodeProperties(node) {
       }
     }, 100);
   }
+
+  // FEA Mesh: mesh viewer'ını başlat (cache'te mesh varsa otomatik yedir)
+  if(node.type === 'fea-mesh') {
+    setTimeout(function() {
+      if(typeof veFEAInitMeshViewerForNode === 'function') {
+        veFEAInitMeshViewerForNode(node.id);
+      }
+    }, 100);
+  }
 }
