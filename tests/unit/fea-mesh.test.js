@@ -27,7 +27,7 @@ describe('veFEAMeshLabel', () => {
     expect(veFEAMeshLabel('hex8')).toMatch(/Heks8/);
     expect(veFEAMeshLabel('wedge6')).toMatch(/Wedge/);
     expect(veFEAMeshLabel('tri3')).toMatch(/Tri3/);
-    expect(veFEAMeshLabel('tet4')).toBe('Tet4');
+    expect(veFEAMeshLabel('tet4')).toMatch(/Tet4/);
   });
 
   test('bilinmeyen tip için tipin kendisi döner', () => {
@@ -396,6 +396,223 @@ describe('cp-fea.js Mesh paneli render', () => {
     expect(html).toMatch(/Medium/);
     expect(html).toMatch(/Fine/);
     expect(html).toMatch(/veFEASetMeshSizePreset/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('Tet4 decomposition (veFEAConvertMeshToTet4)', () => {
+  test('Hex8 mesh → her Heks8 6 Tet4 olur', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var nHex = hex.elements.length / 8;
+    var tet = veFEAConvertMeshToTet4(hex);
+    expect(tet.type).toBe('tet4');
+    expect(tet.nodesPerElement).toBe(4);
+    expect(tet.elements.length / 4).toBe(nHex * 6);
+    // Düğüm konumları aynı (paylaşılan referans)
+    expect(tet.nodes).toBe(hex.nodes);
+    expect(tet.convertedFromHex).toBe(true);
+  });
+
+  test('Wedge6 mesh → her wedge 3 Tet4 olur', () => {
+    var wed = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    var nWed = wed.elements.length / 6;
+    var tet = veFEAConvertMeshToTet4(wed);
+    expect(tet.type).toBe('tet4');
+    expect(tet.elements.length / 4).toBe(nWed * 3);
+    expect(tet.convertedFromWedge).toBe(true);
+  });
+
+  test('Tet4 mesh tekrar dönüştürülmez (no-op)', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var tet1 = veFEAConvertMeshToTet4(hex);
+    var tet2 = veFEAConvertMeshToTet4(tet1);
+    expect(tet2.elements.length).toBe(tet1.elements.length);
+    expect(tet2.type).toBe('tet4');
+  });
+
+  test('Named selections tet4\'e taşınır (node ID\'ler korunur)', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var tet = veFEAConvertMeshToTet4(hex);
+    expect(tet.namedSelections).toBeDefined();
+    expect(Object.keys(tet.namedSelections).length).toBe(6);
+    // Aynı düğüm IDs kullanılıyor — tet4\'de hala geçerli
+    var ids = tet.namedSelections.faceXMin.nodeIds;
+    var maxIdx = tet.nodes.length / 3 - 1;
+    for (var i = 0; i < ids.length; i++) {
+      expect(ids[i]).toBeLessThanOrEqual(maxIdx);
+    }
+  });
+
+  test('null veya error mesh için no-op', () => {
+    expect(veFEAConvertMeshToTet4(null)).toBeNull();
+    var err = { error: 'voxel-too-many' };
+    expect(veFEAConvertMeshToTet4(err)).toBe(err);
+  });
+
+  test('Tri3 (yüzey) mesh\'ler etkilenmez', () => {
+    var tri = { type: 'tri3', nodes: new Float32Array(0), elements: new Uint32Array(0), nodesPerElement: 3 };
+    var out = veFEAConvertMeshToTet4(tri);
+    expect(out.type).toBe('tri3');
+  });
+
+  test('Tet4 element indeksleri geçerli', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var tet = veFEAConvertMeshToTet4(hex);
+    var maxIdx = tet.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < tet.elements.length; i++) {
+      if (tet.elements[i] < 0 || tet.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+
+  test('Hex8 6-tet split toplam hacim ≈ original hex hacim', () => {
+    // Heks8 hacmi (1×1×1) = 1; 6 tet hacim toplamı da 1 olmalı (mass conservation)
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 1, height: 1, depth: 1 } }, { size: 1 });
+    var tet = veFEAConvertMeshToTet4(hex);
+    var nodes = tet.nodes;
+    var totalVol = 0;
+    for (var e = 0; e < tet.elements.length / 4; e++) {
+      var off = e * 4;
+      var a = tet.elements[off], b = tet.elements[off + 1], c = tet.elements[off + 2], d = tet.elements[off + 3];
+      var ax = nodes[a*3], ay = nodes[a*3+1], az = nodes[a*3+2];
+      var bx = nodes[b*3], by = nodes[b*3+1], bz = nodes[b*3+2];
+      var cx = nodes[c*3], cy = nodes[c*3+1], cz = nodes[c*3+2];
+      var dx = nodes[d*3], dy = nodes[d*3+1], dz = nodes[d*3+2];
+      // V = (1/6) |((b-a) × (c-a)) · (d-a)|
+      var v1x = bx-ax, v1y = by-ay, v1z = bz-az;
+      var v2x = cx-ax, v2y = cy-ay, v2z = cz-az;
+      var v3x = dx-ax, v3y = dy-ay, v3z = dz-az;
+      var cross_x = v1y*v2z - v1z*v2y;
+      var cross_y = v1z*v2x - v1x*v2z;
+      var cross_z = v1x*v2y - v1y*v2x;
+      var vol = Math.abs(cross_x*v3x + cross_y*v3y + cross_z*v3z) / 6;
+      totalVol += vol;
+    }
+    expect(totalVol).toBeCloseTo(1, 4);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAMeshFromGeometry — elementType seçimi', () => {
+  test('elementType "auto" → native eleman tipi (hex8)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, elementType: 'auto' });
+    expect(m.type).toBe('hex8');
+  });
+
+  test('elementType "tet4" → kutu Hex8 → Tet4 dönüştürür', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, elementType: 'tet4' });
+    expect(m.type).toBe('tet4');
+    expect(m.elements.length / 4).toBe(8 * 6); // 8 hex × 6 tet
+  });
+
+  test('elementType "tet4" → silindir Wedge6 → Tet4 dönüştürür', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, elementType: 'tet4' });
+    expect(m.type).toBe('tet4');
+    var native = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    expect(m.elements.length / 4).toBe((native.elements.length / 6) * 3);
+  });
+
+  test('Voxel STL + elementType "tet4" → tet4 voxel mesh', () => {
+    // STL fixture
+    function buildCubeTriangles() {
+      return [
+        [0,0,0, 10,10,0, 10,0,0,  0,0,-1],
+        [0,0,0, 0,10,0, 10,10,0,  0,0,-1],
+        [0,0,10, 10,0,10, 10,10,10,  0,0,1],
+        [0,0,10, 10,10,10, 0,10,10,  0,0,1],
+        [0,0,0, 0,0,10, 0,10,10,  -1,0,0],
+        [0,0,0, 0,10,10, 0,10,0,  -1,0,0],
+        [10,0,0, 10,10,0, 10,10,10,  1,0,0],
+        [10,0,0, 10,10,10, 10,0,10,  1,0,0],
+        [0,0,0, 10,0,0, 10,0,10,  0,-1,0],
+        [0,0,0, 10,0,10, 0,0,10,  0,-1,0],
+        [0,10,0, 0,10,10, 10,10,10,  0,1,0],
+        [0,10,0, 10,10,10, 10,10,0,  0,1,0]
+      ];
+    }
+    var tris = buildCubeTriangles();
+    var ab = new ArrayBuffer(84 + tris.length * 50);
+    var view = new DataView(ab);
+    view.setUint32(80, tris.length, true);
+    var offset = 84;
+    for (var i = 0; i < tris.length; i++) {
+      var t = tris[i];
+      view.setFloat32(offset, t[9], true);
+      view.setFloat32(offset + 4, t[10], true);
+      view.setFloat32(offset + 8, t[11], true);
+      offset += 12;
+      for (var j = 0; j < 9; j++) view.setFloat32(offset + j * 4, t[j], true);
+      offset += 36;
+      view.setUint16(offset, 0, true);
+      offset += 2;
+    }
+    var b64 = veFEAArrayBufferToBase64(ab);
+    var m = veFEAMeshFromGeometry({ type: 'stl', rawDataB64: b64 }, { size: 5, mode: 'volume', elementType: 'tet4' });
+    expect(m.type).toBe('tet4');
+    expect(m.voxelMode).toBe(true);
+    expect(m.elements.length / 4).toBe(8 * 6); // 8 voxel × 6 tet
+  });
+
+  test('Surface mode tet4\'ten etkilenmez (tri3 kalır)', () => {
+    function buildCubeTriangles() {
+      return [
+        [0,0,0, 10,10,0, 10,0,0,  0,0,-1],
+        [0,0,0, 0,10,0, 10,10,0,  0,0,-1]
+      ];
+    }
+    var tris = buildCubeTriangles();
+    var ab = new ArrayBuffer(84 + tris.length * 50);
+    var view = new DataView(ab);
+    view.setUint32(80, tris.length, true);
+    var offset = 84;
+    for (var i = 0; i < tris.length; i++) {
+      var t = tris[i];
+      view.setFloat32(offset, t[9], true);
+      view.setFloat32(offset + 4, t[10], true);
+      view.setFloat32(offset + 8, t[11], true);
+      offset += 12;
+      for (var j = 0; j < 9; j++) view.setFloat32(offset + j * 4, t[j], true);
+      offset += 36;
+      view.setUint16(offset, 0, true);
+      offset += 2;
+    }
+    var b64 = veFEAArrayBufferToBase64(ab);
+    var m = veFEAMeshFromGeometry({ type: 'stl', rawDataB64: b64 }, { size: 5, mode: 'surface', elementType: 'tet4' });
+    // Surface modunda tri3 — tet4 dönüştürmesi uygulanmaz
+    expect(m.type).toBe('tri3');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('cp-fea.js Mesh paneli — Eleman Tipi seçici', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+  });
+
+  test('Eleman Tipi dropdown render edilir (2 seçenek)', () => {
+    var node = { id: 'mesh-et1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-eltype-mesh-et1"/);
+    expect(html).toMatch(/value="auto"/);
+    expect(html).toMatch(/value="tet4"/);
+  });
+
+  test('Default elementType "auto" seçili', () => {
+    var node = { id: 'mesh-et2', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    // İki dropdown var (mode + elementType); elementType auto seçili olmalı
+    expect(html).toMatch(/id="ve-fea-mesh-eltype-mesh-et2"[^>]*>[\s\S]*?value="auto"\s+selected/);
+  });
+
+  test('Persist edilmiş elementType UI\'da işaretlenir', () => {
+    var node = { id: 'mesh-et3', type: 'fea-mesh', data: { meshSettings: { size: 10, mode: 'auto', elementType: 'tet4' } } };
+    global.nodes = [node];
+    var html = getFEAMeshPropertiesHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-eltype-mesh-et3"[^>]*>[\s\S]*?value="tet4"\s+selected/);
   });
 });
 

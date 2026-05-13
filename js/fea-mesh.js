@@ -40,10 +40,98 @@ function veFEAMeshLabel(type) {
   return ({
     'hex8':   'Heks8',
     'wedge6': 'Wedge6 (Prizm)',
-    'tet4':   'Tet4',
-    'tet10':  'Tet10',
+    'tet4':   'Tet4 (Tetra)',
+    'tet10':  'Tet10 (Kuadratik Tetra)',
+    'hex20':  'Hex20 (Kuadratik Heks)',
     'tri3':   'Tri3 (Yüzey)'
   })[type] || type;
+}
+
+// ─── Hex8/Wedge6 → Tet4 decomposition ─────────────────────────────────────
+// Yapısal grid'lerde geçerli düğüm topolojisi ile gerçek tet4 mesh üretir.
+// Düğüm konumları korunur (sadece eleman bağlantıları değişir), bu nedenle
+// named selections ve nodeIds aynı kalır.
+//
+// Hex8 split: 6 tet, sabit diagonal (0-6). Yapısal grid'lerde komşu hücrelerin
+// paylaşılan yüzlerinde diagonal eşleşir (conforming). Wedge6 split: 3 tet,
+// diagonals (0-5) ve (1-5) — komşu wedge'lerle paylaşılan radyal arayüzlerde
+// nodeID'ler aynı olduğundan diagonal otomatik eşleşir.
+//
+// Gerçek adaptive Delaunay/quality refinement (tetgen-wasm) ileride ayrı
+// modül olarak eklenecek. Bu yöntem yapısal grid'ler ve voxel hex8 için
+// solver-uygun tet4 mesh sağlar.
+function veFEAConvertMeshToTet4(meshData) {
+  if (!meshData || meshData.error) return meshData;
+  if (meshData.type === 'hex8')   return _veFEAHexMeshToTet4(meshData);
+  if (meshData.type === 'wedge6') return _veFEAWedgeMeshToTet4(meshData);
+  if (meshData.type === 'tet4')   return meshData;
+  return meshData; // tri3 vs. dokunma
+}
+
+// Heks8 → 6 Tet4 (diagonal 0-6 ile)
+var _VE_FEA_HEX_TET_SPLIT = [
+  [0, 1, 2, 6],
+  [0, 2, 3, 6],
+  [0, 3, 7, 6],
+  [0, 7, 4, 6],
+  [0, 4, 5, 6],
+  [0, 5, 1, 6]
+];
+function _veFEAHexMeshToTet4(hexMesh) {
+  var hex = hexMesh.elements;
+  var nElem = hex.length / 8;
+  var tets = new Uint32Array(nElem * 6 * 4);
+  var p = 0;
+  for (var e = 0; e < nElem; e++) {
+    var off = e * 8;
+    for (var s = 0; s < 6; s++) {
+      var split = _VE_FEA_HEX_TET_SPLIT[s];
+      tets[p++] = hex[off + split[0]];
+      tets[p++] = hex[off + split[1]];
+      tets[p++] = hex[off + split[2]];
+      tets[p++] = hex[off + split[3]];
+    }
+  }
+  return _veFEAWrapTet4Mesh(hexMesh, tets, { convertedFromHex: true });
+}
+
+// Wedge6 → 3 Tet4
+var _VE_FEA_WEDGE_TET_SPLIT = [
+  [0, 1, 2, 5],
+  [0, 1, 5, 4],
+  [0, 4, 5, 3]
+];
+function _veFEAWedgeMeshToTet4(wedgeMesh) {
+  var w = wedgeMesh.elements;
+  var nElem = w.length / 6;
+  var tets = new Uint32Array(nElem * 3 * 4);
+  var p = 0;
+  for (var e = 0; e < nElem; e++) {
+    var off = e * 6;
+    for (var s = 0; s < 3; s++) {
+      var split = _VE_FEA_WEDGE_TET_SPLIT[s];
+      tets[p++] = w[off + split[0]];
+      tets[p++] = w[off + split[1]];
+      tets[p++] = w[off + split[2]];
+      tets[p++] = w[off + split[3]];
+    }
+  }
+  return _veFEAWrapTet4Mesh(wedgeMesh, tets, { convertedFromWedge: true });
+}
+
+function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
+  var out = {
+    type: 'tet4',
+    geometryType: srcMesh.geometryType,
+    nodes: srcMesh.nodes,
+    elements: tetElements,
+    nodesPerElement: 4,
+    grid: srcMesh.grid,
+    namedSelections: srcMesh.namedSelections, // node ID'leri korundu, geçerli
+    voxelMode: srcMesh.voxelMode || false
+  };
+  if (extra) Object.keys(extra).forEach(function(k) { out[k] = extra[k]; });
+  return out;
 }
 
 function veFEAMeshFromGeometry(geometry, opts) {
@@ -52,11 +140,14 @@ function veFEAMeshFromGeometry(geometry, opts) {
   var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
   // mode: 'auto' (default), 'volume', 'surface'
   var mode = opts.mode || 'auto';
+  // elementType: 'auto' (native: hex8/wedge6) | 'tet4' (decomposition)
+  var elementType = opts.elementType || 'auto';
 
-  if (geometry.type === 'box')      return _veFEAMeshBox(geometry.params || {}, size);
-  if (geometry.type === 'cylinder') return _veFEAMeshCylinder(geometry.params || {}, size);
-  if (geometry.type === 'shaft')    return _veFEAMeshShaft(geometry.params || {}, size);
-  if (geometry.type === 'stl' || geometry.type === 'step') {
+  var mesh = null;
+  if (geometry.type === 'box')      mesh = _veFEAMeshBox(geometry.params || {}, size);
+  else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size);
+  else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size);
+  else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
     var parsed = _veFEAParseSurfaceTriangles(geometry);
     if (!parsed) return null;
@@ -65,9 +156,14 @@ function veFEAMeshFromGeometry(geometry, opts) {
       return _veFEAMeshFromParsedTriangles(parsed, geometry.type);
     }
     // auto + volume → voxel hex
-    return _veFEAVoxelizeTrianglesToHex(parsed, size, geometry.type);
+    mesh = _veFEAVoxelizeTrianglesToHex(parsed, size, geometry.type);
   }
-  return null;
+
+  // elementType: hex8/wedge6 → tet4 decomposition (yüzey tri3 etkilenmez)
+  if (mesh && !mesh.error && elementType === 'tet4') {
+    mesh = veFEAConvertMeshToTet4(mesh);
+  }
+  return mesh;
 }
 
 // Async wrapper — STEP gibi parse'i Promise tabanlı geometriler için.
@@ -89,10 +185,15 @@ function veFEAMeshFromGeometryAsync(geometry, opts) {
       var parsed = veFEAStepMeshesToParsed(result);
       if (!parsed || parsed.triangleCount === 0) return null;
       var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
+      var elementType = opts.elementType || 'auto';
       if ((opts.mode || 'auto') === 'surface') {
         return _veFEAMeshFromParsedTriangles(parsed, 'step');
       }
-      return _veFEAVoxelizeTrianglesToHex(parsed, size, 'step');
+      var hexMesh = _veFEAVoxelizeTrianglesToHex(parsed, size, 'step');
+      if (hexMesh && !hexMesh.error && elementType === 'tet4') {
+        return veFEAConvertMeshToTet4(hexMesh);
+      }
+      return hexMesh;
     });
   }
   return Promise.resolve(null);

@@ -984,9 +984,10 @@ function veFEABuildMeshForNode(meshNodeId) {
   var settings = meshNode.data.meshSettings || {};
   if (!settings.size) settings.size = 10;
   if (!settings.mode) settings.mode = 'auto';
+  if (!settings.elementType) settings.elementType = 'auto';
 
   var t0 = Date.now();
-  var meshOpts = { size: settings.size, mode: settings.mode };
+  var meshOpts = { size: settings.size, mode: settings.mode, elementType: settings.elementType };
 
   // STEP için async parse gerekebilir — promise-aware yol
   var needsAsync = (geometry.type === 'step');

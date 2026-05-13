@@ -205,6 +205,14 @@ function getFEAMeshPropertiesHTML(node) {
   html += '<option value="surface"' + (currentMode === 'surface' ? ' selected' : '') + '>Yüzey (Tri3 — sadece önizleme)</option>';
   html += '</select>';
 
+  // Eleman tipi — auto (native hex8/wedge6) veya tet4 decomposition
+  var currentElType = settings.elementType || 'auto';
+  html += veFEASectionTitle('Eleman Tipi');
+  html += '<select id="ve-fea-mesh-eltype-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:8px;">';
+  html += '<option value="auto"' + (currentElType === 'auto' ? ' selected' : '') + '>Otomatik (Heks8 / Wedge6 — native)</option>';
+  html += '<option value="tet4"' + (currentElType === 'tet4' ? ' selected' : '') + '>Tet4 (Tetra — decomposition)</option>';
+  html += '</select>';
+
   // Mesh boyu input
   html += veFEASectionTitle('Mesh Boyu');
   html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px;">';
@@ -307,16 +315,20 @@ function veFEASubmitMeshBuild(nodeId) {
   if (typeof nodes === 'undefined' || typeof veFEABuildMeshForNode !== 'function') return;
   var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
   var modeSel = document.getElementById('ve-fea-mesh-mode-' + nodeId);
+  var elTypeSel = document.getElementById('ve-fea-mesh-eltype-' + nodeId);
   var size = input ? parseFloat(input.value) : 10;
   if (!isFinite(size) || size <= 0) size = 10;
   var mode = (modeSel && modeSel.value) ? modeSel.value : 'auto';
   if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
+  var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : 'auto';
+  if (elementType !== 'auto' && elementType !== 'tet4') elementType = 'auto';
   var meshNode = nodes.find(function(n) { return n.id === nodeId; });
   if (meshNode) {
     meshNode.data = meshNode.data || {};
     meshNode.data.meshSettings = meshNode.data.meshSettings || {};
     meshNode.data.meshSettings.size = size;
     meshNode.data.meshSettings.mode = mode;
+    meshNode.data.meshSettings.elementType = elementType;
   }
   veFEABuildMeshForNode(nodeId);
 }
