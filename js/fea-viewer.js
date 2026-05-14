@@ -1386,7 +1386,8 @@ function veFEABuildMeshForNode(meshNodeId) {
     elementType: settings.elementType,
     midSideNodes: settings.midSideNodes,
     curvatureRefinement: settings.curvatureRefinement,
-    localSizing: settings.localSizing
+    localSizing: settings.localSizing,
+    crossSection: settings.crossSection
   };
 
   // STEP için async parse gerekebilir — promise-aware yol

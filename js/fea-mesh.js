@@ -247,7 +247,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   var curvOpts = opts.curvatureRefinement || null;
   var mesh = null;
   if (geometry.type === 'box')      mesh = _veFEAMeshBox(geometry.params || {}, size);
-  else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts);
+  else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
@@ -555,7 +555,7 @@ function _veFEABoxNamedSelections(nx, ny, nz) {
 }
 
 // ─── Silindir → Wedge6 (disk triangulation + eksenel extrude) ──────────────
-function _veFEAMeshCylinder(p, size, curvOpts) {
+function _veFEAMeshCylinder(p, size, curvOpts, extraOpts) {
   var r  = Math.max(0.1, p.radius || 15);
   var h  = Math.max(0.1, p.height || 60);
   var nC = Math.max(6, Math.round(2 * Math.PI * r / size));
@@ -566,6 +566,14 @@ function _veFEAMeshCylinder(p, size, curvOpts) {
     var angDeg = Math.max(1, Math.min(90, Number(curvOpts.normalAngleDeg) || 18));
     var nCByCurv = Math.ceil(360 / angDeg);
     if (nCByCurv > nC) nC = nCByCurv;
+  }
+  // O-grid (butterfly) topoloji — tüm Hex8, dairesel yakınsama daha iyi
+  // ICEM ICEM CFD style: merkez square + 4 outer arc
+  if (extraOpts && extraOpts.crossSection === 'ogrid') {
+    nC = Math.max(8, Math.round(nC / 4) * 4);  // 4'ün katı zorunlu
+    var nRArc = Math.max(1, nR);
+    var nSquare = nC / 4;
+    return _veFEAMeshCylinderOgrid(r, h, nC, nSquare, nRArc, nA);
   }
   var halfH = h / 2;
 
@@ -647,6 +655,185 @@ function _veFEAMeshCylinder(p, size, curvOpts) {
     grid: { nRadial: nR, nCircum: nC, nAxial: nA },
     sweepAxis: 'Y',
     namedSelections: _veFEACylinderNamedSelections(nR, nC, nA)
+  };
+}
+
+// ─── O-grid (Butterfly) Hex8 disk → axial extrude ──────────────────────────
+// ANSYS ICEM CFD altın standardı dairesel kesit için: merkezde küçük kare
+// blok + etrafında 4 yay × radial layers. Tüm elementler Hex8, pole
+// singularity yok, dairesel yüzeylere %3-5 daha doğru yakınsama.
+//
+// Topology (2D disk):
+//   ┌─────────────────┐
+//   │      arc N      │
+//   ├──┐         ┌────┤
+//   │ a│  inner  │ a  │
+//   │ r│  square │ r  │
+//   │ c│ nSq×nSq │ c  │
+//   │ W│         │ E  │
+//   ├──┘         └────┤
+//   │      arc S      │
+//   └─────────────────┘
+// Inner square: a = r * 0.45 (innerFactor) — half-side
+// Each arc: nSquare angular × nR radial Hex (deformed: outer = circle)
+function _veFEABuildOgridDisk2D(r, nSquare, nR, innerFactor) {
+  if (!innerFactor) innerFactor = 0.45;
+  var a = r * innerFactor;
+  var nodes2D = [];
+  var nodeMap = {};
+  function getNode(x, z) {
+    var key = x.toFixed(6) + '|' + z.toFixed(6);
+    if (key in nodeMap) return nodeMap[key];
+    var idx = nodes2D.length;
+    nodes2D.push([x, z]);
+    nodeMap[key] = idx;
+    return idx;
+  }
+  var quads = []; // [a,b,c,d] CCW
+
+  // Inner square: nSquare × nSquare quads (uniform grid)
+  // Quad order CW in xz plane (from +Y view) — Y-axial Hex8 extrude için
+  // Jacobian pozitif. Bu (1-0)×(3-0) = +Y normal verir → apex (top) yönünde.
+  for (var j = 0; j < nSquare; j++) {
+    for (var i = 0; i < nSquare; i++) {
+      var x0 = -a + 2 * a * i / nSquare;
+      var x1 = -a + 2 * a * (i + 1) / nSquare;
+      var z0 = -a + 2 * a * j / nSquare;
+      var z1 = -a + 2 * a * (j + 1) / nSquare;
+      var n0 = getNode(x0, z0);
+      var n1 = getNode(x1, z0);
+      var n2 = getNode(x1, z1);
+      var n3 = getNode(x0, z1);
+      quads.push([n0, n3, n2, n1]);  // n1↔n3 swap (CCW xz → CW xz)
+    }
+  }
+
+  // 4 outer arcs — her biri (nSquare angular) × nR radial cells
+  // Inner edge: square'in ilgili kenarı
+  // Outer edge: çember yayı
+  // Arc convention: corner (a,a), (-a,a), (-a,-a), (a,-a) inner square'in 4 köşesi
+  var arcs = [
+    // East (+X tarafı): θ ∈ [-π/4, π/4]
+    { ix0:  a, iz0: -a, ix1:  a, iz1:  a, t0: -Math.PI / 4, t1:  Math.PI / 4 },
+    // North (+Z tarafı): θ ∈ [π/4, 3π/4]
+    { ix0:  a, iz0:  a, ix1: -a, iz1:  a, t0:  Math.PI / 4, t1: 3 * Math.PI / 4 },
+    // West (-X tarafı): θ ∈ [3π/4, 5π/4]
+    { ix0: -a, iz0:  a, ix1: -a, iz1: -a, t0: 3 * Math.PI / 4, t1: 5 * Math.PI / 4 },
+    // South (-Z tarafı): θ ∈ [5π/4, 7π/4]
+    { ix0: -a, iz0: -a, ix1:  a, iz1: -a, t0: 5 * Math.PI / 4, t1: 7 * Math.PI / 4 }
+  ];
+  function _arcPos(arc, rad, ang, nR_, nSq_) {
+    var s = ang / nSq_;          // 0 = arc start, 1 = arc end
+    var t = rad / nR_;           // 0 = inner edge, 1 = outer arc
+    var ix = arc.ix0 + s * (arc.ix1 - arc.ix0);
+    var iz = arc.iz0 + s * (arc.iz1 - arc.iz0);
+    var theta = arc.t0 + s * (arc.t1 - arc.t0);
+    var ox = r * Math.cos(theta);
+    var oz = r * Math.sin(theta);
+    return [ix + t * (ox - ix), iz + t * (oz - iz)];
+  }
+  arcs.forEach(function(arc) {
+    // Önce tüm node'ları kaydet (dedup şared edges)
+    for (var rad = 0; rad <= nR; rad++) {
+      for (var ang = 0; ang <= nSquare; ang++) {
+        var p = _arcPos(arc, rad, ang, nR, nSquare);
+        getNode(p[0], p[1]);
+      }
+    }
+    // Quads — arc cell vertex layout doğal olarak CW xz plane'de (radial outward
+    // ve circumferential combine olduğunda). Y-axial extrude için Jacobian +.
+    // Order: inner_low → inner_high → outer_high → outer_low.
+    for (var rad2 = 0; rad2 < nR; rad2++) {
+      for (var ang2 = 0; ang2 < nSquare; ang2++) {
+        var pIL = _arcPos(arc, rad2,     ang2,     nR, nSquare); // inner low (rad=0, ang=0)
+        var pIH = _arcPos(arc, rad2,     ang2 + 1, nR, nSquare); // inner high (rad=0, ang=1)
+        var pOH = _arcPos(arc, rad2 + 1, ang2 + 1, nR, nSquare); // outer high (rad=1, ang=1)
+        var pOL = _arcPos(arc, rad2 + 1, ang2,     nR, nSquare); // outer low (rad=1, ang=0)
+        quads.push([
+          getNode(pIL[0], pIL[1]),
+          getNode(pIH[0], pIH[1]),
+          getNode(pOH[0], pOH[1]),
+          getNode(pOL[0], pOL[1])
+        ]);
+      }
+    }
+  });
+  return { nodes2D: nodes2D, quads: quads };
+}
+
+// O-grid disk × eksenel extrude → Hex8 mesh
+function _veFEAMeshCylinderOgrid(r, h, nC, nSquare, nR, nA) {
+  var disk = _veFEABuildOgridDisk2D(r, nSquare, nR);
+  var n2 = disk.nodes2D.length;
+  var nQuads = disk.quads.length;
+  var halfH = h / 2;
+
+  // Düğümler: 2D nodes × (nA+1) axial layers
+  var nodes = new Float32Array(n2 * (nA + 1) * 3);
+  for (var k = 0; k <= nA; k++) {
+    var y = -halfH + h * k / nA;
+    for (var i = 0; i < n2; i++) {
+      var off = (k * n2 + i) * 3;
+      nodes[off]     = disk.nodes2D[i][0];
+      nodes[off + 1] = y;
+      nodes[off + 2] = disk.nodes2D[i][1];
+    }
+  }
+
+  // Hex8 elementler: nQuads × nA
+  var elements = new Uint32Array(nQuads * nA * 8);
+  var ep = 0;
+  for (var k2 = 0; k2 < nA; k2++) {
+    var bOff = k2 * n2;
+    var tOff = (k2 + 1) * n2;
+    for (var q = 0; q < nQuads; q++) {
+      var qd = disk.quads[q];
+      // Hex8 düğüm sırası (alt CCW + üst CCW, box mesher ile aynı convention)
+      elements[ep++] = bOff + qd[0];
+      elements[ep++] = bOff + qd[1];
+      elements[ep++] = bOff + qd[2];
+      elements[ep++] = bOff + qd[3];
+      elements[ep++] = tOff + qd[0];
+      elements[ep++] = tOff + qd[1];
+      elements[ep++] = tOff + qd[2];
+      elements[ep++] = tOff + qd[3];
+    }
+  }
+
+  return {
+    type: 'hex8',
+    geometryType: 'cylinder',
+    nodes: nodes,
+    elements: elements,
+    nodesPerElement: 8,
+    grid: { nNodes2D: n2, nQuads: nQuads, nCircum: nC, nRadial: nR, nAxial: nA, ogrid: true },
+    sweepAxis: 'Y',
+    namedSelections: _veFEAOgridCylinderNamedSelections(disk, n2, nA, r)
+  };
+}
+
+// O-grid silindir için named selections (alt/üst/yan)
+function _veFEAOgridCylinderNamedSelections(disk, n2, nA, r) {
+  // Bottom (k=0) ve Top (k=nA): tüm 2D düğümler
+  var bottom = new Uint32Array(n2);
+  var top = new Uint32Array(n2);
+  for (var i = 0; i < n2; i++) {
+    bottom[i] = i;
+    top[i] = nA * n2 + i;
+  }
+  // Side: 2D'de outer circle üzerindeki düğümler × tüm axial layer
+  var sideIds = [];
+  var eps = r * 1e-4;
+  for (var ii = 0; ii < n2; ii++) {
+    var x = disk.nodes2D[ii][0], z = disk.nodes2D[ii][1];
+    if (Math.abs(Math.sqrt(x * x + z * z) - r) < eps) {
+      for (var k = 0; k <= nA; k++) sideIds.push(k * n2 + ii);
+    }
+  }
+  return {
+    faceBottom: { type: 'face', source: 'auto', label: 'Alt Disk (Y−)',         nodeIds: bottom },
+    faceTop:    { type: 'face', source: 'auto', label: 'Üst Disk (Y+)',         nodeIds: top },
+    faceSide:   { type: 'face', source: 'auto', label: 'Yan Yüzey (Radyal)',    nodeIds: new Uint32Array(sideIds) }
   };
 }
 
