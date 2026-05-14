@@ -54,6 +54,15 @@ var VE_FEA_PRIMITIVES = {
       { key: 'segments', label: 'Çevresel Segment (görsel)', unit: '−', default: 32, min: 8, max: 128, integer: true }
     ]
   },
+  'torus': {
+    label: 'Torus (Halka / O-ring)',
+    schema: [
+      { key: 'majorRadius', label: 'Büyük Yarıçap (R)', unit: 'mm', default: 30, min: 1, max: 2500 },
+      { key: 'minorRadius', label: 'Küçük Yarıçap (r)',  unit: 'mm', default: 10, min: 0.1, max: 1000 },
+      { key: 'majorSegments', label: 'Halka Segment',    unit: '−', default: 48, min: 6, max: 256, integer: true },
+      { key: 'minorSegments', label: 'Kesit Segment',    unit: '−', default: 24, min: 6, max: 128, integer: true }
+    ]
+  },
   'cone': {
     label: 'Koni / Frustum (kesik koni)',
     schema: [
@@ -158,6 +167,13 @@ function veFEAPrimitiveStats(type, params) {
     var flatArea = Math.PI * rH * rH;
     surfaceArea = domeArea + flatArea;
     bbox = { x: 2 * rH, y: rH, z: 2 * rH };
+  } else if(type === 'torus') {
+    var Rt = p.majorRadius, rt = p.minorRadius;
+    // V = 2π² R r²  (Pappus theorem)
+    volume = 2 * Math.PI * Math.PI * Rt * rt * rt;
+    // Surface = 4π² R r
+    surfaceArea = 4 * Math.PI * Math.PI * Rt * rt;
+    bbox = { x: 2 * (Rt + rt), y: 2 * rt, z: 2 * (Rt + rt) };
   } else if(type === 'cone') {
     var rB = p.bottomRadius, rT = p.topRadius, hC = p.height;
     // Frustum hacim: V = (1/3) π h (rB² + rB·rT + rT²)
@@ -204,6 +220,7 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'shaft')    return _veFEABuildShaftGroup(p);
   if(type === 'sphere')     return _veFEABuildSphereMesh(p);
   if(type === 'hemisphere') return _veFEABuildHemisphereMesh(p);
+  if(type === 'torus')      return _veFEABuildTorusMesh(p);
   if(type === 'cone')       return _veFEABuildConeMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
   return null;
@@ -236,6 +253,23 @@ function _veFEABuildHemisphereMesh(p) {
     m.add(l);
   });
   return group;
+}
+
+// ─── Torus — TorusGeometry tek face (toroidal surface) ────────────────────
+function _veFEABuildTorusMesh(p) {
+  var geometry = new THREE.TorusGeometry(p.majorRadius, p.minorRadius, p.minorSegments, p.majorSegments);
+  // Torus default Z-axis etrafında döner; Y-axis'e döndür (standart konvansiyon)
+  geometry.rotateX(Math.PI / 2);
+  var mat = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, mat);
+  mesh.userData.feaPrimitive = { type: 'torus', params: p };
+  mesh.userData.feaFaceId = 'faceSurface';
+  mesh.userData.feaEdgesAttached = true;
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b, transparent: true, opacity: 0.5 }));
+  mesh.add(line);
+  return mesh;
 }
 
 // ─── Koni / Frustum — CylinderGeometry alt/üst farklı yarıçap ──────────────

@@ -407,6 +407,47 @@ describe('Koni / Frustum → Wedge6/Hex8 mesh (cylinder + radial scaling)', () =
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Torus → Wedge6 mesh (closed loop)', () => {
+  test('Torus mesh oluşturulur (Wedge6)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } }, { size: 5 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('wedge6');
+    expect(m.geometryType).toBe('torus');
+    expect(m.grid.closed).toBe(true);
+  });
+
+  test('Düğüm sayısı nMajor × perLayer (closed, no overlap)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } }, { size: 5 });
+    var g = m.grid;
+    expect(m.nodes.length / 3).toBe(g.nMajor * (1 + g.nRadial * g.nMinor));
+  });
+
+  test('Yüzey düğümlerinin minor radius mesafesi (her layer için)', () => {
+    var R = 30, r = 10;
+    var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: R, minorRadius: r } }, { size: 5 });
+    var surf = m.namedSelections.faceSurface.nodeIds;
+    expect(surf.length).toBeGreaterThan(0);
+    for (var i = 0; i < surf.length; i++) {
+      var nid = surf[i];
+      var x = m.nodes[nid * 3];
+      var y = m.nodes[nid * 3 + 1];
+      var z = m.nodes[nid * 3 + 2];
+      // Centerline pozisyonu xz plane'inde R yarıçaplı çember üstünde
+      var rho = Math.sqrt(x * x + z * z);  // axial distance
+      var dRho = rho - R;
+      var distFromCenterline = Math.sqrt(dRho * dRho + y * y);
+      expect(distFromCenterline).toBeCloseTo(r, 1);
+    }
+  });
+
+  test('Hacim ≈ 2π²Rr² (Pappus)', () => {
+    var R = 30, r = 10;
+    var stats = veFEAPrimitiveStats('torus', { majorRadius: R, minorRadius: r });
+    expect(stats.volume).toBeCloseTo(2 * Math.PI * Math.PI * R * r * r, 1);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Yarım Küre → Hex8 (alt düz disk + üst dome)', () => {
   test('Yarım küre mesh oluşturulur (Hex8)', () => {
     var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: 25 } }, { size: 8 });

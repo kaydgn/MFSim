@@ -128,6 +128,30 @@ describe('veFEAComputeGeometryTopology — Küre', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — Torus', () => {
+  test('1 face (toroidal), 0 kenar, 0 köşe (closed manifold)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } });
+    expect(topo.faces.length).toBe(1);
+    expect(topo.edges.count).toBe(0);
+    expect(topo.vertices.count).toBe(0);
+    expect(topo.faces[0].type).toBe('toroidal');
+    expect(topo.faces[0].majorRadius).toBe(30);
+    expect(topo.faces[0].minorRadius).toBe(10);
+  });
+
+  test('Hacim = 2π²Rr², yüzey = 4π²Rr (Pappus)', () => {
+    var R = 30, r = 10;
+    var topo = veFEAComputeGeometryTopology({ type: 'torus', params: { majorRadius: R, minorRadius: r } });
+    expect(topo.volume).toBeCloseTo(2 * Math.PI * Math.PI * R * r * r, 1);
+    expect(topo.totalSurfaceArea).toBeCloseTo(4 * Math.PI * Math.PI * R * r, 1);
+  });
+
+  test('"toroidal" tipi etiketi: Toroidal (Halka)', () => {
+    expect(veFEATopologyFaceTypeLabel('toroidal')).toBe('Toroidal (Halka)');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeGeometryTopology — Yarım Küre', () => {
   test('2 face (faceFlat + faceDome), 1 daire kenar (equator)', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'hemisphere', params: { radius: 25 } });

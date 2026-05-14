@@ -33,6 +33,7 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'shaft')    return _veFEAToplShaft(p);
   if (geometry.type === 'sphere')     return _veFEAToplSphere(p);
   if (geometry.type === 'hemisphere') return _veFEAToplHemisphere(p);
+  if (geometry.type === 'torus')      return _veFEAToplTorus(p);
   if (geometry.type === 'cone')       return _veFEAToplCone(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
   if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
@@ -46,6 +47,7 @@ function veFEATopologyFaceTypeLabel(type) {
     'cylindrical':    'Silindirik',
     'spherical':      'Küresel',
     'conical':        'Konik (Eğri)',
+    'toroidal':       'Toroidal (Halka)',
     'triangulated':   'Üçgenlenmiş'
   })[type] || type;
 }
@@ -154,6 +156,25 @@ function _veFEAToplHemisphere(p) {
     totalSurfaceArea: domeArea + flatArea,
     volume: (2 / 3) * Math.PI * r * r * r,
     bbox: { x: 2 * r, y: r, z: 2 * r }
+  };
+}
+
+// ─── Torus — 1 face (toroidal surface), 0 edge, 0 vertex (closed manifold) ─
+function _veFEAToplTorus(p) {
+  var R = Math.max(1, p.majorRadius || 30);
+  var r = Math.max(0.1, p.minorRadius || 10);
+  var area = 4 * Math.PI * Math.PI * R * r;
+  var vol  = 2 * Math.PI * Math.PI * R * r * r;
+  return {
+    type: 'torus',
+    faces: [
+      { id: 'faceSurface', label: 'Toroidal Yüzey', type: 'toroidal', area: area, majorRadius: R, minorRadius: r }
+    ],
+    edges:    { count: 0 },
+    vertices: { count: 0 },
+    totalSurfaceArea: area,
+    volume: vol,
+    bbox: { x: 2 * (R + r), y: 2 * r, z: 2 * (R + r) }
   };
 }
 

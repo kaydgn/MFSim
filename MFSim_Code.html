@@ -19926,6 +19926,15 @@ var VE_FEA_PRIMITIVES = {
       { key: 'segments', label: 'Çevresel Segment (görsel)', unit: '−', default: 32, min: 8, max: 128, integer: true }
     ]
   },
+  'torus': {
+    label: 'Torus (Halka / O-ring)',
+    schema: [
+      { key: 'majorRadius', label: 'Büyük Yarıçap (R)', unit: 'mm', default: 30, min: 1, max: 2500 },
+      { key: 'minorRadius', label: 'Küçük Yarıçap (r)',  unit: 'mm', default: 10, min: 0.1, max: 1000 },
+      { key: 'majorSegments', label: 'Halka Segment',    unit: '−', default: 48, min: 6, max: 256, integer: true },
+      { key: 'minorSegments', label: 'Kesit Segment',    unit: '−', default: 24, min: 6, max: 128, integer: true }
+    ]
+  },
   'cone': {
     label: 'Koni / Frustum (kesik koni)',
     schema: [
@@ -20030,6 +20039,13 @@ function veFEAPrimitiveStats(type, params) {
     var flatArea = Math.PI * rH * rH;
     surfaceArea = domeArea + flatArea;
     bbox = { x: 2 * rH, y: rH, z: 2 * rH };
+  } else if(type === 'torus') {
+    var Rt = p.majorRadius, rt = p.minorRadius;
+    // V = 2π² R r²  (Pappus theorem)
+    volume = 2 * Math.PI * Math.PI * Rt * rt * rt;
+    // Surface = 4π² R r
+    surfaceArea = 4 * Math.PI * Math.PI * Rt * rt;
+    bbox = { x: 2 * (Rt + rt), y: 2 * rt, z: 2 * (Rt + rt) };
   } else if(type === 'cone') {
     var rB = p.bottomRadius, rT = p.topRadius, hC = p.height;
     // Frustum hacim: V = (1/3) π h (rB² + rB·rT + rT²)
@@ -20076,6 +20092,7 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'shaft')    return _veFEABuildShaftGroup(p);
   if(type === 'sphere')     return _veFEABuildSphereMesh(p);
   if(type === 'hemisphere') return _veFEABuildHemisphereMesh(p);
+  if(type === 'torus')      return _veFEABuildTorusMesh(p);
   if(type === 'cone')       return _veFEABuildConeMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
   return null;
@@ -20108,6 +20125,23 @@ function _veFEABuildHemisphereMesh(p) {
     m.add(l);
   });
   return group;
+}
+
+// ─── Torus — TorusGeometry tek face (toroidal surface) ────────────────────
+function _veFEABuildTorusMesh(p) {
+  var geometry = new THREE.TorusGeometry(p.majorRadius, p.minorRadius, p.minorSegments, p.majorSegments);
+  // Torus default Z-axis etrafında döner; Y-axis'e döndür (standart konvansiyon)
+  geometry.rotateX(Math.PI / 2);
+  var mat = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, mat);
+  mesh.userData.feaPrimitive = { type: 'torus', params: p };
+  mesh.userData.feaFaceId = 'faceSurface';
+  mesh.userData.feaEdgesAttached = true;
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b, transparent: true, opacity: 0.5 }));
+  mesh.add(line);
+  return mesh;
 }
 
 // ─── Koni / Frustum — CylinderGeometry alt/üst farklı yarıçap ──────────────
@@ -20810,6 +20844,7 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'shaft')    return _veFEAToplShaft(p);
   if (geometry.type === 'sphere')     return _veFEAToplSphere(p);
   if (geometry.type === 'hemisphere') return _veFEAToplHemisphere(p);
+  if (geometry.type === 'torus')      return _veFEAToplTorus(p);
   if (geometry.type === 'cone')       return _veFEAToplCone(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
   if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
@@ -20823,6 +20858,7 @@ function veFEATopologyFaceTypeLabel(type) {
     'cylindrical':    'Silindirik',
     'spherical':      'Küresel',
     'conical':        'Konik (Eğri)',
+    'toroidal':       'Toroidal (Halka)',
     'triangulated':   'Üçgenlenmiş'
   })[type] || type;
 }
@@ -20931,6 +20967,25 @@ function _veFEAToplHemisphere(p) {
     totalSurfaceArea: domeArea + flatArea,
     volume: (2 / 3) * Math.PI * r * r * r,
     bbox: { x: 2 * r, y: r, z: 2 * r }
+  };
+}
+
+// ─── Torus — 1 face (toroidal surface), 0 edge, 0 vertex (closed manifold) ─
+function _veFEAToplTorus(p) {
+  var R = Math.max(1, p.majorRadius || 30);
+  var r = Math.max(0.1, p.minorRadius || 10);
+  var area = 4 * Math.PI * Math.PI * R * r;
+  var vol  = 2 * Math.PI * Math.PI * R * r * r;
+  return {
+    type: 'torus',
+    faces: [
+      { id: 'faceSurface', label: 'Toroidal Yüzey', type: 'toroidal', area: area, majorRadius: R, minorRadius: r }
+    ],
+    edges:    { count: 0 },
+    vertices: { count: 0 },
+    totalSurfaceArea: area,
+    volume: vol,
+    bbox: { x: 2 * (R + r), y: 2 * r, z: 2 * (R + r) }
   };
 }
 
@@ -21276,6 +21331,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
   else if (geometry.type === 'sphere')     mesh = _veFEAMeshSphere(geometry.params || {}, size);
   else if (geometry.type === 'hemisphere') mesh = _veFEAMeshHemisphere(geometry.params || {}, size);
+  else if (geometry.type === 'torus')      mesh = _veFEAMeshTorus(geometry.params || {}, size);
   else if (geometry.type === 'cone')       mesh = _veFEAMeshCone(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
@@ -22230,6 +22286,119 @@ function _veFEAMeshHemisphere(p, size) {
     nodesPerElement: 8,
     grid: { nC: nC, cubedSphere: true, hemisphere: true },
     namedSelections: _veFEAHemisphereNamedSelections(n1, nC)
+  };
+}
+
+// ─── Torus → Wedge6 mesh (cross-section fan × toroidal sweep, closed loop) ─
+// Disk kesidi cylinder mesher gibi: merkez + nR halka × nMinor angular.
+// Toroidal direction: nMajor layer, last layer first ile bağlanır (closed).
+function _veFEAMeshTorus(p, size) {
+  var R = Math.max(1, p.majorRadius || 30);
+  var r = Math.max(0.1, p.minorRadius || 10);
+  var nMajor = Math.max(8, Math.round(2 * Math.PI * R / size));
+  var nMinor = Math.max(6, Math.round(2 * Math.PI * r / size));
+  var nRad   = Math.max(2, Math.round(r / size));
+
+  var perLayer = 1 + nRad * nMinor; // center + ring nodes
+  var nNodes = nMajor * perLayer;
+  var nodes = new Float32Array(nNodes * 3);
+
+  for (var k = 0; k < nMajor; k++) {
+    var theta = 2 * Math.PI * k / nMajor;
+    var cosT = Math.cos(theta), sinT = Math.sin(theta);
+    var cxW = R * cosT, czW = R * sinT;
+    var base = k * perLayer;
+    // Center node (toroidal centerline)
+    nodes[base * 3]     = cxW;
+    nodes[base * 3 + 1] = 0;
+    nodes[base * 3 + 2] = czW;
+    // Ring nodes (radial × angular)
+    for (var ring = 1; ring <= nRad; ring++) {
+      var rPol = r * ring / nRad;
+      for (var ang = 0; ang < nMinor; ang++) {
+        var phi = 2 * Math.PI * ang / nMinor;
+        var cosP = Math.cos(phi), sinP = Math.sin(phi);
+        // Local offset: rPol*(cosP * radial_world + sinP * y_world)
+        var dx = rPol * cosP * cosT;
+        var dy = rPol * sinP;
+        var dz = rPol * cosP * sinT;
+        var idx = base + 1 + (ring - 1) * nMinor + ang;
+        nodes[idx * 3]     = cxW + dx;
+        nodes[idx * 3 + 1] = dy;
+        nodes[idx * 3 + 2] = czW + dz;
+      }
+    }
+  }
+
+  function diskNode(layer, ring, circ) {
+    var lm = ((layer % nMajor) + nMajor) % nMajor; // closed loop modular
+    var base = lm * perLayer;
+    if (ring === 0) return base;
+    return base + 1 + (ring - 1) * nMinor + ((circ % nMinor + nMinor) % nMinor);
+  }
+
+  // Wedge6 elements: cylinder pattern with toroidal closing
+  var diskTris = nMinor + 2 * nMinor * (nRad - 1);
+  var nElem = diskTris * nMajor;
+  var elements = new Uint32Array(nElem * 6);
+  var e = 0;
+  for (var ka = 0; ka < nMajor; ka++) {
+    // Center fan triangles
+    for (var c1 = 0; c1 < nMinor; c1++) {
+      var a0 = diskNode(ka,     0, 0);
+      var a1 = diskNode(ka,     1, c1);
+      var a2 = diskNode(ka,     1, c1 + 1);
+      var b0 = diskNode(ka + 1, 0, 0);
+      var b1 = diskNode(ka + 1, 1, c1);
+      var b2 = diskNode(ka + 1, 1, c1 + 1);
+      var off = e * 6; e++;
+      elements[off]     = a0; elements[off + 1] = a1; elements[off + 2] = a2;
+      elements[off + 3] = b0; elements[off + 4] = b1; elements[off + 5] = b2;
+    }
+    // Outer ring quads (each → 2 wedges)
+    for (var rr = 1; rr < nRad; rr++) {
+      for (var c2 = 0; c2 < nMinor; c2++) {
+        var p0 = diskNode(ka,     rr,     c2);
+        var p1 = diskNode(ka,     rr + 1, c2);
+        var p2 = diskNode(ka,     rr + 1, c2 + 1);
+        var p3 = diskNode(ka,     rr,     c2 + 1);
+        var q0 = diskNode(ka + 1, rr,     c2);
+        var q1 = diskNode(ka + 1, rr + 1, c2);
+        var q2 = diskNode(ka + 1, rr + 1, c2 + 1);
+        var q3 = diskNode(ka + 1, rr,     c2 + 1);
+        var off2 = e * 6; e++;
+        elements[off2]     = p0; elements[off2 + 1] = p1; elements[off2 + 2] = p2;
+        elements[off2 + 3] = q0; elements[off2 + 4] = q1; elements[off2 + 5] = q2;
+        off2 = e * 6; e++;
+        elements[off2]     = p0; elements[off2 + 1] = p2; elements[off2 + 2] = p3;
+        elements[off2 + 3] = q0; elements[off2 + 4] = q2; elements[off2 + 5] = q3;
+      }
+    }
+  }
+
+  return {
+    type: 'wedge6',
+    geometryType: 'torus',
+    nodes: nodes,
+    elements: elements,
+    nodesPerElement: 6,
+    grid: { nMajor: nMajor, nMinor: nMinor, nRadial: nRad, closed: true },
+    namedSelections: _veFEATorusNamedSelections(perLayer, nMinor, nRad, nMajor)
+  };
+}
+
+// Torus named selections: tek face (toroidal outer surface — ring=nRad)
+function _veFEATorusNamedSelections(perLayer, nMinor, nRad, nMajor) {
+  var surface = [];
+  for (var k = 0; k < nMajor; k++) {
+    var base = k * perLayer;
+    for (var a = 0; a < nMinor; a++) {
+      // Sadece son ring (rad=nRad) düğümleri yüzeyde
+      surface.push(base + 1 + (nRad - 1) * nMinor + a);
+    }
+  }
+  return {
+    faceSurface: { type: 'face', source: 'auto', label: 'Toroidal Yüzey', nodeIds: new Uint32Array(surface) }
   };
 }
 
