@@ -223,6 +223,9 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
             ? null
             : ('Dosya ' + (byteLength / (1024 * 1024)).toFixed(1) + ' MB — proje kaydında saklanmıyor, yeniden yükleyin.')
         };
+        if (typeof veFEAComputeGeometryTopology === 'function') {
+          node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
+        }
         if (typeof saveState === 'function') saveState();
       }
     }

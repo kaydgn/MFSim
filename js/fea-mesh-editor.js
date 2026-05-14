@@ -23,9 +23,11 @@ var _veFEAEditorEscHandler = null;
 var _veFEAEditorResizeObserver = null;  // modal viewer için container resize observer
 var _veFEAEditorAccordionState = {};  // { sectionKey: true (open) | false (closed) }
 
-// Default accordion durumu (ilk açılışta): Defaults + Sizing açık, geri kalanı kapalı
+// Default accordion durumu (ilk açılışta): Topology + Defaults + Sizing açık.
+// Topology en ustte cunku ANSYS workflow: once geometriyi/yuzeyleri gor, sonra mesh.
 function _veFEAEditorDefaultAccordionState() {
   return {
+    topology: true,
     defaults: true,
     sizing: true,
     inflation: false,
@@ -49,6 +51,7 @@ function veFEAEditorRefreshAccordions() {
   if (!node) return;
 
   var updates = {
+    'topology':    _veFEAEditorTopologyHTML(node),
     'defaults':    _veFEAEditorDefaultsHTML(node),
     'sizing':      _veFEAEditorSizingHTML(node),
     'inflation':   _veFEAEditorInflationHTML(node),
@@ -353,6 +356,7 @@ function _veFEAEditorBuildLeftPanel(node) {
   panel.style.cssText = 'flex:0 0 400px; min-width:280px; max-width:720px; overflow-y:auto; overflow-x:hidden; background:var(--bg-primary, #0a0d14); border-right:1px solid var(--border-color);';
 
   var html = '';
+  html += _veFEAEditorAccordionSection('topology',    'Geometri Topolojisi',           _veFEAEditorTopologyHTML(node));
   html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
   html += _veFEAEditorAccordionSection('sizing',      'Boyutlandırma',                 _veFEAEditorSizingHTML(node));
   html += _veFEAEditorAccordionSection('inflation',   'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
@@ -474,6 +478,77 @@ function _veFEAEditorAttachModalResize(modal, overlay) {
 // ACCORDION İÇERİK BUILDER'LARI
 // ═══════════════════════════════════════════════════════════════════════════
 // (Mevcut cp-fea.js'teki control HTML'leri buraya taşındı)
+
+// Geometri Topolojisi — ANSYS-style "geometriyi/yüzeyleri tanımla → mesh at"
+// workflow'unun ilk aşaması. Upstream Geometry node'undan topology okunur
+// (mesh ÖNCESI tespit edilmiş face listesi).
+function _veFEAEditorTopologyHTML(node) {
+  // Upstream geometri node'unu bul
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
+    ? veFEAFindUpstreamGeometryNode(node.id) : null;
+  if (!geomNode || !geomNode.data || !geomNode.data.geometry) {
+    return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Upstream Geometri bağlantısı yok. Önce bir Geometri bileşeni tanımlayın ve bu Mesh node\'una bağlayın.</div>';
+  }
+  var geom = geomNode.data.geometry;
+  // Topology henuz hesaplanmadiysa on-the-fly hesapla (eski projeler icin)
+  var topo = geom.topology;
+  if (!topo && typeof veFEAComputeGeometryTopology === 'function') {
+    topo = veFEAComputeGeometryTopology(geom);
+  }
+  if (!topo || !topo.faces || topo.faces.length === 0) {
+    return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Bu geometri tipinde topology bilgisi yok.</div>';
+  }
+
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:8px;">' +
+    'Mesh atmadan önce geometriden otomatik tespit edilen yüzeyler. Mesher bu yüzeylere ' +
+    '<b>conforming</b> şekilde eleman üretir; her yüze ait düğümler otomatik named selection olur.</div>';
+
+  // Özet kutusu — alan/hacim/face/edge/vertex sayıları
+  function _fmtArea(a)  { return a >= 1e6 ? (a/1e6).toFixed(2)+' m²' : a >= 1e4 ? (a/1e4).toFixed(2)+' dm²' : a >= 1e2 ? (a/1e2).toFixed(2)+' cm²' : a.toFixed(1)+' mm²'; }
+  function _fmtVol(v)   { return v >= 1e9 ? (v/1e9).toFixed(3)+' m³' : v >= 1e6 ? (v/1e6).toFixed(2)+' dm³' : v >= 1e3 ? (v/1e3).toFixed(2)+' cm³' : v.toFixed(1)+' mm³'; }
+  html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:8px; font-size:0.6rem; display:grid; grid-template-columns:1fr 1fr; gap:3px 12px;">' +
+    '<span style="color:var(--text-secondary);">Yüzey sayısı</span><span style="text-align:right; font-weight:600;">' + topo.faces.length + '</span>' +
+    '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.edges ? topo.edges.count : 0) + '</span>' +
+    '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.vertices ? topo.vertices.count : 0) + '</span>' +
+    '<span style="color:var(--text-secondary);">Hacim</span><span style="text-align:right; font-weight:600;">' + _fmtVol(topo.volume || 0) + '</span>' +
+    '<span style="color:var(--text-secondary);">Toplam yüzey alanı</span><span style="text-align:right; font-weight:600;">' + _fmtArea(topo.totalSurfaceArea || 0) + '</span>' +
+  '</div>';
+
+  // Face listesi tablosu
+  html += '<div style="font-size:0.58rem; color:var(--text-secondary); margin-bottom:4px;">Yüzeyler:</div>';
+  topo.faces.forEach(function(f) {
+    var typeLabel = (typeof veFEATopologyFaceTypeLabel === 'function') ? veFEATopologyFaceTypeLabel(f.type) : f.type;
+    var typeColor = '#3b82f6';
+    if (f.type === 'cylindrical') typeColor = '#8b5cf6';
+    else if (f.type === 'planar-annular') typeColor = '#06b6d4';
+    else if (f.type === 'triangulated') typeColor = '#f59e0b';
+    var holeIcon = f.isHole ? '<span title="Delik / iç yüzey" style="color:#ef4444; margin-left:4px;">⌀</span>' : '';
+    var extra = '';
+    if (f.radius !== undefined) extra += ' · r=' + f.radius.toFixed(1) + 'mm';
+    if (f.length !== undefined) extra += ' · L=' + f.length.toFixed(1) + 'mm';
+    if (f.outerRadius !== undefined && f.innerRadius !== undefined) extra += ' · R=' + f.outerRadius.toFixed(1) + ' / r=' + f.innerRadius.toFixed(1) + 'mm';
+    if (f.normal) extra += ' · n=[' + f.normal.map(function(v){return v.toFixed(0);}).join(',') + ']';
+    html += '<div style="padding:5px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); margin-bottom:3px; font-size:0.6rem;">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
+        '<span style="display:flex; align-items:center; gap:6px;">' +
+          '<span style="font-family:monospace; font-size:0.56rem; padding:1px 5px; background:var(--bg-primary); color:var(--text-muted);">' + f.id + '</span>' +
+          '<span style="font-weight:600; color:var(--text-primary);">' + f.label + '</span>' +
+          holeIcon +
+        '</span>' +
+        '<span style="font-size:0.52rem; padding:1px 6px; background:' + typeColor + '20; color:' + typeColor + '; font-weight:600;">' + typeLabel + '</span>' +
+      '</div>' +
+      '<div style="font-size:0.55rem; color:var(--text-muted);">' +
+        'Alan: <b style="color:var(--text-secondary);">' + _fmtArea(f.area || 0) + '</b>' + extra +
+      '</div>' +
+    '</div>';
+  });
+
+  html += '<div style="font-size:0.52rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">' +
+    'ℹ Mesh oluşturulduktan sonra her yüze ait düğümler <b>Atanmış Yüzeyler</b> bölümünde göz atılabilir. ' +
+    'Sınır koşulları (F4) bu yüzeylere referansla uygulanır.</div>';
+
+  return html;
+}
 
 function _veFEAEditorDefaultsHTML(node) {
   var d = node.data || {};
@@ -669,13 +744,14 @@ function _veFEAEditorDisplayHTML(node) {
   if (!hasMesh) {
     return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra kullanılabilir.</div>';
   }
-  // ANSYS-style default: Body Color = Solid + Edges
-  var displayMode = d.heatMapMetric || 'solid-edges';
-  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">Mesh\'in 3D viewer\'da nasıl gösterileceğini seçin. ANSYS-style: <b>Body Color</b> (solid+edges) varsayılan.</div>';
+  // ANSYS-style default: Body Color = Geometri + Mesh Çizgileri
+  var displayMode = d.heatMapMetric || 'geom-mesh';
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">Mesh\'in 3D viewer\'da nasıl gösterileceğini seçin. ANSYS-style: <b>Body Color</b> (geometri + siyah mesh çizgileri) varsayılan.</div>';
   html += '<select onchange="veFEAApplyHeatMap(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
   html += '<optgroup label="Standart">';
-  html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Body Color (Solid + Edges)</option>';
-  html += '<option value="solid"' + (displayMode === 'solid' ? ' selected' : '') + '>Solid (yüzey)</option>';
+  html += '<option value="geom-mesh"' + (displayMode === 'geom-mesh' ? ' selected' : '') + '>Body Color (Geometri + Mesh Çizgileri)</option>';
+  html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Solid + Edges (Mesh yüzeyi)</option>';
+  html += '<option value="solid"' + (displayMode === 'solid' ? ' selected' : '') + '>Solid (Mesh yüzeyi)</option>';
   html += '<option value="off"' + (displayMode === 'off' ? ' selected' : '') + '>Wireframe (sadece kenarlar)</option>';
   html += '</optgroup>';
   html += '<optgroup label="Kalite Eşiği (Mesh Quality Worksheet)">';
