@@ -445,11 +445,13 @@ function veFEADetectGeometryFeatures(parsed, opts) {
   opts = opts || {};
   if (!parsed || !parsed.vertices || !parsed.triangleCount) return null;
   // smoothAngleDeg: komsu uggenlerin ayni "smooth region"da olabilmesi icin
-  // izin verilen max normal acisi. ANSYS-style default 30° — duz yuzeylerde
-  // birlestirme (0° farkla), egri yuzeylerde tessellation segmentlerini birlestir
-  // (silindir 32 seg = 11.25° aralik, kure 16 lon = 22.5°), ama keskin kenar
-  // (genellikle 60°+) ayri kalir.
-  var smoothCos = Math.cos((opts.smoothAngleDeg || 30) * Math.PI / 180);
+  // izin verilen max normal acisi. Default 50° — silindir/koni'yi N≥8'e kadar
+  // dogru cluster eder (N=8 segment acisi = 45°), kutu kenarlarini (90°) ayri
+  // tutmaya yetecek kadar dusuk. Ondan once 30° idi; bu nedenle N=8/16 gibi
+  // dusuk-segment silindirler birden cok 'planar' cluster'a bolunup
+  // recognition basarisiz oluyordu (kullaniciya kubik voxel ile sonuclanan
+  // duruma yol aciyor).
+  var smoothCos = Math.cos((opts.smoothAngleDeg || 50) * Math.PI / 180);
   // sharpAngleDeg: edge tipi etiketleme — 45°+ olan kenarlar "keskin" sayilir.
   var sharpCos = Math.cos((opts.sharpAngleDeg || 45) * Math.PI / 180);
   var planarVarLimit = (opts.planarVarLimit !== undefined) ? opts.planarVarLimit : 0.001;

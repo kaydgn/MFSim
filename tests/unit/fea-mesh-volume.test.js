@@ -16,6 +16,7 @@ const ROOT = path.join(__dirname, '../..');
 eval(fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-primitives.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-feature-recognition.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8'));
@@ -137,14 +138,33 @@ describe('veFEAMeshFromGeometry — mode parametresi', () => {
              _parsedTriangles: getCubeParsed() };
   }
 
-  test('default mode (auto): STEP → voxel hacim Heks8', () => {
+  test('default mode (auto): STEP → tet4 + boundary snap (kübik staircase ortadan kalkar)', () => {
+    // Yeni default: detectedFeatures yokken voxel hex8 → otomatik tet4 +
+    // yüzey snap. Test kübü için 8 hex × 6 tet = 48 tet eleman üretir.
     var m = veFEAMeshFromGeometry(makeStepGeom(), { size: 5 });
-    expect(m.type).toBe('hex8');
-    expect(m.voxelMode).toBe(true);
+    expect(m.type).toBe('tet4');
+    expect(m.voxelMode).toBe(true);              // staircase voxel orjini
+    expect(m.boundarySnapped).toBe(true);        // snap uygulandı
+    expect(m.elements.length / 4).toBe(8 * 6);    // 8 voxel × 6 tet
   });
 
-  test('mode "volume": STEP → voxel hacim Heks8', () => {
+  test('mode "volume": STEP → tet4 + boundary snap', () => {
     var m = veFEAMeshFromGeometry(makeStepGeom(), { size: 5, mode: 'volume' });
+    expect(m.type).toBe('tet4');
+    expect(m.voxelMode).toBe(true);
+    expect(m.boundarySnapped).toBe(true);
+  });
+
+  test('disableBoundarySnap=true: STEP → ham voxel Heks8 (eski davranış)', () => {
+    // Geriye dönük uyumluluk + perf test'leri için snap atlanabilir.
+    var m = veFEAMeshFromGeometry(makeStepGeom(), { size: 5, disableBoundarySnap: true });
+    expect(m.type).toBe('hex8');
+    expect(m.voxelMode).toBe(true);
+    expect(m.boundarySnapped).not.toBe(true);
+  });
+
+  test('elementType="hex8" niyetli: snap atlanır (kullanıcı zaten hex isteyince)', () => {
+    var m = veFEAMeshFromGeometry(makeStepGeom(), { size: 5, elementType: 'hex8' });
     expect(m.type).toBe('hex8');
     expect(m.voxelMode).toBe(true);
   });
@@ -177,7 +197,8 @@ describe('veFEAMeshFromGeometryAsync', () => {
     var geom = { type: 'step', triangleCount: 12, _parsedTriangles: getCubeParsed() };
     return veFEAMeshFromGeometryAsync(geom, { size: 5 }).then(function(m) {
       expect(m).not.toBeNull();
-      expect(m.type).toBe('hex8');
+      // Voxel fallback default: tet4 + boundary snap
+      expect(m.type).toBe('tet4');
     });
   });
 
@@ -327,18 +348,20 @@ describe('veFEABuildMeshForNode — voxel error handling', () => {
   test('STEP geometri + clamp altı size → MIN_SIZE\'a clamp + başarılı mesh', () => {
     // Çok küçük size (0.01) VE_FEA_MESH_MIN_SIZE=0.5 mm'e clamp olur.
     // Voxel-too-many error tetiklenmez, mesh oluşur ama makul boyutta.
+    // Default: hex voxel → otomatik tet4 + boundary snap. 8000 hex → 48000 tet.
     global.nodes = [
       { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'step', triangleCount: 12, _parsedTriangles: getCubeParsed() } } },
       { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 0.01, mode: 'auto' } } }
     ];
     global.connections = [{ from: 'geom-1', to: 'mesh-1' }];
     veFEABuildMeshForNode('mesh-1');
-    // 0.01 → clamp 0.5 mm. 10/0.5 = 20³ = 8000 voxel (< 5M sınır).
     expect(veFEAMeshCache['mesh-1']).toBeDefined();
-    expect(veFEAMeshCache['mesh-1'].elements.length / 8).toBe(8000);
+    // 8000 hex voxel × 6 tet/hex = 48000 tet
+    expect(veFEAMeshCache['mesh-1'].type).toBe('tet4');
+    expect(veFEAMeshCache['mesh-1'].elements.length / 4).toBe(48000);
   });
 
-  test('STEP geometri + makul size → voxel hacim mesh + success toast', () => {
+  test('STEP geometri + makul size → tet4 hacim mesh (snap\'li) + success toast', () => {
     global.nodes = [
       { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'step', triangleCount: 12, _parsedTriangles: getCubeParsed() } } },
       { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 5, mode: 'auto' } } }
@@ -348,7 +371,88 @@ describe('veFEABuildMeshForNode — voxel error handling', () => {
     var success = global.showToast.mock.calls.filter((c) => c[1] === 'success');
     expect(success.length).toBeGreaterThan(0);
     expect(veFEAMeshCache['mesh-1']).toBeDefined();
-    expect(veFEAMeshCache['mesh-1'].elements.length / 8).toBe(8); // 2×2×2 voxel
+    // 2×2×2 = 8 hex voxel × 6 tet = 48 tet
+    expect(veFEAMeshCache['mesh-1'].type).toBe('tet4');
+    expect(veFEAMeshCache['mesh-1'].elements.length / 4).toBe(48);
+    expect(veFEAMeshCache['mesh-1'].boundarySnapped).toBe(true);
     expect(global.nodes[1].data.meshMetrics.voxelMode).toBe(true);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Feature recognition + voxel fallback regression testleri
+// Bu testler kullanıcının "geometri ne olursa olsun kübik mesh atıyor" şikayetinin
+// kök nedenini hedefler: düşük-segment silindir tanıma (eski 30° eşik kafi değildi)
+// ve voxel fallback'in tet4+snap'e dönüşmesi (staircase artifact eliminasyonu).
+describe('feature recognition — düşük segment silindir (fix #1)', () => {
+  function cylinderY(r, h, N) {
+    var tris = [];
+    var y0 = -h/2, y1 = h/2;
+    for (var i = 0; i < N; i++) {
+      var a = 2*Math.PI*i/N, b = 2*Math.PI*(i+1)/N;
+      var xa = r*Math.cos(a), za = r*Math.sin(a);
+      var xb = r*Math.cos(b), zb = r*Math.sin(b);
+      tris.push([xa, y0, za, xb, y1, zb, xb, y0, zb]);
+      tris.push([xa, y0, za, xa, y1, za, xb, y1, zb]);
+      tris.push([0, y0, 0, xa, y0, za, xb, y0, zb]);
+      tris.push([0, y1, 0, xb, y1, zb, xa, y1, za]);
+    }
+    var v = new Float32Array(tris.length * 9);
+    for (var i2 = 0; i2 < tris.length; i2++) for (var j = 0; j < 9; j++) v[i2*9+j] = tris[i2][j];
+    return { vertices: v, triangleCount: tris.length };
+  }
+
+  test('N=32 silindir → cylinder olarak tespit', () => {
+    var feat = veFEADetectGeometryFeatures(cylinderY(10, 40, 32));
+    expect(feat.summary.cylindrical).toBe(1);
+    expect(feat.summary.planar).toBe(2);
+    var inf = veFEAInferPrimitiveFromFeatures(feat, null);
+    expect(inf).not.toBeNull();
+    expect(inf.type).toBe('cylinder');
+    expect(inf.confidence).toBeGreaterThan(0.9);
+  });
+
+  test('N=8 silindir (45°/segment) → cylinder olarak tespit (eski 30° eşik bozuktu)', () => {
+    // Bu daha önce başarısızdı (8 ayrı planar cluster). 50° smoothAngleDeg
+    // ile artık düzgün clusterleniyor.
+    var feat = veFEADetectGeometryFeatures(cylinderY(10, 40, 8));
+    expect(feat.summary.cylindrical).toBe(1);
+    expect(feat.summary.planar).toBe(2);
+    var inf = veFEAInferPrimitiveFromFeatures(feat, null);
+    expect(inf).not.toBeNull();
+    expect(inf.type).toBe('cylinder');
+  });
+});
+
+describe('voxel fallback boundary-snap (fix #2)', () => {
+  test('Tanınmayan geometri → tet4 + boundary snap default', () => {
+    // Test fixture: konkav/asymmetric — herhangi bir primitif'e uymaz
+    var tris = [
+      // İrregular asimetrik basit body
+      [0,0,0, 10,0,0, 5,3,5],
+      [0,0,0, 5,3,5, 0,0,8],
+      [10,0,0, 5,3,5, 8,0,8],
+      [5,3,5, 0,0,8, 8,0,8],
+      [0,0,0, 0,0,8, 10,0,0],
+      [10,0,0, 0,0,8, 8,0,8]
+    ];
+    var v = new Float32Array(tris.length * 9);
+    for (var i = 0; i < tris.length; i++) for (var j = 0; j < 9; j++) v[i*9+j] = tris[i][j];
+    var geom = { type: 'step', triangleCount: tris.length,
+                 _parsedTriangles: { vertices: v, triangleCount: tris.length } };
+    var m = veFEAMeshFromGeometry(geom, { size: 2 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('tet4');
+    expect(m.voxelMode).toBe(true);
+    expect(m.boundarySnapped).toBe(true);
+  });
+
+  test('Boundary snap düğüm sayısını korur (sadece konumları değişir)', () => {
+    var parsed = getCubeParsed();
+    var geom = { type: 'step', _parsedTriangles: parsed };
+    var noSnap = veFEAMeshFromGeometry(geom, { size: 5, disableBoundarySnap: true });
+    var snap = veFEAMeshFromGeometry(geom, { size: 5 });
+    // disable: hex8 ham (8 hex), snap: tet4 (48 tet). Düğüm sayıları aynı.
+    expect(noSnap.nodes.length).toBe(snap.nodes.length);
   });
 });
