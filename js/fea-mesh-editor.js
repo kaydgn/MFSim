@@ -642,14 +642,18 @@ function _veFEAEditorDefaultsHTML(node) {
     '<span>Orta-kenar düğümler <span style="color:var(--text-muted);">(Quadratic: Tet10 / Hex20 / Wedge15)</span></span>' +
   '</label>';
 
-  // Disk Topolojisi (sadece silindir/şaft için anlamlı) — O-grid butterfly
-  // dairesel yakınsamada altın standart (ICEM CFD).
-  var crossSection = settings.crossSection || 'wedge';
-  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Disk Topolojisi <span style="color:var(--text-muted);">(silindir / şaft için)</span></div>';
-  html += '<select id="ve-fea-mesh-cross-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:10px;">';
-  html += '<option value="wedge"' + (crossSection === 'wedge' ? ' selected' : '') + '>Wedge6 (merkez fan, varsayılan)</option>';
-  html += '<option value="ogrid"' + (crossSection === 'ogrid' ? ' selected' : '') + '>Hex8 O-grid (Butterfly — dairesel yakınsama ↑)</option>';
+  // Akilli mesh stratejisi paneli — sistem geometriye gore otomatik karar verir.
+  // Kullanici sadece istisnai durumda legacy 'wedge' fan'i acabilir.
+  var crossSection = settings.crossSection || 'auto';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Mesh Stratejisi <span style="color:var(--text-muted);">(silindir / koni / torus)</span></div>';
+  html += '<select id="ve-fea-mesh-cross-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:4px;">';
+  html += '<option value="auto"' + (crossSection !== 'wedge' ? ' selected' : '') + '>Otomatik — Hex8 O-grid (önerilen)</option>';
+  html += '<option value="wedge"' + (crossSection === 'wedge' ? ' selected' : '') + '>Legacy: Wedge6 (merkez fan, dejenere)</option>';
   html += '</select>';
+  html += '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">' +
+    'Otomatik mod: silindir/koni/torus için butterfly (5 blok) O-grid topolojisi. ' +
+    'Eksen üzerinde dejenere hücre yok, tüm elemanlar Hex8.' +
+    '</div>';
 
   return html;
 }

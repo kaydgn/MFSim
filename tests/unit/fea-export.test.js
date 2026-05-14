@@ -43,8 +43,8 @@ describe('veFEAExportAbaqus', () => {
     expect(inp).toMatch(/TYPE=C3D20/);
   });
 
-  test('Wedge6 mesh → C3D6', () => {
-    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 5, height: 10 } }, { size: 5 });
+  test('Wedge6 mesh → C3D6 (legacy crossSection:"wedge")', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 5, height: 10 } }, { size: 5, crossSection: 'wedge' });
     var inp = veFEAExportAbaqus(m);
     expect(inp).toMatch(/TYPE=C3D6/);
   });
@@ -98,8 +98,8 @@ describe('veFEAExportNASTRAN', () => {
     expect(nas).toMatch(/CTETRA,1,1,/);
   });
 
-  test('Wedge6 → CPENTA', () => {
-    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 5, height: 10 } }, { size: 5 });
+  test('Wedge6 → CPENTA (legacy crossSection:"wedge")', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 5, height: 10 } }, { size: 5, crossSection: 'wedge' });
     var nas = veFEAExportNASTRAN(m);
     expect(nas).toMatch(/CPENTA,1,1,/);
   });
