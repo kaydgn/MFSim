@@ -434,6 +434,87 @@ function veFEAInitViewer(canvas, opts) {
     // Mesh'i renk-kodlu solid olarak yedirir. perValues: Float32Array (eleman/değer),
     // min/max: legend için sınırlar. Boundary face'ler üçgenleştirilip vertex
     // colors ile renklendirilir.
+    // Sonuç görüntüleme: nodal (her düğüm için) değer haritası.
+    // perNodeValues: Float64Array(nNodes) — örn. von Mises veya displacement magnitude.
+    // Surface vertex'lere triangle başına element ID'ler yerine doğrudan node ID'ler
+    // kullanılır. Renkleme node bazlı, üçgen içi interpolasyon Three.js'in
+    // vertexColors özelliği ile otomatik yapılır.
+    loadMeshResultMap: function(meshData, perNodeValues, valMin, valMax) {
+      if (!meshData || !perNodeValues || typeof veFEAExtractSurfaceTriangles !== 'function') return null;
+      this.clearGeometry();
+      var surf = veFEAExtractSurfaceTriangles(meshData);
+      if (!surf || surf.positions.length === 0) return null;
+      // Yüzey vertex'leri triangle başına 9 float (3 vertex × 3 koord) layout'unda.
+      // Her vertex'in hangi node'a karşılık geldiği bilgisi surf içinde nodeIds varsa
+      // kullanılır (yeni viewer extension), yoksa pozisyondan en yakın node aranır.
+      var positions = surf.positions;
+      var nVerts = positions.length / 3;
+      var colors = new Float32Array(positions.length);
+      var range = (isFinite(valMax) && isFinite(valMin) && valMax > valMin) ? (valMax - valMin) : 1;
+
+      // Vertex → node ID eşlemesi. Eğer surf.nodeIds varsa direkt kullan,
+      // yoksa pozisyon karşılaştırması (mesh.nodes ile).
+      var nodeIdsForVerts;
+      if (surf.nodeIds && surf.nodeIds.length === nVerts) {
+        nodeIdsForVerts = surf.nodeIds;
+      } else {
+        nodeIdsForVerts = new Int32Array(nVerts);
+        var meshNodes = meshData.nodes;
+        var nNodes = meshNodes.length / 3;
+        for (var v = 0; v < nVerts; v++) {
+          var vx = positions[v * 3], vy = positions[v * 3 + 1], vz = positions[v * 3 + 2];
+          var best = -1, bestD = Infinity;
+          for (var n = 0; n < nNodes; n++) {
+            var dx = meshNodes[n * 3] - vx;
+            var dy = meshNodes[n * 3 + 1] - vy;
+            var dz = meshNodes[n * 3 + 2] - vz;
+            var d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 < bestD) { bestD = d2; best = n; }
+          }
+          nodeIdsForVerts[v] = best;
+        }
+      }
+      for (var vv = 0; vv < nVerts; vv++) {
+        var nid = nodeIdsForVerts[vv];
+        var vval = perNodeValues[nid] || 0;
+        var t = (vval - valMin) / range;
+        if (t < 0) t = 0; else if (t > 1) t = 1;
+        var rgb = (typeof veFEAJetColor === 'function') ? veFEAJetColor(t) : [0.5, 0.5, 0.5];
+        colors[vv * 3]     = rgb[0];
+        colors[vv * 3 + 1] = rgb[1];
+        colors[vv * 3 + 2] = rgb[2];
+      }
+      var geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geometry.computeVertexNormals();
+      var material = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        metalness: 0.0,
+        roughness: 0.7,
+        side: THREE.DoubleSide,
+        flatShading: false
+      });
+      var solid = new THREE.Mesh(geometry, material);
+      solid.userData.feaResultMap = true;
+      this._geometryRoot.add(solid);
+
+      var edgeVerts = veFEAMeshExtractEdges(meshData);
+      if (edgeVerts && edgeVerts.length > 0 && edgeVerts.length / 3 < 200000) {
+        var edgeGeo = new THREE.BufferGeometry();
+        edgeGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
+        var edgeLine = new THREE.LineSegments(
+          edgeGeo,
+          new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.6 })
+        );
+        edgeLine.userData.feaMeshEdges = true;
+        this._geometryRoot.add(edgeLine);
+      }
+      this._meshData = meshData;
+      this._highlightedSelectionKey = null;
+      this.zoomToFit(solid);
+      return solid;
+    },
     loadMeshHeatMap: function(meshData, perValues, valMin, valMax) {
       if (!meshData || typeof veFEAExtractSurfaceTriangles !== 'function') return null;
       this.clearGeometry();
@@ -1586,6 +1667,21 @@ function veFEAApplyRefinementSuggestion(meshNodeId, actionType, actionData) {
 //   'solid'       → uniform solid (mavi)
 //   'solid-edges' → solid + ince edge overlay
 //   'aspect' | 'skewness' | 'minAngle' | 'jacobianRatio' → heat map
+// Mesh node ID'sinden aşağı akıştaki solver node'unu bulur.
+// BC → solver path: mesh → bc → solver
+function _veFEAFindSolverNodeForMesh(meshNodeId) {
+  if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  // mesh → bc
+  var bcConn = connections.filter(function (c) { return c.from === meshNodeId; })[0];
+  if (!bcConn) return null;
+  var bcNode = nodes.filter(function (n) { return n.id === bcConn.to; })[0];
+  if (!bcNode || bcNode.type !== 'fea-bc') return null;
+  // bc → solver
+  var solConn = connections.filter(function (c) { return c.from === bcNode.id; })[0];
+  if (!solConn) return null;
+  return nodes.filter(function (n) { return n.id === solConn.to; })[0] || null;
+}
+
 // Eski isim veFEAApplyHeatMap geriye uyumluluk için korunur.
 function veFEAApplyHeatMap(meshNodeId, mode) {
   var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
@@ -1641,6 +1737,47 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
     }
     if (typeof viewer.loadMeshThresholdMap === 'function') {
       viewer.loadMeshThresholdMap(meshData, thrVals, { warnLimit: thrWarn, errLimit: thrErr, inverted: thrInverted });
+    }
+    _veFEARefreshMeshUI(meshNode);
+    return;
+  }
+
+  // Sonuç haritaları (vonMises, displacement, principalMax) — nodal values
+  if (mode === 'result-vonMises' || mode === 'result-displacement' ||
+      mode === 'result-principalMax' || mode === 'result-principalMin') {
+    var solverNode = _veFEAFindSolverNodeForMesh(meshNodeId);
+    if (!solverNode || !solverNode.data || !solverNode.data.solver) {
+      if (typeof showToast === 'function') showToast('Önce çözücü ile sonuç hesaplanmalı', 'warning');
+      return;
+    }
+    var sd = solverNode.data.solver;
+    var nodalVals = null;
+    if (mode === 'result-vonMises') nodalVals = sd.vonMises;
+    else if (mode === 'result-displacement') {
+      var dispMags = veFEAComputeDisplacementMagnitudes(sd.displacement);
+      nodalVals = dispMags.mags;
+    } else if (mode === 'result-principalMax') {
+      // principal stored as flat [s1, s2, s3, s1, s2, s3, ...] per node
+      var n = sd.principal.length / 3;
+      nodalVals = new Float64Array(n);
+      for (var i = 0; i < n; i++) nodalVals[i] = sd.principal[i * 3];
+    } else if (mode === 'result-principalMin') {
+      var n2 = sd.principal.length / 3;
+      nodalVals = new Float64Array(n2);
+      for (var j = 0; j < n2; j++) nodalVals[j] = sd.principal[j * 3 + 2];
+    }
+    if (!nodalVals) {
+      if (typeof showToast === 'function') showToast('Sonuç verisi yok', 'warning');
+      return;
+    }
+    // Min/max'i bul
+    var rMin = Infinity, rMax = -Infinity;
+    for (var ri = 0; ri < nodalVals.length; ri++) {
+      if (nodalVals[ri] < rMin) rMin = nodalVals[ri];
+      if (nodalVals[ri] > rMax) rMax = nodalVals[ri];
+    }
+    if (typeof viewer.loadMeshResultMap === 'function') {
+      viewer.loadMeshResultMap(meshData, nodalVals, rMin, rMax);
     }
     _veFEARefreshMeshUI(meshNode);
     return;

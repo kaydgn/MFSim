@@ -545,36 +545,264 @@ function veFEABCToggleKindForm(nodeId) {
 // ─── 4. FEA ÇÖZÜCÜ ──────────────────────────────────────────────────────────
 function getFEASolverPropertiesHTML(node) {
   var d = node.data || {};
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  if (!d.solver) d.solver = { tolerance: 1e-8, maxIter: 0 }; // 0 → auto
 
+  // Yukarı akış: BC → Mesh → Geometry
+  var bcNode = _veFEAFindUpstreamBCNode(node);
+  var meshNode = bcNode ? _veFEAFindUpstreamMeshNode(bcNode) : null;
+  var pipelineReady = !!(bcNode && meshNode && meshNode.data && meshNode.data.meshData);
+
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
   html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">FEA Çözücü</div>';
-  html += veFEAPhaseBadge('Faz 5');
   html += '</div>';
 
   html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
     'Lineer statik yapısal analiz: <code>[K]{u}={F}</code>. ' +
-    'Çözüm sonrası von Mises, asal gerilmeler ve deplasman hesaplanır.</div>';
+    'PCG (Jacobi precond.) ile sparse Hex8 çözümü.</div>';
 
-  html += veFEASectionTitle('Çözüm Türü');
-  html += '<div style="padding:6px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); font-size:0.66rem; color:var(--text-primary); margin-bottom:8px;">Lineer Statik (Static Structural)</div>';
+  // Pipeline durumu
+  html += veFEASectionTitle('Bağlantı Durumu');
+  html += '<div style="display:grid; grid-template-columns:auto 1fr; gap:6px 10px; font-size:0.62rem; margin-bottom:10px;">';
+  html += _veFEAPipelineRow('Geometri', bcNode && meshNode && _veFEAFindUpstreamGeometryNode(meshNode) ? 'ok' : 'missing');
+  html += _veFEAPipelineRow('Mesh', meshNode && meshNode.data && meshNode.data.meshData ? 'ok' : 'missing');
+  html += _veFEAPipelineRow('Sınır Koşulları', bcNode && bcNode.data && bcNode.data.bc && bcNode.data.bc.assignments && bcNode.data.bc.assignments.length ? 'ok' : 'missing');
+  html += '</div>';
 
-  html += veFEASectionTitle('Çözücü Ayarları (F5)');
-  html += '<select disabled style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); margin-bottom:6px;">';
-  html += '<option>Conjugate Gradient (Jacobi preconditioner) — varsayılan</option>';
-  html += '<option>Direct LDLᵀ (küçük modeller için)</option>';
-  html += '</select>';
+  // Tolerance
+  html += veFEASectionTitle('Çözücü Ayarları');
+  html += '<div style="display:grid; grid-template-columns:1fr 80px; gap:6px; margin-bottom:6px; font-size:0.62rem; align-items:center;">';
+  html += '<div>Yakınsama toleransı</div>';
+  html += '<input type="number" step="0.0000001" value="' + (d.solver.tolerance || 1e-8) +
+          '" onchange="veFEASolverSetTol(\'' + node.id + '\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '</div>';
 
-  html += '<button disabled style="width:100%; padding:8px 10px; font-size:0.7rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; margin-bottom:10px;">▶ Çöz — F5</button>';
+  // Çöz button
+  var canSolve = pipelineReady && bcNode.data && bcNode.data.bc && bcNode.data.bc.assignments && bcNode.data.bc.assignments.length > 0;
+  if (canSolve) {
+    html += '<button onclick="veFEASolverRun(\'' + node.id + '\')" style="width:100%; padding:8px 10px; font-size:0.72rem; font-weight:600; background:var(--accent-success,#22c55e); color:white; border:none; cursor:pointer; margin-bottom:10px;">▶ ÇÖZ</button>';
+  } else {
+    html += '<button disabled style="width:100%; padding:8px 10px; font-size:0.72rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; margin-bottom:10px;">▶ Çöz (yukari akış eksik)</button>';
+  }
 
-  html += veFEASectionTitle('Sonuçlar (F5/F6 — sensörle okunabilir)');
-  html += veFEAReadOnlyRow('Maks. von Mises', '—');
-  html += veFEAReadOnlyRow('Maks. deplasman', '—');
-  html += veFEAReadOnlyRow('Maks. asal gerilme', '—');
-  html += veFEAReadOnlyRow('Min. asal gerilme', '—');
-  html += veFEAReadOnlyRow('Güvenlik faktörü', '—');
-  html += veFEAReadOnlyRow('Toplam kütle', '—');
+  // Sonuçlar
+  html += veFEASectionTitle('Sonuçlar');
+  var r = d.solver.results || null;
+  if (!r) {
+    html += '<div style="padding:8px; background:var(--bg-tertiary); border:1px dashed var(--border-color); font-size:0.62rem; color:var(--text-muted); text-align:center;">Henüz çözüm yapılmadı.</div>';
+  } else {
+    html += '<div style="font-size:0.62rem;">';
+    html += veFEAReadOnlyRow('Maks. von Mises',     _veFEAFmtMPa(r.maxVonMises));
+    html += veFEAReadOnlyRow('Maks. deplasman',     _veFEAFmtMm(r.maxDisplacement));
+    html += veFEAReadOnlyRow('Maks. asal gerilme',  _veFEAFmtMPa(r.maxPrincipalStress));
+    html += veFEAReadOnlyRow('Min. asal gerilme',   _veFEAFmtMPa(r.minPrincipalStress));
+    html += veFEAReadOnlyRow('Güvenlik faktörü',    (isFinite(r.safetyFactor) ? r.safetyFactor.toFixed(2) : '∞'));
+    html += veFEAReadOnlyRow('Toplam kütle',        _veFEAFmtKg(r.totalMass));
+    if (r.iterations) {
+      html += veFEAReadOnlyRow('PCG iterasyon', r.iterations + ' / res=' + r.residual.toExponential(2));
+    }
+    if (r.solveTime) {
+      html += veFEAReadOnlyRow('Çözüm süresi', r.solveTime.toFixed(2) + ' ms');
+    }
+    html += '</div>';
+    // Sonuç görselleştirme moduna geçiş
+    html += '<div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:6px;">';
+    html += '<button onclick="veFEASolverShowResult(\'' + node.id + '\', \'vonMises\')" style="padding:6px 8px; font-size:0.62rem; background:var(--accent-primary,#3b82f6); color:white; border:none; cursor:pointer;">von Mises Haritası</button>';
+    html += '<button onclick="veFEASolverShowResult(\'' + node.id + '\', \'displacement\')" style="padding:6px 8px; font-size:0.62rem; background:var(--accent-primary,#3b82f6); color:white; border:none; cursor:pointer;">Deplasman Haritası</button>';
+    html += '</div>';
+  }
 
   html += '</div>';
   return html;
+}
+
+function _veFEAPipelineRow(label, status) {
+  var ok = status === 'ok';
+  var dotColor = ok ? 'var(--accent-success,#22c55e)' : 'var(--accent-danger,#ef4444)';
+  var icon = ok ? '✓' : '✗';
+  return '<div style="color:' + dotColor + '; font-weight:700;">' + icon + '</div>' +
+         '<div style="color:var(--text-primary);">' + label + (ok ? '' : ' — eksik') + '</div>';
+}
+
+function _veFEAFmtMPa(v) {
+  if (!isFinite(v)) return '—';
+  if (Math.abs(v) >= 1000) return (v / 1000).toFixed(2) + ' GPa';
+  if (Math.abs(v) >= 1)    return v.toFixed(2) + ' MPa';
+  return (v * 1000).toFixed(2) + ' kPa';
+}
+function _veFEAFmtMm(v) {
+  if (!isFinite(v)) return '—';
+  if (Math.abs(v) >= 1)    return v.toFixed(4) + ' mm';
+  if (Math.abs(v) >= 1e-3) return (v * 1000).toFixed(2) + ' µm';
+  return v.toExponential(2) + ' mm';
+}
+function _veFEAFmtKg(v) {
+  if (!isFinite(v)) return '—';
+  if (v >= 1)    return v.toFixed(3) + ' kg';
+  if (v >= 1e-3) return (v * 1000).toFixed(2) + ' g';
+  return (v * 1e6).toFixed(2) + ' mg';
+}
+
+function _veFEAFindUpstreamBCNode(solverNode) {
+  if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  var src = connections.filter(function (c) { return c.to === solverNode.id; })[0];
+  if (!src) return null;
+  return nodes.filter(function (n) { return n.id === src.from; })[0] || null;
+}
+
+function veFEASolverSetTol(nodeId, val) {
+  var node = nodes.filter(function (n) { return n.id === nodeId; })[0];
+  if (!node) return;
+  if (!node.data) node.data = {};
+  if (!node.data.solver) node.data.solver = { tolerance: 1e-8 };
+  node.data.solver.tolerance = Number(val) || 1e-8;
+}
+
+function veFEASolverRun(nodeId) {
+  var node = nodes.filter(function (n) { return n.id === nodeId; })[0];
+  if (!node) return;
+  var bcNode = _veFEAFindUpstreamBCNode(node);
+  var meshNode = bcNode ? _veFEAFindUpstreamMeshNode(bcNode) : null;
+  var geomNode = meshNode ? _veFEAFindUpstreamGeometryNode(meshNode) : null;
+  if (!bcNode || !meshNode || !meshNode.data || !meshNode.data.meshData) {
+    if (typeof showToast === 'function') showToast('FEA: yukarı akışta mesh veya BC bulunamadı', 'error');
+    return;
+  }
+  var mesh = meshNode.data.meshData;
+  if (mesh.type !== 'hex8') {
+    if (typeof showToast === 'function') showToast('FEA: şu an sadece Hex8 mesh çözülebilir', 'error');
+    return;
+  }
+  var bcData = bcNode.data.bc;
+  if (!bcData || !bcData.assignments || !bcData.assignments.length) {
+    if (typeof showToast === 'function') showToast('FEA: en az bir sınır koşulu gerekli', 'error');
+    return;
+  }
+  var material = veFEAMaterialById(bcData.materialId);
+  if (!material) {
+    if (typeof showToast === 'function') showToast('FEA: geçersiz malzeme', 'error');
+    return;
+  }
+
+  // Topology (face → nodeIds mapping)
+  var topology = (geomNode && geomNode.data && geomNode.data.geometry) ?
+    veFEAComputeGeometryTopology(geomNode.data.geometry) : null;
+
+  var t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+
+  // K assemble
+  var K = veFEAAssembleGlobalK(mesh, material);
+  if (!K) {
+    if (typeof showToast === 'function') showToast('FEA: K matrisi hesaplanamadı', 'error');
+    return;
+  }
+  var F = new Float64Array(K.nDoF);
+
+  // BC enforcement: her atamayı yüzeyin node listesine uygula
+  bcData.assignments.forEach(function (a) {
+    if (!a.enabled) return;
+    var faceNodes = _veFEAGetFaceNodeIds(mesh, a.faceId);
+    if (!faceNodes || !faceNodes.length) return;
+    if (a.kind === 'fixed') {
+      faceNodes.forEach(function (nIdx) {
+        veFEAApplyFixedSupport(K, F, nIdx * 3);
+        veFEAApplyFixedSupport(K, F, nIdx * 3 + 1);
+        veFEAApplyFixedSupport(K, F, nIdx * 3 + 2);
+      });
+    } else if (a.kind === 'force' && a.value) {
+      var fxPer = (a.value.fx || 0) / faceNodes.length;
+      var fyPer = (a.value.fy || 0) / faceNodes.length;
+      var fzPer = (a.value.fz || 0) / faceNodes.length;
+      faceNodes.forEach(function (nIdx) {
+        F[nIdx * 3]     += fxPer;
+        F[nIdx * 3 + 1] += fyPer;
+        F[nIdx * 3 + 2] += fzPer;
+      });
+    } else if (a.kind === 'pressure' && a.value) {
+      // Pressure: p·A·n (uniform yüzeye dağılım)
+      var face = (topology && topology.faces) ? topology.faces.filter(function (f) { return f.id === a.faceId; })[0] : null;
+      if (face && face.area && face.normal) {
+        var area = face.area;
+        var nrm = face.normal;
+        var totalF = a.value.magnitude * area; // p × A
+        var fxP = totalF * nrm[0] / faceNodes.length;
+        var fyP = totalF * nrm[1] / faceNodes.length;
+        var fzP = totalF * nrm[2] / faceNodes.length;
+        faceNodes.forEach(function (nIdx) {
+          F[nIdx * 3]     += fxP;
+          F[nIdx * 3 + 1] += fyP;
+          F[nIdx * 3 + 2] += fzP;
+        });
+      }
+    } else if (a.kind === 'displacement' && a.value) {
+      faceNodes.forEach(function (nIdx) {
+        veFEAApplyPrescribedDisplacement(K, F, nIdx * 3,     a.value.ux || 0);
+        veFEAApplyPrescribedDisplacement(K, F, nIdx * 3 + 1, a.value.uy || 0);
+        veFEAApplyPrescribedDisplacement(K, F, nIdx * 3 + 2, a.value.uz || 0);
+      });
+    }
+  });
+
+  // PCG solver
+  var tol = (node.data.solver && node.data.solver.tolerance) || 1e-8;
+  var sol = veFEAPCGSolve(K, F, { tol: tol });
+
+  // Stress recovery
+  var results = veFEAHex8ComputeNodalStresses(mesh, sol.u, material);
+  var summary = veFEABuildResultSummary(mesh, sol.u, material, results);
+
+  var t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  summary.iterations = sol.iterations;
+  summary.residual = sol.residual;
+  summary.converged = sol.converged;
+  summary.solveTime = t1 - t0;
+
+  if (!node.data) node.data = {};
+  if (!node.data.solver) node.data.solver = {};
+  node.data.solver.results = summary;
+  // Tüm vektörleri saklama isteğe bağlı (büyük olabilir), şimdilik tutuyoruz
+  node.data.solver.displacement = sol.u;
+  node.data.solver.vonMises = results.vonMises;
+  node.data.solver.principal = results.principal;
+
+  if (typeof saveState === 'function') saveState();
+  if (typeof showNodeProperties === 'function') showNodeProperties(node);
+  if (typeof showToast === 'function') {
+    showToast('FEA çözüm tamamlandı: ' + summary.iterations + ' iter, ' + summary.solveTime.toFixed(0) + ' ms', 'success');
+  }
+}
+
+// Face ID → nodeIds: meshte hazır namedSelections varsa kullan,
+// yoksa topology + node konumlarından çıkar.
+function _veFEAGetFaceNodeIds(mesh, faceId) {
+  if (mesh && mesh.namedSelections && mesh.namedSelections[faceId]) {
+    return mesh.namedSelections[faceId].nodeIds;
+  }
+  return null;
+}
+
+function veFEASolverShowResult(nodeId, kind) {
+  var node = nodes.filter(function (n) { return n.id === nodeId; })[0];
+  if (!node) return;
+  // Yukarı akış: solver → BC → mesh
+  var bcNode = _veFEAFindUpstreamBCNode(node);
+  var meshNode = bcNode ? _veFEAFindUpstreamMeshNode(bcNode) : null;
+  if (!meshNode) {
+    if (typeof showToast === 'function') showToast('Mesh node bulunamadı', 'error');
+    return;
+  }
+  // viewer üzerinde heat map mode'u aktive et
+  var mode = (kind === 'vonMises') ? 'result-vonMises'
+           : (kind === 'displacement') ? 'result-displacement'
+           : (kind === 'principalMax') ? 'result-principalMax'
+           : (kind === 'principalMin') ? 'result-principalMin'
+           : null;
+  if (!mode) return;
+  node.data.solver.activeResultView = kind;
+  if (typeof veFEAApplyHeatMap === 'function') {
+    veFEAApplyHeatMap(meshNode.id, mode);
+  }
+  if (typeof showToast === 'function') {
+    showToast('Sonuç görüntüleniyor: ' + kind, 'success');
+  }
 }

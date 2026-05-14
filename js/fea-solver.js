@@ -351,7 +351,10 @@ function veFEACsrSpMV(K, x, y) {
 // fixedDoFs: Set<int> — global DoF indices
 // prescribedDisplacements: { dofIdx: value }
 // loadVector: Float64Array(nDoF) — başlangıçta sıfır
-var VE_FEA_BC_PENALTY = 1e20;
+// Penalty katsayısı: diag(K) ortalamasının ~10⁸ katı yeterli (1e20 numeric
+// precision'ı bozar, PCG yakınsamaz). Hex8 E=200GPa için K diag ~1e6, dolayısıyla
+// 1e12 ile fixed-DoF effective olarak sabit (numerik tutarlılık ile).
+var VE_FEA_BC_PENALTY = 1e12;
 
 function veFEAApplyFixedSupport(K, F, dofIdx) {
   // K[i,i] *= PENALTY, F[i] = 0 (sabit destek için u_i = 0)
