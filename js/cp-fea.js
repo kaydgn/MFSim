@@ -340,34 +340,206 @@ function veFEASubmitMeshBuild(nodeId) {
 // ─── 3. SINIR KOŞULLARI ─────────────────────────────────────────────────────
 function getFEABCPropertiesHTML(node) {
   var d = node.data || {};
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  if (!d.bc) d.bc = { materialId: 'steel-st37', assignments: [] };
 
+  // Yukarı akıştaki geometri/mesh + face listesi
+  var meshNode = _veFEAFindUpstreamMeshNode(node);
+  var geomNode = meshNode ? _veFEAFindUpstreamGeometryNode(meshNode) : null;
+  var topology = null;
+  if (geomNode && geomNode.data && geomNode.data.geometry && typeof veFEAComputeGeometryTopology === 'function') {
+    topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+  }
+  var faces = (topology && Array.isArray(topology.faces)) ? topology.faces : [];
+
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
   html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Sınır Koşulları</div>';
-  html += veFEAPhaseBadge('Faz 4');
   html += '</div>';
 
-  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
-    'Malzeme, mesnetler ve yükler. Statik analiz için en az bir fix-support ve bir yük gereklidir.</div>';
+  // ─── Malzeme seçici ───
+  html += veFEASectionTitle('Malzeme');
+  if (typeof veFEAMaterialsByCategory === 'function') {
+    html += '<select onchange="veFEABCSetMaterial(\'' + node.id + '\', this.value)" style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+    var groups = veFEAMaterialsByCategory();
+    Object.keys(groups).forEach(function (cat) {
+      html += '<optgroup label="' + veFEAMaterialCategoryLabel(cat) + '">';
+      groups[cat].forEach(function (m) {
+        var sel = (d.bc.materialId === m.id) ? ' selected' : '';
+        html += '<option value="' + m.id + '"' + sel + '>' + m.label + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    html += '</select>';
+    var matSel = veFEAMaterialById(d.bc.materialId) || veFEAMaterialById('steel-st37');
+    if (matSel) {
+      html += '<div style="font-size:0.6rem; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">';
+      html += 'E = ' + Math.round(matSel.youngsModulus) + ' MPa, ν = ' + matSel.poissonsRatio.toFixed(2) +
+              ', ρ = ' + matSel.density + ' kg/m³, σ<sub>y</sub> = ' + matSel.yieldStrength + ' MPa';
+      html += '</div>';
+    }
+  } else {
+    html += '<div style="font-size:0.62rem; color:var(--text-muted);">Malzeme kütüphanesi yüklenmedi.</div>';
+  }
 
-  html += veFEASectionTitle('Malzeme (F4)');
-  html += '<select disabled style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); margin-bottom:8px;">';
-  html += '<option>Yapısal Çelik (E=200 GPa, ν=0.30)</option>';
-  html += '<option>Alüminyum 6061 (E=69 GPa, ν=0.33)</option>';
-  html += '<option>Özel — manuel giriş…</option>';
-  html += '</select>';
+  // ─── Yüzey atamaları ───
+  html += veFEASectionTitle('Yüzeye Sınır Koşulu Ata');
+  if (!faces.length) {
+    html += '<div style="padding:8px; background:var(--bg-tertiary); border:1px dashed var(--border-color); font-size:0.62rem; color:var(--text-muted); margin-bottom:8px;">';
+    html += 'Önce yukarı akışta geometri tanımlanmalı (Geometri → Mesh → Sınır Koşulu).';
+    html += '</div>';
+  } else {
+    html += '<div style="display:grid; grid-template-columns:1fr 110px 60px; gap:4px; margin-bottom:6px; font-size:0.6rem; color:var(--text-muted); font-weight:600;">';
+    html += '<div>Yüzey</div><div>Tip</div><div>İşlem</div>';
+    html += '</div>';
+    (d.bc.assignments || []).forEach(function (a, idx) {
+      var face = faces.filter(function (f) { return f.id === a.faceId; })[0];
+      var faceLabel = face ? face.label : a.faceId;
+      var kindLabel = ({
+        'fixed': 'Fixed Support',
+        'force': 'Kuvvet (N)',
+        'pressure': 'Basınç (MPa)',
+        'displacement': 'Yer Değişt.'
+      })[a.kind] || a.kind;
+      html += '<div style="display:grid; grid-template-columns:1fr 110px 60px; gap:4px; margin-bottom:4px; font-size:0.6rem; align-items:center;">';
+      html += '<div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + faceLabel + '">' + faceLabel + '</div>';
+      html += '<div style="color:var(--accent-primary);">' + kindLabel + '</div>';
+      html += '<button onclick="veFEABCRemoveAssignment(\'' + node.id + '\', ' + idx + ')" style="padding:2px 6px; font-size:0.6rem; background:var(--accent-danger,#ef4444); color:white; border:none; cursor:pointer;">Sil</button>';
+      html += '</div>';
+      // Detay satırı (vector / magnitude görünür)
+      if (a.value) {
+        var detail = '';
+        if (a.kind === 'force' && a.value) {
+          detail = 'F = (' + (a.value.fx || 0) + ', ' + (a.value.fy || 0) + ', ' + (a.value.fz || 0) + ') N';
+        } else if (a.kind === 'pressure') {
+          detail = 'p = ' + (a.value.magnitude || 0) + ' MPa';
+        } else if (a.kind === 'displacement' && a.value) {
+          detail = 'u = (' + (a.value.ux || 0) + ', ' + (a.value.uy || 0) + ', ' + (a.value.uz || 0) + ') mm';
+        }
+        if (detail) {
+          html += '<div style="grid-column:1/4; padding-left:6px; font-size:0.58rem; color:var(--text-muted); margin-bottom:6px;">' + detail + '</div>';
+        }
+      }
+    });
 
-  html += veFEASectionTitle('Mesnetler');
-  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left; margin-bottom:6px;">+ Fixed Support — F4</button>';
-  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left; margin-bottom:8px;">+ Displacement — F4</button>';
+    // Yeni atama formu
+    html += '<div style="margin-top:8px; padding:8px; background:var(--bg-tertiary); border:1px solid var(--border-color);">';
+    html += '<div style="font-size:0.62rem; color:var(--text-heading); font-weight:600; margin-bottom:6px;">+ Yeni Atama</div>';
+    html += '<select id="ve-fea-bc-face-' + node.id + '" style="width:100%; padding:5px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+    faces.forEach(function (f) {
+      html += '<option value="' + f.id + '">' + f.label + '</option>';
+    });
+    html += '</select>';
+    html += '<select id="ve-fea-bc-kind-' + node.id + '" onchange="veFEABCToggleKindForm(\'' + node.id + '\')" style="width:100%; padding:5px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+    html += '<option value="fixed">Fixed Support (tüm DoF sabit)</option>';
+    html += '<option value="force">Kuvvet (Force)</option>';
+    html += '<option value="pressure">Basınç (Pressure)</option>';
+    html += '<option value="displacement">Yer Değiştirme</option>';
+    html += '</select>';
+    // Force input alanı (default gizli, kullanıcı seçince açılır)
+    html += '<div id="ve-fea-bc-form-force-' + node.id + '" style="display:none; gap:4px; margin-bottom:6px;">';
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px;">';
+    html += '<input type="number" id="ve-fea-bc-fx-' + node.id + '" placeholder="Fx (N)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color);">';
+    html += '<input type="number" id="ve-fea-bc-fy-' + node.id + '" placeholder="Fy (N)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color);">';
+    html += '<input type="number" id="ve-fea-bc-fz-' + node.id + '" placeholder="Fz (N)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color);">';
+    html += '</div></div>';
+    // Pressure input
+    html += '<div id="ve-fea-bc-form-pressure-' + node.id + '" style="display:none; margin-bottom:6px;">';
+    html += '<input type="number" step="0.1" id="ve-fea-bc-pmag-' + node.id + '" placeholder="p (MPa)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color);">';
+    html += '</div>';
+    // Displacement input
+    html += '<div id="ve-fea-bc-form-displacement-' + node.id + '" style="display:none; gap:4px; margin-bottom:6px;">';
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px;">';
+    html += '<input type="number" step="0.01" id="ve-fea-bc-ux-' + node.id + '" placeholder="Δx (mm)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color);">';
+    html += '<input type="number" step="0.01" id="ve-fea-bc-uy-' + node.id + '" placeholder="Δy (mm)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color);">';
+    html += '<input type="number" step="0.01" id="ve-fea-bc-uz-' + node.id + '" placeholder="Δz (mm)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-primary); color:var(--text-primary); border:1px solid var(--border-color);">';
+    html += '</div></div>';
+    html += '<button onclick="veFEABCAddAssignment(\'' + node.id + '\')" style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--accent-primary,#3b82f6); color:white; border:none; cursor:pointer;">+ Ekle</button>';
+    html += '</div>';
+  }
 
-  html += veFEASectionTitle('Yükler');
-  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left; margin-bottom:6px;">+ Force (N) — F4</button>';
-  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left; margin-bottom:6px;">+ Pressure (MPa) — F4</button>';
-  html += '<button disabled style="width:100%; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px dashed var(--border-color); cursor:not-allowed; text-align:left;">+ Moment (Nm) — F4</button>';
+  // ─── Özet ───
+  if (d.bc.assignments && d.bc.assignments.length) {
+    var counts = { fixed: 0, force: 0, pressure: 0, displacement: 0 };
+    d.bc.assignments.forEach(function (a) { counts[a.kind] = (counts[a.kind] || 0) + 1; });
+    html += '<div style="margin-top:10px; padding:6px 8px; background:var(--bg-tertiary); border-left:3px solid var(--accent-success,#22c55e); font-size:0.6rem; color:var(--text-muted);">';
+    html += counts.fixed + ' fixed, ' + counts.force + ' force, ' + counts.pressure + ' pressure, ' + counts.displacement + ' displacement';
+    html += '</div>';
+  }
 
   html += '</div>';
   return html;
+}
+
+// ─── BC modifikasyon API'leri ─────────────────────────────────────────────
+function _veFEAFindUpstreamMeshNode(bcNode) {
+  if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  var src = connections.filter(function (c) { return c.to === bcNode.id; })[0];
+  if (!src) return null;
+  return nodes.filter(function (n) { return n.id === src.from; })[0] || null;
+}
+function _veFEAFindUpstreamGeometryNode(meshNode) {
+  if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  var src = connections.filter(function (c) { return c.to === meshNode.id; })[0];
+  if (!src) return null;
+  return nodes.filter(function (n) { return n.id === src.from; })[0] || null;
+}
+
+function veFEABCSetMaterial(nodeId, matId) {
+  var node = nodes.filter(function (n) { return n.id === nodeId; })[0];
+  if (!node) return;
+  if (!node.data) node.data = {};
+  if (!node.data.bc) node.data.bc = { materialId: 'steel-st37', assignments: [] };
+  node.data.bc.materialId = matId;
+  if (typeof saveState === 'function') saveState();
+  if (typeof showNodeProperties === 'function') showNodeProperties(node);
+}
+
+function veFEABCAddAssignment(nodeId) {
+  var node = nodes.filter(function (n) { return n.id === nodeId; })[0];
+  if (!node) return;
+  if (!node.data) node.data = {};
+  if (!node.data.bc) node.data.bc = { materialId: 'steel-st37', assignments: [] };
+  var faceSel = document.getElementById('ve-fea-bc-face-' + nodeId);
+  var kindSel = document.getElementById('ve-fea-bc-kind-' + nodeId);
+  if (!faceSel || !kindSel) return;
+  var faceId = faceSel.value;
+  var kind = kindSel.value;
+  var value = null;
+  if (kind === 'force') {
+    value = {
+      fx: Number(document.getElementById('ve-fea-bc-fx-' + nodeId).value) || 0,
+      fy: Number(document.getElementById('ve-fea-bc-fy-' + nodeId).value) || 0,
+      fz: Number(document.getElementById('ve-fea-bc-fz-' + nodeId).value) || 0
+    };
+  } else if (kind === 'pressure') {
+    value = { magnitude: Number(document.getElementById('ve-fea-bc-pmag-' + nodeId).value) || 0 };
+  } else if (kind === 'displacement') {
+    value = {
+      ux: Number(document.getElementById('ve-fea-bc-ux-' + nodeId).value) || 0,
+      uy: Number(document.getElementById('ve-fea-bc-uy-' + nodeId).value) || 0,
+      uz: Number(document.getElementById('ve-fea-bc-uz-' + nodeId).value) || 0
+    };
+  }
+  node.data.bc.assignments.push({ faceId: faceId, kind: kind, value: value, enabled: true });
+  if (typeof saveState === 'function') saveState();
+  if (typeof showNodeProperties === 'function') showNodeProperties(node);
+}
+
+function veFEABCRemoveAssignment(nodeId, idx) {
+  var node = nodes.filter(function (n) { return n.id === nodeId; })[0];
+  if (!node || !node.data || !node.data.bc) return;
+  node.data.bc.assignments.splice(idx, 1);
+  if (typeof saveState === 'function') saveState();
+  if (typeof showNodeProperties === 'function') showNodeProperties(node);
+}
+
+function veFEABCToggleKindForm(nodeId) {
+  var kind = document.getElementById('ve-fea-bc-kind-' + nodeId);
+  if (!kind) return;
+  ['force', 'pressure', 'displacement'].forEach(function (k) {
+    var el = document.getElementById('ve-fea-bc-form-' + k + '-' + nodeId);
+    if (el) el.style.display = (kind.value === k) ? 'block' : 'none';
+  });
 }
 
 // ─── 4. FEA ÇÖZÜCÜ ──────────────────────────────────────────────────────────
