@@ -666,7 +666,7 @@ function _veFEABoxNamedSelections(nx, ny, nz) {
 function _veFEAMeshCylinder(p, size, curvOpts, extraOpts) {
   var r  = Math.max(0.1, p.radius || 15);
   var h  = Math.max(0.1, p.height || 60);
-  var nC = Math.max(6, Math.round(2 * Math.PI * r / size));
+  var nC = Math.max(8, Math.round(2 * Math.PI * r / size));
   var nR = Math.max(2, Math.round(r / size));
   var nA = Math.max(1, Math.round(h / size));
   // Curvature refinement: max yüz açısı θ → nC ≥ 360/θ
@@ -675,9 +675,11 @@ function _veFEAMeshCylinder(p, size, curvOpts, extraOpts) {
     var nCByCurv = Math.ceil(360 / angDeg);
     if (nCByCurv > nC) nC = nCByCurv;
   }
-  // O-grid (butterfly) topoloji — tüm Hex8, dairesel yakınsama daha iyi
-  // ICEM ICEM CFD style: merkez square + 4 outer arc
-  if (extraOpts && extraOpts.crossSection === 'ogrid') {
+  // ─── Akilli mesh stratejisi: dairesel kesit → O-grid Hex8 (default) ──
+  // Wedge6 fan'i sadece kullanici acikca isterse (extraOpts.crossSection==='wedge')
+  // Aksi takdirde merkezde dejenere hucreler olusturmayan butterfly topoloji.
+  var useWedgeFan = !!(extraOpts && extraOpts.crossSection === 'wedge');
+  if (!useWedgeFan) {
     nC = Math.max(8, Math.round(nC / 4) * 4);  // 4'ün katı zorunlu
     var nRArc = Math.max(1, nR);
     var nSquare = nC / 4;
@@ -1480,105 +1482,78 @@ function _veFEAMeshTorus(p, size) {
   var R = Math.max(1, p.majorRadius || 30);
   var r = Math.max(0.1, p.minorRadius || 10);
   var nMajor = Math.max(8, Math.round(2 * Math.PI * R / size));
-  var nMinor = Math.max(6, Math.round(2 * Math.PI * r / size));
+  var nMinor = Math.max(8, Math.round(2 * Math.PI * r / size));
   var nRad   = Math.max(2, Math.round(r / size));
+  // 4'un kati zorunlu (O-grid disk topolojisi icin)
+  nMinor = Math.max(8, Math.round(nMinor / 4) * 4);
+  var nSquare = nMinor / 4;
 
-  var perLayer = 1 + nRad * nMinor; // center + ring nodes
-  var nNodes = nMajor * perLayer;
-  var nodes = new Float32Array(nNodes * 3);
+  // 2D O-grid disk (cross-section, local xz coords)
+  var disk = _veFEABuildOgridDisk2D(r, nSquare, nRad);
+  var nDisk = disk.nodes2D.length;
+  var nQuads = disk.quads.length;
 
+  // Her major angle icin disk'i toroidal centerline'a yerlestir.
+  // Local disk: x = radial yatay (cross-section), z = vertical (y world)
+  // Torus dunya koordinati: theta = major angle (XZ duzleminde)
+  //   centerline(theta) = (R cos theta, 0, R sin theta)
+  //   radial_world(theta) = (cos theta, 0, sin theta)
+  //   y_world = (0, 1, 0)
+  //   world = centerline + diskX·radial + diskZ·y_world
+  var nodes = new Float32Array(nDisk * nMajor * 3);
   for (var k = 0; k < nMajor; k++) {
     var theta = 2 * Math.PI * k / nMajor;
     var cosT = Math.cos(theta), sinT = Math.sin(theta);
     var cxW = R * cosT, czW = R * sinT;
-    var base = k * perLayer;
-    // Center node (toroidal centerline)
-    nodes[base * 3]     = cxW;
-    nodes[base * 3 + 1] = 0;
-    nodes[base * 3 + 2] = czW;
-    // Ring nodes (radial × angular)
-    for (var ring = 1; ring <= nRad; ring++) {
-      var rPol = r * ring / nRad;
-      for (var ang = 0; ang < nMinor; ang++) {
-        var phi = 2 * Math.PI * ang / nMinor;
-        var cosP = Math.cos(phi), sinP = Math.sin(phi);
-        // Local offset: rPol*(cosP * radial_world + sinP * y_world)
-        var dx = rPol * cosP * cosT;
-        var dy = rPol * sinP;
-        var dz = rPol * cosP * sinT;
-        var idx = base + 1 + (ring - 1) * nMinor + ang;
-        nodes[idx * 3]     = cxW + dx;
-        nodes[idx * 3 + 1] = dy;
-        nodes[idx * 3 + 2] = czW + dz;
-      }
+    var base = k * nDisk;
+    for (var i = 0; i < nDisk; i++) {
+      var lx = disk.nodes2D[i][0];  // local x (radial inward/outward)
+      var lz = disk.nodes2D[i][1];  // local z (vertical, becomes y world)
+      var off = (base + i) * 3;
+      nodes[off]     = cxW + lx * cosT;
+      nodes[off + 1] = lz;
+      nodes[off + 2] = czW + lx * sinT;
     }
   }
 
-  function diskNode(layer, ring, circ) {
-    var lm = ((layer % nMajor) + nMajor) % nMajor; // closed loop modular
-    var base = lm * perLayer;
-    if (ring === 0) return base;
-    return base + 1 + (ring - 1) * nMinor + ((circ % nMinor + nMinor) % nMinor);
-  }
-
-  // Wedge6 elements: cylinder pattern with toroidal closing
-  var diskTris = nMinor + 2 * nMinor * (nRad - 1);
-  var nElem = diskTris * nMajor;
-  var elements = new Uint32Array(nElem * 6);
-  var e = 0;
+  // Hex8 elements: her quad × her major-angle pair (closed loop)
+  var elements = new Uint32Array(nQuads * nMajor * 8);
+  var ep = 0;
   for (var ka = 0; ka < nMajor; ka++) {
-    // Center fan triangles
-    for (var c1 = 0; c1 < nMinor; c1++) {
-      var a0 = diskNode(ka,     0, 0);
-      var a1 = diskNode(ka,     1, c1);
-      var a2 = diskNode(ka,     1, c1 + 1);
-      var b0 = diskNode(ka + 1, 0, 0);
-      var b1 = diskNode(ka + 1, 1, c1);
-      var b2 = diskNode(ka + 1, 1, c1 + 1);
-      var off = e * 6; e++;
-      elements[off]     = a0; elements[off + 1] = a1; elements[off + 2] = a2;
-      elements[off + 3] = b0; elements[off + 4] = b1; elements[off + 5] = b2;
-    }
-    // Outer ring quads (each → 2 wedges)
-    for (var rr = 1; rr < nRad; rr++) {
-      for (var c2 = 0; c2 < nMinor; c2++) {
-        var p0 = diskNode(ka,     rr,     c2);
-        var p1 = diskNode(ka,     rr + 1, c2);
-        var p2 = diskNode(ka,     rr + 1, c2 + 1);
-        var p3 = diskNode(ka,     rr,     c2 + 1);
-        var q0 = diskNode(ka + 1, rr,     c2);
-        var q1 = diskNode(ka + 1, rr + 1, c2);
-        var q2 = diskNode(ka + 1, rr + 1, c2 + 1);
-        var q3 = diskNode(ka + 1, rr,     c2 + 1);
-        var off2 = e * 6; e++;
-        elements[off2]     = p0; elements[off2 + 1] = p1; elements[off2 + 2] = p2;
-        elements[off2 + 3] = q0; elements[off2 + 4] = q1; elements[off2 + 5] = q2;
-        off2 = e * 6; e++;
-        elements[off2]     = p0; elements[off2 + 1] = p2; elements[off2 + 2] = p3;
-        elements[off2 + 3] = q0; elements[off2 + 4] = q2; elements[off2 + 5] = q3;
-      }
+    var bOff = ka * nDisk;
+    var tOff = ((ka + 1) % nMajor) * nDisk;  // closed loop
+    for (var q = 0; q < nQuads; q++) {
+      var qd = disk.quads[q];
+      elements[ep++] = bOff + qd[0];
+      elements[ep++] = bOff + qd[1];
+      elements[ep++] = bOff + qd[2];
+      elements[ep++] = bOff + qd[3];
+      elements[ep++] = tOff + qd[0];
+      elements[ep++] = tOff + qd[1];
+      elements[ep++] = tOff + qd[2];
+      elements[ep++] = tOff + qd[3];
     }
   }
 
   return {
-    type: 'wedge6',
+    type: 'hex8',
     geometryType: 'torus',
     nodes: nodes,
     elements: elements,
-    nodesPerElement: 6,
-    grid: { nMajor: nMajor, nMinor: nMinor, nRadial: nRad, closed: true },
-    namedSelections: _veFEATorusNamedSelections(perLayer, nMinor, nRad, nMajor)
+    nodesPerElement: 8,
+    grid: { nMajor: nMajor, nMinor: nMinor, nRadial: nRad, ogrid: true, closed: true },
+    namedSelections: _veFEAOgridTorusNamedSelections(disk, nDisk, nMajor, r)
   };
 }
 
-// Torus named selections: tek face (toroidal outer surface — ring=nRad)
-function _veFEATorusNamedSelections(perLayer, nMinor, nRad, nMajor) {
+// Torus O-grid named selections — toroidal outer surface (disk outer circle nodes × all major layers)
+function _veFEAOgridTorusNamedSelections(disk, nDisk, nMajor, r) {
   var surface = [];
-  for (var k = 0; k < nMajor; k++) {
-    var base = k * perLayer;
-    for (var a = 0; a < nMinor; a++) {
-      // Sadece son ring (rad=nRad) düğümleri yüzeyde
-      surface.push(base + 1 + (nRad - 1) * nMinor + a);
+  var eps = r * 1e-4;
+  for (var i = 0; i < nDisk; i++) {
+    var lx = disk.nodes2D[i][0], lz = disk.nodes2D[i][1];
+    if (Math.abs(Math.sqrt(lx * lx + lz * lz) - r) < eps) {
+      for (var k = 0; k < nMajor; k++) surface.push(k * nDisk + i);
     }
   }
   return {

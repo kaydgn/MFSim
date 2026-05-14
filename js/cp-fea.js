@@ -284,9 +284,10 @@ function veFEASubmitMeshBuild(nodeId) {
   if (elementType !== 'auto' && elementType !== 'tet4' && elementType !== 'pyramid5') elementType = 'auto';
   var midSideEl = document.getElementById('ve-fea-mesh-midnodes-' + nodeId);
   var midSideNodes = !!(midSideEl && midSideEl.checked);
+  // crossSection: kullanici 'wedge' opsiyonunu acikca secmis ise pass, aksi
+  // takdirde 'auto' (default O-grid Hex8) — _veFEAMeshCylinder bunu O-grid'e cevirir.
   var crossSel = document.getElementById('ve-fea-mesh-cross-' + nodeId);
-  var crossSection = (crossSel && crossSel.value) ? crossSel.value : 'wedge';
-  if (crossSection !== 'wedge' && crossSection !== 'ogrid') crossSection = 'wedge';
+  var crossSection = (crossSel && crossSel.value === 'wedge') ? 'wedge' : 'auto';
   var curvEl = document.getElementById('ve-fea-mesh-curv-' + nodeId);
   var curvAngEl = document.getElementById('ve-fea-mesh-curv-ang-' + nodeId);
   var curvEnabled = !!(curvEl && curvEl.checked);

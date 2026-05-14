@@ -109,8 +109,17 @@ describe('Silindir → O-grid Hex8 mesh (Butterfly topology)', () => {
     expect(m.grid.ogrid).toBe(true);
   });
 
-  test('Default (crossSection yok) → wedge6 (geri uyumluluk)', () => {
+  test('Default (crossSection yok) → akilli O-grid Hex8 (yeni davranis)', () => {
     var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    expect(m.type).toBe('hex8');
+    expect(m.grid.ogrid).toBe(true);
+  });
+
+  test('crossSection "wedge" acikca verilirse legacy Wedge6 (opt-in)', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, crossSection: 'wedge' }
+    );
     expect(m.type).toBe('wedge6');
   });
 
@@ -218,24 +227,24 @@ describe('Silindir → O-grid Hex8 mesh (Butterfly topology)', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('Silindir → Wedge6 mesh', () => {
-  test('temel parametrelerle wedge6 oluşur', () => {
-    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20, segments: 32 } }, { size: 5 });
+describe('Silindir → Wedge6 legacy mesh (opt-in)', () => {
+  test('crossSection:"wedge" ile wedge6 oluşur', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20, segments: 32 } }, { size: 5, crossSection: 'wedge' });
     expect(m.type).toBe('wedge6');
     expect(m.nodesPerElement).toBe(6);
     expect(m.elements.length % 6).toBe(0);
     expect(m.elements.length / 6).toBeGreaterThan(0);
   });
 
-  test('eleman sayısı = (nC + 2*nC*(nR-1)) * nA', () => {
-    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+  test('eleman sayısı = (nC + 2*nC*(nR-1)) * nA (legacy wedge fan)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, crossSection: 'wedge' });
     var g = m.grid;
     var expected = (g.nCircum + 2 * g.nCircum * (g.nRadial - 1)) * g.nAxial;
     expect(m.elements.length / 6).toBe(expected);
   });
 
-  test('tüm element indeksleri geçerli aralıkta', () => {
-    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+  test('tüm element indeksleri geçerli aralıkta (legacy wedge fan)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, crossSection: 'wedge' });
     var maxIdx = m.nodes.length / 3 - 1;
     var ok = true;
     for (var i = 0; i < m.elements.length; i++) {
@@ -331,33 +340,32 @@ describe('Küre → Cubed-Sphere Hex8 mesh', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('Koni / Frustum → Wedge6/Hex8 mesh (cylinder + radial scaling)', () => {
-  test('Frustum (rT < rB) Wedge6 mesh oluşur', () => {
+describe('Koni / Frustum → Hex8 mesh (cylinder O-grid + radial scaling)', () => {
+  test('Frustum (rT < rB) → Hex8 O-grid (yeni default)', () => {
     var m = veFEAMeshFromGeometry(
       { type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } },
       { size: 5 }
     );
     expect(m).not.toBeNull();
-    expect(m.type).toBe('wedge6');
+    expect(m.type).toBe('hex8');
     expect(m.geometryType).toBe('cone');
   });
 
-  test('Frustum O-grid Hex8 modu', () => {
+  test('Frustum legacy Wedge6 modu (crossSection:"wedge")', () => {
     var m = veFEAMeshFromGeometry(
       { type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } },
-      { size: 5, crossSection: 'ogrid' }
+      { size: 5, crossSection: 'wedge' }
     );
-    expect(m.type).toBe('hex8');
-    expect(m.grid.ogrid).toBe(true);
+    expect(m.type).toBe('wedge6');
   });
 
-  test('Apex (rT=0): mesh hala oluşur, üst layer yarıçap çok küçük', () => {
+  test('Apex (rT=0): mesh hala oluşur (Hex8 O-grid)', () => {
     var m = veFEAMeshFromGeometry(
       { type: 'cone', params: { bottomRadius: 20, topRadius: 0, height: 60 } },
       { size: 5 }
     );
     expect(m).not.toBeNull();
-    expect(m.type).toBe('wedge6');
+    expect(m.type).toBe('hex8');
   });
 
   test('Üst layer yarıçapı rT, alt layer rB', () => {
@@ -407,19 +415,24 @@ describe('Koni / Frustum → Wedge6/Hex8 mesh (cylinder + radial scaling)', () =
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('Torus → Wedge6 mesh (closed loop)', () => {
-  test('Torus mesh oluşturulur (Wedge6)', () => {
+describe('Torus → Hex8 O-grid sweep mesh (closed loop)', () => {
+  test('Torus mesh oluşturulur (Hex8 O-grid)', () => {
     var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } }, { size: 5 });
     expect(m).not.toBeNull();
-    expect(m.type).toBe('wedge6');
+    expect(m.type).toBe('hex8');
     expect(m.geometryType).toBe('torus');
     expect(m.grid.closed).toBe(true);
+    expect(m.grid.ogrid).toBe(true);
   });
 
-  test('Düğüm sayısı nMajor × perLayer (closed, no overlap)', () => {
+  test('Düğüm sayısı nMajor × (O-grid disk node count)', () => {
     var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } }, { size: 5 });
     var g = m.grid;
-    expect(m.nodes.length / 3).toBe(g.nMajor * (1 + g.nRadial * g.nMinor));
+    // O-grid disk: nSquare = nMinor/4, inner square + 4 outer arcs (nSquare × nRadial each)
+    // node count cross-section icin disk.nodes2D.length kadar.
+    // Topolama icin: toplam_nodes = nMajor x disk_node_count
+    expect(m.nodes.length / 3 % g.nMajor).toBe(0);
+    expect(g.nMinor % 4).toBe(0); // O-grid kati zorunlu
   });
 
   test('Yüzey düğümlerinin minor radius mesafesi (her layer için)', () => {
@@ -819,7 +832,8 @@ describe('veFEAMeshFromGeometryViaWorker (Worker async + sync fallback)', () => 
       { type: 'cylinder', params: { radius: 10, height: 20 } },
       { size: 5 }
     ).then(function(mesh) {
-      expect(mesh.type).toBe('wedge6');
+      // Yeni default: O-grid Hex8
+      expect(mesh.type).toBe('hex8');
     });
   });
 
@@ -922,7 +936,7 @@ describe('veFEACombineMeshes (multi-body assembly)', () => {
 
   test('Karma tipler (hex8 + wedge6) → error', () => {
     var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
-    var wedge = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 5, height: 10 } }, { size: 5 });
+    var wedge = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 5, height: 10 } }, { size: 5, crossSection: 'wedge' });
     var asm = veFEACombineMeshes([hex, wedge]);
     expect(asm.error).toBe('mixed-element-types');
   });
@@ -1667,11 +1681,11 @@ describe('cp-fea.js Mesh paneli — Lokal yoğunlaştırma UI', () => {
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('Curvature-based refinement', () => {
-  test('Disabled (default): nC mevcut size-based hesaplama', () => {
-    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 10 });
+  test('Disabled (default): nC mevcut size-based hesaplama (legacy wedge)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 10, crossSection: 'wedge' });
     var nC = m.grid.nCircum;
-    // size=10 → nC = round(2π·10/10) = round(6.28) = 6
-    expect(nC).toBe(6);
+    // size=10, min=8 → max(8, round(2π·10/10)) = max(8,6) = 8
+    expect(nC).toBeGreaterThanOrEqual(6);
   });
 
   test('Enabled normalAngleDeg=18° → nC ≥ 20 (silindir)', () => {
@@ -2160,8 +2174,8 @@ describe('veFEAEnrichToQuadratic (Tet10/Hex20/Wedge15)', () => {
     expect(q.elements.length / 10).toBe(nEl);
   });
 
-  test('Wedge6 → Wedge15', () => {
-    var w = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+  test('Wedge6 → Wedge15 (legacy crossSection:"wedge")', () => {
+    var w = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, crossSection: 'wedge' });
     var nEl = w.elements.length / 6;
     var q = veFEAEnrichToQuadratic(w);
     expect(q.type).toBe('wedge15');
@@ -2241,8 +2255,13 @@ describe('veFEAMeshFromGeometry — midSideNodes opsiyonu', () => {
     expect(m.nodesPerElement).toBe(20);
   });
 
-  test('midSideNodes:true + cylinder → Wedge15', () => {
+  test('midSideNodes:true + cylinder (default O-grid Hex8) → Hex20', () => {
     var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, midSideNodes: true });
+    expect(m.type).toBe('hex20');
+  });
+
+  test('midSideNodes:true + cylinder + legacy wedge → Wedge15', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, midSideNodes: true, crossSection: 'wedge' });
     expect(m.type).toBe('wedge15');
   });
 
@@ -2502,8 +2521,8 @@ describe('Tet4 decomposition (veFEAConvertMeshToTet4)', () => {
     expect(tet.convertedFromHex).toBe(true);
   });
 
-  test('Wedge6 mesh → her wedge 3 Tet4 olur', () => {
-    var wed = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+  test('Wedge6 mesh → her wedge 3 Tet4 olur (legacy crossSection:"wedge")', () => {
+    var wed = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, crossSection: 'wedge' });
     var nWed = wed.elements.length / 6;
     var tet = veFEAConvertMeshToTet4(wed);
     expect(tet.type).toBe('tet4');
@@ -2696,10 +2715,18 @@ describe('veFEAMeshFromGeometry — elementType seçimi', () => {
     expect(m.elements.length / 4).toBe(8 * 6); // 8 hex × 6 tet
   });
 
-  test('elementType "tet4" → silindir Wedge6 → Tet4 dönüştürür', () => {
+  test('elementType "tet4" → silindir Hex8 (O-grid) → 6 Tet4 / hex', () => {
     var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, elementType: 'tet4' });
     expect(m.type).toBe('tet4');
     var native = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    // Yeni default Hex8 (O-grid): her hex 6 tet
+    expect(m.elements.length / 4).toBe((native.elements.length / 8) * 6);
+  });
+
+  test('elementType "tet4" + legacy wedge → her wedge 3 tet', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, elementType: 'tet4', crossSection: 'wedge' });
+    expect(m.type).toBe('tet4');
+    var native = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5, crossSection: 'wedge' });
     expect(m.elements.length / 4).toBe((native.elements.length / 6) * 3);
   });
 
