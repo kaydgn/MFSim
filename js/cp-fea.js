@@ -609,6 +609,8 @@ function getFEASolverPropertiesHTML(node) {
     html += '<div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:6px;">';
     html += '<button onclick="veFEASolverShowResult(\'' + node.id + '\', \'vonMises\')" style="padding:6px 8px; font-size:0.62rem; background:var(--accent-primary,#3b82f6); color:white; border:none; cursor:pointer;">von Mises Haritası</button>';
     html += '<button onclick="veFEASolverShowResult(\'' + node.id + '\', \'displacement\')" style="padding:6px 8px; font-size:0.62rem; background:var(--accent-primary,#3b82f6); color:white; border:none; cursor:pointer;">Deplasman Haritası</button>';
+    html += '<button onclick="veFEASolverShowResult(\'' + node.id + '\', \'deformed\')" style="padding:6px 8px; font-size:0.62rem; background:var(--accent-primary,#3b82f6); color:white; border:none; cursor:pointer;">Deforme Şekil</button>';
+    html += '<button onclick="veFEASolverShowResult(\'' + node.id + '\', \'principalMax\')" style="padding:6px 8px; font-size:0.62rem; background:var(--accent-primary,#3b82f6); color:white; border:none; cursor:pointer;">Maks. Asal Gerilme</button>';
     html += '</div>';
   }
 
@@ -796,6 +798,7 @@ function veFEASolverShowResult(nodeId, kind) {
            : (kind === 'displacement') ? 'result-displacement'
            : (kind === 'principalMax') ? 'result-principalMax'
            : (kind === 'principalMin') ? 'result-principalMin'
+           : (kind === 'deformed') ? 'result-deformed'
            : null;
   if (!mode) return;
   node.data.solver.activeResultView = kind;

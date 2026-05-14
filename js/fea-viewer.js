@@ -434,6 +434,108 @@ function veFEAInitViewer(canvas, opts) {
     // Mesh'i renk-kodlu solid olarak yedirir. perValues: Float32Array (eleman/değer),
     // min/max: legend için sınırlar. Boundary face'ler üçgenleştirilip vertex
     // colors ile renklendirilir.
+    // Sonuç görüntüleme: deformed shape — original mesh + u·scale ile node konumları
+    // güncellenir, üst üste bindirme için isteğe bağlı undeformed (gri) gösterim.
+    // perNodeValues stress map ile renkleme yapar (vonMises tipik kullanım).
+    loadMeshDeformed: function(meshData, displacement, perNodeValues, valMin, valMax, opts) {
+      if (!meshData || !displacement || typeof veFEAExtractSurfaceTriangles !== 'function') return null;
+      opts = opts || {};
+      this.clearGeometry();
+      // Deform edilmis mesh kopyasi olustur
+      var scale = (isFinite(opts.scale) && opts.scale > 0) ? opts.scale : 1;
+      var deformedNodes = new Float32Array(meshData.nodes.length);
+      var n = meshData.nodes.length / 3;
+      for (var i = 0; i < n; i++) {
+        deformedNodes[i * 3]     = meshData.nodes[i * 3]     + displacement[i * 3]     * scale;
+        deformedNodes[i * 3 + 1] = meshData.nodes[i * 3 + 1] + displacement[i * 3 + 1] * scale;
+        deformedNodes[i * 3 + 2] = meshData.nodes[i * 3 + 2] + displacement[i * 3 + 2] * scale;
+      }
+      var deformedMesh = Object.assign({}, meshData, { nodes: deformedNodes });
+
+      // Undeformed referans (gri saydam kafes)
+      if (opts.showUndeformed) {
+        var origEdges = veFEAMeshExtractEdges(meshData);
+        if (origEdges && origEdges.length > 0) {
+          var origGeo = new THREE.BufferGeometry();
+          origGeo.setAttribute('position', new THREE.BufferAttribute(origEdges, 3));
+          var origLine = new THREE.LineSegments(
+            origGeo,
+            new THREE.LineBasicMaterial({ color: 0x888888, transparent: true, opacity: 0.30 })
+          );
+          origLine.userData.feaUndeformed = true;
+          this._geometryRoot.add(origLine);
+        }
+      }
+
+      // Deformed surface + heat map (varsa) veya solid
+      var surf = veFEAExtractSurfaceTriangles(deformedMesh);
+      if (!surf || surf.positions.length === 0) return null;
+      var positions = surf.positions;
+      var nVerts = positions.length / 3;
+      var colors = new Float32Array(positions.length);
+      var range = (isFinite(valMax) && isFinite(valMin) && valMax > valMin) ? (valMax - valMin) : 1;
+
+      // Vertex → original node ID eşlemesi (deformedNodes pozisyonuyla)
+      var nodeIdsForVerts;
+      if (surf.nodeIds && surf.nodeIds.length === nVerts) {
+        nodeIdsForVerts = surf.nodeIds;
+      } else {
+        nodeIdsForVerts = new Int32Array(nVerts);
+        var dN = deformedNodes;
+        var nN = dN.length / 3;
+        for (var v = 0; v < nVerts; v++) {
+          var vx = positions[v * 3], vy = positions[v * 3 + 1], vz = positions[v * 3 + 2];
+          var best = -1, bestD = Infinity;
+          for (var nn = 0; nn < nN; nn++) {
+            var dx = dN[nn * 3] - vx;
+            var dy = dN[nn * 3 + 1] - vy;
+            var dz = dN[nn * 3 + 2] - vz;
+            var d2 = dx * dx + dy * dy + dz * dz;
+            if (d2 < bestD) { bestD = d2; best = nn; }
+          }
+          nodeIdsForVerts[v] = best;
+        }
+      }
+      for (var vv = 0; vv < nVerts; vv++) {
+        var nid = nodeIdsForVerts[vv];
+        var vval = perNodeValues ? (perNodeValues[nid] || 0) : 0;
+        var t = perNodeValues ? (vval - valMin) / range : 0.5;
+        if (t < 0) t = 0; else if (t > 1) t = 1;
+        var rgb = (typeof veFEAJetColor === 'function') ? veFEAJetColor(t) : [0.5, 0.5, 0.7];
+        colors[vv * 3]     = rgb[0];
+        colors[vv * 3 + 1] = rgb[1];
+        colors[vv * 3 + 2] = rgb[2];
+      }
+      var geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      geometry.computeVertexNormals();
+      var material = new THREE.MeshStandardMaterial({
+        vertexColors: true,
+        metalness: 0.0,
+        roughness: 0.65,
+        side: THREE.DoubleSide
+      });
+      var solid = new THREE.Mesh(geometry, material);
+      solid.userData.feaDeformed = true;
+      this._geometryRoot.add(solid);
+
+      var defEdges = veFEAMeshExtractEdges(deformedMesh);
+      if (defEdges && defEdges.length > 0 && defEdges.length / 3 < 200000) {
+        var edgeGeo = new THREE.BufferGeometry();
+        edgeGeo.setAttribute('position', new THREE.BufferAttribute(defEdges, 3));
+        var edgeLine = new THREE.LineSegments(
+          edgeGeo,
+          new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.5 })
+        );
+        edgeLine.userData.feaMeshEdges = true;
+        this._geometryRoot.add(edgeLine);
+      }
+      this._meshData = deformedMesh;
+      this._highlightedSelectionKey = null;
+      this.zoomToFit(solid);
+      return solid;
+    },
     // Sonuç görüntüleme: nodal (her düğüm için) değer haritası.
     // perNodeValues: Float64Array(nNodes) — örn. von Mises veya displacement magnitude.
     // Surface vertex'lere triangle başına element ID'ler yerine doğrudan node ID'ler
@@ -1737,6 +1839,46 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
     }
     if (typeof viewer.loadMeshThresholdMap === 'function') {
       viewer.loadMeshThresholdMap(meshData, thrVals, { warnLimit: thrWarn, errLimit: thrErr, inverted: thrInverted });
+    }
+    _veFEARefreshMeshUI(meshNode);
+    return;
+  }
+
+  // Deformed shape sonuç görüntüleme — displacement + vonMises rengi
+  if (mode === 'result-deformed') {
+    var solverNodeD = _veFEAFindSolverNodeForMesh(meshNodeId);
+    if (!solverNodeD || !solverNodeD.data || !solverNodeD.data.solver || !solverNodeD.data.solver.displacement) {
+      if (typeof showToast === 'function') showToast('Önce çözücü ile sonuç hesaplanmalı', 'warning');
+      return;
+    }
+    var sdD = solverNodeD.data.solver;
+    var vmVals = sdD.vonMises;
+    var vmMin = Infinity, vmMax = -Infinity;
+    if (vmVals) {
+      for (var ki = 0; ki < vmVals.length; ki++) {
+        if (vmVals[ki] < vmMin) vmMin = vmVals[ki];
+        if (vmVals[ki] > vmMax) vmMax = vmVals[ki];
+      }
+    } else { vmMin = 0; vmMax = 1; }
+    // Otomatik ölçek: mesh bbox / max deplasman × 0.1
+    var dispMags = veFEAComputeDisplacementMagnitudes(sdD.displacement);
+    var maxDisp = dispMags.maxMag;
+    var bboxSize = 1;
+    if (meshData.nodes && meshData.nodes.length) {
+      var minB = [Infinity, Infinity, Infinity], maxB = [-Infinity, -Infinity, -Infinity];
+      for (var ni = 0; ni < meshData.nodes.length / 3; ni++) {
+        for (var ax = 0; ax < 3; ax++) {
+          var co = meshData.nodes[ni * 3 + ax];
+          if (co < minB[ax]) minB[ax] = co;
+          if (co > maxB[ax]) maxB[ax] = co;
+        }
+      }
+      bboxSize = Math.max(maxB[0] - minB[0], maxB[1] - minB[1], maxB[2] - minB[2]);
+    }
+    var autoScale = (maxDisp > 0) ? (bboxSize * 0.1 / maxDisp) : 1;
+    if (typeof viewer.loadMeshDeformed === 'function') {
+      viewer.loadMeshDeformed(meshData, sdD.displacement, vmVals, vmMin, vmMax,
+        { scale: autoScale, showUndeformed: true });
     }
     _veFEARefreshMeshUI(meshNode);
     return;

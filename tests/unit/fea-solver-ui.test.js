@@ -95,6 +95,8 @@ describe('Solver: tam pipeline çözümü', () => {
     // Sonuç görselleştirme butonları
     expect(html).toMatch(/von Mises Haritası/);
     expect(html).toMatch(/Deplasman Haritası/);
+    expect(html).toMatch(/Deforme Şekil/);
+    expect(html).toMatch(/Maks\. Asal Gerilme/);
   });
 
   test('Pressure BC: F = p·A·n şeklinde dağıtılır', () => {
