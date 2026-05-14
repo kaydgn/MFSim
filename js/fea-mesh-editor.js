@@ -514,8 +514,10 @@ function _veFEAEditorTopologyHTML(node) {
     '<span style="color:var(--text-secondary);">Toplam yüzey alanı</span><span style="text-align:right; font-weight:600;">' + _fmtArea(topo.totalSurfaceArea || 0) + '</span>' +
   '</div>';
 
-  // Face listesi tablosu
-  html += '<div style="font-size:0.58rem; color:var(--text-secondary); margin-bottom:4px;">Yüzeyler:</div>';
+  // Face listesi tablosu — her satır tıklanabilir (3D viewer'da face highlight)
+  var selectedFaceId = node.data && node.data.selectedFaceId || null;
+  html += '<div style="font-size:0.58rem; color:var(--text-secondary); margin-bottom:4px;">' +
+    'Yüzeyler <span style="color:var(--text-muted);">(satırı tıklayarak 3D\'de seçin)</span>:</div>';
   topo.faces.forEach(function(f) {
     var typeLabel = (typeof veFEATopologyFaceTypeLabel === 'function') ? veFEATopologyFaceTypeLabel(f.type) : f.type;
     var typeColor = '#3b82f6';
@@ -528,20 +530,34 @@ function _veFEAEditorTopologyHTML(node) {
     if (f.length !== undefined) extra += ' · L=' + f.length.toFixed(1) + 'mm';
     if (f.outerRadius !== undefined && f.innerRadius !== undefined) extra += ' · R=' + f.outerRadius.toFixed(1) + ' / r=' + f.innerRadius.toFixed(1) + 'mm';
     if (f.normal) extra += ' · n=[' + f.normal.map(function(v){return v.toFixed(0);}).join(',') + ']';
-    html += '<div style="padding:5px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); margin-bottom:3px; font-size:0.6rem;">' +
+
+    var isSelected = (selectedFaceId === f.id);
+    var rowBg = isSelected ? '#fbbf2420' : 'var(--bg-tertiary)';   // sarı vurgu seçili
+    var rowBorder = isSelected ? '#fbbf24' : 'var(--border-color)';
+    var selIcon = isSelected ? '<span style="color:#fbbf24; margin-right:4px;">◉</span>' : '<span style="color:var(--text-muted); margin-right:4px;">○</span>';
+
+    html += '<button onclick="veFEASelectGeometryFace(\'' + node.id + '\', \'' + f.id + '\')" style="display:block; width:100%; text-align:left; padding:5px 8px; background:' + rowBg + '; border:1px solid ' + rowBorder + '; margin-bottom:3px; font-size:0.6rem; cursor:pointer; transition:background 0.12s;" onmouseover="this.style.background=\'' + (isSelected ? '#fbbf2435' : 'var(--bg-secondary)') + '\'" onmouseout="this.style.background=\'' + rowBg + '\'">' +
       '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
-        '<span style="display:flex; align-items:center; gap:6px;">' +
+        '<span style="display:flex; align-items:center; gap:4px;">' +
+          selIcon +
           '<span style="font-family:monospace; font-size:0.56rem; padding:1px 5px; background:var(--bg-primary); color:var(--text-muted);">' + f.id + '</span>' +
           '<span style="font-weight:600; color:var(--text-primary);">' + f.label + '</span>' +
           holeIcon +
         '</span>' +
         '<span style="font-size:0.52rem; padding:1px 6px; background:' + typeColor + '20; color:' + typeColor + '; font-weight:600;">' + typeLabel + '</span>' +
       '</div>' +
-      '<div style="font-size:0.55rem; color:var(--text-muted);">' +
+      '<div style="font-size:0.55rem; color:var(--text-muted); padding-left:18px;">' +
         'Alan: <b style="color:var(--text-secondary);">' + _fmtArea(f.area || 0) + '</b>' + extra +
       '</div>' +
-    '</div>';
+    '</button>';
   });
+
+  if (selectedFaceId) {
+    html += '<div style="margin-top:6px; padding:5px 8px; background:#fbbf2418; border-left:3px solid #fbbf24; font-size:0.6rem; color:var(--text-primary);">' +
+      '<b>Seçili yüz:</b> ' + selectedFaceId +
+      ' <button onclick="veFEASelectGeometryFace(\'' + node.id + '\', null)" style="float:right; padding:1px 6px; font-size:0.52rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:pointer;">Seçimi Kaldır</button>' +
+    '</div>';
+  }
 
   html += '<div style="font-size:0.52rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">' +
     'ℹ Mesh oluşturulduktan sonra her yüze ait düğümler <b>Atanmış Yüzeyler</b> bölümünde göz atılabilir. ' +
