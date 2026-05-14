@@ -10564,18 +10564,22 @@ function spawnFEAChain(x, y) {
 
   // Mesh → Sınır Koşulları bağlantısı dikey aksta olduğundan portları üst/alt yönlere sabitle.
   // Aksi halde varsayılan sağ→sol yönelim çapraz/eğri bir çizgi üretir.
+  // updatePortPosition() ile DOM kutucukları da görsel olarak doğru kenara taşınır.
+  function applyPortSide(node, portKey, side) {
+    if(!node) return;
+    if(!node.data) node.data = {};
+    if(!node.data.portPositions) node.data.portPositions = {};
+    node.data.portPositions[portKey] = { side: side };
+    var nodeEl = document.getElementById(node.id);
+    if(nodeEl && typeof updatePortPosition === 'function') {
+      var portEl = nodeEl.querySelector('.ve-node-port[data-port="' + portKey + '"]');
+      if(portEl) updatePortPosition(portEl, node, portKey);
+    }
+  }
   var meshNode = nodes.find(function(n){ return n.id === created['fea-mesh']; });
-  if(meshNode) {
-    if(!meshNode.data) meshNode.data = {};
-    if(!meshNode.data.portPositions) meshNode.data.portPositions = {};
-    meshNode.data.portPositions['output'] = { side: 'bottom' };
-  }
+  applyPortSide(meshNode, 'output', 'bottom');
   var bcNode = nodes.find(function(n){ return n.id === created['fea-bc']; });
-  if(bcNode) {
-    if(!bcNode.data) bcNode.data = {};
-    if(!bcNode.data.portPositions) bcNode.data.portPositions = {};
-    bcNode.data.portPositions['input'] = { side: 'top' };
-  }
+  applyPortSide(bcNode, 'input', 'top');
 
   // Bağlantılar: akış sırasına göre. Tüm 4 node oluştuysa kur.
   if(created['fea-geometry'] && created['fea-mesh']) {
