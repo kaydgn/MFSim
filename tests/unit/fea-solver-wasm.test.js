@@ -131,13 +131,198 @@ describe('MFSim FEA — 1D çubuk eleman çözümü (analitik karşılaştırma)
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('MFSim FEA — 3D lineer elastik çözücü (tet4 + hex8)', () => {
+  const haveWasm = fs.existsSync(WASM_JS) && fs.existsSync(WASM_BIN);
+  const maybeTest = haveWasm ? test : test.skip;
+
+  let Module;
+  let wrapper;
+
+  beforeAll(async () => {
+    if (!haveWasm) return;
+    const factory = require(WASM_JS);
+    const wasmBinary = fs.readFileSync(WASM_BIN);
+    Module = await factory({ wasmBinary });
+
+    // Sarmalayıcıyı pre-loaded module ile kur — jsdom URL/Blob yüklemesi bypass
+    wrapper = require(path.join(ROOT, 'js/fea-solver-wasm.js'));
+    wrapper._VE_FEA_WASM_STATE.module = Module;
+  }, 30000);
+
+  // Tek hex8 küp (1m × 1m × 1m), sol yüz sabit, sağ yüz eksenel çekme.
+  function buildClampedCubeHex8() {
+    return {
+      elementType: 'hex8',
+      nodes: new Float64Array([
+        0,0,0,  1,0,0,  1,1,0,  0,1,0,
+        0,0,1,  1,0,1,  1,1,1,  0,1,1
+      ]),
+      elements: new Int32Array([0,1,2,3, 4,5,6,7]),
+      material: { E: 210e9, nu: 0.3 },
+      fixed: new Int32Array([0, 3, 4, 7]),  // sol yüz
+      loads: [
+        { node: 1, force: [250, 0, 0] },
+        { node: 2, force: [250, 0, 0] },
+        { node: 5, force: [250, 0, 0] },
+        { node: 6, force: [250, 0, 0] }
+      ]
+    };
+  }
+
+  // Tek tet4 — düzenli tetrahedron yerine standart unit-tetra (köşeler:
+  // origin + üç birim eksen). Hacim = 1/6.
+  function buildSingleTet4() {
+    return {
+      elementType: 'tet4',
+      nodes: new Float64Array([
+        0, 0, 0,
+        1, 0, 0,
+        0, 1, 0,
+        0, 0, 1
+      ]),
+      elements: new Int32Array([0, 1, 2, 3]),
+      material: { E: 200e9, nu: 0.3 },
+      fixed: new Int32Array([0, 1, 2]),       // üç düğüm tamamen sabit
+      loads: [{ node: 3, force: [0, 0, 100] }]
+    };
+  }
+
+  maybeTest('hex8 küp — başarılı çözüm, sabit düğümlerde sıfır u, simetrik Poisson', async () => {
+    const result = await wrapper.veFEASolveLinearElastic3D(buildClampedCubeHex8());
+    expect(result.displacements.length).toBe(8 * 3);
+    expect(result.info.elementType).toBe('hex8');
+    expect(result.info.numNodes).toBe(8);
+    expect(result.info.numElements).toBe(1);
+
+    const u = result.displacements;
+    // Sabit düğümlerde u ≈ 0 (penalty 1e30 ile sıfıra çok yakın)
+    for (const idx of [0, 3, 4, 7]) {
+      expect(Math.abs(u[idx*3 + 0])).toBeLessThan(1e-15);
+      expect(Math.abs(u[idx*3 + 1])).toBeLessThan(1e-15);
+      expect(Math.abs(u[idx*3 + 2])).toBeLessThan(1e-15);
+    }
+    // Sağ yüz düğümlerinin u_x'leri eşit olmalı (yapı simetrik)
+    const ux1 = u[1*3], ux2 = u[2*3], ux5 = u[5*3], ux6 = u[6*3];
+    expect(ux1).toBeGreaterThan(0);
+    expect(Math.abs(ux2 - ux1)).toBeLessThan(1e-14);
+    expect(Math.abs(ux5 - ux1)).toBeLessThan(1e-14);
+    expect(Math.abs(ux6 - ux1)).toBeLessThan(1e-14);
+    // Slender 1D limit yakın olmalı (cube confinement nedeniyle %15'ten az sapma)
+    const u_analytical = 1000 * 1 / (210e9 * 1);
+    expect(Math.abs(ux1 - u_analytical) / u_analytical).toBeLessThan(0.15);
+  });
+
+  maybeTest('hex8 küp — Poisson lateral kontraksiyonu doğru yönde', async () => {
+    const result = await wrapper.veFEASolveLinearElastic3D(buildClampedCubeHex8());
+    const u = result.displacements;
+    // Sağ yüz: +y köşeleri (2, 6) y yönünde -, -y köşeleri (1, 5) y yönünde +
+    expect(u[2*3 + 1]).toBeLessThan(0);  // node 2 at y=1 → uy negatif
+    expect(u[1*3 + 1]).toBeGreaterThan(0); // node 1 at y=0 → uy pozitif (lateral)
+    expect(Math.abs(u[2*3 + 1] + u[1*3 + 1])).toBeLessThan(1e-14); // anti-simetrik
+  });
+
+  maybeTest('tet4 tek eleman — başarılı çözüm, mantıklı yer değiştirme', async () => {
+    const result = await wrapper.veFEASolveLinearElastic3D(buildSingleTet4());
+    expect(result.info.elementType).toBe('tet4');
+    expect(result.info.numNodes).toBe(4);
+    const u = result.displacements;
+    for (const idx of [0, 1, 2]) {
+      expect(Math.abs(u[idx*3 + 0])).toBeLessThan(1e-15);
+      expect(Math.abs(u[idx*3 + 1])).toBeLessThan(1e-15);
+      expect(Math.abs(u[idx*3 + 2])).toBeLessThan(1e-15);
+    }
+    // Düğüm 3 (apex) +z yönünde 100 N → uz > 0
+    expect(u[3*3 + 2]).toBeGreaterThan(0);
+    // Yer değiştirme küçük olmalı (E = 200 GPa, F = 100 N)
+    expect(u[3*3 + 2]).toBeLessThan(1e-7);
+  });
+
+  maybeTest('Desteklenmeyen eleman tipi (tri3) hata fırlatır', async () => {
+    await expect(wrapper.veFEASolveLinearElastic3D({
+      elementType: 'tri3',
+      nodes: new Float64Array([0,0,0, 1,0,0, 0,1,0]),
+      elements: new Int32Array([0,1,2]),
+      material: { E: 1e9, nu: 0.3 },
+      fixed: [0], loads: []
+    })).rejects.toThrow(/elementType/);
+  });
+
+  maybeTest('Geçersiz Poisson oranı (nu >= 0.5) hata fırlatır', async () => {
+    await expect(wrapper.veFEASolveLinearElastic3D({
+      elementType: 'tet4',
+      nodes: new Float64Array([0,0,0, 1,0,0, 0,1,0, 0,0,1]),
+      elements: new Int32Array([0,1,2,3]),
+      material: { E: 1e9, nu: 0.5 },
+      fixed: [0,1,2], loads: [{ node: 3, force: [0,0,1] }]
+    })).rejects.toThrow(/nu/);
+  });
+
+  maybeTest('hex8 zinciri (10 eleman) — slender bar FL/EA limitine yakınsar', async () => {
+    // 10 hex8 elemanı x ekseni boyunca zincirleme, kesit 1x1, uzunluk 10
+    const N = 10, L = 10.0;
+    const nx = N + 1;  // 11 cross-section
+    const nodes = new Float64Array(nx * 4 * 3);
+    // her cross-section'ta 4 köşe: (0,0), (1,0), (1,1), (0,1) — y,z koordinatları
+    for (let i = 0; i < nx; ++i) {
+      const x = i * L / N;
+      const off = i * 4;
+      nodes[(off+0)*3+0]=x; nodes[(off+0)*3+1]=0; nodes[(off+0)*3+2]=0;
+      nodes[(off+1)*3+0]=x; nodes[(off+1)*3+1]=1; nodes[(off+1)*3+2]=0;
+      nodes[(off+2)*3+0]=x; nodes[(off+2)*3+1]=1; nodes[(off+2)*3+2]=1;
+      nodes[(off+3)*3+0]=x; nodes[(off+3)*3+1]=0; nodes[(off+3)*3+2]=1;
+    }
+    const elements = new Int32Array(N * 8);
+    for (let e = 0; e < N; ++e) {
+      const a = e * 4, b = (e + 1) * 4;
+      // ANSYS hex8 sıralaması: alt (ζ=-1) sonra üst (ζ=+1).
+      // Doğal koordinatlarda ζ → x ekseni olarak eşleyelim:
+      //   alt yüz (x=a): nodes a+0,a+1,a+2,a+3  (sağ el kuralı)
+      //   üst yüz (x=b): nodes b+0,b+1,b+2,b+3
+      elements[e*8+0]=a+0; elements[e*8+1]=a+1; elements[e*8+2]=a+2; elements[e*8+3]=a+3;
+      elements[e*8+4]=b+0; elements[e*8+5]=b+1; elements[e*8+6]=b+2; elements[e*8+7]=b+3;
+    }
+    const fixed = new Int32Array([0, 1, 2, 3]);  // sol yüz tamamen
+    const F_total = 1000;
+    const loads = [
+      { node: N*4 + 0, force: [F_total/4, 0, 0] },
+      { node: N*4 + 1, force: [F_total/4, 0, 0] },
+      { node: N*4 + 2, force: [F_total/4, 0, 0] },
+      { node: N*4 + 3, force: [F_total/4, 0, 0] }
+    ];
+
+    const result = await wrapper.veFEASolveLinearElastic3D({
+      elementType: 'hex8',
+      nodes: nodes,
+      elements: elements,
+      material: { E: 210e9, nu: 0.3 },
+      fixed: fixed,
+      loads: loads
+    });
+    expect(result.info.numNodes).toBe(44);
+    expect(result.info.numElements).toBe(10);
+
+    const u = result.displacements;
+    const u_tip = (u[(N*4 + 0)*3] + u[(N*4 + 1)*3] + u[(N*4 + 2)*3] + u[(N*4 + 3)*3]) / 4;
+    const u_analytical = F_total * L / (210e9 * 1.0);
+    // Slender beam (L/h = 10) → FL/EA limitine %5 içinde yakınsamalı
+    expect(Math.abs(u_tip - u_analytical) / u_analytical).toBeLessThan(0.05);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('js/fea-solver-wasm.js — sarmalayıcı API', () => {
   const wrapperSrc = fs.readFileSync(path.join(ROOT, 'js/fea-solver-wasm.js'), 'utf8');
 
   test('Public API fonksiyonları tanımlı', () => {
     expect(wrapperSrc).toMatch(/function\s+veFEAEnsureWasm\s*\(/);
     expect(wrapperSrc).toMatch(/function\s+veFEASolveBar1D\s*\(/);
+    expect(wrapperSrc).toMatch(/function\s+veFEASolveLinearElastic3D\s*\(/);
     expect(wrapperSrc).toMatch(/function\s+veFEAWasmVersion\s*\(/);
+  });
+
+  test('Eleman tipi enum (VE_FEA_ELEM_TYPE) tet4 ve hex8 içeriyor', () => {
+    expect(wrapperSrc).toMatch(/tet4\s*:\s*0/);
+    expect(wrapperSrc).toMatch(/hex8\s*:\s*1/);
   });
 
   test('window.__feaInline pattern ile inline kaynak destekleniyor', () => {
