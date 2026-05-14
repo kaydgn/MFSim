@@ -1514,18 +1514,29 @@ function veFEASelectGeometryFace(meshNodeId, faceId, opts) {
   var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
   if (!meshNode) return;
   meshNode.data = meshNode.data || {};
-  // Aynı face'e tekrar tıklandıysa seçimi kaldır (toggle)
-  if (meshNode.data.selectedFaceId === faceId && !(opts && opts.fromViewer)) {
+  // Aynı face'e tekrar tıklandıysa seçimi kaldır (toggle, sadece topology panel'inden gelen click'lerde)
+  if (meshNode.data.selectedFaceId === faceId && !(opts && opts.fromViewer) && !(opts && opts.fromDropdown)) {
     faceId = null;
   }
   meshNode.data.selectedFaceId = faceId;
+  // Lokal Yoğunlaştırma "Hedef" dropdown'u ile sync (Topology → Inflation)
+  meshNode.data.meshSettings = meshNode.data.meshSettings || {};
+  meshNode.data.meshSettings.localSizing = meshNode.data.meshSettings.localSizing || { biasMode: 'power', biasStrength: 0, firstLayerThickness: 1, growthRate: 1.2, layerCount: 5 };
+  meshNode.data.meshSettings.localSizing.selection = faceId || 'none';
   var viewer = veFEAViewerRegistry[meshNodeId];
   if (viewer && typeof viewer.setSelectedFace === 'function') {
     viewer.setSelectedFace(faceId);
   }
   if (typeof saveState === 'function') saveState();
-  // Editor accordion'ları yenile (topology satırı highlight güncellensin)
+  // Editor accordion'ları yenile (topology satırı + lokal sizing dropdown güncellensin)
   if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// Lokal Yoğunlaştırma "Hedef" dropdown'undan face seçimi geldiğinde
+// Topology + 3D viewer'ı da senkronize tutar (Inflation → Topology).
+function veFEAOnLocalSelectionChange(meshNodeId, faceValue) {
+  var faceId = (faceValue && faceValue !== 'none') ? faceValue : null;
+  veFEASelectGeometryFace(meshNodeId, faceId, { fromDropdown: true });
 }
 
 // Viewer face click handler — 3D'de mouse ile seçim yapıldığında çağrılır.
