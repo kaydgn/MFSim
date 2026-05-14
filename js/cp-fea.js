@@ -281,7 +281,7 @@ function veFEASubmitMeshBuild(nodeId) {
   var mode = (modeSel && modeSel.value) ? modeSel.value : 'auto';
   if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
   var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : 'auto';
-  if (elementType !== 'auto' && elementType !== 'tet4') elementType = 'auto';
+  if (elementType !== 'auto' && elementType !== 'tet4' && elementType !== 'pyramid5') elementType = 'auto';
   var midSideEl = document.getElementById('ve-fea-mesh-midnodes-' + nodeId);
   var midSideNodes = !!(midSideEl && midSideEl.checked);
   var crossSel = document.getElementById('ve-fea-mesh-cross-' + nodeId);
