@@ -97,6 +97,127 @@ describe('Kutu → Heks8 structured mesh', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Silindir → O-grid Hex8 mesh (Butterfly topology)', () => {
+  test('crossSection "ogrid" → tip hex8 (wedge6 yerine)', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, crossSection: 'ogrid' }
+    );
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('hex8');
+    expect(m.nodesPerElement).toBe(8);
+    expect(m.grid.ogrid).toBe(true);
+  });
+
+  test('Default (crossSection yok) → wedge6 (geri uyumluluk)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    expect(m.type).toBe('wedge6');
+  });
+
+  test('O-grid: nC 4\'ün katına yuvarlanır', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 7, crossSection: 'ogrid' }
+    );
+    expect(m.grid.nCircum % 4).toBe(0);
+    expect(m.grid.nCircum).toBeGreaterThanOrEqual(8);
+  });
+
+  test('O-grid: element sayısı = (nSquare² + 4×nSquare×nR) × nA', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, crossSection: 'ogrid' }
+    );
+    var g = m.grid;
+    var nSquare = g.nCircum / 4;
+    var expectedPerLayer = (nSquare * nSquare) + (4 * nSquare * g.nRadial);
+    expect(g.nQuads).toBe(expectedPerLayer);
+    expect(m.elements.length / 8).toBe(expectedPerLayer * g.nAxial);
+  });
+
+  test('O-grid: tüm element indeksleri geçerli aralıkta', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, crossSection: 'ogrid' }
+    );
+    var maxIdx = m.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < m.elements.length; i++) {
+      if (m.elements[i] < 0 || m.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+
+  test('O-grid: 3 named selection (Alt, Üst, Yan)', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, crossSection: 'ogrid' }
+    );
+    expect(m.namedSelections.faceBottom).toBeDefined();
+    expect(m.namedSelections.faceTop).toBeDefined();
+    expect(m.namedSelections.faceSide).toBeDefined();
+  });
+
+  test('O-grid: yan yüzeydeki tüm düğümlerin radyal mesafesi = r', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, crossSection: 'ogrid' }
+    );
+    var ids = m.namedSelections.faceSide.nodeIds;
+    expect(ids.length).toBeGreaterThan(0);
+    for (var i = 0; i < ids.length; i++) {
+      var nid = ids[i];
+      var x = m.nodes[nid * 3];
+      var z = m.nodes[nid * 3 + 2];
+      expect(Math.sqrt(x * x + z * z)).toBeCloseTo(10, 4);
+    }
+  });
+
+  test('O-grid: Jacobian pozitif (tüm Hex8 valid)', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, crossSection: 'ogrid' }
+    );
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+    expect(jm.invertedCount).toBe(0);
+  });
+
+  test('O-grid: hacim ≈ analitik πr²h', () => {
+    var r = 10, h = 20;
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: r, height: h } },
+      { size: 3, crossSection: 'ogrid' }
+    );
+    // Element hacimleri topla (6-tet split)
+    var totalVol = 0;
+    var nodes = m.nodes;
+    var elems = m.elements;
+    var T = [[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6],[0,5,1,6]];
+    for (var e = 0; e < elems.length / 8; e++) {
+      var off = e * 8;
+      for (var k = 0; k < 6; k++) {
+        var a = elems[off + T[k][0]] * 3;
+        var b = elems[off + T[k][1]] * 3;
+        var c = elems[off + T[k][2]] * 3;
+        var d = elems[off + T[k][3]] * 3;
+        var v1x = nodes[b] - nodes[a], v1y = nodes[b+1] - nodes[a+1], v1z = nodes[b+2] - nodes[a+2];
+        var v2x = nodes[c] - nodes[a], v2y = nodes[c+1] - nodes[a+1], v2z = nodes[c+2] - nodes[a+2];
+        var v3x = nodes[d] - nodes[a], v3y = nodes[d+1] - nodes[a+1], v3z = nodes[d+2] - nodes[a+2];
+        var cx = v2y*v3z - v2z*v3y;
+        var cy = v2z*v3x - v2x*v3z;
+        var cz = v2x*v3y - v2y*v3x;
+        totalVol += Math.abs(v1x*cx + v1y*cy + v1z*cz) / 6;
+      }
+    }
+    var analytic = Math.PI * r * r * h;
+    // Discretization error (segmentlerle): %4'ten az olmalı
+    expect(totalVol).toBeGreaterThan(analytic * 0.95);
+    expect(totalVol).toBeLessThan(analytic * 1.05);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Silindir → Wedge6 mesh', () => {
   test('temel parametrelerle wedge6 oluşur', () => {
     var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20, segments: 32 } }, { size: 5 });

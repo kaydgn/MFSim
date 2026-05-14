@@ -640,6 +640,16 @@ function _veFEAEditorDefaultsHTML(node) {
     '<input type="checkbox" id="ve-fea-mesh-midnodes-' + node.id + '"' + (midSideOn ? ' checked' : '') + ' style="margin:0;">' +
     '<span>Orta-kenar düğümler <span style="color:var(--text-muted);">(Quadratic: Tet10 / Hex20 / Wedge15)</span></span>' +
   '</label>';
+
+  // Disk Topolojisi (sadece silindir/şaft için anlamlı) — O-grid butterfly
+  // dairesel yakınsamada altın standart (ICEM CFD).
+  var crossSection = settings.crossSection || 'wedge';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Disk Topolojisi <span style="color:var(--text-muted);">(silindir / şaft için)</span></div>';
+  html += '<select id="ve-fea-mesh-cross-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:10px;">';
+  html += '<option value="wedge"' + (crossSection === 'wedge' ? ' selected' : '') + '>Wedge6 (merkez fan, varsayılan)</option>';
+  html += '<option value="ogrid"' + (crossSection === 'ogrid' ? ' selected' : '') + '>Hex8 O-grid (Butterfly — dairesel yakınsama ↑)</option>';
+  html += '</select>';
+
   return html;
 }
 

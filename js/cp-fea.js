@@ -284,6 +284,9 @@ function veFEASubmitMeshBuild(nodeId) {
   if (elementType !== 'auto' && elementType !== 'tet4') elementType = 'auto';
   var midSideEl = document.getElementById('ve-fea-mesh-midnodes-' + nodeId);
   var midSideNodes = !!(midSideEl && midSideEl.checked);
+  var crossSel = document.getElementById('ve-fea-mesh-cross-' + nodeId);
+  var crossSection = (crossSel && crossSel.value) ? crossSel.value : 'wedge';
+  if (crossSection !== 'wedge' && crossSection !== 'ogrid') crossSection = 'wedge';
   var curvEl = document.getElementById('ve-fea-mesh-curv-' + nodeId);
   var curvAngEl = document.getElementById('ve-fea-mesh-curv-ang-' + nodeId);
   var curvEnabled = !!(curvEl && curvEl.checked);
@@ -319,6 +322,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.mode = mode;
     meshNode.data.meshSettings.elementType = elementType;
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
+    meshNode.data.meshSettings.crossSection = crossSection;
     meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };
     meshNode.data.meshSettings.localSizing = {
       selection: localSelection,
