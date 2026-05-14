@@ -22,6 +22,75 @@ eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Face selection (Faz B: 3D ↔ topology panel iki yönlü sync)', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.saveState = jest.fn();
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+  });
+
+  test('veFEASelectGeometryFace persist eder ve viewer.setSelectedFace çağırır', () => {
+    var meshNode = { id: 'mesh-fs1', type: 'fea-mesh', data: {} };
+    global.nodes = [meshNode];
+    veFEASelectGeometryFace('mesh-fs1', 'faceXMin');
+    expect(global.nodes[0].data.selectedFaceId).toBe('faceXMin');
+    expect(global.saveState).toHaveBeenCalled();
+  });
+
+  test('Aynı face ID tekrar → seçim kaldırılır (toggle, manuel mode)', () => {
+    var meshNode = { id: 'mesh-fs2', type: 'fea-mesh', data: { selectedFaceId: 'faceXMin' } };
+    global.nodes = [meshNode];
+    veFEASelectGeometryFace('mesh-fs2', 'faceXMin');
+    expect(global.nodes[0].data.selectedFaceId).toBeNull();
+  });
+
+  test('Viewer\'dan gelen (fromViewer) tekrar tıklama toggle yapmaz', () => {
+    var meshNode = { id: 'mesh-fs3', type: 'fea-mesh', data: { selectedFaceId: 'faceXMin' } };
+    global.nodes = [meshNode];
+    veFEASelectGeometryFace('mesh-fs3', 'faceXMin', { fromViewer: true });
+    expect(global.nodes[0].data.selectedFaceId).toBe('faceXMin');
+  });
+
+  test('null faceId → seçim temizlenir', () => {
+    var meshNode = { id: 'mesh-fs4', type: 'fea-mesh', data: { selectedFaceId: 'faceXMin' } };
+    global.nodes = [meshNode];
+    veFEASelectGeometryFace('mesh-fs4', null);
+    expect(global.nodes[0].data.selectedFaceId).toBeNull();
+  });
+
+  test('Topology accordion seçili face\'i sarı highlight ile gösterir', () => {
+    var geomNode = {
+      id: 'g-fs', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-fs5', type: 'fea-mesh', data: { selectedFaceId: 'faceYMax' } };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-fs', to: 'mesh-fs5' }];
+    var html = _veFEAEditorTopologyHTML(meshNode);
+    expect(html).toMatch(/Seçili yüz.*faceYMax/);
+    expect(html).toMatch(/◉/);
+    expect(html).toMatch(/Seçimi Kaldır/);
+  });
+
+  test('Topology face satırı onclick veFEASelectGeometryFace çağırır', () => {
+    var geomNode = {
+      id: 'g-fs2', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-fs6', type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-fs2', to: 'mesh-fs6' }];
+    var html = _veFEAEditorTopologyHTML(meshNode);
+    expect(html).toMatch(/veFEASelectGeometryFace\('mesh-fs6', 'faceXMin'\)/);
+    expect(html).toMatch(/veFEASelectGeometryFace\('mesh-fs6', 'faceZMax'\)/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
   beforeEach(() => {
     global.nodes = [];

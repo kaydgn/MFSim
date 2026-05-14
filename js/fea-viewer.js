@@ -196,9 +196,68 @@ function veFEAInitViewer(canvas, opts) {
       this._geometryRoot.add(mesh);
       _veFEAEnsureEdges(mesh);
       this._applyDisplayState(mesh);
+      // Face selection için materyal haritası çıkar (faceId → THREE.Material)
+      this._collectFaceMaterials();
       this.zoomToFit(mesh);
       return mesh;
     },
+    // Geometri yedirildikten sonra her face'in materyalini topla. Hover/select
+    // sırasında emissive ile vurgulama için doğrudan referans tutulur.
+    _faceMaterials: null,
+    _hoveredFaceId: null,
+    _selectedFaceId: null,
+    _collectFaceMaterials: function() {
+      var map = {};
+      var self = this;
+      this._geometryRoot.traverse(function(obj) {
+        if (!obj.isMesh) return;
+        // Multi-material mesh (Box/Cylinder) — feaFaceMap ile material array eşle
+        if (obj.userData.feaFaceMap && Array.isArray(obj.material)) {
+          obj.userData.feaFaceMap.forEach(function(faceId, idx) {
+            if (faceId && obj.material[idx]) map[faceId] = obj.material[idx];
+          });
+        }
+        // Group child (Shaft/RectTube) — userData.feaFaceId
+        if (obj.userData.feaFaceId && obj.material) {
+          map[obj.userData.feaFaceId] = obj.material;
+        }
+      });
+      this._faceMaterials = map;
+      // Önceki seçim varsa renkleri tazele (yedirme sonrası emissive sıfırlanır)
+      if (this._selectedFaceId) this._applyFaceColors();
+    },
+    _applyFaceColors: function() {
+      if (!this._faceMaterials) return;
+      var sel = this._selectedFaceId;
+      var hov = this._hoveredFaceId;
+      Object.keys(this._faceMaterials).forEach(function(fid) {
+        var mat = this._faceMaterials[fid];
+        if (!mat || !mat.emissive) return;
+        if (fid === sel) {
+          mat.emissive.setHex(0xfbbf24);   // sarı — seçili
+          mat.emissiveIntensity = 0.55;
+        } else if (fid === hov) {
+          mat.emissive.setHex(0x2dd4bf);   // cyan-yeşil — hover
+          mat.emissiveIntensity = 0.4;
+        } else {
+          mat.emissive.setHex(0x000000);
+          mat.emissiveIntensity = 1;
+        }
+        mat.needsUpdate = true;
+      }.bind(this));
+      render();
+    },
+    setHoveredFace: function(faceId) {
+      if (this._hoveredFaceId === faceId) return;
+      this._hoveredFaceId = faceId;
+      this._applyFaceColors();
+    },
+    setSelectedFace: function(faceId) {
+      if (this._selectedFaceId === faceId) return;
+      this._selectedFaceId = faceId;
+      this._applyFaceColors();
+    },
+    getSelectedFace: function() { return this._selectedFaceId; },
     loadSTL: function(parsed) {
       if(typeof veFEABuildSTLMesh !== 'function') return null;
       this.clearGeometry();
@@ -522,6 +581,9 @@ function veFEAInitViewer(canvas, opts) {
       this._highlightMarker = null;
       this._highlightedSelectionKey = null;
       this._meshData = null;
+      this._faceMaterials = null;
+      this._hoveredFaceId = null;
+      // _selectedFaceId korunur — kullanıcı seçimi geometri yedirme arasında saklı
       render();
     },
     zoomToFit: function(object) {
@@ -824,6 +886,78 @@ function veFEAInitViewer(canvas, opts) {
       camera.updateProjectionMatrix();
       render();
     }
+  };
+
+  // ─── Face hover/click selection handlers ─────────────────────────────────
+  // Mouse hover: e.buttons === 0 (drag değil) durumunda raycaster ile
+  // hangi face üzerinde olunduğunu bul, hover state'i güncelle.
+  // Click: mousedown/mouseup pair — delta < 3px ise face select, aksi
+  // halde orbit drag olduğu için skip.
+  var _faceClickStart = null;
+  function _faceIdFromHit(hit) {
+    if (!hit || !hit.object) return null;
+    var obj = hit.object;
+    // Group child (shaft) — direkt userData.feaFaceId
+    if (obj.userData && obj.userData.feaFaceId) return obj.userData.feaFaceId;
+    // Multi-material mesh (box/cylinder) — face.materialIndex → faceMap
+    if (obj.userData && obj.userData.feaFaceMap && hit.face && hit.face.materialIndex !== undefined) {
+      return obj.userData.feaFaceMap[hit.face.materialIndex];
+    }
+    return null;
+  }
+  function _raycastFaceId(clientX, clientY) {
+    if (!viewer._faceMaterials) return null;
+    var rect = canvas.getBoundingClientRect();
+    var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+    var ny = -((clientY - rect.top) / rect.height) * 2 + 1;
+    var rc = new THREE.Raycaster();
+    rc.setFromCamera({ x: nx, y: ny }, camera);
+    var hits = rc.intersectObject(viewer._geometryRoot, true);
+    for (var i = 0; i < hits.length; i++) {
+      // Sadece face owner mesh'ler (edges/markers skip)
+      if (hits[i].object && hits[i].object.userData &&
+          (hits[i].object.userData.feaFaceId || hits[i].object.userData.feaFaceMap)) {
+        var fid = _faceIdFromHit(hits[i]);
+        if (fid) return fid;
+      }
+    }
+    return null;
+  }
+  function _onFaceMouseMove(e) {
+    if (e.buttons !== 0) return;  // orbit/pan drag sırasında hover skip
+    if (!viewer._faceMaterials) return;
+    var fid = _raycastFaceId(e.clientX, e.clientY);
+    viewer.setHoveredFace(fid);
+    canvas.style.cursor = fid ? 'pointer' : 'grab';
+  }
+  function _onFaceMouseDown(e) {
+    if (e.button !== 0) return;
+    _faceClickStart = { x: e.clientX, y: e.clientY };
+  }
+  function _onFaceMouseUp(e) {
+    if (e.button !== 0 || !_faceClickStart) return;
+    var dx = e.clientX - _faceClickStart.x;
+    var dy = e.clientY - _faceClickStart.y;
+    _faceClickStart = null;
+    if (dx * dx + dy * dy > 9) return;  // drag idi
+    if (!viewer._faceMaterials) return;
+    var fid = _raycastFaceId(e.clientX, e.clientY);
+    viewer.setSelectedFace(fid);  // null da olabilir (boş alan)
+    // Bridge: editor'e bildir (varsa)
+    if (typeof veFEAOnViewerFaceSelected === 'function') {
+      veFEAOnViewerFaceSelected(fid);
+    }
+  }
+  canvas.addEventListener('mousemove', _onFaceMouseMove);
+  canvas.addEventListener('mousedown', _onFaceMouseDown);
+  window.addEventListener('mouseup', _onFaceMouseUp);
+  // Dispose'da bunları temizle
+  var origDispose = viewer.dispose;
+  viewer.dispose = function() {
+    canvas.removeEventListener('mousemove', _onFaceMouseMove);
+    canvas.removeEventListener('mousedown', _onFaceMouseDown);
+    window.removeEventListener('mouseup', _onFaceMouseUp);
+    if (typeof origDispose === 'function') origDispose.call(viewer);
   };
 
   return viewer;
@@ -1207,6 +1341,12 @@ function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
       _veFEALoadNodeGeometryIntoViewer(viewer, geomNode.id);
     }
   }
+
+  // Persist edilmiş face selection'ı uygula (geometri yedirme sonrası)
+  var nodeRef = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === nodeId; }) : null;
+  if (nodeRef && nodeRef.data && nodeRef.data.selectedFaceId && typeof viewer.setSelectedFace === 'function') {
+    viewer.setSelectedFace(nodeRef.data.selectedFaceId);
+  }
 }
 
 // Geometri → Mesh node bağlantısını bul (upstream)
@@ -1363,6 +1503,35 @@ function veFEAClearMeshForNode(meshNodeId) {
   var viewer = veFEAViewerRegistry[meshNodeId];
   if (viewer) viewer.clearGeometry();
   _veFEARefreshMeshUI(meshNode);
+}
+
+// Face selection köprüsü (iki yönlü sync):
+//   - Topology accordion'daki satıra tıklama → bu fonksiyon → viewer.setSelectedFace
+//   - Viewer'da face tıklama → veFEAOnViewerFaceSelected → bu fonksiyon (gelen yöne göre)
+//   - State node.data.selectedFaceId'e persist edilir
+//   - Editor accordion'ları refresh → topology satırı highlight güncellenir
+function veFEASelectGeometryFace(meshNodeId, faceId, opts) {
+  var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  // Aynı face'e tekrar tıklandıysa seçimi kaldır (toggle)
+  if (meshNode.data.selectedFaceId === faceId && !(opts && opts.fromViewer)) {
+    faceId = null;
+  }
+  meshNode.data.selectedFaceId = faceId;
+  var viewer = veFEAViewerRegistry[meshNodeId];
+  if (viewer && typeof viewer.setSelectedFace === 'function') {
+    viewer.setSelectedFace(faceId);
+  }
+  if (typeof saveState === 'function') saveState();
+  // Editor accordion'ları yenile (topology satırı highlight güncellensin)
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// Viewer face click handler — 3D'de mouse ile seçim yapıldığında çağrılır.
+function veFEAOnViewerFaceSelected(faceId) {
+  if (!_veFEAEditorActive) return;
+  veFEASelectGeometryFace(_veFEAEditorActive, faceId, { fromViewer: true });
 }
 
 // Refinement önerisini uygula — UI butonundan çağrılır.

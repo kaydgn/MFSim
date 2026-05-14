@@ -139,75 +139,144 @@ function veFEAPrimitiveStats(type, params) {
   return { volume: volume, surfaceArea: surfaceArea, bbox: bbox, params: p };
 }
 
-// ─── Three.js mesh inşası ──────────────────────────────────────────────────
+// ─── Three.js mesh inşası (face-aware: her yüz ayrı materyal/mesh) ─────────
+// ANSYS-style face selection için her primitif yüz başına ayırt edilebilir
+// gösterilir:
+//   - Box / Cylinder: multi-material (BoxGeometry/CylinderGeometry'nin native
+//     groups[] yapısı kullanılır). userData.feaFaceMap[materialIndex] → faceId
+//   - Shaft / RectTube: birden çok ayrı Mesh (Group içinde). Her child mesh
+//     userData.feaFaceId taşır.
+// Raycaster mouse hover/click'te bu metadata'yı okuyup faceId'yi bulur.
 function veFEABuildPrimitiveMesh(type, params) {
   if(typeof THREE === 'undefined') return null;
   var p = veFEANormalizePrimitiveParams(type, params);
-  var geometry = null;
+  if(!p) return null;
 
-  if(type === 'box') {
-    geometry = new THREE.BoxGeometry(p.width, p.height, p.depth);
-  } else if(type === 'cylinder') {
-    geometry = new THREE.CylinderGeometry(p.radius, p.radius, p.height, p.segments);
-  } else if(type === 'shaft') {
-    // İçi boş silindir = dış silindir mesh'i + iç delik. Three.js'in
-    // CylinderGeometry'sinde delik yok; LatheGeometry ile yarım kesiti
-    // döndürerek halka kesitli silindir oluştur.
-    var halfL = p.length / 2;
-    var pts = [
-      new THREE.Vector2(p.innerRadius, -halfL),
-      new THREE.Vector2(p.outerRadius, -halfL),
-      new THREE.Vector2(p.outerRadius,  halfL),
-      new THREE.Vector2(p.innerRadius,  halfL),
-      new THREE.Vector2(p.innerRadius, -halfL)
-    ];
-    geometry = new THREE.LatheGeometry(pts, p.segments);
-    // LatheGeometry Y ekseni etrafında döner — silindir gibi
-  } else if(type === 'rectTube') {
-    // Dikdörtgen profil = dış kutu - iç kutu (ExtrudeGeometry ile delikli shape)
-    var w2 = p.width / 2, h2 = p.height / 2;
-    var iw2 = (p.width / 2) - p.thickness;
-    var ih2 = (p.height / 2) - p.thickness;
-    var shape = new THREE.Shape();
-    shape.moveTo(-w2, -h2);
-    shape.lineTo( w2, -h2);
-    shape.lineTo( w2,  h2);
-    shape.lineTo(-w2,  h2);
-    shape.lineTo(-w2, -h2);
-    if (iw2 > 0 && ih2 > 0) {
-      var hole = new THREE.Path();
-      hole.moveTo(-iw2, -ih2);
-      hole.lineTo( iw2, -ih2);
-      hole.lineTo( iw2,  ih2);
-      hole.lineTo(-iw2,  ih2);
-      hole.lineTo(-iw2, -ih2);
-      shape.holes.push(hole);
-    }
-    geometry = new THREE.ExtrudeGeometry(shape, { depth: p.length, bevelEnabled: false, steps: 1 });
-    // ExtrudeGeometry Z ekseninde +depth uzar; merkezi (cx, cy, depth/2)
-    // bizim convention'ımız: bbox merkezi orijin → translate Z by -depth/2
-    geometry.translate(0, 0, -p.length / 2);
-  }
+  if(type === 'box')      return _veFEABuildBoxMesh(p);
+  if(type === 'cylinder') return _veFEABuildCylinderMesh(p);
+  if(type === 'shaft')    return _veFEABuildShaftGroup(p);
+  if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
+  return null;
+}
 
-  if(!geometry) return null;
-
-  // Standart malzeme
-  var material = new THREE.MeshStandardMaterial({
+// Standart body color materyali — her yüz aynı renkten başlar, hover/select
+// için emissive değiştirilebilir.
+function _veFEAMakePrimitiveMaterial() {
+  return new THREE.MeshStandardMaterial({
     color: 0x3b82f6,
     metalness: 0.3,
     roughness: 0.55,
     side: THREE.DoubleSide,
-    flatShading: false
+    flatShading: false,
+    emissive: 0x000000  // hover/select için runtime'da değişir
   });
+}
 
-  var mesh = new THREE.Mesh(geometry, material);
-  mesh.userData.feaPrimitive = { type: type, params: p };
+// ─── Kutu — BoxGeometry native 6 face groups ───────────────────────────────
+function _veFEABuildBoxMesh(p) {
+  var geometry = new THREE.BoxGeometry(p.width, p.height, p.depth);
+  // Three.js BoxGeometry materialIndex sırası: 0=+X, 1=-X, 2=+Y, 3=-Y, 4=+Z, 5=-Z
+  var faceMap = ['faceXMax', 'faceXMin', 'faceYMax', 'faceYMin', 'faceZMax', 'faceZMin'];
+  var materials = faceMap.map(function() { return _veFEAMakePrimitiveMaterial(); });
+  var mesh = new THREE.Mesh(geometry, materials);
+  mesh.userData.feaPrimitive = { type: 'box', params: p };
+  mesh.userData.feaFaceMap = faceMap;
+  mesh.userData.feaEdgesAttached = true;  // edges manuel eklendi; viewer tekrar eklemesin
 
-  // Tel çerçeve overlay — geometriyi görselleştirmeyi kolaylaştırır
   var edges = new THREE.EdgesGeometry(geometry, 30);
   var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b, linewidth: 1 }));
   mesh.add(line);
+  return mesh;
+}
 
+// ─── Silindir — CylinderGeometry native 3 face groups ──────────────────────
+function _veFEABuildCylinderMesh(p) {
+  var geometry = new THREE.CylinderGeometry(p.radius, p.radius, p.height, p.segments);
+  // Three.js CylinderGeometry materialIndex sırası: 0=side, 1=top, 2=bottom
+  var faceMap = ['faceSide', 'faceTop', 'faceBottom'];
+  var materials = faceMap.map(function() { return _veFEAMakePrimitiveMaterial(); });
+  var mesh = new THREE.Mesh(geometry, materials);
+  mesh.userData.feaPrimitive = { type: 'cylinder', params: p };
+  mesh.userData.feaFaceMap = faceMap;
+  mesh.userData.feaEdgesAttached = true;
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b, linewidth: 1 }));
+  mesh.add(line);
+  return mesh;
+}
+
+// ─── Şaft — 4 ayrı mesh (Group içinde): faceTop, faceBottom, faceOuter, faceInner
+function _veFEABuildShaftGroup(p) {
+  var group = new THREE.Group();
+  group.userData.feaPrimitive = { type: 'shaft', params: p };
+  var halfL = p.length / 2;
+  var rOut = p.outerRadius, rIn = p.innerRadius;
+  var segs = p.segments;
+
+  // Üst halka (RingGeometry, normal +Y)
+  var topGeo = new THREE.RingGeometry(rIn, rOut, segs, 1);
+  var topMesh = new THREE.Mesh(topGeo, _veFEAMakePrimitiveMaterial());
+  topMesh.rotation.x = -Math.PI / 2;
+  topMesh.position.y = halfL;
+  topMesh.userData.feaFaceId = 'faceTop';
+  group.add(topMesh);
+
+  // Alt halka (normal -Y)
+  var botGeo = new THREE.RingGeometry(rIn, rOut, segs, 1);
+  var botMesh = new THREE.Mesh(botGeo, _veFEAMakePrimitiveMaterial());
+  botMesh.rotation.x = Math.PI / 2;
+  botMesh.position.y = -halfL;
+  botMesh.userData.feaFaceId = 'faceBottom';
+  group.add(botMesh);
+
+  // Dış yan yüzey (openEnded CylinderGeometry)
+  var outerGeo = new THREE.CylinderGeometry(rOut, rOut, p.length, segs, 1, true);
+  var outerMesh = new THREE.Mesh(outerGeo, _veFEAMakePrimitiveMaterial());
+  outerMesh.userData.feaFaceId = 'faceOuter';
+  group.add(outerMesh);
+
+  // İç yan yüzey (delik, normal içeri bakar — BackSide)
+  var innerGeo = new THREE.CylinderGeometry(rIn, rIn, p.length, segs, 1, true);
+  var innerMat = _veFEAMakePrimitiveMaterial();
+  innerMat.side = THREE.BackSide;  // iç yüzeyden görünüm
+  var innerMesh = new THREE.Mesh(innerGeo, innerMat);
+  innerMesh.userData.feaFaceId = 'faceInner';
+  group.add(innerMesh);
+
+  // Edges overlay her child için
+  [topMesh, botMesh, outerMesh, innerMesh].forEach(function(m) {
+    var e = new THREE.EdgesGeometry(m.geometry, 30);
+    var l = new THREE.LineSegments(e, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+    m.add(l);
+  });
+
+  return group;
+}
+
+// ─── RectTube — ExtrudeGeometry (eski yapı, face decomposition ileride) ────
+function _veFEABuildRectTubeMesh(p) {
+  var w2 = p.width / 2, h2 = p.height / 2;
+  var iw2 = w2 - p.thickness;
+  var ih2 = h2 - p.thickness;
+  var shape = new THREE.Shape();
+  shape.moveTo(-w2, -h2); shape.lineTo(w2, -h2); shape.lineTo(w2, h2);
+  shape.lineTo(-w2, h2); shape.lineTo(-w2, -h2);
+  if (iw2 > 0 && ih2 > 0) {
+    var hole = new THREE.Path();
+    hole.moveTo(-iw2, -ih2); hole.lineTo(iw2, -ih2); hole.lineTo(iw2, ih2);
+    hole.lineTo(-iw2, ih2); hole.lineTo(-iw2, -ih2);
+    shape.holes.push(hole);
+  }
+  var geometry = new THREE.ExtrudeGeometry(shape, { depth: p.length, bevelEnabled: false, steps: 1 });
+  geometry.translate(0, 0, -p.length / 2);
+  var material = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.feaPrimitive = { type: 'rectTube', params: p };
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
   return mesh;
 }
 
