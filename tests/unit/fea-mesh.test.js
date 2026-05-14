@@ -246,6 +246,91 @@ describe('Silindir → Wedge6 mesh', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Küre → Cubed-Sphere Hex8 mesh', () => {
+  test('Küre mesh oluşturulur (Hex8, single-block cubed sphere)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: 25 } }, { size: 8 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('hex8');
+    expect(m.geometryType).toBe('sphere');
+    expect(m.grid.cubedSphere).toBe(true);
+    expect(m.elements.length / 8).toBe(m.grid.nC * m.grid.nC * m.grid.nC);
+  });
+
+  test('nC = (n+1)^3 düğüm sayısı', () => {
+    var m = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: 25 } }, { size: 8 });
+    var nC = m.grid.nC;
+    expect(m.nodes.length / 3).toBe((nC + 1) * (nC + 1) * (nC + 1));
+  });
+
+  test('Tüm element indeksleri geçerli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: 25 } }, { size: 8 });
+    var maxIdx = m.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < m.elements.length; i++) {
+      if (m.elements[i] < 0 || m.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+
+  test('Cube outer surface düğümlerinin radyal mesafesi = r', () => {
+    var r = 25;
+    var m = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: r } }, { size: 8 });
+    var ids = m.namedSelections.faceSurface.nodeIds;
+    expect(ids.length).toBeGreaterThan(0);
+    for (var i = 0; i < ids.length; i++) {
+      var nid = ids[i];
+      var x = m.nodes[nid * 3];
+      var y = m.nodes[nid * 3 + 1];
+      var z = m.nodes[nid * 3 + 2];
+      expect(Math.sqrt(x * x + y * y + z * z)).toBeCloseTo(r, 4);
+    }
+  });
+
+  test('Jacobian pozitif (tüm Hex8 valid)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: 25 } }, { size: 6 });
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+    expect(jm.invertedCount).toBe(0);
+  });
+
+  test('Hacim ≈ analitik (4/3)πr³ (kabul edilebilir hata)', () => {
+    var r = 25;
+    var m = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: r } }, { size: 4 });
+    // Hex8 hacim toplamı 6-tet split ile
+    var totalVol = 0;
+    var nodes = m.nodes;
+    var elems = m.elements;
+    var T = [[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6],[0,5,1,6]];
+    for (var e = 0; e < elems.length / 8; e++) {
+      var off = e * 8;
+      for (var k = 0; k < 6; k++) {
+        var a = elems[off + T[k][0]] * 3;
+        var b = elems[off + T[k][1]] * 3;
+        var c = elems[off + T[k][2]] * 3;
+        var d = elems[off + T[k][3]] * 3;
+        var v1x = nodes[b]-nodes[a], v1y = nodes[b+1]-nodes[a+1], v1z = nodes[b+2]-nodes[a+2];
+        var v2x = nodes[c]-nodes[a], v2y = nodes[c+1]-nodes[a+1], v2z = nodes[c+2]-nodes[a+2];
+        var v3x = nodes[d]-nodes[a], v3y = nodes[d+1]-nodes[a+1], v3z = nodes[d+2]-nodes[a+2];
+        var cx = v2y*v3z - v2z*v3y;
+        var cy = v2z*v3x - v2x*v3z;
+        var cz = v2x*v3y - v2y*v3x;
+        totalVol += Math.abs(v1x*cx + v1y*cy + v1z*cz) / 6;
+      }
+    }
+    var analytic = (4 / 3) * Math.PI * r * r * r;
+    // Cubed-sphere ile düşük nC: yaklaşık %15 hata kabul (köşelerde hacim kaybı)
+    expect(totalVol).toBeGreaterThan(analytic * 0.80);
+    expect(totalVol).toBeLessThan(analytic * 1.05);
+  });
+
+  test('Tek named selection: faceSurface', () => {
+    var m = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: 25 } }, { size: 8 });
+    expect(Object.keys(m.namedSelections)).toEqual(['faceSurface']);
+    expect(m.namedSelections.faceSurface.label).toBe('Küresel Yüzey');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Şaft (içi boş silindir) → Heks8 annulus', () => {
   test('temel parametrelerle heks8 oluşur', () => {
     var m = veFEAMeshFromGeometry({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } }, { size: 5 });

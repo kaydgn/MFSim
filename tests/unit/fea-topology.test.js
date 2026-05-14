@@ -105,6 +105,29 @@ describe('veFEAComputeGeometryTopology — Şaft', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — Küre', () => {
+  test('1 yüzey (Küresel Yüzey), 0 kenar, 0 köşe', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'sphere', params: { radius: 25 } });
+    expect(topo.faces.length).toBe(1);
+    expect(topo.edges.count).toBe(0);
+    expect(topo.vertices.count).toBe(0);
+    expect(topo.faces[0].id).toBe('faceSurface');
+    expect(topo.faces[0].type).toBe('spherical');
+    expect(topo.faces[0].radius).toBe(25);
+  });
+
+  test('Hacim ve yüzey alanı analitik (4πr², 4/3πr³)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'sphere', params: { radius: 10 } });
+    expect(topo.totalSurfaceArea).toBeCloseTo(4 * Math.PI * 100, 3);
+    expect(topo.volume).toBeCloseTo((4 / 3) * Math.PI * 1000, 3);
+  });
+
+  test('"spherical" tipi etiketi: Küresel', () => {
+    expect(veFEATopologyFaceTypeLabel('spherical')).toBe('Küresel');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeGeometryTopology — Dikdörtgen profil (rectTube)', () => {
   test('10 yüzey (2 kesit + 4 dış + 4 iç)', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 200 } });

@@ -249,6 +249,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (geometry.type === 'box')      mesh = _veFEAMeshBox(geometry.params || {}, size);
   else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
+  else if (geometry.type === 'sphere')   mesh = _veFEAMeshSphere(geometry.params || {}, size);
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
@@ -1049,6 +1050,99 @@ function _veFEAMeshRectTube(p, size) {
     namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
       minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
     })
+  };
+}
+
+// ─── Küre → Cubed-Sphere Hex8 (single-block) ──────────────────────────────
+// Tüm küreyi "deformed cube" olarak modelle. Her cube grid noktası radyal
+// projeksiyon ile küreye taşınır:
+//   sphere_pos = r * cube_max * unit_dir(cube_pos)
+// Burada cube_max = max(|x|,|y|,|z|) (Chebyshev distance).
+//   - Cube yüzeyi (cube_max=1) → küre yüzeyi (r * unit_dir)
+//   - Cube merkezi (cube_max=0) → orijin
+//   - İç noktalar: radyal mesafe r * cube_max
+// Pole singularity yok, tüm Hex8, kabul edilebilir uniform kalite.
+// Köşelerde aspect ratio yüksek (corners squeeze) ama yapısal analiz için OK.
+function _veFEAMeshSphere(p, size) {
+  var r = Math.max(0.5, p.radius || 25);
+  // nC: cube grid çözünürlüğü. Sphere yüzey arc length = π·r/2 (her face),
+  // size'a bölersek nC ≈ π·r / (2·size). Min 4 (yeterli kalite için).
+  var nC = Math.max(4, Math.round(Math.PI * r / (2 * size)));
+
+  var n1 = nC + 1;
+  var nNodes = n1 * n1 * n1;
+  var nodes = new Float32Array(nNodes * 3);
+  for (var k = 0; k <= nC; k++) {
+    var cz = -1 + 2 * k / nC;
+    for (var j = 0; j <= nC; j++) {
+      var cy = -1 + 2 * j / nC;
+      for (var i = 0; i <= nC; i++) {
+        var cx = -1 + 2 * i / nC;
+        var idx = (k * n1 * n1 + j * n1 + i) * 3;
+        var maxAbs = Math.max(Math.abs(cx), Math.abs(cy), Math.abs(cz));
+        if (maxAbs < 1e-9) {
+          // Center node: stay at origin
+          nodes[idx] = nodes[idx + 1] = nodes[idx + 2] = 0;
+        } else {
+          var len = Math.sqrt(cx * cx + cy * cy + cz * cz);
+          var ux = cx / len, uy = cy / len, uz = cz / len;
+          var rad = r * maxAbs;
+          nodes[idx]     = rad * ux;
+          nodes[idx + 1] = rad * uy;
+          nodes[idx + 2] = rad * uz;
+        }
+      }
+    }
+  }
+
+  // Hex8 elements (box mesher convention ile aynı connectivity)
+  var nElem = nC * nC * nC;
+  var elements = new Uint32Array(nElem * 8);
+  var pitchY = n1, pitchZ = n1 * n1;
+  var e = 0;
+  for (var k2 = 0; k2 < nC; k2++) {
+    for (var j2 = 0; j2 < nC; j2++) {
+      for (var i2 = 0; i2 < nC; i2++) {
+        var n0 = i2 + j2 * pitchY + k2 * pitchZ;
+        var off = e * 8; e++;
+        elements[off]     = n0;
+        elements[off + 1] = n0 + 1;
+        elements[off + 2] = n0 + 1 + pitchY;
+        elements[off + 3] = n0 + pitchY;
+        elements[off + 4] = n0 + pitchZ;
+        elements[off + 5] = n0 + 1 + pitchZ;
+        elements[off + 6] = n0 + 1 + pitchY + pitchZ;
+        elements[off + 7] = n0 + pitchY + pitchZ;
+      }
+    }
+  }
+
+  return {
+    type: 'hex8',
+    geometryType: 'sphere',
+    nodes: nodes,
+    elements: elements,
+    nodesPerElement: 8,
+    grid: { nC: nC, cubedSphere: true },
+    namedSelections: _veFEASphereNamedSelections(n1, nC)
+  };
+}
+
+// Küre için tek named selection: faceSurface (cube grid'in dış yüzü = küre yüzeyi)
+function _veFEASphereNamedSelections(n1, nC) {
+  var pitchY = n1, pitchZ = n1 * n1;
+  var surface = [];
+  for (var k = 0; k <= nC; k++) {
+    for (var j = 0; j <= nC; j++) {
+      for (var i = 0; i <= nC; i++) {
+        if (i === 0 || i === nC || j === 0 || j === nC || k === 0 || k === nC) {
+          surface.push(i + j * pitchY + k * pitchZ);
+        }
+      }
+    }
+  }
+  return {
+    faceSurface: { type: 'face', source: 'auto', label: 'Küresel Yüzey', nodeIds: new Uint32Array(surface) }
   };
 }
 
