@@ -407,6 +407,58 @@ describe('Koni / Frustum → Wedge6/Hex8 mesh (cylinder + radial scaling)', () =
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Yarım Küre → Hex8 (alt düz disk + üst dome)', () => {
+  test('Yarım küre mesh oluşturulur (Hex8)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: 25 } }, { size: 8 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('hex8');
+    expect(m.geometryType).toBe('hemisphere');
+    expect(m.grid.hemisphere).toBe(true);
+  });
+
+  test('Alt düz disk düğümlerinin y koordinatı = 0', () => {
+    var r = 25;
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: r } }, { size: 8 });
+    var flatIds = m.namedSelections.faceFlat.nodeIds;
+    for (var i = 0; i < flatIds.length; i++) {
+      var nid = flatIds[i];
+      expect(m.nodes[nid * 3 + 1]).toBeCloseTo(0, 5);
+    }
+  });
+
+  test('Dome düğümlerinin |position| = r (sphere yüzeyi)', () => {
+    var r = 25;
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: r } }, { size: 8 });
+    var domeIds = m.namedSelections.faceDome.nodeIds;
+    for (var i = 0; i < domeIds.length; i++) {
+      var nid = domeIds[i];
+      var x = m.nodes[nid * 3];
+      var y = m.nodes[nid * 3 + 1];
+      var z = m.nodes[nid * 3 + 2];
+      expect(Math.sqrt(x * x + y * y + z * z)).toBeCloseTo(r, 3);
+      expect(y).toBeGreaterThanOrEqual(-1e-3); // üst yarıda
+    }
+  });
+
+  test('Jacobian pozitif (yarım küre)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: 25 } }, { size: 8 });
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+  });
+
+  test('Hacim ≈ (2/3)πr³', () => {
+    var r = 25;
+    var stats = veFEAPrimitiveStats('hemisphere', { radius: r });
+    expect(stats.volume).toBeCloseTo((2 / 3) * Math.PI * r * r * r, 3);
+  });
+
+  test('2 named selection: faceFlat, faceDome', () => {
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: 25 } }, { size: 8 });
+    expect(Object.keys(m.namedSelections).sort()).toEqual(['faceDome', 'faceFlat']);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Şaft (içi boş silindir) → Heks8 annulus', () => {
   test('temel parametrelerle heks8 oluşur', () => {
     var m = veFEAMeshFromGeometry({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } }, { size: 5 });

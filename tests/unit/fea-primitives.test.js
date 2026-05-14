@@ -21,7 +21,7 @@ eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
 describe('fea-primitives API tanımları', () => {
   test('4 tip mevcut: box, cylinder, shaft, rectTube', () => {
     const types = veFEAPrimitiveTypes();
-    expect(types).toEqual(['box', 'cylinder', 'shaft', 'sphere', 'cone', 'rectTube']);
+    expect(types).toEqual(['box', 'cylinder', 'shaft', 'sphere', 'hemisphere', 'cone', 'rectTube']);
   });
 
   test('her tipin etiketi ve şeması var', () => {

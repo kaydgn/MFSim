@@ -249,8 +249,9 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (geometry.type === 'box')      mesh = _veFEAMeshBox(geometry.params || {}, size);
   else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
-  else if (geometry.type === 'sphere')   mesh = _veFEAMeshSphere(geometry.params || {}, size);
-  else if (geometry.type === 'cone')     mesh = _veFEAMeshCone(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
+  else if (geometry.type === 'sphere')     mesh = _veFEAMeshSphere(geometry.params || {}, size);
+  else if (geometry.type === 'hemisphere') mesh = _veFEAMeshHemisphere(geometry.params || {}, size);
+  else if (geometry.type === 'cone')       mesh = _veFEAMeshCone(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
@@ -1126,6 +1127,107 @@ function _veFEAMeshSphere(p, size) {
     nodesPerElement: 8,
     grid: { nC: nC, cubedSphere: true },
     namedSelections: _veFEASphereNamedSelections(n1, nC)
+  };
+}
+
+// ─── Yarım Küre → Hex8 (üst yarı cubed-sphere + alt düz disk koruma) ──────
+// Cube grid x,z ∈ [-1,1], y ∈ [0,1]. j=0 (alt) düğümler düz disk'e projeksiyon
+// (y=0 sabit, radyal scale). j>0 düğümler radyal cubed-sphere projeksiyonu.
+function _veFEAMeshHemisphere(p, size) {
+  var r = Math.max(0.5, p.radius || 25);
+  var nC = Math.max(4, Math.round(Math.PI * r / (2 * size)));
+  var n1 = nC + 1;
+  var nNodes = n1 * n1 * n1;
+  var nodes = new Float32Array(nNodes * 3);
+  for (var k = 0; k <= nC; k++) {
+    var cz = -1 + 2 * k / nC;
+    for (var j = 0; j <= nC; j++) {
+      var cy = j / nC;          // 0 = alt düz disk, 1 = üst (apex region)
+      for (var i = 0; i <= nC; i++) {
+        var cx = -1 + 2 * i / nC;
+        var idx = (k * n1 * n1 + j * n1 + i) * 3;
+        if (j === 0) {
+          // Alt düz disk: y=0 sabit, xz radyal scale to disk of radius r
+          var maxAbsXZ = Math.max(Math.abs(cx), Math.abs(cz));
+          if (maxAbsXZ < 1e-9) {
+            nodes[idx] = nodes[idx + 1] = nodes[idx + 2] = 0;
+          } else {
+            var lenXZ = Math.sqrt(cx * cx + cz * cz);
+            var radXZ = r * maxAbsXZ;
+            nodes[idx]     = radXZ * cx / lenXZ;
+            nodes[idx + 1] = 0;
+            nodes[idx + 2] = radXZ * cz / lenXZ;
+          }
+        } else {
+          // Üst yarı: cubed-sphere radial projection
+          var maxAbs = Math.max(Math.abs(cx), cy, Math.abs(cz));
+          if (maxAbs < 1e-9) {
+            nodes[idx] = nodes[idx + 1] = nodes[idx + 2] = 0;
+          } else {
+            var len = Math.sqrt(cx * cx + cy * cy + cz * cz);
+            var rad = r * maxAbs;
+            nodes[idx]     = rad * cx / len;
+            nodes[idx + 1] = rad * cy / len;
+            nodes[idx + 2] = rad * cz / len;
+          }
+        }
+      }
+    }
+  }
+
+  // Hex8 elements
+  var nElem = nC * nC * nC;
+  var elements = new Uint32Array(nElem * 8);
+  var pitchY = n1, pitchZ = n1 * n1;
+  var e = 0;
+  for (var k2 = 0; k2 < nC; k2++) {
+    for (var j2 = 0; j2 < nC; j2++) {
+      for (var i2 = 0; i2 < nC; i2++) {
+        var n0 = i2 + j2 * pitchY + k2 * pitchZ;
+        var off = e * 8; e++;
+        elements[off]     = n0;
+        elements[off + 1] = n0 + 1;
+        elements[off + 2] = n0 + 1 + pitchY;
+        elements[off + 3] = n0 + pitchY;
+        elements[off + 4] = n0 + pitchZ;
+        elements[off + 5] = n0 + 1 + pitchZ;
+        elements[off + 6] = n0 + 1 + pitchY + pitchZ;
+        elements[off + 7] = n0 + pitchY + pitchZ;
+      }
+    }
+  }
+
+  return {
+    type: 'hex8',
+    geometryType: 'hemisphere',
+    nodes: nodes,
+    elements: elements,
+    nodesPerElement: 8,
+    grid: { nC: nC, cubedSphere: true, hemisphere: true },
+    namedSelections: _veFEAHemisphereNamedSelections(n1, nC)
+  };
+}
+
+// Yarım küre named selections: faceFlat (j=0 alt disk) + faceDome (üst kabuk)
+function _veFEAHemisphereNamedSelections(n1, nC) {
+  var pitchY = n1, pitchZ = n1 * n1;
+  var flat = [];     // j=0 plane
+  var dome = [];     // i,k=0/nC veya j=nC (üst yüzey)
+  for (var k = 0; k <= nC; k++) {
+    for (var j = 0; j <= nC; j++) {
+      for (var i = 0; i <= nC; i++) {
+        var nid = i + j * pitchY + k * pitchZ;
+        var onSide = (i === 0 || i === nC || k === 0 || k === nC);
+        var onTop  = (j === nC);
+        var onBottom = (j === 0);
+        if (onBottom) flat.push(nid);
+        if (j > 0 && (onSide || onTop)) dome.push(nid);
+      }
+    }
+  }
+  return {
+    faceFlat: { type: 'face', source: 'auto', label: 'Alt Düz Disk (Y−)',         nodeIds: new Uint32Array(flat) },
+    faceDome: { type: 'face', source: 'auto', label: 'Yarı Küresel Yüzey (Dome)', nodeIds: new Uint32Array(dome) }
   };
 }
 

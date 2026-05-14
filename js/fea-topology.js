@@ -31,8 +31,9 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'box')      return _veFEAToplBox(p);
   if (geometry.type === 'cylinder') return _veFEAToplCylinder(p);
   if (geometry.type === 'shaft')    return _veFEAToplShaft(p);
-  if (geometry.type === 'sphere')   return _veFEAToplSphere(p);
-  if (geometry.type === 'cone')     return _veFEAToplCone(p);
+  if (geometry.type === 'sphere')     return _veFEAToplSphere(p);
+  if (geometry.type === 'hemisphere') return _veFEAToplHemisphere(p);
+  if (geometry.type === 'cone')       return _veFEAToplCone(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
   if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
   return null;
@@ -134,6 +135,25 @@ function _veFEAToplSphere(p) {
     totalSurfaceArea: area,
     volume: vol,
     bbox: { x: 2 * r, y: 2 * r, z: 2 * r }
+  };
+}
+
+// ─── Yarım Küre — 2 face (alt düz disk + üst dome) + 1 daire (equator) ────
+function _veFEAToplHemisphere(p) {
+  var r = Math.max(0.5, p.radius || 25);
+  var domeArea = 2 * Math.PI * r * r;
+  var flatArea = Math.PI * r * r;
+  return {
+    type: 'hemisphere',
+    faces: [
+      { id: 'faceFlat', label: 'Alt Düz Disk (Y−)', type: 'planar', normal: [0,-1,0], area: flatArea, radius: r },
+      { id: 'faceDome', label: 'Yarı Küresel Yüzey (Dome)', type: 'spherical', area: domeArea, radius: r }
+    ],
+    edges:    { count: 1 },    // equator (alt disk ile dome'un birleşim dairesi)
+    vertices: { count: 0 },
+    totalSurfaceArea: domeArea + flatArea,
+    volume: (2 / 3) * Math.PI * r * r * r,
+    bbox: { x: 2 * r, y: r, z: 2 * r }
   };
 }
 

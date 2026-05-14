@@ -47,6 +47,13 @@ var VE_FEA_PRIMITIVES = {
       { key: 'segments', label: 'Çevresel Segment (görsel)', unit: '−', default: 32, min: 8, max: 128, integer: true }
     ]
   },
+  'hemisphere': {
+    label: 'Yarım Küre (Kapak / Dome)',
+    schema: [
+      { key: 'radius',   label: 'Yarıçap',                unit: 'mm', default: 25, min: 0.5, max: 2500 },
+      { key: 'segments', label: 'Çevresel Segment (görsel)', unit: '−', default: 32, min: 8, max: 128, integer: true }
+    ]
+  },
   'cone': {
     label: 'Koni / Frustum (kesik koni)',
     schema: [
@@ -144,6 +151,13 @@ function veFEAPrimitiveStats(type, params) {
     volume = (4 / 3) * Math.PI * rs * rs * rs;
     surfaceArea = 4 * Math.PI * rs * rs;
     bbox = { x: 2 * rs, y: 2 * rs, z: 2 * rs };
+  } else if(type === 'hemisphere') {
+    var rH = p.radius;
+    volume = (2 / 3) * Math.PI * rH * rH * rH;
+    var domeArea = 2 * Math.PI * rH * rH;
+    var flatArea = Math.PI * rH * rH;
+    surfaceArea = domeArea + flatArea;
+    bbox = { x: 2 * rH, y: rH, z: 2 * rH };
   } else if(type === 'cone') {
     var rB = p.bottomRadius, rT = p.topRadius, hC = p.height;
     // Frustum hacim: V = (1/3) π h (rB² + rB·rT + rT²)
@@ -188,10 +202,40 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'box')      return _veFEABuildBoxMesh(p);
   if(type === 'cylinder') return _veFEABuildCylinderMesh(p);
   if(type === 'shaft')    return _veFEABuildShaftGroup(p);
-  if(type === 'sphere')   return _veFEABuildSphereMesh(p);
-  if(type === 'cone')     return _veFEABuildConeMesh(p);
+  if(type === 'sphere')     return _veFEABuildSphereMesh(p);
+  if(type === 'hemisphere') return _veFEABuildHemisphereMesh(p);
+  if(type === 'cone')       return _veFEABuildConeMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
   return null;
+}
+
+// ─── Yarım Küre — SphereGeometry üst yarı (phi 0 → π/2) + alt disk ────────
+function _veFEABuildHemisphereMesh(p) {
+  var group = new THREE.Group();
+  group.userData.feaPrimitive = { type: 'hemisphere', params: p };
+
+  // Üst yarı küre kabuğu (dome)
+  var domeGeo = new THREE.SphereGeometry(p.radius, p.segments, Math.max(8, Math.round(p.segments / 2)), 0, Math.PI * 2, 0, Math.PI / 2);
+  var domeMat = _veFEAMakePrimitiveMaterial();
+  var dome = new THREE.Mesh(domeGeo, domeMat);
+  dome.userData.feaFaceId = 'faceDome';
+  group.add(dome);
+
+  // Alt düz disk (CircleGeometry)
+  var flatGeo = new THREE.CircleGeometry(p.radius, p.segments);
+  var flatMat = _veFEAMakePrimitiveMaterial();
+  var flat = new THREE.Mesh(flatGeo, flatMat);
+  flat.rotation.x = Math.PI / 2;  // XZ plane'e döndür (y=0 düzlemi)
+  flat.userData.feaFaceId = 'faceFlat';
+  group.add(flat);
+
+  // Edges overlay
+  [dome, flat].forEach(function(m) {
+    var e = new THREE.EdgesGeometry(m.geometry, 30);
+    var l = new THREE.LineSegments(e, new THREE.LineBasicMaterial({ color: 0x1a3d6b, transparent: true, opacity: 0.5 }));
+    m.add(l);
+  });
+  return group;
 }
 
 // ─── Koni / Frustum — CylinderGeometry alt/üst farklı yarıçap ──────────────

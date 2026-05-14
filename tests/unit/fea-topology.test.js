@@ -128,6 +128,28 @@ describe('veFEAComputeGeometryTopology — Küre', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — Yarım Küre', () => {
+  test('2 face (faceFlat + faceDome), 1 daire kenar (equator)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'hemisphere', params: { radius: 25 } });
+    expect(topo.faces.length).toBe(2);
+    expect(topo.edges.count).toBe(1);
+    var ids = topo.faces.map(function(f) { return f.id; });
+    expect(ids).toContain('faceFlat');
+    expect(ids).toContain('faceDome');
+  });
+
+  test('Dome alanı = 2πr², flat = πr², hacim = (2/3)πr³', () => {
+    var r = 25;
+    var topo = veFEAComputeGeometryTopology({ type: 'hemisphere', params: { radius: r } });
+    var dome = topo.faces.find(function(f) { return f.id === 'faceDome'; });
+    var flat = topo.faces.find(function(f) { return f.id === 'faceFlat'; });
+    expect(dome.area).toBeCloseTo(2 * Math.PI * r * r, 3);
+    expect(flat.area).toBeCloseTo(Math.PI * r * r, 3);
+    expect(topo.volume).toBeCloseTo((2 / 3) * Math.PI * r * r * r, 3);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeGeometryTopology — Koni / Frustum', () => {
   test('Frustum (rT > 0): 3 yüzey (alt + üst + conical yan), 2 kenar', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } });
