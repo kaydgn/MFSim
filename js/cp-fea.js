@@ -165,6 +165,11 @@ function getFEAGeometryPropertiesHTML(node) {
       if (s.conical)     parts.push(s.conical + ' konik');
       if (s.freeform)    parts.push(s.freeform + ' serbest form');
       if (parts.length) {
+        // Primitif inference dene
+        var inferred = null;
+        if (typeof veFEAInferPrimitiveFromFeatures === 'function') {
+          inferred = veFEAInferPrimitiveFromFeatures(geom.detectedFeatures, geom.bbox);
+        }
         html += '<div style="margin-top:8px; padding:7px 9px; font-size:0.6rem; color:var(--text-primary); background:rgba(34,197,94,0.08); border-left:3px solid var(--accent-success,#22c55e); border-radius:2px;">';
         html += '<div style="font-weight:600; color:var(--accent-success,#22c55e); margin-bottom:3px;">✓ Geometri tanındı</div>';
         html += '<div style="color:var(--text-muted); line-height:1.5;">' + parts.join(', ') + '</div>';
@@ -172,6 +177,13 @@ function getFEAGeometryPropertiesHTML(node) {
           html += '<div style="color:var(--text-muted); font-size:0.55rem; margin-top:3px;">Kenarlar: ' +
             geom.detectedFeatures.edgeStats.sharp + ' keskin, ' +
             geom.detectedFeatures.edgeStats.smooth + ' yumuşak</div>';
+        }
+        if (inferred && inferred.confidence > 0.85 && typeof veFEAInferredPrimitiveLabel === 'function') {
+          html += '<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(34,197,94,0.25);">';
+          html += '<div style="font-weight:600; color:var(--accent-success,#22c55e); font-size:0.58rem;">★ Primitif eşleşmesi: ' + veFEAInferredPrimitiveLabel(inferred) + '</div>';
+          html += '<div style="color:var(--text-muted); font-size:0.55rem; margin-top:2px;">' +
+            'Yapısal Hex8 mesh uygulanacak (' + (inferred.confidence * 100).toFixed(0) + '% güvenle)</div>';
+          html += '</div>';
         }
         html += '</div>';
       }
