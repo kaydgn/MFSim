@@ -304,10 +304,51 @@ function _veFEAToplRectTube(p) {
   };
 }
 
-// ─── STL / STEP — basitleştirilmiş (tek "Yüzey" face) ──────────────────────
-// Gerçek BREP topology (face/edge/vertex per OCCT primitive) Faz B'de OCCT
-// topology API ile eklenir. Şimdilik tüm üçgenler tek face altında toplanır.
+// ─── STL / STEP — feature-aware (yuklenen geometriden tespit) ──────────────
+// Geom üzerinde detectedFeatures varsa (veFEADetectGeometryFeatures cikti),
+// her feature ayri face olarak topology'ye eklenir. Aksi takdirde tek
+// "triangulated" face fallback.
 function _veFEAToplStlStep(geom) {
+  if (geom.detectedFeatures && geom.detectedFeatures.features && geom.detectedFeatures.features.length > 0) {
+    var det = geom.detectedFeatures;
+    var faces = det.features.map(function (f, idx) {
+      var base = {
+        id: 'feat' + idx,
+        label: _veFEAFeatureFaceLabel(f, idx),
+        type: _veFEAFeatureTypeToBrepLabel(f.type),
+        area: f.area || 0,
+        triangleCount: (f.triangleIds || []).length
+      };
+      if (f.type === 'planar' && f.normal) {
+        base.normal = f.normal;
+      } else if (f.type === 'cylindrical') {
+        base.axis = f.axis;
+        base.radius = f.radius;
+        base.length = f.length;
+      } else if (f.type === 'spherical') {
+        base.center = f.center;
+        base.radius = f.radius;
+      }
+      return base;
+    });
+    return {
+      type: geom.type,
+      faces: faces,
+      edges:    { count: det.edgeStats ? det.edgeStats.total : 0,
+                  sharp: det.edgeStats ? det.edgeStats.sharp : 0,
+                  smooth: det.edgeStats ? det.edgeStats.smooth : 0 },
+      vertices: { count: det.uniqueVertices || 0 },
+      totalSurfaceArea: det.totalArea || geom.surfaceArea || 0,
+      volume: geom.volume || 0,
+      bbox: geom.bbox || (det.bbox ? {
+        x: det.bbox.size,
+        y: det.bbox.size,
+        z: det.bbox.size
+      } : { x: 0, y: 0, z: 0 }),
+      featureSummary: det.summary
+    };
+  }
+  // Fallback: tek "triangulated" face
   return {
     type: geom.type,
     faces: [
@@ -325,4 +366,22 @@ function _veFEAToplStlStep(geom) {
     volume: geom.volume || 0,
     bbox: geom.bbox || { x: 0, y: 0, z: 0 }
   };
+}
+
+function _veFEAFeatureFaceLabel(f, idx) {
+  var t = f.type;
+  if (t === 'planar')      return 'Düzlemsel Yüzey #' + (idx + 1);
+  if (t === 'cylindrical') return 'Silindirik Yüzey #' + (idx + 1) + ' (R≈' + (f.radius || 0).toFixed(1) + ')';
+  if (t === 'spherical')   return 'Küresel Yüzey #' + (idx + 1) + ' (R≈' + (f.radius || 0).toFixed(1) + ')';
+  if (t === 'conical')     return 'Konik Yüzey #' + (idx + 1);
+  if (t === 'freeform')    return 'Serbest Yüzey #' + (idx + 1);
+  return 'Yüzey #' + (idx + 1);
+}
+
+function _veFEAFeatureTypeToBrepLabel(t) {
+  if (t === 'planar')      return 'planar';
+  if (t === 'cylindrical') return 'cylindrical';
+  if (t === 'spherical')   return 'spherical';
+  if (t === 'conical')     return 'conical';
+  return 'triangulated'; // freeform veya unknown
 }

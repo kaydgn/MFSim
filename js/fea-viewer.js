@@ -1524,6 +1524,28 @@ function veFEAApplySTL(nodeId, buffer, fileName) {
           ? null
           : ('Dosya ' + (byteLength / (1024*1024)).toFixed(1) + ' MB — proje kaydında saklanmıyor, yeniden yükleyin.')
       };
+      // ANSYS-style yuzey ozellik tanima — STL icin de aktif
+      if (typeof veFEADetectGeometryFeatures === 'function') {
+        try {
+          var detected = veFEADetectGeometryFeatures(parsed);
+          if (detected) {
+            node.data.geometry.detectedFeatures = {
+              features: detected.features.map(function (f) {
+                var copy = {};
+                Object.keys(f).forEach(function (k) {
+                  if (k !== 'triangleIds') copy[k] = f[k];
+                });
+                copy.triangleCount = (f.triangleIds || []).length;
+                return copy;
+              }),
+              summary: detected.summary,
+              edgeStats: detected.edgeStats,
+              totalArea: detected.totalArea,
+              bbox: detected.bbox
+            };
+          }
+        } catch (err) { /* fallback */ }
+      }
       if (typeof veFEAComputeGeometryTopology === 'function') {
         node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
       }
