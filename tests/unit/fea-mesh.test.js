@@ -1234,6 +1234,100 @@ describe('Rectangular tube (rectTube) primitif - sweep mesh', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('L-Profil (lbracket) primitif - cell-exclusion mesh', () => {
+  test('L-bracket mesh oluşturulur (Hex8, Z sweep)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } }, { size: 5 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('hex8');
+    expect(m.geometryType).toBe('lbracket');
+    expect(m.sweepAxis).toBe('Z');
+    expect(m.elements.length / 8).toBeGreaterThan(0);
+  });
+
+  test('L: eleman sayısı tam dolu kutudan (W·H·L hacim grid) az', () => {
+    var lb   = veFEAMeshFromGeometry({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 60 } }, { size: 5 });
+    var full = veFEAMeshFromGeometry({ type: 'box',      params: { width: 60, height: 40, depth: 60 } }, { size: 5 });
+    expect(lb.elements.length / 8).toBeLessThan(full.elements.length / 8);
+  });
+
+  test('Hacim hesabı: t·(w+h-t)·L', () => {
+    var stats = veFEAPrimitiveStats('lbracket', { width: 60, height: 40, thickness: 5, length: 100 });
+    // 5·(60+40-5)·100 = 5·95·100 = 47500
+    expect(stats.volume).toBeCloseTo(47500, 0);
+  });
+
+  test('Thickness çok büyükse clamp (max = min(w,h))', () => {
+    var p = veFEANormalizePrimitiveParams('lbracket', { width: 30, height: 20, thickness: 999, length: 50 });
+    expect(p.thickness).toBeLessThan(20);
+    expect(p.thickness).toBeGreaterThan(0);
+  });
+
+  test('Tüm element indeksleri geçerli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 80 } }, { size: 10 });
+    var maxIdx = m.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < m.elements.length; i++) {
+      if (m.elements[i] < 0 || m.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+
+  test('Named selections üretilir', () => {
+    var m = veFEAMeshFromGeometry({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 80 } }, { size: 10 });
+    expect(m.namedSelections).toBeDefined();
+    expect(Object.keys(m.namedSelections).length).toBeGreaterThan(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('I-Profil (ibeam) primitif - cell-exclusion mesh', () => {
+  test('I-beam mesh oluşturulur (Hex8, Z sweep)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } }, { size: 8 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('hex8');
+    expect(m.geometryType).toBe('ibeam');
+    expect(m.sweepAxis).toBe('Z');
+    expect(m.elements.length / 8).toBeGreaterThan(0);
+  });
+
+  test('I: eleman sayısı tam dolu kutudan (W·H·L grid) az', () => {
+    var ib   = veFEAMeshFromGeometry({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 80 } }, { size: 8 });
+    var full = veFEAMeshFromGeometry({ type: 'box',   params: { width: 80, height: 120, depth: 80 } }, { size: 8 });
+    expect(ib.elements.length / 8).toBeLessThan(full.elements.length / 8);
+  });
+
+  test('Hacim hesabı: 2·w·tf + tw·(h−2tf), ×L', () => {
+    var stats = veFEAPrimitiveStats('ibeam', { width: 80, height: 120, flange: 8, web: 6, length: 200 });
+    // (2·80·8 + 6·(120-16))·200 = (1280 + 624)·200 = 1904·200 = 380800
+    expect(stats.volume).toBeCloseTo(380800, 0);
+  });
+
+  test('Flange/web çok büyükse clamp', () => {
+    var p = veFEANormalizePrimitiveParams('ibeam', { width: 40, height: 30, flange: 999, web: 999, length: 50 });
+    expect(p.flange).toBeLessThan(15);  // h/2-0.1
+    expect(p.web).toBeLessThan(40);     // w-0.1
+    expect(p.flange).toBeGreaterThan(0);
+    expect(p.web).toBeGreaterThan(0);
+  });
+
+  test('Tüm element indeksleri geçerli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 100 } }, { size: 10 });
+    var maxIdx = m.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < m.elements.length; i++) {
+      if (m.elements[i] < 0 || m.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+
+  test('Named selections üretilir', () => {
+    var m = veFEAMeshFromGeometry({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 100 } }, { size: 10 });
+    expect(m.namedSelections).toBeDefined();
+    expect(Object.keys(m.namedSelections).length).toBeGreaterThan(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Sweep axis bilgisi mesh metrics\'e yansır', () => {
   beforeEach(() => {
     global.nodes = [];

@@ -35,6 +35,8 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'hemisphere') return _veFEAToplHemisphere(p);
   if (geometry.type === 'torus')      return _veFEAToplTorus(p);
   if (geometry.type === 'cone')       return _veFEAToplCone(p);
+  if (geometry.type === 'lbracket')   return _veFEAToplLBracket(p);
+  if (geometry.type === 'ibeam')      return _veFEAToplIBeam(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
   if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
   return null;
@@ -206,6 +208,66 @@ function _veFEAToplCone(p) {
     totalSurfaceArea: bottomArea + topArea + sideArea,
     volume: volume,
     bbox: { x: 2 * rMaxC, y: h, z: 2 * rMaxC }
+  };
+}
+
+// ─── L-Profil (köşe kirişi) — 8 face ───────────────────────────────────────
+function _veFEAToplLBracket(p) {
+  var w = Math.max(1, p.width || 60);
+  var h = Math.max(1, p.height || 40);
+  var t = Math.max(0.5, p.thickness || 5);
+  var L = Math.max(1, p.length || 100);
+  var crossArea = t * (w + h - t);
+  return {
+    type: 'lbracket',
+    faces: [
+      { id: 'faceZMin',     label: 'Ön Kesit (Z−)',              type: 'planar', normal: [0,0,-1], area: crossArea },
+      { id: 'faceZMax',     label: 'Arka Kesit (Z+)',            type: 'planar', normal: [0,0,1],  area: crossArea },
+      { id: 'faceXMin',     label: 'Sol Yan (X−)',               type: 'planar', normal: [-1,0,0], area: h * L },
+      { id: 'faceYMin',     label: 'Alt Yan (Y−)',               type: 'planar', normal: [0,-1,0], area: w * L },
+      { id: 'faceXMax',     label: 'Yatay Kol Sağ Yüzü (X+)',    type: 'planar', normal: [1,0,0],  area: t * L },
+      { id: 'faceYMax',     label: 'Dikey Kol Üst Yüzü (Y+)',    type: 'planar', normal: [0,1,0],  area: t * L },
+      { id: 'faceInnerY',   label: 'İç Köşe Üst Yüzü',           type: 'planar', normal: [0,1,0],  area: (w - t) * L },
+      { id: 'faceInnerX',   label: 'İç Köşe Yan Yüzü',           type: 'planar', normal: [1,0,0],  area: (h - t) * L }
+    ],
+    edges:    { count: 18 },
+    vertices: { count: 12 },     // 6 cross-section köşe × 2 z-uç
+    totalSurfaceArea: 2 * crossArea + 2 * (w + h) * L,
+    volume: crossArea * L,
+    bbox: { x: w, y: h, z: L }
+  };
+}
+
+// ─── I-Profil (kiriş) — 12 face (dış silüet) ──────────────────────────────
+function _veFEAToplIBeam(p) {
+  var w = Math.max(1, p.width || 80);
+  var h = Math.max(1, p.height || 120);
+  var tf = Math.max(0.5, p.flange || 8);
+  var tw = Math.max(0.5, p.web || 6);
+  var L = Math.max(1, p.length || 200);
+  var innerW = (w - tw) / 2;
+  var innerH = h - 2 * tf;
+  var crossArea = 2 * (w * tf) + tw * innerH;
+  // I-profil dış silüet 12 köşeli polygon → 12 yan yüz (yan yüzeyler kenar başına)
+  return {
+    type: 'ibeam',
+    faces: [
+      { id: 'faceZMin',  label: 'Ön Kesit (Z−)',        type: 'planar', normal: [0,0,-1], area: crossArea },
+      { id: 'faceZMax',  label: 'Arka Kesit (Z+)',      type: 'planar', normal: [0,0,1],  area: crossArea },
+      { id: 'faceYMin',  label: 'Alt Flanş Tabanı (Y−)', type: 'planar', normal: [0,-1,0], area: w * L },
+      { id: 'faceYMax',  label: 'Üst Flanş Tepesi (Y+)', type: 'planar', normal: [0,1,0],  area: w * L },
+      { id: 'faceXMin',  label: 'Sol Yan (X−)',         type: 'planar', normal: [-1,0,0], area: tf * L + tf * L },  // alt + üst flanşın sol kenarı
+      { id: 'faceXMax',  label: 'Sağ Yan (X+)',         type: 'planar', normal: [1,0,0],  area: tf * L + tf * L },
+      { id: 'faceWebL',  label: 'Gövde Sol Yüzü',       type: 'planar', normal: [-1,0,0], area: innerH * L },
+      { id: 'faceWebR',  label: 'Gövde Sağ Yüzü',       type: 'planar', normal: [1,0,0],  area: innerH * L },
+      { id: 'faceInnerYU',label: 'Üst Flanş İç Yüzü (Y−)',type: 'planar', normal: [0,-1,0], area: 2 * innerW * L },
+      { id: 'faceInnerYL',label: 'Alt Flanş İç Yüzü (Y+)',type: 'planar', normal: [0,1,0],  area: 2 * innerW * L }
+    ],
+    edges:    { count: 24 },
+    vertices: { count: 24 },     // 12 cross-section × 2 z-uç
+    totalSurfaceArea: 2 * crossArea + (2 * w + 2 * h + 4 * innerW) * L,
+    volume: crossArea * L,
+    bbox: { x: w, y: h, z: L }
   };
 }
 

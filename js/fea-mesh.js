@@ -254,6 +254,8 @@ function veFEAMeshFromGeometry(geometry, opts) {
   else if (geometry.type === 'torus')      mesh = _veFEAMeshTorus(geometry.params || {}, size);
   else if (geometry.type === 'cone')       mesh = _veFEAMeshCone(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
+  else if (geometry.type === 'lbracket') mesh = _veFEAMeshLBracket(geometry.params || {}, size);
+  else if (geometry.type === 'ibeam')    mesh = _veFEAMeshIBeam(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
     var parsed = _veFEAParseSurfaceTriangles(geometry);
@@ -1049,6 +1051,166 @@ function _veFEAMeshRectTube(p, size) {
     elements: elementsTA,
     nodesPerElement: 8,
     grid: { nW: nW, nH: nH, nZ: nZ, nT: nT, voxelCount: elementsTA.length / 8 },
+    sweepAxis: 'Z',
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
+      minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
+    })
+  };
+}
+
+// ─── L-Profil (köşe kirişi) → Hex8 cell-exclusion ─────────────────────────
+// W x H bbox alındı, t kalınlığı kadar yatay (Y<t) ve dikey (X<t) iki kol.
+// Yerel koordinat: köşe (0,0,0), pozitif X yatay kol boyunca, pozitif Y dikey
+// kol boyunca, Z sweep ekseni. Merkezleme bbox ortasına yapılır.
+// "İç boşluk" predikatı: cx > t AND cy > t (her iki koldan da uzak)
+function _veFEAMeshLBracket(p, size) {
+  var w = Math.max(1, p.width || 60);
+  var h = Math.max(1, p.height || 40);
+  var t = Math.max(0.5, p.thickness || 5);
+  var L = Math.max(1, p.length || 100);
+  var maxT = Math.min(w, h) - 0.1;
+  if (t >= maxT) t = Math.max(0.5, maxT);
+
+  // Mesh size feature size'dan büyükse (t < size) thickness yönünde en az 1 hücre garantile.
+  // En geniş ortak hücre kenarı: min(size, t).
+  var cell = Math.min(size, t);
+  var nW = Math.max(1, Math.round(w / cell));
+  var nH = Math.max(1, Math.round(h / cell));
+  var nZ = Math.max(1, Math.round(L / size));
+  var dx = w / nW, dy = h / nH, dz = L / nZ;
+  var x0 = -w / 2, y0 = -h / 2, z0 = -L / 2;
+
+  var pitchY = nW + 1;
+  var pitchZ = (nW + 1) * (nH + 1);
+  var nodeMap = new Int32Array((nW + 1) * (nH + 1) * (nZ + 1));
+  for (var im = 0; im < nodeMap.length; im++) nodeMap[im] = -1;
+  var nodeList = [];
+  function getNode(i, j, k) {
+    var idx = i + j * pitchY + k * pitchZ;
+    var ex = nodeMap[idx];
+    if (ex >= 0) return ex;
+    var newIdx = nodeList.length / 3;
+    nodeList.push(x0 + i * dx, y0 + j * dy, z0 + k * dz);
+    nodeMap[idx] = newIdx;
+    return newIdx;
+  }
+
+  // L şekli: yatay kol (alt kısım, y ∈ [0, t]) + dikey kol (sol kısım, x ∈ [0, t])
+  // Köşe (0,0,0)'da bbox'ın sol-alt köşesi olacak şekilde local frame:
+  //   lx = cx - x0  (∈ [0, w])
+  //   ly = cy - y0  (∈ [0, h])
+  // Hücre içeride ise: lx < t  OR  ly < t  (dikey kol veya yatay kol)
+  var elements = [];
+  for (var k = 0; k < nZ; k++) {
+    for (var j = 0; j < nH; j++) {
+      for (var i = 0; i < nW; i++) {
+        var lx = (i + 0.5) * dx;
+        var ly = (j + 0.5) * dy;
+        if (!(lx < t || ly < t)) continue;
+        var n0 = getNode(i,     j,     k);
+        var n1 = getNode(i + 1, j,     k);
+        var n2 = getNode(i + 1, j + 1, k);
+        var n3 = getNode(i,     j + 1, k);
+        var n4 = getNode(i,     j,     k + 1);
+        var n5 = getNode(i + 1, j,     k + 1);
+        var n6 = getNode(i + 1, j + 1, k + 1);
+        var n7 = getNode(i,     j + 1, k + 1);
+        elements.push(n0, n1, n2, n3, n4, n5, n6, n7);
+      }
+    }
+  }
+
+  if (elements.length === 0) return null;
+
+  var nodes = new Float32Array(nodeList);
+  var elementsTA = new Uint32Array(elements);
+
+  return {
+    type: 'hex8',
+    geometryType: 'lbracket',
+    nodes: nodes,
+    elements: elementsTA,
+    nodesPerElement: 8,
+    grid: { nW: nW, nH: nH, nZ: nZ, voxelCount: elementsTA.length / 8 },
+    sweepAxis: 'Z',
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
+      minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
+    })
+  };
+}
+
+// ─── I-Profil (kiriş) → Hex8 cell-exclusion ───────────────────────────────
+// W x H bbox; alt flanş (y ∈ [0, tf]), üst flanş (y ∈ [h-tf, h]), gövde
+// (x ∈ [(w-tw)/2, (w+tw)/2]). "İçeride" predikatı:
+//   ly < tf  OR  ly > h-tf  OR  (innerWL < lx < innerWR)
+function _veFEAMeshIBeam(p, size) {
+  var w = Math.max(1, p.width || 80);
+  var h = Math.max(1, p.height || 120);
+  var tf = Math.max(0.5, p.flange || 8);
+  var tw = Math.max(0.5, p.web || 6);
+  var L = Math.max(1, p.length || 200);
+  if (tf >= h / 2 - 0.1) tf = Math.max(0.5, h / 2 - 0.1);
+  if (tw >= w - 0.1)     tw = Math.max(0.5, w - 0.1);
+
+  // Web (tw) ve flange (tf) feature size'larını çözmek için minimum cell boyutu.
+  var cell = Math.min(size, Math.min(tf, tw));
+  var nW = Math.max(1, Math.round(w / cell));
+  var nH = Math.max(1, Math.round(h / cell));
+  var nZ = Math.max(1, Math.round(L / size));
+  var dx = w / nW, dy = h / nH, dz = L / nZ;
+  var x0 = -w / 2, y0 = -h / 2, z0 = -L / 2;
+
+  var pitchY = nW + 1;
+  var pitchZ = (nW + 1) * (nH + 1);
+  var nodeMap = new Int32Array((nW + 1) * (nH + 1) * (nZ + 1));
+  for (var im = 0; im < nodeMap.length; im++) nodeMap[im] = -1;
+  var nodeList = [];
+  function getNode(i, j, k) {
+    var idx = i + j * pitchY + k * pitchZ;
+    var ex = nodeMap[idx];
+    if (ex >= 0) return ex;
+    var newIdx = nodeList.length / 3;
+    nodeList.push(x0 + i * dx, y0 + j * dy, z0 + k * dz);
+    nodeMap[idx] = newIdx;
+    return newIdx;
+  }
+
+  var webL = (w - tw) / 2, webR = (w + tw) / 2;
+  var elements = [];
+  for (var k = 0; k < nZ; k++) {
+    for (var j = 0; j < nH; j++) {
+      for (var i = 0; i < nW; i++) {
+        var lx = (i + 0.5) * dx;
+        var ly = (j + 0.5) * dy;
+        var inFlangeBot = ly < tf;
+        var inFlangeTop = ly > h - tf;
+        var inWeb       = (lx > webL && lx < webR);
+        if (!(inFlangeBot || inFlangeTop || inWeb)) continue;
+        var n0 = getNode(i,     j,     k);
+        var n1 = getNode(i + 1, j,     k);
+        var n2 = getNode(i + 1, j + 1, k);
+        var n3 = getNode(i,     j + 1, k);
+        var n4 = getNode(i,     j,     k + 1);
+        var n5 = getNode(i + 1, j,     k + 1);
+        var n6 = getNode(i + 1, j + 1, k + 1);
+        var n7 = getNode(i,     j + 1, k + 1);
+        elements.push(n0, n1, n2, n3, n4, n5, n6, n7);
+      }
+    }
+  }
+
+  if (elements.length === 0) return null;
+
+  var nodes = new Float32Array(nodeList);
+  var elementsTA = new Uint32Array(elements);
+
+  return {
+    type: 'hex8',
+    geometryType: 'ibeam',
+    nodes: nodes,
+    elements: elementsTA,
+    nodesPerElement: 8,
+    grid: { nW: nW, nH: nH, nZ: nZ, voxelCount: elementsTA.length / 8 },
     sweepAxis: 'Z',
     namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
       minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L

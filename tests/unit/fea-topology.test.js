@@ -215,6 +215,43 @@ describe('veFEAComputeGeometryTopology — Koni / Frustum', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — L-Profil (lbracket)', () => {
+  test('8 face (2 kesit + 6 yan yüzey)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } });
+    expect(topo.faces.length).toBe(8);
+  });
+
+  test('Tüm yüzeyler planar', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } });
+    topo.faces.forEach(function(f) { expect(f.type).toBe('planar'); });
+  });
+
+  test('Hacim = t·(w+h-t)·L', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } });
+    expect(topo.volume).toBeCloseTo(5 * (60 + 40 - 5) * 100, 0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — I-Profil (ibeam)', () => {
+  test('10 face (2 kesit + 8 yan yüzey)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } });
+    expect(topo.faces.length).toBe(10);
+  });
+
+  test('Tüm yüzeyler planar', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } });
+    topo.faces.forEach(function(f) { expect(f.type).toBe('planar'); });
+  });
+
+  test('Hacim = (2·w·tf + tw·(h-2·tf))·L', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } });
+    var expected = (2 * 80 * 8 + 6 * (120 - 16)) * 200;
+    expect(topo.volume).toBeCloseTo(expected, 0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeGeometryTopology — Dikdörtgen profil (rectTube)', () => {
   test('10 yüzey (2 kesit + 4 dış + 4 iç)', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 200 } });

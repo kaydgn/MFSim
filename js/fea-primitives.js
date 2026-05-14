@@ -72,6 +72,25 @@ var VE_FEA_PRIMITIVES = {
       { key: 'segments',     label: 'Çevresel Segment', unit: '−',  default: 48, min: 8,   max: 256, integer: true }
     ]
   },
+  'lbracket': {
+    label: 'L-Profil (köşe kirişi)',
+    schema: [
+      { key: 'width',     label: 'Yatay Kol Uzunluğu (W)', unit: 'mm', default: 60, min: 1, max: 5000 },
+      { key: 'height',    label: 'Dikey Kol Uzunluğu (H)', unit: 'mm', default: 40, min: 1, max: 5000 },
+      { key: 'thickness', label: 'Kalınlık (t)',           unit: 'mm', default: 5,  min: 0.5, max: 500 },
+      { key: 'length',    label: 'Uzunluk (Z sweep)',      unit: 'mm', default: 100, min: 1, max: 10000 }
+    ]
+  },
+  'ibeam': {
+    label: 'I-Profil (kiriş)',
+    schema: [
+      { key: 'width',     label: 'Flanş Genişliği (W)',   unit: 'mm', default: 80, min: 1, max: 5000 },
+      { key: 'height',    label: 'Toplam Yükseklik (H)',  unit: 'mm', default: 120, min: 1, max: 5000 },
+      { key: 'flange',    label: 'Flanş Kalınlığı (tf)',  unit: 'mm', default: 8,  min: 0.5, max: 500 },
+      { key: 'web',       label: 'Gövde Kalınlığı (tw)',  unit: 'mm', default: 6,  min: 0.5, max: 500 },
+      { key: 'length',    label: 'Uzunluk (Z sweep)',     unit: 'mm', default: 200, min: 1, max: 10000 }
+    ]
+  },
   'rectTube': {
     label: 'Dikdörtgen Profil (içi boş kutu)',
     schema: [
@@ -128,6 +147,18 @@ function veFEANormalizePrimitiveParams(type, params) {
     var maxT = Math.min(out.width, out.height) / 2 - 0.1;
     if(out.thickness >= maxT) out.thickness = Math.max(0.2, maxT);
   }
+  // L-bracket: thickness < min(w, h)
+  if(type === 'lbracket') {
+    var maxTL = Math.min(out.width, out.height) - 0.1;
+    if(out.thickness >= maxTL) out.thickness = Math.max(0.5, maxTL);
+  }
+  // I-beam: flange < height/2, web < width
+  if(type === 'ibeam') {
+    var maxFlange = out.height / 2 - 0.1;
+    if(out.flange >= maxFlange) out.flange = Math.max(0.5, maxFlange);
+    var maxWeb = out.width - 0.1;
+    if(out.web >= maxWeb) out.web = Math.max(0.5, maxWeb);
+  }
   return out;
 }
 
@@ -174,6 +205,30 @@ function veFEAPrimitiveStats(type, params) {
     // Surface = 4π² R r
     surfaceArea = 4 * Math.PI * Math.PI * Rt * rt;
     bbox = { x: 2 * (Rt + rt), y: 2 * rt, z: 2 * (Rt + rt) };
+  } else if(type === 'lbracket') {
+    var wL = p.width, hL = p.height, tL = p.thickness, LL = p.length;
+    // L kesit alanı = w*t + (h-t)*t = t*(w + h - t)
+    var crossL = tL * (wL + hL - tL);
+    volume = crossL * LL;
+    // Çevre = w + h + (w-t) + (h-t) + 2t = 2w + 2h (dış çevre + iç köşe)
+    // Yan yüzeyler: çevre × L; uç kesitler: 2 × crossL
+    var perimL = 2 * wL + 2 * hL;
+    surfaceArea = perimL * LL + 2 * crossL;
+    bbox = { x: wL, y: hL, z: LL };
+  } else if(type === 'ibeam') {
+    var wI = p.width, hI = p.height, tfI = p.flange, twI = p.web, LI = p.length;
+    // I kesit = 2 × flanş + gövde
+    // Flanş alanı = w * tf
+    // Gövde alanı = tw * (h - 2*tf)
+    var crossI = 2 * (wI * tfI) + twI * (hI - 2 * tfI);
+    volume = crossI * LI;
+    // Perimetre (I kesit): outer 2*(w+h) − 2*(w-tw)*2 ... karmaşık
+    // Yaklaşık: outer çevre = 2*(w+h) için bir kabul + iç girinti
+    var innerW = (wI - twI) / 2;     // her bir flanşın gövdeden taşan kısmı
+    var innerH = hI - 2 * tfI;        // gövde yüksekliği
+    var perimI = 2 * wI + 2 * hI + 4 * innerW;  // dış + iç girinti çevresi
+    surfaceArea = perimI * LI + 2 * crossI;
+    bbox = { x: wI, y: hI, z: LI };
   } else if(type === 'cone') {
     var rB = p.bottomRadius, rT = p.topRadius, hC = p.height;
     // Frustum hacim: V = (1/3) π h (rB² + rB·rT + rT²)
@@ -222,6 +277,8 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'hemisphere') return _veFEABuildHemisphereMesh(p);
   if(type === 'torus')      return _veFEABuildTorusMesh(p);
   if(type === 'cone')       return _veFEABuildConeMesh(p);
+  if(type === 'lbracket')   return _veFEABuildLBracketMesh(p);
+  if(type === 'ibeam')      return _veFEABuildIBeamMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
   return null;
 }
@@ -400,6 +457,62 @@ function _veFEABuildShaftGroup(p) {
   });
 
   return group;
+}
+
+// ─── L-Profil — ExtrudeGeometry (L cross-section × Z extrude) ──────────────
+function _veFEABuildLBracketMesh(p) {
+  // L kesit (XY plane), köşe origin'de, sonra bbox-merkez orijin'e translate
+  var w = p.width, h = p.height, t = p.thickness;
+  var shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(w, 0);
+  shape.lineTo(w, t);
+  shape.lineTo(t, t);
+  shape.lineTo(t, h);
+  shape.lineTo(0, h);
+  shape.lineTo(0, 0);
+  var geometry = new THREE.ExtrudeGeometry(shape, { depth: p.length, bevelEnabled: false, steps: 1 });
+  geometry.translate(-w / 2, -h / 2, -p.length / 2);
+  var mat = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, mat);
+  mesh.userData.feaPrimitive = { type: 'lbracket', params: p };
+  mesh.userData.feaEdgesAttached = true;
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
+}
+
+// ─── I-Profil (kiriş) — ExtrudeGeometry (I cross-section × Z extrude) ──────
+function _veFEABuildIBeamMesh(p) {
+  var w = p.width, h = p.height, tf = p.flange, tw = p.web;
+  var halfW = w / 2, halfH = h / 2, halfTw = tw / 2;
+  // I kesit: dış silüet (T üst + T alt karışımı yerine direct vertices)
+  // CCW dış çevre — flanş alt → gövde sol → flanş üst → karşı tarafa simetrik
+  var shape = new THREE.Shape();
+  shape.moveTo(-halfW, -halfH);                 // alt sol köşe
+  shape.lineTo( halfW, -halfH);                 // alt sağ
+  shape.lineTo( halfW, -halfH + tf);            // alt flanş üst sağ
+  shape.lineTo( halfTw, -halfH + tf);           // gövde sağ alt iç girinti
+  shape.lineTo( halfTw,  halfH - tf);           // gövde sağ üst
+  shape.lineTo( halfW,  halfH - tf);            // üst flanş alt sağ
+  shape.lineTo( halfW,  halfH);                 // üst sağ
+  shape.lineTo(-halfW,  halfH);                 // üst sol
+  shape.lineTo(-halfW,  halfH - tf);            // üst flanş alt sol
+  shape.lineTo(-halfTw, halfH - tf);            // gövde sol üst iç girinti
+  shape.lineTo(-halfTw,-halfH + tf);            // gövde sol alt
+  shape.lineTo(-halfW, -halfH + tf);            // alt flanş üst sol
+  shape.lineTo(-halfW, -halfH);                 // kapa
+  var geometry = new THREE.ExtrudeGeometry(shape, { depth: p.length, bevelEnabled: false, steps: 1 });
+  geometry.translate(0, 0, -p.length / 2);
+  var mat = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, mat);
+  mesh.userData.feaPrimitive = { type: 'ibeam', params: p };
+  mesh.userData.feaEdgesAttached = true;
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
 }
 
 // ─── RectTube — ExtrudeGeometry (eski yapı, face decomposition ileride) ────

@@ -19944,6 +19944,25 @@ var VE_FEA_PRIMITIVES = {
       { key: 'segments',     label: 'Çevresel Segment', unit: '−',  default: 48, min: 8,   max: 256, integer: true }
     ]
   },
+  'lbracket': {
+    label: 'L-Profil (köşe kirişi)',
+    schema: [
+      { key: 'width',     label: 'Yatay Kol Uzunluğu (W)', unit: 'mm', default: 60, min: 1, max: 5000 },
+      { key: 'height',    label: 'Dikey Kol Uzunluğu (H)', unit: 'mm', default: 40, min: 1, max: 5000 },
+      { key: 'thickness', label: 'Kalınlık (t)',           unit: 'mm', default: 5,  min: 0.5, max: 500 },
+      { key: 'length',    label: 'Uzunluk (Z sweep)',      unit: 'mm', default: 100, min: 1, max: 10000 }
+    ]
+  },
+  'ibeam': {
+    label: 'I-Profil (kiriş)',
+    schema: [
+      { key: 'width',     label: 'Flanş Genişliği (W)',   unit: 'mm', default: 80, min: 1, max: 5000 },
+      { key: 'height',    label: 'Toplam Yükseklik (H)',  unit: 'mm', default: 120, min: 1, max: 5000 },
+      { key: 'flange',    label: 'Flanş Kalınlığı (tf)',  unit: 'mm', default: 8,  min: 0.5, max: 500 },
+      { key: 'web',       label: 'Gövde Kalınlığı (tw)',  unit: 'mm', default: 6,  min: 0.5, max: 500 },
+      { key: 'length',    label: 'Uzunluk (Z sweep)',     unit: 'mm', default: 200, min: 1, max: 10000 }
+    ]
+  },
   'rectTube': {
     label: 'Dikdörtgen Profil (içi boş kutu)',
     schema: [
@@ -20000,6 +20019,18 @@ function veFEANormalizePrimitiveParams(type, params) {
     var maxT = Math.min(out.width, out.height) / 2 - 0.1;
     if(out.thickness >= maxT) out.thickness = Math.max(0.2, maxT);
   }
+  // L-bracket: thickness < min(w, h)
+  if(type === 'lbracket') {
+    var maxTL = Math.min(out.width, out.height) - 0.1;
+    if(out.thickness >= maxTL) out.thickness = Math.max(0.5, maxTL);
+  }
+  // I-beam: flange < height/2, web < width
+  if(type === 'ibeam') {
+    var maxFlange = out.height / 2 - 0.1;
+    if(out.flange >= maxFlange) out.flange = Math.max(0.5, maxFlange);
+    var maxWeb = out.width - 0.1;
+    if(out.web >= maxWeb) out.web = Math.max(0.5, maxWeb);
+  }
   return out;
 }
 
@@ -20046,6 +20077,30 @@ function veFEAPrimitiveStats(type, params) {
     // Surface = 4π² R r
     surfaceArea = 4 * Math.PI * Math.PI * Rt * rt;
     bbox = { x: 2 * (Rt + rt), y: 2 * rt, z: 2 * (Rt + rt) };
+  } else if(type === 'lbracket') {
+    var wL = p.width, hL = p.height, tL = p.thickness, LL = p.length;
+    // L kesit alanı = w*t + (h-t)*t = t*(w + h - t)
+    var crossL = tL * (wL + hL - tL);
+    volume = crossL * LL;
+    // Çevre = w + h + (w-t) + (h-t) + 2t = 2w + 2h (dış çevre + iç köşe)
+    // Yan yüzeyler: çevre × L; uç kesitler: 2 × crossL
+    var perimL = 2 * wL + 2 * hL;
+    surfaceArea = perimL * LL + 2 * crossL;
+    bbox = { x: wL, y: hL, z: LL };
+  } else if(type === 'ibeam') {
+    var wI = p.width, hI = p.height, tfI = p.flange, twI = p.web, LI = p.length;
+    // I kesit = 2 × flanş + gövde
+    // Flanş alanı = w * tf
+    // Gövde alanı = tw * (h - 2*tf)
+    var crossI = 2 * (wI * tfI) + twI * (hI - 2 * tfI);
+    volume = crossI * LI;
+    // Perimetre (I kesit): outer 2*(w+h) − 2*(w-tw)*2 ... karmaşık
+    // Yaklaşık: outer çevre = 2*(w+h) için bir kabul + iç girinti
+    var innerW = (wI - twI) / 2;     // her bir flanşın gövdeden taşan kısmı
+    var innerH = hI - 2 * tfI;        // gövde yüksekliği
+    var perimI = 2 * wI + 2 * hI + 4 * innerW;  // dış + iç girinti çevresi
+    surfaceArea = perimI * LI + 2 * crossI;
+    bbox = { x: wI, y: hI, z: LI };
   } else if(type === 'cone') {
     var rB = p.bottomRadius, rT = p.topRadius, hC = p.height;
     // Frustum hacim: V = (1/3) π h (rB² + rB·rT + rT²)
@@ -20094,6 +20149,8 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'hemisphere') return _veFEABuildHemisphereMesh(p);
   if(type === 'torus')      return _veFEABuildTorusMesh(p);
   if(type === 'cone')       return _veFEABuildConeMesh(p);
+  if(type === 'lbracket')   return _veFEABuildLBracketMesh(p);
+  if(type === 'ibeam')      return _veFEABuildIBeamMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
   return null;
 }
@@ -20272,6 +20329,62 @@ function _veFEABuildShaftGroup(p) {
   });
 
   return group;
+}
+
+// ─── L-Profil — ExtrudeGeometry (L cross-section × Z extrude) ──────────────
+function _veFEABuildLBracketMesh(p) {
+  // L kesit (XY plane), köşe origin'de, sonra bbox-merkez orijin'e translate
+  var w = p.width, h = p.height, t = p.thickness;
+  var shape = new THREE.Shape();
+  shape.moveTo(0, 0);
+  shape.lineTo(w, 0);
+  shape.lineTo(w, t);
+  shape.lineTo(t, t);
+  shape.lineTo(t, h);
+  shape.lineTo(0, h);
+  shape.lineTo(0, 0);
+  var geometry = new THREE.ExtrudeGeometry(shape, { depth: p.length, bevelEnabled: false, steps: 1 });
+  geometry.translate(-w / 2, -h / 2, -p.length / 2);
+  var mat = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, mat);
+  mesh.userData.feaPrimitive = { type: 'lbracket', params: p };
+  mesh.userData.feaEdgesAttached = true;
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
+}
+
+// ─── I-Profil (kiriş) — ExtrudeGeometry (I cross-section × Z extrude) ──────
+function _veFEABuildIBeamMesh(p) {
+  var w = p.width, h = p.height, tf = p.flange, tw = p.web;
+  var halfW = w / 2, halfH = h / 2, halfTw = tw / 2;
+  // I kesit: dış silüet (T üst + T alt karışımı yerine direct vertices)
+  // CCW dış çevre — flanş alt → gövde sol → flanş üst → karşı tarafa simetrik
+  var shape = new THREE.Shape();
+  shape.moveTo(-halfW, -halfH);                 // alt sol köşe
+  shape.lineTo( halfW, -halfH);                 // alt sağ
+  shape.lineTo( halfW, -halfH + tf);            // alt flanş üst sağ
+  shape.lineTo( halfTw, -halfH + tf);           // gövde sağ alt iç girinti
+  shape.lineTo( halfTw,  halfH - tf);           // gövde sağ üst
+  shape.lineTo( halfW,  halfH - tf);            // üst flanş alt sağ
+  shape.lineTo( halfW,  halfH);                 // üst sağ
+  shape.lineTo(-halfW,  halfH);                 // üst sol
+  shape.lineTo(-halfW,  halfH - tf);            // üst flanş alt sol
+  shape.lineTo(-halfTw, halfH - tf);            // gövde sol üst iç girinti
+  shape.lineTo(-halfTw,-halfH + tf);            // gövde sol alt
+  shape.lineTo(-halfW, -halfH + tf);            // alt flanş üst sol
+  shape.lineTo(-halfW, -halfH);                 // kapa
+  var geometry = new THREE.ExtrudeGeometry(shape, { depth: p.length, bevelEnabled: false, steps: 1 });
+  geometry.translate(0, 0, -p.length / 2);
+  var mat = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, mat);
+  mesh.userData.feaPrimitive = { type: 'ibeam', params: p };
+  mesh.userData.feaEdgesAttached = true;
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
 }
 
 // ─── RectTube — ExtrudeGeometry (eski yapı, face decomposition ileride) ────
@@ -20846,6 +20959,8 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'hemisphere') return _veFEAToplHemisphere(p);
   if (geometry.type === 'torus')      return _veFEAToplTorus(p);
   if (geometry.type === 'cone')       return _veFEAToplCone(p);
+  if (geometry.type === 'lbracket')   return _veFEAToplLBracket(p);
+  if (geometry.type === 'ibeam')      return _veFEAToplIBeam(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
   if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
   return null;
@@ -21017,6 +21132,66 @@ function _veFEAToplCone(p) {
     totalSurfaceArea: bottomArea + topArea + sideArea,
     volume: volume,
     bbox: { x: 2 * rMaxC, y: h, z: 2 * rMaxC }
+  };
+}
+
+// ─── L-Profil (köşe kirişi) — 8 face ───────────────────────────────────────
+function _veFEAToplLBracket(p) {
+  var w = Math.max(1, p.width || 60);
+  var h = Math.max(1, p.height || 40);
+  var t = Math.max(0.5, p.thickness || 5);
+  var L = Math.max(1, p.length || 100);
+  var crossArea = t * (w + h - t);
+  return {
+    type: 'lbracket',
+    faces: [
+      { id: 'faceZMin',     label: 'Ön Kesit (Z−)',              type: 'planar', normal: [0,0,-1], area: crossArea },
+      { id: 'faceZMax',     label: 'Arka Kesit (Z+)',            type: 'planar', normal: [0,0,1],  area: crossArea },
+      { id: 'faceXMin',     label: 'Sol Yan (X−)',               type: 'planar', normal: [-1,0,0], area: h * L },
+      { id: 'faceYMin',     label: 'Alt Yan (Y−)',               type: 'planar', normal: [0,-1,0], area: w * L },
+      { id: 'faceXMax',     label: 'Yatay Kol Sağ Yüzü (X+)',    type: 'planar', normal: [1,0,0],  area: t * L },
+      { id: 'faceYMax',     label: 'Dikey Kol Üst Yüzü (Y+)',    type: 'planar', normal: [0,1,0],  area: t * L },
+      { id: 'faceInnerY',   label: 'İç Köşe Üst Yüzü',           type: 'planar', normal: [0,1,0],  area: (w - t) * L },
+      { id: 'faceInnerX',   label: 'İç Köşe Yan Yüzü',           type: 'planar', normal: [1,0,0],  area: (h - t) * L }
+    ],
+    edges:    { count: 18 },
+    vertices: { count: 12 },     // 6 cross-section köşe × 2 z-uç
+    totalSurfaceArea: 2 * crossArea + 2 * (w + h) * L,
+    volume: crossArea * L,
+    bbox: { x: w, y: h, z: L }
+  };
+}
+
+// ─── I-Profil (kiriş) — 12 face (dış silüet) ──────────────────────────────
+function _veFEAToplIBeam(p) {
+  var w = Math.max(1, p.width || 80);
+  var h = Math.max(1, p.height || 120);
+  var tf = Math.max(0.5, p.flange || 8);
+  var tw = Math.max(0.5, p.web || 6);
+  var L = Math.max(1, p.length || 200);
+  var innerW = (w - tw) / 2;
+  var innerH = h - 2 * tf;
+  var crossArea = 2 * (w * tf) + tw * innerH;
+  // I-profil dış silüet 12 köşeli polygon → 12 yan yüz (yan yüzeyler kenar başına)
+  return {
+    type: 'ibeam',
+    faces: [
+      { id: 'faceZMin',  label: 'Ön Kesit (Z−)',        type: 'planar', normal: [0,0,-1], area: crossArea },
+      { id: 'faceZMax',  label: 'Arka Kesit (Z+)',      type: 'planar', normal: [0,0,1],  area: crossArea },
+      { id: 'faceYMin',  label: 'Alt Flanş Tabanı (Y−)', type: 'planar', normal: [0,-1,0], area: w * L },
+      { id: 'faceYMax',  label: 'Üst Flanş Tepesi (Y+)', type: 'planar', normal: [0,1,0],  area: w * L },
+      { id: 'faceXMin',  label: 'Sol Yan (X−)',         type: 'planar', normal: [-1,0,0], area: tf * L + tf * L },  // alt + üst flanşın sol kenarı
+      { id: 'faceXMax',  label: 'Sağ Yan (X+)',         type: 'planar', normal: [1,0,0],  area: tf * L + tf * L },
+      { id: 'faceWebL',  label: 'Gövde Sol Yüzü',       type: 'planar', normal: [-1,0,0], area: innerH * L },
+      { id: 'faceWebR',  label: 'Gövde Sağ Yüzü',       type: 'planar', normal: [1,0,0],  area: innerH * L },
+      { id: 'faceInnerYU',label: 'Üst Flanş İç Yüzü (Y−)',type: 'planar', normal: [0,-1,0], area: 2 * innerW * L },
+      { id: 'faceInnerYL',label: 'Alt Flanş İç Yüzü (Y+)',type: 'planar', normal: [0,1,0],  area: 2 * innerW * L }
+    ],
+    edges:    { count: 24 },
+    vertices: { count: 24 },     // 12 cross-section × 2 z-uç
+    totalSurfaceArea: 2 * crossArea + (2 * w + 2 * h + 4 * innerW) * L,
+    volume: crossArea * L,
+    bbox: { x: w, y: h, z: L }
   };
 }
 
@@ -21334,6 +21509,8 @@ function veFEAMeshFromGeometry(geometry, opts) {
   else if (geometry.type === 'torus')      mesh = _veFEAMeshTorus(geometry.params || {}, size);
   else if (geometry.type === 'cone')       mesh = _veFEAMeshCone(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
+  else if (geometry.type === 'lbracket') mesh = _veFEAMeshLBracket(geometry.params || {}, size);
+  else if (geometry.type === 'ibeam')    mesh = _veFEAMeshIBeam(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
     var parsed = _veFEAParseSurfaceTriangles(geometry);
@@ -22129,6 +22306,166 @@ function _veFEAMeshRectTube(p, size) {
     elements: elementsTA,
     nodesPerElement: 8,
     grid: { nW: nW, nH: nH, nZ: nZ, nT: nT, voxelCount: elementsTA.length / 8 },
+    sweepAxis: 'Z',
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
+      minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
+    })
+  };
+}
+
+// ─── L-Profil (köşe kirişi) → Hex8 cell-exclusion ─────────────────────────
+// W x H bbox alındı, t kalınlığı kadar yatay (Y<t) ve dikey (X<t) iki kol.
+// Yerel koordinat: köşe (0,0,0), pozitif X yatay kol boyunca, pozitif Y dikey
+// kol boyunca, Z sweep ekseni. Merkezleme bbox ortasına yapılır.
+// "İç boşluk" predikatı: cx > t AND cy > t (her iki koldan da uzak)
+function _veFEAMeshLBracket(p, size) {
+  var w = Math.max(1, p.width || 60);
+  var h = Math.max(1, p.height || 40);
+  var t = Math.max(0.5, p.thickness || 5);
+  var L = Math.max(1, p.length || 100);
+  var maxT = Math.min(w, h) - 0.1;
+  if (t >= maxT) t = Math.max(0.5, maxT);
+
+  // Mesh size feature size'dan büyükse (t < size) thickness yönünde en az 1 hücre garantile.
+  // En geniş ortak hücre kenarı: min(size, t).
+  var cell = Math.min(size, t);
+  var nW = Math.max(1, Math.round(w / cell));
+  var nH = Math.max(1, Math.round(h / cell));
+  var nZ = Math.max(1, Math.round(L / size));
+  var dx = w / nW, dy = h / nH, dz = L / nZ;
+  var x0 = -w / 2, y0 = -h / 2, z0 = -L / 2;
+
+  var pitchY = nW + 1;
+  var pitchZ = (nW + 1) * (nH + 1);
+  var nodeMap = new Int32Array((nW + 1) * (nH + 1) * (nZ + 1));
+  for (var im = 0; im < nodeMap.length; im++) nodeMap[im] = -1;
+  var nodeList = [];
+  function getNode(i, j, k) {
+    var idx = i + j * pitchY + k * pitchZ;
+    var ex = nodeMap[idx];
+    if (ex >= 0) return ex;
+    var newIdx = nodeList.length / 3;
+    nodeList.push(x0 + i * dx, y0 + j * dy, z0 + k * dz);
+    nodeMap[idx] = newIdx;
+    return newIdx;
+  }
+
+  // L şekli: yatay kol (alt kısım, y ∈ [0, t]) + dikey kol (sol kısım, x ∈ [0, t])
+  // Köşe (0,0,0)'da bbox'ın sol-alt köşesi olacak şekilde local frame:
+  //   lx = cx - x0  (∈ [0, w])
+  //   ly = cy - y0  (∈ [0, h])
+  // Hücre içeride ise: lx < t  OR  ly < t  (dikey kol veya yatay kol)
+  var elements = [];
+  for (var k = 0; k < nZ; k++) {
+    for (var j = 0; j < nH; j++) {
+      for (var i = 0; i < nW; i++) {
+        var lx = (i + 0.5) * dx;
+        var ly = (j + 0.5) * dy;
+        if (!(lx < t || ly < t)) continue;
+        var n0 = getNode(i,     j,     k);
+        var n1 = getNode(i + 1, j,     k);
+        var n2 = getNode(i + 1, j + 1, k);
+        var n3 = getNode(i,     j + 1, k);
+        var n4 = getNode(i,     j,     k + 1);
+        var n5 = getNode(i + 1, j,     k + 1);
+        var n6 = getNode(i + 1, j + 1, k + 1);
+        var n7 = getNode(i,     j + 1, k + 1);
+        elements.push(n0, n1, n2, n3, n4, n5, n6, n7);
+      }
+    }
+  }
+
+  if (elements.length === 0) return null;
+
+  var nodes = new Float32Array(nodeList);
+  var elementsTA = new Uint32Array(elements);
+
+  return {
+    type: 'hex8',
+    geometryType: 'lbracket',
+    nodes: nodes,
+    elements: elementsTA,
+    nodesPerElement: 8,
+    grid: { nW: nW, nH: nH, nZ: nZ, voxelCount: elementsTA.length / 8 },
+    sweepAxis: 'Z',
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
+      minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
+    })
+  };
+}
+
+// ─── I-Profil (kiriş) → Hex8 cell-exclusion ───────────────────────────────
+// W x H bbox; alt flanş (y ∈ [0, tf]), üst flanş (y ∈ [h-tf, h]), gövde
+// (x ∈ [(w-tw)/2, (w+tw)/2]). "İçeride" predikatı:
+//   ly < tf  OR  ly > h-tf  OR  (innerWL < lx < innerWR)
+function _veFEAMeshIBeam(p, size) {
+  var w = Math.max(1, p.width || 80);
+  var h = Math.max(1, p.height || 120);
+  var tf = Math.max(0.5, p.flange || 8);
+  var tw = Math.max(0.5, p.web || 6);
+  var L = Math.max(1, p.length || 200);
+  if (tf >= h / 2 - 0.1) tf = Math.max(0.5, h / 2 - 0.1);
+  if (tw >= w - 0.1)     tw = Math.max(0.5, w - 0.1);
+
+  // Web (tw) ve flange (tf) feature size'larını çözmek için minimum cell boyutu.
+  var cell = Math.min(size, Math.min(tf, tw));
+  var nW = Math.max(1, Math.round(w / cell));
+  var nH = Math.max(1, Math.round(h / cell));
+  var nZ = Math.max(1, Math.round(L / size));
+  var dx = w / nW, dy = h / nH, dz = L / nZ;
+  var x0 = -w / 2, y0 = -h / 2, z0 = -L / 2;
+
+  var pitchY = nW + 1;
+  var pitchZ = (nW + 1) * (nH + 1);
+  var nodeMap = new Int32Array((nW + 1) * (nH + 1) * (nZ + 1));
+  for (var im = 0; im < nodeMap.length; im++) nodeMap[im] = -1;
+  var nodeList = [];
+  function getNode(i, j, k) {
+    var idx = i + j * pitchY + k * pitchZ;
+    var ex = nodeMap[idx];
+    if (ex >= 0) return ex;
+    var newIdx = nodeList.length / 3;
+    nodeList.push(x0 + i * dx, y0 + j * dy, z0 + k * dz);
+    nodeMap[idx] = newIdx;
+    return newIdx;
+  }
+
+  var webL = (w - tw) / 2, webR = (w + tw) / 2;
+  var elements = [];
+  for (var k = 0; k < nZ; k++) {
+    for (var j = 0; j < nH; j++) {
+      for (var i = 0; i < nW; i++) {
+        var lx = (i + 0.5) * dx;
+        var ly = (j + 0.5) * dy;
+        var inFlangeBot = ly < tf;
+        var inFlangeTop = ly > h - tf;
+        var inWeb       = (lx > webL && lx < webR);
+        if (!(inFlangeBot || inFlangeTop || inWeb)) continue;
+        var n0 = getNode(i,     j,     k);
+        var n1 = getNode(i + 1, j,     k);
+        var n2 = getNode(i + 1, j + 1, k);
+        var n3 = getNode(i,     j + 1, k);
+        var n4 = getNode(i,     j,     k + 1);
+        var n5 = getNode(i + 1, j,     k + 1);
+        var n6 = getNode(i + 1, j + 1, k + 1);
+        var n7 = getNode(i,     j + 1, k + 1);
+        elements.push(n0, n1, n2, n3, n4, n5, n6, n7);
+      }
+    }
+  }
+
+  if (elements.length === 0) return null;
+
+  var nodes = new Float32Array(nodeList);
+  var elementsTA = new Uint32Array(elements);
+
+  return {
+    type: 'hex8',
+    geometryType: 'ibeam',
+    nodes: nodes,
+    elements: elementsTA,
+    nodesPerElement: 8,
+    grid: { nW: nW, nH: nH, nZ: nZ, voxelCount: elementsTA.length / 8 },
     sweepAxis: 'Z',
     namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
       minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
