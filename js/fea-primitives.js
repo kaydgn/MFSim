@@ -40,6 +40,13 @@ var VE_FEA_PRIMITIVES = {
       { key: 'segments',    label: 'Çevresel Segment', unit: '−', default: 48, min: 8, max: 256, integer: true }
     ]
   },
+  'sphere': {
+    label: 'Küre',
+    schema: [
+      { key: 'radius',   label: 'Yarıçap',                unit: 'mm', default: 25, min: 0.5, max: 2500 },
+      { key: 'segments', label: 'Çevresel Segment (görsel)', unit: '−', default: 32, min: 8, max: 128, integer: true }
+    ]
+  },
   'rectTube': {
     label: 'Dikdörtgen Profil (içi boş kutu)',
     schema: [
@@ -123,6 +130,11 @@ function veFEAPrimitiveStats(type, params) {
     var endRing   = 2 * Math.PI * (R * R - r * r); // iki uç
     surfaceArea = sideOuter + sideInner + endRing;
     bbox = { x: 2 * R, y: L, z: 2 * R };
+  } else if(type === 'sphere') {
+    var rs = p.radius;
+    volume = (4 / 3) * Math.PI * rs * rs * rs;
+    surfaceArea = 4 * Math.PI * rs * rs;
+    bbox = { x: 2 * rs, y: 2 * rs, z: 2 * rs };
   } else if(type === 'rectTube') {
     var w = p.width, h = p.height, t = p.thickness, L2 = p.length;
     var outerArea = w * h;
@@ -155,8 +167,26 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'box')      return _veFEABuildBoxMesh(p);
   if(type === 'cylinder') return _veFEABuildCylinderMesh(p);
   if(type === 'shaft')    return _veFEABuildShaftGroup(p);
+  if(type === 'sphere')   return _veFEABuildSphereMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
   return null;
+}
+
+// ─── Küre — SphereGeometry tek face ────────────────────────────────────────
+function _veFEABuildSphereMesh(p) {
+  var geometry = new THREE.SphereGeometry(p.radius, p.segments, Math.max(8, Math.round(p.segments / 2)));
+  var mat = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, mat);
+  mesh.userData.feaPrimitive = { type: 'sphere', params: p };
+  // Tek yüz — face selection için
+  mesh.userData.feaFaceId = 'faceSurface';
+  mesh.userData.feaEdgesAttached = true;
+
+  // Edges overlay zorlu (çok segment), düşük açı eşiği
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b, transparent: true, opacity: 0.5 }));
+  mesh.add(line);
+  return mesh;
 }
 
 // Standart body color materyali — her yüz aynı renkten başlar, hover/select

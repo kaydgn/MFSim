@@ -31,6 +31,7 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'box')      return _veFEAToplBox(p);
   if (geometry.type === 'cylinder') return _veFEAToplCylinder(p);
   if (geometry.type === 'shaft')    return _veFEAToplShaft(p);
+  if (geometry.type === 'sphere')   return _veFEAToplSphere(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
   if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
   return null;
@@ -41,6 +42,7 @@ function veFEATopologyFaceTypeLabel(type) {
     'planar':         'Düzlemsel',
     'planar-annular': 'Halka (Düzlem)',
     'cylindrical':    'Silindirik',
+    'spherical':      'Küresel',
     'triangulated':   'Üçgenlenmiş'
   })[type] || type;
 }
@@ -114,6 +116,27 @@ function _veFEAToplShaft(p) {
     bbox: { x: 2 * rOut, y: L, z: 2 * rOut }
   };
 }
+
+// ─── Küre — 1 yüzey (spherical), 0 kenar, 0 köşe ──────────────────────────
+function _veFEAToplSphere(p) {
+  var r = Math.max(0.5, p.radius || 25);
+  var area = 4 * Math.PI * r * r;
+  var vol  = (4 / 3) * Math.PI * r * r * r;
+  return {
+    type: 'sphere',
+    faces: [
+      { id: 'faceSurface', label: 'Küresel Yüzey', type: 'spherical', area: area, radius: r }
+    ],
+    edges:    { count: 0 },
+    vertices: { count: 0 },
+    totalSurfaceArea: area,
+    volume: vol,
+    bbox: { x: 2 * r, y: 2 * r, z: 2 * r }
+  };
+}
+
+// `spherical` face tipi için Türkçe etiket
+// (Bu fonksiyon zaten yukarıda tanımlı — burada güncelleme yok, sadece referans)
 
 // ─── Dikdörtgen profil (rectTube) — 8 yüzey (4 dış + 4 iç) ─────────────────
 function _veFEAToplRectTube(p) {
