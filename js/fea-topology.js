@@ -31,8 +31,12 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'box')      return _veFEAToplBox(p);
   if (geometry.type === 'cylinder') return _veFEAToplCylinder(p);
   if (geometry.type === 'shaft')    return _veFEAToplShaft(p);
-  if (geometry.type === 'sphere')   return _veFEAToplSphere(p);
-  if (geometry.type === 'cone')     return _veFEAToplCone(p);
+  if (geometry.type === 'sphere')     return _veFEAToplSphere(p);
+  if (geometry.type === 'hemisphere') return _veFEAToplHemisphere(p);
+  if (geometry.type === 'torus')      return _veFEAToplTorus(p);
+  if (geometry.type === 'cone')       return _veFEAToplCone(p);
+  if (geometry.type === 'lbracket')   return _veFEAToplLBracket(p);
+  if (geometry.type === 'ibeam')      return _veFEAToplIBeam(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
   if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
   return null;
@@ -45,6 +49,7 @@ function veFEATopologyFaceTypeLabel(type) {
     'cylindrical':    'Silindirik',
     'spherical':      'Küresel',
     'conical':        'Konik (Eğri)',
+    'toroidal':       'Toroidal (Halka)',
     'triangulated':   'Üçgenlenmiş'
   })[type] || type;
 }
@@ -137,6 +142,44 @@ function _veFEAToplSphere(p) {
   };
 }
 
+// ─── Yarım Küre — 2 face (alt düz disk + üst dome) + 1 daire (equator) ────
+function _veFEAToplHemisphere(p) {
+  var r = Math.max(0.5, p.radius || 25);
+  var domeArea = 2 * Math.PI * r * r;
+  var flatArea = Math.PI * r * r;
+  return {
+    type: 'hemisphere',
+    faces: [
+      { id: 'faceFlat', label: 'Alt Düz Disk (Y−)', type: 'planar', normal: [0,-1,0], area: flatArea, radius: r },
+      { id: 'faceDome', label: 'Yarı Küresel Yüzey (Dome)', type: 'spherical', area: domeArea, radius: r }
+    ],
+    edges:    { count: 1 },    // equator (alt disk ile dome'un birleşim dairesi)
+    vertices: { count: 0 },
+    totalSurfaceArea: domeArea + flatArea,
+    volume: (2 / 3) * Math.PI * r * r * r,
+    bbox: { x: 2 * r, y: r, z: 2 * r }
+  };
+}
+
+// ─── Torus — 1 face (toroidal surface), 0 edge, 0 vertex (closed manifold) ─
+function _veFEAToplTorus(p) {
+  var R = Math.max(1, p.majorRadius || 30);
+  var r = Math.max(0.1, p.minorRadius || 10);
+  var area = 4 * Math.PI * Math.PI * R * r;
+  var vol  = 2 * Math.PI * Math.PI * R * r * r;
+  return {
+    type: 'torus',
+    faces: [
+      { id: 'faceSurface', label: 'Toroidal Yüzey', type: 'toroidal', area: area, majorRadius: R, minorRadius: r }
+    ],
+    edges:    { count: 0 },
+    vertices: { count: 0 },
+    totalSurfaceArea: area,
+    volume: vol,
+    bbox: { x: 2 * (R + r), y: 2 * r, z: 2 * (R + r) }
+  };
+}
+
 // ─── Koni / Frustum — 3 face (alt disk, üst disk, conical yan) ─────────────
 function _veFEAToplCone(p) {
   var rB = Math.max(0.1, p.bottomRadius || 20);
@@ -165,6 +208,66 @@ function _veFEAToplCone(p) {
     totalSurfaceArea: bottomArea + topArea + sideArea,
     volume: volume,
     bbox: { x: 2 * rMaxC, y: h, z: 2 * rMaxC }
+  };
+}
+
+// ─── L-Profil (köşe kirişi) — 8 face ───────────────────────────────────────
+function _veFEAToplLBracket(p) {
+  var w = Math.max(1, p.width || 60);
+  var h = Math.max(1, p.height || 40);
+  var t = Math.max(0.5, p.thickness || 5);
+  var L = Math.max(1, p.length || 100);
+  var crossArea = t * (w + h - t);
+  return {
+    type: 'lbracket',
+    faces: [
+      { id: 'faceZMin',     label: 'Ön Kesit (Z−)',              type: 'planar', normal: [0,0,-1], area: crossArea },
+      { id: 'faceZMax',     label: 'Arka Kesit (Z+)',            type: 'planar', normal: [0,0,1],  area: crossArea },
+      { id: 'faceXMin',     label: 'Sol Yan (X−)',               type: 'planar', normal: [-1,0,0], area: h * L },
+      { id: 'faceYMin',     label: 'Alt Yan (Y−)',               type: 'planar', normal: [0,-1,0], area: w * L },
+      { id: 'faceXMax',     label: 'Yatay Kol Sağ Yüzü (X+)',    type: 'planar', normal: [1,0,0],  area: t * L },
+      { id: 'faceYMax',     label: 'Dikey Kol Üst Yüzü (Y+)',    type: 'planar', normal: [0,1,0],  area: t * L },
+      { id: 'faceInnerY',   label: 'İç Köşe Üst Yüzü',           type: 'planar', normal: [0,1,0],  area: (w - t) * L },
+      { id: 'faceInnerX',   label: 'İç Köşe Yan Yüzü',           type: 'planar', normal: [1,0,0],  area: (h - t) * L }
+    ],
+    edges:    { count: 18 },
+    vertices: { count: 12 },     // 6 cross-section köşe × 2 z-uç
+    totalSurfaceArea: 2 * crossArea + 2 * (w + h) * L,
+    volume: crossArea * L,
+    bbox: { x: w, y: h, z: L }
+  };
+}
+
+// ─── I-Profil (kiriş) — 12 face (dış silüet) ──────────────────────────────
+function _veFEAToplIBeam(p) {
+  var w = Math.max(1, p.width || 80);
+  var h = Math.max(1, p.height || 120);
+  var tf = Math.max(0.5, p.flange || 8);
+  var tw = Math.max(0.5, p.web || 6);
+  var L = Math.max(1, p.length || 200);
+  var innerW = (w - tw) / 2;
+  var innerH = h - 2 * tf;
+  var crossArea = 2 * (w * tf) + tw * innerH;
+  // I-profil dış silüet 12 köşeli polygon → 12 yan yüz (yan yüzeyler kenar başına)
+  return {
+    type: 'ibeam',
+    faces: [
+      { id: 'faceZMin',  label: 'Ön Kesit (Z−)',        type: 'planar', normal: [0,0,-1], area: crossArea },
+      { id: 'faceZMax',  label: 'Arka Kesit (Z+)',      type: 'planar', normal: [0,0,1],  area: crossArea },
+      { id: 'faceYMin',  label: 'Alt Flanş Tabanı (Y−)', type: 'planar', normal: [0,-1,0], area: w * L },
+      { id: 'faceYMax',  label: 'Üst Flanş Tepesi (Y+)', type: 'planar', normal: [0,1,0],  area: w * L },
+      { id: 'faceXMin',  label: 'Sol Yan (X−)',         type: 'planar', normal: [-1,0,0], area: tf * L + tf * L },  // alt + üst flanşın sol kenarı
+      { id: 'faceXMax',  label: 'Sağ Yan (X+)',         type: 'planar', normal: [1,0,0],  area: tf * L + tf * L },
+      { id: 'faceWebL',  label: 'Gövde Sol Yüzü',       type: 'planar', normal: [-1,0,0], area: innerH * L },
+      { id: 'faceWebR',  label: 'Gövde Sağ Yüzü',       type: 'planar', normal: [1,0,0],  area: innerH * L },
+      { id: 'faceInnerYU',label: 'Üst Flanş İç Yüzü (Y−)',type: 'planar', normal: [0,-1,0], area: 2 * innerW * L },
+      { id: 'faceInnerYL',label: 'Alt Flanş İç Yüzü (Y+)',type: 'planar', normal: [0,1,0],  area: 2 * innerW * L }
+    ],
+    edges:    { count: 24 },
+    vertices: { count: 24 },     // 12 cross-section × 2 z-uç
+    totalSurfaceArea: 2 * crossArea + (2 * w + 2 * h + 4 * innerW) * L,
+    volume: crossArea * L,
+    bbox: { x: w, y: h, z: L }
   };
 }
 

@@ -43,7 +43,10 @@ function veFEAMeshLabel(type) {
     'tet4':   'Tet4 (Tetra)',
     'tet10':  'Tet10 (Kuadratik Tetra)',
     'hex20':  'Hex20 (Kuadratik Heks)',
-    'tri3':   'Tri3 (Yüzey)'
+    'pyramid5': 'Pyramid5 (Piramit)',
+    'wedge15':'Wedge15 (Kuadratik Prizm)',
+    'tri3':   'Tri3 (Yüzey)',
+    'hybrid': 'Hibrit (Hex8+Pyramid5+Tet4)'
   })[type] || type;
 }
 
@@ -120,6 +123,101 @@ function _veFEAWedgeMeshToTet4(wedgeMesh) {
     }
   }
   return _veFEAWrapTet4Mesh(wedgeMesh, tets, { convertedFromWedge: true });
+}
+
+// ─── Hex8 → 6 Pyramid5 (centroid apex) decomposition ──────────────────────
+// Bir Hex8'i 6 piramide böler: her hex face'i taban + hex centroid'i apex.
+// Bu Pyramid5'lerin tabanları orijinal hex face'leri ile birebir uyumlu,
+// dolayısıyla komşu hex'lerle tet4 / hex8 / wedge6 elemanlarına hibrit olarak
+// bağlanabilir (ANSYS / Abaqus uyumu için klasik geçiş elemanı).
+//
+// Pyramid5 node order (Abaqus / VTK / ANSYS uyumlu):
+//   [P0, P1, P2, P3] = taban kuad CCW (bakış: apex'ten tabana doğru)
+//   [P4] = apex (centroid)
+//
+// Hex8 face listesi (ANSYS/Abaqus klasik CCW dış normal sırası):
+//   Face 1: nodes 0,1,2,3 (alt, -Z), normal -Z
+//   Face 2: nodes 4,5,6,7 (üst, +Z), normal +Z → CCW dış: 4,7,6,5
+//   Face 3: nodes 0,1,5,4 (-Y),       normal -Y → CCW dış: 0,1,5,4 (zaten)
+//   Face 4: nodes 1,2,6,5 (+X),       normal +X → CCW dış: 1,2,6,5
+//   Face 5: nodes 2,3,7,6 (+Y),       normal +Y → CCW dış: 2,3,7,6 (zaten CCW from +Y)
+//   Face 6: nodes 3,0,4,7 (-X),       normal -X → CCW dış: 3,0,4,7
+var _VE_FEA_HEX_PYRAMID_FACES = [
+  [0, 3, 2, 1],   // alt (-Z) → CCW bakış aşağıdan
+  [4, 5, 6, 7],   // üst (+Z) → CCW bakış yukarıdan
+  [0, 1, 5, 4],   // -Y
+  [1, 2, 6, 5],   // +X
+  [2, 3, 7, 6],   // +Y
+  [3, 0, 4, 7]    // -X
+];
+
+function veFEAConvertHexToPyramid5(hexMesh) {
+  if (!hexMesh || hexMesh.type !== 'hex8') return hexMesh;
+  var hex = hexMesh.elements;
+  var origNodes = hexMesh.nodes;
+  var origNodeCount = origNodes.length / 3;
+  var nElem = hex.length / 8;
+
+  // Her hex için 1 centroid + 6 pyramid
+  var newNodeCount = origNodeCount + nElem;
+  var newNodes = new Float32Array(newNodeCount * 3);
+  newNodes.set(origNodes);
+  var pyrs = new Uint32Array(nElem * 6 * 5);
+  var pOff = 0;
+
+  for (var e = 0; e < nElem; e++) {
+    var off = e * 8;
+    // Centroid hesabı
+    var cx = 0, cy = 0, cz = 0;
+    for (var c = 0; c < 8; c++) {
+      var n = hex[off + c];
+      cx += origNodes[n * 3];
+      cy += origNodes[n * 3 + 1];
+      cz += origNodes[n * 3 + 2];
+    }
+    var apexId = origNodeCount + e;
+    newNodes[apexId * 3]     = cx / 8;
+    newNodes[apexId * 3 + 1] = cy / 8;
+    newNodes[apexId * 3 + 2] = cz / 8;
+    // 6 piramit (her yüz için)
+    for (var f = 0; f < 6; f++) {
+      var face = _VE_FEA_HEX_PYRAMID_FACES[f];
+      pyrs[pOff++] = hex[off + face[0]];
+      pyrs[pOff++] = hex[off + face[1]];
+      pyrs[pOff++] = hex[off + face[2]];
+      pyrs[pOff++] = hex[off + face[3]];
+      pyrs[pOff++] = apexId;
+    }
+  }
+
+  return {
+    type: 'pyramid5',
+    geometryType: hexMesh.geometryType,
+    nodes: newNodes,
+    elements: pyrs,
+    nodesPerElement: 5,
+    grid: hexMesh.grid,
+    namedSelections: hexMesh.namedSelections,
+    voxelMode: hexMesh.voxelMode || false,
+    convertedFromHex: true
+  };
+}
+
+// Pyramid5 → 2 Tet4 (4-3 split): pyramid (P0,P1,P2,P3,P4) →
+//   Tet (P0,P1,P2,P4) + Tet (P0,P2,P3,P4)
+function veFEAConvertPyramidToTet4(pyrMesh) {
+  if (!pyrMesh || pyrMesh.type !== 'pyramid5') return pyrMesh;
+  var pyr = pyrMesh.elements;
+  var nElem = pyr.length / 5;
+  var tets = new Uint32Array(nElem * 2 * 4);
+  var p = 0;
+  for (var e = 0; e < nElem; e++) {
+    var off = e * 5;
+    var p0 = pyr[off], p1 = pyr[off + 1], p2 = pyr[off + 2], p3 = pyr[off + 3], p4 = pyr[off + 4];
+    tets[p++] = p0; tets[p++] = p1; tets[p++] = p2; tets[p++] = p4;
+    tets[p++] = p0; tets[p++] = p2; tets[p++] = p3; tets[p++] = p4;
+  }
+  return _veFEAWrapTet4Mesh(pyrMesh, tets, { convertedFromPyramid: true });
 }
 
 // ─── Kuadratik enrichment (mid-side düğümler) ─────────────────────────────
@@ -249,9 +347,13 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (geometry.type === 'box')      mesh = _veFEAMeshBox(geometry.params || {}, size);
   else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
-  else if (geometry.type === 'sphere')   mesh = _veFEAMeshSphere(geometry.params || {}, size);
-  else if (geometry.type === 'cone')     mesh = _veFEAMeshCone(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
+  else if (geometry.type === 'sphere')     mesh = _veFEAMeshSphere(geometry.params || {}, size);
+  else if (geometry.type === 'hemisphere') mesh = _veFEAMeshHemisphere(geometry.params || {}, size);
+  else if (geometry.type === 'torus')      mesh = _veFEAMeshTorus(geometry.params || {}, size);
+  else if (geometry.type === 'cone')       mesh = _veFEAMeshCone(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
+  else if (geometry.type === 'lbracket') mesh = _veFEAMeshLBracket(geometry.params || {}, size);
+  else if (geometry.type === 'ibeam')    mesh = _veFEAMeshIBeam(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
     var parsed = _veFEAParseSurfaceTriangles(geometry);
@@ -274,6 +376,10 @@ function veFEAMeshFromGeometry(geometry, opts) {
   // elementType: hex8/wedge6 → tet4 decomposition (yüzey tri3 etkilenmez)
   if (mesh && !mesh.error && elementType === 'tet4') {
     mesh = veFEAConvertMeshToTet4(mesh);
+  }
+  // elementType: hex8 → pyramid5 (hex-tet köprü elemanı; transition meshler için)
+  if (mesh && !mesh.error && elementType === 'pyramid5' && mesh.type === 'hex8') {
+    mesh = veFEAConvertHexToPyramid5(mesh);
   }
   // midSideNodes: lineer → quadratic (Tet4→Tet10, Hex8→Hex20, Wedge6→Wedge15)
   if (mesh && !mesh.error && opts.midSideNodes === true) {
@@ -1054,6 +1160,166 @@ function _veFEAMeshRectTube(p, size) {
   };
 }
 
+// ─── L-Profil (köşe kirişi) → Hex8 cell-exclusion ─────────────────────────
+// W x H bbox alındı, t kalınlığı kadar yatay (Y<t) ve dikey (X<t) iki kol.
+// Yerel koordinat: köşe (0,0,0), pozitif X yatay kol boyunca, pozitif Y dikey
+// kol boyunca, Z sweep ekseni. Merkezleme bbox ortasına yapılır.
+// "İç boşluk" predikatı: cx > t AND cy > t (her iki koldan da uzak)
+function _veFEAMeshLBracket(p, size) {
+  var w = Math.max(1, p.width || 60);
+  var h = Math.max(1, p.height || 40);
+  var t = Math.max(0.5, p.thickness || 5);
+  var L = Math.max(1, p.length || 100);
+  var maxT = Math.min(w, h) - 0.1;
+  if (t >= maxT) t = Math.max(0.5, maxT);
+
+  // Mesh size feature size'dan büyükse (t < size) thickness yönünde en az 1 hücre garantile.
+  // En geniş ortak hücre kenarı: min(size, t).
+  var cell = Math.min(size, t);
+  var nW = Math.max(1, Math.round(w / cell));
+  var nH = Math.max(1, Math.round(h / cell));
+  var nZ = Math.max(1, Math.round(L / size));
+  var dx = w / nW, dy = h / nH, dz = L / nZ;
+  var x0 = -w / 2, y0 = -h / 2, z0 = -L / 2;
+
+  var pitchY = nW + 1;
+  var pitchZ = (nW + 1) * (nH + 1);
+  var nodeMap = new Int32Array((nW + 1) * (nH + 1) * (nZ + 1));
+  for (var im = 0; im < nodeMap.length; im++) nodeMap[im] = -1;
+  var nodeList = [];
+  function getNode(i, j, k) {
+    var idx = i + j * pitchY + k * pitchZ;
+    var ex = nodeMap[idx];
+    if (ex >= 0) return ex;
+    var newIdx = nodeList.length / 3;
+    nodeList.push(x0 + i * dx, y0 + j * dy, z0 + k * dz);
+    nodeMap[idx] = newIdx;
+    return newIdx;
+  }
+
+  // L şekli: yatay kol (alt kısım, y ∈ [0, t]) + dikey kol (sol kısım, x ∈ [0, t])
+  // Köşe (0,0,0)'da bbox'ın sol-alt köşesi olacak şekilde local frame:
+  //   lx = cx - x0  (∈ [0, w])
+  //   ly = cy - y0  (∈ [0, h])
+  // Hücre içeride ise: lx < t  OR  ly < t  (dikey kol veya yatay kol)
+  var elements = [];
+  for (var k = 0; k < nZ; k++) {
+    for (var j = 0; j < nH; j++) {
+      for (var i = 0; i < nW; i++) {
+        var lx = (i + 0.5) * dx;
+        var ly = (j + 0.5) * dy;
+        if (!(lx < t || ly < t)) continue;
+        var n0 = getNode(i,     j,     k);
+        var n1 = getNode(i + 1, j,     k);
+        var n2 = getNode(i + 1, j + 1, k);
+        var n3 = getNode(i,     j + 1, k);
+        var n4 = getNode(i,     j,     k + 1);
+        var n5 = getNode(i + 1, j,     k + 1);
+        var n6 = getNode(i + 1, j + 1, k + 1);
+        var n7 = getNode(i,     j + 1, k + 1);
+        elements.push(n0, n1, n2, n3, n4, n5, n6, n7);
+      }
+    }
+  }
+
+  if (elements.length === 0) return null;
+
+  var nodes = new Float32Array(nodeList);
+  var elementsTA = new Uint32Array(elements);
+
+  return {
+    type: 'hex8',
+    geometryType: 'lbracket',
+    nodes: nodes,
+    elements: elementsTA,
+    nodesPerElement: 8,
+    grid: { nW: nW, nH: nH, nZ: nZ, voxelCount: elementsTA.length / 8 },
+    sweepAxis: 'Z',
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
+      minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
+    })
+  };
+}
+
+// ─── I-Profil (kiriş) → Hex8 cell-exclusion ───────────────────────────────
+// W x H bbox; alt flanş (y ∈ [0, tf]), üst flanş (y ∈ [h-tf, h]), gövde
+// (x ∈ [(w-tw)/2, (w+tw)/2]). "İçeride" predikatı:
+//   ly < tf  OR  ly > h-tf  OR  (innerWL < lx < innerWR)
+function _veFEAMeshIBeam(p, size) {
+  var w = Math.max(1, p.width || 80);
+  var h = Math.max(1, p.height || 120);
+  var tf = Math.max(0.5, p.flange || 8);
+  var tw = Math.max(0.5, p.web || 6);
+  var L = Math.max(1, p.length || 200);
+  if (tf >= h / 2 - 0.1) tf = Math.max(0.5, h / 2 - 0.1);
+  if (tw >= w - 0.1)     tw = Math.max(0.5, w - 0.1);
+
+  // Web (tw) ve flange (tf) feature size'larını çözmek için minimum cell boyutu.
+  var cell = Math.min(size, Math.min(tf, tw));
+  var nW = Math.max(1, Math.round(w / cell));
+  var nH = Math.max(1, Math.round(h / cell));
+  var nZ = Math.max(1, Math.round(L / size));
+  var dx = w / nW, dy = h / nH, dz = L / nZ;
+  var x0 = -w / 2, y0 = -h / 2, z0 = -L / 2;
+
+  var pitchY = nW + 1;
+  var pitchZ = (nW + 1) * (nH + 1);
+  var nodeMap = new Int32Array((nW + 1) * (nH + 1) * (nZ + 1));
+  for (var im = 0; im < nodeMap.length; im++) nodeMap[im] = -1;
+  var nodeList = [];
+  function getNode(i, j, k) {
+    var idx = i + j * pitchY + k * pitchZ;
+    var ex = nodeMap[idx];
+    if (ex >= 0) return ex;
+    var newIdx = nodeList.length / 3;
+    nodeList.push(x0 + i * dx, y0 + j * dy, z0 + k * dz);
+    nodeMap[idx] = newIdx;
+    return newIdx;
+  }
+
+  var webL = (w - tw) / 2, webR = (w + tw) / 2;
+  var elements = [];
+  for (var k = 0; k < nZ; k++) {
+    for (var j = 0; j < nH; j++) {
+      for (var i = 0; i < nW; i++) {
+        var lx = (i + 0.5) * dx;
+        var ly = (j + 0.5) * dy;
+        var inFlangeBot = ly < tf;
+        var inFlangeTop = ly > h - tf;
+        var inWeb       = (lx > webL && lx < webR);
+        if (!(inFlangeBot || inFlangeTop || inWeb)) continue;
+        var n0 = getNode(i,     j,     k);
+        var n1 = getNode(i + 1, j,     k);
+        var n2 = getNode(i + 1, j + 1, k);
+        var n3 = getNode(i,     j + 1, k);
+        var n4 = getNode(i,     j,     k + 1);
+        var n5 = getNode(i + 1, j,     k + 1);
+        var n6 = getNode(i + 1, j + 1, k + 1);
+        var n7 = getNode(i,     j + 1, k + 1);
+        elements.push(n0, n1, n2, n3, n4, n5, n6, n7);
+      }
+    }
+  }
+
+  if (elements.length === 0) return null;
+
+  var nodes = new Float32Array(nodeList);
+  var elementsTA = new Uint32Array(elements);
+
+  return {
+    type: 'hex8',
+    geometryType: 'ibeam',
+    nodes: nodes,
+    elements: elementsTA,
+    nodesPerElement: 8,
+    grid: { nW: nW, nH: nH, nZ: nZ, voxelCount: elementsTA.length / 8 },
+    sweepAxis: 'Z',
+    namedSelections: _veFEAVoxelMeshNamedSelections(nodes, elementsTA, 8, {
+      minX: x0, maxX: x0 + w, minY: y0, maxY: y0 + h, minZ: z0, maxZ: z0 + L
+    })
+  };
+}
+
 // ─── Küre → Cubed-Sphere Hex8 (single-block) ──────────────────────────────
 // Tüm küreyi "deformed cube" olarak modelle. Her cube grid noktası radyal
 // projeksiyon ile küreye taşınır:
@@ -1126,6 +1392,220 @@ function _veFEAMeshSphere(p, size) {
     nodesPerElement: 8,
     grid: { nC: nC, cubedSphere: true },
     namedSelections: _veFEASphereNamedSelections(n1, nC)
+  };
+}
+
+// ─── Yarım Küre → Hex8 (üst yarı cubed-sphere + alt düz disk koruma) ──────
+// Cube grid x,z ∈ [-1,1], y ∈ [0,1]. j=0 (alt) düğümler düz disk'e projeksiyon
+// (y=0 sabit, radyal scale). j>0 düğümler radyal cubed-sphere projeksiyonu.
+function _veFEAMeshHemisphere(p, size) {
+  var r = Math.max(0.5, p.radius || 25);
+  var nC = Math.max(4, Math.round(Math.PI * r / (2 * size)));
+  var n1 = nC + 1;
+  var nNodes = n1 * n1 * n1;
+  var nodes = new Float32Array(nNodes * 3);
+  for (var k = 0; k <= nC; k++) {
+    var cz = -1 + 2 * k / nC;
+    for (var j = 0; j <= nC; j++) {
+      var cy = j / nC;          // 0 = alt düz disk, 1 = üst (apex region)
+      for (var i = 0; i <= nC; i++) {
+        var cx = -1 + 2 * i / nC;
+        var idx = (k * n1 * n1 + j * n1 + i) * 3;
+        if (j === 0) {
+          // Alt düz disk: y=0 sabit, xz radyal scale to disk of radius r
+          var maxAbsXZ = Math.max(Math.abs(cx), Math.abs(cz));
+          if (maxAbsXZ < 1e-9) {
+            nodes[idx] = nodes[idx + 1] = nodes[idx + 2] = 0;
+          } else {
+            var lenXZ = Math.sqrt(cx * cx + cz * cz);
+            var radXZ = r * maxAbsXZ;
+            nodes[idx]     = radXZ * cx / lenXZ;
+            nodes[idx + 1] = 0;
+            nodes[idx + 2] = radXZ * cz / lenXZ;
+          }
+        } else {
+          // Üst yarı: cubed-sphere radial projection
+          var maxAbs = Math.max(Math.abs(cx), cy, Math.abs(cz));
+          if (maxAbs < 1e-9) {
+            nodes[idx] = nodes[idx + 1] = nodes[idx + 2] = 0;
+          } else {
+            var len = Math.sqrt(cx * cx + cy * cy + cz * cz);
+            var rad = r * maxAbs;
+            nodes[idx]     = rad * cx / len;
+            nodes[idx + 1] = rad * cy / len;
+            nodes[idx + 2] = rad * cz / len;
+          }
+        }
+      }
+    }
+  }
+
+  // Hex8 elements
+  var nElem = nC * nC * nC;
+  var elements = new Uint32Array(nElem * 8);
+  var pitchY = n1, pitchZ = n1 * n1;
+  var e = 0;
+  for (var k2 = 0; k2 < nC; k2++) {
+    for (var j2 = 0; j2 < nC; j2++) {
+      for (var i2 = 0; i2 < nC; i2++) {
+        var n0 = i2 + j2 * pitchY + k2 * pitchZ;
+        var off = e * 8; e++;
+        elements[off]     = n0;
+        elements[off + 1] = n0 + 1;
+        elements[off + 2] = n0 + 1 + pitchY;
+        elements[off + 3] = n0 + pitchY;
+        elements[off + 4] = n0 + pitchZ;
+        elements[off + 5] = n0 + 1 + pitchZ;
+        elements[off + 6] = n0 + 1 + pitchY + pitchZ;
+        elements[off + 7] = n0 + pitchY + pitchZ;
+      }
+    }
+  }
+
+  return {
+    type: 'hex8',
+    geometryType: 'hemisphere',
+    nodes: nodes,
+    elements: elements,
+    nodesPerElement: 8,
+    grid: { nC: nC, cubedSphere: true, hemisphere: true },
+    namedSelections: _veFEAHemisphereNamedSelections(n1, nC)
+  };
+}
+
+// ─── Torus → Wedge6 mesh (cross-section fan × toroidal sweep, closed loop) ─
+// Disk kesidi cylinder mesher gibi: merkez + nR halka × nMinor angular.
+// Toroidal direction: nMajor layer, last layer first ile bağlanır (closed).
+function _veFEAMeshTorus(p, size) {
+  var R = Math.max(1, p.majorRadius || 30);
+  var r = Math.max(0.1, p.minorRadius || 10);
+  var nMajor = Math.max(8, Math.round(2 * Math.PI * R / size));
+  var nMinor = Math.max(6, Math.round(2 * Math.PI * r / size));
+  var nRad   = Math.max(2, Math.round(r / size));
+
+  var perLayer = 1 + nRad * nMinor; // center + ring nodes
+  var nNodes = nMajor * perLayer;
+  var nodes = new Float32Array(nNodes * 3);
+
+  for (var k = 0; k < nMajor; k++) {
+    var theta = 2 * Math.PI * k / nMajor;
+    var cosT = Math.cos(theta), sinT = Math.sin(theta);
+    var cxW = R * cosT, czW = R * sinT;
+    var base = k * perLayer;
+    // Center node (toroidal centerline)
+    nodes[base * 3]     = cxW;
+    nodes[base * 3 + 1] = 0;
+    nodes[base * 3 + 2] = czW;
+    // Ring nodes (radial × angular)
+    for (var ring = 1; ring <= nRad; ring++) {
+      var rPol = r * ring / nRad;
+      for (var ang = 0; ang < nMinor; ang++) {
+        var phi = 2 * Math.PI * ang / nMinor;
+        var cosP = Math.cos(phi), sinP = Math.sin(phi);
+        // Local offset: rPol*(cosP * radial_world + sinP * y_world)
+        var dx = rPol * cosP * cosT;
+        var dy = rPol * sinP;
+        var dz = rPol * cosP * sinT;
+        var idx = base + 1 + (ring - 1) * nMinor + ang;
+        nodes[idx * 3]     = cxW + dx;
+        nodes[idx * 3 + 1] = dy;
+        nodes[idx * 3 + 2] = czW + dz;
+      }
+    }
+  }
+
+  function diskNode(layer, ring, circ) {
+    var lm = ((layer % nMajor) + nMajor) % nMajor; // closed loop modular
+    var base = lm * perLayer;
+    if (ring === 0) return base;
+    return base + 1 + (ring - 1) * nMinor + ((circ % nMinor + nMinor) % nMinor);
+  }
+
+  // Wedge6 elements: cylinder pattern with toroidal closing
+  var diskTris = nMinor + 2 * nMinor * (nRad - 1);
+  var nElem = diskTris * nMajor;
+  var elements = new Uint32Array(nElem * 6);
+  var e = 0;
+  for (var ka = 0; ka < nMajor; ka++) {
+    // Center fan triangles
+    for (var c1 = 0; c1 < nMinor; c1++) {
+      var a0 = diskNode(ka,     0, 0);
+      var a1 = diskNode(ka,     1, c1);
+      var a2 = diskNode(ka,     1, c1 + 1);
+      var b0 = diskNode(ka + 1, 0, 0);
+      var b1 = diskNode(ka + 1, 1, c1);
+      var b2 = diskNode(ka + 1, 1, c1 + 1);
+      var off = e * 6; e++;
+      elements[off]     = a0; elements[off + 1] = a1; elements[off + 2] = a2;
+      elements[off + 3] = b0; elements[off + 4] = b1; elements[off + 5] = b2;
+    }
+    // Outer ring quads (each → 2 wedges)
+    for (var rr = 1; rr < nRad; rr++) {
+      for (var c2 = 0; c2 < nMinor; c2++) {
+        var p0 = diskNode(ka,     rr,     c2);
+        var p1 = diskNode(ka,     rr + 1, c2);
+        var p2 = diskNode(ka,     rr + 1, c2 + 1);
+        var p3 = diskNode(ka,     rr,     c2 + 1);
+        var q0 = diskNode(ka + 1, rr,     c2);
+        var q1 = diskNode(ka + 1, rr + 1, c2);
+        var q2 = diskNode(ka + 1, rr + 1, c2 + 1);
+        var q3 = diskNode(ka + 1, rr,     c2 + 1);
+        var off2 = e * 6; e++;
+        elements[off2]     = p0; elements[off2 + 1] = p1; elements[off2 + 2] = p2;
+        elements[off2 + 3] = q0; elements[off2 + 4] = q1; elements[off2 + 5] = q2;
+        off2 = e * 6; e++;
+        elements[off2]     = p0; elements[off2 + 1] = p2; elements[off2 + 2] = p3;
+        elements[off2 + 3] = q0; elements[off2 + 4] = q2; elements[off2 + 5] = q3;
+      }
+    }
+  }
+
+  return {
+    type: 'wedge6',
+    geometryType: 'torus',
+    nodes: nodes,
+    elements: elements,
+    nodesPerElement: 6,
+    grid: { nMajor: nMajor, nMinor: nMinor, nRadial: nRad, closed: true },
+    namedSelections: _veFEATorusNamedSelections(perLayer, nMinor, nRad, nMajor)
+  };
+}
+
+// Torus named selections: tek face (toroidal outer surface — ring=nRad)
+function _veFEATorusNamedSelections(perLayer, nMinor, nRad, nMajor) {
+  var surface = [];
+  for (var k = 0; k < nMajor; k++) {
+    var base = k * perLayer;
+    for (var a = 0; a < nMinor; a++) {
+      // Sadece son ring (rad=nRad) düğümleri yüzeyde
+      surface.push(base + 1 + (nRad - 1) * nMinor + a);
+    }
+  }
+  return {
+    faceSurface: { type: 'face', source: 'auto', label: 'Toroidal Yüzey', nodeIds: new Uint32Array(surface) }
+  };
+}
+
+// Yarım küre named selections: faceFlat (j=0 alt disk) + faceDome (üst kabuk)
+function _veFEAHemisphereNamedSelections(n1, nC) {
+  var pitchY = n1, pitchZ = n1 * n1;
+  var flat = [];     // j=0 plane
+  var dome = [];     // i,k=0/nC veya j=nC (üst yüzey)
+  for (var k = 0; k <= nC; k++) {
+    for (var j = 0; j <= nC; j++) {
+      for (var i = 0; i <= nC; i++) {
+        var nid = i + j * pitchY + k * pitchZ;
+        var onSide = (i === 0 || i === nC || k === 0 || k === nC);
+        var onTop  = (j === nC);
+        var onBottom = (j === 0);
+        if (onBottom) flat.push(nid);
+        if (j > 0 && (onSide || onTop)) dome.push(nid);
+      }
+    }
+  }
+  return {
+    faceFlat: { type: 'face', source: 'auto', label: 'Alt Düz Disk (Y−)',         nodeIds: new Uint32Array(flat) },
+    faceDome: { type: 'face', source: 'auto', label: 'Yarı Küresel Yüzey (Dome)', nodeIds: new Uint32Array(dome) }
   };
 }
 

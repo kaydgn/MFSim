@@ -407,6 +407,99 @@ describe('Koni / Frustum → Wedge6/Hex8 mesh (cylinder + radial scaling)', () =
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Torus → Wedge6 mesh (closed loop)', () => {
+  test('Torus mesh oluşturulur (Wedge6)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } }, { size: 5 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('wedge6');
+    expect(m.geometryType).toBe('torus');
+    expect(m.grid.closed).toBe(true);
+  });
+
+  test('Düğüm sayısı nMajor × perLayer (closed, no overlap)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } }, { size: 5 });
+    var g = m.grid;
+    expect(m.nodes.length / 3).toBe(g.nMajor * (1 + g.nRadial * g.nMinor));
+  });
+
+  test('Yüzey düğümlerinin minor radius mesafesi (her layer için)', () => {
+    var R = 30, r = 10;
+    var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: R, minorRadius: r } }, { size: 5 });
+    var surf = m.namedSelections.faceSurface.nodeIds;
+    expect(surf.length).toBeGreaterThan(0);
+    for (var i = 0; i < surf.length; i++) {
+      var nid = surf[i];
+      var x = m.nodes[nid * 3];
+      var y = m.nodes[nid * 3 + 1];
+      var z = m.nodes[nid * 3 + 2];
+      // Centerline pozisyonu xz plane'inde R yarıçaplı çember üstünde
+      var rho = Math.sqrt(x * x + z * z);  // axial distance
+      var dRho = rho - R;
+      var distFromCenterline = Math.sqrt(dRho * dRho + y * y);
+      expect(distFromCenterline).toBeCloseTo(r, 1);
+    }
+  });
+
+  test('Hacim ≈ 2π²Rr² (Pappus)', () => {
+    var R = 30, r = 10;
+    var stats = veFEAPrimitiveStats('torus', { majorRadius: R, minorRadius: r });
+    expect(stats.volume).toBeCloseTo(2 * Math.PI * Math.PI * R * r * r, 1);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('Yarım Küre → Hex8 (alt düz disk + üst dome)', () => {
+  test('Yarım küre mesh oluşturulur (Hex8)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: 25 } }, { size: 8 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('hex8');
+    expect(m.geometryType).toBe('hemisphere');
+    expect(m.grid.hemisphere).toBe(true);
+  });
+
+  test('Alt düz disk düğümlerinin y koordinatı = 0', () => {
+    var r = 25;
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: r } }, { size: 8 });
+    var flatIds = m.namedSelections.faceFlat.nodeIds;
+    for (var i = 0; i < flatIds.length; i++) {
+      var nid = flatIds[i];
+      expect(m.nodes[nid * 3 + 1]).toBeCloseTo(0, 5);
+    }
+  });
+
+  test('Dome düğümlerinin |position| = r (sphere yüzeyi)', () => {
+    var r = 25;
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: r } }, { size: 8 });
+    var domeIds = m.namedSelections.faceDome.nodeIds;
+    for (var i = 0; i < domeIds.length; i++) {
+      var nid = domeIds[i];
+      var x = m.nodes[nid * 3];
+      var y = m.nodes[nid * 3 + 1];
+      var z = m.nodes[nid * 3 + 2];
+      expect(Math.sqrt(x * x + y * y + z * z)).toBeCloseTo(r, 3);
+      expect(y).toBeGreaterThanOrEqual(-1e-3); // üst yarıda
+    }
+  });
+
+  test('Jacobian pozitif (yarım küre)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: 25 } }, { size: 8 });
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+  });
+
+  test('Hacim ≈ (2/3)πr³', () => {
+    var r = 25;
+    var stats = veFEAPrimitiveStats('hemisphere', { radius: r });
+    expect(stats.volume).toBeCloseTo((2 / 3) * Math.PI * r * r * r, 3);
+  });
+
+  test('2 named selection: faceFlat, faceDome', () => {
+    var m = veFEAMeshFromGeometry({ type: 'hemisphere', params: { radius: 25 } }, { size: 8 });
+    expect(Object.keys(m.namedSelections).sort()).toEqual(['faceDome', 'faceFlat']);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Şaft (içi boş silindir) → Heks8 annulus', () => {
   test('temel parametrelerle heks8 oluşur', () => {
     var m = veFEAMeshFromGeometry({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } }, { size: 5 });
@@ -1135,6 +1228,100 @@ describe('Rectangular tube (rectTube) primitif - sweep mesh', () => {
 
   test('Named selections üretilir', () => {
     var m = veFEAMeshFromGeometry({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 80 } }, { size: 10 });
+    expect(m.namedSelections).toBeDefined();
+    expect(Object.keys(m.namedSelections).length).toBeGreaterThan(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('L-Profil (lbracket) primitif - cell-exclusion mesh', () => {
+  test('L-bracket mesh oluşturulur (Hex8, Z sweep)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } }, { size: 5 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('hex8');
+    expect(m.geometryType).toBe('lbracket');
+    expect(m.sweepAxis).toBe('Z');
+    expect(m.elements.length / 8).toBeGreaterThan(0);
+  });
+
+  test('L: eleman sayısı tam dolu kutudan (W·H·L hacim grid) az', () => {
+    var lb   = veFEAMeshFromGeometry({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 60 } }, { size: 5 });
+    var full = veFEAMeshFromGeometry({ type: 'box',      params: { width: 60, height: 40, depth: 60 } }, { size: 5 });
+    expect(lb.elements.length / 8).toBeLessThan(full.elements.length / 8);
+  });
+
+  test('Hacim hesabı: t·(w+h-t)·L', () => {
+    var stats = veFEAPrimitiveStats('lbracket', { width: 60, height: 40, thickness: 5, length: 100 });
+    // 5·(60+40-5)·100 = 5·95·100 = 47500
+    expect(stats.volume).toBeCloseTo(47500, 0);
+  });
+
+  test('Thickness çok büyükse clamp (max = min(w,h))', () => {
+    var p = veFEANormalizePrimitiveParams('lbracket', { width: 30, height: 20, thickness: 999, length: 50 });
+    expect(p.thickness).toBeLessThan(20);
+    expect(p.thickness).toBeGreaterThan(0);
+  });
+
+  test('Tüm element indeksleri geçerli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 80 } }, { size: 10 });
+    var maxIdx = m.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < m.elements.length; i++) {
+      if (m.elements[i] < 0 || m.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+
+  test('Named selections üretilir', () => {
+    var m = veFEAMeshFromGeometry({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 80 } }, { size: 10 });
+    expect(m.namedSelections).toBeDefined();
+    expect(Object.keys(m.namedSelections).length).toBeGreaterThan(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('I-Profil (ibeam) primitif - cell-exclusion mesh', () => {
+  test('I-beam mesh oluşturulur (Hex8, Z sweep)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } }, { size: 8 });
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('hex8');
+    expect(m.geometryType).toBe('ibeam');
+    expect(m.sweepAxis).toBe('Z');
+    expect(m.elements.length / 8).toBeGreaterThan(0);
+  });
+
+  test('I: eleman sayısı tam dolu kutudan (W·H·L grid) az', () => {
+    var ib   = veFEAMeshFromGeometry({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 80 } }, { size: 8 });
+    var full = veFEAMeshFromGeometry({ type: 'box',   params: { width: 80, height: 120, depth: 80 } }, { size: 8 });
+    expect(ib.elements.length / 8).toBeLessThan(full.elements.length / 8);
+  });
+
+  test('Hacim hesabı: 2·w·tf + tw·(h−2tf), ×L', () => {
+    var stats = veFEAPrimitiveStats('ibeam', { width: 80, height: 120, flange: 8, web: 6, length: 200 });
+    // (2·80·8 + 6·(120-16))·200 = (1280 + 624)·200 = 1904·200 = 380800
+    expect(stats.volume).toBeCloseTo(380800, 0);
+  });
+
+  test('Flange/web çok büyükse clamp', () => {
+    var p = veFEANormalizePrimitiveParams('ibeam', { width: 40, height: 30, flange: 999, web: 999, length: 50 });
+    expect(p.flange).toBeLessThan(15);  // h/2-0.1
+    expect(p.web).toBeLessThan(40);     // w-0.1
+    expect(p.flange).toBeGreaterThan(0);
+    expect(p.web).toBeGreaterThan(0);
+  });
+
+  test('Tüm element indeksleri geçerli', () => {
+    var m = veFEAMeshFromGeometry({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 100 } }, { size: 10 });
+    var maxIdx = m.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < m.elements.length; i++) {
+      if (m.elements[i] < 0 || m.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+
+  test('Named selections üretilir', () => {
+    var m = veFEAMeshFromGeometry({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 100 } }, { size: 10 });
     expect(m.namedSelections).toBeDefined();
     expect(Object.keys(m.namedSelections).length).toBeGreaterThan(0);
   });
@@ -2392,6 +2579,107 @@ describe('Tet4 decomposition (veFEAConvertMeshToTet4)', () => {
       totalVol += vol;
     }
     expect(totalVol).toBeCloseTo(1, 4);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('Pyramid5 dönüşümleri (Hex8 ↔ Pyramid5 ↔ Tet4)', () => {
+  test('Hex8 → Pyramid5: her hex için 6 piramit ve 1 centroid eklenir', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var nHex = hex.elements.length / 8;
+    var origNodeCount = hex.nodes.length / 3;
+    var pyr = veFEAConvertHexToPyramid5(hex);
+    expect(pyr.type).toBe('pyramid5');
+    expect(pyr.nodesPerElement).toBe(5);
+    expect(pyr.elements.length / 5).toBe(nHex * 6);
+    // Her hex kendi centroid'ini ekler → toplam +nHex düğüm
+    expect(pyr.nodes.length / 3).toBe(origNodeCount + nHex);
+    expect(pyr.convertedFromHex).toBe(true);
+  });
+
+  test('Pyramid5 elemanlarda her piramit 5 farklı düğüm içerir', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var pyr = veFEAConvertHexToPyramid5(hex);
+    var nElem = pyr.elements.length / 5;
+    for (var e = 0; e < nElem; e++) {
+      var off = e * 5;
+      var ids = new Set();
+      for (var c = 0; c < 5; c++) ids.add(pyr.elements[off + c]);
+      expect(ids.size).toBe(5);
+    }
+  });
+
+  test('Pyramid5 → Tet4: her piramit 2 tetraya bölünür', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var pyr = veFEAConvertHexToPyramid5(hex);
+    var nPyr = pyr.elements.length / 5;
+    var tet = veFEAConvertPyramidToTet4(pyr);
+    expect(tet.type).toBe('tet4');
+    expect(tet.elements.length / 4).toBe(nPyr * 2);
+    expect(tet.convertedFromPyramid).toBe(true);
+  });
+
+  test('Hex → Pyramid5 → Tet4 hacim korunur', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 1, height: 1, depth: 1 } }, { size: 1 });
+    var pyr = veFEAConvertHexToPyramid5(hex);
+    var tet = veFEAConvertPyramidToTet4(pyr);
+    var nodes = tet.nodes;
+    var totalVol = 0;
+    for (var e = 0; e < tet.elements.length / 4; e++) {
+      var off = e * 4;
+      var a = tet.elements[off], b = tet.elements[off + 1], c = tet.elements[off + 2], d = tet.elements[off + 3];
+      var ax = nodes[a*3], ay = nodes[a*3+1], az = nodes[a*3+2];
+      var bx = nodes[b*3], by = nodes[b*3+1], bz = nodes[b*3+2];
+      var cx = nodes[c*3], cy = nodes[c*3+1], cz = nodes[c*3+2];
+      var dx = nodes[d*3], dy = nodes[d*3+1], dz = nodes[d*3+2];
+      var v1x = bx-ax, v1y = by-ay, v1z = bz-az;
+      var v2x = cx-ax, v2y = cy-ay, v2z = cz-az;
+      var v3x = dx-ax, v3y = dy-ay, v3z = dz-az;
+      var cross_x = v1y*v2z - v1z*v2y;
+      var cross_y = v1z*v2x - v1x*v2z;
+      var cross_z = v1x*v2y - v1y*v2x;
+      totalVol += Math.abs(cross_x*v3x + cross_y*v3y + cross_z*v3z) / 6;
+    }
+    expect(totalVol).toBeCloseTo(1, 4);
+  });
+
+  test('Pyramid5 element indeksleri geçerli', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var pyr = veFEAConvertHexToPyramid5(hex);
+    var maxIdx = pyr.nodes.length / 3 - 1;
+    var ok = true;
+    for (var i = 0; i < pyr.elements.length; i++) {
+      if (pyr.elements[i] < 0 || pyr.elements[i] > maxIdx) { ok = false; break; }
+    }
+    expect(ok).toBe(true);
+  });
+
+  test('Named selections Pyramid5\'e taşınır (orijinal node IDs korunur)', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var pyr = veFEAConvertHexToPyramid5(hex);
+    expect(pyr.namedSelections).toBeDefined();
+    expect(pyr.namedSelections.faceXMin).toBeDefined();
+    // Apex düğümleri orijinal yüzey ID'lerinin sonuna eklendi, dolayısıyla
+    // namedSelection ID'leri hala geçerli.
+    var maxIdx = pyr.nodes.length / 3 - 1;
+    pyr.namedSelections.faceXMin.nodeIds.forEach(function(id) {
+      expect(id).toBeLessThanOrEqual(maxIdx);
+    });
+  });
+
+  test('Pyramid5 etiketi: "Pyramid5 (Piramit)"', () => {
+    expect(veFEAMeshLabel('pyramid5')).toBe('Pyramid5 (Piramit)');
+  });
+
+  test('veFEAConvertHexToPyramid5: hex8 olmayan → no-op', () => {
+    var tet = { type: 'tet4', nodes: new Float32Array(0), elements: new Uint32Array(0), nodesPerElement: 4 };
+    expect(veFEAConvertHexToPyramid5(tet)).toBe(tet);
+    expect(veFEAConvertHexToPyramid5(null)).toBeNull();
+  });
+
+  test('veFEAConvertPyramidToTet4: pyramid5 olmayan → no-op', () => {
+    var hex = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    expect(veFEAConvertPyramidToTet4(hex)).toBe(hex);
   });
 });
 

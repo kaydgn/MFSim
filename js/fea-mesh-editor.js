@@ -633,6 +633,7 @@ function _veFEAEditorDefaultsHTML(node) {
   html += '<select id="ve-fea-mesh-eltype-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:10px;">';
   html += '<option value="auto"' + (currentElType === 'auto' ? ' selected' : '') + '>Otomatik (Heks8 / Wedge6)</option>';
   html += '<option value="tet4"' + (currentElType === 'tet4' ? ' selected' : '') + '>Tet4 (Tetra — decomposition)</option>';
+  html += '<option value="pyramid5"' + (currentElType === 'pyramid5' ? ' selected' : '') + '>Pyramid5 (Hex8 → 6 piramit + centroid)</option>';
   html += '</select>';
 
   var midSideOn = settings.midSideNodes === true;
@@ -842,9 +843,36 @@ function _veFEAEditorDisplayHTML(node) {
   html += '<option value="minAngle"' + (displayMode === 'minAngle' ? ' selected' : '') + '>Min İç Açı</option>';
   html += '<option value="jacobianRatio"' + (displayMode === 'jacobianRatio' ? ' selected' : '') + '>Jacobian Oranı</option>';
   html += '</optgroup>';
+  // Solver sonuçları varsa "Sonuçlar" grubunu göster
+  var solverNode = (typeof _veFEAFindSolverNodeForMesh === 'function') ? _veFEAFindSolverNodeForMesh(node.id) : null;
+  if (solverNode && solverNode.data && solverNode.data.solver && solverNode.data.solver.results) {
+    html += '<optgroup label="Sonuçlar (Static Structural)">';
+    html += '<option value="result-vonMises"' + (displayMode === 'result-vonMises' ? ' selected' : '') + '>von Mises Stress (MPa)</option>';
+    html += '<option value="result-displacement"' + (displayMode === 'result-displacement' ? ' selected' : '') + '>Deplasman büyüklüğü (mm)</option>';
+    html += '<option value="result-principalMax"' + (displayMode === 'result-principalMax' ? ' selected' : '') + '>Maks. asal gerilme</option>';
+    html += '<option value="result-principalMin"' + (displayMode === 'result-principalMin' ? ' selected' : '') + '>Min. asal gerilme</option>';
+    html += '<option value="result-deformed"' + (displayMode === 'result-deformed' ? ' selected' : '') + '>Deforme şekil (auto scale, gri ref)</option>';
+    html += '</optgroup>';
+  }
   html += '</select>';
   var isHeatMap = (displayMode === 'aspect' || displayMode === 'skewness' || displayMode === 'minAngle' || displayMode === 'jacobianRatio');
   var isThreshold = (displayMode === 'threshold-aspect' || displayMode === 'threshold-skewness' || displayMode === 'threshold-minAngle' || displayMode === 'threshold-jacobian');
+  var isResultMap = (displayMode === 'result-vonMises' || displayMode === 'result-displacement' ||
+                     displayMode === 'result-principalMax' || displayMode === 'result-principalMin' ||
+                     displayMode === 'result-deformed');
+  if (isResultMap) {
+    var rLabel = (displayMode === 'result-vonMises') ? 'von Mises (MPa)'
+               : (displayMode === 'result-displacement') ? 'Deplasman (mm)'
+               : (displayMode === 'result-principalMax') ? 'σ_max (MPa)'
+               : (displayMode === 'result-principalMin') ? 'σ_min (MPa)'
+               : 'Deforme şekil';
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:4px;">' + rLabel + '</div>';
+    html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
+      '<span style="font-size:0.55rem; color:var(--text-muted);">Düşük</span>' +
+      '<div style="flex:1; height:8px; background:linear-gradient(to right, #0000ff, #00ffff, #00ff00, #ffff00, #ff0000); border:1px solid var(--border-color);"></div>' +
+      '<span style="font-size:0.55rem; color:var(--text-muted);">Yüksek</span>' +
+    '</div>';
+  }
   if (isHeatMap) {
     html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">' +
       '<span style="font-size:0.55rem; color:var(--text-muted);">İyi</span>' +

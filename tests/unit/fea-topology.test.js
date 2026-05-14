@@ -128,6 +128,52 @@ describe('veFEAComputeGeometryTopology — Küre', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — Torus', () => {
+  test('1 face (toroidal), 0 kenar, 0 köşe (closed manifold)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } });
+    expect(topo.faces.length).toBe(1);
+    expect(topo.edges.count).toBe(0);
+    expect(topo.vertices.count).toBe(0);
+    expect(topo.faces[0].type).toBe('toroidal');
+    expect(topo.faces[0].majorRadius).toBe(30);
+    expect(topo.faces[0].minorRadius).toBe(10);
+  });
+
+  test('Hacim = 2π²Rr², yüzey = 4π²Rr (Pappus)', () => {
+    var R = 30, r = 10;
+    var topo = veFEAComputeGeometryTopology({ type: 'torus', params: { majorRadius: R, minorRadius: r } });
+    expect(topo.volume).toBeCloseTo(2 * Math.PI * Math.PI * R * r * r, 1);
+    expect(topo.totalSurfaceArea).toBeCloseTo(4 * Math.PI * Math.PI * R * r, 1);
+  });
+
+  test('"toroidal" tipi etiketi: Toroidal (Halka)', () => {
+    expect(veFEATopologyFaceTypeLabel('toroidal')).toBe('Toroidal (Halka)');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — Yarım Küre', () => {
+  test('2 face (faceFlat + faceDome), 1 daire kenar (equator)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'hemisphere', params: { radius: 25 } });
+    expect(topo.faces.length).toBe(2);
+    expect(topo.edges.count).toBe(1);
+    var ids = topo.faces.map(function(f) { return f.id; });
+    expect(ids).toContain('faceFlat');
+    expect(ids).toContain('faceDome');
+  });
+
+  test('Dome alanı = 2πr², flat = πr², hacim = (2/3)πr³', () => {
+    var r = 25;
+    var topo = veFEAComputeGeometryTopology({ type: 'hemisphere', params: { radius: r } });
+    var dome = topo.faces.find(function(f) { return f.id === 'faceDome'; });
+    var flat = topo.faces.find(function(f) { return f.id === 'faceFlat'; });
+    expect(dome.area).toBeCloseTo(2 * Math.PI * r * r, 3);
+    expect(flat.area).toBeCloseTo(Math.PI * r * r, 3);
+    expect(topo.volume).toBeCloseTo((2 / 3) * Math.PI * r * r * r, 3);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeGeometryTopology — Koni / Frustum', () => {
   test('Frustum (rT > 0): 3 yüzey (alt + üst + conical yan), 2 kenar', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } });
@@ -165,6 +211,43 @@ describe('veFEAComputeGeometryTopology — Koni / Frustum', () => {
 
   test('"conical" tipi etiketi: Konik (Eğri)', () => {
     expect(veFEATopologyFaceTypeLabel('conical')).toBe('Konik (Eğri)');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — L-Profil (lbracket)', () => {
+  test('8 face (2 kesit + 6 yan yüzey)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } });
+    expect(topo.faces.length).toBe(8);
+  });
+
+  test('Tüm yüzeyler planar', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } });
+    topo.faces.forEach(function(f) { expect(f.type).toBe('planar'); });
+  });
+
+  test('Hacim = t·(w+h-t)·L', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } });
+    expect(topo.volume).toBeCloseTo(5 * (60 + 40 - 5) * 100, 0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — I-Profil (ibeam)', () => {
+  test('10 face (2 kesit + 8 yan yüzey)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } });
+    expect(topo.faces.length).toBe(10);
+  });
+
+  test('Tüm yüzeyler planar', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } });
+    topo.faces.forEach(function(f) { expect(f.type).toBe('planar'); });
+  });
+
+  test('Hacim = (2·w·tf + tw·(h-2·tf))·L', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } });
+    var expected = (2 * 80 * 8 + 6 * (120 - 16)) * 200;
+    expect(topo.volume).toBeCloseTo(expected, 0);
   });
 });
 
