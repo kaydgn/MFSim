@@ -229,6 +229,46 @@ describe('CSR Mat-Vec çarpımı', () => {
   });
 });
 
+describe('Solver sinyal okuma (sensor entegrasyonu)', () => {
+  test('veFEAReadSolverSignal: bilinen sinyaller doğru değer döner', () => {
+    var solverNode = {
+      data: {
+        solver: {
+          results: {
+            maxVonMises: 100,
+            maxDisplacement: 0.5,
+            maxPrincipalStress: 110,
+            minPrincipalStress: -30,
+            safetyFactor: 2.35,
+            totalMass: 7.85e-6
+          }
+        }
+      }
+    };
+    expect(veFEAReadSolverSignal(solverNode, 'max_von_mises')).toBe(100);
+    expect(veFEAReadSolverSignal(solverNode, 'max_displacement')).toBe(0.5);
+    expect(veFEAReadSolverSignal(solverNode, 'max_principal')).toBe(110);
+    expect(veFEAReadSolverSignal(solverNode, 'min_principal')).toBe(-30);
+    expect(veFEAReadSolverSignal(solverNode, 'safety_factor')).toBe(2.35);
+    expect(veFEAReadSolverSignal(solverNode, 'mass')).toBe(7.85e-6);
+  });
+
+  test('Sonuç yoksa null döner', () => {
+    expect(veFEAReadSolverSignal({ data: {} }, 'max_von_mises')).toBeNull();
+    expect(veFEAReadSolverSignal(null, 'mass')).toBeNull();
+  });
+
+  test('Bilinmeyen sinyal → null', () => {
+    var node = { data: { solver: { results: { maxVonMises: 100 } } } };
+    expect(veFEAReadSolverSignal(node, 'weird-signal')).toBeNull();
+  });
+
+  test('Sonsuz güvenlik faktörü → null (gerçek hesap yapılamamış)', () => {
+    var node = { data: { solver: { results: { safetyFactor: Infinity } } } };
+    expect(veFEAReadSolverSignal(node, 'safety_factor')).toBeNull();
+  });
+});
+
 describe('PCG Çözücü — uniaxial tension validation', () => {
   test('1×1×1 hex8 + sol yüz fixed + sağ yüz F_x: u_x ≈ FL/EA (analitik)', () => {
     var mesh = veFEAMeshFromGeometry({ type: 'box', params: { width: 1, height: 1, depth: 1 } }, { size: 1 });

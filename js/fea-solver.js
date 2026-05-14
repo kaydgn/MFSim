@@ -453,6 +453,28 @@ function veFEAPCGSolve(K, F, opts) {
   return { u: u, iterations: iter, residual: Math.sqrt(finalRNorm), converged: false };
 }
 
+// ─── 10. Sensor okuma yardımcısı ─────────────────────────────────────────
+// FEA Çözücü node'unun outputs (COMPONENT_SIGNALS['fea-solver']) sinyallerini
+// node.data.solver.results'tan oku. Static (one-shot) cozum oldugu icin
+// zaman series degil tek skaler deger.
+//
+// signalId → node.data.solver.results[anahtar] eslemesi:
+function veFEAReadSolverSignal(solverNode, signalId) {
+  if (!solverNode || !solverNode.data || !solverNode.data.solver || !solverNode.data.solver.results) {
+    return null;
+  }
+  var r = solverNode.data.solver.results;
+  switch (signalId) {
+    case 'max_von_mises':    return r.maxVonMises;
+    case 'max_displacement': return r.maxDisplacement;
+    case 'max_principal':    return r.maxPrincipalStress;
+    case 'min_principal':    return r.minPrincipalStress;
+    case 'safety_factor':    return isFinite(r.safetyFactor) ? r.safetyFactor : null;
+    case 'mass':             return r.totalMass;
+    default: return null;
+  }
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veFEAHex8ShapeFunctions: veFEAHex8ShapeFunctions,
@@ -465,6 +487,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFEAApplyFixedSupport: veFEAApplyFixedSupport,
     veFEAApplyPrescribedDisplacement: veFEAApplyPrescribedDisplacement,
     veFEAPCGSolve: veFEAPCGSolve,
+    veFEAReadSolverSignal: veFEAReadSolverSignal,
     VE_FEA_BC_PENALTY: VE_FEA_BC_PENALTY
   };
 }
