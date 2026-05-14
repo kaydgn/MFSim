@@ -9,7 +9,7 @@
 // Primitif tipleri (box/cylinder/shaft/rectTube) için topology trivial:
 //   - Statik face listesi geometriden analitik üretilir
 //   - Face ID'leri mesh sonrası namedSelections ile eşleşir (zaten aynı id'ler)
-// STL/STEP için: full BREP topology OCCT entegrasyonu gerek (Faz B+); şimdilik
+// STEP için: full BREP topology OCCT entegrasyonu gerek (Faz B+); şimdilik
 // tek "Yüzey" face olarak basitleştirildi.
 //
 // Topology data structure:
@@ -38,7 +38,7 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'lbracket')   return _veFEAToplLBracket(p);
   if (geometry.type === 'ibeam')      return _veFEAToplIBeam(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
-  if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
+  if (geometry.type === 'step') return _veFEAToplStep(geometry);
   return null;
 }
 
@@ -304,11 +304,11 @@ function _veFEAToplRectTube(p) {
   };
 }
 
-// ─── STL / STEP — feature-aware (yuklenen geometriden tespit) ──────────────
+// ─── STEP — feature-aware (yuklenen geometriden tespit) ───────────────────
 // Geom üzerinde detectedFeatures varsa (veFEADetectGeometryFeatures cikti),
 // her feature ayri face olarak topology'ye eklenir. Aksi takdirde tek
 // "triangulated" face fallback.
-function _veFEAToplStlStep(geom) {
+function _veFEAToplStep(geom) {
   if (geom.detectedFeatures && geom.detectedFeatures.features && geom.detectedFeatures.features.length > 0) {
     var det = geom.detectedFeatures;
     var faces = det.features.map(function (f, idx) {

@@ -5,7 +5,7 @@
 //   - Kutu        → Heks8 structured (nx × ny × nz)
 //   - Silindir    → Wedge6 (disk triangulation + eksenel extrude)
 //   - Şaft        → Heks8 annulus (radyal × açısal × eksenel)
-//   - STL / STEP  → Tri3 (yüzey mesh, vertex dedup)
+//   - STEP        → Tri3 (yüzey mesh, vertex dedup)
 //
 // Hacim tetra (tet4/tet10) ve adaptif refinement F3b'de eklenir
 // (tetgen-wasm veya benzeri yöntem gerekir).
@@ -354,7 +354,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'lbracket') mesh = _veFEAMeshLBracket(geometry.params || {}, size);
   else if (geometry.type === 'ibeam')    mesh = _veFEAMeshIBeam(geometry.params || {}, size);
-  else if (geometry.type === 'stl' || geometry.type === 'step') {
+  else if (geometry.type === 'step') {
     // ANSYS-style otomatik primitif inference:
     // Tespit edilen feature seti tam bir primitif'e uyuyor mu? (silindir/küre/kutu)
     // Uyuyorsa voxel yerine yapısal primitive mesh kullan.
@@ -372,7 +372,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
         if (primMesh && !primMesh.error) {
           // Mesh node'larini tespit edilen orientation/center'a tasi
           _veFEATransformMeshToOrientation(primMesh, inferred.transform);
-          // Etiketleme: bu STL/STEP'den infer edildi
+          // Etiketleme: bu STEP'ten infer edildi
           primMesh.geometryType = geometry.type;
           primMesh.originalGeometry = geometry.type;
           primMesh.inferredPrimitive = inferred;
@@ -383,10 +383,11 @@ function veFEAMeshFromGeometry(geometry, opts) {
         }
       }
     }
-    // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
+    // STEP için sync parse yok — async wrapper (veFEAMeshFromGeometryAsync)
+    // kullanılır. Bu sync yol primitif inference başarısız olursa null döner.
     var parsed = _veFEAParseSurfaceTriangles(geometry);
     if (!parsed) return null;
-    // mode kararı: auto → STL/STEP için voxel hacim; surface → Tri3
+    // mode kararı: auto → STEP için voxel hacim; surface → Tri3
     if (mode === 'surface') {
       return _veFEAMeshFromParsedTriangles(parsed, geometry.type);
     }
@@ -1685,21 +1686,21 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
   };
 }
 
-// ─── STL / STEP → parsed triangles (sync) ─────────────────────────────────
-// STL için doğrudan parse. STEP için sync parse yok (async wrapper kullan).
+// ─── STEP → parsed triangles ──────────────────────────────────────────────
+// STEP için sync parse yok — veFEAMeshFromGeometryAsync (OCCT WebAssembly)
+// üzerinden async yolu kullanılır. Sync dispatcher bu yüzden null döner ve
+// caller async wrapper'a fallback eder. (STL desteği kaldırıldı.)
+//
+// Test bypass: geometry._parsedTriangles (test-only) varsa onu döndür ki
+// birim testler sync voxelizer üzerinden tam pipeline'ı çalıştırabilsin.
 function _veFEAParseSurfaceTriangles(geom) {
-  if (!geom || !geom.rawDataB64) return null;
-  if (typeof veFEABase64ToArrayBuffer !== 'function') return null;
-  if (geom.type === 'stl' && typeof veFEAParseSTL === 'function') {
-    var buf = veFEABase64ToArrayBuffer(geom.rawDataB64);
-    var parsed = veFEAParseSTL(buf);
-    if (parsed && parsed.triangleCount > 0) return parsed;
+  if (geom && geom._parsedTriangles && geom._parsedTriangles.triangleCount > 0) {
+    return geom._parsedTriangles;
   }
-  // STEP sync parse yok — veFEAMeshFromGeometryAsync kullanılır
   return null;
 }
 
-// ─── Voxel hacim mesh (Heks8) — STL/STEP karmaşık geometriler için ────────
+// ─── Voxel hacim mesh (Heks8) — STEP karmaşık geometriler için ────────────
 // Algoritma: bbox içinde voxel grid, X-eksenli ray casting ile parite testi,
 // içeride kalan voxel'leri Heks8 olarak (ortak köşeler dedup'lı).
 // ANSYS'in "Cartesian mesh" yöntemine benzer. Karmaşık geometrilerde çalışır;

@@ -258,10 +258,13 @@ function veFEAInitViewer(canvas, opts) {
       this._applyFaceColors();
     },
     getSelectedFace: function() { return this._selectedFaceId; },
-    loadSTL: function(parsed) {
-      if(typeof veFEABuildSTLMesh !== 'function') return null;
+    // STEP üçgen mesh'inden Three.js sahnesine yükle. (Eski adı loadSTL; STL
+    // desteği kaldırıldı ama eski isim viewer API'sinde geri uyumluluk için
+    // korunmadı — yeni ad: loadTriangleMesh.)
+    loadTriangleMesh: function(parsed) {
+      if(typeof veFEABuildTriangleMesh !== 'function') return null;
       this.clearGeometry();
-      var mesh = veFEABuildSTLMesh(parsed);
+      var mesh = veFEABuildTriangleMesh(parsed);
       if(!mesh) return null;
       this._geometryRoot.add(mesh);
       _veFEAEnsureEdges(mesh);
@@ -1425,17 +1428,13 @@ function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
   if(!node.data || !node.data.geometry || !node.data.geometry.type) return;
 
   var g = node.data.geometry;
-  if(g.type === 'stl' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function' && typeof veFEAParseSTL === 'function') {
-    var buf = veFEABase64ToArrayBuffer(g.rawDataB64);
-    var parsed = veFEAParseSTL(buf);
-    if(parsed) viewer.loadSTL(parsed);
-  } else if(g.type === 'step' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function'
+  if(g.type === 'step' && g.rawDataB64 && typeof veFEABase64ToArrayBuffer === 'function'
             && typeof veFEAParseSTEPBuffer === 'function' && typeof veFEAStepMeshesToParsed === 'function') {
     var stepBuf = veFEABase64ToArrayBuffer(g.rawDataB64);
     veFEAParseSTEPBuffer(stepBuf).then(function(result) {
       var parsedStep = veFEAStepMeshesToParsed(result);
-      if(parsedStep && parsedStep.triangleCount > 0 && typeof viewer.loadSTL === 'function') {
-        viewer.loadSTL(parsedStep);
+      if(parsedStep && parsedStep.triangleCount > 0 && typeof viewer.loadTriangleMesh === 'function') {
+        viewer.loadTriangleMesh(parsedStep);
       }
     }).catch(function(err) {
       console.error('[FEA] STEP yeniden yukleme hatasi:', err);
@@ -1485,99 +1484,9 @@ function veFEAApplyPrimitive(nodeId, type, params) {
   }
 }
 
-// ─── STL Apply köprüsü ─────────────────────────────────────────────────────
-// Maksimum dosya boyutu (proje kaydında saklamak için).
-var VE_FEA_STL_MAX_PERSIST_BYTES = 10 * 1024 * 1024; // 10 MB
-
-function veFEAApplySTL(nodeId, buffer, fileName) {
-  if(typeof veFEAParseSTL !== 'function') return;
-  var parsed = veFEAParseSTL(buffer);
-  if(!parsed || parsed.triangleCount === 0) {
-    if(typeof showToast === 'function') showToast('STL dosyası geçersiz veya boş', 'error');
-    return;
-  }
-
-  var viewer = veFEAViewerRegistry[nodeId];
-  if(viewer) viewer.loadSTL(parsed);
-
-  var stats = (typeof veFEAComputeMeshStats === 'function')
-    ? veFEAComputeMeshStats(parsed)
-    : { volume: 0, surfaceArea: 0, bbox: { x: 0, y: 0, z: 0 } };
-
-  var byteLength = (buffer && buffer.byteLength) || 0;
-  var canPersist = byteLength > 0 && byteLength <= VE_FEA_STL_MAX_PERSIST_BYTES;
-
-  if(typeof nodes !== 'undefined') {
-    var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
-    if(node) {
-      node.data = node.data || {};
-      node.data.geometry = {
-        type: 'stl',
-        sourceLabel: fileName || 'STL',
-        triangleCount: parsed.triangleCount,
-        fileSize: byteLength,
-        volume: stats.volume,
-        surfaceArea: stats.surfaceArea,
-        bbox: stats.bbox,
-        rawDataB64: canPersist ? veFEAArrayBufferToBase64(buffer) : null,
-        persistNote: canPersist
-          ? null
-          : ('Dosya ' + (byteLength / (1024*1024)).toFixed(1) + ' MB — proje kaydında saklanmıyor, yeniden yükleyin.')
-      };
-      // ANSYS-style yuzey ozellik tanima — STL icin de aktif
-      if (typeof veFEADetectGeometryFeatures === 'function') {
-        try {
-          var detected = veFEADetectGeometryFeatures(parsed);
-          if (detected) {
-            node.data.geometry.detectedFeatures = {
-              features: detected.features.map(function (f) {
-                var copy = {};
-                Object.keys(f).forEach(function (k) {
-                  if (k !== 'triangleIds') copy[k] = f[k];
-                });
-                copy.triangleCount = (f.triangleIds || []).length;
-                return copy;
-              }),
-              summary: detected.summary,
-              edgeStats: detected.edgeStats,
-              totalArea: detected.totalArea,
-              bbox: detected.bbox
-            };
-          }
-        } catch (err) { /* fallback */ }
-      }
-      if (typeof veFEAComputeGeometryTopology === 'function') {
-        node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
-      }
-      if(typeof saveState === 'function') saveState();
-    }
-  }
-
-  if(typeof showToast === 'function') {
-    var sizeMB = (byteLength / (1024*1024)).toFixed(2);
-    showToast('STL yüklendi: ' + (fileName || '?') + ' (' + parsed.triangleCount + ' üçgen, ' + sizeMB + ' MB)', 'success');
-  }
-
-  if(typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
-    var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
-    if(n) showNodeProperties(n);
-  }
-}
-
-// File <input> change handler — cp-fea.js HTML'inden çağrılır
-function veFEAOnSTLFileSelected(input, nodeId) {
-  if(!input || !input.files || !input.files[0]) return;
-  var file = input.files[0];
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    veFEAApplySTL(nodeId, e.target.result, file.name);
-  };
-  reader.onerror = function() {
-    if(typeof showToast === 'function') showToast('Dosya okunamadı: ' + file.name, 'error');
-  };
-  reader.readAsArrayBuffer(file);
-  input.value = ''; // aynı dosyayı tekrar seçebilmek için
-}
+// STL import desteği kaldırıldı (sadece STEP). Eski veFEAApplySTL +
+// veFEAOnSTLFileSelected kullanılmıyor, fea-step.js'in veFEAApplySTEP +
+// veFEAOnSTEPFileSelected eşdeğerleri tek import yolu.
 
 // cp-fea.js "Sığdır" düğmesi için — preview viewer'ın geometriyi sığdırması
 function veFEAFitPreviewForNode(nodeId) {
@@ -1703,8 +1612,9 @@ function veFEABuildMeshForNode(meshNodeId) {
     crossSection: settings.crossSection
   };
 
-  // STEP için async parse gerekebilir — promise-aware yol
-  var needsAsync = (geometry.type === 'step');
+  // STEP için async parse gerekebilir — promise-aware yol.
+  // _parsedTriangles (test/inference bypass) varsa sync yolu yeterli.
+  var needsAsync = (geometry.type === 'step') && !geometry._parsedTriangles;
   var finishMesh = function(meshData) {
     if (!meshData) {
       if (typeof showToast === 'function') showToast('Mesh oluşturulamadı (desteklenmeyen tip?)', 'error');

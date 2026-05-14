@@ -15,7 +15,7 @@ const ROOT = path.join(__dirname, '../..');
 
 eval(fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-primitives.js'), 'utf8'));
-eval(fs.readFileSync(path.join(ROOT, 'js/fea-stl.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
@@ -553,7 +553,7 @@ describe('Geçersiz geometri/giriş', () => {
   });
 
   test('STL geometri rawDataB64 yoksa null', () => {
-    expect(veFEAMeshFromGeometry({ type: 'stl' })).toBeNull();
+    expect(veFEAMeshFromGeometry({ type: 'step' })).toBeNull();
   });
 });
 
@@ -608,32 +608,31 @@ describe('STL yüzey mesh (vertex dedup)', () => {
       [0,10,0, 10,10,10, 10,10,0,  0,1,0]
     ];
   }
-  function buildBinarySTLCube() {
+  // Test fixture: direkt parsed obje (STL parser kaldırıldı, _parsedTriangles
+  // test bypass field'ı kullanılır).
+  function getCubeParsed() {
     var tris = buildCubeTriangles();
-    var ab = new ArrayBuffer(84 + tris.length * 50);
-    var view = new DataView(ab);
-    view.setUint32(80, tris.length, true);
-    var offset = 84;
+    var vertices = new Float32Array(tris.length * 9);
+    var normals  = new Float32Array(tris.length * 9);
     for (var i = 0; i < tris.length; i++) {
       var t = tris[i];
-      view.setFloat32(offset, t[9], true);
-      view.setFloat32(offset + 4, t[10], true);
-      view.setFloat32(offset + 8, t[11], true);
-      offset += 12;
-      for (var j = 0; j < 9; j++) view.setFloat32(offset + j * 4, t[j], true);
-      offset += 36;
-      view.setUint16(offset, 0, true);
-      offset += 2;
+      for (var j = 0; j < 9; j++) vertices[i * 9 + j] = t[j];
+      for (var k = 0; k < 3; k++) {
+        normals[i * 9 + k * 3]     = t[9];
+        normals[i * 9 + k * 3 + 1] = t[10];
+        normals[i * 9 + k * 3 + 2] = t[11];
+      }
     }
-    return ab;
+    return { vertices: vertices, normals: normals, triangleCount: tris.length };
   }
 
-  test('STL geometri + mode "surface" → Tri3 mesh, dedup\'lı düğümler', () => {
-    // F3b sonrası default mode (auto) STL için voxel hex8 üretir.
+  test('STEP geometri + mode "surface" → Tri3 mesh, dedup\'lı düğümler', () => {
+    // F3b sonrası default mode (auto) STEP için voxel hex8 üretir.
     // Yüzey Tri3 mesh için explicit "surface" mode gerek.
-    var stlBuf = buildBinarySTLCube();
-    var b64 = veFEAArrayBufferToBase64(stlBuf);
-    var m = veFEAMeshFromGeometry({ type: 'stl', rawDataB64: b64 }, { size: 5, mode: 'surface' });
+    var m = veFEAMeshFromGeometry(
+      { type: 'step', _parsedTriangles: getCubeParsed() },
+      { size: 5, mode: 'surface' }
+    );
     expect(m).not.toBeNull();
     expect(m.type).toBe('tri3');
     expect(m.nodesPerElement).toBe(3);
@@ -2368,9 +2367,9 @@ describe('veFEAComputeJacobianMetrics', () => {
     expect(veFEAComputeJacobianMetrics({ error: 'voxel-too-many' })).toBeNull();
   });
 
-  test('Voxel STL → tüm voxel hex geçerli', () => {
-    function buildCubeTriangles() {
-      return [
+  test('Voxel STEP → tüm voxel hex geçerli', () => {
+    function getCubeParsed() {
+      var tris = [
         [0,0,0, 10,10,0, 10,0,0,  0,0,-1],
         [0,0,0, 0,10,0, 10,10,0,  0,0,-1],
         [0,0,10, 10,0,10, 10,10,10,  0,0,1],
@@ -2384,25 +2383,15 @@ describe('veFEAComputeJacobianMetrics', () => {
         [0,10,0, 0,10,10, 10,10,10,  0,1,0],
         [0,10,0, 10,10,10, 10,10,0,  0,1,0]
       ];
+      var vertices = new Float32Array(tris.length * 9);
+      for (var i = 0; i < tris.length; i++) {
+        for (var j = 0; j < 9; j++) vertices[i * 9 + j] = tris[i][j];
+      }
+      return { vertices: vertices, triangleCount: tris.length };
     }
-    var tris = buildCubeTriangles();
-    var ab = new ArrayBuffer(84 + tris.length * 50);
-    var view = new DataView(ab);
-    view.setUint32(80, tris.length, true);
-    var offset = 84;
-    for (var i = 0; i < tris.length; i++) {
-      var t = tris[i];
-      view.setFloat32(offset, t[9], true);
-      view.setFloat32(offset + 4, t[10], true);
-      view.setFloat32(offset + 8, t[11], true);
-      offset += 12;
-      for (var j = 0; j < 9; j++) view.setFloat32(offset + j * 4, t[j], true);
-      offset += 36;
-      view.setUint16(offset, 0, true);
-      offset += 2;
-    }
-    var b64 = veFEAArrayBufferToBase64(ab);
-    var m = veFEAMeshFromGeometry({ type: 'stl', rawDataB64: b64 }, { size: 5 });
+    var m = veFEAMeshFromGeometry(
+      { type: 'step', _parsedTriangles: getCubeParsed() }, { size: 5 }
+    );
     var jm = veFEAComputeJacobianMetrics(m);
     expect(jm.valid).toBe(true);
     expect(jm.elementCount).toBe(8);
@@ -2730,10 +2719,9 @@ describe('veFEAMeshFromGeometry — elementType seçimi', () => {
     expect(m.elements.length / 4).toBe((native.elements.length / 6) * 3);
   });
 
-  test('Voxel STL + elementType "tet4" → tet4 voxel mesh', () => {
-    // STL fixture
-    function buildCubeTriangles() {
-      return [
+  test('Voxel STEP + elementType "tet4" → tet4 voxel mesh', () => {
+    function getCubeParsed() {
+      var tris = [
         [0,0,0, 10,10,0, 10,0,0,  0,0,-1],
         [0,0,0, 0,10,0, 10,10,0,  0,0,-1],
         [0,0,10, 10,0,10, 10,10,10,  0,0,1],
@@ -2747,55 +2735,37 @@ describe('veFEAMeshFromGeometry — elementType seçimi', () => {
         [0,10,0, 0,10,10, 10,10,10,  0,1,0],
         [0,10,0, 10,10,10, 10,10,0,  0,1,0]
       ];
+      var vertices = new Float32Array(tris.length * 9);
+      for (var i = 0; i < tris.length; i++) {
+        for (var j = 0; j < 9; j++) vertices[i * 9 + j] = tris[i][j];
+      }
+      return { vertices: vertices, triangleCount: tris.length };
     }
-    var tris = buildCubeTriangles();
-    var ab = new ArrayBuffer(84 + tris.length * 50);
-    var view = new DataView(ab);
-    view.setUint32(80, tris.length, true);
-    var offset = 84;
-    for (var i = 0; i < tris.length; i++) {
-      var t = tris[i];
-      view.setFloat32(offset, t[9], true);
-      view.setFloat32(offset + 4, t[10], true);
-      view.setFloat32(offset + 8, t[11], true);
-      offset += 12;
-      for (var j = 0; j < 9; j++) view.setFloat32(offset + j * 4, t[j], true);
-      offset += 36;
-      view.setUint16(offset, 0, true);
-      offset += 2;
-    }
-    var b64 = veFEAArrayBufferToBase64(ab);
-    var m = veFEAMeshFromGeometry({ type: 'stl', rawDataB64: b64 }, { size: 5, mode: 'volume', elementType: 'tet4' });
+    var m = veFEAMeshFromGeometry(
+      { type: 'step', _parsedTriangles: getCubeParsed() },
+      { size: 5, mode: 'volume', elementType: 'tet4' }
+    );
     expect(m.type).toBe('tet4');
     expect(m.voxelMode).toBe(true);
     expect(m.elements.length / 4).toBe(8 * 6); // 8 voxel × 6 tet
   });
 
   test('Surface mode tet4\'ten etkilenmez (tri3 kalır)', () => {
-    function buildCubeTriangles() {
-      return [
+    function getTwoTriangles() {
+      var tris = [
         [0,0,0, 10,10,0, 10,0,0,  0,0,-1],
         [0,0,0, 0,10,0, 10,10,0,  0,0,-1]
       ];
+      var vertices = new Float32Array(tris.length * 9);
+      for (var i = 0; i < tris.length; i++) {
+        for (var j = 0; j < 9; j++) vertices[i * 9 + j] = tris[i][j];
+      }
+      return { vertices: vertices, triangleCount: tris.length };
     }
-    var tris = buildCubeTriangles();
-    var ab = new ArrayBuffer(84 + tris.length * 50);
-    var view = new DataView(ab);
-    view.setUint32(80, tris.length, true);
-    var offset = 84;
-    for (var i = 0; i < tris.length; i++) {
-      var t = tris[i];
-      view.setFloat32(offset, t[9], true);
-      view.setFloat32(offset + 4, t[10], true);
-      view.setFloat32(offset + 8, t[11], true);
-      offset += 12;
-      for (var j = 0; j < 9; j++) view.setFloat32(offset + j * 4, t[j], true);
-      offset += 36;
-      view.setUint16(offset, 0, true);
-      offset += 2;
-    }
-    var b64 = veFEAArrayBufferToBase64(ab);
-    var m = veFEAMeshFromGeometry({ type: 'stl', rawDataB64: b64 }, { size: 5, mode: 'surface', elementType: 'tet4' });
+    var m = veFEAMeshFromGeometry(
+      { type: 'step', _parsedTriangles: getTwoTriangles() },
+      { size: 5, mode: 'surface', elementType: 'tet4' }
+    );
     // Surface modunda tri3 — tet4 dönüştürmesi uygulanmaz
     expect(m.type).toBe('tri3');
   });

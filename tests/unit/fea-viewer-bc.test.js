@@ -19,7 +19,7 @@ const ROOT = path.join(__dirname, '../..');
 
 eval(fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-primitives.js'), 'utf8'));
-eval(fs.readFileSync(path.join(ROOT, 'js/fea-stl.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));

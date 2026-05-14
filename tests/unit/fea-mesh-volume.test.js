@@ -15,7 +15,6 @@ const ROOT = path.join(__dirname, '../..');
 
 eval(fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-primitives.js'), 'utf8'));
-eval(fs.readFileSync(path.join(ROOT, 'js/fea-stl.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
@@ -56,36 +55,36 @@ function buildCubeTriangles() {
   ];
 }
 
-function buildBinarySTLCube() {
+// 10×10×10 küp üçgenlerini doğrudan parsed format'a getir (vertices flat array)
+function getCubeParsed() {
   var tris = buildCubeTriangles();
-  var ab = new ArrayBuffer(84 + tris.length * 50);
-  var view = new DataView(ab);
-  view.setUint32(80, tris.length, true);
-  var offset = 84;
+  var vertices = new Float32Array(tris.length * 9);
+  var normals  = new Float32Array(tris.length * 9);
   for (var i = 0; i < tris.length; i++) {
     var t = tris[i];
-    view.setFloat32(offset, t[9], true);
-    view.setFloat32(offset + 4, t[10], true);
-    view.setFloat32(offset + 8, t[11], true);
-    offset += 12;
-    for (var j = 0; j < 9; j++) view.setFloat32(offset + j * 4, t[j], true);
-    offset += 36;
-    view.setUint16(offset, 0, true);
-    offset += 2;
+    for (var j = 0; j < 9; j++) vertices[i * 9 + j] = t[j];
+    for (var k = 0; k < 3; k++) {
+      normals[i * 9 + k * 3]     = t[9];
+      normals[i * 9 + k * 3 + 1] = t[10];
+      normals[i * 9 + k * 3 + 2] = t[11];
+    }
   }
-  return ab;
+  return { vertices: vertices, normals: normals, triangleCount: tris.length };
 }
 
-// 10×10×10 küp STL'i parsed format'a getir
-function getCubeParsed() {
-  return veFEAParseSTL(buildBinarySTLCube());
+// Geometriye atamak için cube'u parsed obje ile birlikte rawDataB64'sız döner.
+// Mesh dispatcher rawDataB64 yokken async wrapper'a düşer — testler için bunu
+// bypass etmek isteyenler doğrudan _veFEAVoxelizeTrianglesToHex çağırır.
+function buildCubeBase64Geom() {
+  return { type: 'step', triangleCount: 12, sourceLabel: 'cube.step',
+           bbox: { x: 10, y: 10, z: 10 } };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('_veFEAVoxelizeTrianglesToHex — küp 10×10×10', () => {
   test('size=5: 2×2×2 = 8 voxel beklenir', () => {
     var parsed = getCubeParsed();
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 5, 'stl');
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 5, 'step');
     expect(m).not.toBeNull();
     expect(m.type).toBe('hex8');
     expect(m.voxelMode).toBe(true);
@@ -99,14 +98,14 @@ describe('_veFEAVoxelizeTrianglesToHex — küp 10×10×10', () => {
 
   test('size=2: 5×5×5 = 125 voxel', () => {
     var parsed = getCubeParsed();
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 2, 'stl');
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 2, 'step');
     expect(m.elements.length / 8).toBe(125);
     expect(m.nodes.length / 3).toBe(216); // 6³
   });
 
   test('size=10: 1×1×1 = 1 voxel', () => {
     var parsed = getCubeParsed();
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 10, 'stl');
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 10, 'step');
     expect(m.elements.length / 8).toBe(1);
     expect(m.nodes.length / 3).toBe(8);
   });
@@ -114,44 +113,44 @@ describe('_veFEAVoxelizeTrianglesToHex — küp 10×10×10', () => {
   test('voxel sayısı VE_FEA_VOXEL_MAX_COUNT aşarsa error döner', () => {
     var parsed = getCubeParsed();
     // 10×10×10 küp + size=0.01 → 1000³ = 1G voxel (sınırı çok aşar)
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 0.01, 'stl');
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 0.01, 'step');
     expect(m.error).toBe('voxel-too-many');
     expect(m.total).toBeGreaterThan(VE_FEA_VOXEL_MAX_COUNT);
   });
 
   test('null/boş parsed için null döner', () => {
-    expect(_veFEAVoxelizeTrianglesToHex(null, 5, 'stl')).toBeNull();
-    expect(_veFEAVoxelizeTrianglesToHex({ vertices: new Float32Array(0), triangleCount: 0 }, 5, 'stl')).toBeNull();
+    expect(_veFEAVoxelizeTrianglesToHex(null, 5, 'step')).toBeNull();
+    expect(_veFEAVoxelizeTrianglesToHex({ vertices: new Float32Array(0), triangleCount: 0 }, 5, 'step')).toBeNull();
   });
 
   test('hacim error olmadan: geometryType voxel- prefix\'i taşır', () => {
     var parsed = getCubeParsed();
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 5, 'stl');
-    expect(m.geometryType).toBe('voxel-stl');
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 5, 'step');
+    expect(m.geometryType).toBe('voxel-step');
   });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('veFEAMeshFromGeometry — mode parametresi', () => {
-  function makeStlGeom() {
-    var b64 = veFEAArrayBufferToBase64(buildBinarySTLCube());
-    return { type: 'stl', rawDataB64: b64, sourceLabel: 'cube.stl', triangleCount: 12 };
+  function makeStepGeom() {
+    return { type: 'step', sourceLabel: 'cube.step', triangleCount: 12,
+             _parsedTriangles: getCubeParsed() };
   }
 
-  test('default mode (auto): STL → voxel hacim Heks8', () => {
-    var m = veFEAMeshFromGeometry(makeStlGeom(), { size: 5 });
+  test('default mode (auto): STEP → voxel hacim Heks8', () => {
+    var m = veFEAMeshFromGeometry(makeStepGeom(), { size: 5 });
     expect(m.type).toBe('hex8');
     expect(m.voxelMode).toBe(true);
   });
 
-  test('mode "volume": STL → voxel hacim Heks8', () => {
-    var m = veFEAMeshFromGeometry(makeStlGeom(), { size: 5, mode: 'volume' });
+  test('mode "volume": STEP → voxel hacim Heks8', () => {
+    var m = veFEAMeshFromGeometry(makeStepGeom(), { size: 5, mode: 'volume' });
     expect(m.type).toBe('hex8');
     expect(m.voxelMode).toBe(true);
   });
 
-  test('mode "surface": STL → Tri3 yüzey mesh', () => {
-    var m = veFEAMeshFromGeometry(makeStlGeom(), { size: 5, mode: 'surface' });
+  test('mode "surface": STEP → Tri3 yüzey mesh', () => {
+    var m = veFEAMeshFromGeometry(makeStepGeom(), { size: 5, mode: 'surface' });
     expect(m.type).toBe('tri3');
     expect(m.elements.length / 3).toBe(12);
   });
@@ -167,16 +166,15 @@ describe('veFEAMeshFromGeometry — mode parametresi', () => {
     // veFEAMeshFromGeometry size'ı VE_FEA_MESH_MIN_SIZE=0.5 mm'e clamp eder,
     // dolayısıyla 10 mm küpte 5M voxel'i aşmak için doğrudan voxelize çağrılır
     var parsed = getCubeParsed();
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 0.01, 'stl');
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 0.01, 'step');
     expect(m.error).toBe('voxel-too-many');
   });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('veFEAMeshFromGeometryAsync', () => {
-  test('STL sync yolu çalışır: Promise.resolve(meshData)', () => {
-    var b64 = veFEAArrayBufferToBase64(buildBinarySTLCube());
-    var geom = { type: 'stl', rawDataB64: b64, triangleCount: 12 };
+  test('STEP sync yolu çalışır: Promise.resolve(meshData)', () => {
+    var geom = { type: 'step', triangleCount: 12, _parsedTriangles: getCubeParsed() };
     return veFEAMeshFromGeometryAsync(geom, { size: 5 }).then(function(m) {
       expect(m).not.toBeNull();
       expect(m.type).toBe('hex8');
@@ -242,7 +240,7 @@ describe('veFEAMeshFromGeometryAsync', () => {
 describe('Voxel mesh — dedup ve element bütünlüğü', () => {
   test('Tüm element indeksleri geçerli node aralığında', () => {
     var parsed = getCubeParsed();
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 2, 'stl');
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 2, 'step');
     var maxIdx = m.nodes.length / 3 - 1;
     var ok = true;
     for (var i = 0; i < m.elements.length; i++) {
@@ -253,7 +251,7 @@ describe('Voxel mesh — dedup ve element bütünlüğü', () => {
 
   test('Komşu voxel\'ler köşe paylaşır (dedup çalışıyor)', () => {
     var parsed = getCubeParsed();
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 5, 'stl');
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 5, 'step');
     // 2×2×2 = 8 voxel × 8 köşe = 64 ham vertex
     // Dedup'lı: 3×3×3 = 27 unique
     expect(m.nodes.length / 3).toBeLessThan(64);
@@ -262,7 +260,7 @@ describe('Voxel mesh — dedup ve element bütünlüğü', () => {
 
   test('Voxel mesh bbox 10×10×10 küpe yakın', () => {
     var parsed = getCubeParsed();
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 5, 'stl');
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 5, 'step');
     var minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity, minZ=Infinity, maxZ=-Infinity;
     for (var i = 0; i < m.nodes.length; i += 3) {
       if (m.nodes[i] < minX) minX = m.nodes[i];
@@ -326,12 +324,11 @@ describe('veFEABuildMeshForNode — voxel error handling', () => {
     Object.keys(veFEAMeshCache).forEach((k) => delete veFEAMeshCache[k]);
   });
 
-  test('STL geometri + clamp altı size → MIN_SIZE\'a clamp + başarılı mesh', () => {
+  test('STEP geometri + clamp altı size → MIN_SIZE\'a clamp + başarılı mesh', () => {
     // Çok küçük size (0.01) VE_FEA_MESH_MIN_SIZE=0.5 mm'e clamp olur.
     // Voxel-too-many error tetiklenmez, mesh oluşur ama makul boyutta.
-    var b64 = veFEAArrayBufferToBase64(buildBinarySTLCube());
     global.nodes = [
-      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'stl', rawDataB64: b64, triangleCount: 12 } } },
+      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'step', triangleCount: 12, _parsedTriangles: getCubeParsed() } } },
       { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 0.01, mode: 'auto' } } }
     ];
     global.connections = [{ from: 'geom-1', to: 'mesh-1' }];
@@ -341,10 +338,9 @@ describe('veFEABuildMeshForNode — voxel error handling', () => {
     expect(veFEAMeshCache['mesh-1'].elements.length / 8).toBe(8000);
   });
 
-  test('STL geometri + makul size → voxel hacim mesh + success toast', () => {
-    var b64 = veFEAArrayBufferToBase64(buildBinarySTLCube());
+  test('STEP geometri + makul size → voxel hacim mesh + success toast', () => {
     global.nodes = [
-      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'stl', rawDataB64: b64, triangleCount: 12 } } },
+      { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'step', triangleCount: 12, _parsedTriangles: getCubeParsed() } } },
       { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 5, mode: 'auto' } } }
     ];
     global.connections = [{ from: 'geom-1', to: 'mesh-1' }];

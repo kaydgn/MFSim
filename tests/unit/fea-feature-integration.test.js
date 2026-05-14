@@ -46,7 +46,7 @@ describe('STL/STEP topology — feature-aware', () => {
     expect(det.summary.planar).toBeGreaterThanOrEqual(2);
 
     var geom = {
-      type: 'stl',
+      type: 'step',
       sourceLabel: 'test cylinder',
       triangleCount: parsed.triangleCount,
       surfaceArea: det.totalArea,
@@ -89,7 +89,7 @@ describe('STL/STEP topology — feature-aware', () => {
 
   test('detectedFeatures yoksa fallback: tek "triangulated" face', () => {
     var geom = {
-      type: 'stl',
+      type: 'step',
       sourceLabel: 'no-features',
       triangleCount: 12,
       surfaceArea: 600,
@@ -108,7 +108,7 @@ describe('Mesh dispatcher — curvature-adaptive sizing', () => {
     var det = veFEADetectGeometryFeatures(parsed);
     // Geometri 1: detectedFeatures YOK
     var geomNoFeat = {
-      type: 'stl',
+      type: 'step',
       bbox: { x: 20, y: 30, z: 20 },
       rawDataB64: null,
       // Test için doğrudan parsed eşdeğer — _veFEAParseSurfaceTriangles çağrılır
@@ -117,8 +117,8 @@ describe('Mesh dispatcher — curvature-adaptive sizing', () => {
     };
     // Hack: _veFEAParseSurfaceTriangles ı bypass et — fea-mesh.js'in altyapısı.
     // Sentetik akış için doğrudan _veFEAVoxelizeTrianglesToHex çağıralım.
-    var meshNoFeat = _veFEAVoxelizeTrianglesToHex(parsed, 4, 'stl', null);
-    var meshWithFeat = _veFEAVoxelizeTrianglesToHex(parsed, 4, 'stl', {
+    var meshNoFeat = _veFEAVoxelizeTrianglesToHex(parsed, 4, 'step', null);
+    var meshWithFeat = _veFEAVoxelizeTrianglesToHex(parsed, 4, 'step', {
       summary: det.summary
     });
     expect(meshNoFeat).not.toBeNull();
@@ -134,8 +134,8 @@ describe('Mesh dispatcher — curvature-adaptive sizing', () => {
     var planarOnly = {
       summary: { planar: 6, cylindrical: 0, spherical: 0, conical: 0, freeform: 0 }
     };
-    var meshA = _veFEAVoxelizeTrianglesToHex(parsed, 4, 'stl', null);
-    var meshB = _veFEAVoxelizeTrianglesToHex(parsed, 4, 'stl', planarOnly);
+    var meshA = _veFEAVoxelizeTrianglesToHex(parsed, 4, 'step', null);
+    var meshB = _veFEAVoxelizeTrianglesToHex(parsed, 4, 'step', planarOnly);
     expect(meshA.elements.length).toBe(meshB.elements.length);
   });
 });

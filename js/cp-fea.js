@@ -4,7 +4,7 @@
 // Bu dosya FEA zincirinin 4 alt bileşeninin (Geometri, Mesh, Sınır Koşulları,
 // Çözücü) özellik panelini sağlar. F1 aşamasında yalnız iskelet vardır;
 // gerçek işlev sonraki fazlarda (F2-F6) dolacak:
-//   F2 → Geometri: Three.js viewer + OCCT.js + STEP/IGES/STL import
+//   F2 → Geometri: Three.js viewer + OCCT.js + STEP import
 //   F3 → Mesh: tet4/tet10, mesh boyu, kalite metrikleri
 //   F4 → Sınır Koşulları: fix/displacement/force/pressure
 //   F5 → Çözücü: sparse assembly + PCG + von Mises
@@ -128,12 +128,10 @@ function getFEAGeometryPropertiesHTML(node) {
     html += '<button onclick="veFEAClearGeometryForNode(\'' + node.id + '\')" style="width:100%; padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer; margin-bottom:10px;">🗑 Geometriyi Sil</button>';
   }
 
-  // CAD import — STL ve STEP aktif
+  // CAD import — sadece STEP
   html += veFEASectionTitle('CAD Dosya İçe Aktar');
-  html += '<input type="file" id="ve-fea-stl-input-' + node.id + '" accept=".stl" style="display:none" onchange="veFEAOnSTLFileSelected(this, \'' + node.id + '\')">';
   html += '<input type="file" id="ve-fea-step-input-' + node.id + '" accept=".step,.stp" style="display:none" onchange="veFEAOnSTEPFileSelected(this, \'' + node.id + '\')">';
   html += '<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">';
-  html += '<button onclick="document.getElementById(\'ve-fea-stl-input-' + node.id + '\').click()" style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; text-align:left;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">📥 STL Yükle (binary veya ASCII)</button>';
   html += '<button onclick="document.getElementById(\'ve-fea-step-input-' + node.id + '\').click()" style="padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; text-align:left;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">📥 STEP Yükle (.step / .stp)</button>';
   html += '<div style="font-size:0.55rem; color:var(--text-muted); padding:0 4px;">STEP OpenCascade WebAssembly ile yüklenir (~7 MB). İlk dosyada birkaç saniye sürer.</div>';
   html += '</div>';
@@ -143,7 +141,7 @@ function getFEAGeometryPropertiesHTML(node) {
   if(hasGeom) {
     var sourceName = geom.sourceLabel || (typeof veFEAPrimitiveLabel === 'function' ? veFEAPrimitiveLabel(geom.type) : geom.type);
     html += veFEAReadOnlyRow('Yüklenen geometri', sourceName);
-    if((geom.type === 'stl' || geom.type === 'step') && geom.triangleCount) {
+    if(geom.type === 'step' && geom.triangleCount) {
       html += veFEAReadOnlyRow('Üçgen sayısı', geom.triangleCount.toLocaleString('tr-TR'));
     }
     if(geom.type === 'step' && geom.meshCount && geom.meshCount > 1) {
@@ -155,7 +153,7 @@ function getFEAGeometryPropertiesHTML(node) {
     if(geom.persistNote) {
       html += '<div style="margin-top:6px; padding:6px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); background:rgba(245,158,11,0.08);">⚠ ' + geom.persistNote + '</div>';
     }
-    // ANSYS-style tespit edilen yuzey ozellikleri ozeti (STL/STEP icin)
+    // ANSYS-style tespit edilen yuzey ozellikleri ozeti (STEP icin)
     if (geom.detectedFeatures && geom.detectedFeatures.summary) {
       var s = geom.detectedFeatures.summary;
       var parts = [];

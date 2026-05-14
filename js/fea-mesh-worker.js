@@ -4,8 +4,8 @@
 // Mesh hesaplamasını arka planda (UI thread'ini bloke etmeden) yürütür.
 // Büyük mesh'ler (>100k eleman) için UI rendaring donmaz.
 //
-// Dependencies: importScripts ile fea-primitives, fea-stl, fea-step,
-// fea-mesh, fea-export yüklenir. Aynı global API'ı (veFEAMeshFromGeometry) kullanır.
+// Dependencies: importScripts ile fea-primitives, fea-step, fea-mesh,
+// fea-export yüklenir. Aynı global API'ı (veFEAMeshFromGeometry) kullanır.
 //
 // Mesaj formatı:
 //   IN:  { type: 'meshFromGeometry', requestId, geometry, opts }
@@ -16,7 +16,7 @@
 // Worker context'te document/window yok → grafik fonksiyonları (Three.js)
 // disabled. veFEAMeshFromGeometry pure data işliyor, sorun yok.
 try {
-  importScripts('fea-primitives.js', 'fea-stl.js', 'fea-step.js', 'fea-mesh.js', 'fea-export.js');
+  importScripts('fea-primitives.js', 'fea-step.js', 'fea-mesh.js', 'fea-export.js');
 } catch (e) {
   // importScripts yoluyla hata olursa mesh request'leri error verir
   self._VE_FEA_WORKER_INIT_ERROR = e.message || String(e);
