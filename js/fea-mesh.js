@@ -355,6 +355,34 @@ function veFEAMeshFromGeometry(geometry, opts) {
   else if (geometry.type === 'lbracket') mesh = _veFEAMeshLBracket(geometry.params || {}, size);
   else if (geometry.type === 'ibeam')    mesh = _veFEAMeshIBeam(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
+    // ANSYS-style otomatik primitif inference:
+    // Tespit edilen feature seti tam bir primitif'e uyuyor mu? (silindir/küre/kutu)
+    // Uyuyorsa voxel yerine yapısal primitive mesh kullan.
+    if (geometry.detectedFeatures && typeof veFEAInferPrimitiveFromFeatures === 'function' &&
+        opts.disablePrimitiveInference !== true && mode !== 'surface') {
+      var inferred = veFEAInferPrimitiveFromFeatures(geometry.detectedFeatures, geometry.bbox);
+      if (inferred && inferred.confidence > 0.85) {
+        // Primitif olarak mesh'le
+        var primMesh = veFEAMeshFromGeometry(
+          { type: inferred.type, params: inferred.params },
+          { size: size, curvatureRefinement: curvOpts, elementType: elementType,
+            midSideNodes: opts.midSideNodes, localSizing: opts.localSizing,
+            crossSection: opts.crossSection }
+        );
+        if (primMesh && !primMesh.error) {
+          // Mesh node'larini tespit edilen orientation/center'a tasi
+          _veFEATransformMeshToOrientation(primMesh, inferred.transform);
+          // Etiketleme: bu STL/STEP'den infer edildi
+          primMesh.geometryType = geometry.type;
+          primMesh.originalGeometry = geometry.type;
+          primMesh.inferredPrimitive = inferred;
+          if (geometry.detectedFeatures.summary) {
+            primMesh.detectedFeatureSummary = geometry.detectedFeatures.summary;
+          }
+          return primMesh;
+        }
+      }
+    }
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
     var parsed = _veFEAParseSurfaceTriangles(geometry);
     if (!parsed) return null;
@@ -362,13 +390,10 @@ function veFEAMeshFromGeometry(geometry, opts) {
     if (mode === 'surface') {
       return _veFEAMeshFromParsedTriangles(parsed, geometry.type);
     }
-    // ANSYS-style: feature-aware curvature-adaptive voxel sizing
-    // Tespit edilen detectedFeatures varsa, egri yuzeyler yakininda daha kucuk
-    // hucre kullan. Detaylar: cylindrical/spherical bolgelerin yakinindaki
-    // voxel'leri belirlenmis size yerine size·0.5 ile mesh'le.
+    // ANSYS-style: feature-aware curvature-adaptive voxel sizing (fallback)
+    // Primitif eşleşmediyse ama eğri yüzey varsa, voxel boyutunu adapte et.
     mesh = _veFEAVoxelizeTrianglesToHex(parsed, size, geometry.type,
       geometry.detectedFeatures || null);
-    // Mesh metadata'ya tespit edilen feature ozetini ekle (UI gosterimi icin)
     if (mesh && !mesh.error && geometry.detectedFeatures && geometry.detectedFeatures.summary) {
       mesh.detectedFeatureSummary = geometry.detectedFeatures.summary;
     }
@@ -1679,6 +1704,56 @@ function _veFEAParseSurfaceTriangles(geom) {
 // içeride kalan voxel'leri Heks8 olarak (ortak köşeler dedup'lı).
 // ANSYS'in "Cartesian mesh" yöntemine benzer. Karmaşık geometrilerde çalışır;
 // yüzeyde staircase artifact görülür (gerçek tet mesher F3c+ için planlı).
+// ─── Mesh node'larini canonical pozisyondan target orientation'a tasi ───
+// Canonical: silindir/kure Y-axis hizali, merkez = origin
+// Target: detected primitive'in axis ve center'i
+// Rodrigues' rotation formulu: Y → target axis
+function _veFEATransformMeshToOrientation(mesh, transform) {
+  if (!mesh || !mesh.nodes || !transform) return;
+  var center = transform.center || [0, 0, 0];
+  var targetAxis = transform.axis || [0, 1, 0];
+  // Y → target rotasyon matrisi (Rodrigues)
+  var yx = 0, yy = 1, yz = 0;
+  var tx = targetAxis[0], ty = targetAxis[1], tz = targetAxis[2];
+  var tLen = Math.sqrt(tx*tx + ty*ty + tz*tz);
+  if (tLen < 1e-12) return; // gecersiz target
+  tx /= tLen; ty /= tLen; tz /= tLen;
+  // Y ile target paralel mi? (anti-paralel veya ayni)
+  var cosA = yx * tx + yy * ty + yz * tz; // = ty
+  var R; // 3x3 row-major
+  if (cosA > 0.9999) {
+    // Ayni yon → birim matris
+    R = [1,0,0, 0,1,0, 0,0,1];
+  } else if (cosA < -0.9999) {
+    // Tam ters → 180° Y rotasyonu (X-Z duzleminde flip)
+    R = [-1,0,0, 0,-1,0, 0,0,1];
+  } else {
+    // Rotasyon eksen = Y × target, sin = |bu|
+    var kx = yy * tz - yz * ty;
+    var ky = yz * tx - yx * tz;
+    var kz = yx * ty - yy * tx;
+    var sinA = Math.sqrt(kx*kx + ky*ky + kz*kz);
+    kx /= sinA; ky /= sinA; kz /= sinA;
+    // Rodrigues: R = I + sinA·K + (1-cosA)·K²
+    // K cross-product matrisi
+    var oc = 1 - cosA;
+    R = [
+      cosA + kx*kx*oc,       kx*ky*oc - kz*sinA,   kx*kz*oc + ky*sinA,
+      ky*kx*oc + kz*sinA,    cosA + ky*ky*oc,      ky*kz*oc - kx*sinA,
+      kz*kx*oc - ky*sinA,    kz*ky*oc + kx*sinA,   cosA + kz*kz*oc
+    ];
+  }
+  // Her node'a uygula: new = R · old + center
+  var nodes = mesh.nodes;
+  var n = nodes.length / 3;
+  for (var i = 0; i < n; i++) {
+    var x = nodes[i * 3], y = nodes[i * 3 + 1], z = nodes[i * 3 + 2];
+    nodes[i * 3]     = R[0]*x + R[1]*y + R[2]*z + center[0];
+    nodes[i * 3 + 1] = R[3]*x + R[4]*y + R[5]*z + center[1];
+    nodes[i * 3 + 2] = R[6]*x + R[7]*y + R[8]*z + center[2];
+  }
+}
+
 function _veFEAVoxelizeTrianglesToHex(parsed, voxelSize, geometryType, detectedFeatures) {
   if (!parsed || !parsed.vertices || parsed.triangleCount === 0) return null;
   var verts = parsed.vertices;
