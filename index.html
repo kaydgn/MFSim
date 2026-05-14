@@ -585,6 +585,15 @@
 <!-- INLINE_FILE: vendor/opencascade/occt-import-js.js as occtScript -->
 <!-- INLINE_FILE: vendor/opencascade/occt-import-js.wasm as occtWasm -->
 
+<!--
+  MFSim FEA WASM — C++ ile yazilan FEA cozucusu (Emscripten ile derlenir,
+  src/fea/*.cpp). Monolitik build'de window.__feaInline.mfsimFea{Script,Wasm}'a
+  base64 inline edilir; dev modunda vendor/mfsim-fea/'den lazy fetch.
+  Build: npm run build:wasm  (emscripten gereklidir)
+-->
+<!-- INLINE_FILE: vendor/mfsim-fea/mfsim-fea.js as mfsimFeaScript -->
+<!-- INLINE_FILE: vendor/mfsim-fea/mfsim-fea.wasm as mfsimFeaWasm -->
+
 <script type="text/x-mfsim-defer" src="js/fea-primitives.js" data-mfsim-label="FEA: Temel geometri..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-stl.js" data-mfsim-label="FEA: STL import..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-step.js" data-mfsim-label="FEA: STEP import..."></script>
@@ -593,6 +602,7 @@
 <script type="text/x-mfsim-defer" src="js/fea-export.js" data-mfsim-label="FEA: Dışa aktarım..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-viewer.js" data-mfsim-label="FEA: Görüntüleyici..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-mesh-editor.js" data-mfsim-label="FEA: Mesh editörü..."></script>
+<script type="text/x-mfsim-defer" src="js/fea-solver-wasm.js" data-mfsim-label="FEA: WASM çözücü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fea.js" data-mfsim-label="FEA paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/ft-performance.js" data-mfsim-label="Saha testi: Performans..."></script>
 <script type="text/x-mfsim-defer" src="js/ft-segment-drive.js" data-mfsim-label="Saha testi: Segment sürüş..."></script>
