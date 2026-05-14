@@ -47,6 +47,15 @@ var VE_FEA_PRIMITIVES = {
       { key: 'segments', label: 'Çevresel Segment (görsel)', unit: '−', default: 32, min: 8, max: 128, integer: true }
     ]
   },
+  'cone': {
+    label: 'Koni / Frustum (kesik koni)',
+    schema: [
+      { key: 'bottomRadius', label: 'Alt Yarıçap',     unit: 'mm', default: 20, min: 0.1, max: 2500 },
+      { key: 'topRadius',    label: 'Üst Yarıçap (0=apex)', unit: 'mm', default: 8, min: 0,   max: 2500 },
+      { key: 'height',       label: 'Yükseklik',        unit: 'mm', default: 60, min: 0.1, max: 5000 },
+      { key: 'segments',     label: 'Çevresel Segment', unit: '−',  default: 48, min: 8,   max: 256, integer: true }
+    ]
+  },
   'rectTube': {
     label: 'Dikdörtgen Profil (içi boş kutu)',
     schema: [
@@ -135,6 +144,18 @@ function veFEAPrimitiveStats(type, params) {
     volume = (4 / 3) * Math.PI * rs * rs * rs;
     surfaceArea = 4 * Math.PI * rs * rs;
     bbox = { x: 2 * rs, y: 2 * rs, z: 2 * rs };
+  } else if(type === 'cone') {
+    var rB = p.bottomRadius, rT = p.topRadius, hC = p.height;
+    // Frustum hacim: V = (1/3) π h (rB² + rB·rT + rT²)
+    volume = (Math.PI * hC / 3) * (rB*rB + rB*rT + rT*rT);
+    // Slant height: l = √(h² + (rB-rT)²)
+    var slant = Math.sqrt(hC*hC + (rB - rT)*(rB - rT));
+    var sideArea = Math.PI * (rB + rT) * slant;
+    var bottomArea = Math.PI * rB * rB;
+    var topArea = Math.PI * rT * rT;  // 0 if rT=0 (apex)
+    surfaceArea = sideArea + bottomArea + topArea;
+    var rMaxC = Math.max(rB, rT);
+    bbox = { x: 2 * rMaxC, y: hC, z: 2 * rMaxC };
   } else if(type === 'rectTube') {
     var w = p.width, h = p.height, t = p.thickness, L2 = p.length;
     var outerArea = w * h;
@@ -168,8 +189,27 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'cylinder') return _veFEABuildCylinderMesh(p);
   if(type === 'shaft')    return _veFEABuildShaftGroup(p);
   if(type === 'sphere')   return _veFEABuildSphereMesh(p);
+  if(type === 'cone')     return _veFEABuildConeMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
   return null;
+}
+
+// ─── Koni / Frustum — CylinderGeometry alt/üst farklı yarıçap ──────────────
+function _veFEABuildConeMesh(p) {
+  // Three.js CylinderGeometry(radiusTop, radiusBottom, height, segments)
+  // 3 face groups: 0=side, 1=top, 2=bottom (cylinder ile aynı convention)
+  var geometry = new THREE.CylinderGeometry(p.topRadius, p.bottomRadius, p.height, p.segments);
+  var faceMap = ['faceSide', 'faceTop', 'faceBottom'];
+  var materials = faceMap.map(function() { return _veFEAMakePrimitiveMaterial(); });
+  var mesh = new THREE.Mesh(geometry, materials);
+  mesh.userData.feaPrimitive = { type: 'cone', params: p };
+  mesh.userData.feaFaceMap = faceMap;
+  mesh.userData.feaEdgesAttached = true;
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b, linewidth: 1 }));
+  mesh.add(line);
+  return mesh;
 }
 
 // ─── Küre — SphereGeometry tek face ────────────────────────────────────────

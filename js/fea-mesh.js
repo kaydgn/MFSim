@@ -250,6 +250,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
   else if (geometry.type === 'sphere')   mesh = _veFEAMeshSphere(geometry.params || {}, size);
+  else if (geometry.type === 'cone')     mesh = _veFEAMeshCone(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
@@ -1143,6 +1144,56 @@ function _veFEASphereNamedSelections(n1, nC) {
   }
   return {
     faceSurface: { type: 'face', source: 'auto', label: 'Küresel Yüzey', nodeIds: new Uint32Array(surface) }
+  };
+}
+
+// ─── Koni / Frustum → Hex8/Wedge6 (cylinder + radial scaling) ─────────────
+// Cylinder mesh'in yeniden kullanımı: max yarıçap ile silindir oluştur, sonra
+// her node'u y koordinatına göre yarıçap interpolasyonu uygula:
+//   r(y) = rB + t·(rT − rB),  t = (y + h/2) / h ∈ [0,1]
+//   scale = r(y) / rMax
+// Topology aynı kalır (3 face: alt/üst disk + yan), sadece geometryType değişir.
+// Apex case (rT=0): üst layer node'lar tek noktaya çakışır → degenerate hex.
+// Solver problemi olmasın diye min effective top radius uygulanır (rMax/1000).
+function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
+  var rB = Math.max(0.1, p.bottomRadius || 20);
+  var rT = Math.max(0,   p.topRadius || 0);
+  var h  = Math.max(0.1, p.height || 60);
+  var rMax = Math.max(rB, rT);
+  // Apex case: tam 0 yerine epsilon → degenerate hex önle
+  var rTeff = Math.max(rT, 0.001 * rMax);
+
+  // Cylinder mesh oluştur (max radius ile)
+  var cylMesh = _veFEAMeshCylinder(
+    { radius: rMax, height: h, segments: p.segments },
+    size, curvOpts, extraOpts
+  );
+  if (!cylMesh) return null;
+
+  // Her node için y koordinatına göre radial ölçekle
+  var nodes = cylMesh.nodes;
+  var nNodes = nodes.length / 3;
+  var halfH = h / 2;
+  var newNodes = new Float32Array(nodes);  // copy (cylMesh nodes shared olmasın)
+  for (var i = 0; i < nNodes; i++) {
+    var y = newNodes[i * 3 + 1];
+    var t = (y + halfH) / h;             // 0 = alt, 1 = üst
+    if (t < 0) t = 0; else if (t > 1) t = 1;
+    var rAtY = rB + t * (rTeff - rB);
+    var scale = (rMax > 1e-9) ? (rAtY / rMax) : 0;
+    newNodes[i * 3]     *= scale;
+    newNodes[i * 3 + 2] *= scale;
+  }
+
+  return {
+    type: cylMesh.type,
+    geometryType: 'cone',
+    nodes: newNodes,
+    elements: cylMesh.elements,
+    nodesPerElement: cylMesh.nodesPerElement,
+    grid: cylMesh.grid,
+    sweepAxis: 'Y',
+    namedSelections: cylMesh.namedSelections   // aynı id'ler: faceTop/Bottom/Side
   };
 }
 

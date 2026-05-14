@@ -331,6 +331,82 @@ describe('Küre → Cubed-Sphere Hex8 mesh', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Koni / Frustum → Wedge6/Hex8 mesh (cylinder + radial scaling)', () => {
+  test('Frustum (rT < rB) Wedge6 mesh oluşur', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } },
+      { size: 5 }
+    );
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('wedge6');
+    expect(m.geometryType).toBe('cone');
+  });
+
+  test('Frustum O-grid Hex8 modu', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } },
+      { size: 5, crossSection: 'ogrid' }
+    );
+    expect(m.type).toBe('hex8');
+    expect(m.grid.ogrid).toBe(true);
+  });
+
+  test('Apex (rT=0): mesh hala oluşur, üst layer yarıçap çok küçük', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cone', params: { bottomRadius: 20, topRadius: 0, height: 60 } },
+      { size: 5 }
+    );
+    expect(m).not.toBeNull();
+    expect(m.type).toBe('wedge6');
+  });
+
+  test('Üst layer yarıçapı rT, alt layer rB', () => {
+    var rB = 20, rT = 8, h = 60;
+    var m = veFEAMeshFromGeometry({ type: 'cone', params: { bottomRadius: rB, topRadius: rT, height: h } }, { size: 5 });
+    var topNodes = m.namedSelections.faceTop.nodeIds;
+    var bottomNodes = m.namedSelections.faceBottom.nodeIds;
+    // Üst yüzeyin maksimum radyal mesafesi rT olmalı
+    var maxRTop = 0;
+    for (var i = 0; i < topNodes.length; i++) {
+      var nid = topNodes[i];
+      var x = m.nodes[nid * 3], z = m.nodes[nid * 3 + 2];
+      maxRTop = Math.max(maxRTop, Math.sqrt(x * x + z * z));
+    }
+    var maxRBot = 0;
+    for (var j = 0; j < bottomNodes.length; j++) {
+      var nidB = bottomNodes[j];
+      var xB = m.nodes[nidB * 3], zB = m.nodes[nidB * 3 + 2];
+      maxRBot = Math.max(maxRBot, Math.sqrt(xB * xB + zB * zB));
+    }
+    expect(maxRTop).toBeCloseTo(rT, 1);
+    expect(maxRBot).toBeCloseTo(rB, 1);
+  });
+
+  test('Hacim ≈ analitik (1/3)πh(rB²+rB·rT+rT²)', () => {
+    var rB = 20, rT = 8, h = 60;
+    var stats = veFEAPrimitiveStats('cone', { bottomRadius: rB, topRadius: rT, height: h });
+    var analytic = (Math.PI * h / 3) * (rB*rB + rB*rT + rT*rT);
+    expect(stats.volume).toBeCloseTo(analytic, 3);
+  });
+
+  test('Jacobian pozitif (frustum, non-apex)', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } },
+      { size: 8 }
+    );
+    var jm = veFEAComputeJacobianMetrics(m);
+    expect(jm.valid).toBe(true);
+  });
+
+  test('3 named selection (frustum: alt, üst, yan)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } }, { size: 5 });
+    expect(m.namedSelections.faceBottom).toBeDefined();
+    expect(m.namedSelections.faceTop).toBeDefined();
+    expect(m.namedSelections.faceSide).toBeDefined();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Şaft (içi boş silindir) → Heks8 annulus', () => {
   test('temel parametrelerle heks8 oluşur', () => {
     var m = veFEAMeshFromGeometry({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } }, { size: 5 });

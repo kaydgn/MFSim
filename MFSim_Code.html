@@ -19947,6 +19947,15 @@ var VE_FEA_PRIMITIVES = {
       { key: 'segments', label: 'Çevresel Segment (görsel)', unit: '−', default: 32, min: 8, max: 128, integer: true }
     ]
   },
+  'cone': {
+    label: 'Koni / Frustum (kesik koni)',
+    schema: [
+      { key: 'bottomRadius', label: 'Alt Yarıçap',     unit: 'mm', default: 20, min: 0.1, max: 2500 },
+      { key: 'topRadius',    label: 'Üst Yarıçap (0=apex)', unit: 'mm', default: 8, min: 0,   max: 2500 },
+      { key: 'height',       label: 'Yükseklik',        unit: 'mm', default: 60, min: 0.1, max: 5000 },
+      { key: 'segments',     label: 'Çevresel Segment', unit: '−',  default: 48, min: 8,   max: 256, integer: true }
+    ]
+  },
   'rectTube': {
     label: 'Dikdörtgen Profil (içi boş kutu)',
     schema: [
@@ -20035,6 +20044,18 @@ function veFEAPrimitiveStats(type, params) {
     volume = (4 / 3) * Math.PI * rs * rs * rs;
     surfaceArea = 4 * Math.PI * rs * rs;
     bbox = { x: 2 * rs, y: 2 * rs, z: 2 * rs };
+  } else if(type === 'cone') {
+    var rB = p.bottomRadius, rT = p.topRadius, hC = p.height;
+    // Frustum hacim: V = (1/3) π h (rB² + rB·rT + rT²)
+    volume = (Math.PI * hC / 3) * (rB*rB + rB*rT + rT*rT);
+    // Slant height: l = √(h² + (rB-rT)²)
+    var slant = Math.sqrt(hC*hC + (rB - rT)*(rB - rT));
+    var sideArea = Math.PI * (rB + rT) * slant;
+    var bottomArea = Math.PI * rB * rB;
+    var topArea = Math.PI * rT * rT;  // 0 if rT=0 (apex)
+    surfaceArea = sideArea + bottomArea + topArea;
+    var rMaxC = Math.max(rB, rT);
+    bbox = { x: 2 * rMaxC, y: hC, z: 2 * rMaxC };
   } else if(type === 'rectTube') {
     var w = p.width, h = p.height, t = p.thickness, L2 = p.length;
     var outerArea = w * h;
@@ -20068,8 +20089,27 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'cylinder') return _veFEABuildCylinderMesh(p);
   if(type === 'shaft')    return _veFEABuildShaftGroup(p);
   if(type === 'sphere')   return _veFEABuildSphereMesh(p);
+  if(type === 'cone')     return _veFEABuildConeMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
   return null;
+}
+
+// ─── Koni / Frustum — CylinderGeometry alt/üst farklı yarıçap ──────────────
+function _veFEABuildConeMesh(p) {
+  // Three.js CylinderGeometry(radiusTop, radiusBottom, height, segments)
+  // 3 face groups: 0=side, 1=top, 2=bottom (cylinder ile aynı convention)
+  var geometry = new THREE.CylinderGeometry(p.topRadius, p.bottomRadius, p.height, p.segments);
+  var faceMap = ['faceSide', 'faceTop', 'faceBottom'];
+  var materials = faceMap.map(function() { return _veFEAMakePrimitiveMaterial(); });
+  var mesh = new THREE.Mesh(geometry, materials);
+  mesh.userData.feaPrimitive = { type: 'cone', params: p };
+  mesh.userData.feaFaceMap = faceMap;
+  mesh.userData.feaEdgesAttached = true;
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b, linewidth: 1 }));
+  mesh.add(line);
+  return mesh;
 }
 
 // ─── Küre — SphereGeometry tek face ────────────────────────────────────────
@@ -20753,6 +20793,7 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'cylinder') return _veFEAToplCylinder(p);
   if (geometry.type === 'shaft')    return _veFEAToplShaft(p);
   if (geometry.type === 'sphere')   return _veFEAToplSphere(p);
+  if (geometry.type === 'cone')     return _veFEAToplCone(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
   if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
   return null;
@@ -20764,6 +20805,7 @@ function veFEATopologyFaceTypeLabel(type) {
     'planar-annular': 'Halka (Düzlem)',
     'cylindrical':    'Silindirik',
     'spherical':      'Küresel',
+    'conical':        'Konik (Eğri)',
     'triangulated':   'Üçgenlenmiş'
   })[type] || type;
 }
@@ -20856,8 +20898,36 @@ function _veFEAToplSphere(p) {
   };
 }
 
-// `spherical` face tipi için Türkçe etiket
-// (Bu fonksiyon zaten yukarıda tanımlı — burada güncelleme yok, sadece referans)
+// ─── Koni / Frustum — 3 face (alt disk, üst disk, conical yan) ─────────────
+function _veFEAToplCone(p) {
+  var rB = Math.max(0.1, p.bottomRadius || 20);
+  var rT = Math.max(0,   p.topRadius || 0);
+  var h  = Math.max(0.1, p.height || 60);
+  var slant = Math.sqrt(h * h + (rB - rT) * (rB - rT));
+  var sideArea = Math.PI * (rB + rT) * slant;
+  var bottomArea = Math.PI * rB * rB;
+  var topArea = Math.PI * rT * rT;
+  var volume = (Math.PI * h / 3) * (rB * rB + rB * rT + rT * rT);
+  var faces = [
+    { id: 'faceBottom', label: 'Alt Disk (Y−)', type: 'planar', normal: [0,-1,0], area: bottomArea, radius: rB },
+    { id: 'faceSide',   label: 'Konik Yan Yüzey', type: 'conical', area: sideArea, bottomRadius: rB, topRadius: rT, slant: slant }
+  ];
+  // Apex case (rT=0): üst disk yok, üst tek nokta (vertex)
+  var isApex = (rT < 1e-6);
+  if (!isApex) {
+    faces.splice(1, 0, { id: 'faceTop', label: 'Üst Disk (Y+)', type: 'planar', normal: [0,1,0], area: topArea, radius: rT });
+  }
+  var rMaxC = Math.max(rB, rT);
+  return {
+    type: 'cone',
+    faces: faces,
+    edges:    { count: isApex ? 1 : 2 },         // alt + (üst varsa)
+    vertices: { count: isApex ? 1 : 0 },         // apex vertex
+    totalSurfaceArea: bottomArea + topArea + sideArea,
+    volume: volume,
+    bbox: { x: 2 * rMaxC, y: h, z: 2 * rMaxC }
+  };
+}
 
 // ─── Dikdörtgen profil (rectTube) — 8 yüzey (4 dış + 4 iç) ─────────────────
 function _veFEAToplRectTube(p) {
@@ -21169,6 +21239,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   else if (geometry.type === 'cylinder') mesh = _veFEAMeshCylinder(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'shaft')    mesh = _veFEAMeshShaft(geometry.params || {}, size, curvOpts);
   else if (geometry.type === 'sphere')   mesh = _veFEAMeshSphere(geometry.params || {}, size);
+  else if (geometry.type === 'cone')     mesh = _veFEAMeshCone(geometry.params || {}, size, curvOpts, { crossSection: opts.crossSection });
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'stl' || geometry.type === 'step') {
     // Yüzey üçgenleri lazım. STL için sync parse, STEP için async (bu yol senkron).
@@ -22062,6 +22133,56 @@ function _veFEASphereNamedSelections(n1, nC) {
   }
   return {
     faceSurface: { type: 'face', source: 'auto', label: 'Küresel Yüzey', nodeIds: new Uint32Array(surface) }
+  };
+}
+
+// ─── Koni / Frustum → Hex8/Wedge6 (cylinder + radial scaling) ─────────────
+// Cylinder mesh'in yeniden kullanımı: max yarıçap ile silindir oluştur, sonra
+// her node'u y koordinatına göre yarıçap interpolasyonu uygula:
+//   r(y) = rB + t·(rT − rB),  t = (y + h/2) / h ∈ [0,1]
+//   scale = r(y) / rMax
+// Topology aynı kalır (3 face: alt/üst disk + yan), sadece geometryType değişir.
+// Apex case (rT=0): üst layer node'lar tek noktaya çakışır → degenerate hex.
+// Solver problemi olmasın diye min effective top radius uygulanır (rMax/1000).
+function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
+  var rB = Math.max(0.1, p.bottomRadius || 20);
+  var rT = Math.max(0,   p.topRadius || 0);
+  var h  = Math.max(0.1, p.height || 60);
+  var rMax = Math.max(rB, rT);
+  // Apex case: tam 0 yerine epsilon → degenerate hex önle
+  var rTeff = Math.max(rT, 0.001 * rMax);
+
+  // Cylinder mesh oluştur (max radius ile)
+  var cylMesh = _veFEAMeshCylinder(
+    { radius: rMax, height: h, segments: p.segments },
+    size, curvOpts, extraOpts
+  );
+  if (!cylMesh) return null;
+
+  // Her node için y koordinatına göre radial ölçekle
+  var nodes = cylMesh.nodes;
+  var nNodes = nodes.length / 3;
+  var halfH = h / 2;
+  var newNodes = new Float32Array(nodes);  // copy (cylMesh nodes shared olmasın)
+  for (var i = 0; i < nNodes; i++) {
+    var y = newNodes[i * 3 + 1];
+    var t = (y + halfH) / h;             // 0 = alt, 1 = üst
+    if (t < 0) t = 0; else if (t > 1) t = 1;
+    var rAtY = rB + t * (rTeff - rB);
+    var scale = (rMax > 1e-9) ? (rAtY / rMax) : 0;
+    newNodes[i * 3]     *= scale;
+    newNodes[i * 3 + 2] *= scale;
+  }
+
+  return {
+    type: cylMesh.type,
+    geometryType: 'cone',
+    nodes: newNodes,
+    elements: cylMesh.elements,
+    nodesPerElement: cylMesh.nodesPerElement,
+    grid: cylMesh.grid,
+    sweepAxis: 'Y',
+    namedSelections: cylMesh.namedSelections   // aynı id'ler: faceTop/Bottom/Side
   };
 }
 

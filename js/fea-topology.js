@@ -32,6 +32,7 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'cylinder') return _veFEAToplCylinder(p);
   if (geometry.type === 'shaft')    return _veFEAToplShaft(p);
   if (geometry.type === 'sphere')   return _veFEAToplSphere(p);
+  if (geometry.type === 'cone')     return _veFEAToplCone(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
   if (geometry.type === 'stl' || geometry.type === 'step') return _veFEAToplStlStep(geometry);
   return null;
@@ -43,6 +44,7 @@ function veFEATopologyFaceTypeLabel(type) {
     'planar-annular': 'Halka (Düzlem)',
     'cylindrical':    'Silindirik',
     'spherical':      'Küresel',
+    'conical':        'Konik (Eğri)',
     'triangulated':   'Üçgenlenmiş'
   })[type] || type;
 }
@@ -135,8 +137,36 @@ function _veFEAToplSphere(p) {
   };
 }
 
-// `spherical` face tipi için Türkçe etiket
-// (Bu fonksiyon zaten yukarıda tanımlı — burada güncelleme yok, sadece referans)
+// ─── Koni / Frustum — 3 face (alt disk, üst disk, conical yan) ─────────────
+function _veFEAToplCone(p) {
+  var rB = Math.max(0.1, p.bottomRadius || 20);
+  var rT = Math.max(0,   p.topRadius || 0);
+  var h  = Math.max(0.1, p.height || 60);
+  var slant = Math.sqrt(h * h + (rB - rT) * (rB - rT));
+  var sideArea = Math.PI * (rB + rT) * slant;
+  var bottomArea = Math.PI * rB * rB;
+  var topArea = Math.PI * rT * rT;
+  var volume = (Math.PI * h / 3) * (rB * rB + rB * rT + rT * rT);
+  var faces = [
+    { id: 'faceBottom', label: 'Alt Disk (Y−)', type: 'planar', normal: [0,-1,0], area: bottomArea, radius: rB },
+    { id: 'faceSide',   label: 'Konik Yan Yüzey', type: 'conical', area: sideArea, bottomRadius: rB, topRadius: rT, slant: slant }
+  ];
+  // Apex case (rT=0): üst disk yok, üst tek nokta (vertex)
+  var isApex = (rT < 1e-6);
+  if (!isApex) {
+    faces.splice(1, 0, { id: 'faceTop', label: 'Üst Disk (Y+)', type: 'planar', normal: [0,1,0], area: topArea, radius: rT });
+  }
+  var rMaxC = Math.max(rB, rT);
+  return {
+    type: 'cone',
+    faces: faces,
+    edges:    { count: isApex ? 1 : 2 },         // alt + (üst varsa)
+    vertices: { count: isApex ? 1 : 0 },         // apex vertex
+    totalSurfaceArea: bottomArea + topArea + sideArea,
+    volume: volume,
+    bbox: { x: 2 * rMaxC, y: h, z: 2 * rMaxC }
+  };
+}
 
 // ─── Dikdörtgen profil (rectTube) — 8 yüzey (4 dış + 4 iç) ─────────────────
 function _veFEAToplRectTube(p) {

@@ -128,6 +128,47 @@ describe('veFEAComputeGeometryTopology — Küre', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAComputeGeometryTopology — Koni / Frustum', () => {
+  test('Frustum (rT > 0): 3 yüzey (alt + üst + conical yan), 2 kenar', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } });
+    expect(topo.faces.length).toBe(3);
+    expect(topo.edges.count).toBe(2);
+    expect(topo.vertices.count).toBe(0);
+    var ids = topo.faces.map(function(f) { return f.id; });
+    expect(ids).toContain('faceBottom');
+    expect(ids).toContain('faceTop');
+    expect(ids).toContain('faceSide');
+  });
+
+  test('Apex (rT=0): 2 yüzey (alt + conical yan), 1 kenar, 1 vertex', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'cone', params: { bottomRadius: 20, topRadius: 0, height: 60 } });
+    expect(topo.faces.length).toBe(2);
+    expect(topo.edges.count).toBe(1);
+    expect(topo.vertices.count).toBe(1);
+  });
+
+  test('Yan yüzey "conical" tipi + slant length', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } });
+    var side = topo.faces.find(function(f) { return f.id === 'faceSide'; });
+    expect(side.type).toBe('conical');
+    expect(side.bottomRadius).toBe(20);
+    expect(side.topRadius).toBe(8);
+    var expectedSlant = Math.sqrt(60 * 60 + 12 * 12);
+    expect(side.slant).toBeCloseTo(expectedSlant, 4);
+  });
+
+  test('Frustum hacim = (1/3)πh(rB²+rB·rT+rT²)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } });
+    var analytic = (Math.PI * 60 / 3) * (400 + 160 + 64);
+    expect(topo.volume).toBeCloseTo(analytic, 2);
+  });
+
+  test('"conical" tipi etiketi: Konik (Eğri)', () => {
+    expect(veFEATopologyFaceTypeLabel('conical')).toBe('Konik (Eğri)');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeGeometryTopology — Dikdörtgen profil (rectTube)', () => {
   test('10 yüzey (2 kesit + 4 dış + 4 iç)', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 200 } });
