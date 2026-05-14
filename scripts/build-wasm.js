@@ -13,10 +13,16 @@ const OUT_DIR = path.join(ROOT, 'vendor', 'mfsim-fea');
 const OUT_JS  = path.join(OUT_DIR, 'mfsim-fea.js');
 const OUT_WASM = path.join(OUT_DIR, 'mfsim-fea.wasm');
 
-const sources = ['bar1d.cpp'].map(function(f) { return path.join(SRC_DIR, f); });
+const sources = ['bar1d.cpp', 'solver3d.cpp'].map(function(f) { return path.join(SRC_DIR, f); });
+
+// Eigen başlık dosyaları. apt: /usr/include/eigen3, çoğu dağıtımda aynı.
+// Alternatif olarak ortamda EIGEN_INCLUDE varsa onu kullan.
+const EIGEN_INCLUDE = process.env.EIGEN_INCLUDE || '/usr/include/eigen3';
 
 const exportedFunctions = [
   '_solve_bar_1d',
+  '_solve_linear_elastic_3d',
+  '_solve_linear_elastic_3d_nodes_per_element',
   '_mfsim_fea_version',
   '_malloc',
   '_free'
@@ -28,12 +34,16 @@ const exportedRuntimeMethods = [
   'getValue',
   'setValue',
   'UTF8ToString',
-  'HEAPF64'
+  'HEAPF64',
+  'HEAP32'
 ];
 
 const args = [
   ...sources,
   '-O2',
+  '-std=c++17',
+  '-I', EIGEN_INCLUDE,
+  '-DEIGEN_MPL2_ONLY',
   '-s', 'WASM=1',
   '-s', 'MODULARIZE=1',
   '-s', "EXPORT_NAME='MFSimFEAModule'",
@@ -42,6 +52,7 @@ const args = [
   '-s', 'ALLOW_MEMORY_GROWTH=1',
   '-s', "ENVIRONMENT='web,worker,node'",
   '-s', 'SINGLE_FILE=0',
+  '-s', 'INITIAL_MEMORY=33554432',  // 32 MB başlangıç (Eigen + mesh için)
   '-o', OUT_JS
 ];
 
