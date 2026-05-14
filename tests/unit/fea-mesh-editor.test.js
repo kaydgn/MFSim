@@ -22,6 +22,95 @@ eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Faz C — Face rename + Lokal Sizing sync', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.saveState = jest.fn();
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+  });
+
+  test('veFEARenameGeometryFace özel isim kaydeder', () => {
+    global.prompt = jest.fn().mockReturnValue('Sabit Mesnet Yüzü');
+    var meshNode = { id: 'mesh-r1', type: 'fea-mesh', data: {} };
+    global.nodes = [meshNode];
+    veFEARenameGeometryFace('mesh-r1', 'faceXMin', 'X− Yüzeyi');
+    expect(global.nodes[0].data.faceRenames.faceXMin).toBe('Sabit Mesnet Yüzü');
+    expect(global.saveState).toHaveBeenCalled();
+  });
+
+  test('Boş veya default isimle rename → kaydı kaldırır', () => {
+    global.prompt = jest.fn().mockReturnValue('');
+    var meshNode = { id: 'mesh-r2', type: 'fea-mesh', data: { faceRenames: { faceXMin: 'Eski İsim' } } };
+    global.nodes = [meshNode];
+    veFEARenameGeometryFace('mesh-r2', 'faceXMin', 'X− Yüzeyi');
+    expect(global.nodes[0].data.faceRenames.faceXMin).toBeUndefined();
+  });
+
+  test('Prompt iptal (null) → değişiklik yok', () => {
+    global.prompt = jest.fn().mockReturnValue(null);
+    var meshNode = { id: 'mesh-r3', type: 'fea-mesh', data: { faceRenames: { faceXMin: 'Önceki' } } };
+    global.nodes = [meshNode];
+    veFEARenameGeometryFace('mesh-r3', 'faceXMin', 'X− Yüzeyi');
+    expect(global.nodes[0].data.faceRenames.faceXMin).toBe('Önceki');
+  });
+
+  test('Custom name topology panelinde yeşil renkte gösterilir', () => {
+    var geomNode = {
+      id: 'g-r', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-r4', type: 'fea-mesh', data: { faceRenames: { faceXMin: 'Sabit Yüz' } } };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-r', to: 'mesh-r4' }];
+    var html = _veFEAEditorTopologyHTML(meshNode);
+    expect(html).toMatch(/Sabit Yüz/);
+    expect(html).toMatch(/Yeniden adlandırıldı/);  // tooltip
+  });
+
+  test('veFEASelectGeometryFace → meshSettings.localSizing.selection sync olur', () => {
+    var meshNode = { id: 'mesh-r5', type: 'fea-mesh', data: {} };
+    global.nodes = [meshNode];
+    veFEASelectGeometryFace('mesh-r5', 'faceYMax');
+    expect(global.nodes[0].data.meshSettings.localSizing.selection).toBe('faceYMax');
+    expect(global.nodes[0].data.selectedFaceId).toBe('faceYMax');
+  });
+
+  test('veFEAOnLocalSelectionChange (Inflation → Topology) sync', () => {
+    var meshNode = { id: 'mesh-r6', type: 'fea-mesh', data: {} };
+    global.nodes = [meshNode];
+    veFEAOnLocalSelectionChange('mesh-r6', 'faceTop');
+    expect(global.nodes[0].data.selectedFaceId).toBe('faceTop');
+    expect(global.nodes[0].data.meshSettings.localSizing.selection).toBe('faceTop');
+  });
+
+  test('Dropdown\'da "none" seçilirse selectedFaceId null olur', () => {
+    var meshNode = { id: 'mesh-r7', type: 'fea-mesh', data: { selectedFaceId: 'faceXMin' } };
+    global.nodes = [meshNode];
+    veFEAOnLocalSelectionChange('mesh-r7', 'none');
+    expect(global.nodes[0].data.selectedFaceId).toBeNull();
+  });
+
+  test('Lokal sizing aktifse topology face\'inde ◆ LOKAL badge', () => {
+    var geomNode = {
+      id: 'g-r2', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = {
+      id: 'mesh-r8', type: 'fea-mesh',
+      data: { meshSettings: { localSizing: { selection: 'faceXMin', biasMode: 'power', biasStrength: 0.5 } } }
+    };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-r2', to: 'mesh-r8' }];
+    var html = _veFEAEditorTopologyHTML(meshNode);
+    expect(html).toMatch(/LOKAL/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Face selection (Faz B: 3D ↔ topology panel iki yönlü sync)', () => {
   beforeEach(() => {
     global.nodes = [];

@@ -479,6 +479,34 @@ function _veFEAEditorAttachModalResize(modal, overlay) {
 // ═══════════════════════════════════════════════════════════════════════════
 // (Mevcut cp-fea.js'teki control HTML'leri buraya taşındı)
 
+// Face label resolver — kullanıcı custom rename yaptıysa onu, yoksa topology
+// default label'ını döndür. ANSYS'de kullanıcı her yüze anlamlı isim verebilir
+// (örn. "Sabit Mesnet Yüzü", "Yük Uygulanan Yüz").
+function _veFEAResolveFaceLabel(node, faceId, defaultLabel) {
+  if (!node || !node.data || !node.data.faceRenames) return defaultLabel;
+  return node.data.faceRenames[faceId] || defaultLabel;
+}
+
+// Face rename bridge — UI'dan prompt ile çağrılır.
+function veFEARenameGeometryFace(meshNodeId, faceId, defaultLabel) {
+  if (typeof nodes === 'undefined') return;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  meshNode.data.faceRenames = meshNode.data.faceRenames || {};
+  var current = meshNode.data.faceRenames[faceId] || defaultLabel || faceId;
+  var input = (typeof prompt === 'function') ? prompt('Yüz için yeni isim:', current) : null;
+  if (input === null) return; // iptal
+  input = String(input).trim();
+  if (input === '' || input === defaultLabel || input === faceId) {
+    delete meshNode.data.faceRenames[faceId];
+  } else {
+    meshNode.data.faceRenames[faceId] = input;
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
 // Geometri Topolojisi — ANSYS-style "geometriyi/yüzeyleri tanımla → mesh at"
 // workflow'unun ilk aşaması. Upstream Geometry node'undan topology okunur
 // (mesh ÖNCESI tespit edilmiş face listesi).
@@ -516,8 +544,13 @@ function _veFEAEditorTopologyHTML(node) {
 
   // Face listesi tablosu — her satır tıklanabilir (3D viewer'da face highlight)
   var selectedFaceId = node.data && node.data.selectedFaceId || null;
+  var localSizingFaceId = (node.data && node.data.meshSettings && node.data.meshSettings.localSizing && node.data.meshSettings.localSizing.selection) || null;
+  var localBiasActive = !!(node.data && node.data.meshSettings && node.data.meshSettings.localSizing &&
+    ((node.data.meshSettings.localSizing.biasStrength || 0) > 0 ||
+     (node.data.meshSettings.localSizing.biasMode === 'inflation' && (node.data.meshSettings.localSizing.firstLayerThickness || 0) > 0)));
+  var faceRenames = (node.data && node.data.faceRenames) || {};
   html += '<div style="font-size:0.58rem; color:var(--text-secondary); margin-bottom:4px;">' +
-    'Yüzeyler <span style="color:var(--text-muted);">(satırı tıklayarak 3D\'de seçin)</span>:</div>';
+    'Yüzeyler <span style="color:var(--text-muted);">(satıra tıkla → 3D\'de seç · ✏ → yeniden adlandır)</span>:</div>';
   topo.faces.forEach(function(f) {
     var typeLabel = (typeof veFEATopologyFaceTypeLabel === 'function') ? veFEATopologyFaceTypeLabel(f.type) : f.type;
     var typeColor = '#3b82f6';
@@ -532,17 +565,30 @@ function _veFEAEditorTopologyHTML(node) {
     if (f.normal) extra += ' · n=[' + f.normal.map(function(v){return v.toFixed(0);}).join(',') + ']';
 
     var isSelected = (selectedFaceId === f.id);
-    var rowBg = isSelected ? '#fbbf2420' : 'var(--bg-tertiary)';   // sarı vurgu seçili
+    var hasLocal = localBiasActive && localSizingFaceId === f.id;
+    var rowBg = isSelected ? '#fbbf2420' : 'var(--bg-tertiary)';
     var rowBorder = isSelected ? '#fbbf24' : 'var(--border-color)';
     var selIcon = isSelected ? '<span style="color:#fbbf24; margin-right:4px;">◉</span>' : '<span style="color:var(--text-muted); margin-right:4px;">○</span>';
 
-    html += '<button onclick="veFEASelectGeometryFace(\'' + node.id + '\', \'' + f.id + '\')" style="display:block; width:100%; text-align:left; padding:5px 8px; background:' + rowBg + '; border:1px solid ' + rowBorder + '; margin-bottom:3px; font-size:0.6rem; cursor:pointer; transition:background 0.12s;" onmouseover="this.style.background=\'' + (isSelected ? '#fbbf2435' : 'var(--bg-secondary)') + '\'" onmouseout="this.style.background=\'' + rowBg + '\'">' +
+    var customLabel = faceRenames[f.id];
+    var displayLabel = customLabel || f.label;
+    var labelHTML = customLabel
+      ? '<span style="font-weight:600; color:#22c55e;" title="Yeniden adlandırıldı (varsayılan: ' + f.label + ')">' + customLabel + '</span>'
+      : '<span style="font-weight:600; color:var(--text-primary);">' + f.label + '</span>';
+    var localBadge = hasLocal
+      ? '<span title="Bu yüze lokal yoğunlaştırma uygulanmış" style="font-size:0.5rem; padding:1px 5px; background:#a855f720; color:#a855f7; font-weight:600; margin-left:4px;">◆ LOKAL</span>'
+      : '';
+
+    html += '<div style="display:flex; align-items:stretch; margin-bottom:3px;">';
+    // Ana satır butonu (face select + 3D highlight)
+    html += '<button onclick="veFEASelectGeometryFace(\'' + node.id + '\', \'' + f.id + '\')" style="flex:1; text-align:left; padding:5px 8px; background:' + rowBg + '; border:1px solid ' + rowBorder + '; border-right:none; font-size:0.6rem; cursor:pointer; transition:background 0.12s;" onmouseover="this.style.background=\'' + (isSelected ? '#fbbf2435' : 'var(--bg-secondary)') + '\'" onmouseout="this.style.background=\'' + rowBg + '\'">' +
       '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
         '<span style="display:flex; align-items:center; gap:4px;">' +
           selIcon +
           '<span style="font-family:monospace; font-size:0.56rem; padding:1px 5px; background:var(--bg-primary); color:var(--text-muted);">' + f.id + '</span>' +
-          '<span style="font-weight:600; color:var(--text-primary);">' + f.label + '</span>' +
+          labelHTML +
           holeIcon +
+          localBadge +
         '</span>' +
         '<span style="font-size:0.52rem; padding:1px 6px; background:' + typeColor + '20; color:' + typeColor + '; font-weight:600;">' + typeLabel + '</span>' +
       '</div>' +
@@ -550,6 +596,10 @@ function _veFEAEditorTopologyHTML(node) {
         'Alan: <b style="color:var(--text-secondary);">' + _fmtArea(f.area || 0) + '</b>' + extra +
       '</div>' +
     '</button>';
+    // Yeniden adlandır (✏️) butonu
+    var defaultLabelEsc = f.label.replace(/'/g, '\\\'');
+    html += '<button onclick="veFEARenameGeometryFace(\'' + node.id + '\', \'' + f.id + '\', \'' + defaultLabelEsc + '\')" title="Yüzü yeniden adlandır" style="padding:0 8px; background:' + rowBg + '; border:1px solid ' + rowBorder + '; cursor:pointer; font-size:0.72rem; color:var(--text-muted);" onmouseover="this.style.color=\'#22c55e\'" onmouseout="this.style.color=\'var(--text-muted)\'">✏</button>';
+    html += '</div>';
   });
 
   if (selectedFaceId) {
@@ -628,7 +678,7 @@ function _veFEAEditorInflationHTML(node) {
     'Hedef yüzeye doğru düğüm kümeleme. Power: sürekli güç fonksiyonu, Inflation: ANSYS-style geometric progression katmanları.</div>';
   html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">' +
     '<label for="ve-fea-mesh-local-sel-' + node.id + '" style="flex:0 0 60px; font-size:0.6rem; color:var(--text-secondary);">Hedef</label>' +
-    '<select id="ve-fea-mesh-local-sel-' + node.id + '" style="flex:1; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+    '<select id="ve-fea-mesh-local-sel-' + node.id + '" onchange="veFEAOnLocalSelectionChange(\'' + node.id + '\', this.value)" style="flex:1; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
   var localFaces = [
     ['none', '— Yok —'],
     ['faceXMin', 'X− Yüzeyi'],
