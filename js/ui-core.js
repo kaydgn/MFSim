@@ -758,6 +758,21 @@ function spawnFEAChain(x, y) {
     }
   });
 
+  // Mesh → Sınır Koşulları bağlantısı dikey aksta olduğundan portları üst/alt yönlere sabitle.
+  // Aksi halde varsayılan sağ→sol yönelim çapraz/eğri bir çizgi üretir.
+  var meshNode = nodes.find(function(n){ return n.id === created['fea-mesh']; });
+  if(meshNode) {
+    if(!meshNode.data) meshNode.data = {};
+    if(!meshNode.data.portPositions) meshNode.data.portPositions = {};
+    meshNode.data.portPositions['output'] = { side: 'bottom' };
+  }
+  var bcNode = nodes.find(function(n){ return n.id === created['fea-bc']; });
+  if(bcNode) {
+    if(!bcNode.data) bcNode.data = {};
+    if(!bcNode.data.portPositions) bcNode.data.portPositions = {};
+    bcNode.data.portPositions['input'] = { side: 'top' };
+  }
+
   // Bağlantılar: akış sırasına göre. Tüm 4 node oluştuysa kur.
   if(created['fea-geometry'] && created['fea-mesh']) {
     createConnection(created['fea-geometry'], created['fea-mesh'], 'output', 'input');
