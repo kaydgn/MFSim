@@ -155,6 +155,27 @@ function getFEAGeometryPropertiesHTML(node) {
     if(geom.persistNote) {
       html += '<div style="margin-top:6px; padding:6px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); background:rgba(245,158,11,0.08);">⚠ ' + geom.persistNote + '</div>';
     }
+    // ANSYS-style tespit edilen yuzey ozellikleri ozeti (STL/STEP icin)
+    if (geom.detectedFeatures && geom.detectedFeatures.summary) {
+      var s = geom.detectedFeatures.summary;
+      var parts = [];
+      if (s.planar)      parts.push(s.planar + ' düzlemsel');
+      if (s.cylindrical) parts.push(s.cylindrical + ' silindirik');
+      if (s.spherical)   parts.push(s.spherical + ' küresel');
+      if (s.conical)     parts.push(s.conical + ' konik');
+      if (s.freeform)    parts.push(s.freeform + ' serbest form');
+      if (parts.length) {
+        html += '<div style="margin-top:8px; padding:7px 9px; font-size:0.6rem; color:var(--text-primary); background:rgba(34,197,94,0.08); border-left:3px solid var(--accent-success,#22c55e); border-radius:2px;">';
+        html += '<div style="font-weight:600; color:var(--accent-success,#22c55e); margin-bottom:3px;">✓ Geometri tanındı</div>';
+        html += '<div style="color:var(--text-muted); line-height:1.5;">' + parts.join(', ') + '</div>';
+        if (geom.detectedFeatures.edgeStats) {
+          html += '<div style="color:var(--text-muted); font-size:0.55rem; margin-top:3px;">Kenarlar: ' +
+            geom.detectedFeatures.edgeStats.sharp + ' keskin, ' +
+            geom.detectedFeatures.edgeStats.smooth + ' yumuşak</div>';
+        }
+        html += '</div>';
+      }
+    }
   } else {
     html += veFEAReadOnlyRow('Yüklenen geometri', '— (henüz yok)');
     html += veFEAReadOnlyRow('Hacim', '—');

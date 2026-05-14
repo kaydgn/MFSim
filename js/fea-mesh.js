@@ -362,8 +362,16 @@ function veFEAMeshFromGeometry(geometry, opts) {
     if (mode === 'surface') {
       return _veFEAMeshFromParsedTriangles(parsed, geometry.type);
     }
-    // auto + volume → voxel hex
-    mesh = _veFEAVoxelizeTrianglesToHex(parsed, size, geometry.type);
+    // ANSYS-style: feature-aware curvature-adaptive voxel sizing
+    // Tespit edilen detectedFeatures varsa, egri yuzeyler yakininda daha kucuk
+    // hucre kullan. Detaylar: cylindrical/spherical bolgelerin yakinindaki
+    // voxel'leri belirlenmis size yerine size·0.5 ile mesh'le.
+    mesh = _veFEAVoxelizeTrianglesToHex(parsed, size, geometry.type,
+      geometry.detectedFeatures || null);
+    // Mesh metadata'ya tespit edilen feature ozetini ekle (UI gosterimi icin)
+    if (mesh && !mesh.error && geometry.detectedFeatures && geometry.detectedFeatures.summary) {
+      mesh.detectedFeatureSummary = geometry.detectedFeatures.summary;
+    }
   }
 
   // Lokal sizing (bias): yapısal mesh sonrasında düğüm konumlarını
@@ -1671,10 +1679,21 @@ function _veFEAParseSurfaceTriangles(geom) {
 // içeride kalan voxel'leri Heks8 olarak (ortak köşeler dedup'lı).
 // ANSYS'in "Cartesian mesh" yöntemine benzer. Karmaşık geometrilerde çalışır;
 // yüzeyde staircase artifact görülür (gerçek tet mesher F3c+ için planlı).
-function _veFEAVoxelizeTrianglesToHex(parsed, voxelSize, geometryType) {
+function _veFEAVoxelizeTrianglesToHex(parsed, voxelSize, geometryType, detectedFeatures) {
   if (!parsed || !parsed.vertices || parsed.triangleCount === 0) return null;
   var verts = parsed.vertices;
   var triCount = parsed.triangleCount;
+  // Feature-aware sizing: egri yuzey (cylindrical/spherical) varsa voxel
+  // boyutunu daha kucuk al (curvature-adaptive refinement). Adim global —
+  // sonraki version'da bolgesel oktree refinement gelebilir.
+  if (detectedFeatures && detectedFeatures.summary) {
+    var s = detectedFeatures.summary;
+    var curvedCount = (s.cylindrical || 0) + (s.spherical || 0) + (s.conical || 0);
+    if (curvedCount > 0) {
+      // Egri yuzey varsa voxel'i %30 kucult — daireselligi daha iyi yakala
+      voxelSize = voxelSize * 0.7;
+    }
+  }
 
   // BBox
   var minX = Infinity, minY = Infinity, minZ = Infinity;
