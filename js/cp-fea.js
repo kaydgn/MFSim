@@ -494,6 +494,22 @@ function veFEABCSetMaterial(nodeId, matId) {
   if (typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
+// BC marker'larini upstream mesh viewer'ina uygula
+function _veFEAPushBCMarkersToMeshViewer(bcNode) {
+  if (!bcNode || !bcNode.data || !bcNode.data.bc) return;
+  if (typeof veFEAViewerRegistry === 'undefined') return;
+  var meshNode = _veFEAFindUpstreamMeshNode(bcNode);
+  if (!meshNode) return;
+  var viewer = veFEAViewerRegistry[meshNode.id];
+  if (!viewer || typeof viewer.addBCMarkers !== 'function') return;
+  var meshData = (typeof veFEAMeshCache !== 'undefined') ? veFEAMeshCache[meshNode.id] : null;
+  if (!meshData) return;
+  var geomNode = _veFEAFindUpstreamGeometryNode(meshNode);
+  var topology = (geomNode && geomNode.data && geomNode.data.geometry && typeof veFEAComputeGeometryTopology === 'function')
+    ? veFEAComputeGeometryTopology(geomNode.data.geometry) : null;
+  viewer.addBCMarkers(meshData, bcNode.data.bc.assignments, topology);
+}
+
 function veFEABCAddAssignment(nodeId) {
   var node = nodes.filter(function (n) { return n.id === nodeId; })[0];
   if (!node) return;
@@ -522,6 +538,7 @@ function veFEABCAddAssignment(nodeId) {
   }
   node.data.bc.assignments.push({ faceId: faceId, kind: kind, value: value, enabled: true });
   if (typeof saveState === 'function') saveState();
+  _veFEAPushBCMarkersToMeshViewer(node);
   if (typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
@@ -530,6 +547,7 @@ function veFEABCRemoveAssignment(nodeId, idx) {
   if (!node || !node.data || !node.data.bc) return;
   node.data.bc.assignments.splice(idx, 1);
   if (typeof saveState === 'function') saveState();
+  _veFEAPushBCMarkersToMeshViewer(node);
   if (typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 

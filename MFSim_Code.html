@@ -25699,6 +25699,114 @@ function veFEAInitViewer(canvas, opts) {
     },
     // Mesh'i sabit renkte solid yüzey olarak yedirir (heat map'siz).
     // withEdges: true → siyah ince edge overlay'i de ekler
+    // BC marker'lari sahneye ekle. assignments: array of {faceId, kind, value}.
+    // Mesh'in face merkezi + normali bilgisini topology'den alir.
+    // Marker tipleri:
+    //   - fixed: kırmızı küçük çapraz/X (cıvata mesneti gibi)
+    //   - force: yeşil ok (force yönü ve büyüklüğüne göre)
+    //   - pressure: turkuaz ok dizisi (yüzeye dağılmış)
+    //   - displacement: mavi ok (deplasman yönü)
+    _bcMarkers: null,
+    clearBCMarkers: function () {
+      if (this._bcMarkers) {
+        this._geometryRoot.remove(this._bcMarkers);
+        this._bcMarkers.traverse(function (obj) {
+          if (obj.geometry && obj.geometry.dispose) obj.geometry.dispose();
+          if (obj.material && obj.material.dispose) obj.material.dispose();
+        });
+        this._bcMarkers = null;
+      }
+    },
+    addBCMarkers: function (meshData, assignments, topology) {
+      this.clearBCMarkers();
+      if (!assignments || !assignments.length) { render(); return; }
+      var group = new THREE.Group();
+      group.name = 'feaBCMarkers';
+
+      // Mesh bbox ölçeği — marker boyutlarını mesh'e göre ölçekle
+      var bboxSize = 10;
+      if (meshData && meshData.nodes && meshData.nodes.length) {
+        var minB = [Infinity, Infinity, Infinity], maxB = [-Infinity, -Infinity, -Infinity];
+        for (var i = 0; i < meshData.nodes.length / 3; i++) {
+          for (var ax = 0; ax < 3; ax++) {
+            var c = meshData.nodes[i * 3 + ax];
+            if (c < minB[ax]) minB[ax] = c;
+            if (c > maxB[ax]) maxB[ax] = c;
+          }
+        }
+        bboxSize = Math.max(maxB[0] - minB[0], maxB[1] - minB[1], maxB[2] - minB[2]);
+      }
+      var ms = bboxSize * 0.12; // marker scale
+
+      assignments.forEach(function (a) {
+        if (!a.enabled) return;
+        var faceNodes = (meshData.namedSelections && meshData.namedSelections[a.faceId])
+          ? meshData.namedSelections[a.faceId].nodeIds : null;
+        if (!faceNodes || !faceNodes.length) return;
+        // Yüzey merkezi hesap
+        var cx = 0, cy = 0, cz = 0;
+        for (var ni = 0; ni < faceNodes.length; ni++) {
+          var n = faceNodes[ni];
+          cx += meshData.nodes[n * 3];
+          cy += meshData.nodes[n * 3 + 1];
+          cz += meshData.nodes[n * 3 + 2];
+        }
+        cx /= faceNodes.length;
+        cy /= faceNodes.length;
+        cz /= faceNodes.length;
+        var center = new THREE.Vector3(cx, cy, cz);
+        var face = (topology && topology.faces) ? topology.faces.filter(function (f) { return f.id === a.faceId; })[0] : null;
+        var normal = face && face.normal ? new THREE.Vector3(face.normal[0], face.normal[1], face.normal[2]) : new THREE.Vector3(0, 1, 0);
+
+        if (a.kind === 'fixed') {
+          // 4-5 kırmızı küçük cıvata kontağı: yüzeydeki 5 nokta, her birinde küçük kırmızı küre
+          var sampleCount = Math.min(faceNodes.length, 12);
+          var step = Math.max(1, Math.floor(faceNodes.length / sampleCount));
+          for (var si = 0; si < faceNodes.length; si += step) {
+            var nn = faceNodes[si];
+            var sp = new THREE.Mesh(
+              new THREE.SphereGeometry(ms * 0.08, 8, 8),
+              new THREE.MeshBasicMaterial({ color: 0xef4444 })
+            );
+            sp.position.set(meshData.nodes[nn * 3], meshData.nodes[nn * 3 + 1], meshData.nodes[nn * 3 + 2]);
+            group.add(sp);
+          }
+        } else if (a.kind === 'force' && a.value) {
+          // Yeşil ok: yüzey merkezinden force vektör yönünde
+          var fv = new THREE.Vector3(a.value.fx || 0, a.value.fy || 0, a.value.fz || 0);
+          var fmag = fv.length();
+          if (fmag > 1e-12) {
+            fv.normalize();
+            var arrow = new THREE.ArrowHelper(fv, center, ms, 0x22c55e, ms * 0.3, ms * 0.15);
+            group.add(arrow);
+          }
+        } else if (a.kind === 'pressure' && a.value) {
+          // Turkuaz oklar yüzey normal yönünde, dağıtık
+          var pressNorm = normal.clone().negate(); // Pressure içeri doğru baskı
+          var pSamples = Math.min(faceNodes.length, 8);
+          var pStep = Math.max(1, Math.floor(faceNodes.length / pSamples));
+          for (var pi = 0; pi < faceNodes.length; pi += pStep) {
+            var pn = faceNodes[pi];
+            var p0 = new THREE.Vector3(meshData.nodes[pn * 3], meshData.nodes[pn * 3 + 1], meshData.nodes[pn * 3 + 2]);
+            var arrowP = new THREE.ArrowHelper(pressNorm, p0.clone().sub(pressNorm.clone().multiplyScalar(ms * 0.6)), ms * 0.6, 0x2dd4bf, ms * 0.2, ms * 0.1);
+            group.add(arrowP);
+          }
+        } else if (a.kind === 'displacement' && a.value) {
+          // Mavi ok: deplasman vektör yönü
+          var dv = new THREE.Vector3(a.value.ux || 0, a.value.uy || 0, a.value.uz || 0);
+          var dmag = dv.length();
+          if (dmag > 1e-12) {
+            dv.normalize();
+            var dArrow = new THREE.ArrowHelper(dv, center, ms, 0x3b82f6, ms * 0.3, ms * 0.15);
+            group.add(dArrow);
+          }
+        }
+      });
+
+      this._geometryRoot.add(group);
+      this._bcMarkers = group;
+      render();
+    },
     loadMeshSolid: function(meshData, withEdges) {
       if (!meshData || typeof veFEAExtractSurfaceTriangles !== 'function') return null;
       this.clearGeometry();
@@ -29220,6 +29328,22 @@ function veFEABCSetMaterial(nodeId, matId) {
   if (typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
+// BC marker'larini upstream mesh viewer'ina uygula
+function _veFEAPushBCMarkersToMeshViewer(bcNode) {
+  if (!bcNode || !bcNode.data || !bcNode.data.bc) return;
+  if (typeof veFEAViewerRegistry === 'undefined') return;
+  var meshNode = _veFEAFindUpstreamMeshNode(bcNode);
+  if (!meshNode) return;
+  var viewer = veFEAViewerRegistry[meshNode.id];
+  if (!viewer || typeof viewer.addBCMarkers !== 'function') return;
+  var meshData = (typeof veFEAMeshCache !== 'undefined') ? veFEAMeshCache[meshNode.id] : null;
+  if (!meshData) return;
+  var geomNode = _veFEAFindUpstreamGeometryNode(meshNode);
+  var topology = (geomNode && geomNode.data && geomNode.data.geometry && typeof veFEAComputeGeometryTopology === 'function')
+    ? veFEAComputeGeometryTopology(geomNode.data.geometry) : null;
+  viewer.addBCMarkers(meshData, bcNode.data.bc.assignments, topology);
+}
+
 function veFEABCAddAssignment(nodeId) {
   var node = nodes.filter(function (n) { return n.id === nodeId; })[0];
   if (!node) return;
@@ -29248,6 +29372,7 @@ function veFEABCAddAssignment(nodeId) {
   }
   node.data.bc.assignments.push({ faceId: faceId, kind: kind, value: value, enabled: true });
   if (typeof saveState === 'function') saveState();
+  _veFEAPushBCMarkersToMeshViewer(node);
   if (typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
@@ -29256,6 +29381,7 @@ function veFEABCRemoveAssignment(nodeId, idx) {
   if (!node || !node.data || !node.data.bc) return;
   node.data.bc.assignments.splice(idx, 1);
   if (typeof saveState === 'function') saveState();
+  _veFEAPushBCMarkersToMeshViewer(node);
   if (typeof showNodeProperties === 'function') showNodeProperties(node);
 }
 
