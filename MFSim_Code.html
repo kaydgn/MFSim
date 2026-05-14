@@ -21298,7 +21298,10 @@ function veFEAMeshLabel(type) {
     'tet4':   'Tet4 (Tetra)',
     'tet10':  'Tet10 (Kuadratik Tetra)',
     'hex20':  'Hex20 (Kuadratik Heks)',
-    'tri3':   'Tri3 (Yüzey)'
+    'pyramid5': 'Pyramid5 (Piramit)',
+    'wedge15':'Wedge15 (Kuadratik Prizm)',
+    'tri3':   'Tri3 (Yüzey)',
+    'hybrid': 'Hibrit (Hex8+Pyramid5+Tet4)'
   })[type] || type;
 }
 
@@ -21375,6 +21378,101 @@ function _veFEAWedgeMeshToTet4(wedgeMesh) {
     }
   }
   return _veFEAWrapTet4Mesh(wedgeMesh, tets, { convertedFromWedge: true });
+}
+
+// ─── Hex8 → 6 Pyramid5 (centroid apex) decomposition ──────────────────────
+// Bir Hex8'i 6 piramide böler: her hex face'i taban + hex centroid'i apex.
+// Bu Pyramid5'lerin tabanları orijinal hex face'leri ile birebir uyumlu,
+// dolayısıyla komşu hex'lerle tet4 / hex8 / wedge6 elemanlarına hibrit olarak
+// bağlanabilir (ANSYS / Abaqus uyumu için klasik geçiş elemanı).
+//
+// Pyramid5 node order (Abaqus / VTK / ANSYS uyumlu):
+//   [P0, P1, P2, P3] = taban kuad CCW (bakış: apex'ten tabana doğru)
+//   [P4] = apex (centroid)
+//
+// Hex8 face listesi (ANSYS/Abaqus klasik CCW dış normal sırası):
+//   Face 1: nodes 0,1,2,3 (alt, -Z), normal -Z
+//   Face 2: nodes 4,5,6,7 (üst, +Z), normal +Z → CCW dış: 4,7,6,5
+//   Face 3: nodes 0,1,5,4 (-Y),       normal -Y → CCW dış: 0,1,5,4 (zaten)
+//   Face 4: nodes 1,2,6,5 (+X),       normal +X → CCW dış: 1,2,6,5
+//   Face 5: nodes 2,3,7,6 (+Y),       normal +Y → CCW dış: 2,3,7,6 (zaten CCW from +Y)
+//   Face 6: nodes 3,0,4,7 (-X),       normal -X → CCW dış: 3,0,4,7
+var _VE_FEA_HEX_PYRAMID_FACES = [
+  [0, 3, 2, 1],   // alt (-Z) → CCW bakış aşağıdan
+  [4, 5, 6, 7],   // üst (+Z) → CCW bakış yukarıdan
+  [0, 1, 5, 4],   // -Y
+  [1, 2, 6, 5],   // +X
+  [2, 3, 7, 6],   // +Y
+  [3, 0, 4, 7]    // -X
+];
+
+function veFEAConvertHexToPyramid5(hexMesh) {
+  if (!hexMesh || hexMesh.type !== 'hex8') return hexMesh;
+  var hex = hexMesh.elements;
+  var origNodes = hexMesh.nodes;
+  var origNodeCount = origNodes.length / 3;
+  var nElem = hex.length / 8;
+
+  // Her hex için 1 centroid + 6 pyramid
+  var newNodeCount = origNodeCount + nElem;
+  var newNodes = new Float32Array(newNodeCount * 3);
+  newNodes.set(origNodes);
+  var pyrs = new Uint32Array(nElem * 6 * 5);
+  var pOff = 0;
+
+  for (var e = 0; e < nElem; e++) {
+    var off = e * 8;
+    // Centroid hesabı
+    var cx = 0, cy = 0, cz = 0;
+    for (var c = 0; c < 8; c++) {
+      var n = hex[off + c];
+      cx += origNodes[n * 3];
+      cy += origNodes[n * 3 + 1];
+      cz += origNodes[n * 3 + 2];
+    }
+    var apexId = origNodeCount + e;
+    newNodes[apexId * 3]     = cx / 8;
+    newNodes[apexId * 3 + 1] = cy / 8;
+    newNodes[apexId * 3 + 2] = cz / 8;
+    // 6 piramit (her yüz için)
+    for (var f = 0; f < 6; f++) {
+      var face = _VE_FEA_HEX_PYRAMID_FACES[f];
+      pyrs[pOff++] = hex[off + face[0]];
+      pyrs[pOff++] = hex[off + face[1]];
+      pyrs[pOff++] = hex[off + face[2]];
+      pyrs[pOff++] = hex[off + face[3]];
+      pyrs[pOff++] = apexId;
+    }
+  }
+
+  return {
+    type: 'pyramid5',
+    geometryType: hexMesh.geometryType,
+    nodes: newNodes,
+    elements: pyrs,
+    nodesPerElement: 5,
+    grid: hexMesh.grid,
+    namedSelections: hexMesh.namedSelections,
+    voxelMode: hexMesh.voxelMode || false,
+    convertedFromHex: true
+  };
+}
+
+// Pyramid5 → 2 Tet4 (4-3 split): pyramid (P0,P1,P2,P3,P4) →
+//   Tet (P0,P1,P2,P4) + Tet (P0,P2,P3,P4)
+function veFEAConvertPyramidToTet4(pyrMesh) {
+  if (!pyrMesh || pyrMesh.type !== 'pyramid5') return pyrMesh;
+  var pyr = pyrMesh.elements;
+  var nElem = pyr.length / 5;
+  var tets = new Uint32Array(nElem * 2 * 4);
+  var p = 0;
+  for (var e = 0; e < nElem; e++) {
+    var off = e * 5;
+    var p0 = pyr[off], p1 = pyr[off + 1], p2 = pyr[off + 2], p3 = pyr[off + 3], p4 = pyr[off + 4];
+    tets[p++] = p0; tets[p++] = p1; tets[p++] = p2; tets[p++] = p4;
+    tets[p++] = p0; tets[p++] = p2; tets[p++] = p3; tets[p++] = p4;
+  }
+  return _veFEAWrapTet4Mesh(pyrMesh, tets, { convertedFromPyramid: true });
 }
 
 // ─── Kuadratik enrichment (mid-side düğümler) ─────────────────────────────
@@ -21533,6 +21631,10 @@ function veFEAMeshFromGeometry(geometry, opts) {
   // elementType: hex8/wedge6 → tet4 decomposition (yüzey tri3 etkilenmez)
   if (mesh && !mesh.error && elementType === 'tet4') {
     mesh = veFEAConvertMeshToTet4(mesh);
+  }
+  // elementType: hex8 → pyramid5 (hex-tet köprü elemanı; transition meshler için)
+  if (mesh && !mesh.error && elementType === 'pyramid5' && mesh.type === 'hex8') {
+    mesh = veFEAConvertHexToPyramid5(mesh);
   }
   // midSideNodes: lineer → quadratic (Tet4→Tet10, Hex8→Hex20, Wedge6→Wedge15)
   if (mesh && !mesh.error && opts.midSideNodes === true) {
