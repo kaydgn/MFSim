@@ -11,7 +11,99 @@
 //   veFEAStepMeshesToParsed(result)      → { vertices, normals, triangleCount }
 //   veFEAApplySTEP(nodeId, buf, name)    → viewer'a uygular, persist eder
 //   veFEAOnSTEPFileSelected(input, id)   → cp-fea.js file input handler
+//
+// Ortak yardımcılar (eski fea-stl.js'ten taşındı):
+//   veFEAComputeMeshStats(parsed)        → { volume, surfaceArea, bbox }
+//   veFEABuildTriangleMesh(parsed)       → THREE.Mesh (parsed triangles)
+//   veFEAArrayBufferToBase64(buf)        → string
+//   veFEABase64ToArrayBuffer(b64)        → ArrayBuffer
 // ============================================================================
+
+// ─── Mesh istatistikleri (hacim, alan, bbox) ──────────────────────────────
+// Hacim: divergence teoremi (kapalı yüzey için).
+// Yüzey alanı: her üçgenin (1/2)|(v2-v1) × (v3-v1)|.
+// Bounding box: tüm vertex'lerin min/max.
+function veFEAComputeMeshStats(parsed) {
+  if(!parsed || !parsed.vertices || parsed.triangleCount === 0) {
+    return { volume: 0, surfaceArea: 0, bbox: { x: 0, y: 0, z: 0 } };
+  }
+  var v = parsed.vertices;
+  var n = parsed.triangleCount;
+  var volume = 0;
+  var surfaceArea = 0;
+  var minX = Infinity, minY = Infinity, minZ = Infinity;
+  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for(var i = 0; i < n; i++) {
+    var o = i * 9;
+    var x1 = v[o], y1 = v[o+1], z1 = v[o+2];
+    var x2 = v[o+3], y2 = v[o+4], z2 = v[o+5];
+    var x3 = v[o+6], y3 = v[o+7], z3 = v[o+8];
+    if(x1 < minX) minX = x1; if(x1 > maxX) maxX = x1;
+    if(x2 < minX) minX = x2; if(x2 > maxX) maxX = x2;
+    if(x3 < minX) minX = x3; if(x3 > maxX) maxX = x3;
+    if(y1 < minY) minY = y1; if(y1 > maxY) maxY = y1;
+    if(y2 < minY) minY = y2; if(y2 > maxY) maxY = y2;
+    if(y3 < minY) minY = y3; if(y3 > maxY) maxY = y3;
+    if(z1 < minZ) minZ = z1; if(z1 > maxZ) maxZ = z1;
+    if(z2 < minZ) minZ = z2; if(z2 > maxZ) maxZ = z2;
+    if(z3 < minZ) minZ = z3; if(z3 > maxZ) maxZ = z3;
+    volume += (x1 * (y2 * z3 - y3 * z2) + x2 * (y3 * z1 - y1 * z3) + x3 * (y1 * z2 - y2 * z1)) / 6;
+    var ax = x2 - x1, ay = y2 - y1, az = z2 - z1;
+    var bx = x3 - x1, by = y3 - y1, bz = z3 - z1;
+    var cx = ay * bz - az * by;
+    var cy = az * bx - ax * bz;
+    var cz = ax * by - ay * bx;
+    surfaceArea += Math.sqrt(cx * cx + cy * cy + cz * cz) / 2;
+  }
+  return {
+    volume: Math.abs(volume),
+    surfaceArea: surfaceArea,
+    bbox: { x: maxX - minX, y: maxY - minY, z: maxZ - minZ }
+  };
+}
+
+// ─── Three.js üçgen mesh inşası (parsed → THREE.Mesh) ─────────────────────
+function veFEABuildTriangleMesh(parsed) {
+  if(typeof THREE === 'undefined' || !parsed || parsed.triangleCount === 0) return null;
+  var geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(parsed.vertices, 3));
+  if(parsed.normals && parsed.normals.length === parsed.vertices.length) {
+    geometry.setAttribute('normal', new THREE.BufferAttribute(parsed.normals, 3));
+  } else {
+    geometry.computeVertexNormals();
+  }
+  var material = new THREE.MeshStandardMaterial({
+    color: 0x3b82f6,
+    metalness: 0.3,
+    roughness: 0.55,
+    flatShading: true,
+    side: THREE.DoubleSide
+  });
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.feaTriangleMesh = true;
+  return mesh;
+}
+
+// ─── Base64 yardımcıları (state.js save/load için) ────────────────────────
+function veFEAArrayBufferToBase64(buffer) {
+  var bytes = (buffer instanceof Uint8Array) ? buffer : new Uint8Array(buffer);
+  var chunkSize = 0x8000;
+  var binary = '';
+  for(var i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+  }
+  if(typeof btoa === 'function') return btoa(binary);
+  return Buffer.from(binary, 'binary').toString('base64');
+}
+function veFEABase64ToArrayBuffer(b64) {
+  var binary;
+  if(typeof atob === 'function') binary = atob(b64);
+  else binary = Buffer.from(b64, 'base64').toString('binary');
+  var buffer = new ArrayBuffer(binary.length);
+  var bytes = new Uint8Array(buffer);
+  for(var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return buffer;
+}
 
 var VE_FEA_OCCT_STATE = { module: null, loading: null };
 
@@ -115,7 +207,7 @@ function veFEAParseSTEPBuffer(arrayBuffer) {
   });
 }
 
-// OCCT result'ından bizim STL/primitif ile uyumlu { vertices, normals, triangleCount }
+// OCCT result'ından { vertices, normals, triangleCount } formatına dönüştür
 // formatına dönüştür. Birden çok parça varsa hepsi tek bir vertex stream'inde
 // birleştirilir (tek bir mesh olarak gösterilir).
 function veFEAStepMeshesToParsed(result) {
@@ -195,8 +287,8 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
     }
 
     var viewer = veFEAViewerRegistry[nodeId];
-    // STL ile aynı mesh builder'ı kullan — parsed formatı uyumlu
-    if (viewer && typeof viewer.loadSTL === 'function') viewer.loadSTL(parsed);
+    // Triangle mesh builder ile yükle
+    if (viewer && typeof viewer.loadTriangleMesh === 'function') viewer.loadTriangleMesh(parsed);
 
     var stats = (typeof veFEAComputeMeshStats === 'function')
       ? veFEAComputeMeshStats(parsed)

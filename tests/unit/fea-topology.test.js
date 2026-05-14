@@ -266,15 +266,15 @@ describe('veFEAComputeGeometryTopology — Dikdörtgen profil (rectTube)', () =>
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('veFEAComputeGeometryTopology — STL/STEP', () => {
-  test('STL: tek "Yüzey" face (basitleştirilmiş)', () => {
-    var topo = veFEAComputeGeometryTopology({ type: 'stl', triangleCount: 12, surfaceArea: 600, volume: 1000 });
+describe('veFEAComputeGeometryTopology — STEP', () => {
+  test('STEP: tek "Yüzey" face (detectedFeatures yoksa fallback)', () => {
+    var topo = veFEAComputeGeometryTopology({ type: 'step', triangleCount: 12, surfaceArea: 600, volume: 1000 });
     expect(topo.faces.length).toBe(1);
     expect(topo.faces[0].type).toBe('triangulated');
     expect(topo.faces[0].triangleCount).toBe(12);
   });
 
-  test('STEP: aynı yapı (geom.surfaceArea taşınır)', () => {
+  test('STEP: geom.surfaceArea face.area\'ya taşınır', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'step', triangleCount: 50, surfaceArea: 1200 });
     expect(topo.faces[0].area).toBe(1200);
   });

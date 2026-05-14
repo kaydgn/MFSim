@@ -13,7 +13,6 @@ const path = require('path');
 const ROOT = path.join(__dirname, '../..');
 
 eval(fs.readFileSync(path.join(ROOT, 'js/components.js'), 'utf8'));
-eval(fs.readFileSync(path.join(ROOT, 'js/fea-stl.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-primitives.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8'));
@@ -307,7 +306,7 @@ describe('STEP auto-load sonsuz döngü koruması', () => {
     expect(stepBranchMatch[0]).not.toMatch(/veFEAApplySTEP\s*\(/);
     expect(stepBranchMatch[0]).toMatch(/veFEAParseSTEPBuffer/);
     expect(stepBranchMatch[0]).toMatch(/veFEAStepMeshesToParsed/);
-    expect(stepBranchMatch[0]).toMatch(/viewer\.loadSTL/);
+    expect(stepBranchMatch[0]).toMatch(/viewer\.loadTriangleMesh/);
   });
 
   test('applySTEP sonrası tek bir saveState çağrısı yapılır (döngü değil)', async () => {

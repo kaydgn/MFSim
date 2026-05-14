@@ -1,7 +1,7 @@
 /**
  * FEA Yüzey Feature Recognition (Faz 6a)
  * ─────────────────────────────────────────────────────────────────
- * STL/STEP üçgen mesh'inden geometrik özellikler tespit eder:
+ * STEP üçgen mesh'inden geometrik özellikler tespit eder:
  *
  *   - Üçgen normalleri + komşuluk grafiği
  *   - Smooth region clustering (BFS, normal açısı < threshold)
@@ -18,7 +18,7 @@
  */
 
 // ─── 1. Vertex deduplication (pozisyon hash'i) ────────────────────────────
-// STL: her üçgen 3 vertex × 3 coord = 9 float (paylaşım yok).
+// Tessellated mesh: her üçgen 3 vertex × 3 coord = 9 float (paylaşım yok).
 // Komşuluk için canonical vertex index gerekli.
 function _veFEABuildVertexIndex(vertices, bboxSize) {
   var n = vertices.length / 3;
@@ -431,7 +431,7 @@ function _veFEASymmetric3x3Eigenvalues(m00, m01, m02, m11, m12, m22) {
 
 // ─── 9. Public API: tam feature recognition pipeline ─────────────────────
 //
-// parsed: { vertices, triangleCount } (STL/STEP parser çıktısı)
+// parsed: { vertices, triangleCount } (STEP parser çıktısı)
 // opts: { smoothAngleDeg: 5, sharpAngleDeg: 30, planarVarLimit: 0.001 }
 //
 // Çıkış:

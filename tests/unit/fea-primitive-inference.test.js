@@ -176,7 +176,7 @@ describe('Mesh dispatcher — STL inference primitif mesh\'e cevirir', () => {
       totalArea: det.totalArea
     };
     var geom = {
-      type: 'stl',
+      type: 'step',
       bbox: { x: 10, y: 20, z: 30 },
       triangleCount: 12,
       detectedFeatures: detSummary,
@@ -189,7 +189,7 @@ describe('Mesh dispatcher — STL inference primitif mesh\'e cevirir', () => {
     var mesh = veFEAMeshFromGeometry(geom, { size: 5 });
     expect(mesh).not.toBeNull();
     expect(mesh.type).toBe('hex8');
-    expect(mesh.geometryType).toBe('stl');
+    expect(mesh.geometryType).toBe('step');
     expect(mesh.inferredPrimitive).toBeDefined();
     expect(mesh.inferredPrimitive.type).toBe('box');
     // Mesh tasinmis: merkez (100, 0, 0)
@@ -213,7 +213,7 @@ describe('Mesh dispatcher — STL inference primitif mesh\'e cevirir', () => {
       totalArea: det.totalArea
     };
     var geom = {
-      type: 'stl',
+      type: 'step',
       bbox: { x: 20, y: 30, z: 20 },
       triangleCount: 128,
       detectedFeatures: detSummary
@@ -228,7 +228,7 @@ describe('Mesh dispatcher — STL inference primitif mesh\'e cevirir', () => {
 
   test('disablePrimitiveInference: true → primitif inference atlanir', () => {
     var geom = {
-      type: 'stl',
+      type: 'step',
       bbox: { x: 10, y: 10, z: 10 },
       triangleCount: 12,
       detectedFeatures: {
