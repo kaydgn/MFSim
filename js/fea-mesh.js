@@ -401,15 +401,6 @@ function veFEAMeshFromGeometry(geometry, opts) {
   else if (geometry.type === 'rectTube') mesh = _veFEAMeshRectTube(geometry.params || {}, size);
   else if (geometry.type === 'lbracket') mesh = _veFEAMeshLBracket(geometry.params || {}, size);
   else if (geometry.type === 'ibeam')    mesh = _veFEAMeshIBeam(geometry.params || {}, size);
-  else if (geometry.type === 'washer' || geometry.type === 'bolt' ||
-           geometry.type === 'nut'    || geometry.type === 'plate') {
-    // GENERIC PRIMITIF MESH PATH
-    // Tip-spesifik structured mesher yok — Three.js mesh'inden triangulated
-    // surface çıkar → STEP voxel + boundary-snap path'i ile mesh'le.
-    // Worker context'inde THREE yok → main-thread'de pre-computed triangles
-    // gerekir (worker dispatch'i pre-compute eder veya hata döndürür).
-    mesh = _veFEAMeshGenericPrimitive(geometry, size, mode, elementType, opts);
-  }
   else if (geometry.type === 'step') {
     // ANSYS-style otomatik primitif inference:
     // Tespit edilen feature seti tam bir primitif'e uyuyor mu? (silindir/küre/kutu)
@@ -475,6 +466,16 @@ function veFEAMeshFromGeometry(geometry, opts) {
         }
       }
     }
+  }
+
+  // GENERIC FALLBACK: Yukarıdaki hiçbir tip-spesifik case eşleşmediyse
+  // (yeni primitif eklendi ama dispatch unutuldu, custom primitif vs.)
+  // Three.js mesh'inden triangulated surface çıkar → voxel + boundary-snap.
+  // veFEABuildPrimitiveMesh impl'i olan HERHANGİ bir tip için çalışır.
+  // Tip-spesifik structured mesher (_veFEAMeshBox vs.) yalnız performans
+  // ve kalite optimizasyonu — eksikse generic devreye girer, hata vermez.
+  if (!mesh && geometry.type !== 'step') {
+    mesh = _veFEAMeshGenericPrimitive(geometry, size, mode, elementType, opts);
   }
 
   // Lokal sizing (bias): yapısal mesh sonrasında düğüm konumlarını

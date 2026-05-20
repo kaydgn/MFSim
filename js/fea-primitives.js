@@ -12,6 +12,30 @@
 //   veFEABuildPrimitiveMesh(type, params) → THREE.Mesh (Three.js yoksa null)
 //   veFEAPrimitiveStats(type, params)    → { volume, surfaceArea, bbox }
 //   veFEAFormatVolume(mm3) / veFEAFormatArea(mm2) / veFEAFormatBBox(mm)
+//
+// ─── YENİ PRİMİTİF EKLEME (MİNİMUM 2 ADIM) ──────────────────────────────────
+// veFEABuildPrimitiveMesh TEK DOĞRULUK KAYNAĞI. Onu implement ettiğin sürece
+// stats / topology / mesh OTOMATİK türetilir (Three.js mesh'ten generic
+// fallback'ler devreye girer):
+//
+//   ZORUNLU:
+//   1) VE_FEA_PRIMITIVES[type] = { label, schema: [...] } ekle
+//   2) _veFEABuildXxxMesh(p) fonksiyonu yaz, THREE.Mesh/Group dön
+//      + veFEABuildPrimitiveMesh dispatch'ine eklenmeli
+//
+//   OPSİYONEL (performans/kalite optimizasyonu):
+//   3) veFEAPrimitiveStats() içine analitik formül ekle (yoksa Three.js mesh'ten
+//      hesaplanır — biraz daha yavaş ama doğru sonuç)
+//   4) veFEANormalizePrimitiveParams() içine validasyon kuralı ekle (yoksa
+//      schema clamp/integer kuralları yeterli olabilir)
+//   5) fea-topology.js içine _veFEAToplXxx() ekle (yoksa _veFEAToplGeneric
+//      normal-clustering ile face'leri otomatik çıkarır)
+//   6) fea-mesh.js içine _veFEAMeshXxx() ekle (yoksa _veFEAMeshGenericPrimitive
+//      voxel + boundary-snap → tet4 path'i kullanılır)
+//
+// Adım 3-6'yı atlamak SORUN DEĞİL — fallback'ler "Desteklenmeyen tip" hatası
+// üretmez. Generic mesh ve generic topology gerçek bir kullanıcı için
+// yeterli kalitede sonuç verir.
 // ============================================================================
 
 var VE_FEA_PRIMITIVES = {
@@ -361,7 +385,65 @@ function veFEAPrimitiveStats(type, params) {
     bbox = { x: pL, y: pT, z: pW };
   }
 
+  // GENERIC STATS FALLBACK: Tip-spesifik case eşleşmediyse Three.js mesh'inden
+  // hesapla. Bu sayede yeni primitif eklerken sadece schema + build fonksiyonu
+  // gerekir — stats otomatik türetilir. Type-spesifik analitik formüller
+  // performans/doğruluk açısından opsiyonel ekleme.
+  if (volume === 0 && surfaceArea === 0 && !bbox) {
+    var gen = _veFEAStatsFromMesh(type, p);
+    if (gen) return gen;
+  }
+
   return { volume: volume, surfaceArea: surfaceArea, bbox: bbox, params: p };
+}
+
+// Three.js mesh'inden hacim/yüzey alanı/bbox hesapla. Generic fallback.
+// volume: signed tetrahedra (kapalı manifold için doğru, açık yüzey için
+// "outside-origin" işaretli — kullanıcı abs() alabilir).
+// surfaceArea: triangle area sum (matrixWorld uygulanmış).
+function _veFEAStatsFromMesh(type, p) {
+  if (typeof THREE === 'undefined' || typeof veFEABuildPrimitiveMesh !== 'function') return null;
+  var meshOrGroup;
+  try { meshOrGroup = veFEABuildPrimitiveMesh(type, p); }
+  catch (e) { return null; }
+  if (!meshOrGroup) return null;
+  meshOrGroup.updateMatrixWorld(true);
+
+  var box = new THREE.Box3();
+  var totalVolume = 0;
+  var totalArea = 0;
+  meshOrGroup.traverse(function (o) {
+    if (!o.isMesh || !o.geometry) return;
+    var geo = o.geometry;
+    var pos = geo.attributes.position;
+    if (!pos) return;
+    var idx = geo.index;
+    var triCount = idx ? idx.count / 3 : pos.count / 3;
+    var v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
+    var cb = new THREE.Vector3(), ab = new THREE.Vector3();
+    for (var i = 0; i < triCount; i++) {
+      var a, b, c;
+      if (idx) { a = idx.getX(i*3); b = idx.getX(i*3+1); c = idx.getX(i*3+2); }
+      else     { a = i*3; b = i*3+1; c = i*3+2; }
+      v1.fromBufferAttribute(pos, a); v2.fromBufferAttribute(pos, b); v3.fromBufferAttribute(pos, c);
+      v1.applyMatrix4(o.matrixWorld); v2.applyMatrix4(o.matrixWorld); v3.applyMatrix4(o.matrixWorld);
+      box.expandByPoint(v1); box.expandByPoint(v2); box.expandByPoint(v3);
+      cb.subVectors(v3, v2); ab.subVectors(v1, v2); cb.cross(ab);
+      totalArea += cb.length() * 0.5;
+      var cross = new THREE.Vector3().crossVectors(v2, v3);
+      totalVolume += v1.dot(cross) / 6;
+    }
+  });
+
+  var size = new THREE.Vector3();
+  box.getSize(size);
+  return {
+    volume: Math.abs(totalVolume),
+    surfaceArea: totalArea,
+    bbox: { x: size.x, y: size.y, z: size.z },
+    params: p,
+    generic: true
+  };
 }
 
 // ─── Three.js mesh inşası (face-aware: her yüz ayrı materyal/mesh) ─────────
