@@ -875,11 +875,17 @@ function _veFEAEditorDefaultsHTML(node) {
   html += '<option value="pyramid5"' + (currentElType === 'pyramid5' ? ' selected' : '') + '>Pyramid5 (Hex8 → 6 piramit + centroid)</option>';
   html += '</select>';
 
-  var midSideOn = settings.midSideNodes === true;
-  html += '<label style="display:flex; align-items:center; gap:6px; padding:6px 8px; margin-bottom:8px; background:var(--bg-primary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
-    '<input type="checkbox" id="ve-fea-mesh-midnodes-' + node.id + '"' + (midSideOn ? ' checked' : '') + ' style="margin:0;">' +
-    '<span>Orta-kenar düğümler <span style="color:var(--text-muted);">(Quadratic: Tet10 / Hex20 / Wedge15)</span></span>' +
-  '</label>';
+  // Element Order (ANSYS §3.7) — Linear vs Quadratic dropdown.
+  // Geri uyum: eski settings.midSideNodes → 'quadratic'. Canonical alan
+  // settings.elementOrder, midSideNodes submit sırasında bu değerden türetilir.
+  var elementOrder = settings.elementOrder ||
+    (settings.midSideNodes === true ? 'quadratic' : 'program');
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Element Order <span style="color:var(--text-muted);">(ANSYS §3.7)</span></div>';
+  html += '<select id="ve-fea-mesh-elorder-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:10px;">';
+  html += '<option value="program"' + (elementOrder === 'program' ? ' selected' : '') + '>Program Controlled (otomatik — varsayılan: linear)</option>';
+  html += '<option value="linear"' + (elementOrder === 'linear' ? ' selected' : '') + '>Linear (köşe düğümleri)</option>';
+  html += '<option value="quadratic"' + (elementOrder === 'quadratic' ? ' selected' : '') + '>Quadratic (orta-kenar düğümler: Tet10 / Hex20 / Wedge15)</option>';
+  html += '</select>';
 
   // Akilli mesh stratejisi paneli — sistem geometriye gore otomatik karar verir.
   // Kullanici sadece istisnai durumda legacy 'wedge' fan'i acabilir.
@@ -1274,8 +1280,12 @@ function _veFEAEditorStatisticsHTML(node) {
     return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra istatistikler dolar.</div>';
   }
   var typeLabel = (typeof veFEAMeshLabel === 'function') ? veFEAMeshLabel(metrics.elementType) : metrics.elementType;
+  // Element order: tip'ten türetilir — quadratic mesh tipleri tet10/hex20/wedge15.
+  var quadraticTypes = { tet10: 1, hex20: 1, wedge15: 1 };
+  var orderLabel = quadraticTypes[metrics.elementType] ? 'Quadratic (Q2 — orta-kenar düğümler)' : 'Linear (Q1 — sadece köşe düğümleri)';
   var html = '';
   html += veFEAReadOnlyRow('Eleman tipi', typeLabel);
+  html += veFEAReadOnlyRow('Element Order', orderLabel);
   if (metrics.sweepAxis) html += veFEAReadOnlyRow('Sweep ekseni', metrics.sweepAxis + ' (axial)');
   html += veFEAReadOnlyRow('Düğüm sayısı', metrics.nodeCount.toLocaleString('tr-TR'));
   html += veFEAReadOnlyRow('Eleman sayısı', metrics.elementCount.toLocaleString('tr-TR'));

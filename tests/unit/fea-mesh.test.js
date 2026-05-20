@@ -2504,30 +2504,42 @@ describe('veFEAMeshFromGeometry — midSideNodes opsiyonu', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('cp-fea.js Mesh paneli — Orta-kenar düğüm checkbox\'ı', () => {
+describe('cp-fea.js Mesh paneli — Element Order dropdown (ANSYS §3.7)', () => {
   beforeEach(() => {
     global.nodes = [];
     global.connections = [];
   });
 
-  test('Checkbox render edilir, default unchecked', () => {
+  test('Dropdown render edilir, default Program Controlled', () => {
     var node = { id: 'mesh-q1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     var html = _testRenderFullMeshUI(node);
-    expect(html).toMatch(/id="ve-fea-mesh-midnodes-mesh-q1"/);
-    expect(html).toMatch(/Orta-kenar düğümler/);
-    // Default kapali
-    var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-midnodes-mesh-q1"[^>]*>/);
-    expect(checkboxMatch).not.toBeNull();
-    expect(checkboxMatch[0]).not.toMatch(/checked/);
+    expect(html).toMatch(/id="ve-fea-mesh-elorder-mesh-q1"/);
+    expect(html).toMatch(/Element Order/);
+    expect(html).toMatch(/Program Controlled/);
+    expect(html).toMatch(/Linear/);
+    expect(html).toMatch(/Quadratic/);
+    // Default: program selected
+    var optProgramMatch = html.match(/<option value="program"[^>]*>/);
+    expect(optProgramMatch[0]).toMatch(/selected/);
+    var optQuadMatch = html.match(/<option value="quadratic"[^>]*>/);
+    expect(optQuadMatch[0]).not.toMatch(/selected/);
   });
 
-  test('Persisted midSideNodes:true → checkbox işaretli', () => {
+  test('Persisted midSideNodes:true (geri uyum) → Quadratic seçili', () => {
     var node = { id: 'mesh-q2', type: 'fea-mesh', data: { meshSettings: { size: 5, midSideNodes: true } } };
     global.nodes = [node];
     var html = _testRenderFullMeshUI(node);
-    var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-midnodes-mesh-q2"[^>]*>/);
-    expect(checkboxMatch[0]).toMatch(/checked/);
+    var optQuadMatch = html.match(/<option value="quadratic"[^>]*>/);
+    expect(optQuadMatch[0]).toMatch(/selected/);
+  });
+
+  test('Persisted elementOrder:"linear" → Linear seçili (canonical alan)', () => {
+    var node = { id: 'mesh-q3', type: 'fea-mesh', data: { meshSettings: { size: 5, elementOrder: 'linear' } } };
+    global.nodes = [node];
+    var html = _testRenderFullMeshUI(node);
+    var optLinearMatch = html.match(/<option value="linear"[^>]*>/);
+    expect(optLinearMatch[0]).toMatch(/selected/);
   });
 });
 

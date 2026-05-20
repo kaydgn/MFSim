@@ -336,8 +336,21 @@ function veFEASubmitMeshBuild(nodeId) {
   if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
   var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : 'auto';
   if (elementType !== 'auto' && elementType !== 'tet4' && elementType !== 'pyramid5') elementType = 'auto';
-  var midSideEl = document.getElementById('ve-fea-mesh-midnodes-' + nodeId);
-  var midSideNodes = !!(midSideEl && midSideEl.checked);
+  // Element Order: yeni dropdown (ANSYS §3.7) → midSideNodes türetilir.
+  // Geri uyum: dropdown yoksa eski checkbox'a düş.
+  var elOrderEl = document.getElementById('ve-fea-mesh-elorder-' + nodeId);
+  var elementOrder = (elOrderEl && elOrderEl.value) ? elOrderEl.value : null;
+  if (elementOrder !== 'program' && elementOrder !== 'linear' && elementOrder !== 'quadratic') {
+    elementOrder = null;
+  }
+  var midSideNodes;
+  if (elementOrder) {
+    midSideNodes = (elementOrder === 'quadratic');
+  } else {
+    var midSideEl = document.getElementById('ve-fea-mesh-midnodes-' + nodeId);
+    midSideNodes = !!(midSideEl && midSideEl.checked);
+    elementOrder = midSideNodes ? 'quadratic' : 'program';
+  }
   // crossSection: kullanici 'wedge' opsiyonunu acikca secmis ise pass, aksi
   // takdirde 'auto' (default O-grid Hex8) — _veFEAMeshCylinder bunu O-grid'e cevirir.
   var crossSel = document.getElementById('ve-fea-mesh-cross-' + nodeId);
@@ -376,6 +389,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.size = size;
     meshNode.data.meshSettings.mode = mode;
     meshNode.data.meshSettings.elementType = elementType;
+    meshNode.data.meshSettings.elementOrder = elementOrder;
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
     meshNode.data.meshSettings.crossSection = crossSection;
     meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };
