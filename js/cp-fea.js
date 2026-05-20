@@ -366,16 +366,11 @@ function veFEASubmitMeshBuild(nodeId) {
     };
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);
     meshNode.data.meshSettings.useWorker = !!(workerEl && workerEl.checked);
-    // TetGen ayarları (STEP karmaşık geometriler için kaliteli tet4)
-    var tetgenEl = document.getElementById('ve-fea-mesh-tetgen-' + nodeId);
-    var tetgenRerEl = document.getElementById('ve-fea-mesh-tetgen-rer-' + nodeId);
-    meshNode.data.meshSettings.useTetgen = tetgenEl ? !!tetgenEl.checked : true;
-    if (tetgenRerEl) {
-      var rer = parseFloat(tetgenRerEl.value);
-      if (isFinite(rer) && rer >= 1.0 && rer <= 3.0) {
-        meshNode.data.meshSettings.tetgenRadiusEdgeRatio = rer;
-      }
-    }
+    // Delaunay tet mesher ayarları (STEP karmaşık geometriler için tet4)
+    var tetMesherEl = document.getElementById('ve-fea-mesh-tetmesher-' + nodeId);
+    var tetMesherInteriorEl = document.getElementById('ve-fea-mesh-tetmesher-interior-' + nodeId);
+    meshNode.data.meshSettings.useTetMesher = tetMesherEl ? !!tetMesherEl.checked : true;
+    meshNode.data.meshSettings.delaunayAddInteriorPoints = tetMesherInteriorEl ? !!tetMesherInteriorEl.checked : true;
   }
   veFEABuildMeshForNode(nodeId);
 }

@@ -35,4 +35,38 @@ items.forEach(function(item) {
   console.log('  ✓', item[1], '(' + sizeKB + ' KB)');
   ok++;
 });
+
+// delaunay-triangulate (MIT, Mikola Lysenko) — robust adaptive predicates
+// kullanan 3D Delaunay (incremental Bowyer-Watson). CommonJS modülünü tarayıcı
+// için IIFE bundle'ına çevir. esbuild ile minify.
+try {
+  const esbuild = require('esbuild');
+  const entryPath = path.join(ROOT, '.tmp-delaunay-entry.js');
+  // Hem main thread (window) hem worker (self/globalThis) için: globalThis
+  // tüm modern ortamlarda mevcut. delaunay-triangulate fonksiyonunu global'a yaz.
+  fs.writeFileSync(entryPath,
+    "var _veFEADelaunay = require('delaunay-triangulate');\n" +
+    "(typeof globalThis !== 'undefined' ? globalThis :\n" +
+    " typeof window !== 'undefined' ? window :\n" +
+    " typeof self !== 'undefined' ? self : this).veFEADelaunayTriangulate = _veFEADelaunay;\n");
+  const outPath = path.join(ROOT, 'vendor/delaunay/delaunay-bundle.js');
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  esbuild.buildSync({
+    entryPoints: [entryPath],
+    bundle: true,
+    minify: true,
+    format: 'iife',
+    target: 'es2017',
+    outfile: outPath,
+    logLevel: 'silent'
+  });
+  fs.unlinkSync(entryPath);
+  const sizeKB = (fs.statSync(outPath).size / 1024).toFixed(1);
+  console.log('  ✓ vendor/delaunay/delaunay-bundle.js (' + sizeKB + ' KB, bundle)');
+  ok++;
+} catch (e) {
+  console.warn('  ✗ delaunay bundle başarısız (atlandi):', e.message);
+  skipped++;
+}
+
 console.log('vendor:sync tamamlandi (' + ok + ' kopyalandi, ' + skipped + ' atlandi)');

@@ -3,8 +3,3 @@ test-results/
 playwright-report/
 .playwright/
 .env
-
-# TetGen WASM build çıktıları (npm run build:wasm:tetgen ile yerel üretilir;
-# AGPL nedeniyle git'e commit edilmez — kaynak src/fea/tetgen/ altında zaten var).
-vendor/tetgen/tetgen-wasm.js
-vendor/tetgen/tetgen-wasm.wasm
