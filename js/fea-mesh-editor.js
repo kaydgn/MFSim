@@ -870,6 +870,41 @@ function _veFEAEditorTopologyHTML(node) {
   return html;
 }
 
+// Physics Preference preset değiştirildiğinde tüm defaults'ı uygular.
+function veFEAApplyPhysicsPreset(nodeId, presetId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  node.data.meshSettings.physicsPreference = presetId;
+  if (typeof veFEAPhysicsPresetSettings === 'function') {
+    var presetSettings = veFEAPhysicsPresetSettings(presetId);
+    if (presetSettings) {
+      // Preset'teki her field'ı override'la (kullanıcının ayrıca düzenlediği
+      // yerler kayboluyor; bu kasıtlı — preset zaten "tüm defaults" anlamına gelir).
+      for (var k in presetSettings) {
+        if (presetSettings.hasOwnProperty(k) && k !== 'relativeSizeFactor') {
+          node.data.meshSettings[k] = presetSettings[k];
+        }
+      }
+      // relativeSizeFactor: mevcut size'ı ölçekle (preset'in default'undan)
+      if (presetSettings.relativeSizeFactor && isFinite(+presetSettings.relativeSizeFactor)) {
+        var prevPresetId = node.data._lastAppliedPhysicsPreset || 'static';
+        var prevFactor = (VE_FEA_PHYSICS_PRESETS[prevPresetId] || {}).settings;
+        prevFactor = prevFactor ? (prevFactor.relativeSizeFactor || 1) : 1;
+        var newFactor = +presetSettings.relativeSizeFactor;
+        var ratio = newFactor / prevFactor;
+        var curSize = +node.data.meshSettings.size || 10;
+        node.data.meshSettings.size = Math.max(0.1, curSize * ratio);
+      }
+      node.data._lastAppliedPhysicsPreset = presetId;
+    }
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
 // Mesh method ↔ elementType haritası (geri uyumluluk)
 function _veFEAInferMethodFromElType(elType) {
   if (elType === 'tet4') return 'patchConformingTet';
@@ -886,6 +921,26 @@ function _veFEAEditorDefaultsHTML(node) {
   var d = node.data || {};
   var settings = d.meshSettings || { size: 10 };
   var html = '';
+
+  // Physics Preference (ANSYS §2) — preset defaults
+  var currentPreset = settings.physicsPreference || 'static';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Physics Preference <span style="color:var(--text-muted);">(ANSYS §2 — preset)</span></div>';
+  html += '<select id="ve-fea-mesh-physics-' + node.id + '" onchange="veFEAApplyPhysicsPreset(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:4px;">';
+  if (typeof veFEAPhysicsPresets === 'function') {
+    veFEAPhysicsPresets().forEach(function(pid) {
+      var label = veFEAPhysicsPresetLabel(pid);
+      html += '<option value="' + pid + '"' + (currentPreset === pid ? ' selected' : '') + '>' + label + '</option>';
+    });
+  } else {
+    html += '<option value="static">Static Structural</option>';
+  }
+  html += '</select>';
+  // Preset description
+  if (typeof VE_FEA_PHYSICS_PRESETS !== 'undefined' && VE_FEA_PHYSICS_PRESETS[currentPreset]) {
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">' +
+      VE_FEA_PHYSICS_PRESETS[currentPreset].description + '</div>';
+  }
+
   var currentMode = settings.mode || 'auto';
   html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Mesh Modu</div>';
   html += '<select id="ve-fea-mesh-mode-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:10px;">';

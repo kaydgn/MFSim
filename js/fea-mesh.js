@@ -3157,6 +3157,58 @@ function _veFEAApplySphereOfInfluence(mesh, spheres) {
   return mesh;
 }
 
+// ─── Physics Preference (ANSYS §2 — preset defaults) ─────────────────────
+// Tek bir bayrak değil, onlarca varsayılan parametreyi (element size, order,
+// smoothing, curvature, vs.) toplu olarak değiştiren bir preset sistemidir.
+// MFSim v1: 3 preset (static / nonlinear / explicit) — her biri makul ANSYS
+// pratiğine uygun default'lar.
+var VE_FEA_PHYSICS_PRESETS = {
+  'static': {
+    label: 'Static Structural (lineer/orta nonlineer)',
+    description: 'ANSYS Mechanical varsayılanı. Orta hassasiyet, Patch Conforming Tet.',
+    settings: {
+      elementOrder: 'program',           // → linear default
+      meshMethod: 'automatic',
+      curvatureRefinement: { enabled: false, normalAngleDeg: 18 },
+      defeaturingTolerance: 0,
+      relativeSizeFactor: 1.0            // global size çarpanı (1 = bbox'a göre default)
+    }
+  },
+  'nonlinearMechanical': {
+    label: 'Nonlinear Mechanical (büyük deformasyon / temas)',
+    description: 'Lineer elemanlar tercih edilir (temas hoşgörüsü). Daha ince mesh.',
+    settings: {
+      elementOrder: 'linear',
+      meshMethod: 'automatic',
+      curvatureRefinement: { enabled: true, normalAngleDeg: 15 },
+      defeaturingTolerance: 0,
+      relativeSizeFactor: 0.5            // %50 daha ince
+    }
+  },
+  'explicit': {
+    label: 'Explicit (LS-DYNA / Autodyn)',
+    description: 'Linear hex tercih edilir, mid-side node\'lar otomatik düşürülür.',
+    settings: {
+      elementOrder: 'linear',
+      meshMethod: 'automatic',
+      curvatureRefinement: { enabled: false, normalAngleDeg: 30 },
+      defeaturingTolerance: 0.5,         // explicit küçük detaylara hoşgörüsüz
+      relativeSizeFactor: 0.5
+    }
+  }
+};
+function veFEAPhysicsPresets() {
+  return Object.keys(VE_FEA_PHYSICS_PRESETS);
+}
+function veFEAPhysicsPresetSettings(presetId) {
+  var p = VE_FEA_PHYSICS_PRESETS[presetId];
+  return p ? p.settings : null;
+}
+function veFEAPhysicsPresetLabel(presetId) {
+  var p = VE_FEA_PHYSICS_PRESETS[presetId];
+  return p ? p.label : presetId;
+}
+
 // ─── Virtual Topology (ANSYS §8.2 — face grouplama) ──────────────────────
 // Kullanıcı birden fazla yüzü "tek bir virtual cell" olarak işaretler. v1:
 // post-mesh, gruptaki tüm face'lerin node ID'leri birleştirilip yeni bir

@@ -404,6 +404,11 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.elementType = elementType;
     if (meshMethod) meshNode.data.meshSettings.meshMethod = meshMethod;
     meshNode.data.meshSettings.elementOrder = elementOrder;
+    // Physics Preference (ANSYS §2) — UI'dan oku
+    var physicsEl = document.getElementById('ve-fea-mesh-physics-' + nodeId);
+    if (physicsEl && physicsEl.value) {
+      meshNode.data.meshSettings.physicsPreference = physicsEl.value;
+    }
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
     meshNode.data.meshSettings.crossSection = crossSection;
     meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };

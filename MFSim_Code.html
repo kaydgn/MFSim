@@ -26849,6 +26849,58 @@ function _veFEAApplySphereOfInfluence(mesh, spheres) {
   return mesh;
 }
 
+// ─── Physics Preference (ANSYS §2 — preset defaults) ─────────────────────
+// Tek bir bayrak değil, onlarca varsayılan parametreyi (element size, order,
+// smoothing, curvature, vs.) toplu olarak değiştiren bir preset sistemidir.
+// MFSim v1: 3 preset (static / nonlinear / explicit) — her biri makul ANSYS
+// pratiğine uygun default'lar.
+var VE_FEA_PHYSICS_PRESETS = {
+  'static': {
+    label: 'Static Structural (lineer/orta nonlineer)',
+    description: 'ANSYS Mechanical varsayılanı. Orta hassasiyet, Patch Conforming Tet.',
+    settings: {
+      elementOrder: 'program',           // → linear default
+      meshMethod: 'automatic',
+      curvatureRefinement: { enabled: false, normalAngleDeg: 18 },
+      defeaturingTolerance: 0,
+      relativeSizeFactor: 1.0            // global size çarpanı (1 = bbox'a göre default)
+    }
+  },
+  'nonlinearMechanical': {
+    label: 'Nonlinear Mechanical (büyük deformasyon / temas)',
+    description: 'Lineer elemanlar tercih edilir (temas hoşgörüsü). Daha ince mesh.',
+    settings: {
+      elementOrder: 'linear',
+      meshMethod: 'automatic',
+      curvatureRefinement: { enabled: true, normalAngleDeg: 15 },
+      defeaturingTolerance: 0,
+      relativeSizeFactor: 0.5            // %50 daha ince
+    }
+  },
+  'explicit': {
+    label: 'Explicit (LS-DYNA / Autodyn)',
+    description: 'Linear hex tercih edilir, mid-side node\'lar otomatik düşürülür.',
+    settings: {
+      elementOrder: 'linear',
+      meshMethod: 'automatic',
+      curvatureRefinement: { enabled: false, normalAngleDeg: 30 },
+      defeaturingTolerance: 0.5,         // explicit küçük detaylara hoşgörüsüz
+      relativeSizeFactor: 0.5
+    }
+  }
+};
+function veFEAPhysicsPresets() {
+  return Object.keys(VE_FEA_PHYSICS_PRESETS);
+}
+function veFEAPhysicsPresetSettings(presetId) {
+  var p = VE_FEA_PHYSICS_PRESETS[presetId];
+  return p ? p.settings : null;
+}
+function veFEAPhysicsPresetLabel(presetId) {
+  var p = VE_FEA_PHYSICS_PRESETS[presetId];
+  return p ? p.label : presetId;
+}
+
 // ─── Virtual Topology (ANSYS §8.2 — face grouplama) ──────────────────────
 // Kullanıcı birden fazla yüzü "tek bir virtual cell" olarak işaretler. v1:
 // post-mesh, gruptaki tüm face'lerin node ID'leri birleştirilip yeni bir
@@ -31236,6 +31288,41 @@ function _veFEAEditorTopologyHTML(node) {
   return html;
 }
 
+// Physics Preference preset değiştirildiğinde tüm defaults'ı uygular.
+function veFEAApplyPhysicsPreset(nodeId, presetId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  node.data.meshSettings.physicsPreference = presetId;
+  if (typeof veFEAPhysicsPresetSettings === 'function') {
+    var presetSettings = veFEAPhysicsPresetSettings(presetId);
+    if (presetSettings) {
+      // Preset'teki her field'ı override'la (kullanıcının ayrıca düzenlediği
+      // yerler kayboluyor; bu kasıtlı — preset zaten "tüm defaults" anlamına gelir).
+      for (var k in presetSettings) {
+        if (presetSettings.hasOwnProperty(k) && k !== 'relativeSizeFactor') {
+          node.data.meshSettings[k] = presetSettings[k];
+        }
+      }
+      // relativeSizeFactor: mevcut size'ı ölçekle (preset'in default'undan)
+      if (presetSettings.relativeSizeFactor && isFinite(+presetSettings.relativeSizeFactor)) {
+        var prevPresetId = node.data._lastAppliedPhysicsPreset || 'static';
+        var prevFactor = (VE_FEA_PHYSICS_PRESETS[prevPresetId] || {}).settings;
+        prevFactor = prevFactor ? (prevFactor.relativeSizeFactor || 1) : 1;
+        var newFactor = +presetSettings.relativeSizeFactor;
+        var ratio = newFactor / prevFactor;
+        var curSize = +node.data.meshSettings.size || 10;
+        node.data.meshSettings.size = Math.max(0.1, curSize * ratio);
+      }
+      node.data._lastAppliedPhysicsPreset = presetId;
+    }
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
 // Mesh method ↔ elementType haritası (geri uyumluluk)
 function _veFEAInferMethodFromElType(elType) {
   if (elType === 'tet4') return 'patchConformingTet';
@@ -31252,6 +31339,26 @@ function _veFEAEditorDefaultsHTML(node) {
   var d = node.data || {};
   var settings = d.meshSettings || { size: 10 };
   var html = '';
+
+  // Physics Preference (ANSYS §2) — preset defaults
+  var currentPreset = settings.physicsPreference || 'static';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Physics Preference <span style="color:var(--text-muted);">(ANSYS §2 — preset)</span></div>';
+  html += '<select id="ve-fea-mesh-physics-' + node.id + '" onchange="veFEAApplyPhysicsPreset(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:4px;">';
+  if (typeof veFEAPhysicsPresets === 'function') {
+    veFEAPhysicsPresets().forEach(function(pid) {
+      var label = veFEAPhysicsPresetLabel(pid);
+      html += '<option value="' + pid + '"' + (currentPreset === pid ? ' selected' : '') + '>' + label + '</option>';
+    });
+  } else {
+    html += '<option value="static">Static Structural</option>';
+  }
+  html += '</select>';
+  // Preset description
+  if (typeof VE_FEA_PHYSICS_PRESETS !== 'undefined' && VE_FEA_PHYSICS_PRESETS[currentPreset]) {
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">' +
+      VE_FEA_PHYSICS_PRESETS[currentPreset].description + '</div>';
+  }
+
   var currentMode = settings.mode || 'auto';
   html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Mesh Modu</div>';
   html += '<select id="ve-fea-mesh-mode-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:10px;">';
@@ -33095,6 +33202,11 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.elementType = elementType;
     if (meshMethod) meshNode.data.meshSettings.meshMethod = meshMethod;
     meshNode.data.meshSettings.elementOrder = elementOrder;
+    // Physics Preference (ANSYS §2) — UI'dan oku
+    var physicsEl = document.getElementById('ve-fea-mesh-physics-' + nodeId);
+    if (physicsEl && physicsEl.value) {
+      meshNode.data.meshSettings.physicsPreference = physicsEl.value;
+    }
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
     meshNode.data.meshSettings.crossSection = crossSection;
     meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };

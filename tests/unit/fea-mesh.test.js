@@ -2866,6 +2866,38 @@ describe('Sphere of Influence (opts.sphereOfInfluence → named selection)', () 
   });
 });
 
+// ─── Faz 4 — Physics Preference (ANSYS §2) ───
+describe('Physics Preference (ANSYS §2 — preset defaults)', () => {
+  test('veFEAPhysicsPresets 3 preset döndürür', () => {
+    var presets = veFEAPhysicsPresets();
+    expect(presets).toContain('static');
+    expect(presets).toContain('nonlinearMechanical');
+    expect(presets).toContain('explicit');
+  });
+
+  test('Static preset: program order, curvature off', () => {
+    var s = veFEAPhysicsPresetSettings('static');
+    expect(s.elementOrder).toBe('program');
+    expect(s.curvatureRefinement.enabled).toBe(false);
+  });
+
+  test('Nonlinear preset: linear order, curvature on, relativeSizeFactor=0.5', () => {
+    var s = veFEAPhysicsPresetSettings('nonlinearMechanical');
+    expect(s.elementOrder).toBe('linear');
+    expect(s.curvatureRefinement.enabled).toBe(true);
+    expect(s.relativeSizeFactor).toBe(0.5);
+  });
+
+  test('Explicit preset: defeaturing > 0', () => {
+    var s = veFEAPhysicsPresetSettings('explicit');
+    expect(s.defeaturingTolerance).toBeGreaterThan(0);
+  });
+
+  test('Bilinmeyen preset → null', () => {
+    expect(veFEAPhysicsPresetSettings('bogus')).toBeNull();
+  });
+});
+
 // ─── Faz 2 Adım 4 — Mesh Method dropdown (ANSYS §4) ───
 describe('cp-fea.js Mesh paneli — Mesh Method dropdown (ANSYS §4)', () => {
   beforeEach(() => {
