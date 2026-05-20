@@ -603,6 +603,13 @@
 -->
 <script type="text/x-mfsim-defer" src="vendor/delaunay/delaunay-bundle.js" data-mfsim-label="Delaunay tet mesher (Lysenko)..."></script>
 
+<!-- Manifold-3D (Apache-2.0, Emmett Lalish / Google) — topolojik robust 3D
+  boolean CSG. ES module → IIFE bundle (esbuild ile sync sırasında üretilir),
+  globalThis.veCADManifoldLoader olarak expose edilir. WASM ayrı dosya;
+  monolitik build'de base64 inline (INLINE_FILE placeholder aşağıda). -->
+<script type="text/x-mfsim-defer" src="vendor/manifold/manifold-bundle.js" data-mfsim-label="CSG motoru (Manifold-3D)..."></script>
+<!-- INLINE_FILE: vendor/manifold/manifold.wasm as manifoldWasm -->
+
 <script type="text/x-mfsim-defer" src="js/fea-primitives.js" data-mfsim-label="FEA: Temel geometri..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-materials.js" data-mfsim-label="FEA: Malzeme kütüphanesi..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-solver.js" data-mfsim-label="FEA: Hex8 çözücü..."></script>
@@ -615,6 +622,7 @@
 <script type="text/x-mfsim-defer" src="js/fea-viewer.js" data-mfsim-label="FEA: Görüntüleyici..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-mesh-editor.js" data-mfsim-label="FEA: Mesh editörü..."></script>
 <script type="text/x-mfsim-defer" src="js/cad-engine.js" data-mfsim-label="CAD motoru (kompozisyon)..."></script>
+<script type="text/x-mfsim-defer" src="js/cad-boolean.js" data-mfsim-label="CAD boolean (Manifold sarmalayıcı)..."></script>
 <script type="text/x-mfsim-defer" src="js/cad-editor.js" data-mfsim-label="CAD editörü..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-solver-wasm.js" data-mfsim-label="FEA: WASM çözücü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-fea.js" data-mfsim-label="FEA paneli..."></script>
