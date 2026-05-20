@@ -22045,7 +22045,10 @@ function _veFEAToplCylinder(p) {
       { id: 'faceTop',    label: 'Üst Disk (Y+)', type: 'planar',      normal: [0, 1,0], area: disk, radius: r },
       { id: 'faceSide',   label: 'Yan Yüzey (Radyal)', type: 'cylindrical',              area: side, radius: r, length: h }
     ],
-    edges:    { count: 2 },   // üst + alt daire
+    edges: [
+      { id: 'edgeBottomCircle', label: 'Alt Daire (Y−)', type: 'circle', length: 2 * Math.PI * r, radius: r, faceIds: ['faceBottom', 'faceSide'] },
+      { id: 'edgeTopCircle',    label: 'Üst Daire (Y+)', type: 'circle', length: 2 * Math.PI * r, radius: r, faceIds: ['faceTop',    'faceSide'] }
+    ],
     vertices: { count: 0 },
     totalSurfaceArea: 2 * disk + side,
     volume: disk * h,
@@ -22070,7 +22073,12 @@ function _veFEAToplShaft(p) {
       { id: 'faceOuter',  label: 'Dış Yan Yüzey',        type: 'cylindrical',                       area: outer, radius: rOut, length: L },
       { id: 'faceInner',  label: 'İç Yan Yüzey (Delik)', type: 'cylindrical',                       area: inner, radius: rIn,  length: L, isHole: true }
     ],
-    edges:    { count: 4 },   // 2 dış + 2 iç daire
+    edges: [
+      { id: 'edgeOuterBottom', label: 'Dış Alt Daire (Y−)',  type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, faceIds: ['faceBottom', 'faceOuter'] },
+      { id: 'edgeOuterTop',    label: 'Dış Üst Daire (Y+)',  type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, faceIds: ['faceTop',    'faceOuter'] },
+      { id: 'edgeInnerBottom', label: 'İç Alt Daire (Delik Y−)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, faceIds: ['faceBottom', 'faceInner'], isHole: true },
+      { id: 'edgeInnerTop',    label: 'İç Üst Daire (Delik Y+)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, faceIds: ['faceTop',    'faceInner'], isHole: true }
+    ],
     vertices: { count: 0 },
     totalSurfaceArea: 2 * ring + outer + inner,
     volume: ring * L,
@@ -22107,7 +22115,9 @@ function _veFEAToplHemisphere(p) {
       { id: 'faceFlat', label: 'Alt Düz Disk (Y−)', type: 'planar', normal: [0,-1,0], area: flatArea, radius: r },
       { id: 'faceDome', label: 'Yarı Küresel Yüzey (Dome)', type: 'spherical', area: domeArea, radius: r }
     ],
-    edges:    { count: 1 },    // equator (alt disk ile dome'un birleşim dairesi)
+    edges: [
+      { id: 'edgeEquator', label: 'Ekvator Dairesi', type: 'circle', length: 2 * Math.PI * r, radius: r, faceIds: ['faceFlat', 'faceDome'] }
+    ],
     vertices: { count: 0 },
     totalSurfaceArea: domeArea + flatArea,
     volume: (2 / 3) * Math.PI * r * r * r,
@@ -22154,10 +22164,16 @@ function _veFEAToplCone(p) {
     faces.splice(1, 0, { id: 'faceTop', label: 'Üst Disk (Y+)', type: 'planar', normal: [0,1,0], area: topArea, radius: rT });
   }
   var rMaxC = Math.max(rB, rT);
+  var coneEdges = [
+    { id: 'edgeBottomCircle', label: 'Alt Daire (Y−)', type: 'circle', length: 2 * Math.PI * rB, radius: rB, faceIds: ['faceBottom', 'faceSide'] }
+  ];
+  if (!isApex) {
+    coneEdges.push({ id: 'edgeTopCircle', label: 'Üst Daire (Y+)', type: 'circle', length: 2 * Math.PI * rT, radius: rT, faceIds: ['faceTop', 'faceSide'] });
+  }
   return {
     type: 'cone',
     faces: faces,
-    edges:    { count: isApex ? 1 : 2 },         // alt + (üst varsa)
+    edges: coneEdges,
     vertices: { count: isApex ? 1 : 0 },         // apex vertex
     totalSurfaceArea: bottomArea + topArea + sideArea,
     volume: volume,
@@ -24170,6 +24186,9 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (mesh && !mesh.error && Array.isArray(opts.faceSizingControls) && opts.faceSizingControls.length > 0) {
     mesh = _veFEAApplyFaceSizingControls(mesh, opts.faceSizingControls);
   }
+  if (mesh && !mesh.error && Array.isArray(opts.edgeSizingControls) && opts.edgeSizingControls.length > 0) {
+    mesh = _veFEAApplyEdgeSizingControls(mesh, opts.edgeSizingControls);
+  }
   return mesh;
 }
 
@@ -24402,6 +24421,9 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     }
     if (Array.isArray(opts.faceSizingControls) && opts.faceSizingControls.length > 0) {
       mesh = _veFEAApplyFaceSizingControls(mesh, opts.faceSizingControls);
+    }
+    if (Array.isArray(opts.edgeSizingControls) && opts.edgeSizingControls.length > 0) {
+      mesh = _veFEAApplyEdgeSizingControls(mesh, opts.edgeSizingControls);
     }
     return mesh;
   }
@@ -24901,7 +24923,7 @@ function _veFEAMeshCylinderOgrid(r, h, nC, nSquare, nR, nA) {
   };
 }
 
-// O-grid silindir için named selections (alt/üst/yan)
+// O-grid silindir için named selections (alt/üst/yan + alt/üst daire kenarları)
 function _veFEAOgridCylinderNamedSelections(disk, n2, nA, r) {
   // Bottom (k=0) ve Top (k=nA): tüm 2D düğümler
   var bottom = new Uint32Array(n2);
@@ -24910,19 +24932,31 @@ function _veFEAOgridCylinderNamedSelections(disk, n2, nA, r) {
     bottom[i] = i;
     top[i] = nA * n2 + i;
   }
-  // Side: 2D'de outer circle üzerindeki düğümler × tüm axial layer
-  var sideIds = [];
+  // Outer-circle 2D düğümleri (Side ve edge'ler için)
+  var outerIdxs = [];
   var eps = r * 1e-4;
   for (var ii = 0; ii < n2; ii++) {
     var x = disk.nodes2D[ii][0], z = disk.nodes2D[ii][1];
-    if (Math.abs(Math.sqrt(x * x + z * z) - r) < eps) {
-      for (var k = 0; k <= nA; k++) sideIds.push(k * n2 + ii);
-    }
+    if (Math.abs(Math.sqrt(x * x + z * z) - r) < eps) outerIdxs.push(ii);
+  }
+  // Side: outer circle × tüm axial layer
+  var sideIds = [];
+  for (var oi = 0; oi < outerIdxs.length; oi++) {
+    for (var k = 0; k <= nA; k++) sideIds.push(k * n2 + outerIdxs[oi]);
+  }
+  // Edge'ler: outer circle bottom ve top layer'da
+  var edgeBottom = new Uint32Array(outerIdxs.length);
+  var edgeTop = new Uint32Array(outerIdxs.length);
+  for (var ei = 0; ei < outerIdxs.length; ei++) {
+    edgeBottom[ei] = outerIdxs[ei];
+    edgeTop[ei] = nA * n2 + outerIdxs[ei];
   }
   return {
-    faceBottom: { type: 'face', source: 'auto', label: 'Alt Disk (Y−)',         nodeIds: bottom },
-    faceTop:    { type: 'face', source: 'auto', label: 'Üst Disk (Y+)',         nodeIds: top },
-    faceSide:   { type: 'face', source: 'auto', label: 'Yan Yüzey (Radyal)',    nodeIds: new Uint32Array(sideIds) }
+    faceBottom:       { type: 'face', source: 'auto', label: 'Alt Disk (Y−)',         nodeIds: bottom },
+    faceTop:          { type: 'face', source: 'auto', label: 'Üst Disk (Y+)',         nodeIds: top },
+    faceSide:         { type: 'face', source: 'auto', label: 'Yan Yüzey (Radyal)',    nodeIds: new Uint32Array(sideIds) },
+    edgeBottomCircle: { type: 'edge', source: 'auto', label: 'Alt Daire (Y−)',        nodeIds: edgeBottom },
+    edgeTopCircle:    { type: 'edge', source: 'auto', label: 'Üst Daire (Y+)',        nodeIds: edgeTop }
   };
 }
 
@@ -25027,7 +25061,7 @@ function _veFEAMeshShaft(p, size, curvOpts) {
   };
 }
 
-// Şaft için 4 yüzey (Alt, Üst, Dış Yan, İç Yan)
+// Şaft için 4 yüzey + 4 daire kenar (Alt/Üst Halka + 2 Dış/2 İç daire)
 function _veFEAShaftNamedSelections(nR, nC, nA) {
   var perLayer = (nR + 1) * nC;
   function annNode(layer, ring, circ) {
@@ -25049,11 +25083,21 @@ function _veFEAShaftNamedSelections(nR, nC, nA) {
     }
     return ids;
   }
+  // Daire kenarları: tek bir layer+ring kombinasyonunda nC circumferential node
+  function circleNodes(layer, ring) {
+    var ids = new Uint32Array(nC);
+    for (var c = 0; c < nC; c++) ids[c] = annNode(layer, ring, c);
+    return ids;
+  }
   return {
-    faceBottom: { type: 'face', source: 'auto', label: 'Alt Halka (Y−)', nodeIds: annulusNodes(0) },
-    faceTop:    { type: 'face', source: 'auto', label: 'Üst Halka (Y+)', nodeIds: annulusNodes(nA) },
-    faceOuter:  { type: 'face', source: 'auto', label: 'Dış Yan Yüzey',  nodeIds: sideNodes(nR) },
-    faceInner:  { type: 'face', source: 'auto', label: 'İç Yan Yüzey (Delik)', nodeIds: sideNodes(0) }
+    faceBottom:      { type: 'face', source: 'auto', label: 'Alt Halka (Y−)',          nodeIds: annulusNodes(0) },
+    faceTop:         { type: 'face', source: 'auto', label: 'Üst Halka (Y+)',          nodeIds: annulusNodes(nA) },
+    faceOuter:       { type: 'face', source: 'auto', label: 'Dış Yan Yüzey',           nodeIds: sideNodes(nR) },
+    faceInner:       { type: 'face', source: 'auto', label: 'İç Yan Yüzey (Delik)',    nodeIds: sideNodes(0) },
+    edgeOuterBottom: { type: 'edge', source: 'auto', label: 'Dış Alt Daire (Y−)',      nodeIds: circleNodes(0,  nR) },
+    edgeOuterTop:    { type: 'edge', source: 'auto', label: 'Dış Üst Daire (Y+)',      nodeIds: circleNodes(nA, nR) },
+    edgeInnerBottom: { type: 'edge', source: 'auto', label: 'İç Alt Daire (Delik Y−)', nodeIds: circleNodes(0,  0)  },
+    edgeInnerTop:    { type: 'edge', source: 'auto', label: 'İç Üst Daire (Delik Y+)', nodeIds: circleNodes(nA, 0)  }
   };
 }
 
@@ -26676,6 +26720,47 @@ function veFEAComputeQualityMetrics(meshData) {
 // mesh.namedSelections['faceTop']) bulur, nodeIds'i paylaşan yeni bir
 // 'face-sizing-N' selection oluşturur. behavior='hard' uygulamada mesher
 // bias'ı override eder (Faz 2 size-field); 'soft' ise sadece marker.
+// ─── Edge Sizing Controls (ANSYS §5.5 — edge bazlı lokal kontrol) ─────────
+// Edge için target eleman boyutu (veya number of divisions). v1: post-mesh
+// named selection ile edge'e ait node'lar 'edge-sizing-N' altında gruplanır
+// + metadata (targetSize, divisions, behavior). Gerçek size override
+// (mesher edge subdivision'a hint) Faz 2 ileri adımında.
+function _veFEAApplyEdgeSizingControls(mesh, controls) {
+  if (!mesh || mesh.error || !controls || controls.length === 0) return mesh;
+  if (!mesh.namedSelections) mesh.namedSelections = {};
+  for (var i = 0; i < controls.length; i++) {
+    var c = controls[i] || {};
+    var edgeId = c.edgeId;
+    if (!edgeId) continue;
+    // Size veya divisions'tan en az biri geçerli olmalı
+    var size = +c.size;
+    var divisions = parseInt(c.divisions, 10);
+    var hasSize = isFinite(size) && size > 0;
+    var hasDiv  = isFinite(divisions) && divisions >= 1;
+    if (!hasSize && !hasDiv) continue;
+    var src = mesh.namedSelections[edgeId];
+    if (!src || src.type !== 'edge' || !src.nodeIds) continue;
+    var key = 'edge-sizing-' + i;
+    var behavior = (c.behavior === 'hard') ? 'hard' : 'soft';
+    mesh.namedSelections[key] = {
+      type: 'edge',
+      source: 'auto',
+      label: 'Edge Sizing: ' + (src.label || edgeId) +
+        (hasSize ? ' (' + size + 'mm)' : ' (' + divisions + ' div)') +
+        ' ' + behavior,
+      nodeIds: src.nodeIds,
+      edgeSizing: {
+        sourceEdgeId: edgeId,
+        targetSize: hasSize ? size : null,
+        divisions: hasDiv ? divisions : null,
+        behavior: behavior,
+        nodeCount: src.nodeIds.length
+      }
+    };
+  }
+  return mesh;
+}
+
 function _veFEAApplyFaceSizingControls(mesh, controls) {
   if (!mesh || mesh.error || !controls || controls.length === 0) return mesh;
   if (!mesh.namedSelections) mesh.namedSelections = {};
@@ -29244,6 +29329,7 @@ function veFEABuildMeshForNode(meshNodeId) {
     localSizing: settings.localSizing,
     sphereOfInfluence: settings.sphereOfInfluence,
     faceSizingControls: settings.faceSizingControls,
+    edgeSizingControls: settings.edgeSizingControls,
     crossSection: settings.crossSection,
     useTetMesher: settings.useTetMesher,
     delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints,
@@ -30189,6 +30275,7 @@ function _veFEAEditorDefaultAccordionState() {
     defaults: false,
     inflation: false,
     faceSizing: false,
+    edgeSizing: false,
     sphereOfInfluence: false,
     namedSel: false,
     // Post-mesh
@@ -30217,6 +30304,7 @@ function veFEAEditorRefreshAccordions() {
     'sizing':      _veFEAEditorSizingHTML(node),
     'inflation':         _veFEAEditorInflationHTML(node),
     'faceSizing':        _veFEAEditorFaceSizingHTML(node),
+    'edgeSizing':        _veFEAEditorEdgeSizingHTML(node),
     'sphereOfInfluence': _veFEAEditorSphereOfInfluenceHTML(node),
     'quality':           _veFEAEditorQualityHTML(node),
     'namedSel':    _veFEAEditorNamedSelHTML(node),
@@ -30634,6 +30722,7 @@ function _veFEAEditorBuildLeftPanel(node) {
   html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
   html += _veFEAEditorAccordionSection('inflation',         'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
   html += _veFEAEditorAccordionSection('faceSizing',        'Face Sizing Controls (ANSYS §5.1)', _veFEAEditorFaceSizingHTML(node));
+  html += _veFEAEditorAccordionSection('edgeSizing',        'Edge Sizing Controls (ANSYS §5.5)', _veFEAEditorEdgeSizingHTML(node));
   html += _veFEAEditorAccordionSection('sphereOfInfluence', 'Sphere of Influence (ANSYS §5.2)', _veFEAEditorSphereOfInfluenceHTML(node));
   html += _veFEAEditorAccordionSection('namedSel',          'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
   // ─── Post-mesh: Mesh oluşturulduktan sonra incelenen bölümler ───────────
@@ -31308,6 +31397,178 @@ function veFEAReadFaceSizingFromUI(nodeId) {
     if (!isFinite(sz) || sz <= 0) sz = current[i].size || 1;
     var beh = (behEl && behEl.value === 'hard') ? 'hard' : 'soft';
     out.push({ faceId: current[i].faceId, size: sz, behavior: beh });
+  }
+  return out;
+}
+
+// ─── Edge Sizing Controls panel (ANSYS §5.5) ──────────────────────────────
+// Geometride bir kenar (edge) seçip o kenar üzerinde target eleman boyutu
+// veya number of divisions ata. v1: dropdown-based seçim (3D edge pick
+// sonraki adımda). Cylinder/Shaft/Cone/Hemisphere için topology'de edge
+// listesi tanımlanmış; box için 12 edge sonraki commit'te eklenir.
+function _veFEAEditorEdgeSizingHTML(node) {
+  var d = node.data || {};
+  var settings = d.meshSettings || {};
+  var controls = settings.edgeSizingControls || [];
+
+  // Topology'den edges listesini al
+  var topoEdges = [];
+  if (typeof veFEAComputeGeometryTopology === 'function' && d.geometry) {
+    try {
+      var topo = veFEAComputeGeometryTopology(d.geometry);
+      if (topo && Array.isArray(topo.edges)) topoEdges = topo.edges;
+    } catch (e) { /* skip */ }
+  }
+
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">' +
+    'ANSYS §5.5 — kenar üzerinde target eleman boyutu veya bölünme sayısı (Number of Divisions). ' +
+    'v1: dropdown-based seçim (3D edge pick sonraki adımda).' +
+    '</div>';
+
+  // Edge'leri olmayan geometriler (sphere, torus, box) için uyarı
+  if (topoEdges.length === 0) {
+    html += '<div style="padding:10px 12px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary);">' +
+      'Bu geometri tipinde tanımlı edge yok (örn. sphere, torus) veya henüz edge listesi eklenmedi (box — sonraki commit).' +
+      '</div>';
+    return html;
+  }
+
+  // Mevcut listede olmayan edge'leri seçilebilir hale getir
+  var alreadyUsed = {};
+  controls.forEach(function(c) { alreadyUsed[c.edgeId] = true; });
+  var availableEdges = topoEdges.filter(function(e) { return !alreadyUsed[e.id]; });
+
+  // Edge ekleme dropdown'ı
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color);">';
+  if (availableEdges.length === 0) {
+    html += '<span style="flex:1; font-size:0.6rem; color:var(--text-muted); font-style:italic;">Tüm edge\'ler zaten listede.</span>';
+  } else {
+    html += '<select id="ve-fea-es-pick-' + node.id + '" style="flex:1; font-size:0.62rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+    availableEdges.forEach(function(e) {
+      var label = e.label || e.id;
+      html += '<option value="' + e.id + '">' + label + ' (~' + e.length.toFixed(1) + ' mm)</option>';
+    });
+    html += '</select>';
+    html += '<button onclick="veFEAAddEdgeSizingFromDropdown(\'' + node.id + '\')" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">+ Ekle</button>';
+  }
+  html += '</div>';
+
+  // Mevcut entries
+  if (controls.length === 0) {
+    html += '<div style="padding:10px 12px; background:var(--bg-primary); border:1px dashed var(--border-color); font-size:0.6rem; color:var(--text-muted); text-align:center;">Henüz edge sizing tanımlı değil.</div>';
+  } else {
+    controls.forEach(function(c, idx) {
+      var edgeInfo = topoEdges.find(function(e) { return e.id === c.edgeId; }) || { label: c.edgeId, length: 0 };
+      var beh = c.behavior || 'soft';
+      var hasSize = (c.size != null && isFinite(c.size) && c.size > 0);
+      var hasDiv = (c.divisions != null && isFinite(c.divisions) && c.divisions >= 1);
+      var sizeMode = hasDiv && !hasSize ? 'divisions' : 'size';
+      html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+      html += '<b style="font-size:0.62rem; color:var(--text-primary);">' + (edgeInfo.label || c.edgeId) +
+        ' <span style="color:var(--text-muted); font-weight:400;">(' + c.edgeId + ', L≈' + edgeInfo.length.toFixed(1) + 'mm)</span></b>';
+      html += '<button onclick="veFEARemoveEdgeSizing(\'' + node.id + '\',' + idx + ')" style="padding:2px 8px; font-size:0.55rem; background:#dc2626; color:#fff; border:none; cursor:pointer;">Sil</button>';
+      html += '</div>';
+      html += '<div style="display:grid; grid-template-columns:auto 1fr auto 1fr; gap:6px; align-items:center; margin-bottom:4px;">';
+      html += '<label style="font-size:0.58rem; color:var(--text-secondary);"><input type="radio" name="ve-fea-es-mode-' + node.id + '-' + idx + '" value="size"' +
+        (sizeMode === 'size' ? ' checked' : '') + ' style="margin-right:3px;">Hedef boyut:</label>';
+      html += '<input type="number" value="' + (c.size != null ? c.size : '') + '" placeholder="—" step="0.1" min="0.01" id="ve-fea-es-size-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '<label style="font-size:0.58rem; color:var(--text-secondary);"><input type="radio" name="ve-fea-es-mode-' + node.id + '-' + idx + '" value="divisions"' +
+        (sizeMode === 'divisions' ? ' checked' : '') + ' style="margin-right:3px;"># Divisions:</label>';
+      html += '<input type="number" value="' + (c.divisions != null ? c.divisions : '') + '" placeholder="—" step="1" min="1" id="ve-fea-es-div-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '</div>';
+      html += '<div style="display:flex; gap:6px; align-items:center;">';
+      html += '<span style="font-size:0.58rem; color:var(--text-secondary);">Behavior:</span>';
+      html += '<select id="ve-fea-es-beh-' + node.id + '-' + idx + '" style="flex:1; font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+      html += '<option value="soft"' + (beh === 'soft' ? ' selected' : '') + '>Soft (override\'lanabilir)</option>';
+      html += '<option value="hard"' + (beh === 'hard' ? ' selected' : '') + '>Hard (kesin uygula)</option>';
+      html += '</select>';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+
+  if (controls.length > 0) {
+    html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid #3b82f6; font-size:0.58rem; color:var(--text-secondary); line-height:1.5;">' +
+      'ℹ Her edge entry için bir <i>named selection</i> üretilir (metadata: targetSize/divisions, behavior). ' +
+      'Mesher edge subdivision override Faz 2 ileri adımında.' +
+      '</div>';
+  }
+  return html;
+}
+
+// Dropdown'da seçili edge'i listeye ekler.
+function veFEAAddEdgeSizingFromDropdown(nodeId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  var pickEl = document.getElementById('ve-fea-es-pick-' + nodeId);
+  if (!pickEl || !pickEl.value) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  if (!Array.isArray(node.data.meshSettings.edgeSizingControls)) {
+    node.data.meshSettings.edgeSizingControls = [];
+  }
+  var existing = veFEAReadEdgeSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.edgeSizingControls = existing;
+  var edgeId = pickEl.value;
+  if (node.data.meshSettings.edgeSizingControls.some(function(c) { return c.edgeId === edgeId; })) return;
+  // Default: target size = global / 2
+  var defaultSize = ((node.data.meshSettings.size) || 10) / 2;
+  node.data.meshSettings.edgeSizingControls.push({
+    edgeId: edgeId, size: defaultSize, divisions: null, behavior: 'soft'
+  });
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+function veFEARemoveEdgeSizing(nodeId, index) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings) return;
+  var existing = veFEAReadEdgeSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.edgeSizingControls = existing;
+  if (!Array.isArray(node.data.meshSettings.edgeSizingControls)) return;
+  node.data.meshSettings.edgeSizingControls.splice(index, 1);
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// UI input'larından edge sizing list'i okur.
+function veFEAReadEdgeSizingFromUI(nodeId) {
+  if (typeof nodes === 'undefined') return [];
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings ||
+      !Array.isArray(node.data.meshSettings.edgeSizingControls)) return [];
+  var current = node.data.meshSettings.edgeSizingControls;
+  var out = [];
+  for (var i = 0; i < current.length; i++) {
+    var sizeEl = document.getElementById('ve-fea-es-size-' + nodeId + '-' + i);
+    var divEl  = document.getElementById('ve-fea-es-div-'  + nodeId + '-' + i);
+    var behEl  = document.getElementById('ve-fea-es-beh-'  + nodeId + '-' + i);
+    var modeName = 've-fea-es-mode-' + nodeId + '-' + i;
+    var modeChecked = document.querySelector('input[name="' + modeName + '"]:checked');
+    if (!sizeEl) {
+      out.push({
+        edgeId: current[i].edgeId, size: current[i].size,
+        divisions: current[i].divisions,
+        behavior: current[i].behavior || 'soft'
+      });
+      continue;
+    }
+    var mode = modeChecked ? modeChecked.value : 'size';
+    var sz  = parseFloat(sizeEl.value);
+    var dv  = parseInt(divEl.value, 10);
+    var beh = (behEl && behEl.value === 'hard') ? 'hard' : 'soft';
+    var entry = { edgeId: current[i].edgeId, behavior: beh };
+    if (mode === 'divisions') {
+      entry.divisions = (isFinite(dv) && dv >= 1) ? dv : (current[i].divisions || null);
+      entry.size = null;
+    } else {
+      entry.size = (isFinite(sz) && sz > 0) ? sz : (current[i].size || null);
+      entry.divisions = null;
+    }
+    out.push(entry);
   }
   return out;
 }
@@ -32456,6 +32717,13 @@ function veFEASubmitMeshBuild(nodeId) {
       var fsc = veFEAReadFaceSizingFromUI(nodeId);
       if (fsc.length > 0) {
         meshNode.data.meshSettings.faceSizingControls = fsc;
+      }
+    }
+    // Edge Sizing Controls (ANSYS §5.5) — UI'dan oku
+    if (typeof veFEAReadEdgeSizingFromUI === 'function') {
+      var esc = veFEAReadEdgeSizingFromUI(nodeId);
+      if (esc.length > 0) {
+        meshNode.data.meshSettings.edgeSizingControls = esc;
       }
     }
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);

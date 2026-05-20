@@ -415,6 +415,13 @@ function veFEASubmitMeshBuild(nodeId) {
         meshNode.data.meshSettings.faceSizingControls = fsc;
       }
     }
+    // Edge Sizing Controls (ANSYS §5.5) — UI'dan oku
+    if (typeof veFEAReadEdgeSizingFromUI === 'function') {
+      var esc = veFEAReadEdgeSizingFromUI(nodeId);
+      if (esc.length > 0) {
+        meshNode.data.meshSettings.edgeSizingControls = esc;
+      }
+    }
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);
     meshNode.data.meshSettings.useWorker = !!(workerEl && workerEl.checked);
     // Delaunay tet mesher ayarları (STEP karmaşık geometriler için tet4)

@@ -1744,6 +1744,7 @@ function veFEABuildMeshForNode(meshNodeId) {
     localSizing: settings.localSizing,
     sphereOfInfluence: settings.sphereOfInfluence,
     faceSizingControls: settings.faceSizingControls,
+    edgeSizingControls: settings.edgeSizingControls,
     crossSection: settings.crossSection,
     useTetMesher: settings.useTetMesher,
     delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints,

@@ -2504,6 +2504,71 @@ describe('veFEAMeshFromGeometry — midSideNodes opsiyonu', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// ─── Faz 2 Adım 1 — Edge Sizing Controls (ANSYS §5.5) ───
+describe('Edge Sizing Controls (opts.edgeSizingControls → named selection)', () => {
+  test('Cylinder edgeBottomCircle için target size atanır', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, edgeSizingControls: [{ edgeId: 'edgeBottomCircle', size: 0.5, behavior: 'soft' }] }
+    );
+    expect(m.namedSelections['edge-sizing-0']).toBeDefined();
+    var ns = m.namedSelections['edge-sizing-0'];
+    expect(ns.type).toBe('edge');
+    expect(ns.edgeSizing.sourceEdgeId).toBe('edgeBottomCircle');
+    expect(ns.edgeSizing.targetSize).toBe(0.5);
+    expect(ns.edgeSizing.behavior).toBe('soft');
+  });
+
+  test('Number of Divisions atanır (size null)', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, edgeSizingControls: [{ edgeId: 'edgeTopCircle', divisions: 24, behavior: 'hard' }] }
+    );
+    var ns = m.namedSelections['edge-sizing-0'];
+    expect(ns).toBeDefined();
+    expect(ns.edgeSizing.divisions).toBe(24);
+    expect(ns.edgeSizing.targetSize).toBeNull();
+    expect(ns.edgeSizing.behavior).toBe('hard');
+  });
+
+  test('Shaft 4 edge entry — tümü çalışır', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } },
+      { size: 10, edgeSizingControls: [
+        { edgeId: 'edgeOuterBottom', size: 1, behavior: 'soft' },
+        { edgeId: 'edgeOuterTop',    size: 1, behavior: 'soft' },
+        { edgeId: 'edgeInnerBottom', size: 0.5, behavior: 'hard' },
+        { edgeId: 'edgeInnerTop',    size: 0.5, behavior: 'hard' }
+      ]}
+    );
+    for (var i = 0; i < 4; i++) {
+      expect(m.namedSelections['edge-sizing-' + i]).toBeDefined();
+    }
+  });
+
+  test('Bilinmeyen edgeId atlanır', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, edgeSizingControls: [
+        { edgeId: 'edgeBottomCircle', size: 1, behavior: 'soft' },
+        { edgeId: 'edgeNonExistent',  size: 1, behavior: 'soft' }
+      ]}
+    );
+    expect(m.namedSelections['edge-sizing-0']).toBeDefined();
+    expect(m.namedSelections['edge-sizing-1']).toBeUndefined();
+  });
+
+  test('Hem size hem divisions yok → atlanır', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 10, height: 20 } },
+      { size: 5, edgeSizingControls: [
+        { edgeId: 'edgeBottomCircle', size: null, divisions: null, behavior: 'soft' }
+      ]}
+    );
+    expect(m.namedSelections['edge-sizing-0']).toBeUndefined();
+  });
+});
+
 // ─── Faz 2 Adım 0 — Face Sizing Controls (ANSYS §5.1) ───
 describe('Face Sizing Controls (opts.faceSizingControls → named selection)', () => {
   test('Tek face entry (box: faceYMax): mevcut auto face selection\'a sizing metadata ekler', () => {
@@ -3266,13 +3331,17 @@ describe('Named Selections — otomatik üretim', () => {
     }
   });
 
-  test('Silindir mesh 3 yüzey selection üretir (Alt, Üst, Yan)', () => {
+  test('Silindir mesh 3 yüzey + 2 daire kenar selection üretir', () => {
     var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
     var keys = Object.keys(m.namedSelections);
     expect(keys).toContain('faceTop');
     expect(keys).toContain('faceBottom');
     expect(keys).toContain('faceSide');
-    expect(keys.length).toBe(3);
+    expect(keys).toContain('edgeBottomCircle');
+    expect(keys).toContain('edgeTopCircle');
+    expect(keys.length).toBe(5);
+    expect(m.namedSelections.edgeBottomCircle.type).toBe('edge');
+    expect(m.namedSelections.edgeTopCircle.type).toBe('edge');
   });
 
   test('Silindir Alt disk düğümlerinin y-koordinatı -h/2', () => {
@@ -3293,14 +3362,18 @@ describe('Named Selections — otomatik üretim', () => {
     }
   });
 
-  test('Şaft mesh 4 yüzey selection üretir (Alt, Üst, Dış, İç)', () => {
+  test('Şaft mesh 4 yüzey + 4 daire kenar selection üretir', () => {
     var m = veFEAMeshFromGeometry({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } }, { size: 10 });
     var keys = Object.keys(m.namedSelections);
     expect(keys).toContain('faceTop');
     expect(keys).toContain('faceBottom');
     expect(keys).toContain('faceOuter');
     expect(keys).toContain('faceInner');
-    expect(keys.length).toBe(4);
+    expect(keys).toContain('edgeOuterBottom');
+    expect(keys).toContain('edgeOuterTop');
+    expect(keys).toContain('edgeInnerBottom');
+    expect(keys).toContain('edgeInnerTop');
+    expect(keys.length).toBe(8);
   });
 
   test('Şaft İç yüzey düğümlerinin radyal mesafesi iç yarıçap', () => {
@@ -3350,7 +3423,8 @@ describe('veFEAComputeNamedSelectionsSummary', () => {
     var summary = veFEAComputeNamedSelectionsSummary(m);
     expect(() => JSON.stringify(summary)).not.toThrow();
     var parsed = JSON.parse(JSON.stringify(summary));
-    expect(Object.keys(parsed).length).toBe(3);
+    // 3 face + 2 edge
+    expect(Object.keys(parsed).length).toBe(5);
   });
 });
 

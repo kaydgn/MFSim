@@ -91,7 +91,10 @@ function _veFEAToplCylinder(p) {
       { id: 'faceTop',    label: 'Üst Disk (Y+)', type: 'planar',      normal: [0, 1,0], area: disk, radius: r },
       { id: 'faceSide',   label: 'Yan Yüzey (Radyal)', type: 'cylindrical',              area: side, radius: r, length: h }
     ],
-    edges:    { count: 2 },   // üst + alt daire
+    edges: [
+      { id: 'edgeBottomCircle', label: 'Alt Daire (Y−)', type: 'circle', length: 2 * Math.PI * r, radius: r, faceIds: ['faceBottom', 'faceSide'] },
+      { id: 'edgeTopCircle',    label: 'Üst Daire (Y+)', type: 'circle', length: 2 * Math.PI * r, radius: r, faceIds: ['faceTop',    'faceSide'] }
+    ],
     vertices: { count: 0 },
     totalSurfaceArea: 2 * disk + side,
     volume: disk * h,
@@ -116,7 +119,12 @@ function _veFEAToplShaft(p) {
       { id: 'faceOuter',  label: 'Dış Yan Yüzey',        type: 'cylindrical',                       area: outer, radius: rOut, length: L },
       { id: 'faceInner',  label: 'İç Yan Yüzey (Delik)', type: 'cylindrical',                       area: inner, radius: rIn,  length: L, isHole: true }
     ],
-    edges:    { count: 4 },   // 2 dış + 2 iç daire
+    edges: [
+      { id: 'edgeOuterBottom', label: 'Dış Alt Daire (Y−)',  type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, faceIds: ['faceBottom', 'faceOuter'] },
+      { id: 'edgeOuterTop',    label: 'Dış Üst Daire (Y+)',  type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, faceIds: ['faceTop',    'faceOuter'] },
+      { id: 'edgeInnerBottom', label: 'İç Alt Daire (Delik Y−)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, faceIds: ['faceBottom', 'faceInner'], isHole: true },
+      { id: 'edgeInnerTop',    label: 'İç Üst Daire (Delik Y+)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, faceIds: ['faceTop',    'faceInner'], isHole: true }
+    ],
     vertices: { count: 0 },
     totalSurfaceArea: 2 * ring + outer + inner,
     volume: ring * L,
@@ -153,7 +161,9 @@ function _veFEAToplHemisphere(p) {
       { id: 'faceFlat', label: 'Alt Düz Disk (Y−)', type: 'planar', normal: [0,-1,0], area: flatArea, radius: r },
       { id: 'faceDome', label: 'Yarı Küresel Yüzey (Dome)', type: 'spherical', area: domeArea, radius: r }
     ],
-    edges:    { count: 1 },    // equator (alt disk ile dome'un birleşim dairesi)
+    edges: [
+      { id: 'edgeEquator', label: 'Ekvator Dairesi', type: 'circle', length: 2 * Math.PI * r, radius: r, faceIds: ['faceFlat', 'faceDome'] }
+    ],
     vertices: { count: 0 },
     totalSurfaceArea: domeArea + flatArea,
     volume: (2 / 3) * Math.PI * r * r * r,
@@ -200,10 +210,16 @@ function _veFEAToplCone(p) {
     faces.splice(1, 0, { id: 'faceTop', label: 'Üst Disk (Y+)', type: 'planar', normal: [0,1,0], area: topArea, radius: rT });
   }
   var rMaxC = Math.max(rB, rT);
+  var coneEdges = [
+    { id: 'edgeBottomCircle', label: 'Alt Daire (Y−)', type: 'circle', length: 2 * Math.PI * rB, radius: rB, faceIds: ['faceBottom', 'faceSide'] }
+  ];
+  if (!isApex) {
+    coneEdges.push({ id: 'edgeTopCircle', label: 'Üst Daire (Y+)', type: 'circle', length: 2 * Math.PI * rT, radius: rT, faceIds: ['faceTop', 'faceSide'] });
+  }
   return {
     type: 'cone',
     faces: faces,
-    edges:    { count: isApex ? 1 : 2 },         // alt + (üst varsa)
+    edges: coneEdges,
     vertices: { count: isApex ? 1 : 0 },         // apex vertex
     totalSurfaceArea: bottomArea + topArea + sideArea,
     volume: volume,

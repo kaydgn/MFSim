@@ -58,7 +58,9 @@ describe('veFEAComputeGeometryTopology — Silindir', () => {
   test('3 yüzey (alt/üst disk + yan), 2 kenar', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'cylinder', params: { radius: 10, height: 20 } });
     expect(topo.faces.length).toBe(3);
-    expect(topo.edges.count).toBe(2);
+    expect(topo.edges.length).toBe(2);
+    expect(topo.edges[0].id).toBe('edgeBottomCircle');
+    expect(topo.edges[1].id).toBe('edgeTopCircle');
     expect(topo.vertices.count).toBe(0);
   });
 
@@ -84,7 +86,12 @@ describe('veFEAComputeGeometryTopology — Şaft', () => {
   test('4 yüzey (alt/üst halka + dış/iç yan), 4 daire kenar', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'shaft', params: { outerRadius: 20, innerRadius: 8, length: 100 } });
     expect(topo.faces.length).toBe(4);
-    expect(topo.edges.count).toBe(4);
+    expect(topo.edges.length).toBe(4);
+    var edgeIds = topo.edges.map(function(e) { return e.id; });
+    expect(edgeIds).toContain('edgeOuterBottom');
+    expect(edgeIds).toContain('edgeOuterTop');
+    expect(edgeIds).toContain('edgeInnerBottom');
+    expect(edgeIds).toContain('edgeInnerTop');
   });
 
   test('İç yüzey "isHole: true" işaretli', () => {
@@ -156,7 +163,8 @@ describe('veFEAComputeGeometryTopology — Yarım Küre', () => {
   test('2 face (faceFlat + faceDome), 1 daire kenar (equator)', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'hemisphere', params: { radius: 25 } });
     expect(topo.faces.length).toBe(2);
-    expect(topo.edges.count).toBe(1);
+    expect(topo.edges.length).toBe(1);
+    expect(topo.edges[0].id).toBe('edgeEquator');
     var ids = topo.faces.map(function(f) { return f.id; });
     expect(ids).toContain('faceFlat');
     expect(ids).toContain('faceDome');
@@ -178,7 +186,7 @@ describe('veFEAComputeGeometryTopology — Koni / Frustum', () => {
   test('Frustum (rT > 0): 3 yüzey (alt + üst + conical yan), 2 kenar', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 60 } });
     expect(topo.faces.length).toBe(3);
-    expect(topo.edges.count).toBe(2);
+    expect(topo.edges.length).toBe(2);
     expect(topo.vertices.count).toBe(0);
     var ids = topo.faces.map(function(f) { return f.id; });
     expect(ids).toContain('faceBottom');
@@ -189,7 +197,7 @@ describe('veFEAComputeGeometryTopology — Koni / Frustum', () => {
   test('Apex (rT=0): 2 yüzey (alt + conical yan), 1 kenar, 1 vertex', () => {
     var topo = veFEAComputeGeometryTopology({ type: 'cone', params: { bottomRadius: 20, topRadius: 0, height: 60 } });
     expect(topo.faces.length).toBe(2);
-    expect(topo.edges.count).toBe(1);
+    expect(topo.edges.length).toBe(1);
     expect(topo.vertices.count).toBe(1);
   });
 

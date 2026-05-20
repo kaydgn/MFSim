@@ -35,6 +35,7 @@ function _veFEAEditorDefaultAccordionState() {
     defaults: false,
     inflation: false,
     faceSizing: false,
+    edgeSizing: false,
     sphereOfInfluence: false,
     namedSel: false,
     // Post-mesh
@@ -63,6 +64,7 @@ function veFEAEditorRefreshAccordions() {
     'sizing':      _veFEAEditorSizingHTML(node),
     'inflation':         _veFEAEditorInflationHTML(node),
     'faceSizing':        _veFEAEditorFaceSizingHTML(node),
+    'edgeSizing':        _veFEAEditorEdgeSizingHTML(node),
     'sphereOfInfluence': _veFEAEditorSphereOfInfluenceHTML(node),
     'quality':           _veFEAEditorQualityHTML(node),
     'namedSel':    _veFEAEditorNamedSelHTML(node),
@@ -480,6 +482,7 @@ function _veFEAEditorBuildLeftPanel(node) {
   html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
   html += _veFEAEditorAccordionSection('inflation',         'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
   html += _veFEAEditorAccordionSection('faceSizing',        'Face Sizing Controls (ANSYS §5.1)', _veFEAEditorFaceSizingHTML(node));
+  html += _veFEAEditorAccordionSection('edgeSizing',        'Edge Sizing Controls (ANSYS §5.5)', _veFEAEditorEdgeSizingHTML(node));
   html += _veFEAEditorAccordionSection('sphereOfInfluence', 'Sphere of Influence (ANSYS §5.2)', _veFEAEditorSphereOfInfluenceHTML(node));
   html += _veFEAEditorAccordionSection('namedSel',          'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
   // ─── Post-mesh: Mesh oluşturulduktan sonra incelenen bölümler ───────────
@@ -1154,6 +1157,178 @@ function veFEAReadFaceSizingFromUI(nodeId) {
     if (!isFinite(sz) || sz <= 0) sz = current[i].size || 1;
     var beh = (behEl && behEl.value === 'hard') ? 'hard' : 'soft';
     out.push({ faceId: current[i].faceId, size: sz, behavior: beh });
+  }
+  return out;
+}
+
+// ─── Edge Sizing Controls panel (ANSYS §5.5) ──────────────────────────────
+// Geometride bir kenar (edge) seçip o kenar üzerinde target eleman boyutu
+// veya number of divisions ata. v1: dropdown-based seçim (3D edge pick
+// sonraki adımda). Cylinder/Shaft/Cone/Hemisphere için topology'de edge
+// listesi tanımlanmış; box için 12 edge sonraki commit'te eklenir.
+function _veFEAEditorEdgeSizingHTML(node) {
+  var d = node.data || {};
+  var settings = d.meshSettings || {};
+  var controls = settings.edgeSizingControls || [];
+
+  // Topology'den edges listesini al
+  var topoEdges = [];
+  if (typeof veFEAComputeGeometryTopology === 'function' && d.geometry) {
+    try {
+      var topo = veFEAComputeGeometryTopology(d.geometry);
+      if (topo && Array.isArray(topo.edges)) topoEdges = topo.edges;
+    } catch (e) { /* skip */ }
+  }
+
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">' +
+    'ANSYS §5.5 — kenar üzerinde target eleman boyutu veya bölünme sayısı (Number of Divisions). ' +
+    'v1: dropdown-based seçim (3D edge pick sonraki adımda).' +
+    '</div>';
+
+  // Edge'leri olmayan geometriler (sphere, torus, box) için uyarı
+  if (topoEdges.length === 0) {
+    html += '<div style="padding:10px 12px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary);">' +
+      'Bu geometri tipinde tanımlı edge yok (örn. sphere, torus) veya henüz edge listesi eklenmedi (box — sonraki commit).' +
+      '</div>';
+    return html;
+  }
+
+  // Mevcut listede olmayan edge'leri seçilebilir hale getir
+  var alreadyUsed = {};
+  controls.forEach(function(c) { alreadyUsed[c.edgeId] = true; });
+  var availableEdges = topoEdges.filter(function(e) { return !alreadyUsed[e.id]; });
+
+  // Edge ekleme dropdown'ı
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color);">';
+  if (availableEdges.length === 0) {
+    html += '<span style="flex:1; font-size:0.6rem; color:var(--text-muted); font-style:italic;">Tüm edge\'ler zaten listede.</span>';
+  } else {
+    html += '<select id="ve-fea-es-pick-' + node.id + '" style="flex:1; font-size:0.62rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+    availableEdges.forEach(function(e) {
+      var label = e.label || e.id;
+      html += '<option value="' + e.id + '">' + label + ' (~' + e.length.toFixed(1) + ' mm)</option>';
+    });
+    html += '</select>';
+    html += '<button onclick="veFEAAddEdgeSizingFromDropdown(\'' + node.id + '\')" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">+ Ekle</button>';
+  }
+  html += '</div>';
+
+  // Mevcut entries
+  if (controls.length === 0) {
+    html += '<div style="padding:10px 12px; background:var(--bg-primary); border:1px dashed var(--border-color); font-size:0.6rem; color:var(--text-muted); text-align:center;">Henüz edge sizing tanımlı değil.</div>';
+  } else {
+    controls.forEach(function(c, idx) {
+      var edgeInfo = topoEdges.find(function(e) { return e.id === c.edgeId; }) || { label: c.edgeId, length: 0 };
+      var beh = c.behavior || 'soft';
+      var hasSize = (c.size != null && isFinite(c.size) && c.size > 0);
+      var hasDiv = (c.divisions != null && isFinite(c.divisions) && c.divisions >= 1);
+      var sizeMode = hasDiv && !hasSize ? 'divisions' : 'size';
+      html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+      html += '<b style="font-size:0.62rem; color:var(--text-primary);">' + (edgeInfo.label || c.edgeId) +
+        ' <span style="color:var(--text-muted); font-weight:400;">(' + c.edgeId + ', L≈' + edgeInfo.length.toFixed(1) + 'mm)</span></b>';
+      html += '<button onclick="veFEARemoveEdgeSizing(\'' + node.id + '\',' + idx + ')" style="padding:2px 8px; font-size:0.55rem; background:#dc2626; color:#fff; border:none; cursor:pointer;">Sil</button>';
+      html += '</div>';
+      html += '<div style="display:grid; grid-template-columns:auto 1fr auto 1fr; gap:6px; align-items:center; margin-bottom:4px;">';
+      html += '<label style="font-size:0.58rem; color:var(--text-secondary);"><input type="radio" name="ve-fea-es-mode-' + node.id + '-' + idx + '" value="size"' +
+        (sizeMode === 'size' ? ' checked' : '') + ' style="margin-right:3px;">Hedef boyut:</label>';
+      html += '<input type="number" value="' + (c.size != null ? c.size : '') + '" placeholder="—" step="0.1" min="0.01" id="ve-fea-es-size-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '<label style="font-size:0.58rem; color:var(--text-secondary);"><input type="radio" name="ve-fea-es-mode-' + node.id + '-' + idx + '" value="divisions"' +
+        (sizeMode === 'divisions' ? ' checked' : '') + ' style="margin-right:3px;"># Divisions:</label>';
+      html += '<input type="number" value="' + (c.divisions != null ? c.divisions : '') + '" placeholder="—" step="1" min="1" id="ve-fea-es-div-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '</div>';
+      html += '<div style="display:flex; gap:6px; align-items:center;">';
+      html += '<span style="font-size:0.58rem; color:var(--text-secondary);">Behavior:</span>';
+      html += '<select id="ve-fea-es-beh-' + node.id + '-' + idx + '" style="flex:1; font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+      html += '<option value="soft"' + (beh === 'soft' ? ' selected' : '') + '>Soft (override\'lanabilir)</option>';
+      html += '<option value="hard"' + (beh === 'hard' ? ' selected' : '') + '>Hard (kesin uygula)</option>';
+      html += '</select>';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+
+  if (controls.length > 0) {
+    html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid #3b82f6; font-size:0.58rem; color:var(--text-secondary); line-height:1.5;">' +
+      'ℹ Her edge entry için bir <i>named selection</i> üretilir (metadata: targetSize/divisions, behavior). ' +
+      'Mesher edge subdivision override Faz 2 ileri adımında.' +
+      '</div>';
+  }
+  return html;
+}
+
+// Dropdown'da seçili edge'i listeye ekler.
+function veFEAAddEdgeSizingFromDropdown(nodeId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  var pickEl = document.getElementById('ve-fea-es-pick-' + nodeId);
+  if (!pickEl || !pickEl.value) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  if (!Array.isArray(node.data.meshSettings.edgeSizingControls)) {
+    node.data.meshSettings.edgeSizingControls = [];
+  }
+  var existing = veFEAReadEdgeSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.edgeSizingControls = existing;
+  var edgeId = pickEl.value;
+  if (node.data.meshSettings.edgeSizingControls.some(function(c) { return c.edgeId === edgeId; })) return;
+  // Default: target size = global / 2
+  var defaultSize = ((node.data.meshSettings.size) || 10) / 2;
+  node.data.meshSettings.edgeSizingControls.push({
+    edgeId: edgeId, size: defaultSize, divisions: null, behavior: 'soft'
+  });
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+function veFEARemoveEdgeSizing(nodeId, index) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings) return;
+  var existing = veFEAReadEdgeSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.edgeSizingControls = existing;
+  if (!Array.isArray(node.data.meshSettings.edgeSizingControls)) return;
+  node.data.meshSettings.edgeSizingControls.splice(index, 1);
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// UI input'larından edge sizing list'i okur.
+function veFEAReadEdgeSizingFromUI(nodeId) {
+  if (typeof nodes === 'undefined') return [];
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings ||
+      !Array.isArray(node.data.meshSettings.edgeSizingControls)) return [];
+  var current = node.data.meshSettings.edgeSizingControls;
+  var out = [];
+  for (var i = 0; i < current.length; i++) {
+    var sizeEl = document.getElementById('ve-fea-es-size-' + nodeId + '-' + i);
+    var divEl  = document.getElementById('ve-fea-es-div-'  + nodeId + '-' + i);
+    var behEl  = document.getElementById('ve-fea-es-beh-'  + nodeId + '-' + i);
+    var modeName = 've-fea-es-mode-' + nodeId + '-' + i;
+    var modeChecked = document.querySelector('input[name="' + modeName + '"]:checked');
+    if (!sizeEl) {
+      out.push({
+        edgeId: current[i].edgeId, size: current[i].size,
+        divisions: current[i].divisions,
+        behavior: current[i].behavior || 'soft'
+      });
+      continue;
+    }
+    var mode = modeChecked ? modeChecked.value : 'size';
+    var sz  = parseFloat(sizeEl.value);
+    var dv  = parseInt(divEl.value, 10);
+    var beh = (behEl && behEl.value === 'hard') ? 'hard' : 'soft';
+    var entry = { edgeId: current[i].edgeId, behavior: beh };
+    if (mode === 'divisions') {
+      entry.divisions = (isFinite(dv) && dv >= 1) ? dv : (current[i].divisions || null);
+      entry.size = null;
+    } else {
+      entry.size = (isFinite(sz) && sz > 0) ? sz : (current[i].size || null);
+      entry.divisions = null;
+    }
+    out.push(entry);
   }
   return out;
 }
