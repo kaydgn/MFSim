@@ -381,7 +381,11 @@ function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
 function veFEAMeshFromGeometry(geometry, opts) {
   if (!geometry || !geometry.type) return null;
   opts = opts || {};
-  var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
+  // Defeaturing tolerance (ANSYS §8): mesher'ın effective minimum size'ı.
+  // Verilirse VE_FEA_MESH_MIN_SIZE'in yerine geçer; ondan küçük detaylar
+  // (kısa edge, sliver face) implicit olarak atlanır.
+  var defeatureTol = Math.max(VE_FEA_MESH_MIN_SIZE, +opts.defeaturingTolerance || 0);
+  var size = Math.max(defeatureTol, Number(opts.size) || 10);
   // mode: 'auto' (default), 'volume', 'surface'
   var mode = opts.mode || 'auto';
   // elementType: 'auto' (native: hex8/wedge6) | 'tet4' (decomposition)
@@ -708,7 +712,8 @@ function _veFEAShouldTryTetMesher(opts) {
 // `preBuiltVoxel` opsiyonel: sync yol voxel'ı zaten post-process'lemişse
 // hazır kullanılır.
 function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
-  var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
+  var defeatureTol = Math.max(VE_FEA_MESH_MIN_SIZE, +opts.defeaturingTolerance || 0);
+  var size = Math.max(defeatureTol, Number(opts.size) || 10);
   var geometryType = geometry.type || 'unknown';
 
   function applyPostProcessing(mesh) {

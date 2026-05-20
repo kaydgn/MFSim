@@ -2504,6 +2504,30 @@ describe('veFEAMeshFromGeometry — midSideNodes opsiyonu', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// ─── Faz 2 Adım 2 — Defeaturing Tolerance (ANSYS §8) ───
+describe('Defeaturing Tolerance (opts.defeaturingTolerance)', () => {
+  test('Tolerans verilince effective minimum size artar (küçük size clamp\'lenir)', () => {
+    // size=0.3 + defeatureTol=2 → effective min size = 2 mm, mesh daha kaba olur
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 0.3 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 0.3, defeaturingTolerance: 2 });
+    // defeaturing aktifken element sayısı daha düşük (daha az ince mesh)
+    expect(m2.elements.length).toBeLessThan(m1.elements.length);
+  });
+
+  test('Tolerans büyük size etkilemez (yapısal mesh aynı kalır)', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, defeaturingTolerance: 0.5 });
+    // size > tol → değişiklik yok
+    expect(m2.elements.length).toBe(m1.elements.length);
+  });
+
+  test('Tolerans 0 veya undefined → varsayılan davranış (eski mesh)', () => {
+    var m1 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var m2 = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5, defeaturingTolerance: 0 });
+    expect(m2.elements.length).toBe(m1.elements.length);
+  });
+});
+
 // ─── Faz 2 Adım 1 — Edge Sizing Controls (ANSYS §5.5) ───
 describe('Edge Sizing Controls (opts.edgeSizingControls → named selection)', () => {
   test('Cylinder edgeBottomCircle için target size atanır', () => {

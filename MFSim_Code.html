@@ -24073,7 +24073,11 @@ function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
 function veFEAMeshFromGeometry(geometry, opts) {
   if (!geometry || !geometry.type) return null;
   opts = opts || {};
-  var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
+  // Defeaturing tolerance (ANSYS §8): mesher'ın effective minimum size'ı.
+  // Verilirse VE_FEA_MESH_MIN_SIZE'in yerine geçer; ondan küçük detaylar
+  // (kısa edge, sliver face) implicit olarak atlanır.
+  var defeatureTol = Math.max(VE_FEA_MESH_MIN_SIZE, +opts.defeaturingTolerance || 0);
+  var size = Math.max(defeatureTol, Number(opts.size) || 10);
   // mode: 'auto' (default), 'volume', 'surface'
   var mode = opts.mode || 'auto';
   // elementType: 'auto' (native: hex8/wedge6) | 'tet4' (decomposition)
@@ -24400,7 +24404,8 @@ function _veFEAShouldTryTetMesher(opts) {
 // `preBuiltVoxel` opsiyonel: sync yol voxel'ı zaten post-process'lemişse
 // hazır kullanılır.
 function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
-  var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
+  var defeatureTol = Math.max(VE_FEA_MESH_MIN_SIZE, +opts.defeaturingTolerance || 0);
+  var size = Math.max(defeatureTol, Number(opts.size) || 10);
   var geometryType = geometry.type || 'unknown';
 
   function applyPostProcessing(mesh) {
@@ -29330,6 +29335,7 @@ function veFEABuildMeshForNode(meshNodeId) {
     sphereOfInfluence: settings.sphereOfInfluence,
     faceSizingControls: settings.faceSizingControls,
     edgeSizingControls: settings.edgeSizingControls,
+    defeaturingTolerance: settings.defeaturingTolerance,
     crossSection: settings.crossSection,
     useTetMesher: settings.useTetMesher,
     delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints,
@@ -31196,6 +31202,18 @@ function _veFEAEditorSizingHTML(node) {
     '<input type="checkbox" id="ve-fea-mesh-worker-' + node.id + '"' + (useWorker ? ' checked' : '') + ' style="margin:0;">' +
     '<span>Web Worker\'da hesapla <span style="color:var(--text-muted);">(büyük mesh için)</span></span>' +
   '</label>';
+
+  // Defeaturing Tolerance (ANSYS §8)
+  var defeatureTol = settings.defeaturingTolerance != null ? settings.defeaturingTolerance : 0;
+  html += '<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border-color);">';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Defeaturing Tolerance <span style="color:var(--text-muted);">(ANSYS §8)</span></div>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:6px;">Bundan küçük detaylar (sliver edge/face) mesh\'te yok sayılır. 0 = devre dışı.</div>';
+  html += '<div style="display:flex; gap:6px; align-items:center;">';
+  html += '<input id="ve-fea-mesh-defeature-' + node.id + '" type="number" min="0" step="0.1" value="' + defeatureTol + '" style="flex:1; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '<span style="font-size:0.55rem; color:var(--text-muted);">mm</span>';
+  html += '</div>';
+  html += '</div>';
+
   return html;
 }
 
@@ -32666,6 +32684,9 @@ function veFEASubmitMeshBuild(nodeId) {
   if (!isFinite(curvAngDeg) || curvAngDeg <= 0) curvAngDeg = 18;
   if (curvAngDeg > 90) curvAngDeg = 90;
   if (curvAngDeg < 1) curvAngDeg = 1;
+  var defeatureEl = document.getElementById('ve-fea-mesh-defeature-' + nodeId);
+  var defeatureTol = defeatureEl ? parseFloat(defeatureEl.value) : 0;
+  if (!isFinite(defeatureTol) || defeatureTol < 0) defeatureTol = 0;
   var localSelEl = document.getElementById('ve-fea-mesh-local-sel-' + nodeId);
   var localModeEl = document.getElementById('ve-fea-mesh-local-mode-' + nodeId);
   var localBiasEl = document.getElementById('ve-fea-mesh-local-bias-' + nodeId);
@@ -32697,6 +32718,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
     meshNode.data.meshSettings.crossSection = crossSection;
     meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };
+    meshNode.data.meshSettings.defeaturingTolerance = defeatureTol;
     meshNode.data.meshSettings.localSizing = {
       selection: localSelection,
       biasMode: localBiasMode,

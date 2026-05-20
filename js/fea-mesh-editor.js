@@ -956,6 +956,18 @@ function _veFEAEditorSizingHTML(node) {
     '<input type="checkbox" id="ve-fea-mesh-worker-' + node.id + '"' + (useWorker ? ' checked' : '') + ' style="margin:0;">' +
     '<span>Web Worker\'da hesapla <span style="color:var(--text-muted);">(büyük mesh için)</span></span>' +
   '</label>';
+
+  // Defeaturing Tolerance (ANSYS §8)
+  var defeatureTol = settings.defeaturingTolerance != null ? settings.defeaturingTolerance : 0;
+  html += '<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border-color);">';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Defeaturing Tolerance <span style="color:var(--text-muted);">(ANSYS §8)</span></div>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:6px;">Bundan küçük detaylar (sliver edge/face) mesh\'te yok sayılır. 0 = devre dışı.</div>';
+  html += '<div style="display:flex; gap:6px; align-items:center;">';
+  html += '<input id="ve-fea-mesh-defeature-' + node.id + '" type="number" min="0" step="0.1" value="' + defeatureTol + '" style="flex:1; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '<span style="font-size:0.55rem; color:var(--text-muted);">mm</span>';
+  html += '</div>';
+  html += '</div>';
+
   return html;
 }
 

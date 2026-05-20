@@ -362,6 +362,9 @@ function veFEASubmitMeshBuild(nodeId) {
   if (!isFinite(curvAngDeg) || curvAngDeg <= 0) curvAngDeg = 18;
   if (curvAngDeg > 90) curvAngDeg = 90;
   if (curvAngDeg < 1) curvAngDeg = 1;
+  var defeatureEl = document.getElementById('ve-fea-mesh-defeature-' + nodeId);
+  var defeatureTol = defeatureEl ? parseFloat(defeatureEl.value) : 0;
+  if (!isFinite(defeatureTol) || defeatureTol < 0) defeatureTol = 0;
   var localSelEl = document.getElementById('ve-fea-mesh-local-sel-' + nodeId);
   var localModeEl = document.getElementById('ve-fea-mesh-local-mode-' + nodeId);
   var localBiasEl = document.getElementById('ve-fea-mesh-local-bias-' + nodeId);
@@ -393,6 +396,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
     meshNode.data.meshSettings.crossSection = crossSection;
     meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };
+    meshNode.data.meshSettings.defeaturingTolerance = defeatureTol;
     meshNode.data.meshSettings.localSizing = {
       selection: localSelection,
       biasMode: localBiasMode,
