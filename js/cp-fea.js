@@ -148,19 +148,6 @@ function getFEAGeometryPropertiesHTML(node) {
   html += '<div style="font-size:0.55rem; color:var(--text-muted); padding:0 4px;">STEP OpenCascade WebAssembly ile yüklenir (~7 MB). İlk dosyada birkaç saniye sürer.</div>';
   html += '</div>';
 
-  // ─── CAD EDİTÖRÜ ──────────────────────────────────────────────────────
-  // Modal pencerede çoklu primitif kompozisyonu (Faz-1). Sonraki fazlarda
-  // boolean, sketch, fillet/chamfer ve STEP düzenleme eklenecek.
-  html += veFEASectionTitle('CAD Editörü');
-  html += '<button onclick="veCADOpenEditor(\'' + node.id + '\')" style="width:100%; padding:9px 10px; font-size:0.7rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; text-align:left; display:flex; align-items:center; gap:8px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">' +
-    '<span style="font-size:0.9rem;">🎨</span>' +
-    '<span style="flex:1;">CAD Editörünü Aç</span>' +
-    '<span style="font-size:0.55rem; color:var(--text-muted);">▶</span>' +
-    '</button>';
-  html += '<div style="font-size:0.55rem; color:var(--text-muted); padding:4px 4px 10px; line-height:1.5;">' +
-    'Faz-1: çoklu primitif kompozisyonu (kutu+silindir+şaft). ' +
-    'Boolean, sketch ve STEP düzenleme sonraki sürümlerde.</div>';
-
   // ─── DURUM ────────────────────────────────────────────────────────────
   html += veFEASectionTitle('Durum');
   if(hasGeom) {
@@ -171,12 +158,6 @@ function getFEAGeometryPropertiesHTML(node) {
     }
     if(geom.type === 'step' && geom.meshCount && geom.meshCount > 1) {
       html += veFEAReadOnlyRow('Parça sayısı', String(geom.meshCount));
-    }
-    if(geom.type === 'cad' && geom.cadModel && geom.cadModel.features) {
-      html += veFEAReadOnlyRow('Feature sayısı', String(geom.cadModel.features.length));
-      if(geom.triangleCount) {
-        html += veFEAReadOnlyRow('Üçgen sayısı', geom.triangleCount.toLocaleString('tr-TR'));
-      }
     }
     html += veFEAReadOnlyRow('Hacim',        (typeof veFEAFormatVolume === 'function') ? veFEAFormatVolume(geom.volume) : (geom.volume + ' mm³'));
     html += veFEAReadOnlyRow('Yüzey alanı',  (typeof veFEAFormatArea === 'function') ? veFEAFormatArea(geom.surfaceArea) : (geom.surfaceArea + ' mm²'));

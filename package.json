@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "delaunay-triangulate": "^1.1.6",
-    "manifold-3d": "^3.4.1",
     "occt-import-js": "^0.0.23",
     "three": "^0.149.0"
   }
