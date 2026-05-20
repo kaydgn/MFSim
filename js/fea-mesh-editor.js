@@ -3,12 +3,12 @@
 // ============================================================================
 // ANSYS Workbench Mesh deneyimini taklit eden modal pencere:
 //   - Header (başlık + kapat)
-//   - Toolbar (Mesh Oluştur + Boyut + Presetler + Export)
+//   - Toolbar (Mesh Oluştur + Boyut + Presetler)
 //   - Split body: SOL (resizable accordion paneli) + SAĞ (3D mesh viewer)
 //   - Footer (mesh durumu)
 //
 // Side panel'de SADECE "Mesh Editörünü Aç" butonu var. Tüm kompleks UI
-// (mesh ayarları, kalite metrikleri, heat map, named selections, export)
+// (mesh ayarları, kalite metrikleri, heat map, named selections)
 // burada modal içinde accordion'lar olarak organize edildi.
 //
 // Public API:
@@ -23,19 +23,23 @@ var _veFEAEditorEscHandler = null;
 var _veFEAEditorResizeObserver = null;  // modal viewer için container resize observer
 var _veFEAEditorAccordionState = {};  // { sectionKey: true (open) | false (closed) }
 
-// Default accordion durumu (ilk açılışta): Topology + Defaults + Sizing açık.
-// Topology en ustte cunku ANSYS workflow: once geometriyi/yuzeyleri gor, sonra mesh.
+// Default accordion durumu (ilk açılışta): Sizing + Defaults açık — bunlar
+// "Mesh Oluştur" öncesi en kritik ayarlar. Pre-mesh grup üstte (Sizing,
+// Defaults, Inflation, NamedSel), Post-mesh grup altta (Quality, Stats,
+// Display, Suggestions, Topology).
 function _veFEAEditorDefaultAccordionState() {
   return {
-    topology: true,
-    defaults: true,
+    // Pre-mesh
     sizing: true,
+    defaults: true,
     inflation: false,
-    quality: false,
     namedSel: false,
-    display: false,
+    // Post-mesh
+    quality: false,
     statistics: false,
-    suggestions: false
+    display: false,
+    suggestions: false,
+    topology: false
   };
 }
 
@@ -66,7 +70,7 @@ function veFEAEditorRefreshAccordions() {
     if (body) body.innerHTML = updates[k];
   });
 
-  // Toolbar — Mesh'i Sil + Export butonları mesh varlığına göre değişir
+  // Toolbar — Mesh'i Sil butonu mesh varlığına göre değişir
   var oldToolbar = document.getElementById('ve-fea-mesh-editor-toolbar');
   if (oldToolbar && oldToolbar.parentNode) {
     var newToolbar = _veFEAEditorBuildToolbar(node);
@@ -429,16 +433,6 @@ function _veFEAEditorBuildToolbar(node) {
     toolbar.innerHTML += '<button onclick="veFEAClearMeshForNode(\'' + node.id + '\')" style="padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer;">🗑 Mesh\'i Sil</button>';
   }
 
-  // Export dropdown
-  if (hasMesh) {
-    toolbar.innerHTML += '<select onchange="if(this.value){veFEAExportMeshForNode(\'' + node.id + '\', this.value); this.value=\'\';}" style="padding:5px 8px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">' +
-      '<option value="">📦 Export...</option>' +
-      '<option value="abaqus">Abaqus (.inp)</option>' +
-      '<option value="nastran">NASTRAN (.nas)</option>' +
-      '<option value="vtk">VTK (.vtk)</option>' +
-      '</select>';
-  }
-
   return toolbar;
 }
 
@@ -475,17 +469,27 @@ function _veFEAEditorBuildLeftPanel(node) {
   panel.style.cssText = 'flex:0 0 400px; min-width:280px; max-width:720px; overflow-y:auto; overflow-x:hidden; background:var(--bg-primary, #0a0d14); border-right:1px solid var(--border-color);';
 
   var html = '';
-  html += _veFEAEditorAccordionSection('topology',    'Geometri Topolojisi',           _veFEAEditorTopologyHTML(node));
-  html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
+  // ─── Pre-mesh: "Mesh Oluştur" öncesi ayarlanan bölümler ─────────────────
+  html += _veFEAEditorGroupHeader('Mesh Öncesi (Ayarlar)');
   html += _veFEAEditorAccordionSection('sizing',      'Boyutlandırma',                 _veFEAEditorSizingHTML(node));
+  html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
   html += _veFEAEditorAccordionSection('inflation',   'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
-  html += _veFEAEditorAccordionSection('quality',     'Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', _veFEAEditorQualityHTML(node));
   html += _veFEAEditorAccordionSection('namedSel',    'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
-  html += _veFEAEditorAccordionSection('display',     'Görünüm Modu',                  _veFEAEditorDisplayHTML(node));
+  // ─── Post-mesh: Mesh oluşturulduktan sonra incelenen bölümler ───────────
+  html += _veFEAEditorGroupHeader('Mesh Sonrası (İnceleme)');
+  html += _veFEAEditorAccordionSection('quality',     'Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', _veFEAEditorQualityHTML(node));
   html += _veFEAEditorAccordionSection('statistics',  'İstatistikler',                 _veFEAEditorStatisticsHTML(node));
+  html += _veFEAEditorAccordionSection('display',     'Görünüm Modu',                  _veFEAEditorDisplayHTML(node));
   html += _veFEAEditorAccordionSection('suggestions', 'Adaptif İnceltme Önerileri',    _veFEAEditorSuggestionsHTML(node));
+  html += _veFEAEditorAccordionSection('topology',    'Geometri Topolojisi',           _veFEAEditorTopologyHTML(node));
   panel.innerHTML = html;
   return panel;
+}
+
+// Pre/Post-mesh grup başlığı — accordion bölümleri arasında görsel ayraç.
+function _veFEAEditorGroupHeader(label) {
+  return '<div style="padding:6px 14px 5px; background:var(--bg-primary); border-bottom:1px solid var(--border-color); font-size:0.58rem; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase;">' +
+    label + '</div>';
 }
 
 function _veFEAEditorAccordionSection(key, title, bodyHTML) {

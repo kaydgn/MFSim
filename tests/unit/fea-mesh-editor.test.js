@@ -245,7 +245,7 @@ describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
     expect(html).toMatch(/Halka.*Düzlem/);
   });
 
-  test('Modal acildiginda topology accordion en üstte', () => {
+  test('Modal acildiginda topology accordion en altta (Post-mesh grubunun sonu)', () => {
     var geomNode = {
       id: 'g-t4', type: 'fea-geometry',
       data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
@@ -257,13 +257,14 @@ describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
     veFEAOpenMeshEditor('mesh-t5');
     var section = document.querySelector('[data-acc-section="topology"]');
     expect(section).not.toBeNull();
-    // Sol panelde ilk accordion topology olmalı
+    // Sol panelde ilk accordion sizing, son accordion topology olmalı
     var leftPanel = document.getElementById('ve-fea-mesh-editor-left-panel');
-    var firstSection = leftPanel.querySelector('[data-acc-section]');
-    expect(firstSection.getAttribute('data-acc-section')).toBe('topology');
+    var allSections = leftPanel.querySelectorAll('[data-acc-section]');
+    expect(allSections[0].getAttribute('data-acc-section')).toBe('sizing');
+    expect(allSections[allSections.length - 1].getAttribute('data-acc-section')).toBe('topology');
   });
 
-  test('Topology default expanded (Defaults + Sizing + Topology hepsi açık)', () => {
+  test('Topology default kapalı (Post-mesh, bilgilendirme amaçlı, otomatik açılmaz)', () => {
     var geomNode = {
       id: 'g-t5', type: 'fea-geometry',
       data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
@@ -273,7 +274,56 @@ describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
     global.nodes = [geomNode, meshNode];
     global.connections = [{ from: 'g-t5', to: 'mesh-t6' }];
     veFEAOpenMeshEditor('mesh-t6');
-    expect(document.getElementById('ve-fea-acc-body-topology').style.display).toBe('block');
+    expect(document.getElementById('ve-fea-acc-body-topology').style.display).toBe('none');
+    // Pre-mesh grupları default açık
+    expect(document.getElementById('ve-fea-acc-body-sizing').style.display).toBe('block');
+    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('block');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Pre/Post-mesh grup ayrımı — accordion organization
+describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+  });
+
+  test('Pre-mesh grup başlığı (Mesh Öncesi) ve Post-mesh grup başlığı (Mesh Sonrası) render edilir', () => {
+    global.nodes = [{ id: 'mesh-g1', type: 'fea-mesh', data: {} }];
+    veFEAOpenMeshEditor('mesh-g1');
+    var leftPanel = document.getElementById('ve-fea-mesh-editor-left-panel');
+    expect(leftPanel.innerHTML).toMatch(/Mesh Öncesi/);
+    expect(leftPanel.innerHTML).toMatch(/Mesh Sonrası/);
+  });
+
+  test('Pre-mesh sırası: sizing → defaults → inflation → namedSel', () => {
+    global.nodes = [{ id: 'mesh-g2', type: 'fea-mesh', data: {} }];
+    veFEAOpenMeshEditor('mesh-g2');
+    var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
+      .querySelectorAll('[data-acc-section]');
+    var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
+    expect(order.slice(0, 4)).toEqual(['sizing', 'defaults', 'inflation', 'namedSel']);
+  });
+
+  test('Post-mesh sırası: quality → statistics → display → suggestions → topology', () => {
+    global.nodes = [{ id: 'mesh-g3', type: 'fea-mesh', data: {} }];
+    veFEAOpenMeshEditor('mesh-g3');
+    var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
+      .querySelectorAll('[data-acc-section]');
+    var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
+    expect(order.slice(4)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'topology']);
+  });
+
+  test('Default accordion state: yalnız sizing + defaults açık (mesh öncesi kritik)', () => {
+    var state = _veFEAEditorDefaultAccordionState();
+    expect(state.sizing).toBe(true);
+    expect(state.defaults).toBe(true);
+    expect(state.inflation).toBe(false);
+    expect(state.namedSel).toBe(false);
+    expect(state.quality).toBe(false);
+    expect(state.topology).toBe(false);
   });
 });
 
@@ -670,7 +720,7 @@ describe('Modal toolbar — Çalıştır butonu', () => {
     expect(btn.hasAttribute('disabled')).toBe(false);
   });
 
-  test('Mesh aktifken Mesh\'i Sil + Export dropdown render', () => {
+  test('Mesh aktifken Mesh\'i Sil butonu render', () => {
     var node = {
       id: 'mesh-t3', type: 'fea-mesh',
       data: {
@@ -682,7 +732,5 @@ describe('Modal toolbar — Çalıştır butonu', () => {
     veFEAOpenMeshEditor('mesh-t3');
     var clearBtn = document.querySelector('button[onclick*="veFEAClearMeshForNode"]');
     expect(clearBtn).not.toBeNull();
-    var exportSel = document.querySelector('select[onchange*="veFEAExportMeshForNode"]');
-    expect(exportSel).not.toBeNull();
   });
 });
