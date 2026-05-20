@@ -21,7 +21,12 @@
 // ============================================================================
 
 var VE_FEA_MESH_MIN_SIZE = 0.5;  // mm — çok küçük değerleri clamp et
-var VE_FEA_VOXEL_MAX_COUNT = 5000000; // 5M voxel üst sınır (performans güvencesi)
+var VE_FEA_VOXEL_MAX_COUNT = 20000000; // 20M voxel üst sınır — sub-1mm mesh için
+                                       // büyük geometrilerde headroom sağlar.
+                                       // Boundary-snap fallback'i (degree-based)
+                                       // yüzey düğümlerini tarayacağı için RAM
+                                       // büyür ama hala makul sınırda kalır
+                                       // (20M voxel ≈ 100³ × 20 ≈ 480 MB Float32).
 
 // Named selections veri modeli:
 //   mesh.namedSelections = {
