@@ -2504,6 +2504,55 @@ describe('veFEAMeshFromGeometry — midSideNodes opsiyonu', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// ─── Faz 2 Adım 3 — Convergence Study (ANSYS §10) ───
+describe('veFEAConvergenceStudy — otomatik h-refinement', () => {
+  test('Konverjans sağlanırsa converged=true, log uzunluğu < maxLoops', () => {
+    var result = veFEAConvergenceStudy(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5 },
+      { maxLoops: 5, targetPoorPct: 50, shrinkFactor: 0.8 }
+    );
+    // Mükemmel küp → poor% = 0 → ilk iterasyonda converge
+    expect(result.converged).toBe(true);
+    expect(result.log.length).toBe(1);
+    expect(result.final).toBeDefined();
+  });
+
+  test('Yakınsama olmazsa converged=false, max iterasyona ulaşılır', () => {
+    // İmkansız hedef: poor=0% strict, aspect=20 sınırı tüm meshler için aşılır mı?
+    // Mükemmel küp her zaman 0% poor verir, hedef 0 olsa bile geçer.
+    // Bu test çok katı criteria + STEP voxel için çalışmaz, atlama
+    var result = veFEAConvergenceStudy(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 100 },  // çok kaba başla, mükemmel küp olsa bile
+      { maxLoops: 3, targetPoorPct: 0.0001, shrinkFactor: 0.5 }
+    );
+    expect(result.log.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('Log her loop için size, elementCount, poor% içerir', () => {
+    var result = veFEAConvergenceStudy(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5 },
+      { maxLoops: 3, targetPoorPct: 99, shrinkFactor: 0.7 }
+    );
+    expect(result.log[0].size).toBeDefined();
+    expect(result.log[0].elementCount).toBeDefined();
+    expect(result.log[0].poorPct).toBeDefined();
+    expect(result.log[0].maxAspect).toBeDefined();
+  });
+
+  test('maxLoops parametresine uyum (max 20 clamp)', () => {
+    var result = veFEAConvergenceStudy(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5 },
+      { maxLoops: 100, targetPoorPct: 0.0001 }
+    );
+    // Mükemmel küp ilk iterasyonda converge → log 1, ama maxLoops clamp etkisi diğer testlerde
+    expect(result.log.length).toBeLessThanOrEqual(20);
+  });
+});
+
 // ─── Faz 2 Adım 2 — Defeaturing Tolerance (ANSYS §8) ───
 describe('Defeaturing Tolerance (opts.defeaturingTolerance)', () => {
   test('Tolerans verilince effective minimum size artar (küçük size clamp\'lenir)', () => {

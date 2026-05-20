@@ -307,13 +307,13 @@ describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
     expect(order.slice(0, 7)).toEqual(['sizing', 'defaults', 'inflation', 'faceSizing', 'edgeSizing', 'sphereOfInfluence', 'namedSel']);
   });
 
-  test('Post-mesh sırası: quality → statistics → display → suggestions → topology', () => {
+  test('Post-mesh sırası: quality → statistics → display → suggestions → convergence → topology', () => {
     global.nodes = [{ id: 'mesh-g3', type: 'fea-mesh', data: {} }];
     veFEAOpenMeshEditor('mesh-g3');
     var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
       .querySelectorAll('[data-acc-section]');
     var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(7)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'topology']);
+    expect(order.slice(7)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'convergence', 'topology']);
   });
 
   test('Default accordion state: TÜM accordion\'lar kapalı (sade ilk görünüm)', () => {

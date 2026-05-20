@@ -43,6 +43,7 @@ function _veFEAEditorDefaultAccordionState() {
     statistics: false,
     display: false,
     suggestions: false,
+    convergence: false,
     topology: false
   };
 }
@@ -70,7 +71,8 @@ function veFEAEditorRefreshAccordions() {
     'namedSel':    _veFEAEditorNamedSelHTML(node),
     'display':     _veFEAEditorDisplayHTML(node),
     'statistics':  _veFEAEditorStatisticsHTML(node),
-    'suggestions': _veFEAEditorSuggestionsHTML(node)
+    'suggestions': _veFEAEditorSuggestionsHTML(node),
+    'convergence': _veFEAEditorConvergenceHTML(node)
   };
   Object.keys(updates).forEach(function(k) {
     var body = document.getElementById('ve-fea-acc-body-' + k);
@@ -491,6 +493,7 @@ function _veFEAEditorBuildLeftPanel(node) {
   html += _veFEAEditorAccordionSection('statistics',  'İstatistikler',                 _veFEAEditorStatisticsHTML(node));
   html += _veFEAEditorAccordionSection('display',     'Görünüm Modu',                  _veFEAEditorDisplayHTML(node));
   html += _veFEAEditorAccordionSection('suggestions', 'Adaptif İnceltme Önerileri',    _veFEAEditorSuggestionsHTML(node));
+  html += _veFEAEditorAccordionSection('convergence', 'Convergence Study (ANSYS §10)', _veFEAEditorConvergenceHTML(node));
   html += _veFEAEditorAccordionSection('topology',    'Geometri Topolojisi',           _veFEAEditorTopologyHTML(node));
   panel.innerHTML = html;
   return panel;
@@ -1750,6 +1753,99 @@ function _veFEAEditorStatisticsHTML(node) {
   html += veFEAReadOnlyRow('Ortalama eleman boyu', metrics.avgSize.toFixed(2) + ' mm');
   if (metrics.computeMs !== undefined) html += veFEAReadOnlyRow('Hesaplama süresi', metrics.computeMs + ' ms');
   return html;
+}
+
+// ─── Convergence Study panel (ANSYS §10) ──────────────────────────────────
+// Otomatik h-refinement: mesh oluştur → quality değerlendir → eşiği geçmediyse
+// size küçült, tekrar mesh. v1: mesh-quality tabanlı (solver entegrasyonu Faz 3'te).
+function _veFEAEditorConvergenceHTML(node) {
+  var d = node.data || {};
+  var cs = d.convergenceState || {};
+  var hasGeom = !!(d.geometry && d.geometry.type);
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">' +
+    'ANSYS §10 — otomatik mesh refinement. Hedef poor element yüzdesine ulaşana ' +
+    'kadar size küçültülüp mesh yeniden üretilir. v1: aspect+skewness tabanlı.' +
+    '</div>';
+
+  if (!hasGeom) {
+    html += '<div style="padding:8px 10px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary);">Önce geometri tanımlayın.</div>';
+    return html;
+  }
+
+  html += '<div style="display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; margin-bottom:8px;">';
+  html += '<label style="font-size:0.6rem; color:var(--text-secondary);">Max iterasyon:</label>';
+  html += '<input type="number" id="ve-fea-conv-max-' + node.id + '" min="1" max="20" step="1" value="' + (cs.maxLoops || 5) + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '<label style="font-size:0.6rem; color:var(--text-secondary);">Hedef poor %:</label>';
+  html += '<input type="number" id="ve-fea-conv-pct-' + node.id + '" min="0.1" max="100" step="0.5" value="' + (cs.targetPoorPct || 5) + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '<label style="font-size:0.6rem; color:var(--text-secondary);">Size shrink:</label>';
+  html += '<input type="number" id="ve-fea-conv-shr-' + node.id + '" min="0.1" max="0.95" step="0.05" value="' + (cs.shrinkFactor || 0.8) + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '</div>';
+
+  html += '<button onclick="veFEARunConvergenceStudy(\'' + node.id + '\')" style="width:100%; padding:8px; font-size:0.66rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">▶ Convergence Study Çalıştır</button>';
+
+  if (cs.log && cs.log.length > 0) {
+    html += '<div style="margin-top:8px; padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.58rem;">';
+    html += '<div style="margin-bottom:4px; color:var(--text-secondary); font-weight:600;">Son çalıştırma:</div>';
+    cs.log.forEach(function(entry) {
+      if (entry.status === 'error') {
+        html += '<div style="color:#ef4444;">Loop ' + entry.loop + ': HATA — ' + (entry.error || '?') + '</div>';
+        return;
+      }
+      if (entry.status === 'min-size-reached') {
+        html += '<div style="color:#f59e0b;">Loop ' + entry.loop + ': minimum size aşıldı (' + entry.size.toFixed(2) + ' mm)</div>';
+        return;
+      }
+      html += '<div style="color:var(--text-primary); font-family:monospace;">' +
+        'Loop ' + entry.loop +
+        ' | size=' + entry.size.toFixed(2) + 'mm' +
+        ' | N=' + (entry.elementCount || 0) +
+        ' | poor=' + (entry.poorPct || 0).toFixed(1) + '%' +
+        ' | aspect=' + (entry.maxAspect || 0).toFixed(1) +
+        ' | skew=' + (entry.maxSkew || 0).toFixed(2) +
+        '</div>';
+    });
+    var statusColor = cs.converged ? '#22c55e' : '#f59e0b';
+    var statusIcon  = cs.converged ? '✓' : '⚠';
+    html += '<div style="margin-top:4px; color:' + statusColor + '; font-weight:600;">' + statusIcon +
+      ' ' + (cs.converged ? 'Yakınsama sağlandı' : 'Maks iterasyona ulaşıldı') + '</div>';
+    html += '</div>';
+  }
+  return html;
+}
+
+// Convergence Study runner — UI butonundan çağrılır.
+function veFEARunConvergenceStudy(nodeId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.geometry) return;
+  var maxEl = document.getElementById('ve-fea-conv-max-' + nodeId);
+  var pctEl = document.getElementById('ve-fea-conv-pct-' + nodeId);
+  var shrEl = document.getElementById('ve-fea-conv-shr-' + nodeId);
+  var maxLoops = maxEl ? parseInt(maxEl.value, 10) : 5;
+  var targetPoorPct = pctEl ? parseFloat(pctEl.value) : 5;
+  var shrinkFactor = shrEl ? parseFloat(shrEl.value) : 0.8;
+  var baseOpts = (node.data.meshSettings) ? Object.assign({}, node.data.meshSettings) : { size: 10 };
+  if (typeof veFEAConvergenceStudy !== 'function') return;
+  var result = veFEAConvergenceStudy(node.data.geometry, baseOpts, {
+    maxLoops: maxLoops, targetPoorPct: targetPoorPct, shrinkFactor: shrinkFactor
+  });
+  node.data.convergenceState = {
+    maxLoops: maxLoops, targetPoorPct: targetPoorPct, shrinkFactor: shrinkFactor,
+    log: result.log, converged: result.converged
+  };
+  // Final mesh'i kullan: meshSettings.size'ı son loop'a güncelle ve build et
+  if (result.final && !result.final.error && result.log.length > 0) {
+    var lastEntry = result.log[result.log.length - 1];
+    if (lastEntry.size) {
+      node.data.meshSettings = node.data.meshSettings || {};
+      node.data.meshSettings.size = lastEntry.size;
+    }
+    if (typeof veFEABuildMeshForNode === 'function') {
+      veFEABuildMeshForNode(nodeId);
+    }
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 }
 
 function _veFEAEditorSuggestionsHTML(node) {

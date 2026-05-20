@@ -3151,6 +3151,78 @@ function _veFEAApplySphereOfInfluence(mesh, spheres) {
   return mesh;
 }
 
+// ─── Convergence Study (ANSYS §10 — mesh-quality h-refinement loop) ──────
+// Otomatik h-refinement: mesh oluştur → quality değerlendir → eşiği geçmediyse
+// size'ı küçült, tekrar mesh. v1: mesh-quality tabanlı (solver yok). Solver
+// integration ile stress/displacement convergence Faz 3'te.
+//
+// Parametreler:
+//   geometry      → mesh kaynağı (primitif veya STEP)
+//   baseOpts      → ilk mesh opts (size, elementType, vs.)
+//   criteria      → {
+//     maxLoops: 5,           // azami iterasyon
+//     targetPoorPct: 5,      // hedef poor element yüzdesi (aspect+skew)
+//     shrinkFactor: 0.8      // her loop'ta size *= 0.8
+//   }
+//
+// Returns:
+//   { final: meshData, log: [...], converged: bool }
+function veFEAConvergenceStudy(geometry, baseOpts, criteria) {
+  criteria = criteria || {};
+  var maxLoops = parseInt(criteria.maxLoops, 10);
+  if (!isFinite(maxLoops) || maxLoops < 1) maxLoops = 5;
+  if (maxLoops > 20) maxLoops = 20;
+  var targetPoorPct = +criteria.targetPoorPct;
+  if (!isFinite(targetPoorPct) || targetPoorPct <= 0) targetPoorPct = 5;
+  var shrinkFactor = +criteria.shrinkFactor;
+  if (!isFinite(shrinkFactor) || shrinkFactor <= 0 || shrinkFactor >= 1) shrinkFactor = 0.8;
+
+  var opts = {};
+  for (var k in baseOpts) if (baseOpts.hasOwnProperty(k)) opts[k] = baseOpts[k];
+  if (!isFinite(+opts.size) || +opts.size <= 0) opts.size = 10;
+
+  var log = [];
+  var finalMesh = null;
+  var converged = false;
+  for (var loop = 0; loop < maxLoops; loop++) {
+    var mesh = veFEAMeshFromGeometry(geometry, opts);
+    if (!mesh || mesh.error) {
+      log.push({ loop: loop, size: opts.size, status: 'error', error: mesh && mesh.error });
+      finalMesh = mesh;
+      break;
+    }
+    var q = veFEAComputeQualityMetrics(mesh);
+    if (!q || q.elementCount === 0) {
+      log.push({ loop: loop, size: opts.size, status: 'no-elements' });
+      finalMesh = mesh; break;
+    }
+    var poorCount = (q.aspectRatio.poorCount || 0) + (q.skewness.poorCount || 0);
+    var poorPct = (poorCount / q.elementCount) * 100;
+    log.push({
+      loop: loop,
+      size: opts.size,
+      elementCount: q.elementCount,
+      poorAspect: q.aspectRatio.poorCount || 0,
+      poorSkew:   q.skewness.poorCount || 0,
+      poorPct: poorPct,
+      maxAspect: q.aspectRatio.max,
+      maxSkew: q.skewness.max
+    });
+    finalMesh = mesh;
+    if (poorPct <= targetPoorPct) {
+      converged = true;
+      break;
+    }
+    opts.size = opts.size * shrinkFactor;
+    // Effective minimum'a indiyse stop
+    if (opts.size < VE_FEA_MESH_MIN_SIZE) {
+      log.push({ loop: loop + 1, size: opts.size, status: 'min-size-reached' });
+      break;
+    }
+  }
+  return { final: finalMesh, log: log, converged: converged };
+}
+
 // ─── Adaptive refinement önerileri (mesh kalite-tabanlı) ─────────────────
 // Solver F5 tamamlanana kadar gerçek "error indicator feedback" yok. Bu yöntem
 // quality + jacobian metriklerinden heuristic öneriler üretir:
