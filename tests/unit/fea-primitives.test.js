@@ -19,9 +19,16 @@ eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('fea-primitives API tanımları', () => {
-  test('10 tip mevcut: box, cylinder, shaft, sphere, hemisphere, torus, cone, lbracket, ibeam, rectTube', () => {
+  test('14 tip mevcut: temel hacimsel + yapısal + bağlantı elemanları', () => {
     const types = veFEAPrimitiveTypes();
-    expect(types).toEqual(['box', 'cylinder', 'shaft', 'sphere', 'hemisphere', 'torus', 'cone', 'lbracket', 'ibeam', 'rectTube']);
+    expect(types).toEqual([
+      // Temel hacimsel
+      'box', 'cylinder', 'shaft', 'sphere', 'hemisphere', 'torus', 'cone',
+      // Yapısal profiller
+      'lbracket', 'ibeam', 'rectTube',
+      // Otomotiv bağlantı elemanları (motor/şanzıman)
+      'washer', 'bolt', 'nut', 'plate'
+    ]);
   });
 
   test('her tipin etiketi ve şeması var', () => {
@@ -110,6 +117,53 @@ describe('veFEAPrimitiveStats — analitik hacim/alan', () => {
     const hollow = veFEAPrimitiveStats('shaft', { outerRadius: 10, innerRadius: 0, length: 50 });
     const solid  = veFEAPrimitiveStats('cylinder', { radius: 10, height: 50 });
     expect(hollow.volume).toBeCloseTo(solid.volume, 6);
+  });
+
+  test('washer: V = π(R²−r²)·t (annular extrusion)', () => {
+    const s = veFEAPrimitiveStats('washer', { outerRadius: 12, innerRadius: 5, thickness: 1.5, segments: 48 });
+    expect(s.volume).toBeCloseTo(Math.PI * (144 - 25) * 1.5, 6);
+    expect(s.bbox).toEqual({ x: 24, y: 1.5, z: 24 });
+  });
+
+  test('washer: iç yarıçap >= dış → 1mm fark zorlanır (validasyon)', () => {
+    const s = veFEAPrimitiveStats('washer', { outerRadius: 10, innerRadius: 15, thickness: 1 });
+    expect(s.params.innerRadius).toBe(9); // 10 - 1
+  });
+
+  test('nut: altıgen prizma − merkez delik (hacim < tam altıgen)', () => {
+    const s = veFEAPrimitiveStats('nut', { width: 13, thickness: 6.5, holeDiameter: 8 });
+    const hexR = 13 / Math.sqrt(3);
+    const hexArea = (3 * Math.sqrt(3) / 2) * hexR * hexR;
+    const holeArea = Math.PI * 16;
+    expect(s.volume).toBeCloseTo((hexArea - holeArea) * 6.5, 4);
+    expect(s.bbox.x).toBeCloseTo(2 * hexR, 4);
+  });
+
+  test('bolt: hacim = altıgen başlık + silindir gövde', () => {
+    const s = veFEAPrimitiveStats('bolt', { headWidth: 13, headHeight: 5.5, shaftDiameter: 8, shaftLength: 30 });
+    const hexR = 13 / Math.sqrt(3);
+    const headVol = (3 * Math.sqrt(3) / 2) * hexR * hexR * 5.5;
+    const shaftVol = Math.PI * 16 * 30;
+    expect(s.volume).toBeCloseTo(headVol + shaftVol, 4);
+    expect(s.bbox.y).toBe(5.5 + 30);
+  });
+
+  test('plate: 2×2 grid, delikli levha hacmi', () => {
+    const s = veFEAPrimitiveStats('plate', {
+      length: 120, width: 80, thickness: 8, holeDiameter: 9, cols: 2, rows: 2, margin: 15
+    });
+    const plateArea = 120 * 80;
+    const holeArea = 4 * Math.PI * 4.5 * 4.5;
+    expect(s.volume).toBeCloseTo((plateArea - holeArea) * 8, 4);
+    expect(s.bbox).toEqual({ x: 120, y: 8, z: 80 });
+  });
+
+  test('plate: 1×1 (tek merkez delik) parametre kabul edilir', () => {
+    const s = veFEAPrimitiveStats('plate', {
+      length: 50, width: 50, thickness: 5, holeDiameter: 10, cols: 1, rows: 1, margin: 10
+    });
+    const expectedV = (50 * 50 - Math.PI * 25) * 5;
+    expect(s.volume).toBeCloseTo(expectedV, 4);
   });
 });
 
