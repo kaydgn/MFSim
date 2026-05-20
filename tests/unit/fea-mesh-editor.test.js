@@ -298,22 +298,22 @@ describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
     expect(leftPanel.innerHTML).toMatch(/Mesh Sonrası/);
   });
 
-  test('Pre-mesh sırası: sizing → defaults → inflation → faceSizing → sphereOfInfluence → namedSel', () => {
+  test('Pre-mesh sırası: sizing → defaults → inflation → faceSizing → edgeSizing → sphereOfInfluence → virtualTopology → namedSel', () => {
     global.nodes = [{ id: 'mesh-g2', type: 'fea-mesh', data: {} }];
     veFEAOpenMeshEditor('mesh-g2');
     var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
       .querySelectorAll('[data-acc-section]');
     var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(0, 6)).toEqual(['sizing', 'defaults', 'inflation', 'faceSizing', 'sphereOfInfluence', 'namedSel']);
+    expect(order.slice(0, 8)).toEqual(['sizing', 'defaults', 'inflation', 'faceSizing', 'edgeSizing', 'sphereOfInfluence', 'virtualTopology', 'namedSel']);
   });
 
-  test('Post-mesh sırası: quality → statistics → display → suggestions → topology', () => {
+  test('Post-mesh sırası: quality → statistics → display → suggestions → convergence → topology', () => {
     global.nodes = [{ id: 'mesh-g3', type: 'fea-mesh', data: {} }];
     veFEAOpenMeshEditor('mesh-g3');
     var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
       .querySelectorAll('[data-acc-section]');
     var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(6)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'topology']);
+    expect(order.slice(8)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'convergence', 'topology']);
   });
 
   test('Default accordion state: TÜM accordion\'lar kapalı (sade ilk görünüm)', () => {
@@ -739,6 +739,75 @@ describe('Modal toolbar — Çalıştır butonu', () => {
     veFEAOpenMeshEditor('mesh-t3');
     var clearBtn = document.querySelector('button[onclick*="veFEAClearMeshForNode"]');
     expect(clearBtn).not.toBeNull();
+  });
+});
+
+// ─── Faz 2 Adım 1 — Edge Sizing Controls UI ───
+describe('Edge Sizing Controls (ANSYS §5.5) — UI helpers', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.saveState = jest.fn();
+    document.body.innerHTML = '';
+  });
+
+  test('_veFEAEditorEdgeSizingHTML: cylinder geometry → 2 edge dropdown\'da', () => {
+    var node = { id: 'es1', type: 'fea-mesh', data: {
+      geometry: { type: 'cylinder', params: { radius: 10, height: 20 } }
+    }};
+    var html = _veFEAEditorEdgeSizingHTML(node);
+    expect(html).toMatch(/edgeBottomCircle/);
+    expect(html).toMatch(/edgeTopCircle/);
+    expect(html).toMatch(/veFEAAddEdgeSizingFromDropdown/);
+  });
+
+  test('_veFEAEditorEdgeSizingHTML: edge\'i olmayan geometri → uyarı', () => {
+    var node = { id: 'es2', type: 'fea-mesh', data: {
+      geometry: { type: 'sphere', params: { radius: 10 } }
+    }};
+    var html = _veFEAEditorEdgeSizingHTML(node);
+    expect(html).toMatch(/tanımlı edge yok/);
+  });
+
+  test('veFEAAddEdgeSizingFromDropdown: dropdown\'dan edge ekler', () => {
+    var node = { id: 'es3', type: 'fea-mesh', data: {
+      geometry: { type: 'cylinder', params: { radius: 10, height: 20 } }
+    }};
+    global.nodes = [node];
+    document.body.innerHTML = '<select id="ve-fea-es-pick-es3"><option value="edgeBottomCircle" selected>X</option></select>';
+    veFEAAddEdgeSizingFromDropdown('es3');
+    expect(node.data.meshSettings.edgeSizingControls).toBeDefined();
+    expect(node.data.meshSettings.edgeSizingControls.length).toBe(1);
+    expect(node.data.meshSettings.edgeSizingControls[0].edgeId).toBe('edgeBottomCircle');
+  });
+
+  test('veFEARemoveEdgeSizing siler', () => {
+    var node = { id: 'es4', type: 'fea-mesh', data: {
+      meshSettings: { edgeSizingControls: [
+        { edgeId: 'edgeBottomCircle', size: 1, behavior: 'soft' },
+        { edgeId: 'edgeTopCircle',    size: 2, behavior: 'hard' }
+      ]}
+    }};
+    global.nodes = [node];
+    veFEARemoveEdgeSizing('es4', 0);
+    expect(node.data.meshSettings.edgeSizingControls.length).toBe(1);
+    expect(node.data.meshSettings.edgeSizingControls[0].edgeId).toBe('edgeTopCircle');
+  });
+
+  test('veFEAReadEdgeSizingFromUI: DOM input\'larından okur', () => {
+    var node = { id: 'es5', type: 'fea-mesh', data: {
+      meshSettings: { edgeSizingControls: [
+        { edgeId: 'edgeBottomCircle', size: 1, behavior: 'soft' }
+      ]}
+    }};
+    global.nodes = [node];
+    document.body.innerHTML =
+      '<input id="ve-fea-es-size-es5-0" value="0.5">' +
+      '<input id="ve-fea-es-div-es5-0" value="">' +
+      '<input type="radio" name="ve-fea-es-mode-es5-0" value="size" checked>' +
+      '<select id="ve-fea-es-beh-es5-0"><option value="hard" selected>H</option></select>';
+    var arr = veFEAReadEdgeSizingFromUI('es5');
+    expect(arr[0].size).toBe(0.5);
+    expect(arr[0].behavior).toBe('hard');
   });
 });
 

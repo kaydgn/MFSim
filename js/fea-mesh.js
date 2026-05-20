@@ -381,7 +381,11 @@ function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
 function veFEAMeshFromGeometry(geometry, opts) {
   if (!geometry || !geometry.type) return null;
   opts = opts || {};
-  var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
+  // Defeaturing tolerance (ANSYS §8): mesher'ın effective minimum size'ı.
+  // Verilirse VE_FEA_MESH_MIN_SIZE'in yerine geçer; ondan küçük detaylar
+  // (kısa edge, sliver face) implicit olarak atlanır.
+  var defeatureTol = Math.max(VE_FEA_MESH_MIN_SIZE, +opts.defeaturingTolerance || 0);
+  var size = Math.max(defeatureTol, Number(opts.size) || 10);
   // mode: 'auto' (default), 'volume', 'surface'
   var mode = opts.mode || 'auto';
   // elementType: 'auto' (native: hex8/wedge6) | 'tet4' (decomposition)
@@ -503,6 +507,12 @@ function veFEAMeshFromGeometry(geometry, opts) {
   }
   if (mesh && !mesh.error && Array.isArray(opts.faceSizingControls) && opts.faceSizingControls.length > 0) {
     mesh = _veFEAApplyFaceSizingControls(mesh, opts.faceSizingControls);
+  }
+  if (mesh && !mesh.error && Array.isArray(opts.edgeSizingControls) && opts.edgeSizingControls.length > 0) {
+    mesh = _veFEAApplyEdgeSizingControls(mesh, opts.edgeSizingControls);
+  }
+  if (mesh && !mesh.error && Array.isArray(opts.virtualTopology) && opts.virtualTopology.length > 0) {
+    mesh = _veFEAApplyVirtualTopology(mesh, opts.virtualTopology);
   }
   return mesh;
 }
@@ -715,7 +725,8 @@ function _veFEAShouldTryTetMesher(opts) {
 // `preBuiltVoxel` opsiyonel: sync yol voxel'ı zaten post-process'lemişse
 // hazır kullanılır.
 function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
-  var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
+  var defeatureTol = Math.max(VE_FEA_MESH_MIN_SIZE, +opts.defeaturingTolerance || 0);
+  var size = Math.max(defeatureTol, Number(opts.size) || 10);
   var geometryType = geometry.type || 'unknown';
 
   function applyPostProcessing(mesh) {
@@ -736,6 +747,12 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     }
     if (Array.isArray(opts.faceSizingControls) && opts.faceSizingControls.length > 0) {
       mesh = _veFEAApplyFaceSizingControls(mesh, opts.faceSizingControls);
+    }
+    if (Array.isArray(opts.edgeSizingControls) && opts.edgeSizingControls.length > 0) {
+      mesh = _veFEAApplyEdgeSizingControls(mesh, opts.edgeSizingControls);
+    }
+    if (Array.isArray(opts.virtualTopology) && opts.virtualTopology.length > 0) {
+      mesh = _veFEAApplyVirtualTopology(mesh, opts.virtualTopology);
     }
     return mesh;
   }
@@ -1235,7 +1252,7 @@ function _veFEAMeshCylinderOgrid(r, h, nC, nSquare, nR, nA) {
   };
 }
 
-// O-grid silindir için named selections (alt/üst/yan)
+// O-grid silindir için named selections (alt/üst/yan + alt/üst daire kenarları)
 function _veFEAOgridCylinderNamedSelections(disk, n2, nA, r) {
   // Bottom (k=0) ve Top (k=nA): tüm 2D düğümler
   var bottom = new Uint32Array(n2);
@@ -1244,19 +1261,31 @@ function _veFEAOgridCylinderNamedSelections(disk, n2, nA, r) {
     bottom[i] = i;
     top[i] = nA * n2 + i;
   }
-  // Side: 2D'de outer circle üzerindeki düğümler × tüm axial layer
-  var sideIds = [];
+  // Outer-circle 2D düğümleri (Side ve edge'ler için)
+  var outerIdxs = [];
   var eps = r * 1e-4;
   for (var ii = 0; ii < n2; ii++) {
     var x = disk.nodes2D[ii][0], z = disk.nodes2D[ii][1];
-    if (Math.abs(Math.sqrt(x * x + z * z) - r) < eps) {
-      for (var k = 0; k <= nA; k++) sideIds.push(k * n2 + ii);
-    }
+    if (Math.abs(Math.sqrt(x * x + z * z) - r) < eps) outerIdxs.push(ii);
+  }
+  // Side: outer circle × tüm axial layer
+  var sideIds = [];
+  for (var oi = 0; oi < outerIdxs.length; oi++) {
+    for (var k = 0; k <= nA; k++) sideIds.push(k * n2 + outerIdxs[oi]);
+  }
+  // Edge'ler: outer circle bottom ve top layer'da
+  var edgeBottom = new Uint32Array(outerIdxs.length);
+  var edgeTop = new Uint32Array(outerIdxs.length);
+  for (var ei = 0; ei < outerIdxs.length; ei++) {
+    edgeBottom[ei] = outerIdxs[ei];
+    edgeTop[ei] = nA * n2 + outerIdxs[ei];
   }
   return {
-    faceBottom: { type: 'face', source: 'auto', label: 'Alt Disk (Y−)',         nodeIds: bottom },
-    faceTop:    { type: 'face', source: 'auto', label: 'Üst Disk (Y+)',         nodeIds: top },
-    faceSide:   { type: 'face', source: 'auto', label: 'Yan Yüzey (Radyal)',    nodeIds: new Uint32Array(sideIds) }
+    faceBottom:       { type: 'face', source: 'auto', label: 'Alt Disk (Y−)',         nodeIds: bottom },
+    faceTop:          { type: 'face', source: 'auto', label: 'Üst Disk (Y+)',         nodeIds: top },
+    faceSide:         { type: 'face', source: 'auto', label: 'Yan Yüzey (Radyal)',    nodeIds: new Uint32Array(sideIds) },
+    edgeBottomCircle: { type: 'edge', source: 'auto', label: 'Alt Daire (Y−)',        nodeIds: edgeBottom },
+    edgeTopCircle:    { type: 'edge', source: 'auto', label: 'Üst Daire (Y+)',        nodeIds: edgeTop }
   };
 }
 
@@ -1361,7 +1390,7 @@ function _veFEAMeshShaft(p, size, curvOpts) {
   };
 }
 
-// Şaft için 4 yüzey (Alt, Üst, Dış Yan, İç Yan)
+// Şaft için 4 yüzey + 4 daire kenar (Alt/Üst Halka + 2 Dış/2 İç daire)
 function _veFEAShaftNamedSelections(nR, nC, nA) {
   var perLayer = (nR + 1) * nC;
   function annNode(layer, ring, circ) {
@@ -1383,11 +1412,21 @@ function _veFEAShaftNamedSelections(nR, nC, nA) {
     }
     return ids;
   }
+  // Daire kenarları: tek bir layer+ring kombinasyonunda nC circumferential node
+  function circleNodes(layer, ring) {
+    var ids = new Uint32Array(nC);
+    for (var c = 0; c < nC; c++) ids[c] = annNode(layer, ring, c);
+    return ids;
+  }
   return {
-    faceBottom: { type: 'face', source: 'auto', label: 'Alt Halka (Y−)', nodeIds: annulusNodes(0) },
-    faceTop:    { type: 'face', source: 'auto', label: 'Üst Halka (Y+)', nodeIds: annulusNodes(nA) },
-    faceOuter:  { type: 'face', source: 'auto', label: 'Dış Yan Yüzey',  nodeIds: sideNodes(nR) },
-    faceInner:  { type: 'face', source: 'auto', label: 'İç Yan Yüzey (Delik)', nodeIds: sideNodes(0) }
+    faceBottom:      { type: 'face', source: 'auto', label: 'Alt Halka (Y−)',          nodeIds: annulusNodes(0) },
+    faceTop:         { type: 'face', source: 'auto', label: 'Üst Halka (Y+)',          nodeIds: annulusNodes(nA) },
+    faceOuter:       { type: 'face', source: 'auto', label: 'Dış Yan Yüzey',           nodeIds: sideNodes(nR) },
+    faceInner:       { type: 'face', source: 'auto', label: 'İç Yan Yüzey (Delik)',    nodeIds: sideNodes(0) },
+    edgeOuterBottom: { type: 'edge', source: 'auto', label: 'Dış Alt Daire (Y−)',      nodeIds: circleNodes(0,  nR) },
+    edgeOuterTop:    { type: 'edge', source: 'auto', label: 'Dış Üst Daire (Y+)',      nodeIds: circleNodes(nA, nR) },
+    edgeInnerBottom: { type: 'edge', source: 'auto', label: 'İç Alt Daire (Delik Y−)', nodeIds: circleNodes(0,  0)  },
+    edgeInnerTop:    { type: 'edge', source: 'auto', label: 'İç Üst Daire (Delik Y+)', nodeIds: circleNodes(nA, 0)  }
   };
 }
 
@@ -3095,6 +3134,47 @@ function veFEAComputeQualityMetrics(meshData) {
 // mesh.namedSelections['faceTop']) bulur, nodeIds'i paylaşan yeni bir
 // 'face-sizing-N' selection oluşturur. behavior='hard' uygulamada mesher
 // bias'ı override eder (Faz 2 size-field); 'soft' ise sadece marker.
+// ─── Edge Sizing Controls (ANSYS §5.5 — edge bazlı lokal kontrol) ─────────
+// Edge için target eleman boyutu (veya number of divisions). v1: post-mesh
+// named selection ile edge'e ait node'lar 'edge-sizing-N' altında gruplanır
+// + metadata (targetSize, divisions, behavior). Gerçek size override
+// (mesher edge subdivision'a hint) Faz 2 ileri adımında.
+function _veFEAApplyEdgeSizingControls(mesh, controls) {
+  if (!mesh || mesh.error || !controls || controls.length === 0) return mesh;
+  if (!mesh.namedSelections) mesh.namedSelections = {};
+  for (var i = 0; i < controls.length; i++) {
+    var c = controls[i] || {};
+    var edgeId = c.edgeId;
+    if (!edgeId) continue;
+    // Size veya divisions'tan en az biri geçerli olmalı
+    var size = +c.size;
+    var divisions = parseInt(c.divisions, 10);
+    var hasSize = isFinite(size) && size > 0;
+    var hasDiv  = isFinite(divisions) && divisions >= 1;
+    if (!hasSize && !hasDiv) continue;
+    var src = mesh.namedSelections[edgeId];
+    if (!src || src.type !== 'edge' || !src.nodeIds) continue;
+    var key = 'edge-sizing-' + i;
+    var behavior = (c.behavior === 'hard') ? 'hard' : 'soft';
+    mesh.namedSelections[key] = {
+      type: 'edge',
+      source: 'auto',
+      label: 'Edge Sizing: ' + (src.label || edgeId) +
+        (hasSize ? ' (' + size + 'mm)' : ' (' + divisions + ' div)') +
+        ' ' + behavior,
+      nodeIds: src.nodeIds,
+      edgeSizing: {
+        sourceEdgeId: edgeId,
+        targetSize: hasSize ? size : null,
+        divisions: hasDiv ? divisions : null,
+        behavior: behavior,
+        nodeCount: src.nodeIds.length
+      }
+    };
+  }
+  return mesh;
+}
+
 function _veFEAApplyFaceSizingControls(mesh, controls) {
   if (!mesh || mesh.error || !controls || controls.length === 0) return mesh;
   if (!mesh.namedSelections) mesh.namedSelections = {};
@@ -3170,6 +3250,171 @@ function _veFEAApplySphereOfInfluence(mesh, spheres) {
     };
   }
   return mesh;
+}
+
+// ─── Physics Preference (ANSYS §2 — preset defaults) ─────────────────────
+// Tek bir bayrak değil, onlarca varsayılan parametreyi (element size, order,
+// smoothing, curvature, vs.) toplu olarak değiştiren bir preset sistemidir.
+// MFSim v1: 3 preset (static / nonlinear / explicit) — her biri makul ANSYS
+// pratiğine uygun default'lar.
+var VE_FEA_PHYSICS_PRESETS = {
+  'static': {
+    label: 'Static Structural (lineer/orta nonlineer)',
+    description: 'ANSYS Mechanical varsayılanı. Orta hassasiyet, Patch Conforming Tet.',
+    settings: {
+      elementOrder: 'program',           // → linear default
+      meshMethod: 'automatic',
+      curvatureRefinement: { enabled: false, normalAngleDeg: 18 },
+      defeaturingTolerance: 0,
+      relativeSizeFactor: 1.0            // global size çarpanı (1 = bbox'a göre default)
+    }
+  },
+  'nonlinearMechanical': {
+    label: 'Nonlinear Mechanical (büyük deformasyon / temas)',
+    description: 'Lineer elemanlar tercih edilir (temas hoşgörüsü). Daha ince mesh.',
+    settings: {
+      elementOrder: 'linear',
+      meshMethod: 'automatic',
+      curvatureRefinement: { enabled: true, normalAngleDeg: 15 },
+      defeaturingTolerance: 0,
+      relativeSizeFactor: 0.5            // %50 daha ince
+    }
+  },
+  'explicit': {
+    label: 'Explicit (LS-DYNA / Autodyn)',
+    description: 'Linear hex tercih edilir, mid-side node\'lar otomatik düşürülür.',
+    settings: {
+      elementOrder: 'linear',
+      meshMethod: 'automatic',
+      curvatureRefinement: { enabled: false, normalAngleDeg: 30 },
+      defeaturingTolerance: 0.5,         // explicit küçük detaylara hoşgörüsüz
+      relativeSizeFactor: 0.5
+    }
+  }
+};
+function veFEAPhysicsPresets() {
+  return Object.keys(VE_FEA_PHYSICS_PRESETS);
+}
+function veFEAPhysicsPresetSettings(presetId) {
+  var p = VE_FEA_PHYSICS_PRESETS[presetId];
+  return p ? p.settings : null;
+}
+function veFEAPhysicsPresetLabel(presetId) {
+  var p = VE_FEA_PHYSICS_PRESETS[presetId];
+  return p ? p.label : presetId;
+}
+
+// ─── Virtual Topology (ANSYS §8.2 — face grouplama) ──────────────────────
+// Kullanıcı birden fazla yüzü "tek bir virtual cell" olarak işaretler. v1:
+// post-mesh, gruptaki tüm face'lerin node ID'leri birleştirilip yeni bir
+// named selection olur. Mesher'ın grupları tek face gibi görmesi Faz 3+'da.
+//
+// Parametreler:
+//   groups: [{ faceIds: ['face1', 'face2', ...], label?: 'Combined Face' }, ...]
+function _veFEAApplyVirtualTopology(mesh, groups) {
+  if (!mesh || mesh.error || !groups || groups.length === 0) return mesh;
+  if (!mesh.namedSelections) mesh.namedSelections = {};
+  for (var g = 0; g < groups.length; g++) {
+    var grp = groups[g] || {};
+    var faceIds = grp.faceIds;
+    if (!Array.isArray(faceIds) || faceIds.length < 2) continue;
+    // Union of node IDs
+    var unionSet = {};
+    var labels = [];
+    for (var i = 0; i < faceIds.length; i++) {
+      var src = mesh.namedSelections[faceIds[i]];
+      if (!src || !src.nodeIds) continue;
+      labels.push(src.label || faceIds[i]);
+      for (var j = 0; j < src.nodeIds.length; j++) unionSet[src.nodeIds[j]] = true;
+    }
+    var ids = Object.keys(unionSet).map(function(k) { return parseInt(k, 10); });
+    if (ids.length === 0) continue;
+    ids.sort(function(a, b) { return a - b; });
+    var key = 'virtual-topology-' + g;
+    mesh.namedSelections[key] = {
+      type: 'face',
+      source: 'auto',
+      label: grp.label || ('Virtual Group: ' + labels.join(' + ')),
+      nodeIds: new Uint32Array(ids),
+      virtualTopology: {
+        sourceFaceIds: faceIds.slice(),
+        nodeCount: ids.length
+      }
+    };
+  }
+  return mesh;
+}
+
+// ─── Convergence Study (ANSYS §10 — mesh-quality h-refinement loop) ──────
+// Otomatik h-refinement: mesh oluştur → quality değerlendir → eşiği geçmediyse
+// size'ı küçült, tekrar mesh. v1: mesh-quality tabanlı (solver yok). Solver
+// integration ile stress/displacement convergence Faz 3'te.
+//
+// Parametreler:
+//   geometry      → mesh kaynağı (primitif veya STEP)
+//   baseOpts      → ilk mesh opts (size, elementType, vs.)
+//   criteria      → {
+//     maxLoops: 5,           // azami iterasyon
+//     targetPoorPct: 5,      // hedef poor element yüzdesi (aspect+skew)
+//     shrinkFactor: 0.8      // her loop'ta size *= 0.8
+//   }
+//
+// Returns:
+//   { final: meshData, log: [...], converged: bool }
+function veFEAConvergenceStudy(geometry, baseOpts, criteria) {
+  criteria = criteria || {};
+  var maxLoops = parseInt(criteria.maxLoops, 10);
+  if (!isFinite(maxLoops) || maxLoops < 1) maxLoops = 5;
+  if (maxLoops > 20) maxLoops = 20;
+  var targetPoorPct = +criteria.targetPoorPct;
+  if (!isFinite(targetPoorPct) || targetPoorPct <= 0) targetPoorPct = 5;
+  var shrinkFactor = +criteria.shrinkFactor;
+  if (!isFinite(shrinkFactor) || shrinkFactor <= 0 || shrinkFactor >= 1) shrinkFactor = 0.8;
+
+  var opts = {};
+  for (var k in baseOpts) if (baseOpts.hasOwnProperty(k)) opts[k] = baseOpts[k];
+  if (!isFinite(+opts.size) || +opts.size <= 0) opts.size = 10;
+
+  var log = [];
+  var finalMesh = null;
+  var converged = false;
+  for (var loop = 0; loop < maxLoops; loop++) {
+    var mesh = veFEAMeshFromGeometry(geometry, opts);
+    if (!mesh || mesh.error) {
+      log.push({ loop: loop, size: opts.size, status: 'error', error: mesh && mesh.error });
+      finalMesh = mesh;
+      break;
+    }
+    var q = veFEAComputeQualityMetrics(mesh);
+    if (!q || q.elementCount === 0) {
+      log.push({ loop: loop, size: opts.size, status: 'no-elements' });
+      finalMesh = mesh; break;
+    }
+    var poorCount = (q.aspectRatio.poorCount || 0) + (q.skewness.poorCount || 0);
+    var poorPct = (poorCount / q.elementCount) * 100;
+    log.push({
+      loop: loop,
+      size: opts.size,
+      elementCount: q.elementCount,
+      poorAspect: q.aspectRatio.poorCount || 0,
+      poorSkew:   q.skewness.poorCount || 0,
+      poorPct: poorPct,
+      maxAspect: q.aspectRatio.max,
+      maxSkew: q.skewness.max
+    });
+    finalMesh = mesh;
+    if (poorPct <= targetPoorPct) {
+      converged = true;
+      break;
+    }
+    opts.size = opts.size * shrinkFactor;
+    // Effective minimum'a indiyse stop
+    if (opts.size < VE_FEA_MESH_MIN_SIZE) {
+      log.push({ loop: loop + 1, size: opts.size, status: 'min-size-reached' });
+      break;
+    }
+  }
+  return { final: finalMesh, log: log, converged: converged };
 }
 
 // ─── Adaptive refinement önerileri (mesh kalite-tabanlı) ─────────────────

@@ -35,13 +35,16 @@ function _veFEAEditorDefaultAccordionState() {
     defaults: false,
     inflation: false,
     faceSizing: false,
+    edgeSizing: false,
     sphereOfInfluence: false,
+    virtualTopology: false,
     namedSel: false,
     // Post-mesh
     quality: false,
     statistics: false,
     display: false,
     suggestions: false,
+    convergence: false,
     topology: false
   };
 }
@@ -63,12 +66,15 @@ function veFEAEditorRefreshAccordions() {
     'sizing':      _veFEAEditorSizingHTML(node),
     'inflation':         _veFEAEditorInflationHTML(node),
     'faceSizing':        _veFEAEditorFaceSizingHTML(node),
+    'edgeSizing':        _veFEAEditorEdgeSizingHTML(node),
     'sphereOfInfluence': _veFEAEditorSphereOfInfluenceHTML(node),
+    'virtualTopology':   _veFEAEditorVirtualTopologyHTML(node),
     'quality':           _veFEAEditorQualityHTML(node),
     'namedSel':    _veFEAEditorNamedSelHTML(node),
     'display':     _veFEAEditorDisplayHTML(node),
     'statistics':  _veFEAEditorStatisticsHTML(node),
-    'suggestions': _veFEAEditorSuggestionsHTML(node)
+    'suggestions': _veFEAEditorSuggestionsHTML(node),
+    'convergence': _veFEAEditorConvergenceHTML(node)
   };
   Object.keys(updates).forEach(function(k) {
     var body = document.getElementById('ve-fea-acc-body-' + k);
@@ -480,7 +486,9 @@ function _veFEAEditorBuildLeftPanel(node) {
   html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
   html += _veFEAEditorAccordionSection('inflation',         'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
   html += _veFEAEditorAccordionSection('faceSizing',        'Face Sizing Controls (ANSYS §5.1)', _veFEAEditorFaceSizingHTML(node));
+  html += _veFEAEditorAccordionSection('edgeSizing',        'Edge Sizing Controls (ANSYS §5.5)', _veFEAEditorEdgeSizingHTML(node));
   html += _veFEAEditorAccordionSection('sphereOfInfluence', 'Sphere of Influence (ANSYS §5.2)', _veFEAEditorSphereOfInfluenceHTML(node));
+  html += _veFEAEditorAccordionSection('virtualTopology',   'Virtual Topology (ANSYS §8.2)',    _veFEAEditorVirtualTopologyHTML(node));
   html += _veFEAEditorAccordionSection('namedSel',          'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
   // ─── Post-mesh: Mesh oluşturulduktan sonra incelenen bölümler ───────────
   html += _veFEAEditorGroupHeader('Mesh Sonrası (İnceleme)');
@@ -488,6 +496,7 @@ function _veFEAEditorBuildLeftPanel(node) {
   html += _veFEAEditorAccordionSection('statistics',  'İstatistikler',                 _veFEAEditorStatisticsHTML(node));
   html += _veFEAEditorAccordionSection('display',     'Görünüm Modu',                  _veFEAEditorDisplayHTML(node));
   html += _veFEAEditorAccordionSection('suggestions', 'Adaptif İnceltme Önerileri',    _veFEAEditorSuggestionsHTML(node));
+  html += _veFEAEditorAccordionSection('convergence', 'Convergence Study (ANSYS §10)', _veFEAEditorConvergenceHTML(node));
   html += _veFEAEditorAccordionSection('topology',    'Geometri Topolojisi',           _veFEAEditorTopologyHTML(node));
   panel.innerHTML = html;
   return panel;
@@ -887,10 +896,77 @@ function _veFEAEditorTopologyHTML(node) {
   return html;
 }
 
+// Physics Preference preset değiştirildiğinde tüm defaults'ı uygular.
+function veFEAApplyPhysicsPreset(nodeId, presetId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  node.data.meshSettings.physicsPreference = presetId;
+  if (typeof veFEAPhysicsPresetSettings === 'function') {
+    var presetSettings = veFEAPhysicsPresetSettings(presetId);
+    if (presetSettings) {
+      // Preset'teki her field'ı override'la (kullanıcının ayrıca düzenlediği
+      // yerler kayboluyor; bu kasıtlı — preset zaten "tüm defaults" anlamına gelir).
+      for (var k in presetSettings) {
+        if (presetSettings.hasOwnProperty(k) && k !== 'relativeSizeFactor') {
+          node.data.meshSettings[k] = presetSettings[k];
+        }
+      }
+      // relativeSizeFactor: mevcut size'ı ölçekle (preset'in default'undan)
+      if (presetSettings.relativeSizeFactor && isFinite(+presetSettings.relativeSizeFactor)) {
+        var prevPresetId = node.data._lastAppliedPhysicsPreset || 'static';
+        var prevFactor = (VE_FEA_PHYSICS_PRESETS[prevPresetId] || {}).settings;
+        prevFactor = prevFactor ? (prevFactor.relativeSizeFactor || 1) : 1;
+        var newFactor = +presetSettings.relativeSizeFactor;
+        var ratio = newFactor / prevFactor;
+        var curSize = +node.data.meshSettings.size || 10;
+        node.data.meshSettings.size = Math.max(0.1, curSize * ratio);
+      }
+      node.data._lastAppliedPhysicsPreset = presetId;
+    }
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// Mesh method ↔ elementType haritası (geri uyumluluk)
+function _veFEAInferMethodFromElType(elType) {
+  if (elType === 'tet4') return 'patchConformingTet';
+  if (elType === 'pyramid5') return 'hexDominant';
+  return 'automatic';
+}
+function _veFEAMethodToElType(method) {
+  if (method === 'patchConformingTet') return 'tet4';
+  if (method === 'hexDominant') return 'pyramid5';
+  return 'auto';
+}
+
 function _veFEAEditorDefaultsHTML(node) {
   var d = node.data || {};
   var settings = d.meshSettings || { size: 10 };
   var html = '';
+
+  // Physics Preference (ANSYS §2) — preset defaults
+  var currentPreset = settings.physicsPreference || 'static';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Physics Preference <span style="color:var(--text-muted);">(ANSYS §2 — preset)</span></div>';
+  html += '<select id="ve-fea-mesh-physics-' + node.id + '" onchange="veFEAApplyPhysicsPreset(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:4px;">';
+  if (typeof veFEAPhysicsPresets === 'function') {
+    veFEAPhysicsPresets().forEach(function(pid) {
+      var label = veFEAPhysicsPresetLabel(pid);
+      html += '<option value="' + pid + '"' + (currentPreset === pid ? ' selected' : '') + '>' + label + '</option>';
+    });
+  } else {
+    html += '<option value="static">Static Structural</option>';
+  }
+  html += '</select>';
+  // Preset description
+  if (typeof VE_FEA_PHYSICS_PRESETS !== 'undefined' && VE_FEA_PHYSICS_PRESETS[currentPreset]) {
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:10px; line-height:1.4;">' +
+      VE_FEA_PHYSICS_PRESETS[currentPreset].description + '</div>';
+  }
+
   var currentMode = settings.mode || 'auto';
   html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Mesh Modu</div>';
   html += '<select id="ve-fea-mesh-mode-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:10px;">';
@@ -899,13 +975,38 @@ function _veFEAEditorDefaultsHTML(node) {
   html += '<option value="surface"' + (currentMode === 'surface' ? ' selected' : '') + '>Yüzey (Tri3 — sadece önizleme)</option>';
   html += '</select>';
 
+  // Mesh Method (ANSYS §4) — kullanıcı seçimli strateji. v1: elementType'ı
+  // sarmalayan dropdown; gelecekte (Faz 3) MultiZone, Sweep, Hex Dominant
+  // gerçek mesh strategy seçimi olacak.
+  var currentMethod = settings.meshMethod || _veFEAInferMethodFromElType(settings.elementType);
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Mesh Method <span style="color:var(--text-muted);">(ANSYS §4)</span></div>';
+  html += '<select id="ve-fea-mesh-method-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+  html += '<option value="automatic"'         + (currentMethod === 'automatic'         ? ' selected' : '') + '>Automatic (primitif → yapısal hex; STEP → tet)</option>';
+  html += '<option value="patchConformingTet"' + (currentMethod === 'patchConformingTet' ? ' selected' : '') + '>Patch Conforming Tet (Tet4 — Delaunay/decomposition)</option>';
+  html += '<option value="hexDominant"'        + (currentMethod === 'hexDominant'        ? ' selected' : '') + '>Hex Dominant (Hex8 + Pyramid5 transition)</option>';
+  html += '<option value="sweep"'              + (currentMethod === 'sweep'              ? ' selected' : '') + '>Sweep (silindir/şaft/koni yapısal)</option>';
+  html += '</select>';
+  // TetGen durum göstergesi (vendor/tetgen build edilmemişse uyarı)
+  var tetMesherActive = (typeof veFEADelaunayAvailable === 'function') && veFEADelaunayAvailable();
+  if (currentMethod === 'patchConformingTet') {
+    var statusColor = tetMesherActive ? '#22c55e' : '#f59e0b';
+    var statusMsg = tetMesherActive
+      ? '✓ Delaunay (Lysenko/MIT) aktif. STEP için kaliteli Tet4.'
+      : '⚠ Delaunay yüklü değil. Voxel fallback kullanılacak.';
+    html += '<div style="font-size:0.55rem; color:' + statusColor + '; margin-bottom:10px; padding:4px 6px; background:' + statusColor + '20; border-left:2px solid ' + statusColor + ';">' + statusMsg + '</div>';
+  } else {
+    html += '<div style="margin-bottom:10px;"></div>';
+  }
+
+  // İleri seviye: elementType doğrudan (geri uyum için)
   var currentElType = settings.elementType || 'auto';
-  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Eleman Tipi</div>';
-  html += '<select id="ve-fea-mesh-eltype-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:10px;">';
+  html += '<details style="margin-bottom:10px;"><summary style="font-size:0.58rem; color:var(--text-muted); cursor:pointer;">İleri: Element Tipi (geri uyumluluk)</summary>';
+  html += '<select id="ve-fea-mesh-eltype-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-top:4px;">';
   html += '<option value="auto"' + (currentElType === 'auto' ? ' selected' : '') + '>Otomatik (Heks8 / Wedge6)</option>';
   html += '<option value="tet4"' + (currentElType === 'tet4' ? ' selected' : '') + '>Tet4 (Tetra — decomposition)</option>';
   html += '<option value="pyramid5"' + (currentElType === 'pyramid5' ? ' selected' : '') + '>Pyramid5 (Hex8 → 6 piramit + centroid)</option>';
   html += '</select>';
+  html += '</details>';
 
   // Element Order (ANSYS §3.7) — Linear vs Quadratic dropdown.
   // Geri uyum: eski settings.midSideNodes → 'quadratic'. Canonical alan
@@ -979,6 +1080,18 @@ function _veFEAEditorSizingHTML(node) {
     '<input type="checkbox" id="ve-fea-mesh-worker-' + node.id + '"' + (useWorker ? ' checked' : '') + ' style="margin:0;">' +
     '<span>Web Worker\'da hesapla <span style="color:var(--text-muted);">(büyük mesh için)</span></span>' +
   '</label>';
+
+  // Defeaturing Tolerance (ANSYS §8)
+  var defeatureTol = settings.defeaturingTolerance != null ? settings.defeaturingTolerance : 0;
+  html += '<div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border-color);">';
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Defeaturing Tolerance <span style="color:var(--text-muted);">(ANSYS §8)</span></div>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:6px;">Bundan küçük detaylar (sliver edge/face) mesh\'te yok sayılır. 0 = devre dışı.</div>';
+  html += '<div style="display:flex; gap:6px; align-items:center;">';
+  html += '<input id="ve-fea-mesh-defeature-' + node.id + '" type="number" min="0" step="0.1" value="' + defeatureTol + '" style="flex:1; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '<span style="font-size:0.55rem; color:var(--text-muted);">mm</span>';
+  html += '</div>';
+  html += '</div>';
+
   return html;
 }
 
@@ -1180,6 +1293,291 @@ function veFEAReadFaceSizingFromUI(nodeId) {
     if (!isFinite(sz) || sz <= 0) sz = current[i].size || 1;
     var beh = (behEl && behEl.value === 'hard') ? 'hard' : 'soft';
     out.push({ faceId: current[i].faceId, size: sz, behavior: beh });
+  }
+  return out;
+}
+
+// ─── Edge Sizing Controls panel (ANSYS §5.5) ──────────────────────────────
+// Geometride bir kenar (edge) seçip o kenar üzerinde target eleman boyutu
+// veya number of divisions ata. v1: dropdown-based seçim (3D edge pick
+// sonraki adımda). Cylinder/Shaft/Cone/Hemisphere için topology'de edge
+// listesi tanımlanmış; box için 12 edge sonraki commit'te eklenir.
+function _veFEAEditorEdgeSizingHTML(node) {
+  var d = node.data || {};
+  var settings = d.meshSettings || {};
+  var controls = settings.edgeSizingControls || [];
+
+  // Topology'den edges listesini al
+  var topoEdges = [];
+  if (typeof veFEAComputeGeometryTopology === 'function' && d.geometry) {
+    try {
+      var topo = veFEAComputeGeometryTopology(d.geometry);
+      if (topo && Array.isArray(topo.edges)) topoEdges = topo.edges;
+    } catch (e) { /* skip */ }
+  }
+
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">' +
+    'ANSYS §5.5 — kenar üzerinde target eleman boyutu veya bölünme sayısı (Number of Divisions). ' +
+    'v1: dropdown-based seçim (3D edge pick sonraki adımda).' +
+    '</div>';
+
+  // Edge'leri olmayan geometriler (sphere, torus, box) için uyarı
+  if (topoEdges.length === 0) {
+    html += '<div style="padding:10px 12px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary);">' +
+      'Bu geometri tipinde tanımlı edge yok (örn. sphere, torus) veya henüz edge listesi eklenmedi (box — sonraki commit).' +
+      '</div>';
+    return html;
+  }
+
+  // Mevcut listede olmayan edge'leri seçilebilir hale getir
+  var alreadyUsed = {};
+  controls.forEach(function(c) { alreadyUsed[c.edgeId] = true; });
+  var availableEdges = topoEdges.filter(function(e) { return !alreadyUsed[e.id]; });
+
+  // Edge ekleme dropdown'ı
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color);">';
+  if (availableEdges.length === 0) {
+    html += '<span style="flex:1; font-size:0.6rem; color:var(--text-muted); font-style:italic;">Tüm edge\'ler zaten listede.</span>';
+  } else {
+    html += '<select id="ve-fea-es-pick-' + node.id + '" style="flex:1; font-size:0.62rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+    availableEdges.forEach(function(e) {
+      var label = e.label || e.id;
+      html += '<option value="' + e.id + '">' + label + ' (~' + e.length.toFixed(1) + ' mm)</option>';
+    });
+    html += '</select>';
+    html += '<button onclick="veFEAAddEdgeSizingFromDropdown(\'' + node.id + '\')" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">+ Ekle</button>';
+  }
+  html += '</div>';
+
+  // Mevcut entries
+  if (controls.length === 0) {
+    html += '<div style="padding:10px 12px; background:var(--bg-primary); border:1px dashed var(--border-color); font-size:0.6rem; color:var(--text-muted); text-align:center;">Henüz edge sizing tanımlı değil.</div>';
+  } else {
+    controls.forEach(function(c, idx) {
+      var edgeInfo = topoEdges.find(function(e) { return e.id === c.edgeId; }) || { label: c.edgeId, length: 0 };
+      var beh = c.behavior || 'soft';
+      var hasSize = (c.size != null && isFinite(c.size) && c.size > 0);
+      var hasDiv = (c.divisions != null && isFinite(c.divisions) && c.divisions >= 1);
+      var sizeMode = hasDiv && !hasSize ? 'divisions' : 'size';
+      html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+      html += '<b style="font-size:0.62rem; color:var(--text-primary);">' + (edgeInfo.label || c.edgeId) +
+        ' <span style="color:var(--text-muted); font-weight:400;">(' + c.edgeId + ', L≈' + edgeInfo.length.toFixed(1) + 'mm)</span></b>';
+      html += '<button onclick="veFEARemoveEdgeSizing(\'' + node.id + '\',' + idx + ')" style="padding:2px 8px; font-size:0.55rem; background:#dc2626; color:#fff; border:none; cursor:pointer;">Sil</button>';
+      html += '</div>';
+      html += '<div style="display:grid; grid-template-columns:auto 1fr auto 1fr; gap:6px; align-items:center; margin-bottom:4px;">';
+      html += '<label style="font-size:0.58rem; color:var(--text-secondary);"><input type="radio" name="ve-fea-es-mode-' + node.id + '-' + idx + '" value="size"' +
+        (sizeMode === 'size' ? ' checked' : '') + ' style="margin-right:3px;">Hedef boyut:</label>';
+      html += '<input type="number" value="' + (c.size != null ? c.size : '') + '" placeholder="—" step="0.1" min="0.01" id="ve-fea-es-size-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '<label style="font-size:0.58rem; color:var(--text-secondary);"><input type="radio" name="ve-fea-es-mode-' + node.id + '-' + idx + '" value="divisions"' +
+        (sizeMode === 'divisions' ? ' checked' : '') + ' style="margin-right:3px;"># Divisions:</label>';
+      html += '<input type="number" value="' + (c.divisions != null ? c.divisions : '') + '" placeholder="—" step="1" min="1" id="ve-fea-es-div-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '</div>';
+      html += '<div style="display:flex; gap:6px; align-items:center;">';
+      html += '<span style="font-size:0.58rem; color:var(--text-secondary);">Behavior:</span>';
+      html += '<select id="ve-fea-es-beh-' + node.id + '-' + idx + '" style="flex:1; font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+      html += '<option value="soft"' + (beh === 'soft' ? ' selected' : '') + '>Soft (override\'lanabilir)</option>';
+      html += '<option value="hard"' + (beh === 'hard' ? ' selected' : '') + '>Hard (kesin uygula)</option>';
+      html += '</select>';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+
+  if (controls.length > 0) {
+    html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid #3b82f6; font-size:0.58rem; color:var(--text-secondary); line-height:1.5;">' +
+      'ℹ Her edge entry için bir <i>named selection</i> üretilir (metadata: targetSize/divisions, behavior). ' +
+      'Mesher edge subdivision override Faz 2 ileri adımında.' +
+      '</div>';
+  }
+  return html;
+}
+
+// Dropdown'da seçili edge'i listeye ekler.
+function veFEAAddEdgeSizingFromDropdown(nodeId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  var pickEl = document.getElementById('ve-fea-es-pick-' + nodeId);
+  if (!pickEl || !pickEl.value) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  if (!Array.isArray(node.data.meshSettings.edgeSizingControls)) {
+    node.data.meshSettings.edgeSizingControls = [];
+  }
+  var existing = veFEAReadEdgeSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.edgeSizingControls = existing;
+  var edgeId = pickEl.value;
+  if (node.data.meshSettings.edgeSizingControls.some(function(c) { return c.edgeId === edgeId; })) return;
+  // Default: target size = global / 2
+  var defaultSize = ((node.data.meshSettings.size) || 10) / 2;
+  node.data.meshSettings.edgeSizingControls.push({
+    edgeId: edgeId, size: defaultSize, divisions: null, behavior: 'soft'
+  });
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+function veFEARemoveEdgeSizing(nodeId, index) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings) return;
+  var existing = veFEAReadEdgeSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.edgeSizingControls = existing;
+  if (!Array.isArray(node.data.meshSettings.edgeSizingControls)) return;
+  node.data.meshSettings.edgeSizingControls.splice(index, 1);
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// UI input'larından edge sizing list'i okur.
+function veFEAReadEdgeSizingFromUI(nodeId) {
+  if (typeof nodes === 'undefined') return [];
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings ||
+      !Array.isArray(node.data.meshSettings.edgeSizingControls)) return [];
+  var current = node.data.meshSettings.edgeSizingControls;
+  var out = [];
+  for (var i = 0; i < current.length; i++) {
+    var sizeEl = document.getElementById('ve-fea-es-size-' + nodeId + '-' + i);
+    var divEl  = document.getElementById('ve-fea-es-div-'  + nodeId + '-' + i);
+    var behEl  = document.getElementById('ve-fea-es-beh-'  + nodeId + '-' + i);
+    var modeName = 've-fea-es-mode-' + nodeId + '-' + i;
+    var modeChecked = document.querySelector('input[name="' + modeName + '"]:checked');
+    if (!sizeEl) {
+      out.push({
+        edgeId: current[i].edgeId, size: current[i].size,
+        divisions: current[i].divisions,
+        behavior: current[i].behavior || 'soft'
+      });
+      continue;
+    }
+    var mode = modeChecked ? modeChecked.value : 'size';
+    var sz  = parseFloat(sizeEl.value);
+    var dv  = parseInt(divEl.value, 10);
+    var beh = (behEl && behEl.value === 'hard') ? 'hard' : 'soft';
+    var entry = { edgeId: current[i].edgeId, behavior: beh };
+    if (mode === 'divisions') {
+      entry.divisions = (isFinite(dv) && dv >= 1) ? dv : (current[i].divisions || null);
+      entry.size = null;
+    } else {
+      entry.size = (isFinite(sz) && sz > 0) ? sz : (current[i].size || null);
+      entry.divisions = null;
+    }
+    out.push(entry);
+  }
+  return out;
+}
+
+// ─── Virtual Topology panel (ANSYS §8.2) ──────────────────────────────────
+// Birden fazla yüzü "virtual cell" olarak grupla. v1: post-mesh node ID
+// birleştirme (named selection olarak). Mesher tarafından "tek face gibi
+// işle" davranışı Faz 3+'da.
+function _veFEAEditorVirtualTopologyHTML(node) {
+  var d = node.data || {};
+  var settings = d.meshSettings || {};
+  var groups = settings.virtualTopology || [];
+  var topoFaces = [];
+  if (typeof veFEAComputeGeometryTopology === 'function' && d.geometry) {
+    try {
+      var topo = veFEAComputeGeometryTopology(d.geometry);
+      if (topo && Array.isArray(topo.faces)) topoFaces = topo.faces;
+    } catch (e) {}
+  }
+
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">' +
+    'ANSYS §8.2 — birden fazla yüzü "tek bir virtual cell" olarak grupla. ' +
+    'v1: post-mesh node ID birleştirme (BC için).' +
+    '</div>';
+
+  if (topoFaces.length < 2) {
+    html += '<div style="padding:10px 12px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary);">' +
+      'Bu geometride en az 2 yüz olması gerekir.' +
+      '</div>';
+    return html;
+  }
+
+  if (groups.length === 0) {
+    html += '<div style="padding:10px 12px; background:var(--bg-primary); border:1px dashed var(--border-color); font-size:0.6rem; color:var(--text-muted); text-align:center; margin-bottom:8px;">Henüz virtual group tanımlı değil.</div>';
+  } else {
+    groups.forEach(function(grp, idx) {
+      html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+      html += '<b style="font-size:0.62rem; color:var(--text-primary);">Grup ' + (idx + 1) + ' <span style="color:var(--text-muted); font-weight:400;">(' + (grp.faceIds || []).length + ' yüz)</span></b>';
+      html += '<button onclick="veFEARemoveVirtualGroup(\'' + node.id + '\',' + idx + ')" style="padding:2px 8px; font-size:0.55rem; background:#dc2626; color:#fff; border:none; cursor:pointer;">Sil</button>';
+      html += '</div>';
+      html += '<input type="text" value="' + (grp.label || '') + '" placeholder="Grup adı (opsiyonel)" id="ve-fea-vt-lbl-' + node.id + '-' + idx + '" style="width:100%; font-size:0.6rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:4px;">';
+      html += '<div style="font-size:0.55rem; color:var(--text-secondary); margin-bottom:3px;">Yüzler:</div>';
+      html += '<div style="max-height:120px; overflow-y:auto; padding:4px; background:var(--bg-tertiary); border:1px solid var(--border-color);">';
+      var selected = grp.faceIds || [];
+      topoFaces.forEach(function(f) {
+        var checked = selected.indexOf(f.id) >= 0;
+        html += '<label style="display:block; padding:2px 4px; font-size:0.58rem; color:var(--text-primary); cursor:pointer;">';
+        html += '<input type="checkbox" data-vt-face="' + node.id + '|' + idx + '|' + f.id + '"' + (checked ? ' checked' : '') + ' style="margin-right:4px;">';
+        html += (f.label || f.id) + ' <span style="color:var(--text-muted);">(' + f.id + ')</span>';
+        html += '</label>';
+      });
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+
+  html += '<button onclick="veFEAAddVirtualGroup(\'' + node.id + '\')" style="width:100%; padding:7px; font-size:0.65rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">+ Yeni Virtual Group Ekle</button>';
+
+  return html;
+}
+
+function veFEAAddVirtualGroup(nodeId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  if (!Array.isArray(node.data.meshSettings.virtualTopology)) {
+    node.data.meshSettings.virtualTopology = [];
+  }
+  var existing = veFEAReadVirtualTopologyFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.virtualTopology = existing;
+  node.data.meshSettings.virtualTopology.push({ faceIds: [], label: '' });
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+function veFEARemoveVirtualGroup(nodeId, index) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings) return;
+  var existing = veFEAReadVirtualTopologyFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.virtualTopology = existing;
+  if (!Array.isArray(node.data.meshSettings.virtualTopology)) return;
+  node.data.meshSettings.virtualTopology.splice(index, 1);
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+function veFEAReadVirtualTopologyFromUI(nodeId) {
+  if (typeof nodes === 'undefined') return [];
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings ||
+      !Array.isArray(node.data.meshSettings.virtualTopology)) return [];
+  var current = node.data.meshSettings.virtualTopology;
+  var out = [];
+  for (var i = 0; i < current.length; i++) {
+    var lblEl = document.getElementById('ve-fea-vt-lbl-' + nodeId + '-' + i);
+    var label = lblEl ? lblEl.value : (current[i].label || '');
+    var faceIds = [];
+    var checkboxes = document.querySelectorAll('input[data-vt-face^="' + nodeId + '|' + i + '|"]');
+    if (checkboxes.length === 0) {
+      faceIds = (current[i].faceIds || []).slice();
+    } else {
+      checkboxes.forEach(function(cb) {
+        if (cb.checked) {
+          var parts = cb.getAttribute('data-vt-face').split('|');
+          if (parts.length === 3) faceIds.push(parts[2]);
+        }
+      });
+    }
+    out.push({ faceIds: faceIds, label: label });
   }
   return out;
 }
@@ -1589,6 +1987,99 @@ function _veFEAEditorStatisticsHTML(node) {
   html += veFEAReadOnlyRow('Ortalama eleman boyu', metrics.avgSize.toFixed(2) + ' mm');
   if (metrics.computeMs !== undefined) html += veFEAReadOnlyRow('Hesaplama süresi', metrics.computeMs + ' ms');
   return html;
+}
+
+// ─── Convergence Study panel (ANSYS §10) ──────────────────────────────────
+// Otomatik h-refinement: mesh oluştur → quality değerlendir → eşiği geçmediyse
+// size küçült, tekrar mesh. v1: mesh-quality tabanlı (solver entegrasyonu Faz 3'te).
+function _veFEAEditorConvergenceHTML(node) {
+  var d = node.data || {};
+  var cs = d.convergenceState || {};
+  var hasGeom = !!(d.geometry && d.geometry.type);
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">' +
+    'ANSYS §10 — otomatik mesh refinement. Hedef poor element yüzdesine ulaşana ' +
+    'kadar size küçültülüp mesh yeniden üretilir. v1: aspect+skewness tabanlı.' +
+    '</div>';
+
+  if (!hasGeom) {
+    html += '<div style="padding:8px 10px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary);">Önce geometri tanımlayın.</div>';
+    return html;
+  }
+
+  html += '<div style="display:grid; grid-template-columns:auto 1fr; gap:6px; align-items:center; margin-bottom:8px;">';
+  html += '<label style="font-size:0.6rem; color:var(--text-secondary);">Max iterasyon:</label>';
+  html += '<input type="number" id="ve-fea-conv-max-' + node.id + '" min="1" max="20" step="1" value="' + (cs.maxLoops || 5) + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '<label style="font-size:0.6rem; color:var(--text-secondary);">Hedef poor %:</label>';
+  html += '<input type="number" id="ve-fea-conv-pct-' + node.id + '" min="0.1" max="100" step="0.5" value="' + (cs.targetPoorPct || 5) + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '<label style="font-size:0.6rem; color:var(--text-secondary);">Size shrink:</label>';
+  html += '<input type="number" id="ve-fea-conv-shr-' + node.id + '" min="0.1" max="0.95" step="0.05" value="' + (cs.shrinkFactor || 0.8) + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '</div>';
+
+  html += '<button onclick="veFEARunConvergenceStudy(\'' + node.id + '\')" style="width:100%; padding:8px; font-size:0.66rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">▶ Convergence Study Çalıştır</button>';
+
+  if (cs.log && cs.log.length > 0) {
+    html += '<div style="margin-top:8px; padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.58rem;">';
+    html += '<div style="margin-bottom:4px; color:var(--text-secondary); font-weight:600;">Son çalıştırma:</div>';
+    cs.log.forEach(function(entry) {
+      if (entry.status === 'error') {
+        html += '<div style="color:#ef4444;">Loop ' + entry.loop + ': HATA — ' + (entry.error || '?') + '</div>';
+        return;
+      }
+      if (entry.status === 'min-size-reached') {
+        html += '<div style="color:#f59e0b;">Loop ' + entry.loop + ': minimum size aşıldı (' + entry.size.toFixed(2) + ' mm)</div>';
+        return;
+      }
+      html += '<div style="color:var(--text-primary); font-family:monospace;">' +
+        'Loop ' + entry.loop +
+        ' | size=' + entry.size.toFixed(2) + 'mm' +
+        ' | N=' + (entry.elementCount || 0) +
+        ' | poor=' + (entry.poorPct || 0).toFixed(1) + '%' +
+        ' | aspect=' + (entry.maxAspect || 0).toFixed(1) +
+        ' | skew=' + (entry.maxSkew || 0).toFixed(2) +
+        '</div>';
+    });
+    var statusColor = cs.converged ? '#22c55e' : '#f59e0b';
+    var statusIcon  = cs.converged ? '✓' : '⚠';
+    html += '<div style="margin-top:4px; color:' + statusColor + '; font-weight:600;">' + statusIcon +
+      ' ' + (cs.converged ? 'Yakınsama sağlandı' : 'Maks iterasyona ulaşıldı') + '</div>';
+    html += '</div>';
+  }
+  return html;
+}
+
+// Convergence Study runner — UI butonundan çağrılır.
+function veFEARunConvergenceStudy(nodeId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.geometry) return;
+  var maxEl = document.getElementById('ve-fea-conv-max-' + nodeId);
+  var pctEl = document.getElementById('ve-fea-conv-pct-' + nodeId);
+  var shrEl = document.getElementById('ve-fea-conv-shr-' + nodeId);
+  var maxLoops = maxEl ? parseInt(maxEl.value, 10) : 5;
+  var targetPoorPct = pctEl ? parseFloat(pctEl.value) : 5;
+  var shrinkFactor = shrEl ? parseFloat(shrEl.value) : 0.8;
+  var baseOpts = (node.data.meshSettings) ? Object.assign({}, node.data.meshSettings) : { size: 10 };
+  if (typeof veFEAConvergenceStudy !== 'function') return;
+  var result = veFEAConvergenceStudy(node.data.geometry, baseOpts, {
+    maxLoops: maxLoops, targetPoorPct: targetPoorPct, shrinkFactor: shrinkFactor
+  });
+  node.data.convergenceState = {
+    maxLoops: maxLoops, targetPoorPct: targetPoorPct, shrinkFactor: shrinkFactor,
+    log: result.log, converged: result.converged
+  };
+  // Final mesh'i kullan: meshSettings.size'ı son loop'a güncelle ve build et
+  if (result.final && !result.final.error && result.log.length > 0) {
+    var lastEntry = result.log[result.log.length - 1];
+    if (lastEntry.size) {
+      node.data.meshSettings = node.data.meshSettings || {};
+      node.data.meshSettings.size = lastEntry.size;
+    }
+    if (typeof veFEABuildMeshForNode === 'function') {
+      veFEABuildMeshForNode(nodeId);
+    }
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 }
 
 function _veFEAEditorSuggestionsHTML(node) {

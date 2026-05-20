@@ -336,6 +336,16 @@ function veFEASubmitMeshBuild(nodeId) {
   if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
   var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : 'auto';
   if (elementType !== 'auto' && elementType !== 'tet4' && elementType !== 'pyramid5') elementType = 'auto';
+  // Mesh Method (ANSYS §4) — eğer method dropdown ayarlanmışsa elementType'ı türet
+  var methodSel = document.getElementById('ve-fea-mesh-method-' + nodeId);
+  var meshMethod = (methodSel && methodSel.value) ? methodSel.value : null;
+  if (meshMethod && typeof _veFEAMethodToElType === 'function') {
+    var derivedElType = _veFEAMethodToElType(meshMethod);
+    // Method dropdown önceliklidir; ileri seviye elementType (details) override edilir
+    if (derivedElType !== 'auto' || !elTypeSel || elTypeSel.value === 'auto') {
+      elementType = derivedElType;
+    }
+  }
   // Element Order: yeni dropdown (ANSYS §3.7) → midSideNodes türetilir.
   // Geri uyum: dropdown yoksa eski checkbox'a düş.
   var elOrderEl = document.getElementById('ve-fea-mesh-elorder-' + nodeId);
@@ -362,6 +372,9 @@ function veFEASubmitMeshBuild(nodeId) {
   if (!isFinite(curvAngDeg) || curvAngDeg <= 0) curvAngDeg = 18;
   if (curvAngDeg > 90) curvAngDeg = 90;
   if (curvAngDeg < 1) curvAngDeg = 1;
+  var defeatureEl = document.getElementById('ve-fea-mesh-defeature-' + nodeId);
+  var defeatureTol = defeatureEl ? parseFloat(defeatureEl.value) : 0;
+  if (!isFinite(defeatureTol) || defeatureTol < 0) defeatureTol = 0;
   var localSelEl = document.getElementById('ve-fea-mesh-local-sel-' + nodeId);
   var localModeEl = document.getElementById('ve-fea-mesh-local-mode-' + nodeId);
   var localBiasEl = document.getElementById('ve-fea-mesh-local-bias-' + nodeId);
@@ -389,10 +402,17 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.size = size;
     meshNode.data.meshSettings.mode = mode;
     meshNode.data.meshSettings.elementType = elementType;
+    if (meshMethod) meshNode.data.meshSettings.meshMethod = meshMethod;
     meshNode.data.meshSettings.elementOrder = elementOrder;
+    // Physics Preference (ANSYS §2) — UI'dan oku
+    var physicsEl = document.getElementById('ve-fea-mesh-physics-' + nodeId);
+    if (physicsEl && physicsEl.value) {
+      meshNode.data.meshSettings.physicsPreference = physicsEl.value;
+    }
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
     meshNode.data.meshSettings.crossSection = crossSection;
     meshNode.data.meshSettings.curvatureRefinement = { enabled: curvEnabled, normalAngleDeg: curvAngDeg };
+    meshNode.data.meshSettings.defeaturingTolerance = defeatureTol;
     meshNode.data.meshSettings.localSizing = {
       selection: localSelection,
       biasMode: localBiasMode,
@@ -413,6 +433,20 @@ function veFEASubmitMeshBuild(nodeId) {
       var fsc = veFEAReadFaceSizingFromUI(nodeId);
       if (fsc.length > 0) {
         meshNode.data.meshSettings.faceSizingControls = fsc;
+      }
+    }
+    // Edge Sizing Controls (ANSYS §5.5) — UI'dan oku
+    if (typeof veFEAReadEdgeSizingFromUI === 'function') {
+      var esc = veFEAReadEdgeSizingFromUI(nodeId);
+      if (esc.length > 0) {
+        meshNode.data.meshSettings.edgeSizingControls = esc;
+      }
+    }
+    // Virtual Topology (ANSYS §8.2) — UI'dan oku
+    if (typeof veFEAReadVirtualTopologyFromUI === 'function') {
+      var vt = veFEAReadVirtualTopologyFromUI(nodeId);
+      if (vt.length > 0) {
+        meshNode.data.meshSettings.virtualTopology = vt;
       }
     }
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);
