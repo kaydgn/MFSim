@@ -742,6 +742,52 @@ describe('Modal toolbar — Çalıştır butonu', () => {
   });
 });
 
+// ─── Faz 1 Adım 3 — Element Order Dashboard satırı ───
+describe('_veFEAEditorStatisticsHTML — Element Order satırı', () => {
+  test('Linear mesh (hex8) için "Linear (Q1...)" gösterir', () => {
+    var node = {
+      id: 'st1', type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: {
+          elementType: 'hex8', nodeCount: 27, elementCount: 8,
+          minSize: 5, maxSize: 5, avgSize: 5
+        }
+      }
+    };
+    var html = _veFEAEditorStatisticsHTML(node);
+    expect(html).toMatch(/Element Order/);
+    expect(html).toMatch(/Linear \(Q1/);
+    expect(html).not.toMatch(/Quadratic/);
+  });
+
+  test('Quadratic mesh (hex20) için "Quadratic (Q2...)" gösterir', () => {
+    var node = {
+      id: 'st2', type: 'fea-mesh',
+      data: {
+        meshActive: true,
+        meshMetrics: {
+          elementType: 'hex20', nodeCount: 81, elementCount: 8,
+          minSize: 5, maxSize: 5, avgSize: 5
+        }
+      }
+    };
+    var html = _veFEAEditorStatisticsHTML(node);
+    expect(html).toMatch(/Quadratic \(Q2/);
+  });
+
+  test('Tet10 ve Wedge15 de Quadratic olarak görünür', () => {
+    ['tet10', 'wedge15'].forEach(function(t) {
+      var node = { id: 's-' + t, type: 'fea-mesh', data: {
+        meshActive: true,
+        meshMetrics: { elementType: t, nodeCount: 10, elementCount: 1, minSize:1, maxSize:1, avgSize:1 }
+      }};
+      var html = _veFEAEditorStatisticsHTML(node);
+      expect(html).toMatch(/Quadratic/);
+    });
+  });
+});
+
 // ─── Faz 1 Adım 2 — ANSYS-style histogram bin selection ───
 describe('veFEAHighlightQualityBin (histogram bin → 3D vurgu)', () => {
   beforeEach(() => {
