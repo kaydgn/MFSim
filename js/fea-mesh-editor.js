@@ -23,15 +23,16 @@ var _veFEAEditorEscHandler = null;
 var _veFEAEditorResizeObserver = null;  // modal viewer için container resize observer
 var _veFEAEditorAccordionState = {};  // { sectionKey: true (open) | false (closed) }
 
-// Default accordion durumu (ilk açılışta): Sizing + Defaults açık — bunlar
-// "Mesh Oluştur" öncesi en kritik ayarlar. Pre-mesh grup üstte (Sizing,
-// Defaults, Inflation, NamedSel), Post-mesh grup altta (Quality, Stats,
-// Display, Suggestions, Topology).
+// Default accordion durumu (ilk açılışta): TÜM sekmeler kapalı — kullanıcı
+// modal'ı açtığında temiz/sade bir liste görür, ilgilendiği section'ı kendi
+// açar. Önceden 'sizing'+'defaults' açıktı; modal yüksekliği gereksiz uzuyor
+// ve kullanıcı her açılışta 2 açık panel ile karşılaşıyordu.
+// Pre-mesh grup üstte, Post-mesh grup altta — sıra workflow temelli.
 function _veFEAEditorDefaultAccordionState() {
   return {
     // Pre-mesh
-    sizing: true,
-    defaults: true,
+    sizing: false,
+    defaults: false,
     inflation: false,
     namedSel: false,
     // Post-mesh

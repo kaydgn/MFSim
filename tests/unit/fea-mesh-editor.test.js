@@ -264,7 +264,7 @@ describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
     expect(allSections[allSections.length - 1].getAttribute('data-acc-section')).toBe('topology');
   });
 
-  test('Topology default kapalı (Post-mesh, bilgilendirme amaçlı, otomatik açılmaz)', () => {
+  test('Topology default kapalı (TÜM accordion\'lar başlangıçta kapalı)', () => {
     var geomNode = {
       id: 'g-t5', type: 'fea-geometry',
       data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
@@ -275,9 +275,9 @@ describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
     global.connections = [{ from: 'g-t5', to: 'mesh-t6' }];
     veFEAOpenMeshEditor('mesh-t6');
     expect(document.getElementById('ve-fea-acc-body-topology').style.display).toBe('none');
-    // Pre-mesh grupları default açık
-    expect(document.getElementById('ve-fea-acc-body-sizing').style.display).toBe('block');
-    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('block');
+    // Sizing/defaults da artık kapalı — kullanıcı kendi açar
+    expect(document.getElementById('ve-fea-acc-body-sizing').style.display).toBe('none');
+    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('none');
   });
 });
 
@@ -316,13 +316,16 @@ describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
     expect(order.slice(4)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'topology']);
   });
 
-  test('Default accordion state: yalnız sizing + defaults açık (mesh öncesi kritik)', () => {
+  test('Default accordion state: TÜM accordion\'lar kapalı (sade ilk görünüm)', () => {
     var state = _veFEAEditorDefaultAccordionState();
-    expect(state.sizing).toBe(true);
-    expect(state.defaults).toBe(true);
+    expect(state.sizing).toBe(false);
+    expect(state.defaults).toBe(false);
     expect(state.inflation).toBe(false);
     expect(state.namedSel).toBe(false);
     expect(state.quality).toBe(false);
+    expect(state.statistics).toBe(false);
+    expect(state.display).toBe(false);
+    expect(state.suggestions).toBe(false);
     expect(state.topology).toBe(false);
   });
 });
@@ -657,12 +660,12 @@ describe('Accordion bölümleri', () => {
     });
   });
 
-  test('Default state: defaults + sizing açık, diğerleri kapalı', () => {
+  test('Default state: TÜM accordion\'lar kapalı (kullanıcı kendi açar)', () => {
     var node = { id: 'mesh-a2', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     veFEAOpenMeshEditor('mesh-a2');
-    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('block');
-    expect(document.getElementById('ve-fea-acc-body-sizing').style.display).toBe('block');
+    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('none');
+    expect(document.getElementById('ve-fea-acc-body-sizing').style.display).toBe('none');
     expect(document.getElementById('ve-fea-acc-body-quality').style.display).toBe('none');
     expect(document.getElementById('ve-fea-acc-body-statistics').style.display).toBe('none');
   });
@@ -675,7 +678,11 @@ describe('Accordion bölümleri', () => {
     veFEAToggleAccordion('quality');
     expect(document.getElementById('ve-fea-acc-body-quality').style.display).toBe('block');
     expect(document.getElementById('ve-fea-acc-arrow-quality').textContent).toBe('▼');
-    // Defaults açık → kapat
+    // Defaults kapalı → aç
+    veFEAToggleAccordion('defaults');
+    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('block');
+    expect(document.getElementById('ve-fea-acc-arrow-defaults').textContent).toBe('▼');
+    // Defaults yine kapat
     veFEAToggleAccordion('defaults');
     expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('none');
     expect(document.getElementById('ve-fea-acc-arrow-defaults').textContent).toBe('▶');

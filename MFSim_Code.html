@@ -29344,15 +29344,16 @@ var _veFEAEditorEscHandler = null;
 var _veFEAEditorResizeObserver = null;  // modal viewer için container resize observer
 var _veFEAEditorAccordionState = {};  // { sectionKey: true (open) | false (closed) }
 
-// Default accordion durumu (ilk açılışta): Sizing + Defaults açık — bunlar
-// "Mesh Oluştur" öncesi en kritik ayarlar. Pre-mesh grup üstte (Sizing,
-// Defaults, Inflation, NamedSel), Post-mesh grup altta (Quality, Stats,
-// Display, Suggestions, Topology).
+// Default accordion durumu (ilk açılışta): TÜM sekmeler kapalı — kullanıcı
+// modal'ı açtığında temiz/sade bir liste görür, ilgilendiği section'ı kendi
+// açar. Önceden 'sizing'+'defaults' açıktı; modal yüksekliği gereksiz uzuyor
+// ve kullanıcı her açılışta 2 açık panel ile karşılaşıyordu.
+// Pre-mesh grup üstte, Post-mesh grup altta — sıra workflow temelli.
 function _veFEAEditorDefaultAccordionState() {
   return {
     // Pre-mesh
-    sizing: true,
-    defaults: true,
+    sizing: false,
+    defaults: false,
     inflation: false,
     namedSel: false,
     // Post-mesh
@@ -30920,19 +30921,19 @@ function getFEAGeometryPropertiesHTML(node) {
 
   // ─── GEOMETRİ KAYNAĞI ─────────────────────────────────────────────────
   html += veFEASectionTitle('Parametrik Primitif');
-  // 5×2 grid: dar sidebar'da 10 buton tek satıra sığmıyordu, butonlar ~25px
-  // genişlikte kalıp metin okunamıyordu. Grid ile 50-60px genişlik, iki satır.
-  html += '<div style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; margin-bottom:8px;">';
+  // 10 primitif için buton grid'i (5×2) dar sidebar'da sıkışık duruyordu;
+  // tek bir dropdown daha temiz + tüm primitiflere kolay erişim sağlar.
+  // onchange ile form açma davranışı: ilk seçimde form gözükür.
   var types = (typeof veFEAPrimitiveTypes === 'function') ? veFEAPrimitiveTypes() : [];
+  var activeTypeSel = hasGeom ? geom.type : '';
+  html += '<select onchange="veFEASelectParamForm(\'' + node.id + '\', this.value)" style="width:100%; padding:7px 8px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; margin-bottom:8px;">';
+  html += '<option value=""' + (activeTypeSel === '' ? ' selected' : '') + '>— Primitif türü seçin —</option>';
   types.forEach(function(t) {
-    var label = (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(t).split(' ')[0] : t;
-    var active = hasGeom && geom.type === t;
-    var border = active ? 'var(--accent-primary)' : 'var(--border-color)';
-    var bg = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
-    var color = active ? '#fff' : 'var(--text-primary)';
-    html += '<button onclick="veFEAToggleParamForm(\'' + node.id + '\', \'' + t + '\')" style="padding:7px 4px; font-size:0.62rem; background:' + bg + '; color:' + color + '; border:1px solid ' + border + '; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + (typeof veFEAPrimitiveLabel === 'function' ? veFEAPrimitiveLabel(t) : t) + '">' + label + '</button>';
+    var label = (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(t) : t;
+    var sel = (activeTypeSel === t) ? ' selected' : '';
+    html += '<option value="' + t + '"' + sel + '>' + label + '</option>';
   });
-  html += '</div>';
+  html += '</select>';
 
   // Aktif form (geometri yüklüyse onun formu açık; aksi halde gizli)
   var activeType = hasGeom ? geom.type : null;
@@ -31039,6 +31040,17 @@ function veFEAToggleParamForm(nodeId, type) {
   types.forEach(function(t) {
     var el = document.getElementById('ve-fea-form-' + nodeId + '-' + t);
     if(el) el.style.display = (t === type && willOpen) ? 'block' : 'none';
+  });
+}
+
+// Dropdown'dan çağrılır. Toggle yerine her zaman açar — kullanıcı dropdown'dan
+// bir tür seçtiğinde formun "kapanması" UX hatası olur (aynı türü tekrar
+// seçmesi gerekir). Boş value gelirse tüm formları kapat.
+function veFEASelectParamForm(nodeId, type) {
+  var types = (typeof veFEAPrimitiveTypes === 'function') ? veFEAPrimitiveTypes() : [];
+  types.forEach(function(t) {
+    var el = document.getElementById('ve-fea-form-' + nodeId + '-' + t);
+    if(el) el.style.display = (t === type) ? 'block' : 'none';
   });
 }
 
