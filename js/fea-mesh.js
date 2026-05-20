@@ -398,6 +398,27 @@ function veFEAMeshFromGeometry(geometry, opts) {
     if (mesh && !mesh.error && geometry.detectedFeatures && geometry.detectedFeatures.summary) {
       mesh.detectedFeatureSummary = geometry.detectedFeatures.summary;
     }
+    // Boundary-snap fallback: primitif inference başarısız olunca kullanıcının
+    // gördüğü "kübik mesh" hissini azaltmak için yüzey hex'lerini otomatik
+    // tet4'e böl + yüzey düğümlerini orijinal üçgenlerin en yakın noktasına
+    // snap et. opts.disableBoundarySnap === true ise atlanır (test/perf için).
+    // elementType=hex8 isteyen kullanıcı için snap atlanır (kullanıcı niyetli).
+    if (mesh && !mesh.error && mesh.voxelMode && opts.disableBoundarySnap !== true) {
+      if (elementType !== 'hex8' && elementType !== 'pyramid5') {
+        // Önce tet4'e çevir (snap'ten önce — tet düğümleri zaten hex düğümleri)
+        var tetMesh = veFEAConvertMeshToTet4(mesh);
+        if (tetMesh && !tetMesh.error) {
+          mesh = tetMesh;
+          // Sonra yüzey düğümlerini parsed üçgenlere snap et
+          if (typeof _veFEABoundarySnapToTriangles === 'function') {
+            var snapped = _veFEABoundarySnapToTriangles(mesh, parsed);
+            if (snapped && !snapped.error) mesh = snapped;
+          }
+          // elementType="tet4" zaten yapıldı, sonraki tet4 conversion'u atla
+          elementType = 'tet4-done';
+        }
+      }
+    }
   }
 
   // Lokal sizing (bias): yapısal mesh sonrasında düğüm konumlarını
@@ -408,6 +429,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
     mesh = veFEAApplyLocalSizing(mesh, opts.localSizing);
   }
   // elementType: hex8/wedge6 → tet4 decomposition (yüzey tri3 etkilenmez)
+  // 'tet4-done' sentinel: boundary-snap fallback'i zaten tet4 dönüşümünü yaptı.
   if (mesh && !mesh.error && elementType === 'tet4') {
     mesh = veFEAConvertMeshToTet4(mesh);
   }
@@ -1753,6 +1775,147 @@ function _veFEATransformMeshToOrientation(mesh, transform) {
     nodes[i * 3 + 1] = R[3]*x + R[4]*y + R[5]*z + center[1];
     nodes[i * 3 + 2] = R[6]*x + R[7]*y + R[8]*z + center[2];
   }
+}
+
+// ─── Boundary-snap: yüzey düğümlerini üçgen yüzeye snap et ─────────────────
+// Voxel fallback (inference başarısız) staircase artifact'ını gizlemek için
+// kullanılır. Algoritma: degree<thresh düğümleri = yüzey düğümleri olarak
+// işaretle, parsed üçgenlerini 3D bin'le, her yüzey düğümünü en yakın
+// üçgen noktasına taşı (Eberly's closest-point-on-triangle).
+//
+// Mesh topolojisi (eleman bağlantıları) korunur; sadece düğüm konumları
+// değişir. Bu sayede staircase kübik yüzey gerçek geometriye yaklaşır.
+function _veFEABoundarySnapToTriangles(mesh, parsed) {
+  if (!mesh || mesh.error || !mesh.nodes || !parsed || !parsed.vertices) return mesh;
+  var nodes = mesh.nodes;
+  var elements = mesh.elements;
+  var per = mesh.nodesPerElement || 8;
+  var nNodes = nodes.length / 3;
+  if (!elements || elements.length === 0) return mesh;
+
+  // Düğüm derecesi (kaç elemana bağlı). İç düğümler tipik olarak yüksek
+  // derece, yüzeydekiler düşük. Adaptif eşik = ortalama × 0.7.
+  var degree = new Uint16Array(nNodes);
+  for (var e = 0; e < elements.length; e++) {
+    var d = degree[elements[e]];
+    if (d < 65535) degree[elements[e]] = d + 1;
+  }
+  var sumD = 0;
+  for (var s = 0; s < nNodes; s++) sumD += degree[s];
+  var avgD = sumD / Math.max(1, nNodes);
+  var thresh = Math.max(1, Math.floor(avgD * 0.7));
+
+  var v = parsed.vertices;
+  var triCount = parsed.triangleCount;
+  if (triCount === 0) return mesh;
+
+  // BBox üçgenlerden
+  var bMinX = Infinity, bMinY = Infinity, bMinZ = Infinity;
+  var bMaxX = -Infinity, bMaxY = -Infinity, bMaxZ = -Infinity;
+  for (var p2 = 0; p2 < v.length; p2 += 3) {
+    if (v[p2]   < bMinX) bMinX = v[p2];   if (v[p2]   > bMaxX) bMaxX = v[p2];
+    if (v[p2+1] < bMinY) bMinY = v[p2+1]; if (v[p2+1] > bMaxY) bMaxY = v[p2+1];
+    if (v[p2+2] < bMinZ) bMinZ = v[p2+2]; if (v[p2+2] > bMaxZ) bMaxZ = v[p2+2];
+  }
+  // 3D grid bin'leme: triangle bbox'larını bin'lere dağıt. O(N) snap arama.
+  var bins = Math.max(4, Math.min(64, Math.round(Math.cbrt(triCount))));
+  var bx = (bMaxX - bMinX) / bins;
+  var by = (bMaxY - bMinY) / bins;
+  var bz = (bMaxZ - bMinZ) / bins;
+  if (bx <= 0) bx = 1; if (by <= 0) by = 1; if (bz <= 0) bz = 1;
+  var grid = {};
+  function key3(ix, jy, kz) { return ix + '|' + jy + '|' + kz; }
+  for (var t = 0; t < triCount; t++) {
+    var o = t * 9;
+    var miX = Math.min(v[o], v[o+3], v[o+6]), maX = Math.max(v[o], v[o+3], v[o+6]);
+    var miY = Math.min(v[o+1], v[o+4], v[o+7]), maY = Math.max(v[o+1], v[o+4], v[o+7]);
+    var miZ = Math.min(v[o+2], v[o+5], v[o+8]), maZ = Math.max(v[o+2], v[o+5], v[o+8]);
+    var i0 = Math.max(0, Math.min(bins - 1, Math.floor((miX - bMinX) / bx)));
+    var i1 = Math.max(0, Math.min(bins - 1, Math.floor((maX - bMinX) / bx)));
+    var j0 = Math.max(0, Math.min(bins - 1, Math.floor((miY - bMinY) / by)));
+    var j1 = Math.max(0, Math.min(bins - 1, Math.floor((maY - bMinY) / by)));
+    var k0 = Math.max(0, Math.min(bins - 1, Math.floor((miZ - bMinZ) / bz)));
+    var k1 = Math.max(0, Math.min(bins - 1, Math.floor((maZ - bMinZ) / bz)));
+    for (var ii = i0; ii <= i1; ii++) for (var jj = j0; jj <= j1; jj++) for (var kk = k0; kk <= k1; kk++) {
+      var k = key3(ii, jj, kk);
+      (grid[k] = grid[k] || []).push(t);
+    }
+  }
+
+  // Eberly closest-point-on-triangle (out: [x,y,z])
+  function nearestOnTri(px, py, pz, ax, ay, az, bx2, by2, bz2, cx, cy, cz, out) {
+    var abx = bx2 - ax, aby = by2 - ay, abz = bz2 - az;
+    var acx = cx - ax, acy = cy - ay, acz = cz - az;
+    var apx = px - ax, apy = py - ay, apz = pz - az;
+    var d1 = abx*apx + aby*apy + abz*apz;
+    var d2 = acx*apx + acy*apy + acz*apz;
+    if (d1 <= 0 && d2 <= 0) { out[0]=ax; out[1]=ay; out[2]=az; return; }
+    var bpx = px - bx2, bpy = py - by2, bpz = pz - bz2;
+    var d3 = abx*bpx + aby*bpy + abz*bpz;
+    var d4 = acx*bpx + acy*bpy + acz*bpz;
+    if (d3 >= 0 && d4 <= d3) { out[0]=bx2; out[1]=by2; out[2]=bz2; return; }
+    var vc = d1*d4 - d3*d2;
+    if (vc <= 0 && d1 >= 0 && d3 <= 0) {
+      var wAB = d1 / (d1 - d3);
+      out[0] = ax + wAB*abx; out[1] = ay + wAB*aby; out[2] = az + wAB*abz; return;
+    }
+    var cpx = px - cx, cpy = py - cy, cpz = pz - cz;
+    var d5 = abx*cpx + aby*cpy + abz*cpz;
+    var d6 = acx*cpx + acy*cpy + acz*cpz;
+    if (d6 >= 0 && d5 <= d6) { out[0]=cx; out[1]=cy; out[2]=cz; return; }
+    var vb = d5*d2 - d1*d6;
+    if (vb <= 0 && d2 >= 0 && d6 <= 0) {
+      var wAC = d2 / (d2 - d6);
+      out[0] = ax + wAC*acx; out[1] = ay + wAC*acy; out[2] = az + wAC*acz; return;
+    }
+    var va = d3*d6 - d5*d4;
+    if (va <= 0 && (d4 - d3) >= 0 && (d5 - d6) >= 0) {
+      var wBC = (d4 - d3) / ((d4 - d3) + (d5 - d6));
+      out[0] = bx2 + wBC*(cx - bx2); out[1] = by2 + wBC*(cy - by2); out[2] = bz2 + wBC*(cz - bz2); return;
+    }
+    var denom = 1 / (va + vb + vc);
+    var vv = vb * denom, ww = vc * denom;
+    out[0] = ax + vv*abx + ww*acx;
+    out[1] = ay + vv*aby + ww*acy;
+    out[2] = az + vv*abz + ww*acz;
+  }
+
+  var newNodes = new Float32Array(nodes);
+  var hit = [0, 0, 0];
+  for (var nId = 0; nId < nNodes; nId++) {
+    if (degree[nId] >= thresh) continue; // iç düğüm — snap yok
+    var nx = nodes[nId * 3], ny = nodes[nId * 3 + 1], nz = nodes[nId * 3 + 2];
+    var ix = Math.max(0, Math.min(bins - 1, Math.floor((nx - bMinX) / bx)));
+    var jy = Math.max(0, Math.min(bins - 1, Math.floor((ny - bMinY) / by)));
+    var kz = Math.max(0, Math.min(bins - 1, Math.floor((nz - bMinZ) / bz)));
+    var bestD2 = Infinity, bestX = nx, bestY = ny, bestZ = nz;
+    for (var di = -1; di <= 1; di++) for (var dj = -1; dj <= 1; dj++) for (var dk = -1; dk <= 1; dk++) {
+      var bi = ix + di, bj = jy + dj, bk = kz + dk;
+      if (bi < 0 || bi >= bins || bj < 0 || bj >= bins || bk < 0 || bk >= bins) continue;
+      var list = grid[key3(bi, bj, bk)];
+      if (!list) continue;
+      for (var li = 0; li < list.length; li++) {
+        var ti = list[li];
+        var oo = ti * 9;
+        nearestOnTri(
+          nx, ny, nz,
+          v[oo],     v[oo + 1], v[oo + 2],
+          v[oo + 3], v[oo + 4], v[oo + 5],
+          v[oo + 6], v[oo + 7], v[oo + 8],
+          hit
+        );
+        var dx = hit[0] - nx, dy = hit[1] - ny, dz = hit[2] - nz;
+        var d2 = dx*dx + dy*dy + dz*dz;
+        if (d2 < bestD2) { bestD2 = d2; bestX = hit[0]; bestY = hit[1]; bestZ = hit[2]; }
+      }
+    }
+    if (bestD2 !== Infinity) {
+      newNodes[nId * 3]     = bestX;
+      newNodes[nId * 3 + 1] = bestY;
+      newNodes[nId * 3 + 2] = bestZ;
+    }
+  }
+  return Object.assign({}, mesh, { nodes: newNodes, boundarySnapped: true });
 }
 
 function _veFEAVoxelizeTrianglesToHex(parsed, voxelSize, geometryType, detectedFeatures) {

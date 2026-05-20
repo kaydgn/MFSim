@@ -2389,8 +2389,11 @@ describe('veFEAComputeJacobianMetrics', () => {
       }
       return { vertices: vertices, triangleCount: tris.length };
     }
+    // Snap'siz ham voxel hex8 test (8 eleman). Boundary snap + tet4 default
+    // davranışı için disableBoundarySnap:true kullan.
     var m = veFEAMeshFromGeometry(
-      { type: 'step', _parsedTriangles: getCubeParsed() }, { size: 5 }
+      { type: 'step', _parsedTriangles: getCubeParsed() },
+      { size: 5, disableBoundarySnap: true }
     );
     var jm = veFEAComputeJacobianMetrics(m);
     expect(jm.valid).toBe(true);
