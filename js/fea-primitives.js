@@ -99,6 +99,44 @@ var VE_FEA_PRIMITIVES = {
       { key: 'thickness', label: 'Cidar kalınlığı', unit: 'mm', default: 4, min: 0.2, max: 500 },
       { key: 'length',    label: 'Uzunluk (Z sweep)', unit: 'mm', default: 200, min: 1, max: 10000 }
     ]
+  },
+  'washer': {
+    label: 'Pul / Conta / Bilezik',
+    schema: [
+      { key: 'outerRadius', label: 'Dış Yarıçap',   unit: 'mm', default: 12,  min: 0.5, max: 1000 },
+      { key: 'innerRadius', label: 'İç Yarıçap',    unit: 'mm', default: 5,   min: 0,   max: 1000 },
+      { key: 'thickness',   label: 'Kalınlık',      unit: 'mm', default: 1.5, min: 0.1, max: 200 },
+      { key: 'segments',    label: 'Çevresel Segment', unit: '−', default: 48, min: 8, max: 256, integer: true }
+    ]
+  },
+  'bolt': {
+    label: 'Cıvata (altıgen başlık)',
+    schema: [
+      { key: 'headWidth',   label: 'Başlık Anahtar Ağzı (across-flats)', unit: 'mm', default: 13, min: 1,   max: 500 },
+      { key: 'headHeight',  label: 'Başlık Yüksekliği',                  unit: 'mm', default: 5.5, min: 0.5, max: 200 },
+      { key: 'shaftDiameter', label: 'Gövde Çapı',                       unit: 'mm', default: 8,  min: 0.5, max: 200 },
+      { key: 'shaftLength', label: 'Gövde Uzunluğu',                     unit: 'mm', default: 30, min: 1,   max: 2000 }
+    ]
+  },
+  'nut': {
+    label: 'Somun (altıgen)',
+    schema: [
+      { key: 'width',     label: 'Anahtar Ağzı (across-flats)', unit: 'mm', default: 13, min: 1,   max: 500 },
+      { key: 'thickness', label: 'Kalınlık',                    unit: 'mm', default: 6.5, min: 0.5, max: 200 },
+      { key: 'holeDiameter', label: 'Delik Çapı',               unit: 'mm', default: 8,  min: 0.1, max: 200 }
+    ]
+  },
+  'plate': {
+    label: 'Delikli Levha (Mounting Plate)',
+    schema: [
+      { key: 'length',    label: 'Uzunluk (X)',     unit: 'mm', default: 120, min: 5, max: 5000 },
+      { key: 'width',     label: 'Genişlik (Y)',    unit: 'mm', default: 80,  min: 5, max: 5000 },
+      { key: 'thickness', label: 'Kalınlık (Z)',    unit: 'mm', default: 8,   min: 0.5, max: 500 },
+      { key: 'holeDiameter', label: 'Delik Çapı',   unit: 'mm', default: 9,   min: 0.1, max: 500 },
+      { key: 'cols',      label: 'Sütun Sayısı (X)', unit: '−', default: 2, min: 1, max: 20, integer: true },
+      { key: 'rows',      label: 'Satır Sayısı (Y)', unit: '−', default: 2, min: 1, max: 20, integer: true },
+      { key: 'margin',    label: 'Kenardan Boşluk',  unit: 'mm', default: 15, min: 0, max: 500 }
+    ]
   }
 };
 
@@ -158,6 +196,29 @@ function veFEANormalizePrimitiveParams(type, params) {
     if(out.flange >= maxFlange) out.flange = Math.max(0.5, maxFlange);
     var maxWeb = out.width - 0.1;
     if(out.web >= maxWeb) out.web = Math.max(0.5, maxWeb);
+  }
+  // Washer: iç yarıçap < dış yarıçap (eşit veya büyükse 1mm fark zorla)
+  if(type === 'washer' && out.innerRadius >= out.outerRadius) {
+    out.innerRadius = Math.max(0, out.outerRadius - 1);
+  }
+  // Nut: delik çapı altıgenin dairesel sığma limitinden küçük olmalı
+  if(type === 'nut') {
+    var nutHexR = out.width / Math.sqrt(3);
+    if(out.holeDiameter / 2 >= nutHexR) {
+      out.holeDiameter = Math.max(0.1, nutHexR * 2 - 0.5);
+    }
+  }
+  // Bolt: gövde çapı başlık genişliğinden küçük olmalı (geometrik tutarlılık)
+  if(type === 'bolt') {
+    var headInnerR = out.headWidth / Math.sqrt(3);
+    if(out.shaftDiameter / 2 >= headInnerR) {
+      out.shaftDiameter = Math.max(0.5, headInnerR * 2 - 1);
+    }
+  }
+  // Plate: delik çapı boşlukları aşmamalı
+  if(type === 'plate') {
+    var maxHoleD = Math.max(0.1, Math.min(out.length, out.width) * 0.4);
+    if(out.holeDiameter > maxHoleD) out.holeDiameter = maxHoleD;
   }
   return out;
 }
@@ -252,6 +313,52 @@ function veFEAPrimitiveStats(type, params) {
     var endRingArea = 2 * (outerArea - innerArea);
     surfaceArea = outerPerim * L2 + innerPerim * L2 + endRingArea;
     bbox = { x: w, y: h, z: L2 };
+  } else if(type === 'washer') {
+    var RW = p.outerRadius, rW = p.innerRadius, tW = p.thickness;
+    var annulusArea = Math.PI * (RW * RW - rW * rW);
+    volume = annulusArea * tW;
+    // 2 düz halka yüzey + dış silindir yan + iç silindir yan
+    surfaceArea = 2 * annulusArea + 2 * Math.PI * RW * tW + 2 * Math.PI * rW * tW;
+    bbox = { x: 2 * RW, y: tW, z: 2 * RW };
+  } else if(type === 'nut') {
+    var hexR_N = p.width / Math.sqrt(3);
+    // Düzenli altıgen alanı = (3√3/2) × R²
+    var hexAreaN = (3 * Math.sqrt(3) / 2) * hexR_N * hexR_N;
+    var holeRN = p.holeDiameter / 2;
+    var holeArea = Math.PI * holeRN * holeRN;
+    var crossN = hexAreaN - holeArea;
+    volume = crossN * p.thickness;
+    // 2 üst/alt yüz + 6 yan dikdörtgen + iç silindir yan
+    surfaceArea = 2 * crossN + 6 * p.width * p.thickness + 2 * Math.PI * holeRN * p.thickness;
+    // BBox: altıgenin köşe-köşe mesafesi = 2R, anahtar ağzı = width
+    bbox = { x: 2 * hexR_N, y: p.thickness, z: 2 * hexR_N };
+  } else if(type === 'bolt') {
+    var hexR_B = p.headWidth / Math.sqrt(3);
+    var headArea = (3 * Math.sqrt(3) / 2) * hexR_B * hexR_B;
+    var headVol = headArea * p.headHeight;
+    var shaftR = p.shaftDiameter / 2;
+    var shaftVol = Math.PI * shaftR * shaftR * p.shaftLength;
+    volume = headVol + shaftVol;
+    // Yüzey: başlık (2 hex - shaft kesit) + 6 yan + gövde yan + gövde alt
+    var headTop = headArea;
+    var headBottom = headArea - Math.PI * shaftR * shaftR;
+    var headSides = 6 * p.headWidth * p.headHeight;
+    var shaftSide = 2 * Math.PI * shaftR * p.shaftLength;
+    var shaftBottom = Math.PI * shaftR * shaftR;
+    surfaceArea = headTop + headBottom + headSides + shaftSide + shaftBottom;
+    bbox = { x: 2 * hexR_B, y: p.headHeight + p.shaftLength, z: 2 * hexR_B };
+  } else if(type === 'plate') {
+    var pL = p.length, pW = p.width, pT = p.thickness;
+    var plateArea = pL * pW;
+    var holeR_P = p.holeDiameter / 2;
+    // Effective hole count (kenara taşmayanları say)
+    var validHoles = Math.max(1, p.cols) * Math.max(1, p.rows);
+    var totalHoleArea = validHoles * Math.PI * holeR_P * holeR_P;
+    var crossP = Math.max(0, plateArea - totalHoleArea);
+    volume = crossP * pT;
+    // 2 üst/alt yüz + 4 yan + delik iç silindir yan'ları
+    surfaceArea = 2 * crossP + 2 * (pL + pW) * pT + validHoles * 2 * Math.PI * holeR_P * pT;
+    bbox = { x: pL, y: pT, z: pW };
   }
 
   return { volume: volume, surfaceArea: surfaceArea, bbox: bbox, params: p };
@@ -280,6 +387,10 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'lbracket')   return _veFEABuildLBracketMesh(p);
   if(type === 'ibeam')      return _veFEABuildIBeamMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
+  if(type === 'washer')   return _veFEABuildWasherMesh(p);
+  if(type === 'bolt')     return _veFEABuildBoltGroup(p);
+  if(type === 'nut')      return _veFEABuildNutMesh(p);
+  if(type === 'plate')    return _veFEABuildPlateMesh(p);
   return null;
 }
 
@@ -509,6 +620,173 @@ function _veFEABuildIBeamMesh(p) {
   var mesh = new THREE.Mesh(geometry, mat);
   mesh.userData.feaPrimitive = { type: 'ibeam', params: p };
   mesh.userData.feaEdgesAttached = true;
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
+}
+
+// ─── Pul / Conta / Bilezik — annular extrude (dış disk + iç delik) ─────────
+// Şaft'tan farkı: kalınlık çok daha küçük (oran 1:5 ile 1:50). Tek mesh,
+// görsel olarak yassı bilezik. FEA için tipik kullanım: sızdırmazlık conta,
+// ayarlama pulu (washer), motor blok cıvata bilezikleri.
+function _veFEABuildWasherMesh(p) {
+  var shape = new THREE.Shape();
+  shape.absarc(0, 0, p.outerRadius, 0, Math.PI * 2, false);
+  if (p.innerRadius > 0 && p.innerRadius < p.outerRadius) {
+    var hole = new THREE.Path();
+    hole.absarc(0, 0, p.innerRadius, 0, Math.PI * 2, true);
+    shape.holes.push(hole);
+  }
+  var geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: p.thickness, bevelEnabled: false, steps: 1, curveSegments: p.segments
+  });
+  geometry.translate(0, 0, -p.thickness / 2);
+  geometry.rotateX(-Math.PI / 2); // XZ düzlemi (yatay pul)
+  var material = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.feaPrimitive = { type: 'washer', params: p };
+  mesh.userData.feaFaceId = 'faceSurface';
+  mesh.userData.feaEdgesAttached = true;
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
+}
+
+// ─── Somun — altıgen prizma (6-segment CylinderGeometry) + merkez delik ────
+// Anahtar ağzı (across-flats = width) → altıgen yarıçapı = width / √3.
+// Üst görünüş: altıgen. Yan profil: dikdörtgen.
+function _veFEABuildNutMesh(p) {
+  var hexRadius = p.width / Math.sqrt(3); // across-flats → circumradius
+  var hexOuterShape = new THREE.Shape();
+  // 6 köşeli yıldız: 30° başlangıç → düz yüzey üstte
+  for (var i = 0; i < 6; i++) {
+    var ang = Math.PI / 6 + i * Math.PI / 3;
+    var x = hexRadius * Math.cos(ang);
+    var y = hexRadius * Math.sin(ang);
+    if (i === 0) hexOuterShape.moveTo(x, y);
+    else hexOuterShape.lineTo(x, y);
+  }
+  if (p.holeDiameter > 0 && p.holeDiameter / 2 < hexRadius) {
+    var hole = new THREE.Path();
+    hole.absarc(0, 0, p.holeDiameter / 2, 0, Math.PI * 2, true);
+    hexOuterShape.holes.push(hole);
+  }
+  var geometry = new THREE.ExtrudeGeometry(hexOuterShape, {
+    depth: p.thickness, bevelEnabled: false, steps: 1, curveSegments: 32
+  });
+  geometry.translate(0, 0, -p.thickness / 2);
+  geometry.rotateX(-Math.PI / 2);
+  var material = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.feaPrimitive = { type: 'nut', params: p };
+  mesh.userData.feaFaceId = 'faceSurface';
+  mesh.userData.feaEdgesAttached = true;
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
+}
+
+// ─── Cıvata — altıgen başlık (üst) + silindirik gövde (alt) ─────────────────
+// Group içinde 2 child mesh: faceHead, faceShaft. Başlık y=0'da, gövde
+// aşağı doğru uzanır.
+function _veFEABuildBoltGroup(p) {
+  var group = new THREE.Group();
+  group.userData.feaPrimitive = { type: 'bolt', params: p };
+
+  // Başlık: altıgen prizma
+  var hexRadius = p.headWidth / Math.sqrt(3);
+  var hexShape = new THREE.Shape();
+  for (var i = 0; i < 6; i++) {
+    var ang = Math.PI / 6 + i * Math.PI / 3;
+    var x = hexRadius * Math.cos(ang);
+    var y = hexRadius * Math.sin(ang);
+    if (i === 0) hexShape.moveTo(x, y);
+    else hexShape.lineTo(x, y);
+  }
+  var headGeo = new THREE.ExtrudeGeometry(hexShape, {
+    depth: p.headHeight, bevelEnabled: false, steps: 1, curveSegments: 32
+  });
+  headGeo.translate(0, 0, 0); // 0 → headHeight (Z+)
+  headGeo.rotateX(-Math.PI / 2);
+  // Y ekseninde 0..headHeight aralığında başlık
+  var headMat = _veFEAMakePrimitiveMaterial();
+  var headMesh = new THREE.Mesh(headGeo, headMat);
+  headMesh.userData.feaFaceId = 'faceHead';
+  group.add(headMesh);
+
+  // Gövde: silindir, başlığın alt yüzeyinden aşağı doğru
+  var shaftGeo = new THREE.CylinderGeometry(
+    p.shaftDiameter / 2, p.shaftDiameter / 2, p.shaftLength, 32, 1, false
+  );
+  // CylinderGeometry default merkez orijin. Gövde tepesi y=0'da olsun → -shaftLength/2
+  shaftGeo.translate(0, -p.shaftLength / 2, 0);
+  var shaftMat = _veFEAMakePrimitiveMaterial();
+  var shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
+  shaftMesh.userData.feaFaceId = 'faceShaft';
+  group.add(shaftMesh);
+
+  // BBox'ı merkez (~headHeight/2) etrafında ortalamak için tüm grubu kaydır
+  // Tüm civata uzunluğu = headHeight + shaftLength
+  var totalH = p.headHeight + p.shaftLength;
+  group.position.y = (p.shaftLength - p.headHeight) / 2;
+
+  // Edge overlay
+  [headMesh, shaftMesh].forEach(function(m) {
+    var e = new THREE.EdgesGeometry(m.geometry, 30);
+    var l = new THREE.LineSegments(e, new THREE.LineBasicMaterial({ color: 0x1a3d6b, transparent: true, opacity: 0.6 }));
+    m.add(l);
+  });
+  return group;
+}
+
+// ─── Delikli Levha — dikdörtgen + grid pattern delikler (ExtrudeGeometry) ──
+// Delikler: cols × rows grid, kenardan margin boşlukla. cols=rows=1 ise tek
+// merkez delik. Motor mounts, şanzıman flanş plakaları için tipik.
+function _veFEABuildPlateMesh(p) {
+  var L = p.length, W = p.width;
+  var L2 = L / 2, W2 = W / 2;
+  var shape = new THREE.Shape();
+  shape.moveTo(-L2, -W2);
+  shape.lineTo(L2, -W2);
+  shape.lineTo(L2, W2);
+  shape.lineTo(-L2, W2);
+  shape.lineTo(-L2, -W2);
+
+  var r = p.holeDiameter / 2;
+  var cols = Math.max(1, p.cols), rows = Math.max(1, p.rows);
+  var availX = L - 2 * p.margin;
+  var availY = W - 2 * p.margin;
+  if (r > 0 && availX > 0 && availY > 0) {
+    for (var i = 0; i < cols; i++) {
+      for (var j = 0; j < rows; j++) {
+        var x = (cols === 1) ? 0 : -availX / 2 + (i * availX / (cols - 1));
+        var y = (rows === 1) ? 0 : -availY / 2 + (j * availY / (rows - 1));
+        // Delik kenara taşmıyorsa ekle
+        if (Math.abs(x) + r <= L2 && Math.abs(y) + r <= W2) {
+          var hole = new THREE.Path();
+          hole.absarc(x, y, r, 0, Math.PI * 2, true);
+          shape.holes.push(hole);
+        }
+      }
+    }
+  }
+
+  var geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: p.thickness, bevelEnabled: false, steps: 1, curveSegments: 24
+  });
+  geometry.translate(0, 0, -p.thickness / 2);
+  geometry.rotateX(-Math.PI / 2); // XZ düzlemi (yatay levha)
+  var material = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.feaPrimitive = { type: 'plate', params: p };
+  mesh.userData.feaFaceId = 'faceSurface';
+  mesh.userData.feaEdgesAttached = true;
+
   var edges = new THREE.EdgesGeometry(geometry, 30);
   var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
   mesh.add(line);
