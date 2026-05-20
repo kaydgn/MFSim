@@ -19,38 +19,11 @@
 
 // ─── 1. Vertex deduplication (pozisyon hash'i) ────────────────────────────
 // Tessellated mesh: her üçgen 3 vertex × 3 coord = 9 float (paylaşım yok).
-// Komşuluk için canonical vertex index gerekli.
+// Komşuluk için canonical vertex index gerekli. Çekirdek algoritma
+// fea-mesh-utils.js → veFEADedupVertices.
 function _veFEABuildVertexIndex(vertices, bboxSize) {
-  var n = vertices.length / 3;
-  // Quantize: bbox'ın ~1e-6'sı kadar tolerans
-  var eps = (bboxSize > 0 ? bboxSize : 1) * 1e-6;
-  var invEps = 1 / eps;
-  var map = new Map();
-  var canonical = new Int32Array(n);
-  var uniqueCount = 0;
-  // Geçici uniqueVerts (flat) — sonunda Float32Array'e dönüştür
-  var uxs = [], uys = [], uzs = [];
-  for (var i = 0; i < n; i++) {
-    var x = vertices[i * 3], y = vertices[i * 3 + 1], z = vertices[i * 3 + 2];
-    var kx = Math.round(x * invEps);
-    var ky = Math.round(y * invEps);
-    var kz = Math.round(z * invEps);
-    var key = kx + '|' + ky + '|' + kz;
-    var idx = map.get(key);
-    if (idx === undefined) {
-      idx = uniqueCount++;
-      map.set(key, idx);
-      uxs.push(x); uys.push(y); uzs.push(z);
-    }
-    canonical[i] = idx;
-  }
-  var unique = new Float32Array(uniqueCount * 3);
-  for (var j = 0; j < uniqueCount; j++) {
-    unique[j * 3]     = uxs[j];
-    unique[j * 3 + 1] = uys[j];
-    unique[j * 3 + 2] = uzs[j];
-  }
-  return { canonical: canonical, unique: unique, uniqueCount: uniqueCount };
+  var r = veFEADedupVertices(vertices, { bboxSize: bboxSize });
+  return { canonical: r.canonical, unique: r.unique, uniqueCount: r.uniqueCount };
 }
 
 // ─── 2. Üçgen normalleri + alanlar + centroidler ─────────────────────────

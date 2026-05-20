@@ -22627,6 +22627,100 @@ function _veFEAFeatureTypeToBrepLabel(t) {
 }
 
 </script>
+<script type="text/x-mfsim-defer" data-mfsim-label="FEA: Mesh ortak yardımcılar...">
+// ============================================================================
+// FEA MESH UTILS — ortak yardımcılar
+// ============================================================================
+// Mesh üretim modüllerinin paylaştığı pure helper'lar. Algoritma duplikasyonu
+// olmaması için, dedup gibi her yerde aynı şekilde yapılması gereken işler
+// burada tek noktadan tanımlanır.
+//
+// Public API:
+//   veFEADedupVertices(vertices, opts) → { canonical, unique, uniqueCount, bbox, epsilon }
+//
+// Çağrıldığı yerler:
+//   - js/fea-delaunay.js          (triangle-soup → indexed PLC)
+//   - js/fea-feature-recognition.js (canonical vertex index for adjacency)
+// ============================================================================
+
+/**
+ * Triangle-soup veya genel point cloud'da çakışan/yakın vertex'leri spatial
+ * hash ile birleştirir. O(N) — bbox quantization grid'i kullanır.
+ *
+ * @param {Float32Array|number[]} vertices  Flat [x,y,z, x,y,z, ...] dizisi
+ * @param {object} [opts]
+ * @param {number} [opts.bboxSize]      Tolerans için bbox boyu (yoksa hesaplanır)
+ * @param {number} [opts.epsRatio=1e-6] Tolerance = bbox * epsRatio
+ * @param {number} [opts.minEps=1e-9]   Tolerance alt sınırı
+ * @returns {{
+ *   canonical:   Int32Array,    // her input vertex → unique index
+ *   unique:      Float32Array,  // unique pozisyonlar [x,y,z,...]
+ *   uniqueCount: number,
+ *   bbox:        { minX, maxX, minY, maxY, minZ, maxZ },
+ *   epsilon:     number
+ * }}
+ */
+function veFEADedupVertices(vertices, opts) {
+  opts = opts || {};
+  var n = (vertices.length / 3) | 0;
+
+  var minX = Infinity, minY = Infinity, minZ = Infinity;
+  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (var i = 0; i < vertices.length; i += 3) {
+    var x = vertices[i], y = vertices[i + 1], z = vertices[i + 2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  var dia = (typeof opts.bboxSize === 'number' && opts.bboxSize > 0)
+    ? opts.bboxSize
+    : Math.max(maxX - minX, maxY - minY, maxZ - minZ);
+  var epsRatio = (typeof opts.epsRatio === 'number') ? opts.epsRatio : 1e-6;
+  var minEps   = (typeof opts.minEps   === 'number') ? opts.minEps   : 1e-9;
+  var eps = Math.max(minEps, dia * epsRatio);
+  var invEps = 1 / eps;
+
+  var map = new Map();
+  var canonical = new Int32Array(n);
+  var uxs = [], uys = [], uzs = [];
+  var uniqueCount = 0;
+
+  for (var v = 0; v < n; v++) {
+    var px = vertices[v * 3], py = vertices[v * 3 + 1], pz = vertices[v * 3 + 2];
+    var key = Math.round(px * invEps) + '|' + Math.round(py * invEps) + '|' + Math.round(pz * invEps);
+    var existing = map.get(key);
+    if (existing !== undefined) {
+      canonical[v] = existing;
+    } else {
+      canonical[v] = uniqueCount;
+      map.set(key, uniqueCount);
+      uxs.push(px); uys.push(py); uzs.push(pz);
+      uniqueCount++;
+    }
+  }
+
+  var unique = new Float32Array(uniqueCount * 3);
+  for (var j = 0; j < uniqueCount; j++) {
+    unique[j * 3]     = uxs[j];
+    unique[j * 3 + 1] = uys[j];
+    unique[j * 3 + 2] = uzs[j];
+  }
+
+  return {
+    canonical:   canonical,
+    unique:      unique,
+    uniqueCount: uniqueCount,
+    bbox:        { minX: minX, maxX: maxX, minY: minY, maxY: maxY, minZ: minZ, maxZ: maxZ },
+    epsilon:     eps
+  };
+}
+
+// Node.js (Jest) / Worker uyumu için global export
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { veFEADedupVertices: veFEADedupVertices };
+}
+
+</script>
 <script type="text/x-mfsim-defer" data-mfsim-label="FEA: Yüzey tanıma...">
 /**
  * FEA Yüzey Feature Recognition (Faz 6a)
@@ -22649,38 +22743,11 @@ function _veFEAFeatureTypeToBrepLabel(t) {
 
 // ─── 1. Vertex deduplication (pozisyon hash'i) ────────────────────────────
 // Tessellated mesh: her üçgen 3 vertex × 3 coord = 9 float (paylaşım yok).
-// Komşuluk için canonical vertex index gerekli.
+// Komşuluk için canonical vertex index gerekli. Çekirdek algoritma
+// fea-mesh-utils.js → veFEADedupVertices.
 function _veFEABuildVertexIndex(vertices, bboxSize) {
-  var n = vertices.length / 3;
-  // Quantize: bbox'ın ~1e-6'sı kadar tolerans
-  var eps = (bboxSize > 0 ? bboxSize : 1) * 1e-6;
-  var invEps = 1 / eps;
-  var map = new Map();
-  var canonical = new Int32Array(n);
-  var uniqueCount = 0;
-  // Geçici uniqueVerts (flat) — sonunda Float32Array'e dönüştür
-  var uxs = [], uys = [], uzs = [];
-  for (var i = 0; i < n; i++) {
-    var x = vertices[i * 3], y = vertices[i * 3 + 1], z = vertices[i * 3 + 2];
-    var kx = Math.round(x * invEps);
-    var ky = Math.round(y * invEps);
-    var kz = Math.round(z * invEps);
-    var key = kx + '|' + ky + '|' + kz;
-    var idx = map.get(key);
-    if (idx === undefined) {
-      idx = uniqueCount++;
-      map.set(key, idx);
-      uxs.push(x); uys.push(y); uzs.push(z);
-    }
-    canonical[i] = idx;
-  }
-  var unique = new Float32Array(uniqueCount * 3);
-  for (var j = 0; j < uniqueCount; j++) {
-    unique[j * 3]     = uxs[j];
-    unique[j * 3 + 1] = uys[j];
-    unique[j * 3 + 2] = uzs[j];
-  }
-  return { canonical: canonical, unique: unique, uniqueCount: uniqueCount };
+  var r = veFEADedupVertices(vertices, { bboxSize: bboxSize });
+  return { canonical: r.canonical, unique: r.unique, uniqueCount: r.uniqueCount };
 }
 
 // ─── 2. Üçgen normalleri + alanlar + centroidler ─────────────────────────
@@ -23441,45 +23508,20 @@ function veFEADelaunayDiagnose() {
 // ─── Vertex de-duplication ──────────────────────────────────────────────────
 // fea-step.js / _veFEAParseSurfaceTriangles çıktısı triangle-soup formatında:
 // her üçgen 3 ardışık (paylaşılmamış) vertex. Delaunay ise paylaşımlı nokta
-// kümesi bekler. Spatial hash ile O(N) merge.
+// kümesi bekler. Çekirdek algoritma fea-mesh-utils.js → veFEADedupVertices.
+// Burada Delaunay alt fonksiyonlarının (surface/interior sampling) sonradan
+// nokta ekleyebilmesi için coords mutable Array olarak tutulur.
 function _veFEADelaunayDedupVertices(verts, triangleCount) {
-  var N = triangleCount * 3;
-  var minX = Infinity, minY = Infinity, minZ = Infinity;
-  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-  for (var i = 0; i < verts.length; i += 3) {
-    var x = verts[i], y = verts[i + 1], z = verts[i + 2];
-    if (x < minX) minX = x; if (x > maxX) maxX = x;
-    if (y < minY) minY = y; if (y > maxY) maxY = y;
-    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
-  }
-  var dia = Math.max(maxX - minX, maxY - minY, maxZ - minZ);
-  var eps = Math.max(1e-9, dia * 1e-6);
-  var invEps = 1 / eps;
-
-  var map = new Map();
-  var uniqueCoords = [];
-  var newIndices = new Int32Array(N);
-
-  for (var v = 0; v < N; v++) {
-    var px = verts[v * 3], py = verts[v * 3 + 1], pz = verts[v * 3 + 2];
-    var k = Math.round(px * invEps) + '|' + Math.round(py * invEps) + '|' + Math.round(pz * invEps);
-    var existing = map.get(k);
-    if (existing !== undefined) {
-      newIndices[v] = existing;
-    } else {
-      var newIdx = uniqueCoords.length / 3;
-      map.set(k, newIdx);
-      uniqueCoords.push(px, py, pz);
-      newIndices[v] = newIdx;
-    }
-  }
+  var r = veFEADedupVertices(verts);
+  var coords = new Array(r.unique.length);
+  for (var i = 0; i < r.unique.length; i++) coords[i] = r.unique[i];
   return {
-    coords: uniqueCoords,         // [x0,y0,z0, x1,y1,z1, ...]
-    pointCount: uniqueCoords.length / 3,
-    triangles: newIndices,        // 3*triangleCount entries
+    coords:        coords,        // mutable [x0,y0,z0, ...] — sampling push edebilir
+    pointCount:    r.uniqueCount,
+    triangles:     r.canonical,   // 3*triangleCount entries
     triangleCount: triangleCount,
-    bbox: { minX: minX, maxX: maxX, minY: minY, maxY: maxY, minZ: minZ, maxZ: maxZ },
-    epsilon: eps
+    bbox:          r.bbox,
+    epsilon:       r.epsilon
   };
 }
 
@@ -23921,24 +23963,80 @@ if (typeof module !== 'undefined' && module.exports) {
 // ============================================================================
 // FEA MESH ÜRETİMİ
 // ============================================================================
-// Geometriyi sonlu eleman ağına böler. F3a kapsamı:
+// Geometriyi sonlu eleman ağına böler. Native mesher'lar:
 //   - Kutu        → Heks8 structured (nx × ny × nz)
-//   - Silindir    → Wedge6 (disk triangulation + eksenel extrude)
+//   - Silindir    → Heks8 O-grid (butterfly) veya Wedge6 fan (legacy)
 //   - Şaft        → Heks8 annulus (radyal × açısal × eksenel)
-//   - STEP        → Tri3 (yüzey mesh, vertex dedup)
-//
-// Hacim tetra (tet4/tet10) ve adaptif refinement F3b'de eklenir
-// (tetgen-wasm veya benzeri yöntem gerekir).
-//
-// Mesh data formatı:
-//   { type, geometryType, nodes (Float32Array Nx3), elements (Uint32Array),
-//     nodesPerElement, grid?, metrics? }
+//   - Cone/Sphere/Torus/Hemisphere/I-beam/L-bracket/Rect-tube — Heks8/Wedge6
+//   - STEP/STL    → Tet4 (Delaunay) veya Heks8 (voxel fallback)
 //
 // Public API:
-//   veFEAMeshFromGeometry(geometry, opts) → meshData
-//   veFEAComputeMeshMetrics(meshData)     → { nodeCount, elementCount, ... }
-//   veFEAMeshLabel(type)                  → "Heks8" / "Wedge6" / "Tri3" vs.
+//   veFEAMeshFromGeometry(geometry, opts)      → FEAMeshData | FEAMeshError
+//   veFEAMeshFromGeometryAsync(geometry, opts) → Promise<FEAMeshData | FEAMeshError>
+//   veFEAMeshFromGeometryViaWorker(...)        → Promise (web worker)
+//   veFEAComputeMeshMetrics(meshData)          → FEAMeshMetrics
+//   veFEAComputeQualityMetrics(meshData)       → quality stats (aspect/skewness/...)
+//   veFEAComputeJacobianMetrics(meshData)      → jacobian stats
+//   veFEAConvertMeshToTet4(meshData)           → tet4 mesh (decomposition)
+//   veFEAEnrichToQuadratic(meshData)           → hex20/tet10/wedge15
+//   veFEAMeshLabel(type)                       → görünür label
+//
+// ─── FEAMeshData kontratı (JSDoc) ───────────────────────────────────────────
 // ============================================================================
+
+/**
+ * @typedef {Object} FEAMeshData
+ * @property {('hex8'|'wedge6'|'tet4'|'tri3'|'pyramid5'|'hex20'|'tet10'|'wedge15')} type
+ *   Eleman tipi. Native generated veya conversion/enrichment çıktısı.
+ * @property {string} geometryType
+ *   Kaynak geometri etiketi: 'box' | 'cylinder' | 'shaft' | 'cone' | 'sphere'
+ *   | 'torus' | 'hemisphere' | 'ibeam' | 'lbracket' | 'recttube' | 'voxel-step'
+ *   | 'delaunay-<src>' | 'tri-surface-<src>'.
+ * @property {Float32Array} nodes
+ *   Düğüm pozisyonları, flat [x0,y0,z0, x1,y1,z1, ...] (length = 3·nodeCount).
+ * @property {Uint32Array} elements
+ *   Eleman bağlantıları, flat indices (length = nodesPerElement·elementCount).
+ * @property {number} nodesPerElement
+ *   Eleman başına düğüm: 3 (tri3), 4 (tet4), 5 (pyramid5), 6 (wedge6),
+ *   8 (hex8), 10 (tet10), 15 (wedge15), 20 (hex20).
+ * @property {Object<string,FEANamedSelection>} [namedSelections]
+ *   Auto/manual yüzey/edge/node/element grupları. Geometriye göre otomatik:
+ *   kutu→6 yüzey, silindir→3, şaft→4, voxel→tek yüzey grubu. BC referansı.
+ * @property {Object} [grid]
+ *   Yapısal grid'lerde topolojik boyutlar (örn. {nx,ny,nz} veya
+ *   {nRadial,nCircum,nAxial}). Voxel/Delaunay mesh'te bulunmaz.
+ * @property {FEAMeshMetrics} [metrics]
+ *   Compute sonrası eklenen istatistikler (veFEAComputeMeshMetrics ile).
+ */
+
+/**
+ * @typedef {Object} FEANamedSelection
+ * @property {('face'|'edge'|'node'|'element')} type
+ * @property {('auto'|'manual')} source
+ * @property {string} label  Kullanıcıya görünen isim.
+ * @property {Uint32Array} nodeIds  Global düğüm indeksleri.
+ */
+
+/**
+ * @typedef {Object} FEAMeshError
+ * @property {string} error  Hata kodu: 'voxel-too-many' | 'voxel-empty'
+ *   | 'mixed-element-types' | 'tet-mesher-failed' | ...
+ * @property {string} [message]  Açıklama.
+ * @property {number} [nx]  Voxel hatalarında grid boyutları.
+ * @property {number} [ny]
+ * @property {number} [nz]
+ * @property {number} [total]  Toplam voxel sayısı (üst sınır aşımında).
+ */
+
+/**
+ * @typedef {Object} FEAMeshMetrics
+ * @property {number} nodeCount
+ * @property {number} elementCount
+ * @property {string} elementType
+ * @property {{minX:number,maxX:number,minY:number,maxY:number,minZ:number,maxZ:number}} [bbox]
+ * @property {Object} [quality]   Aspect/skewness/angle istatistikleri.
+ * @property {Object} [jacobian]  Jacobian ratio istatistikleri.
+ */
 
 var VE_FEA_MESH_MIN_SIZE = 0.5;  // mm — çok küçük değerleri clamp et
 var VE_FEA_VOXEL_MAX_COUNT = 20000000; // 20M voxel üst sınır — sub-1mm mesh için
@@ -23947,19 +24045,6 @@ var VE_FEA_VOXEL_MAX_COUNT = 20000000; // 20M voxel üst sınır — sub-1mm mes
                                        // yüzey düğümlerini tarayacağı için RAM
                                        // büyür ama hala makul sınırda kalır
                                        // (20M voxel ≈ 100³ × 20 ≈ 480 MB Float32).
-
-// Named selections veri modeli:
-//   mesh.namedSelections = {
-//     <key>: {
-//       type: 'face' | 'edge' | 'node' | 'element',
-//       source: 'auto' | 'manual',
-//       label: <görünür isim>,
-//       nodeIds: Uint32Array  // global düğüm indeksleri
-//     }
-//   }
-// Auto-generated selections geometriye göre otomatik üretilir (kutu→6 yüzey,
-// silindir→3 yüzey, şaft→4 yüzey, voxel→tek yüzey grubu).
-// Sınır Koşulları (F4) bu gruplara referansla yük/mesnet uygular.
 
 function veFEAMeshLabel(type) {
   return ({
@@ -23970,8 +24055,7 @@ function veFEAMeshLabel(type) {
     'hex20':  'Hex20 (Kuadratik Heks)',
     'pyramid5': 'Pyramid5 (Piramit)',
     'wedge15':'Wedge15 (Kuadratik Prizm)',
-    'tri3':   'Tri3 (Yüzey)',
-    'hybrid': 'Hibrit (Hex8+Pyramid5+Tet4)'
+    'tri3':   'Tri3 (Yüzey)'
   })[type] || type;
 }
 
@@ -24571,9 +24655,11 @@ function _veFEAShouldTryTetMesher(opts) {
   return true;
 }
 
-// Hibrit mesh stratejisi: önce Delaunay tet mesher dene, başarısız olursa
-// voxel fallback. `preBuiltVoxel` opsiyonel — sync yol voxel'ı zaten tam
-// post-process'lemişse hazır kullanılır.
+// STEP/triangle soup için iki kademeli mesh stratejisi: önce Delaunay tet
+// mesher denenir, başarısız/devre-dışı olursa voxel hex fallback. Üretilen
+// mesh tek bir element tipidir (tet4 veya hex8) — "hybrid" değildir.
+// `preBuiltVoxel` opsiyonel: sync yol voxel'ı zaten post-process'lemişse
+// hazır kullanılır.
 function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
   var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
   var geometryType = geometry.type || 'unknown';

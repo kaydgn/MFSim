@@ -59,45 +59,20 @@ function veFEADelaunayDiagnose() {
 // ─── Vertex de-duplication ──────────────────────────────────────────────────
 // fea-step.js / _veFEAParseSurfaceTriangles çıktısı triangle-soup formatında:
 // her üçgen 3 ardışık (paylaşılmamış) vertex. Delaunay ise paylaşımlı nokta
-// kümesi bekler. Spatial hash ile O(N) merge.
+// kümesi bekler. Çekirdek algoritma fea-mesh-utils.js → veFEADedupVertices.
+// Burada Delaunay alt fonksiyonlarının (surface/interior sampling) sonradan
+// nokta ekleyebilmesi için coords mutable Array olarak tutulur.
 function _veFEADelaunayDedupVertices(verts, triangleCount) {
-  var N = triangleCount * 3;
-  var minX = Infinity, minY = Infinity, minZ = Infinity;
-  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-  for (var i = 0; i < verts.length; i += 3) {
-    var x = verts[i], y = verts[i + 1], z = verts[i + 2];
-    if (x < minX) minX = x; if (x > maxX) maxX = x;
-    if (y < minY) minY = y; if (y > maxY) maxY = y;
-    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
-  }
-  var dia = Math.max(maxX - minX, maxY - minY, maxZ - minZ);
-  var eps = Math.max(1e-9, dia * 1e-6);
-  var invEps = 1 / eps;
-
-  var map = new Map();
-  var uniqueCoords = [];
-  var newIndices = new Int32Array(N);
-
-  for (var v = 0; v < N; v++) {
-    var px = verts[v * 3], py = verts[v * 3 + 1], pz = verts[v * 3 + 2];
-    var k = Math.round(px * invEps) + '|' + Math.round(py * invEps) + '|' + Math.round(pz * invEps);
-    var existing = map.get(k);
-    if (existing !== undefined) {
-      newIndices[v] = existing;
-    } else {
-      var newIdx = uniqueCoords.length / 3;
-      map.set(k, newIdx);
-      uniqueCoords.push(px, py, pz);
-      newIndices[v] = newIdx;
-    }
-  }
+  var r = veFEADedupVertices(verts);
+  var coords = new Array(r.unique.length);
+  for (var i = 0; i < r.unique.length; i++) coords[i] = r.unique[i];
   return {
-    coords: uniqueCoords,         // [x0,y0,z0, x1,y1,z1, ...]
-    pointCount: uniqueCoords.length / 3,
-    triangles: newIndices,        // 3*triangleCount entries
+    coords:        coords,        // mutable [x0,y0,z0, ...] — sampling push edebilir
+    pointCount:    r.uniqueCount,
+    triangles:     r.canonical,   // 3*triangleCount entries
     triangleCount: triangleCount,
-    bbox: { minX: minX, maxX: maxX, minY: minY, maxY: maxY, minZ: minZ, maxZ: maxZ },
-    epsilon: eps
+    bbox:          r.bbox,
+    epsilon:       r.epsilon
   };
 }
 
