@@ -21917,6 +21917,13 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
     if (typeof showToast === 'function') {
       showToast('STEP yüklendi: ' + (fileName || '?') + ' (' + parsed.triangleCount + ' üçgen)', 'success');
     }
+    // showNodeProperties panel'i yeniden render eder → canvas DOM elementi
+    // değişir. Aşağıdaki dispose ile eski WebGL context'i serbest bırak
+    // (Chrome ~16 context limiti); veFEAApplyPrimitive'deki açıklamaya bak.
+    if (typeof veFEAViewerRegistry !== 'undefined' && veFEAViewerRegistry[nodeId]) {
+      try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
+      delete veFEAViewerRegistry[nodeId];
+    }
     if (typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
       var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
       if (n) showNodeProperties(n);
@@ -27036,7 +27043,23 @@ function veFEAInitViewer(canvas, opts) {
   var camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 5000);
   camera.position.set(60, 50, 90);
 
-  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  // WebGLRenderer constructor THREE.js içinde gl.getShaderPrecisionFormat()
+  // çağırır; context limit aşılırsa (Chrome ~16 concurrent) null döner ve
+  // "Cannot read properties of null (reading 'precision')" hatası verir.
+  // try/catch ile yakalıyoruz — kullanıcı sayfayı yenilemeden eski state'i
+  // korur. Çağıran (veFEAInitGeometryViewerForNode) null dönüşü handle eder.
+  var renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+  } catch (e) {
+    console.warn('[FEA] WebGLRenderer başlatılamadı (context limiti? GPU kayıp?):', e.message);
+    return null;
+  }
+  if (!renderer || !renderer.getContext || !renderer.getContext()) {
+    console.warn('[FEA] WebGL context alınamadı — viewer başlatılamıyor.');
+    if (renderer && renderer.dispose) try { renderer.dispose(); } catch (e) {}
+    return null;
+  }
   renderer.setSize(width, height, false);
   renderer.setPixelRatio(window.devicePixelRatio || 1);
   renderer.localClippingEnabled = true; // material.clippingPlanes etkili olsun
@@ -28429,6 +28452,19 @@ function veFEAApplyPrimitive(nodeId, type, params) {
       }
       if(typeof saveState === 'function') saveState();
     }
+  }
+
+  // KRİTİK: showNodeProperties panel'i yeniden render eder, canvas DOM
+  // elementi DEĞİŞİR (innerHTML = ...). Eski WebGL context detached canvas'a
+  // bağlı kalır; Chrome'un ~16 concurrent WebGL context limiti var. Bu yüzden
+  // showNodeProperties çağrısından ÖNCE eski viewer'ı dispose ediyoruz —
+  // WEBGL_lose_context ile slot serbest. Sonra cp-core setTimeout(100) ile
+  // veFEAInitGeometryViewerForNode yeni canvas'ta taze context oluşturur.
+  // Aksi halde "Cannot read properties of null (reading 'precision')" hatası
+  // (context limit aşımı, getShaderPrecisionFormat null döndürür).
+  if (veFEAViewerRegistry[nodeId]) {
+    try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
+    delete veFEAViewerRegistry[nodeId];
   }
 
   // Panel yeniden render — durum tablosu güncellensin

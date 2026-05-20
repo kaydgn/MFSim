@@ -151,7 +151,9 @@ describe('viewer davranış testleri (Three.js mock)', () => {
     WebGLRenderer.prototype.setScissorTest = function() {};
     WebGLRenderer.prototype.clearDepth = function() {};
     WebGLRenderer.prototype.render = function() {};
-    WebGLRenderer.prototype.getContext = function() { return null; };
+    // veFEAInitViewer artık getContext() null ise viewer'ı reddediyor
+    // (WebGL context limit defensive check). Mock için truthy stub döndür.
+    WebGLRenderer.prototype.getContext = function() { return {}; };
     WebGLRenderer.prototype.dispose = function() {};
 
     return {

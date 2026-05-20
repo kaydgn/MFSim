@@ -348,6 +348,13 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
     if (typeof showToast === 'function') {
       showToast('STEP yüklendi: ' + (fileName || '?') + ' (' + parsed.triangleCount + ' üçgen)', 'success');
     }
+    // showNodeProperties panel'i yeniden render eder → canvas DOM elementi
+    // değişir. Aşağıdaki dispose ile eski WebGL context'i serbest bırak
+    // (Chrome ~16 context limiti); veFEAApplyPrimitive'deki açıklamaya bak.
+    if (typeof veFEAViewerRegistry !== 'undefined' && veFEAViewerRegistry[nodeId]) {
+      try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
+      delete veFEAViewerRegistry[nodeId];
+    }
     if (typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
       var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
       if (n) showNodeProperties(n);

@@ -212,4 +212,29 @@ describe('fea-viewer köprü fonksiyonları (Three.js yokken graceful)', () => {
     veFEAClearGeometryForNode('c11');
     expect(global.nodes[0].data.geometry).toBeUndefined();
   });
+
+  test('veFEAApplyPrimitive: showNodeProperties öncesi viewer dispose edilir (WebGL context limiti)', () => {
+    // Chrome'un ~16 concurrent WebGL context limiti — her primitif submit
+    // panel re-render eder → yeni canvas → yeni context. Eski context'i
+    // serbest bırakmazsak limit aşılınca getShaderPrecisionFormat null
+    // döner ve "Cannot read properties of null (reading 'precision')"
+    // hatası alırız. Bu test, dispose'un showNodeProperties'ten ÖNCE
+    // çağrıldığını ve registry'nin temizlendiğini doğrular.
+    var disposeCalled = false;
+    var disposedBeforeShow = false;
+    var showCalled = false;
+    veFEAViewerRegistry['c12'] = {
+      loadPrimitive: function() {},
+      dispose: function() {
+        disposeCalled = true;
+        if (!showCalled) disposedBeforeShow = true;
+      }
+    };
+    global.nodes = [{ id: 'c12', data: {} }];
+    global.showNodeProperties = function() { showCalled = true; };
+    veFEAApplyPrimitive('c12', 'box', { width: 10, height: 10, depth: 10 });
+    expect(disposeCalled).toBe(true);
+    expect(disposedBeforeShow).toBe(true);
+    expect(veFEAViewerRegistry['c12']).toBeUndefined();
+  });
 });
