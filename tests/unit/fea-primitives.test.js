@@ -146,12 +146,13 @@ describe('cp-fea.js Geometri panel UI', () => {
     expect(html).toMatch(/henüz yok/);
   });
 
-  test('3 parametrik primitif butonu render edilir', () => {
+  test('Primitif dropdown\'unda 3 tip option olarak render edilir', () => {
     const node = { id: 'c2', data: {} };
     const html = getFEAGeometryPropertiesHTML(node);
-    expect(html).toMatch(/veFEAToggleParamForm\('c2', 'box'\)/);
-    expect(html).toMatch(/veFEAToggleParamForm\('c2', 'cylinder'\)/);
-    expect(html).toMatch(/veFEAToggleParamForm\('c2', 'shaft'\)/);
+    expect(html).toMatch(/veFEASelectParamForm\('c2', this\.value\)/);
+    expect(html).toMatch(/<option value="box"[^>]*>Kutu<\/option>/);
+    expect(html).toMatch(/<option value="cylinder"[^>]*>Silindir<\/option>/);
+    expect(html).toMatch(/<option value="shaft"[^>]*>/);
   });
 
   test('her tip için form (gizli) ve parametre input alanları render edilir', () => {
