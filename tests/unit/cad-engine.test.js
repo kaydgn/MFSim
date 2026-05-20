@@ -158,7 +158,8 @@ describe('CAD Engine — Persist (serialize/deserialize)', () => {
 });
 
 describe('CAD Engine — Backend / Özet', () => {
-  test('Faz-1: boolean yok', () => {
+  test('Manifold modülü yüklenmediği sürece boolean yok', () => {
+    // Test ortamında cad-boolean yüklenmedi → veCADBoolIsReady tanımsız
     expect(veCADHasBoolean()).toBe(false);
     expect(typeof veCADBackendLabel()).toBe('string');
   });
@@ -170,5 +171,60 @@ describe('CAD Engine — Backend / Özet', () => {
     expect(veCADSummaryLabel(m)).toMatch(/1 parça/);
     veCADAddFeature(m, 'cylinder');
     expect(veCADSummaryLabel(m)).toMatch(/2 parça/);
+  });
+});
+
+describe('CAD Engine — Boolean ihtiyacı tespiti', () => {
+  test('boş model bool gerektirmez', () => {
+    expect(veCADModelNeedsBool(veCADCreateModel())).toBe(false);
+  });
+
+  test('sadece add ops varsa bool gerekmez', () => {
+    const m = veCADCreateModel();
+    veCADAddFeature(m, 'box');
+    veCADAddFeature(m, 'cylinder');
+    veCADAddFeature(m, 'sphere');
+    expect(veCADModelNeedsBool(m)).toBe(false);
+  });
+
+  test('sub op varsa bool gerekir', () => {
+    const m = veCADCreateModel();
+    veCADAddFeature(m, 'box');
+    const cyl = veCADAddFeature(m, 'cylinder');
+    veCADUpdateFeature(m, cyl.id, { op: 'sub' });
+    expect(veCADModelNeedsBool(m)).toBe(true);
+  });
+
+  test('intersect op varsa bool gerekir', () => {
+    const m = veCADCreateModel();
+    veCADAddFeature(m, 'box');
+    const sph = veCADAddFeature(m, 'sphere');
+    veCADUpdateFeature(m, sph.id, { op: 'intersect' });
+    expect(veCADModelNeedsBool(m)).toBe(true);
+  });
+
+  test('op değiştirme (add→sub→intersect→add)', () => {
+    const m = veCADCreateModel();
+    veCADAddFeature(m, 'box');
+    const f = veCADAddFeature(m, 'cylinder');
+    expect(f.op).toBe('add');
+    veCADUpdateFeature(m, f.id, { op: 'sub' });
+    expect(veCADGetFeature(m, f.id).op).toBe('sub');
+    veCADUpdateFeature(m, f.id, { op: 'intersect' });
+    expect(veCADGetFeature(m, f.id).op).toBe('intersect');
+    veCADUpdateFeature(m, f.id, { op: 'add' });
+    expect(veCADGetFeature(m, f.id).op).toBe('add');
+  });
+
+  test('serialize/deserialize op alanını korur', () => {
+    const m = veCADCreateModel();
+    veCADAddFeature(m, 'box');
+    const cyl = veCADAddFeature(m, 'cylinder');
+    veCADUpdateFeature(m, cyl.id, { op: 'sub' });
+
+    const json = JSON.parse(JSON.stringify(veCADSerialize(m)));
+    const restored = veCADDeserialize(json);
+    expect(restored.features[1].op).toBe('sub');
+    expect(veCADModelNeedsBool(restored)).toBe(true);
   });
 });

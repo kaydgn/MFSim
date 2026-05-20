@@ -33,8 +33,24 @@ function veCADCreateModel() {
 }
 
 // ─── Backend bilgisi (UI'de göstermek için) ────────────────────────────────
-function veCADHasBoolean() { return false; }
-function veCADBackendLabel() { return 'Three.js (çoklu primitif kompozisyonu)'; }
+function veCADHasBoolean() {
+  return (typeof veCADBoolIsReady === 'function') && veCADBoolIsReady();
+}
+function veCADBackendLabel() {
+  if (veCADHasBoolean()) return 'Manifold-3D (CSG: union / subtract / intersect)';
+  if (typeof veCADBoolEnsureModule === 'function') return 'Three.js (Manifold yükleniyor — booleansız mod)';
+  return 'Three.js (çoklu primitif kompozisyonu)';
+}
+
+// Model'de boolean gerektiren feature var mı? (faz-1 fallback için)
+function veCADModelNeedsBool(model) {
+  if (!model || !model.features) return false;
+  for (var i = 0; i < model.features.length; i++) {
+    var op = model.features[i].op;
+    if (op === 'sub' || op === 'intersect') return true;
+  }
+  return false;
+}
 
 // ─── Feature ID üretici ────────────────────────────────────────────────────
 function _veCADGenFeatureId() {
@@ -206,10 +222,24 @@ function _veCADExtractTriangles(obj3D, outVerts, outNormals) {
 // ─── Modeli tessellate et: { vertices, normals, triangleCount } ────────────
 // veFEAApplySTEP / veFEAApplyPrimitive yolundakine uyumlu mesh formatı.
 // Vertex array Float32, her üçgen 9 float (3 vertex × 3 koord), her normal 3 float.
+//
+// Eğer modelin herhangi bir feature'ı sub/intersect ise VE Manifold modülü
+// yüklenmişse → veCADBoolApplyFeatures (gerçek CSG) kullanılır. Aksi halde
+// fallback: çoklu primitifleri concatenate eder (booleansız).
 function veCADTessellate(model) {
   if (!model || !model.features || model.features.length === 0) {
     return { vertices: new Float32Array(0), normals: new Float32Array(0), triangleCount: 0 };
   }
+
+  if (veCADModelNeedsBool(model) && veCADHasBoolean() && typeof veCADBoolApplyFeatures === 'function') {
+    try {
+      return veCADBoolApplyFeatures(model.features);
+    } catch (e) {
+      console.warn('[CAD] Manifold boolean başarısız, fallback yola dönülüyor:', e && e.message);
+      // fallback'a düş
+    }
+  }
+
   var root = veCADBuildScene(model);
   if (!root) return { vertices: new Float32Array(0), normals: new Float32Array(0), triangleCount: 0 };
 
@@ -310,6 +340,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veCADDeserialize: veCADDeserialize,
     veCADSummaryLabel: veCADSummaryLabel,
     veCADHasBoolean: veCADHasBoolean,
-    veCADBackendLabel: veCADBackendLabel
+    veCADBackendLabel: veCADBackendLabel,
+    veCADModelNeedsBool: veCADModelNeedsBool
   };
 }
