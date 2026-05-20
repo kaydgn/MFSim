@@ -2579,6 +2579,198 @@ function _veFEAHistogram(values, minVal, maxVal, binCount) {
 //   (θ_ideal - θ_min)/θ_ideal). 0 = ideal, 1 = dejenere.
 //   θ_ideal: üçgen yüz için 60°, kare yüz için 90°
 // İç açı: tüm yüzlerin tüm köşe açıları — min ve max global histogram'a düşer.
+// Element Quality (3D): Q = C × |V| / (Σ L²)^(3/2), C tip-spesifik normalize
+//   sabit, mükemmel küp/eşkenar = 1, dejenere = 0. ANSYS-uyumlu formül.
+// Orthogonal Quality: her yüz için |(face_center − cell_center) · n| / |..|,
+//   per-eleman min. Yapısal hex/quad için birincil metrik. 1 = mükemmel.
+// Warping Factor (quad face): 4 köşenin düzlemden sapma ölçüsü (diagonal
+//   midpoints farkı / avg diagonal). 0 = planar. Sadece hex/wedge quad
+//   yüzlerinde anlamlı.
+// Parallel Deviation (quad face): paralel kenarların paralellikten sapma
+//   açısı (derece). 0 = mükemmel paralelogram. Sadece quad-faced elemanlarda.
+
+// İki vektör (a, b) arasındaki açı (derece).
+function _veFEAVecAngleDeg(ax, ay, az, bx, by, bz) {
+  var aL = Math.sqrt(ax*ax + ay*ay + az*az);
+  var bL = Math.sqrt(bx*bx + by*by + bz*bz);
+  if (aL < 1e-12 || bL < 1e-12) return 0;
+  var d = (ax*bx + ay*by + az*bz) / (aL * bL);
+  if (d > 1) d = 1; else if (d < -1) d = -1;
+  return Math.acos(d) * 180 / Math.PI;
+}
+
+// Element merkezini hesapla (cornerCount düğümün ortalaması).
+function _veFEAElementCentroid(nodes, elements, off, cornerCount) {
+  var cx = 0, cy = 0, cz = 0;
+  for (var i = 0; i < cornerCount; i++) {
+    var n = elements[off + i] * 3;
+    cx += nodes[n]; cy += nodes[n + 1]; cz += nodes[n + 2];
+  }
+  return { x: cx / cornerCount, y: cy / cornerCount, z: cz / cornerCount };
+}
+
+// Yüz merkezi + outward normal (ilk 3 köşeden cross product, CCW şablonu varsayar).
+function _veFEAFaceCenterNormal(nodes, elements, off, face) {
+  var fLen = face.length;
+  var cx = 0, cy = 0, cz = 0;
+  for (var i = 0; i < fLen; i++) {
+    var n = elements[off + face[i]] * 3;
+    cx += nodes[n]; cy += nodes[n + 1]; cz += nodes[n + 2];
+  }
+  cx /= fLen; cy /= fLen; cz /= fLen;
+  var a = elements[off + face[0]] * 3;
+  var b = elements[off + face[1]] * 3;
+  var c = elements[off + face[2]] * 3;
+  var e1x = nodes[b]     - nodes[a];
+  var e1y = nodes[b + 1] - nodes[a + 1];
+  var e1z = nodes[b + 2] - nodes[a + 2];
+  var e2x = nodes[c]     - nodes[a];
+  var e2y = nodes[c + 1] - nodes[a + 1];
+  var e2z = nodes[c + 2] - nodes[a + 2];
+  var nx = e1y * e2z - e1z * e2y;
+  var ny = e1z * e2x - e1x * e2z;
+  var nz = e1x * e2y - e1y * e2x;
+  var len = Math.sqrt(nx*nx + ny*ny + nz*nz);
+  if (len > 1e-20) { nx /= len; ny /= len; nz /= len; }
+  return { cx: cx, cy: cy, cz: cz, nx: nx, ny: ny, nz: nz };
+}
+
+// Orthogonal Quality (per element): element centroid'ten her face center'a
+// vektör ile face normal arasındaki açının |cos|'ü. 1 = mükemmel ortogonal,
+// 0 = paralel (kötü). Per-element value = min over all faces.
+function _veFEAOrthogonalQuality(nodes, elements, off, cornerCount, faces) {
+  var cen = _veFEAElementCentroid(nodes, elements, off, cornerCount);
+  var minQ = Infinity;
+  for (var f = 0; f < faces.length; f++) {
+    var fn = _veFEAFaceCenterNormal(nodes, elements, off, faces[f]);
+    var fx = fn.cx - cen.x;
+    var fy = fn.cy - cen.y;
+    var fz = fn.cz - cen.z;
+    var fl = Math.sqrt(fx*fx + fy*fy + fz*fz);
+    if (fl < 1e-12) continue;
+    var dot = (fx * fn.nx + fy * fn.ny + fz * fn.nz) / fl;
+    var q = Math.abs(dot);
+    if (q < minQ) minQ = q;
+  }
+  return isFinite(minQ) ? minQ : 0;
+}
+
+// Element Quality (geometric shape factor). Mükemmel referansta Q=1.
+// 3D: Q = C × |V| / (Σ L²)^(3/2). C: tet=72√3, hex=24√3, wedge=36√3.
+// 2D: Q = (4√3) × A / (Σ L²) — equilateral tri için 1.
+var _VE_FEA_ELEM_QUAL_C_TET   = 72 * Math.sqrt(3);  // ≈ 124.708
+var _VE_FEA_ELEM_QUAL_C_HEX   = 24 * Math.sqrt(3);  // ≈ 41.569
+var _VE_FEA_ELEM_QUAL_C_WEDGE = 36 * Math.sqrt(3);  // ≈ 62.354
+var _VE_FEA_ELEM_QUAL_C_TRI   = 4  * Math.sqrt(3);  // ≈ 6.928 (2D)
+function _veFEAElementQuality(type, nodes, elements, off, edges) {
+  var sumL2 = 0;
+  for (var i = 0; i < edges.length; i++) {
+    var a = elements[off + edges[i][0]] * 3;
+    var b = elements[off + edges[i][1]] * 3;
+    var dx = nodes[a]     - nodes[b];
+    var dy = nodes[a + 1] - nodes[b + 1];
+    var dz = nodes[a + 2] - nodes[b + 2];
+    sumL2 += dx*dx + dy*dy + dz*dz;
+  }
+  if (sumL2 < 1e-20) return 0;
+
+  if (type === 'tri3') {
+    var a0 = elements[off + 0] * 3;
+    var a1 = elements[off + 1] * 3;
+    var a2 = elements[off + 2] * 3;
+    var e1x = nodes[a1]     - nodes[a0];
+    var e1y = nodes[a1 + 1] - nodes[a0 + 1];
+    var e1z = nodes[a1 + 2] - nodes[a0 + 2];
+    var e2x = nodes[a2]     - nodes[a0];
+    var e2y = nodes[a2 + 1] - nodes[a0 + 1];
+    var e2z = nodes[a2 + 2] - nodes[a0 + 2];
+    var cx = e1y * e2z - e1z * e2y;
+    var cy = e1z * e2x - e1x * e2z;
+    var cz = e1x * e2y - e1y * e2x;
+    var area = 0.5 * Math.sqrt(cx*cx + cy*cy + cz*cz);
+    var q2 = _VE_FEA_ELEM_QUAL_C_TRI * area / sumL2;
+    return q2 > 1 ? 1 : (q2 < 0 ? 0 : q2);
+  }
+
+  var vol = 0, C = 0;
+  if (type === 'tet4' || type === 'tet10') {
+    vol = Math.abs(_veFEATetSignedVolume(nodes, elements, off, 0, 1, 2, 3));
+    C = _VE_FEA_ELEM_QUAL_C_TET;
+  } else if (type === 'hex8' || type === 'hex20') {
+    var vh = _veFEAHexSubTetVolumes(nodes, elements, off);
+    var sh = 0; for (var kh = 0; kh < vh.length; kh++) sh += vh[kh];
+    vol = Math.abs(sh);
+    C = _VE_FEA_ELEM_QUAL_C_HEX;
+  } else if (type === 'wedge6' || type === 'wedge15') {
+    var vw = _veFEAWedgeSubTetVolumes(nodes, elements, off);
+    var sw = 0; for (var kw = 0; kw < vw.length; kw++) sw += vw[kw];
+    vol = Math.abs(sw);
+    C = _VE_FEA_ELEM_QUAL_C_WEDGE;
+  } else {
+    return 0;
+  }
+  var den = Math.pow(sumL2, 1.5);
+  if (den < 1e-20) return 0;
+  var q = C * vol / den;
+  return q > 1 ? 1 : (q < 0 ? 0 : q);
+}
+
+// Warping Factor (per element): quad-face'lerin düzlemden sapması.
+// Yöntem: iki diagonal'in midpoint'leri arası mesafe / ortalama diagonal uzunluğu.
+// 0 = planar, > 0.05 problemli. Tet/tri'de quad face yok → 0.
+function _veFEAWarpingFactor(nodes, elements, off, faces) {
+  var maxW = 0;
+  for (var f = 0; f < faces.length; f++) {
+    var face = faces[f];
+    if (face.length !== 4) continue;
+    var p0 = elements[off + face[0]] * 3;
+    var p1 = elements[off + face[1]] * 3;
+    var p2 = elements[off + face[2]] * 3;
+    var p3 = elements[off + face[3]] * 3;
+    var m1x = (nodes[p0]     + nodes[p2])     * 0.5;
+    var m1y = (nodes[p0 + 1] + nodes[p2 + 1]) * 0.5;
+    var m1z = (nodes[p0 + 2] + nodes[p2 + 2]) * 0.5;
+    var m2x = (nodes[p1]     + nodes[p3])     * 0.5;
+    var m2y = (nodes[p1 + 1] + nodes[p3 + 1]) * 0.5;
+    var m2z = (nodes[p1 + 2] + nodes[p3 + 2]) * 0.5;
+    var dx = m1x - m2x, dy = m1y - m2y, dz = m1z - m2z;
+    var d = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    var d1x = nodes[p2]     - nodes[p0], d1y = nodes[p2+1] - nodes[p0+1], d1z = nodes[p2+2] - nodes[p0+2];
+    var d2x = nodes[p3]     - nodes[p1], d2y = nodes[p3+1] - nodes[p1+1], d2z = nodes[p3+2] - nodes[p1+2];
+    var L1 = Math.sqrt(d1x*d1x + d1y*d1y + d1z*d1z);
+    var L2 = Math.sqrt(d2x*d2x + d2y*d2y + d2z*d2z);
+    var avgL = (L1 + L2) * 0.5;
+    if (avgL < 1e-12) continue;
+    var w = d / avgL;
+    if (w > maxW) maxW = w;
+  }
+  return maxW;
+}
+
+// Parallel Deviation (per element): quad face paralel kenarlarının paralellikten
+// sapma açısı (derece). 0 = mükemmel paralelogram, > 70° kötü.
+function _veFEAParallelDeviation(nodes, elements, off, faces) {
+  var maxD = 0;
+  for (var f = 0; f < faces.length; f++) {
+    var face = faces[f];
+    if (face.length !== 4) continue;
+    var p0 = elements[off + face[0]] * 3;
+    var p1 = elements[off + face[1]] * 3;
+    var p2 = elements[off + face[2]] * 3;
+    var p3 = elements[off + face[3]] * 3;
+    var e0x = nodes[p1]   - nodes[p0],   e0y = nodes[p1+1] - nodes[p0+1], e0z = nodes[p1+2] - nodes[p0+2];
+    var e1x = nodes[p2]   - nodes[p1],   e1y = nodes[p2+1] - nodes[p1+1], e1z = nodes[p2+2] - nodes[p1+2];
+    var e2x = nodes[p3]   - nodes[p2],   e2y = nodes[p3+1] - nodes[p2+1], e2z = nodes[p3+2] - nodes[p2+2];
+    var e3x = nodes[p0]   - nodes[p3],   e3y = nodes[p0+1] - nodes[p3+1], e3z = nodes[p0+2] - nodes[p3+2];
+    // Paralel olması beklenen: e0 ‖ -e2, e1 ‖ -e3. Sapma açısı:
+    var dev1 = _veFEAVecAngleDeg(e0x, e0y, e0z, -e2x, -e2y, -e2z);
+    var dev2 = _veFEAVecAngleDeg(e1x, e1y, e1z, -e3x, -e3y, -e3z);
+    var dev = Math.max(dev1, dev2);
+    if (dev > maxD) maxD = dev;
+  }
+  return maxD;
+}
+
 function veFEAComputeQualityMetrics(meshData) {
   if (!meshData || meshData.error) return null;
   var nodes = meshData.nodes;
@@ -2611,12 +2803,28 @@ function veFEAComputeQualityMetrics(meshData) {
   var skewArr = new Float32Array(n);
   var minAngleArr = new Float32Array(n);
   var maxAngleArr = new Float32Array(n);
+  var orthoArr = new Float32Array(n);
+  var elemQualArr = new Float32Array(n);
+  var warpArr = new Float32Array(n);
+  var parDevArr = new Float32Array(n);
   var poorAspect = 0;     // ar > 20
   var poorSkew = 0;       // sk > 0.85
+  var poorElemQual = 0;   // eq < 0.2
+  var poorOrtho = 0;      // oq < 0.1
+  var poorWarp = 0;       // w > 0.05
+  var poorParDev = 0;     // pd > 70°
 
   var gMinAr = Infinity, gMaxAr = -Infinity, sumAr = 0;
   var gMinSk = Infinity, gMaxSk = -Infinity, sumSk = 0;
   var gMinAng = Infinity, gMaxAng = -Infinity;
+  var gMinEq = Infinity, gMaxEq = -Infinity, sumEq = 0;
+  var gMinOq = Infinity, gMaxOq = -Infinity, sumOq = 0;
+  var gMinWp = Infinity, gMaxWp = -Infinity, sumWp = 0;
+  var gMinPd = Infinity, gMaxPd = -Infinity, sumPd = 0;
+
+  var hasQuadFaces = (type === 'hex8' || type === 'hex20' ||
+                      type === 'wedge6' || type === 'wedge15');
+  var is3D = (type !== 'tri3');
 
   for (var e = 0; e < n; e++) {
     var off = e * per;
@@ -2670,6 +2878,41 @@ function veFEAComputeQualityMetrics(meshData) {
     if (elemSkew > gMaxSk) gMaxSk = elemSkew;
     sumSk += elemSkew;
     if (elemSkew > 0.85) poorSkew++;
+
+    // Element Quality (tüm tipler)
+    var eq = _veFEAElementQuality(type, nodes, elements, off, edges);
+    elemQualArr[e] = eq;
+    if (eq < gMinEq) gMinEq = eq;
+    if (eq > gMaxEq) gMaxEq = eq;
+    sumEq += eq;
+    if (eq < 0.2) poorElemQual++;
+
+    // Orthogonal Quality (sadece 3D)
+    if (is3D) {
+      var oq = _veFEAOrthogonalQuality(nodes, elements, off, cornerCount, faces);
+      orthoArr[e] = oq;
+      if (oq < gMinOq) gMinOq = oq;
+      if (oq > gMaxOq) gMaxOq = oq;
+      sumOq += oq;
+      if (oq < 0.1) poorOrtho++;
+    }
+
+    // Warping + Parallel Deviation (sadece quad-faced)
+    if (hasQuadFaces) {
+      var wp = _veFEAWarpingFactor(nodes, elements, off, faces);
+      warpArr[e] = wp;
+      if (wp < gMinWp) gMinWp = wp;
+      if (wp > gMaxWp) gMaxWp = wp;
+      sumWp += wp;
+      if (wp > 0.05) poorWarp++;
+
+      var pd = _veFEAParallelDeviation(nodes, elements, off, faces);
+      parDevArr[e] = pd;
+      if (pd < gMinPd) gMinPd = pd;
+      if (pd > gMaxPd) gMaxPd = pd;
+      sumPd += pd;
+      if (pd > 70) poorParDev++;
+    }
   }
 
   return {
@@ -2695,7 +2938,39 @@ function veFEAComputeQualityMetrics(meshData) {
       min: isFinite(gMinAng) ? gMinAng : 0,
       max: isFinite(gMaxAng) ? gMaxAng : 0,
       histogram: _veFEAHistogram(minAngleArr, 0, 180, 12)
-    }
+    },
+    elementQuality: {
+      min: isFinite(gMinEq) ? gMinEq : 0,
+      max: isFinite(gMaxEq) ? gMaxEq : 0,
+      avg: sumEq / n,
+      poorCount: poorElemQual,
+      warnThreshold: 0.2,
+      histogram: _veFEAHistogram(elemQualArr, 0, 1, 10)
+    },
+    orthogonalQuality: is3D ? {
+      min: isFinite(gMinOq) ? gMinOq : 0,
+      max: isFinite(gMaxOq) ? gMaxOq : 0,
+      avg: sumOq / n,
+      poorCount: poorOrtho,
+      warnThreshold: 0.1,
+      histogram: _veFEAHistogram(orthoArr, 0, 1, 10)
+    } : null,
+    warpingFactor: hasQuadFaces ? {
+      min: isFinite(gMinWp) ? gMinWp : 0,
+      max: isFinite(gMaxWp) ? gMaxWp : 0,
+      avg: sumWp / n,
+      poorCount: poorWarp,
+      warnThreshold: 0.05,
+      histogram: _veFEAHistogram(warpArr, 0, 0.5, 10)
+    } : null,
+    parallelDeviation: hasQuadFaces ? {
+      min: isFinite(gMinPd) ? gMinPd : 0,
+      max: isFinite(gMaxPd) ? gMaxPd : 0,
+      avg: sumPd / n,
+      poorCount: poorParDev,
+      warnThreshold: 70,
+      histogram: _veFEAHistogram(parDevArr, 0, 90, 9)
+    } : null
   };
 }
 
@@ -2769,7 +3044,59 @@ function veFEAComputeRefinementSuggestions(meshMetrics) {
     }
   }
 
-  // 5. Çevresel curvature (silindir/şaft için)
+  // 5. Element Quality (3D shape factor)
+  if (q && q.elementQuality && q.elementQuality.poorCount > 0) {
+    var pctEq = q.elementQuality.poorCount / n;
+    if (pctEq > 0.05) {
+      out.push({
+        severity: 'warn',
+        message: q.elementQuality.poorCount + ' eleman Element Quality < ' + q.elementQuality.warnThreshold +
+          ' (%' + Math.round(pctEq * 100) + '). Şekil faktörü düşük, lokal sizing veya method değişikliği deneyin.',
+        action: null
+      });
+    }
+  }
+
+  // 6. Orthogonal Quality (yapısal hex/quad için birincil metrik)
+  if (q && q.orthogonalQuality && q.orthogonalQuality.poorCount > 0) {
+    var pctOq = q.orthogonalQuality.poorCount / n;
+    if (pctOq > 0.05) {
+      out.push({
+        severity: 'warn',
+        message: q.orthogonalQuality.poorCount + ' eleman Orthogonal Quality < ' + q.orthogonalQuality.warnThreshold +
+          ' (%' + Math.round(pctOq * 100) + '). Sweep/MultiZone yöntemi veya curvature refinement deneyin.',
+        action: null
+      });
+    }
+  }
+
+  // 7. Warping (quad-faced elements)
+  if (q && q.warpingFactor && q.warpingFactor.poorCount > 0) {
+    var pctWp = q.warpingFactor.poorCount / n;
+    if (pctWp > 0.05) {
+      out.push({
+        severity: 'warn',
+        message: q.warpingFactor.poorCount + ' yüz warping > ' + q.warpingFactor.warnThreshold +
+          ' (%' + Math.round(pctWp * 100) + '). Düz yüzeyli mesh için sweep veya yapısal grid kullanın.',
+        action: null
+      });
+    }
+  }
+
+  // 8. Parallel Deviation (quad-faced elements)
+  if (q && q.parallelDeviation && q.parallelDeviation.poorCount > 0) {
+    var pctPd = q.parallelDeviation.poorCount / n;
+    if (pctPd > 0.05) {
+      out.push({
+        severity: 'info',
+        message: q.parallelDeviation.poorCount + ' yüz parallel deviation > ' + q.parallelDeviation.warnThreshold +
+          '° (%' + Math.round(pctPd * 100) + '). Quad simetrisi bozuk, structured sweep değerlendirin.',
+        action: null
+      });
+    }
+  }
+
+  // 9. Çevresel curvature (silindir/şaft için)
   if (meshMetrics.sweepAxis === 'Y' && q && q.aspectRatio.max > 5) {
     out.push({
       severity: 'info',
@@ -2878,6 +3205,24 @@ function veFEAComputePerElementQuality(meshData, metric) {
         if (av > absMax) absMax = av;
       }
       out[e] = (absMin > 1e-12) ? (absMax / absMin) : 999;
+
+    } else if (metric === 'elementQuality') {
+      out[e] = _veFEAElementQuality(type, nodes, elements, off, edges);
+
+    } else if (metric === 'orthogonalQuality') {
+      if (type === 'tri3') { out[e] = 0; continue; }
+      var cornerC = (type === 'tet10') ? 4
+                  : (type === 'hex20') ? 8
+                  : (type === 'wedge15') ? 6
+                  : per;
+      out[e] = _veFEAOrthogonalQuality(nodes, elements, off, cornerC, faces);
+
+    } else if (metric === 'warpingFactor') {
+      out[e] = _veFEAWarpingFactor(nodes, elements, off, faces);
+
+    } else if (metric === 'parallelDeviation') {
+      out[e] = _veFEAParallelDeviation(nodes, elements, off, faces);
+
     } else {
       out[e] = 0;
     }

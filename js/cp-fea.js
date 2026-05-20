@@ -30,26 +30,36 @@ function veFEAReadOnlyRow(label, value) {
 // thresholds (opsiyonel): { warnLimit, errLimit, inverted } → her bin'i ANSYS
 // Mesh Quality Worksheet renkleriyle boyar (yeşil/sarı/kırmızı). thresholds
 // yoksa tüm bar'lar tek renk (`color`).
-function veFEAHistogramHTML(hist, label, color, axisFmt, thresholds) {
+// onBarClickJSExpr (opsiyonel): string JS ifadesi — örn.
+//   'veFEAHighlightQualityBin("node-1", "aspectRatio")'
+// Her bar'a onclick="(<expr>)(binIdx)" eklenir; ANSYS-style bin-selection.
+function veFEAHistogramHTML(hist, label, color, axisFmt, thresholds, onBarClickJSExpr) {
   if (!hist || !hist.bins || hist.bins.length === 0) return '';
   var maxCount = 0;
   for (var i = 0; i < hist.bins.length; i++) if (hist.bins[i] > maxCount) maxCount = hist.bins[i];
   var fmt = axisFmt || function(v) { return v.toFixed(1); };
+  var clickable = !!onBarClickJSExpr;
   var html = '<div style="margin-bottom:8px;">';
-  html += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:3px;">' + label + '</div>';
+  html += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:3px;">' + label +
+    (clickable ? ' <span style="color:var(--text-muted); font-size:0.55rem;">(bin tıkla → 3D vurgu)</span>' : '') + '</div>';
   html += '<div style="display:flex; align-items:flex-end; height:36px; gap:1px; background:var(--bg-secondary); padding:3px; border:1px solid var(--border-color);">';
   hist.bins.forEach(function(b, idx) {
     var pct = maxCount > 0 ? (b / maxCount * 100) : 0;
     var binMin = hist.min + (hist.max - hist.min) * (idx / hist.binCount);
     var binMax = hist.min + (hist.max - hist.min) * ((idx + 1) / hist.binCount);
     var binCenter = (binMin + binMax) / 2;
-    var title = fmt(binMin) + '–' + fmt(binMax) + ': ' + b + ' eleman';
+    var title = fmt(binMin) + '–' + fmt(binMax) + ': ' + b + ' eleman' + (clickable && b > 0 ? ' (tıkla)' : '');
     var binColor = color;
     if (thresholds && typeof veFEAThresholdColor === 'function') {
       var rgb = veFEAThresholdColor(binCenter, thresholds.warnLimit, thresholds.errLimit, !!thresholds.inverted);
       binColor = 'rgb(' + Math.round(rgb[0]*255) + ',' + Math.round(rgb[1]*255) + ',' + Math.round(rgb[2]*255) + ')';
     }
-    html += '<div title="' + title + '" style="flex:1; background:' + binColor + '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + ';"></div>';
+    var clickAttr = (clickable && b > 0)
+      ? ' onclick="(' + onBarClickJSExpr + ')(' + idx + ', this)" style="flex:1; background:' + binColor +
+        '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + '; cursor:pointer;"'
+        + ' onmouseenter="this.style.outline=\'2px solid #fbbf24\'" onmouseleave="this.style.outline=\'none\'"'
+      : ' style="flex:1; background:' + binColor + '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + ';"';
+    html += '<div title="' + title + '"' + clickAttr + '></div>';
   });
   html += '</div>';
   html += '<div style="display:flex; justify-content:space-between; font-size:0.52rem; color:var(--text-muted); margin-top:2px;">' +

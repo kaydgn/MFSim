@@ -2142,6 +2142,175 @@ describe('veFEAComputeQualityMetrics', () => {
   });
 });
 
+// ─── ANSYS §7 — eksik 4 metrik (Element Quality / Orthogonal / Warping / Parallel Deviation) ───
+describe('veFEAComputeQualityMetrics — Element Quality (C·V / (ΣL²)^1.5)', () => {
+  test('Mükemmel küp hex8 için Element Quality ≈ 1.0', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 10 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.elementQuality).toBeDefined();
+    expect(q.elementQuality.min).toBeCloseTo(1, 2);
+    expect(q.elementQuality.max).toBeCloseTo(1, 2);
+    expect(q.elementQuality.avg).toBeCloseTo(1, 2);
+    expect(q.elementQuality.poorCount).toBe(0);
+  });
+
+  test('Streçli prizma (1×10×1) için Element Quality < 1.0', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 1, height: 10, depth: 1 } }, { size: 10 });
+    var q = veFEAComputeQualityMetrics(m);
+    // Streçli element → kalite düşmeli ama 0 olmamalı
+    expect(q.elementQuality.max).toBeLessThan(0.5);
+    expect(q.elementQuality.min).toBeGreaterThan(0);
+  });
+
+  test('Hex20 quadratic mesh için Element Quality corner-based (≈ 1)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } },
+                                  { size: 10, midSideNodes: true });
+    expect(m.type).toBe('hex20');
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.elementQuality.avg).toBeCloseTo(1, 2);
+  });
+
+  test('Tet4 mesh için Element Quality > 0 ve ≤ 1', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } },
+                                  { size: 5, elementType: 'tet4' });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.elementQuality.min).toBeGreaterThan(0);
+    expect(q.elementQuality.max).toBeLessThanOrEqual(1.0001);
+  });
+
+  test('Histogram 10 bin, toplam = elementCount', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.elementQuality.histogram.binCount).toBe(10);
+    var sum = 0; q.elementQuality.histogram.bins.forEach(function(b) { sum += b; });
+    expect(sum).toBe(q.elementCount);
+  });
+});
+
+describe('veFEAComputeQualityMetrics — Orthogonal Quality', () => {
+  test('Mükemmel küp için Orthogonal Quality ≈ 1.0 (her face perpendicular)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 10 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.orthogonalQuality).not.toBeNull();
+    expect(q.orthogonalQuality.min).toBeCloseTo(1, 2);
+    expect(q.orthogonalQuality.max).toBeCloseTo(1, 2);
+    expect(q.orthogonalQuality.poorCount).toBe(0);
+  });
+
+  test('Streçli prizma için Orthogonal Quality hala yüksek (uniform stretch, face/center hizalı kalır)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 1, height: 10, depth: 1 } }, { size: 10 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.orthogonalQuality.min).toBeGreaterThan(0.9);
+  });
+
+  test('Silindir wedge6 için Orthogonal Quality > 0 (üçgen yüzler hafif eğri)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: 10, height: 20 } }, { size: 5 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.orthogonalQuality.min).toBeGreaterThan(0);
+    expect(q.orthogonalQuality.max).toBeLessThanOrEqual(1.0001);
+  });
+
+  test('Tri3 yüzey mesh için orthogonalQuality === null (3D-only metrik)', () => {
+    // Sentetik tri3 mesh inşa et
+    var m = {
+      type: 'tri3', geometryType: 'test',
+      nodes: new Float32Array([0,0,0, 1,0,0, 0,1,0]),
+      elements: new Uint32Array([0,1,2]),
+      nodesPerElement: 3
+    };
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.orthogonalQuality).toBeNull();
+  });
+});
+
+describe('veFEAComputeQualityMetrics — Warping Factor (quad-face only)', () => {
+  test('Mükemmel küp için Warping ≈ 0 (tüm face\'ler planar)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 10 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.warpingFactor).not.toBeNull();
+    expect(q.warpingFactor.max).toBeLessThan(1e-4);
+    expect(q.warpingFactor.poorCount).toBe(0);
+  });
+
+  test('Tet4 mesh için warpingFactor === null (quad face yok)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } },
+                                  { size: 10, elementType: 'tet4' });
+    expect(m.type).toBe('tet4');
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.warpingFactor).toBeNull();
+  });
+
+  test('Sentetik warped hex8: bir köşeyi düzlemden çıkarınca W > 0', () => {
+    // Birim küp, P4'i (üst sol arka) z-yönünde 0.5 yükselt → top face warped
+    var nodes = new Float32Array([
+      0,0,0,  1,0,0,  1,1,0,  0,1,0,   // alt yüz
+      0,0,1.5,  1,0,1,  1,1,1,  0,1,1  // üst yüz (P4 yukarı bükülmüş)
+    ]);
+    var m = {
+      type: 'hex8', geometryType: 'test',
+      nodes: nodes,
+      elements: new Uint32Array([0,1,2,3, 4,5,6,7]),
+      nodesPerElement: 8
+    };
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.warpingFactor.max).toBeGreaterThan(0.05);
+  });
+});
+
+describe('veFEAComputeQualityMetrics — Parallel Deviation (quad-face only)', () => {
+  test('Mükemmel küp için Parallel Deviation ≈ 0° (kareler paralelogram)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 10 });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.parallelDeviation).not.toBeNull();
+    expect(q.parallelDeviation.max).toBeLessThan(1);
+  });
+
+  test('Tet4 mesh için parallelDeviation === null', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } },
+                                  { size: 10, elementType: 'tet4' });
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.parallelDeviation).toBeNull();
+  });
+
+  test('Sentetik trapezoid hex8: bir kenarı kaydırınca PD > 0', () => {
+    // Birim küp, alt yüzü trapez yap: P0'ı x yönünde 0.5 kaydır
+    var nodes = new Float32Array([
+      0.5,0,0,  1,0,0,  1,1,0,  0,1,0,   // alt: trapez
+      0,0,1,    1,0,1,  1,1,1,  0,1,1    // üst: kare
+    ]);
+    var m = {
+      type: 'hex8', geometryType: 'test',
+      nodes: nodes,
+      elements: new Uint32Array([0,1,2,3, 4,5,6,7]),
+      nodesPerElement: 8
+    };
+    var q = veFEAComputeQualityMetrics(m);
+    expect(q.parallelDeviation.max).toBeGreaterThan(5);
+  });
+});
+
+describe('veFEAComputePerElementQuality — yeni metrikler', () => {
+  test('elementQuality, orthogonalQuality, warpingFactor, parallelDeviation per-element çalışır', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 10, height: 10, depth: 10 } }, { size: 5 });
+    expect(m.type).toBe('hex8');
+    var eqArr = veFEAComputePerElementQuality(m, 'elementQuality');
+    var oqArr = veFEAComputePerElementQuality(m, 'orthogonalQuality');
+    var wpArr = veFEAComputePerElementQuality(m, 'warpingFactor');
+    var pdArr = veFEAComputePerElementQuality(m, 'parallelDeviation');
+    expect(eqArr.length).toBe(m.elements.length / m.nodesPerElement);
+    expect(oqArr.length).toBe(eqArr.length);
+    expect(wpArr.length).toBe(eqArr.length);
+    expect(pdArr.length).toBe(eqArr.length);
+    // Mükemmel küp → tüm değerler iyi
+    for (var i = 0; i < eqArr.length; i++) {
+      expect(eqArr[i]).toBeCloseTo(1, 2);
+      expect(oqArr[i]).toBeCloseTo(1, 2);
+      expect(wpArr[i]).toBeLessThan(1e-4);
+      expect(pdArr[i]).toBeLessThan(1);
+    }
+  });
+});
+
 // ────────────────────────────────────────────────────────────────────────────
 describe('cp-fea.js Mesh paneli — Kalite Metrikleri (histogram)', () => {
   beforeEach(() => {

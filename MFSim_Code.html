@@ -26951,6 +26951,198 @@ function _veFEAHistogram(values, minVal, maxVal, binCount) {
 //   (θ_ideal - θ_min)/θ_ideal). 0 = ideal, 1 = dejenere.
 //   θ_ideal: üçgen yüz için 60°, kare yüz için 90°
 // İç açı: tüm yüzlerin tüm köşe açıları — min ve max global histogram'a düşer.
+// Element Quality (3D): Q = C × |V| / (Σ L²)^(3/2), C tip-spesifik normalize
+//   sabit, mükemmel küp/eşkenar = 1, dejenere = 0. ANSYS-uyumlu formül.
+// Orthogonal Quality: her yüz için |(face_center − cell_center) · n| / |..|,
+//   per-eleman min. Yapısal hex/quad için birincil metrik. 1 = mükemmel.
+// Warping Factor (quad face): 4 köşenin düzlemden sapma ölçüsü (diagonal
+//   midpoints farkı / avg diagonal). 0 = planar. Sadece hex/wedge quad
+//   yüzlerinde anlamlı.
+// Parallel Deviation (quad face): paralel kenarların paralellikten sapma
+//   açısı (derece). 0 = mükemmel paralelogram. Sadece quad-faced elemanlarda.
+
+// İki vektör (a, b) arasındaki açı (derece).
+function _veFEAVecAngleDeg(ax, ay, az, bx, by, bz) {
+  var aL = Math.sqrt(ax*ax + ay*ay + az*az);
+  var bL = Math.sqrt(bx*bx + by*by + bz*bz);
+  if (aL < 1e-12 || bL < 1e-12) return 0;
+  var d = (ax*bx + ay*by + az*bz) / (aL * bL);
+  if (d > 1) d = 1; else if (d < -1) d = -1;
+  return Math.acos(d) * 180 / Math.PI;
+}
+
+// Element merkezini hesapla (cornerCount düğümün ortalaması).
+function _veFEAElementCentroid(nodes, elements, off, cornerCount) {
+  var cx = 0, cy = 0, cz = 0;
+  for (var i = 0; i < cornerCount; i++) {
+    var n = elements[off + i] * 3;
+    cx += nodes[n]; cy += nodes[n + 1]; cz += nodes[n + 2];
+  }
+  return { x: cx / cornerCount, y: cy / cornerCount, z: cz / cornerCount };
+}
+
+// Yüz merkezi + outward normal (ilk 3 köşeden cross product, CCW şablonu varsayar).
+function _veFEAFaceCenterNormal(nodes, elements, off, face) {
+  var fLen = face.length;
+  var cx = 0, cy = 0, cz = 0;
+  for (var i = 0; i < fLen; i++) {
+    var n = elements[off + face[i]] * 3;
+    cx += nodes[n]; cy += nodes[n + 1]; cz += nodes[n + 2];
+  }
+  cx /= fLen; cy /= fLen; cz /= fLen;
+  var a = elements[off + face[0]] * 3;
+  var b = elements[off + face[1]] * 3;
+  var c = elements[off + face[2]] * 3;
+  var e1x = nodes[b]     - nodes[a];
+  var e1y = nodes[b + 1] - nodes[a + 1];
+  var e1z = nodes[b + 2] - nodes[a + 2];
+  var e2x = nodes[c]     - nodes[a];
+  var e2y = nodes[c + 1] - nodes[a + 1];
+  var e2z = nodes[c + 2] - nodes[a + 2];
+  var nx = e1y * e2z - e1z * e2y;
+  var ny = e1z * e2x - e1x * e2z;
+  var nz = e1x * e2y - e1y * e2x;
+  var len = Math.sqrt(nx*nx + ny*ny + nz*nz);
+  if (len > 1e-20) { nx /= len; ny /= len; nz /= len; }
+  return { cx: cx, cy: cy, cz: cz, nx: nx, ny: ny, nz: nz };
+}
+
+// Orthogonal Quality (per element): element centroid'ten her face center'a
+// vektör ile face normal arasındaki açının |cos|'ü. 1 = mükemmel ortogonal,
+// 0 = paralel (kötü). Per-element value = min over all faces.
+function _veFEAOrthogonalQuality(nodes, elements, off, cornerCount, faces) {
+  var cen = _veFEAElementCentroid(nodes, elements, off, cornerCount);
+  var minQ = Infinity;
+  for (var f = 0; f < faces.length; f++) {
+    var fn = _veFEAFaceCenterNormal(nodes, elements, off, faces[f]);
+    var fx = fn.cx - cen.x;
+    var fy = fn.cy - cen.y;
+    var fz = fn.cz - cen.z;
+    var fl = Math.sqrt(fx*fx + fy*fy + fz*fz);
+    if (fl < 1e-12) continue;
+    var dot = (fx * fn.nx + fy * fn.ny + fz * fn.nz) / fl;
+    var q = Math.abs(dot);
+    if (q < minQ) minQ = q;
+  }
+  return isFinite(minQ) ? minQ : 0;
+}
+
+// Element Quality (geometric shape factor). Mükemmel referansta Q=1.
+// 3D: Q = C × |V| / (Σ L²)^(3/2). C: tet=72√3, hex=24√3, wedge=36√3.
+// 2D: Q = (4√3) × A / (Σ L²) — equilateral tri için 1.
+var _VE_FEA_ELEM_QUAL_C_TET   = 72 * Math.sqrt(3);  // ≈ 124.708
+var _VE_FEA_ELEM_QUAL_C_HEX   = 24 * Math.sqrt(3);  // ≈ 41.569
+var _VE_FEA_ELEM_QUAL_C_WEDGE = 36 * Math.sqrt(3);  // ≈ 62.354
+var _VE_FEA_ELEM_QUAL_C_TRI   = 4  * Math.sqrt(3);  // ≈ 6.928 (2D)
+function _veFEAElementQuality(type, nodes, elements, off, edges) {
+  var sumL2 = 0;
+  for (var i = 0; i < edges.length; i++) {
+    var a = elements[off + edges[i][0]] * 3;
+    var b = elements[off + edges[i][1]] * 3;
+    var dx = nodes[a]     - nodes[b];
+    var dy = nodes[a + 1] - nodes[b + 1];
+    var dz = nodes[a + 2] - nodes[b + 2];
+    sumL2 += dx*dx + dy*dy + dz*dz;
+  }
+  if (sumL2 < 1e-20) return 0;
+
+  if (type === 'tri3') {
+    var a0 = elements[off + 0] * 3;
+    var a1 = elements[off + 1] * 3;
+    var a2 = elements[off + 2] * 3;
+    var e1x = nodes[a1]     - nodes[a0];
+    var e1y = nodes[a1 + 1] - nodes[a0 + 1];
+    var e1z = nodes[a1 + 2] - nodes[a0 + 2];
+    var e2x = nodes[a2]     - nodes[a0];
+    var e2y = nodes[a2 + 1] - nodes[a0 + 1];
+    var e2z = nodes[a2 + 2] - nodes[a0 + 2];
+    var cx = e1y * e2z - e1z * e2y;
+    var cy = e1z * e2x - e1x * e2z;
+    var cz = e1x * e2y - e1y * e2x;
+    var area = 0.5 * Math.sqrt(cx*cx + cy*cy + cz*cz);
+    var q2 = _VE_FEA_ELEM_QUAL_C_TRI * area / sumL2;
+    return q2 > 1 ? 1 : (q2 < 0 ? 0 : q2);
+  }
+
+  var vol = 0, C = 0;
+  if (type === 'tet4' || type === 'tet10') {
+    vol = Math.abs(_veFEATetSignedVolume(nodes, elements, off, 0, 1, 2, 3));
+    C = _VE_FEA_ELEM_QUAL_C_TET;
+  } else if (type === 'hex8' || type === 'hex20') {
+    var vh = _veFEAHexSubTetVolumes(nodes, elements, off);
+    var sh = 0; for (var kh = 0; kh < vh.length; kh++) sh += vh[kh];
+    vol = Math.abs(sh);
+    C = _VE_FEA_ELEM_QUAL_C_HEX;
+  } else if (type === 'wedge6' || type === 'wedge15') {
+    var vw = _veFEAWedgeSubTetVolumes(nodes, elements, off);
+    var sw = 0; for (var kw = 0; kw < vw.length; kw++) sw += vw[kw];
+    vol = Math.abs(sw);
+    C = _VE_FEA_ELEM_QUAL_C_WEDGE;
+  } else {
+    return 0;
+  }
+  var den = Math.pow(sumL2, 1.5);
+  if (den < 1e-20) return 0;
+  var q = C * vol / den;
+  return q > 1 ? 1 : (q < 0 ? 0 : q);
+}
+
+// Warping Factor (per element): quad-face'lerin düzlemden sapması.
+// Yöntem: iki diagonal'in midpoint'leri arası mesafe / ortalama diagonal uzunluğu.
+// 0 = planar, > 0.05 problemli. Tet/tri'de quad face yok → 0.
+function _veFEAWarpingFactor(nodes, elements, off, faces) {
+  var maxW = 0;
+  for (var f = 0; f < faces.length; f++) {
+    var face = faces[f];
+    if (face.length !== 4) continue;
+    var p0 = elements[off + face[0]] * 3;
+    var p1 = elements[off + face[1]] * 3;
+    var p2 = elements[off + face[2]] * 3;
+    var p3 = elements[off + face[3]] * 3;
+    var m1x = (nodes[p0]     + nodes[p2])     * 0.5;
+    var m1y = (nodes[p0 + 1] + nodes[p2 + 1]) * 0.5;
+    var m1z = (nodes[p0 + 2] + nodes[p2 + 2]) * 0.5;
+    var m2x = (nodes[p1]     + nodes[p3])     * 0.5;
+    var m2y = (nodes[p1 + 1] + nodes[p3 + 1]) * 0.5;
+    var m2z = (nodes[p1 + 2] + nodes[p3 + 2]) * 0.5;
+    var dx = m1x - m2x, dy = m1y - m2y, dz = m1z - m2z;
+    var d = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    var d1x = nodes[p2]     - nodes[p0], d1y = nodes[p2+1] - nodes[p0+1], d1z = nodes[p2+2] - nodes[p0+2];
+    var d2x = nodes[p3]     - nodes[p1], d2y = nodes[p3+1] - nodes[p1+1], d2z = nodes[p3+2] - nodes[p1+2];
+    var L1 = Math.sqrt(d1x*d1x + d1y*d1y + d1z*d1z);
+    var L2 = Math.sqrt(d2x*d2x + d2y*d2y + d2z*d2z);
+    var avgL = (L1 + L2) * 0.5;
+    if (avgL < 1e-12) continue;
+    var w = d / avgL;
+    if (w > maxW) maxW = w;
+  }
+  return maxW;
+}
+
+// Parallel Deviation (per element): quad face paralel kenarlarının paralellikten
+// sapma açısı (derece). 0 = mükemmel paralelogram, > 70° kötü.
+function _veFEAParallelDeviation(nodes, elements, off, faces) {
+  var maxD = 0;
+  for (var f = 0; f < faces.length; f++) {
+    var face = faces[f];
+    if (face.length !== 4) continue;
+    var p0 = elements[off + face[0]] * 3;
+    var p1 = elements[off + face[1]] * 3;
+    var p2 = elements[off + face[2]] * 3;
+    var p3 = elements[off + face[3]] * 3;
+    var e0x = nodes[p1]   - nodes[p0],   e0y = nodes[p1+1] - nodes[p0+1], e0z = nodes[p1+2] - nodes[p0+2];
+    var e1x = nodes[p2]   - nodes[p1],   e1y = nodes[p2+1] - nodes[p1+1], e1z = nodes[p2+2] - nodes[p1+2];
+    var e2x = nodes[p3]   - nodes[p2],   e2y = nodes[p3+1] - nodes[p2+1], e2z = nodes[p3+2] - nodes[p2+2];
+    var e3x = nodes[p0]   - nodes[p3],   e3y = nodes[p0+1] - nodes[p3+1], e3z = nodes[p0+2] - nodes[p3+2];
+    // Paralel olması beklenen: e0 ‖ -e2, e1 ‖ -e3. Sapma açısı:
+    var dev1 = _veFEAVecAngleDeg(e0x, e0y, e0z, -e2x, -e2y, -e2z);
+    var dev2 = _veFEAVecAngleDeg(e1x, e1y, e1z, -e3x, -e3y, -e3z);
+    var dev = Math.max(dev1, dev2);
+    if (dev > maxD) maxD = dev;
+  }
+  return maxD;
+}
+
 function veFEAComputeQualityMetrics(meshData) {
   if (!meshData || meshData.error) return null;
   var nodes = meshData.nodes;
@@ -26983,12 +27175,28 @@ function veFEAComputeQualityMetrics(meshData) {
   var skewArr = new Float32Array(n);
   var minAngleArr = new Float32Array(n);
   var maxAngleArr = new Float32Array(n);
+  var orthoArr = new Float32Array(n);
+  var elemQualArr = new Float32Array(n);
+  var warpArr = new Float32Array(n);
+  var parDevArr = new Float32Array(n);
   var poorAspect = 0;     // ar > 20
   var poorSkew = 0;       // sk > 0.85
+  var poorElemQual = 0;   // eq < 0.2
+  var poorOrtho = 0;      // oq < 0.1
+  var poorWarp = 0;       // w > 0.05
+  var poorParDev = 0;     // pd > 70°
 
   var gMinAr = Infinity, gMaxAr = -Infinity, sumAr = 0;
   var gMinSk = Infinity, gMaxSk = -Infinity, sumSk = 0;
   var gMinAng = Infinity, gMaxAng = -Infinity;
+  var gMinEq = Infinity, gMaxEq = -Infinity, sumEq = 0;
+  var gMinOq = Infinity, gMaxOq = -Infinity, sumOq = 0;
+  var gMinWp = Infinity, gMaxWp = -Infinity, sumWp = 0;
+  var gMinPd = Infinity, gMaxPd = -Infinity, sumPd = 0;
+
+  var hasQuadFaces = (type === 'hex8' || type === 'hex20' ||
+                      type === 'wedge6' || type === 'wedge15');
+  var is3D = (type !== 'tri3');
 
   for (var e = 0; e < n; e++) {
     var off = e * per;
@@ -27042,6 +27250,41 @@ function veFEAComputeQualityMetrics(meshData) {
     if (elemSkew > gMaxSk) gMaxSk = elemSkew;
     sumSk += elemSkew;
     if (elemSkew > 0.85) poorSkew++;
+
+    // Element Quality (tüm tipler)
+    var eq = _veFEAElementQuality(type, nodes, elements, off, edges);
+    elemQualArr[e] = eq;
+    if (eq < gMinEq) gMinEq = eq;
+    if (eq > gMaxEq) gMaxEq = eq;
+    sumEq += eq;
+    if (eq < 0.2) poorElemQual++;
+
+    // Orthogonal Quality (sadece 3D)
+    if (is3D) {
+      var oq = _veFEAOrthogonalQuality(nodes, elements, off, cornerCount, faces);
+      orthoArr[e] = oq;
+      if (oq < gMinOq) gMinOq = oq;
+      if (oq > gMaxOq) gMaxOq = oq;
+      sumOq += oq;
+      if (oq < 0.1) poorOrtho++;
+    }
+
+    // Warping + Parallel Deviation (sadece quad-faced)
+    if (hasQuadFaces) {
+      var wp = _veFEAWarpingFactor(nodes, elements, off, faces);
+      warpArr[e] = wp;
+      if (wp < gMinWp) gMinWp = wp;
+      if (wp > gMaxWp) gMaxWp = wp;
+      sumWp += wp;
+      if (wp > 0.05) poorWarp++;
+
+      var pd = _veFEAParallelDeviation(nodes, elements, off, faces);
+      parDevArr[e] = pd;
+      if (pd < gMinPd) gMinPd = pd;
+      if (pd > gMaxPd) gMaxPd = pd;
+      sumPd += pd;
+      if (pd > 70) poorParDev++;
+    }
   }
 
   return {
@@ -27067,7 +27310,39 @@ function veFEAComputeQualityMetrics(meshData) {
       min: isFinite(gMinAng) ? gMinAng : 0,
       max: isFinite(gMaxAng) ? gMaxAng : 0,
       histogram: _veFEAHistogram(minAngleArr, 0, 180, 12)
-    }
+    },
+    elementQuality: {
+      min: isFinite(gMinEq) ? gMinEq : 0,
+      max: isFinite(gMaxEq) ? gMaxEq : 0,
+      avg: sumEq / n,
+      poorCount: poorElemQual,
+      warnThreshold: 0.2,
+      histogram: _veFEAHistogram(elemQualArr, 0, 1, 10)
+    },
+    orthogonalQuality: is3D ? {
+      min: isFinite(gMinOq) ? gMinOq : 0,
+      max: isFinite(gMaxOq) ? gMaxOq : 0,
+      avg: sumOq / n,
+      poorCount: poorOrtho,
+      warnThreshold: 0.1,
+      histogram: _veFEAHistogram(orthoArr, 0, 1, 10)
+    } : null,
+    warpingFactor: hasQuadFaces ? {
+      min: isFinite(gMinWp) ? gMinWp : 0,
+      max: isFinite(gMaxWp) ? gMaxWp : 0,
+      avg: sumWp / n,
+      poorCount: poorWarp,
+      warnThreshold: 0.05,
+      histogram: _veFEAHistogram(warpArr, 0, 0.5, 10)
+    } : null,
+    parallelDeviation: hasQuadFaces ? {
+      min: isFinite(gMinPd) ? gMinPd : 0,
+      max: isFinite(gMaxPd) ? gMaxPd : 0,
+      avg: sumPd / n,
+      poorCount: poorParDev,
+      warnThreshold: 70,
+      histogram: _veFEAHistogram(parDevArr, 0, 90, 9)
+    } : null
   };
 }
 
@@ -27141,7 +27416,59 @@ function veFEAComputeRefinementSuggestions(meshMetrics) {
     }
   }
 
-  // 5. Çevresel curvature (silindir/şaft için)
+  // 5. Element Quality (3D shape factor)
+  if (q && q.elementQuality && q.elementQuality.poorCount > 0) {
+    var pctEq = q.elementQuality.poorCount / n;
+    if (pctEq > 0.05) {
+      out.push({
+        severity: 'warn',
+        message: q.elementQuality.poorCount + ' eleman Element Quality < ' + q.elementQuality.warnThreshold +
+          ' (%' + Math.round(pctEq * 100) + '). Şekil faktörü düşük, lokal sizing veya method değişikliği deneyin.',
+        action: null
+      });
+    }
+  }
+
+  // 6. Orthogonal Quality (yapısal hex/quad için birincil metrik)
+  if (q && q.orthogonalQuality && q.orthogonalQuality.poorCount > 0) {
+    var pctOq = q.orthogonalQuality.poorCount / n;
+    if (pctOq > 0.05) {
+      out.push({
+        severity: 'warn',
+        message: q.orthogonalQuality.poorCount + ' eleman Orthogonal Quality < ' + q.orthogonalQuality.warnThreshold +
+          ' (%' + Math.round(pctOq * 100) + '). Sweep/MultiZone yöntemi veya curvature refinement deneyin.',
+        action: null
+      });
+    }
+  }
+
+  // 7. Warping (quad-faced elements)
+  if (q && q.warpingFactor && q.warpingFactor.poorCount > 0) {
+    var pctWp = q.warpingFactor.poorCount / n;
+    if (pctWp > 0.05) {
+      out.push({
+        severity: 'warn',
+        message: q.warpingFactor.poorCount + ' yüz warping > ' + q.warpingFactor.warnThreshold +
+          ' (%' + Math.round(pctWp * 100) + '). Düz yüzeyli mesh için sweep veya yapısal grid kullanın.',
+        action: null
+      });
+    }
+  }
+
+  // 8. Parallel Deviation (quad-faced elements)
+  if (q && q.parallelDeviation && q.parallelDeviation.poorCount > 0) {
+    var pctPd = q.parallelDeviation.poorCount / n;
+    if (pctPd > 0.05) {
+      out.push({
+        severity: 'info',
+        message: q.parallelDeviation.poorCount + ' yüz parallel deviation > ' + q.parallelDeviation.warnThreshold +
+          '° (%' + Math.round(pctPd * 100) + '). Quad simetrisi bozuk, structured sweep değerlendirin.',
+        action: null
+      });
+    }
+  }
+
+  // 9. Çevresel curvature (silindir/şaft için)
   if (meshMetrics.sweepAxis === 'Y' && q && q.aspectRatio.max > 5) {
     out.push({
       severity: 'info',
@@ -27250,6 +27577,24 @@ function veFEAComputePerElementQuality(meshData, metric) {
         if (av > absMax) absMax = av;
       }
       out[e] = (absMin > 1e-12) ? (absMax / absMin) : 999;
+
+    } else if (metric === 'elementQuality') {
+      out[e] = _veFEAElementQuality(type, nodes, elements, off, edges);
+
+    } else if (metric === 'orthogonalQuality') {
+      if (type === 'tri3') { out[e] = 0; continue; }
+      var cornerC = (type === 'tet10') ? 4
+                  : (type === 'hex20') ? 8
+                  : (type === 'wedge15') ? 6
+                  : per;
+      out[e] = _veFEAOrthogonalQuality(nodes, elements, off, cornerC, faces);
+
+    } else if (metric === 'warpingFactor') {
+      out[e] = _veFEAWarpingFactor(nodes, elements, off, faces);
+
+    } else if (metric === 'parallelDeviation') {
+      out[e] = _veFEAParallelDeviation(nodes, elements, off, faces);
+
     } else {
       out[e] = 0;
     }
@@ -28624,6 +28969,60 @@ function veFEAInitViewer(canvas, opts) {
     },
     getHighlightedSelectionKey: function() {
       return this._highlightedSelectionKey || null;
+    },
+    // ANSYS-style bin-selection: histogram bin'inde olan element ID'lerini
+    // 3D'de centroid noktası olarak vurgular. elementIds=null veya boş array
+    // mevcut element-highlight'ı temizler.
+    // Named selection highlight ile aynı marker slot'unu paylaşır (tek seferde
+    // ya named selection ya da element highlight gösterilir).
+    highlightElements: function(elementIds, color) {
+      // Önceki highlight'ı temizle (named selection veya element)
+      if (this._highlightMarker) {
+        this._geometryRoot.remove(this._highlightMarker);
+        if (this._highlightMarker.geometry && this._highlightMarker.geometry.dispose) this._highlightMarker.geometry.dispose();
+        if (this._highlightMarker.material && this._highlightMarker.material.dispose) this._highlightMarker.material.dispose();
+        this._highlightMarker = null;
+      }
+      this._highlightedSelectionKey = null;
+      if (!elementIds || elementIds.length === 0 || !this._meshData) { render(); return; }
+      var mesh = this._meshData;
+      var nodes = mesh.nodes;
+      var elements = mesh.elements;
+      var per = mesh.nodesPerElement;
+      // Quadratic elemanlarda corner-only centroid daha temsil edici
+      var corners = (mesh.type === 'tet10') ? 4
+                  : (mesh.type === 'hex20') ? 8
+                  : (mesh.type === 'wedge15') ? 6
+                  : per;
+      var positions = new Float32Array(elementIds.length * 3);
+      for (var i = 0; i < elementIds.length; i++) {
+        var eid = elementIds[i];
+        var off = eid * per;
+        var cx = 0, cy = 0, cz = 0;
+        for (var c = 0; c < corners; c++) {
+          var n = elements[off + c] * 3;
+          cx += nodes[n]; cy += nodes[n + 1]; cz += nodes[n + 2];
+        }
+        positions[i * 3]     = cx / corners;
+        positions[i * 3 + 1] = cy / corners;
+        positions[i * 3 + 2] = cz / corners;
+      }
+      var box = new THREE.Box3().setFromObject(this._geometryRoot);
+      var bsize = box.isEmpty() ? 50 : Math.max(box.getSize(new THREE.Vector3()).x,
+                                                 box.getSize(new THREE.Vector3()).y,
+                                                 box.getSize(new THREE.Vector3()).z);
+      var pointSize = Math.max(2.5, bsize * 0.015);
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      var col = (typeof color === 'number') ? color : 0xff4400;
+      var mat = new THREE.PointsMaterial({ color: col, size: pointSize, sizeAttenuation: true, depthTest: false });
+      var pts = new THREE.Points(geo, mat);
+      pts.renderOrder = 999;
+      pts.userData.feaHighlight = true;
+      pts.userData.feaElementHighlight = true;
+      this._geometryRoot.add(pts);
+      this._highlightMarker = pts;
+      render();
     },
     // Display state'ini (mod, opaklık, clip planes) yeni eklenen mesh'e uygula
     _applyDisplayState: function(mesh) {
@@ -31458,24 +31857,121 @@ function _veFEAEditorQualityHTML(node) {
         '⚠ ' + jm.poorCount.toLocaleString('tr-TR') + ' eleman düşük kaliteli (Jac oranı > ' + jm.ratioWarnThreshold + ')</div>';
     }
   }
-  // Quality (aspect / skewness / angle)
+  // Quality (aspect / skewness / angle + ANSYS §7 yeni 4 metrik)
   if (metrics.quality) {
     var q = metrics.quality;
+    var nid = node.id;
     html += '<div style="margin-top:6px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Aspect Ratio / Skewness / Açı</div>';
     html += veFEAReadOnlyRow('Aspect Min / Maks / Ort', (q.aspectRatio.min || 0).toFixed(2) + ' / ' + (q.aspectRatio.max || 0).toFixed(2) + ' / ' + (q.aspectRatio.avg || 0).toFixed(2));
     if (q.aspectRatio.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.aspectRatio.poorCount.toLocaleString('tr-TR') + ' eleman aspect > ' + q.aspectRatio.warnThreshold + '</div>';
     }
-    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#3b82f6', function(v){return v.toFixed(1);}, { warnLimit: 5, errLimit: q.aspectRatio.warnThreshold || 20, inverted: false });
+    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#3b82f6', function(v){return v.toFixed(1);}, { warnLimit: 5, errLimit: q.aspectRatio.warnThreshold || 20, inverted: false }, 'function(b){veFEAHighlightQualityBin("' + nid + '","aspect",b)}');
     html += veFEAReadOnlyRow('Skewness Min / Maks / Ort', (q.skewness.min || 0).toFixed(3) + ' / ' + (q.skewness.max || 0).toFixed(3) + ' / ' + (q.skewness.avg || 0).toFixed(3));
     if (q.skewness.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.skewness.poorCount.toLocaleString('tr-TR') + ' eleman skewness > ' + q.skewness.warnThreshold + '</div>';
     }
-    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#f59e0b', function(v){return v.toFixed(2);}, { warnLimit: 0.5, errLimit: q.skewness.warnThreshold || 0.85, inverted: false });
+    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#f59e0b', function(v){return v.toFixed(2);}, { warnLimit: 0.5, errLimit: q.skewness.warnThreshold || 0.85, inverted: false }, 'function(b){veFEAHighlightQualityBin("' + nid + '","skewness",b)}');
     html += veFEAReadOnlyRow('Min / Maks iç açı', (q.angle.min || 0).toFixed(1) + '° / ' + (q.angle.max || 0).toFixed(1) + '°');
-    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece — düşük=kötü, ters threshold)', '#22c55e', function(v){return v.toFixed(0) + '°';}, { warnLimit: 30, errLimit: 15, inverted: true });
+    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece — düşük=kötü, ters threshold)', '#22c55e', function(v){return v.toFixed(0) + '°';}, { warnLimit: 30, errLimit: 15, inverted: true }, 'function(b){veFEAHighlightQualityBin("' + nid + '","minAngle",b)}');
+
+    // ─── ANSYS §7 — eksik 4 metrik ───
+    if (q.elementQuality) {
+      html += '<div style="margin-top:10px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Element Quality (şekil faktörü)</div>';
+      html += veFEAReadOnlyRow('Element Q Min / Maks / Ort', (q.elementQuality.min || 0).toFixed(3) + ' / ' + (q.elementQuality.max || 0).toFixed(3) + ' / ' + (q.elementQuality.avg || 0).toFixed(3));
+      if (q.elementQuality.poorCount > 0) {
+        html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.elementQuality.poorCount.toLocaleString('tr-TR') + ' eleman Element Quality < ' + q.elementQuality.warnThreshold + '</div>';
+      }
+      html += veFEAHistogramHTML(q.elementQuality.histogram, 'Element Quality histogramı (1=mükemmel, 0=dejenere)', '#8b5cf6', function(v){return v.toFixed(2);}, { warnLimit: 0.5, errLimit: q.elementQuality.warnThreshold || 0.2, inverted: true }, 'function(b){veFEAHighlightQualityBin("' + nid + '","elementQuality",b)}');
+    }
+    if (q.orthogonalQuality) {
+      html += '<div style="margin-top:6px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Orthogonal Quality (yapısal hex için birincil)</div>';
+      html += veFEAReadOnlyRow('Ortho Q Min / Maks / Ort', (q.orthogonalQuality.min || 0).toFixed(3) + ' / ' + (q.orthogonalQuality.max || 0).toFixed(3) + ' / ' + (q.orthogonalQuality.avg || 0).toFixed(3));
+      if (q.orthogonalQuality.poorCount > 0) {
+        html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.orthogonalQuality.poorCount.toLocaleString('tr-TR') + ' eleman Ortho < ' + q.orthogonalQuality.warnThreshold + '</div>';
+      }
+      html += veFEAHistogramHTML(q.orthogonalQuality.histogram, 'Orthogonal Quality histogramı (1=mükemmel)', '#06b6d4', function(v){return v.toFixed(2);}, { warnLimit: 0.3, errLimit: q.orthogonalQuality.warnThreshold || 0.1, inverted: true }, 'function(b){veFEAHighlightQualityBin("' + nid + '","orthogonalQuality",b)}');
+    }
+    if (q.warpingFactor) {
+      html += '<div style="margin-top:6px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Warping Factor (yüz düzlemsellik)</div>';
+      html += veFEAReadOnlyRow('Warping Min / Maks / Ort', (q.warpingFactor.min || 0).toFixed(4) + ' / ' + (q.warpingFactor.max || 0).toFixed(4) + ' / ' + (q.warpingFactor.avg || 0).toFixed(4));
+      if (q.warpingFactor.poorCount > 0) {
+        html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.warpingFactor.poorCount.toLocaleString('tr-TR') + ' yüz warping > ' + q.warpingFactor.warnThreshold + '</div>';
+      }
+      html += veFEAHistogramHTML(q.warpingFactor.histogram, 'Warping Factor histogramı (0=planar, >0.05 kötü)', '#ec4899', function(v){return v.toFixed(3);}, { warnLimit: 0.02, errLimit: q.warpingFactor.warnThreshold || 0.05, inverted: false }, 'function(b){veFEAHighlightQualityBin("' + nid + '","warpingFactor",b)}');
+    }
+    if (q.parallelDeviation) {
+      html += '<div style="margin-top:6px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Parallel Deviation (paralel kenar sapması)</div>';
+      html += veFEAReadOnlyRow('Par Dev Min / Maks / Ort', (q.parallelDeviation.min || 0).toFixed(1) + '° / ' + (q.parallelDeviation.max || 0).toFixed(1) + '° / ' + (q.parallelDeviation.avg || 0).toFixed(1) + '°');
+      if (q.parallelDeviation.poorCount > 0) {
+        html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.parallelDeviation.poorCount.toLocaleString('tr-TR') + ' yüz par dev > ' + q.parallelDeviation.warnThreshold + '°</div>';
+      }
+      html += veFEAHistogramHTML(q.parallelDeviation.histogram, 'Parallel Deviation histogramı (derece — 0=paralelogram)', '#10b981', function(v){return v.toFixed(0) + '°';}, { warnLimit: 30, errLimit: q.parallelDeviation.warnThreshold || 70, inverted: false }, 'function(b){veFEAHighlightQualityBin("' + nid + '","parallelDeviation",b)}');
+    }
+
+    // Highlight'ı temizle butonu
+    html += '<button onclick="veFEAHighlightQualityBin(\'' + nid + '\', null, null)" style="margin-top:6px; padding:5px 10px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">✕ Vurguyu temizle</button>';
   }
   return html;
+}
+
+// ANSYS-style histogram bin selection: bin tıklanınca o aralıktaki elemanları
+// 3D viewer'da vurgular. metricName=null veya binIndex=null çağrı = clear.
+// veFEAComputePerElementQuality + viewer.highlightElements üzerine kurulu.
+function veFEAHighlightQualityBin(nodeId, metricName, binIndex) {
+  var viewer = (typeof veFEAViewerRegistry !== 'undefined') ? veFEAViewerRegistry[nodeId] : null;
+  if (!viewer || typeof viewer.highlightElements !== 'function') return;
+
+  // Clear isteği
+  if (!metricName || binIndex === null || binIndex === undefined) {
+    viewer.highlightElements(null);
+    return;
+  }
+
+  var mesh = (typeof veFEAMeshCache !== 'undefined') ? veFEAMeshCache[nodeId] : null;
+  if (!mesh) return;
+  if (typeof veFEAComputePerElementQuality !== 'function') return;
+
+  // Histogram'ı meshMetrics'ten al — metricName histogram-key haritası
+  var histKeyMap = {
+    aspect:            'aspectRatio',
+    skewness:          'skewness',
+    minAngle:          'angle',
+    elementQuality:    'elementQuality',
+    orthogonalQuality: 'orthogonalQuality',
+    warpingFactor:     'warpingFactor',
+    parallelDeviation: 'parallelDeviation'
+  };
+  var histKey = histKeyMap[metricName] || metricName;
+  var nodes = (typeof window !== 'undefined' ? window.nodes : null) || (typeof global !== 'undefined' ? global.nodes : null);
+  if (!nodes) return;
+  var node = null;
+  for (var i = 0; i < nodes.length; i++) { if (nodes[i].id === nodeId) { node = nodes[i]; break; } }
+  if (!node || !node.data || !node.data.meshMetrics || !node.data.meshMetrics.quality) return;
+  var q = node.data.meshMetrics.quality;
+  if (!q[histKey] || !q[histKey].histogram) return;
+  var hist = q[histKey].histogram;
+  var binMin = hist.min + (hist.max - hist.min) * binIndex / hist.binCount;
+  var binMax = hist.min + (hist.max - hist.min) * (binIndex + 1) / hist.binCount;
+  var isLastBin = (binIndex === hist.binCount - 1);
+
+  // Per-element değerleri tara
+  var perElemArr = veFEAComputePerElementQuality(mesh, metricName);
+  if (!perElemArr) return;
+  var elementIds = [];
+  for (var e = 0; e < perElemArr.length; e++) {
+    var v = perElemArr[e];
+    if (!isFinite(v)) continue;
+    if (v >= binMin && (isLastBin ? v <= binMax : v < binMax)) {
+      elementIds.push(e);
+    }
+  }
+  viewer.highlightElements(elementIds);
+}
+
+// Browser global export (Jest CommonJS rejimi için)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports.veFEAHighlightQualityBin = veFEAHighlightQualityBin;
 }
 
 function _veFEAEditorNamedSelHTML(node) {
@@ -32915,26 +33411,36 @@ function veFEAReadOnlyRow(label, value) {
 // thresholds (opsiyonel): { warnLimit, errLimit, inverted } → her bin'i ANSYS
 // Mesh Quality Worksheet renkleriyle boyar (yeşil/sarı/kırmızı). thresholds
 // yoksa tüm bar'lar tek renk (`color`).
-function veFEAHistogramHTML(hist, label, color, axisFmt, thresholds) {
+// onBarClickJSExpr (opsiyonel): string JS ifadesi — örn.
+//   'veFEAHighlightQualityBin("node-1", "aspectRatio")'
+// Her bar'a onclick="(<expr>)(binIdx)" eklenir; ANSYS-style bin-selection.
+function veFEAHistogramHTML(hist, label, color, axisFmt, thresholds, onBarClickJSExpr) {
   if (!hist || !hist.bins || hist.bins.length === 0) return '';
   var maxCount = 0;
   for (var i = 0; i < hist.bins.length; i++) if (hist.bins[i] > maxCount) maxCount = hist.bins[i];
   var fmt = axisFmt || function(v) { return v.toFixed(1); };
+  var clickable = !!onBarClickJSExpr;
   var html = '<div style="margin-bottom:8px;">';
-  html += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:3px;">' + label + '</div>';
+  html += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-bottom:3px;">' + label +
+    (clickable ? ' <span style="color:var(--text-muted); font-size:0.55rem;">(bin tıkla → 3D vurgu)</span>' : '') + '</div>';
   html += '<div style="display:flex; align-items:flex-end; height:36px; gap:1px; background:var(--bg-secondary); padding:3px; border:1px solid var(--border-color);">';
   hist.bins.forEach(function(b, idx) {
     var pct = maxCount > 0 ? (b / maxCount * 100) : 0;
     var binMin = hist.min + (hist.max - hist.min) * (idx / hist.binCount);
     var binMax = hist.min + (hist.max - hist.min) * ((idx + 1) / hist.binCount);
     var binCenter = (binMin + binMax) / 2;
-    var title = fmt(binMin) + '–' + fmt(binMax) + ': ' + b + ' eleman';
+    var title = fmt(binMin) + '–' + fmt(binMax) + ': ' + b + ' eleman' + (clickable && b > 0 ? ' (tıkla)' : '');
     var binColor = color;
     if (thresholds && typeof veFEAThresholdColor === 'function') {
       var rgb = veFEAThresholdColor(binCenter, thresholds.warnLimit, thresholds.errLimit, !!thresholds.inverted);
       binColor = 'rgb(' + Math.round(rgb[0]*255) + ',' + Math.round(rgb[1]*255) + ',' + Math.round(rgb[2]*255) + ')';
     }
-    html += '<div title="' + title + '" style="flex:1; background:' + binColor + '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + ';"></div>';
+    var clickAttr = (clickable && b > 0)
+      ? ' onclick="(' + onBarClickJSExpr + ')(' + idx + ', this)" style="flex:1; background:' + binColor +
+        '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + '; cursor:pointer;"'
+        + ' onmouseenter="this.style.outline=\'2px solid #fbbf24\'" onmouseleave="this.style.outline=\'none\'"'
+      : ' style="flex:1; background:' + binColor + '; height:' + pct + '%; min-height:1px; opacity:' + (b > 0 ? 0.9 : 0.18) + ';"';
+    html += '<div title="' + title + '"' + clickAttr + '></div>';
   });
   html += '</div>';
   html += '<div style="display:flex; justify-content:space-between; font-size:0.52rem; color:var(--text-muted); margin-top:2px;">' +
