@@ -1511,6 +1511,25 @@ function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
     }).catch(function(err) {
       console.error('[FEA] STEP yeniden yukleme hatasi:', err);
     });
+  } else if (g.type === 'cad' && g.cadModel && typeof veCADDeserialize === 'function'
+             && typeof veCADBuildScene === 'function' && viewer._geometryRoot) {
+    // CAD modeli: feature listesinden THREE.Group'ı yeniden inşa et.
+    // Persist edilen vertices/normals küçük modellerde mevcut ama büyük
+    // modellerde proje JSON'ından çıkarılır (persistNote'ta belirtildi).
+    // Yeniden inşa cadModel'den feature parametreleri ile yapılır.
+    var cadModel = veCADDeserialize(g.cadModel);
+    if (typeof viewer.clearGeometry === 'function') viewer.clearGeometry();
+    var cadRoot = veCADBuildScene(cadModel);
+    if (cadRoot && cadRoot.children.length > 0) {
+      while (cadRoot.children.length > 0) {
+        viewer._geometryRoot.add(cadRoot.children[0]);
+      }
+      if (typeof viewer._collectFaceMaterials === 'function') viewer._collectFaceMaterials();
+      if (typeof viewer.zoomToFit === 'function') viewer.zoomToFit(viewer._geometryRoot);
+    } else if (g.vertices && g.triangleCount && typeof viewer.loadTriangleMesh === 'function') {
+      // Fallback: doğrudan üçgenler (model deserialize başarısız olursa)
+      viewer.loadTriangleMesh({ vertices: g.vertices, normals: g.normals, triangleCount: g.triangleCount });
+    }
   } else if (g.type && typeof viewer.loadPrimitive === 'function') {
     // Tüm primitif tipleri için aynı yol — veFEABuildPrimitiveMesh
     // dispatch'i `box`, `cylinder`, `shaft`, `sphere`, `hemisphere`,
