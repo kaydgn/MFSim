@@ -420,6 +420,13 @@ function veFEASubmitMeshBuild(nodeId) {
       growthRate: localGrow,
       layerCount: localNlay
     };
+    // Sphere of Influence (ANSYS §5.2) — UI'dan oku, mesh editor modal açıksa
+    if (typeof veFEAReadSphereOfInfluenceFromUI === 'function') {
+      var soi = veFEAReadSphereOfInfluenceFromUI(nodeId);
+      if (soi.length > 0) {
+        meshNode.data.meshSettings.sphereOfInfluence = soi;
+      }
+    }
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);
     meshNode.data.meshSettings.useWorker = !!(workerEl && workerEl.checked);
     // Delaunay tet mesher ayarları (STEP karmaşık geometriler için tet4)

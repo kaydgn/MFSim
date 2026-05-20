@@ -298,13 +298,13 @@ describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
     expect(leftPanel.innerHTML).toMatch(/Mesh Sonrası/);
   });
 
-  test('Pre-mesh sırası: sizing → defaults → inflation → namedSel', () => {
+  test('Pre-mesh sırası: sizing → defaults → inflation → sphereOfInfluence → namedSel', () => {
     global.nodes = [{ id: 'mesh-g2', type: 'fea-mesh', data: {} }];
     veFEAOpenMeshEditor('mesh-g2');
     var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
       .querySelectorAll('[data-acc-section]');
     var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(0, 4)).toEqual(['sizing', 'defaults', 'inflation', 'namedSel']);
+    expect(order.slice(0, 5)).toEqual(['sizing', 'defaults', 'inflation', 'sphereOfInfluence', 'namedSel']);
   });
 
   test('Post-mesh sırası: quality → statistics → display → suggestions → topology', () => {
@@ -313,7 +313,7 @@ describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
     var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
       .querySelectorAll('[data-acc-section]');
     var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(4)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'topology']);
+    expect(order.slice(5)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'topology']);
   });
 
   test('Default accordion state: TÜM accordion\'lar kapalı (sade ilk görünüm)', () => {
@@ -739,6 +739,104 @@ describe('Modal toolbar — Çalıştır butonu', () => {
     veFEAOpenMeshEditor('mesh-t3');
     var clearBtn = document.querySelector('button[onclick*="veFEAClearMeshForNode"]');
     expect(clearBtn).not.toBeNull();
+  });
+});
+
+// ─── Faz 1 Adım 4 — Sphere of Influence UI ───
+describe('Sphere of Influence (ANSYS §5.2) — UI helpers', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.saveState = jest.fn();
+    document.body.innerHTML = '';
+  });
+
+  test('_veFEAEditorSphereOfInfluenceHTML: boş liste → placeholder + Ekle butonu', () => {
+    var node = { id: 'soi1', type: 'fea-mesh', data: {} };
+    var html = _veFEAEditorSphereOfInfluenceHTML(node);
+    expect(html).toMatch(/Henüz tanımlı Sphere of Influence yok/);
+    expect(html).toMatch(/veFEAAddSphereOfInfluence/);
+  });
+
+  test('_veFEAEditorSphereOfInfluenceHTML: dolu liste → her küre için kart', () => {
+    var node = { id: 'soi2', type: 'fea-mesh', data: {
+      meshSettings: { sphereOfInfluence: [
+        { cx: 1, cy: 2, cz: 3, radius: 5, targetSize: 1 },
+        { cx: 10, cy: 20, cz: 30, radius: 8, targetSize: null }
+      ]}
+    }};
+    var html = _veFEAEditorSphereOfInfluenceHTML(node);
+    expect(html).toMatch(/Küre 1/);
+    expect(html).toMatch(/Küre 2/);
+    expect(html).toMatch(/id="ve-fea-soi-cx-soi2-0"/);
+    expect(html).toMatch(/id="ve-fea-soi-cx-soi2-1"/);
+    expect(html).toMatch(/veFEARemoveSphereOfInfluence/);
+  });
+
+  test('veFEAAddSphereOfInfluence: yeni küre ekler', () => {
+    var node = { id: 'soi3', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAAddSphereOfInfluence('soi3');
+    expect(node.data.meshSettings.sphereOfInfluence).toBeDefined();
+    expect(node.data.meshSettings.sphereOfInfluence.length).toBe(1);
+    expect(node.data.meshSettings.sphereOfInfluence[0].radius).toBeGreaterThan(0);
+  });
+
+  test('veFEAAddSphereOfInfluence: geometry bbox\'ından merkez+yarıçap türetir', () => {
+    var geomNode = { id: 'g1', type: 'fea-geometry', data: {
+      geometry: { type: 'box', bbox: { minX: 0, maxX: 100, minY: 0, maxY: 50, minZ: 0, maxZ: 20 } }
+    }};
+    var meshNode = { id: 'm1', type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g1', to: 'm1' }];
+    veFEAAddSphereOfInfluence('m1');
+    var sph = meshNode.data.meshSettings.sphereOfInfluence[0];
+    expect(sph.cx).toBe(50);  // bbox center
+    expect(sph.cy).toBe(25);
+    expect(sph.cz).toBe(10);
+    expect(sph.radius).toBeGreaterThan(0);
+  });
+
+  test('veFEARemoveSphereOfInfluence: belirtilen index siler', () => {
+    var node = { id: 'soi4', type: 'fea-mesh', data: {
+      meshSettings: { sphereOfInfluence: [
+        { cx: 1, cy: 1, cz: 1, radius: 1 },
+        { cx: 2, cy: 2, cz: 2, radius: 2 },
+        { cx: 3, cy: 3, cz: 3, radius: 3 }
+      ]}
+    }};
+    global.nodes = [node];
+    veFEARemoveSphereOfInfluence('soi4', 1);
+    expect(node.data.meshSettings.sphereOfInfluence.length).toBe(2);
+    expect(node.data.meshSettings.sphereOfInfluence[0].radius).toBe(1);
+    expect(node.data.meshSettings.sphereOfInfluence[1].radius).toBe(3);
+  });
+
+  test('veFEAReadSphereOfInfluenceFromUI: DOM input\'larından okur', () => {
+    document.body.innerHTML =
+      '<input id="ve-fea-soi-cx-n1-0" value="5">' +
+      '<input id="ve-fea-soi-cy-n1-0" value="10">' +
+      '<input id="ve-fea-soi-cz-n1-0" value="-3">' +
+      '<input id="ve-fea-soi-r-n1-0"  value="7.5">' +
+      '<input id="ve-fea-soi-ts-n1-0" value="0.5">';
+    var arr = veFEAReadSphereOfInfluenceFromUI('n1');
+    expect(arr.length).toBe(1);
+    expect(arr[0].cx).toBe(5);
+    expect(arr[0].cy).toBe(10);
+    expect(arr[0].cz).toBe(-3);
+    expect(arr[0].radius).toBe(7.5);
+    expect(arr[0].targetSize).toBe(0.5);
+  });
+
+  test('veFEAReadSphereOfInfluenceFromUI: boş targetSize → null', () => {
+    document.body.innerHTML =
+      '<input id="ve-fea-soi-cx-n2-0" value="1">' +
+      '<input id="ve-fea-soi-cy-n2-0" value="2">' +
+      '<input id="ve-fea-soi-cz-n2-0" value="3">' +
+      '<input id="ve-fea-soi-r-n2-0"  value="5">' +
+      '<input id="ve-fea-soi-ts-n2-0" value="">';
+    var arr = veFEAReadSphereOfInfluenceFromUI('n2');
+    expect(arr[0].targetSize).toBeNull();
   });
 });
 

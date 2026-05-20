@@ -34,6 +34,7 @@ function _veFEAEditorDefaultAccordionState() {
     sizing: false,
     defaults: false,
     inflation: false,
+    sphereOfInfluence: false,
     namedSel: false,
     // Post-mesh
     quality: false,
@@ -59,8 +60,9 @@ function veFEAEditorRefreshAccordions() {
     'topology':    _veFEAEditorTopologyHTML(node),
     'defaults':    _veFEAEditorDefaultsHTML(node),
     'sizing':      _veFEAEditorSizingHTML(node),
-    'inflation':   _veFEAEditorInflationHTML(node),
-    'quality':     _veFEAEditorQualityHTML(node),
+    'inflation':         _veFEAEditorInflationHTML(node),
+    'sphereOfInfluence': _veFEAEditorSphereOfInfluenceHTML(node),
+    'quality':           _veFEAEditorQualityHTML(node),
     'namedSel':    _veFEAEditorNamedSelHTML(node),
     'display':     _veFEAEditorDisplayHTML(node),
     'statistics':  _veFEAEditorStatisticsHTML(node),
@@ -474,8 +476,9 @@ function _veFEAEditorBuildLeftPanel(node) {
   html += _veFEAEditorGroupHeader('Mesh Öncesi (Ayarlar)');
   html += _veFEAEditorAccordionSection('sizing',      'Boyutlandırma',                 _veFEAEditorSizingHTML(node));
   html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
-  html += _veFEAEditorAccordionSection('inflation',   'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
-  html += _veFEAEditorAccordionSection('namedSel',    'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
+  html += _veFEAEditorAccordionSection('inflation',         'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
+  html += _veFEAEditorAccordionSection('sphereOfInfluence', 'Sphere of Influence (ANSYS §5.2)', _veFEAEditorSphereOfInfluenceHTML(node));
+  html += _veFEAEditorAccordionSection('namedSel',          'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
   // ─── Post-mesh: Mesh oluşturulduktan sonra incelenen bölümler ───────────
   html += _veFEAEditorGroupHeader('Mesh Sonrası (İnceleme)');
   html += _veFEAEditorAccordionSection('quality',     'Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', _veFEAEditorQualityHTML(node));
@@ -1033,6 +1036,126 @@ function _veFEAEditorInflationHTML(node) {
     '</div>';
   }
   return html;
+}
+
+// ─── Sphere of Influence panel (ANSYS §5.2) ───────────────────────────────
+// Geometriyi bölmeden lokal mesh kontrolü için küre listesi UI'ı.
+// v1: post-mesh named selection üretir + viewer'da küre wireframe.
+// Gerçek size-field refinement Faz 2'de (mesher size override).
+function _veFEAEditorSphereOfInfluenceHTML(node) {
+  var d = node.data || {};
+  var settings = d.meshSettings || {};
+  var spheres = settings.sphereOfInfluence || [];
+
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">' +
+    'ANSYS §5.2 — geometriyi bölmeden lokal mesh yoğunlaştırma. ' +
+    'Her küre içinde kalan düğümler otomatik <i>named selection</i> oluşturur.' +
+    '</div>';
+
+  if (spheres.length === 0) {
+    html += '<div style="padding:10px 12px; background:var(--bg-primary); border:1px dashed var(--border-color); font-size:0.6rem; color:var(--text-muted); text-align:center; margin-bottom:8px;">Henüz tanımlı Sphere of Influence yok.</div>';
+  } else {
+    spheres.forEach(function(sph, idx) {
+      html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+      html += '<b style="font-size:0.62rem; color:var(--text-primary);">Küre ' + (idx + 1) + '</b>';
+      html += '<button onclick="veFEARemoveSphereOfInfluence(\'' + node.id + '\',' + idx + ')" style="padding:2px 8px; font-size:0.55rem; background:#dc2626; color:#fff; border:none; cursor:pointer;">Sil</button>';
+      html += '</div>';
+      html += '<div style="display:grid; grid-template-columns:auto 1fr 1fr 1fr; gap:4px; align-items:center; margin-bottom:4px;">';
+      html += '<span style="font-size:0.58rem; color:var(--text-secondary);">Merkez (x,y,z):</span>';
+      html += '<input type="number" value="' + (sph.cx || 0) + '" step="0.5" id="ve-fea-soi-cx-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '<input type="number" value="' + (sph.cy || 0) + '" step="0.5" id="ve-fea-soi-cy-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '<input type="number" value="' + (sph.cz || 0) + '" step="0.5" id="ve-fea-soi-cz-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '</div>';
+      html += '<div style="display:grid; grid-template-columns:auto 1fr auto 1fr; gap:4px; align-items:center;">';
+      html += '<span style="font-size:0.58rem; color:var(--text-secondary);">Yarıçap:</span>';
+      html += '<input type="number" value="' + (sph.radius || 10) + '" step="0.5" min="0.1" id="ve-fea-soi-r-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;" title="Etki küresi yarıçapı (mm)">';
+      html += '<span style="font-size:0.58rem; color:var(--text-secondary);">Hedef boyut:</span>';
+      html += '<input type="number" value="' + (sph.targetSize != null ? sph.targetSize : '') + '" step="0.5" min="0.1" placeholder="—" id="ve-fea-soi-ts-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;" title="Sphere içinde hedef eleman boyutu (Faz 2: size-field refinement)">';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+
+  html += '<button onclick="veFEAAddSphereOfInfluence(\'' + node.id + '\')" style="width:100%; padding:7px; font-size:0.65rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">+ Yeni Sphere of Influence Ekle</button>';
+
+  if (spheres.length > 0) {
+    html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid #3b82f6; font-size:0.58rem; color:var(--text-secondary); line-height:1.5;">' +
+      'ℹ Mesh yeniden oluşturulduğunda her küre için bir <i>named selection</i> üretilir. ' +
+      'Hedef boyut hâlihazırda mesher tarafından uygulanmıyor (Faz 2 — size-field).' +
+      '</div>';
+  }
+  return html;
+}
+
+// Yeni Sphere of Influence ekle — geometry bbox'ından merkez+yarıçap türetir.
+function veFEAAddSphereOfInfluence(nodeId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  if (!Array.isArray(node.data.meshSettings.sphereOfInfluence)) {
+    node.data.meshSettings.sphereOfInfluence = [];
+  }
+  // Mevcut UI değerlerini koru (re-render kaybetmesin)
+  var existing = veFEAReadSphereOfInfluenceFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.sphereOfInfluence = existing;
+
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
+    ? veFEAFindUpstreamGeometryNode(nodeId) : null;
+  var bbox = (geomNode && geomNode.data && geomNode.data.geometry && geomNode.data.geometry.bbox) || null;
+  var cx = 0, cy = 0, cz = 0, r = 10;
+  if (bbox) {
+    cx = (bbox.minX + bbox.maxX) / 2;
+    cy = (bbox.minY + bbox.maxY) / 2;
+    cz = (bbox.minZ + bbox.maxZ) / 2;
+    var diag = Math.sqrt(
+      Math.pow(bbox.maxX - bbox.minX, 2) +
+      Math.pow(bbox.maxY - bbox.minY, 2) +
+      Math.pow(bbox.maxZ - bbox.minZ, 2)
+    );
+    r = Math.max(1, diag * 0.15);
+  }
+  node.data.meshSettings.sphereOfInfluence.push({ cx: cx, cy: cy, cz: cz, radius: r, targetSize: null });
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+function veFEARemoveSphereOfInfluence(nodeId, index) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings) return;
+  // Önce UI'dan mevcut değerleri al (re-render kaybetmesin)
+  var existing = veFEAReadSphereOfInfluenceFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.sphereOfInfluence = existing;
+  if (!Array.isArray(node.data.meshSettings.sphereOfInfluence)) return;
+  node.data.meshSettings.sphereOfInfluence.splice(index, 1);
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// UI input'larından mevcut Sphere of Influence listesini okur.
+function veFEAReadSphereOfInfluenceFromUI(nodeId) {
+  var out = [];
+  for (var i = 0; ; i++) {
+    var cxEl = document.getElementById('ve-fea-soi-cx-' + nodeId + '-' + i);
+    if (!cxEl) break;
+    var cyEl = document.getElementById('ve-fea-soi-cy-' + nodeId + '-' + i);
+    var czEl = document.getElementById('ve-fea-soi-cz-' + nodeId + '-' + i);
+    var rEl  = document.getElementById('ve-fea-soi-r-'  + nodeId + '-' + i);
+    var tsEl = document.getElementById('ve-fea-soi-ts-' + nodeId + '-' + i);
+    var ts = (tsEl && tsEl.value !== '') ? parseFloat(tsEl.value) : null;
+    if (ts != null && (!isFinite(ts) || ts <= 0)) ts = null;
+    out.push({
+      cx:     parseFloat((cxEl && cxEl.value) || 0) || 0,
+      cy:     parseFloat((cyEl && cyEl.value) || 0) || 0,
+      cz:     parseFloat((czEl && czEl.value) || 0) || 0,
+      radius: parseFloat((rEl  && rEl.value)  || 0) || 0,
+      targetSize: ts
+    });
+  }
+  return out;
 }
 
 function _veFEAEditorQualityHTML(node) {
