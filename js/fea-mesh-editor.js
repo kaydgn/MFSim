@@ -1126,8 +1126,8 @@ function _veFEAEditorDisplayHTML(node) {
   var wfMode = (d.meshSettings && d.meshSettings.wireframeMode) || 'all';
   html += '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:3px;">Mesh Çizgi Modu <span style="opacity:0.6;">(Body Color ile etkili)</span></div>';
   html += '<select onchange="veFEASetWireframeMode(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:8px;">';
-  html += '<option value="all"' + (wfMode === 'all' ? ' selected' : '') + '>Tüm Edge\'ler (Mesh detayı tam)</option>';
-  html += '<option value="surface"' + (wfMode === 'surface' ? ' selected' : '') + '>Sadece Yüzey (Yoğun mesh için)</option>';
+  html += '<option value="all"' + (wfMode === 'all' ? ' selected' : '') + '>Tüm Edge\'ler (yoğun mesh\'te otomatik yüzeye düşer)</option>';
+  html += '<option value="surface"' + (wfMode === 'surface' ? ' selected' : '') + '>Sadece Yüzey (yoğun mesh için tercih)</option>';
   html += '<option value="off"' + (wfMode === 'off' ? ' selected' : '') + '>Kapalı (Temiz solid)</option>';
   html += '</select>';
 
