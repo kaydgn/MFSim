@@ -216,7 +216,7 @@ describe('veFEAMeshFromGeometryAsync', () => {
     });
   });
 
-  test('STEP async: occtimportjs mock ile parse + voxelize', () => {
+  test('STEP async: occtimportjs mock ile parse + tet4 voxel fallback (default)', () => {
     // Önceki state'i sıfırla
     VE_FEA_OCCT_STATE.module = null;
     VE_FEA_OCCT_STATE.loading = null;
@@ -248,7 +248,43 @@ describe('veFEAMeshFromGeometryAsync', () => {
 
     // Stub: rawDataB64 (içerik önemsiz, mock OCCT okumayacak)
     var geom = { type: 'step', rawDataB64: veFEAArrayBufferToBase64(new ArrayBuffer(32)) };
+    // Sync ile aynı default: 'auto' elementType → tet4 + boundary snap
     return veFEAMeshFromGeometryAsync(geom, { size: 5 }).then(function(m) {
+      expect(m).not.toBeNull();
+      expect(m.type).toBe('tet4');
+      // 8 hex × 6 tet/hex = 48 tet
+      expect(m.elements.length / 4).toBe(48);
+    });
+  });
+
+  test('STEP async: elementType="hex8" niyetli — raw voxel hex korunur', () => {
+    VE_FEA_OCCT_STATE.module = null;
+    VE_FEA_OCCT_STATE.loading = null;
+    global.occtimportjs = jest.fn(function() {
+      return Promise.resolve({
+        ReadStepFile: function() {
+          var tris = buildCubeTriangles();
+          var pos = [];
+          var idx = [];
+          for (var i = 0; i < tris.length; i++) {
+            var t = tris[i];
+            pos.push(t[0], t[1], t[2]);
+            pos.push(t[3], t[4], t[5]);
+            pos.push(t[6], t[7], t[8]);
+            idx.push(i*3, i*3+1, i*3+2);
+          }
+          return {
+            success: true,
+            meshes: [{
+              attributes: { position: { array: new Float32Array(pos) } },
+              index: { array: idx }
+            }]
+          };
+        }
+      });
+    });
+    var geom = { type: 'step', rawDataB64: veFEAArrayBufferToBase64(new ArrayBuffer(32)) };
+    return veFEAMeshFromGeometryAsync(geom, { size: 5, elementType: 'hex8' }).then(function(m) {
       expect(m).not.toBeNull();
       expect(m.type).toBe('hex8');
       expect(m.voxelMode).toBe(true);

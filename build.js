@@ -124,7 +124,17 @@ html = html.replace(
   function(match, filePath, kind) {
     var fullPath = path.join(ROOT, filePath);
     if (!fs.existsSync(fullPath)) {
-      console.warn('  Inline atlandi (kaynak yok): ' + filePath + ' — "npm run vendor:sync" calistirin.');
+      // Doğru build komutunu öner (vendor:sync sync edilebilir paketler için;
+      // C++ tabanlı wasm modülleri ayrı build komutu gerektirir)
+      var hint;
+      if (filePath.indexOf('vendor/tetgen/') === 0) {
+        hint = '"npm run build:wasm:tetgen" calistirin (emscripten gerekli, AGPL-3.0)';
+      } else if (filePath.indexOf('vendor/mfsim-fea/') === 0) {
+        hint = '"npm run build:wasm" calistirin (emscripten gerekli)';
+      } else {
+        hint = '"npm run vendor:sync" calistirin';
+      }
+      console.warn('  Inline atlandi (kaynak yok): ' + filePath + ' — ' + hint + '.');
       return '<!-- INLINE_FILE skipped: ' + filePath + ' -->';
     }
     var isBinary = /\.(wasm|bin)$/i.test(filePath);

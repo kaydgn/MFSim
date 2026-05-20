@@ -600,12 +600,26 @@ function _veFEAApplyInflation(mesh, ls, axis, towardMax) {
 
 // Async wrapper — STEP gibi parse'i Promise tabanlı geometriler için.
 // Senkron yol başarısızsa STEP'i OCCT üzerinden async parse eder.
+//
+// Mesh stratejisi (STEP karmaşık geometriler için):
+//   1. Primitif inference (sync, sade şekiller için)
+//   2. TetGen WASM (kapalı yüzey için kaliteli tet4 mesh) — opts.useTetgen
+//   3. Voxel + boundary snap (her zaman çalışan fallback)
 function veFEAMeshFromGeometryAsync(geometry, opts) {
   if (!geometry) return Promise.resolve(null);
   opts = opts || {};
-  // Önce sync yolu dene
+  // Önce sync yolu dene (primitif inference + cached parsed voxel)
   var sync = veFEAMeshFromGeometry(geometry, opts);
-  if (sync) return Promise.resolve(sync);
+  if (sync) {
+    // TetGen aktifse ve sync sonuç voxel ise: TetGen ile yeniden mesh dene
+    if (_veFEAShouldTryTetgen(opts) && sync.voxelMode === true && geometry.type === 'step') {
+      var parsedCached = _veFEAParseSurfaceTriangles(geometry);
+      if (parsedCached) {
+        return _veFEAMeshWithTetgenOrVoxel(parsedCached, geometry, opts, sync);
+      }
+    }
+    return Promise.resolve(sync);
+  }
 
   // STEP için async parse
   if (geometry.type === 'step' && geometry.rawDataB64 &&
@@ -616,26 +630,209 @@ function veFEAMeshFromGeometryAsync(geometry, opts) {
     return veFEAParseSTEPBuffer(buf).then(function(result) {
       var parsed = veFEAStepMeshesToParsed(result);
       if (!parsed || parsed.triangleCount === 0) return null;
-      var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
-      var elementType = opts.elementType || 'auto';
       if ((opts.mode || 'auto') === 'surface') {
         return _veFEAMeshFromParsedTriangles(parsed, 'step');
       }
-      var hexMesh = _veFEAVoxelizeTrianglesToHex(parsed, size, 'step');
-      if (hexMesh && !hexMesh.error && opts.localSizing && opts.localSizing.selection &&
-          opts.localSizing.selection !== 'none' && _veFEALocalSizingActive(opts.localSizing)) {
-        hexMesh = veFEAApplyLocalSizing(hexMesh, opts.localSizing);
-      }
-      if (hexMesh && !hexMesh.error && elementType === 'tet4') {
-        hexMesh = veFEAConvertMeshToTet4(hexMesh);
-      }
-      if (hexMesh && !hexMesh.error && opts.midSideNodes === true) {
-        hexMesh = veFEAEnrichToQuadratic(hexMesh);
-      }
-      return hexMesh;
+      return _veFEAMeshWithTetgenOrVoxel(parsed, geometry, opts, null);
     });
   }
   return Promise.resolve(null);
+}
+
+// TetGen denenebilir mi? (opts ve runtime kontrolü)
+function _veFEAShouldTryTetgen(opts) {
+  if (!opts) opts = {};
+  if (opts.useTetgen === false) return false;
+  if (opts.disableTetgen === true) return false;
+  if (typeof veFEATetgenTetrahedralize !== 'function') return false;
+  if (typeof veFEATetgenIsBuilt === 'function' && !veFEATetgenIsBuilt()) {
+    // Dev modda da denemek için ileri git — gerçek yükleme başarısız olursa
+    // tetgen wrapper graceful error döner, voxel'a düşeriz.
+    if (opts.useTetgen !== true) return false; // explicit istemiyorsa skip
+  }
+  return true;
+}
+
+// Hibrit mesh stratejisi: önce TetGen dene, başarısız olursa voxel fallback.
+// `preBuiltVoxel` opsiyonel — sync yol voxel'ı zaten tam post-process'lemişse
+// (localSizing + tet4 conv + quadratic) hazır kullanılır. Aksi halde voxel
+// burada üretilir.
+function _veFEAMeshWithTetgenOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
+  var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
+  var geometryType = geometry.type || 'unknown';
+
+  function applyPostProcessing(mesh) {
+    if (!mesh || mesh.error) return mesh;
+    var elementType = opts.elementType || 'auto';
+    if (opts.localSizing && opts.localSizing.selection &&
+        opts.localSizing.selection !== 'none' && _veFEALocalSizingActive(opts.localSizing)) {
+      mesh = veFEAApplyLocalSizing(mesh, opts.localSizing);
+    }
+    if (elementType === 'tet4' && mesh.type === 'hex8') {
+      mesh = veFEAConvertMeshToTet4(mesh);
+    }
+    if (opts.midSideNodes === true) {
+      mesh = veFEAEnrichToQuadratic(mesh);
+    }
+    return mesh;
+  }
+
+  // Voxel fallback: sync sonuç hazırsa onu kullan (zaten tam post-process'li),
+  // yoksa kendi voxel + boundary-snap akışımızı çalıştır.
+  function buildVoxelFallback() {
+    if (preBuiltVoxel) return preBuiltVoxel;
+    var elementType = opts.elementType || 'auto';
+    var hexMesh = _veFEAVoxelizeTrianglesToHex(parsed, size, geometryType,
+      geometry.detectedFeatures || null);
+    if (hexMesh && !hexMesh.error && geometry.detectedFeatures && geometry.detectedFeatures.summary) {
+      hexMesh.detectedFeatureSummary = geometry.detectedFeatures.summary;
+    }
+    if (hexMesh && !hexMesh.error && hexMesh.voxelMode && opts.disableBoundarySnap !== true) {
+      if (elementType !== 'hex8' && elementType !== 'pyramid5') {
+        var tetMesh = veFEAConvertMeshToTet4(hexMesh);
+        if (tetMesh && !tetMesh.error) {
+          hexMesh = tetMesh;
+          if (typeof _veFEABoundarySnapToTriangles === 'function') {
+            var snapped = _veFEABoundarySnapToTriangles(hexMesh, parsed);
+            if (snapped && !snapped.error) hexMesh = snapped;
+          }
+          // tet4 conversion'u tekrar yapmamak için elementType sentinel
+          opts = Object.assign({}, opts, { elementType: 'tet4-done' });
+        }
+      }
+    }
+    return applyPostProcessing(hexMesh);
+  }
+
+  if (!_veFEAShouldTryTetgen(opts)) {
+    return Promise.resolve(buildVoxelFallback());
+  }
+
+  // TetGen denemesi — radius-edge ratio ve max volume opts'tan
+  var tetgenOpts = {
+    quality: opts.tetgenQuality !== false,
+    radiusEdgeRatio: typeof opts.tetgenRadiusEdgeRatio === 'number' ? opts.tetgenRadiusEdgeRatio : 1.4,
+    maxVolume: typeof opts.tetgenMaxVolume === 'number' ? opts.tetgenMaxVolume : _veFEADefaultTetgenMaxVolume(size),
+    verbose: opts.verbose === true
+  };
+  return veFEATetgenTetrahedralize(parsed, tetgenOpts).then(function(tetResult) {
+    if (!tetResult || tetResult.error) {
+      if (opts.verbose) console.warn('[TetGen] başarısız, voxel fallback:', tetResult && tetResult.error);
+      return buildVoxelFallback();
+    }
+    var tetMesh = _veFEAWrapTetgenResult(tetResult, geometry);
+    return applyPostProcessing(tetMesh);
+  }).catch(function(err) {
+    if (opts.verbose) console.warn('[TetGen] exception, voxel fallback:', err);
+    return buildVoxelFallback();
+  });
+}
+
+// Element boyutundan default max tet hacmi: küresel olarak h³/6 (regular tet)
+function _veFEADefaultTetgenMaxVolume(size) {
+  return (size * size * size) / 6;
+}
+
+// TetGen sonucunu MFSim mesh formatına sarmak: bbox + namedSelections + meta
+function _veFEAWrapTetgenResult(tetResult, geometry) {
+  var nodes = tetResult.nodes;
+  var elements = tetResult.elements;
+  // BBox (lokal sizing ve direksiyonlu yüz tespiti için)
+  var minX = Infinity, minY = Infinity, minZ = Infinity;
+  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (var i = 0; i < nodes.length; i += 3) {
+    var x = nodes[i], y = nodes[i + 1], z = nodes[i + 2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  var bbox = { minX: minX, maxX: maxX, minY: minY, maxY: maxY, minZ: minZ, maxZ: maxZ };
+  var sel = _veFEATetMeshNamedSelections(nodes, elements, bbox);
+  var mesh = {
+    type: 'tet4',
+    geometryType: 'tetgen-' + (geometry.type || 'unknown'),
+    nodes: nodes,
+    elements: elements,
+    nodesPerElement: 4,
+    namedSelections: sel,
+    tetgenInfo: tetResult.info || null
+  };
+  if (geometry.detectedFeatures && geometry.detectedFeatures.summary) {
+    mesh.detectedFeatureSummary = geometry.detectedFeatures.summary;
+  }
+  return mesh;
+}
+
+// Tet4 mesh için yüzey düğümleri (face-hash, kanonik): her face'i 4 tet
+// içinden çıkar; tek seferlik görünenler yüzey face'leri. Voxel versiyonundan
+// daha doğru — voxel'in degree-based hard-coded `< 8` heuristik'i tet'lerde
+// güvenilir değil.
+function _veFEATetMeshNamedSelections(nodes, elements, bbox) {
+  var nodeCount = nodes.length / 3;
+  var tetCount = elements.length / 4;
+  var faceCount = new Map();
+  // Tet (v0,v1,v2,v3) face'leri: (012),(013),(023),(123) — yönelime bakmaksızın
+  // sıralı triple key kullanıyoruz (kanonik). 4 face × N tet, Map içinde count.
+  var FACE_IDX = [[0,1,2],[0,1,3],[0,2,3],[1,2,3]];
+  for (var t = 0; t < tetCount; t++) {
+    var off = t * 4;
+    for (var f = 0; f < 4; f++) {
+      var fi = FACE_IDX[f];
+      var a = elements[off + fi[0]];
+      var b = elements[off + fi[1]];
+      var c = elements[off + fi[2]];
+      // 3 sayıyı sırala (sade insertion sort)
+      var s0, s1, s2;
+      if (a < b) { s0 = a; s1 = b; } else { s0 = b; s1 = a; }
+      if (c < s0) { s2 = s1; s1 = s0; s0 = c; }
+      else if (c < s1) { s2 = s1; s1 = c; }
+      else { s2 = c; }
+      var key = s0 + '|' + s1 + '|' + s2;
+      faceCount.set(key, (faceCount.get(key) || 0) + 1);
+    }
+  }
+  var surfMark = new Uint8Array(nodeCount);
+  faceCount.forEach(function(v, k) {
+    if (v !== 1) return;  // İç face: 2 tet paylaşır
+    var parts = k.split('|');
+    surfMark[parts[0] | 0] = 1;
+    surfMark[parts[1] | 0] = 1;
+    surfMark[parts[2] | 0] = 1;
+  });
+  var surfaceIds = [];
+  for (var n = 0; n < nodeCount; n++) {
+    if (surfMark[n]) surfaceIds.push(n);
+  }
+  var sel = {
+    faceSurface: {
+      type: 'face', source: 'auto', label: 'Tüm Yüzey',
+      nodeIds: new Uint32Array(surfaceIds)
+    }
+  };
+  if (bbox) {
+    var dia = Math.max(bbox.maxX - bbox.minX, bbox.maxY - bbox.minY, bbox.maxZ - bbox.minZ);
+    var eps = Math.max(1e-3, dia * 1e-4);
+    function addDir(name, label, axis, isMax) {
+      var lim = isMax ? bbox[axis === 'x' ? 'maxX' : axis === 'y' ? 'maxY' : 'maxZ']
+                      : bbox[axis === 'x' ? 'minX' : axis === 'y' ? 'minY' : 'minZ'];
+      var coord = axis === 'x' ? 0 : axis === 'y' ? 1 : 2;
+      var ids = [];
+      for (var i = 0; i < surfaceIds.length; i++) {
+        var id = surfaceIds[i];
+        if (Math.abs(nodes[id * 3 + coord] - lim) < eps) ids.push(id);
+      }
+      if (ids.length > 0) {
+        sel[name] = { type: 'face', source: 'auto', label: label, nodeIds: new Uint32Array(ids) };
+      }
+    }
+    addDir('faceXMin', 'X− Yüzeyi', 'x', false);
+    addDir('faceXMax', 'X+ Yüzeyi', 'x', true);
+    addDir('faceYMin', 'Y− Yüzeyi (Alt)', 'y', false);
+    addDir('faceYMax', 'Y+ Yüzeyi (Üst)', 'y', true);
+    addDir('faceZMin', 'Z− Yüzeyi (Ön)', 'z', false);
+    addDir('faceZMax', 'Z+ Yüzeyi (Arka)', 'z', true);
+  }
+  return sel;
 }
 
 // ─── Kutu → Heks8 structured ───────────────────────────────────────────────
