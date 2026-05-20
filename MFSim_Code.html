@@ -24167,6 +24167,9 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (mesh && !mesh.error && Array.isArray(opts.sphereOfInfluence) && opts.sphereOfInfluence.length > 0) {
     mesh = _veFEAApplySphereOfInfluence(mesh, opts.sphereOfInfluence);
   }
+  if (mesh && !mesh.error && Array.isArray(opts.faceSizingControls) && opts.faceSizingControls.length > 0) {
+    mesh = _veFEAApplyFaceSizingControls(mesh, opts.faceSizingControls);
+  }
   return mesh;
 }
 
@@ -24396,6 +24399,9 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     }
     if (Array.isArray(opts.sphereOfInfluence) && opts.sphereOfInfluence.length > 0) {
       mesh = _veFEAApplySphereOfInfluence(mesh, opts.sphereOfInfluence);
+    }
+    if (Array.isArray(opts.faceSizingControls) && opts.faceSizingControls.length > 0) {
+      mesh = _veFEAApplyFaceSizingControls(mesh, opts.faceSizingControls);
     }
     return mesh;
   }
@@ -26654,6 +26660,49 @@ function veFEAComputeQualityMetrics(meshData) {
       histogram: _veFEAHistogram(parDevArr, 0, 90, 9)
     } : null
   };
+}
+
+// ─── Face Sizing Controls (ANSYS §5.1 — multi-face lokal sizing) ─────────
+// Kullanıcı 3D viewer'da yüzey seçer ve target eleman boyutu atar. v1: post-
+// mesh named selection ile face'e ait node'lar 'face-sizing-N' anahtarıyla
+// yeniden gruplanır + metadata (targetSize, behavior) saklanır. Gerçek
+// size-field uygulaması (yapısal grid'lerde face-near refinement) Faz 2'nin
+// ileri adımında eklenir.
+//
+// Parametreler:
+//   controls: [{ faceId, size, behavior: 'soft'|'hard' }, ...]
+//
+// Uygulama: mesher'ın yazdığı auto face selection'ı (örn. 'faceTop' →
+// mesh.namedSelections['faceTop']) bulur, nodeIds'i paylaşan yeni bir
+// 'face-sizing-N' selection oluşturur. behavior='hard' uygulamada mesher
+// bias'ı override eder (Faz 2 size-field); 'soft' ise sadece marker.
+function _veFEAApplyFaceSizingControls(mesh, controls) {
+  if (!mesh || mesh.error || !controls || controls.length === 0) return mesh;
+  if (!mesh.namedSelections) mesh.namedSelections = {};
+  for (var i = 0; i < controls.length; i++) {
+    var c = controls[i] || {};
+    var faceId = c.faceId;
+    var size = +c.size;
+    if (!faceId || !isFinite(size) || size <= 0) continue;
+    // Mesher box/cylinder/shaft için anahtar doğrudan faceId (örn. 'faceTop').
+    var src = mesh.namedSelections[faceId];
+    if (!src || src.type !== 'face' || !src.nodeIds) continue;
+    var key = 'face-sizing-' + i;
+    var behavior = (c.behavior === 'hard') ? 'hard' : 'soft';
+    mesh.namedSelections[key] = {
+      type: 'face',
+      source: 'auto',
+      label: 'Face Sizing: ' + (src.label || faceId) + ' (' + size + 'mm, ' + behavior + ')',
+      nodeIds: src.nodeIds,
+      faceSizing: {
+        sourceFaceId: faceId,
+        targetSize: size,
+        behavior: behavior,
+        nodeCount: src.nodeIds.length
+      }
+    };
+  }
+  return mesh;
 }
 
 // ─── Sphere of Influence (ANSYS §5.2 — lokal mesh kontrolü) ──────────────
@@ -29194,6 +29243,7 @@ function veFEABuildMeshForNode(meshNodeId) {
     curvatureRefinement: settings.curvatureRefinement,
     localSizing: settings.localSizing,
     sphereOfInfluence: settings.sphereOfInfluence,
+    faceSizingControls: settings.faceSizingControls,
     crossSection: settings.crossSection,
     useTetMesher: settings.useTetMesher,
     delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints,
@@ -30138,6 +30188,7 @@ function _veFEAEditorDefaultAccordionState() {
     sizing: false,
     defaults: false,
     inflation: false,
+    faceSizing: false,
     sphereOfInfluence: false,
     namedSel: false,
     // Post-mesh
@@ -30165,6 +30216,7 @@ function veFEAEditorRefreshAccordions() {
     'defaults':    _veFEAEditorDefaultsHTML(node),
     'sizing':      _veFEAEditorSizingHTML(node),
     'inflation':         _veFEAEditorInflationHTML(node),
+    'faceSizing':        _veFEAEditorFaceSizingHTML(node),
     'sphereOfInfluence': _veFEAEditorSphereOfInfluenceHTML(node),
     'quality':           _veFEAEditorQualityHTML(node),
     'namedSel':    _veFEAEditorNamedSelHTML(node),
@@ -30581,6 +30633,7 @@ function _veFEAEditorBuildLeftPanel(node) {
   html += _veFEAEditorAccordionSection('sizing',      'Boyutlandırma',                 _veFEAEditorSizingHTML(node));
   html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
   html += _veFEAEditorAccordionSection('inflation',         'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
+  html += _veFEAEditorAccordionSection('faceSizing',        'Face Sizing Controls (ANSYS §5.1)', _veFEAEditorFaceSizingHTML(node));
   html += _veFEAEditorAccordionSection('sphereOfInfluence', 'Sphere of Influence (ANSYS §5.2)', _veFEAEditorSphereOfInfluenceHTML(node));
   html += _veFEAEditorAccordionSection('namedSel',          'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
   // ─── Post-mesh: Mesh oluşturulduktan sonra incelenen bölümler ───────────
@@ -31114,6 +31167,149 @@ function _veFEAEditorInflationHTML(node) {
     '</div>';
   }
   return html;
+}
+
+// ─── Face Sizing Controls panel (ANSYS §5.1) ──────────────────────────────
+// Çoklu yüzey lokal sizing: kullanıcı 3D viewer'da bir face'i tıklayıp
+// "Sizing'e ekle" butonu ile listeye katar. Her entry için target eleman
+// boyutu + behavior (soft/hard). v1: post-mesh named selection olarak
+// işaretlenir; gerçek size-field uygulaması Faz 2'nin ileri adımında.
+function _veFEAEditorFaceSizingHTML(node) {
+  var d = node.data || {};
+  var settings = d.meshSettings || {};
+  var controls = settings.faceSizingControls || [];
+  var selectedFaceId = d.selectedFaceId || null;
+
+  // Mevcut topology'den face label haritası (eğer varsa)
+  var faceLabels = {};
+  if (typeof veFEAComputeGeometryTopology === 'function' && d.geometry) {
+    try {
+      var topo = veFEAComputeGeometryTopology(d.geometry);
+      if (topo && Array.isArray(topo.faces)) {
+        topo.faces.forEach(function(f) { faceLabels[f.id] = f.label || f.id; });
+      }
+    } catch (e) { /* topology hesaplanamadıysa fallback: faceId göster */ }
+  }
+
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">' +
+    'ANSYS §5.1 — geometrideki bir yüzeye lokal eleman boyutu ata. ' +
+    '3D görüntüleyiciden bir yüzeye tıklayın, ardından <b>+ Sizing\'e ekle</b> deyin.' +
+    '</div>';
+
+  // Pick'lenmiş face göstergesi + Ekle butonu
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color);">';
+  if (selectedFaceId) {
+    var existsInList = controls.some(function(c) { return c.faceId === selectedFaceId; });
+    var lbl = faceLabels[selectedFaceId] || selectedFaceId;
+    html += '<span style="flex:1; font-size:0.62rem; color:var(--text-primary);"><b>Seçili yüz:</b> ' + lbl +
+      ' <span style="color:var(--text-muted);">(' + selectedFaceId + ')</span></span>';
+    if (existsInList) {
+      html += '<span style="font-size:0.55rem; color:var(--text-muted);">(zaten listede)</span>';
+    } else {
+      html += '<button onclick="veFEAAddFaceSizingFromSelection(\'' + node.id + '\')" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">+ Sizing\'e ekle</button>';
+    }
+  } else {
+    html += '<span style="flex:1; font-size:0.6rem; color:var(--text-muted); font-style:italic;">3D görüntüleyicide bir yüzeye tıklayın…</span>';
+  }
+  html += '</div>';
+
+  // Sizing listesi
+  if (controls.length === 0) {
+    html += '<div style="padding:10px 12px; background:var(--bg-primary); border:1px dashed var(--border-color); font-size:0.6rem; color:var(--text-muted); text-align:center;">Henüz face sizing tanımlı değil.</div>';
+  } else {
+    controls.forEach(function(c, idx) {
+      var lbl = faceLabels[c.faceId] || c.faceId;
+      var beh = c.behavior || 'soft';
+      html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+      html += '<b style="font-size:0.62rem; color:var(--text-primary);">' + lbl +
+        ' <span style="color:var(--text-muted); font-weight:400;">(' + c.faceId + ')</span></b>';
+      html += '<button onclick="veFEARemoveFaceSizing(\'' + node.id + '\',' + idx + ')" style="padding:2px 8px; font-size:0.55rem; background:#dc2626; color:#fff; border:none; cursor:pointer;">Sil</button>';
+      html += '</div>';
+      html += '<div style="display:grid; grid-template-columns:auto 1fr auto 1fr; gap:6px; align-items:center;">';
+      html += '<span style="font-size:0.58rem; color:var(--text-secondary);">Hedef boyut:</span>';
+      html += '<input type="number" value="' + (c.size || 1) + '" step="0.1" min="0.01" id="ve-fea-fs-size-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '<span style="font-size:0.58rem; color:var(--text-secondary);">Behavior:</span>';
+      html += '<select id="ve-fea-fs-beh-' + node.id + '-' + idx + '" style="font-size:0.62rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); width:100%;">';
+      html += '<option value="soft"' + (beh === 'soft' ? ' selected' : '') + '>Soft (override\'lanabilir)</option>';
+      html += '<option value="hard"' + (beh === 'hard' ? ' selected' : '') + '>Hard (kesin uygula)</option>';
+      html += '</select>';
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+
+  if (controls.length > 0) {
+    html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid #3b82f6; font-size:0.58rem; color:var(--text-secondary); line-height:1.5;">' +
+      'ℹ Mesh oluşturulduğunda her face sizing entry için bir <i>named selection</i> üretilir ' +
+      '(metadata: targetSize, behavior). Gerçek size-field refinement Faz 2 ileri adımında.' +
+      '</div>';
+  }
+  return html;
+}
+
+// Currently selected face'i (viewer pick'inden gelen) face sizing listesine ekler.
+function veFEAAddFaceSizingFromSelection(nodeId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.selectedFaceId) return;
+  node.data.meshSettings = node.data.meshSettings || {};
+  if (!Array.isArray(node.data.meshSettings.faceSizingControls)) {
+    node.data.meshSettings.faceSizingControls = [];
+  }
+  // UI'da değişmiş input değerlerini kaybetmemek için önce oku
+  var existing = veFEAReadFaceSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.faceSizingControls = existing;
+  // Tekrar ekleme yapma
+  var fid = node.data.selectedFaceId;
+  if (node.data.meshSettings.faceSizingControls.some(function(c) { return c.faceId === fid; })) return;
+  // Default size: global mesh size'ın yarısı (önemli ölçüde refine'e başlamak için)
+  var defaultSize = ((node.data.meshSettings.size) || 10) / 2;
+  node.data.meshSettings.faceSizingControls.push({
+    faceId: fid, size: defaultSize, behavior: 'soft'
+  });
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+function veFEARemoveFaceSizing(nodeId, index) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings) return;
+  var existing = veFEAReadFaceSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.faceSizingControls = existing;
+  if (!Array.isArray(node.data.meshSettings.faceSizingControls)) return;
+  node.data.meshSettings.faceSizingControls.splice(index, 1);
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// Mevcut DOM input'larından face sizing list'ini okur (submit/refresh sırasında).
+function veFEAReadFaceSizingFromUI(nodeId) {
+  if (typeof nodes === 'undefined') return [];
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings ||
+      !Array.isArray(node.data.meshSettings.faceSizingControls)) return [];
+  var current = node.data.meshSettings.faceSizingControls;
+  var out = [];
+  for (var i = 0; i < current.length; i++) {
+    var sizeEl = document.getElementById('ve-fea-fs-size-' + nodeId + '-' + i);
+    var behEl  = document.getElementById('ve-fea-fs-beh-' + nodeId + '-' + i);
+    if (!sizeEl) {
+      // DOM render edilmemiş (modal kapalı) — settings'teki değeri koru
+      out.push({
+        faceId: current[i].faceId,
+        size: current[i].size,
+        behavior: current[i].behavior || 'soft'
+      });
+      continue;
+    }
+    var sz = parseFloat(sizeEl.value);
+    if (!isFinite(sz) || sz <= 0) sz = current[i].size || 1;
+    var beh = (behEl && behEl.value === 'hard') ? 'hard' : 'soft';
+    out.push({ faceId: current[i].faceId, size: sz, behavior: beh });
+  }
+  return out;
 }
 
 // ─── Sphere of Influence panel (ANSYS §5.2) ───────────────────────────────
@@ -32253,6 +32449,13 @@ function veFEASubmitMeshBuild(nodeId) {
       var soi = veFEAReadSphereOfInfluenceFromUI(nodeId);
       if (soi.length > 0) {
         meshNode.data.meshSettings.sphereOfInfluence = soi;
+      }
+    }
+    // Face Sizing Controls (ANSYS §5.1) — UI'dan oku
+    if (typeof veFEAReadFaceSizingFromUI === 'function') {
+      var fsc = veFEAReadFaceSizingFromUI(nodeId);
+      if (fsc.length > 0) {
+        meshNode.data.meshSettings.faceSizingControls = fsc;
       }
     }
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);

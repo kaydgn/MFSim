@@ -491,6 +491,9 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (mesh && !mesh.error && Array.isArray(opts.sphereOfInfluence) && opts.sphereOfInfluence.length > 0) {
     mesh = _veFEAApplySphereOfInfluence(mesh, opts.sphereOfInfluence);
   }
+  if (mesh && !mesh.error && Array.isArray(opts.faceSizingControls) && opts.faceSizingControls.length > 0) {
+    mesh = _veFEAApplyFaceSizingControls(mesh, opts.faceSizingControls);
+  }
   return mesh;
 }
 
@@ -720,6 +723,9 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     }
     if (Array.isArray(opts.sphereOfInfluence) && opts.sphereOfInfluence.length > 0) {
       mesh = _veFEAApplySphereOfInfluence(mesh, opts.sphereOfInfluence);
+    }
+    if (Array.isArray(opts.faceSizingControls) && opts.faceSizingControls.length > 0) {
+      mesh = _veFEAApplyFaceSizingControls(mesh, opts.faceSizingControls);
     }
     return mesh;
   }
@@ -2978,6 +2984,49 @@ function veFEAComputeQualityMetrics(meshData) {
       histogram: _veFEAHistogram(parDevArr, 0, 90, 9)
     } : null
   };
+}
+
+// ─── Face Sizing Controls (ANSYS §5.1 — multi-face lokal sizing) ─────────
+// Kullanıcı 3D viewer'da yüzey seçer ve target eleman boyutu atar. v1: post-
+// mesh named selection ile face'e ait node'lar 'face-sizing-N' anahtarıyla
+// yeniden gruplanır + metadata (targetSize, behavior) saklanır. Gerçek
+// size-field uygulaması (yapısal grid'lerde face-near refinement) Faz 2'nin
+// ileri adımında eklenir.
+//
+// Parametreler:
+//   controls: [{ faceId, size, behavior: 'soft'|'hard' }, ...]
+//
+// Uygulama: mesher'ın yazdığı auto face selection'ı (örn. 'faceTop' →
+// mesh.namedSelections['faceTop']) bulur, nodeIds'i paylaşan yeni bir
+// 'face-sizing-N' selection oluşturur. behavior='hard' uygulamada mesher
+// bias'ı override eder (Faz 2 size-field); 'soft' ise sadece marker.
+function _veFEAApplyFaceSizingControls(mesh, controls) {
+  if (!mesh || mesh.error || !controls || controls.length === 0) return mesh;
+  if (!mesh.namedSelections) mesh.namedSelections = {};
+  for (var i = 0; i < controls.length; i++) {
+    var c = controls[i] || {};
+    var faceId = c.faceId;
+    var size = +c.size;
+    if (!faceId || !isFinite(size) || size <= 0) continue;
+    // Mesher box/cylinder/shaft için anahtar doğrudan faceId (örn. 'faceTop').
+    var src = mesh.namedSelections[faceId];
+    if (!src || src.type !== 'face' || !src.nodeIds) continue;
+    var key = 'face-sizing-' + i;
+    var behavior = (c.behavior === 'hard') ? 'hard' : 'soft';
+    mesh.namedSelections[key] = {
+      type: 'face',
+      source: 'auto',
+      label: 'Face Sizing: ' + (src.label || faceId) + ' (' + size + 'mm, ' + behavior + ')',
+      nodeIds: src.nodeIds,
+      faceSizing: {
+        sourceFaceId: faceId,
+        targetSize: size,
+        behavior: behavior,
+        nodeCount: src.nodeIds.length
+      }
+    };
+  }
+  return mesh;
 }
 
 // ─── Sphere of Influence (ANSYS §5.2 — lokal mesh kontrolü) ──────────────

@@ -298,13 +298,13 @@ describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
     expect(leftPanel.innerHTML).toMatch(/Mesh Sonrası/);
   });
 
-  test('Pre-mesh sırası: sizing → defaults → inflation → sphereOfInfluence → namedSel', () => {
+  test('Pre-mesh sırası: sizing → defaults → inflation → faceSizing → sphereOfInfluence → namedSel', () => {
     global.nodes = [{ id: 'mesh-g2', type: 'fea-mesh', data: {} }];
     veFEAOpenMeshEditor('mesh-g2');
     var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
       .querySelectorAll('[data-acc-section]');
     var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(0, 5)).toEqual(['sizing', 'defaults', 'inflation', 'sphereOfInfluence', 'namedSel']);
+    expect(order.slice(0, 6)).toEqual(['sizing', 'defaults', 'inflation', 'faceSizing', 'sphereOfInfluence', 'namedSel']);
   });
 
   test('Post-mesh sırası: quality → statistics → display → suggestions → topology', () => {
@@ -313,7 +313,7 @@ describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
     var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
       .querySelectorAll('[data-acc-section]');
     var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(5)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'topology']);
+    expect(order.slice(6)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'topology']);
   });
 
   test('Default accordion state: TÜM accordion\'lar kapalı (sade ilk görünüm)', () => {
@@ -739,6 +739,131 @@ describe('Modal toolbar — Çalıştır butonu', () => {
     veFEAOpenMeshEditor('mesh-t3');
     var clearBtn = document.querySelector('button[onclick*="veFEAClearMeshForNode"]');
     expect(clearBtn).not.toBeNull();
+  });
+});
+
+// ─── Faz 2 Adım 0 — Face Sizing Controls UI ───
+describe('Face Sizing Controls (ANSYS §5.1) — UI helpers', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.saveState = jest.fn();
+    document.body.innerHTML = '';
+  });
+
+  test('_veFEAEditorFaceSizingHTML: hiç seçim yok + boş liste → uyarı placeholder', () => {
+    var node = { id: 'fs1', type: 'fea-mesh', data: {} };
+    var html = _veFEAEditorFaceSizingHTML(node);
+    expect(html).toMatch(/Henüz face sizing tanımlı değil/);
+    expect(html).toMatch(/3D görüntüleyicide bir yüzeye tıklayın/);
+  });
+
+  test('_veFEAEditorFaceSizingHTML: face seçili, listede yok → Ekle butonu', () => {
+    var node = { id: 'fs2', type: 'fea-mesh', data: {
+      selectedFaceId: 'faceTop',
+      geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } }
+    }};
+    var html = _veFEAEditorFaceSizingHTML(node);
+    expect(html).toMatch(/Seçili yüz:/);
+    expect(html).toMatch(/veFEAAddFaceSizingFromSelection/);
+    expect(html).not.toMatch(/zaten listede/);
+  });
+
+  test('_veFEAEditorFaceSizingHTML: face seçili VE listede → "zaten listede" mesajı', () => {
+    var node = { id: 'fs3', type: 'fea-mesh', data: {
+      selectedFaceId: 'faceTop',
+      meshSettings: { faceSizingControls: [{ faceId: 'faceTop', size: 1, behavior: 'soft' }] }
+    }};
+    var html = _veFEAEditorFaceSizingHTML(node);
+    expect(html).toMatch(/zaten listede/);
+    expect(html).not.toMatch(/veFEAAddFaceSizingFromSelection/);
+  });
+
+  test('_veFEAEditorFaceSizingHTML: liste dolu → her entry için size/behavior input', () => {
+    var node = { id: 'fs4', type: 'fea-mesh', data: {
+      meshSettings: { faceSizingControls: [
+        { faceId: 'faceTop', size: 1.5, behavior: 'soft' },
+        { faceId: 'faceBottom', size: 0.8, behavior: 'hard' }
+      ]}
+    }};
+    var html = _veFEAEditorFaceSizingHTML(node);
+    expect(html).toMatch(/id="ve-fea-fs-size-fs4-0"/);
+    expect(html).toMatch(/id="ve-fea-fs-size-fs4-1"/);
+    expect(html).toMatch(/id="ve-fea-fs-beh-fs4-0"/);
+    expect(html).toMatch(/value="hard" selected/);  // index 1 hard
+  });
+
+  test('veFEAAddFaceSizingFromSelection: seçili face listeye eklenir', () => {
+    var node = { id: 'fs5', type: 'fea-mesh', data: { selectedFaceId: 'faceTop' } };
+    global.nodes = [node];
+    veFEAAddFaceSizingFromSelection('fs5');
+    expect(node.data.meshSettings.faceSizingControls).toBeDefined();
+    expect(node.data.meshSettings.faceSizingControls.length).toBe(1);
+    expect(node.data.meshSettings.faceSizingControls[0].faceId).toBe('faceTop');
+    expect(node.data.meshSettings.faceSizingControls[0].behavior).toBe('soft');
+  });
+
+  test('veFEAAddFaceSizingFromSelection: aynı face tekrar eklenemez (dedup)', () => {
+    var node = { id: 'fs6', type: 'fea-mesh', data: {
+      selectedFaceId: 'faceTop',
+      meshSettings: { faceSizingControls: [{ faceId: 'faceTop', size: 1, behavior: 'soft' }] }
+    }};
+    global.nodes = [node];
+    veFEAAddFaceSizingFromSelection('fs6');
+    expect(node.data.meshSettings.faceSizingControls.length).toBe(1);  // değişmedi
+  });
+
+  test('veFEAAddFaceSizingFromSelection: hiç face seçili değilse skip', () => {
+    var node = { id: 'fs7', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAAddFaceSizingFromSelection('fs7');
+    expect(node.data.meshSettings).toBeUndefined();
+  });
+
+  test('veFEAAddFaceSizingFromSelection: default size = global / 2', () => {
+    var node = { id: 'fs8', type: 'fea-mesh', data: {
+      selectedFaceId: 'faceTop',
+      meshSettings: { size: 8 }
+    }};
+    global.nodes = [node];
+    veFEAAddFaceSizingFromSelection('fs8');
+    expect(node.data.meshSettings.faceSizingControls[0].size).toBe(4);
+  });
+
+  test('veFEARemoveFaceSizing: belirtilen index siler', () => {
+    var node = { id: 'fs9', type: 'fea-mesh', data: {
+      meshSettings: { faceSizingControls: [
+        { faceId: 'faceTop',    size: 1, behavior: 'soft' },
+        { faceId: 'faceBottom', size: 2, behavior: 'hard' },
+        { faceId: 'faceSide',   size: 3, behavior: 'soft' }
+      ]}
+    }};
+    global.nodes = [node];
+    veFEARemoveFaceSizing('fs9', 1);
+    expect(node.data.meshSettings.faceSizingControls.length).toBe(2);
+    expect(node.data.meshSettings.faceSizingControls[0].faceId).toBe('faceTop');
+    expect(node.data.meshSettings.faceSizingControls[1].faceId).toBe('faceSide');
+  });
+
+  test('veFEAReadFaceSizingFromUI: DOM input\'larından okur', () => {
+    var node = { id: 'fs10', type: 'fea-mesh', data: {
+      meshSettings: { faceSizingControls: [
+        { faceId: 'faceTop',    size: 1, behavior: 'soft' },
+        { faceId: 'faceBottom', size: 2, behavior: 'hard' }
+      ]}
+    }};
+    global.nodes = [node];
+    document.body.innerHTML =
+      '<input id="ve-fea-fs-size-fs10-0" value="0.5">' +
+      '<select id="ve-fea-fs-beh-fs10-0"><option value="hard" selected>H</option></select>' +
+      '<input id="ve-fea-fs-size-fs10-1" value="3.0">' +
+      '<select id="ve-fea-fs-beh-fs10-1"><option value="soft" selected>S</option></select>';
+    var arr = veFEAReadFaceSizingFromUI('fs10');
+    expect(arr.length).toBe(2);
+    expect(arr[0].size).toBe(0.5);
+    expect(arr[0].behavior).toBe('hard');
+    expect(arr[1].size).toBe(3.0);
+    expect(arr[1].behavior).toBe('soft');
   });
 });
 

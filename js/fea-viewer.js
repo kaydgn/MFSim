@@ -1743,6 +1743,7 @@ function veFEABuildMeshForNode(meshNodeId) {
     curvatureRefinement: settings.curvatureRefinement,
     localSizing: settings.localSizing,
     sphereOfInfluence: settings.sphereOfInfluence,
+    faceSizingControls: settings.faceSizingControls,
     crossSection: settings.crossSection,
     useTetMesher: settings.useTetMesher,
     delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints,

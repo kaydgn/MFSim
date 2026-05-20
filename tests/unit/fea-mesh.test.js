@@ -2504,6 +2504,95 @@ describe('veFEAMeshFromGeometry — midSideNodes opsiyonu', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// ─── Faz 2 Adım 0 — Face Sizing Controls (ANSYS §5.1) ───
+describe('Face Sizing Controls (opts.faceSizingControls → named selection)', () => {
+  test('Tek face entry (box: faceYMax): mevcut auto face selection\'a sizing metadata ekler', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, faceSizingControls: [{ faceId: 'faceYMax', size: 1.5, behavior: 'soft' }] }
+    );
+    expect(mesh.namedSelections['face-sizing-0']).toBeDefined();
+    var ns = mesh.namedSelections['face-sizing-0'];
+    expect(ns.type).toBe('face');
+    expect(ns.nodeIds.length).toBeGreaterThan(0);
+    // Aynı node ID'ler face-sizing'de ve auto face'te paylaşılır (reference)
+    expect(ns.nodeIds).toBe(mesh.namedSelections.faceYMax.nodeIds);
+    expect(ns.faceSizing).toBeDefined();
+    expect(ns.faceSizing.sourceFaceId).toBe('faceYMax');
+    expect(ns.faceSizing.targetSize).toBe(1.5);
+    expect(ns.faceSizing.behavior).toBe('soft');
+  });
+
+  test('Behavior=hard metadata\'da korunur', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, faceSizingControls: [{ faceId: 'faceYMin', size: 0.8, behavior: 'hard' }] }
+    );
+    expect(mesh.namedSelections['face-sizing-0'].faceSizing.behavior).toBe('hard');
+  });
+
+  test('Birden fazla face entry — her biri ayrı selection', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, faceSizingControls: [
+        { faceId: 'faceYMax', size: 1, behavior: 'soft' },
+        { faceId: 'faceYMin', size: 2, behavior: 'hard' }
+      ]}
+    );
+    expect(mesh.namedSelections['face-sizing-0']).toBeDefined();
+    expect(mesh.namedSelections['face-sizing-1']).toBeDefined();
+    expect(mesh.namedSelections['face-sizing-0'].faceSizing.sourceFaceId).toBe('faceYMax');
+    expect(mesh.namedSelections['face-sizing-1'].faceSizing.sourceFaceId).toBe('faceYMin');
+  });
+
+  test('Bilinmeyen faceId (auto selection\'da yok) sessizce atlanır', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, faceSizingControls: [
+        { faceId: 'faceYMax',        size: 1, behavior: 'soft' },
+        { faceId: 'faceNonExistent', size: 1, behavior: 'soft' }
+      ]}
+    );
+    expect(mesh.namedSelections['face-sizing-0']).toBeDefined();
+    // index 1 atlandı çünkü face bulunamadı
+    expect(mesh.namedSelections['face-sizing-1']).toBeUndefined();
+  });
+
+  test('Geçersiz size (0, negatif, NaN) atlanır', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, faceSizingControls: [
+        { faceId: 'faceYMax', size: 0,   behavior: 'soft' },   // sıfır
+        { faceId: 'faceYMax', size: -1,  behavior: 'soft' },   // negatif
+        { faceId: 'faceYMax', size: NaN, behavior: 'soft' },   // NaN
+        { faceId: 'faceYMax', size: 2,   behavior: 'soft' }    // geçerli
+      ]}
+    );
+    expect(mesh.namedSelections['face-sizing-0']).toBeUndefined();
+    expect(mesh.namedSelections['face-sizing-1']).toBeUndefined();
+    expect(mesh.namedSelections['face-sizing-2']).toBeUndefined();
+    expect(mesh.namedSelections['face-sizing-3']).toBeDefined();
+  });
+
+  test('Cylinder eğri yüzey (faceSide) için çalışır', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'cylinder', params: { radius: 5, height: 10 } },
+      { size: 3, faceSizingControls: [{ faceId: 'faceSide', size: 0.5, behavior: 'soft' }] }
+    );
+    expect(mesh.namedSelections['face-sizing-0']).toBeDefined();
+    expect(mesh.namedSelections['face-sizing-0'].faceSizing.sourceFaceId).toBe('faceSide');
+  });
+
+  test('Boş veya tanımsız faceSizingControls → namedSelections değişmez', () => {
+    var m1 = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, faceSizingControls: [] }
+    );
+    var keys = Object.keys(m1.namedSelections).filter(function(k) { return k.indexOf('face-sizing') === 0; });
+    expect(keys.length).toBe(0);
+  });
+});
+
 // ─── Faz 1 Adım 4 — Sphere of Influence (ANSYS §5.2) ───
 describe('Sphere of Influence (opts.sphereOfInfluence → named selection)', () => {
   test('Tek küre içindeki node\'lar named selection oluşturur', () => {
