@@ -88,7 +88,9 @@ function getFEAGeometryPropertiesHTML(node) {
 
   // ─── GEOMETRİ KAYNAĞI ─────────────────────────────────────────────────
   html += veFEASectionTitle('Parametrik Primitif');
-  html += '<div style="display:flex; gap:4px; margin-bottom:8px;">';
+  // 5×2 grid: dar sidebar'da 10 buton tek satıra sığmıyordu, butonlar ~25px
+  // genişlikte kalıp metin okunamıyordu. Grid ile 50-60px genişlik, iki satır.
+  html += '<div style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; margin-bottom:8px;">';
   var types = (typeof veFEAPrimitiveTypes === 'function') ? veFEAPrimitiveTypes() : [];
   types.forEach(function(t) {
     var label = (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(t).split(' ')[0] : t;
@@ -96,7 +98,7 @@ function getFEAGeometryPropertiesHTML(node) {
     var border = active ? 'var(--accent-primary)' : 'var(--border-color)';
     var bg = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
     var color = active ? '#fff' : 'var(--text-primary)';
-    html += '<button onclick="veFEAToggleParamForm(\'' + node.id + '\', \'' + t + '\')" style="flex:1; padding:7px; font-size:0.64rem; background:' + bg + '; color:' + color + '; border:1px solid ' + border + '; cursor:pointer;">' + label + '</button>';
+    html += '<button onclick="veFEAToggleParamForm(\'' + node.id + '\', \'' + t + '\')" style="padding:7px 4px; font-size:0.62rem; background:' + bg + '; color:' + color + '; border:1px solid ' + border + '; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + (typeof veFEAPrimitiveLabel === 'function' ? veFEAPrimitiveLabel(t) : t) + '">' + label + '</button>';
   });
   html += '</div>';
 

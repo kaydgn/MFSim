@@ -184,10 +184,16 @@ describe('veFEAMeshFromGeometry — mode parametresi', () => {
 
   test('voxel-too-many error doğrudan _veFEAVoxelizeTrianglesToHex üzerinden iletilir', () => {
     // veFEAMeshFromGeometry size'ı VE_FEA_MESH_MIN_SIZE=0.5 mm'e clamp eder,
-    // dolayısıyla 10 mm küpte 5M voxel'i aşmak için doğrudan voxelize çağrılır
+    // dolayısıyla 10 mm küpte 20M voxel'i aşmak için doğrudan voxelize çağrılır
     var parsed = getCubeParsed();
     var m = _veFEAVoxelizeTrianglesToHex(parsed, 0.01, 'step');
     expect(m.error).toBe('voxel-too-many');
+  });
+
+  test('VE_FEA_VOXEL_MAX_COUNT 20M (sub-1mm mesh için headroom)', () => {
+    // Eski 5M sınırı sub-1mm mesh'i büyük geometrilerde engelliyordu.
+    // Yeni: 20M → 100mm³ bbox için 0.5mm mesh = 200³ = 8M voxel rahat sığar.
+    expect(VE_FEA_VOXEL_MAX_COUNT).toBe(20000000);
   });
 });
 
