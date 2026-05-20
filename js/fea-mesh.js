@@ -1,24 +1,80 @@
 // ============================================================================
 // FEA MESH ÜRETİMİ
 // ============================================================================
-// Geometriyi sonlu eleman ağına böler. F3a kapsamı:
+// Geometriyi sonlu eleman ağına böler. Native mesher'lar:
 //   - Kutu        → Heks8 structured (nx × ny × nz)
-//   - Silindir    → Wedge6 (disk triangulation + eksenel extrude)
+//   - Silindir    → Heks8 O-grid (butterfly) veya Wedge6 fan (legacy)
 //   - Şaft        → Heks8 annulus (radyal × açısal × eksenel)
-//   - STEP        → Tri3 (yüzey mesh, vertex dedup)
-//
-// Hacim tetra (tet4/tet10) ve adaptif refinement F3b'de eklenir
-// (tetgen-wasm veya benzeri yöntem gerekir).
-//
-// Mesh data formatı:
-//   { type, geometryType, nodes (Float32Array Nx3), elements (Uint32Array),
-//     nodesPerElement, grid?, metrics? }
+//   - Cone/Sphere/Torus/Hemisphere/I-beam/L-bracket/Rect-tube — Heks8/Wedge6
+//   - STEP/STL    → Tet4 (Delaunay) veya Heks8 (voxel fallback)
 //
 // Public API:
-//   veFEAMeshFromGeometry(geometry, opts) → meshData
-//   veFEAComputeMeshMetrics(meshData)     → { nodeCount, elementCount, ... }
-//   veFEAMeshLabel(type)                  → "Heks8" / "Wedge6" / "Tri3" vs.
+//   veFEAMeshFromGeometry(geometry, opts)      → FEAMeshData | FEAMeshError
+//   veFEAMeshFromGeometryAsync(geometry, opts) → Promise<FEAMeshData | FEAMeshError>
+//   veFEAMeshFromGeometryViaWorker(...)        → Promise (web worker)
+//   veFEAComputeMeshMetrics(meshData)          → FEAMeshMetrics
+//   veFEAComputeQualityMetrics(meshData)       → quality stats (aspect/skewness/...)
+//   veFEAComputeJacobianMetrics(meshData)      → jacobian stats
+//   veFEAConvertMeshToTet4(meshData)           → tet4 mesh (decomposition)
+//   veFEAEnrichToQuadratic(meshData)           → hex20/tet10/wedge15
+//   veFEAMeshLabel(type)                       → görünür label
+//
+// ─── FEAMeshData kontratı (JSDoc) ───────────────────────────────────────────
 // ============================================================================
+
+/**
+ * @typedef {Object} FEAMeshData
+ * @property {('hex8'|'wedge6'|'tet4'|'tri3'|'pyramid5'|'hex20'|'tet10'|'wedge15')} type
+ *   Eleman tipi. Native generated veya conversion/enrichment çıktısı.
+ * @property {string} geometryType
+ *   Kaynak geometri etiketi: 'box' | 'cylinder' | 'shaft' | 'cone' | 'sphere'
+ *   | 'torus' | 'hemisphere' | 'ibeam' | 'lbracket' | 'recttube' | 'voxel-step'
+ *   | 'delaunay-<src>' | 'tri-surface-<src>'.
+ * @property {Float32Array} nodes
+ *   Düğüm pozisyonları, flat [x0,y0,z0, x1,y1,z1, ...] (length = 3·nodeCount).
+ * @property {Uint32Array} elements
+ *   Eleman bağlantıları, flat indices (length = nodesPerElement·elementCount).
+ * @property {number} nodesPerElement
+ *   Eleman başına düğüm: 3 (tri3), 4 (tet4), 5 (pyramid5), 6 (wedge6),
+ *   8 (hex8), 10 (tet10), 15 (wedge15), 20 (hex20).
+ * @property {Object<string,FEANamedSelection>} [namedSelections]
+ *   Auto/manual yüzey/edge/node/element grupları. Geometriye göre otomatik:
+ *   kutu→6 yüzey, silindir→3, şaft→4, voxel→tek yüzey grubu. BC referansı.
+ * @property {Object} [grid]
+ *   Yapısal grid'lerde topolojik boyutlar (örn. {nx,ny,nz} veya
+ *   {nRadial,nCircum,nAxial}). Voxel/Delaunay mesh'te bulunmaz.
+ * @property {FEAMeshMetrics} [metrics]
+ *   Compute sonrası eklenen istatistikler (veFEAComputeMeshMetrics ile).
+ */
+
+/**
+ * @typedef {Object} FEANamedSelection
+ * @property {('face'|'edge'|'node'|'element')} type
+ * @property {('auto'|'manual')} source
+ * @property {string} label  Kullanıcıya görünen isim.
+ * @property {Uint32Array} nodeIds  Global düğüm indeksleri.
+ */
+
+/**
+ * @typedef {Object} FEAMeshError
+ * @property {string} error  Hata kodu: 'voxel-too-many' | 'voxel-empty'
+ *   | 'mixed-element-types' | 'tet-mesher-failed' | ...
+ * @property {string} [message]  Açıklama.
+ * @property {number} [nx]  Voxel hatalarında grid boyutları.
+ * @property {number} [ny]
+ * @property {number} [nz]
+ * @property {number} [total]  Toplam voxel sayısı (üst sınır aşımında).
+ */
+
+/**
+ * @typedef {Object} FEAMeshMetrics
+ * @property {number} nodeCount
+ * @property {number} elementCount
+ * @property {string} elementType
+ * @property {{minX:number,maxX:number,minY:number,maxY:number,minZ:number,maxZ:number}} [bbox]
+ * @property {Object} [quality]   Aspect/skewness/angle istatistikleri.
+ * @property {Object} [jacobian]  Jacobian ratio istatistikleri.
+ */
 
 var VE_FEA_MESH_MIN_SIZE = 0.5;  // mm — çok küçük değerleri clamp et
 var VE_FEA_VOXEL_MAX_COUNT = 20000000; // 20M voxel üst sınır — sub-1mm mesh için
@@ -27,19 +83,6 @@ var VE_FEA_VOXEL_MAX_COUNT = 20000000; // 20M voxel üst sınır — sub-1mm mes
                                        // yüzey düğümlerini tarayacağı için RAM
                                        // büyür ama hala makul sınırda kalır
                                        // (20M voxel ≈ 100³ × 20 ≈ 480 MB Float32).
-
-// Named selections veri modeli:
-//   mesh.namedSelections = {
-//     <key>: {
-//       type: 'face' | 'edge' | 'node' | 'element',
-//       source: 'auto' | 'manual',
-//       label: <görünür isim>,
-//       nodeIds: Uint32Array  // global düğüm indeksleri
-//     }
-//   }
-// Auto-generated selections geometriye göre otomatik üretilir (kutu→6 yüzey,
-// silindir→3 yüzey, şaft→4 yüzey, voxel→tek yüzey grubu).
-// Sınır Koşulları (F4) bu gruplara referansla yük/mesnet uygular.
 
 function veFEAMeshLabel(type) {
   return ({
@@ -50,8 +93,7 @@ function veFEAMeshLabel(type) {
     'hex20':  'Hex20 (Kuadratik Heks)',
     'pyramid5': 'Pyramid5 (Piramit)',
     'wedge15':'Wedge15 (Kuadratik Prizm)',
-    'tri3':   'Tri3 (Yüzey)',
-    'hybrid': 'Hibrit (Hex8+Pyramid5+Tet4)'
+    'tri3':   'Tri3 (Yüzey)'
   })[type] || type;
 }
 
@@ -651,9 +693,11 @@ function _veFEAShouldTryTetMesher(opts) {
   return true;
 }
 
-// Hibrit mesh stratejisi: önce Delaunay tet mesher dene, başarısız olursa
-// voxel fallback. `preBuiltVoxel` opsiyonel — sync yol voxel'ı zaten tam
-// post-process'lemişse hazır kullanılır.
+// STEP/triangle soup için iki kademeli mesh stratejisi: önce Delaunay tet
+// mesher denenir, başarısız/devre-dışı olursa voxel hex fallback. Üretilen
+// mesh tek bir element tipidir (tet4 veya hex8) — "hybrid" değildir.
+// `preBuiltVoxel` opsiyonel: sync yol voxel'ı zaten post-process'lemişse
+// hazır kullanılır.
 function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
   var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
   var geometryType = geometry.type || 'unknown';

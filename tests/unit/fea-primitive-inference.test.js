@@ -10,6 +10,7 @@ const ROOT = path.join(__dirname, '../..');
 
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-primitives.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-materials.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-utils.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-feature-recognition.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));

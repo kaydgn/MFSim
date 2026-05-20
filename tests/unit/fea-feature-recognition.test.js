@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '../..');
 
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-utils.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-feature-recognition.js'), 'utf8'));
 
 // ─── Yardımcı: kutu üçgenleri (6 yüzey × 2 üçgen = 12 üçgen) ─────────────

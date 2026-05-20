@@ -15,6 +15,10 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '../..');
 
+// fea-delaunay.js artık veFEADedupVertices'i (fea-mesh-utils.js) kullanıyor —
+// her sandbox Function() çağrısında prepend etmek için kaynağı bir kez oku.
+const utilsSrc = fs.readFileSync(path.join(ROOT, 'js/fea-mesh-utils.js'), 'utf8');
+
 describe('Delaunay — vendor altyapısı', () => {
   test('vendor/delaunay/delaunay-bundle.js bundle edilmiş', () => {
     expect(fs.existsSync(path.join(ROOT, 'vendor/delaunay/delaunay-bundle.js'))).toBe(true);
@@ -48,7 +52,7 @@ describe('fea-delaunay.js — public API', () => {
   let api;
   beforeAll(() => {
     const mod = { exports: {} };
-    const fn = new Function('module', 'window', 'global', delaunaySrc + '\nreturn module;');
+    const fn = new Function('module', 'window', 'global', utilsSrc + '\n' + delaunaySrc + '\nreturn module;');
     api = fn(mod, undefined, undefined).exports;
   });
 
@@ -101,7 +105,7 @@ describe('Yüzey nokta sampling + progress callback', () => {
     var parsed = { vertices: new Float32Array(v), triangleCount: 1 };
     const delaunaySrc = fs.readFileSync(path.join(ROOT, 'js/fea-delaunay.js'), 'utf8');
     const mod = { exports: {} };
-    const fn = new Function('module', 'window', 'global', delaunaySrc + '\nreturn module;');
+    const fn = new Function('module', 'window', 'global', utilsSrc + '\n' + delaunaySrc + '\nreturn module;');
     const api = fn(mod, globalThis, globalThis).exports;
     var dedup = { coords: [0,0,0, 100,0,0, 0,100,0], pointCount: 3 };
     api._veFEADelaunaySampleSurfacePoints(dedup, parsed, 10);
@@ -116,7 +120,7 @@ describe('Yüzey nokta sampling + progress callback', () => {
     var parsed = { vertices: new Float32Array(v), triangleCount: 1 };
     const delaunaySrc = fs.readFileSync(path.join(ROOT, 'js/fea-delaunay.js'), 'utf8');
     const mod = { exports: {} };
-    const fn = new Function('module', 'window', 'global', delaunaySrc + '\nreturn module;');
+    const fn = new Function('module', 'window', 'global', utilsSrc + '\n' + delaunaySrc + '\nreturn module;');
     const api = fn(mod, globalThis, globalThis).exports;
     var dedup = { coords: [0,0,0, 1,0,0, 0,1,0], pointCount: 3 };
     api._veFEADelaunaySampleSurfacePoints(dedup, parsed, 10);
@@ -136,7 +140,7 @@ describe('Yüzey nokta sampling + progress callback', () => {
     var parsed = { vertices: new Float32Array(v), triangleCount: 12 };
     const delaunaySrc = fs.readFileSync(path.join(ROOT, 'js/fea-delaunay.js'), 'utf8');
     const mod = { exports: {} };
-    const fn = new Function('module', 'window', 'global', delaunaySrc + '\nreturn module;');
+    const fn = new Function('module', 'window', 'global', utilsSrc + '\n' + delaunaySrc + '\nreturn module;');
     const api = fn(mod, globalThis, globalThis).exports;
     var phases = [];
     return api.veFEADelaunayTetrahedralize(parsed, {
@@ -190,7 +194,7 @@ describe('Delaunay — gerçek tet mesh (bundle yüklü)', () => {
     // Bundle Node'da yüklendi; fea-delaunay.js'i de yükle (CommonJS)
     const delaunaySrc = fs.readFileSync(path.join(ROOT, 'js/fea-delaunay.js'), 'utf8');
     const mod = { exports: {} };
-    const fn = new Function('module', 'window', 'global', 'performance', delaunaySrc + '\nreturn module;');
+    const fn = new Function('module', 'window', 'global', 'performance', utilsSrc + '\n' + delaunaySrc + '\nreturn module;');
     // window olarak globalThis verirsek bundle bulunur
     const api = fn(mod, globalThis, globalThis, undefined).exports;
 
