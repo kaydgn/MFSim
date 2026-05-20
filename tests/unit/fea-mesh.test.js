@@ -2504,6 +2504,91 @@ describe('veFEAMeshFromGeometry — midSideNodes opsiyonu', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// ─── Faz 1 Adım 4 — Sphere of Influence (ANSYS §5.2) ───
+describe('Sphere of Influence (opts.sphereOfInfluence → named selection)', () => {
+  test('Tek küre içindeki node\'lar named selection oluşturur', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 20, height: 20, depth: 20 } },
+      { size: 5, sphereOfInfluence: [{ cx: 0, cy: 0, cz: 0, radius: 8 }] }
+    );
+    expect(mesh.namedSelections).toBeDefined();
+    expect(mesh.namedSelections['sphere-influence-0']).toBeDefined();
+    var ns = mesh.namedSelections['sphere-influence-0'];
+    expect(ns.type).toBe('node');
+    expect(ns.source).toBe('auto');
+    expect(ns.nodeIds.length).toBeGreaterThan(0);
+    expect(ns.sphereOfInfluence).toBeDefined();
+    expect(ns.sphereOfInfluence.radius).toBe(8);
+  });
+
+  test('Birden fazla küre — her biri ayrı selection', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 30, height: 30, depth: 30 } },
+      { size: 5, sphereOfInfluence: [
+        { cx: -10, cy: 0, cz: 0, radius: 4 },
+        { cx:  10, cy: 0, cz: 0, radius: 4 }
+      ]}
+    );
+    expect(mesh.namedSelections['sphere-influence-0']).toBeDefined();
+    expect(mesh.namedSelections['sphere-influence-1']).toBeDefined();
+    // İki küre disjoint
+    var a = new Set(Array.from(mesh.namedSelections['sphere-influence-0'].nodeIds));
+    var b = new Set(Array.from(mesh.namedSelections['sphere-influence-1'].nodeIds));
+    var common = 0;
+    a.forEach(function(id) { if (b.has(id)) common++; });
+    expect(common).toBe(0);
+  });
+
+  test('Hiçbir node içine düşmeyen küre → selection eklenmez', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, sphereOfInfluence: [{ cx: 1000, cy: 1000, cz: 1000, radius: 1 }] }
+    );
+    expect(mesh.namedSelections['sphere-influence-0']).toBeUndefined();
+  });
+
+  test('targetSize metadata olarak saklanır', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, sphereOfInfluence: [{ cx: 0, cy: 0, cz: 0, radius: 5, targetSize: 1.5 }] }
+    );
+    var ns = mesh.namedSelections['sphere-influence-0'];
+    if (ns) expect(ns.sphereOfInfluence.targetSize).toBe(1.5);
+  });
+
+  test('Geçersiz küre (radius<=0) sessizce atlanır', () => {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, sphereOfInfluence: [
+        { cx: 0, cy: 0, cz: 0, radius: 0 },         // sıfır radius
+        { cx: 0, cy: 0, cz: 0, radius: -5 },        // negatif
+        { cx: NaN, cy: 0, cz: 0, radius: 5 },       // NaN
+        { cx: 0, cy: 0, cz: 0, radius: 5 }          // geçerli
+      ]}
+    );
+    expect(mesh.namedSelections['sphere-influence-0']).toBeUndefined();
+    expect(mesh.namedSelections['sphere-influence-1']).toBeUndefined();
+    expect(mesh.namedSelections['sphere-influence-2']).toBeUndefined();
+    expect(mesh.namedSelections['sphere-influence-3']).toBeDefined();
+  });
+
+  test('Boş veya tanımsız sphereOfInfluence → namedSelections değişmez', () => {
+    var mesh1 = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, sphereOfInfluence: [] }
+    );
+    var keys1 = Object.keys(mesh1.namedSelections).filter(function(k) { return k.startsWith('sphere-'); });
+    expect(keys1.length).toBe(0);
+
+    var mesh2 = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5 } // sphereOfInfluence yok
+    );
+    var keys2 = Object.keys(mesh2.namedSelections).filter(function(k) { return k.startsWith('sphere-'); });
+    expect(keys2.length).toBe(0);
+  });
+});
+
 describe('cp-fea.js Mesh paneli — Element Order dropdown (ANSYS §3.7)', () => {
   beforeEach(() => {
     global.nodes = [];

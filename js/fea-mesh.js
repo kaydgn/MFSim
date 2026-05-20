@@ -488,6 +488,9 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (mesh && !mesh.error && opts.midSideNodes === true) {
     mesh = veFEAEnrichToQuadratic(mesh);
   }
+  if (mesh && !mesh.error && Array.isArray(opts.sphereOfInfluence) && opts.sphereOfInfluence.length > 0) {
+    mesh = _veFEAApplySphereOfInfluence(mesh, opts.sphereOfInfluence);
+  }
   return mesh;
 }
 
@@ -714,6 +717,9 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     }
     if (opts.midSideNodes === true) {
       mesh = veFEAEnrichToQuadratic(mesh);
+    }
+    if (Array.isArray(opts.sphereOfInfluence) && opts.sphereOfInfluence.length > 0) {
+      mesh = _veFEAApplySphereOfInfluence(mesh, opts.sphereOfInfluence);
     }
     return mesh;
   }
@@ -2972,6 +2978,54 @@ function veFEAComputeQualityMetrics(meshData) {
       histogram: _veFEAHistogram(parDevArr, 0, 90, 9)
     } : null
   };
+}
+
+// ─── Sphere of Influence (ANSYS §5.2 — lokal mesh kontrolü) ──────────────
+// Geometriyi bölmeden lokal mesh yoğunlaştırma kavramı. v1: küre içindeki
+// node ID'leri otomatik named selection olarak işaretlenir (BC ve görsel
+// referans için). Gerçek size-field refinement Faz 2'de eklenir; o zaman
+// bu fonksiyon size override için de kullanılır.
+//
+// Parametreler:
+//   spheres: [{ cx, cy, cz, radius, targetSize?, label? }, ...]
+// Uygulama: mesh oluştuktan SONRA çağrılır; içeri düşen tüm node'lar bir
+// named selection altında toplanır. namedSelection.sphereOfInfluence
+// metadata olarak orijinal sphere parametrelerini taşır.
+function _veFEAApplySphereOfInfluence(mesh, spheres) {
+  if (!mesh || mesh.error || !spheres || spheres.length === 0) return mesh;
+  if (!mesh.nodes) return mesh;
+  if (!mesh.namedSelections) mesh.namedSelections = {};
+  var nodes = mesh.nodes;
+  var nodeCount = nodes.length / 3;
+  for (var s = 0; s < spheres.length; s++) {
+    var sph = spheres[s] || {};
+    var cx = +sph.cx, cy = +sph.cy, cz = +sph.cz, r = +sph.radius;
+    if (!isFinite(cx) || !isFinite(cy) || !isFinite(cz) || !isFinite(r) || r <= 0) continue;
+    var r2 = r * r;
+    var inside = [];
+    for (var i = 0; i < nodeCount; i++) {
+      var dx = nodes[i * 3]     - cx;
+      var dy = nodes[i * 3 + 1] - cy;
+      var dz = nodes[i * 3 + 2] - cz;
+      if (dx*dx + dy*dy + dz*dz <= r2) inside.push(i);
+    }
+    if (inside.length === 0) continue;
+    var key = 'sphere-influence-' + s;
+    var label = sph.label || ('Sphere of Influence ' + (s + 1));
+    mesh.namedSelections[key] = {
+      type: 'node',
+      source: 'auto',
+      label: label,
+      nodeIds: new Uint32Array(inside),
+      sphereOfInfluence: {
+        center: [cx, cy, cz],
+        radius: r,
+        targetSize: (isFinite(+sph.targetSize) && +sph.targetSize > 0) ? +sph.targetSize : null,
+        nodeCount: inside.length
+      }
+    };
+  }
+  return mesh;
 }
 
 // ─── Adaptive refinement önerileri (mesh kalite-tabanlı) ─────────────────
