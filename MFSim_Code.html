@@ -23356,74 +23356,95 @@ function _veFEADelaunayAddInteriorPoints(dedup, parsed, opts) {
 }
 
 // ─── Parity test: tet centroid'i içeride mi? ────────────────────────────────
-// Her tet'in centroid'inden +X yönünde ışın at; parsed triangle'lara kesişim
-// sayısı tek ise içeride, çift ise dışarıda. Aynı bin'leme ile hızlı.
-function _veFEADelaunayClassifyTets(tets, points, parsed) {
+// 3 farklı eksen yönünde (X, Y, Z) ışın at; her ışın için üçgen kesişim
+// sayısının pariteti içeride/dışarıda söyler. 3 oydan en az 2'si "içeride"
+// derse içeride sayılır.
+//
+// Neden çoklu ışın? Tek-yönlü +X ışını, ışın bir üçgen kenarına/vertex'ine
+// teğet geçtiğinde hit'i tek sayar (2 saymalıydı) veya hiç saymaz → tet
+// dışarıda iken içeride sayılır → spike artefaktı. Çoğunluk oyu bu numerik
+// kenar durumlarını gizler.
+
+// Tek-yönlü parite (helper). axis: 0=X, 1=Y, 2=Z (ışın yönü)
+function _veFEADelaunayParityOneAxis(tets, points, parsed, axis) {
   var v = parsed.vertices;
   var triCount = parsed.triangleCount;
-  if (triCount === 0) return new Uint8Array(tets.length);
-  var minX = Infinity, minY = Infinity, minZ = Infinity;
-  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  // Düzlem eksen indeksleri (ışına dik)
+  var aA = (axis + 1) % 3;  // plane axis A
+  var aB = (axis + 2) % 3;  // plane axis B
+  // BBox
+  var minA = Infinity, maxA = -Infinity;
   for (var p = 0; p < v.length; p += 3) {
-    if (v[p]   < minX) minX = v[p];   if (v[p]   > maxX) maxX = v[p];
-    if (v[p+1] < minY) minY = v[p+1]; if (v[p+1] > maxY) maxY = v[p+1];
-    if (v[p+2] < minZ) minZ = v[p+2]; if (v[p+2] > maxZ) maxZ = v[p+2];
+    var a = v[p + aA];
+    if (a < minA) minA = a; if (a > maxA) maxA = a;
   }
   var bins = Math.max(8, Math.min(64, Math.round(Math.cbrt(triCount))));
-  var by = (maxY - minY) / bins;
-  if (by <= 0) by = 1;
+  var binW = (maxA - minA) / bins;
+  if (binW <= 0) binW = 1;
 
-  // Üçgenleri Y-bucket'le
+  // Üçgenleri A-eksenine bucket'le
   var triBuckets = new Array(bins);
   for (var j = 0; j < bins; j++) triBuckets[j] = [];
   for (var t = 0; t < triCount; t++) {
     var off = t * 9;
-    var y1 = v[off + 1], y2 = v[off + 4], y3 = v[off + 7];
-    var triMinY = Math.min(y1, y2, y3);
-    var triMaxY = Math.max(y1, y2, y3);
-    var jMin = Math.max(0, Math.floor((triMinY - minY) / by));
-    var jMax = Math.min(bins - 1, Math.floor((triMaxY - minY) / by));
+    var aV1 = v[off + aA], aV2 = v[off + 3 + aA], aV3 = v[off + 6 + aA];
+    var triMin = Math.min(aV1, aV2, aV3);
+    var triMax = Math.max(aV1, aV2, aV3);
+    var jMin = Math.max(0, Math.floor((triMin - minA) / binW));
+    var jMax = Math.min(bins - 1, Math.floor((triMax - minA) / binW));
     for (var jj = jMin; jj <= jMax; jj++) triBuckets[jj].push(t);
   }
 
   var inside = new Uint8Array(tets.length);
   for (var ti = 0; ti < tets.length; ti++) {
     var tet = tets[ti];
-    // Centroid
     var cx = 0, cy = 0, cz = 0;
     for (var k = 0; k < 4; k++) {
       var pIdx = tet[k] * 3;
       cx += points[pIdx]; cy += points[pIdx + 1]; cz += points[pIdx + 2];
     }
     cx /= 4; cy /= 4; cz /= 4;
+    var centroid = [cx, cy, cz];
+    var cR = centroid[axis];     // ray başlangıcı, ışın koordinatı
+    var cA = centroid[aA];
+    var cB = centroid[aB];
 
-    // BBox'ın dışındaysa dışarıda
-    if (cx < minX || cx > maxX || cy < minY || cy > maxY || cz < minZ || cz > maxZ) {
-      inside[ti] = 0;
-      continue;
-    }
-
-    // +X yönünde ışın at — parite test
-    var jBin = Math.max(0, Math.min(bins - 1, Math.floor((cy - minY) / by)));
+    var jBin = Math.max(0, Math.min(bins - 1, Math.floor((cA - minA) / binW)));
     var bucket = triBuckets[jBin];
     var hits = 0;
     for (var bi = 0; bi < bucket.length; bi++) {
       var tid = bucket[bi];
       var o2 = tid * 9;
-      var x1 = v[o2],     y1b = v[o2 + 1], z1 = v[o2 + 2];
-      var x2 = v[o2 + 3], y2b = v[o2 + 4], z2 = v[o2 + 5];
-      var x3 = v[o2 + 6], y3b = v[o2 + 7], z3 = v[o2 + 8];
-      // Y-Z düzleminde nokta üçgenin içinde mi?
-      var area = (y2b - y1b) * (z3 - z1) - (z2 - z1) * (y3b - y1b);
+      // Üçgen vertex'leri
+      var p1A = v[o2 + aA],   p1B = v[o2 + aB],   p1R = v[o2 + axis];
+      var p2A = v[o2+3 + aA], p2B = v[o2+3 + aB], p2R = v[o2+3 + axis];
+      var p3A = v[o2+6 + aA], p3B = v[o2+6 + aB], p3R = v[o2+6 + axis];
+      // Düzlemde (A,B) point-in-triangle
+      var area = (p2A - p1A) * (p3B - p1B) - (p2B - p1B) * (p3A - p1A);
       if (Math.abs(area) < 1e-14) continue;
-      var l1 = ((y2b - cy) * (z3  - cz) - (z2  - cz) * (y3b - cy)) / area;
-      var l2 = ((y3b - cy) * (z1  - cz) - (z3  - cz) * (y1b - cy)) / area;
+      var l1 = ((p2A - cA) * (p3B - cB) - (p2B - cB) * (p3A - cA)) / area;
+      var l2 = ((p3A - cA) * (p1B - cB) - (p3B - cB) * (p1A - cA)) / area;
       var l3 = 1 - l1 - l2;
-      if (l1 < 0 || l2 < 0 || l3 < 0) continue;
-      var hitX = l1 * x1 + l2 * x2 + l3 * x3;
-      if (hitX > cx) hits++;
+      // Kenara çok yakın hit'i kabul etmiyoruz — diğer 2 yöne bırak (çoğunluk oyu)
+      if (l1 < 1e-9 || l2 < 1e-9 || l3 < 1e-9) continue;
+      var hitR = l1 * p1R + l2 * p2R + l3 * p3R;
+      if (hitR > cR) hits++;
     }
     inside[ti] = (hits & 1);
+  }
+  return inside;
+}
+
+function _veFEADelaunayClassifyTets(tets, points, parsed) {
+  if (parsed.triangleCount === 0) return new Uint8Array(tets.length);
+  // 3 yönde parite + çoğunluk oyu (≥2/3) — sayısal kenar durumlarına dayanıklı
+  var insideX = _veFEADelaunayParityOneAxis(tets, points, parsed, 0);
+  var insideY = _veFEADelaunayParityOneAxis(tets, points, parsed, 1);
+  var insideZ = _veFEADelaunayParityOneAxis(tets, points, parsed, 2);
+  var inside = new Uint8Array(tets.length);
+  for (var i = 0; i < tets.length; i++) {
+    var votes = insideX[i] + insideY[i] + insideZ[i];
+    inside[i] = (votes >= 2) ? 1 : 0;
   }
   return inside;
 }
