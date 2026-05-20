@@ -336,6 +336,16 @@ function veFEASubmitMeshBuild(nodeId) {
   if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
   var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : 'auto';
   if (elementType !== 'auto' && elementType !== 'tet4' && elementType !== 'pyramid5') elementType = 'auto';
+  // Mesh Method (ANSYS §4) — eğer method dropdown ayarlanmışsa elementType'ı türet
+  var methodSel = document.getElementById('ve-fea-mesh-method-' + nodeId);
+  var meshMethod = (methodSel && methodSel.value) ? methodSel.value : null;
+  if (meshMethod && typeof _veFEAMethodToElType === 'function') {
+    var derivedElType = _veFEAMethodToElType(meshMethod);
+    // Method dropdown önceliklidir; ileri seviye elementType (details) override edilir
+    if (derivedElType !== 'auto' || !elTypeSel || elTypeSel.value === 'auto') {
+      elementType = derivedElType;
+    }
+  }
   // Element Order: yeni dropdown (ANSYS §3.7) → midSideNodes türetilir.
   // Geri uyum: dropdown yoksa eski checkbox'a düş.
   var elOrderEl = document.getElementById('ve-fea-mesh-elorder-' + nodeId);
@@ -392,6 +402,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.size = size;
     meshNode.data.meshSettings.mode = mode;
     meshNode.data.meshSettings.elementType = elementType;
+    if (meshMethod) meshNode.data.meshSettings.meshMethod = meshMethod;
     meshNode.data.meshSettings.elementOrder = elementOrder;
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
     meshNode.data.meshSettings.crossSection = crossSection;

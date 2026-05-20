@@ -2816,6 +2816,41 @@ describe('Sphere of Influence (opts.sphereOfInfluence → named selection)', () 
   });
 });
 
+// ─── Faz 2 Adım 4 — Mesh Method dropdown (ANSYS §4) ───
+describe('cp-fea.js Mesh paneli — Mesh Method dropdown (ANSYS §4)', () => {
+  beforeEach(() => {
+    global.nodes = [];
+  });
+
+  test('Dropdown render edilir, 4 seçenek: automatic, patchConformingTet, hexDominant, sweep', () => {
+    var node = { id: 'mm1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var html = _testRenderFullMeshUI(node);
+    expect(html).toMatch(/id="ve-fea-mesh-method-mm1"/);
+    expect(html).toMatch(/Patch Conforming Tet/);
+    expect(html).toMatch(/Hex Dominant/);
+    expect(html).toMatch(/Automatic/);
+    expect(html).toMatch(/Sweep/);
+  });
+
+  test('Persisted meshMethod="patchConformingTet" → seçili', () => {
+    var node = { id: 'mm2', type: 'fea-mesh', data: { meshSettings: { meshMethod: 'patchConformingTet' } } };
+    global.nodes = [node];
+    var html = _testRenderFullMeshUI(node);
+    var opt = html.match(/<option value="patchConformingTet"[^>]*>/);
+    expect(opt[0]).toMatch(/selected/);
+  });
+
+  test('Method haritası: tet4 → patchConformingTet, pyramid5 → hexDominant, auto → automatic', () => {
+    expect(_veFEAInferMethodFromElType('tet4')).toBe('patchConformingTet');
+    expect(_veFEAInferMethodFromElType('pyramid5')).toBe('hexDominant');
+    expect(_veFEAInferMethodFromElType('auto')).toBe('automatic');
+    expect(_veFEAMethodToElType('patchConformingTet')).toBe('tet4');
+    expect(_veFEAMethodToElType('hexDominant')).toBe('pyramid5');
+    expect(_veFEAMethodToElType('automatic')).toBe('auto');
+  });
+});
+
 describe('cp-fea.js Mesh paneli — Element Order dropdown (ANSYS §3.7)', () => {
   beforeEach(() => {
     global.nodes = [];

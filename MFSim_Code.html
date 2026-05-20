@@ -31185,6 +31185,18 @@ function _veFEAEditorTopologyHTML(node) {
   return html;
 }
 
+// Mesh method ↔ elementType haritası (geri uyumluluk)
+function _veFEAInferMethodFromElType(elType) {
+  if (elType === 'tet4') return 'patchConformingTet';
+  if (elType === 'pyramid5') return 'hexDominant';
+  return 'automatic';
+}
+function _veFEAMethodToElType(method) {
+  if (method === 'patchConformingTet') return 'tet4';
+  if (method === 'hexDominant') return 'pyramid5';
+  return 'auto';
+}
+
 function _veFEAEditorDefaultsHTML(node) {
   var d = node.data || {};
   var settings = d.meshSettings || { size: 10 };
@@ -31197,13 +31209,38 @@ function _veFEAEditorDefaultsHTML(node) {
   html += '<option value="surface"' + (currentMode === 'surface' ? ' selected' : '') + '>Yüzey (Tri3 — sadece önizleme)</option>';
   html += '</select>';
 
+  // Mesh Method (ANSYS §4) — kullanıcı seçimli strateji. v1: elementType'ı
+  // sarmalayan dropdown; gelecekte (Faz 3) MultiZone, Sweep, Hex Dominant
+  // gerçek mesh strategy seçimi olacak.
+  var currentMethod = settings.meshMethod || _veFEAInferMethodFromElType(settings.elementType);
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Mesh Method <span style="color:var(--text-muted);">(ANSYS §4)</span></div>';
+  html += '<select id="ve-fea-mesh-method-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+  html += '<option value="automatic"'         + (currentMethod === 'automatic'         ? ' selected' : '') + '>Automatic (primitif → yapısal hex; STEP → tet)</option>';
+  html += '<option value="patchConformingTet"' + (currentMethod === 'patchConformingTet' ? ' selected' : '') + '>Patch Conforming Tet (Tet4 — Delaunay/decomposition)</option>';
+  html += '<option value="hexDominant"'        + (currentMethod === 'hexDominant'        ? ' selected' : '') + '>Hex Dominant (Hex8 + Pyramid5 transition)</option>';
+  html += '<option value="sweep"'              + (currentMethod === 'sweep'              ? ' selected' : '') + '>Sweep (silindir/şaft/koni yapısal)</option>';
+  html += '</select>';
+  // TetGen durum göstergesi (vendor/tetgen build edilmemişse uyarı)
+  var tetMesherActive = (typeof veFEADelaunayAvailable === 'function') && veFEADelaunayAvailable();
+  if (currentMethod === 'patchConformingTet') {
+    var statusColor = tetMesherActive ? '#22c55e' : '#f59e0b';
+    var statusMsg = tetMesherActive
+      ? '✓ Delaunay (Lysenko/MIT) aktif. STEP için kaliteli Tet4.'
+      : '⚠ Delaunay yüklü değil. Voxel fallback kullanılacak.';
+    html += '<div style="font-size:0.55rem; color:' + statusColor + '; margin-bottom:10px; padding:4px 6px; background:' + statusColor + '20; border-left:2px solid ' + statusColor + ';">' + statusMsg + '</div>';
+  } else {
+    html += '<div style="margin-bottom:10px;"></div>';
+  }
+
+  // İleri seviye: elementType doğrudan (geri uyum için)
   var currentElType = settings.elementType || 'auto';
-  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Eleman Tipi</div>';
-  html += '<select id="ve-fea-mesh-eltype-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:10px;">';
+  html += '<details style="margin-bottom:10px;"><summary style="font-size:0.58rem; color:var(--text-muted); cursor:pointer;">İleri: Element Tipi (geri uyumluluk)</summary>';
+  html += '<select id="ve-fea-mesh-eltype-' + node.id + '" style="width:100%; padding:5px 8px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-top:4px;">';
   html += '<option value="auto"' + (currentElType === 'auto' ? ' selected' : '') + '>Otomatik (Heks8 / Wedge6)</option>';
   html += '<option value="tet4"' + (currentElType === 'tet4' ? ' selected' : '') + '>Tet4 (Tetra — decomposition)</option>';
   html += '<option value="pyramid5"' + (currentElType === 'pyramid5' ? ' selected' : '') + '>Pyramid5 (Hex8 → 6 piramit + centroid)</option>';
   html += '</select>';
+  html += '</details>';
 
   // Element Order (ANSYS §3.7) — Linear vs Quadratic dropdown.
   // Geri uyum: eski settings.midSideNodes → 'quadratic'. Canonical alan
@@ -32826,6 +32863,16 @@ function veFEASubmitMeshBuild(nodeId) {
   if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
   var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : 'auto';
   if (elementType !== 'auto' && elementType !== 'tet4' && elementType !== 'pyramid5') elementType = 'auto';
+  // Mesh Method (ANSYS §4) — eğer method dropdown ayarlanmışsa elementType'ı türet
+  var methodSel = document.getElementById('ve-fea-mesh-method-' + nodeId);
+  var meshMethod = (methodSel && methodSel.value) ? methodSel.value : null;
+  if (meshMethod && typeof _veFEAMethodToElType === 'function') {
+    var derivedElType = _veFEAMethodToElType(meshMethod);
+    // Method dropdown önceliklidir; ileri seviye elementType (details) override edilir
+    if (derivedElType !== 'auto' || !elTypeSel || elTypeSel.value === 'auto') {
+      elementType = derivedElType;
+    }
+  }
   // Element Order: yeni dropdown (ANSYS §3.7) → midSideNodes türetilir.
   // Geri uyum: dropdown yoksa eski checkbox'a düş.
   var elOrderEl = document.getElementById('ve-fea-mesh-elorder-' + nodeId);
@@ -32882,6 +32929,7 @@ function veFEASubmitMeshBuild(nodeId) {
     meshNode.data.meshSettings.size = size;
     meshNode.data.meshSettings.mode = mode;
     meshNode.data.meshSettings.elementType = elementType;
+    if (meshMethod) meshNode.data.meshSettings.meshMethod = meshMethod;
     meshNode.data.meshSettings.elementOrder = elementOrder;
     meshNode.data.meshSettings.midSideNodes = midSideNodes;
     meshNode.data.meshSettings.crossSection = crossSection;
