@@ -28264,7 +28264,13 @@ function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
     }).catch(function(err) {
       console.error('[FEA] STEP yeniden yukleme hatasi:', err);
     });
-  } else if(g.type === 'box' || g.type === 'cylinder' || g.type === 'shaft') {
+  } else if (g.type && typeof viewer.loadPrimitive === 'function') {
+    // Tüm primitif tipleri için aynı yol — veFEABuildPrimitiveMesh
+    // dispatch'i `box`, `cylinder`, `shaft`, `sphere`, `hemisphere`,
+    // `torus`, `cone`, `lbracket`, `ibeam`, `rectTube` hepsini biliyor.
+    // Önceki kod sadece box/cylinder/shaft'ı yedirip diğerlerini sessizce
+    // atlıyordu — kullanıcı şaft'tan sonraki primitif (sphere, vs.)
+    // yeniden render edilmedi.
     viewer.loadPrimitive(g.type, g.params);
   }
 }
@@ -28273,17 +28279,16 @@ function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
 // nodeId üzerine primitif yükler, node.data.geometry'yi günceller, paneli
 // yeniden render eder (durum tablosu / "Geometriyi Sil" butonu güncellensin).
 function veFEAApplyPrimitive(nodeId, type, params) {
-  var viewer = veFEAViewerRegistry[nodeId];
-  if(!viewer) return;
   var p = (typeof veFEANormalizePrimitiveParams === 'function')
     ? veFEANormalizePrimitiveParams(type, params)
     : params;
-  viewer.loadPrimitive(type, p);
 
-  // Persist
-  if(typeof nodes !== 'undefined') {
+  // KRİTİK 1: Data persist'i HER ZAMAN yap — viewer yoksa bile (WebGL limit
+  // aşımı durumunda). Aksi halde kullanıcı "Oluştur" der, viewer yok, hiçbir
+  // şey olmaz; data güncellenmez, panel yeniden render olmaz.
+  if (typeof nodes !== 'undefined') {
     var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
-    if(node) {
+    if (node) {
       node.data = node.data || {};
       var stats = (typeof veFEAPrimitiveStats === 'function') ? veFEAPrimitiveStats(type, p) : null;
       node.data.geometry = {
@@ -28294,31 +28299,30 @@ function veFEAApplyPrimitive(nodeId, type, params) {
         bbox: stats ? stats.bbox : null,
         sourceLabel: (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(type) : type
       };
-      // Topology: yüzey listesi mesh-öncesi tespit edilir (ANSYS-style)
       if (typeof veFEAComputeGeometryTopology === 'function') {
         node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
       }
-      if(typeof saveState === 'function') saveState();
+      if (typeof saveState === 'function') saveState();
     }
   }
 
-  // KRİTİK: showNodeProperties panel'i yeniden render eder, canvas DOM
-  // elementi DEĞİŞİR (innerHTML = ...). Eski WebGL context detached canvas'a
-  // bağlı kalır; Chrome'un ~16 concurrent WebGL context limiti var. Bu yüzden
-  // showNodeProperties çağrısından ÖNCE eski viewer'ı dispose ediyoruz —
-  // WEBGL_lose_context ile slot serbest. Sonra cp-core setTimeout(100) ile
-  // veFEAInitGeometryViewerForNode yeni canvas'ta taze context oluşturur.
-  // Aksi halde "Cannot read properties of null (reading 'precision')" hatası
-  // (context limit aşımı, getShaderPrecisionFormat null döndürür).
+  // KRİTİK 2: showNodeProperties panel'i yeniden render eder → canvas DOM
+  // elementi değişir. Eski WebGL context detached canvas'a bağlı kalır;
+  // Chrome ~16 concurrent context limiti var. Re-render ÖNCESİ eski viewer'ı
+  // dispose et — WEBGL_lose_context slot'u serbest bırakır. Eski viewer
+  // zaten her halükarda yenisi ile değişecek (cp-core setTimeout(100) ile
+  // veFEAInitGeometryViewerForNode tetiklenir; yeni viewer
+  // _veFEALoadNodeGeometryIntoViewer ile node.data.geometry'den primitif'i
+  // yedirir — TÜM tipleri destekler).
   if (veFEAViewerRegistry[nodeId]) {
     try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
     delete veFEAViewerRegistry[nodeId];
   }
 
-  // Panel yeniden render — durum tablosu güncellensin
-  if(typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
+  // Panel yeniden render — durum tablosu, dropdown, butonlar güncellensin
+  if (typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
     var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
-    if(n) showNodeProperties(n);
+    if (n) showNodeProperties(n);
   }
 }
 
