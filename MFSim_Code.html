@@ -23190,6 +23190,70 @@ function _veFEADelaunayDedupVertices(verts, triangleCount) {
   };
 }
 
+// ─── Yüzey nokta sampling (kalite için) ────────────────────────────────────
+// OCCT triangulasyonu adaptive: eğri yüzeylerde sık, düzde seyrek üçgen verir.
+// Delaunay-of-boundary-points sadece bu eşit olmayan noktaları kullanınca düz
+// alanlarda büyük dejenere üçgenler kalır. Çözüm: input üçgenlerine alan
+// orantılı ek yüzey noktası ekle → uniform boundary point density → uniform
+// Delaunay yüzeyi.
+//
+// Yöntem: stratified barycentric random sampling. Her üçgen için
+//   n_samples = ceil(area / (h² · √3/4))     (eşkenar üçgen alan referansı)
+// noktası serpiştirilir.
+function _veFEADelaunaySampleSurfacePoints(dedup, parsed, targetSize) {
+  var verts = parsed.vertices;
+  var triCount = parsed.triangleCount;
+  // Hedef alan: kenarı h olan eşkenar üçgen → A = h²·√3/4
+  // Pratikte daha yoğun istiyoruz (uniform Delaunay için) → 2× kat
+  var refArea = targetSize * targetSize * 0.433 * 0.5;  // h²·√3/4 / 2
+  // Aşırı sampling'i kırp — bellek/Delaunay süresi koruması
+  var maxExtra = Math.min(150000, Math.max(5000, dedup.pointCount * 6));
+  var added = 0;
+  // Deterministic pseudo-random (test stability + reproducibility için)
+  var seed = 1337;
+  function rand() {
+    seed = (seed * 1664525 + 1013904223) | 0;
+    return ((seed >>> 0) % 100000) / 100000;
+  }
+
+  for (var t = 0; t < triCount; t++) {
+    if (added >= maxExtra) break;
+    var off = t * 9;
+    var ax = verts[off],     ay = verts[off + 1], az = verts[off + 2];
+    var bx = verts[off + 3], by = verts[off + 4], bz = verts[off + 5];
+    var cx = verts[off + 6], cy = verts[off + 7], cz = verts[off + 8];
+    // 3D üçgen alanı = ½|AB × AC|
+    var ABx = bx - ax, ABy = by - ay, ABz = bz - az;
+    var ACx = cx - ax, ACy = cy - ay, ACz = cz - az;
+    var crx = ABy * ACz - ABz * ACy;
+    var cry = ABz * ACx - ABx * ACz;
+    var crz = ABx * ACy - ABy * ACx;
+    var area = 0.5 * Math.sqrt(crx*crx + cry*cry + crz*crz);
+    if (area < refArea) continue;  // zaten yeterince küçük üçgen
+    var nSamples = Math.max(1, Math.floor(area / refArea));
+    // Aşırı yoğun üçgeni kırp (örn. çok büyük tek bir üçgen)
+    if (nSamples > 200) nSamples = 200;
+    for (var s = 0; s < nSamples; s++) {
+      if (added >= maxExtra) break;
+      // Stratified barycentric: u, v in [0,1], u+v ≤ 1
+      var u = rand(), v = rand();
+      if (u + v > 1) { u = 1 - u; v = 1 - v; }
+      var w = 1 - u - v;
+      // Kenara çok yakın olanları ele (degenerate tet'lere sebep olur)
+      if (u < 0.05 || v < 0.05 || w < 0.05) continue;
+      dedup.coords.push(
+        u * ax + v * bx + w * cx,
+        u * ay + v * by + w * cy,
+        u * az + v * bz + w * cz
+      );
+      added++;
+    }
+  }
+  dedup.surfacePointsAdded = added;
+  dedup.pointCount = dedup.coords.length / 3;
+  return dedup;
+}
+
 // ─── Octree-tabanlı iç nokta sampling ──────────────────────────────────────
 // Sadece boundary noktalarını Delaunay yapmak iç hücrelerin Steiner-eksik
 // kalitesizliğine yol açar. Bbox grid'ine eşit aralıklı iç noktalar ekleyip
@@ -23364,67 +23428,106 @@ function _veFEADelaunayClassifyTets(tets, points, parsed) {
   return inside;
 }
 
+// setTimeout(0) yardımcı — Promise tabanlı, browser'a render fırsatı verir.
+// Worker dışında main thread'i bloke etmeden faz aralarında yield etmek için.
+function _veFEADelaunayYield() {
+  if (typeof setTimeout === 'undefined') return Promise.resolve();
+  return new Promise(function(resolve) { setTimeout(resolve, 0); });
+}
+
 // ─── Ana giriş: tetrahedralize ──────────────────────────────────────────────
+// Fazlar (yield ile ayrılmış — UI'ı bloke etmez):
+//   1. Vertex dedup (triangle-soup → unique points)
+//   2. Yüzey nokta sampling (büyük üçgenleri kır → uniform boundary)
+//   3. İç-nokta sampling (octree, parite testi)
+//   4. Delaunay triangulate (TEK BLOKLAYAN ADIM, ~500ms-2s)
+//   5. Parite testi ile dış tet'leri ele
+//   6. Compact + sonuç
+//
 // opts:
-//   targetSize:      iç-nokta sampling grid boyutu (mm). Default: 10
-//   addInteriorPoints: true → iç noktalar ekle (kalite ↑), false → sadece
-//                      boundary noktalar (hızlı ama kalite ↓). Default: true
-//   verbose:         konsola süre/sayı bilgisi
+//   targetSize:        sampling grid boyutu (mm). Default: 10
+//   addSurfacePoints:  true → büyük üçgenlere ek nokta (kalite ↑). Default: true
+//   addInteriorPoints: true → bbox grid ile iç nokta. Default: true
+//   onProgress(stage, msg, frac): faz değişikliklerinde çağrılır
+//   verbose:           konsola süre/sayı bilgisi
+//
 // Promise<{type:'tet4', nodes:Float32Array, elements:Uint32Array, ...} | {error}>
 function veFEADelaunayTetrahedralize(parsed, opts) {
   opts = opts || {};
-  return new Promise(function(resolve) {
-    if (!parsed || !parsed.vertices || parsed.triangleCount <= 0) {
-      resolve({ error: 'parsed boş veya geçersiz' });
-      return;
-    }
-    var triangulate = _veFEADelaunayGetTriangulator();
-    if (!triangulate) {
-      resolve({ error: 'Delaunay kütüphanesi yüklenmemiş (vendor/delaunay/delaunay-bundle.js)' });
-      return;
-    }
-    var t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+  var onProgress = (typeof opts.onProgress === 'function') ? opts.onProgress : function() {};
+  var verbose = opts.verbose === true;
 
-    var dedup = _veFEADelaunayDedupVertices(parsed.vertices, parsed.triangleCount);
+  if (!parsed || !parsed.vertices || parsed.triangleCount <= 0) {
+    return Promise.resolve({ error: 'parsed boş veya geçersiz' });
+  }
+  var triangulate = _veFEADelaunayGetTriangulator();
+  if (!triangulate) {
+    return Promise.resolve({ error: 'Delaunay kütüphanesi yüklenmemiş (vendor/delaunay/delaunay-bundle.js)' });
+  }
 
-    // İç-nokta sampling (kalite için)
+  var t0 = (typeof performance !== 'undefined') ? performance.now() : Date.now();
+  var sz = (typeof opts.targetSize === 'number' && opts.targetSize > 0) ? opts.targetSize : 10;
+  var dedup, tets, inside, keptCount;
+
+  // Faz 1: dedup
+  onProgress('dedup', 'Yüzey noktaları indeksleniyor...', 0.05);
+  return _veFEADelaunayYield().then(function() {
+    dedup = _veFEADelaunayDedupVertices(parsed.vertices, parsed.triangleCount);
+    if (verbose) console.log('[Delaunay] dedup: ' + dedup.pointCount + ' unique vertex');
+
+    // Faz 2: yüzey sampling (kalite için — büyük düz alanları noktalarla doldur)
+    onProgress('surface', 'Yüzey üçgenleri örnekleniyor...', 0.15);
+    return _veFEADelaunayYield();
+  }).then(function() {
+    if (opts.addSurfacePoints !== false) {
+      _veFEADelaunaySampleSurfacePoints(dedup, parsed, sz);
+      if (verbose) console.log('[Delaunay] surface samples: +' + (dedup.surfacePointsAdded || 0));
+    }
+
+    // Faz 3: iç-nokta sampling
+    onProgress('interior', 'İç noktalar örnekleniyor...', 0.30);
+    return _veFEADelaunayYield();
+  }).then(function() {
     if (opts.addInteriorPoints !== false) {
-      var sz = (typeof opts.targetSize === 'number' && opts.targetSize > 0) ? opts.targetSize : 10;
       _veFEADelaunayAddInteriorPoints(dedup, parsed, { targetSize: sz });
+      if (verbose) console.log('[Delaunay] interior samples: +' + (dedup.interiorAdded || 0));
     }
 
-    if (opts.verbose) {
-      console.log('[Delaunay] Noktalar: ' + (parsed.triangleCount * 3) + ' (soup) → ' +
-                  dedup.pointCount + ' (unique + interior ' + (dedup.interiorAdded || 0) + ')');
-    }
-
-    // Noktaları [[x,y,z], ...] formatına çevir
+    // Faz 4: Delaunay triangulate (BLOCKING — UI bunu yapamaz)
+    onProgress('delaunay', 'Delaunay tetrahedralization (' + dedup.pointCount + ' nokta)...', 0.45);
+    return _veFEADelaunayYield();
+  }).then(function() {
+    // [[x,y,z], ...] formatına çevir
     var pts = new Array(dedup.pointCount);
     for (var i = 0; i < dedup.pointCount; i++) {
       pts[i] = [dedup.coords[i*3], dedup.coords[i*3+1], dedup.coords[i*3+2]];
     }
-
-    var tets;
     try {
       tets = triangulate(pts);
     } catch (e) {
-      resolve({ error: 'Delaunay triangulate exception: ' + (e.message || e) });
-      return;
+      throw new Error('Delaunay triangulate exception: ' + (e.message || e));
     }
     if (!tets || tets.length === 0) {
-      resolve({ error: 'Delaunay 0 tet üretti (geometri yetersiz mi?)' });
-      return;
+      throw new Error('Delaunay 0 tet üretti (geometri yetersiz mi?)');
     }
+    if (verbose) console.log('[Delaunay] triangulate: ' + tets.length + ' tet (raw)');
 
-    // İçeride/dışarıda sınıflandırma — parite testi
-    var inside = _veFEADelaunayClassifyTets(tets, dedup.coords, parsed);
-    var keptCount = 0;
+    // Faz 5: parite testi
+    onProgress('parity', 'İç/dış sınıflandırma (' + tets.length + ' tet)...', 0.75);
+    return _veFEADelaunayYield();
+  }).then(function() {
+    inside = _veFEADelaunayClassifyTets(tets, dedup.coords, parsed);
+    keptCount = 0;
     for (var ki = 0; ki < inside.length; ki++) if (inside[ki]) keptCount++;
     if (keptCount === 0) {
-      resolve({ error: 'Parite testi tüm tet\'leri dış olarak işaretledi (yüzey kapalı mı?)' });
-      return;
+      throw new Error('Parite testi tüm tet\'leri dış olarak işaretledi (yüzey kapalı mı?)');
     }
+    if (verbose) console.log('[Delaunay] parity: ' + keptCount + ' inside, ' + (tets.length - keptCount) + ' outside');
 
+    // Faz 6: compact + sonuç
+    onProgress('compact', 'Düğüm/eleman compact...', 0.92);
+    return _veFEADelaunayYield();
+  }).then(function() {
     // Sonuç buffers
     var elemsU32 = new Uint32Array(keptCount * 4);
     var wp = 0;
@@ -23436,12 +23539,12 @@ function veFEADelaunayTetrahedralize(parsed, opts) {
       elemsU32[wp++] = tet[2];
       elemsU32[wp++] = tet[3];
     }
-    // Düğümleri compact'la — referans verilmeyen interior point'leri ele
+    // Compact düğümler — referans verilmeyenleri ele
     var refCount = new Uint8Array(dedup.pointCount);
     for (var ei = 0; ei < elemsU32.length; ei++) refCount[elemsU32[ei]] = 1;
     var remap = new Int32Array(dedup.pointCount);
     var newPointCount = 0;
-    var nodesF32 = new Float32Array(dedup.pointCount * 3);  // üst sınır
+    var nodesF32 = new Float32Array(dedup.pointCount * 3);
     for (var pi = 0; pi < dedup.pointCount; pi++) {
       if (!refCount[pi]) { remap[pi] = -1; continue; }
       remap[pi] = newPointCount;
@@ -23454,17 +23557,19 @@ function veFEADelaunayTetrahedralize(parsed, opts) {
     for (var fi = 0; fi < elemsU32.length; fi++) elemsU32[fi] = remap[elemsU32[fi]];
 
     var dt = ((typeof performance !== 'undefined') ? performance.now() : Date.now()) - t0;
-    if (opts.verbose) {
-      console.log('[Delaunay] Bitti: ' + newPointCount + ' düğüm, ' + keptCount + ' tet (toplam ' +
-                  tets.length + ', dış ' + (tets.length - keptCount) + '), ' + dt.toFixed(0) + ' ms');
+    if (verbose) {
+      console.log('[Delaunay] Bitti: ' + newPointCount + ' düğüm, ' + keptCount + ' tet, ' +
+                  dt.toFixed(0) + ' ms');
     }
-    resolve({
+    onProgress('done', 'Tamamlandı', 1.0);
+    return {
       type: 'tet4',
       nodes: nodesF32,
       elements: elemsU32,
       nodesPerElement: 4,
       info: {
-        inputPoints: dedup.pointCount - (dedup.interiorAdded || 0),
+        inputPoints: (parsed.triangleCount * 3) - (dedup.surfacePointsAdded || 0) - (dedup.interiorAdded || 0),
+        surfacePoints: dedup.surfacePointsAdded || 0,
         interiorPoints: dedup.interiorAdded || 0,
         outputNodes: newPointCount,
         outputTets: keptCount,
@@ -23472,7 +23577,9 @@ function veFEADelaunayTetrahedralize(parsed, opts) {
         outsideRemoved: tets.length - keptCount,
         durationMs: dt
       }
-    });
+    };
+  }).catch(function(err) {
+    return { error: err && err.message ? err.message : String(err) };
   });
 }
 
@@ -23489,6 +23596,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFEADelaunayDiagnose: veFEADelaunayDiagnose,
     veFEADelaunayTetrahedralize: veFEADelaunayTetrahedralize,
     _veFEADelaunayDedupVertices: _veFEADelaunayDedupVertices,
+    _veFEADelaunaySampleSurfacePoints: _veFEADelaunaySampleSurfacePoints,
     _veFEADelaunayAddInteriorPoints: _veFEADelaunayAddInteriorPoints,
     _veFEADelaunayClassifyTets: _veFEADelaunayClassifyTets
   };
@@ -24203,7 +24311,9 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
   // Delaunay tet mesher denemesi
   var delaunayOpts = {
     targetSize: size,
+    addSurfacePoints: opts.delaunayAddSurfacePoints !== false,
     addInteriorPoints: opts.delaunayAddInteriorPoints !== false,
+    onProgress: opts.onProgress,
     verbose: opts.verbose === true
   };
   return veFEADelaunayTetrahedralize(parsed, delaunayOpts).then(function(tetResult) {
@@ -28448,6 +28558,14 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (settings.delaunayAddInteriorPoints === undefined) settings.delaunayAddInteriorPoints = true;
 
   var t0 = Date.now();
+  var editorActive = (typeof _veFEAEditorActive !== 'undefined' && _veFEAEditorActive === meshNodeId);
+
+  // Delaunay tet mesher faz-bazlı ilerleme callback'i — UI overlay'i günceller
+  var onMeshProgress = function(stage, msg) {
+    if (!editorActive || typeof veFEAEditorShowLoading !== 'function') return;
+    veFEAEditorShowLoading('Mesh oluşturuluyor...', msg);
+  };
+
   var meshOpts = {
     size: settings.size,
     mode: settings.mode,
@@ -28457,14 +28575,16 @@ function veFEABuildMeshForNode(meshNodeId) {
     localSizing: settings.localSizing,
     crossSection: settings.crossSection,
     useTetMesher: settings.useTetMesher,
-    delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints
+    delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints,
+    delaunayAddSurfacePoints: settings.delaunayAddSurfacePoints,
+    onProgress: onMeshProgress
   };
 
-  // Mesh editor modal aktifse loading overlay göster (sub-message: yöntem)
-  var editorActive = (typeof _veFEAEditorActive !== 'undefined' && _veFEAEditorActive === meshNodeId);
+  // Mesh editor modal aktifse loading overlay göster (faz ilerlemesi onProgress'ten gelir)
   if (editorActive && typeof veFEAEditorShowLoading === 'function') {
+    var tetMesherReady = (typeof veFEADelaunayAvailable === 'function') && veFEADelaunayAvailable() && settings.useTetMesher !== false;
     var loadingSub = settings.useWorker ? 'Web Worker arka planda hesaplıyor...'
-                   : (geometry.type === 'step' && !geometry._parsedTriangles) ? 'STEP voxelization + tet4 + boundary snap...'
+                   : (geometry.type === 'step' && tetMesherReady) ? 'Delaunay tet mesher hazırlanıyor...'
                    : (geometry.type === 'step') ? 'Voxelization + tet4 + boundary snap...'
                    : 'Yapısal mesh üretiliyor (' + (geometry.sourceLabel || geometry.type) + ')...';
     veFEAEditorShowLoading('Mesh oluşturuluyor...', loadingSub);

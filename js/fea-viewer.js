@@ -1620,6 +1620,14 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (settings.delaunayAddInteriorPoints === undefined) settings.delaunayAddInteriorPoints = true;
 
   var t0 = Date.now();
+  var editorActive = (typeof _veFEAEditorActive !== 'undefined' && _veFEAEditorActive === meshNodeId);
+
+  // Delaunay tet mesher faz-bazlı ilerleme callback'i — UI overlay'i günceller
+  var onMeshProgress = function(stage, msg) {
+    if (!editorActive || typeof veFEAEditorShowLoading !== 'function') return;
+    veFEAEditorShowLoading('Mesh oluşturuluyor...', msg);
+  };
+
   var meshOpts = {
     size: settings.size,
     mode: settings.mode,
@@ -1629,14 +1637,16 @@ function veFEABuildMeshForNode(meshNodeId) {
     localSizing: settings.localSizing,
     crossSection: settings.crossSection,
     useTetMesher: settings.useTetMesher,
-    delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints
+    delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints,
+    delaunayAddSurfacePoints: settings.delaunayAddSurfacePoints,
+    onProgress: onMeshProgress
   };
 
-  // Mesh editor modal aktifse loading overlay göster (sub-message: yöntem)
-  var editorActive = (typeof _veFEAEditorActive !== 'undefined' && _veFEAEditorActive === meshNodeId);
+  // Mesh editor modal aktifse loading overlay göster (faz ilerlemesi onProgress'ten gelir)
   if (editorActive && typeof veFEAEditorShowLoading === 'function') {
+    var tetMesherReady = (typeof veFEADelaunayAvailable === 'function') && veFEADelaunayAvailable() && settings.useTetMesher !== false;
     var loadingSub = settings.useWorker ? 'Web Worker arka planda hesaplıyor...'
-                   : (geometry.type === 'step' && !geometry._parsedTriangles) ? 'STEP voxelization + tet4 + boundary snap...'
+                   : (geometry.type === 'step' && tetMesherReady) ? 'Delaunay tet mesher hazırlanıyor...'
                    : (geometry.type === 'step') ? 'Voxelization + tet4 + boundary snap...'
                    : 'Yapısal mesh üretiliyor (' + (geometry.sourceLabel || geometry.type) + ')...';
     veFEAEditorShowLoading('Mesh oluşturuluyor...', loadingSub);

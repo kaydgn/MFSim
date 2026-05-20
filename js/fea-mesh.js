@@ -705,7 +705,9 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
   // Delaunay tet mesher denemesi
   var delaunayOpts = {
     targetSize: size,
+    addSurfacePoints: opts.delaunayAddSurfacePoints !== false,
     addInteriorPoints: opts.delaunayAddInteriorPoints !== false,
+    onProgress: opts.onProgress,
     verbose: opts.verbose === true
   };
   return veFEADelaunayTetrahedralize(parsed, delaunayOpts).then(function(tetResult) {
