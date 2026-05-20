@@ -213,28 +213,27 @@ describe('fea-viewer köprü fonksiyonları (Three.js yokken graceful)', () => {
     expect(global.nodes[0].data.geometry).toBeUndefined();
   });
 
-  test('veFEAApplyPrimitive: showNodeProperties öncesi viewer dispose edilir (WebGL context limiti)', () => {
-    // Chrome'un ~16 concurrent WebGL context limiti — her primitif submit
-    // panel re-render eder → yeni canvas → yeni context. Eski context'i
-    // serbest bırakmazsak limit aşılınca getShaderPrecisionFormat null
-    // döner ve "Cannot read properties of null (reading 'precision')"
-    // hatası alırız. Bu test, dispose'un showNodeProperties'ten ÖNCE
-    // çağrıldığını ve registry'nin temizlendiğini doğrular.
-    var disposeCalled = false;
-    var disposedBeforeShow = false;
+  test('veFEAApplyPrimitive: loadPrimitive ve veri persist çağrılır, viewer korunur (preserve-across-render)', () => {
+    // Yeni canvas-preserve mantığı: viewer dispose edilmez. Canvas DOM
+    // elementi showNodeProperties öncesi detach + sonrası restore edilir
+    // (preserve). Mevcut viewer ve WebGL context korunur — context churn
+    // yok, "precision null" hatası önlenir.
+    var loadPrimitiveCalled = false;
     var showCalled = false;
+    var disposeCalled = false;
     veFEAViewerRegistry['c12'] = {
-      loadPrimitive: function() {},
-      dispose: function() {
-        disposeCalled = true;
-        if (!showCalled) disposedBeforeShow = true;
-      }
+      loadPrimitive: function(type) { loadPrimitiveCalled = (type === 'box'); },
+      dispose: function() { disposeCalled = true; }
     };
     global.nodes = [{ id: 'c12', data: {} }];
     global.showNodeProperties = function() { showCalled = true; };
     veFEAApplyPrimitive('c12', 'box', { width: 10, height: 10, depth: 10 });
-    expect(disposeCalled).toBe(true);
-    expect(disposedBeforeShow).toBe(true);
-    expect(veFEAViewerRegistry['c12']).toBeUndefined();
+    expect(loadPrimitiveCalled).toBe(true);
+    expect(showCalled).toBe(true);
+    // Viewer dispose EDİLMEMELİ — preserve-across-render
+    expect(disposeCalled).toBe(false);
+    expect(veFEAViewerRegistry['c12']).toBeDefined();
+    // Data persist edildi
+    expect(global.nodes[0].data.geometry.type).toBe('box');
   });
 });

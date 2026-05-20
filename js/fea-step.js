@@ -348,16 +348,24 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
     if (typeof showToast === 'function') {
       showToast('STEP yüklendi: ' + (fileName || '?') + ' (' + parsed.triangleCount + ' üçgen)', 'success');
     }
-    // showNodeProperties panel'i yeniden render eder → canvas DOM elementi
-    // değişir. Aşağıdaki dispose ile eski WebGL context'i serbest bırak
-    // (Chrome ~16 context limiti); veFEAApplyPrimitive'deki açıklamaya bak.
-    if (typeof veFEAViewerRegistry !== 'undefined' && veFEAViewerRegistry[nodeId]) {
-      try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
-      delete veFEAViewerRegistry[nodeId];
+    // Canvas preserve-across-render: veFEAApplyPrimitive'deki açıklamaya
+    // bak. WebGL context churn'ünü önlemek için canvas elementini detach +
+    // re-render + re-attach.
+    var canvasId = 've-fea-geom-canvas-' + nodeId;
+    var savedCanvas = document.getElementById(canvasId);
+    var savedParent = savedCanvas ? savedCanvas.parentNode : null;
+    if (savedCanvas && savedParent) {
+      savedParent.removeChild(savedCanvas);
     }
     if (typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
       var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
       if (n) showNodeProperties(n);
+    }
+    if (savedCanvas) {
+      var placeholder = document.getElementById(canvasId);
+      if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.replaceChild(savedCanvas, placeholder);
+      }
     }
   }).catch(function(err) {
     var msg = (err && err.message) ? err.message : String(err);

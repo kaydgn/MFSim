@@ -1286,6 +1286,10 @@ function veFEAInitViewer(canvas, opts) {
     if (typeof origDispose === 'function') origDispose.call(viewer);
   };
 
+  // Canvas referansını viewer'da sakla — veFEAInitGeometryViewerForNode
+  // "aynı canvas mı?" kontrolü için kullanır (preserve-across-render fix).
+  viewer._canvas = canvas;
+
   return viewer;
 }
 
@@ -1408,9 +1412,25 @@ function veFEAInitGeometryViewerForNode(nodeId) {
   var canvas = document.getElementById(canvasId);
   if(!canvas) return;
 
-  // Eski viewer'ı temizle
-  if(veFEAViewerRegistry[nodeId]) {
-    try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
+  // PRESERVE-ACROSS-RENDER FIX: Eski viewer hâlâ aynı canvas elementine
+  // bağlıysa onu yeniden yarat MA — Chrome ~16 WebGL context limiti var,
+  // her panel re-render'da context churn yaratırsak (dispose + recreate)
+  // slot async-release nedeniyle sonradan null context döner ve render
+  // bozulur. veFEAApplyPrimitive showNodeProperties öncesi canvas'ı DOM'dan
+  // detach edip sonra geri yapıştırır; bu sayede aynı element kalır ve
+  // mevcut viewer (aynı WebGL context) korunabilir.
+  var existingViewer = veFEAViewerRegistry[nodeId];
+  if (existingViewer && existingViewer._canvas === canvas) {
+    // Aynı canvas → viewer hâlâ geçerli. Yalnızca node.data.geometry'den
+    // sahneyi tazele.
+    _veFEALoadNodeGeometryIntoViewer(existingViewer, nodeId);
+    return;
+  }
+
+  // Canvas değişmiş (panel re-render, canvas preserve uygulanmamış) veya
+  // ilk init → eski viewer'ı dispose et + sıfırdan oluştur.
+  if(existingViewer) {
+    try { existingViewer.dispose(); } catch(e) {}
     delete veFEAViewerRegistry[nodeId];
   }
 
@@ -1490,9 +1510,16 @@ function veFEAApplyPrimitive(nodeId, type, params) {
     ? veFEANormalizePrimitiveParams(type, params)
     : params;
 
-  // KRİTİK 1: Data persist'i HER ZAMAN yap — viewer yoksa bile (WebGL limit
-  // aşımı durumunda). Aksi halde kullanıcı "Oluştur" der, viewer yok, hiçbir
-  // şey olmaz; data güncellenmez, panel yeniden render olmaz.
+  // 1) Mevcut viewer'a sahneyi hemen uygula — kullanıcı anında geri bildirim
+  //    alır (showNodeProperties → setTimeout(100ms) gecikmesini beklemez).
+  var viewer = veFEAViewerRegistry[nodeId];
+  if (viewer && typeof viewer.loadPrimitive === 'function') {
+    try { viewer.loadPrimitive(type, p); } catch (e) {
+      console.warn('[FEA] loadPrimitive hata:', e.message);
+    }
+  }
+
+  // 2) Data persist — viewer yoksa bile (ileride init olduğunda yedirilsin)
   if (typeof nodes !== 'undefined') {
     var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
     if (node) {
@@ -1513,23 +1540,37 @@ function veFEAApplyPrimitive(nodeId, type, params) {
     }
   }
 
-  // KRİTİK 2: showNodeProperties panel'i yeniden render eder → canvas DOM
-  // elementi değişir. Eski WebGL context detached canvas'a bağlı kalır;
-  // Chrome ~16 concurrent context limiti var. Re-render ÖNCESİ eski viewer'ı
-  // dispose et — WEBGL_lose_context slot'u serbest bırakır. Eski viewer
-  // zaten her halükarda yenisi ile değişecek (cp-core setTimeout(100) ile
-  // veFEAInitGeometryViewerForNode tetiklenir; yeni viewer
-  // _veFEALoadNodeGeometryIntoViewer ile node.data.geometry'den primitif'i
-  // yedirir — TÜM tipleri destekler).
-  if (veFEAViewerRegistry[nodeId]) {
-    try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
-    delete veFEAViewerRegistry[nodeId];
+  // 3) CANVAS PRESERVE: showNodeProperties → content.innerHTML = html →
+  //    canvas DOM elementi yeniden yaratılır → eski WebGL context kayıp +
+  //    yenisi gerekir. Chrome ~16 concurrent WebGL context limiti var; her
+  //    primitif submit'te yeni context oluşturmazsak Chrome dolar ve yeni
+  //    context null gl döner ("precision" hatası / sessiz render bozulması).
+  //
+  //    Çözüm: Canvas elementini DOM'dan detach → innerHTML değişimi canvas'ı
+  //    ETKİLEMEZ → yeniden render sonrası YENİ placeholder'ı eski canvas ile
+  //    değiştir. Aynı element + aynı WebGL context + aynı viewer korunur.
+  //    veFEAInitGeometryViewerForNode "aynı canvas mı?" check'iyle mevcut
+  //    viewer'ı yeniden yaratmaz (preserve-across-render).
+  var canvasId = 've-fea-geom-canvas-' + nodeId;
+  var savedCanvas = document.getElementById(canvasId);
+  var savedParent = savedCanvas ? savedCanvas.parentNode : null;
+  if (savedCanvas && savedParent) {
+    savedParent.removeChild(savedCanvas);
   }
 
-  // Panel yeniden render — durum tablosu, dropdown, butonlar güncellensin
+  // 4) Panel yeniden render — durum tablosu, dropdown, butonlar güncellensin
   if (typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
     var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
     if (n) showNodeProperties(n);
+  }
+
+  // 5) Yeni placeholder canvas'ı (showNodeProperties tarafından yaratıldı)
+  //    eski (preserve edilmiş) canvas ile değiştir.
+  if (savedCanvas) {
+    var placeholder = document.getElementById(canvasId);
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.replaceChild(savedCanvas, placeholder);
+    }
   }
 }
 
