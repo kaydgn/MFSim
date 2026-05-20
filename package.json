@@ -6,7 +6,6 @@
   "scripts": {
     "build": "node build.js",
     "build:wasm": "node scripts/build-wasm.js",
-    "build:wasm:tetgen": "node scripts/build-tetgen-wasm.js",
     "test": "jest --verbose",
     "test:unit": "jest --verbose",
     "test:e2e": "npx playwright test",
@@ -23,11 +22,13 @@
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "esbuild": "^0.24.0",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "jsdom": "^28.1.0"
   },
   "dependencies": {
+    "delaunay-triangulate": "^1.1.6",
     "occt-import-js": "^0.0.23",
     "three": "^0.149.0"
   }

@@ -1616,7 +1616,8 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (!settings.curvatureRefinement) settings.curvatureRefinement = { enabled: false, normalAngleDeg: 18 };
   if (!settings.localSizing) settings.localSizing = { selection: 'none', biasStrength: 0 };
   if (settings.useWorker === undefined) settings.useWorker = false;
-  if (settings.useTetgen === undefined) settings.useTetgen = true;
+  if (settings.useTetMesher === undefined) settings.useTetMesher = true;
+  if (settings.delaunayAddInteriorPoints === undefined) settings.delaunayAddInteriorPoints = true;
 
   var t0 = Date.now();
   var meshOpts = {
@@ -1627,8 +1628,8 @@ function veFEABuildMeshForNode(meshNodeId) {
     curvatureRefinement: settings.curvatureRefinement,
     localSizing: settings.localSizing,
     crossSection: settings.crossSection,
-    useTetgen: settings.useTetgen,
-    tetgenRadiusEdgeRatio: settings.tetgenRadiusEdgeRatio
+    useTetMesher: settings.useTetMesher,
+    delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints
   };
 
   // Mesh editor modal aktifse loading overlay göster (sub-message: yöntem)
@@ -1642,12 +1643,11 @@ function veFEABuildMeshForNode(meshNodeId) {
   }
 
   // STEP için async parse gerekebilir — promise-aware yol.
-  // _parsedTriangles cached olsa bile, TetGen istemi async wrapper gerektirir
-  // (sync path TetGen WASM'a erişemez).
-  var tetgenWanted = settings.useTetgen !== false &&
-    (typeof veFEATetgenIsBuilt === 'function') && veFEATetgenIsBuilt();
+  // _parsedTriangles cached olsa bile, Delaunay istemi async wrapper'dan geçer.
+  var tetMesherWanted = settings.useTetMesher !== false &&
+    (typeof veFEADelaunayAvailable === 'function') && veFEADelaunayAvailable();
   var needsAsync = (geometry.type === 'step') &&
-    (!geometry._parsedTriangles || tetgenWanted);
+    (!geometry._parsedTriangles || tetMesherWanted);
   var finishMesh = function(meshData) {
     // Loading overlay'i temizle (her durumda — hata yolu dahil)
     if (editorActive && typeof veFEAEditorHideLoading === 'function') veFEAEditorHideLoading();

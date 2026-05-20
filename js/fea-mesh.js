@@ -603,7 +603,7 @@ function _veFEAApplyInflation(mesh, ls, axis, towardMax) {
 //
 // Mesh stratejisi (STEP karmaşık geometriler için):
 //   1. Primitif inference (sync, sade şekiller için)
-//   2. TetGen WASM (kapalı yüzey için kaliteli tet4 mesh) — opts.useTetgen
+//   2. Pure JS Delaunay tet mesher (Mikola Lysenko, MIT) — opts.useTetMesher
 //   3. Voxel + boundary snap (her zaman çalışan fallback)
 function veFEAMeshFromGeometryAsync(geometry, opts) {
   if (!geometry) return Promise.resolve(null);
@@ -611,11 +611,11 @@ function veFEAMeshFromGeometryAsync(geometry, opts) {
   // Önce sync yolu dene (primitif inference + cached parsed voxel)
   var sync = veFEAMeshFromGeometry(geometry, opts);
   if (sync) {
-    // TetGen aktifse ve sync sonuç voxel ise: TetGen ile yeniden mesh dene
-    if (_veFEAShouldTryTetgen(opts) && sync.voxelMode === true && geometry.type === 'step') {
+    // Tet mesher aktifse ve sync sonuç voxel ise: Delaunay ile yeniden mesh dene
+    if (_veFEAShouldTryTetMesher(opts) && sync.voxelMode === true && geometry.type === 'step') {
       var parsedCached = _veFEAParseSurfaceTriangles(geometry);
       if (parsedCached) {
-        return _veFEAMeshWithTetgenOrVoxel(parsedCached, geometry, opts, sync);
+        return _veFEAMeshWithTetMesherOrVoxel(parsedCached, geometry, opts, sync);
       }
     }
     return Promise.resolve(sync);
@@ -633,31 +633,28 @@ function veFEAMeshFromGeometryAsync(geometry, opts) {
       if ((opts.mode || 'auto') === 'surface') {
         return _veFEAMeshFromParsedTriangles(parsed, 'step');
       }
-      return _veFEAMeshWithTetgenOrVoxel(parsed, geometry, opts, null);
+      return _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, null);
     });
   }
   return Promise.resolve(null);
 }
 
-// TetGen denenebilir mi? (opts ve runtime kontrolü)
-function _veFEAShouldTryTetgen(opts) {
+// Tet mesher denenebilir mi? (opts ve runtime kontrolü)
+function _veFEAShouldTryTetMesher(opts) {
   if (!opts) opts = {};
-  if (opts.useTetgen === false) return false;
-  if (opts.disableTetgen === true) return false;
-  if (typeof veFEATetgenTetrahedralize !== 'function') return false;
-  if (typeof veFEATetgenIsBuilt === 'function' && !veFEATetgenIsBuilt()) {
-    // Dev modda da denemek için ileri git — gerçek yükleme başarısız olursa
-    // tetgen wrapper graceful error döner, voxel'a düşeriz.
-    if (opts.useTetgen !== true) return false; // explicit istemiyorsa skip
+  if (opts.useTetMesher === false) return false;
+  if (opts.disableTetMesher === true) return false;
+  if (typeof veFEADelaunayTetrahedralize !== 'function') return false;
+  if (typeof veFEADelaunayAvailable === 'function' && !veFEADelaunayAvailable()) {
+    return false;
   }
   return true;
 }
 
-// Hibrit mesh stratejisi: önce TetGen dene, başarısız olursa voxel fallback.
-// `preBuiltVoxel` opsiyonel — sync yol voxel'ı zaten tam post-process'lemişse
-// (localSizing + tet4 conv + quadratic) hazır kullanılır. Aksi halde voxel
-// burada üretilir.
-function _veFEAMeshWithTetgenOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
+// Hibrit mesh stratejisi: önce Delaunay tet mesher dene, başarısız olursa
+// voxel fallback. `preBuiltVoxel` opsiyonel — sync yol voxel'ı zaten tam
+// post-process'lemişse hazır kullanılır.
+function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
   var size = Math.max(VE_FEA_MESH_MIN_SIZE, Number(opts.size) || 10);
   var geometryType = geometry.type || 'unknown';
 
@@ -677,8 +674,6 @@ function _veFEAMeshWithTetgenOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     return mesh;
   }
 
-  // Voxel fallback: sync sonuç hazırsa onu kullan (zaten tam post-process'li),
-  // yoksa kendi voxel + boundary-snap akışımızı çalıştır.
   function buildVoxelFallback() {
     if (preBuiltVoxel) return preBuiltVoxel;
     var elementType = opts.elementType || 'auto';
@@ -696,7 +691,6 @@ function _veFEAMeshWithTetgenOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
             var snapped = _veFEABoundarySnapToTriangles(hexMesh, parsed);
             if (snapped && !snapped.error) hexMesh = snapped;
           }
-          // tet4 conversion'u tekrar yapmamak için elementType sentinel
           opts = Object.assign({}, opts, { elementType: 'tet4-done' });
         }
       }
@@ -704,40 +698,33 @@ function _veFEAMeshWithTetgenOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     return applyPostProcessing(hexMesh);
   }
 
-  if (!_veFEAShouldTryTetgen(opts)) {
+  if (!_veFEAShouldTryTetMesher(opts)) {
     return Promise.resolve(buildVoxelFallback());
   }
 
-  // TetGen denemesi — radius-edge ratio ve max volume opts'tan
-  var tetgenOpts = {
-    quality: opts.tetgenQuality !== false,
-    radiusEdgeRatio: typeof opts.tetgenRadiusEdgeRatio === 'number' ? opts.tetgenRadiusEdgeRatio : 1.4,
-    maxVolume: typeof opts.tetgenMaxVolume === 'number' ? opts.tetgenMaxVolume : _veFEADefaultTetgenMaxVolume(size),
+  // Delaunay tet mesher denemesi
+  var delaunayOpts = {
+    targetSize: size,
+    addInteriorPoints: opts.delaunayAddInteriorPoints !== false,
     verbose: opts.verbose === true
   };
-  return veFEATetgenTetrahedralize(parsed, tetgenOpts).then(function(tetResult) {
+  return veFEADelaunayTetrahedralize(parsed, delaunayOpts).then(function(tetResult) {
     if (!tetResult || tetResult.error) {
-      if (opts.verbose) console.warn('[TetGen] başarısız, voxel fallback:', tetResult && tetResult.error);
+      if (opts.verbose) console.warn('[Delaunay] başarısız, voxel fallback:', tetResult && tetResult.error);
       return buildVoxelFallback();
     }
-    var tetMesh = _veFEAWrapTetgenResult(tetResult, geometry);
+    var tetMesh = _veFEAWrapDelaunayResult(tetResult, geometry);
     return applyPostProcessing(tetMesh);
   }).catch(function(err) {
-    if (opts.verbose) console.warn('[TetGen] exception, voxel fallback:', err);
+    if (opts.verbose) console.warn('[Delaunay] exception, voxel fallback:', err);
     return buildVoxelFallback();
   });
 }
 
-// Element boyutundan default max tet hacmi: küresel olarak h³/6 (regular tet)
-function _veFEADefaultTetgenMaxVolume(size) {
-  return (size * size * size) / 6;
-}
-
-// TetGen sonucunu MFSim mesh formatına sarmak: bbox + namedSelections + meta
-function _veFEAWrapTetgenResult(tetResult, geometry) {
+// Delaunay sonucunu MFSim mesh formatına sarmak: bbox + namedSelections + meta
+function _veFEAWrapDelaunayResult(tetResult, geometry) {
   var nodes = tetResult.nodes;
   var elements = tetResult.elements;
-  // BBox (lokal sizing ve direksiyonlu yüz tespiti için)
   var minX = Infinity, minY = Infinity, minZ = Infinity;
   var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
   for (var i = 0; i < nodes.length; i += 3) {
@@ -750,12 +737,12 @@ function _veFEAWrapTetgenResult(tetResult, geometry) {
   var sel = _veFEATetMeshNamedSelections(nodes, elements, bbox);
   var mesh = {
     type: 'tet4',
-    geometryType: 'tetgen-' + (geometry.type || 'unknown'),
+    geometryType: 'delaunay-' + (geometry.type || 'unknown'),
     nodes: nodes,
     elements: elements,
     nodesPerElement: 4,
     namedSelections: sel,
-    tetgenInfo: tetResult.info || null
+    delaunayInfo: tetResult.info || null
   };
   if (geometry.detectedFeatures && geometry.detectedFeatures.summary) {
     mesh.detectedFeatureSummary = geometry.detectedFeatures.summary;
