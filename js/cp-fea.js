@@ -437,6 +437,13 @@ function veFEASubmitMeshBuild(nodeId) {
         meshNode.data.meshSettings.edgeSizingControls = esc;
       }
     }
+    // Virtual Topology (ANSYS §8.2) — UI'dan oku
+    if (typeof veFEAReadVirtualTopologyFromUI === 'function') {
+      var vt = veFEAReadVirtualTopologyFromUI(nodeId);
+      if (vt.length > 0) {
+        meshNode.data.meshSettings.virtualTopology = vt;
+      }
+    }
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);
     meshNode.data.meshSettings.useWorker = !!(workerEl && workerEl.checked);
     // Delaunay tet mesher ayarları (STEP karmaşık geometriler için tet4)

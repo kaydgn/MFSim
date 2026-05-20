@@ -24193,6 +24193,9 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (mesh && !mesh.error && Array.isArray(opts.edgeSizingControls) && opts.edgeSizingControls.length > 0) {
     mesh = _veFEAApplyEdgeSizingControls(mesh, opts.edgeSizingControls);
   }
+  if (mesh && !mesh.error && Array.isArray(opts.virtualTopology) && opts.virtualTopology.length > 0) {
+    mesh = _veFEAApplyVirtualTopology(mesh, opts.virtualTopology);
+  }
   return mesh;
 }
 
@@ -24429,6 +24432,9 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     }
     if (Array.isArray(opts.edgeSizingControls) && opts.edgeSizingControls.length > 0) {
       mesh = _veFEAApplyEdgeSizingControls(mesh, opts.edgeSizingControls);
+    }
+    if (Array.isArray(opts.virtualTopology) && opts.virtualTopology.length > 0) {
+      mesh = _veFEAApplyVirtualTopology(mesh, opts.virtualTopology);
     }
     return mesh;
   }
@@ -26837,6 +26843,47 @@ function _veFEAApplySphereOfInfluence(mesh, spheres) {
         radius: r,
         targetSize: (isFinite(+sph.targetSize) && +sph.targetSize > 0) ? +sph.targetSize : null,
         nodeCount: inside.length
+      }
+    };
+  }
+  return mesh;
+}
+
+// ─── Virtual Topology (ANSYS §8.2 — face grouplama) ──────────────────────
+// Kullanıcı birden fazla yüzü "tek bir virtual cell" olarak işaretler. v1:
+// post-mesh, gruptaki tüm face'lerin node ID'leri birleştirilip yeni bir
+// named selection olur. Mesher'ın grupları tek face gibi görmesi Faz 3+'da.
+//
+// Parametreler:
+//   groups: [{ faceIds: ['face1', 'face2', ...], label?: 'Combined Face' }, ...]
+function _veFEAApplyVirtualTopology(mesh, groups) {
+  if (!mesh || mesh.error || !groups || groups.length === 0) return mesh;
+  if (!mesh.namedSelections) mesh.namedSelections = {};
+  for (var g = 0; g < groups.length; g++) {
+    var grp = groups[g] || {};
+    var faceIds = grp.faceIds;
+    if (!Array.isArray(faceIds) || faceIds.length < 2) continue;
+    // Union of node IDs
+    var unionSet = {};
+    var labels = [];
+    for (var i = 0; i < faceIds.length; i++) {
+      var src = mesh.namedSelections[faceIds[i]];
+      if (!src || !src.nodeIds) continue;
+      labels.push(src.label || faceIds[i]);
+      for (var j = 0; j < src.nodeIds.length; j++) unionSet[src.nodeIds[j]] = true;
+    }
+    var ids = Object.keys(unionSet).map(function(k) { return parseInt(k, 10); });
+    if (ids.length === 0) continue;
+    ids.sort(function(a, b) { return a - b; });
+    var key = 'virtual-topology-' + g;
+    mesh.namedSelections[key] = {
+      type: 'face',
+      source: 'auto',
+      label: grp.label || ('Virtual Group: ' + labels.join(' + ')),
+      nodeIds: new Uint32Array(ids),
+      virtualTopology: {
+        sourceFaceIds: faceIds.slice(),
+        nodeCount: ids.length
       }
     };
   }
@@ -29407,6 +29454,7 @@ function veFEABuildMeshForNode(meshNodeId) {
     sphereOfInfluence: settings.sphereOfInfluence,
     faceSizingControls: settings.faceSizingControls,
     edgeSizingControls: settings.edgeSizingControls,
+    virtualTopology: settings.virtualTopology,
     defeaturingTolerance: settings.defeaturingTolerance,
     crossSection: settings.crossSection,
     useTetMesher: settings.useTetMesher,
@@ -30355,6 +30403,7 @@ function _veFEAEditorDefaultAccordionState() {
     faceSizing: false,
     edgeSizing: false,
     sphereOfInfluence: false,
+    virtualTopology: false,
     namedSel: false,
     // Post-mesh
     quality: false,
@@ -30385,6 +30434,7 @@ function veFEAEditorRefreshAccordions() {
     'faceSizing':        _veFEAEditorFaceSizingHTML(node),
     'edgeSizing':        _veFEAEditorEdgeSizingHTML(node),
     'sphereOfInfluence': _veFEAEditorSphereOfInfluenceHTML(node),
+    'virtualTopology':   _veFEAEditorVirtualTopologyHTML(node),
     'quality':           _veFEAEditorQualityHTML(node),
     'namedSel':    _veFEAEditorNamedSelHTML(node),
     'display':     _veFEAEditorDisplayHTML(node),
@@ -30804,6 +30854,7 @@ function _veFEAEditorBuildLeftPanel(node) {
   html += _veFEAEditorAccordionSection('faceSizing',        'Face Sizing Controls (ANSYS §5.1)', _veFEAEditorFaceSizingHTML(node));
   html += _veFEAEditorAccordionSection('edgeSizing',        'Edge Sizing Controls (ANSYS §5.5)', _veFEAEditorEdgeSizingHTML(node));
   html += _veFEAEditorAccordionSection('sphereOfInfluence', 'Sphere of Influence (ANSYS §5.2)', _veFEAEditorSphereOfInfluenceHTML(node));
+  html += _veFEAEditorAccordionSection('virtualTopology',   'Virtual Topology (ANSYS §8.2)',    _veFEAEditorVirtualTopologyHTML(node));
   html += _veFEAEditorAccordionSection('namedSel',          'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
   // ─── Post-mesh: Mesh oluşturulduktan sonra incelenen bölümler ───────────
   html += _veFEAEditorGroupHeader('Mesh Sonrası (İnceleme)');
@@ -31699,6 +31750,119 @@ function veFEAReadEdgeSizingFromUI(nodeId) {
       entry.divisions = null;
     }
     out.push(entry);
+  }
+  return out;
+}
+
+// ─── Virtual Topology panel (ANSYS §8.2) ──────────────────────────────────
+// Birden fazla yüzü "virtual cell" olarak grupla. v1: post-mesh node ID
+// birleştirme (named selection olarak). Mesher tarafından "tek face gibi
+// işle" davranışı Faz 3+'da.
+function _veFEAEditorVirtualTopologyHTML(node) {
+  var d = node.data || {};
+  var settings = d.meshSettings || {};
+  var groups = settings.virtualTopology || [];
+  var topoFaces = [];
+  if (typeof veFEAComputeGeometryTopology === 'function' && d.geometry) {
+    try {
+      var topo = veFEAComputeGeometryTopology(d.geometry);
+      if (topo && Array.isArray(topo.faces)) topoFaces = topo.faces;
+    } catch (e) {}
+  }
+
+  var html = '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">' +
+    'ANSYS §8.2 — birden fazla yüzü "tek bir virtual cell" olarak grupla. ' +
+    'v1: post-mesh node ID birleştirme (BC için).' +
+    '</div>';
+
+  if (topoFaces.length < 2) {
+    html += '<div style="padding:10px 12px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary);">' +
+      'Bu geometride en az 2 yüz olması gerekir.' +
+      '</div>';
+    return html;
+  }
+
+  if (groups.length === 0) {
+    html += '<div style="padding:10px 12px; background:var(--bg-primary); border:1px dashed var(--border-color); font-size:0.6rem; color:var(--text-muted); text-align:center; margin-bottom:8px;">Henüz virtual group tanımlı değil.</div>';
+  } else {
+    groups.forEach(function(grp, idx) {
+      html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+      html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+      html += '<b style="font-size:0.62rem; color:var(--text-primary);">Grup ' + (idx + 1) + ' <span style="color:var(--text-muted); font-weight:400;">(' + (grp.faceIds || []).length + ' yüz)</span></b>';
+      html += '<button onclick="veFEARemoveVirtualGroup(\'' + node.id + '\',' + idx + ')" style="padding:2px 8px; font-size:0.55rem; background:#dc2626; color:#fff; border:none; cursor:pointer;">Sil</button>';
+      html += '</div>';
+      html += '<input type="text" value="' + (grp.label || '') + '" placeholder="Grup adı (opsiyonel)" id="ve-fea-vt-lbl-' + node.id + '-' + idx + '" style="width:100%; font-size:0.6rem; padding:3px 5px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:4px;">';
+      html += '<div style="font-size:0.55rem; color:var(--text-secondary); margin-bottom:3px;">Yüzler:</div>';
+      html += '<div style="max-height:120px; overflow-y:auto; padding:4px; background:var(--bg-tertiary); border:1px solid var(--border-color);">';
+      var selected = grp.faceIds || [];
+      topoFaces.forEach(function(f) {
+        var checked = selected.indexOf(f.id) >= 0;
+        html += '<label style="display:block; padding:2px 4px; font-size:0.58rem; color:var(--text-primary); cursor:pointer;">';
+        html += '<input type="checkbox" data-vt-face="' + node.id + '|' + idx + '|' + f.id + '"' + (checked ? ' checked' : '') + ' style="margin-right:4px;">';
+        html += (f.label || f.id) + ' <span style="color:var(--text-muted);">(' + f.id + ')</span>';
+        html += '</label>';
+      });
+      html += '</div>';
+      html += '</div>';
+    });
+  }
+
+  html += '<button onclick="veFEAAddVirtualGroup(\'' + node.id + '\')" style="width:100%; padding:7px; font-size:0.65rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">+ Yeni Virtual Group Ekle</button>';
+
+  return html;
+}
+
+function veFEAAddVirtualGroup(nodeId) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  if (!Array.isArray(node.data.meshSettings.virtualTopology)) {
+    node.data.meshSettings.virtualTopology = [];
+  }
+  var existing = veFEAReadVirtualTopologyFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.virtualTopology = existing;
+  node.data.meshSettings.virtualTopology.push({ faceIds: [], label: '' });
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+function veFEARemoveVirtualGroup(nodeId, index) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings) return;
+  var existing = veFEAReadVirtualTopologyFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.virtualTopology = existing;
+  if (!Array.isArray(node.data.meshSettings.virtualTopology)) return;
+  node.data.meshSettings.virtualTopology.splice(index, 1);
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+function veFEAReadVirtualTopologyFromUI(nodeId) {
+  if (typeof nodes === 'undefined') return [];
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.meshSettings ||
+      !Array.isArray(node.data.meshSettings.virtualTopology)) return [];
+  var current = node.data.meshSettings.virtualTopology;
+  var out = [];
+  for (var i = 0; i < current.length; i++) {
+    var lblEl = document.getElementById('ve-fea-vt-lbl-' + nodeId + '-' + i);
+    var label = lblEl ? lblEl.value : (current[i].label || '');
+    var faceIds = [];
+    var checkboxes = document.querySelectorAll('input[data-vt-face^="' + nodeId + '|' + i + '|"]');
+    if (checkboxes.length === 0) {
+      faceIds = (current[i].faceIds || []).slice();
+    } else {
+      checkboxes.forEach(function(cb) {
+        if (cb.checked) {
+          var parts = cb.getAttribute('data-vt-face').split('|');
+          if (parts.length === 3) faceIds.push(parts[2]);
+        }
+      });
+    }
+    out.push({ faceIds: faceIds, label: label });
   }
   return out;
 }
@@ -32962,6 +33126,13 @@ function veFEASubmitMeshBuild(nodeId) {
       var esc = veFEAReadEdgeSizingFromUI(nodeId);
       if (esc.length > 0) {
         meshNode.data.meshSettings.edgeSizingControls = esc;
+      }
+    }
+    // Virtual Topology (ANSYS §8.2) — UI'dan oku
+    if (typeof veFEAReadVirtualTopologyFromUI === 'function') {
+      var vt = veFEAReadVirtualTopologyFromUI(nodeId);
+      if (vt.length > 0) {
+        meshNode.data.meshSettings.virtualTopology = vt;
       }
     }
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);

@@ -1745,6 +1745,7 @@ function veFEABuildMeshForNode(meshNodeId) {
     sphereOfInfluence: settings.sphereOfInfluence,
     faceSizingControls: settings.faceSizingControls,
     edgeSizingControls: settings.edgeSizingControls,
+    virtualTopology: settings.virtualTopology,
     defeaturingTolerance: settings.defeaturingTolerance,
     crossSection: settings.crossSection,
     useTetMesher: settings.useTetMesher,

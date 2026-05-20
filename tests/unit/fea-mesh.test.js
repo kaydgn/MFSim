@@ -2504,6 +2504,56 @@ describe('veFEAMeshFromGeometry — midSideNodes opsiyonu', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// ─── Faz 3 — Virtual Topology (ANSYS §8.2) ───
+describe('Virtual Topology (opts.virtualTopology → birleştirilmiş face)', () => {
+  test('2 face grup → birleşik named selection', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, virtualTopology: [{ faceIds: ['faceXMin', 'faceXMax'], label: 'X Yüzleri' }] }
+    );
+    expect(m.namedSelections['virtual-topology-0']).toBeDefined();
+    var ns = m.namedSelections['virtual-topology-0'];
+    expect(ns.type).toBe('face');
+    expect(ns.label).toBe('X Yüzleri');
+    // İki face'in toplam node sayısından az olmalı (çakışan köşeler dedup)
+    var n1 = m.namedSelections.faceXMin.nodeIds.length;
+    var n2 = m.namedSelections.faceXMax.nodeIds.length;
+    expect(ns.nodeIds.length).toBeLessThanOrEqual(n1 + n2);
+    expect(ns.nodeIds.length).toBeGreaterThan(0);
+    expect(ns.virtualTopology.sourceFaceIds).toEqual(['faceXMin', 'faceXMax']);
+  });
+
+  test('Tek face\'lik grup atlanır (min 2 face)', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, virtualTopology: [{ faceIds: ['faceXMin'] }] }
+    );
+    expect(m.namedSelections['virtual-topology-0']).toBeUndefined();
+  });
+
+  test('Bilinmeyen face\'ler ignore edilir, en az 1 valid varsa grup oluşur', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, virtualTopology: [{ faceIds: ['faceXMin', 'faceFake', 'faceXMax'] }] }
+    );
+    expect(m.namedSelections['virtual-topology-0']).toBeDefined();
+  });
+
+  test('Birden fazla grup', () => {
+    var m = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      { size: 5, virtualTopology: [
+        { faceIds: ['faceXMin', 'faceXMax'], label: 'X' },
+        { faceIds: ['faceYMin', 'faceYMax'], label: 'Y' }
+      ]}
+    );
+    expect(m.namedSelections['virtual-topology-0']).toBeDefined();
+    expect(m.namedSelections['virtual-topology-1']).toBeDefined();
+    expect(m.namedSelections['virtual-topology-0'].label).toBe('X');
+    expect(m.namedSelections['virtual-topology-1'].label).toBe('Y');
+  });
+});
+
 // ─── Faz 2 Adım 3 — Convergence Study (ANSYS §10) ───
 describe('veFEAConvergenceStudy — otomatik h-refinement', () => {
   test('Konverjans sağlanırsa converged=true, log uzunluğu < maxLoops', () => {

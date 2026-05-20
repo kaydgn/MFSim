@@ -298,13 +298,13 @@ describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
     expect(leftPanel.innerHTML).toMatch(/Mesh Sonrası/);
   });
 
-  test('Pre-mesh sırası: sizing → defaults → inflation → faceSizing → edgeSizing → sphereOfInfluence → namedSel', () => {
+  test('Pre-mesh sırası: sizing → defaults → inflation → faceSizing → edgeSizing → sphereOfInfluence → virtualTopology → namedSel', () => {
     global.nodes = [{ id: 'mesh-g2', type: 'fea-mesh', data: {} }];
     veFEAOpenMeshEditor('mesh-g2');
     var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
       .querySelectorAll('[data-acc-section]');
     var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(0, 7)).toEqual(['sizing', 'defaults', 'inflation', 'faceSizing', 'edgeSizing', 'sphereOfInfluence', 'namedSel']);
+    expect(order.slice(0, 8)).toEqual(['sizing', 'defaults', 'inflation', 'faceSizing', 'edgeSizing', 'sphereOfInfluence', 'virtualTopology', 'namedSel']);
   });
 
   test('Post-mesh sırası: quality → statistics → display → suggestions → convergence → topology', () => {
@@ -313,7 +313,7 @@ describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
     var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
       .querySelectorAll('[data-acc-section]');
     var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(7)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'convergence', 'topology']);
+    expect(order.slice(8)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'convergence', 'topology']);
   });
 
   test('Default accordion state: TÜM accordion\'lar kapalı (sade ilk görünüm)', () => {

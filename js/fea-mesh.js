@@ -501,6 +501,9 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (mesh && !mesh.error && Array.isArray(opts.edgeSizingControls) && opts.edgeSizingControls.length > 0) {
     mesh = _veFEAApplyEdgeSizingControls(mesh, opts.edgeSizingControls);
   }
+  if (mesh && !mesh.error && Array.isArray(opts.virtualTopology) && opts.virtualTopology.length > 0) {
+    mesh = _veFEAApplyVirtualTopology(mesh, opts.virtualTopology);
+  }
   return mesh;
 }
 
@@ -737,6 +740,9 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     }
     if (Array.isArray(opts.edgeSizingControls) && opts.edgeSizingControls.length > 0) {
       mesh = _veFEAApplyEdgeSizingControls(mesh, opts.edgeSizingControls);
+    }
+    if (Array.isArray(opts.virtualTopology) && opts.virtualTopology.length > 0) {
+      mesh = _veFEAApplyVirtualTopology(mesh, opts.virtualTopology);
     }
     return mesh;
   }
@@ -3145,6 +3151,47 @@ function _veFEAApplySphereOfInfluence(mesh, spheres) {
         radius: r,
         targetSize: (isFinite(+sph.targetSize) && +sph.targetSize > 0) ? +sph.targetSize : null,
         nodeCount: inside.length
+      }
+    };
+  }
+  return mesh;
+}
+
+// ─── Virtual Topology (ANSYS §8.2 — face grouplama) ──────────────────────
+// Kullanıcı birden fazla yüzü "tek bir virtual cell" olarak işaretler. v1:
+// post-mesh, gruptaki tüm face'lerin node ID'leri birleştirilip yeni bir
+// named selection olur. Mesher'ın grupları tek face gibi görmesi Faz 3+'da.
+//
+// Parametreler:
+//   groups: [{ faceIds: ['face1', 'face2', ...], label?: 'Combined Face' }, ...]
+function _veFEAApplyVirtualTopology(mesh, groups) {
+  if (!mesh || mesh.error || !groups || groups.length === 0) return mesh;
+  if (!mesh.namedSelections) mesh.namedSelections = {};
+  for (var g = 0; g < groups.length; g++) {
+    var grp = groups[g] || {};
+    var faceIds = grp.faceIds;
+    if (!Array.isArray(faceIds) || faceIds.length < 2) continue;
+    // Union of node IDs
+    var unionSet = {};
+    var labels = [];
+    for (var i = 0; i < faceIds.length; i++) {
+      var src = mesh.namedSelections[faceIds[i]];
+      if (!src || !src.nodeIds) continue;
+      labels.push(src.label || faceIds[i]);
+      for (var j = 0; j < src.nodeIds.length; j++) unionSet[src.nodeIds[j]] = true;
+    }
+    var ids = Object.keys(unionSet).map(function(k) { return parseInt(k, 10); });
+    if (ids.length === 0) continue;
+    ids.sort(function(a, b) { return a - b; });
+    var key = 'virtual-topology-' + g;
+    mesh.namedSelections[key] = {
+      type: 'face',
+      source: 'auto',
+      label: grp.label || ('Virtual Group: ' + labels.join(' + ')),
+      nodeIds: new Uint32Array(ids),
+      virtualTopology: {
+        sourceFaceIds: faceIds.slice(),
+        nodeCount: ids.length
       }
     };
   }
