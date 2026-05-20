@@ -23146,6 +23146,38 @@ function veFEATetgenIsBuilt() {
   return false;
 }
 
+// Diagnostic: kullanıcı F12 console'dan TetGen durumunu çağırabilir.
+// Cache problemleri / yanlış HTML versiyonu / dev modu için tanı.
+function veFEATetgenDiagnose() {
+  var d = { hasWindow: typeof window !== 'undefined', inline: {}, isBuilt: false };
+  if (typeof window !== 'undefined' && window.__feaInline) {
+    d.inline.hasScript = !!window.__feaInline.tetgenScript;
+    d.inline.hasWasm = !!window.__feaInline.tetgenWasm;
+    if (window.__feaInline.tetgenScript) d.inline.scriptLen = window.__feaInline.tetgenScript.length;
+    if (window.__feaInline.tetgenWasm) d.inline.wasmB64Len = window.__feaInline.tetgenWasm.length;
+  }
+  d.isBuilt = veFEATetgenIsBuilt();
+  d.mode = (d.inline.hasScript && d.inline.hasWasm) ? 'monolitik (inline)' : 'dev (vendor/tetgen/*)';
+  if (typeof console !== 'undefined') {
+    console.log('[TetGen] Tanı:', d);
+    if (!d.isBuilt) {
+      console.warn('[TetGen] WASM bulunamadı. Olası nedenler:');
+      console.warn('  1) Tarayıcı önbelleği eski HTML\'i gösteriyor → Ctrl+Shift+R');
+      console.warn('  2) MFSim_Code.html güncel değil → "npm run build" çalıştır');
+      console.warn('  3) Dev modunda index.html açtınız ama vendor/tetgen/*.wasm yok → "npm run build:wasm:tetgen"');
+    }
+  }
+  return d;
+}
+
+// Init-time tanı: yüklendiğinde otomatik bir kez console'a yaz (sessizce
+// monolitik build için OK durumu da loglar — kullanıcı F12'de görebilsin).
+if (typeof window !== 'undefined' && typeof console !== 'undefined') {
+  var _veFEATetgenBuilt = veFEATetgenIsBuilt();
+  console.info('[TetGen] WASM ' + (_veFEATetgenBuilt ? 'HAZIR (inline)' : 'YOK (voxel fallback aktif)') +
+    ' — detay: veFEATetgenDiagnose()');
+}
+
 function _veFEATetgenLoadScript(src, isBlobUrl) {
   return new Promise(function(resolve, reject) {
     if (typeof document === 'undefined') {
@@ -23400,6 +23432,7 @@ function veFEATetgenTetrahedralize(parsed, opts) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veFEATetgenIsBuilt: veFEATetgenIsBuilt,
+    veFEATetgenDiagnose: veFEATetgenDiagnose,
     veFEATetgenEnsureWasm: veFEATetgenEnsureWasm,
     veFEATetgenTetrahedralize: veFEATetgenTetrahedralize,
     _veFEATetgenDeduplicateVertices: _veFEATetgenDeduplicateVertices
