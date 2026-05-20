@@ -26694,6 +26694,61 @@ function veFEAMeshExtractEdges(mesh) {
   return new Float32Array(lines);
 }
 
+// Sadece sınır (yüzey) face'lerinin kenarlarını çıkar. Yoğun hacim
+// mesh'lerinde iç edge'ler ekrana sığmaz (milyonlarca); yüzey edge'leri
+// boyut(N^(2/3)) ölçeklenir, bu sayede her zaman görünür kalır.
+// Algoritma: face dedup (count==1 → sınır), sınır face kenarları dedup.
+function veFEAMeshExtractSurfaceEdges(meshData) {
+  if (!meshData) return null;
+  var type = meshData.type;
+  var nodes = meshData.nodes;
+  var elements = meshData.elements;
+  var per = meshData.nodesPerElement;
+  var n = elements ? elements.length / per : 0;
+  if (n === 0) return null;
+
+  // Tri3 zaten yüzey — tüm edge'ler döndür
+  if (type === 'tri3') return veFEAMeshExtractEdges(meshData);
+
+  var faces = _veFEAGetFaceTemplate(type);
+  if (faces.length === 0) return null;
+
+  // Face dedup: count==1 → sınır, count==2 → iç (paylaşılan)
+  var faceMap = new Map();
+  for (var e = 0; e < n; e++) {
+    var off = e * per;
+    for (var f = 0; f < faces.length; f++) {
+      var face = faces[f];
+      var ids = new Array(face.length);
+      for (var ii = 0; ii < face.length; ii++) ids[ii] = elements[off + face[ii]];
+      var sorted = ids.slice().sort(function(a, b) { return a - b; });
+      var key = sorted.join('|');
+      var existing = faceMap.get(key);
+      if (existing) existing.count++;
+      else faceMap.set(key, { count: 1, ids: ids });
+    }
+  }
+
+  // Sınır face'leri (count==1) için edge listesi (cycle order, dedup)
+  var edgeSeen = {};
+  var lines = [];
+  faceMap.forEach(function(fm) {
+    if (fm.count !== 1) return;
+    var ids = fm.ids;
+    var len = ids.length;
+    for (var i = 0; i < len; i++) {
+      var a = ids[i];
+      var b = ids[(i + 1) % len];
+      var k = a < b ? (a + '-' + b) : (b + '-' + a);
+      if (edgeSeen[k]) continue;
+      edgeSeen[k] = 1;
+      lines.push(nodes[a * 3], nodes[a * 3 + 1], nodes[a * 3 + 2]);
+      lines.push(nodes[b * 3], nodes[b * 3 + 1], nodes[b * 3 + 2]);
+    }
+  });
+  return new Float32Array(lines);
+}
+
 </script>
 <script type="text/x-mfsim-defer" data-mfsim-label="FEA: Dışa aktarım...">
 // ============================================================================
@@ -27380,8 +27435,12 @@ function veFEAInitViewer(canvas, opts) {
     // ANSYS Body Color modu: orijinal geometri (primitif / STL / STEP) korunur,
     // uzerine mesh element edges siyah cizgi olarak eklenir. ANSYS Mechanical'da
     // mesh atildiktan sonra default goruntu: geometri yuzeyi + siyah mesh agi.
-    loadMeshOverGeometry: function(meshData, geomNodeId) {
+    loadMeshOverGeometry: function(meshData, geomNodeId, opts) {
       if (!meshData) return null;
+      // wireframeMode: 'all' (default, eski davranıştan tutarlı ama 6M edge'e
+      // kadar izin verir), 'surface' (sadece sınır face edges — yoğun mesh'te
+      // en pratik, ANSYS-style shaded-with-edges hissi), 'off' (sadece solid).
+      var wireframeMode = (opts && opts.wireframeMode) || 'all';
       // 1. Geometriyi yedir (mevcut helper kendi clearGeometry yapar)
       if (geomNodeId && typeof _veFEALoadNodeGeometryIntoViewer === 'function') {
         _veFEALoadNodeGeometryIntoViewer(this, geomNodeId);
@@ -27402,18 +27461,30 @@ function veFEAInitViewer(canvas, opts) {
         }
       }
       // 2. Mesh element edges (siyah, belirgin) — geometrinin uzerine overlay
-      if (typeof veFEAMeshExtractEdges === 'function') {
-        var edgeVerts = veFEAMeshExtractEdges(meshData);
-        if (edgeVerts && edgeVerts.length > 0 && edgeVerts.length / 3 < 200000) {
-          var eGeo = new THREE.BufferGeometry();
-          eGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
-          var eLine = new THREE.LineSegments(
-            eGeo,
-            new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.92 })
-          );
-          eLine.userData.feaMeshEdges = true;
-          this._geometryRoot.add(eLine);
+      // wireframeMode'a göre tüm vs yüzey-yalnız edge'ler.
+      var edgeVerts = null;
+      if (wireframeMode === 'all' && typeof veFEAMeshExtractEdges === 'function') {
+        var allEdges = veFEAMeshExtractEdges(meshData);
+        // Çok yoğun mesh'lerde tüm edge'ler ekrana sığmaz; 6M vertex
+        // üst sınırını aşarsa yüzey moduna düşür.
+        if (allEdges && allEdges.length / 3 > 6000000 && typeof veFEAMeshExtractSurfaceEdges === 'function') {
+          edgeVerts = veFEAMeshExtractSurfaceEdges(meshData);
+        } else {
+          edgeVerts = allEdges;
         }
+      } else if (wireframeMode === 'surface' && typeof veFEAMeshExtractSurfaceEdges === 'function') {
+        edgeVerts = veFEAMeshExtractSurfaceEdges(meshData);
+      }
+      // 'off' → edgeVerts null, hiç wireframe yok
+      if (edgeVerts && edgeVerts.length > 0) {
+        var eGeo = new THREE.BufferGeometry();
+        eGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
+        var eLine = new THREE.LineSegments(
+          eGeo,
+          new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.92 })
+        );
+        eLine.userData.feaMeshEdges = true;
+        this._geometryRoot.add(eLine);
       }
       this._meshData = meshData;
       this._highlightedSelectionKey = null;
@@ -28841,6 +28912,23 @@ function _veFEAFindSolverNodeForMesh(meshNodeId) {
 }
 
 // Eski isim veFEAApplyHeatMap geriye uyumluluk için korunur.
+// Mesh wireframe modunu güncelle ve mevcut display modunu yenile.
+// 'all' / 'surface' / 'off' — kullanıcı tercihi meshSettings'e persist edilir.
+function veFEASetWireframeMode(meshNodeId, mode) {
+  if (typeof nodes === 'undefined') return;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  meshNode.data.meshSettings = meshNode.data.meshSettings || {};
+  meshNode.data.meshSettings.wireframeMode = mode;
+  if (typeof saveState === 'function') saveState();
+  // Mevcut display mode'unu yeniden uygula (geom-mesh ise wireframe görünür değişir)
+  var currentDisplay = meshNode.data.heatMapMetric || 'geom-mesh';
+  if (typeof veFEAApplyHeatMap === 'function') {
+    veFEAApplyHeatMap(meshNodeId, currentDisplay);
+  }
+}
+
 function veFEAApplyHeatMap(meshNodeId, mode) {
   var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
   if (!meshNode) return;
@@ -28867,7 +28955,9 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
   if (mode === 'geom-mesh') {
     var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
       ? veFEAFindUpstreamGeometryNode(meshNodeId) : null;
-    viewer.loadMeshOverGeometry(meshData, geomNode ? geomNode.id : null);
+    // Wireframe modu kullanıcı tercihi: meshSettings.wireframeMode
+    var wfMode = (meshNode.data.meshSettings && meshNode.data.meshSettings.wireframeMode) || 'all';
+    viewer.loadMeshOverGeometry(meshData, geomNode ? geomNode.id : null, { wireframeMode: wfMode });
     _veFEARefreshMeshUI(meshNode);
     return;
   }
@@ -29617,6 +29707,13 @@ function _veFEASafeInitModalViewer(nodeId, retries) {
 
   try {
     veFEAInitMeshViewerForNode(nodeId);
+    // Yeni modal'da clip state'i sıfırla (önceki session'dan kalan ayarları
+    // taşımayalım) + UI'ı senkronla.
+    var viewerInit = veFEAViewerRegistry[nodeId];
+    if (viewerInit && viewerInit._clipState) {
+      ['x', 'y', 'z'].forEach(function(a) { viewerInit.setClipPlane(a, false, 0); });
+    }
+    if (typeof _veFEAEditorRefreshClipUI === 'function') _veFEAEditorRefreshClipUI(nodeId);
   } catch (err) {
     console.error('[FEA Mesh Editor] viewer init hatası:', err);
     return;
@@ -29937,17 +30034,132 @@ function _veFEAEditorBuildRightPanel(node) {
   var panel = document.createElement('div');
   panel.id = 've-fea-mesh-editor-right-panel';
   panel.style.cssText = 'flex:1; min-width:300px; display:flex; flex-direction:column; background:#0a0a0a;';
+  var nid = node.id;
+  // Toolbar: Sığdır + Hint + Kesit kontrolü (X/Y/Z toggle + slider)
+  // Kesit hacim mesh içini gösterir — ANSYS section view eşdeğeri.
+  var clipUI = _veFEAEditorBuildClipControls(nid);
   panel.innerHTML =
     // Viewer toolbar (üst, mini)
-    '<div style="display:flex; align-items:center; gap:6px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0;">' +
-      '<button onclick="veFEAFitPreviewForNode(\'' + node.id + '\')" style="padding:5px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">⛶ Sığdır</button>' +
-      '<span style="font-size:0.58rem; color:var(--text-muted); margin-left:8px;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</span>' +
+    '<div style="display:flex; align-items:center; gap:6px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;">' +
+      '<button onclick="veFEAFitPreviewForNode(\'' + nid + '\')" style="padding:5px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">⛶ Sığdır</button>' +
+      '<span style="font-size:0.58rem; color:var(--text-muted); margin-left:4px; margin-right:8px;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</span>' +
+      clipUI +
     '</div>' +
     // Canvas — mevcut viewer ID konvansiyonunu kullan
     '<div style="flex:1; position:relative; min-height:0; background:#1a1a1a;">' +
-      '<canvas id="ve-fea-mesh-canvas-' + node.id + '" style="display:block; width:100%; height:100%; cursor:grab;"></canvas>' +
+      '<canvas id="ve-fea-mesh-canvas-' + nid + '" style="display:block; width:100%; height:100%; cursor:grab;"></canvas>' +
     '</div>';
   return panel;
+}
+
+// Kesit (clipping plane) UI — toolbar inline. Her eksen için: toggle button
+// + slider (gizli, aktif olunca görünür). Slider'lar bbox'a göre min/max alır;
+// veFEAEditorRefreshClipBounds mesh oluştuktan sonra çağrılır (bounds güncelle).
+function _veFEAEditorBuildClipControls(nid) {
+  var html = '<div style="display:flex; align-items:center; gap:4px; border-left:1px solid var(--border-color); padding-left:8px; margin-left:auto;">' +
+    '<span style="font-size:0.58rem; color:var(--text-muted); margin-right:2px;">Kesit:</span>';
+  ['x', 'y', 'z'].forEach(function(axis) {
+    var up = axis.toUpperCase();
+    html += '<button id="ve-fea-clip-btn-' + axis + '-' + nid + '" onclick="veFEAEditorToggleClip(\'' + nid + '\', \'' + axis + '\')" ' +
+      'style="padding:4px 8px; font-size:0.62rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; min-width:26px;" ' +
+      'title="' + up + ' eksenine dik kesit düzlemi">' + up + '</button>';
+  });
+  html += '<button onclick="veFEAEditorResetClip(\'' + nid + '\')" ' +
+    'style="padding:4px 8px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; margin-left:4px;" title="Tüm kesitleri sıfırla">⟲</button>';
+  html += '</div>';
+  // Slider satırı (ayrı bir satır olarak, toolbar wrap'inde)
+  html += '<div id="ve-fea-clip-sliders-' + nid + '" style="display:none; flex-basis:100%; align-items:center; gap:10px; padding-top:6px; border-top:1px dashed var(--border-color); margin-top:4px;">';
+  ['x', 'y', 'z'].forEach(function(axis) {
+    var up = axis.toUpperCase();
+    html += '<div id="ve-fea-clip-row-' + axis + '-' + nid + '" data-axis="' + axis + '" style="display:none; align-items:center; gap:6px; flex:1; min-width:0;">' +
+      '<span style="font-size:0.58rem; color:var(--text-primary); font-weight:600; width:14px;">' + up + ':</span>' +
+      '<input type="range" min="-100" max="100" step="0.1" value="0" ' +
+        'id="ve-fea-clip-slider-' + axis + '-' + nid + '" ' +
+        'oninput="veFEAEditorSetClipOffset(\'' + nid + '\', \'' + axis + '\', this.value)" ' +
+        'style="flex:1; min-width:60px;">' +
+      '<span id="ve-fea-clip-val-' + axis + '-' + nid + '" style="font-size:0.58rem; color:var(--text-muted); width:48px; text-align:right;">—</span>' +
+      '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+// Kesit aksı toggle: button aktifse off et, değilse aç. Slider satırını da güncelle.
+function veFEAEditorToggleClip(nodeId, axis) {
+  var viewer = (typeof veFEAViewerRegistry !== 'undefined') ? veFEAViewerRegistry[nodeId] : null;
+  if (!viewer || typeof viewer.setClipPlane !== 'function') return;
+  var state = viewer._clipState && viewer._clipState[axis];
+  if (!state) return;
+  var newEnabled = !state.enabled;
+  // Aktive ediyorsak: bbox merkezini default offset olarak ayarla
+  var offset = state.offset;
+  if (newEnabled && typeof viewer.getClipBoundsForAxis === 'function') {
+    var b = viewer.getClipBoundsForAxis(axis);
+    if (b && offset === 0) {
+      offset = (b.min + b.max) / 2;
+    }
+  }
+  viewer.setClipPlane(axis, newEnabled, offset);
+  _veFEAEditorRefreshClipUI(nodeId);
+}
+
+// Slider değişimi: offset'i güncelle, viewer'ı yenile.
+function veFEAEditorSetClipOffset(nodeId, axis, value) {
+  var viewer = (typeof veFEAViewerRegistry !== 'undefined') ? veFEAViewerRegistry[nodeId] : null;
+  if (!viewer) return;
+  var v = parseFloat(value);
+  if (!isFinite(v)) return;
+  viewer.setClipPlane(axis, true, v);
+  var label = document.getElementById('ve-fea-clip-val-' + axis + '-' + nodeId);
+  if (label) label.textContent = v.toFixed(1) + ' mm';
+}
+
+// Tüm kesitleri kapat + offset 0'a getir.
+function veFEAEditorResetClip(nodeId) {
+  var viewer = (typeof veFEAViewerRegistry !== 'undefined') ? veFEAViewerRegistry[nodeId] : null;
+  if (!viewer) return;
+  ['x', 'y', 'z'].forEach(function(a) { viewer.setClipPlane(a, false, 0); });
+  _veFEAEditorRefreshClipUI(nodeId);
+}
+
+// UI durumunu viewer state'ine senkronlar — buton renkleri + slider görünürlük.
+function _veFEAEditorRefreshClipUI(nodeId) {
+  var viewer = (typeof veFEAViewerRegistry !== 'undefined') ? veFEAViewerRegistry[nodeId] : null;
+  if (!viewer || !viewer._clipState) return;
+  var anyEnabled = false;
+  ['x', 'y', 'z'].forEach(function(axis) {
+    var st = viewer._clipState[axis];
+    var btn = document.getElementById('ve-fea-clip-btn-' + axis + '-' + nodeId);
+    var row = document.getElementById('ve-fea-clip-row-' + axis + '-' + nodeId);
+    if (btn) {
+      if (st.enabled) {
+        btn.style.background = 'var(--accent-primary)';
+        btn.style.color = '#fff';
+        btn.style.borderColor = 'var(--accent-primary)';
+        anyEnabled = true;
+      } else {
+        btn.style.background = 'var(--bg-tertiary)';
+        btn.style.color = 'var(--text-primary)';
+        btn.style.borderColor = 'var(--border-color)';
+      }
+    }
+    if (row) row.style.display = st.enabled ? 'flex' : 'none';
+    // Slider min/max + value senkronla
+    if (st.enabled && typeof viewer.getClipBoundsForAxis === 'function') {
+      var b = viewer.getClipBoundsForAxis(axis);
+      var slider = document.getElementById('ve-fea-clip-slider-' + axis + '-' + nodeId);
+      var label = document.getElementById('ve-fea-clip-val-' + axis + '-' + nodeId);
+      if (slider && b) {
+        slider.min = b.min;
+        slider.max = b.max;
+        slider.step = Math.max(0.1, (b.max - b.min) / 200);
+        slider.value = st.offset;
+      }
+      if (label) label.textContent = st.offset.toFixed(1) + ' mm';
+    }
+  });
+  var slidersContainer = document.getElementById('ve-fea-clip-sliders-' + nodeId);
+  if (slidersContainer) slidersContainer.style.display = anyEnabled ? 'flex' : 'none';
 }
 
 // ─── DİKEY RESIZE HANDLE (sol panel genişliği) ─────────────────────────────
@@ -30396,7 +30608,7 @@ function _veFEAEditorDisplayHTML(node) {
   // ANSYS-style default: Body Color = Geometri + Mesh Çizgileri
   var displayMode = d.heatMapMetric || 'geom-mesh';
   var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:6px;">Mesh\'in 3D viewer\'da nasıl gösterileceğini seçin. ANSYS-style: <b>Body Color</b> (geometri + siyah mesh çizgileri) varsayılan.</div>';
-  html += '<select onchange="veFEAApplyHeatMap(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+  html += '<select onchange="veFEAApplyHeatMap(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:8px;">';
   html += '<optgroup label="Standart">';
   html += '<option value="geom-mesh"' + (displayMode === 'geom-mesh' ? ' selected' : '') + '>Body Color (Geometri + Mesh Çizgileri)</option>';
   html += '<option value="solid-edges"' + (displayMode === 'solid-edges' ? ' selected' : '') + '>Solid + Edges (Mesh yüzeyi)</option>';
@@ -30427,6 +30639,18 @@ function _veFEAEditorDisplayHTML(node) {
     html += '</optgroup>';
   }
   html += '</select>';
+
+  // Wireframe stratejisi — Body Color modunda etkili. Yoğun mesh'lerde
+  // (sub-1mm + büyük geometri) "Tüm Edge'ler" ekrana sığmaz; "Sadece Yüzey"
+  // her zaman pratik. Kullanıcı 'Kapalı' diyerek temiz solid görebilir.
+  var wfMode = (d.meshSettings && d.meshSettings.wireframeMode) || 'all';
+  html += '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:3px;">Mesh Çizgi Modu <span style="opacity:0.6;">(Body Color ile etkili)</span></div>';
+  html += '<select onchange="veFEASetWireframeMode(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:8px;">';
+  html += '<option value="all"' + (wfMode === 'all' ? ' selected' : '') + '>Tüm Edge\'ler (Mesh detayı tam)</option>';
+  html += '<option value="surface"' + (wfMode === 'surface' ? ' selected' : '') + '>Sadece Yüzey (Yoğun mesh için)</option>';
+  html += '<option value="off"' + (wfMode === 'off' ? ' selected' : '') + '>Kapalı (Temiz solid)</option>';
+  html += '</select>';
+
   var isHeatMap = (displayMode === 'aspect' || displayMode === 'skewness' || displayMode === 'minAngle' || displayMode === 'jacobianRatio');
   var isThreshold = (displayMode === 'threshold-aspect' || displayMode === 'threshold-skewness' || displayMode === 'threshold-minAngle' || displayMode === 'threshold-jacobian');
   var isResultMap = (displayMode === 'result-vonMises' || displayMode === 'result-displacement' ||
@@ -30896,7 +31120,9 @@ function getFEAGeometryPropertiesHTML(node) {
 
   // ─── GEOMETRİ KAYNAĞI ─────────────────────────────────────────────────
   html += veFEASectionTitle('Parametrik Primitif');
-  html += '<div style="display:flex; gap:4px; margin-bottom:8px;">';
+  // 5×2 grid: dar sidebar'da 10 buton tek satıra sığmıyordu, butonlar ~25px
+  // genişlikte kalıp metin okunamıyordu. Grid ile 50-60px genişlik, iki satır.
+  html += '<div style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:4px; margin-bottom:8px;">';
   var types = (typeof veFEAPrimitiveTypes === 'function') ? veFEAPrimitiveTypes() : [];
   types.forEach(function(t) {
     var label = (typeof veFEAPrimitiveLabel === 'function') ? veFEAPrimitiveLabel(t).split(' ')[0] : t;
@@ -30904,7 +31130,7 @@ function getFEAGeometryPropertiesHTML(node) {
     var border = active ? 'var(--accent-primary)' : 'var(--border-color)';
     var bg = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
     var color = active ? '#fff' : 'var(--text-primary)';
-    html += '<button onclick="veFEAToggleParamForm(\'' + node.id + '\', \'' + t + '\')" style="flex:1; padding:7px; font-size:0.64rem; background:' + bg + '; color:' + color + '; border:1px solid ' + border + '; cursor:pointer;">' + label + '</button>';
+    html += '<button onclick="veFEAToggleParamForm(\'' + node.id + '\', \'' + t + '\')" style="padding:7px 4px; font-size:0.62rem; background:' + bg + '; color:' + color + '; border:1px solid ' + border + '; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="' + (typeof veFEAPrimitiveLabel === 'function' ? veFEAPrimitiveLabel(t) : t) + '">' + label + '</button>';
   });
   html += '</div>';
 

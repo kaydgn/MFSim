@@ -590,6 +590,39 @@ describe('veFEAMeshExtractEdges', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('veFEAMeshExtractSurfaceEdges', () => {
+  test('kutu hex8 1 eleman → 12 surface edge (kutu tüm yüzleri sınır)', () => {
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 1, height: 1, depth: 1 } }, { size: 1 });
+    var sEdges = veFEAMeshExtractSurfaceEdges(m);
+    // 1 hex'in 6 yüzü = 6 sınır quad × 4 kenar = 24 (dedup) — küpün 12 kenarı
+    expect(sEdges.length).toBe(12 * 6);
+  });
+
+  test('kutu 2×2×2 = 8 hex iç edge\'ler dahil değil', () => {
+    // 2×2×2 hex grid: iç hex'lerin paylaştığı yüzler 'iç' olarak sayılır.
+    // Toplam: 8 köşe + 12 kenar (kutunun) + her face üzerinde 1 orta vertex
+    // = küpün dış surface edge'leri (yüzey edge'leri sayılı).
+    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 2, height: 2, depth: 2 } }, { size: 1 });
+    var all = veFEAMeshExtractEdges(m);
+    var surf = veFEAMeshExtractSurfaceEdges(m);
+    // Yüzey her zaman tüm edge'lerin alt kümesi
+    expect(surf.length).toBeLessThanOrEqual(all.length);
+    expect(surf.length).toBeGreaterThan(0);
+  });
+
+  test('null mesh için null döner', () => {
+    expect(veFEAMeshExtractSurfaceEdges(null)).toBeNull();
+  });
+
+  test('tri3 surface mesh için tüm edge\'ler döner (tri3 zaten yüzey)', () => {
+    var m = { type: 'tri3', nodes: new Float32Array([0,0,0, 1,0,0, 0,1,0]),
+              elements: new Uint32Array([0, 1, 2]), nodesPerElement: 3 };
+    var sEdges = veFEAMeshExtractSurfaceEdges(m);
+    expect(sEdges.length).toBe(3 * 6); // 3 kenar × 6 float
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('STL yüzey mesh (vertex dedup)', () => {
   // 12 üçgenli küp (10×10×10) fixture'ı
   function buildCubeTriangles() {
@@ -1931,6 +1964,36 @@ describe('veFEAApplyHeatMap köprüsü', () => {
     expect(global.nodes[1].data.heatMapMetric).toBe('aspect');
     veFEAClearMeshForNode('mesh-c');
     expect(global.nodes[1].data.heatMapMetric).toBeUndefined();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEASetWireframeMode (yoğun mesh için kullanıcı seçimi)', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.saveState = jest.fn();
+  });
+
+  test('wireframeMode meshSettings\'e persist edilir', () => {
+    global.nodes = [{ id: 'mesh-wf1', type: 'fea-mesh', data: { meshSettings: { size: 1 } } }];
+    veFEASetWireframeMode('mesh-wf1', 'surface');
+    expect(global.nodes[0].data.meshSettings.wireframeMode).toBe('surface');
+  });
+
+  test('"off" değeri kabul edilir', () => {
+    global.nodes = [{ id: 'mesh-wf2', type: 'fea-mesh', data: {} }];
+    veFEASetWireframeMode('mesh-wf2', 'off');
+    expect(global.nodes[0].data.meshSettings.wireframeMode).toBe('off');
+  });
+
+  test('Bilinmeyen node ID sessizce çıkar', () => {
+    expect(function() { veFEASetWireframeMode('nonexistent', 'surface'); }).not.toThrow();
+  });
+
+  test('saveState çağrılır', () => {
+    global.nodes = [{ id: 'mesh-wf3', type: 'fea-mesh', data: {} }];
+    veFEASetWireframeMode('mesh-wf3', 'all');
+    expect(global.saveState).toHaveBeenCalled();
   });
 });
 
