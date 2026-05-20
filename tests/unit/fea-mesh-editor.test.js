@@ -517,6 +517,78 @@ describe('veFEAEditorShowLoading / veFEAEditorShowResultBanner', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// Kesit (clipping plane) inline kontrol — sağ panel toolbar
+describe('veFEAEditorToggleClip / veFEAEditorSetClipOffset', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+  });
+
+  test('Toolbar\'da X/Y/Z kesit butonları rendering edilir', () => {
+    var node = { id: 'mesh-C1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-C1');
+    expect(document.getElementById('ve-fea-clip-btn-x-mesh-C1')).not.toBeNull();
+    expect(document.getElementById('ve-fea-clip-btn-y-mesh-C1')).not.toBeNull();
+    expect(document.getElementById('ve-fea-clip-btn-z-mesh-C1')).not.toBeNull();
+    // Slider satırı default gizli
+    var sliders = document.getElementById('ve-fea-clip-sliders-mesh-C1');
+    expect(sliders).not.toBeNull();
+    expect(sliders.style.display).toBe('none');
+  });
+
+  test('Viewer yokken toggle no-op', () => {
+    var node = { id: 'mesh-C2', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-C2');
+    // veFEAViewerRegistry stub yok — fonksiyon hata vermemeli
+    expect(function() { veFEAEditorToggleClip('mesh-C2', 'x'); }).not.toThrow();
+  });
+
+  test('Mock viewer ile toggle: state.enabled değişir, slider görünür', () => {
+    var node = { id: 'mesh-C3', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-C3');
+    // Mock viewer state
+    var mockClipState = { x: { enabled: false, offset: 0 }, y: { enabled: false, offset: 0 }, z: { enabled: false, offset: 0 } };
+    var setCalls = [];
+    veFEAViewerRegistry['mesh-C3'] = {
+      _clipState: mockClipState,
+      setClipPlane: function(axis, enabled, offset) {
+        setCalls.push([axis, enabled, offset]);
+        mockClipState[axis].enabled = !!enabled;
+        if (typeof offset === 'number') mockClipState[axis].offset = offset;
+      },
+      getClipBoundsForAxis: function() { return { min: -10, max: 10 }; }
+    };
+    veFEAEditorToggleClip('mesh-C3', 'x');
+    expect(mockClipState.x.enabled).toBe(true);
+    // UI senkronlanmış olmalı — slider satırı görünür
+    var row = document.getElementById('ve-fea-clip-row-x-mesh-C3');
+    expect(row.style.display).toBe('flex');
+    // Default offset = bbox merkezi = 0
+    expect(mockClipState.x.offset).toBe(0);
+  });
+
+  test('veFEAEditorResetClip: 3 ekseni de kapatır', () => {
+    var node = { id: 'mesh-C4', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-C4');
+    var mockClipState = { x: { enabled: true, offset: 5 }, y: { enabled: true, offset: 3 }, z: { enabled: false, offset: 0 } };
+    veFEAViewerRegistry['mesh-C4'] = {
+      _clipState: mockClipState,
+      setClipPlane: function(axis, enabled) { mockClipState[axis].enabled = !!enabled; },
+      getClipBoundsForAxis: function() { return { min: -10, max: 10 }; }
+    };
+    veFEAEditorResetClip('mesh-C4');
+    expect(mockClipState.x.enabled).toBe(false);
+    expect(mockClipState.y.enabled).toBe(false);
+    expect(mockClipState.z.enabled).toBe(false);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Accordion bölümleri', () => {
   beforeEach(() => {
     global.nodes = [];

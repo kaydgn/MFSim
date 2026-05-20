@@ -3086,3 +3086,58 @@ function veFEAMeshExtractEdges(mesh) {
   }
   return new Float32Array(lines);
 }
+
+// Sadece sınır (yüzey) face'lerinin kenarlarını çıkar. Yoğun hacim
+// mesh'lerinde iç edge'ler ekrana sığmaz (milyonlarca); yüzey edge'leri
+// boyut(N^(2/3)) ölçeklenir, bu sayede her zaman görünür kalır.
+// Algoritma: face dedup (count==1 → sınır), sınır face kenarları dedup.
+function veFEAMeshExtractSurfaceEdges(meshData) {
+  if (!meshData) return null;
+  var type = meshData.type;
+  var nodes = meshData.nodes;
+  var elements = meshData.elements;
+  var per = meshData.nodesPerElement;
+  var n = elements ? elements.length / per : 0;
+  if (n === 0) return null;
+
+  // Tri3 zaten yüzey — tüm edge'ler döndür
+  if (type === 'tri3') return veFEAMeshExtractEdges(meshData);
+
+  var faces = _veFEAGetFaceTemplate(type);
+  if (faces.length === 0) return null;
+
+  // Face dedup: count==1 → sınır, count==2 → iç (paylaşılan)
+  var faceMap = new Map();
+  for (var e = 0; e < n; e++) {
+    var off = e * per;
+    for (var f = 0; f < faces.length; f++) {
+      var face = faces[f];
+      var ids = new Array(face.length);
+      for (var ii = 0; ii < face.length; ii++) ids[ii] = elements[off + face[ii]];
+      var sorted = ids.slice().sort(function(a, b) { return a - b; });
+      var key = sorted.join('|');
+      var existing = faceMap.get(key);
+      if (existing) existing.count++;
+      else faceMap.set(key, { count: 1, ids: ids });
+    }
+  }
+
+  // Sınır face'leri (count==1) için edge listesi (cycle order, dedup)
+  var edgeSeen = {};
+  var lines = [];
+  faceMap.forEach(function(fm) {
+    if (fm.count !== 1) return;
+    var ids = fm.ids;
+    var len = ids.length;
+    for (var i = 0; i < len; i++) {
+      var a = ids[i];
+      var b = ids[(i + 1) % len];
+      var k = a < b ? (a + '-' + b) : (b + '-' + a);
+      if (edgeSeen[k]) continue;
+      edgeSeen[k] = 1;
+      lines.push(nodes[a * 3], nodes[a * 3 + 1], nodes[a * 3 + 2]);
+      lines.push(nodes[b * 3], nodes[b * 3 + 1], nodes[b * 3 + 2]);
+    }
+  });
+  return new Float32Array(lines);
+}

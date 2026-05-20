@@ -445,8 +445,12 @@ function veFEAInitViewer(canvas, opts) {
     // ANSYS Body Color modu: orijinal geometri (primitif / STL / STEP) korunur,
     // uzerine mesh element edges siyah cizgi olarak eklenir. ANSYS Mechanical'da
     // mesh atildiktan sonra default goruntu: geometri yuzeyi + siyah mesh agi.
-    loadMeshOverGeometry: function(meshData, geomNodeId) {
+    loadMeshOverGeometry: function(meshData, geomNodeId, opts) {
       if (!meshData) return null;
+      // wireframeMode: 'all' (default, eski davranıştan tutarlı ama 6M edge'e
+      // kadar izin verir), 'surface' (sadece sınır face edges — yoğun mesh'te
+      // en pratik, ANSYS-style shaded-with-edges hissi), 'off' (sadece solid).
+      var wireframeMode = (opts && opts.wireframeMode) || 'all';
       // 1. Geometriyi yedir (mevcut helper kendi clearGeometry yapar)
       if (geomNodeId && typeof _veFEALoadNodeGeometryIntoViewer === 'function') {
         _veFEALoadNodeGeometryIntoViewer(this, geomNodeId);
@@ -467,18 +471,30 @@ function veFEAInitViewer(canvas, opts) {
         }
       }
       // 2. Mesh element edges (siyah, belirgin) — geometrinin uzerine overlay
-      if (typeof veFEAMeshExtractEdges === 'function') {
-        var edgeVerts = veFEAMeshExtractEdges(meshData);
-        if (edgeVerts && edgeVerts.length > 0 && edgeVerts.length / 3 < 200000) {
-          var eGeo = new THREE.BufferGeometry();
-          eGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
-          var eLine = new THREE.LineSegments(
-            eGeo,
-            new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.92 })
-          );
-          eLine.userData.feaMeshEdges = true;
-          this._geometryRoot.add(eLine);
+      // wireframeMode'a göre tüm vs yüzey-yalnız edge'ler.
+      var edgeVerts = null;
+      if (wireframeMode === 'all' && typeof veFEAMeshExtractEdges === 'function') {
+        var allEdges = veFEAMeshExtractEdges(meshData);
+        // Çok yoğun mesh'lerde tüm edge'ler ekrana sığmaz; 6M vertex
+        // üst sınırını aşarsa yüzey moduna düşür.
+        if (allEdges && allEdges.length / 3 > 6000000 && typeof veFEAMeshExtractSurfaceEdges === 'function') {
+          edgeVerts = veFEAMeshExtractSurfaceEdges(meshData);
+        } else {
+          edgeVerts = allEdges;
         }
+      } else if (wireframeMode === 'surface' && typeof veFEAMeshExtractSurfaceEdges === 'function') {
+        edgeVerts = veFEAMeshExtractSurfaceEdges(meshData);
+      }
+      // 'off' → edgeVerts null, hiç wireframe yok
+      if (edgeVerts && edgeVerts.length > 0) {
+        var eGeo = new THREE.BufferGeometry();
+        eGeo.setAttribute('position', new THREE.BufferAttribute(edgeVerts, 3));
+        var eLine = new THREE.LineSegments(
+          eGeo,
+          new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.92 })
+        );
+        eLine.userData.feaMeshEdges = true;
+        this._geometryRoot.add(eLine);
       }
       this._meshData = meshData;
       this._highlightedSelectionKey = null;
@@ -1899,6 +1915,23 @@ function _veFEAFindSolverNodeForMesh(meshNodeId) {
 }
 
 // Eski isim veFEAApplyHeatMap geriye uyumluluk için korunur.
+// Mesh wireframe modunu güncelle ve mevcut display modunu yenile.
+// 'all' / 'surface' / 'off' — kullanıcı tercihi meshSettings'e persist edilir.
+function veFEASetWireframeMode(meshNodeId, mode) {
+  if (typeof nodes === 'undefined') return;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  meshNode.data.meshSettings = meshNode.data.meshSettings || {};
+  meshNode.data.meshSettings.wireframeMode = mode;
+  if (typeof saveState === 'function') saveState();
+  // Mevcut display mode'unu yeniden uygula (geom-mesh ise wireframe görünür değişir)
+  var currentDisplay = meshNode.data.heatMapMetric || 'geom-mesh';
+  if (typeof veFEAApplyHeatMap === 'function') {
+    veFEAApplyHeatMap(meshNodeId, currentDisplay);
+  }
+}
+
 function veFEAApplyHeatMap(meshNodeId, mode) {
   var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
   if (!meshNode) return;
@@ -1925,7 +1958,9 @@ function veFEAApplyHeatMap(meshNodeId, mode) {
   if (mode === 'geom-mesh') {
     var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
       ? veFEAFindUpstreamGeometryNode(meshNodeId) : null;
-    viewer.loadMeshOverGeometry(meshData, geomNode ? geomNode.id : null);
+    // Wireframe modu kullanıcı tercihi: meshSettings.wireframeMode
+    var wfMode = (meshNode.data.meshSettings && meshNode.data.meshSettings.wireframeMode) || 'all';
+    viewer.loadMeshOverGeometry(meshData, geomNode ? geomNode.id : null, { wireframeMode: wfMode });
     _veFEARefreshMeshUI(meshNode);
     return;
   }
