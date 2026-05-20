@@ -27378,7 +27378,12 @@ function veFEAInitViewer(canvas, opts) {
         metalness: 0.15,
         roughness: 0.6,
         side: THREE.DoubleSide,
-        flatShading: false
+        flatShading: false,
+        // Solid yüzeyi z-buffer'da hafifçe arkaya it → edge LineSegments'ler
+        // her zaman önde renderlenir, sub-pixel'de bile sönük olmaz.
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1
       });
       var solid = new THREE.Mesh(geometry, material);
       solid.userData.feaMeshSolid = true;
@@ -27412,6 +27417,20 @@ function veFEAInitViewer(canvas, opts) {
       // kadar izin verir), 'surface' (sadece sınır face edges — yoğun mesh'te
       // en pratik, ANSYS-style shaded-with-edges hissi), 'off' (sadece solid).
       var wireframeMode = (opts && opts.wireframeMode) || 'all';
+      // Solid mesh (tet4/hex8/pyramid5) için 'all' ≡ 'surface' görsel olarak:
+      // interior edge'ler solid yüzey tarafından gizleniyor. Yoğun mesh'lerde
+      // (>30K eleman) 'all' mod milyonlarca sub-pixel çizgi üretip wireframe'i
+      // siliyor. Otomatik 'surface'e geç — kullanıcıya banner bildirimi yap.
+      var elemCount = (meshData.elements && meshData.nodesPerElement)
+                    ? (meshData.elements.length / meshData.nodesPerElement) : 0;
+      var solidMesh = (meshData.type === 'tet4' || meshData.type === 'hex8' ||
+                       meshData.type === 'pyramid5' || meshData.type === 'tet10' ||
+                       meshData.type === 'hex20');
+      var autoSurface = false;
+      if (wireframeMode === 'all' && solidMesh && elemCount > 30000) {
+        wireframeMode = 'surface';
+        autoSurface = true;
+      }
       // 1. Geometriyi yedir (mevcut helper kendi clearGeometry yapar)
       if (geomNodeId && typeof _veFEALoadNodeGeometryIntoViewer === 'function') {
         _veFEALoadNodeGeometryIntoViewer(this, geomNodeId);
@@ -27425,7 +27444,8 @@ function veFEAInitViewer(canvas, opts) {
             sGeo.setAttribute('position', new THREE.BufferAttribute(surf.positions, 3));
             sGeo.computeVertexNormals();
             var sMat = new THREE.MeshStandardMaterial({
-              color: 0x3b82f6, metalness: 0.15, roughness: 0.6, side: THREE.DoubleSide
+              color: 0x3b82f6, metalness: 0.15, roughness: 0.6, side: THREE.DoubleSide,
+              polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1
             });
             this._geometryRoot.add(new THREE.Mesh(sGeo, sMat));
           }
@@ -30646,8 +30666,8 @@ function _veFEAEditorDisplayHTML(node) {
   var wfMode = (d.meshSettings && d.meshSettings.wireframeMode) || 'all';
   html += '<div style="font-size:0.58rem; color:var(--text-muted); margin-bottom:3px;">Mesh Çizgi Modu <span style="opacity:0.6;">(Body Color ile etkili)</span></div>';
   html += '<select onchange="veFEASetWireframeMode(\'' + node.id + '\', this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:8px;">';
-  html += '<option value="all"' + (wfMode === 'all' ? ' selected' : '') + '>Tüm Edge\'ler (Mesh detayı tam)</option>';
-  html += '<option value="surface"' + (wfMode === 'surface' ? ' selected' : '') + '>Sadece Yüzey (Yoğun mesh için)</option>';
+  html += '<option value="all"' + (wfMode === 'all' ? ' selected' : '') + '>Tüm Edge\'ler (yoğun mesh\'te otomatik yüzeye düşer)</option>';
+  html += '<option value="surface"' + (wfMode === 'surface' ? ' selected' : '') + '>Sadece Yüzey (yoğun mesh için tercih)</option>';
   html += '<option value="off"' + (wfMode === 'off' ? ' selected' : '') + '>Kapalı (Temiz solid)</option>';
   html += '</select>';
 
