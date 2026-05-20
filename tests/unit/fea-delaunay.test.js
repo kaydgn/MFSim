@@ -88,6 +88,70 @@ describe('fea-delaunay.js — public API', () => {
   });
 });
 
+describe('Yüzey nokta sampling + progress callback', () => {
+  beforeAll(() => {
+    if (typeof globalThis.veFEADelaunayTriangulate === 'function') return;
+    const bundleSrc = fs.readFileSync(path.join(ROOT, 'vendor/delaunay/delaunay-bundle.js'), 'utf8');
+    eval(bundleSrc);
+  });
+
+  test('Büyük üçgenler surface sampling ile bölünüyor', () => {
+    // 100×100 alanlı tek büyük üçgen — targetSize 10 ile bölünmeli
+    var v = [0,0,0, 100,0,0, 0,100,0];
+    var parsed = { vertices: new Float32Array(v), triangleCount: 1 };
+    const delaunaySrc = fs.readFileSync(path.join(ROOT, 'js/fea-delaunay.js'), 'utf8');
+    const mod = { exports: {} };
+    const fn = new Function('module', 'window', 'global', delaunaySrc + '\nreturn module;');
+    const api = fn(mod, globalThis, globalThis).exports;
+    var dedup = { coords: [0,0,0, 100,0,0, 0,100,0], pointCount: 3 };
+    api._veFEADelaunaySampleSurfacePoints(dedup, parsed, 10);
+    // 100×100 / 2 = 5000 alan, refArea = 100·0.433·0.5 ≈ 21.6 → ~230 nokta beklenir
+    expect(dedup.surfacePointsAdded).toBeGreaterThan(100);
+    expect(dedup.pointCount).toBeGreaterThan(100);
+  });
+
+  test('Küçük üçgenler surface sampling ile bölünmüyor (zaten yeterince ince)', () => {
+    // 1×1 küçük üçgen — targetSize 10 ile dokunulmamalı
+    var v = [0,0,0, 1,0,0, 0,1,0];
+    var parsed = { vertices: new Float32Array(v), triangleCount: 1 };
+    const delaunaySrc = fs.readFileSync(path.join(ROOT, 'js/fea-delaunay.js'), 'utf8');
+    const mod = { exports: {} };
+    const fn = new Function('module', 'window', 'global', delaunaySrc + '\nreturn module;');
+    const api = fn(mod, globalThis, globalThis).exports;
+    var dedup = { coords: [0,0,0, 1,0,0, 0,1,0], pointCount: 3 };
+    api._veFEADelaunaySampleSurfacePoints(dedup, parsed, 10);
+    expect(dedup.surfacePointsAdded).toBe(0);
+    expect(dedup.pointCount).toBe(3);
+  });
+
+  test('progressCallback fazları sırayla raporluyor', () => {
+    var v = [
+      0,0,0, 10,0,0, 0,10,0,   0,0,0, 0,10,0, 10,10,0,
+      0,0,5, 0,10,5, 10,0,5,   0,10,5, 10,10,5, 10,0,5,
+      0,0,0, 10,0,5, 10,0,0,   0,0,0, 0,0,5, 10,0,5,
+      10,0,0, 10,0,5, 10,10,0, 10,10,0, 10,0,5, 10,10,5,
+      0,10,0, 10,10,5, 0,10,5, 0,10,0, 10,10,0, 10,10,5,
+      0,0,0, 0,10,0, 0,0,5,    0,10,0, 0,10,5, 0,0,5
+    ];
+    var parsed = { vertices: new Float32Array(v), triangleCount: 12 };
+    const delaunaySrc = fs.readFileSync(path.join(ROOT, 'js/fea-delaunay.js'), 'utf8');
+    const mod = { exports: {} };
+    const fn = new Function('module', 'window', 'global', delaunaySrc + '\nreturn module;');
+    const api = fn(mod, globalThis, globalThis).exports;
+    var phases = [];
+    return api.veFEADelaunayTetrahedralize(parsed, {
+      targetSize: 5,
+      onProgress: function(stage) { phases.push(stage); }
+    }).then(function(r) {
+      // Fazlar sırayla raporlanmalı
+      var expected = ['dedup','surface','interior','delaunay','parity','compact','done'];
+      expected.forEach(function(p) { expect(phases).toContain(p); });
+      // Done fazı son olmalı
+      expect(phases[phases.length-1]).toBe('done');
+    });
+  });
+});
+
 describe('Delaunay — gerçek tet mesh (bundle yüklü)', () => {
   // Bundle'ı load et — globalThis.veFEADelaunayTriangulate set olur
   beforeAll(() => {
