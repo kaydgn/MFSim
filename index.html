@@ -594,6 +594,16 @@
 <!-- INLINE_FILE: vendor/mfsim-fea/mfsim-fea.js as mfsimFeaScript -->
 <!-- INLINE_FILE: vendor/mfsim-fea/mfsim-fea.wasm as mfsimFeaWasm -->
 
+<!--
+  TetGen WASM — Constrained Delaunay tetrahedral mesher (Hang Si, AGPL-3.0).
+  Karmaşık STEP geometrileri için kaliteli tet4 mesh üretir. WASM build
+  edilmemişse fea-tetgen.js graceful skip yapar; voxel fallback devreye girer.
+  Build: npm run build:wasm:tetgen  (emscripten gereklidir)
+  Lisans uyarısı: vendor/tetgen/NOTICE.md
+-->
+<!-- INLINE_FILE: vendor/tetgen/tetgen-wasm.js as tetgenScript -->
+<!-- INLINE_FILE: vendor/tetgen/tetgen-wasm.wasm as tetgenWasm -->
+
 <script type="text/x-mfsim-defer" src="js/fea-primitives.js" data-mfsim-label="FEA: Temel geometri..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-materials.js" data-mfsim-label="FEA: Malzeme kütüphanesi..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-solver.js" data-mfsim-label="FEA: Hex8 çözücü..."></script>
@@ -601,6 +611,7 @@
 <script type="text/x-mfsim-defer" src="js/fea-step.js" data-mfsim-label="FEA: STEP import..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-topology.js" data-mfsim-label="FEA: Topoloji..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-feature-recognition.js" data-mfsim-label="FEA: Yüzey tanıma..."></script>
+<script type="text/x-mfsim-defer" src="js/fea-tetgen.js" data-mfsim-label="FEA: TetGen tet mesher..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-mesh.js" data-mfsim-label="FEA: Mesh motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-export.js" data-mfsim-label="FEA: Dışa aktarım..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-viewer.js" data-mfsim-label="FEA: Görüntüleyici..."></script>

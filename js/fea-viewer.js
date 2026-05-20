@@ -1600,6 +1600,7 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (!settings.curvatureRefinement) settings.curvatureRefinement = { enabled: false, normalAngleDeg: 18 };
   if (!settings.localSizing) settings.localSizing = { selection: 'none', biasStrength: 0 };
   if (settings.useWorker === undefined) settings.useWorker = false;
+  if (settings.useTetgen === undefined) settings.useTetgen = true;
 
   var t0 = Date.now();
   var meshOpts = {
@@ -1609,12 +1610,18 @@ function veFEABuildMeshForNode(meshNodeId) {
     midSideNodes: settings.midSideNodes,
     curvatureRefinement: settings.curvatureRefinement,
     localSizing: settings.localSizing,
-    crossSection: settings.crossSection
+    crossSection: settings.crossSection,
+    useTetgen: settings.useTetgen,
+    tetgenRadiusEdgeRatio: settings.tetgenRadiusEdgeRatio
   };
 
   // STEP için async parse gerekebilir — promise-aware yol.
-  // _parsedTriangles (test/inference bypass) varsa sync yolu yeterli.
-  var needsAsync = (geometry.type === 'step') && !geometry._parsedTriangles;
+  // _parsedTriangles cached olsa bile, TetGen istemi async wrapper gerektirir
+  // (sync path TetGen WASM'a erişemez).
+  var tetgenWanted = settings.useTetgen !== false &&
+    (typeof veFEATetgenIsBuilt === 'function') && veFEATetgenIsBuilt();
+  var needsAsync = (geometry.type === 'step') &&
+    (!geometry._parsedTriangles || tetgenWanted);
   var finishMesh = function(meshData) {
     if (!meshData) {
       if (typeof showToast === 'function') showToast('Mesh oluşturulamadı (desteklenmeyen tip?)', 'error');

@@ -63,9 +63,30 @@ Claude Code ile çalışırken şu akışı uygula:
 ## Sık Kullanılan Komutlar
 
 ```bash
-npm run build         # MFSim_Code.html üret (modüler → monolitik)
-npm test              # Birim testlerini çalıştır
-npm run test:unit     # Birim testlerini çalıştır (aynı)
-npm run test:e2e      # E2E testlerini çalıştır (tarayıcı gerekli)
-npm run test:all      # Tümünü çalıştır
+npm run build               # MFSim_Code.html üret (modüler → monolitik)
+npm test                    # Birim testlerini çalıştır
+npm run test:unit           # Birim testlerini çalıştır (aynı)
+npm run test:e2e            # E2E testlerini çalıştır (tarayıcı gerekli)
+npm run test:all            # Tümünü çalıştır
+npm run build:wasm          # C++ FEA çözücüsünü WASM'a derle (emscripten gerekli)
+npm run build:wasm:tetgen   # TetGen tet mesher'ı WASM'a derle (emscripten + AGPL)
 ```
+
+## WASM Modülleri
+
+İki ayrı WASM bileşeni vardır; ikisi de opt-in build edilir.
+
+### 1. MFSim FEA (`vendor/mfsim-fea/`)
+- Kaynak: `src/fea/{bar1d,solver3d}.cpp`
+- Lisans: ISC (proje ile aynı)
+- Build: `npm run build:wasm`
+- Artifact: `vendor/mfsim-fea/mfsim-fea.{js,wasm}` (commit edilir)
+
+### 2. TetGen Tet Mesher (`vendor/tetgen/`)
+- Kaynak: `src/fea/tetgen/{tetgen.h,tetgen.cxx,predicates.cxx,tetgen_wasm.cpp}`
+- Lisans: **AGPL-3.0** (Hang Si, WIAS Berlin)
+- Build: `npm run build:wasm:tetgen`
+- Artifact: `vendor/tetgen/tetgen-wasm.{js,wasm}` (**.gitignore'da, commit edilmez**)
+- Detaylı lisans uyarısı: `vendor/tetgen/NOTICE.md`
+
+TetGen build edilmemişse mesh oluşturma graceful olarak voxel fallback'e döner. STEP geometrilerinde kaliteli tet4 mesh için TetGen önerilir; ticari kullanım için WIAS Berlin'den lisans gerekir.
