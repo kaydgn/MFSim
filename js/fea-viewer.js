@@ -877,6 +877,60 @@ function veFEAInitViewer(canvas, opts) {
     getHighlightedSelectionKey: function() {
       return this._highlightedSelectionKey || null;
     },
+    // ANSYS-style bin-selection: histogram bin'inde olan element ID'lerini
+    // 3D'de centroid noktası olarak vurgular. elementIds=null veya boş array
+    // mevcut element-highlight'ı temizler.
+    // Named selection highlight ile aynı marker slot'unu paylaşır (tek seferde
+    // ya named selection ya da element highlight gösterilir).
+    highlightElements: function(elementIds, color) {
+      // Önceki highlight'ı temizle (named selection veya element)
+      if (this._highlightMarker) {
+        this._geometryRoot.remove(this._highlightMarker);
+        if (this._highlightMarker.geometry && this._highlightMarker.geometry.dispose) this._highlightMarker.geometry.dispose();
+        if (this._highlightMarker.material && this._highlightMarker.material.dispose) this._highlightMarker.material.dispose();
+        this._highlightMarker = null;
+      }
+      this._highlightedSelectionKey = null;
+      if (!elementIds || elementIds.length === 0 || !this._meshData) { render(); return; }
+      var mesh = this._meshData;
+      var nodes = mesh.nodes;
+      var elements = mesh.elements;
+      var per = mesh.nodesPerElement;
+      // Quadratic elemanlarda corner-only centroid daha temsil edici
+      var corners = (mesh.type === 'tet10') ? 4
+                  : (mesh.type === 'hex20') ? 8
+                  : (mesh.type === 'wedge15') ? 6
+                  : per;
+      var positions = new Float32Array(elementIds.length * 3);
+      for (var i = 0; i < elementIds.length; i++) {
+        var eid = elementIds[i];
+        var off = eid * per;
+        var cx = 0, cy = 0, cz = 0;
+        for (var c = 0; c < corners; c++) {
+          var n = elements[off + c] * 3;
+          cx += nodes[n]; cy += nodes[n + 1]; cz += nodes[n + 2];
+        }
+        positions[i * 3]     = cx / corners;
+        positions[i * 3 + 1] = cy / corners;
+        positions[i * 3 + 2] = cz / corners;
+      }
+      var box = new THREE.Box3().setFromObject(this._geometryRoot);
+      var bsize = box.isEmpty() ? 50 : Math.max(box.getSize(new THREE.Vector3()).x,
+                                                 box.getSize(new THREE.Vector3()).y,
+                                                 box.getSize(new THREE.Vector3()).z);
+      var pointSize = Math.max(2.5, bsize * 0.015);
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      var col = (typeof color === 'number') ? color : 0xff4400;
+      var mat = new THREE.PointsMaterial({ color: col, size: pointSize, sizeAttenuation: true, depthTest: false });
+      var pts = new THREE.Points(geo, mat);
+      pts.renderOrder = 999;
+      pts.userData.feaHighlight = true;
+      pts.userData.feaElementHighlight = true;
+      this._geometryRoot.add(pts);
+      this._highlightMarker = pts;
+      render();
+    },
     // Display state'ini (mod, opaklık, clip planes) yeni eklenen mesh'e uygula
     _applyDisplayState: function(mesh) {
       this._applyDisplayModeToMesh(mesh);

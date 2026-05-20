@@ -741,3 +741,96 @@ describe('Modal toolbar — Çalıştır butonu', () => {
     expect(clearBtn).not.toBeNull();
   });
 });
+
+// ─── Faz 1 Adım 2 — ANSYS-style histogram bin selection ───
+describe('veFEAHighlightQualityBin (histogram bin → 3D vurgu)', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    // veFEAViewerRegistry & veFEAMeshCache zaten global (fea-viewer.js'den)
+    Object.keys(veFEAViewerRegistry).forEach(function(k) { delete veFEAViewerRegistry[k]; });
+    Object.keys(veFEAMeshCache).forEach(function(k) { delete veFEAMeshCache[k]; });
+  });
+
+  function _makeBoxMeshSetup(nodeId, geomSize, meshSize) {
+    var mesh = veFEAMeshFromGeometry(
+      { type: 'box', params: { width: geomSize, height: geomSize, depth: geomSize } },
+      { size: meshSize }
+    );
+    var quality = veFEAComputeQualityMetrics(mesh);
+    var node = {
+      id: nodeId, type: 'fea-mesh',
+      data: { meshActive: true, meshMetrics: { quality: quality, elementType: mesh.type } }
+    };
+    global.nodes = [node];
+    veFEAMeshCache[nodeId] = mesh;
+    var mockViewer = { highlightElements: jest.fn() };
+    veFEAViewerRegistry[nodeId] = mockViewer;
+    return { mesh: mesh, node: node, viewer: mockViewer, quality: quality };
+  }
+
+  test('clear çağrısı (metricName=null) viewer.highlightElements(null) yapar', () => {
+    var s = _makeBoxMeshSetup('m1', 10, 5);
+    veFEAHighlightQualityBin('m1', null, null);
+    expect(s.viewer.highlightElements).toHaveBeenCalledWith(null);
+  });
+
+  test('Mükemmel küp aspect bin 0 (≈1.0) → tüm elemanlar seçilir', () => {
+    var s = _makeBoxMeshSetup('m2', 10, 5); // 8 hex8 element, aspect=1
+    veFEAHighlightQualityBin('m2', 'aspect', 0);
+    expect(s.viewer.highlightElements).toHaveBeenCalled();
+    var ids = s.viewer.highlightElements.mock.calls[0][0];
+    expect(ids.length).toBe(8); // tüm elementler bin 0'a düşer (aspect≈1)
+  });
+
+  test('Mükemmel küp elementQuality bin 9 (≈1.0 → en yüksek bin)', () => {
+    var s = _makeBoxMeshSetup('m3', 10, 5);
+    veFEAHighlightQualityBin('m3', 'elementQuality', 9);
+    expect(s.viewer.highlightElements).toHaveBeenCalled();
+    var ids = s.viewer.highlightElements.mock.calls[0][0];
+    // Element Quality ≈ 1.0 → bin 9 (son bin) inclusive max'a düşer
+    expect(ids.length).toBe(8);
+  });
+
+  test('Geçerli viewer yoksa hata vermez', () => {
+    expect(function() {
+      veFEAHighlightQualityBin('nonexistent', 'aspect', 0);
+    }).not.toThrow();
+  });
+
+  test('Geçerli metric yoksa hata vermez', () => {
+    var s = _makeBoxMeshSetup('m4', 10, 5);
+    expect(function() {
+      veFEAHighlightQualityBin('m4', 'nonexistentMetric', 0);
+    }).not.toThrow();
+    expect(s.viewer.highlightElements).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Faz 1 Adım 2 — Histogram HTML onClick yapısı ───
+describe('veFEAHistogramHTML — tıklanabilir bin desteği', () => {
+  test('onBarClickJSExpr verilince her bar onclick attribute alır', () => {
+    var hist = { bins: [3, 5, 0, 2], min: 0, max: 1, binCount: 4 };
+    var html = veFEAHistogramHTML(hist, 'Test', '#000', null, null,
+      'function(b){console.log("bin="+b)}');
+    expect(html).toMatch(/onclick="\(function/);
+    expect(html).toMatch(/cursor:pointer/);
+    expect(html).toMatch(/bin tıkla/); // tıkla
+  });
+
+  test('onBarClickJSExpr verilmezse onclick eklenmez (geri uyum)', () => {
+    var hist = { bins: [3, 5, 0, 2], min: 0, max: 1, binCount: 4 };
+    var html = veFEAHistogramHTML(hist, 'Test', '#000', null, null);
+    expect(html).not.toMatch(/onclick=/);
+    expect(html).not.toMatch(/cursor:pointer/);
+  });
+
+  test('Boş bin (count=0) tıklanabilir değil', () => {
+    var hist = { bins: [3, 0, 2], min: 0, max: 1, binCount: 3 };
+    var html = veFEAHistogramHTML(hist, 'Test', '#000', null, null,
+      'function(b){}');
+    // 3 div bar, ancak sadece 2'sinde onclick olmalı (0 sayılı bin click'siz)
+    var onclickCount = (html.match(/onclick=/g) || []).length;
+    expect(onclickCount).toBe(2);
+  });
+});

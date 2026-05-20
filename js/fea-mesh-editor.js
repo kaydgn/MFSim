@@ -1026,24 +1026,121 @@ function _veFEAEditorQualityHTML(node) {
         '⚠ ' + jm.poorCount.toLocaleString('tr-TR') + ' eleman düşük kaliteli (Jac oranı > ' + jm.ratioWarnThreshold + ')</div>';
     }
   }
-  // Quality (aspect / skewness / angle)
+  // Quality (aspect / skewness / angle + ANSYS §7 yeni 4 metrik)
   if (metrics.quality) {
     var q = metrics.quality;
+    var nid = node.id;
     html += '<div style="margin-top:6px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Aspect Ratio / Skewness / Açı</div>';
     html += veFEAReadOnlyRow('Aspect Min / Maks / Ort', (q.aspectRatio.min || 0).toFixed(2) + ' / ' + (q.aspectRatio.max || 0).toFixed(2) + ' / ' + (q.aspectRatio.avg || 0).toFixed(2));
     if (q.aspectRatio.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.aspectRatio.poorCount.toLocaleString('tr-TR') + ' eleman aspect > ' + q.aspectRatio.warnThreshold + '</div>';
     }
-    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#3b82f6', function(v){return v.toFixed(1);}, { warnLimit: 5, errLimit: q.aspectRatio.warnThreshold || 20, inverted: false });
+    html += veFEAHistogramHTML(q.aspectRatio.histogram, 'Aspect Ratio histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#3b82f6', function(v){return v.toFixed(1);}, { warnLimit: 5, errLimit: q.aspectRatio.warnThreshold || 20, inverted: false }, 'function(b){veFEAHighlightQualityBin("' + nid + '","aspect",b)}');
     html += veFEAReadOnlyRow('Skewness Min / Maks / Ort', (q.skewness.min || 0).toFixed(3) + ' / ' + (q.skewness.max || 0).toFixed(3) + ' / ' + (q.skewness.avg || 0).toFixed(3));
     if (q.skewness.poorCount > 0) {
       html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.skewness.poorCount.toLocaleString('tr-TR') + ' eleman skewness > ' + q.skewness.warnThreshold + '</div>';
     }
-    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#f59e0b', function(v){return v.toFixed(2);}, { warnLimit: 0.5, errLimit: q.skewness.warnThreshold || 0.85, inverted: false });
+    html += veFEAHistogramHTML(q.skewness.histogram, 'Skewness histogramı (yeşil=iyi, sarı=uyarı, kırmızı=hata)', '#f59e0b', function(v){return v.toFixed(2);}, { warnLimit: 0.5, errLimit: q.skewness.warnThreshold || 0.85, inverted: false }, 'function(b){veFEAHighlightQualityBin("' + nid + '","skewness",b)}');
     html += veFEAReadOnlyRow('Min / Maks iç açı', (q.angle.min || 0).toFixed(1) + '° / ' + (q.angle.max || 0).toFixed(1) + '°');
-    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece — düşük=kötü, ters threshold)', '#22c55e', function(v){return v.toFixed(0) + '°';}, { warnLimit: 30, errLimit: 15, inverted: true });
+    html += veFEAHistogramHTML(q.angle.histogram, 'Min iç açı histogramı (derece — düşük=kötü, ters threshold)', '#22c55e', function(v){return v.toFixed(0) + '°';}, { warnLimit: 30, errLimit: 15, inverted: true }, 'function(b){veFEAHighlightQualityBin("' + nid + '","minAngle",b)}');
+
+    // ─── ANSYS §7 — eksik 4 metrik ───
+    if (q.elementQuality) {
+      html += '<div style="margin-top:10px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Element Quality (şekil faktörü)</div>';
+      html += veFEAReadOnlyRow('Element Q Min / Maks / Ort', (q.elementQuality.min || 0).toFixed(3) + ' / ' + (q.elementQuality.max || 0).toFixed(3) + ' / ' + (q.elementQuality.avg || 0).toFixed(3));
+      if (q.elementQuality.poorCount > 0) {
+        html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.elementQuality.poorCount.toLocaleString('tr-TR') + ' eleman Element Quality < ' + q.elementQuality.warnThreshold + '</div>';
+      }
+      html += veFEAHistogramHTML(q.elementQuality.histogram, 'Element Quality histogramı (1=mükemmel, 0=dejenere)', '#8b5cf6', function(v){return v.toFixed(2);}, { warnLimit: 0.5, errLimit: q.elementQuality.warnThreshold || 0.2, inverted: true }, 'function(b){veFEAHighlightQualityBin("' + nid + '","elementQuality",b)}');
+    }
+    if (q.orthogonalQuality) {
+      html += '<div style="margin-top:6px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Orthogonal Quality (yapısal hex için birincil)</div>';
+      html += veFEAReadOnlyRow('Ortho Q Min / Maks / Ort', (q.orthogonalQuality.min || 0).toFixed(3) + ' / ' + (q.orthogonalQuality.max || 0).toFixed(3) + ' / ' + (q.orthogonalQuality.avg || 0).toFixed(3));
+      if (q.orthogonalQuality.poorCount > 0) {
+        html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.orthogonalQuality.poorCount.toLocaleString('tr-TR') + ' eleman Ortho < ' + q.orthogonalQuality.warnThreshold + '</div>';
+      }
+      html += veFEAHistogramHTML(q.orthogonalQuality.histogram, 'Orthogonal Quality histogramı (1=mükemmel)', '#06b6d4', function(v){return v.toFixed(2);}, { warnLimit: 0.3, errLimit: q.orthogonalQuality.warnThreshold || 0.1, inverted: true }, 'function(b){veFEAHighlightQualityBin("' + nid + '","orthogonalQuality",b)}');
+    }
+    if (q.warpingFactor) {
+      html += '<div style="margin-top:6px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Warping Factor (yüz düzlemsellik)</div>';
+      html += veFEAReadOnlyRow('Warping Min / Maks / Ort', (q.warpingFactor.min || 0).toFixed(4) + ' / ' + (q.warpingFactor.max || 0).toFixed(4) + ' / ' + (q.warpingFactor.avg || 0).toFixed(4));
+      if (q.warpingFactor.poorCount > 0) {
+        html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.warpingFactor.poorCount.toLocaleString('tr-TR') + ' yüz warping > ' + q.warpingFactor.warnThreshold + '</div>';
+      }
+      html += veFEAHistogramHTML(q.warpingFactor.histogram, 'Warping Factor histogramı (0=planar, >0.05 kötü)', '#ec4899', function(v){return v.toFixed(3);}, { warnLimit: 0.02, errLimit: q.warpingFactor.warnThreshold || 0.05, inverted: false }, 'function(b){veFEAHighlightQualityBin("' + nid + '","warpingFactor",b)}');
+    }
+    if (q.parallelDeviation) {
+      html += '<div style="margin-top:6px; font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px;">Parallel Deviation (paralel kenar sapması)</div>';
+      html += veFEAReadOnlyRow('Par Dev Min / Maks / Ort', (q.parallelDeviation.min || 0).toFixed(1) + '° / ' + (q.parallelDeviation.max || 0).toFixed(1) + '° / ' + (q.parallelDeviation.avg || 0).toFixed(1) + '°');
+      if (q.parallelDeviation.poorCount > 0) {
+        html += '<div style="padding:4px 8px; font-size:0.58rem; color:var(--accent-warning, #f59e0b); border-left:2px solid var(--accent-warning, #f59e0b); margin-bottom:6px; background:rgba(245,158,11,0.06);">⚠ ' + q.parallelDeviation.poorCount.toLocaleString('tr-TR') + ' yüz par dev > ' + q.parallelDeviation.warnThreshold + '°</div>';
+      }
+      html += veFEAHistogramHTML(q.parallelDeviation.histogram, 'Parallel Deviation histogramı (derece — 0=paralelogram)', '#10b981', function(v){return v.toFixed(0) + '°';}, { warnLimit: 30, errLimit: q.parallelDeviation.warnThreshold || 70, inverted: false }, 'function(b){veFEAHighlightQualityBin("' + nid + '","parallelDeviation",b)}');
+    }
+
+    // Highlight'ı temizle butonu
+    html += '<button onclick="veFEAHighlightQualityBin(\'' + nid + '\', null, null)" style="margin-top:6px; padding:5px 10px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">✕ Vurguyu temizle</button>';
   }
   return html;
+}
+
+// ANSYS-style histogram bin selection: bin tıklanınca o aralıktaki elemanları
+// 3D viewer'da vurgular. metricName=null veya binIndex=null çağrı = clear.
+// veFEAComputePerElementQuality + viewer.highlightElements üzerine kurulu.
+function veFEAHighlightQualityBin(nodeId, metricName, binIndex) {
+  var viewer = (typeof veFEAViewerRegistry !== 'undefined') ? veFEAViewerRegistry[nodeId] : null;
+  if (!viewer || typeof viewer.highlightElements !== 'function') return;
+
+  // Clear isteği
+  if (!metricName || binIndex === null || binIndex === undefined) {
+    viewer.highlightElements(null);
+    return;
+  }
+
+  var mesh = (typeof veFEAMeshCache !== 'undefined') ? veFEAMeshCache[nodeId] : null;
+  if (!mesh) return;
+  if (typeof veFEAComputePerElementQuality !== 'function') return;
+
+  // Histogram'ı meshMetrics'ten al — metricName histogram-key haritası
+  var histKeyMap = {
+    aspect:            'aspectRatio',
+    skewness:          'skewness',
+    minAngle:          'angle',
+    elementQuality:    'elementQuality',
+    orthogonalQuality: 'orthogonalQuality',
+    warpingFactor:     'warpingFactor',
+    parallelDeviation: 'parallelDeviation'
+  };
+  var histKey = histKeyMap[metricName] || metricName;
+  var nodes = (typeof window !== 'undefined' ? window.nodes : null) || (typeof global !== 'undefined' ? global.nodes : null);
+  if (!nodes) return;
+  var node = null;
+  for (var i = 0; i < nodes.length; i++) { if (nodes[i].id === nodeId) { node = nodes[i]; break; } }
+  if (!node || !node.data || !node.data.meshMetrics || !node.data.meshMetrics.quality) return;
+  var q = node.data.meshMetrics.quality;
+  if (!q[histKey] || !q[histKey].histogram) return;
+  var hist = q[histKey].histogram;
+  var binMin = hist.min + (hist.max - hist.min) * binIndex / hist.binCount;
+  var binMax = hist.min + (hist.max - hist.min) * (binIndex + 1) / hist.binCount;
+  var isLastBin = (binIndex === hist.binCount - 1);
+
+  // Per-element değerleri tara
+  var perElemArr = veFEAComputePerElementQuality(mesh, metricName);
+  if (!perElemArr) return;
+  var elementIds = [];
+  for (var e = 0; e < perElemArr.length; e++) {
+    var v = perElemArr[e];
+    if (!isFinite(v)) continue;
+    if (v >= binMin && (isLastBin ? v <= binMax : v < binMax)) {
+      elementIds.push(e);
+    }
+  }
+  viewer.highlightElements(elementIds);
+}
+
+// Browser global export (Jest CommonJS rejimi için)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports.veFEAHighlightQualityBin = veFEAHighlightQualityBin;
 }
 
 function _veFEAEditorNamedSelHTML(node) {
