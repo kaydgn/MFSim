@@ -767,6 +767,27 @@ function _veFEAEditorDefaultsHTML(node) {
     'Eksen üzerinde dejenere hücre yok, tüm elemanlar Hex8.' +
     '</div>';
 
+  // TetGen ayarları (karmaşık STEP geometrileri için kaliteli tet4 mesh).
+  // WASM build edilmemişse graceful skip — voxel fallback devreye girer.
+  var useTetgen = settings.useTetgen !== false;
+  var tetgenBuilt = (typeof veFEATetgenIsBuilt === 'function') ? veFEATetgenIsBuilt() : false;
+  var tetgenRER = (typeof settings.tetgenRadiusEdgeRatio === 'number') ? settings.tetgenRadiusEdgeRatio : 1.4;
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px; display:flex; align-items:center; gap:6px;">' +
+    'TetGen Tet Mesher <span style="color:' + (tetgenBuilt ? '#22c55e' : '#fbbf24') +
+    '; font-size:0.52rem;">' + (tetgenBuilt ? '● mevcut' : '○ WASM derlenmemiş — voxel fallback') + '</span>' +
+    '</div>';
+  html += '<label style="display:flex; align-items:center; gap:6px; padding:6px 8px; margin-bottom:6px; background:var(--bg-primary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
+    '<input type="checkbox" id="ve-fea-mesh-tetgen-' + node.id + '"' + (useTetgen ? ' checked' : '') + ' style="margin:0;">' +
+    '<span>STEP geometrilerinde TetGen kullan <span style="color:var(--text-muted);">(varsa)</span></span>' +
+    '</label>';
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; padding-left:24px;">' +
+    '<label for="ve-fea-mesh-tetgen-rer-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">Radius-Edge Ratio</label>' +
+    '<input id="ve-fea-mesh-tetgen-rer-' + node.id + '" type="number" min="1.0" max="3.0" step="0.05" value="' + tetgenRER + '" style="width:60px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+    '</div>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:6px; line-height:1.4;">' +
+    'Lisans: AGPL-3.0 (Hang Si, WIAS Berlin). Ticari kullanım için ayrı lisans gerekir.' +
+    '</div>';
+
   return html;
 }
 

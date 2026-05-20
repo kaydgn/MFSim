@@ -16,7 +16,7 @@
 // Worker context'te document/window yok → grafik fonksiyonları (Three.js)
 // disabled. veFEAMeshFromGeometry pure data işliyor, sorun yok.
 try {
-  importScripts('fea-primitives.js', 'fea-step.js', 'fea-mesh.js', 'fea-export.js');
+  importScripts('fea-primitives.js', 'fea-step.js', 'fea-tetgen.js', 'fea-mesh.js', 'fea-export.js');
 } catch (e) {
   // importScripts yoluyla hata olursa mesh request'leri error verir
   self._VE_FEA_WORKER_INIT_ERROR = e.message || String(e);

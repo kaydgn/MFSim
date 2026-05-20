@@ -366,6 +366,16 @@ function veFEASubmitMeshBuild(nodeId) {
     };
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);
     meshNode.data.meshSettings.useWorker = !!(workerEl && workerEl.checked);
+    // TetGen ayarları (STEP karmaşık geometriler için kaliteli tet4)
+    var tetgenEl = document.getElementById('ve-fea-mesh-tetgen-' + nodeId);
+    var tetgenRerEl = document.getElementById('ve-fea-mesh-tetgen-rer-' + nodeId);
+    meshNode.data.meshSettings.useTetgen = tetgenEl ? !!tetgenEl.checked : true;
+    if (tetgenRerEl) {
+      var rer = parseFloat(tetgenRerEl.value);
+      if (isFinite(rer) && rer >= 1.0 && rer <= 3.0) {
+        meshNode.data.meshSettings.tetgenRadiusEdgeRatio = rer;
+      }
+    }
   }
   veFEABuildMeshForNode(nodeId);
 }
