@@ -402,6 +402,121 @@ describe('veFEAOpenMeshEditor / veFEACloseMeshEditor', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// Mesh oluşturma loading / banner görselleştirmesi
+describe('veFEAEditorShowLoading / veFEAEditorShowResultBanner', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.saveState = jest.fn();
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('Editor kapalıyken showLoading sessizce atlanır (no-op)', () => {
+    expect(_veFEAEditorActive).toBeNull();
+    expect(function() {
+      veFEAEditorShowLoading('test', 'sub');
+    }).not.toThrow();
+    expect(document.getElementById('ve-fea-mesh-loading')).toBeNull();
+  });
+
+  test('showLoading modal aktifken spinner + mesaj DOM\'a eklenir', () => {
+    var node = { id: 'mesh-L1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-L1');
+    veFEAEditorShowLoading('Mesh oluşturuluyor...', 'voxelization + tet4');
+    var el = document.getElementById('ve-fea-mesh-loading');
+    expect(el).not.toBeNull();
+    expect(el.querySelector('[data-loading-msg]').textContent).toBe('Mesh oluşturuluyor...');
+    expect(el.querySelector('[data-loading-sub]').textContent).toBe('voxelization + tet4');
+  });
+
+  test('hideLoading overlay DOM\'dan kaldırır', () => {
+    var node = { id: 'mesh-L2', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-L2');
+    veFEAEditorShowLoading('test');
+    expect(document.getElementById('ve-fea-mesh-loading')).not.toBeNull();
+    veFEAEditorHideLoading();
+    expect(document.getElementById('ve-fea-mesh-loading')).toBeNull();
+  });
+
+  test('showLoading ikinci çağrı yeni eleman oluşturmaz, sadece mesaj günceller', () => {
+    var node = { id: 'mesh-L3', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-L3');
+    veFEAEditorShowLoading('İlk mesaj', 'alt1');
+    veFEAEditorShowLoading('Güncel mesaj', 'alt2');
+    var loaders = document.querySelectorAll('#ve-fea-mesh-loading');
+    expect(loaders.length).toBe(1);
+    expect(loaders[0].querySelector('[data-loading-msg]').textContent).toBe('Güncel mesaj');
+    expect(loaders[0].querySelector('[data-loading-sub]').textContent).toBe('alt2');
+  });
+
+  test('showResultBanner success tipi yeşil banner gösterir', () => {
+    var node = { id: 'mesh-B1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-B1');
+    veFEAEditorShowResultBanner('success', '✓ Mesh oluşturuldu', '8 eleman · 27 düğüm · 12 ms');
+    var b = document.getElementById('ve-fea-mesh-banner');
+    expect(b).not.toBeNull();
+    expect(b.textContent).toContain('Mesh oluşturuldu');
+    expect(b.textContent).toContain('8 eleman');
+  });
+
+  test('showResultBanner error tipi kırmızı banner gösterir', () => {
+    var node = { id: 'mesh-B2', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-B2');
+    veFEAEditorShowResultBanner('error', 'Mesh hatası', 'Detay');
+    var b = document.getElementById('ve-fea-mesh-banner');
+    expect(b).not.toBeNull();
+    // jsdom CSS values'ı boşluklu/normalize formatta tutar; her iki olasılığı kabul et
+    var css = b.style.cssText;
+    expect(css.indexOf('239, 68, 68') >= 0 || css.indexOf('239,68,68') >= 0).toBe(true);
+  });
+
+  test('Banner ikinci çağrı eski banner\'ı kaldırır (tek anda 1 banner)', () => {
+    var node = { id: 'mesh-B3', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-B3');
+    veFEAEditorShowResultBanner('success', 'İlk');
+    veFEAEditorShowResultBanner('error', 'İkinci');
+    var banners = document.querySelectorAll('#ve-fea-mesh-banner');
+    expect(banners.length).toBe(1);
+    expect(banners[0].textContent).toContain('İkinci');
+  });
+
+  test('Banner kapat butonu manuel olarak kaldırır', () => {
+    var node = { id: 'mesh-B4', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-B4');
+    veFEAEditorShowResultBanner('success', 'Test');
+    var b = document.getElementById('ve-fea-mesh-banner');
+    var closeBtn = b.querySelector('[data-banner-close]');
+    closeBtn.click();
+    expect(document.getElementById('ve-fea-mesh-banner')).toBeNull();
+  });
+
+  test('Modal kapatılınca aktif loading + banner timer\'ı sızdırılmaz', () => {
+    var node = { id: 'mesh-B5', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-B5');
+    veFEAEditorShowLoading('test');
+    veFEAEditorShowResultBanner('success', 'Test');
+    veFEACloseMeshEditor();
+    // Modal DOM'dan kaldırıldı, _veFEAEditorActive null
+    expect(_veFEAEditorActive).toBeNull();
+    expect(document.getElementById('ve-fea-mesh-editor-overlay')).toBeNull();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Accordion bölümleri', () => {
   beforeEach(() => {
     global.nodes = [];

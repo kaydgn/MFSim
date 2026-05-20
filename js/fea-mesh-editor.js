@@ -204,6 +204,115 @@ function _veFEASafeInitModalViewer(nodeId, retries) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MESH İŞLEM AŞAMASI GÖRSELLEŞTİRMESİ (Loading overlay + Sonuç banner'ı)
+// ═══════════════════════════════════════════════════════════════════════════
+// Kullanıcı "Mesh Oluştur"a basınca modal içinde yarı-saydam overlay +
+// dönen spinner + "Mesh oluşturuluyor..." gösterilir. Mesh bittiğinde
+// overlay kalkar, modal üst kısmında yeşil success banner (eleman sayısı +
+// hesaplama süresi) 4-5 saniye görünür. Hata durumunda kırmızı banner.
+//
+// Senkron mesh işlemlerinde JS thread bloke olur → spinner animasyonu
+// duraklayabilir; bu yüzden veFEABuildMeshForNode'da requestAnimationFrame
+// ile bir frame defer edilir (overlay'in DOM'a çizilmesi için).
+
+var _veFEAEditorLoadingEl = null;
+var _veFEAEditorBannerTimer = null;
+
+function veFEAEditorShowLoading(message, subMessage) {
+  if (!_veFEAEditorOverlay) return; // modal acik degil — atla
+  // Mevcut overlay varsa sadece mesaj güncelle
+  if (_veFEAEditorLoadingEl) {
+    var msg1 = _veFEAEditorLoadingEl.querySelector('[data-loading-msg]');
+    var msg2 = _veFEAEditorLoadingEl.querySelector('[data-loading-sub]');
+    if (msg1) msg1.textContent = message || 'Mesh oluşturuluyor...';
+    if (msg2) msg2.textContent = subMessage || '';
+    return;
+  }
+  // Spinner CSS animasyonu için style enjekte et (bir kez)
+  if (!document.getElementById('ve-fea-loading-style')) {
+    var st = document.createElement('style');
+    st.id = 've-fea-loading-style';
+    st.textContent = '@keyframes ve-fea-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }' +
+      '@keyframes ve-fea-fade-in { from { opacity: 0; } to { opacity: 1; } }' +
+      '@keyframes ve-fea-slide-down { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }';
+    document.head.appendChild(st);
+  }
+  var loading = document.createElement('div');
+  loading.id = 've-fea-mesh-loading';
+  loading.style.cssText = 'position:absolute; inset:0; z-index:10; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(10,13,20,0.78); backdrop-filter:blur(2px); animation:ve-fea-fade-in 0.15s ease-out; pointer-events:auto;';
+  loading.innerHTML =
+    '<div style="width:64px; height:64px; border:4px solid rgba(255,255,255,0.12); border-top-color:var(--accent-primary, #3b82f6); border-radius:50%; animation:ve-fea-spin 0.9s linear infinite;"></div>' +
+    '<div data-loading-msg style="margin-top:18px; font-size:0.92rem; font-weight:600; color:#fff; letter-spacing:0.02em;">' + (message || 'Mesh oluşturuluyor...') + '</div>' +
+    '<div data-loading-sub style="margin-top:6px; font-size:0.7rem; color:rgba(255,255,255,0.65);">' + (subMessage || '') + '</div>';
+  // Modal box'in icine yerlestir (mesh editor modal box'i overlay'in
+  // direkt child'i)
+  var modalBox = _veFEAEditorOverlay.firstElementChild;
+  if (modalBox) {
+    if (getComputedStyle(modalBox).position === 'static') modalBox.style.position = 'relative';
+    modalBox.appendChild(loading);
+  } else {
+    _veFEAEditorOverlay.appendChild(loading);
+  }
+  _veFEAEditorLoadingEl = loading;
+}
+
+function veFEAEditorHideLoading() {
+  if (!_veFEAEditorLoadingEl) return;
+  if (_veFEAEditorLoadingEl.parentNode) _veFEAEditorLoadingEl.parentNode.removeChild(_veFEAEditorLoadingEl);
+  _veFEAEditorLoadingEl = null;
+}
+
+// Sonuç banner'ı — modal üst kısmında 4 saniye görünür sonra kaybolur.
+// type: 'success' | 'error' | 'warning' | 'info'
+function veFEAEditorShowResultBanner(type, message, subMessage) {
+  if (!_veFEAEditorOverlay) return;
+  // Önceki banner varsa kaldır + timer iptal
+  var existing = document.getElementById('ve-fea-mesh-banner');
+  if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+  if (_veFEAEditorBannerTimer) { clearTimeout(_veFEAEditorBannerTimer); _veFEAEditorBannerTimer = null; }
+
+  var palette = ({
+    success: { bg: 'rgba(34,197,94,0.18)',  border: '#22c55e', color: '#86efac', icon: '✓' },
+    error:   { bg: 'rgba(239,68,68,0.18)',  border: '#ef4444', color: '#fca5a5', icon: '✗' },
+    warning: { bg: 'rgba(245,158,11,0.18)', border: '#f59e0b', color: '#fcd34d', icon: '⚠' },
+    info:    { bg: 'rgba(59,130,246,0.18)', border: '#3b82f6', color: '#93c5fd', icon: 'ℹ' }
+  })[type] || { bg: 'rgba(59,130,246,0.18)', border: '#3b82f6', color: '#93c5fd', icon: 'ℹ' };
+
+  var banner = document.createElement('div');
+  banner.id = 've-fea-mesh-banner';
+  banner.style.cssText = 'position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:11; min-width:320px; max-width:80%; padding:11px 18px; background:' + palette.bg + '; border:1px solid ' + palette.border + '; backdrop-filter:blur(8px); display:flex; align-items:center; gap:12px; animation:ve-fea-slide-down 0.22s ease-out; box-shadow:0 4px 20px rgba(0,0,0,0.35);';
+  banner.innerHTML =
+    '<div style="font-size:1.2rem; color:' + palette.border + '; font-weight:700; line-height:1;">' + palette.icon + '</div>' +
+    '<div style="flex:1;">' +
+      '<div style="font-size:0.74rem; font-weight:600; color:' + palette.color + ';">' + message + '</div>' +
+      (subMessage ? '<div style="font-size:0.6rem; color:rgba(255,255,255,0.6); margin-top:2px;">' + subMessage + '</div>' : '') +
+    '</div>' +
+    '<button data-banner-close style="background:transparent; border:none; color:rgba(255,255,255,0.6); font-size:1rem; cursor:pointer; padding:0 4px;">✕</button>';
+  var modalBox = _veFEAEditorOverlay.firstElementChild;
+  if (modalBox) {
+    if (getComputedStyle(modalBox).position === 'static') modalBox.style.position = 'relative';
+    modalBox.appendChild(banner);
+  } else {
+    _veFEAEditorOverlay.appendChild(banner);
+  }
+  var closeBtn = banner.querySelector('[data-banner-close]');
+  if (closeBtn) closeBtn.addEventListener('click', function() {
+    if (banner.parentNode) banner.parentNode.removeChild(banner);
+    if (_veFEAEditorBannerTimer) { clearTimeout(_veFEAEditorBannerTimer); _veFEAEditorBannerTimer = null; }
+  });
+  // Auto-dismiss
+  var dismissMs = (type === 'success') ? 4500 : 6500; // error daha uzun kalsin
+  _veFEAEditorBannerTimer = setTimeout(function() {
+    if (banner.parentNode) {
+      banner.style.transition = 'opacity 0.3s ease-out';
+      banner.style.opacity = '0';
+      setTimeout(function() { if (banner.parentNode) banner.parentNode.removeChild(banner); }, 320);
+    }
+    _veFEAEditorBannerTimer = null;
+  }, dismissMs);
+}
+
 // ─── Modal kapat ───────────────────────────────────────────────────────────
 function veFEACloseMeshEditor() {
   if (!_veFEAEditorActive) return;
@@ -217,6 +326,9 @@ function veFEACloseMeshEditor() {
     try { veFEAViewerRegistry[_veFEAEditorActive].dispose(); } catch (e) {}
     delete veFEAViewerRegistry[_veFEAEditorActive];
   }
+  // Aktif loading overlay / banner'ı modal kaldırılmadan önce temizle
+  _veFEAEditorLoadingEl = null;
+  if (_veFEAEditorBannerTimer) { clearTimeout(_veFEAEditorBannerTimer); _veFEAEditorBannerTimer = null; }
   if (_veFEAEditorOverlay && _veFEAEditorOverlay.parentNode) {
     _veFEAEditorOverlay.parentNode.removeChild(_veFEAEditorOverlay);
   }
