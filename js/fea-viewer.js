@@ -1164,8 +1164,10 @@ function veFEAInitViewer(canvas, opts) {
     setPointerMode: function(mode) {
       if (['view', 'face-pick', 'body-pick', 'box-select', 'measure'].indexOf(mode) < 0) mode = 'view';
       this._pointerMode = mode;
-      var cursors = { 'view': 'grab', 'face-pick': 'crosshair', 'body-pick': 'crosshair', 'box-select': 'crosshair', 'measure': 'crosshair' };
-      if (canvas && canvas.style) canvas.style.cursor = cursors[mode] || 'grab';
+      // LMB her zaman seç olduğu için view modunda da default cursor.
+      // Hover sırasında pointer hit varsa _onFaceMouseMove'da 'pointer' yapılır.
+      var cursors = { 'view': 'default', 'face-pick': 'crosshair', 'body-pick': 'crosshair', 'box-select': 'crosshair', 'measure': 'crosshair' };
+      if (canvas && canvas.style) canvas.style.cursor = cursors[mode] || 'default';
       // Hit-coord overlay measure modunda aktif
       var coordDiv = document.getElementById('ve-fea-hit-coord-' + (canvas.id || '').replace('ve-fea-mesh-canvas-', '').replace('ve-fea-geom-canvas-', ''));
       if (coordDiv) coordDiv.style.display = (mode === 'measure') ? 'block' : 'none';
@@ -1478,7 +1480,7 @@ function veFEAInitViewer(canvas, opts) {
     var fid = _raycastFaceId(e.clientX, e.clientY);
     viewer.setHoveredFace(fid);
     if ((viewer._pointerMode || 'view') === 'view') {
-      canvas.style.cursor = fid ? 'pointer' : 'grab';
+      canvas.style.cursor = fid ? 'pointer' : 'default';
     }
   }
   function _onFaceMouseDown(e) {
@@ -1730,20 +1732,19 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
   }
 
   function onMouseDown(e) {
-    var mode = getPointerMode();
+    // ANSYS / CAD-style mouse layout (kullanıcı isteği):
+    //   LMB: HER ZAMAN seçim (face/edge/vertex picker) — orbit YOK.
+    //   MMB: rotate + tıklanan noktayı rotation center yap.
+    //   Ctrl+RMB: pan. RMB tek başına: no-op.
     if (e.button === 0) {
-      // LMB: SADECE view modunda orbit. Diğer modlarda face/body/box-select
-      // handler çalışsın — orbit'i kilitle (kamera dönmesin).
-      if (mode === 'view') isOrbit = true;
-      else return;
+      // LMB: orbit asla yapma — face/box handler işler.
+      return;
     } else if (e.button === 1) {
-      // MMB (orta tuş): ANSYS davranışı — her an aktif orbit + tıklanan
-      // nokta rotation center'a atanır (re-center yok, kamera pozisyonu sabit).
+      // MMB: her an aktif rotate + click rotation center (re-center yok).
       isOrbit = true;
       if (viewerRef && typeof viewerRef.pickPointFromMouse === 'function') {
         var hitPt = viewerRef.pickPointFromMouse(e.clientX, e.clientY);
         if (hitPt) {
-          // Eski target'tan kamera pozisyonu offset'i koru → re-center YOK
           var oldOffset = camera.position.clone().sub(target);
           target.copy(hitPt);
           spherical.setFromVector3(oldOffset);
@@ -1751,8 +1752,12 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
         }
       }
     } else if (e.button === 2) {
-      // RMB: pan (mevcut davranış)
-      isPan = true;
+      // RMB: sadece Ctrl basılıyken pan; yoksa no-op (browser menu zaten engellenir).
+      if (e.ctrlKey || e.metaKey) {
+        isPan = true;
+      } else {
+        return;
+      }
     } else return;
     lastX = e.clientX;
     lastY = e.clientY;
