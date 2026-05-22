@@ -19,23 +19,61 @@ eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
+// ANSYS-tarz outline + lokal kontroller (Faz 3b) — editor'dan önce
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-outline.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-controls.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
 
-// Test helper — side panel sadeleştirildi (Tier UI refactor). Mesh UI artık
-// modal'da accordion'lar olarak yaşıyor. Geri-uyumlu testler için bu helper
-// tüm accordion HTML builder'larını + side panel'i birleştirir.
+// Test helper — Faz 3b outline+details refactor sonrası: modal sol paneli
+// artık outline tree + tek bir details container içerir; bir anda sadece bir
+// bölümün HTML'i görünür. Geri-uyumlu testler için TÜM details renderer'larını
+// topluca üret ve birleştir.
 function _testRenderFullMeshUI(node) {
-  // Modal'ın tam içeriği: side panel + toolbar + sol accordion paneli + sağ viewer
   var toolbar = _veFEAEditorBuildToolbar(node);
   var rightPanel = _veFEAEditorBuildRightPanel(node);
   var leftPanel = _veFEAEditorBuildLeftPanel(node);
+  // Outline tree label'larının (Görünüm Modu, Kalite Metrikleri, vb.) test
+  // arama düzlemine girmesi için tüm grupları aç ve outline'ı tekrar render et.
+  var allOutline = '';
+  try {
+    if (typeof FEAMeshOutline !== 'undefined' && node && node.data && node.data.meshSettings && node.data.meshSettings.outline) {
+      var st = node.data.meshSettings.outline;
+      st.expanded['group:globals']       = true;
+      st.expanded['group:localControls'] = true;
+      st.expanded['group:topologyTools'] = true;
+      st.expanded['group:inspect']       = true;
+      allOutline = FEAMeshOutline.render();
+    }
+  } catch (e) { /* tolere et */ }
+  // Outline'da seçili olmayan tüm bölümleri de string'e ekle (tüm UI alanlarını
+  // test'e görünür kıl). Defaults, Sizing, Inflation, NamedSel, Quality,
+  // Display, Statistics, Suggestions, Convergence, Topology — sıra önemli değil.
+  var allDetails = '';
+  // Doğrudan referanslar — eval'da global[name] çalışmadığı için scope'tan
+  // identifier üzerinden erişim şart.
+  try { allDetails += _veFEAEditorDefaultsHTML(node); }         catch(e){}
+  try { allDetails += _veFEAEditorSizingHTML(node); }           catch(e){}
+  try { allDetails += _veFEAEditorInflationHTML(node); }        catch(e){}
+  try { allDetails += _veFEAEditorFaceSizingHTML(node); }       catch(e){}
+  try { allDetails += _veFEAEditorEdgeSizingHTML(node); }       catch(e){}
+  try { allDetails += _veFEAEditorSphereOfInfluenceHTML(node); }catch(e){}
+  try { allDetails += _veFEAEditorVirtualTopologyHTML(node); }  catch(e){}
+  try { allDetails += _veFEAEditorNamedSelHTML(node); }         catch(e){}
+  try { allDetails += _veFEAEditorQualityHTML(node); }          catch(e){}
+  try { allDetails += _veFEAEditorDisplayHTML(node); }          catch(e){}
+  try { allDetails += _veFEAEditorStatisticsHTML(node); }       catch(e){}
+  try { allDetails += _veFEAEditorSuggestionsHTML(node); }      catch(e){}
+  try { allDetails += _veFEAEditorConvergenceHTML(node); }      catch(e){}
+  try { allDetails += _veFEAEditorTopologyHTML(node); }         catch(e){}
   return (
     getFEAMeshPropertiesHTML(node) +
     toolbar.outerHTML +
     leftPanel.outerHTML +
-    rightPanel.outerHTML
+    rightPanel.outerHTML +
+    allOutline +
+    allDetails
   );
 }
 

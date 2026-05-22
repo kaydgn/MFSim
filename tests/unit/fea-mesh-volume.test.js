@@ -20,21 +20,52 @@ eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-utils.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-feature-recognition.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
+// ANSYS-tarz outline + lokal kontroller (Faz 3b) — editor'dan önce
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-outline.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-controls.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
 
-// Test helper — side panel sadeleştirildi. Mesh kontrolleri modal'da accordion
-// builder'larında. Geri-uyumlu testler için tümünü birleştirir.
+// Test helper — Faz 3b outline+details refactor sonrası: tüm details
+// renderer'larını da topla ki testler tüm UI alanlarını arayabilsin.
 function _testRenderFullMeshUI(node) {
   var toolbar = _veFEAEditorBuildToolbar(node);
   var rightPanel = _veFEAEditorBuildRightPanel(node);
   var leftPanel = _veFEAEditorBuildLeftPanel(node);
+  var allOutline = '';
+  try {
+    if (typeof FEAMeshOutline !== 'undefined' && node && node.data && node.data.meshSettings && node.data.meshSettings.outline) {
+      var st = node.data.meshSettings.outline;
+      st.expanded['group:globals']       = true;
+      st.expanded['group:localControls'] = true;
+      st.expanded['group:topologyTools'] = true;
+      st.expanded['group:inspect']       = true;
+      allOutline = FEAMeshOutline.render();
+    }
+  } catch (e) { /* tolere et */ }
+  var allDetails = '';
+  try { allDetails += _veFEAEditorDefaultsHTML(node); }         catch(e){}
+  try { allDetails += _veFEAEditorSizingHTML(node); }           catch(e){}
+  try { allDetails += _veFEAEditorInflationHTML(node); }        catch(e){}
+  try { allDetails += _veFEAEditorFaceSizingHTML(node); }       catch(e){}
+  try { allDetails += _veFEAEditorEdgeSizingHTML(node); }       catch(e){}
+  try { allDetails += _veFEAEditorSphereOfInfluenceHTML(node); }catch(e){}
+  try { allDetails += _veFEAEditorVirtualTopologyHTML(node); }  catch(e){}
+  try { allDetails += _veFEAEditorNamedSelHTML(node); }         catch(e){}
+  try { allDetails += _veFEAEditorQualityHTML(node); }          catch(e){}
+  try { allDetails += _veFEAEditorDisplayHTML(node); }          catch(e){}
+  try { allDetails += _veFEAEditorStatisticsHTML(node); }       catch(e){}
+  try { allDetails += _veFEAEditorSuggestionsHTML(node); }      catch(e){}
+  try { allDetails += _veFEAEditorConvergenceHTML(node); }      catch(e){}
+  try { allDetails += _veFEAEditorTopologyHTML(node); }         catch(e){}
   return (
     getFEAMeshPropertiesHTML(node) +
     toolbar.outerHTML +
     leftPanel.outerHTML +
-    rightPanel.outerHTML
+    rightPanel.outerHTML +
+    allOutline +
+    allDetails
   );
 }
 

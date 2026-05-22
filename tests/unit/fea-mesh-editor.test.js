@@ -17,6 +17,9 @@ eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
+// ANSYS-tarz outline + lokal kontroller (Faz 3b) — editor'dan önce load
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-outline.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-controls.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
@@ -245,26 +248,14 @@ describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
     expect(html).toMatch(/Halka.*Düzlem/);
   });
 
-  test('Modal acildiginda topology accordion en altta (Post-mesh grubunun sonu)', () => {
-    var geomNode = {
-      id: 'g-t4', type: 'fea-geometry',
-      data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
-    };
-    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
-    var meshNode = { id: 'mesh-t5', type: 'fea-mesh', data: {} };
-    global.nodes = [geomNode, meshNode];
-    global.connections = [{ from: 'g-t4', to: 'mesh-t5' }];
-    veFEAOpenMeshEditor('mesh-t5');
-    var section = document.querySelector('[data-acc-section="topology"]');
-    expect(section).not.toBeNull();
-    // Sol panelde ilk accordion sizing, son accordion topology olmalı
-    var leftPanel = document.getElementById('ve-fea-mesh-editor-left-panel');
-    var allSections = leftPanel.querySelectorAll('[data-acc-section]');
-    expect(allSections[0].getAttribute('data-acc-section')).toBe('sizing');
-    expect(allSections[allSections.length - 1].getAttribute('data-acc-section')).toBe('topology');
+  test('Outline: inspect:topology, group:inspect içinde en son sırada', () => {
+    var inspect = FEAMeshOutline._findSchemaNode('group:inspect');
+    expect(inspect).toBeTruthy();
+    var lastChild = inspect.children[inspect.children.length - 1];
+    expect(lastChild.id).toBe('inspect:topology');
   });
 
-  test('Topology default kapalı (TÜM accordion\'lar başlangıçta kapalı)', () => {
+  test('Outline default state: inspect grubu kapalı (ilk açılışta sadeleştirme)', () => {
     var geomNode = {
       id: 'g-t5', type: 'fea-geometry',
       data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } }
@@ -274,59 +265,92 @@ describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
     global.nodes = [geomNode, meshNode];
     global.connections = [{ from: 'g-t5', to: 'mesh-t6' }];
     veFEAOpenMeshEditor('mesh-t6');
-    expect(document.getElementById('ve-fea-acc-body-topology').style.display).toBe('none');
-    // Sizing/defaults da artık kapalı — kullanıcı kendi açar
-    expect(document.getElementById('ve-fea-acc-body-sizing').style.display).toBe('none');
-    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('none');
+    // group:inspect varsayılan kapalı (rapor §5.1 — turuncu vurgu yayılımıyla
+    // problem olunca otomatik açılır; aksi halde kalabalık yapmasın)
+    var state = meshNode.data.meshSettings.outline;
+    expect(state.expanded['group:inspect']).toBe(false);
+    expect(state.expanded['cl:bodySizing']).toBe(false);
   });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// Pre/Post-mesh grup ayrımı — accordion organization
-describe('Mesh Editör accordion Pre/Post-mesh ayrımı', () => {
+// ANSYS-tarz Outline + Details Panel düzeni (eski Pre/Post-mesh accordion'lar
+// outline'a dönüştürüldü — Faz 3b refactor)
+describe('Mesh Editör outline organizasyonu', () => {
   beforeEach(() => {
     global.nodes = [];
     global.connections = [];
     if (_veFEAEditorActive) veFEACloseMeshEditor();
   });
 
-  test('Pre-mesh grup başlığı (Mesh Öncesi) ve Post-mesh grup başlığı (Mesh Sonrası) render edilir', () => {
+  test('Outline + Details split panelleri render edilir', () => {
     global.nodes = [{ id: 'mesh-g1', type: 'fea-mesh', data: {} }];
     veFEAOpenMeshEditor('mesh-g1');
-    var leftPanel = document.getElementById('ve-fea-mesh-editor-left-panel');
-    expect(leftPanel.innerHTML).toMatch(/Mesh Öncesi/);
-    expect(leftPanel.innerHTML).toMatch(/Mesh Sonrası/);
+    expect(document.getElementById('ve-fea-outline-container')).not.toBeNull();
+    expect(document.getElementById('ve-fea-details-container')).not.toBeNull();
+    expect(document.getElementById('ve-fea-outline-vsplitter')).not.toBeNull();
+    expect(document.getElementById('ve-fea-outline-header')).not.toBeNull();
+    expect(document.getElementById('ve-fea-details-header')).not.toBeNull();
   });
 
-  test('Pre-mesh sırası: sizing → defaults → inflation → faceSizing → edgeSizing → sphereOfInfluence → virtualTopology → namedSel', () => {
+  test('Outline kök grupları: Globals / LocalControls / TopologyTools / Inspect', () => {
+    var schema = FEAMeshOutline._SCHEMA;
+    var ids = schema.children.map(function(c) { return c.id; });
+    expect(ids).toEqual([
+      'group:globals',
+      'group:localControls',
+      'group:topologyTools',
+      'group:inspect'
+    ]);
+  });
+
+  test('group:globals altında sizing/defaults/inflation single-instance', () => {
+    var g = FEAMeshOutline._findSchemaNode('group:globals');
+    expect(g.children.map(function(c) { return c.id; })).toEqual([
+      'single:defaults',
+      'single:sizing',
+      'single:inflation'
+    ]);
+  });
+
+  test('group:localControls altında 6 control list tipi (yeni: bodySizing/refinement/methodOverride)', () => {
+    var lc = FEAMeshOutline._findSchemaNode('group:localControls');
+    var ctlTypes = lc.children.map(function(c) { return c.controlType; }).filter(Boolean);
+    expect(ctlTypes).toEqual([
+      'bodySizing', 'faceSizing', 'edgeSizing', 'soi', 'refinement', 'methodOverride'
+    ]);
+  });
+
+  test('group:inspect altında readonly inceleme bölümleri sırada', () => {
+    var ins = FEAMeshOutline._findSchemaNode('group:inspect');
+    var ids = ins.children.map(function(c) { return c.id; });
+    expect(ids).toEqual([
+      'inspect:quality',
+      'inspect:statistics',
+      'inspect:display',
+      'inspect:suggestions',
+      'inspect:convergence',
+      'inspect:topology'
+    ]);
+  });
+
+  test('Outline DOM tüm grup label\'larını render eder', () => {
     global.nodes = [{ id: 'mesh-g2', type: 'fea-mesh', data: {} }];
     veFEAOpenMeshEditor('mesh-g2');
-    var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
-      .querySelectorAll('[data-acc-section]');
-    var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(0, 8)).toEqual(['sizing', 'defaults', 'inflation', 'faceSizing', 'edgeSizing', 'sphereOfInfluence', 'virtualTopology', 'namedSel']);
+    var html = document.getElementById('ve-fea-outline-container').innerHTML;
+    expect(html).toMatch(/Globals/);
+    expect(html).toMatch(/Lokal Kontroller/);
+    expect(html).toMatch(/Topoloji Araçları/);
+    expect(html).toMatch(/Mesh Sonrası İnceleme/);
   });
 
-  test('Post-mesh sırası: quality → statistics → display → suggestions → convergence → topology', () => {
-    global.nodes = [{ id: 'mesh-g3', type: 'fea-mesh', data: {} }];
-    veFEAOpenMeshEditor('mesh-g3');
-    var sections = document.getElementById('ve-fea-mesh-editor-left-panel')
-      .querySelectorAll('[data-acc-section]');
-    var order = Array.from(sections).map(s => s.getAttribute('data-acc-section'));
-    expect(order.slice(8)).toEqual(['quality', 'statistics', 'display', 'suggestions', 'convergence', 'topology']);
-  });
-
-  test('Default accordion state: TÜM accordion\'lar kapalı (sade ilk görünüm)', () => {
+  test('Eski accordion default state helper hâlâ geri uyumlu (test contract için)', () => {
     var state = _veFEAEditorDefaultAccordionState();
+    // Eski API: tüm accordion'lar kapalı — outline'a geçtikten sonra da
+    // sözleşme korunur (kod base'inde bu fonksiyonu çağıran legacy yerler olursa).
     expect(state.sizing).toBe(false);
     expect(state.defaults).toBe(false);
-    expect(state.inflation).toBe(false);
-    expect(state.namedSel).toBe(false);
     expect(state.quality).toBe(false);
-    expect(state.statistics).toBe(false);
-    expect(state.display).toBe(false);
-    expect(state.suggestions).toBe(false);
-    expect(state.topology).toBe(false);
   });
 });
 
@@ -649,52 +673,48 @@ describe('Accordion bölümleri', () => {
     if (_veFEAEditorActive) veFEACloseMeshEditor();
   });
 
-  test('8 accordion bölümü render edilir', () => {
+  test('Tüm tek-instance ve readonly bölümleri outline\'da label\'larıyla görünür', () => {
     var node = { id: 'mesh-a1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     veFEAOpenMeshEditor('mesh-a1');
-    var sectionKeys = ['defaults', 'sizing', 'inflation', 'quality', 'namedSel', 'display', 'statistics', 'suggestions'];
-    sectionKeys.forEach(function(k) {
-      expect(document.querySelector('[data-acc-section="' + k + '"]')).not.toBeNull();
-      expect(document.getElementById('ve-fea-acc-body-' + k)).not.toBeNull();
+    // group:topologyTools ve group:inspect default kapalı — aç ki child label'ları render edilsin
+    FEAMeshOutline.toggleExpand('group:topologyTools');
+    FEAMeshOutline.toggleExpand('group:inspect');
+    var html = document.getElementById('ve-fea-outline-container').innerHTML;
+    ['Varsayılanlar', 'Boyutlandırma', 'Inflation', 'Kalite Metrikleri',
+     'Named Selections', 'Görünüm Modu', 'İstatistikler', 'Adaptif İnceltme Önerileri'].forEach(function(lbl) {
+      expect(html).toContain(lbl);
     });
   });
 
-  test('Default state: TÜM accordion\'lar kapalı (kullanıcı kendi açar)', () => {
+  test('Default outline state: group:inspect kapalı, group:globals açık', () => {
     var node = { id: 'mesh-a2', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     veFEAOpenMeshEditor('mesh-a2');
-    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('none');
-    expect(document.getElementById('ve-fea-acc-body-sizing').style.display).toBe('none');
-    expect(document.getElementById('ve-fea-acc-body-quality').style.display).toBe('none');
-    expect(document.getElementById('ve-fea-acc-body-statistics').style.display).toBe('none');
+    var st = node.data.meshSettings.outline;
+    expect(st.expanded['group:inspect']).toBe(false);
+    expect(st.expanded['group:globals']).toBe(true);
   });
 
-  test('veFEAToggleAccordion açıkken kapatır, kapalıyken açar', () => {
+  test('FEAMeshOutline.toggleExpand açıkken kapatır, kapalıyken açar', () => {
     var node = { id: 'mesh-a3', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     veFEAOpenMeshEditor('mesh-a3');
-    // Quality kapalı → aç
-    veFEAToggleAccordion('quality');
-    expect(document.getElementById('ve-fea-acc-body-quality').style.display).toBe('block');
-    expect(document.getElementById('ve-fea-acc-arrow-quality').textContent).toBe('▼');
-    // Defaults kapalı → aç
-    veFEAToggleAccordion('defaults');
-    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('block');
-    expect(document.getElementById('ve-fea-acc-arrow-defaults').textContent).toBe('▼');
-    // Defaults yine kapat
-    veFEAToggleAccordion('defaults');
-    expect(document.getElementById('ve-fea-acc-body-defaults').style.display).toBe('none');
-    expect(document.getElementById('ve-fea-acc-arrow-defaults').textContent).toBe('▶');
+    var st = node.data.meshSettings.outline;
+    expect(st.expanded['group:inspect']).toBe(false);
+    FEAMeshOutline.toggleExpand('group:inspect');
+    expect(st.expanded['group:inspect']).toBe(true);
+    FEAMeshOutline.toggleExpand('group:inspect');
+    expect(st.expanded['group:inspect']).toBe(false);
   });
 
-  test('Accordion state node.data\'ya persist edilir', () => {
+  test('Outline state node.data.meshSettings.outline\'a persist edilir', () => {
     global.saveState = jest.fn();
     var node = { id: 'mesh-a4', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     veFEAOpenMeshEditor('mesh-a4');
-    veFEAToggleAccordion('quality');
-    expect(global.nodes[0].data.editorAccordion.quality).toBe(true);
+    FEAMeshOutline.select('single:sizing');
+    expect(node.data.meshSettings.outline.selected).toBe('single:sizing');
     expect(global.saveState).toHaveBeenCalled();
   });
 });

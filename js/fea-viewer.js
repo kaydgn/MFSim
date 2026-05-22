@@ -2166,6 +2166,59 @@ function veFEABuildMeshForNode(meshNodeId) {
     onProgress: onMeshProgress
   };
 
+  // ─── ANSYS-tarz outline kontrolleri entegrasyonu (Faz 3b) ──────────────
+  // FEAMeshControls modülü yüklüyse, suppress filter + yeni kontrol tiplerini
+  // (Body Sizing / Refinement / Method Override) etkin değerlere uygula.
+  // Mesher API'sini değiştirmiyoruz; opts'a yeni alanlar eklenir + mevcut
+  // alanlar (faceSizingControls vb.) suppress'lenmiş öğeler atılarak yeniden
+  // doldurulur. Conflict resolution: hard > soft (rapor §4.3).
+  if (typeof FEAMeshControls !== 'undefined') {
+    try {
+      // Suppress filter — sadece aktif kontrolleri pasla
+      var actFS  = FEAMeshControls.activeControls(meshNode, 'faceSizing');
+      var actES  = FEAMeshControls.activeControls(meshNode, 'edgeSizing');
+      var actSOI = FEAMeshControls.activeControls(meshNode, 'soi');
+      var actVT  = FEAMeshControls.activeControls(meshNode, 'virtualTopology');
+      var actBS  = FEAMeshControls.activeControls(meshNode, 'bodySizing');
+      var actRF  = FEAMeshControls.activeControls(meshNode, 'refinement');
+      var actMO  = FEAMeshControls.activeControls(meshNode, 'methodOverride');
+
+      // Mevcut listeleri suppress edilmiş öğelerden temizle (override)
+      meshOpts.faceSizingControls = actFS.map(function(a) { return a.control; });
+      meshOpts.edgeSizingControls = actES.map(function(a) { return a.control; });
+      meshOpts.sphereOfInfluence  = actSOI.map(function(a) { return a.control; });
+      meshOpts.virtualTopology    = actVT.map(function(a) { return a.control; });
+
+      // Yeni alanlar — mesher şu an opts üzerinden okur, future-proof:
+      meshOpts.bodySizingControls = actBS.map(function(a) { return a.control; });
+      meshOpts.refinementControls = actRF.map(function(a) { return a.control; });
+      meshOpts.methodOverrides    = actMO.map(function(a) { return a.control; });
+
+      // Body Sizing: v1 single-body modelde global size'ı override et
+      // (resolveBodySizingFor en sıkı kontrolü döndürür: hard > soft)
+      var bsBest = FEAMeshControls.resolveBodySizingFor(meshNode, 0);
+      if (bsBest && isFinite(bsBest.size) && bsBest.size > 0) {
+        meshOpts.size = bsBest.size;
+        // Persist'i settings'e geri yansıtma — kullanıcı global size'a dokunmadıysa
+        // settings.size global olarak kalır; meshOpts override'ı sadece bu build'e
+        // özgüdür.
+      }
+
+      // Method Override: v1 single-body modelde global meshMethod/elementOrder'ı
+      // override et
+      var moBest = FEAMeshControls.resolveBodyMethodOverride(meshNode, 0);
+      if (moBest && moBest.method) {
+        meshOpts.meshMethod = moBest.method;
+        if (moBest.elementOrder && moBest.elementOrder !== 'program') {
+          meshOpts.elementOrder = moBest.elementOrder;
+          meshOpts.midSideNodes = (moBest.elementOrder === 'quadratic');
+        }
+      }
+    } catch (controlsErr) {
+      console.warn('[fea-mesh] outline kontrolleri uygulanamadı:', controlsErr);
+    }
+  }
+
   // Mesh editor modal aktifse loading overlay göster (faz ilerlemesi onProgress'ten gelir)
   if (editorActive && typeof veFEAEditorShowLoading === 'function') {
     var tetMesherReady = (typeof veFEADelaunayAvailable === 'function') && veFEADelaunayAvailable() && settings.useTetMesher !== false;
@@ -2225,6 +2278,15 @@ function veFEABuildMeshForNode(meshNodeId) {
     if (typeof veFEAComputeQualityMetrics === 'function') {
       metrics.quality = veFEAComputeQualityMetrics(meshData);
     }
+
+    // ANSYS-tarz outline'dan gelen Refinement kontrol metadata'sı (Faz 3b)
+    // v1: meshData üzerine refinementApplied[] alanı yazar — gerçek bölme
+    // Faz 2'de (size-field). Mesher tarafı no-op olarak çalışmaya devam eder.
+    if (typeof FEAMeshControls !== 'undefined' && typeof FEAMeshControls.applyRefinementsToMesh === 'function') {
+      try { FEAMeshControls.applyRefinementsToMesh(meshNode, meshData); } catch (e) {}
+    }
+    // Önceki başarısız mesh build'ten kalan controlKey hatasını temizle
+    meshNode.data.meshError = null;
 
     veFEAMeshCache[meshNodeId] = meshData;
     meshNode.data.meshSettings = settings;
