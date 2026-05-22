@@ -1231,6 +1231,8 @@ function _veFEAEditorFaceSizingHTML(node) {
     } else {
       html += '<button onclick="veFEAAddFaceSizingFromSelection(\'' + node.id + '\')" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">+ Sizing\'e ekle</button>';
     }
+    // ANSYS Extend to Adjacent — komşu face'leri aynı sizing ile bulk ekle
+    html += '<button onclick="veFEAExtendFaceSizingAdjacent(\'' + node.id + '\', 30)" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="Komşu yüzeyleri (≤30°) aynı boyutla ekle">⇲ Extend Adjacent</button>';
   } else {
     html += '<span style="flex:1; font-size:0.6rem; color:var(--text-muted); font-style:italic;">3D görüntüleyicide bir yüzeye tıklayın…</span>';
   }
@@ -1291,6 +1293,45 @@ function veFEAAddFaceSizingFromSelection(nodeId) {
   node.data.meshSettings.faceSizingControls.push({
     faceId: fid, size: defaultSize, behavior: 'soft'
   });
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// ANSYS Extend to Adjacent: mevcut seçili face'in komşularını (feature-angle
+// thresholdDeg ile) face sizing listesine bulk ekler. Aynı boyut + behavior.
+function veFEAExtendFaceSizingAdjacent(nodeId, thresholdDeg) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.selectedFaceId) return;
+  if (!node.data.geometry) return;
+  if (typeof veFEAComputeGeometryTopology !== 'function' ||
+      typeof veFEAExtendSelectionAdjacent !== 'function') return;
+  var topo = veFEAComputeGeometryTopology(node.data.geometry);
+  if (!topo) return;
+  var extended = veFEAExtendSelectionAdjacent([node.data.selectedFaceId], topo, thresholdDeg);
+  if (extended.length === 0) return;
+
+  node.data.meshSettings = node.data.meshSettings || {};
+  if (!Array.isArray(node.data.meshSettings.faceSizingControls)) {
+    node.data.meshSettings.faceSizingControls = [];
+  }
+  var existing = veFEAReadFaceSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.faceSizingControls = existing;
+
+  var defaultSize = ((node.data.meshSettings.size) || 10) / 2;
+  var existingIds = {};
+  node.data.meshSettings.faceSizingControls.forEach(function(c) { existingIds[c.faceId] = true; });
+  var addedCount = 0;
+  extended.forEach(function(fid) {
+    if (existingIds[fid]) return;
+    node.data.meshSettings.faceSizingControls.push({
+      faceId: fid, size: defaultSize, behavior: 'soft'
+    });
+    addedCount++;
+  });
+  if (typeof showToast === 'function') {
+    showToast(addedCount + ' komşu yüz Face Sizing\'e eklendi (eşik ' + (thresholdDeg || 30) + '°)', 'info');
+  }
   if (typeof saveState === 'function') saveState();
   if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 }
