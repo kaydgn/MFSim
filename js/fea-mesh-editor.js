@@ -530,21 +530,85 @@ function _veFEAEditorBuildRightPanel(node) {
   panel.id = 've-fea-mesh-editor-right-panel';
   panel.style.cssText = 'flex:1; min-width:300px; display:flex; flex-direction:column; background:#0a0a0a;';
   var nid = node.id;
-  // Toolbar: Sığdır + Hint + Kesit kontrolü (X/Y/Z toggle + slider)
-  // Kesit hacim mesh içini gösterir — ANSYS section view eşdeğeri.
   var clipUI = _veFEAEditorBuildClipControls(nid);
-  panel.innerHTML =
-    // Viewer toolbar (üst, mini)
-    '<div style="display:flex; align-items:center; gap:6px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;">' +
-      '<button onclick="veFEAFitPreviewForNode(\'' + nid + '\')" style="padding:5px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">⛶ Sığdır</button>' +
-      '<span style="font-size:0.58rem; color:var(--text-muted); margin-left:4px; margin-right:8px;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</span>' +
-      clipUI +
+  // ANSYS-style view toolbar: Standart görünümler (Iso/Top/Bot/Front/Back/Left/Right)
+  // + Previous/Next view (history) + Display mode + Sığdır + Kesit.
+  var btnStyle = 'padding:4px 7px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; min-width:30px;';
+  var viewToolbar = '<div style="display:flex; align-items:center; gap:4px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;">' +
+    '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'fit\')" style="' + btnStyle + '" title="Tümünü pencereye sığdır">⛶</button>' +
+    '<div style="display:flex; gap:0; margin-left:4px;">' +
+      '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-iso\')"    style="' + btnStyle + '" title="İzometrik görünüm">Iso</button>' +
+      '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-front\')"  style="' + btnStyle + 'border-left:none;" title="Ön görünüm (+Z)">F</button>' +
+      '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-back\')"   style="' + btnStyle + 'border-left:none;" title="Arka görünüm (-Z)">Bk</button>' +
+      '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-top\')"    style="' + btnStyle + 'border-left:none;" title="Üst görünüm (+Y)">↑</button>' +
+      '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-bottom\')" style="' + btnStyle + 'border-left:none;" title="Alt görünüm (-Y)">↓</button>' +
+      '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-left\')"   style="' + btnStyle + 'border-left:none;" title="Sol görünüm (-X)">←</button>' +
+      '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-right\')"  style="' + btnStyle + 'border-left:none;" title="Sağ görünüm (+X)">→</button>' +
     '</div>' +
-    // Canvas — mevcut viewer ID konvansiyonunu kullan
+    '<div style="display:flex; gap:0; margin-left:4px;">' +
+      '<button id="ve-fea-prev-view-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'prev-view\')" style="' + btnStyle + '" title="Önceki görünüm">◀</button>' +
+      '<button id="ve-fea-next-view-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'next-view\')" style="' + btnStyle + 'border-left:none;" title="Sonraki görünüm">▶</button>' +
+    '</div>' +
+    '<button id="ve-fea-disp-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'display-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Render modu: Shaded / Edges / Wireframe">Shaded</button>' +
+    '<button id="ve-fea-pointer-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'pointer-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Pointer modu: View / Face Pick / Body Pick">⊞ View</button>' +
+    '<span style="font-size:0.55rem; color:var(--text-muted); margin-left:6px;">LMB: orbit · RMB: pan · wheel: zoom</span>' +
+    clipUI +
+    '</div>';
+  panel.innerHTML = viewToolbar +
+    // Hit-point + cursor coordinate overlay (canvas üstünde absolute)
     '<div style="flex:1; position:relative; min-height:0; background:#1a1a1a;">' +
       '<canvas id="ve-fea-mesh-canvas-' + nid + '" style="display:block; width:100%; height:100%; cursor:grab;"></canvas>' +
+      '<div id="ve-fea-hit-coord-' + nid + '" style="position:absolute; bottom:8px; left:8px; padding:4px 8px; background:rgba(0,0,0,0.65); color:#fbbf24; font-size:0.6rem; font-family:monospace; pointer-events:none; display:none; border:1px solid #444;"></div>' +
+      '<div id="ve-fea-depth-stack-' + nid + '" style="position:absolute; bottom:8px; right:8px; display:none; gap:2px; flex-direction:column;"></div>' +
     '</div>';
   return panel;
+}
+
+// ANSYS-style viewer action dispatcher — toolbar button → viewer method
+function veFEAEditorViewerAction(nodeId, action) {
+  if (typeof veFEAViewerRegistry === 'undefined') return;
+  var viewer = veFEAViewerRegistry[nodeId];
+  if (!viewer) return;
+  if (action === 'fit') { viewer.fitToGeometry(); _veFEAEditorRefreshHistoryButtons(nodeId); return; }
+  if (action.indexOf('view-') === 0) {
+    var view = action.substring(5);
+    if (typeof viewer.setStandardView === 'function') viewer.setStandardView(view);
+    _veFEAEditorRefreshHistoryButtons(nodeId);
+    return;
+  }
+  if (action === 'prev-view') { if (viewer.previousView) viewer.previousView(); _veFEAEditorRefreshHistoryButtons(nodeId); return; }
+  if (action === 'next-view') { if (viewer.nextView) viewer.nextView(); _veFEAEditorRefreshHistoryButtons(nodeId); return; }
+  if (action === 'display-mode') {
+    var modes = ['shaded', 'shaded-edges', 'wireframe'];
+    var labels = { 'shaded': 'Shaded', 'shaded-edges': 'Edges', 'wireframe': 'Wire' };
+    var cur = viewer._displayMode || 'shaded';
+    var next = modes[(modes.indexOf(cur) + 1) % modes.length];
+    if (typeof viewer.setDisplayMode === 'function') viewer.setDisplayMode(next);
+    var btn = document.getElementById('ve-fea-disp-mode-' + nodeId);
+    if (btn) btn.textContent = labels[next];
+    return;
+  }
+  if (action === 'pointer-mode') {
+    // ANSYS-style pointer mode cycle
+    var modes = ['view', 'face-pick', 'box-select', 'body-pick', 'measure'];
+    var labels = { view: '⊞ View', 'face-pick': '⊡ Face Pick', 'box-select': '▭ Box Select', 'body-pick': '⊠ Body Pick', measure: '⌖ Measure' };
+    var cur = viewer._pointerMode || 'view';
+    var next = modes[(modes.indexOf(cur) + 1) % modes.length];
+    if (typeof viewer.setPointerMode === 'function') viewer.setPointerMode(next);
+    var pbtn = document.getElementById('ve-fea-pointer-mode-' + nodeId);
+    if (pbtn) pbtn.textContent = labels[next];
+    return;
+  }
+}
+
+function _veFEAEditorRefreshHistoryButtons(nodeId) {
+  if (typeof veFEAViewerRegistry === 'undefined') return;
+  var viewer = veFEAViewerRegistry[nodeId];
+  if (!viewer) return;
+  var prevBtn = document.getElementById('ve-fea-prev-view-' + nodeId);
+  var nextBtn = document.getElementById('ve-fea-next-view-' + nodeId);
+  if (prevBtn) prevBtn.style.opacity = viewer.canGoPreviousView && viewer.canGoPreviousView() ? '1' : '0.4';
+  if (nextBtn) nextBtn.style.opacity = viewer.canGoNextView     && viewer.canGoNextView()     ? '1' : '0.4';
 }
 
 // Kesit (clipping plane) UI — toolbar inline. Her eksen için: toggle button
@@ -1193,6 +1257,8 @@ function _veFEAEditorFaceSizingHTML(node) {
     } else {
       html += '<button onclick="veFEAAddFaceSizingFromSelection(\'' + node.id + '\')" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;" onmouseenter="this.style.filter=\'brightness(1.15)\'" onmouseleave="this.style.filter=\'none\'">+ Sizing\'e ekle</button>';
     }
+    // ANSYS Extend to Adjacent — komşu face'leri aynı sizing ile bulk ekle
+    html += '<button onclick="veFEAExtendFaceSizingAdjacent(\'' + node.id + '\', 30)" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="Komşu yüzeyleri (≤30°) aynı boyutla ekle">⇲ Extend Adjacent</button>';
   } else {
     html += '<span style="flex:1; font-size:0.6rem; color:var(--text-muted); font-style:italic;">3D görüntüleyicide bir yüzeye tıklayın…</span>';
   }
@@ -1253,6 +1319,45 @@ function veFEAAddFaceSizingFromSelection(nodeId) {
   node.data.meshSettings.faceSizingControls.push({
     faceId: fid, size: defaultSize, behavior: 'soft'
   });
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// ANSYS Extend to Adjacent: mevcut seçili face'in komşularını (feature-angle
+// thresholdDeg ile) face sizing listesine bulk ekler. Aynı boyut + behavior.
+function veFEAExtendFaceSizingAdjacent(nodeId, thresholdDeg) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node || !node.data || !node.data.selectedFaceId) return;
+  if (!node.data.geometry) return;
+  if (typeof veFEAComputeGeometryTopology !== 'function' ||
+      typeof veFEAExtendSelectionAdjacent !== 'function') return;
+  var topo = veFEAComputeGeometryTopology(node.data.geometry);
+  if (!topo) return;
+  var extended = veFEAExtendSelectionAdjacent([node.data.selectedFaceId], topo, thresholdDeg);
+  if (extended.length === 0) return;
+
+  node.data.meshSettings = node.data.meshSettings || {};
+  if (!Array.isArray(node.data.meshSettings.faceSizingControls)) {
+    node.data.meshSettings.faceSizingControls = [];
+  }
+  var existing = veFEAReadFaceSizingFromUI(nodeId);
+  if (existing.length > 0) node.data.meshSettings.faceSizingControls = existing;
+
+  var defaultSize = ((node.data.meshSettings.size) || 10) / 2;
+  var existingIds = {};
+  node.data.meshSettings.faceSizingControls.forEach(function(c) { existingIds[c.faceId] = true; });
+  var addedCount = 0;
+  extended.forEach(function(fid) {
+    if (existingIds[fid]) return;
+    node.data.meshSettings.faceSizingControls.push({
+      faceId: fid, size: defaultSize, behavior: 'soft'
+    });
+    addedCount++;
+  });
+  if (typeof showToast === 'function') {
+    showToast(addedCount + ' komşu yüz Face Sizing\'e eklendi (eşik ' + (thresholdDeg || 30) + '°)', 'info');
+  }
   if (typeof saveState === 'function') saveState();
   if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 }

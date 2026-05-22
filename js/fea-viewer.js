@@ -1027,6 +1027,7 @@ function veFEAInitViewer(canvas, opts) {
     fitToGeometry: function() {
       if(this._geometryRoot.children.length === 0) return;
       this.zoomToFit(this._geometryRoot);
+      this._viewHistoryCapture();
     },
     // Standart CAD görünümleri: 'iso', 'top', 'bottom', 'front', 'back', 'right', 'left'
     setStandardView: function(name) {
@@ -1062,6 +1063,7 @@ function veFEAInitViewer(canvas, opts) {
       camera.far = distance * 100;
       camera.updateProjectionMatrix();
       if(orbitHandle.sync) orbitHandle.sync();
+      this._viewHistoryCapture();
       render();
     },
     // Projeksiyon değişimi: 'perspective' veya 'orthographic'. Kamera
@@ -1106,6 +1108,138 @@ function veFEAInitViewer(canvas, opts) {
       x: { enabled: false, offset: 0 },
       y: { enabled: false, offset: 0 },
       z: { enabled: false, offset: 0 }
+    },
+    // ─── ANSYS-style Previous/Next view stack ─────────────────────────────
+    // Kamera state snapshot'ları (position+target+zoom) — undo/redo mantığı.
+    _viewHistory: [],       // { pos, target, zoom, projType }[]
+    _viewHistoryIdx: -1,
+    _viewHistoryCapture: function() {
+      var snapshot = {
+        pos: camera.position.toArray(),
+        target: target.toArray(),
+        projType: camera.isOrthographicCamera ? 'ortho' : 'persp'
+      };
+      if (camera.isOrthographicCamera) {
+        snapshot.left = camera.left; snapshot.right = camera.right;
+        snapshot.top = camera.top;   snapshot.bottom = camera.bottom;
+      } else {
+        snapshot.fov = camera.fov;
+      }
+      // Hâlihazırda undo'ya gittiyse, future-history'yi at
+      if (this._viewHistoryIdx < this._viewHistory.length - 1) {
+        this._viewHistory.length = this._viewHistoryIdx + 1;
+      }
+      this._viewHistory.push(snapshot);
+      // Max 30 snapshot tut
+      if (this._viewHistory.length > 30) this._viewHistory.shift();
+      this._viewHistoryIdx = this._viewHistory.length - 1;
+    },
+    _viewHistoryRestore: function(idx) {
+      if (idx < 0 || idx >= this._viewHistory.length) return;
+      var s = this._viewHistory[idx];
+      camera.position.fromArray(s.pos);
+      target.fromArray(s.target);
+      camera.lookAt(target);
+      camera.updateProjectionMatrix();
+      if(orbitHandle.sync) orbitHandle.sync();
+      this._viewHistoryIdx = idx;
+      render();
+    },
+    previousView: function() {
+      if (this._viewHistoryIdx > 0) this._viewHistoryRestore(this._viewHistoryIdx - 1);
+    },
+    nextView: function() {
+      if (this._viewHistoryIdx < this._viewHistory.length - 1) {
+        this._viewHistoryRestore(this._viewHistoryIdx + 1);
+      }
+    },
+    canGoPreviousView: function() { return this._viewHistoryIdx > 0; },
+    canGoNextView:     function() { return this._viewHistoryIdx < this._viewHistory.length - 1; },
+
+    // ─── ANSYS-style Pointer Mode (state machine) ─────────────────────────
+    // Cursor her an ya 'view' (kamera kontrolü) ya da bir picking filter
+    // modundadır. View modunda LMB orbit + sağ tık dynamic rotation center.
+    // Face/Body pick modunda LMB seçim yapar.
+    _pointerMode: 'view',  // 'view' | 'face-pick' | 'body-pick' | 'box-select' | 'measure'
+    setPointerMode: function(mode) {
+      if (['view', 'face-pick', 'body-pick', 'box-select', 'measure'].indexOf(mode) < 0) mode = 'view';
+      this._pointerMode = mode;
+      var cursors = { 'view': 'grab', 'face-pick': 'crosshair', 'body-pick': 'crosshair', 'box-select': 'crosshair', 'measure': 'crosshair' };
+      if (canvas && canvas.style) canvas.style.cursor = cursors[mode] || 'grab';
+      // Hit-coord overlay measure modunda aktif
+      var coordDiv = document.getElementById('ve-fea-hit-coord-' + (canvas.id || '').replace('ve-fea-mesh-canvas-', '').replace('ve-fea-geom-canvas-', ''));
+      if (coordDiv) coordDiv.style.display = (mode === 'measure') ? 'block' : 'none';
+    },
+    getPointerMode: function() { return this._pointerMode; },
+
+    // ─── Dynamic rotation center (ANSYS-style) ─────────────────────────────
+    // Geometriye sağ-tıklayınca o nokta rotation center'a (target) atanır,
+    // kısa süreli kırmızı küre indicator gösterilir.
+    setRotationCenterAt: function(worldPoint) {
+      if (!worldPoint) return;
+      target.copy(worldPoint);
+      camera.lookAt(target);
+      if (orbitHandle.sync) orbitHandle.sync();
+      // Indicator: scene'e kırmızı küre, 1.2 sn sonra kaldır
+      if (this._rotCenterMarker) {
+        scene.remove(this._rotCenterMarker);
+        if (this._rotCenterMarker.geometry && this._rotCenterMarker.geometry.dispose) this._rotCenterMarker.geometry.dispose();
+        if (this._rotCenterMarker.material && this._rotCenterMarker.material.dispose) this._rotCenterMarker.material.dispose();
+        this._rotCenterMarker = null;
+      }
+      var bbox = new THREE.Box3().setFromObject(this._geometryRoot || scene);
+      var sz = bbox.isEmpty() ? 50 : Math.max(bbox.getSize(new THREE.Vector3()).x, bbox.getSize(new THREE.Vector3()).y, bbox.getSize(new THREE.Vector3()).z);
+      var r = Math.max(0.5, sz * 0.012);
+      var geo = new THREE.SphereGeometry(r, 16, 16);
+      var mat = new THREE.MeshBasicMaterial({ color: 0xff3030, depthTest: false, transparent: true, opacity: 0.85 });
+      var sphere = new THREE.Mesh(geo, mat);
+      sphere.position.copy(worldPoint);
+      sphere.renderOrder = 9999;
+      scene.add(sphere);
+      this._rotCenterMarker = sphere;
+      var self = this;
+      setTimeout(function() {
+        if (self._rotCenterMarker === sphere) {
+          scene.remove(sphere);
+          if (sphere.geometry) sphere.geometry.dispose();
+          if (sphere.material) sphere.material.dispose();
+          self._rotCenterMarker = null;
+          render();
+        }
+      }, 1200);
+      render();
+    },
+
+    // ─── Hit point at screen coord (ANSYS Hit Point Coordinate) ───────────
+    // İstenirse measure modunda cursor pozisyonundan canlı koordinat verir.
+    pickPointFromMouse: function(clientX, clientY) {
+      if (!this._geometryRoot || this._geometryRoot.children.length === 0) return null;
+      var rect = canvas.getBoundingClientRect();
+      var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+      var ny = -((clientY - rect.top) / rect.height) * 2 + 1;
+      var rc = new THREE.Raycaster();
+      rc.setFromCamera({ x: nx, y: ny }, camera);
+      var hits = rc.intersectObject(this._geometryRoot, true);
+      for (var i = 0; i < hits.length; i++) {
+        if (hits[i].point) return hits[i].point.clone();
+      }
+      return null;
+    },
+    // Tüm derin hit'ler (depth picking için) — raycaster mesafeye göre sıralı döner
+    pickAllFromMouse: function(clientX, clientY) {
+      if (!this._geometryRoot || this._geometryRoot.children.length === 0) return [];
+      var rect = canvas.getBoundingClientRect();
+      var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+      var ny = -((clientY - rect.top) / rect.height) * 2 + 1;
+      var rc = new THREE.Raycaster();
+      rc.setFromCamera({ x: nx, y: ny }, camera);
+      return rc.intersectObject(this._geometryRoot, true);
+    },
+    isMeasuring: function() { return this._pointerMode === 'measure'; },
+    // Ölçüm pointlar listesi (toolbar button entegrasyonu için stub)
+    addMeasurementPoint: function(pt) {
+      this._measurementPoints = this._measurementPoints || [];
+      this._measurementPoints.push(pt.clone());
     },
     setDisplayMode: function(mode) {
       if(mode !== 'shaded' && mode !== 'shaded-edges' && mode !== 'wireframe') return;
@@ -1323,12 +1457,29 @@ function veFEAInitViewer(canvas, opts) {
     }
     return null;
   }
+  // ANSYS-style Hit Point Coordinate overlay — measure / face-pick modunda
+  // canvas üstündeki overlay div'i canlı koordinatlarla günceller.
+  function _updateHitCoordOverlay(e) {
+    var idStripped = (canvas.id || '').replace(/^ve-fea-(mesh|geom)-canvas-/, '');
+    var div = document.getElementById('ve-fea-hit-coord-' + idStripped);
+    if (!div) return;
+    var mode = viewer._pointerMode || 'view';
+    if (mode !== 'measure' && mode !== 'face-pick') { div.style.display = 'none'; return; }
+    var pt = viewer.pickPointFromMouse(e.clientX, e.clientY);
+    if (!pt) { div.style.display = 'none'; return; }
+    div.style.display = 'block';
+    div.textContent = 'X: ' + pt.x.toFixed(2) + '  Y: ' + pt.y.toFixed(2) + '  Z: ' + pt.z.toFixed(2);
+  }
+
   function _onFaceMouseMove(e) {
+    _updateHitCoordOverlay(e);
     if (e.buttons !== 0) return;  // orbit/pan drag sırasında hover skip
     if (!viewer._faceMaterials) return;
     var fid = _raycastFaceId(e.clientX, e.clientY);
     viewer.setHoveredFace(fid);
-    canvas.style.cursor = fid ? 'pointer' : 'grab';
+    if ((viewer._pointerMode || 'view') === 'view') {
+      canvas.style.cursor = fid ? 'pointer' : 'grab';
+    }
   }
   function _onFaceMouseDown(e) {
     if (e.button !== 0) return;
@@ -1347,16 +1498,201 @@ function veFEAInitViewer(canvas, opts) {
     if (typeof veFEAOnViewerFaceSelected === 'function') {
       veFEAOnViewerFaceSelected(fid);
     }
+    // ANSYS depth picking Z-stack: tıklamada üst üste 2+ hit varsa overlay göster
+    _updateDepthStack(e);
   }
+  // ─── ANSYS-style Depth Picking Z-Stack overlay ────────────────────────────
+  // Tıklamada raycaster'ın tüm intersections'larını sol-alt overlay'de
+  // dikey küçük rectangle yığını olarak göster. Üstteki = görünür face,
+  // altındakiler = arkadaki face'ler (ışın boyunca). Tıklayınca o face'i seç.
+  function _updateDepthStack(e) {
+    var idStripped = (canvas.id || '').replace(/^ve-fea-(mesh|geom)-canvas-/, '');
+    var stack = document.getElementById('ve-fea-depth-stack-' + idStripped);
+    if (!stack) return;
+    var hits = viewer.pickAllFromMouse(e.clientX, e.clientY) || [];
+    // Sadece face owner mesh'leri tut, sırayla
+    var faceHits = [];
+    var seen = {};
+    for (var i = 0; i < hits.length; i++) {
+      var h = hits[i];
+      if (!h || !h.object || !h.object.userData) continue;
+      if (!(h.object.userData.feaFaceId || h.object.userData.feaFaceMap)) continue;
+      var fid = _faceIdFromHit(h);
+      if (!fid || seen[fid]) continue;
+      seen[fid] = true;
+      faceHits.push({ faceId: fid, distance: h.distance });
+    }
+    if (faceHits.length < 2) {
+      stack.style.display = 'none';
+      stack.innerHTML = '';
+      return;
+    }
+    stack.style.display = 'flex';
+    var sel = viewer._selectedFaceId;
+    var html = '<div style="font-size:0.5rem; color:#999; padding:2px 4px; background:rgba(0,0,0,0.6);">Depth ' + faceHits.length + '</div>';
+    faceHits.forEach(function(h, idx) {
+      var isSel = (h.faceId === sel);
+      var bgColor = isSel ? '#fbbf24' : (idx === 0 ? '#22c55e' : '#3b82f6');
+      var op = isSel ? '1' : (0.4 + (faceHits.length - idx) / faceHits.length * 0.5);
+      html += '<div data-depth-face="' + h.faceId + '" style="width:80px; padding:3px 6px; background:' + bgColor +
+        '; color:#000; font-size:0.55rem; font-family:monospace; cursor:pointer; opacity:' + op + '; border:1px solid #000;"' +
+        ' title="d=' + h.distance.toFixed(2) + ' — tıkla seç">' + h.faceId + '</div>';
+    });
+    stack.innerHTML = html;
+    // Click handler — her satır
+    var rows = stack.querySelectorAll('[data-depth-face]');
+    rows.forEach(function(row) {
+      row.addEventListener('click', function(ev) {
+        ev.stopPropagation();
+        var fid = this.getAttribute('data-depth-face');
+        viewer.setSelectedFace(fid);
+        if (typeof veFEAOnViewerFaceSelected === 'function') veFEAOnViewerFaceSelected(fid);
+        // Stack güncelle (highlight değişecek)
+        _updateDepthStack(e);
+      });
+      row.addEventListener('mouseenter', function() {
+        var fid = this.getAttribute('data-depth-face');
+        viewer.setHoveredFace(fid);
+      });
+      row.addEventListener('mouseleave', function() {
+        viewer.setHoveredFace(null);
+      });
+    });
+  }
+  // Sağ tık: dynamic rotation center. ANSYS'in "tıklanan noktayı rotation
+  // center yap" davranışı (orta tuş yerine sağ tuş — orta tuş zaten pan).
+  function _onContextMenu(e) {
+    if ((viewer._pointerMode || 'view') !== 'view') return;
+    var pt = viewer.pickPointFromMouse(e.clientX, e.clientY);
+    if (pt) {
+      e.preventDefault();
+      viewer.setRotationCenterAt(pt);
+    }
+  }
+
+  // ─── ANSYS-style Box Select (pointer mode = 'box-select') ─────────────────
+  // LMB drag → ekran-uzayında dikdörtgen, mouseup'ta face center'larını
+  // project et + rectangle içindekileri seç. Drag yönü:
+  //   sağ→sol (dx<0) = crossing — rectangle'a *değen* face'ler.
+  //   sol→sağ (dx>0) = window — *tamamen* içerideki face center'lar.
+  var _boxStart = null;
+  var _boxOverlay = null;
+  function _ensureBoxOverlay() {
+    if (_boxOverlay) return _boxOverlay;
+    var parent = canvas.parentElement;
+    if (!parent) return null;
+    _boxOverlay = document.createElement('div');
+    _boxOverlay.style.cssText = 'position:absolute; border:1px dashed #fbbf24; background:rgba(251,191,36,0.12); pointer-events:none; display:none;';
+    parent.appendChild(_boxOverlay);
+    return _boxOverlay;
+  }
+  function _onBoxMouseDown(e) {
+    if ((viewer._pointerMode || 'view') !== 'box-select') return;
+    if (e.button !== 0) return;
+    var rect = canvas.getBoundingClientRect();
+    _boxStart = { x: e.clientX, y: e.clientY, canvasRect: rect };
+    var ov = _ensureBoxOverlay();
+    if (ov) {
+      ov.style.left = (e.clientX - rect.left) + 'px';
+      ov.style.top = (e.clientY - rect.top) + 'px';
+      ov.style.width = '0px';
+      ov.style.height = '0px';
+      ov.style.display = 'block';
+    }
+    e.preventDefault();
+  }
+  function _onBoxMouseMove(e) {
+    if (!_boxStart) return;
+    var ov = _boxOverlay;
+    if (!ov) return;
+    var rect = _boxStart.canvasRect;
+    var x0 = _boxStart.x - rect.left;
+    var y0 = _boxStart.y - rect.top;
+    var x1 = e.clientX - rect.left;
+    var y1 = e.clientY - rect.top;
+    ov.style.left = Math.min(x0, x1) + 'px';
+    ov.style.top = Math.min(y0, y1) + 'px';
+    ov.style.width = Math.abs(x1 - x0) + 'px';
+    ov.style.height = Math.abs(y1 - y0) + 'px';
+    // Yön rengi: crossing = mavi-yeşil, window = sarı
+    var crossing = (e.clientX < _boxStart.x);
+    ov.style.border = '1px dashed ' + (crossing ? '#2dd4bf' : '#fbbf24');
+    ov.style.background = crossing ? 'rgba(45,212,191,0.10)' : 'rgba(251,191,36,0.12)';
+  }
+  function _onBoxMouseUp(e) {
+    if (!_boxStart) return;
+    var rect = _boxStart.canvasRect;
+    var x0 = _boxStart.x, y0 = _boxStart.y, x1 = e.clientX, y1 = e.clientY;
+    var crossing = (x1 < x0);  // sağ→sol = crossing
+    var startRectX = _boxStart.x; // sadece "ana" yön bilgisi
+    if (_boxOverlay) _boxOverlay.style.display = 'none';
+    _boxStart = null;
+    if (Math.abs(x1 - x0) < 4 && Math.abs(y1 - y0) < 4) return;  // klik, drag değil
+
+    if (!viewer._faceMaterials) return;
+    // Her face center'ını ekran uzayına project et — selected list'i topla
+    var minX = Math.min(x0, x1) - rect.left;
+    var maxX = Math.max(x0, x1) - rect.left;
+    var minY = Math.min(y0, y1) - rect.top;
+    var maxY = Math.max(y0, y1) - rect.top;
+    var w = canvas.width || canvas.clientWidth;
+    var h = canvas.height || canvas.clientHeight;
+    var selected = [];
+    var faceIds = Object.keys(viewer._faceMaterials || {});
+    var v = new THREE.Vector3();
+    var allMeshes = [];
+    viewer._geometryRoot.traverse(function(obj) {
+      if (obj.isMesh && obj.userData && (obj.userData.feaFaceId || obj.userData.feaFaceMap)) {
+        allMeshes.push(obj);
+      }
+    });
+    // Her mesh için bbox center → project → screen → in/out test
+    allMeshes.forEach(function(mesh) {
+      var bbox = new THREE.Box3().setFromObject(mesh);
+      if (bbox.isEmpty()) return;
+      var c = bbox.getCenter(v.clone());
+      var p = c.clone().project(camera);
+      var sx = ((p.x + 1) / 2) * w;
+      var sy = ((-p.y + 1) / 2) * h;
+      if (sx >= minX && sx <= maxX && sy >= minY && sy <= maxY) {
+        if (mesh.userData.feaFaceId) selected.push(mesh.userData.feaFaceId);
+        else if (mesh.userData.feaFaceMap && mesh.userData.feaFaceMap.length > 0) {
+          // Multi-material mesh: ilk faceId (mesh tek bir entity)
+          selected.push(mesh.userData.feaFaceMap[0]);
+        }
+      }
+    });
+    // İlk seçileni viewer.setSelectedFace ile işaretle (UI çok-seçim sonra)
+    if (selected.length > 0) {
+      viewer.setSelectedFace(selected[selected.length - 1]);
+      if (typeof veFEAOnViewerBoxSelected === 'function') {
+        veFEAOnViewerBoxSelected(selected, crossing);
+      }
+      if (typeof veFEAOnViewerFaceSelected === 'function') {
+        veFEAOnViewerFaceSelected(selected[selected.length - 1]);
+      }
+    }
+  }
+
   canvas.addEventListener('mousemove', _onFaceMouseMove);
+  canvas.addEventListener('mousemove', _onBoxMouseMove);
   canvas.addEventListener('mousedown', _onFaceMouseDown);
+  canvas.addEventListener('mousedown', _onBoxMouseDown);
   window.addEventListener('mouseup', _onFaceMouseUp);
+  window.addEventListener('mouseup', _onBoxMouseUp);
+  canvas.addEventListener('contextmenu', _onContextMenu);
   // Dispose'da bunları temizle
   var origDispose = viewer.dispose;
   viewer.dispose = function() {
     canvas.removeEventListener('mousemove', _onFaceMouseMove);
+    canvas.removeEventListener('mousemove', _onBoxMouseMove);
     canvas.removeEventListener('mousedown', _onFaceMouseDown);
+    canvas.removeEventListener('mousedown', _onBoxMouseDown);
     window.removeEventListener('mouseup', _onFaceMouseUp);
+    window.removeEventListener('mouseup', _onBoxMouseUp);
+    canvas.removeEventListener('contextmenu', _onContextMenu);
+    if (_boxOverlay && _boxOverlay.parentNode) _boxOverlay.parentNode.removeChild(_boxOverlay);
+    _boxOverlay = null;
     if (typeof origDispose === 'function') origDispose.call(viewer);
   };
 

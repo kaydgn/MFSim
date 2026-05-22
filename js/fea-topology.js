@@ -25,6 +25,70 @@
 //   veFEATopologyFaceTypeLabel(type)       → "Düzlemsel" / "Silindirik" / ...
 // ============================================================================
 
+// ─── Face Adjacency Graph (ANSYS Extend to Adjacent için) ─────────────────
+// topology.edges[].faceIds bilgisinden her face için komşu listesi çıkarır.
+// Her edge'in iki face'i birbiriyle komşudur (shared edge).
+function veFEABuildFaceAdjacency(topology) {
+  var adj = {};
+  if (!topology || !Array.isArray(topology.edges)) return adj;
+  topology.edges.forEach(function(e) {
+    if (!Array.isArray(e.faceIds) || e.faceIds.length < 2) return;
+    for (var i = 0; i < e.faceIds.length; i++) {
+      for (var j = 0; j < e.faceIds.length; j++) {
+        if (i === j) continue;
+        var a = e.faceIds[i], b = e.faceIds[j];
+        if (!adj[a]) adj[a] = [];
+        if (adj[a].indexOf(b) < 0) adj[a].push(b);
+      }
+    }
+  });
+  return adj;
+}
+
+// ANSYS Extend to Adjacent: feature-angle region growing.
+// Verilen face seçiminden başlayıp, normaller arası açı thresholdDeg'den
+// küçük olan komşuları rekürsif olarak ekler. Cylindrical/spherical normal
+// vektörü olmayan face'ler atlanır.
+function veFEAExtendSelectionAdjacent(selectedFaceIds, topology, thresholdDeg) {
+  if (!Array.isArray(selectedFaceIds) || selectedFaceIds.length === 0) return [];
+  if (!topology) return selectedFaceIds.slice();
+  var threshold = (isFinite(+thresholdDeg) && +thresholdDeg > 0) ? +thresholdDeg : 30;
+  var thresholdRad = threshold * Math.PI / 180;
+  var adj = veFEABuildFaceAdjacency(topology);
+  var faceMap = {};
+  if (Array.isArray(topology.faces)) topology.faces.forEach(function(f) { faceMap[f.id] = f; });
+
+  var result = {};
+  selectedFaceIds.forEach(function(id) { result[id] = true; });
+  var changed = true;
+  var maxIter = 1000;  // sonsuz döngü koruması
+  while (changed && maxIter-- > 0) {
+    changed = false;
+    var keys = Object.keys(result);
+    for (var i = 0; i < keys.length; i++) {
+      var fid = keys[i];
+      var f = faceMap[fid];
+      if (!f || !Array.isArray(f.normal)) continue;
+      var neighbors = adj[fid] || [];
+      for (var j = 0; j < neighbors.length; j++) {
+        var nid = neighbors[j];
+        if (result[nid]) continue;
+        var nf = faceMap[nid];
+        if (!nf || !Array.isArray(nf.normal)) continue;
+        // İki face normal'i arasındaki açı (yön bağımsız — mutlak dot)
+        var dot = f.normal[0]*nf.normal[0] + f.normal[1]*nf.normal[1] + f.normal[2]*nf.normal[2];
+        if (dot > 1) dot = 1; if (dot < -1) dot = -1;
+        var ang = Math.acos(Math.abs(dot));
+        if (ang <= thresholdRad) {
+          result[nid] = true;
+          changed = true;
+        }
+      }
+    }
+  }
+  return Object.keys(result);
+}
+
 function veFEAComputeGeometryTopology(geometry) {
   if (!geometry || !geometry.type) return null;
   var p = geometry.params || {};
