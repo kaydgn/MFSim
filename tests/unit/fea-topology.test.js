@@ -10,6 +10,8 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '../..');
 
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-utils.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-feature-recognition.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -721,5 +723,209 @@ describe('Cylinder edge polyline aksial doğrulama', () => {
     var top = t.edges.find(function(e) { return e.id === 'edgeTopCircle'; });
     bot.polyline.forEach(function(p) { expect(p[1]).toBeCloseTo(-h/2, 3); });
     top.polyline.forEach(function(p) { expect(p[1]).toBeCloseTo( h/2, 3); });
+  });
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// FAZ 2 — TÜM GEOMETRİLER İÇİN TAM TOPOLOGY (edge ↔ face bağı)
+// ════════════════════════════════════════════════════════════════════════════
+describe('Tüm primitif geometrilerde edge ↔ face bağı', () => {
+  var geomTypes = [
+    { type: 'box',        params: { width: 50, height: 30, depth: 20 } },
+    { type: 'cylinder',   params: { radius: 15, height: 60 } },
+    { type: 'shaft',      params: { outerRadius: 20, innerRadius: 8, length: 100 } },
+    { type: 'cone',       params: { bottomRadius: 20, topRadius: 8, height: 60 } },
+    { type: 'hemisphere', params: { radius: 25 } },
+    { type: 'lbracket',   params: { width: 60, height: 40, thickness: 5, length: 100 } },
+    { type: 'ibeam',      params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } },
+    { type: 'rectTube',   params: { width: 60, height: 40, thickness: 5, length: 200 } },
+    { type: 'washer',     params: { outerRadius: 12, innerRadius: 5, thickness: 1.5 } },
+    { type: 'nut',        params: { width: 13, thickness: 6.5, holeDiameter: 8 } },
+    { type: 'bolt',       params: { headWidth: 13, headHeight: 5.5, shaftDiameter: 8, shaftLength: 30 } },
+    { type: 'plate',      params: { length: 120, width: 80, thickness: 8, holeDiameter: 9, cols: 2, rows: 2, margin: 15 } }
+  ];
+  geomTypes.forEach(function(g) {
+    test(g.type + ': her edge en az 2 face\'e bağlı', () => {
+      var topo = veFEAComputeGeometryTopology(g);
+      expect(topo).not.toBeNull();
+      expect(Array.isArray(topo.edges)).toBe(true);
+      expect(topo.edges.length).toBeGreaterThan(0);
+      topo.edges.forEach(function(e) {
+        expect(Array.isArray(e.faceIds)).toBe(true);
+        expect(e.faceIds.length).toBe(2);     // her edge tam 2 face'i ayırır
+        // Her faceId topology.faces içinde var olmalı
+        e.faceIds.forEach(function(fid) {
+          expect(topo.faces.find(function(f) { return f.id === fid; })).not.toBeUndefined();
+        });
+      });
+    });
+    test(g.type + ': her edge\'in polyline veya p1/p2\'si var', () => {
+      var topo = veFEAComputeGeometryTopology(g);
+      topo.edges.forEach(function(e) {
+        var hasPoly = Array.isArray(e.polyline) && e.polyline.length >= 2;
+        var hasEnds = Array.isArray(e.p1) && Array.isArray(e.p2);
+        expect(hasPoly || hasEnds).toBe(true);
+      });
+    });
+  });
+});
+
+describe('Tüm primitif geometrilerde vertex ↔ face bağı', () => {
+  var geomTypes = [
+    { type: 'box',        params: { width: 50, height: 30, depth: 20 } },
+    { type: 'lbracket',   params: { width: 60, height: 40, thickness: 5, length: 100 } },
+    { type: 'ibeam',      params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } },
+    { type: 'rectTube',   params: { width: 60, height: 40, thickness: 5, length: 200 } },
+    { type: 'nut',        params: { width: 13, thickness: 6.5, holeDiameter: 8 } },
+    { type: 'bolt',       params: { headWidth: 13, headHeight: 5.5, shaftDiameter: 8, shaftLength: 30 } },
+    { type: 'plate',      params: { length: 120, width: 80, thickness: 8, holeDiameter: 9, cols: 2, rows: 2, margin: 15 } },
+    { type: 'cone',       params: { bottomRadius: 20, topRadius: 0, height: 60 } }  // apex case
+  ];
+  geomTypes.forEach(function(g) {
+    test(g.type + ': her vertex en az 1 face\'e bağlı', () => {
+      var topo = veFEAComputeGeometryTopology(g);
+      expect(Array.isArray(topo.vertices)).toBe(true);
+      expect(topo.vertices.length).toBeGreaterThan(0);
+      topo.vertices.forEach(function(v) {
+        expect(Array.isArray(v.faceIds)).toBe(true);
+        expect(v.faceIds.length).toBeGreaterThanOrEqual(1);
+        // position 3 koordinat
+        expect(Array.isArray(v.position)).toBe(true);
+        expect(v.position.length).toBe(3);
+      });
+    });
+  });
+});
+
+describe('Tüm geometrilerde face\'in edge\'leri ve vertex\'leri tutarlı', () => {
+  var geomTypes = [
+    { type: 'box',      params: { width: 50, height: 30, depth: 20 } },
+    { type: 'plate',    params: { length: 120, width: 80, thickness: 8, holeDiameter: 9, cols: 1, rows: 1, margin: 15 } },
+    { type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } }
+  ];
+  geomTypes.forEach(function(g) {
+    test(g.type + ': her face\'in edge\'leri faceIds backward-reference uyumlu', () => {
+      var topo = veFEAComputeGeometryTopology(g);
+      topo.faces.forEach(function(f) {
+        // Her edge'in faceIds bu face'i içermeli
+        var faceEdges = topo.edges.filter(function(e) { return e.faceIds.indexOf(f.id) >= 0; });
+        // Box: her yüzey 4 edge'den oluşur
+        if (g.type === 'box') expect(faceEdges.length).toBe(4);
+        // Plate: top/bottom yüzleri 4 dış edge + N delik çemberi
+        if (g.type === 'plate' && (f.id === 'faceTop' || f.id === 'faceBottom')) {
+          expect(faceEdges.length).toBeGreaterThanOrEqual(4);
+        }
+      });
+    });
+  });
+});
+
+describe('Tüm geometriler için topology null değil — kapsam garantisi', () => {
+  // veFEAComputeGeometryTopology asla null dönmemeli (geometry.type varsa)
+  var allTypes = ['box', 'cylinder', 'shaft', 'sphere', 'hemisphere', 'torus', 'cone',
+                  'lbracket', 'ibeam', 'rectTube', 'washer', 'nut', 'bolt', 'plate',
+                  'unknown_type_x', 'custom_geom_y'];
+  allTypes.forEach(function(t) {
+    test(t + ' tipi → topology objesi döner (en az faces[] var)', () => {
+      var topo = veFEAComputeGeometryTopology({ type: t, params: {} });
+      expect(topo).not.toBeNull();
+      expect(Array.isArray(topo.faces)).toBe(true);
+      expect(topo.faces.length).toBeGreaterThanOrEqual(1);
+      // Her face'in id ve label'ı olmalı
+      topo.faces.forEach(function(f) {
+        expect(typeof f.id).toBe('string');
+        expect(typeof f.label).toBe('string');
+        expect(typeof f.type).toBe('string');
+      });
+    });
+  });
+});
+
+describe('Vertex bağlantı sayıları doğru — Box 8 köşede 3 face × 3 edge', () => {
+  test('Box vertex: 3 face + 3 edge (her köşe)', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 10, height: 10, depth: 10 } });
+    t.vertices.forEach(function(v) {
+      expect(v.faceIds.length).toBe(3);
+      // edgeIds: yardımcı veFEABuildVertexAdjacency üzerinden alalım
+    });
+  });
+
+  test('Box vertex.edgeIds: her köşe 3 edge\'in endpoint\'i', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 10, height: 10, depth: 10 } });
+    // Box edge'lerinin vertexIds'inden geri çıkar
+    t.vertices.forEach(function(v) {
+      var edgesAtV = t.edges.filter(function(e) {
+        return Array.isArray(e.vertexIds) && e.vertexIds.indexOf(v.id) >= 0;
+      });
+      expect(edgesAtV.length).toBe(3);
+    });
+  });
+});
+
+describe('Plate: her delik çemberi face\'i bilinen hole face\'ine bağlı', () => {
+  test('Plate 1x1 delik: 2 hole edge\'i faceHole_0_0\'a referans verir', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'plate', params: {
+      length: 100, width: 80, thickness: 8, holeDiameter: 10, cols: 1, rows: 1, margin: 30
+    }});
+    var holeEdges = t.edges.filter(function(e) { return e.id.indexOf('eP_Hole') === 0; });
+    expect(holeEdges.length).toBe(2);   // üst + alt daire
+    holeEdges.forEach(function(e) {
+      expect(e.faceIds.indexOf('faceHole_0_0')).toBeGreaterThanOrEqual(0);
+    });
+  });
+});
+
+describe('Generic motor — _veFEAExtractFullTopology helper fonksiyonları', () => {
+  test('_veFEATopoTriangleData kutu üçgen alanı doğru', () => {
+    // Tek üçgen: A(0,0,0) B(10,0,0) C(0,10,0) → alan = 50
+    var verts = new Float32Array([0,0,0, 10,0,0, 0,10,0]);
+    var td = _veFEATopoTriangleData(verts, 1);
+    expect(td.areas[0]).toBeCloseTo(50, 3);
+    expect(td.normals[2]).toBeCloseTo(1, 3);   // normal +Z
+  });
+
+  test('_veFEATopoTriangleAdjacency: iki üçgen ortak kenar', () => {
+    // 2 üçgen ortak kenar 1-2: ABС ve ACD (D=10,10,0)
+    var verts = new Float32Array([
+      0,0,0, 10,0,0, 0,10,0,   // tri 0
+      10,0,0, 10,10,0, 0,10,0  // tri 1
+    ]);
+    // Canonical: dedup ile A=0, B=1, C=2, B=1, D=3, C=2
+    var dedup = veFEADedupVertices(verts, { bboxSize: 10 });
+    var td = _veFEATopoTriangleData(verts, 2);
+    var adj = _veFEATopoTriangleAdjacency(dedup.canonical, 2, td.normals);
+    // İki üçgen ortak edge'ler üzerinden komşu olmalı
+    var hasNeighbor = false;
+    for (var s = 0; s < 3; s++) if (adj.neighbors[s] === 1) hasNeighbor = true;
+    expect(hasNeighbor).toBe(true);
+  });
+});
+
+describe('STEP topology: parsedMesh ile mesh-driven edge extraction', () => {
+  test('parsedMesh vermeden STEP topology fallback dönüyor', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'step', triangleCount: 50, surfaceArea: 1200 });
+    expect(t).not.toBeNull();
+    expect(t.faces.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('STEP detectedFeatures ile feature faces oluşur', () => {
+    var t = veFEAComputeGeometryTopology({
+      type: 'step',
+      triangleCount: 50,
+      surfaceArea: 1200,
+      volume: 500,
+      detectedFeatures: {
+        features: [
+          { type: 'planar', area: 600, normal: [0, 1, 0], triangleIds: [0, 1, 2] },
+          { type: 'cylindrical', area: 600, radius: 5, axis: [0, 1, 0], triangleIds: [3, 4, 5] }
+        ],
+        edgeStats: { total: 12, sharp: 6, smooth: 6 },
+        uniqueVertices: 8,
+        summary: { planar: 1, cylindrical: 1, spherical: 0, conical: 0, freeform: 0 }
+      }
+    });
+    expect(t.faces.length).toBe(2);
+    expect(t.faces[0].type).toBe('planar');
+    expect(t.faces[1].type).toBe('cylindrical');
   });
 });
