@@ -30257,15 +30257,10 @@ function veFEAInitViewer(canvas, opts) {
       });
     });
   }
-  // Sağ tık: dynamic rotation center. ANSYS'in "tıklanan noktayı rotation
-  // center yap" davranışı (orta tuş yerine sağ tuş — orta tuş zaten pan).
+  // Context menu disable — rotation center artık MMB'de (ANSYS davranışı).
+  // RMB pan için kullanılıyor (orbit handle'da), browser context menu'yu kapat.
   function _onContextMenu(e) {
-    if ((viewer._pointerMode || 'view') !== 'view') return;
-    var pt = viewer.pickPointFromMouse(e.clientX, e.clientY);
-    if (pt) {
-      e.preventDefault();
-      viewer.setRotationCenterAt(pt);
-    }
+    e.preventDefault();
   }
 
   // ─── ANSYS-style Box Select (pointer mode = 'box-select') ─────────────────
@@ -30394,6 +30389,11 @@ function veFEAInitViewer(canvas, opts) {
     if (typeof origDispose === 'function') origDispose.call(viewer);
   };
 
+  // ANSYS-style: orbit handle'a viewer referansı ver → pointer mode'a
+  // göre LMB davranışı + MMB rotation center.
+  if (orbitHandle && typeof orbitHandle.setViewerRef === 'function') {
+    orbitHandle.setViewerRef(viewer);
+  }
   // Canvas referansını viewer'da sakla — veFEAInitGeometryViewerForNode
   // "aynı canvas mı?" kontrolü için kullanır (preserve-across-render fix).
   viewer._canvas = canvas;
@@ -30412,6 +30412,13 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
 
   var isOrbit = false, isPan = false;
   var lastX = 0, lastY = 0;
+  // ANSYS-style pointer mode entegrasyonu — viewer oluşturulduktan sonra
+  // setViewerRef ile bağlanır. LMB davranışı buna göre değişir, MMB her
+  // zaman orbit + rotation center, RMB pan.
+  var viewerRef = null;
+  function getPointerMode() {
+    return (viewerRef && viewerRef._pointerMode) ? viewerRef._pointerMode : 'view';
+  }
 
   function updateCamera() {
     var offset = new THREE.Vector3().setFromSpherical(spherical);
@@ -30421,9 +30428,30 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
   }
 
   function onMouseDown(e) {
-    if(e.button === 0) isOrbit = true;
-    else if(e.button === 2) isPan = true;
-    else return;
+    var mode = getPointerMode();
+    if (e.button === 0) {
+      // LMB: SADECE view modunda orbit. Diğer modlarda face/body/box-select
+      // handler çalışsın — orbit'i kilitle (kamera dönmesin).
+      if (mode === 'view') isOrbit = true;
+      else return;
+    } else if (e.button === 1) {
+      // MMB (orta tuş): ANSYS davranışı — her an aktif orbit + tıklanan
+      // nokta rotation center'a atanır (re-center yok, kamera pozisyonu sabit).
+      isOrbit = true;
+      if (viewerRef && typeof viewerRef.pickPointFromMouse === 'function') {
+        var hitPt = viewerRef.pickPointFromMouse(e.clientX, e.clientY);
+        if (hitPt) {
+          // Eski target'tan kamera pozisyonu offset'i koru → re-center YOK
+          var oldOffset = camera.position.clone().sub(target);
+          target.copy(hitPt);
+          spherical.setFromVector3(oldOffset);
+          if (viewerRef.setRotationCenterAt) viewerRef.setRotationCenterAt(hitPt);
+        }
+      }
+    } else if (e.button === 2) {
+      // RMB: pan (mevcut davranış)
+      isPan = true;
+    } else return;
     lastX = e.clientX;
     lastY = e.clientY;
     e.preventDefault();
@@ -30503,6 +30531,8 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
     sync: function() {
       spherical.setFromVector3(camera.position.clone().sub(target));
     },
+    // ANSYS-style pointer mode entegrasyonu — viewer init'inden sonra çağrılır
+    setViewerRef: function(v) { viewerRef = v; },
     dispose: function() {
       canvas.removeEventListener('mousedown', onMouseDown);
       canvas.removeEventListener('contextmenu', onContextMenu);
