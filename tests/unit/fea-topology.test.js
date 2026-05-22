@@ -360,6 +360,65 @@ describe('veFEATopologyFaceTypeLabel', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+describe('Otomotiv bağlantı elemanları (washer / nut / bolt / plate)', () => {
+  test('Pul: 3-4 yüzey (delikli ise iç silindir +1), 2-4 kenar', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'washer', params: { outerRadius: 12, innerRadius: 5, thickness: 1.5, segments: 48 }});
+    expect(t).not.toBeNull();
+    expect(t.faces.length).toBe(4);   // top + bottom + outer + inner
+    expect(t.edges.count).toBe(4);    // 4 circles
+    expect(t.vertices.count).toBe(0);
+    expect(t.faces.find(f => f.id === 'faceInner').isHole).toBe(true);
+    expect(t.bbox).toEqual({ x: 24, y: 1.5, z: 24 });
+  });
+
+  test('Pul deliksiz (rIn=0): sadece 3 yüzey', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'washer', params: { outerRadius: 10, innerRadius: 0, thickness: 2, segments: 32 }});
+    expect(t.faces.length).toBe(3);
+    expect(t.edges.count).toBe(2);
+  });
+
+  test('Somun: 9 yüzey (2 hex-annular + 6 yan + 1 iç silindir), 20 kenar, 12 köşe', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'nut', params: { width: 13, thickness: 6.5, holeDiameter: 8 }});
+    expect(t.faces.length).toBe(9);
+    expect(t.faces[0].id).toBe('faceTop');
+    expect(t.faces[1].id).toBe('faceBottom');
+    expect(t.faces.filter(f => f.id.startsWith('faceSide')).length).toBe(6);
+    expect(t.faces.find(f => f.id === 'faceInner').isHole).toBe(true);
+    expect(t.edges.count).toBe(20);   // 12 hex + 6 vertical + 2 inner circles
+    expect(t.vertices.count).toBe(12);
+  });
+
+  test('Cıvata: 10 yüzey (head top + head bottom + 6 head side + shaft side + shaft bottom)', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'bolt', params: { headWidth: 13, headHeight: 5.5, shaftDiameter: 8, shaftLength: 30 }});
+    expect(t.faces.length).toBe(10);
+    expect(t.faces.find(f => f.id === 'faceHeadTop').type).toBe('planar');
+    expect(t.faces.find(f => f.id === 'faceHeadBottom').type).toBe('planar-annular');
+    expect(t.faces.find(f => f.id === 'faceShaftSide').type).toBe('cylindrical');
+    expect(t.faces.find(f => f.id === 'faceShaftBottom').type).toBe('planar');
+    expect(t.bbox.y).toBe(5.5 + 30);
+  });
+
+  test('Delikli Levha 2×2: 6 + 4 = 10 yüzey, her delik için cylindrical face', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'plate', params: {
+      length: 120, width: 80, thickness: 8, holeDiameter: 9, cols: 2, rows: 2, margin: 15
+    }});
+    // 2 top/bottom + 4 yan + 4 hole = 10 yüzey
+    expect(t.faces.length).toBe(10);
+    expect(t.faces.filter(f => f.id.startsWith('faceHole_')).length).toBe(4);
+    expect(t.edges.count).toBe(12 + 2 * 4);  // 12 plate + 2 per hole
+    expect(t.vertices.count).toBe(8);
+    expect(t.bbox).toEqual({ x: 120, y: 8, z: 80 });
+  });
+
+  test('Delikli Levha 1×1 (tek delik) ve deliksiz (cols=0 değil, ama hole çapı=0)', () => {
+    var t1 = veFEAComputeGeometryTopology({ type: 'plate', params: {
+      length: 60, width: 60, thickness: 5, holeDiameter: 8, cols: 1, rows: 1, margin: 10
+    }});
+    expect(t1.faces.length).toBe(6 + 1);  // tek delik
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('veFEAComputeGeometryTopology — Geçersiz girdi', () => {
   test('null/undefined → null', () => {
     expect(veFEAComputeGeometryTopology(null)).toBeNull();
@@ -367,8 +426,21 @@ describe('veFEAComputeGeometryTopology — Geçersiz girdi', () => {
     expect(veFEAComputeGeometryTopology({})).toBeNull();
   });
 
-  test('Bilinmeyen geometri tipi → null', () => {
-    expect(veFEAComputeGeometryTopology({ type: 'unknown' })).toBeNull();
+  test('Bilinmeyen geometri tipi → generic fallback (minimal topology)', () => {
+    // Önceden null dönerdi; şimdi _veFEAToplGeneric fallback minimal data döner.
+    // THREE/builder yoksa _veFEAToplGenericMinimal: tek "triangulated" face,
+    // sıfır edge/vertex. generic flag UI'da "otomatik tespit" notu için.
+    var result = veFEAComputeGeometryTopology({ type: 'unknown' });
+    expect(result).not.toBeNull();
+    expect(result.generic).toBe(true);
+    expect(Array.isArray(result.faces)).toBe(true);
+    expect(result.faces.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('null/undefined girdi → yine null', () => {
+    expect(veFEAComputeGeometryTopology(null)).toBeNull();
+    expect(veFEAComputeGeometryTopology(undefined)).toBeNull();
+    expect(veFEAComputeGeometryTopology({})).toBeNull(); // type yok
   });
 });
 

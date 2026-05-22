@@ -19924,6 +19924,30 @@ function onVEGearShiftProfileChange(nodeId) {
 //   veFEABuildPrimitiveMesh(type, params) → THREE.Mesh (Three.js yoksa null)
 //   veFEAPrimitiveStats(type, params)    → { volume, surfaceArea, bbox }
 //   veFEAFormatVolume(mm3) / veFEAFormatArea(mm2) / veFEAFormatBBox(mm)
+//
+// ─── YENİ PRİMİTİF EKLEME (MİNİMUM 2 ADIM) ──────────────────────────────────
+// veFEABuildPrimitiveMesh TEK DOĞRULUK KAYNAĞI. Onu implement ettiğin sürece
+// stats / topology / mesh OTOMATİK türetilir (Three.js mesh'ten generic
+// fallback'ler devreye girer):
+//
+//   ZORUNLU:
+//   1) VE_FEA_PRIMITIVES[type] = { label, schema: [...] } ekle
+//   2) _veFEABuildXxxMesh(p) fonksiyonu yaz, THREE.Mesh/Group dön
+//      + veFEABuildPrimitiveMesh dispatch'ine eklenmeli
+//
+//   OPSİYONEL (performans/kalite optimizasyonu):
+//   3) veFEAPrimitiveStats() içine analitik formül ekle (yoksa Three.js mesh'ten
+//      hesaplanır — biraz daha yavaş ama doğru sonuç)
+//   4) veFEANormalizePrimitiveParams() içine validasyon kuralı ekle (yoksa
+//      schema clamp/integer kuralları yeterli olabilir)
+//   5) fea-topology.js içine _veFEAToplXxx() ekle (yoksa _veFEAToplGeneric
+//      normal-clustering ile face'leri otomatik çıkarır)
+//   6) fea-mesh.js içine _veFEAMeshXxx() ekle (yoksa _veFEAMeshGenericPrimitive
+//      voxel + boundary-snap → tet4 path'i kullanılır)
+//
+// Adım 3-6'yı atlamak SORUN DEĞİL — fallback'ler "Desteklenmeyen tip" hatası
+// üretmez. Generic mesh ve generic topology gerçek bir kullanıcı için
+// yeterli kalitede sonuç verir.
 // ============================================================================
 
 var VE_FEA_PRIMITIVES = {
@@ -20011,6 +20035,44 @@ var VE_FEA_PRIMITIVES = {
       { key: 'thickness', label: 'Cidar kalınlığı', unit: 'mm', default: 4, min: 0.2, max: 500 },
       { key: 'length',    label: 'Uzunluk (Z sweep)', unit: 'mm', default: 200, min: 1, max: 10000 }
     ]
+  },
+  'washer': {
+    label: 'Pul / Conta / Bilezik',
+    schema: [
+      { key: 'outerRadius', label: 'Dış Yarıçap',   unit: 'mm', default: 12,  min: 0.5, max: 1000 },
+      { key: 'innerRadius', label: 'İç Yarıçap',    unit: 'mm', default: 5,   min: 0,   max: 1000 },
+      { key: 'thickness',   label: 'Kalınlık',      unit: 'mm', default: 1.5, min: 0.1, max: 200 },
+      { key: 'segments',    label: 'Çevresel Segment', unit: '−', default: 48, min: 8, max: 256, integer: true }
+    ]
+  },
+  'bolt': {
+    label: 'Cıvata (altıgen başlık)',
+    schema: [
+      { key: 'headWidth',   label: 'Başlık Anahtar Ağzı (across-flats)', unit: 'mm', default: 13, min: 1,   max: 500 },
+      { key: 'headHeight',  label: 'Başlık Yüksekliği',                  unit: 'mm', default: 5.5, min: 0.5, max: 200 },
+      { key: 'shaftDiameter', label: 'Gövde Çapı',                       unit: 'mm', default: 8,  min: 0.5, max: 200 },
+      { key: 'shaftLength', label: 'Gövde Uzunluğu',                     unit: 'mm', default: 30, min: 1,   max: 2000 }
+    ]
+  },
+  'nut': {
+    label: 'Somun (altıgen)',
+    schema: [
+      { key: 'width',     label: 'Anahtar Ağzı (across-flats)', unit: 'mm', default: 13, min: 1,   max: 500 },
+      { key: 'thickness', label: 'Kalınlık',                    unit: 'mm', default: 6.5, min: 0.5, max: 200 },
+      { key: 'holeDiameter', label: 'Delik Çapı',               unit: 'mm', default: 8,  min: 0.1, max: 200 }
+    ]
+  },
+  'plate': {
+    label: 'Delikli Levha (Mounting Plate)',
+    schema: [
+      { key: 'length',    label: 'Uzunluk (X)',     unit: 'mm', default: 120, min: 5, max: 5000 },
+      { key: 'width',     label: 'Genişlik (Y)',    unit: 'mm', default: 80,  min: 5, max: 5000 },
+      { key: 'thickness', label: 'Kalınlık (Z)',    unit: 'mm', default: 8,   min: 0.5, max: 500 },
+      { key: 'holeDiameter', label: 'Delik Çapı',   unit: 'mm', default: 9,   min: 0.1, max: 500 },
+      { key: 'cols',      label: 'Sütun Sayısı (X)', unit: '−', default: 2, min: 1, max: 20, integer: true },
+      { key: 'rows',      label: 'Satır Sayısı (Y)', unit: '−', default: 2, min: 1, max: 20, integer: true },
+      { key: 'margin',    label: 'Kenardan Boşluk',  unit: 'mm', default: 15, min: 0, max: 500 }
+    ]
   }
 };
 
@@ -20070,6 +20132,29 @@ function veFEANormalizePrimitiveParams(type, params) {
     if(out.flange >= maxFlange) out.flange = Math.max(0.5, maxFlange);
     var maxWeb = out.width - 0.1;
     if(out.web >= maxWeb) out.web = Math.max(0.5, maxWeb);
+  }
+  // Washer: iç yarıçap < dış yarıçap (eşit veya büyükse 1mm fark zorla)
+  if(type === 'washer' && out.innerRadius >= out.outerRadius) {
+    out.innerRadius = Math.max(0, out.outerRadius - 1);
+  }
+  // Nut: delik çapı altıgenin dairesel sığma limitinden küçük olmalı
+  if(type === 'nut') {
+    var nutHexR = out.width / Math.sqrt(3);
+    if(out.holeDiameter / 2 >= nutHexR) {
+      out.holeDiameter = Math.max(0.1, nutHexR * 2 - 0.5);
+    }
+  }
+  // Bolt: gövde çapı başlık genişliğinden küçük olmalı (geometrik tutarlılık)
+  if(type === 'bolt') {
+    var headInnerR = out.headWidth / Math.sqrt(3);
+    if(out.shaftDiameter / 2 >= headInnerR) {
+      out.shaftDiameter = Math.max(0.5, headInnerR * 2 - 1);
+    }
+  }
+  // Plate: delik çapı boşlukları aşmamalı
+  if(type === 'plate') {
+    var maxHoleD = Math.max(0.1, Math.min(out.length, out.width) * 0.4);
+    if(out.holeDiameter > maxHoleD) out.holeDiameter = maxHoleD;
   }
   return out;
 }
@@ -20164,9 +20249,113 @@ function veFEAPrimitiveStats(type, params) {
     var endRingArea = 2 * (outerArea - innerArea);
     surfaceArea = outerPerim * L2 + innerPerim * L2 + endRingArea;
     bbox = { x: w, y: h, z: L2 };
+  } else if(type === 'washer') {
+    var RW = p.outerRadius, rW = p.innerRadius, tW = p.thickness;
+    var annulusArea = Math.PI * (RW * RW - rW * rW);
+    volume = annulusArea * tW;
+    // 2 düz halka yüzey + dış silindir yan + iç silindir yan
+    surfaceArea = 2 * annulusArea + 2 * Math.PI * RW * tW + 2 * Math.PI * rW * tW;
+    bbox = { x: 2 * RW, y: tW, z: 2 * RW };
+  } else if(type === 'nut') {
+    var hexR_N = p.width / Math.sqrt(3);
+    // Düzenli altıgen alanı = (3√3/2) × R²
+    var hexAreaN = (3 * Math.sqrt(3) / 2) * hexR_N * hexR_N;
+    var holeRN = p.holeDiameter / 2;
+    var holeArea = Math.PI * holeRN * holeRN;
+    var crossN = hexAreaN - holeArea;
+    volume = crossN * p.thickness;
+    // 2 üst/alt yüz + 6 yan dikdörtgen + iç silindir yan
+    surfaceArea = 2 * crossN + 6 * p.width * p.thickness + 2 * Math.PI * holeRN * p.thickness;
+    // BBox: altıgenin köşe-köşe mesafesi = 2R, anahtar ağzı = width
+    bbox = { x: 2 * hexR_N, y: p.thickness, z: 2 * hexR_N };
+  } else if(type === 'bolt') {
+    var hexR_B = p.headWidth / Math.sqrt(3);
+    var headArea = (3 * Math.sqrt(3) / 2) * hexR_B * hexR_B;
+    var headVol = headArea * p.headHeight;
+    var shaftR = p.shaftDiameter / 2;
+    var shaftVol = Math.PI * shaftR * shaftR * p.shaftLength;
+    volume = headVol + shaftVol;
+    // Yüzey: başlık (2 hex - shaft kesit) + 6 yan + gövde yan + gövde alt
+    var headTop = headArea;
+    var headBottom = headArea - Math.PI * shaftR * shaftR;
+    var headSides = 6 * p.headWidth * p.headHeight;
+    var shaftSide = 2 * Math.PI * shaftR * p.shaftLength;
+    var shaftBottom = Math.PI * shaftR * shaftR;
+    surfaceArea = headTop + headBottom + headSides + shaftSide + shaftBottom;
+    bbox = { x: 2 * hexR_B, y: p.headHeight + p.shaftLength, z: 2 * hexR_B };
+  } else if(type === 'plate') {
+    var pL = p.length, pW = p.width, pT = p.thickness;
+    var plateArea = pL * pW;
+    var holeR_P = p.holeDiameter / 2;
+    // Effective hole count (kenara taşmayanları say)
+    var validHoles = Math.max(1, p.cols) * Math.max(1, p.rows);
+    var totalHoleArea = validHoles * Math.PI * holeR_P * holeR_P;
+    var crossP = Math.max(0, plateArea - totalHoleArea);
+    volume = crossP * pT;
+    // 2 üst/alt yüz + 4 yan + delik iç silindir yan'ları
+    surfaceArea = 2 * crossP + 2 * (pL + pW) * pT + validHoles * 2 * Math.PI * holeR_P * pT;
+    bbox = { x: pL, y: pT, z: pW };
+  }
+
+  // GENERIC STATS FALLBACK: Tip-spesifik case eşleşmediyse Three.js mesh'inden
+  // hesapla. Bu sayede yeni primitif eklerken sadece schema + build fonksiyonu
+  // gerekir — stats otomatik türetilir. Type-spesifik analitik formüller
+  // performans/doğruluk açısından opsiyonel ekleme.
+  if (volume === 0 && surfaceArea === 0 && !bbox) {
+    var gen = _veFEAStatsFromMesh(type, p);
+    if (gen) return gen;
   }
 
   return { volume: volume, surfaceArea: surfaceArea, bbox: bbox, params: p };
+}
+
+// Three.js mesh'inden hacim/yüzey alanı/bbox hesapla. Generic fallback.
+// volume: signed tetrahedra (kapalı manifold için doğru, açık yüzey için
+// "outside-origin" işaretli — kullanıcı abs() alabilir).
+// surfaceArea: triangle area sum (matrixWorld uygulanmış).
+function _veFEAStatsFromMesh(type, p) {
+  if (typeof THREE === 'undefined' || typeof veFEABuildPrimitiveMesh !== 'function') return null;
+  var meshOrGroup;
+  try { meshOrGroup = veFEABuildPrimitiveMesh(type, p); }
+  catch (e) { return null; }
+  if (!meshOrGroup) return null;
+  meshOrGroup.updateMatrixWorld(true);
+
+  var box = new THREE.Box3();
+  var totalVolume = 0;
+  var totalArea = 0;
+  meshOrGroup.traverse(function (o) {
+    if (!o.isMesh || !o.geometry) return;
+    var geo = o.geometry;
+    var pos = geo.attributes.position;
+    if (!pos) return;
+    var idx = geo.index;
+    var triCount = idx ? idx.count / 3 : pos.count / 3;
+    var v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
+    var cb = new THREE.Vector3(), ab = new THREE.Vector3();
+    for (var i = 0; i < triCount; i++) {
+      var a, b, c;
+      if (idx) { a = idx.getX(i*3); b = idx.getX(i*3+1); c = idx.getX(i*3+2); }
+      else     { a = i*3; b = i*3+1; c = i*3+2; }
+      v1.fromBufferAttribute(pos, a); v2.fromBufferAttribute(pos, b); v3.fromBufferAttribute(pos, c);
+      v1.applyMatrix4(o.matrixWorld); v2.applyMatrix4(o.matrixWorld); v3.applyMatrix4(o.matrixWorld);
+      box.expandByPoint(v1); box.expandByPoint(v2); box.expandByPoint(v3);
+      cb.subVectors(v3, v2); ab.subVectors(v1, v2); cb.cross(ab);
+      totalArea += cb.length() * 0.5;
+      var cross = new THREE.Vector3().crossVectors(v2, v3);
+      totalVolume += v1.dot(cross) / 6;
+    }
+  });
+
+  var size = new THREE.Vector3();
+  box.getSize(size);
+  return {
+    volume: Math.abs(totalVolume),
+    surfaceArea: totalArea,
+    bbox: { x: size.x, y: size.y, z: size.z },
+    params: p,
+    generic: true
+  };
 }
 
 // ─── Three.js mesh inşası (face-aware: her yüz ayrı materyal/mesh) ─────────
@@ -20192,6 +20381,10 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'lbracket')   return _veFEABuildLBracketMesh(p);
   if(type === 'ibeam')      return _veFEABuildIBeamMesh(p);
   if(type === 'rectTube') return _veFEABuildRectTubeMesh(p);
+  if(type === 'washer')   return _veFEABuildWasherMesh(p);
+  if(type === 'bolt')     return _veFEABuildBoltGroup(p);
+  if(type === 'nut')      return _veFEABuildNutMesh(p);
+  if(type === 'plate')    return _veFEABuildPlateMesh(p);
   return null;
 }
 
@@ -20421,6 +20614,173 @@ function _veFEABuildIBeamMesh(p) {
   var mesh = new THREE.Mesh(geometry, mat);
   mesh.userData.feaPrimitive = { type: 'ibeam', params: p };
   mesh.userData.feaEdgesAttached = true;
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
+}
+
+// ─── Pul / Conta / Bilezik — annular extrude (dış disk + iç delik) ─────────
+// Şaft'tan farkı: kalınlık çok daha küçük (oran 1:5 ile 1:50). Tek mesh,
+// görsel olarak yassı bilezik. FEA için tipik kullanım: sızdırmazlık conta,
+// ayarlama pulu (washer), motor blok cıvata bilezikleri.
+function _veFEABuildWasherMesh(p) {
+  var shape = new THREE.Shape();
+  shape.absarc(0, 0, p.outerRadius, 0, Math.PI * 2, false);
+  if (p.innerRadius > 0 && p.innerRadius < p.outerRadius) {
+    var hole = new THREE.Path();
+    hole.absarc(0, 0, p.innerRadius, 0, Math.PI * 2, true);
+    shape.holes.push(hole);
+  }
+  var geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: p.thickness, bevelEnabled: false, steps: 1, curveSegments: p.segments
+  });
+  geometry.translate(0, 0, -p.thickness / 2);
+  geometry.rotateX(-Math.PI / 2); // XZ düzlemi (yatay pul)
+  var material = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.feaPrimitive = { type: 'washer', params: p };
+  mesh.userData.feaFaceId = 'faceSurface';
+  mesh.userData.feaEdgesAttached = true;
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
+}
+
+// ─── Somun — altıgen prizma (6-segment CylinderGeometry) + merkez delik ────
+// Anahtar ağzı (across-flats = width) → altıgen yarıçapı = width / √3.
+// Üst görünüş: altıgen. Yan profil: dikdörtgen.
+function _veFEABuildNutMesh(p) {
+  var hexRadius = p.width / Math.sqrt(3); // across-flats → circumradius
+  var hexOuterShape = new THREE.Shape();
+  // 6 köşeli yıldız: 30° başlangıç → düz yüzey üstte
+  for (var i = 0; i < 6; i++) {
+    var ang = Math.PI / 6 + i * Math.PI / 3;
+    var x = hexRadius * Math.cos(ang);
+    var y = hexRadius * Math.sin(ang);
+    if (i === 0) hexOuterShape.moveTo(x, y);
+    else hexOuterShape.lineTo(x, y);
+  }
+  if (p.holeDiameter > 0 && p.holeDiameter / 2 < hexRadius) {
+    var hole = new THREE.Path();
+    hole.absarc(0, 0, p.holeDiameter / 2, 0, Math.PI * 2, true);
+    hexOuterShape.holes.push(hole);
+  }
+  var geometry = new THREE.ExtrudeGeometry(hexOuterShape, {
+    depth: p.thickness, bevelEnabled: false, steps: 1, curveSegments: 32
+  });
+  geometry.translate(0, 0, -p.thickness / 2);
+  geometry.rotateX(-Math.PI / 2);
+  var material = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.feaPrimitive = { type: 'nut', params: p };
+  mesh.userData.feaFaceId = 'faceSurface';
+  mesh.userData.feaEdgesAttached = true;
+
+  var edges = new THREE.EdgesGeometry(geometry, 30);
+  var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
+  mesh.add(line);
+  return mesh;
+}
+
+// ─── Cıvata — altıgen başlık (üst) + silindirik gövde (alt) ─────────────────
+// Group içinde 2 child mesh: faceHead, faceShaft. Başlık y=0'da, gövde
+// aşağı doğru uzanır.
+function _veFEABuildBoltGroup(p) {
+  var group = new THREE.Group();
+  group.userData.feaPrimitive = { type: 'bolt', params: p };
+
+  // Başlık: altıgen prizma
+  var hexRadius = p.headWidth / Math.sqrt(3);
+  var hexShape = new THREE.Shape();
+  for (var i = 0; i < 6; i++) {
+    var ang = Math.PI / 6 + i * Math.PI / 3;
+    var x = hexRadius * Math.cos(ang);
+    var y = hexRadius * Math.sin(ang);
+    if (i === 0) hexShape.moveTo(x, y);
+    else hexShape.lineTo(x, y);
+  }
+  var headGeo = new THREE.ExtrudeGeometry(hexShape, {
+    depth: p.headHeight, bevelEnabled: false, steps: 1, curveSegments: 32
+  });
+  headGeo.translate(0, 0, 0); // 0 → headHeight (Z+)
+  headGeo.rotateX(-Math.PI / 2);
+  // Y ekseninde 0..headHeight aralığında başlık
+  var headMat = _veFEAMakePrimitiveMaterial();
+  var headMesh = new THREE.Mesh(headGeo, headMat);
+  headMesh.userData.feaFaceId = 'faceHead';
+  group.add(headMesh);
+
+  // Gövde: silindir, başlığın alt yüzeyinden aşağı doğru
+  var shaftGeo = new THREE.CylinderGeometry(
+    p.shaftDiameter / 2, p.shaftDiameter / 2, p.shaftLength, 32, 1, false
+  );
+  // CylinderGeometry default merkez orijin. Gövde tepesi y=0'da olsun → -shaftLength/2
+  shaftGeo.translate(0, -p.shaftLength / 2, 0);
+  var shaftMat = _veFEAMakePrimitiveMaterial();
+  var shaftMesh = new THREE.Mesh(shaftGeo, shaftMat);
+  shaftMesh.userData.feaFaceId = 'faceShaft';
+  group.add(shaftMesh);
+
+  // BBox'ı merkez (~headHeight/2) etrafında ortalamak için tüm grubu kaydır
+  // Tüm civata uzunluğu = headHeight + shaftLength
+  var totalH = p.headHeight + p.shaftLength;
+  group.position.y = (p.shaftLength - p.headHeight) / 2;
+
+  // Edge overlay
+  [headMesh, shaftMesh].forEach(function(m) {
+    var e = new THREE.EdgesGeometry(m.geometry, 30);
+    var l = new THREE.LineSegments(e, new THREE.LineBasicMaterial({ color: 0x1a3d6b, transparent: true, opacity: 0.6 }));
+    m.add(l);
+  });
+  return group;
+}
+
+// ─── Delikli Levha — dikdörtgen + grid pattern delikler (ExtrudeGeometry) ──
+// Delikler: cols × rows grid, kenardan margin boşlukla. cols=rows=1 ise tek
+// merkez delik. Motor mounts, şanzıman flanş plakaları için tipik.
+function _veFEABuildPlateMesh(p) {
+  var L = p.length, W = p.width;
+  var L2 = L / 2, W2 = W / 2;
+  var shape = new THREE.Shape();
+  shape.moveTo(-L2, -W2);
+  shape.lineTo(L2, -W2);
+  shape.lineTo(L2, W2);
+  shape.lineTo(-L2, W2);
+  shape.lineTo(-L2, -W2);
+
+  var r = p.holeDiameter / 2;
+  var cols = Math.max(1, p.cols), rows = Math.max(1, p.rows);
+  var availX = L - 2 * p.margin;
+  var availY = W - 2 * p.margin;
+  if (r > 0 && availX > 0 && availY > 0) {
+    for (var i = 0; i < cols; i++) {
+      for (var j = 0; j < rows; j++) {
+        var x = (cols === 1) ? 0 : -availX / 2 + (i * availX / (cols - 1));
+        var y = (rows === 1) ? 0 : -availY / 2 + (j * availY / (rows - 1));
+        // Delik kenara taşmıyorsa ekle
+        if (Math.abs(x) + r <= L2 && Math.abs(y) + r <= W2) {
+          var hole = new THREE.Path();
+          hole.absarc(x, y, r, 0, Math.PI * 2, true);
+          shape.holes.push(hole);
+        }
+      }
+    }
+  }
+
+  var geometry = new THREE.ExtrudeGeometry(shape, {
+    depth: p.thickness, bevelEnabled: false, steps: 1, curveSegments: 24
+  });
+  geometry.translate(0, 0, -p.thickness / 2);
+  geometry.rotateX(-Math.PI / 2); // XZ düzlemi (yatay levha)
+  var material = _veFEAMakePrimitiveMaterial();
+  var mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.feaPrimitive = { type: 'plate', params: p };
+  mesh.userData.feaFaceId = 'faceSurface';
+  mesh.userData.feaEdgesAttached = true;
+
   var edges = new THREE.EdgesGeometry(geometry, 30);
   var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
   mesh.add(line);
@@ -21917,16 +22277,24 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
     if (typeof showToast === 'function') {
       showToast('STEP yüklendi: ' + (fileName || '?') + ' (' + parsed.triangleCount + ' üçgen)', 'success');
     }
-    // showNodeProperties panel'i yeniden render eder → canvas DOM elementi
-    // değişir. Aşağıdaki dispose ile eski WebGL context'i serbest bırak
-    // (Chrome ~16 context limiti); veFEAApplyPrimitive'deki açıklamaya bak.
-    if (typeof veFEAViewerRegistry !== 'undefined' && veFEAViewerRegistry[nodeId]) {
-      try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
-      delete veFEAViewerRegistry[nodeId];
+    // Canvas preserve-across-render: veFEAApplyPrimitive'deki açıklamaya
+    // bak. WebGL context churn'ünü önlemek için canvas elementini detach +
+    // re-render + re-attach.
+    var canvasId = 've-fea-geom-canvas-' + nodeId;
+    var savedCanvas = document.getElementById(canvasId);
+    var savedParent = savedCanvas ? savedCanvas.parentNode : null;
+    if (savedCanvas && savedParent) {
+      savedParent.removeChild(savedCanvas);
     }
     if (typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
       var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
       if (n) showNodeProperties(n);
+    }
+    if (savedCanvas) {
+      var placeholder = document.getElementById(canvasId);
+      if (placeholder && placeholder.parentNode) {
+        placeholder.parentNode.replaceChild(savedCanvas, placeholder);
+      }
     }
   }).catch(function(err) {
     var msg = (err && err.message) ? err.message : String(err);
@@ -22056,7 +22424,13 @@ function veFEAComputeGeometryTopology(geometry) {
   if (geometry.type === 'lbracket')   return _veFEAToplLBracket(p);
   if (geometry.type === 'ibeam')      return _veFEAToplIBeam(p);
   if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
+  if (geometry.type === 'washer')   return _veFEAToplWasher(p);
+  if (geometry.type === 'nut')      return _veFEAToplNut(p);
+  if (geometry.type === 'bolt')     return _veFEAToplBolt(p);
+  if (geometry.type === 'plate')    return _veFEAToplPlate(p);
   if (geometry.type === 'step') return _veFEAToplStep(geometry);
+  // Generic fallback: bilinmeyen tip — Three.js mesh'inden otomatik analiz
+  if (typeof _veFEAToplGeneric === 'function') return _veFEAToplGeneric(geometry);
   return null;
 }
 
@@ -22338,6 +22712,179 @@ function _veFEAToplRectTube(p) {
   };
 }
 
+// ─── Pul / Conta / Bilezik — 4 yüzey, 4 daire kenar, 0 köşe ────────────────
+// Şaft'ın yassı versiyonu — kalınlık küçük. Otomotiv: sızdırmazlık conta,
+// ayarlama pulu, cıvata bilezikleri.
+function _veFEAToplWasher(p) {
+  var rOut = Math.max(0.5, p.outerRadius || 12);
+  // p.innerRadius === 0 explicit kontrolü — `|| 5` operatörü 0'ı false sayar
+  var rIn  = (p.innerRadius !== undefined && p.innerRadius !== null) ? Math.max(0, p.innerRadius) : 5;
+  if (rIn >= rOut) rIn = Math.max(0, rOut - 1);
+  var t = Math.max(0.1, p.thickness || 1.5);
+  var ring  = Math.PI * (rOut * rOut - rIn * rIn);
+  var outer = 2 * Math.PI * rOut * t;
+  var inner = 2 * Math.PI * rIn  * t;
+  var hasHole = rIn > 0;
+  var faces = [
+    { id: 'faceTop',    label: 'Üst Halka (Y+)',          type: 'planar-annular', normal: [0, 1, 0], area: ring, outerRadius: rOut, innerRadius: rIn },
+    { id: 'faceBottom', label: 'Alt Halka (Y−)',          type: 'planar-annular', normal: [0,-1, 0], area: ring, outerRadius: rOut, innerRadius: rIn },
+    { id: 'faceOuter',  label: 'Dış Yan Yüzey (Silindir)', type: 'cylindrical',                       area: outer, radius: rOut, length: t }
+  ];
+  if (hasHole) {
+    faces.push({ id: 'faceInner', label: 'İç Yan Yüzey (Delik)', type: 'cylindrical', area: inner, radius: rIn, length: t, isHole: true });
+  }
+  return {
+    type: 'washer',
+    faces: faces,
+    edges:    { count: hasHole ? 4 : 2 },  // 2 dış + (2 iç) daire
+    vertices: { count: 0 },
+    totalSurfaceArea: 2 * ring + outer + (hasHole ? inner : 0),
+    volume: ring * t,
+    bbox: { x: 2 * rOut, y: t, z: 2 * rOut }
+  };
+}
+
+// ─── Somun (altıgen + merkez delik) — 9 yüzey, 20 kenar, 12 köşe ───────────
+// Top + bottom hexagonal-annular + 6 side rectangles + 1 inner cylindrical.
+// Otomotiv: cıvata ile birlikte montaj.
+function _veFEAToplNut(p) {
+  var width = Math.max(1, p.width || 13);          // across-flats
+  var thick = Math.max(0.5, p.thickness || 6.5);
+  // 0 (deliksiz) ile undefined ayrımı — `|| 8` 0'ı default'a düşürürdü
+  var holeD = (p.holeDiameter !== undefined && p.holeDiameter !== null) ? Math.max(0, p.holeDiameter) : 8;
+  var hexR  = width / Math.sqrt(3);                // circumradius
+  var hexAreaFull = (3 * Math.sqrt(3) / 2) * hexR * hexR;
+  var holeR = holeD / 2;
+  var holeArea = Math.PI * holeR * holeR;
+  var hexAnnular = Math.max(0, hexAreaFull - holeArea);
+  var sideRect = width * thick;       // her bir altıgen yan yüz
+  var innerCyl = 2 * Math.PI * holeR * thick;
+  var hasHole = holeR > 0;
+  var faces = [
+    { id: 'faceTop',    label: 'Üst Yüzey (Altıgen-Halka)', type: 'planar-annular', normal: [0, 1, 0], area: hexAnnular, outerRadius: hexR, innerRadius: holeR },
+    { id: 'faceBottom', label: 'Alt Yüzey (Altıgen-Halka)', type: 'planar-annular', normal: [0,-1, 0], area: hexAnnular, outerRadius: hexR, innerRadius: holeR }
+  ];
+  // 6 yan yüzey — her biri düzlemsel dikdörtgen
+  for (var i = 0; i < 6; i++) {
+    var ang = (Math.PI / 6) + i * (Math.PI / 3) + (Math.PI / 6);  // yan yüzeyin normali
+    faces.push({
+      id: 'faceSide' + (i + 1),
+      label: 'Yan Yüzey #' + (i + 1),
+      type: 'planar',
+      normal: [Math.cos(ang), 0, Math.sin(ang)],
+      area: sideRect,
+      width: width,
+      height: thick
+    });
+  }
+  if (hasHole) {
+    faces.push({ id: 'faceInner', label: 'İç Yüzey (Delik)', type: 'cylindrical', area: innerCyl, radius: holeR, length: thick, isHole: true });
+  }
+  return {
+    type: 'nut',
+    faces: faces,
+    edges:    { count: 12 + 6 + (hasHole ? 2 : 0) }, // 12 hex (top+bottom) + 6 vertical + 2 hole circles
+    vertices: { count: 12 },                          // 6 hex corners top + 6 bottom
+    totalSurfaceArea: 2 * hexAnnular + 6 * sideRect + (hasHole ? innerCyl : 0),
+    volume: hexAnnular * thick,
+    bbox: { x: 2 * hexR, y: thick, z: 2 * hexR }
+  };
+}
+
+// ─── Cıvata (altıgen başlık + silindir gövde) — 10 yüzey, ~20 kenar ─────────
+// Head: 1 üst hex + 1 alt hex-annular (gövde girer) + 6 yan dikdörtgen.
+// Shaft: 1 yan silindir + 1 alt disk. Otomotiv: motor blok, şanzıman flanş.
+function _veFEAToplBolt(p) {
+  var headW = Math.max(1, p.headWidth || 13);       // across-flats
+  var headH = Math.max(0.5, p.headHeight || 5.5);
+  var shaftD = Math.max(0.5, p.shaftDiameter || 8);
+  var shaftL = Math.max(1, p.shaftLength || 30);
+  var hexR  = headW / Math.sqrt(3);
+  var hexAreaFull = (3 * Math.sqrt(3) / 2) * hexR * hexR;
+  var shaftR = shaftD / 2;
+  var shaftCirc = Math.PI * shaftR * shaftR;
+  var headBottomArea = Math.max(0, hexAreaFull - shaftCirc);
+  var headSideRect = headW * headH;
+  var shaftSide = 2 * Math.PI * shaftR * shaftL;
+  var faces = [
+    { id: 'faceHeadTop',    label: 'Başlık Üst (Altıgen)',   type: 'planar',         normal: [0, 1, 0], area: hexAreaFull, outerRadius: hexR },
+    { id: 'faceHeadBottom', label: 'Başlık Alt (Altıgen-Halka)', type: 'planar-annular', normal: [0,-1, 0], area: headBottomArea, outerRadius: hexR, innerRadius: shaftR }
+  ];
+  for (var i = 0; i < 6; i++) {
+    var ang = (Math.PI / 6) + i * (Math.PI / 3) + (Math.PI / 6);
+    faces.push({
+      id: 'faceHeadSide' + (i + 1),
+      label: 'Başlık Yan #' + (i + 1),
+      type: 'planar',
+      normal: [Math.cos(ang), 0, Math.sin(ang)],
+      area: headSideRect,
+      width: headW,
+      height: headH
+    });
+  }
+  faces.push({ id: 'faceShaftSide',   label: 'Gövde Yan Yüzey (Silindir)', type: 'cylindrical', area: shaftSide, radius: shaftR, length: shaftL });
+  faces.push({ id: 'faceShaftBottom', label: 'Gövde Alt Disk',             type: 'planar', normal: [0,-1, 0], area: shaftCirc, radius: shaftR });
+  return {
+    type: 'bolt',
+    faces: faces,
+    edges:    { count: 12 + 6 + 2 },  // 12 hex (top+bottom of head) + 6 vertical + 2 circles (head-shaft junction + shaft bottom)
+    vertices: { count: 12 },           // 6 hex top + 6 hex bottom
+    totalSurfaceArea: hexAreaFull + headBottomArea + 6 * headSideRect + shaftSide + shaftCirc,
+    volume: hexAreaFull * headH + shaftCirc * shaftL,
+    bbox: { x: 2 * hexR, y: headH + shaftL, z: 2 * hexR }
+  };
+}
+
+// ─── Delikli Levha (rectangular plate with grid holes) — 6 + N yüzey ────────
+// Motor mounts, şanzıman flanş plakaları. cols × rows = N delik.
+function _veFEAToplPlate(p) {
+  var L = Math.max(5, p.length || 120);
+  var W = Math.max(5, p.width  || 80);
+  var T = Math.max(0.5, p.thickness || 8);
+  // 0 (deliksiz) ile undefined ayrımı
+  var holeD = (p.holeDiameter !== undefined && p.holeDiameter !== null) ? Math.max(0, p.holeDiameter) : 9;
+  var cols = Math.max(1, Math.round(p.cols || 2));
+  var rows = Math.max(1, Math.round(p.rows || 2));
+  var holeR = holeD / 2;
+  var holeArea = Math.PI * holeR * holeR;
+  var n = cols * rows;
+  var plateAreaFull = L * W;
+  var plateAreaAnn  = Math.max(0, plateAreaFull - n * holeArea);
+  var sideX = W * T;        // X+/X− yan yüzeyleri
+  var sideZ = L * T;        // Z+/Z− yan yüzeyleri (rotateX(-π/2) sonrası Z=W)
+  var holeCyl = 2 * Math.PI * holeR * T;
+  var faces = [
+    { id: 'faceTop',    label: 'Üst Yüzey' + (n > 0 ? ' (' + n + ' delikli)' : ''), type: n > 0 ? 'planar-annular' : 'planar', normal: [0, 1, 0], area: plateAreaAnn, width: L, height: W },
+    { id: 'faceBottom', label: 'Alt Yüzey' + (n > 0 ? ' (' + n + ' delikli)' : ''), type: n > 0 ? 'planar-annular' : 'planar', normal: [0,-1, 0], area: plateAreaAnn, width: L, height: W },
+    { id: 'faceXMin', label: 'X− Yan Yüzey', type: 'planar', normal: [-1, 0, 0], area: sideX, width: W, height: T },
+    { id: 'faceXMax', label: 'X+ Yan Yüzey', type: 'planar', normal: [ 1, 0, 0], area: sideX, width: W, height: T },
+    { id: 'faceZMin', label: 'Z− Yan Yüzey', type: 'planar', normal: [ 0, 0,-1], area: sideZ, width: L, height: T },
+    { id: 'faceZMax', label: 'Z+ Yan Yüzey', type: 'planar', normal: [ 0, 0, 1], area: sideZ, width: L, height: T }
+  ];
+  // Her delik için ayrı silindirik iç yüzey
+  for (var i = 0; i < n; i++) {
+    var ci = i % cols, ri = Math.floor(i / cols);
+    faces.push({
+      id: 'faceHole_' + ri + '_' + ci,
+      label: 'Delik #' + (i + 1) + ' (' + (ri + 1) + '×' + (ci + 1) + ')',
+      type: 'cylindrical',
+      area: holeCyl,
+      radius: holeR,
+      length: T,
+      isHole: true
+    });
+  }
+  return {
+    type: 'plate',
+    faces: faces,
+    edges:    { count: 12 + 2 * n },  // 12 plate edges + 2 per hole (top circle + bottom circle)
+    vertices: { count: 8 },            // 8 corners
+    totalSurfaceArea: 2 * plateAreaAnn + 2 * sideX + 2 * sideZ + n * holeCyl,
+    volume: plateAreaAnn * T,
+    bbox: { x: L, y: T, z: W }
+  };
+}
+
 // ─── STEP — feature-aware (yuklenen geometriden tespit) ───────────────────
 // Geom üzerinde detectedFeatures varsa (veFEADetectGeometryFeatures cikti),
 // her feature ayri face olarak topology'ye eklenir. Aksi takdirde tek
@@ -22418,6 +22965,237 @@ function _veFEAFeatureTypeToBrepLabel(t) {
   if (t === 'spherical')   return 'spherical';
   if (t === 'conical')     return 'conical';
   return 'triangulated'; // freeform veya unknown
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GENERIC TOPOLOGY ANALYZER — Three.js mesh'inden otomatik face detection
+// ════════════════════════════════════════════════════════════════════════════
+// Tip-spesifik topology fonksiyonu olmayan primitifler (yeni eklenenler,
+// custom geometry, vs.) için fallback. veFEABuildPrimitiveMesh ile geometriyi
+// inşa eder, BufferGeometry'yi analiz eder:
+//
+//   1) Vertex'leri epsilon-deduplication ile sayar
+//   2) Üçgen normallerini hesaplar
+//   3) Normal-clustering ile düzlemsel face'leri grupla (5° tolerans):
+//      - Aynı normal yönündeki bitişik üçgenler tek planar face
+//      - Curved (cylinder/sphere/torus) yüzeyler "triangulated" tek face
+//   4) EdgesGeometry ile keskin kenarları say (>30° dihedral angle)
+//   5) Bounding box, surface area (triangle areas sum), volume (signed
+//      tetrahedra sum, closed manifold için doğru)
+//
+// Result quality: sharp-edged geometry (kutu, prizma, levha) için ANSYS
+// kalitesinde topology. Curved geometry için tek "triangulated" face +
+// makul vertex/edge sayısı.
+function _veFEAToplGeneric(geometry) {
+  if (typeof THREE === 'undefined' || typeof veFEABuildPrimitiveMesh !== 'function') {
+    // Three.js veya builder yoksa minimal fallback
+    return _veFEAToplGenericMinimal(geometry);
+  }
+  var p = geometry.params || {};
+  var meshOrGroup;
+  try {
+    meshOrGroup = veFEABuildPrimitiveMesh(geometry.type, p);
+  } catch (e) {
+    console.warn('[FEA Topology] generic build failed:', e.message);
+    return _veFEAToplGenericMinimal(geometry);
+  }
+  if (!meshOrGroup) return _veFEAToplGenericMinimal(geometry);
+
+  // Tüm child mesh'leri topla
+  var meshes = [];
+  meshOrGroup.traverse(function (o) { if (o.isMesh && o.geometry) meshes.push(o); });
+  if (meshes.length === 0) return _veFEAToplGenericMinimal(geometry);
+
+  // Birleşik analiz: her mesh'ten üçgenleri al, normal-clustering yap
+  var allTris = [];  // {p1, p2, p3, normal, area, meshIdx}
+  var bbox = new THREE.Box3();
+  var totalVolume = 0;
+  var allVerts = [];
+  meshes.forEach(function (m, mi) {
+    var geo = m.geometry;
+    geo.computeVertexNormals();  // ensure normals
+    var pos = geo.attributes.position;
+    var idx = geo.index;
+    var triCount = idx ? idx.count / 3 : pos.count / 3;
+    var v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
+    var cb = new THREE.Vector3(), ab = new THREE.Vector3();
+    for (var i = 0; i < triCount; i++) {
+      var a, b, c;
+      if (idx) { a = idx.getX(i*3); b = idx.getX(i*3+1); c = idx.getX(i*3+2); }
+      else     { a = i*3; b = i*3+1; c = i*3+2; }
+      v1.fromBufferAttribute(pos, a);
+      v2.fromBufferAttribute(pos, b);
+      v3.fromBufferAttribute(pos, c);
+      // World space (mesh transform'unu uygula)
+      v1.applyMatrix4(m.matrixWorld); v2.applyMatrix4(m.matrixWorld); v3.applyMatrix4(m.matrixWorld);
+      cb.subVectors(v3, v2); ab.subVectors(v1, v2);
+      cb.cross(ab);
+      var area = cb.length() * 0.5;
+      if (area < 1e-9) continue;  // dejenere
+      cb.normalize();
+      allTris.push({ p1: v1.clone(), p2: v2.clone(), p3: v3.clone(), n: cb.clone(), area: area, mi: mi });
+      bbox.expandByPoint(v1); bbox.expandByPoint(v2); bbox.expandByPoint(v3);
+      // Signed tetrahedra hacim: (v1 · (v2 × v3)) / 6
+      var cross = new THREE.Vector3().crossVectors(v2, v3);
+      totalVolume += v1.dot(cross) / 6;
+      allVerts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+    }
+  });
+
+  if (allTris.length === 0) return _veFEAToplGenericMinimal(geometry);
+
+  // Vertex dedup — 0.01 mm epsilon
+  var vertexCount = _veFEACountUniqueVertices(allVerts, 0.01);
+  // Edge sayısı: EdgesGeometry ile keskin kenarlar
+  var edgeCount = _veFEACountSharpEdges(meshes, 30);
+  // Normal clustering: aynı yöne bakan düzlemsel face'leri grupla
+  var planarFaces = _veFEAClusterPlanarFaces(allTris, 5 /* deg tolerance */);
+  // Kalan üçgenler curved → "triangulated" tek face
+  var planarTriIndices = new Set();
+  planarFaces.forEach(function (pf) { pf.triIdxs.forEach(function (i) { planarTriIndices.add(i); }); });
+  var curvedTris = [];
+  for (var k = 0; k < allTris.length; k++) {
+    if (!planarTriIndices.has(k)) curvedTris.push(allTris[k]);
+  }
+
+  var faces = [];
+  // Planar yüzeyler
+  planarFaces.forEach(function (pf, fi) {
+    faces.push({
+      id: 'faceP_' + fi,
+      label: 'Düzlemsel Yüzey #' + (fi + 1),
+      type: 'planar',
+      normal: [pf.n.x, pf.n.y, pf.n.z],
+      area: pf.area,
+      triangleCount: pf.triIdxs.length
+    });
+  });
+  // Curved yüzey (varsa) — tek "triangulated" face olarak göster
+  if (curvedTris.length > 0) {
+    var curvedArea = 0;
+    curvedTris.forEach(function (t) { curvedArea += t.area; });
+    faces.push({
+      id: 'faceC_curved',
+      label: 'Eğri Yüzey (' + curvedTris.length + ' üçgen)',
+      type: 'triangulated',
+      area: curvedArea,
+      triangleCount: curvedTris.length
+    });
+  }
+
+  var size = new THREE.Vector3();
+  bbox.getSize(size);
+  var totalArea = 0;
+  allTris.forEach(function (t) { totalArea += t.area; });
+
+  return {
+    type: geometry.type,
+    faces: faces,
+    edges:    { count: edgeCount },
+    vertices: { count: vertexCount },
+    totalSurfaceArea: totalArea,
+    volume: Math.abs(totalVolume),
+    bbox: { x: size.x, y: size.y, z: size.z },
+    generic: true   // UI bu bayrağı görürse "otomatik tespit" notu ekleyebilir
+  };
+}
+
+// Minimal fallback (THREE veya builder yoksa): persisted stats'den dön
+function _veFEAToplGenericMinimal(geometry) {
+  var stats = (typeof veFEAPrimitiveStats === 'function') ? veFEAPrimitiveStats(geometry.type, geometry.params) : null;
+  return {
+    type: geometry.type,
+    faces: [
+      { id: 'faceSurface', label: 'Yüzey (Tüm üçgenler)', type: 'triangulated',
+        area: (stats && stats.surfaceArea) || geometry.surfaceArea || 0 }
+    ],
+    edges:    { count: 0 },
+    vertices: { count: 0 },
+    totalSurfaceArea: (stats && stats.surfaceArea) || geometry.surfaceArea || 0,
+    volume: (stats && stats.volume) || geometry.volume || 0,
+    bbox: (stats && stats.bbox) || geometry.bbox || { x: 0, y: 0, z: 0 },
+    generic: true
+  };
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
+// Üçgenleri normal-yönüne göre kümele. Aynı normal (cos θ > 1-tol) ve
+// koplanar (signed distance < epsilon) üçgenler tek planar face.
+function _veFEAClusterPlanarFaces(tris, angDeg) {
+  var tol = Math.cos(angDeg * Math.PI / 180);   // cos threshold
+  var clusters = [];
+  for (var i = 0; i < tris.length; i++) {
+    var t = tris[i];
+    var matched = false;
+    for (var c = 0; c < clusters.length; c++) {
+      var cl = clusters[c];
+      var dot = t.n.dot(cl.n);
+      if (dot < tol) continue;
+      // Koplanarite kontrolü: triangle centroid'ı cluster plane'inden
+      // makul mesafede mi (max dim'in %1'i)
+      var centroid = new THREE.Vector3(
+        (t.p1.x + t.p2.x + t.p3.x) / 3,
+        (t.p1.y + t.p2.y + t.p3.y) / 3,
+        (t.p1.z + t.p2.z + t.p3.z) / 3
+      );
+      var dist = Math.abs(centroid.dot(cl.n) - cl.planeD);
+      if (dist > 0.1) continue;  // 0.1mm tolerans
+      cl.area += t.area;
+      cl.triIdxs.push(i);
+      // Normal güncelle (alan-ağırlıklı ortalama)
+      cl.n.multiplyScalar(cl.area - t.area).add(t.n.clone().multiplyScalar(t.area)).normalize();
+      matched = true;
+      break;
+    }
+    if (!matched) {
+      var centroid2 = new THREE.Vector3(
+        (t.p1.x + t.p2.x + t.p3.x) / 3,
+        (t.p1.y + t.p2.y + t.p3.y) / 3,
+        (t.p1.z + t.p2.z + t.p3.z) / 3
+      );
+      clusters.push({
+        n: t.n.clone(),
+        planeD: centroid2.dot(t.n),
+        area: t.area,
+        triIdxs: [i]
+      });
+    }
+  }
+  // Çok küçük cluster'ları (sadece 1-2 üçgen, curved'ın artığı) at — curved'ın
+  // parçası olarak değerlendir. Minimum 3 üçgen + minimum alan.
+  return clusters.filter(function (c) {
+    return c.triIdxs.length >= 3 || c.area > 1.0;
+  });
+}
+
+// Edge sayısı: her mesh için EdgesGeometry (>angDeg) → unique line segments
+function _veFEACountSharpEdges(meshes, angDeg) {
+  var total = 0;
+  meshes.forEach(function (m) {
+    try {
+      var eg = new THREE.EdgesGeometry(m.geometry, angDeg);
+      var posAttr = eg.attributes.position;
+      total += posAttr.count / 2;  // her edge = 2 endpoint
+      eg.dispose && eg.dispose();
+    } catch (e) {}
+  });
+  return total;
+}
+
+// Vertex dedup — basit grid hashing (epsilon-bucket)
+function _veFEACountUniqueVertices(flatXYZ, eps) {
+  var seen = {};
+  var count = 0;
+  var inv = 1 / Math.max(eps, 1e-9);
+  for (var i = 0; i < flatXYZ.length; i += 3) {
+    var kx = Math.round(flatXYZ[i] * inv);
+    var ky = Math.round(flatXYZ[i + 1] * inv);
+    var kz = Math.round(flatXYZ[i + 2] * inv);
+    var key = kx + ',' + ky + ',' + kz;
+    if (!seen[key]) { seen[key] = 1; count++; }
+  }
+  return count;
 }
 
 </script>
@@ -24228,6 +25006,16 @@ function veFEAMeshFromGeometry(geometry, opts) {
     }
   }
 
+  // GENERIC FALLBACK: Yukarıdaki hiçbir tip-spesifik case eşleşmediyse
+  // (yeni primitif eklendi ama dispatch unutuldu, custom primitif vs.)
+  // Three.js mesh'inden triangulated surface çıkar → voxel + boundary-snap.
+  // veFEABuildPrimitiveMesh impl'i olan HERHANGİ bir tip için çalışır.
+  // Tip-spesifik structured mesher (_veFEAMeshBox vs.) yalnız performans
+  // ve kalite optimizasyonu — eksikse generic devreye girer, hata vermez.
+  if (!mesh && geometry.type !== 'step') {
+    mesh = _veFEAMeshGenericPrimitive(geometry, size, mode, elementType, opts);
+  }
+
   // Lokal sizing (bias): yapısal mesh sonrasında düğüm konumlarını
   // hedef yüze doğru kümele. Tet4/quadratic dönüşümlerinden ÖNCE uygulanır
   // ki midpoint düğümleri doğru pozisyonda hesaplansın.
@@ -25757,6 +26545,91 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
 //
 // Test bypass: geometry._parsedTriangles (test-only) varsa onu döndür ki
 // birim testler sync voxelizer üzerinden tam pipeline'ı çalıştırabilsin.
+// ─── Generic primitif mesh — tip-spesifik mesher yoksa fallback ────────────
+// Three.js mesh'inden triangulated surface çıkar → STEP voxel/boundary-snap
+// path'i ile mesh'le. Yeni eklenen primitifler (washer, bolt, nut, plate)
+// veya gelecek primitifler için tek nokta dispatch. Worker'da THREE yoksa
+// null döner — main thread'de yeniden denenir.
+function _veFEAMeshGenericPrimitive(geometry, size, mode, elementType, opts) {
+  // 1) Triangulated surface çıkar
+  var parsed = geometry._parsedTriangles ||
+               _veFEAExtractTrianglesFromPrimitive(geometry.type, geometry.params || {});
+  if (!parsed || parsed.triangleCount === 0) {
+    if (typeof console !== 'undefined') {
+      console.warn('[FEA Mesh] generic primitive triangulation failed:', geometry.type,
+                   '(THREE.js gerekli — worker context?)');
+    }
+    return null;
+  }
+
+  // 2) Surface mode → Tri3
+  if (mode === 'surface') {
+    return _veFEAMeshFromParsedTriangles(parsed, geometry.type);
+  }
+
+  // 3) Volume mode → voxel hex8
+  var mesh = _veFEAVoxelizeTrianglesToHex(parsed, size, geometry.type, null);
+  if (!mesh || mesh.error) return mesh;
+
+  // 4) Boundary snap + tet4 dönüşümü (kullanıcı elementType=hex8 demediyse)
+  if (mesh.voxelMode && opts && opts.disableBoundarySnap !== true) {
+    if (elementType !== 'hex8' && elementType !== 'pyramid5') {
+      var tetMesh = (typeof veFEAConvertMeshToTet4 === 'function') ? veFEAConvertMeshToTet4(mesh) : null;
+      if (tetMesh && !tetMesh.error) {
+        mesh = tetMesh;
+        if (typeof _veFEABoundarySnapToTriangles === 'function') {
+          var snapped = _veFEABoundarySnapToTriangles(mesh, parsed);
+          if (snapped && !snapped.error) mesh = snapped;
+        }
+      }
+    }
+  }
+  return mesh;
+}
+
+// Three.js primitif mesh'inden triangulated surface çıkar.
+// veFEABuildPrimitiveMesh ile mesh inşa et, tüm child mesh'lerden üçgenleri
+// matrixWorld uygulayarak flat Float32Array'e topla.
+function _veFEAExtractTrianglesFromPrimitive(type, params) {
+  if (typeof THREE === 'undefined' || typeof veFEABuildPrimitiveMesh !== 'function') return null;
+  var meshOrGroup;
+  try {
+    meshOrGroup = veFEABuildPrimitiveMesh(type, params);
+  } catch (e) { return null; }
+  if (!meshOrGroup) return null;
+  // matrixWorld'leri günceller (Group içinde child transform varsa)
+  meshOrGroup.updateMatrixWorld(true);
+
+  var allVerts = [];
+  meshOrGroup.traverse(function (o) {
+    if (!o.isMesh || !o.geometry) return;
+    var geo = o.geometry;
+    var pos = geo.attributes.position;
+    if (!pos) return;
+    var idx = geo.index;
+    var triCount = idx ? idx.count / 3 : pos.count / 3;
+    var v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
+    for (var i = 0; i < triCount; i++) {
+      var a, b, c;
+      if (idx) { a = idx.getX(i * 3); b = idx.getX(i * 3 + 1); c = idx.getX(i * 3 + 2); }
+      else     { a = i * 3; b = i * 3 + 1; c = i * 3 + 2; }
+      v1.fromBufferAttribute(pos, a);
+      v2.fromBufferAttribute(pos, b);
+      v3.fromBufferAttribute(pos, c);
+      v1.applyMatrix4(o.matrixWorld);
+      v2.applyMatrix4(o.matrixWorld);
+      v3.applyMatrix4(o.matrixWorld);
+      allVerts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+    }
+  });
+
+  if (allVerts.length === 0) return null;
+  return {
+    vertices: new Float32Array(allVerts),
+    triangleCount: allVerts.length / 9
+  };
+}
+
 function _veFEAParseSurfaceTriangles(geom) {
   if (geom && geom._parsedTriangles && geom._parsedTriangles.triangleCount > 0) {
     return geom._parsedTriangles;
@@ -29521,6 +30394,9 @@ function veFEAInitViewer(canvas, opts) {
   if (orbitHandle && typeof orbitHandle.setViewerRef === 'function') {
     orbitHandle.setViewerRef(viewer);
   }
+  // Canvas referansını viewer'da sakla — veFEAInitGeometryViewerForNode
+  // "aynı canvas mı?" kontrolü için kullanır (preserve-across-render fix).
+  viewer._canvas = canvas;
 
   return viewer;
 }
@@ -29674,9 +30550,25 @@ function veFEAInitGeometryViewerForNode(nodeId) {
   var canvas = document.getElementById(canvasId);
   if(!canvas) return;
 
-  // Eski viewer'ı temizle
-  if(veFEAViewerRegistry[nodeId]) {
-    try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
+  // PRESERVE-ACROSS-RENDER FIX: Eski viewer hâlâ aynı canvas elementine
+  // bağlıysa onu yeniden yarat MA — Chrome ~16 WebGL context limiti var,
+  // her panel re-render'da context churn yaratırsak (dispose + recreate)
+  // slot async-release nedeniyle sonradan null context döner ve render
+  // bozulur. veFEAApplyPrimitive showNodeProperties öncesi canvas'ı DOM'dan
+  // detach edip sonra geri yapıştırır; bu sayede aynı element kalır ve
+  // mevcut viewer (aynı WebGL context) korunabilir.
+  var existingViewer = veFEAViewerRegistry[nodeId];
+  if (existingViewer && existingViewer._canvas === canvas) {
+    // Aynı canvas → viewer hâlâ geçerli. Yalnızca node.data.geometry'den
+    // sahneyi tazele.
+    _veFEALoadNodeGeometryIntoViewer(existingViewer, nodeId);
+    return;
+  }
+
+  // Canvas değişmiş (panel re-render, canvas preserve uygulanmamış) veya
+  // ilk init → eski viewer'ı dispose et + sıfırdan oluştur.
+  if(existingViewer) {
+    try { existingViewer.dispose(); } catch(e) {}
     delete veFEAViewerRegistry[nodeId];
   }
 
@@ -29756,9 +30648,16 @@ function veFEAApplyPrimitive(nodeId, type, params) {
     ? veFEANormalizePrimitiveParams(type, params)
     : params;
 
-  // KRİTİK 1: Data persist'i HER ZAMAN yap — viewer yoksa bile (WebGL limit
-  // aşımı durumunda). Aksi halde kullanıcı "Oluştur" der, viewer yok, hiçbir
-  // şey olmaz; data güncellenmez, panel yeniden render olmaz.
+  // 1) Mevcut viewer'a sahneyi hemen uygula — kullanıcı anında geri bildirim
+  //    alır (showNodeProperties → setTimeout(100ms) gecikmesini beklemez).
+  var viewer = veFEAViewerRegistry[nodeId];
+  if (viewer && typeof viewer.loadPrimitive === 'function') {
+    try { viewer.loadPrimitive(type, p); } catch (e) {
+      console.warn('[FEA] loadPrimitive hata:', e.message);
+    }
+  }
+
+  // 2) Data persist — viewer yoksa bile (ileride init olduğunda yedirilsin)
   if (typeof nodes !== 'undefined') {
     var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
     if (node) {
@@ -29779,23 +30678,37 @@ function veFEAApplyPrimitive(nodeId, type, params) {
     }
   }
 
-  // KRİTİK 2: showNodeProperties panel'i yeniden render eder → canvas DOM
-  // elementi değişir. Eski WebGL context detached canvas'a bağlı kalır;
-  // Chrome ~16 concurrent context limiti var. Re-render ÖNCESİ eski viewer'ı
-  // dispose et — WEBGL_lose_context slot'u serbest bırakır. Eski viewer
-  // zaten her halükarda yenisi ile değişecek (cp-core setTimeout(100) ile
-  // veFEAInitGeometryViewerForNode tetiklenir; yeni viewer
-  // _veFEALoadNodeGeometryIntoViewer ile node.data.geometry'den primitif'i
-  // yedirir — TÜM tipleri destekler).
-  if (veFEAViewerRegistry[nodeId]) {
-    try { veFEAViewerRegistry[nodeId].dispose(); } catch(e) {}
-    delete veFEAViewerRegistry[nodeId];
+  // 3) CANVAS PRESERVE: showNodeProperties → content.innerHTML = html →
+  //    canvas DOM elementi yeniden yaratılır → eski WebGL context kayıp +
+  //    yenisi gerekir. Chrome ~16 concurrent WebGL context limiti var; her
+  //    primitif submit'te yeni context oluşturmazsak Chrome dolar ve yeni
+  //    context null gl döner ("precision" hatası / sessiz render bozulması).
+  //
+  //    Çözüm: Canvas elementini DOM'dan detach → innerHTML değişimi canvas'ı
+  //    ETKİLEMEZ → yeniden render sonrası YENİ placeholder'ı eski canvas ile
+  //    değiştir. Aynı element + aynı WebGL context + aynı viewer korunur.
+  //    veFEAInitGeometryViewerForNode "aynı canvas mı?" check'iyle mevcut
+  //    viewer'ı yeniden yaratmaz (preserve-across-render).
+  var canvasId = 've-fea-geom-canvas-' + nodeId;
+  var savedCanvas = document.getElementById(canvasId);
+  var savedParent = savedCanvas ? savedCanvas.parentNode : null;
+  if (savedCanvas && savedParent) {
+    savedParent.removeChild(savedCanvas);
   }
 
-  // Panel yeniden render — durum tablosu, dropdown, butonlar güncellensin
+  // 4) Panel yeniden render — durum tablosu, dropdown, butonlar güncellensin
   if (typeof showNodeProperties === 'function' && typeof nodes !== 'undefined') {
     var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
     if (n) showNodeProperties(n);
+  }
+
+  // 5) Yeni placeholder canvas'ı (showNodeProperties tarafından yaratıldı)
+  //    eski (preserve edilmiş) canvas ile değiştir.
+  if (savedCanvas) {
+    var placeholder = document.getElementById(canvasId);
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.replaceChild(savedCanvas, placeholder);
+    }
   }
 }
 
@@ -31698,15 +32611,41 @@ function _veFEAEditorTopologyHTML(node) {
     'Mesh atmadan önce geometriden otomatik tespit edilen yüzeyler. Mesher bu yüzeylere ' +
     '<b>conforming</b> şekilde eleman üretir; her yüze ait düğümler otomatik named selection olur.</div>';
 
-  // Özet kutusu — alan/hacim/face/edge/vertex sayıları
+  // Generic fallback notu — bilinmeyen tip Three.js mesh'inden otomatik analiz edildi
+  if (topo.generic) {
+    html += '<div style="padding:6px 8px; background:rgba(59,130,246,0.08); border:1px solid var(--accent-primary); margin-bottom:8px; font-size:0.58rem; color:var(--text-primary); line-height:1.45;">' +
+      '<b>ℹ Otomatik Topology Analizi:</b> Bu geometri tipi (' + (geom.sourceLabel || geom.type) + ') için ' +
+      'tip-spesifik topology fonksiyonu yok. Three.js mesh\'inden normal-clustering ile düzlemsel yüzeyler ' +
+      'otomatik tespit edildi; eğri yüzeyler "Triangulated" olarak işaretlendi. Üretilen face\'ler local sizing ' +
+      've BC uygulamak için kullanılabilir.' +
+      '</div>';
+  }
+
+  // Özet kutusu — alan/hacim/face/edge/vertex sayıları + tip etiketi
   function _fmtArea(a)  { return a >= 1e6 ? (a/1e6).toFixed(2)+' m²' : a >= 1e4 ? (a/1e4).toFixed(2)+' dm²' : a >= 1e2 ? (a/1e2).toFixed(2)+' cm²' : a.toFixed(1)+' mm²'; }
   function _fmtVol(v)   { return v >= 1e9 ? (v/1e9).toFixed(3)+' m³' : v >= 1e6 ? (v/1e6).toFixed(2)+' dm³' : v >= 1e3 ? (v/1e3).toFixed(2)+' cm³' : v.toFixed(1)+' mm³'; }
-  html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:8px; font-size:0.6rem; display:grid; grid-template-columns:1fr 1fr; gap:3px 12px;">' +
-    '<span style="color:var(--text-secondary);">Yüzey sayısı</span><span style="text-align:right; font-weight:600;">' + topo.faces.length + '</span>' +
-    '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.edges ? topo.edges.count : 0) + '</span>' +
-    '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.vertices ? topo.vertices.count : 0) + '</span>' +
-    '<span style="color:var(--text-secondary);">Hacim</span><span style="text-align:right; font-weight:600;">' + _fmtVol(topo.volume || 0) + '</span>' +
-    '<span style="color:var(--text-secondary);">Toplam yüzey alanı</span><span style="text-align:right; font-weight:600;">' + _fmtArea(topo.totalSurfaceArea || 0) + '</span>' +
+  function _fmtLen(l)   { return l >= 1000 ? (l/1000).toFixed(2)+' m' : l >= 10 ? l.toFixed(1)+' mm' : l.toFixed(2)+' mm'; }
+  // Yüzey tipi dağılımı (kaç tane planar, cylindrical, vs.)
+  var typeCounts = {};
+  topo.faces.forEach(function(f) { typeCounts[f.type] = (typeCounts[f.type] || 0) + 1; });
+  var typeBreakdown = Object.keys(typeCounts).map(function(t) {
+    var lbl = (typeof veFEATopologyFaceTypeLabel === 'function') ? veFEATopologyFaceTypeLabel(t) : t;
+    return typeCounts[t] + '× ' + lbl;
+  }).join(' · ');
+  var bbox = topo.bbox || { x: 0, y: 0, z: 0 };
+
+  html += '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:8px; font-size:0.6rem;">' +
+    '<div style="font-weight:600; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">📐 Geometri Özeti</div>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:3px 12px;">' +
+      '<span style="color:var(--text-secondary);">Geometri tipi</span><span style="text-align:right; font-weight:600;">' + (geom.sourceLabel || geom.type) + '</span>' +
+      '<span style="color:var(--text-secondary);">Yüzey sayısı</span><span style="text-align:right; font-weight:600;">' + topo.faces.length + '</span>' +
+      '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.edges ? topo.edges.count : 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.vertices ? topo.vertices.count : 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Hacim</span><span style="text-align:right; font-weight:600;">' + _fmtVol(topo.volume || 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Toplam yüzey alanı</span><span style="text-align:right; font-weight:600;">' + _fmtArea(topo.totalSurfaceArea || 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Sınırlayıcı kutu</span><span style="text-align:right; font-weight:600;">' + _fmtLen(bbox.x) + ' × ' + _fmtLen(bbox.y) + ' × ' + _fmtLen(bbox.z) + '</span>' +
+      '<span style="color:var(--text-secondary);">Yüzey tipi dağılımı</span><span style="text-align:right; font-weight:600; font-size:0.55rem;">' + typeBreakdown + '</span>' +
+    '</div>' +
   '</div>';
 
   // Face listesi tablosu — her satır tıklanabilir (3D viewer'da face highlight)

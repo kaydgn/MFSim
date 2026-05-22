@@ -472,6 +472,16 @@ function veFEAMeshFromGeometry(geometry, opts) {
     }
   }
 
+  // GENERIC FALLBACK: Yukarıdaki hiçbir tip-spesifik case eşleşmediyse
+  // (yeni primitif eklendi ama dispatch unutuldu, custom primitif vs.)
+  // Three.js mesh'inden triangulated surface çıkar → voxel + boundary-snap.
+  // veFEABuildPrimitiveMesh impl'i olan HERHANGİ bir tip için çalışır.
+  // Tip-spesifik structured mesher (_veFEAMeshBox vs.) yalnız performans
+  // ve kalite optimizasyonu — eksikse generic devreye girer, hata vermez.
+  if (!mesh && geometry.type !== 'step') {
+    mesh = _veFEAMeshGenericPrimitive(geometry, size, mode, elementType, opts);
+  }
+
   // Lokal sizing (bias): yapısal mesh sonrasında düğüm konumlarını
   // hedef yüze doğru kümele. Tet4/quadratic dönüşümlerinden ÖNCE uygulanır
   // ki midpoint düğümleri doğru pozisyonda hesaplansın.
@@ -2001,6 +2011,91 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
 //
 // Test bypass: geometry._parsedTriangles (test-only) varsa onu döndür ki
 // birim testler sync voxelizer üzerinden tam pipeline'ı çalıştırabilsin.
+// ─── Generic primitif mesh — tip-spesifik mesher yoksa fallback ────────────
+// Three.js mesh'inden triangulated surface çıkar → STEP voxel/boundary-snap
+// path'i ile mesh'le. Yeni eklenen primitifler (washer, bolt, nut, plate)
+// veya gelecek primitifler için tek nokta dispatch. Worker'da THREE yoksa
+// null döner — main thread'de yeniden denenir.
+function _veFEAMeshGenericPrimitive(geometry, size, mode, elementType, opts) {
+  // 1) Triangulated surface çıkar
+  var parsed = geometry._parsedTriangles ||
+               _veFEAExtractTrianglesFromPrimitive(geometry.type, geometry.params || {});
+  if (!parsed || parsed.triangleCount === 0) {
+    if (typeof console !== 'undefined') {
+      console.warn('[FEA Mesh] generic primitive triangulation failed:', geometry.type,
+                   '(THREE.js gerekli — worker context?)');
+    }
+    return null;
+  }
+
+  // 2) Surface mode → Tri3
+  if (mode === 'surface') {
+    return _veFEAMeshFromParsedTriangles(parsed, geometry.type);
+  }
+
+  // 3) Volume mode → voxel hex8
+  var mesh = _veFEAVoxelizeTrianglesToHex(parsed, size, geometry.type, null);
+  if (!mesh || mesh.error) return mesh;
+
+  // 4) Boundary snap + tet4 dönüşümü (kullanıcı elementType=hex8 demediyse)
+  if (mesh.voxelMode && opts && opts.disableBoundarySnap !== true) {
+    if (elementType !== 'hex8' && elementType !== 'pyramid5') {
+      var tetMesh = (typeof veFEAConvertMeshToTet4 === 'function') ? veFEAConvertMeshToTet4(mesh) : null;
+      if (tetMesh && !tetMesh.error) {
+        mesh = tetMesh;
+        if (typeof _veFEABoundarySnapToTriangles === 'function') {
+          var snapped = _veFEABoundarySnapToTriangles(mesh, parsed);
+          if (snapped && !snapped.error) mesh = snapped;
+        }
+      }
+    }
+  }
+  return mesh;
+}
+
+// Three.js primitif mesh'inden triangulated surface çıkar.
+// veFEABuildPrimitiveMesh ile mesh inşa et, tüm child mesh'lerden üçgenleri
+// matrixWorld uygulayarak flat Float32Array'e topla.
+function _veFEAExtractTrianglesFromPrimitive(type, params) {
+  if (typeof THREE === 'undefined' || typeof veFEABuildPrimitiveMesh !== 'function') return null;
+  var meshOrGroup;
+  try {
+    meshOrGroup = veFEABuildPrimitiveMesh(type, params);
+  } catch (e) { return null; }
+  if (!meshOrGroup) return null;
+  // matrixWorld'leri günceller (Group içinde child transform varsa)
+  meshOrGroup.updateMatrixWorld(true);
+
+  var allVerts = [];
+  meshOrGroup.traverse(function (o) {
+    if (!o.isMesh || !o.geometry) return;
+    var geo = o.geometry;
+    var pos = geo.attributes.position;
+    if (!pos) return;
+    var idx = geo.index;
+    var triCount = idx ? idx.count / 3 : pos.count / 3;
+    var v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
+    for (var i = 0; i < triCount; i++) {
+      var a, b, c;
+      if (idx) { a = idx.getX(i * 3); b = idx.getX(i * 3 + 1); c = idx.getX(i * 3 + 2); }
+      else     { a = i * 3; b = i * 3 + 1; c = i * 3 + 2; }
+      v1.fromBufferAttribute(pos, a);
+      v2.fromBufferAttribute(pos, b);
+      v3.fromBufferAttribute(pos, c);
+      v1.applyMatrix4(o.matrixWorld);
+      v2.applyMatrix4(o.matrixWorld);
+      v3.applyMatrix4(o.matrixWorld);
+      allVerts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+    }
+  });
+
+  if (allVerts.length === 0) return null;
+  return {
+    vertices: new Float32Array(allVerts),
+    triangleCount: allVerts.length / 9
+  };
+}
+
 function _veFEAParseSurfaceTriangles(geom) {
   if (geom && geom._parsedTriangles && geom._parsedTriangles.triangleCount > 0) {
     return geom._parsedTriangles;

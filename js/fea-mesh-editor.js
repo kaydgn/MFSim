@@ -849,15 +849,41 @@ function _veFEAEditorTopologyHTML(node) {
     'Mesh atmadan önce geometriden otomatik tespit edilen yüzeyler. Mesher bu yüzeylere ' +
     '<b>conforming</b> şekilde eleman üretir; her yüze ait düğümler otomatik named selection olur.</div>';
 
-  // Özet kutusu — alan/hacim/face/edge/vertex sayıları
+  // Generic fallback notu — bilinmeyen tip Three.js mesh'inden otomatik analiz edildi
+  if (topo.generic) {
+    html += '<div style="padding:6px 8px; background:rgba(59,130,246,0.08); border:1px solid var(--accent-primary); margin-bottom:8px; font-size:0.58rem; color:var(--text-primary); line-height:1.45;">' +
+      '<b>ℹ Otomatik Topology Analizi:</b> Bu geometri tipi (' + (geom.sourceLabel || geom.type) + ') için ' +
+      'tip-spesifik topology fonksiyonu yok. Three.js mesh\'inden normal-clustering ile düzlemsel yüzeyler ' +
+      'otomatik tespit edildi; eğri yüzeyler "Triangulated" olarak işaretlendi. Üretilen face\'ler local sizing ' +
+      've BC uygulamak için kullanılabilir.' +
+      '</div>';
+  }
+
+  // Özet kutusu — alan/hacim/face/edge/vertex sayıları + tip etiketi
   function _fmtArea(a)  { return a >= 1e6 ? (a/1e6).toFixed(2)+' m²' : a >= 1e4 ? (a/1e4).toFixed(2)+' dm²' : a >= 1e2 ? (a/1e2).toFixed(2)+' cm²' : a.toFixed(1)+' mm²'; }
   function _fmtVol(v)   { return v >= 1e9 ? (v/1e9).toFixed(3)+' m³' : v >= 1e6 ? (v/1e6).toFixed(2)+' dm³' : v >= 1e3 ? (v/1e3).toFixed(2)+' cm³' : v.toFixed(1)+' mm³'; }
-  html += '<div style="padding:6px 8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:8px; font-size:0.6rem; display:grid; grid-template-columns:1fr 1fr; gap:3px 12px;">' +
-    '<span style="color:var(--text-secondary);">Yüzey sayısı</span><span style="text-align:right; font-weight:600;">' + topo.faces.length + '</span>' +
-    '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.edges ? topo.edges.count : 0) + '</span>' +
-    '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.vertices ? topo.vertices.count : 0) + '</span>' +
-    '<span style="color:var(--text-secondary);">Hacim</span><span style="text-align:right; font-weight:600;">' + _fmtVol(topo.volume || 0) + '</span>' +
-    '<span style="color:var(--text-secondary);">Toplam yüzey alanı</span><span style="text-align:right; font-weight:600;">' + _fmtArea(topo.totalSurfaceArea || 0) + '</span>' +
+  function _fmtLen(l)   { return l >= 1000 ? (l/1000).toFixed(2)+' m' : l >= 10 ? l.toFixed(1)+' mm' : l.toFixed(2)+' mm'; }
+  // Yüzey tipi dağılımı (kaç tane planar, cylindrical, vs.)
+  var typeCounts = {};
+  topo.faces.forEach(function(f) { typeCounts[f.type] = (typeCounts[f.type] || 0) + 1; });
+  var typeBreakdown = Object.keys(typeCounts).map(function(t) {
+    var lbl = (typeof veFEATopologyFaceTypeLabel === 'function') ? veFEATopologyFaceTypeLabel(t) : t;
+    return typeCounts[t] + '× ' + lbl;
+  }).join(' · ');
+  var bbox = topo.bbox || { x: 0, y: 0, z: 0 };
+
+  html += '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:8px; font-size:0.6rem;">' +
+    '<div style="font-weight:600; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">📐 Geometri Özeti</div>' +
+    '<div style="display:grid; grid-template-columns:1fr 1fr; gap:3px 12px;">' +
+      '<span style="color:var(--text-secondary);">Geometri tipi</span><span style="text-align:right; font-weight:600;">' + (geom.sourceLabel || geom.type) + '</span>' +
+      '<span style="color:var(--text-secondary);">Yüzey sayısı</span><span style="text-align:right; font-weight:600;">' + topo.faces.length + '</span>' +
+      '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.edges ? topo.edges.count : 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.vertices ? topo.vertices.count : 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Hacim</span><span style="text-align:right; font-weight:600;">' + _fmtVol(topo.volume || 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Toplam yüzey alanı</span><span style="text-align:right; font-weight:600;">' + _fmtArea(topo.totalSurfaceArea || 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Sınırlayıcı kutu</span><span style="text-align:right; font-weight:600;">' + _fmtLen(bbox.x) + ' × ' + _fmtLen(bbox.y) + ' × ' + _fmtLen(bbox.z) + '</span>' +
+      '<span style="color:var(--text-secondary);">Yüzey tipi dağılımı</span><span style="text-align:right; font-weight:600; font-size:0.55rem;">' + typeBreakdown + '</span>' +
+    '</div>' +
   '</div>';
 
   // Face listesi tablosu — her satır tıklanabilir (3D viewer'da face highlight)
