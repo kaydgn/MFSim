@@ -551,13 +551,13 @@ function _veFEAEditorBuildRightPanel(node) {
     '</div>' +
     '<button id="ve-fea-disp-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'display-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Render modu: Shaded / Edges / Wireframe">Shaded</button>' +
     '<button id="ve-fea-pointer-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'pointer-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Pointer modu: View / Face Pick / Body Pick">⊞ View</button>' +
-    '<span style="font-size:0.55rem; color:var(--text-muted); margin-left:6px;">LMB: orbit · RMB: pan · wheel: zoom</span>' +
+    '<span style="font-size:0.55rem; color:var(--text-muted); margin-left:6px;">LMB: seç · MMB: döndür · Ctrl+RMB: pan · wheel: zoom</span>' +
     clipUI +
     '</div>';
   panel.innerHTML = viewToolbar +
     // Hit-point + cursor coordinate overlay (canvas üstünde absolute)
     '<div style="flex:1; position:relative; min-height:0; background:#1a1a1a;">' +
-      '<canvas id="ve-fea-mesh-canvas-' + nid + '" style="display:block; width:100%; height:100%; cursor:grab;"></canvas>' +
+      '<canvas id="ve-fea-mesh-canvas-' + nid + '" style="display:block; width:100%; height:100%; cursor:default;"></canvas>' +
       '<div id="ve-fea-hit-coord-' + nid + '" style="position:absolute; bottom:8px; left:8px; padding:4px 8px; background:rgba(0,0,0,0.65); color:#fbbf24; font-size:0.6rem; font-family:monospace; pointer-events:none; display:none; border:1px solid #444;"></div>' +
       '<div id="ve-fea-depth-stack-' + nid + '" style="position:absolute; bottom:8px; right:8px; display:none; gap:2px; flex-direction:column;"></div>' +
     '</div>';
