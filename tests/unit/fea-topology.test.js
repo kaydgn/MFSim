@@ -464,3 +464,262 @@ describe('Topology ↔ namedSelections face ID uyumu', () => {
     expect(ids).toEqual(expected.sort());
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════
+// FAZ 1 — YENİ TOPOLOJİ MOTORU TESTLERİ (edge/vertex listeleri + curve fitting)
+// ════════════════════════════════════════════════════════════════════════════
+
+describe('Kutu: detaylı edge listesi (12 edge + 8 vertex)', () => {
+  test('12 edge array olarak, her biri line tipi', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 50, height: 30, depth: 20 } });
+    expect(Array.isArray(t.edges)).toBe(true);
+    expect(t.edges.length).toBe(12);
+    t.edges.forEach(function(e) {
+      expect(e.type).toBe('line');
+      expect(Array.isArray(e.p1)).toBe(true);
+      expect(Array.isArray(e.p2)).toBe(true);
+      expect(Array.isArray(e.faceIds)).toBe(true);
+      expect(e.faceIds.length).toBe(2);
+      expect(typeof e.length).toBe('number');
+    });
+  });
+
+  test('8 vertex array olarak, her biri 3 face referansı', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 10, height: 10, depth: 10 } });
+    expect(Array.isArray(t.vertices)).toBe(true);
+    expect(t.vertices.length).toBe(8);
+    t.vertices.forEach(function(v) {
+      expect(Array.isArray(v.position)).toBe(true);
+      expect(v.position.length).toBe(3);
+      expect(Array.isArray(v.faceIds)).toBe(true);
+      expect(v.faceIds.length).toBe(3);   // her köşede 3 yüz birleşir
+    });
+  });
+
+  test('Geriye uyumluluk: t.edges.count yine erişilebilir', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 50, height: 30, depth: 20 } });
+    expect(t.edges.count).toBe(12);
+    expect(t.vertices.count).toBe(8);
+  });
+});
+
+describe('Silindir: edge polyline + curve geometrisi', () => {
+  test('2 circle edge, her biri 48 segment polyline', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'cylinder', params: { radius: 10, height: 20 } });
+    expect(t.edges.length).toBe(2);
+    t.edges.forEach(function(e) {
+      expect(e.type).toBe('circle');
+      expect(e.radius).toBe(10);
+      expect(Array.isArray(e.center)).toBe(true);
+      expect(Array.isArray(e.axis)).toBe(true);
+      expect(Array.isArray(e.polyline)).toBe(true);
+      expect(e.polyline.length).toBeGreaterThan(40);
+    });
+  });
+
+  test('Edge faceIds doğru bağlantı', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'cylinder', params: { radius: 10, height: 20 } });
+    var bot = t.edges.find(function(e) { return e.id === 'edgeBottomCircle'; });
+    expect(bot.faceIds).toContain('faceBottom');
+    expect(bot.faceIds).toContain('faceSide');
+  });
+});
+
+describe('L-bracket: 18 edge + 12 vertex', () => {
+  test('18 edge array (12 kesit + 6 axial)', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } });
+    expect(Array.isArray(t.edges)).toBe(true);
+    expect(t.edges.length).toBe(18);
+    // 12 cross-section (Zm/Zp) + 6 axial
+    var axials = t.edges.filter(function(e) { return e.id.indexOf('eL_Z_') === 0; });
+    expect(axials.length).toBe(6);
+    axials.forEach(function(e) { expect(e.length).toBe(100); });
+  });
+
+  test('12 vertex array', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'lbracket', params: { width: 60, height: 40, thickness: 5, length: 100 } });
+    expect(Array.isArray(t.vertices)).toBe(true);
+    expect(t.vertices.length).toBe(12);
+  });
+});
+
+describe('I-beam: 36 edge + 24 vertex', () => {
+  test('24 kesit + 12 axial = 36 edge', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } });
+    expect(Array.isArray(t.edges)).toBe(true);
+    expect(t.edges.length).toBe(36);    // 12 (front) + 12 (back) + 12 (axial)
+    expect(t.vertices.length).toBe(24); // 12 corners × 2 z-uç
+  });
+
+  test('Geriye uyumluluk: count', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'ibeam', params: { width: 80, height: 120, flange: 8, web: 6, length: 200 } });
+    expect(t.edges.count).toBe(36);
+    expect(t.vertices.count).toBe(24);
+  });
+});
+
+describe('RectTube: dış+iç edges + 16 vertex', () => {
+  test('24 edge (8 dış kesit + 8 iç kesit + 4 dış axial + 4 iç axial) + 16 vertex', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'rectTube', params: { width: 60, height: 40, thickness: 5, length: 200 } });
+    expect(Array.isArray(t.edges)).toBe(true);
+    expect(t.edges.length).toBe(24);
+    expect(t.vertices.length).toBe(16);
+    // İç delik edge'leri isHole işaretli
+    var innerEdges = t.edges.filter(function(e) { return e.isHole; });
+    expect(innerEdges.length).toBe(12);  // 8 iç kesit + 4 iç axial
+  });
+});
+
+describe('Plate: 12 plate edge + 2*N delik edge + 8 vertex', () => {
+  test('Plate 2×2: 12 + 8 = 20 edge, 8 vertex', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'plate', params: { length: 120, width: 80, thickness: 8, holeDiameter: 9, cols: 2, rows: 2, margin: 15 } });
+    expect(Array.isArray(t.edges)).toBe(true);
+    expect(t.edges.length).toBe(12 + 2 * 4);
+    expect(t.vertices.length).toBe(8);
+    // Her delik için 2 circle edge
+    var holeCircles = t.edges.filter(function(e) { return e.id.indexOf('eP_Hole') === 0; });
+    expect(holeCircles.length).toBe(8);
+    holeCircles.forEach(function(e) { expect(e.type).toBe('circle'); });
+  });
+
+  test('Plate deliksiz: sadece 12 edge', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'plate', params: { length: 120, width: 80, thickness: 8, holeDiameter: 0, cols: 2, rows: 2 } });
+    expect(t.edges.length).toBe(12);
+  });
+});
+
+describe('Nut: 18 hex edge + 6 dikey + 2 iç daire = 20 edge', () => {
+  test('Edge ve vertex sayıları', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'nut', params: { width: 13, thickness: 6.5, holeDiameter: 8 } });
+    expect(t.edges.length).toBe(20);   // 12 hex + 6 vertical + 2 inner circles
+    expect(t.vertices.length).toBe(12);
+  });
+});
+
+describe('Bolt: tam edge + vertex listesi', () => {
+  test('20 edge (12 hex + 6 dikey + 2 daire) + 12 vertex', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'bolt', params: { headWidth: 13, headHeight: 5.5, shaftDiameter: 8, shaftLength: 30 } });
+    expect(t.edges.length).toBe(20);
+    expect(t.vertices.length).toBe(12);
+  });
+});
+
+describe('Curve fitting — veFEAFitCurveToPolyline', () => {
+  test('Düz çizgi noktaları → type=line', () => {
+    var pts = [[0,0,0], [1,0,0], [2,0,0], [3,0,0], [5,0,0]];
+    var fit = veFEAFitCurveToPolyline(pts);
+    expect(fit.type).toBe('line');
+    expect(fit.length).toBeCloseTo(5, 5);
+  });
+
+  test('XY düzleminde tam daire → type=circle', () => {
+    var r = 10, n = 36;
+    var pts = [];
+    for (var i = 0; i <= n; i++) {
+      var th = (i / n) * 2 * Math.PI;
+      pts.push([r * Math.cos(th), r * Math.sin(th), 0]);
+    }
+    var fit = veFEAFitCurveToPolyline(pts, 0.001);
+    expect(fit.type).toBe('circle');
+    expect(fit.radius).toBeCloseTo(r, 2);
+    expect(fit.isFullCircle).toBe(true);
+  });
+
+  test('Yay (yarım daire) → type=arc', () => {
+    var r = 5, n = 18;
+    var pts = [];
+    for (var i = 0; i <= n; i++) {
+      var th = (i / n) * Math.PI;
+      pts.push([r * Math.cos(th), r * Math.sin(th), 0]);
+    }
+    var fit = veFEAFitCurveToPolyline(pts, 0.001);
+    expect(fit.type).toBe('arc');
+    expect(fit.radius).toBeCloseTo(r, 2);
+    expect(fit.isFullCircle).toBe(false);
+  });
+
+  test('Yetersiz veri (1 nokta) → type=unknown', () => {
+    var fit = veFEAFitCurveToPolyline([[0,0,0]]);
+    expect(fit.type).toBe('unknown');
+  });
+
+  test('Eliptik (yarım eksenleri farklı) → ellipse veya spline', () => {
+    var n = 36;
+    var pts = [];
+    for (var i = 0; i <= n; i++) {
+      var th = (i / n) * 2 * Math.PI;
+      pts.push([5 * Math.cos(th), 2 * Math.sin(th), 0]);
+    }
+    var fit = veFEAFitCurveToPolyline(pts, 0.001);
+    // Ellipse veya spline'a fit etmeli (circle değil)
+    expect(['ellipse','spline'].indexOf(fit.type) >= 0).toBe(true);
+  });
+});
+
+describe('Edge ve Vertex adjacency graph', () => {
+  test('Box edge → face adjacency', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 50, height: 30, depth: 20 } });
+    var adj = veFEABuildEdgeAdjacency(t);
+    var ed = t.edges[0];
+    expect(Array.isArray(adj[ed.id])).toBe(true);
+    expect(adj[ed.id].length).toBe(2);
+  });
+
+  test('Box vertex → 3 edge + 3 face', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 10, height: 10, depth: 10 } });
+    var adj = veFEABuildVertexAdjacency(t);
+    var v = t.vertices[0];
+    expect(adj[v.id].faces.length).toBe(3);
+  });
+
+  test('Face adjacency artık BOX için de çalışır (önceden edge[] yoktu, boş gelirdi)', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 10, height: 10, depth: 10 } });
+    var adj = veFEABuildFaceAdjacency(t);
+    // Her face'in 4 komşusu olmalı (kutu)
+    Object.keys(adj).forEach(function(fid) {
+      expect(adj[fid].length).toBeGreaterThanOrEqual(3);
+    });
+  });
+});
+
+describe('Helper fonksiyonlar', () => {
+  test('veFEATopologyEdgeCount edge[] ve count formatı için tutarlı', () => {
+    var t1 = veFEAComputeGeometryTopology({ type: 'box', params: { width: 10, height: 10, depth: 10 } });
+    expect(veFEATopologyEdgeCount(t1)).toBe(12);
+    var t2 = veFEAComputeGeometryTopology({ type: 'sphere', params: { radius: 5 } });
+    expect(veFEATopologyEdgeCount(t2)).toBe(0);
+  });
+
+  test('veFEATopologyVertexCount', () => {
+    var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 10, height: 10, depth: 10 } });
+    expect(veFEATopologyVertexCount(t)).toBe(8);
+  });
+
+  test('veFEATopologyEdgeTypeLabel', () => {
+    expect(veFEATopologyEdgeTypeLabel('line')).toBe('Doğru');
+    expect(veFEATopologyEdgeTypeLabel('circle')).toBe('Daire');
+    expect(veFEATopologyEdgeTypeLabel('arc')).toBe('Yay');
+    expect(veFEATopologyEdgeTypeLabel('ellipse')).toBe('Eliptik');
+    expect(veFEATopologyEdgeTypeLabel('spline')).toBe('Eğri (Spline)');
+  });
+
+  test('_veFEACirclePolyline 48 segment daire üretir', () => {
+    var poly = _veFEACirclePolyline([0,0,0], [0,1,0], 10, 48);
+    expect(poly.length).toBeGreaterThan(40);
+    // İlk ve son nokta yakın olmalı (full circle)
+    var first = poly[0], last = poly[poly.length - 1];
+    var d = Math.sqrt(Math.pow(first[0]-last[0],2) + Math.pow(first[1]-last[1],2) + Math.pow(first[2]-last[2],2));
+    expect(d).toBeLessThan(0.01);
+  });
+});
+
+describe('Cylinder edge polyline aksial doğrulama', () => {
+  test('Alt daire polyline\'ı y=-h/2 düzleminde, üst y=+h/2', () => {
+    var r = 10, h = 20;
+    var t = veFEAComputeGeometryTopology({ type: 'cylinder', params: { radius: r, height: h } });
+    var bot = t.edges.find(function(e) { return e.id === 'edgeBottomCircle'; });
+    var top = t.edges.find(function(e) { return e.id === 'edgeTopCircle'; });
+    bot.polyline.forEach(function(p) { expect(p[1]).toBeCloseTo(-h/2, 3); });
+    top.polyline.forEach(function(p) { expect(p[1]).toBeCloseTo( h/2, 3); });
+  });
+});

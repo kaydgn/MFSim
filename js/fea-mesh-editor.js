@@ -589,14 +589,32 @@ function veFEAEditorViewerAction(nodeId, action) {
     return;
   }
   if (action === 'pointer-mode') {
-    // ANSYS-style pointer mode cycle
-    var modes = ['view', 'face-pick', 'box-select', 'body-pick', 'measure'];
-    var labels = { view: '⊞ View', 'face-pick': '⊡ Face Pick', 'box-select': '▭ Box Select', 'body-pick': '⊠ Body Pick', measure: '⌖ Measure' };
+    // ANSYS-style pointer mode cycle — face/edge/vertex pick dahil
+    var modes = ['view', 'face-pick', 'edge-pick', 'vertex-pick', 'box-select', 'body-pick', 'measure'];
+    var labels = {
+      view: '⊞ View',
+      'face-pick': '⊡ Face Pick',
+      'edge-pick': '📏 Edge Pick',
+      'vertex-pick': '🔘 Vertex Pick',
+      'box-select': '▭ Box Select',
+      'body-pick': '⊠ Body Pick',
+      measure: '⌖ Measure'
+    };
     var cur = viewer._pointerMode || 'view';
     var next = modes[(modes.indexOf(cur) + 1) % modes.length];
     if (typeof viewer.setPointerMode === 'function') viewer.setPointerMode(next);
     var pbtn = document.getElementById('ve-fea-pointer-mode-' + nodeId);
     if (pbtn) pbtn.textContent = labels[next];
+    return;
+  }
+  if (action === 'toggle-edge-overlay') {
+    var em = viewer._edgeOverlayMode === 'off' ? 'all' : 'off';
+    if (typeof viewer.setEdgeOverlayMode === 'function') viewer.setEdgeOverlayMode(em);
+    return;
+  }
+  if (action === 'toggle-vertex-overlay') {
+    var vm = viewer._vertexOverlayMode === 'off' ? 'all' : 'off';
+    if (typeof viewer.setVertexOverlayMode === 'function') viewer.setVertexOverlayMode(vm);
     return;
   }
 }
@@ -828,6 +846,14 @@ function veFEARenameGeometryFace(meshNodeId, faceId, defaultLabel) {
 // Geometri Topolojisi — ANSYS-style "geometriyi/yüzeyleri tanımla → mesh at"
 // workflow'unun ilk aşaması. Upstream Geometry node'undan topology okunur
 // (mesh ÖNCESI tespit edilmiş face listesi).
+// Topology accordion sekme state — Faces / Edges / Vertices arasında geçiş.
+var _veFEATopologyTabState = {};  // { nodeId: 'faces' | 'edges' | 'vertices' }
+
+function veFEAEditorSetTopologyTab(nodeId, tab) {
+  _veFEATopologyTabState[nodeId] = tab;
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
 function _veFEAEditorTopologyHTML(node) {
   // Upstream geometri node'unu bul
   var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
@@ -846,8 +872,8 @@ function _veFEAEditorTopologyHTML(node) {
   }
 
   var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:8px;">' +
-    'Mesh atmadan önce geometriden otomatik tespit edilen yüzeyler. Mesher bu yüzeylere ' +
-    '<b>conforming</b> şekilde eleman üretir; her yüze ait düğümler otomatik named selection olur.</div>';
+    'Mesh atmadan önce geometriden otomatik tespit edilen <b>yüzey / kenar / köşe</b> bilgisi. ' +
+    'Her birine tıklayıp 3D viewer\'da seçebilir, lokal mesh ayarları (size, inflation, SOI) uygulayabilirsiniz.</div>';
 
   // Generic fallback notu — bilinmeyen tip Three.js mesh'inden otomatik analiz edildi
   if (topo.generic) {
@@ -872,19 +898,46 @@ function _veFEAEditorTopologyHTML(node) {
   }).join(' · ');
   var bbox = topo.bbox || { x: 0, y: 0, z: 0 };
 
+  var edgeCount = (typeof veFEATopologyEdgeCount === 'function') ? veFEATopologyEdgeCount(topo) : (topo.edges ? topo.edges.count : 0);
+  var vertexCount = (typeof veFEATopologyVertexCount === 'function') ? veFEATopologyVertexCount(topo) : (topo.vertices ? topo.vertices.count : 0);
   html += '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:8px; font-size:0.6rem;">' +
     '<div style="font-weight:600; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">📐 Geometri Özeti</div>' +
     '<div style="display:grid; grid-template-columns:1fr 1fr; gap:3px 12px;">' +
       '<span style="color:var(--text-secondary);">Geometri tipi</span><span style="text-align:right; font-weight:600;">' + (geom.sourceLabel || geom.type) + '</span>' +
       '<span style="color:var(--text-secondary);">Yüzey sayısı</span><span style="text-align:right; font-weight:600;">' + topo.faces.length + '</span>' +
-      '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.edges ? topo.edges.count : 0) + '</span>' +
-      '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.vertices ? topo.vertices.count : 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + edgeCount + '</span>' +
+      '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + vertexCount + '</span>' +
       '<span style="color:var(--text-secondary);">Hacim</span><span style="text-align:right; font-weight:600;">' + _fmtVol(topo.volume || 0) + '</span>' +
       '<span style="color:var(--text-secondary);">Toplam yüzey alanı</span><span style="text-align:right; font-weight:600;">' + _fmtArea(topo.totalSurfaceArea || 0) + '</span>' +
       '<span style="color:var(--text-secondary);">Sınırlayıcı kutu</span><span style="text-align:right; font-weight:600;">' + _fmtLen(bbox.x) + ' × ' + _fmtLen(bbox.y) + ' × ' + _fmtLen(bbox.z) + '</span>' +
       '<span style="color:var(--text-secondary);">Yüzey tipi dağılımı</span><span style="text-align:right; font-weight:600; font-size:0.55rem;">' + typeBreakdown + '</span>' +
     '</div>' +
   '</div>';
+
+  // ─── Sekme başlıkları (Faces / Edges / Vertices) ─────────────────────────
+  var currentTab = _veFEATopologyTabState[node.id] || 'faces';
+  function _tabBtn(key, lbl, count) {
+    var active = (currentTab === key);
+    var bg = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
+    var fg = active ? '#fff' : 'var(--text-secondary)';
+    var bw = active ? 'var(--accent-primary)' : 'var(--border-color)';
+    return '<button onclick="veFEAEditorSetTopologyTab(\'' + node.id + '\',\'' + key + '\')" style="flex:1; padding:6px 8px; background:' + bg + '; color:' + fg + '; border:1px solid ' + bw + '; font-size:0.6rem; font-weight:600; cursor:pointer;">' + lbl + ' <span style="opacity:0.7;">(' + count + ')</span></button>';
+  }
+  html += '<div style="display:flex; gap:0; margin-bottom:8px;">' +
+    _tabBtn('faces',    '🎨 Yüzeyler', topo.faces.length) +
+    _tabBtn('edges',    '📏 Kenarlar', edgeCount) +
+    _tabBtn('vertices', '🔘 Köşeler',  vertexCount) +
+  '</div>';
+
+  if (currentTab === 'edges') {
+    html += _veFEAEditorTopologyEdgesPanel(node, topo);
+    return html;
+  }
+  if (currentTab === 'vertices') {
+    html += _veFEAEditorTopologyVerticesPanel(node, topo);
+    return html;
+  }
+  // currentTab === 'faces' (varsayılan)
 
   // Face listesi tablosu — her satır tıklanabilir (3D viewer'da face highlight)
   var selectedFaceId = node.data && node.data.selectedFaceId || null;
@@ -958,6 +1011,187 @@ function _veFEAEditorTopologyHTML(node) {
     'Sınır koşulları (F4) bu yüzeylere referansla uygulanır.</div>';
 
   return html;
+}
+
+// ─── EDGES panel — kenar listesi, tip filtreleme, 3D highlight ─────────────
+function _veFEAEditorTopologyEdgesPanel(node, topo) {
+  function _fmtLen(l) { return l >= 1000 ? (l/1000).toFixed(2)+' m' : l >= 10 ? l.toFixed(1)+' mm' : l.toFixed(2)+' mm'; }
+  var edges = Array.isArray(topo.edges) ? topo.edges : [];
+  if (edges.length === 0) {
+    return '<div style="padding:10px 12px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
+      'Bu geometride tanımlı edge bilgisi yok. (Küre, torus gibi sınırsız manifoldlar veya generic mesh\'in henüz tanınamayan kısımları.)' +
+    '</div>';
+  }
+  var selectedEdgeId = (node.data && node.data.selectedEdgeId) || null;
+  // Tip dağılımı
+  var tCounts = {};
+  edges.forEach(function(e) { tCounts[e.type] = (tCounts[e.type] || 0) + 1; });
+  var tBreakdown = Object.keys(tCounts).map(function(t) {
+    var lbl = (typeof veFEATopologyEdgeTypeLabel === 'function') ? veFEATopologyEdgeTypeLabel(t) : t;
+    return tCounts[t] + '× ' + lbl;
+  }).join(' · ');
+  var html = '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:6px;">Tip dağılımı: <b>' + tBreakdown + '</b></div>';
+  html += '<div style="font-size:0.58rem; color:var(--text-secondary); margin-bottom:4px;">Kenarlar <span style="color:var(--text-muted);">(satıra tıkla → 3D\'de sarı highlight)</span>:</div>';
+  edges.forEach(function(e) {
+    var isSel = (selectedEdgeId === e.id);
+    var rowBg = isSel ? '#fbbf2420' : 'var(--bg-tertiary)';
+    var rowBd = isSel ? '#fbbf24' : 'var(--border-color)';
+    var typeLbl = (typeof veFEATopologyEdgeTypeLabel === 'function') ? veFEATopologyEdgeTypeLabel(e.type) : e.type;
+    var typeColor = '#3b82f6';
+    if (e.type === 'circle') typeColor = '#a855f7';
+    else if (e.type === 'arc') typeColor = '#06b6d4';
+    else if (e.type === 'ellipse') typeColor = '#ec4899';
+    else if (e.type === 'spline') typeColor = '#f59e0b';
+    var icon = isSel ? '<span style="color:#fbbf24; margin-right:4px;">◉</span>' : '<span style="color:var(--text-muted); margin-right:4px;">○</span>';
+    var holeIcon = e.isHole ? '<span title="Delik kenarı" style="color:#ef4444; margin-left:4px;">⌀</span>' : '';
+    var extra = '';
+    if (e.radius !== undefined) extra += ' · r=' + e.radius.toFixed(1) + 'mm';
+    if (e.type === 'arc' && e.startAngle !== undefined && e.endAngle !== undefined) {
+      var sweep = Math.abs(e.endAngle - e.startAngle) * 180 / Math.PI;
+      extra += ' · ' + sweep.toFixed(0) + '°';
+    }
+    html += '<button onclick="veFEASelectGeometryEdge(\'' + node.id + '\', \'' + e.id + '\')" style="display:block; width:100%; text-align:left; padding:5px 8px; background:' + rowBg + '; border:1px solid ' + rowBd + '; font-size:0.6rem; cursor:pointer; margin-bottom:3px; transition:background 0.12s;" onmouseover="this.style.background=\'' + (isSel ? '#fbbf2435' : 'var(--bg-secondary)') + '\'" onmouseout="this.style.background=\'' + rowBg + '\'">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
+        '<span style="display:flex; align-items:center; gap:4px;">' +
+          icon +
+          '<span style="font-family:monospace; font-size:0.55rem; padding:1px 5px; background:var(--bg-primary); color:var(--text-muted);">' + e.id + '</span>' +
+          '<span style="font-weight:600; color:var(--text-primary);">' + (e.label || e.id) + '</span>' +
+          holeIcon +
+        '</span>' +
+        '<span style="font-size:0.52rem; padding:1px 6px; background:' + typeColor + '20; color:' + typeColor + '; font-weight:600;">' + typeLbl + '</span>' +
+      '</div>' +
+      '<div style="font-size:0.55rem; color:var(--text-muted); padding-left:18px;">' +
+        'Uzunluk: <b style="color:var(--text-secondary);">' + _fmtLen(e.length || 0) + '</b>' + extra +
+        (Array.isArray(e.faceIds) ? ' · ' + e.faceIds.length + ' yüze komşu' : '') +
+      '</div>' +
+    '</button>';
+  });
+  if (selectedEdgeId) {
+    html += '<div style="margin-top:6px; padding:5px 8px; background:#fbbf2418; border-left:3px solid #fbbf24; font-size:0.6rem; color:var(--text-primary);">' +
+      '<b>Seçili kenar:</b> ' + selectedEdgeId +
+      ' <button onclick="veFEASelectGeometryEdge(\'' + node.id + '\', null)" style="float:right; padding:1px 6px; font-size:0.52rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:pointer;">Seçimi Kaldır</button>' +
+    '</div>';
+  }
+  html += '<div style="font-size:0.52rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">' +
+    'ℹ Kenarlar <b>Edge Sizing</b> bölümünde her biri için target eleman boyu veya bölünme sayısı (Number of Divisions) ile ayarlanabilir.</div>';
+  return html;
+}
+
+// ─── VERTICES panel — köşe listesi + 3D highlight + SOI merkezi ────────────
+function _veFEAEditorTopologyVerticesPanel(node, topo) {
+  var verts = Array.isArray(topo.vertices) ? topo.vertices : [];
+  if (verts.length === 0) {
+    return '<div style="padding:10px 12px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
+      'Bu geometride tanımlı köşe yok. (Silindir, küre, torus gibi smooth manifoldlarda vertex bulunmaz.)' +
+    '</div>';
+  }
+  var selectedVId = (node.data && node.data.selectedVertexId) || null;
+  var html = '<div style="font-size:0.58rem; color:var(--text-secondary); margin-bottom:4px;">' +
+    'Köşeler <span style="color:var(--text-muted);">(satıra tıkla → 3D\'de sarı küre · SOI merkezi olarak kullan)</span>:</div>';
+  verts.forEach(function(v) {
+    var isSel = (selectedVId === v.id);
+    var rowBg = isSel ? '#fbbf2420' : 'var(--bg-tertiary)';
+    var rowBd = isSel ? '#fbbf24' : 'var(--border-color)';
+    var icon = isSel ? '<span style="color:#fbbf24; margin-right:4px;">◉</span>' : '<span style="color:var(--text-muted); margin-right:4px;">○</span>';
+    var pos = v.position || [0,0,0];
+    html += '<button onclick="veFEASelectGeometryVertex(\'' + node.id + '\', \'' + v.id + '\')" style="display:block; width:100%; text-align:left; padding:5px 8px; background:' + rowBg + '; border:1px solid ' + rowBd + '; font-size:0.6rem; cursor:pointer; margin-bottom:3px;" onmouseover="this.style.background=\'' + (isSel ? '#fbbf2435' : 'var(--bg-secondary)') + '\'" onmouseout="this.style.background=\'' + rowBg + '\'">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
+        '<span style="display:flex; align-items:center; gap:4px;">' +
+          icon +
+          '<span style="font-family:monospace; font-size:0.55rem; padding:1px 5px; background:var(--bg-primary); color:var(--text-muted);">' + v.id + '</span>' +
+          '<span style="font-weight:600; color:var(--text-primary);">' + (v.label || v.id) + '</span>' +
+        '</span>' +
+      '</div>' +
+      '<div style="font-size:0.55rem; color:var(--text-muted); padding-left:18px;">' +
+        '(' + pos[0].toFixed(2) + ', ' + pos[1].toFixed(2) + ', ' + pos[2].toFixed(2) + ') mm' +
+        (Array.isArray(v.faceIds) ? ' · ' + v.faceIds.length + ' yüz' : '') +
+        (Array.isArray(v.edgeIds) ? ' · ' + v.edgeIds.length + ' kenar' : '') +
+      '</div>' +
+    '</button>';
+  });
+  if (selectedVId) {
+    var sV = verts.find(function(vv) { return vv.id === selectedVId; });
+    html += '<div style="margin-top:6px; padding:5px 8px; background:#fbbf2418; border-left:3px solid #fbbf24; font-size:0.6rem; color:var(--text-primary);">' +
+      '<b>Seçili köşe:</b> ' + selectedVId;
+    if (sV && sV.position) {
+      html += '<button onclick="veFEAAddSphereOfInfluenceAtVertex(\'' + node.id + '\', \'' + sV.id + '\')" style="float:right; padding:2px 8px; font-size:0.55rem; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; margin-left:6px;">+ SOI Buraya</button>';
+    }
+    html += ' <button onclick="veFEASelectGeometryVertex(\'' + node.id + '\', null)" style="float:right; padding:1px 6px; font-size:0.52rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:pointer;">Seçimi Kaldır</button>' +
+    '</div>';
+  }
+  html += '<div style="font-size:0.52rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">' +
+    'ℹ Köşe konumları <b>Sphere of Influence</b> merkezi olarak doğrudan kullanılabilir. "+ SOI Buraya" butonu ile vertex pozisyonuna otomatik küre yerleştirilir.</div>';
+  return html;
+}
+
+// Edge seçimi — Topology panel veya 3D viewer'dan tetiklenir.
+function veFEASelectGeometryEdge(meshNodeId, edgeId) {
+  if (typeof nodes === 'undefined') return;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  // Toggle: aynı edge'e tekrar tıklanırsa seçim kaldırılır
+  if (meshNode.data.selectedEdgeId === edgeId) edgeId = null;
+  meshNode.data.selectedEdgeId = edgeId;
+  if (typeof veFEAViewerRegistry !== 'undefined') {
+    var viewer = veFEAViewerRegistry[meshNodeId];
+    if (viewer && typeof viewer.setSelectedEdge === 'function') {
+      viewer.setSelectedEdge(edgeId);
+    }
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// Vertex seçimi
+function veFEASelectGeometryVertex(meshNodeId, vertexId) {
+  if (typeof nodes === 'undefined') return;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  if (meshNode.data.selectedVertexId === vertexId) vertexId = null;
+  meshNode.data.selectedVertexId = vertexId;
+  if (typeof veFEAViewerRegistry !== 'undefined') {
+    var viewer = veFEAViewerRegistry[meshNodeId];
+    if (viewer && typeof viewer.setSelectedVertex === 'function') {
+      viewer.setSelectedVertex(vertexId);
+    }
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// Bir vertex'in konumunda yeni Sphere of Influence ekle.
+function veFEAAddSphereOfInfluenceAtVertex(meshNodeId, vertexId) {
+  if (typeof nodes === 'undefined') return;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  meshNode.data.meshSettings = meshNode.data.meshSettings || {};
+  if (!Array.isArray(meshNode.data.meshSettings.sphereOfInfluence)) {
+    meshNode.data.meshSettings.sphereOfInfluence = [];
+  }
+  // Upstream geometriden topology ve vertex pozisyonu
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function') ? veFEAFindUpstreamGeometryNode(meshNodeId) : null;
+  if (!geomNode) return;
+  var topo = geomNode.data && geomNode.data.geometry && geomNode.data.geometry.topology;
+  if (!topo && typeof veFEAComputeGeometryTopology === 'function') {
+    topo = veFEAComputeGeometryTopology(geomNode.data.geometry);
+  }
+  if (!topo || !Array.isArray(topo.vertices)) return;
+  var v = topo.vertices.find(function(vv) { return vv.id === vertexId; });
+  if (!v || !v.position) return;
+  // Varsayılan yarıçap: bbox diag * 0.1
+  var bbox = topo.bbox || { x: 100, y: 100, z: 100 };
+  var diag = Math.sqrt(bbox.x*bbox.x + bbox.y*bbox.y + bbox.z*bbox.z) || 100;
+  var r = Math.max(1, diag * 0.1);
+  meshNode.data.meshSettings.sphereOfInfluence.push({
+    cx: v.position[0], cy: v.position[1], cz: v.position[2], radius: r, targetSize: null,
+    sourceVertexId: vertexId
+  });
+  if (typeof saveState === 'function') saveState();
+  if (typeof showToast === 'function') showToast('Sphere of Influence eklendi: ' + (v.label || v.id), 'success');
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 }
 
 // Physics Preference preset değiştirildiğinde tüm defaults'ı uygular.
@@ -1412,11 +1646,13 @@ function _veFEAEditorEdgeSizingHTML(node) {
   var settings = d.meshSettings || {};
   var controls = settings.edgeSizingControls || [];
 
-  // Topology'den edges listesini al
+  // Topology'den edges listesini al — upstream Geometri node'undan
   var topoEdges = [];
-  if (typeof veFEAComputeGeometryTopology === 'function' && d.geometry) {
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function') ? veFEAFindUpstreamGeometryNode(node.id) : null;
+  var geomForTopo = (geomNode && geomNode.data && geomNode.data.geometry) || d.geometry;
+  if (typeof veFEAComputeGeometryTopology === 'function' && geomForTopo) {
     try {
-      var topo = veFEAComputeGeometryTopology(d.geometry);
+      var topo = (geomForTopo.topology && Array.isArray(geomForTopo.topology.edges)) ? geomForTopo.topology : veFEAComputeGeometryTopology(geomForTopo);
       if (topo && Array.isArray(topo.edges)) topoEdges = topo.edges;
     } catch (e) { /* skip */ }
   }

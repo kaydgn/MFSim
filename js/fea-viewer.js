@@ -274,6 +274,137 @@ function veFEAInitViewer(canvas, opts) {
       this._applyFaceColors();
     },
     getSelectedFace: function() { return this._selectedFaceId; },
+    // ─── Edge highlight (yeni topology motoru — polyline tabanlı) ───────────
+    _topologyEdges: null,        // topology.edges[] referansı
+    _topologyVertices: null,     // topology.vertices[] referansı
+    _edgeHighlightGroup: null,   // sahnedeki ek LineSegments grubu
+    _vertexHighlightGroup: null, // sahnedeki vertex marker grubu
+    _selectedEdgeId: null,
+    _hoveredEdgeId: null,
+    _selectedVertexId: null,
+    _hoveredVertexId: null,
+    setTopologyData: function(topology) {
+      this._topologyEdges = (topology && Array.isArray(topology.edges)) ? topology.edges : null;
+      this._topologyVertices = (topology && Array.isArray(topology.vertices)) ? topology.vertices : null;
+      this._refreshEdgeHighlights();
+      this._refreshVertexHighlights();
+    },
+    _refreshEdgeHighlights: function() {
+      // Temizle
+      if (this._edgeHighlightGroup) {
+        this._geometryRoot.remove(this._edgeHighlightGroup);
+        this._edgeHighlightGroup.traverse(function(o) {
+          if (o.geometry && o.geometry.dispose) o.geometry.dispose();
+          if (o.material && o.material.dispose) o.material.dispose();
+        });
+        this._edgeHighlightGroup = null;
+      }
+      if (!this._topologyEdges || this._topologyEdges.length === 0) { render(); return; }
+      var grp = new THREE.Group();
+      grp.name = 'feaEdgeHighlights';
+      grp.userData.feaEdgeOverlay = true;
+      var self = this;
+      this._topologyEdges.forEach(function(e) {
+        var pts = e.polyline;
+        if (!pts || pts.length < 2) {
+          // Tek line endpoint çifti varsa polyline üret
+          if (e.p1 && e.p2) pts = [e.p1, e.p2];
+          else return;
+        }
+        var flat = new Float32Array(pts.length * 3);
+        for (var i = 0; i < pts.length; i++) {
+          flat[i*3] = pts[i][0]; flat[i*3+1] = pts[i][1]; flat[i*3+2] = pts[i][2];
+        }
+        var geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(flat, 3));
+        var isSel = (self._selectedEdgeId === e.id);
+        var isHov = (self._hoveredEdgeId === e.id);
+        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x60a5fa);
+        var lineWidth = (isSel || isHov) ? 3 : 1.4;
+        var mat = new THREE.LineBasicMaterial({
+          color: color, linewidth: lineWidth, transparent: !isSel && !isHov, opacity: (isSel || isHov) ? 1 : 0.0
+        });
+        var line = new THREE.Line(geo, mat);
+        line.userData.feaEdgeId = e.id;
+        line.renderOrder = (isSel || isHov) ? 1000 : 200;
+        grp.add(line);
+      });
+      this._geometryRoot.add(grp);
+      this._edgeHighlightGroup = grp;
+      render();
+    },
+    _refreshVertexHighlights: function() {
+      if (this._vertexHighlightGroup) {
+        this._geometryRoot.remove(this._vertexHighlightGroup);
+        this._vertexHighlightGroup.traverse(function(o) {
+          if (o.geometry && o.geometry.dispose) o.geometry.dispose();
+          if (o.material && o.material.dispose) o.material.dispose();
+        });
+        this._vertexHighlightGroup = null;
+      }
+      if (!this._topologyVertices || this._topologyVertices.length === 0) { render(); return; }
+      // Bbox'tan marker boyutu çıkar
+      var bb = new THREE.Box3().setFromObject(this._geometryRoot);
+      var bbSize = bb.isEmpty() ? 50 : Math.max(bb.getSize(new THREE.Vector3()).x, bb.getSize(new THREE.Vector3()).y, bb.getSize(new THREE.Vector3()).z);
+      var markerR = Math.max(0.5, bbSize * 0.012);
+      var grp = new THREE.Group();
+      grp.name = 'feaVertexHighlights';
+      grp.userData.feaVertexOverlay = true;
+      var self = this;
+      this._topologyVertices.forEach(function(v) {
+        var pos = v.position;
+        if (!pos || pos.length < 3) return;
+        var isSel = (self._selectedVertexId === v.id);
+        var isHov = (self._hoveredVertexId === v.id);
+        // Default: küçük dot. Selected: büyük sarı küre. Hover: orta turkuaz.
+        var size = (isSel || isHov) ? markerR * 1.6 : markerR * 0.55;
+        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x94a3b8);
+        var op = (isSel || isHov) ? 1.0 : 0.55;
+        var sg = new THREE.SphereGeometry(size, 12, 12);
+        var sm = new THREE.MeshBasicMaterial({ color: color, transparent: op < 1, opacity: op, depthTest: !(isSel || isHov) });
+        var mesh = new THREE.Mesh(sg, sm);
+        mesh.position.set(pos[0], pos[1], pos[2]);
+        mesh.userData.feaVertexId = v.id;
+        mesh.renderOrder = (isSel || isHov) ? 1001 : 150;
+        grp.add(mesh);
+      });
+      this._geometryRoot.add(grp);
+      this._vertexHighlightGroup = grp;
+      render();
+    },
+    setSelectedEdge: function(edgeId) {
+      if (this._selectedEdgeId === edgeId) return;
+      this._selectedEdgeId = edgeId;
+      this._refreshEdgeHighlights();
+    },
+    setHoveredEdge: function(edgeId) {
+      if (this._hoveredEdgeId === edgeId) return;
+      this._hoveredEdgeId = edgeId;
+      this._refreshEdgeHighlights();
+    },
+    getSelectedEdge: function() { return this._selectedEdgeId; },
+    setSelectedVertex: function(vertexId) {
+      if (this._selectedVertexId === vertexId) return;
+      this._selectedVertexId = vertexId;
+      this._refreshVertexHighlights();
+    },
+    setHoveredVertex: function(vertexId) {
+      if (this._hoveredVertexId === vertexId) return;
+      this._hoveredVertexId = vertexId;
+      this._refreshVertexHighlights();
+    },
+    getSelectedVertex: function() { return this._selectedVertexId; },
+    // Edge/vertex overlay'lerin görünürlüğünü kontrol et (geometri yedirildiğinde
+    // çağrılır → varsayılan: tüm edge'ler görünür ama soluk).
+    setEdgeOverlayMode: function(mode) {
+      // mode: 'all' | 'selected-only' | 'off'
+      this._edgeOverlayMode = mode || 'all';
+      this._refreshEdgeHighlights();
+    },
+    setVertexOverlayMode: function(mode) {
+      this._vertexOverlayMode = mode || 'all';
+      this._refreshVertexHighlights();
+    },
     // STEP üçgen mesh'inden Three.js sahnesine yükle. (Eski adı loadSTL; STL
     // desteği kaldırıldı ama eski isim viewer API'sinde geri uyumluluk için
     // korunmadı — yeni ad: loadTriangleMesh.)
@@ -1160,13 +1291,13 @@ function veFEAInitViewer(canvas, opts) {
     // Cursor her an ya 'view' (kamera kontrolü) ya da bir picking filter
     // modundadır. View modunda LMB orbit + sağ tık dynamic rotation center.
     // Face/Body pick modunda LMB seçim yapar.
-    _pointerMode: 'view',  // 'view' | 'face-pick' | 'body-pick' | 'box-select' | 'measure'
+    _pointerMode: 'view',  // 'view' | 'face-pick' | 'edge-pick' | 'vertex-pick' | 'body-pick' | 'box-select' | 'measure'
     setPointerMode: function(mode) {
-      if (['view', 'face-pick', 'body-pick', 'box-select', 'measure'].indexOf(mode) < 0) mode = 'view';
+      if (['view', 'face-pick', 'edge-pick', 'vertex-pick', 'body-pick', 'box-select', 'measure'].indexOf(mode) < 0) mode = 'view';
       this._pointerMode = mode;
       // LMB her zaman seç olduğu için view modunda da default cursor.
       // Hover sırasında pointer hit varsa _onFaceMouseMove'da 'pointer' yapılır.
-      var cursors = { 'view': 'default', 'face-pick': 'crosshair', 'body-pick': 'crosshair', 'box-select': 'crosshair', 'measure': 'crosshair' };
+      var cursors = { 'view': 'default', 'face-pick': 'crosshair', 'edge-pick': 'crosshair', 'vertex-pick': 'crosshair', 'body-pick': 'crosshair', 'box-select': 'crosshair', 'measure': 'crosshair' };
       if (canvas && canvas.style) canvas.style.cursor = cursors[mode] || 'default';
       // Hit-coord overlay measure modunda aktif
       var coordDiv = document.getElementById('ve-fea-hit-coord-' + (canvas.id || '').replace('ve-fea-mesh-canvas-', '').replace('ve-fea-geom-canvas-', ''));
@@ -1493,6 +1624,24 @@ function veFEAInitViewer(canvas, opts) {
     var dy = e.clientY - _faceClickStart.y;
     _faceClickStart = null;
     if (dx * dx + dy * dy > 9) return;  // drag idi
+    // Önce edge/vertex picking dene — daha yakın bir line/marker bulunduysa o seçilir
+    if (viewer._topologyEdges || viewer._topologyVertices) {
+      var picked = _raycastEdgeOrVertex(e.clientX, e.clientY);
+      if (picked.vertexId) {
+        viewer.setSelectedVertex(picked.vertexId);
+        if (typeof veFEAOnViewerVertexSelected === 'function') {
+          veFEAOnViewerVertexSelected(picked.vertexId);
+        }
+        return;
+      }
+      if (picked.edgeId) {
+        viewer.setSelectedEdge(picked.edgeId);
+        if (typeof veFEAOnViewerEdgeSelected === 'function') {
+          veFEAOnViewerEdgeSelected(picked.edgeId);
+        }
+        return;
+      }
+    }
     if (!viewer._faceMaterials) return;
     var fid = _raycastFaceId(e.clientX, e.clientY);
     viewer.setSelectedFace(fid);  // null da olabilir (boş alan)
@@ -1502,6 +1651,49 @@ function veFEAInitViewer(canvas, opts) {
     }
     // ANSYS depth picking Z-stack: tıklamada üst üste 2+ hit varsa overlay göster
     _updateDepthStack(e);
+  }
+
+  // Edge / vertex raycasting — overlay grupları üzerinde line/sphere'leri picker.
+  // Vertex marker'lar (küre) edge line'larından daha öncelikli — vertex'ler
+  // edge endpoint'lerinde durur, mouse oraya değdiyse vertex'i seç.
+  function _raycastEdgeOrVertex(clientX, clientY) {
+    var result = { edgeId: null, vertexId: null };
+    var rect = canvas.getBoundingClientRect();
+    var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+    var ny = -((clientY - rect.top) / rect.height) * 2 + 1;
+    var rc = new THREE.Raycaster();
+    rc.setFromCamera({ x: nx, y: ny }, camera);
+    // Pixel-tabanlı threshold — bbox'a göre
+    var bbS = (function() {
+      var b = new THREE.Box3().setFromObject(viewer._geometryRoot);
+      return b.isEmpty() ? 50 : Math.max(b.getSize(new THREE.Vector3()).x, b.getSize(new THREE.Vector3()).y, b.getSize(new THREE.Vector3()).z);
+    })();
+    rc.params.Line.threshold = Math.max(0.5, bbS * 0.005);  // %0.5 of bbox
+    rc.params.Points = rc.params.Points || {};
+    rc.params.Points.threshold = Math.max(1, bbS * 0.01);
+    // Vertex marker'lar (sphere mesh'leri) — pickle önce
+    if (viewer._vertexHighlightGroup) {
+      var vHits = rc.intersectObject(viewer._vertexHighlightGroup, true);
+      for (var i = 0; i < vHits.length; i++) {
+        var vo = vHits[i].object;
+        if (vo && vo.userData && vo.userData.feaVertexId) {
+          result.vertexId = vo.userData.feaVertexId;
+          return result;
+        }
+      }
+    }
+    // Edge line'lar
+    if (viewer._edgeHighlightGroup) {
+      var eHits = rc.intersectObject(viewer._edgeHighlightGroup, true);
+      for (var i2 = 0; i2 < eHits.length; i2++) {
+        var eo = eHits[i2].object;
+        if (eo && eo.userData && eo.userData.feaEdgeId) {
+          result.edgeId = eo.userData.feaEdgeId;
+          return result;
+        }
+      }
+    }
+    return result;
   }
   // ─── ANSYS-style Depth Picking Z-Stack overlay ────────────────────────────
   // Tıklamada raycaster'ın tüm intersections'larını sol-alt overlay'de
@@ -1945,6 +2137,14 @@ function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
     // yeniden render edilmedi.
     viewer.loadPrimitive(g.type, g.params);
   }
+  // Geometriyle birlikte topology data'yı viewer'a aktar (edge/vertex overlay)
+  if (typeof viewer.setTopologyData === 'function') {
+    var topo = g.topology;
+    if (!topo && typeof veFEAComputeGeometryTopology === 'function') {
+      topo = veFEAComputeGeometryTopology(g);
+    }
+    if (topo) viewer.setTopologyData(topo);
+  }
 }
 
 // ─── Geometri uygulama köprüsü — cp-fea.js UI'sinden çağrılır ───────────────
@@ -2103,6 +2303,26 @@ function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
   var nodeRef = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === nodeId; }) : null;
   if (nodeRef && nodeRef.data && nodeRef.data.selectedFaceId && typeof viewer.setSelectedFace === 'function') {
     viewer.setSelectedFace(nodeRef.data.selectedFaceId);
+  }
+  // Topology data viewer'a aktar (edge/vertex overlay için)
+  if (typeof veFEAFindUpstreamGeometryNode === 'function' && typeof viewer.setTopologyData === 'function') {
+    var gNode = veFEAFindUpstreamGeometryNode(nodeId);
+    if (gNode && gNode.data && gNode.data.geometry) {
+      var topo = gNode.data.geometry.topology;
+      if (!topo && typeof veFEAComputeGeometryTopology === 'function') {
+        topo = veFEAComputeGeometryTopology(gNode.data.geometry);
+      }
+      if (topo) viewer.setTopologyData(topo);
+    }
+  }
+  // Persist edilmiş edge / vertex seçimini de uygula
+  if (nodeRef && nodeRef.data) {
+    if (nodeRef.data.selectedEdgeId && typeof viewer.setSelectedEdge === 'function') {
+      viewer.setSelectedEdge(nodeRef.data.selectedEdgeId);
+    }
+    if (nodeRef.data.selectedVertexId && typeof viewer.setSelectedVertex === 'function') {
+      viewer.setSelectedVertex(nodeRef.data.selectedVertexId);
+    }
   }
 }
 
@@ -2398,6 +2618,29 @@ function veFEAOnLocalSelectionChange(meshNodeId, faceValue) {
 function veFEAOnViewerFaceSelected(faceId) {
   if (!_veFEAEditorActive) return;
   veFEASelectGeometryFace(_veFEAEditorActive, faceId, { fromViewer: true });
+}
+
+// Viewer edge click handler — 3D'de mouse ile edge seçildiğinde çağrılır.
+function veFEAOnViewerEdgeSelected(edgeId) {
+  if (!_veFEAEditorActive) return;
+  if (typeof veFEASelectGeometryEdge === 'function') {
+    veFEASelectGeometryEdge(_veFEAEditorActive, edgeId);
+  }
+  // Topology sekmesini Edges'e çevir
+  if (typeof veFEAEditorSetTopologyTab === 'function') {
+    veFEAEditorSetTopologyTab(_veFEAEditorActive, 'edges');
+  }
+}
+
+// Viewer vertex click handler — 3D'de mouse ile vertex seçildiğinde çağrılır.
+function veFEAOnViewerVertexSelected(vertexId) {
+  if (!_veFEAEditorActive) return;
+  if (typeof veFEASelectGeometryVertex === 'function') {
+    veFEASelectGeometryVertex(_veFEAEditorActive, vertexId);
+  }
+  if (typeof veFEAEditorSetTopologyTab === 'function') {
+    veFEAEditorSetTopologyTab(_veFEAEditorActive, 'vertices');
+  }
 }
 
 // Refinement önerisini uygula — UI butonundan çağrılır.
