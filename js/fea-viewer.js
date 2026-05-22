@@ -1732,28 +1732,21 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
   }
 
   function onMouseDown(e) {
-    // ANSYS / CAD-style mouse layout (kullanıcı isteği):
+    // CAD-style mouse layout (kullanıcı isteği):
     //   LMB: HER ZAMAN seçim (face/edge/vertex picker) — orbit YOK.
-    //   MMB: rotate + tıklanan noktayı rotation center yap.
+    //   MMB: drag ile rotate (click rotation center indicator KALDIRILDI).
+    //   Shift+RMB: rotate (alternative).
     //   Ctrl+RMB: pan. RMB tek başına: no-op.
     if (e.button === 0) {
-      // LMB: orbit asla yapma — face/box handler işler.
-      return;
+      return;  // LMB: face/box handler işler, orbit asla yapma.
     } else if (e.button === 1) {
-      // MMB: her an aktif rotate + click rotation center (re-center yok).
+      // MMB: drag rotate. Click rotation center indicator artık yok.
       isOrbit = true;
-      if (viewerRef && typeof viewerRef.pickPointFromMouse === 'function') {
-        var hitPt = viewerRef.pickPointFromMouse(e.clientX, e.clientY);
-        if (hitPt) {
-          var oldOffset = camera.position.clone().sub(target);
-          target.copy(hitPt);
-          spherical.setFromVector3(oldOffset);
-          if (viewerRef.setRotationCenterAt) viewerRef.setRotationCenterAt(hitPt);
-        }
-      }
     } else if (e.button === 2) {
-      // RMB: sadece Ctrl basılıyken pan; yoksa no-op (browser menu zaten engellenir).
-      if (e.ctrlKey || e.metaKey) {
+      // RMB: modifier'a göre — Shift = rotate, Ctrl/Cmd = pan, sade = no-op.
+      if (e.shiftKey) {
+        isOrbit = true;
+      } else if (e.ctrlKey || e.metaKey) {
         isPan = true;
       } else {
         return;
