@@ -22437,12 +22437,62 @@ function veFEAComputeGeometryTopology(geometry) {
   else if (geometry.type === 'step')       topo = _veFEAToplStep(geometry);
   else if (typeof _veFEAToplGeneric === 'function') topo = _veFEAToplGeneric(geometry);
   if (!topo) return null;
+  // Post-process: vertex.faceIds boşsa, edge'lerden otomatik doldur.
+  // (Box gibi bazı primitiflerde elle dolu; plate/lbracket gibilerde edge'lerden türetilir.)
+  _veFEAPropagateFaceBindings(topo);
   // Edges ve vertices array ise, eski {count:N} formatı için "count" property'sini
   // doğrudan array'in üzerine ekle. Böylece hem topology.edges.length hem
   // topology.edges.count erişimi çalışır. Eski code/test kırılmaz.
   if (Array.isArray(topo.edges))    { topo.edges.count = topo.edges.length; topo._edgesCount = topo.edges.length; }
   if (Array.isArray(topo.vertices)) { topo.vertices.count = topo.vertices.length; topo._verticesCount = topo.vertices.length; }
   return topo;
+}
+
+// Vertex ve edge bağlantılarını topology'de tutarlı hale getir.
+// Vertex.faceIds: o vertex'i kullanan tüm edge'lerin faceIds birleşimi.
+// Vertex.edgeIds: o vertex'i endpoint olarak kullanan tüm edge'ler.
+// Face.edgeIds: bu face'i içeren tüm edge'ler.
+// Face.vertexIds: bu face'in vertex'leri (edge'lerin vertex'lerinin birleşimi).
+function _veFEAPropagateFaceBindings(topo) {
+  if (!topo || !Array.isArray(topo.faces)) return;
+  var edges = Array.isArray(topo.edges) ? topo.edges : [];
+  var verts = Array.isArray(topo.vertices) ? topo.vertices : [];
+  var vertMap = {};
+  verts.forEach(function(v) {
+    vertMap[v.id] = v;
+    if (!Array.isArray(v.edgeIds)) v.edgeIds = [];
+    if (!Array.isArray(v.faceIds)) v.faceIds = [];
+  });
+  var faceMap = {};
+  topo.faces.forEach(function(f) {
+    faceMap[f.id] = f;
+    if (!Array.isArray(f.edgeIds)) f.edgeIds = [];
+    if (!Array.isArray(f.vertexIds)) f.vertexIds = [];
+  });
+  edges.forEach(function(e) {
+    // face.edgeIds
+    if (Array.isArray(e.faceIds)) {
+      e.faceIds.forEach(function(fid) {
+        var ff = faceMap[fid];
+        if (ff && ff.edgeIds.indexOf(e.id) < 0) ff.edgeIds.push(e.id);
+      });
+    }
+    // vertex.edgeIds + vertex.faceIds
+    if (Array.isArray(e.vertexIds)) {
+      e.vertexIds.forEach(function(vid) {
+        var vv = vertMap[vid];
+        if (!vv) return;
+        if (vv.edgeIds.indexOf(e.id) < 0) vv.edgeIds.push(e.id);
+        if (Array.isArray(e.faceIds)) {
+          e.faceIds.forEach(function(fid) {
+            if (vv.faceIds.indexOf(fid) < 0) vv.faceIds.push(fid);
+            var ff2 = faceMap[fid];
+            if (ff2 && ff2.vertexIds.indexOf(vid) < 0) ff2.vertexIds.push(vid);
+          });
+        }
+      });
+    }
+  });
 }
 
 function veFEATopologyFaceTypeLabel(type) {
@@ -23467,27 +23517,23 @@ function _veFEAFeatureTypeToBrepLabel(t) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-// GENERIC TOPOLOGY ANALYZER — Three.js mesh'inden otomatik face detection
+// GENERIC TOPOLOGY ANALYZER — Three.js mesh'inden tam BREP-benzeri topology
 // ════════════════════════════════════════════════════════════════════════════
-// Tip-spesifik topology fonksiyonu olmayan primitifler (yeni eklenenler,
-// custom geometry, vs.) için fallback. veFEABuildPrimitiveMesh ile geometriyi
-// inşa eder, BufferGeometry'yi analiz eder:
-//
-//   1) Vertex'leri epsilon-deduplication ile sayar
-//   2) Üçgen normallerini hesaplar
-//   3) Normal-clustering ile düzlemsel face'leri grupla (5° tolerans):
-//      - Aynı normal yönündeki bitişik üçgenler tek planar face
-//      - Curved (cylinder/sphere/torus) yüzeyler "triangulated" tek face
-//   4) EdgesGeometry ile keskin kenarları say (>30° dihedral angle)
-//   5) Bounding box, surface area (triangle areas sum), volume (signed
-//      tetrahedra sum, closed manifold için doğru)
-//
-// Result quality: sharp-edged geometry (kutu, prizma, levha) için ANSYS
-// kalitesinde topology. Curved geometry için tek "triangulated" face +
-// makul vertex/edge sayısı.
+// Pipeline (her geometri tipi için aynı — primitif ya da generic):
+//   1) Mesh'ten flat vertex buffer çıkar (world space)
+//   2) Vertex dedup (epsilon-bucket) → canonical vertex index
+//   3) Triangle adjacency (her üçgenin 3 komşusu) + edge angle (dihedral)
+//   4) Smooth region clustering (BFS, normal açısı < smoothThreshold)
+//   5) Her cluster'ı sınıflandır: planar / cylindrical / spherical / conical / freeform
+//   6) Sharp edge'leri tespit (dihedral > sharpThreshold)
+//   7) Sharp edge segment'lerini chain'lerle birleştir → polyline edge'ler
+//   8) Curve fitting (line / circle / arc / ellipse / spline)
+//   9) Edge ↔ face bağı — edge'in iki yanındaki triangle'ların cluster ID'leri
+//  10) Vertex ↔ face / edge bağı — vertex'e değen tüm üçgenlerin cluster'ları
+//  11) Hint mapping — mesh.userData.feaFaceMap varsa face ID'leri korunur
+//      (primitif geometriler için face ID'leri namedSelections ile uyumlu kalır)
 function _veFEAToplGeneric(geometry) {
   if (typeof THREE === 'undefined' || typeof veFEABuildPrimitiveMesh !== 'function') {
-    // Three.js veya builder yoksa minimal fallback
     return _veFEAToplGenericMinimal(geometry);
   }
   var p = geometry.params || {};
@@ -23499,25 +23545,31 @@ function _veFEAToplGeneric(geometry) {
     return _veFEAToplGenericMinimal(geometry);
   }
   if (!meshOrGroup) return _veFEAToplGenericMinimal(geometry);
+  return _veFEAExtractFullTopology(meshOrGroup, geometry);
+}
 
-  // Tüm child mesh'leri topla
+// Universal topology extractor — Three.js mesh/group'tan tam topology üretir.
+// Hint: mesh.userData.feaFaceMap[matIndex] = faceId (primitif → mevcut ID'leri koru)
+// Hint: mesh.userData.feaFaceId = faceId (group child = tek face mesh)
+function _veFEAExtractFullTopology(meshOrGroup, geometry) {
   var meshes = [];
   meshOrGroup.traverse(function (o) { if (o.isMesh && o.geometry) meshes.push(o); });
-  if (meshes.length === 0) return _veFEAToplGenericMinimal(geometry);
+  if (meshes.length === 0) return _veFEAToplGenericMinimal(geometry || {});
 
-  // Birleşik analiz: her mesh'ten üçgenleri al, normal-clustering yap
-  var allTris = [];  // {p1, p2, p3, normal, area, meshIdx}
-  var bbox = new THREE.Box3();
+  // 1) Mesh'ten flat vertex buffer + per-triangle hint (feaFaceId/feaFaceMap)
+  var vertsArr = [];   // [x,y,z, x,y,z, ...] world space
+  var triHints = [];   // her üçgen için: { faceId: string | null }
   var totalVolume = 0;
-  var allVerts = [];
-  meshes.forEach(function (m, mi) {
+  meshes.forEach(function (m) {
     var geo = m.geometry;
-    geo.computeVertexNormals();  // ensure normals
+    geo.computeVertexNormals();
     var pos = geo.attributes.position;
     var idx = geo.index;
-    var triCount = idx ? idx.count / 3 : pos.count / 3;
+    var groups = (Array.isArray(geo.groups) && geo.groups.length > 0) ? geo.groups : null;
+    var triCount = idx ? (idx.count / 3) : (pos.count / 3);
     var v1 = new THREE.Vector3(), v2 = new THREE.Vector3(), v3 = new THREE.Vector3();
-    var cb = new THREE.Vector3(), ab = new THREE.Vector3();
+    var faceMap = m.userData && Array.isArray(m.userData.feaFaceMap) ? m.userData.feaFaceMap : null;
+    var faceIdSingle = m.userData && m.userData.feaFaceId ? m.userData.feaFaceId : null;
     for (var i = 0; i < triCount; i++) {
       var a, b, c;
       if (idx) { a = idx.getX(i*3); b = idx.getX(i*3+1); c = idx.getX(i*3+2); }
@@ -23525,88 +23577,551 @@ function _veFEAToplGeneric(geometry) {
       v1.fromBufferAttribute(pos, a);
       v2.fromBufferAttribute(pos, b);
       v3.fromBufferAttribute(pos, c);
-      // World space (mesh transform'unu uygula)
-      v1.applyMatrix4(m.matrixWorld); v2.applyMatrix4(m.matrixWorld); v3.applyMatrix4(m.matrixWorld);
-      cb.subVectors(v3, v2); ab.subVectors(v1, v2);
-      cb.cross(ab);
-      var area = cb.length() * 0.5;
-      if (area < 1e-9) continue;  // dejenere
-      cb.normalize();
-      allTris.push({ p1: v1.clone(), p2: v2.clone(), p3: v3.clone(), n: cb.clone(), area: area, mi: mi });
-      bbox.expandByPoint(v1); bbox.expandByPoint(v2); bbox.expandByPoint(v3);
-      // Signed tetrahedra hacim: (v1 · (v2 × v3)) / 6
-      var cross = new THREE.Vector3().crossVectors(v2, v3);
-      totalVolume += v1.dot(cross) / 6;
-      allVerts.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+      v1.applyMatrix4(m.matrixWorld);
+      v2.applyMatrix4(m.matrixWorld);
+      v3.applyMatrix4(m.matrixWorld);
+      var ux = v2.x - v1.x, uy = v2.y - v1.y, uz = v2.z - v1.z;
+      var vx = v3.x - v1.x, vy = v3.y - v1.y, vz = v3.z - v1.z;
+      var cx = uy*vz - uz*vy, cy = uz*vx - ux*vz, cz = ux*vy - uy*vx;
+      var area = 0.5 * Math.sqrt(cx*cx + cy*cy + cz*cz);
+      if (area < 1e-12) continue;  // dejenere
+      vertsArr.push(v1.x, v1.y, v1.z, v2.x, v2.y, v2.z, v3.x, v3.y, v3.z);
+      // Hint: hangi face'e ait?
+      var hint = null;
+      if (faceIdSingle) hint = faceIdSingle;
+      else if (faceMap && groups) {
+        // Üçgen indeksinin hangi group'a düştüğünü bul
+        var triStart3 = i * 3;
+        for (var gi = 0; gi < groups.length; gi++) {
+          var g = groups[gi];
+          if (triStart3 >= g.start && triStart3 < g.start + g.count) {
+            hint = faceMap[g.materialIndex];
+            break;
+          }
+        }
+      }
+      triHints.push(hint);
+      // Signed tetrahedra hacim
+      var crossX = v2.y*v3.z - v2.z*v3.y;
+      var crossY = v2.z*v3.x - v2.x*v3.z;
+      var crossZ = v2.x*v3.y - v2.y*v3.x;
+      totalVolume += (v1.x * crossX + v1.y * crossY + v1.z * crossZ) / 6;
     }
   });
+  var triCount = triHints.length;
+  if (triCount === 0) return _veFEAToplGenericMinimal(geometry || {});
+  var verticesF32 = new Float32Array(vertsArr);
 
-  if (allTris.length === 0) return _veFEAToplGenericMinimal(geometry);
-
-  // Vertex dedup — 0.01 mm epsilon
-  var vertexCount = _veFEACountUniqueVertices(allVerts, 0.01);
-  // Edge sayısı: EdgesGeometry ile keskin kenarlar
-  var edgeCount = _veFEACountSharpEdges(meshes, 30);
-  // Normal clustering: aynı yöne bakan düzlemsel face'leri grupla
-  var planarFaces = _veFEAClusterPlanarFaces(allTris, 5 /* deg tolerance */);
-  // Kalan üçgenler curved → "triangulated" tek face
-  var planarTriIndices = new Set();
-  planarFaces.forEach(function (pf) { pf.triIdxs.forEach(function (i) { planarTriIndices.add(i); }); });
-  var curvedTris = [];
-  for (var k = 0; k < allTris.length; k++) {
-    if (!planarTriIndices.has(k)) curvedTris.push(allTris[k]);
+  // 2) Bbox + vertex dedup
+  var bb = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, minZ: Infinity, maxZ: -Infinity };
+  for (var bi = 0; bi < verticesF32.length; bi += 3) {
+    if (verticesF32[bi]   < bb.minX) bb.minX = verticesF32[bi];   if (verticesF32[bi]   > bb.maxX) bb.maxX = verticesF32[bi];
+    if (verticesF32[bi+1] < bb.minY) bb.minY = verticesF32[bi+1]; if (verticesF32[bi+1] > bb.maxY) bb.maxY = verticesF32[bi+1];
+    if (verticesF32[bi+2] < bb.minZ) bb.minZ = verticesF32[bi+2]; if (verticesF32[bi+2] > bb.maxZ) bb.maxZ = verticesF32[bi+2];
   }
+  var bboxSize = Math.max(bb.maxX - bb.minX, bb.maxY - bb.minY, bb.maxZ - bb.minZ);
+  var dedupRes = (typeof veFEADedupVertices === 'function')
+    ? veFEADedupVertices(verticesF32, { bboxSize: bboxSize })
+    : _veFEADedupVerticesFallback(verticesF32, bboxSize);
+  var canonical = dedupRes.canonical;
+  var uniqueVerts = dedupRes.unique;
 
+  // 3) Triangle data + adjacency
+  var triData = _veFEATopoTriangleData(verticesF32, triCount);
+  var adj = _veFEATopoTriangleAdjacency(canonical, triCount, triData.normals);
+
+  // 4) Smooth region clustering — 30° tolerans (silindir N=8 segment için ≥45°,
+  //    silindir N=16 için ≥22.5°. Generic motor 30° dengeli: kutu kenarları
+  //    90°, prizma kenarları 60°+ olduğu için cluster'ları bölmez)
+  var smoothCos = Math.cos(30 * Math.PI / 180);
+  var clustered = _veFEATopoClusterSmoothRegions(adj, triCount, smoothCos);
+
+  // 5) Cluster classification → face listesi
+  // Hint dağılımına bak: cluster'daki üçgenlerin çoğu aynı hint'i taşıyorsa
+  // o cluster ID'sini hint'ten al (primitif geometri için namedSelections uyumu).
   var faces = [];
-  // Planar yüzeyler
-  planarFaces.forEach(function (pf, fi) {
-    faces.push({
-      id: 'faceP_' + fi,
-      label: 'Düzlemsel Yüzey #' + (fi + 1),
-      type: 'planar',
-      normal: [pf.n.x, pf.n.y, pf.n.z],
-      area: pf.area,
-      triangleCount: pf.triIdxs.length
+  var clusterToFaceIdx = new Int32Array(clustered.clusters.length);
+  for (var ci = 0; ci < clustered.clusters.length; ci++) {
+    var cl = clustered.clusters[ci];
+    // Hint majority — cluster'ın çoğu hangi faceId'ye işaret ediyor?
+    var hintCount = {};
+    for (var ti = 0; ti < cl.triangleIds.length; ti++) {
+      var hh = triHints[cl.triangleIds[ti]];
+      if (hh) hintCount[hh] = (hintCount[hh] || 0) + 1;
+    }
+    var bestHint = null, bestCt = 0;
+    for (var hkey in hintCount) {
+      if (hintCount[hkey] > bestCt) { bestCt = hintCount[hkey]; bestHint = hkey; }
+    }
+    var feat = _veFEATopoClassifyCluster(cl, triData, 0.001);
+    var faceId = bestHint || ('faceP_' + faces.length);
+    var face = {
+      id: faceId,
+      label: _veFEAGenericFaceLabel(feat, faces.length, bestHint),
+      type: _veFEAFeatureTypeToBrepLabel(feat.type),
+      area: feat.area || 0,
+      triangleCount: cl.triangleIds.length,
+      triangleIds: cl.triangleIds.slice(),
+      edgeIds: [],
+      vertexIds: []
+    };
+    if (feat.type === 'planar' && feat.normal) face.normal = feat.normal.slice();
+    if (feat.type === 'cylindrical') {
+      face.axis = feat.axis ? feat.axis.slice() : [0,1,0];
+      face.radius = feat.radius;
+      face.length = feat.length;
+      face.center = feat.centroid ? feat.centroid.slice() : null;
+    }
+    if (feat.type === 'spherical') {
+      face.center = feat.center ? feat.center.slice() : null;
+      face.radius = feat.radius;
+    }
+    if (feat.type === 'conical' && feat.axis) {
+      face.axis = feat.axis.slice();
+    }
+    face.centroid = feat.centroid ? feat.centroid.slice() : null;
+    clusterToFaceIdx[ci] = faces.length;
+    faces.push(face);
+  }
+  // Tek bir cluster'a düşmeyen üçgenler için fallback (gerçekleşmemeli ama defansif)
+  // — labels[i] >= 0 garanti
+
+  // 6-9) Sharp edge extraction with face binding
+  var sharpCos = Math.cos(30 * Math.PI / 180);
+  var edges = _veFEATopoExtractEdgesWithFaceBinding(
+    adj, triCount, canonical, uniqueVerts, clustered.labels, faces, clusterToFaceIdx, sharpCos
+  );
+  // edge.id → faces[i].edgeIds
+  edges.forEach(function(e) {
+    e.faceIds.forEach(function(fid) {
+      var f = faces.find(function(ff) { return ff.id === fid; });
+      if (f && f.edgeIds.indexOf(e.id) < 0) f.edgeIds.push(e.id);
     });
   });
-  // Curved yüzey (varsa) — tek "triangulated" face olarak göster
-  if (curvedTris.length > 0) {
-    var curvedArea = 0;
-    curvedTris.forEach(function (t) { curvedArea += t.area; });
-    faces.push({
-      id: 'faceC_curved',
-      label: 'Eğri Yüzey (' + curvedTris.length + ' üçgen)',
-      type: 'triangulated',
-      area: curvedArea,
-      triangleCount: curvedTris.length
+
+  // 10) Vertex extraction with face/edge binding
+  var vertices = _veFEATopoExtractVerticesWithBindings(edges, clustered.labels, canonical, uniqueVerts, faces, clusterToFaceIdx);
+  vertices.forEach(function(v) {
+    v.faceIds.forEach(function(fid) {
+      var f = faces.find(function(ff) { return ff.id === fid; });
+      if (f && f.vertexIds.indexOf(v.id) < 0) f.vertexIds.push(v.id);
     });
-  }
+  });
 
-  var size = new THREE.Vector3();
-  bbox.getSize(size);
+  // Toplam alan
   var totalArea = 0;
-  allTris.forEach(function (t) { totalArea += t.area; });
-
-  // Mesh-driven edge ve vertex extraction (curve fitting ile)
-  var meshEdges = [];
-  var meshVertices = [];
-  try {
-    meshEdges = _veFEAExtractMeshEdges(meshes, 30, 5);
-    meshVertices = _veFEAExtractMeshVertices(meshEdges);
-  } catch (e) {
-    // sessiz fail — boş kalır
-  }
+  for (var t2 = 0; t2 < triCount; t2++) totalArea += triData.areas[t2];
 
   return {
-    type: geometry.type,
+    type: geometry ? geometry.type : 'generic',
     faces: faces,
-    edges: meshEdges.length > 0 ? meshEdges : { count: edgeCount },
-    vertices: meshVertices.length > 0 ? meshVertices : { count: vertexCount },
+    edges: edges,
+    vertices: vertices,
     totalSurfaceArea: totalArea,
     volume: Math.abs(totalVolume),
-    bbox: { x: size.x, y: size.y, z: size.z },
-    generic: true   // UI bu bayrağı görürse "otomatik tespit" notu ekleyebilir
+    bbox: { x: bb.maxX - bb.minX, y: bb.maxY - bb.minY, z: bb.maxZ - bb.minZ },
+    generic: true
   };
+}
+
+// ─── Yardımcılar (feature-recognition'dan port) ────────────────────────────
+function _veFEATopoTriangleData(vertices, triCount) {
+  var normals = new Float32Array(triCount * 3);
+  var areas = new Float32Array(triCount);
+  var centroids = new Float32Array(triCount * 3);
+  for (var t = 0; t < triCount; t++) {
+    var o = t * 9;
+    var ax = vertices[o],     ay = vertices[o + 1], az = vertices[o + 2];
+    var bx = vertices[o + 3], by = vertices[o + 4], bz = vertices[o + 5];
+    var cx = vertices[o + 6], cy = vertices[o + 7], cz = vertices[o + 8];
+    var ux = bx - ax, uy = by - ay, uz = bz - az;
+    var vx = cx - ax, vy = cy - ay, vz = cz - az;
+    var nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    var len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+    var area = 0.5 * len;
+    if (len > 1e-20) { nx /= len; ny /= len; nz /= len; }
+    var no = t * 3;
+    normals[no] = nx; normals[no + 1] = ny; normals[no + 2] = nz;
+    areas[t] = area;
+    centroids[no]     = (ax + bx + cx) / 3;
+    centroids[no + 1] = (ay + by + cy) / 3;
+    centroids[no + 2] = (az + bz + cz) / 3;
+  }
+  return { normals: normals, areas: areas, centroids: centroids };
+}
+
+function _veFEATopoTriangleAdjacency(canonical, triCount, normals) {
+  var edgeMap = new Map();
+  var neighbors = new Int32Array(triCount * 3);
+  for (var i = 0; i < neighbors.length; i++) neighbors[i] = -1;
+  var edgeAngles = new Float32Array(triCount * 3);
+  for (var t = 0; t < triCount; t++) {
+    var v0 = canonical[t * 3];
+    var v1 = canonical[t * 3 + 1];
+    var v2 = canonical[t * 3 + 2];
+    var triEdges = [[v0, v1], [v1, v2], [v2, v0]];
+    for (var e = 0; e < 3; e++) {
+      var a = triEdges[e][0], b = triEdges[e][1];
+      var key = (a < b) ? (a + '|' + b) : (b + '|' + a);
+      var ex = edgeMap.get(key);
+      if (ex === undefined) {
+        edgeMap.set(key, { tri: t, slot: e });
+      } else {
+        neighbors[t * 3 + e] = ex.tri;
+        neighbors[ex.tri * 3 + ex.slot] = t;
+        var n1x = normals[t * 3],     n1y = normals[t * 3 + 1],     n1z = normals[t * 3 + 2];
+        var n2x = normals[ex.tri * 3], n2y = normals[ex.tri * 3 + 1], n2z = normals[ex.tri * 3 + 2];
+        var cc = n1x * n2x + n1y * n2y + n1z * n2z;
+        edgeAngles[t * 3 + e] = cc;
+        edgeAngles[ex.tri * 3 + ex.slot] = cc;
+        edgeMap.delete(key);
+      }
+    }
+  }
+  return { neighbors: neighbors, edgeAngles: edgeAngles };
+}
+
+function _veFEATopoClusterSmoothRegions(adj, triCount, smoothCosThreshold) {
+  var labels = new Int32Array(triCount);
+  for (var i = 0; i < triCount; i++) labels[i] = -1;
+  var clusters = [];
+  var queue = new Int32Array(triCount);
+  for (var seed = 0; seed < triCount; seed++) {
+    if (labels[seed] !== -1) continue;
+    var label = clusters.length;
+    labels[seed] = label;
+    var qHead = 0, qTail = 0;
+    queue[qTail++] = seed;
+    var members = [];
+    while (qHead < qTail) {
+      var tri = queue[qHead++];
+      members.push(tri);
+      for (var e = 0; e < 3; e++) {
+        var nb = adj.neighbors[tri * 3 + e];
+        if (nb < 0 || labels[nb] !== -1) continue;
+        var ca = adj.edgeAngles[tri * 3 + e];
+        if (ca >= smoothCosThreshold) {
+          labels[nb] = label;
+          queue[qTail++] = nb;
+        }
+      }
+    }
+    clusters.push({ id: label, triangleIds: members });
+  }
+  return { labels: labels, clusters: clusters };
+}
+
+function _veFEATopoClassifyCluster(cluster, triData, planarVarianceLimit) {
+  var ids = cluster.triangleIds;
+  var n = ids.length;
+  var totalArea = 0;
+  var nxSum = 0, nySum = 0, nzSum = 0;
+  var cxSum = 0, cySum = 0, czSum = 0;
+  for (var i = 0; i < n; i++) {
+    var t = ids[i];
+    var w = triData.areas[t];
+    totalArea += w;
+    nxSum += triData.normals[t * 3] * w;
+    nySum += triData.normals[t * 3 + 1] * w;
+    nzSum += triData.normals[t * 3 + 2] * w;
+    cxSum += triData.centroids[t * 3] * w;
+    cySum += triData.centroids[t * 3 + 1] * w;
+    czSum += triData.centroids[t * 3 + 2] * w;
+  }
+  if (totalArea < 1e-20) return { type: 'degenerate', area: 0, triangleIds: ids };
+  var avgN = [nxSum / totalArea, nySum / totalArea, nzSum / totalArea];
+  var lenN = Math.sqrt(avgN[0]*avgN[0] + avgN[1]*avgN[1] + avgN[2]*avgN[2]);
+  var avgCentroid = [cxSum / totalArea, cySum / totalArea, czSum / totalArea];
+  var varN = 0;
+  for (var j = 0; j < n; j++) {
+    var t2 = ids[j];
+    var dx = triData.normals[t2 * 3]     - avgN[0];
+    var dy = triData.normals[t2 * 3 + 1] - avgN[1];
+    var dz = triData.normals[t2 * 3 + 2] - avgN[2];
+    varN += (dx * dx + dy * dy + dz * dz) * triData.areas[t2];
+  }
+  varN /= totalArea;
+  if (varN < planarVarianceLimit && lenN > 0.99) {
+    return {
+      type: 'planar', area: totalArea,
+      normal: [avgN[0] / lenN, avgN[1] / lenN, avgN[2] / lenN],
+      centroid: avgCentroid, triangleIds: ids
+    };
+  }
+  // Cylinder fit
+  var cylFit = (typeof _veFEAFitCylinderToCluster === 'function')
+    ? _veFEAFitCylinderToCluster(cluster, triData) : null;
+  if (cylFit && cylFit.residual < 0.05) {
+    return {
+      type: 'cylindrical', area: totalArea,
+      axis: cylFit.axis, centroid: cylFit.center,
+      radius: cylFit.radius, length: cylFit.length,
+      residual: cylFit.residual, triangleIds: ids
+    };
+  }
+  // Sphere fit
+  var sphFit = (typeof _veFEAFitSphereToCluster === 'function')
+    ? _veFEAFitSphereToCluster(cluster, triData) : null;
+  if (sphFit && sphFit.residual < 0.05) {
+    return {
+      type: 'spherical', area: totalArea,
+      center: sphFit.center, radius: sphFit.radius,
+      centroid: sphFit.center,
+      residual: sphFit.residual, triangleIds: ids
+    };
+  }
+  return {
+    type: 'freeform', area: totalArea,
+    normal: lenN > 1e-10 ? [avgN[0]/lenN, avgN[1]/lenN, avgN[2]/lenN] : [0,0,1],
+    centroid: avgCentroid, normalVariance: varN, triangleIds: ids
+  };
+}
+
+function _veFEAGenericFaceLabel(feat, fallbackIdx, hint) {
+  if (hint) return hint;
+  var t = feat.type;
+  if (t === 'planar')      return 'Düzlemsel Yüzey #' + (fallbackIdx + 1);
+  if (t === 'cylindrical') return 'Silindirik Yüzey #' + (fallbackIdx + 1) + ' (R≈' + (feat.radius || 0).toFixed(1) + ')';
+  if (t === 'spherical')   return 'Küresel Yüzey #' + (fallbackIdx + 1) + ' (R≈' + (feat.radius || 0).toFixed(1) + ')';
+  if (t === 'conical')     return 'Konik Yüzey #' + (fallbackIdx + 1);
+  if (t === 'freeform')    return 'Serbest Yüzey #' + (fallbackIdx + 1);
+  return 'Yüzey #' + (fallbackIdx + 1);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Edge extraction with face binding
+// Sharp edge: dihedral > sharpThreshold. Bu kenarın iki tarafındaki üçgenlerin
+// cluster ID'lerini kaydet — edge.faceIds bu cluster'ların face ID'leri olur.
+// Sharp edge segment'lerini chain'lerle birleştir, curve fitting yap.
+// ════════════════════════════════════════════════════════════════════════════
+function _veFEATopoExtractEdgesWithFaceBinding(adj, triCount, canonical, uniqueVerts, labels, faces, clusterToFaceIdx, sharpCos) {
+  // Sharp segment listesi: { v1, v2, leftCluster, rightCluster }
+  // v1, v2: unique vertex index
+  // leftCluster: tri'nin cluster ID'si, rightCluster: komşu tri'nin cluster ID'si
+  var segments = [];
+  var segSeen = {};
+  for (var t = 0; t < triCount; t++) {
+    var labT = labels[t];
+    for (var e = 0; e < 3; e++) {
+      var nb = adj.neighbors[t * 3 + e];
+      if (nb < 0) continue;
+      if (nb < t) continue;  // double-count engelle
+      var ca = adj.edgeAngles[t * 3 + e];
+      // Sharp veya cluster-sınırı edge
+      var labNb = labels[nb];
+      var isSharp = (ca < sharpCos);
+      var isClusterBoundary = (labT !== labNb);
+      if (!isSharp && !isClusterBoundary) continue;
+      // Kenar canonical vertex çifti
+      var triBase = t * 3;
+      var va = canonical[triBase + e];
+      var vb = canonical[triBase + ((e + 1) % 3)];
+      var lo = Math.min(va, vb), hi = Math.max(va, vb);
+      var key = lo + '|' + hi;
+      if (segSeen[key]) continue;
+      segSeen[key] = true;
+      segments.push({
+        v1: va, v2: vb,
+        leftCluster: labT,
+        rightCluster: labNb,
+        isSharp: isSharp,
+        isClusterBoundary: isClusterBoundary,
+        dihedralCos: ca
+      });
+    }
+  }
+  if (segments.length === 0) return [];
+
+  // Komşu segment grafiği — vertex paylaşıyorsa ve aynı (leftCluster, rightCluster)
+  // çiftine sahipse (yani aynı face pair'ı ayırıyorsa) chain'leyebiliriz.
+  var vertAdj = {};
+  segments.forEach(function(s, idx) {
+    if (!vertAdj[s.v1]) vertAdj[s.v1] = [];
+    if (!vertAdj[s.v2]) vertAdj[s.v2] = [];
+    vertAdj[s.v1].push(idx);
+    vertAdj[s.v2].push(idx);
+  });
+
+  // Aynı face pair'ını paylaşan segment'leri chain'le
+  var visited = new Array(segments.length);
+  var edges = [];
+  function _pairKey(a, b) { return (a < b) ? (a + '_' + b) : (b + '_' + a); }
+  function _segPair(s) { return _pairKey(s.leftCluster, s.rightCluster); }
+
+  for (var si = 0; si < segments.length; si++) {
+    if (visited[si]) continue;
+    visited[si] = true;
+    var chain = [segments[si].v1, segments[si].v2];
+    var pairKey = _segPair(segments[si]);
+    // İki yöne uzat
+    function _extend(fromEnd) {
+      var changed = true;
+      while (changed) {
+        changed = false;
+        var endVi = chain[fromEnd === 0 ? 0 : chain.length-1];
+        var neighbors = vertAdj[endVi] || [];
+        // Aynı face-pair'ına ait olup unvisited tek bir komşu olmalı
+        var candidates = neighbors.filter(function(ni) {
+          if (visited[ni]) return false;
+          return _segPair(segments[ni]) === pairKey;
+        });
+        if (candidates.length !== 1) break;
+        var cand = segments[candidates[0]];
+        var otherVi = (cand.v1 === endVi) ? cand.v2 : cand.v1;
+        if (chain.indexOf(otherVi) >= 0 && !(fromEnd === 0 && otherVi === chain[chain.length-1]) && !(fromEnd === 1 && otherVi === chain[0])) {
+          // Loop oluşacak — sadece tam closure ise kabul (full circle)
+          if ((fromEnd === 0 && otherVi === chain[chain.length-1]) || (fromEnd === 1 && otherVi === chain[0])) {
+            visited[candidates[0]] = true;
+            if (fromEnd === 0) chain.unshift(otherVi);
+            else                chain.push(otherVi);
+          }
+          break;
+        }
+        visited[candidates[0]] = true;
+        if (fromEnd === 0) chain.unshift(otherVi);
+        else                chain.push(otherVi);
+        changed = true;
+      }
+    }
+    _extend(1);
+    _extend(0);
+    // Polyline çıkar
+    var polyline = chain.map(function(vi) {
+      return [uniqueVerts[vi*3], uniqueVerts[vi*3+1], uniqueVerts[vi*3+2]];
+    });
+    // Curve fitting
+    var fit = veFEAFitCurveToPolyline(polyline);
+    var faceIds = [];
+    var s0 = segments[si];
+    if (s0.leftCluster >= 0 && s0.leftCluster < clusterToFaceIdx.length)  faceIds.push(faces[clusterToFaceIdx[s0.leftCluster]].id);
+    if (s0.rightCluster >= 0 && s0.rightCluster < clusterToFaceIdx.length) {
+      var fId2 = faces[clusterToFaceIdx[s0.rightCluster]].id;
+      if (faceIds.indexOf(fId2) < 0) faceIds.push(fId2);
+    }
+    var typeLbl = (fit.type === 'circle' ? 'Daire' : fit.type === 'arc' ? 'Yay' :
+                   fit.type === 'ellipse' ? 'Eliptik' : fit.type === 'spline' ? 'Eğri' : 'Doğru');
+    var edge = {
+      id: 'eGen_' + edges.length,
+      label: typeLbl + ' Kenar #' + (edges.length + 1),
+      type: fit.type,
+      length: fit.length,
+      polyline: polyline,
+      faceIds: faceIds,
+      vertexIds: []
+    };
+    if (fit.type === 'line') {
+      edge.p1 = fit.p1; edge.p2 = fit.p2; edge.direction = fit.direction;
+    } else if (fit.type === 'circle' || fit.type === 'arc') {
+      edge.center = fit.center; edge.axis = fit.axis; edge.radius = fit.radius;
+      edge.startAngle = fit.startAngle; edge.endAngle = fit.endAngle;
+      edge.isFullCircle = fit.isFullCircle;
+    } else if (fit.type === 'ellipse') {
+      edge.center = fit.center; edge.axis = fit.axis;
+      edge.semiMajor = fit.semiMajor; edge.semiMinor = fit.semiMinor;
+      edge.majorAxis = fit.majorAxis;
+    } else if (fit.type === 'spline') {
+      edge.controlPoints = fit.controlPoints;
+    }
+    edges.push(edge);
+  }
+  return edges;
+}
+
+// Vertex extraction with face/edge binding.
+// Her edge endpoint'i bir vertex — endpoint'e değen tüm üçgenlerin cluster'larını
+// topla → vertex.faceIds.
+function _veFEATopoExtractVerticesWithBindings(edges, labels, canonical, uniqueVerts, faces, clusterToFaceIdx) {
+  if (!Array.isArray(edges) || edges.length === 0) return [];
+  // Endpoint canonical vertex indekslerini topla
+  // edge.polyline endpoint'i = uniqueVerts'ten gelir; polyline[0] ve polyline[n-1]
+  // hangi canonical vertex'i? Bunu polyline coord'undan tersinden bulamayız temiz;
+  // bu yüzden edge oluştururken chain'in ilk/son canonical index'ini saklamamız lazım.
+  // Mevcut implementasyonda polyline koordinatlardan; yine de epsilon-match ile bul.
+  var endpointSet = {};   // canonicalIdx → { id, edgeIds, ... }
+  function _findCanonical(pt) {
+    // En yakın unique vertex'i bul (linear; vertex sayısı küçük olduğu için kabul edilebilir).
+    // Daha hızlısı için spatial hash kullanılabilir; ama tipik primitif < 100 vertex.
+    var bestI = -1, bestD = Infinity;
+    for (var vi = 0; vi < uniqueVerts.length; vi += 3) {
+      var dx = uniqueVerts[vi]   - pt[0];
+      var dy = uniqueVerts[vi+1] - pt[1];
+      var dz = uniqueVerts[vi+2] - pt[2];
+      var d = dx*dx + dy*dy + dz*dz;
+      if (d < bestD) { bestD = d; bestI = vi / 3; }
+    }
+    return bestI;
+  }
+  // Triangle vertex-to-triangles map (canonical vertex → triangle ID'leri)
+  // labels[t] kullanarak vertex'in komşu cluster'larını çıkaracağız.
+  var v2tris = {};
+  var triCount = canonical.length / 3;
+  for (var t = 0; t < triCount; t++) {
+    for (var k = 0; k < 3; k++) {
+      var vi = canonical[t*3 + k];
+      if (!v2tris[vi]) v2tris[vi] = [];
+      v2tris[vi].push(t);
+    }
+  }
+  edges.forEach(function(e) {
+    if (!e.polyline || e.polyline.length === 0) return;
+    var p0 = e.polyline[0], p1 = e.polyline[e.polyline.length-1];
+    [p0, p1].forEach(function(pp) {
+      var vi = _findCanonical(pp);
+      if (vi < 0) return;
+      if (!endpointSet[vi]) {
+        var clusterIds = {};
+        var tris = v2tris[vi] || [];
+        tris.forEach(function(t2) {
+          var lab = labels[t2];
+          if (lab >= 0 && lab < clusterToFaceIdx.length) {
+            clusterIds[faces[clusterToFaceIdx[lab]].id] = true;
+          }
+        });
+        endpointSet[vi] = {
+          id: 'vGen_' + Object.keys(endpointSet).length,
+          label: 'Köşe #' + (Object.keys(endpointSet).length + 1),
+          position: [uniqueVerts[vi*3], uniqueVerts[vi*3+1], uniqueVerts[vi*3+2]],
+          edgeIds: [e.id],
+          faceIds: Object.keys(clusterIds)
+        };
+        e.vertexIds.push(endpointSet[vi].id);
+      } else {
+        if (endpointSet[vi].edgeIds.indexOf(e.id) < 0) endpointSet[vi].edgeIds.push(e.id);
+        if (e.vertexIds.indexOf(endpointSet[vi].id) < 0) e.vertexIds.push(endpointSet[vi].id);
+      }
+    });
+  });
+  var verts = Object.keys(endpointSet).map(function(k) { return endpointSet[k]; });
+  // En az 2 edge'le bağlı vertex'ler — tek-edge dangling endpoint'ler closed loop
+  // case'inde olmaz; sadece açık polyline başlangıç/bitiş için bırak.
+  return verts.filter(function(v) { return v.edgeIds.length >= 1; });
+}
+
+// Fallback dedup — veFEADedupVertices yoksa
+function _veFEADedupVerticesFallback(vertices, bboxSize) {
+  var eps = Math.max((bboxSize || 1) * 1e-6, 1e-9);
+  var invEps = 1 / eps;
+  var map = new Map();
+  var n = vertices.length / 3;
+  var canonical = new Int32Array(n);
+  var ux = [], uy = [], uz = [];
+  for (var i = 0; i < n; i++) {
+    var px = vertices[i*3], py = vertices[i*3+1], pz = vertices[i*3+2];
+    var key = Math.round(px*invEps) + '|' + Math.round(py*invEps) + '|' + Math.round(pz*invEps);
+    var ex = map.get(key);
+    if (ex !== undefined) {
+      canonical[i] = ex;
+    } else {
+      canonical[i] = ux.length;
+      map.set(key, ux.length);
+      ux.push(px); uy.push(py); uz.push(pz);
+    }
+  }
+  var unique = new Float32Array(ux.length * 3);
+  for (var j = 0; j < ux.length; j++) {
+    unique[j*3] = ux[j]; unique[j*3+1] = uy[j]; unique[j*3+2] = uz[j];
+  }
+  return { canonical: canonical, unique: unique, uniqueCount: ux.length, epsilon: eps };
 }
 
 // Minimal fallback (THREE veya builder yoksa): persisted stats'den dön
