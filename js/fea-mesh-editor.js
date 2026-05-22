@@ -589,9 +589,9 @@ function veFEAEditorViewerAction(nodeId, action) {
     return;
   }
   if (action === 'pointer-mode') {
-    // ANSYS-style pointer mode cycle: view → face-pick → body-pick → measure → view
-    var modes = ['view', 'face-pick', 'body-pick', 'measure'];
-    var labels = { view: '⊞ View', 'face-pick': '⊡ Face Pick', 'body-pick': '⊠ Body Pick', measure: '⌖ Measure' };
+    // ANSYS-style pointer mode cycle
+    var modes = ['view', 'face-pick', 'box-select', 'body-pick', 'measure'];
+    var labels = { view: '⊞ View', 'face-pick': '⊡ Face Pick', 'box-select': '▭ Box Select', 'body-pick': '⊠ Body Pick', measure: '⌖ Measure' };
     var cur = viewer._pointerMode || 'view';
     var next = modes[(modes.indexOf(cur) + 1) % modes.length];
     if (typeof viewer.setPointerMode === 'function') viewer.setPointerMode(next);
