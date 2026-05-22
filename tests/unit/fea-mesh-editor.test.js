@@ -1080,6 +1080,80 @@ describe('_veFEAEditorStatisticsHTML — Element Order satırı', () => {
   });
 });
 
+// ─── Faz 5 — ANSYS 3D viewer toolbar: standart view + pointer mode + history ───
+describe('Mesh editor viewer toolbar — standart görünümler + pointer mode', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    if (typeof veFEAViewerRegistry !== 'undefined') {
+      Object.keys(veFEAViewerRegistry).forEach(function(k) { delete veFEAViewerRegistry[k]; });
+    }
+  });
+
+  test('Right panel HTML: Iso/Top/Bottom/Front/Back/Left/Right butonları + prev/next + display mode + pointer mode', () => {
+    var node = { id: 'vt1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    var panel = _veFEAEditorBuildRightPanel(node);
+    var html = panel.innerHTML;
+    // Standart view butonları (onclick içinde 'view-XXX' action ID)
+    expect(html).toMatch(/'view-iso'/);
+    expect(html).toMatch(/'view-front'/);
+    expect(html).toMatch(/'view-back'/);
+    expect(html).toMatch(/'view-top'/);
+    expect(html).toMatch(/'view-bottom'/);
+    expect(html).toMatch(/'view-left'/);
+    expect(html).toMatch(/'view-right'/);
+    // History butonları
+    expect(html).toMatch(/ve-fea-prev-view-vt1/);
+    expect(html).toMatch(/ve-fea-next-view-vt1/);
+    // Display + Pointer mode
+    expect(html).toMatch(/ve-fea-disp-mode-vt1/);
+    expect(html).toMatch(/ve-fea-pointer-mode-vt1/);
+    // Hit-coord ve depth-stack overlay div'leri
+    expect(html).toMatch(/ve-fea-hit-coord-vt1/);
+    expect(html).toMatch(/ve-fea-depth-stack-vt1/);
+  });
+
+  test('veFEAEditorViewerAction — fit/view-iso/prev-view/display-mode/pointer-mode mock viewer çağırır', () => {
+    var calls = [];
+    var fakeViewer = {
+      _displayMode: 'shaded',
+      _pointerMode: 'view',
+      fitToGeometry: function() { calls.push('fit'); },
+      setStandardView: function(v) { calls.push('view:' + v); },
+      previousView: function() { calls.push('prev'); },
+      nextView: function() { calls.push('next'); },
+      canGoPreviousView: function() { return true; },
+      canGoNextView: function() { return false; },
+      setDisplayMode: function(m) { calls.push('disp:' + m); this._displayMode = m; },
+      setPointerMode: function(m) { calls.push('ptr:' + m); this._pointerMode = m; }
+    };
+    veFEAViewerRegistry['v1'] = fakeViewer;
+    document.body.innerHTML =
+      '<button id="ve-fea-disp-mode-v1">x</button>' +
+      '<button id="ve-fea-pointer-mode-v1">y</button>' +
+      '<button id="ve-fea-prev-view-v1">p</button>' +
+      '<button id="ve-fea-next-view-v1">n</button>';
+    veFEAEditorViewerAction('v1', 'fit');
+    veFEAEditorViewerAction('v1', 'view-iso');
+    veFEAEditorViewerAction('v1', 'prev-view');
+    veFEAEditorViewerAction('v1', 'next-view');
+    veFEAEditorViewerAction('v1', 'display-mode');
+    veFEAEditorViewerAction('v1', 'pointer-mode');
+    expect(calls).toContain('fit');
+    expect(calls).toContain('view:iso');
+    expect(calls).toContain('prev');
+    expect(calls).toContain('next');
+    expect(calls).toContain('disp:shaded-edges');
+    expect(calls).toContain('ptr:face-pick');
+  });
+
+  test('Bilinmeyen viewer / action → silently return', () => {
+    expect(function() { veFEAEditorViewerAction('nonexistent', 'fit'); }).not.toThrow();
+    veFEAViewerRegistry['v2'] = {};
+    expect(function() { veFEAEditorViewerAction('v2', 'unknownAction'); }).not.toThrow();
+  });
+});
+
 // ─── Faz 1 Adım 2 — ANSYS-style histogram bin selection ───
 describe('veFEAHighlightQualityBin (histogram bin → 3D vurgu)', () => {
   beforeEach(() => {

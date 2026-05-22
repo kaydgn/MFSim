@@ -793,14 +793,11 @@ describe('cp-fea.js Mesh paneli render', () => {
     expect(html).not.toMatch(/bağlı değil/);
   });
 
-  test('canvas + Sığdır + Tam Ekran butonları render', () => {
+  test('Side panel: "Mesh Editörünü Aç" butonu render', () => {
+    // Mesh paneli artık sadece modal launcher. Canvas + view butonları modal içinde.
     var node = { id: 'mesh-c', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     var html = _testRenderFullMeshUI(node);
-    expect(html).toMatch(/id="ve-fea-mesh-canvas-mesh-c"/);
-    expect(html).toMatch(/veFEAFitPreviewForNode\('mesh-c'\)/);
-    // veFEAOpenFullscreenViewer kaldırıldı — modal kendisi tam ekranı temsil ediyor
-    // Side panel'de "ÇALIŞTIR — Mesh Editörünü Aç" butonu var
     expect(html).toMatch(/veFEAOpenMeshEditor/);
   });
 

@@ -1027,6 +1027,7 @@ function veFEAInitViewer(canvas, opts) {
     fitToGeometry: function() {
       if(this._geometryRoot.children.length === 0) return;
       this.zoomToFit(this._geometryRoot);
+      this._viewHistoryCapture();
     },
     // Standart CAD görünümleri: 'iso', 'top', 'bottom', 'front', 'back', 'right', 'left'
     setStandardView: function(name) {
@@ -1062,6 +1063,7 @@ function veFEAInitViewer(canvas, opts) {
       camera.far = distance * 100;
       camera.updateProjectionMatrix();
       if(orbitHandle.sync) orbitHandle.sync();
+      this._viewHistoryCapture();
       render();
     },
     // Projeksiyon değişimi: 'perspective' veya 'orthographic'. Kamera
@@ -1106,6 +1108,138 @@ function veFEAInitViewer(canvas, opts) {
       x: { enabled: false, offset: 0 },
       y: { enabled: false, offset: 0 },
       z: { enabled: false, offset: 0 }
+    },
+    // ─── ANSYS-style Previous/Next view stack ─────────────────────────────
+    // Kamera state snapshot'ları (position+target+zoom) — undo/redo mantığı.
+    _viewHistory: [],       // { pos, target, zoom, projType }[]
+    _viewHistoryIdx: -1,
+    _viewHistoryCapture: function() {
+      var snapshot = {
+        pos: camera.position.toArray(),
+        target: target.toArray(),
+        projType: camera.isOrthographicCamera ? 'ortho' : 'persp'
+      };
+      if (camera.isOrthographicCamera) {
+        snapshot.left = camera.left; snapshot.right = camera.right;
+        snapshot.top = camera.top;   snapshot.bottom = camera.bottom;
+      } else {
+        snapshot.fov = camera.fov;
+      }
+      // Hâlihazırda undo'ya gittiyse, future-history'yi at
+      if (this._viewHistoryIdx < this._viewHistory.length - 1) {
+        this._viewHistory.length = this._viewHistoryIdx + 1;
+      }
+      this._viewHistory.push(snapshot);
+      // Max 30 snapshot tut
+      if (this._viewHistory.length > 30) this._viewHistory.shift();
+      this._viewHistoryIdx = this._viewHistory.length - 1;
+    },
+    _viewHistoryRestore: function(idx) {
+      if (idx < 0 || idx >= this._viewHistory.length) return;
+      var s = this._viewHistory[idx];
+      camera.position.fromArray(s.pos);
+      target.fromArray(s.target);
+      camera.lookAt(target);
+      camera.updateProjectionMatrix();
+      if(orbitHandle.sync) orbitHandle.sync();
+      this._viewHistoryIdx = idx;
+      render();
+    },
+    previousView: function() {
+      if (this._viewHistoryIdx > 0) this._viewHistoryRestore(this._viewHistoryIdx - 1);
+    },
+    nextView: function() {
+      if (this._viewHistoryIdx < this._viewHistory.length - 1) {
+        this._viewHistoryRestore(this._viewHistoryIdx + 1);
+      }
+    },
+    canGoPreviousView: function() { return this._viewHistoryIdx > 0; },
+    canGoNextView:     function() { return this._viewHistoryIdx < this._viewHistory.length - 1; },
+
+    // ─── ANSYS-style Pointer Mode (state machine) ─────────────────────────
+    // Cursor her an ya 'view' (kamera kontrolü) ya da bir picking filter
+    // modundadır. View modunda LMB orbit + sağ tık dynamic rotation center.
+    // Face/Body pick modunda LMB seçim yapar.
+    _pointerMode: 'view',  // 'view' | 'face-pick' | 'body-pick' | 'measure'
+    setPointerMode: function(mode) {
+      if (['view', 'face-pick', 'body-pick', 'measure'].indexOf(mode) < 0) mode = 'view';
+      this._pointerMode = mode;
+      var cursors = { 'view': 'grab', 'face-pick': 'crosshair', 'body-pick': 'crosshair', 'measure': 'crosshair' };
+      if (canvas && canvas.style) canvas.style.cursor = cursors[mode] || 'grab';
+      // Hit-coord overlay measure modunda aktif
+      var coordDiv = document.getElementById('ve-fea-hit-coord-' + (canvas.id || '').replace('ve-fea-mesh-canvas-', '').replace('ve-fea-geom-canvas-', ''));
+      if (coordDiv) coordDiv.style.display = (mode === 'measure') ? 'block' : 'none';
+    },
+    getPointerMode: function() { return this._pointerMode; },
+
+    // ─── Dynamic rotation center (ANSYS-style) ─────────────────────────────
+    // Geometriye sağ-tıklayınca o nokta rotation center'a (target) atanır,
+    // kısa süreli kırmızı küre indicator gösterilir.
+    setRotationCenterAt: function(worldPoint) {
+      if (!worldPoint) return;
+      target.copy(worldPoint);
+      camera.lookAt(target);
+      if (orbitHandle.sync) orbitHandle.sync();
+      // Indicator: scene'e kırmızı küre, 1.2 sn sonra kaldır
+      if (this._rotCenterMarker) {
+        scene.remove(this._rotCenterMarker);
+        if (this._rotCenterMarker.geometry && this._rotCenterMarker.geometry.dispose) this._rotCenterMarker.geometry.dispose();
+        if (this._rotCenterMarker.material && this._rotCenterMarker.material.dispose) this._rotCenterMarker.material.dispose();
+        this._rotCenterMarker = null;
+      }
+      var bbox = new THREE.Box3().setFromObject(this._geometryRoot || scene);
+      var sz = bbox.isEmpty() ? 50 : Math.max(bbox.getSize(new THREE.Vector3()).x, bbox.getSize(new THREE.Vector3()).y, bbox.getSize(new THREE.Vector3()).z);
+      var r = Math.max(0.5, sz * 0.012);
+      var geo = new THREE.SphereGeometry(r, 16, 16);
+      var mat = new THREE.MeshBasicMaterial({ color: 0xff3030, depthTest: false, transparent: true, opacity: 0.85 });
+      var sphere = new THREE.Mesh(geo, mat);
+      sphere.position.copy(worldPoint);
+      sphere.renderOrder = 9999;
+      scene.add(sphere);
+      this._rotCenterMarker = sphere;
+      var self = this;
+      setTimeout(function() {
+        if (self._rotCenterMarker === sphere) {
+          scene.remove(sphere);
+          if (sphere.geometry) sphere.geometry.dispose();
+          if (sphere.material) sphere.material.dispose();
+          self._rotCenterMarker = null;
+          render();
+        }
+      }, 1200);
+      render();
+    },
+
+    // ─── Hit point at screen coord (ANSYS Hit Point Coordinate) ───────────
+    // İstenirse measure modunda cursor pozisyonundan canlı koordinat verir.
+    pickPointFromMouse: function(clientX, clientY) {
+      if (!this._geometryRoot || this._geometryRoot.children.length === 0) return null;
+      var rect = canvas.getBoundingClientRect();
+      var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+      var ny = -((clientY - rect.top) / rect.height) * 2 + 1;
+      var rc = new THREE.Raycaster();
+      rc.setFromCamera({ x: nx, y: ny }, camera);
+      var hits = rc.intersectObject(this._geometryRoot, true);
+      for (var i = 0; i < hits.length; i++) {
+        if (hits[i].point) return hits[i].point.clone();
+      }
+      return null;
+    },
+    // Tüm derin hit'ler (depth picking için) — raycaster mesafeye göre sıralı döner
+    pickAllFromMouse: function(clientX, clientY) {
+      if (!this._geometryRoot || this._geometryRoot.children.length === 0) return [];
+      var rect = canvas.getBoundingClientRect();
+      var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+      var ny = -((clientY - rect.top) / rect.height) * 2 + 1;
+      var rc = new THREE.Raycaster();
+      rc.setFromCamera({ x: nx, y: ny }, camera);
+      return rc.intersectObject(this._geometryRoot, true);
+    },
+    isMeasuring: function() { return this._pointerMode === 'measure'; },
+    // Ölçüm pointlar listesi (toolbar button entegrasyonu için stub)
+    addMeasurementPoint: function(pt) {
+      this._measurementPoints = this._measurementPoints || [];
+      this._measurementPoints.push(pt.clone());
     },
     setDisplayMode: function(mode) {
       if(mode !== 'shaded' && mode !== 'shaded-edges' && mode !== 'wireframe') return;
@@ -1323,12 +1457,29 @@ function veFEAInitViewer(canvas, opts) {
     }
     return null;
   }
+  // ANSYS-style Hit Point Coordinate overlay — measure / face-pick modunda
+  // canvas üstündeki overlay div'i canlı koordinatlarla günceller.
+  function _updateHitCoordOverlay(e) {
+    var idStripped = (canvas.id || '').replace(/^ve-fea-(mesh|geom)-canvas-/, '');
+    var div = document.getElementById('ve-fea-hit-coord-' + idStripped);
+    if (!div) return;
+    var mode = viewer._pointerMode || 'view';
+    if (mode !== 'measure' && mode !== 'face-pick') { div.style.display = 'none'; return; }
+    var pt = viewer.pickPointFromMouse(e.clientX, e.clientY);
+    if (!pt) { div.style.display = 'none'; return; }
+    div.style.display = 'block';
+    div.textContent = 'X: ' + pt.x.toFixed(2) + '  Y: ' + pt.y.toFixed(2) + '  Z: ' + pt.z.toFixed(2);
+  }
+
   function _onFaceMouseMove(e) {
+    _updateHitCoordOverlay(e);
     if (e.buttons !== 0) return;  // orbit/pan drag sırasında hover skip
     if (!viewer._faceMaterials) return;
     var fid = _raycastFaceId(e.clientX, e.clientY);
     viewer.setHoveredFace(fid);
-    canvas.style.cursor = fid ? 'pointer' : 'grab';
+    if ((viewer._pointerMode || 'view') === 'view') {
+      canvas.style.cursor = fid ? 'pointer' : 'grab';
+    }
   }
   function _onFaceMouseDown(e) {
     if (e.button !== 0) return;
@@ -1348,15 +1499,28 @@ function veFEAInitViewer(canvas, opts) {
       veFEAOnViewerFaceSelected(fid);
     }
   }
+  // Sağ tık: dynamic rotation center. ANSYS'in "tıklanan noktayı rotation
+  // center yap" davranışı (orta tuş yerine sağ tuş — orta tuş zaten pan).
+  function _onContextMenu(e) {
+    if ((viewer._pointerMode || 'view') !== 'view') return;
+    var pt = viewer.pickPointFromMouse(e.clientX, e.clientY);
+    if (pt) {
+      e.preventDefault();
+      viewer.setRotationCenterAt(pt);
+    }
+  }
+
   canvas.addEventListener('mousemove', _onFaceMouseMove);
   canvas.addEventListener('mousedown', _onFaceMouseDown);
   window.addEventListener('mouseup', _onFaceMouseUp);
+  canvas.addEventListener('contextmenu', _onContextMenu);
   // Dispose'da bunları temizle
   var origDispose = viewer.dispose;
   viewer.dispose = function() {
     canvas.removeEventListener('mousemove', _onFaceMouseMove);
     canvas.removeEventListener('mousedown', _onFaceMouseDown);
     window.removeEventListener('mouseup', _onFaceMouseUp);
+    canvas.removeEventListener('contextmenu', _onContextMenu);
     if (typeof origDispose === 'function') origDispose.call(viewer);
   };
 
