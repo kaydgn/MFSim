@@ -309,6 +309,8 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
           volume: stats.volume,
           surfaceArea: stats.surfaceArea,
           bbox: stats.bbox,
+          // Parsed mesh — topology motoru için (transient, persist edilmez)
+          parsedMesh: parsed,
           rawDataB64: canPersist && typeof veFEAArrayBufferToBase64 === 'function'
             ? veFEAArrayBufferToBase64(buffer) : null,
           persistNote: canPersist
@@ -341,6 +343,9 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
         if (typeof veFEAComputeGeometryTopology === 'function') {
           node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
         }
+        // parsedMesh sadece topology hesaplaması için gerekti — proje kaydında
+        // saklanmaması için temizle (rawDataB64 var, yeniden parse edilebilir).
+        delete node.data.geometry.parsedMesh;
         if (typeof saveState === 'function') saveState();
       }
     }

@@ -1246,3 +1246,147 @@ describe('veFEAHistogramHTML — tıklanabilir bin desteği', () => {
     expect(onclickCount).toBe(2);
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// FAZ 1 (YENİ) — Faces / Edges / Vertices sekmesi + edge/vertex seçimi
+// ────────────────────────────────────────────────────────────────────────────
+describe('Topology accordion — Faces / Edges / Vertices sekmesi', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.saveState = jest.fn();
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+    _veFEATopologyTabState = {};
+  });
+
+  function _setupBoxMeshNode(meshId, geomId) {
+    var geomNode = {
+      id: geomId || 'g-tab', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 50, height: 30, depth: 20 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: meshId, type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: geomNode.id, to: meshId }];
+    return { geomNode: geomNode, meshNode: meshNode };
+  }
+
+  test('Varsayılan sekme: Yüzeyler (faces) — face listesi görünür', () => {
+    var s = _setupBoxMeshNode('mesh-tab1');
+    var html = _veFEAEditorTopologyHTML(s.meshNode);
+    expect(html).toMatch(/🎨 Yüzeyler/);
+    expect(html).toMatch(/📏 Kenarlar/);
+    expect(html).toMatch(/🔘 Köşeler/);
+    expect(html).toMatch(/faceXMin/);  // face listesi varsayılan
+  });
+
+  test('Edges sekmesine geçiş → edge listesi render edilir', () => {
+    var s = _setupBoxMeshNode('mesh-tab2');
+    veFEAEditorSetTopologyTab('mesh-tab2', 'edges');
+    var html = _veFEAEditorTopologyHTML(s.meshNode);
+    expect(html).toMatch(/Kenarlar/);
+    expect(html).toMatch(/eX_YmZm/);   // box edge ID
+    expect(html).toMatch(/Doğru/);     // tip Türkçe etiket
+  });
+
+  test('Vertices sekmesine geçiş → vertex listesi render edilir', () => {
+    var s = _setupBoxMeshNode('mesh-tab3');
+    veFEAEditorSetTopologyTab('mesh-tab3', 'vertices');
+    var html = _veFEAEditorTopologyHTML(s.meshNode);
+    expect(html).toMatch(/Köşeler/);
+    expect(html).toMatch(/vXmYmZm/);   // box vertex ID
+  });
+
+  test('Küre için Edges sekmesi: "tanımlı edge yok" uyarısı', () => {
+    var geomNode = {
+      id: 'g-tab-sphere', type: 'fea-geometry',
+      data: { geometry: { type: 'sphere', params: { radius: 25 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-sph', type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-tab-sphere', to: 'mesh-sph' }];
+    veFEAEditorSetTopologyTab('mesh-sph', 'edges');
+    var html = _veFEAEditorTopologyHTML(meshNode);
+    expect(html).toMatch(/tanımlı edge bilgisi yok/);
+  });
+});
+
+describe('Edge & Vertex seçimi', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.saveState = jest.fn();
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+  });
+
+  test('veFEASelectGeometryEdge persist eder', () => {
+    var meshNode = { id: 'mesh-e1', type: 'fea-mesh', data: {} };
+    global.nodes = [meshNode];
+    veFEASelectGeometryEdge('mesh-e1', 'eX_YmZm');
+    expect(global.nodes[0].data.selectedEdgeId).toBe('eX_YmZm');
+    expect(global.saveState).toHaveBeenCalled();
+  });
+
+  test('Aynı edge tekrar → toggle (null)', () => {
+    var meshNode = { id: 'mesh-e2', type: 'fea-mesh', data: { selectedEdgeId: 'eX_YmZm' } };
+    global.nodes = [meshNode];
+    veFEASelectGeometryEdge('mesh-e2', 'eX_YmZm');
+    expect(global.nodes[0].data.selectedEdgeId).toBeNull();
+  });
+
+  test('veFEASelectGeometryVertex persist eder', () => {
+    var meshNode = { id: 'mesh-v1', type: 'fea-mesh', data: {} };
+    global.nodes = [meshNode];
+    veFEASelectGeometryVertex('mesh-v1', 'vXmYmZm');
+    expect(global.nodes[0].data.selectedVertexId).toBe('vXmYmZm');
+  });
+
+  test('veFEAAddSphereOfInfluenceAtVertex vertex pozisyonundan SOI üretir', () => {
+    global.showToast = jest.fn();
+    var geomNode = {
+      id: 'g-soi', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 50, height: 30, depth: 20 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-soi', type: 'fea-mesh', data: {} };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-soi', to: 'mesh-soi' }];
+    veFEAAddSphereOfInfluenceAtVertex('mesh-soi', 'vXpYpZp');
+    var soi = global.nodes[1].data.meshSettings.sphereOfInfluence;
+    expect(Array.isArray(soi)).toBe(true);
+    expect(soi.length).toBe(1);
+    // Box (50,30,20): vXpYpZp = (25,15,10)
+    expect(soi[0].cx).toBeCloseTo(25, 5);
+    expect(soi[0].cy).toBeCloseTo(15, 5);
+    expect(soi[0].cz).toBeCloseTo(10, 5);
+    expect(soi[0].sourceVertexId).toBe('vXpYpZp');
+  });
+});
+
+describe('Edge Sizing dropdown — yeni topology motoru ile Box için çalışır', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    global.connections = [];
+    global.saveState = jest.fn();
+    document.body.innerHTML = '';
+  });
+
+  test('Box edge sizing dropdown\'unda 12 edge listelenir', () => {
+    var geomNode = {
+      id: 'g-edge1', type: 'fea-geometry',
+      data: { geometry: { type: 'box', params: { width: 50, height: 30, depth: 20 } } }
+    };
+    geomNode.data.geometry.topology = veFEAComputeGeometryTopology(geomNode.data.geometry);
+    var meshNode = { id: 'mesh-edge1', type: 'fea-mesh', data: { meshSettings: {} } };
+    global.nodes = [geomNode, meshNode];
+    global.connections = [{ from: 'g-edge1', to: 'mesh-edge1' }];
+    var html = _veFEAEditorEdgeSizingHTML(meshNode);
+    // Önceden box için "Bu geometri tipinde tanımlı edge yok" çıkardı; artık 12 edge var
+    expect(html).not.toMatch(/tanımlı edge yok/);
+    // Edge ID'lerinden bazıları dropdown'da olmalı
+    expect(html).toMatch(/eX_YmZm|eY_XmZm|eZ_XmYm/);
+  });
+});

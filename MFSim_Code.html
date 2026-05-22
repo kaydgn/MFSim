@@ -22238,6 +22238,8 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
           volume: stats.volume,
           surfaceArea: stats.surfaceArea,
           bbox: stats.bbox,
+          // Parsed mesh — topology motoru için (transient, persist edilmez)
+          parsedMesh: parsed,
           rawDataB64: canPersist && typeof veFEAArrayBufferToBase64 === 'function'
             ? veFEAArrayBufferToBase64(buffer) : null,
           persistNote: canPersist
@@ -22270,6 +22272,9 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
         if (typeof veFEAComputeGeometryTopology === 'function') {
           node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
         }
+        // parsedMesh sadece topology hesaplaması için gerekti — proje kaydında
+        // saklanmaması için temizle (rawDataB64 var, yeniden parse edilebilir).
+        delete node.data.geometry.parsedMesh;
         if (typeof saveState === 'function') saveState();
       }
     }
@@ -22414,24 +22419,30 @@ function veFEAExtendSelectionAdjacent(selectedFaceIds, topology, thresholdDeg) {
 function veFEAComputeGeometryTopology(geometry) {
   if (!geometry || !geometry.type) return null;
   var p = geometry.params || {};
-  if (geometry.type === 'box')      return _veFEAToplBox(p);
-  if (geometry.type === 'cylinder') return _veFEAToplCylinder(p);
-  if (geometry.type === 'shaft')    return _veFEAToplShaft(p);
-  if (geometry.type === 'sphere')     return _veFEAToplSphere(p);
-  if (geometry.type === 'hemisphere') return _veFEAToplHemisphere(p);
-  if (geometry.type === 'torus')      return _veFEAToplTorus(p);
-  if (geometry.type === 'cone')       return _veFEAToplCone(p);
-  if (geometry.type === 'lbracket')   return _veFEAToplLBracket(p);
-  if (geometry.type === 'ibeam')      return _veFEAToplIBeam(p);
-  if (geometry.type === 'rectTube') return _veFEAToplRectTube(p);
-  if (geometry.type === 'washer')   return _veFEAToplWasher(p);
-  if (geometry.type === 'nut')      return _veFEAToplNut(p);
-  if (geometry.type === 'bolt')     return _veFEAToplBolt(p);
-  if (geometry.type === 'plate')    return _veFEAToplPlate(p);
-  if (geometry.type === 'step') return _veFEAToplStep(geometry);
-  // Generic fallback: bilinmeyen tip — Three.js mesh'inden otomatik analiz
-  if (typeof _veFEAToplGeneric === 'function') return _veFEAToplGeneric(geometry);
-  return null;
+  var topo = null;
+  if      (geometry.type === 'box')        topo = _veFEAToplBox(p);
+  else if (geometry.type === 'cylinder')   topo = _veFEAToplCylinder(p);
+  else if (geometry.type === 'shaft')      topo = _veFEAToplShaft(p);
+  else if (geometry.type === 'sphere')     topo = _veFEAToplSphere(p);
+  else if (geometry.type === 'hemisphere') topo = _veFEAToplHemisphere(p);
+  else if (geometry.type === 'torus')      topo = _veFEAToplTorus(p);
+  else if (geometry.type === 'cone')       topo = _veFEAToplCone(p);
+  else if (geometry.type === 'lbracket')   topo = _veFEAToplLBracket(p);
+  else if (geometry.type === 'ibeam')      topo = _veFEAToplIBeam(p);
+  else if (geometry.type === 'rectTube')   topo = _veFEAToplRectTube(p);
+  else if (geometry.type === 'washer')     topo = _veFEAToplWasher(p);
+  else if (geometry.type === 'nut')        topo = _veFEAToplNut(p);
+  else if (geometry.type === 'bolt')       topo = _veFEAToplBolt(p);
+  else if (geometry.type === 'plate')      topo = _veFEAToplPlate(p);
+  else if (geometry.type === 'step')       topo = _veFEAToplStep(geometry);
+  else if (typeof _veFEAToplGeneric === 'function') topo = _veFEAToplGeneric(geometry);
+  if (!topo) return null;
+  // Edges ve vertices array ise, eski {count:N} formatı için "count" property'sini
+  // doğrudan array'in üzerine ekle. Böylece hem topology.edges.length hem
+  // topology.edges.count erişimi çalışır. Eski code/test kırılmaz.
+  if (Array.isArray(topo.edges))    { topo.edges.count = topo.edges.length; topo._edgesCount = topo.edges.length; }
+  if (Array.isArray(topo.vertices)) { topo.vertices.count = topo.vertices.length; topo._verticesCount = topo.vertices.length; }
+  return topo;
 }
 
 function veFEATopologyFaceTypeLabel(type) {
@@ -22451,19 +22462,49 @@ function _veFEAToplBox(p) {
   var w = Math.max(0.1, p.width  || 50);
   var h = Math.max(0.1, p.height || 30);
   var d = Math.max(0.1, p.depth  || 20);
+  var hw = w/2, hh = h/2, hd = d/2;
   var faces = [
-    { id: 'faceXMin', label: 'X− Yüzeyi',           type: 'planar', normal: [-1, 0,  0], area: h * d, width: d, height: h },
-    { id: 'faceXMax', label: 'X+ Yüzeyi',           type: 'planar', normal: [ 1, 0,  0], area: h * d, width: d, height: h },
-    { id: 'faceYMin', label: 'Y− Yüzeyi (Alt)',     type: 'planar', normal: [ 0,-1,  0], area: w * d, width: w, height: d },
-    { id: 'faceYMax', label: 'Y+ Yüzeyi (Üst)',     type: 'planar', normal: [ 0, 1,  0], area: w * d, width: w, height: d },
-    { id: 'faceZMin', label: 'Z− Yüzeyi (Ön)',      type: 'planar', normal: [ 0, 0, -1], area: w * h, width: w, height: h },
-    { id: 'faceZMax', label: 'Z+ Yüzeyi (Arka)',    type: 'planar', normal: [ 0, 0,  1], area: w * h, width: w, height: h }
+    { id: 'faceXMin', label: 'X− Yüzeyi',           type: 'planar', normal: [-1, 0,  0], area: h * d, width: d, height: h, centroid: [-hw, 0, 0] },
+    { id: 'faceXMax', label: 'X+ Yüzeyi',           type: 'planar', normal: [ 1, 0,  0], area: h * d, width: d, height: h, centroid: [ hw, 0, 0] },
+    { id: 'faceYMin', label: 'Y− Yüzeyi (Alt)',     type: 'planar', normal: [ 0,-1,  0], area: w * d, width: w, height: d, centroid: [0, -hh, 0] },
+    { id: 'faceYMax', label: 'Y+ Yüzeyi (Üst)',     type: 'planar', normal: [ 0, 1,  0], area: w * d, width: w, height: d, centroid: [0,  hh, 0] },
+    { id: 'faceZMin', label: 'Z− Yüzeyi (Ön)',      type: 'planar', normal: [ 0, 0, -1], area: w * h, width: w, height: h, centroid: [0, 0, -hd] },
+    { id: 'faceZMax', label: 'Z+ Yüzeyi (Arka)',    type: 'planar', normal: [ 0, 0,  1], area: w * h, width: w, height: h, centroid: [0, 0,  hd] }
+  ];
+  // 8 vertex (köşeler) — adlandırma: vXmYmZm = (X-, Y-, Z-) octant
+  var vertices = [
+    { id: 'vXmYmZm', label: 'Köşe (−,−,−)', position: [-hw,-hh,-hd], faceIds: ['faceXMin','faceYMin','faceZMin'] },
+    { id: 'vXpYmZm', label: 'Köşe (+,−,−)', position: [ hw,-hh,-hd], faceIds: ['faceXMax','faceYMin','faceZMin'] },
+    { id: 'vXmYpZm', label: 'Köşe (−,+,−)', position: [-hw, hh,-hd], faceIds: ['faceXMin','faceYMax','faceZMin'] },
+    { id: 'vXpYpZm', label: 'Köşe (+,+,−)', position: [ hw, hh,-hd], faceIds: ['faceXMax','faceYMax','faceZMin'] },
+    { id: 'vXmYmZp', label: 'Köşe (−,−,+)', position: [-hw,-hh, hd], faceIds: ['faceXMin','faceYMin','faceZMax'] },
+    { id: 'vXpYmZp', label: 'Köşe (+,−,+)', position: [ hw,-hh, hd], faceIds: ['faceXMax','faceYMin','faceZMax'] },
+    { id: 'vXmYpZp', label: 'Köşe (−,+,+)', position: [-hw, hh, hd], faceIds: ['faceXMin','faceYMax','faceZMax'] },
+    { id: 'vXpYpZp', label: 'Köşe (+,+,+)', position: [ hw, hh, hd], faceIds: ['faceXMax','faceYMax','faceZMax'] }
+  ];
+  // 12 kenar (4 X-yönlü + 4 Y-yönlü + 4 Z-yönlü)
+  var edges = [
+    // X-yönlü 4 edge
+    { id: 'eX_YmZm', label: 'X-Kenar (Y−,Z−)', type: 'line', length: w, p1:[-hw,-hh,-hd], p2:[ hw,-hh,-hd], faceIds:['faceYMin','faceZMin'], vertexIds:['vXmYmZm','vXpYmZm'] },
+    { id: 'eX_YpZm', label: 'X-Kenar (Y+,Z−)', type: 'line', length: w, p1:[-hw, hh,-hd], p2:[ hw, hh,-hd], faceIds:['faceYMax','faceZMin'], vertexIds:['vXmYpZm','vXpYpZm'] },
+    { id: 'eX_YmZp', label: 'X-Kenar (Y−,Z+)', type: 'line', length: w, p1:[-hw,-hh, hd], p2:[ hw,-hh, hd], faceIds:['faceYMin','faceZMax'], vertexIds:['vXmYmZp','vXpYmZp'] },
+    { id: 'eX_YpZp', label: 'X-Kenar (Y+,Z+)', type: 'line', length: w, p1:[-hw, hh, hd], p2:[ hw, hh, hd], faceIds:['faceYMax','faceZMax'], vertexIds:['vXmYpZp','vXpYpZp'] },
+    // Y-yönlü 4 edge
+    { id: 'eY_XmZm', label: 'Y-Kenar (X−,Z−)', type: 'line', length: h, p1:[-hw,-hh,-hd], p2:[-hw, hh,-hd], faceIds:['faceXMin','faceZMin'], vertexIds:['vXmYmZm','vXmYpZm'] },
+    { id: 'eY_XpZm', label: 'Y-Kenar (X+,Z−)', type: 'line', length: h, p1:[ hw,-hh,-hd], p2:[ hw, hh,-hd], faceIds:['faceXMax','faceZMin'], vertexIds:['vXpYmZm','vXpYpZm'] },
+    { id: 'eY_XmZp', label: 'Y-Kenar (X−,Z+)', type: 'line', length: h, p1:[-hw,-hh, hd], p2:[-hw, hh, hd], faceIds:['faceXMin','faceZMax'], vertexIds:['vXmYmZp','vXmYpZp'] },
+    { id: 'eY_XpZp', label: 'Y-Kenar (X+,Z+)', type: 'line', length: h, p1:[ hw,-hh, hd], p2:[ hw, hh, hd], faceIds:['faceXMax','faceZMax'], vertexIds:['vXpYmZp','vXpYpZp'] },
+    // Z-yönlü 4 edge
+    { id: 'eZ_XmYm', label: 'Z-Kenar (X−,Y−)', type: 'line', length: d, p1:[-hw,-hh,-hd], p2:[-hw,-hh, hd], faceIds:['faceXMin','faceYMin'], vertexIds:['vXmYmZm','vXmYmZp'] },
+    { id: 'eZ_XpYm', label: 'Z-Kenar (X+,Y−)', type: 'line', length: d, p1:[ hw,-hh,-hd], p2:[ hw,-hh, hd], faceIds:['faceXMax','faceYMin'], vertexIds:['vXpYmZm','vXpYmZp'] },
+    { id: 'eZ_XmYp', label: 'Z-Kenar (X−,Y+)', type: 'line', length: d, p1:[-hw, hh,-hd], p2:[-hw, hh, hd], faceIds:['faceXMin','faceYMax'], vertexIds:['vXmYpZm','vXmYpZp'] },
+    { id: 'eZ_XpYp', label: 'Z-Kenar (X+,Y+)', type: 'line', length: d, p1:[ hw, hh,-hd], p2:[ hw, hh, hd], faceIds:['faceXMax','faceYMax'], vertexIds:['vXpYpZm','vXpYpZp'] }
   ];
   return {
     type: 'box',
     faces: faces,
-    edges:    { count: 12 },
-    vertices: { count: 8 },
+    edges: edges,
+    vertices: vertices,
     totalSurfaceArea: 2 * (w * h + w * d + h * d),
     volume: w * h * d,
     bbox: { x: w, y: h, z: d }
@@ -22476,18 +22517,19 @@ function _veFEAToplCylinder(p) {
   var h = Math.max(0.1, p.height || 60);
   var disk = Math.PI * r * r;
   var side = 2 * Math.PI * r * h;
+  var hh = h / 2;
   return {
     type: 'cylinder',
     faces: [
-      { id: 'faceBottom', label: 'Alt Disk (Y−)', type: 'planar',      normal: [0,-1,0], area: disk, radius: r },
-      { id: 'faceTop',    label: 'Üst Disk (Y+)', type: 'planar',      normal: [0, 1,0], area: disk, radius: r },
-      { id: 'faceSide',   label: 'Yan Yüzey (Radyal)', type: 'cylindrical',              area: side, radius: r, length: h }
+      { id: 'faceBottom', label: 'Alt Disk (Y−)', type: 'planar',      normal: [0,-1,0], area: disk, radius: r, centroid: [0,-hh,0] },
+      { id: 'faceTop',    label: 'Üst Disk (Y+)', type: 'planar',      normal: [0, 1,0], area: disk, radius: r, centroid: [0, hh,0] },
+      { id: 'faceSide',   label: 'Yan Yüzey (Radyal)', type: 'cylindrical',              area: side, radius: r, length: h, axis:[0,1,0], center:[0,0,0] }
     ],
     edges: [
-      { id: 'edgeBottomCircle', label: 'Alt Daire (Y−)', type: 'circle', length: 2 * Math.PI * r, radius: r, faceIds: ['faceBottom', 'faceSide'] },
-      { id: 'edgeTopCircle',    label: 'Üst Daire (Y+)', type: 'circle', length: 2 * Math.PI * r, radius: r, faceIds: ['faceTop',    'faceSide'] }
+      { id: 'edgeBottomCircle', label: 'Alt Daire (Y−)', type: 'circle', length: 2 * Math.PI * r, radius: r, center: [0,-hh,0], axis:[0,1,0], polyline: _veFEACirclePolyline([0,-hh,0],[0,1,0],r,48), faceIds: ['faceBottom', 'faceSide'], vertexIds: [] },
+      { id: 'edgeTopCircle',    label: 'Üst Daire (Y+)', type: 'circle', length: 2 * Math.PI * r, radius: r, center: [0, hh,0], axis:[0,1,0], polyline: _veFEACirclePolyline([0, hh,0],[0,1,0],r,48), faceIds: ['faceTop',    'faceSide'], vertexIds: [] }
     ],
-    vertices: { count: 0 },
+    vertices: [],
     totalSurfaceArea: 2 * disk + side,
     volume: disk * h,
     bbox: { x: 2 * r, y: h, z: 2 * r }
@@ -22503,21 +22545,22 @@ function _veFEAToplShaft(p) {
   var ring  = Math.PI * (rOut * rOut - rIn * rIn);
   var outer = 2 * Math.PI * rOut * L;
   var inner = 2 * Math.PI * rIn  * L;
+  var hL = L / 2;
   return {
     type: 'shaft',
     faces: [
-      { id: 'faceBottom', label: 'Alt Halka (Y−)',       type: 'planar-annular', normal: [0,-1,0], area: ring, outerRadius: rOut, innerRadius: rIn },
-      { id: 'faceTop',    label: 'Üst Halka (Y+)',       type: 'planar-annular', normal: [0, 1,0], area: ring, outerRadius: rOut, innerRadius: rIn },
-      { id: 'faceOuter',  label: 'Dış Yan Yüzey',        type: 'cylindrical',                       area: outer, radius: rOut, length: L },
-      { id: 'faceInner',  label: 'İç Yan Yüzey (Delik)', type: 'cylindrical',                       area: inner, radius: rIn,  length: L, isHole: true }
+      { id: 'faceBottom', label: 'Alt Halka (Y−)',       type: 'planar-annular', normal: [0,-1,0], area: ring, outerRadius: rOut, innerRadius: rIn, centroid:[0,-hL,0] },
+      { id: 'faceTop',    label: 'Üst Halka (Y+)',       type: 'planar-annular', normal: [0, 1,0], area: ring, outerRadius: rOut, innerRadius: rIn, centroid:[0, hL,0] },
+      { id: 'faceOuter',  label: 'Dış Yan Yüzey',        type: 'cylindrical',                       area: outer, radius: rOut, length: L, axis:[0,1,0], center:[0,0,0] },
+      { id: 'faceInner',  label: 'İç Yan Yüzey (Delik)', type: 'cylindrical',                       area: inner, radius: rIn,  length: L, axis:[0,1,0], center:[0,0,0], isHole: true }
     ],
     edges: [
-      { id: 'edgeOuterBottom', label: 'Dış Alt Daire (Y−)',  type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, faceIds: ['faceBottom', 'faceOuter'] },
-      { id: 'edgeOuterTop',    label: 'Dış Üst Daire (Y+)',  type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, faceIds: ['faceTop',    'faceOuter'] },
-      { id: 'edgeInnerBottom', label: 'İç Alt Daire (Delik Y−)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, faceIds: ['faceBottom', 'faceInner'], isHole: true },
-      { id: 'edgeInnerTop',    label: 'İç Üst Daire (Delik Y+)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, faceIds: ['faceTop',    'faceInner'], isHole: true }
+      { id: 'edgeOuterBottom', label: 'Dış Alt Daire (Y−)',  type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, center:[0,-hL,0], axis:[0,1,0], polyline: _veFEACirclePolyline([0,-hL,0],[0,1,0],rOut,48), faceIds: ['faceBottom', 'faceOuter'], vertexIds: [] },
+      { id: 'edgeOuterTop',    label: 'Dış Üst Daire (Y+)',  type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, center:[0, hL,0], axis:[0,1,0], polyline: _veFEACirclePolyline([0, hL,0],[0,1,0],rOut,48), faceIds: ['faceTop',    'faceOuter'], vertexIds: [] },
+      { id: 'edgeInnerBottom', label: 'İç Alt Daire (Delik Y−)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, center:[0,-hL,0], axis:[0,1,0], polyline: _veFEACirclePolyline([0,-hL,0],[0,1,0],rIn,48), faceIds: ['faceBottom', 'faceInner'], vertexIds: [], isHole: true },
+      { id: 'edgeInnerTop',    label: 'İç Üst Daire (Delik Y+)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, center:[0, hL,0], axis:[0,1,0], polyline: _veFEACirclePolyline([0, hL,0],[0,1,0],rIn,48), faceIds: ['faceTop',    'faceInner'], vertexIds: [], isHole: true }
     ],
-    vertices: { count: 0 },
+    vertices: [],
     totalSurfaceArea: 2 * ring + outer + inner,
     volume: ring * L,
     bbox: { x: 2 * rOut, y: L, z: 2 * rOut }
@@ -22532,10 +22575,10 @@ function _veFEAToplSphere(p) {
   return {
     type: 'sphere',
     faces: [
-      { id: 'faceSurface', label: 'Küresel Yüzey', type: 'spherical', area: area, radius: r }
+      { id: 'faceSurface', label: 'Küresel Yüzey', type: 'spherical', area: area, radius: r, center: [0,0,0], centroid: [0,0,0] }
     ],
-    edges:    { count: 0 },
-    vertices: { count: 0 },
+    edges: [],
+    vertices: [],
     totalSurfaceArea: area,
     volume: vol,
     bbox: { x: 2 * r, y: 2 * r, z: 2 * r }
@@ -22550,13 +22593,13 @@ function _veFEAToplHemisphere(p) {
   return {
     type: 'hemisphere',
     faces: [
-      { id: 'faceFlat', label: 'Alt Düz Disk (Y−)', type: 'planar', normal: [0,-1,0], area: flatArea, radius: r },
-      { id: 'faceDome', label: 'Yarı Küresel Yüzey (Dome)', type: 'spherical', area: domeArea, radius: r }
+      { id: 'faceFlat', label: 'Alt Düz Disk (Y−)', type: 'planar', normal: [0,-1,0], area: flatArea, radius: r, centroid:[0,0,0] },
+      { id: 'faceDome', label: 'Yarı Küresel Yüzey (Dome)', type: 'spherical', area: domeArea, radius: r, center: [0,0,0], centroid: [0, r/2, 0] }
     ],
     edges: [
-      { id: 'edgeEquator', label: 'Ekvator Dairesi', type: 'circle', length: 2 * Math.PI * r, radius: r, faceIds: ['faceFlat', 'faceDome'] }
+      { id: 'edgeEquator', label: 'Ekvator Dairesi', type: 'circle', length: 2 * Math.PI * r, radius: r, center:[0,0,0], axis:[0,1,0], polyline: _veFEACirclePolyline([0,0,0],[0,1,0],r,48), faceIds: ['faceFlat', 'faceDome'], vertexIds: [] }
     ],
-    vertices: { count: 0 },
+    vertices: [],
     totalSurfaceArea: domeArea + flatArea,
     volume: (2 / 3) * Math.PI * r * r * r,
     bbox: { x: 2 * r, y: r, z: 2 * r }
@@ -22572,10 +22615,10 @@ function _veFEAToplTorus(p) {
   return {
     type: 'torus',
     faces: [
-      { id: 'faceSurface', label: 'Toroidal Yüzey', type: 'toroidal', area: area, majorRadius: R, minorRadius: r }
+      { id: 'faceSurface', label: 'Toroidal Yüzey', type: 'toroidal', area: area, majorRadius: R, minorRadius: r, center: [0,0,0], axis: [0,1,0], centroid: [0,0,0] }
     ],
-    edges:    { count: 0 },
-    vertices: { count: 0 },
+    edges: [],
+    vertices: [],
     totalSurfaceArea: area,
     volume: vol,
     bbox: { x: 2 * (R + r), y: 2 * r, z: 2 * (R + r) }
@@ -22602,17 +22645,26 @@ function _veFEAToplCone(p) {
     faces.splice(1, 0, { id: 'faceTop', label: 'Üst Disk (Y+)', type: 'planar', normal: [0,1,0], area: topArea, radius: rT });
   }
   var rMaxC = Math.max(rB, rT);
+  var hH = h / 2;
+  // centroid'leri faces'e ekleyelim
+  faces[0].centroid = [0, -hH, 0]; // bottom
+  faces[faces.length - 1].center = [0, 0, 0];
+  faces[faces.length - 1].axis = [0, 1, 0];
+  if (!isApex) faces[1].centroid = [0, hH, 0];
   var coneEdges = [
-    { id: 'edgeBottomCircle', label: 'Alt Daire (Y−)', type: 'circle', length: 2 * Math.PI * rB, radius: rB, faceIds: ['faceBottom', 'faceSide'] }
+    { id: 'edgeBottomCircle', label: 'Alt Daire (Y−)', type: 'circle', length: 2 * Math.PI * rB, radius: rB, center:[0,-hH,0], axis:[0,1,0], polyline: _veFEACirclePolyline([0,-hH,0],[0,1,0],rB,48), faceIds: ['faceBottom', 'faceSide'], vertexIds: [] }
   ];
   if (!isApex) {
-    coneEdges.push({ id: 'edgeTopCircle', label: 'Üst Daire (Y+)', type: 'circle', length: 2 * Math.PI * rT, radius: rT, faceIds: ['faceTop', 'faceSide'] });
+    coneEdges.push({ id: 'edgeTopCircle', label: 'Üst Daire (Y+)', type: 'circle', length: 2 * Math.PI * rT, radius: rT, center:[0, hH,0], axis:[0,1,0], polyline: _veFEACirclePolyline([0, hH,0],[0,1,0],rT,48), faceIds: ['faceTop', 'faceSide'], vertexIds: [] });
   }
+  var coneVerts = isApex
+    ? [{ id: 'vApex', label: 'Tepe Noktası', position: [0, hH, 0], faceIds: ['faceSide'] }]
+    : [];
   return {
     type: 'cone',
     faces: faces,
     edges: coneEdges,
-    vertices: { count: isApex ? 1 : 0 },         // apex vertex
+    vertices: coneVerts,
     totalSurfaceArea: bottomArea + topArea + sideArea,
     volume: volume,
     bbox: { x: 2 * rMaxC, y: h, z: 2 * rMaxC }
@@ -22625,21 +22677,84 @@ function _veFEAToplLBracket(p) {
   var h = Math.max(1, p.height || 40);
   var t = Math.max(0.5, p.thickness || 5);
   var L = Math.max(1, p.length || 100);
+  var hw = w/2, hh = h/2, hL = L/2;
   var crossArea = t * (w + h - t);
+  var faces = [
+    { id: 'faceZMin',     label: 'Ön Kesit (Z−)',              type: 'planar', normal: [0,0,-1], area: crossArea, centroid: [0,0,-hL] },
+    { id: 'faceZMax',     label: 'Arka Kesit (Z+)',            type: 'planar', normal: [0,0,1],  area: crossArea, centroid: [0,0, hL] },
+    { id: 'faceXMin',     label: 'Sol Yan (X−)',               type: 'planar', normal: [-1,0,0], area: h * L, centroid: [-hw, 0, 0] },
+    { id: 'faceYMin',     label: 'Alt Yan (Y−)',               type: 'planar', normal: [0,-1,0], area: w * L, centroid: [0, -hh, 0] },
+    { id: 'faceXMax',     label: 'Yatay Kol Sağ Yüzü (X+)',    type: 'planar', normal: [1,0,0],  area: t * L, centroid: [hw - (w - t)/2, -hh + t/2, 0] },
+    { id: 'faceYMax',     label: 'Dikey Kol Üst Yüzü (Y+)',    type: 'planar', normal: [0,1,0],  area: t * L, centroid: [-hw + t/2, hh - (h - t)/2, 0] },
+    { id: 'faceInnerY',   label: 'İç Köşe Üst Yüzü',           type: 'planar', normal: [0,1,0],  area: (w - t) * L, centroid: [hw - (w - t)/2, -hh + t, 0] },
+    { id: 'faceInnerX',   label: 'İç Köşe Yan Yüzü',           type: 'planar', normal: [1,0,0],  area: (h - t) * L, centroid: [-hw + t, hh - (h - t)/2, 0] }
+  ];
+  // 6 cross-section köşesi × 2 z-uç = 12 vertex. L-profil 2D cross-section köşeleri:
+  // (saat yönünün tersi, X- alt sol köşeden başlar)
+  //   C1=(-hw,-hh), C2=(hw,-hh), C3=(hw,-hh+t), C4=(-hw+t,-hh+t), C5=(-hw+t, hh), C6=(-hw, hh)
+  var cs = [
+    [-hw,-hh],         // C1 dış alt sol
+    [ hw,-hh],         // C2 dış alt sağ
+    [ hw,-hh + t],     // C3 yatay kol sağ-üst
+    [-hw + t,-hh + t], // C4 iç köşe (concave)
+    [-hw + t, hh],     // C5 dikey kol üst-sağ
+    [-hw, hh]          // C6 dış sol üst
+  ];
+  var vertices = [];
+  for (var zi = 0; zi < 2; zi++) {
+    var z = (zi === 0) ? -hL : hL;
+    cs.forEach(function(c, ci) {
+      vertices.push({
+        id: 'vL_C' + (ci + 1) + (zi === 0 ? '_Zm' : '_Zp'),
+        label: 'Köşe C' + (ci + 1) + ' (' + (zi === 0 ? 'Z−' : 'Z+') + ')',
+        position: [c[0], c[1], z],
+        faceIds: []
+      });
+    });
+  }
+  // 18 edge: 6 X-Y kesit edge (front) + 6 (back) + 6 axial
+  var edges = [];
+  function _vid(ci, zi) { return 'vL_C' + (ci + 1) + (zi === 0 ? '_Zm' : '_Zp'); }
+  // Cross-section edge'leri (front Z-, back Z+)
+  for (var zi2 = 0; zi2 < 2; zi2++) {
+    var zVal = (zi2 === 0) ? -hL : hL;
+    var faceId = (zi2 === 0) ? 'faceZMin' : 'faceZMax';
+    for (var ei = 0; ei < 6; ei++) {
+      var a = cs[ei], b = cs[(ei + 1) % 6];
+      var L1 = Math.sqrt(Math.pow(b[0]-a[0],2) + Math.pow(b[1]-a[1],2));
+      // İkinci faceId — bu kenarın hangi yan yüzünü ayırdığını belirleyen statik tablo
+      var sideFace = ['faceYMin','faceXMax','faceInnerY','faceInnerX','faceYMax','faceXMin'][ei];
+      edges.push({
+        id: 'eL_C' + (ei + 1) + (zi2 === 0 ? '_Zm' : '_Zp'),
+        label: 'Kesit Kenarı C' + (ei + 1) + '→' + ((ei + 1) % 6 + 1) + ' (' + (zi2 === 0 ? 'Z−' : 'Z+') + ')',
+        type: 'line', length: L1,
+        p1: [a[0], a[1], zVal], p2: [b[0], b[1], zVal],
+        polyline: _veFEALinePolyline([a[0], a[1], zVal], [b[0], b[1], zVal]),
+        faceIds: [faceId, sideFace],
+        vertexIds: [_vid(ei, zi2), _vid((ei + 1) % 6, zi2)]
+      });
+    }
+  }
+  // Axial (Z) edge'leri — her cross-section köşesinden Z- → Z+
+  cs.forEach(function(c, ei3) {
+    // Bu köşedeki iki yan yüz — sırayla cw'de gelen yüzeyler
+    var leftFace  = ['faceXMin','faceYMin','faceXMax','faceInnerY','faceInnerX','faceYMax'][ei3];
+    var rightFace = ['faceYMin','faceXMax','faceInnerY','faceInnerX','faceYMax','faceXMin'][ei3];
+    edges.push({
+      id: 'eL_Z_C' + (ei3 + 1),
+      label: 'Eksenel Kenar C' + (ei3 + 1) + ' (Z)',
+      type: 'line', length: L,
+      p1: [c[0], c[1], -hL], p2: [c[0], c[1], hL],
+      polyline: _veFEALinePolyline([c[0], c[1], -hL], [c[0], c[1], hL]),
+      faceIds: [leftFace, rightFace],
+      vertexIds: [_vid(ei3, 0), _vid(ei3, 1)]
+    });
+  });
   return {
     type: 'lbracket',
-    faces: [
-      { id: 'faceZMin',     label: 'Ön Kesit (Z−)',              type: 'planar', normal: [0,0,-1], area: crossArea },
-      { id: 'faceZMax',     label: 'Arka Kesit (Z+)',            type: 'planar', normal: [0,0,1],  area: crossArea },
-      { id: 'faceXMin',     label: 'Sol Yan (X−)',               type: 'planar', normal: [-1,0,0], area: h * L },
-      { id: 'faceYMin',     label: 'Alt Yan (Y−)',               type: 'planar', normal: [0,-1,0], area: w * L },
-      { id: 'faceXMax',     label: 'Yatay Kol Sağ Yüzü (X+)',    type: 'planar', normal: [1,0,0],  area: t * L },
-      { id: 'faceYMax',     label: 'Dikey Kol Üst Yüzü (Y+)',    type: 'planar', normal: [0,1,0],  area: t * L },
-      { id: 'faceInnerY',   label: 'İç Köşe Üst Yüzü',           type: 'planar', normal: [0,1,0],  area: (w - t) * L },
-      { id: 'faceInnerX',   label: 'İç Köşe Yan Yüzü',           type: 'planar', normal: [1,0,0],  area: (h - t) * L }
-    ],
-    edges:    { count: 18 },
-    vertices: { count: 12 },     // 6 cross-section köşe × 2 z-uç
+    faces: faces,
+    edges: edges,
+    vertices: vertices,
     totalSurfaceArea: 2 * crossArea + 2 * (w + h) * L,
     volume: crossArea * L,
     bbox: { x: w, y: h, z: L }
@@ -22653,26 +22768,94 @@ function _veFEAToplIBeam(p) {
   var tf = Math.max(0.5, p.flange || 8);
   var tw = Math.max(0.5, p.web || 6);
   var L = Math.max(1, p.length || 200);
+  var hw = w/2, hh = h/2, htw = tw/2, hL = L/2;
   var innerW = (w - tw) / 2;
   var innerH = h - 2 * tf;
   var crossArea = 2 * (w * tf) + tw * innerH;
-  // I-profil dış silüet 12 köşeli polygon → 12 yan yüz (yan yüzeyler kenar başına)
+  var faces = [
+    { id: 'faceZMin',  label: 'Ön Kesit (Z−)',        type: 'planar', normal: [0,0,-1], area: crossArea, centroid:[0,0,-hL] },
+    { id: 'faceZMax',  label: 'Arka Kesit (Z+)',      type: 'planar', normal: [0,0,1],  area: crossArea, centroid:[0,0, hL] },
+    { id: 'faceYMin',  label: 'Alt Flanş Tabanı (Y−)', type: 'planar', normal: [0,-1,0], area: w * L, centroid:[0,-hh,0] },
+    { id: 'faceYMax',  label: 'Üst Flanş Tepesi (Y+)', type: 'planar', normal: [0,1,0],  area: w * L, centroid:[0, hh,0] },
+    { id: 'faceXMin',  label: 'Sol Yan (X−)',         type: 'planar', normal: [-1,0,0], area: tf * L + tf * L, centroid:[-hw, 0, 0] },
+    { id: 'faceXMax',  label: 'Sağ Yan (X+)',         type: 'planar', normal: [1,0,0],  area: tf * L + tf * L, centroid:[ hw, 0, 0] },
+    { id: 'faceWebL',  label: 'Gövde Sol Yüzü',       type: 'planar', normal: [-1,0,0], area: innerH * L, centroid:[-htw, 0, 0] },
+    { id: 'faceWebR',  label: 'Gövde Sağ Yüzü',       type: 'planar', normal: [1,0,0],  area: innerH * L, centroid:[ htw, 0, 0] },
+    { id: 'faceInnerYU',label: 'Üst Flanş İç Yüzü (Y−)',type: 'planar', normal: [0,-1,0], area: 2 * innerW * L, centroid:[0,  hh - tf, 0] },
+    { id: 'faceInnerYL',label: 'Alt Flanş İç Yüzü (Y+)',type: 'planar', normal: [0,1,0],  area: 2 * innerW * L, centroid:[0, -hh + tf, 0] }
+  ];
+  // I-profil cross-section 12 köşe (CCW, alt-sol köşeden başlar):
+  // C1=(-hw,-hh), C2=(hw,-hh), C3=(hw,-hh+tf), C4=(htw,-hh+tf), C5=(htw,hh-tf),
+  // C6=(hw,hh-tf), C7=(hw,hh), C8=(-hw,hh), C9=(-hw,hh-tf), C10=(-htw,hh-tf),
+  // C11=(-htw,-hh+tf), C12=(-hw,-hh+tf)
+  var cs = [
+    [-hw,-hh], [ hw,-hh], [ hw,-hh+tf], [ htw,-hh+tf], [ htw, hh-tf], [ hw, hh-tf],
+    [ hw, hh], [-hw, hh], [-hw, hh-tf], [-htw, hh-tf], [-htw,-hh+tf], [-hw,-hh+tf]
+  ];
+  // Her edge'in (i → i+1) hangi yan yüzü ayırdığı
+  var sideFaces = ['faceYMin','faceXMax','faceInnerYL','faceWebR','faceInnerYU','faceXMax',
+                   'faceYMax','faceXMin','faceInnerYU','faceWebL','faceInnerYL','faceXMin'];
+  var vertices = [];
+  for (var zi = 0; zi < 2; zi++) {
+    var z = (zi === 0) ? -hL : hL;
+    cs.forEach(function(c, ci) {
+      vertices.push({
+        id: 'vI_C' + (ci + 1) + (zi === 0 ? '_Zm' : '_Zp'),
+        label: 'Köşe C' + (ci + 1) + ' (' + (zi === 0 ? 'Z−' : 'Z+') + ')',
+        position: [c[0], c[1], z], faceIds: []
+      });
+    });
+  }
+  function _vid(ci, zi) { return 'vI_C' + (ci + 1) + (zi === 0 ? '_Zm' : '_Zp'); }
+  var edges = [];
+  for (var zi2 = 0; zi2 < 2; zi2++) {
+    var zVal = (zi2 === 0) ? -hL : hL;
+    var fId = (zi2 === 0) ? 'faceZMin' : 'faceZMax';
+    for (var ei = 0; ei < 12; ei++) {
+      var a = cs[ei], b = cs[(ei + 1) % 12];
+      var L1 = Math.sqrt(Math.pow(b[0]-a[0],2) + Math.pow(b[1]-a[1],2));
+      edges.push({
+        id: 'eI_C' + (ei + 1) + (zi2 === 0 ? '_Zm' : '_Zp'),
+        label: 'Kesit Kenarı C' + (ei + 1) + '→' + ((ei + 1) % 12 + 1) + ' (' + (zi2 === 0 ? 'Z−' : 'Z+') + ')',
+        type: 'line', length: L1,
+        p1: [a[0], a[1], zVal], p2: [b[0], b[1], zVal],
+        polyline: _veFEALinePolyline([a[0], a[1], zVal], [b[0], b[1], zVal]),
+        faceIds: [fId, sideFaces[ei]],
+        vertexIds: [_vid(ei, zi2), _vid((ei + 1) % 12, zi2)]
+      });
+    }
+  }
+  // Axial edge'ler (Z-yönlü)
+  var axialAdj = [
+    ['faceXMin','faceYMin'],   // C1
+    ['faceYMin','faceXMax'],   // C2
+    ['faceXMax','faceInnerYL'],// C3
+    ['faceInnerYL','faceWebR'],// C4
+    ['faceWebR','faceInnerYU'],// C5
+    ['faceInnerYU','faceXMax'],// C6
+    ['faceXMax','faceYMax'],   // C7
+    ['faceYMax','faceXMin'],   // C8
+    ['faceXMin','faceInnerYU'],// C9
+    ['faceInnerYU','faceWebL'],// C10
+    ['faceWebL','faceInnerYL'],// C11
+    ['faceInnerYL','faceXMin'] // C12
+  ];
+  cs.forEach(function(c, ei3) {
+    edges.push({
+      id: 'eI_Z_C' + (ei3 + 1),
+      label: 'Eksenel Kenar C' + (ei3 + 1) + ' (Z)',
+      type: 'line', length: L,
+      p1: [c[0], c[1], -hL], p2: [c[0], c[1], hL],
+      polyline: _veFEALinePolyline([c[0], c[1], -hL], [c[0], c[1], hL]),
+      faceIds: axialAdj[ei3].slice(),
+      vertexIds: [_vid(ei3, 0), _vid(ei3, 1)]
+    });
+  });
   return {
     type: 'ibeam',
-    faces: [
-      { id: 'faceZMin',  label: 'Ön Kesit (Z−)',        type: 'planar', normal: [0,0,-1], area: crossArea },
-      { id: 'faceZMax',  label: 'Arka Kesit (Z+)',      type: 'planar', normal: [0,0,1],  area: crossArea },
-      { id: 'faceYMin',  label: 'Alt Flanş Tabanı (Y−)', type: 'planar', normal: [0,-1,0], area: w * L },
-      { id: 'faceYMax',  label: 'Üst Flanş Tepesi (Y+)', type: 'planar', normal: [0,1,0],  area: w * L },
-      { id: 'faceXMin',  label: 'Sol Yan (X−)',         type: 'planar', normal: [-1,0,0], area: tf * L + tf * L },  // alt + üst flanşın sol kenarı
-      { id: 'faceXMax',  label: 'Sağ Yan (X+)',         type: 'planar', normal: [1,0,0],  area: tf * L + tf * L },
-      { id: 'faceWebL',  label: 'Gövde Sol Yüzü',       type: 'planar', normal: [-1,0,0], area: innerH * L },
-      { id: 'faceWebR',  label: 'Gövde Sağ Yüzü',       type: 'planar', normal: [1,0,0],  area: innerH * L },
-      { id: 'faceInnerYU',label: 'Üst Flanş İç Yüzü (Y−)',type: 'planar', normal: [0,-1,0], area: 2 * innerW * L },
-      { id: 'faceInnerYL',label: 'Alt Flanş İç Yüzü (Y+)',type: 'planar', normal: [0,1,0],  area: 2 * innerW * L }
-    ],
-    edges:    { count: 24 },
-    vertices: { count: 24 },     // 12 cross-section × 2 z-uç
+    faces: faces,
+    edges: edges,
+    vertices: vertices,
     totalSurfaceArea: 2 * crossArea + (2 * w + 2 * h + 4 * innerW) * L,
     volume: crossArea * L,
     bbox: { x: w, y: h, z: L }
@@ -22685,27 +22868,109 @@ function _veFEAToplRectTube(p) {
   var h = Math.max(1, p.height || 40);
   var t = Math.max(0.2, p.thickness || 4);
   var L = Math.max(1, p.length || 200);
+  var hw = w/2, hh = h/2, hL = L/2;
   var iw = Math.max(0, w - 2 * t);
   var ih = Math.max(0, h - 2 * t);
+  var hiw = iw/2, hih = ih/2;
   var outerSect = w * h;
   var innerSect = iw * ih;
   var ringSect  = outerSect - innerSect;
+  var faces = [
+    { id: 'faceZMin',     label: 'Alt Kesit (Z−)',       type: 'planar', normal: [0,0,-1], area: ringSect, centroid:[0,0,-hL] },
+    { id: 'faceZMax',     label: 'Üst Kesit (Z+)',       type: 'planar', normal: [0,0, 1], area: ringSect, centroid:[0,0, hL] },
+    { id: 'faceXMin',     label: 'X− Dış Yan Yüzey',     type: 'planar', normal: [-1,0,0], area: h * L, centroid:[-hw, 0, 0] },
+    { id: 'faceXMax',     label: 'X+ Dış Yan Yüzey',     type: 'planar', normal: [ 1,0,0], area: h * L, centroid:[ hw, 0, 0] },
+    { id: 'faceYMin',     label: 'Y− Dış Yan Yüzey',     type: 'planar', normal: [0,-1,0], area: w * L, centroid:[0, -hh, 0] },
+    { id: 'faceYMax',     label: 'Y+ Dış Yan Yüzey',     type: 'planar', normal: [0, 1,0], area: w * L, centroid:[0,  hh, 0] },
+    { id: 'faceInnerXMin',label: 'X− İç Yüzey (boşluk)', type: 'planar', normal: [ 1,0,0], area: ih * L, centroid:[-hiw, 0, 0], isHole: true },
+    { id: 'faceInnerXMax',label: 'X+ İç Yüzey (boşluk)', type: 'planar', normal: [-1,0,0], area: ih * L, centroid:[ hiw, 0, 0], isHole: true },
+    { id: 'faceInnerYMin',label: 'Y− İç Yüzey (boşluk)', type: 'planar', normal: [0, 1,0], area: iw * L, centroid:[0, -hih, 0], isHole: true },
+    { id: 'faceInnerYMax',label: 'Y+ İç Yüzey (boşluk)', type: 'planar', normal: [0,-1,0], area: iw * L, centroid:[0,  hih, 0], isHole: true }
+  ];
+  // 16 vertex (4 dış × 2 z-uç + 4 iç × 2 z-uç)
+  var outerCs = [[-hw,-hh], [ hw,-hh], [ hw, hh], [-hw, hh]];
+  var innerCs = [[-hiw,-hih], [ hiw,-hih], [ hiw, hih], [-hiw, hih]];
+  var vertices = [];
+  for (var zi = 0; zi < 2; zi++) {
+    var z = (zi === 0) ? -hL : hL;
+    outerCs.forEach(function(c, ci) {
+      vertices.push({ id: 'vRT_O' + (ci + 1) + (zi === 0 ? '_Zm' : '_Zp'),
+        label: 'Dış Köşe ' + (ci + 1) + ' (' + (zi === 0 ? 'Z−' : 'Z+') + ')',
+        position: [c[0], c[1], z], faceIds: [] });
+    });
+    innerCs.forEach(function(c, ci) {
+      vertices.push({ id: 'vRT_I' + (ci + 1) + (zi === 0 ? '_Zm' : '_Zp'),
+        label: 'İç Köşe ' + (ci + 1) + ' (' + (zi === 0 ? 'Z−' : 'Z+') + ')',
+        position: [c[0], c[1], z], faceIds: [] });
+    });
+  }
+  function _void(ci, zi) { return 'vRT_O' + (ci + 1) + (zi === 0 ? '_Zm' : '_Zp'); }
+  function _viid(ci, zi) { return 'vRT_I' + (ci + 1) + (zi === 0 ? '_Zm' : '_Zp'); }
+  var edges = [];
+  var outerSideFaces = ['faceYMin','faceXMax','faceYMax','faceXMin'];
+  var innerSideFaces = ['faceInnerYMin','faceInnerXMax','faceInnerYMax','faceInnerXMin'];
+  // Cross-section edge'leri (dış 4 + iç 4) × 2 z-uç
+  for (var zi2 = 0; zi2 < 2; zi2++) {
+    var zVal = (zi2 === 0) ? -hL : hL;
+    var fId = (zi2 === 0) ? 'faceZMin' : 'faceZMax';
+    // Dış
+    for (var ei = 0; ei < 4; ei++) {
+      var a = outerCs[ei], b = outerCs[(ei + 1) % 4];
+      var L1 = Math.sqrt(Math.pow(b[0]-a[0],2) + Math.pow(b[1]-a[1],2));
+      edges.push({
+        id: 'eRT_OC' + (ei + 1) + (zi2 === 0 ? '_Zm' : '_Zp'),
+        label: 'Dış Kesit ' + (ei + 1) + '→' + ((ei + 1) % 4 + 1) + ' (' + (zi2 === 0 ? 'Z−' : 'Z+') + ')',
+        type: 'line', length: L1,
+        p1: [a[0], a[1], zVal], p2: [b[0], b[1], zVal],
+        polyline: _veFEALinePolyline([a[0], a[1], zVal], [b[0], b[1], zVal]),
+        faceIds: [fId, outerSideFaces[ei]],
+        vertexIds: [_void(ei, zi2), _void((ei + 1) % 4, zi2)]
+      });
+    }
+    // İç
+    for (var ei2 = 0; ei2 < 4; ei2++) {
+      var ai = innerCs[ei2], bi = innerCs[(ei2 + 1) % 4];
+      var L2 = Math.sqrt(Math.pow(bi[0]-ai[0],2) + Math.pow(bi[1]-ai[1],2));
+      edges.push({
+        id: 'eRT_IC' + (ei2 + 1) + (zi2 === 0 ? '_Zm' : '_Zp'),
+        label: 'İç Kesit ' + (ei2 + 1) + '→' + ((ei2 + 1) % 4 + 1) + ' (' + (zi2 === 0 ? 'Z−' : 'Z+') + ')',
+        type: 'line', length: L2,
+        p1: [ai[0], ai[1], zVal], p2: [bi[0], bi[1], zVal],
+        polyline: _veFEALinePolyline([ai[0], ai[1], zVal], [bi[0], bi[1], zVal]),
+        faceIds: [fId, innerSideFaces[ei2]],
+        isHole: true,
+        vertexIds: [_viid(ei2, zi2), _viid((ei2 + 1) % 4, zi2)]
+      });
+    }
+  }
+  // Axial (Z) edge'leri — 4 dış + 4 iç
+  var outerAxialAdj = [['faceXMin','faceYMin'], ['faceYMin','faceXMax'], ['faceXMax','faceYMax'], ['faceYMax','faceXMin']];
+  var innerAxialAdj = [['faceInnerXMin','faceInnerYMin'], ['faceInnerYMin','faceInnerXMax'], ['faceInnerXMax','faceInnerYMax'], ['faceInnerYMax','faceInnerXMin']];
+  outerCs.forEach(function(c, ei4) {
+    edges.push({
+      id: 'eRT_OZ_C' + (ei4 + 1), label: 'Dış Eksenel ' + (ei4 + 1) + ' (Z)',
+      type: 'line', length: L,
+      p1: [c[0], c[1], -hL], p2: [c[0], c[1], hL],
+      polyline: _veFEALinePolyline([c[0], c[1], -hL], [c[0], c[1], hL]),
+      faceIds: outerAxialAdj[ei4].slice(),
+      vertexIds: [_void(ei4, 0), _void(ei4, 1)]
+    });
+  });
+  innerCs.forEach(function(c, ei5) {
+    edges.push({
+      id: 'eRT_IZ_C' + (ei5 + 1), label: 'İç Eksenel ' + (ei5 + 1) + ' (Z)',
+      type: 'line', length: L,
+      p1: [c[0], c[1], -hL], p2: [c[0], c[1], hL],
+      polyline: _veFEALinePolyline([c[0], c[1], -hL], [c[0], c[1], hL]),
+      faceIds: innerAxialAdj[ei5].slice(), isHole: true,
+      vertexIds: [_viid(ei5, 0), _viid(ei5, 1)]
+    });
+  });
   return {
     type: 'rectTube',
-    faces: [
-      { id: 'faceZMin',     label: 'Alt Kesit (Z−)',       type: 'planar', normal: [0,0,-1], area: ringSect },
-      { id: 'faceZMax',     label: 'Üst Kesit (Z+)',       type: 'planar', normal: [0,0, 1], area: ringSect },
-      { id: 'faceXMin',     label: 'X− Dış Yan Yüzey',     type: 'planar', normal: [-1,0,0], area: h * L },
-      { id: 'faceXMax',     label: 'X+ Dış Yan Yüzey',     type: 'planar', normal: [ 1,0,0], area: h * L },
-      { id: 'faceYMin',     label: 'Y− Dış Yan Yüzey',     type: 'planar', normal: [0,-1,0], area: w * L },
-      { id: 'faceYMax',     label: 'Y+ Dış Yan Yüzey',     type: 'planar', normal: [0, 1,0], area: w * L },
-      { id: 'faceInnerXMin',label: 'X− İç Yüzey (boşluk)', type: 'planar', normal: [ 1,0,0], area: ih * L, isHole: true },
-      { id: 'faceInnerXMax',label: 'X+ İç Yüzey (boşluk)', type: 'planar', normal: [-1,0,0], area: ih * L, isHole: true },
-      { id: 'faceInnerYMin',label: 'Y− İç Yüzey (boşluk)', type: 'planar', normal: [0, 1,0], area: iw * L, isHole: true },
-      { id: 'faceInnerYMax',label: 'Y+ İç Yüzey (boşluk)', type: 'planar', normal: [0,-1,0], area: iw * L, isHole: true }
-    ],
-    edges:    { count: 16 },  // 8 outer + 8 inner
-    vertices: { count: 16 },
+    faces: faces,
+    edges: edges,
+    vertices: vertices,
     totalSurfaceArea: 2 * ringSect + 2 * (w + h) * L + 2 * (iw + ih) * L,
     volume: ringSect * L,
     bbox: { x: w, y: h, z: L }
@@ -22721,23 +22986,32 @@ function _veFEAToplWasher(p) {
   var rIn  = (p.innerRadius !== undefined && p.innerRadius !== null) ? Math.max(0, p.innerRadius) : 5;
   if (rIn >= rOut) rIn = Math.max(0, rOut - 1);
   var t = Math.max(0.1, p.thickness || 1.5);
+  var hT = t / 2;
   var ring  = Math.PI * (rOut * rOut - rIn * rIn);
   var outer = 2 * Math.PI * rOut * t;
   var inner = 2 * Math.PI * rIn  * t;
   var hasHole = rIn > 0;
   var faces = [
-    { id: 'faceTop',    label: 'Üst Halka (Y+)',          type: 'planar-annular', normal: [0, 1, 0], area: ring, outerRadius: rOut, innerRadius: rIn },
-    { id: 'faceBottom', label: 'Alt Halka (Y−)',          type: 'planar-annular', normal: [0,-1, 0], area: ring, outerRadius: rOut, innerRadius: rIn },
-    { id: 'faceOuter',  label: 'Dış Yan Yüzey (Silindir)', type: 'cylindrical',                       area: outer, radius: rOut, length: t }
+    { id: 'faceTop',    label: 'Üst Halka (Y+)',          type: 'planar-annular', normal: [0, 1, 0], area: ring, outerRadius: rOut, innerRadius: rIn, centroid:[0, hT, 0] },
+    { id: 'faceBottom', label: 'Alt Halka (Y−)',          type: 'planar-annular', normal: [0,-1, 0], area: ring, outerRadius: rOut, innerRadius: rIn, centroid:[0,-hT, 0] },
+    { id: 'faceOuter',  label: 'Dış Yan Yüzey (Silindir)', type: 'cylindrical',                       area: outer, radius: rOut, length: t, axis:[0,1,0], center:[0,0,0] }
   ];
   if (hasHole) {
-    faces.push({ id: 'faceInner', label: 'İç Yan Yüzey (Delik)', type: 'cylindrical', area: inner, radius: rIn, length: t, isHole: true });
+    faces.push({ id: 'faceInner', label: 'İç Yan Yüzey (Delik)', type: 'cylindrical', area: inner, radius: rIn, length: t, axis:[0,1,0], center:[0,0,0], isHole: true });
+  }
+  var edges = [
+    { id: 'edgeOuterTop',    label: 'Dış Üst Daire (Y+)', type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, center:[0, hT, 0], axis:[0,1,0], polyline: _veFEACirclePolyline([0, hT, 0],[0,1,0],rOut,48), faceIds: ['faceTop','faceOuter'], vertexIds: [] },
+    { id: 'edgeOuterBottom', label: 'Dış Alt Daire (Y−)', type: 'circle', length: 2 * Math.PI * rOut, radius: rOut, center:[0,-hT, 0], axis:[0,1,0], polyline: _veFEACirclePolyline([0,-hT, 0],[0,1,0],rOut,48), faceIds: ['faceBottom','faceOuter'], vertexIds: [] }
+  ];
+  if (hasHole) {
+    edges.push({ id: 'edgeInnerTop',    label: 'İç Üst Daire (Delik Y+)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, center:[0, hT, 0], axis:[0,1,0], polyline: _veFEACirclePolyline([0, hT, 0],[0,1,0],rIn,48), faceIds: ['faceTop','faceInner'], vertexIds: [], isHole: true });
+    edges.push({ id: 'edgeInnerBottom', label: 'İç Alt Daire (Delik Y−)', type: 'circle', length: 2 * Math.PI * rIn, radius: rIn, center:[0,-hT, 0], axis:[0,1,0], polyline: _veFEACirclePolyline([0,-hT, 0],[0,1,0],rIn,48), faceIds: ['faceBottom','faceInner'], vertexIds: [], isHole: true });
   }
   return {
     type: 'washer',
     faces: faces,
-    edges:    { count: hasHole ? 4 : 2 },  // 2 dış + (2 iç) daire
-    vertices: { count: 0 },
+    edges: edges,
+    vertices: [],
     totalSurfaceArea: 2 * ring + outer + (hasHole ? inner : 0),
     volume: ring * t,
     bbox: { x: 2 * rOut, y: t, z: 2 * rOut }
@@ -22750,6 +23024,7 @@ function _veFEAToplWasher(p) {
 function _veFEAToplNut(p) {
   var width = Math.max(1, p.width || 13);          // across-flats
   var thick = Math.max(0.5, p.thickness || 6.5);
+  var hT = thick / 2;
   // 0 (deliksiz) ile undefined ayrımı — `|| 8` 0'ı default'a düşürürdü
   var holeD = (p.holeDiameter !== undefined && p.holeDiameter !== null) ? Math.max(0, p.holeDiameter) : 8;
   var hexR  = width / Math.sqrt(3);                // circumradius
@@ -22761,12 +23036,20 @@ function _veFEAToplNut(p) {
   var innerCyl = 2 * Math.PI * holeR * thick;
   var hasHole = holeR > 0;
   var faces = [
-    { id: 'faceTop',    label: 'Üst Yüzey (Altıgen-Halka)', type: 'planar-annular', normal: [0, 1, 0], area: hexAnnular, outerRadius: hexR, innerRadius: holeR },
-    { id: 'faceBottom', label: 'Alt Yüzey (Altıgen-Halka)', type: 'planar-annular', normal: [0,-1, 0], area: hexAnnular, outerRadius: hexR, innerRadius: holeR }
+    { id: 'faceTop',    label: 'Üst Yüzey (Altıgen-Halka)', type: 'planar-annular', normal: [0, 1, 0], area: hexAnnular, outerRadius: hexR, innerRadius: holeR, centroid:[0, hT, 0] },
+    { id: 'faceBottom', label: 'Alt Yüzey (Altıgen-Halka)', type: 'planar-annular', normal: [0,-1, 0], area: hexAnnular, outerRadius: hexR, innerRadius: holeR, centroid:[0,-hT, 0] }
   ];
+  // 6 altıgen köşe (XZ düzleminde) — circumradius hexR, 30° offset
+  var hexCorners = [];
+  for (var hi = 0; hi < 6; hi++) {
+    var cang = (Math.PI / 6) + hi * (Math.PI / 3);   // 30° offset (across-flats hizalı)
+    hexCorners.push([hexR * Math.cos(cang), hexR * Math.sin(cang)]);
+  }
   // 6 yan yüzey — her biri düzlemsel dikdörtgen
   for (var i = 0; i < 6; i++) {
-    var ang = (Math.PI / 6) + i * (Math.PI / 3) + (Math.PI / 6);  // yan yüzeyin normali
+    var ang = (Math.PI / 6) + i * (Math.PI / 3) + (Math.PI / 6);  // yan yüzeyin normali (midpoint açısı)
+    var c1 = hexCorners[i], c2 = hexCorners[(i + 1) % 6];
+    var midX = (c1[0] + c2[0]) / 2, midZ = (c1[1] + c2[1]) / 2;
     faces.push({
       id: 'faceSide' + (i + 1),
       label: 'Yan Yüzey #' + (i + 1),
@@ -22774,17 +23057,68 @@ function _veFEAToplNut(p) {
       normal: [Math.cos(ang), 0, Math.sin(ang)],
       area: sideRect,
       width: width,
-      height: thick
+      height: thick,
+      centroid: [midX, 0, midZ]
     });
   }
   if (hasHole) {
-    faces.push({ id: 'faceInner', label: 'İç Yüzey (Delik)', type: 'cylindrical', area: innerCyl, radius: holeR, length: thick, isHole: true });
+    faces.push({ id: 'faceInner', label: 'İç Yüzey (Delik)', type: 'cylindrical', area: innerCyl, radius: holeR, length: thick, axis:[0,1,0], center:[0,0,0], isHole: true });
+  }
+  // 12 vertex (6 üst hex + 6 alt hex)
+  var vertices = [];
+  for (var zi = 0; zi < 2; zi++) {
+    var y = (zi === 0) ? -hT : hT;
+    hexCorners.forEach(function(c, ci) {
+      vertices.push({
+        id: 'vN_C' + (ci + 1) + (zi === 0 ? '_Yb' : '_Yt'),
+        label: 'Altıgen Köşe ' + (ci + 1) + ' (' + (zi === 0 ? 'Alt' : 'Üst') + ')',
+        position: [c[0], y, c[1]], faceIds: []
+      });
+    });
+  }
+  function _vNid(ci, zi) { return 'vN_C' + (ci + 1) + (zi === 0 ? '_Yb' : '_Yt'); }
+  var edges = [];
+  // 12 hex edge (üst + alt)
+  for (var zi2 = 0; zi2 < 2; zi2++) {
+    var yVal = (zi2 === 0) ? -hT : hT;
+    var fId = (zi2 === 0) ? 'faceBottom' : 'faceTop';
+    for (var ei = 0; ei < 6; ei++) {
+      var a = hexCorners[ei], b = hexCorners[(ei + 1) % 6];
+      var L1 = Math.sqrt(Math.pow(b[0]-a[0],2) + Math.pow(b[1]-a[1],2));
+      edges.push({
+        id: 'eN_Hex' + (ei + 1) + (zi2 === 0 ? '_Yb' : '_Yt'),
+        label: 'Altıgen Kenar ' + (ei + 1) + ' (' + (zi2 === 0 ? 'Alt' : 'Üst') + ')',
+        type: 'line', length: L1,
+        p1: [a[0], yVal, a[1]], p2: [b[0], yVal, b[1]],
+        polyline: _veFEALinePolyline([a[0], yVal, a[1]], [b[0], yVal, b[1]]),
+        faceIds: [fId, 'faceSide' + (ei + 1)],
+        vertexIds: [_vNid(ei, zi2), _vNid((ei + 1) % 6, zi2)]
+      });
+    }
+  }
+  // 6 dikey edge (altıgen prizmanın yan kenarları)
+  hexCorners.forEach(function(c, ei2) {
+    var leftSide = 'faceSide' + (((ei2 + 5) % 6) + 1);
+    var rightSide = 'faceSide' + (ei2 + 1);
+    edges.push({
+      id: 'eN_V_C' + (ei2 + 1), label: 'Dikey Kenar ' + (ei2 + 1),
+      type: 'line', length: thick,
+      p1: [c[0], -hT, c[1]], p2: [c[0], hT, c[1]],
+      polyline: _veFEALinePolyline([c[0], -hT, c[1]], [c[0], hT, c[1]]),
+      faceIds: [leftSide, rightSide],
+      vertexIds: [_vNid(ei2, 0), _vNid(ei2, 1)]
+    });
+  });
+  // 2 iç delik dairesi (varsa)
+  if (hasHole) {
+    edges.push({ id: 'edgeInnerTop',    label: 'İç Üst Daire (Delik Y+)', type: 'circle', length: 2 * Math.PI * holeR, radius: holeR, center:[0, hT, 0], axis:[0,1,0], polyline: _veFEACirclePolyline([0, hT, 0],[0,1,0],holeR,48), faceIds: ['faceTop','faceInner'], vertexIds: [], isHole: true });
+    edges.push({ id: 'edgeInnerBottom', label: 'İç Alt Daire (Delik Y−)', type: 'circle', length: 2 * Math.PI * holeR, radius: holeR, center:[0,-hT, 0], axis:[0,1,0], polyline: _veFEACirclePolyline([0,-hT, 0],[0,1,0],holeR,48), faceIds: ['faceBottom','faceInner'], vertexIds: [], isHole: true });
   }
   return {
     type: 'nut',
     faces: faces,
-    edges:    { count: 12 + 6 + (hasHole ? 2 : 0) }, // 12 hex (top+bottom) + 6 vertical + 2 hole circles
-    vertices: { count: 12 },                          // 6 hex corners top + 6 bottom
+    edges: edges,
+    vertices: vertices,
     totalSurfaceArea: 2 * hexAnnular + 6 * sideRect + (hasHole ? innerCyl : 0),
     volume: hexAnnular * thick,
     bbox: { x: 2 * hexR, y: thick, z: 2 * hexR }
@@ -22806,12 +23140,28 @@ function _veFEAToplBolt(p) {
   var headBottomArea = Math.max(0, hexAreaFull - shaftCirc);
   var headSideRect = headW * headH;
   var shaftSide = 2 * Math.PI * shaftR * shaftL;
+  // Yerleşim: head top y=headH+shaftL/2 +headH/2, üst-sol referans bbox
+  // Daha basit — head üstte (Y+), shaft altta (Y-). Toplam yükseklik h = headH + shaftL.
+  // bbox.y = headH+shaftL, head üst y = headH+shaftL/2, head alt = shaftL/2, shaft alt = -shaftL/2
+  // Bu hizalama ile primitives builder ile uyumlu olur.
+  var hY = (headH + shaftL) / 2;
+  var headTopY = hY;
+  var headBotY = hY - headH;       // head-shaft junction
+  var shaftBotY = -hY;
   var faces = [
-    { id: 'faceHeadTop',    label: 'Başlık Üst (Altıgen)',   type: 'planar',         normal: [0, 1, 0], area: hexAreaFull, outerRadius: hexR },
-    { id: 'faceHeadBottom', label: 'Başlık Alt (Altıgen-Halka)', type: 'planar-annular', normal: [0,-1, 0], area: headBottomArea, outerRadius: hexR, innerRadius: shaftR }
+    { id: 'faceHeadTop',    label: 'Başlık Üst (Altıgen)',   type: 'planar',         normal: [0, 1, 0], area: hexAreaFull, outerRadius: hexR, centroid:[0, headTopY, 0] },
+    { id: 'faceHeadBottom', label: 'Başlık Alt (Altıgen-Halka)', type: 'planar-annular', normal: [0,-1, 0], area: headBottomArea, outerRadius: hexR, innerRadius: shaftR, centroid:[0, headBotY, 0] }
   ];
+  // 6 altıgen başlık köşesi
+  var hexCorners = [];
+  for (var hi = 0; hi < 6; hi++) {
+    var cang = (Math.PI / 6) + hi * (Math.PI / 3);
+    hexCorners.push([hexR * Math.cos(cang), hexR * Math.sin(cang)]);
+  }
   for (var i = 0; i < 6; i++) {
     var ang = (Math.PI / 6) + i * (Math.PI / 3) + (Math.PI / 6);
+    var c1 = hexCorners[i], c2 = hexCorners[(i + 1) % 6];
+    var midX = (c1[0] + c2[0]) / 2, midZ = (c1[1] + c2[1]) / 2;
     faces.push({
       id: 'faceHeadSide' + (i + 1),
       label: 'Başlık Yan #' + (i + 1),
@@ -22819,16 +23169,65 @@ function _veFEAToplBolt(p) {
       normal: [Math.cos(ang), 0, Math.sin(ang)],
       area: headSideRect,
       width: headW,
-      height: headH
+      height: headH,
+      centroid: [midX, (headTopY + headBotY) / 2, midZ]
     });
   }
-  faces.push({ id: 'faceShaftSide',   label: 'Gövde Yan Yüzey (Silindir)', type: 'cylindrical', area: shaftSide, radius: shaftR, length: shaftL });
-  faces.push({ id: 'faceShaftBottom', label: 'Gövde Alt Disk',             type: 'planar', normal: [0,-1, 0], area: shaftCirc, radius: shaftR });
+  faces.push({ id: 'faceShaftSide',   label: 'Gövde Yan Yüzey (Silindir)', type: 'cylindrical', area: shaftSide, radius: shaftR, length: shaftL, axis:[0,1,0], center:[0, (headBotY + shaftBotY) / 2, 0] });
+  faces.push({ id: 'faceShaftBottom', label: 'Gövde Alt Disk',             type: 'planar', normal: [0,-1, 0], area: shaftCirc, radius: shaftR, centroid:[0, shaftBotY, 0] });
+  // 12 vertex (6 head top + 6 head bottom hex corners)
+  var vertices = [];
+  for (var zi = 0; zi < 2; zi++) {
+    var y = (zi === 0) ? headBotY : headTopY;
+    hexCorners.forEach(function(c, ci) {
+      vertices.push({
+        id: 'vB_C' + (ci + 1) + (zi === 0 ? '_Yb' : '_Yt'),
+        label: 'Başlık Köşe ' + (ci + 1) + ' (' + (zi === 0 ? 'Alt' : 'Üst') + ')',
+        position: [c[0], y, c[1]], faceIds: []
+      });
+    });
+  }
+  function _vBid(ci, zi) { return 'vB_C' + (ci + 1) + (zi === 0 ? '_Yb' : '_Yt'); }
+  var edges = [];
+  // 12 hex edge (üst + alt)
+  for (var zi2 = 0; zi2 < 2; zi2++) {
+    var yVal = (zi2 === 0) ? headBotY : headTopY;
+    var fId = (zi2 === 0) ? 'faceHeadBottom' : 'faceHeadTop';
+    for (var ei = 0; ei < 6; ei++) {
+      var a = hexCorners[ei], b = hexCorners[(ei + 1) % 6];
+      var L1 = Math.sqrt(Math.pow(b[0]-a[0],2) + Math.pow(b[1]-a[1],2));
+      edges.push({
+        id: 'eB_Hex' + (ei + 1) + (zi2 === 0 ? '_Yb' : '_Yt'),
+        label: 'Başlık Altıgen Kenar ' + (ei + 1) + ' (' + (zi2 === 0 ? 'Alt' : 'Üst') + ')',
+        type: 'line', length: L1,
+        p1: [a[0], yVal, a[1]], p2: [b[0], yVal, b[1]],
+        polyline: _veFEALinePolyline([a[0], yVal, a[1]], [b[0], yVal, b[1]]),
+        faceIds: [fId, 'faceHeadSide' + (ei + 1)],
+        vertexIds: [_vBid(ei, zi2), _vBid((ei + 1) % 6, zi2)]
+      });
+    }
+  }
+  // 6 dikey başlık edge (yan yüzler arası)
+  hexCorners.forEach(function(c, ei2) {
+    var leftSide = 'faceHeadSide' + (((ei2 + 5) % 6) + 1);
+    var rightSide = 'faceHeadSide' + (ei2 + 1);
+    edges.push({
+      id: 'eB_V_C' + (ei2 + 1), label: 'Başlık Dikey Kenar ' + (ei2 + 1),
+      type: 'line', length: headH,
+      p1: [c[0], headBotY, c[1]], p2: [c[0], headTopY, c[1]],
+      polyline: _veFEALinePolyline([c[0], headBotY, c[1]], [c[0], headTopY, c[1]]),
+      faceIds: [leftSide, rightSide],
+      vertexIds: [_vBid(ei2, 0), _vBid(ei2, 1)]
+    });
+  });
+  // 2 daire (head-shaft junction + shaft bottom)
+  edges.push({ id: 'edgeShaftJunction', label: 'Başlık-Gövde Birleşim Dairesi', type: 'circle', length: 2 * Math.PI * shaftR, radius: shaftR, center:[0, headBotY, 0], axis:[0,1,0], polyline: _veFEACirclePolyline([0, headBotY, 0],[0,1,0],shaftR,48), faceIds: ['faceHeadBottom','faceShaftSide'], vertexIds: [] });
+  edges.push({ id: 'edgeShaftBottom',   label: 'Gövde Alt Dairesi', type: 'circle', length: 2 * Math.PI * shaftR, radius: shaftR, center:[0, shaftBotY, 0], axis:[0,1,0], polyline: _veFEACirclePolyline([0, shaftBotY, 0],[0,1,0],shaftR,48), faceIds: ['faceShaftSide','faceShaftBottom'], vertexIds: [] });
   return {
     type: 'bolt',
     faces: faces,
-    edges:    { count: 12 + 6 + 2 },  // 12 hex (top+bottom of head) + 6 vertical + 2 circles (head-shaft junction + shaft bottom)
-    vertices: { count: 12 },           // 6 hex top + 6 hex bottom
+    edges: edges,
+    vertices: vertices,
     totalSurfaceArea: hexAreaFull + headBottomArea + 6 * headSideRect + shaftSide + shaftCirc,
     volume: hexAreaFull * headH + shaftCirc * shaftL,
     bbox: { x: 2 * hexR, y: headH + shaftL, z: 2 * hexR }
@@ -22841,44 +23240,109 @@ function _veFEAToplPlate(p) {
   var L = Math.max(5, p.length || 120);
   var W = Math.max(5, p.width  || 80);
   var T = Math.max(0.5, p.thickness || 8);
+  var hL = L/2, hW = W/2, hT = T/2;
   // 0 (deliksiz) ile undefined ayrımı
   var holeD = (p.holeDiameter !== undefined && p.holeDiameter !== null) ? Math.max(0, p.holeDiameter) : 9;
   var cols = Math.max(1, Math.round(p.cols || 2));
   var rows = Math.max(1, Math.round(p.rows || 2));
+  var margin = Math.max(0, +p.margin || 15);
   var holeR = holeD / 2;
   var holeArea = Math.PI * holeR * holeR;
-  var n = cols * rows;
+  var hasHoles = holeR > 0;
+  var n = hasHoles ? cols * rows : 0;
   var plateAreaFull = L * W;
   var plateAreaAnn  = Math.max(0, plateAreaFull - n * holeArea);
   var sideX = W * T;        // X+/X− yan yüzeyleri
   var sideZ = L * T;        // Z+/Z− yan yüzeyleri (rotateX(-π/2) sonrası Z=W)
   var holeCyl = 2 * Math.PI * holeR * T;
   var faces = [
-    { id: 'faceTop',    label: 'Üst Yüzey' + (n > 0 ? ' (' + n + ' delikli)' : ''), type: n > 0 ? 'planar-annular' : 'planar', normal: [0, 1, 0], area: plateAreaAnn, width: L, height: W },
-    { id: 'faceBottom', label: 'Alt Yüzey' + (n > 0 ? ' (' + n + ' delikli)' : ''), type: n > 0 ? 'planar-annular' : 'planar', normal: [0,-1, 0], area: plateAreaAnn, width: L, height: W },
-    { id: 'faceXMin', label: 'X− Yan Yüzey', type: 'planar', normal: [-1, 0, 0], area: sideX, width: W, height: T },
-    { id: 'faceXMax', label: 'X+ Yan Yüzey', type: 'planar', normal: [ 1, 0, 0], area: sideX, width: W, height: T },
-    { id: 'faceZMin', label: 'Z− Yan Yüzey', type: 'planar', normal: [ 0, 0,-1], area: sideZ, width: L, height: T },
-    { id: 'faceZMax', label: 'Z+ Yan Yüzey', type: 'planar', normal: [ 0, 0, 1], area: sideZ, width: L, height: T }
+    { id: 'faceTop',    label: 'Üst Yüzey' + (n > 0 ? ' (' + n + ' delikli)' : ''), type: n > 0 ? 'planar-annular' : 'planar', normal: [0, 1, 0], area: plateAreaAnn, width: L, height: W, centroid:[0, hT, 0] },
+    { id: 'faceBottom', label: 'Alt Yüzey' + (n > 0 ? ' (' + n + ' delikli)' : ''), type: n > 0 ? 'planar-annular' : 'planar', normal: [0,-1, 0], area: plateAreaAnn, width: L, height: W, centroid:[0,-hT, 0] },
+    { id: 'faceXMin', label: 'X− Yan Yüzey', type: 'planar', normal: [-1, 0, 0], area: sideX, width: W, height: T, centroid:[-hL, 0, 0] },
+    { id: 'faceXMax', label: 'X+ Yan Yüzey', type: 'planar', normal: [ 1, 0, 0], area: sideX, width: W, height: T, centroid:[ hL, 0, 0] },
+    { id: 'faceZMin', label: 'Z− Yan Yüzey', type: 'planar', normal: [ 0, 0,-1], area: sideZ, width: L, height: T, centroid:[0, 0, -hW] },
+    { id: 'faceZMax', label: 'Z+ Yan Yüzey', type: 'planar', normal: [ 0, 0, 1], area: sideZ, width: L, height: T, centroid:[0, 0,  hW] }
   ];
-  // Her delik için ayrı silindirik iç yüzey
-  for (var i = 0; i < n; i++) {
-    var ci = i % cols, ri = Math.floor(i / cols);
-    faces.push({
-      id: 'faceHole_' + ri + '_' + ci,
-      label: 'Delik #' + (i + 1) + ' (' + (ri + 1) + '×' + (ci + 1) + ')',
-      type: 'cylindrical',
-      area: holeCyl,
-      radius: holeR,
-      length: T,
-      isHole: true
-    });
+  // Her delik için ayrı silindirik iç yüzey + merkez konumu hesabı
+  // Delikler grid içine eşit dağıtılır. fea-primitives.js'teki yerleşim ile uyumlu olması için
+  // basit bir grid: X ekseni cols (length), Z ekseni rows (width). Merkez (0,0,0).
+  var holeCentres = [];
+  if (hasHoles) {
+    var stepX = (cols > 1) ? (L - 2 * margin) / (cols - 1) : 0;
+    var stepZ = (rows > 1) ? (W - 2 * margin) / (rows - 1) : 0;
+    var startX = (cols > 1) ? -hL + margin : 0;
+    var startZ = (rows > 1) ? -hW + margin : 0;
+    for (var i = 0; i < n; i++) {
+      var ci = i % cols, ri = Math.floor(i / cols);
+      var hx = startX + ci * stepX;
+      var hz = startZ + ri * stepZ;
+      holeCentres.push({ x: hx, z: hz, ri: ri, ci: ci });
+      faces.push({
+        id: 'faceHole_' + ri + '_' + ci,
+        label: 'Delik #' + (i + 1) + ' (' + (ri + 1) + '×' + (ci + 1) + ')',
+        type: 'cylindrical',
+        area: holeCyl, radius: holeR, length: T,
+        axis: [0, 1, 0], center: [hx, 0, hz],
+        centroid: [hx, 0, hz],
+        isHole: true
+      });
+    }
   }
+  // 8 vertex (plate corners)
+  var cornerSigns = [[-1,-1,-1], [1,-1,-1], [-1,-1, 1], [1,-1, 1], [-1, 1,-1], [1, 1,-1], [-1, 1, 1], [1, 1, 1]];
+  var cornerLabels = ['XmYmZm','XpYmZm','XmYmZp','XpYmZp','XmYpZm','XpYpZm','XmYpZp','XpYpZp'];
+  var vertices = cornerSigns.map(function(s, idx) {
+    return {
+      id: 'vP_' + cornerLabels[idx],
+      label: 'Plaka Köşe ' + cornerLabels[idx],
+      position: [s[0]*hL, s[1]*hT, s[2]*hW],
+      faceIds: []
+    };
+  });
+  function _vPid(s) { return 'vP_' + cornerLabels[cornerSigns.findIndex(function(cs){return cs[0]===s[0]&&cs[1]===s[1]&&cs[2]===s[2];})]; }
+  // 12 plate edge
+  var edges = [
+    // Üst yüz (Y+) 4 edge'i
+    { id: 'eP_TopX_Zm', label: 'Üst X-Kenar (Z−)', type:'line', length: L, p1:[-hL, hT,-hW], p2:[ hL, hT,-hW], polyline:_veFEALinePolyline([-hL, hT,-hW],[ hL, hT,-hW]), faceIds:['faceTop','faceZMin'], vertexIds:[_vPid([-1,1,-1]), _vPid([1,1,-1])] },
+    { id: 'eP_TopX_Zp', label: 'Üst X-Kenar (Z+)', type:'line', length: L, p1:[-hL, hT, hW], p2:[ hL, hT, hW], polyline:_veFEALinePolyline([-hL, hT, hW],[ hL, hT, hW]), faceIds:['faceTop','faceZMax'], vertexIds:[_vPid([-1,1,1]), _vPid([1,1,1])] },
+    { id: 'eP_TopZ_Xm', label: 'Üst Z-Kenar (X−)', type:'line', length: W, p1:[-hL, hT,-hW], p2:[-hL, hT, hW], polyline:_veFEALinePolyline([-hL, hT,-hW],[-hL, hT, hW]), faceIds:['faceTop','faceXMin'], vertexIds:[_vPid([-1,1,-1]), _vPid([-1,1,1])] },
+    { id: 'eP_TopZ_Xp', label: 'Üst Z-Kenar (X+)', type:'line', length: W, p1:[ hL, hT,-hW], p2:[ hL, hT, hW], polyline:_veFEALinePolyline([ hL, hT,-hW],[ hL, hT, hW]), faceIds:['faceTop','faceXMax'], vertexIds:[_vPid([1,1,-1]), _vPid([1,1,1])] },
+    // Alt yüz (Y−) 4 edge'i
+    { id: 'eP_BotX_Zm', label: 'Alt X-Kenar (Z−)', type:'line', length: L, p1:[-hL,-hT,-hW], p2:[ hL,-hT,-hW], polyline:_veFEALinePolyline([-hL,-hT,-hW],[ hL,-hT,-hW]), faceIds:['faceBottom','faceZMin'], vertexIds:[_vPid([-1,-1,-1]), _vPid([1,-1,-1])] },
+    { id: 'eP_BotX_Zp', label: 'Alt X-Kenar (Z+)', type:'line', length: L, p1:[-hL,-hT, hW], p2:[ hL,-hT, hW], polyline:_veFEALinePolyline([-hL,-hT, hW],[ hL,-hT, hW]), faceIds:['faceBottom','faceZMax'], vertexIds:[_vPid([-1,-1,1]), _vPid([1,-1,1])] },
+    { id: 'eP_BotZ_Xm', label: 'Alt Z-Kenar (X−)', type:'line', length: W, p1:[-hL,-hT,-hW], p2:[-hL,-hT, hW], polyline:_veFEALinePolyline([-hL,-hT,-hW],[-hL,-hT, hW]), faceIds:['faceBottom','faceXMin'], vertexIds:[_vPid([-1,-1,-1]), _vPid([-1,-1,1])] },
+    { id: 'eP_BotZ_Xp', label: 'Alt Z-Kenar (X+)', type:'line', length: W, p1:[ hL,-hT,-hW], p2:[ hL,-hT, hW], polyline:_veFEALinePolyline([ hL,-hT,-hW],[ hL,-hT, hW]), faceIds:['faceBottom','faceXMax'], vertexIds:[_vPid([1,-1,-1]), _vPid([1,-1,1])] },
+    // Dikey 4 edge
+    { id: 'eP_Y_XmZm', label: 'Dikey Kenar (X−,Z−)', type:'line', length: T, p1:[-hL,-hT,-hW], p2:[-hL, hT,-hW], polyline:_veFEALinePolyline([-hL,-hT,-hW],[-hL, hT,-hW]), faceIds:['faceXMin','faceZMin'], vertexIds:[_vPid([-1,-1,-1]), _vPid([-1,1,-1])] },
+    { id: 'eP_Y_XpZm', label: 'Dikey Kenar (X+,Z−)', type:'line', length: T, p1:[ hL,-hT,-hW], p2:[ hL, hT,-hW], polyline:_veFEALinePolyline([ hL,-hT,-hW],[ hL, hT,-hW]), faceIds:['faceXMax','faceZMin'], vertexIds:[_vPid([1,-1,-1]), _vPid([1,1,-1])] },
+    { id: 'eP_Y_XmZp', label: 'Dikey Kenar (X−,Z+)', type:'line', length: T, p1:[-hL,-hT, hW], p2:[-hL, hT, hW], polyline:_veFEALinePolyline([-hL,-hT, hW],[-hL, hT, hW]), faceIds:['faceXMin','faceZMax'], vertexIds:[_vPid([-1,-1,1]), _vPid([-1,1,1])] },
+    { id: 'eP_Y_XpZp', label: 'Dikey Kenar (X+,Z+)', type:'line', length: T, p1:[ hL,-hT, hW], p2:[ hL, hT, hW], polyline:_veFEALinePolyline([ hL,-hT, hW],[ hL, hT, hW]), faceIds:['faceXMax','faceZMax'], vertexIds:[_vPid([1,-1,1]), _vPid([1,1,1])] }
+  ];
+  // Her delik için 2 daire edge (üst + alt)
+  holeCentres.forEach(function(hc) {
+    var fHole = 'faceHole_' + hc.ri + '_' + hc.ci;
+    edges.push({
+      id: 'eP_HoleTop_' + hc.ri + '_' + hc.ci,
+      label: 'Delik Üst Dairesi (' + (hc.ri + 1) + '×' + (hc.ci + 1) + ')',
+      type: 'circle', length: 2 * Math.PI * holeR, radius: holeR,
+      center: [hc.x, hT, hc.z], axis: [0, 1, 0],
+      polyline: _veFEACirclePolyline([hc.x, hT, hc.z], [0,1,0], holeR, 48),
+      faceIds: ['faceTop', fHole], vertexIds: [], isHole: true
+    });
+    edges.push({
+      id: 'eP_HoleBot_' + hc.ri + '_' + hc.ci,
+      label: 'Delik Alt Dairesi (' + (hc.ri + 1) + '×' + (hc.ci + 1) + ')',
+      type: 'circle', length: 2 * Math.PI * holeR, radius: holeR,
+      center: [hc.x, -hT, hc.z], axis: [0, 1, 0],
+      polyline: _veFEACirclePolyline([hc.x, -hT, hc.z], [0,1,0], holeR, 48),
+      faceIds: ['faceBottom', fHole], vertexIds: [], isHole: true
+    });
+  });
   return {
     type: 'plate',
     faces: faces,
-    edges:    { count: 12 + 2 * n },  // 12 plate edges + 2 per hole (top circle + bottom circle)
-    vertices: { count: 8 },            // 8 corners
+    edges: edges,
+    vertices: vertices,
     totalSurfaceArea: 2 * plateAreaAnn + 2 * sideX + 2 * sideZ + n * holeCyl,
     volume: plateAreaAnn * T,
     bbox: { x: L, y: T, z: W }
@@ -22912,13 +23376,27 @@ function _veFEAToplStep(geom) {
       }
       return base;
     });
+    // STEP mesh'inden detaylı edge ve vertex extraction (Three.js varsa)
+    var stepEdges = [];
+    var stepVertices = [];
+    if (typeof THREE !== 'undefined' && geom.parsedMesh && geom.parsedMesh.triangles) {
+      try {
+        var stepMesh = _veFEABuildStepThreeMesh(geom.parsedMesh);
+        if (stepMesh) {
+          stepEdges = _veFEAExtractMeshEdges([stepMesh], 30, 5);
+          stepVertices = _veFEAExtractMeshVertices(stepEdges);
+        }
+      } catch (e) {
+        // sessiz fail — fallback edge count'a düşer
+      }
+    }
     return {
       type: geom.type,
       faces: faces,
-      edges:    { count: det.edgeStats ? det.edgeStats.total : 0,
-                  sharp: det.edgeStats ? det.edgeStats.sharp : 0,
-                  smooth: det.edgeStats ? det.edgeStats.smooth : 0 },
-      vertices: { count: det.uniqueVertices || 0 },
+      edges:    stepEdges.length > 0 ? stepEdges : (
+        det.edgeStats ? { count: det.edgeStats.total, sharp: det.edgeStats.sharp, smooth: det.edgeStats.smooth } : { count: 0 }
+      ),
+      vertices: stepVertices.length > 0 ? stepVertices : { count: det.uniqueVertices || 0 },
       totalSurfaceArea: det.totalArea || geom.surfaceArea || 0,
       volume: geom.volume || 0,
       bbox: geom.bbox || (det.bbox ? {
@@ -22947,6 +23425,27 @@ function _veFEAToplStep(geom) {
     volume: geom.volume || 0,
     bbox: geom.bbox || { x: 0, y: 0, z: 0 }
   };
+}
+
+// STEP parsed mesh'inden Three.js Mesh oluştur (edge extraction için).
+// parsedMesh: { triangles: [{v1, v2, v3, normal?}, ...] }
+function _veFEABuildStepThreeMesh(parsed) {
+  if (typeof THREE === 'undefined' || !parsed || !parsed.triangles || parsed.triangles.length === 0) return null;
+  var tris = parsed.triangles;
+  var positions = new Float32Array(tris.length * 9);
+  for (var i = 0; i < tris.length; i++) {
+    var t = tris[i];
+    positions[i*9 + 0] = t.v1[0]; positions[i*9 + 1] = t.v1[1]; positions[i*9 + 2] = t.v1[2];
+    positions[i*9 + 3] = t.v2[0]; positions[i*9 + 4] = t.v2[1]; positions[i*9 + 5] = t.v2[2];
+    positions[i*9 + 6] = t.v3[0]; positions[i*9 + 7] = t.v3[1]; positions[i*9 + 8] = t.v3[2];
+  }
+  var geom = new THREE.BufferGeometry();
+  geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geom.computeVertexNormals();
+  var mat = new THREE.MeshBasicMaterial();
+  var mesh = new THREE.Mesh(geom, mat);
+  mesh.updateMatrixWorld(true);
+  return mesh;
 }
 
 function _veFEAFeatureFaceLabel(f, idx) {
@@ -23088,11 +23587,21 @@ function _veFEAToplGeneric(geometry) {
   var totalArea = 0;
   allTris.forEach(function (t) { totalArea += t.area; });
 
+  // Mesh-driven edge ve vertex extraction (curve fitting ile)
+  var meshEdges = [];
+  var meshVertices = [];
+  try {
+    meshEdges = _veFEAExtractMeshEdges(meshes, 30, 5);
+    meshVertices = _veFEAExtractMeshVertices(meshEdges);
+  } catch (e) {
+    // sessiz fail — boş kalır
+  }
+
   return {
     type: geometry.type,
     faces: faces,
-    edges:    { count: edgeCount },
-    vertices: { count: vertexCount },
+    edges: meshEdges.length > 0 ? meshEdges : { count: edgeCount },
+    vertices: meshVertices.length > 0 ? meshVertices : { count: vertexCount },
     totalSurfaceArea: totalArea,
     volume: Math.abs(totalVolume),
     bbox: { x: size.x, y: size.y, z: size.z },
@@ -23196,6 +23705,593 @@ function _veFEACountUniqueVertices(flatXYZ, eps) {
     if (!seen[key]) { seen[key] = 1; count++; }
   }
   return count;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CURVE & POLYLINE HELPERS — analitik primitif edge'leri için 3D çizgi üretir
+// ════════════════════════════════════════════════════════════════════════════
+
+// Daire polyline'ı: center + axis (normal) ile çizilir, segments segment.
+// Viewer'da edge highlight için kullanılır.
+function _veFEACirclePolyline(center, axis, radius, segments) {
+  if (!center || !axis) return [];
+  var seg = Math.max(8, Math.round(segments || 32));
+  // axis'e dik iki birim vektör üret (Gram-Schmidt)
+  var ax = axis[0], ay = axis[1], az = axis[2];
+  var alen = Math.sqrt(ax*ax + ay*ay + az*az) || 1;
+  ax /= alen; ay /= alen; az /= alen;
+  // axis'e en uzak temel vektör seç
+  var ref = (Math.abs(ax) < 0.9) ? [1,0,0] : [0,1,0];
+  // u = ref - (ref·a)a, sonra normalize
+  var dot = ref[0]*ax + ref[1]*ay + ref[2]*az;
+  var ux = ref[0] - dot*ax, uy = ref[1] - dot*ay, uz = ref[2] - dot*az;
+  var ulen = Math.sqrt(ux*ux + uy*uy + uz*uz) || 1;
+  ux /= ulen; uy /= ulen; uz /= ulen;
+  // v = a × u
+  var vx = ay*uz - az*uy, vy = az*ux - ax*uz, vz = ax*uy - ay*ux;
+  var pts = [];
+  for (var i = 0; i <= seg; i++) {
+    var th = (i / seg) * 2 * Math.PI;
+    var c = Math.cos(th), s = Math.sin(th);
+    pts.push([
+      center[0] + radius * (c*ux + s*vx),
+      center[1] + radius * (c*uy + s*vy),
+      center[2] + radius * (c*uz + s*vz)
+    ]);
+  }
+  return pts;
+}
+
+// İki nokta arası düz çizgi polyline (yalnızca p1, p2 — viewer line için yeterli)
+function _veFEALinePolyline(p1, p2) {
+  return [[p1[0], p1[1], p1[2]], [p2[0], p2[1], p2[2]]];
+}
+
+// Yay polyline'ı: center, axis, radius, startAngle, endAngle, segments
+function _veFEAArcPolyline(center, axis, radius, startAng, endAng, segments) {
+  if (!center || !axis) return [];
+  var seg = Math.max(4, Math.round(segments || 24));
+  var ax = axis[0], ay = axis[1], az = axis[2];
+  var alen = Math.sqrt(ax*ax + ay*ay + az*az) || 1;
+  ax /= alen; ay /= alen; az /= alen;
+  var ref = (Math.abs(ax) < 0.9) ? [1,0,0] : [0,1,0];
+  var dot = ref[0]*ax + ref[1]*ay + ref[2]*az;
+  var ux = ref[0] - dot*ax, uy = ref[1] - dot*ay, uz = ref[2] - dot*az;
+  var ulen = Math.sqrt(ux*ux + uy*uy + uz*uz) || 1;
+  ux /= ulen; uy /= ulen; uz /= ulen;
+  var vx = ay*uz - az*uy, vy = az*ux - ax*uz, vz = ax*uy - ay*ux;
+  var pts = [];
+  for (var i = 0; i <= seg; i++) {
+    var t = i / seg;
+    var th = startAng + t * (endAng - startAng);
+    var c = Math.cos(th), s = Math.sin(th);
+    pts.push([
+      center[0] + radius * (c*ux + s*vx),
+      center[1] + radius * (c*uy + s*vy),
+      center[2] + radius * (c*uz + s*vz)
+    ]);
+  }
+  return pts;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// CURVE FITTING — generic mesh edge segment'leri için tip tespiti
+// ════════════════════════════════════════════════════════════════════════════
+// Input: polyline (3D nokta dizisi, sıralı)
+// Output: { type, ...params }
+//   'line':    { type, p1, p2, length, direction }
+//   'circle':  { type, center, axis, radius, length, isFullCircle }
+//   'arc':     { type, center, axis, radius, startAngle, endAngle, length }
+//   'ellipse': { type, center, axis, semiMajor, semiMinor, length }
+//   'spline':  { type, length, controlPoints }
+function veFEAFitCurveToPolyline(polyline, tolerance) {
+  if (!Array.isArray(polyline) || polyline.length < 2) return { type: 'unknown' };
+  var tol = (isFinite(tolerance) && tolerance > 0) ? tolerance : 0.05;  // mm
+  var n = polyline.length;
+  // Toplam uzunluk
+  var totalLen = 0;
+  for (var i = 1; i < n; i++) {
+    var dx = polyline[i][0] - polyline[i-1][0];
+    var dy = polyline[i][1] - polyline[i-1][1];
+    var dz = polyline[i][2] - polyline[i-1][2];
+    totalLen += Math.sqrt(dx*dx + dy*dy + dz*dz);
+  }
+
+  // 1) LINE TESTİ — tüm noktalar p1-pN doğrusu üzerinde mi?
+  var lineFit = _veFEATryFitLine(polyline, tol);
+  if (lineFit) {
+    lineFit.length = totalLen;
+    return lineFit;
+  }
+
+  // 2) CIRCLE/ARC TESTİ — 3+ nokta circumcircle fit
+  if (n >= 3) {
+    var circFit = _veFEATryFitCircle(polyline, tol);
+    if (circFit) {
+      circFit.length = totalLen;
+      // Full circle: ilk ve son nokta yakın mı?
+      var first = polyline[0], last = polyline[n-1];
+      var dx2 = first[0]-last[0], dy2 = first[1]-last[1], dz2 = first[2]-last[2];
+      var endDist = Math.sqrt(dx2*dx2 + dy2*dy2 + dz2*dz2);
+      circFit.isFullCircle = endDist < tol * 2;
+      if (!circFit.isFullCircle) circFit.type = 'arc';
+      return circFit;
+    }
+
+    // 3) ELLIPSE TESTİ — planar curve, koniğin major/minor eksenli fitting
+    var ellFit = _veFEATryFitEllipse(polyline, tol);
+    if (ellFit) {
+      ellFit.length = totalLen;
+      return ellFit;
+    }
+  }
+
+  // 4) SPLINE FALLBACK — control points olarak polyline'ı (alt-örnekleyerek) sakla
+  var ctrl = [];
+  var maxCtrl = 16;
+  var step = Math.max(1, Math.floor(n / maxCtrl));
+  for (var k = 0; k < n; k += step) ctrl.push(polyline[k]);
+  if (ctrl[ctrl.length-1] !== polyline[n-1]) ctrl.push(polyline[n-1]);
+  return { type: 'spline', length: totalLen, controlPoints: ctrl };
+}
+
+function _veFEATryFitLine(pts, tol) {
+  var n = pts.length;
+  var p1 = pts[0], pN = pts[n-1];
+  var dx = pN[0]-p1[0], dy = pN[1]-p1[1], dz = pN[2]-p1[2];
+  var L = Math.sqrt(dx*dx + dy*dy + dz*dz);
+  if (L < 1e-9) return null;
+  var dirx = dx/L, diry = dy/L, dirz = dz/L;
+  // Her iç nokta için, p1→p line projection ile teğet mesafe
+  for (var i = 1; i < n-1; i++) {
+    var px = pts[i][0]-p1[0], py = pts[i][1]-p1[1], pz = pts[i][2]-p1[2];
+    var t = px*dirx + py*diry + pz*dirz;
+    var ex = px - t*dirx, ey = py - t*diry, ez = pz - t*dirz;
+    var err = Math.sqrt(ex*ex + ey*ey + ez*ez);
+    if (err > tol) return null;
+  }
+  return {
+    type: 'line', p1: [p1[0],p1[1],p1[2]], p2: [pN[0],pN[1],pN[2]],
+    direction: [dirx, diry, dirz]
+  };
+}
+
+function _veFEATryFitCircle(pts, tol) {
+  var n = pts.length;
+  if (n < 3) return null;
+  // İlk-1/3-2/3 noktalarıyla 3-nokta circumcircle dene; collinear ise (full
+  // circle pts[0]≈pts[n-1] olduğunda eski 1/2 seçimi başarısız) 1/4-1/2-3/4'e düş.
+  var triples = [
+    [0, Math.floor(n/3), Math.floor(2*n/3)],
+    [0, Math.floor(n/4), Math.floor(n/2)],
+    [Math.floor(n/4), Math.floor(n/2), Math.floor(3*n/4)]
+  ];
+  var pA = null, pB = null, pC = null, nx, ny, nz;
+  for (var ti = 0; ti < triples.length; ti++) {
+    var tA = triples[ti][0], tB = triples[ti][1], tC = triples[ti][2];
+    if (tA === tB || tB === tC || tA === tC) continue;
+    var ppA = pts[tA], ppB = pts[tB], ppC = pts[tC];
+    var aax = ppB[0]-ppA[0], aay = ppB[1]-ppA[1], aaz = ppB[2]-ppA[2];
+    var bbx = ppC[0]-ppA[0], bby = ppC[1]-ppA[1], bbz = ppC[2]-ppA[2];
+    var tnx = aay*bbz - aaz*bby, tny = aaz*bbx - aax*bbz, tnz = aax*bby - aay*bbx;
+    var tnL = Math.sqrt(tnx*tnx + tny*tny + tnz*tnz);
+    if (tnL > 1e-7) {
+      pA = ppA; pB = ppB; pC = ppC;
+      nx = tnx / tnL; ny = tny / tnL; nz = tnz / tnL;
+      break;
+    }
+  }
+  if (!pA) return null;
+  // Plane: normal = (B-A) × (C-A) — yukarıdaki döngüde nx/ny/nz set edildi
+  var ax = pB[0]-pA[0], ay = pB[1]-pA[1], az = pB[2]-pA[2];
+  var bx = pC[0]-pA[0], by = pC[1]-pA[1], bz = pC[2]-pA[2];
+  // Circumcenter: A + α·(B-A) + β·(C-A); çöz: |O-A|=|O-B|=|O-C|=R
+  var aa = ax*ax + ay*ay + az*az;
+  var bb = bx*bx + by*by + bz*bz;
+  var ab = ax*bx + ay*by + az*bz;
+  var denom = 2 * (aa*bb - ab*ab);
+  if (Math.abs(denom) < 1e-12) return null;
+  var alpha = (bb * (aa - ab)) / denom;
+  var beta  = (aa * (bb - ab)) / denom;
+  var cx = pA[0] + alpha*ax + beta*bx;
+  var cy = pA[1] + alpha*ay + beta*by;
+  var cz = pA[2] + alpha*az + beta*bz;
+  var rx = pA[0]-cx, ry = pA[1]-cy, rz = pA[2]-cz;
+  var R = Math.sqrt(rx*rx + ry*ry + rz*rz);
+  if (R < 1e-9) return null;
+  // Tüm noktalar bu daire üzerinde mi?
+  for (var i = 0; i < n; i++) {
+    var dx = pts[i][0]-cx, dy = pts[i][1]-cy, dz = pts[i][2]-cz;
+    var dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
+    if (Math.abs(dist - R) > tol) return null;
+    // Düzlemsellik
+    var planeProj = (pts[i][0]-pA[0])*nx + (pts[i][1]-pA[1])*ny + (pts[i][2]-pA[2])*nz;
+    if (Math.abs(planeProj) > tol) return null;
+  }
+  // Açı aralığı
+  // u = (pA - C) / R; v = n × u (normalize)
+  var ux = rx/R, uy = ry/R, uz = rz/R;
+  var vx = ny*uz - nz*uy, vy = nz*ux - nx*uz, vz = nx*uy - ny*ux;
+  function angleOf(pt) {
+    var px = pt[0]-cx, py = pt[1]-cy, pz = pt[2]-cz;
+    var cu = px*ux + py*uy + pz*uz;
+    var cv = px*vx + py*vy + pz*vz;
+    return Math.atan2(cv, cu);
+  }
+  var aStart = angleOf(pts[0]);
+  var aEnd   = angleOf(pts[n-1]);
+  return {
+    type: 'circle', center: [cx, cy, cz], axis: [nx, ny, nz], radius: R,
+    startAngle: aStart, endAngle: aEnd
+  };
+}
+
+function _veFEATryFitEllipse(pts, tol) {
+  // Basit yaklaşım: noktaları en küçük kareler ile bir ellipse'e fit etmeye çalış.
+  // v1: planar mı diye kontrol et, eğer öyleyse 2D ellipse fit (Fitzgibbon's direct method
+  // basitleştirilmiş halini kullan). Eksik kalırsa null döner ve fonksiyon spline'a düşer.
+  var n = pts.length;
+  if (n < 5) return null;
+  var pA = pts[0], pB = pts[Math.floor(n/2)], pC = pts[n-1];
+  var ax = pB[0]-pA[0], ay = pB[1]-pA[1], az = pB[2]-pA[2];
+  var bx = pC[0]-pA[0], by = pC[1]-pA[1], bz = pC[2]-pA[2];
+  var nx = ay*bz - az*by, ny = az*bx - ax*bz, nz = ax*by - ay*bx;
+  var nLen = Math.sqrt(nx*nx + ny*ny + nz*nz);
+  if (nLen < 1e-9) return null;
+  nx /= nLen; ny /= nLen; nz /= nLen;
+  // Düzlemsellik kontrolü
+  for (var i = 0; i < n; i++) {
+    var planeProj = (pts[i][0]-pA[0])*nx + (pts[i][1]-pA[1])*ny + (pts[i][2]-pA[2])*nz;
+    if (Math.abs(planeProj) > tol * 2) return null;
+  }
+  // 2D düzleme projeksiyon (u/v koordinatları)
+  var ux = ax, uy = ay, uz = az;
+  var uLen = Math.sqrt(ux*ux + uy*uy + uz*uz) || 1;
+  ux /= uLen; uy /= uLen; uz /= uLen;
+  var vx = ny*uz - nz*uy, vy = nz*ux - nx*uz, vz = nx*uy - ny*ux;
+  var pts2d = [];
+  var cx0 = 0, cy0 = 0;
+  for (var j = 0; j < n; j++) {
+    var px = pts[j][0]-pA[0], py = pts[j][1]-pA[1], pz = pts[j][2]-pA[2];
+    var u2 = px*ux + py*uy + pz*uz;
+    var v2 = px*vx + py*vy + pz*vz;
+    pts2d.push([u2, v2]);
+    cx0 += u2; cy0 += v2;
+  }
+  cx0 /= n; cy0 /= n;
+  // Covariance ile principal axes (basit yaklaşık)
+  var Suu = 0, Svv = 0, Suv = 0;
+  for (var k = 0; k < n; k++) {
+    var du = pts2d[k][0] - cx0, dv = pts2d[k][1] - cy0;
+    Suu += du*du; Svv += dv*dv; Suv += du*dv;
+  }
+  Suu /= n; Svv /= n; Suv /= n;
+  // Eigenvalues
+  var trace = Suu + Svv;
+  var det = Suu*Svv - Suv*Suv;
+  var disc = Math.sqrt(Math.max(0, trace*trace/4 - det));
+  var l1 = trace/2 + disc, l2 = trace/2 - disc;
+  if (l1 < 1e-6 || l2 < 1e-6) return null;
+  var semiMajor = 2 * Math.sqrt(l1);  // ~2σ
+  var semiMinor = 2 * Math.sqrt(l2);
+  // Eksenler yaklaşık eşitse → circle (zaten önce denenmiş olmalı, yine de elenir)
+  if (Math.abs(semiMajor - semiMinor) < tol * 2) return null;
+  // 2D merkez → 3D
+  var centerX = pA[0] + cx0*ux + cy0*vx;
+  var centerY = pA[1] + cx0*uy + cy0*vy;
+  var centerZ = pA[2] + cx0*uz + cy0*vz;
+  // Major axis vector — covariance ana eigenvector'ünden hesapla
+  var theta = (Math.abs(Suu - Svv) < 1e-9) ? 0 : 0.5 * Math.atan2(2*Suv, Suu - Svv);
+  var maX = Math.cos(theta)*ux + Math.sin(theta)*vx;
+  var maY = Math.cos(theta)*uy + Math.sin(theta)*vy;
+  var maZ = Math.cos(theta)*uz + Math.sin(theta)*vz;
+  return {
+    type: 'ellipse', center: [centerX, centerY, centerZ], axis: [nx, ny, nz],
+    semiMajor: semiMajor, semiMinor: semiMinor, majorAxis: [maX, maY, maZ]
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MESH-DRIVEN EDGE EXTRACTION — sharp edge'leri line segment'lere böl,
+// adjacent segment'leri tek bir edge'e (line/circle/arc) birleştir.
+// ════════════════════════════════════════════════════════════════════════════
+function _veFEAExtractMeshEdges(meshes, dihedralDeg, mergeAngleDeg) {
+  if (!meshes || meshes.length === 0 || typeof THREE === 'undefined') return [];
+  var dDeg = (isFinite(dihedralDeg) && dihedralDeg > 0) ? dihedralDeg : 30;
+  var mAng = (isFinite(mergeAngleDeg) && mergeAngleDeg > 0) ? mergeAngleDeg : 5;
+  var segments = [];  // her segment: { p1: [x,y,z], p2: [x,y,z] }
+  meshes.forEach(function(m) {
+    try {
+      var eg = new THREE.EdgesGeometry(m.geometry, dDeg);
+      var pos = eg.attributes.position;
+      var mat = m.matrixWorld;
+      for (var i = 0; i < pos.count; i += 2) {
+        var a = new THREE.Vector3().fromBufferAttribute(pos, i).applyMatrix4(mat);
+        var b = new THREE.Vector3().fromBufferAttribute(pos, i+1).applyMatrix4(mat);
+        segments.push({ p1: [a.x, a.y, a.z], p2: [b.x, b.y, b.z] });
+      }
+      eg.dispose && eg.dispose();
+    } catch (e) {}
+  });
+  if (segments.length === 0) return [];
+  // Bbox'tan epsilon hesabı
+  var minX=Infinity, minY=Infinity, minZ=Infinity, maxX=-Infinity, maxY=-Infinity, maxZ=-Infinity;
+  segments.forEach(function(s) {
+    [s.p1, s.p2].forEach(function(pp){
+      if (pp[0]<minX) minX=pp[0]; if (pp[0]>maxX) maxX=pp[0];
+      if (pp[1]<minY) minY=pp[1]; if (pp[1]>maxY) maxY=pp[1];
+      if (pp[2]<minZ) minZ=pp[2]; if (pp[2]>maxZ) maxZ=pp[2];
+    });
+  });
+  var diag = Math.sqrt(Math.pow(maxX-minX,2)+Math.pow(maxY-minY,2)+Math.pow(maxZ-minZ,2)) || 1;
+  var eps = Math.max(diag * 1e-4, 1e-5);
+  // Vertex dedup: epsilon-bucket → vertex index
+  var vMap = {};
+  var verts = [];
+  function _key(p) {
+    var inv = 1 / eps;
+    return Math.round(p[0]*inv) + ',' + Math.round(p[1]*inv) + ',' + Math.round(p[2]*inv);
+  }
+  function _vIndex(p) {
+    var k = _key(p);
+    if (vMap[k] !== undefined) return vMap[k];
+    var idx = verts.length;
+    verts.push([p[0], p[1], p[2]]);
+    vMap[k] = idx;
+    return idx;
+  }
+  // Segment endpointlerini vertex indeksine bağla, duplicate segmentleri unique yap
+  var segMap = {};
+  var uniqueSegs = [];  // { a, b, dir }
+  segments.forEach(function(s) {
+    var ia = _vIndex(s.p1), ib = _vIndex(s.p2);
+    if (ia === ib) return;
+    var lo = Math.min(ia, ib), hi = Math.max(ia, ib);
+    var key = lo + '-' + hi;
+    if (segMap[key]) return;
+    segMap[key] = true;
+    uniqueSegs.push({ a: ia, b: ib });
+  });
+  // Vertex → segment komşuları
+  var vAdj = {};
+  uniqueSegs.forEach(function(s, idx) {
+    if (!vAdj[s.a]) vAdj[s.a] = [];
+    if (!vAdj[s.b]) vAdj[s.b] = [];
+    vAdj[s.a].push(idx);
+    vAdj[s.b].push(idx);
+  });
+  // Edge polyline'larını chain ile birleştir.
+  // Strateji: T-junction (3+ komşu) vertex'leri "break" noktası;
+  // 2 komşulu vertex'lerde teğet açısı < mergeAngle ise zincire devam.
+  var mergeCos = Math.cos(mAng * Math.PI / 180);
+  function _segDir(seg) {
+    var a = verts[seg.a], b = verts[seg.b];
+    var dx = b[0]-a[0], dy = b[1]-a[1], dz = b[2]-a[2];
+    var L = Math.sqrt(dx*dx+dy*dy+dz*dz)||1;
+    return [dx/L, dy/L, dz/L];
+  }
+  function _segLen(seg) {
+    var a = verts[seg.a], b = verts[seg.b];
+    var dx = b[0]-a[0], dy = b[1]-a[1], dz = b[2]-a[2];
+    return Math.sqrt(dx*dx+dy*dy+dz*dz);
+  }
+  var visited = new Array(uniqueSegs.length);
+  var chains = [];
+  for (var sIdx = 0; sIdx < uniqueSegs.length; sIdx++) {
+    if (visited[sIdx]) continue;
+    visited[sIdx] = true;
+    // İki yöne de uzat
+    var chain = [uniqueSegs[sIdx].a, uniqueSegs[sIdx].b];
+    function _extend(fromEnd) {
+      // fromEnd: 0=baş, 1=son
+      var changed = true;
+      while (changed) {
+        changed = false;
+        var endVi = chain[fromEnd === 0 ? 0 : chain.length-1];
+        var neighbors = vAdj[endVi] || [];
+        // T-junction kontrolü
+        var unvisited = neighbors.filter(function(ni) { return !visited[ni]; });
+        if (unvisited.length !== 1) break;  // ya 0 (dead end) ya 2+ (T-junction)
+        // Teğet açıya bak — chain'in son segment yönü ile candidate segment yönü
+        var prevVi = chain[fromEnd === 0 ? 1 : chain.length-2];
+        var prevA = verts[prevVi], prevB = verts[endVi];
+        var prevDx = prevB[0]-prevA[0], prevDy = prevB[1]-prevA[1], prevDz = prevB[2]-prevA[2];
+        var prevL = Math.sqrt(prevDx*prevDx+prevDy*prevDy+prevDz*prevDz)||1;
+        prevDx /= prevL; prevDy /= prevL; prevDz /= prevL;
+        var cand = uniqueSegs[unvisited[0]];
+        var otherVi = (cand.a === endVi) ? cand.b : cand.a;
+        var candA = verts[endVi], candB = verts[otherVi];
+        var candDx = candB[0]-candA[0], candDy = candB[1]-candA[1], candDz = candB[2]-candA[2];
+        var candL = Math.sqrt(candDx*candDx+candDy*candDy+candDz*candDz)||1;
+        candDx /= candL; candDy /= candL; candDz /= candL;
+        var dot = prevDx*candDx + prevDy*candDy + prevDz*candDz;
+        // mergeCos eşiğinde değil → chain'i kır. Ancak daire için açı kademeli — daha
+        // gevşek bir eşik (cos(20°) ≈ 0.94) kullanalım ki daire chain'leri ayrılmasın.
+        var minDot = Math.cos(20 * Math.PI / 180);
+        if (dot < minDot) break;
+        visited[unvisited[0]] = true;
+        if (fromEnd === 0) chain.unshift(otherVi);
+        else                chain.push(otherVi);
+        changed = true;
+      }
+    }
+    _extend(1);
+    _extend(0);
+    chains.push(chain);
+  }
+  // Her chain için curve fitting yap
+  var edges = [];
+  chains.forEach(function(chain, ci) {
+    var polyline = chain.map(function(vi) { return verts[vi]; });
+    var fit = veFEAFitCurveToPolyline(polyline);
+    var edge = {
+      id: 'eMesh_' + ci,
+      label: 'Kenar #' + (ci + 1) + ' (' + (fit.type === 'circle' ? 'Daire' :
+                                              fit.type === 'arc' ? 'Yay' :
+                                              fit.type === 'ellipse' ? 'Eliptik' :
+                                              fit.type === 'spline' ? 'Eğri' : 'Doğru') + ')',
+      type: fit.type,
+      length: fit.length,
+      polyline: polyline,
+      faceIds: [],
+      vertexIds: []
+    };
+    // Curve params
+    if (fit.type === 'line') {
+      edge.p1 = fit.p1; edge.p2 = fit.p2; edge.direction = fit.direction;
+    } else if (fit.type === 'circle' || fit.type === 'arc') {
+      edge.center = fit.center; edge.axis = fit.axis; edge.radius = fit.radius;
+      edge.startAngle = fit.startAngle; edge.endAngle = fit.endAngle;
+      edge.isFullCircle = fit.isFullCircle;
+    } else if (fit.type === 'ellipse') {
+      edge.center = fit.center; edge.axis = fit.axis;
+      edge.semiMajor = fit.semiMajor; edge.semiMinor = fit.semiMinor;
+      edge.majorAxis = fit.majorAxis;
+    } else if (fit.type === 'spline') {
+      edge.controlPoints = fit.controlPoints;
+    }
+    edges.push(edge);
+  });
+  return edges;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MESH-DRIVEN VERTEX EXTRACTION — sharp edge endpoint'lerini topla, T-junction
+// ve corner sınıflandırması yap.
+// ════════════════════════════════════════════════════════════════════════════
+function _veFEAExtractMeshVertices(edges) {
+  if (!Array.isArray(edges) || edges.length === 0) return [];
+  // Endpoint'leri topla (epsilon dedup)
+  var pts = [];
+  edges.forEach(function(e) {
+    if (e.polyline && e.polyline.length > 0) {
+      pts.push(e.polyline[0]);
+      pts.push(e.polyline[e.polyline.length - 1]);
+    }
+  });
+  if (pts.length === 0) return [];
+  var bb = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, minZ: Infinity, maxZ: -Infinity };
+  pts.forEach(function(p){
+    if (p[0]<bb.minX) bb.minX=p[0]; if (p[0]>bb.maxX) bb.maxX=p[0];
+    if (p[1]<bb.minY) bb.minY=p[1]; if (p[1]>bb.maxY) bb.maxY=p[1];
+    if (p[2]<bb.minZ) bb.minZ=p[2]; if (p[2]>bb.maxZ) bb.maxZ=p[2];
+  });
+  var diag = Math.sqrt(Math.pow(bb.maxX-bb.minX,2)+Math.pow(bb.maxY-bb.minY,2)+Math.pow(bb.maxZ-bb.minZ,2)) || 1;
+  var eps = Math.max(diag * 1e-4, 1e-5);
+  var inv = 1 / eps;
+  var vMap = {};
+  var verts = [];
+  edges.forEach(function(e, ei) {
+    if (!e.polyline || e.polyline.length === 0) return;
+    var p0 = e.polyline[0], p1 = e.polyline[e.polyline.length-1];
+    [p0, p1].forEach(function(pp, endIdx) {
+      var k = Math.round(pp[0]*inv) + ',' + Math.round(pp[1]*inv) + ',' + Math.round(pp[2]*inv);
+      if (vMap[k] === undefined) {
+        var vid = 'vMesh_' + verts.length;
+        var vertex = {
+          id: vid, label: 'Köşe #' + (verts.length + 1),
+          position: [pp[0], pp[1], pp[2]],
+          edgeIds: [e.id], faceIds: []
+        };
+        vMap[k] = verts.length;
+        verts.push(vertex);
+        e.vertexIds.push(vid);
+      } else {
+        var existing = verts[vMap[k]];
+        if (existing.edgeIds.indexOf(e.id) < 0) existing.edgeIds.push(e.id);
+        if (e.vertexIds.indexOf(existing.id) < 0) e.vertexIds.push(existing.id);
+      }
+    });
+  });
+  // Tek-edge vertex'leri (dangling) at — closed loop'larda 0 vertex normal
+  verts = verts.filter(function(v) { return v.edgeIds.length >= 2; });
+  return verts;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// EDGE NORMALIZATION — eski {count:N} formatını array'e çevirir (compat)
+// ════════════════════════════════════════════════════════════════════════════
+function veFEANormalizeTopology(topology) {
+  if (!topology) return topology;
+  // Edges normalize
+  if (topology.edges && !Array.isArray(topology.edges)) {
+    var oldCount = topology.edges.count || 0;
+    var oldSharp = topology.edges.sharp;
+    var oldSmooth = topology.edges.smooth;
+    topology.edges = [];
+    topology._edgesCount = oldCount;
+    if (oldSharp !== undefined) topology._edgesSharp = oldSharp;
+    if (oldSmooth !== undefined) topology._edgesSmooth = oldSmooth;
+  } else if (Array.isArray(topology.edges)) {
+    topology._edgesCount = topology.edges.length;
+  }
+  // Vertices normalize
+  if (topology.vertices && !Array.isArray(topology.vertices)) {
+    var oldVCount = topology.vertices.count || 0;
+    topology.vertices = [];
+    topology._verticesCount = oldVCount;
+  } else if (Array.isArray(topology.vertices)) {
+    topology._verticesCount = topology.vertices.length;
+  }
+  return topology;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// EDGE ADJACENCY GRAPH — edge'lerin face komşuluğunu graph olarak
+// ════════════════════════════════════════════════════════════════════════════
+function veFEABuildEdgeAdjacency(topology) {
+  var adj = {};
+  if (!topology || !Array.isArray(topology.edges)) return adj;
+  topology.edges.forEach(function(e) {
+    adj[e.id] = (Array.isArray(e.faceIds) ? e.faceIds.slice() : []);
+  });
+  return adj;
+}
+
+// VERTEX ADJACENCY — vertex'in komşu edge ve face'leri
+function veFEABuildVertexAdjacency(topology) {
+  var adj = {};
+  if (!topology || !Array.isArray(topology.vertices)) return adj;
+  topology.vertices.forEach(function(v) {
+    adj[v.id] = {
+      edges: Array.isArray(v.edgeIds) ? v.edgeIds.slice() : [],
+      faces: Array.isArray(v.faceIds) ? v.faceIds.slice() : []
+    };
+  });
+  return adj;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// TOPOLOGY SUMMARY — UI için kısa özet metni
+// ════════════════════════════════════════════════════════════════════════════
+function veFEATopologyEdgeTypeLabel(type) {
+  return ({
+    'line':     'Doğru',
+    'circle':   'Daire',
+    'arc':      'Yay',
+    'ellipse':  'Eliptik',
+    'spline':   'Eğri (Spline)',
+    'polyline': 'Polyline',
+    'unknown':  'Belirsiz'
+  })[type] || type;
+}
+
+// Topology'nin edge sayısını döndür (eski count vs yeni array fark etmeden).
+function veFEATopologyEdgeCount(topology) {
+  if (!topology) return 0;
+  if (Array.isArray(topology.edges)) return topology.edges.length;
+  if (topology.edges && typeof topology.edges.count === 'number') return topology.edges.count;
+  if (typeof topology._edgesCount === 'number') return topology._edgesCount;
+  return 0;
+}
+
+// Topology'nin vertex sayısını döndür.
+function veFEATopologyVertexCount(topology) {
+  if (!topology) return 0;
+  if (Array.isArray(topology.vertices)) return topology.vertices.length;
+  if (topology.vertices && typeof topology.vertices.count === 'number') return topology.vertices.count;
+  if (typeof topology._verticesCount === 'number') return topology._verticesCount;
+  return 0;
 }
 
 </script>
@@ -28972,6 +30068,137 @@ function veFEAInitViewer(canvas, opts) {
       this._applyFaceColors();
     },
     getSelectedFace: function() { return this._selectedFaceId; },
+    // ─── Edge highlight (yeni topology motoru — polyline tabanlı) ───────────
+    _topologyEdges: null,        // topology.edges[] referansı
+    _topologyVertices: null,     // topology.vertices[] referansı
+    _edgeHighlightGroup: null,   // sahnedeki ek LineSegments grubu
+    _vertexHighlightGroup: null, // sahnedeki vertex marker grubu
+    _selectedEdgeId: null,
+    _hoveredEdgeId: null,
+    _selectedVertexId: null,
+    _hoveredVertexId: null,
+    setTopologyData: function(topology) {
+      this._topologyEdges = (topology && Array.isArray(topology.edges)) ? topology.edges : null;
+      this._topologyVertices = (topology && Array.isArray(topology.vertices)) ? topology.vertices : null;
+      this._refreshEdgeHighlights();
+      this._refreshVertexHighlights();
+    },
+    _refreshEdgeHighlights: function() {
+      // Temizle
+      if (this._edgeHighlightGroup) {
+        this._geometryRoot.remove(this._edgeHighlightGroup);
+        this._edgeHighlightGroup.traverse(function(o) {
+          if (o.geometry && o.geometry.dispose) o.geometry.dispose();
+          if (o.material && o.material.dispose) o.material.dispose();
+        });
+        this._edgeHighlightGroup = null;
+      }
+      if (!this._topologyEdges || this._topologyEdges.length === 0) { render(); return; }
+      var grp = new THREE.Group();
+      grp.name = 'feaEdgeHighlights';
+      grp.userData.feaEdgeOverlay = true;
+      var self = this;
+      this._topologyEdges.forEach(function(e) {
+        var pts = e.polyline;
+        if (!pts || pts.length < 2) {
+          // Tek line endpoint çifti varsa polyline üret
+          if (e.p1 && e.p2) pts = [e.p1, e.p2];
+          else return;
+        }
+        var flat = new Float32Array(pts.length * 3);
+        for (var i = 0; i < pts.length; i++) {
+          flat[i*3] = pts[i][0]; flat[i*3+1] = pts[i][1]; flat[i*3+2] = pts[i][2];
+        }
+        var geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(flat, 3));
+        var isSel = (self._selectedEdgeId === e.id);
+        var isHov = (self._hoveredEdgeId === e.id);
+        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x60a5fa);
+        var lineWidth = (isSel || isHov) ? 3 : 1.4;
+        var mat = new THREE.LineBasicMaterial({
+          color: color, linewidth: lineWidth, transparent: !isSel && !isHov, opacity: (isSel || isHov) ? 1 : 0.0
+        });
+        var line = new THREE.Line(geo, mat);
+        line.userData.feaEdgeId = e.id;
+        line.renderOrder = (isSel || isHov) ? 1000 : 200;
+        grp.add(line);
+      });
+      this._geometryRoot.add(grp);
+      this._edgeHighlightGroup = grp;
+      render();
+    },
+    _refreshVertexHighlights: function() {
+      if (this._vertexHighlightGroup) {
+        this._geometryRoot.remove(this._vertexHighlightGroup);
+        this._vertexHighlightGroup.traverse(function(o) {
+          if (o.geometry && o.geometry.dispose) o.geometry.dispose();
+          if (o.material && o.material.dispose) o.material.dispose();
+        });
+        this._vertexHighlightGroup = null;
+      }
+      if (!this._topologyVertices || this._topologyVertices.length === 0) { render(); return; }
+      // Bbox'tan marker boyutu çıkar
+      var bb = new THREE.Box3().setFromObject(this._geometryRoot);
+      var bbSize = bb.isEmpty() ? 50 : Math.max(bb.getSize(new THREE.Vector3()).x, bb.getSize(new THREE.Vector3()).y, bb.getSize(new THREE.Vector3()).z);
+      var markerR = Math.max(0.5, bbSize * 0.012);
+      var grp = new THREE.Group();
+      grp.name = 'feaVertexHighlights';
+      grp.userData.feaVertexOverlay = true;
+      var self = this;
+      this._topologyVertices.forEach(function(v) {
+        var pos = v.position;
+        if (!pos || pos.length < 3) return;
+        var isSel = (self._selectedVertexId === v.id);
+        var isHov = (self._hoveredVertexId === v.id);
+        // Default: küçük dot. Selected: büyük sarı küre. Hover: orta turkuaz.
+        var size = (isSel || isHov) ? markerR * 1.6 : markerR * 0.55;
+        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x94a3b8);
+        var op = (isSel || isHov) ? 1.0 : 0.55;
+        var sg = new THREE.SphereGeometry(size, 12, 12);
+        var sm = new THREE.MeshBasicMaterial({ color: color, transparent: op < 1, opacity: op, depthTest: !(isSel || isHov) });
+        var mesh = new THREE.Mesh(sg, sm);
+        mesh.position.set(pos[0], pos[1], pos[2]);
+        mesh.userData.feaVertexId = v.id;
+        mesh.renderOrder = (isSel || isHov) ? 1001 : 150;
+        grp.add(mesh);
+      });
+      this._geometryRoot.add(grp);
+      this._vertexHighlightGroup = grp;
+      render();
+    },
+    setSelectedEdge: function(edgeId) {
+      if (this._selectedEdgeId === edgeId) return;
+      this._selectedEdgeId = edgeId;
+      this._refreshEdgeHighlights();
+    },
+    setHoveredEdge: function(edgeId) {
+      if (this._hoveredEdgeId === edgeId) return;
+      this._hoveredEdgeId = edgeId;
+      this._refreshEdgeHighlights();
+    },
+    getSelectedEdge: function() { return this._selectedEdgeId; },
+    setSelectedVertex: function(vertexId) {
+      if (this._selectedVertexId === vertexId) return;
+      this._selectedVertexId = vertexId;
+      this._refreshVertexHighlights();
+    },
+    setHoveredVertex: function(vertexId) {
+      if (this._hoveredVertexId === vertexId) return;
+      this._hoveredVertexId = vertexId;
+      this._refreshVertexHighlights();
+    },
+    getSelectedVertex: function() { return this._selectedVertexId; },
+    // Edge/vertex overlay'lerin görünürlüğünü kontrol et (geometri yedirildiğinde
+    // çağrılır → varsayılan: tüm edge'ler görünür ama soluk).
+    setEdgeOverlayMode: function(mode) {
+      // mode: 'all' | 'selected-only' | 'off'
+      this._edgeOverlayMode = mode || 'all';
+      this._refreshEdgeHighlights();
+    },
+    setVertexOverlayMode: function(mode) {
+      this._vertexOverlayMode = mode || 'all';
+      this._refreshVertexHighlights();
+    },
     // STEP üçgen mesh'inden Three.js sahnesine yükle. (Eski adı loadSTL; STL
     // desteği kaldırıldı ama eski isim viewer API'sinde geri uyumluluk için
     // korunmadı — yeni ad: loadTriangleMesh.)
@@ -29858,13 +31085,13 @@ function veFEAInitViewer(canvas, opts) {
     // Cursor her an ya 'view' (kamera kontrolü) ya da bir picking filter
     // modundadır. View modunda LMB orbit + sağ tık dynamic rotation center.
     // Face/Body pick modunda LMB seçim yapar.
-    _pointerMode: 'view',  // 'view' | 'face-pick' | 'body-pick' | 'box-select' | 'measure'
+    _pointerMode: 'view',  // 'view' | 'face-pick' | 'edge-pick' | 'vertex-pick' | 'body-pick' | 'box-select' | 'measure'
     setPointerMode: function(mode) {
-      if (['view', 'face-pick', 'body-pick', 'box-select', 'measure'].indexOf(mode) < 0) mode = 'view';
+      if (['view', 'face-pick', 'edge-pick', 'vertex-pick', 'body-pick', 'box-select', 'measure'].indexOf(mode) < 0) mode = 'view';
       this._pointerMode = mode;
       // LMB her zaman seç olduğu için view modunda da default cursor.
       // Hover sırasında pointer hit varsa _onFaceMouseMove'da 'pointer' yapılır.
-      var cursors = { 'view': 'default', 'face-pick': 'crosshair', 'body-pick': 'crosshair', 'box-select': 'crosshair', 'measure': 'crosshair' };
+      var cursors = { 'view': 'default', 'face-pick': 'crosshair', 'edge-pick': 'crosshair', 'vertex-pick': 'crosshair', 'body-pick': 'crosshair', 'box-select': 'crosshair', 'measure': 'crosshair' };
       if (canvas && canvas.style) canvas.style.cursor = cursors[mode] || 'default';
       // Hit-coord overlay measure modunda aktif
       var coordDiv = document.getElementById('ve-fea-hit-coord-' + (canvas.id || '').replace('ve-fea-mesh-canvas-', '').replace('ve-fea-geom-canvas-', ''));
@@ -30191,6 +31418,24 @@ function veFEAInitViewer(canvas, opts) {
     var dy = e.clientY - _faceClickStart.y;
     _faceClickStart = null;
     if (dx * dx + dy * dy > 9) return;  // drag idi
+    // Önce edge/vertex picking dene — daha yakın bir line/marker bulunduysa o seçilir
+    if (viewer._topologyEdges || viewer._topologyVertices) {
+      var picked = _raycastEdgeOrVertex(e.clientX, e.clientY);
+      if (picked.vertexId) {
+        viewer.setSelectedVertex(picked.vertexId);
+        if (typeof veFEAOnViewerVertexSelected === 'function') {
+          veFEAOnViewerVertexSelected(picked.vertexId);
+        }
+        return;
+      }
+      if (picked.edgeId) {
+        viewer.setSelectedEdge(picked.edgeId);
+        if (typeof veFEAOnViewerEdgeSelected === 'function') {
+          veFEAOnViewerEdgeSelected(picked.edgeId);
+        }
+        return;
+      }
+    }
     if (!viewer._faceMaterials) return;
     var fid = _raycastFaceId(e.clientX, e.clientY);
     viewer.setSelectedFace(fid);  // null da olabilir (boş alan)
@@ -30200,6 +31445,49 @@ function veFEAInitViewer(canvas, opts) {
     }
     // ANSYS depth picking Z-stack: tıklamada üst üste 2+ hit varsa overlay göster
     _updateDepthStack(e);
+  }
+
+  // Edge / vertex raycasting — overlay grupları üzerinde line/sphere'leri picker.
+  // Vertex marker'lar (küre) edge line'larından daha öncelikli — vertex'ler
+  // edge endpoint'lerinde durur, mouse oraya değdiyse vertex'i seç.
+  function _raycastEdgeOrVertex(clientX, clientY) {
+    var result = { edgeId: null, vertexId: null };
+    var rect = canvas.getBoundingClientRect();
+    var nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+    var ny = -((clientY - rect.top) / rect.height) * 2 + 1;
+    var rc = new THREE.Raycaster();
+    rc.setFromCamera({ x: nx, y: ny }, camera);
+    // Pixel-tabanlı threshold — bbox'a göre
+    var bbS = (function() {
+      var b = new THREE.Box3().setFromObject(viewer._geometryRoot);
+      return b.isEmpty() ? 50 : Math.max(b.getSize(new THREE.Vector3()).x, b.getSize(new THREE.Vector3()).y, b.getSize(new THREE.Vector3()).z);
+    })();
+    rc.params.Line.threshold = Math.max(0.5, bbS * 0.005);  // %0.5 of bbox
+    rc.params.Points = rc.params.Points || {};
+    rc.params.Points.threshold = Math.max(1, bbS * 0.01);
+    // Vertex marker'lar (sphere mesh'leri) — pickle önce
+    if (viewer._vertexHighlightGroup) {
+      var vHits = rc.intersectObject(viewer._vertexHighlightGroup, true);
+      for (var i = 0; i < vHits.length; i++) {
+        var vo = vHits[i].object;
+        if (vo && vo.userData && vo.userData.feaVertexId) {
+          result.vertexId = vo.userData.feaVertexId;
+          return result;
+        }
+      }
+    }
+    // Edge line'lar
+    if (viewer._edgeHighlightGroup) {
+      var eHits = rc.intersectObject(viewer._edgeHighlightGroup, true);
+      for (var i2 = 0; i2 < eHits.length; i2++) {
+        var eo = eHits[i2].object;
+        if (eo && eo.userData && eo.userData.feaEdgeId) {
+          result.edgeId = eo.userData.feaEdgeId;
+          return result;
+        }
+      }
+    }
+    return result;
   }
   // ─── ANSYS-style Depth Picking Z-Stack overlay ────────────────────────────
   // Tıklamada raycaster'ın tüm intersections'larını sol-alt overlay'de
@@ -30636,6 +31924,14 @@ function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
     // yeniden render edilmedi.
     viewer.loadPrimitive(g.type, g.params);
   }
+  // Geometriyle birlikte topology data'yı viewer'a aktar (edge/vertex overlay)
+  if (typeof viewer.setTopologyData === 'function') {
+    var topo = g.topology;
+    if (!topo && typeof veFEAComputeGeometryTopology === 'function') {
+      topo = veFEAComputeGeometryTopology(g);
+    }
+    if (topo) viewer.setTopologyData(topo);
+  }
 }
 
 // ─── Geometri uygulama köprüsü — cp-fea.js UI'sinden çağrılır ───────────────
@@ -30794,6 +32090,26 @@ function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
   var nodeRef = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === nodeId; }) : null;
   if (nodeRef && nodeRef.data && nodeRef.data.selectedFaceId && typeof viewer.setSelectedFace === 'function') {
     viewer.setSelectedFace(nodeRef.data.selectedFaceId);
+  }
+  // Topology data viewer'a aktar (edge/vertex overlay için)
+  if (typeof veFEAFindUpstreamGeometryNode === 'function' && typeof viewer.setTopologyData === 'function') {
+    var gNode = veFEAFindUpstreamGeometryNode(nodeId);
+    if (gNode && gNode.data && gNode.data.geometry) {
+      var topo = gNode.data.geometry.topology;
+      if (!topo && typeof veFEAComputeGeometryTopology === 'function') {
+        topo = veFEAComputeGeometryTopology(gNode.data.geometry);
+      }
+      if (topo) viewer.setTopologyData(topo);
+    }
+  }
+  // Persist edilmiş edge / vertex seçimini de uygula
+  if (nodeRef && nodeRef.data) {
+    if (nodeRef.data.selectedEdgeId && typeof viewer.setSelectedEdge === 'function') {
+      viewer.setSelectedEdge(nodeRef.data.selectedEdgeId);
+    }
+    if (nodeRef.data.selectedVertexId && typeof viewer.setSelectedVertex === 'function') {
+      viewer.setSelectedVertex(nodeRef.data.selectedVertexId);
+    }
   }
 }
 
@@ -31089,6 +32405,29 @@ function veFEAOnLocalSelectionChange(meshNodeId, faceValue) {
 function veFEAOnViewerFaceSelected(faceId) {
   if (!_veFEAEditorActive) return;
   veFEASelectGeometryFace(_veFEAEditorActive, faceId, { fromViewer: true });
+}
+
+// Viewer edge click handler — 3D'de mouse ile edge seçildiğinde çağrılır.
+function veFEAOnViewerEdgeSelected(edgeId) {
+  if (!_veFEAEditorActive) return;
+  if (typeof veFEASelectGeometryEdge === 'function') {
+    veFEASelectGeometryEdge(_veFEAEditorActive, edgeId);
+  }
+  // Topology sekmesini Edges'e çevir
+  if (typeof veFEAEditorSetTopologyTab === 'function') {
+    veFEAEditorSetTopologyTab(_veFEAEditorActive, 'edges');
+  }
+}
+
+// Viewer vertex click handler — 3D'de mouse ile vertex seçildiğinde çağrılır.
+function veFEAOnViewerVertexSelected(vertexId) {
+  if (!_veFEAEditorActive) return;
+  if (typeof veFEASelectGeometryVertex === 'function') {
+    veFEASelectGeometryVertex(_veFEAEditorActive, vertexId);
+  }
+  if (typeof veFEAEditorSetTopologyTab === 'function') {
+    veFEAEditorSetTopologyTab(_veFEAEditorActive, 'vertices');
+  }
 }
 
 // Refinement önerisini uygula — UI butonundan çağrılır.
@@ -32349,14 +33688,32 @@ function veFEAEditorViewerAction(nodeId, action) {
     return;
   }
   if (action === 'pointer-mode') {
-    // ANSYS-style pointer mode cycle
-    var modes = ['view', 'face-pick', 'box-select', 'body-pick', 'measure'];
-    var labels = { view: '⊞ View', 'face-pick': '⊡ Face Pick', 'box-select': '▭ Box Select', 'body-pick': '⊠ Body Pick', measure: '⌖ Measure' };
+    // ANSYS-style pointer mode cycle — face/edge/vertex pick dahil
+    var modes = ['view', 'face-pick', 'edge-pick', 'vertex-pick', 'box-select', 'body-pick', 'measure'];
+    var labels = {
+      view: '⊞ View',
+      'face-pick': '⊡ Face Pick',
+      'edge-pick': '📏 Edge Pick',
+      'vertex-pick': '🔘 Vertex Pick',
+      'box-select': '▭ Box Select',
+      'body-pick': '⊠ Body Pick',
+      measure: '⌖ Measure'
+    };
     var cur = viewer._pointerMode || 'view';
     var next = modes[(modes.indexOf(cur) + 1) % modes.length];
     if (typeof viewer.setPointerMode === 'function') viewer.setPointerMode(next);
     var pbtn = document.getElementById('ve-fea-pointer-mode-' + nodeId);
     if (pbtn) pbtn.textContent = labels[next];
+    return;
+  }
+  if (action === 'toggle-edge-overlay') {
+    var em = viewer._edgeOverlayMode === 'off' ? 'all' : 'off';
+    if (typeof viewer.setEdgeOverlayMode === 'function') viewer.setEdgeOverlayMode(em);
+    return;
+  }
+  if (action === 'toggle-vertex-overlay') {
+    var vm = viewer._vertexOverlayMode === 'off' ? 'all' : 'off';
+    if (typeof viewer.setVertexOverlayMode === 'function') viewer.setVertexOverlayMode(vm);
     return;
   }
 }
@@ -32588,6 +33945,14 @@ function veFEARenameGeometryFace(meshNodeId, faceId, defaultLabel) {
 // Geometri Topolojisi — ANSYS-style "geometriyi/yüzeyleri tanımla → mesh at"
 // workflow'unun ilk aşaması. Upstream Geometry node'undan topology okunur
 // (mesh ÖNCESI tespit edilmiş face listesi).
+// Topology accordion sekme state — Faces / Edges / Vertices arasında geçiş.
+var _veFEATopologyTabState = {};  // { nodeId: 'faces' | 'edges' | 'vertices' }
+
+function veFEAEditorSetTopologyTab(nodeId, tab) {
+  _veFEATopologyTabState[nodeId] = tab;
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
 function _veFEAEditorTopologyHTML(node) {
   // Upstream geometri node'unu bul
   var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
@@ -32606,8 +33971,8 @@ function _veFEAEditorTopologyHTML(node) {
   }
 
   var html = '<div style="font-size:0.58rem; color:var(--text-muted); line-height:1.5; margin-bottom:8px;">' +
-    'Mesh atmadan önce geometriden otomatik tespit edilen yüzeyler. Mesher bu yüzeylere ' +
-    '<b>conforming</b> şekilde eleman üretir; her yüze ait düğümler otomatik named selection olur.</div>';
+    'Mesh atmadan önce geometriden otomatik tespit edilen <b>yüzey / kenar / köşe</b> bilgisi. ' +
+    'Her birine tıklayıp 3D viewer\'da seçebilir, lokal mesh ayarları (size, inflation, SOI) uygulayabilirsiniz.</div>';
 
   // Generic fallback notu — bilinmeyen tip Three.js mesh'inden otomatik analiz edildi
   if (topo.generic) {
@@ -32632,19 +33997,46 @@ function _veFEAEditorTopologyHTML(node) {
   }).join(' · ');
   var bbox = topo.bbox || { x: 0, y: 0, z: 0 };
 
+  var edgeCount = (typeof veFEATopologyEdgeCount === 'function') ? veFEATopologyEdgeCount(topo) : (topo.edges ? topo.edges.count : 0);
+  var vertexCount = (typeof veFEATopologyVertexCount === 'function') ? veFEATopologyVertexCount(topo) : (topo.vertices ? topo.vertices.count : 0);
   html += '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:8px; font-size:0.6rem;">' +
     '<div style="font-weight:600; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">📐 Geometri Özeti</div>' +
     '<div style="display:grid; grid-template-columns:1fr 1fr; gap:3px 12px;">' +
       '<span style="color:var(--text-secondary);">Geometri tipi</span><span style="text-align:right; font-weight:600;">' + (geom.sourceLabel || geom.type) + '</span>' +
       '<span style="color:var(--text-secondary);">Yüzey sayısı</span><span style="text-align:right; font-weight:600;">' + topo.faces.length + '</span>' +
-      '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.edges ? topo.edges.count : 0) + '</span>' +
-      '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + (topo.vertices ? topo.vertices.count : 0) + '</span>' +
+      '<span style="color:var(--text-secondary);">Kenar sayısı</span><span style="text-align:right; font-weight:600;">' + edgeCount + '</span>' +
+      '<span style="color:var(--text-secondary);">Köşe sayısı</span><span style="text-align:right; font-weight:600;">' + vertexCount + '</span>' +
       '<span style="color:var(--text-secondary);">Hacim</span><span style="text-align:right; font-weight:600;">' + _fmtVol(topo.volume || 0) + '</span>' +
       '<span style="color:var(--text-secondary);">Toplam yüzey alanı</span><span style="text-align:right; font-weight:600;">' + _fmtArea(topo.totalSurfaceArea || 0) + '</span>' +
       '<span style="color:var(--text-secondary);">Sınırlayıcı kutu</span><span style="text-align:right; font-weight:600;">' + _fmtLen(bbox.x) + ' × ' + _fmtLen(bbox.y) + ' × ' + _fmtLen(bbox.z) + '</span>' +
       '<span style="color:var(--text-secondary);">Yüzey tipi dağılımı</span><span style="text-align:right; font-weight:600; font-size:0.55rem;">' + typeBreakdown + '</span>' +
     '</div>' +
   '</div>';
+
+  // ─── Sekme başlıkları (Faces / Edges / Vertices) ─────────────────────────
+  var currentTab = _veFEATopologyTabState[node.id] || 'faces';
+  function _tabBtn(key, lbl, count) {
+    var active = (currentTab === key);
+    var bg = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
+    var fg = active ? '#fff' : 'var(--text-secondary)';
+    var bw = active ? 'var(--accent-primary)' : 'var(--border-color)';
+    return '<button onclick="veFEAEditorSetTopologyTab(\'' + node.id + '\',\'' + key + '\')" style="flex:1; padding:6px 8px; background:' + bg + '; color:' + fg + '; border:1px solid ' + bw + '; font-size:0.6rem; font-weight:600; cursor:pointer;">' + lbl + ' <span style="opacity:0.7;">(' + count + ')</span></button>';
+  }
+  html += '<div style="display:flex; gap:0; margin-bottom:8px;">' +
+    _tabBtn('faces',    '🎨 Yüzeyler', topo.faces.length) +
+    _tabBtn('edges',    '📏 Kenarlar', edgeCount) +
+    _tabBtn('vertices', '🔘 Köşeler',  vertexCount) +
+  '</div>';
+
+  if (currentTab === 'edges') {
+    html += _veFEAEditorTopologyEdgesPanel(node, topo);
+    return html;
+  }
+  if (currentTab === 'vertices') {
+    html += _veFEAEditorTopologyVerticesPanel(node, topo);
+    return html;
+  }
+  // currentTab === 'faces' (varsayılan)
 
   // Face listesi tablosu — her satır tıklanabilir (3D viewer'da face highlight)
   var selectedFaceId = node.data && node.data.selectedFaceId || null;
@@ -32718,6 +34110,187 @@ function _veFEAEditorTopologyHTML(node) {
     'Sınır koşulları (F4) bu yüzeylere referansla uygulanır.</div>';
 
   return html;
+}
+
+// ─── EDGES panel — kenar listesi, tip filtreleme, 3D highlight ─────────────
+function _veFEAEditorTopologyEdgesPanel(node, topo) {
+  function _fmtLen(l) { return l >= 1000 ? (l/1000).toFixed(2)+' m' : l >= 10 ? l.toFixed(1)+' mm' : l.toFixed(2)+' mm'; }
+  var edges = Array.isArray(topo.edges) ? topo.edges : [];
+  if (edges.length === 0) {
+    return '<div style="padding:10px 12px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
+      'Bu geometride tanımlı edge bilgisi yok. (Küre, torus gibi sınırsız manifoldlar veya generic mesh\'in henüz tanınamayan kısımları.)' +
+    '</div>';
+  }
+  var selectedEdgeId = (node.data && node.data.selectedEdgeId) || null;
+  // Tip dağılımı
+  var tCounts = {};
+  edges.forEach(function(e) { tCounts[e.type] = (tCounts[e.type] || 0) + 1; });
+  var tBreakdown = Object.keys(tCounts).map(function(t) {
+    var lbl = (typeof veFEATopologyEdgeTypeLabel === 'function') ? veFEATopologyEdgeTypeLabel(t) : t;
+    return tCounts[t] + '× ' + lbl;
+  }).join(' · ');
+  var html = '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:6px;">Tip dağılımı: <b>' + tBreakdown + '</b></div>';
+  html += '<div style="font-size:0.58rem; color:var(--text-secondary); margin-bottom:4px;">Kenarlar <span style="color:var(--text-muted);">(satıra tıkla → 3D\'de sarı highlight)</span>:</div>';
+  edges.forEach(function(e) {
+    var isSel = (selectedEdgeId === e.id);
+    var rowBg = isSel ? '#fbbf2420' : 'var(--bg-tertiary)';
+    var rowBd = isSel ? '#fbbf24' : 'var(--border-color)';
+    var typeLbl = (typeof veFEATopologyEdgeTypeLabel === 'function') ? veFEATopologyEdgeTypeLabel(e.type) : e.type;
+    var typeColor = '#3b82f6';
+    if (e.type === 'circle') typeColor = '#a855f7';
+    else if (e.type === 'arc') typeColor = '#06b6d4';
+    else if (e.type === 'ellipse') typeColor = '#ec4899';
+    else if (e.type === 'spline') typeColor = '#f59e0b';
+    var icon = isSel ? '<span style="color:#fbbf24; margin-right:4px;">◉</span>' : '<span style="color:var(--text-muted); margin-right:4px;">○</span>';
+    var holeIcon = e.isHole ? '<span title="Delik kenarı" style="color:#ef4444; margin-left:4px;">⌀</span>' : '';
+    var extra = '';
+    if (e.radius !== undefined) extra += ' · r=' + e.radius.toFixed(1) + 'mm';
+    if (e.type === 'arc' && e.startAngle !== undefined && e.endAngle !== undefined) {
+      var sweep = Math.abs(e.endAngle - e.startAngle) * 180 / Math.PI;
+      extra += ' · ' + sweep.toFixed(0) + '°';
+    }
+    html += '<button onclick="veFEASelectGeometryEdge(\'' + node.id + '\', \'' + e.id + '\')" style="display:block; width:100%; text-align:left; padding:5px 8px; background:' + rowBg + '; border:1px solid ' + rowBd + '; font-size:0.6rem; cursor:pointer; margin-bottom:3px; transition:background 0.12s;" onmouseover="this.style.background=\'' + (isSel ? '#fbbf2435' : 'var(--bg-secondary)') + '\'" onmouseout="this.style.background=\'' + rowBg + '\'">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
+        '<span style="display:flex; align-items:center; gap:4px;">' +
+          icon +
+          '<span style="font-family:monospace; font-size:0.55rem; padding:1px 5px; background:var(--bg-primary); color:var(--text-muted);">' + e.id + '</span>' +
+          '<span style="font-weight:600; color:var(--text-primary);">' + (e.label || e.id) + '</span>' +
+          holeIcon +
+        '</span>' +
+        '<span style="font-size:0.52rem; padding:1px 6px; background:' + typeColor + '20; color:' + typeColor + '; font-weight:600;">' + typeLbl + '</span>' +
+      '</div>' +
+      '<div style="font-size:0.55rem; color:var(--text-muted); padding-left:18px;">' +
+        'Uzunluk: <b style="color:var(--text-secondary);">' + _fmtLen(e.length || 0) + '</b>' + extra +
+        (Array.isArray(e.faceIds) ? ' · ' + e.faceIds.length + ' yüze komşu' : '') +
+      '</div>' +
+    '</button>';
+  });
+  if (selectedEdgeId) {
+    html += '<div style="margin-top:6px; padding:5px 8px; background:#fbbf2418; border-left:3px solid #fbbf24; font-size:0.6rem; color:var(--text-primary);">' +
+      '<b>Seçili kenar:</b> ' + selectedEdgeId +
+      ' <button onclick="veFEASelectGeometryEdge(\'' + node.id + '\', null)" style="float:right; padding:1px 6px; font-size:0.52rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:pointer;">Seçimi Kaldır</button>' +
+    '</div>';
+  }
+  html += '<div style="font-size:0.52rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">' +
+    'ℹ Kenarlar <b>Edge Sizing</b> bölümünde her biri için target eleman boyu veya bölünme sayısı (Number of Divisions) ile ayarlanabilir.</div>';
+  return html;
+}
+
+// ─── VERTICES panel — köşe listesi + 3D highlight + SOI merkezi ────────────
+function _veFEAEditorTopologyVerticesPanel(node, topo) {
+  var verts = Array.isArray(topo.vertices) ? topo.vertices : [];
+  if (verts.length === 0) {
+    return '<div style="padding:10px 12px; background:rgba(245,158,11,0.08); border-left:2px solid #f59e0b; font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
+      'Bu geometride tanımlı köşe yok. (Silindir, küre, torus gibi smooth manifoldlarda vertex bulunmaz.)' +
+    '</div>';
+  }
+  var selectedVId = (node.data && node.data.selectedVertexId) || null;
+  var html = '<div style="font-size:0.58rem; color:var(--text-secondary); margin-bottom:4px;">' +
+    'Köşeler <span style="color:var(--text-muted);">(satıra tıkla → 3D\'de sarı küre · SOI merkezi olarak kullan)</span>:</div>';
+  verts.forEach(function(v) {
+    var isSel = (selectedVId === v.id);
+    var rowBg = isSel ? '#fbbf2420' : 'var(--bg-tertiary)';
+    var rowBd = isSel ? '#fbbf24' : 'var(--border-color)';
+    var icon = isSel ? '<span style="color:#fbbf24; margin-right:4px;">◉</span>' : '<span style="color:var(--text-muted); margin-right:4px;">○</span>';
+    var pos = v.position || [0,0,0];
+    html += '<button onclick="veFEASelectGeometryVertex(\'' + node.id + '\', \'' + v.id + '\')" style="display:block; width:100%; text-align:left; padding:5px 8px; background:' + rowBg + '; border:1px solid ' + rowBd + '; font-size:0.6rem; cursor:pointer; margin-bottom:3px;" onmouseover="this.style.background=\'' + (isSel ? '#fbbf2435' : 'var(--bg-secondary)') + '\'" onmouseout="this.style.background=\'' + rowBg + '\'">' +
+      '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">' +
+        '<span style="display:flex; align-items:center; gap:4px;">' +
+          icon +
+          '<span style="font-family:monospace; font-size:0.55rem; padding:1px 5px; background:var(--bg-primary); color:var(--text-muted);">' + v.id + '</span>' +
+          '<span style="font-weight:600; color:var(--text-primary);">' + (v.label || v.id) + '</span>' +
+        '</span>' +
+      '</div>' +
+      '<div style="font-size:0.55rem; color:var(--text-muted); padding-left:18px;">' +
+        '(' + pos[0].toFixed(2) + ', ' + pos[1].toFixed(2) + ', ' + pos[2].toFixed(2) + ') mm' +
+        (Array.isArray(v.faceIds) ? ' · ' + v.faceIds.length + ' yüz' : '') +
+        (Array.isArray(v.edgeIds) ? ' · ' + v.edgeIds.length + ' kenar' : '') +
+      '</div>' +
+    '</button>';
+  });
+  if (selectedVId) {
+    var sV = verts.find(function(vv) { return vv.id === selectedVId; });
+    html += '<div style="margin-top:6px; padding:5px 8px; background:#fbbf2418; border-left:3px solid #fbbf24; font-size:0.6rem; color:var(--text-primary);">' +
+      '<b>Seçili köşe:</b> ' + selectedVId;
+    if (sV && sV.position) {
+      html += '<button onclick="veFEAAddSphereOfInfluenceAtVertex(\'' + node.id + '\', \'' + sV.id + '\')" style="float:right; padding:2px 8px; font-size:0.55rem; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; margin-left:6px;">+ SOI Buraya</button>';
+    }
+    html += ' <button onclick="veFEASelectGeometryVertex(\'' + node.id + '\', null)" style="float:right; padding:1px 6px; font-size:0.52rem; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:pointer;">Seçimi Kaldır</button>' +
+    '</div>';
+  }
+  html += '<div style="font-size:0.52rem; color:var(--text-muted); margin-top:6px; line-height:1.4;">' +
+    'ℹ Köşe konumları <b>Sphere of Influence</b> merkezi olarak doğrudan kullanılabilir. "+ SOI Buraya" butonu ile vertex pozisyonuna otomatik küre yerleştirilir.</div>';
+  return html;
+}
+
+// Edge seçimi — Topology panel veya 3D viewer'dan tetiklenir.
+function veFEASelectGeometryEdge(meshNodeId, edgeId) {
+  if (typeof nodes === 'undefined') return;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  // Toggle: aynı edge'e tekrar tıklanırsa seçim kaldırılır
+  if (meshNode.data.selectedEdgeId === edgeId) edgeId = null;
+  meshNode.data.selectedEdgeId = edgeId;
+  if (typeof veFEAViewerRegistry !== 'undefined') {
+    var viewer = veFEAViewerRegistry[meshNodeId];
+    if (viewer && typeof viewer.setSelectedEdge === 'function') {
+      viewer.setSelectedEdge(edgeId);
+    }
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// Vertex seçimi
+function veFEASelectGeometryVertex(meshNodeId, vertexId) {
+  if (typeof nodes === 'undefined') return;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  if (meshNode.data.selectedVertexId === vertexId) vertexId = null;
+  meshNode.data.selectedVertexId = vertexId;
+  if (typeof veFEAViewerRegistry !== 'undefined') {
+    var viewer = veFEAViewerRegistry[meshNodeId];
+    if (viewer && typeof viewer.setSelectedVertex === 'function') {
+      viewer.setSelectedVertex(vertexId);
+    }
+  }
+  if (typeof saveState === 'function') saveState();
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
+}
+
+// Bir vertex'in konumunda yeni Sphere of Influence ekle.
+function veFEAAddSphereOfInfluenceAtVertex(meshNodeId, vertexId) {
+  if (typeof nodes === 'undefined') return;
+  var meshNode = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (!meshNode) return;
+  meshNode.data = meshNode.data || {};
+  meshNode.data.meshSettings = meshNode.data.meshSettings || {};
+  if (!Array.isArray(meshNode.data.meshSettings.sphereOfInfluence)) {
+    meshNode.data.meshSettings.sphereOfInfluence = [];
+  }
+  // Upstream geometriden topology ve vertex pozisyonu
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function') ? veFEAFindUpstreamGeometryNode(meshNodeId) : null;
+  if (!geomNode) return;
+  var topo = geomNode.data && geomNode.data.geometry && geomNode.data.geometry.topology;
+  if (!topo && typeof veFEAComputeGeometryTopology === 'function') {
+    topo = veFEAComputeGeometryTopology(geomNode.data.geometry);
+  }
+  if (!topo || !Array.isArray(topo.vertices)) return;
+  var v = topo.vertices.find(function(vv) { return vv.id === vertexId; });
+  if (!v || !v.position) return;
+  // Varsayılan yarıçap: bbox diag * 0.1
+  var bbox = topo.bbox || { x: 100, y: 100, z: 100 };
+  var diag = Math.sqrt(bbox.x*bbox.x + bbox.y*bbox.y + bbox.z*bbox.z) || 100;
+  var r = Math.max(1, diag * 0.1);
+  meshNode.data.meshSettings.sphereOfInfluence.push({
+    cx: v.position[0], cy: v.position[1], cz: v.position[2], radius: r, targetSize: null,
+    sourceVertexId: vertexId
+  });
+  if (typeof saveState === 'function') saveState();
+  if (typeof showToast === 'function') showToast('Sphere of Influence eklendi: ' + (v.label || v.id), 'success');
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 }
 
 // Physics Preference preset değiştirildiğinde tüm defaults'ı uygular.
@@ -33172,11 +34745,13 @@ function _veFEAEditorEdgeSizingHTML(node) {
   var settings = d.meshSettings || {};
   var controls = settings.edgeSizingControls || [];
 
-  // Topology'den edges listesini al
+  // Topology'den edges listesini al — upstream Geometri node'undan
   var topoEdges = [];
-  if (typeof veFEAComputeGeometryTopology === 'function' && d.geometry) {
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function') ? veFEAFindUpstreamGeometryNode(node.id) : null;
+  var geomForTopo = (geomNode && geomNode.data && geomNode.data.geometry) || d.geometry;
+  if (typeof veFEAComputeGeometryTopology === 'function' && geomForTopo) {
     try {
-      var topo = veFEAComputeGeometryTopology(d.geometry);
+      var topo = (geomForTopo.topology && Array.isArray(geomForTopo.topology.edges)) ? geomForTopo.topology : veFEAComputeGeometryTopology(geomForTopo);
       if (topo && Array.isArray(topo.edges)) topoEdges = topo.edges;
     } catch (e) { /* skip */ }
   }
