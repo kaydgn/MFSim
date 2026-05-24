@@ -235,17 +235,24 @@ describe('fea-viewer kaynak refaktör güvenceleri', () => {
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('cp-fea.js getFEAGeometryPropertiesHTML', () => {
-  test('HTML çıktısı canvas elementi içerir (node ID ile)', () => {
+  // Faz 1: gömülü "3D Önizleme" canvas'ı kaldırıldı — birleşik modül
+  // editöründe geometri sağdaki tam boy 3D görüntüleyicide gösteriliyor.
+  test('HTML çıktısı artık gömülü geom canvas İÇERMEZ', () => {
     const node = { id: 'comp-42', data: {} };
     const html = getFEAGeometryPropertiesHTML(node);
-    expect(html).toMatch(/<canvas[^>]*id="ve-fea-geom-canvas-comp-42"/);
+    expect(html).not.toMatch(/<canvas[^>]*id="ve-fea-geom-canvas-comp-42"/);
   });
 
-  test("HTML çıktısı 'Tam Ekran' butonunu ve doğru callback'i içerir", () => {
+  test("HTML çıktısı gömülü 'Tam Ekran' önizleme butonunu İÇERMEZ", () => {
     const node = { id: 'comp-7', data: {} };
     const html = getFEAGeometryPropertiesHTML(node);
-    expect(html).toMatch(/veFEAOpenFullscreenViewer\('comp-7'\)/);
-    expect(html).toMatch(/Tam Ekran/);
+    expect(html).not.toMatch(/veFEAOpenFullscreenViewer\('comp-7'\)/);
+  });
+
+  test('geometri paneli sağ görüntüleyiciye yönlendirir', () => {
+    const node = { id: 'comp-7', data: {} };
+    const html = getFEAGeometryPropertiesHTML(node);
+    expect(html).toMatch(/sağdaki 3D görüntüleyici/i);
   });
 
   test('Faz 2 badge bulunur', () => {

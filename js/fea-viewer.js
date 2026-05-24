@@ -2007,6 +2007,9 @@ function veFEAApplyPrimitive(nodeId, type, params) {
     var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
     if (n) showNodeProperties(n);
   }
+  // Birleşik modül editörü açıksa outline + Details panelini de yenile
+  // (Geometri dalının state ikonu + durum tablosu güncellensin)
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 
   // 5) Yeni placeholder canvas'ı (showNodeProperties tarafından yaratıldı)
   //    eski (preserve edilmiş) canvas ile değiştir.
@@ -2740,6 +2743,8 @@ function veFEAClearGeometryForNode(nodeId) {
     var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
     if(n) showNodeProperties(n);
   }
+  // Birleşik modül editörü açıksa outline + Details panelini de yenile
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 }
 
 // ─── Kontrol paneli HTML şablonu (accordion yapı) ───────────────────────────
