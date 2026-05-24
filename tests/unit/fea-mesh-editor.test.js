@@ -293,14 +293,15 @@ describe('Mesh Editör outline organizasyonu', () => {
     expect(document.getElementById('ve-fea-details-header')).not.toBeNull();
   });
 
-  test('Outline kökü study-level: Geometri / Mesh / Sınır Koşulları / Çözüm', () => {
+  test('Outline kökü study-level: Geometri / Mesh / Malzeme / Sınır Koşulları / Çözüm', () => {
     var schema = FEAMeshOutline._SCHEMA;
     var ids = schema.children.map(function(c) { return c.id; });
     expect(ids).toEqual([
       'single:geometry',
       'group:mesh',
-      'single:bc',
-      'single:solver'
+      'single:material',
+      'cl:bc',
+      'group:solution'
     ]);
   });
 
@@ -731,45 +732,58 @@ describe('Accordion bölümleri', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('Modal toolbar — Çalıştır butonu', () => {
+// Faz 1 sonrası: "Mesh Oluştur" üst toolbar'dan ağaçtaki "Mesh" dalının
+// Details paneline (_veFEAEditorMeshBuildControlsHTML) taşındı.
+describe('Mesh Oluştur kontrolleri (Mesh dalı Details)', () => {
   beforeEach(() => {
     global.nodes = [];
+    global.connections = [];
     document.body.innerHTML = '';
     if (_veFEAEditorActive) veFEACloseMeshEditor();
   });
 
   test('Geometri yoksa Mesh Oluştur disabled', () => {
-    var node = { id: 'mesh-t1', type: 'fea-mesh', data: {} };
+    var node = { id: 'fea-t1', type: 'fea', data: {} };
     global.nodes = [node];
-    veFEAOpenMeshEditor('mesh-t1');
-    var btn = document.querySelector('button[onclick*="veFEASubmitMeshBuild"]');
-    expect(btn).not.toBeNull();
-    expect(btn.hasAttribute('disabled')).toBe(true);
+    var html = _veFEAEditorMeshBuildControlsHTML(node);
+    expect(html).toMatch(/veFEASubmitMeshBuild\('fea-t1'\)/);
+    expect(html).toMatch(/disabled/);
   });
 
   test('Geometri varsa Mesh Oluştur aktif', () => {
-    global.nodes = [
-      { id: 'g-t', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
-      { id: 'mesh-t2', type: 'fea-mesh', data: {} }
-    ];
-    global.connections = [{ from: 'g-t', to: 'mesh-t2' }];
-    veFEAOpenMeshEditor('mesh-t2');
-    var btn = document.querySelector('button[onclick*="veFEASubmitMeshBuild"]');
-    expect(btn.hasAttribute('disabled')).toBe(false);
+    var node = { id: 'fea-t2', type: 'fea', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } };
+    global.nodes = [node];
+    var html = _veFEAEditorMeshBuildControlsHTML(node);
+    expect(html).toMatch(/veFEASubmitMeshBuild\('fea-t2'\)/);
+    // Geometri var → buton disabled DEĞİL (disabled attribute yok)
+    var btnMatch = html.match(/<button[^>]*veFEASubmitMeshBuild[^>]*>/);
+    expect(btnMatch[0]).not.toMatch(/disabled/);
   });
 
   test('Mesh aktifken Mesh\'i Sil butonu render', () => {
     var node = {
-      id: 'mesh-t3', type: 'fea-mesh',
-      data: {
-        meshActive: true,
-        meshMetrics: { nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5 }
-      }
+      id: 'fea-t3', type: 'fea',
+      data: { meshActive: true, meshMetrics: { nodeCount: 27, elementCount: 8 } }
     };
     global.nodes = [node];
-    veFEAOpenMeshEditor('mesh-t3');
-    var clearBtn = document.querySelector('button[onclick*="veFEAClearMeshForNode"]');
-    expect(clearBtn).not.toBeNull();
+    var html = _veFEAEditorMeshBuildControlsHTML(node);
+    expect(html).toMatch(/veFEAClearMeshForNode\('fea-t3'\)/);
+  });
+
+  test('Mesh grubu seçilince Details\'te Mesh Oluştur butonu görünür', () => {
+    var node = { id: 'fea-t4', type: 'fea', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('fea-t4');
+    FEAMeshOutline.select('group:mesh');
+    var details = document.getElementById('ve-fea-details-container');
+    expect(details.innerHTML).toMatch(/Mesh Oluştur/);
+  });
+
+  test('Üstte ayrı toolbar artık YOK (ve-fea-mesh-editor-toolbar)', () => {
+    var node = { id: 'fea-t5', type: 'fea', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('fea-t5');
+    expect(document.getElementById('ve-fea-mesh-editor-toolbar')).toBeNull();
   });
 });
 

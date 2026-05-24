@@ -127,8 +127,19 @@
           }
         ]
       },
-      { id: 'single:bc',     type: 'single', label: 'Sınır Koşulları', icon: '⊥', detail: 'bc' },
-      { id: 'single:solver', type: 'single', label: 'Çözüm (Solution)', icon: '►', detail: 'solver' }
+      { id: 'single:material', type: 'single',      label: 'Malzeme',         icon: '◉', detail: 'material' },
+      { id: 'cl:bc',           type: 'controlList', controlType: 'bc',        label: 'Sınır Koşulları', icon: '⊥' },
+      {
+        id: 'group:solution',
+        type: 'group',
+        label: 'Çözüm (Solution)',
+        icon: '►',
+        defaultExpanded: true,
+        children: [
+          { id: 'single:solver', type: 'single',      label: 'Çözücü Ayarları', icon: '⚙', detail: 'solver' },
+          { id: 'cl:result',     type: 'controlList', controlType: 'result',    label: 'Sonuçlar',        icon: '◳' }
+        ]
+      }
     ]
   };
 
@@ -322,6 +333,86 @@
       factoryOf: function(meshNode) {
         return { name: null, faceIds: [] };
       }
+    },
+    // ─── Sınır Koşulları (BC) — storage: node.data.bc.assignments ───────────
+    bc: {
+      detailKey: 'bcItem',
+      storageAccessor: function(meshNode) {
+        if (!meshNode.data || !meshNode.data.bc) return [];
+        return meshNode.data.bc.assignments;
+      },
+      storageSetter: function(meshNode, list) {
+        meshNode.data = meshNode.data || {};
+        meshNode.data.bc = meshNode.data.bc || { materialId: 'steel-st37', assignments: [] };
+        meshNode.data.bc.assignments = list;
+      },
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        var kindLabel = ({
+          'fixed': 'Fixed Support', 'force': 'Kuvvet', 'pressure': 'Basınç', 'displacement': 'Yer Değişt.'
+        })[c && c.kind] || (c && c.kind) || 'BC';
+        var f = (c && c.faceId != null) ? ' (yüz ' + c.faceId + ')' : '';
+        return kindLabel + ' ' + (idx + 1) + f;
+      },
+      scopeOf: function(c) {
+        return { kind: 'geometry', entityType: 'face', entities: (c && c.faceId != null) ? [c.faceId] : [] };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (c.faceId == null) return 'underdefined';
+        // Fixed: yalnız yüz yeter. Diğerleri: değer (magnitude/vektör) gerekli.
+        if (c.kind === 'fixed') return 'ok';
+        if (!c.value) return 'underdefined';
+        if (c.kind === 'pressure') return (isFinite(c.value.magnitude) && c.value.magnitude !== 0) ? 'ok' : 'underdefined';
+        if (c.kind === 'force') {
+          var f = c.value; var any = (f.fx || 0) || (f.fy || 0) || (f.fz || 0);
+          return any ? 'ok' : 'underdefined';
+        }
+        if (c.kind === 'displacement') {
+          var u = c.value; var anyU = (u.ux || 0) || (u.uy || 0) || (u.uz || 0);
+          return anyU ? 'ok' : 'underdefined';
+        }
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, faceId: null, kind: 'fixed', value: null, enabled: true };
+      }
+    },
+    // ─── Çözüm Sonuçları — storage: node.data.solver.resultObjects ──────────
+    // Sonuç objeleri çözülen alanın "görünüm"leridir; gerçek alan verisi
+    // solver.results'tan gelir, her obje 3D viewer'da bir heat-map gösterir.
+    result: {
+      detailKey: 'resultItem',
+      storageAccessor: function(meshNode) {
+        if (!meshNode.data || !meshNode.data.solver) return [];
+        return meshNode.data.solver.resultObjects;
+      },
+      storageSetter: function(meshNode, list) {
+        meshNode.data = meshNode.data || {};
+        meshNode.data.solver = meshNode.data.solver || { tolerance: 1e-8 };
+        meshNode.data.solver.resultObjects = list;
+      },
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        return ({
+          'vonMises': 'Equivalent (von-Mises) Stress',
+          'displacement': 'Total Deformation',
+          'principalMax': 'Maks. Asal Gerilme',
+          'principalMin': 'Min. Asal Gerilme',
+          'deformed': 'Deforme Şekil'
+        })[c && c.type] || (c && c.type) || ('Sonuç ' + (idx + 1));
+      },
+      scopeOf: function(c) {
+        return { kind: 'world', entityType: 'body', entities: [] };
+      },
+      stateOf: function(c, meshNode) {
+        // Çözüm yapılmadıysa sonuç objesi "underdefined" (gösterilemez)
+        if (meshNode && meshNode.data && meshNode.data.solver && meshNode.data.solver.results) return 'ok';
+        return 'underdefined';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, type: 'vonMises' };
+      }
     }
   };
 
@@ -380,6 +471,10 @@
     exp['cl:refinement']     = false;
     exp['cl:methodOverride'] = false;
     exp['cl:virtualTopology']= false;
+    // Sınır Koşulları + Çözüm dalları default açık (yük/sonuç öğeleri görünsün)
+    exp['cl:bc']             = true;
+    exp['group:solution']    = true;
+    exp['cl:result']         = true;
     return exp;
   }
 
@@ -389,10 +484,15 @@
 
   function _getControlList(meshNode, controlType) {
     if (!meshNode || !meshNode.data) return [];
-    var settings = meshNode.data.meshSettings;
-    if (!settings) return [];
     var meta = CONTROL_META[controlType];
     if (!meta) return [];
+    // Özel storage (BC/sonuç gibi meshSettings dışı) — storageAccessor öncelikli
+    if (typeof meta.storageAccessor === 'function') {
+      var custom = meta.storageAccessor(meshNode);
+      return Array.isArray(custom) ? custom : [];
+    }
+    var settings = meshNode.data.meshSettings;
+    if (!settings) return [];
     var arr = settings[meta.storageKey];
     return Array.isArray(arr) ? arr : [];
   }
@@ -400,9 +500,13 @@
   function _setControlList(meshNode, controlType, list) {
     if (!meshNode) return;
     meshNode.data = meshNode.data || {};
-    meshNode.data.meshSettings = meshNode.data.meshSettings || {};
     var meta = CONTROL_META[controlType];
     if (!meta) return;
+    if (typeof meta.storageSetter === 'function') {
+      meta.storageSetter(meshNode, list);
+      return;
+    }
+    meshNode.data.meshSettings = meshNode.data.meshSettings || {};
     meshNode.data.meshSettings[meta.storageKey] = list;
   }
 
@@ -449,7 +553,7 @@
       var list = _getControlList(meshNode, parsed.controlType);
       var c = list[parsed.index];
       if (!c) return 'underdefined';
-      return meta.stateOf(c);
+      return meta.stateOf(c, meshNode);
     }
 
     // Control list grubu: 'cl:bodySizing'
@@ -792,7 +896,7 @@
     // panel üreteçlerini birebir yeniden kullan (tek node tüm sub-data'yı tutar).
     var studyDispatch = {
       'single:geometry': function(n) { return (typeof getFEAGeometryPropertiesHTML === 'function') ? getFEAGeometryPropertiesHTML(n) : _emptyDetail('Geometri paneli yüklenmedi'); },
-      'single:bc':       function(n) { return (typeof getFEABCPropertiesHTML === 'function') ? getFEABCPropertiesHTML(n) : _emptyDetail('Sınır Koşulları paneli yüklenmedi'); },
+      'single:material': function(n) { return (typeof getFEAMaterialPropertiesHTML === 'function') ? getFEAMaterialPropertiesHTML(n) : _emptyDetail('Malzeme paneli yüklenmedi'); },
       'single:solver':   function(n) { return (typeof getFEASolverPropertiesHTML === 'function') ? getFEASolverPropertiesHTML(n) : _emptyDetail('Çözücü paneli yüklenmedi'); }
     };
     if (studyDispatch[outlineId]) return studyDispatch[outlineId](meshNode);
@@ -849,7 +953,9 @@
       soi:             { plural: 'Sphere of Influence', description: 'Bir küre içinde lokal yoğunlaştırma (ANSYS §5.2).' },
       refinement:      { plural: 'Refinement',      description: 'Mevcut elemanları 1-3 seviye böler (ANSYS §5.4).' },
       methodOverride:  { plural: 'Method Override', description: 'Bir body için mesh yöntemini global ayarın yerine geçiren özel kontrol.' },
-      virtualTopology: { plural: 'Virtual Topology', description: 'Birden çok yüzü tek bir mesh edilecek bölge olarak gruplar (ANSYS §8.2).' }
+      virtualTopology: { plural: 'Virtual Topology', description: 'Birden çok yüzü tek bir mesh edilecek bölge olarak gruplar (ANSYS §8.2).' },
+      bc:              { plural: 'Sınır Koşulu',     description: 'Geometriye uygulanan yük/kısıt: Fixed Support, Kuvvet, Basınç, Yer Değiştirme. Her biri bir yüze scope edilir.' },
+      result:          { plural: 'Sonuç',            description: 'Çözüm sonrası gösterilecek alanlar: Total Deformation, von-Mises Stress, vb. Her biri 3D görüntüleyicide ayrı heat-map.' }
     };
     var info = labels[controlType] || { plural: controlType, description: '' };
 
@@ -883,6 +989,11 @@
     var schemaNode = _findSchemaNode(outlineId);
     if (!schemaNode) return _emptyDetail('Grup bulunamadı: ' + outlineId);
     var html = '';
+    // "Mesh" grubu: mesh oluşturma kontrollerini en üste yerleştir (eski üst
+    // toolbar buraya taşındı — kullanıcı isteği).
+    if (outlineId === 'group:mesh' && typeof _veFEAEditorMeshBuildControlsHTML === 'function') {
+      html += _veFEAEditorMeshBuildControlsHTML(meshNode);
+    }
     html += '<div style="font-size:0.6rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">Bu grupta ' + (schemaNode.children || []).length + ' alt düğüm var. Soldaki ağaçtan bir alt düğümü seçerek ayarlarını düzenleyebilirsin.</div>';
     html += '<div style="display:flex; flex-direction:column; gap:4px;">';
     (schemaNode.children || []).forEach(function(child) {
@@ -968,6 +1079,46 @@
       try { global.saveState(); } catch (e) {}
     }
     refresh();
+    // 3D viewer'ı seçili dala göre bağlam anahtarla (BC → yüz vurgu, sonuç → heat-map)
+    _applyViewerContext(meshNode, outlineId);
+  }
+
+  // Seçili outline düğümüne göre sağ 3D görüntüleyici içeriğini değiştir.
+  // Viewer yoksa (test ortamı, modal kapalı) sessiz no-op.
+  function _applyViewerContext(meshNode, outlineId) {
+    if (typeof global.veFEAViewerRegistry === 'undefined') return;
+    var viewer = global.veFEAViewerRegistry[meshNode.id];
+    if (!viewer) return;
+    var parsed = _parseControlOutlineId(outlineId);
+
+    // BC öğesi → scope'lanan yüzü vurgula
+    if (parsed && parsed.controlType === 'bc') {
+      var bcList = _getControlList(meshNode, 'bc');
+      var bc = bcList[parsed.index];
+      if (bc && bc.faceId != null && typeof viewer.setSelectedFace === 'function') {
+        try { viewer.setSelectedFace(bc.faceId); } catch (e) {}
+      }
+      return;
+    }
+    // Sonuç öğesi → o alanın heat-map'ini uygula (çözüm varsa)
+    if (parsed && parsed.controlType === 'result') {
+      var rList = _getControlList(meshNode, 'result');
+      var rc = rList[parsed.index];
+      var solved = meshNode.data && meshNode.data.solver && meshNode.data.solver.results;
+      if (rc && rc.type && solved && typeof global.veFEAApplyHeatMap === 'function') {
+        try { global.veFEAApplyHeatMap(meshNode.id, 'result-' + rc.type); } catch (e) {}
+      }
+      return;
+    }
+    // Face Sizing / Face Refinement → scope'lanan yüzü vurgula (varsa)
+    if (parsed && (parsed.controlType === 'faceSizing' || parsed.controlType === 'refinement')) {
+      var fList = _getControlList(meshNode, parsed.controlType);
+      var fc = fList[parsed.index];
+      var fid = fc && (fc.faceId != null ? fc.faceId : (Array.isArray(fc.faceIds) && fc.faceIds.length ? fc.faceIds[0] : null));
+      if (fid != null && typeof viewer.setSelectedFace === 'function') {
+        try { viewer.setSelectedFace(fid); } catch (e) {}
+      }
+    }
   }
 
   function activeSelection() {

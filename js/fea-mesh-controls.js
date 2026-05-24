@@ -498,6 +498,118 @@
     return html;
   }
 
+  // ─── 3.8 SINIR KOŞULU (BC item) ──────────────────────────────────────────
+  function _renderBCItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'bc', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'bc';
+    var faces = _faceList(meshNode);
+    var kind = c.kind || 'fixed';
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Sınır Koşulu ' + (idx + 1));
+
+    html += _sectionTitle('Tip');
+    html += _row('Koşul tipi',
+      '<select onchange="FEAMeshControls._setBCKind(' + idx + ', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="fixed"' + (kind === 'fixed' ? ' selected' : '') + '>Fixed Support (tüm DoF sabit)</option>' +
+      '<option value="force"' + (kind === 'force' ? ' selected' : '') + '>Kuvvet (Force)</option>' +
+      '<option value="pressure"' + (kind === 'pressure' ? ' selected' : '') + '>Basınç (Pressure)</option>' +
+      '<option value="displacement"' + (kind === 'displacement' ? ' selected' : '') + '>Yer Değiştirme</option>' +
+      '</select>'
+    );
+
+    html += _sectionTitle('Scope (Yüz)');
+    if (faces.length === 0) {
+      html += '<div style="padding:8px; background:var(--bg-primary); border:1px dashed var(--border-color); font-size:0.6rem; color:var(--text-muted);">Önce Geometri tanımlayın (yüz listesi topology\'den gelir).</div>';
+    } else {
+      html += _row('Yüzey',
+        '<select onchange="FEAMeshControls._setBCFace(' + idx + ', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+        '<option value="">— yüz seçin —</option>' +
+        faces.map(function(f) {
+          return '<option value="' + f.id + '"' + (String(c.faceId) === String(f.id) ? ' selected' : '') + '>' + _esc(f.label || ('Face ' + f.id)) + '</option>';
+        }).join('') +
+        '</select>'
+      );
+    }
+
+    // Kind'a göre değer alanları
+    if (kind === 'force') {
+      var fv = c.value || {};
+      html += _sectionTitle('Kuvvet (N)');
+      html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">';
+      ['fx', 'fy', 'fz'].forEach(function(ax) {
+        html += '<div><label style="display:block; font-size:0.55rem; color:var(--text-muted); margin-bottom:2px;">' + ax.toUpperCase() + '</label>' +
+          '<input type="number" value="' + (fv[ax] != null ? fv[ax] : '') + '" onchange="FEAMeshControls._setBCValue(' + idx + ',\'' + ax + '\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"></div>';
+      });
+      html += '</div>';
+    } else if (kind === 'pressure') {
+      var pv = c.value || {};
+      html += _sectionTitle('Basınç');
+      html += _row('Magnitude (MPa)',
+        '<input type="number" step="0.1" value="' + (pv.magnitude != null ? pv.magnitude : '') + '" onchange="FEAMeshControls._setBCValue(' + idx + ',\'magnitude\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">'
+      );
+    } else if (kind === 'displacement') {
+      var uv = c.value || {};
+      html += _sectionTitle('Yer Değiştirme (mm)');
+      html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">';
+      ['ux', 'uy', 'uz'].forEach(function(ax) {
+        html += '<div><label style="display:block; font-size:0.55rem; color:var(--text-muted); margin-bottom:2px;">' + ax.replace('u', 'Δ').toUpperCase() + '</label>' +
+          '<input type="number" step="0.01" value="' + (uv[ax] != null ? uv[ax] : '') + '" onchange="FEAMeshControls._setBCValue(' + idx + ',\'' + ax + '\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(34,197,94,0.08); border-left:2px solid var(--accent-success, #22c55e); font-size:0.58rem; color:var(--text-secondary);">Fixed Support: seçili yüzün tüm serbestlik dereceleri sabitlenir (değer gerekmez).</div>';
+    }
+
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // ─── 3.9 SONUÇ (result item) ──────────────────────────────────────────────
+  function _renderResultItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'result', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'result';
+    var solved = !!(meshNode.data && meshNode.data.solver && meshNode.data.solver.results);
+    var type = c.type || 'vonMises';
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Sonuç ' + (idx + 1));
+    html += _sectionTitle('Sonuç Tipi');
+    html += _row('Alan',
+      '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'type\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="vonMises"' + (type === 'vonMises' ? ' selected' : '') + '>Equivalent (von-Mises) Stress</option>' +
+      '<option value="displacement"' + (type === 'displacement' ? ' selected' : '') + '>Total Deformation</option>' +
+      '<option value="principalMax"' + (type === 'principalMax' ? ' selected' : '') + '>Maks. Asal Gerilme</option>' +
+      '<option value="principalMin"' + (type === 'principalMin' ? ' selected' : '') + '>Min. Asal Gerilme</option>' +
+      '<option value="deformed"' + (type === 'deformed' ? ' selected' : '') + '>Deforme Şekil</option>' +
+      '</select>'
+    );
+
+    if (solved) {
+      var r = meshNode.data.solver.results;
+      var summary = ({
+        'vonMises': 'Maks von Mises: ' + (r.maxVonMises != null ? r.maxVonMises.toFixed(1) + ' MPa' : '—'),
+        'displacement': 'Maks deplasman: ' + (r.maxDisplacement != null ? r.maxDisplacement.toFixed(3) + ' mm' : '—'),
+        'principalMax': 'Maks asal: ' + (r.maxPrincipalStress != null ? r.maxPrincipalStress.toFixed(1) + ' MPa' : '—'),
+        'principalMin': 'Min asal: ' + (r.minPrincipalStress != null ? r.minPrincipalStress.toFixed(1) + ' MPa' : '—'),
+        'deformed': 'Deforme şekil (otomatik ölçek)'
+      })[type] || '';
+      html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(34,197,94,0.08); border-left:2px solid var(--accent-success, #22c55e); font-size:0.6rem; color:var(--text-secondary);">' + summary + '</div>';
+      html += '<button onclick="FEAMeshControls._showResult(\'' + meshNode.id + '\',\'' + type + '\')" style="width:100%; margin-top:10px; padding:8px 10px; font-size:0.7rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;">▶ 3D Görüntüleyicide Göster</button>';
+    } else {
+      html += '<div style="margin-top:8px; padding:8px; background:rgba(245,158,11,0.1); border-left:2px solid var(--accent-warning, #f59e0b); font-size:0.58rem; color:var(--accent-warning, #f59e0b); line-height:1.5;">⚠ Henüz çözüm yok. Önce Çözüm → Çözücü Ayarları\'ndan <b>ÇÖZ</b> deyin; sonuç burada görüntülenebilir.</div>';
+    }
+
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // 4. DISPATCH — outline'ın çağırdığı public renderer
   // ─────────────────────────────────────────────────────────────────────────
@@ -509,7 +621,9 @@
     soi:             _renderSoiItem,
     refinement:      _renderRefinementItem,
     methodOverride:  _renderMethodOverrideItem,
-    virtualTopology: _renderVirtualTopologyItem
+    virtualTopology: _renderVirtualTopologyItem,
+    bc:              _renderBCItem,
+    result:          _renderResultItem
   };
 
   function renderControlDetail(meshNode, controlType, idx) {
@@ -677,6 +791,60 @@
     _setField('soi', idx, 'targetSize', v);
   }
 
+  // ─── BC handler'ları ──────────────────────────────────────────────────────
+  function _setBCFace(idx, faceVal) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'bc').slice();
+    var c = list[idx];
+    if (!c) return;
+    c.faceId = (faceVal === '' || faceVal == null) ? null : (isNaN(+faceVal) ? faceVal : +faceVal);
+    global.FEAMeshOutline._setControlList(meshNode, 'bc', list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  function _setBCKind(idx, kind) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'bc').slice();
+    var c = list[idx];
+    if (!c) return;
+    c.kind = kind;
+    // Değer yapısını tipe göre sıfırla
+    if (kind === 'fixed') c.value = null;
+    else if (kind === 'force') c.value = { fx: 0, fy: 0, fz: 0 };
+    else if (kind === 'pressure') c.value = { magnitude: 0 };
+    else if (kind === 'displacement') c.value = { ux: 0, uy: 0, uz: 0 };
+    global.FEAMeshOutline._setControlList(meshNode, 'bc', list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  function _setBCValue(idx, field, raw) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'bc').slice();
+    var c = list[idx];
+    if (!c) return;
+    var v = parseFloat(raw);
+    if (!isFinite(v)) v = 0;
+    c.value = c.value || {};
+    c.value[field] = v;
+    global.FEAMeshOutline._setControlList(meshNode, 'bc', list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  // ─── Sonuç handler'ı: seçili alanı 3D viewer'da göster ────────────────────
+  function _showResult(meshNodeId, type) {
+    // Result type → heatMapMetric eşlemesi (veFEAApplyHeatMap result-* bekler)
+    var metric = 'result-' + type;
+    if (typeof global.veFEAApplyHeatMap === 'function') {
+      try { global.veFEAApplyHeatMap(meshNodeId, metric); } catch (e) { console.warn('[FEA] sonuç gösterilemedi:', e); }
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // 6. MESHER ENTEGRASYONU — mesh build sırasında çağrılan helper'lar
   // ─────────────────────────────────────────────────────────────────────────
@@ -768,7 +936,11 @@
     _setEdgeSizingMode:         _setEdgeSizingMode,
     _setRefinementEntityType:   _setRefinementEntityType,
     _toggleRefinementEntity:    _toggleRefinementEntity,
-    _setSoiTargetSize:          _setSoiTargetSize
+    _setSoiTargetSize:          _setSoiTargetSize,
+    _setBCFace:                 _setBCFace,
+    _setBCKind:                 _setBCKind,
+    _setBCValue:                _setBCValue,
+    _showResult:                _showResult
   };
 
   global.FEAMeshControls = api;

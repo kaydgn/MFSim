@@ -494,6 +494,51 @@ function veFEASubmitMeshBuild(nodeId) {
   }
   veFEABuildMeshForNode(nodeId);
 }
+// ─── 2.5 MALZEME (ayrı dal — ANSYS Materials) ───────────────────────────────
+// Faz 2: malzeme seçimi BC panelinden ayrıldı, kendi outline dalına taşındı.
+// Veri yine node.data.bc.materialId'de tutulur (solver oradan okur).
+function getFEAMaterialPropertiesHTML(node) {
+  var d = node.data || {};
+  if (!d.bc) d.bc = { materialId: 'steel-st37', assignments: [] };
+
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+  html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Malzeme</div>';
+  html += '</div>';
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">Model'+
+    ' malzemesi — çözücü elastik özellikleri (E, ν, ρ, σ<sub>y</sub>) buradan okur.</div>';
+
+  html += veFEASectionTitle('Malzeme Seçimi');
+  if (typeof veFEAMaterialsByCategory === 'function') {
+    html += '<select onchange="veFEABCSetMaterial(\'' + node.id + '\', this.value)" style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+    var groups = veFEAMaterialsByCategory();
+    Object.keys(groups).forEach(function (cat) {
+      html += '<optgroup label="' + veFEAMaterialCategoryLabel(cat) + '">';
+      groups[cat].forEach(function (m) {
+        var sel = (d.bc.materialId === m.id) ? ' selected' : '';
+        html += '<option value="' + m.id + '"' + sel + '>' + m.label + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    html += '</select>';
+    var matSel = veFEAMaterialById(d.bc.materialId) || veFEAMaterialById('steel-st37');
+    if (matSel) {
+      html += '<div style="font-size:0.62rem; color:var(--text-muted); margin-bottom:6px; line-height:1.6; padding:8px; background:var(--bg-tertiary); border:1px solid var(--border-color);">';
+      html += '<b style="color:var(--text-primary);">' + matSel.label + '</b><br>';
+      html += 'E = ' + Math.round(matSel.youngsModulus) + ' MPa<br>';
+      html += 'ν = ' + matSel.poissonsRatio.toFixed(2) + '<br>';
+      html += 'ρ = ' + matSel.density + ' kg/m³<br>';
+      html += 'σ<sub>y</sub> = ' + matSel.yieldStrength + ' MPa';
+      html += '</div>';
+    }
+  } else {
+    html += '<div style="font-size:0.62rem; color:var(--text-muted);">Malzeme kütüphanesi yüklenmedi.</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
 // ─── 3. SINIR KOŞULLARI ─────────────────────────────────────────────────────
 function getFEABCPropertiesHTML(node) {
   var d = node.data || {};
