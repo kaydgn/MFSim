@@ -148,8 +148,8 @@ function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
   var propertiesPanel = document.querySelector('.ve-properties');
   if(!content) return;
-  // Bir bileşen seçildi → paneli göster
-  if(propertiesPanel) propertiesPanel.classList.remove('ve-prop-hidden');
+  // Bir bileşen seçildi → paneli yumuşakça aç
+  if(typeof veRevealPropertiesPanel === 'function') veRevealPropertiesPanel();
   
   // Panel genişliğini KORUYORUZ - kullanıcı değiştirmedikçe dokunmuyoruz
   // Sadece ilk açılışta varsayılan genişlik ayarlanır

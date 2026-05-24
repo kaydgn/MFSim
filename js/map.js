@@ -2869,12 +2869,25 @@ function veEditNodeName(nodeId) {
   });
 }
 
+// Paneli yumuşakça aç: genişlik anında uygulanır (grafikler tam genişlikte
+// çizilsin), yalnızca opaklık + kayma animasyonlu olur. Kapanış (ve-prop-hidden)
+// genişliği animasyonla daraltarak canvas'ı pürüzsüz genişletir.
+function veRevealPropertiesPanel() {
+  var panel = document.querySelector('.ve-properties');
+  if(!panel || !panel.classList.contains('ve-prop-hidden')) return;
+  panel.classList.add('ve-prop-no-width-anim');
+  panel.classList.remove('ve-prop-hidden');
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      panel.classList.remove('ve-prop-no-width-anim');
+    });
+  });
+}
+
 function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Birden fazla bileşen seçili → paneli göster
-  var panel = document.querySelector('.ve-properties');
-  if(panel) panel.classList.remove('ve-prop-hidden');
+  veRevealPropertiesPanel();
 
   var html = '<div style="text-align:center; padding:20px;">';
   html += '<div style="font-size:2rem; margin-bottom:12px;">📦</div>';

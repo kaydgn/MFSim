@@ -4476,6 +4476,7 @@ function veSetSlotXAxis(slotIdx, optIdx) {
     startX = e.clientX;
     startWidth = properties.offsetWidth;
     resizer.classList.add('active');
+    properties.classList.add('ve-prop-no-anim'); // sürükleme sırasında geçişi kapat
     document.body.style.cursor = 'ew-resize';
     document.body.style.userSelect = 'none';
     e.preventDefault();
@@ -4496,6 +4497,7 @@ function veSetSlotXAxis(slotIdx, optIdx) {
     if(isResizing) {
       isResizing = false;
       resizer.classList.remove('active');
+      properties.classList.remove('ve-prop-no-anim');
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }
