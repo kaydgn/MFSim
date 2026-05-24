@@ -135,6 +135,58 @@ describe('Kutu → Heks8 structured mesh', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// B.5 — Face Sizing kontrolünün gerçek mesh etkisi (eksenel kümeleme bias)
+describe('Face Sizing → eksenel kümeleme bias (B.5)', () => {
+  function uniqueSortedAxis(mesh, axis) {
+    var set = {};
+    var n = mesh.nodes.length / 3;
+    for (var i = 0; i < n; i++) set[mesh.nodes[i * 3 + axis].toFixed(5)] = true;
+    return Object.keys(set).map(Number).sort(function(a, b) { return a - b; });
+  }
+
+  test('faceXMin sizing düğümleri X−\'e doğru kümeler, eleman sayısı korunur', () => {
+    var geom = { type: 'box', params: { width: 20, height: 10, depth: 10 } };
+    var base = veFEAMeshFromGeometry(geom, { size: 5 });
+    var biased = veFEAMeshFromGeometry(geom, {
+      size: 5,
+      faceSizingControls: [{ faceId: 'faceXMin', size: 1, behavior: 'soft' }]
+    });
+    // Eleman + düğüm sayısı değişmez (sadece konum kayar → mesh geçerli kalır)
+    expect(biased.elements.length).toBe(base.elements.length);
+    expect(biased.nodes.length).toBe(base.nodes.length);
+    // X eksenindeki ilk aralık (X−'e en yakın) son aralıktan belirgin küçük olmalı
+    var xs = uniqueSortedAxis(biased, 0);
+    expect(xs.length).toBeGreaterThan(2);
+    var firstGap = xs[1] - xs[0];
+    var lastGap = xs[xs.length - 1] - xs[xs.length - 2];
+    expect(firstGap).toBeLessThan(lastGap * 0.6);
+    // Tüm koordinatlar sonlu (NaN yok)
+    for (var i = 0; i < biased.nodes.length; i++) expect(isFinite(biased.nodes[i])).toBe(true);
+  });
+
+  test('hedef boyut ≥ global ise kümeleme uygulanmaz (no-op)', () => {
+    var geom = { type: 'box', params: { width: 20, height: 10, depth: 10 } };
+    var base = veFEAMeshFromGeometry(geom, { size: 5 });
+    var noop = veFEAMeshFromGeometry(geom, {
+      size: 5, faceSizingControls: [{ faceId: 'faceXMax', size: 8 }]
+    });
+    var xb = uniqueSortedAxis(base, 0);
+    var xn = uniqueSortedAxis(noop, 0);
+    expect(xn).toEqual(xb);
+  });
+
+  test('eksenel olmayan yüz (cylinder faceSide) bias\'ı mesh\'i bozmaz', () => {
+    var geom = { type: 'cylinder', params: { radius: 10, height: 20 } };
+    var base = veFEAMeshFromGeometry(geom, { size: 5 });
+    var withSide = veFEAMeshFromGeometry(geom, {
+      size: 5, faceSizingControls: [{ faceId: 'faceSide', size: 1 }]
+    });
+    // faceSide eksenel değil → veFEAApplyLocalSizing no-op → eleman sayısı korunur
+    expect(withSide.elements.length).toBe(base.elements.length);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Silindir → O-grid Hex8 mesh (Butterfly topology)', () => {
   test('crossSection "ogrid" → tip hex8 (wedge6 yerine)', () => {
     var m = veFEAMeshFromGeometry(

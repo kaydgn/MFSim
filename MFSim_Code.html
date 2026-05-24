@@ -24948,6 +24948,14 @@ function veFEAMeshFromGeometry(geometry, opts) {
       opts.localSizing.selection !== 'none' && _veFEALocalSizingActive(opts.localSizing)) {
     mesh = veFEAApplyLocalSizing(mesh, opts.localSizing);
   }
+  // Face Sizing kontrolleri (ANSYS §5.1) — eksenel yüzlerde hedef boyuta göre
+  // kümeleme bias'ı uygula (B.5: lokal kontrollerin gerçek mesh etkisi).
+  // Sadece düğüm kaydırma → mesh her zaman geçerli (eleman ekleme/silme yok).
+  // localSizing ile aynı konumda (tet4/quadratic dönüşümünden ÖNCE) ki
+  // midpoint düğümleri doğru pozisyonda hesaplansın.
+  if (mesh && !mesh.error && Array.isArray(opts.faceSizingControls) && opts.faceSizingControls.length) {
+    mesh = _veFEAApplyFaceSizingBias(mesh, opts.faceSizingControls, size);
+  }
   // elementType: hex8/wedge6 → tet4 decomposition (yüzey tri3 etkilenmez)
   // 'tet4-done' sentinel: boundary-snap fallback'i zaten tet4 dönüşümünü yaptı.
   if (mesh && !mesh.error && elementType === 'tet4') {
@@ -25020,6 +25028,34 @@ function veFEAApplyLocalSizing(mesh, localSizing) {
   var mode = localSizing.biasMode || 'power';
   if (mode === 'inflation') return _veFEAApplyInflation(mesh, localSizing, axis, towardMax);
   return _veFEAApplyPowerBias(mesh, localSizing, axis, towardMax);
+}
+
+// Face Sizing kontrollerini eksenel kümeleme bias'ına çevir (B.5).
+// Mevcut _veFEAApplyFaceSizingControls (named-selection işaretleme) ile AYRI:
+// bu fonksiyon GEOMETRİK etki uygular (düğümleri yüze doğru kümeler), tet4/
+// quadratic dönüşümünden ÖNCE çağrılır. Sadece düğüm kaydırma → mesh geçerli
+// kalır. Eksenel olmayan yüzlerde (silindir yan yüzü, STEP) veFEAApplyLocalSizing
+// mesh'i değiştirmeden döner.
+function _veFEAApplyFaceSizingBias(mesh, controls, globalSize) {
+  if (!mesh || mesh.error || !Array.isArray(controls) || controls.length === 0) return mesh;
+  var gs = (isFinite(globalSize) && globalSize > 0) ? globalSize : 10;
+  controls.forEach(function(c) {
+    if (!c) return;
+    var faceName = c.faceId;
+    if (faceName == null && Array.isArray(c.faceIds) && c.faceIds.length === 1) faceName = c.faceIds[0];
+    if (faceName == null) return;
+    var target = Number(c.size);
+    if (!isFinite(target) || target <= 0) return;
+    var ratio = gs / target;
+    if (ratio <= 1.01) return;  // hedef ≥ global → kümeleme gereksiz
+    var strength = 0.30 + 0.18 * (ratio - 1);
+    if (strength > 0.85) strength = 0.85;
+    if (c.behavior === 'hard') strength = Math.min(0.9, strength + 0.1);
+    mesh = veFEAApplyLocalSizing(mesh, {
+      selection: faceName, biasMode: 'power', biasStrength: strength
+    });
+  });
+  return mesh;
 }
 
 function _veFEAApplyPowerBias(mesh, ls, axis, towardMax) {
