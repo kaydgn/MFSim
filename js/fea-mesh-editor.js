@@ -468,7 +468,7 @@ function _veFEAEditorBuildToolbar(node) {
 
   // Mesh sil (mesh varsa)
   if (hasMesh) {
-    toolbar.innerHTML += '<button onclick="veFEAClearMeshForNode(\'' + node.id + '\')" style="padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer;">🗑 Mesh\'i Sil</button>';
+    toolbar.innerHTML += '<button onclick="veFEAClearMeshForNode(\'' + node.id + '\')" style="padding:6px 10px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer;"><span class="mf-ico mf-ico-trash"></span> Mesh\'i Sil</button>';
   }
 
   return toolbar;
@@ -594,7 +594,7 @@ function _veFEAEditorBuildLeftPanel(node) {
   var detailsHeader = document.createElement('div');
   detailsHeader.id = 've-fea-details-header';
   detailsHeader.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); font-size:0.58rem; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; flex-shrink:0;';
-  detailsHeader.innerHTML = '<span>⚙ Details</span>' +
+  detailsHeader.innerHTML = '<span><span class="mf-ico mf-ico-settings"></span> Details</span>' +
     '<span style="font-weight:600; font-size:0.5rem; color:var(--text-muted); letter-spacing:0.04em;">Seçili nesnenin ayarları</span>';
   panel.appendChild(detailsHeader);
 
@@ -1055,7 +1055,7 @@ function _veFEAEditorTopologyHTML(node) {
   var edgeCount = (typeof veFEATopologyEdgeCount === 'function') ? veFEATopologyEdgeCount(topo) : (topo.edges ? topo.edges.count : 0);
   var vertexCount = (typeof veFEATopologyVertexCount === 'function') ? veFEATopologyVertexCount(topo) : (topo.vertices ? topo.vertices.count : 0);
   html += '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:8px; font-size:0.6rem;">' +
-    '<div style="font-weight:600; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">📐 Geometri Özeti</div>' +
+    '<div style="font-weight:600; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);"><span class="mf-ico mf-ico-ruler"></span> Geometri Özeti</div>' +
     '<div style="display:grid; grid-template-columns:1fr 1fr; gap:3px 12px;">' +
       '<span style="color:var(--text-secondary);">Geometri tipi</span><span style="text-align:right; font-weight:600;">' + (geom.sourceLabel || geom.type) + '</span>' +
       '<span style="color:var(--text-secondary);">Yüzey sayısı</span><span style="text-align:right; font-weight:600;">' + topo.faces.length + '</span>' +
@@ -1149,7 +1149,7 @@ function _veFEAEditorTopologyHTML(node) {
     '</button>';
     // Yeniden adlandır (✏️) butonu
     var defaultLabelEsc = f.label.replace(/'/g, '\\\'');
-    html += '<button onclick="veFEARenameGeometryFace(\'' + node.id + '\', \'' + f.id + '\', \'' + defaultLabelEsc + '\')" title="Yüzü yeniden adlandır" style="padding:0 8px; background:' + rowBg + '; border:1px solid ' + rowBorder + '; cursor:pointer; font-size:0.72rem; color:var(--text-muted);" onmouseover="this.style.color=\'#22c55e\'" onmouseout="this.style.color=\'var(--text-muted)\'">✏</button>';
+    html += '<button onclick="veFEARenameGeometryFace(\'' + node.id + '\', \'' + f.id + '\', \'' + defaultLabelEsc + '\')" title="Yüzü yeniden adlandır" style="padding:0 8px; background:' + rowBg + '; border:1px solid ' + rowBorder + '; cursor:pointer; font-size:0.72rem; color:var(--text-muted);" onmouseover="this.style.color=\'#22c55e\'" onmouseout="this.style.color=\'var(--text-muted)\'"><span class="mf-ico mf-ico-edit"></span></button>';
     html += '</div>';
   });
 

@@ -84,7 +84,7 @@ function getTransferPropertiesHTML(node) {
     html += '</div>';
     
     // ── BİLGİ NOTU ──
-    html += '<div class="sw-pkg-desc">⚡ Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır. Sonuçlar her kademe için ayrı iSCAAN tablosu olarak raporlanır.</div>';
+    html += '<div class="sw-pkg-desc"><span class="mf-ico mf-ico-zap"></span> Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır. Sonuçlar her kademe için ayrı iSCAAN tablosu olarak raporlanır.</div>';
     
     html += '</div>';
     return html;

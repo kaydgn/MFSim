@@ -137,7 +137,7 @@
 
   function _deleteBtn(controlType, idx) {
     var oid = _outlineId(controlType, idx);
-    return '<button onclick="if(confirm(\'Bu kontrolü silmek istediğine emin misin?\')) FEAMeshOutline.removeControl(\'' + oid + '\')" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--accent-danger, #ef4444); color:#fff; border:none; cursor:pointer;">🗑 Sil</button>';
+    return '<button onclick="if(confirm(\'Bu kontrolü silmek istediğine emin misin?\')) FEAMeshOutline.removeControl(\'' + oid + '\')" style="padding:5px 10px; font-size:0.6rem; font-weight:600; background:var(--accent-danger, #ef4444); color:#fff; border:none; cursor:pointer;"><span class="mf-ico mf-ico-trash"></span> Sil</button>';
   }
 
   function _multiSelect(items, selected, onChange, options) {

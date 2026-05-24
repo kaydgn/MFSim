@@ -8,6 +8,8 @@
   <!-- Leaflet JS ve Plotly login sonrasi MFSim Loader tarafindan yuklenir -->
   <script type="text/x-mfsim-defer" src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" data-mfsim-label="Harita kütüphanesi (Leaflet)..."></script>
   <script type="text/x-mfsim-defer" src="https://cdn.plot.ly/plotly-gl3d-2.35.2.min.js" data-mfsim-label="Grafik kütüphanesi (Plotly)..."></script>
+  <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="css/icons.css" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="manifest" href="pwa/manifest.json" />
   <meta name="theme-color" content="#1a1a2e" />
@@ -21,7 +23,7 @@
 <!-- ═══ LOADING SCREEN (login sonrasi modul yuklenirken gosterilir) ═══ -->
 <div id="mfsim-loading-screen" class="mfsim-loading-screen">
   <div class="mfsim-loading-card">
-    <div class="mfsim-loading-logo">⚙ MFSim</div>
+    <div class="mfsim-loading-logo"><span class="mf-ico mf-ico-settings"></span> MFSim</div>
     <div class="mfsim-loading-subtitle">Araç Performans Simülasyon Yazılımı</div>
     <div class="mfsim-loading-bar-wrap">
       <div id="mfsim-loading-bar" class="mfsim-loading-bar"></div>
@@ -62,15 +64,15 @@
 <!-- TAB BAR -->
 <div id="tab-bar">
   <div class="ve-menu-wrapper" style="position:relative;">
-    <span class="logo" id="ve-project-name-btn" onclick="veToggleFileMenu()" style="cursor:pointer;" title="Proje Menüsü">⚙ MFSim ▾</span>
+    <span class="logo" id="ve-project-name-btn" onclick="veToggleFileMenu()" style="cursor:pointer;" title="Proje Menüsü"><span class="mf-ico mf-ico-settings"></span>MFSim<span class="mf-ico mf-ico-chevron-down" style="width:0.8em;height:0.8em;opacity:0.6;"></span></span>
     <div id="ve-file-menu" class="ve-file-menu" style="display:none;">
-      <div class="ve-menu-item" onclick="veNewProject()">📄 Yeni Proje</div>
-      <div class="ve-menu-item" onclick="veLoadTopology()">📂 Proje Aç</div>
-      <div class="ve-menu-item" onclick="veSaveTopology()">💾 Projeyi Kaydet</div>
+      <div class="ve-menu-item" onclick="veNewProject()"><span class="mf-ico mf-ico-file-plus"></span> Yeni Proje</div>
+      <div class="ve-menu-item" onclick="veLoadTopology()"><span class="mf-ico mf-ico-folder-open"></span> Proje Aç</div>
+      <div class="ve-menu-item" onclick="veSaveTopology()"><span class="mf-ico mf-ico-save"></span> Projeyi Kaydet</div>
       <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="veClearAll()">🗑️ Projeyi Temizle</div>
+      <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
       <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;">🔒 Çıkış Yap</div>
+      <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
     </div>
   </div>
   <div class="ve-tab-group">
@@ -81,8 +83,8 @@
   </div>
   <span class="theme-selector" style="margin-left:auto;">
     <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
-    <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al">🔄</span>
-    <label for="theme-select" class="theme-selector-label">🎨</label>
+    <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
+    <label for="theme-select" class="theme-selector-label"><span class="mf-ico mf-ico-palette"></span></label>
     <select id="theme-select" onchange="changeTheme(this.value)">
       <optgroup label="Koyu">
         <option value="slate">Midnight</option>
@@ -115,7 +117,7 @@
       <div class="ve-sidebar" id="ve-sidebar">
         <!-- Modül seçici kaldırıldı — tek ana modül -->
         <input type="hidden" id="ve-module-select" value="full-throttle">
-        <div class="ve-sidebar-header">📦 Bileşenler</div>
+        <div class="ve-sidebar-header"><span class="mf-ico mf-ico-package"></span>Bileşenler</div>
         <div class="ve-sidebar-resizer" id="ve-sidebar-resizer"></div>
         <div class="ve-sidebar-content">
           
@@ -379,7 +381,7 @@
         <!-- Alt Uyarı Paneli -->
         <div class="ve-warnings-panel" id="ve-warnings-panel">
           <div class="ve-warnings-header" onclick="veToggleWarnings()">
-            <span>⚠️ Uyarılar</span>
+            <span><span class="mf-ico mf-ico-alert-triangle"></span> Uyarılar</span>
             <span id="ve-warnings-count" style="background:var(--accent-warning);color:#000;padding:1px 6px;border-radius:0;font-size:0.6rem;font-weight:600;">0</span>
             <span id="ve-warnings-toggle" style="margin-left:auto;font-size:0.7rem;">▲</span>
           </div>
@@ -392,10 +394,10 @@
       <!-- Sağ Panel - Özellikler -->
       <div class="ve-properties" id="ve-properties">
         <div class="ve-properties-resizer" id="ve-properties-resizer"></div>
-        <div class="ve-properties-header">⚙️ Özellikler</div>
+        <div class="ve-properties-header"><span class="mf-ico mf-ico-sliders"></span>Özellikler</div>
         <div class="ve-properties-content">
           <div class="ve-prop-empty">
-            <div class="ve-prop-empty-icon">🖱️</div>
+            <div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div>
             <div>Bir bileşen seçin</div>
             <small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small>
           </div>
@@ -408,25 +410,25 @@
   <div id="ve-page-cozucu" class="ve-sub-page" style="display:none;">
     <div class="ve-solver-container">
       <div class="ve-solver-header">
-        <h2>⚡ Çözücü</h2>
+        <h2><span class="mf-ico mf-ico-zap"></span>Çözücü</h2>
         <p>Topoloji modelini doğrulayın ve hesaplamayı başlatın</p>
       </div>
       
       <div class="ve-solver-content">
         <!-- Topoloji Doğrulama -->
         <div class="ve-solver-card">
-          <div class="ve-solver-card-title">🔍 Topoloji Doğrulama</div>
+          <div class="ve-solver-card-title"><span class="mf-ico mf-ico-search"></span> Topoloji Doğrulama</div>
           <div id="ve-solver-validation" class="ve-solver-card-body">
             <div class="ve-solver-empty">Doğrulama başlatılmadı. "Doğrula" butonuna tıklayın.</div>
           </div>
           <div class="ve-solver-card-footer">
-            <button class="ve-solver-btn primary" onclick="veSolverValidate()">🔍 Doğrula</button>
+            <button class="ve-solver-btn primary" onclick="veSolverValidate()"><span class="mf-ico mf-ico-search"></span>Doğrula</button>
           </div>
         </div>
         
         <!-- Hesaplama Ayarları (Solver bileşeninden okunur) -->
         <div class="ve-solver-card">
-          <div class="ve-solver-card-title">⚙️ Hesaplama Ayarları</div>
+          <div class="ve-solver-card-title"><span class="mf-ico mf-ico-sliders"></span> Hesaplama Ayarları</div>
           <div class="ve-solver-card-body">
             <div id="ve-solver-settings-summary" style="font-size:0.75rem; color:var(--text-muted); line-height:1.5;">
               Topolojideki <b>Çözücü</b> bileşenine tıklayarak ayarları yapılandırın (zaman modu, çözünürlük, yöntem vb.)
@@ -436,7 +438,7 @@
         
         <!-- Hesaplama Başlat -->
         <div class="ve-solver-card">
-          <div class="ve-solver-card-title">▶️ Hesaplama</div>
+          <div class="ve-solver-card-title"><span class="mf-ico mf-ico-play"></span> Hesaplama</div>
           <div class="ve-solver-card-body">
             <div id="ve-solver-progress" style="display:none;">
               <div class="ve-solver-progress-bar">
@@ -447,7 +449,7 @@
             <div id="ve-solver-result" class="ve-solver-empty">Henüz hesaplama yapılmadı.</div>
           </div>
           <div class="ve-solver-card-footer">
-            <button class="ve-solver-btn success" onclick="veSolverRun()" id="ve-solver-run-btn">▶️ Hesaplamayı Başlat</button>
+            <button class="ve-solver-btn success" onclick="veSolverRun()" id="ve-solver-run-btn"><span class="mf-ico mf-ico-play"></span>Hesaplamayı Başlat</button>
           </div>
         </div>
       </div>
@@ -463,15 +465,16 @@
         
         <!-- Browser Header -->
         <div style="padding:8px 12px; background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:6px;">
-          <span style="font-size:0.85rem; font-weight:700; color:var(--text-heading);">📊 Data Browser</span>
+          <span style="font-size:0.85rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Data Browser</span>
         </div>
 
         <!-- Solver Tab Bar -->
         <div id="ve-solver-tab-bar" class="ve-solver-tab-bar" style="display:none;"></div>
 
         <!-- Arama -->
-        <div style="padding:4px 8px; border-bottom:1px solid var(--border-color);">
-          <input type="text" id="ve-results-search" placeholder="🔍 Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:0; background:var(--bg-input); color:var(--text-primary);">
+        <div style="padding:4px 8px; border-bottom:1px solid var(--border-color); position:relative;">
+          <span class="mf-ico mf-ico-search" style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none; font-size:0.75rem;"></span>
+          <input type="text" id="ve-results-search" placeholder="Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px 5px 26px; font-size:0.75rem; border:1px solid var(--border-color); border-radius:0; background:var(--bg-input); color:var(--text-primary);">
         </div>
         
         <!-- Tree -->
@@ -479,8 +482,8 @@
         
         <!-- Aksiyon Butonları -->
         <div style="padding:6px 8px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
-          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle">🗑 Sonuçları Temizle</button>
-          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)">📊 Detaylı Rapor İndir</button>
+          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle"><span class="mf-ico mf-ico-trash"></span>Sonuçları Temizle</button>
+          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)"><span class="mf-ico mf-ico-bar-chart"></span>Detaylı Rapor İndir</button>
         </div>
       </div>
       

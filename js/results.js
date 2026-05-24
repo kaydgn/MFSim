@@ -155,7 +155,7 @@ function veUpdateResultsTree() {
   var html = '';
   html += '<div class="ve-tree-item">';
   html += '<div class="ve-tree-row">';
-  html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span><span class="icon">📁</span><span style="font-weight:600;">' + projectName + '</span>';
+  html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span><span class="icon"><span class="mf-ico mf-ico-folder"></span></span><span style="font-weight:600;">' + projectName + '</span>';
   html += '</div>';
   html += '<div class="ve-tree-children open">';
   
@@ -206,13 +206,13 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-sensor" style="padding-left:' + indentPx + 'px;">';
           html += '<span class="arrow" onclick="event.stopPropagation();veToggleTree(this.closest(\'.ve-tree-item\').querySelector(\'.ve-tree-sensor\'))" style="font-size:0.55rem; width:12px; cursor:pointer; color:var(--text-muted);">▶</span>';
-          html += '<span>📌</span> ' + sensorLabel;
+          html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + sensorLabel;
           html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + signals.length + ' sinyal</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
           signals.forEach(function(sig) {
             html += '<div class="ve-tree-signal" style="padding-left:' + (indentPx + 16) + 'px;" onmousedown="veStartSignalDrag(event,\'' + prefix + sn.id + '\',\'' + sig.id + '\')" title="' + sig.name + ' (' + sig.unit + ') — Sürükle">';
-            html += '<span>📊</span> ' + sig.name + ' <span style="font-size:0.55rem; color:var(--text-muted);">(' + sig.unit + ')</span>';
+            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sig.name + ' <span style="font-size:0.55rem; color:var(--text-muted);">(' + sig.unit + ')</span>';
             html += '</div>';
           });
           // Tümünü sürükle seçeneği
@@ -223,7 +223,7 @@ function veUpdateResultsTree() {
         } else {
           // Sinyal bulunamadı — eski davranış
           html += '<div class="ve-tree-sensor" style="padding-left:' + indentPx + 'px;" onmousedown="veStartSensorDrag(event,\'' + prefix + sn.id + '\')">';
-          html += '<span>📌</span> ' + sensorLabel + '</div>';
+          html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + sensorLabel + '</div>';
         }
       }
       
@@ -253,7 +253,7 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
           html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensors > 0 ? '▶' : ' ') + '</span>';
-          html += '<span class="icon">⚙️</span><span>' + escapeHTML(name) + '</span>';
+          html += '<span class="icon"><span class="mf-ico mf-ico-settings"></span></span><span>' + escapeHTML(name) + '</span>';
           html += ' <span style="font-size:0.6rem; color:var(--accent-primary); margin-left:auto; opacity:0.7;">' + totalSensors + '</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
@@ -303,7 +303,7 @@ function veUpdateResultsTree() {
         html += '<div style="padding:4px 0 2px 32px; font-size:0.65rem; color:var(--text-muted); font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">Bağlı olmayan</div>';
         unbound.forEach(function(sn) {
           html += '<div class="ve-tree-sensor" style="padding-left:36px; opacity:0.5;">';
-          html += '<span>📌</span> ' + escapeHTML(sn.customName || 'Sensör') + '</div>';
+          html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + escapeHTML(sn.customName || 'Sensör') + '</div>';
         });
       }
 
@@ -347,7 +347,7 @@ function veUpdateResultsTree() {
             var wizSensorId = '~' + compType;
 
             html += '<div class="ve-tree-signal" style="padding-left:48px;" onmousedown="veStartSignalDrag(event,\'' + wizSensorId + '\',\'' + ws.signal + '\')" title="' + sigName + ' (' + sigUnit + ') — Sürükle">';
-            html += '<span>📊</span> ' + sigName + ' <span style="font-size:0.55rem; color:var(--text-muted);">(' + sigUnit + ')</span>';
+            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sigName + ' <span style="font-size:0.55rem; color:var(--text-muted);">(' + sigUnit + ')</span>';
             html += '</div>';
           });
 
@@ -391,7 +391,7 @@ function veUpdateResultsTree() {
       html += '<div class="ve-tree-item">';
       html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
       html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
-      html += '<span class="icon">📊</span>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-bar-chart"></span></span>';
       html += '<span style="font-weight:600;">Diyagramlar</span>';
       html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + totalDiags + '</span>';
       html += '</div>';
@@ -444,7 +444,7 @@ function veUpdateResultsTree() {
       html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
       html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
       html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
-      html += '<span class="icon">📋</span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-clipboard"></span></span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
       html += '</div>';
       html += '<div class="ve-tree-children">';
       // Girdi Özeti group
@@ -469,27 +469,27 @@ function veUpdateResultsTree() {
       html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
       html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
       html += '<span onclick="veRenderDetailedReport(\'performans\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Araç Performans Özeti">';
-      html += '<span class="icon" style="font-size:0.6rem;">📊</span><span style="font-size:0.68rem;">Araç Performans Özeti</span></span></div>';
+      html += '<span class="icon" style="font-size:0.6rem;"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:0.68rem;">Araç Performans Özeti</span></span></div>';
       html += '<div class="ve-tree-children">';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-grade\')" style="cursor:pointer; padding-left:24px;" title="Eğim Kabiliyeti">';
       html += '<span class="icon" style="font-size:0.58rem;">⛰️</span><span style="font-size:0.66rem;">Eğim Kabiliyeti</span></div>';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-accel\')" style="cursor:pointer; padding-left:24px;" title="Hızlanma">';
       html += '<span class="icon" style="font-size:0.58rem;">🏎️</span><span style="font-size:0.66rem;">Hızlanma</span></div>';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-upshifts\')" style="cursor:pointer; padding-left:24px;" title="Vites Geçişleri (Detaylı)">';
-      html += '<span class="icon" style="font-size:0.58rem;">📊</span><span style="font-size:0.66rem;">Vites Geçişleri (Detaylı)</span></div>';
+      html += '<span class="icon" style="font-size:0.58rem;"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:0.66rem;">Vites Geçişleri (Detaylı)</span></div>';
       html += '</div>';
       html += '</div></div>';
       // Topoloji Raporu (TXT) — modül raporunun üstünde
       if(typeof nodes !== 'undefined' && nodes.length > 0) {
         html += '<div style="margin-top:2px;">';
         html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
-        html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
+        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
         html += '</div>';
       }
       // Tam Gaz Hızlanma Raporu (TXT)
       html += '<div style="margin-top:2px;">';
       html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Tam Gaz Hızlanma TXT rapor önizleme">';
-      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Tam Gaz Hızlanma Raporu (TXT)</span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--accent-primary);">Tam Gaz Hızlanma Raporu (TXT)</span></div>';
       html += '</div>';
     }
 
@@ -499,10 +499,10 @@ function veUpdateResultsTree() {
       // Topoloji Raporu (TXT) — modül raporunun üstünde
       if(typeof nodes !== 'undefined' && nodes.length > 0) {
         html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
-        html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
+        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
       }
       html += '<div class="ve-tree-row" onclick="veRenderSegmentDriveTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Hızlanma-Yavaşlama TXT rapor önizleme">';
-      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--accent-primary);">Hızlanma-Yavaşlama Raporu (TXT)</span></div>';
       html += '</div>';
     }
 
@@ -512,10 +512,10 @@ function veUpdateResultsTree() {
       // Topoloji Raporu (TXT) — modül raporunun üstünde
       if(typeof nodes !== 'undefined' && nodes.length > 0) {
         html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
-        html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
+        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
       }
       html += '<div class="ve-tree-row" onclick="veRenderObstacleCrossingTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Engel Atlama TXT rapor önizleme">';
-      html += '<span class="icon">📄</span><span style="font-weight:600; color:var(--accent-primary);">Engel Atlama Raporu (TXT)</span></div>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--accent-primary);">Engel Atlama Raporu (TXT)</span></div>';
       html += '</div>';
     }
   }
@@ -765,7 +765,7 @@ function veRenderDetailedReport(filter) {
     motorDetailHTML += '<div id="dr-engine-crossV" class="dr-chart-crossV"></div>';
     motorDetailHTML += '<div id="dr-engine-crossH" class="dr-chart-crossH"></div>';
     motorDetailHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:0.58rem; color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır  │  Çift Tık — Sıfırla</div>';
-    motorDetailHTML += '<span id="dr-engine-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:0.62rem; font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:0;" onclick="drEngineResetZoom()">🔍 1.0×</span>';
+    motorDetailHTML += '<span id="dr-engine-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:0.62rem; font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:0;" onclick="drEngineResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
     motorDetailHTML += '</div>';
   } else {
     motorDetailHTML = '<span style="color:var(--text-muted); font-style:italic;">Motor tork eğrisi verisi bulunamadı</span>';
@@ -959,7 +959,7 @@ function veRenderDetailedReport(filter) {
     ecmHTML += '<div id="dr-ecm-chart-wrap" style="margin-top:14px; position:relative; max-width:800px; margin:0 auto; height:450px; border:1px solid var(--border-color); border-radius:0; overflow:hidden; background:var(--bg-secondary); cursor:crosshair;">';
     ecmHTML += '<canvas id="dr-ecm-chart" style="width:100%; height:100%; display:block;"></canvas>';
     ecmHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:0.58rem; color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır</div>';
-    ecmHTML += '<span id="dr-ecm-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:0.62rem; font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:0;" onclick="drEcmResetZoom()">🔍 1.0×</span>';
+    ecmHTML += '<span id="dr-ecm-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:0.62rem; font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:0;" onclick="drEcmResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
     ecmHTML += '</div>';
   } else {
     ecmHTML = '<span style="color:var(--text-muted); font-style:italic;">Motor-TC eşleştirme verisi bulunamadı</span>';
@@ -977,14 +977,14 @@ function veRenderDetailedReport(filter) {
   // ═══ HTML oluştur ═══
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
-  html += '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:1rem;">📋</span>';
+  html += '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:1rem;"><span class="mf-ico mf-ico-clipboard"></span></span>';
   html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">' + reportTitle + '</span>';
   if(filter) {
     html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Tüm Rapor</button>';
   }
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadReportPDF()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 PDF İndir</button>';
+  html += '<button onclick="veDownloadReportPDF()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> PDF İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
@@ -2191,12 +2191,12 @@ function veRenderTXTReport(reportType) {
   // Header bar
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:1rem;">📄</span>';
+  html += '<span style="font-size:1rem;"><span class="mf-ico mf-ico-file-text"></span></span>';
   html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">' + reportTitle + '</span>';
   html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
@@ -2243,12 +2243,12 @@ function veRenderSegmentDriveTXTReport() {
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:1rem;">📄</span>';
+  html += '<span style="font-size:1rem;"><span class="mf-ico mf-ico-file-text"></span></span>';
   html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Hızlanma-Yavaşlama Raporu (TXT)</span>';
   html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
@@ -2287,12 +2287,12 @@ function veRenderObstacleCrossingTXTReport() {
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:1rem;">📄</span>';
+  html += '<span style="font-size:1rem;"><span class="mf-ico mf-ico-file-text"></span></span>';
   html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Engel Atlama Raporu (TXT)</span>';
   html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
@@ -2332,12 +2332,12 @@ function veRenderTopologyTXTReport() {
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:1rem;">📄</span>';
+  html += '<span style="font-size:1rem;"><span class="mf-ico mf-ico-file-text"></span></span>';
   html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Topoloji Detay Raporu (TXT)</span>';
   html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">📥 TXT İndir</button>';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
@@ -2369,14 +2369,14 @@ function veDownloadTXTFromPreview() {
   box.style.cssText = 'width:340px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
   box.innerHTML = '' +
     '<div style="padding:10px 14px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); display:flex; align-items:center; justify-content:space-between;">' +
-      '<span style="font-size:0.82rem; font-weight:700; color:#e2e8f0;">📥 TXT Rapor İndir</span>' +
+      '<span style="font-size:0.82rem; font-weight:700; color:#e2e8f0;"><span class="mf-ico mf-ico-download"></span> TXT Rapor İndir</span>' +
       '<button onclick="document.getElementById(\'ve-txt-author-overlay\').remove()" style="width:24px; height:24px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:0; color:#e2e8f0; cursor:pointer; font-size:0.85rem;">✕</button>' +
     '</div>' +
     '<div style="padding:14px 16px;">' +
       '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Yazar Adı:</label>' +
       '<input type="text" id="ve-txt-author-input" placeholder="İsim Soyisim" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; box-sizing:border-box;">' +
       '<div id="ve-txt-author-email" style="margin-top:6px; font-size:0.65rem; color:var(--text-muted); min-height:1.2em;"></div>' +
-      '<button id="ve-txt-author-ok" style="width:100%; margin-top:10px; padding:8px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:0; font-size:0.78rem; font-weight:700; cursor:pointer;">📥 İndir</button>' +
+      '<button id="ve-txt-author-ok" style="width:100%; margin-top:10px; padding:8px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:0; font-size:0.78rem; font-weight:700; cursor:pointer;"><span class="mf-ico mf-ico-download"></span> İndir</button>' +
     '</div>';
   ov.appendChild(box);
   document.body.appendChild(ov);
@@ -4019,7 +4019,7 @@ function veRenderSlot(slotIdx) {
     html += '</div>';
     html += '<div class="ve-chart-tooltip" id="ve-tooltip-' + slotIdx + '"></div>';
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
-    html += '<div style="font-size:1.5rem; margin-bottom:6px;">📈</div>Simülasyon sonrası grafik görünecek</div>';
+    html += '<div style="font-size:1.5rem; margin-bottom:6px;"><span class="mf-ico mf-ico-trending-up"></span></div>Simülasyon sonrası grafik görünecek</div>';
     // ── Grafik içi legend (overlay, sürüklenebilir) ──
     if(sensors.length > 0) {
       html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';

@@ -275,7 +275,7 @@ function showAnnotationContextMenu(e, annot) {
   menu.style.cssText = 'position:fixed; left:' + e.clientX + 'px; top:' + e.clientY + 'px; display:block; z-index:999999;';
 
   var items = '';
-  items += '<div class="ve-menu-item" data-action="edit">✏️ Metni Düzenle</div>';
+  items += '<div class="ve-menu-item" data-action="edit"><span class="mf-ico mf-ico-edit"></span> Metni Düzenle</div>';
   items += '<div class="ve-menu-divider"></div>';
 
   // Renk seçenekleri
@@ -297,7 +297,7 @@ function showAnnotationContextMenu(e, annot) {
   }
 
   items += '<div class="ve-menu-divider"></div>';
-  items += '<div class="ve-menu-item" data-action="delete" style="color:var(--accent-danger);">🗑️ Sil</div>';
+  items += '<div class="ve-menu-item" data-action="delete" style="color:var(--accent-danger);"><span class="mf-ico mf-ico-trash"></span> Sil</div>';
 
   menu.innerHTML = items;
   document.body.appendChild(menu);

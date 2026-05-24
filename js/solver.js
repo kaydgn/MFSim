@@ -322,7 +322,7 @@ function veSolverRun() {
         // ── Solver İstatistikleri Kartı ──
         if(ss.method) {
           rhtml += '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; padding:10px; margin-bottom:10px;">';
-          rhtml += '<div style="font-size:0.68rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;">📊 Solver İstatistikleri</div>';
+          rhtml += '<div style="font-size:0.68rem; font-weight:600; color:var(--text-heading); margin-bottom:6px;"><span class="mf-ico mf-ico-bar-chart"></span> Solver İstatistikleri</div>';
           rhtml += '<table style="width:100%; font-size:0.65rem; color:var(--text-secondary);">';
           
           if(ss.method === 'rk45') {
@@ -339,7 +339,7 @@ function veSolverRun() {
             var ee = ss.energyError;
             var errColor = ee.error_pct < 0.1 ? '#22c55e' : ee.error_pct < 1.0 ? '#f59e0b' : '#ef4444';
             var errLabel = ee.error_pct < 0.1 ? 'Mükemmel' : ee.error_pct < 1.0 ? 'Kabul edilebilir' : 'Yüksek — adım sayısını artırın';
-            rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:600; color:var(--text-heading);">⚡ Enerji Dengesi</td></tr>';
+            rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:600; color:var(--text-heading);"><span class="mf-ico mf-ico-zap"></span> Enerji Dengesi</td></tr>';
             rhtml += '<tr><td>Hata:</td><td style="text-align:right; font-weight:700; color:' + errColor + ';">%' + ee.error_pct.toFixed(4) + '</td></tr>';
             rhtml += '<tr><td>Durum:</td><td style="text-align:right; font-weight:600; color:' + errColor + ';">' + errLabel + '</td></tr>';
             rhtml += '<tr><td>ΔKE:</td><td style="text-align:right; font-family:monospace;">' + (ee.deltaKE / 1000).toFixed(2) + ' kJ</td></tr>';

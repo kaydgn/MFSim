@@ -975,7 +975,7 @@ function ecmExpandChart(nodeId) {
   // Header
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">⚙ Motor Eğrisi × Konvertör Kapasiteleri — ' + engineName + '</span>' +
+  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-settings"></span> Motor Eğrisi × Konvertör Kapasiteleri — ' + engineName + '</span>' +
     '<button onclick="ecmCloseChartModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
   modal.appendChild(header);
   
@@ -1004,7 +1004,7 @@ function ecmExpandChart(nodeId) {
     '<span style="opacity:0.3; margin-left:4px;">│</span>' +
     '<span style="color:var(--text-muted); font-size:0.58rem;">── Stall &nbsp; <span style="border-bottom:1px dashed var(--text-muted);">┄┄</span> 0.80 SR &nbsp; ● Kesişim</span>' +
     '<span style="margin-left:auto; display:flex; align-items:center; gap:10px;">' +
-    '<span id="ecm-zoom-indicator" style="display:none; color:#60a5fa; font-weight:600; font-size:0.62rem; cursor:pointer;" onclick="ecmResetZoom()" title="Tıklayarak sıfırlayın">🔍 1.0×</span>' +
+    '<span id="ecm-zoom-indicator" style="display:none; color:#60a5fa; font-weight:600; font-size:0.62rem; cursor:pointer;" onclick="ecmResetZoom()" title="Tıklayarak sıfırlayın"><span class="mf-ico mf-ico-search"></span> 1.0×</span>' +
     '<span style="color:var(--text-muted); font-size:0.56rem;">Scroll — Yakınlaştır &nbsp;│&nbsp; Sağ Tık + Sürükle — Kaydır</span>' +
     '<span style="color:var(--text-primary); font-weight:500;">ESC — Kapat</span></span>';
   modal.appendChild(footer);

@@ -10,7 +10,7 @@ function createNodeContextMenu() {
   menu.className = 've-context-menu';
   menu.style.cssText = 'display:none; position:fixed; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:10001; min-width:200px; padding:4px 0;';
   
-  menu.innerHTML = '<div class="ve-context-item" data-action="toggle-axis"><span>🔄</span> Yatay ↔ Dikey</div>' +
+  menu.innerHTML = '<div class="ve-context-item" data-action="toggle-axis"><span><span class="mf-ico mf-ico-refresh"></span></span> Yatay ↔ Dikey</div>' +
     '<div class="ve-context-divider"></div>' +
     '<div class="ve-context-item" data-action="mirror-h"><span>↔</span> Yatay Aynala (Sol ↔ Sağ)</div>' +
     '<div class="ve-context-item" data-action="mirror-v"><span>↕</span> Dikey Aynala (Üst ↔ Alt)</div>' +
@@ -50,7 +50,7 @@ function showNodeContextMenu(e, node) {
   var isVertical = (inSide === 'top' || inSide === 'bottom' || outSide === 'top' || outSide === 'bottom');
   
   var items = nodeContextMenu.querySelectorAll('.ve-context-item');
-  items[0].innerHTML = isVertical ? '<span>🔄</span> Yataya Çevir (← →)' : '<span>🔄</span> Dikeye Çevir (↑ ↓)';
+  items[0].innerHTML = isVertical ? '<span><span class="mf-ico mf-ico-refresh"></span></span> Yataya Çevir (← →)' : '<span><span class="mf-ico mf-ico-refresh"></span></span> Dikeye Çevir (↑ ↓)';
   
   nodeContextMenu.style.display = 'block';
   nodeContextMenu.style.left = e.clientX + 'px';
@@ -172,7 +172,7 @@ function createPortContextMenu() {
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="reset">
-      <span>🔄</span> Varsayılana Dön
+      <span><span class="mf-ico mf-ico-refresh"></span></span> Varsayılana Dön
     </div>
   `;
   
@@ -325,10 +325,10 @@ function createConnectionContextMenu() {
       <span>🔀</span> Eğri Çizgi
     </div>
     <div class="ve-context-item" data-action="straight">
-      <span>📏</span> Düz Çizgi
+      <span><span class="mf-ico mf-ico-ruler"></span></span> Düz Çizgi
     </div>
     <div class="ve-context-item" data-action="stepped">
-      <span>📐</span> Kademeli Çizgi
+      <span><span class="mf-ico mf-ico-ruler"></span></span> Kademeli Çizgi
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="addPoint">
@@ -336,7 +336,7 @@ function createConnectionContextMenu() {
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item ve-context-danger" data-action="delete">
-      <span>🗑️</span> Bağlantıyı Sil
+      <span><span class="mf-ico mf-ico-trash"></span></span> Bağlantıyı Sil
     </div>
   `;
   
