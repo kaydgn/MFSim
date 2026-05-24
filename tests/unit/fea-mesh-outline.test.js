@@ -55,11 +55,19 @@ beforeEach(() => {
 });
 
 describe('FEAMeshOutline — schema', () => {
-  test('SCHEMA root has expected top-level groups', () => {
+  test('SCHEMA root is study-level (Yapısal Analiz) with geometry/mesh/bc/solver branches', () => {
     const schema = FEAMeshOutline._SCHEMA;
     expect(schema.id).toBe('root');
     expect(schema.type).toBe('root');
+    expect(schema.label).toBe('Yapısal Analiz');
     const childIds = schema.children.map((c) => c.id);
+    expect(childIds).toEqual(['single:geometry', 'group:mesh', 'single:bc', 'single:solver']);
+  });
+
+  test('Mesh subtree contains globals/localControls/topologyTools/inspect groups', () => {
+    const mesh = FEAMeshOutline._findSchemaNode('group:mesh');
+    expect(mesh).toBeTruthy();
+    const childIds = mesh.children.map((c) => c.id);
     expect(childIds).toContain('group:globals');
     expect(childIds).toContain('group:localControls');
     expect(childIds).toContain('group:topologyTools');
@@ -67,7 +75,7 @@ describe('FEAMeshOutline — schema', () => {
   });
 
   test('group:localControls contains expected control list types', () => {
-    const lc = FEAMeshOutline._SCHEMA.children.find((c) => c.id === 'group:localControls');
+    const lc = FEAMeshOutline._findSchemaNode('group:localControls');
     expect(lc).toBeDefined();
     const ctlTypes = lc.children.map((c) => c.controlType).filter(Boolean);
     expect(ctlTypes).toEqual(expect.arrayContaining([

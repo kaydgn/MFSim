@@ -293,9 +293,20 @@ describe('Mesh Editör outline organizasyonu', () => {
     expect(document.getElementById('ve-fea-details-header')).not.toBeNull();
   });
 
-  test('Outline kök grupları: Globals / LocalControls / TopologyTools / Inspect', () => {
+  test('Outline kökü study-level: Geometri / Mesh / Sınır Koşulları / Çözüm', () => {
     var schema = FEAMeshOutline._SCHEMA;
     var ids = schema.children.map(function(c) { return c.id; });
+    expect(ids).toEqual([
+      'single:geometry',
+      'group:mesh',
+      'single:bc',
+      'single:solver'
+    ]);
+  });
+
+  test('Mesh dalı altında globals/localControls/topologyTools/inspect', () => {
+    var mesh = FEAMeshOutline._findSchemaNode('group:mesh');
+    var ids = mesh.children.map(function(c) { return c.id; });
     expect(ids).toEqual([
       'group:globals',
       'group:localControls',

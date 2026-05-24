@@ -2089,10 +2089,9 @@ function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
   var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
   if(!node) return;
 
-  // Mesh node: in-memory cache'ten mesh data yedir (kullanıcı raporladığı
-  // "tam ekran mesh gelmiyor" sorununu çözer — mesh data node.data'da değil,
-  // veFEAMeshCache global cache'inde tutulur)
-  if (node.type === 'fea-mesh' &&
+  // Mesh node (veya birleşik 'fea' modülü): in-memory cache'ten mesh data
+  // yedir (mesh data node.data'da değil, veFEAMeshCache global cache'inde).
+  if ((node.type === 'fea-mesh' || node.type === 'fea') &&
       typeof veFEAMeshCache !== 'undefined' && veFEAMeshCache[nodeId] &&
       typeof viewer.loadMesh === 'function') {
     viewer.loadMesh(veFEAMeshCache[nodeId]);
@@ -2193,6 +2192,9 @@ function veFEAApplyPrimitive(nodeId, type, params) {
     var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
     if (n) showNodeProperties(n);
   }
+  // Birleşik modül editörü açıksa outline + Details panelini de yenile
+  // (Geometri dalının state ikonu + durum tablosu güncellensin)
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 
   // 5) Yeni placeholder canvas'ı (showNodeProperties tarafından yaratıldı)
   //    eski (preserve edilmiş) canvas ile değiştir.
@@ -2313,7 +2315,11 @@ function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
 
 // Geometri → Mesh node bağlantısını bul (upstream)
 function veFEAFindUpstreamGeometryNode(meshNodeId) {
-  if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  if (typeof nodes === 'undefined') return null;
+  // Birleşik modül (Faz 1): aynı 'fea' node geometriyi de tutar
+  var self = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (self && (self.type === 'fea' || (self.data && self.data.geometry))) return self;
+  if (typeof connections === 'undefined') return null;
   var conn = connections.find(function(c) { return c.to === meshNodeId; });
   if (!conn) return null;
   var geomNode = nodes.find(function(n) { return n.id === conn.from && n.type === 'fea-geometry'; });
@@ -2733,7 +2739,11 @@ function veFEAApplyRefinementSuggestion(meshNodeId, actionType, actionData) {
 // Mesh node ID'sinden aşağı akıştaki solver node'unu bulur.
 // BC → solver path: mesh → bc → solver
 function _veFEAFindSolverNodeForMesh(meshNodeId) {
-  if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  if (typeof nodes === 'undefined') return null;
+  // Birleşik modül (Faz 1): solver verisi aynı node'da
+  var self = nodes.filter(function (n) { return n.id === meshNodeId; })[0];
+  if (self && (self.type === 'fea' || (self.data && self.data.solver))) return self;
+  if (typeof connections === 'undefined') return null;
   // mesh → bc
   var bcConn = connections.filter(function (c) { return c.from === meshNodeId; })[0];
   if (!bcConn) return null;
@@ -2961,6 +2971,8 @@ function veFEAClearGeometryForNode(nodeId) {
     var n = nodes.find && nodes.find(function(x) { return x.id === nodeId; });
     if(n) showNodeProperties(n);
   }
+  // Birleşik modül editörü açıksa outline + Details panelini de yenile
+  if (typeof veFEAEditorRefreshAccordions === 'function') veFEAEditorRefreshAccordions();
 }
 
 // ─── Kontrol paneli HTML şablonu (accordion yapı) ───────────────────────────
