@@ -658,6 +658,71 @@ describe('Curve fitting — veFEAFitCurveToPolyline', () => {
   });
 });
 
+// ─── Robust curve fitting — gürültülü mesh dayanıklılığı ───────────────────
+describe('Robust curve fitting (least-squares + RMS/inlier)', () => {
+  function mkCircle(r, noise, nseg, seed) {
+    var p = [];
+    for (var i = 0; i <= nseg; i++) {
+      var t = i / nseg * 2 * Math.PI;
+      var dn = Math.sin(i * seed) * noise;            // deterministik radyal gürültü
+      var dz = Math.cos(i * seed * 1.3) * noise * 0.5; // düzlem dışı gürültü
+      p.push([(r + dn) * Math.cos(t), (r + dn) * Math.sin(t), dz]);
+    }
+    return p;
+  }
+
+  test('Gürültülü daire (±0.3, adaptif tolerans) → circle, r doğru', () => {
+    var fit = veFEAFitCurveToPolyline(mkCircle(10, 0.3, 36, 7.3));  // tol verilmedi → adaptif
+    expect(fit.type).toBe('circle');
+    expect(fit.radius).toBeCloseTo(10, 0);   // ±0.5 mm içinde
+    expect(fit.rms).toBeLessThan(0.3);
+  });
+
+  test('Daha gürültülü daire (±0.5) → yine circle', () => {
+    var fit = veFEAFitCurveToPolyline(mkCircle(10, 0.5, 36, 3.1));
+    expect(fit.type).toBe('circle');
+    expect(fit.radius).toBeCloseTo(10, 0);
+  });
+
+  test('Gürültülü düz çizgi → line (spline değil)', () => {
+    var ln = [];
+    for (var i = 0; i <= 20; i++) ln.push([i, Math.sin(i * 5.1) * 0.1, 0]);
+    expect(veFEAFitCurveToPolyline(ln).type).toBe('line');
+  });
+
+  test('Gerçek serbest eğri → spline (yanlışlıkla circle/line DEĞİL)', () => {
+    var sp = [];
+    for (var i = 0; i <= 20; i++) sp.push([i, Math.sin(i * 0.7) * 5, Math.cos(i * 0.4) * 3]);
+    expect(veFEAFitCurveToPolyline(sp).type).toBe('spline');
+  });
+
+  test('Least-squares çember merkezi doğru (kaydırılmış daire)', () => {
+    var p = [];
+    for (var i = 0; i <= 36; i++) {
+      var t = i / 36 * 2 * Math.PI;
+      p.push([100 + 7 * Math.cos(t), 50 + 7 * Math.sin(t), 25]);  // merkez (100,50,25), r=7
+    }
+    var fit = veFEAFitCurveToPolyline(p, 0.01);
+    expect(fit.type).toBe('circle');
+    expect(fit.radius).toBeCloseTo(7, 1);
+    expect(fit.center[0]).toBeCloseTo(100, 1);
+    expect(fit.center[1]).toBeCloseTo(50, 1);
+    expect(fit.center[2]).toBeCloseTo(25, 1);
+  });
+
+  test('Temiz daire regresyon — hala circle (robust fit eski davranışı bozmadı)', () => {
+    var p = [];
+    for (var i = 0; i <= 48; i++) {
+      var t = i / 48 * 2 * Math.PI;
+      p.push([15 * Math.cos(t), 15 * Math.sin(t), 0]);
+    }
+    var fit = veFEAFitCurveToPolyline(p, 0.001);
+    expect(fit.type).toBe('circle');
+    expect(fit.radius).toBeCloseTo(15, 3);
+    expect(fit.isFullCircle).toBe(true);
+  });
+});
+
 describe('Edge ve Vertex adjacency graph', () => {
   test('Box edge → face adjacency', () => {
     var t = veFEAComputeGeometryTopology({ type: 'box', params: { width: 50, height: 30, depth: 20 } });

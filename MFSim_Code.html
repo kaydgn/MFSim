@@ -24362,39 +24362,49 @@ function _veFEAArcPolyline(center, axis, radius, startAng, endAng, segments) {
 //   'spline':  { type, length, controlPoints }
 function veFEAFitCurveToPolyline(polyline, tolerance) {
   if (!Array.isArray(polyline) || polyline.length < 2) return { type: 'unknown' };
-  var tol = (isFinite(tolerance) && tolerance > 0) ? tolerance : 0.05;  // mm
   var n = polyline.length;
-  // Toplam uzunluk
+  // Toplam uzunluk + bbox (adaptif tolerans için)
   var totalLen = 0;
-  for (var i = 1; i < n; i++) {
-    var dx = polyline[i][0] - polyline[i-1][0];
-    var dy = polyline[i][1] - polyline[i-1][1];
-    var dz = polyline[i][2] - polyline[i-1][2];
-    totalLen += Math.sqrt(dx*dx + dy*dy + dz*dz);
+  var mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity];
+  for (var i = 0; i < n; i++) {
+    for (var k = 0; k < 3; k++) {
+      if (polyline[i][k] < mn[k]) mn[k] = polyline[i][k];
+      if (polyline[i][k] > mx[k]) mx[k] = polyline[i][k];
+    }
+    if (i > 0) {
+      var dx = polyline[i][0] - polyline[i-1][0];
+      var dy = polyline[i][1] - polyline[i-1][1];
+      var dz = polyline[i][2] - polyline[i-1][2];
+      totalLen += Math.sqrt(dx*dx + dy*dy + dz*dz);
+    }
   }
+  var scale = Math.sqrt((mx[0]-mn[0])*(mx[0]-mn[0]) + (mx[1]-mn[1])*(mx[1]-mn[1]) + (mx[2]-mn[2])*(mx[2]-mn[2]));
+  // Adaptif tolerans: kullanıcı vermezse curve ölçeğinin %2.5'i (gürültü genelde
+  // ölçekle orantılıdır — gerçek CAD tessellation sapması). Mutlak alt sınır var.
+  var tol = (isFinite(tolerance) && tolerance > 0) ? tolerance : Math.max(scale * 0.025, 1e-4);
 
-  // 1) LINE TESTİ — tüm noktalar p1-pN doğrusu üzerinde mi?
+  // 1) LINE — PCA/least-squares doğru fit (RMS + inlier robust kabul)
   var lineFit = _veFEATryFitLine(polyline, tol);
   if (lineFit) {
     lineFit.length = totalLen;
     return lineFit;
   }
 
-  // 2) CIRCLE/ARC TESTİ — 3+ nokta circumcircle fit
+  // 2) CIRCLE/ARC — Kåsa least-squares çember fit (gürültüye dayanıklı)
   if (n >= 3) {
     var circFit = _veFEATryFitCircle(polyline, tol);
     if (circFit) {
       circFit.length = totalLen;
-      // Full circle: ilk ve son nokta yakın mı?
       var first = polyline[0], last = polyline[n-1];
       var dx2 = first[0]-last[0], dy2 = first[1]-last[1], dz2 = first[2]-last[2];
       var endDist = Math.sqrt(dx2*dx2 + dy2*dy2 + dz2*dz2);
-      circFit.isFullCircle = endDist < tol * 2;
+      // Full circle eşiği: yarıçapa göreli (tek tolerans değil) — kapanma testi
+      circFit.isFullCircle = endDist < Math.max(tol * 3, circFit.radius * 0.08);
       if (!circFit.isFullCircle) circFit.type = 'arc';
       return circFit;
     }
 
-    // 3) ELLIPSE TESTİ — planar curve, koniğin major/minor eksenli fitting
+    // 3) ELLIPSE — düzlemsel conic fit
     var ellFit = _veFEATryFitEllipse(polyline, tol);
     if (ellFit) {
       ellFit.length = totalLen;
@@ -24402,103 +24412,171 @@ function veFEAFitCurveToPolyline(polyline, tolerance) {
     }
   }
 
-  // 4) SPLINE FALLBACK — control points olarak polyline'ı (alt-örnekleyerek) sakla
+  // 4) SPLINE FALLBACK
   var ctrl = [];
   var maxCtrl = 16;
   var step = Math.max(1, Math.floor(n / maxCtrl));
-  for (var k = 0; k < n; k += step) ctrl.push(polyline[k]);
+  for (var c2 = 0; c2 < n; c2 += step) ctrl.push(polyline[c2]);
   if (ctrl[ctrl.length-1] !== polyline[n-1]) ctrl.push(polyline[n-1]);
   return { type: 'spline', length: totalLen, controlPoints: ctrl };
 }
 
+// ─── Robust fit helper'ları (least-squares + RMS/inlier) ───────────────────
+// Newell yöntemi — düzlemsel (kapalı/açık) polyline için robust normal.
+// Ardışık kenar çiftlerinin alan-vektörünü toplar; gürültüye dayanıklı.
+function _veFEANewellNormal(pts) {
+  var nx = 0, ny = 0, nz = 0, n = pts.length;
+  for (var i = 0; i < n; i++) {
+    var a = pts[i], b = pts[(i + 1) % n];
+    nx += (a[1] - b[1]) * (a[2] + b[2]);
+    ny += (a[2] - b[2]) * (a[0] + b[0]);
+    nz += (a[0] - b[0]) * (a[1] + b[1]);
+  }
+  var L = Math.sqrt(nx*nx + ny*ny + nz*nz);
+  if (L < 1e-12) return null;
+  return [nx/L, ny/L, nz/L];
+}
+
+// 3x3 simetrik lineer sistem çözücü (Kåsa circle için) — Cramer.
+function _veFEASolve3x3(m, b) {
+  function det3(a) {
+    return a[0]*(a[4]*a[8]-a[5]*a[7]) - a[1]*(a[3]*a[8]-a[5]*a[6]) + a[2]*(a[3]*a[7]-a[4]*a[6]);
+  }
+  var D = det3(m);
+  if (Math.abs(D) < 1e-14) return null;
+  var mx = m.slice(); mx[0]=b[0]; mx[3]=b[1]; mx[6]=b[2];
+  var my = m.slice(); my[1]=b[0]; my[4]=b[1]; my[7]=b[2];
+  var mz = m.slice(); mz[2]=b[0]; mz[5]=b[1]; mz[8]=b[2];
+  return [det3(mx)/D, det3(my)/D, det3(mz)/D];
+}
+
+// Dominant eigenvector (power iteration) — line yönü için.
+function _veFEAPowerIter(cov, seed) {
+  var v = seed.slice();
+  for (var it = 0; it < 24; it++) {
+    var x = cov[0]*v[0] + cov[1]*v[1] + cov[2]*v[2];
+    var y = cov[3]*v[0] + cov[4]*v[1] + cov[5]*v[2];
+    var z = cov[6]*v[0] + cov[7]*v[1] + cov[8]*v[2];
+    var L = Math.sqrt(x*x + y*y + z*z);
+    if (L < 1e-14) break;
+    v = [x/L, y/L, z/L];
+  }
+  return v;
+}
+
 function _veFEATryFitLine(pts, tol) {
   var n = pts.length;
-  var p1 = pts[0], pN = pts[n-1];
-  var dx = pN[0]-p1[0], dy = pN[1]-p1[1], dz = pN[2]-p1[2];
-  var L = Math.sqrt(dx*dx + dy*dy + dz*dz);
-  if (L < 1e-9) return null;
-  var dirx = dx/L, diry = dy/L, dirz = dz/L;
-  // Her iç nokta için, p1→p line projection ile teğet mesafe
-  for (var i = 1; i < n-1; i++) {
-    var px = pts[i][0]-p1[0], py = pts[i][1]-p1[1], pz = pts[i][2]-p1[2];
-    var t = px*dirx + py*diry + pz*dirz;
-    var ex = px - t*dirx, ey = py - t*diry, ez = pz - t*dirz;
-    var err = Math.sqrt(ex*ex + ey*ey + ez*ez);
-    if (err > tol) return null;
+  // Centroid
+  var cx = 0, cy = 0, cz = 0;
+  for (var i = 0; i < n; i++) { cx += pts[i][0]; cy += pts[i][1]; cz += pts[i][2]; }
+  cx /= n; cy /= n; cz /= n;
+  // Covariance (3x3 simetrik) — PCA ile en iyi doğru yönü
+  var c00=0,c01=0,c02=0,c11=0,c12=0,c22=0;
+  for (var j = 0; j < n; j++) {
+    var dx = pts[j][0]-cx, dy = pts[j][1]-cy, dz = pts[j][2]-cz;
+    c00 += dx*dx; c01 += dx*dy; c02 += dx*dz;
+    c11 += dy*dy; c12 += dy*dz; c22 += dz*dz;
+  }
+  var cov = [c00,c01,c02, c01,c11,c12, c02,c12,c22];
+  // Başlangıç tahmini: ilk→son yönü (yakınsamayı hızlandırır)
+  var sx = pts[n-1][0]-pts[0][0], sy = pts[n-1][1]-pts[0][1], sz = pts[n-1][2]-pts[0][2];
+  var sL = Math.sqrt(sx*sx+sy*sy+sz*sz) || 1;
+  var dir = _veFEAPowerIter(cov, [sx/sL, sy/sL, sz/sL]);
+  // RMS dik mesafe + inlier oranı
+  var sumSq = 0, inliers = 0, maxErr = 0;
+  for (var m = 0; m < n; m++) {
+    var px = pts[m][0]-cx, py = pts[m][1]-cy, pz = pts[m][2]-cz;
+    var t = px*dir[0] + py*dir[1] + pz*dir[2];
+    var ex = px - t*dir[0], ey = py - t*dir[1], ez = pz - t*dir[2];
+    var e = Math.sqrt(ex*ex + ey*ey + ez*ez);
+    sumSq += e*e;
+    if (e <= tol) inliers++;
+    if (e > maxErr) maxErr = e;
+  }
+  var rms = Math.sqrt(sumSq / n);
+  // Kabul: RMS tolerans içinde VE noktaların ≥%85'i inlier
+  if (rms > tol || (inliers / n) < 0.85) return null;
+  // Uç noktaları doğruya projekte et (temiz p1/p2)
+  function proj(p) {
+    var px = p[0]-cx, py = p[1]-cy, pz = p[2]-cz;
+    var t = px*dir[0] + py*dir[1] + pz*dir[2];
+    return [cx + t*dir[0], cy + t*dir[1], cz + t*dir[2]];
   }
   return {
-    type: 'line', p1: [p1[0],p1[1],p1[2]], p2: [pN[0],pN[1],pN[2]],
-    direction: [dirx, diry, dirz]
+    type: 'line', p1: proj(pts[0]), p2: proj(pts[n-1]),
+    direction: [dir[0], dir[1], dir[2]], rms: rms
   };
 }
 
+// Robust çember fit — Kåsa least-squares (tüm noktalar) + RMS/inlier kabul.
+// 3-nokta circumcircle yerine bütün noktalardan en iyi çemberi çözer; bu
+// sayede tessellation gürültüsüne dayanıklıdır.
 function _veFEATryFitCircle(pts, tol) {
   var n = pts.length;
   if (n < 3) return null;
-  // İlk-1/3-2/3 noktalarıyla 3-nokta circumcircle dene; collinear ise (full
-  // circle pts[0]≈pts[n-1] olduğunda eski 1/2 seçimi başarısız) 1/4-1/2-3/4'e düş.
-  var triples = [
-    [0, Math.floor(n/3), Math.floor(2*n/3)],
-    [0, Math.floor(n/4), Math.floor(n/2)],
-    [Math.floor(n/4), Math.floor(n/2), Math.floor(3*n/4)]
-  ];
-  var pA = null, pB = null, pC = null, nx, ny, nz;
-  for (var ti = 0; ti < triples.length; ti++) {
-    var tA = triples[ti][0], tB = triples[ti][1], tC = triples[ti][2];
-    if (tA === tB || tB === tC || tA === tC) continue;
-    var ppA = pts[tA], ppB = pts[tB], ppC = pts[tC];
-    var aax = ppB[0]-ppA[0], aay = ppB[1]-ppA[1], aaz = ppB[2]-ppA[2];
-    var bbx = ppC[0]-ppA[0], bby = ppC[1]-ppA[1], bbz = ppC[2]-ppA[2];
-    var tnx = aay*bbz - aaz*bby, tny = aaz*bbx - aax*bbz, tnz = aax*bby - aay*bbx;
-    var tnL = Math.sqrt(tnx*tnx + tny*tny + tnz*tnz);
-    if (tnL > 1e-7) {
-      pA = ppA; pB = ppB; pC = ppC;
-      nx = tnx / tnL; ny = tny / tnL; nz = tnz / tnL;
-      break;
-    }
+  // 1) Düzlem normali — Newell (robust). Düzlemsellik RMS'ini de ölç.
+  var normal = _veFEANewellNormal(pts);
+  if (!normal) return null;
+  var nx = normal[0], ny = normal[1], nz = normal[2];
+  // Centroid (düzlem noktası)
+  var cx0 = 0, cy0 = 0, cz0 = 0;
+  for (var i0 = 0; i0 < n; i0++) { cx0 += pts[i0][0]; cy0 += pts[i0][1]; cz0 += pts[i0][2]; }
+  cx0 /= n; cy0 /= n; cz0 /= n;
+  // Düzlemsellik RMS — noktaların düzleme dik sapması
+  var planarSq = 0;
+  for (var i1 = 0; i1 < n; i1++) {
+    var pd = (pts[i1][0]-cx0)*nx + (pts[i1][1]-cy0)*ny + (pts[i1][2]-cz0)*nz;
+    planarSq += pd*pd;
   }
-  if (!pA) return null;
-  // Plane: normal = (B-A) × (C-A) — yukarıdaki döngüde nx/ny/nz set edildi
-  var ax = pB[0]-pA[0], ay = pB[1]-pA[1], az = pB[2]-pA[2];
-  var bx = pC[0]-pA[0], by = pC[1]-pA[1], bz = pC[2]-pA[2];
-  // Circumcenter: A + α·(B-A) + β·(C-A); çöz: |O-A|=|O-B|=|O-C|=R
-  var aa = ax*ax + ay*ay + az*az;
-  var bb = bx*bx + by*by + bz*bz;
-  var ab = ax*bx + ay*by + az*bz;
-  var denom = 2 * (aa*bb - ab*ab);
-  if (Math.abs(denom) < 1e-12) return null;
-  var alpha = (bb * (aa - ab)) / denom;
-  var beta  = (aa * (bb - ab)) / denom;
-  var cx = pA[0] + alpha*ax + beta*bx;
-  var cy = pA[1] + alpha*ay + beta*by;
-  var cz = pA[2] + alpha*az + beta*bz;
-  var rx = pA[0]-cx, ry = pA[1]-cy, rz = pA[2]-cz;
-  var R = Math.sqrt(rx*rx + ry*ry + rz*rz);
-  if (R < 1e-9) return null;
-  // Tüm noktalar bu daire üzerinde mi?
-  for (var i = 0; i < n; i++) {
-    var dx = pts[i][0]-cx, dy = pts[i][1]-cy, dz = pts[i][2]-cz;
-    var dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-    if (Math.abs(dist - R) > tol) return null;
-    // Düzlemsellik
-    var planeProj = (pts[i][0]-pA[0])*nx + (pts[i][1]-pA[1])*ny + (pts[i][2]-pA[2])*nz;
-    if (Math.abs(planeProj) > tol) return null;
+  var planarRms = Math.sqrt(planarSq / n);
+  if (planarRms > tol * 1.5) return null;  // düzlemsel değil → çember olamaz
+  // 2) Düzleme dik 2 birim eksen (u, v) — noktaları 2D'ye projekte et
+  var ref = (Math.abs(nx) < 0.9) ? [1,0,0] : [0,1,0];
+  var dotn = ref[0]*nx + ref[1]*ny + ref[2]*nz;
+  var ux = ref[0]-dotn*nx, uy = ref[1]-dotn*ny, uz = ref[2]-dotn*nz;
+  var uL = Math.sqrt(ux*ux+uy*uy+uz*uz) || 1; ux/=uL; uy/=uL; uz/=uL;
+  var vx = ny*uz-nz*uy, vy = nz*ux-nx*uz, vz = nx*uy-ny*ux;
+  var U = new Array(n), V = new Array(n);
+  for (var i2 = 0; i2 < n; i2++) {
+    var px = pts[i2][0]-cx0, py = pts[i2][1]-cy0, pz = pts[i2][2]-cz0;
+    U[i2] = px*ux + py*uy + pz*uz;
+    V[i2] = px*vx + py*vy + pz*vz;
   }
-  // Açı aralığı
-  // u = (pA - C) / R; v = n × u (normalize)
-  var ux = rx/R, uy = ry/R, uz = rz/R;
-  var vx = ny*uz - nz*uy, vy = nz*ux - nx*uz, vz = nx*uy - ny*ux;
-  function angleOf(pt) {
-    var px = pt[0]-cx, py = pt[1]-cy, pz = pt[2]-cz;
-    var cu = px*ux + py*uy + pz*uz;
-    var cv = px*vx + py*vy + pz*vz;
-    return Math.atan2(cv, cu);
+  // 3) Kåsa algebraic circle fit (2D): min Σ(u²+v² + A·u + B·v + C)²
+  // Normal denklemler: [Suu Suv Su; Suv Svv Sv; Su Sv n]·[A;B;C] = -[Suuu+Suvv; Svuu+Svvv; Suu+Svv]
+  var Su=0,Sv=0,Suu=0,Svv=0,Suv=0,Suuu=0,Svvv=0,Suvv=0,Svuu=0;
+  for (var i3 = 0; i3 < n; i3++) {
+    var u = U[i3], v = V[i3], uu = u*u, vv = v*v;
+    Su += u; Sv += v; Suu += uu; Svv += vv; Suv += u*v;
+    Suuu += uu*u; Svvv += vv*v; Suvv += u*vv; Svuu += v*uu;
   }
-  var aStart = angleOf(pts[0]);
-  var aEnd   = angleOf(pts[n-1]);
+  var M = [Suu, Suv, Su,  Suv, Svv, Sv,  Su, Sv, n];
+  var rhs = [-(Suuu + Suvv), -(Svvv + Svuu), -(Suu + Svv)];
+  var sol = _veFEASolve3x3(M, rhs);
+  if (!sol) return null;
+  var ucc = -sol[0]/2, vcc = -sol[1]/2;
+  var R2 = ucc*ucc + vcc*vcc - sol[2];
+  if (R2 <= 1e-12) return null;
+  var R = Math.sqrt(R2);
+  // 4) Radyal RMS + inlier oranı
+  var sumSq = 0, inliers = 0;
+  for (var i4 = 0; i4 < n; i4++) {
+    var ddu = U[i4]-ucc, ddv = V[i4]-vcc;
+    var d = Math.abs(Math.sqrt(ddu*ddu + ddv*ddv) - R);
+    sumSq += d*d;
+    if (d <= tol) inliers++;
+  }
+  var rms = Math.sqrt(sumSq / n);
+  // Kabul: radyal RMS tolerans içinde VE noktaların ≥%80'i inlier
+  if (rms > tol || (inliers / n) < 0.80) return null;
+  // 5) 3D merkez + açı aralığı
+  var cx = cx0 + ucc*ux + vcc*vx;
+  var cy = cy0 + ucc*uy + vcc*vy;
+  var cz = cz0 + ucc*uz + vcc*vz;
+  function angleOf(idx) { return Math.atan2(V[idx]-vcc, U[idx]-ucc); }
   return {
     type: 'circle', center: [cx, cy, cz], axis: [nx, ny, nz], radius: R,
-    startAngle: aStart, endAngle: aEnd
+    startAngle: angleOf(0), endAngle: angleOf(n-1), rms: rms, planarRms: planarRms
   };
 }
 
