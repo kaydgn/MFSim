@@ -11,6 +11,47 @@
 //   F6 → Post-process: kontur, deformasyon
 // ============================================================================
 
+// ─── 0. YAPISAL ANALİZ MODÜLÜ (birleşik node side panel) ────────────────────
+// Faz 1: canvas'taki tek 'fea' node seçilince sağ panelde özet + editör butonu.
+// Tüm detaylı çalışma "Yapısal Analiz Editörü" modal'ında (outline + details).
+function getFEAModulePropertiesHTML(node) {
+  var d = node.data || {};
+  var hasGeom = !!(d.geometry && d.geometry.type);
+  var hasMesh = !!(d.meshActive && d.meshMetrics);
+  var bcCount = (d.bc && Array.isArray(d.bc.assignments)) ? d.bc.assignments.length : 0;
+  var solved = !!(d.solver && d.solver.results);
+
+  function statusRow(label, ok, detail) {
+    var color = ok ? 'var(--accent-success, #22c55e)' : 'var(--text-muted)';
+    var icon = ok ? '✓' : '○';
+    return '<div style="display:flex; align-items:center; justify-content:space-between; padding:5px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); margin-bottom:4px; font-size:0.62rem;">' +
+      '<span style="display:flex; align-items:center; gap:6px;"><span style="color:' + color + '; font-weight:700;">' + icon + '</span><span style="color:var(--text-primary);">' + label + '</span></span>' +
+      '<span style="color:var(--text-muted); font-size:0.56rem;">' + (detail || '') + '</span>' +
+      '</div>';
+  }
+
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+  html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Yapısal Analiz</div>';
+  html += '<span style="font-size:0.52rem; font-weight:600; color:#1d4ed8; background:rgba(59,130,246,0.12); padding:2px 7px; border:1px solid rgba(59,130,246,0.4); letter-spacing:0.03em; text-transform:uppercase;">Modül</span>';
+  html += '</div>';
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">Geometri · Mesh · Sınır Koşulları · Çözüm — hepsi tek ağaçta. Detaylı çalışma için editörü aç.</div>';
+
+  // Durum özeti — ANSYS Outline state ikonları mantığı
+  html += veFEASectionTitle('Pipeline Durumu');
+  html += statusRow('Geometri', hasGeom, hasGeom ? (d.geometry.sourceLabel || d.geometry.type) : '— tanımsız');
+  html += statusRow('Mesh', hasMesh, hasMesh ? (d.meshMetrics.nodeCount.toLocaleString('tr-TR') + ' düğüm') : '— oluşturulmadı');
+  html += statusRow('Sınır Koşulları', bcCount > 0, bcCount > 0 ? (bcCount + ' atama') : '— yok');
+  html += statusRow('Çözüm', solved, solved ? '✓ çözüldü' : '— çözülmedi');
+
+  // Editörü aç
+  html += '<button onclick="veFEAOpenMeshEditor(\'' + node.id + '\')" style="width:100%; margin-top:10px; padding:14px 16px; font-size:0.82rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.04em; transition:all 0.12s;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Yapısal Analiz Editörünü Aç</button>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); line-height:1.5; margin-top:8px; padding:0 2px;">Editörde sol panelde <b>Outline ağacı</b> (Geometri / Mesh / Sınır Koşulları / Çözüm), altında seçili nesnenin <b>Details</b> formu, sağda 3D görüntüleyici.</div>';
+
+  html += '</div>';
+  return html;
+}
+
 function veFEAPhaseBadge(phase) {
   return '<span style="font-size:0.52rem; font-weight:600; color:#b45309; background:#fef3c720; padding:2px 7px; border-radius:0; border:1px solid #f59e0b40; letter-spacing:0.03em; text-transform:uppercase;">' + phase + ' — yapım aşamasında</span>';
 }
@@ -593,13 +634,22 @@ function getFEABCPropertiesHTML(node) {
 }
 
 // ─── BC modifikasyon API'leri ─────────────────────────────────────────────
+// Faz 1 birleşik modül: tek 'fea' node tüm sub-data'yı tutar. Upstream
+// helper'ları tek-node-farkında: modül node verilirse kendisini döndürür
+// (mesh/geometri/bc aynı node'da). Eski 4-node zinciri için connection
+// traversal'i geriye uyumluluk olarak korunur.
 function _veFEAFindUpstreamMeshNode(bcNode) {
+  if (!bcNode) return null;
+  // Birleşik modül: aynı node mesh verisini de tutar
+  if (bcNode.type === 'fea' || (bcNode.data && bcNode.data.meshSettings)) return bcNode;
   if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
   var src = connections.filter(function (c) { return c.to === bcNode.id; })[0];
   if (!src) return null;
   return nodes.filter(function (n) { return n.id === src.from; })[0] || null;
 }
 function _veFEAFindUpstreamGeometryNode(meshNode) {
+  if (!meshNode) return null;
+  if (meshNode.type === 'fea' || (meshNode.data && meshNode.data.geometry)) return meshNode;
   if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
   var src = connections.filter(function (c) { return c.to === meshNode.id; })[0];
   if (!src) return null;
@@ -786,6 +836,9 @@ function _veFEAFmtKg(v) {
 }
 
 function _veFEAFindUpstreamBCNode(solverNode) {
+  if (!solverNode) return null;
+  // Birleşik modül: aynı node BC verisini de tutar
+  if (solverNode.type === 'fea' || (solverNode.data && solverNode.data.bc)) return solverNode;
   if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
   var src = connections.filter(function (c) { return c.to === solverNode.id; })[0];
   if (!src) return null;

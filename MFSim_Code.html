@@ -8376,16 +8376,18 @@ var componentDefs = {
     inputs: 0,
     outputs: 0
   },
-  // ── Yapısal Analiz (FEA) zinciri ─────────────────────────────────────────
-  // 'fea' bir sidebar girdisidir; canvas'a sürüklendiğinde 4 alt blok üretir.
-  // Bu tip nodes[] dizisine asla doğrudan eklenmez (bkz. ui-core.js spawnFEAChain).
+  // ── Yapısal Analiz (FEA) — birleşik modül ────────────────────────────────
+  // Faz 1: ANSYS "Model" ağacı gibi TEK node. Geometri + Mesh + Sınır Koşulları
+  // + Çözüm tek node'un data'sında ve tek bir outline ağacında toplanır.
+  // (Eski 4-node zinciri yükleme sırasında otomatik bu modüle göçürülür —
+  //  bkz. js/fea-study.js veFEAMigrateChainToModule.)
   'fea': {
     name: 'Yapısal Analiz',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><path d="M20 30 L50 20 L80 30 L80 70 L50 80 L20 70 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5"/><line x1="50" y1="20" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="80" y2="30" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="70" x2="80" y2="70" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/><line x1="80" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/></svg>',
     inputs: 0,
     outputs: 0,
     maxInstances: 1,
-    isFEAParent: true
+    isFEAModule: true
   },
   'fea-geometry': {
     name: 'Geometri',
@@ -9931,12 +9933,6 @@ document.addEventListener('DOMContentLoaded', function() {
     var x = (e.clientX - rect.left - canvasOffset.x) / canvasZoom + canvasInitialOffset - 40;
     var y = (e.clientY - rect.top - canvasOffset.y) / canvasZoom + canvasInitialOffset - 50;
 
-    // FEA ebeveyni: tek bir node yerine 2×2 alt-blok zinciri üret
-    if(componentDefs[type].isFEAParent) {
-      spawnFEAChain(x, y);
-      return;
-    }
-
     createNode(type, x, y);
   });
   
@@ -10266,12 +10262,6 @@ function createNode(type, x, y, width, height) {
   var def = componentDefs[type];
   if(!def) return;
 
-  // FEA ebeveyni asla doğrudan node olamaz — yalnız spawnFEAChain ile zincir üretir
-  if(def.isFEAParent) {
-    spawnFEAChain(x, y);
-    return;
-  }
-
   // maxInstances kontrolü
   if(def.maxInstances) {
     var existingCount = nodes.filter(function(n) { return n.type === type; }).length;
@@ -10305,6 +10295,13 @@ function createNode(type, x, y, width, height) {
     if(node.data.diffRatio === undefined) node.data.diffRatio = 6.54;
     if(node.data.efficiency === undefined) node.data.efficiency = 96;
     if(node.data.diffInertia === undefined) node.data.diffInertia = 1.0;
+  }
+  // Yapısal Analiz modülü: birleşik sub-data (geometri/mesh/bc/solver) başlat
+  if(type === 'fea' && typeof veFEACreateModuleData === 'function') {
+    var feaDefaults = veFEACreateModuleData();
+    Object.keys(feaDefaults).forEach(function(k) {
+      if(node.data[k] === undefined) node.data[k] = feaDefaults[k];
+    });
   }
   
   // State kaydet
@@ -10521,80 +10518,6 @@ function createConnection(fromNodeId, toNodeId, fromPort, toPort) {
 
   // TC ↔ Şanzıman bağlantısı kontrolü: Şanzıman Kontrol zorunluluğu
   veCheckShiftControllerRequired();
-}
-
-// ═══ Yapısal Analiz zinciri ═══════════════════════════════════════════════
-// 2×2 grid:  Geometri → Mesh   (üst sıra)
-//                ↓
-//            Sınır Koş. → Çözücü (alt sıra)
-// Bağlantı topolojisi (akış sırası): Geometri → Mesh → Sınır Koş. → Çözücü
-function spawnFEAChain(x, y) {
-  // Tekrar eklemeyi engelle (zincir başına bir kez kontrol)
-  var hasChain = nodes.some(function(n) {
-    return n.type === 'fea-geometry' || n.type === 'fea-mesh' ||
-           n.type === 'fea-bc' || n.type === 'fea-solver';
-  });
-  if(hasChain) {
-    if(typeof showToast === 'function') showToast('Yapısal Analiz zinciri zaten mevcut. Aynı projede bir tane bulundurabilirsiniz.', 'warning');
-    else if(typeof showNotification === 'function') showNotification('⚠️ Yapısal Analiz zinciri zaten mevcut.', 'warning');
-    return;
-  }
-
-  // 2×2 grid yerleşimi
-  var cellW = 65, cellH = 60;
-  var gapX = 80, gapY = 70;
-  var positions = {
-    'fea-geometry': { x: x,                   y: y },
-    'fea-mesh':     { x: x + cellW + gapX,    y: y },
-    'fea-bc':       { x: x,                   y: y + cellH + gapY },
-    'fea-solver':   { x: x + cellW + gapX,    y: y + cellH + gapY }
-  };
-
-  // Önce 4 node oluştur, sonra ID'leri toplayıp bağlantıları çek
-  var created = {};
-  ['fea-geometry','fea-mesh','fea-bc','fea-solver'].forEach(function(t) {
-    var idBefore = compCounter;
-    createNode(t, positions[t].x, positions[t].y);
-    // En son eklenen node'u yakala (createNode sonunda push edilir)
-    var newNode = nodes[nodes.length - 1];
-    if(newNode && newNode.type === t) {
-      created[t] = newNode.id;
-    }
-  });
-
-  // Mesh → Sınır Koşulları bağlantısı dikey aksta olduğundan portları üst/alt yönlere sabitle.
-  // Aksi halde varsayılan sağ→sol yönelim çapraz/eğri bir çizgi üretir.
-  // updatePortPosition() ile DOM kutucukları da görsel olarak doğru kenara taşınır.
-  function applyPortSide(node, portKey, side) {
-    if(!node) return;
-    if(!node.data) node.data = {};
-    if(!node.data.portPositions) node.data.portPositions = {};
-    node.data.portPositions[portKey] = { side: side };
-    var nodeEl = document.getElementById(node.id);
-    if(nodeEl && typeof updatePortPosition === 'function') {
-      var portEl = nodeEl.querySelector('.ve-node-port[data-port="' + portKey + '"]');
-      if(portEl) updatePortPosition(portEl, node, portKey);
-    }
-  }
-  var meshNode = nodes.find(function(n){ return n.id === created['fea-mesh']; });
-  applyPortSide(meshNode, 'output', 'bottom');
-  var bcNode = nodes.find(function(n){ return n.id === created['fea-bc']; });
-  applyPortSide(bcNode, 'input', 'top');
-
-  // Bağlantılar: akış sırasına göre. Tüm 4 node oluştuysa kur.
-  if(created['fea-geometry'] && created['fea-mesh']) {
-    createConnection(created['fea-geometry'], created['fea-mesh'], 'output', 'input');
-  }
-  if(created['fea-mesh'] && created['fea-bc']) {
-    createConnection(created['fea-mesh'], created['fea-bc'], 'output', 'input');
-  }
-  if(created['fea-bc'] && created['fea-solver']) {
-    createConnection(created['fea-bc'], created['fea-solver'], 'output', 'input');
-  }
-
-  if(typeof showToast === 'function') {
-    showToast('Yapısal Analiz zinciri eklendi (4 bileşen, 3 bağlantı).', 'success');
-  }
 }
 
 // ═══ TC ↔ Şanzıman bağlantısında Şanzıman Kontrol zorunluluğu ═══
@@ -10829,6 +10752,8 @@ function showNodeProperties(node) {
     html += getTerminatorPropertiesHTML(node);
   } else if(node.type === 'gear-shift') {
     html += getGearShiftPropertiesHTML(node);
+  } else if(node.type === 'fea') {
+    html += getFEAModulePropertiesHTML(node);
   } else if(node.type === 'fea-geometry') {
     html += getFEAGeometryPropertiesHTML(node);
   } else if(node.type === 'fea-mesh') {
@@ -30306,7 +30231,201 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
 }
 
 </script>
-<script type="text/x-mfsim-defer" data-mfsim-label="FEA: Mesh outline (ANSYS tree)...">
+<script type="text/x-mfsim-defer" data-mfsim-label="FEA: Yapısal analiz modülü...">
+// ============================================================================
+// FEA STUDY — Birleşik "Yapısal Analiz" Modülü (Faz 1)
+// ============================================================================
+// ANSYS Mechanical'ın "Model" ağacı gibi: Geometri + Mesh + Sınır Koşulları +
+// Çözüm tek bir node'da, tek bir ağaçta toplanır. Önceki 4-node zinciri
+// (fea-geometry → fea-mesh → fea-bc → fea-solver) artık TEK 'fea' node'una
+// göçürülür; pipeline edge'ler yerine ağaç hiyerarşisiyle ifade edilir.
+//
+// Bu dosya saf-mantık katmanı: veri modeli + migration + node bulma. UI
+// (outline / modal / viewer) ayrı dosyalarda. Jest ile bağımsız test edilir.
+//
+// Birleşik node veri modeli:
+//   node.type === 'fea'
+//   node.data = {
+//     geometry:               { type, params, ... } | null   (eski fea-geometry)
+//     meshSettings:           { size, ..., bodySizingControls, outline }  (eski fea-mesh)
+//     meshData / meshMetrics / meshActive / namedSelectionsSummary
+//     bc:                     { materialId, assignments[] }   (eski fea-bc)
+//     solver:                 { tolerance, maxIter, results } (eski fea-solver)
+//   }
+//
+// Public API:
+//   veFEACreateModuleData()           → yeni modül için default data
+//   veFEAIsModuleNode(node)           → node bir 'fea' modülü mü
+//   veFEAGetModuleNode()              → aktif projedeki tek fea modülü (veya null)
+//   veFEAMigrateChainToModule(state)  → eski 4-node zinciri tek node'a göçür
+//                                       (state.nodes / state.connections mutasyonu)
+//   veFEAModuleHasChain(state)        → state'te eski zincir var mı (test/teşhis)
+// ============================================================================
+
+(function(global) {
+  'use strict';
+
+  var FEA_CHILD_TYPES = ['fea-geometry', 'fea-mesh', 'fea-bc', 'fea-solver'];
+
+  // ─── Default veri ─────────────────────────────────────────────────────────
+  function veFEACreateModuleData() {
+    return {
+      geometry: null,
+      meshSettings: {
+        size: 10,
+        mode: 'auto',
+        elementType: 'auto',
+        bodySizingControls: [],
+        faceSizingControls: [],
+        edgeSizingControls: [],
+        sphereOfInfluence: [],
+        refinementControls: [],
+        methodOverrides: [],
+        virtualTopology: [],
+        suppressFlags: {}
+      },
+      meshActive: false,
+      bc: { materialId: 'steel-st37', assignments: [] },
+      solver: { tolerance: 1e-8, maxIter: 0 }
+    };
+  }
+
+  function veFEAIsModuleNode(node) {
+    return !!(node && node.type === 'fea');
+  }
+
+  function veFEAGetModuleNode() {
+    if (typeof global.nodes === 'undefined' || !Array.isArray(global.nodes)) return null;
+    for (var i = 0; i < global.nodes.length; i++) {
+      if (global.nodes[i].type === 'fea') return global.nodes[i];
+    }
+    return null;
+  }
+
+  // ─── Migration: eski 4-node zinciri → tek modül node ───────────────────────
+  // state.nodes ve state.connections'ı YERİNDE değiştirir; dönüş değeri state.
+  // Idempotent: zaten modül node varsa veya hiç FEA child yoksa dokunmaz.
+  function veFEAMigrateChainToModule(state) {
+    if (!state || !Array.isArray(state.nodes)) return state;
+
+    // Eski child node'ları topla
+    var byType = {};
+    state.nodes.forEach(function(n) {
+      if (FEA_CHILD_TYPES.indexOf(n.type) >= 0 && !byType[n.type]) {
+        byType[n.type] = n;
+      }
+    });
+    var geom   = byType['fea-geometry'] || null;
+    var mesh   = byType['fea-mesh'] || null;
+    var bc     = byType['fea-bc'] || null;
+    var solver = byType['fea-solver'] || null;
+
+    // Hiç eski child yoksa migration gerekmez
+    if (!geom && !mesh && !bc && !solver) return state;
+
+    // Birleşik veri — default'tan başla, eski verileri üzerine bindir
+    var merged = veFEACreateModuleData();
+    if (geom && geom.data) {
+      if (geom.data.geometry) merged.geometry = geom.data.geometry;
+    }
+    if (mesh && mesh.data) {
+      // Mesh sub-data alanlarını taşı (meshSettings + computed alanlar)
+      if (mesh.data.meshSettings) {
+        // default meshSettings ile birleştir (yeni alanlar korunur)
+        merged.meshSettings = _mergeMeshSettings(merged.meshSettings, mesh.data.meshSettings);
+      }
+      ['meshData', 'meshMetrics', 'meshActive', 'namedSelectionsSummary', 'selectedFaceId', 'highlightedSelection', 'heatMapMetric'].forEach(function(k) {
+        if (mesh.data[k] !== undefined) merged[k] = mesh.data[k];
+      });
+    }
+    if (bc && bc.data && bc.data.bc) {
+      merged.bc = bc.data.bc;
+    }
+    if (solver && solver.data && solver.data.solver) {
+      merged.solver = solver.data.solver;
+    }
+
+    // Anchor: geometri node'unun konumu/ID'si tercih edilir (en üstteki blok)
+    var anchor = geom || mesh || bc || solver;
+    var moduleNode = {
+      id: anchor.id,
+      type: 'fea',
+      x: anchor.x,
+      y: anchor.y,
+      width: anchor.width || 65,
+      height: anchor.height || 60,
+      customName: '',
+      data: merged
+    };
+
+    // Eski node id'leri
+    var oldIds = [geom, mesh, bc, solver].filter(Boolean).map(function(n) { return n.id; });
+
+    // Node listesinden eski child'ları çıkar, modül node'unu ekle
+    state.nodes = state.nodes.filter(function(n) {
+      return oldIds.indexOf(n.id) < 0;
+    });
+    state.nodes.push(moduleNode);
+
+    // Eski child'lar arası bağlantıları temizle (zincir edge'leri)
+    if (Array.isArray(state.connections)) {
+      state.connections = state.connections.filter(function(c) {
+        return oldIds.indexOf(c.from) < 0 && oldIds.indexOf(c.to) < 0;
+      });
+    }
+
+    return state;
+  }
+
+  // meshSettings birleştir: default (yeni alanlar) + eski (kullanıcı değerleri).
+  // Eski değerler önceliklidir; yeni alan tipleri (bodySizingControls vb.)
+  // eksikse default'tan tamamlanır.
+  function _mergeMeshSettings(defaults, old) {
+    var out = {};
+    Object.keys(defaults).forEach(function(k) { out[k] = defaults[k]; });
+    Object.keys(old).forEach(function(k) { out[k] = old[k]; });
+    // Yeni liste alanları eksikse default boş dizi ile tamamla
+    ['bodySizingControls', 'faceSizingControls', 'edgeSizingControls',
+     'sphereOfInfluence', 'refinementControls', 'methodOverrides',
+     'virtualTopology'].forEach(function(k) {
+      if (!Array.isArray(out[k])) out[k] = [];
+    });
+    if (!out.suppressFlags || typeof out.suppressFlags !== 'object') out.suppressFlags = {};
+    return out;
+  }
+
+  function veFEAModuleHasChain(state) {
+    if (!state || !Array.isArray(state.nodes)) return false;
+    return state.nodes.some(function(n) { return FEA_CHILD_TYPES.indexOf(n.type) >= 0; });
+  }
+
+  // ─── Export ────────────────────────────────────────────────────────────────
+  var api = {
+    FEA_CHILD_TYPES:           FEA_CHILD_TYPES,
+    veFEACreateModuleData:     veFEACreateModuleData,
+    veFEAIsModuleNode:         veFEAIsModuleNode,
+    veFEAGetModuleNode:        veFEAGetModuleNode,
+    veFEAMigrateChainToModule: veFEAMigrateChainToModule,
+    veFEAModuleHasChain:       veFEAModuleHasChain,
+    _mergeMeshSettings:        _mergeMeshSettings
+  };
+
+  // Global fonksiyon export (mevcut kod tarzı: global function'lar)
+  global.veFEACreateModuleData     = veFEACreateModuleData;
+  global.veFEAIsModuleNode         = veFEAIsModuleNode;
+  global.veFEAGetModuleNode        = veFEAGetModuleNode;
+  global.veFEAMigrateChainToModule = veFEAMigrateChainToModule;
+  global.veFEAModuleHasChain       = veFEAModuleHasChain;
+  global.FEAStudy = api;
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = api;
+  }
+
+})(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this));
+
+</script>
+<script type="text/x-mfsim-defer" data-mfsim-label="FEA: Modül outline (ANSYS tree)...">
 // ============================================================================
 // FEA MESH OUTLINE — ANSYS-tarzı Tree Outline + Details Pane
 // ============================================================================
@@ -30370,62 +30489,74 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
   var SCHEMA = {
     id: 'root',
     type: 'root',
-    label: 'Mesh',
+    label: 'Yapısal Analiz',
     icon: '▣',
     children: [
+      { id: 'single:geometry', type: 'single', label: 'Geometri', icon: '◈', detail: 'geometry' },
       {
-        id: 'group:globals',
+        id: 'group:mesh',
         type: 'group',
-        label: 'Globals',
-        icon: '⚙',
+        label: 'Mesh',
+        icon: '◆',
         defaultExpanded: true,
         children: [
-          { id: 'single:defaults',  type: 'single', label: 'Varsayılanlar',                              icon: '⚙', detail: 'defaults' },
-          { id: 'single:sizing',    type: 'single', label: 'Boyutlandırma',                              icon: '↔', detail: 'sizing' },
-          { id: 'single:inflation', type: 'single', label: 'Lokal Yoğunlaştırma / Inflation (Tek)',      icon: '〰', detail: 'inflation' }
+          {
+            id: 'group:globals',
+            type: 'group',
+            label: 'Globals',
+            icon: '⚙',
+            defaultExpanded: true,
+            children: [
+              { id: 'single:defaults',  type: 'single', label: 'Varsayılanlar',                              icon: '⚙', detail: 'defaults' },
+              { id: 'single:sizing',    type: 'single', label: 'Boyutlandırma',                              icon: '↔', detail: 'sizing' },
+              { id: 'single:inflation', type: 'single', label: 'Lokal Yoğunlaştırma / Inflation (Tek)',      icon: '〰', detail: 'inflation' }
+            ]
+          },
+          {
+            id: 'group:localControls',
+            type: 'group',
+            label: 'Lokal Kontroller',
+            icon: '⊙',
+            defaultExpanded: true,
+            children: [
+              { id: 'cl:bodySizing',     type: 'controlList', controlType: 'bodySizing',     label: 'Body Sizing',         icon: '◧' },
+              { id: 'cl:faceSizing',     type: 'controlList', controlType: 'faceSizing',     label: 'Face Sizing',         icon: '◰' },
+              { id: 'cl:edgeSizing',     type: 'controlList', controlType: 'edgeSizing',     label: 'Edge Sizing',         icon: '╱' },
+              { id: 'cl:soi',            type: 'controlList', controlType: 'soi',            label: 'Sphere of Influence', icon: '◯' },
+              { id: 'cl:refinement',     type: 'controlList', controlType: 'refinement',     label: 'Refinement',          icon: '⊞' },
+              { id: 'cl:methodOverride', type: 'controlList', controlType: 'methodOverride', label: 'Method Override',     icon: '✎' }
+            ]
+          },
+          {
+            id: 'group:topologyTools',
+            type: 'group',
+            label: 'Topoloji Araçları',
+            icon: '◇',
+            defaultExpanded: false,
+            children: [
+              { id: 'cl:virtualTopology', type: 'controlList', controlType: 'virtualTopology', label: 'Virtual Topology', icon: '◇' },
+              { id: 'single:namedSel',    type: 'single',      label: 'Named Selections (Atanmış Yüzeyler)',              icon: '⊟', detail: 'namedSel' }
+            ]
+          },
+          {
+            id: 'group:inspect',
+            type: 'group',
+            label: 'Mesh Sonrası İnceleme',
+            icon: '🔍',
+            defaultExpanded: false,
+            children: [
+              { id: 'inspect:quality',     type: 'readonly', label: 'Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', icon: '✓', detail: 'quality' },
+              { id: 'inspect:statistics',  type: 'readonly', label: 'İstatistikler',      icon: 'Σ', detail: 'statistics' },
+              { id: 'inspect:display',     type: 'readonly', label: 'Görünüm Modu',       icon: '◐', detail: 'display' },
+              { id: 'inspect:suggestions', type: 'readonly', label: 'Adaptif İnceltme Önerileri', icon: '💡', detail: 'suggestions' },
+              { id: 'inspect:convergence', type: 'readonly', label: 'Convergence Study',  icon: '〰', detail: 'convergence' },
+              { id: 'inspect:topology',    type: 'readonly', label: 'Geometri Topolojisi', icon: '◊', detail: 'topology' }
+            ]
+          }
         ]
       },
-      {
-        id: 'group:localControls',
-        type: 'group',
-        label: 'Lokal Kontroller',
-        icon: '⊙',
-        defaultExpanded: true,
-        children: [
-          { id: 'cl:bodySizing',     type: 'controlList', controlType: 'bodySizing',     label: 'Body Sizing',         icon: '◧' },
-          { id: 'cl:faceSizing',     type: 'controlList', controlType: 'faceSizing',     label: 'Face Sizing',         icon: '◰' },
-          { id: 'cl:edgeSizing',     type: 'controlList', controlType: 'edgeSizing',     label: 'Edge Sizing',         icon: '╱' },
-          { id: 'cl:soi',            type: 'controlList', controlType: 'soi',            label: 'Sphere of Influence', icon: '◯' },
-          { id: 'cl:refinement',     type: 'controlList', controlType: 'refinement',     label: 'Refinement',          icon: '⊞' },
-          { id: 'cl:methodOverride', type: 'controlList', controlType: 'methodOverride', label: 'Method Override',     icon: '✎' }
-        ]
-      },
-      {
-        id: 'group:topologyTools',
-        type: 'group',
-        label: 'Topoloji Araçları',
-        icon: '◇',
-        defaultExpanded: false,
-        children: [
-          { id: 'cl:virtualTopology', type: 'controlList', controlType: 'virtualTopology', label: 'Virtual Topology', icon: '◇' },
-          { id: 'single:namedSel',    type: 'single',      label: 'Named Selections (Atanmış Yüzeyler)',              icon: '⊟', detail: 'namedSel' }
-        ]
-      },
-      {
-        id: 'group:inspect',
-        type: 'group',
-        label: 'Mesh Sonrası İnceleme',
-        icon: '🔍',
-        defaultExpanded: false,
-        children: [
-          { id: 'inspect:quality',     type: 'readonly', label: 'Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', icon: '✓', detail: 'quality' },
-          { id: 'inspect:statistics',  type: 'readonly', label: 'İstatistikler',      icon: 'Σ', detail: 'statistics' },
-          { id: 'inspect:display',     type: 'readonly', label: 'Görünüm Modu',       icon: '◐', detail: 'display' },
-          { id: 'inspect:suggestions', type: 'readonly', label: 'Adaptif İnceltme Önerileri', icon: '💡', detail: 'suggestions' },
-          { id: 'inspect:convergence', type: 'readonly', label: 'Convergence Study',  icon: '〰', detail: 'convergence' },
-          { id: 'inspect:topology',    type: 'readonly', label: 'Geometri Topolojisi', icon: '◊', detail: 'topology' }
-        ]
-      }
+      { id: 'single:bc',     type: 'single', label: 'Sınır Koşulları', icon: '⊥', detail: 'bc' },
+      { id: 'single:solver', type: 'single', label: 'Çözüm (Solution)', icon: '►', detail: 'solver' }
     ]
   };
 
@@ -30646,7 +30777,7 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
     meshNode.data.meshSettings = meshNode.data.meshSettings || {};
     if (!meshNode.data.meshSettings.outline) {
       meshNode.data.meshSettings.outline = {
-        selected:  'single:defaults',
+        selected:  'single:geometry',
         expanded:  _defaultExpanded(),
         splitPct:  50
       };
@@ -30667,6 +30798,8 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
       if (Array.isArray(n.children)) n.children.forEach(visit);
     }
     visit(SCHEMA);
+    // Mesh dalı default açık (en sık kullanılan); Globals + Lokal Kontroller açık
+    exp['group:mesh']         = true;
     // Lokal kontrol grupları default kapalı kalsın (kalabalıklığı azaltır)
     exp['cl:bodySizing']     = false;
     exp['cl:faceSizing']     = false;
@@ -30774,7 +30907,22 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
       return 'ok';
     }
 
-    // Globals (single nodes): hep ok kabul edelim — eksik tanım yok.
+    // Study dalları: geometry / bc / solver — duruma göre state
+    if (outlineId === 'single:geometry') {
+      var gd = meshNode.data || {};
+      return (gd.geometry && gd.geometry.type) ? 'ok' : 'underdefined';
+    }
+    if (outlineId === 'single:bc') {
+      var bcd = (meshNode.data && meshNode.data.bc) || {};
+      var asg = Array.isArray(bcd.assignments) ? bcd.assignments : [];
+      return asg.length > 0 ? 'ok' : 'info';
+    }
+    if (outlineId === 'single:solver') {
+      var sv = (meshNode.data && meshNode.data.solver) || {};
+      return (sv.results) ? 'ok' : 'info';
+    }
+
+    // Globals ve diğer single düğümler: hep ok kabul edelim — eksik tanım yok.
     if (outlineId.indexOf('single:') === 0) {
       return 'ok';
     }
@@ -31068,6 +31216,15 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
   }
 
   function _renderDetailBody(meshNode, outlineId) {
+    // Study dalları (Geometri / Sınır Koşulları / Çözüm) — mevcut cp-fea.js
+    // panel üreteçlerini birebir yeniden kullan (tek node tüm sub-data'yı tutar).
+    var studyDispatch = {
+      'single:geometry': function(n) { return (typeof getFEAGeometryPropertiesHTML === 'function') ? getFEAGeometryPropertiesHTML(n) : _emptyDetail('Geometri paneli yüklenmedi'); },
+      'single:bc':       function(n) { return (typeof getFEABCPropertiesHTML === 'function') ? getFEABCPropertiesHTML(n) : _emptyDetail('Sınır Koşulları paneli yüklenmedi'); },
+      'single:solver':   function(n) { return (typeof getFEASolverPropertiesHTML === 'function') ? getFEASolverPropertiesHTML(n) : _emptyDetail('Çözücü paneli yüklenmedi'); }
+    };
+    if (studyDispatch[outlineId]) return studyDispatch[outlineId](meshNode);
+
     // Mevcut _veFEAEditor*HTML üreteçleri için dispatch
     var legacyDispatch = {
       'single:defaults':    function(n) { return (typeof _veFEAEditorDefaultsHTML === 'function') ? _veFEAEditorDefaultsHTML(n) : _emptyDetail('Defaults renderer yüklenmedi'); },
@@ -34288,10 +34445,9 @@ function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
   var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
   if(!node) return;
 
-  // Mesh node: in-memory cache'ten mesh data yedir (kullanıcı raporladığı
-  // "tam ekran mesh gelmiyor" sorununu çözer — mesh data node.data'da değil,
-  // veFEAMeshCache global cache'inde tutulur)
-  if (node.type === 'fea-mesh' &&
+  // Mesh node (veya birleşik 'fea' modülü): in-memory cache'ten mesh data
+  // yedir (mesh data node.data'da değil, veFEAMeshCache global cache'inde).
+  if ((node.type === 'fea-mesh' || node.type === 'fea') &&
       typeof veFEAMeshCache !== 'undefined' && veFEAMeshCache[nodeId] &&
       typeof viewer.loadMesh === 'function') {
     viewer.loadMesh(veFEAMeshCache[nodeId]);
@@ -34512,7 +34668,11 @@ function veFEAInitMeshViewerForNode(nodeId, viewerOpts) {
 
 // Geometri → Mesh node bağlantısını bul (upstream)
 function veFEAFindUpstreamGeometryNode(meshNodeId) {
-  if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  if (typeof nodes === 'undefined') return null;
+  // Birleşik modül (Faz 1): aynı 'fea' node geometriyi de tutar
+  var self = nodes.find(function(n) { return n.id === meshNodeId; });
+  if (self && (self.type === 'fea' || (self.data && self.data.geometry))) return self;
+  if (typeof connections === 'undefined') return null;
   var conn = connections.find(function(c) { return c.to === meshNodeId; });
   if (!conn) return null;
   var geomNode = nodes.find(function(n) { return n.id === conn.from && n.type === 'fea-geometry'; });
@@ -34932,7 +35092,11 @@ function veFEAApplyRefinementSuggestion(meshNodeId, actionType, actionData) {
 // Mesh node ID'sinden aşağı akıştaki solver node'unu bulur.
 // BC → solver path: mesh → bc → solver
 function _veFEAFindSolverNodeForMesh(meshNodeId) {
-  if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
+  if (typeof nodes === 'undefined') return null;
+  // Birleşik modül (Faz 1): solver verisi aynı node'da
+  var self = nodes.filter(function (n) { return n.id === meshNodeId; })[0];
+  if (self && (self.type === 'fea' || (self.data && self.data.solver))) return self;
+  if (typeof connections === 'undefined') return null;
   // mesh → bc
   var bcConn = connections.filter(function (c) { return c.from === meshNodeId; })[0];
   if (!bcConn) return null;
@@ -35670,7 +35834,17 @@ function veFEAOpenMeshEditor(nodeId) {
   if (_veFEAEditorActive) veFEACloseMeshEditor();
   if (typeof nodes === 'undefined') return;
   var node = nodes.find(function(n) { return n.id === nodeId; });
-  if (!node || node.type !== 'fea-mesh') return;
+  // Faz 1: birleşik 'fea' modülü VEYA eski 'fea-mesh' node'u kabul edilir.
+  if (!node || (node.type !== 'fea-mesh' && node.type !== 'fea')) return;
+  // Birleşik modülde meshSettings garanti olsun (outline state buna bağlı)
+  if (node.type === 'fea') {
+    node.data = node.data || {};
+    if (!node.data.meshSettings) {
+      node.data.meshSettings = (typeof veFEACreateModuleData === 'function')
+        ? veFEACreateModuleData().meshSettings
+        : { size: 10, suppressFlags: {} };
+    }
+  }
 
   node.data = node.data || {};
   if (!node.data.editorAccordion) node.data.editorAccordion = _veFEAEditorDefaultAccordionState();
@@ -35966,11 +36140,13 @@ function veFEAToggleAccordion(sectionKey) {
 function _veFEAEditorBuildHeader(node) {
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  var nodeLabel = node.customName || (node.def && node.def.name) || 'Mesh';
+  var nodeLabel = node.customName || (node.def && node.def.name) || 'Yapısal Analiz';
+  var isModule = (node.type === 'fea');
+  var titleText = isModule ? '🔷 Yapısal Analiz Editörü' : '🔷 Mesh Editörü';
   header.innerHTML = '<div style="display:flex; align-items:center; gap:8px;">' +
-    '<div style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">🔷 Mesh Editörü</div>' +
+    '<div style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">' + titleText + '</div>' +
     '<div style="font-size:0.62rem; color:var(--text-muted);">— ' + nodeLabel + ' (' + node.id + ')</div>' +
-    '<span style="font-size:0.52rem; font-weight:600; color:#b45309; background:#fef3c720; padding:2px 7px; border:1px solid #f59e0b40; letter-spacing:0.03em; text-transform:uppercase;">Faz 3a</span>' +
+    '<span style="font-size:0.52rem; font-weight:600; color:#b45309; background:#fef3c720; padding:2px 7px; border:1px solid #f59e0b40; letter-spacing:0.03em; text-transform:uppercase;">' + (isModule ? 'Faz 1 — Modül Ağacı' : 'Faz 3b') + '</span>' +
     '</div>' +
     '<button onclick="veFEACloseMeshEditor()" title="Kapat (ESC)" style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); cursor:pointer; font-size:1rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
   return header;
@@ -38410,6 +38586,47 @@ if (typeof module !== 'undefined' && module.exports) {
 //   F6 → Post-process: kontur, deformasyon
 // ============================================================================
 
+// ─── 0. YAPISAL ANALİZ MODÜLÜ (birleşik node side panel) ────────────────────
+// Faz 1: canvas'taki tek 'fea' node seçilince sağ panelde özet + editör butonu.
+// Tüm detaylı çalışma "Yapısal Analiz Editörü" modal'ında (outline + details).
+function getFEAModulePropertiesHTML(node) {
+  var d = node.data || {};
+  var hasGeom = !!(d.geometry && d.geometry.type);
+  var hasMesh = !!(d.meshActive && d.meshMetrics);
+  var bcCount = (d.bc && Array.isArray(d.bc.assignments)) ? d.bc.assignments.length : 0;
+  var solved = !!(d.solver && d.solver.results);
+
+  function statusRow(label, ok, detail) {
+    var color = ok ? 'var(--accent-success, #22c55e)' : 'var(--text-muted)';
+    var icon = ok ? '✓' : '○';
+    return '<div style="display:flex; align-items:center; justify-content:space-between; padding:5px 8px; background:var(--bg-tertiary); border:1px solid var(--border-color); margin-bottom:4px; font-size:0.62rem;">' +
+      '<span style="display:flex; align-items:center; gap:6px;"><span style="color:' + color + '; font-weight:700;">' + icon + '</span><span style="color:var(--text-primary);">' + label + '</span></span>' +
+      '<span style="color:var(--text-muted); font-size:0.56rem;">' + (detail || '') + '</span>' +
+      '</div>';
+  }
+
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+  html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Yapısal Analiz</div>';
+  html += '<span style="font-size:0.52rem; font-weight:600; color:#1d4ed8; background:rgba(59,130,246,0.12); padding:2px 7px; border:1px solid rgba(59,130,246,0.4); letter-spacing:0.03em; text-transform:uppercase;">Modül</span>';
+  html += '</div>';
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:12px;">Geometri · Mesh · Sınır Koşulları · Çözüm — hepsi tek ağaçta. Detaylı çalışma için editörü aç.</div>';
+
+  // Durum özeti — ANSYS Outline state ikonları mantığı
+  html += veFEASectionTitle('Pipeline Durumu');
+  html += statusRow('Geometri', hasGeom, hasGeom ? (d.geometry.sourceLabel || d.geometry.type) : '— tanımsız');
+  html += statusRow('Mesh', hasMesh, hasMesh ? (d.meshMetrics.nodeCount.toLocaleString('tr-TR') + ' düğüm') : '— oluşturulmadı');
+  html += statusRow('Sınır Koşulları', bcCount > 0, bcCount > 0 ? (bcCount + ' atama') : '— yok');
+  html += statusRow('Çözüm', solved, solved ? '✓ çözüldü' : '— çözülmedi');
+
+  // Editörü aç
+  html += '<button onclick="veFEAOpenMeshEditor(\'' + node.id + '\')" style="width:100%; margin-top:10px; padding:14px 16px; font-size:0.82rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.04em; transition:all 0.12s;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Yapısal Analiz Editörünü Aç</button>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); line-height:1.5; margin-top:8px; padding:0 2px;">Editörde sol panelde <b>Outline ağacı</b> (Geometri / Mesh / Sınır Koşulları / Çözüm), altında seçili nesnenin <b>Details</b> formu, sağda 3D görüntüleyici.</div>';
+
+  html += '</div>';
+  return html;
+}
+
 function veFEAPhaseBadge(phase) {
   return '<span style="font-size:0.52rem; font-weight:600; color:#b45309; background:#fef3c720; padding:2px 7px; border-radius:0; border:1px solid #f59e0b40; letter-spacing:0.03em; text-transform:uppercase;">' + phase + ' — yapım aşamasında</span>';
 }
@@ -38992,13 +39209,22 @@ function getFEABCPropertiesHTML(node) {
 }
 
 // ─── BC modifikasyon API'leri ─────────────────────────────────────────────
+// Faz 1 birleşik modül: tek 'fea' node tüm sub-data'yı tutar. Upstream
+// helper'ları tek-node-farkında: modül node verilirse kendisini döndürür
+// (mesh/geometri/bc aynı node'da). Eski 4-node zinciri için connection
+// traversal'i geriye uyumluluk olarak korunur.
 function _veFEAFindUpstreamMeshNode(bcNode) {
+  if (!bcNode) return null;
+  // Birleşik modül: aynı node mesh verisini de tutar
+  if (bcNode.type === 'fea' || (bcNode.data && bcNode.data.meshSettings)) return bcNode;
   if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
   var src = connections.filter(function (c) { return c.to === bcNode.id; })[0];
   if (!src) return null;
   return nodes.filter(function (n) { return n.id === src.from; })[0] || null;
 }
 function _veFEAFindUpstreamGeometryNode(meshNode) {
+  if (!meshNode) return null;
+  if (meshNode.type === 'fea' || (meshNode.data && meshNode.data.geometry)) return meshNode;
   if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
   var src = connections.filter(function (c) { return c.to === meshNode.id; })[0];
   if (!src) return null;
@@ -39185,6 +39411,9 @@ function _veFEAFmtKg(v) {
 }
 
 function _veFEAFindUpstreamBCNode(solverNode) {
+  if (!solverNode) return null;
+  // Birleşik modül: aynı node BC verisini de tutar
+  if (solverNode.type === 'fea' || (solverNode.data && solverNode.data.bc)) return solverNode;
   if (typeof connections === 'undefined' || typeof nodes === 'undefined') return null;
   var src = connections.filter(function (c) { return c.to === solverNode.id; })[0];
   if (!src) return null;
@@ -50374,12 +50603,20 @@ function redo() {
 }
 
 function restoreState(state) {
+  // ── FEA MİGRASYONU (Faz 1) ──
+  // Eski 4-node Yapısal Analiz zinciri (fea-geometry → fea-mesh → fea-bc →
+  // fea-solver) tek 'fea' modül node'una göçürülür. Idempotent: yeni format
+  // veya FEA içermeyen projeler dokunulmaz.
+  if(typeof veFEAMigrateChainToModule === 'function') {
+    try { veFEAMigrateChainToModule(state); } catch(e) { /* migration güvenli no-op */ }
+  }
+
   // Mevcut node'ları temizle
   nodes.forEach(function(n) {
     var el = document.getElementById(n.id);
     if(el) el.remove();
   });
-  
+
   nodes = [];
   connections = [];
   

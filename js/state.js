@@ -70,12 +70,20 @@ function redo() {
 }
 
 function restoreState(state) {
+  // ── FEA MİGRASYONU (Faz 1) ──
+  // Eski 4-node Yapısal Analiz zinciri (fea-geometry → fea-mesh → fea-bc →
+  // fea-solver) tek 'fea' modül node'una göçürülür. Idempotent: yeni format
+  // veya FEA içermeyen projeler dokunulmaz.
+  if(typeof veFEAMigrateChainToModule === 'function') {
+    try { veFEAMigrateChainToModule(state); } catch(e) { /* migration güvenli no-op */ }
+  }
+
   // Mevcut node'ları temizle
   nodes.forEach(function(n) {
     var el = document.getElementById(n.id);
     if(el) el.remove();
   });
-  
+
   nodes = [];
   connections = [];
   

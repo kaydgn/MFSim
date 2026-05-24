@@ -112,7 +112,17 @@ function veFEAOpenMeshEditor(nodeId) {
   if (_veFEAEditorActive) veFEACloseMeshEditor();
   if (typeof nodes === 'undefined') return;
   var node = nodes.find(function(n) { return n.id === nodeId; });
-  if (!node || node.type !== 'fea-mesh') return;
+  // Faz 1: birleşik 'fea' modülü VEYA eski 'fea-mesh' node'u kabul edilir.
+  if (!node || (node.type !== 'fea-mesh' && node.type !== 'fea')) return;
+  // Birleşik modülde meshSettings garanti olsun (outline state buna bağlı)
+  if (node.type === 'fea') {
+    node.data = node.data || {};
+    if (!node.data.meshSettings) {
+      node.data.meshSettings = (typeof veFEACreateModuleData === 'function')
+        ? veFEACreateModuleData().meshSettings
+        : { size: 10, suppressFlags: {} };
+    }
+  }
 
   node.data = node.data || {};
   if (!node.data.editorAccordion) node.data.editorAccordion = _veFEAEditorDefaultAccordionState();
@@ -408,11 +418,13 @@ function veFEAToggleAccordion(sectionKey) {
 function _veFEAEditorBuildHeader(node) {
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  var nodeLabel = node.customName || (node.def && node.def.name) || 'Mesh';
+  var nodeLabel = node.customName || (node.def && node.def.name) || 'Yapısal Analiz';
+  var isModule = (node.type === 'fea');
+  var titleText = isModule ? '🔷 Yapısal Analiz Editörü' : '🔷 Mesh Editörü';
   header.innerHTML = '<div style="display:flex; align-items:center; gap:8px;">' +
-    '<div style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">🔷 Mesh Editörü</div>' +
+    '<div style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">' + titleText + '</div>' +
     '<div style="font-size:0.62rem; color:var(--text-muted);">— ' + nodeLabel + ' (' + node.id + ')</div>' +
-    '<span style="font-size:0.52rem; font-weight:600; color:#b45309; background:#fef3c720; padding:2px 7px; border:1px solid #f59e0b40; letter-spacing:0.03em; text-transform:uppercase;">Faz 3a</span>' +
+    '<span style="font-size:0.52rem; font-weight:600; color:#b45309; background:#fef3c720; padding:2px 7px; border:1px solid #f59e0b40; letter-spacing:0.03em; text-transform:uppercase;">' + (isModule ? 'Faz 1 — Modül Ağacı' : 'Faz 3b') + '</span>' +
     '</div>' +
     '<button onclick="veFEACloseMeshEditor()" title="Kapat (ESC)" style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); cursor:pointer; font-size:1rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
   return header;

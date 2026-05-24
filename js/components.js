@@ -186,16 +186,18 @@ var componentDefs = {
     inputs: 0,
     outputs: 0
   },
-  // ── Yapısal Analiz (FEA) zinciri ─────────────────────────────────────────
-  // 'fea' bir sidebar girdisidir; canvas'a sürüklendiğinde 4 alt blok üretir.
-  // Bu tip nodes[] dizisine asla doğrudan eklenmez (bkz. ui-core.js spawnFEAChain).
+  // ── Yapısal Analiz (FEA) — birleşik modül ────────────────────────────────
+  // Faz 1: ANSYS "Model" ağacı gibi TEK node. Geometri + Mesh + Sınır Koşulları
+  // + Çözüm tek node'un data'sında ve tek bir outline ağacında toplanır.
+  // (Eski 4-node zinciri yükleme sırasında otomatik bu modüle göçürülür —
+  //  bkz. js/fea-study.js veFEAMigrateChainToModule.)
   'fea': {
     name: 'Yapısal Analiz',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><path d="M20 30 L50 20 L80 30 L80 70 L50 80 L20 70 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5"/><line x1="50" y1="20" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="80" y2="30" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="70" x2="80" y2="70" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/><line x1="80" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/></svg>',
     inputs: 0,
     outputs: 0,
     maxInstances: 1,
-    isFEAParent: true
+    isFEAModule: true
   },
   'fea-geometry': {
     name: 'Geometri',

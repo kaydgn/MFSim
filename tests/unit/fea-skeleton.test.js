@@ -2,7 +2,7 @@
  * FEA İskelet birim testleri (Faz 0 + Faz 1)
  * - components.js: componentDefs ve COMPONENT_SIGNALS kayıtları
  * - VE_MODULES.full-throttle: 'fea' dahil mi
- * - ui-core.js: spawnFEAChain fonksiyonu — 4 alt blok + 3 bağlantı, tek instance kuralı
+ * - Faz 1: 'fea' artık tek birleşik modül (eski 4-node spawnFEAChain kaldırıldı)
  */
 
 const fs = require('fs');
@@ -11,13 +11,16 @@ const path = require('path');
 // components.js'yi yükle — top-level var atamaları globalThis'e bind olur
 const componentsCode = fs.readFileSync(path.join(__dirname, '../../js/components.js'), 'utf8');
 eval(componentsCode);
+eval(fs.readFileSync(path.join(__dirname, '../../js/fea-study.js'), 'utf8'));
 
 describe('components.js — FEA componentDefs', () => {
-  test("'fea' sidebar girdisi tanımlı, maxInstances=1 ve isFEAParent=true", () => {
+  test("'fea' birleşik modül girdisi tanımlı, maxInstances=1 ve isFEAModule=true", () => {
     expect(componentDefs['fea']).toBeDefined();
     expect(componentDefs['fea'].name).toBe('Yapısal Analiz');
     expect(componentDefs['fea'].maxInstances).toBe(1);
-    expect(componentDefs['fea'].isFEAParent).toBe(true);
+    // Faz 1: 'fea' artık 4-node zinciri DEĞİL, tek birleşik modül node'u
+    expect(componentDefs['fea'].isFEAModule).toBe(true);
+    expect(componentDefs['fea'].isFEAParent).toBeFalsy();
   });
 
   test("4 alt bileşen tanımlı (geometry, mesh, bc, solver) ve isFEAChild=true", () => {
@@ -80,117 +83,38 @@ describe('components.js — COMPONENT_SIGNALS', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// spawnFEAChain — ui-core.js'den fonksiyon kaynağını çıkar, izole ortamda test et
+// Faz 1: birleşik 'fea' modülü — eski spawnFEAChain (4 node + 3 bağlantı)
+// kaldırıldı. Artık tek node + tek ağaç; eski projeler migration ile göçürülür.
 // ────────────────────────────────────────────────────────────────────────────
-describe('ui-core.js — spawnFEAChain', () => {
-  const uiCoreCode = fs.readFileSync(path.join(__dirname, '../../js/ui-core.js'), 'utf8');
-  // 'function spawnFEAChain(x, y) {' ile başlayan bloğu, kendi seviyesinde kapanan }'ye kadar yakala.
-  // Brace-balanced parse:
-  function extractFunction(source, signaturePrefix) {
-    const start = source.indexOf(signaturePrefix);
-    if (start === -1) throw new Error('Fonksiyon bulunamadı: ' + signaturePrefix);
-    const braceStart = source.indexOf('{', start);
-    let depth = 0;
-    for (let i = braceStart; i < source.length; i++) {
-      const c = source[i];
-      if (c === '{') depth++;
-      else if (c === '}') {
-        depth--;
-        if (depth === 0) return source.substring(start, i + 1);
-      }
-    }
-    throw new Error('Kapanış parantezi bulunamadı');
-  }
-
-  const spawnSrc = extractFunction(uiCoreCode, 'function spawnFEAChain(x, y)');
-
-  let nodes, connections, toasts, compCounter, spawnFEAChain;
-
-  function createNodeStub(type, x, y, w, h) {
-    compCounter++;
-    nodes.push({ id: 'comp-' + compCounter, type, x, y, width: w || 65, height: h || 60 });
-  }
-  function createConnectionStub(fromId, toId, fromPort, toPort) {
-    connections.push({
-      id: 'conn-' + connections.length,
-      from: fromId,
-      to: toId,
-      fromPort: fromPort || 'output',
-      toPort: toPort || 'input'
-    });
-  }
-  function showToastStub(msg, type) {
-    toasts.push({ msg, type });
-  }
-
-  beforeEach(() => {
-    nodes = [];
-    connections = [];
-    toasts = [];
-    compCounter = 0;
-    // spawnFEAChain'i kontrollü scope ile inşa et
-    spawnFEAChain = new Function(
-      'nodes',
-      'connections',
-      'compCounter',
-      'createNode',
-      'createConnection',
-      'showToast',
-      spawnSrc + '\nreturn spawnFEAChain;'
-    )(nodes, connections, compCounter, createNodeStub, createConnectionStub, showToastStub);
+describe('Faz 1 — birleşik Yapısal Analiz modülü', () => {
+  test('ui-core.js artık spawnFEAChain içermez', () => {
+    const uiCoreCode = fs.readFileSync(path.join(__dirname, '../../js/ui-core.js'), 'utf8');
+    expect(uiCoreCode).not.toMatch(/function spawnFEAChain/);
   });
 
-  test('temiz canvas: 4 alt blok 2×2 grid düzeninde oluşur', () => {
-    spawnFEAChain(100, 200);
-
-    expect(nodes).toHaveLength(4);
-    const types = nodes.map((n) => n.type);
-    expect(types).toEqual(['fea-geometry', 'fea-mesh', 'fea-bc', 'fea-solver']);
-
-    // 2×2 grid: Geometri (sol üst), Mesh (sağ üst), BC (sol alt), Solver (sağ alt)
-    const [g, m, b, s] = nodes;
-    expect(g.x).toBe(100);
-    expect(g.y).toBe(200);
-    // sağ üst: x değişir, y aynı
-    expect(m.x).toBeGreaterThan(g.x);
-    expect(m.y).toBe(g.y);
-    // sol alt: x aynı, y değişir
-    expect(b.x).toBe(g.x);
-    expect(b.y).toBeGreaterThan(g.y);
-    // sağ alt: m.x ile aynı, b.y ile aynı
-    expect(s.x).toBe(m.x);
-    expect(s.y).toBe(b.y);
+  test('veFEACreateModuleData birleşik veri üretir (geometri+mesh+bc+solver tek node)', () => {
+    const d = veFEACreateModuleData();
+    expect(d).toHaveProperty('geometry');
+    expect(d).toHaveProperty('meshSettings');
+    expect(d).toHaveProperty('bc');
+    expect(d).toHaveProperty('solver');
   });
 
-  test('3 bağlantı akış sırasına göre kurulur (Geo→Mesh→BC→Solver)', () => {
-    spawnFEAChain(0, 0);
-
-    expect(connections).toHaveLength(3);
-    expect(connections[0]).toMatchObject({ from: 'comp-1', to: 'comp-2', fromPort: 'output', toPort: 'input' });
-    expect(connections[1]).toMatchObject({ from: 'comp-2', to: 'comp-3', fromPort: 'output', toPort: 'input' });
-    expect(connections[2]).toMatchObject({ from: 'comp-3', to: 'comp-4', fromPort: 'output', toPort: 'input' });
-  });
-
-  test('başarılı zincirden sonra success toast gösterilir', () => {
-    spawnFEAChain(0, 0);
-    expect(toasts.some((t) => t.type === 'success')).toBe(true);
-  });
-
-  test('mevcut FEA zinciri varken tekrar çağırınca yeni eklenmez ve warning toast atılır', () => {
-    // Önceden var olan bir FEA node ile başla
-    nodes.push({ id: 'comp-99', type: 'fea-geometry', x: 0, y: 0 });
-
-    spawnFEAChain(500, 500);
-
-    // Hâlâ sadece tek başlangıç node'u olmalı
-    expect(nodes).toHaveLength(1);
-    expect(connections).toHaveLength(0);
-    expect(toasts.some((t) => t.type === 'warning')).toBe(true);
-  });
-
-  test('herhangi bir FEA alt tipinin varlığı tekrar eklemeyi engeller', () => {
-    nodes.push({ id: 'comp-50', type: 'fea-solver', x: 0, y: 0 });
-    spawnFEAChain(0, 0);
-    expect(nodes).toHaveLength(1);
+  test('eski 4-node zincir migration ile tek fea node\'una iner', () => {
+    const state = {
+      nodes: [
+        { id: 'comp-1', type: 'fea-geometry', x: 0, y: 0, data: { geometry: { type: 'box', params: {} } } },
+        { id: 'comp-2', type: 'fea-mesh', x: 60, y: 0, data: { meshSettings: { size: 5 } } },
+        { id: 'comp-3', type: 'fea-bc', x: 0, y: 60, data: { bc: { materialId: 'steel-st37', assignments: [] } } },
+        { id: 'comp-4', type: 'fea-solver', x: 60, y: 60, data: { solver: {} } }
+      ],
+      connections: [
+        { from: 'comp-1', to: 'comp-2' }, { from: 'comp-2', to: 'comp-3' }, { from: 'comp-3', to: 'comp-4' }
+      ]
+    };
+    veFEAMigrateChainToModule(state);
+    expect(state.nodes.filter((n) => n.type === 'fea')).toHaveLength(1);
+    expect(state.nodes.filter((n) => /^fea-/.test(n.type))).toHaveLength(0);
+    expect(state.connections).toHaveLength(0);
   });
 });

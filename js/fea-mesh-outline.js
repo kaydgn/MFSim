@@ -61,62 +61,74 @@
   var SCHEMA = {
     id: 'root',
     type: 'root',
-    label: 'Mesh',
+    label: 'Yapısal Analiz',
     icon: '▣',
     children: [
+      { id: 'single:geometry', type: 'single', label: 'Geometri', icon: '◈', detail: 'geometry' },
       {
-        id: 'group:globals',
+        id: 'group:mesh',
         type: 'group',
-        label: 'Globals',
-        icon: '⚙',
+        label: 'Mesh',
+        icon: '◆',
         defaultExpanded: true,
         children: [
-          { id: 'single:defaults',  type: 'single', label: 'Varsayılanlar',                              icon: '⚙', detail: 'defaults' },
-          { id: 'single:sizing',    type: 'single', label: 'Boyutlandırma',                              icon: '↔', detail: 'sizing' },
-          { id: 'single:inflation', type: 'single', label: 'Lokal Yoğunlaştırma / Inflation (Tek)',      icon: '〰', detail: 'inflation' }
+          {
+            id: 'group:globals',
+            type: 'group',
+            label: 'Globals',
+            icon: '⚙',
+            defaultExpanded: true,
+            children: [
+              { id: 'single:defaults',  type: 'single', label: 'Varsayılanlar',                              icon: '⚙', detail: 'defaults' },
+              { id: 'single:sizing',    type: 'single', label: 'Boyutlandırma',                              icon: '↔', detail: 'sizing' },
+              { id: 'single:inflation', type: 'single', label: 'Lokal Yoğunlaştırma / Inflation (Tek)',      icon: '〰', detail: 'inflation' }
+            ]
+          },
+          {
+            id: 'group:localControls',
+            type: 'group',
+            label: 'Lokal Kontroller',
+            icon: '⊙',
+            defaultExpanded: true,
+            children: [
+              { id: 'cl:bodySizing',     type: 'controlList', controlType: 'bodySizing',     label: 'Body Sizing',         icon: '◧' },
+              { id: 'cl:faceSizing',     type: 'controlList', controlType: 'faceSizing',     label: 'Face Sizing',         icon: '◰' },
+              { id: 'cl:edgeSizing',     type: 'controlList', controlType: 'edgeSizing',     label: 'Edge Sizing',         icon: '╱' },
+              { id: 'cl:soi',            type: 'controlList', controlType: 'soi',            label: 'Sphere of Influence', icon: '◯' },
+              { id: 'cl:refinement',     type: 'controlList', controlType: 'refinement',     label: 'Refinement',          icon: '⊞' },
+              { id: 'cl:methodOverride', type: 'controlList', controlType: 'methodOverride', label: 'Method Override',     icon: '✎' }
+            ]
+          },
+          {
+            id: 'group:topologyTools',
+            type: 'group',
+            label: 'Topoloji Araçları',
+            icon: '◇',
+            defaultExpanded: false,
+            children: [
+              { id: 'cl:virtualTopology', type: 'controlList', controlType: 'virtualTopology', label: 'Virtual Topology', icon: '◇' },
+              { id: 'single:namedSel',    type: 'single',      label: 'Named Selections (Atanmış Yüzeyler)',              icon: '⊟', detail: 'namedSel' }
+            ]
+          },
+          {
+            id: 'group:inspect',
+            type: 'group',
+            label: 'Mesh Sonrası İnceleme',
+            icon: '🔍',
+            defaultExpanded: false,
+            children: [
+              { id: 'inspect:quality',     type: 'readonly', label: 'Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', icon: '✓', detail: 'quality' },
+              { id: 'inspect:statistics',  type: 'readonly', label: 'İstatistikler',      icon: 'Σ', detail: 'statistics' },
+              { id: 'inspect:display',     type: 'readonly', label: 'Görünüm Modu',       icon: '◐', detail: 'display' },
+              { id: 'inspect:suggestions', type: 'readonly', label: 'Adaptif İnceltme Önerileri', icon: '💡', detail: 'suggestions' },
+              { id: 'inspect:convergence', type: 'readonly', label: 'Convergence Study',  icon: '〰', detail: 'convergence' },
+              { id: 'inspect:topology',    type: 'readonly', label: 'Geometri Topolojisi', icon: '◊', detail: 'topology' }
+            ]
+          }
         ]
       },
-      {
-        id: 'group:localControls',
-        type: 'group',
-        label: 'Lokal Kontroller',
-        icon: '⊙',
-        defaultExpanded: true,
-        children: [
-          { id: 'cl:bodySizing',     type: 'controlList', controlType: 'bodySizing',     label: 'Body Sizing',         icon: '◧' },
-          { id: 'cl:faceSizing',     type: 'controlList', controlType: 'faceSizing',     label: 'Face Sizing',         icon: '◰' },
-          { id: 'cl:edgeSizing',     type: 'controlList', controlType: 'edgeSizing',     label: 'Edge Sizing',         icon: '╱' },
-          { id: 'cl:soi',            type: 'controlList', controlType: 'soi',            label: 'Sphere of Influence', icon: '◯' },
-          { id: 'cl:refinement',     type: 'controlList', controlType: 'refinement',     label: 'Refinement',          icon: '⊞' },
-          { id: 'cl:methodOverride', type: 'controlList', controlType: 'methodOverride', label: 'Method Override',     icon: '✎' }
-        ]
-      },
-      {
-        id: 'group:topologyTools',
-        type: 'group',
-        label: 'Topoloji Araçları',
-        icon: '◇',
-        defaultExpanded: false,
-        children: [
-          { id: 'cl:virtualTopology', type: 'controlList', controlType: 'virtualTopology', label: 'Virtual Topology', icon: '◇' },
-          { id: 'single:namedSel',    type: 'single',      label: 'Named Selections (Atanmış Yüzeyler)',              icon: '⊟', detail: 'namedSel' }
-        ]
-      },
-      {
-        id: 'group:inspect',
-        type: 'group',
-        label: 'Mesh Sonrası İnceleme',
-        icon: '🔍',
-        defaultExpanded: false,
-        children: [
-          { id: 'inspect:quality',     type: 'readonly', label: 'Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', icon: '✓', detail: 'quality' },
-          { id: 'inspect:statistics',  type: 'readonly', label: 'İstatistikler',      icon: 'Σ', detail: 'statistics' },
-          { id: 'inspect:display',     type: 'readonly', label: 'Görünüm Modu',       icon: '◐', detail: 'display' },
-          { id: 'inspect:suggestions', type: 'readonly', label: 'Adaptif İnceltme Önerileri', icon: '💡', detail: 'suggestions' },
-          { id: 'inspect:convergence', type: 'readonly', label: 'Convergence Study',  icon: '〰', detail: 'convergence' },
-          { id: 'inspect:topology',    type: 'readonly', label: 'Geometri Topolojisi', icon: '◊', detail: 'topology' }
-        ]
-      }
+      { id: 'single:bc',     type: 'single', label: 'Sınır Koşulları', icon: '⊥', detail: 'bc' },
+      { id: 'single:solver', type: 'single', label: 'Çözüm (Solution)', icon: '►', detail: 'solver' }
     ]
   };
 
@@ -337,7 +349,7 @@
     meshNode.data.meshSettings = meshNode.data.meshSettings || {};
     if (!meshNode.data.meshSettings.outline) {
       meshNode.data.meshSettings.outline = {
-        selected:  'single:defaults',
+        selected:  'single:geometry',
         expanded:  _defaultExpanded(),
         splitPct:  50
       };
@@ -358,6 +370,8 @@
       if (Array.isArray(n.children)) n.children.forEach(visit);
     }
     visit(SCHEMA);
+    // Mesh dalı default açık (en sık kullanılan); Globals + Lokal Kontroller açık
+    exp['group:mesh']         = true;
     // Lokal kontrol grupları default kapalı kalsın (kalabalıklığı azaltır)
     exp['cl:bodySizing']     = false;
     exp['cl:faceSizing']     = false;
@@ -465,7 +479,22 @@
       return 'ok';
     }
 
-    // Globals (single nodes): hep ok kabul edelim — eksik tanım yok.
+    // Study dalları: geometry / bc / solver — duruma göre state
+    if (outlineId === 'single:geometry') {
+      var gd = meshNode.data || {};
+      return (gd.geometry && gd.geometry.type) ? 'ok' : 'underdefined';
+    }
+    if (outlineId === 'single:bc') {
+      var bcd = (meshNode.data && meshNode.data.bc) || {};
+      var asg = Array.isArray(bcd.assignments) ? bcd.assignments : [];
+      return asg.length > 0 ? 'ok' : 'info';
+    }
+    if (outlineId === 'single:solver') {
+      var sv = (meshNode.data && meshNode.data.solver) || {};
+      return (sv.results) ? 'ok' : 'info';
+    }
+
+    // Globals ve diğer single düğümler: hep ok kabul edelim — eksik tanım yok.
     if (outlineId.indexOf('single:') === 0) {
       return 'ok';
     }
@@ -759,6 +788,15 @@
   }
 
   function _renderDetailBody(meshNode, outlineId) {
+    // Study dalları (Geometri / Sınır Koşulları / Çözüm) — mevcut cp-fea.js
+    // panel üreteçlerini birebir yeniden kullan (tek node tüm sub-data'yı tutar).
+    var studyDispatch = {
+      'single:geometry': function(n) { return (typeof getFEAGeometryPropertiesHTML === 'function') ? getFEAGeometryPropertiesHTML(n) : _emptyDetail('Geometri paneli yüklenmedi'); },
+      'single:bc':       function(n) { return (typeof getFEABCPropertiesHTML === 'function') ? getFEABCPropertiesHTML(n) : _emptyDetail('Sınır Koşulları paneli yüklenmedi'); },
+      'single:solver':   function(n) { return (typeof getFEASolverPropertiesHTML === 'function') ? getFEASolverPropertiesHTML(n) : _emptyDetail('Çözücü paneli yüklenmedi'); }
+    };
+    if (studyDispatch[outlineId]) return studyDispatch[outlineId](meshNode);
+
     // Mevcut _veFEAEditor*HTML üreteçleri için dispatch
     var legacyDispatch = {
       'single:defaults':    function(n) { return (typeof _veFEAEditorDefaultsHTML === 'function') ? _veFEAEditorDefaultsHTML(n) : _emptyDetail('Defaults renderer yüklenmedi'); },
