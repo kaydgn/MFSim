@@ -191,7 +191,15 @@ function _veFEAScanFinish(state) {
   // Progress bar'ı kısa süre sonra fade-out
   var nodeId = state.nodeId;
   setTimeout(function() { _veFEAScanRemoveProgressUI(nodeId); }, 900);
-  // Topology accordion'u tazele (sayaçlar güncellensin)
+  // Outline ağacını + detay panelini tazele — Geometri sekmesindeki
+  // "✓ Topoloji tanımlandı" durumu ve sayaçlar güncellensin.
+  if (typeof FEAMeshOutline !== 'undefined') {
+    try { if (FEAMeshOutline.refresh) FEAMeshOutline.refresh(); } catch (e) {}
+    try {
+      var dc = document.getElementById('ve-fea-details-container');
+      if (dc && FEAMeshOutline.renderDetails) dc.innerHTML = FEAMeshOutline.renderDetails();
+    } catch (e) {}
+  }
   if (typeof veFEAEditorRefreshAccordions === 'function') {
     try { veFEAEditorRefreshAccordions(); } catch (e) {}
   }
@@ -250,33 +258,40 @@ function _veFEAScanBuildProgressUI(nodeId) {
     var st = document.createElement('style');
     st.id = 've-fea-scan-style';
     st.textContent =
-      '@keyframes ve-fea-scan-fade-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }' +
-      '@keyframes ve-fea-scan-pulse { 0%,100% { opacity:1; } 50% { opacity:0.55; } }' +
-      '.ve-fea-scan-bar-fill { transition: width 0.08s linear, background-color 0.3s ease; }';
+      '@keyframes ve-fea-scan-fade-in { from { opacity:0; } to { opacity:1; } }' +
+      '@keyframes ve-fea-scan-blink { 0%,49% { opacity:1; } 50%,100% { opacity:0.25; } }';
     document.head.appendChild(st);
+  }
+
+  // Segment'li (tık tık ilerleyen) progress bar — endüstriyel HMI tarzı.
+  var SEG_COUNT = 28;
+  var segHTML = '';
+  for (var si = 0; si < SEG_COUNT; si++) {
+    segHTML += '<div data-seg style="flex:1; height:100%; background:rgba(255,255,255,0.07);"></div>';
   }
 
   var box = document.createElement('div');
   box.id = 've-fea-scan-progress-' + nodeId;
-  box.style.cssText = 'position:absolute; bottom:10px; right:10px; width:264px; ' +
-    'padding:10px 12px; background:rgba(10,13,20,0.88); border:1px solid rgba(34,197,94,0.4); ' +
-    'border-radius:6px; backdrop-filter:blur(3px); z-index:12; ' +
-    'box-shadow:0 4px 16px rgba(0,0,0,0.4); animation:ve-fea-scan-fade-in 0.25s ease-out; ' +
+  box.setAttribute('data-seg-count', String(SEG_COUNT));
+  // Keskin köşe (border-radius YOK), sol kenarda renkli accent, net border.
+  box.style.cssText = 'position:absolute; bottom:0; right:0; width:300px; ' +
+    'padding:12px 14px 12px 16px; background:rgba(8,11,16,0.94); ' +
+    'border:1px solid rgba(34,197,94,0.55); border-left:3px solid #22c55e; ' +
+    'z-index:12; box-shadow:0 0 0 1px rgba(0,0,0,0.5), -6px -6px 24px rgba(0,0,0,0.45); ' +
+    'animation:ve-fea-scan-fade-in 0.18s ease-out; ' +
     'font-family:-apple-system,Segoe UI,sans-serif; pointer-events:none;';
   box.innerHTML =
-    '<div style="display:flex; align-items:center; gap:7px; margin-bottom:7px;">' +
-      '<span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:#22c55e; animation:ve-fea-scan-pulse 1s ease-in-out infinite;"></span>' +
-      '<span data-scan-title style="font-size:0.72rem; font-weight:700; color:#fff; letter-spacing:0.01em;">Topoloji Motoru</span>' +
-      '<span data-scan-pct style="margin-left:auto; font-size:0.7rem; font-weight:700; color:#22c55e;">0%</span>' +
+    '<div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;">' +
+      '<span data-scan-dot style="display:inline-block; width:8px; height:8px; background:#22c55e; animation:ve-fea-scan-blink 0.8s steps(1,end) infinite;"></span>' +
+      '<span data-scan-title style="font-size:0.66rem; font-weight:700; color:#fff; letter-spacing:0.12em; text-transform:uppercase;">Topoloji Motoru</span>' +
+      '<span data-scan-pct style="margin-left:auto; font-size:0.78rem; font-weight:700; color:#22c55e; font-family:monospace;">0%</span>' +
     '</div>' +
-    '<div data-scan-phase style="font-size:0.62rem; color:rgba(255,255,255,0.7); margin-bottom:6px; min-height:0.8em;">Başlatılıyor…</div>' +
-    '<div style="height:7px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">' +
-      '<div data-scan-fill class="ve-fea-scan-bar-fill" style="height:100%; width:0%; background:#22c55e; border-radius:4px;"></div>' +
-    '</div>' +
-    '<div data-scan-counter style="display:flex; gap:10px; margin-top:8px; font-size:0.58rem; color:rgba(255,255,255,0.85); font-family:monospace;">' +
+    '<div data-scan-phase style="font-size:0.6rem; color:rgba(255,255,255,0.65); margin-bottom:8px; min-height:0.8em; letter-spacing:0.02em;">Başlatılıyor…</div>' +
+    '<div data-scan-bar style="display:flex; gap:2px; height:9px; margin-bottom:9px;">' + segHTML + '</div>' +
+    '<div data-scan-counter style="display:flex; gap:12px; font-size:0.56rem; color:rgba(255,255,255,0.82); font-family:monospace; letter-spacing:0.01em;">' +
       '<span data-c-faces>▣ 0 yüzey</span>' +
-      '<span data-c-edges>📏 0 kenar</span>' +
-      '<span data-c-verts>🔘 0 köşe</span>' +
+      '<span data-c-edges>— 0 kenar</span>' +
+      '<span data-c-verts>○ 0 köşe</span>' +
     '</div>';
   container.appendChild(box);
   return box;
@@ -285,7 +300,12 @@ function _veFEAScanBuildProgressUI(nodeId) {
 function _veFEAScanUpdateProgressUI(state, phase, overallFrac) {
   var el = state.progressEl;
   if (!el) return;
-  var pct = Math.round(overallFrac * 100);
+  // Segment-bazlı (tık tık) ilerleme — yüzde, dolu segment sayısından türetilir,
+  // böylece akışkan değil basamaklı (discrete) ilerler.
+  var segCount = parseInt(el.getAttribute('data-seg-count'), 10) || 28;
+  var filled = Math.round(overallFrac * segCount);
+  if (phase.kind === 'done') filled = segCount;
+  var pct = Math.round((filled / segCount) * 100);
   var colorHex = '#22c55e';
   if (phase.kind === 'edges') colorHex = '#06d6f5';
   else if (phase.kind === 'vertices') colorHex = '#fbbf24';
@@ -294,13 +314,16 @@ function _veFEAScanUpdateProgressUI(state, phase, overallFrac) {
   var titleEl = el.querySelector('[data-scan-title]');
   var pctEl   = el.querySelector('[data-scan-pct]');
   var phaseEl = el.querySelector('[data-scan-phase]');
-  var fillEl  = el.querySelector('[data-scan-fill]');
+  var segEls  = el.querySelectorAll('[data-seg]');
   var cFaces  = el.querySelector('[data-c-faces]');
   var cEdges  = el.querySelector('[data-c-edges]');
   var cVerts  = el.querySelector('[data-c-verts]');
 
   if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = colorHex; }
-  if (fillEl) { fillEl.style.width = pct + '%'; fillEl.style.background = colorHex; }
+  // Segment'leri doldur — dolu olanlar faz rengi, boşlar soluk. transition YOK.
+  for (var i = 0; i < segEls.length; i++) {
+    segEls[i].style.background = (i < filled) ? colorHex : 'rgba(255,255,255,0.07)';
+  }
   if (phaseEl) {
     phaseEl.textContent = (phase.kind === 'done')
       ? '✓ Tüm yüzeyler, kenarlar ve köşeler tanımlandı.'
@@ -309,13 +332,19 @@ function _veFEAScanUpdateProgressUI(state, phase, overallFrac) {
   if (titleEl && phase.kind === 'done') titleEl.textContent = 'Topoloji Tanımlandı';
   // Canlı sayaç
   if (cFaces) cFaces.textContent = '▣ ' + state.counts.faces + '/' + state.totals.faces + ' yüzey';
-  if (cEdges) cEdges.textContent = '📏 ' + state.counts.edges + (state.totals.edges ? '/' + state.totals.edges : '') + ' kenar';
-  if (cVerts) cVerts.textContent = '🔘 ' + state.counts.vertices + (state.totals.vertices ? '/' + state.totals.vertices : '') + ' köşe';
-  // Tamamlanınca border yeşil parlak
+  if (cEdges) cEdges.textContent = '— ' + state.counts.edges + (state.totals.edges ? '/' + state.totals.edges : '') + ' kenar';
+  if (cVerts) cVerts.textContent = '○ ' + state.counts.vertices + (state.totals.vertices ? '/' + state.totals.vertices : '') + ' köşe';
+  // Tamamlanınca border + accent yeşil parlak, blink dur
   if (phase.kind === 'done') {
-    el.style.borderColor = 'rgba(34,197,94,0.9)';
-    var dot = el.querySelector('span');
+    el.style.borderColor = 'rgba(34,197,94,0.95)';
+    el.style.borderLeftColor = '#22c55e';
+    var dot = el.querySelector('[data-scan-dot]');
     if (dot) dot.style.animation = 'none';
+  } else {
+    // Faz rengine göre sol accent + border tonu güncelle
+    el.style.borderLeftColor = colorHex;
+    var dot2 = el.querySelector('[data-scan-dot]');
+    if (dot2) dot2.style.background = colorHex;
   }
 }
 

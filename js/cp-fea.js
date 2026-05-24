@@ -240,6 +240,34 @@ function getFEAGeometryPropertiesHTML(node) {
     html += veFEAReadOnlyRow('Sınırlayıcı kutu', '—');
   }
 
+  // ─── TOPOLOJİ MOTORU (zorunlu adım) ───────────────────────────────────────
+  // Geometri yüklendikten sonra, mesh atmadan önce topoloji taranmalı.
+  // Kullanıcı bu butona basmadan devam edemez (Mesh Oluştur kilitli).
+  if (hasGeom) {
+    var scanned = !!(d.topologyScanned);
+    var summary = d.topologySummary;
+    html += veFEASectionTitle('Topoloji Motoru');
+    if (scanned && summary) {
+      // Tarandı — özet + yeniden tara
+      html += '<div style="padding:9px 11px; background:rgba(34,197,94,0.08); border-left:3px solid var(--accent-success,#22c55e); margin-bottom:8px;">';
+      html += '<div style="font-weight:700; color:var(--accent-success,#22c55e); font-size:0.64rem; margin-bottom:4px;">✓ Topoloji tanımlandı</div>';
+      html += '<div style="font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
+        '<b>' + summary.faces + '</b> yüzey · <b>' + summary.edges + '</b> kenar · <b>' + summary.vertices + '</b> köşe tespit edildi. ' +
+        'Lokal mesh ayarlarına (Face/Edge Sizing, Sphere of Influence) hazır.</div>';
+      html += '</div>';
+      html += '<button onclick="veFEAStartTopologyScan(\'' + node.id + '\', { auto: false })" style="width:100%; padding:8px 10px; font-size:0.66rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-refresh"></span> Topolojiyi Yeniden Tara</button>';
+    } else {
+      // Taranmadı — zorunlu uyarı + belirgin tara butonu
+      html += '<div style="padding:9px 11px; background:rgba(245,158,11,0.1); border-left:3px solid var(--accent-warning,#f59e0b); margin-bottom:8px;">';
+      html += '<div style="font-weight:700; color:var(--accent-warning,#f59e0b); font-size:0.64rem; margin-bottom:4px;">⚠ Topoloji taranmadı</div>';
+      html += '<div style="font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
+        'Mesh oluşturmadan önce geometrinin tüm yüzey, kenar ve köşelerini tanımlamak için ' +
+        '<b>Topoloji Motoru</b>\'nu çalıştırın. Bu adım zorunludur.</div>';
+      html += '</div>';
+      html += '<button onclick="veFEAStartTopologyScan(\'' + node.id + '\', { auto: false })" style="width:100%; padding:11px 14px; font-size:0.72rem; font-weight:700; background:var(--accent-success,#22c55e); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseenter="this.style.filter=\'brightness(1.12)\'" onmouseleave="this.style.filter=\'none\'"><span class="mf-ico mf-ico-search"></span> ▶ Topolojiyi Tara</button>';
+    }
+  }
+
   html += '</div>';
   return html;
 }
@@ -386,9 +414,29 @@ function veFEASetMeshSetting(nodeId, key, value) {
 
 function veFEASubmitMeshBuild(nodeId) {
   if (typeof nodes === 'undefined' || typeof veFEABuildMeshForNode !== 'function') return;
+  var _mn = nodes.find(function(n) { return n.id === nodeId; });
+  // ZORUNLU ADIM: topoloji taranmadan mesh oluşturulamaz. Kullanıcı önce
+  // Geometri sekmesindeki "Topolojiyi Tara" butonuna basmalı.
+  if (_mn && _mn.data && !_mn.data.topologyScanned) {
+    // Geometri bağlı mı? Yoksa zaten aşağıda upstream kontrolü uyarır.
+    var _hasGeom = !!(_mn.data.geometry && _mn.data.geometry.type);
+    if (!_hasGeom && typeof veFEAFindUpstreamGeometryNode === 'function') {
+      var _gn = veFEAFindUpstreamGeometryNode(nodeId);
+      _hasGeom = !!(_gn && _gn.data && _gn.data.geometry && _gn.data.geometry.type);
+    }
+    if (_hasGeom) {
+      if (typeof showToast === 'function') {
+        showToast('Önce Topoloji Motoru\'nu çalıştırın — Geometri sekmesindeki "Topolojiyi Tara" butonuna basın.', 'warning');
+      }
+      // Geometri sekmesine yönlendir (outline ağacında seç)
+      if (typeof FEAMeshOutline !== 'undefined' && FEAMeshOutline.select) {
+        try { FEAMeshOutline.select('single:geometry'); } catch (e) {}
+      }
+      return;
+    }
+  }
   // Persisted ayarlar — DOM input'u yoksa (header'dan başka daldayken build)
   // bu değerler kullanılır; ayarlar persist-on-change ile zaten güncel.
-  var _mn = nodes.find(function(n) { return n.id === nodeId; });
   var S = (_mn && _mn.data && _mn.data.meshSettings) || {};
   var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
   var modeSel = document.getElementById('ve-fea-mesh-mode-' + nodeId);
