@@ -1594,6 +1594,11 @@
   position:relative;
 }
 
+/* Otomatik açılmaz: yalnızca bir bileşen seçilince görünür */
+.ve-properties.ve-prop-hidden{
+  display:none;
+}
+
 .ve-properties-resizer{
   position:absolute;
   left:0;
