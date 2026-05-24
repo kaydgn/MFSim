@@ -72,6 +72,7 @@
         icon: '◆',
         defaultExpanded: true,
         children: [
+          { id: 'single:meshGenerate', type: 'single', label: 'Ağ Ör (Mesh Oluştur)', icon: '▶', detail: 'meshGenerate' },
           {
             id: 'group:globals',
             type: 'group',
@@ -588,6 +589,10 @@
       var gd = meshNode.data || {};
       return (gd.geometry && gd.geometry.type) ? 'ok' : 'underdefined';
     }
+    // "Ağ Ör" düğümü: mesh varsa ok, yoksa info (henüz örülmedi)
+    if (outlineId === 'single:meshGenerate') {
+      return (meshNode.data && meshNode.data.meshActive) ? 'ok' : 'info';
+    }
     if (outlineId === 'single:bc') {
       var bcd = (meshNode.data && meshNode.data.bc) || {};
       var asg = Array.isArray(bcd.assignments) ? bcd.assignments : [];
@@ -895,9 +900,10 @@
     // Study dalları (Geometri / Sınır Koşulları / Çözüm) — mevcut cp-fea.js
     // panel üreteçlerini birebir yeniden kullan (tek node tüm sub-data'yı tutar).
     var studyDispatch = {
-      'single:geometry': function(n) { return (typeof getFEAGeometryPropertiesHTML === 'function') ? getFEAGeometryPropertiesHTML(n) : _emptyDetail('Geometri paneli yüklenmedi'); },
-      'single:material': function(n) { return (typeof getFEAMaterialPropertiesHTML === 'function') ? getFEAMaterialPropertiesHTML(n) : _emptyDetail('Malzeme paneli yüklenmedi'); },
-      'single:solver':   function(n) { return (typeof getFEASolverPropertiesHTML === 'function') ? getFEASolverPropertiesHTML(n) : _emptyDetail('Çözücü paneli yüklenmedi'); }
+      'single:geometry':     function(n) { return (typeof getFEAGeometryPropertiesHTML === 'function') ? getFEAGeometryPropertiesHTML(n) : _emptyDetail('Geometri paneli yüklenmedi'); },
+      'single:material':     function(n) { return (typeof getFEAMaterialPropertiesHTML === 'function') ? getFEAMaterialPropertiesHTML(n) : _emptyDetail('Malzeme paneli yüklenmedi'); },
+      'single:solver':       function(n) { return (typeof getFEASolverPropertiesHTML === 'function') ? getFEASolverPropertiesHTML(n) : _emptyDetail('Çözücü paneli yüklenmedi'); },
+      'single:meshGenerate': function(n) { return (typeof _veFEAEditorMeshSummaryHTML === 'function') ? _veFEAEditorMeshSummaryHTML(n) : _emptyDetail('Mesh özeti yüklenmedi'); }
     };
     if (studyDispatch[outlineId]) return studyDispatch[outlineId](meshNode);
 
