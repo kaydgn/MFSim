@@ -22200,6 +22200,8 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
         // parsedMesh sadece topology hesaplaması için gerekti — proje kaydında
         // saklanmaması için temizle (rawDataB64 var, yeniden parse edilebilir).
         delete node.data.geometry.parsedMesh;
+        // Yeni geometri → topoloji yeniden taranmalı (otomatik tarama guard'ı)
+        node.data.topologyScanned = false;
         if (typeof saveState === 'function') saveState();
       }
     }
@@ -32602,9 +32604,18 @@ function veFEAInitViewer(canvas, opts) {
       if (!this._faceMaterials) return;
       var sel = this._selectedFaceId;
       var hov = this._hoveredFaceId;
+      var scan = this._scanState;
       Object.keys(this._faceMaterials).forEach(function(fid) {
         var mat = this._faceMaterials[fid];
         if (!mat || !mat.emissive) return;
+        // Scan modu — topoloji tarama animasyonu sırasında tespit edilen
+        // yüzeyler yeşil yanar (seçim/hover'dan önceliklidir).
+        if (scan && scan.faces && scan.faces[fid]) {
+          mat.emissive.setHex(scan.faceColor || 0x22c55e);
+          mat.emissiveIntensity = 0.9;   // belirgin yeşil glow
+          mat.needsUpdate = true;
+          return;
+        }
         if (fid === sel) {
           mat.emissive.setHex(0xfbbf24);   // sarı — seçili
           mat.emissiveIntensity = 0.55;
@@ -32675,14 +32686,26 @@ function veFEAInitViewer(canvas, opts) {
         geo.setAttribute('position', new THREE.BufferAttribute(flat, 3));
         var isSel = (self._selectedEdgeId === e.id);
         var isHov = (self._hoveredEdgeId === e.id);
-        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x60a5fa);
-        var lineWidth = (isSel || isHov) ? 3 : 1.4;
+        var scan = self._scanState;
+        var isScan = !!(scan && scan.edges && scan.edges[e.id]);
+        var color, lineWidth, opacity, renderOrder;
+        if (isScan) {
+          // Scan modu — kenar tarama fazı (cyan)
+          color = scan.edgeColor || 0x06d6f5;
+          lineWidth = 3; opacity = 1; renderOrder = 1000;
+        } else if (isSel) {
+          color = 0xfbbf24; lineWidth = 3; opacity = 1; renderOrder = 1000;
+        } else if (isHov) {
+          color = 0x2dd4bf; lineWidth = 3; opacity = 1; renderOrder = 1000;
+        } else {
+          color = 0x60a5fa; lineWidth = 1.4; opacity = 0; renderOrder = 200;
+        }
         var mat = new THREE.LineBasicMaterial({
-          color: color, linewidth: lineWidth, transparent: !isSel && !isHov, opacity: (isSel || isHov) ? 1 : 0.0
+          color: color, linewidth: lineWidth, transparent: opacity < 1, opacity: opacity
         });
         var line = new THREE.Line(geo, mat);
         line.userData.feaEdgeId = e.id;
-        line.renderOrder = (isSel || isHov) ? 1000 : 200;
+        line.renderOrder = renderOrder;
         grp.add(line);
       });
       this._geometryRoot.add(grp);
@@ -32712,16 +32735,19 @@ function veFEAInitViewer(canvas, opts) {
         if (!pos || pos.length < 3) return;
         var isSel = (self._selectedVertexId === v.id);
         var isHov = (self._hoveredVertexId === v.id);
-        // Default: küçük dot. Selected: büyük sarı küre. Hover: orta turkuaz.
-        var size = (isSel || isHov) ? markerR * 1.6 : markerR * 0.55;
-        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x94a3b8);
-        var op = (isSel || isHov) ? 1.0 : 0.55;
+        var scan = self._scanState;
+        var isScan = !!(scan && scan.vertices && scan.vertices[v.id]);
+        // Default: küçük dot. Selected: büyük sarı küre. Hover: orta turkuaz. Scan: sarı.
+        var emph = isSel || isHov || isScan;
+        var size = emph ? markerR * 1.6 : markerR * 0.55;
+        var color = isScan ? (scan.vertexColor || 0xfbbf24) : (isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x94a3b8));
+        var op = emph ? 1.0 : 0.55;
         var sg = new THREE.SphereGeometry(size, 12, 12);
-        var sm = new THREE.MeshBasicMaterial({ color: color, transparent: op < 1, opacity: op, depthTest: !(isSel || isHov) });
+        var sm = new THREE.MeshBasicMaterial({ color: color, transparent: op < 1, opacity: op, depthTest: !emph });
         var mesh = new THREE.Mesh(sg, sm);
         mesh.position.set(pos[0], pos[1], pos[2]);
         mesh.userData.feaVertexId = v.id;
-        mesh.renderOrder = (isSel || isHov) ? 1001 : 150;
+        mesh.renderOrder = emph ? 1001 : 150;
         grp.add(mesh);
       });
       this._geometryRoot.add(grp);
@@ -32750,6 +32776,56 @@ function veFEAInitViewer(canvas, opts) {
       this._refreshVertexHighlights();
     },
     getSelectedVertex: function() { return this._selectedVertexId; },
+    // ─── Topoloji tarama animasyonu (ANSYS-style scan) ──────────────────────
+    // scanState: { faces:{id:true}, edges:{id:true}, vertices:{id:true},
+    //              faceColor, edgeColor, vertexColor }
+    // İlgili face/edge/vertex'leri scan renginde gösterir (yeşil/cyan/sarı).
+    _scanState: null,
+    setScanState: function(scanState) {
+      this._scanState = scanState;
+      this._applyFaceColors();
+      this._refreshEdgeHighlights();
+      this._refreshVertexHighlights();
+    },
+    // Performans: sadece face'leri güncelle (faz 1'de edge/vertex'e dokunma)
+    setScanFaces: function(faceMap, faceColor) {
+      this._scanState = this._scanState || {};
+      this._scanState.faces = faceMap || {};
+      this._scanState.faceColor = faceColor || 0x22c55e;
+      this._applyFaceColors();
+    },
+    setScanEdges: function(edgeMap, edgeColor) {
+      this._scanState = this._scanState || {};
+      this._scanState.edges = edgeMap || {};
+      this._scanState.edgeColor = edgeColor || 0x06d6f5;
+      this._refreshEdgeHighlights();
+    },
+    setScanVertices: function(vertexMap, vertexColor) {
+      this._scanState = this._scanState || {};
+      this._scanState.vertices = vertexMap || {};
+      this._scanState.vertexColor = vertexColor || 0xfbbf24;
+      this._refreshVertexHighlights();
+    },
+    // Tüm modeli kısa bir süre belirtilen renkte yak (tamamlanma pulse).
+    pulseAllFaces: function(colorHex, intensity) {
+      if (!this._faceMaterials) return;
+      var self = this;
+      Object.keys(this._faceMaterials).forEach(function(fid) {
+        var mat = self._faceMaterials[fid];
+        if (mat && mat.emissive) {
+          mat.emissive.setHex(colorHex || 0x22c55e);
+          mat.emissiveIntensity = (intensity != null) ? intensity : 0.5;
+          mat.needsUpdate = true;
+        }
+      });
+      render();
+    },
+    clearScanState: function() {
+      this._scanState = null;
+      this._applyFaceColors();
+      this._refreshEdgeHighlights();
+      this._refreshVertexHighlights();
+    },
     // Edge/vertex overlay'lerin görünürlüğünü kontrol et (geometri yedirildiğinde
     // çağrılır → varsayılan: tüm edge'ler görünür ama soluk).
     setEdgeOverlayMode: function(mode) {
@@ -34521,6 +34597,8 @@ function veFEAApplyPrimitive(nodeId, type, params) {
       if (typeof veFEAComputeGeometryTopology === 'function') {
         node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
       }
+      // Geometri değişti → topoloji yeniden taranmalı (otomatik tarama guard'ı reset)
+      node.data.topologyScanned = false;
       if (typeof saveState === 'function') saveState();
     }
   }
@@ -35719,6 +35797,347 @@ function veFEACloseFullscreenViewer() {
 }
 
 </script>
+<script type="text/x-mfsim-defer" data-mfsim-label="FEA: Topoloji motoru taraması...">
+// ============================================================================
+// FEA TOPOLOJİ MOTORU — ANSYS-tarzı animasyonlu tarama
+// ============================================================================
+// Geometri Yapısal Analiz Editörü'ne entegre edildikten sonra, geometrinin
+// tüm yüzeylerini / kenarlarını / köşelerini "tarayan" görsel bir animasyon.
+// ANSYS Workbench'in geometri yükleme deneyimini taklit eder:
+//
+//   FAZ 1 — Yüzeyler   : her yüzey sırayla YEŞİL yanar
+//   FAZ 2 — Kenarlar   : her kenar sırayla CYAN yanar
+//   FAZ 3 — Köşeler    : her köşe sırayla SARI yanar
+//
+// 3D viewer'ın sağ alt köşesinde bir progress bar + canlı tespit sayacı
+// ("8/12 yüzey · 14 kenar · 6 köşe") görünür. Tarama bitince topology
+// tamamen tanımlanır ve normal görünüme (edge/vertex overlay) geçilir.
+//
+// Public API:
+//   veFEAStartTopologyScan(nodeId, opts)   → taramayı başlat
+//   veFEACancelTopologyScan(nodeId)        → devam eden taramayı durdur
+//   veFEAIsTopologyScanning(nodeId)        → tarama sürüyor mu?
+//
+// opts: {
+//   durationMs: 2200,   // toplam hedef süre (faz'lara bölünür)
+//   auto: false,        // otomatik tetikleme bilgisi (loglama için)
+//   onComplete: fn      // tamamlanınca callback
+// }
+// ============================================================================
+
+// Tarama renkleri (faz başına)
+var VE_FEA_SCAN_FACE_COLOR   = 0x22c55e;  // yeşil
+var VE_FEA_SCAN_EDGE_COLOR   = 0x06d6f5;  // cyan
+var VE_FEA_SCAN_VERTEX_COLOR = 0xfbbf24;  // sarı
+
+// Aktif tarama durumları — nodeId → { rafId, cancelled, ... }
+var _veFEAActiveScanState = {};
+
+// Bir mesh node'u için topoloji taramasını başlat.
+function veFEAStartTopologyScan(nodeId, opts) {
+  opts = opts || {};
+  // Zaten tarama varsa iptal et (yeniden başlat)
+  veFEACancelTopologyScan(nodeId);
+
+  // Viewer + topology'yi al
+  var viewer = (typeof veFEAViewerRegistry !== 'undefined') ? veFEAViewerRegistry[nodeId] : null;
+  if (!viewer) return false;
+  var topo = _veFEAScanResolveTopology(nodeId);
+  if (!topo || !Array.isArray(topo.faces) || topo.faces.length === 0) return false;
+
+  var faces = topo.faces.slice();
+  var edges = Array.isArray(topo.edges) ? topo.edges.slice() : [];
+  var verts = Array.isArray(topo.vertices) ? topo.vertices.slice() : [];
+
+  // Uzaysal sweep sırası — yüzeyleri centroid'e göre sırala (sol→sağ, alt→üst).
+  // Daha "süpürme" hissi verir (rastgele yerine düzenli yanma).
+  _veFEAScanSortBySweep(faces);
+  _veFEAScanSortBySweep(edges);
+  _veFEAScanSortBySweep(verts);
+
+  // Topology data'yı viewer'a yükle (edge/vertex overlay altyapısı hazır olsun),
+  // ama scan modunda hepsi gizli başlar (scanState boş).
+  if (typeof viewer.setTopologyData === 'function') viewer.setTopologyData(topo);
+  viewer.setScanState({ faces: {}, edges: {}, vertices: {},
+    faceColor: VE_FEA_SCAN_FACE_COLOR, edgeColor: VE_FEA_SCAN_EDGE_COLOR, vertexColor: VE_FEA_SCAN_VERTEX_COLOR });
+
+  // Toplam süre — faz başına bölüştür (yüzey %45, kenar %35, köşe %20)
+  var totalMs = (isFinite(opts.durationMs) && opts.durationMs > 400) ? opts.durationMs : 2200;
+  var phases = [];
+  if (faces.length > 0) phases.push({ kind: 'faces',    items: faces, color: VE_FEA_SCAN_FACE_COLOR, weight: 0.45, label: 'Yüzeyler taranıyor' });
+  if (edges.length > 0) phases.push({ kind: 'edges',    items: edges, color: VE_FEA_SCAN_EDGE_COLOR, weight: 0.35, label: 'Kenarlar taranıyor' });
+  if (verts.length > 0) phases.push({ kind: 'vertices', items: verts, color: VE_FEA_SCAN_VERTEX_COLOR, weight: 0.20, label: 'Köşeler taranıyor' });
+  // Ağırlık normalizasyonu (bazı fazlar yoksa)
+  var wSum = phases.reduce(function(s, p) { return s + p.weight; }, 0) || 1;
+  phases.forEach(function(p) { p.durationMs = Math.max(250, totalMs * (p.weight / wSum)); });
+
+  // Progress bar DOM'unu oluştur
+  var progressEl = _veFEAScanBuildProgressUI(nodeId);
+
+  var state = {
+    nodeId: nodeId, viewer: viewer, topo: topo, phases: phases,
+    cancelled: false, rafId: null, progressEl: progressEl,
+    onComplete: opts.onComplete,
+    // Canlı sayaç toplamları
+    counts: { faces: 0, edges: 0, vertices: 0 },
+    totals: { faces: faces.length, edges: edges.length, vertices: verts.length },
+    // Tarama state map'leri (kümülatif — yanm faces korunur)
+    shown: { faces: {}, edges: {}, vertices: {} }
+  };
+  _veFEAActiveScanState[nodeId] = state;
+
+  _veFEAScanRunPhases(state, 0);
+  return true;
+}
+
+// Devam eden taramayı durdur + temizle (topology normal görünüme döner).
+function veFEACancelTopologyScan(nodeId) {
+  var state = _veFEAActiveScanState[nodeId];
+  if (!state) return;
+  state.cancelled = true;
+  if (state.rafId != null && typeof cancelAnimationFrame !== 'undefined') {
+    cancelAnimationFrame(state.rafId);
+  }
+  if (state.viewer && typeof state.viewer.clearScanState === 'function') {
+    state.viewer.clearScanState();
+  }
+  _veFEAScanRemoveProgressUI(nodeId);
+  delete _veFEAActiveScanState[nodeId];
+}
+
+function veFEAIsTopologyScanning(nodeId) {
+  return !!_veFEAActiveScanState[nodeId];
+}
+
+// ─── Faz yürütme (rekürsif) ────────────────────────────────────────────────
+function _veFEAScanRunPhases(state, phaseIdx) {
+  if (state.cancelled) return;
+  if (phaseIdx >= state.phases.length) {
+    _veFEAScanFinish(state);
+    return;
+  }
+  var phase = state.phases[phaseIdx];
+  var startTime = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  var n = phase.items.length;
+
+  function step() {
+    if (state.cancelled) return;
+    var now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    var elapsed = now - startTime;
+    var frac = Math.min(1, elapsed / phase.durationMs);
+    // Kaç eleman gösterilecek (kümülatif)
+    var shownCount = Math.min(n, Math.ceil(frac * n));
+    // shown map'i güncelle
+    var map = state.shown[phase.kind];
+    for (var i = 0; i < shownCount; i++) {
+      var item = phase.items[i];
+      if (item && item.id) map[item.id] = true;
+    }
+    state.counts[phase.kind] = shownCount;
+    // Viewer'a uygula (sadece bu fazın tipini güncelle — performans)
+    if (phase.kind === 'faces')    state.viewer.setScanFaces(map, phase.color);
+    else if (phase.kind === 'edges') state.viewer.setScanEdges(map, phase.color);
+    else if (phase.kind === 'vertices') state.viewer.setScanVertices(map, phase.color);
+    // Progress UI güncelle
+    var overallFrac = _veFEAScanOverallProgress(state, phaseIdx, frac);
+    _veFEAScanUpdateProgressUI(state, phase, overallFrac);
+
+    if (frac >= 1) {
+      // Faz tamam — sonraki faza geç
+      _veFEAScanRunPhases(state, phaseIdx + 1);
+    } else {
+      state.rafId = (typeof requestAnimationFrame !== 'undefined')
+        ? requestAnimationFrame(step)
+        : setTimeout(step, 16);
+    }
+  }
+  step();
+}
+
+// Genel ilerleme oranı (tüm fazlar boyunca 0-1)
+function _veFEAScanOverallProgress(state, phaseIdx, phaseFrac) {
+  var totalW = state.phases.reduce(function(s, p) { return s + p.weight; }, 0) || 1;
+  var done = 0;
+  for (var i = 0; i < phaseIdx; i++) done += state.phases[i].weight;
+  done += state.phases[phaseIdx].weight * phaseFrac;
+  return done / totalW;
+}
+
+// ─── Tamamlanma ────────────────────────────────────────────────────────────
+function _veFEAScanFinish(state) {
+  if (state.cancelled) return;
+  // Progress bar'ı %100'e tamamla
+  _veFEAScanUpdateProgressUI(state, { label: 'Topoloji tanımlandı', kind: 'done' }, 1);
+  // Scan modu temizle → normal edge/vertex overlay görünümüne dön
+  if (state.viewer && typeof state.viewer.clearScanState === 'function') {
+    state.viewer.clearScanState();
+  }
+  // Topology'yi normal şekilde set et (edge/vertex overlay seçilebilir hale gelir)
+  if (state.viewer && typeof state.viewer.setTopologyData === 'function') {
+    state.viewer.setTopologyData(state.topo);
+  }
+  // node.data'ya "topoloji tarandı" bayrağı + özet
+  if (typeof nodes !== 'undefined') {
+    var node = nodes.find(function(n) { return n.id === state.nodeId; });
+    if (node) {
+      node.data = node.data || {};
+      node.data.topologyScanned = true;
+      node.data.topologySummary = {
+        faces: state.totals.faces, edges: state.totals.edges, vertices: state.totals.vertices,
+        scannedAt: Date.now()
+      };
+    }
+  }
+  // Progress bar'ı kısa süre sonra fade-out
+  var nodeId = state.nodeId;
+  setTimeout(function() { _veFEAScanRemoveProgressUI(nodeId); }, 900);
+  // Topology accordion'u tazele (sayaçlar güncellensin)
+  if (typeof veFEAEditorRefreshAccordions === 'function') {
+    try { veFEAEditorRefreshAccordions(); } catch (e) {}
+  }
+  delete _veFEAActiveScanState[state.nodeId];
+  if (typeof state.onComplete === 'function') {
+    try { state.onComplete(state.topo); } catch (e) {}
+  }
+}
+
+// ─── Topology çözümleme ──────────────────────────────────────────────────────
+function _veFEAScanResolveTopology(nodeId) {
+  if (typeof nodes === 'undefined') return null;
+  // Upstream geometriyi bul (birleşik modül veya eski zincir)
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
+    ? veFEAFindUpstreamGeometryNode(nodeId) : null;
+  var geom = null;
+  if (geomNode && geomNode.data && geomNode.data.geometry) {
+    geom = geomNode.data.geometry;
+  } else {
+    // Birleşik modül: node'un kendi data.geometry'si
+    var node = nodes.find(function(n) { return n.id === nodeId; });
+    if (node && node.data && node.data.geometry) geom = node.data.geometry;
+  }
+  if (!geom) return null;
+  var topo = geom.topology;
+  if ((!topo || !Array.isArray(topo.faces)) && typeof veFEAComputeGeometryTopology === 'function') {
+    topo = veFEAComputeGeometryTopology(geom);
+  }
+  return topo;
+}
+
+// ─── Uzaysal sweep sırası ───────────────────────────────────────────────────
+// Elemanları centroid/position'a göre sırala — soldan sağa (X), sonra alttan
+// üste (Y), sonra Z. "Süpürme" hissi verir.
+function _veFEAScanSortBySweep(items) {
+  function key(it) {
+    var p = it.centroid || it.position || it.center ||
+            (it.polyline && it.polyline[0]) || (it.p1) || [0, 0, 0];
+    // X ağırlıklı sıralama anahtarı
+    return p[0] * 1e6 + p[1] * 1e3 + p[2];
+  }
+  items.sort(function(a, b) { return key(a) - key(b); });
+}
+
+// ─── Progress UI ─────────────────────────────────────────────────────────────
+// 3D viewer canvas container'ının sağ altına absolute positioned progress bar.
+function _veFEAScanBuildProgressUI(nodeId) {
+  var canvas = document.getElementById('ve-fea-mesh-canvas-' + nodeId);
+  var container = canvas ? canvas.parentElement : null;
+  if (!container) return null;
+  // Mevcut varsa kaldır
+  _veFEAScanRemoveProgressUI(nodeId);
+
+  // Style enjekte (bir kez)
+  if (!document.getElementById('ve-fea-scan-style')) {
+    var st = document.createElement('style');
+    st.id = 've-fea-scan-style';
+    st.textContent =
+      '@keyframes ve-fea-scan-fade-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }' +
+      '@keyframes ve-fea-scan-pulse { 0%,100% { opacity:1; } 50% { opacity:0.55; } }' +
+      '.ve-fea-scan-bar-fill { transition: width 0.08s linear, background-color 0.3s ease; }';
+    document.head.appendChild(st);
+  }
+
+  var box = document.createElement('div');
+  box.id = 've-fea-scan-progress-' + nodeId;
+  box.style.cssText = 'position:absolute; bottom:10px; right:10px; width:264px; ' +
+    'padding:10px 12px; background:rgba(10,13,20,0.88); border:1px solid rgba(34,197,94,0.4); ' +
+    'border-radius:6px; backdrop-filter:blur(3px); z-index:12; ' +
+    'box-shadow:0 4px 16px rgba(0,0,0,0.4); animation:ve-fea-scan-fade-in 0.25s ease-out; ' +
+    'font-family:-apple-system,Segoe UI,sans-serif; pointer-events:none;';
+  box.innerHTML =
+    '<div style="display:flex; align-items:center; gap:7px; margin-bottom:7px;">' +
+      '<span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:#22c55e; animation:ve-fea-scan-pulse 1s ease-in-out infinite;"></span>' +
+      '<span data-scan-title style="font-size:0.72rem; font-weight:700; color:#fff; letter-spacing:0.01em;">Topoloji Motoru</span>' +
+      '<span data-scan-pct style="margin-left:auto; font-size:0.7rem; font-weight:700; color:#22c55e;">0%</span>' +
+    '</div>' +
+    '<div data-scan-phase style="font-size:0.62rem; color:rgba(255,255,255,0.7); margin-bottom:6px; min-height:0.8em;">Başlatılıyor…</div>' +
+    '<div style="height:7px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden;">' +
+      '<div data-scan-fill class="ve-fea-scan-bar-fill" style="height:100%; width:0%; background:#22c55e; border-radius:4px;"></div>' +
+    '</div>' +
+    '<div data-scan-counter style="display:flex; gap:10px; margin-top:8px; font-size:0.58rem; color:rgba(255,255,255,0.85); font-family:monospace;">' +
+      '<span data-c-faces>▣ 0 yüzey</span>' +
+      '<span data-c-edges>📏 0 kenar</span>' +
+      '<span data-c-verts>🔘 0 köşe</span>' +
+    '</div>';
+  container.appendChild(box);
+  return box;
+}
+
+function _veFEAScanUpdateProgressUI(state, phase, overallFrac) {
+  var el = state.progressEl;
+  if (!el) return;
+  var pct = Math.round(overallFrac * 100);
+  var colorHex = '#22c55e';
+  if (phase.kind === 'edges') colorHex = '#06d6f5';
+  else if (phase.kind === 'vertices') colorHex = '#fbbf24';
+  else if (phase.kind === 'done') colorHex = '#22c55e';
+
+  var titleEl = el.querySelector('[data-scan-title]');
+  var pctEl   = el.querySelector('[data-scan-pct]');
+  var phaseEl = el.querySelector('[data-scan-phase]');
+  var fillEl  = el.querySelector('[data-scan-fill]');
+  var cFaces  = el.querySelector('[data-c-faces]');
+  var cEdges  = el.querySelector('[data-c-edges]');
+  var cVerts  = el.querySelector('[data-c-verts]');
+
+  if (pctEl) { pctEl.textContent = pct + '%'; pctEl.style.color = colorHex; }
+  if (fillEl) { fillEl.style.width = pct + '%'; fillEl.style.background = colorHex; }
+  if (phaseEl) {
+    phaseEl.textContent = (phase.kind === 'done')
+      ? '✓ Tüm yüzeyler, kenarlar ve köşeler tanımlandı.'
+      : (phase.label || '') + '…';
+  }
+  if (titleEl && phase.kind === 'done') titleEl.textContent = 'Topoloji Tanımlandı';
+  // Canlı sayaç
+  if (cFaces) cFaces.textContent = '▣ ' + state.counts.faces + '/' + state.totals.faces + ' yüzey';
+  if (cEdges) cEdges.textContent = '📏 ' + state.counts.edges + (state.totals.edges ? '/' + state.totals.edges : '') + ' kenar';
+  if (cVerts) cVerts.textContent = '🔘 ' + state.counts.vertices + (state.totals.vertices ? '/' + state.totals.vertices : '') + ' köşe';
+  // Tamamlanınca border yeşil parlak
+  if (phase.kind === 'done') {
+    el.style.borderColor = 'rgba(34,197,94,0.9)';
+    var dot = el.querySelector('span');
+    if (dot) dot.style.animation = 'none';
+  }
+}
+
+function _veFEAScanRemoveProgressUI(nodeId) {
+  var el = document.getElementById('ve-fea-scan-progress-' + nodeId);
+  if (el && el.parentNode) {
+    el.style.transition = 'opacity 0.3s ease';
+    el.style.opacity = '0';
+    setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
+  }
+}
+
+// Node.js (Jest) uyumu
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    veFEAStartTopologyScan: veFEAStartTopologyScan,
+    veFEACancelTopologyScan: veFEACancelTopologyScan,
+    veFEAIsTopologyScanning: veFEAIsTopologyScanning
+  };
+}
+
+</script>
 <script type="text/x-mfsim-defer" data-mfsim-label="FEA: Mesh editörü...">
 // ============================================================================
 // FEA MESH EDITOR — MODAL PENCERESİ
@@ -35967,6 +36386,32 @@ function _veFEASafeInitModalViewer(nodeId, retries) {
     });
     _veFEAEditorResizeObserver.observe(canvas.parentElement);
   }
+
+  // Topoloji Motoru otomatik taraması — geometri varsa ve henüz taranmadıysa,
+  // viewer hazır olduğunda ANSYS-tarzı tarama animasyonunu başlat.
+  _veFEAMaybeAutoScanTopology(nodeId);
+}
+
+// Modal açıldığında otomatik topoloji taraması tetikle (bir kez, geometri
+// taranmamışsa). Geometri değişince node.data.topologyScanned reset edilir.
+function _veFEAMaybeAutoScanTopology(nodeId) {
+  if (typeof veFEAStartTopologyScan !== 'function') return;
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  // Zaten tarandıysa tekrar etme (kullanıcı manuel "Yeniden Tara" ile tetikler)
+  if (node.data && node.data.topologyScanned) return;
+  // Geometri bağlı mı? (upstream veya birleşik modül)
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
+    ? veFEAFindUpstreamGeometryNode(nodeId) : null;
+  var hasGeom = !!(geomNode && geomNode.data && geomNode.data.geometry && geomNode.data.geometry.type);
+  if (!hasGeom && node.data && node.data.geometry && node.data.geometry.type) hasGeom = true;
+  if (!hasGeom) return;
+  // Viewer'ın geometriyi yüklemesi için bir frame bekle, sonra tara
+  setTimeout(function() {
+    if (_veFEAEditorActive !== nodeId) return;
+    veFEAStartTopologyScan(nodeId, { auto: true });
+  }, 350);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -36379,6 +36824,7 @@ function _veFEAEditorBuildRightPanel(node) {
     '</div>' +
     '<button id="ve-fea-disp-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'display-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Render modu: Shaded / Edges / Wireframe">Shaded</button>' +
     '<button id="ve-fea-pointer-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'pointer-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Pointer modu: View / Face Pick / Body Pick">⊞ View</button>' +
+    '<button id="ve-fea-scan-topo-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'scan-topology\')" style="' + btnStyle + 'margin-left:4px; border-color:rgba(34,197,94,0.5); color:#22c55e;" title="Topoloji Motoru: tüm yüzey/kenar/köşeleri yeniden tara">🔄 Topolojiyi Tara</button>' +
     '<span style="font-size:0.55rem; color:var(--text-muted); margin-left:6px;">LMB: seç · MMB: döndür · RMB: pan · wheel: zoom</span>' +
     clipUI +
     '</div>';
@@ -36406,6 +36852,20 @@ function veFEAEditorViewerAction(nodeId, action) {
   }
   if (action === 'prev-view') { if (viewer.previousView) viewer.previousView(); _veFEAEditorRefreshHistoryButtons(nodeId); return; }
   if (action === 'next-view') { if (viewer.nextView) viewer.nextView(); _veFEAEditorRefreshHistoryButtons(nodeId); return; }
+  if (action === 'scan-topology') {
+    // Manuel Topoloji Motoru taraması — node.data.topologyScanned reset + başlat
+    if (typeof nodes !== 'undefined') {
+      var n = nodes.find(function(nn) { return nn.id === nodeId; });
+      if (n && n.data) n.data.topologyScanned = false;
+    }
+    if (typeof veFEAStartTopologyScan === 'function') {
+      var ok = veFEAStartTopologyScan(nodeId, { auto: false });
+      if (!ok && typeof showToast === 'function') {
+        showToast('Topoloji taranamadı — önce bir geometri bağlayın.', 'warning');
+      }
+    }
+    return;
+  }
   if (action === 'display-mode') {
     var modes = ['shaded', 'shaded-edges', 'wireframe'];
     var labels = { 'shaded': 'Shaded', 'shaded-edges': 'Edges', 'wireframe': 'Wire' };

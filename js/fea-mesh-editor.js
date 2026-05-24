@@ -245,6 +245,32 @@ function _veFEASafeInitModalViewer(nodeId, retries) {
     });
     _veFEAEditorResizeObserver.observe(canvas.parentElement);
   }
+
+  // Topoloji Motoru otomatik taraması — geometri varsa ve henüz taranmadıysa,
+  // viewer hazır olduğunda ANSYS-tarzı tarama animasyonunu başlat.
+  _veFEAMaybeAutoScanTopology(nodeId);
+}
+
+// Modal açıldığında otomatik topoloji taraması tetikle (bir kez, geometri
+// taranmamışsa). Geometri değişince node.data.topologyScanned reset edilir.
+function _veFEAMaybeAutoScanTopology(nodeId) {
+  if (typeof veFEAStartTopologyScan !== 'function') return;
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  // Zaten tarandıysa tekrar etme (kullanıcı manuel "Yeniden Tara" ile tetikler)
+  if (node.data && node.data.topologyScanned) return;
+  // Geometri bağlı mı? (upstream veya birleşik modül)
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
+    ? veFEAFindUpstreamGeometryNode(nodeId) : null;
+  var hasGeom = !!(geomNode && geomNode.data && geomNode.data.geometry && geomNode.data.geometry.type);
+  if (!hasGeom && node.data && node.data.geometry && node.data.geometry.type) hasGeom = true;
+  if (!hasGeom) return;
+  // Viewer'ın geometriyi yüklemesi için bir frame bekle, sonra tara
+  setTimeout(function() {
+    if (_veFEAEditorActive !== nodeId) return;
+    veFEAStartTopologyScan(nodeId, { auto: true });
+  }, 350);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -657,6 +683,7 @@ function _veFEAEditorBuildRightPanel(node) {
     '</div>' +
     '<button id="ve-fea-disp-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'display-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Render modu: Shaded / Edges / Wireframe">Shaded</button>' +
     '<button id="ve-fea-pointer-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'pointer-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Pointer modu: View / Face Pick / Body Pick">⊞ View</button>' +
+    '<button id="ve-fea-scan-topo-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'scan-topology\')" style="' + btnStyle + 'margin-left:4px; border-color:rgba(34,197,94,0.5); color:#22c55e;" title="Topoloji Motoru: tüm yüzey/kenar/köşeleri yeniden tara">🔄 Topolojiyi Tara</button>' +
     '<span style="font-size:0.55rem; color:var(--text-muted); margin-left:6px;">LMB: seç · MMB: döndür · RMB: pan · wheel: zoom</span>' +
     clipUI +
     '</div>';
@@ -684,6 +711,20 @@ function veFEAEditorViewerAction(nodeId, action) {
   }
   if (action === 'prev-view') { if (viewer.previousView) viewer.previousView(); _veFEAEditorRefreshHistoryButtons(nodeId); return; }
   if (action === 'next-view') { if (viewer.nextView) viewer.nextView(); _veFEAEditorRefreshHistoryButtons(nodeId); return; }
+  if (action === 'scan-topology') {
+    // Manuel Topoloji Motoru taraması — node.data.topologyScanned reset + başlat
+    if (typeof nodes !== 'undefined') {
+      var n = nodes.find(function(nn) { return nn.id === nodeId; });
+      if (n && n.data) n.data.topologyScanned = false;
+    }
+    if (typeof veFEAStartTopologyScan === 'function') {
+      var ok = veFEAStartTopologyScan(nodeId, { auto: false });
+      if (!ok && typeof showToast === 'function') {
+        showToast('Topoloji taranamadı — önce bir geometri bağlayın.', 'warning');
+      }
+    }
+    return;
+  }
   if (action === 'display-mode') {
     var modes = ['shaded', 'shaded-edges', 'wireframe'];
     var labels = { 'shaded': 'Shaded', 'shaded-edges': 'Edges', 'wireframe': 'Wire' };

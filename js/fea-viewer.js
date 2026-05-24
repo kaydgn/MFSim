@@ -246,9 +246,18 @@ function veFEAInitViewer(canvas, opts) {
       if (!this._faceMaterials) return;
       var sel = this._selectedFaceId;
       var hov = this._hoveredFaceId;
+      var scan = this._scanState;
       Object.keys(this._faceMaterials).forEach(function(fid) {
         var mat = this._faceMaterials[fid];
         if (!mat || !mat.emissive) return;
+        // Scan modu — topoloji tarama animasyonu sırasında tespit edilen
+        // yüzeyler yeşil yanar (seçim/hover'dan önceliklidir).
+        if (scan && scan.faces && scan.faces[fid]) {
+          mat.emissive.setHex(scan.faceColor || 0x22c55e);
+          mat.emissiveIntensity = 0.9;   // belirgin yeşil glow
+          mat.needsUpdate = true;
+          return;
+        }
         if (fid === sel) {
           mat.emissive.setHex(0xfbbf24);   // sarı — seçili
           mat.emissiveIntensity = 0.55;
@@ -319,14 +328,26 @@ function veFEAInitViewer(canvas, opts) {
         geo.setAttribute('position', new THREE.BufferAttribute(flat, 3));
         var isSel = (self._selectedEdgeId === e.id);
         var isHov = (self._hoveredEdgeId === e.id);
-        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x60a5fa);
-        var lineWidth = (isSel || isHov) ? 3 : 1.4;
+        var scan = self._scanState;
+        var isScan = !!(scan && scan.edges && scan.edges[e.id]);
+        var color, lineWidth, opacity, renderOrder;
+        if (isScan) {
+          // Scan modu — kenar tarama fazı (cyan)
+          color = scan.edgeColor || 0x06d6f5;
+          lineWidth = 3; opacity = 1; renderOrder = 1000;
+        } else if (isSel) {
+          color = 0xfbbf24; lineWidth = 3; opacity = 1; renderOrder = 1000;
+        } else if (isHov) {
+          color = 0x2dd4bf; lineWidth = 3; opacity = 1; renderOrder = 1000;
+        } else {
+          color = 0x60a5fa; lineWidth = 1.4; opacity = 0; renderOrder = 200;
+        }
         var mat = new THREE.LineBasicMaterial({
-          color: color, linewidth: lineWidth, transparent: !isSel && !isHov, opacity: (isSel || isHov) ? 1 : 0.0
+          color: color, linewidth: lineWidth, transparent: opacity < 1, opacity: opacity
         });
         var line = new THREE.Line(geo, mat);
         line.userData.feaEdgeId = e.id;
-        line.renderOrder = (isSel || isHov) ? 1000 : 200;
+        line.renderOrder = renderOrder;
         grp.add(line);
       });
       this._geometryRoot.add(grp);
@@ -356,16 +377,19 @@ function veFEAInitViewer(canvas, opts) {
         if (!pos || pos.length < 3) return;
         var isSel = (self._selectedVertexId === v.id);
         var isHov = (self._hoveredVertexId === v.id);
-        // Default: küçük dot. Selected: büyük sarı küre. Hover: orta turkuaz.
-        var size = (isSel || isHov) ? markerR * 1.6 : markerR * 0.55;
-        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x94a3b8);
-        var op = (isSel || isHov) ? 1.0 : 0.55;
+        var scan = self._scanState;
+        var isScan = !!(scan && scan.vertices && scan.vertices[v.id]);
+        // Default: küçük dot. Selected: büyük sarı küre. Hover: orta turkuaz. Scan: sarı.
+        var emph = isSel || isHov || isScan;
+        var size = emph ? markerR * 1.6 : markerR * 0.55;
+        var color = isScan ? (scan.vertexColor || 0xfbbf24) : (isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x94a3b8));
+        var op = emph ? 1.0 : 0.55;
         var sg = new THREE.SphereGeometry(size, 12, 12);
-        var sm = new THREE.MeshBasicMaterial({ color: color, transparent: op < 1, opacity: op, depthTest: !(isSel || isHov) });
+        var sm = new THREE.MeshBasicMaterial({ color: color, transparent: op < 1, opacity: op, depthTest: !emph });
         var mesh = new THREE.Mesh(sg, sm);
         mesh.position.set(pos[0], pos[1], pos[2]);
         mesh.userData.feaVertexId = v.id;
-        mesh.renderOrder = (isSel || isHov) ? 1001 : 150;
+        mesh.renderOrder = emph ? 1001 : 150;
         grp.add(mesh);
       });
       this._geometryRoot.add(grp);
@@ -394,6 +418,56 @@ function veFEAInitViewer(canvas, opts) {
       this._refreshVertexHighlights();
     },
     getSelectedVertex: function() { return this._selectedVertexId; },
+    // ─── Topoloji tarama animasyonu (ANSYS-style scan) ──────────────────────
+    // scanState: { faces:{id:true}, edges:{id:true}, vertices:{id:true},
+    //              faceColor, edgeColor, vertexColor }
+    // İlgili face/edge/vertex'leri scan renginde gösterir (yeşil/cyan/sarı).
+    _scanState: null,
+    setScanState: function(scanState) {
+      this._scanState = scanState;
+      this._applyFaceColors();
+      this._refreshEdgeHighlights();
+      this._refreshVertexHighlights();
+    },
+    // Performans: sadece face'leri güncelle (faz 1'de edge/vertex'e dokunma)
+    setScanFaces: function(faceMap, faceColor) {
+      this._scanState = this._scanState || {};
+      this._scanState.faces = faceMap || {};
+      this._scanState.faceColor = faceColor || 0x22c55e;
+      this._applyFaceColors();
+    },
+    setScanEdges: function(edgeMap, edgeColor) {
+      this._scanState = this._scanState || {};
+      this._scanState.edges = edgeMap || {};
+      this._scanState.edgeColor = edgeColor || 0x06d6f5;
+      this._refreshEdgeHighlights();
+    },
+    setScanVertices: function(vertexMap, vertexColor) {
+      this._scanState = this._scanState || {};
+      this._scanState.vertices = vertexMap || {};
+      this._scanState.vertexColor = vertexColor || 0xfbbf24;
+      this._refreshVertexHighlights();
+    },
+    // Tüm modeli kısa bir süre belirtilen renkte yak (tamamlanma pulse).
+    pulseAllFaces: function(colorHex, intensity) {
+      if (!this._faceMaterials) return;
+      var self = this;
+      Object.keys(this._faceMaterials).forEach(function(fid) {
+        var mat = self._faceMaterials[fid];
+        if (mat && mat.emissive) {
+          mat.emissive.setHex(colorHex || 0x22c55e);
+          mat.emissiveIntensity = (intensity != null) ? intensity : 0.5;
+          mat.needsUpdate = true;
+        }
+      });
+      render();
+    },
+    clearScanState: function() {
+      this._scanState = null;
+      this._applyFaceColors();
+      this._refreshEdgeHighlights();
+      this._refreshVertexHighlights();
+    },
     // Edge/vertex overlay'lerin görünürlüğünü kontrol et (geometri yedirildiğinde
     // çağrılır → varsayılan: tüm edge'ler görünür ama soluk).
     setEdgeOverlayMode: function(mode) {
@@ -2165,6 +2239,8 @@ function veFEAApplyPrimitive(nodeId, type, params) {
       if (typeof veFEAComputeGeometryTopology === 'function') {
         node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
       }
+      // Geometri değişti → topoloji yeniden taranmalı (otomatik tarama guard'ı reset)
+      node.data.topologyScanned = false;
       if (typeof saveState === 'function') saveState();
     }
   }
