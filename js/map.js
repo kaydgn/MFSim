@@ -2872,7 +2872,10 @@ function veEditNodeName(nodeId) {
 function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  
+  // Birden fazla bileşen seçili → paneli göster
+  var panel = document.querySelector('.ve-properties');
+  if(panel) panel.classList.remove('ve-prop-hidden');
+
   var html = '<div style="text-align:center; padding:20px;">';
   html += '<div style="font-size:2rem; margin-bottom:12px;">📦</div>';
   html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:8px;">' + selectedNodes.length + ' bileşen seçili</div>';
@@ -2887,7 +2890,10 @@ function showMultipleSelection() {
 function showEmptyProperties() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  
+  // Seçim yok → paneli gizle (otomatik açılmaz)
+  var panel = document.querySelector('.ve-properties');
+  if(panel) panel.classList.add('ve-prop-hidden');
+
   content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon">🖱️</div><div>Bir bileşen seçin</div><small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small></div>';
 }
 
