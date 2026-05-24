@@ -49,17 +49,28 @@ function _veFEAEditorDefaultAccordionState() {
   };
 }
 
-// ─── Accordion'ları + toolbar'ı yenile (mesh state değişimleri için) ───────
-// Modal acikken mesh olusturulduğunda, silindiğinde veya named selection /
-// heat map toggle edildiğinde accordion içerikleri "Mesh olusturulduktan
-// sonra..." placeholder'ında takılı kalmasin diye tüm accordion body'lerini
-// yeniden inşa eder. Accordion expand/collapse state korunur (DOM body
-// elementi aynı, sadece içeriği değişir).
+// ─── Outline + Toolbar + Footer'ı yenile (mesh state değişimleri için) ────
+// Faz 3b refactor (eski adı: veFEAEditorRefreshAccordions — geriye uyumluluk
+// için isim korundu; her yerden çağrılıyor). Modal açıkken mesh oluşturul-
+// duğunda, silindiğinde veya bir lokal kontrol eklendi/silindi/değiştiğinde:
+//   • FEAMeshOutline.refresh() — sol panelin üst yarısındaki outline + alt
+//     yarısındaki details container'larını yeniden çizer
+//   • Backward-compat: eğer eski accordion DOM elementleri (test ortamı veya
+//     legacy build) hâlâ varsa, body'lerini de günceller — no-op değilse
+//     etki yok demektir.
+//   • Toolbar — "Mesh'i Sil" butonu mesh varlığına göre değişir
+//   • Footer — düğüm/eleman sayısı ve süre
 function veFEAEditorRefreshAccordions() {
   if (!_veFEAEditorActive || typeof nodes === 'undefined') return;
   var node = nodes.find(function(n) { return n.id === _veFEAEditorActive; });
   if (!node) return;
 
+  // ANSYS-tarz outline + details panellerini yenile (yeni layout)
+  if (typeof FEAMeshOutline !== 'undefined' && typeof FEAMeshOutline.refresh === 'function') {
+    try { FEAMeshOutline.refresh(); } catch (e) { /* no-op */ }
+  }
+
+  // Backward-compat: eski accordion body'leri DOM'da varsa onları da güncelle
   var updates = {
     'topology':    _veFEAEditorTopologyHTML(node),
     'defaults':    _veFEAEditorDefaultsHTML(node),
@@ -360,6 +371,10 @@ function veFEACloseMeshEditor() {
   _veFEAEditorActive = null;
   _veFEAEditorOverlay = null;
   _veFEAEditorEscHandler = null;
+  // Outline modülünü pasifleştir
+  if (typeof FEAMeshOutline !== 'undefined' && typeof FEAMeshOutline.deactivate === 'function') {
+    try { FEAMeshOutline.deactivate(); } catch (e) {}
+  }
   // Side panel'i tazele (mesh durumu güncellenmiş olabilir)
   if (typeof nodes !== 'undefined' && typeof showNodeProperties === 'function') {
     var node = nodes.find(function(n) { return n.id === arguments[0]; });
@@ -472,34 +487,113 @@ function _veFEAEditorBuildFooter(node) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SOL PANEL (Accordion'lar)
+// SOL PANEL — ANSYS-tarz Outline + Details Split (Faz 3a→b refactor)
 // ═══════════════════════════════════════════════════════════════════════════
+// Eski accordion düzeni (~v1) ANSYS Workbench'in Tree Outline'ına dönüştürüldü:
+//   ÜST: outline tree (Globals, Lokal Kontroller, Topoloji Araçları, İnceleme)
+//   ALT: details pane — outline'da seçilen düğümün formu
+// Kullanıcı vertical splitter ile oranı ayarlar; oran node.data.meshSettings.
+// outline.splitPct olarak persist edilir.
 function _veFEAEditorBuildLeftPanel(node) {
   var panel = document.createElement('div');
   panel.id = 've-fea-mesh-editor-left-panel';
-  panel.style.cssText = 'flex:0 0 400px; min-width:280px; max-width:720px; overflow-y:auto; overflow-x:hidden; background:var(--bg-primary, #0a0d14); border-right:1px solid var(--border-color);';
+  panel.style.cssText = 'flex:0 0 420px; min-width:300px; max-width:780px; background:var(--bg-primary, #0a0d14); border-right:1px solid var(--border-color); display:flex; flex-direction:column; overflow:hidden;';
 
-  var html = '';
-  // ─── Pre-mesh: "Mesh Oluştur" öncesi ayarlanan bölümler ─────────────────
-  html += _veFEAEditorGroupHeader('Mesh Öncesi (Ayarlar)');
-  html += _veFEAEditorAccordionSection('sizing',      'Boyutlandırma',                 _veFEAEditorSizingHTML(node));
-  html += _veFEAEditorAccordionSection('defaults',    'Varsayılanlar',                 _veFEAEditorDefaultsHTML(node));
-  html += _veFEAEditorAccordionSection('inflation',         'Lokal Yoğunlaştırma / Inflation', _veFEAEditorInflationHTML(node));
-  html += _veFEAEditorAccordionSection('faceSizing',        'Face Sizing Controls (ANSYS §5.1)', _veFEAEditorFaceSizingHTML(node));
-  html += _veFEAEditorAccordionSection('edgeSizing',        'Edge Sizing Controls (ANSYS §5.5)', _veFEAEditorEdgeSizingHTML(node));
-  html += _veFEAEditorAccordionSection('sphereOfInfluence', 'Sphere of Influence (ANSYS §5.2)', _veFEAEditorSphereOfInfluenceHTML(node));
-  html += _veFEAEditorAccordionSection('virtualTopology',   'Virtual Topology (ANSYS §8.2)',    _veFEAEditorVirtualTopologyHTML(node));
-  html += _veFEAEditorAccordionSection('namedSel',          'Atanmış Yüzeyler (Düğüm Grupları)', _veFEAEditorNamedSelHTML(node));
-  // ─── Post-mesh: Mesh oluşturulduktan sonra incelenen bölümler ───────────
-  html += _veFEAEditorGroupHeader('Mesh Sonrası (İnceleme)');
-  html += _veFEAEditorAccordionSection('quality',     'Kalite Metrikleri (Aspect / Skewness / Açı + Jacobian / Geçerlilik)', _veFEAEditorQualityHTML(node));
-  html += _veFEAEditorAccordionSection('statistics',  'İstatistikler',                 _veFEAEditorStatisticsHTML(node));
-  html += _veFEAEditorAccordionSection('display',     'Görünüm Modu',                  _veFEAEditorDisplayHTML(node));
-  html += _veFEAEditorAccordionSection('suggestions', 'Adaptif İnceltme Önerileri',    _veFEAEditorSuggestionsHTML(node));
-  html += _veFEAEditorAccordionSection('convergence', 'Convergence Study (ANSYS §10)', _veFEAEditorConvergenceHTML(node));
-  html += _veFEAEditorAccordionSection('topology',    'Geometri Topolojisi',           _veFEAEditorTopologyHTML(node));
-  panel.innerHTML = html;
+  // Outline modülünü bu mesh node için aktive et (state + active-node-id set)
+  if (typeof FEAMeshOutline !== 'undefined' && typeof FEAMeshOutline.init === 'function') {
+    FEAMeshOutline.init(node.id);
+  }
+
+  // Split oranı (persist edilir)
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  var outlineState = node.data.meshSettings.outline;
+  var splitPct = (outlineState && isFinite(outlineState.splitPct) && outlineState.splitPct >= 15 && outlineState.splitPct <= 85)
+    ? outlineState.splitPct : 50;
+
+  // Outline header
+  var outlineHeader = document.createElement('div');
+  outlineHeader.id = 've-fea-outline-header';
+  outlineHeader.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); font-size:0.58rem; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; flex-shrink:0;';
+  outlineHeader.innerHTML = '<span>▣ Mesh Outline</span>' +
+    '<span style="font-weight:600; font-size:0.5rem; color:var(--text-muted); letter-spacing:0.04em;">ANSYS §2.4 Tree</span>';
+  panel.appendChild(outlineHeader);
+
+  // Outline container
+  var outlineContainer = document.createElement('div');
+  outlineContainer.id = 've-fea-outline-container';
+  outlineContainer.style.cssText = 'flex:' + splitPct + ' ' + splitPct + ' 0; min-height:80px; overflow-y:auto; overflow-x:hidden; background:var(--bg-primary);';
+  outlineContainer.innerHTML = (typeof FEAMeshOutline !== 'undefined' && typeof FEAMeshOutline.render === 'function')
+    ? FEAMeshOutline.render() : '<div style="padding:14px; color:var(--text-muted); font-size:0.62rem;">Outline modülü yüklenmedi.</div>';
+  panel.appendChild(outlineContainer);
+
+  // Vertical splitter (outline ↔ details)
+  panel.appendChild(_veFEABuildVerticalSplitter());
+
+  // Details header
+  var detailsHeader = document.createElement('div');
+  detailsHeader.id = 've-fea-details-header';
+  detailsHeader.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); font-size:0.58rem; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; flex-shrink:0;';
+  detailsHeader.innerHTML = '<span>⚙ Details</span>' +
+    '<span style="font-weight:600; font-size:0.5rem; color:var(--text-muted); letter-spacing:0.04em;">Seçili nesnenin ayarları</span>';
+  panel.appendChild(detailsHeader);
+
+  // Details container
+  var detailsContainer = document.createElement('div');
+  detailsContainer.id = 've-fea-details-container';
+  detailsContainer.style.cssText = 'flex:' + (100 - splitPct) + ' ' + (100 - splitPct) + ' 0; min-height:120px; overflow-y:auto; overflow-x:hidden; background:var(--bg-primary);';
+  detailsContainer.innerHTML = (typeof FEAMeshOutline !== 'undefined' && typeof FEAMeshOutline.renderDetails === 'function')
+    ? FEAMeshOutline.renderDetails() : '';
+  panel.appendChild(detailsContainer);
+
   return panel;
+}
+
+// Vertical splitter — outline ↔ details oranını sürükleyerek değiştir
+function _veFEABuildVerticalSplitter() {
+  var splitter = document.createElement('div');
+  splitter.id = 've-fea-outline-vsplitter';
+  splitter.style.cssText = 'flex:0 0 4px; height:4px; background:var(--border-color); cursor:row-resize; position:relative;';
+  splitter.title = 'Outline ↔ Details oranını değiştir';
+  splitter.addEventListener('mouseenter', function() { splitter.style.background = 'var(--accent-primary, #3b82f6)'; });
+  splitter.addEventListener('mouseleave', function() { splitter.style.background = 'var(--border-color)'; });
+  splitter.addEventListener('mousedown', function(startEvt) {
+    startEvt.preventDefault();
+    var panel = document.getElementById('ve-fea-mesh-editor-left-panel');
+    var outline = document.getElementById('ve-fea-outline-container');
+    var details = document.getElementById('ve-fea-details-container');
+    if (!panel || !outline || !details) return;
+    var rect = panel.getBoundingClientRect();
+    var totalH = rect.height;
+    function onMove(e) {
+      var localY = e.clientY - rect.top;
+      // Outline'in başlık+container+splitter'in arası: outline header alanını çıkart
+      // Pragmatik: rect.top → toplam alan; sadece oran hesabı için yeterli
+      var pct = ((localY / totalH) * 100);
+      if (pct < 15) pct = 15;
+      if (pct > 85) pct = 85;
+      outline.style.flex = pct + ' ' + pct + ' 0';
+      details.style.flex = (100 - pct) + ' ' + (100 - pct) + ' 0';
+      // Persist
+      if (typeof nodes !== 'undefined' && _veFEAEditorActive) {
+        var n = nodes.find(function(x) { return x.id === _veFEAEditorActive; });
+        if (n && n.data && n.data.meshSettings) {
+          n.data.meshSettings.outline = n.data.meshSettings.outline || {};
+          n.data.meshSettings.outline.splitPct = Math.round(pct);
+        }
+      }
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if (typeof saveState === 'function') {
+        try { saveState(); } catch (e) {}
+      }
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+  return splitter;
 }
 
 // Pre/Post-mesh grup başlığı — accordion bölümleri arasında görsel ayraç.
