@@ -153,20 +153,18 @@ describe('Fullscreen toolbar render', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('cp-fea.js Geometri panel — "Sığdır" butonu', () => {
-  test('küçük preview\'da "Sığdır" butonu render edilir', () => {
+describe('cp-fea.js Geometri panel — gömülü önizleme kaldırıldı (Faz 1)', () => {
+  test('geometri panelinde artık "Sığdır" önizleme butonu YOK', () => {
     const node = { id: 'cFit', data: {} };
     const html = getFEAGeometryPropertiesHTML(node);
-    expect(html).toMatch(/Sığdır/);
-    expect(html).toMatch(/veFEAFitPreviewForNode\('cFit'\)/);
+    expect(html).not.toMatch(/veFEAFitPreviewForNode\('cFit'\)/);
   });
 
-  test('Sığdır ve Tam Ekran butonları yan yana (flex)', () => {
+  test('geometri panelinde artık gömülü "Tam Ekran" önizleme butonu YOK', () => {
     const node = { id: 'cFit2', data: {} };
     const html = getFEAGeometryPropertiesHTML(node);
-    // İkisinin de buton olarak bulunduğunu doğrula
-    expect(html).toMatch(/veFEAFitPreviewForNode\('cFit2'\)/);
-    expect(html).toMatch(/veFEAOpenFullscreenViewer\('cFit2'\)/);
+    expect(html).not.toMatch(/veFEAFitPreviewForNode\('cFit2'\)/);
+    expect(html).not.toMatch(/veFEAOpenFullscreenViewer\('cFit2'\)/);
   });
 });
 

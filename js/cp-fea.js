@@ -124,18 +124,12 @@ function getFEAGeometryPropertiesHTML(node) {
 
   html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">' +
     'Parametrik primitif tanımlayın veya CAD geometrisi yükleyin. ' +
-    'Sonraki adım: <b>Mesh</b>.</div>';
+    'Geometri sağdaki 3D görüntüleyicide görünür. Sonraki adım: <b>Mesh</b>.</div>';
 
-  // ─── 3D ÖNİZLEME ──────────────────────────────────────────────────────
-  html += veFEASectionTitle('3D Önizleme');
-  html += '<div style="position:relative; border:1px solid var(--border-color); background:#1a1a1a; margin-bottom:8px;">';
-  html += '<canvas id="ve-fea-geom-canvas-' + node.id + '" width="240" height="180" style="display:block; width:100%; height:180px; cursor:grab;"></canvas>';
-  html += '<div style="position:absolute; bottom:6px; left:8px; font-size:0.55rem; color:#888; pointer-events:none;">Sol drag: orbit · Sağ drag: pan · Wheel: zoom</div>';
-  html += '</div>';
-  html += '<div style="display:flex; gap:6px; margin-bottom:10px;">';
-  html += '<button onclick="veFEAFitPreviewForNode(\'' + node.id + '\')" style="flex:0 0 auto; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; white-space:nowrap;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'" title="Geometriyi sığdır">⛶ Sığdır</button>';
-  html += '<button onclick="veFEAOpenFullscreenViewer(\'' + node.id + '\')" style="flex:1 1 auto; padding:7px 10px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">🔍 Tam Ekran Görüntüleyici</button>';
-  html += '</div>';
+  // NOT (Faz 1): Eski gömülü "3D Önizleme" canvas'ı kaldırıldı — birleşik
+  // modül editöründe sağ tarafta zaten tam boy 3D görüntüleyici var; mesh
+  // yokken geometri otomatik orada gösterilir (veFEAInitMeshViewerForNode →
+  // _veFEALoadNodeGeometryIntoViewer).
 
   // ─── GEOMETRİ KAYNAĞI ─────────────────────────────────────────────────
   html += veFEASectionTitle('Parametrik Primitif');
