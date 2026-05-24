@@ -387,12 +387,36 @@ function getFEAMeshPropertiesHTML(node) {
 function veFEASetMeshSizePreset(nodeId, size) {
   var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
   if (input) input.value = size;
+  // Preset'i state'e de yaz (input görünmüyor olabilir / header'dan build edilir)
+  veFEASetMeshSetting(nodeId, 'size', size);
 }
+
+// Tek bir mesh ayarını anında state'e persist eder (persist-on-change).
+// Header'daki "Mesh Oluştur" butonu hangi dalda olunursa olsun çalışsın diye
+// ayarlar DOM'da değil meshSettings'te yaşar. Nested key destekler:
+// 'curvatureRefinement.enabled', 'localSizing.biasMode' gibi.
+function veFEASetMeshSetting(nodeId, key, value) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  var s = node.data.meshSettings;
+  var parts = String(key).split('.');
+  var obj = s;
+  for (var i = 0; i < parts.length - 1; i++) {
+    if (obj[parts[i]] == null || typeof obj[parts[i]] !== 'object') obj[parts[i]] = {};
+    obj = obj[parts[i]];
+  }
+  obj[parts[parts.length - 1]] = value;
+  if (typeof saveState === 'function') saveState();
+}
+
 function veFEASubmitMeshBuild(nodeId) {
   if (typeof nodes === 'undefined' || typeof veFEABuildMeshForNode !== 'function') return;
+  var _mn = nodes.find(function(n) { return n.id === nodeId; });
   // ZORUNLU ADIM: topoloji taranmadan mesh oluşturulamaz. Kullanıcı önce
   // Geometri sekmesindeki "Topolojiyi Tara" butonuna basmalı.
-  var _mn = nodes.find(function(n) { return n.id === nodeId; });
   if (_mn && _mn.data && !_mn.data.topologyScanned) {
     // Geometri bağlı mı? Yoksa zaten aşağıda upstream kontrolü uyarır.
     var _hasGeom = !!(_mn.data.geometry && _mn.data.geometry.type);
@@ -411,18 +435,21 @@ function veFEASubmitMeshBuild(nodeId) {
       return;
     }
   }
+  // Persisted ayarlar — DOM input'u yoksa (header'dan başka daldayken build)
+  // bu değerler kullanılır; ayarlar persist-on-change ile zaten güncel.
+  var S = (_mn && _mn.data && _mn.data.meshSettings) || {};
   var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
   var modeSel = document.getElementById('ve-fea-mesh-mode-' + nodeId);
   var elTypeSel = document.getElementById('ve-fea-mesh-eltype-' + nodeId);
-  var size = input ? parseFloat(input.value) : 10;
-  if (!isFinite(size) || size <= 0) size = 10;
-  var mode = (modeSel && modeSel.value) ? modeSel.value : 'auto';
+  var size = input ? parseFloat(input.value) : (S.size != null ? S.size : 10);
+  if (!isFinite(size) || size <= 0) size = (S.size != null && S.size > 0) ? S.size : 10;
+  var mode = (modeSel && modeSel.value) ? modeSel.value : (S.mode || 'auto');
   if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
-  var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : 'auto';
+  var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : (S.elementType || 'auto');
   if (elementType !== 'auto' && elementType !== 'tet4' && elementType !== 'pyramid5') elementType = 'auto';
   // Mesh Method (ANSYS §4) — eğer method dropdown ayarlanmışsa elementType'ı türet
   var methodSel = document.getElementById('ve-fea-mesh-method-' + nodeId);
-  var meshMethod = (methodSel && methodSel.value) ? methodSel.value : null;
+  var meshMethod = (methodSel && methodSel.value) ? methodSel.value : (S.meshMethod || null);
   if (meshMethod && typeof _veFEAMethodToElType === 'function') {
     var derivedElType = _veFEAMethodToElType(meshMethod);
     // Method dropdown önceliklidir; ileri seviye elementType (details) override edilir
@@ -433,7 +460,7 @@ function veFEASubmitMeshBuild(nodeId) {
   // Element Order: yeni dropdown (ANSYS §3.7) → midSideNodes türetilir.
   // Geri uyum: dropdown yoksa eski checkbox'a düş.
   var elOrderEl = document.getElementById('ve-fea-mesh-elorder-' + nodeId);
-  var elementOrder = (elOrderEl && elOrderEl.value) ? elOrderEl.value : null;
+  var elementOrder = (elOrderEl && elOrderEl.value) ? elOrderEl.value : (S.elementOrder || null);
   if (elementOrder !== 'program' && elementOrder !== 'linear' && elementOrder !== 'quadratic') {
     elementOrder = null;
   }
@@ -448,16 +475,17 @@ function veFEASubmitMeshBuild(nodeId) {
   // crossSection: kullanici 'wedge' opsiyonunu acikca secmis ise pass, aksi
   // takdirde 'auto' (default O-grid Hex8) — _veFEAMeshCylinder bunu O-grid'e cevirir.
   var crossSel = document.getElementById('ve-fea-mesh-cross-' + nodeId);
-  var crossSection = (crossSel && crossSel.value === 'wedge') ? 'wedge' : 'auto';
+  var crossSection = crossSel ? (crossSel.value === 'wedge' ? 'wedge' : 'auto') : (S.crossSection || 'auto');
+  var _curvS = S.curvatureRefinement || {};
   var curvEl = document.getElementById('ve-fea-mesh-curv-' + nodeId);
   var curvAngEl = document.getElementById('ve-fea-mesh-curv-ang-' + nodeId);
-  var curvEnabled = !!(curvEl && curvEl.checked);
-  var curvAngDeg = curvAngEl ? parseFloat(curvAngEl.value) : 18;
+  var curvEnabled = curvEl ? !!curvEl.checked : !!_curvS.enabled;
+  var curvAngDeg = curvAngEl ? parseFloat(curvAngEl.value) : (_curvS.normalAngleDeg != null ? _curvS.normalAngleDeg : 18);
   if (!isFinite(curvAngDeg) || curvAngDeg <= 0) curvAngDeg = 18;
   if (curvAngDeg > 90) curvAngDeg = 90;
   if (curvAngDeg < 1) curvAngDeg = 1;
   var defeatureEl = document.getElementById('ve-fea-mesh-defeature-' + nodeId);
-  var defeatureTol = defeatureEl ? parseFloat(defeatureEl.value) : 0;
+  var defeatureTol = defeatureEl ? parseFloat(defeatureEl.value) : (S.defeaturingTolerance != null ? S.defeaturingTolerance : 0);
   if (!isFinite(defeatureTol) || defeatureTol < 0) defeatureTol = 0;
   var localSelEl = document.getElementById('ve-fea-mesh-local-sel-' + nodeId);
   var localModeEl = document.getElementById('ve-fea-mesh-local-mode-' + nodeId);
@@ -534,12 +562,12 @@ function veFEASubmitMeshBuild(nodeId) {
       }
     }
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);
-    meshNode.data.meshSettings.useWorker = !!(workerEl && workerEl.checked);
+    meshNode.data.meshSettings.useWorker = workerEl ? !!workerEl.checked : !!S.useWorker;
     // Delaunay tet mesher ayarları (STEP karmaşık geometriler için tet4)
     var tetMesherEl = document.getElementById('ve-fea-mesh-tetmesher-' + nodeId);
     var tetMesherInteriorEl = document.getElementById('ve-fea-mesh-tetmesher-interior-' + nodeId);
-    meshNode.data.meshSettings.useTetMesher = tetMesherEl ? !!tetMesherEl.checked : true;
-    meshNode.data.meshSettings.delaunayAddInteriorPoints = tetMesherInteriorEl ? !!tetMesherInteriorEl.checked : true;
+    meshNode.data.meshSettings.useTetMesher = tetMesherEl ? !!tetMesherEl.checked : (S.useTetMesher !== false);
+    meshNode.data.meshSettings.delaunayAddInteriorPoints = tetMesherInteriorEl ? !!tetMesherInteriorEl.checked : (S.delaunayAddInteriorPoints !== false);
   }
   veFEABuildMeshForNode(nodeId);
 }

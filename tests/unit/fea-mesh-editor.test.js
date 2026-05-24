@@ -732,51 +732,72 @@ describe('Accordion bölümleri', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// Faz 1 sonrası: "Mesh Oluştur" üst toolbar'dan ağaçtaki "Mesh" dalının
-// Details paneline (_veFEAEditorMeshBuildControlsHTML) taşındı.
-describe('Mesh Oluştur kontrolleri (Mesh dalı Details)', () => {
+// Faz 2 sonrası: "Mesh Oluştur" header'da sağ üstte (her zaman erişilebilir);
+// genel eleman boyutu Globals > Boyutlandırma'da; persist-on-change ile state.
+describe('Mesh Oluştur — header butonu + Globals boyut', () => {
   beforeEach(() => {
     global.nodes = [];
     global.connections = [];
+    global.saveState = jest.fn();
     document.body.innerHTML = '';
     if (_veFEAEditorActive) veFEACloseMeshEditor();
   });
 
-  test('Geometri yoksa Mesh Oluştur disabled', () => {
+  test('Geometri yoksa header Mesh Oluştur disabled', () => {
     var node = { id: 'fea-t1', type: 'fea', data: {} };
     global.nodes = [node];
-    var html = _veFEAEditorMeshBuildControlsHTML(node);
-    expect(html).toMatch(/veFEASubmitMeshBuild\('fea-t1'\)/);
-    expect(html).toMatch(/disabled/);
+    veFEAOpenMeshEditor('fea-t1');
+    var header = document.getElementById('ve-fea-mesh-editor-header');
+    var btn = header.querySelector('button[onclick*="veFEASubmitMeshBuild"]');
+    expect(btn).not.toBeNull();
+    expect(btn.hasAttribute('disabled')).toBe(true);
   });
 
-  test('Geometri varsa Mesh Oluştur aktif', () => {
+  test('Geometri varsa header Mesh Oluştur aktif', () => {
     var node = { id: 'fea-t2', type: 'fea', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } };
     global.nodes = [node];
-    var html = _veFEAEditorMeshBuildControlsHTML(node);
-    expect(html).toMatch(/veFEASubmitMeshBuild\('fea-t2'\)/);
-    // Geometri var → buton disabled DEĞİL (disabled attribute yok)
-    var btnMatch = html.match(/<button[^>]*veFEASubmitMeshBuild[^>]*>/);
-    expect(btnMatch[0]).not.toMatch(/disabled/);
+    veFEAOpenMeshEditor('fea-t2');
+    var header = document.getElementById('ve-fea-mesh-editor-header');
+    var btn = header.querySelector('button[onclick*="veFEASubmitMeshBuild"]');
+    expect(btn.hasAttribute('disabled')).toBe(false);
   });
 
-  test('Mesh aktifken Mesh\'i Sil butonu render', () => {
-    var node = {
-      id: 'fea-t3', type: 'fea',
-      data: { meshActive: true, meshMetrics: { nodeCount: 27, elementCount: 8 } }
-    };
+  test('Mesh aktifken header\'da Mesh\'i Sil butonu render', () => {
+    var node = { id: 'fea-t3', type: 'fea', data: { meshActive: true, meshMetrics: { nodeCount: 27, elementCount: 8 } } };
     global.nodes = [node];
-    var html = _veFEAEditorMeshBuildControlsHTML(node);
-    expect(html).toMatch(/veFEAClearMeshForNode\('fea-t3'\)/);
+    veFEAOpenMeshEditor('fea-t3');
+    var header = document.getElementById('ve-fea-mesh-editor-header');
+    expect(header.querySelector('button[onclick*="veFEAClearMeshForNode"]')).not.toBeNull();
   });
 
-  test('Mesh grubu seçilince Details\'te Mesh Oluştur butonu görünür', () => {
-    var node = { id: 'fea-t4', type: 'fea', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } };
+  test('Genel eleman boyutu Globals > Boyutlandırma\'da (persist-on-change)', () => {
+    var node = { id: 'fea-t4', type: 'fea', data: { meshSettings: { size: 7 } } };
     global.nodes = [node];
-    veFEAOpenMeshEditor('fea-t4');
-    FEAMeshOutline.select('group:mesh');
-    var details = document.getElementById('ve-fea-details-container');
-    expect(details.innerHTML).toMatch(/Mesh Oluştur/);
+    var html = _veFEAEditorSizingHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-size-fea-t4"/);
+    expect(html).toMatch(/veFEASetMeshSetting\('fea-t4', 'size'/);
+    expect(html).toMatch(/value="7"/);
+  });
+
+  test('veFEASetMeshSetting persist eder (nested key dahil)', () => {
+    var node = { id: 'fea-t6', type: 'fea', data: {} };
+    global.nodes = [node];
+    veFEASetMeshSetting('fea-t6', 'size', 3.5);
+    veFEASetMeshSetting('fea-t6', 'curvatureRefinement.enabled', true);
+    expect(node.data.meshSettings.size).toBe(3.5);
+    expect(node.data.meshSettings.curvatureRefinement.enabled).toBe(true);
+  });
+
+  test('Header\'dan build: input DOM\'da olmasa da persisted boyut korunur (10\'a düşmez)', () => {
+    // Geometri yok → veFEABuildMeshForNode erken döner; ama size-fallback
+    // mantığı build'den ÖNCE çalışır, onu test ediyoruz.
+    var node = { id: 'fea-t7', type: 'fea', data: { meshSettings: { size: 4, mode: 'volume' } } };
+    global.nodes = [node];
+    document.body.innerHTML = '';   // hiçbir mesh input DOM'da yok
+    veFEASubmitMeshBuild('fea-t7');
+    // Persisted değerler korunmalı (hardcoded default'lara düşmemeli)
+    expect(node.data.meshSettings.size).toBe(4);
+    expect(node.data.meshSettings.mode).toBe('volume');
   });
 
   test('Üstte ayrı toolbar artık YOK (ve-fea-mesh-editor-toolbar)', () => {

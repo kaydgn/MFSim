@@ -945,7 +945,7 @@ describe('cp-fea.js Mesh paneli — Worker toggle UI', () => {
     expect(html).toMatch(/id="ve-fea-mesh-worker-mesh-w1"/);
     expect(html).toMatch(/Web Worker.*da hesapla/);
     var match = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-worker-mesh-w1"[^>]*>/);
-    expect(match[0]).not.toMatch(/checked/);
+    expect(match[0]).not.toMatch(/ checked/);
   });
 
   test('Persisted useWorker:true → checkbox işaretli', () => {
@@ -1819,7 +1819,7 @@ describe('cp-fea.js Mesh paneli — Curvature refinement UI', () => {
     global.nodes = [node];
     var html = _testRenderFullMeshUI(node);
     var checkboxMatch = html.match(/<input type="checkbox"[^>]*id="ve-fea-mesh-curv-mesh-cr2"[^>]*>/);
-    expect(checkboxMatch[0]).not.toMatch(/checked/);
+    expect(checkboxMatch[0]).not.toMatch(/ checked/);
     expect(html).toMatch(/value="18"/);
   });
 
