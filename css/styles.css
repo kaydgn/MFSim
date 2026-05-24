@@ -466,6 +466,36 @@
       overflow: hidden;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    /* ===== ODAK & METİN SEÇİMİ (erişilebilir focus-visible + selection) ===== */
+    ::selection {
+      background: color-mix(in srgb, var(--accent-primary) 28%, transparent);
+      color: var(--text-heading);
+    }
+    /* Klavye ile gezinince keskin, aksan renkli odak halkası */
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    a:focus-visible,
+    [tabindex]:focus-visible,
+    .ve-component:focus-visible,
+    .ve-tab:focus-visible,
+    .sw-btn:focus-visible {
+      outline: 2px solid var(--accent-primary);
+      outline-offset: 1px;
+    }
+    /* Fare ile odaklanınca (focus-visible değil) varsayılan halkayı gizle */
+    :focus:not(:focus-visible) {
+      outline: none;
+    }
+    /* Birincil butonlarda hafif basma geri bildirimi */
+    .sw-btn:active,
+    .ve-solver-btn:active,
+    .mfsim-login-btn:active {
+      transform: translateY(1px);
     }
 
 /* ===== TAB SİSTEMİ ===== */
@@ -1703,6 +1733,7 @@
   width:100%;
   font-size:0.8rem;
   border-collapse:collapse;
+  font-variant-numeric:tabular-nums;
 }
 .ve-solver-table th{
   text-align:left;
