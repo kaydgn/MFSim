@@ -989,10 +989,11 @@
     var schemaNode = _findSchemaNode(outlineId);
     if (!schemaNode) return _emptyDetail('Grup bulunamadı: ' + outlineId);
     var html = '';
-    // "Mesh" grubu: mesh oluşturma kontrollerini en üste yerleştir (eski üst
-    // toolbar buraya taşındı — kullanıcı isteği).
-    if (outlineId === 'group:mesh' && typeof _veFEAEditorMeshBuildControlsHTML === 'function') {
-      html += _veFEAEditorMeshBuildControlsHTML(meshNode);
+    // "Mesh" grubu özeti — "Mesh Oluştur" header'da (sağ üstte), genel boyut
+    // Globals > Boyutlandırma'da. Burada kısa yönlendirme.
+    if (outlineId === 'group:mesh') {
+      html += '<div style="padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid var(--accent-primary); font-size:0.58rem; color:var(--text-secondary); line-height:1.5; margin-bottom:10px;">' +
+        'ℹ Genel eleman boyutu <b>Globals → Boyutlandırma</b>\'da; lokal kontroller alt dallarda. Hazır olunca sağ üstteki <b>▶ Mesh Oluştur</b>\'a bas.</div>';
     }
     html += '<div style="font-size:0.6rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">Bu grupta ' + (schemaNode.children || []).length + ' alt düğüm var. Soldaki ağaçtan bir alt düğümü seçerek ayarlarını düzenleyebilirsin.</div>';
     html += '<div style="display:flex; flex-direction:column; gap:4px;">';
