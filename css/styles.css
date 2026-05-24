@@ -1594,9 +1594,31 @@
   position:relative;
 }
 
+/* Açılış/kapanış yumuşak geçiş — genişlik (canvas reflow), opaklık ve kayma */
+.ve-properties{
+  transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease,
+              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              border-left-width 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
 /* Otomatik açılmaz: yalnızca bir bileşen seçilince görünür */
 .ve-properties.ve-prop-hidden{
-  display:none;
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  transform: translateX(12px);
+  border-left-width: 0;
+  pointer-events: none;
+}
+/* Açılışta genişlik anında uygulanır (grafikler tam genişlikte çizilsin);
+   yalnızca opaklık + kayma animasyonlu olur */
+.ve-properties.ve-prop-no-width-anim{
+  transition: opacity 0.2s ease,
+              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Resizer ile sürüklerken hiçbir geçiş olmasın (takılmayı önler) */
+.ve-properties.ve-prop-no-anim{
+  transition: none !important;
 }
 
 .ve-properties-resizer{

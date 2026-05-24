@@ -1676,9 +1676,31 @@
   position:relative;
 }
 
+/* Açılış/kapanış yumuşak geçiş — genişlik (canvas reflow), opaklık ve kayma */
+.ve-properties{
+  transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.2s ease,
+              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              border-left-width 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
 /* Otomatik açılmaz: yalnızca bir bileşen seçilince görünür */
 .ve-properties.ve-prop-hidden{
-  display:none;
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  transform: translateX(12px);
+  border-left-width: 0;
+  pointer-events: none;
+}
+/* Açılışta genişlik anında uygulanır (grafikler tam genişlikte çizilsin);
+   yalnızca opaklık + kayma animasyonlu olur */
+.ve-properties.ve-prop-no-width-anim{
+  transition: opacity 0.2s ease,
+              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Resizer ile sürüklerken hiçbir geçiş olmasın (takılmayı önler) */
+.ve-properties.ve-prop-no-anim{
+  transition: none !important;
 }
 
 .ve-properties-resizer{
@@ -7874,6 +7896,7 @@ function veSetSlotXAxis(slotIdx, optIdx) {
     startX = e.clientX;
     startWidth = properties.offsetWidth;
     resizer.classList.add('active');
+    properties.classList.add('ve-prop-no-anim'); // sürükleme sırasında geçişi kapat
     document.body.style.cursor = 'ew-resize';
     document.body.style.userSelect = 'none';
     e.preventDefault();
@@ -7894,6 +7917,7 @@ function veSetSlotXAxis(slotIdx, optIdx) {
     if(isResizing) {
       isResizing = false;
       resizer.classList.remove('active');
+      properties.classList.remove('ve-prop-no-anim');
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     }
@@ -10802,8 +10826,8 @@ function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
   var propertiesPanel = document.querySelector('.ve-properties');
   if(!content) return;
-  // Bir bileşen seçildi → paneli göster
-  if(propertiesPanel) propertiesPanel.classList.remove('ve-prop-hidden');
+  // Bir bileşen seçildi → paneli yumuşakça aç
+  if(typeof veRevealPropertiesPanel === 'function') veRevealPropertiesPanel();
   
   // Panel genişliğini KORUYORUZ - kullanıcı değiştirmedikçe dokunmuyoruz
   // Sadece ilk açılışta varsayılan genişlik ayarlanır
@@ -50101,12 +50125,25 @@ function veEditNodeName(nodeId) {
   });
 }
 
+// Paneli yumuşakça aç: genişlik anında uygulanır (grafikler tam genişlikte
+// çizilsin), yalnızca opaklık + kayma animasyonlu olur. Kapanış (ve-prop-hidden)
+// genişliği animasyonla daraltarak canvas'ı pürüzsüz genişletir.
+function veRevealPropertiesPanel() {
+  var panel = document.querySelector('.ve-properties');
+  if(!panel || !panel.classList.contains('ve-prop-hidden')) return;
+  panel.classList.add('ve-prop-no-width-anim');
+  panel.classList.remove('ve-prop-hidden');
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      panel.classList.remove('ve-prop-no-width-anim');
+    });
+  });
+}
+
 function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Birden fazla bileşen seçili → paneli göster
-  var panel = document.querySelector('.ve-properties');
-  if(panel) panel.classList.remove('ve-prop-hidden');
+  veRevealPropertiesPanel();
 
   var html = '<div style="text-align:center; padding:20px;">';
   html += '<div style="font-size:2rem; margin-bottom:12px;">📦</div>';
