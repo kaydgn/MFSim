@@ -551,7 +551,7 @@ function _veFEAEditorBuildRightPanel(node) {
     '</div>' +
     '<button id="ve-fea-disp-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'display-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Render modu: Shaded / Edges / Wireframe">Shaded</button>' +
     '<button id="ve-fea-pointer-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'pointer-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Pointer modu: View / Face Pick / Body Pick">⊞ View</button>' +
-    '<span style="font-size:0.55rem; color:var(--text-muted); margin-left:6px;">LMB: seç · MMB / Shift+RMB: döndür · Ctrl+RMB: pan · wheel: zoom</span>' +
+    '<span style="font-size:0.55rem; color:var(--text-muted); margin-left:6px;">LMB: seç · MMB: döndür · RMB: pan · wheel: zoom</span>' +
     clipUI +
     '</div>';
   panel.innerHTML = viewToolbar +
