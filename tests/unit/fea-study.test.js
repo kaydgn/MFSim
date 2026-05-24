@@ -231,13 +231,65 @@ describe('Birleşik node + outline entegrasyonu', () => {
     expect(html.length).toBeGreaterThan(50);
   });
 
-  test('renderDetails single:bc → BC paneli çağrılır', () => {
+  test('renderDetails single:material → Malzeme paneli çağrılır', () => {
     const node = makeModuleNode({ geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } });
     global.nodes = [node];
     FEAMeshOutline.init('fea-1');
-    FEAMeshOutline.select('single:bc');
+    FEAMeshOutline.select('single:material');
     const html = FEAMeshOutline.renderDetails();
-    expect(html).toMatch(/Malzeme|Sınır Koşul|Fixed|Yüzey/);
+    expect(html).toMatch(/Malzeme/);
+  });
+
+  test('cl:bc grup özeti → "+ Yeni Sınır Koşulu" + ekle', () => {
+    const node = makeModuleNode({ geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } });
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.select('cl:bc');
+    const html = FEAMeshOutline.renderDetails();
+    expect(html).toMatch(/Sınır Koşulu/);
+    expect(html).toContain('addControl');
+  });
+
+  test('BC öğesi: yüz + tip ile state hesabı', () => {
+    const node = makeModuleNode({ geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } });
+    node.data.bc.assignments = [
+      { faceId: null, kind: 'fixed' },                       // yüz yok → underdefined
+      { faceId: 0, kind: 'fixed' },                          // OK
+      { faceId: 1, kind: 'pressure', value: { magnitude: 0 } } // magnitude 0 → underdefined
+    ];
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    expect(FEAMeshOutline.computeNodeState(node, 'cl:bc[0]')).toBe('underdefined');
+    expect(FEAMeshOutline.computeNodeState(node, 'cl:bc[1]')).toBe('ok');
+    expect(FEAMeshOutline.computeNodeState(node, 'cl:bc[2]')).toBe('underdefined');
+  });
+
+  test('result öğesi: çözüm yoksa underdefined, varsa ok', () => {
+    const node = makeModuleNode();
+    node.data.solver.resultObjects = [{ type: 'vonMises' }];
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    expect(FEAMeshOutline.computeNodeState(node, 'cl:result[0]')).toBe('underdefined');
+    node.data.solver.results = { maxVonMises: 100 };
+    expect(FEAMeshOutline.computeNodeState(node, 'cl:result[0]')).toBe('ok');
+  });
+
+  test('addControl bc → bc.assignments\'a ekler', () => {
+    const node = makeModuleNode();
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.addControl('bc');
+    expect(node.data.bc.assignments).toHaveLength(1);
+    expect(node.data.bc.assignments[0].kind).toBe('fixed');
+  });
+
+  test('addControl result → solver.resultObjects\'e ekler', () => {
+    const node = makeModuleNode();
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.addControl('result');
+    expect(node.data.solver.resultObjects).toHaveLength(1);
+    expect(node.data.solver.resultObjects[0].type).toBe('vonMises');
   });
 });
 

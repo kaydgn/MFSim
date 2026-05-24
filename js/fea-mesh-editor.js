@@ -146,9 +146,9 @@ function veFEAOpenMeshEditor(nodeId) {
   var header = _veFEAEditorBuildHeader(node);
   modal.appendChild(header);
 
-  // Toolbar
-  var toolbar = _veFEAEditorBuildToolbar(node);
-  modal.appendChild(toolbar);
+  // NOT (kullanıcı isteği): eski üst "Mesh Oluştur" toolbar'ı kaldırıldı —
+  // mesh oluşturma kontrolleri artık ağaçtaki "Mesh" dalının Details panelinde
+  // (_veFEAEditorMeshBuildControlsHTML). Üst şerit çirkin duruyordu.
 
   // Body (split: sol accordion + resize handle + sağ viewer)
   var body = document.createElement('div');
@@ -472,6 +472,54 @@ function _veFEAEditorBuildToolbar(node) {
   }
 
   return toolbar;
+}
+
+// Mesh oluşturma kontrolleri (HTML) — eski üst toolbar'dan ağaçtaki "Mesh"
+// dalının Details paneline taşındı (kullanıcı isteği: üst şerit çirkin
+// duruyordu). Generate + boyut + presetler + (mesh varsa) sil.
+function _veFEAEditorMeshBuildControlsHTML(node) {
+  var d = node.data || {};
+  var settings = d.meshSettings || { size: 10 };
+  var hasMesh = !!d.meshActive;
+  var geomOk = false;
+  if (typeof veFEAFindUpstreamGeometryNode === 'function') {
+    var gn = veFEAFindUpstreamGeometryNode(node.id);
+    geomOk = !!(gn && gn.data && gn.data.geometry && gn.data.geometry.type);
+  }
+
+  var html = '<div style="padding:8px; background:var(--bg-primary); border:1px solid var(--border-color); margin-bottom:10px;">';
+  html += '<div style="font-size:0.58rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Mesh Oluştur</div>';
+
+  // Generate butonu
+  var buildBtnStyle = geomOk
+    ? 'background:var(--accent-primary); color:#fff; cursor:pointer;'
+    : 'background:var(--bg-tertiary); color:var(--text-muted); cursor:not-allowed;';
+  html += '<button ' + (geomOk ? '' : 'disabled ') +
+    'onclick="veFEASubmitMeshBuild(\'' + node.id + '\')" style="width:100%; padding:9px 14px; font-size:0.74rem; font-weight:700; border:1px solid var(--border-color); ' + buildBtnStyle + ' margin-bottom:8px;">▶ Mesh Oluştur</button>';
+  if (!geomOk) {
+    html += '<div style="font-size:0.55rem; color:var(--accent-warning, #f59e0b); margin-bottom:8px;">⚠ Önce Geometri dalından geometri tanımlayın.</div>';
+  }
+
+  // Boyut + presetler
+  html += '<div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">';
+  html += '<span style="font-size:0.6rem; color:var(--text-secondary);">Boyut:</span>';
+  html += '<input id="ve-fea-mesh-size-' + node.id + '" type="number" min="0.5" max="500" step="0.5" value="' + settings.size + '" style="width:64px; padding:4px 6px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+  html += '<span style="font-size:0.58rem; color:var(--text-muted);">mm</span>';
+  html += '<span style="flex:1;"></span>';
+  html += '<div style="display:flex; gap:0;">';
+  html += '<button onclick="veFEASetMeshSizePreset(\'' + node.id + '\', 20)" style="padding:4px 9px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">Coarse</button>';
+  html += '<button onclick="veFEASetMeshSizePreset(\'' + node.id + '\', 10)" style="padding:4px 9px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-left:none; cursor:pointer;">Medium</button>';
+  html += '<button onclick="veFEASetMeshSizePreset(\'' + node.id + '\', 5)" style="padding:4px 9px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-left:none; cursor:pointer;">Fine</button>';
+  html += '</div>';
+  html += '</div>';
+
+  // Mesh sil (varsa)
+  if (hasMesh) {
+    html += '<button onclick="veFEAClearMeshForNode(\'' + node.id + '\')" style="padding:5px 10px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer;">🗑 Mesh\'i Sil</button>';
+  }
+
+  html += '</div>';
+  return html;
 }
 
 function _veFEAEditorBuildFooter(node) {
