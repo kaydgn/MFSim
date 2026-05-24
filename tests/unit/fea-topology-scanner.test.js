@@ -105,7 +105,8 @@ describe('Topoloji Motoru — tarama yaşam döngüsü', () => {
     veFEAStartTopologyScan('mesh-scan3', { durationMs: 500 });
     var bar = document.getElementById('ve-fea-scan-progress-mesh-scan3');
     expect(bar).not.toBeNull();
-    expect(bar.querySelector('[data-scan-fill]')).not.toBeNull();
+    expect(bar.querySelector('[data-scan-bar]')).not.toBeNull();
+    expect(bar.querySelectorAll('[data-seg]').length).toBeGreaterThan(10);  // segment'li bar
     expect(bar.querySelector('[data-c-faces]')).not.toBeNull();
   });
 
