@@ -1924,25 +1924,17 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
   }
 
   function onMouseDown(e) {
-    // CAD-style mouse layout (kullanıcı isteği):
-    //   LMB: HER ZAMAN seçim (face/edge/vertex picker) — orbit YOK.
-    //   MMB: drag ile rotate (click rotation center indicator KALDIRILDI).
-    //   Shift+RMB: rotate (alternative).
-    //   Ctrl+RMB: pan. RMB tek başına: no-op.
+    // Modifiersiz CAD mouse layout (kullanıcı tercihi):
+    //   LMB: seçim (face/edge/vertex) — orbit YOK.
+    //   MMB: rotate (döndür).
+    //   RMB: pan (modifier gerekmez).
+    //   wheel: zoom.
     if (e.button === 0) {
       return;  // LMB: face/box handler işler, orbit asla yapma.
     } else if (e.button === 1) {
-      // MMB: drag rotate. Click rotation center indicator artık yok.
-      isOrbit = true;
+      isOrbit = true;   // MMB: rotate
     } else if (e.button === 2) {
-      // RMB: modifier'a göre — Shift = rotate, Ctrl/Cmd = pan, sade = no-op.
-      if (e.shiftKey) {
-        isOrbit = true;
-      } else if (e.ctrlKey || e.metaKey) {
-        isPan = true;
-      } else {
-        return;
-      }
+      isPan = true;     // RMB: pan (modifier yok)
     } else return;
     lastX = e.clientX;
     lastY = e.clientY;
