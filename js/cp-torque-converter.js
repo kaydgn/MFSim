@@ -31,7 +31,7 @@ function getTorqueConverterPropertiesHTML(node) {
     var hasECM = nodes.some(function(n) { return n.type === 'ec-matching'; });
     html += '<div style="margin-bottom:10px;">';
     if(hasECM) {
-      html += '<div class="sw-chain-bar fail" style="margin-bottom:6px;">🔒 Konvertör seçimi Motor-Konvertör Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+      html += '<div class="sw-chain-bar fail" style="margin-bottom:6px;"><span class="mf-ico mf-ico-lock"></span> Konvertör seçimi Motor-Konvertör Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
     html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:0.7rem; padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
     html += '<option value="">-- Konvertör Seçiniz --</option>';

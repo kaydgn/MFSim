@@ -430,10 +430,10 @@ function veRenderTabs() {
   html += '<button class="ve-toolbar-btn" onclick="veUndo()" title="Geri Al (Ctrl+Z)">↩️</button>';
   html += '<button class="ve-toolbar-btn" onclick="veRedo()" title="İleri Al (Ctrl+Y)">↪️</button>';
   html += '<div class="ve-toolbar-sep"></div>';
-  html += '<button class="ve-toolbar-btn" onclick="veZoomIn()" title="Yakınlaştır">🔍+</button>';
-  html += '<button class="ve-toolbar-btn" onclick="veZoomOut()" title="Uzaklaştır">🔍-</button>';
+  html += '<button class="ve-toolbar-btn" onclick="veZoomIn()" title="Yakınlaştır"><span class="mf-ico mf-ico-search"></span>+</button>';
+  html += '<button class="ve-toolbar-btn" onclick="veZoomOut()" title="Uzaklaştır"><span class="mf-ico mf-ico-search"></span>-</button>';
   html += '<button class="ve-toolbar-btn" onclick="veResetView()" title="Görünümü Sıfırla">🎯</button>';
-  html += '<button class="ve-toolbar-btn" id="ve-snap-btn" onclick="veToggleSnap()" title="Hizalama" style="opacity:' + (typeof SNAP_ENABLED !== 'undefined' && SNAP_ENABLED ? '1' : '0.4') + ';">📐</button>';
+  html += '<button class="ve-toolbar-btn" id="ve-snap-btn" onclick="veToggleSnap()" title="Hizalama" style="opacity:' + (typeof SNAP_ENABLED !== 'undefined' && SNAP_ENABLED ? '1' : '0.4') + ';"><span class="mf-ico mf-ico-ruler"></span></button>';
   html += '<button class="ve-toolbar-btn" id="ve-grid-btn" onclick="veToggleGrid()" title="Grid Göster/Gizle" style="opacity:' + (typeof veGridVisible !== 'undefined' && veGridVisible ? '1' : '0.4') + ';">⊞</button>';
   html += '<button class="ve-toolbar-btn" id="ve-grid-density-btn" onclick="veCycleGridDensity()" title="Grid: ' + (typeof veGridLabels !== 'undefined' ? veGridLabels[veGridDensity] : 'Normal') + '">╬</button>';
   html += '<button class="ve-toolbar-btn" id="ve-boundary-btn" onclick="veToggleBoundary()" title="Sınır Göster/Gizle" style="opacity:' + (typeof veBoundaryVisible !== 'undefined' && veBoundaryVisible ? '1' : '0.4') + ';">▢</button>';

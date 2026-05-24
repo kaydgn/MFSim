@@ -2980,7 +2980,7 @@ function _veFEAControlsPanelHTML() {
   }
 
   // Panel header
-  var html = '<div style="padding:8px 12px; background:#2a2a2a; border-bottom:1px solid #444; font-weight:600; font-size:0.75rem;">⚙ Görüntüleyici Araçları</div>';
+  var html = '<div style="padding:8px 12px; background:#2a2a2a; border-bottom:1px solid #444; font-weight:600; font-size:0.75rem;"><span class="mf-ico mf-ico-settings"></span> Görüntüleyici Araçları</div>';
 
   // ─── Görünüm ───
   html += section('view', '🎯 Görünüm',
@@ -3032,9 +3032,9 @@ function _veFEAControlsPanelHTML() {
   html += section('interaction', '📐 Etkileşim',
     // Ölçüm
     '<div style="margin-bottom:10px;">' +
-      '<button data-action="measure" data-active="false" style="' + btnStyle + '; width:100%; margin-bottom:6px;">📏 Mesafe Ölç</button>' +
+      '<button data-action="measure" data-active="false" style="' + btnStyle + '; width:100%; margin-bottom:6px;"><span class="mf-ico mf-ico-ruler"></span> Mesafe Ölç</button>' +
       '<div data-role="measure-status" style="display:none; padding:6px 8px; background:#2a2a2a; border:1px solid #444;">' +
-        '<div data-role="status" style="color:#fbbf24; margin-bottom:4px; font-size:0.66rem;">📏 İlk noktayı tıklayın</div>' +
+        '<div data-role="status" style="color:#fbbf24; margin-bottom:4px; font-size:0.66rem;"><span class="mf-ico mf-ico-ruler"></span> İlk noktayı tıklayın</div>' +
         '<div style="display:flex; gap:4px;">' +
           '<button data-role="reset" style="' + btnStyle + '; flex:1; font-size:0.6rem; padding:4px;">Sıfırla</button>' +
           '<button data-role="close" style="background:#ef4444; color:#fff; border:none; padding:4px; font-size:0.6rem; cursor:pointer; flex:1;">Çık</button>' +

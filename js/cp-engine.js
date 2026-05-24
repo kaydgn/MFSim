@@ -56,7 +56,7 @@ function getEnginePropertiesHTML(node) {
     
     // Placeholder (veri yoksa)
     html += '<div id="ve-motor-placeholder-' + node.id + '" style="display:' + (hasData ? 'none' : 'block') + '; padding:20px; text-align:center; background:var(--bg-tertiary); border-radius:0; margin-bottom:12px;">';
-    html += '<div style="font-size:1.5rem; margin-bottom:8px;">⚡</div>';
+    html += '<div style="font-size:1.5rem; margin-bottom:8px;"><span class="mf-ico mf-ico-zap"></span></div>';
     html += '<div style="font-size:0.75rem; color:var(--text-muted);">Yukarıdan bir motor seçin<br>veya Manuel Giriş ile veri girin.</div>';
     html += '</div>';
     

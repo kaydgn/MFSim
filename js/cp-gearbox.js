@@ -452,7 +452,7 @@ function getGearboxPropertiesHTML(node) {
     html += '</div>';
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
     if(hasEGM) {
-      html += '<div class="sw-chain-bar fail">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+      html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
 
     // Şanzıman limitleri bilgi kutusu
@@ -730,7 +730,7 @@ function getGearboxPropertiesHTML(node) {
   html += '</div>';
   html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';
   if(_hasEGM2) {
-    html += '<div class="sw-chain-bar fail">🔒 Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
+    html += '<div class="sw-chain-bar fail"><span class="mf-ico mf-ico-lock"></span> Şanzıman seçimi Motor-Şanzıman Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
   }
 
   // Veri alanı

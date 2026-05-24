@@ -320,7 +320,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 function _veApplyUpdate() {
   var popup = document.getElementById('ve-deploy-popup');
   if(popup) {
-    popup.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-heading);"><div style="font-size:1.5rem; margin-bottom:8px;">🔄</div>Güncelleniyor...</div>';
+    popup.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-heading);"><div style="font-size:1.5rem; margin-bottom:8px;"><span class="mf-ico mf-ico-refresh"></span></div>Güncelleniyor...</div>';
   }
   localStorage.setItem('ve-deploy-refreshed', '1');
 

@@ -25,7 +25,7 @@ function veSolverRunProfessional() {
     '<div style="font-weight:700;font-size:0.78rem;color:var(--text-heading);letter-spacing:0.06em;text-transform:uppercase;">MFSim — Çözücü</div>' +
   '</div>' +
   '<div style="display:flex;align-items:center;gap:5px;">' +
-    '<button id="ve-solver-log-dl" style="display:none;padding:3px 9px;font-size:0.58rem;font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:1px;color:var(--text-muted);cursor:pointer;letter-spacing:0.03em;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'">📥 LOG</button>' +
+    '<button id="ve-solver-log-dl" style="display:none;padding:3px 9px;font-size:0.58rem;font-weight:600;background:transparent;border:1px solid var(--border-color);border-radius:1px;color:var(--text-muted);cursor:pointer;letter-spacing:0.03em;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-muted)\'"><span class="mf-ico mf-ico-download"></span> LOG</button>' +
     '<button id="ve-solver-modal-close" style="width:22px;height:22px;border-radius:1px;background:transparent;border:1px solid var(--border-color);color:var(--text-muted);cursor:pointer;font-size:0.65rem;display:none;" onclick="document.getElementById(\'ve-solver-modal-overlay\').remove()">✕</button>' +
   '</div>';
   modal.appendChild(header);

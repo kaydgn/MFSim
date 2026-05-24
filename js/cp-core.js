@@ -154,12 +154,12 @@ function showNodeProperties(node) {
   
   var html = '<div style="position:relative; text-align:center; margin-bottom:12px;">';
   html += node.def.svg.replace('width="50"', 'width="50"').replace('height="50"', 'height="50"');
-  html += '<button onclick="deleteSelectedNodes()" style="position:absolute; top:-4px; right:-4px; width:22px; height:22px; border-radius:50%; background:var(--accent-danger); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; opacity:0.7; transition:opacity 0.15s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7" title="Bileşeni Sil">🗑️</button>';
+  html += '<button onclick="deleteSelectedNodes()" style="position:absolute; top:-4px; right:-4px; width:22px; height:22px; border-radius:50%; background:var(--accent-danger); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; opacity:0.7; transition:opacity 0.15s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7" title="Bileşeni Sil"><span class="mf-ico mf-ico-trash"></span></button>';
   html += '</div>';
   var displayName = node.customName || node.def.name;
   html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:4px; text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;">';
   html += '<span id="ve-node-name-display-' + node.id + '">' + displayName + '</span>';
-  html += '<button onclick="veEditNodeName(\'' + node.id + '\')" style="width:18px; height:18px; border:none; background:none; cursor:pointer; font-size:0.7rem; opacity:0.6; padding:0;" title="İsmi düzenle">✏️</button>';
+  html += '<button onclick="veEditNodeName(\'' + node.id + '\')" style="width:18px; height:18px; border:none; background:none; cursor:pointer; font-size:0.7rem; opacity:0.6; padding:0;" title="İsmi düzenle"><span class="mf-ico mf-ico-edit"></span></button>';
   html += '</div>';
   html += '<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:12px; text-align:center;">ID: ' + node.id + '</div>';
   
