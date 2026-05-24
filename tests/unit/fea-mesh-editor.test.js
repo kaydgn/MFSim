@@ -305,10 +305,11 @@ describe('Mesh Editör outline organizasyonu', () => {
     ]);
   });
 
-  test('Mesh dalı altında globals/localControls/topologyTools/inspect', () => {
+  test('Mesh dalı altında Ağ Ör + globals/localControls/topologyTools/inspect', () => {
     var mesh = FEAMeshOutline._findSchemaNode('group:mesh');
     var ids = mesh.children.map(function(c) { return c.id; });
     expect(ids).toEqual([
+      'single:meshGenerate',
       'group:globals',
       'group:localControls',
       'group:topologyTools',
@@ -732,9 +733,9 @@ describe('Accordion bölümleri', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-// Faz 2 sonrası: "Mesh Oluştur" header'da sağ üstte (her zaman erişilebilir);
-// genel eleman boyutu Globals > Boyutlandırma'da; persist-on-change ile state.
-describe('Mesh Oluştur — header butonu + Globals boyut', () => {
+// Faz 2 sonrası: "Mesh Oluştur" ağaçtaki "Ağ Ör" düğümünün Details'inde
+// (özet + buton); genel eleman boyutu Globals > Boyutlandırma'da; persist-on-change.
+describe('Ağ Ör (Mesh Oluştur) düğümü + Globals boyut', () => {
   beforeEach(() => {
     global.nodes = [];
     global.connections = [];
@@ -743,31 +744,49 @@ describe('Mesh Oluştur — header butonu + Globals boyut', () => {
     if (_veFEAEditorActive) veFEACloseMeshEditor();
   });
 
-  test('Geometri yoksa header Mesh Oluştur disabled', () => {
+  test('Header\'da artık Mesh Oluştur butonu YOK', () => {
+    var node = { id: 'fea-t0', type: 'fea', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('fea-t0');
+    var header = document.getElementById('ve-fea-mesh-editor-header');
+    expect(header.querySelector('button[onclick*="veFEASubmitMeshBuild"]')).toBeNull();
+  });
+
+  test('Ağ Ör düğümü SCHEMA\'da Mesh dalının ilk child\'ı', () => {
+    var mesh = FEAMeshOutline._findSchemaNode('group:mesh');
+    expect(mesh.children[0].id).toBe('single:meshGenerate');
+  });
+
+  test('Geometri yoksa Ağ Ör özetinde Mesh Oluştur disabled', () => {
     var node = { id: 'fea-t1', type: 'fea', data: {} };
     global.nodes = [node];
-    veFEAOpenMeshEditor('fea-t1');
-    var header = document.getElementById('ve-fea-mesh-editor-header');
-    var btn = header.querySelector('button[onclick*="veFEASubmitMeshBuild"]');
-    expect(btn).not.toBeNull();
-    expect(btn.hasAttribute('disabled')).toBe(true);
+    var html = _veFEAEditorMeshSummaryHTML(node);
+    expect(html).toMatch(/veFEASubmitMeshBuild\('fea-t1'\)/);
+    var btn = html.match(/<button[^>]*veFEASubmitMeshBuild[^>]*>/)[0];
+    expect(btn).toMatch(/disabled/);
   });
 
-  test('Geometri varsa header Mesh Oluştur aktif', () => {
-    var node = { id: 'fea-t2', type: 'fea', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } };
+  test('Geometri varsa Ağ Ör özetinde Mesh Oluştur aktif + özet bilgiler', () => {
+    var node = { id: 'fea-t2', type: 'fea', data: {
+      geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      meshSettings: { size: 8, meshMethod: 'sweep', bodySizingControls: [{ bodyIds: [0], size: 3 }] }
+    } };
     global.nodes = [node];
-    veFEAOpenMeshEditor('fea-t2');
-    var header = document.getElementById('ve-fea-mesh-editor-header');
-    var btn = header.querySelector('button[onclick*="veFEASubmitMeshBuild"]');
-    expect(btn.hasAttribute('disabled')).toBe(false);
+    FEAMeshOutline.init('fea-t2');
+    var html = _veFEAEditorMeshSummaryHTML(node);
+    var btn = html.match(/<button[^>]*veFEASubmitMeshBuild[^>]*>/)[0];
+    expect(btn).not.toMatch(/disabled/);
+    expect(html).toMatch(/Genel eleman boyutu/);
+    expect(html).toMatch(/8 mm/);
+    expect(html).toMatch(/Body Sizing/);   // lokal kontrol özeti
   });
 
-  test('Mesh aktifken header\'da Mesh\'i Sil butonu render', () => {
-    var node = { id: 'fea-t3', type: 'fea', data: { meshActive: true, meshMetrics: { nodeCount: 27, elementCount: 8 } } };
+  test('Mesh aktifken Ağ Ör özetinde durum + Sil butonu', () => {
+    var node = { id: 'fea-t3', type: 'fea', data: { meshActive: true, meshMetrics: { nodeCount: 27, elementCount: 8, jacobian: { valid: true } } } };
     global.nodes = [node];
-    veFEAOpenMeshEditor('fea-t3');
-    var header = document.getElementById('ve-fea-mesh-editor-header');
-    expect(header.querySelector('button[onclick*="veFEAClearMeshForNode"]')).not.toBeNull();
+    var html = _veFEAEditorMeshSummaryHTML(node);
+    expect(html).toMatch(/27/);
+    expect(html).toMatch(/veFEAClearMeshForNode\('fea-t3'\)/);
   });
 
   test('Genel eleman boyutu Globals > Boyutlandırma\'da (persist-on-change)', () => {
