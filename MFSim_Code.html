@@ -35969,6 +35969,64 @@ function veFEAEditorRefreshAccordions() {
 }
 
 // ─── Modal aç ──────────────────────────────────────────────────────────────
+// ─── Editör açılış yükleme ekranı (profesyonel splash + progress) ──────────
+// Uygulamanın açılış splash'ine benzer; editör modalı arkada kurulurken üstte
+// progress gösterir, aşamalar bitince fade ile kaybolup editörü ortaya çıkarır.
+function _veFEAShowEditorLoader() {
+  var lo = document.createElement('div');
+  lo.id = 've-fea-editor-loader';
+  lo.style.cssText = 'position:fixed; inset:0; z-index:100002; background:var(--bg-primary,#0a0c10); display:flex; align-items:center; justify-content:center; font-family:Inter,system-ui,-apple-system,sans-serif; transition:opacity 0.38s ease;';
+  lo.innerHTML =
+    '<div style="width:420px; max-width:90%; padding:46px 44px; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); box-shadow:0 25px 80px rgba(0,0,0,0.6); text-align:center;">' +
+      '<div style="font-size:1.4rem; font-weight:700; color:var(--text-heading,#e2e8f0); letter-spacing:0.08em; margin-bottom:6px; display:flex; align-items:center; justify-content:center; gap:10px; animation:mfsim-loading-pulse 2.2s ease-in-out infinite;"><span class="mf-ico mf-ico-package" style="font-size:1.5rem;"></span>Yapısal Analiz</div>' +
+      '<div style="font-size:0.7rem; color:var(--text-muted,#4a5568); letter-spacing:0.5px; margin-bottom:32px;">Editör hazırlanıyor</div>' +
+      '<div style="position:relative; width:100%; height:4px; background:var(--bg-input,#080a0e); border:1px solid var(--border-color,#1c2333); overflow:hidden; margin-bottom:14px;">' +
+        '<div id="ve-fea-loader-bar" style="position:absolute; top:0; left:0; bottom:0; width:0%; background:var(--accent-primary,#2563eb); box-shadow:0 0 8px color-mix(in srgb, var(--accent-primary,#2563eb) 55%, transparent); transition:width 0.32s cubic-bezier(0.4,0,0.2,1);"></div>' +
+      '</div>' +
+      '<div style="display:flex; align-items:center; justify-content:space-between; font-size:0.65rem; color:var(--text-secondary,#7a8599); letter-spacing:0.3px;">' +
+        '<span id="ve-fea-loader-msg" style="flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:12px;">Başlatılıyor...</span>' +
+        '<span id="ve-fea-loader-pct" style="color:var(--accent-primary,#2563eb); font-weight:600; font-variant-numeric:tabular-nums; min-width:40px; text-align:right;">0%</span>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(lo);
+  return lo;
+}
+
+function _veFEARunEditorLoader(nodeId) {
+  var lo = _veFEAShowEditorLoader();
+  var bar = document.getElementById('ve-fea-loader-bar');
+  var msg = document.getElementById('ve-fea-loader-msg');
+  var pct = document.getElementById('ve-fea-loader-pct');
+  var stages = [
+    { p: 20, m: 'Geometri okunuyor...' },
+    { p: 44, m: 'Mesh ayarları hazırlanıyor...' },
+    { p: 68, m: '3D görüntüleyici başlatılıyor...', action: function() { _veFEASafeInitModalViewer(nodeId, 6); } },
+    { p: 88, m: 'Arayüz yükleniyor...' },
+    { p: 100, m: 'Hazır' }
+  ];
+  var i = 0;
+  function step() {
+    // Editör yükleme sırasında kapatıldıysa iptal et
+    if (_veFEAEditorActive !== nodeId) { if (lo.parentNode) lo.parentNode.removeChild(lo); return; }
+    var s = stages[i];
+    if (bar) bar.style.width = s.p + '%';
+    if (msg) msg.textContent = s.m;
+    if (pct) pct.textContent = s.p + '%';
+    if (s.action) { try { s.action(); } catch (e) { console.error('[FEA] editör yükleme aşaması:', e); } }
+    i++;
+    if (i < stages.length) {
+      setTimeout(step, 190 + Math.random() * 130);
+    } else {
+      // Tamamlandı → kısa bekleme + fade out ile editörü ortaya çıkar
+      setTimeout(function() {
+        lo.style.opacity = '0';
+        setTimeout(function() { if (lo.parentNode) lo.parentNode.removeChild(lo); }, 400);
+      }, 240);
+    }
+  }
+  setTimeout(step, 70);
+}
+
 function veFEAOpenMeshEditor(nodeId) {
   if (_veFEAEditorActive) veFEACloseMeshEditor();
   if (typeof nodes === 'undefined') return;
@@ -36049,7 +36107,9 @@ function veFEAOpenMeshEditor(nodeId) {
   // hesaplanmadan Three.js init edersek clientWidth=0 olur → WebGL renderer
   // tiny boyutta kalır → real browser'da context loss / GPU crash ("üzgün yüz").
   // requestAnimationFrame ile layout settle olmasını bekle, gerekirse retry.
-  _veFEASafeInitModalViewer(nodeId, 6);
+  // Profesyonel açılış: progress'li yükleme ekranı göster; viewer yükleme
+  // sırasında (68% aşamasında) başlatılır, aşamalar bitince editör ortaya çıkar.
+  _veFEARunEditorLoader(nodeId);
 }
 
 function _veFEASafeInitModalViewer(nodeId, retries) {
@@ -36232,6 +36292,8 @@ function veFEACloseMeshEditor() {
   }
   // Aktif loading overlay / banner'ı modal kaldırılmadan önce temizle
   _veFEAEditorLoadingEl = null;
+  var _feaLoaderEl = document.getElementById('ve-fea-editor-loader');
+  if (_feaLoaderEl && _feaLoaderEl.parentNode) _feaLoaderEl.parentNode.removeChild(_feaLoaderEl);
   if (_veFEAEditorBannerTimer) { clearTimeout(_veFEAEditorBannerTimer); _veFEAEditorBannerTimer = null; }
   if (_veFEAEditorOverlay && _veFEAEditorOverlay.parentNode) {
     _veFEAEditorOverlay.parentNode.removeChild(_veFEAEditorOverlay);
