@@ -49,6 +49,10 @@
         methodOverrides: [],
         virtualTopology: [],
         userNamedSelections: [],
+        matchControls: [],
+        pinchControls: [],
+        gasketControls: [],
+        coordinateSystems: [],
         suppressFlags: {}
       },
       meshActive: false,
@@ -154,7 +158,8 @@
     // Yeni liste alanları eksikse default boş dizi ile tamamla
     ['bodySizingControls', 'faceSizingControls', 'edgeSizingControls',
      'sphereOfInfluence', 'refinementControls', 'methodOverrides',
-     'virtualTopology', 'userNamedSelections'].forEach(function(k) {
+     'virtualTopology', 'userNamedSelections',
+     'matchControls', 'pinchControls', 'gasketControls', 'coordinateSystems'].forEach(function(k) {
       if (!Array.isArray(out[k])) out[k] = [];
     });
     if (!out.suppressFlags || typeof out.suppressFlags !== 'object') out.suppressFlags = {};
