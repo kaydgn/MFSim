@@ -293,6 +293,87 @@ describe('Birleşik node + outline entegrasyonu', () => {
   });
 });
 
+describe('B.7 — 3D seçili yüzü scope\'a ekle', () => {
+  function makeModuleNode(data) {
+    return { id: 'fea-1', type: 'fea', data: Object.assign(veFEACreateModuleData(), data || {}) };
+  }
+
+  test('_add3DFaceToList: node.data.selectedFaceId Face Sizing scope\'una eklenir', () => {
+    const node = makeModuleNode();
+    node.data.selectedFaceId = 'faceXMin';
+    node.data.meshSettings.faceSizingControls = [{ faceId: null, size: 2 }];
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshControls._add3DFaceToList('faceSizing', 0, 'faceIds');
+    expect(node.data.meshSettings.faceSizingControls[0].faceIds).toContain('faceXMin');
+    expect(node.data.meshSettings.faceSizingControls[0].faceId).toBe('faceXMin');
+  });
+
+  test('_set3DFaceToBC: seçili yüz BC\'nin faceId\'si olur', () => {
+    const node = makeModuleNode();
+    node.data.selectedFaceId = 'faceYMax';
+    node.data.bc.assignments = [{ faceId: null, kind: 'fixed' }];
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshControls._set3DFaceToBC(0);
+    expect(node.data.bc.assignments[0].faceId).toBe('faceYMax');
+  });
+
+  test('seçili yüz yoksa no-op (hata atmaz)', () => {
+    const node = makeModuleNode();
+    node.data.meshSettings.faceSizingControls = [{ faceId: null, size: 2 }];
+    global.nodes = [node];
+    global.showToast = jest.fn();
+    FEAMeshOutline.init('fea-1');
+    expect(() => FEAMeshControls._add3DFaceToList('faceSizing', 0, 'faceIds')).not.toThrow();
+    expect(node.data.meshSettings.faceSizingControls[0].faceIds || []).toHaveLength(0);
+  });
+
+  test('aynı yüz iki kez eklenmez', () => {
+    const node = makeModuleNode();
+    node.data.selectedFaceId = 'faceZMin';
+    node.data.meshSettings.faceSizingControls = [{ faceIds: ['faceZMin'], size: 2 }];
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshControls._add3DFaceToList('faceSizing', 0, 'faceIds');
+    expect(node.data.meshSettings.faceSizingControls[0].faceIds).toEqual(['faceZMin']);
+  });
+});
+
+describe('B.6 — multibody veri modeli (per-body resolve)', () => {
+  function makeModuleNode(data) {
+    return { id: 'fea-1', type: 'fea', data: Object.assign(veFEACreateModuleData(), data || {}) };
+  }
+
+  test('Body Sizing farklı body\'ler için bağımsız çözülür', () => {
+    const node = makeModuleNode({ meshSettings: Object.assign(veFEACreateModuleData().meshSettings, {
+      bodySizingControls: [
+        { bodyIds: [0], size: 2, behavior: 'soft' },
+        { bodyIds: [1], size: 5, behavior: 'soft' }
+      ]
+    }) });
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    expect(FEAMeshControls.resolveBodySizingFor(node, 0).size).toBe(2);
+    expect(FEAMeshControls.resolveBodySizingFor(node, 1).size).toBe(5);
+    expect(FEAMeshControls.resolveBodySizingFor(node, 2)).toBeFalsy();  // tanımsız body
+  });
+
+  test('Method Override body bazlı çözülür', () => {
+    const node = makeModuleNode({ meshSettings: Object.assign(veFEACreateModuleData().meshSettings, {
+      methodOverrides: [
+        { bodyIds: [0], method: 'sweep' },
+        { bodyIds: [1], method: 'hexDominant' }
+      ]
+    }) });
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    expect(FEAMeshControls.resolveBodyMethodOverride(node, 0).method).toBe('sweep');
+    expect(FEAMeshControls.resolveBodyMethodOverride(node, 1).method).toBe('hexDominant');
+    expect(FEAMeshControls.resolveBodyMethodOverride(node, 9)).toBeFalsy();
+  });
+});
+
 describe('Upstream helper tek-node-farkındalığı', () => {
   test('_veFEAFindUpstreamGeometryNode birleşik node\'u kendisi döndürür', () => {
     const node = { id: 'fea-1', type: 'fea', data: { geometry: { type: 'box' }, meshSettings: {}, bc: {}, solver: {} } };
