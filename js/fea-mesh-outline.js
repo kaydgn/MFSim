@@ -108,7 +108,8 @@
             defaultExpanded: false,
             children: [
               { id: 'cl:virtualTopology', type: 'controlList', controlType: 'virtualTopology', label: 'Virtual Topology', icon: '◇' },
-              { id: 'single:namedSel',    type: 'single',      label: 'Named Selections (Atanmış Yüzeyler)',              icon: '⊟', detail: 'namedSel' }
+              { id: 'cl:userNS',          type: 'controlList', controlType: 'userNS',          label: 'Named Selections (DRY)', icon: '◫' },
+              { id: 'single:namedSel',    type: 'single',      label: 'Otomatik Atanmış Yüzeyler (Mesh\'ten)',              icon: '⊟', detail: 'namedSel' }
             ]
           },
           {
@@ -335,6 +336,32 @@
         return { name: null, faceIds: [] };
       }
     },
+    // ─── User Named Selection (B.8 — DRY) ────────────────────────────────────
+    // Kullanıcı bir kez yüz grubu tanımlar; Face Sizing, BC, sonuç gibi
+    // kontroller bu gruptan import eder. ANSYS Named Selections muadili.
+    userNS: {
+      storageKey: 'userNamedSelections',
+      detailKey:  'userNSItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        return 'Named Selection ' + (idx + 1);
+      },
+      scopeOf: function(c) {
+        return {
+          kind: 'geometry', entityType: 'face',
+          entities: Array.isArray(c.faceIds) ? c.faceIds.slice() : []
+        };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (!Array.isArray(c.faceIds) || c.faceIds.length === 0) return 'underdefined';
+        if (!c.name) return 'underdefined';   // isim zorunlu (DRY için referans)
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, faceIds: [] };
+      }
+    },
     // ─── Sınır Koşulları (BC) — storage: node.data.bc.assignments ───────────
     bc: {
       detailKey: 'bcItem',
@@ -472,6 +499,7 @@
     exp['cl:refinement']     = false;
     exp['cl:methodOverride'] = false;
     exp['cl:virtualTopology']= false;
+    exp['cl:userNS']         = false;
     // Sınır Koşulları + Çözüm dalları default açık (yük/sonuç öğeleri görünsün)
     exp['cl:bc']             = true;
     exp['group:solution']    = true;
@@ -961,7 +989,8 @@
       methodOverride:  { plural: 'Method Override', description: 'Bir body için mesh yöntemini global ayarın yerine geçiren özel kontrol.' },
       virtualTopology: { plural: 'Virtual Topology', description: 'Birden çok yüzü tek bir mesh edilecek bölge olarak gruplar (ANSYS §8.2).' },
       bc:              { plural: 'Sınır Koşulu',     description: 'Geometriye uygulanan yük/kısıt: Fixed Support, Kuvvet, Basınç, Yer Değiştirme. Her biri bir yüze scope edilir.' },
-      result:          { plural: 'Sonuç',            description: 'Çözüm sonrası gösterilecek alanlar: Total Deformation, von-Mises Stress, vb. Her biri 3D görüntüleyicide ayrı heat-map.' }
+      result:          { plural: 'Sonuç',            description: 'Çözüm sonrası gösterilecek alanlar: Total Deformation, von-Mises Stress, vb. Her biri 3D görüntüleyicide ayrı heat-map.' },
+      userNS:          { plural: 'Named Selection',  description: 'Tekrar kullanılabilir yüz grubu. Bir kez tanımla → Face Sizing, BC, Refinement vb. kontrollerden referansla doldur (DRY). ANSYS Named Selections muadili.' }
     };
     var info = labels[controlType] || { plural: controlType, description: '' };
 

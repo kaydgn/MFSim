@@ -232,6 +232,7 @@
       'FEAMeshControls._toggleFaceSizingFace.bind(null,' + idx + ')'
     );
     html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'faceSizing\',' + idx + ',\'faceIds\')') + '</div>';
+    html += _importNSDropdown(meshNode, 'faceSizing', idx, 'faceIds');
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + sel.length + ' yüz seçili</div>';
 
     html += _sectionTitle('Parametreler');
@@ -409,6 +410,7 @@
     html += _multiSelect(items, sel, 'FEAMeshControls._toggleRefinementEntity.bind(null,' + idx + ',"' + listKey + '")');
     if (et === 'face') {
       html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'refinement\',' + idx + ',\'faceIds\')') + '</div>';
+      html += _importNSDropdown(meshNode, 'refinement', idx, 'faceIds');
     }
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + sel.length + ' ' + et + ' seçili</div>';
 
@@ -492,6 +494,7 @@
       'FEAMeshControls._toggleListId.bind(null,"' + ct + '",' + idx + ',"faceIds")'
     );
     html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'virtualTopology\',' + idx + ',\'faceIds\')') + '</div>';
+    html += _importNSDropdown(meshNode, 'virtualTopology', idx, 'faceIds');
     html += '<div style="font-size:0.55rem; color:var(--text-muted); line-height:1.5; margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid var(--accent-primary);">' +
       'ℹ ANSYS §8.2 — birleştirilen yüzler mesh üretiminde tek bir patch olarak ele alınır. En az 2 yüz seçilmeli.' +
       '</div>';
@@ -616,6 +619,91 @@
     return html;
   }
 
+  // ─── 3.10 USER NAMED SELECTION (B.8 — DRY) ─────────────────────────────────
+  function _renderUserNSItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'userNS', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'userNS';
+    var faces = _faceList(meshNode);
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Named Selection ' + (idx + 1));
+    html += '<div style="font-size:0.55rem; color:var(--accent-warning, #f59e0b); margin-bottom:8px;">⚠ Diğer kontrollerden referansla kullanmak için <b>İsim</b> zorunlu.</div>';
+    html += _sectionTitle('Yüzler');
+    html += _multiSelect(
+      faces.map(function(f) { return { id: f.id, label: f.label || ('Face ' + f.id) }; }),
+      Array.isArray(c.faceIds) ? c.faceIds : [],
+      'FEAMeshControls._toggleListId.bind(null,"' + ct + '",' + idx + ',"faceIds")'
+    );
+    html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'userNS\',' + idx + ',\'faceIds\')') + '</div>';
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + ((Array.isArray(c.faceIds) ? c.faceIds.length : 0)) + ' yüz</div>';
+    html += '<div style="margin-top:10px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid var(--accent-primary); font-size:0.55rem; color:var(--text-secondary); line-height:1.5;">' +
+      'ℹ Tekrar kullan: Face Sizing / BC / Refinement / Virtual Topology kontrolünün <b>"📋 Named Selection\'dan yükle"</b> butonu bu gruptaki yüzleri import eder.' +
+      '</div>';
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // Named Selections import: hedef kontrole NS'den yüz import et.
+  function _importFromNS(controlType, idx, listField, nsIndex) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var nsList = global.FEAMeshOutline._getControlList(meshNode, 'userNS');
+    var ns = nsList[nsIndex];
+    if (!ns || !Array.isArray(ns.faceIds) || ns.faceIds.length === 0) {
+      if (typeof global.showToast === 'function') global.showToast('Named Selection boş veya bulunamadı.', 'warning');
+      return;
+    }
+    var list = global.FEAMeshOutline._getControlList(meshNode, controlType).slice();
+    var c = list[idx];
+    if (!c) return;
+    var ids = Array.isArray(c[listField]) ? c[listField].slice() : (c.faceId != null ? [c.faceId] : []);
+    ns.faceIds.forEach(function(fid) { if (ids.indexOf(fid) < 0) ids.push(fid); });
+    c[listField] = ids;
+    if (controlType === 'faceSizing') c.faceId = (ids.length === 1) ? ids[0] : null;
+    global.FEAMeshOutline._setControlList(meshNode, controlType, list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  // İsimlendirilmiş, kullanılabilir Named Selections (yüz listesi olan + isimli)
+  function _availableNS(meshNode) {
+    if (!meshNode || !global.FEAMeshOutline) return [];
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'userNS');
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var ns = list[i];
+      if (!ns || !ns.name) continue;
+      if (!Array.isArray(ns.faceIds) || ns.faceIds.length === 0) continue;
+      if (global.FEAMeshOutline.isSuppressed(meshNode, 'cl:userNS[' + i + ']')) continue;
+      out.push({ index: i, name: ns.name, count: ns.faceIds.length });
+    }
+    return out;
+  }
+
+  // NS import dropdown HTML (Face Sizing/Refinement/VT için)
+  function _importNSDropdown(meshNode, controlType, idx, listField) {
+    var avail = _availableNS(meshNode);
+    if (avail.length === 0) return '';
+    var html = '<div style="display:flex; gap:4px; align-items:center; margin-top:4px;">';
+    html += '<select id="ve-fea-ns-import-' + controlType + '-' + idx + '" style="flex:1; padding:3px 6px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+    avail.forEach(function(ns) {
+      html += '<option value="' + ns.index + '">' + _esc(ns.name) + ' (' + ns.count + ' yüz)</option>';
+    });
+    html += '</select>';
+    html += '<button onclick="FEAMeshControls._importFromNSSelected(\'' + controlType + '\',' + idx + ',\'' + listField + '\')" style="padding:3px 8px; font-size:0.58rem; font-weight:600; background:var(--bg-tertiary); color:var(--accent-primary); border:1px solid var(--accent-primary); cursor:pointer; white-space:nowrap;">📋 NS\'den yükle</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function _importFromNSSelected(controlType, idx, listField) {
+    var sel = (typeof document !== 'undefined') ? document.getElementById('ve-fea-ns-import-' + controlType + '-' + idx) : null;
+    if (!sel) return;
+    _importFromNS(controlType, idx, listField, parseInt(sel.value, 10));
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // 4. DISPATCH — outline'ın çağırdığı public renderer
   // ─────────────────────────────────────────────────────────────────────────
@@ -629,7 +717,8 @@
     methodOverride:  _renderMethodOverrideItem,
     virtualTopology: _renderVirtualTopologyItem,
     bc:              _renderBCItem,
-    result:          _renderResultItem
+    result:          _renderResultItem,
+    userNS:          _renderUserNSItem
   };
 
   function renderControlDetail(meshNode, controlType, idx) {
@@ -1000,7 +1089,9 @@
     _showResult:                _showResult,
     _add3DFaceToList:           _add3DFaceToList,
     _set3DFaceToBC:             _set3DFaceToBC,
-    _currentSelectedFaceId:     _currentSelectedFaceId
+    _currentSelectedFaceId:     _currentSelectedFaceId,
+    _importFromNS:              _importFromNS,
+    _importFromNSSelected:      _importFromNSSelected
   };
 
   global.FEAMeshControls = api;

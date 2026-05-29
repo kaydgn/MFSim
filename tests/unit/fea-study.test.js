@@ -374,6 +374,73 @@ describe('B.6 — multibody veri modeli (per-body resolve)', () => {
   });
 });
 
+describe('B.8 — Named Selections DRY (userNS)', () => {
+  function makeModuleNode(data) {
+    return { id: 'fea-1', type: 'fea', data: Object.assign(veFEACreateModuleData(), data || {}) };
+  }
+
+  test('userNS schema topologyTools altında', () => {
+    const tt = FEAMeshOutline._findSchemaNode('group:topologyTools');
+    const ids = tt.children.map((c) => c.id);
+    expect(ids).toContain('cl:userNS');
+  });
+
+  test('addControl userNS → userNamedSelections\'a ekler', () => {
+    const node = makeModuleNode();
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.addControl('userNS');
+    expect(node.data.meshSettings.userNamedSelections).toHaveLength(1);
+  });
+
+  test('userNS state: isim+yüz zorunlu', () => {
+    const node = makeModuleNode({ meshSettings: Object.assign(veFEACreateModuleData().meshSettings, {
+      userNamedSelections: [
+        { name: null, faceIds: ['faceXMin'] },        // isim yok → underdefined
+        { name: 'Yükleme Yüzleri', faceIds: [] },     // yüz yok → underdefined
+        { name: 'Yükleme Yüzleri', faceIds: ['faceXMin', 'faceXMax'] }  // OK
+      ]
+    }) });
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    expect(FEAMeshOutline.computeNodeState(node, 'cl:userNS[0]')).toBe('underdefined');
+    expect(FEAMeshOutline.computeNodeState(node, 'cl:userNS[1]')).toBe('underdefined');
+    expect(FEAMeshOutline.computeNodeState(node, 'cl:userNS[2]')).toBe('ok');
+  });
+
+  test('_importFromNS yüzleri target kontrole kopyalar (duplicate engellenir)', () => {
+    const node = makeModuleNode({ meshSettings: Object.assign(veFEACreateModuleData().meshSettings, {
+      userNamedSelections: [
+        { name: 'Bolt yüzleri', faceIds: ['faceXMin', 'faceXMax'] }
+      ],
+      faceSizingControls: [{ faceIds: ['faceXMin'], size: 2 }]
+    }) });
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshControls._importFromNS('faceSizing', 0, 'faceIds', 0);
+    const ids = node.data.meshSettings.faceSizingControls[0].faceIds;
+    expect(ids).toEqual(['faceXMin', 'faceXMax']);  // dup engellendi, kopyalandı
+  });
+
+  test('isimsiz/boş/suppressed NS\'ler import için filtrelenir', () => {
+    const node = makeModuleNode({ meshSettings: Object.assign(veFEACreateModuleData().meshSettings, {
+      userNamedSelections: [
+        { name: null, faceIds: ['faceXMin'] },                  // isim yok
+        { name: 'Empty', faceIds: [] },                          // yüz yok
+        { name: 'Sup', faceIds: ['faceYMin'] },                  // suppress edilecek
+        { name: 'OK', faceIds: ['faceZMin'] }
+      ],
+      suppressFlags: { 'cl:userNS[2]': true }
+    }) });
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    const list = FEAMeshOutline._getControlList(node, 'userNS');
+    // Sadece "OK" eligible olmalı
+    const eligible = list.filter((ns, i) => ns.name && ns.faceIds && ns.faceIds.length > 0 && !FEAMeshOutline.isSuppressed(node, 'cl:userNS[' + i + ']'));
+    expect(eligible.map((n) => n.name)).toEqual(['OK']);
+  });
+});
+
 describe('Upstream helper tek-node-farkındalığı', () => {
   test('_veFEAFindUpstreamGeometryNode birleşik node\'u kendisi döndürür', () => {
     const node = { id: 'fea-1', type: 'fea', data: { geometry: { type: 'box' }, meshSettings: {}, bc: {}, solver: {} } };
