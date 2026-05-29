@@ -148,8 +148,8 @@ function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
   var propertiesPanel = document.querySelector('.ve-properties');
   if(!content) return;
-  // Bir bileşen seçildi → paneli göster
-  if(propertiesPanel) propertiesPanel.classList.remove('ve-prop-hidden');
+  // Bir bileşen seçildi → paneli yumuşakça aç
+  if(typeof veRevealPropertiesPanel === 'function') veRevealPropertiesPanel();
   
   // Panel genişliğini KORUYORUZ - kullanıcı değiştirmedikçe dokunmuyoruz
   // Sadece ilk açılışta varsayılan genişlik ayarlanır
@@ -262,14 +262,9 @@ function showNodeProperties(node) {
     }, 400);
   }
 
-  // FEA Geometri: 3D viewer'ı başlat (Three.js)
-  if(node.type === 'fea-geometry') {
-    setTimeout(function() {
-      if(typeof veFEAInitGeometryViewerForNode === 'function') {
-        veFEAInitGeometryViewerForNode(node.id);
-      }
-    }, 100);
-  }
+  // FEA: Faz 1 sonrası 'fea-geometry' tipi nodes[]'a düşmez (otomatik migration
+  // ile 'fea' birleşik modülüne göçer); side panel viewer'ı yok — tüm 3D
+  // çalışma "Yapısal Analiz Editörü" modal'ında. Ölü dispatch buradan kaldırıldı.
 
   // FEA Mesh: side panel'de viewer YOK — Mesh Editör modal'i kendi viewer'ini
   // yonetir. Bu block'tan viewer init kaldirildi cunku showNodeProperties

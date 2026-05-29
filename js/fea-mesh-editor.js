@@ -114,6 +114,64 @@ function veFEAEditorRefreshAccordions() {
 }
 
 // ─── Modal aç ──────────────────────────────────────────────────────────────
+// ─── Editör açılış yükleme ekranı (profesyonel splash + progress) ──────────
+// Uygulamanın açılış splash'ine benzer; editör modalı arkada kurulurken üstte
+// progress gösterir, aşamalar bitince fade ile kaybolup editörü ortaya çıkarır.
+function _veFEAShowEditorLoader() {
+  var lo = document.createElement('div');
+  lo.id = 've-fea-editor-loader';
+  lo.style.cssText = 'position:fixed; inset:0; z-index:100002; background:var(--bg-primary,#0a0c10); display:flex; align-items:center; justify-content:center; font-family:Inter,system-ui,-apple-system,sans-serif; transition:opacity 0.38s ease;';
+  lo.innerHTML =
+    '<div style="width:420px; max-width:90%; padding:46px 44px; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); box-shadow:0 25px 80px rgba(0,0,0,0.6); text-align:center;">' +
+      '<div style="font-size:1.4rem; font-weight:700; color:var(--text-heading,#e2e8f0); letter-spacing:0.08em; margin-bottom:6px; display:flex; align-items:center; justify-content:center; gap:10px; animation:mfsim-loading-pulse 2.2s ease-in-out infinite;"><span class="mf-ico mf-ico-package" style="font-size:1.5rem;"></span>Yapısal Analiz</div>' +
+      '<div style="font-size:0.7rem; color:var(--text-muted,#4a5568); letter-spacing:0.5px; margin-bottom:32px;">Editör hazırlanıyor</div>' +
+      '<div style="position:relative; width:100%; height:4px; background:var(--bg-input,#080a0e); border:1px solid var(--border-color,#1c2333); overflow:hidden; margin-bottom:14px;">' +
+        '<div id="ve-fea-loader-bar" style="position:absolute; top:0; left:0; bottom:0; width:0%; background:var(--accent-primary,#2563eb); box-shadow:0 0 8px color-mix(in srgb, var(--accent-primary,#2563eb) 55%, transparent); transition:width 0.32s cubic-bezier(0.4,0,0.2,1);"></div>' +
+      '</div>' +
+      '<div style="display:flex; align-items:center; justify-content:space-between; font-size:0.65rem; color:var(--text-secondary,#7a8599); letter-spacing:0.3px;">' +
+        '<span id="ve-fea-loader-msg" style="flex:1; text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:12px;">Başlatılıyor...</span>' +
+        '<span id="ve-fea-loader-pct" style="color:var(--accent-primary,#2563eb); font-weight:600; font-variant-numeric:tabular-nums; min-width:40px; text-align:right;">0%</span>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(lo);
+  return lo;
+}
+
+function _veFEARunEditorLoader(nodeId) {
+  var lo = _veFEAShowEditorLoader();
+  var bar = document.getElementById('ve-fea-loader-bar');
+  var msg = document.getElementById('ve-fea-loader-msg');
+  var pct = document.getElementById('ve-fea-loader-pct');
+  var stages = [
+    { p: 20, m: 'Geometri okunuyor...' },
+    { p: 44, m: 'Mesh ayarları hazırlanıyor...' },
+    { p: 68, m: '3D görüntüleyici başlatılıyor...', action: function() { _veFEASafeInitModalViewer(nodeId, 6); } },
+    { p: 88, m: 'Arayüz yükleniyor...' },
+    { p: 100, m: 'Hazır' }
+  ];
+  var i = 0;
+  function step() {
+    // Editör yükleme sırasında kapatıldıysa iptal et
+    if (_veFEAEditorActive !== nodeId) { if (lo.parentNode) lo.parentNode.removeChild(lo); return; }
+    var s = stages[i];
+    if (bar) bar.style.width = s.p + '%';
+    if (msg) msg.textContent = s.m;
+    if (pct) pct.textContent = s.p + '%';
+    if (s.action) { try { s.action(); } catch (e) { console.error('[FEA] editör yükleme aşaması:', e); } }
+    i++;
+    if (i < stages.length) {
+      setTimeout(step, 190 + Math.random() * 130);
+    } else {
+      // Tamamlandı → kısa bekleme + fade out ile editörü ortaya çıkar
+      setTimeout(function() {
+        lo.style.opacity = '0';
+        setTimeout(function() { if (lo.parentNode) lo.parentNode.removeChild(lo); }, 400);
+      }, 240);
+    }
+  }
+  setTimeout(step, 70);
+}
+
 function veFEAOpenMeshEditor(nodeId) {
   if (_veFEAEditorActive) veFEACloseMeshEditor();
   if (typeof nodes === 'undefined') return;
@@ -194,7 +252,9 @@ function veFEAOpenMeshEditor(nodeId) {
   // hesaplanmadan Three.js init edersek clientWidth=0 olur → WebGL renderer
   // tiny boyutta kalır → real browser'da context loss / GPU crash ("üzgün yüz").
   // requestAnimationFrame ile layout settle olmasını bekle, gerekirse retry.
-  _veFEASafeInitModalViewer(nodeId, 6);
+  // Profesyonel açılış: progress'li yükleme ekranı göster; viewer yükleme
+  // sırasında (68% aşamasında) başlatılır, aşamalar bitince editör ortaya çıkar.
+  _veFEARunEditorLoader(nodeId);
 }
 
 function _veFEASafeInitModalViewer(nodeId, retries) {
@@ -381,6 +441,8 @@ function veFEACloseMeshEditor() {
   }
   // Aktif loading overlay / banner'ı modal kaldırılmadan önce temizle
   _veFEAEditorLoadingEl = null;
+  var _feaLoaderEl = document.getElementById('ve-fea-editor-loader');
+  if (_feaLoaderEl && _feaLoaderEl.parentNode) _feaLoaderEl.parentNode.removeChild(_feaLoaderEl);
   if (_veFEAEditorBannerTimer) { clearTimeout(_veFEAEditorBannerTimer); _veFEAEditorBannerTimer = null; }
   if (_veFEAEditorOverlay && _veFEAEditorOverlay.parentNode) {
     _veFEAEditorOverlay.parentNode.removeChild(_veFEAEditorOverlay);
@@ -432,36 +494,13 @@ function _veFEAEditorBuildHeader(node) {
   var nodeLabel = node.customName || (node.def && node.def.name) || 'Yapısal Analiz';
   var isModule = (node.type === 'fea');
   var titleText = isModule ? '🔷 Yapısal Analiz Editörü' : '🔷 Mesh Editörü';
-
-  // Header'da sağ üstte "Mesh Oluştur" aksiyonu (kullanıcı isteği) — ağacın
-  // neresinde olunursa olsun her zaman erişilebilir. Ayarlar persist-on-change
-  // ile state'te tutulduğu için DOM input'a bağımlı değil.
-  var d = node.data || {};
-  var hasMesh = !!d.meshActive;
-  var geomOk = false;
-  if (typeof veFEAFindUpstreamGeometryNode === 'function') {
-    var gn = veFEAFindUpstreamGeometryNode(node.id);
-    geomOk = !!(gn && gn.data && gn.data.geometry && gn.data.geometry.type);
-  }
-  var buildLabel = hasMesh ? '↻ Yeniden Oluştur' : '▶ Mesh Oluştur';
-  var buildStyle = geomOk
-    ? 'background:var(--accent-primary); color:#fff; cursor:pointer;'
-    : 'background:var(--bg-tertiary); color:var(--text-muted); cursor:not-allowed;';
-  var buildBtn = '<button id="ve-fea-header-build-' + node.id + '" ' + (geomOk ? '' : 'disabled ') +
-    'onclick="veFEASubmitMeshBuild(\'' + node.id + '\')" title="' + (geomOk ? 'Mesh oluştur (genel boyut + lokal kontroller)' : 'Önce Geometri tanımlayın') + '" ' +
-    'style="padding:5px 12px; font-size:0.66rem; font-weight:700; border:1px solid var(--border-color); ' + buildStyle + '">' + buildLabel + '</button>';
-  var clearBtn = hasMesh
-    ? '<button onclick="veFEAClearMeshForNode(\'' + node.id + '\')" title="Mesh\'i sil" style="padding:5px 9px; font-size:0.62rem; background:transparent; color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer;">🗑</button>'
-    : '';
-
+  // "Mesh Oluştur" butonu artık ağaçtaki "Ağ Ör" düğümünde (Mesh dalı altında)
+  // — header sade: başlık + kapat.
   header.innerHTML = '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' +
     '<div style="font-size:0.8rem; font-weight:700; color:var(--text-heading); white-space:nowrap;">' + titleText + '</div>' +
     '<div style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">— ' + nodeLabel + ' (' + node.id + ')</div>' +
     '</div>' +
-    '<div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">' +
-      buildBtn + clearBtn +
-      '<button onclick="veFEACloseMeshEditor()" title="Kapat (ESC)" style="width:26px; height:26px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>' +
-    '</div>';
+    '<button onclick="veFEACloseMeshEditor()" title="Kapat (ESC)" style="flex-shrink:0; width:26px; height:26px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
   return header;
 }
 
@@ -507,6 +546,103 @@ function _veFEAEditorBuildToolbar(node) {
   }
 
   return toolbar;
+}
+
+// "Ağ Ör" düğümü Details paneli — tüm mesh ayarlarının özeti + Mesh Oluştur.
+// Kullanıcı isteği: lokal ayarlar/boyutlandırma özetlenir, altta build butonu.
+function _veFEAEditorMeshSummaryHTML(node) {
+  var d = node.data || {};
+  var s = d.meshSettings || {};
+  var hasMesh = !!d.meshActive;
+  var geomOk = false;
+  if (typeof veFEAFindUpstreamGeometryNode === 'function') {
+    var gn = veFEAFindUpstreamGeometryNode(node.id);
+    geomOk = !!(gn && gn.data && gn.data.geometry && gn.data.geometry.type);
+  }
+
+  function _row(k, v) {
+    return '<div style="display:flex; justify-content:space-between; gap:8px; padding:3px 0; font-size:0.62rem;">' +
+      '<span style="color:var(--text-secondary);">' + k + '</span>' +
+      '<span style="color:var(--text-primary); font-weight:600; text-align:right;">' + v + '</span></div>';
+  }
+
+  // Aktif (suppress edilmemiş) kontrol sayısı
+  function _count(type) {
+    var list = (s[({ bodySizing:'bodySizingControls', faceSizing:'faceSizingControls', edgeSizing:'edgeSizingControls', soi:'sphereOfInfluence', refinement:'refinementControls', methodOverride:'methodOverrides', virtualTopology:'virtualTopology' })[type]]) || [];
+    var total = list.length;
+    var active = total;
+    if (typeof FEAMeshControls !== 'undefined' && typeof FEAMeshControls.activeControls === 'function') {
+      try { active = FEAMeshControls.activeControls(node, type).length; } catch (e) {}
+    }
+    return { total: total, active: active, suppressed: total - active };
+  }
+
+  var html = '';
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">Mesh için yapılan tüm ayarların özeti. Hazırsan en alttan <b>Mesh Oluştur</b>.</div>';
+
+  // ── Global ayarlar ──
+  html += '<div style="font-size:0.58rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); margin:6px 0 4px; padding-bottom:2px; border-bottom:1px solid var(--border-color);">Global Ayarlar</div>';
+  html += _row('Genel eleman boyutu', (s.size != null ? s.size : 10) + ' mm');
+  var methodLbl = ({ automatic:'Automatic', patchConformingTet:'Patch Conforming Tet', hexDominant:'Hex Dominant', sweep:'Sweep' })[s.meshMethod] || (s.meshMethod || 'Automatic');
+  html += _row('Mesh Method', methodLbl);
+  var eoLbl = ({ program:'Program Controlled', linear:'Linear', quadratic:'Quadratic' })[s.elementOrder] || (s.elementOrder || 'Program Controlled');
+  html += _row('Element Order', eoLbl);
+  var curv = s.curvatureRefinement || {};
+  html += _row('Eğrilik tabanlı incelt', curv.enabled ? ('Açık (' + (curv.normalAngleDeg || 18) + '°)') : 'Kapalı');
+  if (s.defeaturingTolerance) html += _row('Defeaturing', s.defeaturingTolerance + ' mm');
+
+  // ── Lokal kontroller ──
+  var ctlTypes = [
+    ['bodySizing', 'Body Sizing'], ['faceSizing', 'Face Sizing'], ['edgeSizing', 'Edge Sizing'],
+    ['soi', 'Sphere of Influence'], ['refinement', 'Refinement'], ['methodOverride', 'Method Override'],
+    ['virtualTopology', 'Virtual Topology']
+  ];
+  var anyLocal = false;
+  var localRows = '';
+  ctlTypes.forEach(function(t) {
+    var c = _count(t[0]);
+    if (c.total > 0) {
+      anyLocal = true;
+      var supNote = c.suppressed > 0 ? ' <span style="color:var(--text-muted); font-weight:400;">(' + c.suppressed + ' suppressed)</span>' : '';
+      localRows += _row(t[1], c.active + (c.suppressed > 0 ? ('/' + c.total) : '') + supNote);
+    }
+  });
+  html += '<div style="font-size:0.58rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); margin:10px 0 4px; padding-bottom:2px; border-bottom:1px solid var(--border-color);">Lokal Kontroller</div>';
+  if (anyLocal) {
+    html += localRows;
+  } else {
+    html += '<div style="font-size:0.6rem; color:var(--text-muted); font-style:italic; padding:3px 0;">— lokal kontrol tanımlı değil (sadece global boyut)</div>';
+  }
+
+  // ── Mesh durumu ──
+  html += '<div style="font-size:0.58rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); margin:10px 0 4px; padding-bottom:2px; border-bottom:1px solid var(--border-color);">Mesh Durumu</div>';
+  if (hasMesh && d.meshMetrics) {
+    var m = d.meshMetrics;
+    html += _row('Düğüm / Eleman', (m.nodeCount || 0).toLocaleString('tr-TR') + ' / ' + (m.elementCount || 0).toLocaleString('tr-TR'));
+    if (m.jacobian) {
+      var jOk = m.jacobian.valid;
+      html += _row('Jacobian', jOk ? '<span style="color:var(--accent-success, #22c55e);">✓ Geçerli</span>' : '<span style="color:var(--accent-danger, #ef4444);">✗ Hatalı</span>');
+    }
+  } else {
+    html += '<div style="font-size:0.6rem; color:var(--text-muted); font-style:italic; padding:3px 0;">— henüz mesh oluşturulmadı</div>';
+  }
+
+  // ── Mesh Oluştur butonu ──
+  var buildLabel = hasMesh ? '↻ Mesh\'i Yeniden Oluştur' : '▶ Mesh Oluştur';
+  var buildStyle = geomOk
+    ? 'background:var(--accent-primary); color:#fff; cursor:pointer;'
+    : 'background:var(--bg-tertiary); color:var(--text-muted); cursor:not-allowed;';
+  html += '<div style="margin-top:14px;">';
+  html += '<button ' + (geomOk ? '' : 'disabled ') + 'onclick="veFEASubmitMeshBuild(\'' + node.id + '\')" style="width:100%; padding:12px 16px; font-size:0.8rem; font-weight:700; border:1px solid var(--border-color); ' + buildStyle + '">' + buildLabel + '</button>';
+  if (!geomOk) {
+    html += '<div style="font-size:0.55rem; color:var(--accent-warning, #f59e0b); margin-top:6px; text-align:center;">⚠ Önce Geometri dalından geometri tanımlayın.</div>';
+  }
+  if (hasMesh) {
+    html += '<button onclick="veFEAClearMeshForNode(\'' + node.id + '\')" style="width:100%; margin-top:8px; padding:7px 10px; font-size:0.64rem; background:var(--bg-tertiary); color:var(--accent-danger); border:1px solid var(--accent-danger); cursor:pointer;">🗑 Mesh\'i Sil</button>';
+  }
+  html += '</div>';
+
+  return html;
 }
 
 function _veFEAEditorBuildFooter(node) {
@@ -565,6 +701,21 @@ function _veFEAEditorBuildLeftPanel(node) {
   outlineHeader.innerHTML = '<span>▣ Mesh Outline</span>' +
     '<span style="font-weight:600; font-size:0.5rem; color:var(--text-muted); letter-spacing:0.04em;">ANSYS §2.4 Tree</span>';
   panel.appendChild(outlineHeader);
+
+  // Filter / Search input (C.10) — outline container'ın DIŞINDA durur, böylece
+  // outline refresh'i input'un focus'unu kaybettirmez.
+  var filterBar = document.createElement('div');
+  filterBar.id = 've-fea-outline-filter-bar';
+  filterBar.style.cssText = 'display:flex; align-items:center; gap:4px; padding:4px 8px; background:var(--bg-primary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  var filterVal = (outlineState && outlineState.filter) || '';
+  filterBar.innerHTML =
+    '<span style="font-size:0.6rem; color:var(--text-muted);">🔍</span>' +
+    '<input id="ve-fea-outline-filter" type="text" value="' + (filterVal.replace(/"/g, '&quot;')) + '" placeholder="Outline\'da ara..." ' +
+    'oninput="FEAMeshOutline.setFilter(this.value)" ' +
+    'style="flex:1; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+    '<button onclick="document.getElementById(\'ve-fea-outline-filter\').value=\'\'; FEAMeshOutline.setFilter(\'\');" title="Temizle" style="padding:2px 6px; font-size:0.6rem; background:transparent; color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer;">✕</button>' +
+    '<button onclick="FEAMeshOutline.showScopeUsersForSelected()" title="Seçili 3D yüzü kullanan kontrolleri göster (Go To)" style="padding:2px 6px; font-size:0.6rem; background:transparent; color:var(--accent-primary); border:1px solid var(--accent-primary); cursor:pointer;">🔎</button>';
+  panel.appendChild(filterBar);
 
   // Outline container
   var outlineContainer = document.createElement('div');
@@ -669,7 +820,7 @@ function _veFEAEditorAccordionSection(key, title, bodyHTML) {
 function _veFEAEditorBuildRightPanel(node) {
   var panel = document.createElement('div');
   panel.id = 've-fea-mesh-editor-right-panel';
-  panel.style.cssText = 'flex:1; min-width:300px; display:flex; flex-direction:column; background:#0a0a0a;';
+  panel.style.cssText = 'flex:1; min-width:300px; display:flex; flex-direction:column; background:var(--bg-primary);';
   var nid = node.id;
   var clipUI = _veFEAEditorBuildClipControls(nid);
   // ANSYS-style view toolbar: Standart görünümler (Iso/Top/Bot/Front/Back/Left/Right)
@@ -697,7 +848,7 @@ function _veFEAEditorBuildRightPanel(node) {
     '</div>';
   panel.innerHTML = viewToolbar +
     // Hit-point + cursor coordinate overlay (canvas üstünde absolute)
-    '<div style="flex:1; position:relative; min-height:0; background:#1a1a1a;">' +
+    '<div style="flex:1; position:relative; min-height:0; background:var(--bg-tertiary);">' +
       '<canvas id="ve-fea-mesh-canvas-' + nid + '" style="display:block; width:100%; height:100%; cursor:default;"></canvas>' +
       '<div id="ve-fea-hit-coord-' + nid + '" style="position:absolute; bottom:8px; left:8px; padding:4px 8px; background:rgba(0,0,0,0.65); color:#fbbf24; font-size:0.6rem; font-family:monospace; pointer-events:none; display:none; border:1px solid #444;"></div>' +
       '<div id="ve-fea-depth-stack-' + nid + '" style="position:absolute; bottom:8px; right:8px; display:none; gap:2px; flex-direction:column;"></div>' +

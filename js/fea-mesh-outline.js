@@ -66,12 +66,23 @@
     children: [
       { id: 'single:geometry', type: 'single', label: 'Geometri', icon: '◈', detail: 'geometry' },
       {
+        id: 'group:coordinateSystems',
+        type: 'group',
+        label: 'Coordinate Systems',
+        icon: '⊕',
+        defaultExpanded: false,
+        children: [
+          { id: 'cl:coordinateSystem', type: 'controlList', controlType: 'coordinateSystem', label: 'Lokal Koordinat Sistemleri', icon: '⊕' }
+        ]
+      },
+      {
         id: 'group:mesh',
         type: 'group',
         label: 'Mesh',
         icon: '◆',
         defaultExpanded: true,
         children: [
+          { id: 'single:meshGenerate', type: 'single', label: 'Ağ Ör (Mesh Oluştur)', icon: '▶', detail: 'meshGenerate' },
           {
             id: 'group:globals',
             type: 'group',
@@ -96,7 +107,10 @@
               { id: 'cl:edgeSizing',     type: 'controlList', controlType: 'edgeSizing',     label: 'Edge Sizing',         icon: '╱' },
               { id: 'cl:soi',            type: 'controlList', controlType: 'soi',            label: 'Sphere of Influence', icon: '◯' },
               { id: 'cl:refinement',     type: 'controlList', controlType: 'refinement',     label: 'Refinement',          icon: '⊞' },
-              { id: 'cl:methodOverride', type: 'controlList', controlType: 'methodOverride', label: 'Method Override',     icon: '✎' }
+              { id: 'cl:methodOverride', type: 'controlList', controlType: 'methodOverride', label: 'Method Override',     icon: '✎' },
+              { id: 'cl:matchControl',   type: 'controlList', controlType: 'matchControl',   label: 'Match Control',       icon: '↔' },
+              { id: 'cl:pinch',          type: 'controlList', controlType: 'pinch',          label: 'Pinch',               icon: '⌐' },
+              { id: 'cl:gasket',         type: 'controlList', controlType: 'gasket',         label: 'Gasket',              icon: '▤' }
             ]
           },
           {
@@ -107,7 +121,8 @@
             defaultExpanded: false,
             children: [
               { id: 'cl:virtualTopology', type: 'controlList', controlType: 'virtualTopology', label: 'Virtual Topology', icon: '◇' },
-              { id: 'single:namedSel',    type: 'single',      label: 'Named Selections (Atanmış Yüzeyler)',              icon: '⊟', detail: 'namedSel' }
+              { id: 'cl:userNS',          type: 'controlList', controlType: 'userNS',          label: 'Named Selections (DRY)', icon: '◫' },
+              { id: 'single:namedSel',    type: 'single',      label: 'Otomatik Atanmış Yüzeyler (Mesh\'ten)',              icon: '⊟', detail: 'namedSel' }
             ]
           },
           {
@@ -334,6 +349,130 @@
         return { name: null, faceIds: [] };
       }
     },
+    // ─── Match Control (C.15 — ANSYS §5.3) ───────────────────────────────────
+    matchControl: {
+      storageKey: 'matchControls',
+      detailKey:  'matchControlItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        var f1 = c && c.face1 != null ? c.face1 : '?';
+        var f2 = c && c.face2 != null ? c.face2 : '?';
+        return 'Match ' + (idx + 1) + ' [' + f1 + '↔' + f2 + ']';
+      },
+      scopeOf: function(c) {
+        var ents = [];
+        if (c && c.face1 != null) ents.push(c.face1);
+        if (c && c.face2 != null) ents.push(c.face2);
+        return { kind: 'geometry', entityType: 'face', entities: ents };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (c.face1 == null || c.face2 == null) return 'underdefined';
+        if (String(c.face1) === String(c.face2)) return 'underdefined';
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, face1: null, face2: null, type: 'arbitrary' };
+      }
+    },
+    // ─── Pinch Control (C.15 — ANSYS §5.6) ───────────────────────────────────
+    pinch: {
+      storageKey: 'pinchControls',
+      detailKey:  'pinchItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        var et = c && c.entityType ? c.entityType : 'edge';
+        var n = c ? (Array.isArray(c.entities) ? c.entities.length : 0) : 0;
+        return 'Pinch ' + (idx + 1) + ' [' + et + '×' + n + ']';
+      },
+      scopeOf: function(c) {
+        return {
+          kind: 'geometry', entityType: (c && c.entityType) || 'edge',
+          entities: (c && Array.isArray(c.entities)) ? c.entities.slice() : []
+        };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (!Array.isArray(c.entities) || c.entities.length === 0) return 'underdefined';
+        if (!isFinite(c.tolerance) || c.tolerance <= 0) return 'underdefined';
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        var sz = (meshNode && meshNode.data && meshNode.data.meshSettings && meshNode.data.meshSettings.size) || 10;
+        return { name: null, entityType: 'edge', entities: [], tolerance: sz * 0.05 };
+      }
+    },
+    // ─── Gasket Control (C.15 — ANSYS §5.7) ──────────────────────────────────
+    gasket: {
+      storageKey: 'gasketControls',
+      detailKey:  'gasketItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        return 'Gasket ' + (idx + 1);
+      },
+      scopeOf: function(c) {
+        return {
+          kind: 'geometry', entityType: 'body',
+          entities: Array.isArray(c.bodyIds) ? c.bodyIds.slice() : []
+        };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (!Array.isArray(c.bodyIds) || c.bodyIds.length === 0) return 'underdefined';
+        if (!isFinite(c.thickness) || c.thickness <= 0) return 'underdefined';
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, bodyIds: [], thickness: 1, layers: 1 };
+      }
+    },
+    // ─── Coordinate System (C.12) ────────────────────────────────────────────
+    coordinateSystem: {
+      storageKey: 'coordinateSystems',
+      detailKey:  'csItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        var kind = c && c.csType === 'cylindrical' ? 'CS-Silindirik' : 'CS-Kartezyen';
+        return kind + ' ' + (idx + 1);
+      },
+      scopeOf: function(c) {
+        return { kind: 'world', entityType: 'point', entities: [] };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (!Array.isArray(c.origin) || c.origin.length !== 3) return 'underdefined';
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, csType: 'cartesian', origin: [0, 0, 0], rotationDeg: [0, 0, 0] };
+      }
+    },
+    // ─── User Named Selection (B.8 — DRY) ────────────────────────────────────
+    // Kullanıcı bir kez yüz grubu tanımlar; Face Sizing, BC, sonuç gibi
+    // kontroller bu gruptan import eder. ANSYS Named Selections muadili.
+    userNS: {
+      storageKey: 'userNamedSelections',
+      detailKey:  'userNSItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        return 'Named Selection ' + (idx + 1);
+      },
+      scopeOf: function(c) {
+        return {
+          kind: 'geometry', entityType: 'face',
+          entities: Array.isArray(c.faceIds) ? c.faceIds.slice() : []
+        };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (!Array.isArray(c.faceIds) || c.faceIds.length === 0) return 'underdefined';
+        if (!c.name) return 'underdefined';   // isim zorunlu (DRY için referans)
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, faceIds: [] };
+      }
+    },
     // ─── Sınır Koşulları (BC) — storage: node.data.bc.assignments ───────────
     bc: {
       detailKey: 'bcItem',
@@ -442,9 +581,11 @@
       meshNode.data.meshSettings.outline = {
         selected:  'single:geometry',
         expanded:  _defaultExpanded(),
-        splitPct:  50
+        splitPct:  50,
+        filter:    ''
       };
     }
+    if (meshNode.data.meshSettings.outline.filter == null) meshNode.data.meshSettings.outline.filter = '';
     if (!meshNode.data.meshSettings.suppressFlags) {
       meshNode.data.meshSettings.suppressFlags = {};
     }
@@ -471,6 +612,11 @@
     exp['cl:refinement']     = false;
     exp['cl:methodOverride'] = false;
     exp['cl:virtualTopology']= false;
+    exp['cl:userNS']         = false;
+    exp['cl:matchControl']   = false;
+    exp['cl:pinch']          = false;
+    exp['cl:gasket']         = false;
+    exp['cl:coordinateSystem']= false;
     // Sınır Koşulları + Çözüm dalları default açık (yük/sonuç öğeleri görünsün)
     exp['cl:bc']             = true;
     exp['group:solution']    = true;
@@ -588,6 +734,10 @@
       var gd = meshNode.data || {};
       return (gd.geometry && gd.geometry.type) ? 'ok' : 'underdefined';
     }
+    // "Ağ Ör" düğümü: mesh varsa ok, yoksa info (henüz örülmedi)
+    if (outlineId === 'single:meshGenerate') {
+      return (meshNode.data && meshNode.data.meshActive) ? 'ok' : 'info';
+    }
     if (outlineId === 'single:bc') {
       var bcd = (meshNode.data && meshNode.data.bc) || {};
       var asg = Array.isArray(bcd.assignments) ? bcd.assignments : [];
@@ -662,13 +812,147 @@
     var state = _getOutlineState(meshNode);
 
     var html = '';
+    html += _goToBannerHTML(meshNode, state);
     html += '<div class="ve-fea-outline-tree" style="padding:6px 0 8px; font-size:0.66rem; user-select:none;">';
     html += _renderNode(SCHEMA, meshNode, state, 0);
     html += '</div>';
     return html;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // C.10 — Tree filter / search
+  // ─────────────────────────────────────────────────────────────────────────
+  // Bir schema node'un (ve descendant'larının) filter'a uyup uymadığını döner.
+  // Control list item'ları için meta.labelOf ile dinamik label da kontrol edilir.
+  function _passesFilter(meshNode, schemaNode, filter) {
+    if (!filter) return true;
+    var f = filter.toLowerCase();
+    if ((schemaNode.label || '').toLowerCase().indexOf(f) >= 0) return true;
+    if (schemaNode.type === 'controlList') {
+      var meta = CONTROL_META[schemaNode.controlType];
+      if (meta) {
+        var list = _getControlList(meshNode, schemaNode.controlType);
+        for (var i = 0; i < list.length; i++) {
+          if ((meta.labelOf(list[i], i) || '').toLowerCase().indexOf(f) >= 0) return true;
+        }
+      }
+    }
+    if (Array.isArray(schemaNode.children)) {
+      for (var j = 0; j < schemaNode.children.length; j++) {
+        if (_passesFilter(meshNode, schemaNode.children[j], filter)) return true;
+      }
+    }
+    return false;
+  }
+
+  function setFilter(value) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode) return;
+    var state = _getOutlineState(meshNode);
+    state.filter = String(value || '');
+    refresh();
+  }
+
+  // ─── C.11 — Go To: bir yüze hangi kontroller/BC scope edilmiş? ──────────
+  // Yüz vermek lazım; faceId genelde topology face id (string veya number).
+  function findScopeUsers(meshNode, faceId) {
+    if (!meshNode || faceId == null) return [];
+    var users = [];
+    var faceScopedTypes = ['faceSizing', 'refinement', 'virtualTopology', 'userNS'];
+    faceScopedTypes.forEach(function(ct) {
+      var meta = CONTROL_META[ct];
+      if (!meta) return;
+      var list = _getControlList(meshNode, ct);
+      list.forEach(function(c, idx) {
+        if (!c) return;
+        var ids = [];
+        if (Array.isArray(c.faceIds)) ids = c.faceIds;
+        else if (c.faceId != null) ids = [c.faceId];
+        // string/number eşitliği esnek tut
+        var match = false;
+        for (var k = 0; k < ids.length; k++) {
+          if (String(ids[k]) === String(faceId)) { match = true; break; }
+        }
+        if (match) {
+          users.push({
+            outlineId:   _controlOutlineId(ct, idx),
+            controlType: ct,
+            index:       idx,
+            label:       meta.labelOf(c, idx)
+          });
+        }
+      });
+    });
+    // BC assignments (tek face scope)
+    var bcMeta = CONTROL_META.bc;
+    if (bcMeta) {
+      var bcList = _getControlList(meshNode, 'bc');
+      bcList.forEach(function(c, idx) {
+        if (c && c.faceId != null && String(c.faceId) === String(faceId)) {
+          users.push({
+            outlineId:   _controlOutlineId('bc', idx),
+            controlType: 'bc',
+            index:       idx,
+            label:       bcMeta.labelOf(c, idx)
+          });
+        }
+      });
+    }
+    return users;
+  }
+
+  // Go To: viewer'da seçili yüzü kullanan kontrolleri outline'da banner olarak göster
+  function showScopeUsersForSelected() {
+    var meshNode = _activeMeshNode();
+    if (!meshNode) return;
+    var faceId = null;
+    var reg = global.veFEAViewerRegistry;
+    if (reg && reg[meshNode.id] && typeof reg[meshNode.id].getSelectedFace === 'function') {
+      faceId = reg[meshNode.id].getSelectedFace();
+    }
+    if (faceId == null) faceId = (meshNode.data && meshNode.data.selectedFaceId != null) ? meshNode.data.selectedFaceId : null;
+    if (faceId == null) {
+      if (typeof global.showToast === 'function') global.showToast('Önce 3D görüntüleyicide bir yüze tıklayın.', 'warning');
+      return;
+    }
+    var state = _getOutlineState(meshNode);
+    state.goToFaceId = faceId;
+    refresh();
+  }
+
+  function clearGoTo() {
+    var meshNode = _activeMeshNode();
+    if (!meshNode) return;
+    var state = _getOutlineState(meshNode);
+    delete state.goToFaceId;
+    refresh();
+  }
+
+  function _goToBannerHTML(meshNode, outlineState) {
+    var fid = outlineState && outlineState.goToFaceId;
+    if (fid == null) return '';
+    var users = findScopeUsers(meshNode, fid);
+    var html = '<div style="margin:4px 6px 8px; padding:6px 8px; background:rgba(59,130,246,0.12); border-left:3px solid var(--accent-primary, #3b82f6); font-size:0.6rem;">';
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+    html += '<b style="color:var(--text-heading);">🔎 Bu yüze scope edilen kontroller: <span style="color:var(--accent-primary);">' + _escapeHtml(String(fid)) + '</span></b>';
+    html += '<button onclick="FEAMeshOutline.clearGoTo()" title="Kapat" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:0.7rem;">✕</button>';
+    html += '</div>';
+    if (users.length === 0) {
+      html += '<div style="color:var(--text-muted); font-style:italic;">Hiçbir kontrol bu yüze scope edilmemiş.</div>';
+    } else {
+      users.forEach(function(u) {
+        html += '<div onclick="FEAMeshOutline.select(\'' + u.outlineId + '\')" style="padding:3px 6px; margin:2px 0; background:var(--bg-primary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">' +
+          '→ <b>' + _escapeHtml(u.label) + '</b> <span style="color:var(--text-muted); font-size:0.52rem;">(' + u.controlType + ')</span></div>';
+      });
+    }
+    html += '</div>';
+    return html;
+  }
+
   function _renderNode(schemaNode, meshNode, outlineState, depth) {
+    var filter = (outlineState && outlineState.filter) || '';
+    if (filter && !_passesFilter(meshNode, schemaNode, filter)) return '';
+
     if (schemaNode.type === 'root') {
       // Root satırı: outline başlığı + state özet
       var rootState = computeNodeState(meshNode, schemaNode.id);
@@ -694,7 +978,8 @@
 
     if (schemaNode.type === 'group') {
       var groupState = computeNodeState(meshNode, schemaNode.id);
-      var expanded = outlineState.expanded[schemaNode.id] !== false; // default true
+      // Filter aktifse zorla aç, aksi halde state'ten
+      var expanded = filter ? true : (outlineState.expanded[schemaNode.id] !== false);
       var html2 = _renderRow({
         outlineId:  schemaNode.id,
         label:      schemaNode.label,
@@ -738,7 +1023,8 @@
       var ct = schemaNode.controlType;
       var list = _getControlList(meshNode, ct);
       var groupOutlineId = schemaNode.id;
-      var listExpanded = outlineState.expanded[groupOutlineId] === true; // default false
+      // Filter aktifse grubu otomatik aç (sonuç görünür olsun)
+      var listExpanded = filter ? true : (outlineState.expanded[groupOutlineId] === true);
       var groupState2 = computeNodeState(meshNode, groupOutlineId);
 
       // Sağ taraf: kontrol sayısı + (+ ekle) butonu
@@ -769,9 +1055,14 @@
             var itemId = _controlOutlineId(ct, idx);
             var meta = CONTROL_META[ct];
             var lbl  = meta.labelOf(c, idx);
+            // Filter aktifse uymayan item'ı atla
+            if (filter && (lbl || '').toLowerCase().indexOf(filter.toLowerCase()) < 0) return;
             var iState = computeNodeState(meshNode, itemId);
             var sel = outlineState.selected === itemId;
-            var rightExtra = '<button onclick="event.stopPropagation(); FEAMeshOutline.toggleSuppress(\'' + itemId + '\')" title="Suppress/Unsuppress" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; padding:0 3px; font-size:0.66rem;" onmouseenter="this.style.color=\'var(--accent-warning)\'" onmouseleave="this.style.color=\'var(--text-secondary)\'">' + (iState === 'suppressed' ? '◉' : '⊘') + '</button>' +
+            var canUp = idx > 0, canDown = idx < list.length - 1;
+            var rightExtra = '<button onclick="event.stopPropagation(); FEAMeshOutline.moveControl(\'' + itemId + '\', -1)" title="Yukarı" ' + (canUp ? '' : 'disabled ') + 'style="background:transparent; border:none; color:' + (canUp ? 'var(--text-secondary)' : 'var(--text-muted)') + '; cursor:' + (canUp ? 'pointer' : 'not-allowed') + '; padding:0 2px; font-size:0.6rem;">▲</button>' +
+                             '<button onclick="event.stopPropagation(); FEAMeshOutline.moveControl(\'' + itemId + '\', 1)" title="Aşağı" ' + (canDown ? '' : 'disabled ') + 'style="background:transparent; border:none; color:' + (canDown ? 'var(--text-secondary)' : 'var(--text-muted)') + '; cursor:' + (canDown ? 'pointer' : 'not-allowed') + '; padding:0 2px; font-size:0.6rem;">▼</button>' +
+                             '<button onclick="event.stopPropagation(); FEAMeshOutline.toggleSuppress(\'' + itemId + '\')" title="Suppress/Unsuppress" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; padding:0 3px; font-size:0.66rem;" onmouseenter="this.style.color=\'var(--accent-warning)\'" onmouseleave="this.style.color=\'var(--text-secondary)\'">' + (iState === 'suppressed' ? '◉' : '⊘') + '</button>' +
                              '<button onclick="event.stopPropagation(); FEAMeshOutline.removeControl(\'' + itemId + '\')" title="Sil" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; padding:0 3px; font-size:0.66rem;" onmouseenter="this.style.color=\'var(--accent-danger)\'" onmouseleave="this.style.color=\'var(--text-secondary)\'">✕</button>';
             html3 += _renderRow({
               outlineId:  itemId,
@@ -895,9 +1186,10 @@
     // Study dalları (Geometri / Sınır Koşulları / Çözüm) — mevcut cp-fea.js
     // panel üreteçlerini birebir yeniden kullan (tek node tüm sub-data'yı tutar).
     var studyDispatch = {
-      'single:geometry': function(n) { return (typeof getFEAGeometryPropertiesHTML === 'function') ? getFEAGeometryPropertiesHTML(n) : _emptyDetail('Geometri paneli yüklenmedi'); },
-      'single:material': function(n) { return (typeof getFEAMaterialPropertiesHTML === 'function') ? getFEAMaterialPropertiesHTML(n) : _emptyDetail('Malzeme paneli yüklenmedi'); },
-      'single:solver':   function(n) { return (typeof getFEASolverPropertiesHTML === 'function') ? getFEASolverPropertiesHTML(n) : _emptyDetail('Çözücü paneli yüklenmedi'); }
+      'single:geometry':     function(n) { return (typeof getFEAGeometryPropertiesHTML === 'function') ? getFEAGeometryPropertiesHTML(n) : _emptyDetail('Geometri paneli yüklenmedi'); },
+      'single:material':     function(n) { return (typeof getFEAMaterialPropertiesHTML === 'function') ? getFEAMaterialPropertiesHTML(n) : _emptyDetail('Malzeme paneli yüklenmedi'); },
+      'single:solver':       function(n) { return (typeof getFEASolverPropertiesHTML === 'function') ? getFEASolverPropertiesHTML(n) : _emptyDetail('Çözücü paneli yüklenmedi'); },
+      'single:meshGenerate': function(n) { return (typeof _veFEAEditorMeshSummaryHTML === 'function') ? _veFEAEditorMeshSummaryHTML(n) : _emptyDetail('Mesh özeti yüklenmedi'); }
     };
     if (studyDispatch[outlineId]) return studyDispatch[outlineId](meshNode);
 
@@ -955,7 +1247,12 @@
       methodOverride:  { plural: 'Method Override', description: 'Bir body için mesh yöntemini global ayarın yerine geçiren özel kontrol.' },
       virtualTopology: { plural: 'Virtual Topology', description: 'Birden çok yüzü tek bir mesh edilecek bölge olarak gruplar (ANSYS §8.2).' },
       bc:              { plural: 'Sınır Koşulu',     description: 'Geometriye uygulanan yük/kısıt: Fixed Support, Kuvvet, Basınç, Yer Değiştirme. Her biri bir yüze scope edilir.' },
-      result:          { plural: 'Sonuç',            description: 'Çözüm sonrası gösterilecek alanlar: Total Deformation, von-Mises Stress, vb. Her biri 3D görüntüleyicide ayrı heat-map.' }
+      result:          { plural: 'Sonuç',            description: 'Çözüm sonrası gösterilecek alanlar: Total Deformation, von-Mises Stress, vb. Her biri 3D görüntüleyicide ayrı heat-map.' },
+      userNS:          { plural: 'Named Selection',  description: 'Tekrar kullanılabilir yüz grubu. Bir kez tanımla → Face Sizing, BC, Refinement vb. kontrollerden referansla doldur (DRY). ANSYS Named Selections muadili.' },
+      matchControl:    { plural: 'Match Control',    description: 'İki yüz arasında node-to-node eşleşme (ANSYS §5.3). Cyclic veya arbitrary; her iki yüzde aynı sayıda node oluşur.' },
+      pinch:           { plural: 'Pinch',            description: 'Küçük edge/vertex\'leri mesh seviyesinde sıkıştır (ANSYS §5.6). Master/slave; toleranstan küçük detaylar yutulur.' },
+      gasket:          { plural: 'Gasket',           description: 'Conta (gasket) body\'leri için özel mesh (ANSYS §5.7). Thickness ve layers parametreleri ile özel kalınlık-yönlü mesh.' },
+      coordinateSystem:{ plural: 'Koordinat Sistemi', description: 'Lokal kartezyen/silindirik CS (ANSYS §3). SoI merkezi, yük yönü, sonuç ekseni referansı.' }
     };
     var info = labels[controlType] || { plural: controlType, description: '' };
 
@@ -1211,6 +1508,35 @@
     refresh();
   }
 
+  // C.9 — Kontrol listesi içinde reorder (yukarı/aşağı). dir: -1 = yukarı, +1 = aşağı.
+  // Ağaç sırası ≠ işlem sırası (rapor §4.3) — sadece görsel sıralama.
+  // suppressFlags id'leri de listenin yeni sırasına göre güncellenir.
+  function moveControl(outlineId, dir) {
+    var parsed = _parseControlOutlineId(outlineId);
+    if (!parsed) return;
+    var meshNode = _activeMeshNode();
+    if (!meshNode) return;
+    var list = _getControlList(meshNode, parsed.controlType).slice();
+    var i = parsed.index, j = i + (dir < 0 ? -1 : 1);
+    if (i < 0 || i >= list.length || j < 0 || j >= list.length) return;
+    var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+    _setControlList(meshNode, parsed.controlType, list);
+    // Suppress flag id'lerini de takasla
+    var ct = parsed.controlType;
+    var flags = (meshNode.data.meshSettings && meshNode.data.meshSettings.suppressFlags) || {};
+    var keyI = 'cl:' + ct + '[' + i + ']';
+    var keyJ = 'cl:' + ct + '[' + j + ']';
+    var sI = flags[keyI], sJ = flags[keyJ];
+    if (sI) flags[keyJ] = true; else delete flags[keyJ];
+    if (sJ) flags[keyI] = true; else delete flags[keyI];
+    // Seçimi de takip et
+    var state = _getOutlineState(meshNode);
+    if (state.selected === keyI) state.selected = keyJ;
+    else if (state.selected === keyJ) state.selected = keyI;
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    refresh();
+  }
+
   function renameControl(outlineId, newName) {
     var parsed = _parseControlOutlineId(outlineId);
     if (!parsed) return;
@@ -1265,12 +1591,17 @@
     toggleExpand:       toggleExpand,
     addControl:         addControl,
     removeControl:      removeControl,
+    moveControl:        moveControl,
     toggleSuppress:     toggleSuppress,
     renameControl:      renameControl,
     updateControlField: updateControlField,
     activeSelection:    activeSelection,
     activeMeshNodeId:   activeMeshNodeId,
     deactivate:         deactivate,
+    setFilter:          setFilter,
+    findScopeUsers:     findScopeUsers,
+    showScopeUsersForSelected: showScopeUsersForSelected,
+    clearGoTo:          clearGoTo,
     computeNodeState:   computeNodeState,
     isSuppressed:       function(meshNode, outlineId) { return _isSuppressed(meshNode, outlineId); },
     // Internal (test için)

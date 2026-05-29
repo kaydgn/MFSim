@@ -61,7 +61,7 @@ describe('FEAMeshOutline — schema', () => {
     expect(schema.type).toBe('root');
     expect(schema.label).toBe('Yapısal Analiz');
     const childIds = schema.children.map((c) => c.id);
-    expect(childIds).toEqual(['single:geometry', 'group:mesh', 'single:material', 'cl:bc', 'group:solution']);
+    expect(childIds).toEqual(['single:geometry', 'group:coordinateSystems', 'group:mesh', 'single:material', 'cl:bc', 'group:solution']);
   });
 
   test('Mesh subtree contains globals/localControls/topologyTools/inspect groups', () => {
