@@ -6,6 +6,8 @@ function changeTheme(themeId) {
   try { localStorage.setItem('mf-theme', themeId); } catch(e) {}
   var sel = document.getElementById('theme-select');
   if(sel) sel.value = themeId;
+  // Açık 3D yapısal analiz görüntüleyicilerinin arka planını yeni temaya uyarla.
+  if (typeof veFEAApplyThemeToViewers === 'function') veFEAApplyThemeToViewers();
 }
 
 // Sayfa yüklendiğinde kayıtlı temayı uygula

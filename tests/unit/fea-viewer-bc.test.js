@@ -38,6 +38,18 @@ describe('Module sabitleri', () => {
     expect(typeof VE_FEA_EDGES_MAX_VERTICES).toBe('number');
     expect(VE_FEA_EDGES_MAX_VERTICES).toBeGreaterThan(1000);
   });
+
+  test('veFEAGetThemeBackgroundColor tanımlı bir renk döner', () => {
+    expect(typeof veFEAGetThemeBackgroundColor).toBe('function');
+    var c = veFEAGetThemeBackgroundColor();
+    // CSS değişkeni yoksa fallback (hex sayı), varsa CSS string.
+    expect(c === undefined || c === null).toBe(false);
+    expect(['number', 'string']).toContain(typeof c);
+  });
+
+  test('veFEAApplyThemeToViewers fonksiyonu tanımlı', () => {
+    expect(typeof veFEAApplyThemeToViewers).toBe('function');
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -54,6 +66,16 @@ describe('fea-viewer.js — kaynak güvenceleri', () => {
 
   test('THREE.Raycaster kullanılır (mesfe ölçümü için)', () => {
     expect(src).toMatch(/new\s+THREE\.Raycaster/);
+  });
+
+  test('changeTheme (theme.js) viewer arka planını yeniler', () => {
+    const themeSrc = fs.readFileSync(path.join(ROOT, 'js/theme.js'), 'utf8');
+    expect(themeSrc).toMatch(/veFEAApplyThemeToViewers/);
+  });
+
+  test('viewer arka planı tema CSS değişkeninden türetilir', () => {
+    expect(src).toMatch(/--bg-tertiary/);
+    expect(src).toMatch(/function veFEAGetThemeBackgroundColor/);
   });
 
   test('EdgesGeometry lazy attach helper tanımlı', () => {
@@ -312,6 +334,50 @@ describe('viewer davranış testleri (Three.js mock)', () => {
     expect(viewer._backgroundColor).toBe(before);
   });
 
+  test('opts.background verilmeyen viewer temaya bağlıdır', () => {
+    // beforeEach viewer'ı background vermeden oluşturur → tema modu.
+    expect(viewer._isThemeBackground).toBe(true);
+  });
+
+  test('setBackground("theme") viewer\'ı tema moduna alır', () => {
+    viewer.setBackground('blue');
+    expect(viewer._isThemeBackground).toBe(false);
+    viewer.setBackground('theme');
+    expect(viewer._isThemeBackground).toBe(true);
+    // Tema rengi CSS değişkeninden ya da fallback'ten gelir (her zaman tanımlı).
+    expect(viewer._backgroundColor).toBeDefined();
+  });
+
+  test('elle seçilen preset tema modunu kapatır', () => {
+    viewer.setBackground('white');
+    expect(viewer._isThemeBackground).toBe(false);
+    expect(viewer._backgroundColor).toBe(VE_FEA_BG_PRESETS.white);
+  });
+
+  test('veFEAApplyThemeToViewers yalnızca tema modundaki viewer\'ları günceller', () => {
+    // İki viewer: biri temaya bağlı, biri elle preset seçilmiş.
+    var c2 = document.createElement('canvas');
+    document.body.appendChild(c2);
+    var themed = veFEAInitViewer(c2, { width: 400, height: 300 }); // tema modu
+    var c3 = document.createElement('canvas');
+    document.body.appendChild(c3);
+    var manual = veFEAInitViewer(c3, { width: 400, height: 300 });
+    manual.setBackground('blue'); // elle → tema modu kapanır
+
+    veFEAViewerRegistry['themed'] = themed;
+    veFEAViewerRegistry['manual'] = manual;
+
+    expect(() => veFEAApplyThemeToViewers()).not.toThrow();
+    // Elle seçilen viewer mavi kalmalı (tema değişimi onu etkilemez).
+    expect(manual._backgroundColor).toBe(VE_FEA_BG_PRESETS.blue);
+    expect(manual._isThemeBackground).toBe(false);
+    // Tema modundaki viewer tema modunda kalır.
+    expect(themed._isThemeBackground).toBe(true);
+
+    delete veFEAViewerRegistry['themed'];
+    delete veFEAViewerRegistry['manual'];
+  });
+
   test('setClipPlane X ekseninde plane oluşturur', () => {
     viewer.setClipPlane('x', true, 5);
     expect(viewer._clipState.x.enabled).toBe(true);
@@ -455,12 +521,14 @@ describe('Fullscreen toolbar — Grup B + C butonları render', () => {
     expect(modeBtn.textContent).toMatch(/Shaded/);
   });
 
-  test('Arka plan dropdown 4 preset içerir', () => {
+  test('Arka plan dropdown tema + 4 preset içerir', () => {
     veFEAOpenFullscreenViewer('test-bc');
     var opts = document.querySelectorAll('select[data-action="bg"] option');
-    expect(opts.length).toBe(4);
+    expect(opts.length).toBe(5);
     var values = Array.from(opts).map(function(o) { return o.value; });
-    expect(values).toEqual(['dark','light','white','blue']);
+    expect(values).toEqual(['theme','dark','light','white','blue']);
+    // Varsayılan seçim "Tema" — viewer programın aktif temasına uyar.
+    expect(values[0]).toBe('theme');
   });
 
   test('Ölçüm status div\'i accordion içinde gizli olarak render edilir', () => {

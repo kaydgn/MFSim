@@ -820,7 +820,7 @@ function _veFEAEditorAccordionSection(key, title, bodyHTML) {
 function _veFEAEditorBuildRightPanel(node) {
   var panel = document.createElement('div');
   panel.id = 've-fea-mesh-editor-right-panel';
-  panel.style.cssText = 'flex:1; min-width:300px; display:flex; flex-direction:column; background:#0a0a0a;';
+  panel.style.cssText = 'flex:1; min-width:300px; display:flex; flex-direction:column; background:var(--bg-primary);';
   var nid = node.id;
   var clipUI = _veFEAEditorBuildClipControls(nid);
   // ANSYS-style view toolbar: Standart görünümler (Iso/Top/Bot/Front/Back/Left/Right)
@@ -848,7 +848,7 @@ function _veFEAEditorBuildRightPanel(node) {
     '</div>';
   panel.innerHTML = viewToolbar +
     // Hit-point + cursor coordinate overlay (canvas üstünde absolute)
-    '<div style="flex:1; position:relative; min-height:0; background:#1a1a1a;">' +
+    '<div style="flex:1; position:relative; min-height:0; background:var(--bg-tertiary);">' +
       '<canvas id="ve-fea-mesh-canvas-' + nid + '" style="display:block; width:100%; height:100%; cursor:default;"></canvas>' +
       '<div id="ve-fea-hit-coord-' + nid + '" style="position:absolute; bottom:8px; left:8px; padding:4px 8px; background:rgba(0,0,0,0.65); color:#fbbf24; font-size:0.6rem; font-family:monospace; pointer-events:none; display:none; border:1px solid #444;"></div>' +
       '<div id="ve-fea-depth-stack-' + nid + '" style="position:absolute; bottom:8px; right:8px; display:none; gap:2px; flex-direction:column;"></div>' +
