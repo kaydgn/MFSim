@@ -35,6 +35,41 @@ var VE_FEA_BG_PRESETS = {
   blue:  0x1e3a5f
 };
 
+// Aktif program temasının arka plan rengini döner. CSS değişkeninden okur
+// (--fea-viewer-bg varsa onu, yoksa --bg-tertiary). THREE.Color hem hex
+// sayıyı hem CSS renk string'ini ('#151a22', 'rgb(...)') ayrıştırabildiği
+// için dönüş değeri doğrudan new THREE.Color(...) içine verilebilir.
+// DOM yoksa (ör. jsdom testleri) güvenli varsayılana (koyu) düşer.
+function veFEAGetThemeBackgroundColor() {
+  if (typeof document !== 'undefined' && document.documentElement &&
+      typeof getComputedStyle === 'function') {
+    try {
+      var cs = getComputedStyle(document.documentElement);
+      var raw = (cs.getPropertyValue('--fea-viewer-bg') ||
+                 cs.getPropertyValue('--bg-tertiary') || '').trim();
+      if (raw) return raw;
+    } catch (e) {}
+  }
+  return 0x1a1a1a;
+}
+
+// Tema değiştiğinde tüm aktif viewer'ların arka planını günceller. Yalnızca
+// temaya bağlı (kullanıcı elle bir preset seçmemiş) viewer'lar güncellenir.
+// theme.js içindeki changeTheme() bunu çağırır.
+function veFEAApplyThemeToViewers() {
+  if (typeof veFEAViewerRegistry === 'undefined' || !veFEAViewerRegistry) return;
+  Object.keys(veFEAViewerRegistry).forEach(function(key) {
+    var entry = veFEAViewerRegistry[key];
+    if (!entry) return;
+    // Registry hem viewer'ları hem de {viewer, dispose} sarmalayıcılarını
+    // (fullscreen) tutar — ikisini de destekle.
+    var v = (typeof entry.setBackground === 'function') ? entry : entry.viewer;
+    if (v && v._isThemeBackground && typeof v.setBackground === 'function') {
+      v.setBackground('theme');
+    }
+  });
+}
+
 // Edges hesaplama eşiği — bunun üzerinde mesh için edges atlanır (performans)
 var VE_FEA_EDGES_MAX_VERTICES = 30000;
 
@@ -92,8 +127,14 @@ function veFEAInitViewer(canvas, opts) {
   var width = opts.width || canvas.clientWidth || 240;
   var height = opts.height || canvas.clientHeight || 180;
 
+  // Arka plan: opts.background verilmemişse aktif temadan türet. usingThemeBg
+  // bilgisi viewer nesnesinde saklanır; tema değişince yalnızca bu viewer'lar
+  // otomatik güncellenir (kullanıcının elle seçtiği preset korunur).
+  var usingThemeBg = (opts.background == null);
+  var resolvedBg = usingThemeBg ? veFEAGetThemeBackgroundColor() : opts.background;
+
   var scene = new THREE.Scene();
-  scene.background = new THREE.Color(opts.background || 0x1a1a1a);
+  scene.background = new THREE.Color(resolvedBg);
 
   var camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 5000);
   camera.position.set(60, 50, 90);
@@ -1307,7 +1348,8 @@ function veFEAInitViewer(canvas, opts) {
     // ─── Grup B: Display modu / Opaklık / Arka plan ──────────────────────
     _displayMode: 'shaded', // 'shaded' | 'shaded-edges' | 'wireframe'
     _opacity: 1.0,
-    _backgroundColor: opts.background || 0x1a1a1a,
+    _backgroundColor: resolvedBg,
+    _isThemeBackground: usingThemeBg,
     _clipPlanes: [],
     _clipState: {
       x: { enabled: false, offset: 0 },
@@ -1474,15 +1516,22 @@ function veFEAInitViewer(canvas, opts) {
     },
     setBackground: function(colorOrPreset) {
       var color;
-      if (typeof colorOrPreset === 'string' && VE_FEA_BG_PRESETS[colorOrPreset] !== undefined) {
+      if (colorOrPreset === 'theme') {
+        // Aktif program temasına bağlan — tema değişince otomatik güncellenir.
+        color = veFEAGetThemeBackgroundColor();
+        this._isThemeBackground = true;
+      } else if (typeof colorOrPreset === 'string' && VE_FEA_BG_PRESETS[colorOrPreset] !== undefined) {
         color = VE_FEA_BG_PRESETS[colorOrPreset];
+        this._isThemeBackground = false;
       } else if (typeof colorOrPreset === 'number') {
         color = colorOrPreset;
+        this._isThemeBackground = false;
       } else {
         return;
       }
       this._backgroundColor = color;
-      scene.background = new THREE.Color(color);
+      try { scene.background = new THREE.Color(color); }
+      catch (e) { return; }
       render();
     },
     // ─── Grup C: Section view (clip plane'ler) ───────────────────────────
@@ -3097,7 +3146,8 @@ function _veFEAControlsPanelHTML() {
     '<div>' +
       '<div style="font-size:0.6rem; color:#bbb; margin-bottom:3px;">Arka plan</div>' +
       '<select data-action="bg" style="' + btnStyle + '; width:100%;">' +
-        '<option value="dark"  selected>Koyu</option>' +
+        '<option value="theme" selected>Tema</option>' +
+        '<option value="dark">Koyu</option>' +
         '<option value="light">Açık</option>' +
         '<option value="white">Beyaz</option>' +
         '<option value="blue">Mavi</option>' +
@@ -3225,7 +3275,7 @@ function veFEAOpenFullscreenViewer(nodeId) {
 
   // Canvas konteyneri — kalan tüm yüksekliği alır
   var canvasWrap = document.createElement('div');
-  canvasWrap.style.cssText = 'flex:1 1 auto; position:relative; background:#1a1a1a; min-height:0; overflow:hidden;';
+  canvasWrap.style.cssText = 'flex:1 1 auto; position:relative; background:var(--bg-tertiary); min-height:0; overflow:hidden;';
   var canvas = document.createElement('canvas');
   canvas.id = 've-fea-fullscreen-canvas';
   canvas.style.cssText = 'display:block; width:100%; height:100%;';
