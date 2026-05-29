@@ -77,7 +77,8 @@
   </div>
   <div class="ve-tab-group">
     <div class="ve-sub-tabs visible" id="ve-sub-tabs">
-      <button class="ve-sub-tab active" onclick="veSubTabDegistir('anasayfa')" data-subtab="anasayfa">Ana Sayfa</button>
+      <button class="ve-sub-tab active" onclick="veSubTabDegistir('arac-performans')" data-subtab="arac-performans">Araç Performans</button>
+      <button class="ve-sub-tab" onclick="veSubTabDegistir('sonlu-elemanlar')" data-subtab="sonlu-elemanlar">Sonlu Elemanlar</button>
       <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
     </div>
   </div>
@@ -303,7 +304,7 @@
               </svg> <span class="ve-comp-label">Yol / Ortam</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-mode="fea">
             <div class="ve-category-title">Yapısal Analiz</div>
             <div class="ve-component" draggable="true" data-type="fea" title="Sürüklediğinizde Geometri → Mesh → Sınır Koşulları → Çözücü zincirini oluşturur">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -364,9 +365,13 @@
               <div class="ve-module-overlay" id="ve-module-overlay">
                 <div class="ve-module-overlay-title">MFSim — Modül Seçimi</div>
                 <div class="ve-module-overlay-grid">
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('full-throttle')">
-                    <div class="ve-module-card-name">Ana Sayfa</div>
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('arac-performans')">
+                    <div class="ve-module-card-name">Araç Performans</div>
                     <div class="ve-module-card-desc">Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi.</div>
+                  </div>
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('sonlu-elemanlar')">
+                    <div class="ve-module-card-name">Sonlu Elemanlar</div>
+                    <div class="ve-module-card-desc">Yapısal analiz (FEA) — geometri, ağ örme ve çözücü ile gerilme/deformasyon analizi.</div>
                   </div>
                 </div>
               </div>

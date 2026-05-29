@@ -2943,7 +2943,8 @@ function mfsimLogout() {
   </div>
   <div class="ve-tab-group">
     <div class="ve-sub-tabs visible" id="ve-sub-tabs">
-      <button class="ve-sub-tab active" onclick="veSubTabDegistir('anasayfa')" data-subtab="anasayfa">Ana Sayfa</button>
+      <button class="ve-sub-tab active" onclick="veSubTabDegistir('arac-performans')" data-subtab="arac-performans">Araç Performans</button>
+      <button class="ve-sub-tab" onclick="veSubTabDegistir('sonlu-elemanlar')" data-subtab="sonlu-elemanlar">Sonlu Elemanlar</button>
       <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
     </div>
   </div>
@@ -3169,7 +3170,7 @@ function mfsimLogout() {
               </svg> <span class="ve-comp-label">Yol / Ortam</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-mode="fea">
             <div class="ve-category-title">Yapısal Analiz</div>
             <div class="ve-component" draggable="true" data-type="fea" title="Sürüklediğinizde Geometri → Mesh → Sınır Koşulları → Çözücü zincirini oluşturur">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -3230,9 +3231,13 @@ function mfsimLogout() {
               <div class="ve-module-overlay" id="ve-module-overlay">
                 <div class="ve-module-overlay-title">MFSim — Modül Seçimi</div>
                 <div class="ve-module-overlay-grid">
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('full-throttle')">
-                    <div class="ve-module-card-name">Ana Sayfa</div>
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('arac-performans')">
+                    <div class="ve-module-card-name">Araç Performans</div>
                     <div class="ve-module-card-desc">Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi.</div>
+                  </div>
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('sonlu-elemanlar')">
+                    <div class="ve-module-card-name">Sonlu Elemanlar</div>
+                    <div class="ve-module-card-desc">Yapısal analiz (FEA) — geometri, ağ örme ve çözücü ile gerilme/deformasyon analizi.</div>
                   </div>
                 </div>
               </div>
@@ -3464,23 +3469,27 @@ tabBar.classList.add('visible');
 document.body.classList.add('tab-bar-visible');
 
 // Görsel Editör sub-tab değiştirme
-var currentSubTab = 'anasayfa';
+var currentSubTab = 'arac-performans';
 
 function veSubTabDegistir(tabName) {
   currentSubTab = tabName;
-  
+
   document.querySelectorAll('.ve-sub-tab').forEach(function(btn) {
     btn.classList.toggle('active', btn.getAttribute('data-subtab') === tabName);
   });
-  
+
   document.querySelectorAll('.ve-sub-page').forEach(function(page) {
     page.style.display = 'none';
   });
-  
+
   var mainContent = document.querySelector('.ve-main');
-  
-  if(tabName === 'anasayfa') {
+
+  // 'arac-performans' ve 'sonlu-elemanlar' aynı editörü (ve-main) paylaşır;
+  // tek fark sidebar bileşen modudur. Mod değişince palet yeniden filtrelenir.
+  if(tabName === 'arac-performans' || tabName === 'sonlu-elemanlar') {
     mainContent.style.display = 'flex';
+    veSidebarMode = (tabName === 'sonlu-elemanlar') ? 'fea' : 'performans';
+    if(typeof veShowAllSidebarComponents === 'function') veShowAllSidebarComponents();
   } else {
     mainContent.style.display = 'none';
     var page = document.getElementById('ve-page-' + tabName);
@@ -8472,6 +8481,11 @@ var VE_MODULES = {
 
 var veActiveModule = 'full-throttle';
 
+// Sidebar bileşen modu: 'performans' (araç güç aktarma) | 'fea' (sonlu elemanlar).
+// Açılış modül seçim ekranındaki karta göre belirlenir; sidebar kategorileri
+// data-ve-mode özniteliğine göre filtrelenir.
+var veSidebarMode = 'performans';
+
 function veOnModuleChange(moduleId) {
   // Tek modül — değişiklik gerekmez
 }
@@ -8488,23 +8502,34 @@ function veGetActiveModule() {
   return VE_MODULES['full-throttle'];
 }
 
-function veSelectModuleFromOverlay(moduleId) {
+function veSelectModuleFromOverlay(mode) {
   // Overlay'ı gizle
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
 
   veActiveModule = 'full-throttle';
-  veShowAllSidebarComponents();
-  showToast('Ana Sayfa aktif', 'info');
+  var sub = (mode === 'sonlu-elemanlar' || mode === 'fea') ? 'sonlu-elemanlar' : 'arac-performans';
+  // Üst bar sekmesini de güncelle (aktif sekme + sidebar filtresi tek yerden).
+  if(typeof veSubTabDegistir === 'function') {
+    veSubTabDegistir(sub);
+  } else {
+    veSidebarMode = (sub === 'sonlu-elemanlar') ? 'fea' : 'performans';
+    veShowAllSidebarComponents();
+  }
+  showToast(veSidebarMode === 'fea' ? 'Sonlu Elemanlar aktif' : 'Araç Performans aktif', 'info');
 }
 
-// Tüm sidebar bileşenlerini göster (modül filtreleme yok)
+// Aktif moda ait sidebar bileşenlerini göster.
+// data-always-visible kategorileri her modda görünür; geri kalanlar
+// data-ve-mode (varsayılan 'performans') ile aktif moda göre filtrelenir.
 function veShowAllSidebarComponents() {
   document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
     el.style.display = '';
   });
   document.querySelectorAll('.ve-category').forEach(function(cat) {
-    cat.style.display = '';
+    if(cat.getAttribute('data-always-visible')) { cat.style.display = ''; return; }
+    var catMode = cat.getAttribute('data-ve-mode') || 'performans';
+    cat.style.display = (catMode === veSidebarMode) ? '' : 'none';
   });
 }
 
