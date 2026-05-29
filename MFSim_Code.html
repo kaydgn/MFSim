@@ -3089,7 +3089,7 @@ function mfsimLogout() {
               </svg> <span class="ve-comp-label">Yol / Ortam</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-mode="fea">
             <div class="ve-category-title">Yapısal Analiz</div>
             <div class="ve-component" draggable="true" data-type="fea" title="Sürüklediğinizde Geometri → Mesh → Sınır Koşulları → Çözücü zincirini oluşturur">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -3144,9 +3144,13 @@ function mfsimLogout() {
               <div class="ve-module-overlay" id="ve-module-overlay">
                 <div class="ve-module-overlay-title">MFSim — Modül Seçimi</div>
                 <div class="ve-module-overlay-grid">
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('full-throttle')">
-                    <div class="ve-module-card-name">Ana Sayfa</div>
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('arac-performans')">
+                    <div class="ve-module-card-name">Araç Performans</div>
                     <div class="ve-module-card-desc">Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi.</div>
+                  </div>
+                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('sonlu-elemanlar')">
+                    <div class="ve-module-card-name">Sonlu Elemanlar</div>
+                    <div class="ve-module-card-desc">Yapısal analiz (FEA) — geometri, ağ örme ve çözücü ile gerilme/deformasyon analizi.</div>
                   </div>
                 </div>
               </div>
@@ -8338,6 +8342,11 @@ var VE_MODULES = {
 
 var veActiveModule = 'full-throttle';
 
+// Sidebar bileşen modu: 'performans' (araç güç aktarma) | 'fea' (sonlu elemanlar).
+// Açılış modül seçim ekranındaki karta göre belirlenir; sidebar kategorileri
+// data-ve-mode özniteliğine göre filtrelenir.
+var veSidebarMode = 'performans';
+
 function veOnModuleChange(moduleId) {
   // Tek modül — değişiklik gerekmez
 }
@@ -8354,23 +8363,28 @@ function veGetActiveModule() {
   return VE_MODULES['full-throttle'];
 }
 
-function veSelectModuleFromOverlay(moduleId) {
+function veSelectModuleFromOverlay(mode) {
   // Overlay'ı gizle
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
 
   veActiveModule = 'full-throttle';
+  veSidebarMode = (mode === 'sonlu-elemanlar' || mode === 'fea') ? 'fea' : 'performans';
   veShowAllSidebarComponents();
-  showToast('Ana Sayfa aktif', 'info');
+  showToast(veSidebarMode === 'fea' ? 'Sonlu Elemanlar aktif' : 'Araç Performans aktif', 'info');
 }
 
-// Tüm sidebar bileşenlerini göster (modül filtreleme yok)
+// Aktif moda ait sidebar bileşenlerini göster.
+// data-always-visible kategorileri her modda görünür; geri kalanlar
+// data-ve-mode (varsayılan 'performans') ile aktif moda göre filtrelenir.
 function veShowAllSidebarComponents() {
   document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
     el.style.display = '';
   });
   document.querySelectorAll('.ve-category').forEach(function(cat) {
-    cat.style.display = '';
+    if(cat.getAttribute('data-always-visible')) { cat.style.display = ''; return; }
+    var catMode = cat.getAttribute('data-ve-mode') || 'performans';
+    cat.style.display = (catMode === veSidebarMode) ? '' : 'none';
   });
 }
 
@@ -30788,7 +30802,7 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
             children: [
               { id: 'cl:virtualTopology', type: 'controlList', controlType: 'virtualTopology', label: 'Virtual Topology', icon: '◇' },
               { id: 'cl:userNS',          type: 'controlList', controlType: 'userNS',          label: 'Named Selections (DRY)', icon: '◫' },
-              { id: 'single:namedSel',    type: 'single',      label: 'Otomatik Yüzey Grupları (Mesh\'ten)',                icon: '⊟', detail: 'namedSel' }
+              { id: 'single:namedSel',    type: 'single',      label: 'Otomatik Atanmış Yüzeyler (Mesh\'ten)',              icon: '⊟', detail: 'namedSel' }
             ]
           },
           {
