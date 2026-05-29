@@ -234,6 +234,49 @@ describe('fea-viewer kaynak refaktör güvenceleri', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// "Geometri + Mesh Çizgileri" (geom-mesh) modu birleşik 'fea' modülünde
+// solid geometri yüzeyini çizmeli, yalnızca tel kafes (wireframe) değil.
+// Regresyon: _veFEALoadNodeGeometryIntoViewer, mesh cache dolu olan 'fea'
+// node'unda erkenden loadMesh (wireframe) çağırıp solid yüzeyi hiç çizmiyordu.
+describe('geom-mesh modu solid geometri yüzeyi çizer (wireframe-only regresyonu)', () => {
+  let calls, fakeViewer;
+  beforeEach(() => {
+    calls = { loadMesh: 0, loadPrimitive: [] };
+    fakeViewer = {
+      loadMesh: function () { calls.loadMesh++; },
+      loadPrimitive: function (type, params) { calls.loadPrimitive.push({ type: type, params: params }); }
+    };
+    global.nodes = [{
+      id: 'fea-1', type: 'fea',
+      data: { geometry: { type: 'box', params: { x: 10, y: 10, z: 10 } } }
+    }];
+    // Mesh oluşturulmuş → cache dolu (regresyonun tetiklendiği durum)
+    veFEAMeshCache['fea-1'] = { type: 'hex8', nodes: [0, 0, 0], elements: [], nodesPerElement: 8 };
+  });
+  afterEach(() => {
+    delete global.nodes;
+    delete veFEAMeshCache['fea-1'];
+  });
+
+  test('geometryOnly olmadan mesh wireframe yüklenir (geometri görüntüleyici davranışı korunur)', () => {
+    _veFEALoadNodeGeometryIntoViewer(fakeViewer, 'fea-1');
+    expect(calls.loadMesh).toBe(1);
+    expect(calls.loadPrimitive.length).toBe(0);
+  });
+
+  test('geometryOnly:true ile solid geometri (loadPrimitive) yüklenir — wireframe değil', () => {
+    _veFEALoadNodeGeometryIntoViewer(fakeViewer, 'fea-1', { geometryOnly: true });
+    expect(calls.loadMesh).toBe(0);
+    expect(calls.loadPrimitive.length).toBe(1);
+    expect(calls.loadPrimitive[0].type).toBe('box');
+  });
+
+  test('loadMeshOverGeometry kaynağı geometryOnly:true geçirir', () => {
+    expect(viewerCode).toMatch(/_veFEALoadNodeGeometryIntoViewer\s*\(\s*this\s*,\s*geomNodeId\s*,\s*\{\s*geometryOnly:\s*true/);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('cp-fea.js getFEAGeometryPropertiesHTML', () => {
   // Faz 1: gömülü "3D Önizleme" canvas'ı kaldırıldı — birleşik modül
   // editöründe geometri sağdaki tam boy 3D görüntüleyicide gösteriliyor.
