@@ -117,7 +117,7 @@
       <div class="ve-sidebar" id="ve-sidebar">
         <!-- Modül seçici kaldırıldı — tek ana modül -->
         <input type="hidden" id="ve-module-select" value="full-throttle">
-        <div class="ve-sidebar-header"><span class="mf-ico mf-ico-package"></span>Bileşenler</div>
+        <div class="ve-sidebar-header"><span class="mf-ico mf-ico-package"></span><span class="ve-sidebar-title">Bileşenler</span><button class="ve-sidebar-collapse-btn" onclick="veToggleSidebar()" title="Paneli daralt" aria-label="Bileşenler panelini daralt"><span class="mf-ico mf-ico-chevrons-left"></span></button></div>
         <div class="ve-sidebar-resizer" id="ve-sidebar-resizer"></div>
         <div class="ve-sidebar-content">
           
@@ -347,6 +347,12 @@
 
         </div>
       </div>
+
+      <!-- Bileşenler paneli kapalıyken sol kenarda beliren açma rayı -->
+      <button id="ve-sidebar-reveal" class="ve-sidebar-reveal" onclick="veToggleSidebar()" title="Bileşenler panelini aç" aria-label="Bileşenler panelini aç">
+        <span class="mf-ico mf-ico-package"></span>
+        <span class="mf-ico mf-ico-chevrons-right ve-sidebar-reveal-arrow"></span>
+      </button>
 
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
