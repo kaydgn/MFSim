@@ -599,7 +599,7 @@
 /* Sol kenardaki açma rayı (panel kapalıyken belirir) */
 .ve-sidebar-reveal{
   position:absolute;
-  left:0; top:12px;
+  left:0; top:40px;        /* canvas üstündeki sekme çubuğunun (~26px) altında durur */
   z-index:150;            /* modül seçim overlay'inin (100) üstünde kalsın */
   display:none;            /* yalnızca daraltılmışken flex */
   flex-direction:column;
