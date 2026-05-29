@@ -293,21 +293,24 @@ describe('Mesh Editör outline organizasyonu', () => {
     expect(document.getElementById('ve-fea-details-header')).not.toBeNull();
   });
 
-  test('Outline kökü study-level: Geometri / Mesh / Sınır Koşulları / Çözüm', () => {
+  test('Outline kökü study-level: Geometri / Mesh / Malzeme / Sınır Koşulları / Çözüm', () => {
     var schema = FEAMeshOutline._SCHEMA;
     var ids = schema.children.map(function(c) { return c.id; });
     expect(ids).toEqual([
       'single:geometry',
+      'group:coordinateSystems',
       'group:mesh',
-      'single:bc',
-      'single:solver'
+      'single:material',
+      'cl:bc',
+      'group:solution'
     ]);
   });
 
-  test('Mesh dalı altında globals/localControls/topologyTools/inspect', () => {
+  test('Mesh dalı altında Ağ Ör + globals/localControls/topologyTools/inspect', () => {
     var mesh = FEAMeshOutline._findSchemaNode('group:mesh');
     var ids = mesh.children.map(function(c) { return c.id; });
     expect(ids).toEqual([
+      'single:meshGenerate',
       'group:globals',
       'group:localControls',
       'group:topologyTools',
@@ -324,11 +327,12 @@ describe('Mesh Editör outline organizasyonu', () => {
     ]);
   });
 
-  test('group:localControls altında 6 control list tipi (yeni: bodySizing/refinement/methodOverride)', () => {
+  test('group:localControls altında control list tipleri (mesh + C.15)', () => {
     var lc = FEAMeshOutline._findSchemaNode('group:localControls');
     var ctlTypes = lc.children.map(function(c) { return c.controlType; }).filter(Boolean);
     expect(ctlTypes).toEqual([
-      'bodySizing', 'faceSizing', 'edgeSizing', 'soi', 'refinement', 'methodOverride'
+      'bodySizing', 'faceSizing', 'edgeSizing', 'soi', 'refinement', 'methodOverride',
+      'matchControl', 'pinch', 'gasket'
     ]);
   });
 
@@ -731,45 +735,97 @@ describe('Accordion bölümleri', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
-describe('Modal toolbar — Çalıştır butonu', () => {
+// Faz 2 sonrası: "Mesh Oluştur" ağaçtaki "Ağ Ör" düğümünün Details'inde
+// (özet + buton); genel eleman boyutu Globals > Boyutlandırma'da; persist-on-change.
+describe('Ağ Ör (Mesh Oluştur) düğümü + Globals boyut', () => {
   beforeEach(() => {
     global.nodes = [];
+    global.connections = [];
+    global.saveState = jest.fn();
     document.body.innerHTML = '';
     if (_veFEAEditorActive) veFEACloseMeshEditor();
   });
 
-  test('Geometri yoksa Mesh Oluştur disabled', () => {
-    var node = { id: 'mesh-t1', type: 'fea-mesh', data: {} };
+  test('Header\'da artık Mesh Oluştur butonu YOK', () => {
+    var node = { id: 'fea-t0', type: 'fea', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } };
     global.nodes = [node];
-    veFEAOpenMeshEditor('mesh-t1');
-    var btn = document.querySelector('button[onclick*="veFEASubmitMeshBuild"]');
-    expect(btn).not.toBeNull();
-    expect(btn.hasAttribute('disabled')).toBe(true);
+    veFEAOpenMeshEditor('fea-t0');
+    var header = document.getElementById('ve-fea-mesh-editor-header');
+    expect(header.querySelector('button[onclick*="veFEASubmitMeshBuild"]')).toBeNull();
   });
 
-  test('Geometri varsa Mesh Oluştur aktif', () => {
-    global.nodes = [
-      { id: 'g-t', type: 'fea-geometry', data: { geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } } } },
-      { id: 'mesh-t2', type: 'fea-mesh', data: {} }
-    ];
-    global.connections = [{ from: 'g-t', to: 'mesh-t2' }];
-    veFEAOpenMeshEditor('mesh-t2');
-    var btn = document.querySelector('button[onclick*="veFEASubmitMeshBuild"]');
-    expect(btn.hasAttribute('disabled')).toBe(false);
+  test('Ağ Ör düğümü SCHEMA\'da Mesh dalının ilk child\'ı', () => {
+    var mesh = FEAMeshOutline._findSchemaNode('group:mesh');
+    expect(mesh.children[0].id).toBe('single:meshGenerate');
   });
 
-  test('Mesh aktifken Mesh\'i Sil butonu render', () => {
-    var node = {
-      id: 'mesh-t3', type: 'fea-mesh',
-      data: {
-        meshActive: true,
-        meshMetrics: { nodeCount: 27, elementCount: 8, elementType: 'hex8', minSize: 5, maxSize: 5, avgSize: 5 }
-      }
-    };
+  test('Geometri yoksa Ağ Ör özetinde Mesh Oluştur disabled', () => {
+    var node = { id: 'fea-t1', type: 'fea', data: {} };
     global.nodes = [node];
-    veFEAOpenMeshEditor('mesh-t3');
-    var clearBtn = document.querySelector('button[onclick*="veFEAClearMeshForNode"]');
-    expect(clearBtn).not.toBeNull();
+    var html = _veFEAEditorMeshSummaryHTML(node);
+    expect(html).toMatch(/veFEASubmitMeshBuild\('fea-t1'\)/);
+    var btn = html.match(/<button[^>]*veFEASubmitMeshBuild[^>]*>/)[0];
+    expect(btn).toMatch(/disabled/);
+  });
+
+  test('Geometri varsa Ağ Ör özetinde Mesh Oluştur aktif + özet bilgiler', () => {
+    var node = { id: 'fea-t2', type: 'fea', data: {
+      geometry: { type: 'box', params: { width: 10, height: 10, depth: 10 } },
+      meshSettings: { size: 8, meshMethod: 'sweep', bodySizingControls: [{ bodyIds: [0], size: 3 }] }
+    } };
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-t2');
+    var html = _veFEAEditorMeshSummaryHTML(node);
+    var btn = html.match(/<button[^>]*veFEASubmitMeshBuild[^>]*>/)[0];
+    expect(btn).not.toMatch(/disabled/);
+    expect(html).toMatch(/Genel eleman boyutu/);
+    expect(html).toMatch(/8 mm/);
+    expect(html).toMatch(/Body Sizing/);   // lokal kontrol özeti
+  });
+
+  test('Mesh aktifken Ağ Ör özetinde durum + Sil butonu', () => {
+    var node = { id: 'fea-t3', type: 'fea', data: { meshActive: true, meshMetrics: { nodeCount: 27, elementCount: 8, jacobian: { valid: true } } } };
+    global.nodes = [node];
+    var html = _veFEAEditorMeshSummaryHTML(node);
+    expect(html).toMatch(/27/);
+    expect(html).toMatch(/veFEAClearMeshForNode\('fea-t3'\)/);
+  });
+
+  test('Genel eleman boyutu Globals > Boyutlandırma\'da (persist-on-change)', () => {
+    var node = { id: 'fea-t4', type: 'fea', data: { meshSettings: { size: 7 } } };
+    global.nodes = [node];
+    var html = _veFEAEditorSizingHTML(node);
+    expect(html).toMatch(/id="ve-fea-mesh-size-fea-t4"/);
+    expect(html).toMatch(/veFEASetMeshSetting\('fea-t4', 'size'/);
+    expect(html).toMatch(/value="7"/);
+  });
+
+  test('veFEASetMeshSetting persist eder (nested key dahil)', () => {
+    var node = { id: 'fea-t6', type: 'fea', data: {} };
+    global.nodes = [node];
+    veFEASetMeshSetting('fea-t6', 'size', 3.5);
+    veFEASetMeshSetting('fea-t6', 'curvatureRefinement.enabled', true);
+    expect(node.data.meshSettings.size).toBe(3.5);
+    expect(node.data.meshSettings.curvatureRefinement.enabled).toBe(true);
+  });
+
+  test('Header\'dan build: input DOM\'da olmasa da persisted boyut korunur (10\'a düşmez)', () => {
+    // Geometri yok → veFEABuildMeshForNode erken döner; ama size-fallback
+    // mantığı build'den ÖNCE çalışır, onu test ediyoruz.
+    var node = { id: 'fea-t7', type: 'fea', data: { meshSettings: { size: 4, mode: 'volume' } } };
+    global.nodes = [node];
+    document.body.innerHTML = '';   // hiçbir mesh input DOM'da yok
+    veFEASubmitMeshBuild('fea-t7');
+    // Persisted değerler korunmalı (hardcoded default'lara düşmemeli)
+    expect(node.data.meshSettings.size).toBe(4);
+    expect(node.data.meshSettings.mode).toBe('volume');
+  });
+
+  test('Üstte ayrı toolbar artık YOK (ve-fea-mesh-editor-toolbar)', () => {
+    var node = { id: 'fea-t5', type: 'fea', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('fea-t5');
+    expect(document.getElementById('ve-fea-mesh-editor-toolbar')).toBeNull();
   });
 });
 

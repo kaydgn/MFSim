@@ -240,6 +240,34 @@ function getFEAGeometryPropertiesHTML(node) {
     html += veFEAReadOnlyRow('Sınırlayıcı kutu', '—');
   }
 
+  // ─── TOPOLOJİ MOTORU (zorunlu adım) ───────────────────────────────────────
+  // Geometri yüklendikten sonra, mesh atmadan önce topoloji taranmalı.
+  // Kullanıcı bu butona basmadan devam edemez (Mesh Oluştur kilitli).
+  if (hasGeom) {
+    var scanned = !!(d.topologyScanned);
+    var summary = d.topologySummary;
+    html += veFEASectionTitle('Topoloji Motoru');
+    if (scanned && summary) {
+      // Tarandı — özet + yeniden tara
+      html += '<div style="padding:9px 11px; background:rgba(34,197,94,0.08); border-left:3px solid var(--accent-success,#22c55e); margin-bottom:8px;">';
+      html += '<div style="font-weight:700; color:var(--accent-success,#22c55e); font-size:0.64rem; margin-bottom:4px;">✓ Topoloji tanımlandı</div>';
+      html += '<div style="font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
+        '<b>' + summary.faces + '</b> yüzey · <b>' + summary.edges + '</b> kenar · <b>' + summary.vertices + '</b> köşe tespit edildi. ' +
+        'Lokal mesh ayarlarına (Face/Edge Sizing, Sphere of Influence) hazır.</div>';
+      html += '</div>';
+      html += '<button onclick="veFEAStartTopologyScan(\'' + node.id + '\', { auto: false })" style="width:100%; padding:8px 10px; font-size:0.66rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-refresh"></span> Topolojiyi Yeniden Tara</button>';
+    } else {
+      // Taranmadı — zorunlu uyarı + belirgin tara butonu
+      html += '<div style="padding:9px 11px; background:rgba(245,158,11,0.1); border-left:3px solid var(--accent-warning,#f59e0b); margin-bottom:8px;">';
+      html += '<div style="font-weight:700; color:var(--accent-warning,#f59e0b); font-size:0.64rem; margin-bottom:4px;">⚠ Topoloji taranmadı</div>';
+      html += '<div style="font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
+        'Mesh oluşturmadan önce geometrinin tüm yüzey, kenar ve köşelerini tanımlamak için ' +
+        '<b>Topoloji Motoru</b>\'nu çalıştırın. Bu adım zorunludur.</div>';
+      html += '</div>';
+      html += '<button onclick="veFEAStartTopologyScan(\'' + node.id + '\', { auto: false })" style="width:100%; padding:11px 14px; font-size:0.72rem; font-weight:700; background:var(--accent-success,#22c55e); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseenter="this.style.filter=\'brightness(1.12)\'" onmouseleave="this.style.filter=\'none\'"><span class="mf-ico mf-ico-search"></span> ▶ Topolojiyi Tara</button>';
+    }
+  }
+
   html += '</div>';
   return html;
 }
@@ -359,21 +387,69 @@ function getFEAMeshPropertiesHTML(node) {
 function veFEASetMeshSizePreset(nodeId, size) {
   var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
   if (input) input.value = size;
+  // Preset'i state'e de yaz (input görünmüyor olabilir / header'dan build edilir)
+  veFEASetMeshSetting(nodeId, 'size', size);
 }
+
+// Tek bir mesh ayarını anında state'e persist eder (persist-on-change).
+// Header'daki "Mesh Oluştur" butonu hangi dalda olunursa olsun çalışsın diye
+// ayarlar DOM'da değil meshSettings'te yaşar. Nested key destekler:
+// 'curvatureRefinement.enabled', 'localSizing.biasMode' gibi.
+function veFEASetMeshSetting(nodeId, key, value) {
+  if (typeof nodes === 'undefined') return;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return;
+  node.data = node.data || {};
+  node.data.meshSettings = node.data.meshSettings || {};
+  var s = node.data.meshSettings;
+  var parts = String(key).split('.');
+  var obj = s;
+  for (var i = 0; i < parts.length - 1; i++) {
+    if (obj[parts[i]] == null || typeof obj[parts[i]] !== 'object') obj[parts[i]] = {};
+    obj = obj[parts[i]];
+  }
+  obj[parts[parts.length - 1]] = value;
+  if (typeof saveState === 'function') saveState();
+}
+
 function veFEASubmitMeshBuild(nodeId) {
   if (typeof nodes === 'undefined' || typeof veFEABuildMeshForNode !== 'function') return;
+  var _mn = nodes.find(function(n) { return n.id === nodeId; });
+  // ZORUNLU ADIM: topoloji taranmadan mesh oluşturulamaz. Kullanıcı önce
+  // Geometri sekmesindeki "Topolojiyi Tara" butonuna basmalı.
+  if (_mn && _mn.data && !_mn.data.topologyScanned) {
+    // Geometri bağlı mı? Yoksa zaten aşağıda upstream kontrolü uyarır.
+    var _hasGeom = !!(_mn.data.geometry && _mn.data.geometry.type);
+    if (!_hasGeom && typeof veFEAFindUpstreamGeometryNode === 'function') {
+      var _gn = veFEAFindUpstreamGeometryNode(nodeId);
+      _hasGeom = !!(_gn && _gn.data && _gn.data.geometry && _gn.data.geometry.type);
+    }
+    if (_hasGeom) {
+      if (typeof showToast === 'function') {
+        showToast('Önce Topoloji Motoru\'nu çalıştırın — Geometri sekmesindeki "Topolojiyi Tara" butonuna basın.', 'warning');
+      }
+      // Geometri sekmesine yönlendir (outline ağacında seç)
+      if (typeof FEAMeshOutline !== 'undefined' && FEAMeshOutline.select) {
+        try { FEAMeshOutline.select('single:geometry'); } catch (e) {}
+      }
+      return;
+    }
+  }
+  // Persisted ayarlar — DOM input'u yoksa (header'dan başka daldayken build)
+  // bu değerler kullanılır; ayarlar persist-on-change ile zaten güncel.
+  var S = (_mn && _mn.data && _mn.data.meshSettings) || {};
   var input = document.getElementById('ve-fea-mesh-size-' + nodeId);
   var modeSel = document.getElementById('ve-fea-mesh-mode-' + nodeId);
   var elTypeSel = document.getElementById('ve-fea-mesh-eltype-' + nodeId);
-  var size = input ? parseFloat(input.value) : 10;
-  if (!isFinite(size) || size <= 0) size = 10;
-  var mode = (modeSel && modeSel.value) ? modeSel.value : 'auto';
+  var size = input ? parseFloat(input.value) : (S.size != null ? S.size : 10);
+  if (!isFinite(size) || size <= 0) size = (S.size != null && S.size > 0) ? S.size : 10;
+  var mode = (modeSel && modeSel.value) ? modeSel.value : (S.mode || 'auto');
   if (mode !== 'auto' && mode !== 'volume' && mode !== 'surface') mode = 'auto';
-  var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : 'auto';
+  var elementType = (elTypeSel && elTypeSel.value) ? elTypeSel.value : (S.elementType || 'auto');
   if (elementType !== 'auto' && elementType !== 'tet4' && elementType !== 'pyramid5') elementType = 'auto';
   // Mesh Method (ANSYS §4) — eğer method dropdown ayarlanmışsa elementType'ı türet
   var methodSel = document.getElementById('ve-fea-mesh-method-' + nodeId);
-  var meshMethod = (methodSel && methodSel.value) ? methodSel.value : null;
+  var meshMethod = (methodSel && methodSel.value) ? methodSel.value : (S.meshMethod || null);
   if (meshMethod && typeof _veFEAMethodToElType === 'function') {
     var derivedElType = _veFEAMethodToElType(meshMethod);
     // Method dropdown önceliklidir; ileri seviye elementType (details) override edilir
@@ -384,7 +460,7 @@ function veFEASubmitMeshBuild(nodeId) {
   // Element Order: yeni dropdown (ANSYS §3.7) → midSideNodes türetilir.
   // Geri uyum: dropdown yoksa eski checkbox'a düş.
   var elOrderEl = document.getElementById('ve-fea-mesh-elorder-' + nodeId);
-  var elementOrder = (elOrderEl && elOrderEl.value) ? elOrderEl.value : null;
+  var elementOrder = (elOrderEl && elOrderEl.value) ? elOrderEl.value : (S.elementOrder || null);
   if (elementOrder !== 'program' && elementOrder !== 'linear' && elementOrder !== 'quadratic') {
     elementOrder = null;
   }
@@ -399,16 +475,17 @@ function veFEASubmitMeshBuild(nodeId) {
   // crossSection: kullanici 'wedge' opsiyonunu acikca secmis ise pass, aksi
   // takdirde 'auto' (default O-grid Hex8) — _veFEAMeshCylinder bunu O-grid'e cevirir.
   var crossSel = document.getElementById('ve-fea-mesh-cross-' + nodeId);
-  var crossSection = (crossSel && crossSel.value === 'wedge') ? 'wedge' : 'auto';
+  var crossSection = crossSel ? (crossSel.value === 'wedge' ? 'wedge' : 'auto') : (S.crossSection || 'auto');
+  var _curvS = S.curvatureRefinement || {};
   var curvEl = document.getElementById('ve-fea-mesh-curv-' + nodeId);
   var curvAngEl = document.getElementById('ve-fea-mesh-curv-ang-' + nodeId);
-  var curvEnabled = !!(curvEl && curvEl.checked);
-  var curvAngDeg = curvAngEl ? parseFloat(curvAngEl.value) : 18;
+  var curvEnabled = curvEl ? !!curvEl.checked : !!_curvS.enabled;
+  var curvAngDeg = curvAngEl ? parseFloat(curvAngEl.value) : (_curvS.normalAngleDeg != null ? _curvS.normalAngleDeg : 18);
   if (!isFinite(curvAngDeg) || curvAngDeg <= 0) curvAngDeg = 18;
   if (curvAngDeg > 90) curvAngDeg = 90;
   if (curvAngDeg < 1) curvAngDeg = 1;
   var defeatureEl = document.getElementById('ve-fea-mesh-defeature-' + nodeId);
-  var defeatureTol = defeatureEl ? parseFloat(defeatureEl.value) : 0;
+  var defeatureTol = defeatureEl ? parseFloat(defeatureEl.value) : (S.defeaturingTolerance != null ? S.defeaturingTolerance : 0);
   if (!isFinite(defeatureTol) || defeatureTol < 0) defeatureTol = 0;
   var localSelEl = document.getElementById('ve-fea-mesh-local-sel-' + nodeId);
   var localModeEl = document.getElementById('ve-fea-mesh-local-mode-' + nodeId);
@@ -485,15 +562,60 @@ function veFEASubmitMeshBuild(nodeId) {
       }
     }
     var workerEl = document.getElementById('ve-fea-mesh-worker-' + nodeId);
-    meshNode.data.meshSettings.useWorker = !!(workerEl && workerEl.checked);
+    meshNode.data.meshSettings.useWorker = workerEl ? !!workerEl.checked : !!S.useWorker;
     // Delaunay tet mesher ayarları (STEP karmaşık geometriler için tet4)
     var tetMesherEl = document.getElementById('ve-fea-mesh-tetmesher-' + nodeId);
     var tetMesherInteriorEl = document.getElementById('ve-fea-mesh-tetmesher-interior-' + nodeId);
-    meshNode.data.meshSettings.useTetMesher = tetMesherEl ? !!tetMesherEl.checked : true;
-    meshNode.data.meshSettings.delaunayAddInteriorPoints = tetMesherInteriorEl ? !!tetMesherInteriorEl.checked : true;
+    meshNode.data.meshSettings.useTetMesher = tetMesherEl ? !!tetMesherEl.checked : (S.useTetMesher !== false);
+    meshNode.data.meshSettings.delaunayAddInteriorPoints = tetMesherInteriorEl ? !!tetMesherInteriorEl.checked : (S.delaunayAddInteriorPoints !== false);
   }
   veFEABuildMeshForNode(nodeId);
 }
+// ─── 2.5 MALZEME (ayrı dal — ANSYS Materials) ───────────────────────────────
+// Faz 2: malzeme seçimi BC panelinden ayrıldı, kendi outline dalına taşındı.
+// Veri yine node.data.bc.materialId'de tutulur (solver oradan okur).
+function getFEAMaterialPropertiesHTML(node) {
+  var d = node.data || {};
+  if (!d.bc) d.bc = { materialId: 'steel-st37', assignments: [] };
+
+  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
+  html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Malzeme</div>';
+  html += '</div>';
+  html += '<div style="font-size:0.62rem; color:var(--text-muted); line-height:1.5; margin-bottom:10px;">Model'+
+    ' malzemesi — çözücü elastik özellikleri (E, ν, ρ, σ<sub>y</sub>) buradan okur.</div>';
+
+  html += veFEASectionTitle('Malzeme Seçimi');
+  if (typeof veFEAMaterialsByCategory === 'function') {
+    html += '<select onchange="veFEABCSetMaterial(\'' + node.id + '\', this.value)" style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); margin-bottom:6px;">';
+    var groups = veFEAMaterialsByCategory();
+    Object.keys(groups).forEach(function (cat) {
+      html += '<optgroup label="' + veFEAMaterialCategoryLabel(cat) + '">';
+      groups[cat].forEach(function (m) {
+        var sel = (d.bc.materialId === m.id) ? ' selected' : '';
+        html += '<option value="' + m.id + '"' + sel + '>' + m.label + '</option>';
+      });
+      html += '</optgroup>';
+    });
+    html += '</select>';
+    var matSel = veFEAMaterialById(d.bc.materialId) || veFEAMaterialById('steel-st37');
+    if (matSel) {
+      html += '<div style="font-size:0.62rem; color:var(--text-muted); margin-bottom:6px; line-height:1.6; padding:8px; background:var(--bg-tertiary); border:1px solid var(--border-color);">';
+      html += '<b style="color:var(--text-primary);">' + matSel.label + '</b><br>';
+      html += 'E = ' + Math.round(matSel.youngsModulus) + ' MPa<br>';
+      html += 'ν = ' + matSel.poissonsRatio.toFixed(2) + '<br>';
+      html += 'ρ = ' + matSel.density + ' kg/m³<br>';
+      html += 'σ<sub>y</sub> = ' + matSel.yieldStrength + ' MPa';
+      html += '</div>';
+    }
+  } else {
+    html += '<div style="font-size:0.62rem; color:var(--text-muted);">Malzeme kütüphanesi yüklenmedi.</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
 // ─── 3. SINIR KOŞULLARI ─────────────────────────────────────────────────────
 function getFEABCPropertiesHTML(node) {
   var d = node.data || {};

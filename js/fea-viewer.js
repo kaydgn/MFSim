@@ -35,6 +35,41 @@ var VE_FEA_BG_PRESETS = {
   blue:  0x1e3a5f
 };
 
+// Aktif program temasının arka plan rengini döner. CSS değişkeninden okur
+// (--fea-viewer-bg varsa onu, yoksa --bg-tertiary). THREE.Color hem hex
+// sayıyı hem CSS renk string'ini ('#151a22', 'rgb(...)') ayrıştırabildiği
+// için dönüş değeri doğrudan new THREE.Color(...) içine verilebilir.
+// DOM yoksa (ör. jsdom testleri) güvenli varsayılana (koyu) düşer.
+function veFEAGetThemeBackgroundColor() {
+  if (typeof document !== 'undefined' && document.documentElement &&
+      typeof getComputedStyle === 'function') {
+    try {
+      var cs = getComputedStyle(document.documentElement);
+      var raw = (cs.getPropertyValue('--fea-viewer-bg') ||
+                 cs.getPropertyValue('--bg-tertiary') || '').trim();
+      if (raw) return raw;
+    } catch (e) {}
+  }
+  return 0x1a1a1a;
+}
+
+// Tema değiştiğinde tüm aktif viewer'ların arka planını günceller. Yalnızca
+// temaya bağlı (kullanıcı elle bir preset seçmemiş) viewer'lar güncellenir.
+// theme.js içindeki changeTheme() bunu çağırır.
+function veFEAApplyThemeToViewers() {
+  if (typeof veFEAViewerRegistry === 'undefined' || !veFEAViewerRegistry) return;
+  Object.keys(veFEAViewerRegistry).forEach(function(key) {
+    var entry = veFEAViewerRegistry[key];
+    if (!entry) return;
+    // Registry hem viewer'ları hem de {viewer, dispose} sarmalayıcılarını
+    // (fullscreen) tutar — ikisini de destekle.
+    var v = (typeof entry.setBackground === 'function') ? entry : entry.viewer;
+    if (v && v._isThemeBackground && typeof v.setBackground === 'function') {
+      v.setBackground('theme');
+    }
+  });
+}
+
 // Edges hesaplama eşiği — bunun üzerinde mesh için edges atlanır (performans)
 var VE_FEA_EDGES_MAX_VERTICES = 30000;
 
@@ -92,8 +127,14 @@ function veFEAInitViewer(canvas, opts) {
   var width = opts.width || canvas.clientWidth || 240;
   var height = opts.height || canvas.clientHeight || 180;
 
+  // Arka plan: opts.background verilmemişse aktif temadan türet. usingThemeBg
+  // bilgisi viewer nesnesinde saklanır; tema değişince yalnızca bu viewer'lar
+  // otomatik güncellenir (kullanıcının elle seçtiği preset korunur).
+  var usingThemeBg = (opts.background == null);
+  var resolvedBg = usingThemeBg ? veFEAGetThemeBackgroundColor() : opts.background;
+
   var scene = new THREE.Scene();
-  scene.background = new THREE.Color(opts.background || 0x1a1a1a);
+  scene.background = new THREE.Color(resolvedBg);
 
   var camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 5000);
   camera.position.set(60, 50, 90);
@@ -246,9 +287,18 @@ function veFEAInitViewer(canvas, opts) {
       if (!this._faceMaterials) return;
       var sel = this._selectedFaceId;
       var hov = this._hoveredFaceId;
+      var scan = this._scanState;
       Object.keys(this._faceMaterials).forEach(function(fid) {
         var mat = this._faceMaterials[fid];
         if (!mat || !mat.emissive) return;
+        // Scan modu — topoloji tarama animasyonu sırasında tespit edilen
+        // yüzeyler yeşil yanar (seçim/hover'dan önceliklidir).
+        if (scan && scan.faces && scan.faces[fid]) {
+          mat.emissive.setHex(scan.faceColor || 0x22c55e);
+          mat.emissiveIntensity = 0.9;   // belirgin yeşil glow
+          mat.needsUpdate = true;
+          return;
+        }
         if (fid === sel) {
           mat.emissive.setHex(0xfbbf24);   // sarı — seçili
           mat.emissiveIntensity = 0.55;
@@ -319,14 +369,26 @@ function veFEAInitViewer(canvas, opts) {
         geo.setAttribute('position', new THREE.BufferAttribute(flat, 3));
         var isSel = (self._selectedEdgeId === e.id);
         var isHov = (self._hoveredEdgeId === e.id);
-        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x60a5fa);
-        var lineWidth = (isSel || isHov) ? 3 : 1.4;
+        var scan = self._scanState;
+        var isScan = !!(scan && scan.edges && scan.edges[e.id]);
+        var color, lineWidth, opacity, renderOrder;
+        if (isScan) {
+          // Scan modu — kenar tarama fazı (cyan)
+          color = scan.edgeColor || 0x06d6f5;
+          lineWidth = 3; opacity = 1; renderOrder = 1000;
+        } else if (isSel) {
+          color = 0xfbbf24; lineWidth = 3; opacity = 1; renderOrder = 1000;
+        } else if (isHov) {
+          color = 0x2dd4bf; lineWidth = 3; opacity = 1; renderOrder = 1000;
+        } else {
+          color = 0x60a5fa; lineWidth = 1.4; opacity = 0; renderOrder = 200;
+        }
         var mat = new THREE.LineBasicMaterial({
-          color: color, linewidth: lineWidth, transparent: !isSel && !isHov, opacity: (isSel || isHov) ? 1 : 0.0
+          color: color, linewidth: lineWidth, transparent: opacity < 1, opacity: opacity
         });
         var line = new THREE.Line(geo, mat);
         line.userData.feaEdgeId = e.id;
-        line.renderOrder = (isSel || isHov) ? 1000 : 200;
+        line.renderOrder = renderOrder;
         grp.add(line);
       });
       this._geometryRoot.add(grp);
@@ -356,16 +418,19 @@ function veFEAInitViewer(canvas, opts) {
         if (!pos || pos.length < 3) return;
         var isSel = (self._selectedVertexId === v.id);
         var isHov = (self._hoveredVertexId === v.id);
-        // Default: küçük dot. Selected: büyük sarı küre. Hover: orta turkuaz.
-        var size = (isSel || isHov) ? markerR * 1.6 : markerR * 0.55;
-        var color = isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x94a3b8);
-        var op = (isSel || isHov) ? 1.0 : 0.55;
+        var scan = self._scanState;
+        var isScan = !!(scan && scan.vertices && scan.vertices[v.id]);
+        // Default: küçük dot. Selected: büyük sarı küre. Hover: orta turkuaz. Scan: sarı.
+        var emph = isSel || isHov || isScan;
+        var size = emph ? markerR * 1.6 : markerR * 0.55;
+        var color = isScan ? (scan.vertexColor || 0xfbbf24) : (isSel ? 0xfbbf24 : (isHov ? 0x2dd4bf : 0x94a3b8));
+        var op = emph ? 1.0 : 0.55;
         var sg = new THREE.SphereGeometry(size, 12, 12);
-        var sm = new THREE.MeshBasicMaterial({ color: color, transparent: op < 1, opacity: op, depthTest: !(isSel || isHov) });
+        var sm = new THREE.MeshBasicMaterial({ color: color, transparent: op < 1, opacity: op, depthTest: !emph });
         var mesh = new THREE.Mesh(sg, sm);
         mesh.position.set(pos[0], pos[1], pos[2]);
         mesh.userData.feaVertexId = v.id;
-        mesh.renderOrder = (isSel || isHov) ? 1001 : 150;
+        mesh.renderOrder = emph ? 1001 : 150;
         grp.add(mesh);
       });
       this._geometryRoot.add(grp);
@@ -394,6 +459,56 @@ function veFEAInitViewer(canvas, opts) {
       this._refreshVertexHighlights();
     },
     getSelectedVertex: function() { return this._selectedVertexId; },
+    // ─── Topoloji tarama animasyonu (ANSYS-style scan) ──────────────────────
+    // scanState: { faces:{id:true}, edges:{id:true}, vertices:{id:true},
+    //              faceColor, edgeColor, vertexColor }
+    // İlgili face/edge/vertex'leri scan renginde gösterir (yeşil/cyan/sarı).
+    _scanState: null,
+    setScanState: function(scanState) {
+      this._scanState = scanState;
+      this._applyFaceColors();
+      this._refreshEdgeHighlights();
+      this._refreshVertexHighlights();
+    },
+    // Performans: sadece face'leri güncelle (faz 1'de edge/vertex'e dokunma)
+    setScanFaces: function(faceMap, faceColor) {
+      this._scanState = this._scanState || {};
+      this._scanState.faces = faceMap || {};
+      this._scanState.faceColor = faceColor || 0x22c55e;
+      this._applyFaceColors();
+    },
+    setScanEdges: function(edgeMap, edgeColor) {
+      this._scanState = this._scanState || {};
+      this._scanState.edges = edgeMap || {};
+      this._scanState.edgeColor = edgeColor || 0x06d6f5;
+      this._refreshEdgeHighlights();
+    },
+    setScanVertices: function(vertexMap, vertexColor) {
+      this._scanState = this._scanState || {};
+      this._scanState.vertices = vertexMap || {};
+      this._scanState.vertexColor = vertexColor || 0xfbbf24;
+      this._refreshVertexHighlights();
+    },
+    // Tüm modeli kısa bir süre belirtilen renkte yak (tamamlanma pulse).
+    pulseAllFaces: function(colorHex, intensity) {
+      if (!this._faceMaterials) return;
+      var self = this;
+      Object.keys(this._faceMaterials).forEach(function(fid) {
+        var mat = self._faceMaterials[fid];
+        if (mat && mat.emissive) {
+          mat.emissive.setHex(colorHex || 0x22c55e);
+          mat.emissiveIntensity = (intensity != null) ? intensity : 0.5;
+          mat.needsUpdate = true;
+        }
+      });
+      render();
+    },
+    clearScanState: function() {
+      this._scanState = null;
+      this._applyFaceColors();
+      this._refreshEdgeHighlights();
+      this._refreshVertexHighlights();
+    },
     // Edge/vertex overlay'lerin görünürlüğünü kontrol et (geometri yedirildiğinde
     // çağrılır → varsayılan: tüm edge'ler görünür ama soluk).
     setEdgeOverlayMode: function(mode) {
@@ -1233,7 +1348,8 @@ function veFEAInitViewer(canvas, opts) {
     // ─── Grup B: Display modu / Opaklık / Arka plan ──────────────────────
     _displayMode: 'shaded', // 'shaded' | 'shaded-edges' | 'wireframe'
     _opacity: 1.0,
-    _backgroundColor: opts.background || 0x1a1a1a,
+    _backgroundColor: resolvedBg,
+    _isThemeBackground: usingThemeBg,
     _clipPlanes: [],
     _clipState: {
       x: { enabled: false, offset: 0 },
@@ -1400,15 +1516,22 @@ function veFEAInitViewer(canvas, opts) {
     },
     setBackground: function(colorOrPreset) {
       var color;
-      if (typeof colorOrPreset === 'string' && VE_FEA_BG_PRESETS[colorOrPreset] !== undefined) {
+      if (colorOrPreset === 'theme') {
+        // Aktif program temasına bağlan — tema değişince otomatik güncellenir.
+        color = veFEAGetThemeBackgroundColor();
+        this._isThemeBackground = true;
+      } else if (typeof colorOrPreset === 'string' && VE_FEA_BG_PRESETS[colorOrPreset] !== undefined) {
         color = VE_FEA_BG_PRESETS[colorOrPreset];
+        this._isThemeBackground = false;
       } else if (typeof colorOrPreset === 'number') {
         color = colorOrPreset;
+        this._isThemeBackground = false;
       } else {
         return;
       }
       this._backgroundColor = color;
-      scene.background = new THREE.Color(color);
+      try { scene.background = new THREE.Color(color); }
+      catch (e) { return; }
       render();
     },
     // ─── Grup C: Section view (clip plane'ler) ───────────────────────────
@@ -2165,6 +2288,8 @@ function veFEAApplyPrimitive(nodeId, type, params) {
       if (typeof veFEAComputeGeometryTopology === 'function') {
         node.data.geometry.topology = veFEAComputeGeometryTopology(node.data.geometry);
       }
+      // Geometri değişti → topoloji yeniden taranmalı (otomatik tarama guard'ı reset)
+      node.data.topologyScanned = false;
       if (typeof saveState === 'function') saveState();
     }
   }
@@ -3021,7 +3146,8 @@ function _veFEAControlsPanelHTML() {
     '<div>' +
       '<div style="font-size:0.6rem; color:#bbb; margin-bottom:3px;">Arka plan</div>' +
       '<select data-action="bg" style="' + btnStyle + '; width:100%;">' +
-        '<option value="dark"  selected>Koyu</option>' +
+        '<option value="theme" selected>Tema</option>' +
+        '<option value="dark">Koyu</option>' +
         '<option value="light">Açık</option>' +
         '<option value="white">Beyaz</option>' +
         '<option value="blue">Mavi</option>' +
@@ -3149,7 +3275,7 @@ function veFEAOpenFullscreenViewer(nodeId) {
 
   // Canvas konteyneri — kalan tüm yüksekliği alır
   var canvasWrap = document.createElement('div');
-  canvasWrap.style.cssText = 'flex:1 1 auto; position:relative; background:#1a1a1a; min-height:0; overflow:hidden;';
+  canvasWrap.style.cssText = 'flex:1 1 auto; position:relative; background:var(--bg-tertiary); min-height:0; overflow:hidden;';
   var canvas = document.createElement('canvas');
   canvas.id = 've-fea-fullscreen-canvas';
   canvas.style.cssText = 'display:block; width:100%; height:100%;';

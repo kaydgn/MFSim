@@ -346,6 +346,8 @@ function veFEAApplySTEP(nodeId, buffer, fileName) {
         // parsedMesh sadece topology hesaplaması için gerekti — proje kaydında
         // saklanmaması için temizle (rawDataB64 var, yeniden parse edilebilir).
         delete node.data.geometry.parsedMesh;
+        // Yeni geometri → topoloji yeniden taranmalı (otomatik tarama guard'ı)
+        node.data.topologyScanned = false;
         if (typeof saveState === 'function') saveState();
       }
     }

@@ -231,6 +231,8 @@
       sel,
       'FEAMeshControls._toggleFaceSizingFace.bind(null,' + idx + ')'
     );
+    html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'faceSizing\',' + idx + ',\'faceIds\')') + '</div>';
+    html += _importNSDropdown(meshNode, 'faceSizing', idx, 'faceIds');
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + sel.length + ' yüz seçili</div>';
 
     html += _sectionTitle('Parametreler');
@@ -406,6 +408,10 @@
     }
     sel = Array.isArray(c[listKey]) ? c[listKey] : [];
     html += _multiSelect(items, sel, 'FEAMeshControls._toggleRefinementEntity.bind(null,' + idx + ',"' + listKey + '")');
+    if (et === 'face') {
+      html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'refinement\',' + idx + ',\'faceIds\')') + '</div>';
+      html += _importNSDropdown(meshNode, 'refinement', idx, 'faceIds');
+    }
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + sel.length + ' ' + et + ' seçili</div>';
 
     html += _sectionTitle('Parametreler');
@@ -487,6 +493,8 @@
       Array.isArray(c.faceIds) ? c.faceIds : [],
       'FEAMeshControls._toggleListId.bind(null,"' + ct + '",' + idx + ',"faceIds")'
     );
+    html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'virtualTopology\',' + idx + ',\'faceIds\')') + '</div>';
+    html += _importNSDropdown(meshNode, 'virtualTopology', idx, 'faceIds');
     html += '<div style="font-size:0.55rem; color:var(--text-muted); line-height:1.5; margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid var(--accent-primary);">' +
       'ℹ ANSYS §8.2 — birleştirilen yüzler mesh üretiminde tek bir patch olarak ele alınır. En az 2 yüz seçilmeli.' +
       '</div>';
@@ -496,6 +504,370 @@
     html += _deleteBtn(ct, idx);
     html += '</div>';
     return html;
+  }
+
+  // ─── 3.8 SINIR KOŞULU (BC item) ──────────────────────────────────────────
+  function _renderBCItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'bc', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'bc';
+    var faces = _faceList(meshNode);
+    var kind = c.kind || 'fixed';
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Sınır Koşulu ' + (idx + 1));
+
+    html += _sectionTitle('Tip');
+    html += _row('Koşul tipi',
+      '<select onchange="FEAMeshControls._setBCKind(' + idx + ', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="fixed"' + (kind === 'fixed' ? ' selected' : '') + '>Fixed Support (tüm DoF sabit)</option>' +
+      '<option value="force"' + (kind === 'force' ? ' selected' : '') + '>Kuvvet (Force)</option>' +
+      '<option value="pressure"' + (kind === 'pressure' ? ' selected' : '') + '>Basınç (Pressure)</option>' +
+      '<option value="displacement"' + (kind === 'displacement' ? ' selected' : '') + '>Yer Değiştirme</option>' +
+      '</select>'
+    );
+
+    html += _sectionTitle('Scope (Yüz)');
+    if (faces.length === 0) {
+      html += '<div style="padding:8px; background:var(--bg-primary); border:1px dashed var(--border-color); font-size:0.6rem; color:var(--text-muted);">Önce Geometri tanımlayın (yüz listesi topology\'den gelir).</div>';
+    } else {
+      html += _row('Yüzey',
+        '<select onchange="FEAMeshControls._setBCFace(' + idx + ', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+        '<option value="">— yüz seçin —</option>' +
+        faces.map(function(f) {
+          return '<option value="' + f.id + '"' + (String(c.faceId) === String(f.id) ? ' selected' : '') + '>' + _esc(f.label || ('Face ' + f.id)) + '</option>';
+        }).join('') +
+        '</select>'
+      );
+      html += '<div>' + _selBtn('FEAMeshControls._set3DFaceToBC(' + idx + ')') + '</div>';
+    }
+
+    // Kind'a göre değer alanları
+    if (kind === 'force') {
+      var fv = c.value || {};
+      html += _sectionTitle('Kuvvet (N)');
+      html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">';
+      ['fx', 'fy', 'fz'].forEach(function(ax) {
+        html += '<div><label style="display:block; font-size:0.55rem; color:var(--text-muted); margin-bottom:2px;">' + ax.toUpperCase() + '</label>' +
+          '<input type="number" value="' + (fv[ax] != null ? fv[ax] : '') + '" onchange="FEAMeshControls._setBCValue(' + idx + ',\'' + ax + '\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"></div>';
+      });
+      html += '</div>';
+    } else if (kind === 'pressure') {
+      var pv = c.value || {};
+      html += _sectionTitle('Basınç');
+      html += _row('Magnitude (MPa)',
+        '<input type="number" step="0.1" value="' + (pv.magnitude != null ? pv.magnitude : '') + '" onchange="FEAMeshControls._setBCValue(' + idx + ',\'magnitude\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">'
+      );
+    } else if (kind === 'displacement') {
+      var uv = c.value || {};
+      html += _sectionTitle('Yer Değiştirme (mm)');
+      html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">';
+      ['ux', 'uy', 'uz'].forEach(function(ax) {
+        html += '<div><label style="display:block; font-size:0.55rem; color:var(--text-muted); margin-bottom:2px;">' + ax.replace('u', 'Δ').toUpperCase() + '</label>' +
+          '<input type="number" step="0.01" value="' + (uv[ax] != null ? uv[ax] : '') + '" onchange="FEAMeshControls._setBCValue(' + idx + ',\'' + ax + '\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"></div>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(34,197,94,0.08); border-left:2px solid var(--accent-success, #22c55e); font-size:0.58rem; color:var(--text-secondary);">Fixed Support: seçili yüzün tüm serbestlik dereceleri sabitlenir (değer gerekmez).</div>';
+    }
+
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // ─── 3.9 SONUÇ (result item) ──────────────────────────────────────────────
+  function _renderResultItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'result', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'result';
+    var solved = !!(meshNode.data && meshNode.data.solver && meshNode.data.solver.results);
+    var type = c.type || 'vonMises';
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Sonuç ' + (idx + 1));
+    html += _sectionTitle('Sonuç Tipi');
+    html += _row('Alan',
+      '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'type\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="vonMises"' + (type === 'vonMises' ? ' selected' : '') + '>Equivalent (von-Mises) Stress</option>' +
+      '<option value="displacement"' + (type === 'displacement' ? ' selected' : '') + '>Total Deformation</option>' +
+      '<option value="principalMax"' + (type === 'principalMax' ? ' selected' : '') + '>Maks. Asal Gerilme</option>' +
+      '<option value="principalMin"' + (type === 'principalMin' ? ' selected' : '') + '>Min. Asal Gerilme</option>' +
+      '<option value="deformed"' + (type === 'deformed' ? ' selected' : '') + '>Deforme Şekil</option>' +
+      '</select>'
+    );
+
+    if (solved) {
+      var r = meshNode.data.solver.results;
+      var summary = ({
+        'vonMises': 'Maks von Mises: ' + (r.maxVonMises != null ? r.maxVonMises.toFixed(1) + ' MPa' : '—'),
+        'displacement': 'Maks deplasman: ' + (r.maxDisplacement != null ? r.maxDisplacement.toFixed(3) + ' mm' : '—'),
+        'principalMax': 'Maks asal: ' + (r.maxPrincipalStress != null ? r.maxPrincipalStress.toFixed(1) + ' MPa' : '—'),
+        'principalMin': 'Min asal: ' + (r.minPrincipalStress != null ? r.minPrincipalStress.toFixed(1) + ' MPa' : '—'),
+        'deformed': 'Deforme şekil (otomatik ölçek)'
+      })[type] || '';
+      html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(34,197,94,0.08); border-left:2px solid var(--accent-success, #22c55e); font-size:0.6rem; color:var(--text-secondary);">' + summary + '</div>';
+      html += '<button onclick="FEAMeshControls._showResult(\'' + meshNode.id + '\',\'' + type + '\')" style="width:100%; margin-top:10px; padding:8px 10px; font-size:0.7rem; font-weight:600; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;">▶ 3D Görüntüleyicide Göster</button>';
+    } else {
+      html += '<div style="margin-top:8px; padding:8px; background:rgba(245,158,11,0.1); border-left:2px solid var(--accent-warning, #f59e0b); font-size:0.58rem; color:var(--accent-warning, #f59e0b); line-height:1.5;">⚠ Henüz çözüm yok. Önce Çözüm → Çözücü Ayarları\'ndan <b>ÇÖZ</b> deyin; sonuç burada görüntülenebilir.</div>';
+    }
+
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // ─── 3.11 MATCH CONTROL (C.15) ─────────────────────────────────────────────
+  function _renderMatchControlItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'matchControl', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'matchControl';
+    var faces = _faceList(meshNode);
+    var faceOptions = faces.map(function(f) { return { id: f.id, label: f.label || ('Face ' + f.id) }; });
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Match ' + (idx + 1));
+    html += _sectionTitle('Yüz Çifti');
+    function faceSelect(field, val) {
+      var opts = '<option value="">— seç —</option>';
+      faceOptions.forEach(function(f) {
+        opts += '<option value="' + _esc(String(f.id)) + '"' + (String(val) === String(f.id) ? ' selected' : '') + '>' + _esc(f.label) + '</option>';
+      });
+      return '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'' + field + '\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' + opts + '</select>';
+    }
+    html += _row('Yüz 1', faceSelect('face1', c.face1));
+    html += _row('Yüz 2', faceSelect('face2', c.face2));
+    html += _sectionTitle('Tip');
+    html += _row('Eşleşme', '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'type\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="arbitrary"' + ((c.type || 'arbitrary') === 'arbitrary' ? ' selected' : '') + '>Arbitrary (genel)</option>' +
+      '<option value="cyclic"' + (c.type === 'cyclic' ? ' selected' : '') + '>Cyclic (dönel sembol)</option>' +
+      '</select>');
+    if (c.face1 != null && c.face2 != null && String(c.face1) === String(c.face2)) {
+      html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(245,158,11,0.1); border-left:2px solid var(--accent-warning); font-size:0.55rem; color:var(--accent-warning);">⚠ İki yüz farklı olmalı.</div>';
+    }
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // ─── 3.12 PINCH (C.15) ─────────────────────────────────────────────────────
+  function _renderPinchItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'pinch', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'pinch';
+    var et = c.entityType || 'edge';
+    var items = [], listKey = '';
+    if (et === 'edge') {
+      var edges = _edgeList(meshNode);
+      if (edges.length > 0) items = edges.map(function(e, i) { return { id: e.id != null ? e.id : i, label: e.label || ('Edge ' + (e.id != null ? e.id : i)) }; });
+      else {
+        var topo = _getTopology(meshNode); var n = (topo && topo.edges && topo.edges.count) ? topo.edges.count : 12;
+        for (var k = 0; k < n; k++) items.push({ id: k, label: 'Edge ' + k });
+      }
+      listKey = 'entities';
+    } else {
+      items = _vertexList(meshNode).map(function(v) { return { id: v.id, label: v.label || ('Vertex ' + v.id) }; });
+      listKey = 'entities';
+    }
+    var sel = Array.isArray(c.entities) ? c.entities : [];
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Pinch ' + (idx + 1));
+    html += _sectionTitle('Entity Tipi');
+    html += _row('Tip', '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'entityType\', this.value); FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'entities\', [])" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="edge"' + (et === 'edge' ? ' selected' : '') + '>Edge</option>' +
+      '<option value="vertex"' + (et === 'vertex' ? ' selected' : '') + '>Vertex</option>' +
+      '</select>');
+    html += _sectionTitle('Scope');
+    html += _multiSelect(items, sel, 'FEAMeshControls._toggleListId.bind(null,"' + ct + '",' + idx + ',"entities")');
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + sel.length + ' ' + et + ' seçili</div>';
+    html += _sectionTitle('Tolerans');
+    html += _row('Pinch toleransı (mm)',
+      '<input type="number" step="0.05" min="0.001" value="' + (c.tolerance != null ? c.tolerance : '') + '" ' +
+      'onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'tolerance\', parseFloat(this.value))" ' +
+      'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">'
+    );
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // ─── 3.13 GASKET (C.15) ────────────────────────────────────────────────────
+  function _renderGasketItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'gasket', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'gasket';
+    var bodies = _bodyList(meshNode);
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Gasket ' + (idx + 1));
+    html += _sectionTitle('Scope (Body)');
+    html += _multiSelect(
+      bodies.map(function(b) { return { id: b.id, label: b.label || ('Body ' + b.id) }; }),
+      Array.isArray(c.bodyIds) ? c.bodyIds : [],
+      'FEAMeshControls._toggleListId.bind(null,"' + ct + '",' + idx + ',"bodyIds")'
+    );
+    html += _sectionTitle('Parametreler');
+    html += _row('Kalınlık (mm)',
+      '<input type="number" step="0.1" min="0.01" value="' + (c.thickness != null ? c.thickness : 1) + '" ' +
+      'onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'thickness\', parseFloat(this.value))" ' +
+      'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">'
+    );
+    html += _row('Katman sayısı',
+      '<input type="number" step="1" min="1" max="20" value="' + (c.layers || 1) + '" ' +
+      'onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'layers\', parseInt(this.value,10))" ' +
+      'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">'
+    );
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // ─── 3.14 COORDINATE SYSTEM (C.12) ─────────────────────────────────────────
+  function _renderCSItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'coordinateSystem', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'coordinateSystem';
+    var origin = Array.isArray(c.origin) ? c.origin : [0, 0, 0];
+    var rot = Array.isArray(c.rotationDeg) ? c.rotationDeg : [0, 0, 0];
+    var html = '';
+    html += _renameRow(ct, idx, c.name, ((c.csType === 'cylindrical') ? 'CS-Silindirik ' : 'CS-Kartezyen ') + (idx + 1));
+    html += _sectionTitle('Tip');
+    html += _row('Sistem',
+      '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'csType\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="cartesian"' + ((c.csType || 'cartesian') === 'cartesian' ? ' selected' : '') + '>Kartezyen (X/Y/Z)</option>' +
+      '<option value="cylindrical"' + (c.csType === 'cylindrical' ? ' selected' : '') + '>Silindirik (R/θ/Z)</option>' +
+      '</select>'
+    );
+    html += _sectionTitle('Orijin');
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:6px;">';
+    ['X', 'Y', 'Z'].forEach(function(ax, k) {
+      html += '<div><label style="display:block; font-size:0.55rem; color:var(--text-muted); margin-bottom:2px;">' + ax + ' (mm)</label>' +
+        '<input type="number" step="0.5" value="' + (origin[k] != null ? origin[k] : 0) + '" ' +
+        'onchange="FEAMeshControls._setCSField(' + idx + ',\'origin\',' + k + ', this.value)" ' +
+        'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"></div>';
+    });
+    html += '</div>';
+    html += _sectionTitle('Dönüş (derece)');
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">';
+    ['RX', 'RY', 'RZ'].forEach(function(ax, k) {
+      html += '<div><label style="display:block; font-size:0.55rem; color:var(--text-muted); margin-bottom:2px;">' + ax + ' (°)</label>' +
+        '<input type="number" step="1" value="' + (rot[k] != null ? rot[k] : 0) + '" ' +
+        'onchange="FEAMeshControls._setCSField(' + idx + ',\'rotationDeg\',' + k + ', this.value)" ' +
+        'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"></div>';
+    });
+    html += '</div>';
+    html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid var(--accent-primary); font-size:0.55rem; color:var(--text-secondary);">ℹ SoI merkezi, yük yönü, sonuç ekseni gibi yerlerde referans olarak seçilebilir (ileri faz).</div>';
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  function _setCSField(idx, field, k, raw) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'coordinateSystem').slice();
+    var c = list[idx];
+    if (!c) return;
+    var v = parseFloat(raw); if (!isFinite(v)) v = 0;
+    var arr = Array.isArray(c[field]) ? c[field].slice() : [0, 0, 0];
+    arr[k] = v;
+    c[field] = arr;
+    global.FEAMeshOutline._setControlList(meshNode, 'coordinateSystem', list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  // ─── 3.10 USER NAMED SELECTION (B.8 — DRY) ─────────────────────────────────
+  function _renderUserNSItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'userNS', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'userNS';
+    var faces = _faceList(meshNode);
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Named Selection ' + (idx + 1));
+    html += '<div style="font-size:0.55rem; color:var(--accent-warning, #f59e0b); margin-bottom:8px;">⚠ Diğer kontrollerden referansla kullanmak için <b>İsim</b> zorunlu.</div>';
+    html += _sectionTitle('Yüzler');
+    html += _multiSelect(
+      faces.map(function(f) { return { id: f.id, label: f.label || ('Face ' + f.id) }; }),
+      Array.isArray(c.faceIds) ? c.faceIds : [],
+      'FEAMeshControls._toggleListId.bind(null,"' + ct + '",' + idx + ',"faceIds")'
+    );
+    html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'userNS\',' + idx + ',\'faceIds\')') + '</div>';
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + ((Array.isArray(c.faceIds) ? c.faceIds.length : 0)) + ' yüz</div>';
+    html += '<div style="margin-top:10px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid var(--accent-primary); font-size:0.55rem; color:var(--text-secondary); line-height:1.5;">' +
+      'ℹ Tekrar kullan: Face Sizing / BC / Refinement / Virtual Topology kontrolünün <b>"📋 Named Selection\'dan yükle"</b> butonu bu gruptaki yüzleri import eder.' +
+      '</div>';
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // Named Selections import: hedef kontrole NS'den yüz import et.
+  function _importFromNS(controlType, idx, listField, nsIndex) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var nsList = global.FEAMeshOutline._getControlList(meshNode, 'userNS');
+    var ns = nsList[nsIndex];
+    if (!ns || !Array.isArray(ns.faceIds) || ns.faceIds.length === 0) {
+      if (typeof global.showToast === 'function') global.showToast('Named Selection boş veya bulunamadı.', 'warning');
+      return;
+    }
+    var list = global.FEAMeshOutline._getControlList(meshNode, controlType).slice();
+    var c = list[idx];
+    if (!c) return;
+    var ids = Array.isArray(c[listField]) ? c[listField].slice() : (c.faceId != null ? [c.faceId] : []);
+    ns.faceIds.forEach(function(fid) { if (ids.indexOf(fid) < 0) ids.push(fid); });
+    c[listField] = ids;
+    if (controlType === 'faceSizing') c.faceId = (ids.length === 1) ? ids[0] : null;
+    global.FEAMeshOutline._setControlList(meshNode, controlType, list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  // İsimlendirilmiş, kullanılabilir Named Selections (yüz listesi olan + isimli)
+  function _availableNS(meshNode) {
+    if (!meshNode || !global.FEAMeshOutline) return [];
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'userNS');
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var ns = list[i];
+      if (!ns || !ns.name) continue;
+      if (!Array.isArray(ns.faceIds) || ns.faceIds.length === 0) continue;
+      if (global.FEAMeshOutline.isSuppressed(meshNode, 'cl:userNS[' + i + ']')) continue;
+      out.push({ index: i, name: ns.name, count: ns.faceIds.length });
+    }
+    return out;
+  }
+
+  // NS import dropdown HTML (Face Sizing/Refinement/VT için)
+  function _importNSDropdown(meshNode, controlType, idx, listField) {
+    var avail = _availableNS(meshNode);
+    if (avail.length === 0) return '';
+    var html = '<div style="display:flex; gap:4px; align-items:center; margin-top:4px;">';
+    html += '<select id="ve-fea-ns-import-' + controlType + '-' + idx + '" style="flex:1; padding:3px 6px; font-size:0.58rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">';
+    avail.forEach(function(ns) {
+      html += '<option value="' + ns.index + '">' + _esc(ns.name) + ' (' + ns.count + ' yüz)</option>';
+    });
+    html += '</select>';
+    html += '<button onclick="FEAMeshControls._importFromNSSelected(\'' + controlType + '\',' + idx + ',\'' + listField + '\')" style="padding:3px 8px; font-size:0.58rem; font-weight:600; background:var(--bg-tertiary); color:var(--accent-primary); border:1px solid var(--accent-primary); cursor:pointer; white-space:nowrap;">📋 NS\'den yükle</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function _importFromNSSelected(controlType, idx, listField) {
+    var sel = (typeof document !== 'undefined') ? document.getElementById('ve-fea-ns-import-' + controlType + '-' + idx) : null;
+    if (!sel) return;
+    _importFromNS(controlType, idx, listField, parseInt(sel.value, 10));
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -509,7 +881,14 @@
     soi:             _renderSoiItem,
     refinement:      _renderRefinementItem,
     methodOverride:  _renderMethodOverrideItem,
-    virtualTopology: _renderVirtualTopologyItem
+    virtualTopology: _renderVirtualTopologyItem,
+    bc:              _renderBCItem,
+    result:          _renderResultItem,
+    userNS:          _renderUserNSItem,
+    matchControl:    _renderMatchControlItem,
+    pinch:           _renderPinchItem,
+    gasket:          _renderGasketItem,
+    coordinateSystem:_renderCSItem
   };
 
   function renderControlDetail(meshNode, controlType, idx) {
@@ -667,6 +1046,57 @@
     global.FEAMeshOutline.refresh();
   }
 
+  // ─── B.7: 3D görüntüleyicide seçili yüzü scope'a ekle ─────────────────────
+  // Viewer'da tıklanan yüz (getSelectedFace / node.data.selectedFaceId) ilgili
+  // kontrolün face listesine eklenir. ANSYS "Geometry Selection" akışı.
+  function _currentSelectedFaceId() {
+    var mn = _activeMeshNode();
+    if (!mn) return null;
+    var reg = global.veFEAViewerRegistry;
+    if (reg && reg[mn.id] && typeof reg[mn.id].getSelectedFace === 'function') {
+      var f = reg[mn.id].getSelectedFace();
+      if (f != null) return f;
+    }
+    return (mn.data && mn.data.selectedFaceId != null) ? mn.data.selectedFaceId : null;
+  }
+
+  // Face listesine ekle (faceSizing/refinement/virtualTopology) — listField
+  // 'faceIds'. faceSizing eski tekil faceId formatını da senkron tutar.
+  function _add3DFaceToList(controlType, idx, listField) {
+    var fid = _currentSelectedFaceId();
+    if (fid == null) {
+      if (typeof global.showToast === 'function') global.showToast('Önce 3D görüntüleyicide bir yüze tıklayın.', 'warning');
+      return;
+    }
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, controlType).slice();
+    var c = list[idx];
+    if (!c) return;
+    var ids = Array.isArray(c[listField]) ? c[listField].slice() : (c.faceId != null ? [c.faceId] : []);
+    if (ids.indexOf(fid) < 0) ids.push(fid);
+    c[listField] = ids;
+    if (controlType === 'faceSizing') c.faceId = (ids.length === 1) ? ids[0] : null;
+    global.FEAMeshOutline._setControlList(meshNode, controlType, list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  // BC için: seçili yüzü tek scope yap
+  function _set3DFaceToBC(idx) {
+    var fid = _currentSelectedFaceId();
+    if (fid == null) {
+      if (typeof global.showToast === 'function') global.showToast('Önce 3D görüntüleyicide bir yüze tıklayın.', 'warning');
+      return;
+    }
+    _setBCFace(idx, fid);
+  }
+
+  function _selBtn(onclickExpr) {
+    return '<button onclick="' + onclickExpr + '" title="3D görüntüleyicide seçili yüzü ekle" ' +
+      'style="padding:4px 8px; font-size:0.58rem; font-weight:600; background:var(--bg-tertiary); color:var(--accent-primary); border:1px solid var(--accent-primary); cursor:pointer; margin-bottom:6px;">➕ Seçili 3D yüzünü ekle</button>';
+  }
+
   function _setSoiTargetSize(idx, value) {
     var v;
     if (value === '' || value == null) v = null;
@@ -675,6 +1105,60 @@
       if (!isFinite(v) || v <= 0) v = null;
     }
     _setField('soi', idx, 'targetSize', v);
+  }
+
+  // ─── BC handler'ları ──────────────────────────────────────────────────────
+  function _setBCFace(idx, faceVal) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'bc').slice();
+    var c = list[idx];
+    if (!c) return;
+    c.faceId = (faceVal === '' || faceVal == null) ? null : (isNaN(+faceVal) ? faceVal : +faceVal);
+    global.FEAMeshOutline._setControlList(meshNode, 'bc', list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  function _setBCKind(idx, kind) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'bc').slice();
+    var c = list[idx];
+    if (!c) return;
+    c.kind = kind;
+    // Değer yapısını tipe göre sıfırla
+    if (kind === 'fixed') c.value = null;
+    else if (kind === 'force') c.value = { fx: 0, fy: 0, fz: 0 };
+    else if (kind === 'pressure') c.value = { magnitude: 0 };
+    else if (kind === 'displacement') c.value = { ux: 0, uy: 0, uz: 0 };
+    global.FEAMeshOutline._setControlList(meshNode, 'bc', list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  function _setBCValue(idx, field, raw) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'bc').slice();
+    var c = list[idx];
+    if (!c) return;
+    var v = parseFloat(raw);
+    if (!isFinite(v)) v = 0;
+    c.value = c.value || {};
+    c.value[field] = v;
+    global.FEAMeshOutline._setControlList(meshNode, 'bc', list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  // ─── Sonuç handler'ı: seçili alanı 3D viewer'da göster ────────────────────
+  function _showResult(meshNodeId, type) {
+    // Result type → heatMapMetric eşlemesi (veFEAApplyHeatMap result-* bekler)
+    var metric = 'result-' + type;
+    if (typeof global.veFEAApplyHeatMap === 'function') {
+      try { global.veFEAApplyHeatMap(meshNodeId, metric); } catch (e) { console.warn('[FEA] sonuç gösterilemedi:', e); }
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -768,7 +1252,17 @@
     _setEdgeSizingMode:         _setEdgeSizingMode,
     _setRefinementEntityType:   _setRefinementEntityType,
     _toggleRefinementEntity:    _toggleRefinementEntity,
-    _setSoiTargetSize:          _setSoiTargetSize
+    _setSoiTargetSize:          _setSoiTargetSize,
+    _setBCFace:                 _setBCFace,
+    _setBCKind:                 _setBCKind,
+    _setBCValue:                _setBCValue,
+    _showResult:                _showResult,
+    _add3DFaceToList:           _add3DFaceToList,
+    _set3DFaceToBC:             _set3DFaceToBC,
+    _currentSelectedFaceId:     _currentSelectedFaceId,
+    _importFromNS:              _importFromNS,
+    _importFromNSSelected:      _importFromNSSelected,
+    _setCSField:                _setCSField
   };
 
   global.FEAMeshControls = api;
