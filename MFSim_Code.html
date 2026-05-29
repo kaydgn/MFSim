@@ -30387,6 +30387,7 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
       sel,
       'FEAMeshControls._toggleFaceSizingFace.bind(null,' + idx + ')'
     );
+    html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'faceSizing\',' + idx + ',\'faceIds\')') + '</div>';
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + sel.length + ' yüz seçili</div>';
 
     html += _sectionTitle('Parametreler');
@@ -30562,6 +30563,9 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
     }
     sel = Array.isArray(c[listKey]) ? c[listKey] : [];
     html += _multiSelect(items, sel, 'FEAMeshControls._toggleRefinementEntity.bind(null,' + idx + ',"' + listKey + '")');
+    if (et === 'face') {
+      html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'refinement\',' + idx + ',\'faceIds\')') + '</div>';
+    }
     html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + sel.length + ' ' + et + ' seçili</div>';
 
     html += _sectionTitle('Parametreler');
@@ -30643,6 +30647,7 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
       Array.isArray(c.faceIds) ? c.faceIds : [],
       'FEAMeshControls._toggleListId.bind(null,"' + ct + '",' + idx + ',"faceIds")'
     );
+    html += '<div style="margin-top:4px;">' + _selBtn('FEAMeshControls._add3DFaceToList(\'virtualTopology\',' + idx + ',\'faceIds\')') + '</div>';
     html += '<div style="font-size:0.55rem; color:var(--text-muted); line-height:1.5; margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid var(--accent-primary);">' +
       'ℹ ANSYS §8.2 — birleştirilen yüzler mesh üretiminde tek bir patch olarak ele alınır. En az 2 yüz seçilmeli.' +
       '</div>';
@@ -30686,6 +30691,7 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
         }).join('') +
         '</select>'
       );
+      html += '<div>' + _selBtn('FEAMeshControls._set3DFaceToBC(' + idx + ')') + '</div>';
     }
 
     // Kind'a göre değer alanları
@@ -30937,6 +30943,57 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
     global.FEAMeshOutline.refresh();
   }
 
+  // ─── B.7: 3D görüntüleyicide seçili yüzü scope'a ekle ─────────────────────
+  // Viewer'da tıklanan yüz (getSelectedFace / node.data.selectedFaceId) ilgili
+  // kontrolün face listesine eklenir. ANSYS "Geometry Selection" akışı.
+  function _currentSelectedFaceId() {
+    var mn = _activeMeshNode();
+    if (!mn) return null;
+    var reg = global.veFEAViewerRegistry;
+    if (reg && reg[mn.id] && typeof reg[mn.id].getSelectedFace === 'function') {
+      var f = reg[mn.id].getSelectedFace();
+      if (f != null) return f;
+    }
+    return (mn.data && mn.data.selectedFaceId != null) ? mn.data.selectedFaceId : null;
+  }
+
+  // Face listesine ekle (faceSizing/refinement/virtualTopology) — listField
+  // 'faceIds'. faceSizing eski tekil faceId formatını da senkron tutar.
+  function _add3DFaceToList(controlType, idx, listField) {
+    var fid = _currentSelectedFaceId();
+    if (fid == null) {
+      if (typeof global.showToast === 'function') global.showToast('Önce 3D görüntüleyicide bir yüze tıklayın.', 'warning');
+      return;
+    }
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, controlType).slice();
+    var c = list[idx];
+    if (!c) return;
+    var ids = Array.isArray(c[listField]) ? c[listField].slice() : (c.faceId != null ? [c.faceId] : []);
+    if (ids.indexOf(fid) < 0) ids.push(fid);
+    c[listField] = ids;
+    if (controlType === 'faceSizing') c.faceId = (ids.length === 1) ? ids[0] : null;
+    global.FEAMeshOutline._setControlList(meshNode, controlType, list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
+  // BC için: seçili yüzü tek scope yap
+  function _set3DFaceToBC(idx) {
+    var fid = _currentSelectedFaceId();
+    if (fid == null) {
+      if (typeof global.showToast === 'function') global.showToast('Önce 3D görüntüleyicide bir yüze tıklayın.', 'warning');
+      return;
+    }
+    _setBCFace(idx, fid);
+  }
+
+  function _selBtn(onclickExpr) {
+    return '<button onclick="' + onclickExpr + '" title="3D görüntüleyicide seçili yüzü ekle" ' +
+      'style="padding:4px 8px; font-size:0.58rem; font-weight:600; background:var(--bg-tertiary); color:var(--accent-primary); border:1px solid var(--accent-primary); cursor:pointer; margin-bottom:6px;">➕ Seçili 3D yüzünü ekle</button>';
+  }
+
   function _setSoiTargetSize(idx, value) {
     var v;
     if (value === '' || value == null) v = null;
@@ -31096,7 +31153,10 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
     _setBCFace:                 _setBCFace,
     _setBCKind:                 _setBCKind,
     _setBCValue:                _setBCValue,
-    _showResult:                _showResult
+    _showResult:                _showResult,
+    _add3DFaceToList:           _add3DFaceToList,
+    _set3DFaceToBC:             _set3DFaceToBC,
+    _currentSelectedFaceId:     _currentSelectedFaceId
   };
 
   global.FEAMeshControls = api;
