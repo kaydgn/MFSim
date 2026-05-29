@@ -48,6 +48,7 @@
         refinementControls: [],
         methodOverrides: [],
         virtualTopology: [],
+        userNamedSelections: [],
         suppressFlags: {}
       },
       meshActive: false,
@@ -153,7 +154,7 @@
     // Yeni liste alanları eksikse default boş dizi ile tamamla
     ['bodySizingControls', 'faceSizingControls', 'edgeSizingControls',
      'sphereOfInfluence', 'refinementControls', 'methodOverrides',
-     'virtualTopology'].forEach(function(k) {
+     'virtualTopology', 'userNamedSelections'].forEach(function(k) {
       if (!Array.isArray(out[k])) out[k] = [];
     });
     if (!out.suppressFlags || typeof out.suppressFlags !== 'object') out.suppressFlags = {};
