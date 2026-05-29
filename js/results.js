@@ -4447,6 +4447,7 @@ function veSetSlotXAxis(slotIdx, optIdx) {
   sidebarResizer.addEventListener('mousedown', function(e) {
     sbResizing = true; sbStartX = e.clientX; sbStartW = sidebar.offsetWidth;
     sidebarResizer.classList.add('active');
+    sidebar.classList.add('ve-sb-no-anim'); // sürükleme sırasında geçişi kapat
     document.body.style.cursor = 'ew-resize'; document.body.style.userSelect = 'none';
     e.preventDefault();
   });
@@ -4457,8 +4458,53 @@ function veSetSlotXAxis(slotIdx, optIdx) {
     updateCompactMode(newW);
   });
   document.addEventListener('mouseup', function() {
-    if(sbResizing) { sbResizing = false; sidebarResizer.classList.remove('active'); document.body.style.cursor = ''; document.body.style.userSelect = ''; }
+    if(sbResizing) { sbResizing = false; sidebarResizer.classList.remove('active'); sidebar.classList.remove('ve-sb-no-anim'); document.body.style.cursor = ''; document.body.style.userSelect = ''; }
   });
+})();
+
+// ===== BİLEŞENLER PANELİ DARALT / AÇ =====
+// Paneli tamamen gizler; sol kenarda beliren ray ile geri açılır. Durum
+// localStorage'a kaydedilir (profesyonel programlar gibi hatırlanır).
+function veToggleSidebar(forceState) {
+  var sidebar = document.getElementById('ve-sidebar');
+  var reveal = document.getElementById('ve-sidebar-reveal');
+  if(!sidebar) return;
+  var collapsed = (typeof forceState === 'boolean')
+    ? forceState
+    : !sidebar.classList.contains('ve-sb-collapsed');
+  sidebar.classList.toggle('ve-sb-collapsed', collapsed);
+  try { localStorage.setItem('mf-sidebar-collapsed', collapsed ? '1' : '0'); } catch(e) {}
+  if(reveal) {
+    if(collapsed) {
+      reveal.style.display = 'flex';
+      // iki frame bekle → transform/opacity geçişi tetiklensin
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() { reveal.classList.add('visible'); });
+      });
+    } else {
+      reveal.classList.remove('visible');
+      setTimeout(function() {
+        if(!sidebar.classList.contains('ve-sb-collapsed')) reveal.style.display = 'none';
+      }, 260);
+    }
+  }
+  // Layout değişti → canvas/viewer'lara resize sinyali ver
+  setTimeout(function() {
+    try { window.dispatchEvent(new Event('resize')); } catch(e) {}
+  }, 280);
+}
+
+// Sayfa açılışında kayıtlı durumu (animasyonsuz) geri yükle
+(function() {
+  var collapsed = false;
+  try { collapsed = localStorage.getItem('mf-sidebar-collapsed') === '1'; } catch(e) {}
+  if(!collapsed) return;
+  var sidebar = document.getElementById('ve-sidebar');
+  var reveal = document.getElementById('ve-sidebar-reveal');
+  if(!sidebar) return;
+  sidebar.classList.add('ve-sb-no-anim', 've-sb-collapsed');
+  if(reveal) { reveal.style.display = 'flex'; reveal.classList.add('visible'); }
+  requestAnimationFrame(function() { sidebar.classList.remove('ve-sb-no-anim'); });
 })();
 
 // ===== ÖZELLİKLER PANELİ RESIZE =====

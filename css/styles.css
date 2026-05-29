@@ -539,6 +539,7 @@
   display:flex;
   overflow:hidden;
   min-height:0;
+  position:relative;
 }
 
 .ve-sidebar{
@@ -551,7 +552,84 @@
   display:flex;
   flex-direction:column;
   overflow:hidden;
+  transition:width 0.26s cubic-bezier(0.4,0,0.2,1),
+             min-width 0.26s cubic-bezier(0.4,0,0.2,1),
+             opacity 0.2s ease,
+             transform 0.24s cubic-bezier(0.4,0,0.2,1),
+             border-right-width 0.26s cubic-bezier(0.4,0,0.2,1);
 }
+
+/* Daraltılmış panel: tamamen gizlenir (sol kenardaki ray ile geri açılır) */
+.ve-sidebar.ve-sb-collapsed{
+  width:0 !important;
+  min-width:0 !important;
+  opacity:0;
+  transform:translateX(-14px);
+  border-right-width:0;
+  pointer-events:none;
+}
+/* Resizer ile sürüklerken geçiş kapalı (takılmayı önler) */
+.ve-sidebar.ve-sb-no-anim{ transition:none !important; }
+
+/* Başlıktaki daraltma butonu */
+.ve-sidebar-title{ flex:1; }
+.ve-sidebar-collapse-btn{
+  margin-left:auto;
+  width:20px; height:20px;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--text-muted);
+  cursor:pointer;
+  border-radius:0;
+  font-size:0.72rem;
+  padding:0;
+  flex-shrink:0;
+  transition:border-color 0.12s, background 0.12s, color 0.12s;
+}
+.ve-sidebar-collapse-btn:hover{
+  border-color:var(--border-hover);
+  background:var(--bg-input);
+  color:var(--accent-primary);
+}
+/* Compact (ikon-only) modda daraltma butonu ve başlık gizlenir */
+.ve-sidebar.compact .ve-sidebar-collapse-btn,
+.ve-sidebar.compact .ve-sidebar-title{ display:none; }
+
+/* Sol kenardaki açma rayı (panel kapalıyken belirir) */
+.ve-sidebar-reveal{
+  position:absolute;
+  left:0; top:12px;
+  z-index:150;            /* modül seçim overlay'inin (100) üstünde kalsın */
+  display:none;            /* yalnızca daraltılmışken flex */
+  flex-direction:column;
+  align-items:center;
+  gap:7px;
+  padding:9px 7px;
+  background:var(--bg-secondary);
+  border:1px solid var(--border-color);
+  border-left:none;
+  color:var(--text-secondary);
+  cursor:pointer;
+  box-shadow:2px 2px 10px var(--shadow-color);
+  transform:translateX(-100%);
+  opacity:0;
+  transition:transform 0.24s cubic-bezier(0.4,0,0.2,1),
+             opacity 0.2s ease,
+             background 0.15s, color 0.15s, border-color 0.15s;
+}
+.ve-sidebar-reveal.visible{
+  transform:translateX(0);
+  opacity:1;
+}
+.ve-sidebar-reveal:hover{
+  background:var(--bg-tertiary);
+  color:var(--accent-primary);
+  border-color:var(--accent-primary);
+}
+.ve-sidebar-reveal .mf-ico{ font-size:1.05rem; }
+.ve-sidebar-reveal .ve-sidebar-reveal-arrow{ font-size:0.78rem; opacity:0.55; }
+.ve-sidebar-reveal:hover .ve-sidebar-reveal-arrow{ opacity:1; }
 
 .ve-sidebar-resizer{
   position:absolute;
