@@ -702,6 +702,21 @@ function _veFEAEditorBuildLeftPanel(node) {
     '<span style="font-weight:600; font-size:0.5rem; color:var(--text-muted); letter-spacing:0.04em;">ANSYS §2.4 Tree</span>';
   panel.appendChild(outlineHeader);
 
+  // Filter / Search input (C.10) — outline container'ın DIŞINDA durur, böylece
+  // outline refresh'i input'un focus'unu kaybettirmez.
+  var filterBar = document.createElement('div');
+  filterBar.id = 've-fea-outline-filter-bar';
+  filterBar.style.cssText = 'display:flex; align-items:center; gap:4px; padding:4px 8px; background:var(--bg-primary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  var filterVal = (outlineState && outlineState.filter) || '';
+  filterBar.innerHTML =
+    '<span style="font-size:0.6rem; color:var(--text-muted);">🔍</span>' +
+    '<input id="ve-fea-outline-filter" type="text" value="' + (filterVal.replace(/"/g, '&quot;')) + '" placeholder="Outline\'da ara..." ' +
+    'oninput="FEAMeshOutline.setFilter(this.value)" ' +
+    'style="flex:1; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+    '<button onclick="document.getElementById(\'ve-fea-outline-filter\').value=\'\'; FEAMeshOutline.setFilter(\'\');" title="Temizle" style="padding:2px 6px; font-size:0.6rem; background:transparent; color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer;">✕</button>' +
+    '<button onclick="FEAMeshOutline.showScopeUsersForSelected()" title="Seçili 3D yüzü kullanan kontrolleri göster (Go To)" style="padding:2px 6px; font-size:0.6rem; background:transparent; color:var(--accent-primary); border:1px solid var(--accent-primary); cursor:pointer;">🔎</button>';
+  panel.appendChild(filterBar);
+
   // Outline container
   var outlineContainer = document.createElement('div');
   outlineContainer.id = 've-fea-outline-container';
