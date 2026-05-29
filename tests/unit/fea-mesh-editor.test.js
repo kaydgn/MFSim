@@ -298,6 +298,7 @@ describe('Mesh Editör outline organizasyonu', () => {
     var ids = schema.children.map(function(c) { return c.id; });
     expect(ids).toEqual([
       'single:geometry',
+      'group:coordinateSystems',
       'group:mesh',
       'single:material',
       'cl:bc',
@@ -326,11 +327,12 @@ describe('Mesh Editör outline organizasyonu', () => {
     ]);
   });
 
-  test('group:localControls altında 6 control list tipi (yeni: bodySizing/refinement/methodOverride)', () => {
+  test('group:localControls altında control list tipleri (mesh + C.15)', () => {
     var lc = FEAMeshOutline._findSchemaNode('group:localControls');
     var ctlTypes = lc.children.map(function(c) { return c.controlType; }).filter(Boolean);
     expect(ctlTypes).toEqual([
-      'bodySizing', 'faceSizing', 'edgeSizing', 'soi', 'refinement', 'methodOverride'
+      'bodySizing', 'faceSizing', 'edgeSizing', 'soi', 'refinement', 'methodOverride',
+      'matchControl', 'pinch', 'gasket'
     ]);
   });
 

@@ -66,6 +66,16 @@
     children: [
       { id: 'single:geometry', type: 'single', label: 'Geometri', icon: '◈', detail: 'geometry' },
       {
+        id: 'group:coordinateSystems',
+        type: 'group',
+        label: 'Coordinate Systems',
+        icon: '⊕',
+        defaultExpanded: false,
+        children: [
+          { id: 'cl:coordinateSystem', type: 'controlList', controlType: 'coordinateSystem', label: 'Lokal Koordinat Sistemleri', icon: '⊕' }
+        ]
+      },
+      {
         id: 'group:mesh',
         type: 'group',
         label: 'Mesh',
@@ -97,7 +107,10 @@
               { id: 'cl:edgeSizing',     type: 'controlList', controlType: 'edgeSizing',     label: 'Edge Sizing',         icon: '╱' },
               { id: 'cl:soi',            type: 'controlList', controlType: 'soi',            label: 'Sphere of Influence', icon: '◯' },
               { id: 'cl:refinement',     type: 'controlList', controlType: 'refinement',     label: 'Refinement',          icon: '⊞' },
-              { id: 'cl:methodOverride', type: 'controlList', controlType: 'methodOverride', label: 'Method Override',     icon: '✎' }
+              { id: 'cl:methodOverride', type: 'controlList', controlType: 'methodOverride', label: 'Method Override',     icon: '✎' },
+              { id: 'cl:matchControl',   type: 'controlList', controlType: 'matchControl',   label: 'Match Control',       icon: '↔' },
+              { id: 'cl:pinch',          type: 'controlList', controlType: 'pinch',          label: 'Pinch',               icon: '⌐' },
+              { id: 'cl:gasket',         type: 'controlList', controlType: 'gasket',         label: 'Gasket',              icon: '▤' }
             ]
           },
           {
@@ -336,6 +349,104 @@
         return { name: null, faceIds: [] };
       }
     },
+    // ─── Match Control (C.15 — ANSYS §5.3) ───────────────────────────────────
+    matchControl: {
+      storageKey: 'matchControls',
+      detailKey:  'matchControlItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        var f1 = c && c.face1 != null ? c.face1 : '?';
+        var f2 = c && c.face2 != null ? c.face2 : '?';
+        return 'Match ' + (idx + 1) + ' [' + f1 + '↔' + f2 + ']';
+      },
+      scopeOf: function(c) {
+        var ents = [];
+        if (c && c.face1 != null) ents.push(c.face1);
+        if (c && c.face2 != null) ents.push(c.face2);
+        return { kind: 'geometry', entityType: 'face', entities: ents };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (c.face1 == null || c.face2 == null) return 'underdefined';
+        if (String(c.face1) === String(c.face2)) return 'underdefined';
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, face1: null, face2: null, type: 'arbitrary' };
+      }
+    },
+    // ─── Pinch Control (C.15 — ANSYS §5.6) ───────────────────────────────────
+    pinch: {
+      storageKey: 'pinchControls',
+      detailKey:  'pinchItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        var et = c && c.entityType ? c.entityType : 'edge';
+        var n = c ? (Array.isArray(c.entities) ? c.entities.length : 0) : 0;
+        return 'Pinch ' + (idx + 1) + ' [' + et + '×' + n + ']';
+      },
+      scopeOf: function(c) {
+        return {
+          kind: 'geometry', entityType: (c && c.entityType) || 'edge',
+          entities: (c && Array.isArray(c.entities)) ? c.entities.slice() : []
+        };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (!Array.isArray(c.entities) || c.entities.length === 0) return 'underdefined';
+        if (!isFinite(c.tolerance) || c.tolerance <= 0) return 'underdefined';
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        var sz = (meshNode && meshNode.data && meshNode.data.meshSettings && meshNode.data.meshSettings.size) || 10;
+        return { name: null, entityType: 'edge', entities: [], tolerance: sz * 0.05 };
+      }
+    },
+    // ─── Gasket Control (C.15 — ANSYS §5.7) ──────────────────────────────────
+    gasket: {
+      storageKey: 'gasketControls',
+      detailKey:  'gasketItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        return 'Gasket ' + (idx + 1);
+      },
+      scopeOf: function(c) {
+        return {
+          kind: 'geometry', entityType: 'body',
+          entities: Array.isArray(c.bodyIds) ? c.bodyIds.slice() : []
+        };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (!Array.isArray(c.bodyIds) || c.bodyIds.length === 0) return 'underdefined';
+        if (!isFinite(c.thickness) || c.thickness <= 0) return 'underdefined';
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, bodyIds: [], thickness: 1, layers: 1 };
+      }
+    },
+    // ─── Coordinate System (C.12) ────────────────────────────────────────────
+    coordinateSystem: {
+      storageKey: 'coordinateSystems',
+      detailKey:  'csItem',
+      labelOf: function(c, idx) {
+        if (c && c.name) return c.name;
+        var kind = c && c.csType === 'cylindrical' ? 'CS-Silindirik' : 'CS-Kartezyen';
+        return kind + ' ' + (idx + 1);
+      },
+      scopeOf: function(c) {
+        return { kind: 'world', entityType: 'point', entities: [] };
+      },
+      stateOf: function(c) {
+        if (!c) return 'underdefined';
+        if (!Array.isArray(c.origin) || c.origin.length !== 3) return 'underdefined';
+        return 'ok';
+      },
+      factoryOf: function(meshNode) {
+        return { name: null, csType: 'cartesian', origin: [0, 0, 0], rotationDeg: [0, 0, 0] };
+      }
+    },
     // ─── User Named Selection (B.8 — DRY) ────────────────────────────────────
     // Kullanıcı bir kez yüz grubu tanımlar; Face Sizing, BC, sonuç gibi
     // kontroller bu gruptan import eder. ANSYS Named Selections muadili.
@@ -502,6 +613,10 @@
     exp['cl:methodOverride'] = false;
     exp['cl:virtualTopology']= false;
     exp['cl:userNS']         = false;
+    exp['cl:matchControl']   = false;
+    exp['cl:pinch']          = false;
+    exp['cl:gasket']         = false;
+    exp['cl:coordinateSystem']= false;
     // Sınır Koşulları + Çözüm dalları default açık (yük/sonuç öğeleri görünsün)
     exp['cl:bc']             = true;
     exp['group:solution']    = true;
@@ -944,7 +1059,10 @@
             if (filter && (lbl || '').toLowerCase().indexOf(filter.toLowerCase()) < 0) return;
             var iState = computeNodeState(meshNode, itemId);
             var sel = outlineState.selected === itemId;
-            var rightExtra = '<button onclick="event.stopPropagation(); FEAMeshOutline.toggleSuppress(\'' + itemId + '\')" title="Suppress/Unsuppress" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; padding:0 3px; font-size:0.66rem;" onmouseenter="this.style.color=\'var(--accent-warning)\'" onmouseleave="this.style.color=\'var(--text-secondary)\'">' + (iState === 'suppressed' ? '◉' : '⊘') + '</button>' +
+            var canUp = idx > 0, canDown = idx < list.length - 1;
+            var rightExtra = '<button onclick="event.stopPropagation(); FEAMeshOutline.moveControl(\'' + itemId + '\', -1)" title="Yukarı" ' + (canUp ? '' : 'disabled ') + 'style="background:transparent; border:none; color:' + (canUp ? 'var(--text-secondary)' : 'var(--text-muted)') + '; cursor:' + (canUp ? 'pointer' : 'not-allowed') + '; padding:0 2px; font-size:0.6rem;">▲</button>' +
+                             '<button onclick="event.stopPropagation(); FEAMeshOutline.moveControl(\'' + itemId + '\', 1)" title="Aşağı" ' + (canDown ? '' : 'disabled ') + 'style="background:transparent; border:none; color:' + (canDown ? 'var(--text-secondary)' : 'var(--text-muted)') + '; cursor:' + (canDown ? 'pointer' : 'not-allowed') + '; padding:0 2px; font-size:0.6rem;">▼</button>' +
+                             '<button onclick="event.stopPropagation(); FEAMeshOutline.toggleSuppress(\'' + itemId + '\')" title="Suppress/Unsuppress" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; padding:0 3px; font-size:0.66rem;" onmouseenter="this.style.color=\'var(--accent-warning)\'" onmouseleave="this.style.color=\'var(--text-secondary)\'">' + (iState === 'suppressed' ? '◉' : '⊘') + '</button>' +
                              '<button onclick="event.stopPropagation(); FEAMeshOutline.removeControl(\'' + itemId + '\')" title="Sil" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; padding:0 3px; font-size:0.66rem;" onmouseenter="this.style.color=\'var(--accent-danger)\'" onmouseleave="this.style.color=\'var(--text-secondary)\'">✕</button>';
             html3 += _renderRow({
               outlineId:  itemId,
@@ -1130,7 +1248,11 @@
       virtualTopology: { plural: 'Virtual Topology', description: 'Birden çok yüzü tek bir mesh edilecek bölge olarak gruplar (ANSYS §8.2).' },
       bc:              { plural: 'Sınır Koşulu',     description: 'Geometriye uygulanan yük/kısıt: Fixed Support, Kuvvet, Basınç, Yer Değiştirme. Her biri bir yüze scope edilir.' },
       result:          { plural: 'Sonuç',            description: 'Çözüm sonrası gösterilecek alanlar: Total Deformation, von-Mises Stress, vb. Her biri 3D görüntüleyicide ayrı heat-map.' },
-      userNS:          { plural: 'Named Selection',  description: 'Tekrar kullanılabilir yüz grubu. Bir kez tanımla → Face Sizing, BC, Refinement vb. kontrollerden referansla doldur (DRY). ANSYS Named Selections muadili.' }
+      userNS:          { plural: 'Named Selection',  description: 'Tekrar kullanılabilir yüz grubu. Bir kez tanımla → Face Sizing, BC, Refinement vb. kontrollerden referansla doldur (DRY). ANSYS Named Selections muadili.' },
+      matchControl:    { plural: 'Match Control',    description: 'İki yüz arasında node-to-node eşleşme (ANSYS §5.3). Cyclic veya arbitrary; her iki yüzde aynı sayıda node oluşur.' },
+      pinch:           { plural: 'Pinch',            description: 'Küçük edge/vertex\'leri mesh seviyesinde sıkıştır (ANSYS §5.6). Master/slave; toleranstan küçük detaylar yutulur.' },
+      gasket:          { plural: 'Gasket',           description: 'Conta (gasket) body\'leri için özel mesh (ANSYS §5.7). Thickness ve layers parametreleri ile özel kalınlık-yönlü mesh.' },
+      coordinateSystem:{ plural: 'Koordinat Sistemi', description: 'Lokal kartezyen/silindirik CS (ANSYS §3). SoI merkezi, yük yönü, sonuç ekseni referansı.' }
     };
     var info = labels[controlType] || { plural: controlType, description: '' };
 
@@ -1386,6 +1508,35 @@
     refresh();
   }
 
+  // C.9 — Kontrol listesi içinde reorder (yukarı/aşağı). dir: -1 = yukarı, +1 = aşağı.
+  // Ağaç sırası ≠ işlem sırası (rapor §4.3) — sadece görsel sıralama.
+  // suppressFlags id'leri de listenin yeni sırasına göre güncellenir.
+  function moveControl(outlineId, dir) {
+    var parsed = _parseControlOutlineId(outlineId);
+    if (!parsed) return;
+    var meshNode = _activeMeshNode();
+    if (!meshNode) return;
+    var list = _getControlList(meshNode, parsed.controlType).slice();
+    var i = parsed.index, j = i + (dir < 0 ? -1 : 1);
+    if (i < 0 || i >= list.length || j < 0 || j >= list.length) return;
+    var tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+    _setControlList(meshNode, parsed.controlType, list);
+    // Suppress flag id'lerini de takasla
+    var ct = parsed.controlType;
+    var flags = (meshNode.data.meshSettings && meshNode.data.meshSettings.suppressFlags) || {};
+    var keyI = 'cl:' + ct + '[' + i + ']';
+    var keyJ = 'cl:' + ct + '[' + j + ']';
+    var sI = flags[keyI], sJ = flags[keyJ];
+    if (sI) flags[keyJ] = true; else delete flags[keyJ];
+    if (sJ) flags[keyI] = true; else delete flags[keyI];
+    // Seçimi de takip et
+    var state = _getOutlineState(meshNode);
+    if (state.selected === keyI) state.selected = keyJ;
+    else if (state.selected === keyJ) state.selected = keyI;
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    refresh();
+  }
+
   function renameControl(outlineId, newName) {
     var parsed = _parseControlOutlineId(outlineId);
     if (!parsed) return;
@@ -1440,6 +1591,7 @@
     toggleExpand:       toggleExpand,
     addControl:         addControl,
     removeControl:      removeControl,
+    moveControl:        moveControl,
     toggleSuppress:     toggleSuppress,
     renameControl:      renameControl,
     updateControlField: updateControlField,

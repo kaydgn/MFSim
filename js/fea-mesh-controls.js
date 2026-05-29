@@ -619,6 +619,172 @@
     return html;
   }
 
+  // ─── 3.11 MATCH CONTROL (C.15) ─────────────────────────────────────────────
+  function _renderMatchControlItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'matchControl', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'matchControl';
+    var faces = _faceList(meshNode);
+    var faceOptions = faces.map(function(f) { return { id: f.id, label: f.label || ('Face ' + f.id) }; });
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Match ' + (idx + 1));
+    html += _sectionTitle('Yüz Çifti');
+    function faceSelect(field, val) {
+      var opts = '<option value="">— seç —</option>';
+      faceOptions.forEach(function(f) {
+        opts += '<option value="' + _esc(String(f.id)) + '"' + (String(val) === String(f.id) ? ' selected' : '') + '>' + _esc(f.label) + '</option>';
+      });
+      return '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'' + field + '\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' + opts + '</select>';
+    }
+    html += _row('Yüz 1', faceSelect('face1', c.face1));
+    html += _row('Yüz 2', faceSelect('face2', c.face2));
+    html += _sectionTitle('Tip');
+    html += _row('Eşleşme', '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'type\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="arbitrary"' + ((c.type || 'arbitrary') === 'arbitrary' ? ' selected' : '') + '>Arbitrary (genel)</option>' +
+      '<option value="cyclic"' + (c.type === 'cyclic' ? ' selected' : '') + '>Cyclic (dönel sembol)</option>' +
+      '</select>');
+    if (c.face1 != null && c.face2 != null && String(c.face1) === String(c.face2)) {
+      html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(245,158,11,0.1); border-left:2px solid var(--accent-warning); font-size:0.55rem; color:var(--accent-warning);">⚠ İki yüz farklı olmalı.</div>';
+    }
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // ─── 3.12 PINCH (C.15) ─────────────────────────────────────────────────────
+  function _renderPinchItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'pinch', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'pinch';
+    var et = c.entityType || 'edge';
+    var items = [], listKey = '';
+    if (et === 'edge') {
+      var edges = _edgeList(meshNode);
+      if (edges.length > 0) items = edges.map(function(e, i) { return { id: e.id != null ? e.id : i, label: e.label || ('Edge ' + (e.id != null ? e.id : i)) }; });
+      else {
+        var topo = _getTopology(meshNode); var n = (topo && topo.edges && topo.edges.count) ? topo.edges.count : 12;
+        for (var k = 0; k < n; k++) items.push({ id: k, label: 'Edge ' + k });
+      }
+      listKey = 'entities';
+    } else {
+      items = _vertexList(meshNode).map(function(v) { return { id: v.id, label: v.label || ('Vertex ' + v.id) }; });
+      listKey = 'entities';
+    }
+    var sel = Array.isArray(c.entities) ? c.entities : [];
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Pinch ' + (idx + 1));
+    html += _sectionTitle('Entity Tipi');
+    html += _row('Tip', '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'entityType\', this.value); FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'entities\', [])" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="edge"' + (et === 'edge' ? ' selected' : '') + '>Edge</option>' +
+      '<option value="vertex"' + (et === 'vertex' ? ' selected' : '') + '>Vertex</option>' +
+      '</select>');
+    html += _sectionTitle('Scope');
+    html += _multiSelect(items, sel, 'FEAMeshControls._toggleListId.bind(null,"' + ct + '",' + idx + ',"entities")');
+    html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-top:2px;">' + sel.length + ' ' + et + ' seçili</div>';
+    html += _sectionTitle('Tolerans');
+    html += _row('Pinch toleransı (mm)',
+      '<input type="number" step="0.05" min="0.001" value="' + (c.tolerance != null ? c.tolerance : '') + '" ' +
+      'onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'tolerance\', parseFloat(this.value))" ' +
+      'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">'
+    );
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // ─── 3.13 GASKET (C.15) ────────────────────────────────────────────────────
+  function _renderGasketItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'gasket', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'gasket';
+    var bodies = _bodyList(meshNode);
+    var html = '';
+    html += _renameRow(ct, idx, c.name, 'Gasket ' + (idx + 1));
+    html += _sectionTitle('Scope (Body)');
+    html += _multiSelect(
+      bodies.map(function(b) { return { id: b.id, label: b.label || ('Body ' + b.id) }; }),
+      Array.isArray(c.bodyIds) ? c.bodyIds : [],
+      'FEAMeshControls._toggleListId.bind(null,"' + ct + '",' + idx + ',"bodyIds")'
+    );
+    html += _sectionTitle('Parametreler');
+    html += _row('Kalınlık (mm)',
+      '<input type="number" step="0.1" min="0.01" value="' + (c.thickness != null ? c.thickness : 1) + '" ' +
+      'onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'thickness\', parseFloat(this.value))" ' +
+      'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">'
+    );
+    html += _row('Katman sayısı',
+      '<input type="number" step="1" min="1" max="20" value="' + (c.layers || 1) + '" ' +
+      'onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'layers\', parseInt(this.value,10))" ' +
+      'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">'
+    );
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  // ─── 3.14 COORDINATE SYSTEM (C.12) ─────────────────────────────────────────
+  function _renderCSItem(meshNode, idx) {
+    var c = _getControl(meshNode, 'coordinateSystem', idx);
+    if (!c) return '<div style="padding:10px; color:var(--text-muted);">Kontrol bulunamadı.</div>';
+    var ct = 'coordinateSystem';
+    var origin = Array.isArray(c.origin) ? c.origin : [0, 0, 0];
+    var rot = Array.isArray(c.rotationDeg) ? c.rotationDeg : [0, 0, 0];
+    var html = '';
+    html += _renameRow(ct, idx, c.name, ((c.csType === 'cylindrical') ? 'CS-Silindirik ' : 'CS-Kartezyen ') + (idx + 1));
+    html += _sectionTitle('Tip');
+    html += _row('Sistem',
+      '<select onchange="FEAMeshControls._setField(\'' + ct + '\',' + idx + ',\'csType\', this.value)" style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+      '<option value="cartesian"' + ((c.csType || 'cartesian') === 'cartesian' ? ' selected' : '') + '>Kartezyen (X/Y/Z)</option>' +
+      '<option value="cylindrical"' + (c.csType === 'cylindrical' ? ' selected' : '') + '>Silindirik (R/θ/Z)</option>' +
+      '</select>'
+    );
+    html += _sectionTitle('Orijin');
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:6px;">';
+    ['X', 'Y', 'Z'].forEach(function(ax, k) {
+      html += '<div><label style="display:block; font-size:0.55rem; color:var(--text-muted); margin-bottom:2px;">' + ax + ' (mm)</label>' +
+        '<input type="number" step="0.5" value="' + (origin[k] != null ? origin[k] : 0) + '" ' +
+        'onchange="FEAMeshControls._setCSField(' + idx + ',\'origin\',' + k + ', this.value)" ' +
+        'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"></div>';
+    });
+    html += '</div>';
+    html += _sectionTitle('Dönüş (derece)');
+    html += '<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px;">';
+    ['RX', 'RY', 'RZ'].forEach(function(ax, k) {
+      html += '<div><label style="display:block; font-size:0.55rem; color:var(--text-muted); margin-bottom:2px;">' + ax + ' (°)</label>' +
+        '<input type="number" step="1" value="' + (rot[k] != null ? rot[k] : 0) + '" ' +
+        'onchange="FEAMeshControls._setCSField(' + idx + ',\'rotationDeg\',' + k + ', this.value)" ' +
+        'style="width:100%; padding:4px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"></div>';
+    });
+    html += '</div>';
+    html += '<div style="margin-top:8px; padding:6px 8px; background:rgba(59,130,246,0.08); border-left:2px solid var(--accent-primary); font-size:0.55rem; color:var(--text-secondary);">ℹ SoI merkezi, yük yönü, sonuç ekseni gibi yerlerde referans olarak seçilebilir (ileri faz).</div>';
+    html += '<div style="display:flex; gap:6px; margin-top:10px;">';
+    html += _suppressBar(meshNode, ct, idx);
+    html += _deleteBtn(ct, idx);
+    html += '</div>';
+    return html;
+  }
+
+  function _setCSField(idx, field, k, raw) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode || !global.FEAMeshOutline) return;
+    var list = global.FEAMeshOutline._getControlList(meshNode, 'coordinateSystem').slice();
+    var c = list[idx];
+    if (!c) return;
+    var v = parseFloat(raw); if (!isFinite(v)) v = 0;
+    var arr = Array.isArray(c[field]) ? c[field].slice() : [0, 0, 0];
+    arr[k] = v;
+    c[field] = arr;
+    global.FEAMeshOutline._setControlList(meshNode, 'coordinateSystem', list);
+    if (typeof global.saveState === 'function') { try { global.saveState(); } catch (e) {} }
+    global.FEAMeshOutline.refresh();
+  }
+
   // ─── 3.10 USER NAMED SELECTION (B.8 — DRY) ─────────────────────────────────
   function _renderUserNSItem(meshNode, idx) {
     var c = _getControl(meshNode, 'userNS', idx);
@@ -718,7 +884,11 @@
     virtualTopology: _renderVirtualTopologyItem,
     bc:              _renderBCItem,
     result:          _renderResultItem,
-    userNS:          _renderUserNSItem
+    userNS:          _renderUserNSItem,
+    matchControl:    _renderMatchControlItem,
+    pinch:           _renderPinchItem,
+    gasket:          _renderGasketItem,
+    coordinateSystem:_renderCSItem
   };
 
   function renderControlDetail(meshNode, controlType, idx) {
@@ -1091,7 +1261,8 @@
     _set3DFaceToBC:             _set3DFaceToBC,
     _currentSelectedFaceId:     _currentSelectedFaceId,
     _importFromNS:              _importFromNS,
-    _importFromNSSelected:      _importFromNSSelected
+    _importFromNSSelected:      _importFromNSSelected,
+    _setCSField:                _setCSField
   };
 
   global.FEAMeshControls = api;
