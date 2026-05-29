@@ -441,6 +441,125 @@ describe('B.8 — Named Selections DRY (userNS)', () => {
   });
 });
 
+describe('C.10 — Tree filter / search', () => {
+  function makeModuleNode(data) {
+    return { id: 'fea-1', type: 'fea', data: Object.assign(veFEACreateModuleData(), data || {}) };
+  }
+
+  test('setFilter outline state\'ine yazar', () => {
+    const node = makeModuleNode();
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.setFilter('boyut');
+    expect(node.data.meshSettings.outline.filter).toBe('boyut');
+  });
+
+  test('filter "Sınır" sadece Sınır Koşulları dalını gösterir', () => {
+    const node = makeModuleNode();
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.setFilter('Sınır');
+    const html = FEAMeshOutline.render();
+    expect(html).toMatch(/Sınır Koşulları/);
+    expect(html).not.toMatch(/Geometri/);   // root altı geometry dalı görünmez
+  });
+
+  test('filter control item label\'ı eşleşince parent görünür', () => {
+    const node = makeModuleNode({ meshSettings: Object.assign(veFEACreateModuleData().meshSettings, {
+      bodySizingControls: [{ name: 'Bolt holes — sıkı', bodyIds: [0], size: 1 }]
+    }) });
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.setFilter('Bolt');
+    const html = FEAMeshOutline.render();
+    expect(html).toMatch(/Bolt holes/);
+    expect(html).toMatch(/Body Sizing/);
+    expect(html).toMatch(/Mesh/);  // ancestor görünür
+  });
+
+  test('filter boşsa her şey görünür', () => {
+    const node = makeModuleNode();
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.setFilter('');
+    const html = FEAMeshOutline.render();
+    expect(html).toMatch(/Geometri/);
+    expect(html).toMatch(/Mesh/);
+    expect(html).toMatch(/Sınır Koşulları/);
+  });
+});
+
+describe('C.11 — Go To (kapsam ters-arama)', () => {
+  function makeModuleNode(data) {
+    return { id: 'fea-1', type: 'fea', data: Object.assign(veFEACreateModuleData(), data || {}) };
+  }
+
+  test('findScopeUsers face\'i kullanan tüm kontrolleri döner', () => {
+    const node = makeModuleNode({ meshSettings: Object.assign(veFEACreateModuleData().meshSettings, {
+      faceSizingControls: [{ faceIds: ['faceXMin', 'faceYMax'], size: 2 }],
+      refinementControls: [{ entityType: 'face', faceIds: ['faceXMin'], level: 2 }],
+      virtualTopology: [{ faceIds: ['faceXMax', 'faceYMax'] }]
+    }) });
+    node.data.bc.assignments = [{ faceId: 'faceXMin', kind: 'fixed' }];
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    const users = FEAMeshOutline.findScopeUsers(node, 'faceXMin');
+    const types = users.map((u) => u.controlType).sort();
+    expect(types).toEqual(['bc', 'faceSizing', 'refinement']);
+    users.forEach((u) => expect(u.outlineId).toMatch(/^cl:[a-zA-Z]+\[\d+\]$/));
+  });
+
+  test('findScopeUsers eşleşme yoksa boş dizi', () => {
+    const node = makeModuleNode();
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    expect(FEAMeshOutline.findScopeUsers(node, 'faceXMin')).toEqual([]);
+  });
+
+  test('string/number faceId esnek eşleşir', () => {
+    const node = makeModuleNode({ meshSettings: Object.assign(veFEACreateModuleData().meshSettings, {
+      faceSizingControls: [{ faceIds: [3], size: 1 }]
+    }) });
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    expect(FEAMeshOutline.findScopeUsers(node, '3')).toHaveLength(1);
+    expect(FEAMeshOutline.findScopeUsers(node, 3)).toHaveLength(1);
+  });
+
+  test('showScopeUsersForSelected: yüz seçili değilse no-op (showToast)', () => {
+    const node = makeModuleNode();
+    global.nodes = [node];
+    global.showToast = jest.fn();
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.showScopeUsersForSelected();
+    expect(global.showToast).toHaveBeenCalled();
+    expect(node.data.meshSettings.outline.goToFaceId).toBeUndefined();
+  });
+
+  test('seçili yüzle Go To → outline state\'e goToFaceId yazılır + render banner', () => {
+    const node = makeModuleNode({ meshSettings: Object.assign(veFEACreateModuleData().meshSettings, {
+      faceSizingControls: [{ faceIds: ['faceXMin'], size: 2 }]
+    }) });
+    node.data.selectedFaceId = 'faceXMin';
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.showScopeUsersForSelected();
+    expect(node.data.meshSettings.outline.goToFaceId).toBe('faceXMin');
+    const html = FEAMeshOutline.render();
+    expect(html).toMatch(/Bu yüze scope edilen/);
+    expect(html).toMatch(/faceXMin/);
+  });
+
+  test('clearGoTo banner\'ı kaldırır', () => {
+    const node = makeModuleNode();
+    node.data.meshSettings.outline = { selected:'single:geometry', expanded:{}, splitPct:50, filter:'', goToFaceId:'faceXMin' };
+    global.nodes = [node];
+    FEAMeshOutline.init('fea-1');
+    FEAMeshOutline.clearGoTo();
+    expect(node.data.meshSettings.outline.goToFaceId).toBeUndefined();
+  });
+});
+
 describe('Upstream helper tek-node-farkındalığı', () => {
   test('_veFEAFindUpstreamGeometryNode birleşik node\'u kendisi döndürür', () => {
     const node = { id: 'fea-1', type: 'fea', data: { geometry: { type: 'box' }, meshSettings: {}, bc: {}, solver: {} } };

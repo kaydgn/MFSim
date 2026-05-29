@@ -470,9 +470,11 @@
       meshNode.data.meshSettings.outline = {
         selected:  'single:geometry',
         expanded:  _defaultExpanded(),
-        splitPct:  50
+        splitPct:  50,
+        filter:    ''
       };
     }
+    if (meshNode.data.meshSettings.outline.filter == null) meshNode.data.meshSettings.outline.filter = '';
     if (!meshNode.data.meshSettings.suppressFlags) {
       meshNode.data.meshSettings.suppressFlags = {};
     }
@@ -695,13 +697,147 @@
     var state = _getOutlineState(meshNode);
 
     var html = '';
+    html += _goToBannerHTML(meshNode, state);
     html += '<div class="ve-fea-outline-tree" style="padding:6px 0 8px; font-size:0.66rem; user-select:none;">';
     html += _renderNode(SCHEMA, meshNode, state, 0);
     html += '</div>';
     return html;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // C.10 — Tree filter / search
+  // ─────────────────────────────────────────────────────────────────────────
+  // Bir schema node'un (ve descendant'larının) filter'a uyup uymadığını döner.
+  // Control list item'ları için meta.labelOf ile dinamik label da kontrol edilir.
+  function _passesFilter(meshNode, schemaNode, filter) {
+    if (!filter) return true;
+    var f = filter.toLowerCase();
+    if ((schemaNode.label || '').toLowerCase().indexOf(f) >= 0) return true;
+    if (schemaNode.type === 'controlList') {
+      var meta = CONTROL_META[schemaNode.controlType];
+      if (meta) {
+        var list = _getControlList(meshNode, schemaNode.controlType);
+        for (var i = 0; i < list.length; i++) {
+          if ((meta.labelOf(list[i], i) || '').toLowerCase().indexOf(f) >= 0) return true;
+        }
+      }
+    }
+    if (Array.isArray(schemaNode.children)) {
+      for (var j = 0; j < schemaNode.children.length; j++) {
+        if (_passesFilter(meshNode, schemaNode.children[j], filter)) return true;
+      }
+    }
+    return false;
+  }
+
+  function setFilter(value) {
+    var meshNode = _activeMeshNode();
+    if (!meshNode) return;
+    var state = _getOutlineState(meshNode);
+    state.filter = String(value || '');
+    refresh();
+  }
+
+  // ─── C.11 — Go To: bir yüze hangi kontroller/BC scope edilmiş? ──────────
+  // Yüz vermek lazım; faceId genelde topology face id (string veya number).
+  function findScopeUsers(meshNode, faceId) {
+    if (!meshNode || faceId == null) return [];
+    var users = [];
+    var faceScopedTypes = ['faceSizing', 'refinement', 'virtualTopology', 'userNS'];
+    faceScopedTypes.forEach(function(ct) {
+      var meta = CONTROL_META[ct];
+      if (!meta) return;
+      var list = _getControlList(meshNode, ct);
+      list.forEach(function(c, idx) {
+        if (!c) return;
+        var ids = [];
+        if (Array.isArray(c.faceIds)) ids = c.faceIds;
+        else if (c.faceId != null) ids = [c.faceId];
+        // string/number eşitliği esnek tut
+        var match = false;
+        for (var k = 0; k < ids.length; k++) {
+          if (String(ids[k]) === String(faceId)) { match = true; break; }
+        }
+        if (match) {
+          users.push({
+            outlineId:   _controlOutlineId(ct, idx),
+            controlType: ct,
+            index:       idx,
+            label:       meta.labelOf(c, idx)
+          });
+        }
+      });
+    });
+    // BC assignments (tek face scope)
+    var bcMeta = CONTROL_META.bc;
+    if (bcMeta) {
+      var bcList = _getControlList(meshNode, 'bc');
+      bcList.forEach(function(c, idx) {
+        if (c && c.faceId != null && String(c.faceId) === String(faceId)) {
+          users.push({
+            outlineId:   _controlOutlineId('bc', idx),
+            controlType: 'bc',
+            index:       idx,
+            label:       bcMeta.labelOf(c, idx)
+          });
+        }
+      });
+    }
+    return users;
+  }
+
+  // Go To: viewer'da seçili yüzü kullanan kontrolleri outline'da banner olarak göster
+  function showScopeUsersForSelected() {
+    var meshNode = _activeMeshNode();
+    if (!meshNode) return;
+    var faceId = null;
+    var reg = global.veFEAViewerRegistry;
+    if (reg && reg[meshNode.id] && typeof reg[meshNode.id].getSelectedFace === 'function') {
+      faceId = reg[meshNode.id].getSelectedFace();
+    }
+    if (faceId == null) faceId = (meshNode.data && meshNode.data.selectedFaceId != null) ? meshNode.data.selectedFaceId : null;
+    if (faceId == null) {
+      if (typeof global.showToast === 'function') global.showToast('Önce 3D görüntüleyicide bir yüze tıklayın.', 'warning');
+      return;
+    }
+    var state = _getOutlineState(meshNode);
+    state.goToFaceId = faceId;
+    refresh();
+  }
+
+  function clearGoTo() {
+    var meshNode = _activeMeshNode();
+    if (!meshNode) return;
+    var state = _getOutlineState(meshNode);
+    delete state.goToFaceId;
+    refresh();
+  }
+
+  function _goToBannerHTML(meshNode, outlineState) {
+    var fid = outlineState && outlineState.goToFaceId;
+    if (fid == null) return '';
+    var users = findScopeUsers(meshNode, fid);
+    var html = '<div style="margin:4px 6px 8px; padding:6px 8px; background:rgba(59,130,246,0.12); border-left:3px solid var(--accent-primary, #3b82f6); font-size:0.6rem;">';
+    html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">';
+    html += '<b style="color:var(--text-heading);">🔎 Bu yüze scope edilen kontroller: <span style="color:var(--accent-primary);">' + _escapeHtml(String(fid)) + '</span></b>';
+    html += '<button onclick="FEAMeshOutline.clearGoTo()" title="Kapat" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:0.7rem;">✕</button>';
+    html += '</div>';
+    if (users.length === 0) {
+      html += '<div style="color:var(--text-muted); font-style:italic;">Hiçbir kontrol bu yüze scope edilmemiş.</div>';
+    } else {
+      users.forEach(function(u) {
+        html += '<div onclick="FEAMeshOutline.select(\'' + u.outlineId + '\')" style="padding:3px 6px; margin:2px 0; background:var(--bg-primary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">' +
+          '→ <b>' + _escapeHtml(u.label) + '</b> <span style="color:var(--text-muted); font-size:0.52rem;">(' + u.controlType + ')</span></div>';
+      });
+    }
+    html += '</div>';
+    return html;
+  }
+
   function _renderNode(schemaNode, meshNode, outlineState, depth) {
+    var filter = (outlineState && outlineState.filter) || '';
+    if (filter && !_passesFilter(meshNode, schemaNode, filter)) return '';
+
     if (schemaNode.type === 'root') {
       // Root satırı: outline başlığı + state özet
       var rootState = computeNodeState(meshNode, schemaNode.id);
@@ -727,7 +863,8 @@
 
     if (schemaNode.type === 'group') {
       var groupState = computeNodeState(meshNode, schemaNode.id);
-      var expanded = outlineState.expanded[schemaNode.id] !== false; // default true
+      // Filter aktifse zorla aç, aksi halde state'ten
+      var expanded = filter ? true : (outlineState.expanded[schemaNode.id] !== false);
       var html2 = _renderRow({
         outlineId:  schemaNode.id,
         label:      schemaNode.label,
@@ -771,7 +908,8 @@
       var ct = schemaNode.controlType;
       var list = _getControlList(meshNode, ct);
       var groupOutlineId = schemaNode.id;
-      var listExpanded = outlineState.expanded[groupOutlineId] === true; // default false
+      // Filter aktifse grubu otomatik aç (sonuç görünür olsun)
+      var listExpanded = filter ? true : (outlineState.expanded[groupOutlineId] === true);
       var groupState2 = computeNodeState(meshNode, groupOutlineId);
 
       // Sağ taraf: kontrol sayısı + (+ ekle) butonu
@@ -802,6 +940,8 @@
             var itemId = _controlOutlineId(ct, idx);
             var meta = CONTROL_META[ct];
             var lbl  = meta.labelOf(c, idx);
+            // Filter aktifse uymayan item'ı atla
+            if (filter && (lbl || '').toLowerCase().indexOf(filter.toLowerCase()) < 0) return;
             var iState = computeNodeState(meshNode, itemId);
             var sel = outlineState.selected === itemId;
             var rightExtra = '<button onclick="event.stopPropagation(); FEAMeshOutline.toggleSuppress(\'' + itemId + '\')" title="Suppress/Unsuppress" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; padding:0 3px; font-size:0.66rem;" onmouseenter="this.style.color=\'var(--accent-warning)\'" onmouseleave="this.style.color=\'var(--text-secondary)\'">' + (iState === 'suppressed' ? '◉' : '⊘') + '</button>' +
@@ -1306,6 +1446,10 @@
     activeSelection:    activeSelection,
     activeMeshNodeId:   activeMeshNodeId,
     deactivate:         deactivate,
+    setFilter:          setFilter,
+    findScopeUsers:     findScopeUsers,
+    showScopeUsersForSelected: showScopeUsersForSelected,
+    clearGoTo:          clearGoTo,
     computeNodeState:   computeNodeState,
     isSuppressed:       function(meshNode, outlineId) { return _isSuppressed(meshNode, outlineId); },
     // Internal (test için)
