@@ -2863,7 +2863,8 @@ function mfsimLogout() {
   </div>
   <div class="ve-tab-group">
     <div class="ve-sub-tabs visible" id="ve-sub-tabs">
-      <button class="ve-sub-tab active" onclick="veSubTabDegistir('anasayfa')" data-subtab="anasayfa">Ana Sayfa</button>
+      <button class="ve-sub-tab active" onclick="veSubTabDegistir('arac-performans')" data-subtab="arac-performans">Araç Performans</button>
+      <button class="ve-sub-tab" onclick="veSubTabDegistir('sonlu-elemanlar')" data-subtab="sonlu-elemanlar">Sonlu Elemanlar</button>
       <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
     </div>
   </div>
@@ -3380,23 +3381,27 @@ tabBar.classList.add('visible');
 document.body.classList.add('tab-bar-visible');
 
 // Görsel Editör sub-tab değiştirme
-var currentSubTab = 'anasayfa';
+var currentSubTab = 'arac-performans';
 
 function veSubTabDegistir(tabName) {
   currentSubTab = tabName;
-  
+
   document.querySelectorAll('.ve-sub-tab').forEach(function(btn) {
     btn.classList.toggle('active', btn.getAttribute('data-subtab') === tabName);
   });
-  
+
   document.querySelectorAll('.ve-sub-page').forEach(function(page) {
     page.style.display = 'none';
   });
-  
+
   var mainContent = document.querySelector('.ve-main');
-  
-  if(tabName === 'anasayfa') {
+
+  // 'arac-performans' ve 'sonlu-elemanlar' aynı editörü (ve-main) paylaşır;
+  // tek fark sidebar bileşen modudur. Mod değişince palet yeniden filtrelenir.
+  if(tabName === 'arac-performans' || tabName === 'sonlu-elemanlar') {
     mainContent.style.display = 'flex';
+    veSidebarMode = (tabName === 'sonlu-elemanlar') ? 'fea' : 'performans';
+    if(typeof veShowAllSidebarComponents === 'function') veShowAllSidebarComponents();
   } else {
     mainContent.style.display = 'none';
     var page = document.getElementById('ve-page-' + tabName);
@@ -8369,8 +8374,14 @@ function veSelectModuleFromOverlay(mode) {
   if(overlay) overlay.style.display = 'none';
 
   veActiveModule = 'full-throttle';
-  veSidebarMode = (mode === 'sonlu-elemanlar' || mode === 'fea') ? 'fea' : 'performans';
-  veShowAllSidebarComponents();
+  var sub = (mode === 'sonlu-elemanlar' || mode === 'fea') ? 'sonlu-elemanlar' : 'arac-performans';
+  // Üst bar sekmesini de güncelle (aktif sekme + sidebar filtresi tek yerden).
+  if(typeof veSubTabDegistir === 'function') {
+    veSubTabDegistir(sub);
+  } else {
+    veSidebarMode = (sub === 'sonlu-elemanlar') ? 'fea' : 'performans';
+    veShowAllSidebarComponents();
+  }
   showToast(veSidebarMode === 'fea' ? 'Sonlu Elemanlar aktif' : 'Araç Performans aktif', 'info');
 }
 

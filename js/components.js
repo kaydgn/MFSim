@@ -43,8 +43,14 @@ function veSelectModuleFromOverlay(mode) {
   if(overlay) overlay.style.display = 'none';
 
   veActiveModule = 'full-throttle';
-  veSidebarMode = (mode === 'sonlu-elemanlar' || mode === 'fea') ? 'fea' : 'performans';
-  veShowAllSidebarComponents();
+  var sub = (mode === 'sonlu-elemanlar' || mode === 'fea') ? 'sonlu-elemanlar' : 'arac-performans';
+  // Üst bar sekmesini de güncelle (aktif sekme + sidebar filtresi tek yerden).
+  if(typeof veSubTabDegistir === 'function') {
+    veSubTabDegistir(sub);
+  } else {
+    veSidebarMode = (sub === 'sonlu-elemanlar') ? 'fea' : 'performans';
+    veShowAllSidebarComponents();
+  }
   showToast(veSidebarMode === 'fea' ? 'Sonlu Elemanlar aktif' : 'Araç Performans aktif', 'info');
 }
 
