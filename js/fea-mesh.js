@@ -426,6 +426,101 @@ function _veFEAGenericEnrich(mesh, edgeTemplate, newType, newPerElement, project
   };
 }
 
+// ─── Eğri yüzey projektörü (kuadratik mid-side düğümler için) ───────────────
+// veFEAMeshFromGeometry, midSideNodes:true iken kuadratik zenginleştirmeye
+// (_veFEAGenericEnrich) bir "projector" geçirir. Projektör, bir KENARIN İKİ UCU
+// DA eğri yüzeyde ise orta-kenar düğümünü o yüzeye projekte eder; aksi halde
+// null döner (düz kenar-ortası korunur). Böylece yalnız yüzey kenarları gerçek
+// yay temsil eder; iç kenarlar bozulmaz ve eleman ters dönmez (radyal dışa
+// doğru sagitta küçüktür).
+//
+// İmza: projector(midX, midY, midZ, aId, bId) → [x,y,z] | null
+//
+// Konvansiyonlar (primitif mesher'larla birebir — eksen Y, merkez orijin):
+//   sphere/hemisphere : yüzey √(x²+y²+z²)=r (yarımkürede düz taban y=0, uçları
+//                       orijinden r uzakta olmadığı için otomatik atlanır)
+//   cylinder          : yanal yüzey √(x²+z²)=r
+//   cone              : R(y)=rb+(rt-rb)·(y-yMin)/H, yüzey √(x²+z²)=R(y)
+//   diğer (box, ibeam, lbracket, recttube, plate, torus) → null
+function _veFEABuildSurfaceProjector(geometry, mesh) {
+  if (!geometry || !geometry.type || !mesh || !mesh.nodes) return null;
+  var type = geometry.type;
+  var p = geometry.params || {};
+  var nodes = mesh.nodes;
+
+  function rad3(id) {   // orijinden uzaklık (küre/yarımküre)
+    var x = nodes[id * 3], y = nodes[id * 3 + 1], z = nodes[id * 3 + 2];
+    return Math.sqrt(x * x + y * y + z * z);
+  }
+  function radXZ(id) {  // Y eksenine radyal uzaklık (silindir/koni)
+    var x = nodes[id * 3], z = nodes[id * 3 + 2];
+    return Math.sqrt(x * x + z * z);
+  }
+
+  if (type === 'sphere' || type === 'hemisphere') {
+    var R = Math.max(0, +p.radius || 0);
+    if (!R) return null;
+    var tol = Math.max(1e-3, R * 0.01);
+    return function(mx, my, mz, a, b) {
+      if (Math.abs(rad3(a) - R) > tol || Math.abs(rad3(b) - R) > tol) return null;
+      var d = Math.sqrt(mx * mx + my * my + mz * mz);
+      if (d < 1e-9) return null;
+      var s = R / d;
+      return [mx * s, my * s, mz * s];
+    };
+  }
+
+  if (type === 'cylinder') {
+    var Rc = Math.max(0, +p.radius || 0);
+    if (!Rc) return null;
+    var tolc = Math.max(1e-3, Rc * 0.01);
+    return function(mx, my, mz, a, b) {
+      if (Math.abs(radXZ(a) - Rc) > tolc || Math.abs(radXZ(b) - Rc) > tolc) return null;
+      var rr = Math.sqrt(mx * mx + mz * mz);
+      if (rr < 1e-9) return null;
+      var s = Rc / rr;
+      return [mx * s, my, mz * s];  // eksenel (y) korunur
+    };
+  }
+
+  if (type === 'cone') {
+    var rb = (p.bottomRadius != null) ? Math.max(0, +p.bottomRadius) : Math.max(0, +p.radius || 0);
+    var rt = (p.topRadius != null) ? Math.max(0, +p.topRadius) : 0;
+    var maxR = Math.max(rb, rt);
+    if (!(maxR > 0)) return null;
+    // y aralığı mesh bbox'tan türetilir (merkez konumundan bağımsız)
+    var yMin = Infinity, yMax = -Infinity;
+    for (var i = 1; i < nodes.length; i += 3) {
+      var yv = nodes[i];
+      if (yv < yMin) yMin = yv;
+      if (yv > yMax) yMax = yv;
+    }
+    var H = yMax - yMin;
+    if (!(H > 1e-9)) return null;
+    var tolk = Math.max(1e-3, maxR * 0.01);
+    var Rof = function(y) {
+      var t = (y - yMin) / H;
+      if (t < 0) t = 0; else if (t > 1) t = 1;
+      return rb + (rt - rb) * t;
+    };
+    var onCone = function(id) {
+      var Ry = Rof(nodes[id * 3 + 1]);
+      return Ry > 1e-9 && Math.abs(radXZ(id) - Ry) <= tolk;
+    };
+    return function(mx, my, mz, a, b) {
+      if (!onCone(a) || !onCone(b)) return null;
+      var Ry = Rof(my);
+      if (Ry < 1e-9) return null;
+      var rr = Math.sqrt(mx * mx + mz * mz);
+      if (rr < 1e-9) return null;
+      var s = Ry / rr;
+      return [mx * s, my, mz * s];
+    };
+  }
+
+  return null; // düz yüzeyli / desteklenmeyen tip → projeksiyon yok
+}
+
 function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
   var out = {
     type: 'tet4',
