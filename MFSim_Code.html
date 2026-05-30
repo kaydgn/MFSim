@@ -10757,6 +10757,14 @@ function escapeHTML(str) {
 var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 } };
 
 function veAttachNodeDrag(nodeEl, node) {
+  // Çift tık → Özellikler modal'ını aç (tek tık sadece seçim yapar).
+  nodeEl.addEventListener('dblclick', function(e) {
+    if(e.target.classList.contains('ve-node-port')) return;
+    if(e.target.classList.contains('ve-resize-handle')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+  });
   nodeEl.addEventListener('mousedown', function(e) {
     if(e.target.classList.contains('ve-node-port')) return;
     if(e.target.classList.contains('ve-resize-handle')) return;
@@ -11715,8 +11723,8 @@ function showNodeProperties(node) {
   
   
   content.innerHTML = html;
-  // Tek-tık akışı: modal'ı otomatik aç (yan-panel YOK, popup)
-  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+  // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
+  // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 
 
   // Motor bileşeni için grafik çiz ve kategori dropdown'ı doldur
@@ -53854,7 +53862,7 @@ function showMultipleSelection() {
   html += '</div>';
 
   content.innerHTML = html;
-  veTogglePropertiesPanel(true);  // tek tık → modal otomatik açılır
+  // Modal otomatik açılmaz — kullanıcı çift tık ile veya marker'a tıklayarak açar
 }
 
 function showEmptyProperties() {
