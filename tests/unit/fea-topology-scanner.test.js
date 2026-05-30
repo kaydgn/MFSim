@@ -137,6 +137,19 @@ describe('Topoloji Motoru — tarama yaşam döngüsü', () => {
     expect(veFEAIsTopologyScanning('mesh-scan6')).toBe(true);
   });
 
+  test('veFEAScanTopologyButton export edilmiş', () => {
+    expect(typeof veFEAScanTopologyButton).toBe('function');
+  });
+
+  test('veFEAScanTopologyButton primitif (STEP değil) geometride doğrudan tarar', async () => {
+    var s = setupBox('mesh-btn1');  // box geometri → STEP değil → BREP hazırlık atlanır
+    veFEAScanTopologyButton('mesh-btn1', { durationMs: 300 });
+    // _veFEAScanPrepareBrep Promise.resolve(false) → .then(veFEAStartTopologyScan)
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    expect(veFEAIsTopologyScanning('mesh-btn1')).toBe(true);
+    veFEACancelTopologyScan('mesh-btn1');
+  });
+
   test('Tarama tamamlanınca onComplete çağrılır + topologyScanned=true', (done) => {
     var s = setupBox('mesh-scan7');
     veFEAStartTopologyScan('mesh-scan7', {

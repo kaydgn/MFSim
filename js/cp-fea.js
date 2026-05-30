@@ -249,13 +249,34 @@ function getFEAGeometryPropertiesHTML(node) {
     html += veFEASectionTitle('Topoloji Motoru');
     if (scanned && summary) {
       // Tarandı — özet + yeniden tara
+      var topoObj = geom && geom.topology;
+      var isBrep = !!(topoObj && topoObj.brep);
+      var validity = topoObj && topoObj.validity;
       html += '<div style="padding:9px 11px; background:rgba(34,197,94,0.08); border-left:3px solid var(--accent-success,#22c55e); margin-bottom:8px;">';
-      html += '<div style="font-weight:700; color:var(--accent-success,#22c55e); font-size:0.64rem; margin-bottom:4px;">✓ Topoloji tanımlandı</div>';
-      html += '<div style="font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
-        '<b>' + summary.faces + '</b> yüzey · <b>' + summary.edges + '</b> kenar · <b>' + summary.vertices + '</b> köşe tespit edildi. ' +
-        'Lokal mesh ayarlarına (Face/Edge Sizing, Sphere of Influence) hazır.</div>';
+      html += '<div style="font-weight:700; color:var(--accent-success,#22c55e); font-size:0.64rem; margin-bottom:4px; display:flex; align-items:center; gap:6px;">✓ Topoloji tanımlandı';
+      if (isBrep) {
+        html += '<span style="font-size:0.5rem; font-weight:700; padding:1px 6px; background:rgba(34,197,94,0.2); color:var(--accent-success,#22c55e); border-radius:2px; letter-spacing:0.04em;">GERÇEK B-REP · OpenCASCADE</span>';
+      }
       html += '</div>';
-      html += '<button onclick="veFEAStartTopologyScan(\'' + node.id + '\', { auto: false })" style="width:100%; padding:8px 10px; font-size:0.66rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-refresh"></span> Topolojiyi Yeniden Tara</button>';
+      html += '<div style="font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">' +
+        '<b>' + summary.faces + '</b> yüzey · <b>' + summary.edges + '</b> kenar · <b>' + summary.vertices + '</b> köşe' +
+        (isBrep ? ' (CAD çekirdeğinden kesin)' : ' tespit edildi') + '. ' +
+        'Lokal mesh ayarlarına (Face/Edge Sizing, Sphere of Influence) hazır.</div>';
+      // B-Rep validity raporu (Euler-Poincaré + manifold + watertight)
+      if (isBrep && validity) {
+        var chk = function(ok) { return ok ? '<span style="color:var(--accent-success,#22c55e);">✓</span>' : '<span style="color:var(--accent-warning,#f59e0b);">⚠</span>'; };
+        html += '<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(34,197,94,0.2); font-size:0.56rem; color:var(--text-muted); display:grid; grid-template-columns:1fr 1fr; gap:2px 10px;">';
+        html += '<span>' + chk(validity.eulerOK) + ' Euler χ = ' + validity.eulerChi + '</span>';
+        html += '<span>' + chk(validity.manifold) + ' Manifold</span>';
+        html += '<span>' + chk(validity.watertight) + ' Su geçirmez</span>';
+        html += '<span>' + (validity.counts ? validity.counts.manifoldEdges + '/' + validity.counts.E + ' kenar 2-yüz' : '') + '</span>';
+        html += '</div>';
+        if (validity.issues && validity.issues.length) {
+          html += '<div style="margin-top:4px; font-size:0.54rem; color:var(--accent-warning,#f59e0b); line-height:1.4;">⚠ ' + validity.issues.join(' · ') + '</div>';
+        }
+      }
+      html += '</div>';
+      html += '<button onclick="veFEAScanTopologyButton(\'' + node.id + '\', { auto: false })" style="width:100%; padding:8px 10px; font-size:0.66rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-refresh"></span> Topolojiyi Yeniden Tara</button>';
     } else {
       // Taranmadı — zorunlu uyarı + belirgin tara butonu
       html += '<div style="padding:9px 11px; background:rgba(245,158,11,0.1); border-left:3px solid var(--accent-warning,#f59e0b); margin-bottom:8px;">';
@@ -264,7 +285,7 @@ function getFEAGeometryPropertiesHTML(node) {
         'Mesh oluşturmadan önce geometrinin tüm yüzey, kenar ve köşelerini tanımlamak için ' +
         '<b>Topoloji Motoru</b>\'nu çalıştırın. Bu adım zorunludur.</div>';
       html += '</div>';
-      html += '<button onclick="veFEAStartTopologyScan(\'' + node.id + '\', { auto: false })" style="width:100%; padding:11px 14px; font-size:0.72rem; font-weight:700; background:var(--accent-success,#22c55e); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseenter="this.style.filter=\'brightness(1.12)\'" onmouseleave="this.style.filter=\'none\'"><span class="mf-ico mf-ico-search"></span> ▶ Topolojiyi Tara</button>';
+      html += '<button onclick="veFEAScanTopologyButton(\'' + node.id + '\', { auto: false })" style="width:100%; padding:11px 14px; font-size:0.72rem; font-weight:700; background:var(--accent-success,#22c55e); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseenter="this.style.filter=\'brightness(1.12)\'" onmouseleave="this.style.filter=\'none\'"><span class="mf-ico mf-ico-search"></span> ▶ Topolojiyi Tara</button>';
     }
   }
 

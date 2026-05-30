@@ -34,6 +34,90 @@ var VE_FEA_SCAN_VERTEX_COLOR = 0xfbbf24;  // sarı
 var _veFEAActiveScanState = {};
 
 // Bir mesh node'u için topoloji taramasını başlat.
+// ─── Buton girişi: STEP ise önce gerçek BREP topolojisi çıkar, sonra tara ────
+// cp-fea Geometri sekmesindeki "Topolojiyi Tara" butonu bunu çağırır.
+// STEP geometri + rawData + full OCCT mevcutsa: 65MB WASM lazy-load + gerçek
+// B-Rep topolojisi (Euler, gerçek tipler). Aksi halde mevcut analitik/mesh
+// topolojiyle doğrudan tarama (graceful fallback).
+function veFEAScanTopologyButton(nodeId, opts) {
+  opts = opts || {};
+  _veFEAScanPrepareBrep(nodeId).then(function() {
+    veFEAStartTopologyScan(nodeId, opts);
+  }).catch(function(err) {
+    console.warn('[FEA Scan] BREP hazırlık hatası, mevcut topoloji ile devam:', err && err.message);
+    veFEAStartTopologyScan(nodeId, opts);
+  });
+}
+
+// STEP geometri için full OCCT BREP topolojisini lazy-load ile hazırla.
+// Dönüş: Promise (her durumda resolve — hata → graceful).
+function _veFEAScanPrepareBrep(nodeId) {
+  if (typeof nodes === 'undefined') return Promise.resolve(false);
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (!node) return Promise.resolve(false);
+  // Geometriyi bul (upstream veya birleşik modül)
+  var geom = _veFEAScanGeometryOf(nodeId);
+  if (!geom || geom.type !== 'step') return Promise.resolve(false);  // sadece STEP
+  // Zaten BREP topolojisi varsa tekrar etme
+  if (geom.topology && geom.topology.brep) return Promise.resolve(false);
+  // OCCT modülü ve STEP raw verisi mevcut mu?
+  if (typeof veFEAOcctTopologyFromStepBuffer !== 'function') return Promise.resolve(false);
+  if (!geom.rawDataB64 || typeof veFEABase64ToArrayBuffer !== 'function') {
+    // Raw veri yok (büyük dosya / yeniden yükleme gerekli) → fallback
+    return Promise.resolve(false);
+  }
+  var buffer;
+  try { buffer = veFEABase64ToArrayBuffer(geom.rawDataB64); }
+  catch (e) { return Promise.resolve(false); }
+
+  // Yükleme göstergesi (mesh editör overlay)
+  if (typeof veFEAEditorShowLoading === 'function') {
+    veFEAEditorShowLoading('B-Rep Topoloji Motoru yükleniyor…',
+      'OpenCASCADE çekirdeği (~65MB) ilk seferde indiriliyor. Kesin yüzey/kenar/köşe çıkarılacak.');
+  }
+  return veFEAOcctTopologyFromStepBuffer(buffer, {
+    wasmJsUrl: 'vendor/opencascade-full/opencascade.wasm.js',
+    fileName: (geom.sourceLabel || 'import') + '.step',
+    sampleEdges: true
+  }).then(function(brepTopo) {
+    if (typeof veFEAEditorHideLoading === 'function') veFEAEditorHideLoading();
+    if (brepTopo && Array.isArray(brepTopo.faces) && brepTopo.faces.length > 0) {
+      // Geometri topology'sini gerçek BREP ile değiştir (kalıcı)
+      geom.topology = brepTopo;
+      if (typeof showToast === 'function') {
+        var v = brepTopo.validity || {};
+        showToast('Gerçek B-Rep topolojisi çıkarıldı: ' + brepTopo.faces.length + ' yüz, ' +
+          brepTopo.edges.length + ' kenar, ' + brepTopo.vertices.length + ' köşe' +
+          (v.manifold ? ' (manifold ✓)' : ''), 'success');
+      }
+      return true;
+    }
+    // BREP çıkmadıysa graceful (mevcut topoloji kalır)
+    if (typeof showToast === 'function') {
+      showToast('B-Rep çıkarılamadı, mesh-tabanlı topoloji ile devam ediliyor.', 'warning');
+    }
+    return false;
+  }).catch(function(err) {
+    if (typeof veFEAEditorHideLoading === 'function') veFEAEditorHideLoading();
+    if (typeof showToast === 'function') {
+      showToast('OCCT yüklenemedi (' + (err && err.message ? err.message : 'asset yok') +
+        '). Mesh-tabanlı topoloji ile devam.', 'warning');
+    }
+    return false;
+  });
+}
+
+// nodeId için geometri nesnesini bul (upstream veya birleşik modül).
+function _veFEAScanGeometryOf(nodeId) {
+  if (typeof nodes === 'undefined') return null;
+  var geomNode = (typeof veFEAFindUpstreamGeometryNode === 'function')
+    ? veFEAFindUpstreamGeometryNode(nodeId) : null;
+  if (geomNode && geomNode.data && geomNode.data.geometry) return geomNode.data.geometry;
+  var node = nodes.find(function(n) { return n.id === nodeId; });
+  if (node && node.data && node.data.geometry) return node.data.geometry;
+  return null;
+}
+
 function veFEAStartTopologyScan(nodeId, opts) {
   opts = opts || {};
   // Zaten tarama varsa iptal et (yeniden başlat)
@@ -361,6 +445,7 @@ function _veFEAScanRemoveProgressUI(nodeId) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veFEAStartTopologyScan: veFEAStartTopologyScan,
+    veFEAScanTopologyButton: veFEAScanTopologyButton,
     veFEACancelTopologyScan: veFEACancelTopologyScan,
     veFEAIsTopologyScanning: veFEAIsTopologyScanning
   };

@@ -127,6 +127,72 @@ function _veFEAOcctLoadBrowser(opts) {
   });
 }
 
+// ─── STEP okuma: ArrayBuffer → TopoDS_Shape ─────────────────────────────────
+// STEP dosyasını OCCT'nin Emscripten sanal FS'ine yazıp STEPControl_Reader ile
+// okur, tüm root'ları transfer edip tek shape döndürür. occt-import-js'ten
+// (tessellation) farklı olarak GERÇEK B-Rep TopoDS_Shape verir.
+//   oc: yüklenmiş instance, buffer: ArrayBuffer|Uint8Array, fileName: opsiyonel
+// Dönüş: { shape, ok, message }
+function veFEAOcctReadStepBuffer(oc, buffer, fileName) {
+  var name = fileName || 'import.step';
+  var data = (buffer instanceof Uint8Array) ? buffer : new Uint8Array(buffer);
+  var wrote = false;
+  try {
+    // Sanal FS'e yaz (kök dizinde)
+    oc.FS.createDataFile('/', name, data, true, true, true);
+    wrote = true;
+    var reader = new oc.STEPControl_Reader_1();
+    var status = reader.ReadFile(name);
+    // IFSelect_ReturnStatus.IFSelect_RetDone = 1 → başarılı
+    var sval = (status && typeof status === 'object' && 'value' in status) ? status.value : status;
+    if (sval !== 1 && sval !== 0) {
+      _veFEAOcctFsUnlink(oc, name);
+      return { shape: null, ok: false, message: 'STEP okunamadı (status ' + sval + ')' };
+    }
+    // Root'ları transfer et. opencascade.js v1.1.1'de TransferRoots()
+    // parametresizdir (ProgressRange OCCT 7.5+ ile geldi, bu build'de yok).
+    try {
+      reader.TransferRoots();
+    } catch (e) {
+      // Yeni sürüm imzası (ProgressRange) → fallback
+      try {
+        var pr = new oc.Message_ProgressRange_1();
+        reader.TransferRoots(pr);
+        pr.delete && pr.delete();
+      } catch (e2) { /* transfer edilemedi, OneShape yine denenecek */ }
+    }
+    var shape = reader.OneShape();
+    _veFEAOcctFsUnlink(oc, name);
+    if (!shape || (shape.IsNull && shape.IsNull())) {
+      return { shape: null, ok: false, message: 'STEP boş shape döndürdü' };
+    }
+    return { shape: shape, ok: true, message: 'ok' };
+  } catch (e) {
+    if (wrote) _veFEAOcctFsUnlink(oc, name);
+    return { shape: null, ok: false, message: (e && e.message) || String(e) };
+  }
+}
+
+function _veFEAOcctFsUnlink(oc, name) {
+  try { oc.FS.unlink('/' + name); } catch (e) { try { oc.FS.unlink(name); } catch (e2) {} }
+}
+
+// Yüksek seviye: ArrayBuffer → topology (lazy-load + read + extract).
+// Browser'da fea-step.js'in çağıracağı tek fonksiyon.
+//   buffer: STEP ArrayBuffer, opts: { wasmJsUrl, fileName, sampleEdges, distDir }
+// Dönüş: Promise<topology|null>
+function veFEAOcctTopologyFromStepBuffer(buffer, opts) {
+  opts = opts || {};
+  return veFEAOcctLoad(opts).then(function(oc) {
+    var r = veFEAOcctReadStepBuffer(oc, buffer, opts.fileName);
+    if (!r.ok || !r.shape) {
+      console.warn('[FEA OCCT] STEP read başarısız:', r.message);
+      return null;
+    }
+    return veFEAOcctShapeToTopology(oc, r.shape, opts);
+  });
+}
+
 // ─── Topoloji çıkarımı: TopoDS_Shape → TopoModel ────────────────────────────
 // oc: yüklenmiş opencascade instance, shape: TopoDS_Shape
 // opts: { sampleEdges:bool (polyline üret, default true), maxEdgePts:int }
@@ -490,6 +556,8 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veFEAOcctLoad: veFEAOcctLoad,
     veFEAOcctShapeToTopology: veFEAOcctShapeToTopology,
+    veFEAOcctReadStepBuffer: veFEAOcctReadStepBuffer,
+    veFEAOcctTopologyFromStepBuffer: veFEAOcctTopologyFromStepBuffer,
     veFEAOcctIsAvailable: veFEAOcctIsAvailable,
     VE_OCCT_SURF: VE_OCCT_SURF,
     VE_OCCT_CURVE: VE_OCCT_CURVE
