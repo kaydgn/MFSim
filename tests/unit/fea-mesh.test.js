@@ -18,6 +18,7 @@ eval(fs.readFileSync(path.join(ROOT, 'js/fea-primitives.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-step.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-topology.js'), 'utf8'));
+eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-smoothing.js'), 'utf8'));
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8'));
 // ANSYS-tarz outline + lokal kontroller (Faz 3b) — editor'dan önce
 eval(fs.readFileSync(path.join(ROOT, 'js/fea-mesh-outline.js'), 'utf8'));

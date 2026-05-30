@@ -633,6 +633,16 @@ function veFEASubmitMeshBuild(nodeId) {
         meshNode.data.meshSettings.tetgenRadiusEdgeRatio = rer;
       }
     }
+    // Mesh smoothing ayarları (ANSYS-tarzı quality optimization)
+    var smoothEl = document.getElementById('ve-fea-mesh-smoothing-' + nodeId);
+    var smoothItEl = document.getElementById('ve-fea-mesh-smoothing-iter-' + nodeId);
+    meshNode.data.meshSettings.smoothing = smoothEl ? !!smoothEl.checked : (S.smoothing !== false);
+    if (smoothItEl) {
+      var nit = parseInt(smoothItEl.value, 10);
+      if (isFinite(nit) && nit >= 0 && nit <= 20) {
+        meshNode.data.meshSettings.smoothingIterations = nit;
+      }
+    }
   }
   veFEABuildMeshForNode(nodeId);
 }

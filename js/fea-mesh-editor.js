@@ -1747,6 +1747,23 @@ function _veFEAEditorDefaultsHTML(node) {
     'Lisans: MIT (Mikola Lysenko). Saf JS, WASM yok.' +
     '</div>';
 
+  // ─── Mesh Smoothing (ANSYS-tarzı quality optimization) ───────────────────
+  var useSmoothing = settings.smoothing !== false;
+  var smoothIter = (settings.smoothingIterations != null) ? settings.smoothingIterations : 3;
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin:10px 0 4px; display:flex; align-items:center; gap:6px;">' +
+    'Mesh Smoothing <span style="color:var(--text-muted); font-size:0.52rem;">(ANSYS §7 quality opt.)</span></div>';
+  html += '<label style="display:flex; align-items:center; gap:6px; padding:6px 8px; margin-bottom:6px; background:var(--bg-primary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
+    '<input type="checkbox" id="ve-fea-mesh-smoothing-' + node.id + '"' + (useSmoothing ? ' checked' : '') + ' onchange="veFEASetMeshSetting(\'' + node.id + '\', \'smoothing\', this.checked)" style="margin:0;">' +
+    '<span>Smart Laplacian smoothing <span style="color:var(--text-muted);">(iç düğüm kalitesi ↑)</span></span>' +
+    '</label>';
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; padding-left:24px;">' +
+    '<label for="ve-fea-mesh-smoothing-iter-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">İterasyon sayısı</label>' +
+    '<input id="ve-fea-mesh-smoothing-iter-' + node.id + '" type="number" min="0" max="20" step="1" value="' + smoothIter + '" onchange="veFEASetMeshSetting(\'' + node.id + '\', \'smoothingIterations\', parseInt(this.value,10))" style="width:60px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+    '</div>';
+  html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:6px; line-height:1.4;">' +
+    'Yüzey düğümleri sabit kalır; yalnız iç düğümler kaliteyi artıracak şekilde hareket eder (monoton — bozmaz).' +
+    '</div>';
+
   return html;
 }
 
