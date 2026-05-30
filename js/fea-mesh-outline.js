@@ -137,7 +137,8 @@
               { id: 'inspect:display',     type: 'readonly', label: 'Görünüm Modu',       icon: '◐', detail: 'display' },
               { id: 'inspect:suggestions', type: 'readonly', label: 'Adaptif İnceltme Önerileri', icon: '💡', detail: 'suggestions' },
               { id: 'inspect:convergence', type: 'readonly', label: 'Convergence Study',  icon: '〰', detail: 'convergence' },
-              { id: 'inspect:topology',    type: 'readonly', label: 'Geometri Topolojisi', icon: '◊', detail: 'topology' }
+              { id: 'inspect:topology',    type: 'readonly', label: 'Geometri Topolojisi', icon: '◊', detail: 'topology' },
+              { id: 'inspect:selftest',    type: 'readonly', label: 'Mesh Self-Test / Tanılama', icon: '🩺', detail: 'selftest' }
             ]
           }
         ]
@@ -1204,7 +1205,8 @@
       'inspect:display':    function(n) { return (typeof _veFEAEditorDisplayHTML === 'function') ? _veFEAEditorDisplayHTML(n) : _emptyDetail('Display renderer yüklenmedi'); },
       'inspect:suggestions':function(n) { return (typeof _veFEAEditorSuggestionsHTML === 'function') ? _veFEAEditorSuggestionsHTML(n) : _emptyDetail('Suggestions renderer yüklenmedi'); },
       'inspect:convergence':function(n) { return (typeof _veFEAEditorConvergenceHTML === 'function') ? _veFEAEditorConvergenceHTML(n) : _emptyDetail('Convergence renderer yüklenmedi'); },
-      'inspect:topology':   function(n) { return (typeof _veFEAEditorTopologyHTML === 'function') ? _veFEAEditorTopologyHTML(n) : _emptyDetail('Topology renderer yüklenmedi'); }
+      'inspect:topology':   function(n) { return (typeof _veFEAEditorTopologyHTML === 'function') ? _veFEAEditorTopologyHTML(n) : _emptyDetail('Topology renderer yüklenmedi'); },
+      'inspect:selftest':   function(n) { return (typeof _veFEAEditorSelfTestHTML === 'function') ? _veFEAEditorSelfTestHTML(n) : _emptyDetail('Self-Test renderer yüklenmedi'); }
     };
 
     if (legacyDispatch[outlineId]) return legacyDispatch[outlineId](meshNode);
