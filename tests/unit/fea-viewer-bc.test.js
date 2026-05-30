@@ -83,6 +83,20 @@ describe('fea-viewer.js — kaynak güvenceleri', () => {
     expect(src).toMatch(/new\s+THREE\.EdgesGeometry/);
   });
 
+  test('mesh-pick modu mouse handler\'larına bağlı (hover + click)', () => {
+    // Regresyon: bu wiring daha önce sessizce uygulanmadan kalmıştı.
+    expect(src).toMatch(/hoverMeshElement\(e\.clientX, e\.clientY\)/);
+    expect(src).toMatch(/pickMeshElementFromMouse\(e\.clientX, e\.clientY\)/);
+    expect(src).toMatch(/selectMeshElement\(meid\)/);
+  });
+
+  test('mesh eleman seçimi API yöntemleri tanımlı', () => {
+    ['pickMeshElementFromMouse', 'selectMeshElement', 'hoverMeshElement', 'clearMeshElementSelection']
+      .forEach(function(fn) {
+        expect(src).toMatch(new RegExp(fn + ':\\s*function'));
+      });
+  });
+
   test('_veFEAApplyClipPlanesToObject helper tanımlı', () => {
     expect(src).toMatch(/function _veFEAApplyClipPlanesToObject/);
   });
@@ -202,10 +216,22 @@ describe('viewer davranış testleri (Three.js mock)', () => {
       AxesHelper: function() { return { traverse: function(f) { f(this); } }; },
       SphereGeometry: function() { this.dispose = function() {}; },
       EdgesGeometry: function() { this.dispose = function() {}; },
+      BufferAttribute: function(array, itemSize) { this.array = array; this.itemSize = itemSize; this.count = array ? array.length / itemSize : 0; },
       BufferGeometry: function() {
         this.dispose = function() {};
         this.attributes = {};
         this.setFromPoints = function() { return this; };
+        this.setAttribute = function(name, attr) { this.attributes[name] = attr; return this; };
+        this.getAttribute = function(name) { return this.attributes[name]; };
+        this.computeVertexNormals = function() {};
+        this.computeBoundingSphere = function() {};
+        this.setIndex = function() {};
+      },
+      PointsMaterial: function(opts) { Object.assign(this, opts || {}); this.dispose = function() {}; },
+      Points: function(geo, mat) {
+        this.geometry = geo; this.material = mat; this.userData = {}; this.children = [];
+        this.renderOrder = 0;
+        this.traverse = function(f) { f(this); };
       },
       LineBasicMaterial: function() { this.dispose = function() {}; },
       LineSegments: function(geo, mat) {
@@ -281,6 +307,81 @@ describe('viewer davranış testleri (Three.js mock)', () => {
   afterEach(() => {
     delete global.THREE;
     document.body.innerHTML = '';
+  });
+
+  // ─── Mesh eleman seçimi (mesh-pick modu) ───────────────────────────────────
+  test('setPointerMode "mesh-pick" modunu kabul eder', () => {
+    viewer.setPointerMode('mesh-pick');
+    expect(viewer.getPointerMode()).toBe('mesh-pick');
+  });
+
+  test('_ensureElementCentroids eleman centroid\'lerini hesaplar (tek hex8)', () => {
+    // Birim küp (8 köşe) → tek hex8 elemanı, centroid (0.5,0.5,0.5)
+    viewer._meshData = {
+      type: 'hex8', nodesPerElement: 8,
+      nodes: [0,0,0, 1,0,0, 1,1,0, 0,1,0, 0,0,1, 1,0,1, 1,1,1, 0,1,1],
+      elements: [0,1,2,3,4,5,6,7]
+    };
+    var cen = viewer._ensureElementCentroids();
+    expect(cen.length).toBe(3);
+    expect(cen[0]).toBeCloseTo(0.5, 5);
+    expect(cen[1]).toBeCloseTo(0.5, 5);
+    expect(cen[2]).toBeCloseTo(0.5, 5);
+  });
+
+  test('pickMeshElementFromMouse vurulan noktaya en yakın elemanı döner', () => {
+    // İki tet4: 0. eleman orijin civarı, 1. eleman x=10 civarı
+    viewer._meshData = {
+      type: 'tet4', nodesPerElement: 4,
+      nodes: [
+        0,0,0, 1,0,0, 0,1,0, 0,0,1,            // eleman 0 düğümleri
+        10,0,0, 11,0,0, 10,1,0, 10,0,1          // eleman 1 düğümleri
+      ],
+      elements: [0,1,2,3, 4,5,6,7]
+    };
+    // pickPointFromMouse'u sabit bir noktaya stub'la (raycaster gerektirmez)
+    viewer.pickPointFromMouse = function() { return { x: 10, y: 0.2, z: 0.2 }; };
+    expect(viewer.pickMeshElementFromMouse(0, 0)).toBe(1);
+    viewer.pickPointFromMouse = function() { return { x: 0.2, y: 0.2, z: 0.2 }; };
+    expect(viewer.pickMeshElementFromMouse(0, 0)).toBe(0);
+  });
+
+  test('pickMeshElementFromMouse: nokta yoksa null', () => {
+    viewer._meshData = { type: 'tet4', nodesPerElement: 4, nodes: [0,0,0,1,0,0,0,1,0,0,0,1], elements: [0,1,2,3] };
+    viewer.pickPointFromMouse = function() { return null; };
+    expect(viewer.pickMeshElementFromMouse(0, 0)).toBeNull();
+  });
+
+  test('selectMeshElement elemanı vurgular + etiketi günceller; null temizler', () => {
+    document.body.innerHTML = '<canvas id="ve-fea-mesh-canvas-N1"></canvas>' +
+      '<div id="ve-fea-mesh-pick-label-N1" style="display:none;"></div>';
+    var c = document.getElementById('ve-fea-mesh-canvas-N1');
+    var v = veFEAInitViewer(c, { width: 400, height: 300 });
+    v._meshData = {
+      type: 'tet4', nodesPerElement: 4,
+      nodes: [0,0,0, 1,0,0, 0,1,0, 0,0,1], elements: [0,1,2,3]
+    };
+    v.selectMeshElement(0);
+    expect(v._selectedMeshElement).toBe(0);
+    expect(v._meshElementHighlight).not.toBeNull();
+    var label = document.getElementById('ve-fea-mesh-pick-label-N1');
+    expect(label.style.display).toBe('block');
+    expect(label.textContent).toBe('Eleman #0');
+    // Temizle
+    v.selectMeshElement(null);
+    expect(v._selectedMeshElement).toBeNull();
+    expect(v._meshElementHighlight).toBeNull();
+    expect(label.style.display).toBe('none');
+  });
+
+  test('clearMeshElementSelection seçim + hover overlay\'lerini temizler', () => {
+    viewer._meshData = { type: 'tet4', nodesPerElement: 4, nodes: [0,0,0,1,0,0,0,1,0,0,0,1], elements: [0,1,2,3] };
+    viewer.selectMeshElement(0);
+    expect(viewer._selectedMeshElement).toBe(0);
+    viewer.clearMeshElementSelection();
+    expect(viewer._selectedMeshElement).toBeNull();
+    expect(viewer._meshElementHighlight).toBeNull();
+    expect(viewer._meshElementHover).toBeNull();
   });
 
   test('viewer başlangıçta shaded mode, opacity=1, projection=perspective', () => {
