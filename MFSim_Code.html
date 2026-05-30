@@ -29130,6 +29130,110 @@ function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
   return out;
 }
 
+// Kuadratik mid-side düğüm yüzey projektörü. Eğri primitiflerde (küre,
+// yarımküre dome, silindir yanal, koni yanal) kenar orta düğümünü analitik
+// yüzeye projekte eder; böylece tet10/hex20/wedge15 elemanları eğri yüzeyi
+// 2. dereceden gerçekçi temsil eder (düz kenar ortası ~0.5mm sapardı).
+//
+// Dönüş: projector(midX, midY, midZ, aId, bId) → [x,y,z] | null
+//   - null → lineer (düz) konum korunur (düz yüzeyler, iç kenarlar).
+//   - Yalnızca İKİ ucu da analitik yüzeyde olan kenarlar projekte edilir;
+//     böylece iç hacim kenarları ve düz yüzeyler (kutu) etkilenmez.
+// geometry yoksa veya eğri yüzeyli değilse null döner (projeksiyon yok).
+function _veFEABuildSurfaceProjector(geometry, mesh) {
+  if (!geometry || !geometry.type || !mesh || !mesh.nodes) return null;
+  var nodes = mesh.nodes;
+  var p = geometry.params || {};
+  // Bir düğümün analitik yüzeyde olup olmadığını test eden + üzerine projekte
+  // eden yardımcılar tipe göre seçilir. Tolerans yüzey ölçeğine göreli.
+  function nx(id) { return nodes[id * 3]; }
+  function ny(id) { return nodes[id * 3 + 1]; }
+  function nz(id) { return nodes[id * 3 + 2]; }
+
+  if (geometry.type === 'sphere') {
+    var R = Math.max(0.5, p.radius || 25);
+    var tol = Math.max(1e-4, R * 0.02);
+    var onSphere = function (id) {
+      var d = Math.sqrt(nx(id) * nx(id) + ny(id) * ny(id) + nz(id) * nz(id));
+      return Math.abs(d - R) <= tol;
+    };
+    return function (mxv, myv, mzv, a, b) {
+      if (!onSphere(a) || !onSphere(b)) return null;
+      var d = Math.sqrt(mxv * mxv + myv * myv + mzv * mzv);
+      if (d < 1e-9) return null;
+      var s = R / d;
+      return [mxv * s, myv * s, mzv * s];
+    };
+  }
+
+  if (geometry.type === 'hemisphere') {
+    var Rh = Math.max(0.5, p.radius || 25);
+    var tolh = Math.max(1e-4, Rh * 0.02);
+    // Dome yüzeyi: |pos| ≈ R ve y > 0 (alt düz disk hariç).
+    var onDome = function (id) {
+      if (ny(id) <= tolh) return false; // alt düz disk → projekte etme
+      var d = Math.sqrt(nx(id) * nx(id) + ny(id) * ny(id) + nz(id) * nz(id));
+      return Math.abs(d - Rh) <= tolh;
+    };
+    return function (mxv, myv, mzv, a, b) {
+      if (!onDome(a) || !onDome(b)) return null;
+      var d = Math.sqrt(mxv * mxv + myv * myv + mzv * mzv);
+      if (d < 1e-9) return null;
+      var s = Rh / d;
+      return [mxv * s, myv * s, mzv * s];
+    };
+  }
+
+  if (geometry.type === 'cylinder') {
+    var Rc = Math.max(0.1, p.radius || 15);
+    var tolc = Math.max(1e-4, Rc * 0.02);
+    // Yanal yüzey: eksenden (Y) radyal mesafe ≈ R. Üst/alt kapaklar değil.
+    var onLateral = function (id) {
+      var rr = Math.sqrt(nx(id) * nx(id) + nz(id) * nz(id));
+      return Math.abs(rr - Rc) <= tolc;
+    };
+    return function (mxv, myv, mzv, a, b) {
+      if (!onLateral(a) || !onLateral(b)) return null;
+      var rr = Math.sqrt(mxv * mxv + mzv * mzv);
+      if (rr < 1e-9) return null;
+      var s = Rc / rr;
+      return [mxv * s, myv, mzv * s]; // yalnızca radyal projeksiyon (Y korunur)
+    };
+  }
+
+  if (geometry.type === 'cone') {
+    var rB = Math.max(0.1, p.bottomRadius || 20);
+    var rT = Math.max(0, p.topRadius || 0);
+    var hC = Math.max(0.1, p.height || 60);
+    var half = hC / 2;
+    var rMax = Math.max(rB, rT);
+    var toln = Math.max(1e-4, rMax * 0.03);
+    // y → o yükseklikteki beklenen yarıçap (lineer interpolasyon, eksen Y).
+    var radiusAt = function (y) {
+      var t = (y + half) / hC; if (t < 0) t = 0; else if (t > 1) t = 1;
+      return rB + (rT - rB) * t;
+    };
+    var onLateralCone = function (id) {
+      var rr = Math.sqrt(nx(id) * nx(id) + nz(id) * nz(id));
+      var rExp = radiusAt(ny(id));
+      if (rExp < 1e-6) return false; // apex civarı → projekte etme
+      return Math.abs(rr - rExp) <= toln;
+    };
+    return function (mxv, myv, mzv, a, b) {
+      if (!onLateralCone(a) || !onLateralCone(b)) return null;
+      var rExp = radiusAt(myv);
+      if (rExp < 1e-6) return null;
+      var rr = Math.sqrt(mxv * mxv + mzv * mzv);
+      if (rr < 1e-9) return null;
+      var s = rExp / rr;
+      return [mxv * s, myv, mzv * s];
+    };
+  }
+
+  // Düz yüzeyli / desteklenmeyen tipler (kutu, ibeam, vb.) → projeksiyon yok.
+  return null;
+}
+
 function veFEAMeshFromGeometry(geometry, opts) {
   if (!geometry || !geometry.type) return null;
   opts = opts || {};
