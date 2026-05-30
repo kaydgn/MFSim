@@ -323,6 +323,18 @@ describe('FEAMeshOutline — rendering', () => {
     expect(html).toContain('Suppress Et');       // suppress button
   });
 
+  test('seçili satır metni tema değişkeni kullanır (açık temada görünürlük)', () => {
+    // Regresyon: seçili satır metni sabit açık-mavi (#bfdbfe) idi ve açık
+    // temalarda görünmüyordu. Artık --text-heading kullanılmalı.
+    const node = makeMeshNode();
+    global.nodes = [node];
+    FEAMeshOutline.init('mesh-1');
+    FEAMeshOutline.select('single:geometry');
+    const html = FEAMeshOutline.render();
+    expect(html).not.toContain('#bfdbfe');
+    expect(html).toContain('var(--text-heading)');
+  });
+
   test('isSuppressed reflects flag state', () => {
     const node = makeMeshNode({
       bodySizingControls: [{ bodyIds: [0], size: 5 }],

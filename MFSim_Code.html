@@ -33123,7 +33123,9 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
     var fg = 'var(--text-primary)';
     if (opts.selected) {
       bg = 'rgba(59,130,246,0.18)';
-      fg = '#bfdbfe';
+      // Tema değişkeni kullan: açık temalarda koyu, koyu temalarda açık metin.
+      // Sabit açık-mavi (#bfdbfe) açık temalarda görünmez oluyordu.
+      fg = 'var(--text-heading)';
     }
     var fontStyle = opts.suppressed ? 'text-decoration:line-through; opacity:0.55;' : '';
     var clickHandler = '';
