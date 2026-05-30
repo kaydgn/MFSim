@@ -72,6 +72,7 @@
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
       <div class="ve-menu-divider"></div>
+      <div class="ve-menu-item" onclick="veOpenStatusModal()"><span class="mf-ico mf-ico-refresh"></span> Program Durumu</div>
       <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
@@ -340,11 +341,6 @@
 
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
-        <!-- Bileşen sembolü: bir bileşen seçilince canvas sol kenarında belirir (sidebar reveal'ın aynası); tıklayınca Özellikler paneli soldan açılır -->
-        <button id="ve-comp-marker" class="ve-comp-marker" onclick="veTogglePropertiesPanel()" title="Özellikler" aria-label="Özellikler panelini aç">
-          <span class="ve-comp-marker-svg" id="ve-comp-marker-svg"></span>
-          <span class="mf-ico mf-ico-chevrons-right ve-comp-marker-arrow"></span>
-        </button>
         <div class="ve-tab-bar" id="ve-tab-bar"></div>
         <div class="ve-split-container" id="ve-split-container">
           <div class="ve-split-pane focused" id="ve-pane-0">
@@ -551,6 +547,7 @@
 <!-- type="text/x-mfsim-defer" => tarayici execute etmez, loader.js yonetir. -->
 <script type="text/x-mfsim-defer" src="js/theme.js" data-mfsim-label="Tema motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/settings.js" data-mfsim-label="Ayarlar paneli..."></script>
+<script type="text/x-mfsim-defer" src="js/status.js" data-mfsim-label="Program durumu paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/tabs.js" data-mfsim-label="Sekmeler hazırlanıyor..."></script>
 <script type="text/x-mfsim-defer" src="js/results.js" data-mfsim-label="Sonuç paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/components.js" data-mfsim-label="Bileşen kütüphanesi..."></script>
@@ -640,6 +637,19 @@
       <button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Kapat">✕</button>
     </div>
     <div class="ve-properties-content"></div>
+  </div>
+</div>
+
+<!-- ═══ PROGRAM DURUMU MODALI ═══ -->
+<div id="ve-status-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veCloseStatusModal()">
+  <div class="ve-settings-modal" role="dialog" aria-labelledby="ve-status-title">
+    <div class="ve-settings-header">
+      <span id="ve-status-title"><span class="mf-ico mf-ico-refresh"></span> Program Durumu</span>
+      <button class="ve-settings-close" onclick="veCloseStatusModal()" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-settings-body" style="flex-direction:column;">
+      <section class="ve-settings-content" id="ve-status-content" style="width:100%;"></section>
+    </div>
   </div>
 </div>
 
