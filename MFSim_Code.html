@@ -26233,6 +26233,87 @@ function _veFEAOcctLoadBrowser(opts) {
   });
 }
 
+// ─── Shape Healing + Sewing + Validity Check (raporun §5.2-§5.3-§4.4) ──────
+// Ham STEP shape'ini ANSYS pipeline'ı gibi temizler:
+//   1. ShapeFix_Shape — tolerans uyuşmazlığı, eksik pcurve, küçük yüz onarımı
+//   2. BRepBuilderAPI_Sewing — kopuk yüzleri shell'e dik (opsiyonel, IGES kritik)
+//   3. BRepCheck_Analyzer — OCCT'nin kendi düzeyli validity check'i
+// opts: { heal:bool=true, sew:bool=false, sewTolerance:0.01,
+//         precision:0.001, minTol:1e-7, maxTol:1.0, validate:bool=true }
+// Dönüş: { shape (healed), report:{healed,sewed,wasValid,nowValid,issues[]} }
+function veFEAOcctHealShape(oc, shape, opts) {
+  opts = opts || {};
+  var doHeal = opts.heal !== false;
+  var doSew = opts.sew === true;
+  var doValidate = opts.validate !== false;
+  var report = { healed: false, sewed: false, wasValid: null, nowValid: null, issues: [] };
+  var cur = shape;
+
+  // Önce validity (heal öncesi). IsValid_1(shape) — alt-shape parametresi alır;
+  // boş = tüm shape.
+  if (doValidate) {
+    try {
+      var preCheck = new oc.BRepCheck_Analyzer(cur, true);
+      report.wasValid = preCheck.IsValid_1(cur);
+      preCheck.delete && preCheck.delete();
+    } catch (e) { report.issues.push('PreCheck: ' + (e.message || e)); }
+  }
+
+  // ShapeFix_Shape: tolerans + eksik pcurve + küçük yüz onarımı.
+  // OCCT v1.1.1 Perform() boş ProgressIndicator handle ister.
+  if (doHeal) {
+    try {
+      var fix = new oc.ShapeFix_Shape_1();
+      fix.Init(cur);
+      if (isFinite(opts.precision)) fix.SetPrecision(opts.precision);
+      if (isFinite(opts.minTol))    fix.SetMinTolerance(opts.minTol);
+      if (isFinite(opts.maxTol))    fix.SetMaxTolerance(opts.maxTol);
+      var emptyProg = new oc.Handle_Message_ProgressIndicator_1();
+      fix.Perform(emptyProg);
+      emptyProg.delete && emptyProg.delete();
+      var healed = fix.Shape();
+      if (healed && (!healed.IsNull || !healed.IsNull())) {
+        cur = healed;
+        report.healed = true;
+      }
+      fix.delete && fix.delete();
+    } catch (e) { report.issues.push('ShapeFix: ' + (e.message || e)); }
+  }
+
+  // Sewing: kopuk yüzleri birleştir (default OFF — STEP'te shell zaten kapalı,
+  // IGES'te zorunlu). Constructor: (tol, option=true, cutting=true,
+  // nonmanifold=false, ...) — opencascade.js v1.1.1 değişken imza.
+  if (doSew) {
+    try {
+      var tol = isFinite(opts.sewTolerance) ? opts.sewTolerance : 0.01;
+      var sew;
+      try { sew = new oc.BRepBuilderAPI_Sewing(tol, true, true, true, false); }
+      catch (e3) { try { sew = new oc.BRepBuilderAPI_Sewing(tol); } catch (e4) { sew = new oc.BRepBuilderAPI_Sewing(); } }
+      sew.Add(cur);
+      var pSew = new oc.Handle_Message_ProgressIndicator_1();
+      try { sew.Perform(pSew); } catch (eP) { sew.Perform(); }  // bazı build'ler argümansız
+      pSew.delete && pSew.delete();
+      var sewed = sew.SewedShape();
+      if (sewed && (!sewed.IsNull || !sewed.IsNull())) {
+        cur = sewed;
+        report.sewed = true;
+      }
+      sew.delete && sew.delete();
+    } catch (e) { report.issues.push('Sewing: ' + (e.message || e)); }
+  }
+
+  // Healing sonrası validity (BRepCheck.IsValid_1(shape))
+  if (doValidate) {
+    try {
+      var postCheck = new oc.BRepCheck_Analyzer(cur, true);
+      report.nowValid = postCheck.IsValid_1(cur);
+      postCheck.delete && postCheck.delete();
+    } catch (e) { report.issues.push('PostCheck: ' + (e.message || e)); }
+  }
+
+  return { shape: cur, report: report };
+}
+
 // ─── STEP okuma: ArrayBuffer → TopoDS_Shape ─────────────────────────────────
 // STEP dosyasını OCCT'nin Emscripten sanal FS'ine yazıp STEPControl_Reader ile
 // okur, tüm root'ları transfer edip tek shape döndürür. occt-import-js'ten
@@ -26295,7 +26376,22 @@ function veFEAOcctTopologyFromStepBuffer(buffer, opts) {
       console.warn('[FEA OCCT] STEP read başarısız:', r.message);
       return null;
     }
-    return veFEAOcctShapeToTopology(oc, r.shape, opts);
+    // Heal + (opsiyonel) sew + validity check — kötü STEP'leri sessizce kabul etme.
+    // opts.heal=false ile devre dışı; opts.sew=true ile aktif (default OFF).
+    var healed = veFEAOcctHealShape(oc, r.shape, opts);
+    var topo = veFEAOcctShapeToTopology(oc, healed.shape, opts);
+    if (topo) {
+      // Healing raporunu topology.validity'ye iliştir (UI gösterecek)
+      topo.validity = topo.validity || {};
+      topo.validity.healed = healed.report.healed;
+      topo.validity.sewed = healed.report.sewed;
+      topo.validity.wasValid = healed.report.wasValid;
+      topo.validity.brepCheckValid = healed.report.nowValid;
+      if (healed.report.issues.length) {
+        topo.validity.issues = (topo.validity.issues || []).concat(healed.report.issues);
+      }
+    }
+    return topo;
   });
 }
 
@@ -26664,6 +26760,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFEAOcctShapeToTopology: veFEAOcctShapeToTopology,
     veFEAOcctReadStepBuffer: veFEAOcctReadStepBuffer,
     veFEAOcctTopologyFromStepBuffer: veFEAOcctTopologyFromStepBuffer,
+    veFEAOcctHealShape: veFEAOcctHealShape,
     veFEAOcctIsAvailable: veFEAOcctIsAvailable,
     VE_OCCT_SURF: VE_OCCT_SURF,
     VE_OCCT_CURVE: VE_OCCT_CURVE
@@ -43070,7 +43167,7 @@ function getFEAGeometryPropertiesHTML(node) {
         '<b>' + summary.faces + '</b> yüzey · <b>' + summary.edges + '</b> kenar · <b>' + summary.vertices + '</b> köşe' +
         (isBrep ? ' (CAD çekirdeğinden kesin)' : ' tespit edildi') + '. ' +
         'Lokal mesh ayarlarına (Face/Edge Sizing, Sphere of Influence) hazır.</div>';
-      // B-Rep validity raporu (Euler-Poincaré + manifold + watertight)
+      // B-Rep validity raporu (Euler-Poincaré + manifold + watertight + healing)
       if (isBrep && validity) {
         var chk = function(ok) { return ok ? '<span style="color:var(--accent-success,#22c55e);">✓</span>' : '<span style="color:var(--accent-warning,#f59e0b);">⚠</span>'; };
         html += '<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(34,197,94,0.2); font-size:0.56rem; color:var(--text-muted); display:grid; grid-template-columns:1fr 1fr; gap:2px 10px;">';
@@ -43079,6 +43176,18 @@ function getFEAGeometryPropertiesHTML(node) {
         html += '<span>' + chk(validity.watertight) + ' Su geçirmez</span>';
         html += '<span>' + (validity.counts ? validity.counts.manifoldEdges + '/' + validity.counts.E + ' kenar 2-yüz' : '') + '</span>';
         html += '</div>';
+        // Faz 3 — Shape Healing + BRepCheck raporu
+        if (validity.healed != null || validity.brepCheckValid != null || validity.sewed != null) {
+          html += '<div style="margin-top:6px; padding:5px 8px; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); font-size:0.54rem; color:var(--text-muted);">';
+          html += '<div style="font-weight:600; color:var(--accent-success,#22c55e); margin-bottom:2px;">🔧 Shape Healing Pipeline (OCCT)</div>';
+          var bits = [];
+          if (validity.wasValid != null) bits.push(chk(validity.wasValid) + ' Import sonrası valid: ' + (validity.wasValid ? 'evet' : 'hayır'));
+          if (validity.healed) bits.push('🔧 ShapeFix onarıldı');
+          if (validity.sewed)  bits.push('🪡 Sewing uygulandı');
+          if (validity.brepCheckValid != null) bits.push(chk(validity.brepCheckValid) + ' BRepCheck_Analyzer: ' + (validity.brepCheckValid ? 'valid' : 'invalid'));
+          html += bits.join(' · ');
+          html += '</div>';
+        }
         if (validity.issues && validity.issues.length) {
           html += '<div style="margin-top:4px; font-size:0.54rem; color:var(--accent-warning,#f59e0b); line-height:1.4;">⚠ ' + validity.issues.join(' · ') + '</div>';
         }

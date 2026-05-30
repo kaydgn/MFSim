@@ -140,12 +140,36 @@ maybe('OCCT BREP topoloji çıkarımı (gerçek WASM)', () => {
     expect(sphFaces[0].radius).toBeCloseTo(7, 1);
   });
 
-  // NOT: Gerçek STEP okuma (veFEAOcctReadStepBuffer + STEPControl_Reader) manuel
-  // round-trip spike'ında doğrulandı: OCCT ile yazılan kutu STEP'i geri okununca
-  // faces=6, edges=12, Euler=2. Jest-node ortamında emscripten FS.readFile bir
-  // round-trip yazma adımında quirk veriyor; gerçek .step okuma doğrulaması
-  // fea-step.js entegrasyonu + browser E2E ile yapılır. Burada okuyucunun
-  // API kontratını (graceful failure) test ediyoruz.
+  test('Healing pipeline (Faz 3): temiz kutu BRepCheck=true + healed=true', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    const r = occt.veFEAOcctHealShape(oc, box, {});
+    expect(r.report.wasValid).toBe(true);
+    expect(r.report.nowValid).toBe(true);
+    expect(r.report.healed).toBe(true);
+    expect(r.report.issues.length).toBe(0);
+    // Healed shape hala topology'ye uygun
+    const t = occt.veFEAOcctShapeToTopology(oc, r.shape, { sampleEdges: false });
+    expect(t.faces.length).toBe(6);
+    expect(t.validity.eulerChi).toBe(2);
+  });
+
+  test('Healing + sewing (silindir): sewed=true, validity korunur', () => {
+    const cyl = new oc.BRepPrimAPI_MakeCylinder_1(5, 20).Shape();
+    const r = occt.veFEAOcctHealShape(oc, cyl, { sew: true, sewTolerance: 0.001 });
+    expect(r.report.healed).toBe(true);
+    expect(r.report.sewed).toBe(true);
+    expect(r.report.nowValid).toBe(true);
+  });
+
+  test('Heal devre dışı (heal:false) → shape değişmez, issues boş', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 1, 1, 1).Shape();
+    const r = occt.veFEAOcctHealShape(oc, box, { heal: false, validate: false });
+    expect(r.report.healed).toBe(false);
+    expect(r.report.issues.length).toBe(0);
+  });
+
   test('STEP okuma fonksiyonu export + geçersiz buffer → ok:false (graceful)', () => {
     expect(typeof occt.veFEAOcctReadStepBuffer).toBe('function');
     expect(typeof occt.veFEAOcctTopologyFromStepBuffer).toBe('function');
