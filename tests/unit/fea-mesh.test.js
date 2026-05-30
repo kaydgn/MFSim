@@ -126,11 +126,15 @@ describe('Kutu → Heks8 structured mesh', () => {
     expect(Math.abs(sz / n)).toBeLessThan(0.001);
   });
 
-  test('size çok küçük olursa clamp uygulanır (VE_FEA_MESH_MIN_SIZE)', () => {
-    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 5, height: 5, depth: 5 } }, { size: 0.01 });
-    // size 0.5'e clamp olur → 10×10×10 = 1000 element
-    expect(m.elements.length / 8).toBeLessThanOrEqual(2000);
-    expect(m.elements.length / 8).toBeGreaterThan(100);
+  test('minimum eleman boyutu kaldırıldı: küçük size daha çok eleman üretir', () => {
+    // Eski davranış: size VE_FEA_MESH_MIN_SIZE=0.5 mm'e clamp ediliyordu.
+    // Yeni: alt sınır yok (kullanıcı isteği). Aşırı küçük değer OOM yapabileceği
+    // için ölçülebilir ama güvenli bir değer kullanılır.
+    expect(VE_FEA_MESH_MIN_SIZE).toBe(0);
+    var coarse = veFEAMeshFromGeometry({ type: 'box', params: { width: 5, height: 5, depth: 5 } }, { size: 1 });
+    var fine   = veFEAMeshFromGeometry({ type: 'box', params: { width: 5, height: 5, depth: 5 } }, { size: 0.25 });
+    // size 0.25 eskiden 0.5'e clamp olur, coarse ile aynı kalırdı. Artık daha ince.
+    expect(fine.elements.length).toBeGreaterThan(coarse.elements.length);
   });
 });
 
@@ -427,6 +431,20 @@ describe('Küre → Cubed-Sphere Hex8 mesh', () => {
     expect(Object.keys(m.namedSelections)).toEqual(['faceSurface']);
     expect(m.namedSelections.faceSurface.label).toBe('Küresel Yüzey');
   });
+
+  test('Equiangular warp: kabul edilebilir kalite (inverted yok, skewness sınırlı)', () => {
+    // Equiangular cubed-sphere mapping köşe çarpıklığını azaltır. Gnomonic'e
+    // göre skewness daha düşük, orthogonal quality daha yüksek olmalı.
+    [10, 5].forEach(function (sz) {
+      var m = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: 25 } }, { size: sz });
+      var jm = veFEAComputeJacobianMetrics(m);
+      var q = veFEAComputeQualityMetrics(m);
+      expect(jm.invertedCount).toBe(0);
+      expect(jm.valid).toBe(true);
+      // Equiangular ile skewness gnomonic'ten (s=5'te ~0.91) belirgin düşük olmalı.
+      expect(q.skewness.max).toBeLessThan(0.90);
+    });
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -449,13 +467,51 @@ describe('Koni / Frustum → Hex8 mesh (cylinder O-grid + radial scaling)', () =
     expect(m.type).toBe('wedge6');
   });
 
-  test('Apex (rT=0): mesh hala oluşur (Hex8 O-grid)', () => {
+  test('Apex (rT=0): tepe tek noktaya çökertilir → tet4 (degenere hex önlenir)', () => {
+    // Eski davranış: rTeff=0.001·rMax ile "iğne hex8" → AR ~3000, Jac ~10^4.
+    // Yeni: gerçek apex tek noktaya çöker, hex→tet4 + degenere tet filtresi.
     var m = veFEAMeshFromGeometry(
       { type: 'cone', params: { bottomRadius: 20, topRadius: 0, height: 60 } },
       { size: 5 }
     );
     expect(m).not.toBeNull();
-    expect(m.type).toBe('hex8');
+    expect(m.type).toBe('tet4');
+    expect(m.apexCollapsed).toBe(true);
+  });
+
+  test('Apex (rT=0): çözücü-uyumlu — inverted/degenerate yok', () => {
+    [10, 5, 2.5].forEach(function (sz) {
+      var m = veFEAMeshFromGeometry(
+        { type: 'cone', params: { bottomRadius: 20, topRadius: 0, height: 60 } },
+        { size: sz }
+      );
+      var jm = veFEAComputeJacobianMetrics(m);
+      expect(jm.invertedCount).toBe(0);
+      expect(jm.degenerateCount).toBe(0);
+      expect(jm.minVolume).toBeGreaterThan(0);
+      expect(jm.valid).toBe(true);
+    });
+  });
+
+  test('Apex (rT=0): hacim analitik koni hacmine yakın', () => {
+    var rB = 20, h = 60;
+    var m = veFEAMeshFromGeometry(
+      { type: 'cone', params: { bottomRadius: rB, topRadius: 0, height: h } },
+      { size: 4 }
+    );
+    var el = m.elements, nd = m.nodes, vol = 0;
+    for (var e = 0; e < el.length / 4; e++) {
+      var o = e * 4;
+      var a = el[o]*3, b = el[o+1]*3, c = el[o+2]*3, d = el[o+3]*3;
+      var v1x=nd[b]-nd[a], v1y=nd[b+1]-nd[a+1], v1z=nd[b+2]-nd[a+2];
+      var v2x=nd[c]-nd[a], v2y=nd[c+1]-nd[a+1], v2z=nd[c+2]-nd[a+2];
+      var v3x=nd[d]-nd[a], v3y=nd[d+1]-nd[a+1], v3z=nd[d+2]-nd[a+2];
+      vol += Math.abs((v1x*(v2y*v3z-v2z*v3y)+v1y*(v2z*v3x-v2x*v3z)+v1z*(v2x*v3y-v2y*v3x))/6);
+    }
+    var analytic = (Math.PI * h / 3) * rB * rB;
+    // Çevresel poligon yaklaşımı nedeniyle ~%3 tolerans.
+    expect(vol).toBeGreaterThan(analytic * 0.95);
+    expect(vol).toBeLessThan(analytic * 1.02);
   });
 
   test('Üst layer yarıçapı rT, alt layer rB', () => {
@@ -523,6 +579,20 @@ describe('Torus → Hex8 O-grid sweep mesh (closed loop)', () => {
     // Topolama icin: toplam_nodes = nMajor x disk_node_count
     expect(m.nodes.length / 3 % g.nMajor).toBe(0);
     expect(g.nMinor % 4).toBe(0); // O-grid kati zorunlu
+  });
+
+  test('Tüm elemanlar pozitif Jacobian (inverted/degenerate yok)', () => {
+    // Regresyon: toroidal süpürme yön/winding hatası tüm elemanları ters
+    // çeviriyordu (negatif signed volume → çözücü patlar). Hex8 düğüm sırası
+    // silindirle aynı (pozitif) konvansiyonda olmalı.
+    [10, 5, 2.5].forEach(function (sz) {
+      var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } }, { size: sz });
+      var j = veFEAComputeJacobianMetrics(m);
+      expect(j.invertedCount).toBe(0);
+      expect(j.degenerateCount).toBe(0);
+      expect(j.minVolume).toBeGreaterThan(0);
+      expect(j.valid).toBe(true);
+    });
   });
 
   test('Yüzey düğümlerinin minor radius mesafesi (her layer için)', () => {
@@ -3892,5 +3962,88 @@ describe('_veFEALoadNodeGeometryIntoViewer — Mesh node desteği', () => {
     expect(loadPrimitiveMock).toHaveBeenCalledTimes(1);
     expect(loadPrimitiveMock).toHaveBeenCalledWith('box', expect.any(Object));
     expect(loadMeshMock).not.toHaveBeenCalled();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAMeshSelfTest — mesh kalite diagnostiği', () => {
+  test('Sonuç nesnesi doğru yapıda döner', () => {
+    var r = veFEAMeshSelfTest({ verbose: false });
+    expect(r).toHaveProperty('pass');
+    expect(r).toHaveProperty('fail');
+    expect(r).toHaveProperty('total');
+    expect(r).toHaveProperty('rows');
+    expect(r).toHaveProperty('summary');
+    expect(r.pass + r.fail).toBe(r.total);
+    expect(Array.isArray(r.rows)).toBe(true);
+    expect(r.total).toBeGreaterThan(0);
+  });
+
+  test('Düzeltilen geometriler (tor, koni-apex, küre) çözücü-uyumlu geçer', () => {
+    var r = veFEAMeshSelfTest({ verbose: false });
+    var failed = r.rows.filter(function (x) { return !x.ok; }).map(function (x) { return x.senaryo; });
+    // Tor, koni (apex+frustum) ve küre senaryolarının HİÇBİRİ başarısız olmamalı.
+    var critical = failed.filter(function (s) {
+      return /^Tor|^Koni|^Küre /.test(s);  // "Küre " (yarımküre "Y.Küre" hariç)
+    });
+    expect(critical).toEqual([]);
+  });
+
+  test('Her satırda inverted/degenerate alanları raporlanır', () => {
+    var r = veFEAMeshSelfTest({ verbose: false });
+    var passing = r.rows.filter(function (x) { return x.ok; });
+    expect(passing.length).toBeGreaterThan(0);
+    passing.forEach(function (row) {
+      expect(row.inverted).toBe(0);
+      expect(row.degenerate).toBe(0);
+    });
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('Mid-side node yüzey projeksiyonu (kuadratik eğri-temsil)', () => {
+  function maxRadialDev(mesh, r, useXZ) {
+    var mx = 0, n = mesh.nodes.length / 3;
+    for (var i = 0; i < n; i++) {
+      var x = mesh.nodes[i * 3], y = mesh.nodes[i * 3 + 1], z = mesh.nodes[i * 3 + 2];
+      var d = useXZ ? Math.sqrt(x*x + z*z) : Math.sqrt(x*x + y*y + z*z);
+      if (d > r * 0.92) { var dv = Math.abs(d - r); if (dv > mx) mx = dv; }
+    }
+    return mx;
+  }
+
+  test('Küre: kuadratik mid-side düğümler küre yüzeyine projekte edilir', () => {
+    var r = 25;
+    var q = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: r } }, { size: 8, midSideNodes: true });
+    // Projeksiyon ile yüzey düğümlerinin radyal sapması ~0 olmalı (düz kenar
+    // ortası ~0.5mm sapardı). Kuadratik eleman artık gerçek yay temsil eder.
+    expect(maxRadialDev(q, r, false)).toBeLessThan(0.05);
+    expect(veFEAComputeJacobianMetrics(q).invertedCount).toBe(0);
+  });
+
+  test('Silindir: kuadratik mid-side düğümler yanal yüzeye projekte edilir', () => {
+    var r = 15;
+    var q = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: r, height: 60 } }, { size: 8, midSideNodes: true });
+    expect(maxRadialDev(q, r, true)).toBeLessThan(0.05);
+    expect(veFEAComputeJacobianMetrics(q).invertedCount).toBe(0);
+  });
+
+  test('Projeksiyon yeni inverted eleman üretmez (küre/silindir/koni/yarımküre)', () => {
+    var cases = [
+      { type: 'sphere', params: { radius: 25 } },
+      { type: 'cylinder', params: { radius: 15, height: 60 } },
+      { type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 50 } },
+      { type: 'hemisphere', params: { radius: 25 } }
+    ];
+    cases.forEach(function (g) {
+      var q = veFEAMeshFromGeometry(g, { size: 8, midSideNodes: true });
+      expect(veFEAComputeJacobianMetrics(q).invertedCount).toBe(0);
+    });
+  });
+
+  test('Kutu (düz yüzey): projeksiyon uygulanmaz — geçerli kalır', () => {
+    var q = veFEAMeshFromGeometry({ type: 'box', params: { width: 50, height: 30, depth: 20 } }, { size: 5, midSideNodes: true });
+    expect(q.type).toBe('hex20');
+    expect(veFEAComputeJacobianMetrics(q).invertedCount).toBe(0);
   });
 });

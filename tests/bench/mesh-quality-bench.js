@@ -17,6 +17,13 @@ const path = require('path');
 const ROOT = path.join(__dirname, '../..');
 
 global.window = global;
+// Minimal DOM stub — components.js yüklenirken veObserveModuleOverlay gibi
+// DOM erişen yan-etkiler Node ortamında hata vermesin (mesh motoru DOM kullanmaz).
+global.document = global.document || {
+  getElementById: function () { return null; },
+  querySelector: function () { return null; },
+  addEventListener: function () {}
+};
 function src(p) { return fs.readFileSync(path.join(ROOT, p), 'utf8'); }
 try { eval(src('vendor/delaunay/delaunay-bundle.js')); } catch (e) {
   console.warn('[uyarı] delaunay-bundle yüklenemedi:', e.message);

@@ -13,6 +13,14 @@ function escapeHTML(str) {
 var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 } };
 
 function veAttachNodeDrag(nodeEl, node) {
+  // Çift tık → Özellikler modal'ını aç (tek tık sadece seçim yapar).
+  nodeEl.addEventListener('dblclick', function(e) {
+    if(e.target.classList.contains('ve-node-port')) return;
+    if(e.target.classList.contains('ve-resize-handle')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+  });
   nodeEl.addEventListener('mousedown', function(e) {
     if(e.target.classList.contains('ve-node-port')) return;
     if(e.target.classList.contains('ve-resize-handle')) return;
@@ -71,6 +79,9 @@ function updateCanvasTransform() {
   if(canvas) {
     canvas.style.transform = 'translate(' + canvasOffset.x + 'px, ' + canvasOffset.y + 'px) scale(' + canvasZoom + ')';
   }
+  // Alt durum çubuğundaki yakınlaştırma yüzdesini güncelle
+  var _zoomStatus = document.getElementById('ve-status-zoom');
+  if(_zoomStatus) _zoomStatus.textContent = '%' + Math.round(canvasZoom * 100);
 }
 
 // Drag başlangıcı
@@ -497,6 +508,13 @@ function createNode(type, x, y, width, height) {
       if(node.data[k] === undefined) node.data[k] = feaDefaults[k];
     });
   }
+  // Araç Performans modülü: birleşik hücre verisini (A1..A5) başlat
+  if(type === 'vehicle-performance' && typeof veVPCreateModuleData === 'function') {
+    var vpDefaults = veVPCreateModuleData();
+    Object.keys(vpDefaults).forEach(function(k) {
+      if(node.data[k] === undefined) node.data[k] = vpDefaults[k];
+    });
+  }
   
   // State kaydet
   if(typeof saveState === 'function') saveState();
@@ -510,8 +528,8 @@ function createNode(type, x, y, width, height) {
   nodeEl.style.width = node.width + 'px';
   nodeEl.setAttribute('data-type', type);
   
-  var html = '<div class="ve-node-box" style="width:' + node.width + 'px; height:' + node.height + 'px;">';
-  
+  var html = '<div class="ve-node-box' + (def.isModuleBlock ? ' ve-vp-box' : '') + '" style="width:' + node.width + 'px; height:' + node.height + 'px;">';
+
   // Giriş portları
   if(def.inputs > 0) {
     for(var pi = 0; pi < def.inputs; pi++) {
@@ -521,8 +539,12 @@ function createNode(type, x, y, width, height) {
     }
   }
   
-  // Sembol
-  html += def.svg;
+  // Sembol — modül bloğu ise dikey istiflenmiş hücreler (ANSYS sistem bloğu)
+  if(def.isModuleBlock && typeof veVPBlockInnerHTML === 'function') {
+    html += veVPBlockInnerHTML(node);
+  } else {
+    html += def.svg;
+  }
   
   // Çıkış portları
   if(def.outputs > 0) {
@@ -548,7 +570,7 @@ function createNode(type, x, y, width, height) {
   html += '<div class="ve-resize-handle ve-resize-sw" data-handle="sw"></div>';
   html += '<div class="ve-resize-handle ve-resize-w" data-handle="w"></div>';
   
-  html += '<div class="ve-node-label">' + def.name + '</div>';
+  if(!def.isModuleBlock) html += '<div class="ve-node-label">' + def.name + '</div>';
   
   if(type === 'differential') {
     if(node.data.diffRatio === undefined) node.data.diffRatio = 6.54;
@@ -604,6 +626,9 @@ function createNode(type, x, y, width, height) {
   
   // Node sürükleme — paylasilan tek-dinleyicili sistem (bkz. veAttachNodeDrag)
   veAttachNodeDrag(nodeEl, node);
+
+  // Sistem bloğu: hücre çift-tık olayları (her hücre kendi editörünü açar)
+  if(def.isModuleBlock && typeof veVPAttachCellHandlers === 'function') veVPAttachCellHandlers(nodeEl, node);
   
   // Port olayları - bağlantı oluşturma
   nodeEl.querySelectorAll('.ve-node-port').forEach(function(port) {

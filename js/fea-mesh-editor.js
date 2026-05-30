@@ -85,7 +85,8 @@ function veFEAEditorRefreshAccordions() {
     'display':     _veFEAEditorDisplayHTML(node),
     'statistics':  _veFEAEditorStatisticsHTML(node),
     'suggestions': _veFEAEditorSuggestionsHTML(node),
-    'convergence': _veFEAEditorConvergenceHTML(node)
+    'convergence': _veFEAEditorConvergenceHTML(node),
+    'selftest':    _veFEAEditorSelfTestHTML(node)
   };
   Object.keys(updates).forEach(function(k) {
     var body = document.getElementById('ve-fea-acc-body-' + k);
@@ -191,6 +192,9 @@ function veFEAOpenMeshEditor(nodeId) {
   node.data = node.data || {};
   if (!node.data.editorAccordion) node.data.editorAccordion = _veFEAEditorDefaultAccordionState();
   _veFEAEditorAccordionState = node.data.editorAccordion;
+
+  // Alttaki Özellikler modalı bu büyük editörün altında kalmasın → otomatik kapan
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
 
   // Overlay
   var overlay = document.createElement('div');
@@ -497,7 +501,7 @@ function _veFEAEditorBuildHeader(node) {
   // "Mesh Oluştur" butonu artık ağaçtaki "Ağ Ör" düğümünde (Mesh dalı altında)
   // — header sade: başlık + kapat.
   header.innerHTML = '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' +
-    '<div style="font-size:0.8rem; font-weight:700; color:var(--text-heading); white-space:nowrap;">' + titleText + '</div>' +
+    '<div style="font-size:0.72rem; font-weight:700; color:var(--text-heading); white-space:nowrap;">' + titleText + '</div>' +
     '<div style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">— ' + nodeLabel + ' (' + node.id + ')</div>' +
     '</div>' +
     '<button onclick="veFEACloseMeshEditor()" title="Kapat (ESC)" style="flex-shrink:0; width:26px; height:26px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
@@ -2816,4 +2820,65 @@ function _veFEAEditorSuggestionsHTML(node) {
     html += '</div>';
   });
   return html;
+}
+
+// ─── Mesh Self-Test / Tanılama paneli ──────────────────────────────────────
+// Tüm primitifleri kaba/orta/ince örüp çözücü-uyumluluk (inverted/degenerate)
+// kontrol eden veFEAMeshSelfTest aracını UI'dan çalıştırır. Kullanıcının
+// "programdan kontrol" isteği için: bir tık → tam mesh sağlık raporu.
+function _veFEAEditorSelfTestHTML(node) {
+  return '' +
+    '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:8px;">' +
+      'Tüm primitif geometrileri (kutu, silindir, küre, koni, tor, vb.) kaba/orta/ince ' +
+      'çözünürlükte örer ve ANSYS-tarzı kalite kontrolü yapar. <b>Kritik kontrol:</b> ' +
+      'inverted/degenerate eleman = çözücü-uyumsuzluk.' +
+    '</div>' +
+    '<button onclick="veFEARunMeshSelfTest(\'' + node.id + '\')" ' +
+      'style="width:100%; padding:8px 12px; font-size:0.7rem; font-weight:700; ' +
+      'background:var(--accent-info, #3b82f6); color:#fff; border:none; cursor:pointer; margin-bottom:8px;">' +
+      '▶ Mesh Self-Test Çalıştır</button>' +
+    '<div id="ve-fea-selftest-result-' + node.id + '"></div>';
+}
+
+// Self-test'i çalıştırır ve sonucu panele basar (UI olay handler'ı).
+function veFEARunMeshSelfTest(nodeId) {
+  var box = document.getElementById('ve-fea-selftest-result-' + nodeId);
+  if (!box) return;
+  if (typeof veFEAMeshSelfTest !== 'function') {
+    box.innerHTML = '<div style="padding:8px; font-size:0.6rem; color:var(--accent-danger,#ef4444);">veFEAMeshSelfTest bulunamadı.</div>';
+    return;
+  }
+  box.innerHTML = '<div style="padding:8px; font-size:0.62rem; color:var(--text-muted);">Çalışıyor…</div>';
+  // Bir sonraki frame'de çalıştır (UI "Çalışıyor…" gösterebilsin).
+  setTimeout(function () {
+    var r = veFEAMeshSelfTest({ verbose: false });
+    var allOk = r.fail === 0;
+    var head = '<div style="padding:6px 8px; margin-bottom:8px; font-size:0.66rem; font-weight:700; ' +
+      'background:' + (allOk ? 'rgba(34,197,94,0.12)' : 'rgba(245,158,11,0.12)') + '; ' +
+      'color:' + (allOk ? 'var(--accent-success,#22c55e)' : 'var(--accent-warning,#f59e0b)') + '; ' +
+      'border-left:3px solid ' + (allOk ? 'var(--accent-success,#22c55e)' : 'var(--accent-warning,#f59e0b)') + ';">' +
+      (allOk ? '✓ ' : '⚠ ') + r.pass + '/' + r.total + ' geçti' +
+      (allOk ? ' — tüm meshler çözücü-uyumlu' : ' — ' + r.fail + ' başarısız (inverted/degenerate)') + '</div>';
+    var rows = '<table style="width:100%; border-collapse:collapse; font-size:0.56rem;">' +
+      '<tr style="color:var(--text-secondary); text-align:left;">' +
+      '<th style="padding:3px 4px;">Senaryo</th><th>Tip</th><th>Eleman</th><th>Inv</th>' +
+      '<th>Skew</th><th>OrthoQ</th><th>AR</th><th>Sonuç</th></tr>';
+    r.rows.forEach(function (row) {
+      var c = row.ok ? 'var(--accent-success,#22c55e)' : 'var(--accent-danger,#ef4444)';
+      rows += '<tr style="border-top:1px solid var(--border-color);">' +
+        '<td style="padding:3px 4px;">' + row.senaryo + '</td>' +
+        '<td>' + (row.tip || '-') + '</td>' +
+        '<td>' + (row.eleman != null ? row.eleman : '-') + '</td>' +
+        '<td style="color:' + (row.inverted ? 'var(--accent-danger,#ef4444)' : 'inherit') + ';">' + (row.inverted != null ? row.inverted : '-') + '</td>' +
+        '<td>' + (row.skewMax != null ? row.skewMax : '-') + '</td>' +
+        '<td>' + (row.orthoMin != null ? row.orthoMin : '-') + '</td>' +
+        '<td>' + (row.arMax != null ? row.arMax : '-') + '</td>' +
+        '<td style="color:' + c + '; font-weight:700;">' + (row.ok ? '✓' : '✗') + '</td>' +
+      '</tr>';
+    });
+    rows += '</table>';
+    box.innerHTML = head + rows;
+    // Konsola da bas (programatik kontrol + kopyalanabilir log).
+    if (typeof console !== 'undefined') { veFEAMeshSelfTest(); }
+  }, 30);
 }

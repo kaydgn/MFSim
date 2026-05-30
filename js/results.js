@@ -4619,7 +4619,7 @@ function veToggleSnap() {
   SNAP_ENABLED = !SNAP_ENABLED;
   var btn = document.getElementById('ve-snap-btn');
   if(btn) {
-    btn.style.opacity = SNAP_ENABLED ? '1' : '0.4';
+    btn.classList.toggle('active', SNAP_ENABLED);
     btn.title = SNAP_ENABLED ? 'Hizalama Açık (Kapatmak için tıkla)' : 'Hizalama Kapalı (Q tuşu ile geçici aktif)';
   }
   showToast(SNAP_ENABLED ? 'Hizalama açık' : 'Hizalama kapalı (Q tuşu ile geçici)');
@@ -4638,7 +4638,7 @@ function veToggleGrid() {
     if(veGridVisible) { wrapper.classList.remove('grid-hidden'); }
     else { wrapper.classList.add('grid-hidden'); }
   }
-  if(btn) btn.style.opacity = veGridVisible ? '1' : '0.4';
+  if(btn) btn.classList.toggle('active', veGridVisible);
   showToast(veGridVisible ? 'Grid gösteriliyor' : 'Grid gizlendi');
 }
 
@@ -4677,7 +4677,7 @@ function veCycleBoundaryOpacity() {
 function veToggleBoundary() {
   veBoundaryVisible = !veBoundaryVisible;
   var btn = document.getElementById('ve-boundary-btn');
-  if(btn) btn.style.opacity = veBoundaryVisible ? '1' : '0.4';
+  if(btn) btn.classList.toggle('active', veBoundaryVisible);
   veUpdateBoundary();
   showToast(veBoundaryVisible ? 'Topoloji sınırı gösteriliyor' : 'Topoloji sınırı gizlendi');
 }

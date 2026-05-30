@@ -72,9 +72,10 @@
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
       <div class="ve-menu-divider"></div>
+      <div class="ve-menu-item" onclick="veOpenStatusModal()"><span class="mf-ico mf-ico-refresh"></span> Program Durumu<span class="ve-menu-badge" id="ve-status-menu-badge" style="display:none;" title="Yeni güncelleme mevcut"></span></div>
       <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
       <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
+      <div class="ve-menu-item" onclick="mfsimLogout()" style="color:var(--accent-danger);"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
     </div>
   </div>
   <div class="ve-tab-group">
@@ -105,6 +106,17 @@
         <div class="ve-sidebar-resizer" id="ve-sidebar-resizer"></div>
         <div class="ve-sidebar-content">
           
+          <div class="ve-category">
+            <div class="ve-category-title">Analiz Sistemleri</div>
+            <div class="ve-component" draggable="true" data-type="vehicle-performance" title="Sürükle: bir araç performans analizinin tüm aşamalarını (A1–A5) tek blokta getirir">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="14" y="8" width="72" height="84" rx="6" fill="none" stroke="currentColor" stroke-width="6"/>
+                <line x1="14" y1="26" x2="86" y2="26" stroke="currentColor" stroke-width="4"/>
+                <line x1="14" y1="44" x2="86" y2="44" stroke="currentColor" stroke-width="3"/>
+                <line x1="14" y1="62" x2="86" y2="62" stroke="currentColor" stroke-width="3"/>
+              </svg> <span class="ve-comp-label">Araç Performans</span></div>
+          </div>
+
           <div class="ve-category">
             <div class="ve-category-title">Güç Kaynağı</div>
             <div class="ve-component" draggable="true" data-type="engine">
@@ -340,11 +352,6 @@
 
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
-        <!-- Bileşen sembolü: bir bileşen seçilince canvas sol kenarında belirir (sidebar reveal'ın aynası); tıklayınca Özellikler paneli soldan açılır -->
-        <button id="ve-comp-marker" class="ve-comp-marker" onclick="veTogglePropertiesPanel()" title="Özellikler" aria-label="Özellikler panelini aç">
-          <span class="ve-comp-marker-svg" id="ve-comp-marker-svg"></span>
-          <span class="mf-ico mf-ico-chevrons-right ve-comp-marker-arrow"></span>
-        </button>
         <div class="ve-tab-bar" id="ve-tab-bar"></div>
         <div class="ve-split-container" id="ve-split-container">
           <div class="ve-split-pane focused" id="ve-pane-0">
@@ -388,20 +395,15 @@
             <div style="padding:8px 12px;font-size:0.65rem;color:var(--text-muted);">Uyarı bulunmuyor. Topoloji hazır.</div>
           </div>
         </div>
-      </div>
-      
-      <!-- Sağ Panel - Özellikler -->
-      <div class="ve-properties ve-prop-hidden" id="ve-properties">
-        <div class="ve-properties-resizer" id="ve-properties-resizer"></div>
-        <div class="ve-properties-header"><span class="mf-ico mf-ico-sliders"></span><span style="flex:1;">Özellikler</span><button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Özellikler panelini kapat">✕</button></div>
-        <div class="ve-properties-content">
-          <div class="ve-prop-empty">
-            <div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div>
-            <div>Bir bileşen seçin</div>
-            <small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small>
-          </div>
+        <div id="ve-status-bar" class="ve-status-bar">
+          <span class="ve-toolbar-info" id="ve-status-counts">0 bileşen, 0 bağlantı</span>
+          <span class="ve-status-spacer"></span>
+          <span class="ve-status-item" id="ve-status-zoom" title="Yakınlaştırma">%100</span>
+          <span class="ve-status-sep"></span>
+          <span class="ve-status-item" id="ve-status-mode">Hazır</span>
         </div>
       </div>
+
       
     </div>
     
@@ -563,6 +565,7 @@
 <!-- type="text/x-mfsim-defer" => tarayici execute etmez, loader.js yonetir. -->
 <script type="text/x-mfsim-defer" src="js/theme.js" data-mfsim-label="Tema motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/settings.js" data-mfsim-label="Ayarlar paneli..."></script>
+<script type="text/x-mfsim-defer" src="js/status.js" data-mfsim-label="Program durumu paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/tabs.js" data-mfsim-label="Sekmeler hazırlanıyor..."></script>
 <script type="text/x-mfsim-defer" src="js/results.js" data-mfsim-label="Sonuç paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/components.js" data-mfsim-label="Bileşen kütüphanesi..."></script>
@@ -618,6 +621,7 @@
 <script type="text/x-mfsim-defer" src="js/fea-delaunay.js" data-mfsim-label="FEA: Delaunay tet mesher sarmalayıcı..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-mesh.js" data-mfsim-label="FEA: Mesh motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-study.js" data-mfsim-label="FEA: Yapısal analiz modülü..."></script>
+<script type="text/x-mfsim-defer" src="js/vp-study.js" data-mfsim-label="Araç Performans sistem bloğu..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-mesh-outline.js" data-mfsim-label="FEA: Modül outline (ANSYS tree)..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-mesh-controls.js" data-mfsim-label="FEA: Lokal mesh kontrolleri..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-viewer.js" data-mfsim-label="FEA: Görüntüleyici..."></script>
@@ -643,6 +647,30 @@
 <script type="text/x-mfsim-defer" src="js/context-menus.js" data-mfsim-label="Sağ tık menüleri..."></script>
 <script type="text/x-mfsim-defer" src="js/connections.js" data-mfsim-label="Bağlantı motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/deploy-status.js" data-mfsim-label="Dağıtım bilgisi..."></script>
+
+<!-- ═══ BİLEŞEN ÖZELLİKLERİ MODALI ═══ -->
+<div id="ve-properties-overlay" class="ve-properties-overlay" style="display:none;" onmousedown="if(event.target===this) veTogglePropertiesPanel(false)">
+  <div class="ve-properties" id="ve-properties" role="dialog" aria-labelledby="ve-properties-title">
+    <div class="ve-properties-header">
+      <span id="ve-properties-title" style="display:inline-flex;align-items:center;gap:8px;flex:1;"><span class="mf-ico mf-ico-sliders"></span>Özellikler</span>
+      <button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-properties-content"></div>
+  </div>
+</div>
+
+<!-- ═══ PROGRAM DURUMU MODALI ═══ -->
+<div id="ve-status-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veCloseStatusModal()">
+  <div class="ve-settings-modal" role="dialog" aria-labelledby="ve-status-title">
+    <div class="ve-settings-header">
+      <span id="ve-status-title"><span class="mf-ico mf-ico-refresh"></span> Program Durumu</span>
+      <button class="ve-settings-close" onclick="veCloseStatusModal()" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-settings-body" style="flex-direction:column;">
+      <section class="ve-settings-content" id="ve-status-content" style="width:100%;"></section>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ AYARLAR MODALI ═══ -->
 <div id="ve-settings-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veCloseSettings()">

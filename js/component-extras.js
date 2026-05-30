@@ -725,6 +725,9 @@ function veOpenCoastDownWizard(nodeId) {
   var defRho = rd.airDensity || '1.225';
   var defCd = vd.cd || '';
 
+  // Alttaki Özellikler modalı bu büyük wizard'ın altında kalmasın → otomatik kapan
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
+
   // Overlay
   var overlay = document.createElement('div');
   overlay.id = 've-cd-wizard-overlay';
@@ -736,13 +739,13 @@ function veOpenCoastDownWizard(nodeId) {
 
   // Header
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
   header.innerHTML = '<div style="display:flex; align-items:center; gap:8px;">' +
-    '<div style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">🧙 Coast-Down Test Sihirbazı</div>' +
-    '<div style="font-size:0.62rem; color:var(--text-muted);">— Crr & Cd analizi</div></div>' +
+    '<div style="font-size:0.72rem; font-weight:700; color:var(--text-heading);">🧙 Coast-Down Test Sihirbazı</div>' +
+    '<div style="font-size:0.6rem; color:var(--text-muted);">— Crr & Cd analizi</div></div>' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
-    '<button onclick="cdwLoadExample()" style="padding:5px 12px; font-size:0.7rem; font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-clipboard"></span> Örnek Yükle</button>' +
-    '<button onclick="veCloseCoastDownWizard()" title="Kapat (ESC)" style="width:30px; height:30px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:1rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>' +
+    '<button onclick="cdwLoadExample()" style="padding:3px 10px; font-size:0.65rem; font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-clipboard"></span> Örnek Yükle</button>' +
+    '<button onclick="veCloseCoastDownWizard()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>' +
     '</div>';
   modal.appendChild(header);
 
@@ -2114,6 +2117,9 @@ function veManualSegExpandProfile(nodeId) {
 
   _veManualProfileModalNodeId = nodeId;
 
+  // Alttaki Özellikler modalı bu büyük profilin altında kalmasın → otomatik kapan
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
+
   // Overlay
   var overlay = document.createElement('div');
   overlay.id = 've-mseg-profile-overlay';
@@ -2124,12 +2130,12 @@ function veManualSegExpandProfile(nodeId) {
   var modal = document.createElement('div');
   modal.style.cssText = 'width:90%; max-width:1200px; height:70vh; max-height:700px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
-  // Header
+  // Header — ince ortak başlık
   var segs = node.data.manualSegments;
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Yol Profili <span style="font-size:0.62rem; font-weight:400; color:var(--text-muted); margin-left:8px;">' + segs.length + ' segment</span></span>' +
-    '<button onclick="veCloseManualProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button>';
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  header.innerHTML = '<span style="font-size:0.72rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Yol Profili <span style="font-size:0.6rem; font-weight:400; color:var(--text-muted); margin-left:8px;">' + segs.length + ' segment</span></span>' +
+    '<button onclick="veCloseManualProfileModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button>';
   modal.appendChild(header);
 
   // Canvas container

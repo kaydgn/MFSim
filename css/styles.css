@@ -235,10 +235,10 @@
     .ve-settings-header {
       display: flex;
       align-items: center;
-      padding: 12px 16px;
+      padding: 6px 14px;          /* dikey inceltildi: 12px → 6px */
       background: var(--bg-tertiary);
       border-bottom: 1px solid var(--border-color);
-      font-size: 0.88rem;
+      font-size: 0.78rem;          /* 0.88rem → 0.78rem */
       font-weight: 600;
       color: var(--text-heading);
     }
@@ -677,7 +677,7 @@
 .ve-sub-tabs.visible{display:flex;}
 .ve-sub-tab{background:none;border:none;color:var(--text-muted);padding:4px 8px;cursor:pointer;font-size:0.62rem;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}
 .ve-sub-tab:hover{color:var(--text-primary);background:var(--bg-tertiary);}
-.ve-sub-tab.active{color:var(--accent-success);border-bottom-color:var(--accent-success);}
+.ve-sub-tab.active{color:var(--accent-primary);border-bottom-color:var(--accent-primary);}
 .tab-page{display:none;}
 .tab-page.active{display:block;}
 
@@ -1050,11 +1050,42 @@
 }
 
 .ve-toolbar-info{
-  font-size:0.58rem;
-  color:var(--text-muted);
+  font-size:0.62rem;
+  color:var(--text-secondary);
   white-space:nowrap;
   flex-shrink:0;
-  padding-right:2px;
+}
+
+/* ===== ALT DURUM ÇUBUĞU (STATUS BAR) ===== */
+.ve-status-bar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  height:22px;
+  flex-shrink:0;
+  padding:0 10px;
+  background:var(--bg-secondary);
+  border-top:1px solid var(--border-color);
+  font-size:0.62rem;
+  color:var(--text-secondary);
+  user-select:none;
+}
+.ve-status-item{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  white-space:nowrap;
+  color:var(--text-secondary);
+}
+.ve-status-item .mf-ico{
+  color:var(--text-muted);
+}
+.ve-status-spacer{flex:1;}
+.ve-status-sep{
+  width:1px;
+  height:12px;
+  background:var(--border-color);
+  opacity:0.6;
 }
 
 /* ===== TOPOLOJI SEKME ÇUBUĞU ===== */
@@ -1133,7 +1164,7 @@
 .ve-tab-add:hover{
   border-color:var(--accent-primary);
   color:var(--accent-primary);
-  background:rgba(45,138,90,0.08);
+  background:color-mix(in srgb, var(--accent-primary) 10%, transparent);
 }
 .ve-tab-count{
   font-size:0.55rem;
@@ -1834,32 +1865,37 @@
 .ve-warning-item.warn{border-left:3px solid var(--accent-warning);}
 .ve-warning-item.info{border-left:3px solid var(--accent-primary);}
 
-/* Özellikler paneli: sol kenardan kayan overlay (mevcut Bileşenler sidebar'ının üstüne biner). */
+/* Bileşen Özellikleri MODAL'ı: backdrop + ortalanmış kart (Ayarlar modal'ıyla
+   aynı kalıp). Önceki sol-kayan yan-panel kaldırıldı. */
+.ve-properties-overlay{
+  position:fixed;
+  inset:0;
+  z-index:100020;
+  background:rgba(0,0,0,0.6);
+  display:none;             /* JS flex yapar */
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  backdrop-filter:blur(3px);
+  opacity:0;
+  transition:opacity 0.18s ease;
+}
+.ve-properties-overlay.visible{ opacity:1; }
+
 .ve-properties{
-  position:absolute;
-  left:0; top:0; bottom:0;
-  width:480px;
-  min-width:280px;
+  width:100%;
   max-width:720px;
+  max-height:90vh;
   background:var(--bg-secondary);
-  border-right:1px solid var(--border-color);
-  box-shadow:6px 0 24px var(--shadow-color);
+  border:1px solid var(--border-color);
+  box-shadow:0 20px 60px rgba(0,0,0,0.6);
   display:flex;
   flex-direction:column;
   overflow:hidden;
-  z-index:200;
-  transform:translateX(0);
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.22s ease;
+  transform:scale(0.96);
+  transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);
 }
-/* Gizli: tamamen ekran dışı sola kayar */
-.ve-properties.ve-prop-hidden{
-  transform:translateX(-100%);
-  opacity:0;
-  pointer-events:none;
-}
-/* Resizer ile sürüklerken geçiş kapalı (takılmayı önler) */
-.ve-properties.ve-prop-no-anim{ transition:none !important; }
+.ve-properties-overlay.visible .ve-properties{ transform:scale(1); }
 
 /* Panel başlığındaki kapatma butonu */
 .ve-properties-close{
@@ -1879,85 +1915,13 @@
   color:var(--accent-danger);
 }
 
-/* Bileşen sembolü (marker): canvas sol kenarında belirir.
-   Boyut/şekil olarak sidebar-reveal'ın TIPATIP aynası; tam altında durur. */
-.ve-comp-marker{
-  position:absolute;
-  left:0;
-  top:107px;                   /* sidebar-reveal (40 + ~59 = 99 alt) ile arasında ~8px estetik boşluk */
-  z-index:60;
-  display:none;
-  flex-direction:column;
-  align-items:center;
-  gap:7px;
-  padding:9px 7px;             /* sidebar-reveal ile birebir aynı */
-  background:var(--bg-secondary);
-  color:var(--text-secondary);
-  border:1px solid var(--border-color);
-  border-left:none;
-  box-shadow:2px 2px 10px var(--shadow-color);
-  cursor:pointer;
-  transform:translateX(-100%);
-  opacity:0;
-  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.2s ease,
-              background 0.15s, border-color 0.15s, color 0.15s;
-}
-.ve-comp-marker.visible{
-  display:flex;
-  transform:translateX(0);
-  opacity:1;
-}
-.ve-comp-marker:hover{
-  background:var(--bg-tertiary);
-  color:var(--accent-primary);
-  border-color:var(--accent-primary);
-}
-.ve-comp-marker-svg{
-  display:flex; align-items:center; justify-content:center;
-  width:18px; height:18px;     /* sidebar-reveal'in cube ikonuyla aynı kefede */
-}
-.ve-comp-marker-svg svg{ width:100%; height:100%; color:currentColor; }
-.ve-comp-marker-arrow{ font-size:0.78rem; opacity:0.55; }
-.ve-comp-marker:hover .ve-comp-marker-arrow{ opacity:1; }
-
-/* Yeni bileşen düşünce dikkat çek: kenarlık temaya uygun aksan renginde yanıp söner */
-@keyframes ve-marker-flash{
-  0%, 100%{
-    border-color:var(--border-color);
-    box-shadow:2px 2px 10px var(--shadow-color);
-  }
-  50%{
-    border-color:var(--accent-primary);
-    box-shadow:0 0 14px color-mix(in srgb, var(--accent-primary) 70%, transparent),
-               2px 2px 10px var(--shadow-color);
-  }
-}
-.ve-comp-marker.flash{ animation:ve-marker-flash 0.55s ease-in-out 3; }
-
-.ve-properties-resizer{
-  position:absolute;
-  right:0;            /* panel artık solda; resizer sağ kenarda (canvas tarafında) */
-  top:0;
-  bottom:0;
-  width:6px;
-  cursor:ew-resize;
-  background:transparent;
-  transition:background 0.2s;
-  z-index:10;
-}
-
-.ve-properties-resizer:hover,
-.ve-properties-resizer.active{
-  background:var(--accent-primary);
-}
 
 .ve-properties-header{
-  padding:8px 12px;
+  padding:5px 12px;            /* dikey hafifletildi — modal başlığı daha ince */
   background:var(--bg-tertiary);
   border-bottom:1px solid var(--border-color);
   font-weight:600;
-  font-size:0.72rem;
+  font-size:0.7rem;
   color:var(--text-heading);
   display:flex;
   align-items:center;
@@ -2650,6 +2614,155 @@
 }
 
 /* ========== DEPLOY STATUS GÖSTERGESİ ========== */
+/* Top-right'taki deploy gösterimi gizlendi — "Program Durumu" modal'ına taşındı.
+   Modal içindeki .ve-deploy-dot .ve-status-content scope'unda yine görünür. */
+#tab-bar #ve-deploy-dot,
+#tab-bar #ve-deploy-refresh { display: none !important; }
+
+/* Proje menüsü item'larında güncelleme rozeti (kırmızı nokta + parlama) */
+.ve-menu-item { position: relative; display: flex; align-items: center; gap: 4px; }
+.ve-menu-badge {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--accent-danger);
+  border-radius: 50%;
+  margin-left: auto;
+  box-shadow: 0 0 6px var(--accent-danger);
+  animation: ve-menu-badge-pulse 2s ease-in-out infinite;
+}
+@keyframes ve-menu-badge-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.65; transform: scale(0.85); }
+}
+
+/* Program Durumu — güncelleme banner'ı (sadece update mevcutsa) */
+.ve-status-update-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin: 0 0 18px 0;
+  background: color-mix(in srgb, var(--accent-success) 12%, var(--bg-secondary));
+  border: 1px solid var(--accent-success);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-success) 35%, transparent);
+  animation: ve-status-banner-pulse 2.4s ease-in-out infinite;
+}
+@keyframes ve-status-banner-pulse {
+  0%, 100% { box-shadow: 0 0 12px color-mix(in srgb, var(--accent-success) 35%, transparent); }
+  50%       { box-shadow: 0 0 20px color-mix(in srgb, var(--accent-success) 65%, transparent); }
+}
+.ve-status-update-banner-info { flex: 1; }
+.ve-status-update-banner-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-success);
+  margin-bottom: 4px;
+}
+.ve-status-update-banner-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.ve-status-update-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  background: var(--accent-success);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: filter 0.12s, transform 0.08s;
+}
+.ve-status-update-banner-btn:hover { filter: brightness(1.12); }
+.ve-status-update-banner-btn:active { transform: translateY(1px); }
+
+/* Program Durumu — açılır-kapanır commit listesi */
+.ve-status-commit-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--border-light);
+}
+.ve-status-commit {
+  border-bottom: 1px solid var(--border-light);
+}
+.ve-status-commit:last-child { border-bottom: none; }
+.ve-status-commit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  transition: background 0.12s;
+}
+.ve-status-commit-row:hover { background: var(--bg-tertiary); }
+.ve-status-commit-arrow {
+  width: 10px;
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.ve-status-commit.expanded .ve-status-commit-arrow { transform: rotate(90deg); }
+.ve-status-commit-sha {
+  font-size: 0.65rem;
+  opacity: 0.75;
+  width: 56px;
+  flex-shrink: 0;
+}
+.ve-status-commit-msg {
+  flex: 1;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ve-status-commit-when {
+  opacity: 0.65;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ve-status-commit-detail {
+  display: none;
+  padding: 8px 14px 12px 38px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-light);
+  font-size: 0.72rem;
+}
+.ve-status-commit.expanded .ve-status-commit-detail { display: block; }
+.ve-status-commit-body {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'SF Mono','Fira Code',monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.ve-status-commit-meta { display: grid; gap: 4px; margin-bottom: 10px; }
+.ve-status-commit-meta-label {
+  display: inline-block;
+  width: 60px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.ve-status-commit-actions { display: flex; gap: 6px; }
+.ve-status-commit-actions a { text-decoration: none; }
+
 .ve-deploy-dot {
   display:inline-block;
   width:10px; height:10px;
@@ -2708,4 +2821,107 @@
   from { transform:rotate(0deg); }
   to { transform:rotate(360deg); }
 }
+
+/* ════════════════════════════════════════════════════════════════════════
+   ARAÇ PERFORMANS SİSTEM BLOĞU (ANSYS "Analysis System" tarzı)
+   Tek node, dikey istiflenmiş hücreler (A1..A5) + durum ikonları.
+   Render: js/vp-study.js → veVPBlockInnerHTML.
+   ════════════════════════════════════════════════════════════════════════ */
+.ve-vp-box {
+  padding:0 !important;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:flex-start;
+  overflow:hidden;
+  background: var(--bg-elevated, #1b1f27);
+  border:1px solid var(--border-color, #333);
+  border-radius:6px;
+  text-align:left;
+}
+.ve-vp-header {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 8px;
+  background: var(--accent-primary, #3b82f6);
+  color:#fff;
+  font-size:0.62rem;
+  font-weight:700;
+  flex:0 0 auto;
+}
+.ve-vp-header .ve-vp-sys {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:15px; height:15px;
+  border-radius:3px;
+  background:rgba(255,255,255,0.22);
+  font-size:0.54rem;
+}
+.ve-vp-header .ve-vp-title { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ve-vp-header .ve-vp-caret { opacity:0.85; font-size:0.6rem; }
+.ve-vp-cells { display:flex; flex-direction:column; flex:1 1 auto; }
+.ve-vp-cell {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:0 8px;
+  flex:1 1 0;
+  min-height:24px;
+  border-top:1px solid var(--border-color, #2a2f3a);
+  font-size:0.58rem;
+  color: var(--text-primary, #d8dde6);
+  cursor:pointer;
+}
+.ve-vp-cell:hover { background: var(--bg-hover, rgba(255,255,255,0.06)); }
+.ve-vp-cell-code {
+  flex:0 0 auto;
+  width:16px;
+  font-size:0.5rem;
+  font-weight:700;
+  color: var(--text-muted, #888);
+}
+.ve-vp-cell-label { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ve-vp-status {
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:14px; height:14px;
+  border-radius:50%;
+  font-size:0.5rem;
+  font-weight:700;
+  color:#fff;
+}
+.vp-st-unfulfilled { background: var(--text-muted, #888); }
+.vp-st-attention   { background: var(--accent-warning, #f59e0b); }
+.vp-st-uptodate    { background: var(--accent-success, #22c55e); }
+
+/* Properties paneli: genel bakış rozeti + hücre editör alanları */
+.vp-ov-status {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:16px; height:16px; border-radius:50%;
+  font-size:0.54rem; font-weight:700; color:#fff;
+}
+.vp-field {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  margin:6px 0; font-size:0.6rem; color: var(--text-secondary, #aab);
+}
+.vp-field > span { flex:0 0 auto; }
+.vp-field input, .vp-field select {
+  flex:1 1 auto; max-width:60%;
+  padding:3px 6px; font-size:0.6rem;
+  background: var(--bg-input, #11151c);
+  color: var(--text-primary, #d8dde6);
+  border:1px solid var(--border-color, #333);
+  border-radius:4px;
+}
+.vp-chain { display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin:6px 0 10px; }
+.vp-chain-step {
+  padding:2px 7px; font-size:0.54rem; border-radius:10px;
+  background: var(--bg-elevated, #232833); color: var(--text-secondary, #aab);
+  border:1px solid var(--border-color, #333);
+}
+.vp-chain-arrow { color: var(--text-muted, #888); font-size:0.56rem; }
 

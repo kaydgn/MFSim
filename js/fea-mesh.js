@@ -76,13 +76,14 @@
  * @property {Object} [jacobian]  Jacobian ratio istatistikleri.
  */
 
-var VE_FEA_MESH_MIN_SIZE = 0.5;  // mm — çok küçük değerleri clamp et
-var VE_FEA_VOXEL_MAX_COUNT = 20000000; // 20M voxel üst sınır — sub-1mm mesh için
-                                       // büyük geometrilerde headroom sağlar.
-                                       // Boundary-snap fallback'i (degree-based)
-                                       // yüzey düğümlerini tarayacağı için RAM
-                                       // büyür ama hala makul sınırda kalır
-                                       // (20M voxel ≈ 100³ × 20 ≈ 480 MB Float32).
+// Sınırlar kaldırıldı: kullanıcı isteği üzerine minimum eleman boyutu ve voxel
+// üst sınırı devre dışı. Sabitler etkisiz değerlere ayarlandı; mevcut
+// referanslar (clamp / kontrol / hata mesajı) çalışmaya devam eder ama fiilen
+// hiçbir sınır uygulanmaz.
+// UYARI: Çok küçük eleman boyutu (sub-mm) çok büyük geometride milyarlarca
+// voxel/düğüm üretebilir → tarayıcı belleği tükenebilir. Sorumluluk kullanıcıda.
+var VE_FEA_MESH_MIN_SIZE = 0;          // alt sınır yok (eskiden 0.5 mm)
+var VE_FEA_VOXEL_MAX_COUNT = Infinity; // voxel üst sınırı yok (eskiden 20M)
 
 function veFEAMeshLabel(type) {
   return ({
@@ -143,6 +144,59 @@ function _veFEAHexMeshToTet4(hexMesh) {
     }
   }
   return _veFEAWrapTet4Mesh(hexMesh, tets, { convertedFromHex: true });
+}
+
+// Hex8'in 4 ana köşegeni (body diagonal) için 6-tet bölmeleri. Bir hex hafif
+// non-convex (bükülmüş) olduğunda tek bir köşegen negatif tet üretebilir, ama
+// başka bir köşegen tüm-pozitif verir. Adaptif converter en iyisini seçer.
+var _VE_FEA_HEX_TET_SPLITS_4 = [
+  [[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6],[0,5,1,6]], // diag 0-6
+  [[1,2,3,7],[1,3,0,7],[1,0,4,7],[1,4,5,7],[1,5,6,7],[1,6,2,7]], // diag 1-7
+  [[2,3,0,4],[2,0,1,4],[2,1,5,4],[2,5,6,4],[2,6,7,4],[2,7,3,4]], // diag 2-4
+  [[3,0,1,5],[3,1,2,5],[3,2,6,5],[3,6,7,5],[3,7,4,5],[3,4,0,5]]  // diag 3-5
+];
+
+// Adaptif Hex8 → Tet4: her hex için 4 köşegenden minimum sub-tet hacmini
+// MAKSİMİZE edeni seçer. Hafif non-convex hex'lerin (cubed-sphere köşeleri gibi)
+// ürettiği inverted tet'leri önler. Düz/konveks hex'lerde diag 0-6 ile aynı
+// sonucu verir (geriye uyumlu).
+function _veFEAHexMeshToTet4Adaptive(hexMesh) {
+  var nodes = hexMesh.nodes;
+  var hex = hexMesh.elements;
+  var nElem = hex.length / 8;
+  var tets = new Uint32Array(nElem * 6 * 4);
+  var p = 0;
+  for (var e = 0; e < nElem; e++) {
+    var off = e * 8;
+    var bestSplit = _VE_FEA_HEX_TET_SPLITS_4[0];
+    var bestMin = -Infinity;
+    for (var s = 0; s < 4; s++) {
+      var split = _VE_FEA_HEX_TET_SPLITS_4[s];
+      var mn = Infinity;
+      for (var t = 0; t < 6; t++) {
+        var v = _veFEATetSignedVolumeIdx(nodes, hex, off, split[t][0], split[t][1], split[t][2], split[t][3]);
+        if (v < mn) mn = v;
+      }
+      if (mn > bestMin) { bestMin = mn; bestSplit = split; }
+    }
+    for (var k = 0; k < 6; k++) {
+      tets[p++] = hex[off + bestSplit[k][0]];
+      tets[p++] = hex[off + bestSplit[k][1]];
+      tets[p++] = hex[off + bestSplit[k][2]];
+      tets[p++] = hex[off + bestSplit[k][3]];
+    }
+  }
+  return _veFEAWrapTet4Mesh(hexMesh, tets, { convertedFromHex: true, adaptiveDiagonal: true });
+}
+
+// _veFEATetSignedVolume ile aynı, ama düğüm indeksleri doğrudan verilir
+// (4-köşegen taramasında off-bazlı erişim için).
+function _veFEATetSignedVolumeIdx(nodes, elements, off, i0, i1, i2, i3) {
+  var a = elements[off + i0] * 3, b = elements[off + i1] * 3, c = elements[off + i2] * 3, d = elements[off + i3] * 3;
+  var v1x = nodes[b] - nodes[a], v1y = nodes[b+1] - nodes[a+1], v1z = nodes[b+2] - nodes[a+2];
+  var v2x = nodes[c] - nodes[a], v2y = nodes[c+1] - nodes[a+1], v2z = nodes[c+2] - nodes[a+2];
+  var v3x = nodes[d] - nodes[a], v3y = nodes[d+1] - nodes[a+1], v3z = nodes[d+2] - nodes[a+2];
+  return (v1x*(v2y*v3z - v2z*v3y) + v1y*(v2z*v3x - v2x*v3z) + v1z*(v2x*v3y - v2y*v3x)) / 6;
 }
 
 // Wedge6 → 3 Tet4 (positive-orientation split)
@@ -295,15 +349,18 @@ var _VE_FEA_WEDGE6_EDGES = [
   [0, 3], [1, 4], [2, 5]   // dikey
 ];
 
-function veFEAEnrichToQuadratic(meshData) {
+// projector (opsiyonel): kuadratik mid-side düğümleri eğri yüzeye projekte eden
+// fonksiyon. İmza: projector(midX, midY, midZ, aId, bId) → [x,y,z] | null.
+// null/undefined dönerse lineer (düz kenar ortası) konum korunur.
+function veFEAEnrichToQuadratic(meshData, projector) {
   if (!meshData || meshData.error) return meshData;
-  if (meshData.type === 'tet4')   return _veFEAGenericEnrich(meshData, _VE_FEA_TET4_EDGES,  'tet10', 10);
-  if (meshData.type === 'hex8')   return _veFEAGenericEnrich(meshData, _VE_FEA_HEX8_EDGES,  'hex20', 20);
-  if (meshData.type === 'wedge6') return _veFEAGenericEnrich(meshData, _VE_FEA_WEDGE6_EDGES, 'wedge15', 15);
+  if (meshData.type === 'tet4')   return _veFEAGenericEnrich(meshData, _VE_FEA_TET4_EDGES,  'tet10', 10, projector);
+  if (meshData.type === 'hex8')   return _veFEAGenericEnrich(meshData, _VE_FEA_HEX8_EDGES,  'hex20', 20, projector);
+  if (meshData.type === 'wedge6') return _veFEAGenericEnrich(meshData, _VE_FEA_WEDGE6_EDGES, 'wedge15', 15, projector);
   return meshData; // tri3 / zaten quadratic
 }
 
-function _veFEAGenericEnrich(mesh, edgeTemplate, newType, newPerElement) {
+function _veFEAGenericEnrich(mesh, edgeTemplate, newType, newPerElement, projector) {
   var nodes = mesh.nodes;
   var elements = mesh.elements;
   var per = mesh.nodesPerElement;
@@ -319,9 +376,14 @@ function _veFEAGenericEnrich(mesh, edgeTemplate, newType, newPerElement) {
     var id = edgeMap.get(k);
     if (id !== undefined) return id;
     var newId = origNodeCount + midX.length;
-    midX.push((nodes[a * 3]     + nodes[b * 3])     / 2);
-    midY.push((nodes[a * 3 + 1] + nodes[b * 3 + 1]) / 2);
-    midZ.push((nodes[a * 3 + 2] + nodes[b * 3 + 2]) / 2);
+    var mx = (nodes[a * 3]     + nodes[b * 3])     / 2;
+    var my = (nodes[a * 3 + 1] + nodes[b * 3 + 1]) / 2;
+    var mz = (nodes[a * 3 + 2] + nodes[b * 3 + 2]) / 2;
+    if (projector) {
+      var pr = projector(mx, my, mz, a, b);
+      if (pr) { mx = pr[0]; my = pr[1]; mz = pr[2]; }
+    }
+    midX.push(mx); midY.push(my); midZ.push(mz);
     edgeMap.set(k, newId);
     return newId;
   }
@@ -508,7 +570,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   }
   // midSideNodes: lineer → quadratic (Tet4→Tet10, Hex8→Hex20, Wedge6→Wedge15)
   if (mesh && !mesh.error && opts.midSideNodes === true) {
-    mesh = veFEAEnrichToQuadratic(mesh);
+    mesh = veFEAEnrichToQuadratic(mesh, _veFEABuildSurfaceProjector(geometry, mesh));
   }
   if (mesh && !mesh.error && Array.isArray(opts.sphereOfInfluence) && opts.sphereOfInfluence.length > 0) {
     mesh = _veFEAApplySphereOfInfluence(mesh, opts.sphereOfInfluence);
@@ -1729,12 +1791,17 @@ function _veFEAMeshSphere(p, size) {
   var n1 = nC + 1;
   var nNodes = n1 * n1 * n1;
   var nodes = new Float32Array(nNodes * 3);
+  // Equiangular cubed-sphere: küp koordinatlarını tan(c·π/4) ile warp et.
+  // Gnomonic (lineer) projeksiyon köşelerde hücreleri sıkıştırır (skewness
+  // yükselir, orthogonal quality düşer). Equiangular mapping açısal dağılımı
+  // eşitleyerek köşe çarpıklığını azaltır — ANSYS/CFD'de standart teknik.
+  function _eqa(c) { return Math.tan(c * Math.PI / 4); }
   for (var k = 0; k <= nC; k++) {
-    var cz = -1 + 2 * k / nC;
+    var cz = _eqa(-1 + 2 * k / nC);
     for (var j = 0; j <= nC; j++) {
-      var cy = -1 + 2 * j / nC;
+      var cy = _eqa(-1 + 2 * j / nC);
       for (var i = 0; i <= nC; i++) {
-        var cx = -1 + 2 * i / nC;
+        var cx = _eqa(-1 + 2 * i / nC);
         var idx = (k * n1 * n1 + j * n1 + i) * 3;
         var maxAbs = Math.max(Math.abs(cx), Math.abs(cy), Math.abs(cz));
         if (maxAbs < 1e-9) {
@@ -1852,7 +1919,7 @@ function _veFEAMeshHemisphere(p, size) {
     }
   }
 
-  return {
+  var hemiMesh = {
     type: 'hex8',
     geometryType: 'hemisphere',
     nodes: nodes,
@@ -1861,6 +1928,17 @@ function _veFEAMeshHemisphere(p, size) {
     grid: { nC: nC, cubedSphere: true, hemisphere: true },
     namedSelections: _veFEAHemisphereNamedSelections(n1, nC)
   };
+
+  // Apex bölgesi köşelerinde cubed-sphere projeksiyonu bazı hex'leri hafif
+  // non-convex yapar → inverted hex (çözücü patlar). İnce çözünürlüklerde
+  // (nC≳8) görülür. Çözüm: inverted hex varsa tüm mesh'i ADAPTİF tet4'e çevir
+  // (her hex için tüm-pozitif tet veren köşegen seçilir). Düşük çözünürlükte
+  // (inverted yok) hex8 korunur.
+  var jm = veFEAComputeJacobianMetrics(hemiMesh);
+  if (jm && (jm.invertedCount > 0 || jm.degenerateCount > 0)) {
+    return _veFEAHexMeshToTet4Adaptive(hemiMesh);
+  }
+  return hemiMesh;
 }
 
 // ─── Torus → Wedge6 mesh (cross-section fan × toroidal sweep, closed loop) ─
@@ -1905,11 +1983,16 @@ function _veFEAMeshTorus(p, size) {
   }
 
   // Hex8 elements: her quad × her major-angle pair (closed loop)
+  // Major-açı süpürmesi (XZ düzleminde +theta yönü) disk'in yerel çerçevesiyle
+  // birlikte SAĞ-elli bir hex verir → ters Jacobian. Silindirle aynı (pozitif)
+  // konvansiyona getirmek için alt/üst katman rollerini swap ediyoruz: "alt"
+  // bir sonraki major açı (tOff), "üst" mevcut açı (bOff). Bu, eleman düğüm
+  // sırasını sol-elli yapıp signed volume'u pozitife çevirir.
   var elements = new Uint32Array(nQuads * nMajor * 8);
   var ep = 0;
   for (var ka = 0; ka < nMajor; ka++) {
-    var bOff = ka * nDisk;
-    var tOff = ((ka + 1) % nMajor) * nDisk;  // closed loop
+    var bOff = ((ka + 1) % nMajor) * nDisk;  // closed loop — alt katman: sonraki açı
+    var tOff = ka * nDisk;                     // üst katman: mevcut açı
     for (var q = 0; q < nQuads; q++) {
       var qd = disk.quads[q];
       elements[ep++] = bOff + qd[0];
@@ -2003,8 +2086,12 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
   var rT = Math.max(0,   p.topRadius || 0);
   var h  = Math.max(0.1, p.height || 60);
   var rMax = Math.max(rB, rT);
-  // Apex case: tam 0 yerine epsilon → degenerate hex önle
-  var rTeff = Math.max(rT, 0.001 * rMax);
+  // Apex (tam sivri uç) kararı: üst yarıçap tabanın %1'inden küçükse apex say.
+  // Frustum (rT belirgin) → hex8 korunur (kaliteli). Apex → üst katman gerçek
+  // tek noktaya çökertilir + tet4'e dönüştürülür (degenere tet'ler filtrelenir),
+  // böylece eski "iğne hex" (AR ~3000, Jac ~10^4) problemi ortadan kalkar.
+  var isApex = rT < 0.01 * rB;
+  var rTeff = isApex ? 0 : rT;
 
   // Cylinder mesh oluştur (max radius ile)
   var cylMesh = _veFEAMeshCylinder(
@@ -2013,7 +2100,9 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
   );
   if (!cylMesh) return null;
 
-  // Her node için y koordinatına göre radial ölçekle
+  // Her node için y koordinatına göre radial ölçekle. Apex'te üst katman (t=1)
+  // tam (0, y, 0)'a çöker — birden çok düğüm aynı konumda; tet4 dönüşümü sonrası
+  // degenere tet filtresiyle temizlenir.
   var nodes = cylMesh.nodes;
   var nNodes = nodes.length / 3;
   var halfH = h / 2;
@@ -2028,7 +2117,7 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
     newNodes[i * 3 + 2] *= scale;
   }
 
-  return {
+  var coneMesh = {
     type: cylMesh.type,
     geometryType: 'cone',
     nodes: newNodes,
@@ -2038,6 +2127,92 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
     sweepAxis: 'Y',
     namedSelections: cylMesh.namedSelections   // aynı id'ler: faceTop/Bottom/Side
   };
+
+  if (!isApex) return coneMesh;
+
+  // Apex: çökmüş hex8 → tet4 + degenere tet filtresi + node compaction.
+  // Üst katman düğümleri tek apex noktasında üst üste; bu hex'ler doğal olarak
+  // birer piramide degrade olur ve hex→6tet bölmesinin yarısı sıfır hacimlidir.
+  var tetMesh = _veFEAHexMeshToTet4(coneMesh);
+  return _veFEACompactDegenerateTets(tetMesh);
+}
+
+// Degenere (sıfır/çok küçük hacimli) tet4 elemanlarını eler ve kullanılmayan
+// düğümleri çıkarıp eleman indekslerini yeniden numaralandırır. Apex collapse
+// gibi durumlarda üst üste binen düğümlerden doğan sıfır-hacimli tet'leri temizler.
+function _veFEACompactDegenerateTets(mesh) {
+  if (!mesh || mesh.error || mesh.type !== 'tet4') return mesh;
+  var nodes = mesh.nodes, elems = mesh.elements;
+  var nElem = elems.length / 4;
+  // Hacim eşiği: bbox diyagonalinden türetilen ölçek-bağımsız küçük değer.
+  var bb = _veFEABBoxOf(nodes);
+  var diag = Math.sqrt(bb.dx*bb.dx + bb.dy*bb.dy + bb.dz*bb.dz) || 1;
+  var volEps = Math.pow(diag, 3) * 1e-9;
+  var kept = [];
+  for (var e = 0; e < nElem; e++) {
+    var off = e * 4;
+    var v = Math.abs(_veFEATetSignedVolume(nodes, elems, off, 0, 1, 2, 3));
+    if (v > volEps) { kept.push(elems[off], elems[off+1], elems[off+2], elems[off+3]); }
+  }
+  // Node compaction: kullanılan düğümleri yeniden numaralandır.
+  var remap = new Int32Array(nodes.length / 3).fill(-1);
+  var newCoords = [];
+  for (var k = 0; k < kept.length; k++) {
+    var old = kept[k];
+    if (remap[old] === -1) {
+      remap[old] = newCoords.length / 3;
+      newCoords.push(nodes[old*3], nodes[old*3+1], nodes[old*3+2]);
+    }
+    kept[k] = remap[old];
+  }
+  // Named selections'ı yeni indekslere taşı (apex'te bazı node'lar kaybolabilir).
+  var ns = _veFEARemapNamedSelections(mesh.namedSelections, remap);
+  return {
+    type: 'tet4',
+    geometryType: mesh.geometryType,
+    nodes: new Float32Array(newCoords),
+    elements: new Uint32Array(kept),
+    nodesPerElement: 4,
+    grid: mesh.grid,
+    sweepAxis: mesh.sweepAxis,
+    namedSelections: ns,
+    apexCollapsed: true,
+    convertedFromHex: true
+  };
+}
+
+// Basit bbox + boyut hesaplayıcısı (compaction için).
+function _veFEABBoxOf(nodes) {
+  var minX = Infinity, minY = Infinity, minZ = Infinity;
+  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  var n = nodes.length / 3;
+  for (var i = 0; i < n; i++) {
+    var x = nodes[i*3], y = nodes[i*3+1], z = nodes[i*3+2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  return { dx: maxX-minX, dy: maxY-minY, dz: maxZ-minZ };
+}
+
+// Named selection node ID'lerini remap tablosuna göre yeniden numaralandırır;
+// elenen (remap === -1) düğümleri çıkarır.
+function _veFEARemapNamedSelections(ns, remap) {
+  if (!ns) return ns;
+  var out = {};
+  Object.keys(ns).forEach(function(key) {
+    var sel = ns[key];
+    if (!sel || !sel.nodeIds) { out[key] = sel; return; }
+    var ids = [];
+    for (var i = 0; i < sel.nodeIds.length; i++) {
+      var ni = remap[sel.nodeIds[i]];
+      if (ni !== undefined && ni !== -1) ids.push(ni);
+    }
+    var copy = {}; Object.keys(sel).forEach(function(k){ copy[k] = sel[k]; });
+    copy.nodeIds = new Uint32Array(ids);
+    out[key] = copy;
+  });
+  return out;
 }
 
 // ─── STEP → parsed triangles ──────────────────────────────────────────────
@@ -4194,4 +4369,85 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
     }
   });
   return new Float32Array(lines);
+}
+
+// ─── Mesh Self-Test / Diagnostik (tarayıcı konsolundan çağrılabilir) ────────
+// Amaç: Mesh motorunu temsili primitiflerde çalıştırıp ANSYS-tarzı kalite
+// metrikleriyle doğrular. Düzeltilen bug'ların (tor inverted, koni apex, küre
+// kutup) durumunu ve genel sağlığı raporlar.
+//
+// KULLANIM (F12 konsolu):
+//   veFEAMeshSelfTest()            → tablo + özet, sonuç nesnesi döner
+//   veFEAMeshSelfTest({ verbose:false })  → sadece özet
+//
+// Dönen nesne: { pass, fail, total, rows:[...], summary } — programatik kontrol
+// için. pass === total ise tüm kritik kontroller geçti demektir.
+function veFEAMeshSelfTest(opts) {
+  opts = opts || {};
+  var verbose = opts.verbose !== false;
+  // ANSYS Mechanical referans eşikleri.
+  var TH = { skewBad: 0.95, orthoBad: 0.001, arBad: 20, jacBad: 40 };
+  // Test senaryoları: tüm primitifler, kaba/orta/ince + kritik apex/kutup vakaları.
+  var prim = [
+    ['Kutu',      { type: 'box',        params: { width: 50, height: 30, depth: 20 } }],
+    ['Silindir',  { type: 'cylinder',   params: { radius: 15, height: 60 } }],
+    ['Şaft',      { type: 'shaft',      params: { outerRadius: 20, innerRadius: 8, length: 120 } }],
+    ['Küre',      { type: 'sphere',     params: { radius: 25 } }],
+    ['Koni-apex', { type: 'cone',       params: { bottomRadius: 20, topRadius: 0, height: 50 } }],
+    ['Koni-frus', { type: 'cone',       params: { bottomRadius: 20, topRadius: 8, height: 50 } }],
+    ['Tor',       { type: 'torus',      params: { majorRadius: 30, minorRadius: 10 } }],
+    ['Y.Küre',    { type: 'hemisphere', params: { radius: 25 } }],
+    ['I-Kiriş',   { type: 'ibeam',      params: { width: 50, height: 80, length: 200, flangeThickness: 8, webThickness: 6 } }],
+    ['L-Köşe',    { type: 'lbracket',   params: { width: 50, height: 50, length: 100, thickness: 8 } }],
+    ['Kutu Boru', { type: 'rectTube',   params: { width: 50, height: 40, length: 120, thickness: 6 } }]
+  ];
+  var sizes = [10, 5, 2.5];
+  var rows = [], pass = 0, fail = 0;
+  for (var pi = 0; pi < prim.length; pi++) {
+    for (var si = 0; si < sizes.length; si++) {
+      var name = prim[pi][0], geom = prim[pi][1], sz = sizes[si];
+      var row = { senaryo: name + ' s=' + sz, ok: false, not: '' };
+      try {
+        var m = veFEAMeshFromGeometry(geom, { size: sz });
+        if (!m || m.error) { row.not = 'mesh hatası: ' + (m && m.error || 'null'); rows.push(row); fail++; continue; }
+        var j = veFEAComputeJacobianMetrics(m);
+        var q = veFEAComputeQualityMetrics(m);
+        row.tip = m.type;
+        row.eleman = j.elementCount;
+        row.inverted = j.invertedCount;
+        row.degenerate = j.degenerateCount;
+        row.skewMax = q.skewness ? +q.skewness.max.toFixed(3) : null;
+        row.orthoMin = q.orthogonalQuality ? +q.orthogonalQuality.min.toFixed(3) : null;
+        row.arMax = q.aspectRatio ? +q.aspectRatio.max.toFixed(1) : null;
+        // KRİTİK kontrol: çözücü-uyumluluk = inverted/degenerate yok.
+        // (Skewness/AR yüksekliği tekil geometrilerde kabul edilir, ama
+        // inverted eleman = çözücü patlar → mutlak başarısızlık.)
+        if (j.invertedCount === 0 && j.degenerateCount === 0 && j.minVolume > 0) {
+          row.ok = true; pass++;
+        } else {
+          row.not = 'inverted=' + j.invertedCount + ' degenerate=' + j.degenerateCount;
+          fail++;
+        }
+      } catch (e) {
+        row.not = 'exception: ' + e.message; fail++;
+      }
+      rows.push(row);
+    }
+  }
+  var total = pass + fail;
+  var summary = 'Mesh Self-Test: ' + pass + '/' + total + ' geçti' +
+                (fail ? ' — ' + fail + ' BAŞARISIZ (inverted/degenerate eleman)' : ' ✓ tüm meshler çözücü-uyumlu');
+  if (verbose && typeof console !== 'undefined') {
+    if (console.table) {
+      console.table(rows.map(function (r) {
+        return { Senaryo: r.senaryo, Tip: r.tip, Eleman: r.eleman, Inverted: r.inverted,
+                 Degenere: r.degenerate, SkewMax: r.skewMax, OrthoMin: r.orthoMin, ARmax: r.arMax,
+                 Sonuç: r.ok ? '✓' : '✗ ' + r.not };
+      }));
+    } else {
+      rows.forEach(function (r) { console.log((r.ok ? '✓' : '✗') + ' ' + r.senaryo + ' ' + (r.not || '')); });
+    }
+    console.log(summary);
+  }
+  return { pass: pass, fail: fail, total: total, rows: rows, summary: summary };
 }

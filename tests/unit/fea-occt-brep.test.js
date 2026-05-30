@@ -140,12 +140,138 @@ maybe('OCCT BREP topoloji çıkarımı (gerçek WASM)', () => {
     expect(sphFaces[0].radius).toBeCloseTo(7, 1);
   });
 
-  // NOT: Gerçek STEP okuma (veFEAOcctReadStepBuffer + STEPControl_Reader) manuel
-  // round-trip spike'ında doğrulandı: OCCT ile yazılan kutu STEP'i geri okununca
-  // faces=6, edges=12, Euler=2. Jest-node ortamında emscripten FS.readFile bir
-  // round-trip yazma adımında quirk veriyor; gerçek .step okuma doğrulaması
-  // fea-step.js entegrasyonu + browser E2E ile yapılır. Burada okuyucunun
-  // API kontratını (graceful failure) test ediyoruz.
+  test('Healing pipeline (Faz 3): temiz kutu BRepCheck=true + healed=true', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    const r = occt.veFEAOcctHealShape(oc, box, {});
+    expect(r.report.wasValid).toBe(true);
+    expect(r.report.nowValid).toBe(true);
+    expect(r.report.healed).toBe(true);
+    expect(r.report.issues.length).toBe(0);
+    // Healed shape hala topology'ye uygun
+    const t = occt.veFEAOcctShapeToTopology(oc, r.shape, { sampleEdges: false });
+    expect(t.faces.length).toBe(6);
+    expect(t.validity.eulerChi).toBe(2);
+  });
+
+  test('Healing + sewing (silindir): sewed=true, validity korunur', () => {
+    const cyl = new oc.BRepPrimAPI_MakeCylinder_1(5, 20).Shape();
+    const r = occt.veFEAOcctHealShape(oc, cyl, { sew: true, sewTolerance: 0.001 });
+    expect(r.report.healed).toBe(true);
+    expect(r.report.sewed).toBe(true);
+    expect(r.report.nowValid).toBe(true);
+  });
+
+  test('Wire/Shell/Solid hiyerarşisi (Faz 4): kutu 1 solid + 1 shell + 6 wire', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    const t = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    expect(Array.isArray(t.solids)).toBe(true);
+    expect(Array.isArray(t.shells)).toBe(true);
+    expect(Array.isArray(t.wires)).toBe(true);
+    expect(t.solids.length).toBe(1);
+    expect(t.shells.length).toBe(1);
+    expect(t.wires.length).toBe(6);   // her yüz için 1 outer wire
+    // Solid içinde 1 shell, shell içinde 6 face
+    expect(t.solids[0].shellIds.length).toBe(1);
+    expect(t.shells[0].faceIds.length).toBe(6);
+    // validity.counts'a yeni entiteler eklendi
+    expect(t.validity.counts.W).toBe(6);
+    expect(t.validity.counts.S).toBe(1);
+    expect(t.validity.counts.So).toBe(1);
+  });
+
+  test('Feature recognition (Faz 6): silindir → boss tespit edilir', () => {
+    const cyl = new oc.BRepPrimAPI_MakeCylinder_1(5, 20).Shape();
+    const t = occt.veFEAOcctShapeToTopology(oc, cyl, { sampleEdges: false });
+    const features = occt.veFEAOcctDetectFeatures(t);
+    expect(Array.isArray(features)).toBe(true);
+    const bosses = features.filter(function(f) { return f.type === 'boss'; });
+    expect(bosses.length).toBeGreaterThanOrEqual(1);
+    expect(bosses[0].params.diameter).toBeCloseTo(10, 0);   // R=5 → D=10
+    expect(bosses[0].label).toMatch(/Boss/);
+  });
+
+  test('Feature recognition: kutu → feature yok (delik/fillet/boss değil)', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    const t = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    const features = occt.veFEAOcctDetectFeatures(t);
+    expect(features.length).toBe(0);
+  });
+
+  test('Persistent naming: signatures üretilir + remap eski ID\'leri korur', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    const t1 = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    occt.veFEAOcctComputeSignatures(t1);
+    t1.faces.forEach(function(f) {
+      expect(typeof f.signature).toBe('string');
+      expect(f.signature.indexOf('F:')).toBe(0);  // face signature prefix
+    });
+    // Aynı geometriden yeni topology + ID'leri değiştir, remap eski ID'lere döndürmeli
+    const t2 = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    occt.veFEAOcctComputeSignatures(t2);
+    t2.faces.forEach(function(f, i) { f.id = 'changed_' + (i + 1); });
+    occt.veFEAOcctRemapFromOldTopology(t1, t2);
+    var matchCount = 0;
+    t2.faces.forEach(function(f) { if (f.id.indexOf('changed') < 0) matchCount++; });
+    expect(matchCount).toBe(6);
+  });
+
+  test('Tessellation köprüsü (Faz 5): kutu 6 grup, her grup face ID etiketli', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    // face HashCode → ID map
+    const faceMap = {};
+    const exp = new oc.TopExp_Explorer_2(box, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    let fi = 0;
+    for (; exp.More(); exp.Next()) {
+      const h = exp.Current().HashCode(1e9);
+      if (!faceMap[h]) { fi++; faceMap[h] = 'face' + fi; }
+    }
+    exp.delete();
+    const tess = occt.veFEAOcctTessellateShape(oc, box, faceMap, { deflection: 0.5 });
+    expect(tess).not.toBeNull();
+    expect(tess.positions.length / 3).toBeGreaterThanOrEqual(8);
+    expect(tess.indices.length / 3).toBeGreaterThanOrEqual(12);
+    expect(tess.groups.length).toBe(6);
+    // Her grubun face ID'si var ve toplam üçgen sayısı tutarlı
+    let totalGroupTris = 0;
+    tess.groups.forEach(function(g) {
+      expect(g.faceId).toMatch(/^face\d+$/);
+      expect(g.count % 3).toBe(0);
+      totalGroupTris += g.count / 3;
+    });
+    expect(totalGroupTris).toBe(tess.indices.length / 3);
+    expect(tess.faceIdOrder.length).toBe(6);
+  });
+
+  test('Outer/inner wire ayrımı: kutu yüzleri sadece outer wire (inner yok)', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 10, 10).Shape();
+    const t = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    t.faces.forEach(function(f) {
+      expect(f.outerWireId).toBeTruthy();   // her yüzün outer wire'ı var
+      expect(f.outerWireId.indexOf('wire')).toBe(0);
+      expect(f.innerWireIds.length).toBe(0); // kutuda delik yok
+    });
+    // Tüm wire'lar isOuter olmalı (delik loop'u yok)
+    t.wires.forEach(function(w) {
+      expect(w.isOuter).toBe(true);
+      expect(w.edgeIds.length).toBe(4);   // her yüz wire'ı 4 kenardan oluşur
+      expect(w.faceIds.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  test('Heal devre dışı (heal:false) → shape değişmez, issues boş', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 1, 1, 1).Shape();
+    const r = occt.veFEAOcctHealShape(oc, box, { heal: false, validate: false });
+    expect(r.report.healed).toBe(false);
+    expect(r.report.issues.length).toBe(0);
+  });
+
   test('STEP okuma fonksiyonu export + geçersiz buffer → ok:false (graceful)', () => {
     expect(typeof occt.veFEAOcctReadStepBuffer).toBe('function');
     expect(typeof occt.veFEAOcctTopologyFromStepBuffer).toBe('function');

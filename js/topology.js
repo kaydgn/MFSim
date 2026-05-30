@@ -418,26 +418,25 @@ function veRenderTabs() {
       'title="Çift tık: yeniden adlandır · Sağ tık: menü">' +
       '<span>' + tab.name + '</span>' +
       (count > 0 ? '<span class="ve-tab-count">(' + count + ')</span>' : '') +
-      '<span class="ve-tab-close" onclick="event.stopPropagation();veCloseTab(' + idx + ')" title="Kapat">✕</span>' +
+      '<span class="ve-tab-close" onclick="event.stopPropagation();veCloseTab(' + idx + ')" title="Kapat"><span class="mf-ico mf-ico-x"></span></span>' +
       '</div>';
   });
   html += '<div class="ve-tab-add" onclick="veAddTab()" title="Yeni topoloji sekmesi">+</div>';
   
   // Sağ taraf — araç butonları
   html += '<div style="flex:1;"></div>';
-  html += '<div class="ve-toolbar-info">0 bileşen, 0 bağlantı</div>';
+  html += '<button class="ve-toolbar-btn" onclick="veUndo()" title="Geri Al (Ctrl+Z)"><span class="mf-ico mf-ico-undo"></span></button>';
+  html += '<button class="ve-toolbar-btn" onclick="veRedo()" title="İleri Al (Ctrl+Y)"><span class="mf-ico mf-ico-redo"></span></button>';
   html += '<div class="ve-toolbar-sep"></div>';
-  html += '<button class="ve-toolbar-btn" onclick="veUndo()" title="Geri Al (Ctrl+Z)">↩️</button>';
-  html += '<button class="ve-toolbar-btn" onclick="veRedo()" title="İleri Al (Ctrl+Y)">↪️</button>';
+  html += '<button class="ve-toolbar-btn" onclick="veZoomIn()" title="Yakınlaştır"><span class="mf-ico mf-ico-zoom-in"></span></button>';
+  html += '<button class="ve-toolbar-btn" onclick="veZoomOut()" title="Uzaklaştır"><span class="mf-ico mf-ico-zoom-out"></span></button>';
+  html += '<button class="ve-toolbar-btn" onclick="veResetView()" title="Görünümü Sıfırla"><span class="mf-ico mf-ico-crosshair"></span></button>';
   html += '<div class="ve-toolbar-sep"></div>';
-  html += '<button class="ve-toolbar-btn" onclick="veZoomIn()" title="Yakınlaştır"><span class="mf-ico mf-ico-search"></span>+</button>';
-  html += '<button class="ve-toolbar-btn" onclick="veZoomOut()" title="Uzaklaştır"><span class="mf-ico mf-ico-search"></span>-</button>';
-  html += '<button class="ve-toolbar-btn" onclick="veResetView()" title="Görünümü Sıfırla">🎯</button>';
-  html += '<button class="ve-toolbar-btn" id="ve-snap-btn" onclick="veToggleSnap()" title="Hizalama" style="opacity:' + (typeof SNAP_ENABLED !== 'undefined' && SNAP_ENABLED ? '1' : '0.4') + ';"><span class="mf-ico mf-ico-ruler"></span></button>';
-  html += '<button class="ve-toolbar-btn" id="ve-grid-btn" onclick="veToggleGrid()" title="Grid Göster/Gizle" style="opacity:' + (typeof veGridVisible !== 'undefined' && veGridVisible ? '1' : '0.4') + ';">⊞</button>';
-  html += '<button class="ve-toolbar-btn" id="ve-grid-density-btn" onclick="veCycleGridDensity()" title="Grid: ' + (typeof veGridLabels !== 'undefined' ? veGridLabels[veGridDensity] : 'Normal') + '">╬</button>';
-  html += '<button class="ve-toolbar-btn" id="ve-boundary-btn" onclick="veToggleBoundary()" title="Sınır Göster/Gizle" style="opacity:' + (typeof veBoundaryVisible !== 'undefined' && veBoundaryVisible ? '1' : '0.4') + ';">▢</button>';
-  html += '<button class="ve-toolbar-btn" id="ve-boundary-opacity-btn" onclick="veCycleBoundaryOpacity()" title="Sınır Opaklığı: ' + (typeof veBoundaryOpacity !== 'undefined' ? Math.round(veBoundaryOpacity * 100) : '55') + '%">◐</button>';
+  html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof SNAP_ENABLED !== 'undefined' && SNAP_ENABLED ? ' active' : '') + '" id="ve-snap-btn" onclick="veToggleSnap()" title="Hizalama"><span class="mf-ico mf-ico-ruler"></span></button>';
+  html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof veGridVisible !== 'undefined' && veGridVisible ? ' active' : '') + '" id="ve-grid-btn" onclick="veToggleGrid()" title="Grid Göster/Gizle"><span class="mf-ico mf-ico-grid"></span></button>';
+  html += '<button class="ve-toolbar-btn" id="ve-grid-density-btn" onclick="veCycleGridDensity()" title="Grid: ' + (typeof veGridLabels !== 'undefined' ? veGridLabels[veGridDensity] : 'Normal') + '"><span class="mf-ico mf-ico-grid-cells"></span></button>';
+  html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof veBoundaryVisible !== 'undefined' && veBoundaryVisible ? ' active' : '') + '" id="ve-boundary-btn" onclick="veToggleBoundary()" title="Sınır Göster/Gizle"><span class="mf-ico mf-ico-frame"></span></button>';
+  html += '<button class="ve-toolbar-btn" id="ve-boundary-opacity-btn" onclick="veCycleBoundaryOpacity()" title="Sınır Opaklığı: ' + (typeof veBoundaryOpacity !== 'undefined' ? Math.round(veBoundaryOpacity * 100) : '55') + '%"><span class="mf-ico mf-ico-contrast"></span></button>';
   
   bar.innerHTML = html;
 }

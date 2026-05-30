@@ -146,16 +146,13 @@ function clearSelection() {
 
 function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
-  var propertiesPanel = document.querySelector('.ve-properties');
   if(!content) return;
-  // Bir bileşen seçildi → paneli OTOMATİK açma; sol kenarda bileşenin
-  // kendi sembolü (marker) belirir. Kullanıcı sembole tıklayınca panel açılır.
-  if(typeof veShowCompMarker === 'function' && node && node.def && node.def.svg) {
-    veShowCompMarker(node.def.svg);
+  // Modal başlığında bileşenin adı ve sembolü görünür
+  var titleEl = document.getElementById('ve-properties-title');
+  if(titleEl) {
+    var nm = (node && (node.customName || (node.def && node.def.name))) || 'Özellikler';
+    titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>' + nm + ' <span style="opacity:0.5;font-weight:400;font-size:0.7rem;margin-left:6px;">' + (node.id || '') + '</span>';
   }
-  
-  // Panel genişliğini KORUYORUZ - kullanıcı değiştirmedikçe dokunmuyoruz
-  // Sadece ilk açılışta varsayılan genişlik ayarlanır
   
   var html = '<div style="position:relative; text-align:center; margin-bottom:12px;">';
   html += node.def.svg.replace('width="50"', 'width="50"').replace('height="50"', 'height="50"');
@@ -211,6 +208,8 @@ function showNodeProperties(node) {
     html += getTerminatorPropertiesHTML(node);
   } else if(node.type === 'gear-shift') {
     html += getGearShiftPropertiesHTML(node);
+  } else if(node.type === 'vehicle-performance') {
+    html += (typeof veVPOverviewHTML === 'function') ? veVPOverviewHTML(node) : '';
   } else if(node.type === 'fea') {
     html += getFEAModulePropertiesHTML(node);
   } else if(node.type === 'fea-geometry') {
@@ -227,7 +226,10 @@ function showNodeProperties(node) {
   
   
   content.innerHTML = html;
-  
+  // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
+  // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
+
+
   // Motor bileşeni için grafik çiz ve kategori dropdown'ı doldur
   if(node.type === 'engine') {
     setTimeout(function() {

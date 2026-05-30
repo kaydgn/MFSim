@@ -14,25 +14,28 @@ function veExpandRoadMap(nodeId) {
   // Orijinal konumu kaydet
   _veMapModalOrigParent = mapContainer.parentElement;
   _veMapModalOrigNext = mapContainer.nextElementSibling;
-  
+
+  // Alttaki Özellikler modalı bu harita modalının altında kalmasın → otomatik kapan
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
+
   // Overlay
   var overlay = document.createElement('div');
   overlay.id = 've-map-modal-overlay';
   overlay.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.82); display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);';
-  
+
   // Modal
   var modal = document.createElement('div');
   modal.id = 've-map-modal';
   modal.style.cssText = 'width:90%; max-width:1500px; min-width:480px; height:88vh; max-height:900px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); position:relative;';
-  
-  // Header
+
+  // Header — ince ortak başlık
   var markerCount = (veRoadMarkers[nodeId] || []).length;
   var badge = markerCount > 0 ? ' <span style="font-size:0.6rem; padding:1px 6px; background:var(--accent-primary); color:#fff; border-radius:0; margin-left:6px;">' + markerCount + ' nokta</span>' : '';
-  
+
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">🗺️ Güzergah Haritası' + badge + '</span>' +
-    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  header.innerHTML = '<span style="font-size:0.72rem; font-weight:700; color:var(--text-heading);">🗺️ Güzergah Haritası' + badge + '</span>' +
+    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
   modal.appendChild(header);
   
   // Toolbar
@@ -2499,6 +2502,9 @@ function veExpandProfileChart(nodeId, chartType) {
     showToast('GPS rakım verisi bulunamadı', 'warning'); return;
   }
 
+  // Alttaki Özellikler modalı bu büyük chart'ın altında kalmasın → otomatik kapan
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
+
   // Overlay
   var overlay = document.createElement('div');
   overlay.id = 've-profile-modal-overlay';
@@ -2508,11 +2514,11 @@ function veExpandProfileChart(nodeId, chartType) {
   var modal = document.createElement('div');
   modal.style.cssText = 'width:100%; max-width:1200px; max-height:90vh; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); border-radius:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
-  // Header
+  // Header — ince ortak başlık
   var curSmooth = (node.data && node.data.smoothLevel !== undefined) ? node.data.smoothLevel : 2;
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Rakım profili (GPS)</span>' +
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  header.innerHTML = '<span style="font-size:0.72rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Rakım profili (GPS)</span>' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
     '<div style="display:inline-flex; align-items:center; gap:3px;">' +
     '<label style="font-size:0.56rem; color:var(--text-muted);">Filtre:</label>' +
@@ -2869,55 +2875,47 @@ function veEditNodeName(nodeId) {
   });
 }
 
-// ─── Bileşen sembolü (sol-kenar marker) + Özellikler paneli toggle ─────────
-// Bir bileşen seçilince marker görünür; tıklanınca panel soldan kayarak açılır.
-// Eski "otomatik aç" davranışı kaldırıldı — kullanıcı sembolü tıklamadan panel
-// gelmez. Bu fonksiyonlar showNodeProperties / showMultipleSelection /
-// showEmptyProperties tarafından çağrılır.
-function veShowCompMarker(svgHtml) {
-  var m = document.getElementById('ve-comp-marker');
-  if(!m) return;
-  var slot = document.getElementById('ve-comp-marker-svg');
-  if(slot) slot.innerHTML = svgHtml || '';
-  m.classList.add('visible');
-  // Dikkat çek: kenarlık temaya uygun aksan renginde yanıp söner (animasyonu
-  // yeniden başlatmak için class'ı sil → reflow → ekle deseni)
-  m.classList.remove('flash');
-  void m.offsetWidth;
-  m.classList.add('flash');
-}
-function veHideCompMarker() {
-  var m = document.getElementById('ve-comp-marker');
-  if(!m) return;
-  m.classList.remove('visible');
-}
+// Bileşen özellikleri MODAL toggle — overlay fade-in/out yönetir.
+// forceState true → aç; false → kapat; undefined → toggle.
+// Race-safe: hızlı kapat→aç sıralarında bekleyen close timeout'unun yeni
+// open'ı bozmasını engeller (visible class kontrolü ile).
 function veTogglePropertiesPanel(forceState) {
-  var panel = document.querySelector('.ve-properties');
-  if(!panel) return;
-  var open = (typeof forceState === 'boolean')
-    ? forceState
-    : panel.classList.contains('ve-prop-hidden');
-  panel.classList.toggle('ve-prop-hidden', !open);
+  var ov = document.getElementById('ve-properties-overlay');
+  if(!ov) return;
+  var isVisible = ov.classList.contains('visible');
+  var open = (typeof forceState === 'boolean') ? forceState : !isVisible;
+  if(open) {
+    if(ov.style.display !== 'flex') {
+      // Tamamen kapalıydı → display set, sonra rAF ile visible (geçiş 0→1)
+      ov.style.display = 'flex';
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() { ov.classList.add('visible'); });
+      });
+    } else if(!isVisible) {
+      // Kapanma sürecinde tekrar açıldı (display hâlâ flex) → visible'ı geri ekle
+      ov.classList.add('visible');
+    }
+  } else {
+    if(!isVisible) return;
+    ov.classList.remove('visible');
+    setTimeout(function() {
+      // 220ms sonra hâlâ visible değilse gerçekten kapat (race-safe)
+      if(!ov.classList.contains('visible')) ov.style.display = 'none';
+    }, 220);
+  }
 }
-// ESC: panel açıksa kapat (input/textarea içinde değilse)
+// ESC: modal açıksa kapat (input/textarea içinde değilse)
 document.addEventListener('keydown', function(e) {
   if(e.key !== 'Escape') return;
   var t = e.target;
   if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-  var panel = document.querySelector('.ve-properties');
-  if(panel && !panel.classList.contains('ve-prop-hidden')) veTogglePropertiesPanel(false);
+  var ov = document.getElementById('ve-properties-overlay');
+  if(ov && ov.style.display === 'flex') veTogglePropertiesPanel(false);
 });
 
 function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Çoklu seçim için marker — küp ikonu + sayı rozeti
-  veShowCompMarker(
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-      '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>' +
-      '<polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>' +
-    '</svg>'
-  );
 
   var html = '<div style="text-align:center; padding:20px;">';
   html += '<div style="font-size:2rem; margin-bottom:12px;"><span class="mf-ico mf-ico-package"></span></div>';
@@ -2928,17 +2926,16 @@ function showMultipleSelection() {
   html += '</div>';
 
   content.innerHTML = html;
+  // Modal otomatik açılmaz — kullanıcı çift tık ile veya marker'a tıklayarak açar
 }
 
 function showEmptyProperties() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Seçim yok → marker'ı ve paneli gizle
-  veHideCompMarker();
-  var panel = document.querySelector('.ve-properties');
-  if(panel) panel.classList.add('ve-prop-hidden');
+  // Seçim yok → modal'ı kapat
+  veTogglePropertiesPanel(false);
 
-  content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon">🖱️</div><div>Bir bileşen seçin</div><small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small></div>';
+  content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div><div>Bir bileşen seçin</div><small style="color:var(--text-muted);">Özellikleri burada açılır</small></div>';
 }
 
 function deleteSelectedNodes() {

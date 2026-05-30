@@ -262,7 +262,29 @@ function getFEAGeometryPropertiesHTML(node) {
         '<b>' + summary.faces + '</b> yüzey · <b>' + summary.edges + '</b> kenar · <b>' + summary.vertices + '</b> köşe' +
         (isBrep ? ' (CAD çekirdeğinden kesin)' : ' tespit edildi') + '. ' +
         'Lokal mesh ayarlarına (Face/Edge Sizing, Sphere of Influence) hazır.</div>';
-      // B-Rep validity raporu (Euler-Poincaré + manifold + watertight)
+      // Faz 6 — Tespit edilen özellikler (delik/fillet/boss)
+      if (isBrep && topoObj && Array.isArray(topoObj.features) && topoObj.features.length > 0) {
+        var counts = {};
+        topoObj.features.forEach(function(ft) { counts[ft.type] = (counts[ft.type] || 0) + 1; });
+        var label = { hole: 'delik', fillet: 'fillet', boss: 'boss' };
+        var parts = Object.keys(counts).map(function(t) { return '<b>' + counts[t] + '</b> ' + (label[t] || t); });
+        html += '<div style="margin-top:6px; padding:5px 8px; background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.25); font-size:0.56rem; color:var(--text-muted);">';
+        html += '<div style="font-weight:600; color:#a855f7; margin-bottom:2px;">🔍 Tespit edilen özellikler (auto)</div>';
+        html += parts.join(' · ');
+        html += '</div>';
+      }
+      // Faz 4 — tam B-Rep hiyerarşisi (solid/shell/wire)
+      if (isBrep && topoObj && Array.isArray(topoObj.wires)) {
+        var nSolid = topoObj.solids ? topoObj.solids.length : 0;
+        var nShell = topoObj.shells ? topoObj.shells.length : 0;
+        var nWire = topoObj.wires.length;
+        var innerWires = topoObj.wires.filter(function(w) { return !w.isOuter; }).length;
+        html += '<div style="font-size:0.56rem; color:var(--text-muted); margin-top:3px;">' +
+          '🧩 BREP hiyerarşisi: <b>' + nSolid + '</b> katı · <b>' + nShell + '</b> shell · <b>' + nWire + '</b> wire' +
+          (innerWires > 0 ? ' (<b style="color:#a855f7;">' + innerWires + ' delik loop</b>)' : '') +
+          '</div>';
+      }
+      // B-Rep validity raporu (Euler-Poincaré + manifold + watertight + healing)
       if (isBrep && validity) {
         var chk = function(ok) { return ok ? '<span style="color:var(--accent-success,#22c55e);">✓</span>' : '<span style="color:var(--accent-warning,#f59e0b);">⚠</span>'; };
         html += '<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(34,197,94,0.2); font-size:0.56rem; color:var(--text-muted); display:grid; grid-template-columns:1fr 1fr; gap:2px 10px;">';
@@ -271,6 +293,18 @@ function getFEAGeometryPropertiesHTML(node) {
         html += '<span>' + chk(validity.watertight) + ' Su geçirmez</span>';
         html += '<span>' + (validity.counts ? validity.counts.manifoldEdges + '/' + validity.counts.E + ' kenar 2-yüz' : '') + '</span>';
         html += '</div>';
+        // Faz 3 — Shape Healing + BRepCheck raporu
+        if (validity.healed != null || validity.brepCheckValid != null || validity.sewed != null) {
+          html += '<div style="margin-top:6px; padding:5px 8px; background:rgba(34,197,94,0.05); border:1px solid rgba(34,197,94,0.2); font-size:0.54rem; color:var(--text-muted);">';
+          html += '<div style="font-weight:600; color:var(--accent-success,#22c55e); margin-bottom:2px;">🔧 Shape Healing Pipeline (OCCT)</div>';
+          var bits = [];
+          if (validity.wasValid != null) bits.push(chk(validity.wasValid) + ' Import sonrası valid: ' + (validity.wasValid ? 'evet' : 'hayır'));
+          if (validity.healed) bits.push('🔧 ShapeFix onarıldı');
+          if (validity.sewed)  bits.push('🪡 Sewing uygulandı');
+          if (validity.brepCheckValid != null) bits.push(chk(validity.brepCheckValid) + ' BRepCheck_Analyzer: ' + (validity.brepCheckValid ? 'valid' : 'invalid'));
+          html += bits.join(' · ');
+          html += '</div>';
+        }
         if (validity.issues && validity.issues.length) {
           html += '<div style="margin-top:4px; font-size:0.54rem; color:var(--accent-warning,#f59e0b); line-height:1.4;">⚠ ' + validity.issues.join(' · ') + '</div>';
         }

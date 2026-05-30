@@ -127,6 +127,357 @@ function _veFEAOcctLoadBrowser(opts) {
   });
 }
 
+// ─── Feature Recognition (Faz 6, raporun §7.2 madde 11) ────────────────────
+// BREP topology üzerinde delik / fillet / boss / planar set tespiti +
+// otomatik named selection üretir. Wire/face/tip bilgisinden kural-tabanlı:
+//
+//   Delik (Hole)      : Silindirik yüz + bir veya iki planar kapağa komşu
+//                       inner wire (delik loop'u) varsa → o silindir delik
+//   Fillet (Blend)    : Silindirik/toroidal yüz, R çok küçük (bbox <%5),
+//                       iki düzlemsel yüz arasında smooth geçiş
+//   Boss              : Silindirik yüz + iki planar kapak (üst/alt), eksen
+//                       ortak, R bbox'ın belirgin oranı
+//   Planar Top/Bottom : En büyük alanlı planar yüzeyler eksen yönlerinde
+//
+// Çıktı: topology.features = [{type, label, faceIds[], params:{...}}]
+function veFEAOcctDetectFeatures(topology) {
+  if (!topology || !Array.isArray(topology.faces)) return [];
+  var faces = topology.faces;
+  var edges = topology.edges || [];
+  var wires = topology.wires || [];
+  var bbox = topology.bbox || { x: 100, y: 100, z: 100 };
+  var bboxDiag = Math.sqrt(bbox.x * bbox.x + bbox.y * bbox.y + bbox.z * bbox.z) || 100;
+  var features = [];
+
+  // Hızlı erişim haritaları
+  var faceById = {};
+  faces.forEach(function(f) { faceById[f.id] = f; });
+  var wireById = {};
+  wires.forEach(function(w) { wireById[w.id] = w; });
+
+  // 1) DELİK tespiti — silindirik yüzler, bir planar yüze inner wire ile bağlı
+  // Strateji: silindirik bir yüzün edge'leri başka planar yüzlerin innerWireIds'inde mi geçiyor?
+  var holeFaceIds = {};
+  faces.forEach(function(f) {
+    if (f.type !== 'cylindrical') return;
+    // Bu silindirik yüzün edge'leri hangi planar yüzlerle paylaşılıyor?
+    var planarParents = {};
+    (f.edgeIds || []).forEach(function(eid) {
+      var e = edges.find(function(ed) { return ed.id === eid; });
+      if (!e || !Array.isArray(e.faceIds)) return;
+      e.faceIds.forEach(function(otherFid) {
+        if (otherFid === f.id) return;
+        var other = faceById[otherFid];
+        if (!other || other.type !== 'planar') return;
+        // Bu planar yüzün inner wire'larından biri silindirin bu kenarını içeriyor mu?
+        var inners = other.innerWireIds || [];
+        for (var iw = 0; iw < inners.length; iw++) {
+          var wire = wireById[inners[iw]];
+          if (wire && (wire.edgeIds || []).indexOf(eid) >= 0) {
+            planarParents[otherFid] = true;
+            break;
+          }
+        }
+      });
+    });
+    var parentIds = Object.keys(planarParents);
+    if (parentIds.length >= 1) {
+      // En az 1 planar yüzde inner wire olarak görünüyor → delik
+      holeFaceIds[f.id] = true;
+      var holeRadius = f.radius || 0;
+      features.push({
+        type: 'hole', label: 'Delik' + (holeRadius ? ' Ø' + (holeRadius * 2).toFixed(1) + 'mm' : ''),
+        faceIds: [f.id], parentFaceIds: parentIds,
+        params: { radius: holeRadius, diameter: holeRadius * 2, depth: f.length || 0 }
+      });
+    }
+  });
+
+  // 2) FILLET tespiti — küçük R'li silindirik/toroidal yüzler, iki planar yüz arasında
+  // Eşik: R < bbox * 0.05 (kabul: küçük yarıçap = blend)
+  var filletRadiusThresh = bboxDiag * 0.05;
+  faces.forEach(function(f) {
+    if (holeFaceIds[f.id]) return;  // delik olarak işaretlenmiş
+    if (f.type !== 'cylindrical' && f.type !== 'toroidal') return;
+    var r = f.radius || f.minorRadius || 0;
+    if (r <= 0 || r > filletRadiusThresh) return;
+    // İki planar yüze komşu mu?
+    var planarNbrs = {};
+    (f.edgeIds || []).forEach(function(eid) {
+      var e = edges.find(function(ed) { return ed.id === eid; });
+      if (!e || !Array.isArray(e.faceIds)) return;
+      e.faceIds.forEach(function(otherFid) {
+        if (otherFid === f.id) return;
+        var other = faceById[otherFid];
+        if (other && other.type === 'planar') planarNbrs[otherFid] = true;
+      });
+    });
+    if (Object.keys(planarNbrs).length >= 2) {
+      features.push({
+        type: 'fillet', label: 'Fillet R' + r.toFixed(2) + 'mm',
+        faceIds: [f.id], parentFaceIds: Object.keys(planarNbrs),
+        params: { radius: r }
+      });
+    }
+  });
+
+  // 3) BOSS / EXTRUSION — silindirik yüz + iki planar kapak (delik değil)
+  faces.forEach(function(f) {
+    if (holeFaceIds[f.id]) return;
+    if (f.type !== 'cylindrical') return;
+    var r = f.radius || 0;
+    if (r <= filletRadiusThresh) return;  // fillet olarak ele alındı
+    // İki planar yüze komşu (üst+alt kapak)?
+    var planarNbrs = {};
+    (f.edgeIds || []).forEach(function(eid) {
+      var e = edges.find(function(ed) { return ed.id === eid; });
+      if (!e || !Array.isArray(e.faceIds)) return;
+      e.faceIds.forEach(function(otherFid) {
+        if (otherFid === f.id) return;
+        var other = faceById[otherFid];
+        if (other && other.type === 'planar') planarNbrs[otherFid] = true;
+      });
+    });
+    var caps = Object.keys(planarNbrs);
+    if (caps.length === 2) {
+      features.push({
+        type: 'boss', label: 'Boss Ø' + (r * 2).toFixed(1) + 'mm',
+        faceIds: [f.id], parentFaceIds: caps,
+        params: { radius: r, diameter: r * 2, length: f.length || 0 }
+      });
+    }
+  });
+
+  return features;
+}
+
+// ─── Persistent Naming (Faz 6, raporun §5.5 uyarısı) ───────────────────────
+// Geometri güncellendiğinde face/edge/vertex ID'lerinin aynı entiteyi
+// göstermeye devam etmesi için stabil bir geometrik imza üretir.
+// İmza = tip + yuvarlanmış centroid + (alan/uzunluk). Tam çözüm değil
+// (raporun "CAD'in çözülmemiş klasik problemi") ama çoğu güncellemede tutar.
+function veFEAOcctComputeSignatures(topology, opts) {
+  opts = opts || {};
+  var precision = isFinite(opts.precision) ? opts.precision : 0.01;
+  var inv = 1 / precision;
+  function round(x) { return Math.round((x || 0) * inv) / inv; }
+  function rvec(v) { return v ? [round(v[0]), round(v[1]), round(v[2])] : null; }
+  if (Array.isArray(topology.faces)) {
+    topology.faces.forEach(function(f) {
+      f.signature = 'F:' + f.type + ':' + round(f.area || 0) +
+        ':' + (f.centroid ? rvec(f.centroid).join(',') : '') +
+        (f.radius ? ':r' + round(f.radius) : '');
+    });
+  }
+  if (Array.isArray(topology.edges)) {
+    topology.edges.forEach(function(e) {
+      e.signature = 'E:' + e.type + ':' + round(e.length || 0) +
+        (e.radius ? ':r' + round(e.radius) : '') +
+        (e.center ? ':c' + rvec(e.center).join(',') : '');
+    });
+  }
+  if (Array.isArray(topology.vertices)) {
+    topology.vertices.forEach(function(v) {
+      v.signature = 'V:' + (v.position ? rvec(v.position).join(',') : '');
+    });
+  }
+  return topology;
+}
+
+// İki topology arasında signature eşleştirme — eski ID'leri yeni entitelere
+// taşır. updatedTopo.faces[i].id ← oldTopo'daki aynı signature'lı face'in ID'si.
+// Eşleşmeyen yeni entiteler kendi ID'sini korur.
+function veFEAOcctRemapFromOldTopology(oldTopo, newTopo) {
+  if (!oldTopo || !newTopo) return newTopo;
+  ['faces', 'edges', 'vertices'].forEach(function(kind) {
+    var oldList = oldTopo[kind] || [];
+    var newList = newTopo[kind] || [];
+    var sigToOld = {};
+    oldList.forEach(function(o) { if (o.signature) sigToOld[o.signature] = o.id; });
+    newList.forEach(function(n) {
+      if (n.signature && sigToOld[n.signature]) {
+        n.previousId = n.id;
+        n.id = sigToOld[n.signature];
+      }
+    });
+  });
+  return newTopo;
+}
+
+// ─── Tessellation köprüsü (Faz 5, raporun §5.6) ────────────────────────────
+// OCCT shape'i topology-aware tessellate eder (BRepMesh_IncrementalMesh) ve
+// her yüzün üçgenlerini global pozisyona dönüştürerek face ID ile gruplar.
+// 3D viewer'da STEP yüzleri TIKLANABİLİR hale gelir — Three.js BufferGeometry
+// groups[] yapısı ile (her group materialIndex=face index).
+//   opts: { deflection:number=0.5, angularDef:number=0.5 }
+//   faceIdByHash: HashCode → 'faceN' map (caller'dan)
+// Dönüş: { positions:Float32Array, indices:Uint32Array,
+//          groups:[{start,count,faceId}], faceIdOrder:[faceId,...] }
+function veFEAOcctTessellateShape(oc, shape, faceIdByHash, opts) {
+  opts = opts || {};
+  var defl = isFinite(opts.deflection) ? opts.deflection : 0.5;
+  var aDefl = isFinite(opts.angularDef) ? opts.angularDef : 0.5;
+  // Tessellate
+  try { new oc.BRepMesh_IncrementalMesh_2(shape, defl, false, aDefl, false); }
+  catch (e) { return null; }
+
+  var positions = [];  // flat [x,y,z, ...]
+  var indices = [];    // flat triangle indices
+  var groups = [];
+  var faceIdOrder = [];
+  var nodeOffset = 0;  // global position dizinine ofset
+
+  var TA = oc.TopAbs_ShapeEnum;
+  var exp = new oc.TopExp_Explorer_2(shape, TA.TopAbs_FACE, TA.TopAbs_SHAPE);
+  var seen = {};
+  for (; exp.More(); exp.Next()) {
+    var fShape = exp.Current();
+    var h = fShape.HashCode(1e9);
+    if (seen[h]) continue;
+    seen[h] = true;
+    var faceId = (faceIdByHash && faceIdByHash[h]) || ('face' + (faceIdOrder.length + 1));
+    var face;
+    try { face = oc.TopoDS.Face_1(fShape); } catch (e) { continue; }
+    var loc = new oc.TopLoc_Location_1();
+    var triHandle;
+    try { triHandle = oc.BRep_Tool.Triangulation(face, loc); }
+    catch (e) { continue; }
+    if (!triHandle || triHandle.IsNull()) continue;
+    var tri = triHandle.get();
+    var nNodes = tri.NbNodes();
+    var nTris = tri.NbTriangles();
+    if (nNodes < 3 || nTris < 1) continue;
+
+    // Yerel transformasyon (TopLoc_Location) — global pozisyon için uygulanmalı
+    var trsf = loc.Transformation();
+    var hasLoc = loc.IsIdentity ? !loc.IsIdentity() : true;
+
+    // Yüz orientation REVERSED ise üçgen winding'i ters çevrilmeli
+    var faceOri = (typeof face.Orientation_1 === 'function') ? face.Orientation_1() : null;
+    var reversed = false;
+    try { if (faceOri && faceOri.value === 1) reversed = true; }   // TopAbs_REVERSED = 1
+    catch (e) { /* skip */ }
+
+    var localStart = indices.length;
+
+    // Node'ları positions'a ekle (1-tabanlı OCCT → 0-tabanlı buffer)
+    for (var ni = 1; ni <= nNodes; ni++) {
+      var p = tri.Node(ni);
+      var x = p.X(), y = p.Y(), z = p.Z();
+      if (hasLoc) {
+        try {
+          var pt = new oc.gp_Pnt_3(x, y, z);
+          pt.Transform(trsf);
+          positions.push(pt.X(), pt.Y(), pt.Z());
+          pt.delete && pt.delete();
+        } catch (e) { positions.push(x, y, z); }
+      } else {
+        positions.push(x, y, z);
+      }
+    }
+    // Üçgenleri ekle (Triangle.Value(1/2/3) → 1-tabanlı node indeksleri)
+    for (var ti = 1; ti <= nTris; ti++) {
+      var t = tri.Triangle(ti);
+      var a = t.Value(1) - 1 + nodeOffset;
+      var b = t.Value(2) - 1 + nodeOffset;
+      var c = t.Value(3) - 1 + nodeOffset;
+      if (reversed) { indices.push(a, c, b); } else { indices.push(a, b, c); }
+    }
+    groups.push({ start: localStart, count: (indices.length - localStart), faceId: faceId });
+    faceIdOrder.push(faceId);
+    nodeOffset = positions.length / 3;
+  }
+  exp.delete();
+
+  return {
+    positions: new Float32Array(positions),
+    indices: new Uint32Array(indices),
+    groups: groups,
+    faceIdOrder: faceIdOrder
+  };
+}
+
+// ─── Shape Healing + Sewing + Validity Check (raporun §5.2-§5.3-§4.4) ──────
+// Ham STEP shape'ini ANSYS pipeline'ı gibi temizler:
+//   1. ShapeFix_Shape — tolerans uyuşmazlığı, eksik pcurve, küçük yüz onarımı
+//   2. BRepBuilderAPI_Sewing — kopuk yüzleri shell'e dik (opsiyonel, IGES kritik)
+//   3. BRepCheck_Analyzer — OCCT'nin kendi düzeyli validity check'i
+// opts: { heal:bool=true, sew:bool=false, sewTolerance:0.01,
+//         precision:0.001, minTol:1e-7, maxTol:1.0, validate:bool=true }
+// Dönüş: { shape (healed), report:{healed,sewed,wasValid,nowValid,issues[]} }
+function veFEAOcctHealShape(oc, shape, opts) {
+  opts = opts || {};
+  var doHeal = opts.heal !== false;
+  var doSew = opts.sew === true;
+  var doValidate = opts.validate !== false;
+  var report = { healed: false, sewed: false, wasValid: null, nowValid: null, issues: [] };
+  var cur = shape;
+
+  // Önce validity (heal öncesi). IsValid_1(shape) — alt-shape parametresi alır;
+  // boş = tüm shape.
+  if (doValidate) {
+    try {
+      var preCheck = new oc.BRepCheck_Analyzer(cur, true);
+      report.wasValid = preCheck.IsValid_1(cur);
+      preCheck.delete && preCheck.delete();
+    } catch (e) { report.issues.push('PreCheck: ' + (e.message || e)); }
+  }
+
+  // ShapeFix_Shape: tolerans + eksik pcurve + küçük yüz onarımı.
+  // OCCT v1.1.1 Perform() boş ProgressIndicator handle ister.
+  if (doHeal) {
+    try {
+      var fix = new oc.ShapeFix_Shape_1();
+      fix.Init(cur);
+      if (isFinite(opts.precision)) fix.SetPrecision(opts.precision);
+      if (isFinite(opts.minTol))    fix.SetMinTolerance(opts.minTol);
+      if (isFinite(opts.maxTol))    fix.SetMaxTolerance(opts.maxTol);
+      var emptyProg = new oc.Handle_Message_ProgressIndicator_1();
+      fix.Perform(emptyProg);
+      emptyProg.delete && emptyProg.delete();
+      var healed = fix.Shape();
+      if (healed && (!healed.IsNull || !healed.IsNull())) {
+        cur = healed;
+        report.healed = true;
+      }
+      fix.delete && fix.delete();
+    } catch (e) { report.issues.push('ShapeFix: ' + (e.message || e)); }
+  }
+
+  // Sewing: kopuk yüzleri birleştir (default OFF — STEP'te shell zaten kapalı,
+  // IGES'te zorunlu). Constructor: (tol, option=true, cutting=true,
+  // nonmanifold=false, ...) — opencascade.js v1.1.1 değişken imza.
+  if (doSew) {
+    try {
+      var tol = isFinite(opts.sewTolerance) ? opts.sewTolerance : 0.01;
+      var sew;
+      try { sew = new oc.BRepBuilderAPI_Sewing(tol, true, true, true, false); }
+      catch (e3) { try { sew = new oc.BRepBuilderAPI_Sewing(tol); } catch (e4) { sew = new oc.BRepBuilderAPI_Sewing(); } }
+      sew.Add(cur);
+      var pSew = new oc.Handle_Message_ProgressIndicator_1();
+      try { sew.Perform(pSew); } catch (eP) { sew.Perform(); }  // bazı build'ler argümansız
+      pSew.delete && pSew.delete();
+      var sewed = sew.SewedShape();
+      if (sewed && (!sewed.IsNull || !sewed.IsNull())) {
+        cur = sewed;
+        report.sewed = true;
+      }
+      sew.delete && sew.delete();
+    } catch (e) { report.issues.push('Sewing: ' + (e.message || e)); }
+  }
+
+  // Healing sonrası validity (BRepCheck.IsValid_1(shape))
+  if (doValidate) {
+    try {
+      var postCheck = new oc.BRepCheck_Analyzer(cur, true);
+      report.nowValid = postCheck.IsValid_1(cur);
+      postCheck.delete && postCheck.delete();
+    } catch (e) { report.issues.push('PostCheck: ' + (e.message || e)); }
+  }
+
+  return { shape: cur, report: report };
+}
+
 // ─── STEP okuma: ArrayBuffer → TopoDS_Shape ─────────────────────────────────
 // STEP dosyasını OCCT'nin Emscripten sanal FS'ine yazıp STEPControl_Reader ile
 // okur, tüm root'ları transfer edip tek shape döndürür. occt-import-js'ten
@@ -189,7 +540,50 @@ function veFEAOcctTopologyFromStepBuffer(buffer, opts) {
       console.warn('[FEA OCCT] STEP read başarısız:', r.message);
       return null;
     }
-    return veFEAOcctShapeToTopology(oc, r.shape, opts);
+    // Heal + (opsiyonel) sew + validity check — kötü STEP'leri sessizce kabul etme.
+    // opts.heal=false ile devre dışı; opts.sew=true ile aktif (default OFF).
+    var healed = veFEAOcctHealShape(oc, r.shape, opts);
+    var topo = veFEAOcctShapeToTopology(oc, healed.shape, opts);
+    if (topo) {
+      // Healing raporunu topology.validity'ye iliştir (UI gösterecek)
+      topo.validity = topo.validity || {};
+      topo.validity.healed = healed.report.healed;
+      topo.validity.sewed = healed.report.sewed;
+      topo.validity.wasValid = healed.report.wasValid;
+      topo.validity.brepCheckValid = healed.report.nowValid;
+      if (healed.report.issues.length) {
+        topo.validity.issues = (topo.validity.issues || []).concat(healed.report.issues);
+      }
+      // Faz 6 — Feature recognition (hole/fillet/boss) + persistent naming
+      if (opts.detectFeatures !== false) {
+        try { topo.features = veFEAOcctDetectFeatures(topo); }
+        catch (e) { topo.features = []; }
+      }
+      if (opts.computeSignatures !== false) {
+        try { veFEAOcctComputeSignatures(topo, { precision: opts.signaturePrecision }); }
+        catch (e) { /* skip */ }
+      }
+      // Faz 5 — Tessellation köprüsü: viewer'a 3D BREP yüz seçimi sağla
+      if (opts.tessellate !== false) {
+        try {
+          var faceIdByHash = {};
+          // ShapeToTopology'de oluşturulan ID'leri yeniden çıkarmak yerine
+          // healed shape üzerinden HashCode → 'faceN' eşlemesini kur (sıra aynı).
+          var fExp = new oc.TopExp_Explorer_2(healed.shape, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+          var fi = 0, seenF = {};
+          for (; fExp.More(); fExp.Next()) {
+            var h = fExp.Current().HashCode(1e9);
+            if (seenF[h]) continue;
+            seenF[h] = true;
+            fi++;
+            faceIdByHash[h] = 'face' + fi;
+          }
+          fExp.delete();
+          topo.tessellation = veFEAOcctTessellateShape(oc, healed.shape, faceIdByHash, opts);
+        } catch (e) { /* tessellation başarısız → viewer sadece BREP listesi gösterir */ }
+      }
+    }
+    return topo;
   });
 }
 
@@ -204,13 +598,23 @@ function veFEAOcctShapeToTopology(oc, shape, opts) {
   var TA = oc.TopAbs_ShapeEnum;
 
   // 1) Entiteleri HashCode ile dedup ederek topla → stabil index/ID
+  // Raporun §1.1 tam hiyerarşisi: SOLID → SHELL → FACE → WIRE → EDGE → VERTEX
+  var solidList = _veFEAOcctCollect(oc, shape, TA.TopAbs_SOLID);
+  var shellList = _veFEAOcctCollect(oc, shape, TA.TopAbs_SHELL);
   var faceList = _veFEAOcctCollect(oc, shape, TA.TopAbs_FACE);
+  var wireList = _veFEAOcctCollect(oc, shape, TA.TopAbs_WIRE);
   var edgeList = _veFEAOcctCollect(oc, shape, TA.TopAbs_EDGE);
   var vertList = _veFEAOcctCollect(oc, shape, TA.TopAbs_VERTEX);
 
   // HashCode → ID haritaları (adjacency için)
+  var solidIdByHash = {};
+  solidList.forEach(function(it, i) { it.id = 'solid' + (i + 1); solidIdByHash[it.hash] = it.id; });
+  var shellIdByHash = {};
+  shellList.forEach(function(it, i) { it.id = 'shell' + (i + 1); shellIdByHash[it.hash] = it.id; });
   var faceIdByHash = {};
   faceList.forEach(function(it, i) { it.id = 'face' + (i + 1); faceIdByHash[it.hash] = it.id; });
+  var wireIdByHash = {};
+  wireList.forEach(function(it, i) { it.id = 'wire' + (i + 1); wireIdByHash[it.hash] = it.id; });
   var vertIdByHash = {};
   vertList.forEach(function(it, i) { it.id = 'v' + (i + 1); vertIdByHash[it.hash] = it.id; });
   edgeList.forEach(function(it, i) { it.id = 'edge' + (i + 1); });
@@ -218,13 +622,48 @@ function veFEAOcctShapeToTopology(oc, shape, opts) {
   // 2) E→F adjacency: her kenarın komşu yüzleri (manifold kontrolü)
   var edgeFaceMap = _veFEAOcctEdgeFaceMap(oc, shape, faceIdByHash);
 
-  // 3) Yüzleri işle (tip + alan + centroid + normal)
+  // 3) Yüzleri işle (tip + alan + centroid + normal + outer/inner wire)
   var faces = [];
   var totalArea = 0;
   faceList.forEach(function(it) {
     var f = _veFEAOcctFaceInfo(oc, it.shape, it.id);
     if (f.area) totalArea += f.area;
+    // Outer/inner wire ID'leri — raporun §3 "outer dolaşımı CCW, inner CW"
+    var wireBindings = _veFEAOcctFaceWires(oc, it.shape, wireIdByHash);
+    f.outerWireId = wireBindings.outer;
+    f.innerWireIds = wireBindings.inner;
     faces.push(f);
+  });
+
+  // 3b) Wire entitelerini işle (edge listesi + parent face)
+  var edgeIdByHash = {};
+  edgeList.forEach(function(it) { edgeIdByHash[it.hash] = it.id; });
+  var wires = [];
+  wireList.forEach(function(it) {
+    var w = _veFEAOcctWireInfo(oc, it.shape, it.id, edgeIdByHash);
+    wires.push(w);
+  });
+  // Wire ↔ Face backward bind (face.outerWireId / innerWireIds'den)
+  var wireMap = {}; wires.forEach(function(w) { wireMap[w.id] = w; w.faceIds = []; w.isOuter = false; });
+  faces.forEach(function(f) {
+    if (f.outerWireId && wireMap[f.outerWireId]) {
+      wireMap[f.outerWireId].faceIds.push(f.id);
+      wireMap[f.outerWireId].isOuter = true;
+    }
+    (f.innerWireIds || []).forEach(function(wid) {
+      if (wireMap[wid]) wireMap[wid].faceIds.push(f.id);
+    });
+  });
+
+  // 3c) Shell entitelerini işle (içerdiği face ID'leri)
+  var shells = [];
+  shellList.forEach(function(it) {
+    shells.push({ id: it.id, label: it.id, faceIds: _veFEAOcctShellFaceIds(oc, it.shape, faceIdByHash) });
+  });
+  // 3d) Solid entitelerini işle (içerdiği shell ID'leri)
+  var solids = [];
+  solidList.forEach(function(it) {
+    solids.push({ id: it.id, label: it.id, shellIds: _veFEAOcctSolidShellIds(oc, it.shape, shellIdByHash) });
   });
 
   // 4) Kenarları işle (tip + geometri + polyline + endpoint vertex'leri + faceIds)
@@ -251,11 +690,14 @@ function veFEAOcctShapeToTopology(oc, shape, opts) {
   var volume = _veFEAOcctVolume(oc, shape);
   var bbox = _veFEAOcctBBox(oc, shape);
 
-  // 8) Validity: Euler-Poincaré + manifold + watertight
-  var validity = _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap);
+  // 8) Validity: Euler-Poincaré + manifold + watertight + entite sayıları
+  var validity = _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap, shells, solids, wires);
 
   return {
     type: 'step',
+    solids: solids,    // Faz 4 — raporun §7.1 TopoModel solid hiyerarşisi
+    shells: shells,    // Faz 4
+    wires: wires,      // Faz 4 — outer/inner wire ayrımı + face ↔ wire
     faces: faces,
     edges: edges,
     vertices: vertices,
@@ -459,6 +901,96 @@ function _veFEAOcctVertexInfo(oc, vertShape, id) {
   return info;
 }
 
+// ─── Wire / Shell / Solid yardımcıları (Faz 4) ──────────────────────────────
+// Bir yüzün outer wire'ı (BRepTools.OuterWire) + inner wires (delik loop'ları).
+// Raporun §3 outer/inner ayrımı — "deliği tek tıkla seç" UX'inin temeli.
+function _veFEAOcctFaceWires(oc, faceShape, wireIdByHash) {
+  var result = { outer: null, inner: [] };
+  try {
+    var face = oc.TopoDS.Face_1(faceShape);
+    var outerWire = oc.BRepTools.OuterWire(face);
+    var outerHash = null;
+    if (outerWire && !outerWire.IsNull()) {
+      outerHash = outerWire.HashCode(1e9);
+      result.outer = wireIdByHash[outerHash] || null;
+    }
+    // Yüzün tüm wire'larını gez; outer olmayanlar inner (delik loop'ları)
+    var exp = new oc.TopExp_Explorer_2(faceShape, oc.TopAbs_ShapeEnum.TopAbs_WIRE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    var seen = {};
+    for (; exp.More(); exp.Next()) {
+      var wh = exp.Current().HashCode(1e9);
+      if (seen[wh]) continue;
+      seen[wh] = true;
+      if (wh === outerHash) continue;
+      var wid = wireIdByHash[wh];
+      if (wid && result.inner.indexOf(wid) < 0) result.inner.push(wid);
+    }
+    exp.delete();
+  } catch (e) { /* sessiz — face wire mapping başarısız */ }
+  return result;
+}
+
+// Wire entitesi: içerdiği kenarlar + uzunluk (loop perimeter).
+function _veFEAOcctWireInfo(oc, wireShape, id, edgeIdByHash) {
+  var info = { id: id, label: id, edgeIds: [], faceIds: [], isOuter: false, length: 0 };
+  try {
+    var exp = new oc.TopExp_Explorer_2(wireShape, oc.TopAbs_ShapeEnum.TopAbs_EDGE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    var seen = {};
+    for (; exp.More(); exp.Next()) {
+      var eh = exp.Current().HashCode(1e9);
+      if (seen[eh]) continue;
+      seen[eh] = true;
+      var eid = edgeIdByHash && edgeIdByHash[eh];
+      if (eid && info.edgeIds.indexOf(eid) < 0) info.edgeIds.push(eid);
+    }
+    exp.delete();
+    // Wire uzunluğu (perimeter)
+    try {
+      var props = new oc.GProp_GProps_1();
+      oc.BRepGProp.LinearProperties_1(wireShape, props, false, false);
+      info.length = props.Mass();
+      props.delete();
+    } catch (e2) { /* skip */ }
+  } catch (e) { /* skip */ }
+  return info;
+}
+
+// Shell içindeki face ID'leri çıkar.
+function _veFEAOcctShellFaceIds(oc, shellShape, faceIdByHash) {
+  var ids = [];
+  try {
+    var exp = new oc.TopExp_Explorer_2(shellShape, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    var seen = {};
+    for (; exp.More(); exp.Next()) {
+      var h = exp.Current().HashCode(1e9);
+      if (seen[h]) continue;
+      seen[h] = true;
+      var fid = faceIdByHash[h];
+      if (fid && ids.indexOf(fid) < 0) ids.push(fid);
+    }
+    exp.delete();
+  } catch (e) { /* skip */ }
+  return ids;
+}
+
+// Solid içindeki shell ID'leri çıkar.
+function _veFEAOcctSolidShellIds(oc, solidShape, shellIdByHash) {
+  var ids = [];
+  try {
+    var exp = new oc.TopExp_Explorer_2(solidShape, oc.TopAbs_ShapeEnum.TopAbs_SHELL, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    var seen = {};
+    for (; exp.More(); exp.Next()) {
+      var h = exp.Current().HashCode(1e9);
+      if (seen[h]) continue;
+      seen[h] = true;
+      var sid = shellIdByHash[h];
+      if (sid && ids.indexOf(sid) < 0) ids.push(sid);
+    }
+    exp.delete();
+  } catch (e) { /* skip */ }
+  return ids;
+}
+
 // face.edgeIds, face.vertexIds + vertex.edgeIds/faceIds ilişkilerini kur.
 function _veFEAOcctBindRelations(faces, edges, vertices) {
   var faceMap = {}; faces.forEach(function(f) { faceMap[f.id] = f; });
@@ -506,8 +1038,9 @@ function _veFEAOcctBBox(oc, shape) {
 }
 
 // Validity: Euler-Poincaré + manifold (E→F=2) + watertight.
-function _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap) {
+function _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap, shells, solids, wires) {
   var V = vertices.length, E = edges.length, F = faces.length;
+  var S = shells ? shells.length : 0, So = solids ? solids.length : 0, W = wires ? wires.length : 0;
   var chi = V - E + F;
   // Manifold: her kenar tam 2 yüze ait olmalı (kapalı katı)
   var manifoldEdges = 0, openEdges = 0, nonManifoldEdges = 0;
@@ -530,7 +1063,7 @@ function _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap) {
   return {
     eulerChi: chi, eulerOK: eulerOK,
     manifold: manifold, watertight: (openEdges === 0),
-    counts: { V: V, E: E, F: F, manifoldEdges: manifoldEdges, openEdges: openEdges, nonManifoldEdges: nonManifoldEdges },
+    counts: { V: V, E: E, F: F, W: W, S: S, So: So, manifoldEdges: manifoldEdges, openEdges: openEdges, nonManifoldEdges: nonManifoldEdges },
     issues: issues
   };
 }
@@ -558,6 +1091,11 @@ if (typeof module !== 'undefined' && module.exports) {
     veFEAOcctShapeToTopology: veFEAOcctShapeToTopology,
     veFEAOcctReadStepBuffer: veFEAOcctReadStepBuffer,
     veFEAOcctTopologyFromStepBuffer: veFEAOcctTopologyFromStepBuffer,
+    veFEAOcctHealShape: veFEAOcctHealShape,
+    veFEAOcctTessellateShape: veFEAOcctTessellateShape,
+    veFEAOcctDetectFeatures: veFEAOcctDetectFeatures,
+    veFEAOcctComputeSignatures: veFEAOcctComputeSignatures,
+    veFEAOcctRemapFromOldTopology: veFEAOcctRemapFromOldTopology,
     veFEAOcctIsAvailable: veFEAOcctIsAvailable,
     VE_OCCT_SURF: VE_OCCT_SURF,
     VE_OCCT_CURVE: VE_OCCT_CURVE
