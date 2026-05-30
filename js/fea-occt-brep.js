@@ -127,6 +127,99 @@ function _veFEAOcctLoadBrowser(opts) {
   });
 }
 
+// ─── Tessellation köprüsü (Faz 5, raporun §5.6) ────────────────────────────
+// OCCT shape'i topology-aware tessellate eder (BRepMesh_IncrementalMesh) ve
+// her yüzün üçgenlerini global pozisyona dönüştürerek face ID ile gruplar.
+// 3D viewer'da STEP yüzleri TIKLANABİLİR hale gelir — Three.js BufferGeometry
+// groups[] yapısı ile (her group materialIndex=face index).
+//   opts: { deflection:number=0.5, angularDef:number=0.5 }
+//   faceIdByHash: HashCode → 'faceN' map (caller'dan)
+// Dönüş: { positions:Float32Array, indices:Uint32Array,
+//          groups:[{start,count,faceId}], faceIdOrder:[faceId,...] }
+function veFEAOcctTessellateShape(oc, shape, faceIdByHash, opts) {
+  opts = opts || {};
+  var defl = isFinite(opts.deflection) ? opts.deflection : 0.5;
+  var aDefl = isFinite(opts.angularDef) ? opts.angularDef : 0.5;
+  // Tessellate
+  try { new oc.BRepMesh_IncrementalMesh_2(shape, defl, false, aDefl, false); }
+  catch (e) { return null; }
+
+  var positions = [];  // flat [x,y,z, ...]
+  var indices = [];    // flat triangle indices
+  var groups = [];
+  var faceIdOrder = [];
+  var nodeOffset = 0;  // global position dizinine ofset
+
+  var TA = oc.TopAbs_ShapeEnum;
+  var exp = new oc.TopExp_Explorer_2(shape, TA.TopAbs_FACE, TA.TopAbs_SHAPE);
+  var seen = {};
+  for (; exp.More(); exp.Next()) {
+    var fShape = exp.Current();
+    var h = fShape.HashCode(1e9);
+    if (seen[h]) continue;
+    seen[h] = true;
+    var faceId = (faceIdByHash && faceIdByHash[h]) || ('face' + (faceIdOrder.length + 1));
+    var face;
+    try { face = oc.TopoDS.Face_1(fShape); } catch (e) { continue; }
+    var loc = new oc.TopLoc_Location_1();
+    var triHandle;
+    try { triHandle = oc.BRep_Tool.Triangulation(face, loc); }
+    catch (e) { continue; }
+    if (!triHandle || triHandle.IsNull()) continue;
+    var tri = triHandle.get();
+    var nNodes = tri.NbNodes();
+    var nTris = tri.NbTriangles();
+    if (nNodes < 3 || nTris < 1) continue;
+
+    // Yerel transformasyon (TopLoc_Location) — global pozisyon için uygulanmalı
+    var trsf = loc.Transformation();
+    var hasLoc = loc.IsIdentity ? !loc.IsIdentity() : true;
+
+    // Yüz orientation REVERSED ise üçgen winding'i ters çevrilmeli
+    var faceOri = (typeof face.Orientation_1 === 'function') ? face.Orientation_1() : null;
+    var reversed = false;
+    try { if (faceOri && faceOri.value === 1) reversed = true; }   // TopAbs_REVERSED = 1
+    catch (e) { /* skip */ }
+
+    var localStart = indices.length;
+
+    // Node'ları positions'a ekle (1-tabanlı OCCT → 0-tabanlı buffer)
+    for (var ni = 1; ni <= nNodes; ni++) {
+      var p = tri.Node(ni);
+      var x = p.X(), y = p.Y(), z = p.Z();
+      if (hasLoc) {
+        try {
+          var pt = new oc.gp_Pnt_3(x, y, z);
+          pt.Transform(trsf);
+          positions.push(pt.X(), pt.Y(), pt.Z());
+          pt.delete && pt.delete();
+        } catch (e) { positions.push(x, y, z); }
+      } else {
+        positions.push(x, y, z);
+      }
+    }
+    // Üçgenleri ekle (Triangle.Value(1/2/3) → 1-tabanlı node indeksleri)
+    for (var ti = 1; ti <= nTris; ti++) {
+      var t = tri.Triangle(ti);
+      var a = t.Value(1) - 1 + nodeOffset;
+      var b = t.Value(2) - 1 + nodeOffset;
+      var c = t.Value(3) - 1 + nodeOffset;
+      if (reversed) { indices.push(a, c, b); } else { indices.push(a, b, c); }
+    }
+    groups.push({ start: localStart, count: (indices.length - localStart), faceId: faceId });
+    faceIdOrder.push(faceId);
+    nodeOffset = positions.length / 3;
+  }
+  exp.delete();
+
+  return {
+    positions: new Float32Array(positions),
+    indices: new Uint32Array(indices),
+    groups: groups,
+    faceIdOrder: faceIdOrder
+  };
+}
+
 // ─── Shape Healing + Sewing + Validity Check (raporun §5.2-§5.3-§4.4) ──────
 // Ham STEP shape'ini ANSYS pipeline'ı gibi temizler:
 //   1. ShapeFix_Shape — tolerans uyuşmazlığı, eksik pcurve, küçük yüz onarımı
@@ -283,6 +376,25 @@ function veFEAOcctTopologyFromStepBuffer(buffer, opts) {
       topo.validity.brepCheckValid = healed.report.nowValid;
       if (healed.report.issues.length) {
         topo.validity.issues = (topo.validity.issues || []).concat(healed.report.issues);
+      }
+      // Faz 5 — Tessellation köprüsü: viewer'a 3D BREP yüz seçimi sağla
+      if (opts.tessellate !== false) {
+        try {
+          var faceIdByHash = {};
+          // ShapeToTopology'de oluşturulan ID'leri yeniden çıkarmak yerine
+          // healed shape üzerinden HashCode → 'faceN' eşlemesini kur (sıra aynı).
+          var fExp = new oc.TopExp_Explorer_2(healed.shape, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+          var fi = 0, seenF = {};
+          for (; fExp.More(); fExp.Next()) {
+            var h = fExp.Current().HashCode(1e9);
+            if (seenF[h]) continue;
+            seenF[h] = true;
+            fi++;
+            faceIdByHash[h] = 'face' + fi;
+          }
+          fExp.delete();
+          topo.tessellation = veFEAOcctTessellateShape(oc, healed.shape, faceIdByHash, opts);
+        } catch (e) { /* tessellation başarısız → viewer sadece BREP listesi gösterir */ }
       }
     }
     return topo;
@@ -794,6 +906,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFEAOcctReadStepBuffer: veFEAOcctReadStepBuffer,
     veFEAOcctTopologyFromStepBuffer: veFEAOcctTopologyFromStepBuffer,
     veFEAOcctHealShape: veFEAOcctHealShape,
+    veFEAOcctTessellateShape: veFEAOcctTessellateShape,
     veFEAOcctIsAvailable: veFEAOcctIsAvailable,
     VE_OCCT_SURF: VE_OCCT_SURF,
     VE_OCCT_CURVE: VE_OCCT_CURVE

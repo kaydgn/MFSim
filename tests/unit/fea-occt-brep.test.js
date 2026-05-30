@@ -181,6 +181,34 @@ maybe('OCCT BREP topoloji çıkarımı (gerçek WASM)', () => {
     expect(t.validity.counts.So).toBe(1);
   });
 
+  test('Tessellation köprüsü (Faz 5): kutu 6 grup, her grup face ID etiketli', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    // face HashCode → ID map
+    const faceMap = {};
+    const exp = new oc.TopExp_Explorer_2(box, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    let fi = 0;
+    for (; exp.More(); exp.Next()) {
+      const h = exp.Current().HashCode(1e9);
+      if (!faceMap[h]) { fi++; faceMap[h] = 'face' + fi; }
+    }
+    exp.delete();
+    const tess = occt.veFEAOcctTessellateShape(oc, box, faceMap, { deflection: 0.5 });
+    expect(tess).not.toBeNull();
+    expect(tess.positions.length / 3).toBeGreaterThanOrEqual(8);
+    expect(tess.indices.length / 3).toBeGreaterThanOrEqual(12);
+    expect(tess.groups.length).toBe(6);
+    // Her grubun face ID'si var ve toplam üçgen sayısı tutarlı
+    let totalGroupTris = 0;
+    tess.groups.forEach(function(g) {
+      expect(g.faceId).toMatch(/^face\d+$/);
+      expect(g.count % 3).toBe(0);
+      totalGroupTris += g.count / 3;
+    });
+    expect(totalGroupTris).toBe(tess.indices.length / 3);
+    expect(tess.faceIdOrder.length).toBe(6);
+  });
+
   test('Outer/inner wire ayrımı: kutu yüzleri sadece outer wire (inner yok)', () => {
     const o = new oc.gp_Pnt_3(0, 0, 0);
     const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 10, 10).Shape();
