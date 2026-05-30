@@ -1644,13 +1644,21 @@ function _veFEAEditorDefaultsHTML(node) {
   html += '<option value="hexDominant"'        + (currentMethod === 'hexDominant'        ? ' selected' : '') + '>Hex Dominant (Hex8 + Pyramid5 transition)</option>';
   html += '<option value="sweep"'              + (currentMethod === 'sweep'              ? ' selected' : '') + '>Sweep (silindir/şaft/koni yapısal)</option>';
   html += '</select>';
-  // TetGen durum göstergesi (vendor/tetgen build edilmemişse uyarı)
+  // Tet mesh kademe durum göstergesi: TetGen (üst) → Delaunay (orta) → voxel.
+  var tetgenActiveMethod = (typeof veFEATetgenIsBuilt === 'function') && veFEATetgenIsBuilt();
   var tetMesherActive = (typeof veFEADelaunayAvailable === 'function') && veFEADelaunayAvailable();
   if (currentMethod === 'patchConformingTet') {
-    var statusColor = tetMesherActive ? '#22c55e' : '#f59e0b';
-    var statusMsg = tetMesherActive
-      ? '✓ Delaunay (Lysenko/MIT) aktif. STEP için kaliteli Tet4.'
-      : '⚠ Delaunay yüklü değil. Voxel fallback kullanılacak.';
+    var statusColor, statusMsg;
+    if (tetgenActiveMethod) {
+      statusColor = '#22c55e';
+      statusMsg = '✓ TetGen (AGPL) aktif — STEP için en yüksek kalite CDT Tet4.';
+    } else if (tetMesherActive) {
+      statusColor = '#22c55e';
+      statusMsg = '✓ Delaunay (Lysenko/MIT) aktif. TetGen build edilirse otomatik üst katman olur.';
+    } else {
+      statusColor = '#f59e0b';
+      statusMsg = '⚠ Tet mesher yüklü değil. Voxel fallback kullanılacak.';
+    }
     html += '<div style="font-size:0.55rem; color:' + statusColor + '; margin-bottom:10px; padding:4px 6px; background:' + statusColor + '20; border-left:2px solid ' + statusColor + ';">' + statusMsg + '</div>';
   } else {
     html += '<div style="margin-bottom:10px;"></div>';
@@ -1694,6 +1702,32 @@ function _veFEAEditorDefaultsHTML(node) {
   // Delaunay tet mesher (karmaşık STEP geometrileri için kaliteli tet4 mesh).
   // Lysenko's delaunay-triangulate (MIT) — robust adaptive predicates.
   // Bundle yoksa graceful skip — voxel fallback devreye girer.
+
+  // ─── Tet Mesh Kalite Kademesi: TetGen (üst) → Delaunay (orta) → voxel ───
+  // KATMAN 1 — TetGen WASM CDT (en yüksek kalite). AGPL-3.0; build edilmemişse
+  // graceful skip → Delaunay katmanına düşülür.
+  var useTetgen = settings.useTetgen !== false;
+  var tetgenBuilt = (typeof veFEATetgenIsBuilt === 'function') ? veFEATetgenIsBuilt() : false;
+  var tetgenRer = (typeof settings.tetgenRadiusEdgeRatio === 'number') ? settings.tetgenRadiusEdgeRatio : 1.4;
+  html += '<div style="font-size:0.62rem; color:var(--text-secondary); margin-bottom:4px; display:flex; align-items:center; gap:6px;">' +
+    'TetGen Tet Mesher <span style="color:' + (tetgenBuilt ? '#22c55e' : '#fbbf24') +
+    '; font-size:0.52rem;">' + (tetgenBuilt ? '● aktif (inline WASM)' : '○ build edilmedi — Delaunay fallback') + '</span>' +
+    '</div>';
+  html += '<label style="display:flex; align-items:center; gap:6px; padding:6px 8px; margin-bottom:6px; background:var(--bg-primary); border:1px solid var(--border-color); cursor:pointer; font-size:0.62rem; color:var(--text-primary);">' +
+    '<input type="checkbox" id="ve-fea-mesh-tetgen-' + node.id + '"' + (useTetgen ? ' checked' : '') + ' onchange="veFEASetMeshSetting(\'' + node.id + '\', \'useTetgen\', this.checked)" style="margin:0;">' +
+    '<span>STEP geometrilerinde TetGen kullan <span style="color:var(--text-muted);">(en yüksek kalite CDT)</span></span>' +
+    '</label>';
+  html += '<div style="display:flex; gap:6px; align-items:center; margin-bottom:6px; padding-left:24px;">' +
+    '<label for="ve-fea-mesh-tetgen-rer-' + node.id + '" style="flex:1; font-size:0.6rem; color:var(--text-secondary);">Radius-edge oranı <span style="color:var(--text-muted);">(düşük = sıkı kalite)</span></label>' +
+    '<input id="ve-fea-mesh-tetgen-rer-' + node.id + '" type="number" min="1.0" max="3.0" step="0.1" value="' + tetgenRer + '" onchange="veFEASetMeshSetting(\'' + node.id + '\', \'tetgenRadiusEdgeRatio\', parseFloat(this.value))" style="width:60px; padding:3px 6px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);">' +
+    '</div>';
+  html += '<div style="font-size:0.55rem; color:#fbbf24; margin-bottom:8px; line-height:1.4; padding:4px 6px; background:rgba(251,191,36,0.09); border-left:2px solid #fbbf24;">' +
+    '⚠ Lisans: TetGen <b>AGPL-3.0</b> (Hang Si, WIAS Berlin). WASM dağıtıldığında AGPL ' +
+    'yükümlülükleri (kaynak açıklama, network klozu) tetiklenir; ticari kullanım için ' +
+    'WIAS lisansı gerekir. Build: npm run build:wasm:tetgen. Detay: vendor/tetgen/NOTICE.md.' +
+    '</div>';
+
+  // KATMAN 2 — Delaunay tet mesher (saf JS, MIT). TetGen yoksa devreye girer.
   var useTetMesher = settings.useTetMesher !== false;
   var tetMesherAvailable = (typeof veFEADelaunayAvailable === 'function') ? veFEADelaunayAvailable() : false;
   var addInterior = settings.delaunayAddInteriorPoints !== false;

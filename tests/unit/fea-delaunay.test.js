@@ -224,9 +224,9 @@ describe('fea-mesh.js — Delaunay entegrasyonu', () => {
     expect(src).toMatch(/function _veFEAShouldTryTetMesher/);
     expect(src).toMatch(/function _veFEAMeshWithTetMesherOrVoxel/);
     expect(src).toMatch(/function _veFEAWrapDelaunayResult/);
-    // TetGen referansları kalmadı
-    expect(src).not.toMatch(/_veFEAShouldTryTetgen/);
-    expect(src).not.toMatch(/_veFEAMeshWithTetgenOrVoxel/);
+    // TetGen geri getirildi: Delaunay artık kademenin ORTA katmanı; TetGen üst
+    // katman olarak coexist eder (jenerik orchestrator _veFEAMeshWithTetMesherOrVoxel).
+    expect(src).toMatch(/function _veFEAShouldTryTetgen/);
   });
 
   test('Delaunay yokken fea-mesh graceful — voxel fallback', () => {
@@ -236,15 +236,15 @@ describe('fea-mesh.js — Delaunay entegrasyonu', () => {
   });
 });
 
-describe('UI entegrasyonu — Delaunay etiketi (TetGen kaldırıldı)', () => {
+describe('UI entegrasyonu — Delaunay + TetGen kademe etiketleri', () => {
   test('fea-mesh-editor.js Delaunay kontrol elemanları HTML üretiyor', () => {
     const src = fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8');
     expect(src).toMatch(/ve-fea-mesh-tetmesher-/);
     expect(src).toMatch(/Delaunay Tet Mesher/);
     expect(src).toMatch(/Mikola Lysenko/);
-    // TetGen referansları temizlendi
-    expect(src).not.toMatch(/ve-fea-mesh-tetgen-/);
-    expect(src).not.toMatch(/AGPL/);
+    // TetGen kademe üst katmanı da UI'da mevcut (AGPL uyarısı ile coexist)
+    expect(src).toMatch(/ve-fea-mesh-tetgen-/);
+    expect(src).toMatch(/AGPL/);
   });
 
   test('cp-fea.js Delaunay ayarlarını meshSettings\'a kaydediyor', () => {
@@ -265,25 +265,25 @@ describe('build + worker entegrasyonu', () => {
     const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
     expect(html).toMatch(/src="vendor\/delaunay\/delaunay-bundle\.js"/);
     expect(html).toMatch(/src="js\/fea-delaunay\.js"/);
-    // TetGen INLINE_FILE'ları gitti
-    expect(html).not.toMatch(/vendor\/tetgen\//);
+    // TetGen INLINE_FILE'ları da mevcut (kademe üst katmanı, opt-in/AGPL)
+    expect(html).toMatch(/INLINE_FILE:\s*vendor\/tetgen\/tetgen-wasm/);
+    expect(html).toMatch(/src="js\/fea-tetgen\.js"/);
   });
 
-  test('fea-mesh-worker.js delaunay-bundle import ediyor', () => {
+  test('fea-mesh-worker.js delaunay + tetgen import ediyor', () => {
     const src = fs.readFileSync(path.join(ROOT, 'js/fea-mesh-worker.js'), 'utf8');
     expect(src).toMatch(/delaunay-bundle\.js/);
     expect(src).toMatch(/fea-delaunay\.js/);
-    expect(src).not.toMatch(/fea-tetgen/);
+    expect(src).toMatch(/fea-tetgen\.js/);
   });
 
-  test('build.js TetGen hint kaldırılmış', () => {
+  test('build.js TetGen için build:wasm:tetgen ipucu veriyor', () => {
     const src = fs.readFileSync(path.join(ROOT, 'build.js'), 'utf8');
-    expect(src).not.toMatch(/build:wasm:tetgen/);
-    expect(src).not.toMatch(/AGPL-3\.0/);
+    expect(src).toMatch(/build:wasm:tetgen/);
   });
 
-  test('.gitignore TetGen satırları yok', () => {
+  test('.gitignore TetGen WASM artifact\'ını dışlıyor (AGPL, source coexist)', () => {
     const gi = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
-    expect(gi).not.toMatch(/tetgen/);
+    expect(gi).toMatch(/vendor\/tetgen\/tetgen-wasm/);
   });
 });

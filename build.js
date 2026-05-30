@@ -126,7 +126,10 @@ html = html.replace(
     if (!fs.existsSync(fullPath)) {
       // Doğru build komutunu öner (vendor:sync paketleri ve wasm modülleri ayrı)
       var hint;
-      if (filePath.indexOf('vendor/mfsim-fea/') === 0) {
+      if (filePath.indexOf('vendor/tetgen/') === 0) {
+        hint = '"npm run build:wasm:tetgen" calistirin (emscripten gerekli, AGPL-3.0); ' +
+               'build edilmezse TetGen atlanir, Delaunay/voxel devreye girer';
+      } else if (filePath.indexOf('vendor/mfsim-fea/') === 0) {
         hint = '"npm run build:wasm" calistirin (emscripten gerekli)';
       } else {
         hint = '"npm run vendor:sync" calistirin';

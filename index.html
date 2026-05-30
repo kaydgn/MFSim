@@ -601,6 +601,19 @@
 <!-- INLINE_FILE: vendor/mfsim-fea/mfsim-fea.wasm as mfsimFeaWasm -->
 
 <!--
+  TetGen WASM — Constrained Delaunay tetrahedral mesher (Hang Si, AGPL-3.0).
+  Mesh kalite kademesinin en ÜST katmanı (en yüksek kalite tet4). WASM build
+  edilmemişse fea-tetgen.js graceful skip yapar → Delaunay (MIT) katmanına
+  düşülür. Artifact .gitignore'da (AGPL dağıtım yükümlülüğü); monolitik build'de
+  window.__feaInline.tetgen{Script,Wasm}'a base64 inline edilir, dev modunda
+  vendor/tetgen/'den lazy fetch.
+  Build: npm run build:wasm:tetgen  (emscripten gereklidir)
+  Lisans uyarısı: vendor/tetgen/NOTICE.md
+-->
+<!-- INLINE_FILE: vendor/tetgen/tetgen-wasm.js as tetgenScript -->
+<!-- INLINE_FILE: vendor/tetgen/tetgen-wasm.wasm as tetgenWasm -->
+
+<!--
   Delaunay Tet Mesher — Mikola Lysenko's delaunay-triangulate (MIT) bundle.
   Robust adaptive predicates ile 3D Bowyer-Watson tet mesh. Karmaşık STEP
   geometrileri için kübik voxel yerine gerçek tetrahedral mesh üretir.
@@ -619,6 +632,7 @@
 <script type="text/x-mfsim-defer" src="js/fea-mesh-utils.js" data-mfsim-label="FEA: Mesh ortak yardımcılar..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-feature-recognition.js" data-mfsim-label="FEA: Yüzey tanıma..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-delaunay.js" data-mfsim-label="FEA: Delaunay tet mesher sarmalayıcı..."></script>
+<script type="text/x-mfsim-defer" src="js/fea-tetgen.js" data-mfsim-label="FEA: TetGen tet mesher (AGPL, opt-in)..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-mesh.js" data-mfsim-label="FEA: Mesh motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/fea-study.js" data-mfsim-label="FEA: Yapısal analiz modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/vp-study.js" data-mfsim-label="Araç Performans sistem bloğu..."></script>
