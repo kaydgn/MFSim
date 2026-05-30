@@ -85,8 +85,21 @@ function _veStatusRender() {
     've-deploy-ratelimit':         'API limiti aşıldı'
   };
   var statusLbl = labels[dotClass] || 'Bilinmiyor';
+  var updateAvailable = dotClass === 've-deploy-update-available';
 
-  var html = '<h3 class="ve-settings-section-title">Mevcut Sürüm</h3>';
+  var html = '';
+  // Güncelleme banner'ı — yalnız update mevcutsa görünür
+  if(updateAvailable) {
+    html += '<div class="ve-status-update-banner">';
+    html += '<div class="ve-status-update-banner-info">';
+    html += '<div class="ve-status-update-banner-title">🔔 Yeni Sürüm Mevcut</div>';
+    html += '<div class="ve-status-update-banner-desc">Program güncellendi. Şimdi Güncelle butonuna basarak sayfayı yenileyin; güncelleme uygulanır ve "Program Güncel" onayı gelir.</div>';
+    html += '</div>';
+    html += '<button class="ve-status-update-banner-btn" onclick="_veApplyUpdate()"><span class="mf-ico mf-ico-refresh"></span> Şimdi Güncelle</button>';
+    html += '</div>';
+  }
+
+  html += '<h3 class="ve-settings-section-title">Mevcut Sürüm</h3>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Durum</span>';
   html += '<div class="ve-settings-value" style="display:flex;align-items:center;gap:10px;">';
   html += '<span class="ve-deploy-dot ' + dotClass + '" style="position:relative;margin:0;width:11px;height:11px;cursor:default;"></span>';

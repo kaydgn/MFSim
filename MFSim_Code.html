@@ -2732,6 +2732,53 @@
   50%       { opacity: 0.65; transform: scale(0.85); }
 }
 
+/* Program Durumu — güncelleme banner'ı (sadece update mevcutsa) */
+.ve-status-update-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin: 0 0 18px 0;
+  background: color-mix(in srgb, var(--accent-success) 12%, var(--bg-secondary));
+  border: 1px solid var(--accent-success);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent-success) 35%, transparent);
+  animation: ve-status-banner-pulse 2.4s ease-in-out infinite;
+}
+@keyframes ve-status-banner-pulse {
+  0%, 100% { box-shadow: 0 0 12px color-mix(in srgb, var(--accent-success) 35%, transparent); }
+  50%       { box-shadow: 0 0 20px color-mix(in srgb, var(--accent-success) 65%, transparent); }
+}
+.ve-status-update-banner-info { flex: 1; }
+.ve-status-update-banner-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-success);
+  margin-bottom: 4px;
+}
+.ve-status-update-banner-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.ve-status-update-banner-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  background: var(--accent-success);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: filter 0.12s, transform 0.08s;
+}
+.ve-status-update-banner-btn:hover { filter: brightness(1.12); }
+.ve-status-update-banner-btn:active { transform: translateY(1px); }
+
 /* Program Durumu — açılır-kapanır commit listesi */
 .ve-status-commit-list {
   list-style: none;
@@ -4216,8 +4263,21 @@ function _veStatusRender() {
     've-deploy-ratelimit':         'API limiti aşıldı'
   };
   var statusLbl = labels[dotClass] || 'Bilinmiyor';
+  var updateAvailable = dotClass === 've-deploy-update-available';
 
-  var html = '<h3 class="ve-settings-section-title">Mevcut Sürüm</h3>';
+  var html = '';
+  // Güncelleme banner'ı — yalnız update mevcutsa görünür
+  if(updateAvailable) {
+    html += '<div class="ve-status-update-banner">';
+    html += '<div class="ve-status-update-banner-info">';
+    html += '<div class="ve-status-update-banner-title">🔔 Yeni Sürüm Mevcut</div>';
+    html += '<div class="ve-status-update-banner-desc">Program güncellendi. Şimdi Güncelle butonuna basarak sayfayı yenileyin; güncelleme uygulanır ve "Program Güncel" onayı gelir.</div>';
+    html += '</div>';
+    html += '<button class="ve-status-update-banner-btn" onclick="_veApplyUpdate()"><span class="mf-ico mf-ico-refresh"></span> Şimdi Güncelle</button>';
+    html += '</div>';
+  }
+
+  html += '<h3 class="ve-settings-section-title">Mevcut Sürüm</h3>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Durum</span>';
   html += '<div class="ve-settings-value" style="display:flex;align-items:center;gap:10px;">';
   html += '<span class="ve-deploy-dot ' + dotClass + '" style="position:relative;margin:0;width:11px;height:11px;cursor:default;"></span>';
