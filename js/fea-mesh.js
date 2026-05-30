@@ -3709,6 +3709,92 @@ function veFEAComputeQualityMetrics(meshData) {
   };
 }
 
+// ─── ANSYS-tarzı genel mesh kalite skoru ───────────────────────────────────
+// ANSYS Mesher, mesh sağlığını tek bir "Mesh Metric" ile özetler (Orthogonal
+// Quality / Skewness ana metrikler). Bu fonksiyon mevcut metrikleri 0-100 bir
+// skora ve sözel derecelendirmeye (Excellent/Good/Acceptable/Poor) indirger.
+//
+// Skor ağırlıkları (ANSYS rehberi ile uyumlu):
+//   - Min Orthogonal Quality (en kritik — çözücü stabilitesi): %35
+//   - Avg Orthogonal Quality:                                   %20
+//   - Max Skewness (düşük iyi):                                  %25
+//   - Avg Element Quality:                                      %15
+//   - Inverted/degenerate yokluğu (sert ceza):                  %5 + veto
+//
+// inverted/degenerate varsa skor 0'a yakın (veto) — çözücü patlar.
+//
+// Dönüş: { score:0..100, grade, rating, metrics:{...}, valid, recommendation }
+function veFEAComputeMeshQualityScore(meshData) {
+  var q = veFEAComputeQualityMetrics(meshData);
+  if (!q) return null;
+  var jac = (typeof veFEAComputeJacobianMetrics === 'function')
+    ? veFEAComputeJacobianMetrics(meshData) : null;
+
+  var minOQ = q.orthogonalQuality ? q.orthogonalQuality.min : null;
+  var avgOQ = q.orthogonalQuality ? q.orthogonalQuality.avg : null;
+  var maxSk = q.skewness ? q.skewness.max : null;
+  var avgEQ = q.elementQuality ? q.elementQuality.avg : null;
+
+  // Alt-skorlar 0..1
+  var sMinOQ = (minOQ != null) ? _veFEAClamp01(minOQ) : _veFEAClamp01(avgEQ != null ? avgEQ : 0.5);
+  var sAvgOQ = (avgOQ != null) ? _veFEAClamp01(avgOQ) : sMinOQ;
+  var sSkew  = (maxSk != null) ? _veFEAClamp01(1 - maxSk) : 0.7;  // düşük skew iyi
+  var sEQ    = (avgEQ != null) ? _veFEAClamp01(avgEQ) : sAvgOQ;
+
+  var valid = jac ? (jac.invertedCount === 0 && jac.degenerateCount === 0) : true;
+  var sValid = valid ? 1 : 0;
+
+  var raw = 0.35 * sMinOQ + 0.20 * sAvgOQ + 0.25 * sSkew + 0.15 * sEQ + 0.05 * sValid;
+  var score = Math.round(raw * 100);
+  // inverted/degenerate → sert veto (çözücü çalışmaz)
+  if (!valid) score = Math.min(score, 25);
+
+  var grade, rating;
+  if (!valid) { grade = 'F'; rating = 'Geçersiz (inverted/degenerate eleman)'; }
+  else if (score >= 90) { grade = 'A'; rating = 'Mükemmel'; }
+  else if (score >= 75) { grade = 'B'; rating = 'İyi'; }
+  else if (score >= 60) { grade = 'C'; rating = 'Kabul edilebilir'; }
+  else if (score >= 40) { grade = 'D'; rating = 'Zayıf'; }
+  else { grade = 'E'; rating = 'Çok zayıf'; }
+
+  // Öneri (en zayıf metriğe göre)
+  var recommendation = null;
+  if (!valid) {
+    recommendation = 'Inverted/degenerate elemanlar var — smoothing veya daha kaba mesh deneyin.';
+  } else if (maxSk != null && maxSk > 0.9) {
+    recommendation = 'Skewness yüksek (' + maxSk.toFixed(2) + ') — smoothing iterasyonunu artırın.';
+  } else if (minOQ != null && minOQ < 0.1) {
+    recommendation = 'Min orthogonal quality düşük (' + minOQ.toFixed(2) + ') — eleman boyutunu küçültün.';
+  } else if (score >= 90) {
+    recommendation = 'Mesh kalitesi çözücü için mükemmel.';
+  } else {
+    recommendation = 'Mesh kalitesi kabul edilebilir.';
+  }
+
+  return {
+    score: score,
+    grade: grade,
+    rating: rating,
+    valid: valid,
+    elementCount: q.elementCount != null ? q.elementCount : (meshData.elements.length / meshData.nodesPerElement),
+    metrics: {
+      minOrthogonalQuality: minOQ,
+      avgOrthogonalQuality: avgOQ,
+      maxSkewness: maxSk,
+      avgElementQuality: avgEQ,
+      invertedCount: jac ? jac.invertedCount : 0,
+      degenerateCount: jac ? jac.degenerateCount : 0
+    },
+    subScores: { minOQ: sMinOQ, avgOQ: sAvgOQ, skew: sSkew, elemQ: sEQ },
+    recommendation: recommendation
+  };
+}
+
+function _veFEAClamp01(v) {
+  if (v == null || !isFinite(v)) return 0;
+  return v < 0 ? 0 : (v > 1 ? 1 : v);
+}
+
 // ─── Face Sizing Controls (ANSYS §5.1 — multi-face lokal sizing) ─────────
 // Kullanıcı 3D viewer'da yüzey seçer ve target eleman boyutu atar. v1: post-
 // mesh named selection ile face'e ait node'lar 'face-sizing-N' anahtarıyla

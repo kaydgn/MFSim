@@ -2476,6 +2476,28 @@ function _veFEAEditorQualityHTML(node) {
     return '<div style="padding:8px 10px; background:var(--bg-primary); border:1px solid var(--border-color); font-size:0.62rem; color:var(--text-muted);">Mesh oluşturulduktan sonra otomatik hesaplanır.</div>';
   }
   var html = '';
+  // ─── ANSYS-tarzı genel mesh kalite skoru rozeti ───
+  if (metrics.qualityScore) {
+    var qs = metrics.qualityScore;
+    var scColor = !qs.valid ? '#ef4444'
+                : qs.score >= 90 ? '#22c55e'
+                : qs.score >= 75 ? '#84cc16'
+                : qs.score >= 60 ? '#eab308'
+                : qs.score >= 40 ? '#f59e0b' : '#ef4444';
+    html += '<div style="display:flex; align-items:center; gap:12px; padding:10px 12px; margin-bottom:10px; background:' + scColor + '14; border:1px solid ' + scColor + '; border-radius:4px;">' +
+      '<div style="font-size:1.6rem; font-weight:700; color:' + scColor + '; line-height:1;">' + qs.score + '<span style="font-size:0.7rem; opacity:0.7;">/100</span></div>' +
+      '<div style="flex:1;">' +
+        '<div style="font-size:0.72rem; font-weight:600; color:' + scColor + ';">' + qs.grade + ' — ' + qs.rating + '</div>' +
+        '<div style="font-size:0.56rem; color:var(--text-muted); margin-top:2px; line-height:1.3;">' + (qs.recommendation || '') + '</div>' +
+      '</div></div>';
+    if (qs.metrics) {
+      html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:10px; display:flex; gap:10px; flex-wrap:wrap; padding-left:2px;">' +
+        '<span>Min OrthoQ: <b style="color:var(--text-secondary);">' + (qs.metrics.minOrthogonalQuality != null ? qs.metrics.minOrthogonalQuality.toFixed(3) : '–') + '</b></span>' +
+        '<span>Maks Skew: <b style="color:var(--text-secondary);">' + (qs.metrics.maxSkewness != null ? qs.metrics.maxSkewness.toFixed(3) : '–') + '</b></span>' +
+        '<span>Ort ElemQ: <b style="color:var(--text-secondary);">' + (qs.metrics.avgElementQuality != null ? qs.metrics.avgElementQuality.toFixed(3) : '–') + '</b></span>' +
+        '</div>';
+    }
+  }
   // Jacobian
   if (metrics.jacobian) {
     var jm = metrics.jacobian;
