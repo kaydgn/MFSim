@@ -677,7 +677,7 @@
 .ve-sub-tabs.visible{display:flex;}
 .ve-sub-tab{background:none;border:none;color:var(--text-muted);padding:4px 8px;cursor:pointer;font-size:0.62rem;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}
 .ve-sub-tab:hover{color:var(--text-primary);background:var(--bg-tertiary);}
-.ve-sub-tab.active{color:var(--accent-success);border-bottom-color:var(--accent-success);}
+.ve-sub-tab.active{color:var(--accent-primary);border-bottom-color:var(--accent-primary);}
 .tab-page{display:none;}
 .tab-page.active{display:block;}
 
@@ -1050,11 +1050,42 @@
 }
 
 .ve-toolbar-info{
-  font-size:0.58rem;
-  color:var(--text-muted);
+  font-size:0.62rem;
+  color:var(--text-secondary);
   white-space:nowrap;
   flex-shrink:0;
-  padding-right:2px;
+}
+
+/* ===== ALT DURUM ÇUBUĞU (STATUS BAR) ===== */
+.ve-status-bar{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  height:22px;
+  flex-shrink:0;
+  padding:0 10px;
+  background:var(--bg-secondary);
+  border-top:1px solid var(--border-color);
+  font-size:0.62rem;
+  color:var(--text-secondary);
+  user-select:none;
+}
+.ve-status-item{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  white-space:nowrap;
+  color:var(--text-secondary);
+}
+.ve-status-item .mf-ico{
+  color:var(--text-muted);
+}
+.ve-status-spacer{flex:1;}
+.ve-status-sep{
+  width:1px;
+  height:12px;
+  background:var(--border-color);
+  opacity:0.6;
 }
 
 /* ===== TOPOLOJI SEKME ÇUBUĞU ===== */
@@ -1133,7 +1164,7 @@
 .ve-tab-add:hover{
   border-color:var(--accent-primary);
   color:var(--accent-primary);
-  background:rgba(45,138,90,0.08);
+  background:color-mix(in srgb, var(--accent-primary) 10%, transparent);
 }
 .ve-tab-count{
   font-size:0.55rem;

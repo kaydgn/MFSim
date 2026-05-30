@@ -74,7 +74,7 @@
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
       <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
+      <div class="ve-menu-item" onclick="mfsimLogout()" style="color:var(--accent-danger);"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
     </div>
   </div>
   <div class="ve-tab-group">
@@ -387,6 +387,13 @@
           <div class="ve-warnings-body" id="ve-warnings-body">
             <div style="padding:8px 12px;font-size:0.65rem;color:var(--text-muted);">Uyarı bulunmuyor. Topoloji hazır.</div>
           </div>
+        </div>
+        <div id="ve-status-bar" class="ve-status-bar">
+          <span class="ve-toolbar-info" id="ve-status-counts">0 bileşen, 0 bağlantı</span>
+          <span class="ve-status-spacer"></span>
+          <span class="ve-status-item" id="ve-status-zoom" title="Yakınlaştırma">%100</span>
+          <span class="ve-status-sep"></span>
+          <span class="ve-status-item" id="ve-status-mode">Hazır</span>
         </div>
       </div>
       
