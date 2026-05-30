@@ -204,6 +204,38 @@ describe('Smoothing — smart Laplacian davranışı', () => {
     expect(smoothed.namedSelections).toBe(mesh.namedSelections);
     expect(smoothed.smoothingApplied).toBeDefined();
   });
+
+  test('optimization method: kötü iç düğümü iyileştirir, monoton', () => {
+    var mesh = makeCubeWithInteriorNode([1.5, 1.5, 1.5]);
+    var before = smooth.veFEAMeshSmoothingReport(mesh, mesh).before;
+    var smoothed = smooth.veFEASmoothMesh(mesh, { iterations: 10, method: 'optimization' });
+    var after = smooth.veFEAMeshSmoothingReport(mesh, smoothed).after;
+    // Optimization en az Laplacian kadar iyi (monoton — bozmaz)
+    expect(after.minQ).toBeGreaterThanOrEqual(before.minQ - 1e-9);
+    // İç düğüm merkeze (5,5,5) doğru gitmeli
+    var ix = smoothed.nodes[24], iy = smoothed.nodes[25], iz = smoothed.nodes[26];
+    expect(Math.hypot(ix-5, iy-5, iz-5)).toBeLessThan(Math.hypot(1.5-5, 1.5-5, 1.5-5));
+  });
+
+  test('optimizeStubborn: smartLaplacian + pattern search, monoton', () => {
+    var positions = [[1,1,8],[2,2,2],[8,2,5]];
+    positions.forEach(function(pos) {
+      var mesh = makeCubeWithInteriorNode(pos);
+      var before = smooth.veFEAMeshSmoothingReport(mesh, mesh).before;
+      var smoothed = smooth.veFEASmoothMesh(mesh, { iterations: 8, optimizeStubborn: true });
+      var after = smooth.veFEAMeshSmoothingReport(mesh, smoothed).after;
+      expect(after.minQ).toBeGreaterThanOrEqual(before.minQ - 1e-9);
+    });
+  });
+
+  test('optimization yüzey düğümlerini korur (preserveSurface)', () => {
+    var mesh = makeCubeWithInteriorNode([2,2,2]);
+    var smoothed = smooth.veFEASmoothMesh(mesh, { iterations: 5, method: 'optimization' });
+    // köşe düğüm 0 sabit
+    expect(smoothed.nodes[0]).toBeCloseTo(mesh.nodes[0], 6);
+    expect(smoothed.nodes[1]).toBeCloseTo(mesh.nodes[1], 6);
+    expect(smoothed.nodes[2]).toBeCloseTo(mesh.nodes[2], 6);
+  });
 });
 
 describe('Smoothing — gerçek mesh entegrasyonu', () => {

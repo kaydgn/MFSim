@@ -29118,6 +29118,84 @@ function _veFEASmoothLocalMinQuality(type, nodes, elements, per, elemList) {
   return minQ;
 }
 
+// ─── Optimization-based node smoothing (pattern search) ────────────────────
+// Laplacian yönü işe yaramayan ("stubborn") bir düğüm için, düğümü çok yönde
+// (±x,±y,±z + Laplacian/centroid) deneyip lokal MİN kaliteyi MAKSİMİZE eden
+// konumu seçer. Kademeli küçülen adımlarla rafine eder (coordinate/pattern
+// search — gradyan-serbest, ANSYS optimization-based smoothing'in pratik hali).
+//
+// nodes[i] mevcut konumda olmalı; başarılıysa nodes[i]'yi günceller ve true
+// döner, aksi halde orijinalde bırakır ve false döner. Kaliteyi ASLA bozmaz
+// (yalnız qBaseline'dan kesin iyi konumu kabul eder).
+function _veFEASmoothOptimizeNode(type, nodes, elements, per, elemList, nodeId, nbList, qBaseline, surfaceProjector) {
+  var i3 = nodeId * 3;
+  var ox = nodes[i3], oy = nodes[i3+1], oz = nodes[i3+2];
+
+  // Adım ölçeği: komşulara ortalama mesafenin bir kesri.
+  var avgLen = 0, cnt = 0;
+  for (var k = 0; k < nbList.length; k++) {
+    var nb3 = nbList[k] * 3;
+    var dx = nodes[nb3] - ox, dy = nodes[nb3+1] - oy, dz = nodes[nb3+2] - oz;
+    avgLen += Math.sqrt(dx*dx + dy*dy + dz*dz); cnt++;
+  }
+  if (cnt === 0) return false;
+  avgLen /= cnt;
+  var step = avgLen * 0.25;
+  if (!(step > 0)) return false;
+
+  // Centroid yönü de aday yönlerden biri (Laplacian katkısı).
+  var cx = 0, cy = 0, cz = 0;
+  for (var c = 0; c < nbList.length; c++) {
+    cx += nodes[nbList[c]*3]; cy += nodes[nbList[c]*3+1]; cz += nodes[nbList[c]*3+2];
+  }
+  cx /= cnt; cy /= cnt; cz /= cnt;
+
+  var bestQ = qBaseline;
+  var bestX = ox, bestY = oy, bestZ = oz;
+  var improved = false;
+
+  // Aday yönler: 6 eksen + centroid yönü (normalize). 7 yön × kademeli adım.
+  var dirs = [
+    [1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]
+  ];
+  var cdx = cx - ox, cdy = cy - oy, cdz = cz - oz;
+  var clen = Math.sqrt(cdx*cdx + cdy*cdy + cdz*cdz);
+  if (clen > 1e-12) dirs.push([cdx/clen, cdy/clen, cdz/clen]);
+
+  // 3 kademe: step, step/2, step/4 — coarse→fine. Her kademede iyileşme
+  // oldukça aynı kademede tekrar dene (sınırlı tur sayısı ile — sonsuz döngü yok).
+  var totalRounds = 0;
+  var MAX_ROUNDS = 24;
+  for (var level = 0; level < 3 && totalRounds < MAX_ROUNDS; level++) {
+    var s = step / (1 << level);
+    var levelImproved = true;
+    while (levelImproved && totalRounds < MAX_ROUNDS) {
+      levelImproved = false;
+      totalRounds++;
+      for (var di = 0; di < dirs.length; di++) {
+        var tx = bestX + dirs[di][0] * s;
+        var ty = bestY + dirs[di][1] * s;
+        var tz = bestZ + dirs[di][2] * s;
+        if (surfaceProjector) {
+          var pr = surfaceProjector(tx, ty, tz, nodeId);
+          if (!pr) continue;
+          tx = pr[0]; ty = pr[1]; tz = pr[2];
+        }
+        nodes[i3] = tx; nodes[i3+1] = ty; nodes[i3+2] = tz;
+        var q = _veFEASmoothLocalMinQuality(type, nodes, elements, per, elemList);
+        if (q > bestQ + 1e-9) {
+          bestQ = q; bestX = tx; bestY = ty; bestZ = tz;
+          improved = true; levelImproved = true;
+        }
+      }
+    }
+  }
+
+  // En iyi konumu yaz (iyileşme varsa), yoksa orijinale dön.
+  nodes[i3] = bestX; nodes[i3+1] = bestY; nodes[i3+2] = bestZ;
+  return improved;
+}
+
 // ─── Ana smoothing geçişi ──────────────────────────────────────────────────
 function veFEASmoothMesh(mesh, opts) {
   opts = opts || {};
@@ -29134,6 +29212,9 @@ function veFEASmoothMesh(mesh, opts) {
   var relax = (opts.relaxation != null) ? Math.max(0, Math.min(1, opts.relaxation)) : 0.5;
   var preserveSurface = opts.preserveSurface !== false;
   var qualityFloor = (opts.qualityFloor != null) ? opts.qualityFloor : 1.0;
+  // Laplacian başarısız kötü düğümlerde çok-yönlü optimization devreye girsin mi?
+  // (method='optimization' her zaman; optimizeStubborn smartLaplacian'a ekler.)
+  var optimizeStubborn = opts.optimizeStubborn === true;
   var onProgress = (typeof opts.onProgress === 'function') ? opts.onProgress : function() {};
 
   var per = mesh.nodesPerElement;
@@ -29207,10 +29288,25 @@ function veFEASmoothMesh(mesh, opts) {
           var ax = ox + frac * (cx - ox);
           var ay = oy + frac * (cy - oy);
           var az = oz + frac * (cz - oz);
+          if (isBoundary && surfaceProjector) {
+            var prL = surfaceProjector(ax, ay, az, i);
+            if (prL) { ax = prL[0]; ay = prL[1]; az = prL[2]; } else { frac *= 0.5; continue; }
+          }
           nodes[i*3] = ax; nodes[i*3+1] = ay; nodes[i*3+2] = az;
           var qa = _veFEASmoothLocalMinQuality(type, nodes, elements, per, elemList);
           if (qa > qBefore + 1e-9) { accepted = true; movedThisPass++; }
           frac *= 0.5;
+        }
+        // Optimization-based: Laplacian yönü işe yaramadıysa, çok yönlü pattern
+        // search ile lokal min kaliteyi maksimize eden konumu ara (ANSYS
+        // optimization-based smoothing). Yalnız method='optimization' veya
+        // optimizeStubborn açıkken — pahalı olduğu için kötü düğümlere odaklı.
+        if (!accepted && (method === 'optimization' || optimizeStubborn)) {
+          nodes[i*3] = ox; nodes[i*3+1] = oy; nodes[i*3+2] = oz;
+          var opt = _veFEASmoothOptimizeNode(
+            type, nodes, elements, per, elemList, i, neighbors[i],
+            qBefore, isBoundary ? surfaceProjector : null);
+          if (opt) { movedThisPass++; accepted = true; }
         }
         if (!accepted) {
           nodes[i*3] = ox; nodes[i*3+1] = oy; nodes[i*3+2] = oz; // tam geri al
