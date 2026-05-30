@@ -897,6 +897,7 @@
   min-width:0;
   background:var(--bg-primary);
   overflow:hidden;
+  position:relative;          /* marker (sol-kenar) absolute olarak buna göre konumlanır */
 }
 
 .ve-file-menu{
@@ -1789,17 +1790,20 @@
   color:var(--accent-danger);
 }
 
-/* Bileşen sembolü (marker): bir bileşen seçilince sol kenarda belirir */
+/* Bileşen sembolü (marker): canvas sol kenarında belirir.
+   Boyut/şekil olarak sidebar-reveal'ın TIPATIP aynası; tam altında durur. */
 .ve-comp-marker{
   position:absolute;
-  left:0; top:120px;
+  left:0;
+  top:107px;                   /* sidebar-reveal (40 + ~59 = 99 alt) ile arasında ~8px estetik boşluk */
   z-index:60;
   display:none;
-  align-items:center; justify-content:center;
-  width:40px; height:40px;
-  padding:0;
+  flex-direction:column;
+  align-items:center;
+  gap:7px;
+  padding:9px 7px;             /* sidebar-reveal ile birebir aynı */
   background:var(--bg-secondary);
-  color:var(--text-primary);
+  color:var(--text-secondary);
   border:1px solid var(--border-color);
   border-left:none;
   box-shadow:2px 2px 10px var(--shadow-color);
@@ -1817,14 +1821,30 @@
 }
 .ve-comp-marker:hover{
   background:var(--bg-tertiary);
-  border-color:var(--accent-primary);
   color:var(--accent-primary);
+  border-color:var(--accent-primary);
 }
 .ve-comp-marker-svg{
   display:flex; align-items:center; justify-content:center;
-  width:26px; height:26px;
+  width:18px; height:18px;     /* sidebar-reveal'in cube ikonuyla aynı kefede */
 }
-.ve-comp-marker-svg svg{ width:100%; height:100%; }
+.ve-comp-marker-svg svg{ width:100%; height:100%; color:currentColor; }
+.ve-comp-marker-arrow{ font-size:0.78rem; opacity:0.55; }
+.ve-comp-marker:hover .ve-comp-marker-arrow{ opacity:1; }
+
+/* Yeni bileşen düşünce dikkat çek: kenarlık temaya uygun aksan renginde yanıp söner */
+@keyframes ve-marker-flash{
+  0%, 100%{
+    border-color:var(--border-color);
+    box-shadow:2px 2px 10px var(--shadow-color);
+  }
+  50%{
+    border-color:var(--accent-primary);
+    box-shadow:0 0 14px color-mix(in srgb, var(--accent-primary) 70%, transparent),
+               2px 2px 10px var(--shadow-color);
+  }
+}
+.ve-comp-marker.flash{ animation:ve-marker-flash 0.55s ease-in-out 3; }
 
 .ve-properties-resizer{
   position:absolute;
@@ -3266,6 +3286,11 @@ function mfsimLogout() {
 
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
+        <!-- Bileşen sembolü: bir bileşen seçilince canvas sol kenarında belirir (sidebar reveal'ın aynası); tıklayınca Özellikler paneli soldan açılır -->
+        <button id="ve-comp-marker" class="ve-comp-marker" onclick="veTogglePropertiesPanel()" title="Özellikler" aria-label="Özellikler panelini aç">
+          <span class="ve-comp-marker-svg" id="ve-comp-marker-svg"></span>
+          <span class="mf-ico mf-ico-chevrons-right ve-comp-marker-arrow"></span>
+        </button>
         <div class="ve-tab-bar" id="ve-tab-bar"></div>
         <div class="ve-split-container" id="ve-split-container">
           <div class="ve-split-pane focused" id="ve-pane-0">
@@ -3312,11 +3337,6 @@ function mfsimLogout() {
       </div>
       
       <!-- Sağ Panel - Özellikler -->
-      <!-- Bileşen sembolü: bir bileşen seçilince sol kenarda belirir, tıklayınca Özellikler paneli soldan açılır -->
-      <button id="ve-comp-marker" class="ve-comp-marker" onclick="veTogglePropertiesPanel()" title="Özellikler" aria-label="Özellikler panelini aç">
-        <span class="ve-comp-marker-svg" id="ve-comp-marker-svg"></span>
-      </button>
-
       <div class="ve-properties ve-prop-hidden" id="ve-properties">
         <div class="ve-properties-resizer" id="ve-properties-resizer"></div>
         <div class="ve-properties-header"><span class="mf-ico mf-ico-sliders"></span><span style="flex:1;">Özellikler</span><button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Özellikler panelini kapat">✕</button></div>
@@ -53000,6 +53020,11 @@ function veShowCompMarker(svgHtml) {
   var slot = document.getElementById('ve-comp-marker-svg');
   if(slot) slot.innerHTML = svgHtml || '';
   m.classList.add('visible');
+  // Dikkat çek: kenarlık temaya uygun aksan renginde yanıp söner (animasyonu
+  // yeniden başlatmak için class'ı sil → reflow → ekle deseni)
+  m.classList.remove('flash');
+  void m.offsetWidth;
+  m.classList.add('flash');
 }
 function veHideCompMarker() {
   var m = document.getElementById('ve-comp-marker');
