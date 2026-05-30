@@ -1961,32 +1961,37 @@
 .ve-warning-item.warn{border-left:3px solid var(--accent-warning);}
 .ve-warning-item.info{border-left:3px solid var(--accent-primary);}
 
-/* Özellikler paneli: sol kenardan kayan overlay (mevcut Bileşenler sidebar'ının üstüne biner). */
+/* Bileşen Özellikleri MODAL'ı: backdrop + ortalanmış kart (Ayarlar modal'ıyla
+   aynı kalıp). Önceki sol-kayan yan-panel kaldırıldı. */
+.ve-properties-overlay{
+  position:fixed;
+  inset:0;
+  z-index:100020;
+  background:rgba(0,0,0,0.6);
+  display:none;             /* JS flex yapar */
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  backdrop-filter:blur(3px);
+  opacity:0;
+  transition:opacity 0.18s ease;
+}
+.ve-properties-overlay.visible{ opacity:1; }
+
 .ve-properties{
-  position:absolute;
-  left:0; top:0; bottom:0;
-  width:480px;
-  min-width:280px;
+  width:100%;
   max-width:720px;
+  max-height:90vh;
   background:var(--bg-secondary);
-  border-right:1px solid var(--border-color);
-  box-shadow:6px 0 24px var(--shadow-color);
+  border:1px solid var(--border-color);
+  box-shadow:0 20px 60px rgba(0,0,0,0.6);
   display:flex;
   flex-direction:column;
   overflow:hidden;
-  z-index:200;
-  transform:translateX(0);
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.22s ease;
+  transform:scale(0.96);
+  transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);
 }
-/* Gizli: tamamen ekran dışı sola kayar */
-.ve-properties.ve-prop-hidden{
-  transform:translateX(-100%);
-  opacity:0;
-  pointer-events:none;
-}
-/* Resizer ile sürüklerken geçiş kapalı (takılmayı önler) */
-.ve-properties.ve-prop-no-anim{ transition:none !important; }
+.ve-properties-overlay.visible .ve-properties{ transform:scale(1); }
 
 /* Panel başlığındaki kapatma butonu */
 .ve-properties-close{
@@ -2061,23 +2066,6 @@
   }
 }
 .ve-comp-marker.flash{ animation:ve-marker-flash 0.55s ease-in-out 3; }
-
-.ve-properties-resizer{
-  position:absolute;
-  right:0;            /* panel artık solda; resizer sağ kenarda (canvas tarafında) */
-  top:0;
-  bottom:0;
-  width:6px;
-  cursor:ew-resize;
-  background:transparent;
-  transition:background 0.2s;
-  z-index:10;
-}
-
-.ve-properties-resizer:hover,
-.ve-properties-resizer.active{
-  background:var(--accent-primary);
-}
 
 .ve-properties-header{
   padding:8px 12px;
@@ -3541,19 +3529,7 @@ function mfsimLogout() {
           <span class="ve-status-item" id="ve-status-mode">Hazır</span>
         </div>
       </div>
-      
-      <!-- Sağ Panel - Özellikler -->
-      <div class="ve-properties ve-prop-hidden" id="ve-properties">
-        <div class="ve-properties-resizer" id="ve-properties-resizer"></div>
-        <div class="ve-properties-header"><span class="mf-ico mf-ico-sliders"></span><span style="flex:1;">Özellikler</span><button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Özellikler panelini kapat">✕</button></div>
-        <div class="ve-properties-content">
-          <div class="ve-prop-empty">
-            <div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div>
-            <div>Bir bileşen seçin</div>
-            <small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small>
-          </div>
-        </div>
-      </div>
+
       
     </div>
     
@@ -11654,16 +11630,17 @@ function clearSelection() {
 
 function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
-  var propertiesPanel = document.querySelector('.ve-properties');
   if(!content) return;
-  // Bir bileşen seçildi → paneli OTOMATİK açma; sol kenarda bileşenin
-  // kendi sembolü (marker) belirir. Kullanıcı sembole tıklayınca panel açılır.
+  // Bir bileşen seçildi → marker'ı göster + modal'ı otomatik aç
   if(typeof veShowCompMarker === 'function' && node && node.def && node.def.svg) {
     veShowCompMarker(node.def.svg);
   }
-  
-  // Panel genişliğini KORUYORUZ - kullanıcı değiştirmedikçe dokunmuyoruz
-  // Sadece ilk açılışta varsayılan genişlik ayarlanır
+  // Modal başlığında bileşenin adı ve sembolü görünür
+  var titleEl = document.getElementById('ve-properties-title');
+  if(titleEl) {
+    var nm = (node && (node.customName || (node.def && node.def.name))) || 'Özellikler';
+    titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>' + nm + ' <span style="opacity:0.5;font-weight:400;font-size:0.7rem;margin-left:6px;">' + (node.id || '') + '</span>';
+  }
   
   var html = '<div style="position:relative; text-align:center; margin-bottom:12px;">';
   html += node.def.svg.replace('width="50"', 'width="50"').replace('height="50"', 'height="50"');
@@ -11735,7 +11712,10 @@ function showNodeProperties(node) {
   
   
   content.innerHTML = html;
-  
+  // Tek-tık akışı: modal'ı otomatik aç (yan-panel YOK, popup)
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+
+
   // Motor bileşeni için grafik çiz ve kategori dropdown'ı doldur
   if(node.type === 'engine') {
     setTimeout(function() {
@@ -53813,27 +53793,48 @@ function veHideCompMarker() {
   if(!m) return;
   m.classList.remove('visible');
 }
+// Bileşen özellikleri MODAL toggle — overlay fade-in/out yönetir.
+// forceState true → aç; false → kapat; undefined → toggle.
+// Race-safe: hızlı kapat→aç sıralarında bekleyen close timeout'unun yeni
+// open'ı bozmasını engeller (visible class kontrolü ile).
 function veTogglePropertiesPanel(forceState) {
-  var panel = document.querySelector('.ve-properties');
-  if(!panel) return;
-  var open = (typeof forceState === 'boolean')
-    ? forceState
-    : panel.classList.contains('ve-prop-hidden');
-  panel.classList.toggle('ve-prop-hidden', !open);
+  var ov = document.getElementById('ve-properties-overlay');
+  if(!ov) return;
+  var isVisible = ov.classList.contains('visible');
+  var open = (typeof forceState === 'boolean') ? forceState : !isVisible;
+  if(open) {
+    if(ov.style.display !== 'flex') {
+      // Tamamen kapalıydı → display set, sonra rAF ile visible (geçiş 0→1)
+      ov.style.display = 'flex';
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() { ov.classList.add('visible'); });
+      });
+    } else if(!isVisible) {
+      // Kapanma sürecinde tekrar açıldı (display hâlâ flex) → visible'ı geri ekle
+      ov.classList.add('visible');
+    }
+  } else {
+    if(!isVisible) return;
+    ov.classList.remove('visible');
+    setTimeout(function() {
+      // 220ms sonra hâlâ visible değilse gerçekten kapat (race-safe)
+      if(!ov.classList.contains('visible')) ov.style.display = 'none';
+    }, 220);
+  }
 }
-// ESC: panel açıksa kapat (input/textarea içinde değilse)
+// ESC: modal açıksa kapat (input/textarea içinde değilse)
 document.addEventListener('keydown', function(e) {
   if(e.key !== 'Escape') return;
   var t = e.target;
   if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-  var panel = document.querySelector('.ve-properties');
-  if(panel && !panel.classList.contains('ve-prop-hidden')) veTogglePropertiesPanel(false);
+  var ov = document.getElementById('ve-properties-overlay');
+  if(ov && ov.style.display === 'flex') veTogglePropertiesPanel(false);
 });
 
 function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Çoklu seçim için marker — küp ikonu + sayı rozeti
+  // Çoklu seçim marker'ı (küp ikonu) — kullanıcı seçimi görsün
   veShowCompMarker(
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>' +
@@ -53850,17 +53851,17 @@ function showMultipleSelection() {
   html += '</div>';
 
   content.innerHTML = html;
+  veTogglePropertiesPanel(true);  // tek tık → modal otomatik açılır
 }
 
 function showEmptyProperties() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Seçim yok → marker'ı ve paneli gizle
+  // Seçim yok → marker'ı ve modal'ı kapat
   veHideCompMarker();
-  var panel = document.querySelector('.ve-properties');
-  if(panel) panel.classList.add('ve-prop-hidden');
+  veTogglePropertiesPanel(false);
 
-  content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon">🖱️</div><div>Bir bileşen seçin</div><small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small></div>';
+  content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div><div>Bir bileşen seçin</div><small style="color:var(--text-muted);">Özellikleri burada açılır</small></div>';
 }
 
 function deleteSelectedNodes() {
@@ -65658,6 +65659,17 @@ function _veShowRefreshedPopup() {
 }
 
 </script>
+
+<!-- ═══ BİLEŞEN ÖZELLİKLERİ MODALI ═══ -->
+<div id="ve-properties-overlay" class="ve-properties-overlay" style="display:none;" onmousedown="if(event.target===this) veTogglePropertiesPanel(false)">
+  <div class="ve-properties" id="ve-properties" role="dialog" aria-labelledby="ve-properties-title">
+    <div class="ve-properties-header">
+      <span id="ve-properties-title" style="display:inline-flex;align-items:center;gap:8px;flex:1;"><span class="mf-ico mf-ico-sliders"></span>Özellikler</span>
+      <button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-properties-content"></div>
+  </div>
+</div>
 
 <!-- ═══ AYARLAR MODALI ═══ -->
 <div id="ve-settings-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veCloseSettings()">
