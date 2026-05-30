@@ -84,11 +84,23 @@ function _veFEAScanPrepareBrep(nodeId) {
     if (brepTopo && Array.isArray(brepTopo.faces) && brepTopo.faces.length > 0) {
       // Geometri topology'sini gerçek BREP ile değiştir (kalıcı)
       geom.topology = brepTopo;
+      // Faz 5 — Tessellation köprüsü: viewer'a multi-material BREP mesh yedir.
+      // Hafif occt-import-js mesh'inin yerini alır; STEP yüzleri TIKLANABİLİR.
+      if (brepTopo.tessellation && typeof veFEAViewerRegistry !== 'undefined') {
+        var viewer = veFEAViewerRegistry[nodeId];
+        if (viewer && typeof viewer.loadBrepTessellation === 'function') {
+          try { viewer.loadBrepTessellation(brepTopo.tessellation); }
+          catch (e) { console.warn('[FEA Scan] BREP tessellation viewer load hatası:', e.message); }
+        }
+      }
       if (typeof showToast === 'function') {
         var v = brepTopo.validity || {};
+        var tessNote = brepTopo.tessellation
+          ? ' · ' + (brepTopo.tessellation.indices.length / 3) + ' üçgen (yüzler tıklanabilir)'
+          : '';
         showToast('Gerçek B-Rep topolojisi çıkarıldı: ' + brepTopo.faces.length + ' yüz, ' +
           brepTopo.edges.length + ' kenar, ' + brepTopo.vertices.length + ' köşe' +
-          (v.manifold ? ' (manifold ✓)' : ''), 'success');
+          (v.manifold ? ' (manifold ✓)' : '') + tessNote, 'success');
       }
       return true;
     }

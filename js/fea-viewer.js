@@ -534,6 +534,36 @@ function veFEAInitViewer(canvas, opts) {
       this.zoomToFit(mesh);
       return mesh;
     },
+    // Faz 5 — OCCT BREP tessellation köprüsü: STEP yüzleri 3D'de TIKLANABİLİR.
+    // tessellation: { positions, indices, groups:[{start,count,faceId}], faceIdOrder }
+    // Multi-material BufferGeometry kurar (her face bir materyal), feaFaceMap'i
+    // doldurur — mevcut face picking (_collectFaceMaterials + raycaster) otomatik çalışır.
+    loadBrepTessellation: function(tessellation) {
+      if (typeof THREE === 'undefined' || !tessellation || !tessellation.positions ||
+          !tessellation.indices || !Array.isArray(tessellation.groups)) return null;
+      this.clearGeometry();
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(tessellation.positions, 3));
+      geo.setIndex(new THREE.BufferAttribute(tessellation.indices, 1));
+      // Materyal grupları — her face bir materialIndex
+      var materials = [];
+      var faceMap = [];
+      tessellation.groups.forEach(function(g, mi) {
+        geo.addGroup(g.start, g.count, mi);
+        materials.push(_veFEAMakePrimitiveMaterial());
+        faceMap[mi] = g.faceId;
+      });
+      geo.computeVertexNormals();
+      var mesh = new THREE.Mesh(geo, materials);
+      mesh.userData.feaFaceMap = faceMap;
+      mesh.userData.feaBrep = true;   // BREP-kaynaklı (analitik primitif değil)
+      this._geometryRoot.add(mesh);
+      _veFEAEnsureEdges(mesh);
+      this._applyDisplayState(mesh);
+      this._collectFaceMaterials();   // face picking için materyal haritasını kur
+      this.zoomToFit(mesh);
+      return mesh;
+    },
     // F3: Mesh data → LineSegments (kenar wireframe)
     loadMesh: function(meshData) {
       if (!meshData || typeof veFEAMeshExtractEdges !== 'function') return null;
