@@ -3,7 +3,7 @@
  *  - Voxelization algoritması: küp STL → Heks8 mesh
  *  - Ray casting parite testi (içeride/dışarıda)
  *  - veFEAMeshFromGeometry mode parametresi (auto/volume/surface)
- *  - VE_FEA_VOXEL_MAX_COUNT üst sınırı (voxel-too-many error)
+ *  - VE_FEA_VOXEL_MAX_COUNT üst sınırı kaldırıldı (Infinity — sınır yok)
  *  - Async STEP wrapper (mock'lanmış OCCT)
  *  - cp-fea.js Mesh Modu dropdown'u
  */
@@ -143,12 +143,16 @@ describe('_veFEAVoxelizeTrianglesToHex — küp 10×10×10', () => {
     expect(m.nodes.length / 3).toBe(8);
   });
 
-  test('voxel sayısı VE_FEA_VOXEL_MAX_COUNT aşarsa error döner', () => {
+  test('voxel üst sınırı kaldırıldı: yoğun mesh "voxel-too-many" vermez', () => {
+    // Kullanıcı isteğiyle voxel sayısı üst sınırı kaldırıldı
+    // (VE_FEA_VOXEL_MAX_COUNT === Infinity). Eskiden 20M'i aşan yoğunluk hata
+    // verirdi; artık vermez. OOM riskini önlemek için testte makul size kullanılır.
+    expect(VE_FEA_VOXEL_MAX_COUNT).toBe(Infinity);
     var parsed = getCubeParsed();
-    // 10×10×10 küp + size=0.01 → 1000³ = 1G voxel (sınırı çok aşar)
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 0.01, 'step');
-    expect(m.error).toBe('voxel-too-many');
-    expect(m.total).toBeGreaterThan(VE_FEA_VOXEL_MAX_COUNT);
+    // 10mm küp + size=0.5 → 20³ = 8000 voxel (güvenli, hata yok)
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 0.5, 'step');
+    expect(m.error).toBeUndefined();
+    expect(m.elements.length / 8).toBe(8000);
   });
 
   test('null/boş parsed için null döner', () => {
@@ -214,18 +218,13 @@ describe('veFEAMeshFromGeometry — mode parametresi', () => {
     expect(veFEAMeshFromGeometry(box, { size: 5, mode: 'surface' }).type).toBe('hex8');
   });
 
-  test('voxel-too-many error doğrudan _veFEAVoxelizeTrianglesToHex üzerinden iletilir', () => {
-    // veFEAMeshFromGeometry size'ı VE_FEA_MESH_MIN_SIZE=0.5 mm'e clamp eder,
-    // dolayısıyla 10 mm küpte 20M voxel'i aşmak için doğrudan voxelize çağrılır
+  test('küçük size voxelize sırasında hata vermez (sınır kaldırıldı)', () => {
+    // Eskiden çok küçük size → voxel-too-many. Artık sınır yok; küçük ama
+    // OOM yapmayan bir size ile mesh sorunsuz üretilir.
     var parsed = getCubeParsed();
-    var m = _veFEAVoxelizeTrianglesToHex(parsed, 0.01, 'step');
-    expect(m.error).toBe('voxel-too-many');
-  });
-
-  test('VE_FEA_VOXEL_MAX_COUNT 20M (sub-1mm mesh için headroom)', () => {
-    // Eski 5M sınırı sub-1mm mesh'i büyük geometrilerde engelliyordu.
-    // Yeni: 20M → 100mm³ bbox için 0.5mm mesh = 200³ = 8M voxel rahat sığar.
-    expect(VE_FEA_VOXEL_MAX_COUNT).toBe(20000000);
+    var m = _veFEAVoxelizeTrianglesToHex(parsed, 0.5, 'step'); // 20³ = 8000 voxel
+    expect(m.error).toBeUndefined();
+    expect(m.elements.length / 8).toBe(8000);
   });
 });
 
@@ -419,13 +418,14 @@ describe('veFEABuildMeshForNode — voxel error handling', () => {
     Object.keys(veFEAMeshCache).forEach((k) => delete veFEAMeshCache[k]);
   });
 
-  test('STEP geometri + clamp altı size → MIN_SIZE\'a clamp + başarılı mesh', () => {
-    // Çok küçük size (0.01) VE_FEA_MESH_MIN_SIZE=0.5 mm'e clamp olur.
-    // Voxel-too-many error tetiklenmez, mesh oluşur ama makul boyutta.
+  test('STEP geometri + küçük size → sınır yok, başarılı mesh (clamp kaldırıldı)', () => {
+    // Eskiden size VE_FEA_MESH_MIN_SIZE=0.5 mm'e clamp ediliyordu; artık alt
+    // sınır yok. size=0.5 doğrudan kullanılır (10mm küp → 20³=8000 voxel).
+    // OOM önlemek için 0.01 yerine 0.5 (sonuç eski clamp'li hâlle aynı).
     // Default: hex voxel → otomatik tet4 + boundary snap. 8000 hex → 48000 tet.
     global.nodes = [
       { id: 'geom-1', type: 'fea-geometry', data: { geometry: { type: 'step', triangleCount: 12, _parsedTriangles: getCubeParsed() } } },
-      { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 0.01, mode: 'auto' } } }
+      { id: 'mesh-1', type: 'fea-mesh', data: { meshSettings: { size: 0.5, mode: 'auto' } } }
     ];
     global.connections = [{ from: 'geom-1', to: 'mesh-1' }];
     veFEABuildMeshForNode('mesh-1');

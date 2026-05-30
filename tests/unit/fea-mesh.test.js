@@ -126,11 +126,15 @@ describe('Kutu → Heks8 structured mesh', () => {
     expect(Math.abs(sz / n)).toBeLessThan(0.001);
   });
 
-  test('size çok küçük olursa clamp uygulanır (VE_FEA_MESH_MIN_SIZE)', () => {
-    var m = veFEAMeshFromGeometry({ type: 'box', params: { width: 5, height: 5, depth: 5 } }, { size: 0.01 });
-    // size 0.5'e clamp olur → 10×10×10 = 1000 element
-    expect(m.elements.length / 8).toBeLessThanOrEqual(2000);
-    expect(m.elements.length / 8).toBeGreaterThan(100);
+  test('minimum eleman boyutu kaldırıldı: küçük size daha çok eleman üretir', () => {
+    // Eski davranış: size VE_FEA_MESH_MIN_SIZE=0.5 mm'e clamp ediliyordu.
+    // Yeni: alt sınır yok (kullanıcı isteği). Aşırı küçük değer OOM yapabileceği
+    // için ölçülebilir ama güvenli bir değer kullanılır.
+    expect(VE_FEA_MESH_MIN_SIZE).toBe(0);
+    var coarse = veFEAMeshFromGeometry({ type: 'box', params: { width: 5, height: 5, depth: 5 } }, { size: 1 });
+    var fine   = veFEAMeshFromGeometry({ type: 'box', params: { width: 5, height: 5, depth: 5 } }, { size: 0.25 });
+    // size 0.25 eskiden 0.5'e clamp olur, coarse ile aynı kalırdı. Artık daha ince.
+    expect(fine.elements.length).toBeGreaterThan(coarse.elements.length);
   });
 });
 
