@@ -11,6 +11,7 @@
     "test:e2e": "npx playwright test",
     "test:all": "jest --verbose && npx playwright test",
     "vendor:sync": "node scripts/sync-vendor.js",
+    "occt:full": "node scripts/sync-occt-full.js",
     "postinstall": "npm run vendor:sync"
   },
   "repository": {

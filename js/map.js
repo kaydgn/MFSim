@@ -2869,41 +2869,72 @@ function veEditNodeName(nodeId) {
   });
 }
 
-// Paneli yumuşakça aç: genişlik anında uygulanır (grafikler tam genişlikte
-// çizilsin), yalnızca opaklık + kayma animasyonlu olur. Kapanış (ve-prop-hidden)
-// genişliği animasyonla daraltarak canvas'ı pürüzsüz genişletir.
-function veRevealPropertiesPanel() {
-  var panel = document.querySelector('.ve-properties');
-  if(!panel || !panel.classList.contains('ve-prop-hidden')) return;
-  panel.classList.add('ve-prop-no-width-anim');
-  panel.classList.remove('ve-prop-hidden');
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      panel.classList.remove('ve-prop-no-width-anim');
-    });
-  });
+// ─── Bileşen sembolü (sol-kenar marker) + Özellikler paneli toggle ─────────
+// Bir bileşen seçilince marker görünür; tıklanınca panel soldan kayarak açılır.
+// Eski "otomatik aç" davranışı kaldırıldı — kullanıcı sembolü tıklamadan panel
+// gelmez. Bu fonksiyonlar showNodeProperties / showMultipleSelection /
+// showEmptyProperties tarafından çağrılır.
+function veShowCompMarker(svgHtml) {
+  var m = document.getElementById('ve-comp-marker');
+  if(!m) return;
+  var slot = document.getElementById('ve-comp-marker-svg');
+  if(slot) slot.innerHTML = svgHtml || '';
+  m.classList.add('visible');
+  // Dikkat çek: kenarlık temaya uygun aksan renginde yanıp söner (animasyonu
+  // yeniden başlatmak için class'ı sil → reflow → ekle deseni)
+  m.classList.remove('flash');
+  void m.offsetWidth;
+  m.classList.add('flash');
 }
+function veHideCompMarker() {
+  var m = document.getElementById('ve-comp-marker');
+  if(!m) return;
+  m.classList.remove('visible');
+}
+function veTogglePropertiesPanel(forceState) {
+  var panel = document.querySelector('.ve-properties');
+  if(!panel) return;
+  var open = (typeof forceState === 'boolean')
+    ? forceState
+    : panel.classList.contains('ve-prop-hidden');
+  panel.classList.toggle('ve-prop-hidden', !open);
+}
+// ESC: panel açıksa kapat (input/textarea içinde değilse)
+document.addEventListener('keydown', function(e) {
+  if(e.key !== 'Escape') return;
+  var t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  var panel = document.querySelector('.ve-properties');
+  if(panel && !panel.classList.contains('ve-prop-hidden')) veTogglePropertiesPanel(false);
+});
 
 function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  veRevealPropertiesPanel();
+  // Çoklu seçim için marker — küp ikonu + sayı rozeti
+  veShowCompMarker(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>' +
+      '<polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>' +
+    '</svg>'
+  );
 
   var html = '<div style="text-align:center; padding:20px;">';
-  html += '<div style="font-size:2rem; margin-bottom:12px;">📦</div>';
+  html += '<div style="font-size:2rem; margin-bottom:12px;"><span class="mf-ico mf-ico-package"></span></div>';
   html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:8px;">' + selectedNodes.length + ' bileşen seçili</div>';
   html += '<div style="margin-top:16px;">';
   html += '<button onclick="deleteSelectedNodes()" style="width:100%; padding:8px; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.8rem;"><span class="mf-ico mf-ico-trash"></span> Seçilenleri Sil</button>';
   html += '</div>';
   html += '</div>';
-  
+
   content.innerHTML = html;
 }
 
 function showEmptyProperties() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Seçim yok → paneli gizle (otomatik açılmaz)
+  // Seçim yok → marker'ı ve paneli gizle
+  veHideCompMarker();
   var panel = document.querySelector('.ve-properties');
   if(panel) panel.classList.add('ve-prop-hidden');
 

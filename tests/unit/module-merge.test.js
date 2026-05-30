@@ -19,6 +19,9 @@ document.body.innerHTML = `
       <div class="ve-component" data-type="gearbox"></div>
       <div class="ve-component" data-type="propshaft"></div>
     </div>
+    <div class="ve-category" data-ve-mode="fea">
+      <div class="ve-component" data-type="fea"></div>
+    </div>
     <div class="ve-category" data-always-visible="true">
       <div class="ve-component" data-type="frame"></div>
     </div>
@@ -123,42 +126,62 @@ describe('veSelectModuleFromOverlay', () => {
   test('overlay gizlenir', () => {
     var overlay = document.getElementById('ve-module-overlay');
     overlay.style.display = 'block';
-    veSelectModuleFromOverlay('full-throttle');
+    veSelectModuleFromOverlay('arac-performans');
     expect(overlay.style.display).toBe('none');
   });
 
   test('veActiveModule full-throttle olarak kalır', () => {
-    veSelectModuleFromOverlay('full-throttle');
+    veSelectModuleFromOverlay('arac-performans');
     expect(veActiveModule).toBe('full-throttle');
   });
 
-  test('toast mesajı gösterilir', () => {
+  test('Araç Performans seçilince mod "performans" olur ve toast gösterilir', () => {
     showToast.mockClear();
-    veSelectModuleFromOverlay('full-throttle');
-    expect(showToast).toHaveBeenCalledWith('Ana Sayfa aktif', 'info');
+    veSelectModuleFromOverlay('arac-performans');
+    expect(veSidebarMode).toBe('performans');
+    expect(showToast).toHaveBeenCalledWith('Araç Performans aktif', 'info');
+  });
+
+  test('Sonlu Elemanlar seçilince mod "fea" olur ve toast gösterilir', () => {
+    showToast.mockClear();
+    veSelectModuleFromOverlay('sonlu-elemanlar');
+    expect(veSidebarMode).toBe('fea');
+    expect(showToast).toHaveBeenCalledWith('Sonlu Elemanlar aktif', 'info');
   });
 });
 
 // ═════════════════════════════════════════════════════════════════════
 // veShowAllSidebarComponents
 // ═════════════════════════════════════════════════════════════════════
-describe('veShowAllSidebarComponents', () => {
-  test('tüm bileşenler görünür yapılır', () => {
-    // Önce bazı bileşenleri gizle
-    document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
-      el.style.display = 'none';
-    });
-    document.querySelectorAll('.ve-category').forEach(function(cat) {
-      cat.style.display = 'none';
-    });
+describe('veShowAllSidebarComponents — moda göre filtreleme', () => {
+  function feaCat() { return document.querySelector('.ve-category[data-ve-mode="fea"]'); }
+  function perfCats() {
+    return Array.prototype.slice.call(document.querySelectorAll('.ve-category'))
+      .filter(function(c) { return !c.getAttribute('data-ve-mode') && !c.getAttribute('data-always-visible'); });
+  }
+  function alwaysCat() { return document.querySelector('.ve-category[data-always-visible]'); }
 
+  test('Araç Performans modunda FEA kategorisi gizlenir, diğerleri görünür', () => {
+    veSelectModuleFromOverlay('arac-performans');
     veShowAllSidebarComponents();
+    expect(feaCat().style.display).toBe('none');
+    perfCats().forEach(function(c) { expect(c.style.display).toBe(''); });
+    expect(alwaysCat().style.display).toBe('');
+  });
 
+  test('Sonlu Elemanlar modunda yalnızca FEA + her-zaman-görünür kategoriler görünür', () => {
+    veSelectModuleFromOverlay('sonlu-elemanlar');
+    veShowAllSidebarComponents();
+    expect(feaCat().style.display).toBe('');
+    expect(alwaysCat().style.display).toBe('');
+    perfCats().forEach(function(c) { expect(c.style.display).toBe('none'); });
+  });
+
+  test('her iki modda da bileşen elemanları display:"" kalır (kategori bazlı filtre)', () => {
+    veSelectModuleFromOverlay('arac-performans');
+    veShowAllSidebarComponents();
     document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
       expect(el.style.display).toBe('');
-    });
-    document.querySelectorAll('.ve-category').forEach(function(cat) {
-      expect(cat.style.display).toBe('');
     });
   });
 });

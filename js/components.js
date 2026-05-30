@@ -16,6 +16,11 @@ var VE_MODULES = {
 
 var veActiveModule = 'full-throttle';
 
+// Sidebar bileşen modu: 'performans' (araç güç aktarma) | 'fea' (sonlu elemanlar).
+// Açılış modül seçim ekranındaki karta göre belirlenir; sidebar kategorileri
+// data-ve-mode özniteliğine göre filtrelenir.
+var veSidebarMode = 'performans';
+
 function veOnModuleChange(moduleId) {
   // Tek modül — değişiklik gerekmez
 }
@@ -32,23 +37,34 @@ function veGetActiveModule() {
   return VE_MODULES['full-throttle'];
 }
 
-function veSelectModuleFromOverlay(moduleId) {
+function veSelectModuleFromOverlay(mode) {
   // Overlay'ı gizle
   var overlay = document.getElementById('ve-module-overlay');
   if(overlay) overlay.style.display = 'none';
 
   veActiveModule = 'full-throttle';
-  veShowAllSidebarComponents();
-  showToast('Ana Sayfa aktif', 'info');
+  var sub = (mode === 'sonlu-elemanlar' || mode === 'fea') ? 'sonlu-elemanlar' : 'arac-performans';
+  // Üst bar sekmesini de güncelle (aktif sekme + sidebar filtresi tek yerden).
+  if(typeof veSubTabDegistir === 'function') {
+    veSubTabDegistir(sub);
+  } else {
+    veSidebarMode = (sub === 'sonlu-elemanlar') ? 'fea' : 'performans';
+    veShowAllSidebarComponents();
+  }
+  showToast(veSidebarMode === 'fea' ? 'Sonlu Elemanlar aktif' : 'Araç Performans aktif', 'info');
 }
 
-// Tüm sidebar bileşenlerini göster (modül filtreleme yok)
+// Aktif moda ait sidebar bileşenlerini göster.
+// data-always-visible kategorileri her modda görünür; geri kalanlar
+// data-ve-mode (varsayılan 'performans') ile aktif moda göre filtrelenir.
 function veShowAllSidebarComponents() {
   document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
     el.style.display = '';
   });
   document.querySelectorAll('.ve-category').forEach(function(cat) {
-    cat.style.display = '';
+    if(cat.getAttribute('data-always-visible')) { cat.style.display = ''; return; }
+    var catMode = cat.getAttribute('data-ve-mode') || 'performans';
+    cat.style.display = (catMode === veSidebarMode) ? '' : 'none';
   });
 }
 

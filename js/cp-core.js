@@ -148,8 +148,11 @@ function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
   var propertiesPanel = document.querySelector('.ve-properties');
   if(!content) return;
-  // Bir bileşen seçildi → paneli yumuşakça aç
-  if(typeof veRevealPropertiesPanel === 'function') veRevealPropertiesPanel();
+  // Bir bileşen seçildi → paneli OTOMATİK açma; sol kenarda bileşenin
+  // kendi sembolü (marker) belirir. Kullanıcı sembole tıklayınca panel açılır.
+  if(typeof veShowCompMarker === 'function' && node && node.def && node.def.svg) {
+    veShowCompMarker(node.def.svg);
+  }
   
   // Panel genişliğini KORUYORUZ - kullanıcı değiştirmedikçe dokunmuyoruz
   // Sadece ilk açılışta varsayılan genişlik ayarlanır
