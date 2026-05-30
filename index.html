@@ -72,6 +72,8 @@
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
       <div class="ve-menu-divider"></div>
+      <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
+      <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
     </div>
   </div>
@@ -85,25 +87,6 @@
   <span class="theme-selector" style="margin-left:auto;">
     <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
     <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
-    <label for="theme-select" class="theme-selector-label"><span class="mf-ico mf-ico-palette"></span></label>
-    <select id="theme-select" onchange="changeTheme(this.value)">
-      <optgroup label="Koyu">
-        <option value="slate">Midnight</option>
-        <option value="cream">Carbon</option>
-        <option value="claude">Claude</option>
-      </optgroup>
-      <optgroup label="Açık">
-        <option value="silver">Silver</option>
-        <option value="pearl">Pearl</option>
-        <option value="ash">Ash</option>
-        <option value="steel">Steel</option>
-        <option value="light">Gunmetal</option>
-        <option value="arctic">Arctic</option>
-        <option value="sand">Sand</option>
-        <option value="forest">Forest</option>
-        <option value="iris">Iris</option>
-      </optgroup>
-    </select>
   </span>
 </div>
 
@@ -579,6 +562,7 @@
 <!-- Modüller MFSim Loader tarafindan login sonrasi sirayla yuklenir.       -->
 <!-- type="text/x-mfsim-defer" => tarayici execute etmez, loader.js yonetir. -->
 <script type="text/x-mfsim-defer" src="js/theme.js" data-mfsim-label="Tema motoru..."></script>
+<script type="text/x-mfsim-defer" src="js/settings.js" data-mfsim-label="Ayarlar paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/tabs.js" data-mfsim-label="Sekmeler hazırlanıyor..."></script>
 <script type="text/x-mfsim-defer" src="js/results.js" data-mfsim-label="Sonuç paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/components.js" data-mfsim-label="Bileşen kütüphanesi..."></script>
@@ -659,6 +643,26 @@
 <script type="text/x-mfsim-defer" src="js/context-menus.js" data-mfsim-label="Sağ tık menüleri..."></script>
 <script type="text/x-mfsim-defer" src="js/connections.js" data-mfsim-label="Bağlantı motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/deploy-status.js" data-mfsim-label="Dağıtım bilgisi..."></script>
+
+<!-- ═══ AYARLAR MODALI ═══ -->
+<div id="ve-settings-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veCloseSettings()">
+  <div class="ve-settings-modal" role="dialog" aria-labelledby="ve-settings-title">
+    <div class="ve-settings-header">
+      <span id="ve-settings-title"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</span>
+      <button class="ve-settings-close" onclick="veCloseSettings()" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-settings-body">
+      <nav class="ve-settings-nav" id="ve-settings-nav">
+        <button class="ve-settings-nav-item active" data-section="appearance" onclick="veSettingsShowSection('appearance')"><span class="mf-ico mf-ico-palette"></span> Görünüm</button>
+        <button class="ve-settings-nav-item" data-section="autosave" onclick="veSettingsShowSection('autosave')"><span class="mf-ico mf-ico-save"></span> Otomatik Kaydet</button>
+        <button class="ve-settings-nav-item" data-section="shortcuts" onclick="veSettingsShowSection('shortcuts')"><span class="mf-ico mf-ico-clipboard"></span> Klavye Kısayolları</button>
+        <button class="ve-settings-nav-item" data-section="data" onclick="veSettingsShowSection('data')"><span class="mf-ico mf-ico-trash"></span> Veri Yönetimi</button>
+        <button class="ve-settings-nav-item" data-section="about" onclick="veSettingsShowSection('about')"><span class="mf-ico mf-ico-package"></span> Hakkında</button>
+      </nav>
+      <section class="ve-settings-content" id="ve-settings-content"></section>
+    </div>
+  </div>
+</div>
 
 <script>
 if('serviceWorker' in navigator) {
