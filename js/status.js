@@ -113,26 +113,56 @@ function _veStatusLoadCommits() {
         el.innerHTML = '<div style="color:var(--text-muted);font-size:0.72rem;">Commit bulunamadı.</div>';
         return;
       }
-      var html = '<table class="ve-settings-table"><tbody>';
-      commits.forEach(function(c) {
-        var msg = (c.commit && c.commit.message || '').split('\n')[0];
-        if(msg.length > 70) msg = msg.slice(0, 70) + '…';
+      var html = '<ul class="ve-status-commit-list">';
+      commits.forEach(function(c, i) {
+        var fullMsg = (c.commit && c.commit.message) || '';
+        var lines = fullMsg.split('\n');
+        var subject = lines[0];
+        var body = lines.slice(1).join('\n').trim();
+        var subjectShort = subject.length > 75 ? subject.slice(0, 75) + '…' : subject;
         var when = _veStatusFmtAgo(c.commit && c.commit.author && c.commit.author.date);
         var sha = (c.sha || '').slice(0, 7);
+        var fullSha = c.sha || '';
         var url = c.html_url || '#';
-        html += '<tr>';
-        html += '<td style="width:60px;"><a href="' + url + '" target="_blank" rel="noopener"><code style="font-size:0.65rem;opacity:0.75;">' + sha + '</code></a></td>';
-        html += '<td>' + _veStatusEsc(msg) + '</td>';
-        html += '<td style="width:90px;text-align:right;"><small style="opacity:0.7;white-space:nowrap;">' + when + '</small></td>';
-        html += '</tr>';
+        var author = (c.commit && c.commit.author && c.commit.author.name) || 'Bilinmiyor';
+        var authorLogin = (c.author && c.author.login) || '';
+        var date = c.commit && c.commit.author && c.commit.author.date;
+        var dateStr = date ? new Date(date).toLocaleString('tr-TR') : '';
+
+        html += '<li class="ve-status-commit" data-idx="' + i + '">';
+        html += '<div class="ve-status-commit-row" onclick="_veStatusToggleCommit(' + i + ')">';
+        html += '<span class="ve-status-commit-arrow">▸</span>';
+        html += '<code class="ve-status-commit-sha">' + sha + '</code>';
+        html += '<span class="ve-status-commit-msg">' + _veStatusEsc(subjectShort) + '</span>';
+        html += '<small class="ve-status-commit-when">' + when + '</small>';
+        html += '</div>';
+        html += '<div class="ve-status-commit-detail">';
+        if(body) {
+          html += '<pre class="ve-status-commit-body">' + _veStatusEsc(body) + '</pre>';
+        }
+        html += '<div class="ve-status-commit-meta">';
+        html += '<div><span class="ve-status-commit-meta-label">Yazar</span>' + _veStatusEsc(author);
+        if(authorLogin) html += ' <small style="opacity:0.7;">(@' + _veStatusEsc(authorLogin) + ')</small>';
+        html += '</div>';
+        if(dateStr) html += '<div><span class="ve-status-commit-meta-label">Tarih</span>' + _veStatusEsc(dateStr) + '</div>';
+        html += '<div><span class="ve-status-commit-meta-label">Commit</span><code style="font-size:0.65rem;opacity:0.85;">' + _veStatusEsc(fullSha) + '</code></div>';
+        html += '</div>';
+        html += '<div class="ve-status-commit-actions"><a href="' + url + '" target="_blank" rel="noopener" class="ve-settings-btn"><span class="mf-ico mf-ico-link"></span> GitHub\'da Aç</a></div>';
+        html += '</div>';
+        html += '</li>';
       });
-      html += '</tbody></table>';
+      html += '</ul>';
       el.innerHTML = html;
     })
     .catch(function(e) {
       var el = document.getElementById('ve-status-commits');
       if(el) el.innerHTML = '<div style="color:var(--accent-warning);font-size:0.72rem;padding:10px 0;">Güncellemeler alınamadı: ' + _veStatusEsc(e.message) + '</div>';
     });
+}
+
+function _veStatusToggleCommit(idx) {
+  var li = document.querySelector('.ve-status-commit[data-idx="' + idx + '"]');
+  if(li) li.classList.toggle('expanded');
 }
 
 function _veStatusEsc(s) {

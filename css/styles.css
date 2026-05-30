@@ -235,10 +235,10 @@
     .ve-settings-header {
       display: flex;
       align-items: center;
-      padding: 12px 16px;
+      padding: 6px 14px;          /* dikey inceltildi: 12px → 6px */
       background: var(--bg-tertiary);
       border-bottom: 1px solid var(--border-color);
-      font-size: 0.88rem;
+      font-size: 0.78rem;          /* 0.88rem → 0.78rem */
       font-weight: 600;
       color: var(--text-heading);
     }
@@ -2618,6 +2618,86 @@
    Modal içindeki .ve-deploy-dot .ve-status-content scope'unda yine görünür. */
 #tab-bar #ve-deploy-dot,
 #tab-bar #ve-deploy-refresh { display: none !important; }
+
+/* Program Durumu — açılır-kapanır commit listesi */
+.ve-status-commit-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--border-light);
+}
+.ve-status-commit {
+  border-bottom: 1px solid var(--border-light);
+}
+.ve-status-commit:last-child { border-bottom: none; }
+.ve-status-commit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  transition: background 0.12s;
+}
+.ve-status-commit-row:hover { background: var(--bg-tertiary); }
+.ve-status-commit-arrow {
+  width: 10px;
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+.ve-status-commit.expanded .ve-status-commit-arrow { transform: rotate(90deg); }
+.ve-status-commit-sha {
+  font-size: 0.65rem;
+  opacity: 0.75;
+  width: 56px;
+  flex-shrink: 0;
+}
+.ve-status-commit-msg {
+  flex: 1;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ve-status-commit-when {
+  opacity: 0.65;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ve-status-commit-detail {
+  display: none;
+  padding: 8px 14px 12px 38px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-light);
+  font-size: 0.72rem;
+}
+.ve-status-commit.expanded .ve-status-commit-detail { display: block; }
+.ve-status-commit-body {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'SF Mono','Fira Code',monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.ve-status-commit-meta { display: grid; gap: 4px; margin-bottom: 10px; }
+.ve-status-commit-meta-label {
+  display: inline-block;
+  width: 60px;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.ve-status-commit-actions { display: flex; gap: 6px; }
+.ve-status-commit-actions a { text-decoration: none; }
 
 .ve-deploy-dot {
   display:inline-block;
