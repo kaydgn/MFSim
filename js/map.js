@@ -2949,7 +2949,7 @@ function showMultipleSelection() {
   html += '</div>';
 
   content.innerHTML = html;
-  veTogglePropertiesPanel(true);  // tek tık → modal otomatik açılır
+  // Modal otomatik açılmaz — kullanıcı çift tık ile veya marker'a tıklayarak açar
 }
 
 function showEmptyProperties() {

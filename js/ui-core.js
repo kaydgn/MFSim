@@ -13,6 +13,14 @@ function escapeHTML(str) {
 var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 } };
 
 function veAttachNodeDrag(nodeEl, node) {
+  // Çift tık → Özellikler modal'ını aç (tek tık sadece seçim yapar).
+  nodeEl.addEventListener('dblclick', function(e) {
+    if(e.target.classList.contains('ve-node-port')) return;
+    if(e.target.classList.contains('ve-resize-handle')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+  });
   nodeEl.addEventListener('mousedown', function(e) {
     if(e.target.classList.contains('ve-node-port')) return;
     if(e.target.classList.contains('ve-resize-handle')) return;

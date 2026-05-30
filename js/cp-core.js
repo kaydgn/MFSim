@@ -228,8 +228,8 @@ function showNodeProperties(node) {
   
   
   content.innerHTML = html;
-  // Tek-tık akışı: modal'ı otomatik aç (yan-panel YOK, popup)
-  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+  // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
+  // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 
 
   // Motor bileşeni için grafik çiz ve kategori dropdown'ı doldur
