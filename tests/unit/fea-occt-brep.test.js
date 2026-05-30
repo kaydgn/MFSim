@@ -139,4 +139,19 @@ maybe('OCCT BREP topoloji çıkarımı (gerçek WASM)', () => {
     expect(sphFaces.length).toBeGreaterThanOrEqual(1);
     expect(sphFaces[0].radius).toBeCloseTo(7, 1);
   });
+
+  // NOT: Gerçek STEP okuma (veFEAOcctReadStepBuffer + STEPControl_Reader) manuel
+  // round-trip spike'ında doğrulandı: OCCT ile yazılan kutu STEP'i geri okununca
+  // faces=6, edges=12, Euler=2. Jest-node ortamında emscripten FS.readFile bir
+  // round-trip yazma adımında quirk veriyor; gerçek .step okuma doğrulaması
+  // fea-step.js entegrasyonu + browser E2E ile yapılır. Burada okuyucunun
+  // API kontratını (graceful failure) test ediyoruz.
+  test('STEP okuma fonksiyonu export + geçersiz buffer → ok:false (graceful)', () => {
+    expect(typeof occt.veFEAOcctReadStepBuffer).toBe('function');
+    expect(typeof occt.veFEAOcctTopologyFromStepBuffer).toBe('function');
+    const garbage = new Uint8Array([1, 2, 3, 4, 5]);
+    const r = occt.veFEAOcctReadStepBuffer(oc, garbage, 'bad.step');
+    expect(r.ok).toBe(false);  // exception fırlatmaz, ok:false döner
+    expect(typeof r.message).toBe('string');
+  });
 });
