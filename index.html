@@ -389,19 +389,7 @@
           </div>
         </div>
       </div>
-      
-      <!-- Sağ Panel - Özellikler -->
-      <div class="ve-properties ve-prop-hidden" id="ve-properties">
-        <div class="ve-properties-resizer" id="ve-properties-resizer"></div>
-        <div class="ve-properties-header"><span class="mf-ico mf-ico-sliders"></span><span style="flex:1;">Özellikler</span><button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Özellikler panelini kapat">✕</button></div>
-        <div class="ve-properties-content">
-          <div class="ve-prop-empty">
-            <div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div>
-            <div>Bir bileşen seçin</div>
-            <small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small>
-          </div>
-        </div>
-      </div>
+
       
     </div>
     
@@ -643,6 +631,17 @@
 <script type="text/x-mfsim-defer" src="js/context-menus.js" data-mfsim-label="Sağ tık menüleri..."></script>
 <script type="text/x-mfsim-defer" src="js/connections.js" data-mfsim-label="Bağlantı motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/deploy-status.js" data-mfsim-label="Dağıtım bilgisi..."></script>
+
+<!-- ═══ BİLEŞEN ÖZELLİKLERİ MODALI ═══ -->
+<div id="ve-properties-overlay" class="ve-properties-overlay" style="display:none;" onmousedown="if(event.target===this) veTogglePropertiesPanel(false)">
+  <div class="ve-properties" id="ve-properties" role="dialog" aria-labelledby="ve-properties-title">
+    <div class="ve-properties-header">
+      <span id="ve-properties-title" style="display:inline-flex;align-items:center;gap:8px;flex:1;"><span class="mf-ico mf-ico-sliders"></span>Özellikler</span>
+      <button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-properties-content"></div>
+  </div>
+</div>
 
 <!-- ═══ AYARLAR MODALI ═══ -->
 <div id="ve-settings-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veCloseSettings()">
