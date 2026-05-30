@@ -106,6 +106,32 @@ describe('fea-tetgen.js — public API', () => {
     expect(typeof api.veFEATetgenTetrahedralize).toBe('function');
   });
 
+  test('_veFEATetgenBuildSwitches: temel + quality + dihedral + optLevel', () => {
+    expect(typeof api._veFEATetgenBuildSwitches).toBe('function');
+    // default: PLC + quiet + quality 1.4
+    expect(api._veFEATetgenBuildSwitches({})).toBe('pQq1.4');
+    // quality kapalı → düz CDT
+    expect(api._veFEATetgenBuildSwitches({ quality:false })).toBe('pQ');
+    // radius-edge ratio özel
+    expect(api._veFEATetgenBuildSwitches({ radiusEdgeRatio:1.2 })).toBe('pQq1.2');
+    // min dihedral angle (sliver engelleme) → "/{angle}" eki
+    expect(api._veFEATetgenBuildSwitches({ minDihedralAngle:10 })).toBe('pQq1.4/10');
+    // optimization level → "O{lvl}"
+    expect(api._veFEATetgenBuildSwitches({ minDihedralAngle:12, optimizationLevel:5 })).toBe('pQq1.4/12O5');
+    // maxVolume → "a{vol}"
+    expect(api._veFEATetgenBuildSwitches({ maxVolume:50 })).toBe('pQq1.4a50');
+    // noBoundarySteiner → "Y"
+    expect(api._veFEATetgenBuildSwitches({ noBoundarySteiner:true })).toMatch(/Y/);
+  });
+
+  test('_veFEATetgenBuildSwitches: dihedral 18° üst sınıra clamp', () => {
+    // 18° üzeri yakınsama güvenliği için clamp'lenir
+    expect(api._veFEATetgenBuildSwitches({ minDihedralAngle:30 })).toBe('pQq1.4/18');
+    expect(api._veFEATetgenBuildSwitches({ minDihedralAngle:18 })).toBe('pQq1.4/18');
+    // optLevel > 10 clamp
+    expect(api._veFEATetgenBuildSwitches({ optimizationLevel:20 })).toMatch(/O10/);
+  });
+
   test('veFEATetgenIsBuilt window/inline yokken false döner (graceful)', () => {
     // Node ortamında window tanımsız → false
     expect(api.veFEATetgenIsBuilt()).toBe(false);
@@ -217,6 +243,8 @@ describe('fea-mesh.js — TetGen entegrasyonu', () => {
     expect(src).toMatch(/veFEADelaunayTetrahedralize\(parsed/);
     // _veFEADefaultTetgenMaxVolume helper'ı (TetGen 'a' switch)
     expect(src).toMatch(/function _veFEADefaultTetgenMaxVolume/);
+    // ANSYS-kalite: tetgenOpts min dihedral angle geçiriyor (sliver engelleme)
+    expect(src).toMatch(/minDihedralAngle:/);
   });
 
   test('_veFEATetMeshNamedSelections doğru face-hash yapısı kullanıyor', () => {
