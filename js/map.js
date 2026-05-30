@@ -14,25 +14,28 @@ function veExpandRoadMap(nodeId) {
   // Orijinal konumu kaydet
   _veMapModalOrigParent = mapContainer.parentElement;
   _veMapModalOrigNext = mapContainer.nextElementSibling;
-  
+
+  // Alttaki Özellikler modalı bu harita modalının altında kalmasın → otomatik kapan
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
+
   // Overlay
   var overlay = document.createElement('div');
   overlay.id = 've-map-modal-overlay';
   overlay.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.82); display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px);';
-  
+
   // Modal
   var modal = document.createElement('div');
   modal.id = 've-map-modal';
   modal.style.cssText = 'width:90%; max-width:1500px; min-width:480px; height:88vh; max-height:900px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6); position:relative;';
-  
-  // Header
+
+  // Header — ince ortak başlık
   var markerCount = (veRoadMarkers[nodeId] || []).length;
   var badge = markerCount > 0 ? ' <span style="font-size:0.6rem; padding:1px 6px; background:var(--accent-primary); color:#fff; border-radius:0; margin-left:6px;">' + markerCount + ' nokta</span>' : '';
-  
+
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:8px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);">🗺️ Güzergah Haritası' + badge + '</span>' +
-    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  header.innerHTML = '<span style="font-size:0.72rem; font-weight:700; color:var(--text-heading);">🗺️ Güzergah Haritası' + badge + '</span>' +
+    '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
   modal.appendChild(header);
   
   // Toolbar
@@ -2499,6 +2502,9 @@ function veExpandProfileChart(nodeId, chartType) {
     showToast('GPS rakım verisi bulunamadı', 'warning'); return;
   }
 
+  // Alttaki Özellikler modalı bu büyük chart'ın altında kalmasın → otomatik kapan
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
+
   // Overlay
   var overlay = document.createElement('div');
   overlay.id = 've-profile-modal-overlay';
@@ -2508,11 +2514,11 @@ function veExpandProfileChart(nodeId, chartType) {
   var modal = document.createElement('div');
   modal.style.cssText = 'width:100%; max-width:1200px; max-height:90vh; background:var(--bg-secondary,#0f1218); border:1px solid var(--border-color,#1c2333); border-radius:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
-  // Header
+  // Header — ince ortak başlık
   var curSmooth = (node.data && node.data.smoothLevel !== undefined) ? node.data.smoothLevel : 2;
   var header = document.createElement('div');
-  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:10px 16px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:0.82rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Rakım profili (GPS)</span>' +
+  header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
+  header.innerHTML = '<span style="font-size:0.72rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Rakım profili (GPS)</span>' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
     '<div style="display:inline-flex; align-items:center; gap:3px;">' +
     '<label style="font-size:0.56rem; color:var(--text-muted);">Filtre:</label>' +
