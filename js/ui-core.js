@@ -13,6 +13,14 @@ function escapeHTML(str) {
 var _veNodeDrag = { active: false, anchor: null, dragStart: { x: 0, y: 0 } };
 
 function veAttachNodeDrag(nodeEl, node) {
+  // Çift tık → Özellikler modal'ını aç (tek tık sadece seçim yapar).
+  nodeEl.addEventListener('dblclick', function(e) {
+    if(e.target.classList.contains('ve-node-port')) return;
+    if(e.target.classList.contains('ve-resize-handle')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+  });
   nodeEl.addEventListener('mousedown', function(e) {
     if(e.target.classList.contains('ve-node-port')) return;
     if(e.target.classList.contains('ve-resize-handle')) return;
@@ -71,6 +79,9 @@ function updateCanvasTransform() {
   if(canvas) {
     canvas.style.transform = 'translate(' + canvasOffset.x + 'px, ' + canvasOffset.y + 'px) scale(' + canvasZoom + ')';
   }
+  // Alt durum çubuğundaki yakınlaştırma yüzdesini güncelle
+  var _zoomStatus = document.getElementById('ve-status-zoom');
+  if(_zoomStatus) _zoomStatus.textContent = '%' + Math.round(canvasZoom * 100);
 }
 
 // Drag başlangıcı

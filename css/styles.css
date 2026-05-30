@@ -1865,32 +1865,37 @@
 .ve-warning-item.warn{border-left:3px solid var(--accent-warning);}
 .ve-warning-item.info{border-left:3px solid var(--accent-primary);}
 
-/* Özellikler paneli: sol kenardan kayan overlay (mevcut Bileşenler sidebar'ının üstüne biner). */
+/* Bileşen Özellikleri MODAL'ı: backdrop + ortalanmış kart (Ayarlar modal'ıyla
+   aynı kalıp). Önceki sol-kayan yan-panel kaldırıldı. */
+.ve-properties-overlay{
+  position:fixed;
+  inset:0;
+  z-index:100020;
+  background:rgba(0,0,0,0.6);
+  display:none;             /* JS flex yapar */
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  backdrop-filter:blur(3px);
+  opacity:0;
+  transition:opacity 0.18s ease;
+}
+.ve-properties-overlay.visible{ opacity:1; }
+
 .ve-properties{
-  position:absolute;
-  left:0; top:0; bottom:0;
-  width:480px;
-  min-width:280px;
+  width:100%;
   max-width:720px;
+  max-height:90vh;
   background:var(--bg-secondary);
-  border-right:1px solid var(--border-color);
-  box-shadow:6px 0 24px var(--shadow-color);
+  border:1px solid var(--border-color);
+  box-shadow:0 20px 60px rgba(0,0,0,0.6);
   display:flex;
   flex-direction:column;
   overflow:hidden;
-  z-index:200;
-  transform:translateX(0);
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-              opacity 0.22s ease;
+  transform:scale(0.96);
+  transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);
 }
-/* Gizli: tamamen ekran dışı sola kayar */
-.ve-properties.ve-prop-hidden{
-  transform:translateX(-100%);
-  opacity:0;
-  pointer-events:none;
-}
-/* Resizer ile sürüklerken geçiş kapalı (takılmayı önler) */
-.ve-properties.ve-prop-no-anim{ transition:none !important; }
+.ve-properties-overlay.visible .ve-properties{ transform:scale(1); }
 
 /* Panel başlığındaki kapatma butonu */
 .ve-properties-close{
@@ -1966,29 +1971,12 @@
 }
 .ve-comp-marker.flash{ animation:ve-marker-flash 0.55s ease-in-out 3; }
 
-.ve-properties-resizer{
-  position:absolute;
-  right:0;            /* panel artık solda; resizer sağ kenarda (canvas tarafında) */
-  top:0;
-  bottom:0;
-  width:6px;
-  cursor:ew-resize;
-  background:transparent;
-  transition:background 0.2s;
-  z-index:10;
-}
-
-.ve-properties-resizer:hover,
-.ve-properties-resizer.active{
-  background:var(--accent-primary);
-}
-
 .ve-properties-header{
-  padding:8px 12px;
+  padding:5px 12px;            /* dikey hafifletildi — modal başlığı daha ince */
   background:var(--bg-tertiary);
   border-bottom:1px solid var(--border-color);
   font-weight:600;
-  font-size:0.72rem;
+  font-size:0.7rem;
   color:var(--text-heading);
   display:flex;
   align-items:center;

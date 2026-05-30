@@ -826,7 +826,7 @@ function _veFEAEditorBuildRightPanel(node) {
   // ANSYS-style view toolbar: Standart görünümler (Iso/Top/Bot/Front/Back/Left/Right)
   // + Previous/Next view (history) + Display mode + Sığdır + Kesit.
   var btnStyle = 'padding:4px 7px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; min-width:30px;';
-  var viewToolbar = '<div id="ve-fea-viewer-toolbar-' + nid + '" style="display:flex; align-items:center; gap:4px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;">' +
+  var viewToolbar = '<div id="ve-fea-viewer-toolbar-' + nid + '" style="display:none; align-items:center; gap:4px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;">' +
     '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'fit\')" style="' + btnStyle + '" title="Tümünü pencereye sığdır">⛶</button>' +
     '<div style="display:flex; gap:0; margin-left:4px;">' +
       '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-iso\')"    style="' + btnStyle + '" title="İzometrik görünüm">Iso</button>' +
@@ -851,13 +851,13 @@ function _veFEAEditorBuildRightPanel(node) {
   // Geniş tıklama hedefi + hover geri bildirimi ile kolay kullanım. Ortadaki
   // chevron araç çubuğunun açık/kapalı olduğunu gösterir (▴ açık, ▾ kapalı).
   var toolbarHandle = '<div id="ve-fea-toolbar-handle-' + nid + '" onclick="veFEAEditorToggleViewerToolbar(\'' + nid + '\')" ' +
-    'title="Araç çubuğunu gizle" ' +
+    'title="Araç çubuğunu göster" ' +
     'style="display:flex; align-items:center; justify-content:center; height:15px; flex-shrink:0; cursor:pointer; ' +
     'background:var(--bg-secondary); border-bottom:1px solid var(--border-color); color:var(--text-muted); ' +
     'font-size:0.62rem; line-height:1; letter-spacing:2px; transition:background 0.15s, color 0.15s;" ' +
     'onmouseover="this.style.background=\'var(--bg-tertiary)\';this.style.color=\'var(--text-primary)\';" ' +
     'onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-muted)\';">' +
-    '<span id="ve-fea-toolbar-handle-icon-' + nid + '">▴</span></div>';
+    '<span id="ve-fea-toolbar-handle-icon-' + nid + '">▾</span></div>';
   panel.innerHTML = toolbarHandle + viewToolbar +
     // Hit-point + cursor coordinate overlay (canvas üstünde absolute)
     '<div style="flex:1; position:relative; min-height:0; background:var(--bg-tertiary);">' +

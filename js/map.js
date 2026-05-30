@@ -2891,27 +2891,48 @@ function veHideCompMarker() {
   if(!m) return;
   m.classList.remove('visible');
 }
+// Bileşen özellikleri MODAL toggle — overlay fade-in/out yönetir.
+// forceState true → aç; false → kapat; undefined → toggle.
+// Race-safe: hızlı kapat→aç sıralarında bekleyen close timeout'unun yeni
+// open'ı bozmasını engeller (visible class kontrolü ile).
 function veTogglePropertiesPanel(forceState) {
-  var panel = document.querySelector('.ve-properties');
-  if(!panel) return;
-  var open = (typeof forceState === 'boolean')
-    ? forceState
-    : panel.classList.contains('ve-prop-hidden');
-  panel.classList.toggle('ve-prop-hidden', !open);
+  var ov = document.getElementById('ve-properties-overlay');
+  if(!ov) return;
+  var isVisible = ov.classList.contains('visible');
+  var open = (typeof forceState === 'boolean') ? forceState : !isVisible;
+  if(open) {
+    if(ov.style.display !== 'flex') {
+      // Tamamen kapalıydı → display set, sonra rAF ile visible (geçiş 0→1)
+      ov.style.display = 'flex';
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() { ov.classList.add('visible'); });
+      });
+    } else if(!isVisible) {
+      // Kapanma sürecinde tekrar açıldı (display hâlâ flex) → visible'ı geri ekle
+      ov.classList.add('visible');
+    }
+  } else {
+    if(!isVisible) return;
+    ov.classList.remove('visible');
+    setTimeout(function() {
+      // 220ms sonra hâlâ visible değilse gerçekten kapat (race-safe)
+      if(!ov.classList.contains('visible')) ov.style.display = 'none';
+    }, 220);
+  }
 }
-// ESC: panel açıksa kapat (input/textarea içinde değilse)
+// ESC: modal açıksa kapat (input/textarea içinde değilse)
 document.addEventListener('keydown', function(e) {
   if(e.key !== 'Escape') return;
   var t = e.target;
   if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-  var panel = document.querySelector('.ve-properties');
-  if(panel && !panel.classList.contains('ve-prop-hidden')) veTogglePropertiesPanel(false);
+  var ov = document.getElementById('ve-properties-overlay');
+  if(ov && ov.style.display === 'flex') veTogglePropertiesPanel(false);
 });
 
 function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Çoklu seçim için marker — küp ikonu + sayı rozeti
+  // Çoklu seçim marker'ı (küp ikonu) — kullanıcı seçimi görsün
   veShowCompMarker(
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
       '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>' +
@@ -2928,17 +2949,17 @@ function showMultipleSelection() {
   html += '</div>';
 
   content.innerHTML = html;
+  // Modal otomatik açılmaz — kullanıcı çift tık ile veya marker'a tıklayarak açar
 }
 
 function showEmptyProperties() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Seçim yok → marker'ı ve paneli gizle
+  // Seçim yok → marker'ı ve modal'ı kapat
   veHideCompMarker();
-  var panel = document.querySelector('.ve-properties');
-  if(panel) panel.classList.add('ve-prop-hidden');
+  veTogglePropertiesPanel(false);
 
-  content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon">🖱️</div><div>Bir bileşen seçin</div><small style="color:var(--text-muted);">Özelliklerini burada düzenleyebilirsiniz</small></div>';
+  content.innerHTML = '<div class="ve-prop-empty"><div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div><div>Bir bileşen seçin</div><small style="color:var(--text-muted);">Özellikleri burada açılır</small></div>';
 }
 
 function deleteSelectedNodes() {
