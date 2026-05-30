@@ -26233,6 +26233,183 @@ function _veFEAOcctLoadBrowser(opts) {
   });
 }
 
+// ─── Feature Recognition (Faz 6, raporun §7.2 madde 11) ────────────────────
+// BREP topology üzerinde delik / fillet / boss / planar set tespiti +
+// otomatik named selection üretir. Wire/face/tip bilgisinden kural-tabanlı:
+//
+//   Delik (Hole)      : Silindirik yüz + bir veya iki planar kapağa komşu
+//                       inner wire (delik loop'u) varsa → o silindir delik
+//   Fillet (Blend)    : Silindirik/toroidal yüz, R çok küçük (bbox <%5),
+//                       iki düzlemsel yüz arasında smooth geçiş
+//   Boss              : Silindirik yüz + iki planar kapak (üst/alt), eksen
+//                       ortak, R bbox'ın belirgin oranı
+//   Planar Top/Bottom : En büyük alanlı planar yüzeyler eksen yönlerinde
+//
+// Çıktı: topology.features = [{type, label, faceIds[], params:{...}}]
+function veFEAOcctDetectFeatures(topology) {
+  if (!topology || !Array.isArray(topology.faces)) return [];
+  var faces = topology.faces;
+  var edges = topology.edges || [];
+  var wires = topology.wires || [];
+  var bbox = topology.bbox || { x: 100, y: 100, z: 100 };
+  var bboxDiag = Math.sqrt(bbox.x * bbox.x + bbox.y * bbox.y + bbox.z * bbox.z) || 100;
+  var features = [];
+
+  // Hızlı erişim haritaları
+  var faceById = {};
+  faces.forEach(function(f) { faceById[f.id] = f; });
+  var wireById = {};
+  wires.forEach(function(w) { wireById[w.id] = w; });
+
+  // 1) DELİK tespiti — silindirik yüzler, bir planar yüze inner wire ile bağlı
+  // Strateji: silindirik bir yüzün edge'leri başka planar yüzlerin innerWireIds'inde mi geçiyor?
+  var holeFaceIds = {};
+  faces.forEach(function(f) {
+    if (f.type !== 'cylindrical') return;
+    // Bu silindirik yüzün edge'leri hangi planar yüzlerle paylaşılıyor?
+    var planarParents = {};
+    (f.edgeIds || []).forEach(function(eid) {
+      var e = edges.find(function(ed) { return ed.id === eid; });
+      if (!e || !Array.isArray(e.faceIds)) return;
+      e.faceIds.forEach(function(otherFid) {
+        if (otherFid === f.id) return;
+        var other = faceById[otherFid];
+        if (!other || other.type !== 'planar') return;
+        // Bu planar yüzün inner wire'larından biri silindirin bu kenarını içeriyor mu?
+        var inners = other.innerWireIds || [];
+        for (var iw = 0; iw < inners.length; iw++) {
+          var wire = wireById[inners[iw]];
+          if (wire && (wire.edgeIds || []).indexOf(eid) >= 0) {
+            planarParents[otherFid] = true;
+            break;
+          }
+        }
+      });
+    });
+    var parentIds = Object.keys(planarParents);
+    if (parentIds.length >= 1) {
+      // En az 1 planar yüzde inner wire olarak görünüyor → delik
+      holeFaceIds[f.id] = true;
+      var holeRadius = f.radius || 0;
+      features.push({
+        type: 'hole', label: 'Delik' + (holeRadius ? ' Ø' + (holeRadius * 2).toFixed(1) + 'mm' : ''),
+        faceIds: [f.id], parentFaceIds: parentIds,
+        params: { radius: holeRadius, diameter: holeRadius * 2, depth: f.length || 0 }
+      });
+    }
+  });
+
+  // 2) FILLET tespiti — küçük R'li silindirik/toroidal yüzler, iki planar yüz arasında
+  // Eşik: R < bbox * 0.05 (kabul: küçük yarıçap = blend)
+  var filletRadiusThresh = bboxDiag * 0.05;
+  faces.forEach(function(f) {
+    if (holeFaceIds[f.id]) return;  // delik olarak işaretlenmiş
+    if (f.type !== 'cylindrical' && f.type !== 'toroidal') return;
+    var r = f.radius || f.minorRadius || 0;
+    if (r <= 0 || r > filletRadiusThresh) return;
+    // İki planar yüze komşu mu?
+    var planarNbrs = {};
+    (f.edgeIds || []).forEach(function(eid) {
+      var e = edges.find(function(ed) { return ed.id === eid; });
+      if (!e || !Array.isArray(e.faceIds)) return;
+      e.faceIds.forEach(function(otherFid) {
+        if (otherFid === f.id) return;
+        var other = faceById[otherFid];
+        if (other && other.type === 'planar') planarNbrs[otherFid] = true;
+      });
+    });
+    if (Object.keys(planarNbrs).length >= 2) {
+      features.push({
+        type: 'fillet', label: 'Fillet R' + r.toFixed(2) + 'mm',
+        faceIds: [f.id], parentFaceIds: Object.keys(planarNbrs),
+        params: { radius: r }
+      });
+    }
+  });
+
+  // 3) BOSS / EXTRUSION — silindirik yüz + iki planar kapak (delik değil)
+  faces.forEach(function(f) {
+    if (holeFaceIds[f.id]) return;
+    if (f.type !== 'cylindrical') return;
+    var r = f.radius || 0;
+    if (r <= filletRadiusThresh) return;  // fillet olarak ele alındı
+    // İki planar yüze komşu (üst+alt kapak)?
+    var planarNbrs = {};
+    (f.edgeIds || []).forEach(function(eid) {
+      var e = edges.find(function(ed) { return ed.id === eid; });
+      if (!e || !Array.isArray(e.faceIds)) return;
+      e.faceIds.forEach(function(otherFid) {
+        if (otherFid === f.id) return;
+        var other = faceById[otherFid];
+        if (other && other.type === 'planar') planarNbrs[otherFid] = true;
+      });
+    });
+    var caps = Object.keys(planarNbrs);
+    if (caps.length === 2) {
+      features.push({
+        type: 'boss', label: 'Boss Ø' + (r * 2).toFixed(1) + 'mm',
+        faceIds: [f.id], parentFaceIds: caps,
+        params: { radius: r, diameter: r * 2, length: f.length || 0 }
+      });
+    }
+  });
+
+  return features;
+}
+
+// ─── Persistent Naming (Faz 6, raporun §5.5 uyarısı) ───────────────────────
+// Geometri güncellendiğinde face/edge/vertex ID'lerinin aynı entiteyi
+// göstermeye devam etmesi için stabil bir geometrik imza üretir.
+// İmza = tip + yuvarlanmış centroid + (alan/uzunluk). Tam çözüm değil
+// (raporun "CAD'in çözülmemiş klasik problemi") ama çoğu güncellemede tutar.
+function veFEAOcctComputeSignatures(topology, opts) {
+  opts = opts || {};
+  var precision = isFinite(opts.precision) ? opts.precision : 0.01;
+  var inv = 1 / precision;
+  function round(x) { return Math.round((x || 0) * inv) / inv; }
+  function rvec(v) { return v ? [round(v[0]), round(v[1]), round(v[2])] : null; }
+  if (Array.isArray(topology.faces)) {
+    topology.faces.forEach(function(f) {
+      f.signature = 'F:' + f.type + ':' + round(f.area || 0) +
+        ':' + (f.centroid ? rvec(f.centroid).join(',') : '') +
+        (f.radius ? ':r' + round(f.radius) : '');
+    });
+  }
+  if (Array.isArray(topology.edges)) {
+    topology.edges.forEach(function(e) {
+      e.signature = 'E:' + e.type + ':' + round(e.length || 0) +
+        (e.radius ? ':r' + round(e.radius) : '') +
+        (e.center ? ':c' + rvec(e.center).join(',') : '');
+    });
+  }
+  if (Array.isArray(topology.vertices)) {
+    topology.vertices.forEach(function(v) {
+      v.signature = 'V:' + (v.position ? rvec(v.position).join(',') : '');
+    });
+  }
+  return topology;
+}
+
+// İki topology arasında signature eşleştirme — eski ID'leri yeni entitelere
+// taşır. updatedTopo.faces[i].id ← oldTopo'daki aynı signature'lı face'in ID'si.
+// Eşleşmeyen yeni entiteler kendi ID'sini korur.
+function veFEAOcctRemapFromOldTopology(oldTopo, newTopo) {
+  if (!oldTopo || !newTopo) return newTopo;
+  ['faces', 'edges', 'vertices'].forEach(function(kind) {
+    var oldList = oldTopo[kind] || [];
+    var newList = newTopo[kind] || [];
+    var sigToOld = {};
+    oldList.forEach(function(o) { if (o.signature) sigToOld[o.signature] = o.id; });
+    newList.forEach(function(n) {
+      if (n.signature && sigToOld[n.signature]) {
+        n.previousId = n.id;
+        n.id = sigToOld[n.signature];
+      }
+    });
+  });
+  return newTopo;
+}
+
 // ─── Tessellation köprüsü (Faz 5, raporun §5.6) ────────────────────────────
 // OCCT shape'i topology-aware tessellate eder (BRepMesh_IncrementalMesh) ve
 // her yüzün üçgenlerini global pozisyona dönüştürerek face ID ile gruplar.
@@ -26482,6 +26659,15 @@ function veFEAOcctTopologyFromStepBuffer(buffer, opts) {
       topo.validity.brepCheckValid = healed.report.nowValid;
       if (healed.report.issues.length) {
         topo.validity.issues = (topo.validity.issues || []).concat(healed.report.issues);
+      }
+      // Faz 6 — Feature recognition (hole/fillet/boss) + persistent naming
+      if (opts.detectFeatures !== false) {
+        try { topo.features = veFEAOcctDetectFeatures(topo); }
+        catch (e) { topo.features = []; }
+      }
+      if (opts.computeSignatures !== false) {
+        try { veFEAOcctComputeSignatures(topo, { precision: opts.signaturePrecision }); }
+        catch (e) { /* skip */ }
       }
       // Faz 5 — Tessellation köprüsü: viewer'a 3D BREP yüz seçimi sağla
       if (opts.tessellate !== false) {
@@ -27013,6 +27199,9 @@ if (typeof module !== 'undefined' && module.exports) {
     veFEAOcctTopologyFromStepBuffer: veFEAOcctTopologyFromStepBuffer,
     veFEAOcctHealShape: veFEAOcctHealShape,
     veFEAOcctTessellateShape: veFEAOcctTessellateShape,
+    veFEAOcctDetectFeatures: veFEAOcctDetectFeatures,
+    veFEAOcctComputeSignatures: veFEAOcctComputeSignatures,
+    veFEAOcctRemapFromOldTopology: veFEAOcctRemapFromOldTopology,
     veFEAOcctIsAvailable: veFEAOcctIsAvailable,
     VE_OCCT_SURF: VE_OCCT_SURF,
     VE_OCCT_CURVE: VE_OCCT_CURVE
@@ -43461,6 +43650,17 @@ function getFEAGeometryPropertiesHTML(node) {
         '<b>' + summary.faces + '</b> yüzey · <b>' + summary.edges + '</b> kenar · <b>' + summary.vertices + '</b> köşe' +
         (isBrep ? ' (CAD çekirdeğinden kesin)' : ' tespit edildi') + '. ' +
         'Lokal mesh ayarlarına (Face/Edge Sizing, Sphere of Influence) hazır.</div>';
+      // Faz 6 — Tespit edilen özellikler (delik/fillet/boss)
+      if (isBrep && topoObj && Array.isArray(topoObj.features) && topoObj.features.length > 0) {
+        var counts = {};
+        topoObj.features.forEach(function(ft) { counts[ft.type] = (counts[ft.type] || 0) + 1; });
+        var label = { hole: 'delik', fillet: 'fillet', boss: 'boss' };
+        var parts = Object.keys(counts).map(function(t) { return '<b>' + counts[t] + '</b> ' + (label[t] || t); });
+        html += '<div style="margin-top:6px; padding:5px 8px; background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.25); font-size:0.56rem; color:var(--text-muted);">';
+        html += '<div style="font-weight:600; color:#a855f7; margin-bottom:2px;">🔍 Tespit edilen özellikler (auto)</div>';
+        html += parts.join(' · ');
+        html += '</div>';
+      }
       // Faz 4 — tam B-Rep hiyerarşisi (solid/shell/wire)
       if (isBrep && topoObj && Array.isArray(topoObj.wires)) {
         var nSolid = topoObj.solids ? topoObj.solids.length : 0;

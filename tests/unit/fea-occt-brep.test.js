@@ -181,6 +181,44 @@ maybe('OCCT BREP topoloji çıkarımı (gerçek WASM)', () => {
     expect(t.validity.counts.So).toBe(1);
   });
 
+  test('Feature recognition (Faz 6): silindir → boss tespit edilir', () => {
+    const cyl = new oc.BRepPrimAPI_MakeCylinder_1(5, 20).Shape();
+    const t = occt.veFEAOcctShapeToTopology(oc, cyl, { sampleEdges: false });
+    const features = occt.veFEAOcctDetectFeatures(t);
+    expect(Array.isArray(features)).toBe(true);
+    const bosses = features.filter(function(f) { return f.type === 'boss'; });
+    expect(bosses.length).toBeGreaterThanOrEqual(1);
+    expect(bosses[0].params.diameter).toBeCloseTo(10, 0);   // R=5 → D=10
+    expect(bosses[0].label).toMatch(/Boss/);
+  });
+
+  test('Feature recognition: kutu → feature yok (delik/fillet/boss değil)', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    const t = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    const features = occt.veFEAOcctDetectFeatures(t);
+    expect(features.length).toBe(0);
+  });
+
+  test('Persistent naming: signatures üretilir + remap eski ID\'leri korur', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    const t1 = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    occt.veFEAOcctComputeSignatures(t1);
+    t1.faces.forEach(function(f) {
+      expect(typeof f.signature).toBe('string');
+      expect(f.signature.indexOf('F:')).toBe(0);  // face signature prefix
+    });
+    // Aynı geometriden yeni topology + ID'leri değiştir, remap eski ID'lere döndürmeli
+    const t2 = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    occt.veFEAOcctComputeSignatures(t2);
+    t2.faces.forEach(function(f, i) { f.id = 'changed_' + (i + 1); });
+    occt.veFEAOcctRemapFromOldTopology(t1, t2);
+    var matchCount = 0;
+    t2.faces.forEach(function(f) { if (f.id.indexOf('changed') < 0) matchCount++; });
+    expect(matchCount).toBe(6);
+  });
+
   test('Tessellation köprüsü (Faz 5): kutu 6 grup, her grup face ID etiketli', () => {
     const o = new oc.gp_Pnt_3(0, 0, 0);
     const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
