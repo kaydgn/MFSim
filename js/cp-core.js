@@ -208,6 +208,8 @@ function showNodeProperties(node) {
     html += getTerminatorPropertiesHTML(node);
   } else if(node.type === 'gear-shift') {
     html += getGearShiftPropertiesHTML(node);
+  } else if(node.type === 'vehicle-performance') {
+    html += (typeof veVPOverviewHTML === 'function') ? veVPOverviewHTML(node) : '';
   } else if(node.type === 'fea') {
     html += getFEAModulePropertiesHTML(node);
   } else if(node.type === 'fea-geometry') {

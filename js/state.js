@@ -142,7 +142,7 @@ function restoreState(state) {
     nodeEl.style.top = node.y + 'px';
     nodeEl.setAttribute('data-type', node.type);
     
-    var html = '<div class="ve-node-box" style="width:' + node.width + 'px; height:' + node.height + 'px;">';
+    var html = '<div class="ve-node-box' + (def.isModuleBlock ? ' ve-vp-box' : '') + '" style="width:' + node.width + 'px; height:' + node.height + 'px;">';
     
     // Giriş portları - createNode ile aynı çoklu port desteği
     if(def.inputs > 0) {
@@ -153,8 +153,12 @@ function restoreState(state) {
       }
     }
     
-    html += def.svg;
-    
+    if(def.isModuleBlock && typeof veVPBlockInnerHTML === 'function') {
+      html += veVPBlockInnerHTML(node);
+    } else {
+      html += def.svg;
+    }
+
     // Çıkış portları
     if(def.outputs > 0) {
       for(var po = 0; po < def.outputs; po++) {
@@ -174,7 +178,7 @@ function restoreState(state) {
     html += '<div class="ve-resize-handle ve-resize-s" data-handle="s"></div>';
     html += '<div class="ve-resize-handle ve-resize-sw" data-handle="sw"></div>';
     html += '<div class="ve-resize-handle ve-resize-w" data-handle="w"></div>';
-    html += '<div class="ve-node-label">' + escapeHTML(node.customName || def.name) + '</div>';
+    if(!def.isModuleBlock) html += '<div class="ve-node-label">' + escapeHTML(node.customName || def.name) + '</div>';
     
     // Master tekerlek badge'i
     if(node.type === 'wheel' && node.isMasterWheel) {
@@ -250,6 +254,7 @@ function restoreState(state) {
     // Node sürükleme — paylasilan tek-dinleyicili sistem (ui-core.js)
     veAttachNodeDrag(nodeEl, node);
     
+    if(def.isModuleBlock && typeof veVPAttachCellHandlers === 'function') veVPAttachCellHandlers(nodeEl, node);
     document.getElementById('ve-canvas').appendChild(nodeEl);
   });
   

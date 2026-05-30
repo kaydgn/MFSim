@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','fea'],
+    components: ['vehicle-performance','engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','fea'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -207,6 +207,19 @@ var componentDefs = {
   // + Çözüm tek node'un data'sında ve tek bir outline ağacında toplanır.
   // (Eski 4-node zinciri yükleme sırasında otomatik bu modüle göçürülür —
   //  bkz. js/fea-study.js veFEAMigrateChainToModule.)
+  // ── Araç Performans — birleşik sistem bloğu (ANSYS "Analysis System") ─────
+  // Tek node, dikey istiflenmiş hücreler (A1..A5). node.data hücre alt-verisini
+  // tutar. Render + mantık: js/vp-study.js. Çekirdek dosyalarda isModuleBlock dalı.
+  'vehicle-performance': {
+    name: 'Araç Performans',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="14" y="8" width="72" height="84" rx="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><rect x="14" y="8" width="72" height="18" fill="var(--accent-primary, #3b82f6)" opacity="0.18"/><line x1="14" y1="26" x2="86" y2="26" stroke="var(--accent-primary, #3b82f6)" stroke-width="2"/><line x1="14" y1="42" x2="86" y2="42" stroke="var(--accent-primary, #3b82f6)" stroke-width="1.5" opacity="0.7"/><line x1="14" y1="58" x2="86" y2="58" stroke="var(--accent-primary, #3b82f6)" stroke-width="1.5" opacity="0.7"/><line x1="14" y1="74" x2="86" y2="74" stroke="var(--accent-primary, #3b82f6)" stroke-width="1.5" opacity="0.7"/><circle cx="79" cy="34" r="3" fill="var(--accent-success, #22c55e)"/><circle cx="79" cy="50" r="3" fill="var(--accent-warning, #f59e0b)"/><circle cx="79" cy="66" r="3" fill="var(--text-muted, #888)"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    maxInstances: 1,
+    isModuleBlock: true,
+    defaultWidth: 196,
+    defaultHeight: 172
+  },
   'fea': {
     name: 'Yapısal Analiz',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" rx="6" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/><path d="M20 30 L50 20 L80 30 L80 70 L50 80 L20 70 Z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5"/><line x1="50" y1="20" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="80" y2="30" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="70" x2="80" y2="70" stroke="var(--accent-warning, #f59e0b)" stroke-width="2"/><line x1="20" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/><line x1="80" y1="30" x2="50" y2="80" stroke="var(--accent-warning, #f59e0b)" stroke-width="1.5" opacity="0.6"/></svg>',
