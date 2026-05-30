@@ -3999,3 +3999,51 @@ describe('veFEAMeshSelfTest — mesh kalite diagnostiği', () => {
     });
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('Mid-side node yüzey projeksiyonu (kuadratik eğri-temsil)', () => {
+  function maxRadialDev(mesh, r, useXZ) {
+    var mx = 0, n = mesh.nodes.length / 3;
+    for (var i = 0; i < n; i++) {
+      var x = mesh.nodes[i * 3], y = mesh.nodes[i * 3 + 1], z = mesh.nodes[i * 3 + 2];
+      var d = useXZ ? Math.sqrt(x*x + z*z) : Math.sqrt(x*x + y*y + z*z);
+      if (d > r * 0.92) { var dv = Math.abs(d - r); if (dv > mx) mx = dv; }
+    }
+    return mx;
+  }
+
+  test('Küre: kuadratik mid-side düğümler küre yüzeyine projekte edilir', () => {
+    var r = 25;
+    var q = veFEAMeshFromGeometry({ type: 'sphere', params: { radius: r } }, { size: 8, midSideNodes: true });
+    // Projeksiyon ile yüzey düğümlerinin radyal sapması ~0 olmalı (düz kenar
+    // ortası ~0.5mm sapardı). Kuadratik eleman artık gerçek yay temsil eder.
+    expect(maxRadialDev(q, r, false)).toBeLessThan(0.05);
+    expect(veFEAComputeJacobianMetrics(q).invertedCount).toBe(0);
+  });
+
+  test('Silindir: kuadratik mid-side düğümler yanal yüzeye projekte edilir', () => {
+    var r = 15;
+    var q = veFEAMeshFromGeometry({ type: 'cylinder', params: { radius: r, height: 60 } }, { size: 8, midSideNodes: true });
+    expect(maxRadialDev(q, r, true)).toBeLessThan(0.05);
+    expect(veFEAComputeJacobianMetrics(q).invertedCount).toBe(0);
+  });
+
+  test('Projeksiyon yeni inverted eleman üretmez (küre/silindir/koni/yarımküre)', () => {
+    var cases = [
+      { type: 'sphere', params: { radius: 25 } },
+      { type: 'cylinder', params: { radius: 15, height: 60 } },
+      { type: 'cone', params: { bottomRadius: 20, topRadius: 8, height: 50 } },
+      { type: 'hemisphere', params: { radius: 25 } }
+    ];
+    cases.forEach(function (g) {
+      var q = veFEAMeshFromGeometry(g, { size: 8, midSideNodes: true });
+      expect(veFEAComputeJacobianMetrics(q).invertedCount).toBe(0);
+    });
+  });
+
+  test('Kutu (düz yüzey): projeksiyon uygulanmaz — geçerli kalır', () => {
+    var q = veFEAMeshFromGeometry({ type: 'box', params: { width: 50, height: 30, depth: 20 } }, { size: 5, midSideNodes: true });
+    expect(q.type).toBe('hex20');
+    expect(veFEAComputeJacobianMetrics(q).invertedCount).toBe(0);
+  });
+});
