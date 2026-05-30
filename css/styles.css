@@ -593,6 +593,13 @@
   position:relative;
 }
 
+/* Modül seçim overlay'i görünürken sidebar + açma rayı tamamen gizlenir.
+   Sınıf veObserveModuleOverlay() tarafından otomatik yönetilir. */
+.ve-main.ve-no-module .ve-sidebar,
+.ve-main.ve-no-module .ve-sidebar-reveal{
+  display:none !important;
+}
+
 .ve-sidebar{
   width:220px;
   min-width:52px;
