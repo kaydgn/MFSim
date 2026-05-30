@@ -1234,6 +1234,12 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     var tetgenOpts = {
       quality: opts.tetgenQuality !== false,
       radiusEdgeRatio: (typeof opts.tetgenRadiusEdgeRatio === 'number') ? opts.tetgenRadiusEdgeRatio : 1.4,
+      // ANSYS-kalite: min dihedral açı (sliver engelleme) varsayılan AÇIK. TetGen
+      // önerisi makul üst değer; tetgenMinDihedral ile ayarlanabilir, 0 kapatır.
+      minDihedralAngle: (typeof opts.tetgenMinDihedral === 'number') ? opts.tetgenMinDihedral : 10,
+      // Mesh optimization seviyesi (sliver giderme passi) — TetGen default 2'nin
+      // üzerine çıkarılabilir; tetgenOptLevel ile.
+      optimizationLevel: (typeof opts.tetgenOptLevel === 'number') ? opts.tetgenOptLevel : undefined,
       maxVolume: (typeof opts.tetgenMaxVolume === 'number') ? opts.tetgenMaxVolume : _veFEADefaultTetgenMaxVolume(size),
       verbose: opts.verbose === true
     };

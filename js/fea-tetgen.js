@@ -205,10 +205,54 @@ function _veFEATetgenDeduplicateVertices(verts, triangleCount) {
   };
 }
 
+// TetGen switch string üretimi (ayrı fonksiyon — test edilebilir).
+// ANSYS-kalite için kritik switch'ler:
+//   q{ratio}/{angle} : radius-edge ratio + MIN DIHEDRAL ANGLE. Min dihedral açı
+//                      sliver tet'leri doğrudan engeller (ANSYS-kalite anahtarı).
+//                      TetGen formatı: "q1.4/10" → ratio 1.4, min dihedral 10°.
+//   a{vol}           : maks tet hacmi (global refinement).
+//   O{level}         : mesh optimization seviyesi 0..10 (default TetGen 2;
+//                      yüksek = daha çok sliver giderme passi).
+//   Y                : sınırda Steiner ekleme yok (yüzey korunur).
+//   T{tol}           : coplanar tolerans.
+function _veFEATetgenBuildSwitches(opts) {
+  opts = opts || {};
+  var sw = 'pQ';  // p=PLC, Q=quiet
+  if (opts.quality !== false) {
+    var r = (typeof opts.radiusEdgeRatio === 'number') ? opts.radiusEdgeRatio : 1.4;
+    sw += 'q' + r;
+    // Min dihedral angle (derece) — sliver engelleme. TetGen "/{angle}" eki.
+    // Güvenli aralık 0<angle<~18 (çok yüksek → TetGen yakınsamayabilir).
+    var ang = opts.minDihedralAngle;
+    if (typeof ang === 'number' && ang > 0) {
+      if (ang > 18) ang = 18;  // TetGen pratik üst sınır (yakınsama güvenliği)
+      sw += '/' + ang;
+    }
+  }
+  if (typeof opts.maxVolume === 'number' && opts.maxVolume > 0) {
+    sw += 'a' + opts.maxVolume;
+  }
+  // Mesh optimization seviyesi (sliver giderme). 0=kapalı, default TetGen 2.
+  if (typeof opts.optimizationLevel === 'number' && opts.optimizationLevel >= 0) {
+    var lvl = opts.optimizationLevel | 0;
+    if (lvl > 10) lvl = 10;
+    sw += 'O' + lvl;
+  }
+  if (opts.noBoundarySteiner === true) {
+    sw += 'Y';
+  }
+  if (typeof opts.tolerance === 'number' && opts.tolerance > 0) {
+    sw += 'T' + opts.tolerance;
+  }
+  return sw;
+}
+
 // ─── Ana giriş: tetrahedralize ──────────────────────────────────────────────
 // opts:
 //   quality:           true → "q1.4", false → düz CDT (default: true)
 //   radiusEdgeRatio:   default 1.4 (TetGen önerisi; 1.0 daha sıkı, 2.0 daha gevşek)
+//   minDihedralAngle:  min dihedral açı (derece) — sliver engelleme (0..18)
+//   optimizationLevel: TetGen mesh opt seviyesi 0..10 (sliver giderme)
 //   maxVolume:         null veya pozitif sayı (tek tet için maks hacim, mm³)
 //   verbose:           true → console.log (default: false)
 //   tolerance:         coplanar tespit eşiği (default: 1e-10, geometri ölçeğine
@@ -228,21 +272,8 @@ function veFEATetgenTetrahedralize(parsed, opts) {
                   dedup.pointCount + ' unique vertices');
     }
 
-    // 2) Switch string oluştur
-    var sw = 'pQ';  // p=PLC, Q=quiet
-    if (opts.quality !== false) {
-      var r = (typeof opts.radiusEdgeRatio === 'number') ? opts.radiusEdgeRatio : 1.4;
-      sw += 'q' + r;
-    }
-    if (typeof opts.maxVolume === 'number' && opts.maxVolume > 0) {
-      sw += 'a' + opts.maxVolume;
-    }
-    if (opts.noBoundarySteiner === true) {
-      sw += 'Y';
-    }
-    if (typeof opts.tolerance === 'number' && opts.tolerance > 0) {
-      sw += 'T' + opts.tolerance;
-    }
+    // 2) Switch string oluştur (ANSYS-kalite parametreleri dahil)
+    var sw = _veFEATetgenBuildSwitches(opts);
 
     if (opts.verbose) console.log('[TetGen] switches=' + sw);
 
@@ -348,6 +379,7 @@ if (typeof module !== 'undefined' && module.exports) {
     veFEATetgenDiagnose: veFEATetgenDiagnose,
     veFEATetgenEnsureWasm: veFEATetgenEnsureWasm,
     veFEATetgenTetrahedralize: veFEATetgenTetrahedralize,
-    _veFEATetgenDeduplicateVertices: _veFEATetgenDeduplicateVertices
+    _veFEATetgenDeduplicateVertices: _veFEATetgenDeduplicateVertices,
+    _veFEATetgenBuildSwitches: _veFEATetgenBuildSwitches
   };
 }
