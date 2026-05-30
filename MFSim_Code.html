@@ -10839,6 +10839,9 @@ function updateCanvasTransform() {
   if(canvas) {
     canvas.style.transform = 'translate(' + canvasOffset.x + 'px, ' + canvasOffset.y + 'px) scale(' + canvasZoom + ')';
   }
+  // Alt durum çubuğundaki yakınlaştırma yüzdesini güncelle
+  var _zoomStatus = document.getElementById('ve-status-zoom');
+  if(_zoomStatus) _zoomStatus.textContent = '%' + Math.round(canvasZoom * 100);
 }
 
 // Drag başlangıcı
