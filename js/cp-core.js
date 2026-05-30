@@ -147,10 +147,6 @@ function clearSelection() {
 function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Bir bileşen seçildi → marker'ı göster + modal'ı otomatik aç
-  if(typeof veShowCompMarker === 'function' && node && node.def && node.def.svg) {
-    veShowCompMarker(node.def.svg);
-  }
   // Modal başlığında bileşenin adı ve sembolü görünür
   var titleEl = document.getElementById('ve-properties-title');
   if(titleEl) {
