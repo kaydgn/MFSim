@@ -529,6 +529,20 @@ describe('Torus → Hex8 O-grid sweep mesh (closed loop)', () => {
     expect(g.nMinor % 4).toBe(0); // O-grid kati zorunlu
   });
 
+  test('Tüm elemanlar pozitif Jacobian (inverted/degenerate yok)', () => {
+    // Regresyon: toroidal süpürme yön/winding hatası tüm elemanları ters
+    // çeviriyordu (negatif signed volume → çözücü patlar). Hex8 düğüm sırası
+    // silindirle aynı (pozitif) konvansiyonda olmalı.
+    [10, 5, 2.5].forEach(function (sz) {
+      var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: 30, minorRadius: 10 } }, { size: sz });
+      var j = veFEAComputeJacobianMetrics(m);
+      expect(j.invertedCount).toBe(0);
+      expect(j.degenerateCount).toBe(0);
+      expect(j.minVolume).toBeGreaterThan(0);
+      expect(j.valid).toBe(true);
+    });
+  });
+
   test('Yüzey düğümlerinin minor radius mesafesi (her layer için)', () => {
     var R = 30, r = 10;
     var m = veFEAMeshFromGeometry({ type: 'torus', params: { majorRadius: R, minorRadius: r } }, { size: 5 });

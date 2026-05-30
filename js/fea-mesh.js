@@ -1906,11 +1906,16 @@ function _veFEAMeshTorus(p, size) {
   }
 
   // Hex8 elements: her quad × her major-angle pair (closed loop)
+  // Major-açı süpürmesi (XZ düzleminde +theta yönü) disk'in yerel çerçevesiyle
+  // birlikte SAĞ-elli bir hex verir → ters Jacobian. Silindirle aynı (pozitif)
+  // konvansiyona getirmek için alt/üst katman rollerini swap ediyoruz: "alt"
+  // bir sonraki major açı (tOff), "üst" mevcut açı (bOff). Bu, eleman düğüm
+  // sırasını sol-elli yapıp signed volume'u pozitife çevirir.
   var elements = new Uint32Array(nQuads * nMajor * 8);
   var ep = 0;
   for (var ka = 0; ka < nMajor; ka++) {
-    var bOff = ka * nDisk;
-    var tOff = ((ka + 1) % nMajor) * nDisk;  // closed loop
+    var bOff = ((ka + 1) % nMajor) * nDisk;  // closed loop — alt katman: sonraki açı
+    var tOff = ka * nDisk;                     // üst katman: mevcut açı
     for (var q = 0; q < nQuads; q++) {
       var qd = disk.quads[q];
       elements[ep++] = bOff + qd[0];
