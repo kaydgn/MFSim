@@ -19,7 +19,8 @@
 // disabled. veFEAMeshFromGeometry pure data işliyor, sorun yok.
 try {
   importScripts('fea-primitives.js', 'fea-step.js', '../vendor/delaunay/delaunay-bundle.js',
-                'fea-mesh-utils.js', 'fea-delaunay.js', 'fea-tetgen.js', 'fea-mesh.js');
+                'fea-mesh-utils.js', 'fea-delaunay.js', 'fea-tetgen.js',
+                'fea-mesh-smoothing.js', 'fea-mesh.js');
 } catch (e) {
   // importScripts yoluyla hata olursa mesh request'leri error verir
   self._VE_FEA_WORKER_INIT_ERROR = e.message || String(e);

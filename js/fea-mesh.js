@@ -353,6 +353,20 @@ var _VE_FEA_WEDGE6_EDGES = [
 // projector (opsiyonel): kuadratik mid-side düğümleri eğri yüzeye projekte eden
 // fonksiyon. İmza: projector(midX, midY, midZ, aId, bId) → [x,y,z] | null.
 // null/undefined dönerse lineer (düz kenar ortası) konum korunur.
+// Mesh opts → smoothing opts dönüşümü (varsayılanlar ANSYS-makul).
+// opts.smoothing: true/false/undefined ya da { iterations, method, relaxation }
+function _veFEAResolveSmoothingOpts(opts) {
+  var s = opts && opts.smoothing;
+  var cfg = (s && typeof s === 'object') ? s : {};
+  return {
+    iterations: (cfg.iterations != null) ? cfg.iterations : 3,
+    method: cfg.method || 'smartLaplacian',
+    relaxation: (cfg.relaxation != null) ? cfg.relaxation : 0.5,
+    preserveSurface: cfg.preserveSurface !== false,
+    onProgress: opts ? opts.onProgress : undefined
+  };
+}
+
 function veFEAEnrichToQuadratic(meshData, projector) {
   if (!meshData || meshData.error) return meshData;
   if (meshData.type === 'tet4')   return _veFEAGenericEnrich(meshData, _VE_FEA_TET4_EDGES,  'tet10', 10, projector);
@@ -768,6 +782,12 @@ function veFEAMeshFromGeometry(geometry, opts) {
   if (mesh && !mesh.error && elementType === 'pyramid5' && mesh.type === 'hex8') {
     mesh = veFEAConvertHexToPyramid5(mesh);
   }
+  // Mesh smoothing — yapısal primitifler için yalnız OPT-IN (opts.smoothing===true),
+  // çünkü O-grid/cubed-sphere zaten yüksek kaliteli. Quadratic enrichment'tan önce.
+  if (mesh && !mesh.error && opts.smoothing === true && typeof veFEASmoothMesh === 'function' &&
+      (mesh.type === 'tet4' || mesh.type === 'hex8' || mesh.type === 'wedge6')) {
+    mesh = veFEASmoothMesh(mesh, _veFEAResolveSmoothingOpts(opts));
+  }
   // midSideNodes: lineer → quadratic (Tet4→Tet10, Hex8→Hex20, Wedge6→Wedge15)
   if (mesh && !mesh.error && opts.midSideNodes === true) {
     mesh = veFEAEnrichToQuadratic(mesh, _veFEABuildSurfaceProjector(geometry, mesh));
@@ -1060,6 +1080,13 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     }
     if (elementType === 'tet4' && mesh.type === 'hex8') {
       mesh = veFEAConvertMeshToTet4(mesh);
+    }
+    // Mesh smoothing (ANSYS-tarzı quality optimization) — linear mesh üzerinde,
+    // quadratic enrichment'tan ÖNCE. Smart Laplacian kaliteyi asla bozmaz; iç
+    // düğümleri iyileştirir, yüzey sabit kalır. opts.smoothing ile kontrol.
+    if (opts.smoothing !== false && typeof veFEASmoothMesh === 'function' &&
+        (mesh.type === 'tet4' || mesh.type === 'hex8' || mesh.type === 'wedge6')) {
+      mesh = veFEASmoothMesh(mesh, _veFEAResolveSmoothingOpts(opts));
     }
     if (opts.midSideNodes === true) {
       mesh = veFEAEnrichToQuadratic(mesh);

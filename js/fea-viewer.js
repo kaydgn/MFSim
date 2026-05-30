@@ -2682,6 +2682,9 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (settings.delaunayAddInteriorPoints === undefined) settings.delaunayAddInteriorPoints = true;
   if (settings.useTetgen === undefined) settings.useTetgen = true;
   if (settings.tetgenRadiusEdgeRatio === undefined) settings.tetgenRadiusEdgeRatio = 1.4;
+  // Mesh smoothing: unstructured (STEP/voxel) tet için varsayılan AÇIK.
+  if (settings.smoothing === undefined) settings.smoothing = true;
+  if (settings.smoothingIterations === undefined) settings.smoothingIterations = 3;
 
   var t0 = Date.now();
   var editorActive = (typeof _veFEAEditorActive !== 'undefined' && _veFEAEditorActive === meshNodeId);
@@ -2710,6 +2713,9 @@ function veFEABuildMeshForNode(meshNodeId) {
     delaunayAddSurfacePoints: settings.delaunayAddSurfacePoints,
     useTetgen: settings.useTetgen,
     tetgenRadiusEdgeRatio: settings.tetgenRadiusEdgeRatio,
+    // smoothing: false → kapalı; aksi halde { iterations } config'i geçilir.
+    smoothing: (settings.smoothing === false) ? false
+             : { iterations: settings.smoothingIterations },
     onProgress: onMeshProgress
   };
 
