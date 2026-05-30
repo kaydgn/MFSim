@@ -2680,6 +2680,8 @@ function veFEABuildMeshForNode(meshNodeId) {
   if (settings.useWorker === undefined) settings.useWorker = false;
   if (settings.useTetMesher === undefined) settings.useTetMesher = true;
   if (settings.delaunayAddInteriorPoints === undefined) settings.delaunayAddInteriorPoints = true;
+  if (settings.useTetgen === undefined) settings.useTetgen = true;
+  if (settings.tetgenRadiusEdgeRatio === undefined) settings.tetgenRadiusEdgeRatio = 1.4;
 
   var t0 = Date.now();
   var editorActive = (typeof _veFEAEditorActive !== 'undefined' && _veFEAEditorActive === meshNodeId);
@@ -2706,6 +2708,8 @@ function veFEABuildMeshForNode(meshNodeId) {
     useTetMesher: settings.useTetMesher,
     delaunayAddInteriorPoints: settings.delaunayAddInteriorPoints,
     delaunayAddSurfacePoints: settings.delaunayAddSurfacePoints,
+    useTetgen: settings.useTetgen,
+    tetgenRadiusEdgeRatio: settings.tetgenRadiusEdgeRatio,
     onProgress: onMeshProgress
   };
 
@@ -2764,8 +2768,10 @@ function veFEABuildMeshForNode(meshNodeId) {
 
   // Mesh editor modal aktifse loading overlay göster (faz ilerlemesi onProgress'ten gelir)
   if (editorActive && typeof veFEAEditorShowLoading === 'function') {
+    var tetgenReady = (typeof veFEATetgenIsBuilt === 'function') && veFEATetgenIsBuilt() && settings.useTetgen !== false;
     var tetMesherReady = (typeof veFEADelaunayAvailable === 'function') && veFEADelaunayAvailable() && settings.useTetMesher !== false;
     var loadingSub = settings.useWorker ? 'Web Worker arka planda hesaplıyor...'
+                   : (geometry.type === 'step' && tetgenReady) ? 'TetGen tet mesher hazırlanıyor (kaliteli CDT)...'
                    : (geometry.type === 'step' && tetMesherReady) ? 'Delaunay tet mesher hazırlanıyor...'
                    : (geometry.type === 'step') ? 'Voxelization + tet4 + boundary snap...'
                    : 'Yapısal mesh üretiliyor (' + (geometry.sourceLabel || geometry.type) + ')...';
@@ -2773,11 +2779,14 @@ function veFEABuildMeshForNode(meshNodeId) {
   }
 
   // STEP için async parse gerekebilir — promise-aware yol.
-  // _parsedTriangles cached olsa bile, Delaunay istemi async wrapper'dan geçer.
+  // _parsedTriangles cached olsa bile, TetGen/Delaunay istemi async wrapper'dan geçer.
   var tetMesherWanted = settings.useTetMesher !== false &&
     (typeof veFEADelaunayAvailable === 'function') && veFEADelaunayAvailable();
+  // TetGen istemi de async wrapper gerektirir (sync path WASM'a erişemez).
+  var tetgenWanted = settings.useTetgen !== false &&
+    (typeof veFEATetgenIsBuilt === 'function') && veFEATetgenIsBuilt();
   var needsAsync = (geometry.type === 'step') &&
-    (!geometry._parsedTriangles || tetMesherWanted);
+    (!geometry._parsedTriangles || tetMesherWanted || tetgenWanted);
   var finishMesh = function(meshData) {
     // Loading overlay'i temizle (her durumda — hata yolu dahil)
     if (editorActive && typeof veFEAEditorHideLoading === 'function') veFEAEditorHideLoading();

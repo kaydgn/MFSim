@@ -5,7 +5,9 @@
 // Büyük mesh'ler (>100k eleman) için UI rendaring donmaz.
 //
 // Dependencies: importScripts ile fea-primitives, fea-step, delaunay bundle,
-// fea-delaunay, fea-mesh yüklenir. Aynı global API'ı (veFEAMeshFromGeometry).
+// fea-delaunay, fea-tetgen, fea-mesh yüklenir. Aynı global API'ı
+// (veFEAMeshFromGeometry). Worker'da TetGen WASM yüklenemezse (document yok)
+// graceful olarak Delaunay katmanına düşülür.
 //
 // Mesaj formatı:
 //   IN:  { type: 'meshFromGeometry', requestId, geometry, opts }
@@ -17,7 +19,7 @@
 // disabled. veFEAMeshFromGeometry pure data işliyor, sorun yok.
 try {
   importScripts('fea-primitives.js', 'fea-step.js', '../vendor/delaunay/delaunay-bundle.js',
-                'fea-mesh-utils.js', 'fea-delaunay.js', 'fea-mesh.js');
+                'fea-mesh-utils.js', 'fea-delaunay.js', 'fea-tetgen.js', 'fea-mesh.js');
 } catch (e) {
   // importScripts yoluyla hata olursa mesh request'leri error verir
   self._VE_FEA_WORKER_INIT_ERROR = e.message || String(e);

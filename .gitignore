@@ -9,3 +9,10 @@ playwright-report/
 # Deploy'da self-host asset olarak ayrica sunulmali (bkz. vendor/opencascade-full/NOTICE.md).
 vendor/opencascade-full/*.wasm
 vendor/opencascade-full/*.js
+
+# TetGen WASM (AGPL-3.0) — opt-in tet mesher. "npm run build:wasm:tetgen" ile
+# emscripten'den uretilir; AGPL dagitim yukumlulukleri nedeniyle git'e commit
+# EDILMEZ (kaynak src/fea/tetgen/ ayri-lisansli olarak tutulur; LICENSE.txt ve
+# NOTICE.md commit edilir). Detay: vendor/tetgen/NOTICE.md.
+vendor/tetgen/tetgen-wasm.js
+vendor/tetgen/tetgen-wasm.wasm

@@ -89,4 +89,12 @@ npm run build:wasm:tetgen   # TetGen tet mesher'ı WASM'a derle (emscripten + AG
 - Artifact: `vendor/tetgen/tetgen-wasm.{js,wasm}` (**.gitignore'da, commit edilmez**)
 - Detaylı lisans uyarısı: `vendor/tetgen/NOTICE.md`
 
-TetGen build edilmemişse mesh oluşturma graceful olarak voxel fallback'e döner. STEP geometrilerinde kaliteli tet4 mesh için TetGen önerilir; ticari kullanım için WIAS Berlin'den lisans gerekir.
+**Tet mesh kalite kademesi** (STEP / karmaşık geometriler, `_veFEAMeshWithTetMesherOrVoxel`):
+
+1. **TetGen** (üst katman, AGPL WASM) — en yüksek kalite Constrained Delaunay tet4.
+2. **Delaunay** (orta katman, saf JS — `js/fea-delaunay.js` + `vendor/delaunay/`, MIT, **her zaman mevcut**, build gerektirmez).
+3. **Voxel + boundary-snap** (taban — her zaman çalışır).
+
+TetGen build edilmemişse veya yüklenemezse otomatik olarak Delaunay'a, o da başarısız olursa voxel'a düşülür — kullanıcı her durumda tet4 mesh alır. STEP geometrilerinde en yüksek kalite için TetGen önerilir; ticari kullanım için WIAS Berlin'den lisans gerekir.
+
+> **Not:** `scripts/build-tetgen-wasm.js` emscripten flag'lerini `spawnSync` ile (shell olmadan) geçirir; bu yüzden `-s EXPORT_NAME=...` / `-s ENVIRONMENT=...` değerleri **tek tırnaksız** olmalıdır (tırnaklar literal geçer ve emscripten 4.x+ reddeder).

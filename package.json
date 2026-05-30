@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node build.js",
     "build:wasm": "node scripts/build-wasm.js",
+    "build:wasm:tetgen": "node scripts/build-tetgen-wasm.js",
     "test": "jest --verbose",
     "test:unit": "jest --verbose",
     "test:e2e": "npx playwright test",

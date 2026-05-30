@@ -108,9 +108,10 @@ function veFEAMeshLabel(type) {
 // diagonals (0-5) ve (1-5) — komşu wedge'lerle paylaşılan radyal arayüzlerde
 // nodeID'ler aynı olduğundan diagonal otomatik eşleşir.
 //
-// Gerçek adaptive Delaunay/quality refinement (tetgen-wasm) ileride ayrı
-// modül olarak eklenecek. Bu yöntem yapısal grid'ler ve voxel hex8 için
-// solver-uygun tet4 mesh sağlar.
+// Gerçek adaptive/quality tet meshing TetGen WASM (üst katman) ve Delaunay
+// (orta katman) tarafından sağlanır — bkz. _veFEAMeshWithTetMesherOrVoxel.
+// Bu decomposition yöntemi ise yapısal grid'ler ve voxel hex8 için, düğüm
+// topolojisini koruyarak solver-uygun tet4 mesh sağlar.
 function veFEAConvertMeshToTet4(meshData) {
   if (!meshData || meshData.error) return meshData;
   if (meshData.type === 'hex8')   return _veFEAHexMeshToTet4(meshData);
@@ -423,6 +424,101 @@ function _veFEAGenericEnrich(mesh, edgeTemplate, newType, newPerElement, project
     voxelMode: mesh.voxelMode || false,
     enrichedFrom: mesh.type
   };
+}
+
+// ─── Eğri yüzey projektörü (kuadratik mid-side düğümler için) ───────────────
+// veFEAMeshFromGeometry, midSideNodes:true iken kuadratik zenginleştirmeye
+// (_veFEAGenericEnrich) bir "projector" geçirir. Projektör, bir KENARIN İKİ UCU
+// DA eğri yüzeyde ise orta-kenar düğümünü o yüzeye projekte eder; aksi halde
+// null döner (düz kenar-ortası korunur). Böylece yalnız yüzey kenarları gerçek
+// yay temsil eder; iç kenarlar bozulmaz ve eleman ters dönmez (radyal dışa
+// doğru sagitta küçüktür).
+//
+// İmza: projector(midX, midY, midZ, aId, bId) → [x,y,z] | null
+//
+// Konvansiyonlar (primitif mesher'larla birebir — eksen Y, merkez orijin):
+//   sphere/hemisphere : yüzey √(x²+y²+z²)=r (yarımkürede düz taban y=0, uçları
+//                       orijinden r uzakta olmadığı için otomatik atlanır)
+//   cylinder          : yanal yüzey √(x²+z²)=r
+//   cone              : R(y)=rb+(rt-rb)·(y-yMin)/H, yüzey √(x²+z²)=R(y)
+//   diğer (box, ibeam, lbracket, recttube, plate, torus) → null
+function _veFEABuildSurfaceProjector(geometry, mesh) {
+  if (!geometry || !geometry.type || !mesh || !mesh.nodes) return null;
+  var type = geometry.type;
+  var p = geometry.params || {};
+  var nodes = mesh.nodes;
+
+  function rad3(id) {   // orijinden uzaklık (küre/yarımküre)
+    var x = nodes[id * 3], y = nodes[id * 3 + 1], z = nodes[id * 3 + 2];
+    return Math.sqrt(x * x + y * y + z * z);
+  }
+  function radXZ(id) {  // Y eksenine radyal uzaklık (silindir/koni)
+    var x = nodes[id * 3], z = nodes[id * 3 + 2];
+    return Math.sqrt(x * x + z * z);
+  }
+
+  if (type === 'sphere' || type === 'hemisphere') {
+    var R = Math.max(0, +p.radius || 0);
+    if (!R) return null;
+    var tol = Math.max(1e-3, R * 0.01);
+    return function(mx, my, mz, a, b) {
+      if (Math.abs(rad3(a) - R) > tol || Math.abs(rad3(b) - R) > tol) return null;
+      var d = Math.sqrt(mx * mx + my * my + mz * mz);
+      if (d < 1e-9) return null;
+      var s = R / d;
+      return [mx * s, my * s, mz * s];
+    };
+  }
+
+  if (type === 'cylinder') {
+    var Rc = Math.max(0, +p.radius || 0);
+    if (!Rc) return null;
+    var tolc = Math.max(1e-3, Rc * 0.01);
+    return function(mx, my, mz, a, b) {
+      if (Math.abs(radXZ(a) - Rc) > tolc || Math.abs(radXZ(b) - Rc) > tolc) return null;
+      var rr = Math.sqrt(mx * mx + mz * mz);
+      if (rr < 1e-9) return null;
+      var s = Rc / rr;
+      return [mx * s, my, mz * s];  // eksenel (y) korunur
+    };
+  }
+
+  if (type === 'cone') {
+    var rb = (p.bottomRadius != null) ? Math.max(0, +p.bottomRadius) : Math.max(0, +p.radius || 0);
+    var rt = (p.topRadius != null) ? Math.max(0, +p.topRadius) : 0;
+    var maxR = Math.max(rb, rt);
+    if (!(maxR > 0)) return null;
+    // y aralığı mesh bbox'tan türetilir (merkez konumundan bağımsız)
+    var yMin = Infinity, yMax = -Infinity;
+    for (var i = 1; i < nodes.length; i += 3) {
+      var yv = nodes[i];
+      if (yv < yMin) yMin = yv;
+      if (yv > yMax) yMax = yv;
+    }
+    var H = yMax - yMin;
+    if (!(H > 1e-9)) return null;
+    var tolk = Math.max(1e-3, maxR * 0.01);
+    var Rof = function(y) {
+      var t = (y - yMin) / H;
+      if (t < 0) t = 0; else if (t > 1) t = 1;
+      return rb + (rt - rb) * t;
+    };
+    var onCone = function(id) {
+      var Ry = Rof(nodes[id * 3 + 1]);
+      return Ry > 1e-9 && Math.abs(radXZ(id) - Ry) <= tolk;
+    };
+    return function(mx, my, mz, a, b) {
+      if (!onCone(a) || !onCone(b)) return null;
+      var Ry = Rof(my);
+      if (Ry < 1e-9) return null;
+      var rr = Math.sqrt(mx * mx + mz * mz);
+      if (rr < 1e-9) return null;
+      var s = Ry / rr;
+      return [mx * s, my, mz * s];
+    };
+  }
+
+  return null; // düz yüzeyli / desteklenmeyen tip → projeksiyon yok
 }
 
 function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
@@ -871,18 +967,19 @@ function _veFEAApplyInflation(mesh, ls, axis, towardMax) {
 // Async wrapper — STEP gibi parse'i Promise tabanlı geometriler için.
 // Senkron yol başarısızsa STEP'i OCCT üzerinden async parse eder.
 //
-// Mesh stratejisi (STEP karmaşık geometriler için):
+// Mesh stratejisi (STEP karmaşık geometriler için) — 3 katmanlı kalite kademesi:
 //   1. Primitif inference (sync, sade şekiller için)
-//   2. Pure JS Delaunay tet mesher (Mikola Lysenko, MIT) — opts.useTetMesher
-//   3. Voxel + boundary snap (her zaman çalışan fallback)
+//   2. TetGen WASM CDT (en yüksek kalite, opt-in/AGPL) — opts.useTetgen
+//   3. Pure JS Delaunay tet mesher (Mikola Lysenko, MIT) — opts.useTetMesher
+//   4. Voxel + boundary snap (her zaman çalışan fallback)
 function veFEAMeshFromGeometryAsync(geometry, opts) {
   if (!geometry) return Promise.resolve(null);
   opts = opts || {};
   // Önce sync yolu dene (primitif inference + cached parsed voxel)
   var sync = veFEAMeshFromGeometry(geometry, opts);
   if (sync) {
-    // Tet mesher aktifse ve sync sonuç voxel ise: Delaunay ile yeniden mesh dene
-    if (_veFEAShouldTryTetMesher(opts) && sync.voxelMode === true && geometry.type === 'step') {
+    // Tet mesher (TetGen veya Delaunay) aktifse ve sync sonuç voxel ise: yeniden mesh dene
+    if ((_veFEAShouldTryTetgen(opts) || _veFEAShouldTryTetMesher(opts)) && sync.voxelMode === true && geometry.type === 'step') {
       var parsedCached = _veFEAParseSurfaceTriangles(geometry);
       if (parsedCached) {
         return _veFEAMeshWithTetMesherOrVoxel(parsedCached, geometry, opts, sync);
@@ -919,6 +1016,29 @@ function _veFEAShouldTryTetMesher(opts) {
     return false;
   }
   return true;
+}
+
+// TetGen (AGPL WASM) denenebilir mi? Kademenin en yüksek kalite katmanı.
+// WASM build edilmemişse veya yüklenemezse wrapper graceful error döner →
+// otomatik olarak Delaunay katmanına düşülür.
+function _veFEAShouldTryTetgen(opts) {
+  if (!opts) opts = {};
+  if (opts.useTetgen === false) return false;
+  if (opts.disableTetgen === true) return false;
+  if (typeof veFEATetgenTetrahedralize !== 'function') return false;
+  if (typeof veFEATetgenIsBuilt === 'function' && !veFEATetgenIsBuilt()) {
+    // Dev modda isBuilt() sync false döner; explicit istenmediyse skip et
+    // (gereksiz async WASM yükleme denemesinden kaçın). Monolitik build'de
+    // inline artifact varsa isBuilt() true → her zaman denenir.
+    if (opts.useTetgen !== true) return false;
+  }
+  return true;
+}
+
+// Element boyutundan default max tet hacmi (TetGen 'a' switch). Pratik üst
+// sınır h³/6; daha küçük değer daha yoğun mesh üretir.
+function _veFEADefaultTetgenMaxVolume(size) {
+  return (size * size * size) / 6;
 }
 
 // STEP/triangle soup için iki kademeli mesh stratejisi: önce Delaunay tet
@@ -983,29 +1103,53 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     return applyPostProcessing(hexMesh);
   }
 
-  if (!_veFEAShouldTryTetMesher(opts)) {
-    return Promise.resolve(buildVoxelFallback());
+  // ─── Katman 2+3: Delaunay (saf JS) → voxel fallback ──────────────────────
+  // TetGen yoksa/başarısız olursa bu yola düşülür. Mevcut, kanıtlanmış mantık.
+  function tryDelaunayThenVoxel() {
+    if (!_veFEAShouldTryTetMesher(opts)) {
+      return Promise.resolve(buildVoxelFallback());
+    }
+    var delaunayOpts = {
+      targetSize: size,
+      addSurfacePoints: opts.delaunayAddSurfacePoints !== false,
+      addInteriorPoints: opts.delaunayAddInteriorPoints !== false,
+      onProgress: opts.onProgress,
+      verbose: opts.verbose === true
+    };
+    return veFEADelaunayTetrahedralize(parsed, delaunayOpts).then(function(tetResult) {
+      if (!tetResult || tetResult.error) {
+        if (opts.verbose) console.warn('[Delaunay] başarısız, voxel fallback:', tetResult && tetResult.error);
+        return buildVoxelFallback();
+      }
+      return applyPostProcessing(_veFEAWrapDelaunayResult(tetResult, geometry));
+    }).catch(function(err) {
+      if (opts.verbose) console.warn('[Delaunay] exception, voxel fallback:', err);
+      return buildVoxelFallback();
+    });
   }
 
-  // Delaunay tet mesher denemesi
-  var delaunayOpts = {
-    targetSize: size,
-    addSurfacePoints: opts.delaunayAddSurfacePoints !== false,
-    addInteriorPoints: opts.delaunayAddInteriorPoints !== false,
-    onProgress: opts.onProgress,
-    verbose: opts.verbose === true
-  };
-  return veFEADelaunayTetrahedralize(parsed, delaunayOpts).then(function(tetResult) {
-    if (!tetResult || tetResult.error) {
-      if (opts.verbose) console.warn('[Delaunay] başarısız, voxel fallback:', tetResult && tetResult.error);
-      return buildVoxelFallback();
-    }
-    var tetMesh = _veFEAWrapDelaunayResult(tetResult, geometry);
-    return applyPostProcessing(tetMesh);
-  }).catch(function(err) {
-    if (opts.verbose) console.warn('[Delaunay] exception, voxel fallback:', err);
-    return buildVoxelFallback();
-  });
+  // ─── Katman 1: TetGen WASM CDT (en yüksek kalite, opt-in/AGPL) ───────────
+  // Başarısız/yüklenemez ise sessizce Delaunay katmanına düşer (kademe).
+  if (_veFEAShouldTryTetgen(opts)) {
+    var tetgenOpts = {
+      quality: opts.tetgenQuality !== false,
+      radiusEdgeRatio: (typeof opts.tetgenRadiusEdgeRatio === 'number') ? opts.tetgenRadiusEdgeRatio : 1.4,
+      maxVolume: (typeof opts.tetgenMaxVolume === 'number') ? opts.tetgenMaxVolume : _veFEADefaultTetgenMaxVolume(size),
+      verbose: opts.verbose === true
+    };
+    return veFEATetgenTetrahedralize(parsed, tetgenOpts).then(function(tetResult) {
+      if (!tetResult || tetResult.error) {
+        if (opts.verbose) console.warn('[TetGen] başarısız, Delaunay fallback:', tetResult && tetResult.error);
+        return tryDelaunayThenVoxel();
+      }
+      return applyPostProcessing(_veFEAWrapTetgenResult(tetResult, geometry));
+    }).catch(function(err) {
+      if (opts.verbose) console.warn('[TetGen] exception, Delaunay fallback:', err);
+      return tryDelaunayThenVoxel();
+    });
+  }
+
+  return tryDelaunayThenVoxel();
 }
 
 // Delaunay sonucunu MFSim mesh formatına sarmak: bbox + namedSelections + meta
@@ -1030,6 +1174,36 @@ function _veFEAWrapDelaunayResult(tetResult, geometry) {
     nodesPerElement: 4,
     namedSelections: sel,
     delaunayInfo: tetResult.info || null
+  };
+  if (geometry.detectedFeatures && geometry.detectedFeatures.summary) {
+    mesh.detectedFeatureSummary = geometry.detectedFeatures.summary;
+  }
+  return mesh;
+}
+
+// TetGen sonucunu MFSim mesh formatına sarmak. Delaunay wrap ile aynı yapı;
+// yalnız geometryType ('tetgen-…') ve meta alanı (tetgenInfo) farklı.
+function _veFEAWrapTetgenResult(tetResult, geometry) {
+  var nodes = tetResult.nodes;
+  var elements = tetResult.elements;
+  var minX = Infinity, minY = Infinity, minZ = Infinity;
+  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  for (var i = 0; i < nodes.length; i += 3) {
+    var x = nodes[i], y = nodes[i + 1], z = nodes[i + 2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  var bbox = { minX: minX, maxX: maxX, minY: minY, maxY: maxY, minZ: minZ, maxZ: maxZ };
+  var sel = _veFEATetMeshNamedSelections(nodes, elements, bbox);
+  var mesh = {
+    type: 'tet4',
+    geometryType: 'tetgen-' + (geometry.type || 'unknown'),
+    nodes: nodes,
+    elements: elements,
+    nodesPerElement: 4,
+    namedSelections: sel,
+    tetgenInfo: tetResult.info || null
   };
   if (geometry.detectedFeatures && geometry.detectedFeatures.summary) {
     mesh.detectedFeatureSummary = geometry.detectedFeatures.summary;

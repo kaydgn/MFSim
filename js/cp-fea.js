@@ -623,6 +623,16 @@ function veFEASubmitMeshBuild(nodeId) {
     var tetMesherInteriorEl = document.getElementById('ve-fea-mesh-tetmesher-interior-' + nodeId);
     meshNode.data.meshSettings.useTetMesher = tetMesherEl ? !!tetMesherEl.checked : (S.useTetMesher !== false);
     meshNode.data.meshSettings.delaunayAddInteriorPoints = tetMesherInteriorEl ? !!tetMesherInteriorEl.checked : (S.delaunayAddInteriorPoints !== false);
+    // TetGen ayarları (kademenin en üst katmanı — AGPL WASM, kaliteli tet4)
+    var tetgenEl = document.getElementById('ve-fea-mesh-tetgen-' + nodeId);
+    var tetgenRerEl = document.getElementById('ve-fea-mesh-tetgen-rer-' + nodeId);
+    meshNode.data.meshSettings.useTetgen = tetgenEl ? !!tetgenEl.checked : (S.useTetgen !== false);
+    if (tetgenRerEl) {
+      var rer = parseFloat(tetgenRerEl.value);
+      if (isFinite(rer) && rer >= 1.0 && rer <= 3.0) {
+        meshNode.data.meshSettings.tetgenRadiusEdgeRatio = rer;
+      }
+    }
   }
   veFEABuildMeshForNode(nodeId);
 }
