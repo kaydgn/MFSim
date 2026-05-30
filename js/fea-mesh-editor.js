@@ -2491,11 +2491,23 @@ function _veFEAEditorQualityHTML(node) {
         '<div style="font-size:0.56rem; color:var(--text-muted); margin-top:2px; line-height:1.3;">' + (qs.recommendation || '') + '</div>' +
       '</div></div>';
     if (qs.metrics) {
-      html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:10px; display:flex; gap:10px; flex-wrap:wrap; padding-left:2px;">' +
+      html += '<div style="font-size:0.55rem; color:var(--text-muted); margin-bottom:6px; display:flex; gap:10px; flex-wrap:wrap; padding-left:2px;">' +
         '<span>Min OrthoQ: <b style="color:var(--text-secondary);">' + (qs.metrics.minOrthogonalQuality != null ? qs.metrics.minOrthogonalQuality.toFixed(3) : '–') + '</b></span>' +
         '<span>Maks Skew: <b style="color:var(--text-secondary);">' + (qs.metrics.maxSkewness != null ? qs.metrics.maxSkewness.toFixed(3) : '–') + '</b></span>' +
         '<span>Ort ElemQ: <b style="color:var(--text-secondary);">' + (qs.metrics.avgElementQuality != null ? qs.metrics.avgElementQuality.toFixed(3) : '–') + '</b></span>' +
         '</div>';
+    }
+    // Otomatik iyileştirme butonu + son çalıştırma sonucu
+    html += '<button onclick="veFEAAutoImproveMeshForNode(\'' + node.id + '\')" ' +
+      'style="width:100%; padding:7px 10px; margin-bottom:8px; font-size:0.64rem; font-weight:600; ' +
+      'background:var(--accent-primary, #3b82f6); color:#fff; border:none; border-radius:4px; cursor:pointer;">' +
+      '⚡ Mesh\'i Otomatik İyileştir (kalite-güdümlü smoothing)</button>';
+    if (metrics.autoImprove) {
+      var ai = metrics.autoImprove;
+      var aiColor = ai.finalScore > ai.initialScore ? '#22c55e' : 'var(--text-muted)';
+      html += '<div style="font-size:0.56rem; color:' + aiColor + '; margin-bottom:10px; padding:4px 8px; background:rgba(34,197,94,0.06); border-left:2px solid ' + aiColor + ';">' +
+        'Son iyileştirme: skor ' + ai.initialScore + ' → <b>' + ai.finalScore + '</b> (' + ai.stagesRun + ' kademe' +
+        (ai.reachedTarget ? ', hedefe ulaşıldı ✓' : '') + ')</div>';
     }
   }
   // Jacobian

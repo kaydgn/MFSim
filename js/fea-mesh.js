@@ -3730,6 +3730,25 @@ function veFEAComputeQualityMetrics(meshData) {
 // inverted/degenerate varsa skor 0'a yakın (veto) — çözücü patlar.
 //
 // Dönüş: { score:0..100, grade, rating, metrics:{...}, valid, recommendation }
+// UI köprüsü: mesh'i otomatik iyileştir + ANSYS skoru ile değerlendir.
+// veFEAAutoImproveMesh (fea-mesh-smoothing.js) sarmalayıcısı — skor fonksiyonu
+// olarak veFEAComputeMeshQualityScore enjekte edilir. Smoothing bağımsız modül
+// olduğu için skor enjeksiyonu burada (bağımlılık yönü temiz).
+function veFEAAutoImproveMeshWithScore(meshData, opts) {
+  if (typeof veFEAAutoImproveMesh !== 'function') {
+    return { mesh: meshData, initialScore: null, finalScore: null, stagesRun: 0,
+             history: [], note: 'smoothing modülü yok' };
+  }
+  opts = opts || {};
+  // Element-quality tabanlı proxy yerine gerçek ANSYS skorunu kullan.
+  var merged = {};
+  for (var k in opts) { if (opts.hasOwnProperty(k)) merged[k] = opts[k]; }
+  if (!merged.scoreFn && typeof veFEAComputeMeshQualityScore === 'function') {
+    merged.scoreFn = function(m) { return veFEAComputeMeshQualityScore(m); };
+  }
+  return veFEAAutoImproveMesh(meshData, merged);
+}
+
 function veFEAComputeMeshQualityScore(meshData) {
   var q = veFEAComputeQualityMetrics(meshData);
   if (!q) return null;

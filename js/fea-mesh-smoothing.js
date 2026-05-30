@@ -447,12 +447,109 @@ function veFEAMeshSmoothingReport(meshBefore, meshAfter) {
   };
 }
 
+// ─── Kalite-güdümlü otomatik mesh iyileştirme (ANSYS adaptive smoothing) ────
+// Mesh'i artan agresiflikte smoothing stratejileriyle iyileştirir; her adımda
+// kaliteyi ölçer, hedefe ulaşınca durur, en iyi sonucu döndürür. ANSYS'in
+// "mesh quality target" güdümlü otomatik iyileştirmesinin karşılığı.
+//
+// Strateji kademeleri (artan maliyet/agresiflik):
+//   1. smartLaplacian × 3
+//   2. smartLaplacian × 6
+//   3. smartLaplacian + optimizeStubborn × 6
+//   4. optimization × 8
+// Her kademeden sonra scoreFn(mesh) ile değerlendir; targetScore'a ulaşıldıysa
+// veya iyileşme durduysa dur. En yüksek skorlu mesh döndürülür (monoton — asla
+// başlangıçtan kötü sonuç vermez).
+//
+// opts:
+//   targetScore:  hedef kalite skoru 0..100 (default 90)
+//   maxStages:    en fazla kademe (default 4)
+//   scoreFn:      function(mesh) → { score } | number. Yoksa dahili min-quality
+//                 tabanlı proxy skor kullanılır.
+//   surfaceProjector, preserveSurface: veFEASmoothMesh'e geçer.
+//   onProgress(frac, msg)
+//
+// Dönüş: { mesh, initialScore, finalScore, stagesRun, history:[...] }
+function veFEAAutoImproveMesh(mesh, opts) {
+  opts = opts || {};
+  if (!mesh || mesh.error) return { mesh: mesh, initialScore: 0, finalScore: 0, stagesRun: 0, history: [] };
+  var type = mesh.type;
+  if (type !== 'tet4' && type !== 'hex8' && type !== 'wedge6') {
+    return { mesh: mesh, initialScore: null, finalScore: null, stagesRun: 0, history: [],
+             note: 'desteklenmeyen tip (' + type + ')' };
+  }
+
+  var targetScore = (opts.targetScore != null) ? opts.targetScore : 90;
+  var maxStages = (opts.maxStages != null) ? Math.max(1, opts.maxStages | 0) : 4;
+  var onProgress = (typeof opts.onProgress === 'function') ? opts.onProgress : function() {};
+
+  // Skor fonksiyonu: kullanıcı verirse onu kullan, yoksa dahili proxy
+  // (min element quality × 100 — orthogonal/skew olmadan kaba ama monoton).
+  function evalScore(m) {
+    if (typeof opts.scoreFn === 'function') {
+      var r = opts.scoreFn(m);
+      if (r == null) return 0;
+      return (typeof r === 'number') ? r : (r.score || 0);
+    }
+    var rep = veFEAMeshSmoothingReport(m, m);
+    return Math.round(rep.before.minQ * 100);
+  }
+
+  var stages = [
+    { method: 'smartLaplacian', iterations: 3 },
+    { method: 'smartLaplacian', iterations: 6 },
+    { method: 'smartLaplacian', iterations: 6, optimizeStubborn: true },
+    { method: 'optimization',   iterations: 8 }
+  ];
+
+  var initialScore = evalScore(mesh);
+  var bestMesh = mesh;
+  var bestScore = initialScore;
+  var history = [{ stage: 0, score: initialScore, label: 'başlangıç' }];
+
+  if (initialScore >= targetScore) {
+    return { mesh: mesh, initialScore: initialScore, finalScore: initialScore, stagesRun: 0, history: history };
+  }
+
+  var stagesRun = 0;
+  for (var s = 0; s < stages.length && s < maxStages; s++) {
+    var cfg = stages[s];
+    var candidate = veFEASmoothMesh(bestMesh, {
+      method: cfg.method,
+      iterations: cfg.iterations,
+      optimizeStubborn: cfg.optimizeStubborn === true,
+      relaxation: opts.relaxation != null ? opts.relaxation : 0.5,
+      preserveSurface: opts.preserveSurface !== false,
+      surfaceProjector: opts.surfaceProjector
+    });
+    stagesRun++;
+    var sc = evalScore(candidate);
+    history.push({ stage: s + 1, score: sc,
+                   label: cfg.method + '×' + cfg.iterations + (cfg.optimizeStubborn ? '+opt' : '') });
+    onProgress((s + 1) / Math.min(maxStages, stages.length),
+               'İyileştirme kademesi ' + (s+1) + ' — skor ' + sc);
+    // Sadece kesin iyileşmeyi kabul et (monoton)
+    if (sc > bestScore) { bestScore = sc; bestMesh = candidate; }
+    if (bestScore >= targetScore) break;
+  }
+
+  return {
+    mesh: bestMesh,
+    initialScore: initialScore,
+    finalScore: bestScore,
+    stagesRun: stagesRun,
+    history: history,
+    reachedTarget: bestScore >= targetScore
+  };
+}
+
 // CommonJS export (Jest)
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veFEAMeshBuildTopology: veFEAMeshBuildTopology,
     veFEASmoothMesh: veFEASmoothMesh,
     veFEAMeshSmoothingReport: veFEAMeshSmoothingReport,
+    veFEAAutoImproveMesh: veFEAAutoImproveMesh,
     _veFEASmoothTetQuality: _veFEASmoothTetQuality,
     _veFEASmoothElementQuality: _veFEASmoothElementQuality
   };
