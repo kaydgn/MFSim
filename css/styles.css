@@ -106,31 +106,82 @@
       align-items: center;
       gap: 4px;
     }
-    
-    .theme-selector-label {
-      font-size: 0.65rem;
+
+    /* Tema butonu — palet ikonu, tıklayınca menü açılır */
+    .ve-theme-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      background: transparent;
       color: var(--text-secondary);
+      border: 1px solid transparent;
+      border-radius: 0;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
     }
-    
-    .theme-selector select {
-      background: var(--bg-input);
-      color: var(--text-primary);
+    .ve-theme-btn:hover {
+      border-color: var(--border-color);
+      background: var(--bg-tertiary);
+      color: var(--accent-primary);
+    }
+
+    /* Tema menüsü (dropdown) */
+    .ve-theme-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;                /* sağa hizalı — buton sağ üstte */
+      min-width: 160px;
+      background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 0;
-      padding: 2px 6px;
-      font-size: 0.65rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 999999;
+      padding: 4px 0;
+      margin-top: 2px;
+    }
+    .ve-theme-menu-group {
+      font-size: 0.55rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 6px 12px 3px;
+      user-select: none;
+    }
+    .ve-theme-menu-item {
+      position: relative;
+      padding: 6px 12px 6px 28px;   /* sol: ✓ için yer */
+      font-size: 0.7rem;
+      color: var(--text-primary);
       cursor: pointer;
-      outline: none;
-      transition: border-color 0.15s;
+      transition: background 0.12s, color 0.12s;
+      white-space: nowrap;
     }
-    
-    .theme-selector select:hover {
-      border-color: var(--border-hover);
+    .ve-theme-menu-item:hover {
+      background: var(--accent-primary);
+      color: #fff;
     }
-    
-    .theme-selector select:focus {
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    /* Aktif (seçili) tema: yanına ✓ */
+    .ve-theme-menu-item.active::before {
+      content: '✓';
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent-success);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .ve-theme-menu-item.active:hover::before {
+      color: #fff;
+    }
+    .ve-theme-menu-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 4px 8px;
     }
 
     /* ===== LOGIN EKRANI ===== */

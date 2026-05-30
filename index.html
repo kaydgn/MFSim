@@ -85,19 +85,21 @@
   <span class="theme-selector" style="margin-left:auto;">
     <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
     <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
-    <label for="theme-select" class="theme-selector-label"><span class="mf-ico mf-ico-palette"></span></label>
-    <select id="theme-select" onchange="changeTheme(this.value)">
-      <option value="auto">Otomatik (Sistem)</option>
-      <optgroup label="Koyu">
-        <option value="slate">Midnight</option>
-        <option value="cream">Carbon</option>
-        <option value="claude">Claude</option>
-      </optgroup>
-      <optgroup label="Açık">
-        <option value="pearl">Pearl</option>
-        <option value="steel">Steel</option>
-      </optgroup>
-    </select>
+    <span class="ve-theme-wrapper" style="position:relative; display:inline-flex;">
+      <button id="ve-theme-btn" class="ve-theme-btn" onclick="veToggleThemeMenu()" title="Tema seç" aria-label="Tema seç"><span class="mf-ico mf-ico-palette"></span></button>
+      <div id="ve-theme-menu" class="ve-theme-menu" style="display:none;">
+        <div class="ve-theme-menu-item" data-mf-theme="auto" onclick="changeTheme('auto')">Otomatik (Sistem)</div>
+        <div class="ve-theme-menu-divider"></div>
+        <div class="ve-theme-menu-group">Koyu</div>
+        <div class="ve-theme-menu-item" data-mf-theme="slate" onclick="changeTheme('slate')">Midnight</div>
+        <div class="ve-theme-menu-item" data-mf-theme="cream" onclick="changeTheme('cream')">Carbon</div>
+        <div class="ve-theme-menu-item" data-mf-theme="claude" onclick="changeTheme('claude')">Claude</div>
+        <div class="ve-theme-menu-divider"></div>
+        <div class="ve-theme-menu-group">Açık</div>
+        <div class="ve-theme-menu-item" data-mf-theme="pearl" onclick="changeTheme('pearl')">Pearl</div>
+        <div class="ve-theme-menu-item" data-mf-theme="steel" onclick="changeTheme('steel')">Steel</div>
+      </div>
+    </span>
   </span>
 </div>
 

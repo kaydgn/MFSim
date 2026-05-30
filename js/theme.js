@@ -32,8 +32,15 @@ function _mfApplyResolvedTheme(themeId) {
 
 function changeTheme(themeId) {
   try { localStorage.setItem('mf-theme', themeId); } catch(e) {}
-  var sel = document.getElementById('theme-select');
-  if (sel) sel.value = themeId;
+
+  // Menüdeki aktif (✓) işaretini güncelle ("auto" da bir menü öğesidir)
+  var items = document.querySelectorAll('.ve-theme-menu-item');
+  items.forEach(function(it) {
+    it.classList.toggle('active', it.getAttribute('data-mf-theme') === themeId);
+  });
+  // Seçim yapıldı → menüyü kapat
+  var menu = document.getElementById('ve-theme-menu');
+  if(menu) menu.style.display = 'none';
 
   // Yalnızca "auto" modunda sistem tercihi değişimlerini dinle.
   if (_mfDarkMql && _mfDarkMql.addEventListener) {
@@ -44,9 +51,37 @@ function changeTheme(themeId) {
   _mfApplyResolvedTheme(themeId);
 }
 
-// Sayfa yüklendiğinde kayıtlı temayı uygula
-document.addEventListener('DOMContentLoaded', function() {
+function veToggleThemeMenu() {
+  var menu = document.getElementById('ve-theme-menu');
+  if(!menu) return;
+  var open = menu.style.display !== 'block';
+  menu.style.display = open ? 'block' : 'none';
+  // Aynı anda açık dosya menüsü varsa kapat
+  if(open) {
+    var fileMenu = document.getElementById('ve-file-menu');
+    if(fileMenu) fileMenu.style.display = 'none';
+  }
+}
+
+// Dışına tıklayınca kapat
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('ve-theme-menu');
+  var btn = document.getElementById('ve-theme-btn');
+  if(!menu || !btn) return;
+  if(menu.style.display === 'block' && !menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// Kayıtlı temayı uygula (loader-sonrası yüklemede DOMContentLoaded zaten geçmiş
+// olabilir, bu durumda hemen tetikle)
+function _veApplyStoredTheme() {
   var savedTheme = 'slate';
   try { savedTheme = localStorage.getItem('mf-theme') || 'slate'; } catch(e) {}
   changeTheme(savedTheme);
-});
+}
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _veApplyStoredTheme);
+} else {
+  _veApplyStoredTheme();
+}
