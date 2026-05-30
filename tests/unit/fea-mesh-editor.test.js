@@ -248,11 +248,13 @@ describe('Geometri Topolojisi accordion (ANSYS-style face detection)', () => {
     expect(html).toMatch(/Halka.*Düzlem/);
   });
 
-  test('Outline: inspect:topology, group:inspect içinde en son sırada', () => {
+  test('Outline: inspect:selftest, group:inspect içinde en son sırada', () => {
     var inspect = FEAMeshOutline._findSchemaNode('group:inspect');
     expect(inspect).toBeTruthy();
     var lastChild = inspect.children[inspect.children.length - 1];
-    expect(lastChild.id).toBe('inspect:topology');
+    expect(lastChild.id).toBe('inspect:selftest');
+    // topology hala mevcut, son bir önceki sırada
+    expect(inspect.children[inspect.children.length - 2].id).toBe('inspect:topology');
   });
 
   test('Outline default state: inspect grubu kapalı (ilk açılışta sadeleştirme)', () => {
@@ -345,7 +347,8 @@ describe('Mesh Editör outline organizasyonu', () => {
       'inspect:display',
       'inspect:suggestions',
       'inspect:convergence',
-      'inspect:topology'
+      'inspect:topology',
+      'inspect:selftest'
     ]);
   });
 
