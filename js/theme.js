@@ -1,59 +1,27 @@
 // ============================================================================
-// TEMA YÖNETİMİ
+// TEMA YÖNETİMİ (Ayarlar modalına taşındı — bkz. settings.js)
 // ============================================================================
+// Tema değiştir: data-theme uygula, kaydet, tüm [data-mf-theme] item'larını senkronize et.
 function changeTheme(themeId) {
+  if (!themeId) return;
   document.documentElement.setAttribute('data-theme', themeId);
   try { localStorage.setItem('mf-theme', themeId); } catch(e) {}
-
-  // Menüdeki aktif (✓) işaretini güncelle
-  var items = document.querySelectorAll('.ve-theme-menu-item');
-  items.forEach(function(it) {
-    it.classList.toggle('active', it.getAttribute('data-mf-theme') === themeId);
+  // Ayarlar modalındaki tema kartlarının aktif (✓) durumunu güncelle
+  document.querySelectorAll('[data-mf-theme]').forEach(function(el) {
+    el.classList.toggle('active', el.getAttribute('data-mf-theme') === themeId);
   });
-  // Seçim yapıldı → menüyü kapat
-  var menu = document.getElementById('ve-theme-menu');
-  if(menu) menu.style.display = 'none';
-
   // Açık 3D yapısal analiz görüntüleyicilerinin arka planını yeni temaya uyarla.
   if (typeof veFEAApplyThemeToViewers === 'function') veFEAApplyThemeToViewers();
 }
 
-function veToggleThemeMenu() {
-  var menu = document.getElementById('ve-theme-menu');
-  if(!menu) return;
-  var open = menu.style.display !== 'block';
-  menu.style.display = open ? 'block' : 'none';
-  // Aynı anda açık dosya menüsü varsa kapat
-  if(open) {
-    var fileMenu = document.getElementById('ve-file-menu');
-    if(fileMenu) fileMenu.style.display = 'none';
-  }
-}
-
-// Dışına tıklayınca kapat
-document.addEventListener('click', function(e) {
-  var menu = document.getElementById('ve-theme-menu');
-  var btn = document.getElementById('ve-theme-btn');
-  if(!menu || !btn) return;
-  if(menu.style.display === 'block' && !menu.contains(e.target) && !btn.contains(e.target)) {
-    menu.style.display = 'none';
-  }
-});
-
-// Geçerli tema kimlikleri (kaldırılan/eski değerler için geri dönüş)
-var MF_VALID_THEMES = ['slate','cream','claude','ansys','fusion','vscode','pearl','steel','solidworks'];
-
-// Kayıtlı temayı uygula (loader-sonrası yüklemede DOMContentLoaded zaten geçmiş
-// olabilir, bu durumda hemen tetikle)
-function _veApplyStoredTheme() {
+// Sayfa yüklendiğinde kayıtlı temayı uygula
+document.addEventListener('DOMContentLoaded', function() {
   var savedTheme = 'slate';
-  try { savedTheme = localStorage.getItem('mf-theme') || 'slate'; } catch(e) {}
-  // Artık desteklenmeyen bir tema kayıtlıysa (örn. eski "auto") varsayılana dön
-  if (MF_VALID_THEMES.indexOf(savedTheme) === -1) savedTheme = 'slate';
+  try {
+    savedTheme = localStorage.getItem('mf-theme') || 'slate';
+  } catch(e) {}
+  // Geçersiz/eski tema değerleri (örn. kaldırılan 'auto') için güvenli geri dönüş
+  var valid = ['slate','light','cream','arctic','sand','forest','iris','silver','ash','pearl','steel','claude'];
+  if (valid.indexOf(savedTheme) < 0) savedTheme = 'slate';
   changeTheme(savedTheme);
-}
-if(document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', _veApplyStoredTheme);
-} else {
-  _veApplyStoredTheme();
-}
+});

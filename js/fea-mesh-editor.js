@@ -843,6 +843,7 @@ function _veFEAEditorBuildRightPanel(node) {
     '</div>' +
     '<button id="ve-fea-disp-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'display-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Render modu: Shaded / Edges / Wireframe">Shaded</button>' +
     '<button id="ve-fea-pointer-mode-' + nid + '" onclick="veFEAEditorViewerAction(\'' + nid + '\',\'pointer-mode\')" style="' + btnStyle + 'margin-left:4px;" title="Pointer modu: View / Face Pick / Body Pick">⊞ View</button>' +
+    '<button id="ve-fea-mesh-pick-' + nid + '" data-active="false" onclick="veFEAEditorToggleMeshPick(\'' + nid + '\')" style="' + btnStyle + 'margin-left:4px;" title="Mesh eleman seçimi: aç, fareyle mesh üzerine gel ve tıkla — eleman vurgulanır">⊹ Eleman Seç</button>' +
     '<span style="font-size:0.55rem; color:var(--text-muted); margin-left:6px;">LMB: seç · MMB: döndür · RMB: pan · wheel: zoom</span>' +
     clipUI +
     '</div>';
@@ -861,6 +862,7 @@ function _veFEAEditorBuildRightPanel(node) {
     // Hit-point + cursor coordinate overlay (canvas üstünde absolute)
     '<div style="flex:1; position:relative; min-height:0; background:var(--bg-tertiary);">' +
       '<canvas id="ve-fea-mesh-canvas-' + nid + '" style="display:block; width:100%; height:100%; cursor:default;"></canvas>' +
+      '<div id="ve-fea-mesh-pick-label-' + nid + '" style="position:absolute; top:8px; left:8px; padding:4px 9px; background:rgba(251,191,36,0.92); color:#1a1a1a; font-size:0.62rem; font-weight:600; font-family:monospace; pointer-events:none; display:none; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>' +
       '<div id="ve-fea-hit-coord-' + nid + '" style="position:absolute; bottom:8px; left:8px; padding:4px 8px; background:rgba(0,0,0,0.65); color:#fbbf24; font-size:0.6rem; font-family:monospace; pointer-events:none; display:none; border:1px solid #444;"></div>' +
       '<div id="ve-fea-depth-stack-' + nid + '" style="position:absolute; bottom:8px; right:8px; display:none; gap:2px; flex-direction:column;"></div>' +
     '</div>';
@@ -881,6 +883,36 @@ function veFEAEditorToggleViewerToolbar(nodeId) {
   // ▴ = araç çubuğu açık (tıkla → gizle), ▾ = kapalı (tıkla → göster)
   if (icon) icon.textContent = hidden ? '▴' : '▾';
   if (handle) handle.title = hidden ? 'Araç çubuğunu gizle' : 'Araç çubuğunu göster';
+}
+
+// "⊹ Eleman Seç" butonunun görsel durumunu (aktif/pasif) ayarlar.
+function _veFEAEditorSetMeshPickBtn(nodeId, active) {
+  var btn = document.getElementById('ve-fea-mesh-pick-' + nodeId);
+  if (!btn) return;
+  btn.setAttribute('data-active', active ? 'true' : 'false');
+  btn.style.background = active ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
+  btn.style.color = active ? '#fff' : 'var(--text-primary)';
+  btn.style.borderColor = active ? 'var(--accent-primary)' : 'var(--border-color)';
+}
+
+// Mesh eleman seçim modunu aç/kapa. Aktifken fareyle mesh üzerinde gezilince
+// eleman vurgulanır, tıklanınca seçilir (sarı dolu + kenar + "Eleman #id" etiketi).
+function veFEAEditorToggleMeshPick(nodeId) {
+  var viewer = (typeof veFEAViewerRegistry !== 'undefined') ? veFEAViewerRegistry[nodeId] : null;
+  var btn = document.getElementById('ve-fea-mesh-pick-' + nodeId);
+  var active = btn ? (btn.getAttribute('data-active') === 'true') : false;
+  if (viewer && typeof viewer.getPointerMode === 'function') active = (viewer.getPointerMode() === 'mesh-pick');
+  var next = !active;
+  if (viewer && typeof viewer.setPointerMode === 'function') {
+    viewer.setPointerMode(next ? 'mesh-pick' : 'view');
+    if (!next && typeof viewer.clearMeshElementSelection === 'function') viewer.clearMeshElementSelection();
+  }
+  _veFEAEditorSetMeshPickBtn(nodeId, next);
+  // Aktifken normal pointer-mode butonunu görsel olarak View'e döndür (çakışma olmasın).
+  if (next) {
+    var pbtn = document.getElementById('ve-fea-pointer-mode-' + nodeId);
+    if (pbtn) pbtn.textContent = '⊞ View';
+  }
 }
 
 // ANSYS-style viewer action dispatcher — toolbar button → viewer method
@@ -922,6 +954,11 @@ function veFEAEditorViewerAction(nodeId, action) {
     var cur = viewer._pointerMode || 'view';
     var next = modes[(modes.indexOf(cur) + 1) % modes.length];
     if (typeof viewer.setPointerMode === 'function') viewer.setPointerMode(next);
+    // Mesh eleman seçim modundan çıkılıyorsa o butonu da pasife al + seçimi temizle.
+    if (cur === 'mesh-pick') {
+      if (typeof viewer.clearMeshElementSelection === 'function') viewer.clearMeshElementSelection();
+      _veFEAEditorSetMeshPickBtn(nodeId, false);
+    }
     var pbtn = document.getElementById('ve-fea-pointer-mode-' + nodeId);
     if (pbtn) pbtn.textContent = labels[next];
     return;
