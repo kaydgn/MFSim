@@ -1180,6 +1180,163 @@ function veFEAInitViewer(canvas, opts) {
       this._highlightMarker = pts;
       render();
     },
+    // ─── Mesh eleman seçimi (mesh-pick modu) ─────────────────────────────────
+    // Fare ile mesh üzerinde gezerken/tıklarken tekil mesh elemanını yakalar ve
+    // dolu + kenar overlay ile vurgular. Yakalama: yüzeyden raycast ile 3D nokta
+    // alınır, ardından o noktaya en yakın eleman centroid'i bulunur — bu sayede
+    // hangi display modunda olursa olsun (geometri+mesh, solid, heat map) çalışır.
+    _disposeOverlay: function(obj) {
+      if (!obj) return;
+      obj.traverse(function(o) {
+        if (o.geometry && o.geometry.dispose) o.geometry.dispose();
+        if (o.material) {
+          var mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach(function(m) { if (m && m.dispose) m.dispose(); });
+        }
+      });
+    },
+    // Eleman centroid'lerini önbelleğe alır (mesh başına bir kez hesaplanır).
+    _ensureElementCentroids: function() {
+      var md = this._meshData;
+      if (!md || !md.elements || !md.nodes || !md.nodesPerElement) { this._elementCentroids = null; return null; }
+      if (this._elementCentroids && this._centroidsMesh === md) return this._elementCentroids;
+      var per = md.nodesPerElement;
+      var corners = (md.type === 'tet10') ? 4 : (md.type === 'hex20') ? 8 : (md.type === 'wedge15') ? 6 : per;
+      var nodes = md.nodes, els = md.elements;
+      var n = (els.length / per) | 0;
+      var cen = new Float32Array(n * 3);
+      for (var e = 0; e < n; e++) {
+        var off = e * per, cx = 0, cy = 0, cz = 0;
+        for (var c = 0; c < corners; c++) {
+          var ni = els[off + c] * 3;
+          cx += nodes[ni]; cy += nodes[ni + 1]; cz += nodes[ni + 2];
+        }
+        cen[e * 3] = cx / corners; cen[e * 3 + 1] = cy / corners; cen[e * 3 + 2] = cz / corners;
+      }
+      this._elementCentroids = cen;
+      this._centroidsMesh = md;
+      return cen;
+    },
+    // Eleman tipine göre yüzey üçgenlerini döner (overlay highlight için).
+    _elementFaceList: function(type) {
+      if (type === 'tet4' || type === 'tet10') return [[0,1,2],[0,1,3],[0,2,3],[1,2,3]];
+      if (type === 'hex8' || type === 'hex20') return [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
+      if (type === 'wedge6' || type === 'wedge15') return [[0,1,2],[3,4,5],[0,1,4,3],[1,2,5,4],[2,0,3,5]];
+      if (type === 'pyramid5') return [[0,1,2,3],[0,1,4],[1,2,4],[2,3,4],[3,0,4]];
+      if (type === 'tri3') return [[0,1,2]];
+      if (type === 'quad4') return [[0,1,2,3]];
+      return [[0,1,2,3],[4,5,6,7],[0,1,5,4],[1,2,6,5],[2,3,7,6],[3,0,4,7]];
+    },
+    // Tek bir elemanın yüzlerinden dolu + kenar overlay grubu kurar.
+    _buildElementOverlay: function(elementId, color, opacity) {
+      var md = this._meshData;
+      if (!md || !md.elements || elementId == null) return null;
+      var per = md.nodesPerElement;
+      var off = elementId * per;
+      if (off < 0 || off + per > md.elements.length) return null;
+      var nodes = md.nodes, els = md.elements;
+      var faces = this._elementFaceList(md.type);
+      var tri = [];
+      function push(a, b, c) {
+        tri.push(nodes[a*3], nodes[a*3+1], nodes[a*3+2],
+                 nodes[b*3], nodes[b*3+1], nodes[b*3+2],
+                 nodes[c*3], nodes[c*3+1], nodes[c*3+2]);
+      }
+      for (var f = 0; f < faces.length; f++) {
+        var fc = faces[f];
+        var i0 = els[off + fc[0]], i1 = els[off + fc[1]], i2 = els[off + fc[2]];
+        push(i0, i1, i2);
+        if (fc.length === 4) push(i0, i2, els[off + fc[3]]);
+      }
+      if (tri.length === 0) return null;
+      var geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(tri), 3));
+      geo.computeVertexNormals();
+      var grp = new THREE.Group();
+      var fillMat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: (opacity == null ? 0.5 : opacity),
+        side: THREE.DoubleSide, depthTest: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 });
+      var fill = new THREE.Mesh(geo, fillMat);
+      fill.renderOrder = 997; fill.raycast = function() {};
+      grp.add(fill);
+      if (typeof THREE.EdgesGeometry === 'function') {
+        var edgeGeo = new THREE.EdgesGeometry(geo, 1);
+        var line = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 1, depthTest: false }));
+        line.renderOrder = 998; line.raycast = function() {};
+        grp.add(line);
+      }
+      grp.userData.feaMeshElementOverlay = true;
+      return grp;
+    },
+    // Fare konumundan en yakın mesh elemanını döner (elementId | null).
+    pickMeshElementFromMouse: function(clientX, clientY) {
+      if (!this._meshData) return null;
+      var pt = this.pickPointFromMouse(clientX, clientY);
+      if (!pt) return null;
+      var cen = this._ensureElementCentroids();
+      if (!cen) return null;
+      var best = -1, bestD = Infinity;
+      var n = cen.length / 3;
+      for (var e = 0; e < n; e++) {
+        var dx = cen[e*3] - pt.x, dy = cen[e*3+1] - pt.y, dz = cen[e*3+2] - pt.z;
+        var d = dx*dx + dy*dy + dz*dz;
+        if (d < bestD) { bestD = d; best = e; }
+      }
+      return best >= 0 ? best : null;
+    },
+    // Bir mesh elemanını kalıcı seçili olarak vurgular (null → seçimi temizler).
+    // Canvas köşesindeki "Eleman #id" etiketini de günceller.
+    selectMeshElement: function(elementId) {
+      if (this._meshElementHighlight) {
+        this._geometryRoot.remove(this._meshElementHighlight);
+        this._disposeOverlay(this._meshElementHighlight);
+        this._meshElementHighlight = null;
+      }
+      this._selectedMeshElement = (elementId == null ? null : elementId);
+      if (elementId != null) {
+        var grp = this._buildElementOverlay(elementId, 0xfbbf24, 0.5);
+        if (grp) { this._geometryRoot.add(grp); this._meshElementHighlight = grp; }
+      }
+      var cid = (canvas && typeof canvas.id === 'string') ? canvas.id.replace('ve-fea-mesh-canvas-', '').replace('ve-fea-geom-canvas-', '') : '';
+      var label = document.getElementById('ve-fea-mesh-pick-label-' + cid);
+      if (label) {
+        if (elementId == null) { label.style.display = 'none'; }
+        else { label.textContent = 'Eleman #' + elementId; label.style.display = 'block'; }
+      }
+      render();
+    },
+    // Fareyle üzerine gelinen elemanı geçici (hover) vurgular.
+    hoverMeshElement: function(clientX, clientY) {
+      var md = this._meshData;
+      // Çok büyük mesh'lerde hover'ı atla (her mousemove'da O(N) maliyet).
+      if (md && md.elements && md.nodesPerElement && (md.elements.length / md.nodesPerElement) > 150000) return;
+      var eid = this.pickMeshElementFromMouse(clientX, clientY);
+      if (eid === this._hoveredMeshElement) return;
+      this._hoveredMeshElement = eid;
+      if (this._meshElementHover) {
+        this._geometryRoot.remove(this._meshElementHover);
+        this._disposeOverlay(this._meshElementHover);
+        this._meshElementHover = null;
+      }
+      if (eid != null && eid !== this._selectedMeshElement) {
+        var grp = this._buildElementOverlay(eid, 0x2dd4bf, 0.28);
+        if (grp) { this._geometryRoot.add(grp); this._meshElementHover = grp; }
+      }
+      if (canvas && canvas.style) canvas.style.cursor = (eid != null) ? 'pointer' : 'crosshair';
+      render();
+    },
+    // Seçim + hover overlay'lerini ve etiketi temizler (mod kapatılınca çağrılır).
+    clearMeshElementSelection: function() {
+      if (this._meshElementHighlight) { this._geometryRoot.remove(this._meshElementHighlight); this._disposeOverlay(this._meshElementHighlight); }
+      if (this._meshElementHover) { this._geometryRoot.remove(this._meshElementHover); this._disposeOverlay(this._meshElementHover); }
+      this._meshElementHighlight = null;
+      this._meshElementHover = null;
+      this._selectedMeshElement = null;
+      this._hoveredMeshElement = null;
+      var cid = (canvas && typeof canvas.id === 'string') ? canvas.id.replace('ve-fea-mesh-canvas-', '').replace('ve-fea-geom-canvas-', '') : '';
+      var label = document.getElementById('ve-fea-mesh-pick-label-' + cid);
+      if (label) label.style.display = 'none';
+      render();
+    },
     // Display state'ini (mod, opaklık, clip planes) yeni eklenen mesh'e uygula
     _applyDisplayState: function(mesh) {
       this._applyDisplayModeToMesh(mesh);
@@ -1412,11 +1569,11 @@ function veFEAInitViewer(canvas, opts) {
     // Face/Body pick modunda LMB seçim yapar.
     _pointerMode: 'view',  // 'view' | 'face-pick' | 'edge-pick' | 'vertex-pick' | 'body-pick' | 'box-select' | 'measure'
     setPointerMode: function(mode) {
-      if (['view', 'face-pick', 'edge-pick', 'vertex-pick', 'body-pick', 'box-select', 'measure'].indexOf(mode) < 0) mode = 'view';
+      if (['view', 'face-pick', 'edge-pick', 'vertex-pick', 'body-pick', 'box-select', 'measure', 'mesh-pick'].indexOf(mode) < 0) mode = 'view';
       this._pointerMode = mode;
       // LMB her zaman seç olduğu için view modunda da default cursor.
       // Hover sırasında pointer hit varsa _onFaceMouseMove'da 'pointer' yapılır.
-      var cursors = { 'view': 'default', 'face-pick': 'crosshair', 'edge-pick': 'crosshair', 'vertex-pick': 'crosshair', 'body-pick': 'crosshair', 'box-select': 'crosshair', 'measure': 'crosshair' };
+      var cursors = { 'view': 'default', 'face-pick': 'crosshair', 'edge-pick': 'crosshair', 'vertex-pick': 'crosshair', 'body-pick': 'crosshair', 'box-select': 'crosshair', 'measure': 'crosshair', 'mesh-pick': 'crosshair' };
       if (canvas && canvas.style) canvas.style.cursor = cursors[mode] || 'default';
       // Hit-coord overlay measure modunda aktif
       var coordDiv = document.getElementById('ve-fea-hit-coord-' + (canvas.id || '').replace('ve-fea-mesh-canvas-', '').replace('ve-fea-geom-canvas-', ''));
@@ -1733,6 +1890,11 @@ function veFEAInitViewer(canvas, opts) {
   function _onFaceMouseMove(e) {
     _updateHitCoordOverlay(e);
     if (e.buttons !== 0) return;  // orbit/pan drag sırasında hover skip
+    // Mesh eleman seçimi modu — fareyle gezilen elemanı geçici (hover) vurgula
+    if ((viewer._pointerMode || 'view') === 'mesh-pick') {
+      if (typeof viewer.hoverMeshElement === 'function') viewer.hoverMeshElement(e.clientX, e.clientY);
+      return;
+    }
     if (!viewer._faceMaterials) return;
     var fid = _raycastFaceId(e.clientX, e.clientY);
     viewer.setHoveredFace(fid);
@@ -1750,6 +1912,13 @@ function veFEAInitViewer(canvas, opts) {
     var dy = e.clientY - _faceClickStart.y;
     _faceClickStart = null;
     if (dx * dx + dy * dy > 9) return;  // drag idi
+    // Mesh eleman seçimi modu — tıklanan elemanı yakala + kalıcı vurgula
+    if ((viewer._pointerMode || 'view') === 'mesh-pick') {
+      var meid = (typeof viewer.pickMeshElementFromMouse === 'function') ? viewer.pickMeshElementFromMouse(e.clientX, e.clientY) : null;
+      if (typeof viewer.selectMeshElement === 'function') viewer.selectMeshElement(meid);
+      if (typeof veFEAOnViewerMeshElementSelected === 'function') veFEAOnViewerMeshElementSelected(meid);
+      return;
+    }
     // Önce edge/vertex picking dene — daha yakın bir line/marker bulunduysa o seçilir
     if (viewer._topologyEdges || viewer._topologyVertices) {
       var picked = _raycastEdgeOrVertex(e.clientX, e.clientY);
