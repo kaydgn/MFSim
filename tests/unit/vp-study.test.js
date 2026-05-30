@@ -109,3 +109,75 @@ describe('render yardımcıları', () => {
     expect(VP.veVPCellEditorHTML(n, 'results')).toContain('Çözüm hazır');
   });
 });
+
+describe('veVPSynthesizeTopology', () => {
+  test('preset + A2 verisinden geçerli powertrain üretir', () => {
+    const n = makeNode();
+    n.data.powertrain.preset = '6x6-heavy';
+    n.data.vehicle.mass = 24000;
+    const t = VP.veVPSynthesizeTopology(n);
+    const byType = {};
+    t.nodes.forEach((x) => { byType[x.type] = x; });
+    expect(byType.engine.data.torqueData.length).toBeGreaterThanOrEqual(2);
+    expect(byType.gearbox.data.gearRatios.length).toBeGreaterThan(1);
+    expect(byType.vehicle.data.mass).toBe(24000);       // A2 değeri preset'i ezer
+    expect(byType.differential.isMasterDiff).toBe(true);
+    expect(byType.wheel.isMasterWheel).toBe(true);
+    expect(byType.scenario).toBeTruthy();
+    expect(byType.solver).toBeTruthy();
+  });
+
+  test('zincir engine→tc→gearbox→diff→wheel olarak bağlanır', () => {
+    const n = makeNode();
+    n.data.powertrain.preset = '6x6-heavy';
+    const t = VP.veVPSynthesizeTopology(n);
+    const froms = t.connections.map((c) => c.from);
+    const tos = t.connections.map((c) => c.to);
+    expect(froms).toContain('vp-engine');
+    expect(tos).toContain('vp-wheel');
+    expect(t.connections).toHaveLength(4);
+  });
+
+  test('A2 kütle boşsa preset varsayılanı kullanılır', () => {
+    const n = makeNode();
+    n.data.powertrain.preset = '4x4-medium';
+    const t = VP.veVPSynthesizeTopology(n);
+    const veh = t.nodes.find((x) => x.type === 'vehicle');
+    expect(veh.data.mass).toBeGreaterThan(0);            // preset default
+  });
+
+  test('blok çözücü semantiği motor alanlarına çevrilir', () => {
+    const speedNode = makeNode();
+    speedNode.data.solver = { timeMode: 'speed', target: 80, method: 'rk45' };
+    const sv1 = VP.veVPSynthesizeTopology(speedNode).nodes.find((x) => x.type === 'solver');
+    expect(sv1.data.timeMode).toBe('stop');
+    expect(sv1.data.stopSpeed).toBe(80);
+
+    const timeNode = makeNode();
+    timeNode.data.solver = { timeMode: 'time', target: 30, method: 'euler' };
+    const sv2 = VP.veVPSynthesizeTopology(timeNode).nodes.find((x) => x.type === 'solver');
+    expect(sv2.data.timeMode).toBe('manual');
+    expect(sv2.data.duration).toBe(30);
+    expect(sv2.data.method).toBe('euler');
+  });
+});
+
+describe('veVPSummarize', () => {
+  test('motor sonucundan metrikleri çıkarır', () => {
+    const n = makeNode();
+    n.data.solver = { timeMode: 'speed', target: 90 };  // 90 km/s = 25 m/s
+    const result = { speed: [0, 5, 10, 27.78], time: [0, 1, 2, 3], distance: [0, 2, 8, 20] };
+    const s = VP.veVPSummarize(result, n);
+    expect(s.maxSpeedKmh).toBeCloseTo(100.0, 1);
+    expect(s.finalTime).toBe(3);
+    expect(s.distance).toBe(20);
+    expect(s.timeToTarget).toBe(3);                      // ilk speed>=25 → idx3
+    expect(s.points).toBe(4);
+  });
+
+  test('boş sonuç güvenli', () => {
+    const s = VP.veVPSummarize({}, makeNode());
+    expect(s.maxSpeedKmh).toBe(0);
+    expect(s.points).toBe(0);
+  });
+});

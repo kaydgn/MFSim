@@ -2924,4 +2924,7 @@
   border:1px solid var(--border-color, #333);
 }
 .vp-chain-arrow { color: var(--text-muted, #888); font-size:0.56rem; }
+.vp-results { width:100%; border-collapse:collapse; font-size:0.62rem; margin-top:6px; }
+.vp-results td { padding:3px 6px; border-bottom:1px solid var(--border-color, #2a2f3a); color: var(--text-secondary, #aab); }
+.vp-results td:last-child { text-align:right; font-weight:700; color: var(--text-heading, #fff); font-family:Consolas,monospace; }
 

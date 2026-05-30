@@ -3020,6 +3020,9 @@
   border:1px solid var(--border-color, #333);
 }
 .vp-chain-arrow { color: var(--text-muted, #888); font-size:0.56rem; }
+.vp-results { width:100%; border-collapse:collapse; font-size:0.62rem; margin-top:6px; }
+.vp-results td { padding:3px 6px; border-bottom:1px solid var(--border-color, #2a2f3a); color: var(--text-secondary, #aab); }
+.vp-results td:last-child { text-align:right; font-weight:700; color: var(--text-heading, #fff); font-family:Consolas,monospace; }
 
 
 </style>
@@ -33596,11 +33599,16 @@ function veFEAMeshSelfTest(opts) {
     } else if (key === 'results') {
       html += '<div class="sw-section-title">SONUÇLAR</div>';
       if (d.results) {
+        var r = d.results;
         html += '<div class="sw-chain-bar ok">✓ Çözüm hazır.</div>';
-        html += '<div class="sw-pkg-desc">Çalıştırılma: ' + _esc(d.results.ranAt || '') + '</div>';
-        if (d.results.summary) {
-          html += '<div class="sw-pkg-desc">' + _esc(d.results.summary) + '</div>';
-        }
+        html += '<table class="vp-results"><tbody>';
+        if (r.timeToTarget != null) html += '<tr><td>Hedefe ulaşma</td><td>' + _esc(r.timeToTarget) + ' s</td></tr>';
+        html += '<tr><td>Maks. hız</td><td>' + _esc(r.maxSpeedKmh) + ' km/s</td></tr>';
+        html += '<tr><td>Toplam süre</td><td>' + _esc(r.finalTime) + ' s</td></tr>';
+        html += '<tr><td>Mesafe</td><td>' + _esc(r.distance) + ' m</td></tr>';
+        html += '<tr><td>Adım sayısı</td><td>' + _esc(r.points) + '</td></tr>';
+        html += '</tbody></table>';
+        html += '<div class="sw-pkg-desc" style="margin-top:6px;">Çalıştırılma: ' + _esc(r.ranAt || '') + '</div>';
       } else {
         html += '<div class="sw-chain-bar fail">✗ Henüz çözüm yok — A4 Çözüm hücresinde çalıştırın.</div>';
       }
@@ -33661,7 +33669,119 @@ function veFEAMeshSelfTest(opts) {
     if (typeof saveState === 'function') saveState();
   }
 
-  // ─── A4 Çözüm — iterasyon 1: STUB (gerçek çözücü bağlama bir sonraki adım) ──
+  // ─── Hazır güç-aktarma şablonları (preset → tam parametre seti) ────────────
+  // Motor eğrisi, oranlar, tekerlek + araç defaultları. A2 hücresi (kütle/alan/
+  // Cd) bunların üzerine biner. Şimdilik iki şablon; 'custom'/null 6x6'ya düşer.
+  var VP_PRESETS = {
+    '6x6-heavy': {
+      engine: { governedRpm: 2100, verim: 100, torqueData: [
+        { rpm: 800, torque: 1250 }, { rpm: 1000, torque: 1650 }, { rpm: 1200, torque: 1950 },
+        { rpm: 1400, torque: 2100 }, { rpm: 1600, torque: 2100 }, { rpm: 1800, torque: 1980 },
+        { rpm: 2000, torque: 1780 }, { rpm: 2100, torque: 1620 } ] },
+      tc:      { isLocked: true, tcRatio: 1.8 },
+      gearbox: { gearRatios: [12.0, 9.0, 6.5, 4.7, 3.4, 2.5, 1.8, 1.3, 1.0], efficiency: 97 },
+      diff:    { diffRatio: 5.29, efficiency: 96 },
+      wheel:   { wheelRadius: 0.55, rollingResistance: 0.0035, rotatingMass: 0 },
+      vehicle: { mass: 26000, cd: 0.90, frontalArea: 8.0 }
+    },
+    '4x4-medium': {
+      engine: { governedRpm: 2500, verim: 100, torqueData: [
+        { rpm: 800, torque: 600 }, { rpm: 1200, torque: 850 }, { rpm: 1600, torque: 950 },
+        { rpm: 2000, torque: 920 }, { rpm: 2300, torque: 820 }, { rpm: 2500, torque: 720 } ] },
+      tc:      { isLocked: true, tcRatio: 1.6 },
+      gearbox: { gearRatios: [4.7, 3.1, 2.1, 1.4, 1.0, 0.84], efficiency: 97 },
+      diff:    { diffRatio: 4.10, efficiency: 96 },
+      wheel:   { wheelRadius: 0.42, rollingResistance: 0.012, rotatingMass: 0 },
+      vehicle: { mass: 7500, cd: 0.55, frontalArea: 4.2 }
+    }
+  };
+  function _vpPreset(d) {
+    var key = (d && d.powertrain && d.powertrain.preset) || '';
+    return VP_PRESETS[key] || VP_PRESETS['6x6-heavy'];
+  }
+  function _round(x, dp) { var p = Math.pow(10, dp || 0); return Math.round((+x || 0) * p) / p; }
+
+  // ─── Blok verisinden tam bir güç-aktarma topolojisi sentezle ───────────────
+  // Mevcut motor (veRunSimulationEngine) global nodes/connections'tan zincir
+  // çıkarır. Burada bloğun hücrelerinden geçici, tam-veri bir powertrain
+  // (engine→tc→gearbox→diff→wheel + vehicle/scenario/solver) üretilir.
+  function veVPSynthesizeTopology(node) {
+    var d = (node && node.data) || {};
+    var pt = _vpPreset(d);
+    var veh = d.vehicle || {};
+    var sc = d.scenario || {};
+    var sv = d.solver || {};
+
+    // Blok çözücü semantiği → motor çözücü alanları
+    var solverData;
+    if (sv.timeMode === 'time') {
+      solverData = { timeMode: 'manual', duration: (sv.target > 0 ? sv.target : 60),
+                     method: sv.method || 'rk45', resolution: 1000, maxSimTime: 300 };
+    } else {
+      solverData = { timeMode: 'stop', stopSpeed: (sv.target > 0 ? sv.target : 80),
+                     maxSimTime: 300, method: sv.method || 'rk45', resolution: 1000, duration: 60 };
+    }
+    var scenarioType = (sc.type === 'partial_throttle') ? 'partial_throttle' : 'full_throttle';
+
+    function N(id, type, data, extra) {
+      var n = { id: id, type: type, x: 0, y: 0, width: 65, height: 60, data: data };
+      if (extra) Object.keys(extra).forEach(function(k) { n[k] = extra[k]; });
+      return n;
+    }
+
+    var synthNodes = [
+      N('vp-engine', 'engine', {
+        torqueData: pt.engine.torqueData.map(function(p) { return { rpm: p.rpm, torque: p.torque }; }),
+        governedRpm: pt.engine.governedRpm, verim: pt.engine.verim }),
+      N('vp-tc', 'torque-converter', { isLocked: pt.tc.isLocked, tcRatio: pt.tc.tcRatio }),
+      N('vp-gearbox', 'gearbox', { gearRatios: pt.gearbox.gearRatios.slice(),
+        selectedGear: 1, efficiency: pt.gearbox.efficiency }),
+      N('vp-diff', 'differential', { diffRatio: pt.diff.diffRatio, efficiency: pt.diff.efficiency }, { isMasterDiff: true }),
+      N('vp-wheel', 'wheel', { wheelRadius: pt.wheel.wheelRadius,
+        rollingResistance: pt.wheel.rollingResistance, rotatingMass: pt.wheel.rotatingMass }, { isMasterWheel: true }),
+      N('vp-vehicle', 'vehicle', {
+        mass: (veh.mass > 0 ? veh.mass : pt.vehicle.mass),
+        cd: (veh.cd > 0 ? veh.cd : pt.vehicle.cd),
+        frontalArea: (veh.area > 0 ? veh.area : pt.vehicle.frontalArea),
+        initialSpeed: 0, autoShift: true }),
+      N('vp-scenario', 'scenario', { scenarioType: scenarioType,
+        throttle: (sc.throttle != null ? sc.throttle : 100) }),
+      N('vp-solver', 'solver', solverData)
+    ];
+    var synthConnections = [
+      { id: 'vpc1', from: 'vp-engine',  to: 'vp-tc' },
+      { id: 'vpc2', from: 'vp-tc',      to: 'vp-gearbox' },
+      { id: 'vpc3', from: 'vp-gearbox', to: 'vp-diff' },
+      { id: 'vpc4', from: 'vp-diff',    to: 'vp-wheel' }
+    ];
+    return { nodes: synthNodes, connections: synthConnections };
+  }
+
+  // ─── Motor sonucundan blok özeti çıkar ─────────────────────────────────────
+  function veVPSummarize(result, node) {
+    var d = (node && node.data) || {};
+    var speed = (result && result.speed) || [];   // m/s
+    var time  = (result && result.time)  || [];
+    var dist  = (result && result.distance) || [];
+    var maxV = 0;
+    for (var i = 0; i < speed.length; i++) { if (speed[i] > maxV) maxV = speed[i]; }
+    var out = {
+      ranAt: (new Date()).toLocaleString(),
+      maxSpeedKmh: _round(maxV * 3.6, 1),
+      finalTime: _round(time.length ? time[time.length - 1] : 0, 1),
+      distance: _round(dist.length ? dist[dist.length - 1] : 0, 0),
+      points: time.length
+    };
+    if (d.solver && d.solver.timeMode === 'speed' && d.solver.target > 0) {
+      var tgt = d.solver.target / 3.6;
+      for (var j = 0; j < speed.length; j++) {
+        if (speed[j] >= tgt) { out.timeToTarget = _round(time[j], 1); break; }
+      }
+    }
+    return out;
+  }
+
+  // ─── A4 Çözüm — gerçek motoru blok verisiyle çalıştır ──────────────────────
   function veVPRunSolve(nodeId) {
     var node = _findNode(nodeId);
     if (!node) return;
@@ -33670,14 +33790,32 @@ function veFEAMeshSelfTest(opts) {
       if (typeof showToast === 'function') showToast('Önce A1–A3 hücrelerini tamamlayın', 'warning');
       return;
     }
-    // TODO: gerçek simülasyon motoruna (solver.js / simulation-engine.js) bağla.
-    d.results = {
-      ranAt: (new Date()).toLocaleString(),
-      summary: 'Stub çözüm — gerçek motor entegrasyonu beklemede.'
-    };
+    if (typeof veRunSimulationEngine !== 'function') {
+      if (typeof showToast === 'function') showToast('Çözücü motoru henüz yüklenmedi', 'error');
+      return;
+    }
+    var synth = veVPSynthesizeTopology(node);
+    // Global nodes/connections'ı geçici olarak sentezlenen powertrain ile
+    // değiştir, motoru çalıştır, sonra MUTLAKA eski haline döndür (canvas bozulmasın).
+    var savedNodes = global.nodes, savedConns = global.connections;
+    var result = null, err = null;
+    try {
+      global.nodes = synth.nodes;
+      global.connections = synth.connections;
+      result = veRunSimulationEngine();
+    } catch (e) { err = e; }
+    finally {
+      global.nodes = savedNodes;
+      global.connections = savedConns;
+    }
+    if (err || !result) {
+      if (typeof showToast === 'function') showToast('Çözüm hatası: ' + (err ? err.message : 'sonuç yok'), 'error');
+      return;
+    }
+    d.results = veVPSummarize(result, node);
     veVPRefreshBlock(node);
     if (typeof saveState === 'function') saveState();
-    if (typeof showToast === 'function') showToast('Çözüm tamamlandı (stub)', 'success');
+    if (typeof showToast === 'function') showToast('Çözüm tamamlandı', 'success');
     veVPOpenCell(nodeId, 'results');
   }
 
@@ -33689,7 +33827,9 @@ function veFEAMeshSelfTest(opts) {
     veVPCellStatus:         veVPCellStatus,
     veVPBlockInnerHTML:     veVPBlockInnerHTML,
     veVPOverviewHTML:       veVPOverviewHTML,
-    veVPCellEditorHTML:     veVPCellEditorHTML
+    veVPCellEditorHTML:     veVPCellEditorHTML,
+    veVPSynthesizeTopology: veVPSynthesizeTopology,
+    veVPSummarize:          veVPSummarize
   };
 
   global.VP_CELLS              = VP_CELLS;
@@ -33705,6 +33845,8 @@ function veFEAMeshSelfTest(opts) {
   global.veVPOpenCell          = veVPOpenCell;
   global.veVPSetField          = veVPSetField;
   global.veVPRunSolve          = veVPRunSolve;
+  global.veVPSynthesizeTopology = veVPSynthesizeTopology;
+  global.veVPSummarize         = veVPSummarize;
   global.VPStudy               = api;
 
   if (typeof module !== 'undefined' && module.exports) {
