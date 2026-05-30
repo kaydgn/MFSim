@@ -1744,48 +1744,91 @@
 .ve-warning-item.warn{border-left:3px solid var(--accent-warning);}
 .ve-warning-item.info{border-left:3px solid var(--accent-primary);}
 
+/* Özellikler paneli: sol kenardan kayan overlay (mevcut Bileşenler sidebar'ının üstüne biner). */
 .ve-properties{
-  width:500px;
-  min-width:150px;
-  max-width:500px;
+  position:absolute;
+  left:0; top:0; bottom:0;
+  width:480px;
+  min-width:280px;
+  max-width:720px;
   background:var(--bg-secondary);
-  border-left:1px solid var(--border-color);
+  border-right:1px solid var(--border-color);
+  box-shadow:6px 0 24px var(--shadow-color);
   display:flex;
   flex-direction:column;
   overflow:hidden;
-  position:relative;
+  z-index:200;
+  transform:translateX(0);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.22s ease;
+}
+/* Gizli: tamamen ekran dışı sola kayar */
+.ve-properties.ve-prop-hidden{
+  transform:translateX(-100%);
+  opacity:0;
+  pointer-events:none;
+}
+/* Resizer ile sürüklerken geçiş kapalı (takılmayı önler) */
+.ve-properties.ve-prop-no-anim{ transition:none !important; }
+
+/* Panel başlığındaki kapatma butonu */
+.ve-properties-close{
+  margin-left:auto;
+  width:22px; height:22px;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid transparent;
+  background:transparent;
+  color:var(--text-muted);
+  cursor:pointer; padding:0; border-radius:0;
+  font-size:0.78rem;
+  transition:border-color 0.12s, background 0.12s, color 0.12s;
+}
+.ve-properties-close:hover{
+  border-color:var(--accent-danger);
+  background:var(--bg-input);
+  color:var(--accent-danger);
 }
 
-/* Açılış/kapanış yumuşak geçiş — genişlik (canvas reflow), opaklık ve kayma */
-.ve-properties{
-  transition: width 0.24s cubic-bezier(0.4, 0, 0.2, 1),
+/* Bileşen sembolü (marker): bir bileşen seçilince sol kenarda belirir */
+.ve-comp-marker{
+  position:absolute;
+  left:0; top:120px;
+  z-index:60;
+  display:none;
+  align-items:center; justify-content:center;
+  width:40px; height:40px;
+  padding:0;
+  background:var(--bg-secondary);
+  color:var(--text-primary);
+  border:1px solid var(--border-color);
+  border-left:none;
+  box-shadow:2px 2px 10px var(--shadow-color);
+  cursor:pointer;
+  transform:translateX(-100%);
+  opacity:0;
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1),
               opacity 0.2s ease,
-              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-              border-left-width 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+              background 0.15s, border-color 0.15s, color 0.15s;
 }
-/* Otomatik açılmaz: yalnızca bir bileşen seçilince görünür */
-.ve-properties.ve-prop-hidden{
-  width: 0 !important;
-  min-width: 0 !important;
-  opacity: 0;
-  transform: translateX(12px);
-  border-left-width: 0;
-  pointer-events: none;
+.ve-comp-marker.visible{
+  display:flex;
+  transform:translateX(0);
+  opacity:1;
 }
-/* Açılışta genişlik anında uygulanır (grafikler tam genişlikte çizilsin);
-   yalnızca opaklık + kayma animasyonlu olur */
-.ve-properties.ve-prop-no-width-anim{
-  transition: opacity 0.2s ease,
-              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+.ve-comp-marker:hover{
+  background:var(--bg-tertiary);
+  border-color:var(--accent-primary);
+  color:var(--accent-primary);
 }
-/* Resizer ile sürüklerken hiçbir geçiş olmasın (takılmayı önler) */
-.ve-properties.ve-prop-no-anim{
-  transition: none !important;
+.ve-comp-marker-svg{
+  display:flex; align-items:center; justify-content:center;
+  width:26px; height:26px;
 }
+.ve-comp-marker-svg svg{ width:100%; height:100%; }
 
 .ve-properties-resizer{
   position:absolute;
-  left:0;
+  right:0;            /* panel artık solda; resizer sağ kenarda (canvas tarafında) */
   top:0;
   bottom:0;
   width:6px;
@@ -3264,9 +3307,14 @@ function mfsimLogout() {
       </div>
       
       <!-- Sağ Panel - Özellikler -->
+      <!-- Bileşen sembolü: bir bileşen seçilince sol kenarda belirir, tıklayınca Özellikler paneli soldan açılır -->
+      <button id="ve-comp-marker" class="ve-comp-marker" onclick="veTogglePropertiesPanel()" title="Özellikler" aria-label="Özellikler panelini aç">
+        <span class="ve-comp-marker-svg" id="ve-comp-marker-svg"></span>
+      </button>
+
       <div class="ve-properties ve-prop-hidden" id="ve-properties">
         <div class="ve-properties-resizer" id="ve-properties-resizer"></div>
-        <div class="ve-properties-header"><span class="mf-ico mf-ico-sliders"></span>Özellikler</div>
+        <div class="ve-properties-header"><span class="mf-ico mf-ico-sliders"></span><span style="flex:1;">Özellikler</span><button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Özellikler panelini kapat">✕</button></div>
         <div class="ve-properties-content">
           <div class="ve-prop-empty">
             <div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div>
@@ -8039,11 +8087,12 @@ function veToggleSidebar(forceState) {
   document.addEventListener('mousemove', function(e) {
     if(!isResizing) return;
     
-    var dx = startX - e.clientX;
+    // Panel sol-kenara taşındı, resizer sağ kenarda: sağa sürüklemek genişletir
+    var dx = e.clientX - startX;
     var newWidth = startWidth + dx;
-    
-    newWidth = Math.max(150, Math.min(500, newWidth));
-    
+
+    newWidth = Math.max(280, Math.min(720, newWidth));
+
     properties.style.width = newWidth + 'px';
   });
   
@@ -10960,8 +11009,11 @@ function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
   var propertiesPanel = document.querySelector('.ve-properties');
   if(!content) return;
-  // Bir bileşen seçildi → paneli yumuşakça aç
-  if(typeof veRevealPropertiesPanel === 'function') veRevealPropertiesPanel();
+  // Bir bileşen seçildi → paneli OTOMATİK açma; sol kenarda bileşenin
+  // kendi sembolü (marker) belirir. Kullanıcı sembole tıklayınca panel açılır.
+  if(typeof veShowCompMarker === 'function' && node && node.def && node.def.svg) {
+    veShowCompMarker(node.def.svg);
+  }
   
   // Panel genişliğini KORUYORUZ - kullanıcı değiştirmedikçe dokunmuyoruz
   // Sadece ilk açılışta varsayılan genişlik ayarlanır
@@ -52171,41 +52223,67 @@ function veEditNodeName(nodeId) {
   });
 }
 
-// Paneli yumuşakça aç: genişlik anında uygulanır (grafikler tam genişlikte
-// çizilsin), yalnızca opaklık + kayma animasyonlu olur. Kapanış (ve-prop-hidden)
-// genişliği animasyonla daraltarak canvas'ı pürüzsüz genişletir.
-function veRevealPropertiesPanel() {
-  var panel = document.querySelector('.ve-properties');
-  if(!panel || !panel.classList.contains('ve-prop-hidden')) return;
-  panel.classList.add('ve-prop-no-width-anim');
-  panel.classList.remove('ve-prop-hidden');
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      panel.classList.remove('ve-prop-no-width-anim');
-    });
-  });
+// ─── Bileşen sembolü (sol-kenar marker) + Özellikler paneli toggle ─────────
+// Bir bileşen seçilince marker görünür; tıklanınca panel soldan kayarak açılır.
+// Eski "otomatik aç" davranışı kaldırıldı — kullanıcı sembolü tıklamadan panel
+// gelmez. Bu fonksiyonlar showNodeProperties / showMultipleSelection /
+// showEmptyProperties tarafından çağrılır.
+function veShowCompMarker(svgHtml) {
+  var m = document.getElementById('ve-comp-marker');
+  if(!m) return;
+  var slot = document.getElementById('ve-comp-marker-svg');
+  if(slot) slot.innerHTML = svgHtml || '';
+  m.classList.add('visible');
 }
+function veHideCompMarker() {
+  var m = document.getElementById('ve-comp-marker');
+  if(!m) return;
+  m.classList.remove('visible');
+}
+function veTogglePropertiesPanel(forceState) {
+  var panel = document.querySelector('.ve-properties');
+  if(!panel) return;
+  var open = (typeof forceState === 'boolean')
+    ? forceState
+    : panel.classList.contains('ve-prop-hidden');
+  panel.classList.toggle('ve-prop-hidden', !open);
+}
+// ESC: panel açıksa kapat (input/textarea içinde değilse)
+document.addEventListener('keydown', function(e) {
+  if(e.key !== 'Escape') return;
+  var t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  var panel = document.querySelector('.ve-properties');
+  if(panel && !panel.classList.contains('ve-prop-hidden')) veTogglePropertiesPanel(false);
+});
 
 function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  veRevealPropertiesPanel();
+  // Çoklu seçim için marker — küp ikonu + sayı rozeti
+  veShowCompMarker(
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>' +
+      '<polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>' +
+    '</svg>'
+  );
 
   var html = '<div style="text-align:center; padding:20px;">';
-  html += '<div style="font-size:2rem; margin-bottom:12px;">📦</div>';
+  html += '<div style="font-size:2rem; margin-bottom:12px;"><span class="mf-ico mf-ico-package"></span></div>';
   html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:8px;">' + selectedNodes.length + ' bileşen seçili</div>';
   html += '<div style="margin-top:16px;">';
   html += '<button onclick="deleteSelectedNodes()" style="width:100%; padding:8px; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.8rem;"><span class="mf-ico mf-ico-trash"></span> Seçilenleri Sil</button>';
   html += '</div>';
   html += '</div>';
-  
+
   content.innerHTML = html;
 }
 
 function showEmptyProperties() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
-  // Seçim yok → paneli gizle (otomatik açılmaz)
+  // Seçim yok → marker'ı ve paneli gizle
+  veHideCompMarker();
   var panel = document.querySelector('.ve-properties');
   if(panel) panel.classList.add('ve-prop-hidden');
 

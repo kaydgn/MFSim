@@ -398,9 +398,14 @@
       </div>
       
       <!-- Sağ Panel - Özellikler -->
+      <!-- Bileşen sembolü: bir bileşen seçilince sol kenarda belirir, tıklayınca Özellikler paneli soldan açılır -->
+      <button id="ve-comp-marker" class="ve-comp-marker" onclick="veTogglePropertiesPanel()" title="Özellikler" aria-label="Özellikler panelini aç">
+        <span class="ve-comp-marker-svg" id="ve-comp-marker-svg"></span>
+      </button>
+
       <div class="ve-properties ve-prop-hidden" id="ve-properties">
         <div class="ve-properties-resizer" id="ve-properties-resizer"></div>
-        <div class="ve-properties-header"><span class="mf-ico mf-ico-sliders"></span>Özellikler</div>
+        <div class="ve-properties-header"><span class="mf-ico mf-ico-sliders"></span><span style="flex:1;">Özellikler</span><button class="ve-properties-close" onclick="veTogglePropertiesPanel(false)" title="Kapat" aria-label="Özellikler panelini kapat">✕</button></div>
         <div class="ve-properties-content">
           <div class="ve-prop-empty">
             <div class="ve-prop-empty-icon"><span class="mf-ico mf-ico-mouse-pointer"></span></div>
