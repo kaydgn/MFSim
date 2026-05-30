@@ -630,60 +630,6 @@ describe('veFEAEditorToggleClip / veFEAEditorSetClipOffset', () => {
     expect(sliders.style.display).toBe('none');
   });
 
-  test('Kesit kontrolleri varsayılan GİZLİ + toggle butonu render edilir', () => {
-    var node = { id: 'mesh-CT', type: 'fea-mesh', data: {} };
-    global.nodes = [node];
-    veFEAOpenMeshEditor('mesh-CT');
-    var toggle = document.getElementById('ve-fea-clip-toggle-mesh-CT');
-    var panel = document.getElementById('ve-fea-clip-panel-mesh-CT');
-    expect(toggle).not.toBeNull();
-    expect(panel).not.toBeNull();
-    // Buton grubu (X/Y/Z + sıfırla) varsayılan gizli
-    expect(panel.style.display).toBe('none');
-    expect(toggle.getAttribute('data-open')).toBe('false');
-  });
-
-  test('veFEAEditorToggleClipPanel paneli açar/kapar', () => {
-    var node = { id: 'mesh-CT2', type: 'fea-mesh', data: {} };
-    global.nodes = [node];
-    veFEAOpenMeshEditor('mesh-CT2');
-    var toggle = document.getElementById('ve-fea-clip-toggle-mesh-CT2');
-    var panel = document.getElementById('ve-fea-clip-panel-mesh-CT2');
-    // Aç
-    veFEAEditorToggleClipPanel('mesh-CT2');
-    expect(panel.style.display).toBe('flex');
-    expect(toggle.getAttribute('data-open')).toBe('true');
-    // Kapat
-    veFEAEditorToggleClipPanel('mesh-CT2');
-    expect(panel.style.display).toBe('none');
-    expect(toggle.getAttribute('data-open')).toBe('false');
-    // Kapalıyken slider satırı da gizli
-    var sliders = document.getElementById('ve-fea-clip-sliders-mesh-CT2');
-    expect(sliders.style.display).toBe('none');
-  });
-
-  test('Panel kapalıyken aktif eksen olsa bile slider satırı gizli kalır', () => {
-    var node = { id: 'mesh-CT3', type: 'fea-mesh', data: {} };
-    global.nodes = [node];
-    veFEAOpenMeshEditor('mesh-CT3');
-    var mockClipState = { x: { enabled: false, offset: 0 }, y: { enabled: false, offset: 0 }, z: { enabled: false, offset: 0 } };
-    veFEAViewerRegistry['mesh-CT3'] = {
-      _clipState: mockClipState,
-      setClipPlane: function(axis, enabled, offset) {
-        mockClipState[axis].enabled = !!enabled;
-        if (typeof offset === 'number') mockClipState[axis].offset = offset;
-      },
-      getClipBoundsForAxis: function() { return { min: -10, max: 10 }; }
-    };
-    // Panel kapalı (varsayılan) iken X eksenini aktive et
-    veFEAEditorToggleClip('mesh-CT3', 'x');
-    var sliders = document.getElementById('ve-fea-clip-sliders-mesh-CT3');
-    expect(sliders.style.display).toBe('none'); // panel kapalı → gizli
-    // Paneli aç → slider satırı görünür olmalı (aktif eksen var)
-    veFEAEditorToggleClipPanel('mesh-CT3');
-    expect(sliders.style.display).toBe('flex');
-  });
-
   test('Viewer yokken toggle no-op', () => {
     var node = { id: 'mesh-C2', type: 'fea-mesh', data: {} };
     global.nodes = [node];
@@ -731,6 +677,59 @@ describe('veFEAEditorToggleClip / veFEAEditorSetClipOffset', () => {
     expect(mockClipState.x.enabled).toBe(false);
     expect(mockClipState.y.enabled).toBe(false);
     expect(mockClipState.z.enabled).toBe(false);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Görüntüleyici araç çubuğunu komple gizle/göster (Iso/F/Bk/oklar/Shaded/
+// View/ipucu/Kesit dahil tüm bölüm).
+describe('veFEAEditorToggleViewerToolbar', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+  });
+
+  test('Toolbar ve yüzen toggle butonu render edilir; toolbar varsayılan görünür', () => {
+    var node = { id: 'mesh-T1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-T1');
+    var toolbar = document.getElementById('ve-fea-viewer-toolbar-mesh-T1');
+    var toggle = document.getElementById('ve-fea-toolbar-toggle-mesh-T1');
+    expect(toolbar).not.toBeNull();
+    expect(toggle).not.toBeNull();
+    // Varsayılan görünür (inline style display set edilmemiş → '' )
+    expect(toolbar.style.display).not.toBe('none');
+  });
+
+  test('Toggle: tüm araç çubuğunu gizler ve tekrar gösterir', () => {
+    var node = { id: 'mesh-T2', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-T2');
+    var toolbar = document.getElementById('ve-fea-viewer-toolbar-mesh-T2');
+    var toggle = document.getElementById('ve-fea-toolbar-toggle-mesh-T2');
+    // Gizle
+    veFEAEditorToggleViewerToolbar('mesh-T2');
+    expect(toolbar.style.display).toBe('none');
+    expect(toggle.textContent).toBe('▾');
+    // Göster
+    veFEAEditorToggleViewerToolbar('mesh-T2');
+    expect(toolbar.style.display).toBe('flex');
+    expect(toggle.textContent).toBe('▴');
+  });
+
+  test('Toolbar gizliyken görünüm/Kesit butonları DOM\'da kalır (sadece gizli)', () => {
+    var node = { id: 'mesh-T3', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-T3');
+    veFEAEditorToggleViewerToolbar('mesh-T3');
+    // Toolbar içindeki kontroller hâlâ var (display:none olan parent içinde)
+    expect(document.getElementById('ve-fea-disp-mode-mesh-T3')).not.toBeNull();
+    expect(document.getElementById('ve-fea-clip-btn-x-mesh-T3')).not.toBeNull();
+  });
+
+  test('Toolbar yokken no-op (hata vermez)', () => {
+    expect(function() { veFEAEditorToggleViewerToolbar('yok-boyle-bir-id'); }).not.toThrow();
   });
 });
 
