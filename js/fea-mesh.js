@@ -349,15 +349,18 @@ var _VE_FEA_WEDGE6_EDGES = [
   [0, 3], [1, 4], [2, 5]   // dikey
 ];
 
-function veFEAEnrichToQuadratic(meshData) {
+// projector (opsiyonel): kuadratik mid-side düğümleri eğri yüzeye projekte eden
+// fonksiyon. İmza: projector(midX, midY, midZ, aId, bId) → [x,y,z] | null.
+// null/undefined dönerse lineer (düz kenar ortası) konum korunur.
+function veFEAEnrichToQuadratic(meshData, projector) {
   if (!meshData || meshData.error) return meshData;
-  if (meshData.type === 'tet4')   return _veFEAGenericEnrich(meshData, _VE_FEA_TET4_EDGES,  'tet10', 10);
-  if (meshData.type === 'hex8')   return _veFEAGenericEnrich(meshData, _VE_FEA_HEX8_EDGES,  'hex20', 20);
-  if (meshData.type === 'wedge6') return _veFEAGenericEnrich(meshData, _VE_FEA_WEDGE6_EDGES, 'wedge15', 15);
+  if (meshData.type === 'tet4')   return _veFEAGenericEnrich(meshData, _VE_FEA_TET4_EDGES,  'tet10', 10, projector);
+  if (meshData.type === 'hex8')   return _veFEAGenericEnrich(meshData, _VE_FEA_HEX8_EDGES,  'hex20', 20, projector);
+  if (meshData.type === 'wedge6') return _veFEAGenericEnrich(meshData, _VE_FEA_WEDGE6_EDGES, 'wedge15', 15, projector);
   return meshData; // tri3 / zaten quadratic
 }
 
-function _veFEAGenericEnrich(mesh, edgeTemplate, newType, newPerElement) {
+function _veFEAGenericEnrich(mesh, edgeTemplate, newType, newPerElement, projector) {
   var nodes = mesh.nodes;
   var elements = mesh.elements;
   var per = mesh.nodesPerElement;
@@ -373,9 +376,14 @@ function _veFEAGenericEnrich(mesh, edgeTemplate, newType, newPerElement) {
     var id = edgeMap.get(k);
     if (id !== undefined) return id;
     var newId = origNodeCount + midX.length;
-    midX.push((nodes[a * 3]     + nodes[b * 3])     / 2);
-    midY.push((nodes[a * 3 + 1] + nodes[b * 3 + 1]) / 2);
-    midZ.push((nodes[a * 3 + 2] + nodes[b * 3 + 2]) / 2);
+    var mx = (nodes[a * 3]     + nodes[b * 3])     / 2;
+    var my = (nodes[a * 3 + 1] + nodes[b * 3 + 1]) / 2;
+    var mz = (nodes[a * 3 + 2] + nodes[b * 3 + 2]) / 2;
+    if (projector) {
+      var pr = projector(mx, my, mz, a, b);
+      if (pr) { mx = pr[0]; my = pr[1]; mz = pr[2]; }
+    }
+    midX.push(mx); midY.push(my); midZ.push(mz);
     edgeMap.set(k, newId);
     return newId;
   }
@@ -562,7 +570,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   }
   // midSideNodes: lineer → quadratic (Tet4→Tet10, Hex8→Hex20, Wedge6→Wedge15)
   if (mesh && !mesh.error && opts.midSideNodes === true) {
-    mesh = veFEAEnrichToQuadratic(mesh);
+    mesh = veFEAEnrichToQuadratic(mesh, _veFEABuildSurfaceProjector(geometry, mesh));
   }
   if (mesh && !mesh.error && Array.isArray(opts.sphereOfInfluence) && opts.sphereOfInfluence.length > 0) {
     mesh = _veFEAApplySphereOfInfluence(mesh, opts.sphereOfInfluence);
