@@ -735,6 +735,59 @@ describe('veFEAEditorToggleClip / veFEAEditorSetClipOffset', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// Görüntüleyici araç çubuğunu komple gizle/göster (Iso/F/Bk/oklar/Shaded/
+// View/ipucu/Kesit dahil tüm bölüm).
+describe('veFEAEditorToggleViewerToolbar', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+  });
+
+  test('Toolbar ve yüzen toggle butonu render edilir; toolbar varsayılan görünür', () => {
+    var node = { id: 'mesh-T1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-T1');
+    var toolbar = document.getElementById('ve-fea-viewer-toolbar-mesh-T1');
+    var toggle = document.getElementById('ve-fea-toolbar-toggle-mesh-T1');
+    expect(toolbar).not.toBeNull();
+    expect(toggle).not.toBeNull();
+    // Varsayılan görünür (inline style display set edilmemiş → '' )
+    expect(toolbar.style.display).not.toBe('none');
+  });
+
+  test('Toggle: tüm araç çubuğunu gizler ve tekrar gösterir', () => {
+    var node = { id: 'mesh-T2', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-T2');
+    var toolbar = document.getElementById('ve-fea-viewer-toolbar-mesh-T2');
+    var toggle = document.getElementById('ve-fea-toolbar-toggle-mesh-T2');
+    // Gizle
+    veFEAEditorToggleViewerToolbar('mesh-T2');
+    expect(toolbar.style.display).toBe('none');
+    expect(toggle.textContent).toBe('▾');
+    // Göster
+    veFEAEditorToggleViewerToolbar('mesh-T2');
+    expect(toolbar.style.display).toBe('flex');
+    expect(toggle.textContent).toBe('▴');
+  });
+
+  test('Toolbar gizliyken görünüm/Kesit butonları DOM\'da kalır (sadece gizli)', () => {
+    var node = { id: 'mesh-T3', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-T3');
+    veFEAEditorToggleViewerToolbar('mesh-T3');
+    // Toolbar içindeki kontroller hâlâ var (display:none olan parent içinde)
+    expect(document.getElementById('ve-fea-disp-mode-mesh-T3')).not.toBeNull();
+    expect(document.getElementById('ve-fea-clip-btn-x-mesh-T3')).not.toBeNull();
+  });
+
+  test('Toolbar yokken no-op (hata vermez)', () => {
+    expect(function() { veFEAEditorToggleViewerToolbar('yok-boyle-bir-id'); }).not.toThrow();
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Accordion bölümleri', () => {
   beforeEach(() => {
     global.nodes = [];

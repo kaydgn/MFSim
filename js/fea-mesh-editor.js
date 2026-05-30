@@ -826,7 +826,7 @@ function _veFEAEditorBuildRightPanel(node) {
   // ANSYS-style view toolbar: Standart görünümler (Iso/Top/Bot/Front/Back/Left/Right)
   // + Previous/Next view (history) + Display mode + Sığdır + Kesit.
   var btnStyle = 'padding:4px 7px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; min-width:30px;';
-  var viewToolbar = '<div style="display:flex; align-items:center; gap:4px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;">' +
+  var viewToolbar = '<div id="ve-fea-viewer-toolbar-' + nid + '" style="display:flex; align-items:center; gap:4px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;">' +
     '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'fit\')" style="' + btnStyle + '" title="Tümünü pencereye sığdır">⛶</button>' +
     '<div style="display:flex; gap:0; margin-left:4px;">' +
       '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-iso\')"    style="' + btnStyle + '" title="İzometrik görünüm">Iso</button>' +
@@ -850,10 +850,31 @@ function _veFEAEditorBuildRightPanel(node) {
     // Hit-point + cursor coordinate overlay (canvas üstünde absolute)
     '<div style="flex:1; position:relative; min-height:0; background:var(--bg-tertiary);">' +
       '<canvas id="ve-fea-mesh-canvas-' + nid + '" style="display:block; width:100%; height:100%; cursor:default;"></canvas>' +
+      // Araç çubuğunu gizle/göster — canvas üstünde sağ üstte yüzen küçük buton.
+      '<button id="ve-fea-toolbar-toggle-' + nid + '" onclick="veFEAEditorToggleViewerToolbar(\'' + nid + '\')" ' +
+        'style="position:absolute; top:8px; right:8px; z-index:5; width:26px; height:22px; padding:0; font-size:0.7rem; line-height:1; ' +
+        'background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:3px; cursor:pointer; opacity:0.85;" ' +
+        'title="Araç çubuğunu gizle">▴</button>' +
       '<div id="ve-fea-hit-coord-' + nid + '" style="position:absolute; bottom:8px; left:8px; padding:4px 8px; background:rgba(0,0,0,0.65); color:#fbbf24; font-size:0.6rem; font-family:monospace; pointer-events:none; display:none; border:1px solid #444;"></div>' +
       '<div id="ve-fea-depth-stack-' + nid + '" style="position:absolute; bottom:8px; right:8px; display:none; gap:2px; flex-direction:column;"></div>' +
     '</div>';
   return panel;
+}
+
+// Görüntüleyici araç çubuğunun tamamını (görünüm/render/pointer/ipucu/Kesit)
+// gizler veya gösterir. Canvas üzerindeki yüzen buton bunu tetikler; toolbar
+// gizlenince canvas alanı büyür (ResizeObserver viewer'ı otomatik yeniden
+// boyutlandırır).
+function veFEAEditorToggleViewerToolbar(nodeId) {
+  var toolbar = document.getElementById('ve-fea-viewer-toolbar-' + nodeId);
+  var btn = document.getElementById('ve-fea-toolbar-toggle-' + nodeId);
+  if (!toolbar) return;
+  var hidden = (toolbar.style.display === 'none');
+  toolbar.style.display = hidden ? 'flex' : 'none';
+  if (btn) {
+    btn.textContent = hidden ? '▴' : '▾';
+    btn.title = hidden ? 'Araç çubuğunu gizle' : 'Araç çubuğunu göster';
+  }
 }
 
 // ANSYS-style viewer action dispatcher — toolbar button → viewer method
