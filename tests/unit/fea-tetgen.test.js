@@ -69,6 +69,22 @@ describe('TetGen — kaynak dosyaları ve build altyapısı', () => {
     expect(gi).toMatch(/vendor\/tetgen\/tetgen-wasm\.js/);
     expect(gi).toMatch(/vendor\/tetgen\/tetgen-wasm\.wasm/);
   });
+
+  test('CI workflow TetGen WASM build adımını içeriyor (test + deploy)', () => {
+    const wf = path.join(ROOT, '.github/workflows/ci-deploy.yml');
+    expect(fs.existsSync(wf)).toBe(true);
+    const yml = fs.readFileSync(wf, 'utf8');
+    // emscripten kurulumu + build:wasm:tetgen adımı her iki job'da da olmalı
+    expect(yml).toMatch(/setup-emsdk/);
+    // build:wasm:tetgen, hem test hem deploy job'ında (2 kez) çağrılır
+    const occurrences = (yml.match(/npm run build:wasm:tetgen/g) || []).length;
+    expect(occurrences).toBeGreaterThanOrEqual(2);
+    // TetGen build, monolitik "npm run build"den ÖNCE gelmeli (inline için)
+    const idxTetgen = yml.indexOf('build:wasm:tetgen');
+    const idxBuild = yml.indexOf('run: npm run build\n');
+    expect(idxTetgen).toBeGreaterThan(-1);
+    expect(idxTetgen).toBeLessThan(idxBuild);
+  });
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -140,6 +156,44 @@ describe('fea-tetgen.js — public API', () => {
   test('veFEATetgenTetrahedralize boş/geçersiz parsed için anında error döner', () => {
     return api.veFEATetgenTetrahedralize(null, {}).then(function(res) {
       expect(res.error).toBeTruthy();
+    });
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Gerçek WASM end-to-end — sadece vendor/tetgen/tetgen-wasm.js build edilmişse
+// çalışır (CI'da build:wasm:tetgen sonrası). Build yoksa graceful skip.
+describe('TetGen WASM — gerçek tetrahedralization (build varsa)', () => {
+  const wasmJs = path.join(ROOT, 'vendor/tetgen/tetgen-wasm.js');
+  const built = fs.existsSync(wasmJs);
+  const maybe = built ? test : test.skip;
+
+  maybe('küp PLC (8 köşe + 12 üçgen) → tet4 mesh üretir', () => {
+    const TetgenWasmModule = require(wasmJs);
+    const pts = [
+      0,0,0, 10,0,0, 10,10,0, 0,10,0,
+      0,0,10, 10,0,10, 10,10,10, 0,10,10
+    ];
+    const tris = [
+      0,1,2, 0,2,3,  4,5,6, 4,6,7,  0,1,5, 0,5,4,
+      3,2,6, 3,6,7,  0,3,7, 0,7,4,  1,2,6, 1,6,5
+    ];
+    const nPts = pts.length / 3, nTris = tris.length / 3, sw = 'pq1.4Q';
+    return TetgenWasmModule().then((M) => {
+      const pPts = M._malloc(nPts*3*8), pTri = M._malloc(nTris*3*4), pSw = M._malloc(sw.length+1);
+      M.HEAPF64.set(new Float64Array(pts), pPts>>3);
+      M.HEAP32.set(new Int32Array(tris), pTri>>2);
+      for (let i=0;i<sw.length;i++) M.HEAPU8[pSw+i]=sw.charCodeAt(i);
+      M.HEAPU8[pSw+sw.length]=0;
+      const h = M.ccall('tetgen_tetrahedralize','number',
+        ['number','number','number','number','number'], [pPts,nPts,pTri,nTris,pSw]);
+      M._free(pPts); M._free(pTri); M._free(pSw);
+      expect(h).toBeGreaterThan(0);
+      const outTet = M.ccall('tetgen_out_tet_count','number',['number'],[h]);
+      const npt = M.ccall('tetgen_out_nodes_per_tet','number',['number'],[h]);
+      M.ccall('tetgen_free',null,['number'],[h]);
+      expect(outTet).toBeGreaterThan(0);
+      expect(npt).toBe(4);
     });
   });
 });
