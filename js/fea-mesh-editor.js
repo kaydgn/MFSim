@@ -192,6 +192,9 @@ function veFEAOpenMeshEditor(nodeId) {
   if (!node.data.editorAccordion) node.data.editorAccordion = _veFEAEditorDefaultAccordionState();
   _veFEAEditorAccordionState = node.data.editorAccordion;
 
+  // Alttaki Özellikler modalı bu büyük editörün altında kalmasın → otomatik kapan
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
+
   // Overlay
   var overlay = document.createElement('div');
   overlay.id = 've-fea-mesh-editor-overlay';
@@ -497,7 +500,7 @@ function _veFEAEditorBuildHeader(node) {
   // "Mesh Oluştur" butonu artık ağaçtaki "Ağ Ör" düğümünde (Mesh dalı altında)
   // — header sade: başlık + kapat.
   header.innerHTML = '<div style="display:flex; align-items:center; gap:8px; min-width:0;">' +
-    '<div style="font-size:0.8rem; font-weight:700; color:var(--text-heading); white-space:nowrap;">' + titleText + '</div>' +
+    '<div style="font-size:0.72rem; font-weight:700; color:var(--text-heading); white-space:nowrap;">' + titleText + '</div>' +
     '<div style="font-size:0.6rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">— ' + nodeLabel + ' (' + node.id + ')</div>' +
     '</div>' +
     '<button onclick="veFEACloseMeshEditor()" title="Kapat (ESC)" style="flex-shrink:0; width:26px; height:26px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
