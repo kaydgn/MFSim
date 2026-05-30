@@ -690,36 +690,40 @@ describe('veFEAEditorToggleViewerToolbar', () => {
     if (_veFEAEditorActive) veFEACloseMeshEditor();
   });
 
-  test('Toolbar ve üstteki tutamak (handle) render edilir; toolbar varsayılan görünür', () => {
+  test('Toolbar ve üstteki tutamak (handle) render edilir; toolbar varsayılan GİZLİ', () => {
     var node = { id: 'mesh-T1', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     veFEAOpenMeshEditor('mesh-T1');
     var toolbar = document.getElementById('ve-fea-viewer-toolbar-mesh-T1');
     var handle = document.getElementById('ve-fea-toolbar-handle-mesh-T1');
+    var icon = document.getElementById('ve-fea-toolbar-handle-icon-mesh-T1');
     expect(toolbar).not.toBeNull();
     expect(handle).not.toBeNull();
     // Tutamak araç çubuğunun ÜSTÜNDE olmalı (DOM sırası: handle, sonra toolbar)
     var panel = document.getElementById('ve-fea-mesh-editor-right-panel');
     var kids = Array.prototype.slice.call(panel.children);
     expect(kids.indexOf(handle)).toBeLessThan(kids.indexOf(toolbar));
-    // Varsayılan görünür (inline style display set edilmemiş → '' )
-    expect(toolbar.style.display).not.toBe('none');
+    // Varsayılan gizli — editör açılınca bar kapalı gelir, chevron ▾ (kapalı)
+    expect(toolbar.style.display).toBe('none');
+    expect(icon.textContent).toBe('▾');
   });
 
-  test('Toggle: tüm araç çubuğunu gizler ve tekrar gösterir', () => {
+  test('Toggle: gizli toolbar\'ı gösterir ve tekrar gizler', () => {
     var node = { id: 'mesh-T2', type: 'fea-mesh', data: {} };
     global.nodes = [node];
     veFEAOpenMeshEditor('mesh-T2');
     var toolbar = document.getElementById('ve-fea-viewer-toolbar-mesh-T2');
     var icon = document.getElementById('ve-fea-toolbar-handle-icon-mesh-T2');
-    // Gizle
-    veFEAEditorToggleViewerToolbar('mesh-T2');
+    // Başlangıç: gizli
     expect(toolbar.style.display).toBe('none');
-    expect(icon.textContent).toBe('▾');
     // Göster
     veFEAEditorToggleViewerToolbar('mesh-T2');
     expect(toolbar.style.display).toBe('flex');
     expect(icon.textContent).toBe('▴');
+    // Tekrar gizle
+    veFEAEditorToggleViewerToolbar('mesh-T2');
+    expect(toolbar.style.display).toBe('none');
+    expect(icon.textContent).toBe('▾');
   });
 
   test('Toolbar gizliyken görünüm/Kesit butonları DOM\'da kalır (sadece gizli)', () => {
