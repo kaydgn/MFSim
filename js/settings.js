@@ -67,16 +67,15 @@ function _veSettingsRenderAppearance() {
     { id: 'cream',  name: 'Carbon' },
     { id: 'claude', name: 'Claude' }
   ];
+  var pro = [
+    { id: 'ansys',  name: 'ANSYS' },
+    { id: 'fusion', name: 'Fusion 360' },
+    { id: 'vscode', name: 'VS Code Dark+' }
+  ];
   var light = [
-    { id: 'silver', name: 'Silver' },
-    { id: 'pearl',  name: 'Pearl' },
-    { id: 'ash',    name: 'Ash' },
-    { id: 'steel',  name: 'Steel' },
-    { id: 'light',  name: 'Gunmetal' },
-    { id: 'arctic', name: 'Arctic' },
-    { id: 'sand',   name: 'Sand' },
-    { id: 'forest', name: 'Forest' },
-    { id: 'iris',   name: 'Iris' }
+    { id: 'pearl',      name: 'Pearl' },
+    { id: 'steel',      name: 'Steel' },
+    { id: 'solidworks', name: 'SolidWorks' }
   ];
   function group(label, list) {
     var h = '<div class="ve-settings-subhead">' + label + '</div>';
@@ -91,6 +90,7 @@ function _veSettingsRenderAppearance() {
   var html = '<h3 class="ve-settings-section-title">Tema</h3>';
   html += '<p class="ve-settings-desc">Uygulamanın renk paletini değiştirir. Seçim anında uygulanır ve hatırlanır.</p>';
   html += group('Koyu', dark);
+  html += group('Profesyonel', pro);
   html += group('Açık', light);
   return html;
 }

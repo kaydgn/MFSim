@@ -16,11 +16,16 @@ function changeTheme(themeId) {
   if (typeof veFEAApplyThemeToViewers === 'function') veFEAApplyThemeToViewers();
 }
 
+// Geçerli tema kimlikleri (kaldırılan/eski değerler için güvenli fallback)
+var MF_VALID_THEMES = ['slate','cream','claude','ansys','fusion','vscode','pearl','steel','solidworks'];
+
 // Kayıtlı temayı uygula (loader-sonrası yüklemede DOMContentLoaded geçmiş
 // olabilir, bu durumda hemen tetikle)
 function _veApplyStoredTheme() {
   var savedTheme = 'slate';
   try { savedTheme = localStorage.getItem('mf-theme') || 'slate'; } catch(e) {}
+  // Artık desteklenmeyen bir tema kayıtlıysa (örn. eski "auto") varsayılana dön
+  if (MF_VALID_THEMES.indexOf(savedTheme) === -1) savedTheme = 'slate';
   changeTheme(savedTheme);
 }
 if(document.readyState === 'loading') {

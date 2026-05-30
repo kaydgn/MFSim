@@ -5392,9 +5392,14 @@ function veRender3DScatter(slotIdx) {
   if(xVals.length < 2) return;
   if(placeholder) placeholder.style.display = 'none';
 
-  // Tema
-  var theme = document.documentElement.getAttribute('data-theme') || 'slate';
-  var isDark = theme !== 'light';
+  // Tema — koyu/açık tespiti arka plan parlaklığından yapılır (tema ID'sine bağlı değil)
+  var _bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-primary').trim();
+  var _bgM = _bg.match(/#?([0-9a-fA-F]{6})/);
+  var isDark = true;
+  if (_bgM) {
+    var _bgH = _bgM[1];
+    isDark = (parseInt(_bgH.substr(0,2),16) + parseInt(_bgH.substr(2,2),16) + parseInt(_bgH.substr(4,2),16)) / 3 < 128;
+  }
   var sceneBg = isDark ? 'rgb(26,28,35)' : 'rgb(248,250,252)';
   var gridColor = isDark ? 'rgba(148,163,184,0.12)' : 'rgba(100,116,139,0.12)';
   var lineColor = isDark ? 'rgba(148,163,184,0.25)' : 'rgba(100,116,139,0.25)';
