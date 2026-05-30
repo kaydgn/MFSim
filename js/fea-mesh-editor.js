@@ -826,7 +826,7 @@ function _veFEAEditorBuildRightPanel(node) {
   // ANSYS-style view toolbar: Standart görünümler (Iso/Top/Bot/Front/Back/Left/Right)
   // + Previous/Next view (history) + Display mode + Sığdır + Kesit.
   var btnStyle = 'padding:4px 7px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; min-width:30px;';
-  var viewToolbar = '<div style="display:flex; align-items:center; gap:4px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;">' +
+  var viewToolbar = '<div id="ve-fea-viewer-toolbar-' + nid + '" style="display:flex; align-items:center; gap:4px; padding:6px 10px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;">' +
     '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'fit\')" style="' + btnStyle + '" title="Tümünü pencereye sığdır">⛶</button>' +
     '<div style="display:flex; gap:0; margin-left:4px;">' +
       '<button onclick="veFEAEditorViewerAction(\'' + nid + '\',\'view-iso\')"    style="' + btnStyle + '" title="İzometrik görünüm">Iso</button>' +
@@ -846,7 +846,18 @@ function _veFEAEditorBuildRightPanel(node) {
     '<span style="font-size:0.55rem; color:var(--text-muted); margin-left:6px;">LMB: seç · MMB: döndür · RMB: pan · wheel: zoom</span>' +
     clipUI +
     '</div>';
-  panel.innerHTML = viewToolbar +
+  // Araç çubuğunu gizle/göster — çubuğun ÜSTÜNDE ince, tam genişlikte tutamak.
+  // Geniş tıklama hedefi + hover geri bildirimi ile kolay kullanım. Ortadaki
+  // chevron araç çubuğunun açık/kapalı olduğunu gösterir (▴ açık, ▾ kapalı).
+  var toolbarHandle = '<div id="ve-fea-toolbar-handle-' + nid + '" onclick="veFEAEditorToggleViewerToolbar(\'' + nid + '\')" ' +
+    'title="Araç çubuğunu gizle" ' +
+    'style="display:flex; align-items:center; justify-content:center; height:15px; flex-shrink:0; cursor:pointer; ' +
+    'background:var(--bg-secondary); border-bottom:1px solid var(--border-color); color:var(--text-muted); ' +
+    'font-size:0.62rem; line-height:1; letter-spacing:2px; transition:background 0.15s, color 0.15s;" ' +
+    'onmouseover="this.style.background=\'var(--bg-tertiary)\';this.style.color=\'var(--text-primary)\';" ' +
+    'onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-muted)\';">' +
+    '<span id="ve-fea-toolbar-handle-icon-' + nid + '">▴</span></div>';
+  panel.innerHTML = toolbarHandle + viewToolbar +
     // Hit-point + cursor coordinate overlay (canvas üstünde absolute)
     '<div style="flex:1; position:relative; min-height:0; background:var(--bg-tertiary);">' +
       '<canvas id="ve-fea-mesh-canvas-' + nid + '" style="display:block; width:100%; height:100%; cursor:default;"></canvas>' +
@@ -854,6 +865,22 @@ function _veFEAEditorBuildRightPanel(node) {
       '<div id="ve-fea-depth-stack-' + nid + '" style="position:absolute; bottom:8px; right:8px; display:none; gap:2px; flex-direction:column;"></div>' +
     '</div>';
   return panel;
+}
+
+// Görüntüleyici araç çubuğunun tamamını (görünüm/render/pointer/ipucu/Kesit)
+// gizler veya gösterir. Canvas üzerindeki yüzen buton bunu tetikler; toolbar
+// gizlenince canvas alanı büyür (ResizeObserver viewer'ı otomatik yeniden
+// boyutlandırır).
+function veFEAEditorToggleViewerToolbar(nodeId) {
+  var toolbar = document.getElementById('ve-fea-viewer-toolbar-' + nodeId);
+  var handle = document.getElementById('ve-fea-toolbar-handle-' + nodeId);
+  var icon = document.getElementById('ve-fea-toolbar-handle-icon-' + nodeId);
+  if (!toolbar) return;
+  var hidden = (toolbar.style.display === 'none');
+  toolbar.style.display = hidden ? 'flex' : 'none';
+  // ▴ = araç çubuğu açık (tıkla → gizle), ▾ = kapalı (tıkla → göster)
+  if (icon) icon.textContent = hidden ? '▴' : '▾';
+  if (handle) handle.title = hidden ? 'Araç çubuğunu gizle' : 'Araç çubuğunu göster';
 }
 
 // ANSYS-style viewer action dispatcher — toolbar button → viewer method
@@ -921,18 +948,12 @@ function _veFEAEditorRefreshHistoryButtons(nodeId) {
   if (nextBtn) nextBtn.style.opacity = viewer.canGoNextView     && viewer.canGoNextView()     ? '1' : '0.4';
 }
 
-// Kesit (clipping plane) UI — varsayılan GİZLİ; toolbar'daki "Kesit" toggle
-// butonuyla açılır/kapanır. Her eksen için: toggle button + slider (gizli,
-// aktif olunca görünür). Slider'lar bbox'a göre min/max alır;
+// Kesit (clipping plane) UI — toolbar inline. Her eksen için: toggle button
+// + slider (gizli, aktif olunca görünür). Slider'lar bbox'a göre min/max alır;
 // veFEAEditorRefreshClipBounds mesh oluştuktan sonra çağrılır (bounds güncelle).
 function _veFEAEditorBuildClipControls(nid) {
-  // Toggle butonu — sağa yaslı (margin-left:auto). Kesit panelini açar/kapar.
-  var html = '<button id="ve-fea-clip-toggle-' + nid + '" data-open="false" ' +
-    'onclick="veFEAEditorToggleClipPanel(\'' + nid + '\')" ' +
-    'style="padding:4px 8px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer; margin-left:auto;" ' +
-    'title="Kesit (kesit düzlemi) kontrollerini göster/gizle">✂ Kesit</button>';
-  // Buton grubu (X/Y/Z + sıfırla) — varsayılan gizli, toggle ile açılır.
-  html += '<div id="ve-fea-clip-panel-' + nid + '" style="display:none; align-items:center; gap:4px; border-left:1px solid var(--border-color); padding-left:8px;">';
+  var html = '<div style="display:flex; align-items:center; gap:4px; border-left:1px solid var(--border-color); padding-left:8px; margin-left:auto;">' +
+    '<span style="font-size:0.58rem; color:var(--text-muted); margin-right:2px;">Kesit:</span>';
   ['x', 'y', 'z'].forEach(function(axis) {
     var up = axis.toUpperCase();
     html += '<button id="ve-fea-clip-btn-' + axis + '-' + nid + '" onclick="veFEAEditorToggleClip(\'' + nid + '\', \'' + axis + '\')" ' +
@@ -957,34 +978,6 @@ function _veFEAEditorBuildClipControls(nid) {
   });
   html += '</div>';
   return html;
-}
-
-// Kesit panelini aç/kapa. Kapalıyken X/Y/Z butonları ve slider satırı gizli;
-// açıkken butonlar görünür, slider'lar aktif eksene göre _veFEAEditorRefreshClipUI
-// tarafından yönetilir. Kesit state'i (aktif düzlemler) panel kapansa da korunur.
-function veFEAEditorToggleClipPanel(nodeId) {
-  var btn = document.getElementById('ve-fea-clip-toggle-' + nodeId);
-  var panel = document.getElementById('ve-fea-clip-panel-' + nodeId);
-  if (!btn || !panel) return;
-  var open = btn.getAttribute('data-open') !== 'true';
-  btn.setAttribute('data-open', open ? 'true' : 'false');
-  panel.style.display = open ? 'flex' : 'none';
-  // Toggle butonu açıkken vurgulu görünür.
-  btn.style.background = open ? 'var(--accent-primary)' : 'var(--bg-tertiary)';
-  btn.style.color = open ? '#fff' : 'var(--text-primary)';
-  btn.style.borderColor = open ? 'var(--accent-primary)' : 'var(--border-color)';
-  if (open) {
-    _veFEAEditorRefreshClipUI(nodeId);
-  } else {
-    var sliders = document.getElementById('ve-fea-clip-sliders-' + nodeId);
-    if (sliders) sliders.style.display = 'none';
-  }
-}
-
-// Kesit panelinin açık olup olmadığını döner (slider görünürlüğü buna bağlı).
-function _veFEAEditorClipPanelOpen(nodeId) {
-  var btn = document.getElementById('ve-fea-clip-toggle-' + nodeId);
-  return !!(btn && btn.getAttribute('data-open') === 'true');
 }
 
 // Kesit aksı toggle: button aktifse off et, değilse aç. Slider satırını da güncelle.
@@ -1061,12 +1054,8 @@ function _veFEAEditorRefreshClipUI(nodeId) {
       if (label) label.textContent = st.offset.toFixed(1) + ' mm';
     }
   });
-  // Slider satırı yalnızca panel açıkken VE en az bir eksen aktifken görünür.
   var slidersContainer = document.getElementById('ve-fea-clip-sliders-' + nodeId);
-  if (slidersContainer) {
-    var show = anyEnabled && _veFEAEditorClipPanelOpen(nodeId);
-    slidersContainer.style.display = show ? 'flex' : 'none';
-  }
+  if (slidersContainer) slidersContainer.style.display = anyEnabled ? 'flex' : 'none';
 }
 
 // ─── DİKEY RESIZE HANDLE (sol panel genişliği) ─────────────────────────────

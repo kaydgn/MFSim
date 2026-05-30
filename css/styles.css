@@ -20,26 +20,6 @@
       --shadow-color: rgba(0, 0, 0, 0.6);
     }
     
-    /* Tema: Gunmetal */
-    [data-theme="light"] {
-      --bg-primary: #e8eaed;
-      --bg-secondary: #f1f3f5;
-      --bg-tertiary: #dcdfe3;
-      --bg-input: #f8f9fa;
-      --border-color: #c4c9d0;
-      --border-light: #d5d9e0;
-      --border-hover: #9aa0ab;
-      --text-primary: #1a1d23;
-      --text-secondary: #4a5060;
-      --text-muted: #8590a2;
-      --text-heading: #0d0f13;
-      --accent-primary: #1d4ed8;
-      --accent-success: #15803d;
-      --accent-warning: #b45309;
-      --accent-danger: #b91c1c;
-      --shadow-color: rgba(0, 0, 0, 0.12);
-    }
-    
     /* Tema: Karbon */
     [data-theme="cream"] {
       --bg-primary: #161616;
@@ -60,126 +40,6 @@
       --shadow-color: rgba(0, 0, 0, 0.5);
     }
     
-    /* Tema: Arctic — Soğuk beyaz, mavi aksanlar */
-    [data-theme="arctic"] {
-      --bg-primary: #f4f7fa;
-      --bg-secondary: #ffffff;
-      --bg-tertiary: #eaeff5;
-      --bg-input: #ffffff;
-      --border-color: #d0d7e2;
-      --border-light: #dfe5ed;
-      --border-hover: #a8b5c8;
-      --text-primary: #1e293b;
-      --text-secondary: #475569;
-      --text-muted: #94a3b8;
-      --text-heading: #0f172a;
-      --accent-primary: #2563eb;
-      --accent-success: #16a34a;
-      --accent-warning: #d97706;
-      --accent-danger: #dc2626;
-      --shadow-color: rgba(15, 23, 42, 0.08);
-    }
-    
-    /* Tema: Sand — Sıcak kum tonları */
-    [data-theme="sand"] {
-      --bg-primary: #faf6f1;
-      --bg-secondary: #fff8f0;
-      --bg-tertiary: #f0ebe4;
-      --bg-input: #fffcf8;
-      --border-color: #ddd5cb;
-      --border-light: #e8e0d6;
-      --border-hover: #b8ad9f;
-      --text-primary: #2c2418;
-      --text-secondary: #5c5040;
-      --text-muted: #9a8e7e;
-      --text-heading: #1a1108;
-      --accent-primary: #b45309;
-      --accent-success: #15803d;
-      --accent-warning: #c2410c;
-      --accent-danger: #b91c1c;
-      --shadow-color: rgba(44, 36, 24, 0.08);
-    }
-    
-    /* Tema: Forest — Yeşil doğa tonları */
-    [data-theme="forest"] {
-      --bg-primary: #f2f7f4;
-      --bg-secondary: #f8fbf9;
-      --bg-tertiary: #e6efe9;
-      --bg-input: #fcfefb;
-      --border-color: #c4d9cd;
-      --border-light: #d4e4db;
-      --border-hover: #8fb5a0;
-      --text-primary: #1a2e22;
-      --text-secondary: #3d5c4a;
-      --text-muted: #7fa18d;
-      --text-heading: #0c1a12;
-      --accent-primary: #0d7c3e;
-      --accent-success: #0a8a41;
-      --accent-warning: #b45309;
-      --accent-danger: #c62828;
-      --shadow-color: rgba(12, 46, 24, 0.07);
-    }
-    
-    /* Tema: Iris — Mor/Lavanta tonları */
-    [data-theme="iris"] {
-      --bg-primary: #f5f3fa;
-      --bg-secondary: #fbfaff;
-      --bg-tertiary: #ebe7f4;
-      --bg-input: #fefeff;
-      --border-color: #d0c8e4;
-      --border-light: #ddd6ed;
-      --border-hover: #a899c8;
-      --text-primary: #22183a;
-      --text-secondary: #4e3f6e;
-      --text-muted: #8c7eae;
-      --text-heading: #150e28;
-      --accent-primary: #7c3aed;
-      --accent-success: #16a34a;
-      --accent-warning: #d97706;
-      --accent-danger: #dc2626;
-      --shadow-color: rgba(34, 24, 58, 0.08);
-    }
-    
-    /* Tema: Silver — Figma/Linear tarzı temiz gümüş */
-    [data-theme="silver"] {
-      --bg-primary: #f7f8fa;
-      --bg-secondary: #ffffff;
-      --bg-tertiary: #eef0f4;
-      --bg-input: #ffffff;
-      --border-color: #d4d8e1;
-      --border-light: #e2e5ec;
-      --border-hover: #b0b7c5;
-      --text-primary: #1a1f2e;
-      --text-secondary: #525b6e;
-      --text-muted: #8d95a5;
-      --text-heading: #0e1320;
-      --accent-primary: #4f7df5;
-      --accent-success: #18a04e;
-      --accent-warning: #e08c13;
-      --accent-danger: #e03e3e;
-      --shadow-color: rgba(0, 0, 0, 0.07);
-    }
-
-    /* Tema: Ash — VS Code Light+ tarzı sıcak kül gri */
-    [data-theme="ash"] {
-      --bg-primary: #f5f5f3;
-      --bg-secondary: #fafaf8;
-      --bg-tertiary: #eaeae7;
-      --bg-input: #fefefe;
-      --border-color: #d5d5d0;
-      --border-light: #e0e0dc;
-      --border-hover: #b5b5ae;
-      --text-primary: #222220;
-      --text-secondary: #555550;
-      --text-muted: #8a8a82;
-      --text-heading: #111110;
-      --accent-primary: #4a7fc7;
-      --accent-success: #3a8a4e;
-      --accent-warning: #c48820;
-      --accent-danger: #c44040;
-      --shadow-color: rgba(0, 0, 0, 0.08);
-    }
-
     /* Tema: Pearl — Notion/Apple tarzı inci beyaz */
     [data-theme="pearl"] {
       --bg-primary: #fafbfc;
@@ -240,37 +100,168 @@
       --shadow-color: rgba(0, 0, 0, 0.4);
     }
 
+    /* Tema: ANSYS — Koyu mavi-gri mühendislik, altın aksan */
+    [data-theme="ansys"] {
+      --bg-primary: #1a2632;
+      --bg-secondary: #213140;
+      --bg-tertiary: #2a3d4f;
+      --bg-input: #14202b;
+      --border-color: #314557;
+      --border-light: #3a5168;
+      --border-hover: #4a647d;
+      --text-primary: #d4dde6;
+      --text-secondary: #8ea3b5;
+      --text-muted: #5d7589;
+      --text-heading: #eaf1f7;
+      --accent-primary: #ffb71b;
+      --accent-success: #3fa845;
+      --accent-warning: #e8920c;
+      --accent-danger: #e04a4a;
+      --shadow-color: rgba(0, 0, 0, 0.45);
+    }
+
+    /* Tema: Fusion 360 — Autodesk koyu kömür, camgöbeği aksan */
+    [data-theme="fusion"] {
+      --bg-primary: #2b2e32;
+      --bg-secondary: #33373c;
+      --bg-tertiary: #3c4147;
+      --bg-input: #242629;
+      --border-color: #44494f;
+      --border-light: #4e545b;
+      --border-hover: #626a72;
+      --text-primary: #d9dde1;
+      --text-secondary: #9aa0a7;
+      --text-muted: #6a7079;
+      --text-heading: #f0f2f4;
+      --accent-primary: #0696d7;
+      --accent-success: #4caf50;
+      --accent-warning: #e8920c;
+      --accent-danger: #e25141;
+      --shadow-color: rgba(0, 0, 0, 0.5);
+    }
+
+    /* Tema: VS Code Dark+ — Klasik editör koyusu, mavi aksan */
+    [data-theme="vscode"] {
+      --bg-primary: #1e1e1e;
+      --bg-secondary: #252526;
+      --bg-tertiary: #2d2d2d;
+      --bg-input: #3c3c3c;
+      --border-color: #333333;
+      --border-light: #3c3c3c;
+      --border-hover: #5a5a5a;
+      --text-primary: #d4d4d4;
+      --text-secondary: #9d9d9d;
+      --text-muted: #6a6a6a;
+      --text-heading: #ffffff;
+      --accent-primary: #007acc;
+      --accent-success: #4ec9b0;
+      --accent-warning: #cca700;
+      --accent-danger: #f14c4c;
+      --shadow-color: rgba(0, 0, 0, 0.5);
+    }
+
+    /* Tema: SolidWorks — Açık mavi-gri, SolidWorks kırmızı aksan */
+    [data-theme="solidworks"] {
+      --bg-primary: #e9eef3;
+      --bg-secondary: #f2f5f8;
+      --bg-tertiary: #dde4ec;
+      --bg-input: #ffffff;
+      --border-color: #c3cdd9;
+      --border-light: #d2dae3;
+      --border-hover: #9aa8b8;
+      --text-primary: #1c2733;
+      --text-secondary: #4a5868;
+      --text-muted: #7e8c9c;
+      --text-heading: #0f1822;
+      --accent-primary: #d51820;
+      --accent-success: #2e8b3d;
+      --accent-warning: #d98314;
+      --accent-danger: #b01218;
+      --shadow-color: rgba(20, 30, 45, 0.10);
+    }
+
     /* Tema Seçici Stilleri */
     .theme-selector {
       display: flex;
       align-items: center;
       gap: 4px;
     }
-    
-    .theme-selector-label {
-      font-size: 0.65rem;
+
+    /* Tema butonu — palet ikonu, tıklayınca menü açılır */
+    .ve-theme-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      background: transparent;
       color: var(--text-secondary);
+      border: 1px solid transparent;
+      border-radius: 0;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
     }
-    
-    .theme-selector select {
-      background: var(--bg-input);
-      color: var(--text-primary);
+    .ve-theme-btn:hover {
+      border-color: var(--border-color);
+      background: var(--bg-tertiary);
+      color: var(--accent-primary);
+    }
+
+    /* Tema menüsü (dropdown) */
+    .ve-theme-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;                /* sağa hizalı — buton sağ üstte */
+      min-width: 160px;
+      background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 0;
-      padding: 2px 6px;
-      font-size: 0.65rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 999999;
+      padding: 4px 0;
+      margin-top: 2px;
+    }
+    .ve-theme-menu-group {
+      font-size: 0.55rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 6px 12px 3px;
+      user-select: none;
+    }
+    .ve-theme-menu-item {
+      position: relative;
+      padding: 6px 12px 6px 28px;   /* sol: ✓ için yer */
+      font-size: 0.7rem;
+      color: var(--text-primary);
       cursor: pointer;
-      outline: none;
-      transition: border-color 0.15s;
+      transition: background 0.12s, color 0.12s;
+      white-space: nowrap;
     }
-    
-    .theme-selector select:hover {
-      border-color: var(--border-hover);
+    .ve-theme-menu-item:hover {
+      background: var(--accent-primary);
+      color: #fff;
     }
-    
-    .theme-selector select:focus {
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    /* Aktif (seçili) tema: yanına ✓ */
+    .ve-theme-menu-item.active::before {
+      content: '✓';
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent-success);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .ve-theme-menu-item.active:hover::before {
+      color: #fff;
+    }
+    .ve-theme-menu-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 4px 8px;
     }
 
     /* ===== LOGIN EKRANI ===== */
@@ -540,6 +531,13 @@
   overflow:hidden;
   min-height:0;
   position:relative;
+}
+
+/* Modül seçim overlay'i görünürken sidebar + açma rayı tamamen gizlenir.
+   Sınıf veObserveModuleOverlay() tarafından otomatik yönetilir. */
+.ve-main.ve-no-module .ve-sidebar,
+.ve-main.ve-no-module .ve-sidebar-reveal{
+  display:none !important;
 }
 
 .ve-sidebar{
@@ -813,6 +811,7 @@
   min-width:0;
   background:var(--bg-primary);
   overflow:hidden;
+  position:relative;          /* marker (sol-kenar) absolute olarak buna göre konumlanır */
 }
 
 .ve-file-menu{
@@ -1705,17 +1704,20 @@
   color:var(--accent-danger);
 }
 
-/* Bileşen sembolü (marker): bir bileşen seçilince sol kenarda belirir */
+/* Bileşen sembolü (marker): canvas sol kenarında belirir.
+   Boyut/şekil olarak sidebar-reveal'ın TIPATIP aynası; tam altında durur. */
 .ve-comp-marker{
   position:absolute;
-  left:0; top:120px;
+  left:0;
+  top:107px;                   /* sidebar-reveal (40 + ~59 = 99 alt) ile arasında ~8px estetik boşluk */
   z-index:60;
   display:none;
-  align-items:center; justify-content:center;
-  width:40px; height:40px;
-  padding:0;
+  flex-direction:column;
+  align-items:center;
+  gap:7px;
+  padding:9px 7px;             /* sidebar-reveal ile birebir aynı */
   background:var(--bg-secondary);
-  color:var(--text-primary);
+  color:var(--text-secondary);
   border:1px solid var(--border-color);
   border-left:none;
   box-shadow:2px 2px 10px var(--shadow-color);
@@ -1733,14 +1735,30 @@
 }
 .ve-comp-marker:hover{
   background:var(--bg-tertiary);
-  border-color:var(--accent-primary);
   color:var(--accent-primary);
+  border-color:var(--accent-primary);
 }
 .ve-comp-marker-svg{
   display:flex; align-items:center; justify-content:center;
-  width:26px; height:26px;
+  width:18px; height:18px;     /* sidebar-reveal'in cube ikonuyla aynı kefede */
 }
-.ve-comp-marker-svg svg{ width:100%; height:100%; }
+.ve-comp-marker-svg svg{ width:100%; height:100%; color:currentColor; }
+.ve-comp-marker-arrow{ font-size:0.78rem; opacity:0.55; }
+.ve-comp-marker:hover .ve-comp-marker-arrow{ opacity:1; }
+
+/* Yeni bileşen düşünce dikkat çek: kenarlık temaya uygun aksan renginde yanıp söner */
+@keyframes ve-marker-flash{
+  0%, 100%{
+    border-color:var(--border-color);
+    box-shadow:2px 2px 10px var(--shadow-color);
+  }
+  50%{
+    border-color:var(--accent-primary);
+    box-shadow:0 0 14px color-mix(in srgb, var(--accent-primary) 70%, transparent),
+               2px 2px 10px var(--shadow-color);
+  }
+}
+.ve-comp-marker.flash{ animation:ve-marker-flash 0.55s ease-in-out 3; }
 
 .ve-properties-resizer{
   position:absolute;
