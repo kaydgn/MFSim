@@ -2672,6 +2672,23 @@
 #tab-bar #ve-deploy-dot,
 #tab-bar #ve-deploy-refresh { display: none !important; }
 
+/* Proje menüsü item'larında güncelleme rozeti (kırmızı nokta + parlama) */
+.ve-menu-item { position: relative; display: flex; align-items: center; gap: 4px; }
+.ve-menu-badge {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: var(--accent-danger);
+  border-radius: 50%;
+  margin-left: auto;
+  box-shadow: 0 0 6px var(--accent-danger);
+  animation: ve-menu-badge-pulse 2s ease-in-out infinite;
+}
+@keyframes ve-menu-badge-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.65; transform: scale(0.85); }
+}
+
 /* Program Durumu — açılır-kapanır commit listesi */
 .ve-status-commit-list {
   list-style: none;
@@ -3192,7 +3209,7 @@ function mfsimLogout() {
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
       <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="veOpenStatusModal()"><span class="mf-ico mf-ico-refresh"></span> Program Durumu</div>
+      <div class="ve-menu-item" onclick="veOpenStatusModal()"><span class="mf-ico mf-ico-refresh"></span> Program Durumu<span class="ve-menu-badge" id="ve-status-menu-badge" style="display:none;" title="Yeni güncelleme mevcut"></span></div>
       <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
@@ -4085,8 +4102,28 @@ function veOpenStatusModal() {
   if(!ov) return;
   ov.style.display = 'flex';
   _veStatusRender();
+  // Menü rozetini kaldır — kullanıcı modalı açtı, gördü
+  var badge = document.getElementById('ve-status-menu-badge');
+  if(badge) badge.style.display = 'none';
   document.addEventListener('keydown', _veStatusEscHandler);
 }
+
+// Güncelleme rozeti: deploy-status.js dot'unun class'ını izle.
+// "ve-deploy-update-available" eklenince menü item'ında kırmızı nokta belirir.
+(function _veStatusInitBadgeWatcher() {
+  function attach() {
+    var dot = document.getElementById('ve-deploy-dot');
+    var badge = document.getElementById('ve-status-menu-badge');
+    if(!dot || !badge) { setTimeout(attach, 500); return; }
+    function sync() {
+      var hasUpdate = dot.classList.contains('ve-deploy-update-available');
+      badge.style.display = hasUpdate ? 'inline-block' : 'none';
+    }
+    sync();
+    new MutationObserver(sync).observe(dot, { attributes: true, attributeFilter: ['class'] });
+  }
+  attach();
+})();
 
 function veCloseStatusModal() {
   var ov = document.getElementById('ve-status-overlay');
@@ -4185,8 +4222,28 @@ function _veStatusLoadCommits() {
         el.innerHTML = '<div style="color:var(--text-muted);font-size:0.72rem;">Commit bulunamadı.</div>';
         return;
       }
-      var html = '<ul class="ve-status-commit-list">';
-      commits.forEach(function(c, i) {
+      // Tarihe göre grupla: Bugün / Dün / Bu hafta / Eski
+      var now = new Date();
+      var todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      var yesterdayStart = todayStart - 86400000;
+      var weekStart = todayStart - 7 * 86400000;
+      var groups = { today: [], yesterday: [], thisWeek: [], older: [] };
+      commits.forEach(function(c) {
+        var d = c.commit && c.commit.author && c.commit.author.date;
+        if(!d) { groups.older.push(c); return; }
+        var t = new Date(d).getTime();
+        if(t >= todayStart) groups.today.push(c);
+        else if(t >= yesterdayStart) groups.yesterday.push(c);
+        else if(t >= weekStart) groups.thisWeek.push(c);
+        else groups.older.push(c);
+      });
+      var groupLabels = { today: 'Bugün', yesterday: 'Dün', thisWeek: 'Bu hafta', older: 'Eski' };
+      var html = '';
+      ['today','yesterday','thisWeek','older'].forEach(function(key) {
+        if(!groups[key].length) return;
+        html += '<div class="ve-settings-subhead" style="margin-top:14px;">' + groupLabels[key] + '</div>';
+        html += '<ul class="ve-status-commit-list">';
+        groups[key].forEach(function(c) {
         var fullMsg = (c.commit && c.commit.message) || '';
         var lines = fullMsg.split('\n');
         var subject = lines[0];
@@ -4201,8 +4258,8 @@ function _veStatusLoadCommits() {
         var date = c.commit && c.commit.author && c.commit.author.date;
         var dateStr = date ? new Date(date).toLocaleString('tr-TR') : '';
 
-        html += '<li class="ve-status-commit" data-idx="' + i + '">';
-        html += '<div class="ve-status-commit-row" onclick="_veStatusToggleCommit(' + i + ')">';
+        html += '<li class="ve-status-commit" data-sha="' + fullSha + '">';
+        html += '<div class="ve-status-commit-row" onclick="_veStatusToggleCommit(\'' + fullSha + '\')">';
         html += '<span class="ve-status-commit-arrow">▸</span>';
         html += '<code class="ve-status-commit-sha">' + sha + '</code>';
         html += '<span class="ve-status-commit-msg">' + _veStatusEsc(subjectShort) + '</span>';
@@ -4222,8 +4279,9 @@ function _veStatusLoadCommits() {
         html += '<div class="ve-status-commit-actions"><a href="' + url + '" target="_blank" rel="noopener" class="ve-settings-btn"><span class="mf-ico mf-ico-link"></span> GitHub\'da Aç</a></div>';
         html += '</div>';
         html += '</li>';
+        });
+        html += '</ul>';
       });
-      html += '</ul>';
       el.innerHTML = html;
     })
     .catch(function(e) {
@@ -4232,8 +4290,8 @@ function _veStatusLoadCommits() {
     });
 }
 
-function _veStatusToggleCommit(idx) {
-  var li = document.querySelector('.ve-status-commit[data-idx="' + idx + '"]');
+function _veStatusToggleCommit(sha) {
+  var li = document.querySelector('.ve-status-commit[data-sha="' + sha + '"]');
   if(li) li.classList.toggle('expanded');
 }
 
