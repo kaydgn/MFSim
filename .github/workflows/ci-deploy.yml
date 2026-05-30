@@ -16,6 +16,9 @@ concurrency:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  # TetGen WASM (AGPL-3.0) toolchain sürümü — emsdk cache anahtarı.
+  # Yerelde bu sürümle (emcc 5.0.7) derlenip doğrulandı; CI ile hizalı tutulur.
+  EMSDK_VERSION: '5.0.7'
 
 jobs:
   test:
@@ -30,6 +33,21 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # ── TetGen WASM (AGPL-3.0) — emscripten ile derle ────────────────────
+      # Cache'li emsdk: ilk çalıştırmada indirir (~300MB), sonra cache'ten gelir.
+      # build:wasm:tetgen, vendor/tetgen/tetgen-wasm.{js,wasm} üretir; sonraki
+      # "npm run build" bunları MFSim_Code.html'e inline eder.
+      # AGPL NOTU: WASM dağıtıldığında AGPL-3.0 yükümlülükleri tetiklenir
+      # (vendor/tetgen/NOTICE.md). Bu opt-in CI adımı bilinçli bir karardır.
+      - name: Setup emscripten (TetGen WASM)
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Build TetGen WASM (AGPL-3.0, opt-in)
+        run: npm run build:wasm:tetgen
 
       - name: Build
         run: npm run build
@@ -54,6 +72,17 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # TetGen WASM'ı deploy build'inde de üret → canlı sitede "● aktif".
+      # AGPL-3.0: yayınlanan site bu yükümlülüklere tabidir (NOTICE.md).
+      - name: Setup emscripten (TetGen WASM)
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: ${{ env.EMSDK_VERSION }}
+          actions-cache-folder: 'emsdk-cache'
+
+      - name: Build TetGen WASM (AGPL-3.0, opt-in)
+        run: npm run build:wasm:tetgen
 
       - name: Build (GITHUB_RUN_ID deploy-status.js'e gömülür)
         run: npm run build
