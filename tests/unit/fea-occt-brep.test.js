@@ -162,6 +162,42 @@ maybe('OCCT BREP topoloji çıkarımı (gerçek WASM)', () => {
     expect(r.report.nowValid).toBe(true);
   });
 
+  test('Wire/Shell/Solid hiyerarşisi (Faz 4): kutu 1 solid + 1 shell + 6 wire', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 20, 30).Shape();
+    const t = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    expect(Array.isArray(t.solids)).toBe(true);
+    expect(Array.isArray(t.shells)).toBe(true);
+    expect(Array.isArray(t.wires)).toBe(true);
+    expect(t.solids.length).toBe(1);
+    expect(t.shells.length).toBe(1);
+    expect(t.wires.length).toBe(6);   // her yüz için 1 outer wire
+    // Solid içinde 1 shell, shell içinde 6 face
+    expect(t.solids[0].shellIds.length).toBe(1);
+    expect(t.shells[0].faceIds.length).toBe(6);
+    // validity.counts'a yeni entiteler eklendi
+    expect(t.validity.counts.W).toBe(6);
+    expect(t.validity.counts.S).toBe(1);
+    expect(t.validity.counts.So).toBe(1);
+  });
+
+  test('Outer/inner wire ayrımı: kutu yüzleri sadece outer wire (inner yok)', () => {
+    const o = new oc.gp_Pnt_3(0, 0, 0);
+    const box = new oc.BRepPrimAPI_MakeBox_2(o, 10, 10, 10).Shape();
+    const t = occt.veFEAOcctShapeToTopology(oc, box, { sampleEdges: false });
+    t.faces.forEach(function(f) {
+      expect(f.outerWireId).toBeTruthy();   // her yüzün outer wire'ı var
+      expect(f.outerWireId.indexOf('wire')).toBe(0);
+      expect(f.innerWireIds.length).toBe(0); // kutuda delik yok
+    });
+    // Tüm wire'lar isOuter olmalı (delik loop'u yok)
+    t.wires.forEach(function(w) {
+      expect(w.isOuter).toBe(true);
+      expect(w.edgeIds.length).toBe(4);   // her yüz wire'ı 4 kenardan oluşur
+      expect(w.faceIds.length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
   test('Heal devre dışı (heal:false) → shape değişmez, issues boş', () => {
     const o = new oc.gp_Pnt_3(0, 0, 0);
     const box = new oc.BRepPrimAPI_MakeBox_2(o, 1, 1, 1).Shape();
