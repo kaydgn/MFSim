@@ -3964,3 +3964,38 @@ describe('_veFEALoadNodeGeometryIntoViewer — Mesh node desteği', () => {
     expect(loadMeshMock).not.toHaveBeenCalled();
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('veFEAMeshSelfTest — mesh kalite diagnostiği', () => {
+  test('Sonuç nesnesi doğru yapıda döner', () => {
+    var r = veFEAMeshSelfTest({ verbose: false });
+    expect(r).toHaveProperty('pass');
+    expect(r).toHaveProperty('fail');
+    expect(r).toHaveProperty('total');
+    expect(r).toHaveProperty('rows');
+    expect(r).toHaveProperty('summary');
+    expect(r.pass + r.fail).toBe(r.total);
+    expect(Array.isArray(r.rows)).toBe(true);
+    expect(r.total).toBeGreaterThan(0);
+  });
+
+  test('Düzeltilen geometriler (tor, koni-apex, küre) çözücü-uyumlu geçer', () => {
+    var r = veFEAMeshSelfTest({ verbose: false });
+    var failed = r.rows.filter(function (x) { return !x.ok; }).map(function (x) { return x.senaryo; });
+    // Tor, koni (apex+frustum) ve küre senaryolarının HİÇBİRİ başarısız olmamalı.
+    var critical = failed.filter(function (s) {
+      return /^Tor|^Koni|^Küre /.test(s);  // "Küre " (yarımküre "Y.Küre" hariç)
+    });
+    expect(critical).toEqual([]);
+  });
+
+  test('Her satırda inverted/degenerate alanları raporlanır', () => {
+    var r = veFEAMeshSelfTest({ verbose: false });
+    var passing = r.rows.filter(function (x) { return x.ok; });
+    expect(passing.length).toBeGreaterThan(0);
+    passing.forEach(function (row) {
+      expect(row.inverted).toBe(0);
+      expect(row.degenerate).toBe(0);
+    });
+  });
+});

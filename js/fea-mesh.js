@@ -4298,3 +4298,84 @@ function veFEAMeshExtractSurfaceEdges(meshData) {
   });
   return new Float32Array(lines);
 }
+
+// ─── Mesh Self-Test / Diagnostik (tarayıcı konsolundan çağrılabilir) ────────
+// Amaç: Mesh motorunu temsili primitiflerde çalıştırıp ANSYS-tarzı kalite
+// metrikleriyle doğrular. Düzeltilen bug'ların (tor inverted, koni apex, küre
+// kutup) durumunu ve genel sağlığı raporlar.
+//
+// KULLANIM (F12 konsolu):
+//   veFEAMeshSelfTest()            → tablo + özet, sonuç nesnesi döner
+//   veFEAMeshSelfTest({ verbose:false })  → sadece özet
+//
+// Dönen nesne: { pass, fail, total, rows:[...], summary } — programatik kontrol
+// için. pass === total ise tüm kritik kontroller geçti demektir.
+function veFEAMeshSelfTest(opts) {
+  opts = opts || {};
+  var verbose = opts.verbose !== false;
+  // ANSYS Mechanical referans eşikleri.
+  var TH = { skewBad: 0.95, orthoBad: 0.001, arBad: 20, jacBad: 40 };
+  // Test senaryoları: tüm primitifler, kaba/orta/ince + kritik apex/kutup vakaları.
+  var prim = [
+    ['Kutu',      { type: 'box',        params: { width: 50, height: 30, depth: 20 } }],
+    ['Silindir',  { type: 'cylinder',   params: { radius: 15, height: 60 } }],
+    ['Şaft',      { type: 'shaft',      params: { outerRadius: 20, innerRadius: 8, length: 120 } }],
+    ['Küre',      { type: 'sphere',     params: { radius: 25 } }],
+    ['Koni-apex', { type: 'cone',       params: { bottomRadius: 20, topRadius: 0, height: 50 } }],
+    ['Koni-frus', { type: 'cone',       params: { bottomRadius: 20, topRadius: 8, height: 50 } }],
+    ['Tor',       { type: 'torus',      params: { majorRadius: 30, minorRadius: 10 } }],
+    ['Y.Küre',    { type: 'hemisphere', params: { radius: 25 } }],
+    ['I-Kiriş',   { type: 'ibeam',      params: { width: 50, height: 80, length: 200, flangeThickness: 8, webThickness: 6 } }],
+    ['L-Köşe',    { type: 'lbracket',   params: { width: 50, height: 50, length: 100, thickness: 8 } }],
+    ['Kutu Boru', { type: 'rectTube',   params: { width: 50, height: 40, length: 120, thickness: 6 } }]
+  ];
+  var sizes = [10, 5, 2.5];
+  var rows = [], pass = 0, fail = 0;
+  for (var pi = 0; pi < prim.length; pi++) {
+    for (var si = 0; si < sizes.length; si++) {
+      var name = prim[pi][0], geom = prim[pi][1], sz = sizes[si];
+      var row = { senaryo: name + ' s=' + sz, ok: false, not: '' };
+      try {
+        var m = veFEAMeshFromGeometry(geom, { size: sz });
+        if (!m || m.error) { row.not = 'mesh hatası: ' + (m && m.error || 'null'); rows.push(row); fail++; continue; }
+        var j = veFEAComputeJacobianMetrics(m);
+        var q = veFEAComputeQualityMetrics(m);
+        row.tip = m.type;
+        row.eleman = j.elementCount;
+        row.inverted = j.invertedCount;
+        row.degenerate = j.degenerateCount;
+        row.skewMax = q.skewness ? +q.skewness.max.toFixed(3) : null;
+        row.orthoMin = q.orthogonalQuality ? +q.orthogonalQuality.min.toFixed(3) : null;
+        row.arMax = q.aspectRatio ? +q.aspectRatio.max.toFixed(1) : null;
+        // KRİTİK kontrol: çözücü-uyumluluk = inverted/degenerate yok.
+        // (Skewness/AR yüksekliği tekil geometrilerde kabul edilir, ama
+        // inverted eleman = çözücü patlar → mutlak başarısızlık.)
+        if (j.invertedCount === 0 && j.degenerateCount === 0 && j.minVolume > 0) {
+          row.ok = true; pass++;
+        } else {
+          row.not = 'inverted=' + j.invertedCount + ' degenerate=' + j.degenerateCount;
+          fail++;
+        }
+      } catch (e) {
+        row.not = 'exception: ' + e.message; fail++;
+      }
+      rows.push(row);
+    }
+  }
+  var total = pass + fail;
+  var summary = 'Mesh Self-Test: ' + pass + '/' + total + ' geçti' +
+                (fail ? ' — ' + fail + ' BAŞARISIZ (inverted/degenerate eleman)' : ' ✓ tüm meshler çözücü-uyumlu');
+  if (verbose && typeof console !== 'undefined') {
+    if (console.table) {
+      console.table(rows.map(function (r) {
+        return { Senaryo: r.senaryo, Tip: r.tip, Eleman: r.eleman, Inverted: r.inverted,
+                 Degenere: r.degenerate, SkewMax: r.skewMax, OrthoMin: r.orthoMin, ARmax: r.arMax,
+                 Sonuç: r.ok ? '✓' : '✗ ' + r.not };
+      }));
+    } else {
+      rows.forEach(function (r) { console.log((r.ok ? '✓' : '✗') + ' ' + r.senaryo + ' ' + (r.not || '')); });
+    }
+    console.log(summary);
+  }
+  return { pass: pass, fail: fail, total: total, rows: rows, summary: summary };
+}
