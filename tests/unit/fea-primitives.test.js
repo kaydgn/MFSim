@@ -19,7 +19,7 @@ eval(fs.readFileSync(path.join(ROOT, 'js/cp-fea.js'), 'utf8'));
 
 // ────────────────────────────────────────────────────────────────────────────
 describe('fea-primitives API tanımları', () => {
-  test('14 tip mevcut: temel hacimsel + yapısal + bağlantı elemanları', () => {
+  test('18 tip mevcut: temel hacimsel + yapısal + bağlantı + benchmark', () => {
     const types = veFEAPrimitiveTypes();
     expect(types).toEqual([
       // Temel hacimsel
@@ -27,7 +27,9 @@ describe('fea-primitives API tanımları', () => {
       // Yapısal profiller
       'lbracket', 'ibeam', 'rectTube',
       // Otomotiv bağlantı elemanları (motor/şanzıman)
-      'washer', 'bolt', 'nut', 'plate'
+      'washer', 'bolt', 'nut', 'plate',
+      // Benchmark geometrileri (mesh matematiğini zorlayan karmaşık parçalar)
+      'oilFilterBracket', 'pipeFlange', 'clevis', 'gussetBracket'
     ]);
   });
 
@@ -164,6 +166,130 @@ describe('veFEAPrimitiveStats — analitik hacim/alan', () => {
     });
     const expectedV = (50 * 50 - Math.PI * 25) * 5;
     expect(s.volume).toBeCloseTo(expectedV, 4);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// Benchmark geometrileri: tip-spesifik mesher'ları YOKTUR; generic voxel+tet4
+// yolunu zorlamak için tasarlanmıştır. Stats analitik (Three.js gerektirmez).
+describe('Benchmark geometrileri — analitik stats', () => {
+  test('oilFilterBracket: kompozit hacim (taban − delikler + boss + kaburga)', () => {
+    const s = veFEAPrimitiveStats('oilFilterBracket', {
+      baseLength: 90, baseWidth: 60, baseThickness: 8,
+      bossOuterDiameter: 40, bossInnerDiameter: 28, bossHeight: 35,
+      mountHoleDiameter: 9, ribThickness: 5
+    });
+    const boR = 20, biR = 14, mr = 4.5;
+    const baseVol = 90 * 60 * 8 - Math.PI * biR * biR * 8 - 4 * Math.PI * mr * mr * 8;
+    const bossVol = Math.PI * (boR * boR - biR * biR) * 35;
+    const ribVol = 2 * (0.5 * ((45 - boR) * 0.8) * (35 * 0.7)) * 5;
+    expect(s.volume).toBeCloseTo(baseVol + bossVol + ribVol, 3);
+    expect(s.bbox).toEqual({ x: 90, y: 43, z: 60 }); // y = taban + boss
+    expect(s.surfaceArea).toBeGreaterThan(0);
+    expect(s.generic).not.toBe(true); // analitik kullanıldı (mesh fallback değil)
+  });
+
+  test('oilFilterBracket: boss iç delik kapanınca (=0) hacim artar', () => {
+    const hollow = veFEAPrimitiveStats('oilFilterBracket', { bossInnerDiameter: 28 });
+    const solid  = veFEAPrimitiveStats('oilFilterBracket', { bossInnerDiameter: 0 });
+    expect(solid.volume).toBeGreaterThan(hollow.volume);
+  });
+
+  test('pipeFlange: flanş (− bore − N bolt) + içi boş boyun', () => {
+    const s = veFEAPrimitiveStats('pipeFlange', {
+      flangeDiameter: 120, flangeThickness: 12, neckDiameter: 50, neckHeight: 40,
+      boreDiameter: 32, boltCircleDiameter: 95, boltHoleDiameter: 11, boltCount: 6
+    });
+    const Fr = 60, Br = 16, boltR = 5.5, Nr = 25;
+    const flangeVol = Math.PI * Fr * Fr * 12 - Math.PI * Br * Br * 12 - 6 * Math.PI * boltR * boltR * 12;
+    const neckVol = Math.PI * (Nr * Nr - Br * Br) * 40;
+    expect(s.volume).toBeCloseTo(flangeVol + neckVol, 3);
+    expect(s.bbox).toEqual({ x: 120, y: 52, z: 120 });
+    expect(s.generic).not.toBe(true);
+  });
+
+  test('pipeFlange: daha çok cıvata = daha çok delik = daha az hacim', () => {
+    const few  = veFEAPrimitiveStats('pipeFlange', { boltCount: 4 });
+    const many = veFEAPrimitiveStats('pipeFlange', { boltCount: 12 });
+    expect(many.volume).toBeLessThan(few.volume);
+  });
+
+  test('clevis: taban + 2 kulak (yarım daire − pim deliği); baseW = gap + 2·et', () => {
+    const s = veFEAPrimitiveStats('clevis', {
+      baseDepth: 30, baseHeight: 15, earThickness: 8, earHeight: 35, gap: 16, pinHoleDiameter: 12
+    });
+    const earR = 15, pinR = 6, baseW = 16 + 2 * 8;
+    const baseVol = baseW * 15 * 30;
+    const earArea = 30 * 35 + 0.5 * Math.PI * earR * earR - Math.PI * pinR * pinR;
+    expect(s.volume).toBeCloseTo(baseVol + 2 * earArea * 8, 3);
+    expect(s.bbox).toEqual({ x: baseW, y: 15 + 35 + earR, z: 30 });
+    expect(s.generic).not.toBe(true);
+  });
+
+  test('clevis: pim deliği kapanınca (=0) hacim artar', () => {
+    const drilled = veFEAPrimitiveStats('clevis', { pinHoleDiameter: 12 });
+    const solid   = veFEAPrimitiveStats('clevis', { pinHoleDiameter: 0 });
+    expect(solid.volume).toBeGreaterThan(drilled.volume);
+  });
+
+  test('gussetBracket: duvar + raf − L köşe çakışması + N kaburga', () => {
+    const s = veFEAPrimitiveStats('gussetBracket', {
+      wallHeight: 80, shelfLength: 70, width: 60, plateThickness: 8,
+      gussetThickness: 5, gussetCount: 2, holeDiameter: 9
+    });
+    const hr = 4.5;
+    const wallVol = 60 * 80 * 8 - 2 * Math.PI * hr * hr * 8;
+    const shelfVol = 60 * 70 * 8;
+    const gussetVol = 2 * (0.5 * (80 * 0.7) * (70 * 0.7)) * 5;
+    // Duvar rafın üstünde → hacim örtüşmesi yok (corner overlap çıkarılmaz)
+    expect(s.volume).toBeCloseTo(wallVol + shelfVol + gussetVol, 3);
+    expect(s.bbox).toEqual({ x: 60, y: 8 + 80, z: 70 }); // y = plateThickness + wallHeight
+    expect(s.generic).not.toBe(true);
+  });
+
+  test('gussetBracket: daha çok kaburga = daha çok malzeme = daha çok hacim', () => {
+    const one  = veFEAPrimitiveStats('gussetBracket', { gussetCount: 1 });
+    const four = veFEAPrimitiveStats('gussetBracket', { gussetCount: 4 });
+    expect(four.volume).toBeGreaterThan(one.volume);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+describe('Benchmark geometrileri — normalize validasyonu', () => {
+  test('oilFilterBracket: boss iç çap dış çaptan küçük zorlanır', () => {
+    const out = veFEANormalizePrimitiveParams('oilFilterBracket', {
+      bossOuterDiameter: 30, bossInnerDiameter: 50
+    });
+    expect(out.bossInnerDiameter).toBeLessThan(out.bossOuterDiameter);
+  });
+
+  test('oilFilterBracket: boss taban içine sığacak şekilde clamp edilir', () => {
+    const out = veFEANormalizePrimitiveParams('oilFilterBracket', {
+      baseLength: 40, baseWidth: 40, bossOuterDiameter: 200
+    });
+    expect(out.bossOuterDiameter).toBeLessThanOrEqual(40);
+  });
+
+  test('pipeFlange: cıvata sayısı integer yuvarlanır; bore < boyun < flanş', () => {
+    const out = veFEANormalizePrimitiveParams('pipeFlange', {
+      boltCount: 6.7, flangeDiameter: 120, neckDiameter: 200, boreDiameter: 300
+    });
+    expect(out.boltCount).toBe(7);
+    expect(out.neckDiameter).toBeLessThan(out.flangeDiameter);
+    expect(out.boreDiameter).toBeLessThan(out.neckDiameter);
+  });
+
+  test('clevis: pim deliği kulak derinliğine sığacak şekilde clamp edilir', () => {
+    const out = veFEANormalizePrimitiveParams('clevis', { baseDepth: 20, pinHoleDiameter: 100 });
+    expect(out.pinHoleDiameter).toBeLessThanOrEqual(20);
+  });
+
+  test('gussetBracket: kaburga sayısı integer; plaka kalınlığı makul clamp', () => {
+    const out = veFEANormalizePrimitiveParams('gussetBracket', {
+      gussetCount: 3.2, wallHeight: 30, shelfLength: 30, plateThickness: 100
+    });
+    expect(out.gussetCount).toBe(3);
+    expect(out.plateThickness).toBeLessThanOrEqual(10); // min(30,30)/3
   });
 });
 
