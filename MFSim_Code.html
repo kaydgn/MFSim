@@ -683,7 +683,7 @@
 /* Sol kenardaki açma rayı (panel kapalıyken belirir) */
 .ve-sidebar-reveal{
   position:absolute;
-  left:0; top:12px;
+  left:0; top:40px;        /* canvas üstündeki sekme çubuğunun (~26px) altında durur */
   z-index:150;            /* modül seçim overlay'inin (100) üstünde kalsın */
   display:none;            /* yalnızca daraltılmışken flex */
   flex-direction:column;
@@ -35043,9 +35043,12 @@ function veFEAInitViewer(canvas, opts) {
         wireframeMode = 'surface';
         autoSurface = true;
       }
-      // 1. Geometriyi yedir (mevcut helper kendi clearGeometry yapar)
+      // 1. Geometriyi yedir (mevcut helper kendi clearGeometry yapar).
+      // geometryOnly: birleşik 'fea' modülünde geomNodeId === meshNodeId olduğu
+      // için helper'ın mesh-cache kısayolunu atla — yoksa solid yüzey yerine
+      // mesh wireframe çizilir ve aşağıdaki edge overlay ile çift tel kafes olur.
       if (geomNodeId && typeof _veFEALoadNodeGeometryIntoViewer === 'function') {
-        _veFEALoadNodeGeometryIntoViewer(this, geomNodeId);
+        _veFEALoadNodeGeometryIntoViewer(this, geomNodeId, { geometryOnly: true });
       } else {
         // Upstream geometri yok → mesh-derived solid yuzey yedir (fallback)
         this.clearGeometry();
@@ -36518,14 +36521,19 @@ function veFEAInitGeometryViewerForNode(nodeId) {
 // hem fullscreen modal tarafından kullanılır. Persist veya toast yapmaz —
 // applySTEP/applyPrimitive zincirine girmez, dolayısıyla showNodeProperties
 // yeniden tetiklenmez (sonsuz döngü koruması).
-function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId) {
+function _veFEALoadNodeGeometryIntoViewer(viewer, nodeId, opts) {
   if(!viewer || typeof nodes === 'undefined') return;
   var node = nodes.find && nodes.find(function(n) { return n.id === nodeId; });
   if(!node) return;
+  // geometryOnly: çağıran geometri yüzeyini istiyor (ör. loadMeshOverGeometry'nin
+  // "Geometri + Mesh Çizgileri" modu). Bu durumda aşağıdaki mesh-cache kısayolu
+  // atlanır; aksi halde mesh wireframe'i solid geometrinin yerine geçer ve
+  // yüzey hiç çizilmez (sadece tel kafes görünür).
+  var geometryOnly = !!(opts && opts.geometryOnly);
 
   // Mesh node (veya birleşik 'fea' modülü): in-memory cache'ten mesh data
   // yedir (mesh data node.data'da değil, veFEAMeshCache global cache'inde).
-  if ((node.type === 'fea-mesh' || node.type === 'fea') &&
+  if (!geometryOnly && (node.type === 'fea-mesh' || node.type === 'fea') &&
       typeof veFEAMeshCache !== 'undefined' && veFEAMeshCache[nodeId] &&
       typeof viewer.loadMesh === 'function') {
     viewer.loadMesh(veFEAMeshCache[nodeId]);
