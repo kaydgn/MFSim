@@ -29145,12 +29145,19 @@ function veFEASmoothMesh(mesh, opts) {
   var nodeElements = topo.nodeElements;
   var boundary = topo.boundary;
 
+  // Surface projector (opsiyonel): boundary düğümleri geometri yüzeyine geri
+  // projekte ederek TANJANT KAYMA sağlar (ANSYS surface smoothing). null/yoksa
+  // boundary düğümler tamamen sabit kalır (preserveSurface davranışı).
+  var surfaceProjector = (typeof opts.surfaceProjector === 'function') ? opts.surfaceProjector : null;
+
   var movedTotal = 0;
 
   for (var it = 0; it < iterations; it++) {
     var movedThisPass = 0;
     for (var i = 0; i < nodeCount; i++) {
-      if (preserveSurface && boundary[i]) continue;     // yüzey sabit
+      var isBoundary = boundary[i] === 1;
+      // Yüzey düğümü: projector yoksa veya preserveSurface ise sabit; varsa kaydır.
+      if (isBoundary && (preserveSurface && !surfaceProjector)) continue;
       var nb = neighbors[i];
       if (nb.length === 0) continue;
 
@@ -29166,6 +29173,14 @@ function veFEASmoothMesh(mesh, opts) {
       var tx = ox + relax * (cx - ox);
       var ty = oy + relax * (cy - oy);
       var tz = oz + relax * (cz - oz);
+
+      // Boundary düğüm → yüzeye geri projekte (tanjant kayma). Projeksiyon
+      // başarısızsa (null) bu düğümü atla (sabit bırak).
+      if (isBoundary && surfaceProjector) {
+        var pr = surfaceProjector(tx, ty, tz, i);
+        if (!pr) continue;
+        tx = pr[0]; ty = pr[1]; tz = pr[2];
+      }
 
       var elemList = nodeElements[i];
 
@@ -29617,18 +29632,91 @@ var _VE_FEA_WEDGE6_EDGES = [
 // projector (opsiyonel): kuadratik mid-side düğümleri eğri yüzeye projekte eden
 // fonksiyon. İmza: projector(midX, midY, midZ, aId, bId) → [x,y,z] | null.
 // null/undefined dönerse lineer (düz kenar ortası) konum korunur.
+// Smoothing için NODE-konumu yüzey projektörü: bir (x,y,z) noktasını geometrinin
+// analitik yüzeyine en yakın noktaya projekte eder (küre/silindir/koni). Boundary
+// düğümlerinin tanjant kayması için kullanılır (ANSYS surface smoothing). Yapısal
+// _veFEABuildSurfaceProjector'dan farkı: edge değil, tek node konumu alır ve
+// "düğüm zaten yüzeyde mi" toleransı içerir (iç düğümler etkilenmez).
+// Dönüş: function(x,y,z,nodeId) → [x,y,z] | null  ya da  null (desteklenmeyen tip).
+function _veFEABuildNodeSurfaceProjector(geometry, mesh) {
+  if (!geometry || !geometry.type || !mesh || !mesh.nodes) return null;
+  var type = geometry.type;
+  var p = geometry.params || {};
+
+  if (type === 'sphere' || type === 'hemisphere') {
+    var R = Math.max(0, +p.radius || 0);
+    if (!R) return null;
+    var tol = Math.max(1e-3, R * 0.02);
+    return function(x, y, z) {
+      var d = Math.sqrt(x*x + y*y + z*z);
+      if (d < 1e-9) return null;
+      if (Math.abs(d - R) > tol) return null;   // yüzeyde değil → dokunma
+      var s = R / d;
+      return [x*s, y*s, z*s];
+    };
+  }
+  if (type === 'cylinder') {
+    var Rc = Math.max(0, +p.radius || 0);
+    if (!Rc) return null;
+    var tolc = Math.max(1e-3, Rc * 0.02);
+    return function(x, y, z) {
+      var rr = Math.sqrt(x*x + z*z);
+      if (rr < 1e-9) return null;
+      if (Math.abs(rr - Rc) > tolc) return null; // yanal yüzeyde değil (kapak vb.)
+      var s = Rc / rr;
+      return [x*s, y, z*s];                       // y (eksenel) korunur
+    };
+  }
+  if (type === 'cone') {
+    var rb = (p.bottomRadius != null) ? Math.max(0, +p.bottomRadius) : Math.max(0, +p.radius || 0);
+    var rt = (p.topRadius != null) ? Math.max(0, +p.topRadius) : 0;
+    var maxR = Math.max(rb, rt);
+    if (!(maxR > 0)) return null;
+    var yMin = Infinity, yMax = -Infinity;
+    for (var i = 1; i < mesh.nodes.length; i += 3) {
+      var yv = mesh.nodes[i];
+      if (yv < yMin) yMin = yv;
+      if (yv > yMax) yMax = yv;
+    }
+    var H = yMax - yMin;
+    if (!(H > 1e-9)) return null;
+    var tolk = Math.max(1e-3, maxR * 0.02);
+    return function(x, y, z) {
+      var t = (y - yMin) / H;
+      if (t < 0) t = 0; else if (t > 1) t = 1;
+      var Ry = rb + (rt - rb) * t;
+      if (Ry < 1e-9) return null;
+      var rr = Math.sqrt(x*x + z*z);
+      if (rr < 1e-9) return null;
+      if (Math.abs(rr - Ry) > tolk) return null;  // konik yüzeyde değil
+      var s = Ry / rr;
+      return [x*s, y, z*s];
+    };
+  }
+  return null; // box/ibeam/lbracket/recttube/torus → düz yüzeyli, projeksiyon yok
+}
+
 // Mesh opts → smoothing opts dönüşümü (varsayılanlar ANSYS-makul).
 // opts.smoothing: true/false/undefined ya da { iterations, method, relaxation }
-function _veFEAResolveSmoothingOpts(opts) {
+// geometry verilirse eğri yüzeyler için surfaceProjector eklenir (tanjant kayma).
+function _veFEAResolveSmoothingOpts(opts, geometry, mesh) {
   var s = opts && opts.smoothing;
   var cfg = (s && typeof s === 'object') ? s : {};
-  return {
+  var resolved = {
     iterations: (cfg.iterations != null) ? cfg.iterations : 3,
     method: cfg.method || 'smartLaplacian',
     relaxation: (cfg.relaxation != null) ? cfg.relaxation : 0.5,
     preserveSurface: cfg.preserveSurface !== false,
     onProgress: opts ? opts.onProgress : undefined
   };
+  // Eğri yüzeyli primitif → boundary düğümleri yüzeyde kaydır (kalite ↑).
+  if (cfg.surfaceProjector) {
+    resolved.surfaceProjector = cfg.surfaceProjector;
+  } else if (geometry && mesh && cfg.surfaceProjector !== false) {
+    var proj = _veFEABuildNodeSurfaceProjector(geometry, mesh);
+    if (proj) resolved.surfaceProjector = proj;
+  }
+  return resolved;
 }
 
 function veFEAEnrichToQuadratic(meshData, projector) {
@@ -30050,7 +30138,7 @@ function veFEAMeshFromGeometry(geometry, opts) {
   // çünkü O-grid/cubed-sphere zaten yüksek kaliteli. Quadratic enrichment'tan önce.
   if (mesh && !mesh.error && opts.smoothing === true && typeof veFEASmoothMesh === 'function' &&
       (mesh.type === 'tet4' || mesh.type === 'hex8' || mesh.type === 'wedge6')) {
-    mesh = veFEASmoothMesh(mesh, _veFEAResolveSmoothingOpts(opts));
+    mesh = veFEASmoothMesh(mesh, _veFEAResolveSmoothingOpts(opts, geometry, mesh));
   }
   // midSideNodes: lineer → quadratic (Tet4→Tet10, Hex8→Hex20, Wedge6→Wedge15)
   if (mesh && !mesh.error && opts.midSideNodes === true) {
@@ -30350,7 +30438,7 @@ function _veFEAMeshWithTetMesherOrVoxel(parsed, geometry, opts, preBuiltVoxel) {
     // düğümleri iyileştirir, yüzey sabit kalır. opts.smoothing ile kontrol.
     if (opts.smoothing !== false && typeof veFEASmoothMesh === 'function' &&
         (mesh.type === 'tet4' || mesh.type === 'hex8' || mesh.type === 'wedge6')) {
-      mesh = veFEASmoothMesh(mesh, _veFEAResolveSmoothingOpts(opts));
+      mesh = veFEASmoothMesh(mesh, _veFEAResolveSmoothingOpts(opts, geometry, mesh));
     }
     if (opts.midSideNodes === true) {
       mesh = veFEAEnrichToQuadratic(mesh);
