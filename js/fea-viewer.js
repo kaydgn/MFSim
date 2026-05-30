@@ -2836,6 +2836,10 @@ function veFEABuildMeshForNode(meshNodeId) {
     if (typeof veFEAComputeQualityMetrics === 'function') {
       metrics.quality = veFEAComputeQualityMetrics(meshData);
     }
+    // ANSYS-tarzı genel mesh kalite skoru (0-100 + derecelendirme)
+    if (typeof veFEAComputeMeshQualityScore === 'function') {
+      metrics.qualityScore = veFEAComputeMeshQualityScore(meshData);
+    }
 
     // ANSYS-tarz outline'dan gelen Refinement kontrol metadata'sı (Faz 3b)
     // v1: meshData üzerine refinementApplied[] alanı yazar — gerçek bölme
