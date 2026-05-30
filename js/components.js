@@ -414,3 +414,24 @@ var COMPONENT_SIGNALS = {
   }
 };
 
+// ─── Modül seçim overlay'i ⇄ sidebar görünürlüğü senkronu ─────────────────
+// Modül seçilmemişken (overlay görünür) sol Bileşenler panelini + açma rayını
+// CSS ile gizle. Overlay'in display state'ini MutationObserver ile izleyip
+// .ve-main.ve-no-module sınıfını otomatik aç/kapa — tek noktadan kontrol, tüm
+// overlay show/hide yollarını (overlay tıklama, top tab, proje yükle, vb.)
+// otomatik yakalar.
+(function veObserveModuleOverlay() {
+  function attach() {
+    var overlay = document.getElementById('ve-module-overlay');
+    var main = document.querySelector('.ve-main');
+    if(!overlay || !main) { setTimeout(attach, 50); return; }
+    function sync() {
+      var visible = getComputedStyle(overlay).display !== 'none';
+      main.classList.toggle('ve-no-module', visible);
+    }
+    sync();
+    new MutationObserver(sync).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });
+  }
+  attach();
+})();
+
