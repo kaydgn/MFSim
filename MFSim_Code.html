@@ -330,31 +330,82 @@
       align-items: center;
       gap: 4px;
     }
-    
-    .theme-selector-label {
-      font-size: 0.65rem;
+
+    /* Tema butonu — palet ikonu, tıklayınca menü açılır */
+    .ve-theme-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      padding: 0;
+      background: transparent;
       color: var(--text-secondary);
+      border: 1px solid transparent;
+      border-radius: 0;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
     }
-    
-    .theme-selector select {
-      background: var(--bg-input);
-      color: var(--text-primary);
+    .ve-theme-btn:hover {
+      border-color: var(--border-color);
+      background: var(--bg-tertiary);
+      color: var(--accent-primary);
+    }
+
+    /* Tema menüsü (dropdown) */
+    .ve-theme-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;                /* sağa hizalı — buton sağ üstte */
+      min-width: 160px;
+      background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 0;
-      padding: 2px 6px;
-      font-size: 0.65rem;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 999999;
+      padding: 4px 0;
+      margin-top: 2px;
+    }
+    .ve-theme-menu-group {
+      font-size: 0.55rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 6px 12px 3px;
+      user-select: none;
+    }
+    .ve-theme-menu-item {
+      position: relative;
+      padding: 6px 12px 6px 28px;   /* sol: ✓ için yer */
+      font-size: 0.7rem;
+      color: var(--text-primary);
       cursor: pointer;
-      outline: none;
-      transition: border-color 0.15s;
+      transition: background 0.12s, color 0.12s;
+      white-space: nowrap;
     }
-    
-    .theme-selector select:hover {
-      border-color: var(--border-hover);
+    .ve-theme-menu-item:hover {
+      background: var(--accent-primary);
+      color: #fff;
     }
-    
-    .theme-selector select:focus {
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    /* Aktif (seçili) tema: yanına ✓ */
+    .ve-theme-menu-item.active::before {
+      content: '✓';
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--accent-success);
+      font-size: 0.7rem;
+      font-weight: 700;
+    }
+    .ve-theme-menu-item.active:hover::before {
+      color: #fff;
+    }
+    .ve-theme-menu-divider {
+      height: 1px;
+      background: var(--border-color);
+      margin: 4px 8px;
     }
 
     /* ===== LOGIN EKRANI ===== */
@@ -3013,25 +3064,26 @@ function mfsimLogout() {
   <span class="theme-selector" style="margin-left:auto;">
     <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
     <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
-    <label for="theme-select" class="theme-selector-label"><span class="mf-ico mf-ico-palette"></span></label>
-    <select id="theme-select" onchange="changeTheme(this.value)">
-      <optgroup label="Koyu">
-        <option value="slate">Midnight</option>
-        <option value="cream">Carbon</option>
-        <option value="claude">Claude</option>
-      </optgroup>
-      <optgroup label="Açık">
-        <option value="silver">Silver</option>
-        <option value="pearl">Pearl</option>
-        <option value="ash">Ash</option>
-        <option value="steel">Steel</option>
-        <option value="light">Gunmetal</option>
-        <option value="arctic">Arctic</option>
-        <option value="sand">Sand</option>
-        <option value="forest">Forest</option>
-        <option value="iris">Iris</option>
-      </optgroup>
-    </select>
+    <span class="ve-theme-wrapper" style="position:relative; display:inline-flex;">
+      <button id="ve-theme-btn" class="ve-theme-btn" onclick="veToggleThemeMenu()" title="Tema seç" aria-label="Tema seç"><span class="mf-ico mf-ico-palette"></span></button>
+      <div id="ve-theme-menu" class="ve-theme-menu" style="display:none;">
+        <div class="ve-theme-menu-group">Koyu</div>
+        <div class="ve-theme-menu-item" data-mf-theme="slate" onclick="changeTheme('slate')">Midnight</div>
+        <div class="ve-theme-menu-item" data-mf-theme="cream" onclick="changeTheme('cream')">Carbon</div>
+        <div class="ve-theme-menu-item" data-mf-theme="claude" onclick="changeTheme('claude')">Claude</div>
+        <div class="ve-theme-menu-divider"></div>
+        <div class="ve-theme-menu-group">Açık</div>
+        <div class="ve-theme-menu-item" data-mf-theme="silver" onclick="changeTheme('silver')">Silver</div>
+        <div class="ve-theme-menu-item" data-mf-theme="pearl" onclick="changeTheme('pearl')">Pearl</div>
+        <div class="ve-theme-menu-item" data-mf-theme="ash" onclick="changeTheme('ash')">Ash</div>
+        <div class="ve-theme-menu-item" data-mf-theme="steel" onclick="changeTheme('steel')">Steel</div>
+        <div class="ve-theme-menu-item" data-mf-theme="light" onclick="changeTheme('light')">Gunmetal</div>
+        <div class="ve-theme-menu-item" data-mf-theme="arctic" onclick="changeTheme('arctic')">Arctic</div>
+        <div class="ve-theme-menu-item" data-mf-theme="sand" onclick="changeTheme('sand')">Sand</div>
+        <div class="ve-theme-menu-item" data-mf-theme="forest" onclick="changeTheme('forest')">Forest</div>
+        <div class="ve-theme-menu-item" data-mf-theme="iris" onclick="changeTheme('iris')">Iris</div>
+      </div>
+    </span>
   </span>
 </div>
 
@@ -3509,18 +3561,52 @@ function mfsimLogout() {
 function changeTheme(themeId) {
   document.documentElement.setAttribute('data-theme', themeId);
   try { localStorage.setItem('mf-theme', themeId); } catch(e) {}
-  var sel = document.getElementById('theme-select');
-  if(sel) sel.value = themeId;
+  // Menüdeki aktif (✓) işaretini güncelle
+  var items = document.querySelectorAll('.ve-theme-menu-item');
+  items.forEach(function(it) {
+    it.classList.toggle('active', it.getAttribute('data-mf-theme') === themeId);
+  });
+  // Seçim yapıldı → menüyü kapat
+  var menu = document.getElementById('ve-theme-menu');
+  if(menu) menu.style.display = 'none';
   // Açık 3D yapısal analiz görüntüleyicilerinin arka planını yeni temaya uyarla.
   if (typeof veFEAApplyThemeToViewers === 'function') veFEAApplyThemeToViewers();
 }
 
-// Sayfa yüklendiğinde kayıtlı temayı uygula
-document.addEventListener('DOMContentLoaded', function() {
+function veToggleThemeMenu() {
+  var menu = document.getElementById('ve-theme-menu');
+  if(!menu) return;
+  var open = menu.style.display !== 'block';
+  menu.style.display = open ? 'block' : 'none';
+  // Aynı anda açık dosya menüsü varsa kapat
+  if(open) {
+    var fileMenu = document.getElementById('ve-file-menu');
+    if(fileMenu) fileMenu.style.display = 'none';
+  }
+}
+
+// Dışına tıklayınca kapat
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('ve-theme-menu');
+  var btn = document.getElementById('ve-theme-btn');
+  if(!menu || !btn) return;
+  if(menu.style.display === 'block' && !menu.contains(e.target) && !btn.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+
+// Kayıtlı temayı uygula (loader-sonrası yüklemede DOMContentLoaded zaten geçmiş
+// olabilir, bu durumda hemen tetikle)
+function _veApplyStoredTheme() {
   var savedTheme = 'slate';
   try { savedTheme = localStorage.getItem('mf-theme') || 'slate'; } catch(e) {}
   changeTheme(savedTheme);
-});
+}
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _veApplyStoredTheme);
+} else {
+  _veApplyStoredTheme();
+}
 
 </script>
 <script type="text/x-mfsim-defer" data-mfsim-label="Sekmeler hazırlanıyor...">
