@@ -300,13 +300,23 @@ function veFEAOcctShapeToTopology(oc, shape, opts) {
   var TA = oc.TopAbs_ShapeEnum;
 
   // 1) Entiteleri HashCode ile dedup ederek topla → stabil index/ID
+  // Raporun §1.1 tam hiyerarşisi: SOLID → SHELL → FACE → WIRE → EDGE → VERTEX
+  var solidList = _veFEAOcctCollect(oc, shape, TA.TopAbs_SOLID);
+  var shellList = _veFEAOcctCollect(oc, shape, TA.TopAbs_SHELL);
   var faceList = _veFEAOcctCollect(oc, shape, TA.TopAbs_FACE);
+  var wireList = _veFEAOcctCollect(oc, shape, TA.TopAbs_WIRE);
   var edgeList = _veFEAOcctCollect(oc, shape, TA.TopAbs_EDGE);
   var vertList = _veFEAOcctCollect(oc, shape, TA.TopAbs_VERTEX);
 
   // HashCode → ID haritaları (adjacency için)
+  var solidIdByHash = {};
+  solidList.forEach(function(it, i) { it.id = 'solid' + (i + 1); solidIdByHash[it.hash] = it.id; });
+  var shellIdByHash = {};
+  shellList.forEach(function(it, i) { it.id = 'shell' + (i + 1); shellIdByHash[it.hash] = it.id; });
   var faceIdByHash = {};
   faceList.forEach(function(it, i) { it.id = 'face' + (i + 1); faceIdByHash[it.hash] = it.id; });
+  var wireIdByHash = {};
+  wireList.forEach(function(it, i) { it.id = 'wire' + (i + 1); wireIdByHash[it.hash] = it.id; });
   var vertIdByHash = {};
   vertList.forEach(function(it, i) { it.id = 'v' + (i + 1); vertIdByHash[it.hash] = it.id; });
   edgeList.forEach(function(it, i) { it.id = 'edge' + (i + 1); });
@@ -314,13 +324,48 @@ function veFEAOcctShapeToTopology(oc, shape, opts) {
   // 2) E→F adjacency: her kenarın komşu yüzleri (manifold kontrolü)
   var edgeFaceMap = _veFEAOcctEdgeFaceMap(oc, shape, faceIdByHash);
 
-  // 3) Yüzleri işle (tip + alan + centroid + normal)
+  // 3) Yüzleri işle (tip + alan + centroid + normal + outer/inner wire)
   var faces = [];
   var totalArea = 0;
   faceList.forEach(function(it) {
     var f = _veFEAOcctFaceInfo(oc, it.shape, it.id);
     if (f.area) totalArea += f.area;
+    // Outer/inner wire ID'leri — raporun §3 "outer dolaşımı CCW, inner CW"
+    var wireBindings = _veFEAOcctFaceWires(oc, it.shape, wireIdByHash);
+    f.outerWireId = wireBindings.outer;
+    f.innerWireIds = wireBindings.inner;
     faces.push(f);
+  });
+
+  // 3b) Wire entitelerini işle (edge listesi + parent face)
+  var edgeIdByHash = {};
+  edgeList.forEach(function(it) { edgeIdByHash[it.hash] = it.id; });
+  var wires = [];
+  wireList.forEach(function(it) {
+    var w = _veFEAOcctWireInfo(oc, it.shape, it.id, edgeIdByHash);
+    wires.push(w);
+  });
+  // Wire ↔ Face backward bind (face.outerWireId / innerWireIds'den)
+  var wireMap = {}; wires.forEach(function(w) { wireMap[w.id] = w; w.faceIds = []; w.isOuter = false; });
+  faces.forEach(function(f) {
+    if (f.outerWireId && wireMap[f.outerWireId]) {
+      wireMap[f.outerWireId].faceIds.push(f.id);
+      wireMap[f.outerWireId].isOuter = true;
+    }
+    (f.innerWireIds || []).forEach(function(wid) {
+      if (wireMap[wid]) wireMap[wid].faceIds.push(f.id);
+    });
+  });
+
+  // 3c) Shell entitelerini işle (içerdiği face ID'leri)
+  var shells = [];
+  shellList.forEach(function(it) {
+    shells.push({ id: it.id, label: it.id, faceIds: _veFEAOcctShellFaceIds(oc, it.shape, faceIdByHash) });
+  });
+  // 3d) Solid entitelerini işle (içerdiği shell ID'leri)
+  var solids = [];
+  solidList.forEach(function(it) {
+    solids.push({ id: it.id, label: it.id, shellIds: _veFEAOcctSolidShellIds(oc, it.shape, shellIdByHash) });
   });
 
   // 4) Kenarları işle (tip + geometri + polyline + endpoint vertex'leri + faceIds)
@@ -347,11 +392,14 @@ function veFEAOcctShapeToTopology(oc, shape, opts) {
   var volume = _veFEAOcctVolume(oc, shape);
   var bbox = _veFEAOcctBBox(oc, shape);
 
-  // 8) Validity: Euler-Poincaré + manifold + watertight
-  var validity = _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap);
+  // 8) Validity: Euler-Poincaré + manifold + watertight + entite sayıları
+  var validity = _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap, shells, solids, wires);
 
   return {
     type: 'step',
+    solids: solids,    // Faz 4 — raporun §7.1 TopoModel solid hiyerarşisi
+    shells: shells,    // Faz 4
+    wires: wires,      // Faz 4 — outer/inner wire ayrımı + face ↔ wire
     faces: faces,
     edges: edges,
     vertices: vertices,
@@ -555,6 +603,96 @@ function _veFEAOcctVertexInfo(oc, vertShape, id) {
   return info;
 }
 
+// ─── Wire / Shell / Solid yardımcıları (Faz 4) ──────────────────────────────
+// Bir yüzün outer wire'ı (BRepTools.OuterWire) + inner wires (delik loop'ları).
+// Raporun §3 outer/inner ayrımı — "deliği tek tıkla seç" UX'inin temeli.
+function _veFEAOcctFaceWires(oc, faceShape, wireIdByHash) {
+  var result = { outer: null, inner: [] };
+  try {
+    var face = oc.TopoDS.Face_1(faceShape);
+    var outerWire = oc.BRepTools.OuterWire(face);
+    var outerHash = null;
+    if (outerWire && !outerWire.IsNull()) {
+      outerHash = outerWire.HashCode(1e9);
+      result.outer = wireIdByHash[outerHash] || null;
+    }
+    // Yüzün tüm wire'larını gez; outer olmayanlar inner (delik loop'ları)
+    var exp = new oc.TopExp_Explorer_2(faceShape, oc.TopAbs_ShapeEnum.TopAbs_WIRE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    var seen = {};
+    for (; exp.More(); exp.Next()) {
+      var wh = exp.Current().HashCode(1e9);
+      if (seen[wh]) continue;
+      seen[wh] = true;
+      if (wh === outerHash) continue;
+      var wid = wireIdByHash[wh];
+      if (wid && result.inner.indexOf(wid) < 0) result.inner.push(wid);
+    }
+    exp.delete();
+  } catch (e) { /* sessiz — face wire mapping başarısız */ }
+  return result;
+}
+
+// Wire entitesi: içerdiği kenarlar + uzunluk (loop perimeter).
+function _veFEAOcctWireInfo(oc, wireShape, id, edgeIdByHash) {
+  var info = { id: id, label: id, edgeIds: [], faceIds: [], isOuter: false, length: 0 };
+  try {
+    var exp = new oc.TopExp_Explorer_2(wireShape, oc.TopAbs_ShapeEnum.TopAbs_EDGE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    var seen = {};
+    for (; exp.More(); exp.Next()) {
+      var eh = exp.Current().HashCode(1e9);
+      if (seen[eh]) continue;
+      seen[eh] = true;
+      var eid = edgeIdByHash && edgeIdByHash[eh];
+      if (eid && info.edgeIds.indexOf(eid) < 0) info.edgeIds.push(eid);
+    }
+    exp.delete();
+    // Wire uzunluğu (perimeter)
+    try {
+      var props = new oc.GProp_GProps_1();
+      oc.BRepGProp.LinearProperties_1(wireShape, props, false, false);
+      info.length = props.Mass();
+      props.delete();
+    } catch (e2) { /* skip */ }
+  } catch (e) { /* skip */ }
+  return info;
+}
+
+// Shell içindeki face ID'leri çıkar.
+function _veFEAOcctShellFaceIds(oc, shellShape, faceIdByHash) {
+  var ids = [];
+  try {
+    var exp = new oc.TopExp_Explorer_2(shellShape, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    var seen = {};
+    for (; exp.More(); exp.Next()) {
+      var h = exp.Current().HashCode(1e9);
+      if (seen[h]) continue;
+      seen[h] = true;
+      var fid = faceIdByHash[h];
+      if (fid && ids.indexOf(fid) < 0) ids.push(fid);
+    }
+    exp.delete();
+  } catch (e) { /* skip */ }
+  return ids;
+}
+
+// Solid içindeki shell ID'leri çıkar.
+function _veFEAOcctSolidShellIds(oc, solidShape, shellIdByHash) {
+  var ids = [];
+  try {
+    var exp = new oc.TopExp_Explorer_2(solidShape, oc.TopAbs_ShapeEnum.TopAbs_SHELL, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+    var seen = {};
+    for (; exp.More(); exp.Next()) {
+      var h = exp.Current().HashCode(1e9);
+      if (seen[h]) continue;
+      seen[h] = true;
+      var sid = shellIdByHash[h];
+      if (sid && ids.indexOf(sid) < 0) ids.push(sid);
+    }
+    exp.delete();
+  } catch (e) { /* skip */ }
+  return ids;
+}
+
 // face.edgeIds, face.vertexIds + vertex.edgeIds/faceIds ilişkilerini kur.
 function _veFEAOcctBindRelations(faces, edges, vertices) {
   var faceMap = {}; faces.forEach(function(f) { faceMap[f.id] = f; });
@@ -602,8 +740,9 @@ function _veFEAOcctBBox(oc, shape) {
 }
 
 // Validity: Euler-Poincaré + manifold (E→F=2) + watertight.
-function _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap) {
+function _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap, shells, solids, wires) {
   var V = vertices.length, E = edges.length, F = faces.length;
+  var S = shells ? shells.length : 0, So = solids ? solids.length : 0, W = wires ? wires.length : 0;
   var chi = V - E + F;
   // Manifold: her kenar tam 2 yüze ait olmalı (kapalı katı)
   var manifoldEdges = 0, openEdges = 0, nonManifoldEdges = 0;
@@ -626,7 +765,7 @@ function _veFEAOcctValidity(faces, edges, vertices, edgeFaceMap) {
   return {
     eulerChi: chi, eulerOK: eulerOK,
     manifold: manifold, watertight: (openEdges === 0),
-    counts: { V: V, E: E, F: F, manifoldEdges: manifoldEdges, openEdges: openEdges, nonManifoldEdges: nonManifoldEdges },
+    counts: { V: V, E: E, F: F, W: W, S: S, So: So, manifoldEdges: manifoldEdges, openEdges: openEdges, nonManifoldEdges: nonManifoldEdges },
     issues: issues
   };
 }

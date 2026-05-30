@@ -262,6 +262,17 @@ function getFEAGeometryPropertiesHTML(node) {
         '<b>' + summary.faces + '</b> yüzey · <b>' + summary.edges + '</b> kenar · <b>' + summary.vertices + '</b> köşe' +
         (isBrep ? ' (CAD çekirdeğinden kesin)' : ' tespit edildi') + '. ' +
         'Lokal mesh ayarlarına (Face/Edge Sizing, Sphere of Influence) hazır.</div>';
+      // Faz 4 — tam B-Rep hiyerarşisi (solid/shell/wire)
+      if (isBrep && topoObj && Array.isArray(topoObj.wires)) {
+        var nSolid = topoObj.solids ? topoObj.solids.length : 0;
+        var nShell = topoObj.shells ? topoObj.shells.length : 0;
+        var nWire = topoObj.wires.length;
+        var innerWires = topoObj.wires.filter(function(w) { return !w.isOuter; }).length;
+        html += '<div style="font-size:0.56rem; color:var(--text-muted); margin-top:3px;">' +
+          '🧩 BREP hiyerarşisi: <b>' + nSolid + '</b> katı · <b>' + nShell + '</b> shell · <b>' + nWire + '</b> wire' +
+          (innerWires > 0 ? ' (<b style="color:#a855f7;">' + innerWires + ' delik loop</b>)' : '') +
+          '</div>';
+      }
       // B-Rep validity raporu (Euler-Poincaré + manifold + watertight + healing)
       if (isBrep && validity) {
         var chk = function(ok) { return ok ? '<span style="color:var(--accent-success,#22c55e);">✓</span>' : '<span style="color:var(--accent-warning,#f59e0b);">⚠</span>'; };
