@@ -262,6 +262,17 @@ function getFEAGeometryPropertiesHTML(node) {
         '<b>' + summary.faces + '</b> yüzey · <b>' + summary.edges + '</b> kenar · <b>' + summary.vertices + '</b> köşe' +
         (isBrep ? ' (CAD çekirdeğinden kesin)' : ' tespit edildi') + '. ' +
         'Lokal mesh ayarlarına (Face/Edge Sizing, Sphere of Influence) hazır.</div>';
+      // Faz 6 — Tespit edilen özellikler (delik/fillet/boss)
+      if (isBrep && topoObj && Array.isArray(topoObj.features) && topoObj.features.length > 0) {
+        var counts = {};
+        topoObj.features.forEach(function(ft) { counts[ft.type] = (counts[ft.type] || 0) + 1; });
+        var label = { hole: 'delik', fillet: 'fillet', boss: 'boss' };
+        var parts = Object.keys(counts).map(function(t) { return '<b>' + counts[t] + '</b> ' + (label[t] || t); });
+        html += '<div style="margin-top:6px; padding:5px 8px; background:rgba(168,85,247,0.08); border:1px solid rgba(168,85,247,0.25); font-size:0.56rem; color:var(--text-muted);">';
+        html += '<div style="font-weight:600; color:#a855f7; margin-bottom:2px;">🔍 Tespit edilen özellikler (auto)</div>';
+        html += parts.join(' · ');
+        html += '</div>';
+      }
       // Faz 4 — tam B-Rep hiyerarşisi (solid/shell/wire)
       if (isBrep && topoObj && Array.isArray(topoObj.wires)) {
         var nSolid = topoObj.solids ? topoObj.solids.length : 0;
