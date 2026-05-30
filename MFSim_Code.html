@@ -29130,6 +29130,61 @@ function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
   return out;
 }
 
+// ── Kuadratik mid-side düğüm yüzey projektörü ──────────────────────────────
+// veFEAEnrichToQuadratic için projector üretir: eğri primitiflerde (küre,
+// silindir) yüzey kenarlarının orta düğümünü analitik yüzeye taşır → kuadratik
+// eleman gerçek yayı temsil eder. Düz/desteklenmeyen yüzeyler için null döner
+// (projeksiyon yok; orta düğüm lineer orta noktada kalır, inverted üretmez).
+// projector imzası: (mx,my,mz,aId,bId) → [x,y,z] | null.
+// Not: koni/yarımküre şimdilik projeksiyonsuz (lineer orta nokta — güvenli);
+// analitik projeksiyonları ileride eklenebilir.
+function _veFEABuildSurfaceProjector(geometry, mesh) {
+  if (!geometry || !mesh || !mesh.nodes) return null;
+  var type = geometry.type;
+  var p = geometry.params || {};
+  var nodes = mesh.nodes;
+
+  if (type === 'sphere') {
+    var R = (+p.radius) || 0;
+    if (R <= 0) return null;
+    var tol = Math.max(R * 0.02, 1e-6);
+    var onSphere = function(i) {
+      var x = nodes[i * 3], y = nodes[i * 3 + 1], z = nodes[i * 3 + 2];
+      return Math.abs(Math.sqrt(x * x + y * y + z * z) - R) < tol;
+    };
+    // Yalnızca iki ucu da yüzeyde olan (tanjant) kenarların ortası projekte edilir;
+    // radyal iç kenarlar dokunulmaz.
+    return function(mx, my, mz, a, b) {
+      if (!onSphere(a) || !onSphere(b)) return null;
+      var d = Math.sqrt(mx * mx + my * my + mz * mz);
+      if (d < 1e-9) return null;
+      var s = R / d;
+      return [mx * s, my * s, mz * s];
+    };
+  }
+
+  if (type === 'cylinder') {
+    var Rc = (+p.radius) || 0;
+    if (Rc <= 0) return null;
+    var tolc = Math.max(Rc * 0.02, 1e-6);
+    // Silindir ekseni Y; yanal yüzey radyal mesafesi = sqrt(x²+z²).
+    var onLateral = function(i) {
+      var x = nodes[i * 3], z = nodes[i * 3 + 2];
+      return Math.abs(Math.sqrt(x * x + z * z) - Rc) < tolc;
+    };
+    return function(mx, my, mz, a, b) {
+      if (!onLateral(a) || !onLateral(b)) return null;
+      var d = Math.sqrt(mx * mx + mz * mz);
+      if (d < 1e-9) return null;
+      var s = Rc / d;
+      return [mx * s, my, mz * s];   // y (eksen) korunur, x/z yüzeye ölçeklenir
+    };
+  }
+
+  // box / cone / hemisphere / torus / step / ... → projeksiyon yok
+  return null;
+}
+
 function veFEAMeshFromGeometry(geometry, opts) {
   if (!geometry || !geometry.type) return null;
   opts = opts || {};
