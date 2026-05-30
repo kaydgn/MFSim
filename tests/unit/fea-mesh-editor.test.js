@@ -738,6 +738,61 @@ describe('veFEAEditorToggleViewerToolbar', () => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────
+// Mesh eleman seçimi modu — "⊹ Eleman Seç" toolbar butonu + toggle
+describe('veFEAEditorToggleMeshPick', () => {
+  beforeEach(() => {
+    global.nodes = [];
+    document.body.innerHTML = '';
+    if (_veFEAEditorActive) veFEACloseMeshEditor();
+  });
+
+  test('Toolbar\'da "Eleman Seç" butonu + gizli seçim etiketi render edilir', () => {
+    var node = { id: 'mesh-MP1', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-MP1');
+    var btn = document.getElementById('ve-fea-mesh-pick-mesh-MP1');
+    var label = document.getElementById('ve-fea-mesh-pick-label-mesh-MP1');
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute('data-active')).toBe('false');
+    expect(label).not.toBeNull();
+    expect(label.style.display).toBe('none');
+  });
+
+  test('Toggle: mesh-pick modunu açar/kapar ve viewer pointer modunu ayarlar', () => {
+    var node = { id: 'mesh-MP2', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-MP2');
+    var modeCalls = [];
+    var cleared = 0;
+    var curMode = 'view';
+    veFEAViewerRegistry['mesh-MP2'] = {
+      getPointerMode: function() { return curMode; },
+      setPointerMode: function(m) { curMode = m; modeCalls.push(m); },
+      clearMeshElementSelection: function() { cleared++; }
+    };
+    var btn = document.getElementById('ve-fea-mesh-pick-mesh-MP2');
+    // Aç
+    veFEAEditorToggleMeshPick('mesh-MP2');
+    expect(modeCalls[modeCalls.length - 1]).toBe('mesh-pick');
+    expect(btn.getAttribute('data-active')).toBe('true');
+    // Kapat
+    veFEAEditorToggleMeshPick('mesh-MP2');
+    expect(modeCalls[modeCalls.length - 1]).toBe('view');
+    expect(btn.getAttribute('data-active')).toBe('false');
+    expect(cleared).toBe(1); // kapanışta seçim temizlenir
+  });
+
+  test('Viewer yokken toggle no-op (hata vermez), buton durumu yine de değişir', () => {
+    var node = { id: 'mesh-MP3', type: 'fea-mesh', data: {} };
+    global.nodes = [node];
+    veFEAOpenMeshEditor('mesh-MP3');
+    expect(function() { veFEAEditorToggleMeshPick('mesh-MP3'); }).not.toThrow();
+    var btn = document.getElementById('ve-fea-mesh-pick-mesh-MP3');
+    expect(btn.getAttribute('data-active')).toBe('true');
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 describe('Accordion bölümleri', () => {
   beforeEach(() => {
     global.nodes = [];
