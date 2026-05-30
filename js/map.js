@@ -2880,6 +2880,11 @@ function veShowCompMarker(svgHtml) {
   var slot = document.getElementById('ve-comp-marker-svg');
   if(slot) slot.innerHTML = svgHtml || '';
   m.classList.add('visible');
+  // Dikkat çek: kenarlık temaya uygun aksan renginde yanıp söner (animasyonu
+  // yeniden başlatmak için class'ı sil → reflow → ekle deseni)
+  m.classList.remove('flash');
+  void m.offsetWidth;
+  m.classList.add('flash');
 }
 function veHideCompMarker() {
   var m = document.getElementById('ve-comp-marker');
