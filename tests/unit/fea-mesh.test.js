@@ -3980,6 +3980,21 @@ describe('veFEAMeshSelfTest — mesh kalite diagnostiği', () => {
     expect(r.total).toBeGreaterThan(0);
   });
 
+  test('Her satır ANSYS-tarzı kalite skoru (0-100 + grade) raporlar', () => {
+    var r = veFEAMeshSelfTest({ verbose: false });
+    var passing = r.rows.filter(function (x) { return x.ok; });
+    expect(passing.length).toBeGreaterThan(0);
+    passing.forEach(function (row) {
+      expect(typeof row.score).toBe('number');
+      expect(row.score).toBeGreaterThanOrEqual(0);
+      expect(row.score).toBeLessThanOrEqual(100);
+      expect(typeof row.grade).toBe('string');
+    });
+    // Kutu senaryoları mükemmel skor almalı (A)
+    var box = r.rows.filter(function (x) { return /Kutu/.test(x.senaryo) && x.ok; });
+    box.forEach(function (b) { expect(b.score).toBeGreaterThanOrEqual(90); });
+  });
+
   test('Düzeltilen geometriler (tor, koni-apex, küre) çözücü-uyumlu geçer', () => {
     var r = veFEAMeshSelfTest({ verbose: false });
     var failed = r.rows.filter(function (x) { return !x.ok; }).map(function (x) { return x.senaryo; });

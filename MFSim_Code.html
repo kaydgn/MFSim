@@ -34817,6 +34817,12 @@ function veFEAMeshSelfTest(opts) {
         row.skewMax = q.skewness ? +q.skewness.max.toFixed(3) : null;
         row.orthoMin = q.orthogonalQuality ? +q.orthogonalQuality.min.toFixed(3) : null;
         row.arMax = q.aspectRatio ? +q.aspectRatio.max.toFixed(1) : null;
+        // ANSYS-tarzı genel kalite skoru (0-100) — görünürlük için
+        if (typeof veFEAComputeMeshQualityScore === 'function') {
+          var qsc = veFEAComputeMeshQualityScore(m);
+          row.score = qsc ? qsc.score : null;
+          row.grade = qsc ? qsc.grade : null;
+        }
         // KRİTİK kontrol: çözücü-uyumluluk = inverted/degenerate yok.
         // (Skewness/AR yüksekliği tekil geometrilerde kabul edilir, ama
         // inverted eleman = çözücü patlar → mutlak başarısızlık.)
@@ -34840,6 +34846,7 @@ function veFEAMeshSelfTest(opts) {
       console.table(rows.map(function (r) {
         return { Senaryo: r.senaryo, Tip: r.tip, Eleman: r.eleman, Inverted: r.inverted,
                  Degenere: r.degenerate, SkewMax: r.skewMax, OrthoMin: r.orthoMin, ARmax: r.arMax,
+                 Skor: (r.score != null ? r.score + '/' + r.grade : '–'),
                  Sonuç: r.ok ? '✓' : '✗ ' + r.not };
       }));
     } else {

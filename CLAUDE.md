@@ -98,3 +98,36 @@ npm run build:wasm:tetgen   # TetGen tet mesher'ı WASM'a derle (emscripten + AG
 TetGen build edilmemişse veya yüklenemezse otomatik olarak Delaunay'a, o da başarısız olursa voxel'a düşülür — kullanıcı her durumda tet4 mesh alır. STEP geometrilerinde en yüksek kalite için TetGen önerilir; ticari kullanım için WIAS Berlin'den lisans gerekir.
 
 > **Not:** `scripts/build-tetgen-wasm.js` emscripten flag'lerini `spawnSync` ile (shell olmadan) geçirir; bu yüzden `-s EXPORT_NAME=...` / `-s ENVIRONMENT=...` değerleri **tek tırnaksız** olmalıdır (tırnaklar literal geçer ve emscripten 4.x+ reddeder).
+
+> **CI/Deploy:** `.github/workflows/ci-deploy.yml` hem test hem deploy job'ında
+> emscripten kurar (`setup-emsdk@v14`, EMSDK_VERSION pinli) ve `build:wasm:tetgen`'i
+> `npm run build`'den **önce** çalıştırır → TetGen WASM canlı sitede inline ("● aktif").
+> **AGPL-3.0:** yayınlanan site bu yükümlülüklere tabidir (bilinçli opt-in karar).
+
+## Mesh Kalite Altyapısı (ANSYS-tarzı)
+
+Mesh kalitesi `js/fea-mesh-smoothing.js` (ISC, saf JS) ve `js/fea-mesh.js` kalite
+fonksiyonları ile yönetilir.
+
+### Smoothing (`js/fea-mesh-smoothing.js`)
+- **`veFEASmoothMesh(mesh, opts)`** — Smart Laplacian: iç düğümü komşu centroid'ine
+  çeker, yalnız lokal MİN kaliteyi artırıyorsa kabul eder (monoton, inverted üretmez).
+  Yüzey düğümleri sabit (veya `surfaceProjector` ile yüzeyde tanjant kayar).
+  `method:'optimization'` / `optimizeStubborn:true` → çok-yönlü pattern search.
+- **`veFEAAutoImproveMesh(mesh, {targetScore, scoreFn})`** — kalite-güdümlü kademeli
+  otomatik iyileştirme (smartLaplacian → +optimizeStubborn → optimization). Monoton.
+- Unstructured (TetGen/Delaunay/voxel) tet için pipeline'da **varsayılan AÇIK**;
+  yapısal primitifler için opt-in (`opts.smoothing`).
+
+### Kalite metrikleri & skor (`js/fea-mesh.js`)
+- **`veFEAComputeQualityMetrics`** — aspect, skewness, orthogonal quality, element
+  quality, warping, parallel deviation, iç açı + histogramlar.
+- **`veFEAComputeJacobianMetrics`** — inverted/degenerate tespiti.
+- **`veFEAComputeMeshQualityScore`** — ANSYS-tarzı **0-100 skor + harf notu (A-F)** +
+  öneri. Inverted → veto. Mesh editöründe renk-kodlu rozet olarak gösterilir.
+- **`veFEAAutoImproveMeshWithScore`** — UI köprüsü (gerçek skoru auto-improve'a enjekte).
+
+### TetGen ANSYS-kalite switch'leri (`js/fea-tetgen.js`)
+- `_veFEATetgenBuildSwitches` — `q{ratio}/{angle}` (min dihedral açı, sliver
+  engelleme, 18° clamp), `O{level}` (optimization), `a{vol}`, `Y`, `T{tol}`.
+- `fea-mesh.js` varsayılan `minDihedralAngle: 10°`.
