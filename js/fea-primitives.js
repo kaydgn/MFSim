@@ -161,6 +161,63 @@ var VE_FEA_PRIMITIVES = {
       { key: 'rows',      label: 'Satır Sayısı (Y)', unit: '−', default: 2, min: 1, max: 20, integer: true },
       { key: 'margin',    label: 'Kenardan Boşluk',  unit: 'mm', default: 15, min: 0, max: 500 }
     ]
+  },
+
+  // ─── BENCHMARK GEOMETRİLERİ ────────────────────────────────────────────────
+  // Aşağıdaki dört geometri, basit primitiflerin aksine bilinçli olarak
+  // tip-spesifik (structured) bir mesher'a SAHİP DEĞİLDİR. Bu sayede mesh
+  // motoru onları generic yola (üçgen çıkarımı → voxel → ray-cast → tet4 →
+  // boundary-snap) sokar ve "kurduğumuz mesh matematiğini" zorlar. Her biri
+  // farklı bir zorluk sınıfını hedefler (boss/kaburga kaynaşması, bolt-circle
+  // delik dizisi, dar boşluk + pim deliği, ince sliver kaburgalar).
+  'oilFilterBracket': {
+    label: 'Yağ Filtresi Üst Braketi',
+    schema: [
+      { key: 'baseLength',    label: 'Taban Uzunluğu (X)',     unit: 'mm', default: 90, min: 20, max: 2000 },
+      { key: 'baseWidth',     label: 'Taban Genişliği (Z)',    unit: 'mm', default: 60, min: 20, max: 2000 },
+      { key: 'baseThickness', label: 'Taban Kalınlığı (Y)',    unit: 'mm', default: 8,  min: 1,  max: 200 },
+      { key: 'bossOuterDiameter', label: 'Boss Dış Çapı',      unit: 'mm', default: 40, min: 5,  max: 1000 },
+      { key: 'bossInnerDiameter', label: 'Filtre Yuvası İç Çapı', unit: 'mm', default: 28, min: 0, max: 1000 },
+      { key: 'bossHeight',    label: 'Boss Yüksekliği',        unit: 'mm', default: 35, min: 2,  max: 1000 },
+      { key: 'mountHoleDiameter', label: 'Montaj Delik Çapı',  unit: 'mm', default: 9,  min: 0,  max: 200 },
+      { key: 'ribThickness',  label: 'Kaburga Kalınlığı',      unit: 'mm', default: 5,  min: 0,  max: 200 }
+    ]
+  },
+  'pipeFlange': {
+    label: 'Boru Flanşı (Bolt-Circle)',
+    schema: [
+      { key: 'flangeDiameter',  label: 'Flanş Dış Çapı',        unit: 'mm', default: 120, min: 20, max: 3000 },
+      { key: 'flangeThickness', label: 'Flanş Kalınlığı',       unit: 'mm', default: 12,  min: 2,  max: 500 },
+      { key: 'neckDiameter',    label: 'Boyun Dış Çapı',        unit: 'mm', default: 50,  min: 5,  max: 2000 },
+      { key: 'neckHeight',      label: 'Boyun Yüksekliği',      unit: 'mm', default: 40,  min: 0,  max: 2000 },
+      { key: 'boreDiameter',    label: 'Merkez Delik (Bore) Çapı', unit: 'mm', default: 32, min: 1, max: 2000 },
+      { key: 'boltCircleDiameter', label: 'Cıvata Daire Çapı (BCD)', unit: 'mm', default: 95, min: 5, max: 2800 },
+      { key: 'boltHoleDiameter', label: 'Cıvata Delik Çapı',    unit: 'mm', default: 11,  min: 1,  max: 300 },
+      { key: 'boltCount',       label: 'Cıvata Sayısı',         unit: '−',  default: 6,   min: 2,  max: 24, integer: true }
+    ]
+  },
+  'clevis': {
+    label: 'Çatal Mafsal (Clevis / Yoke)',
+    schema: [
+      { key: 'baseDepth',       label: 'Taban/Kulak Derinliği (Z)', unit: 'mm', default: 30, min: 5, max: 1000 },
+      { key: 'baseHeight',      label: 'Taban Yüksekliği (Y)',  unit: 'mm', default: 15, min: 2,  max: 1000 },
+      { key: 'earThickness',    label: 'Kulak Kalınlığı (X, her biri)', unit: 'mm', default: 8, min: 1, max: 500 },
+      { key: 'earHeight',       label: 'Kulak Yüksekliği',      unit: 'mm', default: 35, min: 5,  max: 1500 },
+      { key: 'gap',             label: 'Kulaklar Arası Boşluk', unit: 'mm', default: 16, min: 1,  max: 1000 },
+      { key: 'pinHoleDiameter', label: 'Pim Delik Çapı',        unit: 'mm', default: 12, min: 0,  max: 800 }
+    ]
+  },
+  'gussetBracket': {
+    label: 'Kaburgalı/Gussetli Braket',
+    schema: [
+      { key: 'wallHeight',     label: 'Dikey Duvar Yüksekliği (Y)', unit: 'mm', default: 80, min: 10, max: 3000 },
+      { key: 'shelfLength',    label: 'Yatay Raf Uzunluğu (Z)', unit: 'mm', default: 70, min: 10, max: 3000 },
+      { key: 'width',          label: 'Genişlik (X)',           unit: 'mm', default: 60, min: 10, max: 3000 },
+      { key: 'plateThickness', label: 'Duvar/Raf Kalınlığı',    unit: 'mm', default: 8,  min: 1,  max: 300 },
+      { key: 'gussetThickness', label: 'Kaburga Kalınlığı (ince)', unit: 'mm', default: 5, min: 0, max: 200 },
+      { key: 'gussetCount',    label: 'Kaburga Sayısı',         unit: '−',  default: 2,  min: 0,  max: 10, integer: true },
+      { key: 'holeDiameter',   label: 'Cıvata Delik Çapı',      unit: 'mm', default: 9,  min: 0,  max: 200 }
+    ]
   }
 };
 
@@ -243,6 +300,43 @@ function veFEANormalizePrimitiveParams(type, params) {
   if(type === 'plate') {
     var maxHoleD = Math.max(0.1, Math.min(out.length, out.width) * 0.4);
     if(out.holeDiameter > maxHoleD) out.holeDiameter = maxHoleD;
+  }
+  // Oil filter bracket: boss tabanın içine sığmalı, iç delik dış çaptan küçük
+  if(type === 'oilFilterBracket') {
+    var maxBossD = Math.min(out.baseLength, out.baseWidth) - 2;
+    if(out.bossOuterDiameter > maxBossD) out.bossOuterDiameter = Math.max(5, maxBossD);
+    if(out.bossInnerDiameter >= out.bossOuterDiameter) {
+      out.bossInnerDiameter = Math.max(0, out.bossOuterDiameter - 4);
+    }
+    // Montaj deliği taban köşesinin yarısından küçük olmalı
+    var maxMountD = Math.max(0, Math.min(out.baseLength, out.baseWidth) * 0.25);
+    if(out.mountHoleDiameter > maxMountD) out.mountHoleDiameter = maxMountD;
+  }
+  // Pipe flange: boyun/bore/bolt-circle flanş içine sığmalı
+  if(type === 'pipeFlange') {
+    if(out.neckDiameter >= out.flangeDiameter) out.neckDiameter = Math.max(5, out.flangeDiameter - 4);
+    if(out.boreDiameter >= out.neckDiameter)   out.boreDiameter = Math.max(1, out.neckDiameter - 2);
+    // Bolt-circle + delik flanş kenarı ile boyun arasında kalmalı
+    var maxBcd = out.flangeDiameter - out.boltHoleDiameter - 2;
+    if(out.boltCircleDiameter > maxBcd) out.boltCircleDiameter = Math.max(out.neckDiameter + out.boltHoleDiameter, maxBcd);
+    var minBcd = out.neckDiameter + out.boltHoleDiameter + 2;
+    if(out.boltCircleDiameter < minBcd) out.boltCircleDiameter = Math.min(maxBcd, minBcd);
+    // Cıvata delikleri çakışmasın: çevre / sayı > delik çapı
+    var pitch = Math.PI * out.boltCircleDiameter / Math.max(1, out.boltCount);
+    if(out.boltHoleDiameter >= pitch * 0.9) out.boltHoleDiameter = Math.max(1, pitch * 0.6);
+  }
+  // Clevis: pim deliği kulak derinliğine sığmalı
+  if(type === 'clevis') {
+    var maxPinD = out.baseDepth - 2;
+    if(out.pinHoleDiameter > maxPinD) out.pinHoleDiameter = Math.max(0, maxPinD);
+  }
+  // Gusset bracket: kaburga/plaka kalınlıkları makul kalsın
+  if(type === 'gussetBracket') {
+    var maxPlateT = Math.min(out.wallHeight, out.shelfLength) / 3;
+    if(out.plateThickness > maxPlateT) out.plateThickness = Math.max(1, maxPlateT);
+    if(out.gussetThickness > out.width) out.gussetThickness = out.width;
+    var maxGHoleD = Math.max(0, out.width * 0.3);
+    if(out.holeDiameter > maxGHoleD) out.holeDiameter = maxGHoleD;
   }
   return out;
 }
@@ -383,6 +477,80 @@ function veFEAPrimitiveStats(type, params) {
     // 2 üst/alt yüz + 4 yan + delik iç silindir yan'ları
     surfaceArea = 2 * crossP + 2 * (pL + pW) * pT + validHoles * 2 * Math.PI * holeR_P * pT;
     bbox = { x: pL, y: pT, z: pW };
+  } else if(type === 'oilFilterBracket') {
+    var ofbL = p.baseLength, ofbW = p.baseWidth, ofbT = p.baseThickness;
+    var ofbBoR = p.bossOuterDiameter / 2, ofbBiR = p.bossInnerDiameter / 2, ofbBh = p.bossHeight;
+    var ofbMr = p.mountHoleDiameter / 2;
+    var ofbRt = p.ribThickness;
+    var ofbRibReach = Math.max(0, (ofbL / 2 - ofbBoR) * 0.8);
+    var ofbRibRise = ofbBh * 0.7;
+    var ofbRibArea = 0.5 * ofbRibReach * ofbRibRise;
+    // Taban − boss iç deliği (tabanı deler) − 4 montaj deliği
+    var ofbBaseVol = ofbL * ofbW * ofbT - Math.PI * ofbBiR * ofbBiR * ofbT - 4 * Math.PI * ofbMr * ofbMr * ofbT;
+    var ofbBossVol = Math.PI * (ofbBoR * ofbBoR - ofbBiR * ofbBiR) * ofbBh;
+    var ofbRibVol = (ofbRt > 0 ? 2 : 0) * ofbRibArea * ofbRt;
+    volume = Math.max(0, ofbBaseVol) + ofbBossVol + ofbRibVol;
+    var ofbHip = Math.sqrt(ofbRibReach * ofbRibReach + ofbRibRise * ofbRibRise);
+    surfaceArea =
+      2 * ofbL * ofbW                                  // taban üst + alt
+      + 2 * (ofbL + ofbW) * ofbT                       // taban yan
+      + 2 * Math.PI * ofbBoR * ofbBh                   // boss dış yan
+      + 2 * Math.PI * ofbBiR * (ofbBh + ofbT)          // delik iç yan (taban boyunca)
+      + Math.PI * (ofbBoR * ofbBoR - ofbBiR * ofbBiR)  // boss üst halka
+      + 4 * 2 * Math.PI * ofbMr * ofbT                 // montaj delik iç yan
+      + (ofbRt > 0 ? 2 : 0) * (2 * ofbRibArea + (ofbRibReach + ofbRibRise + ofbHip) * ofbRt); // kaburgalar
+    bbox = { x: ofbL, y: ofbT + ofbBh, z: ofbW };
+  } else if(type === 'pipeFlange') {
+    var pfFr = p.flangeDiameter / 2, pfFt = p.flangeThickness;
+    var pfNr = p.neckDiameter / 2, pfNh = p.neckHeight;
+    var pfBr = p.boreDiameter / 2;
+    var pfBoltR = p.boltHoleDiameter / 2, pfN = p.boltCount;
+    var pfFlangeVol = Math.PI * pfFr * pfFr * pfFt - Math.PI * pfBr * pfBr * pfFt - pfN * Math.PI * pfBoltR * pfBoltR * pfFt;
+    var pfNeckVol = Math.PI * (pfNr * pfNr - pfBr * pfBr) * pfNh;
+    volume = Math.max(0, pfFlangeVol) + Math.max(0, pfNeckVol);
+    surfaceArea =
+      2 * Math.PI * pfFr * pfFr                         // flanş üst + alt
+      - 2 * Math.PI * pfBr * pfBr - 2 * pfN * Math.PI * pfBoltR * pfBoltR // eksi delik kapakları
+      + 2 * Math.PI * pfFr * pfFt                       // flanş dış kenar
+      + 2 * Math.PI * pfBr * (pfFt + pfNh)              // bore iç yan
+      + pfN * 2 * Math.PI * pfBoltR * pfFt              // cıvata delik iç yan
+      + 2 * Math.PI * pfNr * pfNh                       // boyun dış yan
+      + Math.PI * (pfNr * pfNr - pfBr * pfBr);          // boyun üst halka
+    bbox = { x: p.flangeDiameter, y: pfFt + pfNh, z: p.flangeDiameter };
+  } else if(type === 'clevis') {
+    var clBd = p.baseDepth, clBh = p.baseHeight, clEt = p.earThickness;
+    var clEh = p.earHeight, clGap = p.gap, clPinR = p.pinHoleDiameter / 2;
+    var clBaseW = clGap + 2 * clEt;
+    var clEarR = clBd / 2;
+    var clEarArea = clBd * clEh + 0.5 * Math.PI * clEarR * clEarR - Math.PI * clPinR * clPinR;
+    volume = clBaseW * clBh * clBd + 2 * Math.max(0, clEarArea) * clEt;
+    var clEarPerim = 2 * clEh + clBd + Math.PI * clEarR; // dik kenarlar + alt + yarım daire yay
+    surfaceArea =
+      2 * clBaseW * clBd + 2 * (clBaseW + clBd) * clBh   // taban
+      + 2 * (2 * clEarArea + clEarPerim * clEt)          // 2 kulak yüz + kenar
+      + 2 * 2 * Math.PI * clPinR * clEt;                 // 2 pim deliği iç yan
+    bbox = { x: clBaseW, y: clBh + clEh + clEarR, z: clBd };
+  } else if(type === 'gussetBracket') {
+    var gbWh = p.wallHeight, gbSl = p.shelfLength, gbW = p.width;
+    var gbPt = p.plateThickness, gbGt = p.gussetThickness, gbGc = p.gussetCount;
+    var gbHr = p.holeDiameter / 2;
+    var gbGRise = gbWh * 0.7, gbGRun = gbSl * 0.7;
+    var gbGArea = 0.5 * gbGRise * gbGRun;
+    var gbWallVol = gbW * gbWh * gbPt - 2 * Math.PI * gbHr * gbHr * gbPt; // 2 cıvata deliği
+    var gbShelfVol = gbW * gbSl * gbPt;
+    var gbGussetVol = (gbGt > 0 ? gbGc : 0) * gbGArea * gbGt;
+    // Duvar rafın ÜSTÜNDE durur (y = pt'den başlar) → hacimsel örtüşme yok,
+    // sadece L köşesinde temas. (Even-odd voxel mesher'da örtüşme XOR boşluk
+    // yaratırdı; tam temas bağlı katı verir.)
+    volume = Math.max(0, gbWallVol) + gbShelfVol + gbGussetVol;
+    var gbGHip = Math.sqrt(gbGRise * gbGRise + gbGRun * gbGRun);
+    surfaceArea =
+      2 * gbW * gbWh - 2 * 2 * Math.PI * gbHr * gbHr     // duvar yüzleri − delik kapakları
+      + 2 * gbW * gbSl                                   // raf yüzleri
+      + 2 * (gbWh + gbSl) * gbPt                         // dış kenar şeritleri (yaklaşık)
+      + 2 * 2 * Math.PI * gbHr * gbPt                    // cıvata delik iç yan
+      + (gbGt > 0 ? gbGc : 0) * (2 * gbGArea + (gbGRise + gbGRun + gbGHip) * gbGt); // kaburgalar
+    bbox = { x: gbW, y: gbPt + gbWh, z: gbSl }; // duvar rafın üstünde
   }
 
   // GENERIC STATS FALLBACK: Tip-spesifik case eşleşmediyse Three.js mesh'inden
@@ -473,6 +641,10 @@ function veFEABuildPrimitiveMesh(type, params) {
   if(type === 'bolt')     return _veFEABuildBoltGroup(p);
   if(type === 'nut')      return _veFEABuildNutMesh(p);
   if(type === 'plate')    return _veFEABuildPlateMesh(p);
+  if(type === 'oilFilterBracket') return _veFEABuildOilFilterBracketGroup(p);
+  if(type === 'pipeFlange')       return _veFEABuildPipeFlangeGroup(p);
+  if(type === 'clevis')           return _veFEABuildClevisGroup(p);
+  if(type === 'gussetBracket')    return _veFEABuildGussetBracketGroup(p);
   return null;
 }
 
@@ -899,6 +1071,239 @@ function _veFEABuildRectTubeMesh(p) {
   var line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x1a3d6b }));
   mesh.add(line);
   return mesh;
+}
+
+// ─── BENCHMARK GEOMETRİ İNŞAÇILARI ──────────────────────────────────────────
+// Bu dört geometri bilinçli olarak THREE.Group + birden çok child mesh ile
+// kurulur. Parçalar HACİMSEL ÖRTÜŞMEDEN, ortak düzlemlerde TAM TEMAS edecek
+// şekilde yerleştirilir: generic voxel mesher even-odd parite kullandığından
+// (fea-mesh.js), örtüşen kapalı yüzeyler XOR (boşluk) üretir — temas ise
+// bağlı bir katı verir. İnce kaburga / çok delik / eğri-düz kaynaşma gibi
+// zorluklar bu sayede mesh motorunu "kıracak şekilde değil, zorlayacak
+// şekilde" test eder.
+
+// Ortak kenar (wireframe) overlay yardımcı fonksiyonu.
+function _veFEAAttachEdges(mesh, opacity) {
+  var hasOpacity = (opacity !== undefined && opacity !== null);
+  var e = new THREE.EdgesGeometry(mesh.geometry, 30);
+  var l = new THREE.LineSegments(e, new THREE.LineBasicMaterial({
+    color: 0x1a3d6b, transparent: hasOpacity, opacity: hasOpacity ? opacity : 1
+  }));
+  mesh.add(l);
+  return mesh;
+}
+
+// ─── Yağ Filtresi Üst Braketi ───────────────────────────────────────────────
+// Delikli taban plakası + içi boş silindirik filtre boss'u + 2 köşegen kaburga.
+// Zorluk: eğri boss ↔ düz taban kaynaşması, çok-ölçekli (ince kaburga + kalın
+// boss), montaj delikleri + tabanı delen filtre yuvası, re-entrant köşeler.
+function _veFEABuildOilFilterBracketGroup(p) {
+  var group = new THREE.Group();
+  group.userData.feaPrimitive = { type: 'oilFilterBracket', params: p };
+  var L = p.baseLength, W = p.baseWidth, t = p.baseThickness;
+  var boR = p.bossOuterDiameter / 2, biR = p.bossInnerDiameter / 2, bh = p.bossHeight;
+  var mr = p.mountHoleDiameter / 2, rt = p.ribThickness;
+  var L2 = L / 2, W2 = W / 2;
+
+  // Taban plakası (XY shape, +Y extrude → yatay XZ levha)
+  var baseShape = new THREE.Shape();
+  baseShape.moveTo(-L2, -W2); baseShape.lineTo(L2, -W2);
+  baseShape.lineTo(L2, W2);   baseShape.lineTo(-L2, W2); baseShape.lineTo(-L2, -W2);
+  if (biR > 0) { // filtre yuvası tabanı da deler
+    var bHole = new THREE.Path(); bHole.absarc(0, 0, biR, 0, Math.PI * 2, true); baseShape.holes.push(bHole);
+  }
+  if (mr > 0) { // 4 köşe montaj deliği (boss bölgesine girmeyenler)
+    var mx = L2 - Math.max(mr + 2, L * 0.12);
+    var my = W2 - Math.max(mr + 2, W * 0.12);
+    [[-mx, -my], [mx, -my], [mx, my], [-mx, my]].forEach(function (c) {
+      if (Math.sqrt(c[0] * c[0] + c[1] * c[1]) > boR + mr + 1) {
+        var mHole = new THREE.Path(); mHole.absarc(c[0], c[1], mr, 0, Math.PI * 2, true);
+        baseShape.holes.push(mHole);
+      }
+    });
+  }
+  var baseGeo = new THREE.ExtrudeGeometry(baseShape, { depth: t, bevelEnabled: false, steps: 1, curveSegments: 40 });
+  baseGeo.rotateX(-Math.PI / 2); // extrude Z(0..t) → Y(0..t)
+  var baseMesh = new THREE.Mesh(baseGeo, _veFEAMakePrimitiveMaterial());
+  baseMesh.userData.feaFaceId = 'faceBase';
+  group.add(_veFEAAttachEdges(baseMesh));
+
+  // İçi boş silindirik boss — tabanın üstünde TAM TEMAS (y = t)
+  var bossShape = new THREE.Shape();
+  bossShape.absarc(0, 0, boR, 0, Math.PI * 2, false);
+  if (biR > 0) { var biHole = new THREE.Path(); biHole.absarc(0, 0, biR, 0, Math.PI * 2, true); bossShape.holes.push(biHole); }
+  var bossGeo = new THREE.ExtrudeGeometry(bossShape, { depth: bh, bevelEnabled: false, steps: 1, curveSegments: 48 });
+  bossGeo.rotateX(-Math.PI / 2); // y: 0..bh
+  bossGeo.translate(0, t, 0);    // tabanın üstüne
+  var bossMesh = new THREE.Mesh(bossGeo, _veFEAMakePrimitiveMaterial());
+  bossMesh.userData.feaFaceId = 'faceBoss';
+  group.add(_veFEAAttachEdges(bossMesh));
+
+  // 2 köşegen kaburga (gusset) — boss yan yüzünden tabana TAM TEMAS
+  if (rt > 0) {
+    var ribReach = Math.max(2, (L2 - boR) * 0.8);
+    var ribRise = bh * 0.7;
+    [1, -1].forEach(function (sign) {
+      var rs = new THREE.Shape();
+      rs.moveTo(sign * boR, t);
+      rs.lineTo(sign * (boR + ribReach), t);
+      rs.lineTo(sign * boR, t + ribRise);
+      rs.lineTo(sign * boR, t);
+      var rg = new THREE.ExtrudeGeometry(rs, { depth: rt, bevelEnabled: false, steps: 1 });
+      rg.translate(0, 0, -rt / 2); // z=0 düzleminde merkez
+      var rm = new THREE.Mesh(rg, _veFEAMakePrimitiveMaterial());
+      rm.userData.feaFaceId = 'faceRib';
+      group.add(_veFEAAttachEdges(rm, 0.6));
+    });
+  }
+
+  group.position.y = -(t + bh) / 2; // bbox merkezine kaydır
+  return group;
+}
+
+// ─── Boru Flanşı (Bolt-Circle) ───────────────────────────────────────────────
+// Çok delikli flanş diski (merkez bore + N cıvata deliği) + içi boş boyun.
+// Zorluk: eksensimetriyi kıran N adet eğri delik dizisi, kalın boyun ↔ ince
+// flanş geçişi, çok sayıda yakın yerleşimli silindirik delik kenarı.
+function _veFEABuildPipeFlangeGroup(p) {
+  var group = new THREE.Group();
+  group.userData.feaPrimitive = { type: 'pipeFlange', params: p };
+  var Fr = p.flangeDiameter / 2, Ft = p.flangeThickness;
+  var Nr = p.neckDiameter / 2, Nh = p.neckHeight;
+  var Br = p.boreDiameter / 2;
+  var bcR = p.boltCircleDiameter / 2, boltR = p.boltHoleDiameter / 2, N = p.boltCount;
+
+  // Flanş diski — bore + N cıvata deliği
+  var fShape = new THREE.Shape();
+  fShape.absarc(0, 0, Fr, 0, Math.PI * 2, false);
+  if (Br > 0) { var fBore = new THREE.Path(); fBore.absarc(0, 0, Br, 0, Math.PI * 2, true); fShape.holes.push(fBore); }
+  for (var i = 0; i < N; i++) {
+    var ang = (i / N) * Math.PI * 2;
+    var bx = bcR * Math.cos(ang), by = bcR * Math.sin(ang);
+    var bHole = new THREE.Path(); bHole.absarc(bx, by, boltR, 0, Math.PI * 2, true);
+    fShape.holes.push(bHole);
+  }
+  var fGeo = new THREE.ExtrudeGeometry(fShape, { depth: Ft, bevelEnabled: false, steps: 1, curveSegments: 56 });
+  fGeo.rotateX(-Math.PI / 2); // y: 0..Ft
+  var fMesh = new THREE.Mesh(fGeo, _veFEAMakePrimitiveMaterial());
+  fMesh.userData.feaFaceId = 'faceFlange';
+  group.add(_veFEAAttachEdges(fMesh));
+
+  // İçi boş boyun (hub) — flanşın üstünde TAM TEMAS (y = Ft)
+  if (Nh > 0 && Nr > Br) {
+    var nShape = new THREE.Shape();
+    nShape.absarc(0, 0, Nr, 0, Math.PI * 2, false);
+    if (Br > 0) { var nBore = new THREE.Path(); nBore.absarc(0, 0, Br, 0, Math.PI * 2, true); nShape.holes.push(nBore); }
+    var nGeo = new THREE.ExtrudeGeometry(nShape, { depth: Nh, bevelEnabled: false, steps: 1, curveSegments: 48 });
+    nGeo.rotateX(-Math.PI / 2);
+    nGeo.translate(0, Ft, 0);
+    var nMesh = new THREE.Mesh(nGeo, _veFEAMakePrimitiveMaterial());
+    nMesh.userData.feaFaceId = 'faceNeck';
+    group.add(_veFEAAttachEdges(nMesh));
+  }
+
+  group.position.y = -(Ft + Nh) / 2;
+  return group;
+}
+
+// ─── Çatal Mafsal (Clevis / Yoke) ────────────────────────────────────────────
+// Taban bloğu + iki paralel kulak (yuvarlatılmış üst + hizalı pim deliği).
+// Zorluk: kulaklar arası dar boşluk (thin gap), pim deliği eğriliği, U-şekilli
+// derin oyuk, ince paralel duvarlar.
+function _veFEABuildClevisGroup(p) {
+  var group = new THREE.Group();
+  group.userData.feaPrimitive = { type: 'clevis', params: p };
+  var bd = p.baseDepth, bh = p.baseHeight, et = p.earThickness;
+  var eh = p.earHeight, gap = p.gap, pinR = p.pinHoleDiameter / 2;
+  var baseW = gap + 2 * et;
+  var earR = bd / 2;
+
+  // Taban bloğu (merkez origin, y: -bh/2..bh/2)
+  var baseGeo = new THREE.BoxGeometry(baseW, bh, bd);
+  var baseMesh = new THREE.Mesh(baseGeo, _veFEAMakePrimitiveMaterial());
+  baseMesh.userData.feaFaceId = 'faceBase';
+  group.add(_veFEAAttachEdges(baseMesh));
+
+  // 2 kulak — XY profil (x→Z derinlik, y→yükseklik), Z extrude (kalınlık),
+  // rotateY ile X-extrude'a çevir, taban üstüne (y = bh/2) TAM TEMAS.
+  [-1, 1].forEach(function (sign) {
+    var es = new THREE.Shape();
+    es.moveTo(-earR, 0);
+    es.lineTo(earR, 0);
+    es.lineTo(earR, eh);
+    es.absarc(0, eh, earR, 0, Math.PI, false); // üst yarım daire
+    es.lineTo(-earR, eh);
+    es.lineTo(-earR, 0);
+    if (pinR > 0) { var pin = new THREE.Path(); pin.absarc(0, eh, pinR, 0, Math.PI * 2, true); es.holes.push(pin); }
+    var eg = new THREE.ExtrudeGeometry(es, { depth: et, bevelEnabled: false, steps: 1, curveSegments: 40 });
+    eg.rotateY(Math.PI / 2); // extrude Z → X; (sx,sy,sz)→(sz,sy,-sx)
+    // rotateY(+90): world-x = sz(0..et), world-y = sy, world-z = -sx(derinlik)
+    eg.translate(sign > 0 ? (baseW / 2 - et) : (-baseW / 2), bh / 2, 0);
+    var em = new THREE.Mesh(eg, _veFEAMakePrimitiveMaterial());
+    em.userData.feaFaceId = 'faceEar';
+    group.add(_veFEAAttachEdges(em, 0.6));
+  });
+
+  group.position.y = -(eh + earR) / 2; // yaklaşık bbox merkezi
+  return group;
+}
+
+// ─── Kaburgalı / Gussetli Braket ─────────────────────────────────────────────
+// Dikey delikli duvar + yatay raf (L) + N adet ince köşegen gusset kaburga.
+// Zorluk: çok ince kaburga duvarları (thin web), keskin köşegen kenarlar, sivri
+// üçgen uçlar (sliver/inverted eleman riski), L iç (re-entrant) köşe.
+function _veFEABuildGussetBracketGroup(p) {
+  var group = new THREE.Group();
+  group.userData.feaPrimitive = { type: 'gussetBracket', params: p };
+  var wh = p.wallHeight, sl = p.shelfLength, w = p.width;
+  var pt = p.plateThickness, gt = p.gussetThickness, gc = p.gussetCount;
+  var hr = p.holeDiameter / 2;
+  var w2 = w / 2;
+
+  // Dikey duvar (XY shape, Z extrude = kalınlık), z: 0..pt
+  var wallShape = new THREE.Shape();
+  wallShape.moveTo(-w2, 0); wallShape.lineTo(w2, 0);
+  wallShape.lineTo(w2, wh); wallShape.lineTo(-w2, wh); wallShape.lineTo(-w2, 0);
+  if (hr > 0) { // duvar üstünde 2 cıvata deliği
+    var hy = wh - Math.max(hr + 3, wh * 0.15);
+    [[-w * 0.25, hy], [w * 0.25, hy]].forEach(function (c) {
+      var h = new THREE.Path(); h.absarc(c[0], c[1], hr, 0, Math.PI * 2, true); wallShape.holes.push(h);
+    });
+  }
+  var wallGeo = new THREE.ExtrudeGeometry(wallShape, { depth: pt, bevelEnabled: false, steps: 1, curveSegments: 28 });
+  wallGeo.translate(0, pt, 0); // rafın ÜSTÜNE oturt (y: pt..pt+wh) — köşe örtüşmesi yok
+  var wallMesh = new THREE.Mesh(wallGeo, _veFEAMakePrimitiveMaterial());
+  wallMesh.userData.feaFaceId = 'faceWall';
+  group.add(_veFEAAttachEdges(wallMesh));
+
+  // Yatay raf — alt (y: 0..pt), öne uzanır (z: 0..sl), duvarla L köşede temas
+  var shelfGeo = new THREE.BoxGeometry(w, pt, sl);
+  shelfGeo.translate(0, pt / 2, sl / 2);
+  var shelfMesh = new THREE.Mesh(shelfGeo, _veFEAMakePrimitiveMaterial());
+  shelfMesh.userData.feaFaceId = 'faceShelf';
+  group.add(_veFEAAttachEdges(shelfMesh));
+
+  // N adet köşegen gusset (YZ üçgeni, X-extrude = ince kalınlık)
+  if (gt > 0 && gc > 0) {
+    var gRise = wh * 0.7, gRun = sl * 0.7;
+    for (var i = 0; i < gc; i++) {
+      var gx = (gc === 1) ? 0 : (-w2 + gt / 2 + i * (w - gt) / (gc - 1));
+      var gs = new THREE.Shape();      // shape-x → Z, shape-y → Y
+      gs.moveTo(pt, pt);
+      gs.lineTo(pt + gRun, pt);
+      gs.lineTo(pt, pt + gRise);
+      gs.lineTo(pt, pt);
+      var gg = new THREE.ExtrudeGeometry(gs, { depth: gt, bevelEnabled: false, steps: 1 });
+      gg.rotateY(-Math.PI / 2); // extrude Z → X: (sx,sy,sz)→(-sz,sy,sx) → z=shape-x, y=shape-y
+      gg.translate(gx + gt / 2, 0, 0);
+      var gm = new THREE.Mesh(gg, _veFEAMakePrimitiveMaterial());
+      gm.userData.feaFaceId = 'faceGusset';
+      group.add(_veFEAAttachEdges(gm, 0.6));
+    }
+  }
+
+  group.position.set(0, -(pt + wh) / 2, -sl / 2); // yaklaşık bbox merkezi
+  return group;
 }
 
 // ─── Birim formatlama yardımcıları ──────────────────────────────────────────
