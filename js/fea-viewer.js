@@ -1326,8 +1326,10 @@ function veFEAInitViewer(canvas, opts) {
     },
     // Seçim + hover overlay'lerini ve etiketi temizler (mod kapatılınca çağrılır).
     clearMeshElementSelection: function() {
-      if (this._meshElementHighlight) { this._geometryRoot.remove(this._meshElementHighlight); this._disposeOverlay(this._meshElementHighlight); this._meshElementHighlight = null; }
-      if (this._meshElementHover) { this._geometryRoot.remove(this._meshElementHover); this._disposeOverlay(this._meshElementHover); this._meshElementHover = null; }
+      if (this._meshElementHighlight) { this._geometryRoot.remove(this._meshElementHighlight); this._disposeOverlay(this._meshElementHighlight); }
+      if (this._meshElementHover) { this._geometryRoot.remove(this._meshElementHover); this._disposeOverlay(this._meshElementHover); }
+      this._meshElementHighlight = null;
+      this._meshElementHover = null;
       this._selectedMeshElement = null;
       this._hoveredMeshElement = null;
       var cid = (canvas && typeof canvas.id === 'string') ? canvas.id.replace('ve-fea-mesh-canvas-', '').replace('ve-fea-geom-canvas-', '') : '';
@@ -1888,6 +1890,11 @@ function veFEAInitViewer(canvas, opts) {
   function _onFaceMouseMove(e) {
     _updateHitCoordOverlay(e);
     if (e.buttons !== 0) return;  // orbit/pan drag sırasında hover skip
+    // Mesh eleman seçimi modu — fareyle gezilen elemanı geçici (hover) vurgula
+    if ((viewer._pointerMode || 'view') === 'mesh-pick') {
+      if (typeof viewer.hoverMeshElement === 'function') viewer.hoverMeshElement(e.clientX, e.clientY);
+      return;
+    }
     if (!viewer._faceMaterials) return;
     var fid = _raycastFaceId(e.clientX, e.clientY);
     viewer.setHoveredFace(fid);
@@ -1905,6 +1912,13 @@ function veFEAInitViewer(canvas, opts) {
     var dy = e.clientY - _faceClickStart.y;
     _faceClickStart = null;
     if (dx * dx + dy * dy > 9) return;  // drag idi
+    // Mesh eleman seçimi modu — tıklanan elemanı yakala + kalıcı vurgula
+    if ((viewer._pointerMode || 'view') === 'mesh-pick') {
+      var meid = (typeof viewer.pickMeshElementFromMouse === 'function') ? viewer.pickMeshElementFromMouse(e.clientX, e.clientY) : null;
+      if (typeof viewer.selectMeshElement === 'function') viewer.selectMeshElement(meid);
+      if (typeof veFEAOnViewerMeshElementSelected === 'function') veFEAOnViewerMeshElementSelected(meid);
+      return;
+    }
     // Önce edge/vertex picking dene — daha yakın bir line/marker bulunduysa o seçilir
     if (viewer._topologyEdges || viewer._topologyVertices) {
       var picked = _raycastEdgeOrVertex(e.clientX, e.clientY);
