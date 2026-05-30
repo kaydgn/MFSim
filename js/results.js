@@ -4531,11 +4531,12 @@ function veToggleSidebar(forceState) {
   document.addEventListener('mousemove', function(e) {
     if(!isResizing) return;
     
-    var dx = startX - e.clientX;
+    // Panel sol-kenara taşındı, resizer sağ kenarda: sağa sürüklemek genişletir
+    var dx = e.clientX - startX;
     var newWidth = startWidth + dx;
-    
-    newWidth = Math.max(150, Math.min(500, newWidth));
-    
+
+    newWidth = Math.max(280, Math.min(720, newWidth));
+
     properties.style.width = newWidth + 'px';
   });
   
