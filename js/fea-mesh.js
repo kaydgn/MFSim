@@ -1730,12 +1730,17 @@ function _veFEAMeshSphere(p, size) {
   var n1 = nC + 1;
   var nNodes = n1 * n1 * n1;
   var nodes = new Float32Array(nNodes * 3);
+  // Equiangular cubed-sphere: küp koordinatlarını tan(c·π/4) ile warp et.
+  // Gnomonic (lineer) projeksiyon köşelerde hücreleri sıkıştırır (skewness
+  // yükselir, orthogonal quality düşer). Equiangular mapping açısal dağılımı
+  // eşitleyerek köşe çarpıklığını azaltır — ANSYS/CFD'de standart teknik.
+  function _eqa(c) { return Math.tan(c * Math.PI / 4); }
   for (var k = 0; k <= nC; k++) {
-    var cz = -1 + 2 * k / nC;
+    var cz = _eqa(-1 + 2 * k / nC);
     for (var j = 0; j <= nC; j++) {
-      var cy = -1 + 2 * j / nC;
+      var cy = _eqa(-1 + 2 * j / nC);
       for (var i = 0; i <= nC; i++) {
-        var cx = -1 + 2 * i / nC;
+        var cx = _eqa(-1 + 2 * i / nC);
         var idx = (k * n1 * n1 + j * n1 + i) * 3;
         var maxAbs = Math.max(Math.abs(cx), Math.abs(cy), Math.abs(cz));
         if (maxAbs < 1e-9) {
@@ -2009,8 +2014,12 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
   var rT = Math.max(0,   p.topRadius || 0);
   var h  = Math.max(0.1, p.height || 60);
   var rMax = Math.max(rB, rT);
-  // Apex case: tam 0 yerine epsilon → degenerate hex önle
-  var rTeff = Math.max(rT, 0.001 * rMax);
+  // Apex (tam sivri uç) kararı: üst yarıçap tabanın %1'inden küçükse apex say.
+  // Frustum (rT belirgin) → hex8 korunur (kaliteli). Apex → üst katman gerçek
+  // tek noktaya çökertilir + tet4'e dönüştürülür (degenere tet'ler filtrelenir),
+  // böylece eski "iğne hex" (AR ~3000, Jac ~10^4) problemi ortadan kalkar.
+  var isApex = rT < 0.01 * rB;
+  var rTeff = isApex ? 0 : rT;
 
   // Cylinder mesh oluştur (max radius ile)
   var cylMesh = _veFEAMeshCylinder(
@@ -2019,7 +2028,9 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
   );
   if (!cylMesh) return null;
 
-  // Her node için y koordinatına göre radial ölçekle
+  // Her node için y koordinatına göre radial ölçekle. Apex'te üst katman (t=1)
+  // tam (0, y, 0)'a çöker — birden çok düğüm aynı konumda; tet4 dönüşümü sonrası
+  // degenere tet filtresiyle temizlenir.
   var nodes = cylMesh.nodes;
   var nNodes = nodes.length / 3;
   var halfH = h / 2;
@@ -2034,7 +2045,7 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
     newNodes[i * 3 + 2] *= scale;
   }
 
-  return {
+  var coneMesh = {
     type: cylMesh.type,
     geometryType: 'cone',
     nodes: newNodes,
@@ -2044,6 +2055,92 @@ function _veFEAMeshCone(p, size, curvOpts, extraOpts) {
     sweepAxis: 'Y',
     namedSelections: cylMesh.namedSelections   // aynı id'ler: faceTop/Bottom/Side
   };
+
+  if (!isApex) return coneMesh;
+
+  // Apex: çökmüş hex8 → tet4 + degenere tet filtresi + node compaction.
+  // Üst katman düğümleri tek apex noktasında üst üste; bu hex'ler doğal olarak
+  // birer piramide degrade olur ve hex→6tet bölmesinin yarısı sıfır hacimlidir.
+  var tetMesh = _veFEAHexMeshToTet4(coneMesh);
+  return _veFEACompactDegenerateTets(tetMesh);
+}
+
+// Degenere (sıfır/çok küçük hacimli) tet4 elemanlarını eler ve kullanılmayan
+// düğümleri çıkarıp eleman indekslerini yeniden numaralandırır. Apex collapse
+// gibi durumlarda üst üste binen düğümlerden doğan sıfır-hacimli tet'leri temizler.
+function _veFEACompactDegenerateTets(mesh) {
+  if (!mesh || mesh.error || mesh.type !== 'tet4') return mesh;
+  var nodes = mesh.nodes, elems = mesh.elements;
+  var nElem = elems.length / 4;
+  // Hacim eşiği: bbox diyagonalinden türetilen ölçek-bağımsız küçük değer.
+  var bb = _veFEABBoxOf(nodes);
+  var diag = Math.sqrt(bb.dx*bb.dx + bb.dy*bb.dy + bb.dz*bb.dz) || 1;
+  var volEps = Math.pow(diag, 3) * 1e-9;
+  var kept = [];
+  for (var e = 0; e < nElem; e++) {
+    var off = e * 4;
+    var v = Math.abs(_veFEATetSignedVolume(nodes, elems, off, 0, 1, 2, 3));
+    if (v > volEps) { kept.push(elems[off], elems[off+1], elems[off+2], elems[off+3]); }
+  }
+  // Node compaction: kullanılan düğümleri yeniden numaralandır.
+  var remap = new Int32Array(nodes.length / 3).fill(-1);
+  var newCoords = [];
+  for (var k = 0; k < kept.length; k++) {
+    var old = kept[k];
+    if (remap[old] === -1) {
+      remap[old] = newCoords.length / 3;
+      newCoords.push(nodes[old*3], nodes[old*3+1], nodes[old*3+2]);
+    }
+    kept[k] = remap[old];
+  }
+  // Named selections'ı yeni indekslere taşı (apex'te bazı node'lar kaybolabilir).
+  var ns = _veFEARemapNamedSelections(mesh.namedSelections, remap);
+  return {
+    type: 'tet4',
+    geometryType: mesh.geometryType,
+    nodes: new Float32Array(newCoords),
+    elements: new Uint32Array(kept),
+    nodesPerElement: 4,
+    grid: mesh.grid,
+    sweepAxis: mesh.sweepAxis,
+    namedSelections: ns,
+    apexCollapsed: true,
+    convertedFromHex: true
+  };
+}
+
+// Basit bbox + boyut hesaplayıcısı (compaction için).
+function _veFEABBoxOf(nodes) {
+  var minX = Infinity, minY = Infinity, minZ = Infinity;
+  var maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+  var n = nodes.length / 3;
+  for (var i = 0; i < n; i++) {
+    var x = nodes[i*3], y = nodes[i*3+1], z = nodes[i*3+2];
+    if (x < minX) minX = x; if (x > maxX) maxX = x;
+    if (y < minY) minY = y; if (y > maxY) maxY = y;
+    if (z < minZ) minZ = z; if (z > maxZ) maxZ = z;
+  }
+  return { dx: maxX-minX, dy: maxY-minY, dz: maxZ-minZ };
+}
+
+// Named selection node ID'lerini remap tablosuna göre yeniden numaralandırır;
+// elenen (remap === -1) düğümleri çıkarır.
+function _veFEARemapNamedSelections(ns, remap) {
+  if (!ns) return ns;
+  var out = {};
+  Object.keys(ns).forEach(function(key) {
+    var sel = ns[key];
+    if (!sel || !sel.nodeIds) { out[key] = sel; return; }
+    var ids = [];
+    for (var i = 0; i < sel.nodeIds.length; i++) {
+      var ni = remap[sel.nodeIds[i]];
+      if (ni !== undefined && ni !== -1) ids.push(ni);
+    }
+    var copy = {}; Object.keys(sel).forEach(function(k){ copy[k] = sel[k]; });
+    copy.nodeIds = new Uint32Array(ids);
+    out[key] = copy;
+  });
+  return out;
 }
 
 // ─── STEP → parsed triangles ──────────────────────────────────────────────
