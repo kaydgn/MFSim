@@ -440,6 +440,121 @@ function _veFEAWrapTet4Mesh(srcMesh, tetElements, extra) {
   return out;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// _veFEABuildSurfaceProjector — kuadratik (mid-side) düğümleri analitik eğri
+// yüzeye projekte eden bir "projector" closure üretir. veFEAEnrichToQuadratic
+// için opsiyonel argüman (imza: projector(mx,my,mz,aId,bId) → [x,y,z] | null).
+//
+// Tasarım kuralı: bir orta-kenar düğümü YALNIZCA her iki uç düğümü de eğri
+// yüzeyde ise projekte edilir. Böylece düz yüzeyler, kapaklar (cap disk),
+// yarımkürenin düz tabanı ve iç kenarlar dokunulmadan kalır → projeksiyon yeni
+// inverted eleman üretmez. Düz/desteklenmeyen primitifler için null döner (no-op,
+// yani bu özellikten önceki davranış korunur).
+//
+// Koordinat çerçeveleri mesh üreteçleriyle birebir aynıdır:
+//   sphere/hemisphere : merkez orijin, yarıçap r (hemisphere: kubbe +z, taban z=0)
+//   cylinder          : eksen Y, yanal yüzey x²+z²=r²
+//   cone              : eksen Y, yanal yüzey x²+z²=r(y)² (r lineer: taban→tepe)
+// Sayısal değerler (r, eksen aralığı) param adlarına bağlı kalmamak için mesh
+// düğümlerinden türetilir; STEP-infer edilen primitifler de aynı frame'de mesh'lenir.
+function _veFEABuildSurfaceProjector(geometry, mesh) {
+  if (!geometry || !geometry.type || !mesh || !mesh.nodes) return null;
+  var type = geometry.type;
+  var nodes = mesh.nodes;
+  var nodeCount = nodes.length / 3;
+  if (nodeCount === 0) return null;
+
+  function dist3(x, y, z) { return Math.sqrt(x * x + y * y + z * z); }
+  function radXZ(x, z) { return Math.sqrt(x * x + z * z); }
+
+  // bbox (eksen aralıkları için)
+  var minY = Infinity, maxY = -Infinity;
+  for (var i = 0; i < nodeCount; i++) {
+    var yy = nodes[i * 3 + 1];
+    if (yy < minY) minY = yy;
+    if (yy > maxY) maxY = yy;
+  }
+
+  var onSurf, projectMid;
+
+  if (type === 'sphere' || type === 'hemisphere') {
+    var rS = 0;
+    for (var s = 0; s < nodeCount; s++) {
+      var ds = dist3(nodes[s * 3], nodes[s * 3 + 1], nodes[s * 3 + 2]);
+      if (ds > rS) rS = ds;
+    }
+    if (rS <= 0) return null;
+    var tolS = Math.max(1e-6, rS * 1e-4);
+    onSurf = function (x, y, z) { return Math.abs(dist3(x, y, z) - rS) <= tolS; };
+    projectMid = function (mx, my, mz) {
+      var d = dist3(mx, my, mz);
+      if (d < 1e-12) return null;
+      var f = rS / d;
+      return [mx * f, my * f, mz * f];
+    };
+  } else if (type === 'cylinder') {
+    var rC = 0;
+    for (var c = 0; c < nodeCount; c++) {
+      var rc = radXZ(nodes[c * 3], nodes[c * 3 + 2]);
+      if (rc > rC) rC = rc;
+    }
+    if (rC <= 0) return null;
+    var tolC = Math.max(1e-6, rC * 1e-4);
+    onSurf = function (x, y, z) { return Math.abs(radXZ(x, z) - rC) <= tolC; };
+    projectMid = function (mx, my, mz) {
+      var rr = radXZ(mx, mz);
+      if (rr < 1e-12) return null;
+      var f = rC / rr;
+      return [mx * f, my, mz * f];
+    };
+  } else if (type === 'cone') {
+    var yB = minY, yT = maxY, hC = (yT - yB) || 1;
+    var tolY = Math.max(1e-6, hC * 1e-4);
+    var rB = 0, rT = 0;
+    for (var k = 0; k < nodeCount; k++) {
+      var yk = nodes[k * 3 + 1];
+      var rk = radXZ(nodes[k * 3], nodes[k * 3 + 2]);
+      if (Math.abs(yk - yB) <= tolY && rk > rB) rB = rk;
+      if (Math.abs(yk - yT) <= tolY && rk > rT) rT = rk;
+    }
+    var rMax = Math.max(rB, rT);
+    if (rMax <= 0) return null;
+    var tolCone = Math.max(1e-6, rMax * 1e-4);
+    var rAt = function (y) {
+      var t = (y - yB) / hC;
+      if (t < 0) t = 0; else if (t > 1) t = 1;
+      return rB + (rT - rB) * t;
+    };
+    onSurf = function (x, y, z) { return Math.abs(radXZ(x, z) - rAt(y)) <= tolCone; };
+    projectMid = function (mx, my, mz) {
+      var target = rAt(my);
+      var rr = radXZ(mx, mz);
+      if (rr < 1e-12 || target <= 0) return null;
+      var f = target / rr;
+      return [mx * f, my, mz * f];
+    };
+  } else {
+    // box / rectTube / ibeam / lbracket / torus / step(triangle) / shaft ...
+    // Analitik eğri yüzey yok → projeksiyon uygulama (önceki davranış).
+    return null;
+  }
+
+  return function (mx, my, mz, aId, bId) {
+    var ax = nodes[aId * 3], ay = nodes[aId * 3 + 1], az = nodes[aId * 3 + 2];
+    var bx = nodes[bId * 3], by = nodes[bId * 3 + 1], bz = nodes[bId * 3 + 2];
+    if (!onSurf(ax, ay, az) || !onSurf(bx, by, bz)) return null;
+    var p = projectMid(mx, my, mz);
+    if (!p) return null;
+    // Sigorta: yer değiştirme kenar uzunluğunu aşıyorsa atla (yapısal mesh'te
+    // olmaz; patolojik inversiyona karşı koruma).
+    var dx = p[0] - mx, dy = p[1] - my, dz = p[2] - mz;
+    var disp = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    var L = Math.sqrt((bx - ax) * (bx - ax) + (by - ay) * (by - ay) + (bz - az) * (bz - az));
+    if (disp > L) return null;
+    return p;
+  };
+}
+
 function veFEAMeshFromGeometry(geometry, opts) {
   if (!geometry || !geometry.type) return null;
   opts = opts || {};
