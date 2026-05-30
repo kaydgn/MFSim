@@ -1,0 +1,363 @@
+// ============================================================================
+// AYARLAR MODALI
+// ============================================================================
+// Açılış: proje menüsündeki "Ayarlar" öğesinden. 5 bölüm:
+//   - Görünüm (Tema)        — top-right palet butonundan taşındı
+//   - Otomatik Kaydet       — periyodik localStorage yedeği
+//   - Klavye Kısayolları    — referans tablosu
+//   - Veri Yönetimi         — tercih sıfırlama, yedek silme, tam sıfırlama
+//   - Hakkında              — versiyon, lisans, bağımlılıklar
+// LocalStorage anahtarları (mf-* öneki):
+//   mf-theme, mf-sidebar-collapsed, mf-autosave-interval, mf-autosave-data,
+//   mf-autosave-ts
+// ============================================================================
+
+var VE_SETTINGS_AUTOSAVE_KEY      = 'mf-autosave-data';
+var VE_SETTINGS_AUTOSAVE_TS_KEY   = 'mf-autosave-ts';
+var VE_SETTINGS_AUTOSAVE_INT_KEY  = 'mf-autosave-interval';
+var VE_SETTINGS_AUTOSAVE_INTERVALS = [0, 5, 10, 30]; // dakika (0 = kapalı)
+
+var _veAutosaveTimerId = null;
+var _veSettingsCurrentSection = 'appearance';
+
+// ─── Aç / Kapat ────────────────────────────────────────────────────────────
+function veOpenSettings() {
+  if(typeof veCloseFileMenu === 'function') veCloseFileMenu();
+  var ov = document.getElementById('ve-settings-overlay');
+  if(!ov) return;
+  ov.style.display = 'flex';
+  veSettingsShowSection(_veSettingsCurrentSection || 'appearance');
+  document.addEventListener('keydown', _veSettingsEscHandler);
+}
+function veCloseSettings() {
+  var ov = document.getElementById('ve-settings-overlay');
+  if(ov) ov.style.display = 'none';
+  document.removeEventListener('keydown', _veSettingsEscHandler);
+}
+function _veSettingsEscHandler(e) {
+  if(e.key !== 'Escape') return;
+  var t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  veCloseSettings();
+}
+
+// ─── Bölüm değiştir + render ───────────────────────────────────────────────
+function veSettingsShowSection(name) {
+  _veSettingsCurrentSection = name;
+  document.querySelectorAll('.ve-settings-nav-item').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-section') === name);
+  });
+  var content = document.getElementById('ve-settings-content');
+  if(!content) return;
+  var html = '';
+  if(name === 'appearance')      html = _veSettingsRenderAppearance();
+  else if(name === 'autosave')   html = _veSettingsRenderAutosave();
+  else if(name === 'shortcuts')  html = _veSettingsRenderShortcuts();
+  else if(name === 'data')       html = _veSettingsRenderData();
+  else if(name === 'about')      html = _veSettingsRenderAbout();
+  content.innerHTML = html;
+}
+
+// ─── GÖRÜNÜM ───────────────────────────────────────────────────────────────
+function _veSettingsRenderAppearance() {
+  var current = 'slate';
+  try { current = localStorage.getItem('mf-theme') || 'slate'; } catch(e) {}
+  var dark = [
+    { id: 'slate',  name: 'Midnight' },
+    { id: 'cream',  name: 'Carbon' },
+    { id: 'claude', name: 'Claude' }
+  ];
+  var pro = [
+    { id: 'ansys',  name: 'ANSYS' },
+    { id: 'fusion', name: 'Fusion 360' },
+    { id: 'vscode', name: 'VS Code Dark+' }
+  ];
+  var light = [
+    { id: 'pearl',      name: 'Pearl' },
+    { id: 'steel',      name: 'Steel' },
+    { id: 'solidworks', name: 'SolidWorks' }
+  ];
+  function group(label, list) {
+    var h = '<div class="ve-settings-subhead">' + label + '</div>';
+    h += '<div class="ve-settings-theme-grid">';
+    list.forEach(function(t) {
+      var a = (t.id === current) ? ' active' : '';
+      h += '<button class="ve-theme-menu-item' + a + '" data-mf-theme="' + t.id + '" onclick="changeTheme(\'' + t.id + '\')">' + t.name + '</button>';
+    });
+    h += '</div>';
+    return h;
+  }
+  var html = '<h3 class="ve-settings-section-title">Tema</h3>';
+  html += '<p class="ve-settings-desc">Uygulamanın renk paletini değiştirir. Seçim anında uygulanır ve hatırlanır.</p>';
+  html += group('Koyu', dark);
+  html += group('Profesyonel', pro);
+  html += group('Açık', light);
+  return html;
+}
+
+// ─── OTOMATİK KAYDET ───────────────────────────────────────────────────────
+function _veSettingsGetAutosaveInterval() {
+  var v = 0;
+  try { v = parseInt(localStorage.getItem(VE_SETTINGS_AUTOSAVE_INT_KEY), 10) || 0; } catch(e) {}
+  if(VE_SETTINGS_AUTOSAVE_INTERVALS.indexOf(v) === -1) v = 0;
+  return v;
+}
+function veSettingsSetAutosaveInterval(min) {
+  try { localStorage.setItem(VE_SETTINGS_AUTOSAVE_INT_KEY, String(min)); } catch(e) {}
+  _veRestartAutosave();
+  veSettingsShowSection('autosave'); // refresh UI
+}
+function _veRestartAutosave() {
+  if(_veAutosaveTimerId) { clearInterval(_veAutosaveTimerId); _veAutosaveTimerId = null; }
+  var min = _veSettingsGetAutosaveInterval();
+  if(min > 0) {
+    _veAutosaveTimerId = setInterval(_veAutosaveNow, min * 60 * 1000);
+  }
+}
+function _veAutosaveNow() {
+  try {
+    var data = _veSettingsBuildProjectData();
+    if(!data) return;
+    localStorage.setItem(VE_SETTINGS_AUTOSAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(VE_SETTINGS_AUTOSAVE_TS_KEY, String(Date.now()));
+    // Sessiz — sık olduğu için toast atmıyoruz; Ayarlar açıksa zaman damgası yenilensin
+    if(_veSettingsCurrentSection === 'autosave') {
+      var ov = document.getElementById('ve-settings-overlay');
+      if(ov && ov.style.display !== 'none') veSettingsShowSection('autosave');
+    }
+  } catch(e) { console.warn('[autosave]', e); }
+}
+function veSettingsAutosaveNow() {
+  _veAutosaveNow();
+  if(typeof showToast === 'function') showToast('Yedek alındı', 'info');
+  veSettingsShowSection('autosave');
+}
+function veSettingsRestoreAutosave() {
+  var raw = null;
+  try { raw = localStorage.getItem(VE_SETTINGS_AUTOSAVE_KEY); } catch(e) {}
+  if(!raw) { if(typeof showToast === 'function') showToast('Geri yüklenecek yedek yok', 'warning'); return; }
+  if(!confirm('Mevcut çalışma alanı yedekteki içerikle değiştirilecek. Devam edilsin mi?')) return;
+  try {
+    var data = JSON.parse(raw);
+    if(_veSettingsApplyProjectData(data)) {
+      veCloseSettings();
+      if(typeof showToast === 'function') showToast('Yedek geri yüklendi', 'info');
+    }
+  } catch(e) {
+    if(typeof showToast === 'function') showToast('Yedek bozuk: ' + e.message, 'error');
+  }
+}
+function _veSettingsRenderAutosave() {
+  var cur = _veSettingsGetAutosaveInterval();
+  var ts = 0;
+  try { ts = parseInt(localStorage.getItem(VE_SETTINGS_AUTOSAVE_TS_KEY), 10) || 0; } catch(e) {}
+  var hasBackup = false;
+  try { hasBackup = !!localStorage.getItem(VE_SETTINGS_AUTOSAVE_KEY); } catch(e) {}
+  function fmtAgo(ms) {
+    if(!ms) return '—';
+    var diff = Math.max(0, Date.now() - ms);
+    var sec = Math.floor(diff / 1000);
+    if(sec < 60) return sec + ' sn önce';
+    var min = Math.floor(sec / 60);
+    if(min < 60) return min + ' dk önce';
+    var h = Math.floor(min / 60);
+    if(h < 24) return h + ' sa önce';
+    var d = Math.floor(h / 24);
+    return d + ' gün önce';
+  }
+  var html = '<h3 class="ve-settings-section-title">Periyodik Yedekleme</h3>';
+  html += '<p class="ve-settings-desc">Aktif projeyi belirli aralıklarla tarayıcı depolamasına otomatik kaydeder. Beklenmedik kapanmalarda son yedek "Geri yükle" ile açılabilir.</p>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Sıklık</span><div class="ve-settings-radios">';
+  var labels = { 0: 'Kapalı', 5: '5 dakika', 10: '10 dakika', 30: '30 dakika' };
+  VE_SETTINGS_AUTOSAVE_INTERVALS.forEach(function(v) {
+    var checked = (v === cur) ? ' checked' : '';
+    html += '<label class="ve-settings-radio"><input type="radio" name="autosave-int" value="' + v + '"' + checked + ' onchange="veSettingsSetAutosaveInterval(' + v + ')"> ' + labels[v] + '</label>';
+  });
+  html += '</div></div>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Son yedek</span><div class="ve-settings-value">' + fmtAgo(ts) + '</div></div>';
+  html += '<div class="ve-settings-btn-row">';
+  html += '<button class="ve-settings-btn" onclick="veSettingsAutosaveNow()"><span class="mf-ico mf-ico-save"></span> Şimdi yedekle</button>';
+  if(hasBackup) {
+    html += '<button class="ve-settings-btn ve-settings-btn-primary" onclick="veSettingsRestoreAutosave()"><span class="mf-ico mf-ico-upload"></span> Yedeği geri yükle</button>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ─── KLAVYE KISAYOLLARI ────────────────────────────────────────────────────
+function _veSettingsRenderShortcuts() {
+  var rows = [
+    ['Esc',                'Açık pencereyi/modali/seçimi kapat'],
+    ['Delete / Backspace', 'Seçili bileşeni/bağlantıyı sil'],
+    ['Ctrl + Z',           'Geri al'],
+    ['Ctrl + Y / Ctrl + Shift + Z', 'Yinele'],
+    ['Ctrl + C',           'Seçili bileşeni kopyala'],
+    ['Q',                  'FEA görüntüleyici: hızlı kesit görünümü'],
+    ['Enter',              'Aktif girdiyi onayla / yeniden adlandırma kaydet'],
+    ['Mouse: Sol sürükle', 'Canvas alanını kaydır'],
+    ['Mouse: Tekerlek',    'Yakınlaştır / uzaklaştır'],
+    ['Mouse: Sürükle (bileşen)', 'Topolojiye bileşen ekle']
+  ];
+  var html = '<h3 class="ve-settings-section-title">Klavye & Fare Kısayolları</h3>';
+  html += '<p class="ve-settings-desc">Sıkça kullanılan kontroller.</p>';
+  html += '<table class="ve-settings-table"><tbody>';
+  rows.forEach(function(r) {
+    html += '<tr><td><kbd>' + r[0] + '</kbd></td><td>' + r[1] + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// ─── VERİ YÖNETİMİ ─────────────────────────────────────────────────────────
+function _veSettingsLocalStorageBytes() {
+  var total = 0;
+  try {
+    for(var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      var v = localStorage.getItem(k) || '';
+      total += k.length + v.length;
+    }
+  } catch(e) {}
+  return total;
+}
+function _veSettingsFmtBytes(n) {
+  if(n < 1024) return n + ' B';
+  if(n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1024 / 1024).toFixed(2) + ' MB';
+}
+function veSettingsResetPreferences() {
+  if(!confirm('Tema, panel durumu ve diğer tercihler sıfırlanacak (oturum ve otomatik yedek korunur). Devam edilsin mi?')) return;
+  var keep = { 'mfsim_auth_token': 1, 'mfsim_auth_rl': 1, 'mf-autosave-data': 1, 'mf-autosave-ts': 1, 'mf-autosave-interval': 1 };
+  try {
+    var keys = [];
+    for(var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    keys.forEach(function(k) { if(!keep[k]) localStorage.removeItem(k); });
+  } catch(e) {}
+  if(typeof showToast === 'function') showToast('Tercihler sıfırlandı, sayfa yenileniyor...', 'info');
+  setTimeout(function() { location.reload(); }, 600);
+}
+function veSettingsClearAutosave() {
+  if(!confirm('Otomatik yedek silinecek. Devam edilsin mi?')) return;
+  try {
+    localStorage.removeItem(VE_SETTINGS_AUTOSAVE_KEY);
+    localStorage.removeItem(VE_SETTINGS_AUTOSAVE_TS_KEY);
+  } catch(e) {}
+  if(typeof showToast === 'function') showToast('Otomatik yedek silindi', 'info');
+  veSettingsShowSection('data');
+}
+function veSettingsClearAll() {
+  if(!confirm('TÜM yerel veriler silinecek (oturum, tema, yedek, tercihler) ve uygulama yeniden başlatılacak. Bu işlem geri alınamaz. Devam edilsin mi?')) return;
+  try { localStorage.clear(); sessionStorage.clear(); } catch(e) {}
+  setTimeout(function() { location.reload(); }, 300);
+}
+function _veSettingsRenderData() {
+  var bytes = _veSettingsLocalStorageBytes();
+  var keys = [];
+  try {
+    for(var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+  } catch(e) {}
+  var hasBackup = false;
+  try { hasBackup = !!localStorage.getItem(VE_SETTINGS_AUTOSAVE_KEY); } catch(e) {}
+  var html = '<h3 class="ve-settings-section-title">Yerel Depolama</h3>';
+  html += '<p class="ve-settings-desc">Uygulama tüm tercih ve yedeklerini tarayıcının yerel depolamasında tutar.</p>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Toplam boyut</span><div class="ve-settings-value">' + _veSettingsFmtBytes(bytes) + ' (' + keys.length + ' anahtar)</div></div>';
+  html += '<div class="ve-settings-btn-row" style="flex-direction:column; align-items:stretch; gap:8px; margin-top:14px;">';
+  html += '<button class="ve-settings-btn" onclick="veSettingsResetPreferences()"><span class="mf-ico mf-ico-refresh"></span> Tercihleri sıfırla<small> — tema/panel/sidebar (oturum & yedek korunur)</small></button>';
+  if(hasBackup) {
+    html += '<button class="ve-settings-btn" onclick="veSettingsClearAutosave()"><span class="mf-ico mf-ico-trash"></span> Otomatik yedeği sil</button>';
+  }
+  html += '<button class="ve-settings-btn ve-settings-btn-danger" onclick="veSettingsClearAll()"><span class="mf-ico mf-ico-trash"></span> Tüm verileri sil + yeniden başlat</button>';
+  html += '</div>';
+  return html;
+}
+
+// ─── HAKKINDA ──────────────────────────────────────────────────────────────
+function _veSettingsRenderAbout() {
+  var html = '<h3 class="ve-settings-section-title">MFSim</h3>';
+  html += '<p class="ve-settings-desc">Tarayıcı tabanlı Araç Performans + Sonlu Elemanlar simülasyon ortamı.</p>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Versiyon</span><div class="ve-settings-value">' + (window.__mfsimVersion || 'dev') + '</div></div>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Lisans</span><div class="ve-settings-value">ISC</div></div>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Kaynak kod</span><div class="ve-settings-value"><a href="https://github.com/kaydgn/MFSim" target="_blank" rel="noopener">github.com/kaydgn/MFSim</a></div></div>';
+  html += '<div class="ve-settings-subhead" style="margin-top:18px;">Açık kaynak bağımlılıklar</div>';
+  html += '<table class="ve-settings-table"><tbody>';
+  var deps = [
+    ['Three.js',          'r0.149',      'MIT'],
+    ['Plotly.js',         '2.35 (gl3d)', 'MIT'],
+    ['Leaflet',           '1.9.4',       'BSD-2'],
+    ['OpenCascade (OCCT)', 'WASM',        'LGPL-2.1+'],
+    ['Lucide ikonlar',    '—',           'ISC'],
+    ['Inter font',        '5.0.18',      'SIL OFL 1.1'],
+    ['Delaunay (Lysenko)', '—',           'MIT']
+  ];
+  deps.forEach(function(d) {
+    html += '<tr><td>' + d[0] + '</td><td><small style="opacity:0.7;">' + d[1] + '</small></td><td><small style="opacity:0.7;">' + d[2] + '</small></td></tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// ─── Proje veri serileştirme yardımcıları (autosave için) ──────────────────
+function _veSettingsBuildProjectData() {
+  if(typeof veTabs === 'undefined') return null;
+  if(typeof veSaveActiveTabState === 'function') veSaveActiveTabState();
+  return {
+    version: 2,
+    projectName: (typeof veProjectName !== 'undefined') ? (veProjectName || '') : '',
+    activeModule: (typeof veActiveModule !== 'undefined') ? (veActiveModule || '') : '',
+    tabCounter: (typeof veTabCounter !== 'undefined') ? veTabCounter : 0,
+    activeTabIdx: (typeof veActiveTabIdx !== 'undefined') ? veActiveTabIdx : 0,
+    tabs: veTabs.map(function(tab) {
+      var cleanState = null;
+      if(tab.state) {
+        cleanState = {
+          nodes: tab.state.nodes,
+          connections: tab.state.connections,
+          compCounter: tab.state.compCounter,
+          canvasOffset: tab.state.canvasOffset,
+          canvasZoom: tab.state.canvasZoom,
+          simResults: tab.state.simResults || null,
+          resultSlots: tab.state.resultSlots || [{},{},{},{}]
+        };
+      }
+      return { id: tab.id, name: tab.name, state: cleanState };
+    })
+  };
+}
+function _veSettingsApplyProjectData(data) {
+  if(!data || data.version !== 2 || !data.tabs || !data.tabs.length) {
+    if(typeof showToast === 'function') showToast('Geçersiz yedek verisi', 'error');
+    return false;
+  }
+  if(typeof veClearCanvasDOM === 'function') veClearCanvasDOM();
+  veTabs = [];
+  veTabCounter = data.tabCounter || data.tabs.length;
+  data.tabs.forEach(function(t) {
+    veTabs.push({
+      id: t.id, name: t.name, state: t.state,
+      nodeCount: (t.state && t.state.nodes) ? t.state.nodes.length : 0,
+      connCount: (t.state && t.state.connections) ? t.state.connections.length : 0
+    });
+  });
+  veActiveTabIdx = Math.min(data.activeTabIdx || 0, veTabs.length - 1);
+  veActiveModule = 'full-throttle';
+  var ov = document.getElementById('ve-module-overlay');
+  if(ov) ov.style.display = 'none';
+  if(typeof veShowAllSidebarComponents === 'function') veShowAllSidebarComponents();
+  if(typeof veLoadTabState === 'function') veLoadTabState(veTabs[veActiveTabIdx]);
+  if(data.projectName) {
+    veProjectName = data.projectName;
+    var btn = document.getElementById('ve-project-name-btn');
+    if(btn) {
+      var shortName = veProjectName.length > 18 ? veProjectName.substring(0, 16) + '…' : veProjectName;
+      btn.textContent = '⚙ ' + shortName + ' ▾';
+    }
+  }
+  if(typeof veRenderTabs === 'function') veRenderTabs();
+  return true;
+}
+
+// Init: kayıtlı aralığa göre otomatik kaydet timer'ını başlat
+(function _veSettingsInit() {
+  // Modüller geç yüklendiği için biraz bekle ki diğer ortam hazır olsun
+  setTimeout(_veRestartAutosave, 1500);
+})();

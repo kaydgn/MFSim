@@ -271,64 +271,16 @@
       gap: 4px;
     }
 
-    /* Tema butonu — palet ikonu, tıklayınca menü açılır */
-    .ve-theme-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 22px;
-      height: 22px;
-      padding: 0;
-      background: transparent;
-      color: var(--text-secondary);
-      border: 1px solid transparent;
-      border-radius: 0;
-      cursor: pointer;
-      transition: border-color 0.12s, background 0.12s, color 0.12s;
-    }
-    .ve-theme-btn:hover {
-      border-color: var(--border-color);
-      background: var(--bg-tertiary);
-      color: var(--accent-primary);
-    }
-
-    /* Tema menüsü (dropdown) */
-    .ve-theme-menu {
-      position: absolute;
-      top: 100%;
-      right: 0;                /* sağa hizalı — buton sağ üstte */
-      min-width: 160px;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 0;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-      z-index: 999999;
-      padding: 4px 0;
-      margin-top: 2px;
-    }
-    .ve-theme-menu-group {
-      font-size: 0.55rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: 6px 12px 3px;
-      user-select: none;
-    }
+    /* Tema öğesi — Ayarlar > Görünüm'de kullanılır; aktif olanın sol yanında ✓ durur */
     .ve-theme-menu-item {
       position: relative;
-      padding: 6px 12px 6px 28px;   /* sol: ✓ için yer */
+      padding: 6px 12px 6px 28px;
       font-size: 0.7rem;
       color: var(--text-primary);
       cursor: pointer;
-      transition: background 0.12s, color 0.12s;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
       white-space: nowrap;
     }
-    .ve-theme-menu-item:hover {
-      background: var(--accent-primary);
-      color: #fff;
-    }
-    /* Aktif (seçili) tema: yanına ✓ */
     .ve-theme-menu-item.active::before {
       content: '✓';
       position: absolute;
@@ -339,13 +291,236 @@
       font-size: 0.7rem;
       font-weight: 700;
     }
-    .ve-theme-menu-item.active:hover::before {
+
+    /* ===== AYARLAR MODALI ===== */
+    .ve-settings-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100010;
+      background: rgba(0,0,0,0.6);
+      display: none;   /* JS flex yapar */
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      backdrop-filter: blur(3px);
+    }
+    .ve-settings-modal {
+      width: 100%;
+      max-width: 880px;
+      height: 90vh;
+      max-height: 720px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .ve-settings-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-heading);
+    }
+    .ve-settings-header > span {
+      display: inline-flex; align-items: center; gap: 8px; flex: 1;
+    }
+    .ve-settings-close {
+      width: 26px; height: 26px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer; padding: 0;
+      font-size: 0.85rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
+    }
+    .ve-settings-close:hover {
+      border-color: var(--accent-danger);
+      background: var(--bg-input);
+      color: var(--accent-danger);
+    }
+    .ve-settings-body { flex: 1; display: flex; min-height: 0; }
+    .ve-settings-nav {
+      width: 200px;
+      background: var(--bg-tertiary);
+      border-right: 1px solid var(--border-color);
+      padding: 10px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .ve-settings-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      text-align: left;
+      font-size: 0.75rem;
+      font-family: inherit;
+      border-left: 2px solid transparent;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .ve-settings-nav-item:hover {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+    }
+    .ve-settings-nav-item.active {
+      background: var(--bg-secondary);
+      color: var(--accent-primary);
+      border-left-color: var(--accent-primary);
+      font-weight: 600;
+    }
+    .ve-settings-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 22px 28px;
+    }
+    .ve-settings-section-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-heading);
+      margin: 0 0 6px;
+      letter-spacing: -0.01em;
+    }
+    .ve-settings-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin: 0 0 18px;
+      line-height: 1.5;
+    }
+    .ve-settings-subhead {
+      font-size: 0.6rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 14px 0 8px;
+    }
+    .ve-settings-row {
+      display: flex;
+      align-items: center;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border-light);
+      font-size: 0.75rem;
+    }
+    .ve-settings-label { flex: 0 0 130px; color: var(--text-secondary); }
+    .ve-settings-value { flex: 1; color: var(--text-primary); }
+    .ve-settings-radios { display: flex; gap: 16px; flex-wrap: wrap; }
+    .ve-settings-radio {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      color: var(--text-primary);
+      user-select: none;
+    }
+    .ve-settings-radio input { accent-color: var(--accent-primary); }
+    .ve-settings-btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .ve-settings-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 0.72rem;
+      font-family: inherit;
+      font-weight: 500;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    .ve-settings-btn small { color: var(--text-muted); font-weight: 400; margin-left: 4px; }
+    .ve-settings-btn:hover {
+      background: var(--bg-input);
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+    .ve-settings-btn-primary {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
       color: #fff;
     }
-    .ve-theme-menu-divider {
-      height: 1px;
-      background: var(--border-color);
-      margin: 4px 8px;
+    .ve-settings-btn-primary:hover {
+      filter: brightness(1.1);
+      border-color: var(--accent-primary);
+      color: #fff;
+      background: var(--accent-primary);
+    }
+    .ve-settings-btn-danger {
+      border-color: rgba(220,38,38,0.4);
+      color: var(--accent-danger);
+    }
+    .ve-settings-btn-danger:hover {
+      background: rgba(220,38,38,0.08);
+      border-color: var(--accent-danger);
+      color: var(--accent-danger);
+    }
+    .ve-settings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.72rem;
+    }
+    .ve-settings-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text-primary);
+    }
+    .ve-settings-table tr:last-child td { border-bottom: none; }
+    .ve-settings-table kbd {
+      display: inline-block;
+      padding: 2px 7px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      font-family: 'SF Mono','Fira Code',monospace;
+      font-size: 0.7rem;
+      color: var(--text-heading);
+      min-width: 24px;
+      text-align: center;
+    }
+    .ve-settings-content a { color: var(--accent-primary); text-decoration: none; }
+    .ve-settings-content a:hover { text-decoration: underline; }
+
+    /* Tema grid'i (Ayarlar > Görünüm): tema öğeleri 2-sütun kart düzeninde */
+    .ve-settings-theme-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .ve-settings-theme-grid .ve-theme-menu-item {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      text-align: left;
+      font-family: inherit;
+      font-size: 0.75rem;
+      color: var(--text-primary);
+      padding: 9px 10px 9px 28px;
+      cursor: pointer;
+    }
+    .ve-settings-theme-grid .ve-theme-menu-item:hover {
+      background: var(--bg-input);
+      border-color: var(--accent-primary);
+      color: var(--accent-primary);
+    }
+    .ve-settings-theme-grid .ve-theme-menu-item.active {
+      border-color: var(--accent-primary);
     }
 
     /* ===== LOGIN EKRANI ===== */
@@ -2999,6 +3174,8 @@ function mfsimLogout() {
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
       <div class="ve-menu-divider"></div>
+      <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
+      <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="mfsimLogout()" style="color:#ef4444;"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
     </div>
   </div>
@@ -3012,25 +3189,6 @@ function mfsimLogout() {
   <span class="theme-selector" style="margin-left:auto;">
     <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
     <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
-    <span class="ve-theme-wrapper" style="position:relative; display:inline-flex;">
-      <button id="ve-theme-btn" class="ve-theme-btn" onclick="veToggleThemeMenu()" title="Tema seç" aria-label="Tema seç"><span class="mf-ico mf-ico-palette"></span></button>
-      <div id="ve-theme-menu" class="ve-theme-menu" style="display:none;">
-        <div class="ve-theme-menu-group">Koyu</div>
-        <div class="ve-theme-menu-item" data-mf-theme="slate" onclick="changeTheme('slate')">Midnight</div>
-        <div class="ve-theme-menu-item" data-mf-theme="cream" onclick="changeTheme('cream')">Carbon</div>
-        <div class="ve-theme-menu-item" data-mf-theme="claude" onclick="changeTheme('claude')">Claude</div>
-        <div class="ve-theme-menu-divider"></div>
-        <div class="ve-theme-menu-group">Profesyonel</div>
-        <div class="ve-theme-menu-item" data-mf-theme="ansys" onclick="changeTheme('ansys')">ANSYS</div>
-        <div class="ve-theme-menu-item" data-mf-theme="fusion" onclick="changeTheme('fusion')">Fusion 360</div>
-        <div class="ve-theme-menu-item" data-mf-theme="vscode" onclick="changeTheme('vscode')">VS Code Dark+</div>
-        <div class="ve-theme-menu-divider"></div>
-        <div class="ve-theme-menu-group">Açık</div>
-        <div class="ve-theme-menu-item" data-mf-theme="pearl" onclick="changeTheme('pearl')">Pearl</div>
-        <div class="ve-theme-menu-item" data-mf-theme="steel" onclick="changeTheme('steel')">Steel</div>
-        <div class="ve-theme-menu-item" data-mf-theme="solidworks" onclick="changeTheme('solidworks')">SolidWorks</div>
-      </div>
-    </span>
   </span>
 </div>
 
@@ -3509,49 +3667,25 @@ function mfsimLogout() {
 // ============================================================================
 // TEMA YÖNETİMİ
 // ============================================================================
+// Tema seçimi artık Ayarlar modalı içinden yapılır (settings.js); bu modül
+// sadece çekirdek changeTheme + kayıtlı tema yükleme sağlar. Aktif (✓) sınıfı
+// herhangi bir yerdeki [data-mf-theme] öğelerinde otomatik güncellenir.
 function changeTheme(themeId) {
   document.documentElement.setAttribute('data-theme', themeId);
   try { localStorage.setItem('mf-theme', themeId); } catch(e) {}
-
-  // Menüdeki aktif (✓) işaretini güncelle
-  var items = document.querySelectorAll('.ve-theme-menu-item');
+  // ✓ işaretini Ayarlar modalı (ve gelecekteki başka kullanım) için senkronla
+  var items = document.querySelectorAll('[data-mf-theme]');
   items.forEach(function(it) {
     it.classList.toggle('active', it.getAttribute('data-mf-theme') === themeId);
   });
-  // Seçim yapıldı → menüyü kapat
-  var menu = document.getElementById('ve-theme-menu');
-  if(menu) menu.style.display = 'none';
-
   // Açık 3D yapısal analiz görüntüleyicilerinin arka planını yeni temaya uyarla.
   if (typeof veFEAApplyThemeToViewers === 'function') veFEAApplyThemeToViewers();
 }
 
-function veToggleThemeMenu() {
-  var menu = document.getElementById('ve-theme-menu');
-  if(!menu) return;
-  var open = menu.style.display !== 'block';
-  menu.style.display = open ? 'block' : 'none';
-  // Aynı anda açık dosya menüsü varsa kapat
-  if(open) {
-    var fileMenu = document.getElementById('ve-file-menu');
-    if(fileMenu) fileMenu.style.display = 'none';
-  }
-}
-
-// Dışına tıklayınca kapat
-document.addEventListener('click', function(e) {
-  var menu = document.getElementById('ve-theme-menu');
-  var btn = document.getElementById('ve-theme-btn');
-  if(!menu || !btn) return;
-  if(menu.style.display === 'block' && !menu.contains(e.target) && !btn.contains(e.target)) {
-    menu.style.display = 'none';
-  }
-});
-
-// Geçerli tema kimlikleri (kaldırılan/eski değerler için geri dönüş)
+// Geçerli tema kimlikleri (kaldırılan/eski değerler için güvenli fallback)
 var MF_VALID_THEMES = ['slate','cream','claude','ansys','fusion','vscode','pearl','steel','solidworks'];
 
-// Kayıtlı temayı uygula (loader-sonrası yüklemede DOMContentLoaded zaten geçmiş
+// Kayıtlı temayı uygula (loader-sonrası yüklemede DOMContentLoaded geçmiş
 // olabilir, bu durumda hemen tetikle)
 function _veApplyStoredTheme() {
   var savedTheme = 'slate';
@@ -3565,6 +3699,372 @@ if(document.readyState === 'loading') {
 } else {
   _veApplyStoredTheme();
 }
+
+</script>
+<script type="text/x-mfsim-defer" data-mfsim-label="Ayarlar paneli...">
+// ============================================================================
+// AYARLAR MODALI
+// ============================================================================
+// Açılış: proje menüsündeki "Ayarlar" öğesinden. 5 bölüm:
+//   - Görünüm (Tema)        — top-right palet butonundan taşındı
+//   - Otomatik Kaydet       — periyodik localStorage yedeği
+//   - Klavye Kısayolları    — referans tablosu
+//   - Veri Yönetimi         — tercih sıfırlama, yedek silme, tam sıfırlama
+//   - Hakkında              — versiyon, lisans, bağımlılıklar
+// LocalStorage anahtarları (mf-* öneki):
+//   mf-theme, mf-sidebar-collapsed, mf-autosave-interval, mf-autosave-data,
+//   mf-autosave-ts
+// ============================================================================
+
+var VE_SETTINGS_AUTOSAVE_KEY      = 'mf-autosave-data';
+var VE_SETTINGS_AUTOSAVE_TS_KEY   = 'mf-autosave-ts';
+var VE_SETTINGS_AUTOSAVE_INT_KEY  = 'mf-autosave-interval';
+var VE_SETTINGS_AUTOSAVE_INTERVALS = [0, 5, 10, 30]; // dakika (0 = kapalı)
+
+var _veAutosaveTimerId = null;
+var _veSettingsCurrentSection = 'appearance';
+
+// ─── Aç / Kapat ────────────────────────────────────────────────────────────
+function veOpenSettings() {
+  if(typeof veCloseFileMenu === 'function') veCloseFileMenu();
+  var ov = document.getElementById('ve-settings-overlay');
+  if(!ov) return;
+  ov.style.display = 'flex';
+  veSettingsShowSection(_veSettingsCurrentSection || 'appearance');
+  document.addEventListener('keydown', _veSettingsEscHandler);
+}
+function veCloseSettings() {
+  var ov = document.getElementById('ve-settings-overlay');
+  if(ov) ov.style.display = 'none';
+  document.removeEventListener('keydown', _veSettingsEscHandler);
+}
+function _veSettingsEscHandler(e) {
+  if(e.key !== 'Escape') return;
+  var t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+  veCloseSettings();
+}
+
+// ─── Bölüm değiştir + render ───────────────────────────────────────────────
+function veSettingsShowSection(name) {
+  _veSettingsCurrentSection = name;
+  document.querySelectorAll('.ve-settings-nav-item').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute('data-section') === name);
+  });
+  var content = document.getElementById('ve-settings-content');
+  if(!content) return;
+  var html = '';
+  if(name === 'appearance')      html = _veSettingsRenderAppearance();
+  else if(name === 'autosave')   html = _veSettingsRenderAutosave();
+  else if(name === 'shortcuts')  html = _veSettingsRenderShortcuts();
+  else if(name === 'data')       html = _veSettingsRenderData();
+  else if(name === 'about')      html = _veSettingsRenderAbout();
+  content.innerHTML = html;
+}
+
+// ─── GÖRÜNÜM ───────────────────────────────────────────────────────────────
+function _veSettingsRenderAppearance() {
+  var current = 'slate';
+  try { current = localStorage.getItem('mf-theme') || 'slate'; } catch(e) {}
+  var dark = [
+    { id: 'slate',  name: 'Midnight' },
+    { id: 'cream',  name: 'Carbon' },
+    { id: 'claude', name: 'Claude' }
+  ];
+  var pro = [
+    { id: 'ansys',  name: 'ANSYS' },
+    { id: 'fusion', name: 'Fusion 360' },
+    { id: 'vscode', name: 'VS Code Dark+' }
+  ];
+  var light = [
+    { id: 'pearl',      name: 'Pearl' },
+    { id: 'steel',      name: 'Steel' },
+    { id: 'solidworks', name: 'SolidWorks' }
+  ];
+  function group(label, list) {
+    var h = '<div class="ve-settings-subhead">' + label + '</div>';
+    h += '<div class="ve-settings-theme-grid">';
+    list.forEach(function(t) {
+      var a = (t.id === current) ? ' active' : '';
+      h += '<button class="ve-theme-menu-item' + a + '" data-mf-theme="' + t.id + '" onclick="changeTheme(\'' + t.id + '\')">' + t.name + '</button>';
+    });
+    h += '</div>';
+    return h;
+  }
+  var html = '<h3 class="ve-settings-section-title">Tema</h3>';
+  html += '<p class="ve-settings-desc">Uygulamanın renk paletini değiştirir. Seçim anında uygulanır ve hatırlanır.</p>';
+  html += group('Koyu', dark);
+  html += group('Profesyonel', pro);
+  html += group('Açık', light);
+  return html;
+}
+
+// ─── OTOMATİK KAYDET ───────────────────────────────────────────────────────
+function _veSettingsGetAutosaveInterval() {
+  var v = 0;
+  try { v = parseInt(localStorage.getItem(VE_SETTINGS_AUTOSAVE_INT_KEY), 10) || 0; } catch(e) {}
+  if(VE_SETTINGS_AUTOSAVE_INTERVALS.indexOf(v) === -1) v = 0;
+  return v;
+}
+function veSettingsSetAutosaveInterval(min) {
+  try { localStorage.setItem(VE_SETTINGS_AUTOSAVE_INT_KEY, String(min)); } catch(e) {}
+  _veRestartAutosave();
+  veSettingsShowSection('autosave'); // refresh UI
+}
+function _veRestartAutosave() {
+  if(_veAutosaveTimerId) { clearInterval(_veAutosaveTimerId); _veAutosaveTimerId = null; }
+  var min = _veSettingsGetAutosaveInterval();
+  if(min > 0) {
+    _veAutosaveTimerId = setInterval(_veAutosaveNow, min * 60 * 1000);
+  }
+}
+function _veAutosaveNow() {
+  try {
+    var data = _veSettingsBuildProjectData();
+    if(!data) return;
+    localStorage.setItem(VE_SETTINGS_AUTOSAVE_KEY, JSON.stringify(data));
+    localStorage.setItem(VE_SETTINGS_AUTOSAVE_TS_KEY, String(Date.now()));
+    // Sessiz — sık olduğu için toast atmıyoruz; Ayarlar açıksa zaman damgası yenilensin
+    if(_veSettingsCurrentSection === 'autosave') {
+      var ov = document.getElementById('ve-settings-overlay');
+      if(ov && ov.style.display !== 'none') veSettingsShowSection('autosave');
+    }
+  } catch(e) { console.warn('[autosave]', e); }
+}
+function veSettingsAutosaveNow() {
+  _veAutosaveNow();
+  if(typeof showToast === 'function') showToast('Yedek alındı', 'info');
+  veSettingsShowSection('autosave');
+}
+function veSettingsRestoreAutosave() {
+  var raw = null;
+  try { raw = localStorage.getItem(VE_SETTINGS_AUTOSAVE_KEY); } catch(e) {}
+  if(!raw) { if(typeof showToast === 'function') showToast('Geri yüklenecek yedek yok', 'warning'); return; }
+  if(!confirm('Mevcut çalışma alanı yedekteki içerikle değiştirilecek. Devam edilsin mi?')) return;
+  try {
+    var data = JSON.parse(raw);
+    if(_veSettingsApplyProjectData(data)) {
+      veCloseSettings();
+      if(typeof showToast === 'function') showToast('Yedek geri yüklendi', 'info');
+    }
+  } catch(e) {
+    if(typeof showToast === 'function') showToast('Yedek bozuk: ' + e.message, 'error');
+  }
+}
+function _veSettingsRenderAutosave() {
+  var cur = _veSettingsGetAutosaveInterval();
+  var ts = 0;
+  try { ts = parseInt(localStorage.getItem(VE_SETTINGS_AUTOSAVE_TS_KEY), 10) || 0; } catch(e) {}
+  var hasBackup = false;
+  try { hasBackup = !!localStorage.getItem(VE_SETTINGS_AUTOSAVE_KEY); } catch(e) {}
+  function fmtAgo(ms) {
+    if(!ms) return '—';
+    var diff = Math.max(0, Date.now() - ms);
+    var sec = Math.floor(diff / 1000);
+    if(sec < 60) return sec + ' sn önce';
+    var min = Math.floor(sec / 60);
+    if(min < 60) return min + ' dk önce';
+    var h = Math.floor(min / 60);
+    if(h < 24) return h + ' sa önce';
+    var d = Math.floor(h / 24);
+    return d + ' gün önce';
+  }
+  var html = '<h3 class="ve-settings-section-title">Periyodik Yedekleme</h3>';
+  html += '<p class="ve-settings-desc">Aktif projeyi belirli aralıklarla tarayıcı depolamasına otomatik kaydeder. Beklenmedik kapanmalarda son yedek "Geri yükle" ile açılabilir.</p>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Sıklık</span><div class="ve-settings-radios">';
+  var labels = { 0: 'Kapalı', 5: '5 dakika', 10: '10 dakika', 30: '30 dakika' };
+  VE_SETTINGS_AUTOSAVE_INTERVALS.forEach(function(v) {
+    var checked = (v === cur) ? ' checked' : '';
+    html += '<label class="ve-settings-radio"><input type="radio" name="autosave-int" value="' + v + '"' + checked + ' onchange="veSettingsSetAutosaveInterval(' + v + ')"> ' + labels[v] + '</label>';
+  });
+  html += '</div></div>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Son yedek</span><div class="ve-settings-value">' + fmtAgo(ts) + '</div></div>';
+  html += '<div class="ve-settings-btn-row">';
+  html += '<button class="ve-settings-btn" onclick="veSettingsAutosaveNow()"><span class="mf-ico mf-ico-save"></span> Şimdi yedekle</button>';
+  if(hasBackup) {
+    html += '<button class="ve-settings-btn ve-settings-btn-primary" onclick="veSettingsRestoreAutosave()"><span class="mf-ico mf-ico-upload"></span> Yedeği geri yükle</button>';
+  }
+  html += '</div>';
+  return html;
+}
+
+// ─── KLAVYE KISAYOLLARI ────────────────────────────────────────────────────
+function _veSettingsRenderShortcuts() {
+  var rows = [
+    ['Esc',                'Açık pencereyi/modali/seçimi kapat'],
+    ['Delete / Backspace', 'Seçili bileşeni/bağlantıyı sil'],
+    ['Ctrl + Z',           'Geri al'],
+    ['Ctrl + Y / Ctrl + Shift + Z', 'Yinele'],
+    ['Ctrl + C',           'Seçili bileşeni kopyala'],
+    ['Q',                  'FEA görüntüleyici: hızlı kesit görünümü'],
+    ['Enter',              'Aktif girdiyi onayla / yeniden adlandırma kaydet'],
+    ['Mouse: Sol sürükle', 'Canvas alanını kaydır'],
+    ['Mouse: Tekerlek',    'Yakınlaştır / uzaklaştır'],
+    ['Mouse: Sürükle (bileşen)', 'Topolojiye bileşen ekle']
+  ];
+  var html = '<h3 class="ve-settings-section-title">Klavye & Fare Kısayolları</h3>';
+  html += '<p class="ve-settings-desc">Sıkça kullanılan kontroller.</p>';
+  html += '<table class="ve-settings-table"><tbody>';
+  rows.forEach(function(r) {
+    html += '<tr><td><kbd>' + r[0] + '</kbd></td><td>' + r[1] + '</td></tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// ─── VERİ YÖNETİMİ ─────────────────────────────────────────────────────────
+function _veSettingsLocalStorageBytes() {
+  var total = 0;
+  try {
+    for(var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      var v = localStorage.getItem(k) || '';
+      total += k.length + v.length;
+    }
+  } catch(e) {}
+  return total;
+}
+function _veSettingsFmtBytes(n) {
+  if(n < 1024) return n + ' B';
+  if(n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1024 / 1024).toFixed(2) + ' MB';
+}
+function veSettingsResetPreferences() {
+  if(!confirm('Tema, panel durumu ve diğer tercihler sıfırlanacak (oturum ve otomatik yedek korunur). Devam edilsin mi?')) return;
+  var keep = { 'mfsim_auth_token': 1, 'mfsim_auth_rl': 1, 'mf-autosave-data': 1, 'mf-autosave-ts': 1, 'mf-autosave-interval': 1 };
+  try {
+    var keys = [];
+    for(var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    keys.forEach(function(k) { if(!keep[k]) localStorage.removeItem(k); });
+  } catch(e) {}
+  if(typeof showToast === 'function') showToast('Tercihler sıfırlandı, sayfa yenileniyor...', 'info');
+  setTimeout(function() { location.reload(); }, 600);
+}
+function veSettingsClearAutosave() {
+  if(!confirm('Otomatik yedek silinecek. Devam edilsin mi?')) return;
+  try {
+    localStorage.removeItem(VE_SETTINGS_AUTOSAVE_KEY);
+    localStorage.removeItem(VE_SETTINGS_AUTOSAVE_TS_KEY);
+  } catch(e) {}
+  if(typeof showToast === 'function') showToast('Otomatik yedek silindi', 'info');
+  veSettingsShowSection('data');
+}
+function veSettingsClearAll() {
+  if(!confirm('TÜM yerel veriler silinecek (oturum, tema, yedek, tercihler) ve uygulama yeniden başlatılacak. Bu işlem geri alınamaz. Devam edilsin mi?')) return;
+  try { localStorage.clear(); sessionStorage.clear(); } catch(e) {}
+  setTimeout(function() { location.reload(); }, 300);
+}
+function _veSettingsRenderData() {
+  var bytes = _veSettingsLocalStorageBytes();
+  var keys = [];
+  try {
+    for(var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+  } catch(e) {}
+  var hasBackup = false;
+  try { hasBackup = !!localStorage.getItem(VE_SETTINGS_AUTOSAVE_KEY); } catch(e) {}
+  var html = '<h3 class="ve-settings-section-title">Yerel Depolama</h3>';
+  html += '<p class="ve-settings-desc">Uygulama tüm tercih ve yedeklerini tarayıcının yerel depolamasında tutar.</p>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Toplam boyut</span><div class="ve-settings-value">' + _veSettingsFmtBytes(bytes) + ' (' + keys.length + ' anahtar)</div></div>';
+  html += '<div class="ve-settings-btn-row" style="flex-direction:column; align-items:stretch; gap:8px; margin-top:14px;">';
+  html += '<button class="ve-settings-btn" onclick="veSettingsResetPreferences()"><span class="mf-ico mf-ico-refresh"></span> Tercihleri sıfırla<small> — tema/panel/sidebar (oturum & yedek korunur)</small></button>';
+  if(hasBackup) {
+    html += '<button class="ve-settings-btn" onclick="veSettingsClearAutosave()"><span class="mf-ico mf-ico-trash"></span> Otomatik yedeği sil</button>';
+  }
+  html += '<button class="ve-settings-btn ve-settings-btn-danger" onclick="veSettingsClearAll()"><span class="mf-ico mf-ico-trash"></span> Tüm verileri sil + yeniden başlat</button>';
+  html += '</div>';
+  return html;
+}
+
+// ─── HAKKINDA ──────────────────────────────────────────────────────────────
+function _veSettingsRenderAbout() {
+  var html = '<h3 class="ve-settings-section-title">MFSim</h3>';
+  html += '<p class="ve-settings-desc">Tarayıcı tabanlı Araç Performans + Sonlu Elemanlar simülasyon ortamı.</p>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Versiyon</span><div class="ve-settings-value">' + (window.__mfsimVersion || 'dev') + '</div></div>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Lisans</span><div class="ve-settings-value">ISC</div></div>';
+  html += '<div class="ve-settings-row"><span class="ve-settings-label">Kaynak kod</span><div class="ve-settings-value"><a href="https://github.com/kaydgn/MFSim" target="_blank" rel="noopener">github.com/kaydgn/MFSim</a></div></div>';
+  html += '<div class="ve-settings-subhead" style="margin-top:18px;">Açık kaynak bağımlılıklar</div>';
+  html += '<table class="ve-settings-table"><tbody>';
+  var deps = [
+    ['Three.js',          'r0.149',      'MIT'],
+    ['Plotly.js',         '2.35 (gl3d)', 'MIT'],
+    ['Leaflet',           '1.9.4',       'BSD-2'],
+    ['OpenCascade (OCCT)', 'WASM',        'LGPL-2.1+'],
+    ['Lucide ikonlar',    '—',           'ISC'],
+    ['Inter font',        '5.0.18',      'SIL OFL 1.1'],
+    ['Delaunay (Lysenko)', '—',           'MIT']
+  ];
+  deps.forEach(function(d) {
+    html += '<tr><td>' + d[0] + '</td><td><small style="opacity:0.7;">' + d[1] + '</small></td><td><small style="opacity:0.7;">' + d[2] + '</small></td></tr>';
+  });
+  html += '</tbody></table>';
+  return html;
+}
+
+// ─── Proje veri serileştirme yardımcıları (autosave için) ──────────────────
+function _veSettingsBuildProjectData() {
+  if(typeof veTabs === 'undefined') return null;
+  if(typeof veSaveActiveTabState === 'function') veSaveActiveTabState();
+  return {
+    version: 2,
+    projectName: (typeof veProjectName !== 'undefined') ? (veProjectName || '') : '',
+    activeModule: (typeof veActiveModule !== 'undefined') ? (veActiveModule || '') : '',
+    tabCounter: (typeof veTabCounter !== 'undefined') ? veTabCounter : 0,
+    activeTabIdx: (typeof veActiveTabIdx !== 'undefined') ? veActiveTabIdx : 0,
+    tabs: veTabs.map(function(tab) {
+      var cleanState = null;
+      if(tab.state) {
+        cleanState = {
+          nodes: tab.state.nodes,
+          connections: tab.state.connections,
+          compCounter: tab.state.compCounter,
+          canvasOffset: tab.state.canvasOffset,
+          canvasZoom: tab.state.canvasZoom,
+          simResults: tab.state.simResults || null,
+          resultSlots: tab.state.resultSlots || [{},{},{},{}]
+        };
+      }
+      return { id: tab.id, name: tab.name, state: cleanState };
+    })
+  };
+}
+function _veSettingsApplyProjectData(data) {
+  if(!data || data.version !== 2 || !data.tabs || !data.tabs.length) {
+    if(typeof showToast === 'function') showToast('Geçersiz yedek verisi', 'error');
+    return false;
+  }
+  if(typeof veClearCanvasDOM === 'function') veClearCanvasDOM();
+  veTabs = [];
+  veTabCounter = data.tabCounter || data.tabs.length;
+  data.tabs.forEach(function(t) {
+    veTabs.push({
+      id: t.id, name: t.name, state: t.state,
+      nodeCount: (t.state && t.state.nodes) ? t.state.nodes.length : 0,
+      connCount: (t.state && t.state.connections) ? t.state.connections.length : 0
+    });
+  });
+  veActiveTabIdx = Math.min(data.activeTabIdx || 0, veTabs.length - 1);
+  veActiveModule = 'full-throttle';
+  var ov = document.getElementById('ve-module-overlay');
+  if(ov) ov.style.display = 'none';
+  if(typeof veShowAllSidebarComponents === 'function') veShowAllSidebarComponents();
+  if(typeof veLoadTabState === 'function') veLoadTabState(veTabs[veActiveTabIdx]);
+  if(data.projectName) {
+    veProjectName = data.projectName;
+    var btn = document.getElementById('ve-project-name-btn');
+    if(btn) {
+      var shortName = veProjectName.length > 18 ? veProjectName.substring(0, 16) + '…' : veProjectName;
+      btn.textContent = '⚙ ' + shortName + ' ▾';
+    }
+  }
+  if(typeof veRenderTabs === 'function') veRenderTabs();
+  return true;
+}
+
+// Init: kayıtlı aralığa göre otomatik kaydet timer'ını başlat
+(function _veSettingsInit() {
+  // Modüller geç yüklendiği için biraz bekle ki diğer ortam hazır olsun
+  setTimeout(_veRestartAutosave, 1500);
+})();
 
 </script>
 <script type="text/x-mfsim-defer" data-mfsim-label="Sekmeler hazırlanıyor...">
@@ -64905,6 +65405,26 @@ function _veShowRefreshedPopup() {
 }
 
 </script>
+
+<!-- ═══ AYARLAR MODALI ═══ -->
+<div id="ve-settings-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veCloseSettings()">
+  <div class="ve-settings-modal" role="dialog" aria-labelledby="ve-settings-title">
+    <div class="ve-settings-header">
+      <span id="ve-settings-title"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</span>
+      <button class="ve-settings-close" onclick="veCloseSettings()" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-settings-body">
+      <nav class="ve-settings-nav" id="ve-settings-nav">
+        <button class="ve-settings-nav-item active" data-section="appearance" onclick="veSettingsShowSection('appearance')"><span class="mf-ico mf-ico-palette"></span> Görünüm</button>
+        <button class="ve-settings-nav-item" data-section="autosave" onclick="veSettingsShowSection('autosave')"><span class="mf-ico mf-ico-save"></span> Otomatik Kaydet</button>
+        <button class="ve-settings-nav-item" data-section="shortcuts" onclick="veSettingsShowSection('shortcuts')"><span class="mf-ico mf-ico-clipboard"></span> Klavye Kısayolları</button>
+        <button class="ve-settings-nav-item" data-section="data" onclick="veSettingsShowSection('data')"><span class="mf-ico mf-ico-trash"></span> Veri Yönetimi</button>
+        <button class="ve-settings-nav-item" data-section="about" onclick="veSettingsShowSection('about')"><span class="mf-ico mf-ico-package"></span> Hakkında</button>
+      </nav>
+      <section class="ve-settings-content" id="ve-settings-content"></section>
+    </div>
+  </div>
+</div>
 
 <script>
 if('serviceWorker' in navigator) {
