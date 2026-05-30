@@ -1941,11 +1941,11 @@
 .ve-comp-marker.flash{ animation:ve-marker-flash 0.55s ease-in-out 3; }
 
 .ve-properties-header{
-  padding:8px 12px;
+  padding:5px 12px;            /* dikey hafifletildi — modal başlığı daha ince */
   background:var(--bg-tertiary);
   border-bottom:1px solid var(--border-color);
   font-weight:600;
-  font-size:0.72rem;
+  font-size:0.7rem;
   color:var(--text-heading);
   display:flex;
   align-items:center;
