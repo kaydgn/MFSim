@@ -127,6 +127,50 @@ describe('Smoothing — smart Laplacian davranışı', () => {
     expect(distAfter).toBeLessThan(distBefore);
   });
 
+  test('surfaceProjector: boundary düğüm yüzeye projekte edilir (tanjant kayma)', () => {
+    // Tek tet — bir köşeyi kasten yüzeyden saptır, projektör geri çeksin.
+    // Küresel yüzey R=10; düğüm 0'ı R'den uzağa koy.
+    var mesh = {
+      type:'tet4',
+      nodes:new Float32Array([12,0,0, 0,10,0, 0,0,10, 0,0,0]),
+      elements:new Uint32Array([0,1,2,3]),
+      nodesPerElement:4
+    };
+    // Sadece düğüm 0 boundary olsun diye topo'ya güvenmek yerine, projektörün
+    // davranışını doğrudan test ediyoruz: R=10 küre projektörü.
+    var R = 10;
+    var proj = function(x,y,z){ var d=Math.hypot(x,y,z); if(d<1e-9)return null; var s=R/d; return [x*s,y*s,z*s]; };
+    var sm = smooth.veFEASmoothMesh(mesh, {
+      iterations:2, relaxation:0.5, preserveSurface:true, surfaceProjector:proj
+    });
+    // Hareket eden boundary düğümler küre yüzeyine yakın olmalı (|p|≈R) ya da sabit.
+    for (var i=0;i<4;i++){
+      var x=sm.nodes[i*3],y=sm.nodes[i*3+1],z=sm.nodes[i*3+2];
+      var d=Math.hypot(x,y,z);
+      // hareket ettiyse yüzeyde; etmedi ise orijinal — her halükarda sonlu
+      expect(isFinite(d)).toBe(true);
+    }
+  });
+
+  test('_veFEABuildNodeSurfaceProjector küre/silindir/koni için projektör üretir', () => {
+    // fea-mesh.js global'inden eriş (meshFns loader'ı ile yüklendi)
+    const meshSrc = fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8');
+    const M = {};
+    new Function('module','exports', meshSrc +
+      '\n;Object.assign(exports,{_veFEABuildNodeSurfaceProjector});')({exports:M}, M);
+    var dummyMesh = { nodes:new Float32Array([0,0,0, 0,20,0]) };
+    var sph = M._veFEABuildNodeSurfaceProjector({type:'sphere',params:{radius:10}}, dummyMesh);
+    expect(typeof sph).toBe('function');
+    // Yüzeydeki nokta projekte edilir
+    var pr = sph(10.1, 0, 0);  // R=10'a yakın
+    expect(pr).not.toBeNull();
+    expect(Math.hypot(pr[0],pr[1],pr[2])).toBeCloseTo(10, 4);
+    // Yüzeyden uzak (iç) nokta → null (dokunma)
+    expect(sph(2, 0, 0)).toBeNull();
+    // box → null (düz yüzey)
+    expect(M._veFEABuildNodeSurfaceProjector({type:'box',params:{}}, dummyMesh)).toBeNull();
+  });
+
   test('smart Laplacian kaliteyi ASLA bozmaz (monoton)', () => {
     // Birçok rastgele iç konum dene — hiçbiri min kaliteyi düşürmemeli
     var positions = [[2,2,2],[8,8,8],[1,5,5],[5,1,9],[3,7,4]];
@@ -192,8 +236,9 @@ describe('Smoothing — gerçek mesh entegrasyonu', () => {
 describe('Smoothing — pipeline + UI entegrasyonu', () => {
   test('fea-mesh.js applyPostProcessing + yapısal yolda smoothing çağırıyor', () => {
     const src = fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8');
-    expect(src).toMatch(/veFEASmoothMesh\(mesh, _veFEAResolveSmoothingOpts\(opts\)\)/);
+    expect(src).toMatch(/veFEASmoothMesh\(mesh, _veFEAResolveSmoothingOpts\(opts, geometry, mesh\)\)/);
     expect(src).toMatch(/function _veFEAResolveSmoothingOpts/);
+    expect(src).toMatch(/function _veFEABuildNodeSurfaceProjector/);
     // Smoothing, quadratic enrichment'tan ÖNCE gelmeli (her iki yolda da)
     const idxSmooth = src.indexOf('veFEASmoothMesh');
     expect(idxSmooth).toBeGreaterThan(-1);

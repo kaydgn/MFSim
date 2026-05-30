@@ -232,12 +232,19 @@ function veFEASmoothMesh(mesh, opts) {
   var nodeElements = topo.nodeElements;
   var boundary = topo.boundary;
 
+  // Surface projector (opsiyonel): boundary düğümleri geometri yüzeyine geri
+  // projekte ederek TANJANT KAYMA sağlar (ANSYS surface smoothing). null/yoksa
+  // boundary düğümler tamamen sabit kalır (preserveSurface davranışı).
+  var surfaceProjector = (typeof opts.surfaceProjector === 'function') ? opts.surfaceProjector : null;
+
   var movedTotal = 0;
 
   for (var it = 0; it < iterations; it++) {
     var movedThisPass = 0;
     for (var i = 0; i < nodeCount; i++) {
-      if (preserveSurface && boundary[i]) continue;     // yüzey sabit
+      var isBoundary = boundary[i] === 1;
+      // Yüzey düğümü: projector yoksa veya preserveSurface ise sabit; varsa kaydır.
+      if (isBoundary && (preserveSurface && !surfaceProjector)) continue;
       var nb = neighbors[i];
       if (nb.length === 0) continue;
 
@@ -253,6 +260,14 @@ function veFEASmoothMesh(mesh, opts) {
       var tx = ox + relax * (cx - ox);
       var ty = oy + relax * (cy - oy);
       var tz = oz + relax * (cz - oz);
+
+      // Boundary düğüm → yüzeye geri projekte (tanjant kayma). Projeksiyon
+      // başarısızsa (null) bu düğümü atla (sabit bırak).
+      if (isBoundary && surfaceProjector) {
+        var pr = surfaceProjector(tx, ty, tz, i);
+        if (!pr) continue;
+        tx = pr[0]; ty = pr[1]; tz = pr[2];
+      }
 
       var elemList = nodeElements[i];
 
