@@ -3124,6 +3124,55 @@ function veFEASetWireframeMode(meshNodeId, mode) {
   }
 }
 
+// Mesh'i otomatik iyileştir (ANSYS adaptive smoothing) — kalite-güdümlü döngü.
+// Cache'teki mesh'i auto-improve eder, metrikleri yeniden hesaplar, viewer'ı
+// günceller. Topoloji değişmediği için named selections / BC referansları korunur.
+function veFEAAutoImproveMeshForNode(meshNodeId) {
+  var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
+  if (!meshNode) return;
+  var meshData = veFEAMeshCache[meshNodeId];
+  if (!meshData || meshData.error) return;
+  if (typeof veFEAAutoImproveMeshWithScore !== 'function') return;
+
+  var settings = (meshNode.data && meshNode.data.meshSettings) || {};
+  var target = (typeof settings.autoImproveTarget === 'number') ? settings.autoImproveTarget : 90;
+
+  if (typeof veFEAEditorShowLoading === 'function') {
+    veFEAEditorShowLoading('Mesh iyileştiriliyor...', 'Kalite-güdümlü smoothing kademeleri çalışıyor');
+  }
+  // setTimeout ile UI'a render fırsatı ver (auto-improve senkron/bloklayıcı).
+  setTimeout(function() {
+    var result;
+    try {
+      result = veFEAAutoImproveMeshWithScore(meshData, { targetScore: target });
+    } catch (e) {
+      if (typeof veFEAEditorHideLoading === 'function') veFEAEditorHideLoading();
+      return;
+    }
+    if (!result || !result.mesh) {
+      if (typeof veFEAEditorHideLoading === 'function') veFEAEditorHideLoading();
+      return;
+    }
+    var improved = result.mesh;
+    // Cache + metrikleri güncelle
+    veFEAMeshCache[meshNodeId] = improved;
+    var metrics = veFEAComputeMeshMetrics(improved);
+    if (typeof veFEAComputeJacobianMetrics === 'function') metrics.jacobian = veFEAComputeJacobianMetrics(improved);
+    if (typeof veFEAComputeQualityMetrics === 'function') metrics.quality = veFEAComputeQualityMetrics(improved);
+    if (typeof veFEAComputeMeshQualityScore === 'function') metrics.qualityScore = veFEAComputeMeshQualityScore(improved);
+    metrics.autoImprove = {
+      initialScore: result.initialScore, finalScore: result.finalScore,
+      stagesRun: result.stagesRun, reachedTarget: result.reachedTarget
+    };
+    meshNode.data.meshMetrics = metrics;
+    // Viewer'ı yenile
+    var viewer = veFEAViewerRegistry[meshNodeId];
+    if (viewer) viewer.loadMesh(improved);
+    if (typeof veFEAEditorHideLoading === 'function') veFEAEditorHideLoading();
+    if (typeof _veFEARefreshMeshUI === 'function') _veFEARefreshMeshUI(meshNode);
+  }, 30);
+}
+
 function veFEAApplyHeatMap(meshNodeId, mode) {
   var meshNode = (typeof nodes !== 'undefined') ? nodes.find(function(n) { return n.id === meshNodeId; }) : null;
   if (!meshNode) return;

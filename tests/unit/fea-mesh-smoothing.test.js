@@ -265,6 +265,83 @@ describe('Smoothing — gerçek mesh entegrasyonu', () => {
   });
 });
 
+describe('Auto-improve — kalite-güdümlü otomatik iyileştirme', () => {
+  // İç düğümleri jitter'lı yapısal hex grid (bozuk iç, iyi yüzey)
+  function makeJitteredGrid(nn, jitter) {
+    var nodes = [];
+    for (var z=0; z<=nn; z++) for (var y=0; y<=nn; y++) for (var x=0; x<=nn; x++) {
+      var jx=0, jy=0, jz=0;
+      if (x>0&&x<nn&&y>0&&y<nn&&z>0&&z<nn) {
+        var seed=(x*131+y*17+z*7);
+        jx=((seed%10)/10-0.5)*jitter; jy=(((seed*3)%10)/10-0.5)*jitter; jz=(((seed*7)%10)/10-0.5)*jitter;
+      }
+      nodes.push(x+jx, y+jy, z+jz);
+    }
+    var id=function(x,y,z){return x+y*(nn+1)+z*(nn+1)*(nn+1);};
+    var el=[];
+    for (var zz=0; zz<nn; zz++) for (var yy=0; yy<nn; yy++) for (var xx=0; xx<nn; xx++) {
+      el.push(id(xx,yy,zz),id(xx+1,yy,zz),id(xx+1,yy+1,zz),id(xx,yy+1,zz),
+              id(xx,yy,zz+1),id(xx+1,yy,zz+1),id(xx+1,yy+1,zz+1),id(xx,yy+1,zz+1));
+    }
+    return { type:'hex8', nodes:new Float32Array(nodes), elements:new Uint32Array(el), nodesPerElement:8 };
+  }
+
+  test('bozuk iç-düğüm mesh → auto-improve kaliteyi ciddi artırır', () => {
+    var mesh = makeJitteredGrid(4, 0.6);
+    var r = smooth.veFEAAutoImproveMesh(mesh, { targetScore: 95 });
+    expect(r.finalScore).toBeGreaterThan(r.initialScore);   // iyileşti
+    expect(r.stagesRun).toBeGreaterThan(0);
+    // proxy skor (minQ×100) — ciddi artış beklenir
+    expect(r.finalScore - r.initialScore).toBeGreaterThan(15);
+    var rep = smooth.veFEAMeshSmoothingReport(mesh, r.mesh);
+    expect(rep.after.minQ).toBeGreaterThan(rep.before.minQ);
+  });
+
+  test('monotonluk: finalScore ASLA initialScore\'dan düşük değil', () => {
+    [[0.2],[0.4],[0.7]].forEach(function(j) {
+      var mesh = makeJitteredGrid(3, j[0]);
+      var r = smooth.veFEAAutoImproveMesh(mesh, { targetScore: 99 });
+      expect(r.finalScore).toBeGreaterThanOrEqual(r.initialScore);
+    });
+  });
+
+  test('zaten iyi mesh → erken çıkış (0 kademe)', () => {
+    var mesh = makeJitteredGrid(3, 0); // jitter yok → mükemmel
+    var r = smooth.veFEAAutoImproveMesh(mesh, { targetScore: 50 });
+    expect(r.stagesRun).toBe(0);
+    expect(r.finalScore).toBeGreaterThanOrEqual(50);
+  });
+
+  test('history kademeleri sıralı + topoloji korunur', () => {
+    var mesh = makeJitteredGrid(4, 0.5);
+    var r = smooth.veFEAAutoImproveMesh(mesh, { targetScore: 99 });
+    expect(Array.isArray(r.history)).toBe(true);
+    expect(r.history[0].label).toBe('başlangıç');
+    // topoloji invaryantı
+    expect(r.mesh.elements.length).toBe(mesh.elements.length);
+    expect(r.mesh.nodes.length).toBe(mesh.nodes.length);
+  });
+
+  test('özel scoreFn enjeksiyonu çalışır', () => {
+    var mesh = makeJitteredGrid(3, 0.4);
+    var calls = 0;
+    var r = smooth.veFEAAutoImproveMesh(mesh, {
+      targetScore: 100,
+      scoreFn: function(m) { calls++; return { score: 50 }; }  // sabit 50
+    });
+    expect(calls).toBeGreaterThan(0);
+    expect(r.initialScore).toBe(50);
+    expect(r.finalScore).toBe(50);  // hep 50 → iyileşme yok ama monoton
+  });
+
+  test('desteklenmeyen tip (tet10) → no-op note', () => {
+    var mesh = { type:'tet10', nodes:new Float32Array(30), elements:new Uint32Array(10), nodesPerElement:10 };
+    var r = smooth.veFEAAutoImproveMesh(mesh, {});
+    expect(r.stagesRun).toBe(0);
+    expect(r.note).toMatch(/desteklenmeyen/);
+  });
+});
+
 describe('Smoothing — pipeline + UI entegrasyonu', () => {
   test('fea-mesh.js applyPostProcessing + yapısal yolda smoothing çağırıyor', () => {
     const src = fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8');
@@ -296,6 +373,17 @@ describe('Smoothing — pipeline + UI entegrasyonu', () => {
     expect(cp).toMatch(/meshSettings\.smoothingIterations/);
     const vw = fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8');
     expect(vw).toMatch(/smoothing:/);
+  });
+
+  test('auto-improve UI köprüsü + buton bağlı', () => {
+    const mesh = fs.readFileSync(path.join(ROOT, 'js/fea-mesh.js'), 'utf8');
+    expect(mesh).toMatch(/function veFEAAutoImproveMeshWithScore/);
+    const vw = fs.readFileSync(path.join(ROOT, 'js/fea-viewer.js'), 'utf8');
+    expect(vw).toMatch(/function veFEAAutoImproveMeshForNode/);
+    expect(vw).toMatch(/metrics\.autoImprove/);
+    const ed = fs.readFileSync(path.join(ROOT, 'js/fea-mesh-editor.js'), 'utf8');
+    expect(ed).toMatch(/veFEAAutoImproveMeshForNode/);
+    expect(ed).toMatch(/Otomatik İyileştir/);
   });
 
   test('opts.smoothing:false → smoothing atlanır (default açık unstructured)', () => {
