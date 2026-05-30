@@ -27756,13 +27756,14 @@ if (typeof module !== 'undefined' && module.exports) {
  * @property {Object} [jacobian]  Jacobian ratio istatistikleri.
  */
 
-var VE_FEA_MESH_MIN_SIZE = 0.5;  // mm — çok küçük değerleri clamp et
-var VE_FEA_VOXEL_MAX_COUNT = 20000000; // 20M voxel üst sınır — sub-1mm mesh için
-                                       // büyük geometrilerde headroom sağlar.
-                                       // Boundary-snap fallback'i (degree-based)
-                                       // yüzey düğümlerini tarayacağı için RAM
-                                       // büyür ama hala makul sınırda kalır
-                                       // (20M voxel ≈ 100³ × 20 ≈ 480 MB Float32).
+// Sınırlar kaldırıldı: kullanıcı isteği üzerine minimum eleman boyutu ve voxel
+// üst sınırı devre dışı. Sabitler etkisiz değerlere ayarlandı; mevcut
+// referanslar (clamp / kontrol / hata mesajı) çalışmaya devam eder ama fiilen
+// hiçbir sınır uygulanmaz.
+// UYARI: Çok küçük eleman boyutu (sub-mm) çok büyük geometride milyarlarca
+// voxel/düğüm üretebilir → tarayıcı belleği tükenebilir. Sorumluluk kullanıcıda.
+var VE_FEA_MESH_MIN_SIZE = 0;          // alt sınır yok (eskiden 0.5 mm)
+var VE_FEA_VOXEL_MAX_COUNT = Infinity; // voxel üst sınırı yok (eskiden 20M)
 
 function veFEAMeshLabel(type) {
   return ({
@@ -29585,11 +29586,16 @@ function _veFEAMeshTorus(p, size) {
   }
 
   // Hex8 elements: her quad × her major-angle pair (closed loop)
+  // Major-açı süpürmesi (XZ düzleminde +theta yönü) disk'in yerel çerçevesiyle
+  // birlikte SAĞ-elli bir hex verir → ters Jacobian. Silindirle aynı (pozitif)
+  // konvansiyona getirmek için alt/üst katman rollerini swap ediyoruz: "alt"
+  // bir sonraki major açı (tOff), "üst" mevcut açı (bOff). Bu, eleman düğüm
+  // sırasını sol-elli yapıp signed volume'u pozitife çevirir.
   var elements = new Uint32Array(nQuads * nMajor * 8);
   var ep = 0;
   for (var ka = 0; ka < nMajor; ka++) {
-    var bOff = ka * nDisk;
-    var tOff = ((ka + 1) % nMajor) * nDisk;  // closed loop
+    var bOff = ((ka + 1) % nMajor) * nDisk;  // closed loop — alt katman: sonraki açı
+    var tOff = ka * nDisk;                     // üst katman: mevcut açı
     for (var q = 0; q < nQuads; q++) {
       var qd = disk.quads[q];
       elements[ep++] = bOff + qd[0];
