@@ -1595,8 +1595,9 @@ function veFEAInitViewer(canvas, opts) {
 
     // ─── ANSYS-style Pointer Mode (state machine) ─────────────────────────
     // Cursor her an ya 'view' (kamera kontrolü) ya da bir picking filter
-    // modundadır. View modunda LMB orbit + sağ tık dynamic rotation center.
-    // Face/Body pick modunda LMB seçim yapar.
+    // modundadır. View modunda kamera CATIA / 3DEXPERIENCE-stili navigasyonla
+    // sürülür (MMB pan, MMB+LMB-tut rotate, MMB+LMB-tıkla zoom, MMB-tap merkez)
+    // ve LMB tek tık seçim yapar. Face/Body pick modunda LMB seçim yapar.
     _pointerMode: 'view',  // 'view' | 'face-pick' | 'edge-pick' | 'vertex-pick' | 'body-pick' | 'box-select' | 'measure'
     setPointerMode: function(mode) {
       if (['view', 'face-pick', 'edge-pick', 'vertex-pick', 'body-pick', 'box-select', 'measure', 'mesh-pick'].indexOf(mode) < 0) mode = 'view';
@@ -1934,10 +1935,15 @@ function veFEAInitViewer(canvas, opts) {
   }
   function _onFaceMouseDown(e) {
     if (e.button !== 0) return;
+    // Stale combo bayrağını temizle: LMB tek başına (MMB basılı değil) basıldıysa
+    // bu yeni bir seçim girişimidir, önceki combo'dan kalma bayrak silinmeli.
+    if (!viewer._mmbDown) viewer._navLmbCombo = false;
     _faceClickStart = { x: e.clientX, y: e.clientY };
   }
   function _onFaceMouseUp(e) {
     if (e.button !== 0 || !_faceClickStart) return;
+    // CATIA combo (MMB + LMB) ile gelen LMB bırakması → seçim YAPMA.
+    if (viewer._navLmbCombo) { viewer._navLmbCombo = false; _faceClickStart = null; return; }
     var dx = e.clientX - _faceClickStart.x;
     var dy = e.clientY - _faceClickStart.y;
     _faceClickStart = null;
@@ -2078,8 +2084,8 @@ function veFEAInitViewer(canvas, opts) {
       });
     });
   }
-  // Context menu disable — rotation center artık MMB'de (ANSYS davranışı).
-  // RMB pan için kullanılıyor (orbit handle'da), browser context menu'yu kapat.
+  // Context menu disable — rotasyon merkezi MMB-tap'te (CATIA-stili), RMB pan
+  // için kullanılıyor (orbit handle'da). Browser context menu'yu kapat.
   function _onContextMenu(e) {
     e.preventDefault();
   }
@@ -2231,7 +2237,24 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
   var spherical = new THREE.Spherical();
   spherical.setFromVector3(camera.position.clone().sub(target));
 
-  var isOrbit = false, isPan = false;
+  // ── CATIA / 3DEXPERIENCE-stili navigasyon state machine ──────────────────
+  //   MMB sürükle .................... pan
+  //   MMB + LMB (basılı tut) sürükle .. rotate (trackball)
+  //   MMB + LMB (tıkla-bırak) dikey ... zoom (yukarı=yakın, aşağı=uzak)
+  //   MMB tek tık (tap) .............. rotasyon/zoom merkezini o noktaya al
+  //   tekerlek ....................... zoom
+  //   LMB tek tık .................... seçim (face/box handler işler)
+  //   RMB sürükle .................... pan (kolaylık; MMB ile çakışmaz)
+  // Rotate↔zoom ayrımı YÖNDE değil, LMB'yi BASILI TUTMAK (rotate) ile
+  // TIKLA-BIRAK (zoom) arasındadır — CATIA aslına sadık.
+  var mmbDown = false;       // orta tuş basılı mı
+  var mmbMoved = false;      // bu MMB oturumunda kayda değer hareket oldu mu
+  var comboHappened = false; // bu MMB oturumunda LMB'ye basıldı mı
+  var lmbHeld = false;       // LMB şu an combo'nun parçası olarak basılı mı
+  var lmbDownX = 0, lmbDownY = 0;
+  var navMode = 'none';      // 'none' | 'pan' | 'rotate' | 'zoom'
+  var isPanRMB = false;      // RMB ile pan
+  var mmbDownX = 0, mmbDownY = 0;
   var lastX = 0, lastY = 0;
   // ANSYS-style pointer mode entegrasyonu — viewer oluşturulduktan sonra
   // setViewerRef ile bağlanır. LMB davranışı buna göre değişir, MMB her
@@ -2248,57 +2271,27 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
     requestRender();
   }
 
-  function onMouseDown(e) {
-    // Modifiersiz CAD mouse layout (kullanıcı tercihi):
-    //   LMB: seçim (face/edge/vertex) — orbit YOK.
-    //   MMB: rotate (döndür).
-    //   RMB: pan (modifier gerekmez).
-    //   wheel: zoom.
-    if (e.button === 0) {
-      return;  // LMB: face/box handler işler, orbit asla yapma.
-    } else if (e.button === 1) {
-      isOrbit = true;   // MMB: rotate
-    } else if (e.button === 2) {
-      isPan = true;     // RMB: pan (modifier yok)
-    } else return;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    e.preventDefault();
+  function doRotate(dx, dy) {
+    // Hassasiyet katsayıları yumuşatıldı — kontrollü, profesyonel his
+    spherical.theta -= dx * 0.005;
+    spherical.phi = Math.max(0.05, Math.min(Math.PI - 0.05, spherical.phi - dy * 0.005));
+    updateCamera();
   }
 
-  function onMouseMove(e) {
-    if(!isOrbit && !isPan) return;
-    var dx = e.clientX - lastX;
-    var dy = e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-
-    if(isOrbit) {
-      // Hassasiyet katsayıları yumuşatıldı — daha kontrollü, profesyonel his
-      spherical.theta -= dx * 0.005;
-      spherical.phi = Math.max(0.05, Math.min(Math.PI - 0.05, spherical.phi - dy * 0.005));
-      updateCamera();
-    } else if(isPan) {
-      var panSpeed = spherical.radius * 0.0008;
-      // Kameraya göre right/up vektörlerini hesapla
-      var camDir = camera.position.clone().sub(target).normalize();
-      var right = new THREE.Vector3().crossVectors(camera.up, camDir).normalize();
-      var up = new THREE.Vector3().crossVectors(camDir, right).normalize();
-      target.addScaledVector(right, -dx * panSpeed);
-      target.addScaledVector(up, dy * panSpeed);
-      updateCamera();
-    }
+  function doPan(dx, dy) {
+    var panSpeed = spherical.radius * 0.0008;
+    // Kameraya göre right/up vektörlerini hesapla
+    var camDir = camera.position.clone().sub(target).normalize();
+    var right = new THREE.Vector3().crossVectors(camera.up, camDir).normalize();
+    var up = new THREE.Vector3().crossVectors(camDir, right).normalize();
+    target.addScaledVector(right, -dx * panSpeed);
+    target.addScaledVector(up, dy * panSpeed);
+    updateCamera();
   }
 
-  function onMouseUp() {
-    isOrbit = false;
-    isPan = false;
-  }
-
-  function onWheel(e) {
-    e.preventDefault();
-    // Zoom kademe oranı düşürüldü — tek scroll ile küçük adım, akıcı yaklaşım
-    var factor = e.deltaY > 0 ? 1.07 : 0.935;
+  // Ortak zoom — hem tekerlek hem MMB+LMB dikey sürükle bunu kullanır.
+  // factor < 1 → yakınlaş, factor > 1 → uzaklaş.
+  function zoomByFactor(factor) {
     if(camera.isOrthographicCamera) {
       // Ortografik: frustum boyutu üzerinden zoom (mesafe görsel etki vermez)
       var newHalfW = (camera.right - camera.left) * factor / 2;
@@ -2315,6 +2308,107 @@ function veFEAAttachOrbitControls(canvas, cameraArg, target, requestRender) {
       spherical.radius = Math.max(5, Math.min(2000, spherical.radius * factor));
       updateCamera();
     }
+  }
+
+  // MMB tek tık (tap) → tıklanan nokta rotasyon/zoom merkezi olur (CATIA-stili).
+  function setRotationCenterFromEvent(e) {
+    if (!viewerRef || typeof viewerRef.pickPointFromMouse !== 'function') return;
+    var pt = viewerRef.pickPointFromMouse(e.clientX, e.clientY);
+    if (pt && typeof viewerRef.setRotationCenterAt === 'function') {
+      viewerRef.setRotationCenterAt(pt);  // target'ı kopyalar + sync + indicator
+    }
+  }
+
+  function onMouseDown(e) {
+    // CATIA / 3DEXPERIENCE şeması — state machine açıklaması yukarıda.
+    if (e.button === 1) {
+      // Orta tuş: pan başlat. Combo eklenmez + hareket olmazsa tap → merkez.
+      mmbDown = true;
+      mmbMoved = false;
+      comboHappened = false;
+      lmbHeld = false;
+      navMode = 'pan';
+      mmbDownX = e.clientX; mmbDownY = e.clientY;
+      lastX = e.clientX; lastY = e.clientY;
+      if (viewerRef) viewerRef._mmbDown = true;
+      e.preventDefault();
+    } else if (e.button === 0) {
+      if (mmbDown) {
+        // MMB basılıyken LMB → rotate/zoom combo'su. Basılı tutulup sürüklenirse
+        // rotate; kısa tıklanıp bırakılırsa (mouseup'ta) zoom moduna geçilir.
+        comboHappened = true;
+        lmbHeld = true;
+        navMode = 'rotate';
+        lmbDownX = e.clientX; lmbDownY = e.clientY;
+        lastX = e.clientX; lastY = e.clientY;
+        if (viewerRef) viewerRef._navLmbCombo = true;  // face-select'i bastır
+        e.preventDefault();
+      }
+      // LMB tek başına → seçim; face/box handler işler, orbit dokunmaz.
+    } else if (e.button === 2) {
+      if (!mmbDown) {            // MMB combo'su ile çakışmasın
+        isPanRMB = true;
+        lastX = e.clientX; lastY = e.clientY;
+        e.preventDefault();
+      }
+    }
+  }
+
+  function onMouseMove(e) {
+    if (!mmbDown && !isPanRMB) return;
+    var dx = e.clientX - lastX;
+    var dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    if (dx === 0 && dy === 0) return;
+
+    if (mmbDown) {
+      if (Math.abs(e.clientX - mmbDownX) > 3 || Math.abs(e.clientY - mmbDownY) > 3) mmbMoved = true;
+      if (navMode === 'rotate') {
+        doRotate(dx, dy);
+      } else if (navMode === 'zoom') {
+        // Dikey sürükle: yukarı (dy<0) → yakınlaş, aşağı (dy>0) → uzaklaş
+        zoomByFactor(Math.exp(dy * 0.006));
+      } else {
+        doPan(dx, dy);
+      }
+    } else if (isPanRMB) {
+      doPan(dx, dy);
+    }
+  }
+
+  function onMouseUp(e) {
+    var btn = e ? e.button : -1;
+    if (btn === 1) {
+      // MMB bırakıldı. Hareket yoksa ve combo olmadıysa → tap → merkez ata.
+      if (mmbDown && !mmbMoved && !comboHappened) {
+        setRotationCenterFromEvent(e);
+      }
+      mmbDown = false;
+      lmbHeld = false;
+      navMode = 'none';
+      if (viewerRef) viewerRef._mmbDown = false;
+    } else if (btn === 0) {
+      if (lmbHeld) {
+        // Combo LMB bırakıldı: az hareket → tıklamaydı → zoom moduna geç.
+        // Çok hareket → rotate yapılıyordu → MMB hâlâ basılı, pan'a dön.
+        var ddx = e.clientX - lmbDownX, ddy = e.clientY - lmbDownY;
+        navMode = (ddx * ddx + ddy * ddy <= 16) ? 'zoom' : 'pan';
+        lmbHeld = false;
+        // _navLmbCombo true kalır — face handler mouseup'ta tüketip sıfırlar.
+      }
+    } else if (btn === 2) {
+      isPanRMB = false;
+    } else {
+      // Belirsiz durum (ör. focus kaybı) → güvenli reset
+      mmbDown = false; lmbHeld = false; isPanRMB = false; navMode = 'none';
+      if (viewerRef) viewerRef._mmbDown = false;
+    }
+  }
+
+  function onWheel(e) {
+    e.preventDefault();
+    // Zoom kademe oranı düşük — tek scroll ile küçük adım, akıcı yaklaşım
+    zoomByFactor(e.deltaY > 0 ? 1.07 : 0.935);
   }
 
   function onContextMenu(e) {
