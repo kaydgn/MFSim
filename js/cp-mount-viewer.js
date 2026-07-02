@@ -9,7 +9,7 @@
 // Three.js Y-up → (x,y,z)_giriş = (x, z, y)_dünya (A26 konvansiyonu).
 // Ölçek: 1 sahne birimi = 1 mm.
 //
-// Veri kaynağı: _veMountEditorNode.data.mnt (cp-mount.js editör durumu).
+// Veri kaynağı: _veMntViewerData (Çözücü'nün topladığı kütle+takoz, cp-mount.js).
 // Saf sunum: matematiğe dokunmaz. THREE yoksa graceful no-op.
 // ----------------------------------------------------------------------------
 
@@ -139,10 +139,9 @@ function _mntCGRadius(mass, ms){
 
 function veMountViewerUpdate(){
   var V=_veMountViewer; if(!V) return;
-  var node = (typeof _veMountEditorNode!=='undefined') ? _veMountEditorNode : null;
-  if(!node || !node.data || !node.data.mnt) return;
-  // Alt-node topolojisinden agrege (bileşen CG + takoz konumları, UI mm birimi)
-  var d = (typeof _mntAggregate==='function') ? _mntAggregate(node.data.mnt) : node.data.mnt;
+  // Çözücü'nün topladığı kütle+takoz verisi (UI mm; cp-mount.js sağlar)
+  var d = (typeof _veMntViewerData!=='undefined' && _veMntViewerData) ? _veMntViewerData : null;
+  if(!d) return;
   if(!d.components) d.components=[]; if(!d.mounts) d.mounts=[];
 
   // Eski içeriği temizle
