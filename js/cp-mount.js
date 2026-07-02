@@ -43,6 +43,123 @@ var MNT_AUTO_CASES = [
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
+//  ANA MODÜL — ALT-SİSTEM (SUBSYSTEM) DÜĞÜMÜ  (arac-performans kalıbı)
+// ════════════════════════════════════════════════════════════════════════════
+// "Takoz Çökme-Titreşim" ana bileşen listesindeki TEK giriştir (Alt Modüller).
+// Ana canvas'ta tek blok; çift tıkla → kendi İÇ TOPOLOJİSİNE girilir. Alt
+// bileşenler (Motor/Şanzıman/Şaft/Braket/Kütle/Takoz/Çözücü) YALNIZ orada görünür
+// (sidebar 'takoz' modu) ve normal sürükle-bağla ile kurulur. "← Ana Topolojiye
+// Dön" ile çıkılır. Ana canvas makinesi (topology.js) aynen yeniden kullanılır:
+// girişte ebeveyn durumu saklanır, canvas alt-topoloji ile değiştirilir; çıkışta
+// alt-topoloji node.data.subTopology'ye yazılır. Kaydet öncesi veSaveActiveTabState
+// → veMntCollapseToRoot ile köke çöker.
+var veMntStack = [];
+var _veMntBusy = false;
+
+// Modül paneli (tek tık): "Alt Topolojiyi Aç".
+function getMntModulePropertiesHTML(node){
+  var sub = node && node.data && node.data.subTopology;
+  var nCount = (sub && sub.nodes) ? sub.nodes.length : 0;
+  var cCount = (sub && sub.connections) ? sub.connections.length : 0;
+  var initialized = !!(sub && sub.nodes && sub.nodes.length);
+  var html='<div class="sw-panel">';
+  html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
+      + '<b style="color:var(--text-heading);">Takoz Çökme-Titreşim — alt-sistem.</b> '
+      + 'Üstüne <b>çift tıklayınca</b> kendi <b>alt topolojisine</b> girilir. Motor / Şanzıman / Şaft / Braket / Kütle / Takoz / Çözücü alt bileşenlerini orada, kendi panellerinden düzenler, Çözücü\'ye bağlarsınız. Yük durumları otomatik.</div>';
+  html+='<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
+  if(initialized){
+    html+='<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+nCount+'</td></tr>';
+    html+='<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+cCount+'</td></tr>';
+  } else {
+    html+='<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Henüz açılmadı — ilk açılışta bir Çözücü ile başlar.</td></tr>';
+  }
+  html+='</table>';
+  html+='<button onclick="veMntOpenEditor(\''+node.id+'\')" style="width:100%; padding:14px 16px; font-size:0.82rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
+  html+='</div>';
+  return html;
+}
+
+// İlk açılışta iç topolojiye bir Çözücü tohumla (analiz hedefi).
+function veMntPopulateStarter(){
+  if(typeof createNode!=='function') return;
+  var base = (typeof veArrangeModuleBase==='function') ? veArrangeModuleBase([{lx:0,ly:0}]) : { x:3000, y:3000 };
+  createNode('mnt-solver', base.x + 260, base.y + 40);
+  if(typeof updateAllConnections==='function') updateAllConnections();
+}
+
+// Sidebar'ı çalışma alanına göre çevir (takoz iç topolojisi ⇄ ana performans).
+function _veMntSetSidebar(mode){
+  if(typeof veSidebarMode!=='undefined') veSidebarMode = (mode==='takoz') ? 'takoz' : 'performans';
+  if(typeof veShowAllSidebarComponents==='function') veShowAllSidebarComponents();
+}
+
+function veMntOpenEditor(nodeId){
+  if(_veMntBusy) return;
+  if(typeof nodes==='undefined' || typeof veSerializeCurrentState!=='function') return;
+  var node = nodes.find(function(n){ return n.id===nodeId; });
+  if(!node || node.type!=='mount-analysis') return;
+  _veMntBusy=true;
+  try {
+    if(typeof veFlushOpenPanelData==='function') veFlushOpenPanelData();
+    if(typeof veTogglePropertiesPanel==='function') veTogglePropertiesPanel(false);
+    var parentState = veSerializeCurrentState();
+    veMntStack.push({ nodeId:nodeId, parentState:parentState });
+    veClearCanvasDOM();
+    var sub = node.data && node.data.subTopology;
+    if(sub && sub.nodes && sub.nodes.length){
+      veLoadTabState({ state: sub });
+    } else {
+      veLoadTabState({ state: null });
+      veMntPopulateStarter();
+    }
+    _veMntSetSidebar('takoz');
+  } finally { _veMntBusy=false; }
+  veMntUpdateBreadcrumb();
+  if(typeof showToast==='function') showToast('Takoz Çökme-Titreşim — İç Topoloji','info');
+}
+
+function veMntCloseEditor(){
+  if(_veMntBusy) return;
+  if(!veMntStack.length) return;
+  _veMntBusy=true;
+  try {
+    if(typeof veFlushOpenPanelData==='function') veFlushOpenPanelData();
+    var subState = veSerializeCurrentState();
+    var ctx = veMntStack.pop();
+    var pn = (ctx.parentState.nodes||[]).find(function(n){ return n.id===ctx.nodeId; });
+    if(pn){ if(!pn.data) pn.data={}; pn.data.subTopology = subState; }
+    veClearCanvasDOM();
+    veLoadTabState({ state: ctx.parentState });
+    _veMntSetSidebar('performans');
+  } finally { _veMntBusy=false; }
+  veMntUpdateBreadcrumb();
+  if(typeof showToast==='function') showToast('Ana topolojiye dönüldü','info');
+}
+
+function veMntCollapseToRoot(){
+  var guard=0;
+  while(veMntStack.length && guard++<32){ veMntCloseEditor(); }
+}
+
+// "← Ana Topolojiye Dön" bandı (arac-performans ile aynı CSS sınıfı).
+function veMntUpdateBreadcrumb(){
+  if(typeof document==='undefined') return;
+  var el=document.getElementById('ve-mnt-breadcrumb');
+  if(veMntStack.length===0){ if(el) el.remove(); return; }
+  if(!el){
+    el=document.createElement('div');
+    el.id='ve-mnt-breadcrumb';
+    el.className='ve-arac-breadcrumb';
+    var host=document.getElementById('ve-canvas-wrapper')||document.body;
+    host.appendChild(el);
+  }
+  var depth=veMntStack.length;
+  el.innerHTML='<button onclick="veMntCloseEditor()" title="Bir üst topolojiye dön">← Ana Topolojiye Dön</button>'
+    + '<span class="ve-arac-breadcrumb-label">Takoz Çökme-Titreşim · İç Topoloji'
+    + (depth>1 ? ' <b>(derinlik '+depth+')</b>' : '') + '</span>';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  KÜTLE GÖVDESİ PANELİ (Motor / Şanzıman / Şaft / Braket / Kütle)
 // ════════════════════════════════════════════════════════════════════════════
 function _mntEnsureMassData(node){
@@ -428,6 +545,7 @@ var _veMntViewerData = null;
 // Node/Jest için dışa aç
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
+    getMntModulePropertiesHTML: getMntModulePropertiesHTML,
     getMntMassPropertiesHTML: getMntMassPropertiesHTML,
     getMntMountPropertiesHTML: getMntMountPropertiesHTML,
     getMntSolverPropertiesHTML: getMntSolverPropertiesHTML,

@@ -38,6 +38,7 @@ function veSaveActiveTabState() {
   // önce köke (ana topoloji) çık — böylece canlı canvas alt-topoloji değil kök olur
   // ve serileştirme doğru durumu yazar (alt-topoloji ilgili düğümün data'sına saklı).
   if(typeof veAracCollapseToRoot === 'function') veAracCollapseToRoot();
+  if(typeof veMntCollapseToRoot === 'function') veMntCollapseToRoot();
   if(veTabs.length === 0) return;
   var tab = veTabs[veActiveTabIdx];
   if(!tab) return;

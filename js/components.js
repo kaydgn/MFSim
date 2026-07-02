@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-mass','mnt-mount','mnt-solver','arac-performans'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-mass','mnt-mount','mnt-solver','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -252,6 +252,19 @@ var componentDefs = {
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
+    defaultWidth: 80,
+    defaultHeight: 66
+  },
+  // Takoz Çökme-Titreşim ALT-SİSTEM MODÜLÜ — arac-performans ile aynı nested
+  // topoloji kalıbı. Ana canvas'ta tek blok; çift tıkla → iç topolojisi (Motor/
+  // Takoz/Çözücü) açılır (cp-mount.js veMntOpenEditor). isMountModule: dblclick.
+  'mount-analysis': {
+    name: 'Takoz Çökme-Titreşim',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="14" width="88" height="72" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="34" y="30" width="32" height="13" rx="3" fill="var(--text-secondary, #666)"/><path d="M40 43 Q34 49 44 53 Q34 57 44 61 Q34 65 40 69" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M60 43 Q54 49 64 53 Q54 57 64 61 Q54 65 60 69" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="30" y1="71" x2="70" y2="71" stroke="var(--text-secondary, #666)" stroke-width="3"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    isSubsystem: true,
+    isMountModule: true,
     defaultWidth: 80,
     defaultHeight: 66
   },
