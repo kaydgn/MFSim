@@ -196,3 +196,51 @@ describe('Araç Performans — özellik paneli', () => {
     expect(html).toContain('11');
   });
 });
+
+describe('Sidebar kapsamı (veShowAllSidebarComponents + veSyncSidebarScope)', () => {
+  function setupSidebar() {
+    document.body.innerHTML =
+      '<div class="ve-category" data-ve-scope="module" id="cat-mod"><div class="ve-category-title">Modüller</div></div>' +
+      '<div class="ve-category" data-ve-scope="arac-performans" id="cat-ap"><div class="ve-category-title">Güç Kaynağı</div></div>' +
+      '<div class="ve-category" data-ve-scope="mount-analysis" id="cat-mnt"><div class="ve-category-title">Takoz Alt Bileşenleri</div></div>' +
+      '<div class="ve-category" data-always-visible="true" id="cat-tools"><div class="ve-category-title">Araçlar</div></div>';
+  }
+  const disp = (id) => document.getElementById(id).style.display;
+
+  test('üst seviye (top): Modüller + Araçlar görünür, arac-performans ve mount gizli', () => {
+    setupSidebar();
+    veSidebarScope = 'top';
+    veShowAllSidebarComponents();
+    expect(disp('cat-mod')).toBe('');
+    expect(disp('cat-tools')).toBe('');
+    expect(disp('cat-ap')).toBe('none');
+    expect(disp('cat-mnt')).toBe('none');
+  });
+
+  test('modül içi (arac-performans): Modüller + güç aktarma görünür, mount gizli', () => {
+    setupSidebar();
+    veSidebarScope = 'arac-performans';
+    veShowAllSidebarComponents();
+    expect(disp('cat-mod')).toBe('');
+    expect(disp('cat-ap')).toBe('');
+    expect(disp('cat-tools')).toBe('');
+    expect(disp('cat-mnt')).toBe('none');
+  });
+
+  test('veSyncSidebarScope: boş stack → top, Araç Performans stack dolu → arac-performans', () => {
+    setupSidebar();
+    veAracStack.length = 0;
+    veSyncSidebarScope();
+    expect(veSidebarScope).toBe('top');
+    expect(disp('cat-ap')).toBe('none');
+
+    veAracStack.push({ nodeId: 'comp-1', parentState: {} });
+    veSyncSidebarScope();
+    expect(veSidebarScope).toBe('arac-performans');
+    expect(disp('cat-ap')).toBe('');
+
+    veAracStack.length = 0;
+  });
+
+  afterAll(() => { veSidebarScope = 'top'; });
+});

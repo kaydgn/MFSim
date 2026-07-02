@@ -3439,8 +3439,8 @@ function mfsimLogout() {
         <div class="ve-sidebar-resizer" id="ve-sidebar-resizer"></div>
         <div class="ve-sidebar-content">
 
-          <div class="ve-category" data-ve-mode="performans">
-            <div class="ve-category-title">Alt Modüller</div>
+          <div class="ve-category" data-ve-scope="module">
+            <div class="ve-category-title">Modüller</div>
             <div class="ve-component ve-submodule" draggable="true" data-type="arac-performans" title="Sürükleyip bırakın → ana canvas'ta tek 'Araç Performans' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (güç aktarma bileşenleri) açılır.">
               <svg width="20" height="20" viewBox="0 0 100 100" style="flex-shrink:0;">
                 <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
@@ -3465,7 +3465,7 @@ function mfsimLogout() {
             </div>
           </div>
 
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Güç Kaynağı</div>
             <div class="ve-component" draggable="true" data-type="engine">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -3477,7 +3477,7 @@ function mfsimLogout() {
               </svg> <span class="ve-comp-label">Motor</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Aktarma Organları</div>
             <div class="ve-component" draggable="true" data-type="torque-converter">
               <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
@@ -3549,7 +3549,7 @@ function mfsimLogout() {
               </svg> <span class="ve-comp-label">Diferansiyel</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Araç</div>
             <div class="ve-component" draggable="true" data-type="wheel">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -3566,7 +3566,7 @@ function mfsimLogout() {
               </svg> <span class="ve-comp-label">Araç</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Ölçüm</div>
             <div class="ve-component" draggable="true" data-type="sensor">
               <svg width="14" height="18" viewBox="0 0 100 120" style="vertical-align:middle; margin-right:4px;">
@@ -3592,7 +3592,7 @@ function mfsimLogout() {
               </svg> <span class="ve-comp-label">Sonlandırıcı</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Çevre</div>
             <div class="ve-component" draggable="true" data-type="scenario">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -3620,7 +3620,7 @@ function mfsimLogout() {
               </svg> <span class="ve-comp-label">Yol / Ortam</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Analiz Modülleri</div>
             <div class="ve-component" draggable="true" data-type="ec-matching">
               <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
@@ -3664,7 +3664,7 @@ function mfsimLogout() {
               </svg> <span class="ve-comp-label">Engel Geçme</span></div>
           </div>
 
-          <div class="ve-category" data-ve-mode="takoz">
+          <div class="ve-category" data-ve-scope="mount-analysis">
             <div class="ve-category-title">Takoz Alt Bileşenleri</div>
             <div class="ve-component" draggable="true" data-type="mnt-motor" title="Motor kütle gövdesi (kütle + CG + atalet)">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -9605,10 +9605,18 @@ var VE_MODULES = {
 
 var veActiveModule = 'full-throttle';
 
-// Sidebar bileşen modu. (Sonlu Elemanlar/FEA modülü kaldırıldıktan sonra tek
-// mod kaldı: 'performans'. Kategori filtreleme altyapısı data-ve-mode ile
-// generik olarak korunur — ileride yeni mod eklemek isteyen olursa diye.)
+// Sidebar bileşen modu. (Legacy — kategori görünürlüğü artık veSidebarScope ile
+// yönetilir; bu değişken bazı eski çağrılar için korunur.)
 var veSidebarMode = 'performans';
+
+// Sidebar kapsamı — hangi kategoriler görünür:
+//   'top'             → ana topoloji (ana ekran): yalnızca "Modüller" (data-ve-
+//                       scope="module") + her-zaman (Araçlar) kategorileri.
+//   'arac-performans' → "Araç Performans" alt topolojisi: güç aktarma bileşenleri.
+//   'mount-analysis'  → "Takoz" alt topolojisi: Takoz Alt Bileşenleri (mnt-*).
+// Kategoriler data-ve-scope ile etiketlenir: 'module' (her yerde) | 'top' | modül
+// tipi. Bir alt-sistem açılınca veSyncSidebarScope() kapsamı stack'lerden hesaplar.
+var veSidebarScope = 'top';
 
 function veOnModuleChange(moduleId) {
   // Tek modül — değişiklik gerekmez
@@ -9651,9 +9659,25 @@ function veShowAllSidebarComponents() {
   });
   document.querySelectorAll('.ve-category').forEach(function(cat) {
     if(cat.getAttribute('data-always-visible')) { cat.style.display = ''; return; }
-    var catMode = cat.getAttribute('data-ve-mode') || 'performans';
-    cat.style.display = (catMode === veSidebarMode) ? '' : 'none';
+    // Kapsam kuralı: 'module' her yerde görünür; diğerleri yalnızca aktif
+    // kapsamla eşleşince ('top' → ana ekran, modül tipi → o modülün içi).
+    // Etiketsiz kategoriler bileşen paleti sayılır → yalnızca Araç Performans içinde.
+    var scope = cat.getAttribute('data-ve-scope') || 'arac-performans';
+    if(scope === 'module') { cat.style.display = ''; return; }
+    cat.style.display = (scope === veSidebarScope) ? '' : 'none';
   });
+}
+
+// Sidebar kapsamını açık alt-sistem stack'lerinden hesapla ve uygula. Ana ekranda
+// (hiçbir alt-sistem açık değil) → 'top'. Araç Performans / Takoz içindeyken ilgili
+// bileşen paleti gelir. Her iki alt-sistem (cp-arac-performans.js, cp-mount.js)
+// aç/kapat sırasında bunu çağırır.
+function veSyncSidebarScope() {
+  var scope = 'top';
+  if(typeof veAracStack !== 'undefined' && veAracStack.length) scope = 'arac-performans';
+  if(typeof veMntStack !== 'undefined' && veMntStack.length) scope = 'mount-analysis';
+  veSidebarScope = scope;
+  veShowAllSidebarComponents();
 }
 
 // Bileşen tanımları (SVG sembolleri)
@@ -22060,9 +22084,10 @@ function veMntPopulateStarter(){
   if(typeof updateAllConnections==='function') updateAllConnections();
 }
 
-// Sidebar'ı çalışma alanına göre çevir (takoz iç topolojisi ⇄ ana performans).
+// Sidebar kapsamını güncelle (takoz iç topolojisi ⇄ ana ekran). Kapsam açık
+// alt-sistem stack'lerinden merkezi olarak hesaplanır (bkz. veSyncSidebarScope).
 function _veMntSetSidebar(mode){
-  if(typeof veSidebarMode!=='undefined') veSidebarMode = (mode==='takoz') ? 'takoz' : 'performans';
+  if(typeof veSyncSidebarScope==='function'){ veSyncSidebarScope(); return; }
   if(typeof veShowAllSidebarComponents==='function') veShowAllSidebarComponents();
 }
 
@@ -22935,6 +22960,7 @@ function veAracOpenEditor(nodeId){
   }
 
   veAracUpdateBreadcrumb();
+  if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
   if(typeof showToast === 'function') showToast('Araç Performans — Alt Topoloji', 'info');
 }
 
@@ -22959,6 +22985,7 @@ function veAracCloseEditor(){
   }
 
   veAracUpdateBreadcrumb();
+  if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
 
   // Ana topolojiye dönünce ilgili düğümü seç
   var back = veAracStack.length === 0;

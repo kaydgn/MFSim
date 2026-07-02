@@ -105,8 +105,8 @@
         <div class="ve-sidebar-resizer" id="ve-sidebar-resizer"></div>
         <div class="ve-sidebar-content">
 
-          <div class="ve-category" data-ve-mode="performans">
-            <div class="ve-category-title">Alt Modüller</div>
+          <div class="ve-category" data-ve-scope="module">
+            <div class="ve-category-title">Modüller</div>
             <div class="ve-component ve-submodule" draggable="true" data-type="arac-performans" title="Sürükleyip bırakın → ana canvas'ta tek 'Araç Performans' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (güç aktarma bileşenleri) açılır.">
               <svg width="20" height="20" viewBox="0 0 100 100" style="flex-shrink:0;">
                 <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
@@ -131,7 +131,7 @@
             </div>
           </div>
 
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Güç Kaynağı</div>
             <div class="ve-component" draggable="true" data-type="engine">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -143,7 +143,7 @@
               </svg> <span class="ve-comp-label">Motor</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Aktarma Organları</div>
             <div class="ve-component" draggable="true" data-type="torque-converter">
               <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
@@ -215,7 +215,7 @@
               </svg> <span class="ve-comp-label">Diferansiyel</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Araç</div>
             <div class="ve-component" draggable="true" data-type="wheel">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -232,7 +232,7 @@
               </svg> <span class="ve-comp-label">Araç</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Ölçüm</div>
             <div class="ve-component" draggable="true" data-type="sensor">
               <svg width="14" height="18" viewBox="0 0 100 120" style="vertical-align:middle; margin-right:4px;">
@@ -258,7 +258,7 @@
               </svg> <span class="ve-comp-label">Sonlandırıcı</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Çevre</div>
             <div class="ve-component" draggable="true" data-type="scenario">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -286,7 +286,7 @@
               </svg> <span class="ve-comp-label">Yol / Ortam</span></div>
           </div>
           
-          <div class="ve-category">
+          <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Analiz Modülleri</div>
             <div class="ve-component" draggable="true" data-type="ec-matching">
               <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
@@ -330,7 +330,7 @@
               </svg> <span class="ve-comp-label">Engel Geçme</span></div>
           </div>
 
-          <div class="ve-category" data-ve-mode="takoz">
+          <div class="ve-category" data-ve-scope="mount-analysis">
             <div class="ve-category-title">Takoz Alt Bileşenleri</div>
             <div class="ve-component" draggable="true" data-type="mnt-motor" title="Motor kütle gövdesi (kütle + CG + atalet)">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">

@@ -175,6 +175,7 @@ function veAracOpenEditor(nodeId){
   }
 
   veAracUpdateBreadcrumb();
+  if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
   if(typeof showToast === 'function') showToast('Araç Performans — Alt Topoloji', 'info');
 }
 
@@ -199,6 +200,7 @@ function veAracCloseEditor(){
   }
 
   veAracUpdateBreadcrumb();
+  if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
 
   // Ana topolojiye dönünce ilgili düğümü seç
   var back = veAracStack.length === 0;
