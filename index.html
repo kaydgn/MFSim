@@ -107,13 +107,15 @@
 
           <div class="ve-category" data-ve-mode="performans">
             <div class="ve-category-title">Alt Modüller</div>
-            <div class="ve-component ve-submodule" draggable="false" onclick="veBuildVehiclePerformanceModule()" title="Tıklayınca tam araç güç aktarma topolojisini otomatik kurar (Motor → Tork Konvertörü → Şanzıman → Propşaft → Transfer → Diferansiyel → Tekerlekler)">
+            <div class="ve-component ve-submodule" draggable="true" data-type="arac-performans" title="Sürükleyip bırakın → ana canvas'ta tek 'Araç Performans' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (güç aktarma bileşenleri) açılır.">
               <svg width="20" height="20" viewBox="0 0 100 100" style="flex-shrink:0;">
-                <path d="M8 60 L20 60 L30 44 L62 44 L74 60 L92 60 L92 70 L8 70 Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
-                <circle cx="30" cy="72" r="9" fill="none" stroke="currentColor" stroke-width="5"/>
-                <circle cx="70" cy="72" r="9" fill="none" stroke="currentColor" stroke-width="5"/>
-                <line x1="2" y1="40" x2="24" y2="40" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
-                <line x1="10" y1="28" x2="30" y2="28" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+                <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
+                <rect x="18" y="46" width="16" height="16" rx="2" fill="currentColor"/>
+                <line x1="34" y1="54" x2="47" y2="54" stroke="currentColor" stroke-width="4"/>
+                <circle cx="58" cy="54" r="10" fill="none" stroke="currentColor" stroke-width="4"/>
+                <line x1="68" y1="54" x2="77" y2="54" stroke="currentColor" stroke-width="4"/>
+                <circle cx="84" cy="54" r="6" fill="none" stroke="currentColor" stroke-width="3" opacity="0.7"/>
+                <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
               </svg>
               <span class="ve-comp-label">Araç Performans</span>
             </div>
@@ -616,6 +618,7 @@
 <script type="text/x-mfsim-defer" src="js/mount-core.js" data-mfsim-label="Takoz: hesap çekirdeği (6 SD)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount.js" data-mfsim-label="Takoz çökme-titreşim modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-viewer.js" data-mfsim-label="Takoz: 3D görüntüleyici..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-arac-performans.js" data-mfsim-label="Araç Performans: alt-sistem topolojisi..."></script>
 <!-- Three.js (UMD, vendored from npm three@0.149.0) — Takoz 3D görüntüleyici için -->
 <script type="text/x-mfsim-defer" src="vendor/three.min.js" data-mfsim-label="3D kütüphanesi (Three.js)..."></script>
 <script type="text/x-mfsim-defer" src="js/ft-performance.js" data-mfsim-label="Saha testi: Performans..."></script>

@@ -1133,7 +1133,7 @@
 
 /* Alt modül kartı — sürüklenmez, tıklanınca hazır topoloji kurar */
 .ve-submodule{
-  cursor:pointer;
+  cursor:grab;
   font-weight:600;
   color:var(--accent-primary);
   background:color-mix(in srgb, var(--accent-primary) 8%, var(--bg-tertiary));
@@ -1142,6 +1142,40 @@
 .ve-submodule:hover{
   background:color-mix(in srgb, var(--accent-primary) 16%, var(--bg-input));
 }
+
+/* Alt-topoloji breadcrumb — "Araç Performans" iç topolojisindeyken görünür */
+.ve-arac-breadcrumb{
+  position:fixed;
+  top:64px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:7px 14px;
+  background:var(--accent-primary);
+  color:#fff;
+  border-radius:6px;
+  box-shadow:0 3px 14px var(--shadow-color, rgba(0,0,0,0.35));
+  font-size:0.72rem;
+  font-weight:600;
+  white-space:nowrap;
+}
+.ve-arac-breadcrumb button{
+  background:rgba(255,255,255,0.18);
+  color:#fff;
+  border:1px solid rgba(255,255,255,0.45);
+  border-radius:4px;
+  padding:4px 11px;
+  cursor:pointer;
+  font-weight:700;
+  font-size:0.72rem;
+}
+.ve-arac-breadcrumb button:hover{
+  background:rgba(255,255,255,0.3);
+}
+.ve-arac-breadcrumb-label{ opacity:0.95; }
 
 .ve-canvas-area{
   flex:1;
@@ -3407,13 +3441,15 @@ function mfsimLogout() {
 
           <div class="ve-category" data-ve-mode="performans">
             <div class="ve-category-title">Alt Modüller</div>
-            <div class="ve-component ve-submodule" draggable="false" onclick="veBuildVehiclePerformanceModule()" title="Tıklayınca tam araç güç aktarma topolojisini otomatik kurar (Motor → Tork Konvertörü → Şanzıman → Propşaft → Transfer → Diferansiyel → Tekerlekler)">
+            <div class="ve-component ve-submodule" draggable="true" data-type="arac-performans" title="Sürükleyip bırakın → ana canvas'ta tek 'Araç Performans' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (güç aktarma bileşenleri) açılır.">
               <svg width="20" height="20" viewBox="0 0 100 100" style="flex-shrink:0;">
-                <path d="M8 60 L20 60 L30 44 L62 44 L74 60 L92 60 L92 70 L8 70 Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
-                <circle cx="30" cy="72" r="9" fill="none" stroke="currentColor" stroke-width="5"/>
-                <circle cx="70" cy="72" r="9" fill="none" stroke="currentColor" stroke-width="5"/>
-                <line x1="2" y1="40" x2="24" y2="40" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
-                <line x1="10" y1="28" x2="30" y2="28" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+                <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
+                <rect x="18" y="46" width="16" height="16" rx="2" fill="currentColor"/>
+                <line x1="34" y1="54" x2="47" y2="54" stroke="currentColor" stroke-width="4"/>
+                <circle cx="58" cy="54" r="10" fill="none" stroke="currentColor" stroke-width="4"/>
+                <line x1="68" y1="54" x2="77" y2="54" stroke="currentColor" stroke-width="4"/>
+                <circle cx="84" cy="54" r="6" fill="none" stroke="currentColor" stroke-width="3" opacity="0.7"/>
+                <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
               </svg>
               <span class="ve-comp-label">Araç Performans</span>
             </div>
@@ -9550,7 +9586,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-mass','mnt-mount','mnt-solver'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-mass','mnt-mount','mnt-solver','arac-performans'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -9608,162 +9644,6 @@ function veShowAllSidebarComponents() {
     var catMode = cat.getAttribute('data-ve-mode') || 'performans';
     cat.style.display = (catMode === veSidebarMode) ? '' : 'none';
   });
-}
-
-// ============================================================================
-// ALT MODÜL: "Araç Performans" — hazır güç aktarma topolojisi kurucu
-// ============================================================================
-// Sidebar'daki "Araç Performans" alt modülüne tıklanınca çağrılır. Tam bir araç
-// güç aktarma organı topolojisini (Motor → Tork Konvertörü → Şanzıman → Propşaft
-// → Transfer Kutusu → 2×Diferansiyel → 4×Tekerlek) ve yardımcı bileşenleri
-// (Motor-Konvertör Eşleştirme, Çözücü, Şanzıman Kontrol, Araç, Engel Geçme)
-// bağlantılarıyla birlikte otomatik olarak canvas'a kurar.
-//
-// Not: İlk oluşturulan diferansiyel/tekerlek createNode içinde otomatik "master ★"
-// olur; bu yüzden üst diferansiyel ve üst-sağ tekerlek listede önce oluşturulur.
-var VE_ARAC_PERFORMANS_LAYOUT = [
-  // (yerel px koordinatlar; kurulumda görünür alanın merkezine ortalanır)
-  { type:'solver',            lx:150, ly:0   },
-  { type:'shift-controller',  lx:380, ly:0   },
-  { type:'vehicle',           lx:510, ly:0   },
-  { key:'engine',    type:'engine',            lx:30,  ly:190 },
-  { key:'tc',        type:'torque-converter',  lx:185, ly:190 },
-  { key:'gearbox',   type:'gearbox',           lx:320, ly:190 },
-  { key:'propshaft', type:'propshaft',         lx:450, ly:190 },
-  { key:'transfer',  type:'transfer',          lx:585, ly:190 },
-  { key:'diffTop',   type:'differential',      lx:715, ly:110 }, // önce → master ★
-  { key:'diffBot',   type:'differential',      lx:715, ly:300 },
-  { key:'w1',        type:'wheel',             lx:850, ly:40  }, // önce → master ★
-  { key:'w2',        type:'wheel',             lx:850, ly:160 },
-  { key:'w3',        type:'wheel',             lx:850, ly:300 },
-  { key:'w4',        type:'wheel',             lx:850, ly:420 },
-  { key:'ec',        type:'ec-matching',       lx:175, ly:360 },
-  { type:'obstacle-crossing', lx:400, ly:380 }
-];
-
-// Bağlantılar: [fromKey, toKey, fromPort, toPort]
-// transfer/differential 2 çıkışlıdır → 'output-0' (üst) ve 'output-1' (alt).
-var VE_ARAC_PERFORMANS_LINKS = [
-  ['engine',    'tc',        'output',   'input'],
-  ['engine',    'ec',        'output',   'input'],
-  ['tc',        'gearbox',   'output',   'input'],
-  ['gearbox',   'propshaft', 'output',   'input'],
-  ['propshaft', 'transfer',  'output',   'input'],
-  ['transfer',  'diffTop',   'output-0', 'input'],
-  ['transfer',  'diffBot',   'output-1', 'input'],
-  ['diffTop',   'w1',        'output-0', 'input'],
-  ['diffTop',   'w2',        'output-1', 'input'],
-  ['diffBot',   'w3',        'output-0', 'input'],
-  ['diffBot',   'w4',        'output-1', 'input']
-];
-
-// Modül düğümlerini görünür alanın merkezine ortalayacak taban koordinatı hesapla.
-// (drop handler ile aynı dönüşüm: ekran → canvas koordinatı; bkz. ui-core.js drop)
-function veArrangeModuleBase(layout) {
-  var CANVAS_OFFSET = 3000, NODE_W = 65, NODE_H = 60;
-  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  layout.forEach(function(it) {
-    minX = Math.min(minX, it.lx);
-    minY = Math.min(minY, it.ly);
-    maxX = Math.max(maxX, it.lx + NODE_W);
-    maxY = Math.max(maxY, it.ly + NODE_H);
-  });
-  var topoW = maxX - minX, topoH = maxY - minY;
-
-  var wrapper = (typeof document !== 'undefined') ? document.getElementById('ve-canvas-wrapper') : null;
-  if(!wrapper || typeof wrapper.getBoundingClientRect !== 'function') {
-    return { x: CANVAS_OFFSET, y: CANVAS_OFFSET };
-  }
-  var rect = wrapper.getBoundingClientRect();
-  var zoom = (typeof canvasZoom !== 'undefined' && canvasZoom) ? canvasZoom : 1;
-  var offX = (typeof canvasOffset !== 'undefined') ? canvasOffset.x : CANVAS_OFFSET;
-  var offY = (typeof canvasOffset !== 'undefined') ? canvasOffset.y : CANVAS_OFFSET;
-  var cx = (rect.width / 2 - offX) / zoom + CANVAS_OFFSET;
-  var cy = (rect.height / 2 - offY) / zoom + CANVAS_OFFSET;
-  return {
-    x: Math.max(40, cx - topoW / 2 - minX),
-    y: Math.max(40, cy - topoH / 2 - minY)
-  };
-}
-
-function veBuildVehiclePerformanceModule() {
-  if(typeof createNode !== 'function' || typeof createConnection !== 'function') return;
-
-  // "Araç Performans" moduna geç → ilgili bileşenler sidebar'da görünür olsun
-  if(typeof veSubTabDegistir === 'function') {
-    veSubTabDegistir('arac-performans');
-  } else {
-    veSidebarMode = 'performans';
-    if(typeof veShowAllSidebarComponents === 'function') veShowAllSidebarComponents();
-  }
-  var _ov = (typeof document !== 'undefined') ? document.getElementById('ve-module-overlay') : null;
-  if(_ov) _ov.style.display = 'none';
-
-  // Canvas doluysa üzerine yazmamak için onay iste
-  if(typeof nodes !== 'undefined' && nodes.length > 0) {
-    if(typeof confirm === 'function' &&
-       !confirm('Kanvasta zaten bileşenler var. "Araç Performans" topolojisi yine de eklensin mi?')) {
-      return;
-    }
-  }
-
-  // Modülü tek Ctrl+Z adımıyla geri alabilmek için build öncesi durumu işaretle
-  var _undoAnchor = null;
-  if(typeof saveState === 'function' && typeof undoStack !== 'undefined') {
-    saveState();
-    _undoAnchor = undoStack[undoStack.length - 1];
-  }
-
-  // Topolojiyi görünür alanın merkezine ortala
-  var base = veArrangeModuleBase(VE_ARAC_PERFORMANS_LAYOUT);
-
-  // Düğümleri oluştur, key → node eşlemesi tut
-  var ref = {};
-  var created = [];
-  VE_ARAC_PERFORMANS_LAYOUT.forEach(function(item) {
-    var before = nodes.length;
-    createNode(item.type, base.x + item.lx, base.y + item.ly);
-    if(nodes.length > before) {
-      var n = nodes[nodes.length - 1];
-      created.push(n);
-      if(item.key) ref[item.key] = n;
-    }
-  });
-
-  // Bağlantıları kur. createConnection id'yi 'conn-'+Date.now() ile üretir; senkron
-  // döngüde aynı ms → aynı id çakışması olur (silme/render bozulur). topology.js:392
-  // desenini izleyerek her yeni bağlantıya benzersiz 'conn-'+compCounter ata.
-  VE_ARAC_PERFORMANS_LINKS.forEach(function(link) {
-    var a = ref[link[0]], b = ref[link[1]];
-    if(!a || !b) return;
-    var before = connections.length;
-    createConnection(a.id, b.id, link[2], link[3]);
-    if(connections.length > before && typeof compCounter !== 'undefined') {
-      compCounter++;
-      connections[connections.length - 1].id = 'conn-' + compCounter;
-    }
-  });
-
-  if(typeof updateAllConnections === 'function') updateAllConnections();
-
-  // Ara saveState'leri temizle → modül tek geri-alma adımı olsun
-  if(_undoAnchor && typeof undoStack !== 'undefined') {
-    var idx = undoStack.lastIndexOf(_undoAnchor);
-    if(idx >= 0) undoStack.splice(idx + 1);
-  }
-
-  // Oluşturulan tüm düğümleri seç (createNode'un ~20ms auto-select'inden sonra)
-  if(typeof clearSelection === 'function' && typeof addToSelection === 'function') {
-    setTimeout(function() {
-      clearSelection();
-      created.forEach(function(n) { addToSelection(n); });
-    }, 120);
-  }
-
-  if(typeof showToast === 'function') {
-    showToast('Araç Performans modülü yüklendi — ' + created.length + ' bileşen', 'success');
-  }
-  return created;
 }
 
 // Bileşen tanımları (SVG sembolleri)
@@ -9940,7 +9820,20 @@ var componentDefs = {
     name: 'Takoz Çözücü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #ef4444)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 1, outputs: 0, isMountSolver: true
-  }
+  },
+  // ── Araç Performans (ALT-SİSTEM / subsystem düğümü) ──────────────────────
+  // Sürüklenebilir composite düğüm: ana canvas'ta tek blok; çift tıklanınca
+  // kendi iç topolojisine girilir (gerçek güç aktarma bileşenleri). Aç/kapat
+  // ve iç-topoloji mantığı js/cp-arac-performans.js içindedir.
+  'arac-performans': {
+    name: 'Araç Performans',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="18" y="46" width="16" height="16" rx="2" fill="var(--text-secondary, #666)"/><line x1="34" y1="54" x2="47" y2="54" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="58" cy="54" r="10" fill="none" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="58" cy="54" r="3" fill="var(--text-secondary, #666)"/><line x1="68" y1="54" x2="77" y2="54" stroke="var(--text-secondary, #666)" stroke-width="4"/><circle cx="84" cy="54" r="6" fill="none" stroke="var(--text-muted, #888)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    isSubsystem: true,
+    defaultWidth: 80,
+    defaultHeight: 66
+  },
 };
 
 // Her bileşen tipi için sinyal tanımları (sensör okuyabilir)
@@ -11359,6 +11252,11 @@ function veAttachNodeDrag(nodeEl, node) {
     if(e.target.classList.contains('ve-resize-handle')) return;
     e.preventDefault();
     e.stopPropagation();
+    // Alt-sistem düğümü → çift tık doğrudan iç topolojisini açar
+    if(node.type === 'arac-performans' && typeof veAracOpenEditor === 'function') {
+      veAracOpenEditor(node.id);
+      return;
+    }
     if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
   nodeEl.addEventListener('mousedown', function(e) {
@@ -12285,6 +12183,8 @@ function showNodeProperties(node) {
     html += getMntMountPropertiesHTML(node);
   } else if(node.type === 'mnt-solver') {
     html += getMntSolverPropertiesHTML(node);
+  } else if(node.type === 'arac-performans') {
+    html += getAracPerformansPropertiesHTML(node);
   } else if(node.type === 'solver') {
     html += getSolverPropertiesHTML(node);
   } else if(node.type === 'road') {
@@ -22707,6 +22607,255 @@ function veMountViewerDispose(){
     if(V.renderer){ V.renderer.dispose(); }
   } catch(e){}
   _veMountViewer=null;
+}
+
+</script>
+<script type="text/x-mfsim-defer" data-mfsim-label="Araç Performans: alt-sistem topolojisi...">
+// ============================================================================
+//  ARAÇ PERFORMANS — ALT-SİSTEM (SUBSYSTEM) DÜĞÜMÜ
+// ============================================================================
+// "Araç Performans" sürüklenebilir bir composite düğümdür. Ana canvas'ta tek blok
+// olarak görünür; üstüne çift tıklanınca (veya panelinden "Alt Topolojiyi Aç")
+// kendi İÇ TOPOLOJİSİNE girilir. İç topoloji GERÇEK güç aktarma bileşenlerini
+// (Motor, Tork Konvertörü, Şanzıman, Propşaft, Transfer, Diferansiyel, Tekerlek…)
+// kullanır — mevcut zengin özellik panelleri ve bağlantı/çözücü altyapısı aynen
+// çalışır. "← Ana Topolojiye Dön" ile geri çıkılır.
+//
+// Uygulama: ana canvas makinesi (topology.js) yeniden kullanılır — girişte ebeveyn
+// durumu saklanır, canvas alt-topoloji ile değiştirilir; çıkışta alt-topoloji
+// düğümün node.data.subTopology'sine yazılıp ebeveyn geri yüklenir. İç içeyken
+// kaydet/sekme-değiştir olursa veSaveActiveTabState() kancası önce köke çöker.
+
+// ─── Hazır güç aktarma topolojisi (ilk açılışta iç topolojiye yerleştirilir) ──
+// (yerel px koordinatlar; kurulumda görünür alanın merkezine ortalanır)
+// Not: İlk oluşturulan diferansiyel/tekerlek createNode içinde otomatik "master ★"
+// olur; bu yüzden üst diferansiyel ve üst-sağ tekerlek listede önce oluşturulur.
+var VE_ARAC_PERFORMANS_LAYOUT = [
+  { type:'solver',            lx:150, ly:0   },
+  { type:'shift-controller',  lx:380, ly:0   },
+  { type:'vehicle',           lx:510, ly:0   },
+  { key:'engine',    type:'engine',            lx:30,  ly:190 },
+  { key:'tc',        type:'torque-converter',  lx:185, ly:190 },
+  { key:'gearbox',   type:'gearbox',           lx:320, ly:190 },
+  { key:'propshaft', type:'propshaft',         lx:450, ly:190 },
+  { key:'transfer',  type:'transfer',          lx:585, ly:190 },
+  { key:'diffTop',   type:'differential',      lx:715, ly:110 }, // önce → master ★
+  { key:'diffBot',   type:'differential',      lx:715, ly:300 },
+  { key:'w1',        type:'wheel',             lx:850, ly:40  }, // önce → master ★
+  { key:'w2',        type:'wheel',             lx:850, ly:160 },
+  { key:'w3',        type:'wheel',             lx:850, ly:300 },
+  { key:'w4',        type:'wheel',             lx:850, ly:420 },
+  { key:'ec',        type:'ec-matching',       lx:175, ly:360 },
+  { type:'obstacle-crossing', lx:400, ly:380 }
+];
+
+// Bağlantılar: [fromKey, toKey, fromPort, toPort]
+// transfer/differential 2 çıkışlıdır → 'output-0' (üst) ve 'output-1' (alt).
+var VE_ARAC_PERFORMANS_LINKS = [
+  ['engine',    'tc',        'output',   'input'],
+  ['engine',    'ec',        'output',   'input'],
+  ['tc',        'gearbox',   'output',   'input'],
+  ['gearbox',   'propshaft', 'output',   'input'],
+  ['propshaft', 'transfer',  'output',   'input'],
+  ['transfer',  'diffTop',   'output-0', 'input'],
+  ['transfer',  'diffBot',   'output-1', 'input'],
+  ['diffTop',   'w1',        'output-0', 'input'],
+  ['diffTop',   'w2',        'output-1', 'input'],
+  ['diffBot',   'w3',        'output-0', 'input'],
+  ['diffBot',   'w4',        'output-1', 'input']
+];
+
+// Topolojiyi görünür alanın merkezine ortalayacak taban koordinatı hesapla.
+// (drop handler ile aynı dönüşüm: ekran → canvas koordinatı; bkz. ui-core.js drop)
+function veArrangeModuleBase(layout) {
+  var CANVAS_OFFSET = 3000, NODE_W = 65, NODE_H = 60;
+  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  layout.forEach(function(it) {
+    minX = Math.min(minX, it.lx);
+    minY = Math.min(minY, it.ly);
+    maxX = Math.max(maxX, it.lx + NODE_W);
+    maxY = Math.max(maxY, it.ly + NODE_H);
+  });
+  var topoW = maxX - minX, topoH = maxY - minY;
+
+  var wrapper = (typeof document !== 'undefined') ? document.getElementById('ve-canvas-wrapper') : null;
+  if(!wrapper || typeof wrapper.getBoundingClientRect !== 'function') {
+    return { x: CANVAS_OFFSET, y: CANVAS_OFFSET };
+  }
+  var rect = wrapper.getBoundingClientRect();
+  var zoom = (typeof canvasZoom !== 'undefined' && canvasZoom) ? canvasZoom : 1;
+  var offX = (typeof canvasOffset !== 'undefined') ? canvasOffset.x : CANVAS_OFFSET;
+  var offY = (typeof canvasOffset !== 'undefined') ? canvasOffset.y : CANVAS_OFFSET;
+  var cx = (rect.width / 2 - offX) / zoom + CANVAS_OFFSET;
+  var cy = (rect.height / 2 - offY) / zoom + CANVAS_OFFSET;
+  return {
+    x: Math.max(40, cx - topoW / 2 - minX),
+    y: Math.max(40, cy - topoH / 2 - minY)
+  };
+}
+
+// Mevcut (iç) canvas'a hazır güç aktarma topolojisini kurar. Sadece düğüm+bağlantı
+// oluşturur — mod değiştirmez, onay sormaz (boş bir alt-topolojiye çağrılır).
+function veAracPopulateDrivetrain() {
+  if(typeof createNode !== 'function' || typeof createConnection !== 'function') return [];
+  var base = veArrangeModuleBase(VE_ARAC_PERFORMANS_LAYOUT);
+  var ref = {}, created = [];
+  VE_ARAC_PERFORMANS_LAYOUT.forEach(function(item) {
+    var before = nodes.length;
+    createNode(item.type, base.x + item.lx, base.y + item.ly);
+    if(nodes.length > before) {
+      var n = nodes[nodes.length - 1];
+      created.push(n);
+      if(item.key) ref[item.key] = n;
+    }
+  });
+  // Bağlantılar. createConnection id'yi 'conn-'+Date.now() ile üretir; senkron
+  // döngüde çakışabilir → topology.js:392 desenine göre benzersizleştir.
+  VE_ARAC_PERFORMANS_LINKS.forEach(function(link) {
+    var a = ref[link[0]], b = ref[link[1]];
+    if(!a || !b) return;
+    var before = connections.length;
+    createConnection(a.id, b.id, link[2], link[3]);
+    if(connections.length > before && typeof compCounter !== 'undefined') {
+      compCounter++;
+      connections[connections.length - 1].id = 'conn-' + compCounter;
+    }
+  });
+  if(typeof updateAllConnections === 'function') updateAllConnections();
+  return created;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ÖZELLİK PANELİ (side) — özet + "Alt Topolojiyi Aç"
+// ════════════════════════════════════════════════════════════════════════════
+function getAracPerformansPropertiesHTML(node){
+  var sub = node && node.data && node.data.subTopology;
+  var nCount = (sub && sub.nodes) ? sub.nodes.length : 0;
+  var cCount = (sub && sub.connections) ? sub.connections.length : 0;
+  var initialized = !!(sub && sub.nodes && sub.nodes.length);
+  var html = '<div class="sw-panel">';
+  html += '<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
+        + '<b style="color:var(--text-heading);">Araç Performans — alt-sistem.</b> '
+        + 'Üstüne <b>çift tıklayınca</b> kendi <b>alt topolojisine</b> girilir. Motor / Tork Konvertörü / Şanzıman / Diferansiyel / Tekerlek gibi güç aktarma bileşenlerini orada, kendi panellerinden düzenlersiniz.'
+        + '</div>';
+  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
+  if(initialized){
+    html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + nCount + '</td></tr>';
+    html += '<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">' + cCount + '</td></tr>';
+  } else {
+    html += '<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Henüz açılmadı — ilk açılışta hazır güç aktarma topolojisi ile başlar.</td></tr>';
+  }
+  html += '</table>';
+  html += '<button onclick="veAracOpenEditor(\'' + node.id + '\')" style="width:100%; padding:14px 16px; font-size:0.82rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
+  html += '</div>';
+  return html;
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ALT TOPOLOJİ NAVİGASYONU (ana canvas'ı düğümün iç topolojisiyle değiştirir)
+// ════════════════════════════════════════════════════════════════════════════
+// Her giriş: { nodeId, parentState }. Çok seviyeli iç içe girişe (subsystem içinde
+// subsystem) izin verir.
+var veAracStack = [];
+var _veAracBusy = false;
+
+function veAracOpenEditor(nodeId){
+  if(_veAracBusy) return;
+  if(typeof nodes === 'undefined' || typeof veSerializeCurrentState !== 'function') return;
+  var node = nodes.find(function(n){ return n.id === nodeId; });
+  if(!node || node.type !== 'arac-performans') return;
+
+  _veAracBusy = true;
+  try {
+    if(typeof veFlushOpenPanelData === 'function') veFlushOpenPanelData();
+    if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
+
+    // Ebeveyn durumunu sakla, canvas'ı temizle
+    var parentState = veSerializeCurrentState();
+    veAracStack.push({ nodeId: nodeId, parentState: parentState });
+    veClearCanvasDOM();
+
+    // Alt-topolojiyi yükle; yoksa hazır preset ile başlat
+    var sub = node.data && node.data.subTopology;
+    if(sub && sub.nodes && sub.nodes.length){
+      veLoadTabState({ state: sub });
+    } else {
+      veLoadTabState({ state: null });   // boş, temiz canvas
+      veAracPopulateDrivetrain();
+    }
+  } finally {
+    _veAracBusy = false;
+  }
+
+  veAracUpdateBreadcrumb();
+  if(typeof showToast === 'function') showToast('Araç Performans — Alt Topoloji', 'info');
+}
+
+function veAracCloseEditor(){
+  if(_veAracBusy) return;
+  if(!veAracStack.length) return;
+
+  _veAracBusy = true;
+  try {
+    if(typeof veFlushOpenPanelData === 'function') veFlushOpenPanelData();
+    var subState = veSerializeCurrentState();
+    var ctx = veAracStack.pop();
+
+    // Alt-topolojiyi ebeveyn state'indeki ilgili düğümün data'sına yaz
+    var pn = (ctx.parentState.nodes || []).find(function(n){ return n.id === ctx.nodeId; });
+    if(pn){ if(!pn.data) pn.data = {}; pn.data.subTopology = subState; }
+
+    veClearCanvasDOM();
+    veLoadTabState({ state: ctx.parentState });
+  } finally {
+    _veAracBusy = false;
+  }
+
+  veAracUpdateBreadcrumb();
+
+  // Ana topolojiye dönünce ilgili düğümü seç
+  var back = veAracStack.length === 0;
+  if(back && typeof nodes !== 'undefined'){
+    // en son çıkılan düğüm id'si artık stack'te yok; sadece bilgi ver
+    if(typeof showToast === 'function') showToast('Ana topolojiye dönüldü', 'info');
+  }
+}
+
+// İç içe her seviyeden köke (ana topoloji) kadar çıkar. Kaydet/sekme-değiştir
+// öncesi çağrılır (veSaveActiveTabState kancası) → doğru kök durum serileşir.
+function veAracCollapseToRoot(){
+  var guard = 0;
+  while(veAracStack.length && guard++ < 32){ veAracCloseEditor(); }
+}
+
+// İç içeyken görünen "← Ana Topolojiye Dön" breadcrumb çubuğu
+function veAracUpdateBreadcrumb(){
+  if(typeof document === 'undefined') return;
+  var el = document.getElementById('ve-arac-breadcrumb');
+  if(veAracStack.length === 0){ if(el) el.remove(); return; }
+  if(!el){
+    el = document.createElement('div');
+    el.id = 've-arac-breadcrumb';
+    el.className = 've-arac-breadcrumb';
+    var host = document.getElementById('ve-canvas-wrapper') || document.body;
+    host.appendChild(el);
+  }
+  var depth = veAracStack.length;
+  el.innerHTML =
+    '<button onclick="veAracCloseEditor()" title="Bir üst topolojiye dön">← Ana Topolojiye Dön</button>'
+    + '<span class="ve-arac-breadcrumb-label">Araç Performans · Alt Topoloji'
+    + (depth > 1 ? ' <b>(derinlik ' + depth + ')</b>' : '') + '</span>';
+}
+
+// Jest/Node köprüsü (tarayıcıda no-op)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    VE_ARAC_PERFORMANS_LAYOUT: VE_ARAC_PERFORMANS_LAYOUT,
+    VE_ARAC_PERFORMANS_LINKS: VE_ARAC_PERFORMANS_LINKS,
+    veArrangeModuleBase: veArrangeModuleBase,
+    veAracPopulateDrivetrain: veAracPopulateDrivetrain,
+    getAracPerformansPropertiesHTML: getAracPerformansPropertiesHTML
+  };
 }
 
 </script>
@@ -34064,6 +34213,10 @@ function veSerializeCurrentState() {
 }
 
 function veSaveActiveTabState() {
+  // Bir "Araç Performans" alt-topolojisi içindeysek, kaydetmeden/sekme değiştirmeden
+  // önce köke (ana topoloji) çık — böylece canlı canvas alt-topoloji değil kök olur
+  // ve serileştirme doğru durumu yazar (alt-topoloji ilgili düğümün data'sına saklı).
+  if(typeof veAracCollapseToRoot === 'function') veAracCollapseToRoot();
   if(veTabs.length === 0) return;
   var tab = veTabs[veActiveTabIdx];
   if(!tab) return;

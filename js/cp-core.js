@@ -202,6 +202,8 @@ function showNodeProperties(node) {
     html += getMntMountPropertiesHTML(node);
   } else if(node.type === 'mnt-solver') {
     html += getMntSolverPropertiesHTML(node);
+  } else if(node.type === 'arac-performans') {
+    html += getAracPerformansPropertiesHTML(node);
   } else if(node.type === 'solver') {
     html += getSolverPropertiesHTML(node);
   } else if(node.type === 'road') {
