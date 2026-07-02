@@ -3691,11 +3691,14 @@ function mfsimLogout() {
                 <path d="M30 18 L30 78 L80 78" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
                 <circle cx="42" cy="64" r="5" fill="currentColor"/>
               </svg> <span class="ve-comp-label">Braket (Kütle)</span></div>
-            <div class="ve-component" draggable="true" data-type="mnt-mass" title="Genel kütle gövdesi">
+            <div class="ve-component" draggable="true" data-type="mnt-transfer" title="Transfer kutusu kütle gövdesi (kütle + CG + atalet)">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <rect x="26" y="26" width="48" height="48" rx="3" fill="none" stroke="currentColor" stroke-width="5"/>
+                <rect x="28" y="24" width="44" height="52" rx="4" fill="none" stroke="currentColor" stroke-width="5"/>
+                <line x1="12" y1="40" x2="28" y2="40" stroke="currentColor" stroke-width="5"/>
+                <line x1="72" y1="38" x2="88" y2="38" stroke="currentColor" stroke-width="5"/>
+                <line x1="72" y1="62" x2="88" y2="62" stroke="currentColor" stroke-width="5"/>
                 <circle cx="50" cy="50" r="6" fill="currentColor"/>
-              </svg> <span class="ve-comp-label">Kütle</span></div>
+              </svg> <span class="ve-comp-label">Transfer Kutusu</span></div>
             <div class="ve-component" draggable="true" data-type="mnt-mount" title="Takoz (konum + statik/dinamik rijitlik)">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <rect x="30" y="8" width="40" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="4"/>
@@ -3706,11 +3709,11 @@ function mfsimLogout() {
                 <line x1="50" y1="70" x2="44" y2="80" stroke="currentColor" stroke-width="2.5"/>
                 <line x1="74" y1="70" x2="68" y2="80" stroke="currentColor" stroke-width="2.5"/>
               </svg> <span class="ve-comp-label">Takoz</span></div>
-            <div class="ve-component" draggable="true" data-type="mnt-solver" title="Takoz Çözücü — bağlı kütle+takozları 6 SD analiz eder (otomatik yük durumları)">
+            <div class="ve-component" draggable="true" data-type="mnt-solver" title="Çözücü — iç topolojideki tüm kütle+takozları otomatik algılar, 6 SD analiz eder (otomatik yük durumları)">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="currentColor" stroke-width="6"/>
                 <polygon points="40,30 40,70 70,50" fill="currentColor"/>
-              </svg> <span class="ve-comp-label">Takoz Çözücü</span></div>
+              </svg> <span class="ve-comp-label">Çözücü</span></div>
           </div>
 
           <div class="ve-category ve-category-tools" data-always-visible="true">
@@ -9596,7 +9599,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-mass','mnt-mount','mnt-solver','arac-performans','mount-analysis'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-solver','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -9816,18 +9819,18 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg>',
     inputs: 0, outputs: 1, isMountBody: true
   },
-  'mnt-mass': {
-    name: 'Kütle',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="27" y="27" width="46" height="46" rx="3" fill="var(--text-secondary, #888)"/><circle cx="50" cy="50" r="6" fill="#fff"/></svg>',
+  'mnt-transfer': {
+    name: 'Transfer Kutusu',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="28" y="24" width="44" height="52" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.75"/><rect x="12" y="36" width="16" height="8" fill="var(--text-muted, #aaa)"/><rect x="72" y="34" width="16" height="7" fill="var(--text-muted, #aaa)"/><rect x="72" y="59" width="16" height="7" fill="var(--text-muted, #aaa)"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
     inputs: 0, outputs: 1, isMountBody: true
   },
   'mnt-mount': {
     name: 'Takoz',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg>',
-    inputs: 0, outputs: 1, isMount: true
+    inputs: 0, outputs: 1, isMount: true, defaultWidth: 50, defaultHeight: 46
   },
   'mnt-solver': {
-    name: 'Takoz Çözücü',
+    name: 'Çözücü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #ef4444)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 1, outputs: 0, isMountSolver: true
   },
@@ -12204,7 +12207,7 @@ function showNodeProperties(node) {
     html += getCoastDownPropertiesHTML(node);
   } else if(node.type === 'obstacle-crossing') {
     html += getObstacleCrossingPropertiesHTML(node);
-  } else if(node.type === 'mnt-motor' || node.type === 'mnt-gearbox' || node.type === 'mnt-shaft' || node.type === 'mnt-bracket' || node.type === 'mnt-mass') {
+  } else if(node.type === 'mnt-motor' || node.type === 'mnt-gearbox' || node.type === 'mnt-shaft' || node.type === 'mnt-bracket' || node.type === 'mnt-transfer') {
     html += getMntMassPropertiesHTML(node);
   } else if(node.type === 'mnt-mount') {
     html += getMntMountPropertiesHTML(node);
@@ -22154,7 +22157,7 @@ function getMntMassPropertiesHTML(node){
   var d=node.data;
   var html='<div class="sw-panel">';
   html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
-      + 'Kütle gövdesi → 6 SD analizde birleşik rijit gövdeye katkı. Çıkış portunu <b>Takoz Çözücü</b>ye bağlayın. Atalet <b>tensör bileşeni</b> (CATIA Measure Inertia); nokta kütle → atalet 0.</div>';
+      + 'Kütle gövdesi → 6 SD analizde birleşik rijit gövdeye katkı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar (bağlantı gerekmez). Atalet <b>tensör bileşeni</b> (CATIA Measure Inertia); nokta kütle → atalet 0.</div>';
   html+='<div class="sw-section-title">Kütle & Ağırlık Merkezi</div>';
   html+='<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
   html+=_mntRow('Kütle','m [kg]', _mntInp(node,'mass','ör: 1386.3','0.001'));
@@ -22186,7 +22189,7 @@ function getMntMountPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
   html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-success);">'
-      + 'Takoz → şasiye üç eksenli lineer yay bağlantısı. Çıkış portunu <b>Takoz Çözücü</b>ye bağlayın.</div>';
+      + 'Takoz → şasiye üç eksenli lineer yay bağlantısı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar (bağlantı gerekmez).</div>';
   // Kütüphane
   html+='<div style="margin-bottom:8px;"><select onchange="veMntApplyLib(\''+node.id+'\',this.value)" style="width:100%; padding:5px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"><option value="">— Kütüphaneden rijitlik yükle —</option>';
   Object.keys(VE_MOUNT_LIBRARY).forEach(function(k){ html+='<option value="'+k+'"'+(node.data.libKey===k?' selected':'')+'>'+_mntEsc(VE_MOUNT_LIBRARY[k].name)+'</option>'; });
@@ -22241,13 +22244,12 @@ function veMntApplyLib(nodeId, key){
 // ════════════════════════════════════════════════════════════════════════════
 //  ÇÖZÜCÜ — bağlı node'ları topla, agrege et, çekirdeği çalıştır
 // ════════════════════════════════════════════════════════════════════════════
-// Çözücü'ye bağlı (çıkışı → çözücü girişi) kütle ve takoz node'larını topla.
+// Çözücü, iç topolojideki TÜM kütle ve takoz node'larını OTOMATİK algılar —
+// bağlantı zorunluluğu yoktur (kullanıcı isteği). Alt topoloji yalnız mount
+// bileşenleri içerdiğinden nodes içindeki isMountBody/isMount düğümleri toplanır.
 function _mntGatherForSolver(solver){
-  var connectedIds = (typeof connections!=='undefined' ? connections : [])
-    .filter(function(c){ return c.to===solver.id; }).map(function(c){ return c.from; });
   var masses=[], mounts=[];
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
-    if(connectedIds.indexOf(n.id)<0) return;
     var def=_mntDef(n)||{};
     if(def.isMountBody){
       var d=n.data||{};
@@ -22283,7 +22285,7 @@ function getMntSolverPropertiesHTML(node){
   if(!node.data.matrixMode) node.data.matrixMode='delta';
   var html='<div class="sw-panel">';
   html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-danger);">'
-      + '<b style="color:var(--text-heading);">Takoz Çözücü.</b> Giriş portuna bağlı <b>Kütle</b> ve <b>Takoz</b> bileşenlerini okuyup 6 SD rijit gövde analizini çalıştırır. Yük durumları <b>otomatik</b> (Static / Max Bump / Acceleration / Braking / Cornering L-R).</div>';
+      + '<b style="color:var(--text-heading);">Çözücü.</b> İç topolojideki <b>tüm</b> kütle ve takoz bileşenlerini <b>otomatik algılar</b> (bağlantı gerekmez) ve 6 SD rijit gövde analizini çalıştırır. Yük durumları <b>otomatik</b> (Static / Max Bump / Acceleration / Braking / Cornering L-R).</div>';
   html+='<div style="display:flex; gap:6px; margin-bottom:10px;">';
   html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="flex:1; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;">▶ Hesapla</button>';
   html+='<button onclick="veMntShowDetail(\''+node.id+'\')" style="padding:9px 10px; font-size:0.64rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="Detaylı matris + 3D">Detay+3D</button>';
