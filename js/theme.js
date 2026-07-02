@@ -10,8 +10,6 @@ function changeTheme(themeId) {
   document.querySelectorAll('[data-mf-theme]').forEach(function(el) {
     el.classList.toggle('active', el.getAttribute('data-mf-theme') === themeId);
   });
-  // Açık 3D yapısal analiz görüntüleyicilerinin arka planını yeni temaya uyarla.
-  if (typeof veFEAApplyThemeToViewers === 'function') veFEAApplyThemeToViewers();
 }
 
 // Sayfa yüklendiğinde kayıtlı temayı uygula

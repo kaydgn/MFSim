@@ -69,15 +69,14 @@ function extractAttrs(rawAttrs) {
 }
 
 // ── 2a) Vendor JS: <script ... src="vendor/..." ...></script> → inline.
-// Three.js gibi 3. parti kütüphaneler için ayrı eşleştirme. js/ deseninden ÖNCE
-// işlenir; sıralama korunur. Regex src'den onceki/sonraki attribute'lari yakalar.
+// Three.js (Takoz 3D görüntüleyici için) gibi 3. parti kütüphaneler. js/
+// deseninden ÖNCE işlenir; sıralama korunur.
 html = html.replace(
   /<script\b([^>]*?)\s+src="(vendor\/[^"]+)"([^>]*?)\s*>\s*<\/script>/g,
   function(match, beforeAttrs, vendorPath, afterAttrs) {
     var fullPath = path.join(ROOT, vendorPath);
     if (!fs.existsSync(fullPath)) {
       console.error('HATA: Vendor dosyası bulunamadı:', fullPath);
-      console.error('  İpucu: "npm run vendor:sync" çalıştırın.');
       process.exit(1);
     }
     var js = fs.readFileSync(fullPath, 'utf8');
@@ -104,54 +103,6 @@ html = html.replace(
     console.log('  JS inline:', jsPath, '(' + js.length + ' karakter)');
     var attrs = extractAttrs(beforeAttrs) + extractAttrs(afterAttrs);
     return '<script' + attrs + '>\n' + js + '\n</script>';
-  }
-);
-
-// ── 2c) Inline-resource placeholder'lari: <!-- INLINE_FILE: path [as kind] -->
-// Monolitik HTML'in tek-dosya olmasi gerektigi icin WASM/JS dosyalarini
-// HTML icine kaydirmamiz lazim. WASM binary base64, JS metin olarak somutlanir.
-//
-// Kullanim ornekleri:
-//   <!-- INLINE_FILE: vendor/opencascade/occt-import-js.js as occtScript -->
-//   <!-- INLINE_FILE: vendor/opencascade/occt-import-js.wasm as occtWasm -->
-//
-// Dev modunda (index.html'de) placeholder'lar HTML icinde durur; tarayici
-// onlari yorum olarak gorur, fea-step.js dosyalardan dinamik yukler.
-// Build sirasinda placeholder yerine window.__feaInline[kind] = <icerik>
-// atayan bir <script> blogu konur.
-html = html.replace(
-  /<!--\s*INLINE_FILE:\s*([^\s]+)\s+as\s+(\w+)\s*-->/g,
-  function(match, filePath, kind) {
-    var fullPath = path.join(ROOT, filePath);
-    if (!fs.existsSync(fullPath)) {
-      // Doğru build komutunu öner (vendor:sync paketleri ve wasm modülleri ayrı)
-      var hint;
-      if (filePath.indexOf('vendor/tetgen/') === 0) {
-        hint = '"npm run build:wasm:tetgen" calistirin (emscripten gerekli, AGPL-3.0); ' +
-               'build edilmezse TetGen atlanir, Delaunay/voxel devreye girer';
-      } else if (filePath.indexOf('vendor/mfsim-fea/') === 0) {
-        hint = '"npm run build:wasm" calistirin (emscripten gerekli)';
-      } else {
-        hint = '"npm run vendor:sync" calistirin';
-      }
-      console.warn('  Inline atlandi (kaynak yok): ' + filePath + ' — ' + hint + '.');
-      return '<!-- INLINE_FILE skipped: ' + filePath + ' -->';
-    }
-    var isBinary = /\.(wasm|bin)$/i.test(filePath);
-    var content = fs.readFileSync(fullPath);
-    var script;
-    if (isBinary) {
-      var b64 = content.toString('base64');
-      script = '<script>(window.__feaInline=window.__feaInline||{}).' + kind +
-               '=' + JSON.stringify(b64) + ';</script>';
-      console.log('  Inline (base64):', filePath, '(' + (b64.length / 1024).toFixed(0) + ' KB)');
-    } else {
-      var text = content.toString('utf8');
-      script = '<script>(window.__feaInline=window.__feaInline||{}).' + kind +
-               '=' + JSON.stringify(text) + ';</script>';
-      console.log('  Inline (text):', filePath, '(' + (text.length / 1024).toFixed(0) + ' KB)');
-    }
-    return script;
   }
 );
 

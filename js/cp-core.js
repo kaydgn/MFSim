@@ -210,16 +210,6 @@ function showNodeProperties(node) {
     html += getTerminatorPropertiesHTML(node);
   } else if(node.type === 'gear-shift') {
     html += getGearShiftPropertiesHTML(node);
-  } else if(node.type === 'fea') {
-    html += getFEAModulePropertiesHTML(node);
-  } else if(node.type === 'fea-geometry') {
-    html += getFEAGeometryPropertiesHTML(node);
-  } else if(node.type === 'fea-mesh') {
-    html += getFEAMeshPropertiesHTML(node);
-  } else if(node.type === 'fea-bc') {
-    html += getFEABCPropertiesHTML(node);
-  } else if(node.type === 'fea-solver') {
-    html += getFEASolverPropertiesHTML(node);
   } else {
     html += getDefaultPropertiesHTML(node);
   }
@@ -266,14 +256,4 @@ function showNodeProperties(node) {
       veInitRoadMap(node.id);
     }, 400);
   }
-
-  // FEA: Faz 1 sonrası 'fea-geometry' tipi nodes[]'a düşmez (otomatik migration
-  // ile 'fea' birleşik modülüne göçer); side panel viewer'ı yok — tüm 3D
-  // çalışma "Yapısal Analiz Editörü" modal'ında. Ölü dispatch buradan kaldırıldı.
-
-  // FEA Mesh: side panel'de viewer YOK — Mesh Editör modal'i kendi viewer'ini
-  // yonetir. Bu block'tan viewer init kaldirildi cunku showNodeProperties
-  // her tetiklendiginde (build sonrasi, vb.) modal canvas'a ikinci kez
-  // WebGLRenderer kurulup eski gl context ile catismaya neden oluyordu.
-  // ("Cannot read properties of null (reading 'precision')" crash'i)
 }

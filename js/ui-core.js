@@ -501,14 +501,6 @@ function createNode(type, x, y, width, height) {
     if(node.data.efficiency === undefined) node.data.efficiency = 96;
     if(node.data.diffInertia === undefined) node.data.diffInertia = 1.0;
   }
-  // Yapısal Analiz modülü: birleşik sub-data (geometri/mesh/bc/solver) başlat
-  if(type === 'fea' && typeof veFEACreateModuleData === 'function') {
-    var feaDefaults = veFEACreateModuleData();
-    Object.keys(feaDefaults).forEach(function(k) {
-      if(node.data[k] === undefined) node.data[k] = feaDefaults[k];
-    });
-  }
-  
   // State kaydet
   if(typeof saveState === 'function') saveState();
   
