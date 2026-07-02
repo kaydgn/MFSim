@@ -1037,7 +1037,7 @@
 
 /* Alt modül kartı — sürüklenmez, tıklanınca hazır topoloji kurar */
 .ve-submodule{
-  cursor:pointer;
+  cursor:grab;
   font-weight:600;
   color:var(--accent-primary);
   background:color-mix(in srgb, var(--accent-primary) 8%, var(--bg-tertiary));
@@ -1046,6 +1046,40 @@
 .ve-submodule:hover{
   background:color-mix(in srgb, var(--accent-primary) 16%, var(--bg-input));
 }
+
+/* Alt-topoloji breadcrumb — "Araç Performans" iç topolojisindeyken görünür */
+.ve-arac-breadcrumb{
+  position:fixed;
+  top:64px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:7px 14px;
+  background:var(--accent-primary);
+  color:#fff;
+  border-radius:6px;
+  box-shadow:0 3px 14px var(--shadow-color, rgba(0,0,0,0.35));
+  font-size:0.72rem;
+  font-weight:600;
+  white-space:nowrap;
+}
+.ve-arac-breadcrumb button{
+  background:rgba(255,255,255,0.18);
+  color:#fff;
+  border:1px solid rgba(255,255,255,0.45);
+  border-radius:4px;
+  padding:4px 11px;
+  cursor:pointer;
+  font-weight:700;
+  font-size:0.72rem;
+}
+.ve-arac-breadcrumb button:hover{
+  background:rgba(255,255,255,0.3);
+}
+.ve-arac-breadcrumb-label{ opacity:0.95; }
 
 .ve-canvas-area{
   flex:1;

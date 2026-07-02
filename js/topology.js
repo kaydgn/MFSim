@@ -34,6 +34,10 @@ function veSerializeCurrentState() {
 }
 
 function veSaveActiveTabState() {
+  // Bir "Araç Performans" alt-topolojisi içindeysek, kaydetmeden/sekme değiştirmeden
+  // önce köke (ana topoloji) çık — böylece canlı canvas alt-topoloji değil kök olur
+  // ve serileştirme doğru durumu yazar (alt-topoloji ilgili düğümün data'sına saklı).
+  if(typeof veAracCollapseToRoot === 'function') veAracCollapseToRoot();
   if(veTabs.length === 0) return;
   var tab = veTabs[veActiveTabIdx];
   if(!tab) return;

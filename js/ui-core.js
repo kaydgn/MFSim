@@ -19,6 +19,11 @@ function veAttachNodeDrag(nodeEl, node) {
     if(e.target.classList.contains('ve-resize-handle')) return;
     e.preventDefault();
     e.stopPropagation();
+    // Alt-sistem düğümü → çift tık doğrudan iç topolojisini açar
+    if(node.type === 'arac-performans' && typeof veAracOpenEditor === 'function') {
+      veAracOpenEditor(node.id);
+      return;
+    }
     if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
   nodeEl.addEventListener('mousedown', function(e) {
