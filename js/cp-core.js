@@ -196,6 +196,8 @@ function showNodeProperties(node) {
     html += getCoastDownPropertiesHTML(node);
   } else if(node.type === 'obstacle-crossing') {
     html += getObstacleCrossingPropertiesHTML(node);
+  } else if(node.type === 'mount-analysis') {
+    html += getMountAnalysisPropertiesHTML(node);
   } else if(node.type === 'solver') {
     html += getSolverPropertiesHTML(node);
   } else if(node.type === 'road') {

@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','fea'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mount-analysis','fea'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -201,6 +201,16 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="10" width="70" height="80" rx="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="4"/><circle cx="35" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="35" r="6" fill="var(--text-secondary, #666)"/><circle cx="35" cy="60" r="6" fill="var(--text-secondary, #666)"/><circle cx="65" cy="60" r="6" fill="var(--text-secondary, #666)"/><path d="M35 35 L35 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><path d="M35 60 L65 60" stroke="var(--accent-warning, #ff9800)" stroke-width="3" stroke-linecap="round"/><circle cx="35" cy="60" r="8" fill="none" stroke="var(--accent-warning, #ff9800)" stroke-width="2"/></svg>',
     inputs: 0,
     outputs: 0
+  },
+  // ── Takoz Çökme-Titreşim (motor-şanzıman bağlantı analizi) ───────────────
+  // Yardımcı/analiz bileşeni: güç aktarma zincirine girmez, fizik hesabı yok.
+  // Matematiksel model sonradan cp-mount.js içinde detaylandırılacaktır.
+  'mount-analysis': {
+    name: 'Takoz Çökme-Titreşim',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="22" y="6" width="56" height="24" rx="4" fill="var(--text-secondary, #666)"/><path d="M34 30 Q28 37 40 43 Q28 49 40 55 Q28 61 40 67 Q28 73 34 78" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M66 30 Q60 37 72 43 Q60 49 72 55 Q60 61 72 67 Q60 73 66 78" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="80" x2="88" y2="80" stroke="var(--text-secondary, #666)" stroke-width="4"/><line x1="19" y1="80" x2="12" y2="92" stroke="var(--text-muted, #888)" stroke-width="2.5"/><line x1="37" y1="80" x2="30" y2="92" stroke="var(--text-muted, #888)" stroke-width="2.5"/><line x1="55" y1="80" x2="48" y2="92" stroke="var(--text-muted, #888)" stroke-width="2.5"/><line x1="73" y1="80" x2="66" y2="92" stroke="var(--text-muted, #888)" stroke-width="2.5"/><path d="M6 46 q5 -7 10 0 q5 7 10 0" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" stroke-linecap="round"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    maxInstances: 1
   },
   // ── Yapısal Analiz (FEA) — birleşik modül ────────────────────────────────
   // Faz 1: ANSYS "Model" ağacı gibi TEK node. Geometri + Mesh + Sınır Koşulları
