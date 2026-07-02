@@ -16,10 +16,18 @@ var VE_MODULES = {
 
 var veActiveModule = 'full-throttle';
 
-// Sidebar bileşen modu. (Sonlu Elemanlar/FEA modülü kaldırıldıktan sonra tek
-// mod kaldı: 'performans'. Kategori filtreleme altyapısı data-ve-mode ile
-// generik olarak korunur — ileride yeni mod eklemek isteyen olursa diye.)
+// Sidebar bileşen modu. (Legacy — kategori görünürlüğü artık veSidebarScope ile
+// yönetilir; bu değişken bazı eski çağrılar için korunur.)
 var veSidebarMode = 'performans';
+
+// Sidebar kapsamı — hangi kategoriler görünür:
+//   'top'             → ana topoloji (ana ekran): yalnızca "Modüller" (data-ve-
+//                       scope="module") + her-zaman (Araçlar) kategorileri.
+//   'arac-performans' → "Araç Performans" alt topolojisi: güç aktarma bileşenleri.
+//   'mount-analysis'  → "Takoz" alt topolojisi: Takoz Alt Bileşenleri (mnt-*).
+// Kategoriler data-ve-scope ile etiketlenir: 'module' (her yerde) | 'top' | modül
+// tipi. Bir alt-sistem açılınca veSyncSidebarScope() kapsamı stack'lerden hesaplar.
+var veSidebarScope = 'top';
 
 function veOnModuleChange(moduleId) {
   // Tek modül — değişiklik gerekmez
@@ -62,9 +70,25 @@ function veShowAllSidebarComponents() {
   });
   document.querySelectorAll('.ve-category').forEach(function(cat) {
     if(cat.getAttribute('data-always-visible')) { cat.style.display = ''; return; }
-    var catMode = cat.getAttribute('data-ve-mode') || 'performans';
-    cat.style.display = (catMode === veSidebarMode) ? '' : 'none';
+    // Kapsam kuralı: 'module' her yerde görünür; diğerleri yalnızca aktif
+    // kapsamla eşleşince ('top' → ana ekran, modül tipi → o modülün içi).
+    // Etiketsiz kategoriler bileşen paleti sayılır → yalnızca Araç Performans içinde.
+    var scope = cat.getAttribute('data-ve-scope') || 'arac-performans';
+    if(scope === 'module') { cat.style.display = ''; return; }
+    cat.style.display = (scope === veSidebarScope) ? '' : 'none';
   });
+}
+
+// Sidebar kapsamını açık alt-sistem stack'lerinden hesapla ve uygula. Ana ekranda
+// (hiçbir alt-sistem açık değil) → 'top'. Araç Performans / Takoz içindeyken ilgili
+// bileşen paleti gelir. Her iki alt-sistem (cp-arac-performans.js, cp-mount.js)
+// aç/kapat sırasında bunu çağırır.
+function veSyncSidebarScope() {
+  var scope = 'top';
+  if(typeof veAracStack !== 'undefined' && veAracStack.length) scope = 'arac-performans';
+  if(typeof veMntStack !== 'undefined' && veMntStack.length) scope = 'mount-analysis';
+  veSidebarScope = scope;
+  veShowAllSidebarComponents();
 }
 
 // Bileşen tanımları (SVG sembolleri)

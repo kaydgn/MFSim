@@ -35,10 +35,10 @@ test.describe('Araç Performans — alt-sistem düğümü', () => {
 
   test('sidebar öğesi sürüklenebilir composite bileşendir', async ({ page }) => {
     await bootApp(page);
-    const item = page.locator('.ve-submodule');
+    // "Modüller" bölümünde birden çok alt-sistem olabilir → Araç Performans'ı hedefle
+    const item = page.locator('.ve-submodule[data-type="arac-performans"]');
     await expect(item).toBeVisible();
     await expect(item).toHaveAttribute('draggable', 'true');
-    await expect(item).toHaveAttribute('data-type', 'arac-performans');
   });
 
   test('çift tık → alt topoloji açılır; geri dönünce tek blok kalır', async ({ page }) => {
@@ -125,5 +125,42 @@ test.describe('Araç Performans — alt-sistem düğümü', () => {
     await page.waitForFunction(() => window.nodes.length === 17, null, { timeout: 10000 });
     const again = await page.evaluate(() => nodes.length);
     expect(again).toBe(17);
+  });
+
+  test('sidebar kapsamı: üst seviyede yalnızca Modüller, modül içinde bileşenler', async ({ page }) => {
+    await bootApp(page);
+
+    const catVisible = (title) => page.evaluate((t) => {
+      var cats = Array.prototype.slice.call(document.querySelectorAll('.ve-category'));
+      var cat = cats.find(function (c) {
+        var el = c.querySelector('.ve-category-title');
+        return el && el.textContent.trim() === t;
+      });
+      if (!cat) return null;
+      return getComputedStyle(cat).display !== 'none';
+    }, title);
+
+    // Üst seviye: "Modüller" görünür; güç aktarma bileşenleri + Takoz Alt Bileşenleri gizli
+    expect(await catVisible('Modüller')).toBe(true);
+    expect(await catVisible('Güç Kaynağı')).toBe(false);
+    expect(await catVisible('Ölçüm')).toBe(false);
+    expect(await catVisible('Takoz Alt Bileşenleri')).toBe(false);
+
+    // Araç Performans bloğunu aç
+    await page.evaluate(() => { createNode('arac-performans', 560, 360); });
+    await page.waitForFunction(() => window.nodes.length === 1, null, { timeout: 5000 });
+    await page.locator('#ve-canvas .ve-node[data-type="arac-performans"]').dblclick();
+    await page.waitForFunction(() => window.nodes.length === 16, null, { timeout: 10000 });
+
+    // Modül içi: güç aktarma bileşenleri görünür; Takoz gizli; Modüller yine görünür
+    expect(await catVisible('Güç Kaynağı')).toBe(true);
+    expect(await catVisible('Ölçüm')).toBe(true);
+    expect(await catVisible('Takoz Alt Bileşenleri')).toBe(false);
+    expect(await catVisible('Modüller')).toBe(true);
+
+    // Geri dön → üst seviye kapsamı
+    await page.locator('.ve-arac-breadcrumb button').click();
+    await page.waitForFunction(() => window.nodes.length === 1, null, { timeout: 10000 });
+    expect(await catVisible('Güç Kaynağı')).toBe(false);
   });
 });

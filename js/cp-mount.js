@@ -87,9 +87,10 @@ function veMntPopulateStarter(){
   if(typeof updateAllConnections==='function') updateAllConnections();
 }
 
-// Sidebar'ı çalışma alanına göre çevir (takoz iç topolojisi ⇄ ana performans).
+// Sidebar kapsamını güncelle (takoz iç topolojisi ⇄ ana ekran). Kapsam açık
+// alt-sistem stack'lerinden merkezi olarak hesaplanır (bkz. veSyncSidebarScope).
 function _veMntSetSidebar(mode){
-  if(typeof veSidebarMode!=='undefined') veSidebarMode = (mode==='takoz') ? 'takoz' : 'performans';
+  if(typeof veSyncSidebarScope==='function'){ veSyncSidebarScope(); return; }
   if(typeof veShowAllSidebarComponents==='function') veShowAllSidebarComponents();
 }
 

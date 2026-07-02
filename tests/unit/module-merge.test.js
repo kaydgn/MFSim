@@ -143,26 +143,36 @@ describe('veSelectModuleFromOverlay', () => {
 // ═════════════════════════════════════════════════════════════════════
 // veShowAllSidebarComponents
 // ═════════════════════════════════════════════════════════════════════
-describe('veShowAllSidebarComponents — moda göre filtreleme', () => {
-  function perfCats() {
+describe('veShowAllSidebarComponents — kapsama göre filtreleme', () => {
+  // Etiketsiz kategoriler bileşen paleti sayılır (varsayılan 'arac-performans' kapsamı).
+  function compCats() {
     return Array.prototype.slice.call(document.querySelectorAll('.ve-category'))
-      .filter(function(c) { return !c.getAttribute('data-ve-mode') && !c.getAttribute('data-always-visible'); });
+      .filter(function(c) { return !c.getAttribute('data-ve-scope') && !c.getAttribute('data-always-visible'); });
   }
   function alwaysCat() { return document.querySelector('.ve-category[data-always-visible]'); }
 
-  test('Araç Performans modunda tüm performans + her-zaman-görünür kategoriler görünür', () => {
-    veSelectModuleFromOverlay('arac-performans');
+  test('Araç Performans kapsamında bileşen + her-zaman-görünür kategoriler görünür', () => {
+    veSidebarScope = 'arac-performans';
     veShowAllSidebarComponents();
-    perfCats().forEach(function(c) { expect(c.style.display).toBe(''); });
+    compCats().forEach(function(c) { expect(c.style.display).toBe(''); });
+    expect(alwaysCat().style.display).toBe('');
+  });
+
+  test('üst seviye (top) kapsamında bileşen kategorileri gizli, her-zaman-görünür görünür', () => {
+    veSidebarScope = 'top';
+    veShowAllSidebarComponents();
+    compCats().forEach(function(c) { expect(c.style.display).toBe('none'); });
     expect(alwaysCat().style.display).toBe('');
   });
 
   test('bileşen elemanları display:"" kalır (kategori bazlı filtre)', () => {
-    veSelectModuleFromOverlay('arac-performans');
+    veSidebarScope = 'arac-performans';
     veShowAllSidebarComponents();
     document.querySelectorAll('.ve-component[data-type]').forEach(function(el) {
       expect(el.style.display).toBe('');
     });
   });
+
+  afterAll(() => { veSidebarScope = 'top'; });
 });
 
