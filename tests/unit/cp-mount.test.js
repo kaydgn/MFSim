@@ -36,6 +36,21 @@ function buildTTARTopology() {
   return { nodes, connections, solver };
 }
 
+describe('Ana modül (alt-sistem) paneli', () => {
+  test('getMntModulePropertiesHTML "Alt Topolojiyi Aç" düğmesi verir', () => {
+    const node = { id: 'comp-1', type: 'mount-analysis', def: { name: 'Takoz Çökme-Titreşim' }, data: {} };
+    const html = cp.getMntModulePropertiesHTML(node);
+    expect(html).toContain("veMntOpenEditor('comp-1')");
+    expect(html).toContain('alt topolojisine');
+  });
+  test('başlatılmış alt-topoloji özeti bileşen/bağlantı sayısını gösterir', () => {
+    const node = { id: 'comp-2', type: 'mount-analysis', data: { subTopology: { nodes: [{}, {}, {}], connections: [{}, {}] } } };
+    const html = cp.getMntModulePropertiesHTML(node);
+    expect(html).toContain('>3<'); // 3 bileşen
+    expect(html).toContain('>2<'); // 2 bağlantı
+  });
+});
+
 describe('Panel üreticileri', () => {
   test('Kütle paneli: kütle/CG/atalet alanları + nokta-kütle', () => {
     const node = { id: 'n1', type: 'mnt-motor', def: { name: 'Motor (Kütle)' }, data: {} };

@@ -3453,6 +3453,16 @@ function mfsimLogout() {
               </svg>
               <span class="ve-comp-label">Araç Performans</span>
             </div>
+            <div class="ve-component ve-submodule" draggable="true" data-type="mount-analysis" title="Sürükleyip bırakın → ana canvas'ta tek 'Takoz Çökme-Titreşim' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (Motor / Takoz / Çözücü) açılır.">
+              <svg width="20" height="20" viewBox="0 0 100 100" style="flex-shrink:0;">
+                <rect x="6" y="14" width="88" height="72" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
+                <rect x="34" y="30" width="32" height="13" rx="3" fill="currentColor" opacity="0.55"/>
+                <path d="M40 43 Q34 49 44 53 Q34 57 44 61 Q34 65 40 69" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M60 43 Q54 49 64 53 Q54 57 64 61 Q54 65 60 69" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="30" y1="71" x2="70" y2="71" stroke="currentColor" stroke-width="3"/>
+              </svg>
+              <span class="ve-comp-label">Takoz Çökme-Titreşim</span>
+            </div>
           </div>
 
           <div class="ve-category">
@@ -3654,8 +3664,8 @@ function mfsimLogout() {
               </svg> <span class="ve-comp-label">Engel Geçme</span></div>
           </div>
 
-          <div class="ve-category">
-            <div class="ve-category-title">Takoz Analizi</div>
+          <div class="ve-category" data-ve-mode="takoz">
+            <div class="ve-category-title">Takoz Alt Bileşenleri</div>
             <div class="ve-component" draggable="true" data-type="mnt-motor" title="Motor kütle gövdesi (kütle + CG + atalet)">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <rect x="18" y="36" width="64" height="44" rx="5" fill="none" stroke="currentColor" stroke-width="5"/>
@@ -9586,7 +9596,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-mass','mnt-mount','mnt-solver','arac-performans'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-mass','mnt-mount','mnt-solver','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -9831,6 +9841,19 @@ var componentDefs = {
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
+    defaultWidth: 80,
+    defaultHeight: 66
+  },
+  // Takoz Çökme-Titreşim ALT-SİSTEM MODÜLÜ — arac-performans ile aynı nested
+  // topoloji kalıbı. Ana canvas'ta tek blok; çift tıkla → iç topolojisi (Motor/
+  // Takoz/Çözücü) açılır (cp-mount.js veMntOpenEditor). isMountModule: dblclick.
+  'mount-analysis': {
+    name: 'Takoz Çökme-Titreşim',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="14" width="88" height="72" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="34" y="30" width="32" height="13" rx="3" fill="var(--text-secondary, #666)"/><path d="M40 43 Q34 49 44 53 Q34 57 44 61 Q34 65 40 69" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M60 43 Q54 49 64 53 Q54 57 64 61 Q54 65 60 69" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="30" y1="71" x2="70" y2="71" stroke="var(--text-secondary, #666)" stroke-width="3"/></svg>',
+    inputs: 0,
+    outputs: 0,
+    isSubsystem: true,
+    isMountModule: true,
     defaultWidth: 80,
     defaultHeight: 66
   },
@@ -11257,6 +11280,10 @@ function veAttachNodeDrag(nodeEl, node) {
       veAracOpenEditor(node.id);
       return;
     }
+    if(node.type === 'mount-analysis' && typeof veMntOpenEditor === 'function') {
+      veMntOpenEditor(node.id);
+      return;
+    }
     if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
   nodeEl.addEventListener('mousedown', function(e) {
@@ -12185,6 +12212,8 @@ function showNodeProperties(node) {
     html += getMntSolverPropertiesHTML(node);
   } else if(node.type === 'arac-performans') {
     html += getAracPerformansPropertiesHTML(node);
+  } else if(node.type === 'mount-analysis') {
+    html += getMntModulePropertiesHTML(node);
   } else if(node.type === 'solver') {
     html += getSolverPropertiesHTML(node);
   } else if(node.type === 'road') {
@@ -21987,6 +22016,123 @@ var MNT_AUTO_CASES = [
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
+//  ANA MODÜL — ALT-SİSTEM (SUBSYSTEM) DÜĞÜMÜ  (arac-performans kalıbı)
+// ════════════════════════════════════════════════════════════════════════════
+// "Takoz Çökme-Titreşim" ana bileşen listesindeki TEK giriştir (Alt Modüller).
+// Ana canvas'ta tek blok; çift tıkla → kendi İÇ TOPOLOJİSİNE girilir. Alt
+// bileşenler (Motor/Şanzıman/Şaft/Braket/Kütle/Takoz/Çözücü) YALNIZ orada görünür
+// (sidebar 'takoz' modu) ve normal sürükle-bağla ile kurulur. "← Ana Topolojiye
+// Dön" ile çıkılır. Ana canvas makinesi (topology.js) aynen yeniden kullanılır:
+// girişte ebeveyn durumu saklanır, canvas alt-topoloji ile değiştirilir; çıkışta
+// alt-topoloji node.data.subTopology'ye yazılır. Kaydet öncesi veSaveActiveTabState
+// → veMntCollapseToRoot ile köke çöker.
+var veMntStack = [];
+var _veMntBusy = false;
+
+// Modül paneli (tek tık): "Alt Topolojiyi Aç".
+function getMntModulePropertiesHTML(node){
+  var sub = node && node.data && node.data.subTopology;
+  var nCount = (sub && sub.nodes) ? sub.nodes.length : 0;
+  var cCount = (sub && sub.connections) ? sub.connections.length : 0;
+  var initialized = !!(sub && sub.nodes && sub.nodes.length);
+  var html='<div class="sw-panel">';
+  html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
+      + '<b style="color:var(--text-heading);">Takoz Çökme-Titreşim — alt-sistem.</b> '
+      + 'Üstüne <b>çift tıklayınca</b> kendi <b>alt topolojisine</b> girilir. Motor / Şanzıman / Şaft / Braket / Kütle / Takoz / Çözücü alt bileşenlerini orada, kendi panellerinden düzenler, Çözücü\'ye bağlarsınız. Yük durumları otomatik.</div>';
+  html+='<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
+  if(initialized){
+    html+='<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bileşen</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+nCount+'</td></tr>';
+    html+='<tr><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-secondary);">Bağlantı</td><td style="padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;">'+cCount+'</td></tr>';
+  } else {
+    html+='<tr><td style="padding:7px 8px; border:1px solid var(--border-color); color:var(--text-muted);">Henüz açılmadı — ilk açılışta bir Çözücü ile başlar.</td></tr>';
+  }
+  html+='</table>';
+  html+='<button onclick="veMntOpenEditor(\''+node.id+'\')" style="width:100%; padding:14px 16px; font-size:0.82rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.03em;" onmouseover="this.style.filter=\'brightness(1.15)\'" onmouseout="this.style.filter=\'none\'">▶ Alt Topolojiyi Aç</button>';
+  html+='</div>';
+  return html;
+}
+
+// İlk açılışta iç topolojiye bir Çözücü tohumla (analiz hedefi).
+function veMntPopulateStarter(){
+  if(typeof createNode!=='function') return;
+  var base = (typeof veArrangeModuleBase==='function') ? veArrangeModuleBase([{lx:0,ly:0}]) : { x:3000, y:3000 };
+  createNode('mnt-solver', base.x + 260, base.y + 40);
+  if(typeof updateAllConnections==='function') updateAllConnections();
+}
+
+// Sidebar'ı çalışma alanına göre çevir (takoz iç topolojisi ⇄ ana performans).
+function _veMntSetSidebar(mode){
+  if(typeof veSidebarMode!=='undefined') veSidebarMode = (mode==='takoz') ? 'takoz' : 'performans';
+  if(typeof veShowAllSidebarComponents==='function') veShowAllSidebarComponents();
+}
+
+function veMntOpenEditor(nodeId){
+  if(_veMntBusy) return;
+  if(typeof nodes==='undefined' || typeof veSerializeCurrentState!=='function') return;
+  var node = nodes.find(function(n){ return n.id===nodeId; });
+  if(!node || node.type!=='mount-analysis') return;
+  _veMntBusy=true;
+  try {
+    if(typeof veFlushOpenPanelData==='function') veFlushOpenPanelData();
+    if(typeof veTogglePropertiesPanel==='function') veTogglePropertiesPanel(false);
+    var parentState = veSerializeCurrentState();
+    veMntStack.push({ nodeId:nodeId, parentState:parentState });
+    veClearCanvasDOM();
+    var sub = node.data && node.data.subTopology;
+    if(sub && sub.nodes && sub.nodes.length){
+      veLoadTabState({ state: sub });
+    } else {
+      veLoadTabState({ state: null });
+      veMntPopulateStarter();
+    }
+    _veMntSetSidebar('takoz');
+  } finally { _veMntBusy=false; }
+  veMntUpdateBreadcrumb();
+  if(typeof showToast==='function') showToast('Takoz Çökme-Titreşim — İç Topoloji','info');
+}
+
+function veMntCloseEditor(){
+  if(_veMntBusy) return;
+  if(!veMntStack.length) return;
+  _veMntBusy=true;
+  try {
+    if(typeof veFlushOpenPanelData==='function') veFlushOpenPanelData();
+    var subState = veSerializeCurrentState();
+    var ctx = veMntStack.pop();
+    var pn = (ctx.parentState.nodes||[]).find(function(n){ return n.id===ctx.nodeId; });
+    if(pn){ if(!pn.data) pn.data={}; pn.data.subTopology = subState; }
+    veClearCanvasDOM();
+    veLoadTabState({ state: ctx.parentState });
+    _veMntSetSidebar('performans');
+  } finally { _veMntBusy=false; }
+  veMntUpdateBreadcrumb();
+  if(typeof showToast==='function') showToast('Ana topolojiye dönüldü','info');
+}
+
+function veMntCollapseToRoot(){
+  var guard=0;
+  while(veMntStack.length && guard++<32){ veMntCloseEditor(); }
+}
+
+// "← Ana Topolojiye Dön" bandı (arac-performans ile aynı CSS sınıfı).
+function veMntUpdateBreadcrumb(){
+  if(typeof document==='undefined') return;
+  var el=document.getElementById('ve-mnt-breadcrumb');
+  if(veMntStack.length===0){ if(el) el.remove(); return; }
+  if(!el){
+    el=document.createElement('div');
+    el.id='ve-mnt-breadcrumb';
+    el.className='ve-arac-breadcrumb';
+    var host=document.getElementById('ve-canvas-wrapper')||document.body;
+    host.appendChild(el);
+  }
+  var depth=veMntStack.length;
+  el.innerHTML='<button onclick="veMntCloseEditor()" title="Bir üst topolojiye dön">← Ana Topolojiye Dön</button>'
+    + '<span class="ve-arac-breadcrumb-label">Takoz Çökme-Titreşim · İç Topoloji'
+    + (depth>1 ? ' <b>(derinlik '+depth+')</b>' : '') + '</span>';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
 //  KÜTLE GÖVDESİ PANELİ (Motor / Şanzıman / Şaft / Braket / Kütle)
 // ════════════════════════════════════════════════════════════════════════════
 function _mntEnsureMassData(node){
@@ -22372,6 +22518,7 @@ var _veMntViewerData = null;
 // Node/Jest için dışa aç
 if(typeof module!=='undefined' && module.exports){
   module.exports = {
+    getMntModulePropertiesHTML: getMntModulePropertiesHTML,
     getMntMassPropertiesHTML: getMntMassPropertiesHTML,
     getMntMountPropertiesHTML: getMntMountPropertiesHTML,
     getMntSolverPropertiesHTML: getMntSolverPropertiesHTML,
@@ -34217,6 +34364,7 @@ function veSaveActiveTabState() {
   // önce köke (ana topoloji) çık — böylece canlı canvas alt-topoloji değil kök olur
   // ve serileştirme doğru durumu yazar (alt-topoloji ilgili düğümün data'sına saklı).
   if(typeof veAracCollapseToRoot === 'function') veAracCollapseToRoot();
+  if(typeof veMntCollapseToRoot === 'function') veMntCollapseToRoot();
   if(veTabs.length === 0) return;
   var tab = veTabs[veActiveTabIdx];
   if(!tab) return;

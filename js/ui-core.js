@@ -24,6 +24,10 @@ function veAttachNodeDrag(nodeEl, node) {
       veAracOpenEditor(node.id);
       return;
     }
+    if(node.type === 'mount-analysis' && typeof veMntOpenEditor === 'function') {
+      veMntOpenEditor(node.id);
+      return;
+    }
     if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
   });
   nodeEl.addEventListener('mousedown', function(e) {
