@@ -20,7 +20,7 @@ function buildTTARTopology() {
   let c = 0;
   EX.components.forEach(cp0 => {
     const kind = /motor/i.test(cp0.name) ? 'mnt-motor' : /şanz|sanz/i.test(cp0.name) ? 'mnt-gearbox'
-      : /şaft|saft|shaft/i.test(cp0.name) ? 'mnt-shaft' : /cradle|braket/i.test(cp0.name) ? 'mnt-bracket' : 'mnt-mass';
+      : /şaft|saft|shaft/i.test(cp0.name) ? 'mnt-shaft' : /cradle|braket/i.test(cp0.name) ? 'mnt-bracket' : 'mnt-transfer';
     const id = 'm' + (++c);
     nodes.push({ id, type: kind, customName: cp0.name, def: { name: cp0.name, isMountBody: true },
       data: { mass: cp0.mass, cgx: cp0.cg[0], cgy: cp0.cg[1], cgz: cp0.cg[2], Ixx: cp0.Ixx, Iyy: cp0.Iyy, Izz: cp0.Izz, Ixy: cp0.Ixy, Ixz: cp0.Ixz, Iyz: cp0.Iyz, pointMass: !!cp0.pointMass } });
@@ -101,19 +101,26 @@ describe('Takoz kütüphanesi', () => {
   });
 });
 
-describe('Çözücü topoloji köprüsü (connections → gather → çekirdek) — TTAR', () => {
+describe('Çözücü otomatik algılama (bağlantı gerekmez) → gather → çekirdek — TTAR', () => {
   const topo = buildTTARTopology();
   beforeEach(() => { global.nodes = topo.nodes; global.connections = topo.connections; });
 
-  test('_mntGatherForSolver yalnız bağlı kütle+takozları toplar', () => {
+  test('_mntGatherForSolver iç topolojideki tüm kütle+takozları toplar', () => {
     const g = cp._mntGatherForSolver(topo.solver);
     expect(g.components).toHaveLength(5);
     expect(g.mounts).toHaveLength(6);
   });
-  test('bağlı olmayan node dahil edilmez', () => {
-    global.nodes = topo.nodes.concat([{ id: 'orphan', type: 'mnt-motor', def: { isMountBody: true }, data: { mass: 999 } }]);
-    const g = cp._mntGatherForSolver(topo.solver); // orphan bağlı değil
-    expect(g.components).toHaveLength(5);
+  test('BAĞLANTISIZ node da algılanır (otomatik algılama)', () => {
+    global.connections = []; // hiç bağlantı yok
+    const g = cp._mntGatherForSolver(topo.solver);
+    expect(g.components).toHaveLength(5); // bağlantı olmadan da hepsi
+    expect(g.mounts).toHaveLength(6);
+  });
+  test('eklenen her kütle gövdesi bağlantısız da dahil olur', () => {
+    global.nodes = topo.nodes.concat([{ id: 'extra', type: 'mnt-transfer', def: { isMountBody: true }, data: { mass: 120, cgx: 0, cgy: 0, cgz: 0, pointMass: true } }]);
+    global.connections = [];
+    const g = cp._mntGatherForSolver(topo.solver);
+    expect(g.components).toHaveLength(6); // yeni Transfer Kutusu bağlanmadan algılandı
   });
 
   test('T1 — kütle birleştirme (2294.522 kg)', () => {

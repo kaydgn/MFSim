@@ -196,7 +196,7 @@ function showNodeProperties(node) {
     html += getCoastDownPropertiesHTML(node);
   } else if(node.type === 'obstacle-crossing') {
     html += getObstacleCrossingPropertiesHTML(node);
-  } else if(node.type === 'mnt-motor' || node.type === 'mnt-gearbox' || node.type === 'mnt-shaft' || node.type === 'mnt-bracket' || node.type === 'mnt-mass') {
+  } else if(node.type === 'mnt-motor' || node.type === 'mnt-gearbox' || node.type === 'mnt-shaft' || node.type === 'mnt-bracket' || node.type === 'mnt-transfer') {
     html += getMntMassPropertiesHTML(node);
   } else if(node.type === 'mnt-mount') {
     html += getMntMountPropertiesHTML(node);

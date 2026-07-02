@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-mass','mnt-mount','mnt-solver','arac-performans','mount-analysis'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-solver','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -227,18 +227,18 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg>',
     inputs: 0, outputs: 1, isMountBody: true
   },
-  'mnt-mass': {
-    name: 'Kütle',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="27" y="27" width="46" height="46" rx="3" fill="var(--text-secondary, #888)"/><circle cx="50" cy="50" r="6" fill="#fff"/></svg>',
+  'mnt-transfer': {
+    name: 'Transfer Kutusu',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="28" y="24" width="44" height="52" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.75"/><rect x="12" y="36" width="16" height="8" fill="var(--text-muted, #aaa)"/><rect x="72" y="34" width="16" height="7" fill="var(--text-muted, #aaa)"/><rect x="72" y="59" width="16" height="7" fill="var(--text-muted, #aaa)"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
     inputs: 0, outputs: 1, isMountBody: true
   },
   'mnt-mount': {
     name: 'Takoz',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg>',
-    inputs: 0, outputs: 1, isMount: true
+    inputs: 0, outputs: 1, isMount: true, defaultWidth: 50, defaultHeight: 46
   },
   'mnt-solver': {
-    name: 'Takoz Çözücü',
+    name: 'Çözücü',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #ef4444)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 1, outputs: 0, isMountSolver: true
   },

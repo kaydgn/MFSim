@@ -181,7 +181,7 @@ function getMntMassPropertiesHTML(node){
   var d=node.data;
   var html='<div class="sw-panel">';
   html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
-      + 'Kütle gövdesi → 6 SD analizde birleşik rijit gövdeye katkı. Çıkış portunu <b>Takoz Çözücü</b>ye bağlayın. Atalet <b>tensör bileşeni</b> (CATIA Measure Inertia); nokta kütle → atalet 0.</div>';
+      + 'Kütle gövdesi → 6 SD analizde birleşik rijit gövdeye katkı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar (bağlantı gerekmez). Atalet <b>tensör bileşeni</b> (CATIA Measure Inertia); nokta kütle → atalet 0.</div>';
   html+='<div class="sw-section-title">Kütle & Ağırlık Merkezi</div>';
   html+='<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
   html+=_mntRow('Kütle','m [kg]', _mntInp(node,'mass','ör: 1386.3','0.001'));
@@ -213,7 +213,7 @@ function getMntMountPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
   html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-success);">'
-      + 'Takoz → şasiye üç eksenli lineer yay bağlantısı. Çıkış portunu <b>Takoz Çözücü</b>ye bağlayın.</div>';
+      + 'Takoz → şasiye üç eksenli lineer yay bağlantısı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar (bağlantı gerekmez).</div>';
   // Kütüphane
   html+='<div style="margin-bottom:8px;"><select onchange="veMntApplyLib(\''+node.id+'\',this.value)" style="width:100%; padding:5px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"><option value="">— Kütüphaneden rijitlik yükle —</option>';
   Object.keys(VE_MOUNT_LIBRARY).forEach(function(k){ html+='<option value="'+k+'"'+(node.data.libKey===k?' selected':'')+'>'+_mntEsc(VE_MOUNT_LIBRARY[k].name)+'</option>'; });
@@ -268,13 +268,12 @@ function veMntApplyLib(nodeId, key){
 // ════════════════════════════════════════════════════════════════════════════
 //  ÇÖZÜCÜ — bağlı node'ları topla, agrege et, çekirdeği çalıştır
 // ════════════════════════════════════════════════════════════════════════════
-// Çözücü'ye bağlı (çıkışı → çözücü girişi) kütle ve takoz node'larını topla.
+// Çözücü, iç topolojideki TÜM kütle ve takoz node'larını OTOMATİK algılar —
+// bağlantı zorunluluğu yoktur (kullanıcı isteği). Alt topoloji yalnız mount
+// bileşenleri içerdiğinden nodes içindeki isMountBody/isMount düğümleri toplanır.
 function _mntGatherForSolver(solver){
-  var connectedIds = (typeof connections!=='undefined' ? connections : [])
-    .filter(function(c){ return c.to===solver.id; }).map(function(c){ return c.from; });
   var masses=[], mounts=[];
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
-    if(connectedIds.indexOf(n.id)<0) return;
     var def=_mntDef(n)||{};
     if(def.isMountBody){
       var d=n.data||{};
@@ -310,7 +309,7 @@ function getMntSolverPropertiesHTML(node){
   if(!node.data.matrixMode) node.data.matrixMode='delta';
   var html='<div class="sw-panel">';
   html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-danger);">'
-      + '<b style="color:var(--text-heading);">Takoz Çözücü.</b> Giriş portuna bağlı <b>Kütle</b> ve <b>Takoz</b> bileşenlerini okuyup 6 SD rijit gövde analizini çalıştırır. Yük durumları <b>otomatik</b> (Static / Max Bump / Acceleration / Braking / Cornering L-R).</div>';
+      + '<b style="color:var(--text-heading);">Çözücü.</b> İç topolojideki <b>tüm</b> kütle ve takoz bileşenlerini <b>otomatik algılar</b> (bağlantı gerekmez) ve 6 SD rijit gövde analizini çalıştırır. Yük durumları <b>otomatik</b> (Static / Max Bump / Acceleration / Braking / Cornering L-R).</div>';
   html+='<div style="display:flex; gap:6px; margin-bottom:10px;">';
   html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="flex:1; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;">▶ Hesapla</button>';
   html+='<button onclick="veMntShowDetail(\''+node.id+'\')" style="padding:9px 10px; font-size:0.64rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="Detaylı matris + 3D">Detay+3D</button>';
