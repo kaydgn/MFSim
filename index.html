@@ -104,7 +104,21 @@
         <div class="ve-sidebar-header"><span class="mf-ico mf-ico-package"></span><span class="ve-sidebar-title">Bileşenler</span><button class="ve-sidebar-collapse-btn" onclick="veToggleSidebar()" title="Paneli daralt" aria-label="Bileşenler panelini daralt"><span class="mf-ico mf-ico-chevrons-left"></span></button></div>
         <div class="ve-sidebar-resizer" id="ve-sidebar-resizer"></div>
         <div class="ve-sidebar-content">
-          
+
+          <div class="ve-category" data-ve-mode="performans">
+            <div class="ve-category-title">Alt Modüller</div>
+            <div class="ve-component ve-submodule" draggable="false" onclick="veBuildVehiclePerformanceModule()" title="Tıklayınca tam araç güç aktarma topolojisini otomatik kurar (Motor → Tork Konvertörü → Şanzıman → Propşaft → Transfer → Diferansiyel → Tekerlekler)">
+              <svg width="20" height="20" viewBox="0 0 100 100" style="flex-shrink:0;">
+                <path d="M8 60 L20 60 L30 44 L62 44 L74 60 L92 60 L92 70 L8 70 Z" fill="none" stroke="currentColor" stroke-width="6" stroke-linejoin="round"/>
+                <circle cx="30" cy="72" r="9" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="70" cy="72" r="9" fill="none" stroke="currentColor" stroke-width="5"/>
+                <line x1="2" y1="40" x2="24" y2="40" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.7"/>
+                <line x1="10" y1="28" x2="30" y2="28" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+              </svg>
+              <span class="ve-comp-label">Araç Performans</span>
+            </div>
+          </div>
+
           <div class="ve-category">
             <div class="ve-category-title">Güç Kaynağı</div>
             <div class="ve-component" draggable="true" data-type="engine">
@@ -128,33 +142,6 @@
                 <path d="M65 65 Q50 80 35 65" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" fill="none"/>
               </svg>
               <span class="ve-comp-label">Tork Konvertörü</span>
-            </div>
-            <div class="ve-component" draggable="true" data-type="ec-matching">
-              <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
-                <rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4"/>
-                <circle cx="30" cy="42" r="14" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
-                <circle cx="30" cy="42" r="6" fill="var(--text-secondary, #666)"/>
-                <path d="M48 42 L56 42" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linecap="round"/>
-                <path d="M52 38 L56 42 L52 46" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                <rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
-                <path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/>
-                <path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <span class="ve-comp-label">Motor-Konvertör Eşleştirme</span>
-            </div>
-            <div class="ve-component" draggable="true" data-type="engine-gearbox-matching">
-              <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
-                <rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/>
-                <rect x="20" y="28" width="25" height="40" rx="3" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
-                <line x1="25" y1="42" x2="40" y2="42" stroke="var(--text-muted, #888)" stroke-width="2"/>
-                <line x1="25" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="2"/>
-                <line x1="25" y1="58" x2="40" y2="58" stroke="var(--text-muted, #888)" stroke-width="2"/>
-                <path d="M48 48 L56 48" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round"/>
-                <path d="M52 44 L56 48 L52 52" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-                <rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
-                <path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-              <span class="ve-comp-label">Motor-Şanzıman Eşleştirme</span>
             </div>
             <div class="ve-component" draggable="true" data-type="gearbox">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
@@ -288,7 +275,34 @@
           </div>
           
           <div class="ve-category">
-            <div class="ve-category-title">Analiz</div>
+            <div class="ve-category-title">Analiz Modülleri</div>
+            <div class="ve-component" draggable="true" data-type="ec-matching">
+              <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
+                <rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="4"/>
+                <circle cx="30" cy="42" r="14" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
+                <circle cx="30" cy="42" r="6" fill="var(--text-secondary, #666)"/>
+                <path d="M48 42 L56 42" stroke="var(--accent-warning, #f59e0b)" stroke-width="3" stroke-linecap="round"/>
+                <path d="M52 38 L56 42 L52 46" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
+                <path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/>
+                <path d="M20 70 L40 70 L55 62 L70 70 L85 70" stroke="var(--accent-success, #22c55e)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="ve-comp-label">Motor-Konvertör Eşleştirme</span>
+            </div>
+            <div class="ve-component" draggable="true" data-type="engine-gearbox-matching">
+              <svg width="24" height="24" viewBox="0 0 100 100" style="flex-shrink:0;">
+                <rect x="8" y="12" width="84" height="76" rx="8" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4"/>
+                <rect x="20" y="28" width="25" height="40" rx="3" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
+                <line x1="25" y1="42" x2="40" y2="42" stroke="var(--text-muted, #888)" stroke-width="2"/>
+                <line x1="25" y1="50" x2="40" y2="50" stroke="var(--text-muted, #888)" stroke-width="2"/>
+                <line x1="25" y1="58" x2="40" y2="58" stroke="var(--text-muted, #888)" stroke-width="2"/>
+                <path d="M48 48 L56 48" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round"/>
+                <path d="M52 44 L56 48 L52 52" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="58" y="30" width="28" height="24" rx="4" fill="none" stroke="var(--text-secondary, #666)" stroke-width="3"/>
+                <path d="M63 38 L68 38 M63 44 L75 44 M63 50 L71 50" stroke="var(--accent-primary, #3b82f6)" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="ve-comp-label">Motor-Şanzıman Eşleştirme</span>
+            </div>
             <div class="ve-component" draggable="true" data-type="parametric">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
                 <rect x="12" y="12" width="76" height="76" rx="8" fill="none" stroke="currentColor" stroke-width="5"/>

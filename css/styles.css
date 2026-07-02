@@ -979,6 +979,18 @@
   box-shadow:0 0 0 2px color-mix(in srgb, var(--accent-primary) 18%, transparent), 0 2px 8px var(--shadow-color);
 }
 
+/* Alt modül kartı — sürüklenmez, tıklanınca hazır topoloji kurar */
+.ve-submodule{
+  cursor:pointer;
+  font-weight:600;
+  color:var(--accent-primary);
+  background:color-mix(in srgb, var(--accent-primary) 8%, var(--bg-tertiary));
+  border-color:color-mix(in srgb, var(--accent-primary) 35%, var(--border-color));
+}
+.ve-submodule:hover{
+  background:color-mix(in srgb, var(--accent-primary) 16%, var(--bg-input));
+}
+
 .ve-canvas-area{
   flex:1;
   display:flex;
