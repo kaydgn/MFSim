@@ -1996,7 +1996,11 @@
   align-items:center;
   gap:6px;
   flex-shrink:0;
+  cursor:move;                 /* pencere başlıktan sürüklenebilir (js/window-drag.js) */
+  user-select:none;
 }
+/* Sürükleme sırasında metin seçimini engelle (tüm sayfa) */
+body.ve-window-dragging{ user-select:none; cursor:move; }
 
 .ve-properties-content{
   flex:1;
