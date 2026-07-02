@@ -196,8 +196,12 @@ function showNodeProperties(node) {
     html += getCoastDownPropertiesHTML(node);
   } else if(node.type === 'obstacle-crossing') {
     html += getObstacleCrossingPropertiesHTML(node);
-  } else if(node.type === 'mount-analysis') {
-    html += getMountAnalysisPropertiesHTML(node);
+  } else if(node.type === 'mnt-motor' || node.type === 'mnt-gearbox' || node.type === 'mnt-shaft' || node.type === 'mnt-bracket' || node.type === 'mnt-mass') {
+    html += getMntMassPropertiesHTML(node);
+  } else if(node.type === 'mnt-mount') {
+    html += getMntMountPropertiesHTML(node);
+  } else if(node.type === 'mnt-solver') {
+    html += getMntSolverPropertiesHTML(node);
   } else if(node.type === 'solver') {
     html += getSolverPropertiesHTML(node);
   } else if(node.type === 'road') {
@@ -255,5 +259,12 @@ function showNodeProperties(node) {
     setTimeout(function() {
       veInitRoadMap(node.id);
     }, 400);
+  }
+
+  // Takoz Çözücü: bağlı kütle+takozları otomatik hesapla + 3D viewer
+  if(node.type === 'mnt-solver') {
+    setTimeout(function() {
+      if(typeof veMntSolverCompute === 'function') veMntSolverCompute(node.id);
+    }, 120);
   }
 }

@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mount-analysis'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-mass','mnt-mount','mnt-solver'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -201,15 +201,46 @@ var componentDefs = {
     inputs: 0,
     outputs: 0
   },
-  // ── Takoz Çökme-Titreşim (motor-şanzıman bağlantı analizi) ───────────────
-  // Yardımcı/analiz bileşeni: güç aktarma zincirine girmez, fizik hesabı yok.
-  // Matematiksel model sonradan cp-mount.js içinde detaylandırılacaktır.
-  'mount-analysis': {
-    name: 'Takoz Çökme-Titreşim',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="22" y="6" width="56" height="24" rx="4" fill="var(--text-secondary, #666)"/><path d="M34 30 Q28 37 40 43 Q28 49 40 55 Q28 61 40 67 Q28 73 34 78" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M66 30 Q60 37 72 43 Q60 49 72 55 Q60 61 72 67 Q60 73 66 78" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="80" x2="88" y2="80" stroke="var(--text-secondary, #666)" stroke-width="4"/><line x1="19" y1="80" x2="12" y2="92" stroke="var(--text-muted, #888)" stroke-width="2.5"/><line x1="37" y1="80" x2="30" y2="92" stroke="var(--text-muted, #888)" stroke-width="2.5"/><line x1="55" y1="80" x2="48" y2="92" stroke="var(--text-muted, #888)" stroke-width="2.5"/><line x1="73" y1="80" x2="66" y2="92" stroke="var(--text-muted, #888)" stroke-width="2.5"/><path d="M6 46 q5 -7 10 0 q5 7 10 0" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="2.5" stroke-linecap="round"/></svg>',
-    inputs: 0,
-    outputs: 0,
-    maxInstances: 1
+  // ── Takoz Çökme-Titreşim analizi — GERÇEK KANVAS BİLEŞENLERİ ─────────────
+  // "Programın normali gibi": Motor/Şanzıman/Şaft/Braket/Kütle (kütle gövdeleri,
+  // çıkış portu) ve Takoz (çıkış portu) sürüklenip Çözücü'ye (giriş portu)
+  // bağlanır. Çözücü kendisine bağlı kütle+takoz node'larını okuyup 6 SD rijit
+  // gövde analizini OTOMATİK yük durumlarıyla çalıştırır (kullanıcı yük girmez).
+  // Veri: node.data (mass/cg/atalet veya konum/rijitlik). Panel: cp-mount.js.
+  'mnt-motor': {
+    name: 'Motor (Kütle)',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="36" width="60" height="44" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.85"/><rect x="30" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><rect x="52" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><circle cx="50" cy="58" r="5" fill="#fff"/></svg>',
+    inputs: 0, outputs: 1, isMountBody: true
+  },
+  'mnt-gearbox': {
+    name: 'Şanzıman (Kütle)',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="26" y="24" width="48" height="56" rx="5" fill="var(--accent-primary, #3b82f6)" opacity="0.7"/><circle cx="50" cy="52" r="15" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="52" r="4" fill="#fff"/></svg>',
+    inputs: 0, outputs: 1, isMountBody: true
+  },
+  'mnt-shaft': {
+    name: 'Şaft (Kütle)',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="44" width="80" height="12" rx="6" fill="var(--text-secondary, #888)"/><circle cx="24" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="76" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
+    inputs: 0, outputs: 1, isMountBody: true
+  },
+  'mnt-bracket': {
+    name: 'Braket (Kütle)',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg>',
+    inputs: 0, outputs: 1, isMountBody: true
+  },
+  'mnt-mass': {
+    name: 'Kütle',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="27" y="27" width="46" height="46" rx="3" fill="var(--text-secondary, #888)"/><circle cx="50" cy="50" r="6" fill="#fff"/></svg>',
+    inputs: 0, outputs: 1, isMountBody: true
+  },
+  'mnt-mount': {
+    name: 'Takoz',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg>',
+    inputs: 0, outputs: 1, isMount: true
+  },
+  'mnt-solver': {
+    name: 'Takoz Çözücü',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #ef4444)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg>',
+    inputs: 1, outputs: 0, isMountSolver: true
   }
 };
 

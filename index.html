@@ -302,17 +302,55 @@
                 <circle cx="20" cy="75" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
                 <circle cx="80" cy="75" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
               </svg> <span class="ve-comp-label">Engel Geçme</span></div>
-            <div class="ve-component" draggable="true" data-type="mount-analysis" title="Motor-şanzıman bağlantı takozları için çökme ve titreşim analizi">
+          </div>
+
+          <div class="ve-category">
+            <div class="ve-category-title">Takoz Analizi</div>
+            <div class="ve-component" draggable="true" data-type="mnt-motor" title="Motor kütle gövdesi (kütle + CG + atalet)">
               <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <rect x="25" y="8" width="50" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="5"/>
-                <path d="M35 30 Q29 37 41 42 Q29 47 41 52 Q29 57 41 62 Q29 67 35 72" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M65 30 Q59 37 71 42 Q59 47 71 52 Q59 57 71 62 Q59 67 65 72" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="15" y1="74" x2="85" y2="74" stroke="currentColor" stroke-width="5"/>
-                <line x1="22" y1="74" x2="15" y2="84" stroke="currentColor" stroke-width="3"/>
-                <line x1="40" y1="74" x2="33" y2="84" stroke="currentColor" stroke-width="3"/>
-                <line x1="58" y1="74" x2="51" y2="84" stroke="currentColor" stroke-width="3"/>
-                <line x1="76" y1="74" x2="69" y2="84" stroke="currentColor" stroke-width="3"/>
-              </svg> <span class="ve-comp-label">Takoz Çökme-Titreşim</span></div>
+                <rect x="18" y="36" width="64" height="44" rx="5" fill="none" stroke="currentColor" stroke-width="5"/>
+                <rect x="30" y="22" width="14" height="16" fill="currentColor" opacity="0.6"/>
+                <rect x="54" y="22" width="14" height="16" fill="currentColor" opacity="0.6"/>
+                <circle cx="50" cy="58" r="5" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Motor (Kütle)</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-gearbox" title="Şanzıman kütle gövdesi">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="24" y="22" width="52" height="58" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="50" cy="52" r="15" fill="none" stroke="currentColor" stroke-width="4"/>
+                <circle cx="50" cy="52" r="4" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Şanzıman (Kütle)</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-shaft" title="Şaft kütle gövdesi (tipik: nokta kütle)">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <line x1="10" y1="50" x2="90" y2="50" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+                <circle cx="24" cy="50" r="8" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="76" cy="50" r="8" fill="none" stroke="currentColor" stroke-width="3"/>
+                <circle cx="50" cy="50" r="5" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Şaft (Kütle)</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-bracket" title="Braket / cradle kütle gövdesi">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M30 18 L30 78 L80 78" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="42" cy="64" r="5" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Braket (Kütle)</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-mass" title="Genel kütle gövdesi">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="26" y="26" width="48" height="48" rx="3" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="50" cy="50" r="6" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Kütle</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-mount" title="Takoz (konum + statik/dinamik rijitlik)">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="30" y="8" width="40" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="4"/>
+                <path d="M38 24 Q32 31 44 36 Q32 41 44 46 Q32 51 44 56 Q32 61 38 66" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M62 24 Q56 31 68 36 Q56 41 68 46 Q56 51 68 56 Q56 61 62 66" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="18" y1="70" x2="82" y2="70" stroke="currentColor" stroke-width="5"/>
+                <line x1="26" y1="70" x2="20" y2="80" stroke="currentColor" stroke-width="2.5"/>
+                <line x1="50" y1="70" x2="44" y2="80" stroke="currentColor" stroke-width="2.5"/>
+                <line x1="74" y1="70" x2="68" y2="80" stroke="currentColor" stroke-width="2.5"/>
+              </svg> <span class="ve-comp-label">Takoz</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-solver" title="Takoz Çözücü — bağlı kütle+takozları 6 SD analiz eder (otomatik yük durumları)">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="currentColor" stroke-width="6"/>
+                <polygon points="40,30 40,70 70,50" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Takoz Çözücü</span></div>
           </div>
 
           <div class="ve-category ve-category-tools" data-always-visible="true">
