@@ -141,7 +141,9 @@ function veMountViewerUpdate(){
   var V=_veMountViewer; if(!V) return;
   var node = (typeof _veMountEditorNode!=='undefined') ? _veMountEditorNode : null;
   if(!node || !node.data || !node.data.mnt) return;
-  var d = node.data.mnt;
+  // Alt-node topolojisinden agrege (bileşen CG + takoz konumları, UI mm birimi)
+  var d = (typeof _mntAggregate==='function') ? _mntAggregate(node.data.mnt) : node.data.mnt;
+  if(!d.components) d.components=[]; if(!d.mounts) d.mounts=[];
 
   // Eski içeriği temizle
   while(V.group.children.length){
