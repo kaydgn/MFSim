@@ -180,6 +180,61 @@
       --shadow-color: rgba(20, 30, 45, 0.10);
     }
 
+    /* ========== TASARIM SİSTEMİ ÖLÇEKLERİ (tema-bağımsız) ==========
+       Renkler temaya göre değişir; aşağıdaki ölçekler tüm temalarda ortaktır.
+       Amaç: köşe/derinlik/boşluk/hareket tutarlılığı — "tasarlanmış" his. */
+    :root {
+      /* Köşe yarıçapı */
+      --radius-xs: 3px;
+      --radius-sm: 5px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --radius-pill: 999px;
+
+      /* Elevation — --shadow-color aktif temaya göre çözümlenir (koyu temada
+         derin, açık temada çok hafif gölge otomatik gelir) */
+      --shadow-sm: 0 1px 2px var(--shadow-color);
+      --shadow-md: 0 3px 8px var(--shadow-color);
+      --shadow-lg: 0 8px 24px var(--shadow-color);
+      --shadow-xl: 0 16px 48px var(--shadow-color);
+      --shadow-inset: inset 0 1px 3px var(--shadow-color);
+
+      /* Boşluk ölçeği (4px tabanlı) */
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --space-8: 32px;
+
+      /* Hareket — süre + easing tek yerden */
+      --dur-fast: 0.12s;
+      --dur-base: 0.2s;
+      --dur-slow: 0.32s;
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+      /* Tipografi ölçeği */
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+      --text-xs: 0.72rem;
+      --text-sm: 0.8rem;
+      --text-base: 0.88rem;
+      --text-md: 1rem;
+      --text-lg: 1.15rem;
+      --text-xl: 1.4rem;
+      --text-2xl: 1.8rem;
+      --leading-tight: 1.25;
+      --leading-normal: 1.5;
+      --tracking-wide: 0.04em;
+      --tracking-wider: 0.08em;
+
+      /* Odak halkası — erişilebilirlik + profesyonel his (aktif accent'e uyar) */
+      --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 35%, transparent);
+    }
+
     /* Tema Seçici Stilleri */
     .theme-selector {
       display: flex;
@@ -227,7 +282,7 @@
       max-height: 720px;
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
-      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+      box-shadow: var(--shadow-xl);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -451,7 +506,7 @@
       background:var(--bg-secondary);
       border:1px solid var(--border-color);
       border-radius:0;
-      box-shadow:0 25px 80px var(--shadow-color), 0 4px 20px var(--shadow-color);
+      box-shadow:var(--shadow-xl);
     }
     .mfsim-login-title{
       font-size:1.3rem; font-weight:700;
@@ -520,7 +575,7 @@
       background:var(--bg-secondary);
       border:1px solid var(--border-color);
       border-radius:0;
-      box-shadow:0 25px 80px var(--shadow-color), 0 4px 20px var(--shadow-color);
+      box-shadow:var(--shadow-xl);
       text-align:center;
     }
     .mfsim-loading-logo{
@@ -665,7 +720,7 @@
     }
 
 /* ===== TAB SİSTEMİ ===== */
-#tab-bar{position:fixed;top:0;left:0;right:0;height:28px;background:var(--bg-secondary);display:flex;align-items:center;padding:0 10px;z-index:99999;border-bottom:1px solid var(--border-color);box-shadow:0 1px 4px var(--shadow-color);transform:translateY(-100%);transition:transform 0.3s ease;}
+#tab-bar{position:fixed;top:0;left:0;right:0;height:28px;background:var(--bg-secondary);display:flex;align-items:center;padding:0 10px;z-index:99999;border-bottom:1px solid var(--border-color);box-shadow:var(--shadow-sm);transform:translateY(-100%);transition:transform var(--dur-slow) var(--ease-out);}
 #tab-bar.visible{transform:translateY(0);}
 #tab-bar .logo{color:var(--text-heading, #111);font-weight:700;margin-right:14px;font-size:0.72rem;display:flex;align-items:center;gap:4px;letter-spacing:-0.02em;padding:2px 6px;border-radius:0;transition:background 0.15s;user-select:none;}
 #tab-bar .logo:hover{background:var(--bg-tertiary);}
@@ -997,7 +1052,7 @@
   background:var(--bg-secondary);
   border:1px solid var(--border-color);
   border-radius:0;
-  box-shadow:0 8px 24px rgba(0,0,0,0.3);
+  box-shadow:var(--shadow-lg);
   z-index:999999;
   padding:4px 0;
   margin-top:2px;
@@ -1296,7 +1351,7 @@
   border-color:var(--accent-primary);
   background:var(--bg-tertiary);
   transform:translateY(-2px);
-  box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  box-shadow:var(--shadow-md);
 }
 .ve-module-card-name{
   font-size:0.72rem;
@@ -1514,7 +1569,7 @@
 
 .ve-node:hover .ve-node-box{
   border-color:var(--accent-primary);
-  box-shadow:0 4px 12px var(--shadow-color);
+  box-shadow:var(--shadow-md);
 }
 
 .ve-node.selected .ve-node-box{
@@ -1546,7 +1601,7 @@
   font-weight:700;
   z-index:5;
   pointer-events:none;
-  box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  box-shadow:var(--shadow-sm);
 }
 
 /* Port stilleri */
@@ -1888,7 +1943,7 @@
   max-height:90vh;
   background:var(--bg-secondary);
   border:1px solid var(--border-color);
-  box-shadow:0 20px 60px rgba(0,0,0,0.6);
+  box-shadow:var(--shadow-xl);
   display:flex;
   flex-direction:column;
   overflow:hidden;
@@ -2199,7 +2254,7 @@
   border:1px solid var(--border-color);border-radius:0;
   background:var(--bg-input);display:flex;align-items:center;justify-content:center;
   overflow:visible;min-height:0;
-  box-shadow:inset 0 1px 3px rgba(0,0,0,0.08);
+  box-shadow:var(--shadow-inset);
 }
 .ve-slot-axis-x{
   height:22px;margin:0 4px 0 4px;padding:2px 0;
@@ -2226,7 +2281,7 @@
   position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
   min-width:220px;max-width:340px;max-height:300px;overflow-y:auto;
   background:var(--bg-primary);border:1px solid var(--border-color);
-  border-radius:0;box-shadow:0 4px 16px rgba(0,0,0,0.18);
+  border-radius:0;box-shadow:var(--shadow-lg);
   z-index:9999;padding:4px 0;font-size:0.68rem;
 }
 .ve-xaxis-dropdown-group{
@@ -2259,7 +2314,7 @@
   display:flex;flex-direction:column;gap:2px;max-width:50%;
   padding:5px 8px 6px;border-radius:6px;cursor:grab;
   background:var(--bg-primary);border:1px solid var(--border-color);
-  box-shadow:0 2px 8px rgba(0,0,0,0.12);
+  box-shadow:var(--shadow-md);
   opacity:0.88;transition:opacity 0.15s;
 }
 .ve-chart-legend-overlay:hover{opacity:1;}
@@ -2268,7 +2323,7 @@
   display:flex;align-items:center;gap:4px;cursor:default;transition:all 0.15s;
   position:relative;
 }
-.ve-slot-legend-item:hover{filter:brightness(1.15);box-shadow:0 1px 4px rgba(0,0,0,0.15);}
+.ve-slot-legend-item:hover{filter:brightness(1.15);box-shadow:var(--shadow-sm);}
 .ve-legend-color-line{width:14px;height:3px;border-radius:0;display:inline-block;flex-shrink:0;}
 .ve-legend-remove{
   margin-left:4px;cursor:pointer;font-size:0.6rem;opacity:0.45;
@@ -2288,7 +2343,7 @@
   position:absolute;pointer-events:none;z-index:20;
   background:var(--bg-primary);border:1px solid var(--border-light);
   border-radius:0;padding:8px 12px;font-size:0.7rem;
-  box-shadow:0 6px 20px rgba(0,0,0,0.3),0 2px 6px rgba(0,0,0,0.15);white-space:nowrap;
+  box-shadow:var(--shadow-lg);white-space:nowrap;
   opacity:0;transition:opacity 0.12s ease;color:var(--text-primary);
   backdrop-filter:blur(8px);
 }
@@ -2432,7 +2487,7 @@
   gap:8px;
   user-select:none;
   transition:background 0.12s;
-  box-shadow:0 1px 4px rgba(0,0,0,0.15);
+  box-shadow:var(--shadow-sm);
   position:relative;
   z-index:1;
   border-radius:0;
@@ -2446,7 +2501,7 @@
 .dr-body table th{color:var(--text-secondary) !important;background:var(--bg-tertiary) !important;border-color:var(--border-color) !important;}
 .dr-body table td{color:var(--text-primary) !important;border-color:var(--border-light) !important;}
 .dr-body table tr:hover td{background:var(--bg-tertiary) !important;}
-.dr-chart-tooltip{position:absolute;pointer-events:none;background:rgba(30,36,48,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:0;padding:8px 12px;font-size:0.65rem;color:#e0e4ec;line-height:1.6;box-shadow:0 4px 16px rgba(0,0,0,0.35);z-index:10;max-width:280px;white-space:nowrap;backdrop-filter:blur(8px);opacity:0;transition:opacity 0.35s cubic-bezier(0.4,0,0.2,1);}
+.dr-chart-tooltip{position:absolute;pointer-events:none;background:rgba(30,36,48,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:0;padding:8px 12px;font-size:0.65rem;color:#e0e4ec;line-height:1.6;box-shadow:var(--shadow-lg);z-index:10;max-width:280px;white-space:nowrap;backdrop-filter:blur(8px);opacity:0;transition:opacity 0.35s cubic-bezier(0.4,0,0.2,1);}
 .dr-chart-tooltip.visible{opacity:1;}
 .dr-chart-crossV{position:absolute;top:0;width:1px;height:100%;background:rgba(100,160,250,0.25);pointer-events:none;display:none;z-index:5;}
 .dr-chart-crossH{position:absolute;left:0;width:100%;height:1px;background:rgba(100,160,250,0.25);pointer-events:none;display:none;z-index:5;}
@@ -2609,7 +2664,7 @@
 .ve-boundary-summary-btn:hover{
   opacity:1;
   transform:scale(1.15);
-  box-shadow:0 2px 10px var(--shadow-color);
+  box-shadow:var(--shadow-md);
   border-color:var(--accent-primary);
 }
 
