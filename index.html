@@ -81,7 +81,6 @@
   <div class="ve-tab-group">
     <div class="ve-sub-tabs visible" id="ve-sub-tabs">
       <button class="ve-sub-tab active" onclick="veSubTabDegistir('arac-performans')" data-subtab="arac-performans">Araç Performans</button>
-      <button class="ve-sub-tab" onclick="veSubTabDegistir('sonlu-elemanlar')" data-subtab="sonlu-elemanlar">Sonlu Elemanlar</button>
       <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
     </div>
   </div>
@@ -288,18 +287,6 @@
               </svg> <span class="ve-comp-label">Yol / Ortam</span></div>
           </div>
           
-          <div class="ve-category" data-ve-mode="fea">
-            <div class="ve-category-title">Yapısal Analiz</div>
-            <div class="ve-component" draggable="true" data-type="fea" title="Sürüklediğinizde Geometri → Mesh → Sınır Koşulları → Çözücü zincirini oluşturur">
-              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
-                <rect x="10" y="10" width="80" height="80" rx="6" fill="none" stroke="currentColor" stroke-width="5"/>
-                <path d="M20 30 L50 20 L80 30 L80 70 L50 80 L20 70 Z" fill="none" stroke="currentColor" stroke-width="3"/>
-                <line x1="50" y1="20" x2="50" y2="80" stroke="currentColor" stroke-width="2"/>
-                <line x1="20" y1="30" x2="80" y2="30" stroke="currentColor" stroke-width="2"/>
-                <line x1="20" y1="70" x2="80" y2="70" stroke="currentColor" stroke-width="2"/>
-              </svg> <span class="ve-comp-label">Yapısal Analiz</span></div>
-          </div>
-
           <div class="ve-category">
             <div class="ve-category-title">Analiz</div>
             <div class="ve-component" draggable="true" data-type="parametric">
@@ -363,10 +350,6 @@
                   <div class="ve-module-card" onclick="veSelectModuleFromOverlay('arac-performans')">
                     <div class="ve-module-card-name">Araç Performans</div>
                     <div class="ve-module-card-desc">Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi.</div>
-                  </div>
-                  <div class="ve-module-card" onclick="veSelectModuleFromOverlay('sonlu-elemanlar')">
-                    <div class="ve-module-card-name">Sonlu Elemanlar</div>
-                    <div class="ve-module-card-desc">Yapısal analiz (FEA) — geometri, ağ örme ve çözücü ile gerilme/deformasyon analizi.</div>
                   </div>
                 </div>
               </div>
@@ -581,71 +564,8 @@
 <script type="text/x-mfsim-defer" src="js/mount-core.js" data-mfsim-label="Takoz: hesap çekirdeği (6 SD)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount.js" data-mfsim-label="Takoz çökme-titreşim modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-viewer.js" data-mfsim-label="Takoz: 3D görüntüleyici..."></script>
-<!-- Three.js (UMD, vendored from npm three@0.149.0) — FEA viewer için -->
+<!-- Three.js (UMD, vendored from npm three@0.149.0) — Takoz 3D görüntüleyici için -->
 <script type="text/x-mfsim-defer" src="vendor/three.min.js" data-mfsim-label="3D kütüphanesi (Three.js)..."></script>
-
-<!--
-  OCCT (OpenCascade WebAssembly) — STEP/IGES import için lazy yüklenir.
-  Build sirasinda asagidaki placeholder'lar JS string ve WASM base64 olarak
-  window.__feaInline.occtScript / occtWasm icine inline edilir.
-  Dev modunda placeholder'lar yorum olarak kalir; fea-step.js dosyalari
-  dogrudan vendor/opencascade/'den indirir.
--->
-<!-- INLINE_FILE: vendor/opencascade/occt-import-js.js as occtScript -->
-<!-- INLINE_FILE: vendor/opencascade/occt-import-js.wasm as occtWasm -->
-
-<!--
-  MFSim FEA WASM — C++ ile yazilan FEA cozucusu (Emscripten ile derlenir,
-  src/fea/*.cpp). Monolitik build'de window.__feaInline.mfsimFea{Script,Wasm}'a
-  base64 inline edilir; dev modunda vendor/mfsim-fea/'den lazy fetch.
-  Build: npm run build:wasm  (emscripten gereklidir)
--->
-<!-- INLINE_FILE: vendor/mfsim-fea/mfsim-fea.js as mfsimFeaScript -->
-<!-- INLINE_FILE: vendor/mfsim-fea/mfsim-fea.wasm as mfsimFeaWasm -->
-
-<!--
-  TetGen WASM — Constrained Delaunay tetrahedral mesher (Hang Si, AGPL-3.0).
-  Mesh kalite kademesinin en ÜST katmanı (en yüksek kalite tet4). WASM build
-  edilmemişse fea-tetgen.js graceful skip yapar → Delaunay (MIT) katmanına
-  düşülür. Artifact .gitignore'da (AGPL dağıtım yükümlülüğü); monolitik build'de
-  window.__feaInline.tetgen{Script,Wasm}'a base64 inline edilir, dev modunda
-  vendor/tetgen/'den lazy fetch.
-  Build: npm run build:wasm:tetgen  (emscripten gereklidir)
-  Lisans uyarısı: vendor/tetgen/NOTICE.md
--->
-<!-- INLINE_FILE: vendor/tetgen/tetgen-wasm.js as tetgenScript -->
-<!-- INLINE_FILE: vendor/tetgen/tetgen-wasm.wasm as tetgenWasm -->
-
-<!--
-  Delaunay Tet Mesher — Mikola Lysenko's delaunay-triangulate (MIT) bundle.
-  Robust adaptive predicates ile 3D Bowyer-Watson tet mesh. Karmaşık STEP
-  geometrileri için kübik voxel yerine gerçek tetrahedral mesh üretir.
-  Bundle: vendor/delaunay/delaunay-bundle.js (esbuild ile sync sırasında üretilir)
-  Lisans uyarısı: vendor/delaunay/NOTICE.md
--->
-<script type="text/x-mfsim-defer" src="vendor/delaunay/delaunay-bundle.js" data-mfsim-label="Delaunay tet mesher (Lysenko)..."></script>
-
-<script type="text/x-mfsim-defer" src="js/fea-primitives.js" data-mfsim-label="FEA: Temel geometri..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-materials.js" data-mfsim-label="FEA: Malzeme kütüphanesi..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-solver.js" data-mfsim-label="FEA: Hex8 çözücü..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-stress.js" data-mfsim-label="FEA: Gerilme analizi..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-step.js" data-mfsim-label="FEA: STEP import..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-topology.js" data-mfsim-label="FEA: Topoloji..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-occt-brep.js" data-mfsim-label="FEA: OCCT BREP topoloji motoru..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-mesh-utils.js" data-mfsim-label="FEA: Mesh ortak yardımcılar..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-feature-recognition.js" data-mfsim-label="FEA: Yüzey tanıma..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-delaunay.js" data-mfsim-label="FEA: Delaunay tet mesher sarmalayıcı..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-tetgen.js" data-mfsim-label="FEA: TetGen tet mesher (AGPL, opt-in)..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-mesh-smoothing.js" data-mfsim-label="FEA: Mesh smoothing (ANSYS quality opt.)..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-mesh.js" data-mfsim-label="FEA: Mesh motoru..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-study.js" data-mfsim-label="FEA: Yapısal analiz modülü..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-mesh-outline.js" data-mfsim-label="FEA: Modül outline (ANSYS tree)..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-mesh-controls.js" data-mfsim-label="FEA: Lokal mesh kontrolleri..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-viewer.js" data-mfsim-label="FEA: Görüntüleyici..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-topology-scanner.js" data-mfsim-label="FEA: Topoloji motoru taraması..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-mesh-editor.js" data-mfsim-label="FEA: Mesh editörü..."></script>
-<script type="text/x-mfsim-defer" src="js/fea-solver-wasm.js" data-mfsim-label="FEA: WASM çözücü..."></script>
-<script type="text/x-mfsim-defer" src="js/cp-fea.js" data-mfsim-label="FEA paneli..."></script>
 <script type="text/x-mfsim-defer" src="js/ft-performance.js" data-mfsim-label="Saha testi: Performans..."></script>
 <script type="text/x-mfsim-defer" src="js/ft-segment-drive.js" data-mfsim-label="Saha testi: Segment sürüş..."></script>
 <script type="text/x-mfsim-defer" src="js/ft-obstacle.js" data-mfsim-label="Saha testi: Engel..."></script>

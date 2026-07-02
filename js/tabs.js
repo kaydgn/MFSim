@@ -21,11 +21,10 @@ function veSubTabDegistir(tabName) {
 
   var mainContent = document.querySelector('.ve-main');
 
-  // 'arac-performans' ve 'sonlu-elemanlar' aynı editörü (ve-main) paylaşır;
-  // tek fark sidebar bileşen modudur. Mod değişince palet yeniden filtrelenir.
-  if(tabName === 'arac-performans' || tabName === 'sonlu-elemanlar') {
+  // Görsel editör sekmesi (ve-main). Sidebar tek modda çalışır ('performans').
+  if(tabName === 'arac-performans') {
     mainContent.style.display = 'flex';
-    veSidebarMode = (tabName === 'sonlu-elemanlar') ? 'fea' : 'performans';
+    veSidebarMode = 'performans';
     if(typeof veShowAllSidebarComponents === 'function') veShowAllSidebarComponents();
   } else {
     mainContent.style.display = 'none';

@@ -192,7 +192,6 @@ function _veSettingsRenderShortcuts() {
     ['Ctrl + Z',           'Geri al'],
     ['Ctrl + Y / Ctrl + Shift + Z', 'Yinele'],
     ['Ctrl + C',           'Seçili bileşeni kopyala'],
-    ['Q',                  'FEA görüntüleyici: hızlı kesit görünümü'],
     ['Enter',              'Aktif girdiyi onayla / yeniden adlandırma kaydet'],
     ['Mouse: Sol sürükle', 'Canvas alanını kaydır'],
     ['Mouse: Tekerlek',    'Yakınlaştır / uzaklaştır'],
@@ -274,7 +273,7 @@ function _veSettingsRenderData() {
 // ─── HAKKINDA ──────────────────────────────────────────────────────────────
 function _veSettingsRenderAbout() {
   var html = '<h3 class="ve-settings-section-title">MFSim</h3>';
-  html += '<p class="ve-settings-desc">Tarayıcı tabanlı Araç Performans + Sonlu Elemanlar simülasyon ortamı.</p>';
+  html += '<p class="ve-settings-desc">Tarayıcı tabanlı Araç Performans simülasyon ortamı.</p>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Versiyon</span><div class="ve-settings-value">' + (window.__mfsimVersion || 'dev') + '</div></div>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Lisans</span><div class="ve-settings-value">ISC</div></div>';
   html += '<div class="ve-settings-row"><span class="ve-settings-label">Kaynak kod</span><div class="ve-settings-value"><a href="https://github.com/kaydgn/MFSim" target="_blank" rel="noopener">github.com/kaydgn/MFSim</a></div></div>';
@@ -284,10 +283,8 @@ function _veSettingsRenderAbout() {
     ['Three.js',          'r0.149',      'MIT'],
     ['Plotly.js',         '2.35 (gl3d)', 'MIT'],
     ['Leaflet',           '1.9.4',       'BSD-2'],
-    ['OpenCascade (OCCT)', 'WASM',        'LGPL-2.1+'],
     ['Lucide ikonlar',    '—',           'ISC'],
-    ['Inter font',        '5.0.18',      'SIL OFL 1.1'],
-    ['Delaunay (Lysenko)', '—',           'MIT']
+    ['Inter font',        '5.0.18',      'SIL OFL 1.1']
   ];
   deps.forEach(function(d) {
     html += '<tr><td>' + d[0] + '</td><td><small style="opacity:0.7;">' + d[1] + '</small></td><td><small style="opacity:0.7;">' + d[2] + '</small></td></tr>';
