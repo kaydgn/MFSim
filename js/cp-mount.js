@@ -4,12 +4,11 @@
 // SPEC "Takoz Çökme–Titreşim Modülü (6 SD Rijit Gövde Modeli)" v1.0.
 // Hesap çekirdeği: js/mount-core.js (veMountCore) — DOM'suz saf fonksiyonlar.
 //
-// MİMARİ (kullanıcı kararı): "programın normali gibi". Motor/Şanzıman/Şaft/
-// Braket/Kütle (kütle gövdeleri, çıkış portu) ve Takoz (çıkış portu) normal
-// kanvasa sürüklenip Çözücü'ye (giriş portu) NORMAL bağlantı motoruyla
-// (createConnection) bağlanır. Çözücü, kendisine bağlı node'ları connections'
-// tan okuyup 6 SD analizini OTOMATİK yük durumlarıyla çalıştırır — kullanıcı
-// yük durumu girmez.
+// MİMARİ (kullanıcı kararı): Motor / Şanzıman / Şaft / Braket / Transfer (kütle
+// gövdeleri) ve Takoz bileşenleri iç topolojiye sürüklenir; BAĞLANTI YOKTUR
+// (bağlantı portu bulunmaz). Çözücü iç topolojideki TÜM kütle+takoz düğümlerini
+// (nodes içinde def.isMountBody / def.isMount) OTOMATİK algılayıp 6 SD analizini
+// otomatik yük durumlarıyla çalıştırır — kullanıcı ne bağlantı ne yük durumu girer.
 //
 // Birim (SPEC 2): UI mm/kg/N/mm; çekirdek SI. Dönüşüm yalnız burada.
 // Kalıcılık: her node kendi node.data'sında (proje kaydet/yükle otomatik).
@@ -1102,34 +1101,6 @@ function _mntDzMatrixHTML(allCases, mounts){
   h+='</tbody></table></div>';
   return h;
 }
-// Tam matris (δx/δy/δz veya kuvvet) — detay modalı için
-function _mntFullMatrixHTML(allCases, mounts, mode){
-  var isForce=(mode==='force');
-  var h='<div style="display:flex; align-items:center; gap:8px; margin:6px 0 6px; font-size:0.76rem; font-weight:700; color:var(--text-heading); border-bottom:1px solid var(--border-color); padding-bottom:4px;"><span>Statik Çökme Matrisi</span><span style="font-size:0.52rem; font-weight:400; color:var(--text-muted);">'+(isForce?'kN':'mm')+' · |δ|>10mm/çekme işaretli</span><div style="flex:1;"></div><button onclick="veMntToggleMatrix()" style="padding:3px 8px; font-size:0.56rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;">'+(isForce?'→ Sehim':'→ Kuvvet')+'</button></div>';
-  h+='<div style="overflow-x:auto; margin-bottom:12px;"><table style="border-collapse:collapse; font-size:0.56rem; white-space:nowrap;"><thead><tr style="background:var(--bg-tertiary);"><th rowspan="2" style="'+_mntMxTh()+'">Yük Durumu</th>';
-  mounts.forEach(function(m){ h+='<th colspan="3" style="'+_mntMxTh()+'">'+_mntEsc(m.name)+'</th>'; });
-  h+='<th rowspan="2" style="'+_mntMxTh()+'">ΣFz</th><th rowspan="2" style="'+_mntMxTh()+'">Çekme</th></tr><tr style="background:var(--bg-tertiary);">';
-  mounts.forEach(function(){ ['x','y','z'].forEach(function(a){ h+='<th style="'+_mntMxTh()+'">'+a+'</th>'; }); });
-  h+='</tr></thead><tbody>';
-  allCases.forEach(function(rc){
-    h+='<tr><td style="'+_mntMxTd()+' text-align:left; font-weight:600;">'+_mntEsc(rc.name)+'</td>';
-    if(!rc.res){ h+='<td colspan="'+(mounts.length*3+2)+'" style="'+_mntMxTd()+' color:var(--accent-danger);">çözülemedi</td></tr>'; return; }
-    rc.res.perMount.forEach(function(pm){
-      for(var a=0;a<3;a++){
-        var val=isForce?(pm.f[a]/1000):(pm.delta[a]*1000);
-        var col=isForce?_mntForceColor(val):_mntDeflColor(val);
-        var mark=(a===2&&pm.tension)?' outline:2px solid #a855f7; outline-offset:-2px;':'';
-        var warn=(!isForce&&pm.overLinear)?' text-decoration:underline;':'';
-        h+='<td style="'+_mntMxTd()+' color:'+col+'; font-weight:600;'+warn+mark+'">'+val.toFixed(2)+'</td>';
-      }
-    });
-    var chk=rc.res.checks;
-    h+='<td style="'+_mntMxTd()+'">'+(chk.sumFzOk?'<span style="color:#22c55e;">✓</span>':'<span style="color:#ef4444;">✗</span>')+' '+(rc.res.sumF[2]/1000).toFixed(1)+'</td>';
-    h+='<td style="'+_mntMxTd()+' color:'+(chk.tensionCount?'#a855f7':'var(--text-muted)')+'; font-weight:600;">'+chk.tensionCount+'</td></tr>';
-  });
-  h+='</tbody></table></div>';
-  return h;
-}
 function _mntModalHTML(modes){
   var h=_mntSecTitle('Modal Analiz','6 mod · K_dyn');
   if(!modes) return h+'<div style="color:var(--accent-danger); font-size:0.64rem;">Modal başarısız.</div>';
@@ -1144,52 +1115,6 @@ function _mntModalHTML(modes){
   h+='</tbody></table></div>';
   return h;
 }
-function veMntToggleMatrix(){
-  if(!_veMntLast) return;
-  var solver=nodes.find(function(n){return n.id===_veMntLast.solverId;});
-  if(solver){ solver.data.matrixMode=(solver.data.matrixMode==='force')?'delta':'force'; if(typeof saveState==='function') saveState(); }
-  veMntShowDetail(_veMntLast.solverId);
-}
-
-// ─── Detay modalı (tam matris + 3D + mod şekilleri) ──────────────────────────
-function veMntShowDetail(solverId){
-  var R=(_veMntLast && _veMntLast.solverId===solverId) ? _veMntLast : _mntComputeResults(solverId);
-  if(!R || R.error){ if(typeof showToast==='function') showToast('Önce Kütle ve Takoz bileşenlerini Çözücü\'ye bağlayın.','warning'); return; }
-  var solver=nodes.find(function(n){return n.id===solverId;});
-  var mode=(solver&&solver.data.matrixMode)||'delta';
-  var h='<div style="display:flex; gap:14px; flex-wrap:wrap;">';
-  h+='<div style="flex:1; min-width:320px;">';
-  var cgmm=R.mp.cg.map(function(v){return v*1000;});
-  h+=_mntSecTitle('Kütle Özeti');
-  h+='<table style="width:100%; border-collapse:collapse; font-size:0.63rem; margin-bottom:10px;">';
-  h+='<tr><th style="'+_mntTh()+'">m</th><td style="'+_mntTd()+'">'+_mntFmt(R.mp.m,3)+' kg</td></tr>';
-  h+='<tr><th style="'+_mntTh()+'">CG (mm)</th><td style="'+_mntTd()+'">('+cgmm.map(function(v){return _mntFmt(v,2);}).join(', ')+')</td></tr>';
-  h+='<tr><th style="'+_mntTh()+'">I_G</th><td style="'+_mntTd()+' font-family:monospace; font-size:0.54rem; white-space:pre;">'+_mntInertiaText(R.mp.I_G)+'</td></tr>';
-  h+='</table>';
-  h+=_mntFullMatrixHTML(R.allCases, R.mounts, mode);
-  // modal + mod şekilleri
-  h+=_mntSecTitle('Modal Analiz','mod şekli normalize');
-  h+='<div style="overflow-x:auto;"><table style="border-collapse:collapse; font-size:0.55rem; white-space:nowrap;"><thead><tr style="background:var(--bg-tertiary);">';
-  ['Mod','f [Hz]','Etiket','ux','uy','uz','θx','θy','θz'].forEach(function(c){ h+='<th style="'+_mntMxTh()+'">'+c+'</th>'; });
-  h+='</tr></thead><tbody>';
-  (R.modes||[]).forEach(function(md,i){
-    h+='<tr><td style="'+_mntMxTd()+' font-weight:600;">'+(i+1)+'</td><td style="'+_mntMxTd()+' color:var(--accent-primary); font-weight:600;">'+_mntFmt(md.f_Hz,3)+'</td><td style="'+_mntMxTd()+' text-align:left;">'+_mntEsc(md.label)+'</td>';
-    md.phi.forEach(function(v){ h+='<td style="'+_mntMxTd()+'"><span style="opacity:'+(0.35+0.65*Math.min(1,Math.abs(v)))+';">'+v.toFixed(2)+'</span></td>'; });
-    h+='</tr>';
-  });
-  h+='</tbody></table></div>';
-  h+='</div>';
-  // 3D
-  h+='<div style="width:340px; flex-shrink:0;"><div style="font-size:0.72rem; font-weight:700; color:var(--text-heading); margin-bottom:6px;">3D Görünüm</div><div id="ve-mnt-viewer-wrap" style="width:100%; height:320px; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px; overflow:hidden;"><canvas id="ve-mnt-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div><div style="font-size:0.53rem; color:var(--text-muted); margin-top:5px;">Yeşil: takoz · turuncu: bileşen CG · kırmızı: birleşik CG. Sürükle döndür, tekerlek zoom.</div></div>';
-  h+='</div>';
-  _mntShowModal('Takoz Analizi — Detaylı Sonuçlar', h);
-  // 3D viewer başlat
-  if(typeof veMountViewerInit==='function'){
-    _veMntViewerData = R.gather;
-    setTimeout(function(){ try{ veMountViewerInit('ve-mnt-viewer-canvas'); veMountViewerUpdate(); }catch(e){} }, 60);
-  }
-}
-
 // ─── Kopyala / CSV ───────────────────────────────────────────────────────────
 function _mntResultsToText(){
   var R=_veMntLast; if(!R) return 'Önce hesaplayın.';
@@ -1214,15 +1139,7 @@ function veMntExportCSV(){
   var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='takoz_cokme.csv'; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);},500);
 }
 
-// ─── Self-Test / Matematik ───────────────────────────────────────────────────
-function veMntRunSelfTest(){
-  var r=veMountCore.selfTest();
-  var h='<div style="font-size:0.72rem;"><div style="font-weight:700; margin-bottom:10px; color:'+(r.failed===0?'#22c55e':'#ef4444')+';">'+(r.failed===0?'✓ TÜM TESTLER GEÇTİ':'✗ '+r.failed+' BAŞARISIZ')+' <span style="color:var(--text-muted); font-weight:400;">('+r.passed+' geçti / '+r.failed+' kaldı)</span></div>';
-  h+='<table style="width:100%; border-collapse:collapse; font-size:0.62rem;"><thead><tr style="background:var(--bg-tertiary);"><th style="'+_mntMxTh()+'">Test</th><th style="'+_mntMxTh()+'">Ad</th><th style="'+_mntMxTh()+'">Sonuç</th></tr></thead><tbody>';
-  r.details.forEach(function(dt){ h+='<tr><td style="'+_mntMxTd()+' font-weight:600;">'+_mntEsc(dt.id)+'</td><td style="'+_mntMxTd()+' text-align:left;">'+_mntEsc(dt.name)+'<div style="font-size:0.5rem; color:var(--text-muted); white-space:normal; max-width:520px;">'+_mntEsc(dt.detail)+'</div></td><td style="'+_mntMxTd()+'">'+(dt.ok?'<span style="color:#22c55e;">✓</span>':'<span style="color:#ef4444;">✗</span>')+'</td></tr>'; });
-  h+='</tbody></table></div>';
-  _mntShowModal('🧪 Doğrulama Testleri', h);
-}
+// ─── Matematik ───────────────────────────────────────────────────────────────
 function veMntOpenMathModal(){ _mntShowModal('📐 Takoz Modülünün Matematiği', _mntMathHTML()); }
 function _mntMathHTML(){
   var eq='background:var(--bg-secondary); border:1px solid var(--border-color); padding:8px 12px; margin:6px 0; font-family:monospace; font-size:0.66rem; white-space:pre-wrap; overflow-x:auto;';
