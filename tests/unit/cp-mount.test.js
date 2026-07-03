@@ -488,6 +488,17 @@ describe('2D Görünüm bileşeni', () => {
     expect(svg).toContain('Yandan Görünüş');
     expect(svg).toContain('<rect');       // takoz karesi / çerçeve
     expect(svg).toMatch(/Z\s*=\s*0/);     // zemin çizgisi etiketi
+    expect(svg).toContain('data-mnt-info'); // fare-üstü (hover) bilgi attribute'u
+  });
+  test('_mnt2DViewSVG hover bilgisi koordinat ve kütle taşır', () => {
+    const svg = cp._mnt2DViewSVG({
+      comps: [{ name: 'Motor', mass: 1386.3, x: -321.4, y: 4.9, z: 859.3 }],
+      mounts: [{ name: 'Ön Takoz', x: -50, y: 20, z: 30 }],
+      cg: { x: -321.4, y: 4.9, z: 859.3, m: 1386.3 }
+    });
+    expect(svg).toContain('Ağırlık merkezi');       // bileşen hover başlığı
+    expect(svg).toContain('Birleşik Ağırlık Merkezi'); // birleşik CG hover
+    expect(svg).toMatch(/1386[.,]3 kg/);            // kütle bilgisi
   });
 });
 
