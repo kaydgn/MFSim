@@ -277,7 +277,7 @@ var componentDefs = {
     inputs: 0, outputs: 0, isMountSolver: true
   },
   'mnt-example': {
-    name: 'Örnek',
+    name: 'Başlangıç ve Örnekler',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><line x1="36" y1="44" x2="66" y2="44" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="56" x2="66" y2="56" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="68" x2="54" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
     inputs: 0, outputs: 0, isMountExample: true, defaultWidth: 56, defaultHeight: 56
   },
