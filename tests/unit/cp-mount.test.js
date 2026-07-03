@@ -391,6 +391,27 @@ describe('Örnek bileşeni', () => {
     expect(svg).toContain('var(--accent-success)');  // takoz rengi (tema değişkeni)
     expect(cp._mntExampleDiagramSVG(null)).toBe('');  // model yoksa boş
   });
+  test('BMC Siper örneği: 5 kütle + 6 takoz, doğru gövde eşlemesi, 2294.5 kg', () => {
+    const ex = core.getMountExample('siper');
+    expect(ex.vehicle).toBe('BMC Siper');
+    expect(ex.name).toContain('BMC SİPER');
+    const m = ex.model;
+    expect(m.components).toHaveLength(5);
+    expect(m.mounts).toHaveLength(6);
+    // toplam kütle ADAMS referansı (2294.482) ile birebir
+    expect(m.components.reduce((s, c) => s + c.mass, 0)).toBeCloseTo(2294.52, 1);
+    // bileşen adları → yükleyicinin kuracağı kanvas tipleri
+    expect(m.components.map(c => cp._mntExampleBodyType(c.name)))
+      .toEqual(['mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-bracket']);
+    // şaft nokta-kütle; tüm takozlar aynı statik/dinamik rijitlik
+    expect(m.components[2].pointMass).toBe(true);
+    expect(m.mounts.every(x => x.kstat[2] === 640 && x.kdyn[2] === 977)).toBe(true);
+    expect(m.torque.Te).toBe(3000);
+    // panelde açılır menüde her iki örnek de listelenir
+    const html = cp.getMntExamplePropertiesHTML({ id: 'e', type: 'mnt-example', data: { exampleKey: 'siper' } });
+    expect(html).toContain('BMC Siper');
+    expect(html).toContain('BMC TTAR 2031');
+  });
   test('TTAR modeli (6 takoz) → "Fazla takoz" UYARI verir, hata değil', () => {
     const topo = buildTTARTopology();
     global.nodes = topo.nodes;
