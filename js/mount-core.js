@@ -589,7 +589,9 @@ var veMountCore = (function() {
         {type:'mnt-viewer',     name:'3D Görüntüleyici',   at:[200,450]},
         {type:'mnt-example',    name:'Örnek',              at:[730,450]}
       ],
-      image: '',
+      // Kullanıcı ekran görüntüsünü assets/examples/siper.png olarak ekleyecek.
+      // Dosya yoksa panel otomatik şemaya düşer (kırık resim gösterilmez).
+      image: 'assets/examples/siper.png',
       model: SIPER_EXAMPLE
     }
   };
