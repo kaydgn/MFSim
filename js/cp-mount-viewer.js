@@ -38,7 +38,7 @@ function _mntViewerBgIsLight(){
   } catch(e){ return false; }
 }
 
-function veMountViewerInit(canvasId){
+function veMountViewerInit(canvasId, mode){
   if(typeof THREE === 'undefined') return;      // THREE yüklü değil → sessiz atla
   veMountViewerDispose();
   var canvas = document.getElementById(canvasId);
@@ -72,14 +72,25 @@ function veMountViewerInit(canvasId){
 
   _veMountViewer = {
     scene:scene, camera:camera, renderer:renderer, canvas:canvas, group:group,
+    grid:grid, mode:(mode||'model'),
+    axes:[], labelSprites:[], planes:[],
     massScale:{min:0,max:1},
     ctrl:{ theta:-Math.PI*0.75, phi:Math.PI/3, radius:2800, target:new THREE.Vector3(0,0,0) },
-    raf:null, disposed:false
+    raf:null, disposed:false, ro:null
   };
 
-  _mntViewerAxes(scene);
+  // Sabit eksen üçlüsü (model modu). Koordinat modu ekseni kendi çizer.
+  if(_veMountViewer.mode !== 'coordframe') _mntViewerAxes(scene);
   _mntViewerUpdateCamera();
   _mntViewerAttachControls(canvas);
+
+  // Panel yeniden boyutlandığında canvas'ı takip et (resize desteği).
+  if(typeof ResizeObserver !== 'undefined'){
+    try {
+      _veMountViewer.ro = new ResizeObserver(function(){ veMountViewerResize(); });
+      _veMountViewer.ro.observe(wrap);
+    } catch(e){}
+  }
 
   function loop(){
     if(!_veMountViewer || _veMountViewer.disposed) return;
@@ -87,6 +98,37 @@ function veMountViewerInit(canvasId){
     renderer.render(scene, camera);
   }
   loop();
+}
+
+// Panel/sarmal boyutu değişince renderer + kamera en-boy oranını güncelle.
+function veMountViewerResize(){
+  var V=_veMountViewer; if(!V || !V.canvas) return;
+  var wrap=V.canvas.parentElement; if(!wrap) return;
+  var w=Math.max(1, wrap.clientWidth), h=Math.max(1, wrap.clientHeight);
+  V.camera.aspect = w/h; V.camera.updateProjectionMatrix();
+  V.renderer.setSize(w, h, false);
+}
+
+// Görünüm katmanı aç/kapa: 'grid' | 'axes' | 'labels' | 'planes'. Yeni görünürlük döner.
+function veMountViewerToggle(what){
+  var V=_veMountViewer; if(!V) return true;
+  var vis=true;
+  if(what==='grid' && V.grid){ V.grid.visible=!V.grid.visible; vis=V.grid.visible; }
+  else if(what==='axes'){ V.axes.forEach(function(o){ o.visible=!o.visible; }); vis=V.axes.length?V.axes[0].visible:true; }
+  else if(what==='labels'){ V.labelSprites.forEach(function(o){ o.visible=!o.visible; }); vis=V.labelSprites.length?V.labelSprites[0].visible:true; }
+  else if(what==='planes'){ V.planes.forEach(function(o){ o.visible=!o.visible; }); vis=V.planes.length?V.planes[0].visible:true; }
+  return vis;
+}
+
+// Görünümü başlangıç açısına/uzaklığına sıfırla (ve içeriğe yeniden çerçevele).
+function veMountViewerReset(){
+  var V=_veMountViewer; if(!V) return;
+  V.ctrl.theta=-Math.PI*0.75; V.ctrl.phi=Math.PI/3;
+  V.ctrl.radius=(V.mode==='coordframe')?1700:2800;
+  V.ctrl.target.set(0,0,0);
+  V._framed=false;
+  _mntViewerUpdateCamera();
+  if(typeof veMountViewerUpdate==='function') veMountViewerUpdate();
 }
 
 function _mntViewerUpdateCamera(){
@@ -130,18 +172,21 @@ function _mntViewerAttachControls(canvas){
 }
 
 function _mntViewerAxes(scene){
+  var V=_veMountViewer;
   function line(a,b,color){
     var g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(a[0],a[1],a[2]), new THREE.Vector3(b[0],b[1],b[2])]);
-    return new THREE.Line(g, new THREE.LineBasicMaterial({color:color}));
+    var ln=new THREE.Line(g, new THREE.LineBasicMaterial({color:color}));
+    scene.add(ln); if(V) V.axes.push(ln); return ln;
   }
+  function label(t,p){ var s=_mntViewerLabel(t,p); scene.add(s); if(V) V.labelSprites.push(s); return s; }
   var L=400;
   // giriş X→dünya +X (kırmızı), giriş Y→dünya +Z (yeşil), giriş Z→dünya +Y (mavi)
-  scene.add(line([0,0,0],[L,0,0],0xff4444));
-  scene.add(line([0,0,0],[0,0,L],0x44ff44));
-  scene.add(line([0,0,0],[0,L,0],0x4444ff));
-  scene.add(_mntViewerLabel('X',[L+40,0,0]));
-  scene.add(_mntViewerLabel('Y',[0,0,L+40]));
-  scene.add(_mntViewerLabel('Z',[0,L+40,0]));
+  line([0,0,0],[L,0,0],0xff4444);
+  line([0,0,0],[0,0,L],0x44ff44);
+  line([0,0,0],[0,L,0],0x4444ff);
+  label('X',[L+40,0,0]);
+  label('Y',[0,0,L+40]);
+  label('Z',[0,L+40,0]);
 }
 function _mntViewerLabel(text, pos){
   var cv=document.createElement('canvas'); cv.width=64; cv.height=64;
@@ -164,20 +209,34 @@ function _mntCGRadius(mass, ms){
   return 18 + 28*Math.sqrt(Math.max(0,Math.min(1,t)));
 }
 
-function veMountViewerUpdate(){
-  var V=_veMountViewer; if(!V) return;
-  // Çözücü'nün topladığı kütle+takoz verisi (UI mm; cp-mount.js sağlar)
-  var d = (typeof _veMntViewerData!=='undefined' && _veMntViewerData) ? _veMntViewerData : null;
-  if(!d) return;
-  if(!d.components) d.components=[]; if(!d.mounts) d.mounts=[];
-
-  // Eski içeriği temizle
+// Grup içeriğini temizle (geometri/materyal serbest bırak).
+function _mntViewerClearGroup(V){
   while(V.group.children.length){
     var o=V.group.children.pop();
     if(o.geometry) o.geometry.dispose();
     if(o.material){ if(o.material.map) o.material.map.dispose(); o.material.dispose(); }
     V.group.remove(o);
   }
+}
+
+function veMountViewerUpdate(){
+  var V=_veMountViewer; if(!V) return;
+
+  // Koordinat düzlemi modu: eksen + düzlem + yön etiketleri çiz, veri gerektirmez.
+  if(V.mode==='coordframe'){
+    _mntViewerClearGroup(V); V.axes=[]; V.labelSprites=[]; V.planes=[];
+    _mntViewerDrawCoordFrame(V);
+    if(!V._framed){ V.ctrl.target.set(0,0,0); V.ctrl.radius=1700; _mntViewerUpdateCamera(); V._framed=true; }
+    return;
+  }
+
+  // Çözücü'nün topladığı kütle+takoz verisi (UI mm; cp-mount.js sağlar)
+  var d = (typeof _veMntViewerData!=='undefined' && _veMntViewerData) ? _veMntViewerData : null;
+  if(!d) return;
+  if(!d.components) d.components=[]; if(!d.mounts) d.mounts=[];
+
+  // Eski içeriği temizle
+  _mntViewerClearGroup(V);
 
   var num=function(v){ var n=Number(String(v).replace(',','.')); return Number.isFinite(n)?n:NaN; };
 
@@ -233,10 +292,65 @@ function veMountViewerUpdate(){
   }
 }
 
+// ─── Koordinat Düzlemi (mnt-coordframe) — eksen + düzlem + yön etiketleri ─────
+// Genişliğe uyan metin sprite'ı (çok karakterli yön etiketleri için).
+function _mntViewerTextSprite(text, pos, color, worldSize){
+  var fs=44, pad=10;
+  var cv=document.createElement('canvas'); var ctx=cv.getContext('2d');
+  ctx.font='bold '+fs+'px Arial';
+  var tw=Math.max(1, Math.ceil(ctx.measureText(text).width));
+  cv.width=tw+pad*2; cv.height=fs+pad*2;
+  ctx=cv.getContext('2d');
+  ctx.font='bold '+fs+'px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle=color||_mntViewerCssStr('--text-primary','#ffffff');
+  ctx.fillText(text, cv.width/2, cv.height/2);
+  var tex=new THREE.CanvasTexture(cv);
+  var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true, depthTest:false}));
+  var ws=worldSize||120;
+  sp.scale.set(ws*(cv.width/cv.height), ws, 1);
+  sp.position.set(pos[0],pos[1],pos[2]);
+  return sp;
+}
+function _mntViewerDrawCoordFrame(V){
+  var G=V.group, L=700, S=900;
+  if(V.grid) V.grid.position.y=0;   // ızgarayı zemin düzlemiyle hizala
+  function arrow(dir,color){
+    var a=new THREE.ArrowHelper(new THREE.Vector3(dir[0],dir[1],dir[2]).normalize(), new THREE.Vector3(0,0,0), L, color, 95, 58);
+    G.add(a); V.axes.push(a);
+  }
+  // giriş X→dünya+X (kırmızı), giriş Y→dünya+Z (yeşil), giriş Z→dünya+Y (mavi, yukarı)
+  arrow([1,0,0], 0xef4444); arrow([0,0,1], 0x22c55e); arrow([0,1,0], 0x3b82f6);
+  function negline(b,color){
+    var g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(b[0],b[1],b[2])]);
+    var ln=new THREE.Line(g, new THREE.LineBasicMaterial({color:color, transparent:true, opacity:0.35}));
+    G.add(ln); V.axes.push(ln);
+  }
+  negline([-L*0.6,0,0],0xef4444); negline([0,0,-L*0.6],0x22c55e); negline([0,-L*0.6,0],0x3b82f6);
+  function plane(rotX,rotY,color){
+    var m=new THREE.Mesh(new THREE.PlaneGeometry(2*S,2*S), new THREE.MeshBasicMaterial({color:color, transparent:true, opacity:0.07, side:THREE.DoubleSide, depthWrite:false}));
+    if(rotX) m.rotation.x=rotX; if(rotY) m.rotation.y=rotY;
+    G.add(m); V.planes.push(m);
+  }
+  plane(-Math.PI/2, 0, 0x3b82f6);  // giriş XY (zemin) ⟂ Z
+  plane(0, 0, 0x22c55e);           // giriş XZ ⟂ Y
+  plane(0, Math.PI/2, 0xef4444);   // giriş YZ ⟂ X
+  var tp=_mntViewerCssStr('--text-primary','#ffffff');
+  function lab(text,pos,color,sz){ var s=_mntViewerTextSprite(text,pos,color,sz); G.add(s); V.labelSprites.push(s); }
+  lab('+X · Arka',   [L+130,0,0], '#ef4444', 120);
+  lab('+Y · Sağ',    [0,0,L+130], '#22c55e', 120);
+  lab('+Z · Yukarı', [0,L+130,0], '#3b82f6', 120);
+  lab('Ön',   [-L*0.6-80,0,0], tp, 85);
+  lab('Sol',  [0,0,-L*0.6-80], tp, 85);
+  lab('Aşağı',[0,-L*0.6-80,0], tp, 85);
+  var o=new THREE.Mesh(new THREE.SphereGeometry(24,20,20), new THREE.MeshBasicMaterial({color:tp}));
+  G.add(o);
+}
+
 function veMountViewerDispose(){
   var V=_veMountViewer; if(!V) return;
   V.disposed=true;
   if(V.raf) cancelAnimationFrame(V.raf);
+  if(V.ro){ try{ V.ro.disconnect(); }catch(e){} }
   try {
     while(V.group && V.group.children.length){
       var o=V.group.children.pop();

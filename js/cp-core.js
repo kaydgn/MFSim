@@ -208,6 +208,8 @@ function showNodeProperties(node) {
     html += getMntExamplePropertiesHTML(node);
   } else if(node.type === 'mnt-viewer') {
     html += getMntViewerPropertiesHTML(node);
+  } else if(node.type === 'mnt-coordframe') {
+    html += getMntCoordFramePropertiesHTML(node);
   } else if(node.type === 'arac-performans') {
     html += getAracPerformansPropertiesHTML(node);
   } else if(node.type === 'mount-analysis') {
@@ -282,6 +284,13 @@ function showNodeProperties(node) {
   if(node.type === 'mnt-viewer') {
     setTimeout(function() {
       if(typeof veMntViewerRefresh === 'function') veMntViewerRefresh();
+    }, 140);
+  }
+
+  // Takoz Koordinat Düzlemi: panel açılınca koordinat sistemini 3B çiz
+  if(node.type === 'mnt-coordframe') {
+    setTimeout(function() {
+      if(typeof veMntCoordFrameRefresh === 'function') veMntCoordFrameRefresh();
     }, 140);
   }
 
