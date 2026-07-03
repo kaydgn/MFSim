@@ -15,6 +15,29 @@
 
 var _veMountViewer = null;
 
+// ─── Tema yardımcıları ───────────────────────────────────────────────────────
+// Aktif temanın CSS değişkenlerinden renk oku (koyu/açık tema uyumu). THREE.Color
+// setStyle 'rgb()/hsl()/#hex/isim' değerlerini çözer; çözülemezse yedeğe düşer.
+function _mntViewerCssStr(varName, fallback){
+  try {
+    if(typeof document==='undefined' || typeof getComputedStyle==='undefined') return fallback;
+    var v = getComputedStyle(document.documentElement).getPropertyValue(varName);
+    v = v ? v.trim() : '';
+    return v || fallback;
+  } catch(e){ return fallback; }
+}
+function _mntViewerCssColor(varName, fallback){
+  try { return new THREE.Color(_mntViewerCssStr(varName, fallback)); }
+  catch(e){ return new THREE.Color(fallback); }
+}
+// Aktif zemin açık mı? (ışık/etiket dengesi için basit parlaklık eşiği)
+function _mntViewerBgIsLight(){
+  try {
+    var c = _mntViewerCssColor('--bg-primary', '#0a0a0a');
+    return (0.299*c.r + 0.587*c.g + 0.114*c.b) > 0.5;
+  } catch(e){ return false; }
+}
+
 function veMountViewerInit(canvasId){
   if(typeof THREE === 'undefined') return;      // THREE yüklü değil → sessiz atla
   veMountViewerDispose();
@@ -24,7 +47,7 @@ function veMountViewerInit(canvasId){
   var w = Math.max(1, wrap.clientWidth), h = Math.max(1, wrap.clientHeight);
 
   var scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0a0a0a);
+  scene.background = _mntViewerCssColor('--bg-primary', '#0a0a0a');
 
   var camera = new THREE.PerspectiveCamera(55, w/h, 1, 50000);
   var renderer;
@@ -34,11 +57,15 @@ function veMountViewerInit(canvasId){
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 2));
   renderer.setSize(w, h, false);
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-  var d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(500,1000,500); scene.add(d1);
+  // Açık temada düz beyaz zemin fazla parlar → ışıkları temaya göre dengele.
+  var isLight = _mntViewerBgIsLight();
+  scene.add(new THREE.AmbientLight(0xffffff, isLight ? 0.85 : 0.7));
+  var d1 = new THREE.DirectionalLight(0xffffff, isLight ? 0.6 : 0.8); d1.position.set(500,1000,500); scene.add(d1);
   var d2 = new THREE.DirectionalLight(0xffffff, 0.3); d2.position.set(-500,-500,-500); scene.add(d2);
 
-  var grid = new THREE.GridHelper(3000, 30, 0x333333, 0x222222);
+  // Izgara çizgileri: kenarlık rengi (tema) + soluk varyantı.
+  var gc = _mntViewerCssColor('--border-color', '#333333');
+  var grid = new THREE.GridHelper(3000, 30, gc, gc.clone().multiplyScalar(0.55));
   grid.position.y = -200; scene.add(grid);
 
   var group = new THREE.Group(); scene.add(group);   // yeniden kurulan içerik
@@ -118,7 +145,7 @@ function _mntViewerAxes(scene){
 }
 function _mntViewerLabel(text, pos){
   var cv=document.createElement('canvas'); cv.width=64; cv.height=64;
-  var ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.font='bold 40px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  var ctx=cv.getContext('2d'); ctx.fillStyle=_mntViewerCssStr('--text-primary','#ffffff'); ctx.font='bold 40px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(text, 32, 32);
   var tex=new THREE.CanvasTexture(cv);
   var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex, transparent:true}));

@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-solver','arac-performans','mount-analysis'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-solver','mnt-example','mnt-viewer','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -266,6 +266,16 @@ var componentDefs = {
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="15" y="15" width="70" height="70" rx="8" fill="none" stroke="var(--accent-danger, #ef4444)" stroke-width="5"/><polygon points="40,32 40,68 70,50" fill="var(--accent-danger, #ef4444)"/><circle cx="78" cy="22" r="6" fill="var(--accent-warning, #f59e0b)"/></svg>',
     inputs: 1, outputs: 0, isMountSolver: true
   },
+  'mnt-example': {
+    name: 'Örnek',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><path d="M60 14 v14 h14" fill="none" stroke="var(--accent-warning, #f59e0b)" stroke-width="5" stroke-linejoin="round"/><line x1="36" y1="44" x2="66" y2="44" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="56" x2="66" y2="56" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="36" y1="68" x2="54" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    inputs: 0, outputs: 0, isMountExample: true, defaultWidth: 56, defaultHeight: 56
+  },
+  'mnt-viewer': {
+    name: '3D Görüntüleyici',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-linejoin="round"/></svg>',
+    inputs: 0, outputs: 0, isMountViewer: true, defaultWidth: 60, defaultHeight: 56
+  },
   // ── Araç Performans (ALT-SİSTEM / subsystem düğümü) ──────────────────────
   // Sürüklenebilir composite düğüm: ana canvas'ta tek blok; çift tıklanınca
   // kendi iç topolojisine girilir (gerçek güç aktarma bileşenleri). Aç/kapat
@@ -284,7 +294,7 @@ var componentDefs = {
   // Takoz/Çözücü) açılır (cp-mount.js veMntOpenEditor). isMountModule: dblclick.
   'mount-analysis': {
     name: 'Takoz Çökme-Titreşim',
-    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="14" width="88" height="72" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="34" y="30" width="32" height="13" rx="3" fill="var(--text-secondary, #666)"/><path d="M40 43 Q34 49 44 53 Q34 57 44 61 Q34 65 40 69" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M60 43 Q54 49 64 53 Q54 57 64 61 Q54 65 60 69" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="30" y1="71" x2="70" y2="71" stroke="var(--text-secondary, #666)" stroke-width="3"/></svg>',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="7 5"/><rect x="30" y="34" width="30" height="10" rx="2" fill="var(--text-secondary, #666)"/><path d="M38 44 Q32 50 42 54 Q32 58 42 62 Q32 66 38 70" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 44 Q46 50 56 54 Q46 58 56 62 Q46 66 52 70" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><line x1="26" y1="72" x2="64" y2="72" stroke="var(--text-secondary, #666)" stroke-width="3"/><path d="M64 22 h18 v18" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     inputs: 0,
     outputs: 0,
     isSubsystem: true,
