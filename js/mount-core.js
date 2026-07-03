@@ -504,22 +504,24 @@ var veMountCore = (function() {
   // Kaynak: CATIA Measure-Inertia (kütle/CG/atalet, parça-CG çerçevesinde),
   // takoz kataloğu LMT-1433-37 (55 ShA) ve ADAMS .BMC_TTAR_2031 modeli.
   // Birimler UI ile aynı: mm, kg, kg·m², N/mm, N·m. Toplam kütle 2294.5 kg.
+  // Her gövde/takozun at:[lx,ly]'si kullanıcının verdiği topoloji düzenini
+  // birebir yeniden üretir (panel önizlemesi + "Aktar" ile kurulan kanvas aynı).
   const SIPER_EXAMPLE = {
     g: 9.81,
     components: [
-      {name:'Motor',      mass:1386.3,   cg:[-321.36,    4.89,  859.33 ], Ixx:110.7, Iyy:260.2, Izz:205.9, Ixy:0,      Ixz:0,     Iyz:0,      pointMass:false},
-      {name:'Şanzıman',   mass:778.3,    cg:[ 905.815,  11.17,  683.81 ], Ixx:16.43, Iyy:68.15, Izz:64.91, Ixy:0,      Ixz:0,     Iyz:0,      pointMass:false},
-      {name:'Şaft payı',  mass:50.65,    cg:[3041.582,   0.00, -168.419], Ixx:0,     Iyy:0,     Izz:0,     Ixy:0,      Ixz:0,     Iyz:0,      pointMass:true},
-      {name:'Sol cradle', mass:39.635,   cg:[2158.356,-274.782, -39.54 ], Ixx:0.237, Iyy:3.851, Izz:3.727, Ixy:-0.170, Ixz:0.257, Iyz:-0.033, pointMass:false},
-      {name:'Sağ cradle', mass:39.637,   cg:[2150.654, 318.791, -39.54 ], Ixx:0.230, Iyy:3.858, Izz:3.727, Ixy:0.076,  Ixz:0.256, Iyz:0.039,  pointMass:false}
+      {name:'Motor',      mass:1386.3,   cg:[-321.36,    4.89,  859.33 ], Ixx:110.7, Iyy:260.2, Izz:205.9, Ixy:0,      Ixz:0,     Iyz:0,      pointMass:false, at:[335,260]},
+      {name:'Şanzıman',   mass:778.3,    cg:[ 905.815,  11.17,  683.81 ], Ixx:16.43, Iyy:68.15, Izz:64.91, Ixy:0,      Ixz:0,     Iyz:0,      pointMass:false, at:[440,265]},
+      {name:'Şaft payı',  mass:50.65,    cg:[3041.582,   0.00, -168.419], Ixx:0,     Iyy:0,     Izz:0,     Ixy:0,      Ixz:0,     Iyz:0,      pointMass:true,  at:[545,265]},
+      {name:'Sol cradle', mass:39.635,   cg:[2158.356,-274.782, -39.54 ], Ixx:0.237, Iyy:3.851, Izz:3.727, Ixy:-0.170, Ixz:0.257, Iyz:-0.033, pointMass:false, at:[375,360]},
+      {name:'Sağ cradle', mass:39.637,   cg:[2150.654, 318.791, -39.54 ], Ixx:0.230, Iyy:3.858, Izz:3.727, Ixy:0.076,  Ixz:0.256, Iyz:0.039,  pointMass:false, at:[410,175]}
     ],
     mounts: [
-      {name:'sağ ön',   pos:[-948.697,  50.810, 371.023], kstat:[1252,1252,640], kdyn:[2055,2055,977]},
-      {name:'sol ön',   pos:[-948.697, -50.810, 371.023], kstat:[1252,1252,640], kdyn:[2055,2055,977]},
-      {name:'sağ orta', pos:[ 535.313, 357.192, 635.270], kstat:[1252,1252,640], kdyn:[2055,2055,977]},
-      {name:'sol orta', pos:[ 535.313,-357.109, 635.270], kstat:[1252,1252,640], kdyn:[2055,2055,977]},
-      {name:'sağ arka', pos:[ 636.813, 357.192, 635.270], kstat:[1252,1252,640], kdyn:[2055,2055,977]},
-      {name:'sol arka', pos:[ 636.813,-357.109, 635.270], kstat:[1252,1252,640], kdyn:[2055,2055,977]}
+      {name:'sağ ön',   pos:[-948.697,  50.810, 371.023], kstat:[1252,1252,640], kdyn:[2055,2055,977], at:[215,250]},
+      {name:'sol ön',   pos:[-948.697, -50.810, 371.023], kstat:[1252,1252,640], kdyn:[2055,2055,977], at:[215,350]},
+      {name:'sağ orta', pos:[ 535.313, 357.192, 635.270], kstat:[1252,1252,640], kdyn:[2055,2055,977], at:[370, 70]},
+      {name:'sol orta', pos:[ 535.313,-357.109, 635.270], kstat:[1252,1252,640], kdyn:[2055,2055,977], at:[375,460]},
+      {name:'sağ arka', pos:[ 636.813, 357.192, 635.270], kstat:[1252,1252,640], kdyn:[2055,2055,977], at:[450, 70]},
+      {name:'sol arka', pos:[ 636.813,-357.109, 635.270], kstat:[1252,1252,640], kdyn:[2055,2055,977], at:[455,460]}
     ],
     torque: { Te:3000, Rstall:1.62, iTransfer:1.407,
               fwd:{iGear:3.51, phiAxle:1/3.6}, rev:{iGear:-4.8, phiAxle:2.6/3.6},
@@ -564,22 +566,6 @@ var veMountCore = (function() {
   //   yerleşimi birebir eşlemek için elle yerel-piksel konum; verilmezse
   //   otomatik yerleşim (orta sıra kütleler, alt/üst sıra takozlar) uygulanır.
   const MOUNT_EXAMPLES = {
-    ttar: {
-      id: 'ttar',
-      name: 'BMC TTAR 2031',
-      vehicle: 'BMC TTAR 2031',
-      subtitle: '5 kütle · 6 takoz güç grubu',
-      description: 'Ağır ticari araç güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — motor, şanzıman, şaft payı ve iki cradle braketi altı elastomer takozla şasiye bağlanır.',
-      specs: [
-        ['Kütle gövdesi', String(TTAR_EXAMPLE.components.length)],
-        ['Takoz', String(TTAR_EXAMPLE.mounts.length)],
-        ['Toplam kütle', TTAR_EXAMPLE.components.reduce(function(s,c){ return s + (c.mass||0); }, 0).toFixed(1) + ' kg'],
-        ['Motor torku', TTAR_EXAMPLE.torque.Te + ' N·m'],
-        ['Yük durumu', String(TTAR_EXAMPLE.loadCases.length)]
-      ],
-      image: '',
-      model: TTAR_EXAMPLE
-    },
     siper: {
       id: 'siper',
       name: 'BMC SİPER Takoz Analizi',
@@ -593,12 +579,22 @@ var veMountCore = (function() {
         ['Motor torku', SIPER_EXAMPLE.torque.Te + ' N·m'],
         ['Takoz statik (Z)', SIPER_EXAMPLE.mounts[0].kstat[2] + ' N/mm']
       ],
+      // Panel önizleme sahnesi — yalnız görsel süs (yükleyici bunları KURMAZ),
+      // kullanıcının verdiği topoloji düzeniyle aynı yerleşimde yardımcı araçlar.
+      tools: [
+        {type:'mnt-library',    name:'Takoz Özellikleri', at:[ 85, 70]},
+        {type:'mnt-coordframe', name:'Koordinat Düzlemi',  at:[200, 80]},
+        {type:'mnt-solver',     name:'Çözücü',             at:[740,265]},
+        {type:'mnt-2dview',     name:'2D Görünüm',         at:[ 85,450]},
+        {type:'mnt-viewer',     name:'3D Görüntüleyici',   at:[200,450]},
+        {type:'mnt-example',    name:'Örnek',              at:[730,450]}
+      ],
       image: '',
       model: SIPER_EXAMPLE
     }
   };
-  // id → örnek girişi (bilinmezse ttar'a düşer).
-  function getMountExample(id){ return MOUNT_EXAMPLES[id] || MOUNT_EXAMPLES.ttar; }
+  // id → örnek girişi (bilinmezse defterdeki ilk örneğe düşer).
+  function getMountExample(id){ return MOUNT_EXAMPLES[id] || MOUNT_EXAMPLES[Object.keys(MOUNT_EXAMPLES)[0]]; }
   // Açılır menü sırası için giriş listesi.
   function getMountExampleList(){ return Object.keys(MOUNT_EXAMPLES).map(function(k){ return MOUNT_EXAMPLES[k]; }); }
 
