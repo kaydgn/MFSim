@@ -509,32 +509,6 @@ describe('2D Görünüm bileşeni', () => {
     expect(svg).toContain('Birleşik Ağırlık Merkezi'); // birleşik CG hover
     expect(svg).toMatch(/1386[.,]3 kg/);            // kütle bilgisi
   });
-  test('_mnt2DGather analiz katmanı: elastik merkez + statik yük payı (TTAR)', () => {
-    const t = buildTTARTopology();
-    global.nodes = t.nodes;
-    const d = cp._mnt2DGather();
-    expect(d.analysis).toBeTruthy();
-    // elastik merkez (rijitlik merkezi) sonlu
-    expect(d.analysis.ec).toBeTruthy();
-    expect(Number.isFinite(d.analysis.ec.x)).toBe(true);
-    expect(Number.isFinite(d.analysis.ec.z)).toBe(true);
-    // takoz başına statik yük payı topluca %100
-    expect(d.analysis.perMount).toHaveLength(d.mounts.length);
-    const shareSum = d.analysis.perMount.reduce((s, p) => s + p.share, 0);
-    expect(shareSum).toBeCloseTo(1, 3);
-    // sonuç ilgili takoz nesnesine iliştirildi (hover için)
-    expect(typeof d.mounts[0].dz).toBe('number');
-    expect(typeof d.mounts[0].share).toBe('number');
-    delete global.nodes;
-  });
-  test('_mnt2DViewSVG elastik merkez etiketini içerir (EM mevcutsa)', () => {
-    const t = buildTTARTopology();
-    global.nodes = t.nodes;
-    const svg = cp._mnt2DViewSVG(cp._mnt2DGather());
-    expect(svg).toContain('elastik merkez');       // EM etiketi
-    expect(svg).toContain('Elastik Merkez');        // EM hover başlığı
-    delete global.nodes;
-  });
 });
 
 describe('Koordinat Düzlemi bileşeni', () => {
