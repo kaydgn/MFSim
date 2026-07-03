@@ -5,10 +5,13 @@
   "main": "index.js",
   "scripts": {
     "build": "node build.js",
-    "test": "jest --verbose",
-    "test:unit": "jest --verbose",
+    "test": "jest",
+    "test:unit": "jest",
+    "test:watch": "jest --watch",
+    "test:changed": "jest -o",
+    "test:ci": "jest --verbose --ci",
     "test:e2e": "npx playwright test",
-    "test:all": "jest --verbose && npx playwright test"
+    "test:all": "jest && npx playwright test"
   },
   "repository": {
     "type": "git",

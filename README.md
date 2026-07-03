@@ -32,7 +32,7 @@ npm run test:all       # Run all tests
 - `js/` — JavaScript modules
 - `css/` — Stylesheets
 - `tests/` — Unit and E2E tests
-- `MFSim_Code.html` — Auto-generated single-file build (do not edit manually)
+- `MFSim_Code.html` — Auto-generated single-file build (git-ignored; run `npm run build` to produce it locally; CI publishes it to GitHub Pages)
 
 ## License
 

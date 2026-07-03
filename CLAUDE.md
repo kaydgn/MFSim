@@ -4,7 +4,7 @@
 Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framework yok).
 
 - `index.html` — Ana sayfa (modüler versiyon, js/ klasöründen script yükler)
-- `MFSim_Code.html` — Tek dosya versiyonu (otomatik üretilir, elle düzenlenmez)
+- `MFSim_Code.html` — Tek dosya versiyonu (otomatik üretilir, elle düzenlenmez, **git'e dahil değil** — `npm run build` üretir, CI deploy Pages'e yayınlar)
 - `js/` — Modüler JavaScript dosyaları
 - `css/` — Stiller
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
@@ -13,43 +13,71 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 
 **ÖNEMLİ:** Kod değişiklikleri **yalnızca** `js/` ve `css/` klasörlerindeki modüler dosyalara ve `index.html`'e yapılır. `MFSim_Code.html` dosyası **elle düzenlenmez** — `npm run build` ile otomatik üretilir.
 
-## Kodlama Sonrası Akış
+## Çalışma Akışı (hızlı döngü)
 
-Her kod değişikliğinden sonra şu adımları izle:
+Amaç: her küçük değişikliği build+tüm-test töreni yapmadan geliştirmek.
+Önemli gerçek: **birim testler build'e ihtiyaç duymaz** — testler doğrudan
+`js/` dosyalarını yükler, `MFSim_Code.html`'e dokunmaz. Build yalnızca
+E2E ve deploy için gerekir.
 
-### 1. Build (Monolitik dosyayı üret)
+### Geliştirirken: watch modu (döngünün merkezi)
 ```bash
-npm run build
+npm run test:watch      # arka planda açık kalsın; kaydettikçe İLGİLİ testler <1s'de koşar
 ```
-Bu komut `index.html` + `css/styles.css` + `js/*.js` dosyalarını birleştirip `MFSim_Code.html` üretir.
+Bu terminali açık bırak. Dosyayı kaydet → sadece değişimden etkilenen testler
+otomatik koşar. Elle `npm run build` / `npm test` döngüsü YOK.
 
-### 2. Birim Testleri (Jest + jsdom)
+Watch modu yoksa, yalnızca değişen dosyalara bağlı testler:
 ```bash
-npm test
-```
-Bu komut `tests/unit/` altındaki tüm `*.test.js` dosyalarını çalıştırır.
-
-### 3. E2E Testleri (Playwright - yerel ortam gerektirir)
-```bash
-npm run test:e2e
-```
-**Not:** Bu testler Chromium tarayıcısı gerektirir. İlk kurulumda `npx playwright install chromium` çalıştırılmalıdır.
-
-### 4. Her İkisi Birden
-```bash
-npm run test:all
+npm run test:changed    # jest -o — git'te değişen dosyalarla ilgili testler
 ```
 
-## Çalışma Akışı
+### Commit'ten HEMEN ÖNCE (tek sefer)
+```bash
+npm run build           # MFSim_Code.html üret
+npm test                # tüm birim testleri (sessiz)
+```
+İkisi de yeşilse commit et (build çıktısı dahil). Yani build ve tam test
+her düzenlemede değil, **commit başına bir kez** çalışır.
 
-Claude Code ile çalışırken şu akışı uygula:
+### E2E (opsiyonel, yalnızca UI akışını etkileyen değişikliklerde)
+```bash
+npm run test:e2e        # Chromium gerekir: npx playwright install chromium
+```
 
-1. **Kodlama**: Değişikliği `js/`, `css/` veya `index.html` dosyalarına uygula
-2. **Build**: `npm run build` çalıştır → `MFSim_Code.html` otomatik güncellenir
-3. **Test**: `npm test` çalıştır
-   - Testler başarısızsa → düzelt ve tekrar test et
-   - Testler başarılıysa → commit yap (build çıktısı dahil)
-4. **Yeni test yazımı**: Değişiklik yeni bir fonksiyon ekliyorsa, `tests/unit/` altına test ekle
+## Test Politikası — hangi değişikliğe test yazılır?
+
+Amaç: "her fonksiyona test" değil, **değer başına test**. Kırılgan testler
+her UI rötuşunda kırılıp süreci uzatır.
+
+**Test YAZ (yüksek değer):** mantık, matematik, sayısal çekirdek, veri
+dönüşümü, durum yönetimi. Örnek: `numerics` (RK45/PCHIP), `mount-core`,
+`solver`, `state` (undo/redo), kaydetme/serileştirme, topoloji tarama.
+Bunlarda sessiz bir regresyon "makul ama yanlış" sonuç üretir; gözle
+yakalanmaz — testin karşılığı burada.
+
+**Test YAZMA (düşük değer / kırılgan):** yalnızca HTML string üreten sunum
+fonksiyonları için `expect(html).toContain('...etiket/id...')` testleri.
+Bunlar bir etiketi değiştirince kırılır, davranışı değil detayı test eder.
+Gerekiyorsa panel başına **tek** bir "üretiliyor mu / patlamıyor mu" smoke
+testi yeter; her alan/etiket için ayrı assertion açma.
+
+### Yeni birim testi yazma şablonu
+
+Ortak boilerplate `tests/helpers/setup.js`'te merkezi (jest `setupFiles`):
+`loadSource()`, `stubGlobals()`, `resetStubs()` her test dosyasında hazır.
+
+```js
+// module.exports guard'ı olan modül → doğrudan require:
+const core = require('../../js/mount-core.js');
+
+// Üst-seviye (global) fonksiyon bildiren modül → stub + eval:
+const stubs = stubGlobals();            // showToast/saveState/... = jest.fn()
+eval(loadSource('sensors.js'));         // üst-seviye fonksiyonlar test kapsamına gelir
+beforeEach(() => resetStubs(stubs));
+```
+
+Referans örnek: `tests/unit/sensors.test.js`.
 
 ## Test Dosyaları
 
@@ -63,9 +91,11 @@ Claude Code ile çalışırken şu akışı uygula:
 ## Sık Kullanılan Komutlar
 
 ```bash
-npm run build               # MFSim_Code.html üret (modüler → monolitik)
-npm test                    # Birim testlerini çalıştır
-npm run test:unit           # Birim testlerini çalıştır (aynı)
-npm run test:e2e            # E2E testlerini çalıştır (tarayıcı gerekli)
-npm run test:all            # Tümünü çalıştır
+npm run test:watch          # ★ geliştirme döngüsü — kaydettikçe ilgili testler koşar
+npm run test:changed        # git'te değişen dosyalarla ilgili testler (jest -o)
+npm test                    # tüm birim testleri (sessiz) — commit öncesi
+npm run test:ci             # tüm birim testleri (--verbose --ci) — CI logları için
+npm run build               # MFSim_Code.html üret (modüler → monolitik) — commit/deploy öncesi
+npm run test:e2e            # E2E testleri (Chromium gerekli)
+npm run test:all            # birim + E2E
 ```
