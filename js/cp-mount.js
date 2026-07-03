@@ -613,7 +613,11 @@ function getMntExamplePropertiesHTML(node){
   html+='</select>';
   if(diagram){
     html+='<div style="font-size:0.55rem; font-weight:700; color:var(--text-muted); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:5px;">Topoloji</div>';
-    html+='<div style="width:100%; padding:10px; box-sizing:border-box; border:1px solid var(--border-color); background:var(--bg-primary); border-radius:6px; margin-bottom:12px; overflow:hidden;">'+diagram+'</div>';
+    // Görsel/şema panele oranla küçültülür (en-boy korunur) ve ortalanır —
+    // iç kap genişliği sınırlar, içteki <img>/<svg> %100 ile onu doldurur.
+    html+='<div style="width:100%; padding:10px; box-sizing:border-box; border:1px solid var(--border-color); background:var(--bg-primary); border-radius:6px; margin-bottom:12px; overflow:hidden; text-align:center;">'
+      +'<div style="display:inline-block; width:70%; max-width:280px; vertical-align:top;">'+diagram+'</div>'
+      +'</div>';
   }
   html+=_mntExampleDetailsHTML(ex);
   html+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:5px; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği Aktar</button>';
