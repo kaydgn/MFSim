@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  # Elle tetik — başarısız/atlanan bir Pages deploy'unu Actions sekmesinden
+  # "Run workflow" ile yeniden çalıştırmak için (kod değişikliği gerektirmez).
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -43,7 +46,7 @@ jobs:
     if: success()
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,6 +83,20 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
+      # GitHub Pages backend zaman zaman "Deployment failed, try again later."
+      # geçici hatası verir (özellikle art arda hızlı merge'lerde deploy'lar
+      # çakışınca). İlk deneme başarısızsa kısa bekleyişten sonra bir kez
+      # daha denenir; ikisi de düşerse job gerçekten fail olur.
       - name: Deploy to GitHub Pages
         id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Wait before retry
+        if: steps.deployment.outcome == 'failure'
+        run: sleep 45
+
+      - name: Deploy to GitHub Pages (retry)
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
         uses: actions/deploy-pages@v4
