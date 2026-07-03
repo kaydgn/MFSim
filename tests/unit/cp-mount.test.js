@@ -356,6 +356,41 @@ describe('Örnek bileşeni', () => {
     expect(cp._mntExampleBodyType('Sol cradle')).toBe('mnt-bracket');
     expect(cp._mntExampleBodyType('Transfer Kutusu')).toBe('mnt-transfer');
   });
+  test('panel: topoloji görseli + araç detayları + Örneği Aktar', () => {
+    const node = { id: 'ex1', type: 'mnt-example', def: { name: 'Örnek' }, data: {} };
+    const html = cp.getMntExamplePropertiesHTML(node);
+    expect(html).toContain('veMntSetExample(\'ex1\'');   // seçici canlı yenileme
+    expect(html).toContain('<svg');                       // otomatik topoloji şeması
+    expect(html).toContain('BMC TTAR 2031');              // araç başlığı (detay)
+    expect(html).toContain('Örneği Aktar');               // aktar düğmesi
+  });
+  test('kayıt defteri: bilinen anahtar çözülür, bilinmeyen TTAR\'a düşer', () => {
+    expect(core.getMountExample('ttar').model).toBe(core.TTAR_EXAMPLE);
+    expect(core.getMountExample('yok-boyle-anahtar').id).toBe('ttar');
+    expect(core.getMountExampleList().length).toBeGreaterThanOrEqual(1);
+    expect(cp._mntExampleReg('ttar').model).toBe(core.TTAR_EXAMPLE);
+  });
+  test('yerleşim: otomatik (orta sıra kütle, alt/üst takoz) + at[] override', () => {
+    const L = cp._mntExampleLayout(core.TTAR_EXAMPLE);
+    expect(L.bodies).toHaveLength(core.TTAR_EXAMPLE.components.length);
+    expect(L.mnts).toHaveLength(core.TTAR_EXAMPLE.mounts.length);
+    // kütleler tek sırada (aynı ly); ilk takoz üst, sonuncusu alt sırada
+    expect(L.bodies.every(b => b.ly === L.bodies[0].ly)).toBe(true);
+    expect(L.mnts[0].ly).toBeLessThan(L.bodyY);
+    expect(L.mnts[L.mnts.length - 1].ly).toBeGreaterThan(L.bodyY);
+    // at[] override → görsele birebir uyum
+    const custom = { components: [{ name: 'X', at: [11, 22] }], mounts: [{ name: 'M', at: [33, 44] }] };
+    const L2 = cp._mntExampleLayout(custom);
+    expect(L2.bodies[0]).toEqual({ lx: 11, ly: 22 });
+    expect(L2.mnts[0]).toEqual({ lx: 33, ly: 44 });
+  });
+  test('otomatik şema: model bileşen adlarını içeren tema-uyumlu SVG üretir', () => {
+    const svg = cp._mntExampleDiagramSVG(core.TTAR_EXAMPLE);
+    expect(svg).toMatch(/^<svg[\s\S]*<\/svg>$/);
+    expect(svg).toContain('Motor');
+    expect(svg).toContain('var(--accent-success)');  // takoz rengi (tema değişkeni)
+    expect(cp._mntExampleDiagramSVG(null)).toBe('');  // model yoksa boş
+  });
   test('TTAR modeli (6 takoz) → "Fazla takoz" UYARI verir, hata değil', () => {
     const topo = buildTTARTopology();
     global.nodes = topo.nodes;
