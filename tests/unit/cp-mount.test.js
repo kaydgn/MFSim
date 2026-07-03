@@ -179,6 +179,57 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     expect(mount.data.kzd).toBe(666);
     expect(mount.data.libKey).toBe('kX');
   });
+
+  test('veMntLibSetBuiltin gömülü takozu düzenler; fabrika sabiti mutasyona uğramaz', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
+    global.nodes = [lib];
+    cp.veMntLibSetBuiltin('lib1', 'amc55sha', 'sz', '999');
+    cp.veMntLibSetBuiltin('lib1', 'amc55sha', 'name', 'AMC 55 ShA (özel)');
+    // override node'da alan-bazlı saklanır
+    expect(lib.data.overrides.amc55sha.sz).toBe(999);
+    expect(lib.data.overrides.amc55sha.name).toBe('AMC 55 ShA (özel)');
+    // fabrika sabiti DEĞİŞMEZ
+    expect(cp.VE_MOUNT_LIBRARY['amc55sha'].sz).toBe(640);
+    expect(cp.VE_MOUNT_LIBRARY['amc55sha'].name).toBe('AMC 55 ShA');
+    // birleşik harita override'ı yansıtır; düzenlenmemiş alanlar fabrikayı izler
+    const m = cp.veMntGetLibraryMap()['amc55sha'];
+    expect(m.sz).toBe(999);
+    expect(m.name).toBe('AMC 55 ShA (özel)');
+    expect(m.sx).toBe(1252);       // düzenlenmemiş → fabrika
+    expect(m.builtin).toBe(true);
+    expect(m.overridden).toBe(true);
+  });
+
+  test('düzenlenen gömülü takoz veMntApplyLib ile yeni değeri uygular', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
+    const mount = { id: 'm9', type: 'mnt-mount', def: { name: 'Takoz', isMount: true }, data: {} };
+    global.nodes = [lib, mount];
+    cp.veMntLibSetBuiltin('lib1', 'amc55sha', 'sz', '999');
+    cp.veMntApplyLib('m9', 'amc55sha');
+    expect(mount.data.kzs).toBe(999);     // override değeri
+    expect(mount.data.kxs).toBe(1252);    // düzenlenmemiş → fabrika
+  });
+
+  test('veMntLibResetBuiltin override siler; gömülü fabrika değerine döner', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
+    global.nodes = [lib];
+    cp.veMntLibSetBuiltin('lib1', 'amc55sha', 'sz', '999');
+    expect(cp.veMntGetLibraryMap()['amc55sha'].overridden).toBe(true);
+    cp.veMntLibResetBuiltin('lib1', 'amc55sha');
+    expect(lib.data.overrides.amc55sha).toBeUndefined();
+    const m = cp.veMntGetLibraryMap()['amc55sha'];
+    expect(m.sz).toBe(640);               // fabrikaya döndü
+    expect(m.overridden).toBe(false);
+  });
+
+  test('getMntLibraryPropertiesHTML: gömülü satırlar düzenlenebilir + ↺ butonu', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
+    global.nodes = [lib];
+    const html = cp.getMntLibraryPropertiesHTML(lib);
+    expect(html).toContain("veMntLibSetBuiltin('lib1','amc55sha','sz'");
+    expect(html).toContain("veMntLibResetBuiltin('lib1','amc55sha')");
+    expect(html).toContain('value="AMC 55 ShA"');   // gömülü ad artık input değeri
+  });
 });
 
 describe('Çözücü otomatik algılama (bağlantı gerekmez) → gather → çekirdek — TTAR', () => {

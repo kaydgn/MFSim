@@ -31,22 +31,39 @@ var VE_MOUNT_LIBRARY = {
   '57RS313774': { name:'ARKA - 57RS313774', sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 }
 };
 
-// ─── ETKİN KÜTÜPHANE (gömülü + kullanıcı tanımlı) ────────────────────────────
-// Gömülü katalog (VE_MOUNT_LIBRARY) DEĞİŞMEZ. "Takoz Özellikleri" (mnt-library)
-// düğümleri node.data.mounts içinde kullanıcı tanımlı takozları tutar; bu iki
-// kaynak burada birleştirilir. Takoz panelinin kütüphane açılır listesi ve
+// ─── ETKİN KÜTÜPHANE (gömülü + gömülü override + kullanıcı tanımlı) ───────────
+// Gömülü katalog (VE_MOUNT_LIBRARY) fabrika varsayılanıdır ve ÇALIŞMA ANINDA
+// DEĞİŞMEZ (asla mutasyona uğramaz). "Takoz Özellikleri" (mnt-library) düğümleri:
+//   node.data.mounts    → kullanıcı tanımlı takozlar (Özel grup)
+//   node.data.overrides → gömülü takozlara alan-bazlı düzenleme (fabrikanın üzerine)
+// Bu üç kaynak burada birleştirilir. Takoz panelinin kütüphane açılır listesi ve
 // veMntApplyLib doğrudan VE_MOUNT_LIBRARY yerine bu birleşik haritayı okur —
-// böylece kullanıcının eklediği takozlar da "Kütüphaneden yükle" listesinde çıkar.
-// Girdi biçimi (birleşik): { key, name, sx, sy, sz, dx, dy, dz, builtin }.
+// böylece kullanıcının eklediği/değiştirdiği takozlar da yansır. Override'lar
+// alan-bazlıdır: düzenlenmemiş alanlar fabrika değerini izler; ↺ ile override
+// silinince gömülü girdi fabrikaya döner. Girdi biçimi (birleşik):
+//   { key, name, sx, sy, sz, dx, dy, dz, builtin, overridden }.
 function veMntGetLibraryMap(){
   var map={};
   Object.keys(VE_MOUNT_LIBRARY).forEach(function(k){
     var m=VE_MOUNT_LIBRARY[k];
-    map[k]={ key:k, name:m.name, sx:m.sx, sy:m.sy, sz:m.sz, dx:m.dx, dy:m.dy, dz:m.dz, builtin:true };
+    map[k]={ key:k, name:m.name, sx:m.sx, sy:m.sy, sz:m.sz, dx:m.dx, dy:m.dy, dz:m.dz, builtin:true, overridden:false };
   });
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
     var def=_mntDef(n)||{};
-    if(def.isMountLibrary && n.data && Array.isArray(n.data.mounts)){
+    if(!def.isMountLibrary || !n.data) return;
+    // Gömülü override'ları uygula (fabrika değerinin üzerine, alan-bazlı).
+    var ov=n.data.overrides;
+    if(ov && typeof ov==='object'){
+      Object.keys(ov).forEach(function(k){
+        var base=map[k]; if(!base) return;                // yalnız var olan gömülü girdiler
+        var o=ov[k]||{}; if(!o || Object.keys(o).length===0) return;
+        var pick=function(f){ return (o[f]!==undefined && o[f]!==null && o[f]!=='') ? (f==='name'?o[f]:_mntNum(o[f])) : base[f]; };
+        map[k]={ key:k, name:pick('name'), sx:pick('sx'), sy:pick('sy'), sz:pick('sz'),
+          dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true };
+      });
+    }
+    // Kullanıcı tanımlı takozlar (Özel grup).
+    if(Array.isArray(n.data.mounts)){
       n.data.mounts.forEach(function(e){
         if(!e || !e.key) return;
         map[e.key]={ key:e.key, name:(e.name||'Özel Takoz'),
@@ -519,13 +536,16 @@ function _mntLibEnsure(node){
   return node.data;
 }
 // Kütüphane girdisi için kompakt sayısal/metin input (satır içi düzenleme).
-function _mntLibInp(nodeId, key, field, val, isText){
+// setter: değişimi yazan fonksiyon adı — Özel takoz için 'veMntLibSet',
+// gömülü override için 'veMntLibSetBuiltin' (varsayılan: veMntLibSet).
+function _mntLibInp(nodeId, key, field, val, isText, setter){
+  var fn=setter||'veMntLibSet';
   var v=(val===undefined||val===null)?'':val;
   var common='width:100%; padding:3px 4px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;';
   if(isText){
-    return '<input type="text" value="'+_mntEsc(v)+'" onchange="veMntLibSet(\''+nodeId+'\',\''+_mntEsc(key)+'\',\''+field+'\',this.value)" style="'+common+'">';
+    return '<input type="text" value="'+_mntEsc(v)+'" onchange="'+fn+'(\''+nodeId+'\',\''+_mntEsc(key)+'\',\''+field+'\',this.value)" style="'+common+'">';
   }
-  return '<input type="number" value="'+_mntEsc(v)+'" step="1" onchange="veMntLibSet(\''+nodeId+'\',\''+_mntEsc(key)+'\',\''+field+'\',this.value)" style="'+common+' text-align:right;">';
+  return '<input type="number" value="'+_mntEsc(v)+'" step="1" onchange="'+fn+'(\''+nodeId+'\',\''+_mntEsc(key)+'\',\''+field+'\',this.value)" style="'+common+' text-align:right;">';
 }
 function getMntLibraryPropertiesHTML(node){
   var d=_mntLibEnsure(node);
@@ -533,7 +553,7 @@ function getMntLibraryPropertiesHTML(node){
   var builtins=veMntGetLibraryList().filter(function(e){ return e.builtin; });
   var html='<div class="sw-panel">';
   html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-success);">'
-      + '<b style="color:var(--text-heading);">Takoz kataloğu.</b> Kendi takozlarınızı ekleyin; her girdi tüm <b>Takoz</b> bileşenlerinin <b>"Kütüphaneden rijitlik yükle"</b> listesinde <b>Özel</b> grubunda çıkar. Rijitlikler <b>N/mm</b>. Gömülü katalog salt-okunurdur.</div>';
+      + '<b style="color:var(--text-heading);">Takoz kataloğu.</b> Kendi takozlarınızı ekleyin; her girdi tüm <b>Takoz</b> bileşenlerinin <b>"Kütüphaneden rijitlik yükle"</b> listesinde <b>Özel</b> grubunda çıkar. Rijitlikler <b>N/mm</b>. <b>Gömülü katalog da düzenlenebilir</b>; değişiklikler projeyle kaydedilir, <b>↺</b> ile fabrika ayarına dönülür.</div>';
 
   // ── Kullanıcı takozları (düzenlenebilir) ──
   html+='<div class="sw-section-title">Özel Takozlar <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">'+custom.length+' adet · [N/mm]</span></div>';
@@ -561,18 +581,26 @@ function getMntLibraryPropertiesHTML(node){
   }
   html+='<button onclick="veMntLibAdd(\''+node.id+'\')" style="width:100%; padding:9px 12px; margin-bottom:14px; font-size:0.7rem; font-weight:700; background:var(--accent-success); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">＋ Yeni Takoz Ekle</button>';
 
-  // ── Gömülü katalog (salt-okunur) ──
-  html+='<div class="sw-section-title">Gömülü Katalog <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">salt-okunur · [N/mm]</span></div>';
+  // ── Gömülü katalog (düzenlenebilir; ↺ ile fabrika ayarına dön) ──
+  var nOv=builtins.filter(function(e){ return e.overridden; }).length;
+  html+='<div class="sw-section-title">Gömülü Katalog <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">düzenlenebilir'+(nOv?' · '+nOv+' değiştirildi':'')+' · [N/mm]</span></div>';
   html+='<div style="overflow-x:auto;"><table style="border-collapse:collapse; font-size:0.6rem; white-space:nowrap; min-width:100%;"><thead><tr style="background:var(--bg-tertiary);">';
   html+='<th style="'+_mntMxTh()+' text-align:left;">Ad</th>';
   ['kx','ky','kz'].forEach(function(l){ html+='<th style="'+_mntMxTh()+'">'+l+' (st)</th>'; });
   ['kx','ky','kz'].forEach(function(l){ html+='<th style="'+_mntMxTh()+'">'+l+' (dn)</th>'; });
-  html+='</tr></thead><tbody>';
+  html+='<th style="'+_mntMxTh()+'"></th></tr></thead><tbody>';
   builtins.forEach(function(e){
+    var ov=e.overridden;
+    var dot=ov?'<span title="Fabrikadan değiştirildi" style="color:var(--accent-warning); margin-right:3px;">●</span>':'';
     html+='<tr>';
-    html+='<td style="'+_mntMxTd()+' text-align:left; color:var(--text-secondary);">'+_mntEsc(e.name)+'</td>';
-    html+='<td style="'+_mntMxTd()+'">'+e.sx+'</td><td style="'+_mntMxTd()+'">'+e.sy+'</td><td style="'+_mntMxTd()+'">'+e.sz+'</td>';
-    html+='<td style="'+_mntMxTd()+'">'+e.dx+'</td><td style="'+_mntMxTd()+'">'+e.dy+'</td><td style="'+_mntMxTd()+'">'+e.dz+'</td>';
+    html+='<td style="'+_mntMxTd()+' text-align:left; min-width:120px;">'+dot+_mntLibInp(node.id,e.key,'name',e.name,true,'veMntLibSetBuiltin')+'</td>';
+    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'sx',e.sx,false,'veMntLibSetBuiltin')+'</td>';
+    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'sy',e.sy,false,'veMntLibSetBuiltin')+'</td>';
+    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'sz',e.sz,false,'veMntLibSetBuiltin')+'</td>';
+    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dx',e.dx,false,'veMntLibSetBuiltin')+'</td>';
+    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dy',e.dy,false,'veMntLibSetBuiltin')+'</td>';
+    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dz',e.dz,false,'veMntLibSetBuiltin')+'</td>';
+    html+='<td style="'+_mntMxTd()+'"><button onclick="veMntLibResetBuiltin(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Fabrika ayarına dön" style="background:none; border:1px solid var(--border-color); color:'+(ov?'var(--accent-warning)':'var(--text-muted)')+'; cursor:pointer; padding:2px 7px; font-size:0.72rem; line-height:1;">↺</button></td>';
     html+='</tr>';
   });
   html+='</tbody></table></div>';
@@ -614,6 +642,28 @@ function veMntLibSet(nodeId, key, field, val){
   if(typeof saveState==='function') saveState();
   // Ad/rijitlik değişimi Takoz açılır listesini etkiler; panel yeniden çizilmez
   // (aktif input odağı korunur — girdiler zaten güncel değeri gösterir).
+}
+// Gömülü takoz düzenleme — fabrika VE_MOUNT_LIBRARY'yi asla mutasyona uğratmaz;
+// değişikliği node.data.overrides[key][field] içine alan-bazlı yazar (kalıcı).
+function veMntLibSetBuiltin(nodeId, key, field, val){
+  if(!VE_MOUNT_LIBRARY[key]) return;                       // yalnız var olan gömülü girdi
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  if(!node.data.overrides || typeof node.data.overrides!=='object') node.data.overrides={};
+  if(!node.data.overrides[key]) node.data.overrides[key]={};
+  node.data.overrides[key][field]=(field==='name')?val:_mntNum(val);
+  if(typeof saveState==='function') saveState();
+  // Panel yeniden çizilmez (aktif input odağı korunur); ● rozeti bir sonraki
+  // açılışta güncellenir, ↺ butonu her zaman tıklanabilir.
+}
+// Gömülü takozu fabrika ayarına döndür — override'ı sil.
+function veMntLibResetBuiltin(nodeId, key){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(node.data && node.data.overrides && node.data.overrides[key]!==undefined){
+    delete node.data.overrides[key];
+    if(typeof saveState==='function') saveState();
+  }
+  if(typeof showNodeProperties==='function') showNodeProperties(node); // fabrika değerlerini geri bas
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -909,6 +959,8 @@ if(typeof module!=='undefined' && module.exports){
     veMntLibAdd: veMntLibAdd,
     veMntLibRemove: veMntLibRemove,
     veMntLibSet: veMntLibSet,
+    veMntLibSetBuiltin: veMntLibSetBuiltin,
+    veMntLibResetBuiltin: veMntLibResetBuiltin,
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     VE_MNT_EXAMPLES: VE_MNT_EXAMPLES,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
