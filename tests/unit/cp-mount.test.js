@@ -440,6 +440,9 @@ describe('3D Görüntüleyici bileşeni', () => {
     // interaktif: katman aç/kapa + sıfırla + büyüt + boyutlandırma
     expect(html).toContain("veMountViewerToggle('grid')");
     expect(html).toContain('veMountViewerReset()');
+    // tam ekran (tüm pencereyi büyüt) + hover ipucu
+    expect(html).toContain('veMntViewerFullscreen()');
+    expect(html).toContain('bilgi');
     // Büyüt/resize kaldırıldı (kullanıcı isteği: iç 3D genişlemesi gereksiz)
     expect(html).not.toContain('veMntViewerExpand');
     expect(html).not.toContain('resize:vertical');
@@ -454,6 +457,7 @@ describe('2D Görünüm bileşeni', () => {
     const html = cp.getMnt2DViewPropertiesHTML({ id: 'd1', type: 'mnt-2dview', def: {}, data: {} });
     expect(html).toContain('ve-mnt-2dview-box');
     expect(html).toContain('veMnt2DViewRefresh()');
+    expect(html).toContain('veMnt2DViewFullscreen()');   // tam ekran
   });
   test('_mnt2DGather kütle-ağırlıklı birleşik CG hesaplar', () => {
     global.nodes = [
@@ -476,8 +480,8 @@ describe('2D Görünüm bileşeni', () => {
     expect(svg).toContain('<svg');
     expect(svg).toContain('Üstten Görünüş');
     expect(svg).toContain('Yandan Görünüş');
-    expect(svg).toContain('<rect');   // takoz karesi
-    expect(svg).toContain('Z=0');     // zemin çizgisi
+    expect(svg).toContain('<rect');       // takoz karesi / çerçeve
+    expect(svg).toMatch(/Z\s*=\s*0/);     // zemin çizgisi etiketi
   });
 });
 

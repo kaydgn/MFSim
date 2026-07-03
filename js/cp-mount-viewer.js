@@ -63,26 +63,31 @@ function veMountViewerInit(canvasId, mode){
   var d1 = new THREE.DirectionalLight(0xffffff, isLight ? 0.6 : 0.8); d1.position.set(500,1000,500); scene.add(d1);
   var d2 = new THREE.DirectionalLight(0xffffff, 0.3); d2.position.set(-500,-500,-500); scene.add(d2);
 
-  // Izgara çizgileri: kenarlık rengi (tema) + soluk varyantı.
+  // Izgara çizgileri: kenarlık rengi (tema) + soluk varyantı. 3D görüntüleyicide
+  // (model modu) zemin AÇILIŞTA GİZLİ gelir (kullanıcı isteği); koordinat modunda
+  // görünür (koordinat zeminini temsil eder).
+  var _mode = mode||'model';
   var gc = _mntViewerCssColor('--border-color', '#333333');
   var grid = new THREE.GridHelper(3000, 30, gc, gc.clone().multiplyScalar(0.55));
-  grid.position.y = -200; scene.add(grid);
+  grid.position.y = -200; grid.visible = (_mode==='coordframe'); scene.add(grid);
 
   var group = new THREE.Group(); scene.add(group);   // yeniden kurulan içerik
 
   _veMountViewer = {
     scene:scene, camera:camera, renderer:renderer, canvas:canvas, group:group,
-    grid:grid, mode:(mode||'model'),
+    grid:grid, mode:_mode,
     axes:[], labelSprites:[], planes:[],
     massScale:{min:0,max:1},
     ctrl:{ theta:-Math.PI*0.75, phi:Math.PI/3, radius:2800, target:new THREE.Vector3(0,0,0) },
-    raf:null, disposed:false, ro:null
+    raf:null, disposed:false, ro:null,
+    raycaster:new THREE.Raycaster(), mouse:new THREE.Vector2(), tooltip:null, dragging:false
   };
 
   // Sabit eksen üçlüsü (model modu). Koordinat modu ekseni kendi çizer.
   if(_veMountViewer.mode !== 'coordframe') _mntViewerAxes(scene);
   _mntViewerUpdateCamera();
   _mntViewerAttachControls(canvas);
+  _mntViewerAttachHover(canvas);
 
   // Panel yeniden boyutlandığında canvas'ı takip et (resize desteği).
   if(typeof ResizeObserver !== 'undefined'){
@@ -143,8 +148,8 @@ function _mntViewerUpdateCamera(){
 
 function _mntViewerAttachControls(canvas){
   var dragging=false, btn=0, px=0, py=0;
-  canvas.addEventListener('mousedown', function(e){ dragging=true; btn=e.button; px=e.clientX; py=e.clientY; e.preventDefault(); });
-  window.addEventListener('mouseup', function(){ dragging=false; });
+  canvas.addEventListener('mousedown', function(e){ dragging=true; btn=e.button; px=e.clientX; py=e.clientY; if(_veMountViewer) _veMountViewer.dragging=true; e.preventDefault(); });
+  window.addEventListener('mouseup', function(){ dragging=false; if(_veMountViewer) _veMountViewer.dragging=false; });
   window.addEventListener('mousemove', function(e){
     var V=_veMountViewer; if(!V || !dragging) return;
     var dx=e.clientX-px, dy=e.clientY-py; px=e.clientX; py=e.clientY;
@@ -169,6 +174,44 @@ function _mntViewerAttachControls(canvas){
     _mntViewerUpdateCamera();
   }, {passive:false});
   canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+}
+
+// Fare ile bileşen/takoz üzerine gelince özelliklerini tooltip olarak göster
+// (raycast). İşaretlerde userData.info (HTML) tutulur (bkz. veMountViewerUpdate).
+function _mntViewerAttachHover(canvas){
+  var V=_veMountViewer; if(!V) return;
+  var tip=document.createElement('div');
+  tip.style.cssText='position:fixed; z-index:100060; pointer-events:none; display:none; max-width:240px; '
+    +'padding:7px 9px; font-size:0.62rem; line-height:1.5; background:var(--bg-secondary,#1a1a1a); '
+    +'color:var(--text-primary,#eee); border:1px solid var(--border-color,#444); border-radius:6px; '
+    +'box-shadow:0 6px 20px rgba(0,0,0,0.45);';
+  document.body.appendChild(tip);
+  V.tooltip=tip;
+  canvas.addEventListener('mousemove', function(e){
+    var W=_veMountViewer; if(!W || W.disposed || !W.tooltip) return;
+    if(W.dragging){ W.tooltip.style.display='none'; return; }
+    var rect=canvas.getBoundingClientRect();
+    W.mouse.x = ((e.clientX-rect.left)/rect.width)*2-1;
+    W.mouse.y = -((e.clientY-rect.top)/rect.height)*2+1;
+    W.raycaster.setFromCamera(W.mouse, W.camera);
+    var hits=W.raycaster.intersectObjects(W.group.children, false);
+    var hit=null;
+    for(var i=0;i<hits.length;i++){ if(hits[i].object && hits[i].object.userData && hits[i].object.userData.info){ hit=hits[i].object; break; } }
+    if(hit){
+      W.tooltip.innerHTML=hit.userData.info;
+      W.tooltip.style.display='block';
+      var tx=e.clientX+14, ty=e.clientY+14;
+      var tw=W.tooltip.offsetWidth, th=W.tooltip.offsetHeight;
+      if(tx+tw>window.innerWidth-8) tx=e.clientX-tw-14;
+      if(ty+th>window.innerHeight-8) ty=e.clientY-th-14;
+      W.tooltip.style.left=tx+'px'; W.tooltip.style.top=ty+'px';
+      canvas.style.cursor='pointer';
+    } else {
+      W.tooltip.style.display='none';
+      canvas.style.cursor='';
+    }
+  });
+  canvas.addEventListener('mouseleave', function(){ if(_veMountViewer && _veMountViewer.tooltip) _veMountViewer.tooltip.style.display='none'; });
 }
 
 function _mntViewerAxes(scene){
@@ -200,6 +243,10 @@ function _mntViewerLabel(text, pos){
 
 // giriş (x,y,z) mm → dünya vektörü
 function _mntW(x,y,z){ return new THREE.Vector3(x, z, y); }
+
+// Hover tooltip için basit kaçış + sayısal biçim.
+function _mntViewerEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function _mntViewerN(v,d){ var n=Number(String(v).replace(',','.')); return Number.isFinite(n)?n.toFixed(d===undefined?1:d):'—'; }
 
 // Kütle → CG işaret yarıçapı (A26 getCGMarkerRadiusFromMass portu)
 function _mntCGRadius(mass, ms){
@@ -261,6 +308,10 @@ function veMountViewerUpdate(){
     var box=new THREE.Mesh(new THREE.BoxGeometry(60,40,60),
       new THREE.MeshPhongMaterial({color:0x22c55e, emissive:0x114422, shininess:30}));
     box.position.copy(_mntW(x,y,z));
+    var kInfo='';
+    if(mt.kxs!==undefined||mt.kzs!==undefined) kInfo='<br><span style="color:#888;">Statik k (N/mm):</span> '+_mntViewerN(mt.kxs,0)+' · '+_mntViewerN(mt.kys,0)+' · '+_mntViewerN(mt.kzs,0);
+    box.userData={ info:'<b style="color:#22c55e;">'+_mntViewerEsc(mt.name||'Takoz')+'</b>'
+      +'<br><span style="color:#888;">Konum (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1)+kInfo };
     V.group.add(box);
     if(hasCG){
       var g=new THREE.BufferGeometry().setFromPoints([_mntW(cg[0],cg[1],cg[2]), _mntW(x,y,z)]);
@@ -278,6 +329,9 @@ function veMountViewerUpdate(){
     var s=new THREE.Mesh(new THREE.SphereGeometry(r,18,18),
       new THREE.MeshPhongMaterial({color:0xf59e0b, emissive:0x553300, shininess:20}));
     s.position.copy(_mntW(x,y,z));
+    s.userData={ info:'<b style="color:#f59e0b;">'+_mntViewerEsc(c.name||'Bileşen')+'</b>'
+      +'<br><span style="color:#888;">Kütle:</span> '+(m>0?m.toFixed(1)+' kg':'—')
+      +'<br><span style="color:#888;">CG (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1) };
     V.group.add(s);
   });
 
@@ -286,6 +340,9 @@ function veMountViewerUpdate(){
     var cgm=new THREE.Mesh(new THREE.SphereGeometry(40,32,32),
       new THREE.MeshPhongMaterial({color:0xef4444, emissive:0x551111, shininess:80}));
     cgm.position.copy(_mntW(cg[0],cg[1],cg[2]));
+    cgm.userData={ info:'<b style="color:#ef4444;">Birleşik Ağırlık Merkezi</b>'
+      +'<br><span style="color:#888;">Toplam kütle:</span> '+mSum.toFixed(1)+' kg'
+      +'<br><span style="color:#888;">CG (mm):</span> '+cg[0].toFixed(1)+' · '+cg[1].toFixed(1)+' · '+cg[2].toFixed(1) };
     V.group.add(cgm);
     // Kamera hedefini birleşik CG'ye getir (ilk kurulumda)
     if(!V._framed){ V.ctrl.target.copy(_mntW(cg[0],cg[1],cg[2])); _mntViewerUpdateCamera(); V._framed=true; }
@@ -351,6 +408,7 @@ function veMountViewerDispose(){
   V.disposed=true;
   if(V.raf) cancelAnimationFrame(V.raf);
   if(V.ro){ try{ V.ro.disconnect(); }catch(e){} }
+  if(V.tooltip){ try{ V.tooltip.remove(); }catch(e){} V.tooltip=null; }
   try {
     while(V.group && V.group.children.length){
       var o=V.group.children.pop();
