@@ -4,7 +4,7 @@
 Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framework yok).
 
 - `index.html` — Ana sayfa (modüler versiyon, js/ klasöründen script yükler)
-- `MFSim_Code.html` — Tek dosya versiyonu (otomatik üretilir, elle düzenlenmez)
+- `MFSim_Code.html` — Tek dosya versiyonu (otomatik üretilir, elle düzenlenmez, **git'e dahil değil** — `npm run build` üretir, CI deploy Pages'e yayınlar)
 - `js/` — Modüler JavaScript dosyaları
 - `css/` — Stiller
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
