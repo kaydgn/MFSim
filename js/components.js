@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-solver','mnt-example','mnt-viewer','arac-performans','mount-analysis'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -260,6 +260,15 @@ var componentDefs = {
     name: 'Takoz',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg>',
     inputs: 0, outputs: 1, isMount: true, defaultWidth: 50, defaultHeight: 46
+  },
+  // Takoz Özellikleri — takoz KATALOĞU/kütüphane yöneticisi. Fiziksel topolojiye
+  // bağlanmaz (giriş/çıkış portu yok); node.data.mounts içinde kullanıcı tanımlı
+  // takozları tutar. Buradaki girdiler her Takoz'un "Kütüphaneden yükle" listesinde
+  // görünür. İç topolojide tek kopya (maxInstances:1). Panel: cp-mount.js.
+  'mnt-library': {
+    name: 'Takoz Özellikleri',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="16" y="12" width="68" height="76" rx="6" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="5"/><path d="M40 30 Q34 35 43 39 Q34 43 43 47 Q34 51 40 55" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="54" y1="34" x2="74" y2="34" stroke="var(--text-secondary, #888)" stroke-width="4" stroke-linecap="round"/><line x1="54" y1="44" x2="74" y2="44" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/><line x1="26" y1="68" x2="74" y2="68" stroke="var(--text-muted, #aaa)" stroke-width="3.5" stroke-linecap="round"/><line x1="26" y1="78" x2="60" y2="78" stroke="var(--text-muted, #aaa)" stroke-width="3.5" stroke-linecap="round"/></svg>',
+    inputs: 0, outputs: 0, isMountLibrary: true, maxInstances: 1, defaultWidth: 60, defaultHeight: 54
   },
   'mnt-solver': {
     name: 'Çözücü',
