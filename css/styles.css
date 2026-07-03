@@ -1625,14 +1625,21 @@
   box-shadow:0 0 0 3px rgba(59,130,246,0.3);
 }
 
+/* Etiket, düğüm KUTUSUNUN merkezine göre ortalanır. Mutlak konumlandırma ile
+   akıştan çıkarılır → kutu (portlar/bağlantılar node.x'e göre hesaplanır) sola
+   yaslı kalır; uzun etiket kutuyu genişletip kaydırmadan iki yana eşit taşar. */
 .ve-node-label{
+  position:absolute;
+  top:100%;
+  left:50%;
+  transform:translateX(-50%);
   margin-top:4px;
   font-size:0.7rem;
   color:var(--text-primary);
   text-align:center;
-  width:100%;
   white-space:nowrap;
   overflow:visible;
+  pointer-events:none;
 }
 .ve-wheel-master-badge{
   position:absolute;
