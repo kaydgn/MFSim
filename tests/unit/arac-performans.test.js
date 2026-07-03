@@ -217,11 +217,11 @@ describe('Sidebar kapsamı (veShowAllSidebarComponents + veSyncSidebarScope)', (
     expect(disp('cat-mnt')).toBe('none');
   });
 
-  test('modül içi (arac-performans): Modüller + güç aktarma görünür, mount gizli', () => {
+  test('modül içi (arac-performans): güç aktarma görünür, Modüller GİZLİ (modül içinde modül yok), mount gizli', () => {
     setupSidebar();
     veSidebarScope = 'arac-performans';
     veShowAllSidebarComponents();
-    expect(disp('cat-mod')).toBe('');
+    expect(disp('cat-mod')).toBe('none');   // alt-topolojide Modüller gizlenir
     expect(disp('cat-ap')).toBe('');
     expect(disp('cat-tools')).toBe('');
     expect(disp('cat-mnt')).toBe('none');

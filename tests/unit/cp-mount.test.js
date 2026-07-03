@@ -320,16 +320,23 @@ describe('Estetik paneller — yan yana alanlar', () => {
 });
 
 describe('Starter yerleşim (modül açılınca hazır bileşenler)', () => {
-  test('10 düğüm: 4 kütle gövdesi + 5 takoz + Çözücü', () => {
+  test('fiziksel + takoz + Çözücü + analiz araçları', () => {
     const L = cp.VE_MNT_STARTER_LAYOUT;
-    expect(L).toHaveLength(10);
     expect(L.filter(i => i.type === 'mnt-mount')).toHaveLength(5);
     expect(L.filter(i => i.type === 'mnt-solver')).toHaveLength(1);
     expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-shaft']));
+    // referans görseldeki analiz araçları da starter'da (image 1)
+    expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-coordframe', 'mnt-library', 'mnt-viewer', 'mnt-2dview', 'mnt-example']));
   });
-  test('takoz adları referans görsel ile aynı', () => {
-    const names = cp.VE_MNT_STARTER_LAYOUT.filter(i => i.type === 'mnt-mount').map(i => i.name);
-    expect(names).toEqual(['Ön Takoz', 'Sağ Yan Takoz', 'Sağ Arka Takoz', 'Sol Yan Takoz', 'Sol Arka Takoz']);
+  test('takoz adları referans görsel ile aynı (5 adet)', () => {
+    const names = cp.VE_MNT_STARTER_LAYOUT.filter(i => i.type === 'mnt-mount').map(i => i.name).sort();
+    expect(names).toEqual(['Sağ Arka Takoz', 'Sağ Yan Takoz', 'Sol Arka Takoz', 'Sol Yan Takoz', 'Ön Takoz'].sort());
+  });
+  test('kütle gövdesi adlarında "(Kütle)" son eki yok', () => {
+    const bodyNames = cp.VE_MNT_STARTER_LAYOUT
+      .filter(i => /mnt-(motor|gearbox|shaft|transfer)/.test(i.type) && i.name)
+      .map(i => i.name);
+    bodyNames.forEach(n => expect(n).not.toMatch(/\(Kütle\)/));
   });
 });
 
@@ -377,10 +384,44 @@ describe('3D Görüntüleyici bileşeni', () => {
     // interaktif: katman aç/kapa + sıfırla + büyüt + boyutlandırma
     expect(html).toContain("veMountViewerToggle('grid')");
     expect(html).toContain('veMountViewerReset()');
-    expect(html).toContain('veMntViewerExpand(this)');
-    expect(html).toContain('resize:vertical');
+    // Büyüt/resize kaldırıldı (kullanıcı isteği: iç 3D genişlemesi gereksiz)
+    expect(html).not.toContain('veMntViewerExpand');
+    expect(html).not.toContain('resize:vertical');
     // garip açıklama kutusu YOK
     expect(html).not.toContain('Aktif tema ile uyumlu');
+  });
+});
+
+describe('2D Görünüm bileşeni', () => {
+  afterEach(() => { delete global.nodes; });
+  test('panel: diyagram kutusu + Yenile', () => {
+    const html = cp.getMnt2DViewPropertiesHTML({ id: 'd1', type: 'mnt-2dview', def: {}, data: {} });
+    expect(html).toContain('ve-mnt-2dview-box');
+    expect(html).toContain('veMnt2DViewRefresh()');
+  });
+  test('_mnt2DGather kütle-ağırlıklı birleşik CG hesaplar', () => {
+    global.nodes = [
+      { id: 'a', type: 'mnt-motor',   def: { isMountBody: true }, data: { mass: 100, cgx: 0,   cgy: 0, cgz: 0 } },
+      { id: 'b', type: 'mnt-gearbox', def: { isMountBody: true }, data: { mass: 300, cgx: 200, cgy: 0, cgz: 0 } },
+      { id: 'm', type: 'mnt-mount',   def: { isMount: true },     data: { x: 50, y: 10, z: 20 } }
+    ];
+    const d = cp._mnt2DGather();
+    expect(d.comps).toHaveLength(2);
+    expect(d.mounts).toHaveLength(1);
+    expect(d.cg.x).toBeCloseTo(150, 3); // (100·0 + 300·200)/400 = 150
+  });
+  test('_mnt2DViewSVG: boş → mesaj, dolu → iki ölçekli görünüş', () => {
+    expect(cp._mnt2DViewSVG({ comps: [], mounts: [], cg: null })).toMatch(/Görüntülenecek bileşen yok/);
+    const svg = cp._mnt2DViewSVG({
+      comps: [{ name: 'Motor', mass: 100, x: 0, y: 0, z: 100 }],
+      mounts: [{ name: 'Ön Takoz', x: -50, y: 20, z: 30 }],
+      cg: { x: 0, y: 0, z: 100, m: 100 }
+    });
+    expect(svg).toContain('<svg');
+    expect(svg).toContain('Üstten Görünüş');
+    expect(svg).toContain('Yandan Görünüş');
+    expect(svg).toContain('<rect');   // takoz karesi
+    expect(svg).toContain('Z=0');     // zemin çizgisi
   });
 });
 
@@ -401,7 +442,7 @@ describe('Kinematik girdiler + tork yük durumları', () => {
     const node = { id: 'mo1', type: 'mnt-motor', def: { name: 'Motor (Kütle)' }, data: {} };
     const html = cp.getMntMassPropertiesHTML(node);
     expect(html).toContain('ve-mnt-Te-mo1');
-    expect(html).toContain('Motor / Tahrik');
+    expect(html).toContain('Motor · Tahrik');
   });
   test('Şanzıman paneli vites oranları + stall içerir', () => {
     const node = { id: 'gb1', type: 'mnt-gearbox', def: { name: 'Şanzıman (Kütle)' }, data: {} };
