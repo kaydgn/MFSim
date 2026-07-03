@@ -346,7 +346,7 @@ describe('Örnek bileşeni', () => {
     const html = cp.getMntExamplePropertiesHTML(node);
     expect(html).toContain('ve-mnt-example-sel');
     expect(html).toContain("veMntLoadExample('ex1')");
-    expect(html).toContain('BMC TTAR');
+    expect(html).toContain('BMC SİPER');
     expect(html).toContain('ve-mnt-example-report');
   });
   test('örnek adı → kanvas kütle tipi eşlemesi', () => {
@@ -361,14 +361,15 @@ describe('Örnek bileşeni', () => {
     const html = cp.getMntExamplePropertiesHTML(node);
     expect(html).toContain('veMntSetExample(\'ex1\'');   // seçici canlı yenileme
     expect(html).toContain('<svg');                       // otomatik topoloji şeması
-    expect(html).toContain('BMC TTAR 2031');              // araç başlığı (detay)
+    expect(html).toContain('BMC Siper');                  // araç başlığı (detay)
     expect(html).toContain('Örneği Aktar');               // aktar düğmesi
   });
-  test('kayıt defteri: bilinen anahtar çözülür, bilinmeyen TTAR\'a düşer', () => {
-    expect(core.getMountExample('ttar').model).toBe(core.TTAR_EXAMPLE);
-    expect(core.getMountExample('yok-boyle-anahtar').id).toBe('ttar');
+  test('kayıt defteri: bilinen anahtar çözülür, bilinmeyen ilk örneğe düşer', () => {
+    const first = core.getMountExampleList()[0];
+    expect(core.getMountExample('siper').id).toBe('siper');
+    expect(core.getMountExample('yok-boyle-anahtar').id).toBe(first.id);  // bilinmeyen → ilk örnek
     expect(core.getMountExampleList().length).toBeGreaterThanOrEqual(1);
-    expect(cp._mntExampleReg('ttar').model).toBe(core.TTAR_EXAMPLE);
+    expect(cp._mntExampleReg('siper').model).toBe(core.getMountExample('siper').model);
   });
   test('yerleşim: otomatik (orta sıra kütle, alt/üst takoz) + at[] override', () => {
     const L = cp._mntExampleLayout(core.TTAR_EXAMPLE);
@@ -407,10 +408,15 @@ describe('Örnek bileşeni', () => {
     expect(m.components[2].pointMass).toBe(true);
     expect(m.mounts.every(x => x.kstat[2] === 640 && x.kdyn[2] === 977)).toBe(true);
     expect(m.torque.Te).toBe(3000);
-    // panelde açılır menüde her iki örnek de listelenir
+    // her gövde/takoz kullanıcı düzenine ait at:[lx,ly] taşır (görsel↔topoloji birebir)
+    expect(m.components.every(c => Array.isArray(c.at) && c.at.length === 2)).toBe(true);
+    expect(m.mounts.every(x => Array.isArray(x.at) && x.at.length === 2)).toBe(true);
+    // önizleme sahnesinde yardımcı araçlar (tools) tanımlı
+    expect(ex.tools.map(t => t.type)).toContain('mnt-solver');
+    // panelde araç adı + otomatik şema görünür
     const html = cp.getMntExamplePropertiesHTML({ id: 'e', type: 'mnt-example', data: { exampleKey: 'siper' } });
     expect(html).toContain('BMC Siper');
-    expect(html).toContain('BMC TTAR 2031');
+    expect(html).toContain('<svg');
   });
   test('TTAR modeli (6 takoz) → "Fazla takoz" UYARI verir, hata değil', () => {
     const topo = buildTTARTopology();

@@ -511,36 +511,53 @@ function _mntExampleLayout(model){
   return { bodies:bodies, mnts:mnts, bodyY:bodyY, half:half };
 }
 
-// Modelden tema-uyumlu şematik SVG üret (örnek kendi görselini vermediğinde).
-// Kütleler yuvarlak dikdörtgen, takozlar yeşil daire; renkler var(--…) ile
-// aydınlık/karanlık temaya uyar. Yükleyiciyle aynı yerleşimi çizer.
-function _mntExampleDiagramSVG(model){
+// componentDefs ikonunun iç SVG içeriğini çıkar (varsa) — nested <svg> ile gömmek için.
+function _mntIconInner(type){
+  var def=(typeof componentDefs!=='undefined') ? componentDefs[type] : null;
+  var svg=def && def.svg;
+  if(!svg) return null;
+  var m=svg.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
+  return m ? m[1] : null;
+}
+
+// Modelden tema-uyumlu şematik topoloji SVG'si üret (örnek kendi görselini
+// vermediğinde). Kütle/takoz düğümleri uygulamanın GERÇEK ikonlarıyla
+// (componentDefs) çizilir; ikon yoksa (ör. Jest) kutu/daireye düşer. tools[] =
+// önizleme süsü (yardımcı araçlar; yükleyici bunları KURMAZ). Yükleyiciyle aynı
+// at:[lx,ly] yerleşimini kullanır → görsel ile kurulan kanvas birebir örtüşür.
+function _mntExampleDiagramSVG(model, tools){
   if(!model || !model.components || !model.components.length) return '';
   var L=_mntExampleLayout(model), comps=model.components, mounts=model.mounts||[];
-  var BW=100, BH=48, MR=16, M=26, xs=[], ys=[];
-  L.bodies.forEach(function(p){ xs.push(p.lx-BW/2, p.lx+BW/2); ys.push(p.ly-BH/2, p.ly+BH/2); });
-  L.mnts.forEach(function(p){ xs.push(p.lx-MR, p.lx+MR); ys.push(p.ly-MR-14, p.ly+MR+14); });
+  var items=[];
+  comps.forEach(function(c,i){ items.push({type:(c.kind||_mntExampleBodyType(c.name)), name:c.name, x:L.bodies[i].lx, y:L.bodies[i].ly, role:'body'}); });
+  mounts.forEach(function(m,i){ items.push({type:'mnt-mount', name:m.name, x:L.mnts[i].lx, y:L.mnts[i].ly, role:'mount'}); });
+  (tools||[]).forEach(function(t){ if(t && t.at && t.at.length===2) items.push({type:t.type, name:t.name, x:t.at[0], y:t.at[1], role:'tool'}); });
+  var CARD=54, IC=40, LBL=15, M=22, xs=[], ys=[];
+  items.forEach(function(it){ xs.push(it.x-CARD/2, it.x+CARD/2); ys.push(it.y-CARD/2, it.y+CARD/2+LBL); });
   var minX=Math.round(Math.min.apply(null,xs)-M), maxX=Math.round(Math.max.apply(null,xs)+M);
   var minY=Math.round(Math.min.apply(null,ys)-M), maxY=Math.round(Math.max.apply(null,ys)+M);
   var s='<svg viewBox="'+minX+' '+minY+' '+(maxX-minX)+' '+(maxY-minY)+'" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;font-family:inherit;">';
   // Takoz → en yakın kütle ince kılavuz çizgisi (arka planda)
-  mounts.forEach(function(m,i){
-    var p=L.mnts[i], nb=L.bodies[0], bd=Infinity;
-    L.bodies.forEach(function(bp){ var d=Math.abs(bp.lx-p.lx); if(d<bd){ bd=d; nb=bp; } });
-    s+='<line x1="'+p.lx+'" y1="'+p.ly+'" x2="'+nb.lx+'" y2="'+nb.ly+'" stroke="var(--border-hover)" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.6"/>';
+  var bodies=items.filter(function(it){ return it.role==='body'; });
+  items.filter(function(it){ return it.role==='mount'; }).forEach(function(mo){
+    var nb=bodies[0], bd=Infinity;
+    bodies.forEach(function(bp){ var dx=bp.x-mo.x, dy=bp.y-mo.y, d=dx*dx+dy*dy; if(d<bd){ bd=d; nb=bp; } });
+    if(nb) s+='<line x1="'+mo.x+'" y1="'+mo.y+'" x2="'+nb.x+'" y2="'+nb.y+'" stroke="var(--border-hover)" stroke-width="1.3" stroke-dasharray="3 3" opacity="0.55"/>';
   });
-  // Takozlar
-  mounts.forEach(function(m,i){
-    var p=L.mnts[i], below=p.ly>L.bodyY, ty=below?(p.ly+MR+13):(p.ly-MR-6);
-    s+='<circle cx="'+p.lx+'" cy="'+p.ly+'" r="'+MR+'" fill="var(--accent-success)" fill-opacity="0.16" stroke="var(--accent-success)" stroke-width="2"/>';
-    s+='<circle cx="'+p.lx+'" cy="'+p.ly+'" r="4" fill="var(--accent-success)"/>';
-    s+='<text x="'+p.lx+'" y="'+ty+'" text-anchor="middle" font-size="11" fill="var(--text-secondary)">'+_mntEsc(m.name)+'</text>';
-  });
-  // Kütle gövdeleri
-  comps.forEach(function(c,i){
-    var p=L.bodies[i];
-    s+='<rect x="'+(p.lx-BW/2)+'" y="'+(p.ly-BH/2)+'" width="'+BW+'" height="'+BH+'" rx="7" fill="var(--bg-tertiary)" stroke="var(--accent-primary)" stroke-width="2"/>';
-    s+='<text x="'+p.lx+'" y="'+(p.ly+4)+'" text-anchor="middle" font-size="12" font-weight="600" fill="var(--text-primary)">'+_mntEsc(c.name)+'</text>';
+  // Düğümler: kart + gerçek ikon (yoksa yedek) + etiket
+  items.forEach(function(it){
+    var x0=it.x-CARD/2, y0=it.y-CARD/2, tool=it.role==='tool';
+    var stroke=tool?'var(--border-color)':(it.role==='mount'?'var(--accent-success)':'var(--accent-primary)');
+    s+='<rect x="'+x0+'" y="'+y0+'" width="'+CARD+'" height="'+CARD+'" rx="9" fill="var(--bg-secondary)" stroke="'+stroke+'" stroke-width="'+(tool?1.2:1.6)+'"'+(tool?' opacity="0.9"':'')+'/>';
+    var inner=_mntIconInner(it.type);
+    if(inner){
+      s+='<svg x="'+(it.x-IC/2)+'" y="'+(it.y-IC/2)+'" width="'+IC+'" height="'+IC+'" viewBox="0 0 100 100">'+inner+'</svg>';
+    } else if(it.role==='mount'){
+      s+='<circle cx="'+it.x+'" cy="'+it.y+'" r="13" fill="var(--accent-success)" fill-opacity="0.16" stroke="var(--accent-success)" stroke-width="2"/><circle cx="'+it.x+'" cy="'+it.y+'" r="4" fill="var(--accent-success)"/>';
+    } else {
+      s+='<rect x="'+(it.x-16)+'" y="'+(it.y-9)+'" width="32" height="18" rx="3" fill="var(--bg-tertiary)" stroke="var(--accent-primary)" stroke-width="1.5"/>';
+    }
+    s+='<text x="'+it.x+'" y="'+(it.y+CARD/2+11)+'" text-anchor="middle" font-size="10.5" fill="'+(tool?'var(--text-muted)':'var(--text-secondary)')+'">'+_mntEsc(it.name)+'</text>';
   });
   s+='</svg>';
   return s;
@@ -578,10 +595,10 @@ function _mntExampleDetailsHTML(ex){
 function getMntExamplePropertiesHTML(node){
   if(!node.data) node.data={};
   var list=_mntExampleList();
-  var sel=node.data.exampleKey || (list[0]&&list[0].id) || 'ttar';
+  var sel=node.data.exampleKey || (list[0]&&list[0].id) || 'siper';
   var ex=_mntExampleReg(sel);
   var nid=node.id;
-  var diagram = ex.image ? _mntExampleImageHTML(ex.image) : _mntExampleDiagramSVG(ex.model);
+  var diagram = ex.image ? _mntExampleImageHTML(ex.image) : _mntExampleDiagramSVG(ex.model, ex.tools);
   var html='<div class="sw-panel">';
   html+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek Model</div>';
   html+='<select id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; margin-bottom:11px;">';
