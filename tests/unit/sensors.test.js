@@ -10,22 +10,15 @@ document.body.innerHTML = '<div id="ve-canvas"></div>';
 global.nodes = [];
 global.connections = [];
 
-// Stub fonksiyonlar
-global.showToast = jest.fn();
-global.saveState = jest.fn();
-global.showNodeProperties = jest.fn();
-
-const fs = require('fs');
-const path = require('path');
-const code = fs.readFileSync(path.join(__dirname, '../../js/sensors.js'), 'utf8');
-eval(code);
+// Ortak yan-etki stub'ları + kaynak yükleme (bkz. tests/helpers/setup.js).
+// Yeni testler için ŞABLON: stubGlobals() → eval(loadSource(...)) → resetStubs().
+const stubs = stubGlobals();
+eval(loadSource('sensors.js'));
 
 beforeEach(() => {
   nodes = [];
   connections = [];
-  showToast.mockClear();
-  saveState.mockClear();
-  showNodeProperties.mockClear();
+  resetStubs(stubs);
 });
 
 // ── Yardımcı: test node'ları oluştur ──
