@@ -200,6 +200,8 @@ function showNodeProperties(node) {
     html += getMntMassPropertiesHTML(node);
   } else if(node.type === 'mnt-mount') {
     html += getMntMountPropertiesHTML(node);
+  } else if(node.type === 'mnt-library') {
+    html += getMntLibraryPropertiesHTML(node);
   } else if(node.type === 'mnt-solver') {
     html += getMntSolverPropertiesHTML(node);
   } else if(node.type === 'mnt-example') {

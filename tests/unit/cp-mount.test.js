@@ -101,6 +101,86 @@ describe('Takoz kütüphanesi', () => {
   });
 });
 
+describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', () => {
+  afterEach(() => { delete global.nodes; });
+
+  test('kütüphane düğümü yokken birleşik liste yalnız gömülü katalogdur', () => {
+    delete global.nodes;
+    const list = cp.veMntGetLibraryList();
+    expect(list).toHaveLength(3);
+    expect(list.every(e => e.builtin)).toBe(true);
+    expect(list.map(e => e.key)).toContain('amc55sha');
+  });
+
+  test('veMntLibAdd özel takoz ekler; birleşik listede "Özel" olarak görünür', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
+    global.nodes = [lib];
+    cp.veMntLibAdd('lib1');
+    expect(lib.data.mounts).toHaveLength(1);
+    const list = cp.veMntGetLibraryList();
+    expect(list).toHaveLength(4); // 3 gömülü + 1 özel
+    const custom = list.filter(e => !e.builtin);
+    expect(custom).toHaveLength(1);
+    expect(custom[0].name).toContain('Yeni Takoz');
+  });
+
+  test('veMntLibSet ad ve rijitlikleri günceller (virgüllü ondalık dahil)', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
+    global.nodes = [lib];
+    cp.veMntLibAdd('lib1');
+    const key = lib.data.mounts[0].key;
+    cp.veMntLibSet('lib1', key, 'name', 'Özel A');
+    cp.veMntLibSet('lib1', key, 'sz', '1500');
+    cp.veMntLibSet('lib1', key, 'dz', '2,5'); // virgüllü → 2.5
+    const e = lib.data.mounts[0];
+    expect(e.name).toBe('Özel A');
+    expect(e.sz).toBe(1500);
+    expect(e.dz).toBeCloseTo(2.5);
+  });
+
+  test('veMntLibRemove yalnız hedef takozu siler', () => {
+    const lib = { id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true }, data: {} };
+    global.nodes = [lib];
+    cp.veMntLibAdd('lib1');
+    cp.veMntLibAdd('lib1');
+    const key = lib.data.mounts[0].key;
+    cp.veMntLibRemove('lib1', key);
+    expect(lib.data.mounts).toHaveLength(1);
+    expect(lib.data.mounts.find(e => e.key === key)).toBeUndefined();
+  });
+
+  test('getMntLibraryPropertiesHTML: ekle butonu + özel satır + gömülü katalog', () => {
+    const lib = {
+      id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true },
+      data: { mounts: [{ key: 'k1', name: 'Deneme', sx: 100, sy: 100, sz: 200, dx: 150, dy: 150, dz: 300 }] }
+    };
+    global.nodes = [lib];
+    const html = cp.getMntLibraryPropertiesHTML(lib);
+    expect(html).toContain("veMntLibAdd('lib1')");
+    expect(html).toContain('Gömülü Katalog');
+    expect(html).toContain('AMC 55 ShA');               // gömülü satır (salt-okunur)
+    expect(html).toContain('value="Deneme"');           // özel satır ad girdisi
+    expect(html).toContain("veMntLibRemove('lib1','k1')");
+    expect(html).toContain("veMntLibSet('lib1','k1','sz'");
+  });
+
+  test('özel takoz Takoz açılır listesinde çıkar ve veMntApplyLib ile uygulanır', () => {
+    const lib = {
+      id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true },
+      data: { mounts: [{ key: 'kX', name: 'Kullanıcı Takoz', sx: 111, sy: 222, sz: 333, dx: 444, dy: 555, dz: 666 }] }
+    };
+    const mount = { id: 'm9', type: 'mnt-mount', def: { name: 'Takoz', isMount: true }, data: {} };
+    global.nodes = [lib, mount];
+    const dd = cp.getMntMountPropertiesHTML(mount);
+    expect(dd).toContain('Özel (Takoz Özellikleri)');
+    expect(dd).toContain('Kullanıcı Takoz');
+    cp.veMntApplyLib('m9', 'kX');
+    expect(mount.data.kzs).toBe(333);
+    expect(mount.data.kzd).toBe(666);
+    expect(mount.data.libKey).toBe('kX');
+  });
+});
+
 describe('Çözücü otomatik algılama (bağlantı gerekmez) → gather → çekirdek — TTAR', () => {
   const topo = buildTTARTopology();
   beforeEach(() => { global.nodes = topo.nodes; global.connections = topo.connections; });
