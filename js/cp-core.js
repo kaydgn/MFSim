@@ -210,6 +210,8 @@ function showNodeProperties(node) {
     html += getMntViewerPropertiesHTML(node);
   } else if(node.type === 'mnt-coordframe') {
     html += getMntCoordFramePropertiesHTML(node);
+  } else if(node.type === 'mnt-2dview') {
+    html += getMnt2DViewPropertiesHTML(node);
   } else if(node.type === 'arac-performans') {
     html += getAracPerformansPropertiesHTML(node);
   } else if(node.type === 'mount-analysis') {
@@ -292,6 +294,13 @@ function showNodeProperties(node) {
     setTimeout(function() {
       if(typeof veMntCoordFrameRefresh === 'function') veMntCoordFrameRefresh();
     }, 140);
+  }
+
+  // Takoz 2D Görünüm: panel açılınca üstten/yandan diyagramı çiz
+  if(node.type === 'mnt-2dview') {
+    setTimeout(function() {
+      if(typeof veMnt2DViewRefresh === 'function') veMnt2DViewRefresh();
+    }, 120);
   }
 
   // Takoz Örnek: mevcut model uyarılarını göster (yükleme öncesi durum)
