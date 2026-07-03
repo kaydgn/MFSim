@@ -368,12 +368,105 @@ describe('Örnek bileşeni', () => {
 });
 
 describe('3D Görüntüleyici bileşeni', () => {
-  test('panel: canvas + Yenile', () => {
+  test('panel: canvas + Yenile + interaktif kontroller + resize', () => {
     const node = { id: 'vw1', type: 'mnt-viewer', def: { name: '3D Görüntüleyici' }, data: {} };
     const html = cp.getMntViewerPropertiesHTML(node);
     expect(html).toContain('ve-mnt-inline-viewer-canvas');
     expect(html).toContain('veMntViewerRefresh()');
-    // tema uyumlu: sabit koyu değil, CSS değişkeni zemin
     expect(html).toContain('var(--bg-primary)');
+    // interaktif: katman aç/kapa + sıfırla + büyüt + boyutlandırma
+    expect(html).toContain("veMountViewerToggle('grid')");
+    expect(html).toContain('veMountViewerReset()');
+    expect(html).toContain('veMntViewerExpand(this)');
+    expect(html).toContain('resize:vertical');
+    // garip açıklama kutusu YOK
+    expect(html).not.toContain('Aktif tema ile uyumlu');
+  });
+});
+
+describe('Koordinat Düzlemi bileşeni', () => {
+  test('panel: 3B canvas + eksen açıklamaları + düzlem toggle', () => {
+    const node = { id: 'cf1', type: 'mnt-coordframe', def: { name: 'Koordinat Düzlemi' }, data: {} };
+    const html = cp.getMntCoordFramePropertiesHTML(node);
+    expect(html).toContain('ve-mnt-coord-canvas');
+    expect(html).toContain("veMountViewerToggle('planes')");
+    expect(html).toContain('İleri–geri');   // X ekseni açıklaması
+    expect(html).toContain('Yanal');        // Y ekseni açıklaması
+    expect(html).toContain('Düşey');        // Z ekseni açıklaması
+  });
+});
+
+describe('Kinematik girdiler + tork yük durumları', () => {
+  test('Motor paneli tepe tork alanı içerir', () => {
+    const node = { id: 'mo1', type: 'mnt-motor', def: { name: 'Motor (Kütle)' }, data: {} };
+    const html = cp.getMntMassPropertiesHTML(node);
+    expect(html).toContain('ve-mnt-Te-mo1');
+    expect(html).toContain('Motor / Tahrik');
+  });
+  test('Şanzıman paneli vites oranları + stall içerir', () => {
+    const node = { id: 'gb1', type: 'mnt-gearbox', def: { name: 'Şanzıman (Kütle)' }, data: {} };
+    const html = cp.getMntMassPropertiesHTML(node);
+    ['g1','g2','g6','gR','Rstall'].forEach(k => expect(html).toContain('ve-mnt-' + k + '-gb1'));
+    expect(html).toContain('Vites Oranları');
+  });
+  test('Transfer paneli transfer oranı içerir', () => {
+    const node = { id: 'tr1', type: 'mnt-transfer', def: { name: 'Transfer Kutusu' }, data: {} };
+    const html = cp.getMntMassPropertiesHTML(node);
+    expect(html).toContain('ve-mnt-iTransfer-tr1');
+    expect(html).toContain('Transfer Kutusu');
+  });
+  test('Şaft/Braket kinematik bölüm göstermez', () => {
+    const shaft = cp.getMntMassPropertiesHTML({ id: 's1', type: 'mnt-shaft', def: {}, data: {} });
+    expect(shaft).not.toContain('Vites Oranları');
+    expect(shaft).not.toContain('Motor / Tahrik');
+  });
+
+  test('_mntGatherTorque kütle gövdelerinden konumdan bağımsız toplar', () => {
+    global.nodes = [
+      { id: 'mo', type: 'mnt-motor',    def: { isMountBody: true }, data: { Te: 760 } },
+      { id: 'gb', type: 'mnt-gearbox',  def: { isMountBody: true }, data: { g1: 3.10, gR: -4.49, Rstall: 1.58 } },
+      { id: 'tr', type: 'mnt-transfer', def: { isMountBody: true }, data: { iTransfer: 3.428 } }
+    ];
+    const t = cp._mntGatherTorque();
+    expect(Number(t.Te)).toBe(760);
+    expect(Number(t.g1)).toBe(3.10);
+    expect(Number(t.Rstall)).toBe(1.58);
+    expect(Number(t.iTransfer)).toBe(3.428);
+    delete global.nodes;
+  });
+
+  test('_mntTorqueCases TTAR kinematiğini çekirdek tork zinciriyle üretir', () => {
+    const torque = { Te: 3000, Rstall: 1.62, g1: 3.51, gR: -4.8, iTransfer: 1.407, phiFwd: 1 / 3.6, phiRev: 2.6 / 3.6, derate: 1 };
+    const cases = cp._mntTorqueCases(torque);
+    expect(cases).toHaveLength(2);
+    expect(cases[0].name).toBe('Forward Torque');
+    expect(cases[0].T[0]).toBeCloseTo(-6667.07, 1);   // −T_shaft (ileri)
+    expect(cases[1].name).toBe('Reverse Torque');
+    expect(cases[1].T[0]).toBeCloseTo(23705.14, 1);   // −T_shaft (geri, negatif → +)
+  });
+  test('_mntTorqueCases eksik kinematikte boş döner', () => {
+    expect(cp._mntTorqueCases({})).toHaveLength(0);
+    expect(cp._mntTorqueCases({ Te: 760 })).toHaveLength(0); // Rstall/g1 yok
+  });
+
+  test('_mntToSI tork girildiğinde 8, girilmediğinde 6 yük durumu', () => {
+    const withTq = cp._mntToSI({ components: [], mounts: [], torque: { Te: 760, Rstall: 1.58, g1: 3.10, gR: -4.49 } }, 9.81);
+    expect(withTq.loadCases).toHaveLength(8);
+    expect(withTq.loadCases.map(c => c.name)).toContain('Forward Torque');
+    const noTq = cp._mntToSI({ components: [], mounts: [], torque: {} }, 9.81);
+    expect(noTq.loadCases).toHaveLength(6);
+  });
+  test('MNT_AUTO_CASES mutasyona uğramaz (concat kopya)', () => {
+    cp._mntToSI({ components: [], mounts: [], torque: { Te: 760, Rstall: 1.58, g1: 3.10 } }, 9.81);
+    expect(cp.MNT_AUTO_CASES).toHaveLength(6);
+  });
+});
+
+describe('Garip açıklamalar kaldırıldı (Adams dahil)', () => {
+  test('Kütle/Takoz/Çözücü panellerinde Adams referansı yok', () => {
+    const mass = cp.getMntMassPropertiesHTML({ id: 'a', type: 'mnt-motor', def: {}, data: {} });
+    const mount = cp.getMntMountPropertiesHTML({ id: 'b', type: 'mnt-mount', def: {}, data: {} });
+    const solver = cp.getMntSolverPropertiesHTML({ id: 'c', type: 'mnt-solver', def: {}, data: {} });
+    [mass, mount, solver].forEach(h => expect(h).not.toMatch(/Adams/i));
   });
 });

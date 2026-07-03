@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','arac-performans','mount-analysis'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -234,7 +234,7 @@ var componentDefs = {
   'mnt-motor': {
     name: 'Motor (Kütle)',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="36" width="60" height="44" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.85"/><rect x="30" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><rect x="52" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><circle cx="50" cy="58" r="5" fill="#fff"/></svg>',
-    inputs: 0, outputs: 1, isMountBody: true
+    inputs: 0, outputs: 1, isMountBody: true, defaultWidth: 84, defaultHeight: 76
   },
   'mnt-gearbox': {
     name: 'Şanzıman (Kütle)',
@@ -249,7 +249,7 @@ var componentDefs = {
   'mnt-bracket': {
     name: 'Braket (Kütle)',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg>',
-    inputs: 0, outputs: 1, isMountBody: true
+    inputs: 0, outputs: 1, isMountBody: true, defaultWidth: 50, defaultHeight: 46
   },
   'mnt-transfer': {
     name: 'Transfer Kutusu',
@@ -284,6 +284,14 @@ var componentDefs = {
     name: '3D Görüntüleyici',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-linejoin="round"/></svg>',
     inputs: 0, outputs: 0, isMountViewer: true, defaultWidth: 60, defaultHeight: 56
+  },
+  // Koordinat Düzlemi — koordinat sistemini (X/Y/Z eksenleri + düzlemler) 3B
+  // gösterir; kullanıcı konum/CG değerlerini hangi eksene göre girdiğini görür.
+  // Fiziksel topolojiye bağlanmaz. Panel/3B: cp-mount.js + cp-mount-viewer.js.
+  'mnt-coordframe': {
+    name: 'Koordinat Düzlemi',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M32 66 L78 66 L60 84 L14 84 Z" fill="var(--text-muted, #aaa)" opacity="0.18" stroke="var(--text-muted, #aaa)" stroke-width="1.5"/><line x1="32" y1="66" x2="32" y2="16" stroke="var(--accent-danger, #ef4444)" stroke-width="4.5" stroke-linecap="round"/><polygon points="32,12 28,22 36,22" fill="var(--accent-danger, #ef4444)"/><line x1="32" y1="66" x2="86" y2="66" stroke="var(--accent-success, #22c55e)" stroke-width="4.5" stroke-linecap="round"/><polygon points="90,66 80,62 80,70" fill="var(--accent-success, #22c55e)"/><line x1="32" y1="66" x2="10" y2="86" stroke="var(--accent-primary, #3b82f6)" stroke-width="4.5" stroke-linecap="round"/><polygon points="7,89 18,84 12,78" fill="var(--accent-primary, #3b82f6)"/></svg>',
+    inputs: 0, outputs: 0, isMountCoordFrame: true, defaultWidth: 60, defaultHeight: 56
   },
   // ── Araç Performans (ALT-SİSTEM / subsystem düğümü) ──────────────────────
   // Sürüklenebilir composite düğüm: ana canvas'ta tek blok; çift tıklanınca

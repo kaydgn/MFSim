@@ -279,47 +279,109 @@ function _mntRow(label, sub, inner){
     + '<th style="padding:5px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:52%; font-weight:500; color:var(--text-secondary);">'+label+(sub?' <span style="color:var(--text-muted); font-weight:400;">'+sub+'</span>':'')+'</th>'
     + '<td style="padding:3px 5px; background:var(--bg-tertiary);">'+inner+'</td></tr>';
 }
-// Estetik yardımcılar — etiketli 3'lü inline grup (x/y/z yan yana) + tek satır.
+// ─── Estetik girdi yardımcıları (kompakt, ince, hizalı) ──────────────────────
+// Ortak input stili — küçük, zarif, odakta vurgu.
+var _MNT_INP='padding:4px 6px; font-size:0.66rem; height:25px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; box-sizing:border-box;';
+// Bölüm başlığı (ince alt çizgi + opsiyonel birim).
+function _mntGrpTitle(title, unit){
+  return '<div style="font-size:0.6rem; font-weight:700; color:var(--text-heading); border-bottom:1px solid var(--border-color); padding-bottom:4px; margin:3px 0 9px;">'+title+(unit?' <span style="font-size:0.52rem; font-weight:400; color:var(--text-muted);">'+unit+'</span>':'')+'</div>';
+}
+// Etiketli 3'lü inline grup (x/y/z yan yana).
 function _mntTriple(node, title, unit, keys, subs, step){
-  var h='<div style="margin-bottom:13px;">';
-  h+='<div style="font-size:0.6rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:6px;">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400; text-transform:none;">'+unit+'</span>':'')+'</div>';
-  h+='<div style="display:flex; gap:6px;">';
+  var h='<div style="margin-bottom:10px;">';
+  h+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400; text-transform:none; letter-spacing:0;">'+unit+'</span>':'')+'</div>';
+  h+='<div style="display:flex; gap:5px;">';
   for(var i=0;i<3;i++){
     var key=keys[i];
     var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
-    h+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">'
-      +'<span style="font-size:0.56rem; color:var(--text-muted); text-align:center; letter-spacing:0.02em;">'+subs[i]+'</span>'
-      +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; padding:6px 7px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; text-align:right; box-sizing:border-box;">'
+    h+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
+      +'<span style="font-size:0.52rem; color:var(--text-muted); text-align:center;">'+subs[i]+'</span>'
+      +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
       +'</label>';
   }
   h+='</div></div>';
   return h;
 }
+// Tek etiketli alan (etiket sol, dar input sağ).
 function _mntSingle(node, title, unit, key, ph, step){
   var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
-  return '<div style="display:flex; align-items:center; gap:10px; margin-bottom:13px;">'
-    +'<div style="flex:1; font-size:0.68rem; font-weight:600; color:var(--text-secondary);">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400;">'+unit+'</span>':'')+'</div>'
-    +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:140px; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; text-align:right;">'
+  return '<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">'
+    +'<div style="flex:1; font-size:0.66rem; font-weight:600; color:var(--text-secondary);">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400;">'+unit+'</span>':'')+'</div>'
+    +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:108px; '+_MNT_INP+'">'
     +'</div>';
 }
-function _mntNote(text, accent){
-  return '<div style="padding:8px 10px; margin-bottom:13px; font-size:0.62rem; line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid '+(accent||'var(--accent-primary)')+'; border-radius:4px;">'+text+'</div>';
+// Etiketli hücre ızgarası (cells=[{key,label,step,ph}], cols sütun).
+function _mntGrid(node, cells, cols){
+  cols=cols||3;
+  var h='<div style="display:grid; grid-template-columns:repeat('+cols+',1fr); gap:7px 6px; margin-bottom:9px;">';
+  cells.forEach(function(c){
+    var v=(node.data[c.key]===undefined||node.data[c.key]===null)?'':node.data[c.key];
+    h+='<label style="display:flex; flex-direction:column; gap:2px; min-width:0;">'
+      +'<span style="font-size:0.52rem; color:var(--text-muted); text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+c.label+'</span>'
+      +'<input type="number" id="ve-mnt-'+c.key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(c.step||'any')+'"'+(c.ph?' placeholder="'+_mntEsc(c.ph)+'"':'')+' onchange="veMntSet(\''+node.id+'\',\''+c.key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
+      +'</label>';
+  });
+  h+='</div>';
+  return h;
+}
+// Kısa ipucu satırı (not kutusu değil — tek satır, sade).
+function _mntHint(text){
+  return '<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4; margin:-3px 0 9px;">'+text+'</div>';
+}
+
+// ─── Tipe özel kinematik bölümleri (tork yük durumları için) ─────────────────
+// Motor tork zinciri girdileri komponentler içine dağıtılır: Motor→tepe tork,
+// Şanzıman→vites oranları + stall, Transfer→transfer oranı + aks payı.
+function _mntEngineSection(node){
+  return _mntGrpTitle('Motor / Tahrik')
+    + _mntGrid(node, [
+        {key:'Te',      label:'Tepe Tork [Nm]', step:'1',   ph:'760'},
+        {key:'TeRpm',   label:'@ Devir [rpm]',  step:'1',   ph:'1500'},
+        {key:'Pmax',    label:'Maks Güç [kW]',  step:'0.1', ph:'156.6'},
+        {key:'PmaxRpm', label:'@ Devir [rpm]',  step:'1',   ph:'2300'},
+        {key:'idleRpm', label:'Rölanti [rpm]',  step:'1',   ph:'800'}
+      ], 3)
+    + _mntHint('Tork yük durumları <b>Tepe Tork</b> değerinden türetilir; devir/güç bilgi amaçlıdır.');
+}
+function _mntGearboxSection(node){
+  return _mntGrpTitle('Şanzıman / Vites Oranları')
+    + _mntGrid(node, [
+        {key:'g1', label:'1. Vites',    step:'0.01', ph:'3.10'},
+        {key:'g2', label:'2. Vites',    step:'0.01', ph:'1.81'},
+        {key:'g3', label:'3. Vites',    step:'0.01', ph:'1.41'},
+        {key:'g4', label:'4. Vites',    step:'0.01', ph:'1.00'},
+        {key:'g5', label:'5. Vites',    step:'0.01', ph:'0.71'},
+        {key:'g6', label:'6. Vites',    step:'0.01', ph:'0.61'},
+        {key:'gR', label:'Geri',        step:'0.01', ph:'-4.49'},
+        {key:'Rstall', label:'Stall Oranı', step:'0.01', ph:'1.58'}
+      ], 4)
+    + _mntHint('İleri tork durumu <b>1. Vites</b> (en yüksek redüksiyon), geri tork <b>Geri</b> ile hesaplanır. Stall Oranı = konvertör tork çarpanı.');
+}
+function _mntTransferSection(node){
+  return _mntGrpTitle('Transfer Kutusu')
+    + _mntGrid(node, [
+        {key:'iTransfer', label:'Oran',      step:'0.001', ph:'3.428'},
+        {key:'phiFwd',    label:'Aks Payı φ (ileri)', step:'0.001', ph:'1'},
+        {key:'phiRev',    label:'Aks Payı φ (geri)',  step:'0.001', ph:'1'}
+      ], 3)
+    + _mntHint('Aks payı φ: takozlara ulaşan tork oranı (varsayılan 1 = tam tepki).');
 }
 
 function getMntMassPropertiesHTML(node){
   _mntEnsureMassData(node);
   var d=node.data;
   var html='<div class="sw-panel">';
-  html+=_mntNote('Kütle gövdesi → 6 SD analizde birleşik rijit gövdeye katkı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar. Atalet <b>tensör bileşeni</b> (CATIA); nokta kütle → atalet 0.');
-  html+=_mntSingle(node,'Kütle','m [kg]','mass','ör: 1386.3','0.001');
+  html+=_mntSingle(node,'Kütle','[kg]','mass','ör: 1386.3','0.001');
   html+=_mntTriple(node,'Ağırlık Merkezi','[mm]',['cgx','cgy','cgz'],['x','y','z'],'0.01');
-  html+='<label style="display:flex; align-items:center; gap:7px; font-size:0.66rem; color:var(--text-secondary); margin:0 0 13px; cursor:pointer;"><input type="checkbox" '+(d.pointMass?'checked':'')+' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"> Nokta kütle (atalet = 0)</label>';
+  html+='<label style="display:flex; align-items:center; gap:7px; font-size:0.64rem; color:var(--text-secondary); margin:2px 0 11px; cursor:pointer;"><input type="checkbox" '+(d.pointMass?'checked':'')+' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"> Nokta kütle (atalet = 0)</label>';
   if(!d.pointMass){
-    html+='<div style="font-size:0.66rem; font-weight:700; color:var(--text-heading); border-bottom:1px solid var(--border-color); padding-bottom:4px; margin:4px 0 10px;">Atalet Tensörü <span style="font-size:0.54rem; font-weight:400; color:var(--text-muted);">[kg·m²] · CATIA konvansiyonu</span></div>';
+    html+=_mntGrpTitle('Atalet Tensörü','[kg·m²]');
     html+=_mntTriple(node,'Köşegen','',['Ixx','Iyy','Izz'],['Ixx','Iyy','Izz'],'0.001');
     html+=_mntTriple(node,'Çarpım','',['Ixy','Ixz','Iyz'],['Ixy','Ixz','Iyz'],'0.001');
-    html+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4;">Çarpım terimleri tensör bileşeni olarak girilir; el kitabı ∫xy dm konvansiyonu kullanılıyorsa işaret çevrilmelidir.</div>';
   }
+  if(node.type==='mnt-motor')         html+=_mntEngineSection(node);
+  else if(node.type==='mnt-gearbox')  html+=_mntGearboxSection(node);
+  else if(node.type==='mnt-transfer') html+=_mntTransferSection(node);
   html+='</div>';
   return html;
 }
@@ -330,8 +392,7 @@ function getMntMassPropertiesHTML(node){
 function getMntMountPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
-  html+=_mntNote('Takoz → şasiye üç eksenli lineer yay bağlantısı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar (bağlantı gerekmez).','var(--accent-success)');
-  html+='<div style="font-size:0.6rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:6px;">Kütüphane</div>';
+  html+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Kütüphane</div>';
   // Kütüphane (gömülü + "Takoz Özellikleri" ile eklenen kullanıcı takozları)
   var _lib=veMntGetLibraryList();
   var _libB=_lib.filter(function(e){ return e.builtin; });
@@ -375,11 +436,11 @@ function veMntApplyLib(nodeId, key){
 // ════════════════════════════════════════════════════════════════════════════
 //  ÖRNEK — hazır doğrulama analizini topolojiye yükle (+ tutarlılık uyarıları)
 // ════════════════════════════════════════════════════════════════════════════
-// "Örnek" bileşeni: gömülü doğrulama örneklerini (Adams BMC_TTAR_2031) seçip
-// iç topolojiye kurar. Yüklemeden sonra model kontrol edilir; fazla takoz /
-// eksik bileşen / tanımsız değer varsa panelde uyarı listelenir.
+// "Örnek" bileşeni: gömülü örnek modelleri seçip iç topolojiye kurar. Yüklemeden
+// sonra model kontrol edilir; fazla takoz / eksik bileşen / tanımsız değer varsa
+// panelde uyarı listelenir.
 var VE_MNT_EXAMPLES = {
-  'ttar': { name:'BMC TTAR 2031 — Adams Doğrulama (5 kütle · 6 takoz)' }
+  'ttar': { name:'BMC TTAR 2031 (5 kütle · 6 takoz)' }
 };
 
 // Örnek adı → kanvas kütle-gövdesi tipi (test buildTTARTopology ile aynı eşleme).
@@ -394,9 +455,8 @@ function getMntExamplePropertiesHTML(node){
   if(!node.data) node.data={};
   var sel = node.data.exampleKey || 'ttar';
   var html='<div class="sw-panel">';
-  html+=_mntNote('Hazır <b>doğrulama örneği</b> seç ve <b>topolojiye yükle</b>. Yükleme mevcut kütle/takoz bileşenlerinin yerine geçer (Çözücü/yardımcılar korunur). Yüklendikten sonra model <b>tutarlılık uyarıları</b> (fazla takoz · eksik bileşen · tanımsız değer) gösterilir.','var(--accent-warning)');
-  html+='<div style="font-size:0.6rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:6px;">Örnek Analiz</div>';
-  html+='<select id="ve-mnt-example-sel" onchange="veMntSet(\''+node.id+'\',\'exampleKey\',this.value)" style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; margin-bottom:12px;">';
+  html+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek Analiz</div>';
+  html+='<select id="ve-mnt-example-sel" onchange="veMntSet(\''+node.id+'\',\'exampleKey\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; margin-bottom:11px;">';
   Object.keys(VE_MNT_EXAMPLES).forEach(function(k){ html+='<option value="'+k+'"'+(sel===k?' selected':'')+'>'+_mntEsc(VE_MNT_EXAMPLES[k].name)+'</option>'; });
   html+='</select>';
   html+='<button onclick="veMntLoadExample(\''+node.id+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:5px; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Topolojiye Yükle</button>';
@@ -466,13 +526,22 @@ function veMntLoadExample(nodeId){
   EX.mounts.forEach(function(m,i){ var top=i<half, col=top?i:(i-half); layout.push({lx:X0+col*DX, ly: top?(bodyY-135):(bodyY+135)}); });
   var base = (typeof veArrangeModuleBase==='function') ? veArrangeModuleBase(layout) : { x:3000, y:3000 };
 
+  var tq=EX.torque||{};
   var li=0;
   EX.components.forEach(function(c){
     var pos=layout[li++]; var before=nodes.length;
-    createNode(_mntExampleBodyType(c.name), base.x+pos.lx, base.y+pos.ly);
+    var kind=_mntExampleBodyType(c.name);
+    createNode(kind, base.x+pos.lx, base.y+pos.ly);
     if(nodes.length>before){
       var n=nodes[nodes.length-1];
       n.data=Object.assign(n.data||{}, { mass:c.mass, cgx:c.cg[0], cgy:c.cg[1], cgz:c.cg[2], Ixx:c.Ixx, Iyy:c.Iyy, Izz:c.Izz, Ixy:c.Ixy, Ixz:c.Ixz, Iyz:c.Iyz, pointMass:!!c.pointMass });
+      // Tork zinciri: Motor→Te; Şanzıman→vites/stall + transfer/aks payı
+      // (örnekte ayrı Transfer gövdesi yok → değerler Şanzıman'da tutulur).
+      if(kind==='mnt-motor'){ n.data.Te=tq.Te; }
+      else if(kind==='mnt-gearbox' && tq.fwd){
+        n.data.g1=tq.fwd.iGear; n.data.gR=(tq.rev||{}).iGear; n.data.Rstall=tq.Rstall;
+        n.data.iTransfer=tq.iTransfer; n.data.phiFwd=tq.fwd.phiAxle; n.data.phiRev=(tq.rev||{}).phiAxle; n.data.derate=tq.derate;
+      }
       _mntSetNodeName(n, c.name);
     }
   });
@@ -513,14 +582,83 @@ function veMntLoadExample(nodeId){
 // ════════════════════════════════════════════════════════════════════════════
 //  3D GÖRÜNTÜLEYİCİ — iç topolojinin 3B yerleşimi (tema uyumlu)
 // ════════════════════════════════════════════════════════════════════════════
+// Görüntüleyici araç çubuğu düğmesi (aç/kapa görünümlü).
+function _mntVwrBtn(onclick, label, title, active){
+  return '<button onclick="'+onclick+'" title="'+_mntEsc(title||label)+'" style="padding:4px 9px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; opacity:'+(active===false?'0.45':'1')+';">'+label+'</button>';
+}
+// Renk lejantı (slim, tek satır).
+function _mntVwrLegend(){
+  function chip(col,txt){ return '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:9px; height:9px; border-radius:50%; background:'+col+'; display:inline-block;"></span>'+txt+'</span>'; }
+  return '<div style="display:flex; flex-wrap:wrap; gap:12px; font-size:0.55rem; color:var(--text-muted); margin-bottom:7px;">'
+    + chip('#22c55e','Takoz') + chip('#f59e0b','Bileşen CG') + chip('#ef4444','Birleşik CG') + '</div>';
+}
 function getMntViewerPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
-  html+=_mntNote('İç topolojideki <b>tüm</b> kütle ve takozların 3B yerleşimi. <span style="color:var(--accent-success);">Yeşil</span>: takoz · <span style="color:var(--accent-warning);">turuncu</span>: bileşen CG · <span style="color:var(--accent-danger);">kırmızı</span>: birleşik CG. Sürükle döndür · sağ tık kaydır · tekerlek yakınlaş. Aktif tema ile uyumlu.','var(--accent-primary)');
-  html+='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:320px; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px; overflow:hidden;"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
-  html+='<button onclick="veMntViewerRefresh()" style="width:100%; margin-top:8px; padding:9px; font-size:0.7rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">↻ Yenile</button>';
+  html+=_mntVwrLegend();
+  // Araç çubuğu — görünüm katmanları + sıfırla + büyüt/küçült
+  html+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:7px;">';
+  html+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster');
+  html+=_mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksenleri gizle/göster');
+  html+=_mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Eksen etiketlerini gizle/göster');
+  html+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
+  html+='<div style="flex:1;"></div>';
+  html+=_mntVwrBtn("veMntViewerExpand(this);",'⛶ Büyüt','Görüntüleyiciyi büyüt/küçült');
+  html+='</div>';
+  html+='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:320px; min-height:200px; resize:vertical; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px;"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
+  html+='<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · alt kenardan sürükleyerek boyutlandır.</div>';
+  html+='<button onclick="veMntViewerRefresh()" style="width:100%; margin-top:7px; padding:8px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">↻ Yenile</button>';
   html+='</div>';
   return html;
+}
+// Görüntüleyici sarmalını büyüt/küçült (yükseklik) + canvas'ı yeniden boyutla.
+function veMntViewerExpand(btn){
+  var wrap=document.getElementById('ve-mnt-inline-viewer-wrap'); if(!wrap) return;
+  var big = wrap.getAttribute('data-big')==='1';
+  wrap.style.height = big ? '320px' : '70vh';
+  wrap.setAttribute('data-big', big?'0':'1');
+  if(btn) btn.innerHTML = big ? '⛶ Büyüt' : '⛦ Küçült';
+  if(typeof veMountViewerResize==='function') setTimeout(veMountViewerResize, 30);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  KOORDİNAT DÜZLEMİ — koordinat sistemini 3B göster (eksen + düzlem + yön)
+// ════════════════════════════════════════════════════════════════════════════
+function getMntCoordFramePropertiesHTML(node){
+  if(!node.data) node.data={};
+  var html='<div class="sw-panel">';
+  html+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:6px;">Koordinat Sistemi</div>';
+  // Eksen yönü açıklaması (konum/CG değerlerinin hangi eksene göre girildiği)
+  function axRow(col,ax,desc){ return '<div style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:0.62rem;"><span style="width:11px; height:11px; border-radius:2px; background:'+col+'; flex-shrink:0;"></span><b style="color:var(--text-primary); width:14px;">'+ax+'</b><span style="color:var(--text-secondary);">'+desc+'</span></div>'; }
+  html+='<div style="margin-bottom:8px;">';
+  html+=axRow('#ef4444','X','İleri–geri ekseni · +X araç arkası, −X ön');
+  html+=axRow('#22c55e','Y','Yanal eksen · +Y sağ, −Y sol');
+  html+=axRow('#3b82f6','Z','Düşey eksen · +Z yukarı, −Z aşağı');
+  html+='</div>';
+  html+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:7px;">';
+  html+=_mntVwrBtn("var v=veMountViewerToggle('planes'); this.style.opacity=v?'1':'0.45';",'Düzlem','Koordinat düzlemlerini gizle/göster');
+  html+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster');
+  html+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
+  html+='<div style="flex:1;"></div>';
+  html+=_mntVwrBtn("veMntCoordExpand(this);",'⛶ Büyüt','Büyüt/küçült');
+  html+='</div>';
+  html+='<div id="ve-mnt-coord-wrap" style="width:100%; height:320px; min-height:200px; resize:vertical; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px;"><canvas id="ve-mnt-coord-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
+  html+='<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px;">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
+  html+='</div>';
+  return html;
+}
+function veMntCoordFrameRefresh(){
+  if(typeof veMountViewerInit==='function'){
+    try{ veMountViewerInit('ve-mnt-coord-canvas','coordframe'); veMountViewerUpdate(); }catch(e){}
+  }
+}
+function veMntCoordExpand(btn){
+  var wrap=document.getElementById('ve-mnt-coord-wrap'); if(!wrap) return;
+  var big = wrap.getAttribute('data-big')==='1';
+  wrap.style.height = big ? '320px' : '70vh';
+  wrap.setAttribute('data-big', big?'0':'1');
+  if(btn) btn.innerHTML = big ? '⛶ Büyüt' : '⛦ Küçült';
+  if(typeof veMountViewerResize==='function') setTimeout(veMountViewerResize, 30);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -552,8 +690,7 @@ function getMntLibraryPropertiesHTML(node){
   var custom=d.mounts;
   var builtins=veMntGetLibraryList().filter(function(e){ return e.builtin; });
   var html='<div class="sw-panel">';
-  html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-success);">'
-      + '<b style="color:var(--text-heading);">Takoz kataloğu.</b> Kendi takozlarınızı ekleyin; her girdi tüm <b>Takoz</b> bileşenlerinin <b>"Kütüphaneden rijitlik yükle"</b> listesinde <b>Özel</b> grubunda çıkar. Rijitlikler <b>N/mm</b>. <b>Gömülü katalog da düzenlenebilir</b>; değişiklikler projeyle kaydedilir, <b>↺</b> ile fabrika ayarına dönülür.</div>';
+  html+='<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin-bottom:9px;">Eklenen takozlar tüm Takoz bileşenlerinin kütüphane listesinde çıkar. Rijitlikler N/mm. Gömülü katalog da düzenlenebilir (↺ fabrikaya döner).</div>';
 
   // ── Kullanıcı takozları (düzenlenebilir) ──
   html+='<div class="sw-section-title">Özel Takozlar <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">'+custom.length+' adet · [N/mm]</span></div>';
@@ -672,6 +809,19 @@ function veMntLibResetBuiltin(nodeId, key){
 // Çözücü, iç topolojideki TÜM kütle ve takoz node'larını OTOMATİK algılar —
 // bağlantı zorunluluğu yoktur (kullanıcı isteği). Alt topoloji yalnız mount
 // bileşenleri içerdiğinden nodes içindeki isMountBody/isMount düğümleri toplanır.
+// Tork zinciri girdilerini (Te / vites / transfer / aks payı) kütle
+// gövdelerinden konumdan bağımsız topla — hangi bileşende girildiği fark etmez
+// (ilk tanımlı değer geçerli). Motor→Te, Şanzıman→vites+stall, Transfer→oran+φ.
+function _mntGatherTorque(){
+  var keys=['Te','Rstall','g1','g2','g3','g4','g5','g6','gR','iTransfer','phiFwd','phiRev','derate'];
+  var t={};
+  (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
+    if(!(_mntDef(n)||{}).isMountBody) return;
+    var d=n.data||{};
+    keys.forEach(function(k){ if(t[k]===undefined && d[k]!==undefined && d[k]!==null && d[k]!=='') t[k]=d[k]; });
+  });
+  return t;
+}
 function _mntGatherForSolver(solver){
   var masses=[], mounts=[];
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
@@ -684,9 +834,31 @@ function _mntGatherForSolver(solver){
       mounts.push({ name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd });
     }
   });
-  return { components:masses, mounts:mounts };
+  return { components:masses, mounts:mounts, torque:_mntGatherTorque() };
 }
-// UI (mm/kg/N/mm) → SI, otomatik yük durumlarıyla.
+// Girilen kinematikten tork yük durumlarını (ileri/geri) kur. Eksikse boş döner.
+// İleri = 1. vites (en yüksek redüksiyon), geri = Geri vites. T_shaft çekirdeğin
+// torqueChain'i ile hesaplanır; Tx = −T_shaft (SPEC T5 işaret düzeni).
+function _mntTorqueCases(torque){
+  var C=veMountCore; if(!C || !C.torqueChain) return [];
+  var tq=torque||{};
+  var Te=_mntNum(tq.Te,0), Rstall=_mntNum(tq.Rstall,0), g1=_mntNum(tq.g1,0), gR=_mntNum(tq.gR,0);
+  var iTr=_mntNum(tq.iTransfer,1); if(iTr===0) iTr=1;
+  var phiF=_mntNum(tq.phiFwd,1); if(phiF===0) phiF=1;
+  var phiR=_mntNum(tq.phiRev,1); if(phiR===0) phiR=1;
+  var der=_mntNum(tq.derate,1); if(der===0) der=1;
+  if(!(Te>0 && Rstall>0 && g1!==0)) return [];
+  var cases=[];
+  var Tfwd=C.torqueChain({Te:Te, Rstall:Rstall, iGear:g1, iTransfer:iTr, phiAxle:phiF, derate:der});
+  cases.push({name:'Forward Torque', n:[0,0,-1], T:[-Tfwd,0,0]});
+  if(gR!==0){
+    var Trev=C.torqueChain({Te:Te, Rstall:Rstall, iGear:gR, iTransfer:iTr, phiAxle:phiR, derate:der});
+    cases.push({name:'Reverse Torque', n:[0,0,-1], T:[-Trev,0,0]});
+  }
+  return cases;
+}
+// UI (mm/kg/N/mm) → SI. Yük durumları: 6 otomatik g-durumu + (kinematik
+// girildiyse) ileri/geri tork durumları.
 function _mntToSI(gather, g){
   var C=veMountCore;
   return {
@@ -700,7 +872,7 @@ function _mntToSI(gather, g){
       name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
       kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
       kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] }; }),
-    loadCases: MNT_AUTO_CASES
+    loadCases: MNT_AUTO_CASES.concat(_mntTorqueCases(gather.torque))
   };
 }
 
@@ -709,8 +881,7 @@ function getMntSolverPropertiesHTML(node){
   if(!node.data) node.data={};
   if(!node.data.matrixMode) node.data.matrixMode='delta';
   var html='<div class="sw-panel">';
-  html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-danger);">'
-      + '<b style="color:var(--text-heading);">Çözücü.</b> İç topolojideki <b>tüm</b> kütle ve takoz bileşenlerini <b>otomatik algılar</b> (bağlantı gerekmez) ve 6 SD rijit gövde analizini çalıştırır. Yük durumları <b>otomatik</b> (Static / Max Bump / Acceleration / Braking / Cornering L-R).</div>';
+  html+='<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin-bottom:9px;">Tüm kütle ve takozlar otomatik algılanır; yük durumları otomatik uygulanır.</div>';
   html+='<div style="display:flex; gap:6px; margin-bottom:10px;">';
   html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="flex:1; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer;">▶ Hesapla</button>';
   html+='<button onclick="veMntShowDetail(\''+node.id+'\')" style="padding:9px 10px; font-size:0.64rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" title="Detaylı matris + 3D">Detay+3D</button>';
@@ -913,7 +1084,7 @@ function veMntRunSelfTest(){
   h+='<table style="width:100%; border-collapse:collapse; font-size:0.62rem;"><thead><tr style="background:var(--bg-tertiary);"><th style="'+_mntMxTh()+'">Test</th><th style="'+_mntMxTh()+'">Ad</th><th style="'+_mntMxTh()+'">Sonuç</th></tr></thead><tbody>';
   r.details.forEach(function(dt){ h+='<tr><td style="'+_mntMxTd()+' font-weight:600;">'+_mntEsc(dt.id)+'</td><td style="'+_mntMxTd()+' text-align:left;">'+_mntEsc(dt.name)+'<div style="font-size:0.5rem; color:var(--text-muted); white-space:normal; max-width:520px;">'+_mntEsc(dt.detail)+'</div></td><td style="'+_mntMxTd()+'">'+(dt.ok?'<span style="color:#22c55e;">✓</span>':'<span style="color:#ef4444;">✗</span>')+'</td></tr>'; });
   h+='</tbody></table></div>';
-  _mntShowModal('🧪 Self-Test — Kabul Testleri (Adams TTAR)', h);
+  _mntShowModal('🧪 Doğrulama Testleri', h);
 }
 function veMntOpenMathModal(){ _mntShowModal('📐 Takoz Modülünün Matematiği', _mntMathHTML()); }
 function _mntMathHTML(){
@@ -921,11 +1092,12 @@ function _mntMathHTML(){
   var st='font-weight:700; color:var(--text-heading); margin:14px 0 4px; font-size:0.82rem;';
   var tx='font-size:0.68rem; line-height:1.55; color:var(--text-secondary); margin:4px 0;';
   var h='<div style="max-width:760px;">';
-  h+='<div style="'+st+'">0. Model</div><div style="'+tx+'">Güç grubu tek rijit gövde; şasiye N takoz (üç eksenli lineer yay). 6 SD. Referans: birleşik CG. Yük durumları otomatik (g-tabanlı). Lineer model ±10 mm bandında Adams ile birebir.</div>';
+  h+='<div style="'+st+'">0. Model</div><div style="'+tx+'">Güç grubu tek rijit gövde; şasiye N takoz (üç eksenli lineer yay). 6 SD. Referans: birleşik CG. Yük durumları otomatik (g-tabanlı) ve girilen kinematikten türetilen ileri/geri tork durumları. Lineer model ±10 mm bandında geçerli.</div>';
   h+='<div style="'+st+'">1-3. Kinematik & matrisler</div><div style="'+eq+'">q=[ux,uy,uz,θx,θy,θz] ; d=r_mount−c_G\nδ=u+θ×d=A·q , A=[E3|−skew(d)]\nK=Σ Aᵢᵀ·diag(k)ᵢ·Aᵢ ; M6=blockdiag(m·E3, I_G)\nI_G=Σ[Iⱼ+mⱼ((dⱼ·dⱼ)E3−dⱼdⱼᵀ)]</div>';
-  h+='<div style="'+st+'">4. Statik çözüm</div><div style="'+eq+'">F=[m·g·nx, m·g·ny, m·g·nz, 0,0,0] (nz yerçekimi DAHİL)\nq=K_stat⁻¹·F ; δᵢ=Aᵢ·q ; fᵢ=kᵢ·δᵢ\nΣfz=−m·g ; çekme: δz>+0.01 mm</div>';
+  h+='<div style="'+st+'">4. Statik çözüm</div><div style="'+eq+'">F=[m·g·nx, m·g·ny, m·g·nz, Tx,Ty,Tz] (nz yerçekimi DAHİL)\nq=K_stat⁻¹·F ; δᵢ=Aᵢ·q ; fᵢ=kᵢ·δᵢ\nΣfz=−m·g ; çekme: δz>+0.01 mm</div>';
+  h+='<div style="'+st+'">4b. Tork zinciri</div><div style="'+eq+'">T_shaft = Te · R_stall · i_gear · i_transfer · φ_axle · derate\nileri: i_gear=1.vites ; geri: i_gear=Geri ; Tx=−T_shaft</div>';
   h+='<div style="'+st+'">5. Modal</div><div style="'+eq+'">(K_dyn−ω²M6)φ=0 → genelleştirilmiş özdeğer\nf_r=√λ_r/2π (6 mod, artan)</div>';
-  h+='<div style="'+tx+'; color:var(--text-muted); margin-top:12px; border-top:1px solid var(--border-color); padding-top:8px;">Doğrulama: Adams BMC_TTAR_2031. Self-Test T1–T8 referans değerlerle eşleşir.</div></div>';
+  h+='<div style="'+tx+'; color:var(--text-muted); margin-top:12px; border-top:1px solid var(--border-color); padding-top:8px;">Doğrulama testleri (T1–T8) referans değerlerle eşleşir.</div></div>';
   return h;
 }
 function _mntShowModal(title, innerHTML){
@@ -952,6 +1124,7 @@ if(typeof module!=='undefined' && module.exports){
     getMntSolverPropertiesHTML: getMntSolverPropertiesHTML,
     getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
     getMntViewerPropertiesHTML: getMntViewerPropertiesHTML,
+    getMntCoordFramePropertiesHTML: getMntCoordFramePropertiesHTML,
     VE_MOUNT_LIBRARY: VE_MOUNT_LIBRARY,
     veMntGetLibraryMap: veMntGetLibraryMap,
     veMntGetLibraryList: veMntGetLibraryList,
@@ -967,6 +1140,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntExampleBodyType: _mntExampleBodyType,
     _mntExampleValidate: _mntExampleValidate,
     _mntGatherForSolver: _mntGatherForSolver,
+    _mntGatherTorque: _mntGatherTorque,
+    _mntTorqueCases: _mntTorqueCases,
     _mntToSI: _mntToSI,
     _mntDeflColor: _mntDeflColor,
     _mntForceColor: _mntForceColor
