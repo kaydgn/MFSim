@@ -840,12 +840,49 @@ function _mnt2DGather(){
   var num=function(v){ var n=Number(String(v).replace(',','.')); return Number.isFinite(n)?n:NaN; };
   var comps=g.components.map(function(c){ return {name:c.name, mass:num(c.mass), x:num(c.cgx), y:num(c.cgy), z:num(c.cgz)}; })
     .filter(function(c){ return Number.isFinite(c.x)&&Number.isFinite(c.y)&&Number.isFinite(c.z); });
-  var mounts=g.mounts.map(function(m){ return {name:m.name, x:num(m.x), y:num(m.y), z:num(m.z)}; })
+  var mounts=g.mounts.map(function(m){ return {name:m.name, x:num(m.x), y:num(m.y), z:num(m.z),
+    kxs:num(m.kxs), kys:num(m.kys), kzs:num(m.kzs)}; })
     .filter(function(m){ return Number.isFinite(m.x)&&Number.isFinite(m.y)&&Number.isFinite(m.z); });
   var mSum=0,sx=0,sy=0,sz=0;
   comps.forEach(function(c){ if(c.mass>0){ mSum+=c.mass; sx+=c.mass*c.x; sy+=c.mass*c.y; sz+=c.mass*c.z; } });
   var cg=mSum>0?{x:sx/mSum,y:sy/mSum,z:sz/mSum,m:mSum}:null;
-  return { comps:comps, mounts:mounts, cg:cg };
+  var analysis=_mnt2DAnalysis(comps, mounts, cg);
+  // Takoz başına statik sonucu (sehim/yük payı) doğrudan takoz nesnesine iliştir.
+  if(analysis && analysis.perMount){ analysis.perMount.forEach(function(pm,i){ if(mounts[i]){ mounts[i].dz=pm.dz; mounts[i].share=pm.share; mounts[i].tension=pm.tension; } }); }
+  return { comps:comps, mounts:mounts, cg:cg, analysis:analysis };
+}
+// Diyagram analiz katmanı — SADECE geometri+rijitlikten türetilir; başarısızsa null.
+//  • Elastik merkez (rijitlik merkezi): düşey yükte (kz-ağırlıklı) x,y; boyuna
+//    kesme merkezi yüksekliği (kx-ağırlıklı) z. CG ile arasındaki ofset, öteleme–
+//    dönme kuplajının (çökme/titreşim) ana göstergesidir.
+//  • Statik çözüm (yerçekimi): takoz başına düşey sehim δz (mm) ve yük payı (%).
+function _mnt2DAnalysis(comps, mounts, cg){
+  try{
+    var C=(typeof veMountCore!=='undefined')?veMountCore:null;
+    if(!C || !C.combineMassProps || !C.buildK || !C.solveCase || !C.mmToM) return null;
+    if(mounts.length<3 || !comps.length || !cg) return null;
+    // Elastik merkez (mm)
+    var sumKz=0,ecx=0,ecy=0,sumKx=0,ecz=0;
+    mounts.forEach(function(m){ var kz=m.kzs, kx=m.kxs;
+      if(kz>0){ sumKz+=kz; ecx+=kz*m.x; ecy+=kz*m.y; } if(kx>0){ sumKx+=kx; ecz+=kx*m.z; } });
+    var ec = (sumKz>0) ? { x:ecx/sumKz, y:ecy/sumKz, z:(sumKx>0?ecz/sumKx:cg.z) } : null;
+    // Statik çözüm (SI) — nokta-kütle (atalet statikte etkisiz) ile hafif model
+    var siC=comps.filter(function(c){ return c.mass>0; }).map(function(c){ return { name:c.name, mass:c.mass,
+      cg:[C.mmToM(c.x),C.mmToM(c.y),C.mmToM(c.z)], I:[[0,0,0],[0,0,0],[0,0,0]], pointMass:true }; });
+    var kOk=mounts.every(function(m){ return m.kxs>0 && m.kys>0 && m.kzs>0; });
+    var perMount=null;
+    if(siC.length && kOk){
+      var siM=mounts.map(function(m){ var kx=C.nPerMmToNPerM(m.kxs),ky=C.nPerMmToNPerM(m.kys),kz=C.nPerMmToNPerM(m.kzs);
+        return { name:m.name, pos:[C.mmToM(m.x),C.mmToM(m.y),C.mmToM(m.z)], kstat:[kx,ky,kz], kdyn:[kx,ky,kz] }; });
+      var mp=C.combineMassProps(siC);
+      if(mp){ var Kstat=C.buildK(siM, mp.cg, false);
+        var res=C.solveCase(Kstat, siM, mp.cg, mp.m, 9.81, {n:[0,0,-1], T:[0,0,0]});
+        if(res && res.perMount){ var s=0; res.perMount.forEach(function(p){ s+=Math.abs(p.f[2]); });
+          perMount=res.perMount.map(function(p){ return { dz:p.delta[2]*1000, share:(s>0?Math.abs(p.f[2])/s:0), tension:!!p.tension }; }); }
+      }
+    }
+    return (ec||perMount) ? { ec:ec, perMount:perMount } : null;
+  }catch(e){ return null; }
 }
 // SVG metin/işaret yardımcıları — akademik, tek renkli (tema uyumlu) görünüm.
 var _MNT2D_MONO="ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace";
@@ -869,6 +906,13 @@ function _mnt2DCGMark(cx,cy,r,color){
   s+='<path d="M'+_mnt2DR(cx)+' '+_mnt2DR(cy)+' L'+_mnt2DR(cx+r)+' '+_mnt2DR(cy)+' A'+r+' '+r+' 0 0 1 '+_mnt2DR(cx)+' '+_mnt2DR(cy+r)+' Z" fill="'+color+'"/>';
   s+='<path d="M'+_mnt2DR(cx)+' '+_mnt2DR(cy)+' L'+_mnt2DR(cx-r)+' '+_mnt2DR(cy)+' A'+r+' '+r+' 0 0 1 '+_mnt2DR(cx)+' '+_mnt2DR(cy-r)+' Z" fill="'+color+'"/>';
   return s;
+}
+// Elastik merkez işareti — artı (crosshair) daire; vurgu rengiyle CG'den ayrışır.
+function _mnt2DECMark(cx,cy){
+  var r=8, c='var(--accent-primary)';
+  return '<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+r+'" fill="var(--bg-primary)" stroke="'+c+'" stroke-width="1.6"/>'
+    + '<line x1="'+_mnt2DR(cx-r)+'" y1="'+_mnt2DR(cy)+'" x2="'+_mnt2DR(cx+r)+'" y2="'+_mnt2DR(cy)+'" stroke="'+c+'" stroke-width="1.4"/>'
+    + '<line x1="'+_mnt2DR(cx)+'" y1="'+_mnt2DR(cy-r)+'" x2="'+_mnt2DR(cx)+'" y2="'+_mnt2DR(cy+r)+'" stroke="'+c+'" stroke-width="1.4"/>';
 }
 // Takoz işareti — içi boş kare; yandan görünüşte tarama (hatch) ile doldurulur.
 // Yalnızca şekilleri döndürür; hover bilgisi grubu saran <g>'de tutulur.
@@ -977,7 +1021,9 @@ function _mnt2DFigure(o){
     var n=g.length, cx=0, cy=0, vv=0;
     g.forEach(function(x){ cx+=x.cx; cy+=x.cy; vv+=x.v; }); cx/=n; cy/=n; vv/=n;
     var info=['Takoz'+(n>1?' ('+n+')':'')];
-    g.forEach(function(x){ info.push('• '+(x.m.name||'Takoz')+'  ('+_mnt2DR(x.m.x)+', '+_mnt2DR(x.m.y)+', '+_mnt2DR(x.m.z)+') mm'); });
+    g.forEach(function(x){ var line='• '+(x.m.name||'Takoz')+'  ('+_mnt2DR(x.m.x)+', '+_mnt2DR(x.m.y)+', '+_mnt2DR(x.m.z)+') mm';
+      if(typeof x.m.dz==='number') line+='   ·  statik sehim δz='+x.m.dz.toFixed(2)+' mm · yük payı %'+(x.m.share*100).toFixed(1)+(x.m.tension?' ⚠ çekme':'');
+      info.push(line); });
     svg+='<g'+_mnt2DInfoAttr(info)+'>';
     for(var k=0;k<n;k++){ svg+=_mnt2DMountMark(cx+(k-(n-1)/2)*18, cy, o.vKey==='z'); }
     svg+='</g>';
@@ -991,6 +1037,22 @@ function _mnt2DFigure(o){
     svg+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="var(--bg-primary)" stroke="var(--text-secondary)" stroke-width="1.5"/></g>';
     items.push({cx:cx, cy:cy, mr:r, above:o.compAbove, text:o.compLabelFn(c), color:'var(--text-secondary)', size:9.5, bold:false});
   });
+  // elastik merkez + CG→EM ofset bağlantısı (öteleme–dönme kuplaj göstergesi)
+  if(o.ec && o.cg){
+    var ea=(o.vKey==='y'?o.ec.y:o.ec.z), ga=(o.vKey==='y'?o.cg.y:o.cg.z);
+    var ex=o.px(o.ec.x), ey=o.pyFn(ea), gx2=o.px(o.cg.x), gy2=o.pyFn(ga);
+    if(Math.hypot(ex-gx2, ey-gy2)>4){
+      svg+='<line x1="'+_mnt2DR(gx2)+'" y1="'+_mnt2DR(gy2)+'" x2="'+_mnt2DR(ex)+'" y2="'+_mnt2DR(ey)+'" stroke="var(--accent-primary)" stroke-width="1.2" stroke-dasharray="3 3" opacity="0.75"/>';
+    }
+    var da=(o.vKey==='y' ? (o.ec.x-o.cg.x)+' , '+(o.ec.y-o.cg.y) : (o.ec.x-o.cg.x)+' , '+(o.ec.z-o.cg.z));
+    var dvec=(o.vKey==='y') ? {a:o.ec.x-o.cg.x, b:o.ec.y-o.cg.y} : {a:o.ec.x-o.cg.x, b:o.ec.z-o.cg.z};
+    var dmag=Math.round(Math.hypot(dvec.a,dvec.b));
+    var ecInfo=['Elastik Merkez (rijitlik merkezi)', 'Konum  ('+_mnt2DR(o.ec.x)+', '+_mnt2DR(o.ec.y)+', '+_mnt2DR(o.ec.z)+') mm',
+      'CG → EM ofset  '+dmag+' mm ('+_mnt2DR(dvec.a)+', '+_mnt2DR(dvec.b)+')', 'Ofset büyükse öteleme–dönme kuplajı (çökme/titreşim) artar.'];
+    svg+='<g'+_mnt2DInfoAttr(ecInfo)+'>'+_mnt2DECMark(ex,ey);
+    svg+='<circle cx="'+_mnt2DR(ex)+'" cy="'+_mnt2DR(ey)+'" r="12" fill="transparent"/></g>';
+    items.push({cx:ex, cy:ey, mr:11, above:false, text:'elastik merkez', color:'var(--accent-primary)', size:9.5, bold:false});
+  }
   // birleşik CG (jeodezik sembol)
   if(o.cg){ var gx=o.px(o.cg.x), gy=o.pyFn(o.vKey==='y'?o.cg.y:o.cg.z);
     var cgInfo=['Birleşik Ağırlık Merkezi', 'Konum  ('+_mnt2DR(o.cg.x)+', '+_mnt2DR(o.cg.y)+', '+_mnt2DR(o.cg.z)+') mm'];
@@ -1049,26 +1111,28 @@ function _mnt2DViewSVG(data){
     return t;
   }
 
+  var ec=(data.analysis && data.analysis.ec) || null;
+  var hasStatic=!!(data.analysis && data.analysis.perMount);
   var VB_W=FIG_W, VB_H=boxYB+FIG_H+6;
   var svg='<svg viewBox="0 0 '+VB_W+' '+_mnt2DR(VB_H)+'" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block; font-family:'+_MNT2D_MONO+'; min-width:520px;">';
   // ── ÜST GÖRÜNÜŞ (X–Y) ──
   svg+=_mnt2DFigure({ ox:0, boxX:8, boxY:boxYA, boxW:FIG_W-16, boxH:FIG_H, FIG_W:FIG_W,
     title:'Üstten Görünüş · X–Y', plotTop:plotTopA, plotH:plotH, plotL:plotL, plotR:plotR,
-    px:px, pyFn:pyTop, vKey:'y', mounts:data.mounts, comps:data.comps, cg:data.cg, cr:cr, compAbove:true,
+    px:px, pyFn:pyTop, vKey:'y', mounts:data.mounts, comps:data.comps, cg:data.cg, ec:ec, cr:cr, compAbove:true,
     refV:0, refLabel:null, axis:{vLabel:'−Y', vDir:'down', note:'+Y (sağ) yukarı'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
     mountGroupLabelFn:function(g){ return mLabel(g,false); },
     cgLabelFn:function(cg){ return 'G ('+fmt1(cg.x)+' · '+fmt1(cg.y)+')'; },
-    caption:['Şekil 1 — Üstten görünüş (X–Y, ölçekli).','Takoz, bileşen ve birleşik ağırlık merkezleri. Ayrıntı için fare ile üzerine gelin.'] });
+    caption:['Şekil 1 — Üstten görünüş (X–Y, ölçekli).', (ec?'Elastik merkez (⊕) ve CG–EM ofseti gösterilir. ':'')+'Ayrıntı için fare ile işaretlerin üzerine gelin.'] });
   // ── YAN GÖRÜNÜŞ (X–Z) ──
   svg+=_mnt2DFigure({ ox:0, boxX:8, boxY:boxYB, boxW:FIG_W-16, boxH:FIG_H, FIG_W:FIG_W,
     title:'Yandan Görünüş · X–Z', plotTop:plotTopB, plotH:plotH, plotL:plotL, plotR:plotR,
-    px:px, pyFn:pySide, vKey:'z', mounts:data.mounts, comps:data.comps, cg:data.cg, cr:cr, compAbove:false,
+    px:px, pyFn:pySide, vKey:'z', mounts:data.mounts, comps:data.comps, cg:data.cg, ec:ec, cr:cr, compAbove:false,
     refV:0, refLabel:'Z = 0', axis:{vLabel:'+Z', vDir:'up', note:null},
     compLabelFn:function(c){ return shortName(c.name)+' (z='+rz(c.z)+')'; },
     mountGroupLabelFn:function(g){ return mLabel(g,true); },
     cgLabelFn:function(cg){ return 'G (z='+rz(cg.z)+')'; },
-    caption:['Şekil 2 — Yandan görünüş (X–Z, ölçekli).','Düşey konumlar (z) ve Z=0 referans düzlemi.'] });
+    caption:['Şekil 2 — Yandan görünüş (X–Z, ölçekli).', (hasStatic?'Takoza gel → statik sehim δz + yük payı. ':'')+'Düşey konumlar (z) ve Z=0 referans düzlemi.'] });
   svg+='</svg>';
   return svg;
 }
