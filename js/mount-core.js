@@ -500,6 +500,55 @@ var veMountCore = (function() {
     ]
   };
 
+  // ═══════════════════ Çoklu örnek kayıt defteri ═══════════════════
+  // Her giriş kendi kendine yeterli bir doğrulama örneğidir: sayısal model
+  // (TTAR_EXAMPLE biçimi) + sunum meta verisi (araç adı, açıklama, teknik özet)
+  // + isteğe bağlı topoloji görseli. UI katmanı (cp-mount.js) buradan okur;
+  // çekirdek hiçbir UI koduna bağlı değildir (yalnız veri tutar).
+  //
+  // ── YENİ ÖRNEK EKLEMEK ── buraya tek bir nesne ekle; panel ve yükleyici
+  // otomatik okur, başka hiçbir yeri değiştirmeye gerek YOK:
+  //
+  //   'anahtar': {
+  //     id:'anahtar',
+  //     name:'Kısa Ad',                 // açılır menü etiketi
+  //     vehicle:'Araç Adı',             // detay başlığı
+  //     subtitle:'5 kütle · 6 takoz',   // başlık altı kısa etiket
+  //     description:'Bir iki cümle açıklama.',
+  //     specs:[['Etiket','Değer'], …],  // detay tablosu satırları
+  //     image:'<svg…>' | 'data:image/…' | '',  // boş → modelden otomatik şema
+  //     model:{ g, components:[…], mounts:[…], torque:{…}, loadCases:[…] }
+  //   }
+  //
+  // model.components[i].kind  (ops.) → kanvas tipini açıkça belirt
+  //   ('mnt-motor'/'mnt-gearbox'/'mnt-shaft'/'mnt-bracket'/'mnt-transfer');
+  //   verilmezse bileşen adından çıkarılır.
+  // model.components[i].at / model.mounts[i].at = [lx,ly]  (ops.) → görseldeki
+  //   yerleşimi birebir eşlemek için elle yerel-piksel konum; verilmezse
+  //   otomatik yerleşim (orta sıra kütleler, alt/üst sıra takozlar) uygulanır.
+  const MOUNT_EXAMPLES = {
+    ttar: {
+      id: 'ttar',
+      name: 'BMC TTAR 2031',
+      vehicle: 'BMC TTAR 2031',
+      subtitle: '5 kütle · 6 takoz güç grubu',
+      description: 'Ağır ticari araç güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — motor, şanzıman, şaft payı ve iki cradle braketi altı elastomer takozla şasiye bağlanır.',
+      specs: [
+        ['Kütle gövdesi', String(TTAR_EXAMPLE.components.length)],
+        ['Takoz', String(TTAR_EXAMPLE.mounts.length)],
+        ['Toplam kütle', TTAR_EXAMPLE.components.reduce(function(s,c){ return s + (c.mass||0); }, 0).toFixed(1) + ' kg'],
+        ['Motor torku', TTAR_EXAMPLE.torque.Te + ' N·m'],
+        ['Yük durumu', String(TTAR_EXAMPLE.loadCases.length)]
+      ],
+      image: '',
+      model: TTAR_EXAMPLE
+    }
+  };
+  // id → örnek girişi (bilinmezse ttar'a düşer).
+  function getMountExample(id){ return MOUNT_EXAMPLES[id] || MOUNT_EXAMPLES.ttar; }
+  // Açılır menü sırası için giriş listesi.
+  function getMountExampleList(){ return Object.keys(MOUNT_EXAMPLES).map(function(k){ return MOUNT_EXAMPLES[k]; }); }
+
   // TTAR örneğini SI'ya çevirerek çekirdek tiplerine dönüştür.
   function ttarComponentsSI(){
     return TTAR_EXAMPLE.components.map(c=>({
@@ -700,6 +749,8 @@ var veMountCore = (function() {
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
     defaultLoadCases, TTAR_EXAMPLE, ttarComponentsSI, ttarMountsSI, selfTest,
+    // Çoklu örnek kayıt defteri (UI katmanı için)
+    MOUNT_EXAMPLES, getMountExample, getMountExampleList,
     // Birim dönüşümleri (UI katmanı için)
     mmToM, nPerMmToNPerM,
     // Numerik yardımcılar (test/ileri kullanım)

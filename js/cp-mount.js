@@ -434,6 +434,14 @@ function veMntSet(nodeId, key, val){
   node.data[key]=val;
   if(typeof saveState==='function') saveState();
 }
+// Örnek seçimi: kalıcı yaz + paneli yeniden çiz (görsel/detay canlı değişsin).
+function veMntSetExample(nodeId, key){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  node.data.exampleKey=key;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
 function veMntSetCheck(nodeId, key, checked){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
   if(!node.data) node.data={};
@@ -453,16 +461,27 @@ function veMntApplyLib(nodeId, key){
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ÖRNEK — hazır doğrulama analizini topolojiye yükle (+ tutarlılık uyarıları)
+//  ÖRNEK — hazır doğrulama modellerini seç, önizle ve topolojiye yükle
 // ════════════════════════════════════════════════════════════════════════════
-// "Örnek" bileşeni: gömülü örnek modelleri seçip iç topolojiye kurar. Yüklemeden
-// sonra model kontrol edilir; fazla takoz / eksik bileşen / tanımsız değer varsa
-// panelde uyarı listelenir.
-var VE_MNT_EXAMPLES = {
-  'ttar': { name:'BMC TTAR 2031 (5 kütle · 6 takoz)' }
-};
+// "Örnek" bileşeni: gömülü örnek modelleri (veMountCore.MOUNT_EXAMPLES) seçip
+// önizler ve tek tıkla iç topolojiye kurar. Panel yukarıdan aşağı: preset seçici
+// → topoloji görseli → araç detayları → "Örneği Aktar" → tutarlılık raporu.
+// Yeni örnek eklemek: mount-core.js MOUNT_EXAMPLES defterine bir giriş ekle —
+// başka hiçbir yeri değiştirmeye gerek yoktur (panel + yükleyici buradan okur).
+
+// Kayıt defteri erişimi — çekirdeğe bağlı, çekirdek yoksa güvenli düşüş.
+function _mntExampleReg(key){
+  if(typeof veMountCore!=='undefined' && veMountCore.getMountExample) return veMountCore.getMountExample(key);
+  var m=(typeof veMountCore!=='undefined') ? veMountCore.TTAR_EXAMPLE : null;
+  return { id:'ttar', name:'BMC TTAR 2031', vehicle:'BMC TTAR 2031', model:m };
+}
+function _mntExampleList(){
+  if(typeof veMountCore!=='undefined' && veMountCore.getMountExampleList) return veMountCore.getMountExampleList();
+  return [_mntExampleReg('ttar')];
+}
 
 // Örnek adı → kanvas kütle-gövdesi tipi (test buildTTARTopology ile aynı eşleme).
+// Yükleyici önce c.kind'i, yoksa bu adı kullanır.
 function _mntExampleBodyType(name){
   return /motor/i.test(name) ? 'mnt-motor'
     : /şanz|sanz/i.test(name) ? 'mnt-gearbox'
@@ -470,15 +489,107 @@ function _mntExampleBodyType(name){
     : /cradle|braket|bracket/i.test(name) ? 'mnt-bracket' : 'mnt-transfer';
 }
 
+// Örnek modelinin yerel-piksel yerleşimi — HEM otomatik şema HEM yükleyici bunu
+// kullanır, böylece görsel ile "Aktar"ın kurduğu topoloji birebir aynıdır.
+// Koordinatlar STARTER yerleşimiyle uyumlu: kütleler orta bant (ly=205),
+// takozlar ilk yarısı üst (ly=40), kalanı alt (ly=360). Bir bileşen veya takoz
+// kendi at:[lx,ly] konumunu taşırsa o kullanılır (görsele tam uyum).
+function _mntExampleLayout(model){
+  var comps=(model&&model.components)||[], mounts=(model&&model.mounts)||[];
+  var bodyY=205, half=Math.ceil(mounts.length/2);
+  var bodies=comps.map(function(c,i){
+    return (c.at&&c.at.length===2) ? {lx:c.at[0], ly:c.at[1]} : {lx:130+i*95, ly:bodyY};
+  });
+  var mnts=mounts.map(function(m,i){
+    if(m.at&&m.at.length===2) return {lx:m.at[0], ly:m.at[1]};
+    var top=i<half, col=top?i:(i-half);
+    return {lx:140+col*140, ly: top?40:360};
+  });
+  return { bodies:bodies, mnts:mnts, bodyY:bodyY, half:half };
+}
+
+// Modelden tema-uyumlu şematik SVG üret (örnek kendi görselini vermediğinde).
+// Kütleler yuvarlak dikdörtgen, takozlar yeşil daire; renkler var(--…) ile
+// aydınlık/karanlık temaya uyar. Yükleyiciyle aynı yerleşimi çizer.
+function _mntExampleDiagramSVG(model){
+  if(!model || !model.components || !model.components.length) return '';
+  var L=_mntExampleLayout(model), comps=model.components, mounts=model.mounts||[];
+  var BW=100, BH=48, MR=16, M=26, xs=[], ys=[];
+  L.bodies.forEach(function(p){ xs.push(p.lx-BW/2, p.lx+BW/2); ys.push(p.ly-BH/2, p.ly+BH/2); });
+  L.mnts.forEach(function(p){ xs.push(p.lx-MR, p.lx+MR); ys.push(p.ly-MR-14, p.ly+MR+14); });
+  var minX=Math.round(Math.min.apply(null,xs)-M), maxX=Math.round(Math.max.apply(null,xs)+M);
+  var minY=Math.round(Math.min.apply(null,ys)-M), maxY=Math.round(Math.max.apply(null,ys)+M);
+  var s='<svg viewBox="'+minX+' '+minY+' '+(maxX-minX)+' '+(maxY-minY)+'" width="100%" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" style="display:block;font-family:inherit;">';
+  // Takoz → en yakın kütle ince kılavuz çizgisi (arka planda)
+  mounts.forEach(function(m,i){
+    var p=L.mnts[i], nb=L.bodies[0], bd=Infinity;
+    L.bodies.forEach(function(bp){ var d=Math.abs(bp.lx-p.lx); if(d<bd){ bd=d; nb=bp; } });
+    s+='<line x1="'+p.lx+'" y1="'+p.ly+'" x2="'+nb.lx+'" y2="'+nb.ly+'" stroke="var(--border-hover)" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.6"/>';
+  });
+  // Takozlar
+  mounts.forEach(function(m,i){
+    var p=L.mnts[i], below=p.ly>L.bodyY, ty=below?(p.ly+MR+13):(p.ly-MR-6);
+    s+='<circle cx="'+p.lx+'" cy="'+p.ly+'" r="'+MR+'" fill="var(--accent-success)" fill-opacity="0.16" stroke="var(--accent-success)" stroke-width="2"/>';
+    s+='<circle cx="'+p.lx+'" cy="'+p.ly+'" r="4" fill="var(--accent-success)"/>';
+    s+='<text x="'+p.lx+'" y="'+ty+'" text-anchor="middle" font-size="11" fill="var(--text-secondary)">'+_mntEsc(m.name)+'</text>';
+  });
+  // Kütle gövdeleri
+  comps.forEach(function(c,i){
+    var p=L.bodies[i];
+    s+='<rect x="'+(p.lx-BW/2)+'" y="'+(p.ly-BH/2)+'" width="'+BW+'" height="'+BH+'" rx="7" fill="var(--bg-tertiary)" stroke="var(--accent-primary)" stroke-width="2"/>';
+    s+='<text x="'+p.lx+'" y="'+(p.ly+4)+'" text-anchor="middle" font-size="12" font-weight="600" fill="var(--text-primary)">'+_mntEsc(c.name)+'</text>';
+  });
+  s+='</svg>';
+  return s;
+}
+
+// Örnek görselini panele bas: inline SVG → doğrudan (tema uyumlu); data-URI →
+// <img> (raster/svg). Boşsa çağıran taraf otomatik şemaya düşer.
+function _mntExampleImageHTML(image){
+  var s=String(image==null?'':image).trim();
+  if(!s) return '';
+  if(/^<svg/i.test(s)) return s;
+  return '<img src="'+_mntEsc(s)+'" alt="Topoloji şeması" style="display:block; width:100%; height:auto;"/>';
+}
+
+// Detay bloğu — araç adı + kısa etiket + açıklama + spec tablosu.
+function _mntExampleDetailsHTML(ex){
+  var h='<div style="margin-bottom:12px;">';
+  h+='<div style="font-size:0.82rem; font-weight:700; color:var(--text-heading); line-height:1.25;">'+_mntEsc(ex.vehicle||ex.name||'')+'</div>';
+  if(ex.subtitle) h+='<div style="font-size:0.62rem; color:var(--accent-primary); font-weight:600; margin-top:2px;">'+_mntEsc(ex.subtitle)+'</div>';
+  if(ex.description) h+='<div style="font-size:0.62rem; color:var(--text-secondary); line-height:1.5; margin-top:7px;">'+_mntEsc(ex.description)+'</div>';
+  h+='</div>';
+  var specs=ex.specs||[];
+  if(specs.length){
+    h+='<table style="width:100%; font-size:0.64rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:13px;">';
+    specs.forEach(function(r){
+      h+='<tr style="border-bottom:1px solid var(--border-color);">'
+        +'<th style="padding:5px 9px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:52%; font-weight:500; color:var(--text-secondary); white-space:nowrap;">'+_mntEsc(r[0])+'</th>'
+        +'<td style="padding:5px 9px; color:var(--text-primary); font-weight:600;">'+_mntEsc(r[1])+'</td></tr>';
+    });
+    h+='</table>';
+  }
+  return h;
+}
+
 function getMntExamplePropertiesHTML(node){
   if(!node.data) node.data={};
-  var sel = node.data.exampleKey || 'ttar';
+  var list=_mntExampleList();
+  var sel=node.data.exampleKey || (list[0]&&list[0].id) || 'ttar';
+  var ex=_mntExampleReg(sel);
+  var nid=node.id;
+  var diagram = ex.image ? _mntExampleImageHTML(ex.image) : _mntExampleDiagramSVG(ex.model);
   var html='<div class="sw-panel">';
-  html+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek Analiz</div>';
-  html+='<select id="ve-mnt-example-sel" onchange="veMntSet(\''+node.id+'\',\'exampleKey\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; margin-bottom:11px;">';
-  Object.keys(VE_MNT_EXAMPLES).forEach(function(k){ html+='<option value="'+k+'"'+(sel===k?' selected':'')+'>'+_mntEsc(VE_MNT_EXAMPLES[k].name)+'</option>'; });
+  html+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek Model</div>';
+  html+='<select id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; margin-bottom:11px;">';
+  list.forEach(function(e){ html+='<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; });
   html+='</select>';
-  html+='<button onclick="veMntLoadExample(\''+node.id+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:5px; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Topolojiye Yükle</button>';
+  if(diagram){
+    html+='<div style="font-size:0.55rem; font-weight:700; color:var(--text-muted); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:5px;">Topoloji</div>';
+    html+='<div style="width:100%; padding:10px; box-sizing:border-box; border:1px solid var(--border-color); background:var(--bg-primary); border-radius:6px; margin-bottom:12px; overflow:hidden;">'+diagram+'</div>';
+  }
+  html+=_mntExampleDetailsHTML(ex);
+  html+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:5px; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği Aktar</button>';
   html+='<div id="ve-mnt-example-report" style="margin-top:12px;"></div>';
   html+='</div>';
   return html;
@@ -527,7 +638,9 @@ function veMntLoadExample(nodeId){
   if(typeof veMountCore==='undefined' || typeof createNode!=='function') return;
   var node = nodes.find(function(n){ return n.id===nodeId; });
   var key = (node && node.data && node.data.exampleKey) || 'ttar';
-  var EX = veMountCore.TTAR_EXAMPLE; if(!EX) return;
+  // Seçilen örneğin modelini kayıt defterinden çöz (bilinmezse TTAR'a düşer).
+  var ex = (veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
+  var EX = (ex && ex.model) || veMountCore.TTAR_EXAMPLE; if(!EX) return;
 
   // Mevcut kütle/takoz bileşenlerini bul (Çözücü/Örnek/Görüntüleyici korunur).
   var toRemove = nodes.filter(function(n){ var d=_mntDef(n)||{}; return d.isMountBody || d.isMount; });
@@ -539,20 +652,19 @@ function veMntLoadExample(nodeId){
 
   // Örnek düğümlerini STARTER ile aynı tabana göre yerleştir ki yardımcı araçlarla
   // (Koordinat Düzlemi / 3D / 2D / Örnek / Çözücü — sağ ve üst kenarda) çakışmasın.
-  // Fiziksel gövdeler orta bant, takozlar üst/alt bant, hepsi sol-orta bölgede.
-  var nMnt=EX.mounts.length, half=Math.ceil(nMnt/2);
+  // Yerleşim panel önizlemesiyle AYNI (_mntExampleLayout) → görsel ile kurulan
+  // topoloji birebir örtüşür; bileşen/takoz kendi at:[lx,ly]'sini taşıyabilir.
+  var LAY=_mntExampleLayout(EX);
+  var layout=LAY.bodies.concat(LAY.mnts);
   var base = (typeof veArrangeModuleBase==='function')
     ? veArrangeModuleBase(VE_MNT_STARTER_LAYOUT.map(function(it){ return {lx:it.lx, ly:it.ly}; }))
     : { x:3000, y:3000 };
-  var layout=[];
-  EX.components.forEach(function(c,i){ layout.push({lx:130+i*95, ly:205}); });
-  EX.mounts.forEach(function(m,i){ var top=i<half, col=top?i:(i-half); layout.push({lx:140+col*140, ly: top?40:360}); });
 
   var tq=EX.torque||{};
   var li=0;
   EX.components.forEach(function(c){
     var pos=layout[li++]; var before=nodes.length;
-    var kind=_mntExampleBodyType(c.name);
+    var kind=c.kind || _mntExampleBodyType(c.name);
     createNode(kind, base.x+pos.lx, base.y+pos.ly);
     if(nodes.length>before){
       var n=nodes[nodes.length-1];
@@ -1192,8 +1304,11 @@ if(typeof module!=='undefined' && module.exports){
     veMntLibSetBuiltin: veMntLibSetBuiltin,
     veMntLibResetBuiltin: veMntLibResetBuiltin,
     MNT_AUTO_CASES: MNT_AUTO_CASES,
-    VE_MNT_EXAMPLES: VE_MNT_EXAMPLES,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
+    _mntExampleReg: _mntExampleReg,
+    _mntExampleList: _mntExampleList,
+    _mntExampleLayout: _mntExampleLayout,
+    _mntExampleDiagramSVG: _mntExampleDiagramSVG,
     _mntExampleBodyType: _mntExampleBodyType,
     _mntExampleValidate: _mntExampleValidate,
     _mntGatherForSolver: _mntGatherForSolver,
