@@ -319,13 +319,13 @@ describe('Estetik paneller — yan yana alanlar', () => {
   });
 });
 
-describe('Starter yerleşim (modül açılınca hazır bileşenler)', () => {
-  test('fiziksel + takoz + Çözücü + analiz araçları', () => {
+describe('Referans yerleşim (koordinat çerçevesi) + açılış', () => {
+  test('referans yerleşim: fiziksel + takoz + Çözücü + analiz araçları', () => {
     const L = cp.VE_MNT_STARTER_LAYOUT;
     expect(L.filter(i => i.type === 'mnt-mount')).toHaveLength(5);
     expect(L.filter(i => i.type === 'mnt-solver')).toHaveLength(1);
     expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-shaft']));
-    // referans görseldeki analiz araçları da starter'da (image 1)
+    // referans görseldeki analiz araçları da yerleşimde (image 1)
     expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-coordframe', 'mnt-library', 'mnt-viewer', 'mnt-2dview', 'mnt-example']));
   });
   test('takoz adları referans görsel ile aynı (5 adet)', () => {
@@ -337,6 +337,15 @@ describe('Starter yerleşim (modül açılınca hazır bileşenler)', () => {
       .filter(i => /mnt-(motor|gearbox|shaft|transfer)/.test(i.type) && i.name)
       .map(i => i.name);
     bodyNames.forEach(n => expect(n).not.toMatch(/\(Kütle\)/));
+  });
+  test('açılışta YALNIZ "Başlangıç ve Örnekler" (mnt-example) düğümü kurulur', () => {
+    global.nodes = [];
+    global.createNode = (type, x, y) => { global.nodes.push({ id: 'n' + global.nodes.length, type, x, y, data: {} }); };
+    const created = cp.veMntPopulateStarter();
+    expect(global.nodes).toHaveLength(1);
+    expect(global.nodes[0].type).toBe('mnt-example');
+    expect(created).toHaveLength(1);
+    delete global.createNode; delete global.nodes;
   });
 });
 

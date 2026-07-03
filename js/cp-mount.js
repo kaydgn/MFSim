@@ -127,12 +127,12 @@ function getMntModulePropertiesHTML(node){
   return html;
 }
 
-// İlk açılışta iç topolojiye yerleştirilecek hazır, DÜZENLİ yerleşim (yerel px).
-// Üst şerit: analiz araçları tek sırada (Koordinat / Takoz Özellikleri / 3D / 2D
-// / Çözücü / Örnek). Alt bölge: güç grubu üstten-görünüş şeması — gövdeler yatay
-// sırada (Ön Takoz · Motor · Şanzıman · Transfer · Şaft), takozlar gövdelerin
-// çevresinde (sağ takozlar üstte, sol takozlar altta). Kurulumda görünür alana
-// ortalanır.
+// REFERANS yerleşim (yerel px) — güç grubunun düzenli üstten-görünüş şeması ve
+// analiz araçlarının konumları. Model açılışında bu yerleşimin TAMAMI artık
+// KURULMAZ; yalnız "Başlangıç ve Örnekler" bileşeni gelir (aşağıdaki
+// veMntPopulateStarter). Buradaki koordinatlar hâlâ (a) tek bileşenin konumu ve
+// (b) "Örneği Aktar" ile kurulan topolojinin görünür alana ortalanması için
+// koordinat çerçevesi olarak kullanılır.
 var VE_MNT_STARTER_LAYOUT = [
   // ── Üst şerit: analiz araçları (tek sıra, eşit aralık) ──
   { type:'mnt-coordframe',                     lx:40,  ly:20 },
@@ -178,23 +178,24 @@ function _mntRemoveNode(id){
   }
 }
 
-// İlk açılışta iç topolojiye hazır bileşen yerleşimini kur (referans görsel).
-// Sadece düğüm oluşturur — Çözücü hepsini otomatik algıladığından bağlantı yok.
+// İlk açılışta iç topolojiye YALNIZ "Başlangıç ve Örnekler" (mnt-example)
+// bileşeni gelir; kullanıcı örneği bu bileşenin panelinden aktarır. Bileşen,
+// referans yerleşimdeki sağ-üst konumuna (aynı taban) yerleştirilir; "Örneği
+// Aktar" güç grubunu sol-orta bölgeye (Çözücü sağ-üste) kurduğundan çakışmaz.
 function veMntPopulateStarter(){
   if(typeof createNode!=='function') return [];
   var base = (typeof veArrangeModuleBase==='function')
     ? veArrangeModuleBase(VE_MNT_STARTER_LAYOUT.map(function(it){ return {lx:it.lx, ly:it.ly}; }))
     : { x:3000, y:3000 };
+  var slot = VE_MNT_STARTER_LAYOUT.find(function(it){ return it.type==='mnt-example'; }) || { lx:790, ly:20 };
   var created=[];
-  VE_MNT_STARTER_LAYOUT.forEach(function(it){
-    var before=nodes.length;
-    createNode(it.type, base.x+it.lx, base.y+it.ly);
-    if(nodes.length>before){
-      var n=nodes[nodes.length-1];
-      if(it.name && it.name!==((_mntDef(n)||{}).name)) _mntSetNodeName(n, it.name);
-      created.push(n);
-    }
-  });
+  var before=nodes.length;
+  createNode('mnt-example', base.x+slot.lx, base.y+slot.ly);
+  if(nodes.length>before){
+    var n=nodes[nodes.length-1];
+    if(slot.name) _mntSetNodeName(n, slot.name);
+    created.push(n);
+  }
   if(typeof updateAllConnections==='function') updateAllConnections();
   return created;
 }
@@ -1515,6 +1516,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntLibResetBuiltin: veMntLibResetBuiltin,
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
+    veMntPopulateStarter: veMntPopulateStarter,
     _mntExampleReg: _mntExampleReg,
     _mntExampleList: _mntExampleList,
     _mntExampleLayout: _mntExampleLayout,
