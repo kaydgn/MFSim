@@ -73,6 +73,9 @@ jobs:
           cp pwa/manifest.json _site/pwa/manifest.json
           cp pwa/icon.svg _site/pwa/icon.svg
           cp pwa/sw.js _site/pwa/sw.js
+          # Harici varlıklar (ör. örnek topoloji görselleri) — göreli yolla
+          # referans verilenler Pages'e aynı yapıda kopyalanır.
+          if [ -d assets ]; then cp -r assets _site/assets; fi
           touch _site/.nojekyll
 
       - name: Generate version.json

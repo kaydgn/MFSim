@@ -563,13 +563,19 @@ function _mntExampleDiagramSVG(model, tools){
   return s;
 }
 
-// Örnek görselini panele bas: inline SVG → doğrudan (tema uyumlu); data-URI →
-// <img> (raster/svg). Boşsa çağıran taraf otomatik şemaya düşer.
-function _mntExampleImageHTML(image){
+// Örnek görselini panele bas: inline SVG → doğrudan (tema uyumlu); data-URI ya da
+// göreli yol → <img>. fallback verilirse ve resim yüklenemezse (dosya henüz
+// eklenmemişse) kırık resim yerine yedek şema gösterilir. Boşsa çağıran taraf
+// otomatik şemaya düşer.
+function _mntExampleImageHTML(image, fallback){
   var s=String(image==null?'':image).trim();
   if(!s) return '';
   if(/^<svg/i.test(s)) return s;
-  return '<img src="'+_mntEsc(s)+'" alt="Topoloji şeması" style="display:block; width:100%; height:auto;"/>';
+  var fb=fallback||'';
+  var onerr=fb?' onerror="this.style.display=\'none\'; if(this.nextElementSibling) this.nextElementSibling.style.display=\'block\';"':'';
+  var h='<img src="'+_mntEsc(s)+'" alt="Topoloji şeması" loading="lazy" style="display:block; width:100%; height:auto;"'+onerr+'/>';
+  if(fb) h+='<div style="display:none;">'+fb+'</div>';
+  return h;
 }
 
 // Detay bloğu — araç adı + kısa etiket + açıklama + spec tablosu.
@@ -598,7 +604,8 @@ function getMntExamplePropertiesHTML(node){
   var sel=node.data.exampleKey || (list[0]&&list[0].id) || 'siper';
   var ex=_mntExampleReg(sel);
   var nid=node.id;
-  var diagram = ex.image ? _mntExampleImageHTML(ex.image) : _mntExampleDiagramSVG(ex.model, ex.tools);
+  var autoSvg = _mntExampleDiagramSVG(ex.model, ex.tools);
+  var diagram = ex.image ? _mntExampleImageHTML(ex.image, autoSvg) : autoSvg;
   var html='<div class="sw-panel">';
   html+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek Model</div>';
   html+='<select id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; margin-bottom:11px;">';
