@@ -121,11 +121,12 @@
             </div>
             <div class="ve-component ve-submodule" draggable="true" data-type="mount-analysis" title="Sürükleyip bırakın → ana canvas'ta tek 'Takoz Çökme-Titreşim' bloğu oluşur. Çift tıklayınca kendi ALT TOPOLOJİSİ (Motor / Takoz / Çözücü) açılır.">
               <svg width="20" height="20" viewBox="0 0 100 100" style="flex-shrink:0;">
-                <rect x="6" y="14" width="88" height="72" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
-                <rect x="34" y="30" width="32" height="13" rx="3" fill="currentColor" opacity="0.55"/>
-                <path d="M40 43 Q34 49 44 53 Q34 57 44 61 Q34 65 40 69" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M60 43 Q54 49 64 53 Q54 57 64 61 Q54 65 60 69" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-                <line x1="30" y1="71" x2="70" y2="71" stroke="currentColor" stroke-width="3"/>
+                <rect x="6" y="16" width="88" height="68" rx="9" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="7 5"/>
+                <rect x="30" y="34" width="30" height="10" rx="2" fill="currentColor" opacity="0.55"/>
+                <path d="M38 44 Q32 50 42 54 Q32 58 42 62 Q32 66 38 70" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M52 44 Q46 50 56 54 Q46 58 56 62 Q46 66 52 70" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                <line x1="26" y1="72" x2="64" y2="72" stroke="currentColor" stroke-width="3"/>
+                <path d="M64 22 h18 v18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
               </svg>
               <span class="ve-comp-label">Takoz Çökme-Titreşim</span>
             </div>
@@ -380,6 +381,19 @@
                 <rect x="15" y="15" width="70" height="70" rx="10" fill="none" stroke="currentColor" stroke-width="6"/>
                 <polygon points="40,30 40,70 70,50" fill="currentColor"/>
               </svg> <span class="ve-comp-label">Çözücü</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-example" title="Örnek — hazır doğrulama analizini (Adams BMC TTAR 2031) topolojiye yükler; tutarlılık uyarıları gösterir">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M28 14 h32 l14 14 v58 h-46 z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M60 14 v14 h14" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+                <line x1="36" y1="44" x2="66" y2="44" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                <line x1="36" y1="56" x2="66" y2="56" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+                <line x1="36" y1="68" x2="54" y2="68" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+              </svg> <span class="ve-comp-label">Örnek</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-viewer" title="3D Görüntüleyici — iç topolojinin 3B yerleşimini gösterir (tema uyumlu)">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M50 14 L84 32 L84 68 L50 86 L16 68 L16 32 Z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M50 14 L50 50 M50 50 L84 32 M50 50 L16 32" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/>
+              </svg> <span class="ve-comp-label">3D Görüntüleyici</span></div>
           </div>
 
           <div class="ve-category ve-category-tools" data-always-visible="true">

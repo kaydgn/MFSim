@@ -202,6 +202,10 @@ function showNodeProperties(node) {
     html += getMntMountPropertiesHTML(node);
   } else if(node.type === 'mnt-solver') {
     html += getMntSolverPropertiesHTML(node);
+  } else if(node.type === 'mnt-example') {
+    html += getMntExamplePropertiesHTML(node);
+  } else if(node.type === 'mnt-viewer') {
+    html += getMntViewerPropertiesHTML(node);
   } else if(node.type === 'arac-performans') {
     html += getAracPerformansPropertiesHTML(node);
   } else if(node.type === 'mount-analysis') {
@@ -269,6 +273,23 @@ function showNodeProperties(node) {
   if(node.type === 'mnt-solver') {
     setTimeout(function() {
       if(typeof veMntSolverCompute === 'function') veMntSolverCompute(node.id);
+    }, 120);
+  }
+
+  // Takoz 3D Görüntüleyici: panel açılınca güncel topolojiyle başlat
+  if(node.type === 'mnt-viewer') {
+    setTimeout(function() {
+      if(typeof veMntViewerRefresh === 'function') veMntViewerRefresh();
+    }, 140);
+  }
+
+  // Takoz Örnek: mevcut model uyarılarını göster (yükleme öncesi durum)
+  if(node.type === 'mnt-example') {
+    setTimeout(function() {
+      if(typeof _mntExampleValidate === 'function' && typeof _mntRenderExampleReport === 'function') {
+        var g = (typeof _mntGatherForSolver === 'function') ? _mntGatherForSolver() : {components:[],mounts:[]};
+        if(g.components.length || g.mounts.length) _mntRenderExampleReport(_mntExampleValidate(), true);
+      }
     }, 120);
   }
 }

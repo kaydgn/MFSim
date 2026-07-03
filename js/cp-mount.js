@@ -79,12 +79,65 @@ function getMntModulePropertiesHTML(node){
   return html;
 }
 
-// İlk açılışta iç topolojiye bir Çözücü tohumla (analiz hedefi).
+// İlk açılışta iç topolojiye yerleştirilecek hazır yerleşim (yerel px). Orta
+// sıra: Ön Takoz · Motor · Şanzıman · Transfer · Şaft · Çözücü. Üst sıra: Sağ
+// Yan / Sağ Arka takoz. Alt sıra: Sol Yan / Sol Arka takoz. (Kullanıcının
+// gönderdiği referans görsel ile aynı düzen.) Kurulumda görünür alana ortalanır.
+var VE_MNT_STARTER_LAYOUT = [
+  { type:'mnt-solver',   name:'Çözücü',           lx:600, ly:150 },
+  { type:'mnt-motor',    name:'Motor (Kütle)',    lx:95,  ly:150 },
+  { type:'mnt-gearbox',  name:'Şanzıman (Kütle)', lx:215, ly:150 },
+  { type:'mnt-transfer', name:'Transfer Kutusu',  lx:335, ly:150 },
+  { type:'mnt-shaft',    name:'Şaft (Kütle)',     lx:455, ly:150 },
+  { type:'mnt-mount',    name:'Ön Takoz',         lx:5,   ly:157 },
+  { type:'mnt-mount',    name:'Sağ Yan Takoz',    lx:150, ly:25  },
+  { type:'mnt-mount',    name:'Sağ Arka Takoz',   lx:340, ly:25  },
+  { type:'mnt-mount',    name:'Sol Yan Takoz',    lx:150, ly:280 },
+  { type:'mnt-mount',    name:'Sol Arka Takoz',   lx:340, ly:280 }
+];
+
+// Node'a özel ad ata + kanvastaki etiketi güncelle.
+function _mntSetNodeName(node, name){
+  if(!node || !name) return;
+  node.customName = name;
+  if(typeof document!=='undefined'){
+    var el=document.getElementById(node.id);
+    if(el){ var lbl=el.querySelector('.ve-node-label'); if(lbl) lbl.textContent=name; }
+  }
+}
+
+// Node'u (id ile) topolojiden ve DOM'dan kaldır — bağlantılarını da temizle.
+function _mntRemoveNode(id){
+  if(typeof connections!=='undefined'){
+    connections = connections.filter(function(c){ return c.from!==id && c.to!==id; });
+  }
+  if(typeof document!=='undefined'){
+    var el=document.getElementById(id); if(el) el.remove();
+  }
+  if(typeof nodes!=='undefined'){
+    nodes = nodes.filter(function(n){ return n.id!==id; });
+  }
+}
+
+// İlk açılışta iç topolojiye hazır bileşen yerleşimini kur (referans görsel).
+// Sadece düğüm oluşturur — Çözücü hepsini otomatik algıladığından bağlantı yok.
 function veMntPopulateStarter(){
-  if(typeof createNode!=='function') return;
-  var base = (typeof veArrangeModuleBase==='function') ? veArrangeModuleBase([{lx:0,ly:0}]) : { x:3000, y:3000 };
-  createNode('mnt-solver', base.x + 260, base.y + 40);
+  if(typeof createNode!=='function') return [];
+  var base = (typeof veArrangeModuleBase==='function')
+    ? veArrangeModuleBase(VE_MNT_STARTER_LAYOUT.map(function(it){ return {lx:it.lx, ly:it.ly}; }))
+    : { x:3000, y:3000 };
+  var created=[];
+  VE_MNT_STARTER_LAYOUT.forEach(function(it){
+    var before=nodes.length;
+    createNode(it.type, base.x+it.lx, base.y+it.ly);
+    if(nodes.length>before){
+      var n=nodes[nodes.length-1];
+      if(it.name && it.name!==((_mntDef(n)||{}).name)) _mntSetNodeName(n, it.name);
+      created.push(n);
+    }
+  });
   if(typeof updateAllConnections==='function') updateAllConnections();
+  return created;
 }
 
 // Sidebar kapsamını güncelle (takoz iç topolojisi ⇄ ana ekran). Kapsam açık
@@ -177,31 +230,46 @@ function _mntRow(label, sub, inner){
     + '<th style="padding:5px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:52%; font-weight:500; color:var(--text-secondary);">'+label+(sub?' <span style="color:var(--text-muted); font-weight:400;">'+sub+'</span>':'')+'</th>'
     + '<td style="padding:3px 5px; background:var(--bg-tertiary);">'+inner+'</td></tr>';
 }
+// Estetik yardımcılar — etiketli 3'lü inline grup (x/y/z yan yana) + tek satır.
+function _mntTriple(node, title, unit, keys, subs, step){
+  var h='<div style="margin-bottom:13px;">';
+  h+='<div style="font-size:0.6rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:6px;">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400; text-transform:none;">'+unit+'</span>':'')+'</div>';
+  h+='<div style="display:flex; gap:6px;">';
+  for(var i=0;i<3;i++){
+    var key=keys[i];
+    var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
+    h+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">'
+      +'<span style="font-size:0.56rem; color:var(--text-muted); text-align:center; letter-spacing:0.02em;">'+subs[i]+'</span>'
+      +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; padding:6px 7px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; text-align:right; box-sizing:border-box;">'
+      +'</label>';
+  }
+  h+='</div></div>';
+  return h;
+}
+function _mntSingle(node, title, unit, key, ph, step){
+  var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
+  return '<div style="display:flex; align-items:center; gap:10px; margin-bottom:13px;">'
+    +'<div style="flex:1; font-size:0.68rem; font-weight:600; color:var(--text-secondary);">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400;">'+unit+'</span>':'')+'</div>'
+    +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:140px; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; text-align:right;">'
+    +'</div>';
+}
+function _mntNote(text, accent){
+  return '<div style="padding:8px 10px; margin-bottom:13px; font-size:0.62rem; line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid '+(accent||'var(--accent-primary)')+'; border-radius:4px;">'+text+'</div>';
+}
+
 function getMntMassPropertiesHTML(node){
   _mntEnsureMassData(node);
   var d=node.data;
   var html='<div class="sw-panel">';
-  html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
-      + 'Kütle gövdesi → 6 SD analizde birleşik rijit gövdeye katkı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar (bağlantı gerekmez). Atalet <b>tensör bileşeni</b> (CATIA Measure Inertia); nokta kütle → atalet 0.</div>';
-  html+='<div class="sw-section-title">Kütle & Ağırlık Merkezi</div>';
-  html+='<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
-  html+=_mntRow('Kütle','m [kg]', _mntInp(node,'mass','ör: 1386.3','0.001'));
-  html+=_mntRow('Ağ. Merkezi x','[mm]', _mntInp(node,'cgx','ör: -321.36','0.01'));
-  html+=_mntRow('Ağ. Merkezi y','[mm]', _mntInp(node,'cgy','ör: 4.89','0.01'));
-  html+=_mntRow('Ağ. Merkezi z','[mm]', _mntInp(node,'cgz','ör: 859.33','0.01'));
-  html+='</table>';
-  html+='<label style="display:flex; align-items:center; gap:7px; font-size:0.66rem; color:var(--text-secondary); margin-bottom:10px; cursor:pointer;"><input type="checkbox" '+(d.pointMass?'checked':'')+' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"> Nokta kütle (atalet = 0)</label>';
+  html+=_mntNote('Kütle gövdesi → 6 SD analizde birleşik rijit gövdeye katkı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar. Atalet <b>tensör bileşeni</b> (CATIA); nokta kütle → atalet 0.');
+  html+=_mntSingle(node,'Kütle','m [kg]','mass','ör: 1386.3','0.001');
+  html+=_mntTriple(node,'Ağırlık Merkezi','[mm]',['cgx','cgy','cgz'],['x','y','z'],'0.01');
+  html+='<label style="display:flex; align-items:center; gap:7px; font-size:0.66rem; color:var(--text-secondary); margin:0 0 13px; cursor:pointer;"><input type="checkbox" '+(d.pointMass?'checked':'')+' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"> Nokta kütle (atalet = 0)</label>';
   if(!d.pointMass){
-    html+='<div class="sw-section-title">Atalet Tensörü <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">[kg·m²]</span></div>';
-    html+='<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:8px;">';
-    html+=_mntRow('Ixx','', _mntInp(node,'Ixx','','0.001'));
-    html+=_mntRow('Iyy','', _mntInp(node,'Iyy','','0.001'));
-    html+=_mntRow('Izz','', _mntInp(node,'Izz','','0.001'));
-    html+=_mntRow('Ixy','', _mntInp(node,'Ixy','','0.001'));
-    html+=_mntRow('Ixz','', _mntInp(node,'Ixz','','0.001'));
-    html+=_mntRow('Iyz','', _mntInp(node,'Iyz','','0.001'));
-    html+='</table>';
-    html+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4;">Çarpım terimleri (Ixy/Ixz/Iyz) tensör bileşeni olarak girilir; el kitabı ∫xy dm konvansiyonu kullanılıyorsa işaret çevrilmelidir.</div>';
+    html+='<div style="font-size:0.66rem; font-weight:700; color:var(--text-heading); border-bottom:1px solid var(--border-color); padding-bottom:4px; margin:4px 0 10px;">Atalet Tensörü <span style="font-size:0.54rem; font-weight:400; color:var(--text-muted);">[kg·m²] · CATIA konvansiyonu</span></div>';
+    html+=_mntTriple(node,'Köşegen','',['Ixx','Iyy','Izz'],['Ixx','Iyy','Izz'],'0.001');
+    html+=_mntTriple(node,'Çarpım','',['Ixy','Ixz','Iyz'],['Ixy','Ixz','Iyz'],'0.001');
+    html+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4;">Çarpım terimleri tensör bileşeni olarak girilir; el kitabı ∫xy dm konvansiyonu kullanılıyorsa işaret çevrilmelidir.</div>';
   }
   html+='</div>';
   return html;
@@ -213,30 +281,14 @@ function getMntMassPropertiesHTML(node){
 function getMntMountPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
-  html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-success);">'
-      + 'Takoz → şasiye üç eksenli lineer yay bağlantısı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar (bağlantı gerekmez).</div>';
-  // Kütüphane
-  html+='<div style="margin-bottom:8px;"><select onchange="veMntApplyLib(\''+node.id+'\',this.value)" style="width:100%; padding:5px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color);"><option value="">— Kütüphaneden rijitlik yükle —</option>';
+  html+=_mntNote('Takoz → şasiye üç eksenli lineer yay bağlantısı. İç topolojiye eklenince <b>Çözücü</b> otomatik algılar (bağlantı gerekmez).','var(--accent-success)');
+  html+='<div style="font-size:0.6rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:6px;">Kütüphane</div>';
+  html+='<select onchange="veMntApplyLib(\''+node.id+'\',this.value)" style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; margin-bottom:13px;"><option value="">— Kütüphaneden rijitlik yükle —</option>';
   Object.keys(VE_MOUNT_LIBRARY).forEach(function(k){ html+='<option value="'+k+'"'+(node.data.libKey===k?' selected':'')+'>'+_mntEsc(VE_MOUNT_LIBRARY[k].name)+'</option>'; });
-  html+='</select></div>';
-  html+='<div class="sw-section-title">Konum <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">[mm]</span></div>';
-  html+='<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
-  html+=_mntRow('x','', _mntInp(node,'x','','0.01'));
-  html+=_mntRow('y','', _mntInp(node,'y','','0.01'));
-  html+=_mntRow('z','', _mntInp(node,'z','','0.01'));
-  html+='</table>';
-  html+='<div class="sw-section-title">Statik Rijitlik <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">[N/mm]</span></div>';
-  html+='<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
-  html+=_mntRow('kx (statik)','', _mntInp(node,'kxs','','1'));
-  html+=_mntRow('ky (statik)','', _mntInp(node,'kys','','1'));
-  html+=_mntRow('kz (statik)','', _mntInp(node,'kzs','','1'));
-  html+='</table>';
-  html+='<div class="sw-section-title">Dinamik Rijitlik <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">[N/mm]</span></div>';
-  html+='<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:8px;">';
-  html+=_mntRow('kx (dinamik)','', _mntInp(node,'kxd','','1'));
-  html+=_mntRow('ky (dinamik)','', _mntInp(node,'kyd','','1'));
-  html+=_mntRow('kz (dinamik)','', _mntInp(node,'kzd','','1'));
-  html+='</table>';
+  html+='</select>';
+  html+=_mntTriple(node,'Konum','[mm]',['x','y','z'],['x','y','z'],'0.01');
+  html+=_mntTriple(node,'Statik Rijitlik','[N/mm]',['kxs','kys','kzs'],['kx','ky','kz'],'1');
+  html+=_mntTriple(node,'Dinamik Rijitlik','[N/mm]',['kxd','kyd','kzd'],['kx','ky','kz'],'1');
   html+='</div>';
   return html;
 }
@@ -264,6 +316,166 @@ function veMntApplyLib(nodeId, key){
   node.data.kxd=m.dx; node.data.kyd=m.dy; node.data.kzd=m.dz; node.data.libKey=key;
   if(typeof saveState==='function') saveState();
   if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ÖRNEK — hazır doğrulama analizini topolojiye yükle (+ tutarlılık uyarıları)
+// ════════════════════════════════════════════════════════════════════════════
+// "Örnek" bileşeni: gömülü doğrulama örneklerini (Adams BMC_TTAR_2031) seçip
+// iç topolojiye kurar. Yüklemeden sonra model kontrol edilir; fazla takoz /
+// eksik bileşen / tanımsız değer varsa panelde uyarı listelenir.
+var VE_MNT_EXAMPLES = {
+  'ttar': { name:'BMC TTAR 2031 — Adams Doğrulama (5 kütle · 6 takoz)' }
+};
+
+// Örnek adı → kanvas kütle-gövdesi tipi (test buildTTARTopology ile aynı eşleme).
+function _mntExampleBodyType(name){
+  return /motor/i.test(name) ? 'mnt-motor'
+    : /şanz|sanz/i.test(name) ? 'mnt-gearbox'
+    : /şaft|saft|shaft/i.test(name) ? 'mnt-shaft'
+    : /cradle|braket|bracket/i.test(name) ? 'mnt-bracket' : 'mnt-transfer';
+}
+
+function getMntExamplePropertiesHTML(node){
+  if(!node.data) node.data={};
+  var sel = node.data.exampleKey || 'ttar';
+  var html='<div class="sw-panel">';
+  html+=_mntNote('Hazır <b>doğrulama örneği</b> seç ve <b>topolojiye yükle</b>. Yükleme mevcut kütle/takoz bileşenlerinin yerine geçer (Çözücü/yardımcılar korunur). Yüklendikten sonra model <b>tutarlılık uyarıları</b> (fazla takoz · eksik bileşen · tanımsız değer) gösterilir.','var(--accent-warning)');
+  html+='<div style="font-size:0.6rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:6px;">Örnek Analiz</div>';
+  html+='<select id="ve-mnt-example-sel" onchange="veMntSet(\''+node.id+'\',\'exampleKey\',this.value)" style="width:100%; padding:6px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; margin-bottom:12px;">';
+  Object.keys(VE_MNT_EXAMPLES).forEach(function(k){ html+='<option value="'+k+'"'+(sel===k?' selected':'')+'>'+_mntEsc(VE_MNT_EXAMPLES[k].name)+'</option>'; });
+  html+='</select>';
+  html+='<button onclick="veMntLoadExample(\''+node.id+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:5px; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Topolojiye Yükle</button>';
+  html+='<div id="ve-mnt-example-report" style="margin-top:12px;"></div>';
+  html+='</div>';
+  return html;
+}
+
+// Örnek modeli tutarlılık kontrolü — uyarı nesneleri döner ({level,msg}).
+function _mntExampleValidate(){
+  var g = _mntGatherForSolver();
+  var out=[];
+  if(g.components.length===0) out.push({level:'err', msg:'Kütle gövdesi yok — en az bir kütle gerekir.'});
+  if(g.mounts.length===0) out.push({level:'err', msg:'Takoz yok — 6 SD kısıtı için en az 3 takoz gerekir.'});
+  else if(g.mounts.length<3) out.push({level:'warn', msg:'Az takoz: '+g.mounts.length+' takoz — rijit gövde kısıtı için ≥3 önerilir.'});
+  else if(g.mounts.length>4) out.push({level:'warn', msg:'Fazla takoz: '+g.mounts.length+' takoz tanımlı — tipik güç grubu 3–4 takozla bağlanır (aşırı-kısıtlı model).'});
+  g.components.forEach(function(c){ if(!(_mntNum(c.mass)>0)) out.push({level:'err', msg:_mntEsc(c.name)+': kütle tanımsız/sıfır.'}); });
+  g.mounts.forEach(function(m){
+    if(!(_mntNum(m.kzs)>0)) out.push({level:'warn', msg:_mntEsc(m.name)+': düşey (z) statik rijitlik tanımsız.'});
+    if(!Number.isFinite(_mntNum(m.z,NaN))) out.push({level:'warn', msg:_mntEsc(m.name)+': z konumu tanımsız.'});
+  });
+  var hasSolver = (typeof nodes!=='undefined') && nodes.some(function(n){ return (_mntDef(n)||{}).isMountSolver; });
+  if(!hasSolver) out.push({level:'warn', msg:'Çözücü bulunamadı — sonuç için bir Çözücü ekleyin.'});
+  return out;
+}
+
+function _mntRenderExampleReport(warnings, silent){
+  var el = (typeof document!=='undefined') ? document.getElementById('ve-mnt-example-report') : null;
+  if(!el) return;
+  if(!warnings.length){
+    el.innerHTML='<div style="padding:9px 11px; background:rgba(34,197,94,0.12); border:1px solid var(--accent-success); border-radius:5px; font-size:0.64rem; color:var(--accent-success);"><b>✓ Model tutarlı</b> — herhangi bir uyarı yok.</div>';
+    return;
+  }
+  var errN=warnings.filter(function(w){return w.level==='err';}).length;
+  var h='<div style="font-size:0.6rem; font-weight:700; color:var(--text-heading); margin-bottom:6px;">Tutarlılık Uyarıları <span style="color:var(--text-muted); font-weight:400;">('+warnings.length+')</span></div>';
+  h+='<div style="display:flex; flex-direction:column; gap:5px;">';
+  warnings.forEach(function(w){
+    var isErr=w.level==='err';
+    var col=isErr?'var(--accent-danger)':'var(--accent-warning)';
+    var bg=isErr?'rgba(239,68,68,0.10)':'rgba(245,158,11,0.10)';
+    h+='<div style="padding:6px 9px; background:'+bg+'; border-left:3px solid '+col+'; border-radius:3px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary);"><b style="color:'+col+';">'+(isErr?'HATA':'UYARI')+':</b> '+w.msg+'</div>';
+  });
+  h+='</div>';
+  el.innerHTML=h;
+  if(!silent && typeof showToast==='function') showToast('Örnek yüklendi — '+warnings.length+' uyarı ('+errN+' hata).', errN?'warning':'info');
+}
+
+function veMntLoadExample(nodeId){
+  if(typeof veMountCore==='undefined' || typeof createNode!=='function') return;
+  var node = nodes.find(function(n){ return n.id===nodeId; });
+  var key = (node && node.data && node.data.exampleKey) || 'ttar';
+  var EX = veMountCore.TTAR_EXAMPLE; if(!EX) return;
+
+  // Mevcut kütle/takoz bileşenlerini bul (Çözücü/Örnek/Görüntüleyici korunur).
+  var toRemove = nodes.filter(function(n){ var d=_mntDef(n)||{}; return d.isMountBody || d.isMount; });
+  if(toRemove.length){
+    var ok = (typeof confirm==='undefined') ? true : confirm('Topolojide '+toRemove.length+' kütle/takoz bileşeni var. Örnek yüklenirken bunlar silinecek. Devam edilsin mi?');
+    if(!ok) return;
+    toRemove.forEach(function(n){ _mntRemoveNode(n.id); });
+  }
+
+  // Görünür alana ortalanacak taban koordinatı — bileşen sayısına göre yerleşim.
+  var nBody=EX.components.length, nMnt=EX.mounts.length, half=Math.ceil(nMnt/2);
+  var DX=120, bodyY=150, X0=140;
+  var layout=[];
+  EX.components.forEach(function(c,i){ layout.push({lx:X0+i*DX, ly:bodyY}); });
+  EX.mounts.forEach(function(m,i){ var top=i<half, col=top?i:(i-half); layout.push({lx:X0+col*DX, ly: top?(bodyY-135):(bodyY+135)}); });
+  var base = (typeof veArrangeModuleBase==='function') ? veArrangeModuleBase(layout) : { x:3000, y:3000 };
+
+  var li=0;
+  EX.components.forEach(function(c){
+    var pos=layout[li++]; var before=nodes.length;
+    createNode(_mntExampleBodyType(c.name), base.x+pos.lx, base.y+pos.ly);
+    if(nodes.length>before){
+      var n=nodes[nodes.length-1];
+      n.data=Object.assign(n.data||{}, { mass:c.mass, cgx:c.cg[0], cgy:c.cg[1], cgz:c.cg[2], Ixx:c.Ixx, Iyy:c.Iyy, Izz:c.Izz, Ixy:c.Ixy, Ixz:c.Ixz, Iyz:c.Iyz, pointMass:!!c.pointMass });
+      _mntSetNodeName(n, c.name);
+    }
+  });
+  EX.mounts.forEach(function(m){
+    var pos=layout[li++]; var before=nodes.length;
+    createNode('mnt-mount', base.x+pos.lx, base.y+pos.ly);
+    if(nodes.length>before){
+      var n=nodes[nodes.length-1];
+      n.data=Object.assign(n.data||{}, { x:m.pos[0], y:m.pos[1], z:m.pos[2], kxs:m.kstat[0], kys:m.kstat[1], kzs:m.kstat[2], kxd:m.kdyn[0], kyd:m.kdyn[1], kzd:m.kdyn[2] });
+      _mntSetNodeName(n, m.name);
+    }
+  });
+
+  // Çözücü yoksa ekle.
+  if(!nodes.some(function(n){ return (_mntDef(n)||{}).isMountSolver; })){
+    createNode('mnt-solver', base.x + X0 + Math.max(nBody, half)*DX, base.y + bodyY);
+  }
+  if(typeof saveState==='function') saveState();
+  if(typeof updateAllConnections==='function') updateAllConnections();
+
+  // createNode +20ms otomatik seçimi paneli son eklenen düğüme çevirir → Örnek
+  // düğümünü yeniden seçip raporu bas ki kullanıcı uyarıları (fazla takoz vs)
+  // görsün. setTimeout/DOM yoksa (Jest) doğrudan bas.
+  var exNode = (typeof nodes!=='undefined') ? nodes.find(function(n){ return n.id===nodeId; }) : null;
+  if(typeof setTimeout==='function' && typeof document!=='undefined'){
+    setTimeout(function(){
+      if(exNode && typeof clearSelection==='function' && typeof addToSelection==='function'){
+        clearSelection(); addToSelection(exNode);
+        if(typeof showNodeProperties==='function') showNodeProperties(exNode);
+      }
+      _mntRenderExampleReport(_mntExampleValidate(), false);
+    }, 90);
+  } else {
+    _mntRenderExampleReport(_mntExampleValidate(), false);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  3D GÖRÜNTÜLEYİCİ — iç topolojinin 3B yerleşimi (tema uyumlu)
+// ════════════════════════════════════════════════════════════════════════════
+function getMntViewerPropertiesHTML(node){
+  if(!node.data) node.data={};
+  var html='<div class="sw-panel">';
+  html+=_mntNote('İç topolojideki <b>tüm</b> kütle ve takozların 3B yerleşimi. <span style="color:var(--accent-success);">Yeşil</span>: takoz · <span style="color:var(--accent-warning);">turuncu</span>: bileşen CG · <span style="color:var(--accent-danger);">kırmızı</span>: birleşik CG. Sürükle döndür · sağ tık kaydır · tekerlek yakınlaş. Aktif tema ile uyumlu.','var(--accent-primary)');
+  html+='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:320px; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px; overflow:hidden;"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
+  html+='<button onclick="veMntViewerRefresh()" style="width:100%; margin-top:8px; padding:9px; font-size:0.7rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">↻ Yenile</button>';
+  html+='</div>';
+  return html;
+}
+
+// Panel içi 3B görüntüleyiciyi güncel topolojiyle (yeniden) başlat.
+function veMntViewerRefresh(){
+  if(typeof _mntGatherForSolver!=='function') return;
+  _veMntViewerData = _mntGatherForSolver();
+  if(typeof veMountViewerInit==='function'){
+    try{ veMountViewerInit('ve-mnt-inline-viewer-canvas'); veMountViewerUpdate(); }catch(e){}
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -472,7 +684,7 @@ function veMntShowDetail(solverId){
   h+='</tbody></table></div>';
   h+='</div>';
   // 3D
-  h+='<div style="width:340px; flex-shrink:0;"><div style="font-size:0.72rem; font-weight:700; color:var(--text-heading); margin-bottom:6px;">3D Görünüm</div><div id="ve-mnt-viewer-wrap" style="width:100%; height:320px; border:1px solid var(--border-color); background:#0a0a0a; position:relative;"><canvas id="ve-mnt-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div><div style="font-size:0.53rem; color:var(--text-muted); margin-top:5px;">Yeşil: takoz · turuncu: bileşen CG · kırmızı: birleşik CG. Sürükle döndür, tekerlek zoom.</div></div>';
+  h+='<div style="width:340px; flex-shrink:0;"><div style="font-size:0.72rem; font-weight:700; color:var(--text-heading); margin-bottom:6px;">3D Görünüm</div><div id="ve-mnt-viewer-wrap" style="width:100%; height:320px; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px; overflow:hidden;"><canvas id="ve-mnt-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div><div style="font-size:0.53rem; color:var(--text-muted); margin-top:5px;">Yeşil: takoz · turuncu: bileşen CG · kırmızı: birleşik CG. Sürükle döndür, tekerlek zoom.</div></div>';
   h+='</div>';
   _mntShowModal('Takoz Analizi — Detaylı Sonuçlar', h);
   // 3D viewer başlat
@@ -549,8 +761,14 @@ if(typeof module!=='undefined' && module.exports){
     getMntMassPropertiesHTML: getMntMassPropertiesHTML,
     getMntMountPropertiesHTML: getMntMountPropertiesHTML,
     getMntSolverPropertiesHTML: getMntSolverPropertiesHTML,
+    getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
+    getMntViewerPropertiesHTML: getMntViewerPropertiesHTML,
     VE_MOUNT_LIBRARY: VE_MOUNT_LIBRARY,
     MNT_AUTO_CASES: MNT_AUTO_CASES,
+    VE_MNT_EXAMPLES: VE_MNT_EXAMPLES,
+    VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
+    _mntExampleBodyType: _mntExampleBodyType,
+    _mntExampleValidate: _mntExampleValidate,
     _mntGatherForSolver: _mntGatherForSolver,
     _mntToSI: _mntToSI,
     _mntDeflColor: _mntDeflColor,

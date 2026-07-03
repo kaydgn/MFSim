@@ -166,3 +166,83 @@ describe('Renk skalaları', () => {
     expect(cp._mntForceColor(25)).toBe('#f97316');
   });
 });
+
+describe('Estetik paneller — yan yana alanlar', () => {
+  test('Kütle paneli CG/atalet alanlarını 3\'lü inline id ile üretir', () => {
+    const node = { id: 'n9', type: 'mnt-motor', def: { name: 'Motor (Kütle)' }, data: {} };
+    const html = cp.getMntMassPropertiesHTML(node);
+    // CG x/y/z + atalet köşegen/çarpım hepsi id'li input
+    ['cgx','cgy','cgz','Ixx','Iyy','Izz','Ixy','Ixz','Iyz','mass'].forEach(k =>
+      expect(html).toContain('ve-mnt-' + k + '-n9'));
+    // Yan yana flex düzeni
+    expect(html).toContain('display:flex');
+    expect(html).toContain('Ağırlık Merkezi');
+  });
+  test('Takoz paneli konum + statik/dinamik rijitliği yan yana id ile üretir', () => {
+    const node = { id: 'm9', type: 'mnt-mount', def: { name: 'Takoz' }, data: {} };
+    const html = cp.getMntMountPropertiesHTML(node);
+    ['x','y','z','kxs','kys','kzs','kxd','kyd','kzd'].forEach(k =>
+      expect(html).toContain('ve-mnt-' + k + '-m9'));
+    expect(html).toContain('Statik Rijitlik');
+    expect(html).toContain('Dinamik Rijitlik');
+  });
+});
+
+describe('Starter yerleşim (modül açılınca hazır bileşenler)', () => {
+  test('10 düğüm: 4 kütle gövdesi + 5 takoz + Çözücü', () => {
+    const L = cp.VE_MNT_STARTER_LAYOUT;
+    expect(L).toHaveLength(10);
+    expect(L.filter(i => i.type === 'mnt-mount')).toHaveLength(5);
+    expect(L.filter(i => i.type === 'mnt-solver')).toHaveLength(1);
+    expect(L.map(i => i.type)).toEqual(expect.arrayContaining(['mnt-motor', 'mnt-gearbox', 'mnt-transfer', 'mnt-shaft']));
+  });
+  test('takoz adları referans görsel ile aynı', () => {
+    const names = cp.VE_MNT_STARTER_LAYOUT.filter(i => i.type === 'mnt-mount').map(i => i.name);
+    expect(names).toEqual(['Ön Takoz', 'Sağ Yan Takoz', 'Sağ Arka Takoz', 'Sol Yan Takoz', 'Sol Arka Takoz']);
+  });
+});
+
+describe('Örnek bileşeni', () => {
+  test('panel: örnek seçici + Topolojiye Yükle düğmesi', () => {
+    const node = { id: 'ex1', type: 'mnt-example', def: { name: 'Örnek' }, data: {} };
+    const html = cp.getMntExamplePropertiesHTML(node);
+    expect(html).toContain('ve-mnt-example-sel');
+    expect(html).toContain("veMntLoadExample('ex1')");
+    expect(html).toContain('BMC TTAR');
+    expect(html).toContain('ve-mnt-example-report');
+  });
+  test('örnek adı → kanvas kütle tipi eşlemesi', () => {
+    expect(cp._mntExampleBodyType('Motor')).toBe('mnt-motor');
+    expect(cp._mntExampleBodyType('Şanzıman')).toBe('mnt-gearbox');
+    expect(cp._mntExampleBodyType('Şaft payı')).toBe('mnt-shaft');
+    expect(cp._mntExampleBodyType('Sol cradle')).toBe('mnt-bracket');
+    expect(cp._mntExampleBodyType('Transfer Kutusu')).toBe('mnt-transfer');
+  });
+  test('TTAR modeli (6 takoz) → "Fazla takoz" UYARI verir, hata değil', () => {
+    const topo = buildTTARTopology();
+    global.nodes = topo.nodes;
+    global.connections = topo.connections;
+    const w = cp._mntExampleValidate();
+    const excess = w.find(x => /Fazla takoz/.test(x.msg));
+    expect(excess).toBeTruthy();
+    expect(excess.level).toBe('warn');
+  });
+  test('boş topoloji → eksik kütle + eksik takoz HATASI', () => {
+    global.nodes = [];
+    global.connections = [];
+    const w = cp._mntExampleValidate();
+    expect(w.some(x => /Kütle gövdesi yok/.test(x.msg) && x.level === 'err')).toBe(true);
+    expect(w.some(x => /Takoz yok/.test(x.msg) && x.level === 'err')).toBe(true);
+  });
+});
+
+describe('3D Görüntüleyici bileşeni', () => {
+  test('panel: canvas + Yenile', () => {
+    const node = { id: 'vw1', type: 'mnt-viewer', def: { name: '3D Görüntüleyici' }, data: {} };
+    const html = cp.getMntViewerPropertiesHTML(node);
+    expect(html).toContain('ve-mnt-inline-viewer-canvas');
+    expect(html).toContain('veMntViewerRefresh()');
+    // tema uyumlu: sabit koyu değil, CSS değişkeni zemin
+    expect(html).toContain('var(--bg-primary)');
+  });
+});
