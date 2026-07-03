@@ -127,29 +127,32 @@ function getMntModulePropertiesHTML(node){
   return html;
 }
 
-// İlk açılışta iç topolojiye yerleştirilecek hazır yerleşim (yerel px, referans
-// görsel düzeni). Analiz araçları (Koordinat Düzlemi / Takoz Özellikleri / 3D
-// Görüntüleyici / 2D Görünüm / Örnek / Çözücü) + fiziksel gövdeler (Motor /
-// Şanzıman / Transfer / Şaft) + 5 takoz. Kurulumda görünür alana ortalanır.
+// İlk açılışta iç topolojiye yerleştirilecek hazır, DÜZENLİ yerleşim (yerel px).
+// Üst şerit: analiz araçları tek sırada (Koordinat / Takoz Özellikleri / 3D / 2D
+// / Çözücü / Örnek). Alt bölge: güç grubu üstten-görünüş şeması — gövdeler yatay
+// sırada (Ön Takoz · Motor · Şanzıman · Transfer · Şaft), takozlar gövdelerin
+// çevresinde (sağ takozlar üstte, sol takozlar altta). Kurulumda görünür alana
+// ortalanır.
 var VE_MNT_STARTER_LAYOUT = [
-  // Üst şerit: araçlar + üst takozlar + Çözücü
-  { type:'mnt-coordframe',                    lx:20,  ly:20  },
-  { type:'mnt-mount',    name:'Sağ Yan Takoz',  lx:225, ly:30 },
-  { type:'mnt-mount',    name:'Sağ Arka Takoz', lx:380, ly:30 },
-  { type:'mnt-library',                       lx:560, ly:20  },
-  { type:'mnt-viewer',                        lx:685, ly:20  },
-  { type:'mnt-solver',   name:'Çözücü',        lx:810, ly:20  },
-  // Orta şerit: fiziksel gövdeler + 2D Görünüm
-  { type:'mnt-mount',    name:'Ön Takoz',      lx:20,  ly:205 },
-  { type:'mnt-motor',    name:'Motor',         lx:130, ly:195 },
-  { type:'mnt-gearbox',  name:'Şanzıman',      lx:270, ly:205 },
-  { type:'mnt-transfer', name:'Transfer Kutusu', lx:395, ly:205 },
-  { type:'mnt-shaft',    name:'Şaft',          lx:525, ly:205 },
-  { type:'mnt-2dview',                         lx:685, ly:200 },
-  // Alt şerit: alt takozlar + Örnek
-  { type:'mnt-mount',    name:'Sol Yan Takoz',  lx:225, ly:370 },
-  { type:'mnt-mount',    name:'Sol Arka Takoz', lx:380, ly:370 },
-  { type:'mnt-example',                        lx:810, ly:370 }
+  // ── Üst şerit: analiz araçları (tek sıra, eşit aralık) ──
+  { type:'mnt-coordframe',                     lx:40,  ly:20 },
+  { type:'mnt-library',                        lx:190, ly:20 },
+  { type:'mnt-viewer',                         lx:340, ly:20 },
+  { type:'mnt-2dview',                         lx:490, ly:20 },
+  { type:'mnt-solver',   name:'Çözücü',         lx:640, ly:20 },
+  { type:'mnt-example',                        lx:790, ly:20 },
+  // ── Sağ takozlar (şasi sağ tarafı → şemada üstte) ──
+  { type:'mnt-mount',    name:'Sağ Yan Takoz',  lx:300, ly:190 },
+  { type:'mnt-mount',    name:'Sağ Arka Takoz', lx:480, ly:190 },
+  // ── Güç grubu (gövdeler yatay sıra) ──
+  { type:'mnt-mount',    name:'Ön Takoz',       lx:60,  ly:320 },
+  { type:'mnt-motor',    name:'Motor',          lx:180, ly:308 },
+  { type:'mnt-gearbox',  name:'Şanzıman',       lx:320, ly:320 },
+  { type:'mnt-transfer', name:'Transfer Kutusu',lx:445, ly:320 },
+  { type:'mnt-shaft',    name:'Şaft',           lx:575, ly:320 },
+  // ── Sol takozlar (şasi sol tarafı → şemada altta) ──
+  { type:'mnt-mount',    name:'Sol Yan Takoz',  lx:300, ly:450 },
+  { type:'mnt-mount',    name:'Sol Arka Takoz', lx:480, ly:450 }
 ];
 
 // Node'a özel ad ata + kanvastaki etiketi güncelle.
@@ -691,7 +694,7 @@ function veMntLoadExample(nodeId){
 
   // Çözücü yoksa ekle (starter'daki sağ-üst konuma).
   if(!nodes.some(function(n){ return (_mntDef(n)||{}).isMountSolver; })){
-    createNode('mnt-solver', base.x + 810, base.y + 20);
+    createNode('mnt-solver', base.x + 640, base.y + 20);
   }
   if(typeof saveState==='function') saveState();
   if(typeof updateAllConnections==='function') updateAllConnections();
@@ -730,15 +733,17 @@ function getMntViewerPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
   html+=_mntVwrLegend();
-  // Araç çubuğu — görünüm katmanları + sıfırla + büyüt/küçült
+  // Araç çubuğu — görünüm katmanları + sıfırla + tam ekran (Zemin varsayılan gizli)
   html+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:7px;">';
-  html+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster');
+  html+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
   html+=_mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksenleri gizle/göster');
   html+=_mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Eksen etiketlerini gizle/göster');
   html+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
+  html+='<span style="flex:1;"></span>';
+  html+=_mntVwrBtn("veMntViewerFullscreen();",'⛶ Tam Ekran','Görüntüleyiciyi tam ekran aç');
   html+='</div>';
   html+='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:340px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px;"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
-  html+='<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş.</div>';
+  html+='<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
   html+='<button onclick="veMntViewerRefresh()" style="width:100%; margin-top:7px; padding:8px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">↻ Yenile</button>';
   html+='</div>';
   return html;
@@ -762,6 +767,8 @@ function getMntCoordFramePropertiesHTML(node){
   html+=_mntVwrBtn("var v=veMountViewerToggle('planes'); this.style.opacity=v?'1':'0.45';",'Düzlem','Koordinat düzlemlerini gizle/göster');
   html+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster');
   html+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
+  html+='<span style="flex:1;"></span>';
+  html+=_mntVwrBtn("veMntCoordFullscreen();",'⛶ Tam Ekran','Tam ekran aç');
   html+='</div>';
   html+='<div id="ve-mnt-coord-wrap" style="width:100%; height:340px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px;"><canvas id="ve-mnt-coord-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
   html+='<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px;">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
@@ -783,9 +790,12 @@ function veMntCoordFrameRefresh(){
 function getMnt2DViewPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
-  html+='<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin-bottom:8px;">Güç grubunun <b>üstten (X–Y)</b> ve <b>yandan (X–Z)</b> ölçekli diyagramı: takozlar, bileşen ağırlık merkezleri ve birleşik ağırlık merkezi. Topoloji değiştikçe <b>Yenile</b> ile güncellenir.</div>';
-  html+='<div id="ve-mnt-2dview-box" style="width:100%; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:6px 8px; overflow:auto;"></div>';
-  html+='<button onclick="veMnt2DViewRefresh()" style="width:100%; margin-top:8px; padding:8px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">↻ Yenile</button>';
+  html+='<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin-bottom:8px;">Güç grubunun <b>üstten (X–Y)</b> ve <b>yandan (X–Z)</b> ölçekli diyagramı: takozlar, bileşen ağırlık merkezleri ve birleşik ağırlık merkezi. Detaylı görünüm için <b>Tam Ekran</b>.</div>';
+  html+='<div style="display:flex; gap:6px; margin-bottom:7px;">';
+  html+='<button onclick="veMnt2DViewRefresh()" style="flex:1; padding:7px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">↻ Yenile</button>';
+  html+='<button onclick="veMnt2DViewFullscreen()" style="flex:1; padding:7px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">⛶ Tam Ekran</button>';
+  html+='</div>';
+  html+='<div id="ve-mnt-2dview-box" style="width:100%; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:8px; overflow:auto;"></div>';
   html+='</div>';
   return html;
 }
@@ -812,101 +822,123 @@ function _mnt2DText(x,y,t,anchor,color,size,bold){
   return '<text x="'+_mnt2DR(x)+'" y="'+_mnt2DR(y)+'" text-anchor="'+(anchor||'middle')+'" font-size="'+(size||8)+'" fill="'+(color||'var(--text-secondary)')+'"'+(bold?' font-weight="700"':'')+'>'+_mntEsc(t)+'</text>';
 }
 function _mnt2DR(v){ return Math.round(v*10)/10; }
-function _mnt2DArrow(x1,y1,x2,y2,color){
-  var ang=Math.atan2(y2-y1,x2-x1), hl=6;
-  var ax=x2-hl*Math.cos(ang-0.4), ay=y2-hl*Math.sin(ang-0.4);
-  var bx=x2-hl*Math.cos(ang+0.4), by=y2-hl*Math.sin(ang+0.4);
-  return '<line x1="'+_mnt2DR(x1)+'" y1="'+_mnt2DR(y1)+'" x2="'+_mnt2DR(x2)+'" y2="'+_mnt2DR(y2)+'" stroke="'+color+'" stroke-width="1.4"/>'
+function _mnt2DArrow(x1,y1,x2,y2,color,hl){
+  hl=hl||9; var ang=Math.atan2(y2-y1,x2-x1);
+  var ax=x2-hl*Math.cos(ang-0.42), ay=y2-hl*Math.sin(ang-0.42);
+  var bx=x2-hl*Math.cos(ang+0.42), by=y2-hl*Math.sin(ang+0.42);
+  return '<line x1="'+_mnt2DR(x1)+'" y1="'+_mnt2DR(y1)+'" x2="'+_mnt2DR(x2)+'" y2="'+_mnt2DR(y2)+'" stroke="'+color+'" stroke-width="2.2"/>'
     + '<polygon points="'+_mnt2DR(x2)+','+_mnt2DR(y2)+' '+_mnt2DR(ax)+','+_mnt2DR(ay)+' '+_mnt2DR(bx)+','+_mnt2DR(by)+'" fill="'+color+'"/>';
 }
 // Birleşik CG işareti (4 çeyrek — jeodezik CG sembolü)
-function _mnt2DCGMark(cx,cy){
-  var r=7, s='';
-  s+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+r+'" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.4"/>';
+function _mnt2DCGMark(cx,cy,r){
+  r=r||11; var s='';
+  s+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+r+'" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="2"/>';
   s+='<path d="M'+_mnt2DR(cx)+' '+_mnt2DR(cy)+' L'+_mnt2DR(cx+r)+' '+_mnt2DR(cy)+' A'+r+' '+r+' 0 0 1 '+_mnt2DR(cx)+' '+_mnt2DR(cy+r)+' Z" fill="var(--accent-danger)"/>';
   s+='<path d="M'+_mnt2DR(cx)+' '+_mnt2DR(cy)+' L'+_mnt2DR(cx-r)+' '+_mnt2DR(cy)+' A'+r+' '+r+' 0 0 1 '+_mnt2DR(cx)+' '+_mnt2DR(cy-r)+' Z" fill="var(--accent-danger)"/>';
   return s;
 }
+// Tek görünüş (üst veya yan) çiz — çerçeve + başlık + eksen + işaretler.
+function _mnt2DFigure(o){
+  // o: {title, y0, h, frameY, frameH, px, pyFn, mounts, comps, cg, minX, VB_W, mL, mR,
+  //     vAxisColor, vAxisLabel, vAxisHint, refLine:{y,label}, cgLabelFn, cr, shortName, showMountLabels}
+  var VB_W=o.VB_W, mL=o.mL, mR=o.mR;
+  var svg='';
+  // çerçeve (akademik panel görünümü)
+  svg+='<rect x="'+_mnt2DR(mL-14)+'" y="'+_mnt2DR(o.frameY)+'" width="'+_mnt2DR(VB_W-mR-(mL-14)+8)+'" height="'+_mnt2DR(o.frameH)+'" rx="8" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>';
+  // başlık
+  svg+=_mnt2DText(mL-14, o.frameY-8, o.title, 'start', 'var(--text-heading)', 14, true);
+  // referans/zemin çizgisi
+  if(o.refLine){
+    var ry=o.pyFn(o.refLine.y);
+    svg+='<line x1="'+_mnt2DR(mL-6)+'" y1="'+_mnt2DR(ry)+'" x2="'+_mnt2DR(VB_W-mR)+'" y2="'+_mnt2DR(ry)+'" stroke="var(--border-color)" stroke-width="1.2" stroke-dasharray="6 4"/>';
+    if(o.refLine.label) svg+=_mnt2DText(VB_W-mR-2, ry-5, o.refLine.label, 'end', 'var(--text-muted)', 10);
+  }
+  // eksen göstergesi (sol üst köşe)
+  var ox=mL-52, oy=o.y0+34;
+  svg+=_mnt2DArrow(ox,oy,ox+40,oy,'var(--accent-danger)')+_mnt2DText(ox+44,oy+4,'+X','start','var(--accent-danger)',11,true);
+  svg+=_mnt2DArrow(ox,oy,ox,oy-36,o.vAxisColor)+_mnt2DText(ox,oy-42,o.vAxisLabel,'middle',o.vAxisColor,11,true);
+  if(o.vAxisHint) svg+=_mnt2DText(ox+4,oy+20,o.vAxisHint,'start','var(--text-muted)',9);
+  var refV=(o.cg?(o.vKey==='y'?o.cg.y:o.cg.z):0);
+  // takozlar (kare) + <title> (üzerine gelince ad)
+  o.mounts.forEach(function(m){ var mv=(o.vKey==='y'?m.y:m.z); var cx=o.px(m.x), cy=o.pyFn(mv);
+    svg+='<rect x="'+_mnt2DR(cx-7)+'" y="'+_mnt2DR(cy-7)+'" width="14" height="14" rx="2" fill="rgba(34,197,94,0.14)" stroke="var(--accent-success)" stroke-width="2"><title>'+_mntEsc(m.name||'Takoz')+'</title></rect>';
+  });
+  // etiketler — üst/alt grupla (sağ üstte, sol altta); yatayda çok yakın takozları
+  // dikeyde kademele (çakışmayı azalt).
+  if(o.showMountLabels){
+    var groups={above:[], below:[]};
+    o.mounts.forEach(function(m){ var mv=(o.vKey==='y'?m.y:m.z); (mv>=refV?groups.above:groups.below).push({m:m, cx:o.px(m.x), cy:o.pyFn(mv)}); });
+    ['above','below'].forEach(function(gk){ var arr=groups[gk]; arr.sort(function(a,b){ return a.cx-b.cx; });
+      var lastCx=-1e9, tier=0;
+      arr.forEach(function(it){ if(it.cx-lastCx<44) tier++; else tier=0; lastCx=it.cx;
+        var off=(gk==='above') ? -(13+tier*13) : (23+tier*13);
+        svg+=_mnt2DText(it.cx, it.cy+off, o.shortName(it.m.name), 'middle', 'var(--text-secondary)', 9);
+      });
+    });
+  }
+  // bileşen CG (daire) + <title>
+  o.comps.forEach(function(c){ var cv=(o.vKey==='y'?c.y:c.z); var cx=o.px(c.x), cy=o.pyFn(cv), r=o.cr(c.mass);
+    svg+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="rgba(245,158,11,0.14)" stroke="var(--accent-warning)" stroke-width="2"><title>'+_mntEsc(c.name||'Bileşen')+(c.mass>0?' — '+c.mass.toFixed(1)+' kg':'')+'</title></circle>';
+    svg+=_mnt2DText(cx, cy-r-4, o.shortName(c.name), 'middle', 'var(--text-secondary)', 10);
+  });
+  // birleşik CG + <title>
+  if(o.cg){ var gx=o.px(o.cg.x), gy=o.pyFn(o.vKey==='y'?o.cg.y:o.cg.z);
+    svg+=_mnt2DCGMark(gx,gy,11);
+    svg+='<circle cx="'+_mnt2DR(gx)+'" cy="'+_mnt2DR(gy)+'" r="11" fill="transparent"><title>Birleşik Ağırlık Merkezi</title></circle>';
+    svg+=_mnt2DText(gx, gy-17, o.cgLabelFn(o.cg), 'middle', 'var(--accent-danger)', 10.5, true);
+  }
+  return svg;
+}
 function _mnt2DViewSVG(data){
   if(!data.comps.length && !data.mounts.length){
-    return '<div style="padding:20px 8px; text-align:center; font-size:0.62rem; color:var(--text-muted);">Görüntülenecek bileşen yok — Motor / Şanzıman / Takoz ekleyip değer girin.</div>';
+    return '<div style="padding:24px 10px; text-align:center; font-size:0.7rem; color:var(--text-muted);">Görüntülenecek bileşen yok — Motor / Şanzıman / Takoz ekleyip değer girin.</div>';
   }
   var xs=[]; data.mounts.forEach(function(m){xs.push(m.x);}); data.comps.forEach(function(c){xs.push(c.x);}); if(data.cg) xs.push(data.cg.x);
   var minX=Math.min.apply(null,xs), maxX=Math.max.apply(null,xs), xRange=Math.max(maxX-minX,1);
-  var VB_W=640, mL=66, mR=22, usableW=VB_W-mL-mR;
-  var s=Math.max(0.015, Math.min(0.55, usableW/xRange));
-  function px(x){ return mL+(x-minX)*s; }
+  var VB_W=520, mL=78, mR=28, usableW=VB_W-mL-mR;
+  var sx=Math.max(0.02, Math.min(0.7, usableW/xRange));
+  function px(x){ return mL+(x-minX)*sx; }
+  // Yatay eksen (X) ölçekli; düşey eksen (Y/Z) figür yüksekliğini DOLDURACAK şekilde
+  // BAĞIMSIZ ölçeklenir (şematik) — böylece birbirine yakın takozlar dikeyde ayrışır.
+  var hTop=170, hSide=170, vpad=16;
   var ys=[0]; data.mounts.forEach(function(m){ys.push(m.y);}); data.comps.forEach(function(c){ys.push(c.y);}); if(data.cg) ys.push(data.cg.y);
   var minY=Math.min.apply(null,ys), maxY=Math.max.apply(null,ys), yRange=Math.max(maxY-minY,1);
-  var hTop=Math.max(yRange*s, 62);
+  var sy=(hTop-2*vpad)/yRange;
   var zs=[0]; data.mounts.forEach(function(m){zs.push(m.z);}); data.comps.forEach(function(c){zs.push(c.z);}); if(data.cg) zs.push(data.cg.z);
   var minZ=Math.min.apply(null,zs), maxZ=Math.max.apply(null,zs), zRange=Math.max(maxZ-minZ,1);
-  var hSide=Math.max(zRange*s, 62);
-  var titleH=20, capH=16, gap=26, mTop=6, mBot=8;
-  var topTitleY=mTop+12, topY0=mTop+titleH;
-  var topCapY=topY0+hTop+12;
-  var sideTitleY=topCapY+gap, sideY0=sideTitleY+8;
-  var sideCapY=sideY0+hSide+12;
-  var VB_H=sideCapY+mBot+2;
-  function pyTop(y){ return topY0+(maxY-y)*s; }
-  function pySide(z){ return sideY0+(maxZ-z)*s; }
-  // kütle → daire yarıçapı
+  var sz=(hSide-2*vpad)/zRange;
+  var mTop=34, framePad=18, gap=48, legendH=30, mBot=12;
+  var topFrameY=mTop, topFrameH=hTop+framePad*2, topY0=topFrameY+framePad;
+  var sideFrameY=topFrameY+topFrameH+gap, sideFrameH=hSide+framePad*2, sideY0=sideFrameY+framePad;
+  var legendY=sideFrameY+sideFrameH+legendH-6;
+  var VB_H=legendY+mBot;
+  function pyTop(y){ return topY0+vpad+(maxY-y)*sy; }
+  function pySide(z){ return sideY0+vpad+(maxZ-z)*sz; }
   var ms=data.comps.map(function(c){return c.mass;}).filter(function(m){return m>0;});
   var mMin=ms.length?Math.min.apply(null,ms):0, mMax=ms.length?Math.max.apply(null,ms):1;
-  function cr(m){ if(!(m>0)) return 4.5; var t=(mMax-mMin>1e-9)?(m-mMin)/(mMax-mMin):0.5; return 4.5+5*Math.sqrt(t); }
-  function shortName(n){ n=String(n||''); return n.length>13?n.slice(0,12)+'…':n; }
+  function cr(m){ if(!(m>0)) return 7; var t=(mMax-mMin>1e-9)?(m-mMin)/(mMax-mMin):0.5; return 7+7*Math.sqrt(t); }
+  function shortName(n){ n=String(n||''); return n.length>15?n.slice(0,14)+'…':n; }
 
-  var svg='<svg viewBox="0 0 '+VB_W+' '+Math.round(VB_H)+'" width="100%" style="display:block; font-family:inherit;">';
-
+  var svg='<svg viewBox="0 0 '+VB_W+' '+Math.round(VB_H)+'" width="100%" style="display:block; font-family:inherit; min-width:440px;">';
   // ── ÜST GÖRÜNÜŞ (X–Y) ──
-  svg+=_mnt2DText(mL, topTitleY, 'Üstten Görünüş — X–Y düzlemi (ölçekli)', 'start', 'var(--text-heading)', 9.5, true);
-  // referans centerline (CG y)
-  if(data.cg){ svg+='<line x1="'+_mnt2DR(mL-6)+'" y1="'+_mnt2DR(pyTop(data.cg.y))+'" x2="'+_mnt2DR(VB_W-mR)+'" y2="'+_mnt2DR(pyTop(data.cg.y))+'" stroke="var(--border-color)" stroke-width="1" stroke-dasharray="4 3"/>'; }
-  // eksen göstergesi (sol)
-  (function(){ var ox=16, oy=topY0+30;
-    svg+=_mnt2DArrow(ox,oy,ox+30,oy,'var(--accent-danger)')+_mnt2DText(ox+33,oy+3,'+X','start','var(--accent-danger)',7.5,true);
-    svg+=_mnt2DArrow(ox,oy,ox,oy-26,'var(--accent-success)')+_mnt2DText(ox-2,oy-29,'+Y','middle','var(--accent-success)',7.5,true);
-    svg+=_mnt2DText(ox+2,oy+16,'(sağ ↑)','start','var(--text-muted)',6);
-  })();
-  // takozlar (kare)
-  data.mounts.forEach(function(m){ var cx=px(m.x), cy=pyTop(m.y);
-    svg+='<rect x="'+_mnt2DR(cx-5)+'" y="'+_mnt2DR(cy-5)+'" width="10" height="10" fill="none" stroke="var(--accent-success)" stroke-width="1.6"/>';
-    svg+=_mnt2DText(cx, cy+13, shortName(m.name), 'middle', 'var(--text-muted)', 6);
-  });
-  // bileşen CG (daire)
-  data.comps.forEach(function(c){ var cx=px(c.x), cy=pyTop(c.y), r=cr(c.mass);
-    svg+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="none" stroke="var(--accent-warning)" stroke-width="1.6"/>';
-    svg+=_mnt2DText(cx, cy-r-2, shortName(c.name), 'middle', 'var(--text-secondary)', 6.2);
-  });
-  // birleşik CG
-  if(data.cg){ var gx=px(data.cg.x), gy=pyTop(data.cg.y);
-    svg+=_mnt2DCGMark(gx,gy);
-    svg+=_mnt2DText(gx, gy-11, 'G ('+data.cg.x.toFixed(1)+' · '+data.cg.y.toFixed(1)+')', 'middle', 'var(--accent-danger)', 6.6, true);
-  }
-
+  svg+=_mnt2DFigure({ title:'Üstten Görünüş · X–Y düzlemi (ölçekli)', VB_W:VB_W, mL:mL, mR:mR,
+    y0:topY0, frameY:topFrameY, frameH:topFrameH, px:px, pyFn:pyTop, vKey:'y',
+    mounts:data.mounts, comps:data.comps, cg:data.cg, cr:cr, shortName:shortName, showMountLabels:true,
+    vAxisColor:'var(--accent-success)', vAxisLabel:'+Y', vAxisHint:'sağ ↑',
+    refLine:data.cg?{y:data.cg.y}:null,
+    cgLabelFn:function(cg){ return 'G ('+cg.x.toFixed(1)+' · '+cg.y.toFixed(1)+')'; } });
   // ── YAN GÖRÜNÜŞ (X–Z) ──
-  svg+=_mnt2DText(mL, sideTitleY, 'Yandan Görünüş — X–Z düzlemi (ölçekli)', 'start', 'var(--text-heading)', 9.5, true);
-  // zemin çizgisi (Z=0)
-  svg+='<line x1="'+_mnt2DR(mL-6)+'" y1="'+_mnt2DR(pySide(0))+'" x2="'+_mnt2DR(VB_W-mR)+'" y2="'+_mnt2DR(pySide(0))+'" stroke="var(--border-color)" stroke-width="1" stroke-dasharray="4 3"/>';
-  svg+=_mnt2DText(VB_W-mR, pySide(0)-3, 'Z=0', 'end', 'var(--text-muted)', 6.5);
-  (function(){ var ox=16, oy=sideY0+30;
-    svg+=_mnt2DArrow(ox,oy,ox+30,oy,'var(--accent-danger)')+_mnt2DText(ox+33,oy+3,'+X','start','var(--accent-danger)',7.5,true);
-    svg+=_mnt2DArrow(ox,oy,ox,oy-26,'var(--accent-primary)')+_mnt2DText(ox-2,oy-29,'+Z','middle','var(--accent-primary)',7.5,true);
-    svg+=_mnt2DText(ox+2,oy+16,'(yukarı)','start','var(--text-muted)',6);
-  })();
-  data.mounts.forEach(function(m){ var cx=px(m.x), cy=pySide(m.z);
-    svg+='<rect x="'+_mnt2DR(cx-5)+'" y="'+_mnt2DR(cy-5)+'" width="10" height="10" fill="none" stroke="var(--accent-success)" stroke-width="1.6"/>';
-  });
-  data.comps.forEach(function(c){ var cx=px(c.x), cy=pySide(c.z), r=cr(c.mass);
-    svg+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="none" stroke="var(--accent-warning)" stroke-width="1.6"/>';
-    svg+=_mnt2DText(cx, cy-r-2, shortName(c.name), 'middle', 'var(--text-secondary)', 6.2);
-  });
-  if(data.cg){ var gx2=px(data.cg.x), gy2=pySide(data.cg.z);
-    svg+=_mnt2DCGMark(gx2,gy2);
-    svg+=_mnt2DText(gx2, gy2-11, 'G (z='+data.cg.z.toFixed(0)+')', 'middle', 'var(--accent-danger)', 6.6, true);
-  }
+  svg+=_mnt2DFigure({ title:'Yandan Görünüş · X–Z düzlemi (ölçekli)', VB_W:VB_W, mL:mL, mR:mR,
+    y0:sideY0, frameY:sideFrameY, frameH:sideFrameH, px:px, pyFn:pySide, vKey:'z',
+    mounts:data.mounts, comps:data.comps, cg:data.cg, cr:cr, shortName:shortName, showMountLabels:false,
+    vAxisColor:'var(--accent-primary)', vAxisLabel:'+Z', vAxisHint:'yukarı',
+    refLine:{y:0, label:'Z = 0'},
+    cgLabelFn:function(cg){ return 'G (z = '+cg.z.toFixed(0)+')'; } });
   // lejant
-  svg+=_mnt2DText(mL, sideCapY, '◻ takoz   ○ bileşen CG   ⊕ birleşik CG', 'start', 'var(--text-muted)', 7);
+  var lx=mL-14;
+  svg+='<rect x="'+_mnt2DR(lx)+'" y="'+_mnt2DR(legendY-13)+'" width="13" height="13" rx="2" fill="rgba(34,197,94,0.14)" stroke="var(--accent-success)" stroke-width="2"/>'+_mnt2DText(lx+19,legendY-2,'takoz','start','var(--text-muted)',10.5);
+  svg+='<circle cx="'+_mnt2DR(lx+90)+'" cy="'+_mnt2DR(legendY-6)+'" r="7" fill="rgba(245,158,11,0.14)" stroke="var(--accent-warning)" stroke-width="2"/>'+_mnt2DText(lx+102,legendY-2,'bileşen CG','start','var(--text-muted)',10.5);
+  svg+=_mnt2DCGMark(lx+205,legendY-6,7)+_mnt2DText(lx+217,legendY-2,'birleşik CG','start','var(--text-muted)',10.5);
   svg+='</svg>';
   return svg;
 }
@@ -1275,6 +1307,55 @@ function _mntShowModal(title, innerHTML){
   box.style.cssText='max-width:1200px; width:94%; max-height:90vh; overflow-y:auto; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 20px 60px rgba(0,0,0,0.6);';
   box.innerHTML='<div style="display:flex; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border-color); background:var(--bg-tertiary); position:sticky; top:0; z-index:1;"><span style="font-weight:700; font-size:0.88rem; color:var(--text-heading);">'+title+'</span><div style="flex:1;"></div><button onclick="if(typeof veMountViewerDispose===\'function\'){try{veMountViewerDispose();}catch(x){}} this.closest(\'#ve-mnt-submodal\').remove()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1rem;">✕</button></div><div style="padding:16px;">'+innerHTML+'</div>';
   ov.appendChild(box); document.body.appendChild(ov);
+}
+
+// ─── Tam ekran overlay (3D / 2D görünümleri büyütmek için) ───────────────────
+// Büyük, esnek bir overlay: başlık + kapat (X/Esc) + içerik alanı. onMount(body)
+// DOM eklendikten sonra çağrılır; onClose kapanışta.
+function _mntFsOverlay(title, innerHTML, onMount, onClose){
+  var old=document.getElementById('ve-mnt-fs'); if(old) old.remove();
+  var ov=document.createElement('div'); ov.id='ve-mnt-fs';
+  ov.style.cssText='position:fixed; inset:0; z-index:100045; background:rgba(0,0,0,0.72); display:flex; align-items:center; justify-content:center; padding:2vh 2vw;';
+  var box=document.createElement('div');
+  box.style.cssText='width:96vw; height:94vh; max-width:1600px; display:flex; flex-direction:column; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:10px; box-shadow:0 24px 70px rgba(0,0,0,0.6); overflow:hidden;';
+  function close(){ document.removeEventListener('keydown', onKey); try{ if(onClose) onClose(); }catch(e){} ov.remove(); }
+  function onKey(e){ if(e.key==='Escape') close(); }
+  box.innerHTML='<div style="display:flex; align-items:center; gap:10px; padding:11px 16px; border-bottom:1px solid var(--border-color); background:var(--bg-tertiary); flex-shrink:0;"><span style="font-weight:700; font-size:0.92rem; color:var(--text-heading);">'+title+'</span><div style="flex:1;"></div><button id="ve-mnt-fs-x" title="Kapat (Esc)" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.25rem; line-height:1;">✕</button></div>'
+    +'<div id="ve-mnt-fs-body" style="flex:1; min-height:0; position:relative; display:flex; flex-direction:column;">'+innerHTML+'</div>';
+  ov.appendChild(box); document.body.appendChild(ov);
+  ov.addEventListener('mousedown', function(e){ if(e.target===ov) close(); });
+  document.getElementById('ve-mnt-fs-x').addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  if(onMount){ try{ onMount(document.getElementById('ve-mnt-fs-body')); }catch(e){} }
+}
+// 3D görünümü (model veya coordframe) tam ekran aç.
+function _mntViewer3DFullscreen(title, mode){
+  var toggles = (mode==='coordframe')
+    ? _mntVwrBtn("var v=veMountViewerToggle('planes'); this.style.opacity=v?'1':'0.45';",'Düzlem','Düzlem')
+      + _mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin')
+    : _mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin', false)
+      + _mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksen')
+      + _mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Etiket');
+  var bar='<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 14px; flex-shrink:0; border-bottom:1px solid var(--border-color);">'
+    + toggles + _mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Sıfırla')
+    + '<span style="flex:1;"></span><span style="font-size:0.58rem; color:var(--text-muted);">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşen bilgisi</span></div>';
+  var wrap='<div style="flex:1; min-height:0; position:relative; background:var(--bg-primary);"><canvas id="ve-mnt-fs-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
+  _mntFsOverlay(title, bar+wrap,
+    function(){ if(mode!=='coordframe' && typeof _mntGatherForSolver==='function') _veMntViewerData=_mntGatherForSolver();
+      if(typeof veMountViewerInit==='function'){ try{ veMountViewerInit('ve-mnt-fs-canvas', mode); veMountViewerUpdate(); }catch(e){} } },
+    function(){ if(typeof veMountViewerDispose==='function'){ try{ veMountViewerDispose(); }catch(e){} }
+      if(mode==='coordframe') veMntCoordFrameRefresh(); else veMntViewerRefresh(); }
+  );
+}
+function veMntViewerFullscreen(){ _mntViewer3DFullscreen('3D Görüntüleyici','model'); }
+function veMntCoordFullscreen(){ _mntViewer3DFullscreen('Koordinat Düzlemi','coordframe'); }
+// 2D görünümü tam ekran aç (SVG büyük ölçekte).
+function veMnt2DViewFullscreen(){
+  _mntFsOverlay('2D Görünüm — Güç Grubu Diyagramı',
+    '<div style="flex:1; min-height:0; overflow:auto; padding:18px 22px; background:var(--bg-primary);"><div id="ve-mnt-2dview-fs" style="max-width:1200px; margin:0 auto;"></div></div>',
+    function(){ var el=document.getElementById('ve-mnt-2dview-fs'); if(el && typeof _mnt2DViewSVG==='function') el.innerHTML=_mnt2DViewSVG(_mnt2DGather()); },
+    null
+  );
 }
 
 // 3D viewer veri sağlayıcısı (cp-mount-viewer.js okur)
