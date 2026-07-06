@@ -1810,6 +1810,9 @@
 .ve-node-label.lbl-top{ top:auto; bottom:100%; margin-top:0; margin-bottom:4px; }
 .ve-node-label.lbl-left{ top:50%; left:auto; right:100%; transform:translateY(-50%); margin-top:0; margin-right:7px; text-align:right; }
 .ve-node-label.lbl-right{ top:50%; left:100%; right:auto; transform:translateY(-50%); margin-top:0; margin-left:7px; text-align:left; }
+/* Şasi metaforu: takoz modülü düğümlerinde port kareleri gizli — bağlantı, düğümden
+   şasi çerçevesine giden yay ile temsil edilir (cp-mount.js veMntDecorateConnections). */
+.ve-node[data-type^="mnt-"] .ve-node-port{ display:none; }
 .ve-wheel-master-badge{
   position:absolute;
   top:-6px;

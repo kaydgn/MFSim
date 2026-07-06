@@ -287,7 +287,14 @@ function updateAllConnections() {
     var fromNode = nodes.find(function(n) { return n.id === conn.from; });
     var toNode = nodes.find(function(n) { return n.id === conn.to; });
     if(!fromNode || !toNode) return;
-    
+
+    // Takoz modülü: mount düğümleri (gövde/takoz/cradle) arası bağlantılar ŞASİ
+    // METAFORU ile çizilir (cp-mount.js veMntDecorateConnections) → burada port-port
+    // eğrisi ÇİZME. Diğer topolojiler (Araç Performans vb.) etkilenmez.
+    var _fd = (typeof componentDefs!=='undefined' && componentDefs[fromNode.type]) || {};
+    var _td = (typeof componentDefs!=='undefined' && componentDefs[toNode.type]) || {};
+    if((_fd.isMount||_fd.isMountBody) && (_td.isMount||_td.isMountBody)) return;
+
     // Port pozisyonlarını al
     var fromPortType = conn.fromPort || 'output';
     var toPortType = conn.toPort || 'input';

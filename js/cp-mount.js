@@ -844,29 +844,105 @@ function _mntWireSupportLinks(placed){
   });
 }
 
-// ── Şasi (ground) sembolü ────────────────────────────────────────────────────
-// updateAllConnections sonunda çağrılır (connections.js hook). Her takozun DIŞ
-// ucuna sabit-mesnet ("şasi") sembolü çizer → takoz görsel olarak gövde ile şasi
-// ARASINDA durur. Bağlantı katmanına <g class="ve-mnt-chassis"> ekler; her çağrıda
-// eskisini silip yeniden çizer (updateAllConnections yalnız path/circle siler, <g>
-// bırakır). Takoz yoksa no-op → başka topoloji modülleri etkilenmez.
+// ── ŞASİ METAFORU (kütle-yay-zemin) ─────────────────────────────────────────
+// Takoz topolojisini "titreşim diyagramı" gibi çizer: güç grubu bir ŞASİ ÇERÇEVESİ
+// içinde; gövdeler aktarma-hattı omurgasıyla; her takoz karşıya uzanan çizgi yerine
+// en yakın çerçeve kenarına KISA BİR YAY + dış tarafta zemin sembolü. updateAllConn.
+// sonunda çağrılır (connections.js hook), <g class="ve-mnt-chassis"> ekler; her
+// çağrıda yeniden çizilir. Takoz+gövde yoksa no-op → başka modüller etkilenmez.
+// NOT: mount düğümleri arası port-port eğrileri updateAllConnections'ta atlanır
+// (bu metafor onların yerini alır).
 function veMntDecorateConnections(svg){
   if(!svg || typeof document==='undefined' || typeof nodes==='undefined') return;
   var old = svg.querySelector('g.ve-mnt-chassis');
   if(old && old.parentNode) old.parentNode.removeChild(old);
   var mountsN = nodes.filter(function(n){ return (_mntDef(n)||{}).isMount; });
-  if(!mountsN.length) return;
+  var bodiesN = nodes.filter(function(n){ return (_mntDef(n)||{}).isMountBody; });
+  if(!mountsN.length && !bodiesN.length) return;
   var NS='http://www.w3.org/2000/svg';
   var g = document.createElementNS(NS,'g');
   g.setAttribute('class','ve-mnt-chassis');
   g.style.pointerEvents='none';
-  var opp = { left:'right', right:'left', top:'bottom', bottom:'top' };
+
+  // ── Şasi çerçevesi: gövdelerin (cradle dahil) sınır kutusu + pay ──
+  var fr=null;
+  if(bodiesN.length){
+    var pad=26, x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
+    bodiesN.forEach(function(n){ var w=n.width||50,h=n.height||46;
+      x1=Math.min(x1,n.x); y1=Math.min(y1,n.y); x2=Math.max(x2,n.x+w); y2=Math.max(y2,n.y+h); });
+    fr={x1:x1-pad, y1:y1-pad, x2:x2+pad, y2:y2+pad};
+    var rect=document.createElementNS(NS,'rect');
+    rect.setAttribute('x',fr.x1); rect.setAttribute('y',fr.y1);
+    rect.setAttribute('width',fr.x2-fr.x1); rect.setAttribute('height',fr.y2-fr.y1);
+    rect.setAttribute('rx',16); rect.setAttribute('fill','var(--accent-primary, #3b82f6)');
+    rect.setAttribute('fill-opacity','0.045'); rect.setAttribute('stroke','var(--accent-primary, #3b82f6)');
+    rect.setAttribute('stroke-width','1.6'); rect.setAttribute('stroke-dasharray','2 6'); rect.setAttribute('opacity','0.7');
+    g.appendChild(rect);
+    var t=document.createElementNS(NS,'text');
+    t.setAttribute('x',fr.x1+11); t.setAttribute('y',fr.y1+16);
+    t.setAttribute('fill','var(--accent-primary, #3b82f6)'); t.setAttribute('font-size','10.5');
+    t.setAttribute('opacity','0.72'); t.setAttribute('letter-spacing','1.5');
+    t.setAttribute('font-family','ui-monospace, monospace'); t.textContent='ŞASİ'; g.appendChild(t);
+  }
+
+  // ── Aktarma hattı omurgası: cradle olmayan gövdeler, x sırasına göre merkezden ──
+  var spineB = bodiesN.filter(function(n){ return n.type!=='mnt-bracket'; })
+    .sort(function(a,b){ return a.x - b.x; });
+  for(var i=0;i<spineB.length-1;i++){
+    var a=spineB[i], b=spineB[i+1];
+    var l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',a.x+(a.width||50)/2); l.setAttribute('y1',a.y+(a.height||46)/2);
+    l.setAttribute('x2',b.x+(b.width||50)/2); l.setAttribute('y2',b.y+(b.height||46)/2);
+    l.setAttribute('stroke','var(--text-secondary, #888)'); l.setAttribute('stroke-width','3');
+    l.setAttribute('stroke-linecap','round'); l.setAttribute('opacity','0.7'); g.appendChild(l);
+  }
+
+  // ── Takozlar: en yakın çerçeve kenarına kısa yay + dış tarafta zemin ──
+  var opp={ left:'right', right:'left', top:'bottom', bottom:'top' };
   mountsN.forEach(function(n){
-    // Takozun ÇIKIŞ portu iç (desteklediği gövde) taraf; şasi bunun KARŞISINDA.
-    var out = (typeof getPortPosition==='function') ? getPortPosition(n,'output') : null;
-    _mntChassisGlyph(g, n, opp[(out&&out.side)||'right'] || 'left');
+    var w=n.width||50,h=n.height||46, cx=n.x+w/2, cy=n.y+h/2;
+    if(fr){
+      // en yakın çerçeve kenarı + o kenar üzerine izdüşüm (köşeye taşmayı kırp)
+      var dl=Math.abs(cx-fr.x1),dr=Math.abs(cx-fr.x2),dt=Math.abs(cy-fr.y1),db=Math.abs(cy-fr.y2);
+      var mn=Math.min(dl,dr,dt,db), fp;
+      if(mn===dt) fp={x:Math.max(fr.x1,Math.min(fr.x2,cx)), y:fr.y1};
+      else if(mn===db) fp={x:Math.max(fr.x1,Math.min(fr.x2,cx)), y:fr.y2};
+      else if(mn===dl) fp={x:fr.x1, y:Math.max(fr.y1,Math.min(fr.y2,cy))};
+      else fp={x:fr.x2, y:Math.max(fr.y1,Math.min(fr.y2,cy))};
+      var mp=_mntEdge(n, fp.x, fp.y);
+      _mntSpring(g, mp, fp);
+      // zemin: yayın TERS yönünde (dışta). İç yön = fp'ye bakan baskın eksen.
+      var idx=fp.x-cx, idy=fp.y-cy;
+      var inSide=(Math.abs(idx)>=Math.abs(idy)) ? (idx>0?'right':'left') : (idy>0?'bottom':'top');
+      _mntChassisGlyph(g, n, opp[inSide]);
+    } else {
+      _mntChassisGlyph(g, n, 'left');
+    }
   });
   svg.appendChild(g);
+}
+
+// Düğüm sınır kutusunun (tx,ty)'ye bakan kenar noktası.
+function _mntEdge(n, tx, ty){
+  var w=n.width||50,h=n.height||46, cx=n.x+w/2, cy=n.y+h/2, dx=tx-cx, dy=ty-cy;
+  if(dx===0&&dy===0) return {x:cx,y:cy};
+  var s=Math.min((w/2)/Math.abs(dx||1e-9), (h/2)/Math.abs(dy||1e-9));
+  return {x:cx+dx*s, y:cy+dy*s};
+}
+
+// İki nokta arası KISA YAY (zig-zag) — takoz kenarından şasi çerçevesine.
+function _mntSpring(g, a, b){
+  var NS='http://www.w3.org/2000/svg';
+  var vx=b.x-a.x, vy=b.y-a.y, L=Math.hypot(vx,vy)||1e-6, ux=vx/L, uy=vy/L, px=-uy, py=ux;
+  var coils=Math.max(3, Math.min(6, Math.round(L/8))), amp=Math.min(4.5, L*0.16), seg=L/(coils+1);
+  var d='M'+a.x+' '+a.y;
+  for(var i=1;i<=coils;i++){ var tt=seg*i, sgn=(i%2?1:-1)*amp; d+=' L '+(a.x+ux*tt+px*sgn)+' '+(a.y+uy*tt+py*sgn); }
+  d+=' L '+b.x+' '+b.y;
+  var p=document.createElementNS(NS,'path');
+  p.setAttribute('d',d); p.setAttribute('fill','none');
+  p.setAttribute('stroke','var(--accent-success, #22c55e)'); p.setAttribute('stroke-width','2');
+  p.setAttribute('stroke-linecap','round'); p.setAttribute('stroke-linejoin','round'); p.setAttribute('opacity','0.95');
+  g.appendChild(p);
 }
 
 // Tek takoz için dış kenara sabit-mesnet sembolü çiz: takozdan raya kısa bağ +
