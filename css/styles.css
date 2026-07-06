@@ -1369,56 +1369,193 @@
 .ve-snapshot-pane .ve-node-port{display:none;}
 .ve-snapshot-pane .ve-node-label{pointer-events:none;}
 
-/* Module Selection Overlay */
+/* ═══ Modül Seçim / Karşılama Ekranı ═══
+   Program açılışında (modül seçilmeden) gösterilen ana karşılama paneli.
+   Login/loading kartlarıyla aynı dili konuşur: keskin köşe, 1px kenar,
+   shadow-xl, tema değişkenleriyle sürülür → 9 temanın tümünde tutarlı. */
 .ve-module-overlay{
   position:absolute;
-  top:0;left:0;right:0;bottom:0;
+  inset:0;
   z-index:100;
-  background:var(--bg-primary);
   display:flex;
-  flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:16px;
+  padding:24px;
+  /* Taban: ince teknik ızgara (color-mix desteklenmezse bu geçerli kalır) */
+  background:
+    linear-gradient(var(--border-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-color) 1px, transparent 1px),
+    var(--bg-primary);
+  background-size:34px 34px, 34px 34px, auto;
 }
-.ve-module-overlay-title{
-  font-size:0.9rem;
-  font-weight:700;
-  color:var(--text-heading);
-  letter-spacing:-0.02em;
+/* Üst katman: yumuşak accent ışıltısı (color-mix destekli tarayıcılarda) */
+.ve-module-overlay{
+  background:
+    radial-gradient(135% 100% at 50% -20%, color-mix(in srgb, var(--accent-primary) 9%, transparent), transparent 58%),
+    linear-gradient(var(--border-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-color) 1px, transparent 1px),
+    var(--bg-primary);
+  background-size:auto, 34px 34px, 34px 34px, auto;
 }
-.ve-module-overlay-grid{
-  display:grid;
-  grid-template-columns:repeat(2,1fr);
-  gap:10px;
+
+.ve-welcome{
+  width:100%;
   max-width:440px;
-  width:90%;
+  padding:38px 38px 30px;
+  background:var(--bg-secondary);
+  border:1px solid var(--border-color);
+  box-shadow:var(--shadow-xl);
+  display:flex;
+  flex-direction:column;
+  animation:ve-welcome-in var(--dur-slow) var(--ease-out) both;
+}
+@keyframes ve-welcome-in{
+  from{ opacity:0; transform:translateY(10px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+.ve-welcome-hero{
+  text-align:center;
+  margin-bottom:22px;
+}
+.ve-welcome-logo{
+  display:inline-flex;
+  align-items:center;
+  gap:11px;
+  font-size:1.7rem;
+  font-weight:700;
+  letter-spacing:0.5px;
+  color:var(--text-heading);
+}
+.ve-welcome-logo-ico{
+  width:1.5rem;
+  height:1.5rem;
+  color:var(--accent-primary);
+}
+.ve-welcome-tagline{
+  margin-top:9px;
+  font-size:0.72rem;
+  letter-spacing:0.4px;
+  color:var(--text-muted);
+}
+.ve-welcome-sep{
+  height:1px;
+  background:var(--border-color);
+  margin:0 -38px 20px;
+}
+.ve-welcome-label{
+  font-size:0.6rem;
+  font-weight:600;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--text-muted);
+  margin-bottom:11px;
+}
+
+.ve-module-overlay-grid{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 .ve-module-card{
-  background:var(--bg-secondary);
-  border:2px solid var(--border-color);
-  border-radius:0;
-  padding:14px 12px;
-  cursor:pointer;
-  transition:all 0.2s ease;
-  text-align:center;
-}
-.ve-module-card:hover{
-  border-color:var(--accent-primary);
+  display:flex;
+  align-items:center;
+  gap:15px;
+  padding:15px 16px;
   background:var(--bg-tertiary);
+  border:1px solid var(--border-color);
+  border-radius:0;
+  cursor:pointer;
+  text-align:left;
+  transition:border-color var(--dur-base) var(--ease-out),
+             transform var(--dur-base) var(--ease-out),
+             box-shadow var(--dur-base) var(--ease-out);
+}
+.ve-module-card:hover,
+.ve-module-card:focus-visible{
+  border-color:var(--accent-primary);
   transform:translateY(-2px);
-  box-shadow:var(--shadow-md);
+  box-shadow:var(--shadow-lg);
+  outline:none;
+}
+.ve-module-card-icon{
+  flex-shrink:0;
+  width:52px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--accent-primary);
+  background:var(--bg-input);
+  border:1px solid var(--border-color);
+  transition:border-color var(--dur-base) var(--ease-out),
+             background var(--dur-base) var(--ease-out);
+}
+.ve-module-card:hover .ve-module-card-icon,
+.ve-module-card:focus-visible .ve-module-card-icon{
+  border-color:var(--accent-primary);
+  background:color-mix(in srgb, var(--accent-primary) 14%, var(--bg-input));
+}
+.ve-module-card-text{
+  flex:1;
+  min-width:0;
 }
 .ve-module-card-name{
-  font-size:0.72rem;
+  display:block;
+  font-size:0.88rem;
   font-weight:600;
   color:var(--text-heading);
-  margin-bottom:4px;
+  letter-spacing:-0.01em;
+  margin-bottom:3px;
 }
 .ve-module-card-desc{
-  font-size:0.56rem;
+  display:block;
+  font-size:0.68rem;
   color:var(--text-secondary);
-  line-height:1.45;
+  line-height:1.5;
+}
+.ve-module-card-arrow{
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  color:var(--text-muted);
+  transition:color var(--dur-base) var(--ease-out),
+             transform var(--dur-base) var(--ease-out);
+}
+.ve-module-card:hover .ve-module-card-arrow,
+.ve-module-card:focus-visible .ve-module-card-arrow{
+  color:var(--accent-primary);
+  transform:translateX(4px);
+}
+
+.ve-welcome-open{
+  margin-top:20px;
+  align-self:center;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 12px;
+  font-family:var(--font-sans);
+  font-size:0.68rem;
+  font-weight:500;
+  color:var(--text-secondary);
+  background:transparent;
+  border:1px solid transparent;
+  border-radius:0;
+  cursor:pointer;
+  transition:color var(--dur-base) var(--ease-out),
+             border-color var(--dur-base) var(--ease-out),
+             background var(--dur-base) var(--ease-out);
+}
+.ve-welcome-open:hover{
+  color:var(--text-heading);
+  border-color:var(--border-color);
+  background:var(--bg-tertiary);
+}
+.ve-welcome-open .mf-ico{
+  width:0.9rem;
+  height:0.9rem;
+  opacity:0.85;
 }
 .ve-canvas-wrapper{
   flex:1;
