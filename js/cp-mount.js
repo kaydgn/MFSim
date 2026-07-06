@@ -228,11 +228,14 @@ function veMntOpenEditor(nodeId){
     }
     _veMntSetSidebar('takoz');
   } finally { _veMntBusy=false; }
+  if(typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('enter');
   veMntUpdateBreadcrumb();
   if(typeof showToast==='function') showToast('Takoz Çökme-Titreşim — İç Topoloji','info');
 }
 
-function veMntCloseEditor(){
+// _silent: köke çökerken (veMntCollapseToRoot → kaydet/sekme değiştir öncesi) true
+// gelir; kullanıcıya görünmeyen bu toplu çıkışta geçiş animasyonu tetiklenmez.
+function veMntCloseEditor(_silent){
   if(_veMntBusy) return;
   if(!veMntStack.length) return;
   _veMntBusy=true;
@@ -246,13 +249,14 @@ function veMntCloseEditor(){
     veLoadTabState({ state: ctx.parentState });
     _veMntSetSidebar('performans');
   } finally { _veMntBusy=false; }
+  if(!_silent && typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('exit');
   veMntUpdateBreadcrumb();
   if(typeof showToast==='function') showToast('Ana topolojiye dönüldü','info');
 }
 
 function veMntCollapseToRoot(){
   var guard=0;
-  while(veMntStack.length && guard++<32){ veMntCloseEditor(); }
+  while(veMntStack.length && guard++<32){ veMntCloseEditor(true); }
 }
 
 // "← Ana Topolojiye Dön" bandı (arac-performans ile aynı CSS sınıfı).
@@ -264,8 +268,9 @@ function veMntUpdateBreadcrumb(){
     el=document.createElement('div');
     el.id='ve-mnt-breadcrumb';
     el.className='ve-arac-breadcrumb';
-    var host=document.getElementById('ve-canvas-wrapper')||document.body;
-    host.appendChild(el);
+    // Canvas geçiş animasyonu wrapper'a transform uygular; position:fixed breadcrumb
+    // transform'lu ata içinde konumunu şaşırır → body altına asılır (görsel aynı).
+    document.body.appendChild(el);
   }
   var depth=veMntStack.length;
   el.innerHTML='<button onclick="veMntCloseEditor()" title="Bir üst topolojiye dön">← Ana Topolojiye Dön</button>'

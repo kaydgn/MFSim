@@ -154,6 +154,32 @@ function veFlushOpenPanelData() {
   }
 }
 
+// Alt-topolojiye giriş/çıkışta canvas'ın yumuşak (fade + hafif zoom) geçişi.
+// direction: 'enter' (alt-sisteme in) | 'exit' (üst topolojiye dön). Senkron DOM
+// takasını DEĞİŞTİRMEZ — yalnız görsel katman: gelen sahneye tek seferlik animasyon
+// ekler. Class animationend'de kaldırılır ki art arda navigasyonda tekrar tetiklensin.
+// prefers-reduced-motion açıksa ve non-DOM ortamda (Jest) no-op.
+function veAnimateCanvasTransition(direction) {
+  if(typeof document === 'undefined' || typeof document.getElementById !== 'function') return;
+  // Canlı canvas'ı içeren wrapper'ı bul (split görünümde birden çok wrapper olabilir).
+  var canvas = document.getElementById('ve-canvas');
+  var wrap = (canvas && typeof canvas.closest === 'function') ? canvas.closest('.ve-canvas-wrapper') : null;
+  if(!wrap) wrap = document.getElementById('ve-canvas-wrapper');
+  if(!wrap || !wrap.classList) return;
+  if(typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    try { if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; } catch(e) {}
+  }
+  var cls = (direction === 'exit') ? 've-topo-anim-exit' : 've-topo-anim-enter';
+  wrap.classList.remove('ve-topo-anim-enter', 've-topo-anim-exit');
+  void wrap.offsetWidth;   // reflow → aynı animasyon art arda yeniden tetiklenebilsin
+  wrap.classList.add(cls);
+  var done = function() {
+    wrap.classList.remove(cls);
+    wrap.removeEventListener('animationend', done);
+  };
+  wrap.addEventListener('animationend', done);
+}
+
 function veClearCanvasDOM() {
   nodes.forEach(function(n) {
     var el = document.getElementById(n.id);
