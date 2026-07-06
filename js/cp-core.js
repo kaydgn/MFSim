@@ -234,6 +234,10 @@ function showNodeProperties(node) {
   
   
   content.innerHTML = html;
+  // 2D Görünüm paneli üç ölçekli diyagram gösterir → pencereyi geniş/uzun yap
+  // (diğer bileşenlerde varsayılan boyuta döner). Salt sunum, mantığa dokunmaz.
+  var _propWin = document.getElementById('ve-properties');
+  if(_propWin) _propWin.classList.toggle('ve-properties--2dview', node.type === 'mnt-2dview');
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 

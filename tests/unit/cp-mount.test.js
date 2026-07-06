@@ -508,11 +508,11 @@ describe('3D Görüntüleyici bileşeni', () => {
 
 describe('2D Görünüm bileşeni', () => {
   afterEach(() => { delete global.nodes; });
-  test('panel: diyagram kutusu + Yenile', () => {
+  test('panel: diyagram kutusu + Yenile (tam ekran kaldırıldı)', () => {
     const html = cp.getMnt2DViewPropertiesHTML({ id: 'd1', type: 'mnt-2dview', def: {}, data: {} });
     expect(html).toContain('ve-mnt-2dview-box');
     expect(html).toContain('veMnt2DViewRefresh()');
-    expect(html).toContain('veMnt2DViewFullscreen()');   // tam ekran
+    expect(html).not.toContain('veMnt2DViewFullscreen');   // tam ekran kaldırıldı
   });
   test('_mnt2DGather kütle-ağırlıklı birleşik CG hesaplar', () => {
     global.nodes = [
@@ -525,7 +525,7 @@ describe('2D Görünüm bileşeni', () => {
     expect(d.mounts).toHaveLength(1);
     expect(d.cg.x).toBeCloseTo(150, 3); // (100·0 + 300·200)/400 = 150
   });
-  test('_mnt2DViewSVG: boş → mesaj, dolu → iki ölçekli görünüş', () => {
+  test('_mnt2DViewSVG: boş → mesaj, dolu → üç ölçekli görünüş (üst/yan/ön)', () => {
     expect(cp._mnt2DViewSVG({ comps: [], mounts: [], cg: null })).toMatch(/Görüntülenecek bileşen yok/);
     const svg = cp._mnt2DViewSVG({
       comps: [{ name: 'Motor', mass: 100, x: 0, y: 0, z: 100 }],
@@ -535,6 +535,9 @@ describe('2D Görünüm bileşeni', () => {
     expect(svg).toContain('<svg');
     expect(svg).toContain('Üstten Görünüş');
     expect(svg).toContain('Yandan Görünüş');
+    expect(svg).toContain('Önden Görünüş');               // yeni üçüncü görünüş
+    // her görünüş kendi SVG'sinde (bağımsız yakınlaştırma) → üç figür
+    expect((svg.match(/class="ve-mnt2d-fig"/g) || []).length).toBe(3);
     expect(svg).toContain('<rect');       // takoz karesi / çerçeve
     expect(svg).toMatch(/Z\s*=\s*0/);     // zemin çizgisi etiketi
     expect(svg).toContain('data-mnt-info'); // fare-üstü (hover) bilgi attribute'u
