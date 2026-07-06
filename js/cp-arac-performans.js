@@ -174,12 +174,15 @@ function veAracOpenEditor(nodeId){
     _veAracBusy = false;
   }
 
+  if(typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
   veAracUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
   if(typeof showToast === 'function') showToast('Araç Performans — Alt Topoloji', 'info');
 }
 
-function veAracCloseEditor(){
+// _silent: köke çökerken (veAracCollapseToRoot → kaydet/sekme değiştir öncesi) true
+// gelir; kullanıcıya görünmeyen bu toplu çıkışta geçiş animasyonu tetiklenmez.
+function veAracCloseEditor(_silent){
   if(_veAracBusy) return;
   if(!veAracStack.length) return;
 
@@ -199,6 +202,7 @@ function veAracCloseEditor(){
     _veAracBusy = false;
   }
 
+  if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('exit');
   veAracUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
 
@@ -214,7 +218,7 @@ function veAracCloseEditor(){
 // öncesi çağrılır (veSaveActiveTabState kancası) → doğru kök durum serileşir.
 function veAracCollapseToRoot(){
   var guard = 0;
-  while(veAracStack.length && guard++ < 32){ veAracCloseEditor(); }
+  while(veAracStack.length && guard++ < 32){ veAracCloseEditor(true); }
 }
 
 // İç içeyken görünen "← Ana Topolojiye Dön" breadcrumb çubuğu
@@ -226,8 +230,9 @@ function veAracUpdateBreadcrumb(){
     el = document.createElement('div');
     el.id = 've-arac-breadcrumb';
     el.className = 've-arac-breadcrumb';
-    var host = document.getElementById('ve-canvas-wrapper') || document.body;
-    host.appendChild(el);
+    // Canvas geçiş animasyonu wrapper'a transform uygular; position:fixed breadcrumb
+    // transform'lu ata içinde konumunu şaşırır → body altına asılır (görsel aynı).
+    document.body.appendChild(el);
   }
   var depth = veAracStack.length;
   el.innerHTML =
