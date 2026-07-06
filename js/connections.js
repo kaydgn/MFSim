@@ -253,26 +253,24 @@ function getPortPosition(node, portType, portIndex) {
     : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType)
       : (node.mirrored ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right')));
   
+  // Kenar üzerindeki konum: aynı kenardaki portların sırasına göre (portPerpPercent).
+  var frac = ((typeof portPerpPercent === 'function') ? portPerpPercent(node, portType)
+    : ((portIndex + 1) / (totalPorts + 1) * 100)) / 100;
   var x, y;
-  var spacing = nodeHeight / (totalPorts + 1);
-  var portOffsetY = spacing * (portIndex + 1);
-  
   switch(side) {
     case 'top':
-      var hSpacing = nodeWidth / (totalPorts + 1);
-      x = node.x + hSpacing * (portIndex + 1); y = node.y - 7; break;
+      x = node.x + nodeWidth * frac; y = node.y - 7; break;
     case 'right':
-      x = node.x + nodeWidth + 7; y = node.y + portOffsetY; break;
+      x = node.x + nodeWidth + 7; y = node.y + nodeHeight * frac; break;
     case 'bottom':
-      var hSpacing2 = nodeWidth / (totalPorts + 1);
-      x = node.x + hSpacing2 * (portIndex + 1); y = node.y + nodeHeight + 7; break;
+      x = node.x + nodeWidth * frac; y = node.y + nodeHeight + 7; break;
     case 'left':
-      x = node.x - 7; y = node.y + portOffsetY; break;
+      x = node.x - 7; y = node.y + nodeHeight * frac; break;
     default:
-      if(isInput) { x = node.x - 7; y = node.y + portOffsetY; }
-      else { x = node.x + nodeWidth + 7; y = node.y + portOffsetY; }
+      if(isInput) { x = node.x - 7; y = node.y + nodeHeight * frac; }
+      else { x = node.x + nodeWidth + 7; y = node.y + nodeHeight * frac; }
   }
-  
+
   return {x: x, y: y, side: side};
 }
 

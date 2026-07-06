@@ -589,7 +589,20 @@ function createNode(type, x, y, width, height) {
   }
   
   nodeEl.innerHTML = html;
-  
+
+  // Etiket: konumlandırılabilir (üst/alt/sağ/sol) + sağ-tık menüsü. pointerEvents
+  // auto → sağ-tık yakalanır; sol-tık nodeEl'e bubble eder (sürükleme bozulmaz).
+  var _lblEl = nodeEl.querySelector('.ve-node-label');
+  if(_lblEl) {
+    _lblEl.style.pointerEvents = 'auto';
+    if(typeof applyNodeLabelPos === 'function') applyNodeLabelPos(node, _lblEl);
+    _lblEl.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      if(typeof showLabelContextMenu === 'function') showLabelContextMenu(e, node, _lblEl);
+    });
+  }
+
   // Handle ve border pozisyonlarını ayarla
   updateNodeHandles(nodeEl, node.width, node.height);
   
