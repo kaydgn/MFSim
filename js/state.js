@@ -136,11 +136,12 @@ function restoreState(state) {
     
     var html = '<div class="ve-node-box" style="width:' + node.width + 'px; height:' + node.height + 'px;">';
     
-    // Giriş portları - createNode ile aynı çoklu port desteği
-    if(def.inputs > 0) {
-      for(var pi = 0; pi < def.inputs; pi++) {
-        var inputPortId = def.inputs === 1 ? 'input' : 'input-' + pi;
-        var inputTopPct = ((pi + 1) / (def.inputs + 1) * 100);
+    // Giriş portları - createNode ile aynı (nodePortCount → portOverride'ı korur)
+    var inCount = (typeof nodePortCount === 'function') ? nodePortCount(node, 'inputs') : (def.inputs || 0);
+    if(inCount > 0) {
+      for(var pi = 0; pi < inCount; pi++) {
+        var inputPortId = inCount === 1 ? 'input' : 'input-' + pi;
+        var inputTopPct = ((pi + 1) / (inCount + 1) * 100);
         html += '<div class="ve-node-port input" data-node="' + node.id + '" data-port="' + inputPortId + '" data-port-index="' + pi + '" title="Giriş ' + (pi+1) + '" style="top:' + inputTopPct + '%; margin-top:-5px;"></div>';
       }
     }
@@ -148,10 +149,11 @@ function restoreState(state) {
     html += def.svg;
     
     // Çıkış portları
-    if(def.outputs > 0) {
-      for(var po = 0; po < def.outputs; po++) {
-        var outputPortId = def.outputs === 1 ? 'output' : 'output-' + po;
-        var outputTopPct = ((po + 1) / (def.outputs + 1) * 100);
+    var outCount = (typeof nodePortCount === 'function') ? nodePortCount(node, 'outputs') : (def.outputs || 0);
+    if(outCount > 0) {
+      for(var po = 0; po < outCount; po++) {
+        var outputPortId = outCount === 1 ? 'output' : 'output-' + po;
+        var outputTopPct = ((po + 1) / (outCount + 1) * 100);
         html += '<div class="ve-node-port output" data-node="' + node.id + '" data-port="' + outputPortId + '" data-port-index="' + po + '" title="Çıkış ' + (po+1) + '" style="top:' + outputTopPct + '%; margin-top:-5px;"></div>';
       }
     }
@@ -241,7 +243,26 @@ function restoreState(state) {
     
     // Node sürükleme — paylasilan tek-dinleyicili sistem (ui-core.js)
     veAttachNodeDrag(nodeEl, node);
-    
+
+    // portLayout / kayıtlı taşımalar → port kenarlarını uygula (createNode ile aynı)
+    if((def.portLayout || (node.data && node.data.portPositions)) && typeof updatePortPosition === 'function') {
+      nodeEl.querySelectorAll('.ve-node-port').forEach(function(port) {
+        updatePortPosition(port, node, port.getAttribute('data-port'));
+      });
+    }
+    // Etiket: konumlandırılabilir + sağ-tık menüsü (createNode ile aynı) → YÜKLÜ
+    // örneklerin/geri-yüklenen düğümlerin etiketleri de taşınabilir olsun.
+    var _lbl = nodeEl.querySelector('.ve-node-label');
+    if(_lbl) {
+      _lbl.style.pointerEvents = 'auto';
+      if(typeof applyNodeLabelPos === 'function') applyNodeLabelPos(node, _lbl);
+      _lbl.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if(typeof showLabelContextMenu === 'function') showLabelContextMenu(e, node, _lbl);
+      });
+    }
+
     document.getElementById('ve-canvas').appendChild(nodeEl);
   });
   
