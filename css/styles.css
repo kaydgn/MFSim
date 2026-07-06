@@ -1443,14 +1443,6 @@
   background:var(--border-color);
   margin:0 -38px 20px;
 }
-.ve-welcome-label{
-  font-size:0.6rem;
-  font-weight:600;
-  letter-spacing:0.14em;
-  text-transform:uppercase;
-  color:var(--text-muted);
-  margin-bottom:11px;
-}
 
 .ve-module-overlay-grid{
   display:flex;
