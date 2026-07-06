@@ -351,12 +351,18 @@ document.addEventListener('DOMContentLoaded', function() {
       if(selectedNodes.length > 0) {
         e.preventDefault();
         
-        // Seçili node'ları clipboard'a kopyala
+        // Seçili node'ları clipboard'a kopyala — DEĞERLER (data) + ad/ayna/boyut
+        // dahil derin kopya, ki sonradan kaynak değişse bile yapıştırma bozulmasın.
         clipboard = selectedNodes.map(function(node) {
           return {
             type: node.type,
             x: node.x,
-            y: node.y
+            y: node.y,
+            data: node.data ? JSON.parse(JSON.stringify(node.data)) : {},
+            customName: node.customName || '',
+            mirrored: !!node.mirrored,
+            width: node.width,
+            height: node.height
           };
         });
         
@@ -385,17 +391,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Clipboard'daki node'ları yapıştır
         var newNodes = [];
         clipboard.forEach(function(item) {
-          var newX = item.x + pasteOffset;
-          var newY = item.y + pasteOffset;
-          
-          createNode(item.type, newX, newY);
-          
-          // Son oluşturulan node'u bul ve seçime ekle
-          var newNode = nodes[nodes.length - 1];
+          // TÜM özellikleriyle klonla (data/değerler dahil) → boş yapıştırma bug'ı biter
+          var newNode = veCloneNodeFrom(item, item.x + pasteOffset, item.y + pasteOffset);
           if(newNode) {
             newNodes.push(newNode);
           }
         });
+        if(typeof updateAllConnections === 'function') updateAllConnections();
         
         // Yapıştırılan node'ları seç
         newNodes.forEach(function(n) {
@@ -431,13 +433,14 @@ document.addEventListener('DOMContentLoaded', function() {
         clearSelection();
         
         toDuplicate.forEach(function(node) {
-          createNode(node.type, node.x + 40, node.y + 40);
-          var newNode = nodes[nodes.length - 1];
+          // TÜM özellikleriyle klonla (data/değerler dahil)
+          var newNode = veCloneNodeFrom(node, node.x + 40, node.y + 40);
           if(newNode) {
             addToSelection(newNode);
           }
         });
-        
+        if(typeof updateAllConnections === 'function') updateAllConnections();
+
         showToast(toDuplicate.length + ' bileşen kopyalandı');
       }
     }
@@ -730,6 +733,40 @@ function veRebuildNodePorts(node) {
     if(c.from === node.id) { var pe = box.querySelector('.ve-node-port[data-port="' + c.fromPort + '"]'); if(pe) pe.classList.add('connected'); }
     if(c.to === node.id)   { var pt = box.querySelector('.ve-node-port[data-port="' + c.toPort + '"]'); if(pt) pt.classList.add('connected'); }
   });
+}
+
+// Bir düğümü TÜM özellikleriyle klonlar: createNode + kopyalanan veri/ad/ayna/boyut
+// + port ve etiket düzeni + DOM tazeleme. Kopyala-Yapıştır ve Ctrl+D bunu kullanır
+// → yapıştırılan bileşenin DEĞERLERİ (takoz konum/rijitlik, kütle/CG vb.) kaybolmaz.
+// src: canlı düğüm VEYA clipboard snapshot'ı ({type,x,y,data,customName,mirrored,width,height}).
+// Master bayrakları (isMasterWheel/isMasterDiff) KOPYALANMAZ — topolojide tekil olmalı.
+function veCloneNodeFrom(src, x, y) {
+  if(!src || typeof createNode !== 'function') return null;
+  createNode(src.type, x, y);
+  var n = nodes[nodes.length - 1];
+  if(!n) return null;
+  n.data = src.data ? JSON.parse(JSON.stringify(src.data)) : {};
+  if(src.customName) n.customName = src.customName;
+  if(src.mirrored) n.mirrored = true;
+  if(src.width) n.width = src.width;
+  if(src.height) n.height = src.height;
+
+  var el = (typeof document !== 'undefined') ? document.getElementById(n.id) : null;
+  if(el) {
+    var box = el.querySelector('.ve-node-box');
+    if(box) {
+      if(src.width) box.style.width = n.width + 'px';
+      if(src.height) box.style.height = n.height + 'px';
+      box.style.transform = n.mirrored ? 'scaleX(-1)' : '';
+    }
+    if(src.width) el.style.width = n.width + 'px';
+    if((src.width || src.height) && typeof updateNodeHandles === 'function') updateNodeHandles(el, n.width, n.height);
+    var lbl = el.querySelector('.ve-node-label');
+    if(lbl) lbl.textContent = n.customName || (componentDefs[n.type] && componentDefs[n.type].name) || n.type;
+    if(typeof veRebuildNodePorts === 'function') veRebuildNodePorts(n);   // portOverride/portPositions uygula
+    if(typeof applyNodeLabelPos === 'function') applyNodeLabelPos(n);      // labelPos uygula
+  }
+  return n;
 }
 
 function createConnection(fromNodeId, toNodeId, fromPort, toPort) {
