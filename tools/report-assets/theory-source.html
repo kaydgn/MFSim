@@ -91,10 +91,20 @@ pre code{background:none;padding:0}
 
 @media print{
   .page{max-width:100%;padding:0}
-  body{font-size:11.5pt}
-  h2{break-after:avoid}
-  figure,table,pre,.note{break-inside:avoid}
+  body{font-size:11pt}
+  h2,h3{break-after:avoid}
+  figure,table,pre,.note,.katex-display{break-inside:avoid}
+  tr{break-inside:avoid}
+  caption{break-after:avoid}
   a{color:inherit;text-decoration:none}
+  /* Arka planları (antet bandı, notlar, tablo başlıkları, veri-çubukları)
+     kullanıcının "Arka plan grafikleri" seçeneği KAPALI olsa bile bas. */
+  *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  /* Geniş tablolar sayfaya sığsın — sağdan kırpılmasın. */
+  table{font-size:9pt}
+  caption{font-size:9pt}
+  th{padding:4px 6px}
+  td{padding:3px 6px;white-space:normal}
 }
 @media (max-width:640px){
   .antet .fields{grid-template-columns:repeat(2,1fr)}

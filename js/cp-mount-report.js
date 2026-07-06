@@ -303,7 +303,47 @@ function _mntRepMountTable(R){
   return h;
 }
 
-// Şekil 2/3 — ölçekli akademik SVG (üstten X–Y / yandan X–Z)
+// Yakın (çakışan) noktaları ekran-uzaklığına göre kümele → tek işaret + birleşik
+// etiket. Yandan/üstten görünüşte aynı noktaya düşen takozlar üst üste binmesin.
+function _repCluster(pts, thr){
+  var cl=[];
+  pts.forEach(function(p){
+    var f=null;
+    for(var i=0;i<cl.length;i++){ if(Math.hypot(cl[i].x-p.x, cl[i].y-p.y) < thr){ f=cl[i]; break; } }
+    if(f){ var n=f.names.length; f.x=(f.x*n+p.x)/(n+1); f.y=(f.y*n+p.y)/(n+1); f.names.push(p.name); }
+    else cl.push({ x:p.x, y:p.y, names:[p.name] });
+  });
+  return cl;
+}
+function _repClusterLabel(names, maxlen, nameLen, unit){
+  var uniq=[]; names.forEach(function(nm){ var s=_mntRepShort(nm, nameLen||14); if(uniq.indexOf(s)<0) uniq.push(s); });
+  var t=uniq.join(' · ');
+  return (t.length>(maxlen||22)) ? names.length+' '+(unit||'öğe') : t;
+}
+// Etiket yerleştirme + dikey çakışma-önleme (greedy). Her etiket işaretinden
+// dışa doğru (dir) itilir; çakışırsa satır satır uzaklaştırılır.
+function _repPlaceLabels(labels, H){
+  labels.forEach(function(L){
+    L.h=11; L.w=Math.max(20, L.text.length*L.fs*0.56);
+    var off=(L.marker==='sq')?14:12;
+    L.y=L.ay + (L.dir>0 ? off+L.h*0.7 : -off);
+  });
+  labels.sort(function(a,b){ return a.cx-b.cx; });
+  var placed=[];
+  labels.forEach(function(L){
+    var t=0;
+    while(t<16){
+      var ov=placed.some(function(P){ return Math.abs(P.cx-L.cx) < (P.w+L.w)/2+3 && Math.abs(P.y-L.y) < (P.h+L.h)/2+1; });
+      if(!ov) break;
+      L.y += L.dir*(L.h+2); t++;
+    }
+    L.y=Math.max(11, Math.min(H-4, L.y));
+    placed.push({ cx:L.cx, y:L.y, w:L.w, h:L.h });
+  });
+}
+
+// Şekil 2/3 — ölçekli akademik SVG (üstten X–Y / yandan X–Z). Çakışan takozlar
+// kümelenir; etiketler çakışma-önlemeyle yerleştirilir.
 function _mntRepFigure(geom, plane, no, caption){
   var horiz='x', vert=(plane==='xy')?'y':'z';
   var pts=[];
@@ -315,7 +355,7 @@ function _mntRepFigure(geom, plane, no, caption){
   var hs=pts.map(function(p){return p.h;}), vs=pts.map(function(p){return p.v;});
   var minH=Math.min.apply(null,hs), maxH=Math.max.apply(null,hs);
   var minV=Math.min.apply(null,vs), maxV=Math.max.apply(null,vs);
-  var W=820, H=300, padL=70, padR=40, padT=54, padB=46;
+  var W=820, H=330, padL=70, padR=44, padT=60, padB=54;
   var rngH=Math.max(maxH-minH,1), rngV=Math.max(maxV-minV,1);
   var plotW=W-padL-padR, plotH=H-padT-padB;
   var sc=Math.min(plotW/rngH, plotH/rngV); // eşit ölçek (izometrik oran korunur)
@@ -323,37 +363,38 @@ function _mntRepFigure(geom, plane, no, caption){
   function sx(hh){ return offH+(hh-minH)*sc; }
   function sy(vv){ return offV+(maxV-vv)*sc; } // vert yukarı
   var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
-  svg+='<defs><marker id="ra'+no+'" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#24425f"/></marker>'
-     +'<pattern id="hx'+no+'" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="7" stroke="#8a92a0" stroke-width="1.3"/></pattern></defs>';
+  svg+='<defs><marker id="ra'+no+'" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#24425f"/></marker></defs>';
   // referans eksen köşesi
-  var ax=22, ay=26;
+  var ax=22, ay=28;
   svg+='<line x1="'+ax+'" y1="'+ay+'" x2="'+(ax+46)+'" y2="'+ay+'" stroke="#24425f" stroke-width="1.6" marker-end="url(#ra'+no+')"/>';
   svg+='<text x="'+(ax+52)+'" y="'+(ay+4)+'" font-size="12" fill="#24425f">+X</text>';
   svg+='<line x1="'+ax+'" y1="'+ay+'" x2="'+ax+'" y2="'+(ay+40)+'" stroke="#24425f" stroke-width="1.6" marker-end="url(#ra'+no+')"/>';
   svg+='<text x="'+(ax-6)+'" y="'+(ay+54)+'" font-size="12" fill="#24425f">'+(plane==='xy'?'−Y':'−Z')+'</text>';
-  svg+='<text x="'+(ax)+'" y="'+(ay-8)+'" font-size="10.5" fill="#5a6270">'+(plane==='xy'?'+Y yukarı':'+Z yukarı')+'</text>';
+  svg+='<text x="'+(ax)+'" y="'+(ay-10)+'" font-size="10.5" fill="#5a6270">'+(plane==='xy'?'+Y yukarı':'+Z yukarı')+'</text>';
   // orta çizgi (v=0)
-  if(minV<=0 && maxV>=0){ var y0=sy(0); svg+='<line x1="'+padL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y0.toFixed(1)+'" stroke="#c9cdd3" stroke-width="1.4" stroke-dasharray="7 5"/>'; }
-  // takozlar (kare)
-  geom.mounts.forEach(function(m){
-    var X=sx(m[horiz]), Y=sy(m[vert]);
-    svg+='<rect x="'+(X-7).toFixed(1)+'" y="'+(Y-7).toFixed(1)+'" width="14" height="14" fill="#fff" stroke="#1b1e24" stroke-width="1.8"/>';
-    svg+='<text x="'+X.toFixed(1)+'" y="'+(Y+20).toFixed(1)+'" text-anchor="middle" font-size="9.5" fill="#1b1e24">'+_rEsc(_mntRepShort(m.name,12))+'</text>';
-  });
-  // bileşen CG (daire)
-  geom.comps.forEach(function(c){
-    var X=sx(c[horiz]), Y=sy(c[vert]);
-    svg+='<circle cx="'+X.toFixed(1)+'" cy="'+Y.toFixed(1)+'" r="6" fill="none" stroke="#5a6270" stroke-width="1.6"/>';
-    svg+='<text x="'+X.toFixed(1)+'" y="'+(Y-10).toFixed(1)+'" text-anchor="middle" font-size="10.5" fill="#5a6270">'+_rEsc((c.name||'').slice(0,14))+'</text>';
-  });
+  var y0=(minV<=0 && maxV>=0) ? sy(0) : (padT+plotH/2);
+  if(minV<=0 && maxV>=0){ svg+='<line x1="'+padL+'" y1="'+y0.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+y0.toFixed(1)+'" stroke="#c9cdd3" stroke-width="1.4" stroke-dasharray="7 5"/>'; }
+  // kümele
+  var mClust=_repCluster(geom.mounts.map(function(m){ return {x:sx(m[horiz]), y:sy(m[vert]), name:m.name}; }), 26);
+  var cClust=_repCluster(geom.comps.map(function(c){ return {x:sx(c[horiz]), y:sy(c[vert]), name:c.name}; }), 18);
+  // takoz kareleri (küme başına bir kare)
+  mClust.forEach(function(k){ svg+='<rect x="'+(k.x-7).toFixed(1)+'" y="'+(k.y-7).toFixed(1)+'" width="14" height="14" fill="#fff" stroke="#1b1e24" stroke-width="1.8"/>'; });
+  // bileşen CG daireleri
+  cClust.forEach(function(k){ svg+='<circle cx="'+k.x.toFixed(1)+'" cy="'+k.y.toFixed(1)+'" r="6" fill="none" stroke="#5a6270" stroke-width="1.6"/>'; });
   // birleşik CG (pinwheel G)
   if(geom.cg){
     var GX=sx(geom.cg[horiz]), GY=sy(geom.cg[vert]), r=11;
     svg+='<g transform="translate('+GX.toFixed(1)+','+GY.toFixed(1)+')">'
        +'<circle r="'+r+'" fill="#fff" stroke="#1b1e24" stroke-width="1.6"/>'
        +'<path d="M0,0 L'+r+',0 A'+r+','+r+' 0 0 1 0,'+r+' Z M0,0 L-'+r+',0 A'+r+','+r+' 0 0 1 0,-'+r+' Z" fill="#1b1e24"/>'
-       +'<text x="0" y="'+(r+13)+'" text-anchor="middle" font-size="11.5" fill="#1b1e24" font-weight="600">G</text></g>';
+       +'<text x="0" y="'+(-r-5)+'" text-anchor="middle" font-size="11.5" fill="#1b1e24" font-weight="600">G</text></g>';
   }
+  // etiketler → çakışma-önlemeyle yerleştir
+  var labels=[];
+  mClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,20,14,'takoz'), dir:(k.y<=y0?-1:1), fs:9.5, col:'#1b1e24', marker:'sq' }); });
+  cClust.forEach(function(k){ labels.push({ cx:k.x, ay:k.y, text:_repClusterLabel(k.names,19,17,'bileşen'), dir:(k.y<y0?-1:1), fs:10, col:'#5a6270', marker:'ci' }); });
+  _repPlaceLabels(labels, H-2);
+  labels.forEach(function(L){ svg+='<text x="'+L.cx.toFixed(1)+'" y="'+L.y.toFixed(1)+'" text-anchor="middle" font-size="'+L.fs+'" fill="'+L.col+'">'+_rEsc(L.text)+'</text>'; });
   svg+='</svg>';
   return '<figure>'+svg+'<figcaption><b>Şekil '+no+' —</b> '+caption+'</figcaption></figure>';
 }
@@ -544,20 +585,23 @@ function _mntRepStep5Modal(R, C){
   return h;
 }
 
-// Mod şekli matrisi — modlar × 6 SD, renk yoğunluğu = |φ| (heatmap).
+// Mod şekli matrisi — modlar × 6 SD. Ortalanmış veri-çubuğu (merkezden sağa +,
+// sola −). Çubuk hem ekranda hem yazdırmada okunur (print-color-adjust:exact ile
+// arka plan basılır); metin koyu ink, daima okunaklı.
 function _mntRepModeMatrix(modes){
   var lbl=['u_x','u_y','u_z','θ_x','θ_y','θ_z'];
-  var h='<table><caption>Tablo '+_rTbl()+' — Mod şekilleri (en büyük bileşene normalize; renk yoğunluğu = baskınlık)</caption>';
+  var h='<table class="modeshape"><caption>Tablo '+_rTbl()+' — Mod şekilleri (en büyük bileşene normalize; çubuk = merkezden katılım, yön = işaret)</caption>';
   h+='<tr><th>Mod</th><th>f [Hz]</th>';
   lbl.forEach(function(l){ h+='<th>'+l+'</th>'; });
   h+='</tr>';
   modes.forEach(function(md,i){
     h+='<tr><td class="c">'+(i+1)+'</td><td>'+_rF(md.f_Hz,2)+'</td>';
     (md.phi||[0,0,0,0,0,0]).forEach(function(v){
-      var a=Math.min(Math.abs(Number(v)||0),1);
-      var bg='background:rgba(36,66,95,'+(a*0.6).toFixed(2)+');';
-      var col=a>0.62?' color:#fff;':'';
-      h+='<td style="'+bg+col+'">'+_rFs(v,2)+'</td>';
+      var val=Math.max(-1, Math.min(1, Number(v)||0));
+      var L, Rr;
+      if(val>=0){ L=50; Rr=50+val*47; } else { L=50+val*47; Rr=50; }
+      var bar='background:linear-gradient(90deg, transparent '+L.toFixed(1)+'%, rgba(36,66,95,0.20) '+L.toFixed(1)+'%, rgba(36,66,95,0.20) '+Rr.toFixed(1)+'%, transparent '+Rr.toFixed(1)+'%);';
+      h+='<td style="'+bar+'">'+_rFs(v,2)+'</td>';
     });
     h+='</tr>';
   });
