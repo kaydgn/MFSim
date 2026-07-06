@@ -29,7 +29,7 @@ function buildR() {
     { name: 'Sağ Arka', x: 500,  y: 250,  z: 120, kxs: 800, kys: 800, kzs: 500, kxd: 1200, kyd: 1200, kzd: 800 },
     { name: 'Sol Arka', x: 500,  y: -250, z: 120, kxs: 800, kys: 800, kzs: 500, kxd: 1200, kyd: 1200, kzd: 800 },
   ];
-  const torque = { Te: 400, Rstall: 1.8, g1: 3.5, iTransfer: 1.0, phiFwd: 1, derate: 1 };
+  const torque = { Te: 400, Rstall: 1.8, g1: 3.5, gR: -3.2, iTransfer: 1.0, phiFwd: 1, phiRev: 1, derate: 1 };
   const compsSI = comps.map(c => ({ name: c.name, mass: c.mass, cg: [c.cgx * mm, c.cgy * mm, c.cgz * mm],
     I: [[c.Ixx || 0, 0, 0], [0, c.Iyy || 0, 0], [0, 0, c.Izz || 0]], pointMass: !!c.pointMass }));
   const mntsSI = mnts.map(m => ({ name: m.name, pos: [m.x * mm, m.y * mm, m.z * mm],
@@ -42,7 +42,9 @@ function buildR() {
     { name: 'Cornering L', n: [0, 1, -1], T: [0, 0, 0] }, { name: 'Cornering R', n: [0, -1, -1], T: [0, 0, 0] },
   ];
   const Tfwd = core.torqueChain({ Te: torque.Te, Rstall: torque.Rstall, iGear: torque.g1, iTransfer: torque.iTransfer, phiAxle: torque.phiFwd, derate: torque.derate });
-  const cases = AUTO.concat([{ name: 'Forward Torque', n: [0, 0, -1], T: [-Tfwd, 0, 0] }]);
+  const Trev = core.torqueChain({ Te: torque.Te, Rstall: torque.Rstall, iGear: torque.gR, iTransfer: torque.iTransfer, phiAxle: torque.phiRev, derate: torque.derate });
+  const cases = AUTO.concat([{ name: 'Forward Torque', n: [0, 0, -1], T: [-Tfwd, 0, 0] },
+    { name: 'Reverse Torque', n: [0, 0, -1], T: [-Trev, 0, 0] }]);
   return {
     mp, mounts: mntsSI,
     allCases: core.solveAllCases(model, cases),
@@ -141,6 +143,52 @@ describe('§8 dinamik içerik — modelin gerçek değerleri', () => {
     const h = rep._mntRepStep4Torque(R2);
     expect(h).toContain('tork yük durumu tanımlı değil');
     expect(h).not.toContain('Tablo 4');
+  });
+});
+
+describe('§8 zenginleştirmeleri', () => {
+  test('Kritik Sonuç Özeti: maks sehim/kuvvet + lift-off (tüm durumları tarar)', () => {
+    const h = rep._mntRepCritical(R);
+    expect(h).toContain('Kritik Sonuç Özeti');
+    expect(h).toContain('Maks düşey sehim');
+    expect(h).toContain('Maks takoz kuvveti');
+    expect(h).toContain('note warn');           // bu modelde lift-off var → amber
+    expect(h).toMatch(/Modal bant/);
+  });
+  test('Yük durumu matrisi: 8 durum (Türkçe adlı) + tension işareti', () => {
+    const h = rep._mntRepLoadCaseMatrix(R);
+    ['Statik', 'Tümsek', 'Hızlanma', 'Frenleme', 'Viraj', 'İleri tork', 'Geri tork'].forEach(n =>
+      expect(h).toContain(n));
+    expect(h).toContain('outline:2px solid #a855f7'); // en az bir çekme hücresi
+  });
+  test('Mod şekli matrisi: 6 mod × 6 SD, heatmap arka planı', () => {
+    const h = rep._mntRepModeMatrix(R.modes);
+    ['u_x', 'u_y', 'u_z', 'θ_x', 'θ_y', 'θ_z'].forEach(l => expect(h).toContain(l));
+    expect(h).toContain('background:rgba(36,66,95,');
+    expect((h.match(/<tr>/g) || []).length).toBe(7); // başlık + 6 mod
+  });
+  test('§8.4 geri tork tablosu (Reverse case varsa)', () => {
+    const h = rep._mntRepStep4Torque(R);
+    expect(h).toContain('İleri (Forward)');
+    expect(h).toContain('Geri (Reverse)');
+  });
+  test('Frekans yerleşimi: girdi varsa üretilir, yoksa boş', () => {
+    expect(rep._mntRepFreqPlacement(R, {})).toBe('');
+    expect(rep._mntRepFreqPlacement(R, { idleRpm: 0, cylinders: 6 })).toBe('');
+    const h = rep._mntRepFreqPlacement(R, { idleRpm: 650, cylinders: 6 });
+    expect(h).toContain('Frekans yerleşimi');
+    expect(h).toContain('32,5');                 // f_ateş = (650/60)*(6/2)
+    expect(h).toMatch(/note (check|warn)/);
+  });
+  test('_mntRepCaseTr yük durumu adlarını Türkçeleştirir', () => {
+    expect(rep._mntRepCaseTr('Max Bump')).toContain('Tümsek');
+    expect(rep._mntRepCaseTr('Bilinmeyen')).toBe('Bilinmeyen');
+  });
+  test('Dinamik numaralandırma: Tablo 1..N boşluksuz artar', () => {
+    const s8 = rep._mntRepSection8(R, { idleRpm: 650, cylinders: 6 });
+    const nums = (s8.match(/Tablo (\d+) —/g) || []).map(s => +s.match(/\d+/)[0]);
+    expect(nums.length).toBeGreaterThanOrEqual(8);
+    nums.forEach((n, i) => expect(n).toBe(i + 1)); // 1,2,3,... kesintisiz
   });
 });
 

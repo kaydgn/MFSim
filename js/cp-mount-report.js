@@ -41,6 +41,7 @@ function _rMountCore(){ return (typeof veMountCore!=='undefined')?veMountCore:(t
 
 // ═══════════════════ BİLEŞEN PANELİ ═════════════════════════════════════════
 function getMntReportPropertiesHTML(node){
+  if(!node.data) node.data={};
   var solved = (typeof _veMntLast!=='undefined') && _veMntLast && !_veMntLast.error;
   var nC=0,nM=0;
   if(solved){ nC=(_veMntLast.gather.components||[]).length; nM=(_veMntLast.mounts||[]).length; }
@@ -53,6 +54,15 @@ function getMntReportPropertiesHTML(node){
     html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.64rem; background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-primary);">'
         + '<span style="color:var(--accent-success); font-weight:700;">✓ Model çözüldü</span> — '
         + nC+' bileşen · '+nM+' takoz. Rapor güncel çözüme göre üretilir.</div>';
+    // Frekans yerleşimi (opsiyonel) — doldurulursa rapora §8.7 eklenir.
+    var inpSt='width:100%; padding:4px 6px; margin-top:3px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); text-align:right;';
+    html+='<div style="margin:0 0 10px; padding:9px 10px; background:var(--bg-secondary); border:1px solid var(--border-color);">'
+        + '<div style="font-size:0.64rem; font-weight:600; color:var(--text-heading);">Frekans yerleşimi <span style="font-weight:400; color:var(--text-muted);">(opsiyonel)</span></div>'
+        + '<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin:3px 0 6px;">Doldurulursa rapora ateşleme frekansı (f<sub>ateş</sub>) izolasyon değerlendirmesi (§8.7) eklenir.</div>'
+        + '<div style="display:flex; gap:8px;">'
+        +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Rölanti [d/dk]<input type="number" min="0" step="10" value="'+_rEsc(node.data.idleRpm==null?'':node.data.idleRpm)+'" placeholder="ör: 650" onchange="veMntSet(\''+node.id+'\',\'idleRpm\',this.value)" style="'+inpSt+'"></label>'
+        +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Silindir sayısı<input type="number" min="1" step="1" value="'+_rEsc(node.data.cylinders==null?'':node.data.cylinders)+'" placeholder="ör: 6" onchange="veMntSet(\''+node.id+'\',\'cylinders\',this.value)" style="'+inpSt+'"></label>'
+        + '</div></div>';
     html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:0.8rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:5px;" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
   } else {
     html+='<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:0.66rem; line-height:1.5;">'
@@ -105,6 +115,8 @@ function veMntGenerateReport(nodeId){
     return;
   }
   var R=_veMntLast;
+  var node=(typeof nodes!=='undefined') ? nodes.find(function(n){return n.id===nodeId;}) : null;
+  var opts=(node && node.data) ? { idleRpm:node.data.idleRpm, cylinders:node.data.cylinders } : {};
   setStatus('Rapor hazırlanıyor…');
   if(typeof showToast==='function') showToast('Rapor hazırlanıyor…','info');
   _mntReportEnsureAssets(function(ok){
@@ -114,7 +126,7 @@ function veMntGenerateReport(nodeId){
       return;
     }
     try {
-      var html=_mntBuildReportHTML(R);
+      var html=_mntBuildReportHTML(R, opts);
       _mntReportDownload(html, 'takoz_cokme_titresim_raporu.html');
       setStatus('İndirildi ✓ ('+Math.round(html.length/1024)+' KB)','var(--accent-success)');
       if(typeof showToast==='function') showToast('Rapor indirildi.','success');
@@ -135,13 +147,13 @@ function _mntReportDownload(html, filename){
 }
 
 // ═══════════════════ RAPOR MONTAJI ══════════════════════════════════════════
-function _mntBuildReportHTML(R){
+function _mntBuildReportHTML(R, opts){
   var A=window.MNT_REPORT_ASSETS;
   var tpl=decodeURIComponent(escape(atob(window.MNT_REPORT_TEMPLATE_B64)));
   var assetsCss=A.fontsCss + '\n' + A.katexCss;
   var katexJs=A.katexJs.replace(/<\/script>/gi,'<\\/script>');
   var antet=_mntRepAntet(R);
-  var sec8=_mntRepSection8(R);
+  var sec8=_mntRepSection8(R, opts);
   // Fonksiyon-replacer: dinamik HTML içindeki $$…$$ ($ desenleri) bozulmasın.
   return tpl
     .replace('@@ASSETS_CSS@@', function(){ return assetsCss; })
@@ -184,29 +196,84 @@ function _mntRepGeom(R){
   return { comps:comps, mounts:mounts, cg:cg };
 }
 
+// Dinamik tablo/şekil numaralandırma (koşullu tablolar boşluk bırakmasın).
+// Şekil 1 = teori şablonundaki kavramsal model → dinamik şekiller 2'den başlar.
+var _repTblNo=0, _repFigNo=1;
+function _rTbl(){ return ++_repTblNo; }
+function _rFig(){ return ++_repFigNo; }
+
 // ─── §8 — SAYISAL ÖRNEK (dinamik) ────────────────────────────────────────────
-function _mntRepSection8(R){
+// opts: { idleRpm, cylinders } — frekans yerleşimi için (opsiyonel, panelden).
+function _mntRepSection8(R, opts){
+  opts=opts||{};
+  _repTblNo=0; _repFigNo=1;   // her rapor üretiminde sıfırla
   var C=_rMountCore();
   var geom=_mntRepGeom(R);
   var h='<h2 id="s8"><span class="no">8</span>Sayısal Örnek: Bu Modelin Çözümü</h2>';
-  h+='<p>Bölüm 2–7\'deki yöntem, projede tanımlı güç grubuna uygulanır. Tüm kütle ve takozlar iç topolojiden otomatik toplanır; girdiler aşağıda listelenir, ardından kütle birleştirme, rijitlik, statik çökme, tork süperpozisyonu ve modal analiz adımları bu modelin gerçek değerleriyle çözülür. Koordinatlar model girdisiyle aynıdır (uzunluk mm, kütle kg, rijitlik N/mm).</p>';
+  h+='<p>Bölüm 2–7\'deki yöntem, projede tanımlı güç grubuna uygulanır. Tüm kütle ve takozlar iç topolojiden otomatik toplanır; girdiler aşağıda listelenir, ardından kütle birleştirme, rijitlik, statik çökme, tork süperpozisyonu, tüm yük durumları ve modal analiz adımları bu modelin gerçek değerleriyle çözülür. Koordinatlar model girdisiyle aynıdır (uzunluk mm, kütle kg, rijitlik N/mm).</p>';
+  h+=_mntRepCritical(R);
   h+=_mntRepMassTable(geom);
   h+=_mntRepMountTable(R);
-  h+=_mntRepFigure(geom,'xy',2,'Üstten görünüş (X–Y düzlemi, ölçekli): takozlar (kare), bileşen ağırlık merkezleri (daire) ve birleşik ağırlık merkezi (G).');
-  h+=_mntRepFigure(geom,'xz',3,'Yandan görünüş (X–Z düzlemi, ölçekli). Ağırlık merkezinin takoz düzlemlerine göre düşey ofseti, öteleme–dönme kuplajının (K<sub>tθ</sub>) ana kaynağıdır.');
+  h+=_mntRepFigure(geom,'xy',_rFig(),'Üstten görünüş (X–Y düzlemi, ölçekli): takozlar (kare, adlı), bileşen ağırlık merkezleri (daire) ve birleşik ağırlık merkezi (G).');
+  h+=_mntRepFigure(geom,'xz',_rFig(),'Yandan görünüş (X–Z düzlemi, ölçekli). Ağırlık merkezinin takoz düzlemlerine göre düşey ofseti, öteleme–dönme kuplajının (K<sub>tθ</sub>) ana kaynağıdır.');
   h+=_mntRepStep1Mass(R);
   h+=_mntRepStep2Stiffness(R, C);
   h+=_mntRepStep3Static(R, geom);
   h+=_mntRepStep4Torque(R);
+  h+=_mntRepLoadCaseMatrix(R);
   h+=_mntRepStep5Modal(R, C);
+  h+=_mntRepFreqPlacement(R, opts);
   h+=_mntRepConsistency(R);
+  return h;
+}
+
+// Yük durumu adı → Türkçe etiket.
+function _mntRepCaseTr(name){
+  var map={ 'Static':'Statik (yerçekimi)', 'Max Bump':'Tümsek (3g)', 'Acceleration':'Hızlanma (1g)',
+    'Braking':'Frenleme (1g)', 'Cornering L':'Viraj — sol (1g)', 'Cornering R':'Viraj — sağ (1g)',
+    'Forward Torque':'İleri tork', 'Reverse Torque':'Geri tork' };
+  return map[name] || name;
+}
+
+// Kısa takoz adı (matris sütun başlığı için).
+function _mntRepShort(name, n){
+  name=String(name||'takoz').replace(/\s*takoz\s*$/i,'').trim() || 'takoz';
+  n=n||8; return name.length>n ? name.slice(0,n-1)+'…' : name;
+}
+
+// Kritik sonuç özeti — tüm yük durumlarını tarar (5 saniyelik okuma).
+function _mntRepCritical(R){
+  var maxDz=null, maxF=null, lift={}, over={}, nCases=0;
+  (R.allCases||[]).forEach(function(rc){
+    if(!rc.res) return; nCases++;
+    rc.res.perMount.forEach(function(pm){
+      var dz=Math.abs(pm.delta[2]*1000);
+      if(!maxDz || dz>maxDz.v) maxDz={v:dz, mount:pm.name, cas:rc.name};
+      var fm=Math.sqrt(pm.f[0]*pm.f[0]+pm.f[1]*pm.f[1]+pm.f[2]*pm.f[2])/1000;
+      if(!maxF || fm>maxF.v) maxF={v:fm, mount:pm.name, cas:rc.name};
+    });
+    if(rc.res.checks.tensionCount>0) lift[rc.name]=1;
+    if(rc.res.checks.overLinearCount>0) over[rc.name]=1;
+  });
+  var liftC=Object.keys(lift), overC=Object.keys(over);
+  var modes=R.modes||[];
+  var cls=(overC.length===0 && liftC.length===0)?'check':'warn';
+  var row=function(k,v){ return '<div style="margin:3px 0;"><strong style="color:var(--prusya);">'+k+':</strong> '+v+'</div>'; };
+  var h='<div class="note '+cls+'"><span class="t">Kritik Sonuç Özeti</span>';
+  if(maxDz) h+=row('Maks düşey sehim', '|δ_z| = '+_rF(maxDz.v,2)+' mm — <b>'+_rEsc(maxDz.mount)+'</b> ('+_rEsc(_mntRepCaseTr(maxDz.cas))+')');
+  if(maxF)  h+=row('Maks takoz kuvveti (bileşke)', _rF(maxF.v,2)+' kN — <b>'+_rEsc(maxF.mount)+'</b> ('+_rEsc(_mntRepCaseTr(maxF.cas))+') — dayanım tasarımı için');
+  h+=row('Çekme / lift-off', liftC.length ? '<b style="color:var(--warn);">var</b> — '+liftC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (takoz gerilmeye geçer)' : 'yok — tüm takozlar basıda');
+  h+=row('Lineerlik (±10 mm)', overC.length ? '<b style="color:var(--warn);">aşım</b> — '+overC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (nonlineer bölge)' : 'tüm sehimler bantta');
+  if(modes.length) h+=row('Modal bant', 'en düşük '+_rF(modes[0].f_Hz,2)+' Hz · en yüksek '+_rF(modes[modes.length-1].f_Hz,2)+' Hz ('+modes.length+' rijit gövde modu)');
+  h+='<div style="margin-top:5px; font-size:0.9em; color:#5a6270;">'+nCases+' yük durumu çözüldü; ayrıntı için aşağıdaki adımlar ve yük durumu matrisi.</div>';
+  h+='</div>';
   return h;
 }
 
 // Tablo 1 — bileşen kütle özellikleri
 function _mntRepMassTable(geom){
   var g=(_veMntLast.gather.components||[]);
-  var h='<table><caption>Tablo 1 — Bileşen kütle özellikleri (model girdisi; atalet, bileşenin kendi ağırlık merkezine göre)</caption>';
+  var h='<table><caption>Tablo '+_rTbl()+' — Bileşen kütle özellikleri (model girdisi; atalet, bileşenin kendi ağırlık merkezine göre)</caption>';
   h+='<tr><th>Bileşen</th><th>m [kg]</th><th>c_x [mm]</th><th>c_y [mm]</th><th>c_z [mm]</th><th>I_xx</th><th>I_yy</th><th>I_zz [kg·m²]</th></tr>';
   g.forEach(function(c){
     var pm=!!c.pointMass;
@@ -224,7 +291,7 @@ function _mntRepMassTable(geom){
 // Tablo 2 — takoz konum + rijitlik
 function _mntRepMountTable(R){
   var g=(R.gather.mounts||[]);
-  var h='<table><caption>Tablo 2 — Takoz konumları ve rijitlikleri (statik / dinamik, üç eksen)</caption>';
+  var h='<table><caption>Tablo '+_rTbl()+' — Takoz konumları ve rijitlikleri (statik / dinamik, üç eksen)</caption>';
   h+='<tr><th>Takoz</th><th>x [mm]</th><th>y [mm]</th><th>z [mm]</th><th>k_x,s</th><th>k_y,s</th><th>k_z,s</th><th>k_x,d</th><th>k_y,d</th><th>k_z,d [N/mm]</th></tr>';
   g.forEach(function(m){
     h+='<tr><td class="l">'+_rEsc(m.name||'takoz')+'</td>'
@@ -271,6 +338,7 @@ function _mntRepFigure(geom, plane, no, caption){
   geom.mounts.forEach(function(m){
     var X=sx(m[horiz]), Y=sy(m[vert]);
     svg+='<rect x="'+(X-7).toFixed(1)+'" y="'+(Y-7).toFixed(1)+'" width="14" height="14" fill="#fff" stroke="#1b1e24" stroke-width="1.8"/>';
+    svg+='<text x="'+X.toFixed(1)+'" y="'+(Y+20).toFixed(1)+'" text-anchor="middle" font-size="9.5" fill="#1b1e24">'+_rEsc(_mntRepShort(m.name,12))+'</text>';
   });
   // bileşen CG (daire)
   geom.comps.forEach(function(c){
@@ -334,7 +402,7 @@ function _mntRepStep3Static(R, geom){
   if(!stat || !stat.res){ return h+'<p>Statik durum çözülemedi.</p>'; }
   var res=stat.res, m=R.mp.m;
   h+='<p>\\( \\mathbf F=[0,0,-mg,0,0,0]^{\\mathsf T} \\), \\( mg='+_rF(m*9.81/1000,2)+' \\) kN ile (6.1) çözülür. Takoz düşey sehimleri (δ_z) ve şasiye ilettikleri düşey kuvvetler:</p>';
-  h+='<table><caption>Tablo 3 — Statik durum: takoz düşey sehimleri ve kuvvetleri (statik rijitlik)</caption>';
+  h+='<table><caption>Tablo '+_rTbl()+' — Statik durum: takoz düşey sehimleri ve kuvvetleri (statik rijitlik)</caption>';
   h+='<tr><th>Takoz</th><th>δ_z [mm]</th><th>Düşey kuvvet f_z [kN]</th><th>Durum</th></tr>';
   var mounts=R.mounts;
   res.perMount.forEach(function(pm,i){
@@ -354,7 +422,26 @@ function _mntRepStep3Static(R, geom){
     +'<td class="c">Σf_z = '+_rF(res.sumF[2]/1000,2)+' kN '+(res.checks.sumFzOk?'✓':'✗')+'</td></tr>';
   h+='</table>';
   h+='<p>Σf_z değeri dış yükü (−mg) dengeler; ön/arka dağılım, ağırlık merkezinin takoz grubu içindeki boylamsal konumunu yansıtır. Çekme (lift-off) işaretli takozlar, o yük durumunda basıdan çıkıp gerilmeye geçtiğini gösterir.</p>';
+  h+=_mntRepLoadBar(R);
   return h;
+}
+
+// Statik düşey takoz kuvvetleri — yatay bar grafiği (ölçekli SVG).
+function _mntRepLoadBar(R){
+  var stat=_mntRepFindCase(R,'Static'); if(!stat || !stat.res) return '';
+  var rows=stat.res.perMount.map(function(pm){ return { name:pm.name, v:Math.abs(pm.f[2])/1000 }; });
+  var max=Math.max.apply(null, rows.map(function(r){return r.v;})) || 1;
+  var W=760, rowH=26, padL=140, padR=70, top=8, barMax=W-padL-padR;
+  var H=top+rows.length*rowH+10;
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+  rows.forEach(function(r,i){
+    var y=top+i*rowH, bw=Math.max(2, r.v/max*barMax), cy=y+rowH/2;
+    svg+='<text x="'+(padL-8)+'" y="'+(cy+4)+'" text-anchor="end" font-size="11" fill="#1b1e24">'+_rEsc(_mntRepShort(r.name,16))+'</text>';
+    svg+='<rect x="'+padL+'" y="'+(y+4)+'" width="'+bw.toFixed(1)+'" height="'+(rowH-10)+'" fill="#24425f"/>';
+    svg+='<text x="'+(padL+bw+6)+'" y="'+(cy+4)+'" font-size="11" fill="#3c4350" font-family="IBM Plex Mono,monospace">'+_rF(r.v,2)+' kN</text>';
+  });
+  svg+='</svg>';
+  return '<figure>'+svg+'<figcaption><b>Şekil '+_rFig()+' —</b> Statik durumda takozların şasiye ilettiği düşey kuvvet (|f_z|) dağılımı.</figcaption></figure>';
 }
 
 // §8.4 — tork süperpozisyonu
@@ -368,7 +455,7 @@ function _mntRepStep4Torque(R){
   }
   var Ts = fwd.loadCase && fwd.loadCase.T ? -fwd.loadCase.T[0] : NaN;
   h+='<p>Tahrik hattı torku, güç grubuna X ekseni etrafında reaksiyon momenti olarak etkir (6.3). İleri vites için şaft torku \\( T_s='+_rF(Ts,1)+' \\) N·m; bu reaksiyon tek başına çözülüp statik çözümle toplanır (lineer süperpozisyon):</p>';
-  h+='<table><caption>Tablo 4 — Süperpozisyon: İleri (Forward) yük durumu, düşey sehimler [mm]</caption>';
+  h+='<table><caption>Tablo '+_rTbl()+' — Süperpozisyon: İleri (Forward) yük durumu, düşey sehimler [mm]</caption>';
   h+='<tr><th>Takoz</th><th>Statik</th><th>+ Tork</th><th>= Toplam</th><th>Durum</th></tr>';
   fwd.res.perMount.forEach(function(pm,i){
     var tot=pm.delta[2]*1000;
@@ -379,19 +466,59 @@ function _mntRepStep4Torque(R){
       +'<td>'+_rFs(s,2)+'</td><td>'+_rFs(tq,2)+'</td><td>'+_rFs(tot,2)+'</td><td class="c">'+flag+'</td></tr>';
   });
   h+='</table>';
+  // Geri tork (tanımlıysa) — aynı süperpozisyon.
+  var rev=_mntRepFindCase(R,'Reverse Torque');
+  if(rev && rev.res){
+    var Tr = rev.loadCase && rev.loadCase.T ? -rev.loadCase.T[0] : NaN;
+    h+='<p>Geri vites reaksiyonu \\( T_s='+_rFs(Tr,1)+' \\) N·m (yön ters) için aynı süperpozisyon:</p>';
+    h+='<table><caption>Tablo '+_rTbl()+' — Süperpozisyon: Geri (Reverse) yük durumu, düşey sehimler [mm]</caption>';
+    h+='<tr><th>Takoz</th><th>Statik</th><th>+ Tork</th><th>= Toplam</th><th>Durum</th></tr>';
+    rev.res.perMount.forEach(function(pm,i){
+      var tot=pm.delta[2]*1000, s=stat.res.perMount[i]?stat.res.perMount[i].delta[2]*1000:NaN, tq=tot-s;
+      var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>');
+      h+='<tr><td class="l">'+_rEsc(pm.name||('takoz '+(i+1)))+'</td>'
+        +'<td>'+_rFs(s,2)+'</td><td>'+_rFs(tq,2)+'</td><td>'+_rFs(tot,2)+'</td><td class="c">'+flag+'</td></tr>';
+    });
+    h+='</table>';
+  }
   h+='<p>Tork reaksiyonu bir yandaki takozları bastırırken (çökme artar) karşı yanı boşaltır; büyük torkta karşı taraf takozları çekmeye (lift-off) geçebilir. Süperpozisyonun geçerliliği, modelin lineer kabulüne (±10 mm bandı) bağlıdır.</p>';
   return h;
 }
 
-// §8.5 — modal analiz (k_din + k_stat karşılaştırmalı)
+// §8.5 — TÜM yük durumları (çökme matrisi) ───────────────────────────────────
+function _mntRepLoadCaseMatrix(R){
+  var mounts=R.mounts||[];
+  var h='<h3>8.5 Adım 5 — Tüm yük durumları (çökme matrisi)</h3>';
+  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku). Her hücre takozun düşey sehimi δ_z [mm]; <b>çekme / lift-off</b> mor çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir.</p>';
+  h+='<table><caption>Tablo '+_rTbl()+' — Yük durumu × takoz düşey sehim matrisi [mm]</caption>';
+  h+='<tr><th>Yük durumu</th>';
+  mounts.forEach(function(m){ h+='<th title="'+_rEsc(m.name)+'">'+_rEsc(_mntRepShort(m.name,8))+'</th>'; });
+  h+='<th>Σf_z [kN]</th></tr>';
+  (R.allCases||[]).forEach(function(rc){
+    h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td>';
+    if(!rc.res){ h+='<td colspan="'+(mounts.length+1)+'" class="c">— (K tekil / çözülemedi)</td></tr>'; return; }
+    rc.res.perMount.forEach(function(pm){
+      var dz=pm.delta[2]*1000, st='';
+      if(pm.tension) st+='outline:2px solid #a855f7; outline-offset:-2px;';
+      if(pm.overLinear) st+='text-decoration:underline;';
+      h+='<td'+(st?' style="'+st+'"':'')+'>'+_rFs(dz,2)+'</td>';
+    });
+    h+='<td>'+_rF(rc.res.sumF[2]/1000,2)+(rc.res.checks.sumFzOk?' <span class="ok">✓</span>':' ✗')+'</td></tr>';
+  });
+  h+='</table>';
+  h+='<p>Manevra durumları (tümsek/fren/viraj) takoz kuvvetlerinin dayanım zarfını, tork durumları ise tahrik reaksiyonunun etkisini verir. Çekme veya lineerlik aşımı işaretli hücreler, o durum için takoz seçimi / yerleşiminin gözden geçirilmesi gereğine işaret eder.</p>';
+  return h;
+}
+
+// §8.6 — modal analiz (k_din + k_stat karşılaştırmalı + mod şekli matrisi)
 function _mntRepStep5Modal(R, C){
-  var h='<h3>8.5 Adım 5 — Modal analiz</h3>';
+  var h='<h3>8.6 Adım 6 — Modal analiz</h3>';
   var modes=R.modes;
   if(!modes || !modes.length){ return h+'<p>Modal analiz üretilemedi (K tekil / kütle geçersiz olabilir).</p>'; }
   var mstat=null;
   try { if(C && C.buildK && C.buildM6 && C.solveModal){ mstat=C.solveModal(C.buildK(R.mounts,R.mp.cg,false), C.buildM6(R.mp.m,R.mp.I_G), R.mounts, R.mp.cg); } } catch(e){}
   h+='<p>Sönümsüz özdeğer problemi (7.1) dinamik rijitlikle çözülür. Karşılaştırma için statik rijitlikle hesaplanan frekanslar da verilmiştir; oran, dinamik sertleşmeyi \\( \\sqrt{k_{\\text{din}}/k_{\\text{stat}}} \\) mertebesinde gösterir.</p>';
-  h+='<table><caption>Tablo 5 — Rijit gövde modları: doğal frekanslar ve baskın mod şekli</caption>';
+  h+='<table><caption>Tablo '+_rTbl()+' — Rijit gövde modları: doğal frekanslar ve baskın mod şekli</caption>';
   h+='<tr><th>Mod</th><th>f (k_din) [Hz]</th><th>f (k_stat) [Hz]</th><th>Baskın hareket (mod şekli)</th></tr>';
   var lbl=['u_x','u_y','u_z','θ_x','θ_y','θ_z'];
   modes.forEach(function(md,i){
@@ -411,13 +538,62 @@ function _mntRepStep5Modal(R, C){
   if(warn){
     h+='<div class="note warn"><span class="t">Uyarı · serbest mod</span>Bir veya daha fazla mod sıfıra yakın frekansta çıktı — yapılandırma kinematik olarak serbest olabilir (yetersiz takoz kısıtı). Takoz sayısını/yerleşimini gözden geçirin.</div>';
   }
-  h+='<p>Mod şekilleri en büyük bileşene normalize edilmiştir; birden fazla bileşenin belirgin olması modların <em>kuplajlı</em> (saf olmayan) olduğunu gösterir. Rijit gövde modlarının hedef bandı, alttan süspansiyon modlarının üzerinde, üstten motorun rölanti ateşleme mertebesinin altında seçilir (Bölüm 7.2).</p>';
+  h+='<p>Mod şekilleri en büyük bileşene normalize edilmiştir; birden fazla bileşenin belirgin olması modların <em>kuplajlı</em> (saf olmayan) olduğunu gösterir. Aşağıdaki matris her modun altı serbestlik derecesindeki katılımını renk yoğunluğuyla gösterir (koyu = baskın).</p>';
+  h+=_mntRepModeMatrix(modes);
+  h+='<p>Rijit gövde modlarının hedef bandı, alttan süspansiyon modlarının üzerinde, üstten motorun rölanti ateşleme mertebesinin altında seçilir (Bölüm 7.2).</p>';
+  return h;
+}
+
+// Mod şekli matrisi — modlar × 6 SD, renk yoğunluğu = |φ| (heatmap).
+function _mntRepModeMatrix(modes){
+  var lbl=['u_x','u_y','u_z','θ_x','θ_y','θ_z'];
+  var h='<table><caption>Tablo '+_rTbl()+' — Mod şekilleri (en büyük bileşene normalize; renk yoğunluğu = baskınlık)</caption>';
+  h+='<tr><th>Mod</th><th>f [Hz]</th>';
+  lbl.forEach(function(l){ h+='<th>'+l+'</th>'; });
+  h+='</tr>';
+  modes.forEach(function(md,i){
+    h+='<tr><td class="c">'+(i+1)+'</td><td>'+_rF(md.f_Hz,2)+'</td>';
+    (md.phi||[0,0,0,0,0,0]).forEach(function(v){
+      var a=Math.min(Math.abs(Number(v)||0),1);
+      var bg='background:rgba(36,66,95,'+(a*0.6).toFixed(2)+');';
+      var col=a>0.62?' color:#fff;':'';
+      h+='<td style="'+bg+col+'">'+_rFs(v,2)+'</td>';
+    });
+    h+='</tr>';
+  });
+  h+='</table>';
+  return h;
+}
+
+// §8.7 — Frekans yerleşimi değerlendirmesi (opsiyonel; motor devri + silindir girdisi)
+function _mntRepFreqPlacement(R, opts){
+  opts=opts||{};
+  var rpm=Number(opts.idleRpm), z=Number(opts.cylinders);
+  var modes=R.modes||[];
+  if(!(rpm>0 && z>0) || !modes.length) return '';   // girdi yoksa bölümü atla
+  // 4 zamanlı motorda temel ateşleme mertebesi z/2 → f_ateş = (N/60)·(z/2).
+  var fFire=(rpm/60)*(z/2);
+  var fMax=modes[modes.length-1].f_Hz;
+  var limit=fFire/Math.SQRT2;                        // izolasyon bölgesine geçiş
+  var ok=fMax<limit;
+  var h='<h3>8.7 Adım 7 — Frekans yerleşimi değerlendirmesi</h3>';
+  h+='<p>Dört zamanlı motorun rölanti ateşleme frekansı \\( f_{\\text{ateş}}=\\dfrac{N}{60}\\cdot\\dfrac{z}{2} \\); '
+    +'girilen değerlerle \\( N='+_rF(rpm,0)+' \\) d/dk, \\( z='+_rF(z,0)+' \\) silindir → '
+    +'\\( f_{\\text{ateş}}='+_rF(fFire,1)+' \\) Hz. Yaygın tasarım pratiği, en yüksek rijit gövde modunu '
+    +'izolasyon bölgesine geçiş sınırı \\( f_{\\text{ateş}}/\\sqrt2='+_rF(limit,1)+' \\) Hz altında tutmaktır.</p>';
+  var cls=ok?'check':'warn';
+  h+='<div class="note '+cls+'"><span class="t">'+(ok?'Uygun · frekans yerleşimi':'Dikkat · frekans yerleşimi')+'</span>';
+  h+='En yüksek rijit gövde modu <b>'+_rF(fMax,2)+' Hz</b>, sınır '+_rF(limit,1)+' Hz\'in ';
+  h+= ok ? '<b>altındadır</b> — güç grubu rölanti ateşleme tahrikinden izole bölgede çalışır.'
+        : '<b>ÜZERİNDEDİR</b> — rölanti ateşleme mertebesine yakın/üstünde; rezonans riski. Takoz rijitliklerini düşürmek (mod bandını aşağı taşımak) veya yerleşimi gözden geçirmek önerilir.';
+  h+='</div>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Not: değerlendirme temel ateşleme mertebesine göredir; gerçek rölanti devri ve baskın tahrik mertebeleriyle teyit edilmelidir. Süspansiyon/sürüş konforu modları (≈1–2,5 Hz) alt sınırdır.</p>';
   return h;
 }
 
 // Doğrulama → iç-tutarlılık özeti
 function _mntRepConsistency(R){
-  var h='<h3>8.6 Model içi tutarlılık kontrolleri</h3>';
+  var h='<h3>8.8 Model içi tutarlılık kontrolleri</h3>';
   var nBal=0, nTot=0, tension=0, overLin=0;
   R.allCases.forEach(function(rc){
     if(!rc.res) return; nTot++;
@@ -462,6 +638,13 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepStep5Modal: _mntRepStep5Modal,
     _mntRepConsistency: _mntRepConsistency,
     _mntRepFindCase: _mntRepFindCase,
+    _mntRepCritical: _mntRepCritical,
+    _mntRepCaseTr: _mntRepCaseTr,
+    _mntRepShort: _mntRepShort,
+    _mntRepLoadBar: _mntRepLoadBar,
+    _mntRepLoadCaseMatrix: _mntRepLoadCaseMatrix,
+    _mntRepModeMatrix: _mntRepModeMatrix,
+    _mntRepFreqPlacement: _mntRepFreqPlacement,
     _rF: _rF, _rFs: _rFs, _rEsc: _rEsc
   };
 }
