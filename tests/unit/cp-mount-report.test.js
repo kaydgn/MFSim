@@ -37,9 +37,10 @@ function buildR() {
   const mp = core.combineMassProps(compsSI);
   const model = { m: mp.m, cg: mp.cg, Kstat: core.buildK(mntsSI, mp.cg, false), mounts: mntsSI, g: 9.81 };
   const AUTO = [
-    { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] }, { name: 'Max Bump', n: [0, 0, -3], T: [0, 0, 0] },
-    { name: 'Acceleration', n: [1, 0, -1], T: [0, 0, 0] }, { name: 'Braking', n: [-1, 0, -1], T: [0, 0, 0] },
-    { name: 'Cornering L', n: [0, 1, -1], T: [0, 0, 0] }, { name: 'Cornering R', n: [0, -1, -1], T: [0, 0, 0] },
+    { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] }, { name: 'Max Bump', n: [0, 0, -3.5], T: [0, 0, 0] },
+    { name: 'Braking', n: [-1, 0, -1], T: [0, 0, 0] }, { name: 'Cornering', n: [0, 0.6, -1], T: [0, 0, 0] },
+    { name: 'Brake in Turn', n: [-0.4, 0.4, -1], T: [0, 0, 0] }, { name: 'Pothole Braking', n: [-3, 0, -3.5], T: [0, 0, 0] },
+    { name: 'Rim Lateral Kerb Strike', n: [0, 1, -1], T: [0, 0, 0] },
   ];
   const Tfwd = core.torqueChain({ Te: torque.Te, Rstall: torque.Rstall, iGear: torque.g1, iTransfer: torque.iTransfer, phiAxle: torque.phiFwd, derate: torque.derate });
   const Trev = core.torqueChain({ Te: torque.Te, Rstall: torque.Rstall, iGear: torque.gR, iTransfer: torque.iTransfer, phiAxle: torque.phiRev, derate: torque.derate });
@@ -155,10 +156,10 @@ describe('§8 zenginleştirmeleri', () => {
     expect(h).toContain('note warn');           // bu modelde lift-off var → amber
     expect(h).toMatch(/Modal bant/);
   });
-  test('Yük durumu matrisi: 8 durum (Türkçe adlı) + tension işareti', () => {
+  test('Yük durumu matrisi: 9 durum (Türkçe adlı, yük kitabı) + tension işareti', () => {
     const h = rep._mntRepLoadCaseMatrix(R);
-    ['Statik', 'Tümsek', 'Hızlanma', 'Frenleme', 'Viraj', 'İleri tork', 'Geri tork'].forEach(n =>
-      expect(h).toContain(n));
+    ['Statik', 'Tümsek', 'Frenleme', 'Viraj', 'Frenlemeli viraj', 'Çukur + fren',
+     'Yanal bordür', 'İleri tork', 'Geri tork'].forEach(n => expect(h).toContain(n));
     expect(h).toContain('outline:2px solid #a855f7'); // en az bir çekme hücresi
   });
   test('§8.6 üç-eksen çökme detayı: her takoz için δx/δy/δz tablosu', () => {

@@ -256,9 +256,13 @@ function _mntRepDeflectionDetail(R){
 
 // Yük durumu adı → Türkçe etiket.
 function _mntRepCaseTr(name){
-  var map={ 'Static':'Statik (yerçekimi)', 'Max Bump':'Tümsek (3g)', 'Acceleration':'Hızlanma (1g)',
-    'Braking':'Frenleme (1g)', 'Cornering L':'Viraj — sol (1g)', 'Cornering R':'Viraj — sağ (1g)',
-    'Forward Torque':'İleri tork', 'Reverse Torque':'Geri tork' };
+  var map={ 'Static':'Statik (yerçekimi)', 'Max Bump':'Tümsek (3,5g)',
+    'Braking':'Frenleme (1g)', 'Cornering':'Viraj (0,6g)',
+    'Brake in Turn':'Frenlemeli viraj', 'Pothole Braking':'Çukur + fren',
+    'Rim Lateral Kerb Strike':'Yanal bordür darbesi',
+    'Forward Torque':'İleri tork', 'Reverse Torque':'Geri tork',
+    // eski adlar (geriye dönük):
+    'Acceleration':'Hızlanma (1g)', 'Cornering L':'Viraj — sol', 'Cornering R':'Viraj — sağ' };
   return map[name] || name;
 }
 
