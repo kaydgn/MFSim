@@ -560,11 +560,26 @@
     /* ===== YUKLEME EKRANI (SPLASH / LOADING SCREEN) ===== */
     .mfsim-loading-screen{
       position:fixed; inset:0; z-index:1000000;
-      background:var(--bg-primary);
       display:none;            /* JS show ile flex olur */
       align-items:center; justify-content:center;
       font-family:var(--font-sans);
       opacity:1;               /* INSTANT goster — fade yalniz hide icin */
+      /* Karşılama ekranıyla aynı zemin: ince teknik ızgara + accent ışıltı.
+         İlk katman görünmez radial → color-mix desteklenmese bile ızgara bozulmaz. */
+      background:
+        radial-gradient(135% 100% at 50% -20%, transparent, transparent),
+        linear-gradient(var(--border-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border-color) 1px, transparent 1px),
+        var(--bg-primary);
+      background-size:auto, 34px 34px, 34px 34px, auto;
+    }
+    .mfsim-loading-screen{
+      background:
+        radial-gradient(135% 100% at 50% -20%, color-mix(in srgb, var(--accent-primary) 9%, transparent), transparent 58%),
+        linear-gradient(var(--border-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border-color) 1px, transparent 1px),
+        var(--bg-primary);
+      background-size:auto, 34px 34px, 34px 34px, auto;
     }
     .mfsim-loading-screen.mfsim-fading-out{
       transition:opacity 0.4s ease;
@@ -572,7 +587,7 @@
       pointer-events:none;
     }
     .mfsim-loading-card{
-      width:400px; padding:48px 44px;
+      width:410px; padding:40px 40px 34px;
       background:var(--bg-secondary);
       border:1px solid var(--border-color);
       border-radius:0;
@@ -580,17 +595,29 @@
       text-align:center;
     }
     .mfsim-loading-logo{
+      display:inline-flex;
+      align-items:center;
+      gap:11px;
       font-size:1.6rem; font-weight:700;
       color:var(--text-heading);
-      letter-spacing:1.5px;
-      margin-bottom:6px;
-      animation:mfsim-loading-pulse 2.2s ease-in-out infinite;
+      letter-spacing:0.5px;
+      margin-bottom:8px;
+    }
+    .mfsim-loading-logo-ico{
+      width:1.4rem; height:1.4rem;
+      color:var(--accent-primary);
+      animation:mfsim-loading-spin 4.5s linear infinite;
     }
     .mfsim-loading-subtitle{
       font-size:0.7rem;
       color:var(--text-muted);
-      letter-spacing:0.5px;
-      margin-bottom:34px;
+      letter-spacing:0.4px;
+      margin-bottom:22px;
+    }
+    .mfsim-loading-sep{
+      height:1px;
+      background:var(--border-color);
+      margin:0 -40px 22px;
     }
     .mfsim-loading-bar-wrap{
       position:relative;
@@ -638,9 +665,9 @@
       min-width:40px;
       text-align:right;
     }
-    @keyframes mfsim-loading-pulse{
-      0%, 100% { opacity:1; transform:scale(1); }
-      50%      { opacity:0.78; transform:scale(0.985); }
+    @keyframes mfsim-loading-spin{
+      from { transform:rotate(0deg); }
+      to   { transform:rotate(360deg); }
     }
     @keyframes mfsim-loading-shimmer{
       0%   { opacity:0; transform:translateX(-30px); }
