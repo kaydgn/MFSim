@@ -242,12 +242,14 @@ var componentDefs = {
   'mnt-motor': {
     name: 'Motor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="36" width="60" height="44" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.85"/><rect x="30" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><rect x="52" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><circle cx="50" cy="58" r="5" fill="#fff"/></svg>',
-    inputs: 1, outputs: 0, isMountBody: true, defaultWidth: 84, defaultHeight: 76
+    inputs: 3, outputs: 0, isMountBody: true, defaultWidth: 84, defaultHeight: 76,
+    portLayout: { inputs: ['left','top','bottom'] }   // ön / sağ / sol
   },
   'mnt-gearbox': {
     name: 'Şanzıman',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="26" y="24" width="48" height="56" rx="5" fill="var(--accent-primary, #3b82f6)" opacity="0.7"/><circle cx="50" cy="52" r="15" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="52" r="4" fill="#fff"/></svg>',
-    inputs: 1, outputs: 0, isMountBody: true
+    inputs: 2, outputs: 0, isMountBody: true,
+    portLayout: { inputs: ['top','bottom'] }   // sağ / sol
   },
   'mnt-shaft': {
     name: 'Şaft',
@@ -257,7 +259,8 @@ var componentDefs = {
   'mnt-bracket': {
     name: 'Braket',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg>',
-    inputs: 1, outputs: 1, isMountBody: true, defaultWidth: 50, defaultHeight: 46
+    inputs: 2, outputs: 1, isMountBody: true, defaultWidth: 50, defaultHeight: 46,
+    portLayout: { inputs: ['top','bottom'], outputs: ['right'] }   // takozlar üst/alt
   },
   'mnt-transfer': {
     name: 'Transfer Kutusu',
@@ -336,6 +339,31 @@ var componentDefs = {
     defaultHeight: 66
   },
 };
+
+// ── Port modeli yardımcıları (dinamik port sayısı + varsayılan kenar) ────────
+// Bir düğümün ETKİN giriş/çıkış port sayısı: örnek-başı override (node.data.
+// portOverride) varsa o, yoksa tip tanımındaki def.inputs/outputs. Kullanıcı
+// port ekle/kaldır yaptığında portOverride yazılır (bkz. context-menus.js).
+// createNode / getPortPosition / veSnapPortPos hep buradan okur → tutarlı.
+function nodePortCount(node, kind){ // kind: 'inputs' | 'outputs'
+  var def = (node && node.type && typeof componentDefs!=='undefined') ? (componentDefs[node.type]||{}) : {};
+  var ov = node && node.data && node.data.portOverride;
+  if(ov && typeof ov[kind] === 'number' && ov[kind] >= 0) return ov[kind];
+  return def[kind] || 0;
+}
+
+// Bir portun VARSAYILAN kenarı (kullanıcı taşımadıysa). Öncelik: tipin portLayout'u
+// (ör. Motor girişleri ön/sağ/sol) → aynalama → klasik (giriş sol, çıkış sağ).
+// portLayout: { inputs:['left','top','bottom'], outputs:[...] } — index'e göre kenar.
+function defaultPortSide(node, portType){
+  var isInput = portType.indexOf('input') === 0;
+  var idx = 0; if(portType.indexOf('-') > -1) idx = parseInt(portType.split('-')[1]) || 0;
+  var def = (node && node.type && typeof componentDefs!=='undefined') ? (componentDefs[node.type]||{}) : {};
+  var lay = def.portLayout && def.portLayout[isInput ? 'inputs' : 'outputs'];
+  if(lay && lay[idx]) return lay[idx];
+  if(node && node.mirrored) return isInput ? 'right' : 'left';
+  return isInput ? 'left' : 'right';
+}
 
 // Her bileşen tipi için sinyal tanımları (sensör okuyabilir)
 var COMPONENT_SIGNALS = {

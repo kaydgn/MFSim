@@ -171,6 +171,13 @@ function createPortContextMenu() {
       <span>⬅️</span> Sola Taşı
     </div>
     <div class="ve-context-divider"></div>
+    <div class="ve-context-item" data-action="addPort">
+      <span>➕</span> Aynı Tipten Port Ekle
+    </div>
+    <div class="ve-context-item ve-context-danger" data-action="removePort">
+      <span>➖</span> Bu Portu Kaldır
+    </div>
+    <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="reset">
       <span><span class="mf-ico mf-ico-refresh"></span></span> Varsayılana Dön
     </div>
@@ -252,23 +259,107 @@ function handlePortContextAction(action) {
     case 'reset':
       delete node.data.portPositions[portKey];
       break;
+    case 'addPort':
+      addNodePort(node, portKey);
+      return;   // kendi rebuild/toast'ını yapar
+    case 'removePort':
+      removeNodePort(node, portKey);
+      return;
   }
-  
+
   // Port pozisyonunu güncelle
   updatePortPosition(portEl, node, portKey);
   updateAllConnections();
   showToast('Port pozisyonu güncellendi');
 }
 
+// ── Dinamik port ekle / kaldır (tüm düğümler için) ───────────────────────────
+// Port sayısını örnek-başı override eder (node.data.portOverride), DOM'u yeniden
+// kurar (veRebuildNodePorts) ve bağlantı/portPositions id'lerini yeniden numaralar.
+// portKey: 'input' | 'output' | 'input-N' | 'output-N'.
+function _portIdOf(kind, idx, count){ return count <= 1 ? kind : kind + '-' + idx; }
+
+// SAF: port sayısı değişince eski→yeni port id eşlemesi + kaldırılan id. removedIdx<0 = ekleme.
+function _computePortRemap(kind, oldCount, newCount, removedIdx){
+  var survivors = [];
+  for(var i = 0; i < oldCount; i++){ if(i !== removedIdx) survivors.push(i); }
+  var map = {};
+  for(var k = 0; k < survivors.length; k++){
+    var oldId = _portIdOf(kind, survivors[k], oldCount);
+    var newId = _portIdOf(kind, k, newCount);
+    if(oldId !== newId) map[oldId] = newId;
+  }
+  var removedId = (removedIdx >= 0 && removedIdx < oldCount) ? _portIdOf(kind, removedIdx, oldCount) : null;
+  return { map: map, removedId: removedId };
+}
+
+// Eşlemeyi bağlantılara + node.data.portPositions'a uygula (kaldırılanı temizle).
+function _remapNodePorts(node, kind, oldCount, newCount, removedIdx){
+  var r = _computePortRemap(kind, oldCount, newCount, removedIdx);
+  var isInput = (kind === 'input');
+  if(typeof connections !== 'undefined'){
+    if(r.removedId){
+      connections = connections.filter(function(c){
+        return isInput ? !(c.to === node.id && c.toPort === r.removedId)
+                       : !(c.from === node.id && c.fromPort === r.removedId);
+      });
+    }
+    connections.forEach(function(c){
+      if(isInput && c.to === node.id && r.map[c.toPort]) c.toPort = r.map[c.toPort];
+      if(!isInput && c.from === node.id && r.map[c.fromPort]) c.fromPort = r.map[c.fromPort];
+    });
+  }
+  var pp = node.data && node.data.portPositions;
+  if(pp){
+    if(r.removedId && pp[r.removedId] !== undefined) delete pp[r.removedId];
+    var moves = [];
+    Object.keys(r.map).forEach(function(oldId){ if(pp[oldId] !== undefined) moves.push([r.map[oldId], pp[oldId]]); });
+    Object.keys(r.map).forEach(function(oldId){ if(pp[oldId] !== undefined) delete pp[oldId]; });
+    moves.forEach(function(mv){ pp[mv[0]] = mv[1]; });
+  }
+}
+
+function addNodePort(node, portKey){
+  var kind = portKey.indexOf('input') === 0 ? 'input' : 'output';
+  var kindP = kind + 's';
+  var oldC = nodePortCount(node, kindP), newC = oldC + 1;
+  if(!node.data) node.data = {};
+  node.data.portOverride = node.data.portOverride || {};
+  node.data.portOverride[kindP] = newC;
+  _remapNodePorts(node, kind, oldC, newC, -1);
+  veRebuildNodePorts(node);
+  updateAllConnections();
+  showToast(kind === 'input' ? 'Giriş portu eklendi' : 'Çıkış portu eklendi');
+}
+
+function removeNodePort(node, portKey){
+  var kind = portKey.indexOf('input') === 0 ? 'input' : 'output';
+  var kindP = kind + 's';
+  var oldC = nodePortCount(node, kindP);
+  if(oldC <= 0) return;
+  var idx = 0; if(portKey.indexOf('-') > -1) idx = parseInt(portKey.split('-')[1]) || 0;
+  if(!node.data) node.data = {};
+  node.data.portOverride = node.data.portOverride || {};
+  node.data.portOverride[kindP] = oldC - 1;
+  _remapNodePorts(node, kind, oldC, oldC - 1, idx);
+  veRebuildNodePorts(node);
+  updateAllConnections();
+  showToast('Port kaldırıldı');
+}
+
 function updatePortPosition(portEl, node, portType) {
-  var nodeWidth = node.width || 65;
-  var nodeHeight = node.height || 60;
   var pos = (node.data && node.data.portPositions && node.data.portPositions[portType]) || null;
-  
-  // Varsayılan pozisyonlar
-  var defaultSide = (portType === 'input') ? 'left' : 'right';
-  var side = pos ? pos.side : defaultSide;
-  
+  var isInput = portType.indexOf('input') === 0;
+  var side = pos ? pos.side
+    : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType) : (isInput ? 'left' : 'right'));
+
+  // Aynı kenardaki çok portu ayır: index-tabanlı aralık (getPortPosition ile birebir).
+  // Tek portta (idx 0, total 1) → %50 = eski davranış (geriye dönük uyumlu).
+  var idx = 0; if(portType.indexOf('-') > -1) idx = parseInt(portType.split('-')[1]) || 0;
+  var total = (typeof nodePortCount === 'function') ? nodePortCount(node, isInput ? 'inputs' : 'outputs') : 1;
+  if(!total) total = 1;
+  var perp = ((idx + 1) / (total + 1)) * 100;
+
   // Pozisyon stillerini tamamen sıfırla
   portEl.style.left = 'auto';
   portEl.style.right = 'auto';
@@ -276,26 +367,26 @@ function updatePortPosition(portEl, node, portType) {
   portEl.style.bottom = 'auto';
   portEl.style.marginLeft = '0';
   portEl.style.marginTop = '0';
-  
+
   switch(side) {
     case 'top':
       portEl.style.top = '-9px';
-      portEl.style.left = '50%';
+      portEl.style.left = perp + '%';
       portEl.style.marginLeft = '-7px';
       break;
     case 'right':
       portEl.style.right = '-9px';
-      portEl.style.top = '50%';
+      portEl.style.top = perp + '%';
       portEl.style.marginTop = '-7px';
       break;
     case 'bottom':
       portEl.style.bottom = '-9px';
-      portEl.style.left = '50%';
+      portEl.style.left = perp + '%';
       portEl.style.marginLeft = '-7px';
       break;
     case 'left':
       portEl.style.left = '-9px';
-      portEl.style.top = '50%';
+      portEl.style.top = perp + '%';
       portEl.style.marginTop = '-7px';
       break;
   }
@@ -431,5 +522,10 @@ function addControlPointToConnection(conn) {
   
   if(!conn.controlPoints) conn.controlPoints = [];
   conn.controlPoints.push({x: midX, y: midY, id: 'cp-' + Date.now()});
+}
+
+// Jest/Node: saf port-remap yardımcılarını test edilebilir kıl (tarayıcıda no-op).
+if(typeof module !== 'undefined' && module.exports){
+  module.exports = { _computePortRemap: _computePortRemap, _portIdOf: _portIdOf };
 }
 

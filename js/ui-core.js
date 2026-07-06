@@ -524,23 +524,25 @@ function createNode(type, x, y, width, height) {
   
   var html = '<div class="ve-node-box" style="width:' + node.width + 'px; height:' + node.height + 'px;">';
   
-  // Giriş portları
-  if(def.inputs > 0) {
-    for(var pi = 0; pi < def.inputs; pi++) {
-      var inputPortId = def.inputs === 1 ? 'input' : 'input-' + pi;
-      var inputTopPct = ((pi + 1) / (def.inputs + 1) * 100);
+  // Giriş portları (sayı: tip tanımı VEYA örnek-başı override — nodePortCount)
+  var inCount = (typeof nodePortCount==='function') ? nodePortCount(node, 'inputs') : (def.inputs||0);
+  if(inCount > 0) {
+    for(var pi = 0; pi < inCount; pi++) {
+      var inputPortId = inCount === 1 ? 'input' : 'input-' + pi;
+      var inputTopPct = ((pi + 1) / (inCount + 1) * 100);
       html += '<div class="ve-node-port input" data-node="' + nodeId + '" data-port="' + inputPortId + '" data-port-index="' + pi + '" title="Giriş ' + (pi+1) + '" style="top:' + inputTopPct + '%; margin-top:-5px;"></div>';
     }
   }
-  
+
   // Sembol
   html += def.svg;
-  
+
   // Çıkış portları
-  if(def.outputs > 0) {
-    for(var po = 0; po < def.outputs; po++) {
-      var outputPortId = def.outputs === 1 ? 'output' : 'output-' + po;
-      var outputTopPct = ((po + 1) / (def.outputs + 1) * 100);
+  var outCount = (typeof nodePortCount==='function') ? nodePortCount(node, 'outputs') : (def.outputs||0);
+  if(outCount > 0) {
+    for(var po = 0; po < outCount; po++) {
+      var outputPortId = outCount === 1 ? 'output' : 'output-' + po;
+      var outputTopPct = ((po + 1) / (outCount + 1) * 100);
       html += '<div class="ve-node-port output" data-node="' + nodeId + '" data-port="' + outputPortId + '" data-port-index="' + po + '" title="Çıkış ' + (po+1) + '" style="top:' + outputTopPct + '%; margin-top:-5px;"></div>';
     }
   }
@@ -617,69 +619,19 @@ function createNode(type, x, y, width, height) {
   // Node sürükleme — paylasilan tek-dinleyicili sistem (bkz. veAttachNodeDrag)
   veAttachNodeDrag(nodeEl, node);
   
-  // Port olayları - bağlantı oluşturma
+  // Port olayları — bağlantı oluşturma (paylaşılan: veRebuildNodePorts de kullanır)
   nodeEl.querySelectorAll('.ve-node-port').forEach(function(port) {
-    // mousedown'da stopPropagation - node drag'ı engelle
-    port.addEventListener('mousedown', function(e) {
-      e.stopPropagation();
-    });
-    port.addEventListener('click', function(e) {
-      if(e.button !== 0) return;
-      e.stopPropagation();
-      e.preventDefault();
-      
-      var portType = this.getAttribute('data-port');
-      var portNodeId = this.getAttribute('data-node');
-      
-      if(!isConnecting) {
-        // Bağlantı başlat (output'tan veya input'tan)
-        isConnecting = true;
-        connectingFrom = {
-          nodeId: portNodeId,
-          port: portType,
-          element: this,
-          node: node
-        };
-        this.style.background = 'var(--accent-primary)';
-        this.style.transform = 'scale(1.5)';
-        
-        // Geçici çizgi oluştur
-        var svg = document.getElementById('ve-connections-layer');
-        var portPos = getPortPosition(node, portType);
-        tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        tempLine.setAttribute('class', 've-connection-temp');
-        tempLine.setAttribute('d', 'M ' + portPos.x + ' ' + portPos.y + ' L ' + portPos.x + ' ' + portPos.y);
-        tempLine.addEventListener('click', function(ev) { ev.stopPropagation(); cleanupTempLine(); });
-        svg.appendChild(tempLine);
-        
-        // Sensör ise midpoint'leri göster
-        if(node.type === 'sensor') {
-          updateAllConnections();
-        }
-      } else {
-        // Bağlantı tamamla
-        var fromPort = connectingFrom.port;
-        var fromNodeId = connectingFrom.nodeId;
-        
-        // Farklı node'a ve uyumlu port'a bağla (output→input veya input→output)
-        if(portNodeId !== fromNodeId) {
-          if(fromPort.startsWith('output') && portType.startsWith('input')) {
-            createConnection(fromNodeId, portNodeId, fromPort, portType);
-          } else if(fromPort.startsWith('input') && portType.startsWith('output')) {
-            createConnection(portNodeId, fromNodeId, portType, fromPort);
-          }
-        }
-        
-        // Önceki port stilini sıfırla
-        if(connectingFrom.element) {
-          connectingFrom.element.style.background = '';
-          connectingFrom.element.style.transform = '';
-        }
-        cleanupTempLine();
-      }
-    });
+    veAttachPortConnect(port, node);
   });
   
+  // portLayout (ör. Motor ön/sağ/sol) veya kayıtlı taşımalar (portPositions) varsa
+  // port DOM'unu ilgili kenarlara yerleştir. Aksi halde klasik davranış (değişmez).
+  if((def.portLayout || (node.data && node.data.portPositions)) && typeof updatePortPosition === 'function') {
+    nodeEl.querySelectorAll('.ve-node-port').forEach(function(port) {
+      updatePortPosition(port, node, port.getAttribute('data-port'));
+    });
+  }
+
   document.getElementById('ve-canvas').appendChild(nodeEl);
   updateNodeCount();
   
@@ -692,6 +644,79 @@ function createNode(type, x, y, width, height) {
     var el = document.getElementById(_newNode.id);
     if(el) updateNodeHandles(el, _newNode.width, _newNode.height);
   }, 20);
+}
+
+// Bir port DOM elemanına bağlantı-oluşturma (tıkla-bağla) dinleyicilerini ekler.
+// createNode + veRebuildNodePorts ortak kullanır (davranış birebir aynı).
+function veAttachPortConnect(port, node) {
+  port.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+  port.addEventListener('click', function(e) {
+    if(e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    var portType = this.getAttribute('data-port');
+    var portNodeId = this.getAttribute('data-node');
+    if(!isConnecting) {
+      isConnecting = true;
+      connectingFrom = { nodeId: portNodeId, port: portType, element: this, node: node };
+      this.style.background = 'var(--accent-primary)';
+      this.style.transform = 'scale(1.5)';
+      var svg = document.getElementById('ve-connections-layer');
+      var portPos = getPortPosition(node, portType);
+      tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      tempLine.setAttribute('class', 've-connection-temp');
+      tempLine.setAttribute('d', 'M ' + portPos.x + ' ' + portPos.y + ' L ' + portPos.x + ' ' + portPos.y);
+      tempLine.addEventListener('click', function(ev) { ev.stopPropagation(); cleanupTempLine(); });
+      svg.appendChild(tempLine);
+      if(node.type === 'sensor') { updateAllConnections(); }
+    } else {
+      var fromPort = connectingFrom.port;
+      var fromNodeId = connectingFrom.nodeId;
+      if(portNodeId !== fromNodeId) {
+        if(fromPort.startsWith('output') && portType.startsWith('input')) {
+          createConnection(fromNodeId, portNodeId, fromPort, portType);
+        } else if(fromPort.startsWith('input') && portType.startsWith('output')) {
+          createConnection(portNodeId, fromNodeId, portType, fromPort);
+        }
+      }
+      if(connectingFrom.element) {
+        connectingFrom.element.style.background = '';
+        connectingFrom.element.style.transform = '';
+      }
+      cleanupTempLine();
+    }
+  });
+}
+
+// Bir düğümün port DOM'unu GÜNCEL port sayısına göre yeniden kurar (ekle/kaldır
+// sonrası). Bağlantı dinleyicileri + port menüsü yeniden bağlanır, kayıtlı kenarlar
+// (portPositions / portLayout) uygulanır, bağlı portlar işaretlenir.
+function veRebuildNodePorts(node) {
+  var nodeEl = document.getElementById(node.id);
+  if(!nodeEl) return;
+  var box = nodeEl.querySelector('.ve-node-box');
+  if(!box) return;
+  box.querySelectorAll('.ve-node-port').forEach(function(p){ p.remove(); });
+  function mk(cls, portId, idx, titleBase) {
+    var d = document.createElement('div');
+    d.className = 've-node-port ' + cls;
+    d.setAttribute('data-node', node.id);
+    d.setAttribute('data-port', portId);
+    d.setAttribute('data-port-index', idx);
+    d.setAttribute('title', titleBase + ' ' + (idx + 1));
+    box.appendChild(d);
+    enablePortContextMenu(d, node, portId);
+    veAttachPortConnect(d, node);
+    updatePortPosition(d, node, portId);
+  }
+  var inC = nodePortCount(node, 'inputs');
+  for(var i = 0; i < inC; i++) mk('input', inC === 1 ? 'input' : 'input-' + i, i, 'Giriş');
+  var outC = nodePortCount(node, 'outputs');
+  for(var o = 0; o < outC; o++) mk('output', outC === 1 ? 'output' : 'output-' + o, o, 'Çıkış');
+  connections.forEach(function(c){
+    if(c.from === node.id) { var pe = box.querySelector('.ve-node-port[data-port="' + c.fromPort + '"]'); if(pe) pe.classList.add('connected'); }
+    if(c.to === node.id)   { var pt = box.querySelector('.ve-node-port[data-port="' + c.toPort + '"]'); if(pt) pt.classList.add('connected'); }
+  });
 }
 
 function createConnection(fromNodeId, toNodeId, fromPort, toPort) {

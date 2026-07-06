@@ -767,6 +767,7 @@ function _mntComputeSupportLinks(items){
   var cradles    = items.filter(function(it){ return it.kind==='mnt-bracket'; });
   var mounts     = items.filter(function(it){ return it.kind==='mnt-mount'; });
   var supportTargets = pureBodies.concat(cradles);
+  var byId={}; items.forEach(function(it){ byId[it.id]=it; });
 
   function nearest(a, pool){
     var best=null, bd=Infinity;
@@ -782,26 +783,30 @@ function _mntComputeSupportLinks(items){
     if(Math.abs(dx) >= Math.abs(dy)) return dx>=0 ? 'right' : 'left';
     return dy>=0 ? 'bottom' : 'top';
   }
+  function ang(from, to){ var a=Math.atan2(to.ly-from.ly, to.lx-from.lx)*180/Math.PI; return (a+360)%360; }
 
-  var links=[], incomers={}, byId={};
-  items.forEach(function(it){ byId[it.id]=it; });
-  function addLink(from, to){
-    if(!from || !to) return;
-    links.push({ from:from.id, to:to.id, fromPort:'output', toPort:'input' });
-    (incomers[to.id]=incomers[to.id]||[]).push(from);
-  }
-  mounts.forEach(function(m){ addLink(m, nearest(m, supportTargets)); });
-  cradles.forEach(function(c){ addLink(c, nearest(c, pureBodies)); });
+  // 1. Ham linkler: her takoz → en yakın gövde/cradle; her cradle → en yakın gövde.
+  var byTarget={};
+  function addRaw(src, tgt){ if(src&&tgt) (byTarget[tgt.id]=byTarget[tgt.id]||[]).push(src); }
+  mounts.forEach(function(m){ addRaw(m, nearest(m, supportTargets)); });
+  cradles.forEach(function(c){ addRaw(c, nearest(c, pureBodies)); });
 
-  var ports={};
+  // 2. Her hedefte gelenleri AYRI giriş portlarına dağıt; hem kaynağın çıkışını hem
+  //    hedefin o portunu KARŞILIKLI birbirine baktır (per-instance portPositions).
+  //    Böylece ters yönelimli iki cradle bile doğru çıkar (biri üstten, biri alttan).
+  var links=[], ports={};
   function setSide(id, portType, side){ (ports[id]=ports[id]||{})[portType]={ side:side }; }
-  // Çıkış: kaynağın hedefe baktığı kenar.
-  links.forEach(function(lk){ setSide(lk.from, 'output', sideToward(byId[lk.from], byId[lk.to])); });
-  // Giriş: hedefin, kendisine gelen kaynakların ağırlık merkezine baktığı kenar.
-  Object.keys(incomers).forEach(function(tid){
-    var srcs=incomers[tid], cx=0, cy=0;
-    srcs.forEach(function(s){ cx+=s.lx; cy+=s.ly; });
-    setSide(tid, 'input', sideToward(byId[tid], { lx:cx/srcs.length, ly:cy/srcs.length }));
+  Object.keys(byTarget).forEach(function(tid){
+    var tgt=byId[tid];
+    var incs=byTarget[tid].slice().sort(function(a,b){ return ang(tgt,a)-ang(tgt,b); });
+    var inCount=(tgt.inCount!=null)?tgt.inCount:incs.length;
+    incs.forEach(function(src, i){
+      var pi=Math.min(i, Math.max(0,inCount-1));         // fazla gelen → son portu paylaşır
+      var toPort=(inCount<=1) ? 'input' : ('input-'+pi);
+      links.push({ from:src.id, to:tgt.id, fromPort:'output', toPort:toPort });
+      setSide(src.id, 'output', sideToward(src, tgt));   // kaynak çıkışı hedefe baksın
+      setSide(tgt.id, toPort, sideToward(tgt, src));      // hedef portu kaynağa baksın
+    });
   });
   return { links:links, ports:ports };
 }
@@ -934,7 +939,8 @@ function _mntLoadExampleFromModel(nodeId){
         n.data.iTransfer=tq.iTransfer; n.data.phiFwd=tq.fwd.phiAxle; n.data.phiRev=(tq.rev||{}).phiAxle; n.data.derate=tq.derate;
       }
       _mntSetNodeName(n, c.name);
-      placed.push({ id:n.id, kind:kind, lx:pos.lx, ly:pos.ly });
+      placed.push({ id:n.id, kind:kind, lx:pos.lx, ly:pos.ly,
+        inCount:(typeof nodePortCount==='function') ? nodePortCount(n,'inputs') : 1 });
     }
   });
   EX.mounts.forEach(function(m){
