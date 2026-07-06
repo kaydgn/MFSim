@@ -556,8 +556,15 @@ var veMountCore = (function() {
   //     description:'Bir iki cümle açıklama.',
   //     specs:[['Etiket','Değer'], …],  // detay tablosu satırları
   //     image:'<svg…>' | 'data:image/…' | '',  // boş → modelden otomatik şema
-  //     model:{ g, components:[…], mounts:[…], torque:{…}, loadCases:[…] }
+  //     // AŞAĞIDAKİLERDEN BİRİ:
+  //     model:{ g, components:[…], mounts:[…], torque:{…}, loadCases:[…] }  // (a) programatik
+  //     topology:'assets/examples/xxx.json'   // (b) JSON topoloji (varsa öncelikli)
   //   }
+  //
+  // topology (ops., model'den ÖNCELİKLİ): "Başlangıç ve Örnekler" panelinden
+  //   "İç Topolojiyi JSON Dışa Aktar" ile üretilen dosya. "Örneği Aktar" bu JSON'u
+  //   iç topolojiye birebir kurar (konum/isim/bağlantı/veri dahil). Dosyayı
+  //   assets/examples/'e koy; build tek dosyaya gömer (fetch'e gerek kalmaz).
   //
   // model.components[i].kind  (ops.) → kanvas tipini açıkça belirt
   //   ('mnt-motor'/'mnt-gearbox'/'mnt-shaft'/'mnt-bracket'/'mnt-transfer');

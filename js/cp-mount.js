@@ -622,6 +622,7 @@ function getMntExamplePropertiesHTML(node){
   }
   html+=_mntExampleDetailsHTML(ex);
   html+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:5px; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği Aktar</button>';
+  html+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:0.68rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:5px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">⬇ İç Topolojiyi JSON Dışa Aktar</button>';
   html+='<div id="ve-mnt-example-report" style="margin-top:12px;"></div>';
   html+='</div>';
   return html;
@@ -666,11 +667,92 @@ function _mntRenderExampleReport(warnings, silent){
   if(!silent && typeof showToast==='function') showToast('Örnek yüklendi — '+warnings.length+' uyarı ('+errN+' hata).', errN?'warning':'info');
 }
 
+// Ayrıştırılmış JSON'u veLoadTabState'in beklediği "state" biçimine getir.
+// Kabul edilenler: {format,version,nodes,connections,…} · {state:{…}} · ham state.
+function _mntTopoState(j){
+  if(!j) return null;
+  var s = (j.state && j.state.nodes) ? j.state : (j.nodes ? j : null);
+  if(!s || !s.nodes) return null;
+  return {
+    nodes: s.nodes, connections: s.connections || [],
+    compCounter: s.compCounter || 0,
+    canvasOffset: s.canvasOffset || { x:3000, y:3000 },
+    canvasZoom: s.canvasZoom || 1
+  };
+}
+
+// Örnek topolojisini çöz: önce build'e gömülü (window.__MNT_TOPOLOGIES), yoksa
+// fetch (geliştirme/Pages). Nesne verilirse doğrudan kullanır. cb(state|null).
+function _mntResolveTopology(ref, cb){
+  if(ref && typeof ref==='object'){ cb(_mntTopoState(ref)); return; }
+  var url = String(ref||''); if(!url){ cb(null); return; }
+  var emb = (typeof window!=='undefined' && window.__MNT_TOPOLOGIES) ? window.__MNT_TOPOLOGIES[url] : null;
+  if(emb){ cb(_mntTopoState(emb)); return; }
+  if(typeof fetch==='function'){
+    fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(j){ cb(_mntTopoState(j)); })
+      .catch(function(){ cb(null); });
+  } else { cb(null); }
+}
+
+// İç topolojiyi (kanvasın o anki hali) JSON olarak dışa aktar — kullanıcı bununla
+// örnek topolojisi üretir. undo/redo/simResults gibi uçucu alanlar hariç tutulur.
+function veMntExportTopology(){
+  if(typeof veSerializeCurrentState!=='function'){ if(typeof showToast==='function') showToast('Dışa aktarma kullanılamıyor.','warning'); return; }
+  if(typeof veFlushOpenPanelData==='function') veFlushOpenPanelData();
+  var st = veSerializeCurrentState();
+  var out = { format:'mfsim-mount-example', version:1,
+    nodes: st.nodes, connections: st.connections,
+    compCounter: st.compCounter, canvasOffset: st.canvasOffset, canvasZoom: st.canvasZoom };
+  var json = JSON.stringify(out, null, 2);
+  if(typeof document==='undefined') return json;
+  var blob = new Blob([json], { type:'application/json' });
+  if(typeof veShowSaveDialog==='function') veShowSaveDialog('ornek-topoloji.json', blob, 'İç topoloji JSON olarak kaydedildi ('+(st.nodes||[]).length+' düğüm)');
+  return json;
+}
+
+// Örneği kayıtlı JSON topolojisinden yükle — iç topolojiyi tümüyle değiştirir.
+function _mntLoadExampleFromJSON(ref, ex){
+  var hasBodies = (typeof nodes!=='undefined') && nodes.some(function(n){ var d=_mntDef(n)||{}; return d.isMountBody||d.isMount; });
+  if(hasBodies && typeof confirm==='function'){
+    if(!confirm('İç topoloji, seçilen örnekle DEĞİŞTİRİLECEK. Devam edilsin mi?')) return;
+  }
+  _mntResolveTopology(ref, function(state){
+    if(!state || !state.nodes || !state.nodes.length){
+      if(typeof showToast==='function') showToast('Örnek topolojisi yüklenemedi.','warning');
+      return;
+    }
+    if(typeof veLoadTabState==='function') veLoadTabState({ state: state });
+    // Başka örnek yüklenebilsin diye "Başlangıç ve Örnekler" düğümü yoksa ekle.
+    if(typeof nodes!=='undefined' && !nodes.some(function(n){ return (_mntDef(n)||{}).isMountExample; }) && typeof veMntPopulateStarter==='function'){
+      veMntPopulateStarter();
+    }
+    if(typeof saveState==='function') saveState();
+    if(typeof updateAllConnections==='function') updateAllConnections();
+    if(typeof veMntUpdateBreadcrumb==='function') veMntUpdateBreadcrumb();
+    if(typeof showToast==='function') showToast('Örnek yüklendi'+(ex&&ex.vehicle?(' — '+ex.vehicle):'')+' (JSON).','info');
+  });
+}
+
+// "Örneği Aktar" yönlendiricisi: kayıt girişinde JSON topolojisi (topology) varsa
+// ondan yükle; yoksa mevcut programatik model kurucusuna düş.
 function veMntLoadExample(nodeId){
+  if(typeof veMountCore==='undefined') return;
+  var node = (typeof nodes!=='undefined') ? nodes.find(function(n){ return n.id===nodeId; }) : null;
+  var key = (node && node.data && node.data.exampleKey)
+    || ((veMountCore.getMountExampleList && veMountCore.getMountExampleList()[0]||{}).id) || 'siper';
+  var ex = (veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
+  if(ex && ex.topology){ _mntLoadExampleFromJSON(ex.topology, ex); return; }
+  _mntLoadExampleFromModel(nodeId);
+}
+
+// Programatik model kurucusu (kayıt girişinde JSON yoksa): model'den kütle/takoz
+// düğümlerini oluşturur.
+function _mntLoadExampleFromModel(nodeId){
   if(typeof veMountCore==='undefined' || typeof createNode!=='function') return;
   var node = nodes.find(function(n){ return n.id===nodeId; });
-  var key = (node && node.data && node.data.exampleKey) || 'ttar';
-  // Seçilen örneğin modelini kayıt defterinden çöz (bilinmezse TTAR'a düşer).
+  var key = (node && node.data && node.data.exampleKey) || 'siper';
+  // Seçilen örneğin modelini kayıt defterinden çöz (bilinmezse ilk örneğe düşer).
   var ex = (veMountCore.getMountExample) ? veMountCore.getMountExample(key) : null;
   var EX = (ex && ex.model) || veMountCore.TTAR_EXAMPLE; if(!EX) return;
 
@@ -1510,6 +1592,10 @@ if(typeof module!=='undefined' && module.exports){
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
     veMntPopulateStarter: veMntPopulateStarter,
+    veMntExportTopology: veMntExportTopology,
+    _mntTopoState: _mntTopoState,
+    _mntResolveTopology: _mntResolveTopology,
+    _mntLoadExampleFromJSON: _mntLoadExampleFromJSON,
     _mntExampleReg: _mntExampleReg,
     _mntExampleList: _mntExampleList,
     _mntExampleLayout: _mntExampleLayout,

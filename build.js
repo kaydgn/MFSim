@@ -106,6 +106,28 @@ html = html.replace(
   }
 );
 
+// ── 2c) Örnek topolojileri (assets/examples/*.json) tek dosyaya göm.
+// Tarayıcı fetch'i file:// üzerinde engellenir; gömme sayesinde indirilmiş
+// tek dosyada da örnekler çalışır. Geliştirmede (index.html) bu betik yok →
+// çalışma zamanı fetch'e düşer. Enjeksiyon: <body> hemen ardına script.
+var examplesDir = path.join(ROOT, 'assets', 'examples');
+var embedded = {};
+if (fs.existsSync(examplesDir)) {
+  fs.readdirSync(examplesDir).filter(function(f) { return f.endsWith('.json'); }).forEach(function(f) {
+    var rel = 'assets/examples/' + f;
+    try {
+      embedded[rel] = JSON.parse(fs.readFileSync(path.join(examplesDir, f), 'utf8'));
+      console.log('  Örnek topoloji göm:', rel);
+    } catch(e) {
+      console.error('HATA: Geçersiz JSON:', rel, '—', e.message);
+      process.exit(1);
+    }
+  });
+}
+// '<' → <: JSON içindeki olası "</script>" script tag'ini kırmasın.
+var embedScript = '<script>window.__MNT_TOPOLOGIES = ' + JSON.stringify(embedded).replace(/</g, '\\u003c') + ';</script>';
+html = html.replace(/<body([^>]*)>/, '<body$1>\n' + embedScript);
+
 // ── 3) Yaz
 fs.writeFileSync(OUTPUT, html, 'utf8');
 
