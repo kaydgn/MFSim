@@ -108,24 +108,38 @@ jobs:
     needs: build
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
+      url: ${{ steps.d1.outputs.page_url || steps.d2.outputs.page_url || steps.d3.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       # GitHub Pages backend zaman zaman geçici "Deployment failed, try again
-      # later." hatası verir (özellikle art arda hızlı merge'lerde). İlk deneme
-      # düşerse kısa bekleyişten sonra bir kez daha denenir. Bu adımlar artifact
-      # ÜRETMEZ (yalnız mevcut "github-pages" artifact'ını yayına alır) → tekrar
-      # denemek güvenlidir, artifact sayısını artırmaz.
-      - name: Deploy to GitHub Pages
-        id: deployment
+      # later." hatası verir — özellikle art arda hızlı merge/re-run'larda önceki
+      # bir Pages deployment'ı "in progress" takılıp yenilerini bloke ederse
+      # (Pages aynı anda tek deployment'a izin verir; takılı olan ~10 dk'da
+      # temizlenir). Bu yüzden deploy KADEMELİ bekleyişle 3 kez denenir.
+      # Adımlar ARTIFACT ÜRETMEZ (yalnız mevcut "github-pages" artifact'ını yayına
+      # alır) → tekrar denemek güvenli, artifact sayısını ARTIRMAZ.
+      - name: Deploy to GitHub Pages (deneme 1)
+        id: d1
         continue-on-error: true
         uses: actions/deploy-pages@v4
 
-      - name: Wait before retry
-        if: steps.deployment.outcome == 'failure'
-        run: sleep 45
+      - name: Bekle (60 sn)
+        if: steps.d1.outcome == 'failure'
+        run: sleep 60
 
-      - name: Deploy to GitHub Pages (retry)
-        id: deployment_retry
-        if: steps.deployment.outcome == 'failure'
+      - name: Deploy to GitHub Pages (deneme 2)
+        id: d2
+        if: steps.d1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Bekle (180 sn)
+        if: steps.d1.outcome == 'failure' && steps.d2.outcome == 'failure'
+        run: sleep 180
+
+      # Son deneme: continue-on-error YOK → hâlâ düşerse job gerçekten fail olur
+      # (kalıcı bir sorunu gizlemez). Yalnız ilk iki deneme de düştüyse çalışır.
+      - name: Deploy to GitHub Pages (deneme 3 — son)
+        id: d3
+        if: steps.d1.outcome == 'failure' && steps.d2.outcome == 'failure'
         uses: actions/deploy-pages@v4
