@@ -221,9 +221,36 @@ function _mntRepSection8(R, opts){
   h+=_mntRepStep3Static(R, geom);
   h+=_mntRepStep4Torque(R);
   h+=_mntRepLoadCaseMatrix(R);
+  h+=_mntRepDeflectionDetail(R);
   h+=_mntRepStep5Modal(R, C);
   h+=_mntRepFreqPlacement(R, opts);
   h+=_mntRepConsistency(R);
+  return h;
+}
+
+// §8.6 — Takoz bazında ÜÇ-EKSEN çökme detayı (her takoz için ayrı tablo).
+// δz özeti (§8.5) çoğu durumda yeterli değildir: viraj/bordür darbesinde yanal
+// (δy), fren/tork'ta boyuna (δx) sehim kritiktir. Her takoz için tüm yük
+// durumlarındaki δx/δy/δz burada verilir. Tek sayfaya sığmayabilir; tablolar
+// sayfalara yayılır (break-inside:avoid ile her tablo bütün kalır).
+function _mntRepDeflectionDetail(R){
+  var mounts=R.mounts||[], cases=R.allCases||[];
+  var h='<h3>8.6 Adım 6 — Takoz bazında üç-eksen çökme detayı</h3>';
+  h+='<p>Her takoz için tüm yük durumlarındaki üç-eksen sehimi: δ_x (boyuna), δ_y (enine), δ_z (düşey) [mm]. Düşey özetin (§8.5) ötesinde yanal ve boyuna sehimler de değerlendirilir — viraj / bordür darbesinde δ_y, fren / tahrik torkunda δ_x baskın olabilir. <b>Çekme</b> (δ_z &gt; 0, lift-off) ve herhangi bir eksende <b>±10 mm aşımı</b> (lineer-dışı) işaretlidir.</p>';
+  mounts.forEach(function(mnt, mi){
+    h+='<table><caption>Tablo '+_rTbl()+' — '+_rEsc(mnt.name||('Takoz '+(mi+1)))+': yük durumlarına göre çökme [mm]</caption>';
+    h+='<tr><th>Yük durumu</th><th>δ_x</th><th>δ_y</th><th>δ_z</th><th>Durum</th></tr>';
+    cases.forEach(function(rc){
+      if(!rc.res){ h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td><td colspan="4" class="c">— (çözülemedi)</td></tr>'; return; }
+      var pm=rc.res.perMount[mi]; if(!pm) return;
+      var dx=pm.delta[0]*1000, dy=pm.delta[1]*1000, dz=pm.delta[2]*1000;
+      var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>');
+      h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td>'
+        +'<td>'+_rFs(dx,2)+'</td><td>'+_rFs(dy,2)+'</td><td>'+_rFs(dz,2)+'</td>'
+        +'<td class="c">'+flag+'</td></tr>';
+    });
+    h+='</table>';
+  });
   return h;
 }
 
@@ -529,8 +556,8 @@ function _mntRepStep4Torque(R){
 // §8.5 — TÜM yük durumları (çökme matrisi) ───────────────────────────────────
 function _mntRepLoadCaseMatrix(R){
   var mounts=R.mounts||[];
-  var h='<h3>8.5 Adım 5 — Tüm yük durumları (çökme matrisi)</h3>';
-  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku). Her hücre takozun düşey sehimi δ_z [mm]; <b>çekme / lift-off</b> mor çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir.</p>';
+  var h='<h3>8.5 Adım 5 — Yük durumu özeti (düşey çökme δ_z)</h3>';
+  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> çökme özeti. Her hücre takozun δ_z\'si [mm]; <b>çekme / lift-off</b> mor çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç-eksen (δ_x/δ_y/δ_z) ayrıntı için §8.6.</p>';
   h+='<table><caption>Tablo '+_rTbl()+' — Yük durumu × takoz düşey sehim matrisi [mm]</caption>';
   h+='<tr><th>Yük durumu</th>';
   mounts.forEach(function(m){ h+='<th title="'+_rEsc(m.name)+'">'+_rEsc(_mntRepShort(m.name,8))+'</th>'; });
@@ -551,9 +578,9 @@ function _mntRepLoadCaseMatrix(R){
   return h;
 }
 
-// §8.6 — modal analiz (k_din + k_stat karşılaştırmalı + mod şekli matrisi)
+// §8.7 — modal analiz (k_din + k_stat karşılaştırmalı + mod şekli matrisi)
 function _mntRepStep5Modal(R, C){
-  var h='<h3>8.6 Adım 6 — Modal analiz</h3>';
+  var h='<h3>8.7 Adım 7 — Modal analiz</h3>';
   var modes=R.modes;
   if(!modes || !modes.length){ return h+'<p>Modal analiz üretilemedi (K tekil / kütle geçersiz olabilir).</p>'; }
   var mstat=null;
@@ -620,7 +647,7 @@ function _mntRepFreqPlacement(R, opts){
   var fMax=modes[modes.length-1].f_Hz;
   var limit=fFire/Math.SQRT2;                        // izolasyon bölgesine geçiş
   var ok=fMax<limit;
-  var h='<h3>8.7 Adım 7 — Frekans yerleşimi değerlendirmesi</h3>';
+  var h='<h3>8.8 Adım 8 — Frekans yerleşimi değerlendirmesi</h3>';
   h+='<p>Dört zamanlı motorun rölanti ateşleme frekansı \\( f_{\\text{ateş}}=\\dfrac{N}{60}\\cdot\\dfrac{z}{2} \\); '
     +'girilen değerlerle \\( N='+_rF(rpm,0)+' \\) d/dk, \\( z='+_rF(z,0)+' \\) silindir → '
     +'\\( f_{\\text{ateş}}='+_rF(fFire,1)+' \\) Hz. Yaygın tasarım pratiği, en yüksek rijit gövde modunu '
@@ -637,7 +664,7 @@ function _mntRepFreqPlacement(R, opts){
 
 // Doğrulama → iç-tutarlılık özeti
 function _mntRepConsistency(R){
-  var h='<h3>8.8 Model içi tutarlılık kontrolleri</h3>';
+  var h='<h3>8.9 Model içi tutarlılık kontrolleri</h3>';
   var nBal=0, nTot=0, tension=0, overLin=0;
   R.allCases.forEach(function(rc){
     if(!rc.res) return; nTot++;
@@ -687,6 +714,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepShort: _mntRepShort,
     _mntRepLoadBar: _mntRepLoadBar,
     _mntRepLoadCaseMatrix: _mntRepLoadCaseMatrix,
+    _mntRepDeflectionDetail: _mntRepDeflectionDetail,
     _mntRepModeMatrix: _mntRepModeMatrix,
     _mntRepFreqPlacement: _mntRepFreqPlacement,
     _rF: _rF, _rFs: _rFs, _rEsc: _rEsc
