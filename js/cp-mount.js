@@ -141,6 +141,7 @@ var VE_MNT_STARTER_LAYOUT = [
   { type:'mnt-2dview',                         lx:490, ly:20 },
   { type:'mnt-solver',   name:'Çözücü',         lx:640, ly:20 },
   { type:'mnt-example',                        lx:790, ly:20 },
+  { type:'mnt-report',                         lx:940, ly:20 },
   // ── Sağ takozlar (şasi sağ tarafı → şemada üstte) ──
   { type:'mnt-mount',    name:'Sağ Yan Takoz',  lx:300, ly:190 },
   { type:'mnt-mount',    name:'Sağ Arka Takoz', lx:480, ly:190 },

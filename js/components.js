@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','arac-performans','mount-analysis'],
+    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -301,6 +301,14 @@ var componentDefs = {
     name: '2D Görünüm',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="12" y="14" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #888)" stroke-width="3"/><line x1="20" y1="40" x2="20" y2="20" stroke="var(--accent-danger, #ef4444)" stroke-width="2.5"/><line x1="20" y1="40" x2="44" y2="40" stroke="var(--accent-success, #22c55e)" stroke-width="2.5"/><circle cx="52" cy="30" r="4" fill="var(--accent-warning, #f59e0b)"/><rect x="64" y="24" width="8" height="8" fill="var(--accent-success, #22c55e)"/><rect x="12" y="54" width="76" height="34" rx="3" fill="none" stroke="var(--text-secondary, #888)" stroke-width="3"/><line x1="20" y1="80" x2="20" y2="60" stroke="var(--accent-danger, #ef4444)" stroke-width="2.5"/><line x1="20" y1="80" x2="44" y2="80" stroke="var(--accent-primary, #3b82f6)" stroke-width="2.5"/><circle cx="52" cy="66" r="4" fill="var(--accent-warning, #f59e0b)"/><rect x="64" y="70" width="8" height="8" fill="var(--accent-success, #22c55e)"/></svg>',
     inputs: 0, outputs: 0, isMount2DView: true, defaultWidth: 60, defaultHeight: 56
+  },
+  // Rapor — Çözücü'nün 6 SD sonuçlarını akademik, tamamen çevrimdışı bir HTML
+  // rapora döker (teori + bu modelin sayısal örneği). Çözülmemişse uyarır.
+  // Fiziksel topolojiye bağlanmaz. Panel/üreteç: cp-mount-report.js.
+  'mnt-report': {
+    name: 'Rapor',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><path d="M60 12 v16 h16" fill="none" stroke="var(--accent-primary, #3b82f6)" stroke-width="5" stroke-linejoin="round"/><rect x="34" y="60" width="8" height="18" fill="var(--accent-primary, #3b82f6)"/><rect x="47" y="50" width="8" height="28" fill="var(--accent-primary, #3b82f6)"/><rect x="60" y="42" width="8" height="36" fill="var(--accent-primary, #3b82f6)"/><line x1="34" y1="40" x2="66" y2="40" stroke="var(--text-muted, #aaa)" stroke-width="4" stroke-linecap="round"/></svg>',
+    inputs: 0, outputs: 0, isMountReport: true, defaultWidth: 60, defaultHeight: 56
   },
   // ── Araç Performans (ALT-SİSTEM / subsystem düğümü) ──────────────────────
   // Sürüklenebilir composite düğüm: ana canvas'ta tek blok; çift tıklanınca
