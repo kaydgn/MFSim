@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Güç Grubu Takoz Sistemi — 6 Serbestlik Dereceli Rijit Gövde Modeli</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400..600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1b1e24; --paper:#fdfdfb; --line:#c9cdd3; --line-soft:#e4e6e9;
+  --prusya:#24425f; --prusya-soft:#eef2f6; --check:#2e7d4f; --check-soft:#eaf3ee;
+  --warn:#8a5a1e; --warn-soft:#f7f1e6; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:'Source Serif 4',Georgia,serif;font-size:15.5px;line-height:1.68;}
+.page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
+h1,h2,h3{font-family:'Archivo',system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
+h1{font-size:27px;font-weight:700;letter-spacing:.2px;margin:0 0 6px}
+h2{font-size:19px;font-weight:700;margin:56px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
+  display:flex;gap:14px;align-items:baseline}
+h2 .no{font-family:var(--mono);font-size:13px;color:var(--paper);background:var(--prusya);
+  padding:2px 8px;border-radius:2px;transform:translateY(-2px)}
+h3{font-size:15.5px;font-weight:600;margin:26px 0 8px;color:var(--ink)}
+p{margin:0 0 13px;text-align:justify;hyphens:auto}
+strong{font-weight:600}
+em{font-style:italic}
+
+/* ── Antet (çizim başlık bloğu) ── */
+.antet{border:1.5px solid var(--ink);margin-bottom:36px}
+.antet .band{background:var(--prusya);color:#fff;padding:16px 20px}
+.antet .band .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
+.antet .band h1{color:#fff}
+.antet .band .sub{font-family:'Archivo',sans-serif;font-size:13.5px;font-weight:400;opacity:.92;margin-top:4px}
+.antet .fields{display:grid;grid-template-columns:repeat(4,1fr);border-top:1.5px solid var(--ink)}
+.antet .f{padding:8px 12px;border-right:1px solid var(--line)}
+.antet .f:last-child{border-right:none}
+.antet .f .k{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#5a6270}
+.antet .f .v{font-family:'Archivo',sans-serif;font-size:13px;font-weight:600;margin-top:2px}
+
+/* ── Denklem/işaret blokları ── */
+.eqno{position:relative}
+.eqno .tag{position:absolute;right:0;top:50%;transform:translateY(-50%);
+  font-family:var(--mono);font-size:12.5px;color:#5a6270}
+.note{background:var(--prusya-soft);border-left:3px solid var(--prusya);padding:12px 16px;margin:16px 0;font-size:14.5px}
+.note.warn{background:var(--warn-soft);border-left-color:var(--warn)}
+.note.check{background:var(--check-soft);border-left-color:var(--check)}
+.note .t{font-family:'Archivo',sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;
+  text-transform:uppercase;display:block;margin-bottom:4px}
+.note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)} .note .t{color:var(--prusya)}
+
+/* ── Tablolar ── */
+table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:13.5px}
+caption{caption-side:top;text-align:left;font-family:'Archivo',sans-serif;font-size:12.5px;
+  font-weight:600;color:var(--prusya);padding-bottom:6px;letter-spacing:.3px}
+th{font-family:'Archivo',sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;
+  background:var(--prusya-soft);color:var(--prusya);padding:7px 10px;border:1px solid var(--line);text-align:center}
+td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:12.8px;text-align:right;white-space:nowrap}
+td.l{text-align:left;font-family:'Source Serif 4',serif;font-size:13.8px;white-space:normal}
+td.c{text-align:center}
+tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:500}
+.ok{color:var(--check);font-weight:600}
+.chip{display:inline-block;font-family:var(--mono);font-size:11px;background:var(--check-soft);
+  color:var(--check);border:1px solid var(--check);border-radius:2px;padding:0 6px;margin-left:6px;vertical-align:1px}
+
+/* ── Şekiller ── */
+figure{margin:22px 0 26px;border:1px solid var(--line);padding:14px 14px 10px;background:#fff}
+figcaption{font-family:'Archivo',sans-serif;font-size:12.5px;color:#3c4350;margin-top:10px;
+  padding-top:8px;border-top:1px solid var(--line-soft)}
+figcaption b{color:var(--prusya)}
+svg{width:100%;height:auto;display:block}
+svg text{font-family:'IBM Plex Mono',monospace}
+
+/* ── Kod ── */
+pre{background:#f4f5f6;border:1px solid var(--line);padding:16px 18px;overflow-x:auto;
+  font-family:var(--mono);font-size:12px;line-height:1.55;margin:14px 0}
+code{font-family:var(--mono);font-size:.92em;background:#f1f2f4;padding:1px 5px;border-radius:2px}
+pre code{background:none;padding:0}
+
+.katex-display{margin:14px 0 18px}
+.toc{font-family:'Archivo',sans-serif;font-size:13.5px;columns:2;column-gap:36px;margin:10px 0 4px}
+.toc a{color:var(--ink);text-decoration:none;display:block;padding:3px 0;border-bottom:1px dotted var(--line-soft)}
+.toc a:hover{color:var(--prusya)}
+.toc .n{font-family:var(--mono);font-size:11.5px;color:var(--prusya);margin-right:8px}
+
+@media print{
+  .page{max-width:100%;padding:0}
+  body{font-size:11.5pt}
+  h2{break-after:avoid}
+  figure,table,pre,.note{break-inside:avoid}
+  a{color:inherit;text-decoration:none}
+}
+@media (max-width:640px){
+  .antet .fields{grid-template-columns:repeat(2,1fr)}
+  .toc{columns:1}
+  .page{padding:24px 16px 64px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══════════ ANTET ═══════════ -->
+<div class="antet">
+  <div class="band">
+    <div class="eyebrow">Yöntem Raporu · Güç Aktarma Organları Mühendisliği</div>
+    <h1>Güç Grubu Takoz Sistemi: 6 Serbestlik Dereceli Rijit Gövde Modeli</h1>
+    <div class="sub">Elastik mesnetler üzerindeki motor–şanzıman grubunun statik çökme ve rijit gövde titreşim analizi — matematiksel altyapı, çözüm yöntemi ve doğrulanmış sayısal örnek</div>
+  </div>
+  <div class="fields">
+    <div class="f"><div class="k">Doküman Türü</div><div class="v">Hesap / Yöntem Raporu</div></div>
+    <div class="f"><div class="k">Örnek Uygulama</div><div class="v">8×8 TTAR Güç Grubu</div></div>
+    <div class="f"><div class="k">Referans Model</div><div class="v">Adams · BMC_TTAR_2031</div></div>
+    <div class="f"><div class="k">Tarih / Rev</div><div class="v">02.07.2026 · Rev A</div></div>
+  </div>
+</div>
+
+<div class="toc">
+  <a href="#s1"><span class="n">1</span>Amaç ve Kapsam</a>
+  <a href="#s2"><span class="n">2</span>Fiziksel Model ve Varsayımlar</a>
+  <a href="#s3"><span class="n">3</span>Serbestlik Dereceleri ve Kinematik</a>
+  <a href="#s4"><span class="n">4</span>Kütle Özelliklerinin Birleştirilmesi</a>
+  <a href="#s5"><span class="n">5</span>Rijitlik Matrisinin Kurulması</a>
+  <a href="#s6"><span class="n">6</span>Statik ve Quasi-Statik Çözüm</a>
+  <a href="#s7"><span class="n">7</span>Modal Analiz</a>
+  <a href="#s8"><span class="n">8</span>Sayısal Örnek: TTAR Güç Grubu</a>
+  <a href="#s9"><span class="n">9</span>Geçerlilik Sınırları ve Genişletmeler</a>
+  <a href="#s10"><span class="n">10</span>Semboller</a>
+  <a href="#ekA"><span class="n">Ek A</span>Referans Uygulama (Python)</a>
+</div>
+
+<!-- ═══════════ 1 ═══════════ -->
+<h2 id="s1"><span class="no">1</span>Amaç ve Kapsam</h2>
+<p>Bu rapor, elastik takozlar (motor kulakları / mesnetler) üzerine oturan bir güç grubunun — motor, şanzıman ve bunlara rijit bağlı elemanların — <strong>statik çökme</strong> ve <strong>rijit gövde titreşim (modal)</strong> davranışının, çok gövdeli dinamik (MBD) yazılımlarına ihtiyaç duymadan, kapalı formda kurulabilen bir matematiksel modelle nasıl hesaplandığını açıklamaktadır. Yöntem, literatürde "kütle–yay modeli", "6 DOF rigid body on elastic mounts" veya indirgenmiş parametreli (lumped parameter) model olarak bilinir.</p>
+<p>Modelin tamamı iki temel matrisin kurulmasına indirgenir: 6×6 kütle matrisi \( \mathbf{M} \) ve 6×6 rijitlik matrisi \( \mathbf{K} \). Statik yük durumları \( \mathbf{K}\mathbf{q}=\mathbf{F} \) lineer sisteminin, doğal frekanslar ise \( (\mathbf{K}-\omega^2\mathbf{M})\boldsymbol{\varphi}=\mathbf{0} \) özdeğer probleminin çözümüdür. Bölüm 8'de yöntem, 8×8 TTAR güç grubu verileriyle adım adım uygulanmış ve Adams (BMC_TTAR_2031 modeli) sonuçlarıyla doğrulanmıştır: altı doğal frekansın tamamı 0,01 Hz mertebesinde, statik çökme değerleri 0,1 mm mertebesinde örtüşmektedir.</p>
+
+<!-- ═══════════ 2 ═══════════ -->
+<h2 id="s2"><span class="no">2</span>Fiziksel Model ve Varsayımlar</h2>
+<p>Güç grubu, uzayda altı serbestlik derecesine sahip <strong>tek bir rijit gövde</strong> olarak ele alınır. Motor, şanzıman, cradle braketleri ve şaftın mesnet payı gibi bileşenler birbirine rijit bağlı kabul edilir; dolayısıyla analizden önce tek bir eşdeğer kütle, ağırlık merkezi ve atalet tensöründe birleştirilirler (Bölüm 4). Gövde, şasiye \( N \) adet takoz ile bağlıdır; her takoz üç dik eksende lineer yay olarak modellenir.</p>
+<p>Modelin geçerliliği şu varsayımlara dayanır. <strong>(i) Rijit gövde:</strong> Güç grubunun kendi elastik modları (blok eğilmesi, flanş modları vb. tipik olarak &gt; 100 Hz) takoz modlarından (≈ 5–25 Hz) yeterince ayrıksa, gövde esnekliği ihmal edilebilir. <strong>(ii) Lineer yay:</strong> Takoz kuvvet–sehim eğrisi, çalışma bölgesinde sabit rijitlik ile temsil edilir. Elastomer takozlarda bu, sınırlı bir sehim aralığında geçerlidir (Bölüm 9.1). <strong>(iii) Küçük yer değiştirme:</strong> Dönmeler küçük kabul edilir (\(\sin\theta\approx\theta\)); kinematik lineerleştirilir. <strong>(iv) Sönümsüz modal model:</strong> Doğal frekans hesabında sönüm ihmal edilir — nitekim referans Adams çıktısında da sönüm oranı 0'dır. <strong>(v) Quasi-statik yükler:</strong> Fren, viraj, tümsek gibi manevra yükleri, gövdeye ağırlık merkezinden etkiyen sabit ivme (G) vektörleri olarak uygulanır; tahrik torku ise gövdeye reaksiyon momenti olarak etkir. <strong>(vi) Şasi rijit:</strong> Takozların şasi tarafı ankastre kabul edilir.</p>
+
+<figure>
+<svg viewBox="0 0 880 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#24425f"/></marker>
+    <pattern id="hatch" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="8" stroke="#8a92a0" stroke-width="1.5"/></pattern>
+  </defs>
+  <!-- govde -->
+  <g>
+    <rect x="200" y="60" width="420" height="110" fill="#eef2f6" stroke="#24425f" stroke-width="2"/>
+    <text x="410" y="92" text-anchor="middle" font-size="14" fill="#24425f" font-weight="600">RİJİT GÖVDE</text>
+    <text x="410" y="112" text-anchor="middle" font-size="11.5" fill="#3c4350">m, I_G  (motor + şanzıman + şaft payı + cradle)</text>
+  </g>
+  <!-- CG sembolu -->
+  <g transform="translate(410,145)">
+    <circle r="13" fill="none" stroke="#1b1e24" stroke-width="1.6"/>
+    <path d="M0,0 L13,0 A13,13 0 0 1 0,13 Z M0,0 L-13,0 A13,13 0 0 1 0,-13 Z" fill="#1b1e24"/>
+    <text x="20" y="4" font-size="12" fill="#1b1e24">G</text>
+  </g>
+  <!-- eksenler -->
+  <g stroke="#24425f" stroke-width="1.6" fill="none">
+    <line x1="410" y1="145" x2="510" y2="145" marker-end="url(#arr)"/>
+    <line x1="410" y1="145" x2="410" y2="38" marker-end="url(#arr)"/>
+  </g>
+  <text x="516" y="149" font-size="12" fill="#24425f">x, u_x</text>
+  <text x="416" y="36" font-size="12" fill="#24425f">z, u_z</text>
+  <!-- donme oku -->
+  <path d="M 455 128 A 30 30 0 1 1 456 162" fill="none" stroke="#24425f" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="492" y="188" font-size="12" fill="#24425f">θ_y</text>
+  <!-- yaylar -->
+  <g stroke="#1b1e24" stroke-width="1.8" fill="none">
+    <path d="M250,170 l0,10 l12,6 l-24,12 l24,12 l-24,12 l12,6 l0,10"/>
+    <path d="M560,170 l0,10 l12,6 l-24,12 l24,12 l-24,12 l12,6 l0,10"/>
+  </g>
+  <!-- takoz kutulari kx ky kz -->
+  <text x="268" y="212" font-size="11.5" fill="#3c4350">k_x, k_y, k_z</text>
+  <text x="578" y="212" font-size="11.5" fill="#3c4350">k_x, k_y, k_z</text>
+  <!-- zemin -->
+  <rect x="210" y="238" width="80" height="10" fill="url(#hatch)"/>
+  <line x1="210" y1="238" x2="290" y2="238" stroke="#1b1e24" stroke-width="2"/>
+  <rect x="520" y="238" width="80" height="10" fill="url(#hatch)"/>
+  <line x1="520" y1="238" x2="600" y2="238" stroke="#1b1e24" stroke-width="2"/>
+  <text x="405" y="262" text-anchor="middle" font-size="11.5" fill="#3c4350">şasi (rijit)</text>
+  <!-- konum vektoru -->
+  <line x1="410" y1="145" x2="252" y2="172" stroke="#8a5a1e" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+  <text x="300" y="150" font-size="12" fill="#8a5a1e">d_i</text>
+  <!-- sehim -->
+  <line x1="238" y1="176" x2="238" y2="232" stroke="#2e7d4f" stroke-width="1.4" marker-end="url(#arr)"/>
+  <text x="196" y="208" font-size="12" fill="#2e7d4f">δ_i</text>
+  <text x="640" y="120" font-size="12.5" fill="#3c4350">Her takozda:</text>
+  <text x="640" y="140" font-size="12.5" fill="#1b1e24">δ_i = u + θ × d_i</text>
+  <text x="640" y="160" font-size="12.5" fill="#1b1e24">f_i = −k_i δ_i</text>
+</svg>
+<figcaption><b>Şekil 1 —</b> Kavramsal model: 6 serbestlik dereceli rijit gövde, üç eksenli lineer yaylarla (takozlar) rijit şasiye bağlıdır. \( \mathbf{d}_i \), takozun ağırlık merkezine göre konumu; \( \boldsymbol{\delta}_i \), takoz sehim vektörüdür.</figcaption>
+</figure>
+
+<!-- ═══════════ 3 ═══════════ -->
+<h2 id="s3"><span class="no">3</span>Serbestlik Dereceleri ve Kinematik</h2>
+<p>Gövdenin konumu, referans noktası olarak seçilen <strong>birleşik ağırlık merkezi</strong> \( G \) üzerinden tanımlanan genelleştirilmiş koordinat vektörü ile ifade edilir:</p>
+<div class="eqno">
+$$ \mathbf{q}=\begin{bmatrix}\mathbf{u}\\ \boldsymbol{\theta}\end{bmatrix}
+=\begin{bmatrix}u_x & u_y & u_z & \theta_x & \theta_y & \theta_z\end{bmatrix}^{\!\mathsf T} $$
+<span class="tag">(3.1)</span></div>
+<p>Burada \( \mathbf{u} \) ağırlık merkezinin ötelenmesi, \( \boldsymbol{\theta} \) gövdenin küçük dönme vektörüdür (sırasıyla yalpa/roll, kafa vurma/pitch, savrulma/yaw). Küçük dönmeler için, gövde üzerinde \( G \)'ye göre \( \mathbf{d}_i \) konumundaki bir noktanın (i'nci takozun gövde tarafı bağlantısı) yer değiştirmesi:</p>
+<div class="eqno">
+$$ \boldsymbol{\delta}_i=\mathbf{u}+\boldsymbol{\theta}\times\mathbf{d}_i $$
+<span class="tag">(3.2)</span></div>
+<p>Vektörel çarpım, matris cebrine antisimetrik (skew) matris ile taşınır. Herhangi bir \( \mathbf{a}=[a_x\;a_y\;a_z]^{\mathsf T} \) için:</p>
+<div class="eqno">
+$$ \tilde{\mathbf a}=\begin{bmatrix}0&-a_z&a_y\\ a_z&0&-a_x\\ -a_y&a_x&0\end{bmatrix},
+\qquad \mathbf a\times\mathbf b=\tilde{\mathbf a}\,\mathbf b $$
+<span class="tag">(3.3)</span></div>
+<p>\( \boldsymbol{\theta}\times\mathbf d_i=-\,\mathbf d_i\times\boldsymbol{\theta}=-\tilde{\mathbf d}_i\boldsymbol{\theta} \) özdeşliği kullanılarak (3.2), \( \mathbf q \)'ya lineer bağlı biçimde yazılır:</p>
+<div class="eqno">
+$$ \boldsymbol{\delta}_i=\underbrace{\begin{bmatrix}\mathbf E_3 & -\tilde{\mathbf d}_i\end{bmatrix}}_{\mathbf B_i\;(3\times6)}\;\mathbf q $$
+<span class="tag">(3.4)</span></div>
+<p>\( \mathbf B_i \) <em>kinematik dönüşüm matrisi</em>dir; gövde koordinatlarını i'nci takozun sehimine izdüşürür. Modelin tamamı bu tek kinematik ilişkinin üzerine kurulur: rijitlik matrisi \( \mathbf B_i \)'ler üzerinden birleştirilir (Bölüm 5), çözüm sonrası takoz sehim ve kuvvetleri yine \( \mathbf B_i \) ile geri kazanılır.</p>
+
+<!-- ═══════════ 4 ═══════════ -->
+<h2 id="s4"><span class="no">4</span>Kütle Özelliklerinin Birleştirilmesi</h2>
+<p>Rijit bağlı \( n \) bileşen (motor, şanzıman, braketler, şaft payı…) tek gövdede toplanır. Her bileşenin kütlesi \( m_j \), ağırlık merkezi konumu \( \mathbf c_j \) ve kendi ağırlık merkezine göre atalet tensörü \( \mathbf I_j \) bilinmektedir (CAD "Measure Inertia" çıktısı). Toplam kütle ve birleşik ağırlık merkezi:</p>
+<div class="eqno">
+$$ m=\sum_{j=1}^{n}m_j,\qquad
+\mathbf c_G=\frac{1}{m}\sum_{j=1}^{n}m_j\,\mathbf c_j $$
+<span class="tag">(4.1)</span></div>
+<p>Her bileşenin atalet tensörü, <strong>paralel eksen (Huygens–Steiner) teoremi</strong>nin tensör formu ile birleşik ağırlık merkezine taşınır ve toplanır. \( \mathbf d_j=\mathbf c_j-\mathbf c_G \) olmak üzere:</p>
+<div class="eqno">
+$$ \mathbf I_G=\sum_{j=1}^{n}\Big[\mathbf I_j+m_j\big((\mathbf d_j\!\cdot\!\mathbf d_j)\,\mathbf E_3-\mathbf d_j\mathbf d_j^{\mathsf T}\big)\Big] $$
+<span class="tag">(4.2)</span></div>
+<p>Açık yazımda köşegen ve çarpım terimleri, örneğin \( I_{xx} \) ve \( I_{xz} \) için:
+\( I_{xx}^{G}=\sum\big[I_{xx,j}+m_j(d_{y,j}^2+d_{z,j}^2)\big] \),
+\( I_{xz}^{G}=\sum\big[I_{xz,j}+m_j\,d_{x,j}d_{z,j}\big] \) şeklindedir; tensör (4.2)'de çarpım atalet momentleri eksi işaretle yer alır: \( (\mathbf I)_{13}=-I_{xz} \).</p>
+<p>Referans noktası ağırlık merkezi seçildiği için kütle matrisi <strong>blok köşegen</strong> çıkar — öteleme ve dönme kütle tarafında kuplajsızdır:</p>
+<div class="eqno">
+$$ \mathbf M=\begin{bmatrix} m\,\mathbf E_3 & \mathbf 0\\ \mathbf 0 & \mathbf I_G \end{bmatrix}_{6\times6} $$
+<span class="tag">(4.3)</span></div>
+<div class="note"><span class="t">Not — referans noktası seçimi</span>
+Referans nokta ağırlık merkezinden farklı seçilirse (örneğin bir takoz noktası), \( \mathbf M \)'de \( \pm m\tilde{\mathbf c} \) kuplaj blokları belirir ve yerçekimi yükü moment üretir. Ağırlık merkezi seçimi hem kütle matrisini sadeleştirir hem de G-yüklerinin momentsiz uygulanmasını sağlar; bu rapordaki bütün türetimler bu seçime dayanır.</div>
+
+<!-- ═══════════ 5 ═══════════ -->
+<h2 id="s5"><span class="no">5</span>Rijitlik Matrisinin Kurulması</h2>
+<p>i'nci takozun lokal eksenlerdeki rijitlik matrisi köşegendir: \( \mathbf k_i=\mathrm{diag}(k_x,k_y,k_z)_i \). Takoz eksenleri global eksenlerle hizalıysa doğrudan kullanılır; takoz eğik monte edilmişse global eksenlere döndürülür: \( \mathbf k_i^{\,g}=\mathbf R_i\,\mathbf k_i\,\mathbf R_i^{\mathsf T} \) (\( \mathbf R_i \): lokalden globale dönüşüm matrisi). İncelenen örnekte tüm takozlar hizalıdır (aksiyel yön = düşey Z).</p>
+<p>Sistemin elastik potansiyel enerjisi takoz sehimlerinde depolanır. (3.4) yerine konularak:</p>
+<div class="eqno">
+$$ U=\tfrac12\sum_{i=1}^{N}\boldsymbol{\delta}_i^{\mathsf T}\mathbf k_i\,\boldsymbol{\delta}_i
+=\tfrac12\,\mathbf q^{\mathsf T}\Big(\underbrace{\sum_{i=1}^{N}\mathbf B_i^{\mathsf T}\mathbf k_i\,\mathbf B_i}_{\displaystyle \mathbf K}\Big)\mathbf q $$
+<span class="tag">(5.1)</span></div>
+<p>Böylece 6×6 global rijitlik matrisi, her takozun katkısının doğrudan toplamı olarak elde edilir. \( \mathbf B_i=[\mathbf E_3\;\; -\tilde{\mathbf d}_i] \) açılırsa blok yapısı görünür hâle gelir:</p>
+<div class="eqno">
+$$ \mathbf K=\begin{bmatrix}\mathbf K_{tt} & \mathbf K_{t\theta}\\ \mathbf K_{t\theta}^{\mathsf T} & \mathbf K_{\theta\theta}\end{bmatrix},\qquad
+\begin{aligned}
+\mathbf K_{tt}&=\textstyle\sum_i \mathbf k_i\\
+\mathbf K_{t\theta}&=-\textstyle\sum_i \mathbf k_i\,\tilde{\mathbf d}_i\\
+\mathbf K_{\theta\theta}&=\textstyle\sum_i \tilde{\mathbf d}_i^{\mathsf T}\mathbf k_i\,\tilde{\mathbf d}_i
+\end{aligned} $$
+<span class="tag">(5.2)</span></div>
+<p>Fiziksel okuma: \( \mathbf K_{tt} \) yalın öteleme rijitliği (yayların doğrudan toplamı), \( \mathbf K_{\theta\theta} \) takoz kollarının (moment kolu \( \mathbf d_i \)) oluşturduğu dönme rijitliği, \( \mathbf K_{t\theta} \) ise <strong>öteleme–dönme kuplajıdır</strong>. Takoz düzleminin ağırlık merkezinden geçmemesi (\( d_z\neq0 \)) ve önden arkaya asimetrik yerleşim bu bloğu sıfırdan farklı kılar; sonuçta örneğin düşey zıplama (bounce) ile kafa vurma (pitch) modları birbirine karışır. Takoz yerleşimini elastik merkez ağırlık merkezine yaklaşacak biçimde ayarlamak (odaklama / focalization), bu kuplajı azaltmanın klasik tasarım aracıdır.</p>
+
+<!-- ═══════════ 6 ═══════════ -->
+<h2 id="s6"><span class="no">6</span>Statik ve Quasi-Statik Çözüm</h2>
+<p>Gövdeye etkiyen dış yükler 6 bileşenli genelleştirilmiş kuvvet vektöründe toplanır: \( \mathbf F=[\mathbf F_t;\;\mathbf T] \) (kuvvet + ağırlık merkezine göre moment). Denge, lineer sistemin çözümüdür:</p>
+<div class="eqno">
+$$ \mathbf K_{\text{stat}}\,\mathbf q=\mathbf F
+\;\;\Longrightarrow\;\;
+\mathbf q=\mathbf K_{\text{stat}}^{-1}\mathbf F,\qquad
+\boldsymbol{\delta}_i=\mathbf B_i\,\mathbf q,\qquad
+\mathbf f_i=\mathbf k_i\,\boldsymbol{\delta}_i $$
+<span class="tag">(6.1)</span></div>
+<p>Burada \( \mathbf f_i \), i'nci takozun şasiye ilettiği kuvvettir (gövdeye etkiyen tepki \( -\mathbf f_i \)). Statik ve yavaş manevra durumlarında takozların <strong>statik rijitliği</strong> kullanılır. Yük vektörleri iki tipte kurulur:</p>
+<p><strong>(a) İvme (G) yükleri.</strong> Yerçekimi ve manevra ivmeleri ağırlık merkezinden etkir; referans nokta ağırlık merkezi olduğundan moment bileşeni sıfırdır:</p>
+<div class="eqno">
+$$ \mathbf F_{G}=\begin{bmatrix} m\,\mathbf a \\ \mathbf 0 \end{bmatrix},\qquad
+\text{örn. statik: } \mathbf a=[0,\,0,\,-g]^{\mathsf T},\;\;
+\text{tümsek: } \mathbf a=[0,\,0,\,-n_z g]^{\mathsf T},\;\;
+\text{fren: } \mathbf a=[-n_x g,\,0,\,-g]^{\mathsf T} $$
+<span class="tag">(6.2)</span></div>
+<p>Her yük durumunun \( n_x,n_y,n_z \) katsayıları araç yük kitabından (load case spesifikasyonu) alınır; tümsek, fren, viraj, çukur, bordür darbesi gibi satırların tamamı aynı reçeteyle çözülür.</p>
+<p><strong>(b) Tahrik torku reaksiyonu.</strong> Şaft üzerinden aktarılan tork, güç grubuna tahrik hattı ekseni (burada X) etrafında reaksiyon momenti olarak geri etkir: \( \mathbf F_T=[\,\mathbf 0;\; \mp T_s\,\hat{\mathbf e}_x] \). Şaft torku, motor maksimum torkundan aktarma organları çevrim zinciriyle hesaplanır:</p>
+<div class="eqno">
+$$ T_s=T_{e}\;\underbrace{R_{\text{stall}}}_{\text{tork konvertörü}}\;\cdot\;i_{\text{vites}}\;\cdot\;i_{\text{transfer}}\;\cdot\;\phi_{\text{aks}} $$
+<span class="tag">(6.3)</span></div>
+<p>\( \phi_{\text{aks}} \), ilgili çıkış şaftına düşen tork payıdır (ön/arka aks dağılımı). Sistem lineer olduğundan <strong>süperpozisyon geçerlidir</strong>: bileşik bir yük durumu (örn. "Forward" = statik ağırlık + ileri vites tork reaksiyonu), tekil çözümlerin toplamıdır. Bu özellik Bölüm 8.4'te doğrulama aracı olarak da kullanılmıştır.</p>
+
+<!-- ═══════════ 7 ═══════════ -->
+<h2 id="s7"><span class="no">7</span>Modal Analiz</h2>
+<p>Sönümsüz serbest titreşim denklemi \( \mathbf M\ddot{\mathbf q}+\mathbf K_{\text{din}}\,\mathbf q=\mathbf 0 \)'dır. Harmonik çözüm \( \mathbf q=\boldsymbol{\varphi}\,e^{\mathrm i\omega t} \) yerine konularak genelleştirilmiş özdeğer problemi elde edilir:</p>
+<div class="eqno">
+$$ \big(\mathbf K_{\text{din}}-\omega^2\,\mathbf M\big)\,\boldsymbol{\varphi}=\mathbf 0
+\;\;\Longrightarrow\;\;
+\det\!\big(\mathbf K_{\text{din}}-\omega^2\mathbf M\big)=0,\qquad f_r=\frac{\omega_r}{2\pi} $$
+<span class="tag">(7.1)</span></div>
+<p>\( \mathbf M \) ve \( \mathbf K \) simetrik, pozitif tanımlı olduğundan altı gerçek, pozitif özdeğer \( \omega_r^2 \) ve bunlara karşılık altı <strong>rijit gövde modu</strong> \( \boldsymbol{\varphi}_r \) bulunur. Mod şekli vektörünün baskın bileşenine göre modlara roll, pitch, bounce, yaw, fore-aft, lateral adları verilir; ancak \( \mathbf K_{t\theta}\neq\mathbf 0 \) ve atalet tensöründeki çarpım terimleri (özellikle \( I_{xz} \)) nedeniyle modlar genelde saf değil <em>kuplajlıdır</em>.</p>
+<h3>7.1 Dinamik rijitlik</h3>
+<p>Elastomer takozlar frekans ve genlik bağımlıdır: küçük genlikli, yüksek frekanslı tahrikte ölçülen <strong>dinamik rijitlik</strong>, statik değerin belirgin üzerindedir (dolgu elastomerlerde Payne etkisi; tedarikçi föyünde tipik ölçüm koşulu ±0,1 mm @ 50 Hz). Bu nedenle modal analizde \( \mathbf K \), dinamik rijitliklerle; statik/quasi-statik çökme analizinde ise statik rijitliklerle kurulur. Tüm yaylar aynı oranda sertleştiğinde frekansların yaklaşık \( \sqrt{k_{\text{din}}/k_{\text{stat}}} \) katına çıkacağı öngörülebilir — Bölüm 8.5'te bu oran sayısal olarak da görülmektedir (≈ 1,24).</p>
+<h3>7.2 Frekans yerleşimi için değerlendirme çerçevesi</h3>
+<p>Rijit gövde modlarının hedef bandı, alttan süspansiyon/sürüş konforu modlarının (≈ 1–2,5 Hz) üzerinde, üstten motorun rölanti ateşleme tahrikinin altında kalacak biçimde seçilir. Dört zamanlı bir motorun ateşleme frekansı \( f_{\text{ateş}}=\dfrac{N_{\text{dev/dk}}}{60}\cdot\dfrac{z}{2} \) ile hesaplanır (\( z \): silindir sayısı). Örneğin 6 silindirli bir dizelde 650 d/dk rölantide \( f_{\text{ateş}}\approx32{,}5 \) Hz olup, yaygın tasarım pratiği en yüksek rijit gövde modunun \( f_{\text{ateş}}/\sqrt2 \) sınırının altında tutulmasıdır (izolasyon bölgesine geçiş koşulu). Bu değerlendirme, motorun gerçek rölanti devri ve tahrik mertebeleriyle teyit edilmelidir.</p>
+
+<!-- ═══════════ 8 ═══════════ -->
+<h2 id="s8"><span class="no">8</span>Sayısal Örnek: TTAR Güç Grubu</h2>
+<p>Yöntem, 8×8 TTAR güç grubuna uygulanmış ve aynı girdilerle kurulan Adams modeli (BMC_TTAR_2031) çıktılarıyla karşılaştırılmıştır. Koordinat düzeni Adams nokta tablosuyla aynıdır: X boyuna (+ geri), Y enine (+ <em>sağ</em>), Z düşey (+ yukarı). Gövde beş bileşenden birleştirilir; 101,3 kg'lık kardan şaftının yarısı, şanzıman çıkışındaki kardan noktasına yığılı kütle olarak eklenir.</p>
+
+<table>
+<caption>Tablo 1 — Bileşen kütle özellikleri (CAD ölçümleri; atalet, bileşenin kendi ağırlık merkezine göre)</caption>
+<tr><th>Bileşen</th><th>m [kg]</th><th>c_x [mm]</th><th>c_y [mm]</th><th>c_z [mm]</th><th>I_xx</th><th>I_yy</th><th>I_zz [kg·m²]</th></tr>
+<tr><td class="l">Motor</td><td>1386,3</td><td>−321,36</td><td>4,89</td><td>859,33</td><td>110,7</td><td>260,2</td><td>205,9</td></tr>
+<tr><td class="l">Şanzıman</td><td>778,3</td><td>905,82</td><td>11,17</td><td>683,81</td><td>16,43</td><td>68,15</td><td>64,91</td></tr>
+<tr><td class="l">Şaft payı (½ × 101,3)</td><td>50,65</td><td>3041,58</td><td>0,00</td><td>−168,42</td><td colspan="3" class="c">yığılı kütle</td></tr>
+<tr><td class="l">Sol cradle braketi</td><td>39,635</td><td>2158,36</td><td>−274,78</td><td>−39,54</td><td>0,237</td><td>3,851</td><td>3,727</td></tr>
+<tr><td class="l">Sağ cradle braketi</td><td>39,637</td><td>2150,65</td><td>318,79</td><td>−39,54</td><td>0,230</td><td>3,858</td><td>3,727</td></tr>
+</table>
+
+<table>
+<caption>Tablo 2 — Takoz konumları ve rijitlikleri (LMT-1433-37, 55 ShA; aksiyel yön = Z)</caption>
+<tr><th>Takoz</th><th>x [mm]</th><th>y [mm]</th><th>z [mm]</th><th>k_x = k_y statik</th><th>k_z statik</th><th>k_x = k_y dinamik</th><th>k_z dinamik [N/mm]</th></tr>
+<tr><td class="l">Sağ ön</td><td>−948,70</td><td>+50,81</td><td>371,02</td><td rowspan="6" class="c">1252</td><td rowspan="6" class="c">640</td><td rowspan="6" class="c">2055</td><td rowspan="6" class="c">977</td></tr>
+<tr><td class="l">Sol ön</td><td>−948,70</td><td>−50,81</td><td>371,02</td></tr>
+<tr><td class="l">Sağ orta</td><td>535,31</td><td>+357,19</td><td>635,27</td></tr>
+<tr><td class="l">Sol orta</td><td>535,31</td><td>−357,11</td><td>635,27</td></tr>
+<tr><td class="l">Sağ arka</td><td>636,81</td><td>+357,19</td><td>635,27</td></tr>
+<tr><td class="l">Sol arka</td><td>636,81</td><td>−357,11</td><td>635,27</td></tr>
+</table>
+
+<figure>
+<svg viewBox="-1220 -560 4640 1120" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="arr2" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#24425f"/></marker></defs>
+  <!-- eksen ve merkez cizgisi -->
+  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c9cdd3" stroke-width="3" stroke-dasharray="26 16"/>
+  <line x1="-1150" y1="-500" x2="-800" y2="-500" stroke="#24425f" stroke-width="6" marker-end="url(#arr2)"/>
+  <text x="-770" y="-478" font-size="60" fill="#24425f">+X</text>
+  <line x1="-1150" y1="-500" x2="-1150" y2="-250" stroke="#24425f" stroke-width="6" marker-end="url(#arr2)"/>
+  <text x="-1130" y="-190" font-size="60" fill="#24425f">−Y</text>
+  <text x="-1150" y="440" font-size="54" fill="#5a6270">+Y (sağ) ↑ şekilde üsttedir</text>
+  <!-- takozlar (kare) : y_cizim = -Y -->
+  <g fill="#fff" stroke="#1b1e24" stroke-width="7">
+    <rect x="-988" y="-90" width="80" height="80"/>   <!-- sag on  (+50.8) -->
+    <rect x="-988" y="10"  width="80" height="80"/>   <!-- sol on  (-50.8) -->
+    <rect x="495"  y="-397" width="80" height="80"/>  <!-- sag orta -->
+    <rect x="495"  y="317"  width="80" height="80"/>  <!-- sol orta -->
+    <rect x="597"  y="-397" width="80" height="80"/>  <!-- sag arka -->
+    <rect x="597"  y="317"  width="80" height="80"/>  <!-- sol arka -->
+  </g>
+  <text x="-948" y="-140" text-anchor="middle" font-size="52" fill="#1b1e24">ön takozlar</text>
+  <text x="586" y="-450" text-anchor="middle" font-size="52" fill="#1b1e24">sağ orta · sağ arka</text>
+  <text x="586" y="480" text-anchor="middle" font-size="52" fill="#1b1e24">sol orta · sol arka</text>
+  <!-- bilesen CG'leri -->
+  <g>
+    <circle cx="-321" cy="-5" r="34" fill="none" stroke="#5a6270" stroke-width="6"/>
+    <text x="-321" y="-60" text-anchor="middle" font-size="50" fill="#5a6270">motor G</text>
+    <circle cx="906" cy="-11" r="34" fill="none" stroke="#5a6270" stroke-width="6"/>
+    <text x="906" y="-60" text-anchor="middle" font-size="50" fill="#5a6270">şanzıman G</text>
+    <circle cx="2158" cy="275" r="30" fill="none" stroke="#5a6270" stroke-width="6"/>
+    <text x="2158" y="360" text-anchor="middle" font-size="50" fill="#5a6270">sol cradle</text>
+    <circle cx="2151" cy="-319" r="30" fill="none" stroke="#5a6270" stroke-width="6"/>
+    <text x="2151" y="-370" text-anchor="middle" font-size="50" fill="#5a6270">sağ cradle</text>
+    <circle cx="3042" cy="0" r="30" fill="none" stroke="#5a6270" stroke-width="6"/>
+    <text x="3042" y="-60" text-anchor="middle" font-size="50" fill="#5a6270">şaft noktası</text>
+  </g>
+  <!-- birlesik CG sembolu -->
+  <g transform="translate(255,-8)">
+    <circle r="52" fill="#fff" stroke="#1b1e24" stroke-width="7"/>
+    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#1b1e24"/>
+    <text x="0" y="130" text-anchor="middle" font-size="54" fill="#1b1e24" font-weight="600">G (254,7 · 7,5)</text>
+  </g>
+</svg>
+<figcaption><b>Şekil 2 —</b> Üstten görünüş (X–Y düzlemi, ölçekli): altı takoz, bileşen ağırlık merkezleri ve birleşik ağırlık merkezi. Cradle braketleri ile şaft noktasının geride oluşu, birleşik ağırlık merkezini takoz grubunun arkasına çeker.</figcaption>
+</figure>
+
+<figure>
+<svg viewBox="-1220 -1030 4640 1330" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr3" markerWidth="9" markerHeight="9" refX="7" refY="3.5" orient="auto"><path d="M0,0 L8,3.5 L0,7 Z" fill="#24425f"/></marker>
+    <pattern id="hatch2" width="26" height="26" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="26" stroke="#8a92a0" stroke-width="5"/></pattern>
+  </defs>
+  <line x1="-1150" y1="0" x2="3330" y2="0" stroke="#c9cdd3" stroke-width="3" stroke-dasharray="26 16"/>
+  <text x="3160" y="-24" font-size="46" fill="#5a6270">Z = 0</text>
+  <line x1="-1150" y1="-960" x2="-800" y2="-960" stroke="#24425f" stroke-width="6" marker-end="url(#arr3)"/>
+  <text x="-770" y="-938" font-size="60" fill="#24425f">+X</text>
+  <line x1="-1150" y1="-960" x2="-1150" y2="-710" stroke="#24425f" stroke-width="6" marker-end="url(#arr3)"/>
+  <text x="-1130" y="-650" font-size="60" fill="#24425f">+Z</text>
+  <!-- takozlar yan gorunus: on z=371, orta/arka z=635 -->
+  <g fill="#fff" stroke="#1b1e24" stroke-width="7">
+    <rect x="-988" y="-411" width="80" height="80"/>
+    <rect x="495" y="-675" width="80" height="80"/>
+    <rect x="597" y="-675" width="80" height="80"/>
+  </g>
+  <g fill="url(#hatch2)" stroke="none">
+    <rect x="-998" y="-331" width="100" height="34"/>
+    <rect x="485" y="-595" width="100" height="34"/>
+    <rect x="587" y="-595" width="100" height="34"/>
+  </g>
+  <text x="-948" y="-460" text-anchor="middle" font-size="50" fill="#1b1e24">ön (z=371)</text>
+  <text x="586" y="-724" text-anchor="middle" font-size="50" fill="#1b1e24">orta+arka (z=635)</text>
+  <!-- CG'ler -->
+  <circle cx="-321" cy="-859" r="34" fill="none" stroke="#5a6270" stroke-width="6"/>
+  <text x="-321" y="-910" text-anchor="middle" font-size="50" fill="#5a6270">motor G (z=859)</text>
+  <circle cx="906" cy="-684" r="34" fill="none" stroke="#5a6270" stroke-width="6"/>
+  <text x="1020" y="-720" font-size="50" fill="#5a6270">şanzıman G (z=684)</text>
+  <circle cx="2154" cy="40" r="30" fill="none" stroke="#5a6270" stroke-width="6"/>
+  <text x="2154" y="130" text-anchor="middle" font-size="50" fill="#5a6270">cradle (z=−40)</text>
+  <circle cx="3042" cy="168" r="30" fill="none" stroke="#5a6270" stroke-width="6"/>
+  <text x="3042" y="260" text-anchor="middle" font-size="50" fill="#5a6270">şaft (z=−168)</text>
+  <g transform="translate(255,-746)">
+    <circle r="52" fill="#fff" stroke="#1b1e24" stroke-width="7"/>
+    <path d="M0,0 L52,0 A52,52 0 0 1 0,52 Z M0,0 L-52,0 A52,52 0 0 1 0,-52 Z" fill="#1b1e24"/>
+    <text x="0" y="-90" text-anchor="middle" font-size="54" fill="#1b1e24" font-weight="600">G (z=746)</text>
+  </g>
+</svg>
+<figcaption><b>Şekil 3 —</b> Yandan görünüş (X–Z düzlemi, ölçekli). Ağırlık merkezi (z≈746) takoz düzlemlerinin (371 / 635) üzerindedir; bu düşey ofset \( \mathbf K_{t\theta} \) kuplaj bloğunun ana kaynağıdır ve boyuna/enine ötelemeleri kafa vurma/yalpa dönmeleriyle birleştirir.</figcaption>
+</figure>
+
+<h3>8.1 Adım 1 — Kütle birleştirme</h3>
+<p>(4.1) ve (4.2) uygulanır:</p>
+$$ m=2294{,}522\ \text{kg},\qquad \mathbf c_G=\begin{bmatrix}254{,}67\\ 7{,}50\\ 746{,}05\end{bmatrix}\text{mm},\qquad
+\mathbf I_G=\begin{bmatrix} 246{,}7 & -4{,}9 & 368{,}9\\ -4{,}9 & 1917{,}6 & 1{,}1\\ 368{,}9 & 1{,}1 & 1754{,}8 \end{bmatrix}\text{kg}\!\cdot\!\text{m}^2 $$
+<div class="note check"><span class="t">Doğrulama · kütle birleştirme</span>
+Adams toplu kütle çıktısı: m = 2294,482 kg, ağırlık merkezi (254,679 · 7,504 · 746,050) mm — model ile birebir örtüşür. Tensördeki büyük \( (\mathbf I_G)_{13}=368{,}9 \) terimi (yani \( I_{xz}=-368{,}9\ \text{kg}\!\cdot\!\text{m}^2 \)), motor ağırlık merkezinin yüksek-önde, şaft/cradle kütlelerinin alçak-geride olmasından doğar; roll–yaw ve bounce–pitch kuplajlarının kütle tarafındaki kaynağıdır.</div>
+
+<h3>8.2 Adım 2 — Rijitlik matrisi</h3>
+<p>(5.2) blokları statik rijitliklerle (birim: kuvvet blokları MN/m, kuplaj MN/rad, dönme MN·m/rad):</p>
+$$ \mathbf K_{tt}=\begin{bmatrix}7{,}512&0&0\\0&7{,}512&0\\0&0&3{,}840\end{bmatrix}\!,\;\;
+\mathbf K_{t\theta}=\begin{bmatrix}0&-1{,}494&0{,}056\\1{,}494&0&-1{,}354\\-0{,}029&0{,}692&0\end{bmatrix}\!,\;\;
+\mathbf K_{\theta\theta}=\begin{bmatrix}0{,}744&-0{,}005&-0{,}946\\-0{,}005&2{,}555&-0{,}011\\-0{,}946&-0{,}011&4{,}835\end{bmatrix} $$
+<p>Dinamik rijitliklerle aynı yapı: \( \mathbf K_{tt}=\mathrm{diag}(12{,}330;\,12{,}330;\,5{,}862) \) MN/m; kuplaj bloğunda örneğin \( (\mathbf K_{t\theta})_{12}=-2{,}452 \) MN/rad, dönme bloğunda \( (\mathbf K_{\theta\theta})_{33}=7{,}935 \) MN·m/rad. \( \mathbf K_{t\theta} \)'daki baskın terimler doğrudan yorumlanabilir: \( (1,2) \) elemanı, ağırlık merkezinin takoz düzlemlerinin üzerinde oluşundan (\(\sum k_x d_z\)); \( (2,3) \) elemanı ise takoz grubunun ağırlık merkezine göre boyuna asimetrisinden (\(\sum k_y d_x\)) gelir.</p>
+
+<h3>8.3 Adım 3 — Statik çökme (yerçekimi)</h3>
+<p>\( \mathbf F=[0,0,-mg,0,0,0]^{\mathsf T} \), \( mg=22{,}51 \) kN ile (6.1) çözülür. Genelleştirilmiş çözüm \( \mathbf u=(+0{,}38;\,+0{,}08;\,-6{,}21) \) mm, \( \boldsymbol{\theta}=(-0{,}485;\,+1{,}901;\,-0{,}072) \) mrad — gövde çökerken hafifçe öne kafa vurur (ağırlık merkezi arka takoz grubuna yakın olduğundan arka daha çok ezilir) ve ağırlık merkezinin +Y'deki 7,5 mm'lik kaçıklığı küçük bir yalpa doğurur.</p>
+
+<table>
+<caption>Tablo 3 — Statik durum: takoz düşey sehimleri ve kuvvetleri (statik rijitlik). Parantez içi: Adams</caption>
+<tr><th>Takoz</th><th>δ_z model [mm]</th><th>δ_z Adams [mm]</th><th>Takoz düşey kuvveti [kN]</th></tr>
+<tr><td class="l">Sağ ön</td><td>−3,94</td><td>−4,0 <span class="ok">✓</span></td><td>2,52</td></tr>
+<tr><td class="l">Sol ön</td><td>−3,89</td><td>−4,0 <span class="ok">✓</span></td><td>2,49</td></tr>
+<tr><td class="l">Sağ orta</td><td>−6,91</td><td>−7,0 <span class="ok">✓</span></td><td>4,42</td></tr>
+<tr><td class="l">Sol orta</td><td>−6,56</td><td>−6,6 <span class="ok">✓</span></td><td>4,20</td></tr>
+<tr><td class="l">Sağ arka</td><td>−7,10</td><td>−7,1 <span class="ok">✓</span></td><td>4,55</td></tr>
+<tr><td class="l">Sol arka</td><td>−6,76</td><td>−6,8 <span class="ok">✓</span></td><td>4,32</td></tr>
+<tr class="sum"><td class="l">Toplam / dağılım</td><td colspan="2" class="c">ön %22,3 · orta+arka %77,7</td><td>22,51 = mg ✓</td></tr>
+</table>
+<p>Sağlama bağımsız yoldan da yapılabilir: takoz grubu ağırlıklı merkezleri ile ağırlık merkezi arasındaki kol oranı, ön paya \( \approx (586-255)/(586+949)=\%21{,}6 \) verir — çözümle uyumludur. Sağ tarafın solu ~0,35 mm geçmesi, ağırlık merkezinin +Y (sağ) kaçıklığının doğrudan sonucudur.</p>
+
+<h3>8.4 Adım 4 — Tork reaksiyonu ve süperpozisyon</h3>
+<p>(6.3) ile, \( T_e=3000 \) Nm, \( R_{\text{stall}}=1{,}62 \), transfer 1,407 ve aks payları (ön 1 / arka 2,6 / toplam 3,6):</p>
+$$ T_{s,\text{ileri}}=3000\cdot1{,}62\cdot3{,}51\cdot1{,}407\cdot\tfrac{1}{3{,}6}=6667{,}1\ \text{Nm},\qquad
+T_{s,\text{geri}}=-3000\cdot1{,}62\cdot4{,}8\cdot1{,}407\cdot\tfrac{2{,}6}{3{,}6}=-23\,705\ \text{Nm} $$
+<p>İleri vites reaksiyonu \( \mathbf F_T=[\mathbf 0;\,-T_s\hat{\mathbf e}_x] \) tek başına çözülür ve statik çözümle toplanır ("Forward" yük durumu). Yalın tork çözümü orta/arka takozlarda \( \mp6{,}87 \) mm düşey sehim üretir (sağ taraf ezilir, sol boşalır):</p>
+
+<table>
+<caption>Tablo 4 — Süperpozisyon doğrulaması: Forward (2. vites) yük durumu, düşey sehimler [mm]</caption>
+<tr><th>Takoz</th><th>Statik</th><th>+ Tork (6667 Nm)</th><th>= Model toplam</th><th>Adams "Forward"</th></tr>
+<tr><td class="l">Sağ ön</td><td>−3,94</td><td>−0,98</td><td>−4,92</td><td>−5,0 <span class="ok">✓</span></td></tr>
+<tr><td class="l">Sol ön</td><td>−3,89</td><td>+0,98</td><td>−2,91</td><td>−3,0 <span class="ok">✓</span></td></tr>
+<tr><td class="l">Sağ orta</td><td>−6,91</td><td>−6,87</td><td>−13,78</td><td>−14,0 <span class="ok">✓</span></td></tr>
+<tr><td class="l">Sol orta</td><td>−6,56</td><td>+6,87</td><td>+0,31</td><td>+0,3 <span class="ok">✓</span></td></tr>
+<tr><td class="l">Sağ arka</td><td>−7,10</td><td>−6,87</td><td>−13,98</td><td>−14,0 <span class="ok">✓</span></td></tr>
+<tr><td class="l">Sol arka</td><td>−6,76</td><td>+6,87</td><td>+0,11</td><td>+0,3 <span class="ok">✓</span></td></tr>
+</table>
+<p>Uyum, hem tork zinciri yorumunun hem de lineer süperpozisyonun doğruluğunu gösterir. (Adams satırındaki küçük X–Y bileşenleri, burada modellenmeyen ikincil boyuna reaksiyonlardan gelir; baskın düşey davranış tam olarak yakalanmıştır.)</p>
+
+<h3>8.5 Adım 5 — Modal analiz</h3>
+<p>(7.1), dinamik rijitliklerle kurulan \( \mathbf K_{\text{din}} \) ve (4.3) kütle matrisiyle çözülür:</p>
+
+<table>
+<caption>Tablo 5 — Rijit gövde modları: model vs Adams. Karşılaştırma için statik rijitlikle hesaplanan frekanslar da verilmiştir</caption>
+<tr><th>Mod</th><th>f model (k_din) [Hz]</th><th>f Adams [Hz]</th><th>f (k_stat) [Hz]</th><th>Baskın hareket (mod şekli)</th><th>Adams etiketi</th></tr>
+<tr><td class="c">1</td><td>5,041</td><td>5,048 <span class="ok">✓</span></td><td>4,053</td><td class="l">Yalpa (roll) + az yaw/lateral</td><td class="c">roll</td></tr>
+<tr><td class="c">2</td><td>6,111</td><td>6,109 <span class="ok">✓</span></td><td>4,933</td><td class="l">Kafa vurma (pitch) + bounce/fore-aft</td><td class="c">pitch</td></tr>
+<tr><td class="c">3</td><td>8,364</td><td>8,365 <span class="ok">✓</span></td><td>6,764</td><td class="l">Zıplama (bounce) + pitch</td><td class="c">pitch</td></tr>
+<tr><td class="c">4</td><td>10,147</td><td>10,148 <span class="ok">✓</span></td><td>7,923</td><td class="l">Yanal + savrulma (yaw) + roll</td><td class="c">yaw</td></tr>
+<tr><td class="c">5</td><td>12,071</td><td>12,070 <span class="ok">✓</span></td><td>9,433</td><td class="l">Boyuna (fore-aft) + pitch</td><td class="c">pitch + fore-aft</td></tr>
+<tr><td class="c">6</td><td>21,206</td><td>21,218 <span class="ok">✓</span></td><td>16,627</td><td class="l">Yalpa (yüksek roll) + yaw</td><td class="c">roll</td></tr>
+</table>
+
+<p>Mod şekilleri (en büyük bileşene normalize) kuplajı sayısal olarak gösterir; örneğin Mod 3'te \( \boldsymbol{\varphi}=[u_x{=}{-}0{,}18;\;u_z{=}{-}1{,}00;\;\theta_y{=}{-}0{,}45] \) — saf zıplama değil, zıplama–kafa vurma birleşimidir. İki yalpa modunun (5,0 ve 21,2 Hz) ayrışması klasiktir: alçak mod, gövdenin takoz düzlemi altındaki sanal salınım merkezi etrafında; yüksek mod, ağırlık merkezine yakın eksen etrafındaki yalpadır ve dar ön takoz izi (±50,8 mm) ile geniş orta/arka iz (±357 mm) arasındaki fark tarafından biçimlenir. Statik rijitlik sütunu, dinamik sertleşmenin frekansları ortalama \( \sqrt{k_{\text{din}}/k_{\text{stat}}}\approx1{,}24 \) katına taşıdığını doğrular — modal analizde dinamik rijitlik kullanmanın gerekçesi budur. Bölüm 7.2 çerçevesiyle: 5,0 Hz'lik en düşük mod süspansiyon bandının güvenle üzerindedir; 21,2 Hz'lik en yüksek mod ise 6 silindirli bir dizelin ≈650 d/dk rölanti ateşleme frekansı (≈32,5 Hz) için \( 32{,}5/\sqrt2\approx23{,}0 \) Hz sınırının altında kalır.</p>
+
+<div class="note check"><span class="t">Doğrulama özeti</span>
+Altı doğal frekansın tamamı Adams ile ≤ 0,012 Hz (&lt; %0,06) farkla, statik çökmeler ≤ 0,1 mm farkla, Forward yük durumu süperpozisyonla ≤ 0,2 mm farkla örtüşmektedir. Bu, Adams modelinin bu analiz kapsamında tam olarak "6 SD rijit gövde + 6 lineer üç eksenli yay" matematiğine eşdeğer olduğunu gösterir.</div>
+
+<h3>8.6 Lineer modelin sınırına işaret eden gözlem</h3>
+<p>Süperpozisyon geri vitese uygulandığında (\( T_s=-23\,705 \) Nm) lineer model orta/arka takozlarda \( -31{,}2\ldots+17{,}5 \) mm öngörür; 3g düşey tümsek durumu için arka takozlarda \( -19{,}7\ldots-21{,}3 \) mm çıkar. Oysa Adams çıktısında bu satırların tamamı \( \pm15 \) mm civarında yığılmaktadır. Bu sistematik doyum, Adams takoz tanımında büyük sehimde devreye giren bir <strong>ilerleyen rijitlik / hareket sınırlayıcı (snubber, bump-stop veya nonlineer kuvvet–sehim eğrisi)</strong> bulunduğuna işaret eder. Lineer model bu örnekte yaklaşık ±10 mm sehim bandında Adams ile birebirdir; bunun ötesindeki yük durumları için takoz spline tanımının teyit edilmesi ve gerekirse Bölüm 9.1'deki genişletmenin uygulanması önerilir.</p>
+
+<!-- ═══════════ 9 ═══════════ -->
+<h2 id="s9"><span class="no">9</span>Geçerlilik Sınırları ve Genişletme Yolları</h2>
+<h3>9.1 Nonlineer takoz karakteristiği</h3>
+<p>Elastomer takozun kuvvet–sehim eğrisi büyük sehimde sertleşir; sınırlayıcıya oturma ile süreksiz artar. Model, \( \mathbf f_i=\mathbf k_i\boldsymbol{\delta}_i \) yerine eksen bazında ölçülmüş eğrilerle \( f=f(\delta) \) kurularak genişletilir; statik çözüm bu durumda Newton–Raphson iterasyonuna döner (\( \mathbf K \) yerine her adımda teğet rijitlik). Bölüm 8.6'daki ±15 mm doyumu tam olarak bu sınıfa girer.</p>
+<h3>9.2 Eğik takozlar</h3>
+<p>Takoz lokal eksenleri araç eksenlerinden farklıysa Bölüm 5'teki \( \mathbf R_i\mathbf k_i\mathbf R_i^{\mathsf T} \) dönüşümü uygulanır. Eğik yerleşim, tasarımcıya \( \mathbf K_{t\theta} \) kuplajını yönetme (mod odaklama, tork ekseni ayrıştırma — TRA/torque-roll-axis yaklaşımı) imkânı verir.</p>
+<h3>9.3 Sönüm ve zorlanmış titreşim</h3>
+<p>Referans model sönümsüzdür (Adams çıktısında sönüm oranı 0). Elastomerin kayıp faktörü, viskoz eşdeğer \( \mathbf C=\sum\mathbf B_i^{\mathsf T}\mathbf c_i\mathbf B_i \) matrisiyle eklenir; doğal frekanslar kompleks özdeğer probleminden bulunur. Aynı altyapı, motor tahrik mertebeleri altında zorlanmış titreşim ve şasiye iletilen kuvvet (izolasyon oranı / transmissibility) hesabına doğrudan genişler: \( \mathbf q(\omega)=(\mathbf K+\mathrm i\omega\mathbf C-\omega^2\mathbf M)^{-1}\mathbf F(\omega) \).</p>
+<h3>9.4 Rijitlik varsayımının sınırı</h3>
+<p>Güç grubu eğilme modları takoz modlarına yaklaşırsa (uzun powerpack, hafif blok) tek rijit gövde varsayımı bozulur; model, motor–şanzıman arasını elastik bağlayan iki gövdeli sürüme ya da FE tabanlı esnek gövdeye taşınmalıdır. Ayrıca şasi esnekliği, takoz rijitliğiyle seri çalışarak etkin rijitliği düşürebilir.</p>
+
+<!-- ═══════════ 10 ═══════════ -->
+<h2 id="s10"><span class="no">10</span>Semboller</h2>
+<table>
+<tr><th style="width:22%">Sembol</th><th>Tanım</th><th style="width:18%">Birim</th></tr>
+<tr><td class="c">\( \mathbf q=[\mathbf u;\boldsymbol{\theta}] \)</td><td class="l">Genelleştirilmiş koordinatlar: ağırlık merkezi ötelemesi ve küçük dönme vektörü</td><td class="c">m, rad</td></tr>
+<tr><td class="c">\( \mathbf d_i,\ \tilde{\mathbf d}_i \)</td><td class="l">i'nci takozun ağırlık merkezine göre konumu ve skew (antisimetrik) matrisi</td><td class="c">m</td></tr>
+<tr><td class="c">\( \mathbf B_i \)</td><td class="l">Kinematik dönüşüm matrisi, \( [\mathbf E_3\;\; -\tilde{\mathbf d}_i] \)</td><td class="c">—</td></tr>
+<tr><td class="c">\( \boldsymbol{\delta}_i,\ \mathbf f_i \)</td><td class="l">Takoz sehim vektörü ve takozun şasiye ilettiği kuvvet</td><td class="c">m, N</td></tr>
+<tr><td class="c">\( \mathbf k_i \)</td><td class="l">Takoz rijitlik matrisi, lokal eksenlerde \( \mathrm{diag}(k_x,k_y,k_z) \)</td><td class="c">N/m</td></tr>
+<tr><td class="c">\( m,\ \mathbf I_G,\ \mathbf M \)</td><td class="l">Birleşik kütle, ağırlık merkezine göre atalet tensörü, 6×6 kütle matrisi</td><td class="c">kg, kg·m²</td></tr>
+<tr><td class="c">\( \mathbf K,\ \mathbf K_{tt},\mathbf K_{t\theta},\mathbf K_{\theta\theta} \)</td><td class="l">Global rijitlik matrisi ve öteleme / kuplaj / dönme blokları</td><td class="c">N/m … N·m/rad</td></tr>
+<tr><td class="c">\( \omega_r,\ f_r,\ \boldsymbol{\varphi}_r \)</td><td class="l">r'nci modun açısal ve doğal frekansı, mod şekli</td><td class="c">rad/s, Hz</td></tr>
+<tr><td class="c">\( T_e,\ R_{\text{stall}},\ i,\ \phi_{\text{aks}} \)</td><td class="l">Motor torku, konvertör stall oranı, çevrim oranları, aks tork payı</td><td class="c">N·m, —</td></tr>
+</table>
+
+<!-- ═══════════ EK A ═══════════ -->
+<h2 id="ekA"><span class="no">Ek A</span>Referans Uygulama (Python / NumPy)</h2>
+<p>Raporun tamamını üreten çekirdek algoritma yaklaşık kırk satırdır; herhangi bir dile (JavaScript dâhil) doğrudan taşınabilir.</p>
+<pre><code>import numpy as np
+
+def skew(a):
+    return np.array([[0,-a[2],a[1]],[a[2],0,-a[0]],[-a[1],a[0],0]])
+
+# --- 1) Kutle birlestirme: bodies = [(m, cog[m], I_3x3_kendi_CG), ...]
+m_tot = sum(b[0] for b in bodies)
+cG    = sum(b[0]*np.asarray(b[1]) for b in bodies) / m_tot
+I_G   = np.zeros((3,3))
+for m, c, I in bodies:
+    d = np.asarray(c) - cG
+    I_G += I + m*(d@d*np.eye(3) - np.outer(d,d))      # paralel eksen
+M = np.block([[m_tot*np.eye(3), np.zeros((3,3))],
+              [np.zeros((3,3)), I_G]])
+
+# --- 2) Rijitlik: mounts = [r_i (m)], k = diag(kx,ky,kz) [N/m]
+def K_assemble(k):
+    K = np.zeros((6,6))
+    for r in mounts:
+        B = np.hstack([np.eye(3), -skew(r - cG)])     # delta = B q
+        K += B.T @ k @ B
+    return K
+
+# --- 3) Statik / quasi-statik cozum (statik rijitlik)
+K_s = K_assemble(k_stat)
+F   = np.hstack([m_tot*np.array([0,0,-9.81]), [0,0,0]])   # + tork: F[3:] += T
+q   = np.linalg.solve(K_s, F)
+for r in mounts:
+    delta = q[:3] - skew(r - cG) @ q[3:]              # takoz sehimi [m]
+    f     = k_stat @ delta                            # sasiye iletilen kuvvet [N]
+
+# --- 4) Modal analiz (dinamik rijitlik)
+K_d  = K_assemble(k_dyn)
+w2,V = np.linalg.eig(np.linalg.solve(M, K_d))
+f_Hz = np.sort(np.sqrt(w2.real)) / (2*np.pi)          # 6 rijit govde modu</code></pre>
+
+<p style="margin-top:40px;font-size:13px;color:#5a6270;border-top:1px solid var(--line);padding-top:12px">
+Bu doküman yöntem raporudur; girdi değerleri örnek uygulamaya aittir ve tasarım kararlarında güncel CAD/tedarikçi verisiyle teyit edilmelidir. Doğrulama referansı: Adams BMC_TTAR_2031 modeli çıktıları.</p>
+
+</div>
+</body>
+</html>

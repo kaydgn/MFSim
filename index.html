@@ -423,6 +423,15 @@
                 <circle cx="52" cy="66" r="4" fill="currentColor"/>
                 <rect x="64" y="70" width="8" height="8" fill="none" stroke="currentColor" stroke-width="2"/>
               </svg> <span class="ve-comp-label">2D Görünüm</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-report" title="Rapor — Çözücü'nün 6 SD sonuçlarını akademik, tamamen çevrimdışı bir HTML rapora döker (teori + bu modelin sayısal örneği). Önce Çözücü'de hesaplayın.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <path d="M26 12 h34 l16 16 v60 h-50 z" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+                <path d="M60 12 v16 h16" fill="none" stroke="currentColor" stroke-width="5" stroke-linejoin="round"/>
+                <rect x="34" y="60" width="8" height="18" fill="currentColor"/>
+                <rect x="47" y="50" width="8" height="28" fill="currentColor"/>
+                <rect x="60" y="42" width="8" height="36" fill="currentColor"/>
+                <line x1="34" y1="40" x2="66" y2="40" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+              </svg> <span class="ve-comp-label">Rapor</span></div>
           </div>
 
           <div class="ve-category ve-category-tools" data-always-visible="true">
@@ -720,6 +729,12 @@
 <script type="text/x-mfsim-defer" src="js/mount-core.js" data-mfsim-label="Takoz: hesap çekirdeği (6 SD)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount.js" data-mfsim-label="Takoz çökme-titreşim modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-viewer.js" data-mfsim-label="Takoz: 3D görüntüleyici..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-mount-report.js" data-mfsim-label="Takoz: rapor üreteci..."></script>
+<!-- Rapor varlıkları (KaTeX + fontlar, ~1MB) ve teori şablonu: type="text/x-mfsim-report"
+     → loader bunları AÇILIŞTA yüklemez; ilk rapor üretiminde talep üzerine çekilir.
+     build.js monolitik derlemede içeriği inline eder → indirilmiş tek dosyada da çalışır. -->
+<script type="text/x-mfsim-report" src="js/mount-report-template.js"></script>
+<script type="text/x-mfsim-report" src="js/mount-report-assets.js"></script>
 <script type="text/x-mfsim-defer" src="js/cp-arac-performans.js" data-mfsim-label="Araç Performans: alt-sistem topolojisi..."></script>
 <!-- Three.js (UMD, vendored from npm three@0.149.0) — Takoz 3D görüntüleyici için -->
 <script type="text/x-mfsim-defer" src="vendor/three.min.js" data-mfsim-label="3D kütüphanesi (Three.js)..."></script>
