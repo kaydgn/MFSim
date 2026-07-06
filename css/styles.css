@@ -2007,6 +2007,17 @@
 }
 .ve-properties-overlay.visible .ve-properties{ transform:scale(1); }
 
+/* 2D Görünüm paneli — üç ölçekli diyagram (üstten/yandan/önden) alt alta
+   sığsın diye pencere hem geniş hem uzun. Diğer bileşenler varsayılan kalır. */
+.ve-properties.ve-properties--2dview{
+  max-width:1000px;
+  max-height:95vh;
+}
+/* İnteraktif 2D figürler: fare tekerleğiyle yakınlaştır, sürükleyerek kaydır.
+   grabbing imleci sürükleme sırasında JS ile ayarlanır. */
+.ve-mnt2d-fig{ cursor:grab; }
+.ve-mnt2d-fig:active{ cursor:grabbing; }
+
 /* Panel başlığındaki kapatma butonu */
 .ve-properties-close{
   margin-left:auto;
