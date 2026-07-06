@@ -751,6 +751,143 @@ function veMntLoadExample(nodeId){
   _mntLoadExampleFromModel(nodeId);
 }
 
+// ── Otomatik destek bağlantıları (GÖRSEL) ───────────────────────────────────
+// "Neyi neyin desteklediğini" gösteren port bağlantılarını + port kenarlarını
+// hesaplar. SAF fonksiyon (DOM/nodes/connections'a dokunmaz) → birim test edilir.
+// items: [{id, kind, lx, ly}] (lx/ly = kanvas yerleşim konumu). Döner:
+//   { links:[{from,to,fromPort,toPort}], ports:{ id:{ portType:{side} } } }
+// Kural: her takoz → en yakın gövde/cradle; her cradle → en yakın (cradle olmayan)
+// gövde. Çıkış portu hedefe, giriş portu gelen kaynakların ağırlık merkezine
+// bakacak şekilde (üst/sağ/alt/sol) yönlendirilir. Çözücüyü ETKİLEMEZ (çözücü
+// düğümleri tipe göre toplar; bağlantı zorunlu değildir).
+function _mntComputeSupportLinks(items){
+  items = items || [];
+  var BODY = { 'mnt-motor':1, 'mnt-gearbox':1, 'mnt-shaft':1, 'mnt-transfer':1 };
+  var pureBodies = items.filter(function(it){ return BODY[it.kind]; });
+  var cradles    = items.filter(function(it){ return it.kind==='mnt-bracket'; });
+  var mounts     = items.filter(function(it){ return it.kind==='mnt-mount'; });
+  var supportTargets = pureBodies.concat(cradles);
+
+  function nearest(a, pool){
+    var best=null, bd=Infinity;
+    pool.forEach(function(b){
+      if(b.id===a.id) return;
+      var dx=b.lx-a.lx, dy=b.ly-a.ly, d=dx*dx+dy*dy;
+      if(d<bd){ bd=d; best=b; }
+    });
+    return best;
+  }
+  function sideToward(a, b){
+    var dx=b.lx-a.lx, dy=b.ly-a.ly;
+    if(Math.abs(dx) >= Math.abs(dy)) return dx>=0 ? 'right' : 'left';
+    return dy>=0 ? 'bottom' : 'top';
+  }
+
+  var links=[], incomers={}, byId={};
+  items.forEach(function(it){ byId[it.id]=it; });
+  function addLink(from, to){
+    if(!from || !to) return;
+    links.push({ from:from.id, to:to.id, fromPort:'output', toPort:'input' });
+    (incomers[to.id]=incomers[to.id]||[]).push(from);
+  }
+  mounts.forEach(function(m){ addLink(m, nearest(m, supportTargets)); });
+  cradles.forEach(function(c){ addLink(c, nearest(c, pureBodies)); });
+
+  var ports={};
+  function setSide(id, portType, side){ (ports[id]=ports[id]||{})[portType]={ side:side }; }
+  // Çıkış: kaynağın hedefe baktığı kenar.
+  links.forEach(function(lk){ setSide(lk.from, 'output', sideToward(byId[lk.from], byId[lk.to])); });
+  // Giriş: hedefin, kendisine gelen kaynakların ağırlık merkezine baktığı kenar.
+  Object.keys(incomers).forEach(function(tid){
+    var srcs=incomers[tid], cx=0, cy=0;
+    srcs.forEach(function(s){ cx+=s.lx; cy+=s.ly; });
+    setSide(tid, 'input', sideToward(byId[tid], { lx:cx/srcs.length, ly:cy/srcs.length }));
+  });
+  return { links:links, ports:ports };
+}
+
+// Örnek yükleyicilerin ortak "bağla + port kenarlarını uygula" adımı. placed =
+// oluşturulan gövde/takoz düğümlerinin [{id,kind,lx,ly}] listesi. createConnection
+// id'yi Date.now()'la üretir → senkron döngüde çakışabilir, compCounter ile
+// benzersizleştir (topology.js:392 / cp-arac-performans.js:106 deseni).
+function _mntWireSupportLinks(placed){
+  if(typeof createConnection!=='function') return;
+  var wiring = _mntComputeSupportLinks(placed);
+  Object.keys(wiring.ports).forEach(function(id){
+    var n = (typeof nodes!=='undefined') ? nodes.find(function(x){ return x.id===id; }) : null;
+    if(!n) return;
+    n.data = n.data || {};
+    n.data.portPositions = Object.assign(n.data.portPositions || {}, wiring.ports[id]);
+  });
+  wiring.links.forEach(function(lk){
+    var before = connections.length;
+    createConnection(lk.from, lk.to, lk.fromPort, lk.toPort);
+    if(connections.length>before && typeof compCounter!=='undefined'){
+      compCounter++;
+      connections[connections.length-1].id = 'conn-' + compCounter;
+    }
+  });
+}
+
+// ── Şasi (ground) sembolü ────────────────────────────────────────────────────
+// updateAllConnections sonunda çağrılır (connections.js hook). Her takozun DIŞ
+// ucuna sabit-mesnet ("şasi") sembolü çizer → takoz görsel olarak gövde ile şasi
+// ARASINDA durur. Bağlantı katmanına <g class="ve-mnt-chassis"> ekler; her çağrıda
+// eskisini silip yeniden çizer (updateAllConnections yalnız path/circle siler, <g>
+// bırakır). Takoz yoksa no-op → başka topoloji modülleri etkilenmez.
+function veMntDecorateConnections(svg){
+  if(!svg || typeof document==='undefined' || typeof nodes==='undefined') return;
+  var old = svg.querySelector('g.ve-mnt-chassis');
+  if(old && old.parentNode) old.parentNode.removeChild(old);
+  var mountsN = nodes.filter(function(n){ return (_mntDef(n)||{}).isMount; });
+  if(!mountsN.length) return;
+  var NS='http://www.w3.org/2000/svg';
+  var g = document.createElementNS(NS,'g');
+  g.setAttribute('class','ve-mnt-chassis');
+  g.style.pointerEvents='none';
+  var opp = { left:'right', right:'left', top:'bottom', bottom:'top' };
+  mountsN.forEach(function(n){
+    // Takozun ÇIKIŞ portu iç (desteklediği gövde) taraf; şasi bunun KARŞISINDA.
+    var out = (typeof getPortPosition==='function') ? getPortPosition(n,'output') : null;
+    _mntChassisGlyph(g, n, opp[(out&&out.side)||'right'] || 'left');
+  });
+  svg.appendChild(g);
+}
+
+// Tek takoz için dış kenara sabit-mesnet sembolü çiz: takozdan raya kısa bağ +
+// ray + dışa dönük tarama çizgileri. side = şasinin bulunduğu kenar.
+function _mntChassisGlyph(g, n, side){
+  var NS='http://www.w3.org/2000/svg';
+  var w=n.width||50, h=n.height||46, gap=9, rail=Math.min(w,h)*0.62, tick=7, N=5;
+  var cx=n.x+w/2, cy=n.y+h/2;
+  var col='var(--accent-primary, #3b82f6)';
+  function ln(x1,y1,x2,y2,wd,op){
+    var l=document.createElementNS(NS,'line');
+    l.setAttribute('x1',x1); l.setAttribute('y1',y1); l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+    l.setAttribute('stroke',col); l.setAttribute('stroke-width',wd); l.setAttribute('stroke-linecap','round');
+    if(op!=null) l.setAttribute('opacity',op);
+    g.appendChild(l);
+  }
+  var vertical = (side==='left'||side==='right');
+  if(vertical){
+    var ax = side==='left' ? n.x-gap : n.x+w+gap;
+    var edgeX = side==='left' ? n.x : n.x+w;
+    var dir = side==='left' ? -1 : 1;
+    ln(edgeX, cy, ax, cy, 2.2, 0.9);                 // takoz → ray
+    ln(ax, cy-rail/2, ax, cy+rail/2, 2.4, 1);        // ray
+    for(var i=0;i<N;i++){ var yy=cy-rail/2 + i*(rail/(N-1));
+      ln(ax, yy, ax+tick*dir, yy-tick, 1.4, 0.7); }  // tarama
+  } else {
+    var ay = side==='top' ? n.y-gap : n.y+h+gap;
+    var edgeY = side==='top' ? n.y : n.y+h;
+    var dirY = side==='top' ? -1 : 1;
+    ln(cx, edgeY, cx, ay, 2.2, 0.9);
+    ln(cx-rail/2, ay, cx+rail/2, ay, 2.4, 1);
+    for(var j=0;j<N;j++){ var xx=cx-rail/2 + j*(rail/(N-1));
+      ln(xx, ay, xx-tick, ay+tick*dirY, 1.4, 0.7); }
+  }
+}
+
 // Programatik model kurucusu (kayıt girişinde JSON yoksa): model'den kütle/takoz
 // düğümlerini oluşturur.
 function _mntLoadExampleFromModel(nodeId){
@@ -781,6 +918,7 @@ function _mntLoadExampleFromModel(nodeId){
 
   var tq=EX.torque||{};
   var li=0;
+  var placed=[];  // otomatik destek bağlantıları için: {id,kind,lx,ly}
   EX.components.forEach(function(c){
     var pos=layout[li++]; var before=nodes.length;
     var kind=c.kind || _mntExampleBodyType(c.name);
@@ -796,6 +934,7 @@ function _mntLoadExampleFromModel(nodeId){
         n.data.iTransfer=tq.iTransfer; n.data.phiFwd=tq.fwd.phiAxle; n.data.phiRev=(tq.rev||{}).phiAxle; n.data.derate=tq.derate;
       }
       _mntSetNodeName(n, c.name);
+      placed.push({ id:n.id, kind:kind, lx:pos.lx, ly:pos.ly });
     }
   });
   EX.mounts.forEach(function(m){
@@ -805,8 +944,11 @@ function _mntLoadExampleFromModel(nodeId){
       var n=nodes[nodes.length-1];
       n.data=Object.assign(n.data||{}, { x:m.pos[0], y:m.pos[1], z:m.pos[2], kxs:m.kstat[0], kys:m.kstat[1], kzs:m.kstat[2], kxd:m.kdyn[0], kyd:m.kdyn[1], kzd:m.kdyn[2] });
       _mntSetNodeName(n, m.name);
+      placed.push({ id:n.id, kind:'mnt-mount', lx:pos.lx, ly:pos.ly });
     }
   });
+  // Takoz/cradle destek bağlantılarını (görsel) otomatik kur.
+  _mntWireSupportLinks(placed);
 
   // Çözücü yoksa ekle (starter'daki sağ-üst konuma).
   if(!nodes.some(function(n){ return (_mntDef(n)||{}).isMountSolver; })){
@@ -1598,6 +1740,8 @@ if(typeof module!=='undefined' && module.exports){
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
     veMntPopulateStarter: veMntPopulateStarter,
     veMntExportTopology: veMntExportTopology,
+    veMntDecorateConnections: veMntDecorateConnections,
+    _mntWireSupportLinks: _mntWireSupportLinks,
     _mntTopoState: _mntTopoState,
     _mntResolveTopology: _mntResolveTopology,
     _mntLoadExampleFromJSON: _mntLoadExampleFromJSON,
@@ -1606,6 +1750,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntExampleLayout: _mntExampleLayout,
     _mntExampleDiagramSVG: _mntExampleDiagramSVG,
     _mntExampleBodyType: _mntExampleBodyType,
+    _mntComputeSupportLinks: _mntComputeSupportLinks,
     _mntExampleValidate: _mntExampleValidate,
     _mntGatherForSolver: _mntGatherForSolver,
     _mntGatherTorque: _mntGatherTorque,

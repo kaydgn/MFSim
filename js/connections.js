@@ -697,6 +697,10 @@ function updateAllConnections() {
   
   // Topoloji sınır çerçevesini güncelle
   veUpdateBoundary();
+
+  // Takoz modülü: takozların dış ucuna "şasi" sembolü çiz (varsa; başka
+  // modüllerde no-op). Bağlantı katmanı her yenilendiğinde birlikte tazelenir.
+  if(typeof veMntDecorateConnections === 'function') veMntDecorateConnections(svg);
 }
 
 // Kontrol noktası sürükleme
