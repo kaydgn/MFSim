@@ -596,9 +596,13 @@ var veMountCore = (function() {
         {type:'mnt-viewer',     name:'3D Görüntüleyici',   at:[200,450]},
         {type:'mnt-example',    name:'Örnek',              at:[730,450]}
       ],
-      // Kullanıcı ekran görüntüsünü assets/examples/siper.png olarak ekleyecek.
+      // Kullanıcı ekran görüntüsünü assets/examples/siper.png olarak ekledi.
       // Dosya yoksa panel otomatik şemaya düşer (kırık resim gösterilmez).
       image: 'assets/examples/siper.png',
+      // JSON topolojisi (model'den ÖNCELİKLİ): "Örneği Aktar" bu dosyayı iç
+      // topolojiye birebir kurar. model aşağıda kalır (panel spec tablosu +
+      // selfTest onu kullanır; JSON yüklenemezse programatik yola düşülür).
+      topology: 'assets/examples/siper_topoloji.json',
       model: SIPER_EXAMPLE
     }
   };
