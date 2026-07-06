@@ -161,11 +161,21 @@ describe('§8 zenginleştirmeleri', () => {
       expect(h).toContain(n));
     expect(h).toContain('outline:2px solid #a855f7'); // en az bir çekme hücresi
   });
-  test('Mod şekli matrisi: 6 mod × 6 SD, heatmap arka planı', () => {
+  test('Mod şekli matrisi: 6 mod × 6 SD, ortalanmış veri-çubuğu', () => {
     const h = rep._mntRepModeMatrix(R.modes);
     ['u_x', 'u_y', 'u_z', 'θ_x', 'θ_y', 'θ_z'].forEach(l => expect(h).toContain(l));
-    expect(h).toContain('background:rgba(36,66,95,');
-    expect((h.match(/<tr>/g) || []).length).toBe(7); // başlık + 6 mod
+    expect(h).toContain('linear-gradient');            // ortalanmış çubuk (heatmap değil)
+    expect(h).toContain('rgba(36,66,95,0.20)');
+    expect(h).toContain('class="modeshape"');
+    expect((h.match(/<tr>/g) || []).length).toBe(7);   // başlık + 6 mod
+  });
+  test('Figür: X–Z görünüşte çakışan takozlar kümelenir (kare sayısı azalır)', () => {
+    const geom = rep._mntRepGeom(R);
+    const svg = rep._mntRepFigure(geom, 'xz', 3, 'test');
+    // buildR: Sağ Ön & Sol Ön X–Z\'de çakışır (x=−150,z=100); Sağ/Sol Arka da (x=500,z=120)
+    const squares = (svg.match(/<rect /g) || []).length;
+    expect(squares).toBeLessThan(4);   // 4 takoz → 2 küme (2 kare)
+    expect(svg).toContain(' · ');        // birleşik etiket (ör. "Sağ Ön · Sol Ön")
   });
   test('§8.4 geri tork tablosu (Reverse case varsa)', () => {
     const h = rep._mntRepStep4Torque(R);
