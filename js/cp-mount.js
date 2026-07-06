@@ -909,7 +909,6 @@ function getMnt2DViewPropertiesHTML(node){
   html+='<div style="display:flex; gap:6px; margin-bottom:7px;">';
   html+='<button onclick="veMnt2DViewRefresh()" style="flex:1; padding:7px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">↻ Yenile</button>';
   html+='</div>';
-  html+='<div style="font-size:0.6rem; color:var(--text-muted); margin-bottom:6px; text-align:center; line-height:1.5;">Fare tekerleği: yakınlaştır / uzaklaştır · sürükle: kaydır · çift tık: sıfırla</div>';
   html+='<div id="ve-mnt-2dview-box" style="width:100%; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:8px; overflow:auto;"></div>';
   html+='</div>';
   return html;
