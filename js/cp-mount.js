@@ -81,13 +81,17 @@ function veMntGetLibraryList(){
 
 // Otomatik yük durumları (SPEC 4.4, g-tabanlı — tork gerektirmez, kullanıcı
 // girişi yok). nz yerçekimi DAHİL toplam düşey ivme katsayısı.
+// Otomatik yük durumları — araç yük kitabı g-faktörleri (a_x, a_y, a_z magnitüd;
+// yön MFSim konvansiyonuyla işaretlenir: frenleme −x, yanal +y, düşey −z; a_z
+// yerçekimi DAHİL toplam düşey g). Statik hariç hepsi 1g düşey (a_z=1) taşır.
 var MNT_AUTO_CASES = [
-  { name:'Static',       n:[ 0, 0,-1], T:[0,0,0] },
-  { name:'Max Bump',     n:[ 0, 0,-3], T:[0,0,0] },
-  { name:'Acceleration', n:[ 1, 0,-1], T:[0,0,0] },
-  { name:'Braking',      n:[-1, 0,-1], T:[0,0,0] },
-  { name:'Cornering L',  n:[ 0, 1,-1], T:[0,0,0] },
-  { name:'Cornering R',  n:[ 0,-1,-1], T:[0,0,0] }
+  { name:'Static',                  n:[ 0,    0,   -1  ], T:[0,0,0] }, // 1g
+  { name:'Max Bump',                n:[ 0,    0,   -3.5], T:[0,0,0] }, // 3.5g düşey
+  { name:'Braking',                 n:[-1,    0,   -1  ], T:[0,0,0] }, // 1g boyuna
+  { name:'Cornering',               n:[ 0,    0.6, -1  ], T:[0,0,0] }, // 0.6g yanal
+  { name:'Brake in Turn',           n:[-0.4,  0.4, -1  ], T:[0,0,0] }, // 0.4g boyuna+yanal
+  { name:'Pothole Braking',         n:[-3,    0,   -3.5], T:[0,0,0] }, // çukur+fren
+  { name:'Rim Lateral Kerb Strike', n:[ 0,    1,   -1  ], T:[0,0,0] }  // 1g yanal bordür
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
