@@ -154,8 +154,8 @@ function showNodeProperties(node) {
     titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>' + nm + ' <span style="opacity:0.5;font-weight:400;font-size:0.7rem;margin-left:6px;">' + (node.id || '') + '</span>';
   }
   
-  var html = '<div style="position:relative; text-align:center; margin-bottom:12px;">';
-  html += node.def.svg.replace('width="50"', 'width="50"').replace('height="50"', 'height="50"');
+  var html = '<div class="ve-prop-symbol" style="position:relative; margin-bottom:8px;">';
+  html += node.def.svg;
   html += '<button onclick="deleteSelectedNodes()" style="position:absolute; top:-4px; right:-4px; width:22px; height:22px; border-radius:50%; background:var(--accent-danger); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; opacity:0.7; transition:opacity 0.15s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7" title="Bileşeni Sil"><span class="mf-ico mf-ico-trash"></span></button>';
   html += '</div>';
   var displayName = node.customName || node.def.name;
