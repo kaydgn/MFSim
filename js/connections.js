@@ -246,17 +246,12 @@ function getPortPosition(node, portType, portIndex) {
     portIndex = parseInt(portType.split('-')[1]) || 0;
   }
   
-  var totalPorts = isInput ? (def.inputs || 0) : (def.outputs || 0);
+  var totalPorts = (typeof nodePortCount === 'function') ? nodePortCount(node, isInput ? 'inputs' : 'outputs') : (isInput ? (def.inputs || 0) : (def.outputs || 0));
   var pos = (node.data && node.data.portPositions && node.data.portPositions[portType]) || null;
-  
-  // Mirrored: input→right, output→left
-  var defaultSide;
-  if(node.mirrored) {
-    defaultSide = isInput ? 'right' : 'left';
-  } else {
-    defaultSide = isInput ? 'left' : 'right';
-  }
-  var side = pos ? pos.side : defaultSide;
+  // Varsayılan kenar: portLayout → aynalama → klasik (defaultPortSide, components.js)
+  var side = pos ? pos.side
+    : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType)
+      : (node.mirrored ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right')));
   
   var x, y;
   var spacing = nodeHeight / (totalPorts + 1);

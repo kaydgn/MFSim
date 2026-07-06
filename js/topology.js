@@ -867,17 +867,24 @@ function veRenderSnapshot(paneIdx) {
 
 function veSnapPortPos(node, portType) {
   var w = node.width || 65, h = node.height || 60;
-  var def = componentDefs[node.type] || {};
   var isInput = portType.indexOf('input') === 0;
   var portIndex = 0;
   if(portType.indexOf('-') > -1) portIndex = parseInt(portType.split('-')[1]) || 0;
-  var totalPorts = isInput ? (def.inputs || 1) : (def.outputs || 1);
-  var spacing = h / (totalPorts + 1);
-  var side = node.mirrored ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right');
+  var totalPorts = (typeof nodePortCount === 'function') ? nodePortCount(node, isInput ? 'inputs' : 'outputs') : 1;
+  if(!totalPorts) totalPorts = 1;
+  // Kayıtlı taşıma (portPositions) → portLayout/klasik varsayılan (getPortPosition ile aynı)
+  var pos = (node.data && node.data.portPositions && node.data.portPositions[portType]) || null;
+  var side = pos ? pos.side
+    : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType)
+      : (node.mirrored ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right')));
+  var vSpacing = h / (totalPorts + 1), hSpacing = w / (totalPorts + 1);
   var x, y;
-  y = node.y + spacing * (portIndex + 1);
-  if(side === 'right') x = node.x + w + 7;
-  else x = node.x - 7;
+  switch(side) {
+    case 'top':    x = node.x + hSpacing * (portIndex + 1); y = node.y - 7; break;
+    case 'bottom': x = node.x + hSpacing * (portIndex + 1); y = node.y + h + 7; break;
+    case 'right':  x = node.x + w + 7; y = node.y + vSpacing * (portIndex + 1); break;
+    default:       x = node.x - 7;     y = node.y + vSpacing * (portIndex + 1); break;
+  }
   return {x: x, y: y, side: side};
 }
 
