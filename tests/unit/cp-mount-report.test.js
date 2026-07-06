@@ -161,6 +161,16 @@ describe('§8 zenginleştirmeleri', () => {
       expect(h).toContain(n));
     expect(h).toContain('outline:2px solid #a855f7'); // en az bir çekme hücresi
   });
+  test('§8.6 üç-eksen çökme detayı: her takoz için δx/δy/δz tablosu', () => {
+    const h = rep._mntRepDeflectionDetail(R);
+    expect(h).toContain('üç-eksen çökme detayı');
+    ['δ_x', 'δ_y', 'δ_z'].forEach(l => expect(h).toContain(l));
+    // her takoz için bir tablo
+    expect((h.match(/<table>/g) || []).length).toBe(R.mounts.length);
+    R.mounts.forEach(m => expect(h).toContain(m.name));
+    // δx/δy sıfır-olmayan (yalnız δz değil): viraj durumunda δy dolu olmalı
+    expect(h).toMatch(/−|\+/); // işaretli değerler var
+  });
   test('Mod şekli matrisi: 6 mod × 6 SD, ortalanmış veri-çubuğu', () => {
     const h = rep._mntRepModeMatrix(R.modes);
     ['u_x', 'u_y', 'u_z', 'θ_x', 'θ_y', 'θ_z'].forEach(l => expect(h).toContain(l));
