@@ -1,0 +1,509 @@
+{
+  "format": "mfsim-mount-example",
+  "version": 1,
+  "nodes": [
+    {
+      "id": "comp-2",
+      "type": "mnt-example",
+      "x": 1290.3591991237831,
+      "y": 228.14893768522066,
+      "width": 56,
+      "height": 56,
+      "customName": "",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {}
+    },
+    {
+      "id": "comp-3",
+      "type": "mnt-motor",
+      "x": 658.5,
+      "y": 402,
+      "width": 84,
+      "height": 76,
+      "customName": "Motor",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "mass": 1386.3,
+        "cgx": -321.36,
+        "cgy": 4.89,
+        "cgz": 859.33,
+        "Ixx": 110.7,
+        "Iyy": 260.2,
+        "Izz": 205.9,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": false,
+        "Te": 3000,
+        "portPositions": {
+          "input-0": {
+            "side": "bottom"
+          },
+          "input-1": {
+            "side": "left"
+          },
+          "input-2": {
+            "side": "left"
+          }
+        }
+      }
+    },
+    {
+      "id": "comp-4",
+      "type": "mnt-gearbox",
+      "x": 816.8433508640121,
+      "y": 409.51314800901577,
+      "width": 65,
+      "height": 60,
+      "customName": "Şanzıman",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "mass": 778.3,
+        "cgx": 905.815,
+        "cgy": 11.17,
+        "cgz": 683.81,
+        "Ixx": 16.43,
+        "Iyy": 68.15,
+        "Izz": 64.91,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": false,
+        "g1": 3.51,
+        "gR": -4.8,
+        "Rstall": 1.62,
+        "iTransfer": 1.407,
+        "phiFwd": 0.2777777777777778,
+        "phiRev": 0.7222222222222222,
+        "derate": 1,
+        "portPositions": {
+          "input-0": {
+            "side": "top"
+          }
+        }
+      }
+    },
+    {
+      "id": "comp-5",
+      "type": "mnt-shaft",
+      "x": 942.8801652892561,
+      "y": 410.00525920360633,
+      "width": 65,
+      "height": 60,
+      "customName": "Şaft payı",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "mass": 50.65,
+        "cgx": 3041.582,
+        "cgy": 0,
+        "cgz": -168.419,
+        "Ixx": 0,
+        "Iyy": 0,
+        "Izz": 0,
+        "Ixy": 0,
+        "Ixz": 0,
+        "Iyz": 0,
+        "pointMass": true
+      }
+    },
+    {
+      "id": "comp-6",
+      "type": "mnt-bracket",
+      "x": 761.2986476333584,
+      "y": 516.4290007513148,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol cradle",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "mass": 39.635,
+        "cgx": 2158.356,
+        "cgy": -274.782,
+        "cgz": -39.54,
+        "Ixx": 0.237,
+        "Iyy": 3.851,
+        "Izz": 3.727,
+        "Ixy": -0.17,
+        "Ixz": 0.257,
+        "Iyz": -0.033,
+        "pointMass": false,
+        "portPositions": {
+          "output": {
+            "side": "top"
+          },
+          "input-0": {
+            "side": "bottom"
+          },
+          "input-1": {
+            "side": "bottom"
+          }
+        }
+      }
+    },
+    {
+      "id": "comp-7",
+      "type": "mnt-bracket",
+      "x": 760.5473328324568,
+      "y": 326.015777610819,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ cradle",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "mass": 39.637,
+        "cgx": 2150.654,
+        "cgy": 318.791,
+        "cgz": -39.54,
+        "Ixx": 0.23,
+        "Iyy": 3.858,
+        "Izz": 3.727,
+        "Ixy": 0.076,
+        "Ixz": 0.256,
+        "Iyz": 0.039,
+        "pointMass": false,
+        "portPositions": {
+          "input-0": {
+            "side": "top"
+          },
+          "input-1": {
+            "side": "top"
+          },
+          "output": {
+            "side": "bottom"
+          }
+        }
+      }
+    },
+    {
+      "id": "comp-8",
+      "type": "mnt-mount",
+      "x": 536.9973703981968,
+      "y": 363.45003756574,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ Ön Takoz",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "x": -948.697,
+        "y": 50.81,
+        "z": 371.023,
+        "kxs": 1252,
+        "kys": 1252,
+        "kzs": 640,
+        "kxd": 2055,
+        "kyd": 2055,
+        "kzd": 977,
+        "portPositions": {
+          "output": {
+            "side": "right"
+          }
+        }
+      }
+    },
+    {
+      "id": "comp-9",
+      "type": "mnt-mount",
+      "x": 536.9973703981968,
+      "y": 458.190833959429,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol Ön Takoz",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "x": -948.697,
+        "y": -50.81,
+        "z": 371.023,
+        "kxs": 1252,
+        "kys": 1252,
+        "kzs": 640,
+        "kxd": 2055,
+        "kyd": 2055,
+        "kzd": 977,
+        "portPositions": {
+          "output": {
+            "side": "right"
+          }
+        }
+      }
+    },
+    {
+      "id": "comp-10",
+      "type": "mnt-mount",
+      "x": 693.5,
+      "y": 212,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ Orta Takoz",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "x": 535.313,
+        "y": 357.192,
+        "z": 635.27,
+        "kxs": 1252,
+        "kys": 1252,
+        "kzs": 640,
+        "kxd": 2055,
+        "kyd": 2055,
+        "kzd": 977,
+        "portPositions": {
+          "output": {
+            "side": "bottom"
+          }
+        },
+        "labelPos": "left"
+      }
+    },
+    {
+      "id": "comp-11",
+      "type": "mnt-mount",
+      "x": 697.04996243426,
+      "y": 639.5657400450791,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol Orta Takoz",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "x": 535.313,
+        "y": -357.109,
+        "z": 635.27,
+        "kxs": 1252,
+        "kys": 1252,
+        "kzs": 640,
+        "kxd": 2055,
+        "kyd": 2055,
+        "kzd": 977,
+        "portPositions": {
+          "output": {
+            "side": "top"
+          }
+        },
+        "labelPos": "left"
+      }
+    },
+    {
+      "id": "comp-12",
+      "type": "mnt-mount",
+      "x": 852.7749812171301,
+      "y": 212,
+      "width": 50,
+      "height": 46,
+      "customName": "Sağ Arka Takoz",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "x": 636.813,
+        "y": 357.192,
+        "z": 635.27,
+        "kxs": 1252,
+        "kys": 1252,
+        "kzs": 640,
+        "kxd": 2055,
+        "kyd": 2055,
+        "kzd": 977,
+        "portPositions": {
+          "output": {
+            "side": "bottom"
+          }
+        },
+        "labelPos": "left"
+      }
+    },
+    {
+      "id": "comp-13",
+      "type": "mnt-mount",
+      "x": 852.7749812171301,
+      "y": 640.3170548459807,
+      "width": 50,
+      "height": 46,
+      "customName": "Sol Arka Takoz",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "x": 636.813,
+        "y": -357.109,
+        "z": 635.27,
+        "kxs": 1252,
+        "kys": 1252,
+        "kzs": 640,
+        "kxd": 2055,
+        "kyd": 2055,
+        "kzd": 977,
+        "portPositions": {
+          "output": {
+            "side": "top"
+          }
+        },
+        "labelPos": "left"
+      }
+    },
+    {
+      "id": "comp-22",
+      "type": "mnt-solver",
+      "x": 1140.3591991237831,
+      "y": 229.14893768522066,
+      "width": 65,
+      "height": 60,
+      "customName": "",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {
+        "matrixMode": "delta"
+      }
+    },
+    {
+      "id": "comp-23",
+      "type": "mnt-viewer",
+      "x": 1322.2122511419766,
+      "y": 622.1087751341987,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {}
+    },
+    {
+      "id": "comp-24",
+      "type": "mnt-2dview",
+      "x": 1116.0694003091905,
+      "y": 622.1087751341987,
+      "width": 63.241986607876925,
+      "height": 57.68645297621005,
+      "customName": "",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {}
+    },
+    {
+      "id": "comp-25",
+      "type": "mnt-coordframe",
+      "x": 1217.8514433920056,
+      "y": 622.1087751341987,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {}
+    },
+    {
+      "id": "comp-26",
+      "type": "mnt-report",
+      "x": 1109.367121982861,
+      "y": 437.6418608710623,
+      "width": 60,
+      "height": 56,
+      "customName": "",
+      "mirrored": false,
+      "isMasterWheel": false,
+      "isMasterDiff": false,
+      "data": {}
+    }
+  ],
+  "connections": [
+    {
+      "id": "conn-14",
+      "from": "comp-6",
+      "to": "comp-3",
+      "fromPort": "output",
+      "toPort": "input-0",
+      "lineType": "curve",
+      "controlPoints": []
+    },
+    {
+      "id": "conn-15",
+      "from": "comp-8",
+      "to": "comp-3",
+      "fromPort": "output",
+      "toPort": "input-1",
+      "lineType": "curve",
+      "controlPoints": []
+    },
+    {
+      "id": "conn-16",
+      "from": "comp-9",
+      "to": "comp-3",
+      "fromPort": "output",
+      "toPort": "input-2",
+      "lineType": "curve",
+      "controlPoints": []
+    },
+    {
+      "id": "conn-17",
+      "from": "comp-10",
+      "to": "comp-7",
+      "fromPort": "output",
+      "toPort": "input-0",
+      "lineType": "curve",
+      "controlPoints": []
+    },
+    {
+      "id": "conn-18",
+      "from": "comp-12",
+      "to": "comp-7",
+      "fromPort": "output",
+      "toPort": "input-1",
+      "lineType": "curve",
+      "controlPoints": []
+    },
+    {
+      "id": "conn-19",
+      "from": "comp-11",
+      "to": "comp-6",
+      "fromPort": "output",
+      "toPort": "input-0",
+      "lineType": "curve",
+      "controlPoints": []
+    },
+    {
+      "id": "conn-20",
+      "from": "comp-13",
+      "to": "comp-6",
+      "fromPort": "output",
+      "toPort": "input-1",
+      "lineType": "curve",
+      "controlPoints": []
+    },
+    {
+      "id": "conn-21",
+      "from": "comp-7",
+      "to": "comp-4",
+      "fromPort": "output",
+      "toPort": "input-0",
+      "lineType": "curve",
+      "controlPoints": []
+    }
+  ],
+  "compCounter": 26,
+  "canvasOffset": {
+    "x": 2675.9334530121005,
+    "y": 2862.227592096901
+  },
+  "canvasZoom": 0.9509900499000005
+}
