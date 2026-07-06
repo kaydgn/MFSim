@@ -1041,8 +1041,6 @@ function getMntCoordFramePropertiesHTML(node){
   html+=_mntVwrBtn("var v=veMountViewerToggle('planes'); this.style.opacity=v?'1':'0.45';",'Düzlem','Koordinat düzlemlerini gizle/göster');
   html+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
   html+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
-  html+='<span style="flex:1;"></span>';
-  html+=_mntVwrBtn("veMntCoordFullscreen();",'⛶ Tam Ekran','Tam ekran aç');
   html+='</div>';
   html+='<div id="ve-mnt-coord-wrap" style="width:100%; height:340px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px;"><canvas id="ve-mnt-coord-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
   html+='<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px;">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
@@ -1775,27 +1773,22 @@ function _mntFsOverlay(title, innerHTML, onMount, onClose){
   document.addEventListener('keydown', onKey);
   if(onMount){ try{ onMount(document.getElementById('ve-mnt-fs-body')); }catch(e){} }
 }
-// 3D görünümü (model veya coordframe) tam ekran aç.
-function _mntViewer3DFullscreen(title, mode){
-  var toggles = (mode==='coordframe')
-    ? _mntVwrBtn("var v=veMountViewerToggle('planes'); this.style.opacity=v?'1':'0.45';",'Düzlem','Düzlem')
-      + _mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin', false)
-    : _mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin', false)
-      + _mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksen')
-      + _mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Etiket');
+// 3D Görüntüleyici'yi (model modu) tam ekran aç. Koordinat Düzlemi'nde tam ekran yok.
+function veMntViewerFullscreen(){
+  var toggles = _mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin', false)
+    + _mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksen')
+    + _mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Etiket');
   var bar='<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 14px; flex-shrink:0; border-bottom:1px solid var(--border-color);">'
     + toggles + _mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Sıfırla')
     + '<span style="flex:1;"></span><span style="font-size:0.58rem; color:var(--text-muted);">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşen bilgisi</span></div>';
   var wrap='<div style="flex:1; min-height:0; position:relative; background:var(--bg-primary);"><canvas id="ve-mnt-fs-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
-  _mntFsOverlay(title, bar+wrap,
-    function(){ if(mode!=='coordframe' && typeof _mntGatherForSolver==='function') _veMntViewerData=_mntGatherForSolver();
-      if(typeof veMountViewerInit==='function'){ try{ veMountViewerInit('ve-mnt-fs-canvas', mode); veMountViewerUpdate(); }catch(e){} } },
+  _mntFsOverlay('3D Görüntüleyici', bar+wrap,
+    function(){ if(typeof _mntGatherForSolver==='function') _veMntViewerData=_mntGatherForSolver();
+      if(typeof veMountViewerInit==='function'){ try{ veMountViewerInit('ve-mnt-fs-canvas', 'model'); veMountViewerUpdate(); }catch(e){} } },
     function(){ if(typeof veMountViewerDispose==='function'){ try{ veMountViewerDispose(); }catch(e){} }
-      if(mode==='coordframe') veMntCoordFrameRefresh(); else veMntViewerRefresh(); }
+      veMntViewerRefresh(); }
   );
 }
-function veMntViewerFullscreen(){ _mntViewer3DFullscreen('3D Görüntüleyici','model'); }
-function veMntCoordFullscreen(){ _mntViewer3DFullscreen('Koordinat Düzlemi','coordframe'); }
 
 // 3D viewer veri sağlayıcısı (cp-mount-viewer.js okur)
 var _veMntViewerData = null;
