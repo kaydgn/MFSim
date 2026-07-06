@@ -1400,8 +1400,8 @@
 
 .ve-welcome{
   width:100%;
-  max-width:440px;
-  padding:38px 38px 30px;
+  max-width:410px;
+  padding:34px 36px 28px;
   background:var(--bg-secondary);
   border:1px solid var(--border-color);
   box-shadow:var(--shadow-xl);
@@ -1416,44 +1416,44 @@
 
 .ve-welcome-hero{
   text-align:center;
-  margin-bottom:22px;
+  margin-bottom:20px;
 }
 .ve-welcome-logo{
   display:inline-flex;
   align-items:center;
-  gap:11px;
-  font-size:1.7rem;
+  gap:10px;
+  font-size:1.6rem;
   font-weight:700;
   letter-spacing:0.5px;
   color:var(--text-heading);
 }
 .ve-welcome-logo-ico{
-  width:1.5rem;
-  height:1.5rem;
+  width:1.4rem;
+  height:1.4rem;
   color:var(--accent-primary);
 }
 .ve-welcome-tagline{
-  margin-top:9px;
-  font-size:0.72rem;
+  margin-top:8px;
+  font-size:0.7rem;
   letter-spacing:0.4px;
   color:var(--text-muted);
 }
 .ve-welcome-sep{
   height:1px;
   background:var(--border-color);
-  margin:0 -38px 20px;
+  margin:0 -36px 18px;
 }
 
 .ve-module-overlay-grid{
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:9px;
 }
 .ve-module-card{
   display:flex;
   align-items:center;
-  gap:15px;
-  padding:15px 16px;
+  gap:14px;
+  padding:13px 15px;
   background:var(--bg-tertiary);
   border:1px solid var(--border-color);
   border-radius:0;
@@ -1472,8 +1472,8 @@
 }
 .ve-module-card-icon{
   flex-shrink:0;
-  width:52px;
-  height:52px;
+  width:48px;
+  height:48px;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -1494,7 +1494,7 @@
 }
 .ve-module-card-name{
   display:block;
-  font-size:0.88rem;
+  font-size:0.85rem;
   font-weight:600;
   color:var(--text-heading);
   letter-spacing:-0.01em;
@@ -1502,7 +1502,7 @@
 }
 .ve-module-card-desc{
   display:block;
-  font-size:0.68rem;
+  font-size:0.66rem;
   color:var(--text-secondary);
   line-height:1.5;
 }
@@ -1521,7 +1521,7 @@
 }
 
 .ve-welcome-open{
-  margin-top:20px;
+  margin-top:18px;
   align-self:center;
   display:inline-flex;
   align-items:center;
