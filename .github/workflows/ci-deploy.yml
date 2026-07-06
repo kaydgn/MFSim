@@ -5,13 +5,16 @@ on:
     branches:
       - main
   # Elle tetik — başarısız/atlanan bir Pages deploy'unu Actions sekmesinden
-  # "Run workflow" ile yeniden çalıştırmak için (kod değişikliği gerektirmez).
+  # "Run workflow" ile YENİ bir çalıştırma olarak tetiklemek için (kod değişikliği
+  # gerektirmez). Not: başarısız deploy için mevcut çalıştırmayı "Re-run" etmek de
+  # artık güvenli — upload ayrı job'da olduğundan artifact tekrarlanmaz.
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  actions: write   # aynı run'da kalan "github-pages" artifact'ını silebilmek için
 
 concurrency:
   group: "pages"
@@ -41,12 +44,12 @@ jobs:
       - name: Run tests
         run: npm run test:ci
 
-  deploy:
+  # Pages artifact'ını ÜRETEN job. Deploy'dan AYRI tutulur: böylece başarısız bir
+  # deploy'u "re-run" etmek upload'ı TEKRARLAMAZ. (Upload ile deploy aynı job'da
+  # olduğunda, deploy'u yeniden çalıştırmak aynı run'da ikinci bir "github-pages"
+  # artifact'ı oluşturuyor ve deploy-pages "Artifact count is 2" hatası veriyordu.)
+  build:
     needs: test
-    if: success()
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -83,13 +86,36 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node gen-version.js _site
 
+      # "Re-run all jobs" güvenliği: bu run'ın önceki denemesinden kalmış bir
+      # "github-pages" artifact'ı varsa, upload'dan ÖNCE sil. Aksi halde ikinci
+      # upload 2. artifact'ı üretir ve deploy "Artifact count is 2" ile düşer.
+      # (API bu run ile sınırlı — başka çalıştırmaların artifact'larına dokunmaz.)
+      - name: Remove stale github-pages artifact (re-run güvenliği)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ids=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+            --jq '.artifacts[] | select(.name=="github-pages") | .id' 2>/dev/null || true)
+          for id in $ids; do
+            echo "Bayat github-pages artifact siliniyor: $id"
+            gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" || true
+          done
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
 
-      # GitHub Pages backend zaman zaman "Deployment failed, try again later."
-      # geçici hatası verir (özellikle art arda hızlı merge'lerde deploy'lar
-      # çakışınca). İlk deneme başarısızsa kısa bekleyişten sonra bir kez
-      # daha denenir; ikisi de düşerse job gerçekten fail olur.
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      # GitHub Pages backend zaman zaman geçici "Deployment failed, try again
+      # later." hatası verir (özellikle art arda hızlı merge'lerde). İlk deneme
+      # düşerse kısa bekleyişten sonra bir kez daha denenir. Bu adımlar artifact
+      # ÜRETMEZ (yalnız mevcut "github-pages" artifact'ını yayına alır) → tekrar
+      # denemek güvenlidir, artifact sayısını artırmaz.
       - name: Deploy to GitHub Pages
         id: deployment
         continue-on-error: true
