@@ -227,40 +227,47 @@ var componentDefs = {
     outputs: 0
   },
   // ── Takoz Çökme-Titreşim analizi — GERÇEK KANVAS BİLEŞENLERİ ─────────────
-  // "Programın normali gibi": Motor/Şanzıman/Şaft/Braket/Kütle (kütle gövdeleri,
-  // çıkış portu) ve Takoz (çıkış portu) sürüklenip Çözücü'ye (giriş portu)
-  // bağlanır. Çözücü kendisine bağlı kütle+takoz node'larını okuyup 6 SD rijit
-  // gövde analizini OTOMATİK yük durumlarıyla çalıştırır (kullanıcı yük girmez).
-  // Veri: node.data (mass/cg/atalet veya konum/rijitlik). Panel: cp-mount.js.
+  // Bağlantı = GÖRSEL/örgütsel (topolojiyi okunur kılar); ÇÖZÜCÜYÜ ETKİLEMEZ.
+  // Çözücü kütle+takoz node'larını hâlâ TİPE göre OTOMATİK toplar (bkz. cp-mount.js
+  // _mntGatherForSolver) — bağlantı zorunlu değildir. Portlar yalnız "neyi neyin
+  // desteklediğini" göstermek için:
+  //   • Kütle gövdeleri (Motor/Şanzıman/Şaft/Transfer): giriş portu = "mesnet"
+  //     (takoz/cradle desteğini alır).
+  //   • Braket/cradle: giriş (takozları alır) + çıkış (taşıdığı gövdeye gider).
+  //   • Takoz: çıkış portu = desteklediği gövde/cradle'a; dış ucu "şasi" sembolüyle
+  //     otomatik topraklanır (cp-mount.js veMntDecorateConnections).
+  // Örnek yüklenince bu bağlantılar en-yakın-gövde kuralıyla OTOMATİK kurulur
+  // (cp-mount.js _mntComputeSupportLinks). Veri: node.data (mass/cg/atalet veya
+  // konum/rijitlik). Panel: cp-mount.js.
   'mnt-motor': {
     name: 'Motor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="36" width="60" height="44" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.85"/><rect x="30" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><rect x="52" y="22" width="14" height="16" fill="var(--accent-primary, #3b82f6)"/><circle cx="50" cy="58" r="5" fill="#fff"/></svg>',
-    inputs: 0, outputs: 0, isMountBody: true, defaultWidth: 84, defaultHeight: 76
+    inputs: 1, outputs: 0, isMountBody: true, defaultWidth: 84, defaultHeight: 76
   },
   'mnt-gearbox': {
     name: 'Şanzıman',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="26" y="24" width="48" height="56" rx="5" fill="var(--accent-primary, #3b82f6)" opacity="0.7"/><circle cx="50" cy="52" r="15" fill="none" stroke="#fff" stroke-width="4"/><circle cx="50" cy="52" r="4" fill="#fff"/></svg>',
-    inputs: 0, outputs: 0, isMountBody: true
+    inputs: 1, outputs: 0, isMountBody: true
   },
   'mnt-shaft': {
     name: 'Şaft',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="10" y="44" width="80" height="12" rx="6" fill="var(--text-secondary, #888)"/><circle cx="24" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="76" cy="50" r="8" fill="none" stroke="var(--text-muted, #aaa)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
-    inputs: 0, outputs: 0, isMountBody: true
+    inputs: 1, outputs: 0, isMountBody: true
   },
   'mnt-bracket': {
     name: 'Braket',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><path d="M30 18 L30 78 L80 78" fill="none" stroke="var(--text-secondary, #888)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="42" cy="64" r="5" fill="#fff"/></svg>',
-    inputs: 0, outputs: 0, isMountBody: true, defaultWidth: 50, defaultHeight: 46
+    inputs: 1, outputs: 1, isMountBody: true, defaultWidth: 50, defaultHeight: 46
   },
   'mnt-transfer': {
     name: 'Transfer Kutusu',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="28" y="24" width="44" height="52" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.75"/><rect x="12" y="36" width="16" height="8" fill="var(--text-muted, #aaa)"/><rect x="72" y="34" width="16" height="7" fill="var(--text-muted, #aaa)"/><rect x="72" y="59" width="16" height="7" fill="var(--text-muted, #aaa)"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
-    inputs: 0, outputs: 0, isMountBody: true
+    inputs: 1, outputs: 0, isMountBody: true
   },
   'mnt-mount': {
     name: 'Takoz',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="30" y="8" width="40" height="18" rx="3" fill="var(--accent-success, #22c55e)"/><path d="M38 26 Q32 33 44 38 Q32 43 44 48 Q32 53 44 58 Q32 63 38 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M62 26 Q56 33 68 38 Q56 43 68 48 Q56 53 68 58 Q56 63 62 68" fill="none" stroke="var(--accent-success, #22c55e)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><line x1="18" y1="72" x2="82" y2="72" stroke="var(--text-secondary, #888)" stroke-width="4"/><line x1="26" y1="72" x2="20" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="44" y1="72" x2="38" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="62" y1="72" x2="56" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/><line x1="80" y1="72" x2="74" y2="82" stroke="var(--text-muted, #aaa)" stroke-width="2.5"/></svg>',
-    inputs: 0, outputs: 0, isMount: true, defaultWidth: 50, defaultHeight: 46
+    inputs: 0, outputs: 1, isMount: true, defaultWidth: 50, defaultHeight: 46
   },
   // Takoz Özellikleri — takoz KATALOĞU/kütüphane yöneticisi. Fiziksel topolojiye
   // bağlanmaz (giriş/çıkış portu yok); node.data.mounts içinde kullanıcı tanımlı

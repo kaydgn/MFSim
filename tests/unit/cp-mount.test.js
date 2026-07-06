@@ -445,6 +445,59 @@ describe('Örnek bileşeni', () => {
   });
 });
 
+describe('Otomatik destek bağlantıları (_mntComputeSupportLinks)', () => {
+  // SIPER örneğinin GERÇEK kanvas yerleşimini (at:[lx,ly]) items'a çevir.
+  function siperItems() {
+    const m = core.getMountExample('siper').model;
+    const L = cp._mntExampleLayout(m);
+    const items = [];
+    m.components.forEach((c, i) => items.push({ id: 'b' + i, kind: cp._mntExampleBodyType(c.name), lx: L.bodies[i].lx, ly: L.bodies[i].ly, name: c.name }));
+    m.mounts.forEach((mt, i) => items.push({ id: 'k' + i, kind: 'mnt-mount', lx: L.mnts[i].lx, ly: L.mnts[i].ly, name: mt.name }));
+    return items;
+  }
+
+  test('6 takoz + 2 cradle = 8 bağlantı, hepsi output→input', () => {
+    const { links } = cp._mntComputeSupportLinks(siperItems());
+    expect(links).toHaveLength(8);
+    expect(links.every(l => l.fromPort === 'output' && l.toPort === 'input')).toBe(true);
+    // kendine bağlantı yok
+    expect(links.every(l => l.from !== l.to)).toBe(true);
+  });
+
+  test('en yakın hedef = fiziksel montaj mantığı (ön→Motor, yan→cradle, cradle→gövde)', () => {
+    const items = siperItems();
+    const byId = {}; items.forEach(it => byId[it.id] = it);
+    const link = {};
+    cp._mntComputeSupportLinks(items).links.forEach(l => { link[byId[l.from].name] = byId[l.to].name; });
+    expect(link['sağ ön']).toBe('Motor');
+    expect(link['sol ön']).toBe('Motor');
+    expect(link['sağ orta']).toBe('Sağ cradle');
+    expect(link['sağ arka']).toBe('Sağ cradle');
+    expect(link['sol orta']).toBe('Sol cradle');
+    expect(link['sol arka']).toBe('Sol cradle');
+    // cradle'lar bir güç grubu gövdesine oturur (başka cradle'a DEĞİL)
+    expect(['Motor', 'Şanzıman', 'Şaft payı']).toContain(link['Sağ cradle']);
+    expect(['Motor', 'Şanzıman', 'Şaft payı']).toContain(link['Sol cradle']);
+  });
+
+  test('port kenarları: her kaynak çıkışı + her hedef girişi geçerli kenara yönlendirilir', () => {
+    const { links, ports } = cp._mntComputeSupportLinks(siperItems());
+    links.forEach(l => {
+      expect(ports[l.from] && ports[l.from].output && ports[l.from].output.side).toBeTruthy();
+      expect(ports[l.to] && ports[l.to].input && ports[l.to].input.side).toBeTruthy();
+    });
+    Object.keys(ports).forEach(id => Object.keys(ports[id]).forEach(pt =>
+      expect(['top', 'right', 'bottom', 'left']).toContain(ports[id][pt].side)));
+  });
+
+  test('hedefsiz/boş girdi güvenli (link üretmez, patlamaz)', () => {
+    expect(cp._mntComputeSupportLinks([]).links).toHaveLength(0);
+    expect(cp._mntComputeSupportLinks([{ id: 'k', kind: 'mnt-mount', lx: 0, ly: 0 }]).links).toHaveLength(0);
+    expect(cp._mntComputeSupportLinks([{ id: 'b', kind: 'mnt-motor', lx: 0, ly: 0 }]).links).toHaveLength(0);
+    expect(cp._mntComputeSupportLinks(undefined).links).toHaveLength(0);
+  });
+});
+
 describe('Örnek JSON topolojisi (dışa aktar + çözümleme)', () => {
   afterEach(() => { delete global.veSerializeCurrentState; try { delete window.__MNT_TOPOLOGIES; } catch (e) {} });
 
