@@ -61,6 +61,42 @@ function veSelectModuleFromOverlay(mode) {
   showToast('Araç Performans aktif', 'info');
 }
 
+// Karşılama ekranındaki modül kartı → overlay'i kapat + seçilen modül bloğunu
+// görünür alanın ortasına bırak (drag-drop ile aynı sonuç, tek tıkla). Kullanıcı
+// çift tıklayarak alt-topolojiye girer; dilerse diğer modülü de sidebar'dan ekler.
+// Not: veSelectModuleFromOverlay testlerce doğrulanan sözleşmeyi korur; bu ayrı
+// fonksiyon yalnızca karşılama kartlarına bağlıdır.
+function veStartModule(type) {
+  var overlay = document.getElementById('ve-module-overlay');
+  if(overlay) overlay.style.display = 'none';
+
+  veActiveModule = 'full-throttle';
+  if(typeof veSubTabDegistir === 'function') {
+    veSubTabDegistir('arac-performans');
+  } else {
+    veSidebarMode = 'performans';
+    if(typeof veShowAllSidebarComponents === 'function') veShowAllSidebarComponents();
+  }
+
+  // Seçilen modül bloğunu görünür alanın ortasına oluştur.
+  // Canvas CSS'te -3000px offset'li → görünür merkez ≈ 3000 + yarı-genişlik.
+  if(typeof createNode === 'function' && componentDefs[type]) {
+    var def = componentDefs[type];
+    var w = def.defaultWidth || 80, h = def.defaultHeight || 60;
+    var cx = 3000 + 200 - w / 2, cy = 3000 + 140 - h / 2;
+    var wrap = document.getElementById('ve-canvas-wrapper');
+    if(wrap && typeof canvasOffset !== 'undefined' && typeof canvasZoom !== 'undefined') {
+      var r = wrap.getBoundingClientRect();
+      cx = (r.width / 2 - canvasOffset.x) / canvasZoom + 3000 - w / 2;
+      cy = (r.height / 2 - canvasOffset.y) / canvasZoom + 3000 - h / 2;
+    }
+    createNode(type, cx, cy);
+  }
+
+  var label = (componentDefs[type] && componentDefs[type].name) ? componentDefs[type].name : type;
+  if(typeof showToast === 'function') showToast(label + ' eklendi — çift tıklayarak açın', 'info');
+}
+
 // Aktif moda ait sidebar bileşenlerini göster.
 // data-always-visible kategorileri her modda görünür; geri kalanlar
 // data-ve-mode (varsayılan 'performans') ile aktif moda göre filtrelenir.
