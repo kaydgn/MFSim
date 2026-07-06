@@ -445,6 +445,46 @@ describe('Örnek bileşeni', () => {
   });
 });
 
+describe('Örnek JSON topolojisi (dışa aktar + çözümleme)', () => {
+  afterEach(() => { delete global.veSerializeCurrentState; try { delete window.__MNT_TOPOLOGIES; } catch (e) {} });
+
+  test('_mntTopoState farklı biçimleri "state"e normalize eder', () => {
+    const raw = { nodes: [{ id: 'a' }], connections: [{ id: 'c' }] };
+    expect(cp._mntTopoState(raw).nodes).toHaveLength(1);
+    expect(cp._mntTopoState({ state: raw }).connections).toHaveLength(1);        // {state:{…}}
+    expect(cp._mntTopoState({ format: 'x', nodes: [{ id: 'b' }] }).nodes[0].id).toBe('b'); // sarmalı
+    expect(cp._mntTopoState(null)).toBeNull();
+    expect(cp._mntTopoState({})).toBeNull();                                     // nodes yok
+    const s = cp._mntTopoState({ nodes: [{ id: 'a' }] });
+    expect(s.connections).toEqual([]);                                          // varsayılanlar
+    expect(s.canvasOffset).toEqual({ x: 3000, y: 3000 });
+  });
+
+  test('veMntExportTopology geçerli örnek JSON üretir (uçucu alanlar hariç)', () => {
+    global.veSerializeCurrentState = () => ({
+      nodes: [{ id: 'n1', type: 'mnt-motor', data: { mass: 1386.3 } }],
+      connections: [], compCounter: 3, canvasOffset: { x: 10, y: 20 }, canvasZoom: 1,
+      undoStack: [1, 2, 3], simResults: { big: true }
+    });
+    const obj = JSON.parse(cp.veMntExportTopology());
+    expect(obj.format).toBe('mfsim-mount-example');
+    expect(obj.nodes).toHaveLength(1);
+    expect(obj.compCounter).toBe(3);
+    expect(obj.undoStack).toBeUndefined();   // uçucu alanlar dışa aktarılmaz
+    expect(obj.simResults).toBeUndefined();
+  });
+
+  test('_mntResolveTopology: nesne ref doğrudan; string → gömülü __MNT_TOPOLOGIES', () => {
+    let got = 'x';
+    cp._mntResolveTopology({ nodes: [{ id: 'a' }] }, s => { got = s; });
+    expect(got.nodes[0].id).toBe('a');
+    window.__MNT_TOPOLOGIES = { 'assets/examples/x.json': { nodes: [{ id: 'emb' }] } };
+    let got2 = null;
+    cp._mntResolveTopology('assets/examples/x.json', s => { got2 = s; });
+    expect(got2.nodes[0].id).toBe('emb');
+  });
+});
+
 describe('3D Görüntüleyici bileşeni', () => {
   test('panel: canvas + Yenile + interaktif kontroller + resize', () => {
     const node = { id: 'vw1', type: 'mnt-viewer', def: { name: '3D Görüntüleyici' }, data: {} };
