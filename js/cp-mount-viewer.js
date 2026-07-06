@@ -63,13 +63,13 @@ function veMountViewerInit(canvasId, mode){
   var d1 = new THREE.DirectionalLight(0xffffff, isLight ? 0.6 : 0.8); d1.position.set(500,1000,500); scene.add(d1);
   var d2 = new THREE.DirectionalLight(0xffffff, 0.3); d2.position.set(-500,-500,-500); scene.add(d2);
 
-  // Izgara çizgileri: kenarlık rengi (tema) + soluk varyantı. 3D görüntüleyicide
-  // (model modu) zemin AÇILIŞTA GİZLİ gelir (kullanıcı isteği); koordinat modunda
-  // görünür (koordinat zeminini temsil eder).
+  // Izgara çizgileri: kenarlık rengi (tema) + soluk varyantı. Hem 3D görüntüleyici
+  // (model modu) hem koordinat modu AÇILIŞTA zemini GİZLİ getirir (kullanıcı isteği:
+  // eksenler "havada" + geri çekilmiş görünüm). "Zemin" düğmesiyle açılabilir.
   var _mode = mode||'model';
   var gc = _mntViewerCssColor('--border-color', '#333333');
   var grid = new THREE.GridHelper(3000, 30, gc, gc.clone().multiplyScalar(0.55));
-  grid.position.y = -200; grid.visible = (_mode==='coordframe'); scene.add(grid);
+  grid.position.y = -200; grid.visible = false; scene.add(grid);
 
   var group = new THREE.Group(); scene.add(group);   // yeniden kurulan içerik
 
@@ -129,8 +129,9 @@ function veMountViewerToggle(what){
 function veMountViewerReset(){
   var V=_veMountViewer; if(!V) return;
   V.ctrl.theta=-Math.PI*0.75; V.ctrl.phi=Math.PI/3;
-  V.ctrl.radius=(V.mode==='coordframe')?1700:2800;
-  V.ctrl.target.set(0,0,0);
+  V.ctrl.radius=(V.mode==='coordframe')?2600:2800;
+  // Koordinat modu: dikey ekseni (+Z) çerçevelemek için hedefi biraz yukarı al.
+  V.ctrl.target.set(0, (V.mode==='coordframe')?150:0, 0);
   V._framed=false;
   _mntViewerUpdateCamera();
   if(typeof veMountViewerUpdate==='function') veMountViewerUpdate();
@@ -273,7 +274,8 @@ function veMountViewerUpdate(){
   if(V.mode==='coordframe'){
     _mntViewerClearGroup(V); V.axes=[]; V.labelSprites=[]; V.planes=[];
     _mntViewerDrawCoordFrame(V);
-    if(!V._framed){ V.ctrl.target.set(0,0,0); V.ctrl.radius=1700; _mntViewerUpdateCamera(); V._framed=true; }
+    // Geri çekilmiş + dikey ekseni çerçeveleyen başlangıç görünümü (hedef biraz yukarı).
+    if(!V._framed){ V.ctrl.target.set(0,150,0); V.ctrl.radius=2600; _mntViewerUpdateCamera(); V._framed=true; }
     return;
   }
 
