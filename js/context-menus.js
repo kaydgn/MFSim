@@ -353,12 +353,9 @@ function updatePortPosition(portEl, node, portType) {
   var side = pos ? pos.side
     : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType) : (isInput ? 'left' : 'right'));
 
-  // Aynı kenardaki çok portu ayır: index-tabanlı aralık (getPortPosition ile birebir).
-  // Tek portta (idx 0, total 1) → %50 = eski davranış (geriye dönük uyumlu).
-  var idx = 0; if(portType.indexOf('-') > -1) idx = parseInt(portType.split('-')[1]) || 0;
-  var total = (typeof nodePortCount === 'function') ? nodePortCount(node, isInput ? 'inputs' : 'outputs') : 1;
-  if(!total) total = 1;
-  var perp = ((idx + 1) / (total + 1)) * 100;
+  // Kenar üzerindeki konum: aynı kenardaki portların sırasına göre (getPortPosition
+  // ile birebir). Tek port → %50 (kenarın ortası); aynı kenarda çoklu → yan yana.
+  var perp = (typeof portPerpPercent === 'function') ? portPerpPercent(node, portType) : 50;
 
   // Pozisyon stillerini tamamen sıfırla
   portEl.style.left = 'auto';
@@ -398,6 +395,82 @@ function enablePortContextMenu(portEl, node, portType) {
     e.stopPropagation();
     showPortContextMenu(e, portEl, node, portType);
   });
+}
+
+// ============================================================================
+// ETİKET (LABEL) KONUM MENÜSÜ — düğüm adını üst/alt/sağ/sol konumlandır
+// ============================================================================
+var labelContextMenu = null;
+var labelContextTarget = null;
+
+// node.data.labelPos'a göre etiket elemanına konum sınıfını uygula (yoksa: alt).
+function applyNodeLabelPos(node, labelEl){
+  if(!labelEl){
+    var nodeEl = (typeof document !== 'undefined') ? document.getElementById(node.id) : null;
+    labelEl = nodeEl && nodeEl.querySelector('.ve-node-label');
+  }
+  if(!labelEl) return;
+  labelEl.classList.remove('lbl-top', 'lbl-left', 'lbl-right');
+  var pos = node.data && node.data.labelPos;
+  if(pos === 'top') labelEl.classList.add('lbl-top');
+  else if(pos === 'left') labelEl.classList.add('lbl-left');
+  else if(pos === 'right') labelEl.classList.add('lbl-right');
+  // 'bottom' / tanımsız → temel kural (alt)
+}
+
+function createLabelContextMenu(){
+  var menu = document.createElement('div');
+  menu.id = 've-label-context-menu';
+  menu.className = 've-context-menu';
+  menu.style.cssText = 'display:none; position:fixed; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 4px 12px rgba(0,0,0,0.3); z-index:10001; min-width:150px; padding:4px 0;';
+  menu.innerHTML = `
+    <div class="ve-context-item" data-action="top"><span>⬆️</span> Etiketi Üste</div>
+    <div class="ve-context-item" data-action="bottom"><span>⬇️</span> Etiketi Alta</div>
+    <div class="ve-context-item" data-action="left"><span>⬅️</span> Etiketi Sola</div>
+    <div class="ve-context-item" data-action="right"><span>➡️</span> Etiketi Sağa</div>
+    <div class="ve-context-divider"></div>
+    <div class="ve-context-item" data-action="reset"><span><span class="mf-ico mf-ico-refresh"></span></span> Varsayılana Dön</div>
+  `;
+  document.body.appendChild(menu);
+  labelContextMenu = menu;
+  menu.querySelectorAll('.ve-context-item').forEach(function(item){
+    item.addEventListener('click', function(){
+      handleLabelContextAction(this.getAttribute('data-action'));
+      hideLabelContextMenu();
+    });
+  });
+  document.addEventListener('click', function(e){
+    if(labelContextMenu && !labelContextMenu.contains(e.target)) hideLabelContextMenu();
+  });
+}
+
+function showLabelContextMenu(e, node, labelEl){
+  if(typeof hidePortContextMenu === 'function') hidePortContextMenu();
+  if(typeof hideNodeContextMenu === 'function') hideNodeContextMenu();
+  if(!labelContextMenu) createLabelContextMenu();
+  labelContextTarget = { node: node, el: labelEl };
+  labelContextMenu.style.display = 'block';
+  labelContextMenu.style.left = e.clientX + 'px';
+  labelContextMenu.style.top = e.clientY + 'px';
+  var rect = labelContextMenu.getBoundingClientRect();
+  if(rect.right > window.innerWidth) labelContextMenu.style.left = (e.clientX - rect.width) + 'px';
+  if(rect.bottom > window.innerHeight) labelContextMenu.style.top = (e.clientY - rect.height) + 'px';
+}
+
+function hideLabelContextMenu(){
+  if(labelContextMenu) labelContextMenu.style.display = 'none';
+  labelContextTarget = null;
+}
+
+function handleLabelContextAction(action){
+  if(!labelContextTarget) return;
+  var node = labelContextTarget.node, el = labelContextTarget.el;
+  if(!node.data) node.data = {};
+  if(typeof saveState === 'function') saveState();
+  if(action === 'reset') delete node.data.labelPos;
+  else node.data.labelPos = action;   // top / bottom / left / right
+  applyNodeLabelPos(node, el);
+  if(typeof showToast === 'function') showToast('Etiket konumu güncellendi');
 }
 
 // ============================================================================

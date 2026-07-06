@@ -877,13 +877,14 @@ function veSnapPortPos(node, portType) {
   var side = pos ? pos.side
     : ((typeof defaultPortSide === 'function') ? defaultPortSide(node, portType)
       : (node.mirrored ? (isInput ? 'right' : 'left') : (isInput ? 'left' : 'right')));
-  var vSpacing = h / (totalPorts + 1), hSpacing = w / (totalPorts + 1);
+  var frac = ((typeof portPerpPercent === 'function') ? portPerpPercent(node, portType)
+    : ((portIndex + 1) / (totalPorts + 1) * 100)) / 100;
   var x, y;
   switch(side) {
-    case 'top':    x = node.x + hSpacing * (portIndex + 1); y = node.y - 7; break;
-    case 'bottom': x = node.x + hSpacing * (portIndex + 1); y = node.y + h + 7; break;
-    case 'right':  x = node.x + w + 7; y = node.y + vSpacing * (portIndex + 1); break;
-    default:       x = node.x - 7;     y = node.y + vSpacing * (portIndex + 1); break;
+    case 'top':    x = node.x + w * frac; y = node.y - 7; break;
+    case 'bottom': x = node.x + w * frac; y = node.y + h + 7; break;
+    case 'right':  x = node.x + w + 7;    y = node.y + h * frac; break;
+    default:       x = node.x - 7;        y = node.y + h * frac; break;
   }
   return {x: x, y: y, side: side};
 }

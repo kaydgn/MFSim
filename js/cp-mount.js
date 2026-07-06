@@ -784,7 +784,6 @@ function _mntComputeSupportLinks(items){
     if(Math.abs(dx) >= Math.abs(dy)) return dx>=0 ? 'right' : 'left';
     return dy>=0 ? 'bottom' : 'top';
   }
-  function ang(from, to){ var a=Math.atan2(to.ly-from.ly, to.lx-from.lx)*180/Math.PI; return (a+360)%360; }
 
   // 1. Ham linkler: her takoz → en yakın gövde/cradle; her cradle → en yakın gövde.
   var byTarget={};
@@ -797,16 +796,26 @@ function _mntComputeSupportLinks(items){
   //    Böylece ters yönelimli iki cradle bile doğru çıkar (biri üstten, biri alttan).
   var links=[], ports={};
   function setSide(id, portType, side){ (ports[id]=ports[id]||{})[portType]={ side:side }; }
+  var SIDE_ORD = { top:0, right:1, bottom:2, left:3 };
   Object.keys(byTarget).forEach(function(tid){
     var tgt=byId[tid];
-    var incs=byTarget[tid].slice().sort(function(a,b){ return ang(tgt,a)-ang(tgt,b); });
+    var incs=byTarget[tid].slice();
     var inCount=(tgt.inCount!=null)?tgt.inCount:incs.length;
+    // Her geleni gideceği kenara göre etiketle, sonra ÇAPRAZ olmayacak sırada diz:
+    // önce kenar (grupla), sonra kenarın perp ekseni boyunca konum (sol/sağ → üstten
+    // alta ly; üst/alt → soldan sağa lx). Port index'i bu sırayla artınca, üstteki
+    // gelen üstteki porta düşer → çizgiler kesişmez.
+    incs.forEach(function(s){ s._side = sideToward(tgt, s); });
+    incs.sort(function(a,b){
+      if(a._side !== b._side) return (SIDE_ORD[a._side]||0) - (SIDE_ORD[b._side]||0);
+      return (a._side==='left'||a._side==='right') ? (a.ly-b.ly) : (a.lx-b.lx);
+    });
     incs.forEach(function(src, i){
       var pi=Math.min(i, Math.max(0,inCount-1));         // fazla gelen → son portu paylaşır
       var toPort=(inCount<=1) ? 'input' : ('input-'+pi);
       links.push({ from:src.id, to:tgt.id, fromPort:'output', toPort:toPort });
       setSide(src.id, 'output', sideToward(src, tgt));   // kaynak çıkışı hedefe baksın
-      setSide(tgt.id, toPort, sideToward(tgt, src));      // hedef portu kaynağa baksın
+      setSide(tgt.id, toPort, src._side);                 // hedef portu kaynağa baksın
     });
   });
   return { links:links, ports:ports };

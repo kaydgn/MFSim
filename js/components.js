@@ -409,6 +409,30 @@ function defaultPortSide(node, portType){
   return isInput ? 'left' : 'right';
 }
 
+// Bir portun, BULUNDUĞU KENAR üzerindeki yüzdelik konumu (0–100). Aynı kenardaki
+// portlar sıraya göre eşit aralıklanır: tek port → %50 (orta), iki port → %33/%66…
+// Böylece bir portu bir kenara taşıyınca kenarın ORTASINA oturur (köşesine değil),
+// aynı kenara birden çok atınca da yan yana dizilir. getPortPosition /
+// updatePortPosition / veSnapPortPos hep buradan okur → DOM ve SVG hizalı kalır.
+function portPerpPercent(node, portType){
+  function sideOf(pid){
+    return (node && node.data && node.data.portPositions && node.data.portPositions[pid] && node.data.portPositions[pid].side)
+      || defaultPortSide(node, pid);
+  }
+  var mySide = sideOf(portType);
+  var onSide = [];
+  [['inputs','input'],['outputs','output']].forEach(function(k){
+    var count = nodePortCount(node, k[0]);
+    for(var i = 0; i < count; i++){
+      var pid = (count === 1) ? k[1] : (k[1] + '-' + i);
+      if(sideOf(pid) === mySide) onSide.push(pid);
+    }
+  });
+  var rank = onSide.indexOf(portType);
+  if(rank < 0){ rank = 0; onSide = [portType]; }
+  return ((rank + 1) / (onSide.length + 1)) * 100;
+}
+
 // Her bileşen tipi için sinyal tanımları (sensör okuyabilir)
 var COMPONENT_SIGNALS = {
   'engine': {
