@@ -2096,6 +2096,21 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   padding:10px;
   font-size:0.64rem;
 }
+/* Özellik paneli başlığındaki bileşen sembolü: def.svg'nin tutarsız doğal
+   boyutunu (22–38px) sabit 48px'e getirerek tüm bileşenlerde tek tip, panele
+   yaraşır büyüklükte göster; inline-baseline boşluğunu (sembol ile ad
+   arasındaki garip aralık) kaldır. viewBox oranı korunur, flex ile ortalanır. */
+.ve-prop-symbol{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:48px;
+}
+.ve-prop-symbol svg{
+  display:block;
+  width:48px;
+  height:48px;
+}
 .ve-properties-content input,
 .ve-properties-content select,
 .ve-properties-content button,
