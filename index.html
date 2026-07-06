@@ -2,6 +2,10 @@
 <html lang="tr" data-theme="slate">
 <head>
   <meta charset="UTF-8" />
+  <!-- Kayıtlı temayı İLK boyamadan önce uygula. theme.js login sonrası (deferred)
+       yüklendiğinden, o çalışana kadar login/açılış ekranları varsayılan 'slate'
+       ile gelirdi; bu satır kullanıcının temasını (ör. Carbon) anında geçerli kılar. -->
+  <script>try{var _mfT=localStorage.getItem('mf-theme');if(_mfT)document.documentElement.setAttribute('data-theme',_mfT);}catch(e){}</script>
   <title>MFSim — Araç Performans Simülasyonu</title>
   <!-- Leaflet CSS - harita stilleri (kucuk, kalsin) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
