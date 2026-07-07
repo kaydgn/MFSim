@@ -213,6 +213,23 @@ describe('§8 zenginleştirmeleri', () => {
   });
 });
 
+describe('Motor Takozu Uygunluğu (hedef kontrolü)', () => {
+  test('4 kriter tablosu + genel hüküm (idle girdisiyle tam değerlendirme)', () => {
+    const h = rep._mntRepCompliance(R, { idleRpm: 650, cylinders: 6 });
+    expect(h).toContain('Motor Takozu Uygunluğu');
+    ['PowerPack Roll modu', 'transmissibility', 'Vites başına takoz kuvvetleri', 'Genel hüküm'].forEach(s =>
+      expect(h).toContain(s));
+    expect(h).toContain('Roll modu');       // roll modu bulundu ve değerlendirildi
+    expect(h).not.toContain('bekliyor');     // idle var → 1&2 beklemiyor
+    expect(h).toContain('f_ateş');           // ateşleme frekansı hesaplandı
+  });
+  test('idle girdisi yoksa kriter 1&2 bekliyor; 3&4 değerlendirilir', () => {
+    const h = rep._mntRepCompliance(R, {});
+    expect(h).toContain('bekliyor');         // roll modu / transmissibility girdi bekler
+    expect(h).toContain('✓ Uygun');          // torku ve yükleme koşulları mevcut → 3&4 uygun
+  });
+});
+
 describe('Şablon montajı — token doldurma + $$ sınırlayıcı korunması', () => {
   const B64 = (s) => Buffer.from(s, 'utf8').toString('base64');
   test('_mntBuildReportHTML tokenları doldurur, $$ BOZMAZ, artık token bırakmaz', () => {
@@ -249,7 +266,7 @@ describe('Gömülü teori şablonu — sınırlayıcı sağlamlığı (regresyon
     expect(dd).toBeGreaterThan(0);
     expect(dd % 2).toBe(0);
     // tokenlar hâlâ yerinde (üreteç bunları dolduracak)
-    ['@@ASSETS_CSS@@', '@@KATEX_JS@@', '@@ANTET@@', '@@SECTION8@@'].forEach(k =>
+    ['@@ASSETS_CSS@@', '@@KATEX_JS@@', '@@ANTET@@', '@@SECTION8@@', '@@COMPLIANCE@@'].forEach(k =>
       expect(t).toContain(k));
   });
 });
