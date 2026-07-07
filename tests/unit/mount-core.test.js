@@ -210,6 +210,52 @@ describe('solveAllCases — çoklu yük durumu matrisi', () => {
   });
 });
 
+describe('T9 — ±15 mm metal-metal durdurucu (solveCaseStop, F4)', () => {
+  test('küçük sehim: durdurucu devrede değil → solveCase (lineer) ile aynı', () => {
+    const lc = { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] };
+    const lin = core.solveCase(Kstat, mounts, mp.cg, mp.m, g, lc);
+    const stp = core.solveCaseStop(Kstat, mounts, mp.cg, mp.m, g, lc);
+    expect(stp.checks.clampCount).toBe(0);
+    expect(stp.checks.stopConverged).toBe(true);
+    stp.perMount.forEach((pm, i) => {
+      expect(pm.clamped).toBe(false);
+      expect(pm.delta[2]).toBeCloseTo(lin.perMount[i].delta[2], 9);
+    });
+  });
+  test('Max Bump 3.5g: orta+arka 4 takoz klipslenir, |δz| ≤ ~15 mm, ΣFz dengeli', () => {
+    const res = core.solveCaseStop(Kstat, mounts, mp.cg, mp.m, g, { name: 'Max Bump', n: [0, 0, -3.5], T: [0, 0, 0] });
+    expect(res.checks.stopConverged).toBe(true);
+    expect(res.checks.clampCount).toBe(4);
+    expect(res.perMount[0].clamped).toBe(false);  // ön serbest
+    expect(res.perMount[2].clamped).toBe(true);    // orta klipsli
+    res.perMount.forEach(pm => expect(Math.abs(pm.delta[2])).toBeLessThanOrEqual(0.0155));
+    // Yük yeniden dağıtımı: klipslenen arka yükü öne aktarır → ön lineer −11.7'den derinleşir
+    expect(res.perMount[0].delta[2] * 1000).toBeLessThan(-12.5);
+    expect(res.checks.sumFzOk).toBe(true);         // temas kuvvetleri dahil düşey denge
+  });
+  test('Reverse Torque: çift yönlü klips (±15), yakınsar, ΣFz dengeli', () => {
+    const res = core.solveCaseStop(Kstat, mounts, mp.cg, mp.m, g, { name: 'Reverse', n: [0, 0, -1], T: [23705.14, 0, 0] });
+    expect(res.checks.stopConverged).toBe(true);
+    expect(res.checks.clampCount).toBeGreaterThanOrEqual(3);
+    res.perMount.forEach(pm => expect(Math.abs(pm.delta[2])).toBeLessThanOrEqual(0.016));
+    expect(res.checks.sumFzOk).toBe(true);
+  });
+  test('solveAllCases useStop: Static aynı, Max Bump klipsli', () => {
+    const model = core.buildModel(comps, mounts, g);
+    const cases = [
+      { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] },
+      { name: 'Max Bump', n: [0, 0, -3.5], T: [0, 0, 0] }
+    ];
+    const lin = core.solveAllCases(model, cases);
+    const stp = core.solveAllCases(model, cases, { useStop: true });
+    expect(stp[0].res.checks.clampCount).toBe(0);
+    expect(stp[1].res.checks.clampCount).toBe(4);
+    // durdurucusuz Max Bump orta lineer 15 mm'yi aşar; durduruculu klipslenir
+    expect(Math.abs(lin[1].res.perMount[2].delta[2])).toBeGreaterThan(0.015);
+    expect(Math.abs(stp[1].res.perMount[2].delta[2])).toBeLessThanOrEqual(0.0155);
+  });
+});
+
 describe('selfTest — gömülü kabul testi koşucusu', () => {
   test('T1–T8 hepsi yeşil (failed = 0)', () => {
     const r = core.selfTest();

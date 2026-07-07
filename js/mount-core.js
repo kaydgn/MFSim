@@ -347,12 +347,101 @@ var veMountCore = (function() {
     return {q, F, perMount, sumF, checks};
   }
 
+  // ═══════════════════ Metal-metal durdurucu — ±15 mm (SPEC 9.1 / F4) ═══════════════════
+  //
+  // Takozun DÜŞEY (z) hareketi ±STOP_GAP_M'de metal-metal temasa oturur; ötesinde
+  // ek rijitlik k_stop = STOP_STIFF_RATIO·kz devreye girer → sistem PARÇALI-LİNEER.
+  //
+  // NEDEN SONLU RİJİTLİK (rijit kelepçe DEĞİL): rijit gövdenin yalnız 3 düşey
+  // serbestlik derecesi (bounce, roll, pitch) vardır. 3'ten çok takozu aynı anda
+  // TAM ±15'e RİJİT sabitlemek kinematik olarak aşırı-kısıttır (KKT singular olur).
+  // Adams referansı da klipsli takozları tam ±15'te değil (−14.9/−15.0) gösterir —
+  // yani hafif eğimli, sonlu-rijitlikli temas. Bu yüzden gap elemanı + yüksek
+  // (varsayılan 100·kz) teğet rijitlik kullanılır; penetrasyon ~0.1 mm kalır.
+  //
+  // Çözüm: aktif-küme iterasyonu. Penetrasyondaki (|δz|>gap) takozlar kümesi
+  // kararlı olana dek K_eff = Kstat + Σ_aktif k_stop·(aᵤᵤ⊗aᵤᵤ) sistemi yeniden
+  // çözülür (aᵤᵤ = takozun A matrisinin z-satırı). Yük OTOMATİK yeniden dağılır:
+  // dibe oturan takoz temas kuvvetiyle (k·δ değil) çalışır, fazla yük komşulara.
+  const STOP_GAP_M = 0.015;          // ±15 mm metal-metal boşluğu (SPEC 9.1)
+  const STOP_STIFF_RATIO = 100;      // k_stop / kz (Adams BMC_TTAR_2031 kalibrasyonu)
+  const STOP_MAXITER = 50;           // aktif-küme üst sınırı (tipik 1-3 iterasyon)
+
+  // Durduruculu tek yük durumu çözümü. Küçük sehimde solveCase ile AYNI sonucu
+  // verir (hiçbir takoz gap'i aşmaz → aktif küme boş → saf lineer). Dönüş
+  // solveCase ile aynı biçim + perMount[i].clamped, checks.clampCount, stopConverged.
+  function solveCaseStop(Kstat, mounts, cg, m, g, lc, opts){
+    opts = opts || {};
+    const gap   = (opts.gap != null)        ? opts.gap        : STOP_GAP_M;
+    const ratio = (opts.stiffRatio != null) ? opts.stiffRatio : STOP_STIFF_RATIO;
+    const F=[m*g*lc.n[0], m*g*lc.n[1], m*g*lc.n[2], lc.T[0], lc.T[1], lc.T[2]];
+    // Takoz kinematik matrisleri + düşey (z) satırları (bir kez hesapla).
+    const A=[], az=[];
+    for(const mnt of mounts){
+      const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
+      const Ai=makeA(d); A.push(Ai); az.push(Ai[2]);
+    }
+    const active = new Array(mounts.length).fill(0);   // 0 / −1 (alt) / +1 (üst)
+    let q=null, converged=false;
+    for(let iter=0; iter<STOP_MAXITER; iter++){
+      // K_eff = Kstat + Σ_aktif k_stop·(az⊗az) ; rhs = F + Σ k_stop·(sgn·gap)·az
+      const K = matCopy(Kstat);
+      const rhs = F.slice();
+      for(let i=0;i<mounts.length;i++){
+        if(!active[i]) continue;
+        const kS = mounts[i].kstat[2]*ratio, r=az[i], dg=active[i]*gap;
+        for(let a=0;a<6;a++){ for(let b=0;b<6;b++) K[a][b]+=kS*r[a]*r[b]; rhs[a]+=kS*dg*r[a]; }
+      }
+      q = solveLinear(K, rhs);
+      if(!q) return null;
+      // Aktif küme güncelle: gap'i aşan → temas; içine dönen → serbest.
+      let changed=false;
+      for(let i=0;i<mounts.length;i++){
+        const dz = az[i].reduce((s,a,j)=>s+a*q[j],0);
+        const want = (dz < -gap) ? -1 : (dz > gap) ? +1 : 0;
+        if(want !== active[i]){ active[i]=want; changed=true; }
+      }
+      if(!changed){ converged=true; break; }
+    }
+    // Sonuç kur — dibe oturan takozda fz = kz·δz + k_stop·(δz∓gap) (temas dahil).
+    const perMount=[]; const sumF=[0,0,0];
+    let tensionCount=0, overLinearCount=0, clampCount=0;
+    for(let i=0;i<mounts.length;i++){
+      const mnt=mounts[i];
+      const delta=[0,1,2].map(k=>A[i][k].reduce((s,a,j)=>s+a*q[j],0));
+      let fz = mnt.kstat[2]*delta[2];
+      if(active[i]) fz += mnt.kstat[2]*ratio*(delta[2]-active[i]*gap);
+      const f=[mnt.kstat[0]*delta[0], mnt.kstat[1]*delta[1], fz];
+      for(let k=0;k<3;k++) sumF[k]+=f[k];
+      const tension = delta[2] > TENSION_EPS_M;
+      if(tension) tensionCount++;
+      const overLinear = delta.some(dv => Math.abs(dv) > LINEAR_LIMIT_M);
+      if(overLinear) overLinearCount++;
+      const clamped = active[i] !== 0;
+      if(clamped) clampCount++;
+      perMount.push({name:mnt.name, delta, f, tension, overLinear, clamped});
+    }
+    const checks={
+      sumFzOk: Math.abs(sumF[2]-F[2]) < 1e-3*Math.max(1,Math.abs(F[2])),
+      sumFzResidual: sumF[2]-F[2],
+      tensionCount, overLinearCount, clampCount, stopConverged: converged
+    };
+    return {q, F, perMount, sumF, checks};
+  }
+
   // Çoklu yük durumu: sistem lineer → durumlar bağımsız çözülür.
   // model = { m, cg, Kstat, mounts, g }. Dönüş satırları Adams çıktı düzeni
   // (satır = yük durumu, sütun = takoz × {δx,δy,δz}).
-  function solveAllCases(model, cases){
+  // opts.useStop=true → ±15 mm metal-metal durdurucu (solveCaseStop, F4);
+  //   büyük sehimli senaryolarda (Tümsek/Pothole/Kerb/Reverse) klips + yeniden
+  //   dağıtım. Küçük sehimde iki yol da AYNI (lineer) sonucu verir.
+  function solveAllCases(model, cases, opts){
+    opts = opts || {};
+    const solve = opts.useStop
+      ? (lc => solveCaseStop(model.Kstat, model.mounts, model.cg, model.m, model.g, lc, opts))
+      : (lc => solveCase(model.Kstat, model.mounts, model.cg, model.m, model.g, lc));
     return cases.map(lc => {
-      const res = solveCase(model.Kstat, model.mounts, model.cg, model.m, model.g, lc);
+      const res = solve(lc);
       return res ? {name: lc.name, loadCase: lc, res}
                  : {name: lc.name, loadCase: lc, res: null,
                     error: 'K matrisi singular/çözülemedi (montaj kinematik olarak serbest olabilir).'};
@@ -485,8 +574,8 @@ var veMountCore = (function() {
       {name:'Max Bump',       n:[ 0, 0,-3], T:[0,0,0]},
       {name:'Acceleration',   n:[ 1, 0,-1], T:[0,0,0]},
       {name:'Braking',        n:[-1, 0,-1], T:[0,0,0]},
-      {name:'Cornering L',    n:[ 0, 1,-1], T:[0,0,0]},
-      {name:'Cornering R',    n:[ 0,-1,-1], T:[0,0,0]},
+      {name:'Cornering L',    n:[ 0, 0.6,-1], T:[0,0,0]},
+      {name:'Cornering R',    n:[ 0,-0.6,-1], T:[0,0,0]},
       {name:'Forward Torque', n:[ 0, 0,-1], T:[0,0,0]},
       {name:'Reverse Torque', n:[ 0, 0,-1], T:[0,0,0]}
     ];
@@ -522,8 +611,8 @@ var veMountCore = (function() {
       {name:'Max Bump',       n:[ 0, 0,-3], T:[0,0,0]},
       {name:'Acceleration',   n:[ 1, 0,-1], T:[0,0,0]},
       {name:'Braking',        n:[-1, 0,-1], T:[0,0,0]},
-      {name:'Cornering L',    n:[ 0, 1,-1], T:[0,0,0]},
-      {name:'Cornering R',    n:[ 0,-1,-1], T:[0,0,0]},
+      {name:'Cornering L',    n:[ 0, 0.6,-1], T:[0,0,0]},
+      {name:'Cornering R',    n:[ 0,-0.6,-1], T:[0,0,0]},
       {name:'Forward Torque', n:[ 0, 0,-1], T:[-6667.07,0,0]},
       {name:'Reverse Torque', n:[ 0, 0,-1], T:[ 23705.06,0,0]}
     ]
@@ -561,8 +650,8 @@ var veMountCore = (function() {
       {name:'Max Bump',       n:[ 0, 0,-3], T:[0,0,0]},
       {name:'Acceleration',   n:[ 1, 0,-1], T:[0,0,0]},
       {name:'Braking',        n:[-1, 0,-1], T:[0,0,0]},
-      {name:'Cornering L',    n:[ 0, 1,-1], T:[0,0,0]},
-      {name:'Cornering R',    n:[ 0,-1,-1], T:[0,0,0]},
+      {name:'Cornering L',    n:[ 0, 0.6,-1], T:[0,0,0]},
+      {name:'Cornering R',    n:[ 0,-0.6,-1], T:[0,0,0]},
       {name:'Forward Torque', n:[ 0, 0,-1], T:[ -6667.07,0,0]},
       {name:'Reverse Torque', n:[ 0, 0,-1], T:[ 23705.14,0,0]}
     ]
@@ -841,7 +930,7 @@ var veMountCore = (function() {
   return {
     // Model
     combineMassProps, buildK, buildM6, buildModel,
-    solveCase, solveAllCases, solveModal,
+    solveCase, solveCaseStop, solveAllCases, solveModal,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
     defaultLoadCases, TTAR_EXAMPLE, ttarComponentsSI, ttarMountsSI, selfTest,
@@ -852,7 +941,7 @@ var veMountCore = (function() {
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
     // Sabitler
-    TENSION_EPS_M, LINEAR_LIMIT_M
+    TENSION_EPS_M, LINEAR_LIMIT_M, STOP_GAP_M, STOP_STIFF_RATIO
   };
 })();
 

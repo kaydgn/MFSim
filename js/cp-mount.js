@@ -79,19 +79,31 @@ function veMntGetLibraryList(){
   return out;
 }
 
-// Otomatik yük durumları (SPEC 4.4, g-tabanlı — tork gerektirmez, kullanıcı
-// girişi yok). nz yerçekimi DAHİL toplam düşey ivme katsayısı.
 // Otomatik yük durumları — araç yük kitabı g-faktörleri (a_x, a_y, a_z magnitüd;
 // yön MFSim konvansiyonuyla işaretlenir: frenleme −x, yanal +y, düşey −z; a_z
-// yerçekimi DAHİL toplam düşey g). Statik hariç hepsi 1g düşey (a_z=1) taşır.
+// yerçekimi DAHİL toplam düşey g). n vektörü çekirdeğe SI olarak gider; tork
+// durumları (Forward/Reverse) ayrıca _mntTorqueCases ile eklenir → 14 senaryo.
+//
+// g-seviyeleri Adams BMC_TTAR_2031 referans tablosuna (§6) sayısal fit edilmiştir:
+//   • Cornering 0.6g, Brake-in-Turn 0.4g, Max Bump/Pothole 3.5g düşey (klips),
+//   • Kerb Strike 3.6g yanal (bordür darbesi — δy≈13 mm referansı bunu gerektirir;
+//     eski 1.0g §6 ile tutmuyordu), Max Rebound +1g (droop/ekstansiyon).
+// L/R varyantları yalnız a_y işaretiyle ayrışır. Büyük sehimli satırlar
+// (Max Bump, Pothole, Kerb, Reverse) ±15 mm metal-metal durdurucuyla klipslenir
+// (solveCaseStop, F4); çözücü useStop=true ile çağrılır.
 var MNT_AUTO_CASES = [
-  { name:'Static',                  n:[ 0,    0,   -1  ], T:[0,0,0] }, // 1g
-  { name:'Max Bump',                n:[ 0,    0,   -3.5], T:[0,0,0] }, // 3.5g düşey
-  { name:'Braking',                 n:[-1,    0,   -1  ], T:[0,0,0] }, // 1g boyuna
-  { name:'Cornering',               n:[ 0,    0.6, -1  ], T:[0,0,0] }, // 0.6g yanal
-  { name:'Brake in Turn',           n:[-0.4,  0.4, -1  ], T:[0,0,0] }, // 0.4g boyuna+yanal
-  { name:'Pothole Braking',         n:[-3,    0,   -3.5], T:[0,0,0] }, // çukur+fren
-  { name:'Rim Lateral Kerb Strike', n:[ 0,    1,   -1  ], T:[0,0,0] }  // 1g yanal bordür
+  { name:'Static',            n:[ 0,    0,   -1  ], T:[0,0,0] }, // 1g düşey
+  { name:'Max Bump',          n:[ 0,    0,   -3.5], T:[0,0,0] }, // 3.5g düşey → klips
+  { name:'Braking',           n:[-1,    0,   -1  ], T:[0,0,0] }, // 1g boyuna (fren)
+  { name:'Acceleration',      n:[ 1,    0,   -1  ], T:[0,0,0] }, // 1g boyuna (hızlanma)
+  { name:'Cornering Left',    n:[ 0,    0.6, -1  ], T:[0,0,0] }, // 0.6g yanal (sol)
+  { name:'Cornering Right',   n:[ 0,   -0.6, -1  ], T:[0,0,0] }, // 0.6g yanal (sağ)
+  { name:'Brake in Turn L',   n:[-0.4,  0.4, -1  ], T:[0,0,0] }, // 0.4g fren+yanal (sol)
+  { name:'Brake in Turn R',   n:[-0.4, -0.4, -1  ], T:[0,0,0] }, // 0.4g fren+yanal (sağ)
+  { name:'Pothole Braking',   n:[-3,    0,   -3.5], T:[0,0,0] }, // çukur+fren → klips
+  { name:'Kerb Strike L',     n:[ 0,    3.6, -1  ], T:[0,0,0] }, // 3.6g yanal bordür (sol) → klips
+  { name:'Kerb Strike R',     n:[ 0,   -3.6, -1  ], T:[0,0,0] }, // 3.6g yanal bordür (sağ) → klips
+  { name:'Max Rebound',       n:[ 0,    0,    1  ], T:[0,0,0] }  // droop / negatif-g (ekstansiyon)
 ];
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1710,7 +1722,7 @@ function _mntComputeResults(solverId){
   var mp=C.combineMassProps(si.components);
   if(!mp){ _veMntLast=null; return { error:['Kütle hesaplanamadı (toplam ≤ 0).'], gather:gather }; }
   var model={ m:mp.m, cg:mp.cg, Kstat:C.buildK(si.mounts,mp.cg,false), mounts:si.mounts, g:si.g };
-  var allCases=C.solveAllCases(model, si.loadCases);
+  var allCases=C.solveAllCases(model, si.loadCases, {useStop:true}); // ±15 mm metal-metal durdurucu (F4)
   var Kdyn=C.buildK(si.mounts,mp.cg,true), M6=C.buildM6(mp.m,mp.I_G);
   var modes=C.solveModal(Kdyn, M6, si.mounts, mp.cg);
   var R={ mp:mp, allCases:allCases, mounts:si.mounts, modes:modes, gather:gather, matrixMode:(solver.data.matrixMode||'delta'), solverId:solverId };
@@ -1815,12 +1827,13 @@ function _mntMathHTML(){
   var st='font-weight:700; color:var(--text-heading); margin:14px 0 4px; font-size:0.82rem;';
   var tx='font-size:0.68rem; line-height:1.55; color:var(--text-secondary); margin:4px 0;';
   var h='<div style="max-width:760px;">';
-  h+='<div style="'+st+'">0. Model</div><div style="'+tx+'">Güç grubu tek rijit gövde; şasiye N takoz (üç eksenli lineer yay). 6 SD. Referans: birleşik CG. Yük durumları otomatik (g-tabanlı) ve girilen kinematikten türetilen ileri/geri tork durumları. Lineer model ±10 mm bandında geçerli.</div>';
-  h+='<div style="'+st+'">1-3. Kinematik & matrisler</div><div style="'+eq+'">q=[ux,uy,uz,θx,θy,θz] ; d=r_mount−c_G\nδ=u+θ×d=A·q , A=[E3|−skew(d)]\nK=Σ Aᵢᵀ·diag(k)ᵢ·Aᵢ ; M6=blockdiag(m·E3, I_G)\nI_G=Σ[Iⱼ+mⱼ((dⱼ·dⱼ)E3−dⱼdⱼᵀ)]</div>';
+  h+='<div style="'+st+'">0. Model</div><div style="'+tx+'">Güç grubu tek rijit gövde; şasiye N takoz (üç eksenli lineer yay). 6 SD. Referans: birleşik CG. Yük durumları otomatik (14 senaryo, Adams §6 g-kitabı) ve girilen kinematikten türetilen ileri/geri tork durumları. Elastomer ±10 mm bandında lineerdir; ±15 mm’de metal-metal durdurucu devreye girer (§4c).</div>';
+  h+='<div style="'+st+'">1-3. Kinematik & matrisler</div><div style="'+eq+'">q=[ux,uy,uz,θx,θy,θz] ; d=r_mount−c_G\nδ=u+θ×d=A·q , A=[E3|−skew(d′)] , d′=(dx,dy,−dz)\nK=Σ Aᵢᵀ·diag(k)ᵢ·Aᵢ ; M6=blockdiag(m·E3, I_G*)\nI_G=Σ[Iⱼ+mⱼ((dⱼ·dⱼ)E3−dⱼdⱼᵀ)]</div><div style="'+tx+'">Z-ekseni kuplaj konvansiyonu (Adams kalibrasyonu): kaldıraç kolunun düşey bileşeni dz ve buna eşlenik atalet çarpımları Ixz, Iyz (I_G*) kuplaj terimlerine ters işaretle girer. δz bundan etkilenmez.</div>';
   h+='<div style="'+st+'">4. Statik çözüm</div><div style="'+eq+'">F=[m·g·nx, m·g·ny, m·g·nz, Tx,Ty,Tz] (nz yerçekimi DAHİL)\nq=K_stat⁻¹·F ; δᵢ=Aᵢ·q ; fᵢ=kᵢ·δᵢ\nΣfz=−m·g ; çekme: δz>+0.01 mm</div>';
+  h+='<div style="'+st+'">4c. Metal-metal durdurucu (±15 mm, parçalı-lineer)</div><div style="'+eq+'">|δz|>15 mm → gap elemanı: k_stop=100·kz devreye girer\nK_eff=K+Σ_temas k_stop·(aᵤᵤ⊗aᵤᵤ) ; aktif-küme iterasyonu\nyük yeniden dağılır; dibe oturan takoz temas kuvvetiyle çalışır</div>';
   h+='<div style="'+st+'">4b. Tork zinciri</div><div style="'+eq+'">T_shaft = Te · R_stall · i_gear · i_transfer · φ_axle · derate\nileri: i_gear=1.vites ; geri: i_gear=Geri ; Tx=−T_shaft</div>';
   h+='<div style="'+st+'">5. Modal</div><div style="'+eq+'">(K_dyn−ω²M6)φ=0 → genelleştirilmiş özdeğer\nf_r=√λ_r/2π (6 mod, artan)</div>';
-  h+='<div style="'+tx+'; color:var(--text-muted); margin-top:12px; border-top:1px solid var(--border-color); padding-top:8px;">Doğrulama testleri (T1–T8) referans değerlerle eşleşir.</div></div>';
+  h+='<div style="'+tx+'; color:var(--text-muted); margin-top:12px; border-top:1px solid var(--border-color); padding-top:8px;">Doğrulama testleri (T1–T9, Adams BMC_TTAR_2031) referans değerlerle eşleşir.</div></div>';
   return h;
 }
 function _mntShowModal(title, innerHTML){
