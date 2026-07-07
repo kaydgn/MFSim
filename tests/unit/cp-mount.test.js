@@ -85,16 +85,21 @@ describe('Panel üreticileri', () => {
 });
 
 describe('Otomatik yük durumları (kullanıcı girişi yok)', () => {
-  test('7 g-tabanlı standart durum (yük kitabı), tork gerektirmez', () => {
-    expect(cp.MNT_AUTO_CASES).toHaveLength(7);
+  test('12 g-tabanlı standart durum (Adams §6 yük kitabı), tork gerektirmez', () => {
+    expect(cp.MNT_AUTO_CASES).toHaveLength(12);
     expect(cp.MNT_AUTO_CASES[0]).toEqual({ name: 'Static', n: [0, 0, -1], T: [0, 0, 0] });
     expect(cp.MNT_AUTO_CASES.every(c => c.T[0] === 0 && c.T[1] === 0 && c.T[2] === 0)).toBe(true);
     expect(cp.MNT_AUTO_CASES.map(c => c.name)).toEqual(
-      ['Static', 'Max Bump', 'Braking', 'Cornering', 'Brake in Turn', 'Pothole Braking', 'Rim Lateral Kerb Strike']);
-    // g-faktörleri (yük kitabı): a_z yerçekimi dahil (−), yanal +y, frenleme −x
-    expect(cp.MNT_AUTO_CASES[1].n).toEqual([0, 0, -3.5]);      // Max Bump 3.5g
-    expect(cp.MNT_AUTO_CASES[4].n).toEqual([-0.4, 0.4, -1]);   // Brake in Turn
-    expect(cp.MNT_AUTO_CASES[5].n).toEqual([-3, 0, -3.5]);     // Pothole Braking
+      ['Static', 'Max Bump', 'Braking', 'Acceleration', 'Cornering Left', 'Cornering Right',
+       'Brake in Turn L', 'Brake in Turn R', 'Pothole Braking', 'Kerb Strike L', 'Kerb Strike R', 'Max Rebound']);
+    // g-faktörleri (Adams §6 fit): a_z yerçekimi dahil (−), yanal +y sol, frenleme −x
+    expect(cp.MNT_AUTO_CASES[1].n).toEqual([0, 0, -3.5]);       // Max Bump 3.5g düşey
+    expect(cp.MNT_AUTO_CASES[3].n).toEqual([1, 0, -1]);         // Acceleration +1g boyuna
+    expect(cp.MNT_AUTO_CASES[4].n).toEqual([0, 0.6, -1]);       // Cornering Left 0.6g
+    expect(cp.MNT_AUTO_CASES[6].n).toEqual([-0.4, 0.4, -1]);    // Brake in Turn L
+    expect(cp.MNT_AUTO_CASES[8].n).toEqual([-3, 0, -3.5]);      // Pothole Braking
+    expect(cp.MNT_AUTO_CASES[9].n).toEqual([0, 3.6, -1]);       // Kerb Strike L 3.6g yanal
+    expect(cp.MNT_AUTO_CASES[11].n).toEqual([0, 0, 1]);         // Max Rebound +1g droop
   });
 });
 
@@ -284,14 +289,14 @@ describe('Çözücü otomatik algılama (bağlantı gerekmez) → gather → çe
     const expF = [5.039, 6.111, 8.364, 10.148, 12.071, 21.239];
     modes.forEach((md, i) => expect(md.f_Hz).toBeCloseTo(expF[i], 2));
   });
-  test('otomatik yük durumları çözücüde uygulanır (7 durum)', () => {
+  test('otomatik yük durumları çözücüde uygulanır (12 g + tork)', () => {
     const si = cp._mntToSI(cp._mntGatherForSolver(topo.solver), 9.81);
-    expect(si.loadCases).toHaveLength(7);
+    expect(si.loadCases.length).toBeGreaterThanOrEqual(12);  // 12 g-senaryosu (+ tork varsa)
     const mp = core.combineMassProps(si.components);
     const model = { m: mp.m, cg: mp.cg, Kstat: core.buildK(si.mounts, mp.cg, false), mounts: si.mounts, g: si.g };
-    const rows = core.solveAllCases(model, si.loadCases);
-    expect(rows).toHaveLength(7);
-    rows.forEach(r => expect(r.res).not.toBeNull());
+    const rows = core.solveAllCases(model, si.loadCases, { useStop: true });
+    expect(rows).toHaveLength(si.loadCases.length);
+    rows.forEach(r => { expect(r.res).not.toBeNull(); expect(r.res.checks.stopConverged).toBe(true); });
   });
 });
 
@@ -695,16 +700,16 @@ describe('Kinematik girdiler + tork yük durumları', () => {
     expect(cp._mntTorqueCases({ Te: 760 })).toHaveLength(0); // Rstall/g1 yok
   });
 
-  test('_mntToSI tork girildiğinde 9, girilmediğinde 7 yük durumu', () => {
+  test('_mntToSI tork girildiğinde 14, girilmediğinde 12 yük durumu', () => {
     const withTq = cp._mntToSI({ components: [], mounts: [], torque: { Te: 760, Rstall: 1.58, g1: 3.10, gR: -4.49 } }, 9.81);
-    expect(withTq.loadCases).toHaveLength(9);   // 7 otomatik + ileri/geri tork
+    expect(withTq.loadCases).toHaveLength(14);   // 12 otomatik + ileri/geri tork
     expect(withTq.loadCases.map(c => c.name)).toContain('Forward Torque');
     const noTq = cp._mntToSI({ components: [], mounts: [], torque: {} }, 9.81);
-    expect(noTq.loadCases).toHaveLength(7);
+    expect(noTq.loadCases).toHaveLength(12);
   });
   test('MNT_AUTO_CASES mutasyona uğramaz (concat kopya)', () => {
     cp._mntToSI({ components: [], mounts: [], torque: { Te: 760, Rstall: 1.58, g1: 3.10 } }, 9.81);
-    expect(cp.MNT_AUTO_CASES).toHaveLength(7);
+    expect(cp.MNT_AUTO_CASES).toHaveLength(12);
   });
 });
 

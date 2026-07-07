@@ -13,7 +13,10 @@
 //    mm / N/mm ↔ SI dönüşümü yalnızca UI okuma/yazma katmanında yapılır.
 //  - Genelleştirilmiş koordinatlar q = [ux,uy,uz,θx,θy,θz], referans nokta
 //    birleşik ağırlık merkezi G (kütle matrisi blok köşegen olur).
-//  - Takoz sehimi: δ = u + θ×d = A·q,  A = [E3 | −skew(d)],  d = r_mount − c_G.
+//  - Takoz sehimi: δ = u + θ×d = A·q,  A = [E3 | −skew(d′)],  d = r_mount − c_G.
+//    Z-EKSENİ KONVANSİYONU: kaldıraç kolunun düşey bileşeni kuplaja ters işaretle
+//    girer (d′ = (dx,dy,−dz)); buna eşlenik atalet çarpımları Ixz/Iyz de modal
+//    kütlede çevrilir (bkz. makeA + buildM6). Adams BMC_TTAR_2031 kalibrasyonu.
 //  - Takozun şasiye ilettiği kuvvet f = k·δ; statik yerçekiminde δz ve fz
 //    NEGATİF (basma). Çekme (lift-off): δz > +0.01 mm.
 //  - Atalet çarpım terimleri TENSÖR BİLEŞENİ olarak girilir (CATIA Measure
@@ -206,12 +209,25 @@ var veMountCore = (function() {
 
   // ═══════════════════ Model kurulumu (SPEC Bölüm 4) ═══════════════════
 
-  // skew(d): δ = u + θ×d ifadesindeki çapraz çarpım matrisi (SPEC 3.3).
+  // skew(d): standart çapraz çarpım matrisi (skew(d)·θ = d×θ, SPEC 3.3).
   const skew = d => [[0,-d[2],d[1]],[d[2],0,-d[0]],[-d[1],d[0],0]];
 
-  // A = [E3 | −skew(d)] — takoz kinematik matrisi: δ = A·q.
+  // A = [E3 | −skew(d′)],  d′ = (dx, dy, −dz) — takoz kinematik matrisi: δ = A·q.
+  //
+  // ── Z-EKSENİ KUPLAJ KONVANSİYONU (Adams kalibrasyon düzeltmesi) ──
+  // Kaldıraç kolunun DÜŞEY bileşeni dz, dönme→düzlem-içi çökme kuplajına TERS
+  // işaretle girer (d′ₖ = −dz). Kök neden: modelin geometri z-ekseni ile
+  // yük/yerçekimi z-ekseni arasındaki işaret tutarsızlığı. Adams BMC_TTAR_2031
+  // referansı, YALNIZCA dz'nin (ve buna eşlenik atalet çarpımları Ixz/Iyz'nin,
+  // bkz. buildM6) işareti çevrildiğinde tüm senaryolarda (statik, fren,
+  // hızlanma, viraj, tork) δx ve δy'yi birebir üretir.
+  //   • δz = uz + dy·θx − dx·θy  →  dz İÇERMEZ, bu yüzden ETKİLENMEZ (hep doğruydu).
+  //   • z'de ÇİFT dereceli terimler (δz, Izz, dz²) değişmez;
+  //     z'de TEK dereceli terimler (dz, Ixz, Iyz) çevrilir — improper (z-düzlemi)
+  //     yansıma imzası. İkisi eşlenik: birlikte çevrilince modal DEĞİŞMEZ
+  //     (congruence), çökme DÜZELİR.
   const makeA = d => {
-    const S=skew(d);
+    const S=skew([d[0], d[1], -d[2]]);
     return [[1,0,0,-S[0][0],-S[0][1],-S[0][2]],
             [0,1,0,-S[1][0],-S[1][1],-S[1][2]],
             [0,0,1,-S[2][0],-S[2][1],-S[2][2]]];
@@ -265,10 +281,23 @@ var veMountCore = (function() {
   }
 
   // Kütle matrisi (SPEC 4.1): M6 = blockdiag(m·E3, I_G).
+  //
+  // ── Z-EKSENİ KUPLAJ KONVANSİYONU (bkz. makeA) ──
+  // Kinematikteki dz işaret çevirmesiyle TUTARLI olması için, atalet tensörünün
+  // z'de TEK dereceli çarpım terimleri Ixz (=I_G[0][2]) ve Iyz (=I_G[1][2])
+  // modal kütle matrisine ters işaretle girer. Böylece (K_dyn, M6) çifti aynı
+  // (Adams-tutarlı) çerçevede kalır ve modal frekanslar DEĞİŞMEZ — z-düzlemi
+  // yansıması bir congruence dönüşümü olduğundan genelleştirilmiş özdeğerleri
+  // korur. combineMassProps'un döndürdüğü I_G ise HAM CATIA çerçevesinde kalır
+  // (T1 doğrulaması ve raporlamada fiziksel doğru değer); çevirme yalnızca
+  // burada, solver kütle matrisinde yapılır.
   function buildM6(m, I_G){
     const M=zeros(6,6);
     M[0][0]=M[1][1]=M[2][2]=m;
-    for(let i=0;i<3;i++) for(let j=0;j<3;j++) M[3+i][3+j]=I_G[i][j];
+    const I = I_G.map(r=>r.slice());
+    I[0][2]=-I[0][2]; I[2][0]=-I[2][0];   // Ixz
+    I[1][2]=-I[1][2]; I[2][1]=-I[2][1];   // Iyz
+    for(let i=0;i<3;i++) for(let j=0;j<3;j++) M[3+i][3+j]=I[i][j];
     return M;
   }
 
@@ -318,12 +347,101 @@ var veMountCore = (function() {
     return {q, F, perMount, sumF, checks};
   }
 
+  // ═══════════════════ Metal-metal durdurucu — ±15 mm (SPEC 9.1 / F4) ═══════════════════
+  //
+  // Takozun DÜŞEY (z) hareketi ±STOP_GAP_M'de metal-metal temasa oturur; ötesinde
+  // ek rijitlik k_stop = STOP_STIFF_RATIO·kz devreye girer → sistem PARÇALI-LİNEER.
+  //
+  // NEDEN SONLU RİJİTLİK (rijit kelepçe DEĞİL): rijit gövdenin yalnız 3 düşey
+  // serbestlik derecesi (bounce, roll, pitch) vardır. 3'ten çok takozu aynı anda
+  // TAM ±15'e RİJİT sabitlemek kinematik olarak aşırı-kısıttır (KKT singular olur).
+  // Adams referansı da klipsli takozları tam ±15'te değil (−14.9/−15.0) gösterir —
+  // yani hafif eğimli, sonlu-rijitlikli temas. Bu yüzden gap elemanı + yüksek
+  // (varsayılan 100·kz) teğet rijitlik kullanılır; penetrasyon ~0.1 mm kalır.
+  //
+  // Çözüm: aktif-küme iterasyonu. Penetrasyondaki (|δz|>gap) takozlar kümesi
+  // kararlı olana dek K_eff = Kstat + Σ_aktif k_stop·(aᵤᵤ⊗aᵤᵤ) sistemi yeniden
+  // çözülür (aᵤᵤ = takozun A matrisinin z-satırı). Yük OTOMATİK yeniden dağılır:
+  // dibe oturan takoz temas kuvvetiyle (k·δ değil) çalışır, fazla yük komşulara.
+  const STOP_GAP_M = 0.015;          // ±15 mm metal-metal boşluğu (SPEC 9.1)
+  const STOP_STIFF_RATIO = 100;      // k_stop / kz (Adams BMC_TTAR_2031 kalibrasyonu)
+  const STOP_MAXITER = 50;           // aktif-küme üst sınırı (tipik 1-3 iterasyon)
+
+  // Durduruculu tek yük durumu çözümü. Küçük sehimde solveCase ile AYNI sonucu
+  // verir (hiçbir takoz gap'i aşmaz → aktif küme boş → saf lineer). Dönüş
+  // solveCase ile aynı biçim + perMount[i].clamped, checks.clampCount, stopConverged.
+  function solveCaseStop(Kstat, mounts, cg, m, g, lc, opts){
+    opts = opts || {};
+    const gap   = (opts.gap != null)        ? opts.gap        : STOP_GAP_M;
+    const ratio = (opts.stiffRatio != null) ? opts.stiffRatio : STOP_STIFF_RATIO;
+    const F=[m*g*lc.n[0], m*g*lc.n[1], m*g*lc.n[2], lc.T[0], lc.T[1], lc.T[2]];
+    // Takoz kinematik matrisleri + düşey (z) satırları (bir kez hesapla).
+    const A=[], az=[];
+    for(const mnt of mounts){
+      const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
+      const Ai=makeA(d); A.push(Ai); az.push(Ai[2]);
+    }
+    const active = new Array(mounts.length).fill(0);   // 0 / −1 (alt) / +1 (üst)
+    let q=null, converged=false;
+    for(let iter=0; iter<STOP_MAXITER; iter++){
+      // K_eff = Kstat + Σ_aktif k_stop·(az⊗az) ; rhs = F + Σ k_stop·(sgn·gap)·az
+      const K = matCopy(Kstat);
+      const rhs = F.slice();
+      for(let i=0;i<mounts.length;i++){
+        if(!active[i]) continue;
+        const kS = mounts[i].kstat[2]*ratio, r=az[i], dg=active[i]*gap;
+        for(let a=0;a<6;a++){ for(let b=0;b<6;b++) K[a][b]+=kS*r[a]*r[b]; rhs[a]+=kS*dg*r[a]; }
+      }
+      q = solveLinear(K, rhs);
+      if(!q) return null;
+      // Aktif küme güncelle: gap'i aşan → temas; içine dönen → serbest.
+      let changed=false;
+      for(let i=0;i<mounts.length;i++){
+        const dz = az[i].reduce((s,a,j)=>s+a*q[j],0);
+        const want = (dz < -gap) ? -1 : (dz > gap) ? +1 : 0;
+        if(want !== active[i]){ active[i]=want; changed=true; }
+      }
+      if(!changed){ converged=true; break; }
+    }
+    // Sonuç kur — dibe oturan takozda fz = kz·δz + k_stop·(δz∓gap) (temas dahil).
+    const perMount=[]; const sumF=[0,0,0];
+    let tensionCount=0, overLinearCount=0, clampCount=0;
+    for(let i=0;i<mounts.length;i++){
+      const mnt=mounts[i];
+      const delta=[0,1,2].map(k=>A[i][k].reduce((s,a,j)=>s+a*q[j],0));
+      let fz = mnt.kstat[2]*delta[2];
+      if(active[i]) fz += mnt.kstat[2]*ratio*(delta[2]-active[i]*gap);
+      const f=[mnt.kstat[0]*delta[0], mnt.kstat[1]*delta[1], fz];
+      for(let k=0;k<3;k++) sumF[k]+=f[k];
+      const tension = delta[2] > TENSION_EPS_M;
+      if(tension) tensionCount++;
+      const overLinear = delta.some(dv => Math.abs(dv) > LINEAR_LIMIT_M);
+      if(overLinear) overLinearCount++;
+      const clamped = active[i] !== 0;
+      if(clamped) clampCount++;
+      perMount.push({name:mnt.name, delta, f, tension, overLinear, clamped});
+    }
+    const checks={
+      sumFzOk: Math.abs(sumF[2]-F[2]) < 1e-3*Math.max(1,Math.abs(F[2])),
+      sumFzResidual: sumF[2]-F[2],
+      tensionCount, overLinearCount, clampCount, stopConverged: converged
+    };
+    return {q, F, perMount, sumF, checks};
+  }
+
   // Çoklu yük durumu: sistem lineer → durumlar bağımsız çözülür.
   // model = { m, cg, Kstat, mounts, g }. Dönüş satırları Adams çıktı düzeni
   // (satır = yük durumu, sütun = takoz × {δx,δy,δz}).
-  function solveAllCases(model, cases){
+  // opts.useStop=true → ±15 mm metal-metal durdurucu (solveCaseStop, F4);
+  //   büyük sehimli senaryolarda (Tümsek/Pothole/Kerb/Reverse) klips + yeniden
+  //   dağıtım. Küçük sehimde iki yol da AYNI (lineer) sonucu verir.
+  function solveAllCases(model, cases, opts){
+    opts = opts || {};
+    const solve = opts.useStop
+      ? (lc => solveCaseStop(model.Kstat, model.mounts, model.cg, model.m, model.g, lc, opts))
+      : (lc => solveCase(model.Kstat, model.mounts, model.cg, model.m, model.g, lc));
     return cases.map(lc => {
-      const res = solveCase(model.Kstat, model.mounts, model.cg, model.m, model.g, lc);
+      const res = solve(lc);
       return res ? {name: lc.name, loadCase: lc, res}
                  : {name: lc.name, loadCase: lc, res: null,
                     error: 'K matrisi singular/çözülemedi (montaj kinematik olarak serbest olabilir).'};
@@ -456,8 +574,8 @@ var veMountCore = (function() {
       {name:'Max Bump',       n:[ 0, 0,-3], T:[0,0,0]},
       {name:'Acceleration',   n:[ 1, 0,-1], T:[0,0,0]},
       {name:'Braking',        n:[-1, 0,-1], T:[0,0,0]},
-      {name:'Cornering L',    n:[ 0, 1,-1], T:[0,0,0]},
-      {name:'Cornering R',    n:[ 0,-1,-1], T:[0,0,0]},
+      {name:'Cornering L',    n:[ 0, 0.6,-1], T:[0,0,0]},
+      {name:'Cornering R',    n:[ 0,-0.6,-1], T:[0,0,0]},
       {name:'Forward Torque', n:[ 0, 0,-1], T:[0,0,0]},
       {name:'Reverse Torque', n:[ 0, 0,-1], T:[0,0,0]}
     ];
@@ -493,8 +611,8 @@ var veMountCore = (function() {
       {name:'Max Bump',       n:[ 0, 0,-3], T:[0,0,0]},
       {name:'Acceleration',   n:[ 1, 0,-1], T:[0,0,0]},
       {name:'Braking',        n:[-1, 0,-1], T:[0,0,0]},
-      {name:'Cornering L',    n:[ 0, 1,-1], T:[0,0,0]},
-      {name:'Cornering R',    n:[ 0,-1,-1], T:[0,0,0]},
+      {name:'Cornering L',    n:[ 0, 0.6,-1], T:[0,0,0]},
+      {name:'Cornering R',    n:[ 0,-0.6,-1], T:[0,0,0]},
       {name:'Forward Torque', n:[ 0, 0,-1], T:[-6667.07,0,0]},
       {name:'Reverse Torque', n:[ 0, 0,-1], T:[ 23705.06,0,0]}
     ]
@@ -532,8 +650,8 @@ var veMountCore = (function() {
       {name:'Max Bump',       n:[ 0, 0,-3], T:[0,0,0]},
       {name:'Acceleration',   n:[ 1, 0,-1], T:[0,0,0]},
       {name:'Braking',        n:[-1, 0,-1], T:[0,0,0]},
-      {name:'Cornering L',    n:[ 0, 1,-1], T:[0,0,0]},
-      {name:'Cornering R',    n:[ 0,-1,-1], T:[0,0,0]},
+      {name:'Cornering L',    n:[ 0, 0.6,-1], T:[0,0,0]},
+      {name:'Cornering R',    n:[ 0,-0.6,-1], T:[0,0,0]},
       {name:'Forward Torque', n:[ 0, 0,-1], T:[ -6667.07,0,0]},
       {name:'Reverse Torque', n:[ 0, 0,-1], T:[ 23705.14,0,0]}
     ]
@@ -669,8 +787,11 @@ var veMountCore = (function() {
     {
       const s = 1e-6; // N/m → MN/m
       const expTT = [7.512, 7.512, 3.840];
-      const expTTh = [[0,-1.4939,0.0562],[1.4939,0,-1.3536],[-0.0287,0.6919,0]];
-      const expThTh = [[0.7437,-0.0052,-0.9462],[-0.0052,2.5549,-0.0112],[-0.9462,-0.0112,4.8346]];
+      // Z-EKSENİ KONVANSİYONU (makeA): dz-tek dereceli kuplajlar ters işaretli.
+      // K_tθ'da yalnız [0][1] ve [1][0] (dz'li) çevrilir; K_θθ'da [0][2]/[2][0]
+      // ve [1][2]/[2][1] (θx-θz, θy-θz) çevrilir. dz içermeyenler değişmez.
+      const expTTh = [[0,1.4939,0.0562],[-1.4939,0,-1.3536],[-0.0287,0.6919,0]];
+      const expThTh = [[0.7437,-0.0052,0.9462],[-0.0052,2.5549,0.0112],[0.9462,0.0112,4.8346]];
       let ok=true; let det='';
       for(let i=0;i<3;i++){
         if(!near(Kstat[i][i]*s, expTT[i], 0.001)){ ok=false; det+=' K_tt['+i+']='+(Kstat[i][i]*s).toFixed(4); }
@@ -691,8 +812,10 @@ var veMountCore = (function() {
       const th = stat.q.slice(3,6).map(v=>v*1000);    // mrad
       const expDz = [-3.941,-3.892,-6.911,-6.565,-7.104,-6.758];
       const expFz = [-2.522,-2.491,-4.423,-4.201,-4.547,-4.325];
-      let ok = near(u[0], 0.379, 0.005) && near(u[1], 0.084, 0.005) && near(u[2], -6.208, 0.005) &&
-               near(th[0], -0.485, 0.005) && near(th[1], 1.901, 0.005) && near(th[2], -0.072, 0.005);
+      // Z-EKSENİ KONVANSİYONU (makeA): ux, uy ve θz işaret çevirir; uz, θx, θy
+      // ve tüm δz/fz DEĞİŞMEZ (δz = uz + dy·θx − dx·θy, dz içermez).
+      let ok = near(u[0], -0.379, 0.005) && near(u[1], -0.084, 0.005) && near(u[2], -6.208, 0.005) &&
+               near(th[0], -0.485, 0.005) && near(th[1], 1.901, 0.005) && near(th[2], 0.072, 0.005);
       let det='q=('+u.map(v=>v.toFixed(3)).join(', ')+') mm, θ=('+th.map(v=>v.toFixed(3)).join(', ')+') mrad;';
       stat.perMount.forEach((pm,i)=>{
         const dz=pm.delta[2]*1000, fz=pm.f[2]/1000;
@@ -807,7 +930,7 @@ var veMountCore = (function() {
   return {
     // Model
     combineMassProps, buildK, buildM6, buildModel,
-    solveCase, solveAllCases, solveModal,
+    solveCase, solveCaseStop, solveAllCases, solveModal,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
     defaultLoadCases, TTAR_EXAMPLE, ttarComponentsSI, ttarMountsSI, selfTest,
@@ -818,7 +941,7 @@ var veMountCore = (function() {
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
     // Sabitler
-    TENSION_EPS_M, LINEAR_LIMIT_M
+    TENSION_EPS_M, LINEAR_LIMIT_M, STOP_GAP_M, STOP_STIFF_RATIO
   };
 })();
 

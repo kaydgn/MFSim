@@ -244,7 +244,7 @@ function _mntRepDeflectionDetail(R){
       if(!rc.res){ h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td><td colspan="4" class="c">— (çözülemedi)</td></tr>'; return; }
       var pm=rc.res.perMount[mi]; if(!pm) return;
       var dx=pm.delta[0]*1000, dy=pm.delta[1]*1000, dz=pm.delta[2]*1000;
-      var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>');
+      var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#8a5a1e)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
       h+='<tr><td class="l">'+_rEsc(_mntRepCaseTr(rc.name))+'</td>'
         +'<td>'+_rFs(dx,2)+'</td><td>'+_rFs(dy,2)+'</td><td>'+_rFs(dz,2)+'</td>'
         +'<td class="c">'+flag+'</td></tr>';
@@ -257,12 +257,17 @@ function _mntRepDeflectionDetail(R){
 // Yük durumu adı → Türkçe etiket.
 function _mntRepCaseTr(name){
   var map={ 'Static':'Statik (yerçekimi)', 'Max Bump':'Tümsek (3,5g)',
-    'Braking':'Frenleme (1g)', 'Cornering':'Viraj (0,6g)',
-    'Brake in Turn':'Frenlemeli viraj', 'Pothole Braking':'Çukur + fren',
-    'Rim Lateral Kerb Strike':'Yanal bordür darbesi',
+    'Braking':'Frenleme (1g)', 'Acceleration':'Hızlanma (1g)',
+    'Cornering Left':'Viraj — sol (0,6g)', 'Cornering Right':'Viraj — sağ (0,6g)',
+    'Brake in Turn L':'Frenlemeli viraj — sol', 'Brake in Turn R':'Frenlemeli viraj — sağ',
+    'Pothole Braking':'Çukur + fren (3,5g)',
+    'Kerb Strike L':'Yanal bordür darbesi — sol (3,6g)', 'Kerb Strike R':'Yanal bordür darbesi — sağ (3,6g)',
+    'Max Rebound':'Azami geri esneme (droop)',
     'Forward Torque':'İleri tork', 'Reverse Torque':'Geri tork',
-    // eski adlar (geriye dönük):
-    'Acceleration':'Hızlanma (1g)', 'Cornering L':'Viraj — sol', 'Cornering R':'Viraj — sağ' };
+    // eski adlar (geriye dönük uyumluluk):
+    'Cornering':'Viraj (0,6g)', 'Brake in Turn':'Frenlemeli viraj',
+    'Rim Lateral Kerb Strike':'Yanal bordür darbesi',
+    'Cornering L':'Viraj — sol', 'Cornering R':'Viraj — sağ' };
   return map[name] || name;
 }
 
@@ -274,7 +279,7 @@ function _mntRepShort(name, n){
 
 // Kritik sonuç özeti — tüm yük durumlarını tarar (5 saniyelik okuma).
 function _mntRepCritical(R){
-  var maxDz=null, maxF=null, lift={}, over={}, nCases=0;
+  var maxDz=null, maxF=null, lift={}, over={}, clamp={}, nCases=0;
   (R.allCases||[]).forEach(function(rc){
     if(!rc.res) return; nCases++;
     rc.res.perMount.forEach(function(pm){
@@ -285,8 +290,9 @@ function _mntRepCritical(R){
     });
     if(rc.res.checks.tensionCount>0) lift[rc.name]=1;
     if(rc.res.checks.overLinearCount>0) over[rc.name]=1;
+    if(rc.res.checks.clampCount>0) clamp[rc.name]=1;   // ±15 mm metal-metal durdurucu (F4)
   });
-  var liftC=Object.keys(lift), overC=Object.keys(over);
+  var liftC=Object.keys(lift), overC=Object.keys(over), clampC=Object.keys(clamp);
   var modes=R.modes||[];
   var cls=(overC.length===0 && liftC.length===0)?'check':'warn';
   var row=function(k,v){ return '<div style="margin:3px 0;"><strong style="color:var(--prusya);">'+k+':</strong> '+v+'</div>'; };
@@ -295,6 +301,7 @@ function _mntRepCritical(R){
   if(maxF)  h+=row('Maks takoz kuvveti (bileşke)', _rF(maxF.v,2)+' kN — <b>'+_rEsc(maxF.mount)+'</b> ('+_rEsc(_mntRepCaseTr(maxF.cas))+') — dayanım tasarımı için');
   h+=row('Çekme / lift-off', liftC.length ? '<b style="color:var(--warn);">var</b> — '+liftC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (takoz gerilmeye geçer)' : 'yok — tüm takozlar basıda');
   h+=row('Lineerlik (±10 mm)', overC.length ? '<b style="color:var(--warn);">aşım</b> — '+overC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (nonlineer bölge)' : 'tüm sehimler bantta');
+  h+=row('Durdurucu (±15 mm metal-metal)', clampC.length ? '<b style="color:var(--warn);">devrede</b> — '+clampC.map(function(c){return _rEsc(_mntRepCaseTr(c));}).join(', ')+' (takoz dibe oturur; yük yeniden dağılır)' : 'hiçbir takoz durdurucuya oturmadı');
   if(modes.length) h+=row('Modal bant', 'en düşük '+_rF(modes[0].f_Hz,2)+' Hz · en yüksek '+_rF(modes[modes.length-1].f_Hz,2)+' Hz ('+modes.length+' rijit gövde modu)');
   h+='<div style="margin-top:5px; font-size:0.9em; color:#5a6270;">'+nCases+' yük durumu çözüldü; ayrıntı için aşağıdaki adımlar ve yük durumu matrisi.</div>';
   h+='</div>';
@@ -479,7 +486,7 @@ function _mntRepStep3Static(R, geom){
   var mounts=R.mounts;
   res.perMount.forEach(function(pm,i){
     var dz=pm.delta[2]*1000, fz=pm.f[2]/1000;
-    var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>');
+    var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#8a5a1e)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
     h+='<tr><td class="l">'+_rEsc(pm.name||('takoz '+(i+1)))+'</td>'
       +'<td>'+_rFs(dz,2)+'</td><td>'+_rF(fz,2)+'</td><td class="c">'+flag+'</td></tr>';
   });
@@ -533,7 +540,7 @@ function _mntRepStep4Torque(R){
     var tot=pm.delta[2]*1000;
     var s=stat.res.perMount[i]?stat.res.perMount[i].delta[2]*1000:NaN;
     var tq=tot-s;
-    var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>');
+    var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#8a5a1e)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
     h+='<tr><td class="l">'+_rEsc(pm.name||('takoz '+(i+1)))+'</td>'
       +'<td>'+_rFs(s,2)+'</td><td>'+_rFs(tq,2)+'</td><td>'+_rFs(tot,2)+'</td><td class="c">'+flag+'</td></tr>';
   });
@@ -547,7 +554,7 @@ function _mntRepStep4Torque(R){
     h+='<tr><th>Takoz</th><th>Statik</th><th>+ Tork</th><th>= Toplam</th><th>Durum</th></tr>';
     rev.res.perMount.forEach(function(pm,i){
       var tot=pm.delta[2]*1000, s=stat.res.perMount[i]?stat.res.perMount[i].delta[2]*1000:NaN, tq=tot-s;
-      var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>');
+      var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#8a5a1e)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
       h+='<tr><td class="l">'+_rEsc(pm.name||('takoz '+(i+1)))+'</td>'
         +'<td>'+_rFs(s,2)+'</td><td>'+_rFs(tq,2)+'</td><td>'+_rFs(tot,2)+'</td><td class="c">'+flag+'</td></tr>';
     });

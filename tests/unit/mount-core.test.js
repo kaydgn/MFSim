@@ -50,14 +50,15 @@ describe('T2 — K_stat blokları (tol ±0.001 MN)', () => {
     expect(Kstat[0][2] * s).toBeCloseTo(0, 3);
     expect(Kstat[1][2] * s).toBeCloseTo(0, 3);
   });
-  test('K_tθ bloğu (MN/rad)', () => {
-    const exp = [[0, -1.4939, 0.0562], [1.4939, 0, -1.3536], [-0.0287, 0.6919, 0]];
+  test('K_tθ bloğu (MN/rad) — z-ekseni konvansiyonu: dz-tek terimler ters işaretli', () => {
+    // makeA dz işaret çevirmesi (Adams kalibrasyonu): [0][1] ve [1][0] (dz'li) çevrilir.
+    const exp = [[0, 1.4939, 0.0562], [-1.4939, 0, -1.3536], [-0.0287, 0.6919, 0]];
     for (let i = 0; i < 3; i++)
       for (let j = 0; j < 3; j++)
         expect(Math.abs(Kstat[i][3 + j] * s - exp[i][j])).toBeLessThanOrEqual(0.001);
   });
-  test('K_θθ bloğu (MN·m/rad)', () => {
-    const exp = [[0.7437, -0.0052, -0.9462], [-0.0052, 2.5549, -0.0112], [-0.9462, -0.0112, 4.8346]];
+  test('K_θθ bloğu (MN·m/rad) — θx-θz ve θy-θz kuplajları ters işaretli', () => {
+    const exp = [[0.7437, -0.0052, 0.9462], [-0.0052, 2.5549, 0.0112], [0.9462, 0.0112, 4.8346]];
     for (let i = 0; i < 3; i++)
       for (let j = 0; j < 3; j++)
         expect(Math.abs(Kstat[3 + i][3 + j] * s - exp[i][j])).toBeLessThanOrEqual(0.001);
@@ -72,15 +73,17 @@ describe('T2 — K_stat blokları (tol ±0.001 MN)', () => {
 describe('T3 — Statik durum n=(0,0,−1) (tol sehim ±0.005 mm, kuvvet ±0.005 kN)', () => {
   const res = core.solveCase(Kstat, mounts, mp.cg, mp.m, g, { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] });
   test('çözüm üretildi', () => { expect(res).not.toBeNull(); });
+  // Z-EKSENİ KONVANSİYONU (makeA): ux, uy ve θz işaret çevirir; uz, θx, θy ve
+  // tüm δz/fz DEĞİŞMEZ (δz = uz + dy·θx − dx·θy, dz içermez → statik δz doğruydu).
   test('q ötelemeleri (mm)', () => {
-    expect(Math.abs(res.q[0] * 1000 - 0.379)).toBeLessThanOrEqual(0.005);
-    expect(Math.abs(res.q[1] * 1000 - 0.084)).toBeLessThanOrEqual(0.005);
+    expect(Math.abs(res.q[0] * 1000 - (-0.379))).toBeLessThanOrEqual(0.005);
+    expect(Math.abs(res.q[1] * 1000 - (-0.084))).toBeLessThanOrEqual(0.005);
     expect(Math.abs(res.q[2] * 1000 - (-6.208))).toBeLessThanOrEqual(0.005);
   });
   test('q dönmeleri (mrad)', () => {
     expect(Math.abs(res.q[3] * 1000 - (-0.485))).toBeLessThanOrEqual(0.005);
     expect(Math.abs(res.q[4] * 1000 - 1.901)).toBeLessThanOrEqual(0.005);
-    expect(Math.abs(res.q[5] * 1000 - (-0.072))).toBeLessThanOrEqual(0.005);
+    expect(Math.abs(res.q[5] * 1000 - 0.072)).toBeLessThanOrEqual(0.005);
   });
   test('takoz δz ve fz değerleri', () => {
     const expDz = [-3.941, -3.892, -6.911, -6.565, -7.104, -6.758];
@@ -204,6 +207,52 @@ describe('solveAllCases — çoklu yük durumu matrisi', () => {
     // Forward Torque satırı T5 ile aynı olmalı
     const fw = rows[6].res;
     expect(Math.abs(fw.perMount[2].delta[2] * 1000 - (-13.782))).toBeLessThanOrEqual(0.01);
+  });
+});
+
+describe('T9 — ±15 mm metal-metal durdurucu (solveCaseStop, F4)', () => {
+  test('küçük sehim: durdurucu devrede değil → solveCase (lineer) ile aynı', () => {
+    const lc = { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] };
+    const lin = core.solveCase(Kstat, mounts, mp.cg, mp.m, g, lc);
+    const stp = core.solveCaseStop(Kstat, mounts, mp.cg, mp.m, g, lc);
+    expect(stp.checks.clampCount).toBe(0);
+    expect(stp.checks.stopConverged).toBe(true);
+    stp.perMount.forEach((pm, i) => {
+      expect(pm.clamped).toBe(false);
+      expect(pm.delta[2]).toBeCloseTo(lin.perMount[i].delta[2], 9);
+    });
+  });
+  test('Max Bump 3.5g: orta+arka 4 takoz klipslenir, |δz| ≤ ~15 mm, ΣFz dengeli', () => {
+    const res = core.solveCaseStop(Kstat, mounts, mp.cg, mp.m, g, { name: 'Max Bump', n: [0, 0, -3.5], T: [0, 0, 0] });
+    expect(res.checks.stopConverged).toBe(true);
+    expect(res.checks.clampCount).toBe(4);
+    expect(res.perMount[0].clamped).toBe(false);  // ön serbest
+    expect(res.perMount[2].clamped).toBe(true);    // orta klipsli
+    res.perMount.forEach(pm => expect(Math.abs(pm.delta[2])).toBeLessThanOrEqual(0.0155));
+    // Yük yeniden dağıtımı: klipslenen arka yükü öne aktarır → ön lineer −11.7'den derinleşir
+    expect(res.perMount[0].delta[2] * 1000).toBeLessThan(-12.5);
+    expect(res.checks.sumFzOk).toBe(true);         // temas kuvvetleri dahil düşey denge
+  });
+  test('Reverse Torque: çift yönlü klips (±15), yakınsar, ΣFz dengeli', () => {
+    const res = core.solveCaseStop(Kstat, mounts, mp.cg, mp.m, g, { name: 'Reverse', n: [0, 0, -1], T: [23705.14, 0, 0] });
+    expect(res.checks.stopConverged).toBe(true);
+    expect(res.checks.clampCount).toBeGreaterThanOrEqual(3);
+    res.perMount.forEach(pm => expect(Math.abs(pm.delta[2])).toBeLessThanOrEqual(0.016));
+    expect(res.checks.sumFzOk).toBe(true);
+  });
+  test('solveAllCases useStop: Static aynı, Max Bump klipsli', () => {
+    const model = core.buildModel(comps, mounts, g);
+    const cases = [
+      { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] },
+      { name: 'Max Bump', n: [0, 0, -3.5], T: [0, 0, 0] }
+    ];
+    const lin = core.solveAllCases(model, cases);
+    const stp = core.solveAllCases(model, cases, { useStop: true });
+    expect(stp[0].res.checks.clampCount).toBe(0);
+    expect(stp[1].res.checks.clampCount).toBe(4);
+    // durdurucusuz Max Bump orta lineer 15 mm'yi aşar; durduruculu klipslenir
+    expect(Math.abs(lin[1].res.perMount[2].delta[2])).toBeGreaterThan(0.015);
+    expect(Math.abs(stp[1].res.perMount[2].delta[2])).toBeLessThanOrEqual(0.0155);
   });
 });
 
