@@ -285,6 +285,87 @@ var veMountCore = (function() {
     return M;
   }
 
+  // ═══════════════════ Constitutive — takoz kuvvet yasası (Newton için) ═══════════════════
+  //
+  // Her takoz ekseni bir kuvvet-sehim yasası φ(δ) taşır: δ (m) → f (N) ve tanjant
+  // rijitlik k_t = dφ/dδ (N/m). İki biçim:
+  //   • LİNEER (varsayılan): φ = k·δ  (k = kstat[eksen]) — klasik elastik takoz.
+  //   • EĞRİ   (opsiyonel):  ölçülmüş [[δ,f],…] noktaları → monoton kübik interpolant.
+  // Karma sistem desteklenir: bazı takozlar lineer, bazıları eğrili olabilir; çözücü
+  // hepsini TEK Newton döngüsünde birlikte çözer (bkz. solveCaseNL). Sistem tümüyle
+  // lineerse Newton ilk adımda tam lineer çözüme iner → mevcut solveCase sonuçları
+  // (ve selfTest T1–T8) BİREBİR korunur.
+
+  // Monoton kübik Hermite (Fritsch–Carlson). numerics.js veBuildPchipSpline ile AYNI
+  // çekirdek yöntem; TEK farkı: tablo DIŞINDA düz değil DOĞRUSAL ekstrapolasyon (uç
+  // tanjantıyla). Kuvvet-sehim için ZORUNLU — aksi halde eğri aralığının dışına taşan
+  // bir takozun tanjantı 0 olur, K_T tekilleşir ve Newton çöker. Ayrıca çekirdek
+  // saf/kendine-yeterli kalsın diye numerics.js'e bağımlılık YOK (testte tek başına
+  // require edilir). xs artan sıralı, n≥2. Dönüş: { eval(x)→y, slope(x)→dy/dx }.
+  function buildMonotoneCubic(xs, ys){
+    const n=xs.length;
+    const h=new Array(n-1), del=new Array(n-1);
+    for(let i=0;i<n-1;i++){ h[i]=xs[i+1]-xs[i]; del[i]=(h[i]>1e-15)?(ys[i+1]-ys[i])/h[i]:0; }
+    const m=new Array(n).fill(0);
+    for(let i=1;i<n-1;i++){
+      if(del[i-1]*del[i]<=0){ m[i]=0; }                         // yerel ekstremum → tanjant 0 (monotonluk)
+      else { const w1=2*h[i]+h[i-1], w2=h[i]+2*h[i-1]; m[i]=(w1+w2)/(w1/del[i-1]+w2/del[i]); }
+    }
+    if(n===2){ m[0]=del[0]; m[1]=del[0]; }                       // iki nokta → düz doğru
+    else {
+      m[0]=((2*h[0]+h[1])*del[0]-h[0]*del[1])/(h[0]+h[1]);
+      if(m[0]*del[0]<=0) m[0]=0; else if(Math.abs(m[0])>3*Math.abs(del[0])) m[0]=3*del[0];
+      m[n-1]=((2*h[n-2]+h[n-3])*del[n-2]-h[n-2]*del[n-3])/(h[n-2]+h[n-3]);
+      if(m[n-1]*del[n-2]<=0) m[n-1]=0; else if(Math.abs(m[n-1])>3*Math.abs(del[n-2])) m[n-1]=3*del[n-2];
+    }
+    function seg(x){ let lo=0,hi=n-2; while(lo<hi){ const mid=(lo+hi)>>1; if(x>xs[mid+1]) lo=mid+1; else hi=mid; } return lo; }
+    function coef(i){ const hi=h[i]; return [ (3*del[i]-2*m[i]-m[i+1])/hi, (m[i]+m[i+1]-2*del[i])/(hi*hi) ]; }
+    return {
+      eval:function(x){
+        if(x<=xs[0])   return ys[0]   + m[0]  *(x-xs[0]);        // doğrusal ekstrapolasyon (alt)
+        if(x>=xs[n-1]) return ys[n-1] + m[n-1]*(x-xs[n-1]);      // doğrusal ekstrapolasyon (üst)
+        const i=seg(x), t=x-xs[i], c=coef(i);
+        return ys[i] + m[i]*t + c[0]*t*t + c[1]*t*t*t;
+      },
+      slope:function(x){
+        if(x<=xs[0])   return m[0];
+        if(x>=xs[n-1]) return m[n-1];
+        const i=seg(x), t=x-xs[i], c=coef(i);
+        return m[i] + 2*c[0]*t + 3*c[1]*t*t;
+      }
+    };
+  }
+
+  // Tek eksen kuvvet yasası. spec:
+  //   { type:'linear', k }                 → φ=k·δ (k sabit)
+  //   { type:'curve', points:[[δ,f],…] }   → monoton kübik (δ SI m, f SI N; sıralanır)
+  // Dönüş: { force(δ)→N, tangent(δ)→N/m, k0, curve:bool }.
+  //   k0 = δ=0 civarı referans (küçük-sehim) rijitliği — doğrulama/ölçek kontrolü için.
+  function makeAxisLaw(spec){
+    if(spec && spec.type==='curve' && spec.points && spec.points.length>=2){
+      const pts=spec.points.slice().sort(function(a,b){ return a[0]-b[0]; });
+      const xs=pts.map(function(p){ return p[0]; });
+      const ys=pts.map(function(p){ return p[1]; });
+      const sp=buildMonotoneCubic(xs, ys);
+      return { force:function(d){ return sp.eval(d); },
+               tangent:function(d){ return sp.slope(d); },
+               k0:sp.slope(0), curve:true };
+    }
+    const k=(spec && Number.isFinite(spec.k)) ? spec.k : 0;
+    return { force:function(d){ return k*d; }, tangent:function(){ return k; }, k0:k, curve:false };
+  }
+
+  // Takozun 3 STATİK eksen yasası [x,y,z]. mount.curves[axis] (SI [[δ_m,f_N],…])
+  // verilmişse o eksen nonlineer; yoksa lineer kstat[axis]. axis anahtarı 'x'/'y'/'z'.
+  function mountStaticLaws(mount){
+    const cur=mount.curves||{}, key=['x','y','z'];
+    return [0,1,2].map(function(ax){
+      const pts=cur[key[ax]];
+      if(pts && pts.length>=2) return makeAxisLaw({type:'curve', points:pts});
+      return makeAxisLaw({type:'linear', k:(mount.kstat?mount.kstat[ax]:0)});
+    });
+  }
+
   // ═══════════════════ Statik çözüm (SPEC 4.3-4.4) ═══════════════════
 
   // Çekme (lift-off) eşiği: δz > +0.01 mm (SPEC 3.4 — A26'daki ters
@@ -943,6 +1024,8 @@ var veMountCore = (function() {
     MOUNT_EXAMPLES, getMountExample, getMountExampleList,
     // Birim dönüşümleri (UI katmanı için)
     mmToM, nPerMmToNPerM,
+    // Constitutive — takoz kuvvet yasası (Newton çözücüsü + testler için)
+    buildMonotoneCubic, makeAxisLaw, mountStaticLaws,
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
     // Sabitler

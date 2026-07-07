@@ -312,3 +312,93 @@ describe('classifyMode — kenar durumlar', () => {
     expect(core.classifyMode([0, 0, 0, 1, 0, 0], rel)).toBe('roll');
   });
 });
+
+// ═══════════════ Faz 1 — Constitutive: takoz kuvvet yasası φ(δ) ═══════════════
+// Monoton kübik interpolant (doğrusal ekstrapolasyonlu) + lineer/eğri eksen yasası.
+// Newton çözücüsünün (Faz 2) temeli: tanjant rijitliğinin analitik ve sürekli
+// olması, uçlarda sıfırlanmaması kritik.
+
+describe('buildMonotoneCubic — monoton kübik + DOĞRUSAL ekstrapolasyon', () => {
+  const XS = [-0.015, -0.005, 0.005, 0.015], YS = [-900, -250, 250, 900];
+  test('düğüm noktalarından birebir geçer', () => {
+    const sp = core.buildMonotoneCubic(XS, YS);
+    XS.forEach((x, i) => expect(sp.eval(x)).toBeCloseTo(YS[i], 6));
+  });
+  test('n=2 → tam doğrusal (interpolasyon + iki yönde ekstrapolasyon)', () => {
+    const sp = core.buildMonotoneCubic([0, 1], [0, 2]);
+    expect(sp.eval(0.5)).toBeCloseTo(1, 9);
+    expect(sp.slope(0.5)).toBeCloseTo(2, 9);
+    expect(sp.eval(2)).toBeCloseTo(4, 9);    // üst: düz değil doğrusal
+    expect(sp.eval(-1)).toBeCloseTo(-2, 9);  // alt: doğrusal
+    expect(sp.slope(5)).toBeCloseTo(2, 9);
+  });
+  test('slope(x) = eval(x) merkezî farkı (analitik türev tutarlı)', () => {
+    const sp = core.buildMonotoneCubic(XS, YS);
+    const e = 1e-7;
+    [-0.012, -0.003, 0, 0.004, 0.011].forEach(x => {
+      const num = (sp.eval(x + e) - sp.eval(x - e)) / (2 * e);
+      expect(sp.slope(x)).toBeCloseTo(num, 3);
+    });
+  });
+  test('tablo dışında tanjant SIFIRLANMAZ (Newton için kritik)', () => {
+    const sp = core.buildMonotoneCubic(XS, YS);
+    const sEnd = sp.slope(0.015);
+    expect(sEnd).toBeGreaterThan(0);
+    expect(sp.slope(0.03)).toBeCloseTo(sEnd, 9);              // uç tanjant korunur (≠0)
+    expect(sp.eval(0.03)).toBeCloseTo(900 + sEnd * 0.015, 6); // doğrusal devam
+  });
+});
+
+describe('makeAxisLaw — tek eksen kuvvet yasası (lineer / eğri)', () => {
+  test('lineer: φ=k·δ, tanjant=k sabit, curve=false', () => {
+    const law = core.makeAxisLaw({ type: 'linear', k: 640000 });
+    expect(law.curve).toBe(false);
+    expect(law.force(0.003)).toBeCloseTo(1920, 9);
+    expect(law.force(-0.01)).toBeCloseTo(-6400, 9);
+    expect(law.tangent(0.5)).toBe(640000);
+    expect(law.k0).toBe(640000);
+  });
+  test('lineer: geçersiz k → 0 (çökme yerine sıfır kuvvet)', () => {
+    expect(core.makeAxisLaw({ type: 'linear' }).force(1)).toBe(0);
+    expect(core.makeAxisLaw(null).tangent(1)).toBe(0);
+  });
+  test('eğri: monoton artan, tanjant>0, k0>0, curve=true', () => {
+    const law = core.makeAxisLaw({ type: 'curve', points: [[-0.015,-900],[-0.005,-250],[0.005,250],[0.015,900]] });
+    expect(law.curve).toBe(true);
+    expect(law.force(0.015)).toBeGreaterThan(law.force(0.005));
+    expect(law.force(-0.005)).toBeGreaterThan(law.force(-0.015));
+    expect(law.tangent(0)).toBeGreaterThan(0);
+    expect(law.k0).toBeGreaterThan(0);
+  });
+  test('eğri: sırasız noktalar sıralanır (aynı yasa)', () => {
+    const a = core.makeAxisLaw({ type: 'curve', points: [[0.015,900],[-0.005,-250],[0.005,250],[-0.015,-900]] });
+    expect(a.force(0.005)).toBeCloseTo(250, 6);
+    expect(a.force(-0.015)).toBeCloseTo(-900, 6);
+  });
+  test('eğri: tanjant = kuvvetin merkezî farkı (Newton tanjantı doğru)', () => {
+    const law = core.makeAxisLaw({ type: 'curve', points: [[-0.015,-900],[-0.005,-250],[0.005,250],[0.015,900]] });
+    const e = 1e-7;
+    [-0.01, 0, 0.008].forEach(d => {
+      const num = (law.force(d + e) - law.force(d - e)) / (2 * e);
+      expect(law.tangent(d)).toBeCloseTo(num, 3);
+    });
+  });
+});
+
+describe('mountStaticLaws — takoz 3-eksen yasası (karma lineer/eğri)', () => {
+  test('eğrisiz takoz → 3 lineer yasa (kstat)', () => {
+    const laws = core.mountStaticLaws({ kstat: [1252000,1252000,640000], kdyn: [2055000,2055000,977000] });
+    expect(laws.map(l => l.curve)).toEqual([false, false, false]);
+    expect(laws[2].force(0.001)).toBeCloseTo(640, 6);
+    expect(laws[0].tangent(0)).toBe(1252000);
+  });
+  test('z-ekseni eğrili takoz → z nonlineer, x/y lineer', () => {
+    const laws = core.mountStaticLaws({
+      kstat: [1252000,1252000,640000], kdyn: [2055000,2055000,977000],
+      curves: { z: [[-0.015,-11000],[-0.005,-3000],[0.005,3000],[0.015,11000]] }
+    });
+    expect(laws.map(l => l.curve)).toEqual([false, false, true]);
+    expect(laws[2].force(0.005)).toBeCloseTo(3000, 6);
+    expect(laws[0].force(0.001)).toBeCloseTo(1252, 6);
+  });
+});
