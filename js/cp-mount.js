@@ -224,7 +224,10 @@ function _veMntSetSidebar(mode){
   if(typeof veShowAllSidebarComponents==='function') veShowAllSidebarComponents();
 }
 
-function veMntOpenEditor(nodeId){
+// _silent: autosave gibi arka-plan işlemleri köke çöküp (veSaveActiveTabState)
+// kullanıcıyı bulunduğu iç topolojiye geri getirirken true geçer; bu görünmez
+// geri-girişte toast/animasyon tetiklenmez (breadcrumb ve sidebar yine güncellenir).
+function veMntOpenEditor(nodeId, _silent){
   if(_veMntBusy) return;
   if(typeof nodes==='undefined' || typeof veSerializeCurrentState!=='function') return;
   var node = nodes.find(function(n){ return n.id===nodeId; });
@@ -245,9 +248,9 @@ function veMntOpenEditor(nodeId){
     }
     _veMntSetSidebar('takoz');
   } finally { _veMntBusy=false; }
-  if(typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('enter');
+  if(!_silent && typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('enter');
   veMntUpdateBreadcrumb();
-  if(typeof showToast==='function') showToast('Takoz Çökme-Titreşim — İç Topoloji','info');
+  if(!_silent && typeof showToast==='function') showToast('Takoz Çökme-Titreşim — İç Topoloji','info');
 }
 
 // _silent: köke çökerken (veMntCollapseToRoot → kaydet/sekme değiştir öncesi) true
@@ -268,7 +271,7 @@ function veMntCloseEditor(_silent){
   } finally { _veMntBusy=false; }
   if(!_silent && typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('exit');
   veMntUpdateBreadcrumb();
-  if(typeof showToast==='function') showToast('Ana topolojiye dönüldü','info');
+  if(!_silent && typeof showToast==='function') showToast('Ana topolojiye dönüldü','info');
 }
 
 function veMntCollapseToRoot(){
