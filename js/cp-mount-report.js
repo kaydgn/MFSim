@@ -166,11 +166,17 @@ function _mntBuildReportHTML(R, opts){
 }
 
 // ─── Antet (dinamik başlık bloğu) ────────────────────────────────────────────
+// Nonlineer (eğri) z-yasası taşıyan takozları döndür (SI R.mounts üzerinden).
+function _mntRepNLMounts(R){
+  return (R.mounts||[]).filter(function(m){ return m && m.curves && m.curves.z && m.curves.z.length>=2; });
+}
 function _mntRepAntet(R){
   var nC=(R.gather.components||[]).length, nM=(R.mounts||[]).length;
   var mass=_rF(R.mp.m,1);
   var date='—';
   try { date=new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch(e){}
+  var nNL=_mntRepNLMounts(R).length;
+  var method = nNL ? ('Newton-Raphson · '+nNL+' nonlineer takoz') : 'Lineer (kapalı-form)';
   return ''
   + '<div class="antet">'
   + '  <div class="band">'
@@ -182,9 +188,33 @@ function _mntRepAntet(R){
   + '    <div class="f"><div class="k">Doküman Türü</div><div class="v">Analiz Raporu</div></div>'
   + '    <div class="f"><div class="k">Model</div><div class="v">'+nC+' bileşen · '+nM+' takoz</div></div>'
   + '    <div class="f"><div class="k">Toplam Kütle</div><div class="v">'+mass+' kg</div></div>'
+  + '    <div class="f"><div class="k">Çözüm Yöntemi</div><div class="v">'+_rEsc(method)+'</div></div>'
   + '    <div class="f"><div class="k">Tarih</div><div class="v">'+_rEsc(date)+'</div></div>'
   + '  </div>'
   + '</div>';
+}
+
+// Nonlineer çözüm notu (§8) — hangi takozlar eğri kullanıyor + Newton yakınsaması.
+// Tüm takozlar lineerse boş döner (rapora hiçbir şey eklenmez).
+function _mntRepNLNote(R){
+  var nl=_mntRepNLMounts(R);
+  if(!nl.length) return '';
+  var names=nl.map(function(m){ return _rEsc(m.name||'takoz'); }).join(', ');
+  var notConv=0, iters=0;
+  (R.allCases||[]).concat(R.gearCases||[], R.designCases||[]).forEach(function(rc){
+    var ck=rc && rc.res && rc.res.checks; if(!ck) return;
+    if(ck.converged===false || ck.stopConverged===false) notConv++;
+    if(ck.newtonIters) iters=Math.max(iters, ck.newtonIters);
+  });
+  var conv = notConv
+    ? '<b style="color:#b45309;">'+notConv+' yük durumunda yakınsama sağlanamadı</b>'
+    : 'tüm yük durumları yakınsadı (en çok '+iters+' Newton iterasyonu)';
+  return '<div style="margin:10px 0 14px; padding:10px 13px; border-left:3px solid #b45309; background:rgba(180,83,9,0.06); font-size:0.93em; line-height:1.55;">'
+    + '<b>Nonlineer çözüm.</b> '+nl.length+' takoz ('+names+') ölçülmüş düşey kuvvet–sehim eğrisi taşır; '
+    + 'denge doğrudan lineer ters-çözüm yerine <b>Newton-Raphson</b> ile bulunmuştur '
+    + '(tanjant rijitlik K<sub>T</sub> = Σ&nbsp;Aᵀ&nbsp;φ′(δ)&nbsp;A). Lineer ve nonlineer takozlar tek bağlı '
+    + 'sistemde birlikte çözülür; modal analiz statik dengedeki tanjant rijitlikle yapılır '
+    + '(önyüklü çalışma noktası). Yakınsama: '+conv+'.</div>';
 }
 
 // ─── Geometri (mm) — R.gather'dan sayısal; birleşik CG R.mp'den (otorite) ────
@@ -214,6 +244,7 @@ function _mntRepSection8(R, opts){
   var geom=_mntRepGeom(R);
   var h='<h2 id="s8"><span class="no">8</span>Sayısal Örnek: Bu Modelin Çözümü</h2>';
   h+='<p>Bölüm 2–7\'deki yöntem, projede tanımlı güç grubuna uygulanır. Tüm kütle ve takozlar iç topolojiden otomatik toplanır; girdiler aşağıda listelenir, ardından kütle birleştirme, rijitlik, statik çökme, tork süperpozisyonu, tüm yük durumları ve modal analiz adımları bu modelin gerçek değerleriyle çözülür. Koordinatlar model girdisiyle aynıdır (uzunluk mm, kütle kg, rijitlik N/mm).</p>';
+  h+=_mntRepNLNote(R);
   h+=_mntRepCritical(R);
   h+=_mntRepMassTable(geom);
   h+=_mntRepMountTable(R);
@@ -879,6 +910,8 @@ if(typeof module!=='undefined' && module.exports){
     veMntGenerateReport: veMntGenerateReport,
     _mntBuildReportHTML: _mntBuildReportHTML,
     _mntRepAntet: _mntRepAntet,
+    _mntRepNLMounts: _mntRepNLMounts,
+    _mntRepNLNote: _mntRepNLNote,
     _mntRepGeom: _mntRepGeom,
     _mntRepSection8: _mntRepSection8,
     _mntRepMassTable: _mntRepMassTable,

@@ -748,3 +748,82 @@ describe('Garip açıklamalar kaldırıldı (Adams dahil)', () => {
     [mass, mount, solver].forEach(h => expect(h).not.toMatch(/Adams/i));
   });
 });
+
+// ═══════════════ Faz 4 — Nonlineer z-eğrisi UI + veri taşıma ═══════════════
+describe('Takoz nonlineer z-eğrisi (Faz 4)', () => {
+  afterEach(() => { delete global.nodes; });
+
+  test('eğri yokken panel "＋ Nonlineer z-eğrisi ekle" düğmesi gösterir', () => {
+    const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: { kzs: 640 } });
+    expect(html).toContain('Nonlineer z-eğrisi ekle');
+    expect(html).toContain("veMntCurveEnable('m1')");
+    expect(html).not.toContain('veMntCurveAddPoint');
+  });
+
+  test('eğri varken panel düzenlenebilir (δ,f) tablosu + nokta/lineere-dön düğmeleri', () => {
+    const node = { id: 'm1', type: 'mnt-mount', def: {}, data: { kzs: 640, curveZ: [[-10, -6400], [0, 0], [10, 6400]] } };
+    const html = cp.getMntMountPropertiesHTML(node);
+    expect(html).toContain("veMntCurveSetPoint('m1',0,0");
+    expect(html).toContain("veMntCurveSetPoint('m1',2,1");
+    expect(html).toContain("veMntCurveAddPoint('m1')");
+    expect(html).toContain("veMntCurveRemovePoint('m1',1)");
+    expect(html).toContain("veMntCurveDisable('m1')");
+  });
+
+  test('veMntCurveEnable kzs\'den lineer eğri tohumlar (f=kzs·δ, 5 nokta)', () => {
+    const node = { id: 'm1', type: 'mnt-mount', data: { kzs: 640 } };
+    global.nodes = [node];
+    cp.veMntCurveEnable('m1');
+    expect(node.data.curveZ).toHaveLength(5);
+    // (δ_mm, f_N): f = kzs · δ → 15 mm'de 9600 N
+    expect(node.data.curveZ[4]).toEqual([15, 9600]);
+    expect(node.data.curveZ[2]).toEqual([0, 0]);
+  });
+
+  test('veMntCurveDisable eğriyi siler (lineere döner)', () => {
+    const node = { id: 'm1', type: 'mnt-mount', data: { kzs: 640, curveZ: [[-10, -6400], [10, 6400]] } };
+    global.nodes = [node];
+    cp.veMntCurveDisable('m1');
+    expect(node.data.curveZ).toBeUndefined();
+  });
+
+  test('veMntCurveSetPoint/AddPoint/RemovePoint noktaları düzenler', () => {
+    const node = { id: 'm1', type: 'mnt-mount', data: { curveZ: [[-10, -6400], [0, 0], [10, 6400]] } };
+    global.nodes = [node];
+    cp.veMntCurveSetPoint('m1', 2, 1, '9000');     // f[2] = 9000 (string → parse)
+    expect(node.data.curveZ[2]).toEqual([10, 9000]);
+    cp.veMntCurveAddPoint('m1');
+    expect(node.data.curveZ).toHaveLength(4);
+    cp.veMntCurveRemovePoint('m1', 0);
+    expect(node.data.curveZ).toHaveLength(3);
+    expect(node.data.curveZ[0]).toEqual([0, 0]);
+  });
+
+  test('_mntGatherForSolver + _mntToSI eğriyi çekirdeğe SI olarak taşır', () => {
+    const topo = buildTTARTopology();
+    // İlk takoza z-eğrisi ekle (mm/N)
+    const mnt = topo.nodes.find(n => n.type === 'mnt-mount');
+    mnt.data.curveZ = [[-15, -9600], [0, 0], [15, 9600]];
+    global.nodes = topo.nodes;
+    global.connections = topo.connections;
+    const si = cp._mntToSI(cp._mntGatherForSolver(topo.solver), 9.81);
+    const withCurve = si.mounts.filter(m => m.curves && m.curves.z);
+    expect(withCurve).toHaveLength(1);
+    // SI dönüşümü: δ mm→m (÷1000), f N→N (aynı)
+    expect(withCurve[0].curves.z[2]).toEqual([0.015, 9600]);
+    expect(withCurve[0].curves.z[0]).toEqual([-0.015, -9600]);
+    // Çekirdek bu modeli nonlineer olarak tanır
+    expect(core.anyCurve(si.mounts)).toBe(true);
+  });
+
+  test('tek nokta eğri → yok sayılır (SI\'da curves taşınmaz, lineer kalır)', () => {
+    const topo = buildTTARTopology();
+    const mnt = topo.nodes.find(n => n.type === 'mnt-mount');
+    mnt.data.curveZ = [[0, 0]];   // <2 nokta
+    global.nodes = topo.nodes;
+    global.connections = topo.connections;
+    const si = cp._mntToSI(cp._mntGatherForSolver(topo.solver), 9.81);
+    expect(si.mounts.some(m => m.curves)).toBe(false);
+    expect(core.anyCurve(si.mounts)).toBe(false);
+  });
+});

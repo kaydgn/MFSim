@@ -312,3 +312,213 @@ describe('classifyMode — kenar durumlar', () => {
     expect(core.classifyMode([0, 0, 0, 1, 0, 0], rel)).toBe('roll');
   });
 });
+
+// ═══════════════ Faz 1 — Constitutive: takoz kuvvet yasası φ(δ) ═══════════════
+// Monoton kübik interpolant (doğrusal ekstrapolasyonlu) + lineer/eğri eksen yasası.
+// Newton çözücüsünün (Faz 2) temeli: tanjant rijitliğinin analitik ve sürekli
+// olması, uçlarda sıfırlanmaması kritik.
+
+describe('buildMonotoneCubic — monoton kübik + DOĞRUSAL ekstrapolasyon', () => {
+  const XS = [-0.015, -0.005, 0.005, 0.015], YS = [-900, -250, 250, 900];
+  test('düğüm noktalarından birebir geçer', () => {
+    const sp = core.buildMonotoneCubic(XS, YS);
+    XS.forEach((x, i) => expect(sp.eval(x)).toBeCloseTo(YS[i], 6));
+  });
+  test('n=2 → tam doğrusal (interpolasyon + iki yönde ekstrapolasyon)', () => {
+    const sp = core.buildMonotoneCubic([0, 1], [0, 2]);
+    expect(sp.eval(0.5)).toBeCloseTo(1, 9);
+    expect(sp.slope(0.5)).toBeCloseTo(2, 9);
+    expect(sp.eval(2)).toBeCloseTo(4, 9);    // üst: düz değil doğrusal
+    expect(sp.eval(-1)).toBeCloseTo(-2, 9);  // alt: doğrusal
+    expect(sp.slope(5)).toBeCloseTo(2, 9);
+  });
+  test('slope(x) = eval(x) merkezî farkı (analitik türev tutarlı)', () => {
+    const sp = core.buildMonotoneCubic(XS, YS);
+    const e = 1e-7;
+    [-0.012, -0.003, 0, 0.004, 0.011].forEach(x => {
+      const num = (sp.eval(x + e) - sp.eval(x - e)) / (2 * e);
+      expect(sp.slope(x)).toBeCloseTo(num, 3);
+    });
+  });
+  test('tablo dışında tanjant SIFIRLANMAZ (Newton için kritik)', () => {
+    const sp = core.buildMonotoneCubic(XS, YS);
+    const sEnd = sp.slope(0.015);
+    expect(sEnd).toBeGreaterThan(0);
+    expect(sp.slope(0.03)).toBeCloseTo(sEnd, 9);              // uç tanjant korunur (≠0)
+    expect(sp.eval(0.03)).toBeCloseTo(900 + sEnd * 0.015, 6); // doğrusal devam
+  });
+});
+
+describe('makeAxisLaw — tek eksen kuvvet yasası (lineer / eğri)', () => {
+  test('lineer: φ=k·δ, tanjant=k sabit, curve=false', () => {
+    const law = core.makeAxisLaw({ type: 'linear', k: 640000 });
+    expect(law.curve).toBe(false);
+    expect(law.force(0.003)).toBeCloseTo(1920, 9);
+    expect(law.force(-0.01)).toBeCloseTo(-6400, 9);
+    expect(law.tangent(0.5)).toBe(640000);
+    expect(law.k0).toBe(640000);
+  });
+  test('lineer: geçersiz k → 0 (çökme yerine sıfır kuvvet)', () => {
+    expect(core.makeAxisLaw({ type: 'linear' }).force(1)).toBe(0);
+    expect(core.makeAxisLaw(null).tangent(1)).toBe(0);
+  });
+  test('eğri: monoton artan, tanjant>0, k0>0, curve=true', () => {
+    const law = core.makeAxisLaw({ type: 'curve', points: [[-0.015,-900],[-0.005,-250],[0.005,250],[0.015,900]] });
+    expect(law.curve).toBe(true);
+    expect(law.force(0.015)).toBeGreaterThan(law.force(0.005));
+    expect(law.force(-0.005)).toBeGreaterThan(law.force(-0.015));
+    expect(law.tangent(0)).toBeGreaterThan(0);
+    expect(law.k0).toBeGreaterThan(0);
+  });
+  test('eğri: sırasız noktalar sıralanır (aynı yasa)', () => {
+    const a = core.makeAxisLaw({ type: 'curve', points: [[0.015,900],[-0.005,-250],[0.005,250],[-0.015,-900]] });
+    expect(a.force(0.005)).toBeCloseTo(250, 6);
+    expect(a.force(-0.015)).toBeCloseTo(-900, 6);
+  });
+  test('eğri: tanjant = kuvvetin merkezî farkı (Newton tanjantı doğru)', () => {
+    const law = core.makeAxisLaw({ type: 'curve', points: [[-0.015,-900],[-0.005,-250],[0.005,250],[0.015,900]] });
+    const e = 1e-7;
+    [-0.01, 0, 0.008].forEach(d => {
+      const num = (law.force(d + e) - law.force(d - e)) / (2 * e);
+      expect(law.tangent(d)).toBeCloseTo(num, 3);
+    });
+  });
+});
+
+describe('mountStaticLaws — takoz 3-eksen yasası (karma lineer/eğri)', () => {
+  test('eğrisiz takoz → 3 lineer yasa (kstat)', () => {
+    const laws = core.mountStaticLaws({ kstat: [1252000,1252000,640000], kdyn: [2055000,2055000,977000] });
+    expect(laws.map(l => l.curve)).toEqual([false, false, false]);
+    expect(laws[2].force(0.001)).toBeCloseTo(640, 6);
+    expect(laws[0].tangent(0)).toBe(1252000);
+  });
+  test('z-ekseni eğrili takoz → z nonlineer, x/y lineer', () => {
+    const laws = core.mountStaticLaws({
+      kstat: [1252000,1252000,640000], kdyn: [2055000,2055000,977000],
+      curves: { z: [[-0.015,-11000],[-0.005,-3000],[0.005,3000],[0.015,11000]] }
+    });
+    expect(laws.map(l => l.curve)).toEqual([false, false, true]);
+    expect(laws[2].force(0.005)).toBeCloseTo(3000, 6);
+    expect(laws[0].force(0.001)).toBeCloseTo(1252, 6);
+  });
+});
+
+// ═══════════════ Faz 2 — solveCaseNL: Newton-Raphson + aktif-küme ═══════════════
+// En kritik değişmez: TÜMÜYLE LİNEER takozda Newton, mevcut solveCaseStop ile
+// birebir aynı sonucu üretmeli (Newton ilk adımda tam lineer çözüme iner).
+describe('solveCaseNL — Newton çözücü (Faz 2)', () => {
+  const cases = [
+    { name: 'Static',   n: [0, 0, -1],   T: [0, 0, 0] },
+    { name: 'Max Bump', n: [0, 0, -3.5], T: [0, 0, 0] },       // durdurucu devreye girer
+    { name: 'Braking',  n: [-1, 0, -1],  T: [0, 0, 0] },
+    { name: 'Fwd Tork', n: [0, 0, -1],   T: [-6667.07, 0, 0] } // çekme (lift-off) senaryosu
+  ];
+  const kzMount = (idx, pts) => mounts.map((mn, i) => i === idx ? Object.assign({}, mn, { curves: { z: pts } }) : mn);
+  const linCurve = (kz) => [[-0.02, -0.02*kz], [-0.01, -0.01*kz], [0, 0], [0.01, 0.01*kz], [0.02, 0.02*kz]];
+
+  test('lineer takozda solveCaseStop ile BİREBİR (çekirdek değişmezliği)', () => {
+    cases.forEach(lc => {
+      const a = core.solveCaseStop(Kstat, mounts, mp.cg, mp.m, g, lc, { useStop: true });
+      const b = core.solveCaseNL(mounts, mp.cg, mp.m, g, lc, { useStop: true });
+      expect(b).not.toBeNull();
+      for (let i = 0; i < 6; i++) expect(b.q[i]).toBeCloseTo(a.q[i], 8);
+      a.perMount.forEach((pm, i) => {
+        for (let k = 0; k < 3; k++) {
+          expect(b.perMount[i].delta[k]).toBeCloseTo(pm.delta[k], 8);
+          expect(b.perMount[i].f[k]).toBeCloseTo(pm.f[k], 1);
+        }
+        expect(b.perMount[i].clamped).toBe(pm.clamped);
+        expect(b.perMount[i].tension).toBe(pm.tension);
+      });
+      expect(b.checks.converged).toBe(true);
+      expect(b.checks.stopConverged).toBe(a.checks.stopConverged);
+    });
+  });
+
+  test('denge sağlanır: Σf_z = −m·g (Static)', () => {
+    const b = core.solveCaseNL(mounts, mp.cg, mp.m, g, { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] }, { useStop: true });
+    expect(b.checks.sumFzOk).toBe(true);
+    expect(b.sumF[2]).toBeCloseTo(-mp.m * g, 0);
+    expect(b.checks.newtonIters).toBeGreaterThan(0);
+  });
+
+  test('lineere-DENK eğri (doğru üstünde noktalar) → lineerle aynı', () => {
+    const lc = { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] };
+    const a = core.solveCaseNL(mounts, mp.cg, mp.m, g, lc, { useStop: true });
+    const b = core.solveCaseNL(kzMount(0, linCurve(mounts[0].kstat[2])), mp.cg, mp.m, g, lc, { useStop: true });
+    for (let i = 0; i < 6; i++) expect(b.q[i]).toBeCloseTo(a.q[i], 8);
+  });
+
+  test('daha rijit ilerlemeli eğri → o takozda |δz| azalır (fizik yönü)', () => {
+    const kz = mounts[0].kstat[2];
+    const stiff = [[-0.02, -0.02*kz*2], [-0.01, -0.01*kz*2], [0, 0], [0.01, 0.01*kz*2], [0.02, 0.02*kz*2]];
+    const lc = { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] };
+    const a = core.solveCaseNL(mounts, mp.cg, mp.m, g, lc, { useStop: true });
+    const b = core.solveCaseNL(kzMount(0, stiff), mp.cg, mp.m, g, lc, { useStop: true });
+    expect(Math.abs(b.perMount[0].delta[2])).toBeLessThan(Math.abs(a.perMount[0].delta[2]));
+    expect(b.checks.converged).toBe(true);
+  });
+
+  test('K_T tekil (boş takoz) → null', () => {
+    expect(core.solveCaseNL([], mp.cg, mp.m, g, { name: 'x', n: [0, 0, -1], T: [0, 0, 0] }, { useStop: true })).toBeNull();
+  });
+
+  test('solveAllCases: eğri VARSA Newton yoluna geçer, lineerde solveCaseStop', () => {
+    const model = { m: mp.m, cg: mp.cg, Kstat, mounts, g };
+    expect(core.anyCurve(mounts)).toBe(false);
+    const linRes = core.solveAllCases(model, cases, { useStop: true });
+
+    const m2 = kzMount(0, linCurve(mounts[0].kstat[2]));
+    expect(core.anyCurve(m2)).toBe(true);
+    const model2 = { m: mp.m, cg: mp.cg, Kstat, mounts: m2, g };
+    const nlRes = core.solveAllCases(model2, cases, { useStop: true });
+
+    linRes.forEach((rc, ci) => {
+      rc.res.perMount.forEach((pm, i) => {
+        expect(nlRes[ci].res.perMount[i].delta[2]).toBeCloseTo(pm.delta[2], 7);
+      });
+    });
+  });
+});
+
+// ═══════════════ Faz 3 — Tanjant rijitlikle modal analiz ═══════════════
+// Modlar statik dengedeki dinamik tanjant rijitlikle çözülür. Lineer takozda
+// buildK(dynamic) ile aynı → T6 frekansları korunur; eğride çalışma noktasına duyarlı.
+describe('buildKtangentDyn / solveModalAtState — tanjant-modal (Faz 3)', () => {
+  test('lineer + δ=0 → buildKtangentDyn = buildK(dynamic) (elemanca)', () => {
+    const Kt = core.buildKtangentDyn(mounts, mp.cg, null);
+    for (let a = 0; a < 6; a++)
+      for (let b = 0; b < 6; b++)
+        expect(Math.abs(Kt[a][b] - Kdyn[a][b])).toBeLessThan(1e-3);   // ~1e-9 bağıl
+  });
+  test('tanjant rijitlik K_T simetriktir', () => {
+    const m2 = mounts.map(mn => Object.assign({}, mn, {
+      curves: { z: [[-0.02, -0.02 * mn.kstat[2] * 1.7], [0, 0], [0.02, 0.02 * mn.kstat[2] * 1.7]] }
+    }));
+    const Kt = core.buildKtangentDyn(m2, mp.cg, null);
+    for (let a = 0; a < 6; a++)
+      for (let b = a + 1; b < 6; b++)
+        expect(Kt[a][b]).toBeCloseTo(Kt[b][a], 6);
+  });
+  test('lineer takozda solveModalAtState = T6 referans frekansları', () => {
+    const modesT = core.solveModalAtState(mounts, mp.cg, M6, null);
+    const expF = [5.039, 6.111, 8.364, 10.148, 12.071, 21.239];
+    expect(modesT).toHaveLength(6);
+    modesT.forEach((md, i) => expect(md.f_Hz).toBeCloseTo(expF[i], 2));
+  });
+  test('z-rijitliği 2× eğri → TÜM frekanslar monoton ↑ (Weyl), toplam kesin artar', () => {
+    // Doğru üstünde (lineer) ama 2× eğimli z-eğrisi → dinamik z-rijitliği 2 katına.
+    // Pozitif rijitlik artışı → her özdeğer artar (min-max teoremi).
+    const m2 = mounts.map(mn => Object.assign({}, mn, {
+      curves: { z: [[-0.02, -0.02 * mn.kstat[2] * 2], [0, 0], [0.02, 0.02 * mn.kstat[2] * 2]] }
+    }));
+    const base = core.solveModalAtState(mounts, mp.cg, M6, null);
+    const stiff = core.solveModalAtState(m2, mp.cg, M6, null);
+    let sumBase = 0, sumStiff = 0;
+    for (let i = 0; i < 6; i++) {
+      expect(stiff[i].f_Hz).toBeGreaterThanOrEqual(base[i].f_Hz - 1e-6);   // monoton
+      sumBase += base[i].f_Hz; sumStiff += stiff[i].f_Hz;
+    }
+    expect(sumStiff).toBeGreaterThan(sumBase + 0.5);                        // kesin artış
+  });
+});

@@ -452,8 +452,40 @@ function getMntMountPropertiesHTML(node){
   html+=_mntCard('Konum','[mm]','var(--accent-primary)', _mntTriple(node,'','',['x','y','z'],['x','y','z'],'0.01'));
   html+=_mntCard('Statik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxs','kys','kzs'],['kx','ky','kz'],'1'));
   html+=_mntCard('Dinamik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxd','kyd','kzd'],['kx','ky','kz'],'1'));
+  html+=_mntMountCurveCard(node);
   html+='</div>';
   return html;
+}
+
+// Nonlineer düşey (z) kuvvet–sehim eğrisi kartı (opsiyonel). node.data.curveZ =
+// [[δ_mm, f_N], …]. ≥2 nokta → çözücü bu takozu Newton ile nonlineer çözer; yoksa
+// lineer kzs geçerli. kzs/kzd yine kullanılır (durdurucu + dinamik/statik oran).
+function _mntMountCurveCard(node){
+  var pts = Array.isArray(node.data.curveZ) ? node.data.curveZ : null;
+  var inner;
+  if(!pts || pts.length<2){
+    inner = '<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.45; margin-bottom:8px;">'
+      + 'Düşey eksende ölçülmüş kuvvet–sehim eğrisi tanımlarsanız çözücü bu takozu '
+      + '<b>nonlineer</b> (Newton-Raphson) çözer. Tanımlamazsanız statik rijitlikle (kz) lineer kalır.</div>'
+      + '<button onclick="veMntCurveEnable(\''+node.id+'\')" style="width:100%; padding:7px; font-size:0.66rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">＋ Nonlineer z-eğrisi ekle</button>';
+  } else {
+    inner = '<div style="font-size:0.54rem; color:var(--text-muted); line-height:1.4; margin-bottom:7px;">δ: sehim [mm], f: kuvvet [N] (basma <b>−</b>). Çözücü δ\'ya göre sıralar; monoton eğri önerilir.</div>';
+    inner += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.6rem; margin-bottom:7px;"><thead><tr>'
+      + '<th style="'+_mntMxTh()+'">δ [mm]</th><th style="'+_mntMxTh()+'">f [N]</th><th style="'+_mntMxTh()+'"></th></tr></thead><tbody>';
+    pts.forEach(function(p,i){
+      inner += '<tr>'
+        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[0])+'" step="0.5" onchange="veMntCurveSetPoint(\''+node.id+'\','+i+',0,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[1])+'" step="10" onchange="veMntCurveSetPoint(\''+node.id+'\','+i+',1,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+'"><button onclick="veMntCurveRemovePoint(\''+node.id+'\','+i+')" title="Noktayı sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:1px 6px; font-size:0.7rem; line-height:1;">✕</button></td>'
+        + '</tr>';
+    });
+    inner += '</tbody></table></div>';
+    inner += '<div style="display:flex; gap:5px;">'
+      + '<button onclick="veMntCurveAddPoint(\''+node.id+'\')" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">＋ nokta</button>'
+      + '<button onclick="veMntCurveDisable(\''+node.id+'\')" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">Lineere dön</button>'
+      + '</div>';
+  }
+  return _mntCard('Düşey Kuvvet–Sehim Eğrisi (z)','opsiyonel · nonlineer','var(--accent-danger)', inner);
 }
 
 // ─── Setters ─────────────────────────────────────────────────────────────────
@@ -485,6 +517,48 @@ function veMntApplyLib(nodeId, key){
   if(!node.data) node.data={};
   node.data.kxs=m.sx; node.data.kys=m.sy; node.data.kzs=m.sz;
   node.data.kxd=m.dx; node.data.kyd=m.dy; node.data.kzd=m.dz; node.data.libKey=key;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+
+// ─── Nonlineer z-eğrisi (kuvvet–sehim) düzenleyici ───────────────────────────
+// Etkinleştir: mevcut kzs'den LİNEER başlangıç eğrisi tohumla (δ=−15..+15 mm,
+// f=kzs·δ). Kullanıcı sonra ilerlemeli/asimetrik yaparak düzenler. Böylece eğri
+// başta lineerle aynı sonuç verir (sürpriz yok), kullanıcı delta ekledikçe ayrışır.
+function veMntCurveEnable(nodeId){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  var kz=_mntNum(node.data.kzs, 0);   // N/mm
+  node.data.curveZ=[[-15,-15*kz],[-7.5,-7.5*kz],[0,0],[7.5,7.5*kz],[15,15*kz]];
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+function veMntCurveDisable(nodeId){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(node.data) delete node.data.curveZ;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+// Nokta değeri düzenle — YENİDEN ÇİZME YOK (yazarken odak kaybını önler; input
+// zaten güncel değeri gösterir). col: 0=δ[mm], 1=f[N].
+function veMntCurveSetPoint(nodeId, idx, col, val){
+  var node=nodes.find(function(n){return n.id===nodeId;});
+  if(!node || !node.data || !Array.isArray(node.data.curveZ) || !node.data.curveZ[idx]) return;
+  node.data.curveZ[idx][col]=_mntNum(val, 0);
+  if(typeof saveState==='function') saveState();
+}
+function veMntCurveAddPoint(nodeId){
+  var node=nodes.find(function(n){return n.id===nodeId;});
+  if(!node || !node.data || !Array.isArray(node.data.curveZ)) return;
+  var pts=node.data.curveZ, last=pts[pts.length-1]||[0,0];
+  pts.push([_mntNum(last[0],0)+5, _mntNum(last[1],0)]);   // son noktanın 5 mm ötesine
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+function veMntCurveRemovePoint(nodeId, idx){
+  var node=nodes.find(function(n){return n.id===nodeId;});
+  if(!node || !node.data || !Array.isArray(node.data.curveZ)) return;
+  node.data.curveZ.splice(idx,1);
   if(typeof saveState==='function') saveState();
   if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
@@ -1726,7 +1800,8 @@ function _mntGatherForSolver(solver){
       masses.push({ name:_mntNodeName(n), mass:d.mass, cgx:d.cgx, cgy:d.cgy, cgz:d.cgz, Ixx:d.Ixx, Iyy:d.Iyy, Izz:d.Izz, Ixy:d.Ixy, Ixz:d.Ixz, Iyz:d.Iyz, pointMass:!!d.pointMass });
     } else if(def.isMount){
       var m=n.data||{};
-      mounts.push({ name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd });
+      mounts.push({ name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd,
+                    curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });  // opsiyonel nonlineer z-eğrisi
     }
   });
   return { components:masses, mounts:mounts, torque:_mntGatherTorque() };
@@ -1791,10 +1866,16 @@ function _mntToSI(gather, g){
       cg:[C.mmToM(_mntNum(c.cgx)),C.mmToM(_mntNum(c.cgy)),C.mmToM(_mntNum(c.cgz))],
       I:[[_mntNum(c.Ixx),_mntNum(c.Ixy),_mntNum(c.Ixz)],[_mntNum(c.Ixy),_mntNum(c.Iyy),_mntNum(c.Iyz)],[_mntNum(c.Ixz),_mntNum(c.Iyz),_mntNum(c.Izz)]],
       pointMass:!!c.pointMass }; }),
-    mounts: gather.mounts.map(function(m){ return {
-      name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
-      kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
-      kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] }; }),
+    mounts: gather.mounts.map(function(m){
+      var mnt={
+        name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
+        kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
+        kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] };
+      // Opsiyonel nonlineer z-eğrisi (UI: [δ_mm, f_N]) → SI ([δ_m, f_N]). ≥2 nokta gerekli.
+      if(Array.isArray(m.curveZ) && m.curveZ.length>=2){
+        mnt.curves={ z:m.curveZ.map(function(p){ return [C.mmToM(_mntNum(p[0])), _mntNum(p[1])]; }) };
+      }
+      return mnt; }),
     loadCases: MNT_AUTO_CASES.concat(_mntTorqueCases(gather.torque))
   };
 }
@@ -1827,8 +1908,16 @@ function _mntComputeResults(solverId){
   if(!mp){ _veMntLast=null; return { error:['Kütle hesaplanamadı (toplam ≤ 0).'], gather:gather }; }
   var model={ m:mp.m, cg:mp.cg, Kstat:C.buildK(si.mounts,mp.cg,false), mounts:si.mounts, g:si.g };
   var allCases=C.solveAllCases(model, si.loadCases, {useStop:true}); // ±15 mm metal-metal durdurucu (F4)
-  var Kdyn=C.buildK(si.mounts,mp.cg,true), M6=C.buildM6(mp.m,mp.I_G);
-  var modes=C.solveModal(Kdyn, M6, si.mounts, mp.cg);
+  var M6=C.buildM6(mp.m,mp.I_G), modes;
+  if(typeof C.anyCurve==='function' && C.anyCurve(si.mounts)){
+    // Nonlineer takoz var → modları STATİK dengedeki (Static durumu) dinamik
+    // tanjant rijitlikle çöz (önyüklü çalışma noktası). allCases[0] = Static.
+    var qStat=(allCases[0] && allCases[0].res) ? allCases[0].res.q : null;
+    modes=C.solveModalAtState(si.mounts, mp.cg, M6, qStat);
+  } else {
+    // Tümüyle lineer → mevcut yol (K_dyn) birebir korunur.
+    modes=C.solveModal(C.buildK(si.mounts,mp.cg,true), M6, si.mounts, mp.cg);
+  }
   // Kriter 3 — her vites için tork durumu (mount kuvvetleri). Kriter 4 — tasarım
   // yük koşulları (maks tork = 1. vites, 3.5g düşey, 1g yanal, 1g boyuna).
   var gearDefs=_mntGearTorqueCases(gather.torque);
@@ -1846,95 +1935,73 @@ function _mntComputeResults(solverId){
   return R;
 }
 
-// Çözücüyü çalıştır → #ve-mnt-results'a bas (varsa). Sonucu döner.
+// Çözücüyü çalıştır → #ve-mnt-results'a KOMPAKT DURUM bas. Sonucu döner.
+// Ayrıntılı sonuç dökümü (çökme matrisi / mod tablosu / CSV) BİLEREK YOK:
+// kullanıcı sonuçlara Rapor bileşeninden bakar; panel yalnız "çözüldü mü,
+// uyarı var mı" durumunu gösterir (bkz. _mntSolverStatusHTML).
 function veMntSolverCompute(solverId){
   var R=_mntComputeResults(solverId);
   var out=document.getElementById('ve-mnt-results'); if(!out) return R;
   if(!R){ out.innerHTML=''; return R; }
+  out.innerHTML=_mntSolverStatusHTML(R);
+  return R;
+}
+
+// Kompakt çözüm durumu — büyük sonuç dökümü değil. Model çözüldüyse özet
+// (kütle/CG + kütle/takoz/durum/mod sayıları) + varsa mühendislik notları
+// (çekme, durdurucu, ±10 mm aşımı, modal f≈0, yakınsama). Ayrıntı → Rapor.
+function _mntSolverStatusHTML(R){
   if(R.error){
-    out.innerHTML='<div style="padding:10px 12px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:0.66rem; line-height:1.5;"><b>Bağlantı gerekli:</b><ul style="margin:6px 0 0 16px; padding:0;">'+R.error.map(function(p){return '<li>'+_mntEsc(p)+'</li>';}).join('')+'</ul><div style="margin-top:6px; color:var(--text-muted);">Kütle ve Takoz bileşenlerini bu Çözücü\'nün giriş portuna bağlayın.</div></div>';
-    return R;
+    return '<div style="padding:10px 12px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:0.66rem; line-height:1.5;"><b>Çözülemedi — eksik/geçersiz girdi:</b><ul style="margin:6px 0 0 16px; padding:0;">'
+      + R.error.map(function(p){return '<li>'+_mntEsc(p)+'</li>';}).join('')
+      + '</ul><div style="margin-top:6px; color:var(--text-muted);">İç topolojide Kütle ve Takoz bileşenleri bulunmalı ve geçerli değerler girilmelidir.</div></div>';
   }
-  var mp=R.mp, allCases=R.allCases, modes=R.modes, si={mounts:R.mounts};
-  var cgmm=mp.cg.map(function(v){return v*1000;});
-  var h=_mntSecTitle('Kütle Özeti');
-  h+='<table style="width:100%; border-collapse:collapse; font-size:0.63rem; margin-bottom:10px;">';
-  h+='<tr><th style="'+_mntTh()+'">m</th><td style="'+_mntTd()+'">'+_mntFmt(mp.m,3)+' kg</td></tr>';
-  h+='<tr><th style="'+_mntTh()+'">CG (mm)</th><td style="'+_mntTd()+'">('+_mntFmt(cgmm[0],1)+', '+_mntFmt(cgmm[1],1)+', '+_mntFmt(cgmm[2],1)+')</td></tr>';
-  h+='</table>';
-  // Kompakt δz matrisi (satır=durum, sütun=takoz, δz mm)
-  h+=_mntDzMatrixHTML(allCases, si.mounts);
-  // Modal
-  h+=_mntModalHTML(modes);
-  h+='<div style="display:flex; gap:6px; margin-top:8px;"><button onclick="veMntCopyResults()" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">📋 Kopyala</button><button onclick="veMntExportCSV()" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">CSV</button></div>';
-  out.innerHTML=h;
+  var mp=R.mp, cgmm=mp.cg.map(function(v){return v*1000;});
+  var nC=(R.gather && R.gather.components ? R.gather.components.length : 0);
+  var nM=(R.mounts||[]).length, nCase=(R.allCases||[]).length, nMode=(R.modes||[]).length;
+  // Durum-bazında uyarı toplulaştırması.
+  var failed=0, notConv=0, tension=0, clamp=0, overlin=0;
+  (R.allCases||[]).forEach(function(rc){
+    if(!rc.res){ failed++; return; }
+    var ck=rc.res.checks||{};
+    if(ck.converged===false || ck.stopConverged===false) notConv++;
+    if(ck.tensionCount>0) tension++;
+    if(ck.clampCount>0) clamp++;
+    if(ck.overLinearCount>0) overlin++;
+  });
+  var modalWarn=(R.modes||[]).filter(function(m){return m && m.warning;}).length;
+
+  var h='<div style="padding:9px 11px; border:1px solid var(--accent-success); background:rgba(34,197,94,0.10); border-radius:5px;">';
+  h+='<div style="display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; font-size:0.72rem; font-weight:700; color:var(--accent-success);"><span>✓ Çözüldü</span>'
+    + '<span style="font-weight:400; color:var(--text-muted); font-size:0.58rem;">'+nC+' kütle · '+nM+' takoz · '+nCase+' yük durumu · '+nMode+' mod</span></div>';
+  h+='<div style="margin-top:5px; font-size:0.62rem; color:var(--text-secondary); line-height:1.5;">'
+    + 'Toplam kütle <b style="color:var(--text-primary);">'+_mntFmt(mp.m,1)+' kg</b> · '
+    + 'CG (<b style="color:var(--text-primary);">'+_mntFmt(cgmm[0],0)+', '+_mntFmt(cgmm[1],0)+', '+_mntFmt(cgmm[2],0)+'</b>) mm</div>';
+  h+='</div>';
+
+  var warns=[];
+  if(failed)    warns.push(['✗', failed+' yük durumu çözülemedi (K tekil)', 'var(--accent-danger)']);
+  if(notConv)   warns.push(['⚠', notConv+' durumda çözücü yakınsamadı', 'var(--accent-danger)']);
+  if(tension)   warns.push(['⟂', tension+' durumda çekme / lift-off', 'var(--accent-warning)']);
+  if(clamp)     warns.push(['▢', clamp+' durumda metal-metal durdurucu', 'var(--accent-warning)']);
+  if(overlin)   warns.push(['~', overlin+' durumda ±10 mm lineer bandı aşıldı', 'var(--accent-warning)']);
+  if(modalWarn) warns.push(['♪', modalWarn+' modda f≈0 (serbest mod) uyarısı', 'var(--accent-warning)']);
+  if(warns.length){
+    h+='<div style="margin-top:8px; padding:8px 10px; border:1px solid var(--border-color); background:var(--bg-secondary); border-radius:5px; font-size:0.6rem; line-height:1.65; color:var(--text-secondary);">';
+    h+='<div style="font-weight:700; color:var(--text-heading); margin-bottom:2px; font-size:0.62rem;">Notlar</div>';
+    warns.forEach(function(w){ h+='<div><span style="display:inline-block; width:14px; color:'+w[2]+';">'+w[0]+'</span>'+_mntEsc(w[1])+'</div>'; });
+    h+='</div>';
+  }
+  h+='<div style="margin-top:8px; font-size:0.58rem; color:var(--text-muted); line-height:1.45;">Ayrıntılı sonuçlar (çökme matrisi, mod şekilleri, kriter değerlendirmesi) için <b>Rapor</b> bileşenini kullanın.</div>';
+  return h;
 }
 
 // ─── Render yardımcıları ─────────────────────────────────────────────────────
-function _mntSecTitle(t, sub){ return '<div style="display:flex; align-items:center; gap:8px; margin:6px 0 6px; font-size:0.74rem; font-weight:700; color:var(--text-heading); border-bottom:1px solid var(--border-color); padding-bottom:4px;"><span>'+t+'</span>'+(sub?'<span style="font-size:0.53rem; font-weight:400; color:var(--text-muted);">'+sub+'</span>':'')+'</div>'; }
-function _mntTh(){ return 'padding:5px 8px; text-align:left; background:var(--bg-tertiary); border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:32%;'; }
-function _mntTd(){ return 'padding:5px 8px; border:1px solid var(--border-color); color:var(--text-primary); font-weight:600;'; }
+// (Not: çözücü panelindeki büyük sonuç dökümü — δz matrisi, modal tablosu,
+//  Kopyala/CSV — kaldırıldı; sonuçlara Rapor bileşeninden bakılır. _mntMxTh/
+//  _mntMxTd hâlâ Takoz Özellikleri kütüphane tablolarında kullanılıyor.)
 function _mntMxTh(){ return 'padding:3px 5px; border:1px solid var(--border-color); color:var(--text-secondary); font-weight:600; text-align:center;'; }
 function _mntMxTd(){ return 'padding:3px 5px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);'; }
-function _mntInertiaText(I){ var f=function(x){return Number.isFinite(x)?x.toFixed(2):'—';}; return '['+f(I[0][0])+', '+f(I[0][1])+', '+f(I[0][2])+']\n['+f(I[1][0])+', '+f(I[1][1])+', '+f(I[1][2])+']\n['+f(I[2][0])+', '+f(I[2][1])+', '+f(I[2][2])+']'; }
-
-// Kompakt δz matrisi (yan panel için — dar)
-function _mntDzMatrixHTML(allCases, mounts){
-  var h=_mntSecTitle('Statik Çökme','δz [mm] · çekme mor');
-  h+='<div style="overflow-x:auto; margin-bottom:10px;"><table style="border-collapse:collapse; font-size:0.55rem; white-space:nowrap;"><thead><tr style="background:var(--bg-tertiary);"><th style="'+_mntMxTh()+'">Durum</th>';
-  mounts.forEach(function(m){ h+='<th style="'+_mntMxTh()+'" title="'+_mntEsc(m.name)+'">'+_mntEsc(m.name.length>7?m.name.slice(0,6)+'…':m.name)+'</th>'; });
-  h+='<th style="'+_mntMxTh()+'">ΣFz</th></tr></thead><tbody>';
-  allCases.forEach(function(rc){
-    h+='<tr><td style="'+_mntMxTd()+' text-align:left; font-weight:600;">'+_mntEsc(rc.name)+'</td>';
-    if(!rc.res){ h+='<td colspan="'+(mounts.length+1)+'" style="'+_mntMxTd()+' color:var(--accent-danger);">—</td></tr>'; return; }
-    rc.res.perMount.forEach(function(pm){
-      var dz=pm.delta[2]*1000, col=_mntDeflColor(dz);
-      var mark=pm.tension?' outline:2px solid #a855f7; outline-offset:-2px;':'';
-      var warn=pm.overLinear?' text-decoration:underline;':'';
-      h+='<td style="'+_mntMxTd()+' color:'+col+'; font-weight:600;'+warn+mark+'">'+dz.toFixed(1)+'</td>';
-    });
-    h+='<td style="'+_mntMxTd()+'">'+(rc.res.checks.sumFzOk?'<span style="color:#22c55e;">✓</span>':'<span style="color:#ef4444;">✗</span>')+'</td></tr>';
-  });
-  h+='</tbody></table></div>';
-  return h;
-}
-function _mntModalHTML(modes){
-  var h=_mntSecTitle('Modal Analiz','6 mod · K_dyn');
-  if(!modes) return h+'<div style="color:var(--accent-danger); font-size:0.64rem;">Modal başarısız.</div>';
-  h+='<div style="overflow-x:auto;"><table style="border-collapse:collapse; font-size:0.56rem; white-space:nowrap;"><thead><tr style="background:var(--bg-tertiary);">';
-  ['Mod','f [Hz]','Etiket'].forEach(function(c){ h+='<th style="'+_mntMxTh()+'">'+c+'</th>'; });
-  h+='</tr></thead><tbody>';
-  modes.forEach(function(md,i){
-    h+='<tr'+(md.warning?' title="'+_mntEsc(md.warning)+'"':'')+'><td style="'+_mntMxTd()+' font-weight:600;">'+(i+1)+'</td>';
-    h+='<td style="'+_mntMxTd()+' font-weight:600; color:var(--accent-primary);">'+_mntFmt(md.f_Hz,3)+'</td>';
-    h+='<td style="'+_mntMxTd()+' text-align:left; color:'+(md.warning?'#f59e0b':'var(--text-primary)')+';">'+_mntEsc(md.label)+'</td></tr>';
-  });
-  h+='</tbody></table></div>';
-  return h;
-}
-// ─── Kopyala / CSV ───────────────────────────────────────────────────────────
-function _mntResultsToText(){
-  var R=_veMntLast; if(!R) return 'Önce hesaplayın.';
-  var cg=R.mp.cg.map(function(v){return (v*1000).toFixed(3);});
-  var t='TAKOZ ÇÖKME-TİTREŞİM\n====================\nKütle: '+R.mp.m.toFixed(3)+' kg\nCG (mm): ('+cg.join(', ')+')\nI_G:\n'+_mntInertiaText(R.mp.I_G)+'\n\nSTATİK ÇÖKME (δz, mm):\n';
-  R.allCases.forEach(function(rc){ if(!rc.res){ t+=rc.name+': —\n'; return; } t+=rc.name+': '+rc.res.perMount.map(function(pm){var v=pm.delta[2]*1000; return (v<0?'':'+')+v.toFixed(2);}).join(' / ')+'  [ΣFz='+(rc.res.sumF[2]/1000).toFixed(2)+', çekme='+rc.res.checks.tensionCount+']\n'; });
-  t+='\nMODAL (Hz): '+(R.modes||[]).map(function(m){return m.f_Hz.toFixed(3)+'('+m.label+')';}).join(', ');
-  return t;
-}
-function veMntCopyResults(){
-  var txt=_mntResultsToText();
-  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ if(typeof showToast==='function') showToast('Kopyalandı.','success'); }); }
-  else { var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); }
-}
-function veMntExportCSV(){
-  var R=_veMntLast; if(!R){ if(typeof showToast==='function') showToast('Önce hesaplayın.','warning'); return; }
-  var rows=[], head=['LoadCase'];
-  R.mounts.forEach(function(m){ head.push(m.name+' dx',m.name+' dy',m.name+' dz'); });
-  head.push('SumFz_kN','Tension'); rows.push(head.join(','));
-  R.allCases.forEach(function(rc){ if(!rc.res){ rows.push(rc.name+',ERROR'); return; } var r=[rc.name]; rc.res.perMount.forEach(function(pm){ r.push((pm.delta[0]*1000).toFixed(3),(pm.delta[1]*1000).toFixed(3),(pm.delta[2]*1000).toFixed(3)); }); r.push((rc.res.sumF[2]/1000).toFixed(3), rc.res.checks.tensionCount); rows.push(r.join(',')); });
-  var blob=new Blob([rows.join('\n')],{type:'text/csv'});
-  var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='takoz_cokme.csv'; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href);},500);
-}
 
 // ─── Matematik ───────────────────────────────────────────────────────────────
 function veMntOpenMathModal(){ _mntShowModal('📐 Takoz Modülünün Matematiği', _mntMathHTML()); }
@@ -2021,6 +2088,11 @@ if(typeof module!=='undefined' && module.exports){
     veMntGetLibraryMap: veMntGetLibraryMap,
     veMntGetLibraryList: veMntGetLibraryList,
     veMntApplyLib: veMntApplyLib,
+    veMntCurveEnable: veMntCurveEnable,
+    veMntCurveDisable: veMntCurveDisable,
+    veMntCurveSetPoint: veMntCurveSetPoint,
+    veMntCurveAddPoint: veMntCurveAddPoint,
+    veMntCurveRemovePoint: veMntCurveRemovePoint,
     veMntLibAdd: veMntLibAdd,
     veMntLibRemove: veMntLibRemove,
     veMntLibSet: veMntLibSet,

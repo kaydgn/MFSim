@@ -281,12 +281,8 @@ function showNodeProperties(node) {
     }, 400);
   }
 
-  // Takoz Çözücü: bağlı kütle+takozları otomatik hesapla + 3D viewer
-  if(node.type === 'mnt-solver') {
-    setTimeout(function() {
-      if(typeof veMntSolverCompute === 'function') veMntSolverCompute(node.id);
-    }, 120);
-  }
+  // Takoz Çözücü: hesap YALNIZ "▶ Hesapla" düğmesiyle koşar (otomatik tetik YOK).
+  // Panel açılışında model çözülmez; ayrıntılı sonuçlara Rapor bileşeninden bakılır.
 
   // Takoz 3D Görüntüleyici: panel açılınca güncel topolojiyle başlat
   if(node.type === 'mnt-viewer') {
