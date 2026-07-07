@@ -227,6 +227,8 @@ function _mntRepSection8(R, opts){
   h+=_mntRepDeflectionDetail(R);
   h+=_mntRepStep5Modal(R, C);
   h+=_mntRepFreqPlacement(R, opts);
+  h+=_mntRepGearForces(R);
+  h+=_mntRepDesignLoads(R);
   h+=_mntRepConsistency(R);
   return h;
 }
@@ -700,9 +702,83 @@ function _mntRepFreqPlacement(R, opts){
   return h;
 }
 
+// Bir yük durumu sonucunda en yüksek bileşke takoz kuvveti (kN) ve takoz adı.
+function _mntRepMaxForce(res){
+  var best={v:-1, name:'—'};
+  (res && res.perMount || []).forEach(function(pm){
+    var fm=Math.sqrt(pm.f[0]*pm.f[0]+pm.f[1]*pm.f[1]+pm.f[2]*pm.f[2])/1000;
+    if(fm>best.v){ best.v=fm; best.name=pm.name; }
+  });
+  return best;
+}
+// Yük durumu notu (durdurucu / çekme / normal).
+function _mntRepCaseNote(res){
+  if(!res) return '—';
+  if(res.checks.clampCount>0) return '<span style="color:var(--warn,#8a5a1e)">durdurucu ×'+res.checks.clampCount+'</span>';
+  if(res.checks.tensionCount>0) return '<span style="color:var(--warn,#8a5a1e)">çekme ×'+res.checks.tensionCount+'</span>';
+  return '<span class="ok">✓</span>';
+}
+
+// §8.9 — Kriter 3: her vites için takoz kuvvetleri (tork reaksiyonu altında).
+function _mntRepGearForces(R){
+  var rows=R.gearCases||[];
+  if(!rows.length) return '';   // tork girilmemişse bölümü atla
+  var h='<h3>8.9 Kriter 3 — Vites bazında takoz kuvvetleri</h3>';
+  h+='<p>Tasarım kriteri her vites için takoz kuvvetlerinin kontrolünü ister. Kütle ve rijitlik sabit, yalnız şaft torku \\(T_{\\text{shaft}}\\) vites oranıyla ölçeklenir; en yüksek redüksiyonlu <b>1. vites en yüksek tork</b> ürettiğinden ileri vitesler için <b>bağlayıcı</b> durumdur. Değerler ±15 mm durdurucu modeliyle (bkz. §9) çözülür.</p>';
+  h+='<table style="width:100%; border-collapse:collapse; font-size:0.72rem; margin:8px 0;">';
+  h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c9cdd3);">'
+    +'<th style="text-align:left; padding:4px 6px;">Vites</th>'
+    +'<th style="text-align:right; padding:4px 6px;">Oran</th>'
+    +'<th style="text-align:right; padding:4px 6px;">T<sub>shaft</sub> [N·m]</th>'
+    +'<th style="text-align:right; padding:4px 6px;">Maks |F| [kN]</th>'
+    +'<th style="text-align:left; padding:4px 6px;">Takoz</th>'
+    +'<th style="text-align:center; padding:4px 6px;">Durum</th></tr></thead><tbody>';
+  rows.forEach(function(rc){
+    var lc=rc.loadCase||{}, res=rc.res, mf=_mntRepMaxForce(res);
+    h+='<tr style="border-bottom:1px solid var(--line-soft,#e4e6e9);">'
+      +'<td style="padding:3px 6px;">'+_rEsc(lc.gearLabel||rc.name)+'</td>'
+      +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+_rF(lc.ratio,2)+'</td>'
+      +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+(res?_rF(lc.Tshaft,0):'—')+'</td>'
+      +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+(res?_rF(mf.v,2):'—')+'</td>'
+      +'<td style="padding:3px 6px;">'+(res?_rEsc(mf.name):'çözülemedi')+'</td>'
+      +'<td style="text-align:center; padding:3px 6px;">'+_mntRepCaseNote(res)+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Maks |F| = takoza gelen üç-eksen bileşke kuvvetinin en büyüğü (dayanım/cıvata tasarımı için). Vites yükseldikçe tork ve dolayısıyla kuvvet azalır.</p>';
+  return h;
+}
+
+// §8.10 — Kriter 4: tasarım yük koşulları (maks tork, 3.5g düşey, 1g yanal, 1g boyuna).
+function _mntRepDesignLoads(R){
+  var design=R.designCases||[], gear=R.gearCases||[];
+  var maxTq=gear.length?gear[0]:null;   // 1. vites = maks tork
+  if(!design.length && !maxTq) return '';
+  var h='<h3>8.10 Kriter 4 — Tasarım yük koşulları</h3>';
+  h+='<p>Tasarım kriterinin dört zorunlu yük koşulunda maksimum takoz kuvveti (dayanım tasarımı için). 1g yanal koşul, kalibreli 0,6g viraj manevrasından ayrı bir dayanım zarfıdır.</p>';
+  h+='<table style="width:100%; border-collapse:collapse; font-size:0.72rem; margin:8px 0;">';
+  h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c9cdd3);">'
+    +'<th style="text-align:left; padding:4px 6px;">Koşul</th>'
+    +'<th style="text-align:right; padding:4px 6px;">Maks |F| [kN]</th>'
+    +'<th style="text-align:left; padding:4px 6px;">Takoz</th>'
+    +'<th style="text-align:center; padding:4px 6px;">Durum</th></tr></thead><tbody>';
+  function line(label, res){
+    var mf=_mntRepMaxForce(res);
+    h+='<tr style="border-bottom:1px solid var(--line-soft,#e4e6e9);">'
+      +'<td style="padding:3px 6px;">'+label+'</td>'
+      +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+(res?_rF(mf.v,2):'—')+'</td>'
+      +'<td style="padding:3px 6px;">'+(res?_rEsc(mf.name):'—')+'</td>'
+      +'<td style="text-align:center; padding:3px 6px;">'+_mntRepCaseNote(res)+'</td></tr>';
+  }
+  if(maxTq && maxTq.res) line('Maks. tork <span style="color:#5a6270;">(1. vites, T<sub>shaft</sub> '+_rF(maxTq.loadCase.Tshaft,0)+' N·m)</span>', maxTq.res);
+  design.forEach(function(rc){ line(_rEsc(rc.name), rc.res); });
+  h+='</tbody></table>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Not: 3,5g düşey ve büyük tork koşullarında ±15 mm durdurucu devreye girebilir (Durum sütunu). Maks |F| durdurucudaki temas kuvvetini de içerir.</p>';
+  return h;
+}
+
 // Doğrulama → iç-tutarlılık özeti
 function _mntRepConsistency(R){
-  var h='<h3>8.9 Model içi tutarlılık kontrolleri</h3>';
+  var h='<h3>8.11 Model içi tutarlılık kontrolleri</h3>';
   var nBal=0, nTot=0, tension=0, overLin=0;
   R.allCases.forEach(function(rc){
     if(!rc.res) return; nTot++;
@@ -733,37 +809,42 @@ function _mntRepCompliance(R, opts){
   var rpm=Number(opts.idleRpm), z=Number(opts.cylinders);
   var haveIdle=(rpm>0 && z>0), fFire=haveIdle?(rpm/60)*(z/2):NaN;
 
-  // Kriter 1 — PowerPack Roll modu (yalpa baskın mod) < %50·f_ateş
-  var rollM=null;
-  modes.forEach(function(m){ if(/roll/i.test(m.label||'') && (!rollM || m.f_Hz<rollM.f_Hz)) rollM=m; });
-  if(!rollM) modes.forEach(function(m){ if(m.phi && (!rollM || Math.abs(m.phi[3])>Math.abs(rollM.phi[3]))) rollM=m; });
+  // Kriter 1 — PowerPack Roll modu < %50·f_ateş. Roll modu = EN YÜKSEK rijit
+  // gövde modu (mod 6); ateşlemeye en yakın ve izolasyon için belirleyici mod
+  // budur (§8.8 hesabı ve tasarım tanımıyla tutarlı).
+  var rollM=modes[modes.length-1];
   var fRoll=rollM?rollM.f_Hz:NaN, c1;
   if(!haveIdle) c1={st:'wait', bulgu:'Motor rölanti devri + silindir sayısı girin (Rapor paneli)'};
-  else { var lim1=0.5*fFire; c1={st:(fRoll<lim1?'ok':'no'), bulgu:'Roll modu <b>'+_rF(fRoll,2)+'</b> Hz · sınır %50·f_ateş = '+_rF(lim1,2)+' Hz'}; }
+  else { var lim1=0.5*fFire; c1={st:(fRoll<lim1?'ok':'no'), bulgu:'Roll modu (mod '+modes.length+') <b>'+_rF(fRoll,2)+'</b> Hz · sınır %50·f_ateş = '+_rF(lim1,2)+' Hz'}; }
 
-  // Kriter 2 — Rölanti transmissibility (sönümsüz, en yüksek modda) < %50
+  // Kriter 2 — Rölanti transmissibility < %50. §8.8 ile AYNI hesap: en yüksek
+  // mod (ateşlemeye en yakın), sönüm oranı ζ (varsayılan 0,001 ≈ sönümsüz).
   var fMax=modes[modes.length-1].f_Hz, c2;
+  var zeta=Number(opts.zeta); if(!(zeta>0)) zeta=0.001;
+  var _core=_rMountCore();
   if(!haveIdle) c2={st:'wait', bulgu:'Motor rölanti devri + silindir sayısı girin'};
-  else { var rr=fFire/fMax, T=(Math.abs(rr*rr-1)>1e-9)?1/Math.abs(rr*rr-1):Infinity;
-    c2={st:((rr>Math.SQRT2 && T<0.5)?'ok':'no'),
-      bulgu:'f_ateş '+_rF(fFire,1)+' Hz / en yüksek mod '+_rF(fMax,2)+' Hz → r='+_rF(rr,2)+', T≈<b>'+(isFinite(T)?_rF(T*100,0)+'%':'∞')+'</b> (sönümsüz)'}; }
+  else { var rr=fFire/fMax, T=_core?_core.transmissibility(fFire,fMax,zeta):Infinity;
+    c2={st:(T<0.5?'ok':'no'),
+      bulgu:'f_ateş '+_rF(fFire,1)+' Hz / en yüksek mod '+_rF(fMax,2)+' Hz → r='+_rF(rr,2)+', T=<b>'+(isFinite(T)?_rF(T*100,1)+'%':'∞')+'</b> (§8.8)'}; }
 
-  // Kriter 3 — Vites başına takoz kuvvetleri kontrol
-  var fwd=_mntRepFindCase(R,'Forward Torque'), rev=_mntRepFindCase(R,'Reverse Torque'), maxF=null;
-  (R.allCases||[]).forEach(function(rc){ if(!rc.res) return; rc.res.perMount.forEach(function(pm){
-    var fm=Math.sqrt(pm.f[0]*pm.f[0]+pm.f[1]*pm.f[1]+pm.f[2]*pm.f[2])/1000; if(!maxF||fm>maxF.v) maxF={v:fm,cas:rc.name}; }); });
-  var c3 = (fwd&&fwd.res)
-    ? {st:'ok', bulgu:'Tahrik torku durumları hesaplandı (İleri'+(rev&&rev.res?' + Geri':'')+'); maks bileşke takoz kuvveti <b>'+_rF(maxF.v,2)+'</b> kN ('+_rEsc(_mntRepCaseTr(maxF.cas))+')'}
+  // Kriter 3 — Vites başına takoz kuvvetleri (§8.9): tanımlı her vites ayrı çözülür.
+  var gears=R.gearCases||[], gmax=null;
+  gears.forEach(function(rc){ if(!rc.res) return; var mf=_mntRepMaxForce(rc.res);
+    if(!gmax||mf.v>gmax.v) gmax={v:mf.v, g:(rc.loadCase&&rc.loadCase.gearLabel)||rc.name, mnt:mf.name}; });
+  var c3 = (gears.length && gmax)
+    ? {st:'ok', bulgu:'Her vites ayrı çözüldü ('+gears.length+' durum, §8.9); en yüksek bileşke takoz kuvveti <b>'+_rF(gmax.v,2)+'</b> kN ('+_rEsc(gmax.g)+' · '+_rEsc(gmax.mnt)+')'}
     : {st:'no', bulgu:'Tahrik torku girdisi yok — vites başına kontrol için Motor/Şanzıman kinematiğini doldurun'};
 
-  // Kriter 4 — Yükleme koşulları kontrol edildi mi (maks tork·3,5g·1g yanal·1g boyuna)
-  var need=[['Forward Torque','maks tork'],['Max Bump','3,5g düşey'],['Rim Lateral Kerb Strike','1g yanal'],['Braking','1g boyuna']];
-  var present=need.filter(function(p){ var c=_mntRepFindCase(R,p[0]); return c&&c.res; });
-  var missing=need.filter(function(p){ var c=_mntRepFindCase(R,p[0]); return !(c&&c.res); });
+  // Kriter 4 — Tasarım yük koşulları (§8.10): maks tork, 3,5g düşey, 1g yanal,
+  // 1g boyuna. 1g yanal, kalibreli 0,6g virajdan AYRI bir dayanım case'idir.
+  var design=R.designCases||[], haveTq=(gears.length>0 && !!gears[0].res);
+  var dPresent=design.filter(function(rc){ return rc.res; });
+  var c4Total=dPresent.length+(haveTq?1:0);
   var concern=[];
-  present.forEach(function(p){ var c=_mntRepFindCase(R,p[0]); if(c.res.checks.tensionCount>0||c.res.checks.overLinearCount>0) concern.push(_mntRepCaseTr(p[0])); });
-  var c4={st:(missing.length===0?'ok':'no'),
-    bulgu:present.length+'/'+need.length+' koşul analizde ('+present.map(function(p){return p[1];}).join(', ')+')'+(missing.length?' — eksik: '+missing.map(function(p){return p[1];}).join(', '):'')};
+  dPresent.forEach(function(rc){ if(rc.res.checks.tensionCount>0) concern.push(rc.name); });
+  if(haveTq && gears[0].res.checks.tensionCount>0) concern.push('maks tork');
+  var c4={st:(c4Total>=4?'ok':'no'),
+    bulgu:c4Total+'/4 koşul çözüldü — §8.10'+(haveTq?'':' (maks tork için tahrik kinematiği girin)')};
 
   function badge(st){ return st==='ok'?'<span class="ok">✓ Uygun</span>':(st==='wait'?'<span style="color:#5a6270;">— bekliyor</span>':'<span style="color:var(--warn);font-weight:600;">✗ kontrol</span>'); }
   h+='<table><caption>Tablo '+_rTbl()+' — Motor takozu hedef kriterleri uygunluk kontrolü</caption>';
@@ -778,9 +859,9 @@ function _mntRepCompliance(R, opts){
   if(anyNo) h+='Bir veya daha fazla kriter <b>sağlanmıyor / kontrol gerektiriyor</b>; ilgili satırları ve §8 ayrıntısını inceleyin.';
   else if(anyWait) h+='Kuvvet ve yükleme kriterleri sağlanıyor; roll modu ve transmissibility için motor rölanti devri + silindir sayısı girin (Rapor paneli) → tam değerlendirme.';
   else h+='<b>Tüm hedef kriterler sağlanıyor</b> — güç grubu takoz sistemi şirket motor takozu hedeflerini karşılıyor.';
-  if(concern.length) h+=' <span style="color:var(--warn);">Not: '+_rEsc(concern.join(', '))+' durum(lar)ında çekme / lineerlik aşımı var — takoz seçimi gözden geçirilmeli.</span>';
+  if(concern.length) h+=' <span style="color:var(--warn);">Not: '+_rEsc(concern.join(', '))+' durum(lar)ında çekme (lift-off) var — takoz seçimi gözden geçirilmeli.</span>';
   h+='</div>';
-  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Roll modu = mod şekli baskın yalpa (θ_x) olan rijit gövde modu (§8.7). Ateşleme frekansı f_ateş = (N/60)·(z/2) (§8.8). Transmissibility burada sönümsüz idealize edilmiştir (T = 1/|r²−1|, r = f_ateş / en yüksek mod); elastomer sönümü gerçek değeri düşürür. Vites başına ayrıntılı kontrol için her vitesin tork durumu ayrıca kurulmalıdır.</div>';
+  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Roll modu = en yüksek rijit gövde modu (mod '+(modes.length)+', §8.8). Ateşleme frekansı f_ateş = (N/60)·(z/2). Transmissibility §8.8 formülüyle T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] hesaplanır (ζ varsayılan 0,001; küçük sönümde ≈ sönümsüz). Vites başına kuvvetler §8.9, tasarım yük koşulları (1g yanal dâhil) §8.10\'da ayrıntılıdır.</div>';
   return h;
 }
 
@@ -818,6 +899,9 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepDeflectionDetail: _mntRepDeflectionDetail,
     _mntRepModeMatrix: _mntRepModeMatrix,
     _mntRepFreqPlacement: _mntRepFreqPlacement,
+    _mntRepGearForces: _mntRepGearForces,
+    _mntRepDesignLoads: _mntRepDesignLoads,
+    _mntRepMaxForce: _mntRepMaxForce,
     _mntRepCompliance: _mntRepCompliance,
     _rF: _rF, _rFs: _rFs, _rEsc: _rEsc
   };

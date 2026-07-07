@@ -1679,6 +1679,34 @@ function _mntTorqueCases(torque){
   }
   return cases;
 }
+
+// Kriter 3 — HER tanımlı vites için ayrı tork durumu (mount kuvvetleri kontrolü).
+// _mntTorqueCases yalnız 1. vitesi (maks tork) ana matrise koyar; bu ise g1..g6 +
+// geri için ayrı durumlar döndürür. Kütle/rijitlik sabit, yalnız T_shaft vites
+// oranıyla ölçeklenir → yüksek vites daha düşük kuvvet (1. vites bağlayıcıdır).
+// Dönüş öğeleri gearLabel/ratio/Tshaft meta verisini taşır (rapor §8.9 tablosu).
+function _mntGearTorqueCases(torque){
+  var C=veMountCore; if(!C || !C.torqueChain) return [];
+  var tq=torque||{};
+  var Te=_mntNum(tq.Te,0), Rstall=_mntNum(tq.Rstall,0);
+  var iTr=_mntNum(tq.iTransfer,1); if(iTr===0) iTr=1;
+  var phiF=_mntNum(tq.phiFwd,1); if(phiF===0) phiF=1;
+  var phiR=_mntNum(tq.phiRev,1); if(phiR===0) phiR=1;
+  var der=_mntNum(tq.derate,1); if(der===0) der=1;
+  if(!(Te>0 && Rstall>0)) return [];
+  var out=[];
+  ['g1','g2','g3','g4','g5','g6'].forEach(function(k,i){
+    var gr=_mntNum(tq[k],0); if(gr===0) return;
+    var Ts=C.torqueChain({Te:Te, Rstall:Rstall, iGear:gr, iTransfer:iTr, phiAxle:phiF, derate:der});
+    out.push({name:(i+1)+'. Vites', gearLabel:(i+1)+'. Vites', ratio:gr, Tshaft:Ts, n:[0,0,-1], T:[-Ts,0,0]});
+  });
+  var gR=_mntNum(tq.gR,0);
+  if(gR!==0){
+    var Tr=C.torqueChain({Te:Te, Rstall:Rstall, iGear:gR, iTransfer:iTr, phiAxle:phiR, derate:der});
+    out.push({name:'Geri Vites', gearLabel:'Geri', ratio:gR, Tshaft:Tr, n:[0,0,-1], T:[-Tr,0,0]});
+  }
+  return out;
+}
 // UI (mm/kg/N/mm) → SI. Yük durumları: 6 otomatik g-durumu + (kinematik
 // girildiyse) ileri/geri tork durumları.
 function _mntToSI(gather, g){
@@ -1728,7 +1756,19 @@ function _mntComputeResults(solverId){
   var allCases=C.solveAllCases(model, si.loadCases, {useStop:true}); // ±15 mm metal-metal durdurucu (F4)
   var Kdyn=C.buildK(si.mounts,mp.cg,true), M6=C.buildM6(mp.m,mp.I_G);
   var modes=C.solveModal(Kdyn, M6, si.mounts, mp.cg);
-  var R={ mp:mp, allCases:allCases, mounts:si.mounts, modes:modes, gather:gather, matrixMode:(solver.data.matrixMode||'delta'), solverId:solverId };
+  // Kriter 3 — her vites için tork durumu (mount kuvvetleri). Kriter 4 — tasarım
+  // yük koşulları (maks tork = 1. vites, 3.5g düşey, 1g yanal, 1g boyuna).
+  var gearDefs=_mntGearTorqueCases(gather.torque);
+  var gearCases=gearDefs.length ? C.solveAllCases(model, gearDefs, {useStop:true}) : [];
+  var designDefs=[
+    {name:'3.5g Düşey',       n:[ 0,0,-3.5], T:[0,0,0]},
+    {name:'1g Yanal',         n:[ 0,1,-1  ], T:[0,0,0]},
+    {name:'1g Boyuna (fren)', n:[-1,0,-1  ], T:[0,0,0]}
+  ];
+  var designCases=C.solveAllCases(model, designDefs, {useStop:true});
+  var R={ mp:mp, allCases:allCases, mounts:si.mounts, modes:modes, gather:gather,
+          gearCases:gearCases, designCases:designCases, g:si.g,
+          matrixMode:(solver.data.matrixMode||'delta'), solverId:solverId };
   _veMntLast=R;
   return R;
 }
@@ -1932,6 +1972,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntGatherForSolver: _mntGatherForSolver,
     _mntGatherTorque: _mntGatherTorque,
     _mntTorqueCases: _mntTorqueCases,
+    _mntGearTorqueCases: _mntGearTorqueCases,
     _mntToSI: _mntToSI,
     _mntDeflColor: _mntDeflColor,
     _mntForceColor: _mntForceColor
