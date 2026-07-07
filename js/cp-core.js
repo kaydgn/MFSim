@@ -240,6 +240,8 @@ function showNodeProperties(node) {
   // (diğer bileşenlerde varsayılan boyuta döner). Salt sunum, mantığa dokunmaz.
   var _propWin = document.getElementById('ve-properties');
   if(_propWin) _propWin.classList.toggle('ve-properties--2dview', node.type === 'mnt-2dview');
+  // Takoz Özellikleri: iki sütun (seçici + detay) ve 3 eksen grafiği yan yana → geniş pencere.
+  if(_propWin) _propWin.classList.toggle('ve-properties--mntlib', node.type === 'mnt-library');
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 
