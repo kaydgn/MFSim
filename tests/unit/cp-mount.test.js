@@ -120,9 +120,10 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
   test('kütüphane düğümü yokken birleşik liste yalnız gömülü katalogdur', () => {
     delete global.nodes;
     const list = cp.veMntGetLibraryList();
-    expect(list).toHaveLength(3);
+    expect(list).toHaveLength(6);
     expect(list.every(e => e.builtin)).toBe(true);
     expect(list.map(e => e.key)).toContain('amc55sha');
+    expect(list.map(e => e.key)).toContain('TK035');
   });
 
   test('veMntLibAdd özel takoz ekler; birleşik listede "Özel" olarak görünür', () => {
@@ -131,7 +132,7 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     cp.veMntLibAdd('lib1');
     expect(lib.data.mounts).toHaveLength(1);
     const list = cp.veMntGetLibraryList();
-    expect(list).toHaveLength(4); // 3 gömülü + 1 özel
+    expect(list).toHaveLength(7); // 6 gömülü + 1 özel
     const custom = list.filter(e => !e.builtin);
     expect(custom).toHaveLength(1);
     expect(custom[0].name).toContain('Yeni Takoz');
@@ -242,6 +243,41 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     expect(html).toContain("veMntLibSetBuiltin('lib1','amc55sha','sz'");
     expect(html).toContain("veMntLibResetBuiltin('lib1','amc55sha')");
     expect(html).toContain('value="AMC 55 ShA"');   // gömülü ad artık input değeri
+  });
+
+  // ── Gömülü 3-eksen analitik fitli katalog (TK035/40/50) ──
+  test('veMntGetLibraryMap gömülü TK035 3-eksen analitik fit taşır; fitsiz gömülü null', () => {
+    delete global.nodes;
+    const map = cp.veMntGetLibraryMap();
+    expect(map['TK035'].fitX.form).toBe('poly');
+    expect(map['TK035'].fitX.k0).toBe(415);           // radyal fit orijin eğimi = statik Cx
+    expect(map['TK035'].fitY.form).toBe('poly');
+    expect(map['TK035'].fitZ.form).toBe('asym');       // eksenel asimetrik
+    expect(map['TK035'].fitZ.pos.xmax).toBeCloseTo(5.60);
+    // statik/dinamik lineer değerler de tabloya uygun
+    expect(map['TK035'].sz).toBe(192);
+    expect(map['TK035'].dx).toBe(535);
+    // fit taşımayan gömülü (amc55sha) → fit*/curve* null
+    expect(map['amc55sha'].fitZ).toBeNull();
+    expect(map['amc55sha'].curveZ).toBeNull();
+  });
+
+  test('veMntApplyLib gömülü TK035 3-eksen fitini Takoz\'a kopyalar (snapshot); fitsiz gömülü temizler', () => {
+    const mount = { id: 'mm', type: 'mnt-mount', def: { name: 'Takoz', isMount: true }, data: {} };
+    global.nodes = [mount];
+    cp.veMntApplyLib('mm', 'TK035');
+    expect(mount.data.fitX.form).toBe('poly');
+    expect(mount.data.fitZ.form).toBe('asym');
+    expect(mount.data.kzs).toBe(192);   // statik Cz (lineer değer de kopyalanır)
+    expect(mount.data.kxs).toBe(415);   // statik Cx
+    // kopya snapshot, fabrika referansı değil (mutasyon fabrikayı etkilemez)
+    expect(mount.data.fitZ).not.toBe(cp.VE_MOUNT_LIBRARY['TK035'].fits.z);
+    expect(mount.data.fitZ.pos.xmax).toBeCloseTo(5.60);
+    // fitsiz gömülü uygula → 3 eksen de temizlenir
+    cp.veMntApplyLib('mm', 'amc55sha');
+    expect(mount.data.fitX).toBeUndefined();
+    expect(mount.data.fitZ).toBeUndefined();
+    expect(mount.data.curveZ).toBeUndefined();
   });
 });
 
@@ -783,10 +819,11 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     n.data.mounts[0].curveZ = [[-10, -6400], [0, 0], [10, 6400]];
     n.data._selKey = 'k1';
     const html = cp.getMntLibraryPropertiesHTML(n);
-    expect(html).toContain('Eğrisi (z)');
+    expect(html).toContain('eksenel (Fz)');   // z ekseni grafik kartı
+    expect(html).toContain('radyal (Fx)');    // x ekseni grafik kartı
     expect(html).toContain('<svg');
     expect(html).toContain('<polyline');   // statik + dinamik çizgiler
-    expect(html).toContain('<circle');      // ölçüm noktaları
+    expect(html).toContain('<circle');      // ölçüm noktaları (z-eğrisi)
   });
 
   test('kütüphane paneli: editör açıkken (δ,f) düzenleyici görünür', () => {
@@ -866,6 +903,78 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     expect(withCurve[0].curves.z[0]).toEqual([-0.015, -9600]);
     // Çekirdek bu modeli nonlineer olarak tanır
     expect(core.anyCurve(si.mounts)).toBe(true);
+  });
+
+  test('_mntToSI 3-eksen eğriyi (x/y/z) curves.{x,y,z} olarak SI\'ya taşır', () => {
+    const topo = buildTTARTopology();
+    const mnt = topo.nodes.find(n => n.type === 'mnt-mount');
+    mnt.data.curveX = [[-10, -4000], [0, 0], [10, 4000]];
+    mnt.data.curveY = [[-12, -5000], [0, 0], [12, 5000]];
+    mnt.data.curveZ = [[-15, -9600], [0, 0], [15, 9600]];
+    global.nodes = topo.nodes;
+    global.connections = topo.connections;
+    const si = cp._mntToSI(cp._mntGatherForSolver(topo.solver), 9.81);
+    const m = si.mounts.find(mm => mm.curves && mm.curves.x && mm.curves.y && mm.curves.z);
+    expect(m).toBeTruthy();
+    expect(m.curves.x[2][0]).toBeCloseTo(0.010); expect(m.curves.x[2][1]).toBe(4000);
+    expect(m.curves.y[0][0]).toBeCloseTo(-0.012); expect(m.curves.y[0][1]).toBe(-5000);
+    expect(m.curves.z[2][0]).toBeCloseTo(0.015); expect(m.curves.z[2][1]).toBe(9600);
+    expect(core.anyCurve(si.mounts)).toBe(true);
+  });
+
+  // ── Analitik fit yasası (kapalı-form) — çekirdek + panel + çözücü ──
+  test('core.makeAxisLaw analitik fit: force/tangent (mm→m dönüşümü) ve asimptot', () => {
+    const poly = core.makeAxisLaw({ form: 'poly', k0: 415, c3: -2.44, c5: 0.0201 });
+    expect(poly.curve).toBe(true);
+    expect(poly.k0).toBeCloseTo(415000, 0);              // dF/dδ|0 = 415 N/mm = 415000 N/m
+    expect(poly.force(0.005)).toBeCloseTo(1832.81, 1);   // 5 mm → N
+    expect(poly.tangent(0.005)).toBeCloseTo(294812.5, 0);// dF/dδ|5mm (N/m)
+    const az = core.makeAxisLaw({ form: 'asym', neg: { k0: 361, c3: 2.20 }, pos: { k0: 367, xmax: 5.60 } });
+    expect(az.force(-0.005)).toBeCloseTo(-2080, 0);      // -5 mm → kübik dal
+    expect(az.force(0.003)).toBeCloseTo(2371.6, 0);      // +3 mm → rasyonel dal
+    expect(az.force(0.0055)).toBeGreaterThan(90000);     // asimptota yakın → kırpılmış, çok sert
+    expect(Number.isFinite(az.force(0.006))).toBe(true); // xmax ötesi bile SONLU (Newton için)
+  });
+
+  test('_mntFitForce panel değerlendiricisi çekirdek makeAxisLaw ile birebir', () => {
+    const asym = { form: 'asym', neg: { k0: 361, c3: 2.20 }, pos: { k0: 367, xmax: 5.60 } };
+    expect(cp._mntFitForce({ form: 'poly', k0: 415, c3: -2.44, c5: 0.0201 }, 5)).toBeCloseTo(1832.81, 1);
+    expect(cp._mntFitForce(asym, 0)).toBe(0);
+    expect(cp._mntFitForce(asym, -5)).toBeCloseTo(-2080, 0);
+    const law = core.makeAxisLaw(asym);
+    expect(cp._mntFitForce(asym, 3)).toBeCloseTo(law.force(0.003), 3);   // panel = çekirdek
+  });
+
+  test('_mntToSI analitik fiti mnt.fits olarak taşır; çekirdek nonlineer tanır', () => {
+    const topo = buildTTARTopology();
+    const mnt = topo.nodes.find(n => n.type === 'mnt-mount');
+    mnt.data.fitZ = { form: 'asym', neg: { k0: 361, c3: 2.20 }, pos: { k0: 367, xmax: 5.60 } };
+    mnt.data.fitX = { form: 'poly', k0: 415, c3: -2.44, c5: 0.0201 };
+    global.nodes = topo.nodes; global.connections = topo.connections;
+    const si = cp._mntToSI(cp._mntGatherForSolver(topo.solver), 9.81);
+    const m = si.mounts.find(mm => mm.fits && mm.fits.z);
+    expect(m).toBeTruthy();
+    expect(m.fits.z.form).toBe('asym');
+    expect(m.fits.x.form).toBe('poly');
+    expect(core.anyCurve(si.mounts)).toBe(true);         // fit → Newton yolu
+  });
+
+  test('solveCaseNL analitik fit (TK035) ile Static durumu YAKINSAR (asimptot kararlı)', () => {
+    const topo = buildTTARTopology();
+    topo.nodes.filter(n => n.type === 'mnt-mount').forEach(n => {
+      n.data.fitX = { form: 'poly', k0: 415, c3: -2.44, c5: 0.0201 };
+      n.data.fitY = { form: 'poly', k0: 210, c3: -1.28, c5: 0.0169 };
+      n.data.fitZ = { form: 'asym', neg: { k0: 361, c3: 2.20 }, pos: { k0: 367, xmax: 5.60 } };
+    });
+    global.nodes = topo.nodes; global.connections = topo.connections;
+    const si = cp._mntToSI(cp._mntGatherForSolver(topo.solver), 9.81);
+    const mp = core.combineMassProps(si.components);
+    const model = { m: mp.m, cg: mp.cg, Kstat: core.buildK(si.mounts, mp.cg, false), mounts: si.mounts, g: si.g };
+    const out = core.solveAllCases(model, [si.loadCases[0]], { useStop: true });   // Static
+    expect(out[0].res).toBeTruthy();
+    expect(out[0].res.checks.converged).toBe(true);
+    // düşey sehimler metal-metal durdurucu (±15 mm) içinde
+    out[0].res.perMount.forEach(pm => expect(Math.abs(pm.delta[2])).toBeLessThanOrEqual(0.015));
   });
 
   test('tek nokta eğri → yok sayılır (SI\'da curves taşınmaz, lineer kalır)', () => {

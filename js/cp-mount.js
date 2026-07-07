@@ -24,10 +24,40 @@ function _mntDef(n){ return (typeof componentDefs!=='undefined') ? componentDefs
 function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type; }
 
 // A26 gömülü takoz kütüphanesi (SPEC 7.2)
+// Gömülü girdi: statik (sx/sy/sz) + dinamik (dx/dy/dz) rijitlik [N/mm]. Bir eksende
+// nonlineer kuvvet–sehim yasası iki biçimde tanımlanabilir (yoksa o eksen lineerdir):
+//   • `fits:{x,y,z}`   — ANALİTİK kapalı-form (mm/N). Çekirdek force+tanjantı tam ve
+//        pürüzsüz üretir (Newton için ideal). 'poly': F=k0·x+c3·x³+c5·x⁵ (radyal);
+//        'asym': x<0 → k0·x+c3·x³, x≥0 → k0·x/(1−x/xmax) (eksenel, xmax'ta bump-stop).
+//   • `curves:{x,y,z}` — ölçülmüş [[δ_mm,f_N],…] nokta tablosu (monoton kübik interp).
+// TK0xx fit'leri test raporu grafiklerinin (Fx/Fy radyal, Fz eksenel) curve-fit'idir;
+// dz @5 mm ön yük değeridir. NOT: radyal fit orijin eğimi = statik Cx/Cy; eksenel fit
+// orijin eğimi (~k0) tablo Cz'den yüksektir (rasyonel form uç-noktaya oturtulmuştur).
 var VE_MOUNT_LIBRARY = {
   'amc55sha':   { name:'AMC 55 ShA',        sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
   '57RS313773': { name:'ÖN - 57RS313773',   sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
-  '57RS313774': { name:'ARKA - 57RS313774', sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 }
+  '57RS313774': { name:'ARKA - 57RS313774', sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
+  // TK035 · 57RS328045 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
+  'TK035': { name:'TK035 (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
+    fits:{
+      x:{ form:'poly', k0:415, c3:-2.44, c5:0.0201 },
+      y:{ form:'poly', k0:210, c3:-1.28, c5:0.0169 },
+      z:{ form:'asym', neg:{k0:361, c3:2.20}, pos:{k0:367, xmax:5.60} }
+    } },
+  // TK040 · 57RS329001M · 45 ShA — MLMT-0216-33-TK040 (curve-fit, R²≈0.99)
+  'TK040': { name:'TK040 (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
+    fits:{
+      x:{ form:'poly', k0:515, c3:-3.29, c5:0.0311 },
+      y:{ form:'poly', k0:260, c3:-2.78, c5:0.0269 },
+      z:{ form:'asym', neg:{k0:400, c3:2.06}, pos:{k0:387, xmax:5.66} }
+    } },
+  // TK050 · 57RS326612M · 50 ShA — MLMT-0216-33-TK050 (curve-fit, R²≈0.99)
+  'TK050': { name:'TK050 (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
+    fits:{
+      x:{ form:'poly', k0:665, c3:-5.85, c5:0.0618 },
+      y:{ form:'poly', k0:335, c3:-2.53, c5:0.0249 },
+      z:{ form:'asym', neg:{k0:374, c3:2.11}, pos:{k0:381, xmax:5.02} }
+    } }
 };
 
 // ─── ETKİN KÜTÜPHANE (gömülü + gömülü override + kullanıcı tanımlı) ───────────
@@ -43,14 +73,18 @@ var VE_MOUNT_LIBRARY = {
 //   { key, name, sx, sy, sz, dx, dy, dz, builtin, overridden }.
 function veMntGetLibraryMap(){
   var map={};
+  var cv=function(a){ return (Array.isArray(a)&&a.length>=2)?a:null; };   // geçerli eğri (≥2 nokta) veya null
   Object.keys(VE_MOUNT_LIBRARY).forEach(function(k){
-    var m=VE_MOUNT_LIBRARY[k];
-    map[k]={ key:k, name:m.name, sx:m.sx, sy:m.sy, sz:m.sz, dx:m.dx, dy:m.dy, dz:m.dz, builtin:true, overridden:false };
+    var m=VE_MOUNT_LIBRARY[k], c=m.curves||{}, f=m.fits||{};
+    map[k]={ key:k, name:m.name, sx:m.sx, sy:m.sy, sz:m.sz, dx:m.dx, dy:m.dy, dz:m.dz, builtin:true, overridden:false,
+      fitX:f.x||null, fitY:f.y||null, fitZ:f.z||null,       // fabrika analitik fit (varsa)
+      curveX:cv(c.x), curveY:cv(c.y), curveZ:cv(c.z) };     // ya da nokta tablosu (varsa)
   });
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
     var def=_mntDef(n)||{};
     if(!def.isMountLibrary || !n.data) return;
-    // Gömülü override'ları uygula (fabrika değerinin üzerine, alan-bazlı).
+    // Gömülü override'ları uygula (fabrika değerinin üzerine, alan-bazlı). Eğriler
+    // fabrikadan gelir (override edilmez) — base'ten aynen taşınır.
     var ov=n.data.overrides;
     if(ov && typeof ov==='object'){
       Object.keys(ov).forEach(function(k){
@@ -58,18 +92,21 @@ function veMntGetLibraryMap(){
         var o=ov[k]||{}; if(!o || Object.keys(o).length===0) return;
         var pick=function(f){ return (o[f]!==undefined && o[f]!==null && o[f]!=='') ? (f==='name'?o[f]:_mntNum(o[f])) : base[f]; };
         map[k]={ key:k, name:pick('name'), sx:pick('sx'), sy:pick('sy'), sz:pick('sz'),
-          dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true };
+          dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true,
+          fitX:base.fitX, fitY:base.fitY, fitZ:base.fitZ,
+          curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ };
       });
     }
-    // Kullanıcı tanımlı takozlar (Özel grup).
+    // Kullanıcı tanımlı takozlar (Özel grup) — 3-eksen eğri (curveX/Y/Z) taşıyabilir.
     if(Array.isArray(n.data.mounts)){
       n.data.mounts.forEach(function(e){
         if(!e || !e.key) return;
         map[e.key]={ key:e.key, name:(e.name||'Özel Takoz'),
           sx:_mntNum(e.sx), sy:_mntNum(e.sy), sz:_mntNum(e.sz),
           dx:_mntNum(e.dx), dy:_mntNum(e.dy), dz:_mntNum(e.dz), builtin:false,
-          // Opsiyonel nonlineer z-eğrisi (takoz tipinin özelliği) — Takoz'a uygulanınca kopyalanır.
-          curveZ:(Array.isArray(e.curveZ)&&e.curveZ.length>=2)?e.curveZ:null };
+          // Opsiyonel nonlineer yasa (takoz tipinin özelliği) — Takoz'a uygulanınca kopyalanır.
+          fitX:(e.fitX||null), fitY:(e.fitY||null), fitZ:(e.fitZ||null),
+          curveX:cv(e.curveX), curveY:cv(e.curveY), curveZ:cv(e.curveZ) };
       });
     }
   });
@@ -464,12 +501,17 @@ function getMntMountPropertiesHTML(node){
 // tanımlanır; kütüphaneden uygulandığında node.data.curveZ'e kopyalanır. Burada
 // yalnız gösterilir, düzenlenmez (düzenleme kütüphane panelinde).
 function _mntMountCurveNote(node){
-  var pts = Array.isArray(node.data.curveZ) ? node.data.curveZ : null;
-  if(!pts || pts.length<2) return '';
+  var axes=[['X','x'],['Y','y'],['Z','z']].filter(function(a){
+    var p=node.data['curve'+a[0]]; return Array.isArray(p)&&p.length>=2;
+  });
+  if(!axes.length) return '';
+  var labels=axes.map(function(a){ return a[1]; }).join(', ');
+  var carrier=(axes.length===1) ? ('<b style="color:var(--text-heading);">nonlineer '+labels+'-eğrisi</b>')
+                                 : ('<b style="color:var(--text-heading);">'+labels+'</b> eksenlerinde <b style="color:var(--text-heading);">nonlineer eğri</b>');
   var inner = '<div style="font-size:0.58rem; color:var(--text-secondary); line-height:1.5;">'
-    + 'Bu takoz <b style="color:var(--text-heading);">nonlineer z-eğrisi</b> taşıyor ('+pts.length+' nokta) → çözücü onu Newton ile çözer. '
+    + 'Bu takoz '+carrier+' taşıyor → çözücü onu Newton ile çözer. '
     + 'Eğri <b>Takoz Özellikleri</b> bileşenindeki takoz tipinden gelir ve oradan düzenlenir.</div>';
-  return _mntCard('Düşey Kuvvet–Sehim Eğrisi (z)','nonlineer · kütüphaneden','var(--accent-danger)', inner);
+  return _mntCard('Kuvvet–Sehim Eğrisi ('+labels+')','nonlineer · kütüphaneden','var(--accent-danger)', inner);
 }
 
 // ─── Setters ─────────────────────────────────────────────────────────────────
@@ -501,13 +543,21 @@ function veMntApplyLib(nodeId, key){
   if(!node.data) node.data={};
   node.data.kxs=m.sx; node.data.kys=m.sy; node.data.kzs=m.sz;
   node.data.kxd=m.dx; node.data.kyd=m.dy; node.data.kzd=m.dz; node.data.libKey=key;
-  // Nonlineer z-eğrisi kütüphane girdisinin özelliği: uygularken Takoz'a KOPYALA
-  // (anlık; gather bu snapshot'ı okur). Lineer girdi uygulanırsa eski eğriyi temizle.
-  if(Array.isArray(m.curveZ) && m.curveZ.length>=2){
-    node.data.curveZ=m.curveZ.map(function(p){ return [_mntNum(p[0]), _mntNum(p[1])]; });
-  } else {
-    delete node.data.curveZ;
-  }
+  // Nonlineer yasa kütüphane girdisinin özelliği: uygularken 3 ekseni de Takoz'a
+  // KOPYALA (anlık snapshot; gather okur). Eksen başına fit ÖNCELİKLİ; yoksa nokta
+  // tablosu; ikisi de yoksa o eksende eski yasa temizlenir (lineere döner).
+  ['X','Y','Z'].forEach(function(A){
+    var fit=m['fit'+A], cur=m['curve'+A];
+    if(fit && (fit.form==='poly'||fit.form==='asym')){
+      node.data['fit'+A]=JSON.parse(JSON.stringify(fit));   // fabrika mutasyona uğramaz
+      delete node.data['curve'+A];
+    } else if(Array.isArray(cur) && cur.length>=2){
+      node.data['curve'+A]=cur.map(function(p){ return [_mntNum(p[0]), _mntNum(p[1])]; });
+      delete node.data['fit'+A];
+    } else {
+      delete node.data['fit'+A]; delete node.data['curve'+A];
+    }
+  });
   if(typeof saveState==='function') saveState();
   if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
@@ -1630,10 +1680,15 @@ function _mntLinInterp(pts, x){
 function _mntLibBadge(text, color){
   return '<span style="font-size:0.5rem; font-weight:700; letter-spacing:0.04em; padding:2px 7px; border:1px solid '+color+'; color:'+color+'; border-radius:10px; white-space:nowrap;">'+text+'</span>';
 }
+// Bir girdi herhangi bir eksende nonlineer yasa (analitik fit VEYA nokta eğrisi) taşıyor mu?
+function _mntEntryHasLaw(e){
+  return ['fitX','fitY','fitZ'].some(function(f){ return !!e[f]; })
+      || ['curveX','curveY','curveZ'].some(function(f){ return Array.isArray(e[f])&&e[f].length>=2; });
+}
 // Master listede tek tıklanabilir takoz satırı (seçili → aksan çerçeve + koyu zemin).
 function _mntLibMasterRow(node, e, sel){
   var isSel=sel && e.key===sel.key;
-  var hasCurve=!e.builtin && Array.isArray(e.curveZ) && e.curveZ.length>=2;
+  var hasCurve=_mntEntryHasLaw(e);
   var dotColor=hasCurve?'var(--accent-danger)':(e.overridden?'var(--accent-warning)':(e.builtin?'var(--accent-primary)':'var(--accent-success)'));
   var baseBg=isSel?'var(--bg-tertiary)':'transparent';
   var border=isSel?('1px solid '+dotColor):'1px solid transparent';
@@ -1667,34 +1722,66 @@ function _mntLibStiff(node, e, title, unit, fields, setter, accent){
   return h;
 }
 // Grafik altına açıklamalı legend (statik/dinamik/ölçüm).
-function _mntLibLegend(hasCurve){
+function _mntLibLegend(hasCurve, hasMarkers){
   function sw(inner){ return '<svg width="16" height="9" viewBox="0 0 16 9" style="vertical-align:-1px;">'+inner+'</svg>'; }
   var statColor=hasCurve?'var(--accent-danger)':'var(--accent-primary)';
   var h='<div style="display:flex; flex-wrap:wrap; gap:11px; margin-top:7px; font-size:0.52rem; color:var(--text-secondary);">';
   h+='<span>'+sw('<line x1="1" y1="4.5" x2="15" y2="4.5" stroke="'+statColor+'" stroke-width="2"/>')+' Statik'+(hasCurve?' (eğri)':' (lineer)')+'</span>';
   h+='<span>'+sw('<line x1="1" y1="4.5" x2="15" y2="4.5" stroke="var(--accent-warning)" stroke-width="1.6" stroke-dasharray="4 2.5"/>')+' Dinamik</span>';
-  if(hasCurve) h+='<span>'+sw('<circle cx="8" cy="4.5" r="2.6" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.3"/>')+' Ölçüm noktaları</span>';
+  if(hasMarkers) h+='<span>'+sw('<circle cx="8" cy="4.5" r="2.6" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.3"/>')+' Ölçüm noktaları</span>';
   h+='</div>';
   return h;
 }
-// Kuvvet–sehim (z) GRAFİĞİ: statik yasa (eğri varsa PCHIP, yoksa lineer sz·δ),
-// dinamik referans slope (dz·δ, kesikli) ve ölçüm noktaları. Salt-görsel SVG.
-function _mntLibForceChart(e){
-  var sz=_mntNum(e.sz), dz=_mntNum(e.dz);
-  var raw=(!e.builtin && Array.isArray(e.curveZ) && e.curveZ.length>=2)?e.curveZ:null;
+// Analitik fit değerlendiricisi (x: sehim mm → kuvvet N) — çekirdek makeAxisLaw ile
+// AYNI matematik (yalnız panel çizimi için). 'poly': k0·x+c3·x³+c5·x⁵; 'asym' parçalı.
+function _mntFitForce(fit, x){
+  if(!fit) return 0;
+  if(fit.form==='asym'){
+    var ng=fit.neg||{}, ps=fit.pos||{}, xmax=(ps.xmax>0?ps.xmax:1), EPS=0.02;
+    if(x<0) return _mntNum(ng.k0)*x + _mntNum(ng.c3)*x*x*x;
+    var u=1-x/xmax; if(u<EPS) u=EPS;
+    return _mntNum(ps.k0)*x/u;
+  }
+  return _mntNum(fit.k0)*x + _mntNum(fit.c3)*x*x*x + _mntNum(fit.c5)*x*x*x*x*x;
+}
+// Fit için çizim aralığı [dmin,dmax] mm — |F|≈17 kN'a ulaştığı yer (eksenelde
+// asimptota çok yaklaşmadan xmax·0.985'te durur). Grafik ölçeğini otomatik verir.
+function _mntFitDomain(fit){
+  var TARGET=17000;
+  function reach(dir){ var last=0; for(var i=1;i<=160;i++){ var x=dir*0.25*i; if(Math.abs(_mntFitForce(fit,x))>=TARGET) return x; last=x; } return last; }
+  if(fit && fit.form==='asym'){
+    var xmax=(fit.pos&&fit.pos.xmax>0)?fit.pos.xmax:5;
+    return [reach(-1)||-15, Math.min(reach(1)||xmax*0.985, xmax*0.985)];
+  }
+  var h=reach(1)||15;
+  return [-h, h];
+}
+// Kuvvet–sehim GRAFİĞİ (eksen bazlı: 'x'|'y'|'z'): statik yasa (analitik fit, ya da
+// PCHIP nokta eğrisi, ya da lineer k_s·δ), dinamik referans slope (k_d·δ, kesikli) ve
+// (nokta eğrisi için) ölçüm noktaları. Salt-görsel SVG.
+function _mntLibForceChart(e, axis){
+  axis=axis||'z';
+  var A=axis.toUpperCase();
+  var sz=_mntNum(e['s'+axis]), dz=_mntNum(e['d'+axis]);
+  var fit=e['fit'+A]||null;
+  var rawc=e['curve'+A];
+  var raw=(!fit && Array.isArray(rawc) && rawc.length>=2)?rawc:null;
   var pts=raw?raw.map(function(p){ return [_mntNum(p[0]), _mntNum(p[1])]; }).sort(function(a,b){ return a[0]-b[0]; }):null;
-  var hasCurve=!!pts;
+  var hasCurve=!!fit || !!pts;
   var dmin, dmax;
-  if(pts){ dmin=pts[0][0]; dmax=pts[pts.length-1][0]; } else { dmin=-15; dmax=15; }
+  if(fit){ var dm=_mntFitDomain(fit); dmin=dm[0]; dmax=dm[1]; }
+  else if(pts){ dmin=pts[0][0]; dmax=pts[pts.length-1][0]; }
+  else { dmin=-15; dmax=15; }
   if(!(dmax>dmin)){ dmin-=1; dmax+=1; }
   // Statik yasa değerlendiricisi
   var spline=null;
-  if(pts && pts.length>=3 && typeof veBuildPchipSpline==='function'){
+  if(!fit && pts && pts.length>=3 && typeof veBuildPchipSpline==='function'){
     try{ spline=veBuildPchipSpline(pts.map(function(p){ return {rpm:p[0], torque:p[1]}; })); }catch(_e){ spline=null; }
   }
   function fStat(x){
     var v;
-    if(!pts) v=sz*x;
+    if(fit) v=_mntFitForce(fit, x);
+    else if(!pts) v=sz*x;
     else if(spline && typeof veEvalPchip==='function') v=veEvalPchip(spline, x);
     else v=_mntLinInterp(pts, x);
     return isFinite(v)?v:0;
@@ -1743,7 +1830,7 @@ function _mntLibForceChart(e){
 function _mntLibDetail(node, e){
   var isCustom=!e.builtin;
   var setter=isCustom?'veMntLibSet':'veMntLibSetBuiltin';
-  var hasCurve=isCustom && Array.isArray(e.curveZ) && e.curveZ.length>=2;
+  var hasCurveZ=isCustom && Array.isArray(e.curveZ) && e.curveZ.length>=2;   // özel z-eğrisi editörü için
   var accent=e.overridden?'var(--accent-warning)':(isCustom?'var(--accent-success)':'var(--accent-primary)');
   var badge=isCustom?_mntLibBadge('ÖZEL','var(--accent-success)')
     :(e.overridden?_mntLibBadge('DEĞİŞTİRİLDİ','var(--accent-warning)'):_mntLibBadge('GÖMÜLÜ','var(--accent-primary)'));
@@ -1756,15 +1843,25 @@ function _mntLibDetail(node, e){
     +badge+actionBtn+'</div>';
   inner+=_mntLibStiff(node, e, 'Statik Rijitlik', 'N/mm', ['sx','sy','sz'], setter, 'var(--accent-primary)');
   inner+=_mntLibStiff(node, e, 'Dinamik Rijitlik', 'N/mm', ['dx','dy','dz'], setter, 'var(--accent-warning)');
-  inner+=_mntCard('Kuvvet–Sehim Eğrisi (z)', hasCurve?'nonlineer':'lineer', hasCurve?'var(--accent-danger)':'var(--accent-primary)', _mntLibForceChart(e)+_mntLibLegend(hasCurve));
+  // Üç eksen kuvvet–sehim grafiği (Fx/Fy/Fz) — gömülüde fabrika eğrisi, özelde z-eğrisi;
+  // eğri yoksa o eksen statik k_s·δ lineeriyle çizilir (dinamik kesikli referansla).
+  [['x','x · radyal (Fx)'],['y','y · radyal (Fy)'],['z','z · eksenel (Fz)']].forEach(function(ax){
+    var A=ax[0].toUpperCase();
+    var f=e['fit'+A], c=e['curve'+A];
+    var hc=!!f || (Array.isArray(c)&&c.length>=2);
+    var mk=!f && Array.isArray(c)&&c.length>=2;            // ölçüm noktaları yalnız nokta eğrisinde
+    var unit=f?'analitik fit':(hc?'nonlineer':'lineer');
+    inner+=_mntCard('Kuvvet–Sehim Eğrisi ('+ax[1]+')', unit, hc?'var(--accent-danger)':'var(--accent-primary)', _mntLibForceChart(e, ax[0])+_mntLibLegend(hc, mk));
+  });
   if(isCustom){
     if(node.data._curveEditKey===e.key){
       inner+=_mntLibCurveEditor(node, _mntLibCustomEntry(node, e.key)||e);
     } else {
-      inner+='<button onclick="veMntLibCurveToggle(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="width:100%; padding:8px; margin-top:2px; font-size:0.63rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:6px; cursor:pointer;">∿ '+(hasCurve?('z-eğrisini düzenle ('+e.curveZ.length+' nokta)'):'Nonlineer z-eğrisi tanımla')+'</button>';
+      inner+='<button onclick="veMntLibCurveToggle(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="width:100%; padding:8px; margin-top:2px; font-size:0.63rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:6px; cursor:pointer;">∿ '+(hasCurveZ?('z-eğrisini düzenle ('+e.curveZ.length+' nokta)'):'Nonlineer z-eğrisi tanımla')+'</button>';
     }
   } else {
-    inner+='<div style="font-size:0.54rem; color:var(--text-muted); line-height:1.4; margin-top:2px; padding:7px 9px; background:var(--bg-tertiary); border:1px dashed var(--border-color); border-radius:6px;">Gömülü takozlar lineerdir (statik/dinamik kz). Nonlineer eğri için bir <b>Özel Takoz</b> oluşturun.</div>';
+    var anyC=_mntEntryHasLaw(e);
+    inner+='<div style="font-size:0.54rem; color:var(--text-muted); line-height:1.4; margin-top:2px; padding:7px 9px; background:var(--bg-tertiary); border:1px dashed var(--border-color); border-radius:6px;">'+(anyC?'Gömülü takoz — eğriler <b>fabrika</b> değeridir (salt-okunur). Kendi eğrini düzenlemek için bir <b>Özel Takoz</b> oluştur.':'Bu gömülü takoz lineerdir. Nonlineer eğri için bir <b>Özel Takoz</b> oluşturun.')+'</div>';
   }
   return '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid '+accent+'; border-radius:9px; padding:12px 12px 9px;">'
     +'<div style="font-size:0.5rem; font-weight:700; letter-spacing:0.05em; color:var(--text-muted); text-transform:uppercase; margin-bottom:9px;">Seçili Takoz</div>'
@@ -1776,7 +1873,7 @@ function getMntLibraryPropertiesHTML(node){
   var d=_mntLibEnsure(node);
   var custom=d.mounts;                                        // bu düğümün özel takozları (ham girdiler; builtin yok → özel)
   var builtins=veMntGetLibraryList().filter(function(e){ return e.builtin; });
-  var nCurve=custom.filter(function(e){ return Array.isArray(e.curveZ)&&e.curveZ.length>=2; }).length;
+  var nCurve=custom.concat(builtins).filter(_mntEntryHasLaw).length;
   var sel=null;
   if(d._selKey) sel=custom.concat(builtins).find(function(e){ return e.key===d._selKey; });
   if(!sel) sel=custom[0]||builtins[0]||null;
@@ -1988,7 +2085,10 @@ function _mntGatherForSolver(solver){
     } else if(def.isMount){
       var m=n.data||{};
       mounts.push({ name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd,
-                    curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });  // opsiyonel nonlineer z-eğrisi
+                    fitX:(m.fitX||null), fitY:(m.fitY||null), fitZ:(m.fitZ||null),   // opsiyonel analitik fit (x/y/z)
+                    curveX:(Array.isArray(m.curveX)?m.curveX:null),                  // ya da nokta tablosu (x/y/z)
+                    curveY:(Array.isArray(m.curveY)?m.curveY:null),
+                    curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });
     }
   });
   return { components:masses, mounts:mounts, torque:_mntGatherTorque() };
@@ -2058,10 +2158,20 @@ function _mntToSI(gather, g){
         name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
         kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
         kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] };
-      // Opsiyonel nonlineer z-eğrisi (UI: [δ_mm, f_N]) → SI ([δ_m, f_N]). ≥2 nokta gerekli.
-      if(Array.isArray(m.curveZ) && m.curveZ.length>=2){
-        mnt.curves={ z:m.curveZ.map(function(p){ return [C.mmToM(_mntNum(p[0])), _mntNum(p[1])]; }) };
-      }
+      // Nonlineer yasa → çekirdek. Eksen başına FİT (analitik) ÖNCELİKLİ: mm/N olarak
+      // AYNEN geçer (çekirdek makeAxisLaw mm↔m dönüşümünü yapar). Yoksa nokta tablosu:
+      // burada SI'ya (δ mm→m, f N aynı) çevrilir. Çekirdek mnt.fits/mnt.curves okur.
+      var fits={}, curves={};
+      [['X','x'],['Y','y'],['Z','z']].forEach(function(ax){
+        var f=m['fit'+ax[0]];
+        if(f && (f.form==='poly'||f.form==='asym')){ fits[ax[1]]=f; return; }
+        var src=m['curve'+ax[0]];
+        if(Array.isArray(src) && src.length>=2){
+          curves[ax[1]]=src.map(function(p){ return [C.mmToM(_mntNum(p[0])), _mntNum(p[1])]; });
+        }
+      });
+      if(Object.keys(fits).length) mnt.fits=fits;
+      if(Object.keys(curves).length) mnt.curves=curves;
       return mnt; }),
     loadCases: MNT_AUTO_CASES.concat(_mntTorqueCases(gather.torque))
   };
@@ -2308,6 +2418,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntTorqueCases: _mntTorqueCases,
     _mntGearTorqueCases: _mntGearTorqueCases,
     _mntToSI: _mntToSI,
+    _mntFitForce: _mntFitForce,
     _mntDeflColor: _mntDeflColor,
     _mntForceColor: _mntForceColor
   };
