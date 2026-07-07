@@ -224,7 +224,10 @@ function _veMntSetSidebar(mode){
   if(typeof veShowAllSidebarComponents==='function') veShowAllSidebarComponents();
 }
 
-function veMntOpenEditor(nodeId){
+// _silent: autosave gibi arka-plan işlemleri köke çöküp (veSaveActiveTabState)
+// kullanıcıyı bulunduğu iç topolojiye geri getirirken true geçer; bu görünmez
+// geri-girişte toast/animasyon tetiklenmez (breadcrumb ve sidebar yine güncellenir).
+function veMntOpenEditor(nodeId, _silent){
   if(_veMntBusy) return;
   if(typeof nodes==='undefined' || typeof veSerializeCurrentState!=='function') return;
   var node = nodes.find(function(n){ return n.id===nodeId; });
@@ -245,9 +248,9 @@ function veMntOpenEditor(nodeId){
     }
     _veMntSetSidebar('takoz');
   } finally { _veMntBusy=false; }
-  if(typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('enter');
+  if(!_silent && typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('enter');
   veMntUpdateBreadcrumb();
-  if(typeof showToast==='function') showToast('Takoz Çökme-Titreşim — İç Topoloji','info');
+  if(!_silent && typeof showToast==='function') showToast('Takoz Çökme-Titreşim — İç Topoloji','info');
 }
 
 // _silent: köke çökerken (veMntCollapseToRoot → kaydet/sekme değiştir öncesi) true
@@ -268,7 +271,7 @@ function veMntCloseEditor(_silent){
   } finally { _veMntBusy=false; }
   if(!_silent && typeof veAnimateCanvasTransition==='function') veAnimateCanvasTransition('exit');
   veMntUpdateBreadcrumb();
-  if(typeof showToast==='function') showToast('Ana topolojiye dönüldü','info');
+  if(!_silent && typeof showToast==='function') showToast('Ana topolojiye dönüldü','info');
 }
 
 function veMntCollapseToRoot(){
@@ -1340,7 +1343,7 @@ function _mnt2DLabels(items, leftX, rightX){
 function _mnt2DFigure(o){
   // o: {ox, boxX,boxY,boxW,boxH, FIG_W, title, plotTop,plotH,plotL,plotR, px,pyFn,
   //     hKey,vKey, mounts,comps,cg, cr, compAbove, refV,refLabel,
-  //     axis:{hLabel,vLabel,vDir,note}, compLabelFn, mountGroupLabelFn, cgLabelFn}
+  //     axis:{hLabel,vLabel,vDir,note}, compLabelFn, mountLabelFn, cgLabelFn}
   // hKey → yatay eksen koordinatı ('x' üst/yan, 'y' önden); vKey → düşey ('y'/'z').
   var svg='', plotBottom=o.plotTop+o.plotH;
   var hKey=o.hKey||'x';
@@ -1361,21 +1364,23 @@ function _mnt2DFigure(o){
   if(o.axis.note) svg+=_mnt2DText(o.ox+o.plotL-30, plotBottom-2, o.axis.note, 'start', 'var(--text-muted)', 8.5);
   var leftX=o.ox+o.plotL, rightX=o.ox+o.FIG_W-o.plotR, items=[];
   // ── İŞARETLER ── (etiketler ayrı geçişte, çakışma önleyici yerleştirilir)
-  // takozlar — aynı projeksiyona düşen (çakışan) takozları KÜMELE: yan yana kareler
-  // + tek birleşik etiket (referanstaki "orta+arka" gruplaması gibi).
-  var mp=o.mounts.map(function(m){ var mv=(o.vKey==='y'?m.y:m.z); return {m:m, v:mv, cx:o.px(hval(m)), cy:o.pyFn(mv)}; });
-  var used=[];
-  mp.forEach(function(a,i){ if(used[i]) return; var g=[a]; used[i]=1;
-    mp.forEach(function(b,j){ if(j<=i||used[j]) return;
-      if(Math.abs(a.cx-b.cx)<30 && Math.abs(a.cy-b.cy)<26){ g.push(b); used[j]=1; } });
-    var n=g.length, cx=0, cy=0, vv=0;
-    g.forEach(function(x){ cx+=x.cx; cy+=x.cy; vv+=x.v; }); cx/=n; cy/=n; vv/=n;
-    var info=['Takoz'+(n>1?' ('+n+')':'')];
-    g.forEach(function(x){ info.push('• '+(x.m.name||'Takoz')+'  ('+_mnt2DR(x.m.x)+', '+_mnt2DR(x.m.y)+', '+_mnt2DR(x.m.z)+') mm'); });
-    svg+='<g'+_mnt2DInfoAttr(info)+'>';
-    for(var k=0;k<n;k++){ svg+=_mnt2DMountMark(cx+(k-(n-1)/2)*18, cy, o.vKey==='z'); }
-    svg+='</g>';
-    items.push({cx:cx, cy:cy, mr:9, above:(vv>=o.refV), text:o.mountGroupLabelFn(g), color:'var(--text-secondary)', size:9.5, bold:false});
+  // takozlar — HER takoz GERÇEK izdüşüm konumunda çizilir (koordinat düzlemine
+  // sadık; konum birleştirme yok). Yalnızca ~işaret boyutu kadar BİREBİR üst üste
+  // binen işaretler (aynı piksele düşen sol/sağ çiftleri: yandan X–Z ve önden Y–Z
+  // görünüşlerinde) görünürlük için hafifçe yatay yelpazelenir. Her takoz tek tek
+  // etiketlenir; çakışan etiketler kademelenir.
+  var mpts=o.mounts.map(function(m){ var mv=(o.vKey==='y'?m.y:m.z); return {m:m, v:mv, cx:o.px(hval(m)), cy:o.pyFn(mv)}; });
+  var COIN=12;   // px — bu yarıçapta üst üste binenler yelpazelenir (konum aldatmacası değil)
+  mpts.forEach(function(a,i){ if(a._grp) return; var grp=[a]; a._grp=1;
+    mpts.forEach(function(b,j){ if(j<=i || b._grp) return;
+      if(Math.abs(a.cx-b.cx)<COIN && Math.abs(a.cy-b.cy)<COIN){ grp.push(b); b._grp=1; } });
+    var n=grp.length;
+    grp.forEach(function(pt,k){
+      var mx=pt.cx+(n>1?(k-(n-1)/2)*19:0), my=pt.cy;
+      var info=['Takoz — '+(pt.m.name||'Takoz'), 'Konum  ('+_mnt2DR(pt.m.x)+', '+_mnt2DR(pt.m.y)+', '+_mnt2DR(pt.m.z)+') mm'];
+      svg+='<g'+_mnt2DInfoAttr(info)+'>'+_mnt2DMountMark(mx, my, o.vKey==='z')+'</g>';
+      items.push({cx:mx, cy:my, mr:9, above:(pt.v>=o.refV), text:o.mountLabelFn(pt.m), color:'var(--text-secondary)', size:9, bold:false});
+    });
   });
   // bileşen CG (içi boş daire, kütleye göre boyut)
   o.comps.forEach(function(c){ var cv=(o.vKey==='y'?c.y:c.z), cx=o.px(hval(c)), cy=o.pyFn(cv), r=o.cr(c.mass);
@@ -1434,17 +1439,9 @@ function _mnt2DViewSVG(data){
   function shortName(n){ n=String(n||''); return n.length>18?n.slice(0,17)+'…':n; }
   function fmt1(v){ return (Math.round(v*10)/10).toString().replace('.',','); }
   function rz(v){ return Math.round(v).toString().replace('-','−'); }
-  // Kümelenen takozlar için birleşik etiket: adların "Takoz" ekini at, tekilleştir,
-  // " · " ile birleştir; çok uzunsa "N takoz". withZ (yandan görünüş, sağ/sol aynı
-  // projeksiyona düşer) ise "sağ/sol" önekini de at ("orta · arka") ve ortalama z ekle.
-  function mLabel(g, withZ){
-    var uniq=[]; g.forEach(function(x){ var nm=String(x.m.name||'Takoz').replace(/\s*takoz\s*$/i,'').trim();
-      if(withZ) nm=nm.replace(/^(sağ|sol)\s+/i,'').trim();
-      nm=shortName(nm||'Takoz'); if(uniq.indexOf(nm)<0) uniq.push(nm); });
-    var t=uniq.join(' · '); if(t.length>28) t=g.length+' takoz';
-    if(withZ){ var z=0; g.forEach(function(x){ z+=x.v; }); t+=' (z='+rz(z/g.length)+')'; }
-    return t;
-  }
+  // Takoz etiketi — gerçek adı (kısaltılmış). Konum birleştirme olmadığından
+  // her takoz kendi adıyla, kendi izdüşüm konumunda etiketlenir.
+  function mntLabel(m){ return shortName(m.name||'Takoz'); }
   // Her figürü kendi SVG'sine sar — data-vb başlangıç viewBox'ı (zoom sıfırlama).
   function wrap(inner){
     var vb='0 0 '+FIG_W+' '+_mnt2DR(VB_H);
@@ -1462,19 +1459,19 @@ function _mnt2DViewSVG(data){
   out+=wrap(fig({ title:'Üstten Görünüş · X–Y', hKey:'x', vKey:'y', px:pxX, pyFn:pyTop, compAbove:true,
     refV:0, refLabel:null, axis:{hLabel:'+X', vLabel:'−Y', vDir:'down', note:'+Y (sağ) yukarı'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
-    mountGroupLabelFn:function(g){ return mLabel(g,false); },
+    mountLabelFn:mntLabel,
     cgLabelFn:function(cg){ return 'G ('+fmt1(cg.x)+' · '+fmt1(cg.y)+')'; } }));
   // ── YAN GÖRÜNÜŞ (X–Z) ──
   out+=wrap(fig({ title:'Yandan Görünüş · X–Z', hKey:'x', vKey:'z', px:pxX, pyFn:pyZ, compAbove:false,
     refV:0, refLabel:'Z = 0', axis:{hLabel:'+X', vLabel:'+Z', vDir:'up', note:null},
     compLabelFn:function(c){ return shortName(c.name)+' (z='+rz(c.z)+')'; },
-    mountGroupLabelFn:function(g){ return mLabel(g,true); },
+    mountLabelFn:mntLabel,
     cgLabelFn:function(cg){ return 'G (z='+rz(cg.z)+')'; } }));
   // ── ÖNDEN GÖRÜNÜŞ (Y–Z) ──
   out+=wrap(fig({ title:'Önden Görünüş · Y–Z', hKey:'y', vKey:'z', px:pxY, pyFn:pyZ, compAbove:true,
     refV:0, refLabel:'Z = 0', axis:{hLabel:'+Y', vLabel:'+Z', vDir:'up', note:'+Y (sağ) →'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
-    mountGroupLabelFn:function(g){ return mLabel(g,false); },
+    mountLabelFn:mntLabel,
     cgLabelFn:function(cg){ return 'G ('+fmt1(cg.y)+' · '+fmt1(cg.z)+')'; } }));
   out+='</div>';
   return out;

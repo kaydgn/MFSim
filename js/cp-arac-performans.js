@@ -146,7 +146,10 @@ function getAracPerformansPropertiesHTML(node){
 var veAracStack = [];
 var _veAracBusy = false;
 
-function veAracOpenEditor(nodeId){
+// _silent: autosave gibi arka-plan işlemleri köke çöküp (veSaveActiveTabState)
+// kullanıcıyı bulunduğu alt-topolojiye geri getirirken true geçer; bu görünmez
+// geri-girişte toast/animasyon tetiklenmez (breadcrumb ve sidebar yine güncellenir).
+function veAracOpenEditor(nodeId, _silent){
   if(_veAracBusy) return;
   if(typeof nodes === 'undefined' || typeof veSerializeCurrentState !== 'function') return;
   var node = nodes.find(function(n){ return n.id === nodeId; });
@@ -174,10 +177,10 @@ function veAracOpenEditor(nodeId){
     _veAracBusy = false;
   }
 
-  if(typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
+  if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
   veAracUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
-  if(typeof showToast === 'function') showToast('Araç Performans — Alt Topoloji', 'info');
+  if(!_silent && typeof showToast === 'function') showToast('Araç Performans — Alt Topoloji', 'info');
 }
 
 // _silent: köke çökerken (veAracCollapseToRoot → kaydet/sekme değiştir öncesi) true
@@ -208,7 +211,7 @@ function veAracCloseEditor(_silent){
 
   // Ana topolojiye dönünce ilgili düğümü seç
   var back = veAracStack.length === 0;
-  if(back && typeof nodes !== 'undefined'){
+  if(!_silent && back && typeof nodes !== 'undefined'){
     // en son çıkılan düğüm id'si artık stack'te yok; sadece bilgi ver
     if(typeof showToast === 'function') showToast('Ana topolojiye dönüldü', 'info');
   }
