@@ -2054,6 +2054,42 @@
 .ve-mnt2d-fig{ cursor:grab; }
 .ve-mnt2d-fig:active{ cursor:grabbing; }
 
+/* Özet şeridi — toplam kütle · birleşik CG · takoz/bileşen sayısı (her zaman görünür) */
+.ve-mnt2d-summary{
+  display:flex; flex-wrap:wrap; gap:6px 16px;
+  padding:7px 10px; margin-bottom:6px;
+  background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:7px;
+  font-size:0.64rem; color:var(--text-secondary);
+}
+.ve-mnt2d-summary b{ color:var(--text-heading); font-weight:600; }
+/* Lejant — sembol/renk açıklaması */
+.ve-mnt2d-legend{
+  display:flex; flex-wrap:wrap; gap:4px 16px;
+  padding:5px 10px; margin-bottom:9px;
+  font-size:0.62rem; color:var(--text-muted);
+}
+.ve-mnt2d-legend span{ display:inline-flex; align-items:center; gap:5px; }
+.ve-mnt2d-legend i{ font-style:normal; opacity:0.75; }
+
+/* Her figür + köşesindeki zoom kontrolleri */
+.ve-mnt2d-figwrap{ position:relative; }
+.ve-mnt2d-zoomctl{
+  position:absolute; top:10px; right:12px; z-index:2;
+  display:flex; flex-direction:column; gap:3px;
+  opacity:0.32; transition:opacity 0.15s ease;
+}
+.ve-mnt2d-figwrap:hover .ve-mnt2d-zoomctl,
+.ve-mnt2d-zoomctl:focus-within{ opacity:1; }
+.ve-mnt2d-zoomctl button{
+  width:23px; height:23px; padding:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:0.82rem !important; line-height:1;
+  background:var(--bg-tertiary); color:var(--text-primary);
+  border:1px solid var(--border-color); border-radius:5px; cursor:pointer;
+  transition:background 0.12s, border-color 0.12s;
+}
+.ve-mnt2d-zoomctl button:hover{ background:var(--bg-input); border-color:var(--accent-primary); }
+
 /* Panel başlığındaki kapatma butonu */
 .ve-properties-close{
   margin-left:auto;
