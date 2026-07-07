@@ -633,11 +633,14 @@ var veMountCore = (function() {
     opts = opts || {};
     // Eğri (nonlineer) takoz VARSA → Newton (solveCaseNL); YOKSA mevcut lineer yol
     // (solveCaseStop / solveCase) birebir korunur. Karar model.mounts'a bakar.
+    // useStop iki yolda AYNI biçimde yorumlanır: yalnız opts.useStop truthy ise
+    // metal-metal durdurucu devrededir (nonlineer yolda da aynı kapı → tutarlı).
     const nonlinear = anyCurve(model.mounts);
+    const useStop = !!opts.useStop;
     const solve = nonlinear
       ? (lc => solveCaseNL(model.mounts, model.cg, model.m, model.g, lc,
-                           Object.assign({}, opts, {useStop: opts.useStop!==false})))
-      : opts.useStop
+                           Object.assign({}, opts, {useStop: useStop})))
+      : useStop
         ? (lc => solveCaseStop(model.Kstat, model.mounts, model.cg, model.m, model.g, lc, opts))
         : (lc => solveCase(model.Kstat, model.mounts, model.cg, model.m, model.g, lc));
     return cases.map(lc => {
@@ -763,7 +766,10 @@ var veMountCore = (function() {
   }
 
   // Statik denge (qStatic) çevresinde dinamik tanjant rijitlikle modal analiz.
-  // Lineer takozda solveModal(buildK(dynamic)) ile aynı sonuç.
+  // Lineer takozda solveModal(buildK(dynamic)) ile aynı sonuç. NOT: tanjant, takozun
+  // elastik/eğri rijitliğidir; ±15 mm metal-metal durdurucunun 100·kz teğet katkısı
+  // DAHİL DEĞİLDİR. Üretimde modal, Static (1g) çalışma noktasında çözülür — orada
+  // hiçbir takoz klipslenmez → dışlanan terim zaten sıfırdır (bkz. cp-mount.js).
   function solveModalAtState(mounts, cg, M6, qStatic){
     return solveModal(buildKtangentDyn(mounts, cg, qStatic), M6, mounts, cg);
   }
