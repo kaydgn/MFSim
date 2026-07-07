@@ -266,7 +266,7 @@ function _mntRepCaseTr(name){
     'Cornering Left':'Viraj — sol (0,6g)', 'Cornering Right':'Viraj — sağ (0,6g)',
     'Brake in Turn L':'Frenlemeli viraj — sol', 'Brake in Turn R':'Frenlemeli viraj — sağ',
     'Pothole Braking':'Çukur + fren (3,5g)',
-    'Kerb Strike L':'Yanal bordür darbesi — sol (3,6g)', 'Kerb Strike R':'Yanal bordür darbesi — sağ (3,6g)',
+    'Kerb Strike L':'Yanal bordür darbesi — sol (1,55g)', 'Kerb Strike R':'Yanal bordür darbesi — sağ (1,55g)',
     'Max Rebound':'Azami geri esneme (droop)',
     'Forward Torque':'İleri tork', 'Reverse Torque':'Geri tork',
     // eski adlar (geriye dönük uyumluluk):

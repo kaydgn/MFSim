@@ -84,13 +84,13 @@ function veMntGetLibraryList(){
 // yerçekimi DAHİL toplam düşey g). n vektörü çekirdeğe SI olarak gider; tork
 // durumları (Forward/Reverse) ayrıca _mntTorqueCases ile eklenir → 14 senaryo.
 //
-// g-seviyeleri Adams BMC_TTAR_2031 referans tablosuna (§6) sayısal fit edilmiştir:
-//   • Cornering 0.6g, Brake-in-Turn 0.4g, Max Bump/Pothole 3.5g düşey (klips),
-//   • Kerb Strike 3.6g yanal (bordür darbesi — δy≈13 mm referansı bunu gerektirir;
-//     eski 1.0g §6 ile tutmuyordu), Max Rebound +1g (droop/ekstansiyon).
-// L/R varyantları yalnız a_y işaretiyle ayrışır. Büyük sehimli satırlar
-// (Max Bump, Pothole, Kerb, Reverse) ±15 mm metal-metal durdurucuyla klipslenir
-// (solveCaseStop, F4); çözücü useStop=true ile çağrılır.
+// g-seviyeleri:
+//   • Cornering 0.6g, Brake-in-Turn 0.4g (boyuna+yanal), Max Bump/Pothole 3.5g düşey,
+//   • Kerb Strike 1.55g yanal (bordür darbesi); a_y İŞARETİ cornering'in TERSİDİR
+//     (Kerb sol = −1.55, cornering sol = +0.6), Max Rebound +1g (droop/ekstansiyon).
+// L/R varyantları a_y işaretiyle ayrışır. Büyük sehimli satırlar (Max Bump, Pothole,
+// Reverse) ±15 mm metal-metal durdurucuyla klipslenir (solveCaseStop, F4);
+// çözücü useStop=true ile çağrılır.
 var MNT_AUTO_CASES = [
   { name:'Static',            n:[ 0,    0,   -1  ], T:[0,0,0] }, // 1g düşey
   { name:'Max Bump',          n:[ 0,    0,   -3.5], T:[0,0,0] }, // 3.5g düşey → klips
@@ -101,8 +101,8 @@ var MNT_AUTO_CASES = [
   { name:'Brake in Turn L',   n:[-0.4,  0.4, -1  ], T:[0,0,0] }, // 0.4g fren+yanal (sol)
   { name:'Brake in Turn R',   n:[-0.4, -0.4, -1  ], T:[0,0,0] }, // 0.4g fren+yanal (sağ)
   { name:'Pothole Braking',   n:[-3,    0,   -3.5], T:[0,0,0] }, // çukur+fren → klips
-  { name:'Kerb Strike L',     n:[ 0,    3.6, -1  ], T:[0,0,0] }, // 3.6g yanal bordür (sol) → klips
-  { name:'Kerb Strike R',     n:[ 0,   -3.6, -1  ], T:[0,0,0] }, // 3.6g yanal bordür (sağ) → klips
+  { name:'Kerb Strike L',     n:[ 0,   -1.55,-1  ], T:[0,0,0] }, // 1.55g yanal bordür (sol) — işaret cornering'in TERSİ
+  { name:'Kerb Strike R',     n:[ 0,    1.55,-1  ], T:[0,0,0] }, // 1.55g yanal bordür (sağ)
   { name:'Max Rebound',       n:[ 0,    0,    1  ], T:[0,0,0] }  // droop / negatif-g (ekstansiyon)
 ];
 
