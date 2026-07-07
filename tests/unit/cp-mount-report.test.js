@@ -46,9 +46,21 @@ function buildR() {
   const Trev = core.torqueChain({ Te: torque.Te, Rstall: torque.Rstall, iGear: torque.gR, iTransfer: torque.iTransfer, phiAxle: torque.phiRev, derate: torque.derate });
   const cases = AUTO.concat([{ name: 'Forward Torque', n: [0, 0, -1], T: [-Tfwd, 0, 0] },
     { name: 'Reverse Torque', n: [0, 0, -1], T: [-Trev, 0, 0] }]);
+  // Kriter 3/4 verisi (üretimdeki _mntComputeResults ile aynı): vites + tasarım durumları
+  const gearDefs = [
+    { name: '1. Vites', gearLabel: '1. Vites', ratio: torque.g1, Tshaft: Tfwd, n: [0, 0, -1], T: [-Tfwd, 0, 0] },
+    { name: 'Geri Vites', gearLabel: 'Geri', ratio: torque.gR, Tshaft: Trev, n: [0, 0, -1], T: [-Trev, 0, 0] }
+  ];
+  const designDefs = [
+    { name: '3.5g Düşey', n: [0, 0, -3.5], T: [0, 0, 0] },
+    { name: '1g Yanal', n: [0, 1, -1], T: [0, 0, 0] },
+    { name: '1g Boyuna (fren)', n: [-1, 0, -1], T: [0, 0, 0] }
+  ];
   return {
     mp, mounts: mntsSI,
     allCases: core.solveAllCases(model, cases),
+    gearCases: core.solveAllCases(model, gearDefs, { useStop: true }),
+    designCases: core.solveAllCases(model, designDefs, { useStop: true }),
     modes: core.solveModal(core.buildK(mntsSI, mp.cg, true), core.buildM6(mp.m, mp.I_G), mntsSI, mp.cg),
     gather: { components: comps, mounts: mnts, torque }, matrixMode: 'delta',
   };
@@ -213,6 +225,23 @@ describe('§8 zenginleştirmeleri', () => {
   });
 });
 
+describe('Motor Takozu Uygunluğu (hedef kontrolü)', () => {
+  test('4 kriter tablosu + genel hüküm (idle girdisiyle tam değerlendirme)', () => {
+    const h = rep._mntRepCompliance(R, { idleRpm: 650, cylinders: 6 });
+    expect(h).toContain('Motor Takozu Uygunluğu');
+    ['PowerPack Roll modu', 'transmissibility', 'Vites başına takoz kuvvetleri', 'Genel hüküm'].forEach(s =>
+      expect(h).toContain(s));
+    expect(h).toContain('Roll modu');       // roll modu bulundu ve değerlendirildi
+    expect(h).not.toContain('bekliyor');     // idle var → 1&2 beklemiyor
+    expect(h).toContain('f_ateş');           // ateşleme frekansı hesaplandı
+  });
+  test('idle girdisi yoksa kriter 1&2 bekliyor; 3&4 değerlendirilir', () => {
+    const h = rep._mntRepCompliance(R, {});
+    expect(h).toContain('bekliyor');         // roll modu / transmissibility girdi bekler
+    expect(h).toContain('✓ Uygun');          // torku ve yükleme koşulları mevcut → 3&4 uygun
+  });
+});
+
 describe('Şablon montajı — token doldurma + $$ sınırlayıcı korunması', () => {
   const B64 = (s) => Buffer.from(s, 'utf8').toString('base64');
   test('_mntBuildReportHTML tokenları doldurur, $$ BOZMAZ, artık token bırakmaz', () => {
@@ -249,7 +278,7 @@ describe('Gömülü teori şablonu — sınırlayıcı sağlamlığı (regresyon
     expect(dd).toBeGreaterThan(0);
     expect(dd % 2).toBe(0);
     // tokenlar hâlâ yerinde (üreteç bunları dolduracak)
-    ['@@ASSETS_CSS@@', '@@KATEX_JS@@', '@@ANTET@@', '@@SECTION8@@'].forEach(k =>
+    ['@@ASSETS_CSS@@', '@@KATEX_JS@@', '@@ANTET@@', '@@SECTION8@@', '@@COMPLIANCE@@'].forEach(k =>
       expect(t).toContain(k));
   });
 });

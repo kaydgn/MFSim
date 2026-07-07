@@ -155,12 +155,14 @@ function _mntBuildReportHTML(R, opts){
   var katexJs=A.katexJs.replace(/<\/script>/gi,'<\\/script>');
   var antet=_mntRepAntet(R);
   var sec8=_mntRepSection8(R, opts);
+  var compliance=_mntRepCompliance(R, opts);
   // Fonksiyon-replacer: dinamik HTML içindeki $$…$$ ($ desenleri) bozulmasın.
   return tpl
     .replace('@@ASSETS_CSS@@', function(){ return assetsCss; })
     .replace('@@KATEX_JS@@',   function(){ return katexJs; })
     .replace('@@ANTET@@',      function(){ return antet; })
-    .replace('@@SECTION8@@',   function(){ return sec8; });
+    .replace('@@SECTION8@@',   function(){ return sec8; })
+    .replace('@@COMPLIANCE@@', function(){ return compliance; });
 }
 
 // ─── Antet (dinamik başlık bloğu) ────────────────────────────────────────────
@@ -795,6 +797,74 @@ function _mntRepConsistency(R){
   return h;
 }
 
+// ═══ "Motor Takozu Uygunluğu" — analizi şirket hedef kriterlerine göre denetler ═══
+//  1) PowerPack Roll modu < %50·f_ateş  2) Rölanti transmissibility < %50
+//  3) Vites başına takoz kuvvetleri kontrol  4) Maks tork·3,5g düşey·1g yanal·1g boyuna
+function _mntRepCompliance(R, opts){
+  opts=opts||{};
+  var modes=R.modes||[];
+  var h='<h2 id="uygunluk"><span class="no">✓</span>Motor Takozu Uygunluğu</h2>';
+  h+='<p>Bu bölüm, §8 analiz sonuçlarını <strong>şirket motor takozu hedef kriterlerine</strong> göre değerlendirir. Roll modu ve rölanti izolasyon kriterleri, motor rölanti devri ve silindir sayısı girdisine bağlıdır (Rapor panelinden girilir).</p>';
+  if(!modes.length){ return h+'<div class="note warn"><span class="t">Değerlendirilemedi</span>Modal sonuç yok — çözüm üretilemedi.</div>'; }
+  var rpm=Number(opts.idleRpm), z=Number(opts.cylinders);
+  var haveIdle=(rpm>0 && z>0), fFire=haveIdle?(rpm/60)*(z/2):NaN;
+
+  // Kriter 1 — PowerPack Roll modu < %50·f_ateş. Roll modu = EN YÜKSEK rijit
+  // gövde modu (mod 6); ateşlemeye en yakın ve izolasyon için belirleyici mod
+  // budur (§8.8 hesabı ve tasarım tanımıyla tutarlı).
+  var rollM=modes[modes.length-1];
+  var fRoll=rollM?rollM.f_Hz:NaN, c1;
+  if(!haveIdle) c1={st:'wait', bulgu:'Motor rölanti devri + silindir sayısı girin (Rapor paneli)'};
+  else { var lim1=0.5*fFire; c1={st:(fRoll<lim1?'ok':'no'), bulgu:'Roll modu (mod '+modes.length+') <b>'+_rF(fRoll,2)+'</b> Hz · sınır %50·f_ateş = '+_rF(lim1,2)+' Hz'}; }
+
+  // Kriter 2 — Rölanti transmissibility < %50. §8.8 ile AYNI hesap: en yüksek
+  // mod (ateşlemeye en yakın), sönüm oranı ζ (varsayılan 0,001 ≈ sönümsüz).
+  var fMax=modes[modes.length-1].f_Hz, c2;
+  var zeta=Number(opts.zeta); if(!(zeta>0)) zeta=0.001;
+  var _core=_rMountCore();
+  if(!haveIdle) c2={st:'wait', bulgu:'Motor rölanti devri + silindir sayısı girin'};
+  else { var rr=fFire/fMax, T=_core?_core.transmissibility(fFire,fMax,zeta):Infinity;
+    c2={st:(T<0.5?'ok':'no'),
+      bulgu:'f_ateş '+_rF(fFire,1)+' Hz / en yüksek mod '+_rF(fMax,2)+' Hz → r='+_rF(rr,2)+', T=<b>'+(isFinite(T)?_rF(T*100,1)+'%':'∞')+'</b> (§8.8)'}; }
+
+  // Kriter 3 — Vites başına takoz kuvvetleri (§8.9): tanımlı her vites ayrı çözülür.
+  var gears=R.gearCases||[], gmax=null;
+  gears.forEach(function(rc){ if(!rc.res) return; var mf=_mntRepMaxForce(rc.res);
+    if(!gmax||mf.v>gmax.v) gmax={v:mf.v, g:(rc.loadCase&&rc.loadCase.gearLabel)||rc.name, mnt:mf.name}; });
+  var c3 = (gears.length && gmax)
+    ? {st:'ok', bulgu:'Her vites ayrı çözüldü ('+gears.length+' durum, §8.9); en yüksek bileşke takoz kuvveti <b>'+_rF(gmax.v,2)+'</b> kN ('+_rEsc(gmax.g)+' · '+_rEsc(gmax.mnt)+')'}
+    : {st:'no', bulgu:'Tahrik torku girdisi yok — vites başına kontrol için Motor/Şanzıman kinematiğini doldurun'};
+
+  // Kriter 4 — Tasarım yük koşulları (§8.10): maks tork, 3,5g düşey, 1g yanal,
+  // 1g boyuna. 1g yanal, kalibreli 0,6g virajdan AYRI bir dayanım case'idir.
+  var design=R.designCases||[], haveTq=(gears.length>0 && !!gears[0].res);
+  var dPresent=design.filter(function(rc){ return rc.res; });
+  var c4Total=dPresent.length+(haveTq?1:0);
+  var concern=[];
+  dPresent.forEach(function(rc){ if(rc.res.checks.tensionCount>0) concern.push(rc.name); });
+  if(haveTq && gears[0].res.checks.tensionCount>0) concern.push('maks tork');
+  var c4={st:(c4Total>=4?'ok':'no'),
+    bulgu:c4Total+'/4 koşul çözüldü — §8.10'+(haveTq?'':' (maks tork için tahrik kinematiği girin)')};
+
+  function badge(st){ return st==='ok'?'<span class="ok">✓ Uygun</span>':(st==='wait'?'<span style="color:#5a6270;">— bekliyor</span>':'<span style="color:var(--warn);font-weight:600;">✗ kontrol</span>'); }
+  h+='<table><caption>Tablo '+_rTbl()+' — Motor takozu hedef kriterleri uygunluk kontrolü</caption>';
+  h+='<tr><th>#</th><th>Kriter</th><th>Hedef</th><th>Bulgu</th><th>Sonuç</th></tr>';
+  [['1','PowerPack Roll modu','&lt; %50 · f_ateş',c1],['2','Rölanti transmissibility','&lt; %50',c2],
+   ['3','Vites başına takoz kuvvetleri','kontrol',c3],['4','Maks tork · 3,5g düşey · 1g yanal · 1g boyuna','kontrol',c4]
+  ].forEach(function(r){ h+='<tr><td class="c">'+r[0]+'</td><td class="l">'+r[1]+'</td><td class="l">'+r[2]+'</td><td class="l">'+r[3].bulgu+'</td><td class="c">'+badge(r[3].st)+'</td></tr>'; });
+  h+='</table>';
+
+  var sts=[c1.st,c2.st,c3.st,c4.st], anyNo=sts.indexOf('no')>=0, anyWait=sts.indexOf('wait')>=0;
+  h+='<div class="note '+(anyNo?'warn':(anyWait?'':'check'))+'"><span class="t">Genel hüküm</span>';
+  if(anyNo) h+='Bir veya daha fazla kriter <b>sağlanmıyor / kontrol gerektiriyor</b>; ilgili satırları ve §8 ayrıntısını inceleyin.';
+  else if(anyWait) h+='Kuvvet ve yükleme kriterleri sağlanıyor; roll modu ve transmissibility için motor rölanti devri + silindir sayısı girin (Rapor paneli) → tam değerlendirme.';
+  else h+='<b>Tüm hedef kriterler sağlanıyor</b> — güç grubu takoz sistemi şirket motor takozu hedeflerini karşılıyor.';
+  if(concern.length) h+=' <span style="color:var(--warn);">Not: '+_rEsc(concern.join(', '))+' durum(lar)ında çekme (lift-off) var — takoz seçimi gözden geçirilmeli.</span>';
+  h+='</div>';
+  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Roll modu = en yüksek rijit gövde modu (mod '+(modes.length)+', §8.8). Ateşleme frekansı f_ateş = (N/60)·(z/2). Transmissibility §8.8 formülüyle T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] hesaplanır (ζ varsayılan 0,001; küçük sönümde ≈ sönümsüz). Vites başına kuvvetler §8.9, tasarım yük koşulları (1g yanal dâhil) §8.10\'da ayrıntılıdır.</div>';
+  return h;
+}
+
 // allCases içinde ada göre bul
 function _mntRepFindCase(R, name){
   if(!R || !R.allCases) return null;
@@ -832,6 +902,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepGearForces: _mntRepGearForces,
     _mntRepDesignLoads: _mntRepDesignLoads,
     _mntRepMaxForce: _mntRepMaxForce,
+    _mntRepCompliance: _mntRepCompliance,
     _rF: _rF, _rFs: _rFs, _rEsc: _rEsc
   };
 }

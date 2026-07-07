@@ -30,8 +30,9 @@ h = h.replace('<style>', '<style>@@ASSETS_CSS@@</style>\n<style>');
 // ── 3) Replace the static ANTET block with the @@ANTET@@ token ──────────────
 h = h.replace(/<div class="antet">[\s\S]*?(?=<div class="toc">)/, '@@ANTET@@\n\n');
 
-// ── 4) Replace the static Section 8 (numerical example) with @@SECTION8@@ ───
-h = h.replace(/<h2 id="s8">[\s\S]*?(?=<h2 id="s9">)/, '@@SECTION8@@\n\n');
+// ── 4) Replace the static Section 8 (numerical example) with @@SECTION8@@ +
+//       a dynamic "Motor Takozu Uygunluğu" section (@@COMPLIANCE@@) before §9.
+h = h.replace(/<h2 id="s8">[\s\S]*?(?=<h2 id="s9">)/, '@@SECTION8@@\n\n@@COMPLIANCE@@\n\n');
 
 // ── 5) Generalize example/validation-specific prose (no Adams claim) ────────
 function must(sub){ if(h.indexOf(sub)<0){ console.error('EDIT ANCHOR MISSING:\n'+sub.slice(0,80)); process.exit(1);} }
@@ -55,7 +56,7 @@ const katexBoot = '<script>@@KATEX_JS@@</script>\n'
 h = h.replace('</body>', function(){ return katexBoot + '</body>'; });
 
 // ── 7) Sanity: tokens present exactly once, no external refs remain ─────────
-for(const t of ['@@ASSETS_CSS@@','@@KATEX_JS@@','@@ANTET@@','@@SECTION8@@']){
+for(const t of ['@@ASSETS_CSS@@','@@KATEX_JS@@','@@ANTET@@','@@SECTION8@@','@@COMPLIANCE@@']){
   const c = h.split(t).length - 1;
   if(c!==1){ console.error('TOKEN '+t+' appears '+c+' times (want 1)'); process.exit(1); }
 }
