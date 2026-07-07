@@ -225,6 +225,8 @@ function _mntRepSection8(R, opts){
   h+=_mntRepDeflectionDetail(R);
   h+=_mntRepStep5Modal(R, C);
   h+=_mntRepFreqPlacement(R, opts);
+  h+=_mntRepGearForces(R);
+  h+=_mntRepDesignLoads(R);
   h+=_mntRepConsistency(R);
   return h;
 }
@@ -698,9 +700,83 @@ function _mntRepFreqPlacement(R, opts){
   return h;
 }
 
+// Bir yük durumu sonucunda en yüksek bileşke takoz kuvveti (kN) ve takoz adı.
+function _mntRepMaxForce(res){
+  var best={v:-1, name:'—'};
+  (res && res.perMount || []).forEach(function(pm){
+    var fm=Math.sqrt(pm.f[0]*pm.f[0]+pm.f[1]*pm.f[1]+pm.f[2]*pm.f[2])/1000;
+    if(fm>best.v){ best.v=fm; best.name=pm.name; }
+  });
+  return best;
+}
+// Yük durumu notu (durdurucu / çekme / normal).
+function _mntRepCaseNote(res){
+  if(!res) return '—';
+  if(res.checks.clampCount>0) return '<span style="color:var(--warn,#8a5a1e)">durdurucu ×'+res.checks.clampCount+'</span>';
+  if(res.checks.tensionCount>0) return '<span style="color:var(--warn,#8a5a1e)">çekme ×'+res.checks.tensionCount+'</span>';
+  return '<span class="ok">✓</span>';
+}
+
+// §8.9 — Kriter 3: her vites için takoz kuvvetleri (tork reaksiyonu altında).
+function _mntRepGearForces(R){
+  var rows=R.gearCases||[];
+  if(!rows.length) return '';   // tork girilmemişse bölümü atla
+  var h='<h3>8.9 Kriter 3 — Vites bazında takoz kuvvetleri</h3>';
+  h+='<p>Tasarım kriteri her vites için takoz kuvvetlerinin kontrolünü ister. Kütle ve rijitlik sabit, yalnız şaft torku \\(T_{\\text{shaft}}\\) vites oranıyla ölçeklenir; en yüksek redüksiyonlu <b>1. vites en yüksek tork</b> ürettiğinden ileri vitesler için <b>bağlayıcı</b> durumdur. Değerler ±15 mm durdurucu modeliyle (bkz. §9) çözülür.</p>';
+  h+='<table style="width:100%; border-collapse:collapse; font-size:0.72rem; margin:8px 0;">';
+  h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c9cdd3);">'
+    +'<th style="text-align:left; padding:4px 6px;">Vites</th>'
+    +'<th style="text-align:right; padding:4px 6px;">Oran</th>'
+    +'<th style="text-align:right; padding:4px 6px;">T<sub>shaft</sub> [N·m]</th>'
+    +'<th style="text-align:right; padding:4px 6px;">Maks |F| [kN]</th>'
+    +'<th style="text-align:left; padding:4px 6px;">Takoz</th>'
+    +'<th style="text-align:center; padding:4px 6px;">Durum</th></tr></thead><tbody>';
+  rows.forEach(function(rc){
+    var lc=rc.loadCase||{}, res=rc.res, mf=_mntRepMaxForce(res);
+    h+='<tr style="border-bottom:1px solid var(--line-soft,#e4e6e9);">'
+      +'<td style="padding:3px 6px;">'+_rEsc(lc.gearLabel||rc.name)+'</td>'
+      +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+_rF(lc.ratio,2)+'</td>'
+      +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+(res?_rF(lc.Tshaft,0):'—')+'</td>'
+      +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+(res?_rF(mf.v,2):'—')+'</td>'
+      +'<td style="padding:3px 6px;">'+(res?_rEsc(mf.name):'çözülemedi')+'</td>'
+      +'<td style="text-align:center; padding:3px 6px;">'+_mntRepCaseNote(res)+'</td></tr>';
+  });
+  h+='</tbody></table>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Maks |F| = takoza gelen üç-eksen bileşke kuvvetinin en büyüğü (dayanım/cıvata tasarımı için). Vites yükseldikçe tork ve dolayısıyla kuvvet azalır.</p>';
+  return h;
+}
+
+// §8.10 — Kriter 4: tasarım yük koşulları (maks tork, 3.5g düşey, 1g yanal, 1g boyuna).
+function _mntRepDesignLoads(R){
+  var design=R.designCases||[], gear=R.gearCases||[];
+  var maxTq=gear.length?gear[0]:null;   // 1. vites = maks tork
+  if(!design.length && !maxTq) return '';
+  var h='<h3>8.10 Kriter 4 — Tasarım yük koşulları</h3>';
+  h+='<p>Tasarım kriterinin dört zorunlu yük koşulunda maksimum takoz kuvveti (dayanım tasarımı için). 1g yanal koşul, kalibreli 0,6g viraj manevrasından ayrı bir dayanım zarfıdır.</p>';
+  h+='<table style="width:100%; border-collapse:collapse; font-size:0.72rem; margin:8px 0;">';
+  h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c9cdd3);">'
+    +'<th style="text-align:left; padding:4px 6px;">Koşul</th>'
+    +'<th style="text-align:right; padding:4px 6px;">Maks |F| [kN]</th>'
+    +'<th style="text-align:left; padding:4px 6px;">Takoz</th>'
+    +'<th style="text-align:center; padding:4px 6px;">Durum</th></tr></thead><tbody>';
+  function line(label, res){
+    var mf=_mntRepMaxForce(res);
+    h+='<tr style="border-bottom:1px solid var(--line-soft,#e4e6e9);">'
+      +'<td style="padding:3px 6px;">'+label+'</td>'
+      +'<td style="text-align:right; padding:3px 6px; font-family:var(--mono,monospace);">'+(res?_rF(mf.v,2):'—')+'</td>'
+      +'<td style="padding:3px 6px;">'+(res?_rEsc(mf.name):'—')+'</td>'
+      +'<td style="text-align:center; padding:3px 6px;">'+_mntRepCaseNote(res)+'</td></tr>';
+  }
+  if(maxTq && maxTq.res) line('Maks. tork <span style="color:#5a6270;">(1. vites, T<sub>shaft</sub> '+_rF(maxTq.loadCase.Tshaft,0)+' N·m)</span>', maxTq.res);
+  design.forEach(function(rc){ line(_rEsc(rc.name), rc.res); });
+  h+='</tbody></table>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Not: 3,5g düşey ve büyük tork koşullarında ±15 mm durdurucu devreye girebilir (Durum sütunu). Maks |F| durdurucudaki temas kuvvetini de içerir.</p>';
+  return h;
+}
+
 // Doğrulama → iç-tutarlılık özeti
 function _mntRepConsistency(R){
-  var h='<h3>8.9 Model içi tutarlılık kontrolleri</h3>';
+  var h='<h3>8.11 Model içi tutarlılık kontrolleri</h3>';
   var nBal=0, nTot=0, tension=0, overLin=0;
   R.allCases.forEach(function(rc){
     if(!rc.res) return; nTot++;
@@ -753,6 +829,9 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepDeflectionDetail: _mntRepDeflectionDetail,
     _mntRepModeMatrix: _mntRepModeMatrix,
     _mntRepFreqPlacement: _mntRepFreqPlacement,
+    _mntRepGearForces: _mntRepGearForces,
+    _mntRepDesignLoads: _mntRepDesignLoads,
+    _mntRepMaxForce: _mntRepMaxForce,
     _rF: _rF, _rFs: _rFs, _rEsc: _rEsc
   };
 }

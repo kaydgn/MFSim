@@ -713,6 +713,33 @@ describe('Kinematik girdiler + tork yük durumları', () => {
   });
 });
 
+describe('_mntGearTorqueCases — Kriter 3 (her vites için tork durumu)', () => {
+  const tq = { Te: 3000, Rstall: 1.62, g1: 3.51, g2: 1.81, g3: 1.41, gR: -4.8, iTransfer: 1.407, phiFwd: 1 / 3.6, phiRev: 2.6 / 3.6, derate: 1 };
+  test('tanımlı her ileri vites + geri için durum üretir', () => {
+    const cases = cp._mntGearTorqueCases(tq);
+    expect(cases).toHaveLength(4);   // g1, g2, g3, geri
+    expect(cases.map(c => c.gearLabel)).toEqual(['1. Vites', '2. Vites', '3. Vites', 'Geri']);
+  });
+  test('T_shaft vites oranıyla ölçeklenir; 1. vites bağlayıcı (en yüksek)', () => {
+    const cases = cp._mntGearTorqueCases(tq);
+    expect(Math.abs(cases[0].Tshaft)).toBeGreaterThan(Math.abs(cases[1].Tshaft));
+    expect(Math.abs(cases[1].Tshaft)).toBeGreaterThan(Math.abs(cases[2].Tshaft));
+    expect(cases[0].Tshaft).toBeCloseTo(6667.07, 0);   // T5 ile aynı (1. vites)
+    expect(cases[0].T[0]).toBeCloseTo(-cases[0].Tshaft, 6);  // Tx = −T_shaft
+  });
+  test('tanımsız vites atlanır; tork yoksa boş', () => {
+    const only13 = cp._mntGearTorqueCases({ Te: 3000, Rstall: 1.62, g1: 3.51, g3: 1.41 });
+    expect(only13.map(c => c.gearLabel)).toEqual(['1. Vites', '3. Vites']);  // g2 yok → atlanır
+    expect(cp._mntGearTorqueCases({})).toHaveLength(0);
+    expect(cp._mntGearTorqueCases({ Te: 3000 })).toHaveLength(0);  // Rstall/g1 yok
+  });
+  test('_mntToSI: gearCases ana matrise KARIŞMAZ (ayrı R alanı)', () => {
+    const si = cp._mntToSI({ components: [], mounts: [], torque: tq }, 9.81);
+    // ana loadCases yalnız 12 g + 2 tork (Forward/Reverse) — vites dökümü değil
+    expect(si.loadCases.map(c => c.name)).not.toContain('2. Vites');
+  });
+});
+
 describe('Garip açıklamalar kaldırıldı (Adams dahil)', () => {
   test('Kütle/Takoz/Çözücü panellerinde Adams referansı yok', () => {
     const mass = cp.getMntMassPropertiesHTML({ id: 'a', type: 'mnt-motor', def: {}, data: {} });

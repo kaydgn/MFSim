@@ -253,3 +253,56 @@ describe('Gömülü teori şablonu — sınırlayıcı sağlamlığı (regresyon
       expect(t).toContain(k));
   });
 });
+
+describe('§8.9/§8.10 — Kriter 3 (vites kuvvetleri) ve Kriter 4 (tasarım yükleri)', () => {
+  // Gerçek model + çözülmüş vites/tasarım durumlarıyla R kur
+  function buildGearR() {
+    const comps = core.ttarComponentsSI(), mnts = core.ttarMountsSI(), g = 9.81;
+    const mp = core.combineMassProps(comps);
+    const model = { m: mp.m, cg: mp.cg, Kstat: core.buildK(mnts, mp.cg, false), mounts: mnts, g };
+    // Vites tanımlarını inline kur (rapor testini cp-mount.js'e bağlamadan)
+    const TC = (iGear, phi) => core.torqueChain({ Te: 3000, Rstall: 1.62, iGear, iTransfer: 1.407, phiAxle: phi, derate: 1 });
+    const gearDefs = [
+      { name: '1. Vites', gearLabel: '1. Vites', ratio: 3.51, Tshaft: TC(3.51, 1 / 3.6), n: [0, 0, -1], T: [-TC(3.51, 1 / 3.6), 0, 0] },
+      { name: '2. Vites', gearLabel: '2. Vites', ratio: 1.81, Tshaft: TC(1.81, 1 / 3.6), n: [0, 0, -1], T: [-TC(1.81, 1 / 3.6), 0, 0] },
+      { name: '3. Vites', gearLabel: '3. Vites', ratio: 1.41, Tshaft: TC(1.41, 1 / 3.6), n: [0, 0, -1], T: [-TC(1.41, 1 / 3.6), 0, 0] },
+      { name: 'Geri Vites', gearLabel: 'Geri', ratio: -4.8, Tshaft: TC(-4.8, 2.6 / 3.6), n: [0, 0, -1], T: [-TC(-4.8, 2.6 / 3.6), 0, 0] }
+    ];
+    const gearCases = core.solveAllCases(model, gearDefs, { useStop: true });
+    const designDefs = [
+      { name: '3.5g Düşey', n: [0, 0, -3.5], T: [0, 0, 0] },
+      { name: '1g Yanal', n: [0, 1, -1], T: [0, 0, 0] },
+      { name: '1g Boyuna (fren)', n: [-1, 0, -1], T: [0, 0, 0] }
+    ];
+    const designCases = core.solveAllCases(model, designDefs, { useStop: true });
+    return { gearCases, designCases };
+  }
+  const R = buildGearR();
+
+  test('_mntRepMaxForce: en yüksek bileşke kuvvet + takoz adı', () => {
+    const mf = rep._mntRepMaxForce(R.gearCases[0].res);
+    expect(mf.v).toBeGreaterThan(0);
+    expect(typeof mf.name).toBe('string');
+  });
+  test('§8.9 Kriter 3 tablosu üretilir; her vites bir satır', () => {
+    const h = rep._mntRepGearForces(R);
+    expect(h).toContain('Kriter 3');
+    ['1. Vites', '2. Vites', '3. Vites', 'Geri'].forEach(g => expect(h).toContain(g));
+    expect(h).toContain('T<sub>shaft</sub>');
+  });
+  test('§8.9 tork yoksa boş döner (bölüm atlanır)', () => {
+    expect(rep._mntRepGearForces({ gearCases: [] })).toBe('');
+    expect(rep._mntRepGearForces({})).toBe('');
+  });
+  test('§8.10 Kriter 4: dört tasarım koşulu + maks tork satırı', () => {
+    const h = rep._mntRepDesignLoads(R);
+    expect(h).toContain('Kriter 4');
+    expect(h).toContain('Maks. tork');
+    ['3.5g Düşey', '1g Yanal', '1g Boyuna'].forEach(c => expect(h).toContain(c));
+  });
+  test('Geri vites en yüksek tork → en yüksek kuvvet (bağlayıcı sizing)', () => {
+    const fwd1 = rep._mntRepMaxForce(R.gearCases[0].res).v;
+    const rev = rep._mntRepMaxForce(R.gearCases[3].res).v;
+    expect(rev).toBeGreaterThan(fwd1);   // geri (−23705 N·m) ileri 1. vitesten ağır
+  });
+});
