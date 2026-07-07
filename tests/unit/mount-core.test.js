@@ -256,6 +256,38 @@ describe('T9 — ±15 mm metal-metal durdurucu (solveCaseStop, F4)', () => {
   });
 });
 
+describe('transmissibility — iletilebilirlik / izolasyon (Kriter 2)', () => {
+  const T = core.transmissibility;
+  test('r=√2 izolasyon başı → T≈1 (düşük ζ)', () => {
+    expect(T(Math.SQRT2, 1, 0.001)).toBeCloseTo(1, 2);
+  });
+  test('r=√3 → T≈0.5 (%50 kriter eşiği)', () => {
+    expect(T(Math.sqrt(3), 1, 0.001)).toBeCloseTo(0.5, 2);
+  });
+  test('r=2 → T≈1/3 (klasik iki-kat ayrım)', () => {
+    expect(T(2, 1, 0.001)).toBeCloseTo(1 / 3, 2);
+  });
+  test('statik r=0 → T=1', () => {
+    expect(T(0, 1, 0.001)).toBeCloseTo(1, 9);
+  });
+  test('izolasyon bölgesinde (r>√2) frekans oranı arttıkça T azalır', () => {
+    expect(T(2, 1, 0.001)).toBeLessThan(T(1.5, 1, 0.001));
+    expect(T(3, 1, 0.001)).toBeLessThan(T(2, 1, 0.001));
+  });
+  test('rezonansta (r=1) sönüm tepeyi sınırlar: ζ↑ → T↓', () => {
+    expect(T(1, 1, 0.001)).toBeGreaterThan(T(1, 1, 0.05));
+    expect(T(1, 1, 0.05)).toBeCloseTo(10, 1);   // T_rez ≈ 1/(2ζ)
+  });
+  test('çok küçük ζ ≈ sönümsüz: T→1/|1−r²|', () => {
+    const r = 1.53;
+    expect(T(r, 1, 1e-6)).toBeCloseTo(1 / Math.abs(1 - r * r), 3);
+  });
+  test('f_nat ≤ 0 → NaN', () => {
+    expect(Number.isNaN(T(30, 0, 0.001))).toBe(true);
+    expect(Number.isNaN(T(30, -5, 0.001))).toBe(true);
+  });
+});
+
 describe('selfTest — gömülü kabul testi koşucusu', () => {
   test('T1–T8 hepsi yeşil (failed = 0)', () => {
     const r = core.selfTest();
