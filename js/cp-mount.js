@@ -67,7 +67,9 @@ function veMntGetLibraryMap(){
         if(!e || !e.key) return;
         map[e.key]={ key:e.key, name:(e.name||'Özel Takoz'),
           sx:_mntNum(e.sx), sy:_mntNum(e.sy), sz:_mntNum(e.sz),
-          dx:_mntNum(e.dx), dy:_mntNum(e.dy), dz:_mntNum(e.dz), builtin:false };
+          dx:_mntNum(e.dx), dy:_mntNum(e.dy), dz:_mntNum(e.dz), builtin:false,
+          // Opsiyonel nonlineer z-eğrisi (takoz tipinin özelliği) — Takoz'a uygulanınca kopyalanır.
+          curveZ:(Array.isArray(e.curveZ)&&e.curveZ.length>=2)?e.curveZ:null };
       });
     }
   });
@@ -452,40 +454,22 @@ function getMntMountPropertiesHTML(node){
   html+=_mntCard('Konum','[mm]','var(--accent-primary)', _mntTriple(node,'','',['x','y','z'],['x','y','z'],'0.01'));
   html+=_mntCard('Statik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxs','kys','kzs'],['kx','ky','kz'],'1'));
   html+=_mntCard('Dinamik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxd','kyd','kzd'],['kx','ky','kz'],'1'));
-  html+=_mntMountCurveCard(node);
+  html+=_mntMountCurveNote(node);
   html+='</div>';
   return html;
 }
 
-// Nonlineer düşey (z) kuvvet–sehim eğrisi kartı (opsiyonel). node.data.curveZ =
-// [[δ_mm, f_N], …]. ≥2 nokta → çözücü bu takozu Newton ile nonlineer çözer; yoksa
-// lineer kzs geçerli. kzs/kzd yine kullanılır (durdurucu + dinamik/statik oran).
-function _mntMountCurveCard(node){
+// Takoz'a uygulanmış nonlineer z-eğrisi için SALT-OKUNUR bilgi notu. Eğri artık
+// "Takoz Özellikleri" (kütüphane) bileşeninde bir takoz TİPİNİN özelliği olarak
+// tanımlanır; kütüphaneden uygulandığında node.data.curveZ'e kopyalanır. Burada
+// yalnız gösterilir, düzenlenmez (düzenleme kütüphane panelinde).
+function _mntMountCurveNote(node){
   var pts = Array.isArray(node.data.curveZ) ? node.data.curveZ : null;
-  var inner;
-  if(!pts || pts.length<2){
-    inner = '<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.45; margin-bottom:8px;">'
-      + 'Düşey eksende ölçülmüş kuvvet–sehim eğrisi tanımlarsanız çözücü bu takozu '
-      + '<b>nonlineer</b> (Newton-Raphson) çözer. Tanımlamazsanız statik rijitlikle (kz) lineer kalır.</div>'
-      + '<button onclick="veMntCurveEnable(\''+node.id+'\')" style="width:100%; padding:7px; font-size:0.66rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">＋ Nonlineer z-eğrisi ekle</button>';
-  } else {
-    inner = '<div style="font-size:0.54rem; color:var(--text-muted); line-height:1.4; margin-bottom:7px;">δ: sehim [mm], f: kuvvet [N] (basma <b>−</b>). Çözücü δ\'ya göre sıralar; monoton eğri önerilir.</div>';
-    inner += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.6rem; margin-bottom:7px;"><thead><tr>'
-      + '<th style="'+_mntMxTh()+'">δ [mm]</th><th style="'+_mntMxTh()+'">f [N]</th><th style="'+_mntMxTh()+'"></th></tr></thead><tbody>';
-    pts.forEach(function(p,i){
-      inner += '<tr>'
-        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[0])+'" step="0.5" onchange="veMntCurveSetPoint(\''+node.id+'\','+i+',0,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
-        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[1])+'" step="10" onchange="veMntCurveSetPoint(\''+node.id+'\','+i+',1,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
-        + '<td style="'+_mntMxTd()+'"><button onclick="veMntCurveRemovePoint(\''+node.id+'\','+i+')" title="Noktayı sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:1px 6px; font-size:0.7rem; line-height:1;">✕</button></td>'
-        + '</tr>';
-    });
-    inner += '</tbody></table></div>';
-    inner += '<div style="display:flex; gap:5px;">'
-      + '<button onclick="veMntCurveAddPoint(\''+node.id+'\')" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">＋ nokta</button>'
-      + '<button onclick="veMntCurveDisable(\''+node.id+'\')" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">Lineere dön</button>'
-      + '</div>';
-  }
-  return _mntCard('Düşey Kuvvet–Sehim Eğrisi (z)','opsiyonel · nonlineer','var(--accent-danger)', inner);
+  if(!pts || pts.length<2) return '';
+  var inner = '<div style="font-size:0.58rem; color:var(--text-secondary); line-height:1.5;">'
+    + 'Bu takoz <b style="color:var(--text-heading);">nonlineer z-eğrisi</b> taşıyor ('+pts.length+' nokta) → çözücü onu Newton ile çözer. '
+    + 'Eğri <b>Takoz Özellikleri</b> bileşenindeki takoz tipinden gelir ve oradan düzenlenir.</div>';
+  return _mntCard('Düşey Kuvvet–Sehim Eğrisi (z)','nonlineer · kütüphaneden','var(--accent-danger)', inner);
 }
 
 // ─── Setters ─────────────────────────────────────────────────────────────────
@@ -517,51 +501,19 @@ function veMntApplyLib(nodeId, key){
   if(!node.data) node.data={};
   node.data.kxs=m.sx; node.data.kys=m.sy; node.data.kzs=m.sz;
   node.data.kxd=m.dx; node.data.kyd=m.dy; node.data.kzd=m.dz; node.data.libKey=key;
+  // Nonlineer z-eğrisi kütüphane girdisinin özelliği: uygularken Takoz'a KOPYALA
+  // (anlık; gather bu snapshot'ı okur). Lineer girdi uygulanırsa eski eğriyi temizle.
+  if(Array.isArray(m.curveZ) && m.curveZ.length>=2){
+    node.data.curveZ=m.curveZ.map(function(p){ return [_mntNum(p[0]), _mntNum(p[1])]; });
+  } else {
+    delete node.data.curveZ;
+  }
   if(typeof saveState==='function') saveState();
   if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
 
-// ─── Nonlineer z-eğrisi (kuvvet–sehim) düzenleyici ───────────────────────────
-// Etkinleştir: mevcut kzs'den LİNEER başlangıç eğrisi tohumla (δ=−15..+15 mm,
-// f=kzs·δ). Kullanıcı sonra ilerlemeli/asimetrik yaparak düzenler. Böylece eğri
-// başta lineerle aynı sonuç verir (sürpriz yok), kullanıcı delta ekledikçe ayrışır.
-function veMntCurveEnable(nodeId){
-  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
-  if(!node.data) node.data={};
-  var kz=_mntNum(node.data.kzs, 0);   // N/mm
-  node.data.curveZ=[[-15,-15*kz],[-7.5,-7.5*kz],[0,0],[7.5,7.5*kz],[15,15*kz]];
-  if(typeof saveState==='function') saveState();
-  if(typeof showNodeProperties==='function') showNodeProperties(node);
-}
-function veMntCurveDisable(nodeId){
-  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
-  if(node.data) delete node.data.curveZ;
-  if(typeof saveState==='function') saveState();
-  if(typeof showNodeProperties==='function') showNodeProperties(node);
-}
-// Nokta değeri düzenle — YENİDEN ÇİZME YOK (yazarken odak kaybını önler; input
-// zaten güncel değeri gösterir). col: 0=δ[mm], 1=f[N].
-function veMntCurveSetPoint(nodeId, idx, col, val){
-  var node=nodes.find(function(n){return n.id===nodeId;});
-  if(!node || !node.data || !Array.isArray(node.data.curveZ) || !node.data.curveZ[idx]) return;
-  node.data.curveZ[idx][col]=_mntNum(val, 0);
-  if(typeof saveState==='function') saveState();
-}
-function veMntCurveAddPoint(nodeId){
-  var node=nodes.find(function(n){return n.id===nodeId;});
-  if(!node || !node.data || !Array.isArray(node.data.curveZ)) return;
-  var pts=node.data.curveZ, last=pts[pts.length-1]||[0,0];
-  pts.push([_mntNum(last[0],0)+5, _mntNum(last[1],0)]);   // son noktanın 5 mm ötesine
-  if(typeof saveState==='function') saveState();
-  if(typeof showNodeProperties==='function') showNodeProperties(node);
-}
-function veMntCurveRemovePoint(nodeId, idx){
-  var node=nodes.find(function(n){return n.id===nodeId;});
-  if(!node || !node.data || !Array.isArray(node.data.curveZ)) return;
-  node.data.curveZ.splice(idx,1);
-  if(typeof saveState==='function') saveState();
-  if(typeof showNodeProperties==='function') showNodeProperties(node);
-}
+// (Nonlineer z-eğrisi düzenleme artık Takoz Özellikleri kütüphane panelinde —
+//  veMntLibCurve* — takoz TİPİNE bağlı; veMntApplyLib uygulanınca Takoz'a kopyalar.)
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ÖRNEK — hazır doğrulama modellerini seç, önizle ve topolojiye yükle
@@ -1680,12 +1632,20 @@ function getMntLibraryPropertiesHTML(node){
       html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dx',e.dx)+'</td>';
       html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dy',e.dy)+'</td>';
       html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dz',e.dz)+'</td>';
-      html+='<td style="'+_mntMxTd()+'"><button onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Bu takozu sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:2px 7px; font-size:0.72rem; line-height:1;">✕</button></td>';
+      html+='<td style="'+_mntMxTd()+' white-space:nowrap;">'
+        +'<button onclick="veMntLibCurveToggle(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Nonlineer z-eğrisi" style="background:none; border:1px solid var(--border-color); color:'+((Array.isArray(e.curveZ)&&e.curveZ.length>=2)?'var(--accent-danger)':'var(--text-muted)')+'; cursor:pointer; padding:2px 6px; font-size:0.72rem; line-height:1; margin-right:3px;">∿</button>'
+        +'<button onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Bu takozu sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:2px 7px; font-size:0.72rem; line-height:1;">✕</button></td>';
       html+='</tr>';
     });
     html+='</tbody></table></div>';
   }
   html+='<button onclick="veMntLibAdd(\''+node.id+'\')" style="width:100%; padding:9px 12px; margin-bottom:14px; font-size:0.7rem; font-weight:700; background:var(--accent-success); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">＋ Yeni Takoz Ekle</button>';
+
+  // ── Açık nonlineer eğri editörü (özel girdide ∿ ile açılır) ──
+  if(d._curveEditKey){
+    var _czEntry=_mntLibCustomEntry(node, d._curveEditKey);
+    if(_czEntry) html+=_mntLibCurveEditor(node, _czEntry);
+  }
 
   // ── Gömülü katalog (düzenlenebilir; ↺ ile fabrika ayarına dön) ──
   var nOv=builtins.filter(function(e){ return e.overridden; }).length;
@@ -1770,6 +1730,89 @@ function veMntLibResetBuiltin(nodeId, key){
     if(typeof saveState==='function') saveState();
   }
   if(typeof showNodeProperties==='function') showNodeProperties(node); // fabrika değerlerini geri bas
+}
+
+// ─── Kütüphane girdisi: nonlineer z-eğrisi (takoz TİPİNİN özelliği) ──────────
+// Eğri ÖZEL kütüphane girdisinde (node.data.mounts[i].curveZ = [[δ_mm,f_N],…])
+// tutulur; veMntApplyLib ile Takoz'a KOPYALANIR. Gömülü katalog lineer kalır.
+// d._curveEditKey: hangi özel girdinin eğri editörü açık (yalnız görsel durum).
+function _mntLibCustomEntry(node, key){
+  var d=_mntLibEnsure(node);
+  return d.mounts.find(function(x){ return x.key===key; }) || null;
+}
+function veMntLibCurveToggle(nodeId, key){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  var d=_mntLibEnsure(node);
+  d._curveEditKey = (d._curveEditKey===key) ? null : key;
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+// Etkinleştir: girdinin sz'sinden (statik kz, N/mm) LİNEER başlangıç eğrisi tohumla.
+// Başta lineerle aynı sonucu verir; kullanıcı ilerlemeli/asimetrik yaparak ayrıştırır.
+function veMntLibCurveEnable(nodeId, key){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  var e=_mntLibCustomEntry(node, key); if(!e) return;
+  var kz=_mntNum(e.sz, 0);   // N/mm
+  e.curveZ=[[-15,-15*kz],[-7.5,-7.5*kz],[0,0],[7.5,7.5*kz],[15,15*kz]];
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+function veMntLibCurveDisable(nodeId, key){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  var e=_mntLibCustomEntry(node, key); if(e) delete e.curveZ;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+// Nokta düzenle — YENİDEN ÇİZME YOK (odak korunur). col: 0=δ[mm], 1=f[N].
+function veMntLibCurveSetPoint(nodeId, key, idx, col, val){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  var e=_mntLibCustomEntry(node, key);
+  if(!e || !Array.isArray(e.curveZ) || !e.curveZ[idx]) return;
+  e.curveZ[idx][col]=_mntNum(val, 0);
+  if(typeof saveState==='function') saveState();
+}
+function veMntLibCurveAddPoint(nodeId, key){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  var e=_mntLibCustomEntry(node, key); if(!e || !Array.isArray(e.curveZ)) return;
+  var last=e.curveZ[e.curveZ.length-1]||[0,0];
+  e.curveZ.push([_mntNum(last[0],0)+5, _mntNum(last[1],0)]);   // son noktanın 5 mm ötesine
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+function veMntLibCurveRemovePoint(nodeId, key, idx){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  var e=_mntLibCustomEntry(node, key); if(!e || !Array.isArray(e.curveZ)) return;
+  e.curveZ.splice(idx,1);
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+// Özel girdi için eğri editörü kartı (kütüphane panelinde, özel tablonun altında).
+function _mntLibCurveEditor(node, e){
+  var pts = Array.isArray(e.curveZ) ? e.curveZ : null;
+  var head='<div style="display:flex; justify-content:flex-end; margin-bottom:6px;"><button onclick="veMntLibCurveToggle(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="background:none; border:1px solid var(--border-color); color:var(--text-muted); cursor:pointer; padding:2px 8px; font-size:0.6rem; border-radius:4px;">Kapat ✕</button></div>';
+  var inner;
+  if(!pts || pts.length<2){
+    inner = '<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.45; margin-bottom:8px;">'
+      + '<b>'+_mntEsc(e.name||'Takoz')+'</b> için düşey (z) kuvvet–sehim eğrisi tanımlarsanız, bu takoz tipi '
+      + 'bir Takoz\'a uygulandığında çözücü onu <b>nonlineer</b> (Newton) çözer. Tanımlanmazsa statik kz ile lineer kalır.</div>'
+      + '<button onclick="veMntLibCurveEnable(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="width:100%; padding:7px; font-size:0.66rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">＋ z-eğrisi ekle (sz\'den lineer tohum)</button>';
+  } else {
+    inner = '<div style="font-size:0.54rem; color:var(--text-muted); line-height:1.4; margin-bottom:7px;">δ: sehim [mm], f: kuvvet [N] (basma <b>−</b>). Çözücü δ\'ya göre sıralar; monoton eğri önerilir.</div>';
+    inner += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.6rem; margin-bottom:7px;"><thead><tr>'
+      + '<th style="'+_mntMxTh()+'">δ [mm]</th><th style="'+_mntMxTh()+'">f [N]</th><th style="'+_mntMxTh()+'"></th></tr></thead><tbody>';
+    pts.forEach(function(p,i){
+      inner += '<tr>'
+        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[0])+'" step="0.5" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',0,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[1])+'" step="10" onchange="veMntLibCurveSetPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+',1,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+'"><button onclick="veMntLibCurveRemovePoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\','+i+')" title="Noktayı sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:1px 6px; font-size:0.7rem; line-height:1;">✕</button></td>'
+        + '</tr>';
+    });
+    inner += '</tbody></table></div>';
+    inner += '<div style="display:flex; gap:5px;">'
+      + '<button onclick="veMntLibCurveAddPoint(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">＋ nokta</button>'
+      + '<button onclick="veMntLibCurveDisable(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">Lineere dön</button>'
+      + '</div>';
+  }
+  return _mntCard('Nonlineer z-eğrisi — '+_mntEsc(e.name||'Takoz'),'düşey kuvvet–sehim','var(--accent-danger)', head+inner);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -2088,11 +2131,12 @@ if(typeof module!=='undefined' && module.exports){
     veMntGetLibraryMap: veMntGetLibraryMap,
     veMntGetLibraryList: veMntGetLibraryList,
     veMntApplyLib: veMntApplyLib,
-    veMntCurveEnable: veMntCurveEnable,
-    veMntCurveDisable: veMntCurveDisable,
-    veMntCurveSetPoint: veMntCurveSetPoint,
-    veMntCurveAddPoint: veMntCurveAddPoint,
-    veMntCurveRemovePoint: veMntCurveRemovePoint,
+    veMntLibCurveToggle: veMntLibCurveToggle,
+    veMntLibCurveEnable: veMntLibCurveEnable,
+    veMntLibCurveDisable: veMntLibCurveDisable,
+    veMntLibCurveSetPoint: veMntLibCurveSetPoint,
+    veMntLibCurveAddPoint: veMntLibCurveAddPoint,
+    veMntLibCurveRemovePoint: veMntLibCurveRemovePoint,
     veMntLibAdd: veMntLibAdd,
     veMntLibRemove: veMntLibRemove,
     veMntLibSet: veMntLibSet,

@@ -749,54 +749,89 @@ describe('Garip açıklamalar kaldırıldı (Adams dahil)', () => {
   });
 });
 
-// ═══════════════ Faz 4 — Nonlineer z-eğrisi UI + veri taşıma ═══════════════
-describe('Takoz nonlineer z-eğrisi (Faz 4)', () => {
+// ═══════════ Nonlineer z-eğrisi — Takoz Özellikleri (kütüphane) bileşeninde ═══════════
+// Eğri, takoz TİPİNİN özelliği: kütüphane özel girdisinde tutulur, veMntApplyLib ile
+// Takoz'a kopyalanır. Takoz panelinde YALNIZ salt-okunur not; düzenleme kütüphanede.
+describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde', () => {
   afterEach(() => { delete global.nodes; });
+  const libNode = () => ({ id: 'lib1', type: 'mnt-library', def: { isMountLibrary: true },
+    data: { mounts: [{ key: 'k1', name: 'Özel A', sx: 100, sy: 100, sz: 640, dx: 150, dy: 150, dz: 980 }] } });
 
-  test('eğri yokken panel "＋ Nonlineer z-eğrisi ekle" düğmesi gösterir', () => {
-    const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: { kzs: 640 } });
-    expect(html).toContain('Nonlineer z-eğrisi ekle');
-    expect(html).toContain("veMntCurveEnable('m1')");
-    expect(html).not.toContain('veMntCurveAddPoint');
+  test('Takoz panelinde eğri EDİTÖRÜ YOK; curveZ varsa salt-okunur not', () => {
+    const noCurve = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: { kzs: 640 } });
+    expect(noCurve).not.toContain('veMntCurveEnable');
+    expect(noCurve).not.toContain('z-eğrisi ekle');
+    const withCurve = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: { kzs: 640, curveZ: [[-10, -6400], [0, 0], [10, 6400]] } });
+    expect(withCurve).toContain('nonlineer z-eğrisi');          // salt-okunur bilgi notu
+    expect(withCurve).toContain('Takoz Özellikleri');
+    expect(withCurve).not.toContain('veMntLibCurveSetPoint');   // burada düzenlenmez
   });
 
-  test('eğri varken panel düzenlenebilir (δ,f) tablosu + nokta/lineere-dön düğmeleri', () => {
-    const node = { id: 'm1', type: 'mnt-mount', def: {}, data: { kzs: 640, curveZ: [[-10, -6400], [0, 0], [10, 6400]] } };
-    const html = cp.getMntMountPropertiesHTML(node);
-    expect(html).toContain("veMntCurveSetPoint('m1',0,0");
-    expect(html).toContain("veMntCurveSetPoint('m1',2,1");
-    expect(html).toContain("veMntCurveAddPoint('m1')");
-    expect(html).toContain("veMntCurveRemovePoint('m1',1)");
-    expect(html).toContain("veMntCurveDisable('m1')");
+  test('kütüphane paneli: özel takoz satırında ∿ eğri düğmesi', () => {
+    const html = cp.getMntLibraryPropertiesHTML(libNode());
+    expect(html).toContain("veMntLibCurveToggle('lib1','k1')");
   });
 
-  test('veMntCurveEnable kzs\'den lineer eğri tohumlar (f=kzs·δ, 5 nokta)', () => {
-    const node = { id: 'm1', type: 'mnt-mount', data: { kzs: 640 } };
-    global.nodes = [node];
-    cp.veMntCurveEnable('m1');
-    expect(node.data.curveZ).toHaveLength(5);
-    // (δ_mm, f_N): f = kzs · δ → 15 mm'de 9600 N
-    expect(node.data.curveZ[4]).toEqual([15, 9600]);
-    expect(node.data.curveZ[2]).toEqual([0, 0]);
+  test('kütüphane paneli: editör açıkken (δ,f) düzenleyici görünür', () => {
+    const n = libNode();
+    n.data.mounts[0].curveZ = [[-10, -6400], [0, 0], [10, 6400]];
+    n.data._curveEditKey = 'k1';
+    const html = cp.getMntLibraryPropertiesHTML(n);
+    expect(html).toContain("veMntLibCurveSetPoint('lib1','k1',0,0");
+    expect(html).toContain("veMntLibCurveAddPoint('lib1','k1')");
+    expect(html).toContain("veMntLibCurveRemovePoint('lib1','k1',1)");
+    expect(html).toContain("veMntLibCurveDisable('lib1','k1')");
   });
 
-  test('veMntCurveDisable eğriyi siler (lineere döner)', () => {
-    const node = { id: 'm1', type: 'mnt-mount', data: { kzs: 640, curveZ: [[-10, -6400], [10, 6400]] } };
-    global.nodes = [node];
-    cp.veMntCurveDisable('m1');
-    expect(node.data.curveZ).toBeUndefined();
+  test('veMntLibCurveEnable sz\'den lineer eğri tohumlar (f=sz·δ, 5 nokta)', () => {
+    const n = libNode();
+    global.nodes = [n];
+    cp.veMntLibCurveEnable('lib1', 'k1');
+    const cz = n.data.mounts[0].curveZ;
+    expect(cz).toHaveLength(5);
+    expect(cz[4]).toEqual([15, 9600]);   // 15 mm · 640 N/mm
+    expect(cz[2]).toEqual([0, 0]);
   });
 
-  test('veMntCurveSetPoint/AddPoint/RemovePoint noktaları düzenler', () => {
-    const node = { id: 'm1', type: 'mnt-mount', data: { curveZ: [[-10, -6400], [0, 0], [10, 6400]] } };
-    global.nodes = [node];
-    cp.veMntCurveSetPoint('m1', 2, 1, '9000');     // f[2] = 9000 (string → parse)
-    expect(node.data.curveZ[2]).toEqual([10, 9000]);
-    cp.veMntCurveAddPoint('m1');
-    expect(node.data.curveZ).toHaveLength(4);
-    cp.veMntCurveRemovePoint('m1', 0);
-    expect(node.data.curveZ).toHaveLength(3);
-    expect(node.data.curveZ[0]).toEqual([0, 0]);
+  test('veMntLibCurve Disable/SetPoint/AddPoint/RemovePoint özel girdiyi düzenler', () => {
+    const n = libNode();
+    n.data.mounts[0].curveZ = [[-10, -6400], [0, 0], [10, 6400]];
+    global.nodes = [n];
+    cp.veMntLibCurveSetPoint('lib1', 'k1', 2, 1, '9000');
+    expect(n.data.mounts[0].curveZ[2]).toEqual([10, 9000]);
+    cp.veMntLibCurveAddPoint('lib1', 'k1');
+    expect(n.data.mounts[0].curveZ).toHaveLength(4);
+    cp.veMntLibCurveRemovePoint('lib1', 'k1', 0);
+    expect(n.data.mounts[0].curveZ).toHaveLength(3);
+    cp.veMntLibCurveDisable('lib1', 'k1');
+    expect(n.data.mounts[0].curveZ).toBeUndefined();
+  });
+
+  test('veMntGetLibraryMap özel girdinin curveZ\'sini taşır', () => {
+    const n = libNode();
+    n.data.mounts[0].curveZ = [[-15, -9600], [0, 0], [15, 9600]];
+    global.nodes = [n];
+    const map = cp.veMntGetLibraryMap();
+    expect(map['k1'].curveZ).toEqual([[-15, -9600], [0, 0], [15, 9600]]);
+    // Eğrisiz özel girdi → curveZ null
+    n.data.mounts[0].curveZ = undefined;
+    expect(cp.veMntGetLibraryMap()['k1'].curveZ).toBeNull();
+  });
+
+  test('veMntApplyLib eğriyi kütüphaneden Takoz\'a KOPYALAR; lineer girdi temizler', () => {
+    const n = libNode();
+    n.data.mounts[0].curveZ = [[-15, -9600], [0, 0], [15, 9600]];
+    n.data.mounts.push({ key: 'k2', name: 'Lineer B', sx: 200, sy: 200, sz: 500, dx: 300, dy: 300, dz: 750 });
+    const mount = { id: 'mm', type: 'mnt-mount', data: {} };
+    global.nodes = [mount, n];
+    cp.veMntApplyLib('mm', 'k1');
+    expect(mount.data.curveZ).toEqual([[-15, -9600], [0, 0], [15, 9600]]);
+    expect(mount.data.curveZ).not.toBe(n.data.mounts[0].curveZ);   // kopya (snapshot), referans değil
+    expect(mount.data.kzs).toBe(640);
+    // Lineer girdi uygula → eski eğri temizlenir
+    cp.veMntApplyLib('mm', 'k2');
+    expect(mount.data.curveZ).toBeUndefined();
+    expect(mount.data.kzs).toBe(500);
   });
 
   test('_mntGatherForSolver + _mntToSI eğriyi çekirdeğe SI olarak taşır', () => {
