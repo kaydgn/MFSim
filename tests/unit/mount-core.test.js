@@ -402,3 +402,81 @@ describe('mountStaticLaws — takoz 3-eksen yasası (karma lineer/eğri)', () =>
     expect(laws[0].force(0.001)).toBeCloseTo(1252, 6);
   });
 });
+
+// ═══════════════ Faz 2 — solveCaseNL: Newton-Raphson + aktif-küme ═══════════════
+// En kritik değişmez: TÜMÜYLE LİNEER takozda Newton, mevcut solveCaseStop ile
+// birebir aynı sonucu üretmeli (Newton ilk adımda tam lineer çözüme iner).
+describe('solveCaseNL — Newton çözücü (Faz 2)', () => {
+  const cases = [
+    { name: 'Static',   n: [0, 0, -1],   T: [0, 0, 0] },
+    { name: 'Max Bump', n: [0, 0, -3.5], T: [0, 0, 0] },       // durdurucu devreye girer
+    { name: 'Braking',  n: [-1, 0, -1],  T: [0, 0, 0] },
+    { name: 'Fwd Tork', n: [0, 0, -1],   T: [-6667.07, 0, 0] } // çekme (lift-off) senaryosu
+  ];
+  const kzMount = (idx, pts) => mounts.map((mn, i) => i === idx ? Object.assign({}, mn, { curves: { z: pts } }) : mn);
+  const linCurve = (kz) => [[-0.02, -0.02*kz], [-0.01, -0.01*kz], [0, 0], [0.01, 0.01*kz], [0.02, 0.02*kz]];
+
+  test('lineer takozda solveCaseStop ile BİREBİR (çekirdek değişmezliği)', () => {
+    cases.forEach(lc => {
+      const a = core.solveCaseStop(Kstat, mounts, mp.cg, mp.m, g, lc, { useStop: true });
+      const b = core.solveCaseNL(mounts, mp.cg, mp.m, g, lc, { useStop: true });
+      expect(b).not.toBeNull();
+      for (let i = 0; i < 6; i++) expect(b.q[i]).toBeCloseTo(a.q[i], 8);
+      a.perMount.forEach((pm, i) => {
+        for (let k = 0; k < 3; k++) {
+          expect(b.perMount[i].delta[k]).toBeCloseTo(pm.delta[k], 8);
+          expect(b.perMount[i].f[k]).toBeCloseTo(pm.f[k], 1);
+        }
+        expect(b.perMount[i].clamped).toBe(pm.clamped);
+        expect(b.perMount[i].tension).toBe(pm.tension);
+      });
+      expect(b.checks.converged).toBe(true);
+      expect(b.checks.stopConverged).toBe(a.checks.stopConverged);
+    });
+  });
+
+  test('denge sağlanır: Σf_z = −m·g (Static)', () => {
+    const b = core.solveCaseNL(mounts, mp.cg, mp.m, g, { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] }, { useStop: true });
+    expect(b.checks.sumFzOk).toBe(true);
+    expect(b.sumF[2]).toBeCloseTo(-mp.m * g, 0);
+    expect(b.checks.newtonIters).toBeGreaterThan(0);
+  });
+
+  test('lineere-DENK eğri (doğru üstünde noktalar) → lineerle aynı', () => {
+    const lc = { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] };
+    const a = core.solveCaseNL(mounts, mp.cg, mp.m, g, lc, { useStop: true });
+    const b = core.solveCaseNL(kzMount(0, linCurve(mounts[0].kstat[2])), mp.cg, mp.m, g, lc, { useStop: true });
+    for (let i = 0; i < 6; i++) expect(b.q[i]).toBeCloseTo(a.q[i], 8);
+  });
+
+  test('daha rijit ilerlemeli eğri → o takozda |δz| azalır (fizik yönü)', () => {
+    const kz = mounts[0].kstat[2];
+    const stiff = [[-0.02, -0.02*kz*2], [-0.01, -0.01*kz*2], [0, 0], [0.01, 0.01*kz*2], [0.02, 0.02*kz*2]];
+    const lc = { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] };
+    const a = core.solveCaseNL(mounts, mp.cg, mp.m, g, lc, { useStop: true });
+    const b = core.solveCaseNL(kzMount(0, stiff), mp.cg, mp.m, g, lc, { useStop: true });
+    expect(Math.abs(b.perMount[0].delta[2])).toBeLessThan(Math.abs(a.perMount[0].delta[2]));
+    expect(b.checks.converged).toBe(true);
+  });
+
+  test('K_T tekil (boş takoz) → null', () => {
+    expect(core.solveCaseNL([], mp.cg, mp.m, g, { name: 'x', n: [0, 0, -1], T: [0, 0, 0] }, { useStop: true })).toBeNull();
+  });
+
+  test('solveAllCases: eğri VARSA Newton yoluna geçer, lineerde solveCaseStop', () => {
+    const model = { m: mp.m, cg: mp.cg, Kstat, mounts, g };
+    expect(core.anyCurve(mounts)).toBe(false);
+    const linRes = core.solveAllCases(model, cases, { useStop: true });
+
+    const m2 = kzMount(0, linCurve(mounts[0].kstat[2]));
+    expect(core.anyCurve(m2)).toBe(true);
+    const model2 = { m: mp.m, cg: mp.cg, Kstat, mounts: m2, g };
+    const nlRes = core.solveAllCases(model2, cases, { useStop: true });
+
+    linRes.forEach((rc, ci) => {
+      rc.res.perMount.forEach((pm, i) => {
+        expect(nlRes[ci].res.perMount[i].delta[2]).toBeCloseTo(pm.delta[2], 7);
+      });
+    });
+  });
+});

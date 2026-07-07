@@ -494,6 +494,135 @@ var veMountCore = (function() {
     return {q, F, perMount, sumF, checks};
   }
 
+  // ═══════════════════ Nonlineer statik çözüm — Newton-Raphson (eğri takoz) ═══════════════════
+  //
+  // Takozların bir kısmı NONLİNEER kuvvet-sehim yasası (curves) taşıyorsa sistem
+  // artık lineer değildir; denge Newton-Raphson ile çözülür (SPEC ek — Faz 2):
+  //   r(q)   = Σ Aᵢᵀ·fᵢ(δᵢ) − F_dış        (artık; δᵢ = Aᵢ·q)
+  //   K_T(q) = Σ Aᵢᵀ·diag(φ'ᵢ(δᵢ))·Aᵢ       (tanjant rijitlik)
+  //   K_T·Δq = −r ,  q ← q + λ·Δq           (λ: geri-izlemeli sönüm)
+  // Metal-metal durdurucu (±15 mm) yine AKTİF-KÜME ile (dış döngü); her aktif-küme
+  // adımında Newton iç döngüsü sabit kümede dengeyi çözer. KARMA sistem: bazı takoz
+  // lineer, bazısı eğrili olabilir — hepsi TEK sistemde birlikte çözülür.
+  //
+  // GERİYE UYUM (kanıt): tümüyle lineer takozda φ'=k sabittir, r q'da doğrusaldır →
+  // Newton İLK adımda K_eff·q=rhs'yi tam çözer; aktif-küme mantığı solveCaseStop ile
+  // birebir aynıdır → sonuç solveCaseStop ile eşleşir (Faz 2 karşılaştırma testi).
+  // Bu yüzden solveAllCases yalnız eğri VARSA bu yola girer; hepsi-lineerde dokunulmaz.
+  // Dönüş biçimi solveCaseStop ile AYNI + checks.converged (Newton) & checks.newtonIters.
+  const NL_NEWTON_MAXITER = 60;
+  const NL_RTOL = 1e-9;
+  function solveCaseNL(mounts, cg, m, g, lc, opts){
+    opts = opts || {};
+    const gap   = (opts.gap != null)        ? opts.gap        : STOP_GAP_M;
+    const ratio = (opts.stiffRatio != null) ? opts.stiffRatio : STOP_STIFF_RATIO;
+    const useStop = (opts.useStop !== false);        // varsayılan: durdurucu açık
+    const F=[m*g*lc.n[0], m*g*lc.n[1], m*g*lc.n[2], lc.T[0], lc.T[1], lc.T[2]];
+    const N=mounts.length;
+    const A=[], az=[], laws=[];
+    for(const mnt of mounts){
+      const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
+      const Ai=makeA(d); A.push(Ai); az.push(Ai[2]); laws.push(mountStaticLaws(mnt));
+    }
+    const active = new Array(N).fill(0);             // 0 / −1 (alt) / +1 (üst) durdurucu
+    const Fscale = norm(F) + m*g + 1;
+    const tol = NL_RTOL * Fscale;
+
+    // (q, aktif küme) → { g6: iç genelleştirilmiş kuvvet Σ Aᵀf, KT: tanjant (wantK) }.
+    function assemble(q, wantK){
+      const g6=[0,0,0,0,0,0];
+      const KT=wantK?zeros(6,6):null;
+      for(let i=0;i<N;i++){
+        const Ai=A[i], law=laws[i];
+        const d0=Ai[0].reduce((s,a,j)=>s+a*q[j],0);
+        const d1=Ai[1].reduce((s,a,j)=>s+a*q[j],0);
+        const d2=Ai[2].reduce((s,a,j)=>s+a*q[j],0);
+        let fx=law[0].force(d0), fy=law[1].force(d1), fz=law[2].force(d2);
+        let kx=0,ky=0,kz=0;
+        if(wantK){ kx=law[0].tangent(d0); ky=law[1].tangent(d1); kz=law[2].tangent(d2); }
+        if(useStop && active[i]){                    // metal-metal temas (z ekseni)
+          const kS=mounts[i].kstat[2]*ratio;
+          fz += kS*(d2-active[i]*gap);
+          if(wantK) kz += kS;
+        }
+        for(let a=0;a<6;a++) g6[a]+=Ai[0][a]*fx+Ai[1][a]*fy+Ai[2][a]*fz;
+        if(wantK){
+          const kv=[kx,ky,kz];
+          for(let ax=0;ax<3;ax++){ const kk=kv[ax], row=Ai[ax];
+            for(let a=0;a<6;a++){ const t=kk*row[a]; for(let b=0;b<6;b++) KT[a][b]+=t*row[b]; } }
+        }
+      }
+      return {g6, KT};
+    }
+    function residNorm(q){
+      const g6=assemble(q,false).g6;
+      let s=0; for(let a=0;a<6;a++){ const r=g6[a]-F[a]; s+=r*r; } return Math.sqrt(s);
+    }
+
+    let q=new Array(6).fill(0);
+    let converged=true, newtonIters=0, stopConverged=false;
+    const OUTER = useStop ? STOP_MAXITER : 1;
+    for(let outer=0; outer<OUTER; outer++){
+      // ── Newton iç döngü (aktif küme sabit) ──
+      let nconv=false;
+      for(let nit=0; nit<NL_NEWTON_MAXITER; nit++){
+        newtonIters++;
+        const asm=assemble(q,true);
+        const r=[0,0,0,0,0,0]; let rn2=0;
+        for(let a=0;a<6;a++){ r[a]=asm.g6[a]-F[a]; rn2+=r[a]*r[a]; }
+        const rn=Math.sqrt(rn2);
+        if(rn<=tol){ nconv=true; break; }
+        const neg=r.map(function(v){return -v;});
+        const dq=solveLinear(asm.KT, neg);
+        if(!dq) return null;                          // K_T tekil → çözülemez
+        // Geri-izlemeli sönüm: adım artığı büyütürse yarıla (nonlineer kararlılık).
+        let lam=1, qn=q.map((v,i)=>v+dq[i]), rnn=residNorm(qn), bt=0;
+        while(rnn>rn && bt<12){ lam*=0.5; qn=q.map((v,i)=>v+lam*dq[i]); rnn=residNorm(qn); bt++; }
+        q=qn;
+        if(rnn<=tol){ nconv=true; break; }
+      }
+      converged = converged && nconv;
+      if(!useStop){ stopConverged=true; break; }
+      // ── aktif küme güncelle (gap'i aşan → temas; içine dönen → serbest) ──
+      let changed=false;
+      for(let i=0;i<N;i++){
+        const dz=az[i].reduce((s,a,j)=>s+a*q[j],0);
+        const want=(dz<-gap)?-1:(dz>gap)?+1:0;
+        if(want!==active[i]){ active[i]=want; changed=true; }
+      }
+      if(!changed){ stopConverged=true; break; }
+    }
+    // ── Sonuç kur (solveCaseStop ile AYNI biçim; kuvvet yasadan, durdurucu dahil) ──
+    const perMount=[]; const sumF=[0,0,0];
+    let tensionCount=0, overLinearCount=0, clampCount=0;
+    for(let i=0;i<N;i++){
+      const mnt=mounts[i], law=laws[i];
+      const delta=[0,1,2].map(k=>A[i][k].reduce((s,a,j)=>s+a*q[j],0));
+      let fz=law[2].force(delta[2]);
+      if(useStop && active[i]) fz += mnt.kstat[2]*ratio*(delta[2]-active[i]*gap);
+      const f=[law[0].force(delta[0]), law[1].force(delta[1]), fz];
+      for(let k=0;k<3;k++) sumF[k]+=f[k];
+      const tension = delta[2] > TENSION_EPS_M;      if(tension) tensionCount++;
+      const overLinear = delta.some(dv => Math.abs(dv) > LINEAR_LIMIT_M); if(overLinear) overLinearCount++;
+      const clamped = active[i] !== 0;               if(clamped) clampCount++;
+      perMount.push({name:mnt.name, delta, f, tension, overLinear, clamped});
+    }
+    const checks={
+      sumFzOk: Math.abs(sumF[2]-F[2]) < 1e-3*Math.max(1,Math.abs(F[2])),
+      sumFzResidual: sumF[2]-F[2],
+      tensionCount, overLinearCount, clampCount,
+      stopConverged, converged, newtonIters
+    };
+    return {q, F, perMount, sumF, checks};
+  }
+
+  // Takozda en az bir eksende nonlineer eğri (≥2 nokta) tanımlı mı?
+  function mountHasCurve(mnt){
+    const c=mnt && mnt.curves; if(!c) return false;
+    return (c.x&&c.x.length>=2)||(c.y&&c.y.length>=2)||(c.z&&c.z.length>=2);
+  }
+  function anyCurve(mounts){ return (mounts||[]).some(mountHasCurve); }
+
   // Çoklu yük durumu: sistem lineer → durumlar bağımsız çözülür.
   // model = { m, cg, Kstat, mounts, g }. Dönüş satırları Adams çıktı düzeni
   // (satır = yük durumu, sütun = takoz × {δx,δy,δz}).
@@ -502,9 +631,15 @@ var veMountCore = (function() {
   //   dağıtım. Küçük sehimde iki yol da AYNI (lineer) sonucu verir.
   function solveAllCases(model, cases, opts){
     opts = opts || {};
-    const solve = opts.useStop
-      ? (lc => solveCaseStop(model.Kstat, model.mounts, model.cg, model.m, model.g, lc, opts))
-      : (lc => solveCase(model.Kstat, model.mounts, model.cg, model.m, model.g, lc));
+    // Eğri (nonlineer) takoz VARSA → Newton (solveCaseNL); YOKSA mevcut lineer yol
+    // (solveCaseStop / solveCase) birebir korunur. Karar model.mounts'a bakar.
+    const nonlinear = anyCurve(model.mounts);
+    const solve = nonlinear
+      ? (lc => solveCaseNL(model.mounts, model.cg, model.m, model.g, lc,
+                           Object.assign({}, opts, {useStop: opts.useStop!==false})))
+      : opts.useStop
+        ? (lc => solveCaseStop(model.Kstat, model.mounts, model.cg, model.m, model.g, lc, opts))
+        : (lc => solveCase(model.Kstat, model.mounts, model.cg, model.m, model.g, lc));
     return cases.map(lc => {
       const res = solve(lc);
       return res ? {name: lc.name, loadCase: lc, res}
@@ -1015,7 +1150,7 @@ var veMountCore = (function() {
   return {
     // Model
     combineMassProps, buildK, buildM6, buildModel,
-    solveCase, solveCaseStop, solveAllCases, solveModal,
+    solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
     transmissibility,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
@@ -1025,7 +1160,7 @@ var veMountCore = (function() {
     // Birim dönüşümleri (UI katmanı için)
     mmToM, nPerMmToNPerM,
     // Constitutive — takoz kuvvet yasası (Newton çözücüsü + testler için)
-    buildMonotoneCubic, makeAxisLaw, mountStaticLaws,
+    buildMonotoneCubic, makeAxisLaw, mountStaticLaws, mountHasCurve, anyCurve,
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
     // Sabitler
