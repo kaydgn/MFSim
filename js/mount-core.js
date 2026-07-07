@@ -13,10 +13,9 @@
 //    mm / N/mm ↔ SI dönüşümü yalnızca UI okuma/yazma katmanında yapılır.
 //  - Genelleştirilmiş koordinatlar q = [ux,uy,uz,θx,θy,θz], referans nokta
 //    birleşik ağırlık merkezi G (kütle matrisi blok köşegen olur).
-//  - Takoz sehimi: δ = u + θ×d = A·q,  A = [E3 | −skew(d′)],  d = r_mount − c_G.
-//    Z-EKSENİ KONVANSİYONU: kaldıraç kolunun düşey bileşeni kuplaja ters işaretle
-//    girer (d′ = (dx,dy,−dz)); buna eşlenik atalet çarpımları Ixz/Iyz de modal
-//    kütlede çevrilir (bkz. makeA + buildM6). Adams BMC_TTAR_2031 kalibrasyonu.
+//  - Takoz sehimi: δ = u + θ×d = A·q,  A = [E3 | −skew(d)],  d = r_mount − c_G.
+//    STANDART birinci-prensip kinematiği (işaret çevirmesi yok). Regresyon kilidi:
+//    frende güç grubu BURUN AŞAĞI (ön takozlar daha çok basılı) — bkz. makeA.
 //  - Takozun şasiye ilettiği kuvvet f = k·δ; statik yerçekiminde δz ve fz
 //    NEGATİF (basma). Çekme (lift-off): δz > +0.01 mm.
 //  - Atalet çarpım terimleri TENSÖR BİLEŞENİ olarak girilir (CATIA Measure
@@ -209,25 +208,21 @@ var veMountCore = (function() {
 
   // ═══════════════════ Model kurulumu (SPEC Bölüm 4) ═══════════════════
 
-  // skew(d): standart çapraz çarpım matrisi (skew(d)·θ = d×θ, SPEC 3.3).
+  // skew(d): δ = u + θ×d ifadesindeki çapraz çarpım matrisi (skew(d)·θ = d×θ).
   const skew = d => [[0,-d[2],d[1]],[d[2],0,-d[0]],[-d[1],d[0],0]];
 
-  // A = [E3 | −skew(d′)],  d′ = (dx, dy, −dz) — takoz kinematik matrisi: δ = A·q.
+  // A = [E3 | −skew(d)] — takoz kinematik matrisi: δ = A·q,  d = r_mount − c_G.
   //
-  // ── Z-EKSENİ KUPLAJ KONVANSİYONU (Adams kalibrasyon düzeltmesi) ──
-  // Kaldıraç kolunun DÜŞEY bileşeni dz, dönme→düzlem-içi çökme kuplajına TERS
-  // işaretle girer (d′ₖ = −dz). Kök neden: modelin geometri z-ekseni ile
-  // yük/yerçekimi z-ekseni arasındaki işaret tutarsızlığı. Adams BMC_TTAR_2031
-  // referansı, YALNIZCA dz'nin (ve buna eşlenik atalet çarpımları Ixz/Iyz'nin,
-  // bkz. buildM6) işareti çevrildiğinde tüm senaryolarda (statik, fren,
-  // hızlanma, viraj, tork) δx ve δy'yi birebir üretir.
-  //   • δz = uz + dy·θx − dx·θy  →  dz İÇERMEZ, bu yüzden ETKİLENMEZ (hep doğruydu).
-  //   • z'de ÇİFT dereceli terimler (δz, Izz, dz²) değişmez;
-  //     z'de TEK dereceli terimler (dz, Ixz, Iyz) çevrilir — improper (z-düzlemi)
-  //     yansıma imzası. İkisi eşlenik: birlikte çevrilince modal DEĞİŞMEZ
-  //     (congruence), çökme DÜZELİR.
+  // STANDART rijit gövde kinematiği: δ_i = u + θ×d_i (birinci-prensip).
+  // Kaldıraç kolunun düşey bileşeni dz, dönme→düzlem-içi çökme kuplajına DOĞRUDAN
+  // girer; hiçbir işaret çevirmesi YOK. Fiziksel akıl-sağlığı testi (regresyon):
+  // frende (öne atalet, CG takozların ÜSTÜNDE) güç grubu BURUN AŞAĞI döner →
+  // ön takozlar arka takozlardan daha çok basılı olmalı (K[x,θy] = k_x·Σdz < 0,
+  // takozlar CG altında olduğundan). Bu, önceki "z-ekseni konvansiyonu" (F1)
+  // düzeltmesinin GERİ ALINMASIDIR: v2 bağımsız türevi, F1'in Adams'ın sistematik
+  // kuplaj-işareti hatasını kopyaladığını gösterdi (bkz. tests T2/T3, selfTest).
   const makeA = d => {
-    const S=skew([d[0], d[1], -d[2]]);
+    const S=skew(d);
     return [[1,0,0,-S[0][0],-S[0][1],-S[0][2]],
             [0,1,0,-S[1][0],-S[1][1],-S[1][2]],
             [0,0,1,-S[2][0],-S[2][1],-S[2][2]]];
@@ -281,23 +276,12 @@ var veMountCore = (function() {
   }
 
   // Kütle matrisi (SPEC 4.1): M6 = blockdiag(m·E3, I_G).
-  //
-  // ── Z-EKSENİ KUPLAJ KONVANSİYONU (bkz. makeA) ──
-  // Kinematikteki dz işaret çevirmesiyle TUTARLI olması için, atalet tensörünün
-  // z'de TEK dereceli çarpım terimleri Ixz (=I_G[0][2]) ve Iyz (=I_G[1][2])
-  // modal kütle matrisine ters işaretle girer. Böylece (K_dyn, M6) çifti aynı
-  // (Adams-tutarlı) çerçevede kalır ve modal frekanslar DEĞİŞMEZ — z-düzlemi
-  // yansıması bir congruence dönüşümü olduğundan genelleştirilmiş özdeğerleri
-  // korur. combineMassProps'un döndürdüğü I_G ise HAM CATIA çerçevesinde kalır
-  // (T1 doğrulaması ve raporlamada fiziksel doğru değer); çevirme yalnızca
-  // burada, solver kütle matrisinde yapılır.
+  // Atalet tensörü HAM CATIA çerçevesinde girer (hiçbir işaret çevirmesi YOK);
+  // standart makeA ile tutarlı → modal frekanslar 5.039…21.239 Hz (Adams T6).
   function buildM6(m, I_G){
     const M=zeros(6,6);
     M[0][0]=M[1][1]=M[2][2]=m;
-    const I = I_G.map(r=>r.slice());
-    I[0][2]=-I[0][2]; I[2][0]=-I[2][0];   // Ixz
-    I[1][2]=-I[1][2]; I[2][1]=-I[2][1];   // Iyz
-    for(let i=0;i<3;i++) for(let j=0;j<3;j++) M[3+i][3+j]=I[i][j];
+    for(let i=0;i<3;i++) for(let j=0;j<3;j++) M[3+i][3+j]=I_G[i][j];
     return M;
   }
 
@@ -809,11 +793,10 @@ var veMountCore = (function() {
     {
       const s = 1e-6; // N/m → MN/m
       const expTT = [7.512, 7.512, 3.840];
-      // Z-EKSENİ KONVANSİYONU (makeA): dz-tek dereceli kuplajlar ters işaretli.
-      // K_tθ'da yalnız [0][1] ve [1][0] (dz'li) çevrilir; K_θθ'da [0][2]/[2][0]
-      // ve [1][2]/[2][1] (θx-θz, θy-θz) çevrilir. dz içermeyenler değişmez.
-      const expTTh = [[0,1.4939,0.0562],[-1.4939,0,-1.3536],[-0.0287,0.6919,0]];
-      const expThTh = [[0.7437,-0.0052,0.9462],[-0.0052,2.5549,0.0112],[0.9462,0.0112,4.8346]];
+      // STANDART skew (birinci-prensip, v2 §2): K[x,θy]=−1.494 (dz-kuplajı, işaret
+      // KRİTİK — frende burun aşağı fiziği bunu gerektirir). Çevirme yok.
+      const expTTh = [[0,-1.4939,0.0562],[1.4939,0,-1.3536],[-0.0287,0.6919,0]];
+      const expThTh = [[0.7437,-0.0052,-0.9462],[-0.0052,2.5549,-0.0112],[-0.9462,-0.0112,4.8346]];
       let ok=true; let det='';
       for(let i=0;i<3;i++){
         if(!near(Kstat[i][i]*s, expTT[i], 0.001)){ ok=false; det+=' K_tt['+i+']='+(Kstat[i][i]*s).toFixed(4); }
@@ -834,10 +817,9 @@ var veMountCore = (function() {
       const th = stat.q.slice(3,6).map(v=>v*1000);    // mrad
       const expDz = [-3.941,-3.892,-6.911,-6.565,-7.104,-6.758];
       const expFz = [-2.522,-2.491,-4.423,-4.201,-4.547,-4.325];
-      // Z-EKSENİ KONVANSİYONU (makeA): ux, uy ve θz işaret çevirir; uz, θx, θy
-      // ve tüm δz/fz DEĞİŞMEZ (δz = uz + dy·θx − dx·θy, dz içermez).
-      let ok = near(u[0], -0.379, 0.005) && near(u[1], -0.084, 0.005) && near(u[2], -6.208, 0.005) &&
-               near(th[0], -0.485, 0.005) && near(th[1], 1.901, 0.005) && near(th[2], 0.072, 0.005);
+      // STANDART skew (v2): statik ux=+0.379, uy=+0.084, θz=−0.072 mrad; δz/fz aynı.
+      let ok = near(u[0], 0.379, 0.005) && near(u[1], 0.084, 0.005) && near(u[2], -6.208, 0.005) &&
+               near(th[0], -0.485, 0.005) && near(th[1], 1.901, 0.005) && near(th[2], -0.072, 0.005);
       let det='q=('+u.map(v=>v.toFixed(3)).join(', ')+') mm, θ=('+th.map(v=>v.toFixed(3)).join(', ')+') mrad;';
       stat.perMount.forEach((pm,i)=>{
         const dz=pm.delta[2]*1000, fz=pm.f[2]/1000;
