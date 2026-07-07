@@ -19,11 +19,11 @@ eval(loadSource('cp-gearbox.js'));       // VE_GEARBOX_PRESETS, VE_FT_SHIFT_PROF
 eval(loadSource('ft-performance.js'));   // FT_SOLVER + veFTRunSimulationEngine
 
 // ── TK'SİZ GÜÇ AKTARMA ZİNCİRİ KUR ──────────────────────────────────────────
-function buildNoTCTopology() {
-  const eng = VE_FT_MOTOR_PRESETS['duramax_lz0_305'];
+function buildNoTCTopology(engineKey, vehOverride) {
+  const eng = VE_FT_MOTOR_PRESETS[engineKey];
   const engineNode = {
     id: 'e1', type: 'engine', data: {
-      ftMotorPreset: 'duramax_lz0_305',
+      ftMotorPreset: engineKey,
       torqueData: eng.data.map(d => ({ rpm: d.rpm, torque: d.torque, power: d.power })),
       motorSpecs: Object.assign({}, eng.specs),
       governedRpm: eng.specs.governedSpeed,
@@ -58,9 +58,9 @@ function buildNoTCTopology() {
   const diffNode = { id: 'd1', type: 'differential', isMasterDiff: true, data: { diffRatio: 3.42, efficiency: 96, diffInertia: 1.0 } };
   const wheelNode = { id: 'w1', type: 'wheel', isMasterWheel: true, data: { ftTireRadius: 0.37, ftTireInertia: 8.0, ftCrr: 0.010, ftSurfaceFactor: 1.0 } };
   const vehicleNode = {
-    id: 'v1', type: 'vehicle', data: {
+    id: 'v1', type: 'vehicle', data: Object.assign({
       ftGVW: 3200, ftDrivenWeight: 100, ftHeight: 1.90, ftWidth: 1.85, ftCd: 0.43, ftRho: 1.225, ftGrade: 0
-    }
+    }, vehOverride || {})
   };
   const shiftCtrlNode = { id: 's1', type: 'shift-controller', data: {} };
   const solverNode = { id: 'sv1', type: 'solver', data: { maxSimTime: 90, ftDt: 0.01, method: 'rk4' } };
@@ -76,7 +76,7 @@ function buildNoTCTopology() {
 describe('TK\'siz (Motor→Şanzıman) tam-gaz koşumu — gerçek çözücü', () => {
   let R;
   beforeAll(() => {
-    buildNoTCTopology();
+    buildNoTCTopology('duramax_lz0_305');
     R = veFTRunSimulationEngine();
   });
 
@@ -122,7 +122,8 @@ describe('TK\'siz (Motor→Şanzıman) tam-gaz koşumu — gerçek çözücü', 
     expect(Math.min.apply(null, gearNums)).toBe(1);   // 1. viteste başlar
   });
 
-  test('vites geçişleri güç tepesi yakınında (~3900 rpm) olur — 8L90 profili', () => {
+  test('vites geçişleri motor governed devrinde (~4000 rpm, LZ0) olur — 8L90 profili', () => {
+    // shiftRefRPM: null → LZ0 governedSpeed'i (4000) kullanılır.
     const gearNums = R.gearMode.map(gm => parseInt(String(gm).replace(/[^0-9]/g, ''), 10));
     const upshiftRpms = [];
     for (let i = 1; i < gearNums.length; i++) {
@@ -130,7 +131,7 @@ describe('TK\'siz (Motor→Şanzıman) tam-gaz koşumu — gerçek çözücü', 
     }
     expect(upshiftRpms.length).toBeGreaterThanOrEqual(6);   // 1→2 ... 7→8
     upshiftRpms.forEach(rpm => {
-      expect(rpm).toBeGreaterThan(3600);
+      expect(rpm).toBeGreaterThan(3700);
       expect(rpm).toBeLessThan(4150);
     });
   });
@@ -151,5 +152,35 @@ describe('TK\'siz (Motor→Şanzıman) tam-gaz koşumu — gerçek çözücü', 
     const ratio = R.T_output[k] / R.engineTorque[k];
     expect(ratio).toBeGreaterThan(0.95);   // yalnız dişli verimi (~0.98), TK kaybı yok
     expect(ratio).toBeLessThanOrEqual(1.0);
+  });
+});
+
+describe('L5P + 8L90 — profil genelliği (düşük-devirli motor 1. viteste TAKILMAZ)', () => {
+  let R;
+  beforeAll(() => {
+    // L5P governedSpeed=3450 → eski sabit 3900'e ASLA ulaşamaz. shiftRefRPM:null
+    // olmasaydı şanzıman 1. viteste takılırdı. Ağır HD kamyon (4500 kg) ile koştur.
+    buildNoTCTopology('duramax_l5p_470', { ftGVW: 4500, ftDrivenWeight: 60 });
+    R = veFTRunSimulationEngine();
+  });
+
+  test('sonuç üretir ve tüm 8 vitese çıkar (takılmıyor)', () => {
+    expect(R.speed.length).toBeGreaterThan(50);
+    expect(R.speed.every(v => Number.isFinite(v))).toBe(true);
+    const gearNums = R.gearMode.map(gm => parseInt(String(gm).replace(/[^0-9]/g, ''), 10));
+    expect(Math.max.apply(null, gearNums)).toBe(8);   // 8. vitese ulaşır → TAKILMIYOR
+  });
+
+  test('vites geçişleri L5P governed devrinde (~3450 rpm) — 3900\'de DEĞİL', () => {
+    const gearNums = R.gearMode.map(gm => parseInt(String(gm).replace(/[^0-9]/g, ''), 10));
+    const upshiftRpms = [];
+    for (let i = 1; i < gearNums.length; i++) {
+      if (gearNums[i] > gearNums[i - 1]) upshiftRpms.push(R.rpm[i - 1]);
+    }
+    expect(upshiftRpms.length).toBeGreaterThanOrEqual(6);
+    upshiftRpms.forEach(rpm => {
+      expect(rpm).toBeGreaterThan(3250);   // L5P governed 3450 civarı
+      expect(rpm).toBeLessThan(3600);      // ← 3900 DEĞİL: profil motora uyarlandı
+    });
   });
 });

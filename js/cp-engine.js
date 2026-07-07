@@ -31,6 +31,7 @@ function getEnginePropertiesHTML(node) {
       {label: 'Cummins ISG 12L', prefix: ['isg']},
       {label: 'Cummins ISM 10.8L', prefix: ['ism']},
       {label: 'Cummins ISX 15L', prefix: ['isx']},
+      {label: 'GM Duramax', prefix: ['duramax_']},
       {label: 'Diğer', prefix: []}
     ];
     var _ftUsed = {};
@@ -1734,6 +1735,46 @@ var VE_FT_MOTOR_PRESETS = {
       {rpm: 3750, torque: 578, power: 227.0},
       {rpm: 4000, torque: 522, power: 218.7},
       {rpm: 5000, torque: 0, power: 0}
+    ],
+    accessories: [
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0},
+      {name: 'Alternatör / Jeneratör', standardLoss: 0, userLoss: 0},
+      {name: 'Hava Kompresörü', standardLoss: 0, userLoss: 0},
+      {name: 'Direksiyon Pompası', standardLoss: 0, userLoss: 0},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
+    ]
+  },
+  'duramax_l5p_470': {
+    name: '6.6L V8 Duramax Turbo Diesel L5P | 1322Nm&350kW',
+    specs: {
+      displacement: 6.60,
+      idleRpm: 700,
+      governedSpeed: 3450,       // "Maximum Powered Speed" (tahrik governor devri)
+      noLoadGoverned: 3600,
+      inertia: 0.5500
+    },
+    // GM L5P (Silverado/Sierra HD) — grafikten dijitalleştirilmiş, rated noktalara
+    // sabit: 1322 Nm (975 lb-ft) @1600, 350 kW (470 HP) @2800. Maks powered 3450 rpm.
+    // (Maks braking 4800 rpm ayrı motor-freni speki; tahrik eğrisi 3450'de governor'a girer.)
+    // Yayınlanan eğri NET (araca kurulu) → aksesuar kayıpları 0 (net = brüt, çift-sayım yok).
+    data: [
+      {rpm: 700, torque: 203, power: 14.9},   // rölanti çapası (grafiğin altı)
+      {rpm: 1000, torque: 271, power: 28.4},
+      {rpm: 1200, torque: 583, power: 73.3},
+      {rpm: 1400, torque: 1085, power: 159.0},
+      {rpm: 1500, torque: 1247, power: 195.9},
+      {rpm: 1600, torque: 1322, power: 221.5},
+      {rpm: 1800, torque: 1322, power: 249.2},
+      {rpm: 2000, torque: 1315, power: 275.4},
+      {rpm: 2200, torque: 1302, power: 299.9},
+      {rpm: 2400, torque: 1268, power: 318.6},
+      {rpm: 2600, torque: 1247, power: 339.6},
+      {rpm: 2800, torque: 1194, power: 350.2},
+      {rpm: 3000, torque: 1085, power: 340.8},
+      {rpm: 3200, torque: 922, power: 309.0},
+      {rpm: 3400, torque: 597, power: 212.4},
+      {rpm: 3600, torque: 0, power: 0}
     ],
     accessories: [
       {name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0},
