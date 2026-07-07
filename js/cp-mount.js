@@ -1187,11 +1187,33 @@ function _mnt2DGather(){
 // SVG metin/işaret yardımcıları — akademik, tek renkli (tema uyumlu) görünüm.
 var _MNT2D_MONO="ui-monospace,'SF Mono',Menlo,Consolas,'Liberation Mono',monospace";
 var _MNT2D_SANS="system-ui,-apple-system,'Segoe UI',Roboto,sans-serif";
+// İşaret renkleri — bileşen ikonuyla (components.js) tutarlı, tema uyumlu:
+// takoz=yeşil, bileşen CG=amber, birleşik CG=kırmızı. Fallback'li accent-* değişkenleri.
+var _MNT2D_C_MOUNT='var(--accent-success, #22c55e)';
+var _MNT2D_C_COMP ='var(--accent-warning, #f59e0b)';
+var _MNT2D_C_CG   ='var(--accent-danger, #ef4444)';
 function _mnt2DText(x,y,t,anchor,color,size,bold,family){
   return '<text x="'+_mnt2DR(x)+'" y="'+_mnt2DR(y)+'" text-anchor="'+(anchor||'middle')+'" font-size="'+(size||8)+'"'
     + ' font-family="'+(family||_MNT2D_MONO)+'" fill="'+(color||'var(--text-secondary)')+'"'+(bold?' font-weight="700"':'')+'>'+_mntEsc(t)+'</text>';
 }
 function _mnt2DR(v){ return Math.round(v*10)/10; }
+// "Güzel" eksen adımı (1·2·5 ×10^k) ve o adıma oturan işaret (tick) değerleri —
+// ölçek ızgarası + sayısal eksen etiketleri için (mm). target ≈ istenen işaret sayısı.
+function _mnt2DNiceStep(range, target){
+  var raw=range/Math.max(1,target);
+  if(!(raw>0)) return 1;
+  var mag=Math.pow(10, Math.floor(Math.log(raw)/Math.LN10)), norm=raw/mag, step;
+  if(norm<1.5) step=1; else if(norm<3) step=2; else if(norm<7) step=5; else step=10;
+  return step*mag;
+}
+function _mnt2DNiceTicks(min, max, target){
+  if(!(max>min)) return [min||0];
+  var step=_mnt2DNiceStep(max-min, target||6), ticks=[];
+  for(var v=Math.ceil(min/step)*step; v<=max+step*1e-6; v+=step) ticks.push(Math.round(v*1e6)/1e6);
+  return ticks;
+}
+// Eksen işaret etiketi — tam sayı mm, eksi işareti tipografik "−".
+function _mnt2DTick(v){ return Math.round(v).toString().replace('-','−'); }
 function _mnt2DArrow(x1,y1,x2,y2,color,hl){
   hl=hl||7; var ang=Math.atan2(y2-y1,x2-x1);
   var ax=x2-hl*Math.cos(ang-0.42), ay=y2-hl*Math.sin(ang-0.42);
@@ -1209,9 +1231,9 @@ function _mnt2DCGMark(cx,cy,r,color){
 }
 // Takoz işareti — içi boş kare; yandan görünüşte tarama (hatch) ile doldurulur.
 // Yalnızca şekilleri döndürür; hover bilgisi grubu saran <g>'de tutulur.
-function _mnt2DMountMark(cx,cy,hatch){
-  var r=8, s='';
-  s+='<rect x="'+_mnt2DR(cx-r)+'" y="'+_mnt2DR(cy-r)+'" width="'+(2*r)+'" height="'+(2*r)+'" rx="1.5" fill="var(--bg-primary)" stroke="var(--text-secondary)" stroke-width="1.5"/>';
+function _mnt2DMountMark(cx,cy,hatch,color){
+  var r=8, s='', col=color||'var(--text-secondary)';
+  s+='<rect x="'+_mnt2DR(cx-r)+'" y="'+_mnt2DR(cy-r)+'" width="'+(2*r)+'" height="'+(2*r)+'" rx="1.5" fill="var(--bg-primary)" stroke="'+col+'" stroke-width="1.5"/>';
   if(hatch){
     s+='<line x1="'+_mnt2DR(cx-r)+'" y1="'+_mnt2DR(cy+r)+'" x2="'+_mnt2DR(cx+r)+'" y2="'+_mnt2DR(cy-r)+'" stroke="var(--text-muted)" stroke-width="0.8"/>';
     s+='<line x1="'+_mnt2DR(cx-r)+'" y1="'+_mnt2DR(cy)+'" x2="'+_mnt2DR(cx)+'" y2="'+_mnt2DR(cy-r)+'" stroke="var(--text-muted)" stroke-width="0.8"/>';
@@ -1267,17 +1289,34 @@ function _mnt2DAttachZoom(container){
       if(vb.y+vb.h>baseY+baseH) vb.y=baseY+baseH-vb.h;
     }
     function apply(){ svg.setAttribute('viewBox', _mnt2DR(vb.x)+' '+_mnt2DR(vb.y)+' '+_mnt2DR(vb.w)+' '+_mnt2DR(vb.h)); }
-    svg.addEventListener('wheel', function(e){
-      e.preventDefault();
+    function reset(){ vb.x=baseX; vb.y=baseY; vb.w=baseW; vb.h=baseH; apply(); }
+    // İmleç (veya verilmezse figür merkezi) sabit kalacak şekilde f kadar ölçekle.
+    function zoomAt(f, clientX, clientY){
       var rect=svg.getBoundingClientRect();
       if(!rect.width || !rect.height) return;
-      var ux=vb.x+(e.clientX-rect.left)/rect.width*vb.w;
-      var uy=vb.y+(e.clientY-rect.top)/rect.height*vb.h;
-      var f=(e.deltaY<0)?0.85:1/0.85, nw=vb.w*f;
-      if(nw<minW) f=minW/vb.w; else if(vb.w*f>baseW) f=baseW/vb.w;
+      var ux=(clientX==null)?vb.x+vb.w/2:vb.x+(clientX-rect.left)/rect.width*vb.w;
+      var uy=(clientY==null)?vb.y+vb.h/2:vb.y+(clientY-rect.top)/rect.height*vb.h;
+      if(vb.w*f<minW) f=minW/vb.w; else if(vb.w*f>baseW) f=baseW/vb.w;
       vb.x=ux-(ux-vb.x)*f; vb.y=uy-(uy-vb.y)*f; vb.w*=f; vb.h*=f;
       clamp(); apply();
+    }
+    svg.addEventListener('wheel', function(e){
+      e.preventDefault();
+      zoomAt((e.deltaY<0)?0.85:1/0.85, e.clientX, e.clientY);
     }, { passive:false });
+    // Köşe butonları (varsa) — figür merkezli zoom / sıfırla.
+    var wrapEl=svg.parentNode;
+    var ctl=wrapEl && wrapEl.querySelector ? wrapEl.querySelector('.ve-mnt2d-zoomctl') : null;
+    if(ctl){
+      ctl.addEventListener('click', function(e){
+        var btn=e.target.closest ? e.target.closest('button[data-z]') : null;
+        if(!btn) return; e.preventDefault();
+        var z=btn.getAttribute('data-z');
+        if(z==='in') zoomAt(0.8, null, null);
+        else if(z==='out') zoomAt(1.25, null, null);
+        else reset();
+      });
+    }
     var drag=false, lx=0, ly=0;
     svg.addEventListener('pointerdown', function(e){
       if(e.button!==0 && e.pointerType==='mouse') return;
@@ -1297,9 +1336,7 @@ function _mnt2DAttachZoom(container){
       try { svg.releasePointerCapture(e.pointerId); } catch(err){} }
     svg.addEventListener('pointerup', endDrag);
     svg.addEventListener('pointercancel', endDrag);
-    svg.addEventListener('dblclick', function(e){
-      e.preventDefault(); vb.x=baseX; vb.y=baseY; vb.w=baseW; vb.h=baseH; apply();
-    });
+    svg.addEventListener('dblclick', function(e){ e.preventDefault(); reset(); });
   });
 }
 // Çakışma önleyici etiket yerleştirici: her etiketi işaretinin üst/alt tarafına
@@ -1350,6 +1387,22 @@ function _mnt2DFigure(o){
   function hval(p){ return hKey==='y'?p.y:(hKey==='z'?p.z:p.x); }
   // dış panel
   svg+='<rect x="'+_mnt2DR(o.boxX)+'" y="'+_mnt2DR(o.boxY)+'" width="'+_mnt2DR(o.boxW)+'" height="'+_mnt2DR(o.boxH)+'" rx="9" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>';
+  // ── ÖLÇEK IZGARASI + SAYISAL EKSEN DEĞERLERİ (mm) — işaretlerin ALTINDA ──
+  var gl=o.ox+o.plotL, gr=o.ox+o.FIG_W-o.plotR;
+  if(o.hMin!=null && o.hMax!=null){
+    _mnt2DNiceTicks(o.hMin, o.hMax, 8).forEach(function(tv){
+      var gx=o.px(tv); if(gx<gl-0.5 || gx>gr+0.5) return;
+      svg+='<line x1="'+_mnt2DR(gx)+'" y1="'+_mnt2DR(o.plotTop)+'" x2="'+_mnt2DR(gx)+'" y2="'+_mnt2DR(plotBottom)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.4"/>';
+      svg+=_mnt2DText(gx, plotBottom+13, _mnt2DTick(tv), 'middle', 'var(--text-muted)', 8);
+    });
+  }
+  if(o.vMin!=null && o.vMax!=null){
+    _mnt2DNiceTicks(o.vMin, o.vMax, 5).forEach(function(tv){
+      var gy=o.pyFn(tv); if(gy<o.plotTop-0.5 || gy>plotBottom+0.5) return;
+      svg+='<line x1="'+_mnt2DR(gl)+'" y1="'+_mnt2DR(gy)+'" x2="'+_mnt2DR(gr)+'" y2="'+_mnt2DR(gy)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.4"/>';
+      svg+=_mnt2DText(gl-5, gy+3, _mnt2DTick(tv), 'end', 'var(--text-muted)', 8);
+    });
+  }
   // başlık
   svg+=_mnt2DText(o.ox+o.plotL-2, o.boxY+21, o.title, 'start', 'var(--text-heading)', 13, true);
   // kesikli referans çizgisi (Y=0 / Z=0)
@@ -1378,7 +1431,7 @@ function _mnt2DFigure(o){
     grp.forEach(function(pt,k){
       var mx=pt.cx+(n>1?(k-(n-1)/2)*19:0), my=pt.cy;
       var info=['Takoz — '+(pt.m.name||'Takoz'), 'Konum  ('+_mnt2DR(pt.m.x)+', '+_mnt2DR(pt.m.y)+', '+_mnt2DR(pt.m.z)+') mm'];
-      svg+='<g'+_mnt2DInfoAttr(info)+'>'+_mnt2DMountMark(mx, my, o.vKey==='z')+'</g>';
+      svg+='<g'+_mnt2DInfoAttr(info)+'>'+_mnt2DMountMark(mx, my, o.vKey==='z', _MNT2D_C_MOUNT)+'</g>';
       items.push({cx:mx, cy:my, mr:9, above:(pt.v>=o.refV), text:o.mountLabelFn(pt.m), color:'var(--text-secondary)', size:9, bold:false});
     });
   });
@@ -1387,14 +1440,14 @@ function _mnt2DFigure(o){
     var info=[c.name||'Bileşen', 'Ağırlık merkezi  ('+_mnt2DR(c.x)+', '+_mnt2DR(c.y)+', '+_mnt2DR(c.z)+') mm'];
     if(c.mass>0) info.push('Kütle  '+c.mass.toFixed(1)+' kg');
     svg+='<g'+_mnt2DInfoAttr(info)+'>';
-    svg+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="var(--bg-primary)" stroke="var(--text-secondary)" stroke-width="1.5"/></g>';
+    svg+='<circle cx="'+_mnt2DR(cx)+'" cy="'+_mnt2DR(cy)+'" r="'+_mnt2DR(r)+'" fill="var(--bg-primary)" stroke="'+_MNT2D_C_COMP+'" stroke-width="1.5"/></g>';
     items.push({cx:cx, cy:cy, mr:r, above:o.compAbove, text:o.compLabelFn(c), color:'var(--text-secondary)', size:9.5, bold:false});
   });
   // birleşik CG (jeodezik sembol)
   if(o.cg){ var gx=o.px(hval(o.cg)), gy=o.pyFn(o.vKey==='y'?o.cg.y:o.cg.z);
     var cgInfo=['Birleşik Ağırlık Merkezi', 'Konum  ('+_mnt2DR(o.cg.x)+', '+_mnt2DR(o.cg.y)+', '+_mnt2DR(o.cg.z)+') mm'];
     if(o.cg.m>0) cgInfo.push('Toplam kütle  '+o.cg.m.toFixed(1)+' kg');
-    svg+='<g'+_mnt2DInfoAttr(cgInfo)+'>'+_mnt2DCGMark(gx,gy,10);
+    svg+='<g'+_mnt2DInfoAttr(cgInfo)+'>'+_mnt2DCGMark(gx,gy,10,_MNT2D_C_CG);
     svg+='<circle cx="'+_mnt2DR(gx)+'" cy="'+_mnt2DR(gy)+'" r="12" fill="transparent"/></g>';
     items.push({cx:gx, cy:gy, mr:11, above:o.compAbove, text:o.cgLabelFn(o.cg), color:'var(--text-primary)', size:10.5, bold:true});
   }
@@ -1442,33 +1495,59 @@ function _mnt2DViewSVG(data){
   // Takoz etiketi — gerçek adı (kısaltılmış). Konum birleştirme olmadığından
   // her takoz kendi adıyla, kendi izdüşüm konumunda etiketlenir.
   function mntLabel(m){ return shortName(m.name||'Takoz'); }
-  // Her figürü kendi SVG'sine sar — data-vb başlangıç viewBox'ı (zoom sıfırlama).
+  // Her figürü kendi SVG'sine sar (data-vb = başlangıç viewBox'ı, zoom sıfırlama)
+  // + köşesine yakınlaştır/uzaklaştır/sıfırla butonları (_mnt2DAttachZoom bağlar).
   function wrap(inner){
     var vb='0 0 '+FIG_W+' '+_mnt2DR(VB_H);
-    return '<svg class="ve-mnt2d-fig" viewBox="'+vb+'" data-vb="'+vb+'" preserveAspectRatio="xMidYMid meet"'
-      + ' style="display:block; width:100%; height:auto; touch-action:none; cursor:grab; font-family:'+_MNT2D_MONO+';">'
-      + inner + '</svg>';
+    return '<div class="ve-mnt2d-figwrap">'
+      + '<div class="ve-mnt2d-zoomctl">'
+      +   '<button type="button" data-z="in" title="Yakınlaştır" aria-label="Yakınlaştır">+</button>'
+      +   '<button type="button" data-z="out" title="Uzaklaştır" aria-label="Uzaklaştır">−</button>'
+      +   '<button type="button" data-z="reset" title="Sıfırla" aria-label="Sıfırla">⟲</button>'
+      + '</div>'
+      + '<svg class="ve-mnt2d-fig" viewBox="'+vb+'" data-vb="'+vb+'" preserveAspectRatio="xMidYMid meet"'
+      +   ' style="display:block; width:100%; height:auto; touch-action:none; cursor:grab; font-family:'+_MNT2D_MONO+';">'
+      + inner + '</svg>'
+      + '</div>';
   }
   var common={ ox:0, boxX:8, boxY:boxY, boxW:FIG_W-16, boxH:FIG_H, FIG_W:FIG_W,
     plotTop:plotTop, plotH:plotH, plotL:plotL, plotR:plotR, cr:cr,
     mounts:data.mounts, comps:data.comps, cg:data.cg };
   function fig(extra){ var o={}; var k; for(k in common) o[k]=common[k]; for(k in extra) o[k]=extra[k]; return _mnt2DFigure(o); }
 
-  var out='<div class="ve-mnt2d-stack" style="display:flex; flex-direction:column; gap:14px; min-width:480px;">';
+  // ── ÖZET ŞERİDİ + LEJANT (her zaman görünür; hover'a gerek kalmaz) ──
+  var totMass=(data.cg&&data.cg.m)?data.cg.m:data.comps.reduce(function(s,c){ return s+(c.mass>0?c.mass:0); },0);
+  var summary='<div class="ve-mnt2d-summary">'
+    + '<span>Toplam kütle <b>'+fmt1(totMass)+' kg</b></span>'
+    + (data.cg?'<span>Birleşik CG <b>('+fmt1(data.cg.x)+' · '+fmt1(data.cg.y)+' · '+fmt1(data.cg.z)+') mm</b></span>':'')
+    + '<span>Takoz <b>'+data.mounts.length+'</b></span>'
+    + '<span>Bileşen <b>'+data.comps.length+'</b></span>'
+    + '</div>';
+  function sw(inner){ return '<svg width="16" height="14" viewBox="0 0 16 14" style="vertical-align:-2px;">'+inner+'</svg>'; }
+  var legend='<div class="ve-mnt2d-legend">'
+    + '<span>'+sw('<rect x="3" y="2.5" width="10" height="9" rx="1.5" fill="none" stroke="'+_MNT2D_C_MOUNT+'" stroke-width="1.6"/>')+' Takoz</span>'
+    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="none" stroke="'+_MNT2D_C_COMP+'" stroke-width="1.6"/>')+' Bileşen CG <i>(kütle ≈ boyut)</i></span>'
+    + '<span>'+sw('<circle cx="8" cy="7" r="5" fill="var(--bg-primary)" stroke="'+_MNT2D_C_CG+'" stroke-width="1.6"/><path d="M8 7 L13 7 A5 5 0 0 1 8 12 Z" fill="'+_MNT2D_C_CG+'"/><path d="M8 7 L3 7 A5 5 0 0 1 8 2 Z" fill="'+_MNT2D_C_CG+'"/>')+' Birleşik CG</span>'
+    + '</div>';
+
+  var out=summary+legend+'<div class="ve-mnt2d-stack" style="display:flex; flex-direction:column; gap:14px; min-width:480px;">';
   // ── ÜST GÖRÜNÜŞ (X–Y) ──
   out+=wrap(fig({ title:'Üstten Görünüş · X–Y', hKey:'x', vKey:'y', px:pxX, pyFn:pyTop, compAbove:true,
+    hMin:minX, hMax:maxX, vMin:minY, vMax:maxY,
     refV:0, refLabel:null, axis:{hLabel:'+X', vLabel:'−Y', vDir:'down', note:'+Y (sağ) yukarı'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
     mountLabelFn:mntLabel,
     cgLabelFn:function(cg){ return 'G ('+fmt1(cg.x)+' · '+fmt1(cg.y)+')'; } }));
   // ── YAN GÖRÜNÜŞ (X–Z) ──
   out+=wrap(fig({ title:'Yandan Görünüş · X–Z', hKey:'x', vKey:'z', px:pxX, pyFn:pyZ, compAbove:false,
+    hMin:minX, hMax:maxX, vMin:minZ, vMax:maxZ,
     refV:0, refLabel:'Z = 0', axis:{hLabel:'+X', vLabel:'+Z', vDir:'up', note:null},
     compLabelFn:function(c){ return shortName(c.name)+' (z='+rz(c.z)+')'; },
     mountLabelFn:mntLabel,
     cgLabelFn:function(cg){ return 'G (z='+rz(cg.z)+')'; } }));
   // ── ÖNDEN GÖRÜNÜŞ (Y–Z) ──
   out+=wrap(fig({ title:'Önden Görünüş · Y–Z', hKey:'y', vKey:'z', px:pxY, pyFn:pyZ, compAbove:true,
+    hMin:minY, hMax:maxY, vMin:minZ, vMax:maxZ,
     refV:0, refLabel:'Z = 0', axis:{hLabel:'+Y', vLabel:'+Z', vDir:'up', note:'+Y (sağ) →'},
     compLabelFn:function(c){ return shortName(c.name)+' G'; },
     mountLabelFn:mntLabel,
