@@ -963,6 +963,31 @@ var VE_FT_SHIFT_PROFILES = {
     srLockup2C2L: 0.85,
     etaLockup2C2L: 0.83
   },
+  // GM 8L90 8-ileri — TK'siz (doğrudan Motor→Şanzıman) Tam-Gaz kalibrasyonu.
+  // Konvertör-lockup ayrımı TK yokken kozmetiktir; tüm vitesler sabit ~3900 rpm'de
+  // (güç tepesi 3750'nin hemen üstü) değişir. shiftRefRPM motor governor'ından
+  // bağımsız sabittir → motor 5000 rpm'e kadar dönebilirken vites 3900'de değişir.
+  // lockupShifts.a = 1/i_gear (b=0) → her vites tam N_engine = shiftRefRPM'de üst vitese.
+  gm8l90_perf: {
+    name: 'GM 8L90 8-Speed — Performans',
+    family: '',
+    lockupOffset: 0,               // fallback: N_engine ≥ shiftRefRPM
+    shift1C2C_outRatio: 0.2193,    // 1C→2C: N_out ≥ 0.2193×ref → N_engine ≈ 3900 (i₁=4.56)
+    shift2C2L_outRatio: 0.3367,    // 2C→2L: N_out ≥ 0.3367×ref → N_engine ≈ 3900 (i₂=2.97)
+    shiftRefRPM: 3900,             // sabit vites-değiştirme devri (güç tepesi ~3750 üstü)
+    lockupShifts: {
+      '2L3L': { a: 0.3367, b: 0 },   // i₂=2.97
+      '3L4L': { a: 0.4808, b: 0 },   // i₃=2.08
+      '4L5L': { a: 0.5917, b: 0 },   // i₄=1.69
+      '5L6L': { a: 0.7874, b: 0 },   // i₅=1.27
+      '6L7L': { a: 1.0000, b: 0 },   // i₆=1.00
+      '7L8L': { a: 1.1765, b: 0 }    // i₇=0.85
+    },
+    // downshiftThresholds yok: Tam-Gaz hızlanma tek yönlü (aşağı vites gerekmez).
+    srShift1C2C: 0.78,
+    srLockup2C2L: 0.85,
+    etaLockup2C2L: 0.965
+  },
   allison3200sp_s2: {
     name: 'Allison 3200 SP — S2 Performance',
     family: '3000',
@@ -1707,7 +1732,9 @@ function veGetGearboxKeyFromShiftProfile(spKey) {
   var sp = VE_FT_SHIFT_PROFILES[spKey];
   if(!sp || !sp.name) return '';
   var m = sp.name.match(/Allison\s+(\d+)\s*SP/i);
-  return m ? (m[1] + 'SP') : '';
+  if(m) return m[1] + 'SP';
+  if(/8L90/i.test(sp.name)) return '8L90';   // GM 8L90 profili → '8L90' preset anahtarı
+  return '';
 }
 
 // Tam Gaz — Şanzıman parametre değişikliği
@@ -2204,6 +2231,26 @@ var VE_GEARBOX_PRESETS = {
       {gear: '8', ratio: 0.643, note: ''},
       {gear: '9', ratio: 0.568, note: ''},
       {gear: 'R', ratio: -5.085, note: 'Geri'}
+    ]
+  },
+  '8L90': {
+    name: 'GM | 8L90 8-Speed',
+    family: '',            // Allison değil → TC aile filtresi tüm TC'leri gösterir
+    calibrated: true,      // gm8l90_perf vites profili mevcut (aşağıda)
+    grossInputPower: 313,  // 420 HP  — "max engine power"  [kW]
+    grossInputTorque: 624, // 460 lb-ft — "max engine torque" [Nm]
+    netTurbineTorque: 900, // 665 lb-ft — "max gearbox torque" [Nm] → EC-Matching turbineRating
+    maxOutputSpeed: null,  // 8L90 çıkış-şaft hızı yayınlanmadı (maks. vites-değiştirme 6000 rpm ayrı bir spek)
+    gears: [
+      {gear: '1', ratio: 4.56, note: ''},
+      {gear: '2', ratio: 2.97, note: ''},
+      {gear: '3', ratio: 2.08, note: ''},
+      {gear: '4', ratio: 1.69, note: ''},
+      {gear: '5', ratio: 1.27, note: ''},
+      {gear: '6', ratio: 1.00, note: ''},
+      {gear: '7', ratio: 0.85, note: ''},
+      {gear: '8', ratio: 0.65, note: ''},
+      {gear: 'R', ratio: -3.82, note: 'Geri'}
     ]
   }
 };

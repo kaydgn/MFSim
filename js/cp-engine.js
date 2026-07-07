@@ -1705,6 +1705,44 @@ var VE_FT_MOTOR_PRESETS = {
       {name: 'Klima', standardLoss: 0, userLoss: 0},
       {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
+  },
+  'duramax_lz0_305': {
+    name: '3.0L I6 Duramax Turbo Diesel LZ0 | 671Nm&227kW',
+    specs: {
+      displacement: 2.99,
+      idleRpm: 700,
+      governedSpeed: 4000,
+      noLoadGoverned: 5000,
+      inertia: 0.3500
+    },
+    // GM LZ0 (Chevrolet Silverado) — grafikten dijitalleştirilmiş, rated noktalara
+    // sabit: 671 Nm (495 lb-ft) @ 2750, 227 kW (305 HP) @ 3750. Maks. motor devri 5000.
+    // Yayınlanan eğri NET (araca kurulu) → aksesuar kayıpları 0 (net = brüt, çift-sayım yok).
+    data: [
+      {rpm: 700, torque: 200, power: 14.7},   // rölanti çapası (grafiğin altı — kalkışta eğri tanımlı olsun diye)
+      {rpm: 1000, torque: 359, power: 37.6},
+      {rpm: 1250, torque: 536, power: 70.2},
+      {rpm: 1500, torque: 630, power: 99.0},
+      {rpm: 1750, torque: 637, power: 116.7},
+      {rpm: 2000, torque: 640, power: 134.0},
+      {rpm: 2250, torque: 651, power: 153.4},
+      {rpm: 2500, torque: 662, power: 173.3},
+      {rpm: 2750, torque: 671, power: 193.2},
+      {rpm: 3000, torque: 667, power: 209.5},
+      {rpm: 3250, torque: 655, power: 222.9},
+      {rpm: 3500, torque: 612, power: 224.3},
+      {rpm: 3750, torque: 578, power: 227.0},
+      {rpm: 4000, torque: 522, power: 218.7},
+      {rpm: 5000, torque: 0, power: 0}
+    ],
+    accessories: [
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0},
+      {name: 'Alternatör / Jeneratör', standardLoss: 0, userLoss: 0},
+      {name: 'Hava Kompresörü', standardLoss: 0, userLoss: 0},
+      {name: 'Direksiyon Pompası', standardLoss: 0, userLoss: 0},
+      {name: 'Klima', standardLoss: 0, userLoss: 0},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
+    ]
   }
 };
 
