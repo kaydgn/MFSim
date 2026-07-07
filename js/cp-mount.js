@@ -1096,7 +1096,7 @@ function _mntVwrBtn(onclick, label, title, active){
 function _mntVwrLegend(){
   function chip(col,txt){ return '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:9px; height:9px; border-radius:50%; background:'+col+'; display:inline-block;"></span>'+txt+'</span>'; }
   return '<div style="display:flex; flex-wrap:wrap; gap:12px; font-size:0.55rem; color:var(--text-muted); margin-bottom:7px;">'
-    + chip('#22c55e','Takoz') + chip('#f59e0b','Bileşen CG') + chip('#ef4444','Birleşik CG') + '</div>';
+    + chip('var(--accent-success)','Takoz') + chip('var(--accent-warning)','Bileşen CG') + chip('var(--accent-danger)','Birleşik CG') + '</div>';
 }
 function getMntViewerPropertiesHTML(node){
   if(!node.data) node.data={};

@@ -37,6 +37,20 @@ function _mntViewerBgIsLight(){
     return (0.299*c.r + 0.587*c.g + 0.114*c.b) > 0.5;
   } catch(e){ return false; }
 }
+// İşaret malzemesi (tema uyumu). Takoz/bileşen/CG işaretleri UI'nin semantik
+// accent renklerini (--accent-success/-warning/-danger) kullanır; bu renkler her
+// temada zemine göre ayarlıdır → açık temada koyulaşıp beyaz zemine karşı okunur
+// kalır (2D görünümün takoz rengiyle de aynı değişken). Emissive parıltı yalnızca
+// koyu temada eklenir; açık temada kapanır ki işaretler solmadan doygun görünsün.
+function _mntViewerMarkerMat(varName, fallback, shininess){
+  var base = _mntViewerCssColor(varName, fallback);
+  var emF = _mntViewerBgIsLight() ? 0 : 0.3;
+  return new THREE.MeshPhongMaterial({
+    color: base,
+    emissive: base.clone().multiplyScalar(emF),
+    shininess: shininess
+  });
+}
 
 function veMountViewerInit(canvasId, mode){
   if(typeof THREE === 'undefined') return;      // THREE yüklü değil → sessiz atla
@@ -303,21 +317,24 @@ function veMountViewerUpdate(){
   var hasCG = mSum>0;
   var cg = hasCG ? [sx/mSum, sy/mSum, sz/mSum] : [0,0,0];
 
+  // CG→takoz kılavuz çizgisi: temaya göre soluk gri (açık temada koyulaşır).
+  var lineCol = _mntViewerCssColor('--text-muted', '#888888');
+
   // Takoz küpleri + bağlantı çizgileri
   d.mounts.forEach(function(mt){
     var x=num(mt.x), y=num(mt.y), z=num(mt.z);
     if(!(Number.isFinite(x)&&Number.isFinite(y)&&Number.isFinite(z))) return;
     var box=new THREE.Mesh(new THREE.BoxGeometry(60,40,60),
-      new THREE.MeshPhongMaterial({color:0x22c55e, emissive:0x114422, shininess:30}));
+      _mntViewerMarkerMat('--accent-success', '#22c55e', 30));
     box.position.copy(_mntW(x,y,z));
     var kInfo='';
-    if(mt.kxs!==undefined||mt.kzs!==undefined) kInfo='<br><span style="color:#888;">Statik k (N/mm):</span> '+_mntViewerN(mt.kxs,0)+' · '+_mntViewerN(mt.kys,0)+' · '+_mntViewerN(mt.kzs,0);
-    box.userData={ info:'<b style="color:#22c55e;">'+_mntViewerEsc(mt.name||'Takoz')+'</b>'
-      +'<br><span style="color:#888;">Konum (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1)+kInfo };
+    if(mt.kxs!==undefined||mt.kzs!==undefined) kInfo='<br><span style="color:var(--text-muted,#888);">Statik k (N/mm):</span> '+_mntViewerN(mt.kxs,0)+' · '+_mntViewerN(mt.kys,0)+' · '+_mntViewerN(mt.kzs,0);
+    box.userData={ info:'<b style="color:var(--accent-success,#22c55e);">'+_mntViewerEsc(mt.name||'Takoz')+'</b>'
+      +'<br><span style="color:var(--text-muted,#888);">Konum (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1)+kInfo };
     V.group.add(box);
     if(hasCG){
       var g=new THREE.BufferGeometry().setFromPoints([_mntW(cg[0],cg[1],cg[2]), _mntW(x,y,z)]);
-      var ln=new THREE.Line(g, new THREE.LineDashedMaterial({color:0x888888, dashSize:30, gapSize:15, transparent:true, opacity:0.6}));
+      var ln=new THREE.Line(g, new THREE.LineDashedMaterial({color:lineCol, dashSize:30, gapSize:15, transparent:true, opacity:0.6}));
       ln.computeLineDistances();
       V.group.add(ln);
     }
@@ -329,22 +346,22 @@ function veMountViewerUpdate(){
     if(!(Number.isFinite(x)&&Number.isFinite(y)&&Number.isFinite(z))) return;
     var r=_mntCGRadius(m, V.massScale);
     var s=new THREE.Mesh(new THREE.SphereGeometry(r,18,18),
-      new THREE.MeshPhongMaterial({color:0xf59e0b, emissive:0x553300, shininess:20}));
+      _mntViewerMarkerMat('--accent-warning', '#f59e0b', 20));
     s.position.copy(_mntW(x,y,z));
-    s.userData={ info:'<b style="color:#f59e0b;">'+_mntViewerEsc(c.name||'Bileşen')+'</b>'
-      +'<br><span style="color:#888;">Kütle:</span> '+(m>0?m.toFixed(1)+' kg':'—')
-      +'<br><span style="color:#888;">CG (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1) };
+    s.userData={ info:'<b style="color:var(--accent-warning,#f59e0b);">'+_mntViewerEsc(c.name||'Bileşen')+'</b>'
+      +'<br><span style="color:var(--text-muted,#888);">Kütle:</span> '+(m>0?m.toFixed(1)+' kg':'—')
+      +'<br><span style="color:var(--text-muted,#888);">CG (mm):</span> '+x.toFixed(1)+' · '+y.toFixed(1)+' · '+z.toFixed(1) };
     V.group.add(s);
   });
 
   // Birleşik CG (kırmızı)
   if(hasCG){
     var cgm=new THREE.Mesh(new THREE.SphereGeometry(40,32,32),
-      new THREE.MeshPhongMaterial({color:0xef4444, emissive:0x551111, shininess:80}));
+      _mntViewerMarkerMat('--accent-danger', '#ef4444', 80));
     cgm.position.copy(_mntW(cg[0],cg[1],cg[2]));
-    cgm.userData={ info:'<b style="color:#ef4444;">Birleşik Ağırlık Merkezi</b>'
-      +'<br><span style="color:#888;">Toplam kütle:</span> '+mSum.toFixed(1)+' kg'
-      +'<br><span style="color:#888;">CG (mm):</span> '+cg[0].toFixed(1)+' · '+cg[1].toFixed(1)+' · '+cg[2].toFixed(1) };
+    cgm.userData={ info:'<b style="color:var(--accent-danger,#ef4444);">Birleşik Ağırlık Merkezi</b>'
+      +'<br><span style="color:var(--text-muted,#888);">Toplam kütle:</span> '+mSum.toFixed(1)+' kg'
+      +'<br><span style="color:var(--text-muted,#888);">CG (mm):</span> '+cg[0].toFixed(1)+' · '+cg[1].toFixed(1)+' · '+cg[2].toFixed(1) };
     V.group.add(cgm);
     // Kamera hedefini birleşik CG'ye getir (ilk kurulumda)
     if(!V._framed){ V.ctrl.target.copy(_mntW(cg[0],cg[1],cg[2])); _mntViewerUpdateCamera(); V._framed=true; }
