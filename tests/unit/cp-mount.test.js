@@ -948,3 +948,13 @@ describe('Çözücü çözüm modu (auto/linear/nonlinear)', () => {
                   - Rnl.allCases[0].res.perMount[0].delta[2])).toBeGreaterThan(1e-5);
   });
 });
+
+// ═══════════ Çözücü — Matematik kaldırıldı (istek üzerine kod silindi) ═══════════
+describe('Çözücü paneli — Matematik yok', () => {
+  test('panelde Matematik butonu/işlevi yok, Hesapla var', () => {
+    const html = cp.getMntSolverPropertiesHTML({ id: 'sv', type: 'mnt-solver', def: {}, data: {} });
+    expect(html).not.toContain('Matematik');
+    expect(html).not.toContain('veMntOpenMathModal');
+    expect(html).toContain("veMntSolverCompute('sv')");
+  });
+});

@@ -517,6 +517,7 @@ var veMountCore = (function() {
     const gap   = (opts.gap != null)        ? opts.gap        : STOP_GAP_M;
     const ratio = (opts.stiffRatio != null) ? opts.stiffRatio : STOP_STIFF_RATIO;
     const useStop = (opts.useStop !== false);        // varsayılan: durdurucu açık
+    const onIter = (typeof opts.onIter === 'function') ? opts.onIter : null;  // (iter, ‖r‖) — ilerleme/yakınsama izi
     const F=[m*g*lc.n[0], m*g*lc.n[1], m*g*lc.n[2], lc.T[0], lc.T[1], lc.T[2]];
     const N=mounts.length;
     const A=[], az=[], laws=[];
@@ -571,6 +572,7 @@ var veMountCore = (function() {
         const r=[0,0,0,0,0,0]; let rn2=0;
         for(let a=0;a<6;a++){ r[a]=asm.g6[a]-F[a]; rn2+=r[a]*r[a]; }
         const rn=Math.sqrt(rn2);
+        if(onIter) onIter(newtonIters, rn);           // yakınsama izi (residual normu)
         if(rn<=tol){ nconv=true; break; }
         const neg=r.map(function(v){return -v;});
         const dq=solveLinear(asm.KT, neg);
