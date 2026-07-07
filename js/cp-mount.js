@@ -1827,8 +1827,16 @@ function _mntComputeResults(solverId){
   if(!mp){ _veMntLast=null; return { error:['Kütle hesaplanamadı (toplam ≤ 0).'], gather:gather }; }
   var model={ m:mp.m, cg:mp.cg, Kstat:C.buildK(si.mounts,mp.cg,false), mounts:si.mounts, g:si.g };
   var allCases=C.solveAllCases(model, si.loadCases, {useStop:true}); // ±15 mm metal-metal durdurucu (F4)
-  var Kdyn=C.buildK(si.mounts,mp.cg,true), M6=C.buildM6(mp.m,mp.I_G);
-  var modes=C.solveModal(Kdyn, M6, si.mounts, mp.cg);
+  var M6=C.buildM6(mp.m,mp.I_G), modes;
+  if(typeof C.anyCurve==='function' && C.anyCurve(si.mounts)){
+    // Nonlineer takoz var → modları STATİK dengedeki (Static durumu) dinamik
+    // tanjant rijitlikle çöz (önyüklü çalışma noktası). allCases[0] = Static.
+    var qStat=(allCases[0] && allCases[0].res) ? allCases[0].res.q : null;
+    modes=C.solveModalAtState(si.mounts, mp.cg, M6, qStat);
+  } else {
+    // Tümüyle lineer → mevcut yol (K_dyn) birebir korunur.
+    modes=C.solveModal(C.buildK(si.mounts,mp.cg,true), M6, si.mounts, mp.cg);
+  }
   // Kriter 3 — her vites için tork durumu (mount kuvvetleri). Kriter 4 — tasarım
   // yük koşulları (maks tork = 1. vites, 3.5g düşey, 1g yanal, 1g boyuna).
   var gearDefs=_mntGearTorqueCases(gather.torque);

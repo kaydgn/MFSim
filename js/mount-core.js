@@ -737,6 +737,37 @@ var veMountCore = (function() {
     return modes; // sortEigen zaten artan sırada — 6 mod
   }
 
+  // Dinamik TANJANT rijitliği — modal analiz için (Faz 3). Her takoz ekseninin
+  // STATİK dengede (qStatic) tanjant rijitliği φ'(δ) × dinamik/statik oran
+  // (kdyn/kstat). LİNEER eksende φ'=kstat sabittir → kstat·(kdyn/kstat)=kdyn →
+  // buildK(dynamic) ile aynı K → mevcut modal sonuç (T6/T7) korunur. EĞRİ eksende
+  // φ'(δ_static)·oran → önyüklü çalışma noktasına duyarlı frekanslar (fiziksel
+  // olarak doğru: nonlineer takozun frekansı çalışma noktasına bağlıdır).
+  // qStatic yoksa (null) → δ=0 tanjantı (küçük-sehim) kullanılır.
+  function buildKtangentDyn(mounts, cg, qStatic){
+    const K=zeros(6,6);
+    for(const mnt of mounts){
+      const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
+      const A=makeA(d);
+      const laws=mountStaticLaws(mnt);
+      const kt=[0,1,2].map(function(ax){
+        const dax = qStatic ? A[ax].reduce((s,a,j)=>s+a*qStatic[j],0) : 0;
+        const kStat = laws[ax].tangent(dax);                           // statik tanjant @ δ
+        const ratio = (mnt.kstat && mnt.kstat[ax]>0) ? (mnt.kdyn[ax]/mnt.kstat[ax]) : 1;
+        return kStat * ratio;                                          // dinamik tanjant
+      });
+      const Ki=[[kt[0],0,0],[0,kt[1],0],[0,0,kt[2]]];
+      addInPlace(K, matMul(matMul(matT(A),Ki),A));
+    }
+    return K;
+  }
+
+  // Statik denge (qStatic) çevresinde dinamik tanjant rijitlikle modal analiz.
+  // Lineer takozda solveModal(buildK(dynamic)) ile aynı sonuç.
+  function solveModalAtState(mounts, cg, M6, qStatic){
+    return solveModal(buildKtangentDyn(mounts, cg, qStatic), M6, mounts, cg);
+  }
+
   // ═══════════════════ İletilebilirlik / transmissibility (izolasyon) ═══════════════════
   //
   // Tek serbestlik dereceli kuvvet iletilebilirliği (harmonik tahrik): tahrik
@@ -1142,6 +1173,31 @@ var veMountCore = (function() {
     }
     // (T8d yukarıda T5 ile birlikte koşuldu)
 
+    // ── T9: Newton (solveCaseNL) lineer denklik — Static ──
+    // Tümüyle lineer takozda Newton çözücüsü, doğrudan lineer çözüm (solveCase) ile
+    // aynı sonucu vermeli (Newton ilk adımda tam çözüme iner). Nonlineer altyapının
+    // mevcut fiziği bozmadığının çekirdek-içi güvencesi.
+    {
+      const lc={name:'Static', n:[0,0,-1], T:[0,0,0]};
+      const nl = solveCaseNL(mounts, mp.cg, mp.m, g, lc, {useStop:true});
+      const ref = solveCase(Kstat, mounts, mp.cg, mp.m, g, lc);
+      let ok = !!nl && !!ref && nl.checks.converged === true;
+      let maxd = 0;
+      if(ok) nl.perMount.forEach((pm,i)=>{ maxd = Math.max(maxd, Math.abs(pm.delta[2]-ref.perMount[i].delta[2])); });
+      if(maxd > 1e-7) ok = false;   // 1e-7 m = 1e-4 mm
+      check('T9','Newton (solveCaseNL) lineer denklik', ok, 'maks|Δδz|='+(maxd*1000).toExponential(2)+' mm, converged='+(nl?nl.checks.converged:'—'));
+    }
+    // ── T10: Tanjant-modal lineer denklik ──
+    // buildKtangentDyn(δ=0) lineer takozda buildK(dynamic)'e eşit → T6 frekansları.
+    {
+      const modesT = solveModalAtState(mounts, mp.cg, M6, null);
+      const expF = [5.039, 6.111, 8.364, 10.148, 12.071, 21.239];
+      let ok = !!modesT && modesT.length===6;
+      let det='f(Hz):';
+      if(ok) modesT.forEach((md,i)=>{ if(!near(md.f_Hz, expF[i], 0.005)) ok=false; det += ' '+md.f_Hz.toFixed(3); });
+      check('T10','Tanjant-modal lineer denklik', ok, det);
+    }
+
     return {passed, failed, details};
   }
 
@@ -1151,6 +1207,7 @@ var veMountCore = (function() {
     // Model
     combineMassProps, buildK, buildM6, buildModel,
     solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
+    buildKtangentDyn, solveModalAtState,
     transmissibility,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test

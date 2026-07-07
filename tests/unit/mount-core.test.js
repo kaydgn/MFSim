@@ -480,3 +480,45 @@ describe('solveCaseNL — Newton çözücü (Faz 2)', () => {
     });
   });
 });
+
+// ═══════════════ Faz 3 — Tanjant rijitlikle modal analiz ═══════════════
+// Modlar statik dengedeki dinamik tanjant rijitlikle çözülür. Lineer takozda
+// buildK(dynamic) ile aynı → T6 frekansları korunur; eğride çalışma noktasına duyarlı.
+describe('buildKtangentDyn / solveModalAtState — tanjant-modal (Faz 3)', () => {
+  test('lineer + δ=0 → buildKtangentDyn = buildK(dynamic) (elemanca)', () => {
+    const Kt = core.buildKtangentDyn(mounts, mp.cg, null);
+    for (let a = 0; a < 6; a++)
+      for (let b = 0; b < 6; b++)
+        expect(Math.abs(Kt[a][b] - Kdyn[a][b])).toBeLessThan(1e-3);   // ~1e-9 bağıl
+  });
+  test('tanjant rijitlik K_T simetriktir', () => {
+    const m2 = mounts.map(mn => Object.assign({}, mn, {
+      curves: { z: [[-0.02, -0.02 * mn.kstat[2] * 1.7], [0, 0], [0.02, 0.02 * mn.kstat[2] * 1.7]] }
+    }));
+    const Kt = core.buildKtangentDyn(m2, mp.cg, null);
+    for (let a = 0; a < 6; a++)
+      for (let b = a + 1; b < 6; b++)
+        expect(Kt[a][b]).toBeCloseTo(Kt[b][a], 6);
+  });
+  test('lineer takozda solveModalAtState = T6 referans frekansları', () => {
+    const modesT = core.solveModalAtState(mounts, mp.cg, M6, null);
+    const expF = [5.039, 6.111, 8.364, 10.148, 12.071, 21.239];
+    expect(modesT).toHaveLength(6);
+    modesT.forEach((md, i) => expect(md.f_Hz).toBeCloseTo(expF[i], 2));
+  });
+  test('z-rijitliği 2× eğri → TÜM frekanslar monoton ↑ (Weyl), toplam kesin artar', () => {
+    // Doğru üstünde (lineer) ama 2× eğimli z-eğrisi → dinamik z-rijitliği 2 katına.
+    // Pozitif rijitlik artışı → her özdeğer artar (min-max teoremi).
+    const m2 = mounts.map(mn => Object.assign({}, mn, {
+      curves: { z: [[-0.02, -0.02 * mn.kstat[2] * 2], [0, 0], [0.02, 0.02 * mn.kstat[2] * 2]] }
+    }));
+    const base = core.solveModalAtState(mounts, mp.cg, M6, null);
+    const stiff = core.solveModalAtState(m2, mp.cg, M6, null);
+    let sumBase = 0, sumStiff = 0;
+    for (let i = 0; i < 6; i++) {
+      expect(stiff[i].f_Hz).toBeGreaterThanOrEqual(base[i].f_Hz - 1e-6);   // monoton
+      sumBase += base[i].f_Hz; sumStiff += stiff[i].f_Hz;
+    }
+    expect(sumStiff).toBeGreaterThan(sumBase + 0.5);                        // kesin artış
+  });
+});
