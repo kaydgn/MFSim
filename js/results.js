@@ -92,8 +92,12 @@ function veUpdateResultsTree() {
     if(t && t !== 'MFSim') projectName = t;
   }
 
-  // Aktif sekmeyi kaydet (güncel nodes/connections)
-  if(veTabs.length > 0) veSaveActiveTabState();
+  // Aktif sekmeyi kaydet (güncel nodes/connections). Alt-topoloji içindeyken sonuç
+  // ağacı yenilenirse kullanıcı köke atılmasın diye görünümü koruyan varyant.
+  if(veTabs.length > 0) {
+    if(typeof veSaveActiveTabStateKeepView === 'function') veSaveActiveTabStateKeepView();
+    else veSaveActiveTabState();
+  }
   
   // Helper: sensörün bağlı olduğu bileşenden sinyal listesi al
   function getSensorSignals(sensor, tNodes, tConns) {
