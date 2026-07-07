@@ -452,8 +452,40 @@ function getMntMountPropertiesHTML(node){
   html+=_mntCard('Konum','[mm]','var(--accent-primary)', _mntTriple(node,'','',['x','y','z'],['x','y','z'],'0.01'));
   html+=_mntCard('Statik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxs','kys','kzs'],['kx','ky','kz'],'1'));
   html+=_mntCard('Dinamik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxd','kyd','kzd'],['kx','ky','kz'],'1'));
+  html+=_mntMountCurveCard(node);
   html+='</div>';
   return html;
+}
+
+// Nonlineer düşey (z) kuvvet–sehim eğrisi kartı (opsiyonel). node.data.curveZ =
+// [[δ_mm, f_N], …]. ≥2 nokta → çözücü bu takozu Newton ile nonlineer çözer; yoksa
+// lineer kzs geçerli. kzs/kzd yine kullanılır (durdurucu + dinamik/statik oran).
+function _mntMountCurveCard(node){
+  var pts = Array.isArray(node.data.curveZ) ? node.data.curveZ : null;
+  var inner;
+  if(!pts || pts.length<2){
+    inner = '<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.45; margin-bottom:8px;">'
+      + 'Düşey eksende ölçülmüş kuvvet–sehim eğrisi tanımlarsanız çözücü bu takozu '
+      + '<b>nonlineer</b> (Newton-Raphson) çözer. Tanımlamazsanız statik rijitlikle (kz) lineer kalır.</div>'
+      + '<button onclick="veMntCurveEnable(\''+node.id+'\')" style="width:100%; padding:7px; font-size:0.66rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">＋ Nonlineer z-eğrisi ekle</button>';
+  } else {
+    inner = '<div style="font-size:0.54rem; color:var(--text-muted); line-height:1.4; margin-bottom:7px;">δ: sehim [mm], f: kuvvet [N] (basma <b>−</b>). Çözücü δ\'ya göre sıralar; monoton eğri önerilir.</div>';
+    inner += '<div style="overflow-x:auto;"><table style="width:100%; border-collapse:collapse; font-size:0.6rem; margin-bottom:7px;"><thead><tr>'
+      + '<th style="'+_mntMxTh()+'">δ [mm]</th><th style="'+_mntMxTh()+'">f [N]</th><th style="'+_mntMxTh()+'"></th></tr></thead><tbody>';
+    pts.forEach(function(p,i){
+      inner += '<tr>'
+        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[0])+'" step="0.5" onchange="veMntCurveSetPoint(\''+node.id+'\','+i+',0,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+'"><input type="number" value="'+_mntEsc(p[1])+'" step="10" onchange="veMntCurveSetPoint(\''+node.id+'\','+i+',1,this.value)" style="width:100%; '+_MNT_INP+'"></td>'
+        + '<td style="'+_mntMxTd()+'"><button onclick="veMntCurveRemovePoint(\''+node.id+'\','+i+')" title="Noktayı sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:1px 6px; font-size:0.7rem; line-height:1;">✕</button></td>'
+        + '</tr>';
+    });
+    inner += '</tbody></table></div>';
+    inner += '<div style="display:flex; gap:5px;">'
+      + '<button onclick="veMntCurveAddPoint(\''+node.id+'\')" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">＋ nokta</button>'
+      + '<button onclick="veMntCurveDisable(\''+node.id+'\')" style="flex:1; padding:6px; font-size:0.62rem; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer;">Lineere dön</button>'
+      + '</div>';
+  }
+  return _mntCard('Düşey Kuvvet–Sehim Eğrisi (z)','opsiyonel · nonlineer','var(--accent-danger)', inner);
 }
 
 // ─── Setters ─────────────────────────────────────────────────────────────────
@@ -485,6 +517,48 @@ function veMntApplyLib(nodeId, key){
   if(!node.data) node.data={};
   node.data.kxs=m.sx; node.data.kys=m.sy; node.data.kzs=m.sz;
   node.data.kxd=m.dx; node.data.kyd=m.dy; node.data.kzd=m.dz; node.data.libKey=key;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+
+// ─── Nonlineer z-eğrisi (kuvvet–sehim) düzenleyici ───────────────────────────
+// Etkinleştir: mevcut kzs'den LİNEER başlangıç eğrisi tohumla (δ=−15..+15 mm,
+// f=kzs·δ). Kullanıcı sonra ilerlemeli/asimetrik yaparak düzenler. Böylece eğri
+// başta lineerle aynı sonuç verir (sürpriz yok), kullanıcı delta ekledikçe ayrışır.
+function veMntCurveEnable(nodeId){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  var kz=_mntNum(node.data.kzs, 0);   // N/mm
+  node.data.curveZ=[[-15,-15*kz],[-7.5,-7.5*kz],[0,0],[7.5,7.5*kz],[15,15*kz]];
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+function veMntCurveDisable(nodeId){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(node.data) delete node.data.curveZ;
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+// Nokta değeri düzenle — YENİDEN ÇİZME YOK (yazarken odak kaybını önler; input
+// zaten güncel değeri gösterir). col: 0=δ[mm], 1=f[N].
+function veMntCurveSetPoint(nodeId, idx, col, val){
+  var node=nodes.find(function(n){return n.id===nodeId;});
+  if(!node || !node.data || !Array.isArray(node.data.curveZ) || !node.data.curveZ[idx]) return;
+  node.data.curveZ[idx][col]=_mntNum(val, 0);
+  if(typeof saveState==='function') saveState();
+}
+function veMntCurveAddPoint(nodeId){
+  var node=nodes.find(function(n){return n.id===nodeId;});
+  if(!node || !node.data || !Array.isArray(node.data.curveZ)) return;
+  var pts=node.data.curveZ, last=pts[pts.length-1]||[0,0];
+  pts.push([_mntNum(last[0],0)+5, _mntNum(last[1],0)]);   // son noktanın 5 mm ötesine
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+function veMntCurveRemovePoint(nodeId, idx){
+  var node=nodes.find(function(n){return n.id===nodeId;});
+  if(!node || !node.data || !Array.isArray(node.data.curveZ)) return;
+  node.data.curveZ.splice(idx,1);
   if(typeof saveState==='function') saveState();
   if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
@@ -1726,7 +1800,8 @@ function _mntGatherForSolver(solver){
       masses.push({ name:_mntNodeName(n), mass:d.mass, cgx:d.cgx, cgy:d.cgy, cgz:d.cgz, Ixx:d.Ixx, Iyy:d.Iyy, Izz:d.Izz, Ixy:d.Ixy, Ixz:d.Ixz, Iyz:d.Iyz, pointMass:!!d.pointMass });
     } else if(def.isMount){
       var m=n.data||{};
-      mounts.push({ name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd });
+      mounts.push({ name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd,
+                    curveZ:(Array.isArray(m.curveZ)?m.curveZ:null) });  // opsiyonel nonlineer z-eğrisi
     }
   });
   return { components:masses, mounts:mounts, torque:_mntGatherTorque() };
@@ -1791,10 +1866,16 @@ function _mntToSI(gather, g){
       cg:[C.mmToM(_mntNum(c.cgx)),C.mmToM(_mntNum(c.cgy)),C.mmToM(_mntNum(c.cgz))],
       I:[[_mntNum(c.Ixx),_mntNum(c.Ixy),_mntNum(c.Ixz)],[_mntNum(c.Ixy),_mntNum(c.Iyy),_mntNum(c.Iyz)],[_mntNum(c.Ixz),_mntNum(c.Iyz),_mntNum(c.Izz)]],
       pointMass:!!c.pointMass }; }),
-    mounts: gather.mounts.map(function(m){ return {
-      name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
-      kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
-      kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] }; }),
+    mounts: gather.mounts.map(function(m){
+      var mnt={
+        name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
+        kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
+        kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] };
+      // Opsiyonel nonlineer z-eğrisi (UI: [δ_mm, f_N]) → SI ([δ_m, f_N]). ≥2 nokta gerekli.
+      if(Array.isArray(m.curveZ) && m.curveZ.length>=2){
+        mnt.curves={ z:m.curveZ.map(function(p){ return [C.mmToM(_mntNum(p[0])), _mntNum(p[1])]; }) };
+      }
+      return mnt; }),
     loadCases: MNT_AUTO_CASES.concat(_mntTorqueCases(gather.torque))
   };
 }
@@ -2007,6 +2088,11 @@ if(typeof module!=='undefined' && module.exports){
     veMntGetLibraryMap: veMntGetLibraryMap,
     veMntGetLibraryList: veMntGetLibraryList,
     veMntApplyLib: veMntApplyLib,
+    veMntCurveEnable: veMntCurveEnable,
+    veMntCurveDisable: veMntCurveDisable,
+    veMntCurveSetPoint: veMntCurveSetPoint,
+    veMntCurveAddPoint: veMntCurveAddPoint,
+    veMntCurveRemovePoint: veMntCurveRemovePoint,
     veMntLibAdd: veMntLibAdd,
     veMntLibRemove: veMntLibRemove,
     veMntLibSet: veMntLibSet,

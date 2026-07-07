@@ -335,3 +335,36 @@ describe('§8.9/§8.10 — Kriter 3 (vites kuvvetleri) ve Kriter 4 (tasarım yü
     expect(rev).toBeGreaterThan(fwd1);   // geri (−23705 N·m) ileri 1. vitesten ağır
   });
 });
+
+// ═══════════════ Faz 4 — Nonlineer (eğri) takoz rapor notu ═══════════════
+describe('Nonlineer takoz rapor notu (_mntRepNLNote / antet yöntemi)', () => {
+  test('tüm takoz lineer → antet "Lineer", nonlineer notu YOK', () => {
+    expect(rep._mntRepAntet(R)).toContain('Lineer');
+    expect(rep._mntRepNLMounts(R)).toHaveLength(0);
+    expect(rep._mntRepNLNote(R)).toBe('');
+    expect(rep._mntRepSection8(R)).not.toContain('Nonlineer çözüm');
+  });
+
+  test('nonlineer takoz → antet "Newton-Raphson" + not takoz adı & yakınsama içerir', () => {
+    const Rnl = {
+      mp: R.mp, gather: R.gather,
+      mounts: [Object.assign({}, R.mounts[0], { curves: { z: [[-0.02, -1000], [0, 0], [0.02, 1000]] } })].concat(R.mounts.slice(1)),
+      allCases: [{ res: { checks: { converged: true, stopConverged: true, newtonIters: 4 } } }]
+    };
+    expect(rep._mntRepNLMounts(Rnl)).toHaveLength(1);
+    expect(rep._mntRepAntet(Rnl)).toContain('Newton-Raphson');
+    const note = rep._mntRepNLNote(Rnl);
+    expect(note).toContain('Nonlineer çözüm');
+    expect(note).toContain(R.mounts[0].name);
+    expect(note).toContain('yakınsadı');
+  });
+
+  test('yakınsamayan durum → not "yakınsama sağlanamadı" uyarısı', () => {
+    const Rbad = {
+      mp: R.mp, gather: R.gather,
+      mounts: [Object.assign({}, R.mounts[0], { curves: { z: [[-0.02, -1000], [0, 0], [0.02, 1000]] } })],
+      allCases: [{ res: { checks: { converged: false, newtonIters: 60 } } }]
+    };
+    expect(rep._mntRepNLNote(Rbad)).toContain('yakınsama sağlanamadı');
+  });
+});
