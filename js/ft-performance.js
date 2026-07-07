@@ -433,8 +433,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   var tcd = tcNode ? (tcNode.data || {}) : {};
   var tcDataArr = tcd.tcData || [];
   var pumpTorqueDrop = tcd.pumpTorqueDrop !== undefined ? parseFloat(tcd.pumpTorqueDrop) : 17.6;
-  var I_conv = 0.5;           // TC toplam atalet (lockup modda)
-  var I_conv_turbine = 0.3;   // TC türbin ataleti (converter modda)
+  var I_conv = tcNode ? 0.5 : 0.0;           // TC toplam atalet (lockup modda) — TK yoksa 0
+  var I_conv_turbine = tcNode ? 0.3 : 0.0;   // TC türbin ataleti (converter modda) — TK yoksa 0
 
   var tcFns = FT_SOLVER.createTCFunctions(tcDataArr);
   var hasTCData = tcDataArr.length >= 2;
@@ -762,23 +762,36 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       N_engine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
       if(N_engine < idleRpm) N_engine = idleRpm;
       T_engine = motorTorqueFn(N_engine);
-      // Lockup kayıpları: pump torque drop + lockup klaç sürtünmesi
-      var deltaT_lockup = 10.0 + 0.00367 * N_engine;
-      T_pump = T_engine - pumpTorqueDrop;
-      var T_net_lockup = T_pump - deltaT_lockup;
-      if(T_net_lockup < 0) T_net_lockup = 0;
-      // Lockup iç verim: pompa drag + klaç sürtünmesi + gear mekanik kayıp
-      var eta_lockup = tcd.etaLockup || 0.965;
-      T_output = T_net_lockup * eta_lockup;
       SR = 1.0;
       tau = 1.0;
-      tcEta = eta_lockup;
-      // Lockup ısı reddi: per-gear RPM-bağımlı lineer model (iSCAAN uyumu)
-      // Heat_lockup = a × N_engine + b  [kW]
-      // Şanzıman mekanik kayıpları (dişli sürtünmesi, yatak, yağ kesme) devire bağlı artar
-      var gearNum = shiftState.gearIdx + 1; // 1-indexed
-      var hrCoeff = LOCKUP_HEAT_COEFFICIENTS[gearNum] || LOCKUP_HEAT_COEFFICIENTS[2];
-      heatRejection_kW = Math.max(0, hrCoeff.a * N_engine + hrCoeff.b);
+      if(!tcNode) {
+        // ── TK YOK: gerçek doğrudan tahrik (Motor ⇄ Şanzıman rijit) ──
+        // Olmayan bir konvertörün pompa tork düşüşü / kilit-klaç sürtünmesi / konvertör
+        // verimi UYGULANMAZ. Tek kayıp: dişli mekanik verimi (ftGearData.eff) — tork kaybı.
+        var eta_direct = (parseFloat(gearData.eff) || 98.0) / 100;
+        if(eta_direct <= 0 || eta_direct > 1) eta_direct = 0.98;
+        T_pump = T_engine;
+        T_output = T_engine * eta_direct;
+        tcEta = eta_direct;
+        // Isı reddi: yalnız dişli mekanik kaybı (motor gücü × (1−η))
+        var omega_dir = N_engine * 2 * Math.PI / 60;
+        heatRejection_kW = Math.max(0, T_engine * omega_dir * (1 - eta_direct) / 1000);
+      } else {
+        // ── KİLİTLİ KONVERTÖR (lockup) ── pompa drop + kilit klaç sürtünmesi
+        var deltaT_lockup = 10.0 + 0.00367 * N_engine;
+        T_pump = T_engine - pumpTorqueDrop;
+        var T_net_lockup = T_pump - deltaT_lockup;
+        if(T_net_lockup < 0) T_net_lockup = 0;
+        // Lockup iç verim: pompa drag + klaç sürtünmesi + gear mekanik kayıp
+        var eta_lockup = tcd.etaLockup || 0.965;
+        T_output = T_net_lockup * eta_lockup;
+        tcEta = eta_lockup;
+        // Lockup ısı reddi: per-gear RPM-bağımlı lineer model (iSCAAN uyumu)
+        // Heat_lockup = a × N_engine + b  [kW] — şanzıman mekanik kayıpları devire bağlı
+        var gearNum = shiftState.gearIdx + 1; // 1-indexed
+        var hrCoeff = LOCKUP_HEAT_COEFFICIENTS[gearNum] || LOCKUP_HEAT_COEFFICIENTS[2];
+        heatRejection_kW = Math.max(0, hrCoeff.a * N_engine + hrCoeff.b);
+      }
     } else {
       // ── CONVERTER MOD ──
       // N_turbine'i hızdan hesapla
@@ -839,7 +852,9 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       I_engine: I_engine, I_conv: I_conv, I_conv_turbine: I_conv_turbine,
       I_trans: I_trans, I_propshaft: I_propshaft, I_tc: I_tc,
       I_axle: I_axle_inertia, I_tire: I_tire,
-      isLockup: isLU
+      // TK yok → motor rijit bağlı: kütle hesabında daima lockup ataleti (motor dahil).
+      // TK varsa gerçek mod (converter modda motor ataleti akışkan ayrıştırma ile devre dışı).
+      isLockup: (tcNode ? isLU : true)
     });
 
     // İvme
