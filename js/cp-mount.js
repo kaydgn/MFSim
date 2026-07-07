@@ -2086,10 +2086,7 @@ function getMntSolverPropertiesHTML(node){
   html+='</select>';
   html+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4; margin-top:4px;">Nonlineer eğriler <b>Takoz Özellikleri</b>\'nde tanımlanır. Bu seçim yalnız ▶ Hesapla ile uygulanır.</div>';
   html+='</div>';
-  html+='<div style="display:flex; gap:6px; margin-bottom:10px;">';
-  html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="flex:1; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:5px;">▶ Hesapla</button>';
-  html+='<button onclick="veMntOpenMathModal()" style="padding:9px 12px; font-size:0.64rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;" title="Matematik">📐 Matematik</button>';
-  html+='</div>';
+  html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:5px;">▶ Hesapla</button>';
   html+='<div id="ve-mnt-results"></div>';
   html+='</div>';
   return html;
@@ -2104,21 +2101,20 @@ function veMntSetSolveMode(nodeId, val){
   if(typeof saveState==='function') saveState();
 }
 
-// Hesap çekirdeği — DOM'DAN BAĞIMSIZ. _veMntLast'i üretir, döner.
-// {error:[...]} (validasyon) | {mp,allCases,mounts,modes,gather,...} | null
-function _mntComputeResults(solverId){
+// ─── Çözüm hazırlığı (SYNC, DOM'suz) — gather→SI→mod→model + tek-durum çözücüsü ───
+// Hem sync _mntComputeResults hem async (progress'li) veMntSolverCompute bunu kullanır;
+// böylece iki yol da AYNI çözüm mantığını paylaşır. Dönüş: null (çözücü yok) |
+// {error,gather} (validasyon) | prep nesnesi (solveOne/solveModes fonksiyonlarıyla).
+function _mntPrepareSolve(solverId){
   var solver=nodes.find(function(n){return n.id===solverId;}); if(!solver) return null;
   var C=veMountCore;
   var gather=_mntGatherForSolver(solver);
   var si=_mntToSI(gather, 9.81);
   var problems=C.validateModel(si.components, si.mounts);
-  if(problems.length){ _veMntLast=null; return { error:problems, gather:gather }; }
+  if(problems.length) return { error:problems, gather:gather };
   var mp=C.combineMassProps(si.components);
-  if(!mp){ _veMntLast=null; return { error:['Kütle hesaplanamadı (toplam ≤ 0).'], gather:gather }; }
-  // ── Çözüm Modu: kullanıcı seçimini uygula ──
-  //  linear    → nonlineer eğrileri YOK SAY (SI mount'lardan curves'i sıyır) → saf lineer.
-  //  nonlinear → eğrileri kullan (varsa Newton; yoksa lineer + uyarı — solvedNL=false).
-  //  auto      → eğri varsa nonlineer, yoksa lineer (varsayılan/geriye uyumlu).
+  if(!mp) return { error:['Kütle hesaplanamadı (toplam ≤ 0).'], gather:gather };
+  // Çözüm Modu: linear → curves'i sıyır (saf lineer); nonlinear/auto → eğrileri kullan.
   var mode=(solver.data && solver.data.solveMode) || 'auto';
   var mounts=si.mounts;
   if(mode==='linear'){
@@ -2127,48 +2123,146 @@ function _mntComputeResults(solverId){
       var c={}; Object.keys(m).forEach(function(k){ if(k!=='curves') c[k]=m[k]; }); return c;
     });
   }
-  var solvedNL=(typeof C.anyCurve==='function') && C.anyCurve(mounts);   // fiilen nonlineer çözüldü mü
-  var model={ m:mp.m, cg:mp.cg, Kstat:C.buildK(mounts,mp.cg,false), mounts:mounts, g:si.g };
-  var allCases=C.solveAllCases(model, si.loadCases, {useStop:true}); // ±15 mm metal-metal durdurucu (F4)
-  var M6=C.buildM6(mp.m,mp.I_G), modes;
-  if(solvedNL){
-    // Nonlineer takoz var → modları STATİK dengedeki (Static durumu) dinamik
-    // tanjant rijitlikle çöz (önyüklü çalışma noktası). allCases[0] = Static.
-    var qStat=(allCases[0] && allCases[0].res) ? allCases[0].res.q : null;
-    modes=C.solveModalAtState(mounts, mp.cg, M6, qStat);
-  } else {
-    // Lineer (mod seçimi veya eğri yok) → mevcut yol (K_dyn) birebir korunur.
-    modes=C.solveModal(C.buildK(mounts,mp.cg,true), M6, mounts, mp.cg);
-  }
-  // Kriter 3 — her vites için tork durumu (mount kuvvetleri). Kriter 4 — tasarım
-  // yük koşulları (maks tork = 1. vites, 3.5g düşey, 1g yanal, 1g boyuna).
-  var gearDefs=_mntGearTorqueCases(gather.torque);
-  var gearCases=gearDefs.length ? C.solveAllCases(model, gearDefs, {useStop:true}) : [];
-  var designDefs=[
-    {name:'3.5g Düşey',       n:[ 0,0,-3.5], T:[0,0,0]},
-    {name:'1g Yanal',         n:[ 0,1,-1  ], T:[0,0,0]},
-    {name:'1g Boyuna (fren)', n:[-1,0,-1  ], T:[0,0,0]}
-  ];
-  var designCases=C.solveAllCases(model, designDefs, {useStop:true});
-  // Nonlineer seçildi ama hiç eğri yok → kullanıcı uyarılır (solvedNL zaten false).
-  var nlNoCurve=(mode==='nonlinear' && !solvedNL);
-  var R={ mp:mp, allCases:allCases, mounts:mounts, modes:modes, gather:gather,
-          gearCases:gearCases, designCases:designCases, g:si.g,
-          matrixMode:(solver.data.matrixMode||'delta'), solveMode:mode, solvedNL:solvedNL, nlNoCurve:nlNoCurve,
-          solverId:solverId };
+  var solvedNL=(typeof C.anyCurve==='function') && C.anyCurve(mounts);   // fiilen nonlineer mi
+  var Kstat=C.buildK(mounts,mp.cg,false);
+  var prep={
+    C:C, solver:solver, gather:gather, si:si, mp:mp, mode:mode, mounts:mounts,
+    solvedNL:solvedNL, nlNoCurve:(mode==='nonlinear' && !solvedNL),
+    loadCases:si.loadCases, gearDefs:_mntGearTorqueCases(gather.torque),
+    designDefs:[ {name:'3.5g Düşey',       n:[ 0,0,-3.5], T:[0,0,0]},
+                 {name:'1g Yanal',         n:[ 0,1,-1  ], T:[0,0,0]},
+                 {name:'1g Boyuna (fren)', n:[-1,0,-1  ], T:[0,0,0]} ]
+  };
+  // Tek yük durumu çözücüsü — solveAllCases yönlendirmesiyle AYNI: solvedNL → Newton
+  // (solveCaseNL), değilse metal-metal durdurucu (solveCaseStop). onIter (ops.) yalnız
+  // nonlineer yolda anlamlı: her Newton adımının residual normunu bildirir (progress).
+  prep.solveOne=function(lc, onIter){
+    var res = solvedNL
+      ? C.solveCaseNL(mounts, mp.cg, mp.m, si.g, lc, {useStop:true, onIter:onIter})
+      : C.solveCaseStop(Kstat, mounts, mp.cg, mp.m, si.g, lc, {useStop:true});
+    return res ? {name:lc.name, loadCase:lc, res:res}
+               : {name:lc.name, loadCase:lc, res:null, error:'K matrisi singular/çözülemedi (montaj kinematik olarak serbest olabilir).'};
+  };
+  // Modal — nonlineerde statik dengedeki (Static) tanjant rijitlik; değilse K_dyn.
+  prep.solveModes=function(allCases){
+    var M6=C.buildM6(mp.m, mp.I_G);
+    if(solvedNL){
+      var qStat=(allCases[0] && allCases[0].res) ? allCases[0].res.q : null;
+      return C.solveModalAtState(mounts, mp.cg, M6, qStat);
+    }
+    return C.solveModal(C.buildK(mounts,mp.cg,true), M6, mounts, mp.cg);
+  };
+  return prep;
+}
+
+// prep + çözülmüş durumlar → R (ve _veMntLast). Sync ve async yol AYNI R'yi üretir.
+function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
+  var R={ mp:prep.mp, allCases:allCases, mounts:prep.mounts, modes:modes, gather:prep.gather,
+          gearCases:gearCases, designCases:designCases, g:prep.si.g,
+          matrixMode:((prep.solver.data&&prep.solver.data.matrixMode)||'delta'), solveMode:prep.mode,
+          solvedNL:prep.solvedNL, nlNoCurve:prep.nlNoCurve, solverId:prep.solver.id };
   _veMntLast=R;
   return R;
 }
 
-// Çözücüyü çalıştır → #ve-mnt-results'a KOMPAKT DURUM bas. Sonucu döner.
-// Ayrıntılı sonuç dökümü (çökme matrisi / mod tablosu / CSV) BİLEREK YOK:
-// kullanıcı sonuçlara Rapor bileşeninden bakar; panel yalnız "çözüldü mü,
-// uyarı var mı" durumunu gösterir (bkz. _mntSolverStatusHTML).
-function veMntSolverCompute(solverId){
-  var R=_mntComputeResults(solverId);
-  var out=document.getElementById('ve-mnt-results'); if(!out) return R;
-  if(!R){ out.innerHTML=''; return R; }
-  out.innerHTML=_mntSolverStatusHTML(R);
+// Hesap çekirdeği — DOM'DAN BAĞIMSIZ, SYNC. _veMntLast'i üretir, döner.
+// {error:[...]} (validasyon) | {mp,allCases,mounts,modes,gather,...} | null
+// (Canlı ilerleme çubuğu için async sürüm veMntSolverCompute; AYNI R'yi üretir.)
+function _mntComputeResults(solverId){
+  var prep=_mntPrepareSolve(solverId); if(!prep) return null;
+  if(prep.error){ _veMntLast=null; return { error:prep.error, gather:prep.gather }; }
+  var allCases=prep.loadCases.map(function(lc){ return prep.solveOne(lc); });
+  var modes=prep.solveModes(allCases);
+  var gearCases=prep.gearDefs.length ? prep.gearDefs.map(function(lc){ return prep.solveOne(lc); }) : [];
+  var designCases=prep.designDefs.map(function(lc){ return prep.solveOne(lc); });
+  return _mntAssembleR(prep, allCases, modes, gearCases, designCases);
+}
+
+// ─── İlerleme çubuğu yardımcıları ────────────────────────────────────────────
+// Bir sonraki boyamaya bırak (progress bar görünür olsun) + küçük gecikme.
+function _mntYield(){
+  return new Promise(function(resolve){
+    if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){ setTimeout(resolve, 24); });
+    else setTimeout(resolve, 0);
+  });
+}
+function _mntSci(x){
+  if(!Number.isFinite(x)) return '—';
+  var a=Math.abs(x);
+  return (a===0) ? '0' : (a>=100 || a<0.1) ? x.toExponential(1) : x.toFixed(2);
+}
+// Yük durumu için iterasyon/durum etiketi (progress alt satırı).
+function _mntCaseIterLabel(rc, prep){
+  if(!rc || !rc.res) return 'çözülemedi';
+  var ck=rc.res.checks||{};
+  if(prep.solvedNL){
+    var it=ck.newtonIters||1;
+    return 'Newton '+it+' iter'+((ck.converged===false)?' ⚠':' ✓');
+  }
+  return 'lineer'+((ck.clampCount>0)?(' · '+ck.clampCount+' durdurucu'):'');
+}
+// İlerleme çubuğu HTML'i (async çözüm sırasında #ve-mnt-results'a basılır).
+function _mntSolverProgressHTML(done, total, label, sub, prep){
+  var pct=Math.max(0, Math.min(100, Math.round(100*done/Math.max(1,total))));
+  var accent=prep.solvedNL ? 'var(--accent-danger)' : 'var(--accent-primary)';
+  var modeTxt=prep.solvedNL ? 'Nonlineer · Newton-Raphson' : 'Lineer';
+  var h='<div style="padding:11px 12px; border:1px solid var(--border-color); background:var(--bg-secondary); border-radius:6px;">';
+  h+='<div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px;">'
+    + '<span style="font-size:0.68rem; font-weight:700; color:var(--text-heading);">Çözülüyor…</span>'
+    + '<span style="font-size:0.58rem; color:var(--text-muted);">'+done+' / '+total+' · %'+pct+'</span></div>';
+  h+='<div style="height:8px; background:var(--bg-tertiary); border-radius:4px; overflow:hidden;">'
+    + '<div style="height:100%; width:'+pct+'%; background:'+accent+'; transition:width 0.12s linear;"></div></div>';
+  h+='<div style="margin-top:6px; font-size:0.6rem; color:var(--text-secondary); display:flex; justify-content:space-between; gap:8px;">'
+    + '<span style="font-weight:600;">'+_mntEsc(label)+'</span>'
+    + '<span style="color:var(--text-muted);">'+_mntEsc(sub||'')+'</span></div>';
+  h+='<div style="margin-top:3px; font-size:0.53rem; color:var(--text-muted);">'+modeTxt+' · '+(prep.mounts?prep.mounts.length:0)+' takoz</div>';
+  h+='</div>';
+  return h;
+}
+
+// Çözücüyü çalıştır → #ve-mnt-results'a önce CANLI İLERLEME ÇUBUĞU, sonra KOMPAKT
+// DURUM bas. ASYNC: yük durumlarını adım adım çözüp ilerlemeyi (ve nonlineerde her
+// durumun Newton iterasyon sayısını) canlı gösterir. Ayrıntılı sonuç → Rapor.
+// Hesap yalnız bu fonksiyonla (▶ Hesapla) koşar.
+async function veMntSolverCompute(solverId){
+  var out=(typeof document!=='undefined') ? document.getElementById('ve-mnt-results') : null;
+  var prep=_mntPrepareSolve(solverId);
+  if(!prep){ if(out) out.innerHTML=''; return null; }
+  if(prep.error){ _veMntLast=null; var Rerr={ error:prep.error, gather:prep.gather };
+    if(out) out.innerHTML=_mntSolverStatusHTML(Rerr); return Rerr; }
+  var total=prep.loadCases.length + prep.gearDefs.length + prep.designDefs.length + 1; // +modal
+  var done=0;
+  function step(label, sub){ done++; if(out) out.innerHTML=_mntSolverProgressHTML(done, total, label, sub, prep); }
+  var worst={ iters:0, name:'', trace:null };   // en çok iterasyon yapan durum (residual izi)
+  // 1) Ana yük durumları — nonlineerde her durumun Newton residual izini yakala
+  var allCases=[];
+  for(var i=0;i<prep.loadCases.length;i++){
+    var lc=prep.loadCases[i], trace=[];
+    var rc=prep.solveOne(lc, prep.solvedNL ? function(iter, res){ trace.push(res); } : null);
+    allCases.push(rc);
+    var it=(rc.res && rc.res.checks && rc.res.checks.newtonIters) || 0;
+    if(prep.solvedNL && it>worst.iters){ worst={ iters:it, name:lc.name, trace:trace.slice() }; }
+    step(lc.name, _mntCaseIterLabel(rc, prep));
+    await _mntYield();
+  }
+  // 2) Vites tork durumları (Kriter 3)
+  var gearCases=[];
+  for(var gi=0; gi<prep.gearDefs.length; gi++){
+    var glc=prep.gearDefs[gi], grc=prep.solveOne(glc);
+    gearCases.push(grc); step(glc.name, _mntCaseIterLabel(grc, prep)); await _mntYield();
+  }
+  // 3) Tasarım yük durumları (Kriter 4)
+  var designCases=[];
+  for(var di=0; di<prep.designDefs.length; di++){
+    var dlc=prep.designDefs[di], drc=prep.solveOne(dlc);
+    designCases.push(drc); step(dlc.name, _mntCaseIterLabel(drc, prep)); await _mntYield();
+  }
+  // 4) Modal analiz
+  var modes=prep.solveModes(allCases);
+  step('Modal analiz', prep.solvedNL ? 'tanjant rijitlik' : 'K_dyn'); await _mntYield();
+  var R=_mntAssembleR(prep, allCases, modes, gearCases, designCases);
+  R._worstIter=worst;   // profesyonel yakınsama özeti için
+  if(out) out.innerHTML=_mntSolverStatusHTML(R);
   return R;
 }
 
@@ -2222,6 +2316,26 @@ function _mntSolverStatusHTML(R){
     warns.forEach(function(w){ h+='<div><span style="display:inline-block; width:14px; color:'+w[2]+';">'+w[0]+'</span>'+_mntEsc(w[1])+'</div>'; });
     h+='</div>';
   }
+
+  // ── Yakınsama özeti (yalnız nonlineer): en çok iterasyon + residual izi ──
+  if(R.solvedNL){
+    var maxIt=0, maxName='';
+    (R.allCases||[]).forEach(function(rc){
+      var it=rc.res && rc.res.checks && rc.res.checks.newtonIters;
+      if(it>maxIt){ maxIt=it; maxName=rc.name; }
+    });
+    if(maxIt>0){
+      h+='<div style="margin-top:8px; padding:8px 10px; border:1px solid var(--accent-danger); background:rgba(239,68,68,0.06); border-radius:5px; font-size:0.58rem; line-height:1.6; color:var(--text-secondary);">';
+      h+='<div style="font-weight:700; color:var(--text-heading); font-size:0.62rem; margin-bottom:2px;">Yakınsama · Newton-Raphson</div>';
+      h+='En çok iterasyon: <b style="color:var(--text-primary);">'+maxIt+'</b> ('+_mntEsc(maxName)+' durumu).';
+      var tr=(R._worstIter && R._worstIter.trace && R._worstIter.trace.length) ? R._worstIter.trace : null;
+      if(tr){
+        h+='<div style="margin-top:3px;">Artık ‖r‖: <span style="font-family:monospace; color:var(--text-primary);">'
+          + tr.map(function(v){ return _mntSci(v); }).join(' → ')+'</span> N</div>';
+      }
+      h+='</div>';
+    }
+  }
   h+='<div style="margin-top:8px; font-size:0.58rem; color:var(--text-muted); line-height:1.45;">Ayrıntılı sonuçlar (çökme matrisi, mod şekilleri, kriter değerlendirmesi) için <b>Rapor</b> bileşenini kullanın.</div>';
   return h;
 }
@@ -2233,33 +2347,7 @@ function _mntSolverStatusHTML(R){
 function _mntMxTh(){ return 'padding:3px 5px; border:1px solid var(--border-color); color:var(--text-secondary); font-weight:600; text-align:center;'; }
 function _mntMxTd(){ return 'padding:3px 5px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);'; }
 
-// ─── Matematik ───────────────────────────────────────────────────────────────
-function veMntOpenMathModal(){ _mntShowModal('📐 Takoz Modülünün Matematiği', _mntMathHTML()); }
-function _mntMathHTML(){
-  var eq='background:var(--bg-secondary); border:1px solid var(--border-color); padding:8px 12px; margin:6px 0; font-family:monospace; font-size:0.66rem; white-space:pre-wrap; overflow-x:auto;';
-  var st='font-weight:700; color:var(--text-heading); margin:14px 0 4px; font-size:0.82rem;';
-  var tx='font-size:0.68rem; line-height:1.55; color:var(--text-secondary); margin:4px 0;';
-  var h='<div style="max-width:760px;">';
-  h+='<div style="'+st+'">0. Model</div><div style="'+tx+'">Güç grubu tek rijit gövde; şasiye N takoz (üç eksenli lineer yay). 6 SD. Referans: birleşik CG. Yük durumları otomatik (14 senaryo, Adams §6 g-kitabı) ve girilen kinematikten türetilen ileri/geri tork durumları. Elastomer ±10 mm bandında lineerdir; ±15 mm’de metal-metal durdurucu devreye girer (§4c).</div>';
-  h+='<div style="'+st+'">1-3. Kinematik & matrisler</div><div style="'+eq+'">q=[ux,uy,uz,θx,θy,θz] ; d=r_mount−c_G\nδ=u+θ×d=A·q , A=[E3|−skew(d′)] , d′=(dx,dy,−dz)\nK=Σ Aᵢᵀ·diag(k)ᵢ·Aᵢ ; M6=blockdiag(m·E3, I_G*)\nI_G=Σ[Iⱼ+mⱼ((dⱼ·dⱼ)E3−dⱼdⱼᵀ)]</div><div style="'+tx+'">Z-ekseni kuplaj konvansiyonu (Adams kalibrasyonu): kaldıraç kolunun düşey bileşeni dz ve buna eşlenik atalet çarpımları Ixz, Iyz (I_G*) kuplaj terimlerine ters işaretle girer. δz bundan etkilenmez.</div>';
-  h+='<div style="'+st+'">4. Statik çözüm</div><div style="'+eq+'">F=[m·g·nx, m·g·ny, m·g·nz, Tx,Ty,Tz] (nz yerçekimi DAHİL)\nq=K_stat⁻¹·F ; δᵢ=Aᵢ·q ; fᵢ=kᵢ·δᵢ\nΣfz=−m·g ; çekme: δz>+0.01 mm</div>';
-  h+='<div style="'+st+'">4c. Metal-metal durdurucu (±15 mm, parçalı-lineer)</div><div style="'+eq+'">|δz|>15 mm → gap elemanı: k_stop=100·kz devreye girer\nK_eff=K+Σ_temas k_stop·(aᵤᵤ⊗aᵤᵤ) ; aktif-küme iterasyonu\nyük yeniden dağılır; dibe oturan takoz temas kuvvetiyle çalışır</div>';
-  h+='<div style="'+st+'">4b. Tork zinciri</div><div style="'+eq+'">T_shaft = Te · R_stall · i_gear · i_transfer · φ_axle · derate\nileri: i_gear=1.vites ; geri: i_gear=Geri ; Tx=−T_shaft</div>';
-  h+='<div style="'+st+'">5. Modal</div><div style="'+eq+'">(K_dyn−ω²M6)φ=0 → genelleştirilmiş özdeğer\nf_r=√λ_r/2π (6 mod, artan)</div>';
-  h+='<div style="'+st+'">5b. İzolasyon kriterleri (rapor §8.8)</div><div style="'+eq+'">f_ateş=(N/60)·(z/2) (4-zamanlı)\nKriter 1: roll modu (mod 6) < 0.5·f_ateş\nKriter 2: T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] < %50 , r=f_ateş/f_doğal</div>';
-  h+='<div style="'+tx+'; color:var(--text-muted); margin-top:12px; border-top:1px solid var(--border-color); padding-top:8px;">Doğrulama testleri (T1–T9, Adams BMC_TTAR_2031) referans değerlerle eşleşir.</div></div>';
-  return h;
-}
-function _mntShowModal(title, innerHTML){
-  var old=document.getElementById('ve-mnt-submodal'); if(old) old.remove();
-  var ov=document.createElement('div'); ov.id='ve-mnt-submodal';
-  ov.style.cssText='position:fixed; inset:0; z-index:100030; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; padding:20px;';
-  ov.addEventListener('mousedown', function(e){ if(e.target===ov){ if(typeof veMountViewerDispose==='function'){try{veMountViewerDispose();}catch(x){}} ov.remove(); } });
-  var box=document.createElement('div');
-  box.style.cssText='max-width:1200px; width:94%; max-height:90vh; overflow-y:auto; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 20px 60px rgba(0,0,0,0.6);';
-  box.innerHTML='<div style="display:flex; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border-color); background:var(--bg-tertiary); position:sticky; top:0; z-index:1;"><span style="font-weight:700; font-size:0.88rem; color:var(--text-heading);">'+title+'</span><div style="flex:1;"></div><button onclick="if(typeof veMountViewerDispose===\'function\'){try{veMountViewerDispose();}catch(x){}} this.closest(\'#ve-mnt-submodal\').remove()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.1rem;">✕</button></div><div style="padding:16px;">'+innerHTML+'</div>';
-  ov.appendChild(box); document.body.appendChild(ov);
-}
+// (📐 Matematik paneli kaldırıldı — istek üzerine tamamen silindi.)
 
 // ─── Tam ekran overlay (3D / 2D görünümleri büyütmek için) ───────────────────
 // Büyük, esnek bir overlay: başlık + kapat (X/Esc) + içerik alanı. onMount(body)

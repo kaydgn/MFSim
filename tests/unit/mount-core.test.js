@@ -522,3 +522,32 @@ describe('buildKtangentDyn / solveModalAtState — tanjant-modal (Faz 3)', () =>
     expect(sumStiff).toBeGreaterThan(sumBase + 0.5);                        // kesin artış
   });
 });
+
+// ═══════════ solveCaseNL onIter — Newton residual izi (progress bar için) ═══════════
+describe('solveCaseNL onIter callback (yakınsama izi)', () => {
+  const kz = mounts[0].kstat[2];
+  const stiff = [[-0.02,-0.02*kz*2.5],[-0.01,-0.01*kz*1.5],[0,0],[0.01,0.01*kz*1.5],[0.02,0.02*kz*2.5]];
+
+  test('nonlineer: onIter her Newton adımında (iter,‖r‖) bildirir; residual azalır', () => {
+    const m2 = mounts.map((mn, i) => i === 0 ? Object.assign({}, mn, { curves: { z: stiff } }) : mn);
+    const trace = [];
+    const r = core.solveCaseNL(m2, mp.cg, mp.m, g, { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] },
+      { useStop: true, onIter: (it, res) => trace.push(res) });
+    expect(r.checks.converged).toBe(true);
+    expect(trace.length).toBe(r.checks.newtonIters);        // iterasyon başına tam bir çağrı
+    expect(trace.length).toBeGreaterThanOrEqual(2);          // gerçek nonlineer iterasyon
+    expect(trace[trace.length - 1]).toBeLessThan(trace[0]);  // residual düştü (yakınsama)
+  });
+
+  test('lineer takozda onIter tek adım bildirir (Newton 1 iterasyonda iner)', () => {
+    const trace = [];
+    core.solveCaseNL(mounts, mp.cg, mp.m, g, { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] },
+      { useStop: true, onIter: (it, res) => trace.push(res) });
+    expect(trace.length).toBe(1);
+  });
+
+  test('onIter yoksa hata vermez (opsiyonel)', () => {
+    expect(() => core.solveCaseNL(mounts, mp.cg, mp.m, g,
+      { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] }, { useStop: true })).not.toThrow();
+  });
+});
