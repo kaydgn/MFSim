@@ -964,17 +964,20 @@ var VE_FT_SHIFT_PROFILES = {
     etaLockup2C2L: 0.83
   },
   // GM 8L90 8-ileri — TK'siz (doğrudan Motor→Şanzıman) Tam-Gaz kalibrasyonu.
-  // Konvertör-lockup ayrımı TK yokken kozmetiktir; tüm vitesler sabit ~3900 rpm'de
-  // (güç tepesi 3750'nin hemen üstü) değişir. shiftRefRPM motor governor'ından
-  // bağımsız sabittir → motor 5000 rpm'e kadar dönebilirken vites 3900'de değişir.
-  // lockupShifts.a = 1/i_gear (b=0) → her vites tam N_engine = shiftRefRPM'de üst vitese.
+  // Konvertör-lockup ayrımı TK yokken kozmetiktir. Tüm vitesler MOTOR GOVERNED
+  // devrinde değişir (shiftRefRPM: null → motorun governedSpeed'i kullanılır) →
+  // profil HER motora uyarlanır: LZ0 (gov 4000) → 4000, L5P (gov 3450) → 3450.
+  // Bu genellik şart: sabit bir devir (ör. 3900) düşük-devirli motorda (L5P maks
+  // 3450) asla ulaşılamaz → şanzıman 1. viteste takılırdı.
+  // shift1C2C/2C2L oranları ve lockupShifts.a = 1/i_gear (b=0) → geçiş devri
+  // shiftRefRPM'in mutlak değerinden bağımsız olarak tam N_engine = shiftRefRPM olur.
   gm8l90_perf: {
     name: 'GM 8L90 8-Speed — Performans',
     family: '',
     lockupOffset: 0,               // fallback: N_engine ≥ shiftRefRPM
-    shift1C2C_outRatio: 0.2193,    // 1C→2C: N_out ≥ 0.2193×ref → N_engine ≈ 3900 (i₁=4.56)
-    shift2C2L_outRatio: 0.3367,    // 2C→2L: N_out ≥ 0.3367×ref → N_engine ≈ 3900 (i₂=2.97)
-    shiftRefRPM: 3900,             // sabit vites-değiştirme devri (güç tepesi ~3750 üstü)
+    shift1C2C_outRatio: 0.2193,    // 1C→2C: N_out ≥ (1/i₁)×ref → N_engine = shiftRefRPM (i₁=4.56)
+    shift2C2L_outRatio: 0.3367,    // 2C→2L: N_out ≥ (1/i₂)×ref → N_engine = shiftRefRPM (i₂=2.97)
+    shiftRefRPM: null,             // null → motor governedSpeed'i (her motora uyarlanır)
     lockupShifts: {
       '2L3L': { a: 0.3367, b: 0 },   // i₂=2.97
       '3L4L': { a: 0.4808, b: 0 },   // i₃=2.08

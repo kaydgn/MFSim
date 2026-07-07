@@ -64,6 +64,41 @@ describe('Motor preset — 3.0L I6 Duramax Turbo Diesel LZ0', () => {
   });
 });
 
+describe('Motor preset — 6.6L V8 Duramax Turbo Diesel L5P', () => {
+  const p = VE_FT_MOTOR_PRESETS['duramax_l5p_470'];
+
+  test('preset tanımlı ve isim/etiket doğru', () => {
+    expect(p).toBeDefined();
+    expect(p.name).toContain('L5P');
+    expect(p.name).toContain('1322Nm');
+    expect(p.name).toContain('350kW');
+  });
+
+  test('spec: max powered speed = governedSpeed 3450', () => {
+    expect(p.specs.displacement).toBe(6.60);
+    expect(p.specs.idleRpm).toBe(700);
+    expect(p.specs.governedSpeed).toBe(3450);   // "Maximum Powered Speed"
+    expect(p.specs.noLoadGoverned).toBe(3600);
+  });
+
+  test('rated tork/güç noktaları (tepe tork@1600, tepe güç@2800)', () => {
+    const at1600 = p.data.find(d => d.rpm === 1600);
+    expect(at1600.torque).toBe(1322);           // 975 lb-ft tepe tork
+    expect(Math.max.apply(null, p.data.map(d => d.torque))).toBe(1322);
+    const peakPow = p.data.reduce((a, d) => d.power > a.power ? d : a);
+    expect(peakPow.rpm).toBe(2800);             // 470 HP @ 2800
+    expect(peakPow.power).toBeCloseTo(350.2, 1);
+  });
+
+  test('eğri sıralı + güç tutarlı, terminal {3600,0,0}, rölanti çapası', () => {
+    for (let i = 1; i < p.data.length; i++) expect(p.data[i].rpm).toBeGreaterThan(p.data[i - 1].rpm);
+    p.data.forEach(d => { if (d.torque > 0) expect(d.power).toBeCloseTo(d.torque * d.rpm / 9549.3, 0); });
+    expect(p.data[p.data.length - 1]).toEqual({ rpm: 3600, torque: 0, power: 0 });
+    expect(p.data[0].rpm).toBe(700);
+    expect(p.accessories.every(a => a.userLoss === 0)).toBe(true);
+  });
+});
+
 describe('Şanzıman preset — GM 8L90 8-Speed', () => {
   const g = VE_GEARBOX_PRESETS['8L90'];
 
@@ -88,7 +123,10 @@ describe('Vites profili — gm8l90_perf', () => {
   test('profil tanımlı ve 8L90 preset anahtarına eşleşir', () => {
     const sp = VE_FT_SHIFT_PROFILES['gm8l90_perf'];
     expect(sp).toBeDefined();
-    expect(sp.shiftRefRPM).toBe(3900);
+    // shiftRefRPM null → çözücü motorun governedSpeed'ini kullanır (her motora uyarlanır).
+    // Sabit bir devir olsaydı düşük-devirli motor (L5P maks 3450) o devre ulaşamaz →
+    // şanzıman 1. viteste takılırdı.
+    expect(sp.shiftRefRPM).toBeNull();
     // 8L90 preset'i uygulanınca bu profil otomatik seçilir:
     expect(veGetGearboxKeyFromShiftProfile('gm8l90_perf')).toBe('8L90');
     // Allison profilleri hâlâ kendi anahtarlarına eşleşir (regresyon yok):
