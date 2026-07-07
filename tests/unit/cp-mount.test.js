@@ -252,8 +252,8 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     expect(map['TK035'].fitX.form).toBe('poly');
     expect(map['TK035'].fitX.k0).toBe(415);           // radyal fit orijin eğimi = statik Cx
     expect(map['TK035'].fitY.form).toBe('poly');
-    expect(map['TK035'].fitZ.form).toBe('asym');       // eksenel asimetrik
-    expect(map['TK035'].fitZ.pos.xmax).toBeCloseTo(5.60);
+    expect(map['TK035'].fitZ.form).toBe('asym');       // eksenel asimetrik (basma=δ<0)
+    expect(map['TK035'].fitZ.comp.xmax).toBeCloseTo(5.60);
     // statik/dinamik lineer değerler de tabloya uygun
     expect(map['TK035'].sz).toBe(192);
     expect(map['TK035'].dx).toBe(535);
@@ -272,7 +272,7 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     expect(mount.data.kxs).toBe(415);   // statik Cx
     // kopya snapshot, fabrika referansı değil (mutasyon fabrikayı etkilemez)
     expect(mount.data.fitZ).not.toBe(cp.VE_MOUNT_LIBRARY['TK035'].fits.z);
-    expect(mount.data.fitZ.pos.xmax).toBeCloseTo(5.60);
+    expect(mount.data.fitZ.comp.xmax).toBeCloseTo(5.60);
     // fitsiz gömülü uygula → 3 eksen de temizlenir
     cp.veMntApplyLib('mm', 'amc55sha');
     expect(mount.data.fitX).toBeUndefined();
@@ -929,26 +929,27 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     expect(poly.k0).toBeCloseTo(415000, 0);              // dF/dδ|0 = 415 N/mm = 415000 N/m
     expect(poly.force(0.005)).toBeCloseTo(1832.81, 1);   // 5 mm → N
     expect(poly.tangent(0.005)).toBeCloseTo(294812.5, 0);// dF/dδ|5mm (N/m)
-    const az = core.makeAxisLaw({ form: 'asym', neg: { k0: 361, c3: 2.20 }, pos: { k0: 367, xmax: 5.60 } });
-    expect(az.force(-0.005)).toBeCloseTo(-2080, 0);      // -5 mm → kübik dal
-    expect(az.force(0.003)).toBeCloseTo(2371.6, 0);      // +3 mm → rasyonel dal
-    expect(az.force(0.0055)).toBeGreaterThan(90000);     // asimptota yakın → kırpılmış, çok sert
-    expect(Number.isFinite(az.force(0.006))).toBe(true); // xmax ötesi bile SONLU (Newton için)
+    const az = core.makeAxisLaw({ form: 'asym', comp: { k0: 367, xmax: 5.60 }, ext: { k0: 361, c3: 2.20 } });
+    expect(az.force(0.003)).toBeCloseTo(1142.4, 0);       // +3 mm geri-gelme → kübik (yumuşak)
+    expect(az.force(-0.005)).toBeCloseTo(-17126.7, 0);    // -5 mm basma → rasyonel (sert, bump-stop yakını)
+    expect(az.force(-0.0055)).toBeLessThan(-90000);       // asimptota yakın → kırpılmış, çok sert
+    expect(Number.isFinite(az.force(-0.006))).toBe(true); // -xmax ötesi bile SONLU (Newton için)
   });
 
   test('_mntFitForce panel değerlendiricisi çekirdek makeAxisLaw ile birebir', () => {
-    const asym = { form: 'asym', neg: { k0: 361, c3: 2.20 }, pos: { k0: 367, xmax: 5.60 } };
+    const asym = { form: 'asym', comp: { k0: 367, xmax: 5.60 }, ext: { k0: 361, c3: 2.20 } };
     expect(cp._mntFitForce({ form: 'poly', k0: 415, c3: -2.44, c5: 0.0201 }, 5)).toBeCloseTo(1832.81, 1);
     expect(cp._mntFitForce(asym, 0)).toBe(0);
-    expect(cp._mntFitForce(asym, -5)).toBeCloseTo(-2080, 0);
+    expect(cp._mntFitForce(asym, 3)).toBeCloseTo(1142.4, 0);      // +3 mm geri-gelme (kübik)
+    expect(cp._mntFitForce(asym, -5)).toBeCloseTo(-17126.7, 0);   // -5 mm basma (rasyonel)
     const law = core.makeAxisLaw(asym);
-    expect(cp._mntFitForce(asym, 3)).toBeCloseTo(law.force(0.003), 3);   // panel = çekirdek
+    expect(cp._mntFitForce(asym, 3)).toBeCloseTo(law.force(0.003), 3);   // panel = çekirdek (aynı konvansiyon)
   });
 
   test('_mntToSI analitik fiti mnt.fits olarak taşır; çekirdek nonlineer tanır', () => {
     const topo = buildTTARTopology();
     const mnt = topo.nodes.find(n => n.type === 'mnt-mount');
-    mnt.data.fitZ = { form: 'asym', neg: { k0: 361, c3: 2.20 }, pos: { k0: 367, xmax: 5.60 } };
+    mnt.data.fitZ = { form: 'asym', comp: { k0: 367, xmax: 5.60 }, ext: { k0: 361, c3: 2.20 } };
     mnt.data.fitX = { form: 'poly', k0: 415, c3: -2.44, c5: 0.0201 };
     global.nodes = topo.nodes; global.connections = topo.connections;
     const si = cp._mntToSI(cp._mntGatherForSolver(topo.solver), 9.81);
@@ -964,7 +965,7 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     topo.nodes.filter(n => n.type === 'mnt-mount').forEach(n => {
       n.data.fitX = { form: 'poly', k0: 415, c3: -2.44, c5: 0.0201 };
       n.data.fitY = { form: 'poly', k0: 210, c3: -1.28, c5: 0.0169 };
-      n.data.fitZ = { form: 'asym', neg: { k0: 361, c3: 2.20 }, pos: { k0: 367, xmax: 5.60 } };
+      n.data.fitZ = { form: 'asym', comp: { k0: 367, xmax: 5.60 }, ext: { k0: 361, c3: 2.20 } };
     });
     global.nodes = topo.nodes; global.connections = topo.connections;
     const si = cp._mntToSI(cp._mntGatherForSolver(topo.solver), 9.81);

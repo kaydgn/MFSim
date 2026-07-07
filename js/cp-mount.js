@@ -28,11 +28,14 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // nonlineer kuvvet–sehim yasası iki biçimde tanımlanabilir (yoksa o eksen lineerdir):
 //   • `fits:{x,y,z}`   — ANALİTİK kapalı-form (mm/N). Çekirdek force+tanjantı tam ve
 //        pürüzsüz üretir (Newton için ideal). 'poly': F=k0·x+c3·x³+c5·x⁵ (radyal);
-//        'asym': x<0 → k0·x+c3·x³, x≥0 → k0·x/(1−x/xmax) (eksenel, xmax'ta bump-stop).
+//        'asym' (eksenel, MODEL konvansiyonu δ<0 = BASMA): δ<0 → comp.k0·δ/(1+δ/comp.xmax)
+//        (rasyonel, −xmax'ta bump-stop), δ≥0 → ext.k0·δ+ext.c3·δ³ (kübik, geri-gelme).
 //   • `curves:{x,y,z}` — ölçülmüş [[δ_mm,f_N],…] nokta tablosu (monoton kübik interp).
 // TK0xx fit'leri test raporu grafiklerinin (Fx/Fy radyal, Fz eksenel) curve-fit'idir;
-// dz @5 mm ön yük değeridir. NOT: radyal fit orijin eğimi = statik Cx/Cy; eksenel fit
-// orijin eğimi (~k0) tablo Cz'den yüksektir (rasyonel form uç-noktaya oturtulmuştur).
+// dz @5 mm ön yük. Test grafiğinde +yer değiştirme=BASMA olduğundan, eksenel fit modelin
+// δ<0=basma konvansiyonuna göre yazılmıştır (comp=test'in sert dalı). NOT: radyal fit
+// orijin eğimi = statik Cx/Cy; eksenel fit orijin eğimi (~k0≈360) tablo Cz'den (192)
+// yüksektir (rasyonel form uç-noktaya oturtulmuş) — daha iyi fit gelirse güncellenir.
 var VE_MOUNT_LIBRARY = {
   'amc55sha':   { name:'AMC 55 ShA',        sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
   '57RS313773': { name:'ÖN - 57RS313773',   sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
@@ -42,21 +45,21 @@ var VE_MOUNT_LIBRARY = {
     fits:{
       x:{ form:'poly', k0:415, c3:-2.44, c5:0.0201 },
       y:{ form:'poly', k0:210, c3:-1.28, c5:0.0169 },
-      z:{ form:'asym', neg:{k0:361, c3:2.20}, pos:{k0:367, xmax:5.60} }
+      z:{ form:'asym', comp:{k0:367, xmax:5.60}, ext:{k0:361, c3:2.20} }   // basma sert (rasyonel), geri-gelme kübik
     } },
   // TK040 · 57RS329001M · 45 ShA — MLMT-0216-33-TK040 (curve-fit, R²≈0.99)
   'TK040': { name:'TK040 (57RS329001M)', sx:515, sy:260, sz:242, dx:740, dy:355, dz:335,
     fits:{
       x:{ form:'poly', k0:515, c3:-3.29, c5:0.0311 },
       y:{ form:'poly', k0:260, c3:-2.78, c5:0.0269 },
-      z:{ form:'asym', neg:{k0:400, c3:2.06}, pos:{k0:387, xmax:5.66} }
+      z:{ form:'asym', comp:{k0:387, xmax:5.66}, ext:{k0:400, c3:2.06} }
     } },
   // TK050 · 57RS326612M · 50 ShA — MLMT-0216-33-TK050 (curve-fit, R²≈0.99)
   'TK050': { name:'TK050 (57RS326612M)', sx:665, sy:335, sz:290, dx:1165, dy:590, dz:490,
     fits:{
       x:{ form:'poly', k0:665, c3:-5.85, c5:0.0618 },
       y:{ form:'poly', k0:335, c3:-2.53, c5:0.0249 },
-      z:{ form:'asym', neg:{k0:374, c3:2.11}, pos:{k0:381, xmax:5.02} }
+      z:{ form:'asym', comp:{k0:381, xmax:5.02}, ext:{k0:374, c3:2.11} }
     } }
 };
 
@@ -1737,10 +1740,10 @@ function _mntLibLegend(hasCurve, hasMarkers){
 function _mntFitForce(fit, x){
   if(!fit) return 0;
   if(fit.form==='asym'){
-    var ng=fit.neg||{}, ps=fit.pos||{}, xmax=(ps.xmax>0?ps.xmax:1), EPS=0.02;
-    if(x<0) return _mntNum(ng.k0)*x + _mntNum(ng.c3)*x*x*x;
-    var u=1-x/xmax; if(u<EPS) u=EPS;
-    return _mntNum(ps.k0)*x/u;
+    var cp=fit.comp||{}, ex=fit.ext||{}, xmax=(cp.xmax>0?cp.xmax:1), EPS=0.02;
+    if(x>=0) return _mntNum(ex.k0)*x + _mntNum(ex.c3)*x*x*x;    // geri-gelme (δ≥0, kübik)
+    var u=1+x/xmax; if(u<EPS) u=EPS;                            // basma (δ<0, rasyonel, asimptot −xmax)
+    return _mntNum(cp.k0)*x/u;
   }
   return _mntNum(fit.k0)*x + _mntNum(fit.c3)*x*x*x + _mntNum(fit.c5)*x*x*x*x*x;
 }
@@ -1750,8 +1753,8 @@ function _mntFitDomain(fit){
   var TARGET=17000;
   function reach(dir){ var last=0; for(var i=1;i<=160;i++){ var x=dir*0.25*i; if(Math.abs(_mntFitForce(fit,x))>=TARGET) return x; last=x; } return last; }
   if(fit && fit.form==='asym'){
-    var xmax=(fit.pos&&fit.pos.xmax>0)?fit.pos.xmax:5;
-    return [reach(-1)||-15, Math.min(reach(1)||xmax*0.985, xmax*0.985)];
+    var xmax=(fit.comp&&fit.comp.xmax>0)?fit.comp.xmax:5;   // asimptot basma (δ<0) tarafında
+    return [Math.max(reach(-1)||(-xmax*0.985), -xmax*0.985), reach(1)||15];
   }
   var h=reach(1)||15;
   return [-h, h];

@@ -344,17 +344,18 @@ var veMountCore = (function() {
   function makeAxisLaw(spec){
     // ANALİTİK FİT (kapalı-form): parametreler mm/N; law δ'yı (m) mm'ye çevirip
     // değerlendirir, tanjantı N/m'ye ölçekler (dF/dδ_m = dF/dx·1000). İki biçim:
-    //   'poly'  (radyal): F = k0·x + c3·x³ + c5·x⁵                    (tek/simetrik)
-    //   'asym'  (eksenel): x<0 → k0·x + c3·x³ ;  x≥0 → k0·x/(1−x/xmax)
-    //     Rasyonel dal x→xmax'ta ışınlanır (bump-stop). Payda EPS'te kırpılır →
-    //     asimptot ötesi SONLU ama çok sert (Newton için tekillik yok).
+    //   'poly' (radyal): F = k0·x + c3·x³ + c5·x⁵                     (tek/simetrik)
+    //   'asym' (eksenel): MODEL konvansiyonu δ<0 = BASMA (compression).
+    //     δ<0 (basma) → comp.k0·δ/(1+δ/comp.xmax)   — rasyonel, asimptot δ=−xmax (bump-stop)
+    //     δ≥0 (geri-gelme) → ext.k0·δ + ext.c3·δ³   — kübik (daha yumuşak)
+    //     Payda EPS'te kırpılır → asimptot ötesi SONLU ama çok sert (Newton'da tekillik yok).
     if(spec && (spec.form==='poly' || spec.form==='asym')){
       const MM=1000;                        // δ(m) → x(mm)
       let fx, dfx;                          // x(mm)→F(N),  x(mm)→dF/dx(N/mm)
       if(spec.form==='asym'){
-        const ng=spec.neg||{}, ps=spec.pos||{}, xmax=(Number.isFinite(ps.xmax)&&ps.xmax>0)?ps.xmax:1, EPS=0.02;
-        fx =function(x){ if(x<0) return (ng.k0||0)*x+(ng.c3||0)*x*x*x; let u=1-x/xmax; if(u<EPS)u=EPS; return (ps.k0||0)*x/u; };
-        dfx=function(x){ if(x<0) return (ng.k0||0)+3*(ng.c3||0)*x*x;   let u=1-x/xmax; if(u<EPS)u=EPS; return (ps.k0||0)/(u*u); };
+        const cp=spec.comp||{}, ex=spec.ext||{}, xmax=(Number.isFinite(cp.xmax)&&cp.xmax>0)?cp.xmax:1, EPS=0.02;
+        fx =function(x){ if(x>=0) return (ex.k0||0)*x+(ex.c3||0)*x*x*x; let u=1+x/xmax; if(u<EPS)u=EPS; return (cp.k0||0)*x/u; };
+        dfx=function(x){ if(x>=0) return (ex.k0||0)+3*(ex.c3||0)*x*x;   let u=1+x/xmax; if(u<EPS)u=EPS; return (cp.k0||0)/(u*u); };
       } else {
         const k0=spec.k0||0, c3=spec.c3||0, c5=spec.c5||0;
         fx =function(x){ return k0*x + c3*x*x*x + c5*x*x*x*x*x; };
