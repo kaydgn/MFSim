@@ -537,6 +537,28 @@ var veMountCore = (function() {
     return modes; // sortEigen zaten artan sırada — 6 mod
   }
 
+  // ═══════════════════ İletilebilirlik / transmissibility (izolasyon) ═══════════════════
+  //
+  // Tek serbestlik dereceli kuvvet iletilebilirliği (harmonik tahrik): tahrik
+  // frekansı f_exc (ör. rölanti ateşleme f_ateş), doğal frekans f_nat, sönüm
+  // oranı ζ. Frekans oranı r = f_exc / f_nat.
+  //
+  //   T(r) = √[ (1 + (2ζr)²) / ((1 − r²)² + (2ζr)²) ]
+  //
+  // İzolasyon (T<1) ancak r>√2'de başlar; T<0.5 (%50 kriteri) için düşük
+  // sönümde r>√3≈1.73 gerekir. ζ→0'da T→1/|1−r²| (sönümsüz limit) — bu yüzden
+  // çok küçük ζ (ör. 0.001) sonucu neredeyse tümüyle frekans oranı belirler.
+  // f_nat ≤ 0 → NaN. r=1 (rezonans) ve ζ=0 → sonsuz.
+  function transmissibility(fExc, fNat, zeta){
+    if(!(fNat > 0)) return NaN;
+    const z = (zeta > 0) ? zeta : 0;
+    const r = fExc / fNat;
+    const a = 2*z*r;
+    const den = (1 - r*r)*(1 - r*r) + a*a;
+    if(den <= 0) return Infinity;                 // sönümsüz rezonans
+    return Math.sqrt((1 + a*a) / den);
+  }
+
   // ═══════════════════ Tork zinciri (SPEC 4.5) ═══════════════════
 
   // T_shaft = Te,max × R_stall × i_gear × i_transfer × φ_axle × derate
@@ -931,6 +953,7 @@ var veMountCore = (function() {
     // Model
     combineMassProps, buildK, buildM6, buildModel,
     solveCase, solveCaseStop, solveAllCases, solveModal,
+    transmissibility,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
     defaultLoadCases, TTAR_EXAMPLE, ttarComponentsSI, ttarMountsSI, selfTest,

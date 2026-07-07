@@ -57,11 +57,12 @@ function getMntReportPropertiesHTML(node){
     // Frekans yerleşimi (opsiyonel) — doldurulursa rapora §8.7 eklenir.
     var inpSt='width:100%; padding:4px 6px; margin-top:3px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); text-align:right;';
     html+='<div style="margin:0 0 10px; padding:9px 10px; background:var(--bg-secondary); border:1px solid var(--border-color);">'
-        + '<div style="font-size:0.64rem; font-weight:600; color:var(--text-heading);">Frekans yerleşimi <span style="font-weight:400; color:var(--text-muted);">(opsiyonel)</span></div>'
-        + '<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin:3px 0 6px;">Doldurulursa rapora ateşleme frekansı (f<sub>ateş</sub>) izolasyon değerlendirmesi (§8.7) eklenir.</div>'
+        + '<div style="font-size:0.64rem; font-weight:600; color:var(--text-heading);">Frekans yerleşimi & izolasyon <span style="font-weight:400; color:var(--text-muted);">(opsiyonel)</span></div>'
+        + '<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin:3px 0 6px;">Doldurulursa rapora §8.8 eklenir: ateşleme frekansı (f<sub>ateş</sub>), Kriter 1 (roll modu &lt; %50 f<sub>ateş</sub>) ve Kriter 2 (rölanti iletilebilirliği &lt; %50). ζ = sönüm oranı (boş → 0,001).</div>'
         + '<div style="display:flex; gap:8px;">'
         +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Rölanti [d/dk]<input type="number" min="0" step="10" value="'+_rEsc(node.data.idleRpm==null?'':node.data.idleRpm)+'" placeholder="ör: 650" onchange="veMntSet(\''+node.id+'\',\'idleRpm\',this.value)" style="'+inpSt+'"></label>'
         +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Silindir sayısı<input type="number" min="1" step="1" value="'+_rEsc(node.data.cylinders==null?'':node.data.cylinders)+'" placeholder="ör: 6" onchange="veMntSet(\''+node.id+'\',\'cylinders\',this.value)" style="'+inpSt+'"></label>'
+        +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Sönüm ζ<input type="number" min="0" step="0.001" value="'+_rEsc(node.data.zeta==null?'':node.data.zeta)+'" placeholder="0,001" onchange="veMntSet(\''+node.id+'\',\'zeta\',this.value)" style="'+inpSt+'"></label>'
         + '</div></div>';
     html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:0.8rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:5px;" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
   } else {
@@ -116,7 +117,7 @@ function veMntGenerateReport(nodeId){
   }
   var R=_veMntLast;
   var node=(typeof nodes!=='undefined') ? nodes.find(function(n){return n.id===nodeId;}) : null;
-  var opts=(node && node.data) ? { idleRpm:node.data.idleRpm, cylinders:node.data.cylinders } : {};
+  var opts=(node && node.data) ? { idleRpm:node.data.idleRpm, cylinders:node.data.cylinders, zeta:node.data.zeta } : {};
   setStatus('Rapor hazırlanıyor…');
   if(typeof showToast==='function') showToast('Rapor hazırlanıyor…','info');
   _mntReportEnsureAssets(function(ok){
@@ -205,7 +206,7 @@ function _rTbl(){ return ++_repTblNo; }
 function _rFig(){ return ++_repFigNo; }
 
 // ─── §8 — SAYISAL ÖRNEK (dinamik) ────────────────────────────────────────────
-// opts: { idleRpm, cylinders } — frekans yerleşimi için (opsiyonel, panelden).
+// opts: { idleRpm, cylinders, zeta } — frekans yerleşimi + iletilebilirlik (opsiyonel, panelden).
 function _mntRepSection8(R, opts){
   opts=opts||{};
   _repTblNo=0; _repFigNo=1;   // her rapor üretiminde sıfırla
@@ -649,29 +650,53 @@ function _mntRepModeMatrix(modes){
   return h;
 }
 
-// §8.7 — Frekans yerleşimi değerlendirmesi (opsiyonel; motor devri + silindir girdisi)
+// §8.8 — Frekans yerleşimi + iletilebilirlik (opsiyonel; motor devri + silindir + sönüm girdisi)
+// Kriter 1: Roll modu (en yüksek rijit gövde modu) < %50 ateşleme frekansı.
+// Kriter 2: Rölantide iletilebilirlik (transmissibility) < %50 (en kötü mod belirleyici).
 function _mntRepFreqPlacement(R, opts){
   opts=opts||{};
   var rpm=Number(opts.idleRpm), z=Number(opts.cylinders);
+  var zeta=Number(opts.zeta); if(!(zeta>0)) zeta=0.001;   // varsayılan — referans analizle uyumlu
   var modes=R.modes||[];
   if(!(rpm>0 && z>0) || !modes.length) return '';   // girdi yoksa bölümü atla
+  var core=_rMountCore();
   // 4 zamanlı motorda temel ateşleme mertebesi z/2 → f_ateş = (N/60)·(z/2).
   var fFire=(rpm/60)*(z/2);
-  var fMax=modes[modes.length-1].f_Hz;
-  var limit=fFire/Math.SQRT2;                        // izolasyon bölgesine geçiş
-  var ok=fMax<limit;
-  var h='<h3>8.8 Adım 8 — Frekans yerleşimi değerlendirmesi</h3>';
+  var fRoll=modes[modes.length-1].f_Hz;             // en yüksek rijit gövde modu (mode 6 = roll)
+
+  // ── Kriter 1: Roll modu < %50 ateşleme frekansı  (⟺ f_ateş > 2·f_roll) ──
+  var lim1=0.5*fFire, ok1=(fRoll<lim1), r1=(fRoll>0?fFire/fRoll:0);
+
+  // ── Kriter 2: Rölanti iletilebilirliği < %50 (ateşlemeye en yakın = en kötü mod) ──
+  var Tmax=0, govIdx=modes.length-1;
+  modes.forEach(function(m,i){ var T=core?core.transmissibility(fFire,m.f_Hz,zeta):NaN;
+    if(T>Tmax){ Tmax=T; govIdx=i; } });
+  var ok2=(Tmax<0.5), govF=modes[govIdx].f_Hz, govLbl=modes[govIdx].label||'—';
+  var Tstr=isFinite(Tmax)?(_rF(Tmax*100,1)+'%'):'∞';
+
+  var h='<h3>8.8 Adım 8 — Frekans yerleşimi ve iletilebilirlik</h3>';
   h+='<p>Dört zamanlı motorun rölanti ateşleme frekansı \\( f_{\\text{ateş}}=\\dfrac{N}{60}\\cdot\\dfrac{z}{2} \\); '
     +'girilen değerlerle \\( N='+_rF(rpm,0)+' \\) d/dk, \\( z='+_rF(z,0)+' \\) silindir → '
-    +'\\( f_{\\text{ateş}}='+_rF(fFire,1)+' \\) Hz. Yaygın tasarım pratiği, en yüksek rijit gövde modunu '
-    +'izolasyon bölgesine geçiş sınırı \\( f_{\\text{ateş}}/\\sqrt2='+_rF(limit,1)+' \\) Hz altında tutmaktır.</p>';
-  var cls=ok?'check':'warn';
-  h+='<div class="note '+cls+'"><span class="t">'+(ok?'Uygun · frekans yerleşimi':'Dikkat · frekans yerleşimi')+'</span>';
-  h+='En yüksek rijit gövde modu <b>'+_rF(fMax,2)+' Hz</b>, sınır '+_rF(limit,1)+' Hz\'in ';
-  h+= ok ? '<b>altındadır</b> — güç grubu rölanti ateşleme tahrikinden izole bölgede çalışır.'
-        : '<b>ÜZERİNDEDİR</b> — rölanti ateşleme mertebesine yakın/üstünde; rezonans riski. Takoz rijitliklerini düşürmek (mod bandını aşağı taşımak) veya yerleşimi gözden geçirmek önerilir.';
+    +'\\( f_{\\text{ateş}}='+_rF(fFire,1)+' \\) Hz; sönüm oranı \\( \\zeta='+_rF(zeta,4)+' \\).</p>';
+
+  // Kriter 1 rozeti
+  var cls1=ok1?'check':'warn';
+  h+='<div class="note '+cls1+'"><span class="t">'+(ok1?'Uygun':'Dikkat')+' · Kriter 1 — Roll modu &lt; %50 ateşleme</span>';
+  h+='En yüksek rijit gövde (roll) modu <b>'+_rF(fRoll,2)+' Hz</b>, sınır \\( 0{,}5\\,f_{\\text{ateş}}='+_rF(lim1,1)+' \\) Hz\'in ';
+  h+= ok1 ? '<b>altındadır</b> (f_ateş/f_roll = '+_rF(r1,2)+' ≥ 2) — ateşleme mertebesinden izole.'
+         : '<b>ÜZERİNDEDİR</b> (f_ateş/f_roll = '+_rF(r1,2)+' &lt; 2) — %50 kriterini karşılamıyor; takoz dinamik rijitliklerini düşürmek (mod bandını aşağı taşımak) önerilir.';
   h+='</div>';
-  h+='<p style="font-size:0.9em; color:#5a6270;">Not: değerlendirme temel ateşleme mertebesine göredir; gerçek rölanti devri ve baskın tahrik mertebeleriyle teyit edilmelidir. Süspansiyon/sürüş konforu modları (≈1–2,5 Hz) alt sınırdır.</p>';
+
+  // Kriter 2 rozeti
+  var cls2=ok2?'check':'warn';
+  h+='<div class="note '+cls2+'"><span class="t">'+(ok2?'Uygun':'Dikkat')+' · Kriter 2 — Rölanti iletilebilirliği &lt; %50</span>';
+  h+='Rölanti ateşlemesinde en belirleyici mod <b>'+_rEsc(govLbl)+' ('+_rF(govF,2)+' Hz)</b> için '
+    +'\\( T=\\sqrt{\\tfrac{1+(2\\zeta r)^2}{(1-r^2)^2+(2\\zeta r)^2}} \\) = <b>'+Tstr+'</b> ';
+  h+= ok2 ? '&lt; %50 — güç grubu rölantide izole bölgede çalışır.'
+         : '&ge; %50 — izolasyon yetersiz; mod frekansını ateşlemeden uzaklaştırmak (rijitliği düşürmek) veya sönümü artırmak gerekir.';
+  h+='</div>';
+
+  h+='<p style="font-size:0.9em; color:#5a6270;">Not: iletilebilirlik tek-serbestlik yaklaşımıyla, ateşlemeye en yakın (en yüksek T veren) mod üzerinden hesaplanır. Çok küçük ζ ile sonuç neredeyse tümüyle frekans oranına bağlıdır. Değerlendirme temel ateşleme mertebesine göredir; gerçek rölanti devri, baskın tahrik mertebeleri ve sönüm ölçümüyle teyit edilmelidir.</p>';
   return h;
 }
 

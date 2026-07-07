@@ -1833,6 +1833,7 @@ function _mntMathHTML(){
   h+='<div style="'+st+'">4c. Metal-metal durdurucu (±15 mm, parçalı-lineer)</div><div style="'+eq+'">|δz|>15 mm → gap elemanı: k_stop=100·kz devreye girer\nK_eff=K+Σ_temas k_stop·(aᵤᵤ⊗aᵤᵤ) ; aktif-küme iterasyonu\nyük yeniden dağılır; dibe oturan takoz temas kuvvetiyle çalışır</div>';
   h+='<div style="'+st+'">4b. Tork zinciri</div><div style="'+eq+'">T_shaft = Te · R_stall · i_gear · i_transfer · φ_axle · derate\nileri: i_gear=1.vites ; geri: i_gear=Geri ; Tx=−T_shaft</div>';
   h+='<div style="'+st+'">5. Modal</div><div style="'+eq+'">(K_dyn−ω²M6)φ=0 → genelleştirilmiş özdeğer\nf_r=√λ_r/2π (6 mod, artan)</div>';
+  h+='<div style="'+st+'">5b. İzolasyon kriterleri (rapor §8.8)</div><div style="'+eq+'">f_ateş=(N/60)·(z/2) (4-zamanlı)\nKriter 1: roll modu (mod 6) < 0.5·f_ateş\nKriter 2: T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] < %50 , r=f_ateş/f_doğal</div>';
   h+='<div style="'+tx+'; color:var(--text-muted); margin-top:12px; border-top:1px solid var(--border-color); padding-top:8px;">Doğrulama testleri (T1–T9, Adams BMC_TTAR_2031) referans değerlerle eşleşir.</div></div>';
   return h;
 }
