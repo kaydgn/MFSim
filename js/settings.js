@@ -114,18 +114,58 @@ function _veRestartAutosave() {
     _veAutosaveTimerId = setInterval(_veAutosaveNow, min * 60 * 1000);
   }
 }
+// Alt-topoloji (Araç Performans / Takoz iç topolojisi) gezinme yolunu yakalar ve
+// kullanıcıyı aynı yola SESSİZCE geri götüren bir "restore" fonksiyonu döndürür.
+// Gerekçe: _veSettingsBuildProjectData() → veSaveActiveTabState() kancası, doğru
+// serileştirme için açık alt-topolojiyi köke çökertir. Bu, sekme değiştir/dosya
+// kaydet gibi terminal akışlarda istenir; ancak periyodik/arka-plan yedeğinde
+// kullanıcıyı bulunduğu alt-topolojiden koparıp ana topolojiye atardı. Yakala →
+// yedekle → geri gir sırası bu kopmayı görünmez kılar.
+function _veCaptureSubtopoNav() {
+  var aracPath = [];
+  var mntPath = [];
+  try {
+    if(typeof veAracStack !== 'undefined' && veAracStack && veAracStack.length) {
+      aracPath = veAracStack.map(function(c){ return c.nodeId; });
+    }
+  } catch(e) {}
+  try {
+    if(typeof veMntStack !== 'undefined' && veMntStack && veMntStack.length) {
+      mntPath = veMntStack.map(function(c){ return c.nodeId; });
+    }
+  } catch(e) {}
+  return function _veRestoreSubtopoNav() {
+    try {
+      // Köke çökmüş canvas'ta yolu baştan (kök→derin) yeniden gir; _silent=true →
+      // toast/animasyon yok. Düğüm silinmişse open editor no-op'tur (güvenli).
+      if(aracPath.length && typeof veAracOpenEditor === 'function') {
+        aracPath.forEach(function(id){ veAracOpenEditor(id, true); });
+      }
+      if(mntPath.length && typeof veMntOpenEditor === 'function') {
+        mntPath.forEach(function(id){ veMntOpenEditor(id, true); });
+      }
+    } catch(e) { console.warn('[autosave] alt-topoloji geri yükleme:', e && e.message); }
+  };
+}
 function _veAutosaveNow() {
+  // Yedek almadan önce alt-topoloji gezinme yolunu yakala; build köke çökertecek.
+  var restoreNav = _veCaptureSubtopoNav();
   try {
     var data = _veSettingsBuildProjectData();
-    if(!data) return;
-    localStorage.setItem(VE_SETTINGS_AUTOSAVE_KEY, JSON.stringify(data));
-    localStorage.setItem(VE_SETTINGS_AUTOSAVE_TS_KEY, String(Date.now()));
+    if(data) {
+      localStorage.setItem(VE_SETTINGS_AUTOSAVE_KEY, JSON.stringify(data));
+      localStorage.setItem(VE_SETTINGS_AUTOSAVE_TS_KEY, String(Date.now()));
+    }
     // Sessiz — sık olduğu için toast atmıyoruz; Ayarlar açıksa zaman damgası yenilensin
     if(_veSettingsCurrentSection === 'autosave') {
       var ov = document.getElementById('ve-settings-overlay');
       if(ov && ov.style.display !== 'none') veSettingsShowSection('autosave');
     }
   } catch(e) { console.warn('[autosave]', e); }
+  finally {
+    // localStorage kotası dolsa/hata olsa bile kullanıcıyı alt-topolojisine geri getir.
+    restoreNav();
+  }
 }
 function veSettingsAutosaveNow() {
   _veAutosaveNow();
