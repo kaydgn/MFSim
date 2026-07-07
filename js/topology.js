@@ -50,6 +50,37 @@ function veSaveActiveTabState() {
   tab.connCount = connections.length;
 }
 
+// Alt-topoloji (Araç Performans / Takoz iç topolojisi) gezinme yolunu yakalar ve
+// kullanıcıyı aynı yola SESSİZCE (toast/animasyon yok) geri götüren bir "restore"
+// fonksiyonu döndürür. Köke çökme (veSaveActiveTabState) sonrası yeniden giriş için.
+function _veCaptureSubtopoNav() {
+  var aracPath = [];
+  var mntPath = [];
+  try { if(typeof veAracStack !== 'undefined' && veAracStack && veAracStack.length) aracPath = veAracStack.map(function(c){ return c.nodeId; }); } catch(e) {}
+  try { if(typeof veMntStack !== 'undefined' && veMntStack && veMntStack.length) mntPath = veMntStack.map(function(c){ return c.nodeId; }); } catch(e) {}
+  return function _veRestoreSubtopoNav() {
+    try {
+      // Köke çökmüş canvas'ta yolu baştan (kök→derin) yeniden gir; _silent=true.
+      // Düğüm silinmişse open editor no-op'tur (güvenli).
+      if(aracPath.length && typeof veAracOpenEditor === 'function') aracPath.forEach(function(id){ veAracOpenEditor(id, true); });
+      if(mntPath.length && typeof veMntOpenEditor === 'function') mntPath.forEach(function(id){ veMntOpenEditor(id, true); });
+    } catch(e) { if(typeof console !== 'undefined') console.warn('[MFSim] alt-topoloji geri yükleme:', e && e.message); }
+  };
+}
+
+// Aktif sekmeyi kaydeder AMA kullanıcının açık alt-topolojisini bozmadan: köke çök →
+// doğru kök durumu serialize et → kullanıcıyı bulunduğu alt-topolojiye sessizce geri
+// getir. TERMINAL OLMAYAN / arka-plan çağıranlar bunu kullanır (sonuç ağacı yenileme,
+// autosave, dosya kaydı, sekme çoğaltma, snapshot) — böylece kaydetmenin köke-çökme
+// yan-etkisi kullanıcıyı ana topolojiye atmaz. Sekme değiştir/yükle gibi TERMINAL
+// akışlar düz veSaveActiveTabState() kullanmaya devam eder (onlar zaten canvası
+// değiştirdiği için geri-giriş gereksiz/yanlış olurdu).
+function veSaveActiveTabStateKeepView() {
+  var restore = _veCaptureSubtopoNav();
+  veSaveActiveTabState();
+  restore();
+}
+
 /**
  * Açık özellik panelindeki tüm DOM input değerlerini node.data'ya flush eder.
  * Kullanıcı bir değer değiştirip onchange tetiklemeden kaydet diyebilir.
@@ -389,8 +420,8 @@ function veRenameTab(idx) {
 }
 
 function veDuplicateTab(idx) {
-  // Kaynağın güncel halini kaydet
-  if(idx === veActiveTabIdx) veSaveActiveTabState();
+  // Kaynağın güncel halini kaydet (alt-topolojideysek kullanıcıyı yerinden etme)
+  if(idx === veActiveTabIdx) veSaveActiveTabStateKeepView();
   
   var srcTab = veTabs[idx];
   if(!srcTab) return;
@@ -556,9 +587,9 @@ function veActivateSplit(rightTabIdx) {
     return;
   }
   
-  // Aktif sekmeyi kaydet
-  veSaveActiveTabState();
-  
+  // Aktif sekmeyi kaydet (odaklı pane alt-topolojideyse görünümü koru)
+  veSaveActiveTabStateKeepView();
+
   veSplitMode = true;
   veSplitPanes = [veActiveTabIdx, rightTabIdx];
   veFocusedPane = 0;
@@ -745,7 +776,7 @@ function veRenderSnapshot(paneIdx) {
   var isActive = (paneIdx === veFocusedPane);
   var state;
   if(isActive) {
-    veSaveActiveTabState();
+    veSaveActiveTabStateKeepView();
     state = tab.state;
   } else {
     state = tab.state;

@@ -230,9 +230,10 @@ function veClearAll() {
 
 function veSaveTopology() {
   veCloseFileMenu();
-  
-  // Aktif sekmeyi kaydet
-  veSaveActiveTabState();
+
+  // Aktif sekmeyi kaydet (alt-topolojideysek kullanıcıyı yerinden etme)
+  if(typeof veSaveActiveTabStateKeepView === 'function') veSaveActiveTabStateKeepView();
+  else veSaveActiveTabState();
   
   var project = {
     version: 2,
