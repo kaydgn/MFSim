@@ -342,6 +342,28 @@ var veMountCore = (function() {
   // Dönüş: { force(δ)→N, tangent(δ)→N/m, k0, curve:bool }.
   //   k0 = δ=0 civarı referans (küçük-sehim) rijitliği — doğrulama/ölçek kontrolü için.
   function makeAxisLaw(spec){
+    // ANALİTİK FİT (kapalı-form): parametreler mm/N; law δ'yı (m) mm'ye çevirip
+    // değerlendirir, tanjantı N/m'ye ölçekler (dF/dδ_m = dF/dx·1000). İki biçim:
+    //   'poly'  (radyal): F = k0·x + c3·x³ + c5·x⁵                    (tek/simetrik)
+    //   'asym'  (eksenel): x<0 → k0·x + c3·x³ ;  x≥0 → k0·x/(1−x/xmax)
+    //     Rasyonel dal x→xmax'ta ışınlanır (bump-stop). Payda EPS'te kırpılır →
+    //     asimptot ötesi SONLU ama çok sert (Newton için tekillik yok).
+    if(spec && (spec.form==='poly' || spec.form==='asym')){
+      const MM=1000;                        // δ(m) → x(mm)
+      let fx, dfx;                          // x(mm)→F(N),  x(mm)→dF/dx(N/mm)
+      if(spec.form==='asym'){
+        const ng=spec.neg||{}, ps=spec.pos||{}, xmax=(Number.isFinite(ps.xmax)&&ps.xmax>0)?ps.xmax:1, EPS=0.02;
+        fx =function(x){ if(x<0) return (ng.k0||0)*x+(ng.c3||0)*x*x*x; let u=1-x/xmax; if(u<EPS)u=EPS; return (ps.k0||0)*x/u; };
+        dfx=function(x){ if(x<0) return (ng.k0||0)+3*(ng.c3||0)*x*x;   let u=1-x/xmax; if(u<EPS)u=EPS; return (ps.k0||0)/(u*u); };
+      } else {
+        const k0=spec.k0||0, c3=spec.c3||0, c5=spec.c5||0;
+        fx =function(x){ return k0*x + c3*x*x*x + c5*x*x*x*x*x; };
+        dfx=function(x){ return k0 + 3*c3*x*x + 5*c5*x*x*x*x; };
+      }
+      return { force:function(d){ return fx(d*MM); },
+               tangent:function(d){ return dfx(d*MM)*MM; },
+               k0:dfx(0)*MM, curve:true };
+    }
     if(spec && spec.type==='curve' && spec.points && spec.points.length>=2){
       const pts=spec.points.slice().sort(function(a,b){ return a[0]-b[0]; });
       const xs=pts.map(function(p){ return p[0]; });
@@ -358,11 +380,13 @@ var veMountCore = (function() {
   // Takozun 3 STATİK eksen yasası [x,y,z]. mount.curves[axis] (SI [[δ_m,f_N],…])
   // verilmişse o eksen nonlineer; yoksa lineer kstat[axis]. axis anahtarı 'x'/'y'/'z'.
   function mountStaticLaws(mount){
-    const cur=mount.curves||{}, key=['x','y','z'];
+    const cur=mount.curves||{}, fit=mount.fits||{}, key=['x','y','z'];
     return [0,1,2].map(function(ax){
-      const pts=cur[key[ax]];
-      if(pts && pts.length>=2) return makeAxisLaw({type:'curve', points:pts});
-      return makeAxisLaw({type:'linear', k:(mount.kstat?mount.kstat[ax]:0)});
+      const k=key[ax], fp=fit[k];
+      if(fp && (fp.form==='poly'||fp.form==='asym')) return makeAxisLaw(fp);   // analitik fit önce
+      const pts=cur[k];
+      if(pts && pts.length>=2) return makeAxisLaw({type:'curve', points:pts}); // sonra nokta tablosu
+      return makeAxisLaw({type:'linear', k:(mount.kstat?mount.kstat[ax]:0)});  // yoksa lineer
     });
   }
 
@@ -620,7 +644,9 @@ var veMountCore = (function() {
 
   // Takozda en az bir eksende nonlineer eğri (≥2 nokta) tanımlı mı?
   function mountHasCurve(mnt){
-    const c=mnt && mnt.curves; if(!c) return false;
+    if(!mnt) return false;
+    const f=mnt.fits; if(f && (f.x||f.y||f.z)) return true;       // analitik fit de nonlineer
+    const c=mnt.curves; if(!c) return false;
     return (c.x&&c.x.length>=2)||(c.y&&c.y.length>=2)||(c.z&&c.z.length>=2);
   }
   function anyCurve(mounts){ return (mounts||[]).some(mountHasCurve); }
