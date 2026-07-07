@@ -98,8 +98,11 @@ describe('Otomatik yük durumları (kullanıcı girişi yok)', () => {
     expect(cp.MNT_AUTO_CASES[4].n).toEqual([0, 0.6, -1]);       // Cornering Left 0.6g
     expect(cp.MNT_AUTO_CASES[6].n).toEqual([-0.4, 0.4, -1]);    // Brake in Turn L
     expect(cp.MNT_AUTO_CASES[8].n).toEqual([-3, 0, -3.5]);      // Pothole Braking
-    expect(cp.MNT_AUTO_CASES[9].n).toEqual([0, 3.6, -1]);       // Kerb Strike L 3.6g yanal
+    expect(cp.MNT_AUTO_CASES[9].n).toEqual([0, -1.55, -1]);     // Kerb Strike L 1.55g, işaret cornering'in tersi
+    expect(cp.MNT_AUTO_CASES[10].n).toEqual([0, 1.55, -1]);     // Kerb Strike R +1.55g
     expect(cp.MNT_AUTO_CASES[11].n).toEqual([0, 0, 1]);         // Max Rebound +1g droop
+    // Kerb işareti cornering'in TERSİ (sol: kerb −1.55 vs cornering +0.6)
+    expect(Math.sign(cp.MNT_AUTO_CASES[9].n[1])).toBe(-Math.sign(cp.MNT_AUTO_CASES[4].n[1]));
   });
 });
 
