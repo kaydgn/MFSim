@@ -819,8 +819,8 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     n.data.mounts[0].curveZ = [[-10, -6400], [0, 0], [10, 6400]];
     n.data._selKey = 'k1';
     const html = cp.getMntLibraryPropertiesHTML(n);
-    expect(html).toContain('eksenel (Fz)');   // z ekseni grafik kartı
-    expect(html).toContain('radyal (Fx)');    // x ekseni grafik kartı
+    expect(html).toContain('Fz · eksenel');   // z ekseni grafik kartı
+    expect(html).toContain('Fx · radyal');    // x ekseni grafik kartı
     expect(html).toContain('<svg');
     expect(html).toContain('<polyline');   // statik + dinamik çizgiler
     expect(html).toContain('<circle');      // ölçüm noktaları (z-eğrisi)

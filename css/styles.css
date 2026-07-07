@@ -2212,6 +2212,12 @@
   max-width:1000px;
   max-height:95vh;
 }
+/* Takoz Özellikleri paneli — solda takoz seçici, sağda detay + 3 eksen kuvvet–sehim
+   grafiği yan yana. Bu düzen için pencere geniş. Diğer bileşenler varsayılan kalır. */
+.ve-properties.ve-properties--mntlib{
+  max-width:1040px;
+  max-height:92vh;
+}
 /* İnteraktif 2D figürler: fare tekerleğiyle yakınlaştır, sürükleyerek kaydır.
    grabbing imleci sürükleme sırasında JS ile ayarlanır. */
 .ve-mnt2d-fig{ cursor:grab; }
