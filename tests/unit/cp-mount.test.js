@@ -865,3 +865,89 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     expect(core.anyCurve(si.mounts)).toBe(false);
   });
 });
+
+// ═══════════ Çözücü — Lineer/Nonlineer/Otomatik çözüm modu seçici ═══════════
+describe('Çözücü çözüm modu (auto/linear/nonlinear)', () => {
+  afterEach(() => { delete global.nodes; delete global.connections; });
+
+  test('panel çözüm modu seçici gösterir (3 mod, varsayılan auto seçili)', () => {
+    const node = { id: 'sv', type: 'mnt-solver', def: {}, data: {} };
+    const html = cp.getMntSolverPropertiesHTML(node);
+    expect(node.data.solveMode).toBe('auto');                 // varsayılan atanır
+    expect(html).toContain("veMntSetSolveMode('sv'");
+    expect(html).toContain('value="auto"');
+    expect(html).toContain('value="linear"');
+    expect(html).toContain('value="nonlinear"');
+    expect(html).toMatch(/value="auto"\s+selected/);
+  });
+
+  test('veMntSetSolveMode modu saklar; geçersiz değer → auto', () => {
+    const node = { id: 'sv', type: 'mnt-solver', data: {} };
+    global.nodes = [node];
+    cp.veMntSetSolveMode('sv', 'nonlinear');
+    expect(node.data.solveMode).toBe('nonlinear');
+    cp.veMntSetSolveMode('sv', 'linear');
+    expect(node.data.solveMode).toBe('linear');
+    cp.veMntSetSolveMode('sv', 'saçma');
+    expect(node.data.solveMode).toBe('auto');
+  });
+
+  // Eğrili takozlu topoloji + seçilen mod ile _mntComputeResults davranışı
+  function curvedTopo(mode) {
+    const topo = buildTTARTopology();
+    const mnt = topo.nodes.find(n => n.type === 'mnt-mount');
+    const kz = mnt.data.kzs;   // N/mm
+    mnt.data.curveZ = [[-15,-15*kz*2.5],[-7.5,-7.5*kz*1.5],[0,0],[7.5,7.5*kz*1.5],[15,15*kz*2.5]];
+    topo.solver.data.solveMode = mode;
+    global.nodes = topo.nodes;
+    global.connections = topo.connections;
+    return topo;
+  }
+
+  test('mod=auto: tanımlı eğri kullanılır (solvedNL=true)', () => {
+    curvedTopo('auto');
+    const R = cp._mntComputeResults('sv');
+    expect(R.solvedNL).toBe(true);
+    expect(core.anyCurve(R.mounts)).toBe(true);
+  });
+
+  test('mod=nonlinear: eğri kullanılır (solvedNL=true, nlNoCurve=false)', () => {
+    curvedTopo('nonlinear');
+    const R = cp._mntComputeResults('sv');
+    expect(R.solvedNL).toBe(true);
+    expect(R.nlNoCurve).toBe(false);
+  });
+
+  test('mod=linear: eğriler YOK SAYILIR → saf lineer (curves sıyrılır)', () => {
+    const topo = curvedTopo('linear');
+    const R = cp._mntComputeResults('sv');
+    expect(R.solvedNL).toBe(false);
+    expect(core.anyCurve(R.mounts)).toBe(false);            // curves sıyrıldı
+    // Aynı topolojinin eğrisiz (saf lineer) çözümüyle δz birebir eşleşir
+    topo.nodes.forEach(n => { if (n.type === 'mnt-mount') delete n.data.curveZ; });
+    topo.solver.data.solveMode = 'auto';
+    const Rpure = cp._mntComputeResults('sv');
+    R.allCases[0].res.perMount.forEach((pm, i) => {
+      expect(pm.delta[2]).toBeCloseTo(Rpure.allCases[0].res.perMount[i].delta[2], 9);
+    });
+  });
+
+  test('mod=nonlinear ama hiç eğri yok → solvedNL=false, nlNoCurve=true (uyarı)', () => {
+    const topo = buildTTARTopology();   // eğri tanımlı değil
+    topo.solver.data.solveMode = 'nonlinear';
+    global.nodes = topo.nodes;
+    global.connections = topo.connections;
+    const R = cp._mntComputeResults('sv');
+    expect(R.solvedNL).toBe(false);
+    expect(R.nlNoCurve).toBe(true);
+  });
+
+  test('linear vs nonlinear sonuç FARKLI (eğri gerçekten yok sayılıyor)', () => {
+    curvedTopo('linear');
+    const Rlin = cp._mntComputeResults('sv');
+    curvedTopo('nonlinear');
+    const Rnl = cp._mntComputeResults('sv');
+    expect(Math.abs(Rlin.allCases[0].res.perMount[0].delta[2]
+                  - Rnl.allCases[0].res.perMount[0].delta[2])).toBeGreaterThan(1e-5);
+  });
+});
