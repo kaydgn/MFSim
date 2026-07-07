@@ -775,6 +775,20 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     expect(html).toContain("veMntLibCurveToggle('lib1','k1')");
   });
 
+  // Smoke: seçili takozun kuvvet–sehim grafiği (SVG) patlamadan üretilir —
+  // statik + dinamik çizgileri (polyline) ve ölçüm noktaları (circle). Detayı
+  // etiket/koordinat bazında test ETME (kırılgan olur); yalnız boru hattı sağlam mı.
+  test('kütüphane paneli: seçili takozun kuvvet–sehim grafiği (SVG) üretilir', () => {
+    const n = libNode();
+    n.data.mounts[0].curveZ = [[-10, -6400], [0, 0], [10, 6400]];
+    n.data._selKey = 'k1';
+    const html = cp.getMntLibraryPropertiesHTML(n);
+    expect(html).toContain('Eğrisi (z)');
+    expect(html).toContain('<svg');
+    expect(html).toContain('<polyline');   // statik + dinamik çizgiler
+    expect(html).toContain('<circle');      // ölçüm noktaları
+  });
+
   test('kütüphane paneli: editör açıkken (δ,f) düzenleyici görünür', () => {
     const n = libNode();
     n.data.mounts[0].curveZ = [[-10, -6400], [0, 0], [10, 6400]];

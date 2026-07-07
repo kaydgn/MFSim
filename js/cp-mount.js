@@ -1600,76 +1600,211 @@ function _mntLibEnsure(node){
 function _mntLibInp(nodeId, key, field, val, isText, setter){
   var fn=setter||'veMntLibSet';
   var v=(val===undefined||val===null)?'':val;
-  var common='width:100%; padding:3px 4px; font-size:0.62rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;';
+  var common='width:100%; padding:4px 7px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; box-sizing:border-box;';
   if(isText){
     return '<input type="text" value="'+_mntEsc(v)+'" onchange="'+fn+'(\''+nodeId+'\',\''+_mntEsc(key)+'\',\''+field+'\',this.value)" style="'+common+'">';
   }
   return '<input type="number" value="'+_mntEsc(v)+'" step="1" onchange="'+fn+'(\''+nodeId+'\',\''+_mntEsc(key)+'\',\''+field+'\',this.value)" style="'+common+' text-align:right;">';
 }
+// ─── Grafik/detay yardımcıları (master-detay interaktif panel) ───────────────
+// Kuvvet biçimlendirici — grafik ekseni için kompakt (6400→"6.4k"), tipografik −.
+function _mntFmtF(v){
+  var a=Math.abs(v), s=(v<0)?'−':'';
+  if(a>=1000){ var k=a/1000; return s+(k>=10?Math.round(k):(Math.round(k*10)/10))+'k'; }
+  return s+Math.round(a);
+}
+// [[δ,f],…] noktaları arasında lineer interpolasyon/klips (2 nokta veya spline yoksa).
+function _mntLinInterp(pts, x){
+  var n=pts.length;
+  if(x<=pts[0][0]) return pts[0][1];
+  if(x>=pts[n-1][0]) return pts[n-1][1];
+  for(var i=0;i<n-1;i++){
+    if(x<=pts[i+1][0]){
+      var dx=(pts[i+1][0]-pts[i][0])||1, t=(x-pts[i][0])/dx;
+      return pts[i][1]+t*(pts[i+1][1]-pts[i][1]);
+    }
+  }
+  return pts[n-1][1];
+}
+// Küçük yuvarlak rozet (ÖZEL / GÖMÜLÜ / DEĞİŞTİRİLDİ).
+function _mntLibBadge(text, color){
+  return '<span style="font-size:0.5rem; font-weight:700; letter-spacing:0.04em; padding:2px 7px; border:1px solid '+color+'; color:'+color+'; border-radius:10px; white-space:nowrap;">'+text+'</span>';
+}
+// Master listede tek tıklanabilir takoz satırı (seçili → aksan çerçeve + koyu zemin).
+function _mntLibMasterRow(node, e, sel){
+  var isSel=sel && e.key===sel.key;
+  var hasCurve=!e.builtin && Array.isArray(e.curveZ) && e.curveZ.length>=2;
+  var dotColor=hasCurve?'var(--accent-danger)':(e.overridden?'var(--accent-warning)':(e.builtin?'var(--accent-primary)':'var(--accent-success)'));
+  var baseBg=isSel?'var(--bg-tertiary)':'transparent';
+  var border=isSel?('1px solid '+dotColor):'1px solid transparent';
+  var hover=isSel?'':' onmouseover="this.style.background=\'var(--bg-tertiary)\'" onmouseout="this.style.background=\'transparent\'"';
+  var h='<div onclick="veMntLibSelect(\''+node.id+'\',\''+_mntEsc(e.key)+'\')"'+hover
+    +' style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:7px; background:'+baseBg+'; border:'+border+'; margin-bottom:4px;">';
+  h+='<span style="width:8px; height:8px; border-radius:50%; background:'+dotColor+'; flex-shrink:0;"></span>';
+  h+='<span style="flex:1; min-width:0; font-size:0.66rem; font-weight:'+(isSel?'700':'500')+'; color:var(--text-'+(isSel?'heading':'primary')+'); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+_mntEsc(e.name)+'</span>';
+  h+='<span style="font-size:0.53rem; color:var(--text-muted); font-family:'+_MNT2D_MONO+'; white-space:nowrap;">kz '+Math.round(_mntNum(e.sz))+'</span>';
+  if(hasCurve) h+='<span title="nonlineer eğri" style="font-size:0.72rem; color:var(--accent-danger); line-height:1;">∿</span>';
+  h+='</div>';
+  return h;
+}
+// Statik/dinamik rijitlik üçlüsü (kx/ky/kz) — satır içi editable, doğru setter.
+function _mntLibStiff(node, e, title, unit, fields, setter, accent){
+  var subs=['kx','ky','kz'];
+  var h='<div style="margin-bottom:11px;">';
+  h+='<div style="display:flex; align-items:center; gap:6px; margin-bottom:5px;">'
+    +'<span style="width:3px; height:10px; border-radius:2px; background:'+accent+';"></span>'
+    +'<span style="font-size:0.55rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.03em; text-transform:uppercase;">'+title+'</span>'
+    +'<span style="font-size:0.5rem; color:var(--text-muted);">'+unit+'</span></div>';
+  h+='<div style="display:flex; gap:5px;">';
+  for(var i=0;i<3;i++){
+    var f=fields[i], val=(e[f]===undefined||e[f]===null)?'':e[f];
+    h+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
+      +'<span style="font-size:0.5rem; color:var(--text-muted); text-align:center;">'+subs[i]+'</span>'
+      +_mntLibInp(node.id, e.key, f, val, false, setter)
+      +'</label>';
+  }
+  h+='</div></div>';
+  return h;
+}
+// Grafik altına açıklamalı legend (statik/dinamik/ölçüm).
+function _mntLibLegend(hasCurve){
+  function sw(inner){ return '<svg width="16" height="9" viewBox="0 0 16 9" style="vertical-align:-1px;">'+inner+'</svg>'; }
+  var statColor=hasCurve?'var(--accent-danger)':'var(--accent-primary)';
+  var h='<div style="display:flex; flex-wrap:wrap; gap:11px; margin-top:7px; font-size:0.52rem; color:var(--text-secondary);">';
+  h+='<span>'+sw('<line x1="1" y1="4.5" x2="15" y2="4.5" stroke="'+statColor+'" stroke-width="2"/>')+' Statik'+(hasCurve?' (eğri)':' (lineer)')+'</span>';
+  h+='<span>'+sw('<line x1="1" y1="4.5" x2="15" y2="4.5" stroke="var(--accent-warning)" stroke-width="1.6" stroke-dasharray="4 2.5"/>')+' Dinamik</span>';
+  if(hasCurve) h+='<span>'+sw('<circle cx="8" cy="4.5" r="2.6" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.3"/>')+' Ölçüm noktaları</span>';
+  h+='</div>';
+  return h;
+}
+// Kuvvet–sehim (z) GRAFİĞİ: statik yasa (eğri varsa PCHIP, yoksa lineer sz·δ),
+// dinamik referans slope (dz·δ, kesikli) ve ölçüm noktaları. Salt-görsel SVG.
+function _mntLibForceChart(e){
+  var sz=_mntNum(e.sz), dz=_mntNum(e.dz);
+  var raw=(!e.builtin && Array.isArray(e.curveZ) && e.curveZ.length>=2)?e.curveZ:null;
+  var pts=raw?raw.map(function(p){ return [_mntNum(p[0]), _mntNum(p[1])]; }).sort(function(a,b){ return a[0]-b[0]; }):null;
+  var hasCurve=!!pts;
+  var dmin, dmax;
+  if(pts){ dmin=pts[0][0]; dmax=pts[pts.length-1][0]; } else { dmin=-15; dmax=15; }
+  if(!(dmax>dmin)){ dmin-=1; dmax+=1; }
+  // Statik yasa değerlendiricisi
+  var spline=null;
+  if(pts && pts.length>=3 && typeof veBuildPchipSpline==='function'){
+    try{ spline=veBuildPchipSpline(pts.map(function(p){ return {rpm:p[0], torque:p[1]}; })); }catch(_e){ spline=null; }
+  }
+  function fStat(x){
+    var v;
+    if(!pts) v=sz*x;
+    else if(spline && typeof veEvalPchip==='function') v=veEvalPchip(spline, x);
+    else v=_mntLinInterp(pts, x);
+    return isFinite(v)?v:0;
+  }
+  // Örnekle
+  var N=64, i, x, statPts=[], dynPts=[], allF=[0];
+  for(i=0;i<=N;i++){ x=dmin+(dmax-dmin)*i/N; var fs=fStat(x), fd=dz*x; statPts.push([x,fs]); dynPts.push([x,fd]); allF.push(fs); allF.push(fd); }
+  if(pts) pts.forEach(function(p){ allF.push(p[1]); });
+  var fmin=Math.min.apply(null, allF), fmax=Math.max.apply(null, allF);
+  if(!(fmax>fmin)){ fmin-=1; fmax+=1; }
+  var fpad=(fmax-fmin)*0.10; fmin-=fpad; fmax+=fpad;
+  // Geometri
+  var W=320, H=200, plotL=50, plotR=310, plotT=14, plotB=164;
+  function px(xx){ return plotL+(xx-dmin)/(dmax-dmin)*(plotR-plotL); }
+  function py(ff){ return plotB-(ff-fmin)/(fmax-fmin)*(plotB-plotT); }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" preserveAspectRatio="xMidYMid meet" style="display:block; font-family:'+_MNT2D_MONO+';">';
+  s+='<rect x="'+plotL+'" y="'+plotT+'" width="'+(plotR-plotL)+'" height="'+(plotB-plotT)+'" fill="var(--bg-input)" opacity="0.3"/>';
+  // Izgara + eksen etiketleri
+  var xticks=_mnt2DNiceTicks(dmin,dmax,5), yticks=_mnt2DNiceTicks(fmin,fmax,5);
+  xticks.forEach(function(tv){ var gx=px(tv); if(gx<plotL-0.5||gx>plotR+0.5) return;
+    s+='<line x1="'+_mnt2DR(gx)+'" y1="'+plotT+'" x2="'+_mnt2DR(gx)+'" y2="'+plotB+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.35"/>';
+    s+=_mnt2DText(gx, plotB+12, _mnt2DTick(tv), 'middle', 'var(--text-muted)', 7.5);
+  });
+  yticks.forEach(function(tv){ var gy=py(tv); if(gy<plotT-0.5||gy>plotB+0.5) return;
+    s+='<line x1="'+plotL+'" y1="'+_mnt2DR(gy)+'" x2="'+plotR+'" y2="'+_mnt2DR(gy)+'" stroke="var(--border-color)" stroke-width="0.5" opacity="0.35"/>';
+    s+=_mnt2DText(plotL-4, _mnt2DR(gy)+2.5, _mntFmtF(tv), 'end', 'var(--text-muted)', 7);
+  });
+  // Sıfır eksenleri (vurgulu)
+  var y0=py(0), x0=px(0);
+  if(y0>=plotT&&y0<=plotB) s+='<line x1="'+plotL+'" y1="'+_mnt2DR(y0)+'" x2="'+plotR+'" y2="'+_mnt2DR(y0)+'" stroke="var(--text-muted)" stroke-width="1"/>';
+  if(x0>=plotL&&x0<=plotR) s+='<line x1="'+_mnt2DR(x0)+'" y1="'+plotT+'" x2="'+_mnt2DR(x0)+'" y2="'+plotB+'" stroke="var(--text-muted)" stroke-width="1"/>';
+  // Dinamik referans (kesikli) + statik yasa (kalın) + ölçüm noktaları
+  s+='<polyline points="'+dynPts.map(function(p){ return _mnt2DR(px(p[0]))+','+_mnt2DR(py(p[1])); }).join(' ')+'" fill="none" stroke="var(--accent-warning)" stroke-width="1.4" stroke-dasharray="5 3" opacity="0.9"/>';
+  var statColor=hasCurve?'var(--accent-danger)':'var(--accent-primary)';
+  s+='<polyline points="'+statPts.map(function(p){ return _mnt2DR(px(p[0]))+','+_mnt2DR(py(p[1])); }).join(' ')+'" fill="none" stroke="'+statColor+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+  if(pts) pts.forEach(function(p){ s+='<circle cx="'+_mnt2DR(px(p[0]))+'" cy="'+_mnt2DR(py(p[1]))+'" r="2.6" fill="var(--bg-primary)" stroke="var(--accent-danger)" stroke-width="1.4"/>'; });
+  // Eksen başlıkları
+  s+=_mnt2DText((plotL+plotR)/2, H-2, 'sehim δ [mm]', 'middle', 'var(--text-secondary)', 7.5);
+  var yc=(plotT+plotB)/2;
+  s+='<text x="11" y="'+yc+'" text-anchor="middle" font-size="7.5" font-family="'+_MNT2D_MONO+'" fill="var(--text-secondary)" transform="rotate(-90 11 '+yc+')">kuvvet f [N]</text>';
+  s+='</svg>';
+  return s;
+}
+// SEÇİLİ takozun detay kartı: ad + statik/dinamik rijitlikler + kuvvet-sehim
+// grafiği + (özel takoz için) nonlineer eğri editörü.
+function _mntLibDetail(node, e){
+  var isCustom=!e.builtin;
+  var setter=isCustom?'veMntLibSet':'veMntLibSetBuiltin';
+  var hasCurve=isCustom && Array.isArray(e.curveZ) && e.curveZ.length>=2;
+  var accent=e.overridden?'var(--accent-warning)':(isCustom?'var(--accent-success)':'var(--accent-primary)');
+  var badge=isCustom?_mntLibBadge('ÖZEL','var(--accent-success)')
+    :(e.overridden?_mntLibBadge('DEĞİŞTİRİLDİ','var(--accent-warning)'):_mntLibBadge('GÖMÜLÜ','var(--accent-primary)'));
+  var actionBtn=isCustom
+    ? '<button onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Bu takozu sil" style="background:none; border:1px solid var(--accent-danger); color:var(--accent-danger); cursor:pointer; padding:4px 8px; font-size:0.6rem; border-radius:5px; white-space:nowrap;">✕ Sil</button>'
+    : '<button onclick="veMntLibResetBuiltin(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Fabrika ayarına dön" style="background:none; border:1px solid var(--accent-warning); color:var(--accent-warning); cursor:pointer; padding:4px 8px; font-size:0.6rem; border-radius:5px; white-space:nowrap;">↺ Fabrika</button>';
+  var inner='';
+  inner+='<div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;">'
+    +'<div style="flex:1; min-width:0;">'+_mntLibInp(node.id, e.key, 'name', e.name, true, setter)+'</div>'
+    +badge+actionBtn+'</div>';
+  inner+=_mntLibStiff(node, e, 'Statik Rijitlik', 'N/mm', ['sx','sy','sz'], setter, 'var(--accent-primary)');
+  inner+=_mntLibStiff(node, e, 'Dinamik Rijitlik', 'N/mm', ['dx','dy','dz'], setter, 'var(--accent-warning)');
+  inner+=_mntCard('Kuvvet–Sehim Eğrisi (z)', hasCurve?'nonlineer':'lineer', hasCurve?'var(--accent-danger)':'var(--accent-primary)', _mntLibForceChart(e)+_mntLibLegend(hasCurve));
+  if(isCustom){
+    if(node.data._curveEditKey===e.key){
+      inner+=_mntLibCurveEditor(node, _mntLibCustomEntry(node, e.key)||e);
+    } else {
+      inner+='<button onclick="veMntLibCurveToggle(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" style="width:100%; padding:8px; margin-top:2px; font-size:0.63rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:6px; cursor:pointer;">∿ '+(hasCurve?('z-eğrisini düzenle ('+e.curveZ.length+' nokta)'):'Nonlineer z-eğrisi tanımla')+'</button>';
+    }
+  } else {
+    inner+='<div style="font-size:0.54rem; color:var(--text-muted); line-height:1.4; margin-top:2px; padding:7px 9px; background:var(--bg-tertiary); border:1px dashed var(--border-color); border-radius:6px;">Gömülü takozlar lineerdir (statik/dinamik kz). Nonlineer eğri için bir <b>Özel Takoz</b> oluşturun.</div>';
+  }
+  return '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid '+accent+'; border-radius:9px; padding:12px 12px 9px;">'
+    +'<div style="font-size:0.5rem; font-weight:700; letter-spacing:0.05em; color:var(--text-muted); text-transform:uppercase; margin-bottom:9px;">Seçili Takoz</div>'
+    +inner+'</div>';
+}
+// Master-detay panel: tıklanabilir takoz listesi (Özel + Gömülü) → seçili takozun
+// statik/dinamik rijitlikleri ve kuvvet-sehim eğrisi detay kartında görünür.
 function getMntLibraryPropertiesHTML(node){
   var d=_mntLibEnsure(node);
-  var custom=d.mounts;
+  var custom=d.mounts;                                        // bu düğümün özel takozları (ham girdiler; builtin yok → özel)
   var builtins=veMntGetLibraryList().filter(function(e){ return e.builtin; });
+  var nCurve=custom.filter(function(e){ return Array.isArray(e.curveZ)&&e.curveZ.length>=2; }).length;
+  var sel=null;
+  if(d._selKey) sel=custom.concat(builtins).find(function(e){ return e.key===d._selKey; });
+  if(!sel) sel=custom[0]||builtins[0]||null;
+
   var html='<div class="sw-panel">';
-  html+='<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin-bottom:9px;">Eklenen takozlar tüm Takoz bileşenlerinin kütüphane listesinde çıkar. Rijitlikler N/mm. Gömülü katalog da düzenlenebilir (↺ fabrikaya döner).</div>';
+  html+='<div class="sw-status-bar installed"><span class="sw-status-dot"></span><span>Takoz Kütüphanesi</span>'
+    +'<span style="margin-left:auto; font-weight:400; font-size:0.56rem; opacity:0.85;">'+custom.length+' özel · '+builtins.length+' gömülü'+(nCurve?' · '+nCurve+' eğri':'')+'</span></div>';
+  html+='<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.45; margin:8px 0 10px;">Bir takoza <b>tıklayın</b>: statik + dinamik rijitlikleri ve kuvvet–sehim eğrisi görünür. Eklenen takozlar tüm Takoz bileşenlerinin kütüphane listesinde çıkar. Rijitlikler <b>N/mm</b>.</div>';
 
-  // ── Kullanıcı takozları (düzenlenebilir) ──
-  html+='<div class="sw-section-title">Özel Takozlar <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">'+custom.length+' adet · [N/mm]</span></div>';
+  // ── Master liste: Özel Takozlar ──
+  html+='<div class="sw-section-title">Özel Takozlar <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">'+custom.length+' adet</span></div>';
   if(!custom.length){
-    html+='<div style="padding:9px 10px; margin-bottom:8px; font-size:0.62rem; color:var(--text-muted); background:var(--bg-tertiary); border:1px dashed var(--border-color);">Henüz özel takoz yok. Aşağıdaki <b>＋ Yeni Takoz Ekle</b> ile başlayın.</div>';
+    html+='<div style="padding:8px 10px; margin-bottom:6px; font-size:0.6rem; color:var(--text-muted); background:var(--bg-tertiary); border:1px dashed var(--border-color); border-radius:6px;">Henüz özel takoz yok. Aşağıdaki <b>＋</b> ile ekleyin.</div>';
   } else {
-    html+='<div style="overflow-x:auto; margin-bottom:8px;"><table style="border-collapse:collapse; font-size:0.6rem; white-space:nowrap; min-width:100%;"><thead><tr style="background:var(--bg-tertiary);">';
-    html+='<th style="'+_mntMxTh()+' text-align:left;">Ad</th>';
-    ['kx','ky','kz'].forEach(function(l){ html+='<th style="'+_mntMxTh()+'">'+l+' (st)</th>'; });
-    ['kx','ky','kz'].forEach(function(l){ html+='<th style="'+_mntMxTh()+'">'+l+' (dn)</th>'; });
-    html+='<th style="'+_mntMxTh()+'"></th></tr></thead><tbody>';
-    custom.forEach(function(e){
-      html+='<tr>';
-      html+='<td style="'+_mntMxTd()+' min-width:120px;">'+_mntLibInp(node.id,e.key,'name',e.name,true)+'</td>';
-      html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'sx',e.sx)+'</td>';
-      html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'sy',e.sy)+'</td>';
-      html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'sz',e.sz)+'</td>';
-      html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dx',e.dx)+'</td>';
-      html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dy',e.dy)+'</td>';
-      html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dz',e.dz)+'</td>';
-      html+='<td style="'+_mntMxTd()+' white-space:nowrap;">'
-        +'<button onclick="veMntLibCurveToggle(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Nonlineer z-eğrisi" style="background:none; border:1px solid var(--border-color); color:'+((Array.isArray(e.curveZ)&&e.curveZ.length>=2)?'var(--accent-danger)':'var(--text-muted)')+'; cursor:pointer; padding:2px 6px; font-size:0.72rem; line-height:1; margin-right:3px;">∿</button>'
-        +'<button onclick="veMntLibRemove(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Bu takozu sil" style="background:none; border:1px solid var(--border-color); color:var(--accent-danger); cursor:pointer; padding:2px 7px; font-size:0.72rem; line-height:1;">✕</button></td>';
-      html+='</tr>';
-    });
-    html+='</tbody></table></div>';
+    custom.forEach(function(e){ html+=_mntLibMasterRow(node, e, sel); });
   }
-  html+='<button onclick="veMntLibAdd(\''+node.id+'\')" style="width:100%; padding:9px 12px; margin-bottom:14px; font-size:0.7rem; font-weight:700; background:var(--accent-success); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">＋ Yeni Takoz Ekle</button>';
+  html+='<button onclick="veMntLibAdd(\''+node.id+'\')" style="width:100%; padding:8px 12px; margin:4px 0 14px; font-size:0.68rem; font-weight:700; background:var(--accent-success); color:#fff; border:none; border-radius:6px; cursor:pointer; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">＋ Yeni Takoz Ekle</button>';
 
-  // ── Açık nonlineer eğri editörü (özel girdide ∿ ile açılır) ──
-  if(d._curveEditKey){
-    var _czEntry=_mntLibCustomEntry(node, d._curveEditKey);
-    if(_czEntry) html+=_mntLibCurveEditor(node, _czEntry);
-  }
-
-  // ── Gömülü katalog (düzenlenebilir; ↺ ile fabrika ayarına dön) ──
+  // ── Master liste: Gömülü Katalog ──
   var nOv=builtins.filter(function(e){ return e.overridden; }).length;
-  html+='<div class="sw-section-title">Gömülü Katalog <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">düzenlenebilir'+(nOv?' · '+nOv+' değiştirildi':'')+' · [N/mm]</span></div>';
-  html+='<div style="overflow-x:auto;"><table style="border-collapse:collapse; font-size:0.6rem; white-space:nowrap; min-width:100%;"><thead><tr style="background:var(--bg-tertiary);">';
-  html+='<th style="'+_mntMxTh()+' text-align:left;">Ad</th>';
-  ['kx','ky','kz'].forEach(function(l){ html+='<th style="'+_mntMxTh()+'">'+l+' (st)</th>'; });
-  ['kx','ky','kz'].forEach(function(l){ html+='<th style="'+_mntMxTh()+'">'+l+' (dn)</th>'; });
-  html+='<th style="'+_mntMxTh()+'"></th></tr></thead><tbody>';
-  builtins.forEach(function(e){
-    var ov=e.overridden;
-    var dot=ov?'<span title="Fabrikadan değiştirildi" style="color:var(--accent-warning); margin-right:3px;">●</span>':'';
-    html+='<tr>';
-    html+='<td style="'+_mntMxTd()+' text-align:left; min-width:120px;">'+dot+_mntLibInp(node.id,e.key,'name',e.name,true,'veMntLibSetBuiltin')+'</td>';
-    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'sx',e.sx,false,'veMntLibSetBuiltin')+'</td>';
-    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'sy',e.sy,false,'veMntLibSetBuiltin')+'</td>';
-    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'sz',e.sz,false,'veMntLibSetBuiltin')+'</td>';
-    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dx',e.dx,false,'veMntLibSetBuiltin')+'</td>';
-    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dy',e.dy,false,'veMntLibSetBuiltin')+'</td>';
-    html+='<td style="'+_mntMxTd()+' min-width:56px;">'+_mntLibInp(node.id,e.key,'dz',e.dz,false,'veMntLibSetBuiltin')+'</td>';
-    html+='<td style="'+_mntMxTd()+'"><button onclick="veMntLibResetBuiltin(\''+node.id+'\',\''+_mntEsc(e.key)+'\')" title="Fabrika ayarına dön" style="background:none; border:1px solid var(--border-color); color:'+(ov?'var(--accent-warning)':'var(--text-muted)')+'; cursor:pointer; padding:2px 7px; font-size:0.72rem; line-height:1;">↺</button></td>';
-    html+='</tr>';
-  });
-  html+='</tbody></table></div>';
+  html+='<div class="sw-section-title">Gömülü Katalog <span style="font-size:0.55rem; font-weight:400; color:var(--text-muted);">'+builtins.length+' adet'+(nOv?' · '+nOv+' değiştirildi':'')+'</span></div>';
+  builtins.forEach(function(e){ html+=_mntLibMasterRow(node, e, sel); });
+
+  // ── Seçili takozun detayı ──
+  if(sel){
+    html+='<div style="height:1px; background:var(--border-color); margin:14px 0 12px;"></div>';
+    html+=_mntLibDetail(node, sel);
+  }
   html+='</div>';
   return html;
 }
@@ -1730,6 +1865,15 @@ function veMntLibResetBuiltin(nodeId, key){
     if(typeof saveState==='function') saveState();
   }
   if(typeof showNodeProperties==='function') showNodeProperties(node); // fabrika değerlerini geri bas
+}
+// Master listede bir takoz seç → detay kartı o takozu gösterir (panel yeniden çizilir).
+// Başka takoza geçilince açık eğri editörü kapanır (görsel durum temiz kalır).
+function veMntLibSelect(nodeId, key){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  var d=_mntLibEnsure(node);
+  d._selKey=key;
+  if(d._curveEditKey && d._curveEditKey!==key) d._curveEditKey=null;
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
 
 // ─── Kütüphane girdisi: nonlineer z-eğrisi (takoz TİPİNİN özelliği) ──────────
@@ -2142,6 +2286,7 @@ if(typeof module!=='undefined' && module.exports){
     veMntLibSet: veMntLibSet,
     veMntLibSetBuiltin: veMntLibSetBuiltin,
     veMntLibResetBuiltin: veMntLibResetBuiltin,
+    veMntLibSelect: veMntLibSelect,
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
     veMntPopulateStarter: veMntPopulateStarter,
