@@ -1927,8 +1927,21 @@ var _veMntLast=null;      // son sonuç (kopyala/CSV/3D için)
 function getMntSolverPropertiesHTML(node){
   if(!node.data) node.data={};
   if(!node.data.matrixMode) node.data.matrixMode='delta';
+  if(!node.data.solveMode) node.data.solveMode='auto';
   var html='<div class="sw-panel">';
   html+='<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin-bottom:9px;">Tüm kütle ve takozlar otomatik algılanır; yük durumları otomatik uygulanır.</div>';
+  // ── Çözüm Modu: nonlineer eğrilerin kullanılıp kullanılmayacağını AÇIKÇA seç ──
+  var _sm=node.data.solveMode||'auto';
+  html+='<div style="margin-bottom:10px;">';
+  html+='<div style="font-size:0.58rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Çözüm Modu</div>';
+  html+='<select onchange="veMntSetSolveMode(\''+node.id+'\',this.value)" style="width:100%; padding:6px 8px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px;">';
+  [['auto','Otomatik — eğri tanımlıysa nonlineer'],
+   ['nonlinear','Nonlineer — tanımlı eğrileri kullan (Newton)'],
+   ['linear','Lineer — eğrileri yok say (statik rijitlik)']
+  ].forEach(function(o){ html+='<option value="'+o[0]+'"'+(_sm===o[0]?' selected':'')+'>'+o[1]+'</option>'; });
+  html+='</select>';
+  html+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4; margin-top:4px;">Nonlineer eğriler <b>Takoz Özellikleri</b>\'nde tanımlanır. Bu seçim yalnız ▶ Hesapla ile uygulanır.</div>';
+  html+='</div>';
   html+='<div style="display:flex; gap:6px; margin-bottom:10px;">';
   html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="flex:1; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:5px;">▶ Hesapla</button>';
   html+='<button onclick="veMntOpenMathModal()" style="padding:9px 12px; font-size:0.64rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;" title="Matematik">📐 Matematik</button>';
@@ -1936,6 +1949,15 @@ function getMntSolverPropertiesHTML(node){
   html+='<div id="ve-mnt-results"></div>';
   html+='</div>';
   return html;
+}
+
+// Çözüm modu seç (auto/nonlinear/linear). Yeniden çizme YOK — sonuç korunur;
+// seçim bir sonraki ▶ Hesapla'da uygulanır (hesap butona kilitli).
+function veMntSetSolveMode(nodeId, val){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  node.data.solveMode=(val==='linear'||val==='nonlinear')?val:'auto';
+  if(typeof saveState==='function') saveState();
 }
 
 // Hesap çekirdeği — DOM'DAN BAĞIMSIZ. _veMntLast'i üretir, döner.
@@ -1949,17 +1971,30 @@ function _mntComputeResults(solverId){
   if(problems.length){ _veMntLast=null; return { error:problems, gather:gather }; }
   var mp=C.combineMassProps(si.components);
   if(!mp){ _veMntLast=null; return { error:['Kütle hesaplanamadı (toplam ≤ 0).'], gather:gather }; }
-  var model={ m:mp.m, cg:mp.cg, Kstat:C.buildK(si.mounts,mp.cg,false), mounts:si.mounts, g:si.g };
+  // ── Çözüm Modu: kullanıcı seçimini uygula ──
+  //  linear    → nonlineer eğrileri YOK SAY (SI mount'lardan curves'i sıyır) → saf lineer.
+  //  nonlinear → eğrileri kullan (varsa Newton; yoksa lineer + uyarı — solvedNL=false).
+  //  auto      → eğri varsa nonlineer, yoksa lineer (varsayılan/geriye uyumlu).
+  var mode=(solver.data && solver.data.solveMode) || 'auto';
+  var mounts=si.mounts;
+  if(mode==='linear'){
+    mounts=si.mounts.map(function(m){
+      if(!m.curves) return m;
+      var c={}; Object.keys(m).forEach(function(k){ if(k!=='curves') c[k]=m[k]; }); return c;
+    });
+  }
+  var solvedNL=(typeof C.anyCurve==='function') && C.anyCurve(mounts);   // fiilen nonlineer çözüldü mü
+  var model={ m:mp.m, cg:mp.cg, Kstat:C.buildK(mounts,mp.cg,false), mounts:mounts, g:si.g };
   var allCases=C.solveAllCases(model, si.loadCases, {useStop:true}); // ±15 mm metal-metal durdurucu (F4)
   var M6=C.buildM6(mp.m,mp.I_G), modes;
-  if(typeof C.anyCurve==='function' && C.anyCurve(si.mounts)){
+  if(solvedNL){
     // Nonlineer takoz var → modları STATİK dengedeki (Static durumu) dinamik
     // tanjant rijitlikle çöz (önyüklü çalışma noktası). allCases[0] = Static.
     var qStat=(allCases[0] && allCases[0].res) ? allCases[0].res.q : null;
-    modes=C.solveModalAtState(si.mounts, mp.cg, M6, qStat);
+    modes=C.solveModalAtState(mounts, mp.cg, M6, qStat);
   } else {
-    // Tümüyle lineer → mevcut yol (K_dyn) birebir korunur.
-    modes=C.solveModal(C.buildK(si.mounts,mp.cg,true), M6, si.mounts, mp.cg);
+    // Lineer (mod seçimi veya eğri yok) → mevcut yol (K_dyn) birebir korunur.
+    modes=C.solveModal(C.buildK(mounts,mp.cg,true), M6, mounts, mp.cg);
   }
   // Kriter 3 — her vites için tork durumu (mount kuvvetleri). Kriter 4 — tasarım
   // yük koşulları (maks tork = 1. vites, 3.5g düşey, 1g yanal, 1g boyuna).
@@ -1971,9 +2006,12 @@ function _mntComputeResults(solverId){
     {name:'1g Boyuna (fren)', n:[-1,0,-1  ], T:[0,0,0]}
   ];
   var designCases=C.solveAllCases(model, designDefs, {useStop:true});
-  var R={ mp:mp, allCases:allCases, mounts:si.mounts, modes:modes, gather:gather,
+  // Nonlineer seçildi ama hiç eğri yok → kullanıcı uyarılır (solvedNL zaten false).
+  var nlNoCurve=(mode==='nonlinear' && !solvedNL);
+  var R={ mp:mp, allCases:allCases, mounts:mounts, modes:modes, gather:gather,
           gearCases:gearCases, designCases:designCases, g:si.g,
-          matrixMode:(solver.data.matrixMode||'delta'), solverId:solverId };
+          matrixMode:(solver.data.matrixMode||'delta'), solveMode:mode, solvedNL:solvedNL, nlNoCurve:nlNoCurve,
+          solverId:solverId };
   _veMntLast=R;
   return R;
 }
@@ -2020,9 +2058,14 @@ function _mntSolverStatusHTML(R){
   h+='<div style="margin-top:5px; font-size:0.62rem; color:var(--text-secondary); line-height:1.5;">'
     + 'Toplam kütle <b style="color:var(--text-primary);">'+_mntFmt(mp.m,1)+' kg</b> · '
     + 'CG (<b style="color:var(--text-primary);">'+_mntFmt(cgmm[0],0)+', '+_mntFmt(cgmm[1],0)+', '+_mntFmt(cgmm[2],0)+'</b>) mm</div>';
+  var modeLbl = R.solveMode==='linear' ? 'Lineer — eğriler yok sayıldı'
+    : R.solveMode==='nonlinear' ? (R.solvedNL ? 'Nonlineer (Newton)' : 'Nonlineer seçildi — eğri yok, lineer')
+    : (R.solvedNL ? 'Otomatik → Nonlineer (Newton)' : 'Otomatik → Lineer');
+  h+='<div style="margin-top:4px; font-size:0.58rem; color:var(--text-muted);">Çözüm modu: <b style="color:'+(R.solvedNL?'var(--accent-danger)':'var(--text-secondary)')+';">'+_mntEsc(modeLbl)+'</b></div>';
   h+='</div>';
 
   var warns=[];
+  if(R.nlNoCurve) warns.push(['ℹ', 'Nonlineer seçildi ama hiç eğri tanımlı değil → lineer çözüldü. Takoz Özellikleri\'nden z-eğrisi ekleyin.', 'var(--accent-warning)']);
   if(failed)    warns.push(['✗', failed+' yük durumu çözülemedi (K tekil)', 'var(--accent-danger)']);
   if(notConv)   warns.push(['⚠', notConv+' durumda çözücü yakınsamadı', 'var(--accent-danger)']);
   if(tension)   warns.push(['⟂', tension+' durumda çekme / lift-off', 'var(--accent-warning)']);
@@ -2121,6 +2164,8 @@ if(typeof module!=='undefined' && module.exports){
     getMntMountPropertiesHTML: getMntMountPropertiesHTML,
     getMntLibraryPropertiesHTML: getMntLibraryPropertiesHTML,
     getMntSolverPropertiesHTML: getMntSolverPropertiesHTML,
+    veMntSetSolveMode: veMntSetSolveMode,
+    _mntComputeResults: _mntComputeResults,
     getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
     getMntViewerPropertiesHTML: getMntViewerPropertiesHTML,
     getMntCoordFramePropertiesHTML: getMntCoordFramePropertiesHTML,
