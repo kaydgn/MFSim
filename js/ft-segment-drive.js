@@ -209,6 +209,12 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   // ═══ VİTES GEÇİŞ DURUMU MAKİNESİ ═══
   var shiftState = { gearIdx: 0, isLockup: false, shiftHistory: [] };
 
+  // Vites-modu etiketi: TK varsa 'C' (converter) / 'L' (lockup) soneki; TK YOKSA
+  // konvertör/kilit kavramı olmadığından salt vites numarası (doğrudan tahrik).
+  function veGearModeLabel(gearNum, isLU) {
+    return tcNode ? (gearNum + (isLU ? 'L' : 'C')) : String(gearNum);
+  }
+
   function getCurrentGearData() {
     return forwardGears[shiftState.gearIdx] || forwardGears[0];
   }
@@ -223,9 +229,9 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
         var N_out = N_engine * SR / i_gc;
         if(g === 0) {
           var th1C = (csData && csData['1C2C']) ? csData['1C2C'].a * shiftRefRPM + (csData['1C2C'].b || 0) : SHIFT_1C_2C_OUT_RATIO * shiftRefRPM;
-          if(N_out >= th1C) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:1,fromMode:'1C',toMode:'2C',v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out}); shiftState.gearIdx = 1; shifted = true; }
+          if(N_out >= th1C) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:1,fromMode:veGearModeLabel(1,false),toMode:veGearModeLabel(2,false),v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out}); shiftState.gearIdx = 1; shifted = true; }
         } else if(g === 1) {
-          if(N_out >= _sdCalc2C2LThreshold(shiftRefRPM)) { shiftState.shiftHistory.push({t:t_s,fromGear:1,toGear:1,fromMode:'2C',toMode:'2L',v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out,eta:SR*tau}); shiftState.isLockup = true; shifted = true; }
+          if(N_out >= _sdCalc2C2LThreshold(shiftRefRPM)) { shiftState.shiftHistory.push({t:t_s,fromGear:1,toGear:1,fromMode:veGearModeLabel(2,false),toMode:veGearModeLabel(2,true),v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out,eta:SR*tau}); shiftState.isLockup = true; shifted = true; }
         }
       } else if(g < maxGear) {
         var i_glu = parseFloat(getCurrentGearData().ratio) || 1.0;
@@ -233,7 +239,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
         var fN = (g+1)+'L', tN = (g+2)+'L', sK = fN+tN, triggered = false;
         if(spData.lockupShifts && spData.lockupShifts[sK]) { var ls = spData.lockupShifts[sK]; var thlu = ls.a*shiftRefRPM+ls.b; if(ls.minCap!==undefined) thlu=Math.max(thlu,ls.minCap); if(N_out_lu>=thlu) triggered=true; }
         else { if(N_engine>=N_shift_lockup) triggered=true; }
-        if(triggered) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:g+1,fromMode:fN,toMode:tN,v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out_lu}); shiftState.gearIdx=g+1; shifted=true; }
+        if(triggered) { shiftState.shiftHistory.push({t:t_s,fromGear:g,toGear:g+1,fromMode:veGearModeLabel(g+1,true),toMode:veGearModeLabel(g+2,true),v_kmh:v_kmh,N_engine:N_engine,SR:SR,N_out:N_out_lu}); shiftState.gearIdx=g+1; shifted=true; }
       }
     }
 
@@ -260,10 +266,10 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
               }
             }
 
-            var dsFromName = (g + 1) + 'L';
-            var dsToName = g + 'L';
-            if(g === 1) {
-              dsToName = '1C';
+            var dsFromName = veGearModeLabel(g + 1, true);
+            var dsToName = veGearModeLabel(g, true);
+            if(g === 1 && tcNode) {
+              dsToName = veGearModeLabel(1, false);
               shiftState.isLockup = false;
             }
 
@@ -290,7 +296,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
           if(N_out_conv < dsThreshold2C) {
             shiftState.shiftHistory.push({
               t: t_s, fromGear: 1, toGear: 0,
-              fromMode: '2C', toMode: '1C',
+              fromMode: veGearModeLabel(2, false), toMode: veGearModeLabel(1, false),
               v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_conv,
               isDownshift: true,
               F_traction: ph ? ph.F_traction : 0,
@@ -430,7 +436,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     var mEff = FT_SOLVER.calcEquivalentMass({
       m_vehicle: m_vehicle, r_tire: r_tire, i_gear: i_gear, i_propshaft: i_propshaft, i_transfer: i_transfer, i_axle: i_axle,
       I_engine: I_engine, I_conv: I_conv, I_conv_turbine: I_conv_turbine, I_trans: I_trans, I_propshaft: I_propshaft,
-      I_tc: I_tc, I_axle: I_axle_inertia, I_tire: I_tire, isLockup: isLU
+      I_tc: I_tc, I_axle: I_axle_inertia, I_tire: I_tire, isLockup: (tcNode ? isLU : true)
     });
 
     return {
@@ -439,7 +445,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       F_traction: F_traction, F_engine_drag: F_engine_drag, F_rolling: resist.F_rolling, F_aero: resist.F_aero,
       F_grade: resist.F_grade, F_resist: resist.F_total, F_net: F_net,
       m_eff: mEff.m_eff, i_gear: i_gear, eta_gear: eta_gear,
-      gearIdx: shiftState.gearIdx, gearName: gearData.name, isLockup: isLU, command: command
+      gearIdx: shiftState.gearIdx, gearName: gearData.name, isLockup: (tcNode ? isLU : true), command: command
     };
   }
 
@@ -461,7 +467,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     res_F_grade.push(ph.F_grade); res_F_rolling.push(ph.F_rolling); res_F_aero.push(ph.F_aero);
     res_F_net.push(ph.F_net); res_distance.push(dist_rec); res_accel.push(ph.accel);
     var gNum = ph.gearName.replace(/[^0-9]/g, '');
-    res_gearMode.push(gNum + (ph.isLockup ? 'L' : 'C'));
+    res_gearMode.push(veGearModeLabel(gNum, ph.isLockup));
     res_SR.push(ph.isLockup ? 1.0 : ph.SR);
     res_TE.push(ph.F_traction / 1000);
     res_DP.push((ph.F_traction - Math.abs(ph.F_rolling) - Math.abs(ph.F_aero)) / 1000);
@@ -499,7 +505,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
 
     var segStartSpeed = v * 3.6, segStartTime = t, segDist = 0;
     var segMaxSpeed = v * 3.6, segMinSpeed = v * 3.6;
-    var segStartGear = res_gearMode.length > 0 ? res_gearMode[res_gearMode.length - 1] : ((shiftState.gearIdx + 1) + (shiftState.isLockup ? 'L' : 'C'));
+    var segStartGear = res_gearMode.length > 0 ? res_gearMode[res_gearMode.length - 1] : veGearModeLabel(shiftState.gearIdx + 1, shiftState.isLockup);
     var segDownshiftCount = 0;
 
     var stallCounter = 0;
@@ -564,7 +570,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
     recordStep(t, v, totalDist, phEnd, si);
     lastSampleStep = globalStep;
 
-    var segEndGear = res_gearMode.length > 0 ? res_gearMode[res_gearMode.length - 1] : ((shiftState.gearIdx + 1) + (shiftState.isLockup ? 'L' : 'C'));
+    var segEndGear = res_gearMode.length > 0 ? res_gearMode[res_gearMode.length - 1] : veGearModeLabel(shiftState.gearIdx + 1, shiftState.isLockup);
     segmentSummary.push({
       segIdx: si, no: seg.no || (si + 1), command: seg_command, grade: seg.grade || 0,
       targetDist: seg_dist, actualDist: segDist,
