@@ -234,3 +234,35 @@ describe('Regresyon: TK VARSA konvertör-modu (C/L) etiketleri korunur', () => {
     expect(R.gearMode.some(gm => /L$/.test(String(gm)))).toBe(true);   // lockup fazı korunur
   });
 });
+
+describe('Eğim Kabiliyeti — TK\'siz stall/launch kalkış kabiliyetinden (RÖLANTİ değil)', () => {
+  const TC = [
+    {sr:0.00, kpump:101.50, tau:2.05}, {sr:0.20, kpump:102.14, tau:1.85},
+    {sr:0.40, kpump:104.30, tau:1.59}, {sr:0.60, kpump:108.03, tau:1.35},
+    {sr:0.68, kpump:110.61, tau:1.26}, {sr:0.80, kpump:120.0, tau:1.10},
+    {sr:0.90, kpump:135.0, tau:1.02}
+  ];
+  function gradeFromV0(R) {
+    const mg = R.solverStats.m_vehicle * 9.81 / 1000;
+    return Math.tan(Math.asin(Math.min(0.999, Math.max(0, R.DP[0] / mg)))) * 100;
+  }
+
+  test('TK YOK: stall/launch eğimi 1. viteste maks. DP\'den → v=0 rölantiden YÜKSEK', () => {
+    buildNoTCTopology('duramax_lz0_305', { ftGVW: 8000 });   // orta-ağır, tork-limitli
+    const R = veFTRunSimulationEngine();
+    const G = veCalculateGradeability(R);
+    expect(G && G.high).toBeTruthy();
+    // Düzeltme öncesi stall = v=0 (rölanti) değeriydi; düzeltme sonrası belirgin YÜKSEK
+    expect(G.high.stallGrade).toBeGreaterThan(gradeFromV0(R) + 2);
+    expect(G.high.launchGrade).toBeCloseTo(G.high.stallGrade, 1);       // TK yok → launch = stall
+    expect(String(G.high.stallGear).replace(/[^0-9]/g, '')).toBe('1');  // kalkış 1. viteste
+  });
+
+  test('TK VAR: stall eğimi v=0 (konvertör stall) noktasından — davranış korunur', () => {
+    buildNoTCTopology('duramax_lz0_305', { ftGVW: 8000 }, TC);
+    const R = veFTRunSimulationEngine();
+    const G = veCalculateGradeability(R);
+    expect(G && G.high).toBeTruthy();
+    expect(G.high.stallGrade).toBeCloseTo(Math.round(gradeFromV0(R) * 10) / 10, 0); // v=0 tabanlı (değişmedi)
+  });
+});
