@@ -2444,24 +2444,38 @@ function veCloseDetailedReport() {
   }
 }
 
-// ═══════ HTML İNDİR — Detaylı Rapor (bağımsız, estetik, baskıya hazır) ═══════
-// Rapor overlay içeriğini tek parça, bağımsız bir HTML dosyasına dönüştürür.
-//  • Temadan bağımsız: sabit AÇIK tema :root değerleri gömülür → daima beyaz zemin.
-//    Grafikler de geçici olarak açık renklerle yeniden çizilip PNG'ye alınır (_drTC override).
-//  • Tipografi: Takoz raporu font varlıkları (Archivo / Source Serif 4 / IBM Plex Mono)
-//    varsa yeniden kullanılır; yoksa sistem yazı tiplerine düşülür.
-//  • Grafikler statik PNG olarak gömülür; interaktif öğeler (tooltip/zoom) temizlenir.
-//  • Blob olarak indirilir; tarayıcıdan Ctrl+P ile birebir baskı alınabilir.
+// ============================================================================
+//  ARAÇ PERFORMANS — DETAYLI RAPOR → BAĞIMSIZ HTML (referans kozmetiği)
+// ============================================================================
+// "Takoz Çökme–Titreşim" raporunun estetiğini birebir izler: Source Serif 4 gövde,
+// Archivo başlıklar, IBM Plex Mono sayılar; Prusya mavisi vurgu; numaralı <h2>
+// bölümler + <p> prose + <caption>'lı tablolar + <figure>. Temadan bağımsız beyaz.
+//
+// SÖZLEŞME (bölüm üreticileri için) — her bölüm şu imzayı taşır:
+//   function _veRepSecX(R, sim, H, charts) -> { id, title, body }  (yoksa null)
+//   • body: h2 HARİÇ her şey (prose + tablo + figür). Numarayı/h2'yi assembler ekler.
+//   • YALNIZCA H yardımcıları kullanılır; SATIR İÇİ (inline) STİL YOK.
+//   • Kullanıcı metinleri (isim vb.) H.esc(...) ile kaçışlanır; H.f(...) sayı güvenlidir.
+//   • Grafikler: charts['<canvasId>'] bir <img> HTML'i (yoksa '') → H.fig(img, açıklama).
+//
+// H yardımcıları:
+//   H.esc(s)                      → HTML-kaçışlı string
+//   H.f(n, d)                     → sayı, d ondalık (varsayılan 2); geçersizse '—'
+//   H.p(html)                     → <p>…</p>  (html güvenli/istenmiş kabul edilir)
+//   H.h3(text)                    → <h3>…</h3>
+//   H.note(kind, title, bodyHtml) → <div class="note {kind}">…</div>  (kind:''|'warn'|'check')
+//   H.kv(rows)                    → 2 sütun etiket/değer tablosu (başlıksız). rows:[[label,value],…]
+//                                    value string veya {v, cls}; ETİKET kaçışlanır, DEĞER kaçışlanmaz.
+//   H.table(caption, cols, rows, sumRows)
+//                                    cols:[{t,w,a}] a:'l'|'c'|'r'(vars.); rows/sumRows: hücre = string veya {v,a,cls}
+//                                    "Tablo N — {caption}" otomatik numaralanır.
+//   H.fig(imgHtml, captionHtml)   → <figure>…<figcaption><b>Şekil N —</b> …</figcaption></figure> (img boşsa '')
+//   H.st(kind, text)              → durum rozeti <span class="st-…">  (kind:'ok'|'warn'|'bad')
 
 function _veReportEsc(s) {
   return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
     return c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;';
   });
-}
-function _veReportNum(n) {
-  var v = Number(n);
-  if(!isFinite(v)) return _veReportEsc(n);
-  try { return v.toLocaleString('tr-TR'); } catch(e) { return String(v); }
 }
 function _veReportSlug(s) {
   var map = { 'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u' };
@@ -2477,139 +2491,818 @@ function _veReportDownloadBlob(html, filename) {
   setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
 }
 
-// Bağımsız rapor stil sayfası — referans Takoz raporunun estetiğini izler.
-// :root'taki AÇIK tema değişkenleri, içerikteki tüm inline var(--...) referanslarını
-// beyaz-zemin açık temaya çözer (uygulama teması ne olursa olsun).
-var _VE_REPORT_CSS = `
-:root{
-  --bg-primary:#ffffff; --bg-secondary:#ffffff; --bg-tertiary:#f0f1f3;
-  --border-color:#e0e2e6; --border-light:#e8eaed; --border-hover:#c2c8d4;
-  --text-primary:#1b1e24; --text-secondary:#4e535e; --text-muted:#9098a6; --text-heading:#0c0e12;
-  --accent-primary:#2d6fe6; --accent-success:#1a9a50; --accent-warning:#d49318; --accent-danger:#d43d3d;
-  --ink:#1b1e24; --line:#c9cdd3; --line-soft:#e4e6e9;
-  --prusya:#24425f; --prusya-soft:#eef2f6;
+// ─── Yardımcı fabrikası (tablo/figür numaralayıcı closure) ───────────────────
+function _veMakeReportHelpers() {
+  var esc = _veReportEsc;
+  var tblNo = 0, figNo = 0;
+  function f(n, d) { var v = Number(n); if(!isFinite(v)) return '—'; return v.toFixed(d == null ? 2 : d); }
+  function cell(c, colA) {
+    var v, a = colA || 'r', cls = '';
+    if(c && typeof c === 'object') { v = c.v; if(c.a) a = c.a; if(c.cls) cls = c.cls; } else { v = c; }
+    if(v == null) v = '';
+    var k = (a === 'l' ? 'l' : a === 'c' ? 'c' : '');
+    var full = k + (cls ? (k ? ' ' : '') + cls : '');
+    return '<td' + (full ? ' class="' + full + '"' : '') + '>' + v + '</td>';
+  }
+  return {
+    esc: esc,
+    f: f,
+    p: function(html) { return '<p>' + html + '</p>'; },
+    h3: function(t) { return '<h3>' + esc(t) + '</h3>'; },
+    note: function(kind, title, body) {
+      return '<div class="note' + (kind ? ' ' + kind : '') + '"><span class="t">' + esc(title) + '</span>' + body + '</div>';
+    },
+    kv: function(rows) {
+      var h = '<table class="kv">';
+      rows.forEach(function(r) {
+        var val = r[1], vcls = '', vv = val;
+        if(val && typeof val === 'object') { vv = val.v; vcls = val.cls || ''; }
+        if(vv == null) vv = '';
+        h += '<tr><td class="l">' + esc(r[0]) + '</td><td' + (vcls ? ' class="' + vcls + '"' : '') + '>' + vv + '</td></tr>';
+      });
+      return h + '</table>';
+    },
+    table: function(caption, cols, rows, sumRows) {
+      tblNo++;
+      var aligns = cols.map(function(c) { return c.a || 'r'; });
+      var h = '<table><caption>Tablo ' + tblNo + ' — ' + esc(caption) + '</caption><thead><tr>';
+      cols.forEach(function(c) { h += '<th' + (c.w ? ' style="width:' + c.w + '"' : '') + '>' + esc(c.t) + '</th>'; });
+      h += '</tr></thead><tbody>';
+      (rows || []).forEach(function(row) {
+        h += '<tr>';
+        row.forEach(function(c, i) { h += cell(c, aligns[i]); });
+        h += '</tr>';
+      });
+      (sumRows || []).forEach(function(row) {
+        h += '<tr class="sum">';
+        row.forEach(function(c, i) { h += cell(c, aligns[i]); });
+        h += '</tr>';
+      });
+      return h + '</tbody></table>';
+    },
+    fig: function(imgHtml, caption) {
+      if(!imgHtml) return '';
+      figNo++;
+      return '<figure>' + imgHtml + '<figcaption><b>Şekil ' + figNo + ' —</b> ' + caption + '</figcaption></figure>';
+    },
+    st: function(kind, text) {
+      var k = kind === 'ok' ? 'st-ok' : kind === 'warn' ? 'st-warn' : 'st-bad';
+      return '<span class="' + k + '">' + text + '</span>';
+    }
+  };
 }
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:#ffffff;color:var(--ink);
-  font-family:"Source Serif 4",Georgia,serif;font-size:15px;line-height:1.6;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
-.dr-page{max-width:1000px;margin:0 auto;padding:40px 34px 80px;background:#fff;}
 
-/* ── Antet ── */
-.dr-antet{border:1.5px solid var(--ink);margin-bottom:26px;}
-.dr-antet .dr-band{background:var(--prusya);color:#fff;padding:18px 22px;}
-.dr-antet .dr-eyebrow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;
-  letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:7px;}
-.dr-antet h1{font-family:"Archivo",system-ui,sans-serif;color:#fff;font-size:24px;font-weight:700;
-  margin:0;line-height:1.22;letter-spacing:.2px;}
-.dr-antet .dr-sub{font-family:"Archivo",sans-serif;font-size:13px;font-weight:400;opacity:.92;
-  margin-top:6px;line-height:1.45;}
-.dr-antet .dr-fields{display:grid;grid-template-columns:repeat(5,1fr);border-top:1.5px solid var(--ink);}
-.dr-antet .dr-f{padding:9px 13px;border-right:1px solid var(--line);}
-.dr-antet .dr-f:last-child{border-right:none;}
-.dr-antet .dr-f .dr-k{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:1.1px;
-  text-transform:uppercase;color:#5a6270;}
-.dr-antet .dr-f .dr-v{font-family:"Archivo",sans-serif;font-size:12.5px;font-weight:600;margin-top:3px;color:var(--ink);word-break:break-word;}
-
-/* ── İçindekiler ── */
-.dr-toc{font-family:"Archivo",sans-serif;font-size:13px;columns:2;column-gap:44px;
-  margin:0 0 28px;padding:14px 0;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);}
-.dr-toc a{color:var(--ink);text-decoration:none;display:block;padding:3.5px 0;
-  border-bottom:1px dotted var(--line-soft);break-inside:avoid;}
-.dr-toc a:hover{color:var(--prusya);}
-.dr-toc .dr-n{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--prusya);
-  margin-right:9px;font-weight:600;}
-
-/* ── İçerik ── */
-.dr-doc{font-family:"Source Serif 4",Georgia,serif;}
-.dr-doc h1,.dr-doc h2,.dr-doc h3{font-family:"Archivo",sans-serif;}
-/* Grup başlıkları (Girdi Özeti / Araç Performans Özeti) — :has ile hedeflenir */
-.dr-doc div:has(> .dr-gs-arrow){
-  font-family:"Archivo",sans-serif !important;font-size:16px !important;font-weight:700 !important;
-  color:var(--prusya) !important;background:#fff !important;
-  border-bottom:2px solid var(--prusya) !important;padding:16px 2px 8px !important;margin-top:6px;}
-.dr-gs-arrow,.dr-arrow{display:none !important;}
-/* Bölüm kartları */
-.dr-section{border:1px solid var(--border-color);border-top:none;background:#fff;}
-.dr-section:first-of-type{border-top:1px solid var(--border-color);}
-.dr-hdr{font-family:"Archivo",sans-serif !important;font-size:12px !important;font-weight:700 !important;
-  letter-spacing:.5px;text-transform:uppercase;color:var(--prusya) !important;
-  background:var(--prusya-soft) !important;padding:9px 16px !important;
-  border-bottom:1px solid var(--border-color) !important;cursor:default !important;}
-.dr-body{padding:8px 16px 16px !important;display:block !important;max-height:none !important;overflow:visible !important;}
-.dr-girdi-wrapper{display:block !important;max-height:none !important;overflow:visible !important;}
-
-/* ── Tablolar ── */
-.dr-doc table{border-collapse:collapse;width:100%;margin:8px 0 14px;}
-.dr-doc td{font-family:"IBM Plex Mono",ui-monospace,monospace;}
-.dr-doc th{font-family:"Archivo",sans-serif;}
-
-/* ── Grafikler ── */
-.dr-chart-img{display:block;margin:16px auto;max-width:100%;height:auto;
-  border:1px solid var(--line-soft);background:#fff;}
-
-/* ── Footer ── */
-.dr-footer{text-align:center;font-family:"IBM Plex Mono",monospace;font-size:10px;color:#9098a6;
-  margin-top:34px;padding-top:14px;border-top:1px solid var(--line-soft);}
-
-@media print{
-  @page{size:A4;margin:14mm 12mm 16mm;}
-  body{font-size:10.5pt;background:#fff;}
-  .dr-page{max-width:100%;padding:0;}
-  *{ -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
-  .dr-section,.dr-doc table,.dr-chart-img,.dr-antet{break-inside:avoid;}
-  .dr-hdr{break-after:avoid;}
-  tr{break-inside:avoid;}
-  a{color:inherit;text-decoration:none;}
-  .dr-toc{break-after:avoid;}
-  .dr-doc table{font-size:9pt;}
-}
-@media (max-width:680px){
-  .dr-antet .dr-fields{grid-template-columns:repeat(2,1fr);}
-  .dr-toc{columns:1;}
-  .dr-page{padding:24px 16px 60px;}
-}
-`;
-
-// Antet (dinamik başlık bloğu) — reportSnapshot'tan
+// ─── Antet (referans .antet bloğu) ───────────────────────────────────────────
 function _veReportAntet(R, projectName, dateStr) {
-  var eng = R ? R.engineName : '—';
-  var gb = R ? R.gbName : '—';
-  var gvw = R ? (_veReportNum(R.gvw) + ' kg') : '—';
+  var esc = _veReportEsc;
+  var eng = R ? esc(R.engineName) : '—';
+  var gb = R ? esc(R.gbName) : '—';
+  var gvw = R ? (Number(R.gvw).toLocaleString('tr-TR') + ' kg') : '—';
   var gears = (R && R.gearData) ? (R.gearData.length + ' ileri') : '—';
   return ''
-    + '<div class="dr-antet">'
-    +   '<div class="dr-band">'
-    +     '<div class="dr-eyebrow">MFSim · Araç Performans Analizi</div>'
-    +     '<h1>' + _veReportEsc(projectName) + '</h1>'
-    +     '<div class="dr-sub">Tam gaz otomatik vites geçişleri, eğim kabiliyeti ve hızlanma analizi — projede tanımlı güç aktarma modelinden otomatik üretilmiştir.</div>'
+    + '<div class="antet">'
+    +   '<div class="band">'
+    +     '<div class="eyebrow">Analiz Raporu · Araç Performansı</div>'
+    +     '<h1>' + esc(projectName) + '</h1>'
+    +     '<div class="sub">Tam gaz otomatik vites geçişleri, eğim tırmanma kabiliyeti ve hızlanma analizi — projede tanımlı güç aktarma modelinden otomatik üretilmiştir.</div>'
     +   '</div>'
-    +   '<div class="dr-fields">'
-    +     '<div class="dr-f"><div class="dr-k">Doküman</div><div class="dr-v">Performans Raporu</div></div>'
-    +     '<div class="dr-f"><div class="dr-k">Motor</div><div class="dr-v">' + _veReportEsc(eng) + '</div></div>'
-    +     '<div class="dr-f"><div class="dr-k">Şanzıman</div><div class="dr-v">' + _veReportEsc(gb) + '</div></div>'
-    +     '<div class="dr-f"><div class="dr-k">Vites</div><div class="dr-v">' + _veReportEsc(gears) + '</div></div>'
-    +     '<div class="dr-f"><div class="dr-k">Brüt Ağırlık · Tarih</div><div class="dr-v">' + _veReportEsc(gvw) + ' · ' + _veReportEsc(dateStr) + '</div></div>'
+    +   '<div class="fields">'
+    +     '<div class="f"><div class="k">Doküman Türü</div><div class="v">Performans Raporu</div></div>'
+    +     '<div class="f"><div class="k">Motor</div><div class="v">' + eng + '</div></div>'
+    +     '<div class="f"><div class="k">Şanzıman</div><div class="v">' + gb + '</div></div>'
+    +     '<div class="f"><div class="k">Brüt Ağırlık · Vites</div><div class="v">' + esc(gvw) + ' · ' + esc(gears) + '</div></div>'
+    +     '<div class="f"><div class="k">Tarih</div><div class="v">' + esc(dateStr) + '</div></div>'
     +   '</div>'
     + '</div>';
 }
 
-// İçindekiler — overlay'deki dr-section'lardan (belge sırasıyla)
-function _veReportTOC(overlay) {
-  var secs = overlay.querySelectorAll('.dr-section');
-  if(!secs.length) return '';
-  var items = '', n = 0;
-  Array.prototype.forEach.call(secs, function(sec) {
-    var ds = sec.getAttribute('data-section'); if(!ds) return;
-    var hdr = sec.querySelector('.dr-hdr');
-    var title = hdr ? hdr.textContent.replace(/^[\s▼▶]+/, '').trim() : ds;
-    n++;
-    items += '<a href="#rep-' + ds + '"><span class="dr-n">' + (n < 10 ? '0' + n : n) + '</span>' + _veReportEsc(title) + '</a>';
-  });
-  return items ? '<nav class="dr-toc">' + items + '</nav>' : '';
+// ─── Bölüm üreticileri ───────────────────────────────────────────────────────
+// GOLD ÖRNEK — diğer bölümler bunu birebir taklit eder.
+function _veRepSecPlatform(R, sim, H, charts) {
+  if(!R) return null;
+  var revPerKm = (R.tireRadius > 0) ? (1000 / (2 * Math.PI * R.tireRadius)).toFixed(0) : '—';
+  var body = '';
+  body += H.p('Bu bölüm, aracın aerodinamik ve kütle parametreleri ile lastik özelliklerini özetler. Bu değerler yol yükü (yuvarlanma ve aerodinamik direnç), çekiş kuvveti ve devir–hız dönüşümü hesaplarının temel girdileridir.');
+  body += H.h3('Alan ve Ağırlık');
+  body += H.kv([
+    ['Alın Alanı', H.f(R.frontalArea, 3) + ' m²'],
+    ['Yükseklik / Genişlik', H.f(R.height, 3) + ' m / ' + H.f(R.width, 3) + ' m'],
+    ['Aerodinamik Direnç Katsayısı (Cd)', H.f(R.cd, 3)],
+    ['Brüt Araç Ağırlığı', H.f(R.gvw, 0) + ' kg']
+  ]);
+  body += H.h3('Lastikler');
+  body += H.kv([
+    ['Seçili Lastik', H.esc(R.tireName)],
+    ['Lastik Devir/km', revPerKm + ' devir/km'],
+    ['Lastik Yuvarlanma Yarıçapı', H.f(R.tireRadius, 3) + ' m'],
+    ['Yuvarlanma Direnci (Crr)', H.f(R.crr, 4)],
+    ['Yüzey Faktörü', H.f(R.surfFactor, 2)],
+    ['Lastik/Tekerlek Ataleti (tahmini)', H.f(R.tireInertia, 4) + ' kg·m²']
+  ]);
+  return { id: 'platform', title: 'Platform', body: body };
 }
 
+function _veRepSecMotor(R, sim, H, charts) {
+  if(!R || !R.torqueData) return null;
+
+  // ── Pik tork / güç / governed güç (kaynak 655-664, fonksiyon içine taşındı) ──
+  var peakTorque = 0, peakTorqueRpm = 0, peakPower = 0, peakPowerRpm = 0, govPower = 0;
+  R.torqueData.forEach(function(p) {
+    if(p.torque > peakTorque) { peakTorque = p.torque; peakTorqueRpm = p.rpm; }
+    var pw = p.power || (p.torque * p.rpm * Math.PI / 30000);
+    if(pw > peakPower) { peakPower = pw; peakPowerRpm = p.rpm; }
+    if(p.rpm === R.governed) govPower = pw;
+  });
+
+  var body = '';
+  body += H.p('Bu bölüm, projede tanımlı motorun karakteristik parametrelerini ve tam devir aralığındaki tork/güç eğrisini özetler. Değerler, çekiş kuvveti ve motor freni hesaplarının kaynak girdisidir; net değerler fan ve diğer aksesuar kayıplarının governed devre göre ölçeklenmesiyle brüt eğriden türetilir.');
+
+  // ── Motor özeti (kaynak 716-729) ──
+  body += H.h3('Motor Özeti');
+  body += H.kv([
+    ['Motor Tanımı', H.esc(R.engineName)],
+    ['Silindir Hacmi', R.displacement > 0 ? H.f(R.displacement, 2) + ' L' : '—'],
+    ['Pik Tork', peakTorque > 0 ? H.f(peakTorque, 1) + ' N·m' : '—'],
+    ['Pik Tork Devri', peakTorqueRpm > 0 ? peakTorqueRpm + ' rpm' : '—'],
+    ['Pik Güç', peakPower > 0 ? H.f(peakPower, 1) + ' kW' : '—'],
+    ['Pik Güç Devri', peakPowerRpm > 0 ? peakPowerRpm + ' rpm' : '—'],
+    ['Governed Güç', govPower > 0 ? H.f(govPower, 1) + ' kW' : '—'],
+    ['Governed Devir', R.governed + ' rpm'],
+    ['No-Load Governed', R.noLoad + ' rpm'],
+    ['Rölanti Devri', R.idleRpm + ' rpm'],
+    ['Motor Ataleti (tahmini)', H.f(R.engineInertia, 4) + ' kg·m²']
+  ]);
+
+  // ── Motor kayıpları: aksesuar tablosu (kaynak 693-714) ──
+  body += H.h3('Motor Kayıpları (Governed Devirde Güç)');
+  var accData = (R.accessories && R.accessories.length > 0) ? R.accessories : [
+    { name: 'Fan (Kavramalı Fan)', standardLoss: 0, userLoss: 0 },
+    { name: 'Alternatör / Jeneratör', standardLoss: 0, userLoss: 0 },
+    { name: 'Hava Kompresörü', standardLoss: 0, userLoss: 0 },
+    { name: 'Direksiyon Pompası', standardLoss: 0, userLoss: 0 },
+    { name: 'Klima', standardLoss: 0, userLoss: 0 },
+    { name: 'Ek Tahrik', standardLoss: 0, userLoss: 0 }
+  ];
+  var totalStd = 0, totalUser = 0;
+  var accRows = accData.map(function(a) {
+    totalStd += a.standardLoss; totalUser += a.userLoss;
+    return [
+      { v: H.esc(a.name), a: 'l' },
+      { v: H.f(a.standardLoss, 1), a: 'c' },
+      { v: H.f(a.userLoss, 1), a: 'c' }
+    ];
+  });
+  var accSum = [[
+    { v: 'Toplam', a: 'l' },
+    { v: H.f(totalStd, 1), a: 'c' },
+    { v: H.f(totalUser, 1), a: 'c' }
+  ]];
+  body += H.table('Governed devirde aksesuar güç kayıpları', [
+    { t: 'Aksesuar', a: 'l' },
+    { t: 'Standart Kayıp (kW)', a: 'c', w: '150px' },
+    { t: 'Kullanıcı Tanımlı Kayıp (kW)', a: 'c', w: '170px' }
+  ], accRows, accSum);
+
+  // ── Motor detayları: tork eğrisi tablosu (kaynak 731-765) ──
+  body += H.h3('Motor Detayları');
+  if(R.torqueData.length > 0) {
+    var detRows = [];
+    R.torqueData.forEach(function(p) {
+      var rpm = p.rpm; if(!rpm || rpm <= 0) return;
+      var netPwr = p.power || (p.torque * rpm * Math.PI / 30000);
+      var netTrk = p.torque || (netPwr * 30000 / (Math.PI * rpm));
+      var ratio = R.governed > 0 ? rpm / R.governed : 0;
+      var fanPwr = R.fanLossGov * ratio * ratio * ratio;
+      var otherPwr = R.otherLossGov * ratio;
+      var grossPwr = netPwr + fanPwr + otherPwr;
+      var grossTrk = rpm > 0 ? grossPwr * 30000 / (Math.PI * rpm) : 0;
+      var netPwrFanOn = netPwr - fanPwr;
+      var netTrkFanOn = rpm > 0 ? netPwrFanOn * 30000 / (Math.PI * rpm) : 0;
+      var ident = '';
+      if(rpm === peakTorqueRpm && peakTorque > 0) ident = 'Pik Tork';
+      if(rpm === R.governed) ident = 'Pik Governed';
+      if(rpm === R.noLoad || (rpm > R.governed && netTrk <= 0)) ident = 'Yüksüz Governed';
+      detRows.push([
+        rpm,
+        H.f(grossPwr, 1),
+        H.f(grossTrk, 1),
+        H.f(netPwrFanOn, 1),
+        H.f(netTrkFanOn, 1),
+        H.f(netPwr, 1),
+        H.f(netTrk, 1),
+        { v: H.esc(ident), a: 'l' }
+      ]);
+    });
+    body += H.table('Devir aralığında brüt ve net (fan açık / fan kapalı) tork ve güç', [
+      { t: 'Devir (rpm)', a: 'r' },
+      { t: 'Brüt Güç (kW)', a: 'r' },
+      { t: 'Brüt Tork (N·m)', a: 'r' },
+      { t: 'Net Güç Fan Açık (kW)', a: 'r' },
+      { t: 'Net Tork Fan Açık (N·m)', a: 'r' },
+      { t: 'Net Güç Fan Kapalı (kW)', a: 'r' },
+      { t: 'Net Tork Fan Kapalı (N·m)', a: 'r' },
+      { t: 'Tanım', a: 'l' }
+    ], detRows);
+  } else {
+    body += H.note('', 'Veri Yok', 'Motor tork eğrisi verisi bulunamadı.');
+  }
+
+  // ── Motor grafiği ──
+  body += H.fig(charts['dr-engine-chart'], 'Motor tork ve güç eğrileri — brüt ile net (fan açık/kapalı) değerlerin devre göre değişimi.');
+
+  return { id: 'motor', title: 'Motor', body: body };
+}
+function _veRepSecTransmission(R, sim, H, charts) {
+  if(!R) return null;
+
+  var body = '';
+  body += H.p('Bu bölüm, güç aktarma organının şanzıman tanımını ve tam gaz otomatik vites geçişlerini yöneten kontrol stratejisini özetler. Şanzıman verimi ve vites geçiş eşikleri, çekiş kuvveti ve devir–hız profilinin hesaplanmasında doğrudan rol oynar.');
+
+  // ─── Şanzıman ───
+  body += H.h3('Şanzıman');
+  body += H.kv([
+    ['Şanzıman Üretici', 'Allison Transmission'],
+    ['Şanzıman', H.esc(R.gbName)],
+    ['Şanzıman Ailesi', H.esc(R.gbFamily)],
+    ['Şanzıman Verimi', H.f(R.gbEff, 1) + '%'],
+    ['Tork Konvertörü', H.esc(R.tcName)]
+  ]);
+
+  // ─── Kontrol ───
+  var spName = R.shiftProfile.replace(/_/g, ' ').toUpperCase();
+  var spDataRes = (typeof VE_FT_SHIFT_PROFILES !== 'undefined' ? VE_FT_SHIFT_PROFILES[R.shiftProfile] : null) || {};
+  var gLow = R.gearData.length > 0 ? R.gearData[0].name : '1';
+  var gHigh = R.gearData.length > 0 ? R.gearData[R.gearData.length - 1].name : '6';
+  var gLowE = H.esc(gLow), gHighE = H.esc(gHigh);
+
+  var ctrlRows = [];
+  ctrlRows.push(['Shift Profili', H.esc(spName)]);
+  ctrlRows.push(['Vites Geçiş Hızı ve Strateji', H.f(R.shiftRefRPM, 0) + ' rpm']);
+
+  // Converter geçişleri (koşullu)
+  if(spDataRes.converterShifts) {
+    var csRes = spDataRes.converterShifts;
+    var convParts = [];
+    if(csRes['1C2C']) convParts.push('1C→2C: ' + Math.round(csRes['1C2C'].a * R.shiftRefRPM + (csRes['1C2C'].b || 0)) + ' rpm');
+    if(csRes['2C2L'] && csRes['2C2L'].type === 'segmented') {
+      convParts.push('2C→2L: ' + Math.round(csRes['2C2L'].linear.a * R.shiftRefRPM + csRes['2C2L'].linear.b) + ' rpm (ESL≥' + csRes['2C2L'].linear.validFrom + ')');
+    }
+    if(convParts.length > 0) ctrlRows.push(['Converter Geçişleri', H.esc(convParts.join(', '))]);
+  }
+
+  // Lockup geçişleri (koşullu) veya Kilitleme Ofseti
+  if(spDataRes.lockupShifts) {
+    var luSummary = Object.keys(spDataRes.lockupShifts).map(function(sk) {
+      var ls = spDataRes.lockupShifts[sk];
+      var thr = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(ls, R.shiftRefRPM) : (ls.a * R.shiftRefRPM + (ls.b || 0));
+      return sk.replace(/(\d+L)(\d+L)/, '$1→$2') + ': ' + Math.round(thr) + ' rpm';
+    }).join(', ');
+    ctrlRows.push(['Lockup Geçişleri', H.esc(luSummary)]);
+  } else {
+    ctrlRows.push(['Kilitleme Ofseti', H.f(R.lockupOffset, 0) + ' rpm']);
+  }
+
+  ctrlRows.push(['Ana Mod: Vitesler', 'Düşük = ' + gLowE + ', Başlangıç = ' + gLowE + ', Yüksek = ' + gHighE + ' (' + gLowE + '-' + gLowE + '-' + gHighE + ')']);
+
+  body += H.h3('Kontrol');
+  body += H.kv(ctrlRows);
+
+  return { id: 'transmission', title: 'Şanzıman ve Kontrol', body: body };
+}
+function _veRepSecConverter(R, sim, H, charts) {
+  if(!R) return null;
+
+  var body = '';
+  body += H.p('Bu bölüm, motor tork eğrisi ile aday tork konvertörlerinin eşleştirmesini değerlendirir. Her aday için stall noktası, türbin torku ve governed devirdeki hız oranı (SR) hesaplanır; C5/C7/C8 uygunluk kriterleri ile şanzıman giriş güç/tork limitleri (C9/C10) denetlenir.');
+
+  // Veri koşulu — kaynaktaki gibi torque eğrisi ve TC preset'leri gerekli
+  if(!(R.torqueData && R.torqueData.length > 2 && typeof VE_FT_TC_PRESETS !== 'undefined' && typeof veGetFamilyTCKeys === 'function')) {
+    body += H.note('warn', 'Veri Yok', 'Motor–TC eşleştirme verisi bulunamadı; bu değerlendirme için tam motor tork eğrisi ve tanımlı konvertör aileleri gereklidir.');
+    return { id: 'ecm', title: 'Konvertör Değerlendirmesi', body: body };
+  }
+
+  var _pDrop = R.pumpDrop || 17.6;
+  var _tRating = R.turbineRating || 3320;
+  var _gov = R.governed;
+  var _nlg = R.noLoad;
+  var _td = R.torqueData;
+  var _peakT = 0, _peakRPM = 0;
+  _td.forEach(function(d){ if(d.torque > _peakT){_peakT = d.torque; _peakRPM = d.rpm;} });
+
+  // Governed devirdeki tork ve güç (C9/C10)
+  var _rGbLimits = { grossInputPower: R.gbGrossInputPower || null, grossInputTorque: R.gbGrossInputTorque || null };
+  var _rTorqueAtGov = 0;
+  if(_td.length >= 2) {
+    if(_gov <= _td[0].rpm) _rTorqueAtGov = _td[0].torque;
+    else if(_gov >= _td[_td.length-1].rpm) _rTorqueAtGov = _td[_td.length-1].torque;
+    else { for(var _ri=0;_ri<_td.length-1;_ri++){if(_td[_ri].rpm<=_gov&&_gov<=_td[_ri+1].rpm){var _rf=(_gov-_td[_ri].rpm)/(_td[_ri+1].rpm-_td[_ri].rpm);_rTorqueAtGov=_td[_ri].torque+_rf*(_td[_ri+1].torque-_td[_ri].torque);break;}}}
+  }
+  var _rPowerAtGov = _rTorqueAtGov * _gov * Math.PI / 30000;
+  var _rc9ok = _rGbLimits.grossInputPower !== null ? _rPowerAtGov <= _rGbLimits.grossInputPower : true;
+  var _rc10ok = _rGbLimits.grossInputTorque !== null ? _rTorqueAtGov <= _rGbLimits.grossInputTorque : true;
+
+  // İnterpolasyon fonksiyonları (kaynaktan aynen taşındı)
+  function _interpT(rpm){
+    if(rpm<=_td[0].rpm)return _td[0].torque; if(rpm>=_td[_td.length-1].rpm)return _td[_td.length-1].torque;
+    for(var i=0;i<_td.length-1;i++){if(_td[i].rpm<=rpm&&rpm<=_td[i+1].rpm){var f=(rpm-_td[i].rpm)/(_td[i+1].rpm-_td[i].rpm);return _td[i].torque+f*(_td[i+1].torque-_td[i].torque);}}return 0;
+  }
+  function _interpTD(rpm){if(rpm<=_gov)return _interpT(rpm);if(rpm>=_nlg)return 0;return _interpT(_gov)*(1-(rpm-_gov)/(_nlg-_gov));}
+  function _interpKp(tcD,sr){sr=Math.max(0,Math.min(0.99,sr));for(var i=0;i<tcD.length-1;i++){if(tcD[i].sr<=sr&&sr<=tcD[i+1].sr){var f=(sr-tcD[i].sr)/(tcD[i+1].sr-tcD[i].sr);return tcD[i].kpump+f*(tcD[i+1].kpump-tcD[i].kpump);}}return tcD[tcD.length-1].kpump;}
+  function _findStall(tcD){var kp0=tcD[0].kpump;var lo=600,hi=3500;for(var i=0;i<50;i++){var m=(lo+hi)/2;var tA=_interpTD(m)-_pDrop;var tB=(m*m)/(kp0*kp0);if(tA>tB)lo=m;else hi=m;if(hi-lo<0.5)break;}return(lo+hi)/2;}
+  function _findSRGov(tcD){var tp=_interpT(_gov)-_pDrop;if(tp<=0)return 0;var kpN=_gov/Math.sqrt(tp);for(var i=0;i<tcD.length-1;i++){var k1=tcD[i].kpump,k2=tcD[i+1].kpump;if((k1<=kpN&&kpN<=k2)||(k2<=kpN&&kpN<=k1)){var f=(kpN-k1)/(k2-k1);if(f>=0&&f<=1)return tcD[i].sr+f*(tcD[i+1].sr-tcD[i].sr);}}return kpN>tcD[tcD.length-1].kpump?0.99:0.50;}
+  function _findMinN(tcD){var mn=9999;for(var nt=0;nt<=_gov*1.05;nt+=15){var lo=Math.max(nt+1,600),hi=_nlg+100;for(var it=0;it<45;it++){var m=(lo+hi)/2;if(m<=nt){lo=m;continue;}var sr=nt/m;sr=Math.max(0,Math.min(0.99,sr));var kp=_interpKp(tcD,sr);var tA=_interpTD(m)-_pDrop;var tB=(m*m)/(kp*kp);if(tA>tB)lo=m;else hi=m;if(hi-lo<1)break;}var nE=(lo+hi)/2;if(nE<mn&&nE>500)mn=nE;}return mn;}
+
+  var _tcKeys = veGetFamilyTCKeys();
+  var _ecmResults = [];
+  _tcKeys.forEach(function(key){
+    var tc = VE_FT_TC_PRESETS[key]; var tcD = tc.data;
+    var ss = _findStall(tcD); var srG = _findSRGov(tcD); var minN = _findMinN(tcD);
+    var sTau = tcD[0].tau; var tPS = _interpTD(ss)-_pDrop; var tTS = tPS * sTau;
+    var c5 = minN >= _peakRPM - 50; var c7 = tTS <= _tRating; var c8 = srG >= 0.80;
+    var st, sc;
+    if(!_rc9ok || !_rc10ok){st='unacceptable';sc=0;}
+    else if(!c7){st='unacceptable';sc=0;}else if(!c5){st='not-recommended';sc=1;}else if(!c8){st='caution';sc=2;}else{st='recommended';sc=3;}
+    _ecmResults.push({key:key, name:tc.name, stallTau:sTau, stallSpeed:ss, minSpeed:minN, srGov:srG, tTurbineStall:tTS, c5ok:c5, c7ok:c7, c8ok:c8, c9ok:_rc9ok, c10ok:_rc10ok, status:st, score:sc});
+  });
+  _ecmResults.sort(function(a,b){return b.score-a.score||b.srGov-a.srGov;});
+
+  // (a) Motor bilgisi — özet listesi
+  var motorRows = [
+    ['Motor', H.esc(R.engineName)],
+    ['Pik Tork', H.f(_peakT, 0) + ' N·m @ ' + H.f(_peakRPM, 0) + ' rpm'],
+    ['Governed Devir', H.f(_gov, 0) + ' rpm'],
+    ['Pompa Düşümü', H.f(_pDrop, 1) + ' N·m'],
+    ['Türbin Limiti', H.f(_tRating, 0) + ' N·m']
+  ];
+  if(_rGbLimits.grossInputPower !== null) {
+    motorRows.push(['Giriş Güç Limiti (C9)', H.st(_rc9ok ? 'ok' : 'bad', H.f(_rPowerAtGov, 0) + ' / ' + H.f(_rGbLimits.grossInputPower, 0) + ' kW')]);
+  }
+  if(_rGbLimits.grossInputTorque !== null) {
+    motorRows.push(['Giriş Tork Limiti (C10)', H.st(_rc10ok ? 'ok' : 'bad', H.f(_rTorqueAtGov, 0) + ' / ' + H.f(_rGbLimits.grossInputTorque, 0) + ' N·m')]);
+  }
+  body += H.h3('Motor');
+  body += H.kv(motorRows);
+
+  // (b) Aday konvertör tablosu
+  var cols = [
+    { t: 'Durum', a: 'l' },
+    { t: 'Konvertör', a: 'l' },
+    { t: 'Stall τ', a: 'c' },
+    { t: 'Stall rpm', a: 'c' },
+    { t: 'Min N rpm', a: 'c' },
+    { t: 'T_turb N·m', a: 'c' },
+    { t: 'SR@Gov', a: 'c' },
+    { t: 'C5', a: 'c' },
+    { t: 'C7', a: 'c' },
+    { t: 'C8', a: 'c' }
+  ];
+  var rows = _ecmResults.map(function(r){
+    var stKind = r.status==='recommended' ? 'ok' : r.status==='caution' ? 'warn' : r.status==='not-recommended' ? 'warn' : 'bad';
+    var stTxt = r.status==='recommended' ? 'Önerilen' : r.status==='caution' ? 'Dikkat' : r.status==='not-recommended' ? 'Önerilmez' : 'Uyumsuz';
+    return [
+      { v: H.st(stKind, stTxt), a: 'l' },
+      { v: H.esc(r.name), a: 'l' },
+      { v: H.f(r.stallTau, 2), a: 'c' },
+      { v: H.f(r.stallSpeed, 0), a: 'c' },
+      { v: H.f(r.minSpeed, 0), a: 'c', cls: r.c5ok ? '' : 'st-bad' },
+      { v: H.f(r.tTurbineStall, 0), a: 'c', cls: r.c7ok ? '' : 'st-bad' },
+      { v: H.f(r.srGov, 3), a: 'c', cls: r.c8ok ? '' : 'st-warn' },
+      { v: r.c5ok ? H.st('ok', '✓') : H.st('bad', '✗'), a: 'c' },
+      { v: r.c7ok ? H.st('ok', '✓') : H.st('bad', '✗'), a: 'c' },
+      { v: r.c8ok ? H.st('ok', '✓') : H.st('warn', '✗'), a: 'c' }
+    ];
+  });
+  body += H.table('Aday tork konvertörleri — stall, türbin torku ve uygunluk kriterleri', cols, rows);
+
+  // (c) Önerilen konvertör özeti
+  if(_ecmResults.length > 0) {
+    var best = _ecmResults[0];
+    var kind = best.status === 'recommended' ? 'check' : 'warn';
+    var summary = H.esc(best.name)
+      + ' — Stall: ' + H.f(best.stallSpeed, 0) + ' rpm · SR@Gov: ' + H.f(best.srGov, 3)
+      + ' · T_turb: ' + H.f(best.tTurbineStall, 0) + ' N·m';
+    body += H.note(kind, 'Önerilen Konvertör', summary);
+  }
+
+  // (d) ECM grafiği
+  body += H.fig(charts['dr-ecm-chart'], 'Motor tork eğrisi ile aday konvertörlerin pompa/türbin karakteristik eşleşmesi ve stall noktaları.');
+
+  return { id: 'ecm', title: 'Konvertör Değerlendirmesi', body: body };
+}
+function _veRepSecDriveline(R, sim, H, charts) {
+  if(!R) return null;
+
+  var body = '';
+  body += H.p('Bu bölüm, şanzıman çıkışından tekerleklere kadar uzanan güç aktarma zincirini (kardan milleri, diferansiyel ve — varsa — transfer kutusu) oran ve verim değerleriyle özetler. Bu bileşenlerin oran çarpımı toplam aktarma oranını, verim çarpımı ise tekerleğe iletilen net gücü belirler.');
+
+  // ─── Bileşen tablosu ───────────────────────────────────────────────────────
+  var cols = [
+    { t: 'Bileşen',   a: 'l' },
+    { t: 'Açıklama',  a: 'c' },
+    { t: 'Oran',      a: 'c' },
+    { t: 'Verim (%)', a: 'c' }
+  ];
+  var rows = [];
+
+  // Kardan milleri (yoksa tek varsayılan)
+  var pss = (R.propshafts && R.propshafts.length > 0) ? R.propshafts : [{ name: 'Kardan Mili', eff: 98.60 }];
+  pss.forEach(function(ps) {
+    rows.push([
+      { v: H.esc(ps.name), a: 'l' },
+      'Tek',
+      H.f(1, 3),
+      H.f(ps.eff, 2)
+    ]);
+  });
+
+  // Diferansiyel
+  rows.push([
+    { v: H.esc(R.diffName), a: 'l' },
+    'Tek',
+    H.f(R.diffRatio, 3),
+    H.f(R.diffEff, 2)
+  ]);
+
+  // Transfer kutusu kademeleri (koşullu)
+  if(R.hasTransfer && R.transferGears && R.transferGears.length > 0) {
+    R.transferGears.forEach(function(tr, i) {
+      rows.push([
+        { v: (i === 0 ? H.esc(R.transferName) : ''), a: 'l' },
+        H.esc(tr.kademe),
+        H.f(tr.ratio, 3),
+        H.f(tr.eff, 2)
+      ]);
+    });
+  }
+
+  body += H.table('Aktarma organı bileşenleri', cols, rows);
+
+  // ─── Toplam aktarma oranı tablosu (koşullu: transfer kutusu varsa) ──────────
+  if(R.hasTransfer && R.transferGears && R.transferGears.length > 0) {
+    var psEffT = 1;
+    (R.propshafts || []).forEach(function(ps) { psEffT *= ps.eff / 100; });
+
+    var totCols = [
+      { t: 'Toplam Aktarma Oranı', a: 'l' },
+      { t: 'Kademe',              a: 'c' },
+      { t: 'Oran',                a: 'c' },
+      { t: 'Verim (%)',           a: 'c' },
+      { t: 'N/V Oranı (rpm/kph)', a: 'c' }
+    ];
+    var totRows = [];
+    R.transferGears.forEach(function(tr) {
+      var oR = R.diffRatio * tr.ratio;
+      var oE = (R.diffEff / 100) * (tr.eff / 100) * psEffT * 100;
+      var nv = (R.tireRadius > 0) ? (oR * 1000 / (R.tireRadius * 2 * Math.PI * 60)) : NaN;
+      totRows.push([
+        '',
+        H.esc(tr.kademe),
+        H.f(oR, 3),
+        H.f(oE, 2),
+        H.f(nv, 3)
+      ]);
+    });
+
+    body += H.table('Diferansiyel ve transfer kademeleri için toplam aktarma oranı', totCols, totRows);
+  }
+
+  return { id: 'driveline', title: 'Aktarma Organları', body: body };
+}
+function _veRepSecGrade(R, sim, H, charts) {
+  var G = sim && sim.gradeability;
+  if(!G || !G.high) return null;
+
+  var body = '';
+  body += H.p('Bu bölüm, tam gaz otomatik vites geçişleriyle aracın çıkabildiği maksimum eğimleri özetler. Durma (stall) ve kalkış (launch) tırmanma kabiliyeti, düşük hız eğim performansı ve düz yolda ulaşılan maksimum hız ile birlikte, artan eğime karşılık gelen en yüksek araç hızı ve o noktadaki vites kademesi verilir.');
+
+  // Üst bilgi — analiz koşulları
+  var trRatioHigh = G.high.transferRatio || 1.0;
+  body += H.kv([
+    ['Motor Fanı', 'Açık'],
+    ['Motor Gücü', 'Standart Güç Eğrisi'],
+    ['Klima', 'Kapalı'],
+    ['Araç Parametreleri', 'Standart'],
+    ['Aks Oranı', H.f(R.diffRatio, 3)],
+    ['Transfer Kutusu Oranı', H.f(trRatioHigh, 3)]
+  ]);
+
+  // Tek kademe tablosu oluşturucu (kaynak renderGradeTable mantığı)
+  function gradeTable(gd, caption) {
+    var cols = [
+      { t: 'Eğim Kabiliyeti', a: 'l', w: '34%' },
+      { t: '% Eğim', a: 'c' },
+      { t: 'Araç Hızı (km/h)', a: 'c' },
+      { t: 'Vites Kademe', a: 'c' },
+      { t: 'Eşleşme Noktası', a: 'l' }
+    ];
+    var rows = [];
+    rows.push(['Durma Eğim Kabiliyeti (Stall)', H.f(gd.stallGrade, 1), '', H.esc(gd.stallGear), 'Stall']);
+    rows.push(['Kalkış Eğim Kabiliyeti (Launch)', H.f(gd.launchGrade, 1), '', H.esc(gd.launchGear), '']);
+    rows.push(['Düşük Hız Eğim Kabiliyeti', H.f(gd.lowSpeedGrade, 1), H.f(gd.lowSpeedV, 1), H.esc(gd.lowSpeedGear), '%80']);
+    rows.push(['Düz Yolda Maksimum Hız', H.f(0, 1), H.f(gd.maxSpeedFlat, 1), H.esc(gd.maxSpeedFlatGear), 'Yol Yükü']);
+    (gd.gradeTable || []).forEach(function(row) {
+      if(row.v_max <= 0 && row.grade > 0) return;
+      rows.push(['', H.f(row.grade, 1), H.f(row.v_max, 1), H.esc(row.gear), '']);
+    });
+    return H.table(caption, cols, rows);
+  }
+
+  if(G.low) {
+    // Çift kademe — H.h3 ile etiketle
+    body += H.h3('Yüksek Kademe');
+    body += gradeTable(G.high, 'Yüksek Kademe Eğim Tırmanma Kabiliyeti');
+    body += H.fig(charts['gradeChartHigh'], 'Yüksek kademe için eğim–araç hızı eğrisi (tam gaz otomatik vites geçişleri).');
+
+    body += H.h3('Düşük Kademe');
+    body += gradeTable(G.low, 'Düşük Kademe Eğim Tırmanma Kabiliyeti');
+    body += H.fig(charts['gradeChartLow'], 'Düşük kademe için eğim–araç hızı eğrisi (tam gaz otomatik vites geçişleri).');
+  } else {
+    // Tek kademe
+    body += gradeTable(G.high, 'Eğim Tırmanma Kabiliyeti');
+    body += H.fig(charts['gradeChartHigh'], 'Eğim–araç hızı eğrisi (tam gaz otomatik vites geçişleri).');
+  }
+
+  return { id: 'grade', title: 'Eğim Tırmanma Kabiliyeti', body: body };
+}
+function _veRepSecAccel(R, sim, H, charts) {
+  var A = sim && sim.acceleration;
+  if(!A || !A.high) return null;
+
+  var body = '';
+  body += H.p('Bu bölüm, durgun halden hedef hızlara ulaşmak için gereken süre ve mesafeyi tam gaz otomatik vites geçişleri altında özetler. Değerler, güç aktarma modelinden ve yol yükü hesabından türetilir; her hedef hız için ulaşılan süre ve kat edilen mesafe verilir.');
+
+  // ── Üst bilgi (gradeability ile aynı 6 alan) ─────────────────────────────
+  var trRatioAccel = A.high.transferRatio || 1.0;
+  body += H.kv([
+    ['Motor Fanı', 'Açık'],
+    ['Motor Gücü', 'Standart Güç Eğrisi'],
+    ['Klima', 'Kapalı'],
+    ['Araç Parametreleri', 'Standart'],
+    ['Aks Oranı', H.f(R.diffRatio, 3)],
+    ['Transfer Kutusu Oranı', H.f(trRatioAccel, 3)]
+  ]);
+
+  // ── Tek kademe tablosu oluşturucu ────────────────────────────────────────
+  function renderAccelTable(ad) {
+    var caption = A.low ? ('Hızlanma — ' + ad.label) : 'Hızlanma Süre ve Mesafe Değerleri';
+    var cols = [
+      { t: 'Hız', a: 'l', w: '46%' },
+      { t: 'Süre (saniye)', a: 'c' },
+      { t: 'Mesafe (m)', a: 'c' }
+    ];
+    var rows = ad.rows.map(function(row) {
+      var speedLabel = '0 — ' + H.esc(row.targetSpeed) + ' km/h';
+      if(row.time === null) {
+        return [
+          { v: speedLabel, a: 'l' },
+          { v: H.st('bad', 'Hıza ulaşılamıyor'), a: 'c' },
+          { v: H.st('bad', 'Hıza ulaşılamıyor'), a: 'c' }
+        ];
+      }
+      return [
+        { v: speedLabel, a: 'l' },
+        { v: H.f(row.time, 1), a: 'c' },
+        { v: H.f(Math.round(row.distance), 0), a: 'c' }
+      ];
+    });
+    return H.table(caption, cols, rows);
+  }
+
+  // Yüksek kademe (çift kademe varsa H.h3 ile etiketlenir)
+  if(A.low) body += H.h3(A.high.label);
+  body += renderAccelTable(A.high);
+
+  // Düşük kademe (varsa)
+  if(A.low) {
+    body += H.h3(A.low.label);
+    body += renderAccelTable(A.low);
+  }
+
+  // ── Diyagramlar ──────────────────────────────────────────────────────────
+  body += H.fig(charts['accelChartHigh'], 'Yüksek kademe hızlanma diyagramı — hız ve mesafenin zamana göre değişimi.');
+  if(A.low) {
+    body += H.fig(charts['accelChartLow'], 'Düşük kademe hızlanma diyagramı — hız ve mesafenin zamana göre değişimi.');
+  }
+
+  return { id: 'accel', title: 'Hızlanma', body: body };
+}
+function _veRepSecUpshift(R, sim, H, charts) {
+  // Tam gaz otomatik vites geçişleri — simülasyon verisi yoksa bölüm atlanır.
+  if(!sim || !sim.speed || sim.speed.length < 2) return null;
+
+  var ss = sim.solverStats || {};
+  var rs = sim.reportSnapshot || R || {};
+  var axleRatio = ss.i_axle || rs.diffRatio || 5.904;
+  var trGears = rs.transferGears || [];
+  var hasTransfer = rs.hasTransfer && trGears.length > 1;
+  var activeRatio = ss.transferRange ? (parseFloat(ss.transferRange.ratio || ss.transferRange.oran) || 1.0) : (trGears.length > 0 ? trGears[0].ratio : 1.0);
+
+  // Adım listesinden referans-stili tablo satırları üret (_ftBuildTable ile aynı kolon yapısı)
+  function _cols() {
+    return [
+      { t: 'Vites Kademe', a: 'l' },
+      { t: 'Araç Hızı (km/h)' },
+      { t: 'Motor Devri (rpm)' },
+      { t: 'Çıkış Devri (rpm)' },
+      { t: 'Çekiş Kuvveti (kN)' },
+      { t: 'Net Çekiş (kN)' },
+      { t: 'Tekerlek Gücü (kW)' },
+      { t: 'Net Eğim (%)' },
+      { t: 'Isı Reddi (kW)' },
+      { t: 'Eşleşme Noktası', a: 'l' }
+    ];
+  }
+  function _rows(steps) {
+    return steps.map(function(s) {
+      return [
+        { v: H.esc(s.gear), a: 'l' },
+        H.f(s.speed, 1),
+        String(Math.round(s.engineRPM)),
+        String(Math.round(s.outputRPM)),
+        H.f(s.te, 2),
+        { v: H.f(s.dp, 2), cls: (s.dp < 0 ? 'st-bad' : '') },
+        H.f(s.wheelPower, 1),
+        { v: H.f(s.netGrade, 2), cls: (s.netGrade < 0 ? 'st-bad' : '') },
+        H.f(s.heatRejection, 2),
+        { v: (s.matchPoint ? H.esc(s.matchPoint) : ''), a: 'l' }
+      ];
+    });
+  }
+
+  var body = '';
+  body += H.p('Bu bölüm, aracın duruştan azami hıza tam gaz hızlanması sırasında otomatik şanzımanın vites geçiş noktalarını adım adım listeler. Her satır, ilgili hız/devir noktasındaki çekiş kuvvetini, tekerlek gücünü, tırmanılabilen net eğimi ve soğutucuya reddedilen ısıyı özetler; simülasyon standart güç eğrisi ve standart araç parametreleri ile motor fanı açık koşulunda yürütülmüştür.');
+
+  // Üst bilgi — koşullar ve aktarma oranları
+  body += H.kv([
+    ['Motor Fanı', 'Açık'],
+    ['Motor Gücü', 'Standart Güç Eğrisi'],
+    ['Klima', 'Kapalı'],
+    ['Araç Parametreleri', 'Standart'],
+    ['Aks Oranı', H.f(axleRatio, 3)],
+    ['Transfer Kutusu Oranı', H.f(activeRatio, 3)]
+  ]);
+
+  // ═══ HIGH RANGE ═══
+  var stepsHigh = veBuildFTStepsFromSim(sim, 'high');
+  if(stepsHigh.length > 0) {
+    body += H.h3(hasTransfer ? ('Yüksek Kademe (' + H.f(activeRatio, 3) + ')') : 'Vites Geçiş Tablosu');
+    body += H.table(
+      hasTransfer ? ('Tam gaz vites geçişleri — Transfer Kutusu: Yüksek Kademe') : 'Tam gaz vites geçişleri',
+      _cols(), _rows(stepsHigh)
+    );
+    body += H.fig(charts['ftUpshiftChartHigh'], 'Yüksek kademede araç hızına karşı çekiş kuvveti ve vites geçiş noktaları.');
+  }
+
+  // ═══ LOW RANGE ═══
+  if(hasTransfer && trGears.length > 1) {
+    var lowGear = trGears[1];
+    var lowRatio = lowGear.ratio;
+    var lowEta = lowGear.eff || 97;
+    var activeEta = trGears[0].eff || 97;
+    var Cd = rs.cd || 0.9, A = rs.frontalArea || 8.0, Crr = rs.crr || 0.0035;
+    var m_kg = ss.m_vehicle || rs.gvw || 15000;
+
+    // Gerçek düşük kademe simülasyonu varsa onu kullan (ölçekleme yerine)
+    var allRangeRes = typeof window !== 'undefined' ? window._veFTAllRangeResults : null;
+    var lowKademe = lowGear.kademe || 'Low';
+    var lowSimResult = allRangeRes ? allRangeRes[lowKademe] : null;
+
+    var stepsLow;
+    if(lowSimResult && lowSimResult.speed && lowSimResult.speed.length > 2) {
+      stepsLow = veBuildFTStepsFromSim(lowSimResult, 'low');
+    } else {
+      stepsLow = _ftBuildLowRangeSteps(sim, activeRatio, lowRatio, activeEta, lowEta, m_kg, Cd, A, Crr, rs);
+    }
+
+    if(stepsLow.length > 0) {
+      body += H.h3('Düşük Kademe (' + H.f(lowRatio, 3) + ')');
+      body += H.table('Tam gaz vites geçişleri — Transfer Kutusu: Düşük Kademe', _cols(), _rows(stepsLow));
+      body += H.fig(charts['ftUpshiftChartLow'], 'Düşük kademede araç hızına karşı çekiş kuvveti ve vites geçiş noktaları.');
+    }
+  }
+
+  return { id: 'upshift', title: 'Tam Gaz Vites Geçişleri', body: body };
+}
+
+// ─── Assembler: bölümleri sırala, numarala, TOC üret ─────────────────────────
+function _veReportAssemble(R, sim, charts) {
+  var H = _veMakeReportHelpers();
+  var emitters = [
+    _veRepSecPlatform, _veRepSecMotor, _veRepSecTransmission, _veRepSecConverter,
+    _veRepSecDriveline, _veRepSecGrade, _veRepSecAccel, _veRepSecUpshift
+  ];
+  var secs = [];
+  emitters.forEach(function(fn) {
+    var s = null;
+    try { s = fn(R, sim, H, charts); } catch(e) { if(typeof console !== 'undefined') console.error('[Rapor bölümü]', e); }
+    if(s && s.body) secs.push(s);
+  });
+  var toc = '<nav class="toc">', body = '';
+  secs.forEach(function(s, i) {
+    var no = i + 1;
+    toc += '<a href="#' + s.id + '"><span class="n">' + no + '</span>' + H.esc(s.title) + '</a>';
+    body += '<h2 id="' + s.id + '"><span class="no">' + no + '</span>' + H.esc(s.title) + '</h2>' + s.body;
+  });
+  toc += '</nav>';
+  return { toc: toc, body: body };
+}
+
+// ─── Stil (referans CSS uyarlaması; KaTeX yok, daima beyaz zemin) ─────────────
+var _VE_REPORT_CSS = `
+:root{
+  --ink:#1b1e24; --paper:#ffffff; --line:#c9cdd3; --line-soft:#e4e6e9;
+  --prusya:#24425f; --prusya-soft:#eef2f6; --check:#2e7d4f; --check-soft:#eaf3ee;
+  --warn:#8a5a1e; --warn-soft:#f7f1e6; --bad:#b23b3b;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Source Serif 4",Georgia,serif;font-size:15.5px;line-height:1.68;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+.page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
+h1,h2,h3{font-family:"Archivo",system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
+h1{font-size:27px;font-weight:700;letter-spacing:.2px;margin:0 0 6px}
+h2{font-size:19px;font-weight:700;margin:56px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
+  display:flex;gap:14px;align-items:baseline}
+h2 .no{font-family:var(--mono);font-size:13px;color:var(--paper);background:var(--prusya);
+  padding:2px 8px;border-radius:2px;transform:translateY(-2px)}
+h3{font-size:15.5px;font-weight:600;margin:26px 0 8px;color:var(--ink)}
+p{margin:0 0 13px;text-align:justify;hyphens:auto}
+strong{font-weight:600} em{font-style:italic}
+
+/* ── Antet ── */
+.antet{border:1.5px solid var(--ink);margin-bottom:36px}
+.antet .band{background:var(--prusya);color:#fff;padding:16px 20px}
+.antet .band .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
+.antet .band h1{color:#fff}
+.antet .band .sub{font-family:"Archivo",sans-serif;font-size:13.5px;font-weight:400;opacity:.92;margin-top:4px;line-height:1.4}
+.antet .fields{display:grid;grid-template-columns:repeat(5,1fr);border-top:1.5px solid var(--ink)}
+.antet .f{padding:8px 12px;border-right:1px solid var(--line)}
+.antet .f:last-child{border-right:none}
+.antet .f .k{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#5a6270}
+.antet .f .v{font-family:"Archivo",sans-serif;font-size:13px;font-weight:600;margin-top:2px;word-break:break-word}
+
+/* ── Notlar ── */
+.note{background:var(--prusya-soft);border-left:3px solid var(--prusya);padding:12px 16px;margin:16px 0;font-size:14.5px}
+.note.warn{background:var(--warn-soft);border-left-color:var(--warn)}
+.note.check{background:var(--check-soft);border-left-color:var(--check)}
+.note .t{font-family:"Archivo",sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;
+  text-transform:uppercase;display:block;margin-bottom:4px;color:var(--prusya)}
+.note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)}
+
+/* ── Tablolar ── */
+table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:13.5px}
+caption{caption-side:top;text-align:left;font-family:"Archivo",sans-serif;font-size:12.5px;
+  font-weight:600;color:var(--prusya);padding-bottom:6px;letter-spacing:.3px}
+th{font-family:"Archivo",sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;
+  background:var(--prusya-soft);color:var(--prusya);padding:7px 10px;border:1px solid var(--line);text-align:center}
+td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:12.8px;text-align:right;white-space:nowrap}
+td.l{text-align:left;font-family:"Source Serif 4",Georgia,serif;font-size:13.8px;white-space:normal}
+td.c{text-align:center}
+tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:600}
+table.kv td.l{width:46%;color:#3c4350}
+table.kv td:not(.l){font-weight:600}
+.st-ok{color:var(--check);font-weight:600;white-space:nowrap}
+.st-warn{color:var(--warn);font-weight:600;white-space:nowrap}
+.st-bad{color:var(--bad);font-weight:600;white-space:nowrap}
+.chip{display:inline-block;font-family:var(--mono);font-size:11px;background:var(--check-soft);
+  color:var(--check);border:1px solid var(--check);border-radius:2px;padding:0 6px;margin-left:6px;vertical-align:1px}
+
+/* ── Şekiller ── */
+figure{margin:22px 0 26px;border:1px solid var(--line);padding:14px 14px 10px;background:#fff}
+figure img{width:100%;height:auto;display:block}
+figcaption{font-family:"Archivo",sans-serif;font-size:12.5px;color:#3c4350;margin-top:10px;
+  padding-top:8px;border-top:1px solid var(--line-soft)}
+figcaption b{color:var(--prusya)}
+
+/* ── İçindekiler ── */
+.toc{font-family:"Archivo",sans-serif;font-size:13.5px;columns:2;column-gap:36px;margin:10px 0 4px}
+.toc a{color:var(--ink);text-decoration:none;display:block;padding:3px 0;border-bottom:1px dotted var(--line-soft);break-inside:avoid}
+.toc a:hover{color:var(--prusya)}
+.toc .n{font-family:var(--mono);font-size:11.5px;color:var(--prusya);margin-right:8px;font-weight:600}
+
+.foot{margin-top:40px;font-size:13px;color:#5a6270;border-top:1px solid var(--line);padding-top:12px;font-family:"Archivo",sans-serif}
+
+@media print{
+  .page{max-width:100%;padding:0}
+  body{font-size:11pt}
+  h2,h3{break-after:avoid}
+  figure,table,.note{break-inside:avoid}
+  tr{break-inside:avoid}
+  caption{break-after:avoid}
+  a{color:inherit;text-decoration:none}
+  *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  table{font-size:9pt} caption{font-size:9pt} th{padding:4px 6px} td{padding:3px 6px;white-space:normal}
+}
+@media (max-width:640px){
+  .antet .fields{grid-template-columns:repeat(2,1fr)}
+  .toc{columns:1}
+  .page{padding:24px 16px 64px}
+}
+`;
+
+// ─── Ana giriş: grafikleri yakala + belgeyi kur + indir ──────────────────────
 function veDownloadReportHTML() {
   var overlay = document.getElementById('ve-report-overlay');
   if(!overlay || overlay.style.display === 'none') {
@@ -2618,23 +3311,22 @@ function veDownloadReportHTML() {
   }
   var sim = window.veSimResults;
   var R = sim && sim.reportSnapshot;
+  if(!R) {
+    if(typeof showToast === 'function') showToast('Rapor verisi bulunamadı — önce simülasyon çalıştırın', 'warning');
+    return;
+  }
 
-  // 1) Tüm bölümleri aç (dosyada tümü görünsün)
+  // 1) Bölümleri aç (grafik canvas'ları layout alsın)
   var allBodies = overlay.querySelectorAll('.dr-body');
   var prevStates = [];
-  Array.prototype.forEach.call(allBodies, function(b) {
-    prevStates.push(b.style.display);
-    b.style.display = 'block'; b.style.maxHeight = 'none';
-  });
-  Array.prototype.forEach.call(overlay.querySelectorAll('.dr-arrow'), function(a) { a.textContent = '▼'; });
+  Array.prototype.forEach.call(allBodies, function(b) { prevStates.push(b.style.display); b.style.display = 'block'; b.style.maxHeight = 'none'; });
   Array.prototype.forEach.call(overlay.querySelectorAll('.dr-girdi-wrapper'), function(w) { w.classList.add('dr-girdi-open'); });
 
-  // 2) Grafikleri SABİT AÇIK renklerle yeniden çiz (tema bağımsızlığı → beyaz zemin)
+  // 2) Grafikleri SABİT AÇIK renklerle yeniden çiz (tema bağımsızlığı)
   var _savedTC = _drTC;
   _drTC = { bg:'#ffffff', bgAlt:'#f0f1f3', text:'#1b1e24', textSec:'#4e535e',
             textMuted:'#9098a6', border:'#e8eaed', accent:'#2d6fe6', axisLine:'#c2c8d4' };
   function _drawReportCharts() {
-    if(!R) return;
     try {
       veDrawEngineChart(R.torqueData, R.governed, R.noLoad, R.fanLossGov, R.otherLossGov);
       veDrawReportECMChart(R);
@@ -2647,97 +3339,60 @@ function veDownloadReportHTML() {
 
   if(typeof showToast === 'function') showToast('HTML rapor hazırlanıyor…', 'info');
 
-  // Font varlıklarını hazırla (Takoz rapor mekanizması) — yoksa sistem fontları
   function withFonts(cb) {
     if(typeof _mntReportEnsureAssets === 'function') {
-      try {
-        _mntReportEnsureAssets(function(ok) {
-          cb((ok && window.MNT_REPORT_ASSETS) ? window.MNT_REPORT_ASSETS.fontsCss : '');
-        });
-        return;
-      } catch(e) { /* aşağıya düş */ }
+      try { _mntReportEnsureAssets(function(ok) { cb((ok && window.MNT_REPORT_ASSETS) ? window.MNT_REPORT_ASSETS.fontsCss : ''); }); return; }
+      catch(e) {}
     }
     cb((window.MNT_REPORT_ASSETS && window.MNT_REPORT_ASSETS.fontsCss) || '');
   }
 
-  // 3) Çizimler bittikten sonra (upshift +60ms gecikmeli) yakala + kur
   withFonts(function(fontsCss) {
     setTimeout(function() {
       var restored = false;
       function restore() {
         if(restored) return; restored = true;
-        // Bölüm durumlarını geri yükle
         Array.prototype.forEach.call(allBodies, function(b, i) { b.style.display = prevStates[i]; });
         Array.prototype.forEach.call(overlay.querySelectorAll('.dr-arrow'), function(a) {
           var sec = a.closest('.dr-section');
           if(sec) { var body = sec.querySelector('.dr-body'); a.textContent = (body && body.style.display !== 'none') ? '▼' : '▶'; }
         });
-        // Ekrandaki grafikleri gerçek temaya döndür
         _drTC = _savedTC;
         _drawReportCharts();
       }
       try {
         var contentContainer = overlay.querySelector('[style*="overflow-y:auto"]') || overlay;
-
-        // id-siz canvas'lara geçici id ver (hiçbir grafik düşmesin)
-        var tmp = 0;
+        // Grafik canvas'larını id → <img> eşle (statik PNG)
+        var charts = {};
         Array.prototype.forEach.call(contentContainer.querySelectorAll('canvas'), function(c) {
-          if(!c.id) c.id = 'dr-tmpcanvas-' + (++tmp);
-        });
-        // canvas → PNG dataURL
-        var chartImages = [];
-        Array.prototype.forEach.call(contentContainer.querySelectorAll('canvas'), function(c) {
-          try { chartImages.push({ id: c.id, dataUrl: c.toDataURL('image/png'), csW: c.clientWidth || c.width }); }
-          catch(e) { /* CORS olabilir */ }
+          if(!c.id) return;
+          try {
+            var url = c.toDataURL('image/png');
+            if(url && url.length > 32) charts[c.id] = '<img src="' + url + '" alt="grafik">';
+          } catch(e) {}
         });
 
-        // Proje adı
         var projectName = 'MFSim Raporu';
         try {
           var pnBtn = document.getElementById('ve-project-name-btn');
-          if(pnBtn) { var pn = pnBtn.textContent.replace(/[⚙▾]/g, '').trim(); if(pn && pn !== 'MFSim') projectName = pn; }
+          if(pnBtn) { var pn = pnBtn.textContent.replace(/[⚙▾…]/g, '').trim(); if(pn && pn !== 'MFSim') projectName = pn; }
         } catch(e) {}
 
         var now = new Date();
         var dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
         var timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
 
-        // İçerik + kesin ankraj id'leri (TOC bağlantıları için)
-        var contentHTML = contentContainer.innerHTML;
-        contentHTML = contentHTML.replace(/<div class="dr-section" data-section="([a-z0-9-]+)"/g,
-          '<div class="dr-section" id="rep-$1" data-section="$1"');
-
-        // canvas → img
-        chartImages.forEach(function(ci) {
-          if(!ci.id) return;
-          var canvasRegex = new RegExp('<canvas[^>]*id=["\']' + ci.id + '["\'][^>]*>[\\s\\S]*?<\\/canvas>', 'g');
-          var imgTag = '<img class="dr-chart-img" src="' + ci.dataUrl + '" style="max-width:' + (ci.csW || 780) + 'px;" alt="grafik">';
-          contentHTML = contentHTML.replace(canvasRegex, imgTag);
-        });
-
-        // İnteraktif öğeleri temizle (statik, baskıya hazır çıktı)
-        contentHTML = contentHTML.replace(/<span class="mf-ico[^"]*"[^>]*><\/span>/g, '');            // gömülmemiş ikon glifleri
-        contentHTML = contentHTML.replace(/<div[^>]*class="dr-chart-tooltip"[^>]*>[\s\S]*?<\/div>/g, '');
-        contentHTML = contentHTML.replace(/<div[^>]*class="dr-chart-cross[VH]"[^>]*>[\s\S]*?<\/div>/g, '');
-        contentHTML = contentHTML.replace(/<span[^>]*id="[^"]*zoom-ind[^"]*"[^>]*>[\s\S]*?<\/span>/g, ''); // "🔍 1.0×" göstergesi
-        contentHTML = contentHTML.replace(/<div[^>]*>\s*Scroll[\s\S]*?<\/div>/g, '');                   // "Scroll — Yakınlaştır…" ipucu
-        // Olay işleyicileri + imleç + gölge + gizli bölümler
-        contentHTML = contentHTML.replace(/\s*on(click|mouseover|mouseout|mousedown|mousemove|mouseup|wheel|contextmenu|dblclick)="[^"]*"/g, '');
-        contentHTML = contentHTML.replace(/cursor:\s*(pointer|crosshair);?/g, '');
-        contentHTML = contentHTML.replace(/box-shadow:[^;"]*;?/g, '');
-        contentHTML = contentHTML.replace(/display:\s*none/g, 'display:block');
-
-        // Bağımsız belgeyi kur
+        var asm = _veReportAssemble(R, sim, charts);
         var doc = '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">'
           + '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
           + '<title>' + _veReportEsc(projectName) + ' — Araç Performans Raporu</title>'
           + (fontsCss ? '<style>' + fontsCss + '</style>' : '')
           + '<style>' + _VE_REPORT_CSS + '</style>'
-          + '</head><body><div class="dr-page">'
+          + '</head><body><div class="page">'
           + _veReportAntet(R, projectName, dateStr)
-          + _veReportTOC(overlay)
-          + '<div class="dr-doc">' + contentHTML + '</div>'
-          + '<div class="dr-footer">MFSim — Motor Freni Simülasyon Yazılımı · ' + dateStr + ' ' + timeStr + '</div>'
+          + asm.toc
+          + asm.body
+          + '<p class="foot">Bu rapor, projede tanımlı güç aktarma modelinden <strong>otomatik üretilmiştir</strong>; girdi değerleri modeldeki bileşen tanımlarından alınır. Tasarım kararlarında güncel tedarikçi / test verisiyle teyit edilmelidir. · MFSim — Motor Freni Simülasyon Yazılımı · ' + dateStr + ' ' + timeStr + '</p>'
           + '</div></body></html>';
 
         _veReportDownloadBlob(doc, _veReportSlug(projectName) + '_arac_performans_raporu.html');
