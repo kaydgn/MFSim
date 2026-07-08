@@ -1589,27 +1589,39 @@ function veFindTC80PercentSpeed(ftData) {
 }
 
 // Tek kademe gradeability hesabı
-function veCalcGradeForRatio(ftData, m_kg, transferRatio, isLowGear) {
+function veCalcGradeForRatio(ftData, m_kg, transferRatio, isLowGear, hasTC) {
   var g = 9.81;
   var mg_kN = m_kg * g / 1000;
-  
-  // Stall
+
+  // Stall/Launch DP kaynağı:
+  //  TK VAR → v=0 noktası (konvertör stall = maks. tork çarpımı → gerçek startability).
+  //  TK YOK → doğrudan tahrikte çözücü v=0'da motoru RÖLANTİYE kelepçeler (debriyaj
+  //           modeli yok) → v=0 DP kalkış kabiliyetini YANSITMAZ (rölanti torku çok düşük).
+  //           Gerçek kalkış debriyaj kaydırarak tork tepesine dek devir alır; bu yüzden
+  //           stall/launch kabiliyeti = 1. VİTESTEKİ ULAŞILABİLİR MAKS. DP olarak alınır.
   var dp_stall = ftData[0].dp_kN;
+  var stallIdx = 0;
+  if(!hasTC) {
+    for(var qi = 0; qi < ftData.length; qi++) {
+      var gnq = parseInt(String(ftData[qi].gear).replace(/[^0-9]/g, ''), 10) || 99;
+      if(gnq <= 1 && ftData[qi].dp_kN > dp_stall) { dp_stall = ftData[qi].dp_kN; stallIdx = qi; }
+    }
+  }
   var stallGrade, launchGrade;
   if(dp_stall >= mg_kN) {
     stallGrade = 999.0;
     launchGrade = 997.0;
   } else {
-    stallGrade = Math.tan(Math.asin(dp_stall / mg_kN)) * 100;
-    stallGrade = Math.round(stallGrade * 10) / 10;
-    // Launch
-    if(ftData.length > 1 && ftData[1].v_kmh > 0.5 && ftData[1].v_kmh <= 3.0) {
+    stallGrade = Math.round(Math.tan(Math.asin(dp_stall / mg_kN)) * 100 * 10) / 10;
+    if(hasTC && ftData.length > 1 && ftData[1].v_kmh > 0.5 && ftData[1].v_kmh <= 3.0) {
+      // TK: launch = ilk yuvarlanma noktası (v ~1-3 km/h)
       var dp_launch = ftData[1].dp_kN;
-      if(dp_launch >= mg_kN) { launchGrade = 997.0; }
-      else { launchGrade = Math.tan(Math.asin(dp_launch / mg_kN)) * 100; }
-      launchGrade = Math.round(launchGrade * 10) / 10;
-    } else {
+      launchGrade = (dp_launch >= mg_kN) ? 997.0 : Math.round(Math.tan(Math.asin(dp_launch / mg_kN)) * 100 * 10) / 10;
+    } else if(hasTC) {
       launchGrade = Math.round((stallGrade - 2.0) * 10) / 10;
+    } else {
+      // TK yok: launch = stall (aynı kalkış kabiliyeti — 1. viteste ulaşılabilir maks. DP)
+      launchGrade = stallGrade;
     }
   }
   
@@ -1647,8 +1659,8 @@ function veCalcGradeForRatio(ftData, m_kg, transferRatio, isLowGear) {
     transferRatio: transferRatio,
     label: isLowGear ? 'Transfer Kutusu: Düşük Kademe (' + transferRatio.toFixed(3) + ')' :
                         'Transfer Kutusu: Yüksek Kademe (' + transferRatio.toFixed(3) + ')',
-    stallGrade: stallGrade, stallGear: ftData[0].gear,
-    launchGrade: launchGrade, launchGear: ftData[0].gear,
+    stallGrade: stallGrade, stallGear: ftData[stallIdx].gear,
+    launchGrade: launchGrade, launchGear: ftData[stallIdx].gear,
     lowSpeedGrade: lowSpeedGrade, lowSpeedV: v_lowspd, lowSpeedGear: gearAtV(v_lowspd),
     maxSpeedFlat: v_max_flat, maxSpeedFlatGear: maxSpeedResult.gear,
     gradeTable: gradeTable
@@ -1705,7 +1717,7 @@ function veCalculateGradeability(simResult) {
   
   // High kademe (mevcut FT verisi)
   var result = {};
-  result.high = veCalcGradeForRatio(ftData, m_kg, activeRatio, false);
+  result.high = veCalcGradeForRatio(ftData, m_kg, activeRatio, false, rs.hasTC);
   result.high.label = rs.hasTransfer && trGears.length > 1 ?
     'Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')' :
     'Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')';
@@ -1751,7 +1763,7 @@ function veCalculateGradeability(simResult) {
     }
 
     if(ftDataLow.length >= 2) {
-      result.low = veCalcGradeForRatio(ftDataLow, m_kg, lowRatio, true);
+      result.low = veCalcGradeForRatio(ftDataLow, m_kg, lowRatio, true, rs.hasTC);
       result.low.label = 'Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')';
       result.low.source = lowSimResult ? 'simulation' : 'scaling';
     }

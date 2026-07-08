@@ -19,7 +19,7 @@ eval(loadSource('ft-performance.js'));
 eval(loadSource('results.js'));
 eval(loadSource('graphics.js'));
 
-function buildSim() {
+function buildSim(tc) {
   const eng = VE_FT_MOTOR_PRESETS['duramax_lz0_305'];
   const engineNode = { id:'e1', type:'engine', data:{ ftMotorPreset:'duramax_lz0_305',
     torqueData: eng.data.map(d=>({rpm:d.rpm,torque:d.torque,power:d.power})),
@@ -38,7 +38,9 @@ function buildSim() {
   const vehicleNode = { id:'v1', type:'vehicle', data:{ ftGVW:3200, ftDrivenWeight:100, ftHeight:1.90, ftWidth:1.85, ftCd:0.43, ftRho:1.225, ftGrade:0 } };
   const shiftCtrlNode = { id:'s1', type:'shift-controller', data:{} };
   const solverNode = { id:'sv1', type:'solver', data:{ maxSimTime:90, ftDt:0.01, method:'rk4' } };
-  const chain = [engineNode, gearboxNode, propshaftNode, transferNode, diffNode, wheelNode];
+  const chain = tc
+    ? [engineNode, { id:'tc1', type:'torque-converter', data:{ tcData: tc.tcData, tcName: tc.tcName, pumpTorqueDrop: 17.6 } }, gearboxNode, propshaftNode, transferNode, diffNode, wheelNode]
+    : [engineNode, gearboxNode, propshaftNode, transferNode, diffNode, wheelNode];
   global.nodes = chain.concat([shiftCtrlNode, vehicleNode, solverNode]);
   global.connections = [];
   global.veGetPowertrainChain = () => chain;
@@ -88,5 +90,40 @@ describe('TK\'siz Tam-Gaz TXT raporu — Performans Özeti temizliği', () => {
     const widths = boxLines.map(l => l.length);
     const w0 = widths[0];
     widths.forEach(w => expect(w).toBe(w0));   // hiçbir satır taşmıyor
+  });
+});
+
+describe('TK VARSA rapor — konvertör bölümleri KORUNUR (ileride TK eklenirse güvence)', () => {
+  let report, section, sim;
+  beforeAll(() => {
+    const TC = { tcName: 'Test Konvertor', tcData: [
+      {sr:0.00,kpump:101.50,tau:2.05},{sr:0.20,kpump:102.14,tau:1.85},
+      {sr:0.40,kpump:104.30,tau:1.59},{sr:0.60,kpump:108.03,tau:1.35},
+      {sr:0.68,kpump:110.61,tau:1.26},{sr:0.80,kpump:120.0,tau:1.10},
+      {sr:0.90,kpump:135.0,tau:1.02}
+    ] };
+    sim = buildSim(TC);
+    report = veGenerateFTTxtReport(sim, 'Test');
+    const i = report.indexOf('6. PERFORMANS OZETI');
+    const e = report.indexOf('RAPOR SONU');
+    section = report.slice(i, e > i ? e : report.length);
+  });
+
+  test('TK varsa Genel Bilgiler\'de "Tork Konvertoru" satırı VAR (adıyla)', () => {
+    expect(sim.reportSnapshot.hasTC).toBe(true);
+    expect(section).toContain('Tork Konvertoru');
+    expect(section).toContain('Test Konvertor');
+  });
+
+  test('TK varsa vites-modu converter/lockup (C/L) etiketli — kaldırılmadı', () => {
+    expect(sim.gearMode.some(gm => /C$/.test(String(gm)))).toBe(true);
+    expect(sim.gearMode.some(gm => /L$/.test(String(gm)))).toBe(true);
+  });
+
+  test('kutu bordürü TK\'li raporda da tutarlı', () => {
+    const boxLines = section.split('\n').filter(l => /^\s{2}\|/.test(l));
+    expect(boxLines.length).toBeGreaterThan(5);
+    const w0 = boxLines[0].length;
+    boxLines.forEach(l => expect(l.length).toBe(w0));
   });
 });

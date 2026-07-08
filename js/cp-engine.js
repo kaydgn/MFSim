@@ -1784,6 +1784,47 @@ var VE_FT_MOTOR_PRESETS = {
       {name: 'Klima', standardLoss: 0, userLoss: 0},
       {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
     ]
+  },
+  'duramax_l5d_470': {
+    name: '6.6L V8 Duramax Turbo Diesel L5D | 1332Nm&350kW',
+    specs: {
+      displacement: 6.60,
+      idleRpm: 700,
+      governedSpeed: 3000,       // "Governed Speed" (rated) — spek
+      noLoadGoverned: 3600,      // "No Load Governed" — spek
+      inertia: 0.5792            // "Engine Inertia (estimated)" — spek
+    },
+    // GM 6.6L L5D Duramax (SEM/LRTP, 497-L042559-E) — üretici tablosundan BRÜT eğri.
+    // Tepe güç/tork spek başlığıyla birebir: 1332 Nm@1600, 350.1 kW@2800 (brüt).
+    // NET sürüş torku aksesuar kayıplarıyla hesaplanır: Fan (kavramalı, N³) 34.5 kW +
+    // diğerleri 7.2 kW @governed → tablodaki "Net Fan On" ile eşleşir (fan=0 → "Net Fan Off").
+    // Fan kaybı N³ olarak birebir doğrulanmıştır (34.5·(rpm/3000)³). US EPA On-Road 2024.
+    data: [
+      {rpm: 700, torque: 203.0, power: 14.9},
+      {rpm: 1000, torque: 271.0, power: 28.4},
+      {rpm: 1200, torque: 583.0, power: 73.3},
+      {rpm: 1400, torque: 1085.0, power: 159.1},
+      {rpm: 1500, torque: 1247.0, power: 195.9},
+      {rpm: 1600, torque: 1332.0, power: 223.2},
+      {rpm: 1800, torque: 1322.0, power: 249.2},
+      {rpm: 2000, torque: 1315.0, power: 275.4},
+      {rpm: 2200, torque: 1302.0, power: 300.0},
+      {rpm: 2400, torque: 1268.0, power: 318.7},
+      {rpm: 2600, torque: 1247.0, power: 339.5},
+      {rpm: 2800, torque: 1194.0, power: 350.1},
+      {rpm: 3000, torque: 1085.0, power: 340.9},
+      {rpm: 3200, torque: 922.0, power: 309.0},
+      {rpm: 3400, torque: 597.0, power: 212.6},
+      {rpm: 3600, torque: 0, power: 0}
+    ],
+    accessories: [
+      {name: 'Fan (Kavramalı Fan)', standardLoss: 34.5, userLoss: 34.5},
+      {name: 'Alternatör / Jeneratör', standardLoss: 2.8, userLoss: 2.8},
+      {name: 'Hava Kompresörü', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Direksiyon Pompası', standardLoss: 1.4, userLoss: 1.4},
+      {name: 'Klima', standardLoss: 1.6, userLoss: 1.6},
+      {name: 'Ek Tahrik', standardLoss: 0, userLoss: 0}
+    ]
   }
 };
 
