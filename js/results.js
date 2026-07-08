@@ -988,7 +988,7 @@ function veRenderDetailedReport(filter) {
   }
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadReportPDF()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> PDF İndir</button>';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'" title="Bağımsız, baskıya hazır HTML rapor indir"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
@@ -2444,32 +2444,197 @@ function veCloseDetailedReport() {
   }
 }
 
-// ═══════ PDF İNDİR — Detaylı Rapor ═══════
-function veDownloadReportPDF() {
+// ═══════ HTML İNDİR — Detaylı Rapor (bağımsız, estetik, baskıya hazır) ═══════
+// Rapor overlay içeriğini tek parça, bağımsız bir HTML dosyasına dönüştürür.
+//  • Temadan bağımsız: sabit AÇIK tema :root değerleri gömülür → daima beyaz zemin.
+//    Grafikler de geçici olarak açık renklerle yeniden çizilip PNG'ye alınır (_drTC override).
+//  • Tipografi: Takoz raporu font varlıkları (Archivo / Source Serif 4 / IBM Plex Mono)
+//    varsa yeniden kullanılır; yoksa sistem yazı tiplerine düşülür.
+//  • Grafikler statik PNG olarak gömülür; interaktif öğeler (tooltip/zoom) temizlenir.
+//  • Blob olarak indirilir; tarayıcıdan Ctrl+P ile birebir baskı alınabilir.
+
+function _veReportEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g, function(c) {
+    return c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;';
+  });
+}
+function _veReportNum(n) {
+  var v = Number(n);
+  if(!isFinite(v)) return _veReportEsc(n);
+  try { return v.toLocaleString('tr-TR'); } catch(e) { return String(v); }
+}
+function _veReportSlug(s) {
+  var map = { 'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u' };
+  return String(s || 'mfsim').toLowerCase()
+    .replace(/[çğıöşü]/g, function(c) { return map[c] || c; })
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'mfsim';
+}
+function _veReportDownloadBlob(html, filename) {
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
+}
+
+// Bağımsız rapor stil sayfası — referans Takoz raporunun estetiğini izler.
+// :root'taki AÇIK tema değişkenleri, içerikteki tüm inline var(--...) referanslarını
+// beyaz-zemin açık temaya çözer (uygulama teması ne olursa olsun).
+var _VE_REPORT_CSS = `
+:root{
+  --bg-primary:#ffffff; --bg-secondary:#ffffff; --bg-tertiary:#f0f1f3;
+  --border-color:#e0e2e6; --border-light:#e8eaed; --border-hover:#c2c8d4;
+  --text-primary:#1b1e24; --text-secondary:#4e535e; --text-muted:#9098a6; --text-heading:#0c0e12;
+  --accent-primary:#2d6fe6; --accent-success:#1a9a50; --accent-warning:#d49318; --accent-danger:#d43d3d;
+  --ink:#1b1e24; --line:#c9cdd3; --line-soft:#e4e6e9;
+  --prusya:#24425f; --prusya-soft:#eef2f6;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#ffffff;color:var(--ink);
+  font-family:"Source Serif 4",Georgia,serif;font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
+.dr-page{max-width:1000px;margin:0 auto;padding:40px 34px 80px;background:#fff;}
+
+/* ── Antet ── */
+.dr-antet{border:1.5px solid var(--ink);margin-bottom:26px;}
+.dr-antet .dr-band{background:var(--prusya);color:#fff;padding:18px 22px;}
+.dr-antet .dr-eyebrow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px;
+  letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:7px;}
+.dr-antet h1{font-family:"Archivo",system-ui,sans-serif;color:#fff;font-size:24px;font-weight:700;
+  margin:0;line-height:1.22;letter-spacing:.2px;}
+.dr-antet .dr-sub{font-family:"Archivo",sans-serif;font-size:13px;font-weight:400;opacity:.92;
+  margin-top:6px;line-height:1.45;}
+.dr-antet .dr-fields{display:grid;grid-template-columns:repeat(5,1fr);border-top:1.5px solid var(--ink);}
+.dr-antet .dr-f{padding:9px 13px;border-right:1px solid var(--line);}
+.dr-antet .dr-f:last-child{border-right:none;}
+.dr-antet .dr-f .dr-k{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:1.1px;
+  text-transform:uppercase;color:#5a6270;}
+.dr-antet .dr-f .dr-v{font-family:"Archivo",sans-serif;font-size:12.5px;font-weight:600;margin-top:3px;color:var(--ink);word-break:break-word;}
+
+/* ── İçindekiler ── */
+.dr-toc{font-family:"Archivo",sans-serif;font-size:13px;columns:2;column-gap:44px;
+  margin:0 0 28px;padding:14px 0;border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);}
+.dr-toc a{color:var(--ink);text-decoration:none;display:block;padding:3.5px 0;
+  border-bottom:1px dotted var(--line-soft);break-inside:avoid;}
+.dr-toc a:hover{color:var(--prusya);}
+.dr-toc .dr-n{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--prusya);
+  margin-right:9px;font-weight:600;}
+
+/* ── İçerik ── */
+.dr-doc{font-family:"Source Serif 4",Georgia,serif;}
+.dr-doc h1,.dr-doc h2,.dr-doc h3{font-family:"Archivo",sans-serif;}
+/* Grup başlıkları (Girdi Özeti / Araç Performans Özeti) — :has ile hedeflenir */
+.dr-doc div:has(> .dr-gs-arrow){
+  font-family:"Archivo",sans-serif !important;font-size:16px !important;font-weight:700 !important;
+  color:var(--prusya) !important;background:#fff !important;
+  border-bottom:2px solid var(--prusya) !important;padding:16px 2px 8px !important;margin-top:6px;}
+.dr-gs-arrow,.dr-arrow{display:none !important;}
+/* Bölüm kartları */
+.dr-section{border:1px solid var(--border-color);border-top:none;background:#fff;}
+.dr-section:first-of-type{border-top:1px solid var(--border-color);}
+.dr-hdr{font-family:"Archivo",sans-serif !important;font-size:12px !important;font-weight:700 !important;
+  letter-spacing:.5px;text-transform:uppercase;color:var(--prusya) !important;
+  background:var(--prusya-soft) !important;padding:9px 16px !important;
+  border-bottom:1px solid var(--border-color) !important;cursor:default !important;}
+.dr-body{padding:8px 16px 16px !important;display:block !important;max-height:none !important;overflow:visible !important;}
+.dr-girdi-wrapper{display:block !important;max-height:none !important;overflow:visible !important;}
+
+/* ── Tablolar ── */
+.dr-doc table{border-collapse:collapse;width:100%;margin:8px 0 14px;}
+.dr-doc td{font-family:"IBM Plex Mono",ui-monospace,monospace;}
+.dr-doc th{font-family:"Archivo",sans-serif;}
+
+/* ── Grafikler ── */
+.dr-chart-img{display:block;margin:16px auto;max-width:100%;height:auto;
+  border:1px solid var(--line-soft);background:#fff;}
+
+/* ── Footer ── */
+.dr-footer{text-align:center;font-family:"IBM Plex Mono",monospace;font-size:10px;color:#9098a6;
+  margin-top:34px;padding-top:14px;border-top:1px solid var(--line-soft);}
+
+@media print{
+  @page{size:A4;margin:14mm 12mm 16mm;}
+  body{font-size:10.5pt;background:#fff;}
+  .dr-page{max-width:100%;padding:0;}
+  *{ -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+  .dr-section,.dr-doc table,.dr-chart-img,.dr-antet{break-inside:avoid;}
+  .dr-hdr{break-after:avoid;}
+  tr{break-inside:avoid;}
+  a{color:inherit;text-decoration:none;}
+  .dr-toc{break-after:avoid;}
+  .dr-doc table{font-size:9pt;}
+}
+@media (max-width:680px){
+  .dr-antet .dr-fields{grid-template-columns:repeat(2,1fr);}
+  .dr-toc{columns:1;}
+  .dr-page{padding:24px 16px 60px;}
+}
+`;
+
+// Antet (dinamik başlık bloğu) — reportSnapshot'tan
+function _veReportAntet(R, projectName, dateStr) {
+  var eng = R ? R.engineName : '—';
+  var gb = R ? R.gbName : '—';
+  var gvw = R ? (_veReportNum(R.gvw) + ' kg') : '—';
+  var gears = (R && R.gearData) ? (R.gearData.length + ' ileri') : '—';
+  return ''
+    + '<div class="dr-antet">'
+    +   '<div class="dr-band">'
+    +     '<div class="dr-eyebrow">MFSim · Araç Performans Analizi</div>'
+    +     '<h1>' + _veReportEsc(projectName) + '</h1>'
+    +     '<div class="dr-sub">Tam gaz otomatik vites geçişleri, eğim kabiliyeti ve hızlanma analizi — projede tanımlı güç aktarma modelinden otomatik üretilmiştir.</div>'
+    +   '</div>'
+    +   '<div class="dr-fields">'
+    +     '<div class="dr-f"><div class="dr-k">Doküman</div><div class="dr-v">Performans Raporu</div></div>'
+    +     '<div class="dr-f"><div class="dr-k">Motor</div><div class="dr-v">' + _veReportEsc(eng) + '</div></div>'
+    +     '<div class="dr-f"><div class="dr-k">Şanzıman</div><div class="dr-v">' + _veReportEsc(gb) + '</div></div>'
+    +     '<div class="dr-f"><div class="dr-k">Vites</div><div class="dr-v">' + _veReportEsc(gears) + '</div></div>'
+    +     '<div class="dr-f"><div class="dr-k">Brüt Ağırlık · Tarih</div><div class="dr-v">' + _veReportEsc(gvw) + ' · ' + _veReportEsc(dateStr) + '</div></div>'
+    +   '</div>'
+    + '</div>';
+}
+
+// İçindekiler — overlay'deki dr-section'lardan (belge sırasıyla)
+function _veReportTOC(overlay) {
+  var secs = overlay.querySelectorAll('.dr-section');
+  if(!secs.length) return '';
+  var items = '', n = 0;
+  Array.prototype.forEach.call(secs, function(sec) {
+    var ds = sec.getAttribute('data-section'); if(!ds) return;
+    var hdr = sec.querySelector('.dr-hdr');
+    var title = hdr ? hdr.textContent.replace(/^[\s▼▶]+/, '').trim() : ds;
+    n++;
+    items += '<a href="#rep-' + ds + '"><span class="dr-n">' + (n < 10 ? '0' + n : n) + '</span>' + _veReportEsc(title) + '</a>';
+  });
+  return items ? '<nav class="dr-toc">' + items + '</nav>' : '';
+}
+
+function veDownloadReportHTML() {
   var overlay = document.getElementById('ve-report-overlay');
   if(!overlay || overlay.style.display === 'none') {
     if(typeof showToast === 'function') showToast('Rapor açık değil', 'warning');
     return;
   }
-
-  // 1) Tüm bölümleri aç (PDF'te tümü görünsün)
-  var allBodies = overlay.querySelectorAll('.dr-body');
-  var prevStates = [];
-  allBodies.forEach(function(b) {
-    prevStates.push(b.style.display);
-    b.style.display = 'block';
-    b.style.maxHeight = 'none';
-  });
-  var allArrows = overlay.querySelectorAll('.dr-arrow');
-  allArrows.forEach(function(a) { a.textContent = '▼'; });
-  // Girdi wrapper'ları da aç
-  var allWrappers = overlay.querySelectorAll('.dr-girdi-wrapper');
-  allWrappers.forEach(function(w) { w.classList.add('dr-girdi-open'); });
-
-  // Chart canvas'ları yeniden çiz (açılan bölümler için)
   var sim = window.veSimResults;
   var R = sim && sim.reportSnapshot;
-  if(R) {
+
+  // 1) Tüm bölümleri aç (dosyada tümü görünsün)
+  var allBodies = overlay.querySelectorAll('.dr-body');
+  var prevStates = [];
+  Array.prototype.forEach.call(allBodies, function(b) {
+    prevStates.push(b.style.display);
+    b.style.display = 'block'; b.style.maxHeight = 'none';
+  });
+  Array.prototype.forEach.call(overlay.querySelectorAll('.dr-arrow'), function(a) { a.textContent = '▼'; });
+  Array.prototype.forEach.call(overlay.querySelectorAll('.dr-girdi-wrapper'), function(w) { w.classList.add('dr-girdi-open'); });
+
+  // 2) Grafikleri SABİT AÇIK renklerle yeniden çiz (tema bağımsızlığı → beyaz zemin)
+  var _savedTC = _drTC;
+  _drTC = { bg:'#ffffff', bgAlt:'#f0f1f3', text:'#1b1e24', textSec:'#4e535e',
+            textMuted:'#9098a6', border:'#e8eaed', accent:'#2d6fe6', axisLine:'#c2c8d4' };
+  function _drawReportCharts() {
+    if(!R) return;
     try {
       veDrawEngineChart(R.torqueData, R.governed, R.noLoad, R.fanLossGov, R.otherLossGov);
       veDrawReportECMChart(R);
@@ -2478,145 +2643,113 @@ function veDownloadReportPDF() {
       if(document.getElementById('ftUpshiftChartHigh')) veDrawFTUpshiftCharts(sim);
     } catch(e) { /* devam */ }
   }
+  _drawReportCharts();
 
-  // 2) Canvas'ları img'ye dönüştür (setTimeout ile çizimlerin bitmesini bekle)
-  setTimeout(function() {
-    // Overlay'in scrollable content container'ını bul
-    var contentContainer = overlay.querySelector('[style*="overflow-y:auto"]') || overlay;
+  if(typeof showToast === 'function') showToast('HTML rapor hazırlanıyor…', 'info');
 
-    // Canvas → dataURL eşleştirmesi
-    var canvases = contentContainer.querySelectorAll('canvas');
-    var chartImages = [];
-    canvases.forEach(function(c) {
+  // Font varlıklarını hazırla (Takoz rapor mekanizması) — yoksa sistem fontları
+  function withFonts(cb) {
+    if(typeof _mntReportEnsureAssets === 'function') {
       try {
-        var dataUrl = c.toDataURL('image/png');
-        chartImages.push({ id: c.id, dataUrl: dataUrl, w: c.width, h: c.height, csW: c.clientWidth, csH: c.clientHeight });
-      } catch(e) { /* CORS hatası olabilir */ }
-    });
-
-    // 3) Proje adı
-    var projectName = 'MFSim Rapor';
-    try {
-      var pnBtn = document.getElementById('ve-project-name-btn');
-      if(pnBtn) {
-        var pn = pnBtn.textContent.replace(/[⚙▾]/g, '').trim();
-        if(pn && pn !== 'MFSim') projectName = pn;
-      }
-    } catch(e) {}
-
-    var now = new Date();
-    var dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
-    var timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-
-    // 4) İçerik HTML'ini topla
-    var contentHTML = contentContainer.innerHTML;
-
-    // Canvas elementlerini img ile değiştir
-    chartImages.forEach(function(ci) {
-      if(!ci.id) return;
-      // Canvas'ın parent wrapper'ındaki tooltip ve crosshair elementlerini kaldır
-      var canvasRegex = new RegExp('<canvas[^>]*id=["\']' + ci.id + '["\'][^>]*>[\\s\\S]*?<\\/canvas>', 'g');
-      var imgTag = '<img src="' + ci.dataUrl + '" style="width:100%; max-width:' + (ci.csW || 780) + 'px; height:auto; display:block; margin:0 auto;">';
-      contentHTML = contentHTML.replace(canvasRegex, imgTag);
-    });
-
-    // Tooltip/crosshair/interactive elementleri kaldır
-    contentHTML = contentHTML.replace(/<div[^>]*class="dr-chart-tooltip"[^>]*>[\s\S]*?<\/div>/g, '');
-    contentHTML = contentHTML.replace(/<div[^>]*class="dr-chart-cross[VH]"[^>]*>[\s\S]*?<\/div>/g, '');
-
-    // onclick, onmouseover, onmouseout, cursor:pointer kaldır
-    contentHTML = contentHTML.replace(/\s*on(click|mouseover|mouseout|mousedown|mousemove|mouseup|wheel|contextmenu)="[^"]*"/g, '');
-    contentHTML = contentHTML.replace(/cursor:\s*pointer;?/g, '');
-    contentHTML = contentHTML.replace(/cursor:\s*crosshair;?/g, '');
-
-    // Tüm bölümleri açık göster
-    contentHTML = contentHTML.replace(/display:\s*none/g, 'display:block');
-
-    // 5) PDF penceresi oluştur
-    var pdfHTML = '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">';
-    pdfHTML += '<title>' + projectName + ' — Detaylı Rapor</title>';
-    pdfHTML += '<style>';
-    pdfHTML += '@page { size: A4; margin: 15mm 12mm 18mm 12mm; }';
-    pdfHTML += '@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }';
-    pdfHTML += '*, *::before, *::after { box-sizing: border-box; }';
-    pdfHTML += 'body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; font-size: 11px; color: #222; background: #fff; margin: 0; padding: 0; line-height: 1.5; }';
-    pdfHTML += '.pdf-header { text-align: center; padding: 16px 20px 12px; border-bottom: 2px solid #1d4ed8; margin-bottom: 16px; }';
-    pdfHTML += '.pdf-header h1 { font-size: 18px; font-weight: 700; color: #1d4ed8; margin: 0 0 4px 0; }';
-    pdfHTML += '.pdf-header .pdf-meta { font-size: 9px; color: #666; }';
-    pdfHTML += '.pdf-content { padding: 0 8px; }';
-    // Beyaz kartlar
-    pdfHTML += '.pdf-content > div { max-width: 100% !important; margin: 0 0 12px 0 !important; box-shadow: none !important; border: 1px solid var(--border-color); border-radius: 0; overflow: hidden; page-break-inside: auto; }';
-    // Bölüm başlıkları — sayfa kırılmasını önle
-    pdfHTML += '.dr-hdr { font-size: 11px !important; font-weight: 700 !important; color: #1a1a1a !important; background: #f0f1f3 !important; padding: 8px 14px !important; border-bottom: 1px solid var(--border-color) !important; page-break-after: avoid; }';
-    pdfHTML += '.dr-arrow { margin-right: 6px; font-size: 8px; }';
-    pdfHTML += '.dr-body { display: block !important; max-height: none !important; overflow: visible !important; padding: 0 !important; }';
-    // Girdi özeti başlık
-    pdfHTML += '.dr-girdi-wrapper { display: block !important; max-height: none !important; overflow: visible !important; }';
-    // Tablolar
-    pdfHTML += 'table { width: 100%; border-collapse: collapse; font-size: 10.5px; page-break-inside: auto; }';
-    pdfHTML += 'tr { page-break-inside: avoid; }';
-    pdfHTML += 'td, th { padding: 5px 12px; border-bottom: 1px solid var(--border-light); }';
-    pdfHTML += 'th { background: #f5f6f8; font-weight: 600; }';
-    // Grafik görselleri
-    pdfHTML += 'img { max-width: 100%; height: auto; display: block; margin: 8px auto; page-break-inside: avoid; }';
-    pdfHTML += 'canvas { display: none !important; }';
-    // Ana bölüm başlıkları (Girdi Özeti, Araç Performans Özeti)
-    pdfHTML += '.pdf-content > div > div:first-child { font-size: 14px !important; font-weight: 700 !important; color: #1d4ed8 !important; padding: 10px 16px !important; background: #f8f9ff !important; border-bottom: 2px solid #1d4ed8 !important; page-break-after: avoid; }';
-    // Alt başlıklar print
-    pdfHTML += '[style*="font-weight:700"][style*="font-size:0.75rem"] { page-break-after: avoid; }';
-    // Footer
-    pdfHTML += '.pdf-footer { text-align: center; font-size: 8px; color: #999; padding: 8px 0; border-top: 1px solid #eee; margin-top: 12px; }';
-    pdfHTML += '</style></head><body>';
-
-    // Header
-    pdfHTML += '<div class="pdf-header">';
-    pdfHTML += '<h1>' + projectName + '</h1>';
-    pdfHTML += '<div class="pdf-meta">' + dateStr + ' ' + timeStr + ' | MFSim — Motor Freni Simülasyon Yazılımı</div>';
-    pdfHTML += '</div>';
-
-    // Content
-    pdfHTML += '<div class="pdf-content">';
-    pdfHTML += contentHTML;
-    pdfHTML += '</div>';
-
-    // Footer
-    pdfHTML += '<div class="pdf-footer">MFSim Detaylı Rapor — ' + dateStr + '</div>';
-    pdfHTML += '</body></html>';
-
-    // 6) Yeni pencere aç ve yazdır
-    var w = window.open('', '_blank', 'width=900,height=700');
-    if(!w) {
-      if(typeof showToast === 'function') showToast('Popup engelleyici PDF penceresini engelledi. Lütfen izin verin.', 'warning');
-      // Bölümleri eski haline getir
-      allBodies.forEach(function(b, i) { b.style.display = prevStates[i]; });
-      return;
+        _mntReportEnsureAssets(function(ok) {
+          cb((ok && window.MNT_REPORT_ASSETS) ? window.MNT_REPORT_ASSETS.fontsCss : '');
+        });
+        return;
+      } catch(e) { /* aşağıya düş */ }
     }
-    w.document.open();
-    w.document.write(pdfHTML);
-    w.document.close();
+    cb((window.MNT_REPORT_ASSETS && window.MNT_REPORT_ASSETS.fontsCss) || '');
+  }
 
-    // Görseller yüklendikten sonra print dialog aç
-    w.onload = function() {
-      setTimeout(function() {
-        w.focus();
-        w.print();
-      }, 400);
-    };
-
-    // 7) Bölümleri eski haline döndür
-    allBodies.forEach(function(b, i) {
-      b.style.display = prevStates[i];
-    });
-    allArrows.forEach(function(a) {
-      var sec = a.closest('.dr-section');
-      if(sec) {
-        var body = sec.querySelector('.dr-body');
-        a.textContent = (body && body.style.display !== 'none') ? '▼' : '▶';
+  // 3) Çizimler bittikten sonra (upshift +60ms gecikmeli) yakala + kur
+  withFonts(function(fontsCss) {
+    setTimeout(function() {
+      var restored = false;
+      function restore() {
+        if(restored) return; restored = true;
+        // Bölüm durumlarını geri yükle
+        Array.prototype.forEach.call(allBodies, function(b, i) { b.style.display = prevStates[i]; });
+        Array.prototype.forEach.call(overlay.querySelectorAll('.dr-arrow'), function(a) {
+          var sec = a.closest('.dr-section');
+          if(sec) { var body = sec.querySelector('.dr-body'); a.textContent = (body && body.style.display !== 'none') ? '▼' : '▶'; }
+        });
+        // Ekrandaki grafikleri gerçek temaya döndür
+        _drTC = _savedTC;
+        _drawReportCharts();
       }
-    });
+      try {
+        var contentContainer = overlay.querySelector('[style*="overflow-y:auto"]') || overlay;
 
-    if(typeof showToast === 'function') showToast('PDF penceresi açıldı — "PDF olarak kaydet" seçeneğini kullanın', 'info');
-  }, 200);
+        // id-siz canvas'lara geçici id ver (hiçbir grafik düşmesin)
+        var tmp = 0;
+        Array.prototype.forEach.call(contentContainer.querySelectorAll('canvas'), function(c) {
+          if(!c.id) c.id = 'dr-tmpcanvas-' + (++tmp);
+        });
+        // canvas → PNG dataURL
+        var chartImages = [];
+        Array.prototype.forEach.call(contentContainer.querySelectorAll('canvas'), function(c) {
+          try { chartImages.push({ id: c.id, dataUrl: c.toDataURL('image/png'), csW: c.clientWidth || c.width }); }
+          catch(e) { /* CORS olabilir */ }
+        });
+
+        // Proje adı
+        var projectName = 'MFSim Raporu';
+        try {
+          var pnBtn = document.getElementById('ve-project-name-btn');
+          if(pnBtn) { var pn = pnBtn.textContent.replace(/[⚙▾]/g, '').trim(); if(pn && pn !== 'MFSim') projectName = pn; }
+        } catch(e) {}
+
+        var now = new Date();
+        var dateStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+        var timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+        // İçerik + kesin ankraj id'leri (TOC bağlantıları için)
+        var contentHTML = contentContainer.innerHTML;
+        contentHTML = contentHTML.replace(/<div class="dr-section" data-section="([a-z0-9-]+)"/g,
+          '<div class="dr-section" id="rep-$1" data-section="$1"');
+
+        // canvas → img
+        chartImages.forEach(function(ci) {
+          if(!ci.id) return;
+          var canvasRegex = new RegExp('<canvas[^>]*id=["\']' + ci.id + '["\'][^>]*>[\\s\\S]*?<\\/canvas>', 'g');
+          var imgTag = '<img class="dr-chart-img" src="' + ci.dataUrl + '" style="max-width:' + (ci.csW || 780) + 'px;" alt="grafik">';
+          contentHTML = contentHTML.replace(canvasRegex, imgTag);
+        });
+
+        // İnteraktif öğeleri temizle (statik, baskıya hazır çıktı)
+        contentHTML = contentHTML.replace(/<span class="mf-ico[^"]*"[^>]*><\/span>/g, '');            // gömülmemiş ikon glifleri
+        contentHTML = contentHTML.replace(/<div[^>]*class="dr-chart-tooltip"[^>]*>[\s\S]*?<\/div>/g, '');
+        contentHTML = contentHTML.replace(/<div[^>]*class="dr-chart-cross[VH]"[^>]*>[\s\S]*?<\/div>/g, '');
+        contentHTML = contentHTML.replace(/<span[^>]*id="[^"]*zoom-ind[^"]*"[^>]*>[\s\S]*?<\/span>/g, ''); // "🔍 1.0×" göstergesi
+        contentHTML = contentHTML.replace(/<div[^>]*>\s*Scroll[\s\S]*?<\/div>/g, '');                   // "Scroll — Yakınlaştır…" ipucu
+        // Olay işleyicileri + imleç + gölge + gizli bölümler
+        contentHTML = contentHTML.replace(/\s*on(click|mouseover|mouseout|mousedown|mousemove|mouseup|wheel|contextmenu|dblclick)="[^"]*"/g, '');
+        contentHTML = contentHTML.replace(/cursor:\s*(pointer|crosshair);?/g, '');
+        contentHTML = contentHTML.replace(/box-shadow:[^;"]*;?/g, '');
+        contentHTML = contentHTML.replace(/display:\s*none/g, 'display:block');
+
+        // Bağımsız belgeyi kur
+        var doc = '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">'
+          + '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+          + '<title>' + _veReportEsc(projectName) + ' — Araç Performans Raporu</title>'
+          + (fontsCss ? '<style>' + fontsCss + '</style>' : '')
+          + '<style>' + _VE_REPORT_CSS + '</style>'
+          + '</head><body><div class="dr-page">'
+          + _veReportAntet(R, projectName, dateStr)
+          + _veReportTOC(overlay)
+          + '<div class="dr-doc">' + contentHTML + '</div>'
+          + '<div class="dr-footer">MFSim — Motor Freni Simülasyon Yazılımı · ' + dateStr + ' ' + timeStr + '</div>'
+          + '</div></body></html>';
+
+        _veReportDownloadBlob(doc, _veReportSlug(projectName) + '_arac_performans_raporu.html');
+        if(typeof showToast === 'function') showToast('HTML rapor indirildi (' + Math.round(doc.length / 1024) + ' KB)', 'success');
+      } catch(e) {
+        if(typeof showToast === 'function') showToast('HTML rapor üretilemedi: ' + e.message, 'error');
+        if(typeof console !== 'undefined') console.error('[Detaylı Rapor HTML]', e);
+      } finally {
+        restore();
+      }
+    }, 240);
+  });
 }
 
 // ECM Absorption chart — interactive (zoom + pan)
