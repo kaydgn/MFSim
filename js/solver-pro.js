@@ -294,9 +294,10 @@ function veSolverRunProfessional() {
         }
         var spLogData = VE_FT_SHIFT_PROFILES[gd.shiftProfile || 'allison3200sp_s1'] || {};
         var refForLog = logRefRPM || (function(){ var eN = nodes.find(function(n){return n.type==='engine';}); return eN ? (parseFloat(((eN.data||{}).motorSpecs||{}).governedSpeed)||parseFloat((eN.data||{}).governedRpm)||0) : 0; })();
+        var _hasTCNode = nodes.some(function(n){ return n.type === 'torque-converter'; });
         if(refForLog && (spLogData.lockupOffset || spLogData.lockupShifts)) {
-          // Converter geçişleri
-          if(spLogData.converterShifts) {
+          // Converter geçişleri — YALNIZ TK varsa (TK yoksa converter fazı yok, gösterme)
+          if(_hasTCNode && spLogData.converterShifts) {
             var csLog = spLogData.converterShifts;
             if(csLog['1C2C']) {
               var thr1C = csLog['1C2C'].a * refForLog + (csLog['1C2C'].b || 0);
@@ -313,16 +314,17 @@ function veSolverRunProfessional() {
                 log('  2C→2L eşik      : N_out = ' + Math.round(thr2Ls) + ' (' + (cs2L.a || 0) + '×' + refForLog + '+' + (cs2L.b || 0) + ')', 'dim');
               }
             }
-          } else {
+          } else if(_hasTCNode) {
             if(spLogData.shift1C2C_outRatio) log('  1C→2C eşik      : N_out = ' + Math.round(spLogData.shift1C2C_outRatio * refForLog) + ' (' + spLogData.shift1C2C_outRatio + ' × ' + refForLog + ')', 'dim');
             if(spLogData.shift2C2L_outRatio) log('  2C→2L eşik      : N_out = ' + Math.round(spLogData.shift2C2L_outRatio * refForLog) + ' (' + spLogData.shift2C2L_outRatio + ' × ' + refForLog + ')', 'dim');
           }
           if(spLogData.lockupShifts) {
-            log('  Lockup geçişleri: N_out = a × ESL + b (per-gear kalibrasyon)', 'dim');
+            log('  ' + (_hasTCNode ? 'Lockup geçişleri' : 'Vites geçiş eşik.') + ': N_out = a × ESL + b (per-gear kalibrasyon)', 'dim');
             Object.keys(spLogData.lockupShifts).forEach(function(sk) {
               var ls = spLogData.lockupShifts[sk];
               var thr = (typeof calcLockupShiftThreshold === 'function') ? calcLockupShiftThreshold(ls, refForLog) : (ls.a * refForLog + (ls.b || 0));
               var label = sk.replace(/(\d+L)(\d+L)/, '$1→$2');
+              if(!_hasTCNode) label = label.replace(/L/g, '');  // TK yok → salt vites no
               var detail = '';
               if(ls.type === 'segments') { detail = 'segments'; }
               else if(ls.type === 'piecewise') { detail = 'piecewise'; }
@@ -330,11 +332,11 @@ function veSolverRunProfessional() {
               log('    ' + label + ': N_out ≥ ' + thr.toFixed(1) + ' (' + detail + ')', 'dim');
             });
           } else {
-            log('  Lockup shift    : ' + (refForLog - spLogData.lockupOffset) + ' rpm (ref - ' + spLogData.lockupOffset + ')', 'dim');
+            log('  ' + (_hasTCNode ? 'Lockup shift    ' : 'Vites shift     ') + ': ' + (refForLog - spLogData.lockupOffset) + ' rpm (ref - ' + spLogData.lockupOffset + ')', 'dim');
           }
         }
         fwd.forEach(function(g) {
-          log('    ' + g.name + ': i=' + g.ratio + ', η=' + g.eff + '%, ' + (g.lockup ? 'Lockup' : 'Converter'), 'dim');
+          log('    ' + g.name + ': i=' + g.ratio + ', η=' + g.eff + '%' + (_hasTCNode ? (', ' + (g.lockup ? 'Lockup' : 'Converter')) : ''), 'dim');
         });
       } else {
         var gears = gd.gearData || [];
@@ -918,7 +920,7 @@ function veSolverRunProfessional() {
             log('  Son hız        : ' + _sds.finalSpeed_kmh.toFixed(1) + ' km/h');
             log('  Toplam mesafe  : ' + _sds.totalDistance.toFixed(0) + ' m');
             log('  Toplam adım   : ' + _sds.steps);
-            log('  Son vites      : ' + (_sds.finalGear || '—') + (_sds.isLockup ? ' (Lockup)' : ' (Converter)'));
+            log('  Son vites      : ' + (_sds.finalGear || '—') + (nodes.some(function(n){return n.type==='torque-converter';}) ? (_sds.isLockup ? ' (Lockup)' : ' (Converter)') : ''));
 
             if(_sds.shiftHistory && _sds.shiftHistory.length > 0) {
               log('  Vites geçişleri (' + _sds.shiftHistory.length + '):', 'dim');
@@ -1056,8 +1058,9 @@ function veSolverRunProfessional() {
                 var isConvToConv = fromMode.match(/C$/) && toMode.match(/C$/);
                 var isConvToLock = fromMode.match(/C$/) && toMode.match(/L$/);
                 var isLockToLock = fromMode.match(/L$/) && toMode.match(/L$/);
-                
-                var shiftType = isConvToConv ? 'Conv→Conv' : isConvToLock ? 'Conv→Lock' : isLockToLock ? 'Lock→Lock' : 'Diğer';
+                var isDirect = !fromMode.match(/[CL]$/) && !toMode.match(/[CL]$/);  // TK yok → salt vites geçişi
+
+                var shiftType = isConvToConv ? 'Conv→Conv' : isConvToLock ? 'Conv→Lock' : isLockToLock ? 'Lock→Lock' : (isDirect ? 'Vites' : 'Diğer');
                 var statusIcon = '✓';
                 var statusNote = '';
                 
@@ -1209,7 +1212,8 @@ function veSolverRunProfessional() {
               log('  │  Güç Bileşeni            │  Maks [kW] │ Ort [kW]│');
               log('  ├─────────────────────────────────────────────────┤');
               log('  │  Motor Gücü (P_engine)    │ ' + pad(eb.maxP_engine.toFixed(1), 9) + '  │ ' + pad(eb.avgP_engine.toFixed(1), 7) + ' │');
-              log('  │  TC Isı Kaybı (P_TC)      │ ' + pad(eb.maxP_TC_heat.toFixed(1), 9) + '  │ ' + pad(eb.avgP_TC_heat.toFixed(1), 7) + ' │');
+              var _tcHeatLbl = nodes.some(function(n){return n.type==='torque-converter';}) ? 'TC Isı Kaybı (P_TC)' : 'Aktarma Isı (P_ısı)';
+              log('  │  ' + _tcHeatLbl + '      │ ' + pad(eb.maxP_TC_heat.toFixed(1), 9) + '  │ ' + pad(eb.avgP_TC_heat.toFixed(1), 7) + ' │');
               log('  │  Güç Aktarma Kaybı (P_dt) │ ' + pad(eb.maxP_drivetrain.toFixed(1), 9) + '  │ ' + pad(eb.avgP_drivetrain.toFixed(1), 7) + ' │');
               log('  │  Tekerlek Gücü (P_wheel)  │ ' + pad(eb.maxP_wheel.toFixed(1), 9) + '  │ ' + pad(eb.avgP_wheel.toFixed(1), 7) + ' │');
               log('  ├─────────────────────────────────────────────────┤');
@@ -1231,7 +1235,7 @@ function veSolverRunProfessional() {
                 var pctTC = eb.avgP_TC_heat / eb.avgP_engine * 100;
                 var pctDT = eb.avgP_drivetrain / eb.avgP_engine * 100;
                 var pctWheel = eb.avgP_wheel / eb.avgP_engine * 100;
-                log('  Güç dağılımı: Tekerlek ' + pctWheel.toFixed(1) + '% | TC ısı ' + pctTC.toFixed(1) + '% | Drivetrain ' + pctDT.toFixed(1) + '%', 'dim');
+                log('  Güç dağılımı: Tekerlek ' + pctWheel.toFixed(1) + '% | ' + (nodes.some(function(n){return n.type==='torque-converter';}) ? 'TC ısı' : 'Aktarma ısı') + ' ' + pctTC.toFixed(1) + '% | Drivetrain ' + pctDT.toFixed(1) + '%', 'dim');
               }
             }
             

@@ -609,9 +609,16 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   var shiftState = {
     gearIdx: 0,
-    isLockup: false,   // Başlangıç: 1C (converter mod)
+    isLockup: false,   // Başlangıç: 1C (converter mod) — TK varsa; TK yoksa etiket salt vites no
     shiftHistory: []    // [{t, fromGear, toGear, fromMode, toMode, v_kmh, N_engine, SR}]
   };
+
+  // Vites-modu etiketi. TK VARSA 'C' (converter) / 'L' (lockup) soneki; TK YOKSA
+  // konvertör/kilit kavramı olmadığından SALT vites numarası (doğrudan tahrik).
+  // NOT: lockup anahtar araması (shiftKey) ayrı hesaplanır — bu yalnızca ETİKET üretir.
+  function veGearModeLabel(gearNum, isLU) {
+    return tcNode ? (gearNum + (isLU ? 'L' : 'C')) : String(gearNum);
+  }
 
   function getCurrentGearData() {
     return forwardGears[shiftState.gearIdx] || forwardGears[0];
@@ -645,7 +652,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         }
         if(N_out >= threshold_1C2C) {
           shiftState.shiftHistory.push({
-            t: t, fromGear: g, toGear: 1, fromMode: '1C', toMode: '2C',
+            t: t, fromGear: g, toGear: 1, fromMode: veGearModeLabel(1, false), toMode: veGearModeLabel(2, false),
             v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out
           });
           shiftState.gearIdx = 1;
@@ -656,7 +663,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         var threshold_2C2L = calc2C2LThreshold(shiftRefRPM);
         if(N_out >= threshold_2C2L) {
           shiftState.shiftHistory.push({
-            t: t, fromGear: 1, toGear: 1, fromMode: '2C', toMode: '2L',
+            t: t, fromGear: 1, toGear: 1, fromMode: veGearModeLabel(2, false), toMode: veGearModeLabel(2, true),
             v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out,
             eta: SR * tau
           });
@@ -687,7 +694,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
         if(luShiftTriggered) {
           shiftState.shiftHistory.push({
-            t: t, fromGear: g, toGear: g + 1, fromMode: fromName, toMode: toName,
+            t: t, fromGear: g, toGear: g + 1, fromMode: veGearModeLabel(g + 1, true), toMode: veGearModeLabel(g + 2, true),
             v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_out_lu
           });
           shiftState.gearIdx = g + 1;
@@ -709,11 +716,11 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       if(dsEntry) {
         var dsThreshold = calcDownshiftThreshold(dsEntry, shiftRefRPM);
         if(N_out_ds < dsThreshold) {
-          var dsFromName = (g + 1) + 'L';
-          var dsToName = g + 'L';
-          // 2→1 özel durum: converter moda geçiş (1C)
-          if(g === 1) {
-            dsToName = '1C';
+          var dsFromName = veGearModeLabel(g + 1, true);
+          var dsToName = veGearModeLabel(g, true);
+          // 2→1 özel durum: converter moda geçiş (yalnız TK varsa; TK yoksa kilit yok)
+          if(g === 1 && tcNode) {
+            dsToName = veGearModeLabel(1, false);
             shiftState.isLockup = false;
           }
           shiftState.shiftHistory.push({
@@ -881,7 +888,9 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       eta_gear: eta_gear,
       gearIdx: shiftState.gearIdx,
       gearName: gearData.name,
-      isLockup: isLU
+      // TK yok → doğrudan tahrik rijit "kilitli" sayılır (converter fazı yok).
+      // Bu, gearMode/SR/N_turbine türevlerinin no-TC'de kilitli değerler almasını sağlar.
+      isLockup: (tcNode ? isLU : true)
     };
   }
 
@@ -970,7 +979,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
     // ── iSCAAN KOLONLARI ──
     var gearNum = ph.gearName.replace(/[^0-9]/g, '');
-    res_gearMode.push(gearNum + (ph.isLockup ? 'L' : 'C'));
+    res_gearMode.push(veGearModeLabel(gearNum, ph.isLockup));
     res_SR.push(ph.isLockup ? 1.0 : ph.SR);
     res_tcEta.push(ph.isLockup ? 1.0 : (ph.SR * ph.tau));
     res_N_turbine.push(ph.isLockup ? ph.N_engine : ph.N_engine * ph.SR);
@@ -1082,7 +1091,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       if(ng.power_loss) ng.power_loss.push(Math.max(0, gbP_in - gbP_out));
       if(ng.gear) ng.gear.push(ph.gearIdx + 1);
       if(ng.ratio) ng.ratio.push(ph.i_gear);
-      if(ng.gear_mode) ng.gear_mode.push(gearNum2 + (ph.isLockup ? 'L' : 'C'));
+      if(ng.gear_mode) ng.gear_mode.push(veGearModeLabel(gearNum2, ph.isLockup));
       if(ng.efficiency) ng.efficiency.push(ph.eta_gear * 100);
     }
 
@@ -1097,7 +1106,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       var gearNum3 = ph.gearName.replace(/[^0-9]/g, '');
       var N_out_rec = gbOutRpm_rec;  // Şanzıman çıkış devri
       if(nsc.current_gear) nsc.current_gear.push(ph.gearIdx + 1);
-      if(nsc.gear_mode) nsc.gear_mode.push(gearNum3 + (ph.isLockup ? 'L' : 'C'));
+      if(nsc.gear_mode) nsc.gear_mode.push(veGearModeLabel(gearNum3, ph.isLockup));
       if(nsc.lockup_state) nsc.lockup_state.push(ph.isLockup ? 1 : 0);
       if(nsc.n_output) nsc.n_output.push(N_out_rec);
       if(nsc.n_out_ratio) nsc.n_out_ratio.push(shiftRefRPM > 0 ? N_out_rec / shiftRefRPM : 0);
@@ -1508,6 +1517,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         diffName: diffNode?(diffNode.customName||'Aks'):'Aks', diffRatio: i_axle, diffEff: (eta_axle*100),
         transferName: _trN, transferGears: ftTrGears.map(function(tr){return{kademe:tr.kademe||tr.mode||'',ratio:parseFloat(tr.ratio||tr.oran)||1.0,eff:parseFloat(tr.eff||tr.verim)||97};}),
         hasTransfer: !!transferNode,
+        hasTC: !!tcNode,
+        hasECM: nodes.some(function(n){ return n.type === 'ec-matching'; }),
         pumpDrop: pumpTorqueDrop,
         tcData: tcDataArr.map(function(d){return{sr:d.sr,kpump:d.kpump,tau:d.tau};}),
         turbineRating: (function(){ var ecmN = nodes.find(function(n){return n.type==='ec-matching';}); return ecmN && ecmN.data ? (ecmN.data.turbineRating||3320) : 3320; })(),

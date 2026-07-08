@@ -19,7 +19,7 @@ eval(loadSource('cp-gearbox.js'));       // VE_GEARBOX_PRESETS, VE_FT_SHIFT_PROF
 eval(loadSource('ft-performance.js'));   // FT_SOLVER + veFTRunSimulationEngine
 
 // ── TK'SİZ GÜÇ AKTARMA ZİNCİRİ KUR ──────────────────────────────────────────
-function buildNoTCTopology(engineKey, vehOverride) {
+function buildNoTCTopology(engineKey, vehOverride, tcData) {
   const eng = VE_FT_MOTOR_PRESETS[engineKey];
   const engineNode = {
     id: 'e1', type: 'engine', data: {
@@ -65,8 +65,10 @@ function buildNoTCTopology(engineKey, vehOverride) {
   const shiftCtrlNode = { id: 's1', type: 'shift-controller', data: {} };
   const solverNode = { id: 'sv1', type: 'solver', data: { maxSimTime: 90, ftDt: 0.01, method: 'rk4' } };
 
-  // Zincir: TK YOK — motor doğrudan şanzımana
-  const chain = [engineNode, gearboxNode, propshaftNode, transferNode, diffNode, wheelNode];
+  // Zincir: tcData verilirse Motor→TK→Şanzıman; yoksa TK'siz doğrudan Motor→Şanzıman
+  const chain = tcData
+    ? [engineNode, { id: 'tc1', type: 'torque-converter', data: { tcData: tcData, pumpTorqueDrop: 17.6 } }, gearboxNode, propshaftNode, transferNode, diffNode, wheelNode]
+    : [engineNode, gearboxNode, propshaftNode, transferNode, diffNode, wheelNode];
   global.nodes = chain.concat([shiftCtrlNode, vehicleNode, solverNode]);
   global.connections = [];
   global.veGetPowertrainChain = () => chain;
@@ -182,5 +184,53 @@ describe('L5P + 8L90 — profil genelliği (düşük-devirli motor 1. viteste TA
       expect(rpm).toBeGreaterThan(3250);   // L5P governed 3450 civarı
       expect(rpm).toBeLessThan(3600);      // ← 3900 DEĞİL: profil motora uyarlandı
     });
+  });
+});
+
+describe('TXT rapor TK-temizliği: TK yokken konvertör (1C/2C) verisi YOK', () => {
+  let R;
+  beforeAll(() => {
+    buildNoTCTopology('duramax_lz0_305');
+    R = veFTRunSimulationEngine();
+  });
+
+  test('gearMode tümü SALT vites numarası — hiçbirinde C/L soneki yok', () => {
+    // Kullanıcının şikâyeti: TK yokken raporda 1C, 2C çıkıyordu.
+    const bad = R.gearMode.filter(gm => /[CL]/.test(String(gm)));
+    expect(bad).toEqual([]);                                        // hiç C/L yok
+    expect(R.gearMode.every(gm => /^\d+$/.test(String(gm)))).toBe(true); // hepsi düz sayı
+    expect(R.gearMode).toContain('1');
+    expect(R.gearMode).toContain('8');
+  });
+
+  test('reportSnapshot TK/ECM yokluğunu bildirir (rapor gate\'leri için)', () => {
+    expect(R.reportSnapshot.hasTC).toBe(false);
+    expect(R.reportSnapshot.hasECM).toBe(false);
+  });
+
+  test('SR/τ dizileri kilitli (1.0) — konvertör slip verisi yok', () => {
+    expect(R.SR.every(v => v === 1.0)).toBe(true);
+    expect(R.tau.every(v => v === 1.0)).toBe(true);
+  });
+});
+
+describe('Regresyon: TK VARSA konvertör-modu (C/L) etiketleri korunur', () => {
+  // Gerçekçi bir TK eğrisiyle: with-TC davranışı (converter→lockup fazları) korunmalı.
+  const TC = [
+    {sr:0.00, kpump:101.50, tau:2.05}, {sr:0.20, kpump:102.14, tau:1.85},
+    {sr:0.40, kpump:104.30, tau:1.59}, {sr:0.60, kpump:108.03, tau:1.35},
+    {sr:0.68, kpump:110.61, tau:1.26}, {sr:0.80, kpump:120.0, tau:1.10},
+    {sr:0.90, kpump:135.0, tau:1.02}
+  ];
+  let R;
+  beforeAll(() => {
+    buildNoTCTopology('duramax_lz0_305', {}, TC);
+    R = veFTRunSimulationEngine();
+  });
+
+  test('TK var → gearMode konvertör/lockup soneki (C/L) içerir', () => {
+    expect(R.reportSnapshot.hasTC).toBe(true);
+    expect(R.gearMode.some(gm => /C$/.test(String(gm)))).toBe(true);   // 1C/2C converter fazı korunur
+    expect(R.gearMode.some(gm => /L$/.test(String(gm)))).toBe(true);   // lockup fazı korunur
   });
 });

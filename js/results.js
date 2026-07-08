@@ -781,7 +781,7 @@ function veRenderDetailedReport(filter) {
   transHTML += row('Şanzıman', R.gbName);
   transHTML += row('Şanzıman Ailesi', R.gbFamily);
   transHTML += row('Şanzıman Verimi', R.gbEff.toFixed(1) + '%');
-  transHTML += row('Tork Konvertörü', R.tcName);
+  if(R.hasTC) transHTML += row('Tork Konvertörü', R.tcName);
   transHTML = tableWrap(transHTML);
   
   // ═══ KONTROL ═══
@@ -868,7 +868,8 @@ function veRenderDetailedReport(filter) {
   
   // ═══ KONVERTÖR DEĞERLENDİRMESİ ═══
   var ecmHTML = '';
-  if(R.torqueData.length > 2 && typeof VE_FT_TC_PRESETS !== 'undefined' && typeof veGetFamilyTCKeys === 'function') {
+  // Konvertör değerlendirmesi yalnız TK veya Motor-TC Eşleştirme (ECM) bileşeni varsa
+  if((R.hasTC || R.hasECM) && R.torqueData.length > 2 && typeof VE_FT_TC_PRESETS !== 'undefined' && typeof veGetFamilyTCKeys === 'function') {
     var _pDrop = R.pumpDrop || 17.6;
     var _tRating = R.turbineRating || 3320;
     var _gov = R.governed;
@@ -974,9 +975,10 @@ function veRenderDetailedReport(filter) {
     {id:'platform', title:'PLATFORM', content: platformHTML},
     {id:'engine', title:'MOTOR', content: motorHTML + '<div style="height:16px;"></div><div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px; padding-left:24px;">Motor Kayıpları (Governed Devirde Güç)</div><div style="height:8px;"></div>' + accHTML + '<div style="height:16px;"></div><div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px; padding-left:24px;">Motor Detayları</div><div style="height:8px;"></div>' + motorDetailHTML},
     {id:'transmission', title:'ŞANZIMAN', content: transHTML + '<div style="height:16px;"></div><div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px; padding-left:24px;">Kontrol</div><div style="height:8px;"></div>' + controlHTML},
-    {id:'ecm', title:'KONVERTÖR DEĞERLENDİRMESİ', content: ecmHTML},
     {id:'driveline', title:'AKTARMA ORGANLARI', content: driveHTML}
   ];
+  // Konvertör Değerlendirmesi bölümü yalnız TK veya Motor-TC Eşleştirme varsa gösterilir
+  if(R.hasTC || R.hasECM) sections.splice(3, 0, {id:'ecm', title:'KONVERTÖR DEĞERLENDİRMESİ', content: ecmHTML});
   
   // ═══ HTML oluştur ═══
   var html = '';
@@ -2832,8 +2834,8 @@ function veBuildFTStepsFromSim(sim, transferLabel) {
       var ratio = s.te / mg_kN;
       if(ratio <= 0.605 && ratio >= 0.30) { mp060done = true; return '%60 Çekiş/Ağırlık'; }
     }
-    // RPM yüzdeleri (sadece 1C)
-    if(s.gear === '1C') {
+    // RPM yüzdeleri (yalnız 1. vites — TK'li '1C' ve TK'siz '1' hepsi eşleşir)
+    if(s.gear.replace(/[CL]$/, '') === '1') {
       var rpmPct = s.engineRPM / governed * 100;
       if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; return '%70'; }
       if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; return '%80'; }
@@ -2846,8 +2848,9 @@ function veBuildFTStepsFromSim(sim, transferLabel) {
   
   // Minimum speed interval per gear mode
   function getSpeedStep(gear) {
-    if(gear === '1C') return 1.0;
-    if(gear === '2C') return 1.5;
+    var gn = String(gear).replace(/[CL]$/, '');
+    if(gn === '1') return 1.0;
+    if(gn === '2') return 1.5;
     return 2.0;
   }
   
@@ -3093,7 +3096,7 @@ function _ftBuildLowRangeSteps(sim, ratioHigh, ratioLow, etaHigh, etaLow, m_kg, 
     };
     
     if(!mp060done && mg_kN > 0 && te / mg_kN <= 0.605 && te / mg_kN >= 0.30) { mp060done = true; s.matchPoint = '%60 Çekiş/Ağırlık'; }
-    if(s.gear === '1C') {
+    if(s.gear.replace(/[CL]$/, '') === '1') {
       var rpmPct = s.engineRPM / governed * 100;
       if(!mp70done && rpmPct >= 69.5 && rpmPct <= 71.0) { mp70done = true; s.matchPoint = '%70'; }
       if(!mp80done && rpmPct >= 79.5 && rpmPct <= 81.0) { mp80done = true; s.matchPoint = '%80'; }
