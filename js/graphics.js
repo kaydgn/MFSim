@@ -2478,22 +2478,24 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   r += ln('=', W) + '\n\n';
 
   // Box table
-  var LW = 42;
-  var RW = 33;
-  var TW = LW + RW + 3;
+  var LW = 34;   // etiket sütunu (değer sütununa yer açmak için daraltıldı)
+  var RW = 41;   // değer sütunu (uzun motor/şanzıman adları taşmasın)
+  var TW = LW + RW + 1;  // iç bölme tek '+' → dış bordür genişliği = LW+1+RW (satırlarla eşit)
 
   function boxTable(sections) {
+    // Hücre genişliğini aşan metni kırp — kutu bordürü asla bozulmasın
+    function clip(s, w) { s = ascii(s); return s.length > w ? s.slice(0, w - 1) + '~' : s; }
     var rb = '';
     rb += '  +' + ln('-', TW) + '+\n';
     rb += '  |' + pad('PERFORMANS OZET TABLOSU', TW, 'center') + '|\n';
 
     sections.forEach(function(sec) {
       rb += '  +' + ln('-', LW) + '+' + ln('-', RW) + '+\n';
-      rb += '  | ' + pad(sec.title, LW - 1) + '|' + pad('', RW) + '|\n';
+      rb += '  | ' + pad(clip(sec.title, LW - 2), LW - 1) + '|' + pad('', RW) + '|\n';
       rb += '  +' + ln('-', LW) + '+' + ln('-', RW) + '+\n';
 
       sec.rows.forEach(function(row) {
-        rb += '  | ' + pad(ascii(row.label), LW - 1) + '| ' + pad(ascii(row.value), RW - 2) + ' |\n';
+        rb += '  | ' + pad(clip(row.label, LW - 2), LW - 1) + '| ' + pad(clip(row.value, RW - 3), RW - 2) + ' |\n';
       });
     });
 
@@ -2507,15 +2509,16 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
   var boxSections = [];
 
-  // Genel Bilgiler
-  boxSections.push({ title: 'GENEL BILGILER', rows: [
-    { label: 'Motor', value: ascii(R.engineName) },
-    { label: 'Sanziman', value: ascii(R.gbName) },
-    { label: 'Tork Konvertoru', value: ascii(R.tcName) },
-    { label: 'Brut Agirlik (GVW)', value: numI(R.gvw) + ' kg' },
-    { label: 'Guc / Agirlik Orani', value: num(pwRatio, 2) + ' kW/ton' },
-    { label: 'Tork / Agirlik Orani', value: num(tqRatio, 1) + ' N.m/ton' }
-  ]});
+  // Genel Bilgiler — motor adındaki " | tork&güç" etiketini ayır (yalnız görünen ad)
+  var genelRows = [
+    { label: 'Motor', value: ascii(String(R.engineName).split(' | ')[0]) },
+    { label: 'Sanziman', value: ascii(R.gbName) }
+  ];
+  if (R.hasTC) genelRows.push({ label: 'Tork Konvertoru', value: ascii(R.tcName) });
+  genelRows.push({ label: 'Brut Agirlik (GVW)', value: numI(R.gvw) + ' kg' });
+  genelRows.push({ label: 'Guc / Agirlik Orani', value: num(pwRatio, 2) + ' kW/ton' });
+  genelRows.push({ label: 'Tork / Agirlik Orani', value: num(tqRatio, 1) + ' N.m/ton' });
+  boxSections.push({ title: 'GENEL BILGILER', rows: genelRows });
 
   // Motor Performansi
   boxSections.push({ title: 'MOTOR PERFORMANSI', rows: [
@@ -2587,8 +2590,8 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     boxSections.push({ title: 'VITES GECISLERI', rows: vRows });
   }
 
-  // Konvertor Eslesmesi
-  if (_ecmResults.length > 0) {
+  // Konvertor Eslesmesi — YALNIZ tork konvertörü varsa (TK yoksa gösterme, gerek yok)
+  if (R.hasTC && _ecmResults.length > 0) {
     var selEC = _ecmResults.find(function(e) { return e.name === R.tcName; }) || _ecmResults[0];
     var durStr = selEC.status === 'recommended' ? 'Onerilen' : selEC.status === 'caution' ? 'Dikkat' : 'Onerilmez';
     boxSections.push({ title: 'KONVERTOR ESLESMESI', rows: [

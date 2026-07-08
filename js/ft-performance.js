@@ -1078,7 +1078,10 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       var ng = nodeData[gearboxNode.id];
       var N_turb2 = ph.isLockup ? ph.N_engine : ph.N_engine * ph.SR;
       var gbOutRpm = N_turb2 / ph.i_gear;
-      var gbOutTorque = ph.T_output * ph.i_gear * ph.eta_gear;
+      // Dişli verimi TE/fizik formülünde uygulanmaz (T_output zaten dişli mek.
+      // kaybını içerir; calcTractiveEffort gearbox slot=1.0). Sinyalde de çift
+      // uygulamamak için T_output·i_gear kullanılır → sinyal zinciri F_traction ile birebir.
+      var gbOutTorque = ph.T_output * ph.i_gear;
       var gbP_in = ph.T_output * N_turb2 * Math.PI / 30 / 1000;
       var gbP_out = gbOutTorque * gbOutRpm * Math.PI / 30 / 1000;
       var gearNum2 = ph.gearName.replace(/[^0-9]/g, '');
@@ -1092,13 +1095,15 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       if(ng.gear) ng.gear.push(ph.gearIdx + 1);
       if(ng.ratio) ng.ratio.push(ph.i_gear);
       if(ng.gear_mode) ng.gear_mode.push(veGearModeLabel(gearNum2, ph.isLockup));
-      if(ng.efficiency) ng.efficiency.push(ph.eta_gear * 100);
+      // Dişli kaybı T_output'ta (motor→şanzıman-giriş torku düşüşünde) modellenir;
+      // sinyal aşamasında şanzıman saf oran (P_out=P_in) → verim gerçek güç oranından.
+      if(ng.efficiency) ng.efficiency.push(gbP_in > 0 ? (gbP_out / gbP_in * 100) : 100);
     }
 
     // ── PROPŞAFT, TRANSFER, DİFERANSİYEL SİNYALLERİ ──
     var N_turb_rec = ph.isLockup ? ph.N_engine : ph.N_engine * ph.SR;
     var gbOutRpm_rec = N_turb_rec / ph.i_gear;
-    var gbOutTorque_rec = ph.T_output * ph.i_gear * ph.eta_gear;
+    var gbOutTorque_rec = ph.T_output * ph.i_gear;  // dişli verimi T_output'ta (çift-sayım yok)
 
     // Shift Controller
     if(shiftCtrlNode && nodeData[shiftCtrlNode.id]) {
