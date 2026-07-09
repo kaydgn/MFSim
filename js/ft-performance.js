@@ -92,11 +92,16 @@ var FT_SOLVER = (function() {
     var rpms = sorted.map(function(d) { return d.rpm; });
     var torques = sorted.map(function(d) { return d.torque; });
     var spline = pchipCreate(rpms, torques);
+    var tableMaxRpm = rpms[rpms.length - 1];   // tablo verisinin en yüksek devri
 
     return function(rpm) {
       if(rpm <= 0) return 0;
       var T_net = pchipEval(spline, rpm);
-      if(noLoadGoverned > governedSpeed && rpm > governedSpeed) {
+      // Sentetik governor droop YALNIZCA tablo governor bölgesini KAPSAMIYORSA uygulanır.
+      // L5D gibi tablo governed'ı aşıp no-load'da sıfıra iniyorsa (ör. 3600→0), droop
+      // zaten veridedir → çift-droop olmaması için sentetik olanı UYGULAMA (PCHIP tabloyu izler).
+      // Tablo yalnız governed'a kadarsa (üstü düz ekstrapolasyon) sentetik droop gerekir.
+      if(noLoadGoverned > governedSpeed && rpm > governedSpeed && tableMaxRpm < noLoadGoverned) {
         if(rpm >= noLoadGoverned) return 0;
         var frac = (rpm - governedSpeed) / (noLoadGoverned - governedSpeed);
         T_net = T_net * (1 - frac);
@@ -203,6 +208,33 @@ var FT_SOLVER = (function() {
       if(hi - lo < 0.5) break;
     }
     return (lo + hi) / 2;
+  }
+
+  // OTURMUŞ STALL çalışma noktası (v=0, türbin kilitli, SR=0) — eğim/kalkış METRİKLERİ için.
+  // Motor rölantiden yukarı taranır; net motor torku ile pompa emişi (N/K_pump(0))²
+  // arasındaki FAZLALIK'ın ilk YEREL MİNİMUMU = teğetlik/asılma noktası (motorun kalkışta
+  // fiilen oturduğu devir, ör. L5D+TC-415'te ~1000-1050). Bu, tam gaz stall'ında motorun
+  // 2334'e kaçmadan asılı kaldığı yerdir. Teğetlik toleransı (tol), fazlalık tam sıfırı
+  // kesmese de (marjinal kombinasyon) yüksek köke kaçmayı önler; fazlalık sıfırı geçerse
+  // (gerçek düşük denge) o kesişim kullanılır.
+  function computeSettledStall(motorTorqueFn, tcFns, pumpDrop, idleRpm, options) {
+    var opts = options || {};
+    var tol = (opts.tol != null) ? opts.tol : 15;   // N·m — teğetlik eşiği
+    var nMax = opts.nMax || 2600;
+    var stepN = opts.step || 5;
+    var K0 = tcFns.kpump(0);
+    var tau0 = tcFns.tau(0);
+    var prevExcess = Infinity, minExcess = Infinity, minN = idleRpm, chosenN = null;
+    for(var N = idleRpm; N <= nMax; N += stepN) {
+      var excess = motorTorqueFn(N) - pumpDrop - (N * N) / (K0 * K0);
+      if(excess < minExcess) { minExcess = excess; minN = N; }
+      if(excess <= 0) { chosenN = N; break; }                                 // gerçek düşük denge
+      if(excess > prevExcess && minExcess <= tol) { chosenN = minN; break; }  // teğetlik/asılma
+      prevExcess = excess;
+    }
+    if(chosenN === null) chosenN = minN;   // teğetlik yoksa en düşük fazlalık noktası
+    var T_pump = (chosenN * chosenN) / (K0 * K0);
+    return { N_engine: chosenN, T_pump: T_pump, T_turbine: T_pump * tau0, tau: tau0, SR: 0, minExcess: minExcess };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -334,6 +366,7 @@ var FT_SOLVER = (function() {
     pchipCreate: pchipCreate, pchipEval: pchipEval, lerpTable: lerpTable,
     createMotorTorqueFn: createMotorTorqueFn,
     createTCFunctions: createTCFunctions, solveTCOperatingPoint: solveTCOperatingPoint,
+    computeSettledStall: computeSettledStall,
     calcEquivalentMass: calcEquivalentMass,
     calcResistForces: calcResistForces, calcTractiveEffort: calcTractiveEffort,
     limitByGrip: limitByGrip,
@@ -1478,6 +1511,46 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     })()
   };
 
+  // ── OTURMUŞ STALL (v=0) — eğim/kalkış METRİKLERİ için (transient t=0 satırı yerine) ──
+  // Motor kalkışta anlık dengeye atlamaz; teğetlikte ~1000-1050 rpm'de oturur. Eğim
+  // kabiliyeti bu OTURMUŞ noktadan hesaplanmalı (iSCAAN C03: ~1023 rpm / türbin ~553).
+  // Çekiş, sim converter dalıyla BİREBİR aynı formülle üretilir → tutarlı.
+  var settledStall = null;
+  if(tcNode && hasTCData) {
+    var _ss = FT_SOLVER.computeSettledStall(motorTorqueFn, tcFns, pumpTorqueDrop, idleRpm);
+    var _iGear1 = parseFloat(forwardGears[0].ratio) || 1.0;
+    var _etaConv = tcd.etaConvInternal || 0.975;
+    var _Tout = _ss.T_turbine * _etaConv;
+    var _TE = FT_SOLVER.calcTractiveEffort(_Tout, _iGear1, 1.0, i_propshaft, psEff,
+                                           i_transfer, eta_transfer, i_axle, eta_axle, r_tire);
+    _TE = FT_SOLVER.limitByGrip(_TE, F_grip);
+    var _Froll0 = FT_SOLVER.getCrrEffective(Crr, 0) * (surfFactor || 1.0) * m_vehicle * 9.81; // v=0, düz yol
+    settledStall = {
+      N_engine: _ss.N_engine, T_turbine: _ss.T_turbine, T_pump: _ss.T_pump,
+      TE_kN: _TE / 1000, DP_kN: (_TE - _Froll0) / 1000
+    };
+  }
+
+  // ── DÜŞÜK-HIZ (~10 km/h) QUASİ-STATİK ÇALIŞMA NOKTASI — düşük-hız eğim metriği için ──
+  // Transient iz o hızda motor henüz tam oturmadığından (kopuş yeni bitmiş) çekişi düşük
+  // okur. Düşük-hız eğim kabiliyeti motorun O HIZDA oturduğu dengeden hesaplanmalı.
+  var lowSpeedOp = null;
+  if(tcNode && hasTCData) {
+    var _vRef = 10 / 3.6;  // m/s
+    var _iG1 = parseFloat(forwardGears[0].ratio) || 1.0;
+    var _Nturb = FT_SOLVER.speedToTurbineRpm(_vRef, _iG1, i_propshaft, i_transfer, i_axle, r_tire);
+    var _op = FT_SOLVER.solveTCOperatingPoint(_Nturb, motorTorqueFn, tcFns, pumpTorqueDrop,
+                                              { N_min: idleRpm, N_max: noLoadGoverned + 100 });
+    var _etaC2 = tcd.etaConvInternal || 0.975;
+    var _To2 = _op.T_turbine * _etaC2;
+    var _TE2 = FT_SOLVER.calcTractiveEffort(_To2, _iG1, 1.0, i_propshaft, psEff,
+                                            i_transfer, eta_transfer, i_axle, eta_axle, r_tire);
+    _TE2 = FT_SOLVER.limitByGrip(_TE2, F_grip);
+    var _Froll10 = FT_SOLVER.getCrrEffective(Crr, _vRef) * (surfFactor || 1.0) * m_vehicle * 9.81;
+    var _Faero10 = 0.5 * rho * Cd * A_frontal * _vRef * _vRef;
+    lowSpeedOp = { v_kmh: 10, TE_kN: _TE2 / 1000, DP_kN: (_TE2 - _Froll10 - _Faero10) / 1000 };
+  }
+
   return {
     time: timeArr,
     mode: 'full-throttle',
@@ -1505,6 +1578,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     WP: res_WP,
     netGrade: res_netGrade,
     heatRejection: res_heatRej,
+    settledStall: settledStall,   // v=0 oturmuş stall (eğim metrikleri için)
+    lowSpeedOp: lowSpeedOp,       // ~10 km/h quasi-statik nokta (düşük-hız eğim metriği için)
     // ── Enerji Dengesi ──
     P_engine: res_P_engine,
     P_wheel: res_P_wheel,
@@ -1729,7 +1804,16 @@ function veCalculateGradeability(simResult) {
     cleaned.push(ftData[ci]);
   }
   ftData = cleaned;
-  
+
+  // ── OTURMUŞ STALL enjeksiyonu (Fix A) ──
+  // ftData[0] transient t=0 satırıdır (motor rölantide, ~700 rpm) → v=0 stall eğimi
+  // yanlış (düşük) çıkar. Stall eğimi motorun OTURDUĞU teğet noktadan (~1023 rpm)
+  // hesaplanmalı. simResult.settledStall bu noktanın çekiş/DP'sini taşır (sim ile tutarlı).
+  if(simResult.settledStall && ftData.length > 0 && ftData[0].v_kmh < 0.5) {
+    ftData[0] = { gear: ftData[0].gear, v_kmh: 0,
+                  dp_kN: simResult.settledStall.DP_kN, te_kN: simResult.settledStall.TE_kN };
+  }
+
   // Aktif transfer oranı
   var trGears = rs.transferGears || [];
   var activeRatio = ss.transferRange ? (parseFloat(ss.transferRange.ratio || ss.transferRange.oran) || 1.0) : (trGears.length > 0 ? trGears[0].ratio : 1.0);
@@ -1741,7 +1825,17 @@ function veCalculateGradeability(simResult) {
   result.high.label = rs.hasTransfer && trGears.length > 1 ?
     'Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')' :
     'Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')';
-  
+
+  // Düşük-hız eğimini quasi-statik (~10 km/h oturmuş) noktadan override et (Fix A §1.3.3) —
+  // transient iz o hızda motoru tam oturmamış gösterip çekişi düşük okuyor.
+  if(simResult.lowSpeedOp) {
+    var _mgH = m_kg * 9.81 / 1000;
+    var _dpL = simResult.lowSpeedOp.DP_kN;
+    result.high.lowSpeedGrade = (_dpL / _mgH >= 1.0) ? 999.0
+      : Math.round(Math.tan(Math.asin(_dpL / _mgH)) * 100 * 10) / 10;
+    result.high.lowSpeedV = simResult.lowSpeedOp.v_kmh;
+  }
+
   // Düşük kademe (ikinci transfer oranı varsa)
   result.low = null;
   if(rs.hasTransfer && trGears.length > 1) {
