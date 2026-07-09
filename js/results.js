@@ -77,6 +77,27 @@ function veSwitchSolverTab(tabId) {
   }
 }
 
+// Çözümü ETKİLEYEN bir girdi (Cd, GVW, alın alanı, oran…) değiştiğinde, önceki
+// simülasyon sonucu artık BAYAT'tır: detaylı rapor girdi değerlerini (Cd, alan,
+// ağırlık…) çözüm ANINDAKİ reportSnapshot'tan okur — kullanıcı Cd'yi düzeltse bile
+// yeniden çözmeden rapor eski değeri (ör. varsayılan 0.9) göstermeye devam eder ve
+// bu bayat snapshot projeyle birlikte kaydedilip yeniden açılışta da 0.9 gelir.
+// Bu yardımcı, saklanan sonucu geçersiz kılar; kullanıcı yeniden çözünce rapor
+// güncel girdilerle tutarlı üretilir. Sonuç yoksa hiçbir şey yapmaz (gürültüsüz).
+// _silent=true → kullanıcıya toast gösterme (toplu/dolaylı çağrılar için).
+function veInvalidateStaleSimResults(reasonMsg, _silent) {
+  if(typeof window === 'undefined' || !window.veSimResults) return false;
+  window.veSimResults = null;
+  // Aktif sekmenin saklı sonucunu da temizle ki sekme/rapor tutarlı kalsın.
+  try {
+    if(typeof veTabs !== 'undefined' && veTabs[veActiveTabIdx] && veTabs[veActiveTabIdx].state) {
+      veTabs[veActiveTabIdx].state.simResults = null;
+    }
+  } catch(e) {}
+  if(!_silent && reasonMsg && typeof showToast === 'function') showToast(reasonMsg, 'info');
+  return true;
+}
+
 // ===== SONUÇLAR: DATA BROWSER AĞACI =====
 function veUpdateResultsTree() {
   var tree = document.getElementById('ve-results-tree');

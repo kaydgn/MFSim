@@ -34,6 +34,17 @@ function veSerializeCurrentState() {
 }
 
 function veSaveActiveTabState() {
+  // YENİDEN-GİRİŞ KORUMASI: Bir alt-topoloji (Araç Performans / Takoz) giriş-çıkış
+  // işlemi HÂLÂ sürerken (_veAracBusy/_veMntBusy true — atomik canvas takası ortası)
+  // buraya sıçranırsa (örn. veAracOpenEditor → veLoadTabState → veUpdateResultsTree
+  // yeniden-girişli olarak veSaveActiveTabStateKeepView'i çağırır), canlı canvas henüz
+  // köke ÇÖKMEMİŞ düz alt-topolojidir; şimdi serialize etmek tab.state'e composite
+  // yerine 16 düğümlü DÜZ alt-topolojiyi yazar ve "Araç Performans" sarmalayıcısını
+  // kaybederiz (kaydedilen dosya bozulur). Dıştaki işlem bitince doğru kök durumu
+  // zaten yazılacağı için burada sessizce çık.
+  if((typeof _veAracBusy !== 'undefined' && _veAracBusy) ||
+     (typeof _veMntBusy !== 'undefined' && _veMntBusy)) return;
+
   // Bir "Araç Performans" alt-topolojisi içindeysek, kaydetmeden/sekme değiştirmeden
   // önce köke (ana topoloji) çık — böylece canlı canvas alt-topoloji değil kök olur
   // ve serileştirme doğru durumu yazar (alt-topoloji ilgili düğümün data'sına saklı).
