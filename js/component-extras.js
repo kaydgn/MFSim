@@ -1795,10 +1795,25 @@ function onVEFTVehicleParamChange(nodeId) {
   var node = nodes.find(function(n) { return n.id === nodeId; });
   if(!node) return;
   if(!node.data) node.data = {};
-  
+
   var g = function(suffix) { return document.getElementById('ve-ftv-' + suffix + '-' + nodeId); };
-  
+
   var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
+
+  // Çözümü etkileyen aero/kütle parametrelerinin ESKİ değerlerini (varsayılana
+  // normalize ederek) yakala. undefined→varsayılan sayılır ki DOM'daki varsayılanın
+  // node.data'ya ilk kez yazılması (gerçek kullanıcı değişikliği değil) yanlışlıkla
+  // "değişti" sayılıp sonucu gereksiz yere geçersiz kılmasın.
+  var nrm = function(v, def) { return (v === undefined || v === null) ? def : v; };
+  var prev = {
+    gvw:    nrm(node.data.ftGVW, 14900),
+    driven: nrm(node.data.ftDrivenWeight, 100),
+    height: nrm(node.data.ftHeight, 3.200),
+    width:  nrm(node.data.ftWidth, 2.500),
+    cd:     nrm(node.data.ftCd, 0.900),
+    rho:    nrm(node.data.ftRho, 1.225)
+  };
+
   if(g('name')) node.data.ftVehName = g('name').value || 'BMC 4x4 2.5T';
   if(g('gvw')) node.data.ftGVW = pf(g('gvw').value, 14900);
   if(g('driven')) node.data.ftDrivenWeight = pf(g('driven').value, 100);
@@ -1814,6 +1829,21 @@ function onVEFTVehicleParamChange(nodeId) {
   var A = h * w;
   if(g('area')) g('area').value = A.toFixed(3);
   if(g('cda')) g('cda').value = (cd * A).toFixed(3);
+
+  // Çözümü etkileyen bir aero/kütle parametresi GERÇEKTEN değiştiyse, önceki
+  // simülasyon sonucu ve raporun okuduğu reportSnapshot artık bayat. Kullanıcı
+  // Cd'yi düzeltse bile rapor eski değeri (ör. varsayılan 0.9) gösterirdi; sonucu
+  // geçersiz kılarak raporu güncel girdilerle yeniden çözülmeye zorlarız.
+  var changed =
+    prev.gvw    !== nrm(node.data.ftGVW, 14900) ||
+    prev.driven !== nrm(node.data.ftDrivenWeight, 100) ||
+    prev.height !== nrm(node.data.ftHeight, 3.200) ||
+    prev.width  !== nrm(node.data.ftWidth, 2.500) ||
+    prev.cd     !== nrm(node.data.ftCd, 0.900) ||
+    prev.rho    !== nrm(node.data.ftRho, 1.225);
+  if(changed && typeof veInvalidateStaleSimResults === 'function') {
+    veInvalidateStaleSimResults('Araç parametresi değişti — sonuçlar güncelliğini yitirdi, raporu yenilemek için yeniden çözün');
+  }
 }
 
 // Yol özellikleri - eğim, mesafe, zaman
