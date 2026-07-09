@@ -258,11 +258,16 @@ describe('Eğim Kabiliyeti — TK\'siz stall/launch kalkış kabiliyetinden (RÖ
     expect(String(G.high.stallGear).replace(/[^0-9]/g, '')).toBe('1');  // kalkış 1. viteste
   });
 
-  test('TK VAR: stall eğimi v=0 (konvertör stall) noktasından — davranış korunur', () => {
+  test('TK VAR: stall eğimi OTURMUŞ konvertör-stall noktasından (v=0 transient DEĞİL) — REV3 Fix A', () => {
     buildNoTCTopology('duramax_lz0_305', { ftGVW: 8000 }, TC);
     const R = veFTRunSimulationEngine();
     const G = veCalculateGradeability(R);
     expect(G && G.high).toBeTruthy();
-    expect(G.high.stallGrade).toBeCloseTo(Math.round(gradeFromV0(R) * 10) / 10, 0); // v=0 tabanlı (değişmedi)
+    // REV3 Fix A: stall eğimi artık motorun OTURDUĞU konvertör-stall noktasından
+    // (settledStall) hesaplanıyor — t=0 rölanti transient satırından DEĞİL. Simülasyon
+    // izi (Option A: rölantiden başlama) korunur; yalnız METRİK hesabı düzeltildi.
+    // Bu yüzden stall eğimi v=0 tabanlı değerden belirgin YÜKSEK olmalı.
+    expect(R.settledStall).toBeTruthy();
+    expect(G.high.stallGrade).toBeGreaterThan(gradeFromV0(R) + 2);
   });
 });
