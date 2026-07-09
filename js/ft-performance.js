@@ -435,6 +435,9 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   var pumpTorqueDrop = tcd.pumpTorqueDrop !== undefined ? parseFloat(tcd.pumpTorqueDrop) : 17.6;
   var I_conv = tcNode ? 0.5 : 0.0;           // TC toplam atalet (lockup modda) — TK yoksa 0
   var I_conv_turbine = tcNode ? 0.3 : 0.0;   // TC türbin ataleti (converter modda) — TK yoksa 0
+  // Converter-mod rev-up ataleti: motor krank+volan + konvertör pompası (impeller tarafı).
+  // Kalkışta motorun idle→stall tırmanma hızını (dolayısıyla ~1 sn avansı) belirler.
+  var I_eng_rev = I_engine + Math.max(0, I_conv - I_conv_turbine);
 
   var tcFns = FT_SOLVER.createTCFunctions(tcDataArr);
   var hasTCData = tcDataArr.length >= 2;
@@ -638,9 +641,12 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
     if(!isLU) {
       // ── CONVERTER MOD ──
-      // N_out = şanzıman çıkış devri = N_turbine / i_gear = N_engine × SR / i_gear
+      // N_out = şanzıman çıkış devri. KİNEMATİK (araç hızından) — dinamik motor
+      // devrinde SR 0.99'a kısılabildiği için N_engine×SR/i_gear güvenilmez;
+      // çıkış mili devri yalnız araç hızına + downstream oranlara bağlıdır.
+      // (SR kısılmadığında N_engine×SR/i_gear ile birebir aynı değer.)
       var i_gear_current = parseFloat(getCurrentGearData().ratio) || 1.0;
-      var N_out = N_engine * SR / i_gear_current;
+      var N_out = (v_kmh / 3.6 / r_tire) * (i_propshaft * i_transfer * i_axle) * 60 / (2 * Math.PI);
 
       if(g === 0) {
         // 1C → 2C: converterShifts varsa a×ESL+b, yoksa oran×N_ref
@@ -748,6 +754,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     var isLU = shiftState.isLockup;
 
     var N_engine, T_engine, T_output, T_pump, SR, tau, tcEta;
+    var engRate = null;   // converter modda motor devri değişim hızı [rpm/s]; lockup/no-TC'de null (hıza kilitli)
 
     var heatRejection_kW = 0;  // TC/Lockup ısı reddi [kW]
 
@@ -800,29 +807,38 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         heatRejection_kW = Math.max(0, hrCoeff.a * N_engine + hrCoeff.b);
       }
     } else {
-      // ── CONVERTER MOD ──
-      // N_turbine'i hızdan hesapla
+      // ── CONVERTER MOD — motor devri DİNAMİK durum (rev-up ataleti) ──
+      // Motor tam gaz kalkışta anlık dengeye ATLAMAZ; rölantiden tork konvertörüne
+      // karşı devir alır. f(N)=T_net−emiş teğetliği ~1000 rpm'de olduğundan motor
+      // orada asılıp (crawl) sonra kopar — iSCAAN'ın "1023→kopuş→~2400" profili budur.
+      // N_eng_dynamic ana döngüde entegre edilen motor devridir (bu adımda sabit okunur).
       var N_turbine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
       if(N_turbine < 0) N_turbine = 0;
 
-      // TC bisection ile motor çalışma noktasını bul
-      var tcResult = FT_SOLVER.solveTCOperatingPoint(
-        N_turbine, motorTorqueFn, tcFns, pumpTorqueDrop,
-        { N_min: idleRpm, N_max: noLoadGoverned + 100 }
-      );
-      N_engine = tcResult.N_engine;
-      T_engine = tcResult.T_engine;
-      T_pump = tcResult.T_pump;
-      var T_turbine_raw = tcResult.T_turbine;  // Türbin torku (TC çıkışı)
-      SR = tcResult.SR;
-      tau = tcResult.tau;
+      N_engine = N_eng_dynamic;
+      if(N_engine < idleRpm) N_engine = idleRpm;
+      SR = Math.min(0.99, Math.max(0, N_turbine / N_engine));
+      tau = tcFns.tau(SR);
+      T_engine = motorTorqueFn(N_engine);
+
+      // Konvertörün emdiği pompa torku (anlık, SR'ye bağlı K-faktör) — denge DEĞİL
+      var _Kp = tcFns.kpump(SR);
+      var T_pump_absorbed = (N_engine * N_engine) / (_Kp * _Kp);
+      T_pump = T_pump_absorbed;
+
+      // Motor NET (ivmelendirici) torku → dönme ataletini hızlandırır (rev-up dinamiği)
+      // Denge noktasında (T_eng_net=0) eski davranışla birebir örtüşür.
+      var T_eng_net = T_engine - pumpTorqueDrop - T_pump_absorbed;
+      engRate = (T_eng_net / I_eng_rev) * (60 / (2 * Math.PI));  // [rpm/s]
+
+      var T_turbine_raw = T_pump_absorbed * tau;  // türbine aktarılan tork (tork çarpımı)
       // Konvertör iç verim: pompa verimsizliği + gear mekanik kayıp
       var eta_conv_internal = tcd.etaConvInternal || 0.975;
       T_output = T_turbine_raw * eta_conv_internal;
-      tcEta = tcResult.eta * eta_conv_internal;
-      // Converter ısı reddi: TC kaybı + gear mekanik kayıp ısısı
+      tcEta = (SR * tau) * eta_conv_internal;
+      // Converter ısı reddi: TC slip kaybı + gear mekanik kayıp ısısı
       var omega_eng = N_engine * 2 * Math.PI / 60;
-      var P_heat_converter = T_pump * omega_eng * (1 - SR * tau) / 1000;
+      var P_heat_converter = T_pump_absorbed * omega_eng * (1 - SR * tau) / 1000;
       var P_turbine_kW = T_turbine_raw * (N_engine * SR) * 2 * Math.PI / 60 / 1000;
       var P_heat_gear_mech = P_turbine_kW * (1 - eta_conv_internal);
       heatRejection_kW = Math.max(0, P_heat_converter) + Math.max(0, P_heat_gear_mech);
@@ -869,6 +885,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
     return {
       accel: accel,
+      engRate: engRate,
       N_engine: N_engine,
       T_engine: T_engine,
       T_pump: T_pump,
@@ -953,6 +970,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   var t = 0;
   var v = 0;       // m/s — başlangıç hızı = 0 (tam gaz kalkış)
+  var N_eng_dynamic = idleRpm;   // MOTOR DEVRİ — dinamik durum; kalkışta rölantiden başlar (rev-up)
   var dist = 0;    // m
   var step = 0;
   var maxSteps = Math.ceil(maxTime / dt);
@@ -1338,6 +1356,20 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     dist += (v + v_new) / 2 * dt_step;  // Trapez kuralı ile mesafe
     v = v_new;
     t += dt_step;
+
+    // ── MOTOR DEVRİ DİNAMİĞİ (rev-up ataleti) ──
+    // Converter modda: net motor torku devri değiştirir (idle→stall tırmanışı,
+    // teğetlikte asılma, kopuş). Denge yakınında hız hızlı olduğundan eski
+    // yarı-statik sonuçlarla örtüşür → orta/üst hız davranışı korunur.
+    // Lockup / no-TC modda motor devri hıza kilitlidir (engRate=null).
+    if(ph.engRate !== null && ph.engRate !== undefined) {
+      N_eng_dynamic += ph.engRate * dt_step;
+      var _nMax = Math.max(noLoadGoverned, governedSpeed) + 100;
+      if(N_eng_dynamic < idleRpm) N_eng_dynamic = idleRpm;
+      else if(N_eng_dynamic > _nMax) N_eng_dynamic = _nMax;
+    } else {
+      N_eng_dynamic = ph.N_engine;  // lockup / no-TC: motor hıza kilitli
+    }
   }
 
   // Son adımı kaydet (eğer henüz kaydedilmediyse)
