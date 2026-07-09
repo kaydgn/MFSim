@@ -98,8 +98,11 @@ describe('REV3 Fix A — eğim metrikleri oturmuş noktadan (transient değil)',
     expect(R.settledStall.TE_kN).toBeLessThan(30);
   });
 
-  test('simülasyon izi hâlâ rölantiden başlar (Option A korunmuş)', () => {
-    expect(R.rpm[0]).toBeLessThan(900);   // t=0 fiziksel idle (~700)
+  test('simülasyon izi konvertör-eşleşme noktasından başlar (Option B — tutma modeli)', () => {
+    // t=0 motor rölantide DEĞİL, konvertör-eşleşme düşük dalında TUTULUR
+    // (iSCAAN 1023 bandı). Motor düşük hızda oyalanır, sonra kopup yükselir.
+    expect(R.rpm[0]).toBeGreaterThanOrEqual(950);
+    expect(R.rpm[0]).toBeLessThanOrEqual(1120);
   });
 
   test('stall eğim yanlış andan değil oturmuş noktadan → makul (transient 9.5% DEĞİL)', () => {

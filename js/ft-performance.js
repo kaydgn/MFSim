@@ -471,6 +471,11 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   // Converter-mod rev-up ataleti: motor krank+volan + konvertör pompası (impeller tarafı).
   // Kalkışta motorun idle→stall tırmanma hızını (dolayısıyla ~1 sn avansı) belirler.
   var I_eng_rev = I_engine + Math.max(0, I_conv - I_conv_turbine);
+  // Konvertör-eşleşme (düşük dal) kopuş eşiği [N·m]: kalkışta motor, teğet bölgesindeki
+  // net-tork fazlalığı bu eşiğin ALTINDA olduğu sürece eşleşme noktasında TUTULUR (oyalanır,
+  // iSCAAN gibi). Fazlalık eşiği aşınca (araç ~5-6 km/h) düşük dal bozulur → motor KOPAR ve
+  // serbest rev-up ile yüksek dala tırmanır. Değer iSCAAN kopuş hızına göre kalibre.
+  var CONV_MATCH_THRESHOLD = 45;
 
   var tcFns = FT_SOLVER.createTCFunctions(tcDataArr);
   var hasTCData = tcDataArr.length >= 2;
@@ -788,6 +793,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
     var N_engine, T_engine, T_output, T_pump, SR, tau, tcEta;
     var engRate = null;   // converter modda motor devri değişim hızı [rpm/s]; lockup/no-TC'de null (hıza kilitli)
+    var onLowBranch = false;   // converter modda motor konvertör-eşleşme (düşük dal) noktasında mı TUTULUYOR
 
     var heatRejection_kW = 0;  // TC/Lockup ısı reddi [kW]
 
@@ -840,29 +846,47 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         heatRejection_kW = Math.max(0, hrCoeff.a * N_engine + hrCoeff.b);
       }
     } else {
-      // ── CONVERTER MOD — motor devri DİNAMİK durum (rev-up ataleti) ──
-      // Motor tam gaz kalkışta anlık dengeye ATLAMAZ; rölantiden tork konvertörüne
-      // karşı devir alır. f(N)=T_net−emiş teğetliği ~1000 rpm'de olduğundan motor
-      // orada asılıp (crawl) sonra kopar — iSCAAN'ın "1023→kopuş→~2400" profili budur.
-      // N_eng_dynamic ana döngüde entegre edilen motor devridir (bu adımda sabit okunur).
+      // ── CONVERTER MOD — İKİ MODLU: konvertör-eşleşme TUTMA + kopuş rev-up ──
+      // Tam gazda motor önce KONVERTÖR-EŞLEŞME (düşük dal, ~1010 rpm) noktasında oyalanır
+      // (iSCAAN: 1023→1011). Teğet bölgesindeki net-tork fazlalığı eşiği (CONV_MATCH_THRESHOLD)
+      // aşınca eşleşme bozulur → motor KOPAR ve serbest rev-up ataletiyle yüksek dala tırmanır.
+      // Düşük dalda TE düşük (τ, SR ile azalır) olduğundan hızlanma iSCAAN'la örtüşür (~2.2 s).
       var N_turbine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
       if(N_turbine < 0) N_turbine = 0;
 
-      N_engine = N_eng_dynamic;
-      if(N_engine < idleRpm) N_engine = idleRpm;
+      // Düşük dal (konvertör-eşleşme) noktası: teğet bölgesinde (~850-1350) net motor torku
+      // ile pompa emişi arasındaki fazlalığın MİNİMUMU (motorun eşleştiği/oturduğu yer).
+      var _lmN = idleRpm, _lmE = Infinity;
+      for(var _nS = Math.max(idleRpm, 850); _nS <= 1350; _nS += 10) {
+        var _srS = Math.min(0.99, Math.max(0, N_turbine / _nS));
+        var _kpS = tcFns.kpump(_srS);
+        var _eS = motorTorqueFn(_nS) - pumpTorqueDrop - (_nS * _nS) / (_kpS * _kpS);
+        if(_eS < _lmE) { _lmE = _eS; _lmN = _nS; }
+      }
+      onLowBranch = (_lmE < CONV_MATCH_THRESHOLD);
+
+      if(onLowBranch) {
+        N_engine = _lmN;            // DÜŞÜK DAL — eşleşme noktasında TUT (quasi-statik oyalanma)
+      } else {
+        N_engine = N_eng_dynamic;   // YÜKSEK DAL — serbest rev-up ataleti (entegre edilen durum)
+        if(N_engine < idleRpm) N_engine = idleRpm;
+      }
       SR = Math.min(0.99, Math.max(0, N_turbine / N_engine));
       tau = tcFns.tau(SR);
       T_engine = motorTorqueFn(N_engine);
 
-      // Konvertörün emdiği pompa torku (anlık, SR'ye bağlı K-faktör) — denge DEĞİL
+      // Konvertörün emdiği pompa torku (anlık, SR'ye bağlı K-faktör)
       var _Kp = tcFns.kpump(SR);
       var T_pump_absorbed = (N_engine * N_engine) / (_Kp * _Kp);
       T_pump = T_pump_absorbed;
 
-      // Motor NET (ivmelendirici) torku → dönme ataletini hızlandırır (rev-up dinamiği)
-      // Denge noktasında (T_eng_net=0) eski davranışla birebir örtüşür.
-      var T_eng_net = T_engine - pumpTorqueDrop - T_pump_absorbed;
-      engRate = (T_eng_net / I_eng_rev) * (60 / (2 * Math.PI));  // [rpm/s]
+      if(onLowBranch) {
+        engRate = 0;   // düşük dalda motor devri eşleşme noktasında tutulur (dinamik yok)
+      } else {
+        // Motor NET (ivmelendirici) torku → dönme ataletini hızlandırır (kopuş rev-up).
+        var T_eng_net = T_engine - pumpTorqueDrop - T_pump_absorbed;
+        engRate = (T_eng_net / I_eng_rev) * (60 / (2 * Math.PI));  // [rpm/s]
+      }
 
       var T_turbine_raw = T_pump_absorbed * tau;  // türbine aktarılan tork (tork çarpımı)
       // Konvertör iç verim: pompa verimsizliği + gear mekanik kayıp
@@ -919,6 +943,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     return {
       accel: accel,
       engRate: engRate,
+      onLowBranch: onLowBranch,
       N_engine: N_engine,
       T_engine: T_engine,
       T_pump: T_pump,
@@ -1395,7 +1420,11 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     // teğetlikte asılma, kopuş). Denge yakınında hız hızlı olduğundan eski
     // yarı-statik sonuçlarla örtüşür → orta/üst hız davranışı korunur.
     // Lockup / no-TC modda motor devri hıza kilitlidir (engRate=null).
-    if(ph.engRate !== null && ph.engRate !== undefined) {
+    if(ph.onLowBranch) {
+      // DÜŞÜK DAL: motor devri konvertör-eşleşme noktasında tutulur. N_eng_dynamic'i
+      // buna eşitle → kopuş anında serbest rev-up bu noktadan (sürekli) başlar.
+      N_eng_dynamic = ph.N_engine;
+    } else if(ph.engRate !== null && ph.engRate !== undefined) {
       N_eng_dynamic += ph.engRate * dt_step;
       var _nMax = Math.max(noLoadGoverned, governedSpeed) + 100;
       if(N_eng_dynamic < idleRpm) N_eng_dynamic = idleRpm;
