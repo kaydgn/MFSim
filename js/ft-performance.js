@@ -747,6 +747,30 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       }
     }
 
+    // ── GOVERNED ÜST-VİTES GÜVENLİĞİ (over-rev / vites-atmama koruması) ──
+    // Motor governed devrini geçemez (üstünde tork droop'a girer, net çekiş → 0). Per-gear
+    // ÇIKIŞ eşikleri shift profili FARKLI bir motor/vites-oranı için kalibre olduğundan motor
+    // governed'a ulaşmadan tetiklenmeyebilir; özellikle TK-yok + derin vites oranlarında
+    // converter→lockup (2C→2L) çıkış eşiği, governed'daki çıkış devrinin ÜSTÜNDE kalıp mode-
+    // flip'i (ve dolayısıyla üst-vites geçişini) TAMAMEN bloke eder → motor no-load'a dayanıp
+    // 0 çekişte takılır. Bu güvenlik: motor governed'a ulaşınca ve üst vites varsa, mod/eşik
+    // ne olursa olsun ÜST vitese (lockup) geç. İyi kalibre profillerde normal eşik governed'ın
+    // altında tetiklendiğinden bu koşul no-op'tur (kalibre shift hızlarını etkilemez).
+    if(!shifted && g < maxGear && N_engine >= governedSpeed) {
+      var _iGcur = parseFloat(getCurrentGearData().ratio) || 1.0;
+      // TK VAR: yüksek viteste lockup'a geç. TK YOK: mode-flag anlamsız (converter yok) →
+      // false bırak; aksi halde downshift dalı (isLU gerektirir) her governed-güvenlik
+      // yükseltmesinden sonra hemen alt vitese düşürüp up/down HUNT üretir.
+      if(tcNode) shiftState.isLockup = true;
+      shiftState.shiftHistory.push({
+        t: t, fromGear: g, toGear: g + 1,
+        fromMode: veGearModeLabel(g + 1, shiftState.isLockup), toMode: veGearModeLabel(g + 2, shiftState.isLockup),
+        v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_engine / _iGcur, reason: 'governed-safety'
+      });
+      shiftState.gearIdx = g + 1;
+      shifted = true;
+    }
+
     // ── DOWNSHIFT KONTROLÜ ──
     // Lockup modda: N_out < downshift eşiği → alt vitese düş
     // Converter modda: downshift uygulanmaz (henüz hızlanma aşamasında)
