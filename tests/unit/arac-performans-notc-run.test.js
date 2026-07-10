@@ -247,15 +247,18 @@ describe('Eğim Kabiliyeti — TK\'siz stall/launch kalkış kabiliyetinden (RÖ
     return Math.tan(Math.asin(Math.min(0.999, Math.max(0, R.DP[0] / mg)))) * 100;
   }
 
-  test('TK YOK: stall/launch eğimi 1. viteste maks. DP\'den → v=0 rölantiden YÜKSEK', () => {
+  test('TK YOK: kalkış STALL noktasından (torque-peak) — v=0 izi rölanti DEĞİL', () => {
     buildNoTCTopology('duramax_lz0_305', { ftGVW: 8000 });   // orta-ağır, tork-limitli
     const R = veFTRunSimulationEngine();
     const G = veCalculateGradeability(R);
     expect(G && G.high).toBeTruthy();
-    // Düzeltme öncesi stall = v=0 (rölanti) değeriydi; düzeltme sonrası belirgin YÜKSEK
-    expect(G.high.stallGrade).toBeGreaterThan(gradeFromV0(R) + 2);
-    expect(G.high.launchGrade).toBeCloseTo(G.high.stallGrade, 1);       // TK yok → launch = stall
-    expect(String(G.high.stallGear).replace(/[^0-9]/g, '')).toBe('1');  // kalkış 1. viteste
+    // Doğrudan tahrikte kalkış artık RÖLANTİDEN değil, debriyaj kaydırarak torque-peak
+    // (stall) devrinden başlar → v=0 izi yüksek devir/çekiş; metrik ile İZ tutarlı olur.
+    expect(R.rpm[0]).toBeGreaterThan(R.reportSnapshot.idleRpm + 300);   // v=0 stall'da, rölantide (700) DEĞİL
+    expect(Math.abs(G.high.stallGrade - gradeFromV0(R))).toBeLessThan(3); // metrik v=0 izi ile tutarlı
+    expect(G.high.stallGrade).toBeGreaterThan(20);                       // anlamlı/yüksek (rölanti near-zero DEĞİL)
+    expect(G.high.launchGrade).toBeCloseTo(G.high.stallGrade, 1);        // TK yok → launch = stall
+    expect(String(G.high.stallGear).replace(/[^0-9]/g, '')).toBe('1');   // kalkış 1. viteste
   });
 
   test('TK VAR: sim izinin v=0 satırı = OTURMUŞ konvertör çalışma noktası (evrensel çalışma noktası)', () => {
