@@ -813,7 +813,11 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       // ── LOCKUP MOD (veya TC verisi yoksa) ──
       // N_engine = N_turbine (doğrudan bağlantı)
       N_engine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
-      if(N_engine < idleRpm) N_engine = idleRpm;
+      // TK yok: kalkışta debriyaj kaydırarak motor, kalkış-stall (torque-peak) devrinde TUTULUR
+      // (rölanti değil); araç hızlanıp rijit-bağlantı devri stall'ı aşınca motor onu izler.
+      // Lockup'ta (TK var, kilitli) taban rölanti — converter fazı stall'ı ayrıca ele alır.
+      var _floorRpm = (!tcNode) ? _noTcLaunchStall : idleRpm;
+      if(N_engine < _floorRpm) N_engine = _floorRpm;
       T_engine = motorTorqueFn(N_engine);
       SR = 1.0;
       tau = 1.0;
@@ -1060,7 +1064,20 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     ? FT_SOLVER.computeSettledStall(motorTorqueFn, tcFns, pumpTorqueDrop, idleRpm,
                                     { nMax: noLoadGoverned, tol: CONV_MATCH_THRESHOLD })
     : null;
-  var N_eng_dynamic = _settledOp ? _settledOp.N_engine : idleRpm;   // MOTOR DEVRİ — dinamik durum
+  // TK YOK (doğrudan tahrik) kalkış-stall devri: tam gazda debriyaj kaydırarak motor, net
+  // motor torkunun (dolayısıyla TE'nin) MAKSİMUM olduğu devri (torque-peak) tutar. Kalkış
+  // rölantiden DEĞİL bu stall noktasından başlar — WITH-TC evrensel çalışma noktasının
+  // doğrudan-tahrik karşılığı (konvertör oranı 1:1, stall başlangıç).
+  var _noTcLaunchStall = idleRpm;
+  if(!tcNode) {
+    var _pkT = -Infinity;
+    for(var _nP = idleRpm; _nP <= governedSpeed; _nP += 10) {
+      var _tP = motorTorqueFn(_nP);
+      if(_tP > _pkT) { _pkT = _tP; _noTcLaunchStall = _nP; }
+    }
+  }
+  var N_eng_dynamic = _settledOp ? _settledOp.N_engine
+                    : (!tcNode ? _noTcLaunchStall : idleRpm);   // MOTOR DEVRİ — dinamik durum
   var dist = 0;    // m
   var step = 0;
   var maxSteps = Math.ceil(maxTime / dt);
