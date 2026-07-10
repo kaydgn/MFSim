@@ -830,15 +830,18 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         var omega_dir = N_engine * 2 * Math.PI / 60;
         heatRejection_kW = Math.max(0, T_engine * omega_dir * (1 - eta_direct) / 1000);
       } else {
-        // ── KİLİTLİ KONVERTÖR (lockup) ── pompa drop + kilit klaç sürtünmesi
-        var deltaT_lockup = 10.0 + 0.00367 * N_engine;
-        T_pump = T_engine - pumpTorqueDrop;
-        var T_net_lockup = T_pump - deltaT_lockup;
+        // ── KİLİTLİ KONVERTÖR (lockup) — YALNIZ kilit-klaç sürtünmesi ──
+        // SR=1, τ=1: pompa ve türbin BİRLİKTE döner → hidrolik pompa emişi (N²/K²) sıfırdır →
+        // pompa tork düşümü (17.6) UYGULANMAZ (yalnız kayma varken / converter modda oluşur).
+        // Tek konvertör-kaynaklı kayıp kilit-klaç sürtünmesidir. Dişli mekanik kaybı düz 0.965
+        // çarpanı yerine aşağıda calcGearEfficiency ile bir kez uygulanır. Eski ÜÇLÜ kayıp
+        // sayımı (pompa drop + klaç + 0.965) kaldırıldı → türbin düzlemindeki ~%5.7 açık giderilir.
+        var deltaT_lockup = 10.0 + 0.00367 * N_engine;   // iSCAAN ~19.6 N·m sürtünme (DEĞİŞMEZ)
+        var T_net_lockup = T_engine - deltaT_lockup;
         if(T_net_lockup < 0) T_net_lockup = 0;
-        // Lockup iç verim: pompa drag + klaç sürtünmesi + gear mekanik kayıp
-        var eta_lockup = tcd.etaLockup || 0.965;
-        T_output = T_net_lockup * eta_lockup;
-        tcEta = eta_lockup;
+        T_pump = T_net_lockup;
+        T_output = T_net_lockup;                          // dişli verimi aşağıda (calcGearEfficiency)
+        tcEta = (T_engine > 0) ? (T_net_lockup / T_engine) : 1.0;   // kilit-klaç tork verimi (~0.98)
         // Lockup ısı reddi: per-gear RPM-bağımlı lineer model (iSCAAN uyumu)
         // Heat_lockup = a × N_engine + b  [kW] — şanzıman mekanik kayıpları devire bağlı
         var gearNum = shiftState.gearIdx + 1; // 1-indexed
@@ -846,24 +849,36 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         heatRejection_kW = Math.max(0, hrCoeff.a * N_engine + hrCoeff.b);
       }
     } else {
-      // ── CONVERTER MOD — İKİ MODLU: konvertör-eşleşme TUTMA + kopuş rev-up ──
-      // Tam gazda motor önce KONVERTÖR-EŞLEŞME (düşük dal, ~1010 rpm) noktasında oyalanır
-      // (iSCAAN: 1023→1011). Teğet bölgesindeki net-tork fazlalığı eşiği (CONV_MATCH_THRESHOLD)
-      // aşınca eşleşme bozulur → motor KOPAR ve serbest rev-up ataletiyle yüksek dala tırmanır.
-      // Düşük dalda TE düşük (τ, SR ile azalır) olduğundan hızlanma iSCAAN'la örtüşür (~2.2 s).
+      // ── CONVERTER MOD — KONFİG-BAĞIMSIZ konvertör çalışma noktası ──
+      // Motor her adımda konvertör ÇALIŞMA NOKTASINDA tutulur (iSCAAN'ın quasi-statik
+      // eşleşme taramasıyla örtüşür). İki olasılık, motor+TK kombinasyonuna göre kendi
+      // kendine ayrışır:
+      //   • DÜŞÜK DAL (teğet/oyalanma): fazlalık excess(N)=net−drop−emiş bir "vadi" (önce
+      //     azalıp sonra artan yerel min) yapıyor ve tabanı eşiğin altındaysa motor orada
+      //     oturur (JMMA/L5D: ~1010 → iSCAAN 1023-1011). Vadi tabanı eşiği aşınca (araç
+      //     hızlanınca) kopar → serbest rev-up ile yüksek dala tırmanır (iSCAAN 1804→2406).
+      //   • YÜKSEK DENGE (temiz stall): vadi yok (excess idle'dan itibaren artıyor) → motor
+      //     doğrudan yüksek stall/eşleşme dengesinde oturur (BMC/isb67: ~2204 → iSCAAN 2204).
+      //     N_eng_dynamic bu dengeden başlatıldığından (idle değil) launch transientinin
+      //     (~0.5 s) yalancı düşük çekişi tabloya SIZMAZ.
       var N_turbine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
       if(N_turbine < 0) N_turbine = 0;
 
-      // Düşük dal (konvertör-eşleşme) noktası: teğet bölgesinde (~850-1350) net motor torku
-      // ile pompa emişi arasındaki fazlalığın MİNİMUMU (motorun eşleştiği/oturduğu yer).
-      var _lmN = idleRpm, _lmE = Infinity;
-      for(var _nS = Math.max(idleRpm, 850); _nS <= 1350; _nS += 10) {
+      // Düşük dal (konvertör-eşleşme teğet) vadisi — SABİT devir penceresi YOK; teğet devri
+      // motora+TK'ye göre değiştiğinden idle→noLoad tam aralığı taranır. excess önce azalıp
+      // sonra artıyorsa vadi tabanı bulunmuştur; excess idle'dan itibaren artıyorsa (ya da
+      // sıfırı geçiyorsa) düşük dal yoktur → yüksek denge.
+      var _lmN = idleRpm, _lmE = Infinity, _prevE = Infinity;
+      onLowBranch = false;
+      for(var _nS = idleRpm; _nS <= noLoadGoverned; _nS += 10) {
         var _srS = Math.min(0.99, Math.max(0, N_turbine / _nS));
         var _kpS = tcFns.kpump(_srS);
         var _eS = motorTorqueFn(_nS) - pumpTorqueDrop - (_nS * _nS) / (_kpS * _kpS);
         if(_eS < _lmE) { _lmE = _eS; _lmN = _nS; }
+        if(_eS > _prevE) { onLowBranch = (_lmE < CONV_MATCH_THRESHOLD); break; }  // vadi tabanı geçildi
+        if(_eS <= 0) break;   // sıfır geçişi (temiz yüksek denge) — düşük vadi yok
+        _prevE = _eS;
       }
-      onLowBranch = (_lmE < CONV_MATCH_THRESHOLD);
 
       if(onLowBranch) {
         N_engine = _lmN;            // DÜŞÜK DAL — eşleşme noktasında TUT (quasi-statik oyalanma)
@@ -889,10 +904,13 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       }
 
       var T_turbine_raw = T_pump_absorbed * tau;  // türbine aktarılan tork (tork çarpımı)
-      // Konvertör iç verim: pompa verimsizliği + gear mekanik kayıp
+      // Konvertör çıkış torku = HAM türbin torku. Dişli mekanik kaybı düz 0.975 çarpanı yerine
+      // aşağıda calcGearEfficiency ile bir kez uygulanır (lockup ile AYNI yol → çift-sayım yok).
+      // F1'de calcGearEfficiency(3.487)≈0.978≈0.975 → converter 1C/2C satırları ve F1 stall
+      // çıkışı (~7538 N·m) pratikte korunur. eta_conv_internal yalnız ısı-reddi gear-mek terimi için.
       var eta_conv_internal = tcd.etaConvInternal || 0.975;
-      T_output = T_turbine_raw * eta_conv_internal;
-      tcEta = (SR * tau) * eta_conv_internal;
+      T_output = T_turbine_raw;
+      tcEta = SR * tau;
       // Converter ısı reddi: TC slip kaybı + gear mekanik kayıp ısısı
       var omega_eng = N_engine * 2 * Math.PI / 60;
       var P_heat_converter = T_pump_absorbed * omega_eng * (1 - SR * tau) / 1000;
@@ -905,9 +923,14 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     var _N_turb_for_eff = isLU ? N_engine : (N_engine * SR);
     var eta_gear = FT_SOLVER.calcGearEfficiency(i_gear, _N_turb_for_eff);
 
-    // Çekme kuvveti — şanzıman kayıpları tork kaybı modeli (deltaT_lockup / TC eta)
-    // ile zaten hesaplandığından eta_gear TE formülünden çıkarıldı (iSCAAN uyumu).
-    // eta_gear sadece rapor/sinyal amaçlı saklanıyor.
+    // TK'li modlarda (converter + lockup) dişli mekanik kaybı BURADA bir kez uygulanır —
+    // her iki dalın çıkış torku ham bırakıldı (converter: türbin torku; lockup: motor − klaç
+    // drag). Böylece eski düz 0.975/0.965 çarpanları yerine devire-bağlı TEK dişli verimi
+    // (calcGearEfficiency) kullanılır → çift/üçlü kayıp sayımı yok. TK YOK (doğrudan tahrik)
+    // dalında T_output zaten gearData.eff içerdiğinden dokunulmaz.
+    if(tcNode) T_output = T_output * eta_gear;
+
+    // Çekme kuvveti — dişli verimi T_output'a yukarıda uygulandığından çağrıda gear arg = 1.0.
     var F_traction = FT_SOLVER.calcTractiveEffort(
       T_output, i_gear, 1.0, i_propshaft, psEff,
       i_transfer, eta_transfer, i_axle, eta_axle, r_tire
@@ -1028,7 +1051,16 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   var t = 0;
   var v = 0;       // m/s — başlangıç hızı = 0 (tam gaz kalkış)
-  var N_eng_dynamic = idleRpm;   // MOTOR DEVRİ — dinamik durum; kalkışta rölantiden başlar (rev-up)
+  // MOTOR DEVRİ — dinamik durum. Konvertör modunda motor, kalkıştaki anlık idle→stall
+  // rev-up geçişini (≲0.5 s; iSCAAN'ın tam-gaz tablosunda ihmal ettiği) atlamak için OTURMUŞ
+  // konvertör çalışma noktasından başlatılır (idle değil): düşük dalı olmayan kombinasyonda
+  // v=0'da stall (BMC/isb67 ~2204), teğet-dallı kombinasyonda düşük dal (JMMA/L5D ~1010). TK
+  // yoksa motor hıza kilitli → idle başlangıcı korunur.
+  var _settledOp = (tcNode && hasTCData)
+    ? FT_SOLVER.computeSettledStall(motorTorqueFn, tcFns, pumpTorqueDrop, idleRpm,
+                                    { nMax: noLoadGoverned, tol: CONV_MATCH_THRESHOLD })
+    : null;
+  var N_eng_dynamic = _settledOp ? _settledOp.N_engine : idleRpm;   // MOTOR DEVRİ — dinamik durum
   var dist = 0;    // m
   var step = 0;
   var maxSteps = Math.ceil(maxTime / dt);
@@ -1546,17 +1578,22 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   // Çekiş, sim converter dalıyla BİREBİR aynı formülle üretilir → tutarlı.
   var settledStall = null;
   if(tcNode && hasTCData) {
-    var _ss = FT_SOLVER.computeSettledStall(motorTorqueFn, tcFns, pumpTorqueDrop, idleRpm);
+    var _ss = _settledOp || FT_SOLVER.computeSettledStall(motorTorqueFn, tcFns, pumpTorqueDrop, idleRpm,
+                                                          { nMax: noLoadGoverned, tol: CONV_MATCH_THRESHOLD });
     var _iGear1 = parseFloat(forwardGears[0].ratio) || 1.0;
-    var _etaConv = tcd.etaConvInternal || 0.975;
-    var _Tout = _ss.T_turbine * _etaConv;
+    // Dişli verimi sim converter dalıyla tutarlı (calcGearEfficiency; stall'da türbin=0 → SR=0).
+    var _etaG1 = FT_SOLVER.calcGearEfficiency(_iGear1, 0);
+    var _Tout = _ss.T_turbine * _etaG1;
+    // GRİP-LİMİTSİZ çekiş (drivetrain KAPASİTESİ) — gradeability metriği bunu kullanır (iSCAAN
+    // konvansiyonu: eğim kabiliyeti aktarma-organı kapasitesidir; tutunma AYRI "!" bayrağıyla).
     var _TE = FT_SOLVER.calcTractiveEffort(_Tout, _iGear1, 1.0, i_propshaft, psEff,
                                            i_transfer, eta_transfer, i_axle, eta_axle, r_tire);
-    _TE = FT_SOLVER.limitByGrip(_TE, F_grip);
     var _Froll0 = FT_SOLVER.getCrrEffective(Crr, 0) * (surfFactor || 1.0) * m_vehicle * 9.81; // v=0, düz yol
     settledStall = {
       N_engine: _ss.N_engine, T_turbine: _ss.T_turbine, T_pump: _ss.T_pump,
-      TE_kN: _TE / 1000, DP_kN: (_TE - _Froll0) / 1000
+      TE_kN: _TE / 1000, DP_kN: (_TE - _Froll0) / 1000,
+      slip: (_TE > F_grip),                              // TE > tutunma limiti → tekerlek kayması olası ("!" bayrağı)
+      TE_gripLimited_kN: Math.min(_TE, F_grip) / 1000    // tutunma-sınırlı efektif değer (ayrıca saklanır)
     };
   }
 
@@ -1570,14 +1607,15 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     var _Nturb = FT_SOLVER.speedToTurbineRpm(_vRef, _iG1, i_propshaft, i_transfer, i_axle, r_tire);
     var _op = FT_SOLVER.solveTCOperatingPoint(_Nturb, motorTorqueFn, tcFns, pumpTorqueDrop,
                                               { N_min: idleRpm, N_max: noLoadGoverned + 100 });
-    var _etaC2 = tcd.etaConvInternal || 0.975;
-    var _To2 = _op.T_turbine * _etaC2;
+    var _etaG2 = FT_SOLVER.calcGearEfficiency(_iG1, _op.SR ? _op.N_engine * _op.SR : 0);
+    var _To2 = _op.T_turbine * _etaG2;
+    // GRİP-LİMİTSİZ (drivetrain kapasitesi) — düşük-hız eğim metriği de kapasite raporlar.
     var _TE2 = FT_SOLVER.calcTractiveEffort(_To2, _iG1, 1.0, i_propshaft, psEff,
                                             i_transfer, eta_transfer, i_axle, eta_axle, r_tire);
-    _TE2 = FT_SOLVER.limitByGrip(_TE2, F_grip);
     var _Froll10 = FT_SOLVER.getCrrEffective(Crr, _vRef) * (surfFactor || 1.0) * m_vehicle * 9.81;
     var _Faero10 = 0.5 * rho * Cd * A_frontal * _vRef * _vRef;
-    lowSpeedOp = { v_kmh: 10, TE_kN: _TE2 / 1000, DP_kN: (_TE2 - _Froll10 - _Faero10) / 1000 };
+    lowSpeedOp = { v_kmh: 10, TE_kN: _TE2 / 1000, DP_kN: (_TE2 - _Froll10 - _Faero10) / 1000,
+                   slip: (_TE2 > F_grip) };
   }
 
   return {
@@ -1749,11 +1787,10 @@ function veCalcGradeForRatio(ftData, m_kg, transferRatio, isLowGear, hasTC) {
     launchGrade = 997.0;
   } else {
     stallGrade = Math.round(Math.tan(Math.asin(dp_stall / mg_kN)) * 100 * 10) / 10;
-    if(hasTC && ftData.length > 1 && ftData[1].v_kmh > 0.5 && ftData[1].v_kmh <= 3.0) {
-      // TK: launch = ilk yuvarlanma noktası (v ~1-3 km/h)
-      var dp_launch = ftData[1].dp_kN;
-      launchGrade = (dp_launch >= mg_kN) ? 997.0 : Math.round(Math.tan(Math.asin(dp_launch / mg_kN)) * 100 * 10) / 10;
-    } else if(hasTC) {
+    if(hasTC) {
+      // TK: kalkış eğimi = stall − 2 (iSCAAN konvansiyonu; kalkış stall'a yakın, aynı
+      // torque-çarpım bölgesinde). GRİP-LİMİTSİZ stall'dan türetilir — trace'in v~1-3 km/h
+      // noktası grip-limitli okunacağından (metrik kapasite ister) KULLANILMAZ.
       launchGrade = Math.round((stallGrade - 2.0) * 10) / 10;
     } else {
       // TK yok: launch = stall (aynı kalkış kabiliyeti — 1. viteste ulaşılabilir maks. DP)
@@ -1915,6 +1952,14 @@ function veCalculateGradeability(simResult) {
       var A = rs.frontalArea || (rs.height * rs.width) || 8.0;
       var Crr = rs.crr || 0.0035;
       ftDataLow = veScaleFTDataForTransfer(ftData, activeRatio, lowRatio, activeEta, lowEta, m_kg, Cd, A, Crr);
+    }
+
+    // OTURMUŞ STALL enjeksiyonu (düşük kademe) — yüksek kademeyle AYNI quasi-statik stall.
+    // Stall TK'nin ÖNCESİNDE olduğundan transfer kademesinden BAĞIMSIZDIR; düşük kademe de
+    // grip-limitsiz quasi-statik stall'ı kullanmalı (rölanti/transient v=0 okuması DEĞİL).
+    if(lowSimResult && lowSimResult.settledStall && ftDataLow.length > 0 && ftDataLow[0].v_kmh < 0.5) {
+      ftDataLow[0] = { gear: ftDataLow[0].gear, v_kmh: 0,
+                       dp_kN: lowSimResult.settledStall.DP_kN, te_kN: lowSimResult.settledStall.TE_kN };
     }
 
     if(ftDataLow.length >= 2) {

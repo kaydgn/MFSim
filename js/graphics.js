@@ -1863,7 +1863,9 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   function renderGradeSection(gd) {
     var rg = '';
     if (hasTransfer) {
-      rg += '  TRANSFER KUTUSU: ' + ascii(gd.label).toUpperCase() + '\n';
+      // Etiket zaten "Transfer Kutusu: <Kademe>" içerdiğinden çift "TRANSFER KUTUSU:"
+      // basılmasını önle (tekilleştir).
+      rg += '  TRANSFER KUTUSU: ' + ascii(gd.label).toUpperCase().replace(/^TRANSFER KUTUSU:\s*/, '') + '\n';
     }
     rg += '  ' + ln('-', 78) + '\n';
     rg += '  ' + pad('Egim Kabiliyeti', 36) + pad('% Egim', 10, 'right');
@@ -1958,7 +1960,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   function renderAccelSection(ad) {
     var ra = '';
     if (A.low) {
-      ra += '  TRANSFER KUTUSU: ' + ascii(ad.label).toUpperCase() + '\n';
+      ra += '  TRANSFER KUTUSU: ' + ascii(ad.label).toUpperCase().replace(/^TRANSFER KUTUSU:\s*/, '') + '\n';
     }
     ra += '  ' + ln('-', 58) + '\n';
     ra += '  ' + pad('Hedef Hiz', 26) + pad('Sure (saniye)', 18, 'right');
@@ -2294,7 +2296,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   function renderFTSection(steps, label) {
     var rf = '';
     if (hasTransfer && label) {
-      rf += '  TRANSFER KUTUSU: ' + ascii(label).toUpperCase() + '\n';
+      rf += '  TRANSFER KUTUSU: ' + ascii(label).toUpperCase().replace(/^TRANSFER KUTUSU:\s*/, '') + '\n';
     }
     rf += '  ' + ln('=', WW - 4) + '\n';
     rf += '  ' + pad('Vites', 6) + pad('Hiz', 10, 'right') + pad('Motor', 10, 'right');
