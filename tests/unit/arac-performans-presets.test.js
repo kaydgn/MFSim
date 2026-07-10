@@ -198,6 +198,52 @@ describe('Şanzıman preset — GM 8L90 8-Speed', () => {
   });
 });
 
+describe('Şanzıman preset — ZF 8HP90S 8-Speed', () => {
+  const g = VE_GEARBOX_PRESETS['8HP90S'];
+
+  test('preset tanımlı, 8 ileri + geri, oranlar doğru (açıklık ~7.07:1)', () => {
+    expect(g).toBeDefined();
+    expect(g.name).toBe('ZF | 8HP90S 8-Speed');
+    const fwd = g.gears.filter(x => x.gear !== 'R');
+    expect(fwd.length).toBe(8);
+    expect(fwd.map(x => x.ratio)).toEqual([4.714, 3.143, 2.106, 1.667, 1.285, 1.000, 0.839, 0.667]);
+    const rev = g.gears.find(x => x.gear === 'R');
+    expect(rev.ratio).toBe(-3.317);        // geri negatif saklanır (konvansiyon)
+    expect(4.714 / 0.667).toBeCloseTo(7.07, 1);   // toplam açıklık F1/F8
+  });
+
+  test('vites-başına verim (η) değerleri birebir — direkt vites (F6) en yüksek', () => {
+    const eff = {};
+    g.gears.forEach(x => { eff[x.gear] = x.eff; });
+    expect(eff['1']).toBe(97.8);
+    expect(eff['2']).toBe(98.5);
+    expect(eff['3']).toBe(98.7);
+    expect(eff['4']).toBe(98.8);
+    expect(eff['5']).toBe(98.9);
+    expect(eff['6']).toBe(99.6);           // 1:1 direkt vites → tepe verim
+    expect(eff['7']).toBe(98.2);
+    expect(eff['8']).toBe(97.6);
+    expect(eff['R']).toBe(97.0);
+  });
+
+  test('mod ataması — kalkış F1 konverter (C), F2+ lockup (L), geri (C)', () => {
+    const mode = {};
+    g.gears.forEach(x => { mode[x.gear] = x.mode; });
+    expect(mode['1']).toBe('C');
+    expect(mode['R']).toBe('C');
+    ['2', '3', '4', '5', '6', '7', '8'].forEach(k => expect(mode[k]).toBe('L'));
+  });
+
+  test('limit spekleri (giriş güç 450 kW / tork 1356 Nm, türbin 1350 Nm, çıkış-hız yok)', () => {
+    expect(g.grossInputPower).toBe(450);    // nominal ~450 kW
+    expect(g.grossInputTorque).toBe(1356);  // ~1000 lb-ft gerçek dünya kapasitesi
+    expect(g.netTurbineTorque).toBe(1350);  // türbin tork
+    expect(g.maxOutputSpeed).toBeNull();    // governed motordan gelir
+    expect(g.family).toBe('');              // Allison değil → tüm TC'ler
+    expect(g.calibrated).toBe(false);       // ZF'ye özel shift kalibrasyonu yok
+  });
+});
+
 describe('Vites profili — gm8l90_perf', () => {
   test('profil tanımlı ve 8L90 preset anahtarına eşleşir', () => {
     const sp = VE_FT_SHIFT_PROFILES['gm8l90_perf'];

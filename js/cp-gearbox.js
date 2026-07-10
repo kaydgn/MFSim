@@ -1836,31 +1836,34 @@ function onVEFTGBPresetSelect(nodeId, value) {
       return {name: g.name, ratio: g.ratio, eff: g.eff, lockup: g.lockup};
     });
   } else {
-    // Diğer presetler: oran al, verim tahmin et
+    // Diğer presetler: oranı al. Verim (eff) ve mod (mode: 'C'/'L') preset'te
+    // açıkça verilmişse birebir kullanılır (örn. ZF 8HP90S); verilmemişse verim
+    // tahmin edilir ve mod "kalkış F1 konverter, kalan lockup" kuralına düşer.
     // Direct drive vites bul (ratio === 1.00)
     var directIdx = -1;
     fwdGears.forEach(function(g, i) { if(Math.abs(g.ratio - 1.0) < 0.01) directIdx = i; });
-    
+
     fwdGears.forEach(function(g, i) {
       var eff;
-      if(directIdx >= 0 && i === directIdx) eff = 99.64; // Direct drive
+      if(g.eff !== undefined && g.eff !== null) eff = g.eff; // preset açık verim değeri
+      else if(directIdx >= 0 && i === directIdx) eff = 99.64; // Direct drive
       else if(i === 0) eff = 98.11; // 1. vites (yüksek tork yükü)
       else if(directIdx >= 0 && i < directIdx) eff = 98.5 + (i / directIdx) * 0.5; // Underdrive
       else eff = 98.62 - (i - directIdx) * 0.57; // Overdrive (artan kayıp)
-      
+
       ftGears.push({
         name: 'F' + g.gear,
         ratio: g.ratio,
         eff: parseFloat(eff.toFixed(2)),
-        lockup: (i > 0) // F1 = converter, geri kalan lockup
+        lockup: (g.mode ? g.mode === 'L' : i > 0) // preset açık mod, yoksa F1 = converter, kalan lockup
       });
     });
     revGears.forEach(function(g, i) {
       ftGears.push({
         name: 'R' + (i + 1),
         ratio: Math.abs(g.ratio),
-        eff: 97.50,
-        lockup: false
+        eff: (g.eff !== undefined && g.eff !== null) ? g.eff : 97.50,
+        lockup: (g.mode ? g.mode === 'L' : false)
       });
     });
   }
@@ -2254,6 +2257,29 @@ var VE_GEARBOX_PRESETS = {
       {gear: '7', ratio: 0.85, note: ''},
       {gear: '8', ratio: 0.65, note: ''},
       {gear: 'R', ratio: -3.82, note: 'Geri'}
+    ]
+  },
+  '8HP90S': {
+    name: 'ZF | 8HP90S 8-Speed',
+    family: '',              // Allison değil → TC aile filtresi tüm TC'leri gösterir
+    calibrated: false,       // ZF için ayrı vites-geçiş (shift) kalibrasyonu henüz yok
+    grossInputPower: 450,    // nominal ~450 kW (kanıtlanmış tavan ~590 kW — Hellcat Redeye 797 hp) [kW]
+    grossInputTorque: 1356,  // gerçek dünya kapasitesi ~1356 Nm (1000+ lb-ft) [Nm]
+    netTurbineTorque: 1350,  // Türbin Tork ≈ 1350 Nm (giriş tork × stall ~1.8-2.0) → EC-Matching turbineRating
+    maxOutputSpeed: null,    // governed speed motor bileşeninden gelir — sabit değil
+    // Oranlar 8HP90 için doğrulanmış nominal (F1–F8 4.714→0.667, R 3.317; toplam açıklık 7.07:1).
+    // Verim (η) ZF yayınlamaz → tahmini (AVL CRUISE tarzı). Mod: kalkış F1 konverter (C),
+    // F2'den itibaren lockup (L), geri (R) konverter (C).
+    gears: [
+      {gear: '1', ratio: 4.714, eff: 97.8, mode: 'C', note: ''},
+      {gear: '2', ratio: 3.143, eff: 98.5, mode: 'L', note: ''},
+      {gear: '3', ratio: 2.106, eff: 98.7, mode: 'L', note: ''},
+      {gear: '4', ratio: 1.667, eff: 98.8, mode: 'L', note: ''},
+      {gear: '5', ratio: 1.285, eff: 98.9, mode: 'L', note: ''},
+      {gear: '6', ratio: 1.000, eff: 99.6, mode: 'L', note: ''},
+      {gear: '7', ratio: 0.839, eff: 98.2, mode: 'L', note: ''},
+      {gear: '8', ratio: 0.667, eff: 97.6, mode: 'L', note: ''},
+      {gear: 'R', ratio: -3.317, eff: 97.0, mode: 'C', note: 'Geri'}
     ]
   }
 };
