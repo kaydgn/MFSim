@@ -846,24 +846,36 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         heatRejection_kW = Math.max(0, hrCoeff.a * N_engine + hrCoeff.b);
       }
     } else {
-      // ── CONVERTER MOD — İKİ MODLU: konvertör-eşleşme TUTMA + kopuş rev-up ──
-      // Tam gazda motor önce KONVERTÖR-EŞLEŞME (düşük dal, ~1010 rpm) noktasında oyalanır
-      // (iSCAAN: 1023→1011). Teğet bölgesindeki net-tork fazlalığı eşiği (CONV_MATCH_THRESHOLD)
-      // aşınca eşleşme bozulur → motor KOPAR ve serbest rev-up ataletiyle yüksek dala tırmanır.
-      // Düşük dalda TE düşük (τ, SR ile azalır) olduğundan hızlanma iSCAAN'la örtüşür (~2.2 s).
+      // ── CONVERTER MOD — KONFİG-BAĞIMSIZ konvertör çalışma noktası ──
+      // Motor her adımda konvertör ÇALIŞMA NOKTASINDA tutulur (iSCAAN'ın quasi-statik
+      // eşleşme taramasıyla örtüşür). İki olasılık, motor+TK kombinasyonuna göre kendi
+      // kendine ayrışır:
+      //   • DÜŞÜK DAL (teğet/oyalanma): fazlalık excess(N)=net−drop−emiş bir "vadi" (önce
+      //     azalıp sonra artan yerel min) yapıyor ve tabanı eşiğin altındaysa motor orada
+      //     oturur (JMMA/L5D: ~1010 → iSCAAN 1023-1011). Vadi tabanı eşiği aşınca (araç
+      //     hızlanınca) kopar → serbest rev-up ile yüksek dala tırmanır (iSCAAN 1804→2406).
+      //   • YÜKSEK DENGE (temiz stall): vadi yok (excess idle'dan itibaren artıyor) → motor
+      //     doğrudan yüksek stall/eşleşme dengesinde oturur (BMC/isb67: ~2204 → iSCAAN 2204).
+      //     N_eng_dynamic bu dengeden başlatıldığından (idle değil) launch transientinin
+      //     (~0.5 s) yalancı düşük çekişi tabloya SIZMAZ.
       var N_turbine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
       if(N_turbine < 0) N_turbine = 0;
 
-      // Düşük dal (konvertör-eşleşme) noktası: teğet bölgesinde (~850-1350) net motor torku
-      // ile pompa emişi arasındaki fazlalığın MİNİMUMU (motorun eşleştiği/oturduğu yer).
-      var _lmN = idleRpm, _lmE = Infinity;
-      for(var _nS = Math.max(idleRpm, 850); _nS <= 1350; _nS += 10) {
+      // Düşük dal (konvertör-eşleşme teğet) vadisi — SABİT devir penceresi YOK; teğet devri
+      // motora+TK'ye göre değiştiğinden idle→noLoad tam aralığı taranır. excess önce azalıp
+      // sonra artıyorsa vadi tabanı bulunmuştur; excess idle'dan itibaren artıyorsa (ya da
+      // sıfırı geçiyorsa) düşük dal yoktur → yüksek denge.
+      var _lmN = idleRpm, _lmE = Infinity, _prevE = Infinity;
+      onLowBranch = false;
+      for(var _nS = idleRpm; _nS <= noLoadGoverned; _nS += 10) {
         var _srS = Math.min(0.99, Math.max(0, N_turbine / _nS));
         var _kpS = tcFns.kpump(_srS);
         var _eS = motorTorqueFn(_nS) - pumpTorqueDrop - (_nS * _nS) / (_kpS * _kpS);
         if(_eS < _lmE) { _lmE = _eS; _lmN = _nS; }
+        if(_eS > _prevE) { onLowBranch = (_lmE < CONV_MATCH_THRESHOLD); break; }  // vadi tabanı geçildi
+        if(_eS <= 0) break;   // sıfır geçişi (temiz yüksek denge) — düşük vadi yok
+        _prevE = _eS;
       }
-      onLowBranch = (_lmE < CONV_MATCH_THRESHOLD);
 
       if(onLowBranch) {
         N_engine = _lmN;            // DÜŞÜK DAL — eşleşme noktasında TUT (quasi-statik oyalanma)
@@ -1028,7 +1040,16 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   var t = 0;
   var v = 0;       // m/s — başlangıç hızı = 0 (tam gaz kalkış)
-  var N_eng_dynamic = idleRpm;   // MOTOR DEVRİ — dinamik durum; kalkışta rölantiden başlar (rev-up)
+  // MOTOR DEVRİ — dinamik durum. Konvertör modunda motor, kalkıştaki anlık idle→stall
+  // rev-up geçişini (≲0.5 s; iSCAAN'ın tam-gaz tablosunda ihmal ettiği) atlamak için OTURMUŞ
+  // konvertör çalışma noktasından başlatılır (idle değil): düşük dalı olmayan kombinasyonda
+  // v=0'da stall (BMC/isb67 ~2204), teğet-dallı kombinasyonda düşük dal (JMMA/L5D ~1010). TK
+  // yoksa motor hıza kilitli → idle başlangıcı korunur.
+  var _settledOp = (tcNode && hasTCData)
+    ? FT_SOLVER.computeSettledStall(motorTorqueFn, tcFns, pumpTorqueDrop, idleRpm,
+                                    { nMax: noLoadGoverned, tol: CONV_MATCH_THRESHOLD })
+    : null;
+  var N_eng_dynamic = _settledOp ? _settledOp.N_engine : idleRpm;   // MOTOR DEVRİ — dinamik durum
   var dist = 0;    // m
   var step = 0;
   var maxSteps = Math.ceil(maxTime / dt);
@@ -1546,7 +1567,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   // Çekiş, sim converter dalıyla BİREBİR aynı formülle üretilir → tutarlı.
   var settledStall = null;
   if(tcNode && hasTCData) {
-    var _ss = FT_SOLVER.computeSettledStall(motorTorqueFn, tcFns, pumpTorqueDrop, idleRpm);
+    var _ss = _settledOp || FT_SOLVER.computeSettledStall(motorTorqueFn, tcFns, pumpTorqueDrop, idleRpm,
+                                                          { nMax: noLoadGoverned, tol: CONV_MATCH_THRESHOLD });
     var _iGear1 = parseFloat(forwardGears[0].ratio) || 1.0;
     var _etaConv = tcd.etaConvInternal || 0.975;
     var _Tout = _ss.T_turbine * _etaConv;
