@@ -516,6 +516,11 @@ function veUpdateResultsTree() {
       html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Tam Gaz Hızlanma TXT rapor önizleme">';
       html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--accent-primary);">Tam Gaz Hızlanma Raporu (TXT)</span></div>';
       html += '</div>';
+      // Detaylı Hesaplama İzi (TXT) — hata avı / matematik doğrulama
+      html += '<div style="margin-top:2px;">';
+      html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Programın yaptığı tüm hesaplamaların adım adım (formül + sayı) dökümü — doğrulama / hata avı">';
+      html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detaylı Hesaplama İzi (TXT)</span></div>';
+      html += '</div>';
     }
 
     // === HIZLANMA-YAVAŞLAMA tab'ı ===
@@ -2209,6 +2214,12 @@ function veRenderTXTReport(reportType) {
     txtContent = veGenerateFTTxtReport(sim);
     downloadName = 'BMC_TamGaz_Rapor_' + dateStr + '.txt';
     reportTitle = 'Tam Gaz Hızlanma Raporu (TXT)';
+  } else if(reportType === 'ft-trace') {
+    if(typeof veGenerateFTCalcTraceReport !== 'function') { showToast('İz rapor fonksiyonu bulunamadı', 'warning'); return; }
+    showToast('Hesaplama izi üretiliyor…', 'info');
+    txtContent = veGenerateFTCalcTraceReport(sim);
+    downloadName = 'BMC_TamGaz_HesaplamaIzi_' + dateStr + '.txt';
+    reportTitle = 'Tam Gaz — Detaylı Hesaplama İzi (TXT)';
   }
 
   if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }
@@ -2428,6 +2439,8 @@ function veDownloadTXTFromPreview() {
 
     if(rType === 'ft' && typeof veGenerateFTTxtReport === 'function') {
       content = veGenerateFTTxtReport(sim, authorName);
+    } else if(rType === 'ft-trace' && typeof veGenerateFTCalcTraceReport === 'function') {
+      content = veGenerateFTCalcTraceReport(sim, authorName);
     } else if(rType === 'sd' && typeof veGenerateSegmentDriveTxtReport === 'function') {
       content = veGenerateSegmentDriveTxtReport(sim, authorName);
     } else if(rType === 'obs' && typeof veGenerateObstacleCrossingTxtReport === 'function') {
