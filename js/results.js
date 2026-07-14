@@ -516,7 +516,7 @@ function veUpdateResultsTree() {
       html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Tam Gaz Hızlanma TXT rapor önizleme">';
       html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--accent-primary);">Tam Gaz Hızlanma Raporu (TXT)</span></div>';
       html += '</div>';
-      // Detaylı Hesaplama İzi (TXT) — hata avı / matematik doğrulama
+      // Detay Matematik Hesapları (TXT) — hata avı / matematik doğrulama
       // Transfer kutusu (2+ kademe) varsa Yüksek/Düşük ayrı iz; yoksa tek iz.
       var _ftHasLowRange = (typeof nodes !== 'undefined') && nodes.some(function(nd){
         return nd.type === 'transfer' && nd.data && (nd.data.ftTrGears || []).length > 1;
@@ -524,16 +524,16 @@ function veUpdateResultsTree() {
       if(_ftHasLowRange) {
         html += '<div style="margin-top:2px;">';
         html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Yüksek kademe — tüm hesaplamaların adım adım (formül + sayı) dökümü">';
-        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detaylı Hesaplama İzi — Yüksek Kademe (TXT)</span></div>';
+        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detay Matematik Hesapları — Yüksek Kademe (TXT)</span></div>';
         html += '</div>';
         html += '<div style="margin-top:2px;">';
         html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace-low\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Düşük kademe — tüm hesaplamaların adım adım (formül + sayı) dökümü">';
-        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detaylı Hesaplama İzi — Düşük Kademe (TXT)</span></div>';
+        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detay Matematik Hesapları — Düşük Kademe (TXT)</span></div>';
         html += '</div>';
       } else {
         html += '<div style="margin-top:2px;">';
         html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft-trace\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Programın yaptığı tüm hesaplamaların adım adım (formül + sayı) dökümü — doğrulama / hata avı">';
-        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detaylı Hesaplama İzi (TXT)</span></div>';
+        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Detay Matematik Hesapları (TXT)</span></div>';
         html += '</div>';
       }
     }
@@ -2232,12 +2232,12 @@ function veRenderTXTReport(reportType) {
   } else if(reportType === 'ft-trace' || reportType === 'ft-trace-low') {
     if(typeof veGenerateFTCalcTraceReport !== 'function') { showToast('İz rapor fonksiyonu bulunamadı', 'warning'); return; }
     var _isLow = (reportType === 'ft-trace-low');
-    showToast('Hesaplama izi üretiliyor…', 'info');
+    showToast('Detay matematik hesapları üretiliyor…', 'info');
     txtContent = veGenerateFTCalcTraceReport(sim, null, _isLow ? 'low' : null);
     // Üreteç kısa bir "(... uretilemedi ...)" mesajı döndürdüyse (parantezle başlar) uyar
     if(txtContent && txtContent.charAt(0) === '(') { showToast(txtContent.replace(/[()]/g, '').trim(), 'warning'); return; }
-    downloadName = 'BMC_TamGaz_HesaplamaIzi_' + (_isLow ? 'DusukKademe_' : '') + dateStr + '.txt';
-    reportTitle = 'Tam Gaz — Detaylı Hesaplama İzi' + (_isLow ? ' — Düşük Kademe' : '') + ' (TXT)';
+    downloadName = 'BMC_TamGaz_DetayMatematik_' + (_isLow ? 'DusukKademe_' : '') + dateStr + '.txt';
+    reportTitle = 'Tam Gaz — Detay Matematik Hesapları' + (_isLow ? ' — Düşük Kademe' : '') + ' (TXT)';
   }
 
   if(!txtContent) { showToast('Rapor oluşturulamadı', 'warning'); return; }

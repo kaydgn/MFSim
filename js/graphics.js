@@ -2779,7 +2779,7 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
   // ── BAŞLIK ──
   r += '\n' + ln('=', W) + '\n';
   r += pad('BMC Otomotiv -- Guc Grubu Mudurlugu', W, 'center') + '\n';
-  r += pad('TAM GAZ HIZLANMA -- DETAYLI HESAPLAMA IZI', W, 'center') + '\n';
+  r += pad('TAM GAZ HIZLANMA -- DETAY MATEMATIK HESAPLARI', W, 'center') + '\n';
   r += ln('=', W) + '\n';
   r += kv('Rapor Tarihi / Saati', tarih + ' ' + saat);
   r += kv('Hazirlayan', ascii(hazirlayan));
@@ -2914,7 +2914,7 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
 
   // ── SON ──
   r += '\n' + ln('=', W) + '\n';
-  r += pad('IZ SONU — ' + T.steps.length + ' kilit adim gosterildi', W, 'center') + '\n';
+  r += pad('RAPOR SONU — ' + T.steps.length + ' kilit adim gosterildi', W, 'center') + '\n';
   r += pad('Bu belge dogrulama/hata-avi amaclidir. Hesaplar teorik modellere dayanir.', W, 'center') + '\n';
   r += ln('=', W) + '\n';
   return r;
