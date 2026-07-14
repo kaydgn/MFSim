@@ -1656,6 +1656,82 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       .replace(/ç/g,'c').replace(/Ç/g,'C');
   }
 
+  // ── UNICODE KUTU-CIZIMI YARDIMCILARI (UTF-8; hepsi tek kod-birimi → pad hizasi korunur) ──
+  // Gercek Turkce metni oldugu gibi birak (ascii() sadelestirmesinin tersi).
+  function tr(s) { return s == null ? '' : String(s); }
+  function rep(ch, n) { var s = ''; for (var i = 0; i < n; i++) s += ch; return s; }
+
+  // Metni w genisligine gore kelime bazli sar.
+  function wrap(text, w) {
+    var words = tr(text).split(/\s+/), lines = [], cur = '';
+    for (var i = 0; i < words.length; i++) {
+      var word = words[i];
+      if (!cur) cur = word;
+      else if ((cur + ' ' + word).length <= w) cur += ' ' + word;
+      else { lines.push(cur); cur = word; }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  // Tablo yatay cizgisi: widths = kolon ic-genislikleri (bar'lar arasi toplam).
+  function tRule(widths, l, m, rt, fill) {
+    var s = '  ' + l;
+    for (var i = 0; i < widths.length; i++) { s += rep(fill, widths[i]); s += (i < widths.length - 1 ? m : rt); }
+    return s + '\n';
+  }
+  // Tablo veri satiri: cells + widths + aligns (left/right/center). Tasan hucre '…' ile kirpilir.
+  function tRow(cells, widths, aligns) {
+    var s = '  │';
+    for (var i = 0; i < cells.length; i++) {
+      var w = widths[i], a = (aligns && aligns[i]) || 'left', t = tr(cells[i]);
+      if (t.length > w - 2) t = t.slice(0, Math.max(0, w - 3)) + '…';
+      var cell = a === 'right'  ? pad(t, w - 1, 'right') + ' '
+               : a === 'center' ? pad(t, w, 'center')
+               :                  ' ' + pad(t, w - 1, 'left');
+      s += cell + '│';
+    }
+    return s + '\n';
+  }
+
+  // Agir cerceveli bolum baslik bandi (tam genislik, sol hizali).
+  function sectionBanner(label, width) {
+    var inner = width - 2;
+    return '┏' + rep('━', inner) + '┓\n' +
+           '┃' + pad(' ' + label, inner, 'left') + '┃\n' +
+           '┗' + rep('━', inner) + '┛\n\n';
+  }
+
+  // Baslikli hafif kutu (2 girinti). bodyLines onceden bicimlenmis satirlar.
+  function titledBox(title, bodyLines, width) {
+    var inner = width - 4;              // '  ┌' + inner + '┐'
+    var head = '─ ' + tr(title) + ' ';
+    var s = '  ┌' + head + rep('─', Math.max(0, inner - head.length)) + '┐\n';
+    for (var i = 0; i < bodyLines.length; i++) {
+      var t = tr(bodyLines[i]);
+      if (t.length > inner - 2) t = t.slice(0, inner - 3) + '…';
+      s += '  │ ' + pad(t, inner - 2, 'left') + ' │\n';
+    }
+    return s + '  └' + rep('─', inner) + '┘\n';
+  }
+
+  // Yorum/not kutusu: metni kutu icine sarar, sol ustte ► baslik etiketi.
+  function noteBox(title, text, width) {
+    var inner = width - 4;
+    var head = '─ ► ' + tr(title) + ' ';
+    var s = '  ┌' + head + rep('─', Math.max(0, inner - head.length)) + '┐\n';
+    var lines = wrap(text, inner - 2);
+    for (var i = 0; i < lines.length; i++) {
+      s += '  │ ' + pad(lines[i], inner - 2, 'left') + ' │\n';
+    }
+    return s + '  └' + rep('─', inner) + '┘\n';
+  }
+
+  // Kosul seridi: "  ETIKET │ a · b · c"
+  function condStrip(label, pairs) {
+    return '  ' + pad(tr(label), 10, 'left') + '│ ' + pairs.join('  ·  ') + '\n';
+  }
+
   // ── VERI KAYNAKLARI ──
   var R = sim.reportSnapshot;
   if (!R) {
@@ -1791,29 +1867,40 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   // BMC BASLIK
   // ════════════════════════════════════════════════════════════════════════
-  r += '\n' + ln('=', W) + '\n\n';
-  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n';
-  r += pad(' ##   ##  ###  ###   ##      ', W, 'center') + '\n';
-  r += pad(' ######   ## ## ##   ##      ', W, 'center') + '\n';
-  r += pad(' ##   ##  ##    ##   ##      ', W, 'center') + '\n';
-  r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n\n';
-  r += pad('BMC Otomotiv Sanayi ve Ticaret A.S.', W, 'center') + '\n';
-  r += pad('Guc Grubu Mudurlugu', W, 'center') + '\n\n';
-  r += ln('=', W) + '\n\n';
-  r += pad('+' + ln('-', 46) + '+', W, 'center') + '\n';
-  r += pad('|   TAM GAZ HIZLANMA PERFORMANS HESAP RAPORU   |', W, 'center') + '\n';
-  r += pad('+' + ln('-', 46) + '+', W, 'center') + '\n\n';
+  var _mInner = W - 2;
+  function _mLine(c) { return '║' + pad(c, _mInner, 'left') + '║\n'; }
+  function _mCenter(c) { return '║' + pad(c, _mInner, 'center') + '║\n'; }
+  var _fig = [
+    '██████╗ ███╗   ███╗ ██████╗',
+    '██╔══██╗████╗ ████║██╔════╝',
+    '██████╔╝██╔████╔██║██║     ',
+    '██╔══██╗██║╚██╔╝██║██║     ',
+    '██████╔╝██║ ╚═╝ ██║╚██████╗',
+    '╚═════╝ ╚═╝     ╚═╝ ╚═════╝'
+  ];
+  var _figW = 0; for (var _fi = 0; _fi < _fig.length; _fi++) if (_fig[_fi].length > _figW) _figW = _fig[_fi].length;
+  var _figSide = ['', '', 'BMC Otomotiv Sanayi ve Ticaret A.Ş.', 'Güç Grubu Müdürlüğü', '', ''];
 
-  // ── RAPOR BILGILERI ──
-  r += ln('-', W) + '\n  RAPOR BILGILERI\n' + ln('-', W) + '\n';
-  r += pRow('Rapor Tarihi', tarih);
-  r += pRow('Rapor Saati', saat);
-  r += pRow('Rapor No', raporNo);
-  r += pRow('Hazirlayan', ascii(hazirlayan));
-  r += pRow('Hesaplama Modu', 'MFSim Tam Gaz Hizlanma');
-  r += pRow('Cozucu Metodu', solverLabel);
-  r += pRow('Shift Profili', ascii(shiftProfile));
-  r += ln('-', W) + '\n\n';
+  r += '\n';
+  r += '╔' + rep('═', _mInner) + '╗\n';
+  r += _mLine('');
+  for (var _mi = 0; _mi < _fig.length; _mi++) {
+    r += _mLine('   ' + pad(_fig[_mi], _figW, 'left') + '     ' + (_figSide[_mi] || ''));
+  }
+  r += _mLine('');
+  r += '╟' + rep('─', _mInner) + '╢\n';
+  r += _mCenter('TAM GAZ HIZLANMA  ·  PERFORMANS HESAP RAPORU');
+  r += '╚' + rep('═', _mInner) + '╝\n\n';
+
+  // ── RAPOR BILGILERI (baslikli panel, iki kolon) ──
+  function _kv(k, v, kw) { return pad(tr(k), kw || 15, 'left') + ': ' + tr(v); }
+  var _infoLines = [
+    pad(_kv('Rapor Tarihi', tarih), 40) + _kv('Hazırlayan', tr(hazirlayan)),
+    pad(_kv('Rapor Saati', saat), 40) + _kv('Çözücü', solverLabel),
+    pad(_kv('Rapor No', raporNo), 40) + _kv('Shift Profili', tr(shiftProfile)),
+    _kv('Hesaplama Modu', 'MFSim Tam Gaz Hızlanma')
+  ];
+  r += titledBox('RAPOR BİLGİLERİ', _infoLines, W) + '\n';
 
   // ════════════════════════════════════════════════════════════════════════
   // 1. PLATFORM VE ARAC OZELLIKLERI
@@ -1943,44 +2030,30 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   // ════════════════════════════════════════════════════════════════════════
   // 3. TAM GAZ HIZLANMA
   // ════════════════════════════════════════════════════════════════════════
-  r += ln('=', W) + '\n';
-  r += pad('3. TAM GAZ HIZLANMA', W, 'center') + '\n';
-  r += ln('=', W) + '\n\n';
+  r += sectionBanner('3  ·  TAM GAZ HIZLANMA', W);
 
-  r += '  KOSULLAR\n';
-  r += '  ' + ln('-', 38) + '\n';
-  r += pRow('Motor Fani', 'Acik');
-  r += pRow('Klima', 'Kapali');
-  r += pRow('Aks Orani', num(R.diffRatio, 3));
-  if (hasTransfer) {
-    r += pRow('Transfer Kutusu Orani', num(trHighRatio, 3));
-  }
-  r += '\n';
+  var _c3 = ['Motor Fanı: Açık', 'Klima: Kapalı', 'Aks Oranı: ' + num(R.diffRatio, 3)];
+  if (hasTransfer) _c3.push('Transfer: ' + num(trHighRatio, 3));
+  r += condStrip('KOŞULLAR', _c3) + '\n';
 
   function renderAccelSection(ad) {
     var ra = '';
+    var _w = [26, 16, 16];
     if (A.low) {
-      ra += '  TRANSFER KUTUSU: ' + ascii(ad.label).toUpperCase().replace(/^TRANSFER KUTUSU:\s*/, '') + '\n';
+      ra += '  ▸ Transfer Kutusu: ' + tr(ad.label).replace(/^Transfer Kutusu:\s*/i, '') + '\n';
     }
-    ra += '  ' + ln('-', 58) + '\n';
-    ra += '  ' + pad('Hedef Hiz', 26) + pad('Sure (saniye)', 18, 'right');
-    ra += pad('Mesafe (m)', 14, 'right') + '\n';
-    ra += '  ' + ln('-', 58) + '\n';
-
+    ra += tRule(_w, '┌', '┬', '┐', '─');
+    ra += tRow(['Hedef Hız', 'Süre (sn)', 'Mesafe (m)'], _w, ['left', 'right', 'right']);
+    ra += tRule(_w, '├', '┼', '┤', '─');
     (ad.rows || []).forEach(function(row) {
-      var label = '0 -- ' + pad(String(row.targetSpeed), 3, 'right') + ' km/h';
-      ra += '  ' + pad(label, 26);
+      var label = '0 → ' + pad(String(row.targetSpeed), 3, 'right') + ' km/h';
       if (row.time === null || row.time === undefined) {
-        ra += pad('Hiza ulasilamiyor', 18, 'right');
-        ra += pad('-', 14, 'right');
+        ra += tRow([label, 'ulaşılamıyor', '–'], _w, ['left', 'right', 'right']);
       } else {
-        ra += pad(num(row.time, 1), 18, 'right');
-        ra += pad(numI(row.distance), 14, 'right');
+        ra += tRow([label, num(row.time, 1), numI(row.distance)], _w, ['left', 'right', 'right']);
       }
-      ra += '\n';
     });
-
-    ra += '  ' + ln('-', 58) + '\n';
+    ra += tRule(_w, '└', '┴', '┘', '─');
     return ra;
   }
 
@@ -1991,25 +2064,20 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       r += renderAccelSection(A.low);
     }
 
-    // Hizlanma yorumu
+    // Hizlanma yorumu → not kutusu
     var aH = A.high;
     var a60 = null, a100 = null;
     (aH.rows || []).forEach(function(row) {
       if (row.targetSpeed === 60 && row.time !== null) a60 = row;
       if (row.targetSpeed === 100 && row.time !== null) a100 = row;
     });
-    r += '\n  YORUM: ';
-    if (a60) {
-      r += 'Arac, 0\'dan 60 km/h hiza ' + num(a60.time, 1) + ' saniyede, ' + numI(a60.distance) + ' metre mesafede\n  ulasmaktadir. ';
-    }
-    if (a100) {
-      r += '0-100 km/h hizlanma ' + num(a100.time, 1) + ' saniyede ' + numI(a100.distance) + ' metrede\n  tamamlanmaktadir.';
-    } else if (a60) {
-      r += 'Arac 100 km/h hiza ulasamamaktadir.';
-    }
-    r += '\n';
+    var _yorum = '';
+    if (a60) _yorum += 'Araç, 0\'dan 60 km/h hıza ' + num(a60.time, 1) + ' saniyede, ' + numI(a60.distance) + ' metre mesafede ulaşmaktadır. ';
+    if (a100) _yorum += '0–100 km/h hızlanma ' + num(a100.time, 1) + ' saniyede ' + numI(a100.distance) + ' metrede tamamlanmaktadır.';
+    else if (a60) _yorum += 'Araç 100 km/h hıza ulaşamamaktadır.';
+    if (_yorum) r += '\n' + noteBox('YORUM', _yorum, W);
   } else {
-    r += '  Hizlanma verisi bulunamadi.\n';
+    r += '  Hızlanma verisi bulunamadı.\n';
   }
   r += '\n\n';
 
