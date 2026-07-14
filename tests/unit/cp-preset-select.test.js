@@ -93,4 +93,43 @@ describe('Şanzıman preset seçimi → node.data.gbName güncellemesi', () => {
     expect(node.data.gbName).toBe(VE_GEARBOX_PRESETS[firstKey].name);
     expect(node.data.forwardGears).toBeGreaterThan(0);
   });
+
+  test('8HP90S: preset\'teki açık eff/mode değerleri ftGearData\'ya birebir yansır', () => {
+    const node = { id: 'gb-2', type: 'gearbox', data: {} };
+    global.nodes.push(node);
+
+    onVEFTGBPresetSelect('gb-2', '8HP90S');
+
+    const gd = node.data.ftGearData;
+    expect(Array.isArray(gd)).toBe(true);
+    expect(gd.length).toBe(9);   // 8 ileri + 1 geri
+
+    // F1: Mod C → lockup:false; açık verim 97.8 (tahmin 98.11 DEĞİL)
+    const f1 = gd.find(x => x.name === 'F1');
+    expect(f1.ratio).toBe(4.714);
+    expect(f1.eff).toBe(97.8);
+    expect(f1.lockup).toBe(false);
+
+    // F6: direkt vites, açık verim 99.6 kazanır (tahmin 99.64 DEĞİL); Mod L → lockup:true
+    const f6 = gd.find(x => x.name === 'F6');
+    expect(f6.ratio).toBe(1.0);
+    expect(f6.eff).toBe(99.6);
+    expect(f6.lockup).toBe(true);
+
+    // F8: overdrive, açık verim 97.6 (tahmin 97.48 DEĞİL)
+    const f8 = gd.find(x => x.name === 'F8');
+    expect(f8.eff).toBe(97.6);
+    expect(f8.lockup).toBe(true);
+
+    // Geri: mutlak oran, açık verim 97.0, konverter (lockup:false)
+    const r1 = gd.find(x => x.name === 'R1');
+    expect(r1.ratio).toBe(3.317);
+    expect(r1.eff).toBe(97.0);
+    expect(r1.lockup).toBe(false);
+
+    // Şanzıman limitleri node'a yazıldı (netTurbineTorque → EC-Matching turbineRating)
+    expect(node.data.gbNetTurbineTorque).toBe(1350);
+    expect(node.data.gbGrossInputPower).toBe(450);
+    expect(node.data.gbGrossInputTorque).toBe(1356);
+  });
 });
