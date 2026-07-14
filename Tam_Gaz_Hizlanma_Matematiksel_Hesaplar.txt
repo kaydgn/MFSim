@@ -1,0 +1,587 @@
+================================================================================
+  TAM GAZ HIZLANMA (FULL THROTTLE ACCELERATION) MODÜLÜ
+  MATEMATİKSEL HESAPLAMALAR — GÜNCEL DÖKÜM
+================================================================================
+
+Kaynak dosya : js/ft-performance.js  (2337 satır)
+Yardımcı     : js/cp-gearbox.js (varsayılan vites/shift profilleri)
+Üretim tarihi: 2026-07-14
+
+Bu belge, "Tam Gaz Hızlanma" simülasyonunun MEVCUT kaynak kodundan bire bir
+çıkarılmış tüm matematiksel formülleri, sabitleri ve algoritmaları içerir.
+Her bölümün yanında ilgili kaynak satır numaraları verilmiştir.
+
+Notasyon:
+  N        = devir sayısı [rpm]
+  ω        = açısal hız [rad/s] = N·2π/60 = N·π/30
+  T        = tork [N·m]
+  i        = dişli/aktarma oranı [birimsiz]
+  η (eta)  = verim [0..1]
+  SR       = speed ratio (hız oranı) = N_türbin / N_motor
+  τ (tau)  = torque ratio (tork çarpım oranı) = T_türbin / T_pompa
+  V, v_ms  = araç hızı [m/s];  v_kmh = 3.6·v_ms
+  F        = kuvvet [N]
+  I        = atalet momenti [kg·m²]
+
+Mimari özet: FT_SOLVER (saf matematik çekirdeği, satır 9–401) + simülasyon
+motoru veFTRunSimulationEngine (satır 410+). Motor freni solver'ından bağımsız.
+
+
+================================================================================
+ 1. PCHIP SPLINE İNTERPOLASYON            (satır 12–83)
+================================================================================
+Motor tork eğrisi ve tork konvertörü karakteristikleri için şekil-koruyan
+(monotonluk koruyan) kübik Hermite interpolasyonu.
+
+Düğüm eğimleri (iç noktalar, i = 1..n-2):
+  δ_i = (y_{i+1} − y_i) / h_i            (h_i = x_{i+1} − x_i, parça genişliği)
+
+  Eğer δ_{i-1}·δ_i ≤ 0  →  d_i = 0        (yerel ekstremumda düz = aşım yok)
+  Aksi halde (ağırlıklı harmonik ortalama):
+      w1 = 2·h_i + h_{i-1}
+      w2 = h_i + 2·h_{i-1}
+      d_i = (w1 + w2) / ( w1/δ_{i-1} + w2/δ_i )
+
+Uç nokta eğimleri (_pchipEndSlope, satır 47–53):
+      d = ( (2·h1 + h2)·δ1 − h1·δ2 ) / (h1 + h2)
+      Eğer d·δ1 < 0            →  d = 0
+      Eğer δ1·δ2 < 0 ve |d| > 3·|δ1|  →  d = 3·δ1     (aşırı sapmayı sınırla)
+
+n = 2 özel durumu: d0 = d1 = (y1 − y0)/(x1 − x0)  (doğrusal)
+
+Değerlendirme (pchipEval, satır 54–69) — Hermite baz fonksiyonlarıyla:
+  x ≤ xs[0]      →  ys[0]         (düz ekstrapolasyon; klip)
+  x ≥ xs[n-1]    →  ys[n-1]
+  Aralık [x_i, x_{i+1}] içinde, t = (x − x_i)/h,  h = x_{i+1} − x_i:
+      y = y_i·h00(t) + h·d_i·h10(t) + y_{i+1}·h01(t) + h·d_{i+1}·h11(t)
+  Kübik Hermite bazları:
+      h00 = 2t³ − 3t² + 1
+      h10 = t³ − 2t² + t
+      h01 = −2t³ + 3t²
+      h11 = t³ − t²
+
+Doğrusal tablo interpolasyonu (lerpTable, satır 71–83) — TC dışı basit aramalar
+için: standart iki-nokta lineer interpolasyon, aralık dışı → uç değere klip.
+
+
+================================================================================
+ 2. MOTOR TORK FONKSİYONU                 (satır 85–111, 476–492)
+================================================================================
+2.1 Brüt tork (createMotorTorqueFn, satır 89–111)
+  Veri noktaları rpm'e göre sıralanır → PCHIP spline oluşturulur.
+  T_brüt(rpm) = pchipEval(spline, rpm),   rpm ≤ 0 → 0
+
+  Sentetik governor droop (yalnız tablo governed bölgesini KAPSAMIYORSA):
+      Koşul: noLoadGoverned > governedSpeed  VE  rpm > governedSpeed
+             VE  tableMaxRpm < noLoadGoverned
+      rpm ≥ noLoadGoverned              →  T = 0
+      governedSpeed < rpm < noLoadGoverned:
+          frac = (rpm − governedSpeed) / (noLoadGoverned − governedSpeed)
+          T = T_brüt · (1 − frac)          (lineer droop → no-load'da sıfır)
+  Not: Tablo zaten no-load'a kadar droop içeriyorsa (ör. 3600→0) sentetik droop
+       UYGULANMAZ (çift-droop engellenir; PCHIP tabloyu izler).
+  Çıkış her zaman max(0, T_net).
+
+2.2 Net (aksesuar-düşülmüş) tork (motorTorqueFn, satır 476–492)
+  T_brüt = grossMotorTorqueFn(rpm)
+  ratio = rpm / governedSpeed
+  Fan gücü:
+      accFanMode = 'on'      →  P_fan = accTotalFanLoss                (sabit)
+      accFanMode = 'clutch'  →  P_fan = accTotalFanLoss · ratio³       (P ∝ N³)
+  P_kayıp [kW] = P_fan + accTotalOtherLoss · ratio        (diğerleri P ∝ N)
+  ω = 2π·rpm/60
+  T_kayıp = P_kayıp · 1000 / ω
+  T_net = max(0, T_brüt − T_kayıp)
+
+  Aksesuar toplama (satır 463–473): adı "fan" içerenler fan kaybına, diğerleri
+  "other" kaybına eklenir; her ikisi de kW cinsinden governed hızdaki değerdir.
+
+
+================================================================================
+ 3. TORK KONVERTÖRÜ MATEMATİĞİ            (satır 113–247)
+================================================================================
+3.1 TC fonksiyonları (createTCFunctions, satır 117–141)
+  Veri SR'ye göre sıralanır. İki PCHIP spline kurulur: K_pump(SR), τ(SR).
+  Tüm SR girişleri [0, 0.99] aralığına klip edilir.
+      K_pump(SR) = pchipEval(spKp, clip(SR))          [K-faktör]
+      τ(SR)      = pchipEval(spTau, clip(SR))          [tork oranı]
+      η(SR)      = τ(SR) · SR                          [konvertör verimi]
+  Coupling SR: τ ≤ 1.005 olan ilk SR (yoksa 0.88).
+  Veri < 2 nokta → dejenere: K_pump=999, τ=1, η=SR, couplingSR=0.88.
+
+3.2 Emilen pompa torku (temel hidrodinamik ilişki)
+      T_pompa_emilen = N_motor² / K_pump(SR)²
+      SR = N_türbin / N_motor
+  Motorun sağladığı pompa torku:
+      T_pompa_mevcut = T_motor(N) − pumpTorqueDrop
+  (pumpTorqueDrop varsayılan = 17.6 N·m; kayma/converter modunda uygulanır.)
+
+3.3 Motor–konvertör çalışma noktası (solveTCOperatingPoint, satır 147–204)
+  Hata fonksiyonu (belirli bir N_türbin için):
+      err(N) = [ T_motor(N) − drop ] − N² / K_pump(SR)²,   SR = clip(N_türbin/N)
+  err(N) = 0 kökü BİSEKSİYON ile bulunur (aralık [N_lo, N_hi], varsayılan
+  N_min=700, N_max=2500, maxIter=50, tol=0.5). Yakınsama kriteri:
+      |N_hi − N_lo| < tol   VEYA   |f_mid| < 0.1
+  Kök yoksa (f_lo·f_hi > 0): 50 rpm adımla en küçük |err| taranıp bracket
+  bulunur ("converged:false" işaretlenir).
+  Çıkış: N_motor, T_motor, T_pompa = max(0, T_motor − drop),
+         T_türbin = T_pompa·τ(SR), SR, τ, η.
+
+  Stall (N_türbin = 0, satır 154–163): _findStallSpeed ile
+      T_motor(N) − N²/K_pump(0)² − drop = 0  kökü (40 iter biseksiyon).
+
+3.4 OTURMUŞ stall çalışma noktası (computeSettledStall, satır 223–247)
+  v=0'da (türbin kilitli, SR=0) motorun FİİLEN oturduğu devir — eğim/kalkış
+  metrikleri için. Motor idle'dan nMax'a taranır (adım 5 rpm):
+      excess(N) = T_motor(N) − drop − N²/K_pump(0)²
+  Karar mantığı:
+    • excess ≤ 0 ilk kez  →  gerçek düşük denge (o N seçilir)
+    • excess yerel min yapıp tekrar artıyorsa VE min excess ≤ tol (=15 N·m)
+      →  teğetlik/asılma noktası (min excess'in N'i seçilir)
+    • hiçbiri olmazsa  →  en düşük excess noktası
+  Çıkış: T_pompa = N²/K_pump(0)², T_türbin = T_pompa·τ(0).
+  Fiziksel örnek (yorumdan): L5D + TC-415 → ~1000–1050 rpm oturma.
+
+
+================================================================================
+ 4. EŞDEĞER (DÖNEN) KÜTLE HESABI          (satır 249–290)
+================================================================================
+Tüm dönen ataletlerin tekerlek düzlemine indirgenmiş kütle katkısı.
+  i_total = i_gear · i_propshaft · i_transfer · i_axle
+  i_down  = i_propshaft · i_transfer · i_axle        (şanzıman ÇIKIŞI sonrası)
+  r²      = r_tire²
+
+LOCKUP modu (motor rijit bağlı):
+  I_eff = I_engine·i_total² + I_conv·i_total²
+        + I_trans·i_down²   + I_propshaft·i_down²
+        + I_tc·i_axle²      + I_axle + I_tire
+
+CONVERTER modu (motor ataleti akışkanla ayrıştığı için DEVRE DIŞI):
+  I_eff = I_conv_turbine·i_total²
+        + I_trans·i_down²   + I_propshaft·i_down²
+        + I_tc·i_axle²      + I_axle + I_tire
+
+Eşdeğer kütle:
+  m_eff = m_vehicle + I_eff / r_tire²
+  ratio = m_eff / m_vehicle     (kütle çarpanı; rapor amaçlı)
+
+Her atalet teriminin kütle katkısı I_term/r_tire² olarak ayrı raporlanır
+(terms nesnesi, satır 278–288).
+
+
+================================================================================
+ 5. DİRENÇ KUVVETLERİ                     (satır 292–324)
+================================================================================
+5.1 Hıza bağlı yuvarlanma katsayısı (getCrrEffective, satır 308–313)
+  iSCAAN doğrulamasıyla türetilmiş evrensel hız düzeltmesi (R²=0.9994,
+  71 nokta, geçerli 0–33 m/s):
+      K1 = 0.026909      [1/(m/s)]     (hız lineer katsayısı)
+      K2 = −0.00018893   [1/(m/s)²]    (hız kare katsayısı)
+      f = 1 + K1·V + K2·V²
+      Crr_eff = Crr_static · f
+
+5.2 Direnç bileşenleri (calcResistForces, satır 315–324)   g = 9.81
+      θ = atan(grade_pct / 100)                    (yol eğim açısı)
+      F_rolling = Crr_eff · surfFactor · m · g · cos(θ)
+      F_aero    = 0.5 · ρ · Cd · A · V²
+      F_grade   = m · g · sin(θ)
+      F_total   = F_rolling + F_aero + F_grade
+  (A = frontal alan = yükseklik·genişlik; ρ = hava yoğunluğu, vars. 1.225.)
+
+
+================================================================================
+ 6. DRİVELİNE (AKTARMA) HESAPLARI         (satır 326–348)
+================================================================================
+Hız → türbin devri (speedToTurbineRpm, satır 330):
+      N_türbin = (V / r_tire) · (i_gear·i_ps·i_tr·i_axle) · 60 / (2π)
+
+Türbin devri → hız (turbineRpmToSpeed, satır 334):
+      V = N · r_tire · 2π / (i · 60),   i = i_gear·i_ps·i_tr·i_axle
+
+Tekerlekteki çekme kuvveti (calcTractiveEffort, satır 340–344) — per-kademe
+verimli tam zincir:
+      F_traction = T_output · i_gear·η_gear · i_ps·η_ps
+                            · i_tr·η_tr · i_axle·η_axle / r_tire
+
+Tutunma limiti (limitByGrip, satır 346):
+      F_traction = min(F_traction_ham, F_grip)
+      F_grip = μ · m_vehicle · drivenPct · 9.81      (μ = 0.70 varsayılan, satır 587)
+
+
+================================================================================
+ 7. AKSESUAR TORK KAYBI (RPM BAZLI)       (satır 350–363)
+================================================================================
+(FT_SOLVER içindeki bağımsız yardımcı — Bölüm 2.2 ile aynı fizik.)
+  ref = accData.refRpm (varsayılan 2100)
+  ratio = rpm / ref
+  P_total [kW] = fanLoss·ratio³ + otherLoss·ratio       (Fan ∝ N³, diğer ∝ N)
+  ω = 2π·rpm/60
+  T_kayıp = P_total·1000 / ω      (ω>0 ise, değilse 0)
+
+
+================================================================================
+ 8. EVRENSEL DİŞLİ VERİMİ                  (satır 365–376)
+================================================================================
+iSCAAN doğrulaması: 7 vites, 2 mod, ≤0.1% hata.
+      η_gear = 1 − |ln(i_gear)| · (0.0175 + 0.00000293 · N_türbin)
+  i_gear = 1.000 (direkt) → η = 1.000 (kayıpsız)
+  Sonuç [0.90, 1.00] aralığına klip edilir.
+  Fiziksel mantık: 1'den uzaklaşan oran (under/overdrive) daha çok diş
+  teması → daha çok kayıp; kayıp devirle hafif artar.
+
+
+================================================================================
+ 9. PER-ADIM FİZİK ÇEKİRDEĞİ (calcStepPhysics)   (satır 849–1119)
+================================================================================
+Verilen v_ms ve mevcut vites/mod durumu için ANLIK ivmeyi ve tüm türev
+büyüklükleri hesaplar. Üç dala ayrılır:
+
+── DAL A: DOĞRUDAN TAHRİK (TK YOK)         (satır 902–915)
+  N_engine = speedToTurbineRpm(...), taban = torque-peak stall devri
+             (_noTcLaunchStall; idle değil — debriyaj kaydırma modeli).
+  η_direct = gearData.eff/100  (geçersizse 0.98)
+  T_engine = motorTorqueFn(N_engine)
+  T_output = T_engine · η_direct                 (SR=1, τ=1)
+  Isı reddi = max(0, T_engine·ω·(1−η_direct)/1000)     [yalnız dişli mek. kaybı]
+
+── DAL B: KİLİTLİ KONVERTÖR (LOCKUP)       (satır 916–937)
+  N_engine = N_türbin (doğrudan bağlantı), taban = idleRpm. SR=1, τ=1.
+  Kilit-klaç sürtünme torku (iSCAAN ~19.6 N·m; DEĞİŞMEZ):
+      ΔT_lockup = 10.0 + 0.00367 · N_engine
+  T_net = max(0, T_engine − ΔT_lockup)
+  T_output = T_net       (dişli verimi AYRICA aşağıda, satır 1037 uygulanır)
+  tcEta = T_net / T_engine  (~0.98 kilit-klaç verimi)
+  NOT: SR=1 olduğundan hidrolik pompa emişi (N²/K²) SIFIRDIR → pompa tork
+       düşümü (17.6) UYGULANMAZ; tek kayıp kilit-klaç sürtünmesidir.
+  Isı reddi — per-vites lineer model (Heat = a·N_engine + b [kW]):
+      Vites 1: a=0.002995, b= 0.5519      (2L ile aynı varsayılmış)
+      Vites 2: a=0.002995, b= 0.5519      (underdrive)
+      Vites 3: a=0.003071, b= 0.0304      (underdrive)
+      Vites 4: a=0.003470, b=−2.1427      (direct)
+      Vites 5: a=0.004852, b=−1.9591      (overdrive)
+      Vites 6: a=0.006967, b=−4.1326      (overdrive, en yüksek eğim)
+
+── DAL C: KONVERTÖR MODU (KAYAN TK)        (satır 938–1024)
+  N_türbin = speedToTurbineRpm(...)  (≥0).
+  DÜŞÜK DAL (teğet/oyalanma) TARAMASI (satır 958–970):
+    idleRpm → noLoadGoverned aralığı 10 rpm adımla taranır:
+      SR = clip(N_türbin / N),   Kp = K_pump(SR)
+      excess(N) = T_motor(N) − pumpTorqueDrop − N²/Kp²
+    excess önce azalıp SONRA artıyorsa vadi tabanı bulunmuştur:
+      onLowBranch = (min excess < CONV_MATCH_THRESHOLD=45 N·m)
+    excess ≤ 0 olursa → temiz yüksek denge (düşük vadi yok).
+
+    onLowBranch = TRUE   →  N_engine = vadi tabanı (eşleşmede TUT), engRate=0
+    onLowBranch = FALSE  →  N_engine = N_eng_dynamic (serbest rev-up; entegre
+                            edilen dinamik durum), taban idleRpm.
+
+  SR = clip(N_türbin / N_engine),   τ = τ(SR),   T_engine = motorTorqueFn(N_engine)
+  Kp = K_pump(SR)
+  T_pompa_emilen = N_engine² / Kp²
+  Motor NET (rev-up) torku [yalnız yüksek dalda]:
+      T_eng_net = T_engine − pumpTorqueDrop − T_pompa_emilen
+      engRate = (T_eng_net / I_eng_rev) · (60 / 2π)         [rpm/s]
+      I_eng_rev = I_engine + max(0, I_conv − I_conv_turbine)   (satır 502)
+  Türbin (çıkış) torku:  T_türbin_ham = T_pompa_emilen · τ
+  T_output = T_türbin_ham   (dişli verimi AYRICA aşağıda uygulanır)
+  tcEta = SR · τ
+  Isı reddi (satır 1006–1010):
+      ω_eng = N_engine·2π/60
+      P_heat_conv = T_pompa_emilen · ω_eng · (1 − SR·τ) / 1000     [TC kayma ısısı]
+      P_turbine   = T_türbin_ham · (N_engine·SR)·2π/60 / 1000
+      P_heat_gear = P_turbine · (1 − eta_conv_internal)   (eta_conv_internal=0.975)
+      Isı reddi   = max(0,P_heat_conv) + max(0,P_heat_gear)
+
+── ORTAK: DİŞLİ VERİMİ, ÇEKİŞ, DİRENÇ, İVME   (satır 1026–1118)
+  Dişli verimi devri: N_türb_eff = isLockup ? N_engine : N_engine·SR
+  eta_gear = calcGearEfficiency(i_gear, N_türb_eff)          (Bölüm 8)
+  TK'li modlarda (converter+lockup) BİR KEZ uygulanır (satır 1037):
+      T_output ← T_output · eta_gear
+  (Doğrudan tahrik dalında T_output zaten gearData.eff içerir → dokunulmaz.)
+
+  Ham çekiş (dişli slotu 1.0, çift-sayım yok):
+      F_traction_ham = calcTractiveEffort(T_output, i_gear, 1.0, ...)
+  Grip limiti:  F_traction = min(F_traction_ham, F_grip)
+  Direnç:       F_total = calcResistForces(v_ms, ...)          (Bölüm 5)
+  NET KUVVET:   F_net = F_traction − F_total
+  Eşdeğer kütle: m_eff = calcEquivalentMass(...)               (Bölüm 4)
+                 isLockup = tcNode ? gerçek_mod : true (TK yoksa daima lockup)
+
+  ┌─────────────────────────────────────────────────────────┐
+  │  İVME:      a = F_net / m_eff        [m/s²]               │
+  │             a_g = a / 9.81           [g]                  │
+  └─────────────────────────────────────────────────────────┘
+
+
+================================================================================
+ 10. VİTES GEÇİŞ MANTIĞI (checkShift)      (satır 596–840)
+================================================================================
+Shift sırası:  1C → 2C → 2L → 3L → 4L → 5L → 6L
+State = { gearIdx (0=F1), isLockup (false=converter, true=lockup) }
+Şanzıman çıkış devri (KİNEMATİK — araç hızından):
+      N_out = (v_kmh/3.6 / r_tire) · (i_propshaft·i_transfer·i_axle) · 60/(2π)
+
+CONVERTER MOD yükseltmeleri:
+  1C→2C:  eşik = converterShifts['1C2C']: a·shiftRefRPM + b
+                 yoksa: SHIFT_1C_2C_OUT_RATIO · shiftRefRPM
+          Tetik: N_out ≥ eşik
+  2C→2L:  eşik = calc2C2LThreshold(shiftRefRPM):
+                 segmented ise (ESL ≥ validFrom) → a·ESL + b
+                 aksi halde lookup tablosu lineer interpolasyonu
+                 basit ise → a·ESL + b
+          Tetik: N_out ≥ eşik  → isLockup = true
+
+LOCKUP MOD yükseltmeleri (2L→3L … 5L→6L):
+  N_out_lu = N_engine / i_gear         (SR=1)
+  lockupShifts[shiftKey] varsa: eşik = calcDownshiftThreshold(...)
+      Tetik: N_out_lu ≥ eşik
+  yoksa (eski yöntem): Tetik: N_engine ≥ N_shift_lockup
+      N_shift_lockup = shiftRefRPM − lockupOffset
+
+GOVERNED ÜST-VİTES GÜVENLİĞİ (over-rev koruması, satır 793–806):
+  Shift olmadıysa VE g<maxGear VE N_engine ≥ governedSpeed:
+      TK varsa isLockup=true → zorunlu üst vitese geç
+      (kötü kalibre profillerde motorun no-load'a dayanıp 0 çekişte
+       takılmasını önler; iyi profillerde no-op'tur.)
+
+DOWNSHIFT (yalnız lockup modda, g>0, satır 808–837):
+  N_out_ds = N_engine / i_gear
+  dsKey = (g+1)+'to'+g   (ör. '6to5')
+  eşik = calcDownshiftThreshold(dsEntry, shiftRefRPM)
+  Tetik: N_out_ds < eşik → alt vitese düş (2→1'de converter moda dönüş)
+
+calcDownshiftThreshold formatları (satır 656–678):
+  {a,b}                         → a·ESL + b            (lineer)
+  {a,b,capValue,capBelow}       → ESL<capBelow ise capValue, yoksa a·ESL+b
+  {type:'piecewise',breakpoint,low,high} → ESL≤bp ? low.a·ESL+low.b : high...
+  {type:'segments',segments:[{maxESL,a,b,cap},...]}    → çok segmentli
+  minCap tanımlıysa sonuç minCap altına düşemez.
+
+
+================================================================================
+ 11. ZAMAN ENTEGRASYONU (dv/dt = a(v))     (satır 1567–1709)
+================================================================================
+Ana döngü: step=0..maxSteps-1, maxSteps = ceil(maxTime/dt). Her adımda
+calcStepPhysics(v).accel ile ivme; seçilen yöntemle hız güncellenir:
+
+EULER (satır 1624):
+      dv = a(v)·dt
+
+HEUN (2. derece, satır 1626):
+      a1 = a(v);  a2 = a(v + a1·dt)
+      dv = (a1 + a2)/2 · dt
+
+RALSTON (optimal 2. derece, satır 1630):
+      r1 = a(v);  r2 = a(v + (2/3)·r1·dt)
+      dv = (r1/4 + 3·r2/4) · dt
+
+RK4 (VARSAYILAN, satır 1676):
+      k1 = a(v)
+      k2 = a(v + k1·dt/2)
+      k3 = a(v + k2·dt/2)
+      k4 = a(v + k3·dt)
+      dv = (k1 + 2k2 + 2k3 + k4)/6 · dt
+
+RK45 (Dormand–Prince, adaptif adım, satır 1635–1675):
+  6 kademe (Butcher tablosu, satır 1645–1650):
+      k1 = a(v)
+      k2 = a(v + k1·dt/5)
+      k3 = a(v + k1·dt·3/40 + k2·dt·9/40)
+      k4 = a(v + k1·dt·44/45 − k2·dt·56/15 + k3·dt·32/9)
+      k5 = a(v + k1·dt·19372/6561 − k2·dt·25360/2187
+               + k3·dt·64448/6561 − k4·dt·212/729)
+      k6 = a(v + k1·dt·9017/3168 − k2·dt·355/33 + k3·dt·46732/5247
+               + k4·dt·49/176 − k5·dt·5103/18656)
+  4. derece (hata tahmini):
+      dv4 = (k1·5179/57600 + k3·7571/16695 + k4·393/640
+             − k5·92097/339200 + k6·187/2100) · dt
+  5. derece (kullanılan çözüm):
+      dv5 = (k1·35/384 + k3·500/1113 + k4·125/192
+             − k5·2187/6784 + k6·11/84) · dt
+  Hata / tolerans:
+      err = |dv5 − dv4|,   tol = ftAtol + ftRtol·|v|    (vars. 1e-6, 1e-4)
+      err ≤ tol (veya dt≤dt_min=1e-5) → kabul: dv=dv5
+          yeni dt: factor = 0.84·(tol/err)^0.2, clip[0.3, 2.5], dt∈[1e-5,0.1]
+      err > tol → reddet, küçült: shrink = 0.84·(tol/err)^0.25, ×max(0.2,·)
+
+DURUM GÜNCELLEME (satır 1684–1690):
+      v_new = max(0, v + dv)
+      dt_step = (rk45 ? kabul edilen dt : dt)
+      dist += (v + v_new)/2 · dt_step          (trapez kuralı)
+      v = v_new;   t += dt_step
+
+
+================================================================================
+ 12. MOTOR DEVRİ DİNAMİĞİ (REV-UP)         (satır 1692–1708)
+================================================================================
+Başlangıç durumu (satır 1185–1202):
+  TK var + veri var → N_eng_dynamic = computeSettledStall(...).N_engine
+                      (oturmuş konvertör noktası; idle değil — launch
+                       transientinin yalancı düşük çekişini tabloya sızdırmaz)
+  TK yok            → _noTcLaunchStall = idle→governed arası torque-peak devri
+  aksi             → idleRpm
+
+Her adım güncellemesi:
+  ph.onLowBranch                →  N_eng_dynamic = ph.N_engine  (eşleşmede tut)
+  ph.engRate ≠ null (yüksek dal) →  N_eng_dynamic += engRate·dt_step
+                                    clip[idleRpm, max(noLoad,governed)+100]
+  aksi (lockup / no-TC)         →  N_eng_dynamic = ph.N_engine (hıza kilitli)
+
+
+================================================================================
+ 13. TÜREV ÇIKIŞ BÜYÜKLÜKLERİ (recordStep) (satır 1302–1564)
+================================================================================
+Her kaydedilen adımda hesaplanan mühendislik büyüklükleri:
+
+  Output speed (kinematik):
+      N_output = (v/r_tire)·(i_propshaft·i_transfer·i_axle)·60/(2π)
+  Tractive Effort:      TE [kN] = F_traction / 1000
+  Drawbar Pull:         DP [kN] = (F_traction − |F_rolling| − |F_aero|)/1000
+                        (eğim hariç → saf tırmanma/çekme kapasitesi)
+  Wheel Power:          WP [kW] = F_traction · v / 1000
+  Net Grade [%] (Allison/iSCAAN standardı):
+      sinθ = DP_N / (m_vehicle·9.81)
+      |sinθ|≥1 → ±999.9,  aksi → Grade% = sinθ/√(1−sin²θ) · 100 = tanθ·100
+  Speed Ratio / τ / N_türbin:
+      lockup → SR=1, τ=1, N_türbin = N_engine
+      converter → SR, τ, N_türbin = N_engine·SR
+  tcEta kaydı: lockup → 1.0, converter → SR·τ
+
+ENERJİ DENGESİ (satır 1358–1379):
+      ω_eng = N_engine·2π/60
+      P_engine = T_engine·ω_eng / 1000
+      P_wheel  = F_traction·v / 1000
+      P_rolling= |F_rolling|·v / 1000
+      P_aero   = |F_aero|·v / 1000
+      P_grade  = F_grade·v / 1000            (işaretli: + = yokuş yukarı)
+      P_accel  = m_eff·a·v / 1000
+      P_TC_heat= heatRejection_kW
+      P_drivetrain = max(0, P_engine − P_TC_heat − P_wheel)
+      η_total  = (P_engine>0.1) ? P_wheel/P_engine·100 : 0
+  Artık (kapanış kontrolü, satır 1803):
+      residual = |P_wheel − (P_rolling + P_aero + P_grade + P_accel)|
+
+Per-bileşen sinyalleri (motor/TC/şanzıman/propşaft/transfer/diferansiyel,
+satır 1382–1501+): her düğümde rpm_in/out, torque_in/out, power_in/out,
+power_loss, verim vb. Örn. TC K-faktör = N_engine/√T_pump; slip=(1−SR)·100.
+
+
+================================================================================
+ 14. STATİK V_max UZANTISI (droop bölgesi) (satır 1720–1740)
+================================================================================
+V_max'a ulaşıldığında (son vites, F_net≤0 veya |a|<0.005 m/s², satır 1608–1618)
+Allison formatı statik uzantı eklenir:
+      vExtStep = 3.2 km/h,   en çok 30 adım
+      Her adımda calcStepPhysics(vExt) → WP hesapla, kaydet
+      WP ≤ 0 satırı da dahil edilip DURULUR (governed→noLoad droop sonu).
+
+
+================================================================================
+ 15. OTURMUŞ STALL & DÜŞÜK-HIZ METRİKLERİ  (satır 1817–1885)
+================================================================================
+Eğim/kalkış metrikleri transient t=0 satırından DEĞİL, oturmuş noktalardan
+hesaplanır (motor kalkışta anlık dengeye atlamaz):
+
+  settledStall (TK var + veri var):
+      _ss = computeSettledStall(...)             (Bölüm 3.4)
+      η_g1 = calcGearEfficiency(i_gear1, 0)      (stall'da SR=0 → türbin=0)
+      T_output = _ss.T_turbine · η_g1
+      TE = calcTractiveEffort(T_output, i_gear1, 1.0, ...)   [GRİP-LİMİTSİZ]
+      F_roll0 = Crr_eff(0)·surfFactor·m·9.81      (v=0, düz yol)
+      TE_kN = TE/1000,  DP_kN = (TE − F_roll0)/1000
+      slip = (TE > F_grip)     → tutunma aşıldı bayrağı ("!")
+
+  Düşük-hız (~10 km/h) quasi-statik nokta: benzer şekilde o hızda motorun
+  oturduğu dengeden TE/DP üretilir (transient düşük okumayı override eder).
+
+
+================================================================================
+ 16. GRADEABILITY (EĞİM TIRMANMA)          (satır 1978–2239)
+================================================================================
+16.1 Belirli eğim için maks hız (veFindMaxSpeedForGrade, satır 2000–2015):
+      θ = atan(grade_pct/100)
+      F_grade [kN] = m·g·sin(θ) / 1000
+      DP eğrisinde (yüksek→düşük hız) DP_kN ≥ F_grade koşulunu sağlayan en
+      yüksek hız; geçiş aralığında lineer interpolasyon.
+
+16.2 Tek kademe hesabı (veCalcGradeForRatio, satır 2032–2107):
+      mg_kN = m·g/1000
+      Stall DP kaynağı: TK var → v=0 (konvertör stall = maks tork çarpımı);
+                        TK yok → 1. vitesteki ulaşılabilir MAKS DP.
+      dp_stall ≥ mg_kN → stallGrade=999, launchGrade=997 (sınırsız)
+      aksi:
+          stallGrade = tan(asin(dp_stall/mg_kN)) · 100      [%], 0.1 yuvarlama
+          launchGrade: TK var → stallGrade − 2.0 (iSCAAN konvansiyonu)
+                       TK yok → stallGrade
+      Düşük-hız eğimi: dp_lowspd = DP eğrisi @ v_lowspd
+          lowSpeedGrade = tan(asin(dp_lowspd/mg_kN)) · 100  (≥1 ise 999)
+      Eğim tablosu: VE_DEFAULT_GRADE_LIST [0,0.3,0.5,1,2,...,50,60]% için
+                    her eğimde ulaşılabilir maks hız + o hızdaki vites.
+
+16.3 TC %80 çalışma noktası (veFindTC80PercentSpeed, satır 2018–2029):
+      1C vitesinde DP'nin stall değerinin %60'ına düştüğü hız (interpolasyon).
+
+16.4 Farklı transfer oranı için ölçekleme (veScaleFTDataForTransfer, 2110):
+      rFactor = ratioNew / ratioOrig     (ρ=1.18, g=9.81)
+      v_new = v_kmh / rFactor
+      TE_new = TE_kN · rFactor · (ηNew/ηOrig)
+      F_aero = 0.5·ρ·Cd·A·v_ms² / 1000
+      F_roll = Crr_eff(v_ms)·m·g / 1000
+      DP_new = TE_new − F_roll − F_aero
+  (Gerçek Low-range simülasyon sonucu varsa ölçekleme yerine o kullanılır.)
+
+
+================================================================================
+ 17. HIZLANMA MİLESTONE'LARI (ACCELERATION) (satır 2241–2337)
+================================================================================
+Hedef hızlar: VE_ACCEL_SPEED_TARGETS = [20, 30, 40, 60, 80, 100] km/h
+
+Milestone çıkarımı (veExtractAccelMilestones, satır 2247–2270):
+  Her hedef için hız dizisinde speed[i-1] ≤ target ≤ speed[i] aralığı bulunur,
+  LİNEER İNTERPOLASYON ile:
+      frac = (target − speed[i-1]) / (speed[i] − speed[i-1])
+      t = time[i-1]     + frac·(time[i]     − time[i-1])       [0.1 yuvarlama]
+      d = distance[i-1] + frac·(distance[i] − distance[i-1])   [tam sayı m]
+  target > maxSpeed → satır boş (ulaşılamaz).
+
+Düşük kademe (transfer ikinci oranı varsa, satır 2293–2334):
+  Gerçek Low-range simülasyon sonucu varsa doğrudan kullanılır (doğru ivme,
+  doğru eşdeğer kütle). Yoksa FALLBACK ölçekleme:
+      rFactor = lowRatio / activeRatio
+      lowSpeed[i]    = speed[i] / rFactor
+      lowTime[i]     = time[i]  / rFactor        (ivme ≈ rFactor kat artar)
+      lowDist[i]     = distance[i] / rFactor²
+      maxSpeedLow    = maxSpeed / rFactor
+
+
+================================================================================
+ 18. TEMEL VARSAYILAN SABİTLER
+================================================================================
+Motor:      idleRpm=700, governedSpeed=2100, noLoadGoverned=2350,
+            I_engine=1.431 kg·m²
+Tork konv.: pumpTorqueDrop=17.6 N·m, I_conv=0.5, I_conv_turbine=0.3,
+            eta_conv_internal=0.975, CONV_MATCH_THRESHOLD=45 N·m,
+            couplingSR (τ≤1.005) veya 0.88
+Şanzıman:   I_trans=1.0 kg·m²; varsayılan vitesler (VE_FT_GB_DEFAULT_GEARS,
+            cp-gearbox.js:816) — oran / verim%:
+              F1 3.487 / 98.11 (C)      F4 1.000 / 99.64 (L)
+              F2 1.864 / 98.79 (L)      F5 0.750 / 98.62 (L)
+              F3 1.409 / 99.00 (L)      F6 0.652 / 98.05 (L)
+              R1 5.026 / 97.50
+Propşaft:   psEff=98.60% (çarpımsal), I_propshaft=0.5 kg·m² (düğüm başına),
+            i_propshaft=1.0
+Transfer:   High 1.054 / 97%, Low 2.337 / 97%; I_tc=0.3 kg·m²
+Diferans.:  i_axle=6.54, eta_axle=96%, I_axle=1.0 kg·m²
+Tekerlek:   r_tire=0.573 m, I_tire=56.0 kg·m², Crr=0.0035, surfFactor=1.00
+Araç:       GVW=14900 kg, drivenPct=100%, H=3.200 m, W=2.500 m,
+            Cd=0.900, ρ=1.225 kg/m³, grade=0%
+Tutunma:    μ=0.70 → F_grip = μ·m·drivenPct·9.81
+Çözücü:     method='rk4', dt=0.01 s, maxTime=120 s,
+            ftAtol=1e-6, ftRtol=1e-4 (RK45)
+Crr hız düz.: K1=0.026909, K2=−0.00018893
+Dişli verim katsayıları: 0.0175 + 0.00000293·N_türbin
+Lockup klaç sürtünme: ΔT = 10.0 + 0.00367·N_engine
+
+================================================================================
+  BELGE SONU
+================================================================================
