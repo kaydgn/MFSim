@@ -80,13 +80,22 @@ describe('veGenerateFTCalcTraceReport — smoke', () => {
   });
 
   test('adım izinde formül+sayı ikamesi var (F_aero substitution)', () => {
-    expect(txt).toContain('F_aero = 0.5*rho*Cd*A*v^2');
-    expect(txt).toContain('a = (F_cekis - F_direnc)/m_eff');
-    expect(txt).toMatch(/k1 = a\(v\)/);            // RK4 iç adımı yazılmış
+    expect(txt).toMatch(/0\.5 \* rho \* Cd \* A \* v\^2/);       // aero formülü
+    expect(txt).toMatch(/\(F_cekis - F_direnc\) \/ m_eff/);     // ivme formülü
+    expect(txt).toMatch(/k1 = a\(v\)/);                          // RK4 iç adımı yazılmış
   });
 
   test('izli yeniden-koşu ekrandaki veriyi (window.veSimResults) bozmaz', () => {
     // Rapor üretimi window.veSimResults'a dokunmamalı (sadece kendi koşusunu yapar)
     expect(window.veSimResults).toBeUndefined();
+  });
+
+  test('düşük kademe (rangeSel=low) ayrı iz üretir', () => {
+    const low = veGenerateFTCalcTraceReport(null, 'Test', 'low');
+    expect(typeof low).toBe('string');
+    expect(low.charAt(0)).not.toBe('(');                         // hata mesajı değil
+    expect(low).toMatch(/Transfer Kademesi\s*:\s*Low/);          // düşük kademe başlıkta
+    // yüksek ve düşük farklı içerik (farklı transfer oranı → farklı devir/kuvvet)
+    expect(low).not.toBe(txt);
   });
 });
