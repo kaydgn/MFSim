@@ -59,7 +59,7 @@ describe('TK\'siz Tam-Gaz TXT raporu — Performans Özeti temizliği', () => {
   beforeAll(() => {
     const sim = buildSim();
     report = veGenerateFTTxtReport(sim, 'Test');
-    const i = report.indexOf('6. PERFORMANS OZETI');
+    const i = report.indexOf('6  ·  PERFORMANS ÖZETİ');
     const e = report.indexOf('RAPOR SONU');
     section = report.slice(i, e > i ? e : report.length);
   });
@@ -67,16 +67,16 @@ describe('TK\'siz Tam-Gaz TXT raporu — Performans Özeti temizliği', () => {
   test('rapor üretilir ve Performans Özeti + Eğim Kabiliyeti içerir', () => {
     expect(typeof report).toBe('string');
     expect(report.length).toBeGreaterThan(500);
-    expect(section).toContain('PERFORMANS OZETI');
-    expect(section).toContain('EGIM KABILIYETI');
+    expect(section).toContain('PERFORMANS ÖZETİ');
+    expect(section).toContain('EĞİM KABİLİYETİ');
   });
 
   test('Konvertör Eşleşmesi bölümü TK yokken GÖSTERİLMEZ', () => {
-    expect(section).not.toContain('KONVERTOR ESLESMESI');
+    expect(section).not.toContain('KONVERTÖR EŞLEŞMESİ');
   });
 
   test('Genel Bilgiler\'de "Tork Konvertoru" satırı TK yokken yok', () => {
-    expect(section).not.toContain('Tork Konvertoru');
+    expect(section).not.toContain('Tork Konvertörü');
   });
 
   test('motor adındaki " | tork&güç" etiketi ayrıştırılır', () => {
@@ -85,7 +85,7 @@ describe('TK\'siz Tam-Gaz TXT raporu — Performans Özeti temizliği', () => {
   });
 
   test('kutu bordürü bozulmaz — tüm tablo satırları eşit genişlik', () => {
-    const boxLines = section.split('\n').filter(l => /^\s{2}\|/.test(l));
+    const boxLines = section.split('\n').filter(l => /^\s{2}│/.test(l));
     expect(boxLines.length).toBeGreaterThan(5);
     const widths = boxLines.map(l => l.length);
     const w0 = widths[0];
@@ -99,7 +99,7 @@ describe('TK\'siz Tam-Gaz TXT raporu — Performans Özeti temizliği', () => {
     expect(report).toContain('ŞANZIMAN');       // 8L90 giriş limitleri → S kategorisi
     expect(report).toMatch(/S0\d\s+Giriş/);
     const iPanel = report.indexOf('DERECELENDİRME VE KILAVUZ KONTROLÜ');
-    const iSec1 = report.indexOf('1. PLATFORM');
+    const iSec1 = report.indexOf('1  ·  PLATFORM');
     expect(iPanel).toBeGreaterThan(0);
     expect(iPanel).toBeLessThan(iSec1);          // girişte
   });
@@ -116,14 +116,14 @@ describe('TK VARSA rapor — konvertör bölümleri KORUNUR (ileride TK eklenirs
     ] };
     sim = buildSim(TC);
     report = veGenerateFTTxtReport(sim, 'Test');
-    const i = report.indexOf('6. PERFORMANS OZETI');
+    const i = report.indexOf('6  ·  PERFORMANS ÖZETİ');
     const e = report.indexOf('RAPOR SONU');
     section = report.slice(i, e > i ? e : report.length);
   });
 
   test('TK varsa Genel Bilgiler\'de "Tork Konvertoru" satırı VAR (adıyla)', () => {
     expect(sim.reportSnapshot.hasTC).toBe(true);
-    expect(section).toContain('Tork Konvertoru');
+    expect(section).toContain('Tork Konvertörü');
     expect(section).toContain('Test Konvertor');
   });
 
@@ -133,7 +133,7 @@ describe('TK VARSA rapor — konvertör bölümleri KORUNUR (ileride TK eklenirs
   });
 
   test('kutu bordürü TK\'li raporda da tutarlı', () => {
-    const boxLines = section.split('\n').filter(l => /^\s{2}\|/.test(l));
+    const boxLines = section.split('\n').filter(l => /^\s{2}│/.test(l));
     expect(boxLines.length).toBeGreaterThan(5);
     const w0 = boxLines[0].length;
     boxLines.forEach(l => expect(l.length).toBe(w0));
