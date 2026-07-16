@@ -2188,6 +2188,31 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
 }
 
 // ═══════ TXT RAPOR ÖNİZLEME ═══════
+// TXT raporu önizlemede YATAYDA ORTALAR. Metni boş-satır bloklarına ayırır,
+// her bloğu ayrı <pre width:fit-content; margin:0 auto> olarak render eder →
+// tüm bloklar aynı merkez ekseninde. Blok-içi sütun hizası korunur (her blok
+// tek parça kayar). Boş satır aralıkları eşdeğer yükseklikte boşlukla korunur.
+// İndirilen .txt DEĞİŞMEZ — ham metin ayrıca saklanır.
+function veRenderCenteredTXT(txtContent) {
+  function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  var lines = String(txtContent == null ? '' : txtContent).split('\n');
+  var out = '', cur = [], blanks = 0;
+  function flush(){
+    if(!cur.length) return;
+    out += '<pre style="margin:0 auto; padding:0; width:fit-content; max-width:100%; white-space:pre; overflow-x:auto; line-height:1.55;">' + esc(cur.join('\n')) + '</pre>';
+    cur = [];
+  }
+  for(var i=0;i<lines.length;i++){
+    if(lines[i].trim()===''){ flush(); blanks++; }
+    else {
+      if(blanks>0){ out += '<div style="height:' + (blanks*1.55).toFixed(2) + 'em;"></div>'; blanks=0; }
+      cur.push(lines[i]);
+    }
+  }
+  flush();
+  return out;
+}
+
 function veRenderTXTReport(reportType) {
   var overlay = document.getElementById('ve-report-overlay');
   if(!overlay) return;
@@ -2231,9 +2256,9 @@ function veRenderTXTReport(reportType) {
   // TXT content area — düz belge görünümü
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
   html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
-  html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  html += '</pre>';
+  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; color:var(--text-primary); tab-size:4;">';
+  html += veRenderCenteredTXT(txtContent);
+  html += '</div>';
   html += '</div></div>';
 
   // Store content for download
@@ -2281,9 +2306,9 @@ function veRenderSegmentDriveTXTReport() {
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
   html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
-  html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  html += '</pre>';
+  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; color:var(--text-primary); tab-size:4;">';
+  html += veRenderCenteredTXT(txtContent);
+  html += '</div>';
   html += '</div></div>';
 
   window._veTxtPreviewContent = txtContent;
@@ -2325,9 +2350,9 @@ function veRenderObstacleCrossingTXTReport() {
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
   html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
-  html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  html += '</pre>';
+  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; color:var(--text-primary); tab-size:4;">';
+  html += veRenderCenteredTXT(txtContent);
+  html += '</div>';
   html += '</div></div>';
 
   window._veTxtPreviewContent = txtContent;
@@ -2370,9 +2395,9 @@ function veRenderTopologyTXTReport() {
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
   html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<pre id="ve-txt-report-content" style="margin:0; padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; line-height:1.55; color:var(--text-primary); white-space:pre; overflow-x:auto; tab-size:4;">';
-  html += txtContent.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  html += '</pre>';
+  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; color:var(--text-primary); tab-size:4;">';
+  html += veRenderCenteredTXT(txtContent);
+  html += '</div>';
   html += '</div></div>';
 
   window._veTxtPreviewContent = txtContent;
@@ -2450,7 +2475,7 @@ function veDownloadTXTFromPreview() {
     // Önizlemeyi de güncelle
     window._veTxtPreviewContent = content;
     var preEl = document.getElementById('ve-txt-report-content');
-    if(preEl) preEl.textContent = content;
+    if(preEl) preEl.innerHTML = veRenderCenteredTXT(content);
 
     ov.remove();
     showToast('TXT rapor indirildi', 'success');
