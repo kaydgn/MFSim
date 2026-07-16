@@ -1729,7 +1729,17 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
   // Kosul seridi: "  ETIKET │ a · b · c"
   function condStrip(label, pairs) {
-    return '  ' + pad(tr(label), 10, 'left') + '│ ' + pairs.join('  ·  ') + '\n';
+    var prefix = '  ' + pad(tr(label), 10, 'left') + '│ ';
+    var cont   = '  ' + pad('', 10, 'left') + '│ ';
+    var maxW = W;
+    var out = '', line = prefix;
+    for (var i = 0; i < pairs.length; i++) {
+      var atStart = (line === prefix || line === cont);
+      var seg = (atStart ? '' : '  ·  ') + pairs[i];
+      if (!atStart && (line + seg).length > maxW) { out += line + '\n'; line = cont + pairs[i]; }
+      else line += seg;
+    }
+    return out + line + '\n';
   }
 
   // ── VERI KAYNAKLARI ──
@@ -1902,98 +1912,140 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   ];
   r += titledBox('RAPOR BİLGİLERİ', _infoLines, W) + '\n';
 
+  // ── DERECELENDİRME VE KILAVUZ KONTROLÜ (girişte özet uygunluk paneli) ──
+  // Özgün MFSim şeması: K=Konvertör, S=Şanzıman, A=Araç. Tüm değerler kendi
+  // simülasyonumuzdan (ECM / şanzıman limitleri / gradeability) — validasyonlu
+  // mevcut hesaplar yeniden sunulur, yeni numerik icat edilmez.
+  r += (function(){
+    function clip(x, w){ x = tr(x); return x.length > w ? x.slice(0, w-1) + '…' : x; }
+    function mk(code, label, detail, st, stLabel){ return { code:code, label:label, detail:detail, st:st, stLabel:stLabel }; }
+    var cats = [];
+
+    // KONVERTÖR — ECM sonucundan. YALNIZ seçili TK gerçekten değerlendirildiyse
+    // göster; eşleşme yoksa (ör. preset dışı özel TK) yanıltıcı fallback yerine
+    // kategoriyi hiç gösterme.
+    var ec = (R.hasTC && _ecmResults.length > 0) ? _ecmResults.find(function(e){ return e.name === R.tcName; }) : null;
+    if (ec) {
+      var k1st = ec.status === 'recommended' ? 'ok' : ec.status === 'caution' ? 'warn' : 'bad';
+      var k1lb = ec.status === 'recommended' ? 'Uygun' : ec.status === 'caution' ? 'Dikkat' : ec.status === 'not-recommended' ? 'Önerilmez' : 'Uygun Değil';
+      var thrMin = Math.round(peakTorqueRpm - 50);
+      var thrTurb = Math.round(R.turbineRating || 3320);
+      cats.push({ title:'KONVERTÖR', rows:[
+        mk('K01', 'Motor–Konvertör Eşleşmesi', clip(ec.name, 24), k1st, k1lb),
+        mk('K02', 'Stall Tork Oranı (TR)', num(ec.stallTau, 3), 'ref'),
+        mk('K03', 'Stall Motor Devri', numI(ec.stallSpeed) + ' rpm', 'ref'),
+        mk('K04', 'Min. Konvertör Çalışma Devri', numI(ec.minSpeed) + ' ≥ ' + thrMin + ' rpm', ec.c5ok ? 'ok' : 'warn'),
+        mk('K05', 'Stall Türbin Torku', numI(ec.tTurbineStall) + ' ≤ ' + thrTurb + ' N·m', ec.c7ok ? 'ok' : 'bad'),
+        mk('K06', 'Governed Hız Oranı (SR)', num(ec.srGov, 3) + ' ≥ 0.80', ec.c8ok ? 'ok' : 'warn')
+      ]});
+    }
+
+    // ŞANZIMAN — preset giriş/çıkış limitlerinden
+    var sRows = [];
+    if (_gbLimits.grossInputTorque != null) {
+      sRows.push(mk('S01', 'Giriş Torku (Brüt)', numI(_torqueAtGov) + ' ≤ ' + numI(_gbLimits.grossInputTorque) + ' N·m', _c10ok ? 'ok' : 'bad'));
+    }
+    if (_gbLimits.grossInputPower != null) {
+      sRows.push(mk('S02', 'Giriş Gücü (Brüt)', numI(_powerAtGov) + ' ≤ ' + numI(_gbLimits.grossInputPower) + ' kW', _c9ok ? 'ok' : 'bad'));
+    }
+    if (_gbLimits.maxOutputSpeed != null && stepsHigh.length > 0) {
+      var maxOut = 0; for (var _oi = 0; _oi < stepsHigh.length; _oi++) if (stepsHigh[_oi].outputRPM > maxOut) maxOut = stepsHigh[_oi].outputRPM;
+      sRows.push(mk('S03', 'Maks. Çıkış Devri', numI(maxOut) + ' ≤ ' + numI(_gbLimits.maxOutputSpeed) + ' rpm', maxOut <= _gbLimits.maxOutputSpeed ? 'ok' : 'bad'));
+    }
+    if (sRows.length) cats.push({ title:'ŞANZIMAN', rows:sRows });
+
+    // ARAÇ — gradeability referansları (eşiksiz, bilgi)
+    if (G && G.high) {
+      var aRows = [ mk('A01', 'Düz Yolda Maks. Hız', num(G.high.maxSpeedFlat, 1) + ' km/h', 'ref') ];
+      if (G.high.stallGrade != null) aRows.push(mk('A02', 'Stall Tırmanış Kabiliyeti', '%' + num(G.high.stallGrade, 1), 'ref'));
+      if (G.high.lowSpeedGrade != null) aRows.push(mk('A03', 'Düşük Hız Tırmanış (%80)', '%' + num(G.high.lowSpeedGrade, 1) + ' @ ' + num(G.high.lowSpeedV, 1) + ' km/h', 'ref'));
+      cats.push({ title:'ARAÇ', rows:aRows });
+    }
+
+    if (!cats.length) return '';
+
+    var STG = { ok:'✓', warn:'⚠', bad:'✗', ref:'·' };
+    var STL = { ok:'Uygun', warn:'Dikkat', bad:'Uygun Değil', ref:'Referans' };
+    var inner = W - 4;                                  // '  ┌' + inner + '┐'
+    var CW = { code:5, label:32, detail:24, st:13 };    // 5+32+24+13 = 74 = inner-2
+    function bLine(t){ if (t.length > inner-2) t = t.slice(0, inner-3) + '…'; return '  │ ' + pad(t, inner-2, 'left') + ' │\n'; }
+    function mRule(){ return '  ├' + rep('─', inner) + '┤\n'; }
+
+    var hd = '─ DERECELENDİRME VE KILAVUZ KONTROLÜ ';
+    var s = '  ┌' + hd + rep('─', Math.max(0, inner - hd.length)) + '┐\n';
+
+    for (var ci = 0; ci < cats.length; ci++) {
+      var cat = cats[ci], hasBad = false, hasWarn = false, hasPF = false;
+      for (var ri = 0; ri < cat.rows.length; ri++) {
+        var st = cat.rows[ri].st;
+        if (st !== 'ref') { hasPF = true; if (st === 'bad') hasBad = true; else if (st === 'warn') hasWarn = true; }
+      }
+      var score = !hasPF ? '' : hasBad ? '✗ İNCELE' : hasWarn ? '⚠ DİKKAT' : '✓ UYGUN';
+      s += mRule();
+      s += bLine(pad(cat.title, (inner-2) - score.length) + score);
+      s += mRule();
+      for (var ri2 = 0; ri2 < cat.rows.length; ri2++) {
+        var rw = cat.rows[ri2];
+        var stStr = STG[rw.st] + ' ' + (rw.stLabel || STL[rw.st]);
+        s += bLine(pad(rw.code, CW.code) + pad(clip(rw.label, CW.label), CW.label) + pad(clip(rw.detail, CW.detail), CW.detail) + pad(stStr, CW.st, 'right'));
+      }
+    }
+    s += '  └' + rep('─', inner) + '┘\n';
+    return s + '\n';
+  })();
+
   // ════════════════════════════════════════════════════════════════════════
   // 1. PLATFORM VE ARAC OZELLIKLERI
   // ════════════════════════════════════════════════════════════════════════
-  r += '\n' + ln('=', W) + '\n';
-  r += pad('1. PLATFORM VE ARAC OZELLIKLERI', W, 'center') + '\n';
-  r += ln('=', W) + '\n\n';
+  r += '\n' + sectionBanner('1  ·  PLATFORM VE ARAÇ ÖZELLİKLERİ', W);
 
   var revPerKm = Math.round(1000 / (2 * Math.PI * R.tireRadius));
 
-  // Yan yana satır yardımcısı (\n olmadan)
-  var CW = 40;
-  var CLW = 24; // kolon label genişliği
-  function pCol(label, value) { return '  ' + pad(label, CLW) + ': ' + value; }
+  r += titledBox('ALAN VE AĞIRLIK', [
+    _kv('Alın Alanı', num(R.frontalArea, 3) + ' m²', 22),
+    _kv('Yükseklik / Genişlik', num(R.height, 3) + ' / ' + num(R.width, 3) + ' m', 22),
+    _kv('Aerodinamik Cd', num(R.cd, 3), 22),
+    _kv('Brüt Ağırlık (GVW)', numI(R.gvw) + ' kg', 22)
+  ], W) + '\n';
 
-  r += '  ALAN VE AGIRLIK' + pad('', CW - 16) + 'LASTIKLER\n';
-  r += '  ' + ln('-', CW - 4) + '    ' + ln('-', CW - 4) + '\n';
-  r += pad(pCol('Alin Alani', num(R.frontalArea, 3) + ' m2'), CW) + '    ' + pCol('Secili Lastik', ascii(R.tireName)) + '\n';
-  r += pad(pCol('Yuk. / Gen.', num(R.height, 3) + ' / ' + num(R.width, 3) + ' m'), CW) + '    ' + pCol('Lastik Devir/km', revPerKm + ' devir/km') + '\n';
-  r += pad(pCol('Aerodinamik Cd', num(R.cd, 3)), CW) + '    ' + pCol('Yuvarlanma Yari.', num(R.tireRadius, 3) + ' m') + '\n';
-  r += pad(pCol('Brut Agirlik (GVW)', numI(R.gvw) + ' kg'), CW) + '    ' + pCol('Yuvarlanma Dir. Crr', num(R.crr, 4)) + '\n';
-  r += pad('', CW) + '    ' + pCol('Yuzey Faktoru', num(R.surfFactor || 1.0, 2)) + '\n';
-  r += pad('', CW) + '    ' + pCol('Lastik/Teker Ataleti', num(R.tireInertia, 4) + ' kg.m2') + '\n';
-  r += '\n\n';
+  r += titledBox('LASTİKLER', [
+    _kv('Seçili Lastik', tr(R.tireName), 22),
+    _kv('Lastik Devir/km', revPerKm + ' devir/km', 22),
+    _kv('Yuvarlanma Yarıçapı', num(R.tireRadius, 3) + ' m', 22),
+    _kv('Yuvarlanma Direnci (Crr)', num(R.crr, 4), 22),
+    _kv('Yüzey Faktörü', num(R.surfFactor || 1.0, 2), 22),
+    _kv('Lastik/Teker Ataleti', num(R.tireInertia, 4) + ' kg·m²', 22)
+  ], W) + '\n';
 
 
   // ════════════════════════════════════════════════════════════════════════
   // 2. TAM GAZ EGIM KABILIYETI
   // ════════════════════════════════════════════════════════════════════════
-  r += ln('=', W) + '\n';
-  r += pad('2. TAM GAZ EGIM KABILIYETI', W, 'center') + '\n';
-  r += ln('=', W) + '\n\n';
+  r += sectionBanner('2  ·  TAM GAZ EĞİM KABİLİYETİ', W);
 
-  // Kosullar
-  r += '  KOSULLAR\n';
-  r += '  ' + ln('-', 38) + '\n';
-  r += pRow('Motor Fani', 'Acik');
-  r += pRow('Klima', 'Kapali');
-  r += pRow('Motor Gucu', 'Standart Guc Egrisi');
-  r += pRow('Arac Parametreleri', 'Standart');
-  r += pRow('Aks Orani', num(R.diffRatio, 3));
-  if (hasTransfer) {
-    r += pRow('Transfer Kutusu Orani', num(trHighRatio, 3));
-  }
-  r += '\n';
+  var _c2 = ['Motor Fanı: Açık', 'Klima: Kapalı', 'Motor Gücü: Standart Güç Eğrisi', 'Araç Parametreleri: Standart', 'Aks Oranı: ' + num(R.diffRatio, 3)];
+  if (hasTransfer) _c2.push('Transfer Kutusu: ' + num(trHighRatio, 3));
+  r += condStrip('KOŞULLAR', _c2) + '\n';
 
   function renderGradeSection(gd) {
     var rg = '';
+    var _w = [29, 9, 12, 8, 12];
+    var _al = ['left', 'right', 'right', 'right', 'right'];
     if (hasTransfer) {
-      // Etiket zaten "Transfer Kutusu: <Kademe>" içerdiğinden çift "TRANSFER KUTUSU:"
-      // basılmasını önle (tekilleştir).
-      rg += '  TRANSFER KUTUSU: ' + ascii(gd.label).toUpperCase().replace(/^TRANSFER KUTUSU:\s*/, '') + '\n';
+      rg += '  ▸ Transfer Kutusu: ' + tr(gd.label).replace(/^Transfer Kutusu:\s*/i, '') + '\n';
     }
-    rg += '  ' + ln('-', 78) + '\n';
-    rg += '  ' + pad('Egim Kabiliyeti', 36) + pad('% Egim', 10, 'right');
-    rg += pad('Hiz (km/h)', 12, 'right') + pad('Vites', 8, 'right');
-    rg += pad('Esleme Nokt.', 14, 'right') + '\n';
-    rg += '  ' + ln('-', 78) + '\n';
-
-    // Stall
-    rg += '  ' + pad('Durma Egim Kab. (Stall)', 36);
-    rg += pad(num(gd.stallGrade, 1), 10, 'right');
-    rg += pad('-', 12, 'right') + pad(gd.stallGear, 8, 'right');
-    rg += pad('Stall', 14, 'right') + '\n';
-
-    // Launch
-    rg += '  ' + pad('Kalkis Egim Kab. (Launch)', 36);
-    rg += pad(num(gd.launchGrade, 1), 10, 'right');
-    rg += pad('-', 12, 'right') + pad(gd.launchGear, 8, 'right');
-    rg += pad('', 14, 'right') + '\n';
-
-    // Low speed
-    rg += '  ' + pad('Dusuk Hiz Egim Kabiliyeti', 36);
-    rg += pad(num(gd.lowSpeedGrade, 1), 10, 'right');
-    rg += pad(num(gd.lowSpeedV, 1), 12, 'right') + pad(gd.lowSpeedGear, 8, 'right');
-    rg += pad('%80', 14, 'right') + '\n';
-
-    // Duz yol maks hiz
-    rg += '  ' + pad('Duz Yolda Maksimum Hiz', 36);
-    rg += pad('0.0', 10, 'right');
-    rg += pad(num(gd.maxSpeedFlat, 1), 12, 'right') + pad(gd.maxSpeedFlatGear, 8, 'right');
-    rg += pad('Yol Yuku', 14, 'right') + '\n';
-
-    // Grade tablosu
+    rg += tRule(_w, '┌', '┬', '┐', '─');
+    rg += tRow(['Eğim Kabiliyeti', '% Eğim', 'Hız (km/h)', 'Vites', 'Eşleme'], _w, _al);
+    rg += tRule(_w, '├', '┼', '┤', '─');
+    rg += tRow(['Durma Eğim Kab. (Stall)', num(gd.stallGrade, 1), '–', gd.stallGear, 'Stall'], _w, _al);
+    rg += tRow(['Kalkış Eğim Kab. (Launch)', num(gd.launchGrade, 1), '–', gd.launchGear, ''], _w, _al);
+    rg += tRow(['Düşük Hız Eğim Kabiliyeti', num(gd.lowSpeedGrade, 1), num(gd.lowSpeedV, 1), gd.lowSpeedGear, '%80'], _w, _al);
+    rg += tRow(['Düz Yolda Maksimum Hız', '0.0', num(gd.maxSpeedFlat, 1), gd.maxSpeedFlatGear, 'Yol Yükü'], _w, _al);
     (gd.gradeTable || []).forEach(function(row) {
       if (row.v_max <= 0 && row.grade > 0) return;
-      rg += '  ' + pad('', 36);
-      rg += pad(num(row.grade, 1), 10, 'right');
-      rg += pad(num(row.v_max, 1), 12, 'right') + pad(row.gear, 8, 'right');
-      rg += '\n';
+      rg += tRow(['', num(row.grade, 1), num(row.v_max, 1), row.gear, ''], _w, _al);
     });
-
-    rg += '  ' + ln('-', 78) + '\n';
+    rg += tRule(_w, '└', '┴', '┘', '─');
     return rg;
   }
 
@@ -2004,26 +2056,21 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       r += renderGradeSection(G.low);
     }
 
-    // Egim yorumu
     var gH = G.high;
-    r += '\n  YORUM: Bu arac, durma konumundan ';
-    if (gH.stallGrade >= 60) r += 'cok dik egimlerde (>%60) dahi kalkis\n  yapabilecek cekis kuvvetine sahiptir.';
-    else if (gH.stallGrade >= 30) r += 'yuksek arazi egimlerinde (%' + num(gH.stallGrade, 0) + ') kalkis\n  yapabilecek cekis kuvvetine sahiptir.';
-    else r += 'orta egimlerde (%' + num(gH.stallGrade, 0) + ') kalkis yapabilir.';
-    r += ' Duz yolda (0% egim) arac maksimum\n';
-    r += '  ' + num(gH.maxSpeedFlat, 1) + ' km/h hiza ulasabilir.';
-
-    // %5 ve %10 egim hizlari bul
-    var v5 = '-', v10 = '-';
+    var _y2 = 'Bu araç, durma konumundan ';
+    if (gH.stallGrade >= 60) _y2 += 'çok dik eğimlerde (>%60) dahi kalkış yapabilecek çekiş kuvvetine sahiptir.';
+    else if (gH.stallGrade >= 30) _y2 += 'yüksek arazi eğimlerinde (%' + num(gH.stallGrade, 0) + ') kalkış yapabilecek çekiş kuvvetine sahiptir.';
+    else _y2 += 'orta eğimlerde (%' + num(gH.stallGrade, 0) + ') kalkış yapabilir.';
+    _y2 += ' Düz yolda (%0 eğim) araç maksimum ' + num(gH.maxSpeedFlat, 1) + ' km/h hıza ulaşabilir.';
+    var v5 = '–', v10 = '–';
     (gH.gradeTable || []).forEach(function(row) {
       if (Math.abs(row.grade - 5.0) < 0.1) v5 = num(row.v_max, 0);
       if (Math.abs(row.grade - 10.0) < 0.1) v10 = num(row.v_max, 0);
     });
-    r += ' %5 egimde (tipik karayolu rampasi) arac\n';
-    r += '  ' + v5 + ' km/h ile seyredebilir. %10 egimde (dik yokus) arac ' + v10 + ' km/h ile\n';
-    r += '  ilerleyebilir.\n';
+    _y2 += ' %5 eğimde (tipik karayolu rampası) araç ' + v5 + ' km/h ile seyredebilir. %10 eğimde (dik yokuş) araç ' + v10 + ' km/h ile ilerleyebilir.';
+    r += '\n' + noteBox('YORUM', _y2, W);
   } else {
-    r += '  Egim kabiliyeti verisi bulunamadi.\n';
+    r += '  Eğim kabiliyeti verisi bulunamadı.\n';
   }
   r += '\n\n';
 
@@ -2236,224 +2283,122 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       });
     }
 
-    // Kolon genislikleri (sabit)
-    var _c = [9, 9, 9, 12, 12, 10, 12, 10, 14, 16];
-    var _cmTW = 0; for (var _wi = 0; _wi < _c.length; _wi++) _cmTW += _c[_wi];
+    // Banner + kosul seridi + kutulu 10-kolon tablo
+    r += sectionBanner('KONVERTÖR MODU  —  TÜM KADEMELER', W);
+    r += condStrip('KOŞULLAR', ['Motor Fanı: Açık', 'Klima: Kapalı', 'Motor Gücü: Standart Güç Eğrisi', 'Araç Parametreleri: Standart']) + '\n';
 
-    // Tabloyu renderla
-    r += ln('=', _cmTW + 4) + '\n';
-    r += pad('KONVERTOR MODU (Tum Kademeler)', _cmTW + 4, 'center') + '\n';
-    r += ln('=', _cmTW + 4) + '\n\n';
-
-    r += '  ' + pad('Motor Fani', 16) + pad('Klima', 16) + pad('Motor Gucu', 30) + 'Arac Parametreleri\n';
-    r += '  ' + ln('-', _cmTW) + '\n';
-    r += '  ' + pad('Acik', 16) + pad('Kapali', 16) + pad('Standart Guc Egrisi', 30) + 'Standart\n\n';
-
-    // Tablo basligi — satir 1
-    r += '  ' + pad('Hiz', _c[0], 'right') + pad('Tork', _c[1], 'right') + pad('Motor', _c[2], 'right');
-    r += pad('Net Motor', _c[3], 'right') + pad('Net Motor', _c[4], 'right');
-    r += pad('Turbin', _c[5], 'right') + pad('Turbin', _c[6], 'right') + pad('Turbin', _c[7], 'right');
-    r += pad('Konvertor Isi', _c[8], 'right') + pad('Esleme', _c[9], 'right') + '\n';
-    // Tablo basligi — satir 2
-    r += '  ' + pad('Orani', _c[0], 'right') + pad('Orani', _c[1], 'right') + pad('Devri', _c[2], 'right');
-    r += pad('Torku (N-m)', _c[3], 'right') + pad('Gucu (kW)', _c[4], 'right');
-    r += pad('Devri', _c[5], 'right') + pad('Torku (N-m)', _c[6], 'right') + pad('Gucu (kW)', _c[7], 'right');
-    r += pad('Reddi (kW)', _c[8], 'right') + pad('Noktasi', _c[9], 'right') + '\n';
-    // Tablo basligi — satir 3 (birimler)
-    r += '  ' + pad('', _c[0], 'right') + pad('', _c[1], 'right') + pad('(rpm)', _c[2], 'right');
-    r += pad('', _c[3], 'right') + pad('', _c[4], 'right');
-    r += pad('(rpm)', _c[5], 'right') + pad('', _c[6], 'right') + pad('', _c[7], 'right');
-    r += pad('', _c[8], 'right') + pad('', _c[9], 'right') + '\n';
-    r += '  ' + ln('-', _cmTW) + '\n';
-
+    var _cw = [8, 8, 9, 11, 11, 9, 11, 10, 12, 14];
+    var _cal = ['right','right','right','right','right','right','right','right','right','right'];
+    r += tRule(_cw, '┌', '┬', '┐', '─');
+    r += tRow(['Hız', 'Tork', 'Motor', 'Net Motor', 'Net Motor', 'Türbin', 'Türbin', 'Türbin', 'Konvertör', 'Eşleme'], _cw, _cal);
+    r += tRow(['Oranı', 'Oranı', 'Devri', 'Torku', 'Gücü', 'Devri', 'Torku', 'Gücü', 'Isı Reddi', 'Noktası'], _cw, _cal);
+    r += tRow(['', '', '(rpm)', '(N·m)', '(kW)', '(rpm)', '(N·m)', '(kW)', '(kW)', ''], _cw, _cal);
+    r += tRule(_cw, '├', '┼', '┤', '─');
     for (var _ri = 0; _ri < _cmTable.length; _ri++) {
       var _row = _cmTable[_ri];
-      r += '  ' + pad(num(_row.SR, 3), _c[0], 'right') + pad(num(_row.TR, 3), _c[1], 'right');
-      r += pad(numI(_row.N_engine), _c[2], 'right') + pad(num(_row.T_engine, 1), _c[3], 'right');
-      r += pad(num(_row.P_engine, 1), _c[4], 'right') + pad(numI(_row.N_turbine), _c[5], 'right');
-      r += pad(num(_row.T_turbine, 1), _c[6], 'right') + pad(num(_row.P_turbine, 1), _c[7], 'right');
-      r += pad(num(_row.Q_reject, 2), _c[8], 'right');
-      r += pad(_row.matchPoint || '', _c[9], 'right') + '\n';
+      r += tRow([num(_row.SR, 3), num(_row.TR, 3), numI(_row.N_engine), num(_row.T_engine, 1), num(_row.P_engine, 1), numI(_row.N_turbine), num(_row.T_turbine, 1), num(_row.P_turbine, 1), num(_row.Q_reject, 2), _row.matchPoint || ''], _cw, _cal);
     }
+    r += tRule(_cw, '└', '┴', '┘', '─');
+    r += '\n  Not: T_türbin = T_pompa × TR  ·  T_pompa = (N_motor / K_pompa)²  ·  Düşürme = ' + num(_cmPumpDrop, 1) + ' N·m\n';
+    r += '       T_motor(N) − Düşürme = T_pompa(N) denklemi bisection ile çözülmüştür.\n\n';
 
-    r += '  ' + ln('-', _cmTW) + '\n\n';
-    r += '  Not: T_turbin = T_pompa x TR.  T_pompa = (N_motor / K_pompa)^2.  Dusurme = ' + num(_cmPumpDrop, 1) + ' N.m.\n';
-    r += '       T_motor(N) - Dusurme = T_pompa(N)  denklemi bisection ile cozulmustur.\n';
-    r += '\n\n';
-
-    // ══════════════════════════════════════════════════════════════════════
-    // SANZIMAN CIKIS PERFORMANS OZETI — KONVERTOR MODU (Per-Gear)
-    // ══════════════════════════════════════════════════════════════════════
+    // ── ŞANZIMAN ÇIKIŞ PERFORMANSI — Konvertör Modu (vites başına) ──
     var _pgGears = R.allGearData || R.gearData || [];
     if (_pgGears.length > 0 && _cmTable.length > 0) {
-
-      // Kolon genislikleri
-      var _pg = [9, 9, 12, 12, 10, 12, 10, 12, 16];
-      var _pgTW = 0; for (var _pwi = 0; _pwi < _pg.length; _pwi++) _pgTW += _pg[_pwi];
-
+      var _pw = [8, 9, 11, 11, 11, 11, 10, 11, 14];
+      var _pal = ['right','right','right','right','right','right','right','right','right'];
       for (var _gi = 0; _gi < _pgGears.length; _gi++) {
         var _gear = _pgGears[_gi];
         var _gName = _gear.name || ('F' + (_gi + 1));
         var _gRatio = parseFloat(_gear.ratio) || 1.0;
-
-        // Stall ve governed verimlerini evrensel formulle hesapla (basliga yazilacak)
         var _effStall = FT_SOLVER.calcGearEfficiency(_gRatio, 0);
         var _effGov = FT_SOLVER.calcGearEfficiency(_gRatio, _cmTable.length > 0 ? _cmTable[_cmTable.length - 1].N_turbine : 0);
 
-        r += '  ' + ln('-', _pgTW) + '\n';
-        r += '  Vites ' + ascii(_gName) + ' (Oran = ' + num(_gRatio, 3) + ') - Konvertor Modu\n';
-        r += '  ' + ln('-', _pgTW) + '\n\n';
-
-        // Baslik satir 1
-        r += '  ' + pad('Hiz', _pg[0], 'right') + pad('Motor', _pg[1], 'right');
-        r += pad('Net Motor', _pg[2], 'right') + pad('Net Motor', _pg[3], 'right');
-        r += pad('Sanziman', _pg[4], 'right') + pad('Sanziman', _pg[5], 'right');
-        r += pad('Sanziman', _pg[6], 'right') + pad('Sanziman', _pg[7], 'right');
-        r += pad('Esleme', _pg[8], 'right') + '\n';
-        // Baslik satir 2
-        r += '  ' + pad('Orani', _pg[0], 'right') + pad('Devri', _pg[1], 'right');
-        r += pad('Torku (N-m)', _pg[2], 'right') + pad('Gucu (kW)', _pg[3], 'right');
-        r += pad('Cikis (rpm)', _pg[4], 'right') + pad('Cikis (N-m)', _pg[5], 'right');
-        r += pad('Cikis (kW)', _pg[6], 'right') + pad('Isi (kW)', _pg[7], 'right');
-        r += pad('Noktasi', _pg[8], 'right') + '\n';
-        r += '  ' + ln('-', _pgTW) + '\n';
-
+        r += '  ▸ Vites ' + tr(_gName) + '  (Oran = ' + num(_gRatio, 3) + ')  —  Konvertör Modu\n';
+        r += tRule(_pw, '┌', '┬', '┐', '─');
+        r += tRow(['Hız', 'Motor', 'Net Motor', 'Net Motor', 'Şanzıman', 'Şanzıman', 'Şanzıman', 'Şanzıman', 'Eşleme'], _pw, _pal);
+        r += tRow(['Oranı', 'Devri', 'Torku', 'Gücü', 'Çıkış', 'Çıkış', 'Çıkış', 'Isı', 'Noktası'], _pw, _pal);
+        r += tRow(['', '(rpm)', '(N·m)', '(kW)', '(rpm)', '(N·m)', '(kW)', '(kW)', ''], _pw, _pal);
+        r += tRule(_pw, '├', '┼', '┤', '─');
         for (var _pri = 0; _pri < _cmTable.length; _pri++) {
           var _pr = _cmTable[_pri];
-          var _N_turb_pg = _pr.N_turbine; // SR x N_engine (converter mode)
+          var _N_turb_pg = _pr.N_turbine;
           var _gEff = FT_SOLVER.calcGearEfficiency(_gRatio, _N_turb_pg);
           var _N_out = _N_turb_pg / _gRatio;
           var _T_out = _pr.T_turbine * _gRatio * _gEff;
           var _P_out = _T_out * (2 * Math.PI * _N_out / 60) / 1000;
           var _Q_gb = _pr.P_engine - _P_out;
-
-          r += '  ' + pad(num(_pr.SR, 3), _pg[0], 'right') + pad(numI(_pr.N_engine), _pg[1], 'right');
-          r += pad(num(_pr.T_engine, 1), _pg[2], 'right') + pad(num(_pr.P_engine, 1), _pg[3], 'right');
-          r += pad(numI(Math.round(_N_out)), _pg[4], 'right') + pad(num(_T_out, 1), _pg[5], 'right');
-          r += pad(num(_P_out, 1), _pg[6], 'right') + pad(num(_Q_gb, 2), _pg[7], 'right');
-          r += pad(_pr.matchPoint || '', _pg[8], 'right') + '\n';
+          r += tRow([num(_pr.SR, 3), numI(_pr.N_engine), num(_pr.T_engine, 1), num(_pr.P_engine, 1), numI(Math.round(_N_out)), num(_T_out, 1), num(_P_out, 1), num(_Q_gb, 2), _pr.matchPoint || ''], _pw, _pal);
         }
-
-        r += '  ' + ln('-', _pgTW) + '\n';
-        r += '  Disli Verimi: ' + num(_effStall * 100, 2) + '% (stall) ~ ' + num(_effGov * 100, 2) + '% (governed)\n';
-        r += '  Formul: eta = 1 - |ln(i)| x (0.0175 + 2.93e-6 x N_turbin)\n';
-        r += '\n';
+        r += tRule(_pw, '└', '┴', '┘', '─');
+        r += '  Dişli Verimi: %' + num(_effStall * 100, 2) + ' (stall) ~ %' + num(_effGov * 100, 2) + ' (governed)  ·  η = 1 − |ln(i)| × (0.0175 + 2.93e-6 × N_türbin)\n\n';
       }
-
-      r += '\n';
     }
   }
 
   // ════════════════════════════════════════════════════════════════════════
   // 4. TAM GAZ OTOMATIK VITES GECISLERI (DETAYLI)
   // ════════════════════════════════════════════════════════════════════════
-  r += ln('=', WW) + '\n';
-  r += pad('4. TAM GAZ OTOMATIK VITES GECISLERI (DETAYLI)', WW, 'center') + '\n';
-  r += ln('=', WW) + '\n\n';
+  r += sectionBanner('4  ·  TAM GAZ OTOMATİK VİTES GEÇİŞLERİ (DETAYLI)', W);
 
-  r += '  KOSULLAR\n';
-  r += '  ' + ln('-', 38) + '\n';
-  r += pRow('Motor Fani', 'Acik');
-  r += pRow('Klima', 'Kapali');
-  r += pRow('Aks Orani', num(R.diffRatio, 3));
-  if (hasTransfer) {
-    r += pRow('Transfer Kutusu Orani', num(trHighRatio, 3));
-  }
-  r += '\n';
+  var _c4 = ['Motor Fanı: Açık', 'Klima: Kapalı', 'Aks Oranı: ' + num(R.diffRatio, 3)];
+  if (hasTransfer) _c4.push('Transfer Kutusu: ' + num(trHighRatio, 3));
+  r += condStrip('KOŞULLAR', _c4) + '\n';
 
   function renderFTSection(steps, label) {
     var rf = '';
+    var _w = [8, 9, 9, 9, 10, 11, 11, 10, 11, 18];
+    var _al = ['left', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right', 'right'];
+    var _inner = 0; for (var _k = 0; _k < _w.length; _k++) _inner += _w[_k]; _inner += _w.length - 1;
+    function _span(lbl) { var t = ' ' + lbl + ' '; var f = _inner - t.length; var l = Math.floor(f / 2); return '  ├' + rep('─', Math.max(0, l)) + t + rep('─', Math.max(0, f - l)) + '┤\n'; }
     if (hasTransfer && label) {
-      rf += '  TRANSFER KUTUSU: ' + ascii(label).toUpperCase().replace(/^TRANSFER KUTUSU:\s*/, '') + '\n';
+      rf += '  ▸ Transfer Kutusu: ' + tr(label).replace(/^Transfer Kutusu:\s*/i, '') + '\n';
     }
-    rf += '  ' + ln('=', WW - 4) + '\n';
-    rf += '  ' + pad('Vites', 6) + pad('Hiz', 10, 'right') + pad('Motor', 10, 'right');
-    rf += pad('Cikis', 10, 'right') + pad('Cekis', 11, 'right') + pad('Net Cekis', 12, 'right');
-    rf += pad('Tekerlek', 11, 'right') + pad('Net Egim', 11, 'right') + pad('Isi Reddi', 11, 'right');
-    rf += '   Esleme Noktasi\n';
-    rf += '  ' + pad('Kademe', 6) + pad('(km/h)', 10, 'right') + pad('(rpm)', 10, 'right');
-    rf += pad('(rpm)', 10, 'right') + pad('(kN)', 11, 'right') + pad('(kN)', 12, 'right');
-    rf += pad('Gucu (kW)', 11, 'right') + pad('(%)', 11, 'right') + pad('(kW)', 11, 'right') + '\n';
-    rf += '  ' + ln('-', WW - 4) + '\n';
+    rf += tRule(_w, '┌', '┬', '┐', '─');
+    rf += tRow(['Vites', 'Hız', 'Motor', 'Çıkış', 'Çekiş', 'Net Çekiş', 'Tekerlek', 'Net Eğim', 'Isı Reddi', 'Eşleme'], _w, _al);
+    rf += tRow(['Kademe', '(km/h)', '(rpm)', '(rpm)', '(kN)', '(kN)', 'Gücü (kW)', '(%)', '(kW)', 'Noktası'], _w, _al);
+    rf += tRule(_w, '├', '┼', '┤', '─');
 
-    var prevGear = '';
-    var hasNegative = false;
-
+    var prevGear = '', hasNegative = false;
     for (var i = 0; i < steps.length; i++) {
       var s = steps[i];
-
-      // Vites degisimi ayiricisi
       if (prevGear && s.gear !== prevGear) {
-        rf += '  ';
-        var dashCount = Math.floor((WW - 4) / 2);
-        for (var d = 0; d < dashCount - 15; d++) rf += '- ';
-        rf += ' [vites gecisi: ' + prevGear + ' -> ' + s.gear + ']\n';
+        rf += _span('vites geçişi: ' + prevGear + ' → ' + s.gear);
       }
-
-      // Negatif deger kontrolu
-      var dpStr = num(s.dp, 2);
-      var ngStr = num(s.netGrade, 2);
+      var dpStr = num(s.dp, 2), ngStr = num(s.netGrade, 2);
       if (s.dp < 0) { dpStr += '*'; hasNegative = true; }
       if (s.netGrade < 0) { ngStr += '*'; hasNegative = true; }
-
-      rf += '  ' + pad(s.gear, 6);
-      rf += pad(num(s.speed, 1), 10, 'right');
-      rf += pad(numI(s.engineRPM), 10, 'right');
-      rf += pad(numI(s.outputRPM), 10, 'right');
-      rf += pad(num(s.te, 2), 11, 'right');
-      rf += pad(dpStr, 12, 'right');
-      rf += pad(num(s.wheelPower, 1), 11, 'right');
-      rf += pad(ngStr, 11, 'right');
-      rf += pad(num(s.heatRejection, 2), 11, 'right');
-      rf += '   ' + (s.matchPoint || '') + '\n';
-
+      rf += tRow([s.gear, num(s.speed, 1), numI(s.engineRPM), numI(s.outputRPM), num(s.te, 2), dpStr, num(s.wheelPower, 1), ngStr, num(s.heatRejection, 2), s.matchPoint || ''], _w, _al);
       prevGear = s.gear;
     }
-
-    rf += '  ' + ln('=', WW - 4) + '\n';
-
-    if (hasNegative) {
-      rf += '\n  * Negatif degerler aragin bu hizda ek dirence maruz kaldigini gosterir.\n';
-    }
+    rf += tRule(_w, '└', '┴', '┘', '─');
+    if (hasNegative) rf += '  * Negatif değerler aracın bu hızda ek dirence maruz kaldığını gösterir.\n';
     return rf;
   }
 
   if (stepsHigh.length > 0) {
-    r += renderFTSection(stepsHigh, hasTransfer ? (G && G.high ? G.high.label : 'Yuksek Kademe') : '');
+    r += renderFTSection(stepsHigh, hasTransfer ? (G && G.high ? G.high.label : 'Yüksek Kademe') : '');
     if (stepsLow.length > 0) {
       r += '\n';
-      r += renderFTSection(stepsLow, G && G.low ? G.low.label : 'Dusuk Kademe');
+      r += renderFTSection(stepsLow, G && G.low ? G.low.label : 'Düşük Kademe');
     }
 
-    // Sutun aciklamalari
-    r += '\n  SUTUN ACIKLAMALARI\n';
-    r += '  Vites Kademe   : Vites numarasi + mod (C=Konvertor, L=Lockup)\n';
-    r += '  Hiz (km/h)     : Arac hizi\n';
-    r += '  Motor (rpm)    : Motor devri -- konvertor modunda slip nedeniyle yuksek,\n';
-    r += '                   lockup modunda cikis devri ile esit\n';
-    r += '  Cikis (rpm)    : Sanziman cikis devri\n';
-    r += '  Cekis (kN)     : Cekis Kuvveti -- tekerlek cevresindeki toplam cekis kuvveti\n';
-    r += '  Net Cekis (kN) : Net Cekis -- cekis kuvvetinden tum direncler (yuvarlanma +\n';
-    r += '                   aerodinamik) dusuldukten sonra kalan net kuvvet\n';
-    r += '  Tekerlek Gucu  : Tekerlek cevresi gucu (kW)\n';
-    r += '  Net Egim (%)   : Aragin bu hiz ve kuvvette tirmanabilecegi maks. egim yuzdesi\n';
-    r += '  Isi Reddi (kW) : Tork konvertoru kayip isisi -- kilitleme modunda 0, konvertor\n';
-    r += '                   modunda kayma oranina oranli\n';
-    r += '  Esleme Noktasi : Referans kritik noktalar (Durma, %60 Cekis/Agirlik, %70/%80/%85\n';
-    r += '                   governed RPM yuzdesi, Governed)\n';
+    r += '\n' + titledBox('SÜTUN AÇIKLAMALARI', [
+      _kv('Vites Kademe', 'Vites no + mod (C = Konvertör, L = Lockup)', 15),
+      _kv('Hız (km/h)', 'Araç hızı', 15),
+      _kv('Motor (rpm)', 'Motor devri (konv. modda slip ile yüksek, lockup çıkışa eşit)', 15),
+      _kv('Çıkış (rpm)', 'Şanzıman çıkış devri', 15),
+      _kv('Çekiş (kN)', 'Tekerlek çevresindeki toplam çekiş kuvveti', 15),
+      _kv('Net Çekiş (kN)', 'Çekişten tüm dirençler düşülünce kalan net kuvvet', 15),
+      _kv('Tekerlek Gücü', 'Tekerlek çevresi gücü (kW)', 15),
+      _kv('Net Eğim (%)', 'Bu hız/kuvvette tırmanılabilecek maks. eğim', 15),
+      _kv('Isı Reddi (kW)', 'TK kayıp ısısı (lockup 0, konv. modda kaymayla orantılı)', 15),
+      _kv('Eşleme Nokt.', 'Kritik referanslar (Durma, %70/80/85, Governed)', 15)
+    ], W) + '\n';
 
-    // FT Yorum
-    var transitions = [];
-    for (var i = 1; i < stepsHigh.length; i++) {
-      if (stepsHigh[i - 1].gear !== stepsHigh[i].gear) {
-        transitions.push({ from: stepsHigh[i - 1].gear, to: stepsHigh[i].gear, speed: stepsHigh[i].speed });
-      }
-    }
-    var numGears = 1;
-    var gearSet = {};
+    var numGears = 1, gearSet = {};
     stepsHigh.forEach(function(s) { gearSet[s.gear.replace(/[CL]$/, '')] = true; });
     numGears = Object.keys(gearSet).length;
-
     var s0 = stepsHigh[0];
     var govStep = null, maxHeat = 0;
     stepsHigh.forEach(function(s) {
@@ -2461,116 +2406,93 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       if (s.heatRejection > maxHeat) maxHeat = s.heatRejection;
     });
 
-    r += '\n  YORUM: Arac toplam ' + numGears + ' viteste tam gaz ivmelenme yapmaktadir.\n';
-    r += '  Stall noktasinda (0 km/h) toplam cekis kuvveti ' + num(s0.te, 1) + ' kN olup,\n';
-    r += '  bu kosulda arac %' + num(s0.netGrade, 1) + ' egimi asabilir.\n';
-    if (govStep) {
-      r += '  Motor governed devire (' + numI(govStep.engineRPM) + ' rpm) ' + num(govStep.speed, 1) + ' km/h hizda ulasmaktadir.\n';
-    }
-    if (maxHeat > 0) {
-      r += '  Tork konvertoru maksimum ' + num(maxHeat, 1) + ' kW isi reddi\n';
-      r += '  uretmektedir.\n';
-    }
+    var _y4 = 'Araç toplam ' + numGears + ' viteste tam gaz ivmelenme yapmaktadır. Stall noktasında (0 km/h) toplam çekiş kuvveti ' + num(s0.te, 1) + ' kN olup, bu koşulda araç %' + num(s0.netGrade, 1) + ' eğimi aşabilir.';
+    if (govStep) _y4 += ' Motor governed devire (' + numI(govStep.engineRPM) + ' rpm) ' + num(govStep.speed, 1) + ' km/h hızda ulaşmaktadır.';
+    if (maxHeat > 0) _y4 += ' Tork konvertörü maksimum ' + num(maxHeat, 1) + ' kW ısı reddi üretmektedir.';
+    r += noteBox('YORUM', _y4, W);
   } else {
-    r += '  FT vites gecisi verisi bulunamadi.\n';
+    r += '  FT vites geçişi verisi bulunamadı.\n';
   }
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
   // 5. ENERJI DENGESI ANALIZI
   // ════════════════════════════════════════════════════════════════════════
-  r += ln('=', W) + '\n';
-  r += pad('5. ENERJI DENGESI ANALIZI', W, 'center') + '\n';
-  r += ln('=', W) + '\n\n';
+  r += sectionBanner('5  ·  ENERJİ DENGESİ ANALİZİ', W);
 
   var eb = ss.energyBalance;
   if (eb) {
-    r += '  Motor → Tork Konv. → Sanziman → Tekerlek → Yol\n';
-    r += '  ' + ln('-', 60) + '\n\n';
+    r += '  Motor  →  Tork Konv.  →  Şanzıman  →  Tekerlek  →  Yol\n\n';
 
-    // Güç akışı tablosu
-    r += '  GUC AKISI DAGILIMI\n';
-    r += '  ' + ln('-', 60) + '\n';
-    r += '  ' + pad('Guc Bileseni', 30) + pad('Maks [kW]', 12, 'right') + pad('Ort [kW]', 12, 'right') + '\n';
-    r += '  ' + ln('-', 60) + '\n';
-    r += '  ' + pad('Motor Gucu (P_engine)', 30) + pad(num(eb.maxP_engine, 1), 12, 'right') + pad(num(eb.avgP_engine, 1), 12, 'right') + '\n';
-    r += '  ' + pad('TC Isi Kaybi (P_TC)', 30) + pad(num(eb.maxP_TC_heat, 1), 12, 'right') + pad(num(eb.avgP_TC_heat, 1), 12, 'right') + '\n';
-    r += '  ' + pad('Guc Aktarma Kaybi (P_dt)', 30) + pad(num(eb.maxP_drivetrain, 1), 12, 'right') + pad(num(eb.avgP_drivetrain, 1), 12, 'right') + '\n';
-    r += '  ' + pad('Tekerlek Gucu (P_wheel)', 30) + pad(num(eb.maxP_wheel, 1), 12, 'right') + pad(num(eb.avgP_wheel, 1), 12, 'right') + '\n';
-    r += '  ' + ln('-', 60) + '\n\n';
-
-    // Tekerlek güç dağılımı
-    r += '  TEKERLEK GUCU DAGILIMI (Ortalama)\n';
-    r += '  ' + ln('-', 60) + '\n';
-    r += '  ' + pad('Yuvarlanma Direnci (P_rolling)', 38) + pad(num(eb.avgP_rolling, 1), 10, 'right') + ' kW\n';
-    r += '  ' + pad('Aerodinamik Suruklenme (P_aero)', 38) + pad(num(eb.avgP_aero, 1), 10, 'right') + ' kW\n';
-    r += '  ' + pad('Egim Direnci (P_grade)', 38) + pad(num(eb.avgP_grade, 1), 10, 'right') + ' kW\n';
-    r += '  ' + pad('Hizlanma Gucu (P_accel)', 38) + pad(num(eb.avgP_accel, 1), 10, 'right') + ' kW\n';
-    r += '  ' + ln('-', 60) + '\n\n';
-
-    // Verim
-    r += '  TOPLAM VERIM\n';
-    r += '  ' + ln('-', 60) + '\n';
-    r += pRow('Ortalama Verim (eta_avg)', '%' + num(eb.eta_avg, 1));
-    r += pRow('Minimum Verim (eta_min)', '%' + num(eb.eta_min, 1));
-    r += pRow('Maksimum Verim (eta_max)', '%' + num(eb.eta_max, 1));
+    var _ew = [32, 13, 13], _eal = ['left', 'right', 'right'];
+    r += '  GÜÇ AKIŞI DAĞILIMI\n';
+    r += tRule(_ew, '┌', '┬', '┐', '─');
+    r += tRow(['Güç Bileşeni', 'Maks (kW)', 'Ort. (kW)'], _ew, _eal);
+    r += tRule(_ew, '├', '┼', '┤', '─');
+    r += tRow(['Motor Gücü (P_engine)', num(eb.maxP_engine, 1), num(eb.avgP_engine, 1)], _ew, _eal);
+    r += tRow(['TK Isı Kaybı (P_TC)', num(eb.maxP_TC_heat, 1), num(eb.avgP_TC_heat, 1)], _ew, _eal);
+    r += tRow(['Güç Aktarma Kaybı (P_dt)', num(eb.maxP_drivetrain, 1), num(eb.avgP_drivetrain, 1)], _ew, _eal);
+    r += tRow(['Tekerlek Gücü (P_wheel)', num(eb.maxP_wheel, 1), num(eb.avgP_wheel, 1)], _ew, _eal);
+    r += tRule(_ew, '└', '┴', '┘', '─');
     r += '\n';
 
-    // Kayıp dağılım yüzdeleri
+    var _tw = [40, 16];
+    r += '  TEKERLEK GÜCÜ DAĞILIMI (Ortalama)\n';
+    r += tRule(_tw, '┌', '┬', '┐', '─');
+    r += tRow(['Yuvarlanma Direnci (P_rolling)', num(eb.avgP_rolling, 1) + ' kW'], _tw, ['left', 'right']);
+    r += tRow(['Aerodinamik Sürüklenme (P_aero)', num(eb.avgP_aero, 1) + ' kW'], _tw, ['left', 'right']);
+    r += tRow(['Eğim Direnci (P_grade)', num(eb.avgP_grade, 1) + ' kW'], _tw, ['left', 'right']);
+    r += tRow(['Hızlanma Gücü (P_accel)', num(eb.avgP_accel, 1) + ' kW'], _tw, ['left', 'right']);
+    r += tRule(_tw, '└', '┴', '┘', '─');
+    r += '\n';
+
+    r += titledBox('TOPLAM VERİM', [
+      _kv('Ortalama Verim (η_avg)', '%' + num(eb.eta_avg, 1), 30),
+      _kv('Minimum Verim (η_min)', '%' + num(eb.eta_min, 1), 30),
+      _kv('Maksimum Verim (η_max)', '%' + num(eb.eta_max, 1), 30)
+    ], W) + '\n';
+
     if (eb.avgP_engine > 0.1) {
       var pctTC = eb.avgP_TC_heat / eb.avgP_engine * 100;
       var pctDT = eb.avgP_drivetrain / eb.avgP_engine * 100;
       var pctWheel = eb.avgP_wheel / eb.avgP_engine * 100;
-      r += '  KAYIP DAGILIMI (Motor gucune oranla)\n';
-      r += '  ' + ln('-', 60) + '\n';
-      r += pRow('Tekerlege aktarilan', '%' + num(pctWheel, 1));
-      r += pRow('TC isi kaybi', '%' + num(pctTC, 1));
-      r += pRow('Guc aktarma kaybi', '%' + num(pctDT, 1));
-      r += '\n';
+      r += titledBox('KAYIP DAĞILIMI (Motor gücüne oranla)', [
+        _kv('Tekerleğe aktarılan', '%' + num(pctWheel, 1), 30),
+        _kv('TK ısı kaybı', '%' + num(pctTC, 1), 30),
+        _kv('Güç aktarma kaybı', '%' + num(pctDT, 1), 30)
+      ], W) + '\n';
     }
 
-    // Newton dengesi doğrulama
-    r += '  DOGRULAMA\n';
-    r += '  ' + ln('-', 60) + '\n';
-    r += pRow('Newton dengesi artigi (maks)', num(eb.maxResidual_kW, 3) + ' kW');
-    r += pRow('Durum', eb.maxResidual_kW < 0.5 ? 'BASARILI' : 'SAPMA TESPIT EDILDI');
-    r += pRow('Analiz edilen nokta sayisi', String(eb.samples));
+    var _okDenge = eb.maxResidual_kW < 0.5;
+    r += titledBox('DOĞRULAMA', [
+      _kv('Newton dengesi artığı (maks)', num(eb.maxResidual_kW, 3) + ' kW', 30),
+      _kv('Durum', (_okDenge ? '✓ Başarılı' : '⚠ Sapma tespit edildi'), 30),
+      _kv('Analiz edilen nokta sayısı', String(eb.samples), 30)
+    ], W) + '\n';
   } else {
-    r += '  Enerji dengesi verisi bulunamadi.\n';
+    r += '  Enerji dengesi verisi bulunamadı.\n';
   }
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
   // 6. PERFORMANS OZETI
   // ════════════════════════════════════════════════════════════════════════
-  r += ln('=', W) + '\n';
-  r += pad('6. PERFORMANS OZETI', W, 'center') + '\n';
-  r += ln('=', W) + '\n\n';
-
-  // Box table
-  var LW = 34;   // etiket sütunu (değer sütununa yer açmak için daraltıldı)
-  var RW = 41;   // değer sütunu (uzun motor/şanzıman adları taşmasın)
-  var TW = LW + RW + 1;  // iç bölme tek '+' → dış bordür genişliği = LW+1+RW (satırlarla eşit)
-
+  // Performans Özet Tablosu — Unicode kutu, kategori başlıklı
   function boxTable(sections) {
-    // Hücre genişliğini aşan metni kırp — kutu bordürü asla bozulmasın
-    function clip(s, w) { s = ascii(s); return s.length > w ? s.slice(0, w - 1) + '~' : s; }
-    var rb = '';
-    rb += '  +' + ln('-', TW) + '+\n';
-    rb += '  |' + pad('PERFORMANS OZET TABLOSU', TW, 'center') + '|\n';
-
+    function clip(s, w) { s = tr(s); return s.length > w ? s.slice(0, w - 1) + '…' : s; }
+    var inner = W - 4, L = 32, V = 40;   // '  │ ' + L + '│ ' + V + ' │' = 80
+    var hd = '─ PERFORMANS ÖZET TABLOSU ';
+    function mid() { return '  ├' + rep('─', inner) + '┤\n'; }
+    var rb = '  ┌' + hd + rep('─', Math.max(0, inner - hd.length)) + '┐\n';
     sections.forEach(function(sec) {
-      rb += '  +' + ln('-', LW) + '+' + ln('-', RW) + '+\n';
-      rb += '  | ' + pad(clip(sec.title, LW - 2), LW - 1) + '|' + pad('', RW) + '|\n';
-      rb += '  +' + ln('-', LW) + '+' + ln('-', RW) + '+\n';
-
+      rb += mid();
+      rb += '  │ ' + pad(clip(sec.title, inner - 2), inner - 2, 'left') + ' │\n';
+      rb += mid();
       sec.rows.forEach(function(row) {
-        rb += '  | ' + pad(clip(row.label, LW - 2), LW - 1) + '| ' + pad(clip(row.value, RW - 3), RW - 2) + ' |\n';
+        rb += '  │ ' + pad(clip(row.label, L), L) + '│ ' + pad(clip(row.value, V), V) + ' │\n';
       });
     });
-
-    rb += '  +' + ln('-', LW) + '+' + ln('-', RW) + '+\n';
-    return rb;
+    return rb + '  └' + rep('─', inner) + '┘\n';
   }
 
   var gvwTon = R.gvw / 1000;
@@ -2581,66 +2503,60 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
   // Genel Bilgiler — motor adındaki " | tork&güç" etiketini ayır (yalnız görünen ad)
   var genelRows = [
-    { label: 'Motor', value: ascii(String(R.engineName).split(' | ')[0]) },
-    { label: 'Sanziman', value: ascii(R.gbName) }
+    { label: 'Motor', value: tr(String(R.engineName).split(' | ')[0]) },
+    { label: 'Şanzıman', value: tr(R.gbName) }
   ];
-  if (R.hasTC) genelRows.push({ label: 'Tork Konvertoru', value: ascii(R.tcName) });
-  genelRows.push({ label: 'Brut Agirlik (GVW)', value: numI(R.gvw) + ' kg' });
-  genelRows.push({ label: 'Guc / Agirlik Orani', value: num(pwRatio, 2) + ' kW/ton' });
-  genelRows.push({ label: 'Tork / Agirlik Orani', value: num(tqRatio, 1) + ' N.m/ton' });
-  boxSections.push({ title: 'GENEL BILGILER', rows: genelRows });
+  if (R.hasTC) genelRows.push({ label: 'Tork Konvertörü', value: tr(R.tcName) });
+  genelRows.push({ label: 'Brüt Ağırlık (GVW)', value: numI(R.gvw) + ' kg' });
+  genelRows.push({ label: 'Güç / Ağırlık Oranı', value: num(pwRatio, 2) + ' kW/ton' });
+  genelRows.push({ label: 'Tork / Ağırlık Oranı', value: num(tqRatio, 1) + ' N·m/ton' });
+  boxSections.push({ title: 'GENEL BİLGİLER', rows: genelRows });
 
-  // Motor Performansi
   boxSections.push({ title: 'MOTOR PERFORMANSI', rows: [
-    { label: 'Maksimum Guc', value: num(peakPower, 1) + ' kW @ ' + numI(peakPowerRpm) + ' rpm' },
-    { label: 'Maksimum Tork', value: numI(peakTorque) + ' N.m @ ' + numI(peakTorqueRpm) + ' rpm' },
+    { label: 'Maksimum Güç', value: num(peakPower, 1) + ' kW @ ' + numI(peakPowerRpm) + ' rpm' },
+    { label: 'Maksimum Tork', value: numI(peakTorque) + ' N·m @ ' + numI(peakTorqueRpm) + ' rpm' },
     { label: 'Governed Devir', value: numI(R.governed) + ' rpm' },
-    { label: 'Governed Guc', value: num(govPower, 1) + ' kW' }
+    { label: 'Governed Güç', value: num(govPower, 1) + ' kW' }
   ]});
 
-  // Egim Kabiliyeti
   if (G && G.high) {
     var gH2 = G.high;
     var eRows = [
-      { label: 'Stall Egim (Durma)', value: '%' + num(gH2.stallGrade, 1) },
-      { label: 'Launch Egim (Kalkis)', value: '%' + num(gH2.launchGrade, 1) },
-      { label: 'Duz Yol Maks. Hiz', value: num(gH2.maxSpeedFlat, 1) + ' km/h' }
+      { label: 'Stall Eğim (Durma)', value: '%' + num(gH2.stallGrade, 1) },
+      { label: 'Launch Eğim (Kalkış)', value: '%' + num(gH2.launchGrade, 1) },
+      { label: 'Düz Yol Maks. Hız', value: num(gH2.maxSpeedFlat, 1) + ' km/h' }
     ];
-    // %5, %10, %20 hiz
     [5, 10, 20].forEach(function(gr) {
       (gH2.gradeTable || []).forEach(function(row) {
         if (Math.abs(row.grade - gr) < 0.1 && row.v_max > 0) {
-          eRows.push({ label: '%' + gr + ' Egimde Maks. Hiz', value: num(row.v_max, 1) + ' km/h' });
+          eRows.push({ label: '%' + gr + ' Eğimde Maks. Hız', value: num(row.v_max, 1) + ' km/h' });
         }
       });
     });
-    boxSections.push({ title: 'EGIM KABILIYETI', rows: eRows });
+    boxSections.push({ title: 'EĞİM KABİLİYETİ', rows: eRows });
   }
 
-  // Hizlanma Performansi
   if (A && A.high) {
     var aRows = [];
     [30, 60, 80].forEach(function(spd) {
       (A.high.rows || []).forEach(function(row) {
         if (row.targetSpeed === spd) {
           if (row.time !== null && row.time !== undefined) {
-            aRows.push({ label: '0 -> ' + spd + ' km/h Suresi', value: num(row.time, 1) + ' sn / ' + numI(row.distance) + ' m' });
+            aRows.push({ label: '0 → ' + spd + ' km/h Süresi', value: num(row.time, 1) + ' sn / ' + numI(row.distance) + ' m' });
           } else {
-            aRows.push({ label: '0 -> ' + spd + ' km/h Suresi', value: 'Ulasilamiyor' });
+            aRows.push({ label: '0 → ' + spd + ' km/h Süresi', value: 'Ulaşılamıyor' });
           }
         }
       });
     });
-    // Maks hiz suresi (son satir)
     var lastRow = null;
     (A.high.rows || []).forEach(function(row) { if (row.time !== null && row.time !== undefined) lastRow = row; });
     if (lastRow) {
-      aRows.push({ label: '0 -> Maks. Hiz Suresi', value: num(lastRow.time, 1) + ' sn / ' + numI(lastRow.distance) + ' m' });
+      aRows.push({ label: '0 → Maks. Hız Süresi', value: num(lastRow.time, 1) + ' sn / ' + numI(lastRow.distance) + ' m' });
     }
     boxSections.push({ title: 'HIZLANMA PERFORMANSI', rows: aRows });
   }
 
-  // Vites Gecisleri
   if (stepsHigh.length > 0) {
     var firstTransition = null, lastTransition = null;
     for (var t = 1; t < stepsHigh.length; t++) {
@@ -2650,54 +2566,51 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       }
     }
     var vRows = [
-      { label: 'Toplam Vites Sayisi (Kullanilan)', value: String(numGears) }
+      { label: 'Toplam Vites Sayısı (Kullanılan)', value: String(numGears) }
     ];
-    if (firstTransition) vRows.push({ label: '1->2 Gecis Hizi', value: num(firstTransition.speed, 1) + ' km/h' });
-    if (lastTransition) vRows.push({ label: 'Son Vites Gecis Hizi', value: num(lastTransition.speed, 1) + ' km/h' });
-    vRows.push({ label: 'Stall Cekis Kuvveti', value: num(stepsHigh[0].te, 2) + ' kN' });
-    if (govStep) vRows.push({ label: 'Governed Hiz', value: num(govStep.speed, 1) + ' km/h' });
-    if (maxHeat > 0) vRows.push({ label: 'Maks. Isi Reddi', value: num(maxHeat, 1) + ' kW' });
-    boxSections.push({ title: 'VITES GECISLERI', rows: vRows });
+    if (firstTransition) vRows.push({ label: '1 → 2 Geçiş Hızı', value: num(firstTransition.speed, 1) + ' km/h' });
+    if (lastTransition) vRows.push({ label: 'Son Vites Geçiş Hızı', value: num(lastTransition.speed, 1) + ' km/h' });
+    vRows.push({ label: 'Stall Çekiş Kuvveti', value: num(stepsHigh[0].te, 2) + ' kN' });
+    if (govStep) vRows.push({ label: 'Governed Hız', value: num(govStep.speed, 1) + ' km/h' });
+    if (maxHeat > 0) vRows.push({ label: 'Maks. Isı Reddi', value: num(maxHeat, 1) + ' kW' });
+    boxSections.push({ title: 'VİTES GEÇİŞLERİ', rows: vRows });
   }
 
-  // Konvertor Eslesmesi — YALNIZ tork konvertörü varsa (TK yoksa gösterme, gerek yok)
+  // Konvertör Eşleşmesi — YALNIZ tork konvertörü varsa
   if (R.hasTC && _ecmResults.length > 0) {
     var selEC = _ecmResults.find(function(e) { return e.name === R.tcName; }) || _ecmResults[0];
-    var durStr = selEC.status === 'recommended' ? 'Onerilen' : selEC.status === 'caution' ? 'Dikkat' : 'Onerilmez';
-    boxSections.push({ title: 'KONVERTOR ESLESMESI', rows: [
-      { label: 'Esleme Durumu', value: durStr + ' (' + ascii(selEC.name) + ')' },
+    var durStr = selEC.status === 'recommended' ? 'Önerilen' : selEC.status === 'caution' ? 'Dikkat' : 'Önerilmez';
+    boxSections.push({ title: 'KONVERTÖR EŞLEŞMESİ', rows: [
+      { label: 'Eşleme Durumu', value: durStr + ' (' + tr(selEC.name) + ')' },
       { label: 'SR @ Governed', value: num(selEC.srGov, 3) },
-      { label: 'Turbin Torku @ Stall', value: numI(selEC.tTurbineStall) + ' N.m' }
+      { label: 'Türbin Torku @ Stall', value: numI(selEC.tTurbineStall) + ' N·m' }
     ]});
   }
 
+  r += sectionBanner('6  ·  PERFORMANS ÖZETİ', W);
   r += boxTable(boxSections);
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
   // RAPOR SONU
   // ════════════════════════════════════════════════════════════════════════
-  r += ln('-', W) + '\n';
+  r += rep('━', W) + '\n';
   r += pad('RAPOR SONU', W, 'center') + '\n';
-  r += ln('=', W) + '\n\n';
+  r += rep('━', W) + '\n\n';
 
-  r += ln('-', W) + '\n';
-  r += pad('BMC OTOMOTIV SANAYI VE TICARET A.S.', W, 'center') + '\n';
-  r += pad('GUC GRUBU MUDURLUGU', W, 'center') + '\n';
-  r += ln('-', W) + '\n\n';
+  r += pad('BMC OTOMOTİV SANAYİ VE TİCARET A.Ş.', W, 'center') + '\n';
+  r += pad('GÜÇ GRUBU MÜDÜRLÜĞÜ', W, 'center') + '\n\n';
 
-  r += pRow('Hazirlayan', ascii(hazirlayan));
-  r += pRow('Iletisim', veNameToEmail(hazirlayan));
-  r += '\n';
+  r += titledBox('İMZA', [
+    _kv('Hazırlayan', tr(hazirlayan), 12),
+    _kv('İletişim', veNameToEmail(hazirlayan), 12)
+  ], W) + '\n';
 
-  r += ln('-', W) + '\n';
-  r += pad('Bu rapor BMC MFSim Tam Gaz Hizlanma Performans Hesaplama Programi', W, 'center') + '\n';
-  r += pad('ile otomatik olusturulmustur. Hesaplamalar', W, 'center') + '\n';
-  r += pad('teorik modellere dayanmaktadir. Gercek test sonuclari ile', W, 'center') + '\n';
-  r += pad('dogrulama yapilmasi onerilir.', W, 'center') + '\n';
-  r += ln('-', W) + '\n\n';
+  r += pad('Bu rapor BMC MFSim Tam Gaz Hızlanma Performans Hesaplama Programı ile', W, 'center') + '\n';
+  r += pad('otomatik oluşturulmuştur. Hesaplamalar teorik modellere dayanmaktadır;', W, 'center') + '\n';
+  r += pad('gerçek test sonuçları ile doğrulama yapılması önerilir.', W, 'center') + '\n\n';
 
-  r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
+  r += pad('© ' + now.getFullYear() + ' BMC Otomotiv — Tüm Hakları Saklıdır', W, 'center') + '\n';
 
   return r;
 }
