@@ -1964,7 +1964,9 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
     if (!cats.length) return '';
 
-    var STG = { ok:'✓', warn:'⚠', bad:'✗', ref:'·' };
+    // NOT: ✓ ✗ ⚠ (Dingbat/emoji) bazı monospace fontlarda çift-genişlik çizilip
+    // çerçeveyi taşırır. Hizada güvenli (tek-genişlik) ASCII/Latin-1 işaretler.
+    var STG = { ok:'+', warn:'!', bad:'×', ref:'·' };
     var STL = { ok:'Uygun', warn:'Dikkat', bad:'Uygun Değil', ref:'Referans' };
     var inner = W - 4;                                  // '  ┌' + inner + '┐'
     var CW = { code:5, label:32, detail:24, st:13 };    // 5+32+24+13 = 74 = inner-2
@@ -1980,7 +1982,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
         var st = cat.rows[ri].st;
         if (st !== 'ref') { hasPF = true; if (st === 'bad') hasBad = true; else if (st === 'warn') hasWarn = true; }
       }
-      var score = !hasPF ? '' : hasBad ? '✗ İNCELE' : hasWarn ? '⚠ DİKKAT' : '✓ UYGUN';
+      var score = !hasPF ? '' : hasBad ? '× İNCELE' : hasWarn ? '! DİKKAT' : '+ UYGUN';
       s += mRule();
       s += bLine(pad(cat.title, (inner-2) - score.length) + score);
       s += mRule();
@@ -2466,7 +2468,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     var _okDenge = eb.maxResidual_kW < 0.5;
     r += titledBox('DOĞRULAMA', [
       _kv('Newton dengesi artığı (maks)', num(eb.maxResidual_kW, 3) + ' kW', 30),
-      _kv('Durum', (_okDenge ? '✓ Başarılı' : '⚠ Sapma tespit edildi'), 30),
+      _kv('Durum', (_okDenge ? '+ Başarılı' : '! Sapma tespit edildi'), 30),
       _kv('Analiz edilen nokta sayısı', String(eb.samples), 30)
     ], W) + '\n';
   } else {
