@@ -2213,6 +2213,41 @@ function veRenderCenteredTXT(txtContent) {
   return out;
 }
 
+// Raporu, HER TARAYICIDA önizlemedeki gibi ORTALI açılan, kendi kendine yeten
+// bir HTML belgeye sarar. (Düz .txt tarayıcıda daima sola yaslı gelir — metin
+// CSS taşımaz; ortalama yalnız HTML/CSS ile mümkün.)
+function veBuildReportHTML(content, title) {
+  var t = String(title || 'MFSim Rapor').replace(/[<>&"]/g, '');
+  return '<!DOCTYPE html>\n<html lang="tr"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>' + t + '</title><style>' +
+    'html,body{margin:0;background:#eceff3;}' +
+    '.mf-wrap{padding:28px 12px;}' +
+    '.mf-card{width:fit-content;max-width:100%;margin:0 auto;background:#fff;' +
+    'border:1px solid #d8dce2;box-shadow:0 2px 14px rgba(0,0,0,.08);' +
+    'padding:26px 34px;box-sizing:border-box;}' +
+    '.mf-card pre{margin:0 auto;padding:0;width:fit-content;max-width:100%;' +
+    'white-space:pre;overflow-x:auto;line-height:1.5;font-size:12.5px;color:#14171c;' +
+    "font-family:'Consolas','Menlo','DejaVu Sans Mono','Courier New',monospace;}" +
+    '@media(prefers-color-scheme:dark){html,body{background:#23201c;}' +
+    '.mf-card{background:#2b2621;border-color:#3d352e;}.mf-card pre{color:#e6ddd0;}}' +
+    '@media print{html,body{background:#fff;}.mf-card{border:none;box-shadow:none;}}' +
+    '</style></head><body><div class="mf-wrap"><div class="mf-card">' +
+    veRenderCenteredTXT(content) + '</div></div></body></html>';
+}
+
+function veDownloadReportHTML() {
+  if(!window._veTxtPreviewContent) { showToast('İndirilecek içerik bulunamadı', 'warning'); return; }
+  var name = (window._veTxtPreviewFilename || 'rapor.txt').replace(/\.txt$/i, '') + '.html';
+  var html = veBuildReportHTML(window._veTxtPreviewContent, name);
+  var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 1500);
+  showToast('HTML rapor indirildi — tarayıcıda ortalı açılır', 'success');
+}
+
 function veRenderTXTReport(reportType) {
   var overlay = document.getElementById('ve-report-overlay');
   if(!overlay) return;
@@ -2248,6 +2283,7 @@ function veRenderTXTReport(reportType) {
   html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
   html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
@@ -2300,6 +2336,7 @@ function veRenderSegmentDriveTXTReport() {
   html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
   html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
@@ -2344,6 +2381,7 @@ function veRenderObstacleCrossingTXTReport() {
   html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
   html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
@@ -2389,6 +2427,7 @@ function veRenderTopologyTXTReport() {
   html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
   html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
   html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
