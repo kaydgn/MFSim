@@ -1912,6 +1912,125 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   ];
   r += titledBox('RAPOR BİLGİLERİ', _infoLines, W) + '\n';
 
+  // ── PERFORMANS ÖZETİ (girişte özet tablo — Derecelendirme panelinden önce) ──
+  // Performans Özet Tablosu — Unicode kutu, kategori başlıklı.
+  function boxTable(sections) {
+    function clip(s, w) { s = tr(s); return s.length > w ? s.slice(0, w - 1) + '…' : s; }
+    var inner = W - 4, L = 32, V = 40;   // '  │ ' + L + '│ ' + V + ' │' = 80
+    var hd = '─ PERFORMANS ÖZET TABLOSU ';
+    function mid() { return '  ├' + rep('─', inner) + '┤\n'; }
+    var rb = '  ┌' + hd + rep('─', Math.max(0, inner - hd.length)) + '┐\n';
+    sections.forEach(function(sec) {
+      rb += mid();
+      rb += '  │ ' + pad(clip(sec.title, inner - 2), inner - 2, 'left') + ' │\n';
+      rb += mid();
+      sec.rows.forEach(function(row) {
+        rb += '  │ ' + pad(clip(row.label, L), L) + '│ ' + pad(clip(row.value, V), V) + ' │\n';
+      });
+    });
+    return rb + '  └' + rep('─', inner) + '┘\n';
+  }
+
+  var gvwTon = R.gvw / 1000;
+  var pwRatio = peakPower / gvwTon;
+  var tqRatio = peakTorque / gvwTon;
+
+  var boxSections = [];
+
+  // Genel Bilgiler — motor adındaki " | tork&güç" etiketini ayır (yalnız görünen ad)
+  var genelRows = [
+    { label: 'Motor', value: tr(String(R.engineName).split(' | ')[0]) },
+    { label: 'Şanzıman', value: tr(R.gbName) }
+  ];
+  if (R.hasTC) genelRows.push({ label: 'Tork Konvertörü', value: tr(R.tcName) });
+  genelRows.push({ label: 'Brüt Ağırlık (GVW)', value: numI(R.gvw) + ' kg' });
+  genelRows.push({ label: 'Güç / Ağırlık Oranı', value: num(pwRatio, 2) + ' kW/ton' });
+  genelRows.push({ label: 'Tork / Ağırlık Oranı', value: num(tqRatio, 1) + ' N·m/ton' });
+  boxSections.push({ title: 'GENEL BİLGİLER', rows: genelRows });
+
+  boxSections.push({ title: 'MOTOR PERFORMANSI', rows: [
+    { label: 'Maksimum Güç', value: num(peakPower, 1) + ' kW @ ' + numI(peakPowerRpm) + ' rpm' },
+    { label: 'Maksimum Tork', value: numI(peakTorque) + ' N·m @ ' + numI(peakTorqueRpm) + ' rpm' },
+    { label: 'Governed Devir', value: numI(R.governed) + ' rpm' },
+    { label: 'Governed Güç', value: num(govPower, 1) + ' kW' }
+  ]});
+
+  if (G && G.high) {
+    var gH2 = G.high;
+    var eRows = [
+      { label: 'Stall Eğim (Durma)', value: '%' + num(gH2.stallGrade, 1) },
+      { label: 'Launch Eğim (Kalkış)', value: '%' + num(gH2.launchGrade, 1) },
+      { label: 'Düz Yol Maks. Hız', value: num(gH2.maxSpeedFlat, 1) + ' km/h' }
+    ];
+    [5, 10, 20].forEach(function(gr) {
+      (gH2.gradeTable || []).forEach(function(row) {
+        if (Math.abs(row.grade - gr) < 0.1 && row.v_max > 0) {
+          eRows.push({ label: '%' + gr + ' Eğimde Maks. Hız', value: num(row.v_max, 1) + ' km/h' });
+        }
+      });
+    });
+    boxSections.push({ title: 'EĞİM KABİLİYETİ', rows: eRows });
+  }
+
+  if (A && A.high) {
+    var aRows = [];
+    [30, 60, 80].forEach(function(spd) {
+      (A.high.rows || []).forEach(function(row) {
+        if (row.targetSpeed === spd) {
+          if (row.time !== null && row.time !== undefined) {
+            aRows.push({ label: '0 → ' + spd + ' km/h Süresi', value: num(row.time, 1) + ' sn / ' + numI(row.distance) + ' m' });
+          } else {
+            aRows.push({ label: '0 → ' + spd + ' km/h Süresi', value: 'Ulaşılamıyor' });
+          }
+        }
+      });
+    });
+    var lastRow = null;
+    (A.high.rows || []).forEach(function(row) { if (row.time !== null && row.time !== undefined) lastRow = row; });
+    if (lastRow) {
+      aRows.push({ label: '0 → Maks. Hız Süresi', value: num(lastRow.time, 1) + ' sn / ' + numI(lastRow.distance) + ' m' });
+    }
+    boxSections.push({ title: 'HIZLANMA PERFORMANSI', rows: aRows });
+  }
+
+  if (stepsHigh.length > 0) {
+    // numGears/govStep/maxHeat — bu blok artık Bölüm 4'ten ÖNCE olduğundan burada hesaplanır.
+    var _pgSet = {};
+    stepsHigh.forEach(function(s) { _pgSet[s.gear.replace(/[CL]$/, '')] = true; });
+    var numGears = Object.keys(_pgSet).length;
+    var govStep = null, maxHeat = 0;
+    stepsHigh.forEach(function(s) { if (s.matchPoint === 'Governed') govStep = s; if (s.heatRejection > maxHeat) maxHeat = s.heatRejection; });
+    var firstTransition = null, lastTransition = null;
+    for (var t = 1; t < stepsHigh.length; t++) {
+      if (stepsHigh[t - 1].gear !== stepsHigh[t].gear) {
+        if (!firstTransition) firstTransition = { speed: stepsHigh[t].speed };
+        lastTransition = { speed: stepsHigh[t].speed };
+      }
+    }
+    var vRows = [
+      { label: 'Toplam Vites Sayısı (Kullanılan)', value: String(numGears) }
+    ];
+    if (firstTransition) vRows.push({ label: '1 → 2 Geçiş Hızı', value: num(firstTransition.speed, 1) + ' km/h' });
+    if (lastTransition) vRows.push({ label: 'Son Vites Geçiş Hızı', value: num(lastTransition.speed, 1) + ' km/h' });
+    vRows.push({ label: 'Stall Çekiş Kuvveti', value: num(stepsHigh[0].te, 2) + ' kN' });
+    if (govStep) vRows.push({ label: 'Governed Hız', value: num(govStep.speed, 1) + ' km/h' });
+    if (maxHeat > 0) vRows.push({ label: 'Maks. Isı Reddi', value: num(maxHeat, 1) + ' kW' });
+    boxSections.push({ title: 'VİTES GEÇİŞLERİ', rows: vRows });
+  }
+
+  // Konvertör Eşleşmesi — YALNIZ tork konvertörü varsa
+  if (R.hasTC && _ecmResults.length > 0) {
+    var selEC = _ecmResults.find(function(e) { return e.name === R.tcName; }) || _ecmResults[0];
+    var durStr = selEC.status === 'recommended' ? 'Önerilen' : selEC.status === 'caution' ? 'Dikkat' : 'Önerilmez';
+    boxSections.push({ title: 'KONVERTÖR EŞLEŞMESİ', rows: [
+      { label: 'Eşleme Durumu', value: durStr + ' (' + tr(selEC.name) + ')' },
+      { label: 'SR @ Governed', value: num(selEC.srGov, 3) },
+      { label: 'Türbin Torku @ Stall', value: numI(selEC.tTurbineStall) + ' N·m' }
+    ]});
+  }
+
+  r += boxTable(boxSections) + '\n';
+
   // ── DERECELENDİRME VE KILAVUZ KONTROLÜ (girişte özet uygunluk paneli) ──
   // Özgün MFSim şeması: K=Konvertör, S=Şanzıman, A=Araç. Tüm değerler kendi
   // simülasyonumuzdan (ECM / şanzıman limitleri / gradeability) — validasyonlu
@@ -2474,123 +2593,6 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   } else {
     r += '  Enerji dengesi verisi bulunamadı.\n';
   }
-  r += '\n\n';
-
-  // ════════════════════════════════════════════════════════════════════════
-  // 6. PERFORMANS OZETI
-  // ════════════════════════════════════════════════════════════════════════
-  // Performans Özet Tablosu — Unicode kutu, kategori başlıklı
-  function boxTable(sections) {
-    function clip(s, w) { s = tr(s); return s.length > w ? s.slice(0, w - 1) + '…' : s; }
-    var inner = W - 4, L = 32, V = 40;   // '  │ ' + L + '│ ' + V + ' │' = 80
-    var hd = '─ PERFORMANS ÖZET TABLOSU ';
-    function mid() { return '  ├' + rep('─', inner) + '┤\n'; }
-    var rb = '  ┌' + hd + rep('─', Math.max(0, inner - hd.length)) + '┐\n';
-    sections.forEach(function(sec) {
-      rb += mid();
-      rb += '  │ ' + pad(clip(sec.title, inner - 2), inner - 2, 'left') + ' │\n';
-      rb += mid();
-      sec.rows.forEach(function(row) {
-        rb += '  │ ' + pad(clip(row.label, L), L) + '│ ' + pad(clip(row.value, V), V) + ' │\n';
-      });
-    });
-    return rb + '  └' + rep('─', inner) + '┘\n';
-  }
-
-  var gvwTon = R.gvw / 1000;
-  var pwRatio = peakPower / gvwTon;
-  var tqRatio = peakTorque / gvwTon;
-
-  var boxSections = [];
-
-  // Genel Bilgiler — motor adındaki " | tork&güç" etiketini ayır (yalnız görünen ad)
-  var genelRows = [
-    { label: 'Motor', value: tr(String(R.engineName).split(' | ')[0]) },
-    { label: 'Şanzıman', value: tr(R.gbName) }
-  ];
-  if (R.hasTC) genelRows.push({ label: 'Tork Konvertörü', value: tr(R.tcName) });
-  genelRows.push({ label: 'Brüt Ağırlık (GVW)', value: numI(R.gvw) + ' kg' });
-  genelRows.push({ label: 'Güç / Ağırlık Oranı', value: num(pwRatio, 2) + ' kW/ton' });
-  genelRows.push({ label: 'Tork / Ağırlık Oranı', value: num(tqRatio, 1) + ' N·m/ton' });
-  boxSections.push({ title: 'GENEL BİLGİLER', rows: genelRows });
-
-  boxSections.push({ title: 'MOTOR PERFORMANSI', rows: [
-    { label: 'Maksimum Güç', value: num(peakPower, 1) + ' kW @ ' + numI(peakPowerRpm) + ' rpm' },
-    { label: 'Maksimum Tork', value: numI(peakTorque) + ' N·m @ ' + numI(peakTorqueRpm) + ' rpm' },
-    { label: 'Governed Devir', value: numI(R.governed) + ' rpm' },
-    { label: 'Governed Güç', value: num(govPower, 1) + ' kW' }
-  ]});
-
-  if (G && G.high) {
-    var gH2 = G.high;
-    var eRows = [
-      { label: 'Stall Eğim (Durma)', value: '%' + num(gH2.stallGrade, 1) },
-      { label: 'Launch Eğim (Kalkış)', value: '%' + num(gH2.launchGrade, 1) },
-      { label: 'Düz Yol Maks. Hız', value: num(gH2.maxSpeedFlat, 1) + ' km/h' }
-    ];
-    [5, 10, 20].forEach(function(gr) {
-      (gH2.gradeTable || []).forEach(function(row) {
-        if (Math.abs(row.grade - gr) < 0.1 && row.v_max > 0) {
-          eRows.push({ label: '%' + gr + ' Eğimde Maks. Hız', value: num(row.v_max, 1) + ' km/h' });
-        }
-      });
-    });
-    boxSections.push({ title: 'EĞİM KABİLİYETİ', rows: eRows });
-  }
-
-  if (A && A.high) {
-    var aRows = [];
-    [30, 60, 80].forEach(function(spd) {
-      (A.high.rows || []).forEach(function(row) {
-        if (row.targetSpeed === spd) {
-          if (row.time !== null && row.time !== undefined) {
-            aRows.push({ label: '0 → ' + spd + ' km/h Süresi', value: num(row.time, 1) + ' sn / ' + numI(row.distance) + ' m' });
-          } else {
-            aRows.push({ label: '0 → ' + spd + ' km/h Süresi', value: 'Ulaşılamıyor' });
-          }
-        }
-      });
-    });
-    var lastRow = null;
-    (A.high.rows || []).forEach(function(row) { if (row.time !== null && row.time !== undefined) lastRow = row; });
-    if (lastRow) {
-      aRows.push({ label: '0 → Maks. Hız Süresi', value: num(lastRow.time, 1) + ' sn / ' + numI(lastRow.distance) + ' m' });
-    }
-    boxSections.push({ title: 'HIZLANMA PERFORMANSI', rows: aRows });
-  }
-
-  if (stepsHigh.length > 0) {
-    var firstTransition = null, lastTransition = null;
-    for (var t = 1; t < stepsHigh.length; t++) {
-      if (stepsHigh[t - 1].gear !== stepsHigh[t].gear) {
-        if (!firstTransition) firstTransition = { speed: stepsHigh[t].speed };
-        lastTransition = { speed: stepsHigh[t].speed };
-      }
-    }
-    var vRows = [
-      { label: 'Toplam Vites Sayısı (Kullanılan)', value: String(numGears) }
-    ];
-    if (firstTransition) vRows.push({ label: '1 → 2 Geçiş Hızı', value: num(firstTransition.speed, 1) + ' km/h' });
-    if (lastTransition) vRows.push({ label: 'Son Vites Geçiş Hızı', value: num(lastTransition.speed, 1) + ' km/h' });
-    vRows.push({ label: 'Stall Çekiş Kuvveti', value: num(stepsHigh[0].te, 2) + ' kN' });
-    if (govStep) vRows.push({ label: 'Governed Hız', value: num(govStep.speed, 1) + ' km/h' });
-    if (maxHeat > 0) vRows.push({ label: 'Maks. Isı Reddi', value: num(maxHeat, 1) + ' kW' });
-    boxSections.push({ title: 'VİTES GEÇİŞLERİ', rows: vRows });
-  }
-
-  // Konvertör Eşleşmesi — YALNIZ tork konvertörü varsa
-  if (R.hasTC && _ecmResults.length > 0) {
-    var selEC = _ecmResults.find(function(e) { return e.name === R.tcName; }) || _ecmResults[0];
-    var durStr = selEC.status === 'recommended' ? 'Önerilen' : selEC.status === 'caution' ? 'Dikkat' : 'Önerilmez';
-    boxSections.push({ title: 'KONVERTÖR EŞLEŞMESİ', rows: [
-      { label: 'Eşleme Durumu', value: durStr + ' (' + tr(selEC.name) + ')' },
-      { label: 'SR @ Governed', value: num(selEC.srGov, 3) },
-      { label: 'Türbin Torku @ Stall', value: numI(selEC.tTurbineStall) + ' N·m' }
-    ]});
-  }
-
-  r += sectionBanner('6  ·  PERFORMANS ÖZETİ', W);
-  r += boxTable(boxSections);
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
