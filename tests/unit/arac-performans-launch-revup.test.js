@@ -1,18 +1,17 @@
 /**
  * arac-performans-launch-revup.test.js
  * ────────────────────────────────────
- * Tam-gaz KALKIŞ (launch) motor rev-up dinamiği — iSCAAN uyumu.
+ * Tam-gaz KALKIŞ — konvertör STALL dengesi (Rev1, EM64-A/TD-148-G · Allison C4).
  *
- * Regresyon bağlamı: converter modunda motor devri eskiden her adımda anlık
- * denge noktasına ("stall kökü", ~2334 rpm) ATLIYORDU → kalkışta fizik-dışı
- * yüksek devir + ~1 sn yapay hızlanma avansı. Gerçek fizik: motor rölantiden
- * tork konvertörüne karşı devir alır (dönme ataleti), f(N)=T_net−pompa_emişi
- * teğetliği yüzünden ~1000 rpm'de SÜRÜNÜR, sonra KOPAR (~2400'e).
+ * [Rev1 düzeltmesi] Tam gaz stall'ında (türbin kilitli, SR=0) motor, fazlalık
+ * excess(N)=T_net−drop−(N/K0)²'nın GERÇEK denge kökünde (excess ilk ≤0) oturur —
+ * bu, _findStallSpeed ve computeSettledStall ile TEK denge tanımıdır (§2.5/§2.7).
+ * Düşük-rpm'deki sığ pozitif vadi bir near-hang'dir (stall DEĞİL); motor onu
+ * GEÇİP yüksek stall dengesine tırmanır. Bu yüzden kalkış ~2335 rpm'den başlar
+ * (eski ~1010 "düşük dal oyalama" modeli KALDIRILDI). Yüksek stall = maksimum
+ * tork çarpımı → sert kalkış (0→20 ≈ 1.1 s).
  *
  * Referans senaryo: JMMA — L5D Duramax (governed 3000) + TC-415 + Allison 3200SP.
- * iSCAAN hedefi: kalkış ~1023 rpm (2334 DEĞİL), 0→20 ≈ 2.2 s (1.1 DEĞİL),
- * kopuştan sonra converter fazı iSCAAN'la örtüşür, lockup (2L…6L) çalışır.
- *
  * Assertion'lar DAVRANIŞSAL bant olarak yazıldı (kırılgan tek-değer değil).
  */
 const stubs = stubGlobals({ veResetChartView: jest.fn() });
@@ -77,7 +76,7 @@ function atSpeed(R, field, target) {
   return null;
 }
 
-describe('Kalkış rev-up dinamiği (L5D + TC-415 + 3200SP) — iSCAAN uyumu', () => {
+describe('Kalkış konvertör stall dengesi (L5D + TC-415 + 3200SP) — Rev1', () => {
   let R;
   beforeAll(() => { buildJMMA(0.900); R = veFTRunSimulationEngine(); });
 
@@ -88,35 +87,38 @@ describe('Kalkış rev-up dinamiği (L5D + TC-415 + 3200SP) — iSCAAN uyumu', (
     expect(R.TE.every(v => Number.isFinite(v))).toBe(true);
   });
 
-  test('KALKIŞTA motor rölanti civarında — anlık stall köküne (2334) ATLAMIYOR', () => {
-    // Eski hatalı davranış: v=0'da motor ~2334 rpm. Fix: rölantiden başlar (~700).
-    expect(R.rpm[0]).toBeLessThan(1200);        // 2334 DEĞİL
-    expect(R.rpm[0]).toBeGreaterThanOrEqual(690); // idle tabanı
+  test('KALKIŞTA motor konvertör STALL dengesinde (~2335) — düşük dala oyalanmıyor', () => {
+    // [Rev1] Tam gaz stall'ı = excess'in gerçek denge kökü (~2335), sığ pozitif vadi
+    // (eski ~1010 "oyalama") DEĞİL. rpm[0] = settledStall = _findStallSpeed noktası.
+    expect(R.rpm[0]).toBeGreaterThan(2200);     // yüksek stall dengesi (idle/düşük-dal DEĞİL)
+    expect(R.rpm[0]).toBeLessThan(2450);
   });
 
-  test('düşük hızda motor "sürünür" (teğetlik) — sonra KOPAR', () => {
-    // İlk ~4 km/h'te motor düşük kalmalı (crawl); sonra yüksek dala fırlamalı.
+  test('düşük hızda motor stall dengesinde KALIR (sürünme/oyalama YOK)', () => {
+    // [Rev1] Near-hang tutması kaldırıldığından motor ilk metrelerde de stall dengesinde;
+    // hız arttıkça çalışma noktasını izler (düşük dala düşmez).
     const rpmAt3 = atSpeed(R, 'rpm', 3.2);
-    expect(rpmAt3).toBeLessThan(1300);           // hâlâ sürünme bölgesi
+    expect(rpmAt3).toBeGreaterThan(2200);         // stall dengesinde (sürünme bölgesi DEĞİL)
     const rpmAt10 = atSpeed(R, 'rpm', 10);
-    expect(rpmAt10).toBeGreaterThan(2100);        // kopmuş, converter dengesinde
+    expect(rpmAt10).toBeGreaterThan(2200);        // converter dengesinde
   });
 
-  test('kopuştan sonra converter fazı denge devrinde (fizik-dışı runaway yok)', () => {
-    // Converter fazı (1C/2C, ≤~28 km/h) motor devri denge civarında kalmalı —
-    // eski hatanın (anlık 2334 stall köküne atlama) converter fazına özgü olduğu yer burası.
+  test('converter fazı denge devrinde (fizik-dışı runaway yok)', () => {
+    // Converter fazı (1C/2C, ≤~28 km/h) motor devri stall/denge bandında kalmalı,
+    // governed'ı (3000) aşmamalı.
     const rpmAt16 = atSpeed(R, 'rpm', 16.9);   // hâlâ 2C converter
     expect(rpmAt16).toBeGreaterThan(2500);
     expect(rpmAt16).toBeLessThan(2950);        // governed (3000) altında, converter dengesinde
     // Genel tavan: lockup/overdrive + Vmax-ötesi statik uzantı redline'a (3600) kadar
-    // kinematik çıkabilir (fix'ten bağımsız, önceden de böyle) → yalnız redline sınırı.
+    // kinematik çıkabilir → yalnız redline sınırı.
     expect(Math.max.apply(null, R.rpm)).toBeLessThanOrEqual(3650);
   });
 
-  test('0→20 km/h GERÇEKÇİ (~2.2 s) — eski ~1.1 s yapay avans YOK', () => {
+  test('0→20 km/h sert stall-launch ile ~1.1 s (yüksek stall = maks tork çarpımı)', () => {
+    // [Rev1] Yüksek stall dengesi (SR=0, τ≈2.35) → maksimum tork çarpımı → sert kalkış.
     const t20 = atSpeed(R, 'time', 20);
-    expect(t20).toBeGreaterThan(1.8);             // 1.1 s (eski) DEĞİL
-    expect(t20).toBeLessThan(2.8);
+    expect(t20).toBeGreaterThan(0.9);
+    expect(t20).toBeLessThan(1.5);                // ~1.1 s (Rev1); eski düşük-dal ~2.2 s DEĞİL
   });
 
   test('lockup çalışıyor: converter (C) VE lockup (L) fazları mevcut', () => {

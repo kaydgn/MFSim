@@ -3,13 +3,21 @@
   MATEMATİKSEL HESAPLAMALAR — GÜNCEL DÖKÜM
 ================================================================================
 
-Kaynak dosya : js/ft-performance.js  (2337 satır)
+Kaynak dosya : js/ft-performance.js
 Yardımcı     : js/cp-gearbox.js (varsayılan vites/shift profilleri)
-Üretim tarihi: 2026-07-14
+Üretim tarihi: 2026-07-14  ·  Güncelleme: Rev1 (konvertör stall birleşmesi)
 
 Bu belge, "Tam Gaz Hızlanma" simülasyonunun MEVCUT kaynak kodundan bire bir
 çıkarılmış tüm matematiksel formülleri, sabitleri ve algoritmaları içerir.
 Her bölümün yanında ilgili kaynak satır numaraları verilmiştir.
+
+[Rev1 — Konvertör & Stall Düzeltme Brief'i uygulandı] Tam gaz stall çalışma noktası
+artık TEK denge tanımı kullanır (excess = T_net−drop−(N/K0)² ilk ≤0 geçişi): üç yol
+(computeSettledStall §3.4, _findStallSpeed §3.3, per-adım konvertör dalı §9-C) aynı
+yüksek denge kökünü verir. Eski "sığ pozitif vadi = ~1010 rpm oyalama" (Option B tutma)
+modeli KALDIRILDI. Etki: stall devri (JMMA ~1010→~2335), stall türbin torku (~5×),
+gradeability stall (drivetrain kapasitesi + slip bayrağı), 0→20 (~2.2→~1.1 s).
+pumpTorqueDrop=17.6 (EM64) korundu ve kaynağıyla belgelendi. Ayrıntı: §3.4, §9-C, §15, §16.2.
 
 Notasyon:
   N        = devir sayısı [rpm]
@@ -130,17 +138,20 @@ için: standart iki-nokta lineer interpolasyon, aralık dışı → uç değere 
   Stall (N_türbin = 0, satır 154–163): _findStallSpeed ile
       T_motor(N) − N²/K_pump(0)² − drop = 0  kökü (40 iter biseksiyon).
 
-3.4 OTURMUŞ stall çalışma noktası (computeSettledStall, satır 223–247)
-  v=0'da (türbin kilitli, SR=0) motorun FİİLEN oturduğu devir — eğim/kalkış
+3.4 OTURMUŞ stall çalışma noktası (computeSettledStall) — [Rev1 birleşme]
+  v=0'da (türbin kilitli, SR=0) motorun FİİLEN oturduğu STALL dengesi — eğim/kalkış
   metrikleri için. Motor idle'dan nMax'a taranır (adım 5 rpm):
       excess(N) = T_motor(N) − drop − N²/K_pump(0)²
-  Karar mantığı:
-    • excess ≤ 0 ilk kez  →  gerçek düşük denge (o N seçilir)
-    • excess yerel min yapıp tekrar artıyorsa VE min excess ≤ tol (=15 N·m)
-      →  teğetlik/asılma noktası (min excess'in N'i seçilir)
-    • hiçbiri olmazsa  →  en düşük excess noktası
+  TEK KABUL KURALI (§2.5/§2.7 birleşme): excess'in İLK ≤ 0 geçişi = gerçek denge
+  (excess + → − ⇒ kararlı) → o N seçilir. Bu, _findStallSpeed (§3.3) ve per-adım
+  konvertör dalı (§9-C) ile AYNI denge tanımıdır — üç yol tek noktayı verir.
+    • Düşük-rpm'deki SIĞ POZİTİF vadi (yerel min > 0) bir near-hang'dir, stall
+      DEĞİL → GEÇİLİR, motor yüksek dengeye tırmanır.
+    • Sıfır geçişi hiç yoksa → en düşük excess noktası (fallback).
   Çıkış: T_pompa = N²/K_pump(0)², T_türbin = T_pompa·τ(0).
-  Fiziksel örnek (yorumdan): L5D + TC-415 → ~1000–1050 rpm oturma.
+  Örnek (aksesuar dahil net tork): L5D+TC-415 → ~2335 rpm; isb67+TC-413 → ~2210 rpm.
+  [Rev1 öncesi eski model sığ pozitif vadiyi "teğetlik/asılma ~1010" olarak kabul
+   ediyordu (tol=15/45 eşiği); bu KALDIRILDI — kabul kapısı artık yalnız excess ≤ 0.]
 
 
 ================================================================================
@@ -261,19 +272,22 @@ büyüklükleri hesaplar. Üç dala ayrılır:
       Vites 5: a=0.004852, b=−1.9591      (overdrive)
       Vites 6: a=0.006967, b=−4.1326      (overdrive, en yüksek eğim)
 
-── DAL C: KONVERTÖR MODU (KAYAN TK)        (satır 938–1024)
+── DAL C: KONVERTÖR MODU (KAYAN TK)        [Rev1 birleşme]
   N_türbin = speedToTurbineRpm(...)  (≥0).
-  DÜŞÜK DAL (teğet/oyalanma) TARAMASI (satır 958–970):
+  DÜŞÜK DAL TARAMASI (§2.7 — §3.4 ile AYNI denge tanımı):
     idleRpm → noLoadGoverned aralığı 10 rpm adımla taranır:
       SR = clip(N_türbin / N),   Kp = K_pump(SR)
       excess(N) = T_motor(N) − pumpTorqueDrop − N²/Kp²
-    excess önce azalıp SONRA artıyorsa vadi tabanı bulunmuştur:
-      onLowBranch = (min excess < CONV_MATCH_THRESHOLD=45 N·m)
-    excess ≤ 0 olursa → temiz yüksek denge (düşük vadi yok).
+    TEK KABUL KURALI: excess'in İLK ≤ 0 geçişi = GERÇEK düşük denge → onLowBranch=TRUE.
+    excess sığ pozitif vadi tabanını geçip ARTIYORSA (yerel min > 0) → near-hang,
+    stall DEĞİL → onLowBranch=FALSE (yüksek denge). CONV_MATCH_THRESHOLD (=45) artık
+    kabul KAPISI DEĞİL; yalnız hesaplama izinde referans olarak taşınır.
 
-    onLowBranch = TRUE   →  N_engine = vadi tabanı (eşleşmede TUT), engRate=0
-    onLowBranch = FALSE  →  N_engine = N_eng_dynamic (serbest rev-up; entegre
-                            edilen dinamik durum), taban idleRpm.
+    onLowBranch = TRUE   →  N_engine = denge noktası (_lmN), engRate=0
+    onLowBranch = FALSE  →  N_engine = N_eng_dynamic (entegre durum; başlangıç =
+                            computeSettledStall = stall dengesi, idle DEĞİL).
+    [Rev1 öncesi eski model: sığ pozitif vadiyi (min < 45) düşük-dal TUTMA (Option B
+     "~1010 oyalama") olarak kabul edip ~5-6 km/h'de "kopuş" üretiyordu → KALDIRILDI.]
 
   SR = clip(N_türbin / N_engine),   τ = τ(SR),   T_engine = motorTorqueFn(N_engine)
   Kp = K_pump(SR)
@@ -416,13 +430,14 @@ DURUM GÜNCELLEME (satır 1684–1690):
 ================================================================================
 Başlangıç durumu (satır 1185–1202):
   TK var + veri var → N_eng_dynamic = computeSettledStall(...).N_engine
-                      (oturmuş konvertör noktası; idle değil — launch
-                       transientinin yalancı düşük çekişini tabloya sızdırmaz)
+                      [Rev1] = konvertör STALL dengesi (~2335/~2210 rpm; idle DEĞİL).
+                      Kalkış bu dengeden başlar (sığ-vadi "oyalama" başlangıcı DEĞİL).
   TK yok            → _noTcLaunchStall = idle→governed arası torque-peak devri
   aksi             → idleRpm
 
 Her adım güncellemesi:
-  ph.onLowBranch                →  N_eng_dynamic = ph.N_engine  (eşleşmede tut)
+  ph.onLowBranch                →  N_eng_dynamic = ph.N_engine  (yalnız GERÇEK düşük
+                                    denge varsa; §2.7 sonrası JMMA/BMC'de tetiklenmez)
   ph.engRate ≠ null (yüksek dal) →  N_eng_dynamic += engRate·dt_step
                                     clip[idleRpm, max(noLoad,governed)+100]
   aksi (lockup / no-TC)         →  N_eng_dynamic = ph.N_engine (hıza kilitli)
@@ -483,13 +498,16 @@ Eğim/kalkış metrikleri transient t=0 satırından DEĞİL, oturmuş noktalard
 hesaplanır (motor kalkışta anlık dengeye atlamaz):
 
   settledStall (TK var + veri var):
-      _ss = computeSettledStall(...)             (Bölüm 3.4)
+      _ss = computeSettledStall(...)             (Bölüm 3.4 — [Rev1] STALL denge kökü)
       η_g1 = calcGearEfficiency(i_gear1, 0)      (stall'da SR=0 → türbin=0)
       T_output = _ss.T_turbine · η_g1
-      TE = calcTractiveEffort(T_output, i_gear1, 1.0, ...)   [GRİP-LİMİTSİZ]
+      TE = calcTractiveEffort(T_output, i_gear1, 1.0, ...)   [GRİP-LİMİTSİZ = drivetrain kapasitesi]
       F_roll0 = Crr_eff(0)·surfFactor·m·9.81      (v=0, düz yol)
       TE_kN = TE/1000,  DP_kN = (TE − F_roll0)/1000
       slip = (TE > F_grip)     → tutunma aşıldı bayrağı ("!")
+      [Rev1] Stall artık yüksek denge (maks tork çarpımı τ(0)) → TE/DP çok yüksek
+      (ör. L5D+TC-415: TE≈124 kN, T_türbin≈2756). Güçlü drivetrain'de DP > mg olabilir
+      → §16.2 stallGrade=999 (kapasite sınırsız) + slip bayrağı (gerçek startability grip-limitli).
 
   Düşük-hız (~10 km/h) quasi-statik nokta: benzer şekilde o hızda motorun
   oturduğu dengeden TE/DP üretilir (transient düşük okumayı override eder).
@@ -506,9 +524,13 @@ hesaplanır (motor kalkışta anlık dengeye atlamaz):
 
 16.2 Tek kademe hesabı (veCalcGradeForRatio, satır 2032–2107):
       mg_kN = m·g/1000
-      Stall DP kaynağı: TK var → v=0 (konvertör stall = maks tork çarpımı);
+      Stall DP kaynağı: TK var → v=0 (konvertör stall = maks tork çarpımı; [Rev1]
+                        yüksek denge kökü → çok yüksek DP);
                         TK yok → 1. vitesteki ulaşılabilir MAKS DP.
-      dp_stall ≥ mg_kN → stallGrade=999, launchGrade=997 (sınırsız)
+      dp_stall ≥ mg_kN → stallGrade=999, launchGrade=997 (drivetrain kapasitesi
+                        sınırsız; gerçek startability grip-limitli → settledStall.slip
+                        bayrağı). [Rev1] Güçlü drivetrain'de tipik durum budur (BMC,
+                        JMMA her ikisi de). Eski düşük-stall (~22%) modeli KALDIRILDI.
       aksi:
           stallGrade = tan(asin(dp_stall/mg_kN)) · 100      [%], 0.1 yuvarlama
           launchGrade: TK var → stallGrade − 2.0 (iSCAAN konvansiyonu)
@@ -559,9 +581,11 @@ Düşük kademe (transfer ikinci oranı varsa, satır 2293–2334):
 ================================================================================
 Motor:      idleRpm=700, governedSpeed=2100, noLoadGoverned=2350,
             I_engine=1.431 kg·m²
-Tork konv.: pumpTorqueDrop=17.6 N·m, I_conv=0.5, I_conv_turbine=0.3,
-            eta_conv_internal=0.975, CONV_MATCH_THRESHOLD=45 N·m,
-            couplingSR (τ≤1.005) veya 0.88
+Tork konv.: pumpTorqueDrop=17.6 N·m (Allison EM64-A, 3000 ailesi; TD-159=19 N·m
+            alternatifi — kalibrasyon EM64 olduğundan 17.6 seçili, §4.1),
+            I_conv=0.5, I_conv_turbine=0.3, eta_conv_internal=0.975,
+            CONV_MATCH_THRESHOLD=45 N·m ([Rev1] artık kabul kapısı DEĞİL — yalnız iz;
+            stall/düşük-dal kararı excess ≤ 0 ile), couplingSR (τ≤1.005) veya 0.88
 Şanzıman:   I_trans=1.0 kg·m²; varsayılan vitesler (VE_FT_GB_DEFAULT_GEARS,
             cp-gearbox.js:816) — oran / verim%:
               F1 3.487 / 98.11 (C)      F4 1.000 / 99.64 (L)

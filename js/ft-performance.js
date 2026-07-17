@@ -215,32 +215,35 @@ var FT_SOLVER = (function() {
 
   // OTURMUŞ STALL çalışma noktası (v=0, türbin kilitli, SR=0) — eğim/kalkış METRİKLERİ için.
   // Motor rölantiden yukarı taranır; net motor torku ile pompa emişi (N/K_pump(0))²
-  // arasındaki FAZLALIK'ın ilk YEREL MİNİMUMU = teğetlik/asılma noktası (motorun kalkışta
-  // fiilen oturduğu devir, ör. L5D+TC-415'te ~1000-1050). Bu, tam gaz stall'ında motorun
-  // 2334'e kaçmadan asılı kaldığı yerdir. Teğetlik toleransı (tol), fazlalık tam sıfırı
-  // kesmese de (marjinal kombinasyon) yüksek köke kaçmayı önler; fazlalık sıfırı geçerse
-  // (gerçek düşük denge) o kesişim kullanılır.
+  // arasındaki FAZLALIĞ'ın (excess = T_net − drop − emiş) İLK SIFIR GEÇİŞİ = motorun tam
+  // gazda fiilen oturduğu STALL DENGESİDİR (excess + → − ⇒ kararlı denge). Bu, denge kökü
+  // _findStallSpeed (§3.3) ve solveTCOperatingPoint(N_türbin=0) ile AYNI noktadır — üç yol
+  // tek denge tanımını paylaşır (§2.7 birleşme ilkesi). Düşük-rpm'de excess'in yaptığı SIĞ
+  // POZİTİF vadi (yerel min > 0) bir stall DEĞİL, motorun rev-up sırasında GEÇTİĞİ bir
+  // near-hang'dir; excess orada ≤ 0 OLMADIKÇA kabul EDİLMEZ → motor yüksek dengeye tırmanır
+  // (ör. L5D+TC-415: ~2410; isb67+TC-413: ~2265). Referans: Allison C4 tam-gaz konvertör
+  // stall'ı (EM64-A / TD-148-G). [Rev1 düzeltmesi: eski "teğetlik/asılma ~1025" kabulü kaldırıldı.]
   function computeSettledStall(motorTorqueFn, tcFns, pumpDrop, idleRpm, options) {
     var opts = options || {};
-    var tol = (opts.tol != null) ? opts.tol : 15;   // N·m — teğetlik eşiği
+    var tol = (opts.tol != null) ? opts.tol : 15;   // N·m — yalnız iz/geriye-uyum; kabul KAPISI DEĞİL
     var nMax = opts.nMax || 2600;
     var stepN = opts.step || 5;
     var K0 = tcFns.kpump(0);
     var tau0 = tcFns.tau(0);
     var trace = opts.traceSink || null;   // iz için iterasyon kaydı (hesaba etkisiz)
     if(trace) { trace.K0 = K0; trace.tau0 = tau0; trace.tol = tol; trace.pumpDrop = pumpDrop; trace.idleRpm = idleRpm; trace.iterations = []; trace.reason = ''; }
-    var prevExcess = Infinity, minExcess = Infinity, minN = idleRpm, chosenN = null;
+    var minExcess = Infinity, minN = idleRpm, chosenN = null;
     for(var N = idleRpm; N <= nMax; N += stepN) {
       var Te_s = motorTorqueFn(N);
       var Tpa_s = (N * N) / (K0 * K0);
       var excess = Te_s - pumpDrop - Tpa_s;
       if(trace) trace.iterations.push({ N: N, Te: Te_s, T_pump_absorb: Tpa_s, excess: excess });
       if(excess < minExcess) { minExcess = excess; minN = N; }
-      if(excess <= 0) { chosenN = N; if(trace) trace.reason = 'gercek denge (fazlalik<=0)'; break; }                                 // gerçek düşük denge
-      if(excess > prevExcess && minExcess <= tol) { chosenN = minN; if(trace) trace.reason = 'teget/asilma (min fazlalik<=tol)'; break; }  // teğetlik/asılma
-      prevExcess = excess;
+      // TEK KABUL KURALI (§2.5/§2.7): yalnız GERÇEK denge = excess'in İLK ≤ 0 geçişi. Sığ
+      // pozitif vadi (near-hang) stall değildir → geçilir; motor yüksek dengeye tırmanır.
+      if(excess <= 0) { chosenN = N; if(trace) trace.reason = 'denge koku (excess ilk <=0)'; break; }
     }
-    if(chosenN === null) { chosenN = minN; if(trace) trace.reason = 'min fazlalik noktasi (teget yok)'; }   // teğetlik yoksa en düşük fazlalık noktası
+    if(chosenN === null) { chosenN = minN; if(trace) trace.reason = 'kesisim yok — min excess noktasi (fallback)'; }   // sıfır geçişi yoksa en düşük fazlalık noktası
     var T_pump = (chosenN * chosenN) / (K0 * K0);
     if(trace) { trace.chosenN = chosenN; trace.minExcess = minExcess; trace.T_pump = T_pump; trace.T_turbine = T_pump * tau0; }
     return { N_engine: chosenN, T_pump: T_pump, T_turbine: T_pump * tau0, tau: tau0, SR: 0, minExcess: minExcess };
@@ -494,16 +497,19 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   // ── TORK KONVERTÖRÜ ──
   var tcd = tcNode ? (tcNode.data || {}) : {};
   var tcDataArr = tcd.tcData || [];
+  // Pompa (şarj pompası) tork düşümü [N·m] — TD-148 §5.1: konvertör çoğaltmadan ÖNCE düşülür.
+  // Varsayılan 17.6 N·m (≈13 lb-ft) = Allison EM64-A, 3000 ailesi. K/τ tablolarını da EM64'ten
+  // aldığımız için tutarlı. (TD-159: 3700-dışı 3000 ailesi = 19 N·m; kalibrasyon EM64 olduğundan
+  // 17.6 kullanılır — karar §4.1, 2026-07-14.) Kullanıcı TK verisinde geçersiz kılabilir.
   var pumpTorqueDrop = tcd.pumpTorqueDrop !== undefined ? parseFloat(tcd.pumpTorqueDrop) : 17.6;
   var I_conv = tcNode ? 0.5 : 0.0;           // TC toplam atalet (lockup modda) — TK yoksa 0
   var I_conv_turbine = tcNode ? 0.3 : 0.0;   // TC türbin ataleti (converter modda) — TK yoksa 0
   // Converter-mod rev-up ataleti: motor krank+volan + konvertör pompası (impeller tarafı).
   // Kalkışta motorun idle→stall tırmanma hızını (dolayısıyla ~1 sn avansı) belirler.
   var I_eng_rev = I_engine + Math.max(0, I_conv - I_conv_turbine);
-  // Konvertör-eşleşme (düşük dal) kopuş eşiği [N·m]: kalkışta motor, teğet bölgesindeki
-  // net-tork fazlalığı bu eşiğin ALTINDA olduğu sürece eşleşme noktasında TUTULUR (oyalanır,
-  // iSCAAN gibi). Fazlalık eşiği aşınca (araç ~5-6 km/h) düşük dal bozulur → motor KOPAR ve
-  // serbest rev-up ile yüksek dala tırmanır. Değer iSCAAN kopuş hızına göre kalibre.
+  // [Rev1] Eski konvertör-eşleşme "düşük dal tutma" eşiği [N·m]. Artık kabul KAPISI DEĞİL:
+  // düşük/yüksek denge kararı excess ≤ 0 (gerçek denge) ile verilir (§2.5/§2.7 birleşme).
+  // Yalnız hesaplama izinde (trace) referans olarak taşınır — davranışa etkisi yoktur.
   var CONV_MATCH_THRESHOLD = 45;
 
   var tcFns = FT_SOLVER.createTCFunctions(tcDataArr);
@@ -937,24 +943,24 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       }
     } else {
       // ── CONVERTER MOD — KONFİG-BAĞIMSIZ konvertör çalışma noktası ──
-      // Motor her adımda konvertör ÇALIŞMA NOKTASINDA tutulur (iSCAAN'ın quasi-statik
-      // eşleşme taramasıyla örtüşür). İki olasılık, motor+TK kombinasyonuna göre kendi
-      // kendine ayrışır:
-      //   • DÜŞÜK DAL (teğet/oyalanma): fazlalık excess(N)=net−drop−emiş bir "vadi" (önce
-      //     azalıp sonra artan yerel min) yapıyor ve tabanı eşiğin altındaysa motor orada
-      //     oturur (JMMA/L5D: ~1010 → iSCAAN 1023-1011). Vadi tabanı eşiği aşınca (araç
-      //     hızlanınca) kopar → serbest rev-up ile yüksek dala tırmanır (iSCAAN 1804→2406).
-      //   • YÜKSEK DENGE (temiz stall): vadi yok (excess idle'dan itibaren artıyor) → motor
-      //     doğrudan yüksek stall/eşleşme dengesinde oturur (BMC/isb67: ~2204 → iSCAAN 2204).
-      //     N_eng_dynamic bu dengeden başlatıldığından (idle değil) launch transientinin
-      //     (~0.5 s) yalancı düşük çekişi tabloya SIZMAZ.
+      // Motor her adımda konvertör ÇALIŞMA NOKTASINDA tutulur. Nokta, fazlalık
+      // excess(N)=net−drop−emiş fonksiyonunun GERÇEK denge tanımıyla (excess'in ≤ 0 geçişi)
+      // belirlenir — computeSettledStall (§3.4) ve _findStallSpeed (§3.3) ile TEK VE AYNI
+      // tanım (§2.7 birleşme):
+      //   • GERÇEK DÜŞÜK DENGE: excess düşük-rpm'de ≤ 0'ı GEÇİYORSA (motor o noktayı aşamaz)
+      //     motor orada oturur (düşük dal). Sığ POZİTİF vadi (yerel min > 0) denge DEĞİLDİR.
+      //   • YÜKSEK DENGE (stall): excess düşük-rpm'de ≤ 0'a inmiyorsa (yalnız sığ pozitif vadi
+      //     ya da monoton) motor near-hang'i GEÇİP yüksek stall dengesine tırmanır — N_eng_dynamic
+      //     (computeSettledStall'dan başlatılan entegre durum) bu dengeyi taşır (JMMA/L5D: ~2410;
+      //     BMC/isb67: ~2265). [Rev1: eski sığ-vadi "~1010 oyalama" tutması KALDIRILDI.]
       var N_turbine = FT_SOLVER.speedToTurbineRpm(v_ms, i_gear, i_propshaft, i_transfer, i_axle, r_tire);
       if(N_turbine < 0) N_turbine = 0;
 
-      // Düşük dal (konvertör-eşleşme teğet) vadisi — SABİT devir penceresi YOK; teğet devri
-      // motora+TK'ye göre değiştiğinden idle→noLoad tam aralığı taranır. excess önce azalıp
-      // sonra artıyorsa vadi tabanı bulunmuştur; excess idle'dan itibaren artıyorsa (ya da
-      // sıfırı geçiyorsa) düşük dal yoktur → yüksek denge.
+      // Düşük dal taraması — idle→noLoad. GERÇEK düşük denge yalnız excess düşük-rpm'de ≤ 0'ı
+      // GEÇİYORSA vardır (motor o noktayı aşamaz → orada oturur). Sığ pozitif vadi tabanı
+      // (yerel min > 0) bir near-hang'dir, stall DEĞİL → onLowBranch=false, motor yüksek
+      // dengeye çıkar (§2.7 birleşme). CONV_MATCH_THRESHOLD artık kabul KAPISI DEĞİL (yalnız iz);
+      // kabul kapısı excess ≤ 0'dır → computeSettledStall/_findStallSpeed ile aynı tanım.
       var _lmN = idleRpm, _lmE = Infinity, _prevE = Infinity;
       onLowBranch = false;
       var _scanRows = tr ? [] : null;
@@ -964,8 +970,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         var _eS = motorTorqueFn(_nS) - pumpTorqueDrop - (_nS * _nS) / (_kpS * _kpS);
         if(_scanRows) _scanRows.push({ N: _nS, SR: _srS, kpump: _kpS, excess: _eS });
         if(_eS < _lmE) { _lmE = _eS; _lmN = _nS; }
-        if(_eS > _prevE) { onLowBranch = (_lmE < CONV_MATCH_THRESHOLD); break; }  // vadi tabanı geçildi
-        if(_eS <= 0) break;   // sıfır geçişi (temiz yüksek denge) — düşük vadi yok
+        if(_eS <= 0) { onLowBranch = true; break; }       // GERÇEK denge: excess ilk ≤0 geçişi → o noktada (_lmN) tut
+        if(_eS > _prevE) { onLowBranch = false; break; }  // sığ pozitif vadi (near-hang) — düşük denge yok → yüksek dala
         _prevE = _eS;
       }
 

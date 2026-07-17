@@ -1,16 +1,16 @@
 /**
  * arac-performans-operating-point.test.js
  * ────────────────────────────────────────
- * EVRENSEL KONVERTÖR ÇALIŞMA NOKTASI (Approach A) doğrulaması.
+ * EVRENSEL KONVERTÖR ÇALIŞMA NOKTASI (Approach A + Rev1 stall birleşmesi) doğrulaması.
  *
- * Tam-gaz tam-gaz tablosunda motor, kalkışta idle→stall rev-up transientini (iSCAAN'ın
- * ihmal ettiği) atlayarak konvertör ÇALIŞMA NOKTASINDAN başlar. İki motor+TK kombinasyonu
- * kendi kendine ayrışır:
- *   • BMC/isb67 + TC-413  → düşük dal YOK → v=0'da temiz yüksek STALL (~2204, iSCAAN 2204)
- *   • JMMA/L5D  + TC-415  → teğet düşük dal → v=0'da ~1010 oyalanma (iSCAAN 1023) → kopuş
+ * Tam gaz stall'ında motor, fazlalık excess(N)=T_net−drop−(N/K0)²'nın GERÇEK denge kökünde
+ * (excess ilk ≤0) oturur — _findStallSpeed ve computeSettledStall ile TEK denge tanımı
+ * (§2.5/§2.7). Her iki motor+TK kombinasyonu bu yüksek stall dengesine oturur:
+ *   • BMC/isb67 + TC-413  → v=0 yüksek STALL ~2210
+ *   • JMMA/L5D  + TC-415  → v=0 yüksek STALL ~2335  [Rev1: eski sığ-vadi ~1010 oyalama KALDIRILDI]
  *
- * Bu test, sabit 850-1350 rpm penceresine bağlı ESKİ (config'e özel) tespitin geri
- * gelmesini ve BMC'nin yeniden rölantiden (700) başlamasını önler.
+ * Bu test, hem BMC'nin rölantiden (700) başlamasını hem de JMMA'nın düşük dala oyalanmasını
+ * önler — ikisi de stall denge kökünden başlamalı.
  */
 const stubs = stubGlobals({ veResetChartView: jest.fn() });
 global.veActiveModule = 'full-throttle';
@@ -84,24 +84,24 @@ describe('Evrensel konvertör çalışma noktası — BMC (temiz yüksek stall)'
   });
 });
 
-describe('Evrensel konvertör çalışma noktası — JMMA (teğet düşük dal, regresyon)', () => {
+describe('Evrensel konvertör çalışma noktası — JMMA (yüksek stall dengesi, Rev1)', () => {
   let R;
   beforeAll(() => { buildJMMA(); R = veFTRunSimulationEngine(); });
 
-  test('v=0 DÜŞÜK DAL noktasında oyalanır (~1010), stall\'a (2335) kaçmaz', () => {
-    expect(R.rpm[0]).toBeGreaterThanOrEqual(950);      // iSCAAN 1023
-    expect(R.rpm[0]).toBeLessThanOrEqual(1120);
+  test('v=0 yüksek STALL dengesinde (~2335) — düşük dala oyalanmıyor', () => {
+    expect(R.rpm[0]).toBeGreaterThan(2250);            // stall denge kökü (~2335)
+    expect(R.rpm[0]).toBeLessThan(2420);
   });
 
-  test('düşük dal ~3 km/h\'ye kadar tutulur, sonra yüksek dala KOPAR', () => {
-    expect(at(R, 'rpm', 3.2)).toBeLessThan(1250);      // hâlâ düşük dal (iSCAAN 1011)
-    expect(at(R, 'rpm', 9.7)).toBeGreaterThan(2200);   // kopmuş, yüksek dal (iSCAAN 2463)
+  test('düşük hızda motor stall dengesinde kalır (sürünme/oyalama YOK)', () => {
+    expect(at(R, 'rpm', 3.2)).toBeGreaterThan(2200);   // stall dengesinde (düşük dal DEĞİL)
+    expect(at(R, 'rpm', 9.7)).toBeGreaterThan(2200);   // converter dengesinde
   });
 
-  test('hızlanma iSCAAN bandında (0→20 in 2.0-2.5 s) ve maks hız ~133', () => {
+  test('sert stall-launch (0→20 ~1.1 s) ve maks hız ~134', () => {
     const t20 = at(R, 'time', 20);
-    expect(t20).toBeGreaterThan(2.0);
-    expect(t20).toBeLessThan(2.5);
+    expect(t20).toBeGreaterThan(0.9);
+    expect(t20).toBeLessThan(1.5);                      // ~1.1 s (Rev1 yüksek stall)
     expect(dynMax(R)).toBeGreaterThan(131);
     expect(dynMax(R)).toBeLessThan(136);
   });
