@@ -59,15 +59,15 @@ describe('TK\'siz Tam-Gaz TXT raporu — Performans Özeti temizliği', () => {
   beforeAll(() => {
     const sim = buildSim();
     report = veGenerateFTTxtReport(sim, 'Test');
-    const i = report.indexOf('6  ·  PERFORMANS ÖZETİ');
-    const e = report.indexOf('RAPOR SONU');
+    const i = report.indexOf('PERFORMANS ÖZET TABLOSU');
+    const e = report.indexOf('DERECELENDİRME VE KILAVUZ KONTROLÜ');
     section = report.slice(i, e > i ? e : report.length);
   });
 
   test('rapor üretilir ve Performans Özeti + Eğim Kabiliyeti içerir', () => {
     expect(typeof report).toBe('string');
     expect(report.length).toBeGreaterThan(500);
-    expect(section).toContain('PERFORMANS ÖZETİ');
+    expect(section).toContain('PERFORMANS ÖZET TABLOSU');
     expect(section).toContain('EĞİM KABİLİYETİ');
   });
 
@@ -116,8 +116,8 @@ describe('TK VARSA rapor — konvertör bölümleri KORUNUR (ileride TK eklenirs
     ] };
     sim = buildSim(TC);
     report = veGenerateFTTxtReport(sim, 'Test');
-    const i = report.indexOf('6  ·  PERFORMANS ÖZETİ');
-    const e = report.indexOf('RAPOR SONU');
+    const i = report.indexOf('PERFORMANS ÖZET TABLOSU');
+    const e = report.indexOf('DERECELENDİRME VE KILAVUZ KONTROLÜ');
     section = report.slice(i, e > i ? e : report.length);
   });
 
