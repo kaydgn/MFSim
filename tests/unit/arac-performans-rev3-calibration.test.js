@@ -5,8 +5,10 @@
  *   Fix B — Governed üstü çift-droop giderildi: tablo no-load'a kadar iniyorsa (L5D 3600→0)
  *           sentetik governor droop UYGULANMAZ → tepe hız iSCAAN'a oturur (~133 km/h).
  *   Fix A — Stall/launch/düşük-hız eğim metrikleri TRANSIENT t=0 satırından değil, motorun
- *           OTURDUĞU quasi-statik noktadan hesaplanır (settledStall ~1000 rpm; low-speed op).
- * Referans iSCAAN: stall eğim 22.3%, launch 20.3%, maks hız 133.4 km/h, 0→20 = 2.2 s.
+ *           OTURDUĞU noktadan hesaplanır. [Rev1] Oturma noktası = konvertör stall DENGE kökü
+ *           (excess ilk ≤0; ~2335 rpm), eski sığ-vadi "~1000" DEĞİL — _findStallSpeed ile aynı.
+ * Referans (Rev1): yüksek stall = maks tork çarpımı → stall/launch eğimi drivetrain KAPASİTESİ
+ *           (grip-limitsiz; TE>grip → slip bayrağı, BMC gibi), 0→20 ≈ 1.1 s, maks hız ~134 km/h.
  */
 const stubs = stubGlobals({ veResetChartView: jest.fn() });
 global.veActiveModule = 'full-throttle';
@@ -90,28 +92,29 @@ describe('REV3 Fix A — eğim metrikleri oturmuş noktadan (transient değil)',
   let R;
   beforeAll(() => { buildJMMA(0.750); R = veFTRunSimulationEngine(); });
 
-  test('settledStall v=0 oturmuş noktayı verir (~1000-1050 rpm, teğetlik; 2334 DEĞİL)', () => {
+  test('settledStall v=0 stall DENGE kökünü verir (~2335 rpm; _findStallSpeed ile aynı)', () => {
     expect(R.settledStall).toBeTruthy();
-    expect(R.settledStall.N_engine).toBeGreaterThanOrEqual(950);
-    expect(R.settledStall.N_engine).toBeLessThanOrEqual(1120);   // iSCAAN 1023 bandı
-    expect(R.settledStall.TE_kN).toBeGreaterThan(18);            // yüksek köke (2334→79 kN grip) kaçmadı
-    expect(R.settledStall.TE_kN).toBeLessThan(30);
+    expect(R.settledStall.N_engine).toBeGreaterThan(2250);       // yüksek stall dengesi
+    expect(R.settledStall.N_engine).toBeLessThan(2420);          // ~2335 (Rev1)
+    // Drivetrain KAPASİTESİ (grip-limitsiz TE) — yüksek stall → maks tork çarpımı
+    expect(R.settledStall.TE_kN).toBeGreaterThan(100);           // düşük-dal (~24 kN) DEĞİL
+    expect(R.settledStall.slip).toBe(true);                      // TE > F_grip → tekerlek kayması olası
   });
 
-  test('simülasyon izi konvertör-eşleşme noktasından başlar (Option B — tutma modeli)', () => {
-    // t=0 motor rölantide DEĞİL, konvertör-eşleşme düşük dalında TUTULUR
-    // (iSCAAN 1023 bandı). Motor düşük hızda oyalanır, sonra kopup yükselir.
-    expect(R.rpm[0]).toBeGreaterThanOrEqual(950);
-    expect(R.rpm[0]).toBeLessThanOrEqual(1120);
+  test('simülasyon izi stall DENGE noktasından başlar (Rev1 — near-hang tutması yok)', () => {
+    // [Rev1] t=0 motor konvertör stall dengesinde (~2335); eski düşük-dal "oyalama" kaldırıldı.
+    expect(R.rpm[0]).toBeGreaterThan(2250);
+    expect(R.rpm[0]).toBeLessThan(2420);
   });
 
-  test('stall eğim yanlış andan değil oturmuş noktadan → makul (transient 9.5% DEĞİL)', () => {
+  test('stall/launch eğim = drivetrain KAPASİTESİ (grip-limitsiz; yüksek stall → yüksek)', () => {
+    // [Rev1] Yüksek stall dengesinde TE (~124 kN) araç ağırlığını (mg≈112.8 kN) aşar →
+    // stall eğim drivetrain kapasitesi olarak sınırsız (999); gerçek startability grip-limitli
+    // (slip bayrağı ayrıca set). BMC/isb67 ile AYNI konvansiyon.
     const G = veCalculateGradeability(R);
     expect(G).toBeTruthy();
-    expect(G.high.stallGrade).toBeGreaterThan(17);   // iSCAAN 22.3, band tabanı ~20; transient 9.5\'i kesin geçer
-    expect(G.high.stallGrade).toBeLessThan(26);
-    // launch = stall civarı (stall−2 konvansiyonu), transient 7.5 değil
-    expect(G.high.launchGrade).toBeGreaterThan(15);
+    expect(G.high.stallGrade).toBeGreaterThan(100);   // kapasite sınırsız (düşük-dal 22.3% DEĞİL)
+    expect(G.high.launchGrade).toBeGreaterThan(100);  // stall−2 konvansiyonu (997)
   });
 
   test('lowSpeedOp quasi-statik ~10 km/h noktası mevcut ve makul', () => {
@@ -121,14 +124,14 @@ describe('REV3 Fix A — eğim metrikleri oturmuş noktadan (transient değil)',
   });
 });
 
-describe('REV3 REGRESYON — rev-up fix + hızlanma + lockup korunuyor', () => {
+describe('REV3 REGRESYON — hızlanma + lockup korunuyor', () => {
   let R;
   beforeAll(() => { buildJMMA(0.750); R = veFTRunSimulationEngine(); });
 
-  test('0→20 km/h iSCAAN bandında (~2.2 s) — rev-up transiyenti korunuyor', () => {
+  test('0→20 km/h sert stall-launch ile ~1.1 s (Rev1 yüksek stall)', () => {
     const t20 = timeToSpeed(R, 20);
-    expect(t20).toBeGreaterThan(2.0);
-    expect(t20).toBeLessThan(2.6);
+    expect(t20).toBeGreaterThan(0.9);
+    expect(t20).toBeLessThan(1.5);   // ~1.1 s; eski düşük-dal ~2.2 s DEĞİL
   });
   test('vites/mod dizisi lockup\'a geçer ve 6. vitese çıkar', () => {
     const gm = R.gearMode.map(String);
