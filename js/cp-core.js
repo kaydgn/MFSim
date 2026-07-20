@@ -154,16 +154,19 @@ function showNodeProperties(node) {
     titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>' + nm + ' <span style="opacity:0.5;font-weight:400;font-size:0.7rem;margin-left:6px;">' + (node.id || '') + '</span>';
   }
   
-  var html = '<div class="ve-prop-symbol" style="position:relative; margin-bottom:8px;">';
-  html += node.def.svg;
-  html += '<button onclick="deleteSelectedNodes()" style="position:absolute; top:-4px; right:-4px; width:22px; height:22px; border-radius:50%; background:var(--accent-danger); color:white; border:none; cursor:pointer; font-size:0.65rem; display:flex; align-items:center; justify-content:center; opacity:0.7; transition:opacity 0.15s;" onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0.7" title="Bileşeni Sil"><span class="mf-ico mf-ico-trash"></span></button>';
-  html += '</div>';
+  // Kimlik bloğu — sınıf tabanlı (yerleşim CSS'te). Varsayılan: ortalanmış
+  // (simge üstte, ad/ID altında). Motor penceresinde (.ve-properties--engine)
+  // CSS ile kompakt-sol satıra döner: simge solda, ad/ID yanında, sil sağda.
   var displayName = node.customName || node.def.name;
-  html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:4px; text-align:center; display:flex; align-items:center; justify-content:center; gap:6px;">';
-  html += '<span id="ve-node-name-display-' + node.id + '">' + displayName + '</span>';
-  html += '<button onclick="veEditNodeName(\'' + node.id + '\')" style="width:18px; height:18px; border:none; background:none; cursor:pointer; font-size:0.7rem; opacity:0.6; padding:0;" title="İsmi düzenle"><span class="mf-ico mf-ico-edit"></span></button>';
-  html += '</div>';
-  html += '<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:12px; text-align:center;">ID: ' + node.id + '</div>';
+  var html = '<div class="ve-prop-identity">';
+  html += '<div class="ve-prop-symbol">' + node.def.svg + '</div>';
+  html += '<div class="ve-prop-meta">';
+  html += '<div class="ve-prop-name"><span id="ve-node-name-display-' + node.id + '">' + displayName + '</span>';
+  html += '<button class="ve-prop-nameedit" onclick="veEditNodeName(\'' + node.id + '\')" title="İsmi düzenle"><span class="mf-ico mf-ico-edit"></span></button></div>';
+  html += '<div class="ve-prop-id">ID: ' + node.id + '</div>';
+  html += '</div>';  // ve-prop-meta
+  html += '<button class="ve-prop-del" onclick="deleteSelectedNodes()" title="Bileşeni Sil"><span class="mf-ico mf-ico-trash"></span></button>';
+  html += '</div>';  // ve-prop-identity
   
   // Node tipine göre özel içerik
   if(node.type === 'engine') {

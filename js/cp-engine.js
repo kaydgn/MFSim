@@ -363,17 +363,23 @@ function getEnginePropertiesHTML(node) {
   var html = '<div class="sw-panel ve-eng-panel">';
 
   if(isFullThrottle) {
-    html += selectHtml;                                   // tam genişlik üst şerit
-    html += '<div id="ve-ft-extra-' + node.id + '" style="display:' + (hasData ? 'block' : 'none') + ';">';
+    // Motor Seçimi sol sütunun tepesinde (hep görünür) → sağ sütun (grafik)
+    // ızgaranın tepesiyle hizalanıp yukarı çıkar. "Veri varsa görünen" içerik
+    // (parametreler/tablo/aksesuar | grafik/eğri/net) her sütunda ayrı bir
+    // .ve-ft-extra sarmalayıcısında; ikisi birlikte açılıp kapanır.
     html += '<div class="ve-eng-grid">';
     html += '<div class="ve-eng-col ve-eng-col--in">';    // sol: girdiler
+    html += selectHtml;                                   // Motor Seçimi + placeholder (hep görünür)
+    html += '<div class="ve-ft-extra" data-node="' + node.id + '" style="display:' + (hasData ? 'block' : 'none') + ';">';
     html += specCardHtml + dataAreaHtml + accHtml;
-    html += '</div>';
+    html += '</div>';                                     // ve-ft-extra (sol)
+    html += '</div>';                                     // ve-eng-col--in
     html += '<div class="ve-eng-col ve-eng-col--out">';   // sağ: çıktı
+    html += '<div class="ve-ft-extra" data-node="' + node.id + '" style="display:' + (hasData ? 'block' : 'none') + ';">';
     html += chartHtml + fitHtml + netHtml;
-    html += '</div>';
-    html += '</div>';  // ve-eng-grid
-    html += '</div>';  // ve-ft-extra
+    html += '</div>';                                     // ve-ft-extra (sağ)
+    html += '</div>';                                     // ve-eng-col--out
+    html += '</div>';                                     // ve-eng-grid
   } else {
     html += '<div class="ve-eng-grid">';
     html += '<div class="ve-eng-col ve-eng-col--in">';    // sol: girdiler
@@ -2130,10 +2136,11 @@ function onVEFTMotorSelect(nodeId, value) {
   
   var dataArea = document.getElementById('ve-motor-data-area-' + nodeId);
   var placeholder = document.getElementById('ve-motor-placeholder-' + nodeId);
-  var ftExtra = document.getElementById('ve-ft-extra-' + nodeId);
+  // İki sütuna dağılmış .ve-ft-extra sarmalayıcılarının ikisini de aç (sol+sağ)
+  var ftExtras = document.querySelectorAll('.ve-ft-extra[data-node="' + nodeId + '"]');
   if(dataArea) dataArea.style.display = 'block';
   if(placeholder) placeholder.style.display = 'none';
-  if(ftExtra) ftExtra.style.display = 'block';
+  ftExtras.forEach(function(el){ el.style.display = 'block'; });
   
   tbody.innerHTML = '';
   
