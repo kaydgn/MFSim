@@ -224,7 +224,8 @@ function veAracCollapseToRoot(){
   while(veAracStack.length && guard++ < 32){ veAracCloseEditor(true); }
 }
 
-// İç içeyken görünen "← Ana Topolojiye Dön" breadcrumb çubuğu
+// Alt-topoloji içindeyken canvas alanının sol-üst köşesine (topoloji sınırına)
+// iliştirilen çıkış çipi — "← Ana topolojiye dön" + kapsam etiketi.
 function veAracUpdateBreadcrumb(){
   if(typeof document === 'undefined') return;
   var el = document.getElementById('ve-arac-breadcrumb');
@@ -233,13 +234,17 @@ function veAracUpdateBreadcrumb(){
     el = document.createElement('div');
     el.id = 've-arac-breadcrumb';
     el.className = 've-arac-breadcrumb';
-    // Canvas geçiş animasyonu wrapper'a transform uygular; position:fixed breadcrumb
-    // transform'lu ata içinde konumunu şaşırır → body altına asılır (görsel aynı).
-    document.body.appendChild(el);
+    // Canvas alanının sol-üst köşesine iliştir. #ve-split-container position:relative
+    // ve geçiş animasyonunun transform'u alt-seviye .ve-canvas-wrapper'a uygulandığı
+    // için çip konumunu şaşırmaz → sınıra sabit kalır.
+    var host = document.getElementById('ve-split-container')
+            || document.querySelector('.ve-canvas-area')
+            || document.body;
+    host.appendChild(el);
   }
   var depth = veAracStack.length;
   el.innerHTML =
-    '<button onclick="veAracCloseEditor()" title="Bir üst topolojiye dön">← Ana Topolojiye Dön</button>'
+    '<button onclick="veAracCloseEditor()" title="Ana (üst) topolojiye dön">← Ana topolojiye dön</button>'
     + '<span class="ve-arac-breadcrumb-label">Araç Performans · Alt Topoloji'
     + (depth > 1 ? ' <b>(derinlik ' + depth + ')</b>' : '') + '</span>';
 }

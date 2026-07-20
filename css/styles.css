@@ -1088,47 +1088,59 @@
   background:color-mix(in srgb, var(--accent-primary) 16%, var(--bg-input));
 }
 
-/* Alt-topoloji breadcrumb — "Araç Performans" iç topolojisindeyken görünür */
+/* Alt-topoloji çıkış çipi — bir alt topolojinin ("Araç Performans" / "Takoz")
+   içine inildiğinde CANVAS ALANININ SOL-ÜST KÖŞESİNE (topoloji sınırına)
+   iliştirilir. (Eskiden ekran ortasında yüzen kırmızı banner'dı; artık sınıra
+   dock'lu, göze batmayan bir çip.) */
 .ve-arac-breadcrumb{
-  position:fixed;
-  top:64px;
-  left:50%;
-  transform:translateX(-50%);
-  z-index:1000;
+  position:absolute;
+  top:10px;
+  left:10px;
+  z-index:60;
   display:flex;
   align-items:center;
-  gap:10px;
-  padding:7px 14px;
-  background:var(--accent-primary);
-  color:#fff;
+  gap:9px;
+  padding:5px 11px 5px 8px;
+  max-width:calc(100% - 20px);
+  background:var(--bg-secondary);
+  color:var(--text-secondary);
+  border:1px solid var(--border-color);
+  border-left:3px solid var(--accent-primary);   /* sınır işareti */
   border-radius:6px;
-  box-shadow:0 3px 14px var(--shadow-color, rgba(0,0,0,0.35));
-  font-size:0.72rem;
+  box-shadow:0 4px 14px var(--shadow-color, rgba(0,0,0,0.28));
+  font-size:0.7rem;
   font-weight:600;
   white-space:nowrap;
-  animation:veBreadcrumbIn 260ms cubic-bezier(0.22,0.61,0.36,1);
+  animation:veBreadcrumbIn 220ms cubic-bezier(0.22,0.61,0.36,1);
 }
-/* Breadcrumb ile canvas geçişi aynı yumuşak ritimde açılır. Base kural transform:
-   translateX(-50%) ile ortaladığından keyframe -50%'i korur (yoksa animasyon sonu
-   yatay zıplama olur). */
+/* Sol-üst köşeden hafifçe kayarak belirir (canvas geçişiyle aynı ritim). */
 @keyframes veBreadcrumbIn{
-  from{ opacity:0; transform:translate(-50%, -8px); }
-  to{ opacity:1; transform:translate(-50%, 0); }
+  from{ opacity:0; transform:translate(-6px, -6px); }
+  to{ opacity:1; transform:translate(0, 0); }
 }
 .ve-arac-breadcrumb button{
-  background:rgba(255,255,255,0.18);
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  background:var(--accent-primary);
   color:#fff;
-  border:1px solid rgba(255,255,255,0.45);
+  border:none;
   border-radius:4px;
-  padding:4px 11px;
+  padding:4px 10px;
   cursor:pointer;
   font-weight:700;
-  font-size:0.72rem;
+  font-size:0.68rem;
+  letter-spacing:0.01em;
+  transition:filter 0.12s;
 }
-.ve-arac-breadcrumb button:hover{
-  background:rgba(255,255,255,0.3);
+.ve-arac-breadcrumb button:hover{ filter:brightness(1.12); }
+.ve-arac-breadcrumb-label{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  color:var(--text-muted);
+  opacity:0.95;
 }
-.ve-arac-breadcrumb-label{ opacity:0.95; }
 
 .ve-canvas-area{
   flex:1;
