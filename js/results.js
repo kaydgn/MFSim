@@ -504,13 +504,8 @@ function veUpdateResultsTree() {
       html += '<span class="icon" style="font-size:0.58rem;"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:0.66rem;">Vites Geçişleri (Detaylı)</span></div>';
       html += '</div>';
       html += '</div></div>';
-      // Topoloji Raporu (TXT) — modül raporunun üstünde
-      if(typeof nodes !== 'undefined' && nodes.length > 0) {
-        html += '<div style="margin-top:2px;">';
-        html += '<div class="ve-tree-row" onclick="veRenderTopologyTXTReport()" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Topoloji Detay TXT rapor önizleme">';
-        html += '<span class="icon"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-weight:600; color:var(--text-secondary);">Topoloji Raporu (TXT)</span></div>';
-        html += '</div>';
-      }
+      // Topoloji detayı artık Tam Gaz Hızlanma raporunun içine dahil edildi —
+      // ayrı "Topoloji Raporu (TXT)" öğesi bu sekmeden kaldırıldı.
       // Tam Gaz Hızlanma Raporu (TXT)
       html += '<div style="margin-top:2px;">';
       html += '<div class="ve-tree-row" onclick="veRenderTXTReport(\'ft\')" style="cursor:pointer; display:flex; align-items:center; gap:4px;" title="Tam Gaz Hızlanma TXT rapor önizleme">';
