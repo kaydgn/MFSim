@@ -309,18 +309,21 @@ function _veSettingsBuildProjectData() {
     tabCounter: (typeof veTabCounter !== 'undefined') ? veTabCounter : 0,
     activeTabIdx: (typeof veActiveTabIdx !== 'undefined') ? veActiveTabIdx : 0,
     tabs: veTabs.map(function(tab) {
-      var cleanState = null;
-      if(tab.state) {
-        cleanState = {
-          nodes: tab.state.nodes,
-          connections: tab.state.connections,
-          compCounter: tab.state.compCounter,
-          canvasOffset: tab.state.canvasOffset,
-          canvasZoom: tab.state.canvasZoom,
-          simResults: tab.state.simResults || null,
-          resultSlots: tab.state.resultSlots || [{},{},{},{}]
-        };
-      }
+      // Otomatik yedek localStorage'a yazılır (kota ~5-10 MB). Simülasyon
+      // sonuçları buraya sığmaz ve yedeği sessizce bozar; kurtarma için
+      // önemli olan topolojidir. Bu yüzden sonuçları hiç yazmıyoruz —
+      // yedekten dönünce sonuçlar tek "Hesapla" ile yeniden üretilir.
+      var cleanState = (typeof veBuildCleanTabState === 'function')
+        ? veBuildCleanTabState(tab.state, { stripResults: true })
+        : (tab.state ? {
+            nodes: tab.state.nodes,
+            connections: tab.state.connections,
+            compCounter: tab.state.compCounter,
+            canvasOffset: tab.state.canvasOffset,
+            canvasZoom: tab.state.canvasZoom,
+            simResults: null,
+            resultSlots: tab.state.resultSlots || [{},{},{},{}]
+          } : null);
       return { id: tab.id, name: tab.name, state: cleanState };
     })
   };

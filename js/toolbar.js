@@ -241,6 +241,96 @@ function veClearAll() {
   });
 }
 
+// ─────────────────────────────────────────────────────────────
+// KAYDETME BOYUTU: simülasyon sonuçlarını seyreltme / ayıklama
+// ---------------------------------------------------------------
+// simResults (time + nodeData sinyalleri + legacy diziler) çıktı-nokta
+// sayısıyla büyür; ham hâliyle kaydedilince tek sekme bile on-yüzlerce
+// MB olabilir (topoloji basit olsa da). Diske/localStorage'a yazarken
+// zaman-serilerini görsel olarak yeterli bir üst sınıra indiririz.
+// ÖNEMLİ: canlı bellekteki window.veSimResults / tab.state.simResults'a
+// DOKUNULMAZ — grafik/CSV tam çözünürlükte kalır; yalnızca serileştirilen
+// KOPYA seyreltilir.
+var VE_SAVE_MAX_POINTS = 2000;
+
+// N uzunluklu bir diziden en fazla maxPoints eleman seçen indeks kümesi.
+// İlk ve son nokta her zaman korunur (son değerler anlamlıdır).
+function veComputeDecimationIndices(len, maxPoints) {
+  var idx = [];
+  if(!(len > maxPoints)) {
+    for(var i = 0; i < len; i++) idx.push(i);
+    return idx;
+  }
+  var stride = (len - 1) / (maxPoints - 1);
+  for(var k = 0; k < maxPoints; k++) idx.push(Math.round(k * stride));
+  idx[idx.length - 1] = len - 1;
+  return idx;
+}
+
+// simResults'ın seyreltilmiş YENİ bir kopyasını döndürür (orijinali bozmaz).
+// time uzunluğuna eşit tüm paralel diziler (time, nodeData[*][*], legacy
+// hız/devir/kuvvet dizileri) aynı indekslerle seyreltilir → hizalama korunur.
+// Paralel olmayan alanlar (mode, chainNodeIds, solverStats) aynen taşınır.
+function veDecimateSimResults(sim, maxPoints) {
+  if(!sim || typeof sim !== 'object') return sim || null;
+  maxPoints = maxPoints || VE_SAVE_MAX_POINTS;
+  var origLen = (sim.time && sim.time.length) ? sim.time.length : 0;
+  if(origLen <= maxPoints) return sim; // seyreltme gereksiz — referansı aynen bırak
+  var idx = veComputeDecimationIndices(origLen, maxPoints);
+  function pick(arr) {
+    var out = new Array(idx.length);
+    for(var i = 0; i < idx.length; i++) out[i] = arr[idx[i]];
+    return out;
+  }
+  var slim = {};
+  Object.keys(sim).forEach(function(key) {
+    var val = sim[key];
+    if(key === 'nodeData' && val && typeof val === 'object') {
+      var nd = {};
+      Object.keys(val).forEach(function(nodeId) {
+        var sigs = val[nodeId];
+        if(!sigs || typeof sigs !== 'object') { nd[nodeId] = sigs; return; }
+        var outSigs = {};
+        Object.keys(sigs).forEach(function(sigId) {
+          var a = sigs[sigId];
+          outSigs[sigId] = (Array.isArray(a) && a.length === origLen) ? pick(a) : a;
+        });
+        nd[nodeId] = outSigs;
+      });
+      slim[key] = nd;
+    } else if(Array.isArray(val) && val.length === origLen) {
+      slim[key] = pick(val);
+    } else {
+      slim[key] = val;
+    }
+  });
+  return slim;
+}
+
+// Bir sekme state'inin diske/yedeğe yazılacak "temiz" kopyasını üretir.
+// opts.stripResults=true  → sonuçlar hiç yazılmaz (en küçük; yedek/kurtarma için)
+// opts.maxPoints          → seyreltme üst sınırı (varsayılan VE_SAVE_MAX_POINTS)
+// resultSlots (sensör/panel konfigürasyonu) her durumda korunur.
+function veBuildCleanTabState(tabState, opts) {
+  if(!tabState) return null;
+  opts = opts || {};
+  var sim = tabState.simResults || null;
+  if(opts.stripResults) {
+    sim = null;
+  } else if(sim) {
+    sim = veDecimateSimResults(sim, opts.maxPoints || VE_SAVE_MAX_POINTS);
+  }
+  return {
+    nodes: tabState.nodes,
+    connections: tabState.connections,
+    compCounter: tabState.compCounter,
+    canvasOffset: tabState.canvasOffset,
+    canvasZoom: tabState.canvasZoom,
+    simResults: sim,
+    resultSlots: tabState.resultSlots || [{},{},{},{}]
+  };
+}
+
 function veSaveTopology() {
   veCloseFileMenu();
 
@@ -255,27 +345,17 @@ function veSaveTopology() {
     tabCounter: veTabCounter,
     activeTabIdx: veActiveTabIdx,
     tabs: veTabs.map(function(tab) {
-      var cleanState = null;
-      if(tab.state) {
-        cleanState = {
-          nodes: tab.state.nodes,
-          connections: tab.state.connections,
-          compCounter: tab.state.compCounter,
-          canvasOffset: tab.state.canvasOffset,
-          canvasZoom: tab.state.canvasZoom,
-          simResults: tab.state.simResults || null,
-          resultSlots: tab.state.resultSlots || [{},{},{},{}]
-        };
-      }
       return {
         id: tab.id,
         name: tab.name,
-        state: cleanState
+        state: veBuildCleanTabState(tab.state)
       };
     })
   };
-  
-  var json = JSON.stringify(project, null, 2);
+
+  // Girintisiz (compact) JSON: girintili yazım milyonlarca sayıyı ~2.5×
+  // şişirir. Yükleme JSON.parse ile yapıldığından biçim fark etmez.
+  var json = JSON.stringify(project);
   var blob = new Blob([json], {type: 'application/json'});
   var defaultName = (veProjectName || 'topoloji') + '_' + new Date().toISOString().slice(0,10) + '.json';
   veShowSaveDialog(defaultName, blob, 'Proje kaydedildi (' + veTabs.length + ' sekme)');
