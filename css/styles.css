@@ -2307,6 +2307,59 @@
 @media (max-width:820px){
   .ve-eng-grid{ grid-template-columns:1fr; }
 }
+
+/* ── Bileşen kimlik bloğu (simge + ad + ID + sil düğmesi) ──
+   Varsayılan: ORTALANMIŞ dikey yığın — tüm bileşen pencerelerinde eskisi gibi. */
+.ve-prop-identity{
+  position:relative;
+  display:flex; flex-direction:column; align-items:center;
+  margin-bottom:12px;
+}
+.ve-prop-identity .ve-prop-symbol{ margin-bottom:8px; }
+.ve-prop-meta{ display:flex; flex-direction:column; align-items:center; }
+.ve-prop-name{
+  display:flex; align-items:center; gap:6px;
+  font-weight:600; color:var(--text-heading); margin-bottom:4px;
+}
+.ve-prop-nameedit{
+  width:18px; height:18px; border:none; background:none;
+  cursor:pointer; font-size:0.7rem; opacity:0.6; padding:0;
+}
+.ve-prop-nameedit:hover{ opacity:1; }
+.ve-prop-id{ font-size:0.7rem; color:var(--text-muted); }
+.ve-prop-del{
+  position:absolute; top:-4px; right:-4px;
+  width:22px; height:22px; border-radius:50%;
+  background:var(--accent-danger); color:#fff; border:none;
+  display:flex; align-items:center; justify-content:center;
+  cursor:pointer; font-size:0.65rem; opacity:0.7; transition:opacity 0.15s;
+}
+.ve-prop-del:hover{ opacity:1; }
+
+/* Motor penceresi: kimlik KOMPAKT-SOL satır — simge solda, ad/ID yanında,
+   sil düğmesi sağa yaslı, altında ince ayraç. Böylece sağ sütun (grafik)
+   yukarı çıkar ve iki sütun düzeniyle hizalanır. Yalnız motor penceresine. */
+.ve-properties--engine .ve-prop-identity{
+  flex-direction:row; align-items:center; gap:11px;
+  margin-bottom:10px; padding-bottom:9px;
+  border-bottom:1px solid var(--border-color);
+}
+.ve-properties--engine .ve-prop-identity .ve-prop-symbol{
+  min-height:0; margin:0; flex:0 0 auto;
+}
+.ve-properties--engine .ve-prop-identity .ve-prop-symbol svg{
+  width:34px; height:34px;
+}
+.ve-properties--engine .ve-prop-meta{ align-items:flex-start; }
+.ve-properties--engine .ve-prop-name{ margin-bottom:1px; }
+.ve-properties--engine .ve-prop-del{
+  position:static; margin-left:auto;
+  width:24px; height:24px; border-radius:var(--radius-sm);
+  background:transparent; color:var(--accent-danger);
+  border:1px solid color-mix(in srgb, var(--accent-danger) 35%, transparent);
+  opacity:1;
+}
+.ve-properties--engine .ve-prop-del:hover{ background:var(--bg-input); }
 /* İnteraktif 2D figürler: fare tekerleğiyle yakınlaştır, sürükleyerek kaydır.
    grabbing imleci sürükleme sırasında JS ile ayarlanır. */
 .ve-mnt2d-fig{ cursor:grab; }
