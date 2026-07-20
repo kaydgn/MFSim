@@ -2596,6 +2596,16 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   r += '\n\n';
 
   // ════════════════════════════════════════════════════════════════════════
+  // TOPOLOJİ DETAYI  (eskiden ayrı "Topoloji Raporu" idi — artık bu rapora dahil)
+  // ════════════════════════════════════════════════════════════════════════
+  if (typeof veGenerateTopologyTxtReport === 'function' &&
+      typeof nodes !== 'undefined' && nodes && nodes.length > 0) {
+    r += sectionBanner('TOPOLOJİ DETAYI', W);
+    r += veGenerateTopologyTxtReport(hazirlayan, { bodyOnly: true });
+    r += '\n';
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
   // RAPOR SONU
   // ════════════════════════════════════════════════════════════════════════
   r += rep('━', W) + '\n';
@@ -3009,7 +3019,11 @@ function veFTTraceRenderStep(s, idx, H) {
   return r;
 }
 
-function veGenerateTopologyTxtReport(optHazirlayan) {
+function veGenerateTopologyTxtReport(optHazirlayan, opts) {
+  opts = opts || {};
+  // bodyOnly: yalnızca bileşen bölümlerini üret (BMC başlığı, RAPOR BILGILERI ve
+  // RAPOR SONU olmadan) — Tam Gaz Hızlanma raporuna gömme için kullanılır.
+  var bodyOnly = !!opts.bodyOnly;
   var W = 80;
 
   function ln(ch, len) { var s = ''; for (var i = 0; i < len; i++) s += ch; return s; }
@@ -3081,6 +3095,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
 
   var r = '';
 
+  if (!bodyOnly) {
   // ═══ BMC BASLIK ═══
   r += '\n' + ln('=', W) + '\n\n';
   r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n';
@@ -3106,6 +3121,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   r += pRow('Bilesen Sayisi', String(nodes.length));
   r += pRow('Baglanti Sayisi', String(connections.length));
   r += ln('-', W) + '\n\n';
+  }
 
   var secNo = 1;
 
@@ -3642,6 +3658,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
     secNo++;
   }
 
+  if (!bodyOnly) {
   // ═══ RAPOR SONU ═══
   r += ln('-', W) + '\n';
   r += pad('RAPOR SONU', W, 'center') + '\n';
@@ -3658,6 +3675,7 @@ function veGenerateTopologyTxtReport(optHazirlayan) {
   r += pad('otomatik olusturulmustur.', W, 'center') + '\n';
   r += ln('-', W) + '\n\n';
   r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
+  }
 
   return r;
 }
