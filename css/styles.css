@@ -2290,6 +2290,23 @@
   max-width:1040px;
   max-height:92vh;
 }
+/* Motor bileşeni — İKİ SÜTUN düzeni: solda girdiler (motor seçimi,
+   parametreler, veri tablosu, aksesuar), sağda çıktı (tork/güç grafiği,
+   eğri yaklaşımı, net değerler). Grafik ile veri aynı anda görünsün diye
+   pencere geniş. Dar ekranda sütunlar tek sütuna iner. Yalnız yerleşim. */
+.ve-properties.ve-properties--engine{
+  max-width:980px;
+}
+.ve-eng-grid{
+  display:grid;
+  grid-template-columns:minmax(0,0.95fr) minmax(0,1.05fr);
+  gap:12px;
+  align-items:start;
+}
+.ve-eng-col{ min-width:0; }               /* ızgara hücreleri taşmasın */
+@media (max-width:820px){
+  .ve-eng-grid{ grid-template-columns:1fr; }
+}
 /* İnteraktif 2D figürler: fare tekerleğiyle yakınlaştır, sürükleyerek kaydır.
    grabbing imleci sürükleme sırasında JS ile ayarlanır. */
 .ve-mnt2d-fig{ cursor:grab; }

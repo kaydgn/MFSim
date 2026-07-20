@@ -242,6 +242,8 @@ function showNodeProperties(node) {
   if(_propWin) _propWin.classList.toggle('ve-properties--2dview', node.type === 'mnt-2dview');
   // Takoz Özellikleri: iki sütun (seçici + detay) ve 3 eksen grafiği yan yana → geniş pencere.
   if(_propWin) _propWin.classList.toggle('ve-properties--mntlib', node.type === 'mnt-library');
+  // Motor: iki sütun düzeni (sol girdi, sağ grafik) için geniş pencere. Salt sunum.
+  if(_propWin) _propWin.classList.toggle('ve-properties--engine', node.type === 'engine');
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 
