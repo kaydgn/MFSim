@@ -5,8 +5,18 @@ var undoStack = [];
 var redoStack = [];
 var MAX_UNDO_STEPS = 50;
 
+// ── ŞEMA SÜRÜMÜ ──
+// Bu sürümün ürettiği her state (undo/redo, sekme değiştirme, güncel kayıt)
+// "migrasyon uygulanmış" damgasını taşır. Sürüm damgası taşımayan (veya daha
+// eski) state'ler LEGACY kabul edilir ve eski varsayılanlar bir KEZ yeni
+// değerlere yükseltilir (bkz. veMigrateNodeData). Sürümlü state'lerde
+// migrasyon ÇALIŞMAZ — böylece kullanıcının bilerek girdiği değerler
+// (ör. Cd=0.75) "eski varsayılan" sanılıp 0.90'a ezilmez.
+var VE_SCHEMA_VERSION = 2;
+
 function saveState() {
   var state = {
+    schemaVersion: VE_SCHEMA_VERSION,
     nodes: JSON.parse(JSON.stringify(nodes.map(function(n) {
       return {
         id: n.id,
@@ -69,7 +79,53 @@ function redo() {
   showToast('İleri alındı');
 }
 
+// ── LEGACY VERİ MİGRASYONU (SAF fonksiyon — DOM'a dokunmaz) ──
+// Eski (binek araç) varsayılanlarını yeni (ağır vasıta) varsayılanlarına
+// yükseltir. Değer-eşleşmesiyle çalıştığı için "eski varsayılan" ile
+// "kullanıcının bilerek girdiği aynı değer"i ayırt EDEMEZ; bu yüzden YALNIZCA
+// sürümsüz/eski state'ler için (bkz. restoreState) çağrılmalıdır. Sürümlü
+// state'lerde çağrılırsa kullanıcının kasıtlı değerlerini (ör. Cd=0.75) ezer.
+function veMigrateNodeData(node) {
+  if(!node || !node.data) return node;
+  // Eski varsayılan Crr=0.015 (binek araç) → 0.0035 (ağır vasıta) düzeltmesi
+  if(node.type === 'wheel' && node.data.ftCrr === 0.015) {
+    node.data.ftCrr = 0.0035;
+  }
+  // Eski varsayılan aerodinamik değerleri düzeltmesi
+  // H=3.0→3.2, W=2.0→2.5, Cd=0.75→0.90 (CdA: 4.5→7.2 m²)
+  if(node.type === 'vehicle') {
+    if(node.data.ftHeight === 3 || node.data.ftHeight === 3.0 || node.data.ftHeight === 3.000) node.data.ftHeight = 3.200;
+    if(node.data.ftWidth === 2 || node.data.ftWidth === 2.0 || node.data.ftWidth === 2.000) node.data.ftWidth = 2.500;
+    if(node.data.ftCd === 0.75 || node.data.ftCd === 0.750) node.data.ftCd = 0.900;
+  }
+  // Eski varsayılan diferansiyel verimi 98→96 (ağır vasıta yük altı)
+  if(node.type === 'differential' && node.data.efficiency === 98) {
+    node.data.efficiency = 96;
+  }
+  return node;
+}
+
+// LEGACY migrasyonu bir STATE'in tüm düğümlerine uygular — AMA yalnızca state
+// sürüm damgası taşımıyorsa (veya daha eskiyse). Güncel state'ler (undo/redo,
+// sekme değiştirme, bu sürümle kaydedilen dosyalar) VE_SCHEMA_VERSION taşır →
+// migrasyon ATLANIR, böylece kullanıcının kasıtlı girdileri (ör. Cd=0.75)
+// korunur. Yalnızca gerçekten eski dosyalar bir kez yeni varsayılanlara
+// yükseltilir. SAF fonksiyon (DOM'a dokunmaz); state.nodes[i].data'yı yerinde
+// günceller ve state'i döndürür.
+function veApplyLegacyMigrations(state) {
+  if(!state || !state.nodes) return state;
+  if(typeof state.schemaVersion === 'number' && state.schemaVersion >= VE_SCHEMA_VERSION) {
+    return state; // Sürümlü/güncel → migrasyon yok
+  }
+  state.nodes.forEach(veMigrateNodeData);
+  return state;
+}
+
 function restoreState(state) {
+  // Yüklenen state LEGACY ise (sürümsüz/eski) eski varsayılanları bir kez
+  // yeni değerlere yükselt; sürümlüyse dokunma (kasıtlı girdiler korunur).
+  veApplyLegacyMigrations(state);
+
   // Mevcut node'ları temizle
   nodes.forEach(function(n) {
     var el = document.getElementById(n.id);
@@ -108,22 +164,9 @@ function restoreState(state) {
       data: n.data || {}
     };
 
-    // ── VERİ MİGRASYONU ──
-    // Eski varsayılan Crr=0.015 (binek araç) → 0.0035 (ağır vasıta) düzeltmesi
-    if(node.type === 'wheel' && node.data.ftCrr === 0.015) {
-      node.data.ftCrr = 0.0035;
-    }
-    // Eski varsayılan aerodinamik değerleri düzeltmesi
-    // H=3.0→3.2, W=2.0→2.5, Cd=0.75→0.90 (CdA: 4.5→7.2 m²)
-    if(node.type === 'vehicle') {
-      if(node.data.ftHeight === 3 || node.data.ftHeight === 3.0 || node.data.ftHeight === 3.000) node.data.ftHeight = 3.200;
-      if(node.data.ftWidth === 2 || node.data.ftWidth === 2.0 || node.data.ftWidth === 2.000) node.data.ftWidth = 2.500;
-      if(node.data.ftCd === 0.75 || node.data.ftCd === 0.750) node.data.ftCd = 0.900;
-    }
-    // Eski varsayılan diferansiyel verimi 98→96 (ağır vasıta yük altı)
-    if(node.type === 'differential' && node.data.efficiency === 98) {
-      node.data.efficiency = 96;
-    }
+    // NOT: Eski varsayılan → yeni varsayılan migrasyonu artık restoreState
+    // başında veApplyLegacyMigrations(state) ile YALNIZCA legacy state'lere
+    // uygulanır (bkz. yukarı). Burada tekrar uygulanmaz.
     nodes.push(node);
     
     // Node element oluştur (createNode ile uyumlu)
