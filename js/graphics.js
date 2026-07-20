@@ -1863,6 +1863,18 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   var shiftRefRPM = R.shiftRefRPM || R.governed || 2200;
   var lockupRPM = shiftRefRPM - lockupOffset;
   var spDataReport = VE_FT_SHIFT_PROFILES[R.shiftProfile] || {};
+  // Shift Profili gösterimi: şanzımanın KAYITLI bir profili yoksa profil adı
+  // yerine "Governed" (vitesler governed devirde değişir). Özel bir shift
+  // referans devri varsa devri de göster.
+  var shiftProfileDisp;
+  if (R.shiftProfileRegistered) {
+    shiftProfileDisp = tr(shiftProfile);
+  } else {
+    var _srr = R.shiftRefRPM || R.governed || 0;
+    shiftProfileDisp = (R.governed && Math.abs(_srr - R.governed) >= 5)
+      ? 'Governed (' + numI(_srr) + ' rpm)'
+      : 'Governed';
+  }
 
   // Aksesuar toplami
   var accTotal = 0, accTotalStd = 0;
@@ -1907,7 +1919,7 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   var _infoLines = [
     pad(_kv('Rapor Tarihi', tarih), 40) + _kv('Hazırlayan', tr(hazirlayan)),
     pad(_kv('Rapor Saati', saat), 40) + _kv('Çözücü', solverLabel),
-    pad(_kv('Rapor No', raporNo), 40) + _kv('Shift Profili', tr(shiftProfile)),
+    pad(_kv('Rapor No', raporNo), 40) + _kv('Shift Profili', shiftProfileDisp),
     _kv('Hesaplama Modu', 'MFSim Tam Gaz Hızlanma')
   ];
   r += titledBox('RAPOR BİLGİLERİ', _infoLines, W) + '\n';
@@ -1957,9 +1969,14 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
 
   if (G && G.high) {
     var gH2 = G.high;
+    // Stall/Kalkış eğim + %80 eğim kabiliyeti — Transfer Kutusu DÜŞÜK KADEME'den
+    // (araç maks. tırmanış kabiliyeti düşük kademededir). Düşük kademe yoksa
+    // yüksek kademeye düşer.
+    var _gGr = G.low || G.high;
+    var _lowSfx = G.low ? ' (Düşük)' : '';
     var eRows = [
-      { label: 'Stall Eğim (Durma)', value: '%' + num(gH2.stallGrade, 1) },
-      { label: 'Launch Eğim (Kalkış)', value: '%' + num(gH2.launchGrade, 1) },
+      { label: 'Stall/Kalkış Eğim' + _lowSfx, value: '%' + num(_gGr.stallGrade, 1) },
+      { label: '%80 Eğim Kabiliyeti' + _lowSfx, value: '%' + num(_gGr.lowSpeedGrade, 1) },
       { label: 'Düz Yol Maks. Hız', value: num(gH2.maxSpeedFlat, 1) + ' km/h' }
     ];
     [5, 10, 20].forEach(function(gr) {
@@ -2517,20 +2534,6 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       _kv('Eşleme Nokt.', 'Kritik referanslar (Durma, %70/80/85, Governed)', 15)
     ], W) + '\n';
 
-    var numGears = 1, gearSet = {};
-    stepsHigh.forEach(function(s) { gearSet[s.gear.replace(/[CL]$/, '')] = true; });
-    numGears = Object.keys(gearSet).length;
-    var s0 = stepsHigh[0];
-    var govStep = null, maxHeat = 0;
-    stepsHigh.forEach(function(s) {
-      if (s.matchPoint === 'Governed') govStep = s;
-      if (s.heatRejection > maxHeat) maxHeat = s.heatRejection;
-    });
-
-    var _y4 = 'Araç toplam ' + numGears + ' viteste tam gaz ivmelenme yapmaktadır. Stall noktasında (0 km/h) toplam çekiş kuvveti ' + num(s0.te, 1) + ' kN olup, bu koşulda araç %' + num(s0.netGrade, 1) + ' eğimi aşabilir.';
-    if (govStep) _y4 += ' Motor governed devire (' + numI(govStep.engineRPM) + ' rpm) ' + num(govStep.speed, 1) + ' km/h hızda ulaşmaktadır.';
-    if (maxHeat > 0) _y4 += ' Tork konvertörü maksimum ' + num(maxHeat, 1) + ' kW ısı reddi üretmektedir.';
-    r += noteBox('YORUM', _y4, W);
   } else {
     r += '  FT vites geçişi verisi bulunamadı.\n';
   }

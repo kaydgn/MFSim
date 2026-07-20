@@ -524,6 +524,9 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   // Shift profili
   var shiftProfile = gbd.shiftProfile || 'allison3200sp_s1';
+  // Şanzımanın GERÇEK (kayıtlı) bir shift profili var mı? Yoksa yukarıdaki
+  // fallback ('allison3200sp_s1') devreye girer; raporda "Governed" gösterilir.
+  var shiftProfileRegistered = !!(gbd.shiftProfile && typeof VE_FT_SHIFT_PROFILES !== 'undefined' && VE_FT_SHIFT_PROFILES[gbd.shiftProfile]);
   var spData = VE_FT_SHIFT_PROFILES[shiftProfile] || { lockupOffset: 75, shift1C2C_outRatio: 0.2150, shift2C2L_outRatio: 0.3594 };
   var lockupOffset = spData.lockupOffset || 75;
   // Shift Referans RPM: profilde tanımlıysa onu kullan, yoksa motor governed
@@ -1961,7 +1964,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         torqueData: (ed.torqueData||ed.motorData||[]).map(function(p){return{rpm:p.rpm,torque:p.torque,power:p.power};}),
         fanLossGov: accTotalFanLoss, otherLossGov: accTotalOtherLoss, accFanMode: accFanMode,
         gbName: _gbP ? _gbP.name : (_gbd.gbName||'—'), gbFamily: _gbP ? (_gbP.family||'—') : '—', gbEff: parseFloat(_gbd.efficiency)||97, tcName: _tcN,
-        shiftProfile: shiftProfile, shiftRefRPM: shiftRefRPM, lockupOffset: lockupOffset,
+        shiftProfile: shiftProfile, shiftProfileRegistered: shiftProfileRegistered, shiftRefRPM: shiftRefRPM, lockupOffset: lockupOffset,
         gearData: forwardGears.map(function(g){return{name:g.name,ratio:g.ratio,eff:g.eff};}),
         allGearData: ftGearData.map(function(g){return{name:g.name,ratio:g.ratio,eff:g.eff};}),
         propshafts: propshaftNodes.map(function(ps,i){var psd=ps.data||{};return{name:ps.customName||('Kardan Mili'+(propshaftNodes.length>1?' '+(i+1):'')),eff:parseFloat(psd.psEff)||98.60};}),
