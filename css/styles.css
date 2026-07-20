@@ -1677,7 +1677,8 @@
   height:60px;
   background:var(--bg-tertiary);
   border:2.5px solid #999;
-  border-radius:0;
+  border-radius:var(--radius-md);
+  box-shadow:var(--shadow-sm);
   display:flex;
   align-items:center;
   justify-content:center;
@@ -1897,7 +1898,7 @@
   height:10px;
   background:var(--accent-success);
   border:2px solid var(--bg-secondary);
-  border-radius:0;
+  border-radius:50%;
   cursor:crosshair;
   transition:transform 0.15s, background 0.15s;
   z-index:15;
