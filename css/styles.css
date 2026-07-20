@@ -2620,7 +2620,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-rslot-btns button{
   width:24px;height:24px;border:none;background:none;cursor:pointer;
   font-size:0.68rem;color:var(--text-muted);display:flex;align-items:center;
-  justify-content:center;border-radius:0;padding:0;transition:all 0.12s;
+  justify-content:center;border-radius:var(--radius-sm);padding:0;transition:all 0.12s;
 }
 .ve-rslot-btns button:hover{background:var(--bg-input);color:var(--text-primary);}
 .ve-rslot-btns button.btn-close:hover{color:var(--accent-danger);}
@@ -2633,7 +2633,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-slot-picker{display:grid;grid-template-columns:repeat(3, 80px);gap:10px;padding:20px;}
 .ve-slot-pick-item{
   display:flex;flex-direction:column;align-items:center;gap:6px;
-  padding:14px 6px;border-radius:0;cursor:pointer;
+  padding:14px 6px;border-radius:var(--radius-sm);cursor:pointer;
   transition:all 0.15s;border:1px solid transparent;
 }
 .ve-slot-pick-item:hover{background:rgba(59,130,246,0.08);border-color:var(--accent-primary);transform:translateY(-1px);}
@@ -2643,7 +2643,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-slot-assigned{width:100%;height:100%;display:flex;flex-direction:column;overflow:visible;}
 .ve-slot-chart-area{
   flex:1;position:relative;margin:4px 4px 0 4px;
-  border:1px solid var(--border-color);border-radius:0;
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
   background:var(--bg-input);display:flex;align-items:center;justify-content:center;
   overflow:visible;min-height:0;
   box-shadow:var(--shadow-inset);
@@ -2657,7 +2657,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 }
 .ve-xaxis-btn{
   display:inline-flex;align-items:center;gap:3px;
-  padding:1px 8px;border-radius:0;cursor:pointer;
+  padding:1px 8px;border-radius:var(--radius-sm);cursor:pointer;
   border:1px solid transparent;transition:all 0.12s;
   user-select:none;white-space:nowrap;
 }
@@ -2673,7 +2673,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   position:absolute;bottom:100%;left:50%;transform:translateX(-50%);
   min-width:220px;max-width:340px;max-height:300px;overflow-y:auto;
   background:var(--bg-primary);border:1px solid var(--border-color);
-  border-radius:0;box-shadow:var(--shadow-lg);
+  border-radius:var(--radius-md);box-shadow:var(--shadow-lg);
   z-index:9999;padding:4px 0;font-size:0.68rem;
 }
 .ve-xaxis-dropdown-group{
@@ -2711,7 +2711,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 }
 .ve-chart-legend-overlay:hover{opacity:1;}
 .ve-slot-legend-item{
-  font-size:0.68rem;padding:3px 8px;border-radius:0;
+  font-size:0.68rem;padding:3px 8px;border-radius:var(--radius-sm);
   display:flex;align-items:center;gap:4px;cursor:default;transition:all 0.15s;
   position:relative;
 }
@@ -2734,7 +2734,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-chart-tooltip{
   position:absolute;pointer-events:none;z-index:20;
   background:var(--bg-primary);border:1px solid var(--border-light);
-  border-radius:0;padding:8px 12px;font-size:0.7rem;
+  border-radius:var(--radius-sm);padding:8px 12px;font-size:0.7rem;
   box-shadow:var(--shadow-lg);white-space:nowrap;
   opacity:0;transition:opacity 0.12s ease;color:var(--text-primary);
   backdrop-filter:blur(8px);
@@ -2772,7 +2772,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   display:flex;align-items:center;justify-content:center;gap:4px;
   padding:4px 12px;font-size:0.68rem;font-weight:600;
   background:transparent;color:var(--text-muted);border:1px dashed var(--border-color);
-  border-radius:0;cursor:pointer;transition:all 0.15s;margin:4px;
+  border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;margin:4px;
 }
 .ve-add-panel-btn:hover{background:rgba(59,130,246,0.08);color:var(--accent-primary);border-color:var(--accent-primary);}
 /* Data Browser */
@@ -2784,11 +2784,11 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   cursor:pointer;
   font-size:0.78rem;
   gap:3px;
-  border-radius:0;
+  border-radius:var(--radius-sm);
   margin:0 4px;
 }
 .ve-tree-row:hover{background:rgba(59,130,246,0.08);}
-.ve-tree-row .arrow{width:14px;text-align:center;font-size:0.68rem;color:var(--text-muted);flex-shrink:0;cursor:pointer;padding:2px;border-radius:0;}
+.ve-tree-row .arrow{width:14px;text-align:center;font-size:0.68rem;color:var(--text-muted);flex-shrink:0;cursor:pointer;padding:2px;border-radius:var(--radius-xs);}
 .ve-tree-row .arrow:hover{background:rgba(59,130,246,0.15);color:var(--text-primary);}
 .ve-tree-row .icon{width:16px;text-align:center;flex-shrink:0;font-size:0.78rem;}
 .ve-tree-children{display:none;margin-left:10px;}
@@ -2800,7 +2800,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   cursor:pointer;
   font-size:0.76rem;
   gap:4px;
-  border-radius:0;
+  border-radius:var(--radius-sm);
   margin:0 4px;
   color:#22c55e;
   font-weight:500;
@@ -2814,7 +2814,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   cursor:grab;
   font-size:0.72rem;
   gap:4px;
-  border-radius:0;
+  border-radius:var(--radius-sm);
   margin:0 4px;
   color:#3b82f6;
   font-weight:500;
@@ -2882,7 +2882,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   box-shadow:var(--shadow-sm);
   position:relative;
   z-index:1;
-  border-radius:0;
+  border-radius:var(--radius-sm);
   margin-top:4px;
 }
 .dr-hdr:hover{background:var(--bg-secondary);filter:brightness(1.08);}
@@ -2893,7 +2893,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .dr-body table th{color:var(--text-secondary) !important;background:var(--bg-tertiary) !important;border-color:var(--border-color) !important;}
 .dr-body table td{color:var(--text-primary) !important;border-color:var(--border-light) !important;}
 .dr-body table tr:hover td{background:var(--bg-tertiary) !important;}
-.dr-chart-tooltip{position:absolute;pointer-events:none;background:rgba(30,36,48,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:0;padding:8px 12px;font-size:0.65rem;color:#e0e4ec;line-height:1.6;box-shadow:var(--shadow-lg);z-index:10;max-width:280px;white-space:nowrap;backdrop-filter:blur(8px);opacity:0;transition:opacity 0.35s cubic-bezier(0.4,0,0.2,1);}
+.dr-chart-tooltip{position:absolute;pointer-events:none;background:rgba(30,36,48,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.65rem;color:#e0e4ec;line-height:1.6;box-shadow:var(--shadow-lg);z-index:10;max-width:280px;white-space:nowrap;backdrop-filter:blur(8px);opacity:0;transition:opacity 0.35s cubic-bezier(0.4,0,0.2,1);}
 .dr-chart-tooltip.visible{opacity:1;}
 .dr-chart-crossV{position:absolute;top:0;width:1px;height:100%;background:rgba(100,160,250,0.25);pointer-events:none;display:none;z-index:5;}
 .dr-chart-crossH{position:absolute;left:0;width:100%;height:1px;background:rgba(100,160,250,0.25);pointer-events:none;display:none;z-index:5;}
@@ -2926,7 +2926,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-results-chart-card{
   background:var(--bg-secondary);
   border:1px solid var(--border-color);
-  border-radius:0;
+  border-radius:var(--radius-md);
   padding:16px;
 }
 .ve-results-chart-title{
