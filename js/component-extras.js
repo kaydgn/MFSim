@@ -1159,7 +1159,7 @@ function veUpdateWarnings() {
       if(!hasRoad && nodes.length >= 4) warnings.push({type:'info', msg:'Yol/Ortam bileşeni önerilir.'});
     } else {
       if(!hasEngine) warnings.push({type:'warn', msg:'Motor bileşeni eksik.'});
-      warnings.push({type:'info', msg:'✂️ Sonlandırıcı aktif — kısmi analiz modu.'});
+      warnings.push({type:'info', msg:'Sonlandırıcı aktif — kısmi analiz modu.'});
     }
     
     // Bağlantı uyarıları - aktarma bileşenleri bağlantısız olmamalı
@@ -1193,11 +1193,10 @@ function veUpdateWarnings() {
   
   if(body) {
     if(warnings.length === 0) {
-      body.innerHTML = '<div style="padding:10px 14px;font-size:0.75rem;color:var(--accent-success);">✅ Uyarı yok. Topoloji hazır görünüyor.</div>';
+      body.innerHTML = '<div style="padding:10px 14px;font-size:0.75rem;color:var(--accent-success);">Uyarı yok. Topoloji hazır görünüyor.</div>';
     } else {
       body.innerHTML = warnings.map(function(w) {
-        var icon = w.type === 'error' ? '🔴' : (w.type === 'warn' ? '🟡' : '🔵');
-        return '<div class="ve-warning-item ' + w.type + '">' + icon + ' <span>' + w.msg + '</span></div>';
+        return '<div class="ve-warning-item ' + w.type + '"><span>' + w.msg + '</span></div>';
       }).join('');
     }
   }
