@@ -33,6 +33,73 @@ function veSerializeCurrentState() {
   };
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// GÖMME/KAYIT İÇİN DURUM HAFİFLETME  (kritik regresyon düzeltmesi)
+// ────────────────────────────────────────────────────────────────────────────
+// veSerializeCurrentState() çıktısı BAŞKA bir yapının içine gömülürken
+// (node.data.subTopology, kayıt dosyası, otomatik yedek) iki alan ölümcüldür:
+//
+//   • undoStack / redoStack — yalnızca AKTİF düzenleme oturumuna aittir. Gömülünce
+//     ÇARPIMSAL büyür: alt-topolojiden çıkışta subState → node.data'ya yazılır,
+//     saveState() o node.data'yı (subTopology dahil) HER undo adımına kopyalar, bu
+//     da bir sonraki serileştirmeye geri girer. N seviye iç içe × 50 undo × 50
+//     alt-undo … → JSON.stringify V8 string sınırını (~512 MB) aşar ("Invalid
+//     string length") ve otomatik yedek localStorage kotasını taşırır.
+//
+//   • simResults — tam çözünürlüklü TÜRETİLMİŞ veridir (tek "Hesapla" ile yeniden
+//     üretilir). Gömülü kopya seyreltilir; canlı bellekteki tam çözünürlüğe
+//     (window.veSimResults) DOKUNULMAZ.
+//
+// İç içe subTopology'ler de RECURSIVE temizlenir → eski/şişmiş bir dosyadan
+// yüklenmiş durum yüklenince sınırlanır. Girdi MUTASYONA UĞRATILMAZ: canlı
+// tab.state / node.data referansları bozulmasın diye yalnızca gereken yerlerde
+// yeni kopyalar üretilir (hiç subTopology yoksa aynı dizi referansı döner).
+//
+// opts.stripResults=true → gömülü sonuçlar tamamen düşer (otomatik yedek; en küçük)
+// opts.maxPoints        → seyreltme üst sınırı (varsayılan: veDecimateSimResults'ınki)
+var VE_SUBTOPO_SANITIZE_MAX_DEPTH = 64; // bozuk/patolojik iç içelikte yığın taşmasına karşı
+
+function veSanitizeNodesSubtopology(nodeArr, opts, _depth) {
+  if(!Array.isArray(nodeArr)) return nodeArr;
+  _depth = _depth || 0;
+  var touched = false;
+  var out = nodeArr.map(function(n) {
+    if(!n || !n.data || !n.data.subTopology) return n; // gömülü topoloji yok → aynen
+    touched = true;
+    var cleanData = {};
+    for(var dk in n.data) if(Object.prototype.hasOwnProperty.call(n.data, dk)) cleanData[dk] = n.data[dk];
+    cleanData.subTopology = (_depth + 1 >= VE_SUBTOPO_SANITIZE_MAX_DEPTH)
+      ? null // aşırı derin → daha derini at (gerçekte erişilmez; güvenlik freni)
+      : veSanitizeEmbeddedState(n.data.subTopology, opts, _depth + 1);
+    var cleanNode = {};
+    for(var nk in n) if(Object.prototype.hasOwnProperty.call(n, nk)) cleanNode[nk] = n[nk];
+    cleanNode.data = cleanData;
+    return cleanNode;
+  });
+  return touched ? out : nodeArr; // hiç değişiklik yoksa gereksiz kopya üretme
+}
+
+function veSanitizeEmbeddedState(state, opts, _depth) {
+  if(!state || typeof state !== 'object') return state;
+  opts = opts || {};
+  _depth = _depth || 0;
+  var out = {};
+  for(var k in state) if(Object.prototype.hasOwnProperty.call(state, k)) out[k] = state[k];
+  // Uçucu düzenleme geçmişi asla gömülmez (çarpımsal büyümenin ana kaynağı).
+  out.undoStack = [];
+  out.redoStack = [];
+  // Sonuçlar: stripResults → tamamen düş; değilse seyrelt. veDecimateSimResults
+  // toolbar.js'te tanımlı ve yalnızca runtime'da (yükleme sonrası) çağrılır.
+  if(opts.stripResults) {
+    out.simResults = null;
+  } else if(out.simResults && typeof veDecimateSimResults === 'function') {
+    try { out.simResults = veDecimateSimResults(out.simResults, opts.maxPoints); } catch(e) {}
+  }
+  // İç içe alt-topolojiler de aynı kurallarla temizlenir.
+  out.nodes = veSanitizeNodesSubtopology(out.nodes, opts, _depth);
+  return out;
+}
+
 function veSaveActiveTabState() {
   // YENİDEN-GİRİŞ KORUMASI: Bir alt-topoloji (Araç Performans / Takoz) giriş-çıkış
   // işlemi HÂLÂ sürerken (_veAracBusy/_veMntBusy true — atomik canvas takası ortası)

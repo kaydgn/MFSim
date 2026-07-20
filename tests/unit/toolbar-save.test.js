@@ -455,3 +455,61 @@ describe('veBuildCleanTabState - temiz kayıt state\'i', () => {
     expect(s.simResults.time.length).toBeLessThanOrEqual(500);
   });
 });
+
+// Kritik kota/blowup düzeltmesi: veBuildCleanTabState, düğümlerin GÖMÜLÜ
+// alt-topolojilerini (node.data.subTopology) de temizlemeli — yoksa b89f2fd
+// yalnızca üst-seviye sim'i seyreltir, iç içe subTopology blobları (undo geçmişi
+// + tam sim) ham kalır → otomatik yedek QuotaExceededError'a düşer. Gerçek
+// özyineleme topology.js'te (subtopology-embed-sanitize.test.js); burada
+// veBuildCleanTabState'in ona DOĞRU opts ile DELEGE ettiği doğrulanır.
+describe('veBuildCleanTabState — iç içe subTopology delegasyonu', () => {
+  var origSanitize;
+  beforeEach(() => { origSanitize = global.veSanitizeNodesSubtopology; });
+  afterEach(() => {
+    if (origSanitize === undefined) delete global.veSanitizeNodesSubtopology;
+    else global.veSanitizeNodesSubtopology = origSanitize;
+  });
+
+  function mkStateWithSub() {
+    return {
+      nodes: [{ id: 'arac', type: 'arac-performans', data: { subTopology: { nodes: [], undoStack: [1, 2] } } }],
+      connections: [], compCounter: 1,
+      canvasOffset: { x: 0, y: 0 }, canvasZoom: 1,
+      simResults: null, resultSlots: [{}, {}, {}, {}]
+    };
+  }
+
+  test('düğümleri veSanitizeNodesSubtopology ile temizler ve çıktısını kullanır', () => {
+    var cleaned = [{ id: 'arac', cleanedMarker: true }];
+    global.veSanitizeNodesSubtopology = jest.fn().mockReturnValue(cleaned);
+
+    var s = veBuildCleanTabState(mkStateWithSub());
+    expect(global.veSanitizeNodesSubtopology).toHaveBeenCalledTimes(1);
+    expect(s.nodes).toBe(cleaned); // temizlenmiş düğümler kullanıldı
+  });
+
+  test('stripResults iç içe seviyeye iletilir (otomatik yedek yolu)', () => {
+    global.veSanitizeNodesSubtopology = jest.fn(function (nodes) { return nodes; });
+
+    veBuildCleanTabState(mkStateWithSub(), { stripResults: true });
+    var opts = global.veSanitizeNodesSubtopology.mock.calls[0][1];
+    expect(opts.stripResults).toBe(true);
+    expect(opts.maxPoints).toBe(2000); // VE_SAVE_MAX_POINTS
+  });
+
+  test('varsayılanda stripResults=false, maxPoints=VE_SAVE_MAX_POINTS iletilir', () => {
+    global.veSanitizeNodesSubtopology = jest.fn(function (nodes) { return nodes; });
+
+    veBuildCleanTabState(mkStateWithSub(), { maxPoints: 750 });
+    var opts = global.veSanitizeNodesSubtopology.mock.calls[0][1];
+    expect(opts.stripResults).toBe(false);
+    expect(opts.maxPoints).toBe(750);
+  });
+
+  test('veSanitizeNodesSubtopology yoksa güvenli düşüş (nodes aynen)', () => {
+    delete global.veSanitizeNodesSubtopology;
+    var st = mkStateWithSub();
+    var s = veBuildCleanTabState(st);
+    expect(s.nodes).toBe(st.nodes); // fonksiyon yoksa ham nodes döner (patlamaz)
+  });
+});

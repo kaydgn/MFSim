@@ -304,6 +304,10 @@ function veMntCloseEditor(_silent){
   try {
     if(typeof veFlushOpenPanelData==='function') veFlushOpenPanelData();
     var subState = veSerializeCurrentState();
+    // Gömmeden ÖNCE hafiflet (bkz. topology.js veSanitizeEmbeddedState): undo/redo
+    // geçmişi + tam simResults gömülünce çarpımsal büyüyüp JSON.stringify'ı
+    // "Invalid string length" ile patlatır ve yedek kotasını taşırır.
+    if(typeof veSanitizeEmbeddedState==='function') subState = veSanitizeEmbeddedState(subState);
     var ctx = veMntStack.pop();
     var pn = (ctx.parentState.nodes||[]).find(function(n){ return n.id===ctx.nodeId; });
     if(pn){ if(!pn.data) pn.data={}; pn.data.subTopology = subState; }

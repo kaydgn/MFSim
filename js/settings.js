@@ -337,10 +337,14 @@ function _veSettingsApplyProjectData(data) {
   veTabs = [];
   veTabCounter = data.tabCounter || data.tabs.length;
   data.tabs.forEach(function(t) {
+    // Yükleme sırasında iç içe subTopology'yi hafiflet (bkz. veSanitizeEmbeddedState):
+    // eski yedeklerde undo geçmişi + tam sim gömülü olabilir; belleği sınırla.
+    var st = (t.state && typeof veSanitizeEmbeddedState === 'function')
+      ? veSanitizeEmbeddedState(t.state) : t.state;
     veTabs.push({
-      id: t.id, name: t.name, state: t.state,
-      nodeCount: (t.state && t.state.nodes) ? t.state.nodes.length : 0,
-      connCount: (t.state && t.state.connections) ? t.state.connections.length : 0
+      id: t.id, name: t.name, state: st,
+      nodeCount: (st && st.nodes) ? st.nodes.length : 0,
+      connCount: (st && st.connections) ? st.connections.length : 0
     });
   });
   veActiveTabIdx = Math.min(data.activeTabIdx || 0, veTabs.length - 1);
