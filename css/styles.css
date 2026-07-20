@@ -2454,7 +2454,8 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-solver-card{
   background:var(--bg-secondary);
   border:1px solid var(--border-color);
-  border-radius:0;
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-sm);
   margin-bottom:16px;
   overflow:hidden;
 }
@@ -2502,12 +2503,14 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   background:var(--bg-input);
   color:var(--text-primary);
   border:1px solid var(--border-color);
-  border-radius:0;
+  border-radius:var(--radius-sm);
   text-align:right;
+  transition:border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
 }
 .ve-solver-input:focus{
   outline:none;
   border-color:var(--accent-primary);
+  box-shadow:0 0 0 2px color-mix(in srgb, var(--accent-primary) 22%, transparent);
 }
 .ve-solver-btn{
   padding:8px 20px;
@@ -2544,13 +2547,13 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-solver-progress-bar{
   height:6px;
   background:var(--bg-tertiary);
-  border-radius:0;
+  border-radius:var(--radius-pill);
   overflow:hidden;
 }
 .ve-solver-progress-fill{
   height:100%;
   background:linear-gradient(90deg,var(--accent-primary),var(--accent-success));
-  border-radius:0;
+  border-radius:var(--radius-pill);
   transition:width 0.3s ease;
 }
 /* Validation items */
