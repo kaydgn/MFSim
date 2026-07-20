@@ -63,7 +63,7 @@ describe('TK\'siz Tam-Gaz TXT raporu — Performans Özeti temizliği', () => {
     const sim = buildSim();
     report = veGenerateFTTxtReport(sim, 'Test');
     const i = report.indexOf('PERFORMANS ÖZET TABLOSU');
-    const e = report.indexOf('DERECELENDİRME VE KILAVUZ KONTROLÜ');
+    const e = report.indexOf('TOPOLOJİ DETAYI');
     section = report.slice(i, e > i ? e : report.length);
   });
 
@@ -95,16 +95,8 @@ describe('TK\'siz Tam-Gaz TXT raporu — Performans Özeti temizliği', () => {
     widths.forEach(w => expect(w).toBe(w0));   // hiçbir satır taşmıyor
   });
 
-  test('Derecelendirme ve Kılavuz Kontrolü paneli GİRİŞTE üretilir (smoke)', () => {
-    // Panel: patlamadan üretilmeli, girişte (1. bölümden ÖNCE) olmalı, en az bir
-    // kategori + kod içermeli. Değer doğruluğu ECM/gradeability testlerinde ayrıca.
-    expect(report).toContain('DERECELENDİRME VE KILAVUZ KONTROLÜ');
-    expect(report).toContain('ŞANZIMAN');       // 8L90 giriş limitleri → S kategorisi
-    expect(report).toMatch(/S0\d\s+Giriş/);
-    const iPanel = report.indexOf('DERECELENDİRME VE KILAVUZ KONTROLÜ');
-    const iSec1 = report.indexOf('1  ·  PLATFORM');
-    expect(iPanel).toBeGreaterThan(0);
-    expect(iPanel).toBeLessThan(iSec1);          // girişte
+  test('Derecelendirme ve Kılavuz Kontrolü paneli kaldırıldı', () => {
+    expect(report).not.toContain('DERECELENDİRME VE KILAVUZ KONTROLÜ');
   });
 });
 
@@ -120,7 +112,7 @@ describe('TK VARSA rapor — konvertör bölümleri KORUNUR (ileride TK eklenirs
     sim = buildSim(TC);
     report = veGenerateFTTxtReport(sim, 'Test');
     const i = report.indexOf('PERFORMANS ÖZET TABLOSU');
-    const e = report.indexOf('DERECELENDİRME VE KILAVUZ KONTROLÜ');
+    const e = report.indexOf('TOPOLOJİ DETAYI');
     section = report.slice(i, e > i ? e : report.length);
   });
 
