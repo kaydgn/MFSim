@@ -321,7 +321,8 @@ function veMntCollapseToRoot(){
   while(veMntStack.length && guard++<32){ veMntCloseEditor(true); }
 }
 
-// "← Ana Topolojiye Dön" bandı (arac-performans ile aynı CSS sınıfı).
+// Alt-topoloji çıkış çipi — canvas alanının sol-üst köşesine (topoloji sınırına)
+// iliştirilir (arac-performans ile aynı CSS sınıfı ve konumlama mantığı).
 function veMntUpdateBreadcrumb(){
   if(typeof document==='undefined') return;
   var el=document.getElementById('ve-mnt-breadcrumb');
@@ -330,12 +331,16 @@ function veMntUpdateBreadcrumb(){
     el=document.createElement('div');
     el.id='ve-mnt-breadcrumb';
     el.className='ve-arac-breadcrumb';
-    // Canvas geçiş animasyonu wrapper'a transform uygular; position:fixed breadcrumb
-    // transform'lu ata içinde konumunu şaşırır → body altına asılır (görsel aynı).
-    document.body.appendChild(el);
+    // Canvas alanının sol-üst köşesine iliştir. #ve-split-container position:relative
+    // ve geçiş animasyonunun transform'u alt-seviye .ve-canvas-wrapper'a uygulandığı
+    // için çip konumunu şaşırmaz → sınıra sabit kalır.
+    var host=document.getElementById('ve-split-container')
+          || document.querySelector('.ve-canvas-area')
+          || document.body;
+    host.appendChild(el);
   }
   var depth=veMntStack.length;
-  el.innerHTML='<button onclick="veMntCloseEditor()" title="Bir üst topolojiye dön">← Ana Topolojiye Dön</button>'
+  el.innerHTML='<button onclick="veMntCloseEditor()" title="Ana (üst) topolojiye dön">← Ana topolojiye dön</button>'
     + '<span class="ve-arac-breadcrumb-label">Takoz Çökme-Titreşim · İç Topoloji'
     + (depth>1 ? ' <b>(derinlik '+depth+')</b>' : '') + '</span>';
 }
