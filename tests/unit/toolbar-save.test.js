@@ -316,3 +316,142 @@ describe('Proje JSON formatı', () => {
     expect(parsed.tabs[0].state.nodes[0].x).toBe(10);
   });
 });
+
+// Yüksek çıktı-nokta sayılı simResults kaydedilince dosya on-yüzlerce MB
+// olabiliyor. Kaydederken zaman-serileri seyreltilir; bu mantık sessiz
+// regresyona açık (hizalama/son değer bozulması gözle yakalanmaz) → test edilir.
+describe('veDecimateSimResults - kaydetme için sonuç seyreltme', () => {
+  function mkResult(N) {
+    var time = [], speed = [];
+    var nodeData = { engine: { rpm: [], torque: [] }, wheel: { speed: [], force: [] } };
+    for (var i = 0; i < N; i++) {
+      time.push(parseFloat((i * 0.01).toFixed(4)));
+      speed.push(i * 0.05);
+      nodeData.engine.rpm.push(1000 + i);
+      nodeData.engine.torque.push(500 - i * 0.1);
+      nodeData.wheel.speed.push(i * 0.05);
+      nodeData.wheel.force.push(i * 2);
+    }
+    return {
+      time: time, mode: 'full', chainNodeIds: ['engine', 'wheel'],
+      nodeData: nodeData, speed: speed,
+      solverStats: { method: 'rk45', steps: N, events: [{ t: 1, type: 'shift' }] }
+    };
+  }
+
+  test('maxPoints üstündeki sonuç sınırı aşmayacak şekilde seyreltilir', () => {
+    var r = veDecimateSimResults(mkResult(50000), 2000);
+    expect(r.time.length).toBe(2000);
+  });
+
+  test('tüm paralel diziler aynı uzunlukta kalır (hizalama korunur)', () => {
+    var r = veDecimateSimResults(mkResult(50000), 2000);
+    var L = r.time.length;
+    expect(r.speed.length).toBe(L);
+    expect(r.nodeData.engine.rpm.length).toBe(L);
+    expect(r.nodeData.engine.torque.length).toBe(L);
+    expect(r.nodeData.wheel.speed.length).toBe(L);
+    expect(r.nodeData.wheel.force.length).toBe(L);
+  });
+
+  test('ilk ve son nokta korunur (son değerler anlamlı)', () => {
+    var orig = mkResult(50000);
+    var r = veDecimateSimResults(orig, 2000);
+    var lastO = orig.time.length - 1, lastR = r.time.length - 1;
+    expect(r.time[0]).toBe(orig.time[0]);
+    expect(r.time[lastR]).toBe(orig.time[lastO]);
+    expect(r.nodeData.engine.rpm[0]).toBe(orig.nodeData.engine.rpm[0]);
+    expect(r.nodeData.engine.rpm[lastR]).toBe(orig.nodeData.engine.rpm[lastO]);
+  });
+
+  test('paralel olmayan alanlar aynen taşınır', () => {
+    var r = veDecimateSimResults(mkResult(50000), 2000);
+    expect(r.mode).toBe('full');
+    expect(r.chainNodeIds).toEqual(['engine', 'wheel']);
+    expect(r.solverStats.steps).toBe(50000);
+    expect(r.solverStats.events).toHaveLength(1);
+  });
+
+  test('maxPoints altındaki sonuç değişmeden döner (aynı referans)', () => {
+    var orig = mkResult(500);
+    expect(veDecimateSimResults(orig, 2000)).toBe(orig);
+  });
+
+  test('orijinal sonucu MUTASYONA UĞRATMAZ', () => {
+    var orig = mkResult(10000);
+    var beforeLen = orig.time.length;
+    var beforeFirst = orig.nodeData.engine.rpm[0];
+    veDecimateSimResults(orig, 1000);
+    expect(orig.time.length).toBe(beforeLen);
+    expect(orig.nodeData.engine.rpm.length).toBe(beforeLen);
+    expect(orig.nodeData.engine.rpm[0]).toBe(beforeFirst);
+  });
+
+  test('null / boş girdi güvenli', () => {
+    expect(veDecimateSimResults(null)).toBeNull();
+    var empty = { time: [], nodeData: {}, mode: 'partial' };
+    expect(veDecimateSimResults(empty, 2000)).toBe(empty);
+  });
+
+  test('doldurulmamış (boş) sinyal dizileri korunur', () => {
+    var orig = mkResult(5000);
+    orig.nodeData.engine.emptySig = [];
+    var r = veDecimateSimResults(orig, 1000);
+    expect(r.nodeData.engine.emptySig).toEqual([]);
+  });
+
+  test('seyreltme JSON boyutunu >10× düşürür', () => {
+    var orig = mkResult(50000);
+    var full = JSON.stringify(orig).length;
+    var slim = JSON.stringify(veDecimateSimResults(orig, 2000)).length;
+    expect(slim).toBeLessThan(full * 0.1);
+  });
+});
+
+describe('veBuildCleanTabState - temiz kayıt state\'i', () => {
+  function mkTabState() {
+    var t = [], rpm = [];
+    for (var i = 0; i < 8000; i++) { t.push(i * 0.01); rpm.push(1000 + i); }
+    return {
+      nodes: [{ id: 'n1', type: 'engine' }],
+      connections: [{ from: 'n1', to: 'n2' }],
+      compCounter: 3,
+      canvasOffset: { x: 10, y: 20 },
+      canvasZoom: 1.5,
+      simResults: { time: t, mode: 'full', chainNodeIds: ['n1'], nodeData: { n1: { rpm: rpm } } },
+      resultSlots: [{ sensors: [{ id: 'n1', signal: 'rpm', name: 'Devir' }] }, {}, {}, {}]
+    };
+  }
+
+  test('null state → null', () => {
+    expect(veBuildCleanTabState(null)).toBeNull();
+  });
+
+  test('varsayılan: sonuçlar seyreltilir; topoloji ve panel konfigürasyonu korunur', () => {
+    var s = veBuildCleanTabState(mkTabState());
+    expect(s.nodes).toHaveLength(1);
+    expect(s.connections).toHaveLength(1);
+    expect(s.canvasZoom).toBe(1.5);
+    expect(s.simResults).not.toBeNull();
+    expect(s.simResults.time.length).toBeLessThanOrEqual(2000);
+    expect(s.resultSlots[0].sensors).toHaveLength(1);
+  });
+
+  test('stripResults=true → sonuçlar tamamen düşer, konfigürasyon kalır', () => {
+    var s = veBuildCleanTabState(mkTabState(), { stripResults: true });
+    expect(s.simResults).toBeNull();
+    expect(s.resultSlots[0].sensors).toHaveLength(1);
+    expect(s.nodes).toHaveLength(1);
+  });
+
+  test('simResults yoksa güvenli, resultSlots varsayılanı', () => {
+    var s = veBuildCleanTabState({ nodes: [], connections: [], resultSlots: null });
+    expect(s.simResults).toBeNull();
+    expect(s.resultSlots).toEqual([{}, {}, {}, {}]);
+  });
+
+  test('custom maxPoints uygulanır', () => {
+    var s = veBuildCleanTabState(mkTabState(), { maxPoints: 500 });
+    expect(s.simResults.time.length).toBeLessThanOrEqual(500);
+  });
+});
