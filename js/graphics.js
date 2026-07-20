@@ -1620,6 +1620,335 @@ function veNameToEmail(name) {
   return parts.join('.') + '@bmc.com.tr';
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// TOPOLOJİ DETAYI (Tam Gaz raporuna gömülü) — FT rapor teması
+// ════════════════════════════════════════════════════════════════════════════
+// Bileşen (topoloji) dökümünü, Tam Gaz Hızlanma raporunun görsel diliyle üretir:
+// aynı sectionBanner / titledBox / tRule-tRow şekilleri, Unicode çizgiler ve
+// gerçek Türkçe ifadeler. Sunum yardımcıları çağıran veGenerateFTTxtReport'tan
+// H paketiyle geçirilir → tema birebir aynıdır. nodes / connections global okunur.
+function veBuildTopologyDetailFT(H) {
+  if (typeof nodes === 'undefined' || !nodes || nodes.length === 0) return '';
+
+  var W = H.W, pad = H.pad, num = H.num, numI = H.numI, tr = H.tr, rep = H.rep,
+      sectionBanner = H.sectionBanner, titledBox = H.titledBox,
+      tRule = H.tRule, tRow = H.tRow, kvfn = H._kv;
+
+  var KW = 30;                          // titledBox içi etiket sütun genişliği
+  function kv(k, v) { return kvfn(k, v, KW); }
+  // pairs: [ [label,value] | falsy ] — falsy girdi atlanır; hiç satır yoksa kutu üretilmez
+  function specBox(title, pairs) {
+    var lines = [];
+    for (var i = 0; i < pairs.length; i++) if (pairs[i]) lines.push(kv(pairs[i][0], pairs[i][1]));
+    return lines.length ? titledBox(title, lines, W) + '\n' : '';
+  }
+  // Başlıklı, kenarlıklı (│) tablo; satır yoksa üretilmez.
+  function table(heading, header, widths, aligns, rows) {
+    if (!rows || !rows.length) return '';
+    var s = '  ' + heading + '\n';
+    s += tRule(widths, '┌', '┬', '┐', '─');
+    s += tRow(header, widths, aligns);
+    s += tRule(widths, '├', '┼', '┤', '─');
+    for (var i = 0; i < rows.length; i++) s += tRow(rows[i], widths, aligns);
+    s += tRule(widths, '└', '┴', '┘', '─');
+    return s + '\n';
+  }
+
+  // ── Bileşen seçimi (standalone topoloji raporuyla aynı mantık) ──
+  function find(fn) { return nodes.find(fn); }
+  var engineNode = find(function(n){ return n.type === 'engine'; });
+  var gbNode     = find(function(n){ return n.type === 'gearbox'; });
+  var tcNode     = find(function(n){ return n.type === 'torque-converter'; });
+  var trNode     = find(function(n){ return n.type === 'transfer'; });
+  var diffNode   = find(function(n){ return n.type === 'differential' && n.isMasterDiff; }) || find(function(n){ return n.type === 'differential'; });
+  var wheelNode  = find(function(n){ return n.type === 'wheel' && n.isMasterWheel; }) || find(function(n){ return n.type === 'wheel'; });
+  var vehNode    = find(function(n){ return n.type === 'vehicle'; });
+  var roadNode   = find(function(n){ return n.type === 'road'; });
+  var scenNode   = find(function(n){ return n.type === 'scenario'; });
+  var solverNode = find(function(n){ return n.type === 'solver'; });
+  var propNode   = find(function(n){ return n.type === 'propshaft'; });
+  var obsNode    = find(function(n){ return n.type === 'obstacle-crossing'; });
+  var brakeNode  = find(function(n){ return n.type === 'retarder' || n.type === 'brake'; });
+
+  var ed = engineNode ? (engineNode.data || {}) : {};
+  var gd = gbNode ? (gbNode.data || {}) : {};
+  var td = tcNode ? (tcNode.data || {}) : {};
+  var trd = trNode ? (trNode.data || {}) : {};
+  var dd = diffNode ? (diffNode.data || {}) : {};
+  var wd = wheelNode ? (wheelNode.data || {}) : {};
+  var vd = vehNode ? (vehNode.data || {}) : {};
+  var rd = roadNode ? (roadNode.data || {}) : {};
+  var scd = scenNode ? (scenNode.data || {}) : {};
+  var sd = solverNode ? (solverNode.data || {}) : {};
+  var psd = propNode ? (propNode.data || {}) : {};
+
+  var r = sectionBanner('TOPOLOJİ DETAYI', W);
+
+  var connCount = (typeof connections !== 'undefined' && connections) ? connections.length : 0;
+  r += specBox('TOPOLOJİ ÖZETİ', [
+    ['Bileşen Sayısı', String(nodes.length)],
+    ['Bağlantı Sayısı', String(connCount)]
+  ]);
+
+  // ── ARAÇ ──
+  if (vehNode) {
+    var mass = vd.ftGVW || vd.mass || 0;
+    var cd = vd.ftCd || vd.cd || 0;
+    var fa = vd.frontalArea || ((vd.ftHeight || 0) * (vd.ftWidth || 0)) || 0;
+    var rho = vd.ftRho || vd.airDensity || 0;
+    r += specBox('ARAÇ', [
+      (vd.ftVehName || vd.ftVehicleName) && ['Araç Adı', tr(vd.ftVehName || vd.ftVehicleName)],
+      mass && ['Brüt Araç Ağırlığı (GVW)', numI(mass) + ' kg'],
+      (vd.initialSpeed !== undefined) && ['Başlangıç Hızı', num(vd.initialSpeed, 1) + ' km/sa'],
+      cd && ['Sürüklenme Katsayısı (Cd)', num(cd, 3)],
+      fa && ['Alın Alanı (A)', num(fa, 2) + ' m²'],
+      vd.ftHeight && ['Yükseklik', num(vd.ftHeight, 3) + ' m'],
+      vd.ftWidth && ['Genişlik', num(vd.ftWidth, 3) + ' m'],
+      rho && ['Hava Yoğunluğu (ρ)', num(rho, 3) + ' kg/m³'],
+      (cd && fa) && ['CdA', num(cd * fa, 3) + ' m²'],
+      (vd.autoShift !== undefined) && ['Otomatik Vites', vd.autoShift ? 'Evet' : 'Hayır']
+    ]);
+  }
+
+  // ── MOTOR ──
+  if (engineNode) {
+    var ms = ed.motorSpecs || {};
+    var engName = engineNode.customName || ed.ftMotorPreset || ed.mfMotorPreset || '-';
+    var tData = ed.torqueData || [];
+    var pkT = 0, pkTr = 0, pkP = 0, pkPr = 0;
+    tData.forEach(function(p) {
+      var rpm = p.rpm || p.x || 0, tq = p.torque || p.y || 0;
+      var pw = p.power || (tq * rpm * Math.PI / 30000);
+      if (tq > pkT) { pkT = tq; pkTr = rpm; }
+      if (pw > pkP) { pkP = pw; pkPr = rpm; }
+    });
+    r += specBox('MOTOR', [
+      ['Motor Tanımı', tr(engName)],
+      ms.displacement && ['Silindir Hacmi', num(ms.displacement, 2) + ' L'],
+      ms.governedSpeed && ['Governed Devir', numI(ms.governedSpeed) + ' rpm'],
+      ms.noLoadGoverned && ['No-Load Governed', numI(ms.noLoadGoverned) + ' rpm'],
+      ms.idleRpm && ['Rölanti Devri', numI(ms.idleRpm) + ' rpm'],
+      ms.inertia && ['Motor Ataleti', num(ms.inertia, 4) + ' kg·m²'],
+      (ed.verim !== undefined) && ['Motor Freni Verimi', num(ed.verim, 0) + '%'],
+      (pkT > 0) && ['Pik Tork', num(pkT, 1) + ' N·m @ ' + numI(pkTr) + ' rpm'],
+      (pkP > 0) && ['Pik Güç', num(pkP, 1) + ' kW (' + numI(pkP * 1.341) + ' HP) @ ' + numI(pkPr) + ' rpm']
+    ]);
+    var tqRows = tData.map(function(p) {
+      var rpm = p.rpm || p.x || 0, tq = p.torque || p.y || 0;
+      var pw = p.power || (tq * rpm * Math.PI / 30000);
+      var mark = '—';
+      if (Math.abs(rpm - pkTr) < 5) mark = 'Pik Tork';
+      else if (Math.abs(rpm - pkPr) < 5) mark = 'Pik Güç';
+      else if (ms.governedSpeed && Math.abs(rpm - ms.governedSpeed) < 5) mark = 'Governed';
+      return [numI(rpm), num(tq, 1), num(pw, 1), mark];
+    });
+    r += table('MOTOR TORK / GÜÇ EĞRİSİ', ['Devir [rpm]', 'Tork [N·m]', 'Güç [kW]', 'İşaret'],
+      [14, 14, 14, 12], ['right', 'right', 'right', 'center'], tqRows);
+    if (ed.accessories && ed.accessories.length > 0) {
+      var aStd = 0, aUsr = 0;
+      var accRows = ed.accessories.map(function(a) {
+        aStd += (a.standardLoss || 0); aUsr += (a.userLoss || 0);
+        return [tr(a.name), num(a.standardLoss, 1), num(a.userLoss, 1)];
+      });
+      accRows.push(['TOPLAM', num(aStd, 1), num(aUsr, 1)]);
+      r += table('AKSESUAR KAYIPLARI', ['Aksesuar', 'Std [kW]', 'Usr [kW]'],
+        [32, 12, 12], ['left', 'right', 'right'], accRows);
+    }
+  }
+
+  // ── TORK KONVERTÖRÜ ──
+  if (tcNode) {
+    r += specBox('TORK KONVERTÖRÜ', [
+      ['Konvertör Adı', tr(td.tcName || td.tcPresetKey || '-')],
+      (td.pumpTorqueDrop !== undefined) && ['Pompa Tork Düşümü', num(td.pumpTorqueDrop, 1) + ' N·m'],
+      (td.tcRatio !== undefined) && ['TC Oranı (M.Freni)', num(td.tcRatio, 2)],
+      ['Kilit Durumu', td.isLocked ? 'Kilitli' : 'Açık']
+    ]);
+    var tcData = td.tcData || [];
+    var tcRows = tcData.map(function(p) {
+      var eff = (p.sr && p.tau) ? (p.sr * p.tau * 100) : (p.efficiency || 0);
+      return [num(p.sr, 3), num(p.kpump, 3), num(p.tau, 3), num(eff, 1)];
+    });
+    r += table('KONVERTÖR KARAKTERİSTİĞİ', ['SR [-]', 'K_pump', 'Tork Oranı (τ)', 'Verim [%]'],
+      [12, 16, 16, 12], ['right', 'right', 'right', 'right'], tcRows);
+  }
+
+  // ── ŞANZIMAN ──
+  if (gbNode) {
+    r += specBox('ŞANZIMAN', [
+      ['Şanzıman Modeli', tr(gd.gbName || gd.selectedGearbox || gd.ftGBPreset || '-')],
+      (gd.efficiency !== undefined) && ['Verim', num(gd.efficiency, 1) + '%'],
+      gd.forwardGears && ['İleri Vites Sayısı', String(gd.forwardGears)],
+      gd.reverseGears && ['Geri Vites Sayısı', String(gd.reverseGears)],
+      gd.shiftProfile && ['Shift Profili', tr(gd.shiftProfile)],
+      gd.shiftRefRPM && ['Shift Referans RPM', numI(gd.shiftRefRPM) + ' rpm']
+    ]);
+    var gears = gd.ftGearData || gd.gearData || [];
+    if (gears.length > 0) {
+      var gRows = gears.map(function(g, i) {
+        var ratio = g.ratio || g.y || parseFloat(g) || 0;
+        var eff = g.eff || g.efficiency;
+        return [tr(String(g.name || g.gear || (i + 1))), num(ratio, 3), (eff != null ? num(eff, 1) : '—')];
+      });
+      r += table('VİTES ORANLARI', ['Vites', 'Oran', 'Verim [%]'],
+        [16, 16, 14], ['left', 'right', 'right'], gRows);
+    } else if (gd.gearRatios && gd.gearRatios.length > 0) {
+      var gRows2 = gd.gearRatios.map(function(ratio, i) {
+        return [String(i + 1), num(parseFloat(ratio), 3)];
+      });
+      r += table('VİTES ORANLARI', ['Vites', 'Oran'], [16, 16], ['left', 'right'], gRows2);
+    }
+  }
+
+  // ── TRANSFER KUTUSU ──
+  if (trNode) {
+    r += specBox('TRANSFER KUTUSU', [
+      ['Transfer Adı', tr(trNode.customName || trd.ftTrName || trd.ftTrPreset || '-')],
+      (trd.efficiency !== undefined) && ['Verim', num(trd.efficiency, 1) + '%'],
+      trd.selectedMode && ['Seçili Mod', tr(trd.selectedMode)],
+      trd.selectedRatio && ['Seçili Oran', num(trd.selectedRatio, 3)]
+    ]);
+    var trGears = trd.ftTrGears || trd.transferData || [];
+    var trRows = trGears.map(function(tg) {
+      var eff = tg.eff || tg.verim || trd.efficiency;
+      return [tr(tg.kademe || tg.mode || '-'), num(tg.ratio || tg.oran || 0, 3), (eff != null ? num(eff, 1) : '—')];
+    });
+    r += table('TRANSFER KADEMELERİ', ['Kademe', 'Oran', 'Verim [%]'],
+      [18, 16, 14], ['left', 'right', 'right'], trRows);
+  }
+
+  // ── PROPSAFT ──
+  if (propNode) {
+    r += specBox('PROPSAFT (KARDAN MİLİ)', [
+      ['Tanım', tr(psd.psName || propNode.customName || '-')],
+      ['Oran', '1.000 (Direkt)'],
+      (psd.psEff !== undefined) && ['Verim', num(psd.psEff, 2) + '%'],
+      (psd.psInertia !== undefined) && ['Atalet', num(psd.psInertia, 4) + ' kg·m²']
+    ]);
+  }
+
+  // ── DİFERANSİYEL ──
+  if (diffNode) {
+    var diffRatioVal = (dd.diffRatio !== undefined) ? dd.diffRatio : (dd.ratio !== undefined ? dd.ratio : null);
+    r += specBox('DİFERANSİYEL', [
+      ['Tanım', tr(diffNode.customName || '-')],
+      (diffRatioVal !== null) && ['Diferansiyel Oranı', num(diffRatioVal, 3)],
+      (dd.efficiency !== undefined) && ['Verim', num(dd.efficiency, 1) + '%'],
+      (dd.diffInertia !== undefined) && ['Atalet', num(dd.diffInertia, 4) + ' kg·m²']
+    ]);
+  }
+
+  // ── TEKERLEK / LASTİK ──
+  if (wheelNode) {
+    var tireR = wd.ftTireRadius || wd.wheelRadius || wd.radius || 0;
+    var crr = wd.ftCrr || wd.rollingResistance || wd.crr || 0;
+    r += specBox('TEKERLEK / LASTİK', [
+      wd.ftTireName && ['Lastik Adı', tr(wd.ftTireName)],
+      tireR && ['Yuvarlanma Yarıçapı', num(tireR, 4) + ' m'],
+      tireR && ['Lastik Devir/km', numI(Math.round(1000 / (2 * Math.PI * tireR))) + ' devir/km'],
+      crr && ['Yuvarlanma Direnci (Crr)', num(crr, 4)],
+      (wd.ftSurfaceFactor !== undefined) && ['Yüzey Faktörü', num(wd.ftSurfaceFactor, 2)],
+      (wd.ftTireInertia !== undefined) && ['Lastik/Tekerlek Ataleti', num(wd.ftTireInertia, 4) + ' kg·m²'],
+      (wd.rotatingMass !== undefined) && ['Döner Kütle Faktörü', num(wd.rotatingMass, 2)]
+    ]);
+  }
+
+  // ── YOL / ORTAM ──
+  if (roadNode) {
+    r += specBox('YOL / ORTAM', [
+      (rd.grade !== undefined) && ['Yol Eğimi', num(rd.grade, 1) + '%'],
+      rd.egimMode && ['Eğim Modu', rd.egimMode === 'segment' ? 'Segment (Rota)' : 'Manuel (Sabit)'],
+      (rd.altitude !== undefined) && ['Rakım', num(rd.altitude, 0) + ' m'],
+      (rd.temperature !== undefined) && ['Sıcaklık', num(rd.temperature, 1) + ' °C'],
+      (rd.airDensity !== undefined) && ['Hava Yoğunluğu', num(rd.airDensity, 4) + ' kg/m³']
+    ]);
+    var segs = rd.roadSegments || [];
+    var segRows = segs.map(function(s, i) {
+      return [String(s.no || (i + 1)), num(s.distance, 1), num(s.grade, 1), num(s.deltaH, 1), tr(s.command || '-')];
+    });
+    r += table('YOL SEGMENTLERİ (' + segs.length + ' segment)',
+      ['No', 'Mesafe [m]', 'Eğim [%]', 'ΔH [m]', 'Komut'],
+      [6, 14, 12, 12, 16], ['left', 'right', 'right', 'right', 'left'], segRows);
+  }
+
+  // ── SENARYO ──
+  if (scenNode) {
+    var stMap = { 'full_throttle': 'Tam Gaz', 'partial_throttle': 'Kısmi Gaz', 'custom': 'Özel' };
+    r += specBox('SENARYO', [
+      ['Senaryo Tipi', stMap[scd.scenarioType] || scd.scenarioType || '-'],
+      (scd.throttle !== undefined) && ['Gaz Pedalı', num(scd.throttle, 0) + '%'],
+      (scd.segInitSpeed !== undefined) && ['Başlangıç Hızı', num(scd.segInitSpeed, 1) + ' km/sa']
+    ]);
+  }
+
+  // ── ÇÖZÜCÜ ──
+  if (solverNode) {
+    var mMap = { 'euler': 'Euler (1. derece)', 'heun': 'Heun (2. derece)', 'ralston': 'Ralston (2. derece)', 'rk4': 'RK4 (4. derece)', 'rk45': 'RK4/5 Adaptif (Dormand-Prince)' };
+    r += specBox('ÇÖZÜCÜ', [
+      ['Sayısal Yöntem', mMap[sd.method] || sd.method || 'euler'],
+      (sd.maxSimTime !== undefined) && ['Maks. Simülasyon Süresi', num(sd.maxSimTime, 0) + ' s'],
+      (sd.ftDt !== undefined) && ['Zaman Adımı (dt)', num(sd.ftDt, 4) + ' s'],
+      (sd.ftAtol !== undefined) && ['Mutlak Tolerans (atol)', String(sd.ftAtol)],
+      (sd.ftRtol !== undefined) && ['Bağıl Tolerans (rtol)', String(sd.ftRtol)]
+    ]);
+  }
+
+  // ── ENGEL GEÇME ──
+  if (obsNode) {
+    var od = obsNode.data || {};
+    r += specBox('ENGEL GEÇME', [
+      (od.obstacleHeight !== undefined) && ['Engel Yüksekliği', num(od.obstacleHeight, 3) + ' m'],
+      (od.a1 !== undefined) && ['Ağırlık Merkezi — Ön Aks', num(od.a1, 3) + ' m'],
+      (od.a2 !== undefined) && ['Ağırlık Merkezi — Arka Aks', num(od.a2, 3) + ' m'],
+      (od.a1 && od.a2) && ['Aks Açıklığı (L)', num(od.a1 + od.a2, 3) + ' m'],
+      (od.loadedTireRadius !== undefined) && ['Yüklü Lastik Yarıçapı', num(od.loadedTireRadius, 4) + ' m'],
+      (od.cornerDeflection !== undefined) && ['Köşe Defleksiyonu', num(od.cornerDeflection, 1) + ' mm'],
+      (od.gbTorqueLimit !== undefined) && ['Şanzıman Tork Limiti', numI(od.gbTorqueLimit) + ' N·m']
+    ]);
+  }
+
+  // ── FREN / RETARDER ──
+  if (brakeNode) {
+    r += specBox('FREN / RETARDER', [
+      ['Bileşen Tipi', brakeNode.type === 'retarder' ? 'Retarder' : 'Fren'],
+      ['Tanım', tr(brakeNode.customName || '-')]
+    ]);
+  }
+
+  // ── TOPLAM AKTARMA ÖZETİ ──
+  var diffR = dd.diffRatio || dd.ratio || 0;
+  if (diffR > 0) {
+    var trGsum = trd.ftTrGears || trd.transferData || [];
+    var tireRsum = wd.ftTireRadius || wd.wheelRadius || wd.radius || 0.5;
+    var psEffSum = psd.psEff ? (psd.psEff / 100) : 1.0;
+    var diffEffSum = dd.efficiency ? (dd.efficiency / 100) : 1.0;
+    if (trGsum.length > 0) {
+      var tdRows = trGsum.map(function(tg) {
+        var trR = tg.ratio || tg.oran || 1;
+        var trE = tg.eff || tg.verim || (trd.efficiency || 97);
+        var totalR = diffR * trR;
+        var totalEff = diffEffSum * (trE / 100) * psEffSum * 100;
+        var nv = (totalR * 1000) / (tireRsum * 2 * Math.PI * 60);
+        return [tr(tg.kademe || tg.mode || '-'), num(diffR, 3), num(trR, 3), num(totalR, 3), num(nv, 3), num(totalEff, 1)];
+      });
+      r += table('TOPLAM AKTARMA ÖZETİ',
+        ['Kademe', 'Diff', 'Transfer', 'Toplam', 'N/V (rpm/kph)', 'Verim [%]'],
+        [14, 10, 10, 10, 15, 12], ['left', 'right', 'right', 'right', 'right', 'right'], tdRows);
+    } else {
+      var totalSingle = diffR;
+      var nvSingle = (totalSingle * 1000) / (tireRsum * 2 * Math.PI * 60);
+      r += specBox('TOPLAM AKTARMA ÖZETİ', [
+        ['Diferansiyel Oranı', num(diffR, 3)],
+        ['Toplam Aktarma Oranı', num(totalSingle, 3)],
+        ['N/V (rpm/kph)', num(nvSingle, 3)],
+        ['Toplam Verim', num(diffEffSum * psEffSum * 100, 1) + '%']
+      ]);
+    }
+  }
+
+  return r + '\n';
+}
+
 function veGenerateFTTxtReport(sim, optHazirlayan) {
   var W = 80;
   var WW = 130;
@@ -1711,18 +2040,6 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       var t = tr(bodyLines[i]);
       if (t.length > inner - 2) t = t.slice(0, inner - 3) + '…';
       s += '  │ ' + pad(t, inner - 2, 'left') + ' │\n';
-    }
-    return s + '  └' + rep('─', inner) + '┘\n';
-  }
-
-  // Yorum/not kutusu: metni kutu icine sarar, sol ustte ► baslik etiketi.
-  function noteBox(title, text, width) {
-    var inner = width - 4;
-    var head = '─ ► ' + tr(title) + ' ';
-    var s = '  ┌' + head + rep('─', Math.max(0, inner - head.length)) + '┐\n';
-    var lines = wrap(text, inner - 2);
-    for (var i = 0; i < lines.length; i++) {
-      s += '  │ ' + pad(lines[i], inner - 2, 'left') + ' │\n';
     }
     return s + '  └' + rep('─', inner) + '┘\n';
   }
@@ -2133,6 +2450,15 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
   })();
 
   // ════════════════════════════════════════════════════════════════════════
+  // TOPOLOJİ DETAYI — bileşen dökümü (rapor başında, FT teması)
+  // ════════════════════════════════════════════════════════════════════════
+  r += veBuildTopologyDetailFT({
+    W: W, pad: pad, num: num, numI: numI, tr: tr, rep: rep,
+    sectionBanner: sectionBanner, titledBox: titledBox,
+    tRule: tRule, tRow: tRow, _kv: _kv
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
   // 1. PLATFORM VE ARAC OZELLIKLERI
   // ════════════════════════════════════════════════════════════════════════
   r += '\n' + sectionBanner('1  ·  PLATFORM VE ARAÇ ÖZELLİKLERİ', W);
@@ -2194,19 +2520,6 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       r += renderGradeSection(G.low);
     }
 
-    var gH = G.high;
-    var _y2 = 'Bu araç, durma konumundan ';
-    if (gH.stallGrade >= 60) _y2 += 'çok dik eğimlerde (>%60) dahi kalkış yapabilecek çekiş kuvvetine sahiptir.';
-    else if (gH.stallGrade >= 30) _y2 += 'yüksek arazi eğimlerinde (%' + num(gH.stallGrade, 0) + ') kalkış yapabilecek çekiş kuvvetine sahiptir.';
-    else _y2 += 'orta eğimlerde (%' + num(gH.stallGrade, 0) + ') kalkış yapabilir.';
-    _y2 += ' Düz yolda (%0 eğim) araç maksimum ' + num(gH.maxSpeedFlat, 1) + ' km/h hıza ulaşabilir.';
-    var v5 = '–', v10 = '–';
-    (gH.gradeTable || []).forEach(function(row) {
-      if (Math.abs(row.grade - 5.0) < 0.1) v5 = num(row.v_max, 0);
-      if (Math.abs(row.grade - 10.0) < 0.1) v10 = num(row.v_max, 0);
-    });
-    _y2 += ' %5 eğimde (tipik karayolu rampası) araç ' + v5 + ' km/h ile seyredebilir. %10 eğimde (dik yokuş) araç ' + v10 + ' km/h ile ilerleyebilir.';
-    r += '\n' + noteBox('YORUM', _y2, W);
   } else {
     r += '  Eğim kabiliyeti verisi bulunamadı.\n';
   }
@@ -2249,18 +2562,6 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
       r += renderAccelSection(A.low);
     }
 
-    // Hizlanma yorumu → not kutusu
-    var aH = A.high;
-    var a60 = null, a100 = null;
-    (aH.rows || []).forEach(function(row) {
-      if (row.targetSpeed === 60 && row.time !== null) a60 = row;
-      if (row.targetSpeed === 100 && row.time !== null) a100 = row;
-    });
-    var _yorum = '';
-    if (a60) _yorum += 'Araç, 0\'dan 60 km/h hıza ' + num(a60.time, 1) + ' saniyede, ' + numI(a60.distance) + ' metre mesafede ulaşmaktadır. ';
-    if (a100) _yorum += '0–100 km/h hızlanma ' + num(a100.time, 1) + ' saniyede ' + numI(a100.distance) + ' metrede tamamlanmaktadır.';
-    else if (a60) _yorum += 'Araç 100 km/h hıza ulaşamamaktadır.';
-    if (_yorum) r += '\n' + noteBox('YORUM', _yorum, W);
   } else {
     r += '  Hızlanma verisi bulunamadı.\n';
   }
@@ -2597,16 +2898,6 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     r += '  Enerji dengesi verisi bulunamadı.\n';
   }
   r += '\n\n';
-
-  // ════════════════════════════════════════════════════════════════════════
-  // TOPOLOJİ DETAYI  (eskiden ayrı "Topoloji Raporu" idi — artık bu rapora dahil)
-  // ════════════════════════════════════════════════════════════════════════
-  if (typeof veGenerateTopologyTxtReport === 'function' &&
-      typeof nodes !== 'undefined' && nodes && nodes.length > 0) {
-    r += sectionBanner('TOPOLOJİ DETAYI', W);
-    r += veGenerateTopologyTxtReport(hazirlayan, { bodyOnly: true });
-    r += '\n';
-  }
 
   // ════════════════════════════════════════════════════════════════════════
   // RAPOR SONU
@@ -3022,11 +3313,7 @@ function veFTTraceRenderStep(s, idx, H) {
   return r;
 }
 
-function veGenerateTopologyTxtReport(optHazirlayan, opts) {
-  opts = opts || {};
-  // bodyOnly: yalnızca bileşen bölümlerini üret (BMC başlığı, RAPOR BILGILERI ve
-  // RAPOR SONU olmadan) — Tam Gaz Hızlanma raporuna gömme için kullanılır.
-  var bodyOnly = !!opts.bodyOnly;
+function veGenerateTopologyTxtReport(optHazirlayan) {
   var W = 80;
 
   function ln(ch, len) { var s = ''; for (var i = 0; i < len; i++) s += ch; return s; }
@@ -3098,7 +3385,6 @@ function veGenerateTopologyTxtReport(optHazirlayan, opts) {
 
   var r = '';
 
-  if (!bodyOnly) {
   // ═══ BMC BASLIK ═══
   r += '\n' + ln('=', W) + '\n\n';
   r += pad(' ######   ##    ##    ###### ', W, 'center') + '\n';
@@ -3124,7 +3410,6 @@ function veGenerateTopologyTxtReport(optHazirlayan, opts) {
   r += pRow('Bilesen Sayisi', String(nodes.length));
   r += pRow('Baglanti Sayisi', String(connections.length));
   r += ln('-', W) + '\n\n';
-  }
 
   var secNo = 1;
 
@@ -3661,7 +3946,6 @@ function veGenerateTopologyTxtReport(optHazirlayan, opts) {
     secNo++;
   }
 
-  if (!bodyOnly) {
   // ═══ RAPOR SONU ═══
   r += ln('-', W) + '\n';
   r += pad('RAPOR SONU', W, 'center') + '\n';
@@ -3678,7 +3962,6 @@ function veGenerateTopologyTxtReport(optHazirlayan, opts) {
   r += pad('otomatik olusturulmustur.', W, 'center') + '\n';
   r += ln('-', W) + '\n\n';
   r += pad('(c) ' + now.getFullYear() + ' BMC Otomotiv -- Tum Haklari Saklidir', W, 'center') + '\n';
-  }
 
   return r;
 }
