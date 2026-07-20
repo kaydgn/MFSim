@@ -7,6 +7,9 @@ var veTabCounter = 0;
 
 function veSerializeCurrentState() {
   return {
+    // Migrasyon damgası: sürümlü state'ler restoreState'te LEGACY migrasyonu
+    // ATLAR → kullanıcının kasıtlı girdileri (ör. Cd=0.75) ezilmez.
+    schemaVersion: (typeof VE_SCHEMA_VERSION !== 'undefined' ? VE_SCHEMA_VERSION : 2),
     nodes: JSON.parse(JSON.stringify(nodes.map(function(n) {
       return {
         id: n.id, type: n.type, x: n.x, y: n.y,

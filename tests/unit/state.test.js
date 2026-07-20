@@ -161,6 +161,70 @@ describe('redo', () => {
   });
 });
 
+describe('şema sürümü damgası', () => {
+  test('saveState state\'e VE_SCHEMA_VERSION damgası koyar', () => {
+    nodes = [{ id: 'n1', type: 'vehicle', x: 0, y: 0, data: { ftCd: 0.75 } }];
+    saveState();
+    expect(undoStack[0].schemaVersion).toBe(VE_SCHEMA_VERSION);
+  });
+});
+
+describe('veMigrateNodeData (LEGACY eski→yeni varsayılan)', () => {
+  test('vehicle: Cd 0.75 → 0.90 yükseltir', () => {
+    const node = { type: 'vehicle', data: { ftCd: 0.75 } };
+    veMigrateNodeData(node);
+    expect(node.data.ftCd).toBe(0.900);
+  });
+
+  test('vehicle: H=3.0→3.2, W=2.0→2.5 yükseltir', () => {
+    const node = { type: 'vehicle', data: { ftHeight: 3.0, ftWidth: 2.0 } };
+    veMigrateNodeData(node);
+    expect(node.data.ftHeight).toBe(3.200);
+    expect(node.data.ftWidth).toBe(2.500);
+  });
+
+  test('wheel: Crr 0.015 → 0.0035; differential: verim 98 → 96', () => {
+    const wheel = { type: 'wheel', data: { ftCrr: 0.015 } };
+    const diff = { type: 'differential', data: { efficiency: 98 } };
+    veMigrateNodeData(wheel);
+    veMigrateNodeData(diff);
+    expect(wheel.data.ftCrr).toBe(0.0035);
+    expect(diff.data.efficiency).toBe(96);
+  });
+
+  test('eski varsayılana EŞİT OLMAYAN kasıtlı değerlere dokunmaz', () => {
+    const node = { type: 'vehicle', data: { ftCd: 0.76, ftHeight: 3.5, ftWidth: 2.5 } };
+    veMigrateNodeData(node);
+    expect(node.data.ftCd).toBe(0.76);
+    expect(node.data.ftHeight).toBe(3.5);
+    expect(node.data.ftWidth).toBe(2.5);
+  });
+});
+
+describe('veApplyLegacyMigrations (sürüm-kapılı migrasyon)', () => {
+  test('LEGACY state (sürümsüz): Cd 0.75 → 0.90', () => {
+    const state = { nodes: [{ type: 'vehicle', data: { ftCd: 0.75 } }] };
+    veApplyLegacyMigrations(state);
+    expect(state.nodes[0].data.ftCd).toBe(0.900);
+  });
+
+  // Kullanıcının bildirdiği bug'ın regresyon kilidi: 0.75 yaz → hep 0.9 hesaplanıyordu.
+  // Sürümlü state'te (undo/redo, sekme değiştirme, güncel kayıt) migrasyon ÇALIŞMAMALI.
+  test('SÜRÜMLÜ state: kasıtlı Cd=0.75 KORUNUR (0.90\'a ezilmez)', () => {
+    const state = { schemaVersion: VE_SCHEMA_VERSION, nodes: [{ type: 'vehicle', data: { ftCd: 0.75 } }] };
+    veApplyLegacyMigrations(state);
+    expect(state.nodes[0].data.ftCd).toBe(0.75);
+  });
+
+  test('saveState çıktısı (sürümlü) tekrar migrasyona sokulsa bile 0.75 korunur', () => {
+    nodes = [{ id: 'v1', type: 'vehicle', x: 0, y: 0, data: { ftCd: 0.75 } }];
+    saveState();
+    const saved = undoStack[undoStack.length - 1];
+    veApplyLegacyMigrations(saved); // undo/redo yeniden yükleme simülasyonu
+    expect(saved.nodes[0].data.ftCd).toBe(0.75);
+  });
+});
+
 describe('undo-redo döngüsü', () => {
   test('birden fazla undo-redo tutarlı', () => {
     for (let i = 0; i < 5; i++) {
