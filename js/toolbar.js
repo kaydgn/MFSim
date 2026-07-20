@@ -320,8 +320,19 @@ function veBuildCleanTabState(tabState, opts) {
   } else if(sim) {
     sim = veDecimateSimResults(sim, opts.maxPoints || VE_SAVE_MAX_POINTS);
   }
+  // Düğümlerin GÖMÜLÜ alt-topolojileri (node.data.subTopology) de aynı kurallarla
+  // özyinelemeli temizlenir: aksi hâlde b89f2fd yalnızca üst-seviye simResults'ı
+  // seyreltir, iç içe subTopology blobları (undo geçmişi + tam sim) ham kalır →
+  // otomatik yedek kotası taşar, dosya gereksiz şişer. Mutasyonsuz (canlı tab.state
+  // bozulmaz). stripResults/maxPoints iç içe seviyelere de aktarılır.
+  var cleanNodes = (typeof veSanitizeNodesSubtopology === 'function')
+    ? veSanitizeNodesSubtopology(tabState.nodes, {
+        stripResults: !!opts.stripResults,
+        maxPoints: opts.maxPoints || VE_SAVE_MAX_POINTS
+      })
+    : tabState.nodes;
   return {
-    nodes: tabState.nodes,
+    nodes: cleanNodes,
     connections: tabState.connections,
     compCounter: tabState.compCounter,
     canvasOffset: tabState.canvasOffset,
@@ -383,12 +394,17 @@ function veLoadTopology() {
           veTabCounter = data.tabCounter || data.tabs.length;
           
           data.tabs.forEach(function(t) {
+            // Yükleme sırasında hafiflet: eski dosyalarda iç içe subTopology blobları
+            // undo geçmişi + tam simResults taşıyabilir → belleği şişirir, editör
+            // açınca RangeError'a yol açar. Sonuçlar KORUNUR (seyreltilerek).
+            var st = (t.state && typeof veSanitizeEmbeddedState === 'function')
+              ? veSanitizeEmbeddedState(t.state) : t.state;
             veTabs.push({
               id: t.id,
               name: t.name,
-              state: t.state,
-              nodeCount: (t.state && t.state.nodes) ? t.state.nodes.length : 0,
-              connCount: (t.state && t.state.connections) ? t.state.connections.length : 0
+              state: st,
+              nodeCount: (st && st.nodes) ? st.nodes.length : 0,
+              connCount: (st && st.connections) ? st.connections.length : 0
             });
           });
           

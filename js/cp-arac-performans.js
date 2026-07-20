@@ -193,6 +193,10 @@ function veAracCloseEditor(_silent){
   try {
     if(typeof veFlushOpenPanelData === 'function') veFlushOpenPanelData();
     var subState = veSerializeCurrentState();
+    // Gömmeden ÖNCE hafiflet: undo/redo geçmişini at, sonuçları seyrelt, iç içe
+    // alt-topolojileri özyinelemeli temizle → çarpımsal büyüme (RangeError: Invalid
+    // string length) ve otomatik-yedek kota taşması önlenir.
+    if(typeof veSanitizeEmbeddedState === 'function') subState = veSanitizeEmbeddedState(subState);
     var ctx = veAracStack.pop();
 
     // Alt-topolojiyi ebeveyn state'indeki ilgili düğümün data'sına yaz
