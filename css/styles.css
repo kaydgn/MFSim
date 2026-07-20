@@ -1139,30 +1139,32 @@
   position:absolute;
   top:100%;
   left:0;
-  min-width:180px;
+  min-width:190px;
   background:var(--bg-secondary);
   border:1px solid var(--border-color);
-  border-radius:0;
+  border-radius:var(--radius-md);
   box-shadow:var(--shadow-lg);
   z-index:999999;
-  padding:4px 0;
-  margin-top:2px;
+  padding:5px;
+  margin-top:4px;
 }
 .ve-menu-item{
-  padding:6px 14px;
+  padding:6px 10px;
+  border-radius:var(--radius-sm);
   font-size:0.7rem;
   color:var(--text-primary);
   cursor:pointer;
-  transition:background 0.15s;
+  transition:background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
+/* İnset yuvarlak highlight; tam-mavi yerine aksan-tint → tehlike (Çıkış) kırmızısı korunur */
 .ve-menu-item:hover{
-  background:var(--accent-primary);
-  color:white;
+  background:color-mix(in srgb, var(--accent-primary) 14%, transparent);
+  color:var(--text-heading);
 }
 .ve-menu-divider{
   height:1px;
   background:var(--border-color);
-  margin:4px 8px;
+  margin:4px 6px;
 }
 
 .ve-toolbar-btn{
@@ -1959,13 +1961,15 @@
 }
 
 .ve-context-item{
-  padding:8px 14px;
+  padding:7px 10px;
+  margin:0 4px;
+  border-radius:var(--radius-sm);
   cursor:pointer;
   display:flex;
   align-items:center;
   gap:8px;
   color:var(--text-primary);
-  transition:background 0.15s;
+  transition:background var(--dur-fast) var(--ease-out);
 }
 
 .ve-context-item:hover{
@@ -1983,7 +1987,7 @@
 .ve-context-divider{
   height:1px;
   background:var(--border-color);
-  margin:4px 0;
+  margin:4px 8px;
 }
 
 /* Seçili bağlantı */

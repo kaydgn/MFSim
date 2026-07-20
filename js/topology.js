@@ -524,26 +524,26 @@ function veShowTabMenu(e, idx) {
   
   var menu = document.createElement('div');
   menu.id = 've-tab-context-menu';
-  menu.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + e.clientY + 'px;z-index:200000;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:0;box-shadow:0 4px 16px rgba(0,0,0,0.3);padding:4px 0;min-width:150px;';
-  
+  menu.style.cssText = 'position:fixed;left:' + e.clientX + 'px;top:' + e.clientY + 'px;z-index:200000;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-md);box-shadow:var(--shadow-lg);padding:5px;min-width:160px;';
+
   var items = [
-    { label: '✏️ Yeniden Adlandır', fn: function() { veRenameTab(idx); } },
-    { label: '📋 Çoğalt', fn: function() { veDuplicateTab(idx); } },
+    { icon: 'edit',      label: 'Yeniden Adlandır', fn: function() { veRenameTab(idx); } },
+    { icon: 'clipboard', label: 'Çoğalt',           fn: function() { veDuplicateTab(idx); } },
     { label: 'sep' },
-    { label: '✕ Kapat', fn: function() { veCloseTab(idx); }, danger: true }
+    { icon: 'x',         label: 'Kapat', fn: function() { veCloseTab(idx); }, danger: true }
   ];
-  
+
   items.forEach(function(item) {
     if(item.label === 'sep') {
       var d = document.createElement('div');
-      d.style.cssText = 'height:1px;background:var(--border-color);margin:4px 8px;';
+      d.style.cssText = 'height:1px;background:var(--border-color);margin:4px 6px;';
       menu.appendChild(d);
       return;
     }
     var el = document.createElement('div');
-    el.style.cssText = 'padding:6px 14px;font-size:0.7rem;cursor:pointer;color:' + (item.danger ? 'var(--accent-danger)' : 'var(--text-primary)') + ';transition:background 0.1s;';
-    el.textContent = item.label;
-    el.onmouseover = function() { this.style.background = 'var(--bg-tertiary)'; };
+    el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius-sm);font-size:0.7rem;cursor:pointer;color:' + (item.danger ? 'var(--accent-danger)' : 'var(--text-primary)') + ';transition:background 0.12s;';
+    el.innerHTML = '<span class="mf-ico mf-ico-' + item.icon + '"></span><span>' + item.label + '</span>';
+    el.onmouseover = function() { this.style.background = item.danger ? 'color-mix(in srgb, var(--accent-danger) 15%, transparent)' : 'var(--bg-tertiary)'; };
     el.onmouseout = function() { this.style.background = 'transparent'; };
     el.onclick = function() { menu.remove(); item.fn(); };
     menu.appendChild(el);
