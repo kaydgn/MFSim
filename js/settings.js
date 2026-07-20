@@ -348,11 +348,7 @@ function _veSettingsApplyProjectData(data) {
   if(typeof veLoadTabState === 'function') veLoadTabState(veTabs[veActiveTabIdx]);
   if(data.projectName) {
     veProjectName = data.projectName;
-    var btn = document.getElementById('ve-project-name-btn');
-    if(btn) {
-      var shortName = veProjectName.length > 18 ? veProjectName.substring(0, 16) + '…' : veProjectName;
-      btn.textContent = '⚙ ' + shortName + ' ▾';
-    }
+    if(typeof veSetProjectNameButton === 'function') veSetProjectNameButton(veProjectName);
   }
   if(typeof veRenderTabs === 'function') veRenderTabs();
   return true;

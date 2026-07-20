@@ -78,8 +78,7 @@ function veNewProject() {
     veTabCounter = 0;
     compCounter = 0;
     veProjectName = '';
-    var btn = document.getElementById('ve-project-name-btn');
-    if(btn) btn.textContent = '⚙ MFSim ▾';
+    veSetProjectNameButton('MFSim');
     veAddTab('Topoloji 1');
     showToast('Yeni proje oluşturuldu');
   };
@@ -93,6 +92,24 @@ function veNewProject() {
 
 // Proje adı - dosya adından veya topolojiden otomatik al
 var veProjectName = '';
+
+// Marka / proje-adı butonunu tutarlı ve yapısal biçimde çizer:
+// [ikon kutusu] [proje adı] [chevron]. İsim boşsa ya da uygulamanın kendi
+// <title>'ıysa sade "MFSim" markası gösterilir (kırpılmış başlık görünmez).
+// textContent = gösterilen isim → results.js'in geri-okuması korunur.
+function veSetProjectNameButton(name) {
+  var btn = document.getElementById('ve-project-name-btn');
+  if(!btn) return;
+  var raw = (name == null ? '' : String(name)).trim();
+  if(!raw || raw === (document.title || '').trim()) raw = 'MFSim';
+  var display = raw.length > 22 ? raw.substring(0, 20) + '…' : raw;
+  btn.innerHTML =
+    '<span class="ve-brand-mark"><span class="mf-ico mf-ico-settings"></span></span>' +
+    '<span class="ve-brand-name"></span>' +
+    '<span class="mf-ico mf-ico-chevron-down ve-brand-chev"></span>';
+  btn.querySelector('.ve-brand-name').textContent = display;
+}
+
 (function() {
   // Dosya adından proje adı çıkar
   var title = document.title || '';
@@ -106,11 +123,7 @@ var veProjectName = '';
   }
   // Proje buton metnini güncelle
   setTimeout(function() {
-    var btn = document.getElementById('ve-project-name-btn');
-    if(btn && veProjectName) {
-      var shortName = veProjectName.length > 18 ? veProjectName.substring(0, 16) + '…' : veProjectName;
-      btn.textContent = '⚙ ' + shortName + ' ▾';
-    }
+    veSetProjectNameButton(veProjectName);
   }, 500);
 })();
 
@@ -311,11 +324,7 @@ function veLoadTopology() {
           
           if(data.projectName) {
             veProjectName = data.projectName;
-            var btn = document.getElementById('ve-project-name-btn');
-            if(btn) {
-              var shortName = veProjectName.length > 18 ? veProjectName.substring(0, 16) + '…' : veProjectName;
-              btn.textContent = '⚙ ' + shortName + ' ▾';
-            }
+            veSetProjectNameButton(veProjectName);
           }
           
           veRenderTabs();
