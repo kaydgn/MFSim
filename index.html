@@ -637,77 +637,22 @@
         
         <!-- Aksiyon Butonları -->
         <div style="padding:6px 8px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
+          <button onclick="veChangeResultLayout()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-primary)';this.style.color='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Panel yerleşimini değiştir (düzen seçiciyi aç)"><span class="mf-ico mf-ico-grid-cells"></span>Panel Düzeni</button>
           <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle"><span class="mf-ico mf-ico-trash"></span>Sonuçları Temizle</button>
           <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)"><span class="mf-ico mf-ico-bar-chart"></span>Detaylı Rapor İndir</button>
         </div>
       </div>
       
       <!-- Sağ Panel: Dinamik Panel Grid -->
+      <!-- Paneller artık statik değil: Sonuçlar sekmesine girildiğinde önce
+           düzen seçici (veRenderLayoutChooser) gösterilir; kullanıcı bir
+           yerleşim seçince izgara #ve-results-panels içine JS ile üretilir
+           (veBuildResultsGrid / veApplyResultLayout). -->
       <div class="ve-results-grid" id="ve-results-grid" style="position:relative;">
         <!-- Detaylı Rapor Overlay -->
         <div id="ve-report-overlay"></div>
-        <!-- Üst satır -->
-        <div class="ve-results-row" id="ve-results-row-0" style="flex:1;">
-          <!-- Slot 0 (sol üst) -->
-          <div class="ve-rslot" id="ve-rslot-0" data-slot="0">
-            <div class="ve-rslot-hdr">
-              <div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-0">Panel 1</span></div>
-              <div class="ve-rslot-btns">
-                <button class="btn-collapse" onclick="veSlotToggle(0)" title="Daralt / Genişlet">▼</button>
-                <button class="btn-close" onclick="veSlotClear(0)" title="Temizle">✕</button>
-              </div>
-            </div>
-            <div class="ve-rslot-body" id="ve-rslot-body-0"></div>
-          </div>
-          
-          <!-- Sütun ayırıcı -->
-          <div class="ve-results-col-resizer" data-row="0"></div>
-          
-          <!-- Slot 1 (sağ üst) -->
-          <div class="ve-rslot" id="ve-rslot-1" data-slot="1">
-            <div class="ve-rslot-hdr">
-              <div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-1">Panel 2</span></div>
-              <div class="ve-rslot-btns">
-                <button class="btn-collapse" onclick="veSlotToggle(1)" title="Daralt / Genişlet">▼</button>
-                <button class="btn-close" onclick="veSlotClear(1)" title="Temizle">✕</button>
-              </div>
-            </div>
-            <div class="ve-rslot-body" id="ve-rslot-body-1"></div>
-          </div>
-        </div>
-        
-        <!-- Satır ayırıcı -->
-        <div class="ve-results-row-resizer" id="ve-row-resizer-0"></div>
-        
-        <!-- Alt satır -->
-        <div class="ve-results-row" id="ve-results-row-1" style="flex:1;">
-          <!-- Slot 2 (sol alt) -->
-          <div class="ve-rslot" id="ve-rslot-2" data-slot="2">
-            <div class="ve-rslot-hdr">
-              <div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-2">Panel 3</span></div>
-              <div class="ve-rslot-btns">
-                <button class="btn-collapse" onclick="veSlotToggle(2)" title="Daralt / Genişlet">▼</button>
-                <button class="btn-close" onclick="veSlotClear(2)" title="Temizle">✕</button>
-              </div>
-            </div>
-            <div class="ve-rslot-body" id="ve-rslot-body-2"></div>
-          </div>
-          
-          <!-- Sütun ayırıcı -->
-          <div class="ve-results-col-resizer" data-row="1"></div>
-          
-          <!-- Slot 3 (sağ alt) -->
-          <div class="ve-rslot" id="ve-rslot-3" data-slot="3">
-            <div class="ve-rslot-hdr">
-              <div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-3">Panel 4</span></div>
-              <div class="ve-rslot-btns">
-                <button class="btn-collapse" onclick="veSlotToggle(3)" title="Daralt / Genişlet">▼</button>
-                <button class="btn-close" onclick="veSlotClear(3)" title="Temizle">✕</button>
-              </div>
-            </div>
-            <div class="ve-rslot-body" id="ve-rslot-body-3"></div>
-          </div>
-        </div>
+        <!-- Panel alanı (düzen seçici veya seçilen izgara buraya çizilir) -->
+        <div id="ve-results-panels" style="flex:1; display:flex; flex-direction:column; min-width:0; min-height:0;"></div>
       </div>
   </div>
   
