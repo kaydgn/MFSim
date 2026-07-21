@@ -5575,9 +5575,10 @@ function veToggleFlow() {
 function veCycleGridDensity() {
   veGridDensity = (veGridDensity + 1) % veGridSizes.length;
   var size = veGridSizes[veGridDensity];
-  var wrapper = document.getElementById('ve-canvas-wrapper');
-  if(wrapper) {
-    wrapper.style.backgroundSize = size + 'px ' + size + 'px';
+  // Izgara artık #ve-canvas'ta (bileşenlerle birlikte hareket eder) → boyutu orada güncelle
+  var canvasEl = document.getElementById('ve-canvas');
+  if(canvasEl) {
+    canvasEl.style.backgroundSize = size + 'px ' + size + 'px';
   }
   // Snapshot panelini de güncelle
   var snap = document.querySelector('.ve-snapshot-pane');
