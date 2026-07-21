@@ -2,9 +2,11 @@
 // PENCERE SÜRÜKLEME — Bileşen Özellik Penceresi (#ve-properties)
 // ============================================================================
 // Bileşene çift tıklayınca / marker'a tıklayınca açılan özellik penceresini
-// başlığından tutup sürüklenebilir yapar. Kullanıcının koyduğu konum
-// localStorage'a kaydedilir ve SONRAKİ TÜM açılışlar aynı konumda gelir
-// (tek global konum — pencere tipi ayrımı yok).
+// başlığından tutup sürüklenebilir yapar. Pencere HER AÇILIŞTA ve başka bir
+// bileşene geçişte ORTALANIR — sürükleme kalıcı değildir (localStorage'a
+// kaydedilmez). Sürüklenen konum yalnızca aynı bileşenin penceresi açık kaldığı
+// sürece (sekme/profil vb. yerinde yenilemelerde) korunur; bileşen değişince
+// veya pencere yeniden açılınca ortaya döner.
 //
 // Tasarım notları:
 //  - Sürükleme sırasında pencere `position:absolute; left/top` (viewport
@@ -12,8 +14,9 @@
 //  - Konum her uygulanışta viewport'a clamp'lenir → ekran küçülse/değişse bile
 //    pencere ekran dışına kaçmaz, başlık her zaman erişilebilir kalır.
 //  - Açılış, #ve-properties-overlay üzerinde MutationObserver ile yakalanır;
-//    map.js'teki veTogglePropertiesPanel'e dokunmaya gerek yok.
-//  - Başlığa ÇİFT TIK → konumu sıfırlar (ortaya döner, kayıt silinir).
+//    display:flex olunca pencere doğrudan resetToCenter ile ortalanır.
+//  - Bileşen değişiminde ortalama cp-core.js showNodeProperties'te tetiklenir.
+//  - Başlığa ÇİFT TIK → konumu anında ortalar.
 //
 // Test edilebilir saf fonksiyonlar module.exports ile dışa verilir.
 // ============================================================================
@@ -147,12 +150,11 @@
     if (!_drag.active) return;
     _drag.active = false;
     if (global.document && global.document.body) global.document.body.classList.remove('ve-window-dragging');
-    var win = _drag.win;
     _drag.win = null;
-    if (!win) return;
-    var left = parseFloat(win.style.left) || 0;
-    var top  = parseFloat(win.style.top)  || 0;
-    savePos(left, top);
+    // Sürükleme KALICI DEĞİL: konum localStorage'a kaydedilmez. Pencere her
+    // açılışta ve başka bileşene geçişte ortalanır (bkz. cp-core.js
+    // showNodeProperties → VEWindowDrag.resetToCenter). Sürüklenen konum yalnız
+    // aynı bileşen açık kaldığı sürece (yerinde yenilenmelerde) korunur.
   }
 
   // Başlığa çift tık → konumu sıfırla
@@ -169,6 +171,9 @@
     var ov = global.document.getElementById(OVERLAY_ID);
     if (!ov) return;
 
+    // Eski sürümden kalan kayıtlı konumu temizle (artık kalıcılık yok).
+    clearPos();
+
     // Sürükleme dinleyicileri (başlık delege — pencere içeriği yeniden yazılsa da kalır)
     ov.addEventListener('mousedown', function(e) {
       if (e.target.closest && e.target.closest(HEADER_SEL)) _onHeaderMouseDown(e);
@@ -179,12 +184,13 @@
     global.document.addEventListener('mousemove', _onMouseMove);
     global.document.addEventListener('mouseup', _onMouseUp);
 
-    // Açılışı yakala: overlay display:flex olunca kayıtlı konumu uygula.
-    // (rAF ile paint öncesi uygula → zıplama olmaz.)
+    // Açılışı yakala: overlay display:flex olunca pencereyi ORTALA.
+    // (rAF ile paint öncesi uygula → zıplama olmaz.) Kalıcı konum yok — her
+    // açılış ortadan başlar; bileşen değişimi cp-core.js'te ele alınır.
     var apply = function() {
       if (ov.style.display === 'flex') {
-        if (global.requestAnimationFrame) global.requestAnimationFrame(applyStoredPosition);
-        else applyStoredPosition();
+        if (global.requestAnimationFrame) global.requestAnimationFrame(function() { resetToCenter(); });
+        else resetToCenter();
       }
     };
     if (typeof global.MutationObserver === 'function') {
