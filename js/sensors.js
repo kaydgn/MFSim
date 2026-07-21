@@ -1003,8 +1003,10 @@ function getSensorWizardPropertiesHTML(node) {
   var topo = swScanTopology();
   var isInstalled = node.data && node.data.sensorsInstalled;
   var installedPkgs = (node.data && node.data.installedPackages) || [];
-  var html = '<div class="sw-panel">';
+  var html = '<div class="sw-panel ve-cp-panel">';
 
+  // İKİ SÜTUN: SOL = durum + topoloji + kur/kaldır, SAĞ = diyagram paketleri + footer
+  html += '<div class="ve-cp-grid"><div class="ve-cp-col ve-cp-col--in">';
   // ── Durum Çubuğu ──
   if(isInstalled) {
     var sCount = (node.data.activeSensors || []).length;
@@ -1078,6 +1080,8 @@ function getSensorWizardPropertiesHTML(node) {
     if(firstEnabled) { swActiveTab = firstEnabled.id; }
   }
 
+  html += '</div>';                                   // ve-cp-col--in kapat
+  html += '<div class="ve-cp-col ve-cp-col--out">';   // SAĞ: diyagram paketleri + footer
   html += '<div class="sw-section">';
   html += '<div class="sw-section-title">Diyagram Paketleri</div>';
   html += '<div class="sw-tab-bar">';
@@ -1203,6 +1207,8 @@ function getSensorWizardPropertiesHTML(node) {
   html += '<div style="text-align:center;margin-top:6px;">';
   html += '<button class="sw-btn sw-btn-outline" style="font-size:0.56rem;padding:3px 10px;" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)showNodeProperties(w);">Durumu Yenile</button>';
   html += '</div>';
+  html += '</div>';                                   // ve-cp-col--out kapat
+  html += '</div>';                                   // ve-cp-grid kapat
 
   html += '</div>';
   return html;
