@@ -4286,6 +4286,173 @@ function veFilterResultsTree(query) {
 var veResultSlots = [{},{},{},{}];
 var veSlotCollapsed = [false, false, false, false];
 
+// ===== SONUCLAR: PANEL DUZENI (LAYOUT) SECIMI =====
+// Sonuclar sekmesine ilk gecildiginde paneller otomatik acilmaz; once kullaniciya
+// bir yerlesim (layout) sectirilir. Her duzen, satir satir hangi slot indekslerinin
+// gosterilecegini tanimlar. Slotlar daima 0..N-1 sirasiyla kullanilir; boylece mevcut
+// slot fonksiyonlari (0..3) hicbir degisiklik olmadan calisir.
+var veResultLayout = null;   // null => henuz duzen secilmedi (secici ekrani gosterilir)
+
+var VE_RESULT_LAYOUTS = [
+  {
+    id: 'single', label: '1 Panel', desc: 'Tek geniş panel',
+    rows: [[0]],
+    preview: '<rect x="3" y="3" width="58" height="38" rx="3"/>'
+  },
+  {
+    id: 'dual', label: '2 Panel', desc: 'Yan yana iki panel',
+    rows: [[0, 1]],
+    preview: '<rect x="3" y="3" width="27.5" height="38" rx="3"/><rect x="33.5" y="3" width="27.5" height="38" rx="3"/>'
+  },
+  {
+    id: 'triple', label: '3 Panel', desc: 'Üstte bir, altta iki',
+    rows: [[0], [1, 2]],
+    preview: '<rect x="3" y="3" width="58" height="17.5" rx="3"/><rect x="3" y="23.5" width="27.5" height="17.5" rx="3"/><rect x="33.5" y="23.5" width="27.5" height="17.5" rx="3"/>'
+  },
+  {
+    id: 'quad', label: '4 Panel', desc: '2×2 dörtlü ızgara',
+    rows: [[0, 1], [2, 3]],
+    preview: '<rect x="3" y="3" width="27.5" height="17.5" rx="3"/><rect x="33.5" y="3" width="27.5" height="17.5" rx="3"/><rect x="3" y="23.5" width="27.5" height="17.5" rx="3"/><rect x="33.5" y="23.5" width="27.5" height="17.5" rx="3"/>'
+  }
+];
+
+function veGetLayoutDef(id) {
+  for(var i = 0; i < VE_RESULT_LAYOUTS.length; i++) {
+    if(VE_RESULT_LAYOUTS[i].id === id) return VE_RESULT_LAYOUTS[i];
+  }
+  return null;
+}
+
+// Sonuclar sekmesine girisin tek giris noktasi: veri agacini tazeler, ardindan
+// duzen secili degilse secici ekranini, seciliyse mevcut izgarayi hazirlar.
+function veEnterResults() {
+  if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
+  veUpdateResultsTree();
+  if(veResultLayout == null) {
+    veRenderLayoutChooser();
+  } else if(!document.getElementById('ve-rslot-0')) {
+    // Duzen secili ama izgara henuz kurulmamis (ilk uygulama) — kur.
+    veApplyResultLayout(veResultLayout);
+  } else {
+    // Izgara zaten duruyor (sekmeler arasi gecis) — bos slotlarin secicilerini tazele.
+    veInitResultSlots();
+  }
+}
+
+// Duzen secici ekrani: panel alanina 3-4 yerlesim karti cizer.
+function veRenderLayoutChooser() {
+  var host = document.getElementById('ve-results-panels');
+  if(!host) return;
+  var html = '<div class="ve-layout-chooser">';
+  html += '<div class="ve-layout-chooser-head">';
+  html += '<div class="ve-layout-chooser-title">Panel düzenini seçin</div>';
+  html += '<div class="ve-layout-chooser-sub">Sonuçları görüntülemek için bir yerleşim seçin. Daha sonra sol alttaki <strong>Panel Düzeni</strong> ile değiştirebilirsiniz.</div>';
+  html += '</div>';
+  html += '<div class="ve-layout-cards">';
+  VE_RESULT_LAYOUTS.forEach(function(L) {
+    html += '<div class="ve-layout-card" onclick="veApplyResultLayout(\'' + L.id + '\')" title="' + L.desc + '" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();veApplyResultLayout(\'' + L.id + '\');}">';
+    html += '<div class="ve-layout-preview"><svg viewBox="0 0 64 44" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' + L.preview + '</svg></div>';
+    html += '<div class="ve-layout-card-label">' + L.label + '</div>';
+    html += '<div class="ve-layout-card-desc">' + L.desc + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '</div>';
+  host.innerHTML = html;
+}
+
+// Secilen duzenin satir/slot yapisini panel alanina uretir (izgara + ayiricilar).
+function veBuildResultsGrid(layoutId) {
+  var host = document.getElementById('ve-results-panels');
+  var def = veGetLayoutDef(layoutId);
+  if(!host || !def) return;
+  var html = '';
+  def.rows.forEach(function(slotIdxs, rowIdx) {
+    if(rowIdx > 0) {
+      // Satir ayiricisi (veInitRowResizer 've-row-resizer-0' id'sini bekler)
+      html += '<div class="ve-results-row-resizer" id="ve-row-resizer-' + (rowIdx - 1) + '"></div>';
+    }
+    html += '<div class="ve-results-row" id="ve-results-row-' + rowIdx + '" style="flex:1;">';
+    slotIdxs.forEach(function(slotIdx, colPos) {
+      if(colPos > 0) html += '<div class="ve-results-col-resizer" data-row="' + rowIdx + '"></div>';
+      html += veSlotShellHTML(slotIdx);
+    });
+    html += '</div>';
+  });
+  host.innerHTML = html;
+}
+
+// Tek bir slot kabugunun HTML'i (baslik + daralt/kapat butonlari + govde).
+function veSlotShellHTML(slotIdx) {
+  var h = '<div class="ve-rslot" id="ve-rslot-' + slotIdx + '" data-slot="' + slotIdx + '">';
+  h += '<div class="ve-rslot-hdr">';
+  h += '<div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-' + slotIdx + '">Panel ' + (slotIdx + 1) + '</span></div>';
+  h += '<div class="ve-rslot-btns">';
+  h += '<button class="btn-collapse" onclick="veSlotToggle(' + slotIdx + ')" title="Daralt / Genişlet">▼</button>';
+  h += '<button class="btn-close" onclick="veSlotClear(' + slotIdx + ')" title="Temizle">✕</button>';
+  h += '</div></div>';
+  h += '<div class="ve-rslot-body" id="ve-rslot-body-' + slotIdx + '"></div>';
+  h += '</div>';
+  return h;
+}
+
+// Bir duzeni uygula: izgarayi kur, kullanilmayan slotlarin durumunu temizle,
+// aktif slotlari (varsa verisiyle) tekrar cizdir.
+function veApplyResultLayout(layoutId) {
+  var def = veGetLayoutDef(layoutId);
+  if(!def) return;
+  veResultLayout = layoutId;
+
+  // Bu duzende kullanilan slot indeksleri
+  var used = {};
+  def.rows.forEach(function(r) { r.forEach(function(i) { used[i] = true; }); });
+
+  // Kullanilmayan slotlarin durumunu sifirla (izgarada olmayan slot hayalet veri tutmasin)
+  for(var i = 0; i < 4; i++) {
+    if(!used[i]) { veResultSlots[i] = {}; veSlotCollapsed[i] = false; }
+  }
+
+  // Izgarayi kur ve ayiricilarini baglat
+  veBuildResultsGrid(layoutId);
+  veInitRowResizer();
+  veInitColResizers();
+
+  // Aktif slotlari icerige gore cizdir (verisi olan grafik, bos olan secici)
+  for(var s = 0; s < 4; s++) {
+    if(!used[s]) continue;
+    var slot = veResultSlots[s];
+    if(slot && slot.sensors && slot.sensors.length > 0) veRenderSlot(s);
+    else veRenderSlotPicker(s);
+    // Onceki daralt durumunu gorsele yansit
+    var el = document.getElementById('ve-rslot-' + s);
+    if(el && veSlotCollapsed[s]) {
+      el.classList.add('collapsed');
+      var cb = el.querySelector('.btn-collapse');
+      if(cb) cb.textContent = '▶';
+    }
+  }
+
+  // Simulasyon verisi varsa grafikleri ciz
+  if(window.veSimResults) veRefreshAllCharts();
+
+  // Acilis animasyonunu yeniden tetikle (yeni paneller yumusakca belirir)
+  var _resPage = document.getElementById('ve-page-sonuclar');
+  if(_resPage) { _resPage.classList.remove('ve-reveal-play'); void _resPage.offsetWidth; _resPage.classList.add('ve-reveal-play'); }
+}
+
+// "Panel Duzeni" butonu: secici ekranina geri don. Slot durumu bellekte korunur;
+// ayni/daha genis duzen secilirse mevcut paneller geri gelir.
+function veChangeResultLayout() {
+  // Sonuclar sekmesinde degilsek once oraya gec
+  if(typeof veSubTabDegistir === 'function' && typeof currentSubTab !== 'undefined' && currentSubTab !== 'sonuclar') {
+    veSubTabDegistir('sonuclar');
+  }
+  veResultLayout = null;
+  var ov = document.getElementById('ve-report-overlay');
+  if(ov) ov.style.display = 'none';
+  veRenderLayoutChooser();
+}
+
 function veInitResultSlots() {
   for(var i = 0; i < 4; i++) {
     if(!veResultSlots[i].sensors || veResultSlots[i].sensors.length === 0) {
