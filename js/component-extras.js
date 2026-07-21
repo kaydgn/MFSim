@@ -516,8 +516,10 @@ function getObstacleCrossingPropertiesHTML(node) {
   var selectedGearIdx = d.selectedGearIdx !== undefined ? d.selectedGearIdx : 0;
   var selectedGearRatio = (ftGears.length > 0 && selectedGearIdx < ftGears.length) ? ftGears[selectedGearIdx].ratio : '—';
 
-  var html = '<div class="sw-panel">';
+  var html = '<div class="sw-panel ve-cp-panel">';
 
+  // İKİ SÜTUN (kart yığını): SOL = Araç + Engel, SAĞ = Lastik + Aktarma + Parametrik
+  html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
   // ═══════ ARAÇ PARAMETRELERİ ═══════
   html += '<div class="sw-section-title">Araç Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
@@ -560,6 +562,8 @@ function getObstacleCrossingPropertiesHTML(node) {
 
   html += '</table>';
 
+  html += '</div>';                                   // ve-cp-col (sol) kapat
+  html += '<div class="ve-cp-col">';                  // SAĞ sütun: lastik + aktarma + parametrik
   // ═══════ LASTİK PARAMETRELERİ ═══════
   html += '<div class="sw-section-title" style="margin-top:10px;">Lastik Parametreleri</div>';
   html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:10px;">';
@@ -635,6 +639,8 @@ function getObstacleCrossingPropertiesHTML(node) {
   html += '<input type="checkbox" id="ve-obs-load-transfer-' + nid + '" ' + (loadTransferEnabled ? 'checked' : '') + ' onchange="onVEObstacleCrossingChange(\'' + nid + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
   html += '<div><div style="font-weight:600;">Yük Transferi Analizi</div><div style="font-size:0.52rem; color:var(--text-muted); margin-top:2px;">Ağırlık merkezi kaymasıyla engel aşma kabiliyetinin parametrik analizi. Sonuçlar TXT raporunda gösterilir.</div></div>';
   html += '</label>';
+  html += '</div>';                                   // ve-cp-col (sağ) kapat
+  html += '</div>';                                   // ve-cp-grid kapat
 
   html += '</div>';
   return html;
