@@ -748,8 +748,9 @@
     /* Birincil butonlarda hafif basma geri bildirimi */
     .sw-btn:active,
     .ve-solver-btn:active,
+    .ve-settings-btn:active,
     .mfsim-login-btn:active {
-      transform: translateY(1px);
+      transform: scale(0.97);
     }
 
 /* ===== TAB SİSTEMİ ===== */
@@ -1869,6 +1870,18 @@
   box-shadow:0 0 0 3px rgba(59,130,246,0.3);
 }
 
+/* Yeni bileşen canvas'a eklenince yaylanarak belirir (drop-in) — yalnızca
+   kullanıcı eklemesinde (createNode); restore/load ayrı yoldan render eder. */
+.ve-node.ve-node-dropin{ animation:veNodeDrop 0.40s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes veNodeDrop{
+  0%{ opacity:0; transform:scale(0.5); }
+  60%{ opacity:1; }
+  100%{ opacity:1; transform:scale(1); }
+}
+@media (prefers-reduced-motion: reduce){
+  .ve-node.ve-node-dropin{ animation:none; }
+}
+
 /* Etiket, düğüm KUTUSUNUN merkezine göre ortalanır. Mutlak konumlandırma ile
    akıştan çıkarılır → kutu (portlar/bağlantılar node.x'e göre hesaplanır) sola
    yaslı kalır; uzun etiket kutuyu genişletip kaydırmadan iki yana eşit taşar. */
@@ -2668,7 +2681,15 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   padding:6px 0;
   font-size:0.8rem;
   border-bottom:1px solid var(--border-light);
+  /* Doğrula'ya basınca öğeler kayarak gelir (render'da tetiklenir, kademe'li) */
+  animation:veValItemIn 0.32s var(--ease-out) both;
 }
+.ve-validation-item:nth-child(2){ animation-delay:0.05s; }
+.ve-validation-item:nth-child(3){ animation-delay:0.10s; }
+.ve-validation-item:nth-child(4){ animation-delay:0.15s; }
+.ve-validation-item:nth-child(n+5){ animation-delay:0.20s; }
+@keyframes veValItemIn{ from{ opacity:0; transform:translateX(-6px); } to{ opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce){ .ve-validation-item{ animation:none; } }
 .ve-validation-item:last-child{border-bottom:none;}
 .ve-validation-ok{color:var(--accent-success);}
 .ve-validation-err{color:var(--accent-danger);}

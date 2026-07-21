@@ -649,6 +649,10 @@ function createNode(type, x, y, width, height) {
   }
 
   document.getElementById('ve-canvas').appendChild(nodeEl);
+  // Drop-in animasyonu: yeni bileşen yaylanarak belirir (yalnızca kullanıcı
+  // eklemesi; restore/load bu yolu kullanmaz). reduced-motion'da CSS ile kapalı.
+  nodeEl.classList.add('ve-node-dropin');
+  nodeEl.addEventListener('animationend', function(){ nodeEl.classList.remove('ve-node-dropin'); }, { once:true });
   updateNodeCount();
   
   // Bileşeni hemen seç — setTimeout ile DOM render'ın tamamlanmasını garanti et
