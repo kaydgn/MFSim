@@ -1728,6 +1728,98 @@
   .ve-minimap, .ve-minimap-toggle{ transition:none; }
 }
 
+/* ── Komut paleti (Ctrl/⌘+K) — aranabilir eylem menüsü ──────────────────── */
+.ve-cmdk-overlay{
+  position:fixed; inset:0; z-index:10000;
+  display:flex; align-items:flex-start; justify-content:center;
+  padding-top:12vh;
+  background:rgba(9,14,24,.48);
+  -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+  opacity:0; transition:opacity var(--dur-fast,.14s) ease;
+}
+.ve-cmdk-overlay[hidden]{ display:none; }
+.ve-cmdk-overlay.open{ opacity:1; }
+.ve-cmdk-panel{
+  width:min(620px,92vw);
+  background:var(--bg-secondary);
+  border:1px solid var(--border-color);
+  border-radius:var(--radius-lg,12px);
+  box-shadow:0 24px 70px rgba(0,0,0,.42), 0 2px 10px rgba(0,0,0,.25);
+  overflow:hidden;
+  transform:translateY(-8px) scale(.985);
+  transition:transform var(--dur-base,.2s) var(--ease-out,cubic-bezier(.16,1,.3,1));
+}
+.ve-cmdk-overlay.open .ve-cmdk-panel{ transform:none; }
+.ve-cmdk-search{
+  display:flex; align-items:center; gap:10px;
+  padding:14px 16px; border-bottom:1px solid var(--border-color);
+}
+.ve-cmdk-search-ico{ color:var(--text-muted); flex:none; font-size:1.05rem; }
+#ve-cmdk-input{
+  flex:1; border:none; outline:none; background:transparent;
+  font-family:var(--font-sans,inherit); font-size:1rem; color:var(--text-primary);
+  padding:2px 0;
+}
+#ve-cmdk-input::placeholder{ color:var(--text-muted); }
+.ve-cmdk-kbd, .ve-cmdk-foot kbd{
+  font-family:var(--font-mono,ui-monospace,monospace); font-size:.66rem; font-weight:600;
+  color:var(--text-secondary); background:var(--bg-tertiary,var(--bg-primary));
+  border:1px solid var(--border-color); border-bottom-width:2px;
+  border-radius:5px; padding:2px 6px; line-height:1; flex:none;
+}
+.ve-cmdk-list{
+  max-height:min(52vh,420px); overflow-y:auto; padding:7px;
+  scrollbar-width:thin;
+}
+.ve-cmdk-item{
+  display:flex; align-items:center; gap:12px;
+  padding:9px 12px; border-radius:var(--radius-sm,7px);
+  cursor:pointer; user-select:none;
+}
+.ve-cmdk-item.active{ background:var(--accent-primary); }
+.ve-cmdk-ico{
+  flex:none; width:20px; display:flex; align-items:center; justify-content:center;
+  color:var(--text-secondary);
+}
+.ve-cmdk-ico .mf-ico{ font-size:1rem; }
+.ve-cmdk-item.active .ve-cmdk-ico,
+.ve-cmdk-item.active .ve-cmdk-label{ color:#fff; }
+.ve-cmdk-label{
+  flex:1; font-size:.9rem; color:var(--text-primary);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ve-cmdk-sec{
+  flex:none; font-size:.66rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
+  color:var(--text-muted);
+  background:var(--bg-tertiary,var(--bg-primary));
+  border:1px solid var(--border-color);
+  border-radius:999px; padding:2px 9px;
+}
+.ve-cmdk-item.active .ve-cmdk-sec{
+  color:#fff; background:rgba(255,255,255,.18); border-color:rgba(255,255,255,.28);
+}
+.ve-cmdk-empty{ padding:26px 16px; text-align:center; color:var(--text-muted); font-size:.86rem; }
+.ve-cmdk-foot{
+  display:flex; align-items:center; gap:14px;
+  padding:9px 14px; border-top:1px solid var(--border-color);
+  font-size:.7rem; color:var(--text-muted);
+}
+.ve-cmdk-foot span{ display:inline-flex; align-items:center; gap:5px; }
+.ve-cmdk-foot-grow{ flex:1; }
+.ve-cmdk-brand{ font-weight:700; letter-spacing:.06em; color:var(--text-secondary); opacity:.8; }
+/* Toolbar tetikleyici — arama ikonu + ⌘K ipucu (keşfedilebilirlik) */
+.ve-cmdk-trigger{ width:auto; gap:6px; padding:0 9px; }
+.ve-cmdk-trigger-kbd{
+  font-family:var(--font-mono,ui-monospace,monospace); font-size:.62rem; font-weight:600;
+  color:var(--text-muted); line-height:1;
+  border:1px solid var(--border-color); border-radius:4px; padding:2px 4px;
+}
+.ve-cmdk-trigger:hover .ve-cmdk-trigger-kbd{ color:var(--text-secondary); }
+@media (max-width:900px){ .ve-cmdk-trigger-kbd{ display:none; } }
+@media (prefers-reduced-motion: reduce){
+  .ve-cmdk-overlay, .ve-cmdk-panel{ transition:none; }
+}
+
 .ve-canvas-wrapper.panning{
   cursor:grabbing;
 }
