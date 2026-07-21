@@ -3071,5 +3071,7 @@ function updateNodeCount() {
   }
   // Topoloji değişti (ekle/sil/geri-yükle/düzenle) → minimap'i tazele
   if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
+  // Boş tuval ipucunu göster/gizle
+  if(typeof veEmptyHintUpdate === 'function') veEmptyHintUpdate();
 }
 
