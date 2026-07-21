@@ -1611,8 +1611,10 @@ function getVehiclePropertiesHTML(node) {
     
     var roStyle = 'width:100%; padding:4px; font-size:0.68rem; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:0; text-align:right; cursor:default;';
     
-    var html = '<div class="sw-panel">';
+    var html = '<div class="sw-panel ve-cp-panel">';
 
+    // İKİ SÜTUN (kart yığını): SOL = Araç Parametreleri, SAĞ = Aerodinamik Parametreleri
+    html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
     // ── 1. ARAÇ PARAMETRELERİ ──
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Araç Parametreleri</span></div>';
@@ -1636,6 +1638,8 @@ function getVehiclePropertiesHTML(node) {
     
     html += '</table>';
     html += '</div></div>'; // sw-pkg-body + sw-pkg-card
+    html += '</div>';                                    // ve-cp-col (sol) kapat
+    html += '<div class="ve-cp-col">';                   // SAĞ sütun
 
     // ── 2. AERODİNAMİK PARAMETRELERİ ──
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
@@ -1675,6 +1679,8 @@ function getVehiclePropertiesHTML(node) {
     
     html += '</table>';
     html += '</div></div>'; // sw-pkg-body + sw-pkg-card
+    html += '</div>';                                    // ve-cp-col (sağ) kapat
+    html += '</div>';                                    // ve-cp-grid kapat
 
     html += '</div>'; // sw-panel
     return html;
