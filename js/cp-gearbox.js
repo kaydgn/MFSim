@@ -1,7 +1,7 @@
 // Şanzıman özellikleri
 // ===== ŞANZIMAN KONTROL ÖZELLİKLERİ =====
 function getShiftControllerPropertiesHTML(node) {
-  var html = '<div class="sw-panel">';
+  var html = '<div class="sw-panel ve-cp-panel">';
 
   // Status bar — veri durumunu göster
   var hasData = !!(nodes.find(function(n) { return n.type === 'gearbox'; }) && nodes.find(function(n) { return n.type === 'engine'; }));
@@ -63,6 +63,8 @@ function getShiftControllerPropertiesHTML(node) {
   // Lockup shift RPM
   var N_shift_lockup = shiftRefRPM > 0 ? (shiftRefRPM - lockupOffset) : 0;
   
+  // İKİ SÜTUN (kart yığını): SOL = aktif profil + lockup tablosu, SAĞ = converter mantığı + algoritma
+  html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
   // Profil adı
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aktif Shift Profili</span></div>';
@@ -133,6 +135,8 @@ function getShiftControllerPropertiesHTML(node) {
   var shift1C2C_outRatio = spData.shift1C2C_outRatio || 0.2150;
   var shift2C2L_outRatio = spData.shift2C2L_outRatio || 0.3593;
 
+  html += '</div>';                                    // ve-cp-col (sol) kapat
+  html += '<div class="ve-cp-col">';                   // SAĞ sütun: converter mantığı + algoritma
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Converter Mode Shift Mantığı</span></div>';
   html += '<div class="sw-pkg-body">';
@@ -228,6 +232,8 @@ function getShiftControllerPropertiesHTML(node) {
 
   html += '</div></div>';
 
+  html += '</div>';                                    // ve-cp-col (sağ) kapat
+  html += '</div>';                                    // ve-cp-grid kapat
   html += '</div>';
   return html;
 }
