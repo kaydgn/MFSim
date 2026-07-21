@@ -580,7 +580,9 @@ function veRenderTabs() {
   html += '<button class="ve-toolbar-btn" id="ve-grid-density-btn" onclick="veCycleGridDensity()" title="Grid: ' + (typeof veGridLabels !== 'undefined' ? veGridLabels[veGridDensity] : 'Normal') + '"><span class="mf-ico mf-ico-grid-cells"></span></button>';
   html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof veBoundaryVisible !== 'undefined' && veBoundaryVisible ? ' active' : '') + '" id="ve-boundary-btn" onclick="veToggleBoundary()" title="Sınır Göster/Gizle"><span class="mf-ico mf-ico-frame"></span></button>';
   html += '<button class="ve-toolbar-btn" id="ve-boundary-opacity-btn" onclick="veCycleBoundaryOpacity()" title="Sınır Opaklığı: ' + (typeof veBoundaryOpacity !== 'undefined' ? Math.round(veBoundaryOpacity * 100) : '55') + '%"><span class="mf-ico mf-ico-contrast"></span></button>';
-  
+  html += '<div class="ve-toolbar-sep"></div>';
+  html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof veFlowAnim !== 'undefined' && veFlowAnim ? ' active' : '') + '" id="ve-flow-btn" onclick="veToggleFlow()" title="Güç akışı animasyonu (bağlantılarda akan çizgiler)"><span class="mf-ico mf-ico-zap"></span></button>';
+
   bar.innerHTML = html;
 }
 

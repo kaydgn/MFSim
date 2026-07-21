@@ -5549,6 +5549,29 @@ function veToggleGrid() {
   showToast(veGridVisible ? 'Grid gösteriliyor' : 'Grid gizlendi');
 }
 
+// Güç akışı animasyonu — bağlantılarda akan kesik çizgiler (from→to yönünde).
+// Sürekli olduğu için KAPALI varsayılan; kullanıcı toolbar'dan açar ve seçim
+// localStorage'da hatırlanır. Salt görsel katman (CSS) — bağlantı verisine dokunmaz.
+var veFlowAnim = false;
+try { veFlowAnim = localStorage.getItem('mf-flow-anim') === '1'; } catch(e) {}
+function veApplyFlowAnim() {
+  var wrapper = document.getElementById('ve-canvas-wrapper');
+  if(wrapper) wrapper.classList.toggle('ve-flow-anim', veFlowAnim);
+  var btn = document.getElementById('ve-flow-btn');
+  if(btn) btn.classList.toggle('active', veFlowAnim);
+}
+function veToggleFlow() {
+  veFlowAnim = !veFlowAnim;
+  try { localStorage.setItem('mf-flow-anim', veFlowAnim ? '1' : '0'); } catch(e) {}
+  veApplyFlowAnim();
+  if(typeof showToast === 'function') showToast(veFlowAnim ? 'Güç akışı animasyonu açık' : 'Güç akışı animasyonu kapalı');
+}
+(function(){
+  var _apply = function(){ veApplyFlowAnim(); };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _apply);
+  else setTimeout(_apply, 200);
+})();
+
 function veCycleGridDensity() {
   veGridDensity = (veGridDensity + 1) % veGridSizes.length;
   var size = veGridSizes[veGridDensity];
