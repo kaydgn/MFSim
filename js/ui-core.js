@@ -71,6 +71,7 @@ function veAttachNodeDrag(nodeEl, node) {
 
     _veNodeDrag.dragStart = { x: e.clientX - node.x * canvasZoom, y: e.clientY - node.y * canvasZoom };
     if(typeof updateAllConnections === 'function') updateAllConnections();
+    if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
   });
 
   document.addEventListener('mouseup', function() {
@@ -91,6 +92,8 @@ function updateCanvasTransform() {
   // Alt durum çubuğundaki yakınlaştırma yüzdesini güncelle
   var _zoomStatus = document.getElementById('ve-status-zoom');
   if(_zoomStatus) _zoomStatus.textContent = '%' + Math.round(canvasZoom * 100);
+  // Minimap'teki viewport dikdörtgenini tazele (pan/zoom)
+  if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
 }
 
 // Görünümü mevcut TÜM bileşenlere ortalar ve sığdırır (fit-to-content).

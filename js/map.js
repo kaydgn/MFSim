@@ -3067,5 +3067,7 @@ function updateNodeCount() {
   if(countEl) {
     countEl.innerHTML = nodes.length + ' bileşen, ' + connections.length + ' bağlantı';
   }
+  // Topoloji değişti (ekle/sil/geri-yükle/düzenle) → minimap'i tazele
+  if(typeof veMinimapUpdate === 'function') veMinimapUpdate();
 }
 

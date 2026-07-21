@@ -535,6 +535,12 @@
               <div class="ve-canvas" id="ve-canvas">
                 <svg class="ve-connections-layer" id="ve-connections-layer"></svg>
               </div>
+              <!-- Genel görünüm (minimap) — sağ-alt köşe -->
+              <div class="ve-minimap ve-minimap-hidden" id="ve-minimap" aria-hidden="true">
+                <canvas class="ve-minimap-canvas" id="ve-minimap-canvas"></canvas>
+                <div class="ve-minimap-viewport" id="ve-minimap-viewport"></div>
+                <button class="ve-minimap-toggle" id="ve-minimap-toggle" type="button" title="Genel görünümü gizle"></button>
+              </div>
             </div>
           </div>
         </div>
@@ -764,6 +770,7 @@
 <script type="text/x-mfsim-defer" src="js/window-drag.js" data-mfsim-label="Sürüklenebilir pencereler..."></script>
 <script type="text/x-mfsim-defer" src="js/radio.js" data-mfsim-label="Radyo / müzik çalar..."></script>
 <script type="text/x-mfsim-defer" src="js/deploy-status.js" data-mfsim-label="Dağıtım bilgisi..."></script>
+<script type="text/x-mfsim-defer" src="js/minimap.js" data-mfsim-label="Genel görünüm (minimap)..."></script>
 
 <!-- ═══ BİLEŞEN ÖZELLİKLERİ MODALI ═══ -->
 <div id="ve-properties-overlay" class="ve-properties-overlay" style="display:none;" onmousedown="if(event.target===this) veTogglePropertiesPanel(false)">
