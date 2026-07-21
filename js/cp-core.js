@@ -147,7 +147,7 @@ function clearSelection() {
 // İki sütun (geniş) düzene geçmiş içerik-yoğun bileşen tipleri.
 // Yeni panel dönüştürüldükçe buraya eklenir → pencere otomatik genişler,
 // kimlik kompakt-sola geçer. (Yerleşim üreticileri ilgili cp-*.js dosyalarında.)
-var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver'];
+var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard'];
 
 function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
