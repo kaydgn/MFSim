@@ -1913,6 +1913,42 @@
 .ve-align-btn:active:not([disabled]){ transform:translateY(1px); }
 .ve-align-btn[disabled]{ opacity:.4; cursor:not-allowed; }
 
+/* ── Boş tuval ipucu (empty-state) ──────────────────────────────────────── */
+.ve-empty-hint{
+  position:absolute; inset:0; z-index:6;
+  display:flex; align-items:center; justify-content:center;
+  pointer-events:none;                 /* tuvale bırakmayı engelleme */
+  opacity:0; visibility:hidden;
+  transition:opacity var(--dur-slow,.32s) ease, visibility var(--dur-slow,.32s);
+}
+.ve-empty-hint.visible{ opacity:1; visibility:visible; }
+.ve-empty-hint-inner{
+  display:flex; flex-direction:column; align-items:center; text-align:center;
+  color:var(--text-muted); user-select:none; padding:20px;
+  transform:translateY(6px); transition:transform var(--dur-slow,.32s) var(--ease-out,ease);
+}
+.ve-empty-hint.visible .ve-empty-hint-inner{ transform:none; }
+.ve-empty-hint-icon{ color:var(--text-muted); opacity:.55; margin-bottom:14px; }
+.ve-empty-hint-title{ font-size:1.05rem; font-weight:700; color:var(--text-secondary); }
+.ve-empty-hint-sub{ font-size:.82rem; margin-top:4px; margin-bottom:18px; }
+.ve-empty-hint-rows{ display:flex; flex-direction:column; gap:9px; }
+.ve-empty-hint-row{
+  display:flex; align-items:center; gap:9px; justify-content:center;
+  font-size:.8rem; color:var(--text-muted);
+}
+.ve-empty-hint-row b{ color:var(--text-secondary); font-weight:650; }
+.ve-empty-hint-ic{ display:inline-flex; color:var(--accent-primary); opacity:.85; }
+.ve-empty-hint-keys{ display:inline-flex; gap:3px; }
+.ve-empty-hint-keys kbd{
+  font-family:var(--font-mono,ui-monospace,monospace); font-size:.66rem; font-weight:600;
+  color:var(--text-secondary); background:var(--bg-tertiary,var(--bg-primary));
+  border:1px solid var(--border-color); border-bottom-width:2px; border-radius:5px;
+  padding:2px 6px; line-height:1.2; min-width:16px; text-align:center;
+}
+@media (prefers-reduced-motion: reduce){
+  .ve-empty-hint, .ve-empty-hint-inner{ transition:none; }
+}
+
 .ve-canvas-wrapper.panning{
   cursor:grabbing;
 }
