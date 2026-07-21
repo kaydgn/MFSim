@@ -2297,22 +2297,30 @@
   max-width:1040px;
   max-height:92vh;
 }
-/* Motor bileşeni — İKİ SÜTUN düzeni: solda girdiler (motor seçimi,
-   parametreler, veri tablosu, aksesuar), sağda çıktı (tork/güç grafiği,
-   eğri yaklaşımı, net değerler). Grafik ile veri aynı anda görünsün diye
-   pencere geniş. Dar ekranda sütunlar tek sütuna iner. Yalnız yerleşim. */
-.ve-properties.ve-properties--engine{
+/* ══ İÇERİK-YOĞUN BİLEŞEN PENCERELERİ — ORTAK İKİ SÜTUN SİSTEMİ ══
+   Motor panelinden genelleştirildi. İçeriği çok olan paneller (motor, tork
+   konvertörü, eşleştirme, solver, yol…) bu sınıfları paylaşır:
+   .ve-properties--wide  → geniş pencere + kompakt-sol kimlik (aşağıda)
+   .ve-cp-grid           → iki sütun (sol girdi / sağ çıktı); dar ekranda tek sütun
+   .ve-cp-col--in/--out  → anlamsal sütunlar (girdi | çıktı)
+   Hangi node.type'ların geniş olacağı js/cp-core.js'teki VE_WIDE_PANEL_TYPES
+   listesinde. Yalnız yerleşim; işlevsel mantık değişmez. */
+.ve-properties.ve-properties--wide{
   max-width:980px;
 }
-.ve-eng-grid{
+.ve-cp-grid{
   display:grid;
   grid-template-columns:minmax(0,0.95fr) minmax(0,1.05fr);
   gap:12px;
   align-items:start;
 }
-.ve-eng-col{ min-width:0; }               /* ızgara hücreleri taşmasın */
+/* İki denk sütun — "kart yığını" panelleri için (hepsi girdi ya da hepsi rapor) */
+.ve-cp-grid--cards{ grid-template-columns:minmax(0,1fr) minmax(0,1fr); }
+/* İnce sol ray + geniş sağ — çıktı-ağırlıklı paneller (ör. eşleştirme analizi) */
+.ve-cp-grid--wideright{ grid-template-columns:minmax(190px,0.6fr) minmax(0,1.7fr); }
+.ve-cp-col{ min-width:0; }                 /* ızgara hücreleri taşmasın */
 @media (max-width:820px){
-  .ve-eng-grid{ grid-template-columns:1fr; }
+  .ve-cp-grid{ grid-template-columns:1fr; }
 }
 
 /* ── Bileşen kimlik bloğu (simge + ad + ID + sil düğmesi) ──
@@ -2343,30 +2351,30 @@
 }
 .ve-prop-del:hover{ opacity:1; }
 
-/* Motor penceresi: kimlik KOMPAKT-SOL satır — simge solda, ad/ID yanında,
-   sil düğmesi sağa yaslı, altında ince ayraç. Böylece sağ sütun (grafik)
-   yukarı çıkar ve iki sütun düzeniyle hizalanır. Yalnız motor penceresine. */
-.ve-properties--engine .ve-prop-identity{
+/* Geniş (içerik-yoğun) pencereler: kimlik KOMPAKT-SOL satır — simge solda,
+   ad/ID yanında, sil düğmesi sağa yaslı, altında ince ayraç. Böylece sağ sütun
+   yukarı çıkar ve iki sütun düzeniyle hizalanır. Yalnız .ve-properties--wide'da. */
+.ve-properties--wide .ve-prop-identity{
   flex-direction:row; align-items:center; gap:11px;
   margin-bottom:10px; padding-bottom:9px;
   border-bottom:1px solid var(--border-color);
 }
-.ve-properties--engine .ve-prop-identity .ve-prop-symbol{
+.ve-properties--wide .ve-prop-identity .ve-prop-symbol{
   min-height:0; margin:0; flex:0 0 auto;
 }
-.ve-properties--engine .ve-prop-identity .ve-prop-symbol svg{
+.ve-properties--wide .ve-prop-identity .ve-prop-symbol svg{
   width:34px; height:34px;
 }
-.ve-properties--engine .ve-prop-meta{ align-items:flex-start; }
-.ve-properties--engine .ve-prop-name{ margin-bottom:1px; }
-.ve-properties--engine .ve-prop-del{
+.ve-properties--wide .ve-prop-meta{ align-items:flex-start; }
+.ve-properties--wide .ve-prop-name{ margin-bottom:1px; }
+.ve-properties--wide .ve-prop-del{
   position:static; margin-left:auto;
   width:24px; height:24px; border-radius:var(--radius-sm);
   background:transparent; color:var(--accent-danger);
   border:1px solid color-mix(in srgb, var(--accent-danger) 35%, transparent);
   opacity:1;
 }
-.ve-properties--engine .ve-prop-del:hover{ background:var(--bg-input); }
+.ve-properties--wide .ve-prop-del:hover{ background:var(--bg-input); }
 /* İnteraktif 2D figürler: fare tekerleğiyle yakınlaştır, sürükleyerek kaydır.
    grabbing imleci sürükleme sırasında JS ile ayarlanır. */
 .ve-mnt2d-fig{ cursor:grab; }

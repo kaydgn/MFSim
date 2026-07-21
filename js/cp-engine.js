@@ -16,7 +16,7 @@ function getEnginePropertiesHTML(node) {
   // İKİ SÜTUN DÜZENİ — sol sütun = girdiler (motor seçimi, parametreler,
   // veri tablosu, aksesuar), sağ sütun = çıktı (tork/güç grafiği, eğri
   // yaklaşımı, net değerler). Aşağıdaki chunk'lar tekil kartların HTML'ini
-  // üretir; en sonda `ve-eng-grid` içinde sütunlara yerleştirilir.
+  // üretir; en sonda `ve-cp-grid` içinde sütunlara yerleştirilir.
   // İçerik, ID'ler ve olay bağlayıcıları DEĞİŞMEZ — yalnızca yerleşim.
   // ══════════════════════════════════════════════════════════════════════
 
@@ -360,35 +360,35 @@ function getEnginePropertiesHTML(node) {
   // ══════════════════════════════════════════════════════════════════════
   // KOMPOZİSYON — iki sütun ızgarası
   // ══════════════════════════════════════════════════════════════════════
-  var html = '<div class="sw-panel ve-eng-panel">';
+  var html = '<div class="sw-panel ve-cp-panel">';
 
   if(isFullThrottle) {
     // Motor Seçimi sol sütunun tepesinde (hep görünür) → sağ sütun (grafik)
     // ızgaranın tepesiyle hizalanıp yukarı çıkar. "Veri varsa görünen" içerik
     // (parametreler/tablo/aksesuar | grafik/eğri/net) her sütunda ayrı bir
     // .ve-ft-extra sarmalayıcısında; ikisi birlikte açılıp kapanır.
-    html += '<div class="ve-eng-grid">';
-    html += '<div class="ve-eng-col ve-eng-col--in">';    // sol: girdiler
+    html += '<div class="ve-cp-grid">';
+    html += '<div class="ve-cp-col ve-cp-col--in">';    // sol: girdiler
     html += selectHtml;                                   // Motor Seçimi + placeholder (hep görünür)
     html += '<div class="ve-ft-extra" data-node="' + node.id + '" style="display:' + (hasData ? 'block' : 'none') + ';">';
     html += specCardHtml + dataAreaHtml + accHtml;
     html += '</div>';                                     // ve-ft-extra (sol)
-    html += '</div>';                                     // ve-eng-col--in
-    html += '<div class="ve-eng-col ve-eng-col--out">';   // sağ: çıktı
+    html += '</div>';                                     // ve-cp-col--in
+    html += '<div class="ve-cp-col ve-cp-col--out">';   // sağ: çıktı
     html += '<div class="ve-ft-extra" data-node="' + node.id + '" style="display:' + (hasData ? 'block' : 'none') + ';">';
     html += chartHtml + fitHtml + netHtml;
     html += '</div>';                                     // ve-ft-extra (sağ)
-    html += '</div>';                                     // ve-eng-col--out
-    html += '</div>';                                     // ve-eng-grid
+    html += '</div>';                                     // ve-cp-col--out
+    html += '</div>';                                     // ve-cp-grid
   } else {
-    html += '<div class="ve-eng-grid">';
-    html += '<div class="ve-eng-col ve-eng-col--in">';    // sol: girdiler
+    html += '<div class="ve-cp-grid">';
+    html += '<div class="ve-cp-col ve-cp-col--in">';    // sol: girdiler
     html += dataAreaHtml + brakeHtml;
     html += '</div>';
-    html += '<div class="ve-eng-col ve-eng-col--out">';   // sağ: çıktı
+    html += '<div class="ve-cp-col ve-cp-col--out">';   // sağ: çıktı
     html += chartHtml + fitHtml;
     html += '</div>';
-    html += '</div>';  // ve-eng-grid
+    html += '</div>';  // ve-cp-grid
   }
 
   html += '</div>';  // sw-panel

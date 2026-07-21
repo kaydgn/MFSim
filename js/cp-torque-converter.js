@@ -6,7 +6,7 @@ function getTorqueConverterPropertiesHTML(node) {
   var tcRows = nodeData.tcData || [];
   var hasData = tcRows.length > 0;
 
-  var html = '<div class="sw-panel">';
+  var html = '<div class="sw-panel ve-cp-panel">';
 
   if(isFullThrottle) {
     // ── TAM GAZ HIZLANMA: Konvertör Parametreleri ──
@@ -26,6 +26,8 @@ function getTorqueConverterPropertiesHTML(node) {
     }
     var _familyLabels = {'1000_2000': '1000/2000 Serisi', '3000': '3000 Serisi', '4000': '4000 Serisi'};
     
+    // İki sütun düzeni — SOL sütun: seçim + parametreler + veri tablosu (girdi)
+    html += '<div class="ve-cp-grid"><div class="ve-cp-col ve-cp-col--in">';
     html += '<div class="sw-section-title">Konvertör Seçimi</div>';
 
     var hasECM = nodes.some(function(n) { return n.type === 'ec-matching'; });
@@ -130,7 +132,10 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-btn-row" style="justify-content:flex-end; margin-bottom:2px;">';
     html += '<button class="sw-btn sw-btn-primary" style="font-size:0.56rem;padding:3px 10px;" onclick="updateVETCCharts(\'' + node.id + '\')">Güncelle</button>';
     html += '</div>';
-    
+    html += '</div>';                                    // ve-tc-data-area kapat (tablo girdi bölümü)
+    html += '</div>';                                    // ve-cp-col--in kapat (sol/girdi)
+    html += '<div class="ve-cp-col ve-cp-col--out">';    // SAĞ sütun: grafikler (çıktı)
+
     // ── GRAFİK 1: Tork Oranı & Verim Eğrisi ──
     html += '<div class="sw-pkg-card" style="margin-top:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Tork Oranı & Verim Eğrisi</span></div>';
@@ -157,8 +162,9 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '</div>';
     html += '</div></div>';
     
-    html += '</div>'; // tc-data-area close
-    
+    html += '</div>';  // ve-cp-col--out kapat (sağ/çıktı)
+    html += '</div>';  // ve-cp-grid kapat
+
   } else {
     // ── MOTOR FRENİ: Mevcut parametreler ──
     var tcRatio = nodeData.tcRatio !== undefined ? nodeData.tcRatio : 1.0;

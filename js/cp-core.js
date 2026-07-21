@@ -144,6 +144,11 @@ function clearSelection() {
   showEmptyProperties();
 }
 
+// İki sütun (geniş) düzene geçmiş içerik-yoğun bileşen tipleri.
+// Yeni panel dönüştürüldükçe buraya eklenir → pencere otomatik genişler,
+// kimlik kompakt-sola geçer. (Yerleşim üreticileri ilgili cp-*.js dosyalarında.)
+var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching'];
+
 function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
@@ -245,8 +250,9 @@ function showNodeProperties(node) {
   if(_propWin) _propWin.classList.toggle('ve-properties--2dview', node.type === 'mnt-2dview');
   // Takoz Özellikleri: iki sütun (seçici + detay) ve 3 eksen grafiği yan yana → geniş pencere.
   if(_propWin) _propWin.classList.toggle('ve-properties--mntlib', node.type === 'mnt-library');
-  // Motor: iki sütun düzeni (sol girdi, sağ grafik) için geniş pencere. Salt sunum.
-  if(_propWin) _propWin.classList.toggle('ve-properties--engine', node.type === 'engine');
+  // İçerik-yoğun paneller (VE_WIDE_PANEL_TYPES listesi): geniş pencere +
+  // kompakt-sol kimlik + iki sütun düzeni. Liste dalga dalga büyür. Salt sunum.
+  if(_propWin) _propWin.classList.toggle('ve-properties--wide', VE_WIDE_PANEL_TYPES.indexOf(node.type) >= 0);
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 
