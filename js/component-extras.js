@@ -1862,7 +1862,7 @@ function getRoadPropertiesHTML(node) {
   var d = node.data || {};
   var egimMode = d.egimMode || 'segment';
 
-  var html = '<div class="sw-panel">';
+  var html = '<div class="sw-panel ve-cp-panel">';
 
   // ===== EĞİM PARAMETRELERİ =====
   html += '<div class="sw-section-title" style="margin:0 0 6px 0;"><span class="mf-ico mf-ico-ruler"></span> Eğim Parametreleri</div>';
@@ -1874,6 +1874,8 @@ function getRoadPropertiesHTML(node) {
   var manualSegs = d.manualSegments || [];
   html += '<div id="ve-road-manuel-content-' + node.id + '" style="' + (egimMode==='segment'?'display:none;':'') + '">';
 
+  // İKİ SÜTUN (manuel mod): SOL = segment tablosu (girdi), SAĞ = özet + aktar + profil (çıktı)
+  html += '<div class="ve-cp-grid"><div class="ve-cp-col ve-cp-col--in">';
   // Segment tablosu
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;">';
@@ -1885,6 +1887,8 @@ function getRoadPropertiesHTML(node) {
   html += _veManualSegTableHTML(node.id, manualSegs);
   html += '</div>';
   html += '</div></div>';
+  html += '</div>';                                   // ve-cp-col--in kapat (girdi: segment tablosu)
+  html += '<div class="ve-cp-col ve-cp-col--out">';   // SAĞ: özet + aktar + profil (çıktı)
 
   // Özet kutusu
   html += '<div id="ve-road-mseg-summary-' + node.id + '" style="' + (manualSegs.length === 0 ? 'display:none;' : '') + 'background:var(--bg-secondary); padding:8px; border:1px solid var(--border-color); margin-bottom:10px;">';
@@ -1911,6 +1915,8 @@ function getRoadPropertiesHTML(node) {
   html += '</div></div>';
   html += '</div>';
 
+  html += '</div>';                                   // ve-cp-col--out kapat
+  html += '</div>';                                   // ve-cp-grid kapat
   html += '</div>'; // manuel-content wrapper
 
   // ===== SEGMENT BAZLI İÇERİK (Harita + Profiller) =====
