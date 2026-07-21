@@ -3,14 +3,16 @@ function getSolverPropertiesHTML(node) {
   var d = node.data || {};
   var maxSimTime = d.maxSimTime !== undefined ? d.maxSimTime : 300;
 
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  var html = '<div class="ve-cp-panel" style="border-top:1px solid var(--border-color); padding-top:12px;">';
 
   // Başlık
   html += '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">';
   html += '<div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">Çözücü Ayarları</div>';
   html += '<span style="font-size:0.52rem; font-weight:600; color:#2e7d32; background:#2e7d3218; padding:2px 7px; border-radius:0; border:1px solid #2e7d3230; letter-spacing:0.03em; text-transform:uppercase;">MFSim</span>';
   html += '</div>';
-  
+
+  // İKİ SÜTUN: SOL = çözüm kümesi + yöntem/tolerans (girdi), SAĞ = referans + zincir + hesapla
+  html += '<div class="ve-cp-grid"><div class="ve-cp-col ve-cp-col--in">';
   // ===== ÇÖZÜM KÜMESİ =====
   var perfAnalysis = d.performanceAnalysis || false;
   html += '<div style="margin-bottom:10px;">';
@@ -110,7 +112,9 @@ function getSolverPropertiesHTML(node) {
   html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
   
   html += '</table>';
-  
+  html += '</div>';                                   // ve-cp-col--in kapat (girdi)
+  html += '<div class="ve-cp-col ve-cp-col--out">';   // SAĞ: referans + zincir + hesapla
+
   // ===== INTERPOLASYON BİLGİSİ =====
   html += '<div style="margin-top:10px; padding:8px 10px; background:var(--bg-secondary); border-radius:0; border:1px solid var(--border-color);">';
   html += '<div style="display:flex; align-items:center; gap:5px; margin-bottom:5px;">';
@@ -147,7 +151,9 @@ function getSolverPropertiesHTML(node) {
   html += '▶ Hesapla';
   html += '</button>';
   html += '</div>';
-  
+  html += '</div>';                                   // ve-cp-col--out kapat
+  html += '</div>';                                   // ve-cp-grid kapat
+
   html += '</div>';
   return html;
 }
