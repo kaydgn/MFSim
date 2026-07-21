@@ -149,9 +149,20 @@ function clearSelection() {
 // kimlik kompakt-sola geçer. (Yerleşim üreticileri ilgili cp-*.js dosyalarında.)
 var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard', 'road'];
 
+// Son gösterilen bileşen — pencere konumunu sıfırlamak için. Başka bileşene
+// geçince pencere ortalanır; aynı bileşenin yerinde yenilenmesinde korunur.
+var _veLastPropNodeId = null;
+
 function showNodeProperties(node) {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
+  // Başka bir bileşen açıldığında pencereyi ORTALA — önceki bileşenin
+  // sürüklenmiş konumunu miras alma. Aynı bileşenin içeriği yerinde
+  // yenilenirken (sekme/profil değişimi) konumu koru → sürüklediğin yer bozulmaz.
+  if(typeof VEWindowDrag !== 'undefined' && VEWindowDrag && typeof VEWindowDrag.resetToCenter === 'function') {
+    if(_veLastPropNodeId !== (node && node.id)) VEWindowDrag.resetToCenter();
+  }
+  _veLastPropNodeId = (node && node.id) || null;
   // Modal başlığında bileşenin adı ve sembolü görünür
   var titleEl = document.getElementById('ve-properties-title');
   if(titleEl) {
