@@ -3,7 +3,7 @@ function getTransferPropertiesHTML(node) {
   var nodeData = node.data || {};
   var isFullThrottle = veActiveModule === 'full-throttle';
   
-  var html = '<div class="sw-panel">';
+  var html = '<div class="sw-panel ve-cp-panel">';
 
   html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Transfer Kutusu <button class="sw-info-btn" onclick="showInfoPopup(\'transferKutusu\')" title="Bilgi">?</button></div>';
 
@@ -18,7 +18,9 @@ function getTransferPropertiesHTML(node) {
       ];
     }
     var ftTrGears = nodeData.ftTrGears;
-    
+
+    // İKİ SÜTUN (kart yığını): SOL = parametreler, SAĞ = kademe tablosu
+    html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Transfer Case Parametreleri</span></div>';
     html += '<div class="sw-pkg-body">';
@@ -54,6 +56,8 @@ function getTransferPropertiesHTML(node) {
     
     html += '</table>';
     html += '</div></div>';
+    html += '</div>';                                  // ve-cp-col (sol) kapat
+    html += '<div class="ve-cp-col">';                 // SAĞ sütun: kademe tablosu
 
     // ── KADEME TABLOSU ──
     html += '<div style="margin-top:10px;">';
@@ -85,7 +89,9 @@ function getTransferPropertiesHTML(node) {
     
     // ── BİLGİ NOTU ──
     html += '<div class="sw-pkg-desc"><span class="mf-ico mf-ico-zap"></span> Tam Gaz Hızlanma simülasyonu tüm kademeler için ayrı ayrı çalıştırılır. Sonuçlar her kademe için ayrı iSCAAN tablosu olarak raporlanır.</div>';
-    
+    html += '</div>';                                  // ve-cp-col (sağ) kapat
+    html += '</div>';                                  // ve-cp-grid kapat
+
     html += '</div>';
     return html;
   }
@@ -96,7 +102,9 @@ function getTransferPropertiesHTML(node) {
   var selectedRatio = nodeData.selectedRatio || '';
   
   html += '<div class="sw-pkg-desc">Transfer kutusu kademelerini ve oranlarını tanımlayınız.</div>';
-  
+
+  // İKİ SÜTUN (kart yığını): SOL = marka/model + kademe tablosu, SAĞ = aktif kademe + verim
+  html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
   // Transfer Kutusu Marka/Model Seçici
   html += '<div style="display:flex; gap:4px; margin-bottom:8px; align-items:center;">';
   html += '<select id="ve-transfer-brand-' + node.id + '" onchange="veUpdateTransferModels(\'' + node.id + '\')" style="flex:1; font-size:0.68rem; padding:4px 4px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;">';
@@ -142,6 +150,8 @@ function getTransferPropertiesHTML(node) {
   html += '<button class="sw-btn" onclick="clearVETransferTable(\'' + node.id + '\')">Temizle</button>';
   html += '</div>';
   
+  html += '</div>';                                   // ve-cp-col (sol) kapat
+  html += '<div class="ve-cp-col">';                  // SAĞ sütun: aktif kademe + verim
   // Aktif Kademe Seçimi
   html += '<div class="sw-pkg-card" style="margin-bottom:10px; margin-top:12px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aktif Kademe</span></div>';
@@ -175,7 +185,9 @@ function getTransferPropertiesHTML(node) {
   html += '</tr>';
   html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.62rem; color:var(--text-muted); background:var(--bg-secondary);">Tipik değer: %95–98</td></tr>';
   html += '</table></div></div>';
-  
+  html += '</div>';                                   // ve-cp-col (sağ) kapat
+  html += '</div>';                                   // ve-cp-grid kapat
+
   html += '</div>';
   return html;
 }
