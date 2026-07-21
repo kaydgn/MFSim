@@ -1820,6 +1820,11 @@
   .ve-cmdk-overlay, .ve-cmdk-panel{ transition:none; }
 }
 
+/* Otomatik düzen sonrası kamera içeriğe yumuşakça otursun (tek seferlik sınıf).
+   Normal pan/zoom'da bu sınıf yok → geçiş yalnız tidy'de çalışır. */
+.ve-canvas.tidy-cam{ transition:transform .5s var(--ease-out,cubic-bezier(.16,1,.3,1)); }
+@media (prefers-reduced-motion: reduce){ .ve-canvas.tidy-cam{ transition:none; } }
+
 .ve-canvas-wrapper.panning{
   cursor:grabbing;
 }

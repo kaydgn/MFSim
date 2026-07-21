@@ -33,7 +33,8 @@ var _CMDK_SVG = {
   check:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
   info: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
   panel:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>',
-  plus: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
+  plus: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  tidy: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="6" height="6" rx="1"/><rect x="15" y="4" width="6" height="6" rx="1"/><rect x="9" y="14" width="6" height="6" rx="1"/><path d="M6 10v2a2 2 0 0 0 2 2h4M18 10v2a2 2 0 0 1-2 2h-4"/></svg>'
 };
 function _cmdkSvg(k) { return _CMDK_SVG[k] || _CMDK_SVG.plus; }
 
@@ -63,6 +64,7 @@ function _cmdkStaticCommands() {
   return [
     // Görünüm
     { sec:'Görünüm', label:'İçeriğe sığdır',            kw:'fit zoom orta ortala göster tümü', icon:_cmdkSvg('fit'),        run:function(){ _cmdkCall('veFitViewToContent', {maxZoom:2}); } },
+    { sec:'Düzen',   label:'Otomatik düzenle',          kw:'tidy düzen layout hizala otomatik temizle dağınık', icon:_cmdkSvg('tidy'), run:function(){ _cmdkCall('veTidyLayout'); } },
     { sec:'Görünüm', label:'Yakınlaştır',               kw:'zoom in büyüt',                     icon:_cmdkIco('zoom-in'),    run:function(){ _cmdkCall('veZoomIn'); } },
     { sec:'Görünüm', label:'Uzaklaştır',                kw:'zoom out küçült',                   icon:_cmdkIco('zoom-out'),   run:function(){ _cmdkCall('veZoomOut'); } },
     { sec:'Görünüm', label:'Yakınlaştırmayı %100 yap',  kw:'zoom reset sıfırla yüzde',          icon:_cmdkIco('crosshair'),  run:function(){ _cmdkCall('veResetZoom'); } },
