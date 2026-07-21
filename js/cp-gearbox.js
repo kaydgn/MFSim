@@ -436,7 +436,9 @@ function getGearboxPropertiesHTML(node) {
       autoGoverned = esp.governedSpeed || engineNode.data.governedRpm || '';
     }
     var displayGoverned = gbGovernedSpeed || autoGoverned || '';
-    
+
+    // İKİ SÜTUN (kart yığını): SOL = Şanzıman Parametreleri, SAĞ = Vites Oranları
+    html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Şanzıman Parametreleri</span></div>';
     html += '<div class="sw-pkg-body">';
@@ -668,7 +670,9 @@ function getGearboxPropertiesHTML(node) {
     
     html += '</table>';
     html += '</div></div>'; // close sw-pkg-body + sw-pkg-card Şanzıman Parametreleri
-    
+    html += '</div>';                                  // ve-cp-col (sol) kapat
+    html += '<div class="ve-cp-col">';                 // SAĞ sütun: vites oranları
+
     // ── VİTES ORANLARI VE VERİMLER TABLOSU ──
     var ftGearData = nodeData.ftGearData || VE_FT_GB_DEFAULT_GEARS;
     var ftGearTableHeight = nodeData.ftGearTableHeight || 220;
@@ -708,6 +712,8 @@ function getGearboxPropertiesHTML(node) {
     html += '<button class="sw-btn sw-btn-primary" onclick="saveVEFTGearData(\'' + node.id + '\')">Kaydet</button>';
     html += '</div>';
     html += '</div></div>';
+    html += '</div>';                                  // ve-cp-col (sağ) kapat
+    html += '</div>';                                  // ve-cp-grid kapat
   } else {
     // ── MOTOR FRENİ: Mevcut parametreler ──
   var gearData = nodeData.gearData || [];
@@ -717,8 +723,10 @@ function getGearboxPropertiesHTML(node) {
   var tableHeight = nodeData.tableHeight || 150;
   var hasData = gearData.length > 0;
   
+  // İKİ SÜTUN (kart yığını): SOL = seçici + vites tablosu, SAĞ = test vitesi + verim
+  html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
   html += '<div class="sw-pkg-desc">Test sırasında kullanılan şanzımanın vites oranlarını giriniz veya hazır şanzıman seçiniz.</div>';
-  
+
   // Şanzıman Seçici
   var _hasEGM2 = nodes.some(function(n) { return n.type === 'engine-gearbox-matching'; });
   html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
@@ -774,6 +782,8 @@ function getGearboxPropertiesHTML(node) {
   
   html += '</div>'; // ve-gearbox-data-area
   
+  html += '</div>';                                   // ve-cp-col (sol) kapat
+  html += '<div class="ve-cp-col">';                  // SAĞ sütun: test vitesi + verim
   // ===== TEST BAŞLANGIÇ VİTESİ =====
   html += '<div class="sw-pkg-card" style="margin-top:12px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Test Başlangıç Vitesi</span> <button class="sw-info-btn" onclick="showInfoPopup(\'testVitesi\')" title="Bilgi">?</button></div>';
@@ -811,6 +821,8 @@ function getGearboxPropertiesHTML(node) {
   html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.62rem; color:var(--text-muted); background:var(--bg-secondary);">Tipik değer: %95–98</td></tr>';
   html += '</table>';
   html += '</div></div>';
+  html += '</div>';                                   // ve-cp-col (sağ) kapat
+  html += '</div>';                                   // ve-cp-grid kapat
 
   } // end motor freni else
 
