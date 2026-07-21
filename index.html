@@ -75,6 +75,9 @@
       <div class="ve-menu-item" onclick="veLoadTopology()"><span class="mf-ico mf-ico-folder-open"></span> Proje Aç</div>
       <div class="ve-menu-item" onclick="veSaveTopology()"><span class="mf-ico mf-ico-save"></span> Projeyi Kaydet</div>
       <div class="ve-menu-divider"></div>
+      <div class="ve-menu-item" onclick="veExportTopology('png')"><span class="mf-ico mf-ico-download"></span> PNG olarak dışa aktar</div>
+      <div class="ve-menu-item" onclick="veExportTopology('svg')"><span class="mf-ico mf-ico-download"></span> SVG olarak dışa aktar</div>
+      <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veOpenStatusModal()"><span class="mf-ico mf-ico-refresh"></span> Program Durumu<span class="ve-menu-badge" id="ve-status-menu-badge" style="display:none;" title="Yeni güncelleme mevcut"></span></div>
@@ -718,6 +721,7 @@
 <script type="text/x-mfsim-defer" src="js/minimap.js" data-mfsim-label="Genel görünüm (minimap)..."></script>
 <script type="text/x-mfsim-defer" src="js/command-palette.js" data-mfsim-label="Komut paleti (Ctrl+K)..."></script>
 <script type="text/x-mfsim-defer" src="js/tidy-layout.js" data-mfsim-label="Otomatik düzen (tidy)..."></script>
+<script type="text/x-mfsim-defer" src="js/export-topology.js" data-mfsim-label="Görüntü dışa aktarma (PNG/SVG)..."></script>
 
 <!-- ═══ BİLEŞEN ÖZELLİKLERİ MODALI ═══ -->
 <div id="ve-properties-overlay" class="ve-properties-overlay" style="display:none;" onmousedown="if(event.target===this) veTogglePropertiesPanel(false)">

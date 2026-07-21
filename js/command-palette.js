@@ -81,6 +81,8 @@ function _cmdkStaticCommands() {
     { sec:'Dosya',   label:'Projeyi kaydet',            kw:'kaydet save dosya indir',           icon:_cmdkIco('save'),       run:function(){ _cmdkCall('veSaveTopology'); } },
     { sec:'Dosya',   label:'Proje aç',                  kw:'aç yükle load dosya open',          icon:_cmdkIco('folder-open'),run:function(){ _cmdkCall('veLoadTopology'); } },
     { sec:'Dosya',   label:'Yeni proje',                kw:'yeni new temiz',                    icon:_cmdkIco('file-plus'),  run:function(){ _cmdkCall('veNewProject'); } },
+    { sec:'Dosya',   label:'PNG olarak dışa aktar',      kw:'export dışa aktar png görüntü resim indir', icon:_cmdkIco('download'), run:function(){ _cmdkCall('veExportTopology', 'png'); } },
+    { sec:'Dosya',   label:'SVG olarak dışa aktar',      kw:'export dışa aktar svg vektör indir', icon:_cmdkIco('download'), run:function(){ _cmdkCall('veExportTopology', 'svg'); } },
     { sec:'Dosya',   label:'Tümünü temizle',            kw:'temizle sil clear hepsi',           icon:_cmdkIco('trash'),      run:function(){ _cmdkCall('veClearAll'); } },
     // Çözücü
     { sec:'Çözücü',  label:'Çözümü doğrula',            kw:'doğrula validate kontrol çözücü',   icon:_cmdkSvg('check'),      run:function(){ _cmdkCall('veSolverValidate'); } },
