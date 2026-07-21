@@ -568,6 +568,8 @@ function veRenderTabs() {
   
   // Sağ taraf — araç butonları
   html += '<div style="flex:1;"></div>';
+  html += '<button class="ve-toolbar-btn ve-cmdk-trigger" onclick="veCmdkOpen()" title="Komut paleti — her eylemi arayıp çalıştır (Ctrl+K)"><span class="mf-ico mf-ico-search"></span><span class="ve-cmdk-trigger-kbd">⌘K</span></button>';
+  html += '<div class="ve-toolbar-sep"></div>';
   html += '<button class="ve-toolbar-btn" onclick="veUndo()" title="Geri Al (Ctrl+Z)"><span class="mf-ico mf-ico-undo"></span></button>';
   html += '<button class="ve-toolbar-btn" onclick="veRedo()" title="İleri Al (Ctrl+Y)"><span class="mf-ico mf-ico-redo"></span></button>';
   html += '<div class="ve-toolbar-sep"></div>';
