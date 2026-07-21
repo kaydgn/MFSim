@@ -2034,6 +2034,19 @@
   stroke-width:4px !important;
 }
 
+/* Güç akışı animasyonu (opt-in; toolbar "zap" toggle → #ve-canvas-wrapper.ve-flow-anim).
+   Bağlantılar akan kesik çizgiye döner; from→to (güç aktarım) yönünde ilerler.
+   Bağlantının kendi rengi korunur. Sürekli olduğu için varsayılan KAPALI ve
+   prefers-reduced-motion'da tamamen durur. */
+.ve-flow-anim .ve-connection{
+  stroke-dasharray:7 9;
+  animation:veConnFlow 0.9s linear infinite;
+}
+@keyframes veConnFlow{ to{ stroke-dashoffset:-16; } }
+@media (prefers-reduced-motion: reduce){
+  .ve-flow-anim .ve-connection{ animation:none; stroke-dasharray:none; }
+}
+
 /* Bağlantı çizgileri SVG - canvas içinde */
 .ve-connections-layer{
   position:absolute;
