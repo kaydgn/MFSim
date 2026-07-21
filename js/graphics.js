@@ -1126,6 +1126,56 @@ function veInitChartInteraction(slotIdx) {
   });
 }
 
+// SİMÜLASYON OYNATMA (playhead): mevcut hover crosshair'ını (veChartShowTooltip)
+// sentetik koordinatlarla soldan sağa sürerek zamanda tarar. Yeni çizim mantığı
+// YOK — test edilmiş hover yolu yeniden kullanılır. reduced-motion'da sona atlar.
+// Tekrar tetiklenince durur (toggle). Yalnızca canvas (line) grafiklerde çalışır.
+function veChartPlayhead(slotIdx) {
+  var slot = veResultSlots[slotIdx];
+  if(!slot || !slot._chartMeta) return;
+  var m = slot._chartMeta;
+  var tArr = m.timeArr;
+  if(!tArr || tArr.length < 2) return;
+  var canvas = document.getElementById('ve-chart-canvas-' + slotIdx);
+  if(!canvas) return;
+  var playBtn = document.getElementById('ve-chart-play-' + slotIdx);
+  // Zaten oynuyorsa durdur (toggle)
+  if(slot._playRAF) {
+    cancelAnimationFrame(slot._playRAF);
+    slot._playRAF = null;
+    if(typeof veChartHideTooltip === 'function') veChartHideTooltip(slotIdx);
+    if(playBtn) playBtn.classList.remove('playing');
+    return;
+  }
+  var reduce = false;
+  try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e) {}
+  var cRect = canvas.getBoundingClientRect();
+  if(cRect.width < 10) return;
+  var scaleX = cRect.width / m.w;
+  var plotLeft = m.margin.left * scaleX;
+  var plotRight = (m.margin.left + m.pw) * scaleX;
+  var cy = cRect.top + cRect.height / 2;
+  function frameAt(p) {
+    var x = plotLeft + (plotRight - plotLeft) * p;
+    veChartShowTooltip(slotIdx, { clientX: cRect.left + x, clientY: cy });
+  }
+  if(reduce) { frameAt(1); return; }
+  if(playBtn) playBtn.classList.add('playing');
+  var dur = 2600, startTs = null;
+  function step(ts) {
+    if(startTs === null) startTs = ts;
+    var p = Math.min(1, (ts - startTs) / dur);
+    frameAt(p);
+    if(p < 1) {
+      slot._playRAF = requestAnimationFrame(step);
+    } else {
+      slot._playRAF = null;
+      if(playBtn) playBtn.classList.remove('playing');
+    }
+  }
+  slot._playRAF = requestAnimationFrame(step);
+}
+
 function veChartShowTooltip(slotIdx, e) {
   var slot = veResultSlots[slotIdx];
   if(!slot || !slot._chartMeta) return;
