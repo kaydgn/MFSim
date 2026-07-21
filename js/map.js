@@ -2982,12 +2982,14 @@ function showMultipleSelection() {
   var content = document.querySelector('.ve-properties-content');
   if(!content) return;
 
-  var html = '<div style="text-align:center; padding:20px;">';
+  var html = '<div style="text-align:center; padding:20px 20px 16px;">';
   html += '<div style="font-size:2rem; margin-bottom:12px;"><span class="mf-ico mf-ico-package"></span></div>';
   html += '<div style="font-weight:600; color:var(--text-heading); margin-bottom:8px;">' + selectedNodes.length + ' bileşen seçili</div>';
-  html += '<div style="margin-top:16px;">';
-  html += '<button onclick="deleteSelectedNodes()" style="width:100%; padding:8px; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.8rem;"><span class="mf-ico mf-ico-trash"></span> Seçilenleri Sil</button>';
   html += '</div>';
+  // Hizalama & dağıtma araçları (align-nodes.js)
+  if(typeof veAlignPanelHTML === 'function') html += veAlignPanelHTML();
+  html += '<div style="padding:0 20px 20px;">';
+  html += '<button onclick="deleteSelectedNodes()" style="width:100%; padding:8px; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.8rem;"><span class="mf-ico mf-ico-trash"></span> Seçilenleri Sil</button>';
   html += '</div>';
 
   content.innerHTML = html;
