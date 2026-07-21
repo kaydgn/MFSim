@@ -82,6 +82,7 @@
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="veOpenStatusModal()"><span class="mf-ico mf-ico-refresh"></span> Program Durumu<span class="ve-menu-badge" id="ve-status-menu-badge" style="display:none;" title="Yeni güncelleme mevcut"></span></div>
       <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
+      <div class="ve-menu-item" onclick="veShortcutsHelpOpen()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="8" y1="14" x2="16" y2="14"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01"/></svg> Klavye Kısayolları <span style="margin-left:auto;opacity:.6;font-size:.72rem;">?</span></div>
       <div class="ve-menu-divider"></div>
       <div class="ve-menu-item" onclick="mfsimLogout()" style="color:var(--accent-danger);"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
     </div>
@@ -722,6 +723,7 @@
 <script type="text/x-mfsim-defer" src="js/command-palette.js" data-mfsim-label="Komut paleti (Ctrl+K)..."></script>
 <script type="text/x-mfsim-defer" src="js/tidy-layout.js" data-mfsim-label="Otomatik düzen (tidy)..."></script>
 <script type="text/x-mfsim-defer" src="js/export-topology.js" data-mfsim-label="Görüntü dışa aktarma (PNG/SVG)..."></script>
+<script type="text/x-mfsim-defer" src="js/shortcuts-help.js" data-mfsim-label="Klavye kısayolları yardımı..."></script>
 
 <!-- ═══ BİLEŞEN ÖZELLİKLERİ MODALI ═══ -->
 <div id="ve-properties-overlay" class="ve-properties-overlay" style="display:none;" onmousedown="if(event.target===this) veTogglePropertiesPanel(false)">
