@@ -445,7 +445,7 @@ function veUpdateResultsTree() {
             : '';
 
           var is3dDiag = diagSigDef && diagSigDef.z;
-          var diagIcon = canDrag ? (is3dDiag ? '🔮' : '📈') : '🔒';
+          var diagIcon = canDrag ? (is3dDiag ? '<span class="mf-ico mf-ico-package"></span>' : '<span class="mf-ico mf-ico-trending-up"></span>') : '<span class="mf-ico mf-ico-lock"></span>';
           html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
           html += diagIcon + ' ' + diag.name;
           if(diag.note) html += ' <span style="font-size:0.5rem; color:var(--accent-warning);">⚠</span>';
@@ -4430,8 +4430,8 @@ function veRenderSlotPicker(slotIdx) {
   if(!body) return;
   
   var items = [
-    {type:'line', icon:'📈', label:'Çizgi\nGrafik'},
-    {type:'table', icon:'📋', label:'Tablo'},
+    {type:'line', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="gLine" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><line x1="6" y1="34" x2="6" y2="6" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="34" y2="34" stroke="#94a3b8" stroke-width="1.2"/><polyline points="8,27 15,19 21,23 28,11 33,14" fill="none" stroke="url(#gLine)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="27" r="1.7" fill="#3b82f6"/><circle cx="28" cy="11" r="1.7" fill="#8b5cf6"/></svg>', label:'Çizgi\nGrafik'},
+    {type:'table', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="gTbl" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><rect x="7" y="10" width="26" height="20" rx="2.5" fill="none" stroke="#94a3b8" stroke-width="1.2"/><path d="M7.6 16.6 H32.4" stroke="#94a3b8" stroke-width="1"/><path d="M15.3 16.6 V29.5 M24 16.6 V29.5" stroke="#94a3b8" stroke-width="1"/><rect x="9.2" y="12.2" width="21.6" height="2.6" rx="1.3" fill="url(#gTbl)"/></svg>', label:'Tablo'},
     {type:'scatter3d', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="g3d" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><line x1="6" y1="34" x2="6" y2="6" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="34" y2="34" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="18" y2="24" stroke="#94a3b8" stroke-width="1.2"/><circle cx="14" cy="18" r="2.8" fill="url(#g3d)" opacity="0.9"/><circle cx="22" cy="24" r="2.2" fill="#3b82f6" opacity="0.7"/><circle cx="28" cy="14" r="3" fill="url(#g3d)" opacity="0.95"/><circle cx="18" cy="28" r="2" fill="#8b5cf6" opacity="0.65"/><circle cx="26" cy="20" r="2.5" fill="#3b82f6" opacity="0.8"/><circle cx="11" cy="26" r="1.8" fill="#8b5cf6" opacity="0.6"/><circle cx="30" cy="28" r="2.3" fill="url(#g3d)" opacity="0.75"/></svg>', label:'3D\nGrafik'}
   ];
   
@@ -4628,8 +4628,7 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   }
 
   veRenderSlot(slotIdx);
-  var icon = is3D ? '🔮' : '📊';
-  if(typeof showToast === 'function') showToast(icon + ' ' + diag.name + ' diyagramı eklendi', 'success');
+  if(typeof showToast === 'function') showToast(diag.name + ' diyagramı eklendi', 'success');
 }
 
 // Tek sinyal slot'a ekle
@@ -4886,27 +4885,30 @@ function veRenderSlot(slotIdx) {
   
   var type = slot.type || 'line';
   var sensors = slot.sensors || [];
-  var typeName = type === 'line' ? '📈' : (type === 'scatter3d' ? '🔮' : '📋');
+  var typeIconName = type === 'line' ? 'trending-up' : (type === 'scatter3d' ? 'package' : 'clipboard');
 
   // Tab başlığını güncelle
   var tab = document.getElementById('ve-rslot-tab-' + slotIdx);
   if(tab) {
+    var tabText;
     if(sensors.length > 0) {
-      tab.textContent = typeName + ' ' + sensors.map(function(s){return s.name;}).join(', ');
+      tabText = sensors.map(function(s){return s.name;}).join(', ');
     } else {
       var typeLabel = type === 'line' ? 'Grafik' : (type === 'scatter3d' ? '3D Grafik' : 'Tablo');
-      tab.textContent = typeName + ' ' + typeLabel + ' ' + (slotIdx + 1);
+      tabText = typeLabel + ' ' + (slotIdx + 1);
     }
+    tab.innerHTML = '<span class="mf-ico mf-ico-' + typeIconName + '"></span> ';
+    tab.appendChild(document.createTextNode(tabText));
   }
   
   var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   
   if(sensors.length === 0) {
-    var emptyIcon = type === 'line' ? '📈' : (type === 'scatter3d' ? '🔮' : '📋');
+    var emptyIcon = type === 'line' ? 'trending-up' : (type === 'scatter3d' ? 'package' : 'clipboard');
     var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'scatter3d' ? '3D Scatter Grafik' : 'Veri Tablosu');
     var emptyHint = type === 'scatter3d' ? 'Data Browser\'dan en az 2 sinyal sürükleyin (X, Y). 3. sinyal Z olur.' : 'Data Browser\'dan sensör sürükleyin';
     var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted);">';
-    html += '<div style="font-size:2.2rem; margin-bottom:10px;">' + emptyIcon + '</div>';
+    html += '<div style="font-size:2.2rem; margin-bottom:10px;"><span class="mf-ico mf-ico-' + emptyIcon + '"></span></div>';
     html += '<div style="font-size:0.82rem; font-weight:600;">' + emptyName + '</div>';
     html += '<div style="font-size:0.72rem; margin-top:6px; opacity:0.7;">' + emptyHint + '</div>';
     html += '</div>';
@@ -4948,7 +4950,7 @@ function veRenderSlot(slotIdx) {
     html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '" style="overflow:hidden;">';
     html += '<div id="ve-3d-container-' + slotIdx + '" style="position:absolute;left:0;top:0;width:100%;height:100%;"></div>';
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
-    html += '<div style="font-size:1.5rem; margin-bottom:6px;">🔮</div>';
+    html += '<div style="font-size:1.5rem; margin-bottom:6px;"><span class="mf-ico mf-ico-package"></span></div>';
     if(sensors.length < 2) {
       html += 'En az 2 sinyal sürükleyin (X, Y). 3. sinyal Z ekseni olur, yoksa zaman kullanılır.';
     } else {

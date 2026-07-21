@@ -975,7 +975,7 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   }
   var html = '<div style="background:var(--bg-primary,#fff);border-radius:0;padding:20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);color:var(--text-primary,#333);">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
-  var diagIcon = d.zAxis ? '🔮' : '📊';
+  var diagIcon = d.zAxis ? '<span class="mf-ico mf-ico-package"></span>' : '<span class="mf-ico mf-ico-trending-up"></span>';
   html += '<span style="font-weight:700;font-size:0.9rem;">' + diagIcon + ' ' + d.name + '</span>';
   html += '<button onclick="document.getElementById(\'sw-info-overlay\').remove()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted,#999);">✕</button>';
   html += '</div>';
