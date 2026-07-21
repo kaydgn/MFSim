@@ -93,6 +93,40 @@ function updateCanvasTransform() {
   if(_zoomStatus) _zoomStatus.textContent = '%' + Math.round(canvasZoom * 100);
 }
 
+// Görünümü mevcut TÜM bileşenlere ortalar ve sığdırır (fit-to-content).
+// Otomatik yüklenen/kurulan topolojiler ızgaranın kenarına yapışmasın diye
+// kullanılır. Node koordinatlarına DOKUNMAZ — yalnız kamerayı (canvasOffset/
+// canvasZoom) ayarlar. maxZoom=1: küçük topolojilerde yakınlaştırmaz, sadece ortalar.
+function veFitViewToContent(opts) {
+  opts = opts || {};
+  if(typeof nodes === 'undefined' || !nodes || nodes.length === 0) return;
+  var wrapper = document.getElementById('ve-canvas-wrapper');
+  if(!wrapper) return;
+  var W = wrapper.clientWidth, H = wrapper.clientHeight;
+  if(W < 20 || H < 20) return;
+  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(function(n) {
+    var w = n.width || 65, h = n.height || 60;
+    if(n.x < minX) minX = n.x;
+    if(n.y < minY) minY = n.y;
+    if(n.x + w > maxX) maxX = n.x + w;
+    if(n.y + h > maxY) maxY = n.y + h;
+  });
+  if(!isFinite(minX)) return;
+  var bw = Math.max(1, maxX - minX), bh = Math.max(1, maxY - minY);
+  var ccx = (minX + maxX) / 2, ccy = (minY + maxY) / 2;
+  var margin = (opts.margin != null) ? opts.margin : 90;   // içerik çevresi boşluk (px)
+  var fitZoom = Math.min((W - margin * 2) / bw, (H - margin * 2) / bh);
+  var zoom = Math.max(0.2, Math.min(opts.maxZoom || 1, fitZoom));
+  // #ve-canvas top/left -3000 + transform-origin center → wrapper (0,0)'a göre:
+  //   ekran(cx) = (cx - 3000) * zoom + offset  ⇒  içerik merkezi ekran merkezine.
+  var CANVAS_OFFSET = 3000;
+  canvasZoom = zoom;
+  canvasOffset.x = W / 2 - (ccx - CANVAS_OFFSET) * zoom;
+  canvasOffset.y = H / 2 - (ccy - CANVAS_OFFSET) * zoom;
+  updateCanvasTransform();
+}
+
 // Drag başlangıcı
 document.querySelectorAll('.ve-component').forEach(function(comp) {
   comp.addEventListener('dragstart', function(e) {
