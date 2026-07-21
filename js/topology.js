@@ -574,6 +574,7 @@ function veRenderTabs() {
   html += '<button class="ve-toolbar-btn" onclick="veZoomIn()" title="Yakınlaştır"><span class="mf-ico mf-ico-zoom-in"></span></button>';
   html += '<button class="ve-toolbar-btn" onclick="veZoomOut()" title="Uzaklaştır"><span class="mf-ico mf-ico-zoom-out"></span></button>';
   html += '<button class="ve-toolbar-btn" onclick="veResetView()" title="Görünümü Sıfırla"><span class="mf-ico mf-ico-crosshair"></span></button>';
+  html += '<button class="ve-toolbar-btn" onclick="veFitViewToContent({maxZoom:2})" title="İçeriğe Sığdır"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>';
   html += '<div class="ve-toolbar-sep"></div>';
   html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof SNAP_ENABLED !== 'undefined' && SNAP_ENABLED ? ' active' : '') + '" id="ve-snap-btn" onclick="veToggleSnap()" title="Hizalama"><span class="mf-ico mf-ico-ruler"></span></button>';
   html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof veGridVisible !== 'undefined' && veGridVisible ? ' active' : '') + '" id="ve-grid-btn" onclick="veToggleGrid()" title="Grid Göster/Gizle"><span class="mf-ico mf-ico-grid"></span></button>';

@@ -1255,6 +1255,9 @@
   color:var(--text-muted);
 }
 .ve-status-spacer{flex:1;}
+/* Tıklanabilir durum-öğesi (ör. %zoom → tıkla %100) */
+.ve-status-clickable{cursor:pointer;border-radius:var(--radius-xs);padding:0 3px;transition:color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);}
+.ve-status-clickable:hover{color:var(--text-primary);background:var(--bg-tertiary);}
 .ve-status-sep{
   width:1px;
   height:12px;

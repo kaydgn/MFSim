@@ -127,6 +127,23 @@ function veFitViewToContent(opts) {
   updateCanvasTransform();
 }
 
+// Yakınlaştırmayı %100'e sıfırlar — görünüm MERKEZİNİ sabit tutarak (pan korunur).
+// Durum çubuğundaki %zoom göstergesine tıklanınca çağrılır.
+function veResetZoom() {
+  if(typeof canvasZoom === 'undefined' || canvasZoom === 1) return; // zaten %100
+  var wrapper = document.getElementById('ve-canvas-wrapper');
+  if(!wrapper) return;
+  var W = wrapper.clientWidth, H = wrapper.clientHeight;
+  var CANVAS_OFFSET = 3000;
+  // Şu an ekran merkezinde duran canvas noktası — zoom=1 sonrası orada kalsın
+  var cx = (W / 2 - canvasOffset.x) / canvasZoom + CANVAS_OFFSET;
+  var cy = (H / 2 - canvasOffset.y) / canvasZoom + CANVAS_OFFSET;
+  canvasZoom = 1;
+  canvasOffset.x = W / 2 - (cx - CANVAS_OFFSET);
+  canvasOffset.y = H / 2 - (cy - CANVAS_OFFSET);
+  updateCanvasTransform();
+}
+
 // Drag başlangıcı
 document.querySelectorAll('.ve-component').forEach(function(comp) {
   comp.addEventListener('dragstart', function(e) {
