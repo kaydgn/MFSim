@@ -645,34 +645,111 @@ function veHesaplaMesafe(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// ── 3 katmanlı yükseklik API: Open-Meteo → Open Topo Data → Open-Elevation ──
-function veFetchElevations(coords) {
-  var lats = coords.map(function(c) { return c.lat; });
-  var lngs = coords.map(function(c) { return c.lng; });
+// ── Kümülatif mesafe dizisi (metre): cum[i] = yol başından coords[i]'ye ──
+function _veCumDistances(coords) {
+  var cum = [0];
+  for(var i = 1; i < coords.length; i++) {
+    cum[i] = cum[i-1] + veHesaplaMesafe(coords[i-1].lat, coords[i-1].lng, coords[i].lat, coords[i].lng);
+  }
+  return cum;
+}
 
-  // 1) Open-Meteo: GET, max 1000 nokta, Copernicus DEM 90m
+// ── Elevation API'leri için seyrek örnekleme indeksleri ──
+// GPS örnekleri ~1.67m aralıklı (binlerce nokta) ama DEM çözünürlüğü 30-90m;
+// her noktayı sormak hem gereksiz hem de Open-Meteo'nun istek başına 100-nokta
+// limitini ve sunucuları zorlar. Bunun yerine en fazla `maxPts`, en az
+// `minSpacing` metre aralıklı bir alt küme seç (ilk + son nokta daima dahil).
+function _veBuildFetchIndices(cum, maxPts, minSpacing) {
+  var n = cum.length;
+  if(n <= 2) { var all = []; for(var k = 0; k < n; k++) all.push(k); return all; }
+  var total = cum[n-1] || 0;
+  var spacing = Math.max(minSpacing, total / Math.max(1, maxPts - 1));
+  var idxs = [0];
+  var lastD = 0;
+  for(var i = 1; i < n - 1; i++) {
+    if(cum[i] - lastD >= spacing) { idxs.push(i); lastD = cum[i]; }
+  }
+  idxs.push(n - 1);
+  return idxs;
+}
+
+// ── Seyrek elevation'ı tüm yoğun noktalara mesafeye göre lineer interpolasyonla yay ──
+// idxs: coords içindeki örneklenen indeksler; coarseElev[k] ↔ coords[idxs[k]].
+// Dönen dizi cum ile aynı uzunlukta (her yoğun nokta için bir yükseklik).
+function _veInterpElevByDist(cum, idxs, coarseElev) {
+  var out = new Array(cum.length);
+  var seg = 0;
+  for(var p = 0; p < cum.length; p++) {
+    while(seg < idxs.length - 2 && idxs[seg+1] <= p) seg++;
+    var iL = idxs[seg], iR = idxs[seg+1] !== undefined ? idxs[seg+1] : iL;
+    var eL = coarseElev[seg];
+    var eR = coarseElev[seg+1] !== undefined ? coarseElev[seg+1] : eL;
+    if(eL === undefined) { out[p] = eR; continue; }
+    if(p <= iL || iR <= iL) { out[p] = eL; }
+    else if(p >= iR) { out[p] = eR; }
+    else {
+      var dL = cum[iL], dR = cum[iR];
+      var t = dR > dL ? (cum[p] - dL) / (dR - dL) : 0;
+      out[p] = eL + (eR - eL) * t;
+    }
+  }
+  return out;
+}
+
+// ── 3 katmanlı yükseklik API: Open-Meteo → Open-Elevation → Open Topo Data ──
+// Yoğun GPS noktalarını doğrudan sormak yerine DEM çözünürlüğüne uygun seyrek
+// bir alt küme sorar, sonra interpolasyonla yoğunlaştırır. Bu sayede istek
+// başına 100-nokta limiti aşılmaz ve sunucular gereksiz yükle patlamaz.
+function veFetchElevations(coords) {
+  var cum = _veCumDistances(coords);
+  var MAX_FETCH_PTS = 500;   // Open-Meteo için ≤5 paralel 100-nokta isteği
+  var MIN_SPACING_M = 25;    // DEM ~30-90m; bunun altında yeni bilgi yok
+  var idxs = _veBuildFetchIndices(cum, MAX_FETCH_PTS, MIN_SPACING_M);
+  var fetchCoords = idxs.map(function(k) { return { lat: coords[k].lat, lng: coords[k].lng }; });
+  var lats = fetchCoords.map(function(c) { return c.lat; });
+  var lngs = fetchCoords.map(function(c) { return c.lng; });
+
+  // 1) Open-Meteo: GET, istek başına EN FAZLA 100 nokta (API limiti), Copernicus DEM 90m
   function tryOpenMeteo() {
-    // Open-Meteo URL uzunluk limiti nedeniyle chunk'lara böl (max 1000 nokta)
-    var chunkSize = 1000;
+    var chunkSize = 100;
     var chunks = [];
     for(var i = 0; i < lats.length; i += chunkSize) {
       chunks.push({ lats: lats.slice(i, i + chunkSize), lngs: lngs.slice(i, i + chunkSize) });
     }
-    return chunks.reduce(function(promise, chunk) {
-      return promise.then(function(acc) {
-        var url = 'https://api.open-meteo.com/v1/elevation?latitude=' + chunk.lats.join(',') + '&longitude=' + chunk.lngs.join(',');
-        return fetch(url).then(function(r) {
-          if(!r.ok) throw new Error('Open-Meteo HTTP ' + r.status);
-          return r.json();
-        }).then(function(data) {
-          if(!data.elevation || data.elevation.length !== chunk.lats.length) throw new Error('Open-Meteo eksik veri');
-          return acc.concat(data.elevation);
-        });
+    // Parça sayısı az (≤5) → paralel iste; Promise.all sırayı korur
+    return Promise.all(chunks.map(function(chunk) {
+      var url = 'https://api.open-meteo.com/v1/elevation?latitude=' + chunk.lats.join(',') + '&longitude=' + chunk.lngs.join(',');
+      return fetch(url).then(function(r) {
+        if(!r.ok) throw new Error('Open-Meteo HTTP ' + r.status);
+        return r.json();
+      }).then(function(data) {
+        if(!data.elevation || data.elevation.length !== chunk.lats.length) throw new Error('Open-Meteo eksik veri');
+        return data.elevation;
       });
-    }, Promise.resolve([]));
+    })).then(function(parts) {
+      return parts.reduce(function(acc, p) { return acc.concat(p); }, []);
+    });
   }
 
-  // 2) Open Topo Data: GET, max 100 nokta, SRTM 30m, cubic interpolasyon
+  // 2) Open-Elevation: POST, SRTM 30m — CORS destekli yedek
+  function tryOpenElevation() {
+    var locations = fetchCoords.map(function(c) { return {latitude: c.lat, longitude: c.lng}; });
+    return fetch('https://api.open-elevation.com/api/v1/lookup', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({locations: locations})
+    }).then(function(r) {
+      if(!r.ok) throw new Error('Open-Elevation HTTP ' + r.status);
+      return r.json();
+    }).then(function(data) {
+      if(!data.results || data.results.length < fetchCoords.length) throw new Error('Open-Elevation eksik veri');
+      return data.results.map(function(r) { return r.elevation; });
+    });
+  }
+
+  // 3) Open Topo Data: GET, SRTM 30m — son çare.
+  //    NOT: CORS başlığı göndermediğinden tarayıcıda genelde çalışmaz;
+  //    yalnızca CORS uygulanmayan ortamlar (Electron/proxy) için tutuluyor.
   function tryOpenTopoData() {
     var chunkSize = 100;
     var chunks = [];
@@ -697,33 +774,21 @@ function veFetchElevations(coords) {
     }, Promise.resolve([]));
   }
 
-  // 3) Open-Elevation: POST, SRTM 30m (mevcut - son çare)
-  function tryOpenElevation() {
-    var locations = coords.map(function(c) { return {latitude: c.lat, longitude: c.lng}; });
-    return fetch('https://api.open-elevation.com/api/v1/lookup', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({locations: locations})
-    }).then(function(r) {
-      if(!r.ok) throw new Error('Open-Elevation HTTP ' + r.status);
-      return r.json();
-    }).then(function(data) {
-      if(!data.results || data.results.length < coords.length) throw new Error('Open-Elevation eksik veri');
-      return data.results.map(function(r) { return r.elevation; });
-    });
-  }
-
-  // Fallback zinciri
+  // Fallback zinciri: Open-Meteo → Open-Elevation → Open Topo Data
+  // Sonra seyrek elevation'ı tüm yoğun noktalara interpolasyonla yay.
   return tryOpenMeteo()
     .catch(function(e) {
-      console.warn('Open-Meteo başarısız, Open Topo Data deneniyor...', e.message);
+      console.warn('Open-Meteo başarısız, Open-Elevation deneniyor...', e.message);
       showToast('⚠️ Open-Meteo yanıt vermedi, alternatif deneniyor...', 'warning');
-      return tryOpenTopoData();
+      return tryOpenElevation();
     })
     .catch(function(e) {
-      console.warn('Open Topo Data başarısız, Open-Elevation deneniyor...', e.message);
+      console.warn('Open-Elevation başarısız, Open Topo Data deneniyor...', e.message);
       showToast('⚠️ Alternatif API yanıt vermedi, son seçenek deneniyor...', 'warning');
-      return tryOpenElevation();
+      return tryOpenTopoData();
+    })
+    .then(function(coarseElev) {
+      return _veInterpElevByDist(cum, idxs, coarseElev);
     });
 }
 
