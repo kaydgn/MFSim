@@ -5,10 +5,13 @@ function getECMatchingPropertiesHTML(node) {
   var html = '';
   
   // Başlık
-  html += '<div class="sw-panel">';
+  html += '<div class="sw-panel ve-cp-panel">';
   html += '<div class="sw-section-title">Motor — Konvertör Eşleştirme Analizi</div>';
   html += '<div class="sw-pkg-desc">Motor çıkış portuna bağlanmalıdır. Allison TD-148G standardına göre motor-konvertör uyumluluğunu analiz eder. C4/C5/C7/C8/C9/C10 kontrollerini uygular.</div>';
-  
+
+  // İki sütun (asimetrik) — İNCE SOL ray: motor özeti + türbin limiti girdisi
+  html += '<div class="ve-cp-grid ve-cp-grid--wideright"><div class="ve-cp-col ve-cp-col--in">';
+
   // Motor algılama bilgisi
   html += '<div id="ecm-engine-info-' + node.id + '" style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';
   html += '<div style="font-size:0.65rem; color:var(--text-muted);">Motor bileşeni aranıyor...</div>';
@@ -27,7 +30,9 @@ function getECMatchingPropertiesHTML(node) {
   html += '</table>';
   html += '<div class="sw-pkg-desc">C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir (Net Turbine Torque limiti).</div>';
   html += '</div></div>';
-  
+  html += '</div>';                                     // ve-cp-col--in kapat (ince sol ray)
+  html += '<div class="ve-cp-col ve-cp-col--out">';     // GENİŞ SAĞ: sonuç tablosu + grafik
+
   // Analiz sonuç tablosu
   html += '<div id="ecm-results-' + node.id + '" style="padding:10px 12px;">';
   html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.68rem;">Analiz bekleniyor... Motor bileşeni tanımlandığında otomatik çalışır.</div>';
@@ -43,6 +48,8 @@ function getECMatchingPropertiesHTML(node) {
   html += '</div>';
   html += '<div class="sw-pkg-desc">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0.80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0.80 SR çalışma noktalarını verir.</div>';
   html += '</div></div>';
+  html += '</div>';  // ve-cp-col--out kapat
+  html += '</div>';  // ve-cp-grid kapat
   html += '</div>'; // close sw-panel
 
   return html;
