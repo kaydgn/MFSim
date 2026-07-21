@@ -46,5 +46,9 @@ function veSubTabDegistir(tabName) {
     if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
     veUpdateResultsTree();
     veInitResultSlots();
+    // Sonuç açılışı: içerik yumuşakça belirir (animasyon CSS'te; reduced-motion'a saygılı).
+    // remove → reflow → add ile her geçişte yeniden tetiklenir.
+    var _resPage = document.getElementById('ve-page-sonuclar');
+    if(_resPage){ _resPage.classList.remove('ve-reveal-play'); void _resPage.offsetWidth; _resPage.classList.add('ve-reveal-play'); }
   }
 }

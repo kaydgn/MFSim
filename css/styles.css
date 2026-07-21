@@ -3031,6 +3031,27 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   margin-bottom:12px;
 }
 
+/* ===== SONUÇ AÇILIŞ ANİMASYONU =====
+   Sonuçlar sekmesine geçildiğinde içerik yumuşakça belirir (fade + yukarı
+   kayma); yuvalar satır satır hafif kademeyle gelir. Plotly'ye dokunmaz —
+   yalnızca kapsayıcıları canlandırır. reduced-motion'da tamamen kapanır. */
+@keyframes veResultReveal{
+  from{ opacity:0; transform:translateY(10px); }
+  to{ opacity:1; transform:none; }
+}
+#ve-page-sonuclar.ve-reveal-play #ve-results-browser{
+  animation:veResultReveal 0.40s var(--ease-out) both;
+}
+#ve-page-sonuclar.ve-reveal-play .ve-rslot{
+  animation:veResultReveal 0.46s var(--ease-out) both;
+}
+#ve-page-sonuclar.ve-reveal-play .ve-results-row:nth-child(1) .ve-rslot{ animation-delay:0.05s; }
+#ve-page-sonuclar.ve-reveal-play .ve-results-row:nth-child(2) .ve-rslot{ animation-delay:0.13s; }
+@media (prefers-reduced-motion: reduce){
+  #ve-page-sonuclar.ve-reveal-play #ve-results-browser,
+  #ve-page-sonuclar.ve-reveal-play .ve-rslot{ animation:none; }
+}
+
 /* ===== ANNOTATIONS (Gruplama Çerçevesi & Yazı Etiketi) ===== */
 .ve-annotation{
   position:absolute;
