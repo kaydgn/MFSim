@@ -1631,10 +1631,8 @@
 .ve-canvas-wrapper{
   flex:1;
   overflow:hidden;
-  background:
-    linear-gradient(var(--border-light) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
-  background-size:20px 20px;
+  /* Izgara buradan #ve-canvas'a taşındı → bileşenlerle aynı transform'lu uzayda,
+     pan/zoom'da birlikte kayar. Wrapper yalnızca zemin rengini tutar. */
   background-color:var(--bg-primary);
   min-height:0;
   position:relative;
@@ -1644,7 +1642,7 @@
 .ve-canvas-wrapper.panning{
   cursor:grabbing;
 }
-.ve-canvas-wrapper.grid-hidden{
+.ve-canvas-wrapper.grid-hidden #ve-canvas{
   background-image:none;
 }
 
@@ -1683,6 +1681,16 @@
   top:-3000px;
   left:-3000px;
   transform-origin:center center;
+}
+/* Izgara ana canvas'ın kendi (transform'lu) koordinat uzayında — id ile hedeflenir
+   ki split-view snapshot klonları (class 've-canvas') etkilenmesin. Böylece ızgara
+   bileşenlerle birlikte pan'da kayar, zoom'da ölçeklenir; hep hizalı kalır.
+   Boyut veCycleGridDensity ile inline güncellenir (varsayılan 20px). */
+#ve-canvas{
+  background-image:
+    linear-gradient(var(--border-light) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
+  background-size:20px 20px;
 }
 
 /* ===== NODE STİLLERİ ===== */
