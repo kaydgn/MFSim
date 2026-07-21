@@ -252,7 +252,7 @@ function onVESolverParamChange(nodeId) {
 
 // ===== VİTES GEÇİŞLERİ ÖZELLİKLERİ =====
 function getGearShiftPropertiesHTML(node) {
-  var html = '<div style="border-top:1px solid var(--border-color); padding-top:12px;">';
+  var html = '<div class="ve-cp-panel" style="border-top:1px solid var(--border-color); padding-top:12px;">';
 
   // ── Kaynak bileşenlerden veri çek ──
   var gbNode = nodes.find(function(n) { return n.type === 'gearbox'; });
@@ -323,6 +323,9 @@ function getGearShiftPropertiesHTML(node) {
     return html;
   }
 
+  // İKİ SÜTUN (kart yığını): profil seçici tam genişlik üstte kaldı; çıktı
+  // kartları SOL = Converter + Lockup, SAĞ = Downshift + Matematik + Algoritma
+  html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
   // ── 2. Converter-Mod Geçişleri ──
   html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Converter-Mod Geçişleri</div>';
@@ -467,6 +470,8 @@ function getGearShiftPropertiesHTML(node) {
   html += '</div>';
 
   // ── 4. Downshift Tablosu ──
+  html += '</div>';                                    // ve-cp-col (sol) kapat
+  html += '<div class="ve-cp-col">';                   // SAĞ sütun: downshift + matematik + algoritma
   html += '<div style="background:var(--bg-tertiary); border-radius:8px; padding:10px; margin-bottom:10px;">';
   html += '<div style="font-size:0.72rem; font-weight:600; color:var(--text-heading); margin-bottom:4px;">Downshift Eşikleri</div>';
   html += '<p style="font-size:0.58rem; color:var(--text-muted); margin-bottom:8px; line-height:1.3;">Downshift koşulu: N<sub>out</sub> &lt; eşik → alt vitese düş. Histerezis = upshift eşiği − downshift eşiği.</p>';
@@ -618,6 +623,8 @@ function getGearShiftPropertiesHTML(node) {
   html += '</div>';
 
   html += '</div>';
+  html += '</div>';                                    // ve-cp-col (sağ) kapat
+  html += '</div>';                                    // ve-cp-grid kapat
 
   html += '</div>';
   return html;
