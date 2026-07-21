@@ -177,6 +177,11 @@ function veAracOpenEditor(nodeId, _silent){
     _veAracBusy = false;
   }
 
+  // Otomatik yüklenen/kurulan alt-topoloji ızgaranın kenarına yapışmasın:
+  // görünümü içeriğe ortala + sığdır (node koordinatları değişmez). Sessiz
+  // (köke-çökme) re-entry'de kullanıcının bulunduğu konum korunur.
+  if(!_silent && typeof veFitViewToContent === 'function') veFitViewToContent();
+
   if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
   veAracUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
