@@ -2864,6 +2864,19 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   backdrop-filter:blur(8px);
 }
 .ve-chart-tooltip.visible{opacity:1;}
+/* Simülasyon oynatma (playhead) butonu — grafik alanında hover'da beliren overlay */
+.ve-chart-play{
+  position:absolute; top:8px; left:8px; z-index:16;
+  width:26px; height:26px; display:flex; align-items:center; justify-content:center;
+  border-radius:var(--radius-sm); cursor:pointer; padding:0;
+  background:color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  border:1px solid var(--border-color); color:var(--text-secondary);
+  opacity:0; transition:opacity 0.15s ease, background 0.12s, color 0.12s, border-color 0.12s;
+}
+.ve-slot-chart-area:hover .ve-chart-play{ opacity:0.85; }
+.ve-chart-play:hover{ opacity:1; background:var(--bg-input); border-color:var(--accent-primary); color:var(--accent-primary); }
+.ve-chart-play.playing{ opacity:1; border-color:var(--accent-primary); color:var(--accent-primary); }
+.ve-chart-play .mf-ico{ width:14px; height:14px; }
 .ve-chart-tooltip-row{display:flex;align-items:center;gap:7px;padding:2px 0;}
 .ve-chart-tooltip-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 0 4px rgba(0,0,0,0.2);}
 .ve-chart-tooltip-val{font-weight:600;font-family:'SF Mono','Fira Code',monospace;margin-left:auto;padding-left:14px;font-size:0.72rem;}

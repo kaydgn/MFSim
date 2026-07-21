@@ -4924,6 +4924,7 @@ function veRenderSlot(slotIdx) {
     html += '<div class="ve-chart-crosshair-v" id="ve-crosshair-v-' + slotIdx + '"></div>';
     html += '</div>';
     html += '<div class="ve-chart-tooltip" id="ve-tooltip-' + slotIdx + '"></div>';
+    html += '<button class="ve-chart-play" id="ve-chart-play-' + slotIdx + '" onclick="event.stopPropagation();veChartPlayhead(' + slotIdx + ')" title="Simülasyonu oynat (zaman-kafası eğriyi tarar)"><span class="mf-ico mf-ico-play"></span></button>';
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
     html += '<div style="font-size:1.5rem; margin-bottom:6px;"><span class="mf-ico mf-ico-trending-up"></span></div>Simülasyon sonrası grafik görünecek</div>';
     // ── Grafik içi legend (overlay, sürüklenebilir) ──
