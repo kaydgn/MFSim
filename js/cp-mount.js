@@ -368,7 +368,7 @@ function _mntRow(label, sub, inner){
 }
 // ─── Estetik girdi yardımcıları (kompakt, ince, hizalı) ──────────────────────
 // Ortak input stili — küçük, zarif, odakta vurgu.
-var _MNT_INP='padding:4px 6px; font-size:0.66rem; height:25px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; text-align:right; box-sizing:border-box;';
+var _MNT_INP='padding:4px 6px; font-size:0.66rem; height:25px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right; box-sizing:border-box;';
 // Bölüm başlığı (ince alt çizgi + opsiyonel birim).
 function _mntGrpTitle(title, unit){
   return '<div style="font-size:0.6rem; font-weight:700; color:var(--text-heading); border-bottom:1px solid var(--border-color); padding-bottom:4px; margin:3px 0 9px;">'+title+(unit?' <span style="font-size:0.52rem; font-weight:400; color:var(--text-muted);">'+unit+'</span>':'')+'</div>';
@@ -377,11 +377,11 @@ function _mntGrpTitle(title, unit){
 // (estetik: yumuşak zemin, yuvarlak köşe, sol aksan).
 function _mntCard(title, unit, accent, inner){
   var head = title ? '<div style="display:flex; align-items:center; gap:7px; margin-bottom:9px;">'
-    + '<span style="width:3px; height:12px; border-radius:2px; background:'+(accent||'var(--accent-primary)')+';"></span>'
+    + '<span style="width:3px; height:12px; border-radius:0; background:'+(accent||'var(--accent-primary)')+';"></span>'
     + '<span style="font-size:0.635rem; font-weight:700; color:var(--text-heading); letter-spacing:0.02em;">'+title+'</span>'
     + (unit ? '<span style="font-size:0.5rem; font-weight:400; color:var(--text-muted);">'+unit+'</span>' : '')
     + '</div>' : '';
-  return '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:9px; padding:11px 12px 6px; margin-bottom:9px;">'+head+inner+'</div>';
+  return '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; padding:11px 12px 6px; margin-bottom:9px;">'+head+inner+'</div>';
 }
 // Etiketli 3'lü inline grup (x/y/z yan yana). title boşsa üst başlık çizilmez
 // (kart başlığı kapsıyorsa). subLabel verilirse solda küçük bir alt-etiket olur.
@@ -468,19 +468,28 @@ function _mntTransferSection(node){
 function getMntMassPropertiesHTML(node){
   _mntEnsureMassData(node);
   var d=node.data;
-  var html='<div class="sw-panel">';
-  html+=_mntCard('Kütle & Ağırlık Merkezi','[kg · mm]','var(--accent-primary)',
+  // SOL (girdi): kütle + ağırlık merkezi + nokta-kütle anahtarı.
+  var massCard=_mntCard('Kütle & Ağırlık Merkezi','[kg · mm]','var(--accent-primary)',
       _mntSingle(node,'Kütle','[kg]','mass','ör: 1386.3','0.001')
     + _mntTriple(node,'Ağırlık Merkezi (CG)','[mm]',['cgx','cgy','cgz'],['x','y','z'],'0.01'));
-  html+='<label style="display:flex; align-items:center; gap:8px; font-size:0.64rem; color:var(--text-secondary); margin:0 2px 9px; cursor:pointer;"><input type="checkbox" '+(d.pointMass?'checked':'')+' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"> Nokta kütle (atalet = 0)</label>';
-  if(!d.pointMass){
-    html+=_mntCard('Atalet Tensörü','[kg·m²]','var(--accent-warning)',
-        _mntTriple(node,'Köşegen','',['Ixx','Iyy','Izz'],['Ixx','Iyy','Izz'],'0.001')
-      + _mntTriple(node,'Çarpım','',['Ixy','Ixz','Iyz'],['Ixy','Ixz','Iyz'],'0.001'));
-  }
-  if(node.type==='mnt-motor')         html+=_mntEngineSection(node);
-  else if(node.type==='mnt-gearbox')  html+=_mntGearboxSection(node);
-  else if(node.type==='mnt-transfer') html+=_mntTransferSection(node);
+  var toggle='<label style="display:flex; align-items:center; gap:8px; font-size:0.64rem; color:var(--text-secondary); margin:0 2px 9px; cursor:pointer;"><input type="checkbox" '+(d.pointMass?'checked':'')+' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"> Nokta kütle (atalet = 0)</label>';
+  // SAĞ (çıktı/tanım): atalet tensörü — nokta kütlede yerine kısa bilgi kartı gelir
+  // (sağ sütun boş kalmasın, tüm gövde tiplerinde denge korunsun).
+  var rightCard = (!d.pointMass)
+    ? _mntCard('Atalet Tensörü','[kg·m²]','var(--accent-warning)',
+          _mntTriple(node,'Köşegen','',['Ixx','Iyy','Izz'],['Ixx','Iyy','Izz'],'0.001')
+        + _mntTriple(node,'Çarpım','',['Ixy','Ixz','Iyz'],['Ixy','Ixz','Iyz'],'0.001'))
+    : _mntCard('Nokta Kütle','I = 0','var(--accent-warning)',
+          '<div style="font-size:0.6rem; color:var(--text-secondary); line-height:1.5;">Atalet tensörü <b style="color:var(--text-heading);">sıfır</b> kabul edilir; kütle tümüyle ağırlık merkezinde toplanır. Şaft gibi ince/hafif gövdeler için uygundur. Atalet girmek için işareti kaldırın.</div>');
+  var drive = node.type==='mnt-motor'  ? _mntEngineSection(node)
+            : node.type==='mnt-gearbox' ? _mntGearboxSection(node)
+            : node.type==='mnt-transfer'? _mntTransferSection(node) : '';
+  var html='<div class="sw-panel">';
+  html+='<div class="ve-cp-grid ve-cp-grid--cards">';
+  html+='<div class="ve-cp-col ve-cp-col--in">'+massCard+toggle+'</div>';
+  html+='<div class="ve-cp-col ve-cp-col--out">'+rightCard+'</div>';
+  html+='</div>';
+  if(drive) html+=drive;   // tork/tahrik zinciri girdileri — tam genişlik alt şerit
   html+='</div>';
   return html;
 }
