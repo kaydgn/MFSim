@@ -2757,25 +2757,27 @@
    Çözücü / Rapor / modül girişi gibi "kısa metin + tek eylem" panelleri içeriği
    azdır: geniş/iki-sütun yapmak boş sağ sütun bırakır. Bunun yerine DAR pencere +
    (geniş panellerdeki gibi) kompakt-sol kimlik satırı → düzenli, kasıtlı görünür.
-   Kimlik stilleri --wide ile aynı; yalnız pencere dar. Salt yerleşim. */
+   Kimlik stilleri --wide ile aynı; yalnız pencere dar. Salt yerleşim.
+   NOT: kompakt-sol kimlik satırı --2dview ve --mntlib panellerine de uygulanır
+   (onlar kendi geniş boyutlarını korur; yalnız kimlik satırını paylaşır). */
 .ve-properties.ve-properties--compact{ max-width:560px; }
-.ve-properties--compact .ve-prop-identity{
+:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-identity{
   flex-direction:row; align-items:center; gap:11px;
   margin-bottom:10px; padding-bottom:9px;
   border-bottom:1px solid var(--border-color);
 }
-.ve-properties--compact .ve-prop-identity .ve-prop-symbol{ min-height:0; margin:0; flex:0 0 auto; }
-.ve-properties--compact .ve-prop-identity .ve-prop-symbol svg{ width:34px; height:34px; }
-.ve-properties--compact .ve-prop-meta{ align-items:flex-start; }
-.ve-properties--compact .ve-prop-name{ margin-bottom:1px; }
-.ve-properties--compact .ve-prop-del{
+:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-identity .ve-prop-symbol{ min-height:0; margin:0; flex:0 0 auto; }
+:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-identity .ve-prop-symbol svg{ width:34px; height:34px; }
+:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-meta{ align-items:flex-start; }
+:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-name{ margin-bottom:1px; }
+:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-del{
   position:static; margin-left:auto;
   width:24px; height:24px; border-radius:var(--radius-sm);
   background:transparent; color:var(--accent-danger);
   border:1px solid color-mix(in srgb, var(--accent-danger) 35%, transparent);
   opacity:1;
 }
-.ve-properties--compact .ve-prop-del:hover{ background:var(--bg-input); }
+:is(.ve-properties--compact, .ve-properties--2dview, .ve-properties--mntlib) .ve-prop-del:hover{ background:var(--bg-input); }
 /* İnteraktif 2D figürler: fare tekerleğiyle yakınlaştır, sürükleyerek kaydır.
    grabbing imleci sürükleme sırasında JS ile ayarlanır. */
 .ve-mnt2d-fig{ cursor:grab; }
@@ -2785,7 +2787,7 @@
 .ve-mnt2d-summary{
   display:flex; flex-wrap:wrap; gap:6px 16px;
   padding:7px 10px; margin-bottom:6px;
-  background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:7px;
+  background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0;
   font-size:0.64rem; color:var(--text-secondary);
 }
 .ve-mnt2d-summary b{ color:var(--text-heading); font-weight:600; }
@@ -2812,7 +2814,7 @@
   display:flex; align-items:center; justify-content:center;
   font-size:0.82rem !important; line-height:1;
   background:var(--bg-tertiary); color:var(--text-primary);
-  border:1px solid var(--border-color); border-radius:5px; cursor:pointer;
+  border:1px solid var(--border-color); border-radius:0; cursor:pointer;
   transition:background 0.12s, border-color 0.12s;
 }
 .ve-mnt2d-zoomctl button:hover{ background:var(--bg-input); border-color:var(--accent-primary); }
