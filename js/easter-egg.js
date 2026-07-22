@@ -35,7 +35,13 @@ var MF_DHO_CONFIG = {
 
   // Sana özel ithaf satırı (opsiyonel) — örn. mezuniyet yılın, filon, gemin.
   // Boş bırakırsan gösterilmez. Örnek: 'Bir DHO mezununun emeğiyle · 1998'
-  ithaf: 'Bir Deniz Harp Okulu mezununun emeğiyle. ⚓'
+  ithaf: 'Bir Deniz Harp Okulu mezununun emeğiyle. ⚓',
+
+  // Onur penceresindeki "temaya geç" düğmesi (opsiyonel). Uygulamanın
+  // "Donanma Mavisi" temasına tek tıkla geçer. temaButonu:false ile gizlenir.
+  temaButonu: true,
+  temaId: 'navy',
+  temaButonEtiketi: '⚓ Donanma Mavisi temasına geç'
 };
 
 var _mfDhoBuilt = false;
@@ -114,6 +120,13 @@ function _mfDhoInjectCSS() {
       'display:flex;flex-direction:column;gap:8px;}',
     '.mf-dho-dedication{font-size:.74rem;color:var(--text-secondary,#7a8599);}',
     '.mf-dho-brand{font-size:.64rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted,#4a5568);}',
+    // Temaya geç düğmesi — altın hayalet düğme
+    '.mf-dho-cta{align-self:center;margin:2px 0 6px;padding:9px 18px;border-radius:10px;cursor:pointer;',
+      'font-size:.8rem;font-weight:600;letter-spacing:.3px;color:#f2e2b3;',
+      'background:linear-gradient(180deg,rgba(217,178,90,.16),rgba(217,178,90,.05));',
+      'border:1px solid rgba(217,178,90,.55);transition:background .15s,border-color .15s,transform .1s;}',
+    '.mf-dho-cta:hover{background:linear-gradient(180deg,rgba(217,178,90,.30),rgba(217,178,90,.12));border-color:rgba(217,178,90,.9);}',
+    '.mf-dho-cta:active{transform:translateY(1px);}',
     // Kapat düğmesi
     '.mf-dho-close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:8px;cursor:pointer;',
       'display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid transparent;',
@@ -155,6 +168,9 @@ function _mfDhoBuild() {
     if (c.sozSahibi) body += '<p class="mf-dho-author">' + _mfDhoEsc(c.sozSahibi) + '</p>';
   }
   body += '<div class="mf-dho-foot">';
+  if (c.temaButonu && c.temaId) {
+    body += '<button class="mf-dho-cta" type="button" onclick="veDenizHarpApplyTheme()">' + _mfDhoEsc(c.temaButonEtiketi || 'Temayı uygula') + '</button>';
+  }
   if (c.ithaf) body += '<div class="mf-dho-dedication">' + _mfDhoEsc(c.ithaf) + '</div>';
   body += '<div class="mf-dho-brand">MFSim ⚓ Sancak selamda</div>';
   body += '</div>';
@@ -197,6 +213,14 @@ function veDenizHarpToggle() {
   else veDenizHarpOpen();
 }
 
+// Onur penceresindeki düğme → uygulamanın "Donanma Mavisi" temasına geç.
+function veDenizHarpApplyTheme() {
+  var id = MF_DHO_CONFIG.temaId || 'navy';
+  if (typeof changeTheme === 'function') changeTheme(id);
+  if (typeof showToast === 'function') showToast('Donanma Mavisi teması uygulandı ⚓', 'success');
+  veDenizHarpClose();
+}
+
 // ── Dinleyici: gizli diziyi yakala; Esc ile kapat ────────────────────────────
 // Yalnız bir metin alanına yazmıyorken sayılır (arama/başka easter egg ile
 // çakışmasın). preventDefault yalnız eşleşme anında (nötr; girdi alanı yok).
@@ -222,6 +246,7 @@ if (typeof module !== 'undefined' && module.exports) {
     _mfDhoResetBuffer: function() { _mfDhoBuf = ''; },
     veDenizHarpOpen: veDenizHarpOpen,
     veDenizHarpClose: veDenizHarpClose,
-    veDenizHarpToggle: veDenizHarpToggle
+    veDenizHarpToggle: veDenizHarpToggle,
+    veDenizHarpApplyTheme: veDenizHarpApplyTheme
   };
 }

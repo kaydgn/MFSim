@@ -180,6 +180,26 @@
       --shadow-color: rgba(20, 30, 45, 0.10);
     }
 
+    /* Tema: Donanma Mavisi — Derin lacivert deniz gecesi, sırma altını aksan */
+    [data-theme="navy"] {
+      --bg-primary: #0a1728;
+      --bg-secondary: #0f2237;
+      --bg-tertiary: #17324f;
+      --bg-input: #071120;
+      --border-color: #21405f;
+      --border-light: #294a6c;
+      --border-hover: #3a6390;
+      --text-primary: #cfdbea;
+      --text-secondary: #869ab6;
+      --text-muted: #57708c;
+      --text-heading: #eef4fb;
+      --accent-primary: #d9b25a;
+      --accent-success: #35a56f;
+      --accent-warning: #e58a2c;
+      --accent-danger: #e15a51;
+      --shadow-color: rgba(0, 6, 16, 0.6);
+    }
+
     /* ========== TASARIM SİSTEMİ ÖLÇEKLERİ (tema-bağımsız) ==========
        Renkler temaya göre değişir; aşağıdaki ölçekler tüm temalarda ortaktır.
        Amaç: köşe/derinlik/boşluk/hareket tutarlılığı — "tasarlanmış" his. */

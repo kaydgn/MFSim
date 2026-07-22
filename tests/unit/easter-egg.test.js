@@ -62,9 +62,26 @@ describe('onur penceresi (smoke)', () => {
     const ov = document.getElementById('mf-dho');
     expect(ov).not.toBeNull();
     expect(ov.classList.contains('open')).toBe(true);
-    // İçerik amblem + okul adını taşımalı
+    // İçerik amblem + okul adı + tema düğmesini taşımalı
     expect(ov.innerHTML).toContain(egg.MF_DHO_CONFIG.okulAdi);
+    expect(ov.innerHTML).toContain(egg.MF_DHO_CONFIG.temaButonEtiketi);
     expect(() => egg.veDenizHarpClose()).not.toThrow();
     expect(ov.classList.contains('open')).toBe(false);
+  });
+});
+
+// ── Tema düğmesi kablolaması ──────────────────────────────────────────
+describe('veDenizHarpApplyTheme — Donanma Mavisi', () => {
+  test('changeTheme(temaId) çağırır, toast atar ve pencereyi kapatır', () => {
+    global.changeTheme = jest.fn();
+    global.showToast = jest.fn();
+    egg.veDenizHarpOpen();
+    egg.veDenizHarpApplyTheme();
+    expect(global.changeTheme).toHaveBeenCalledWith(egg.MF_DHO_CONFIG.temaId); // 'navy'
+    expect(global.showToast).toHaveBeenCalled();
+    const ov = document.getElementById('mf-dho');
+    expect(ov.classList.contains('open')).toBe(false);
+    delete global.changeTheme;
+    delete global.showToast;
   });
 });
