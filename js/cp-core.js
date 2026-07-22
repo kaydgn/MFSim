@@ -149,7 +149,14 @@ function clearSelection() {
 // kimlik kompakt-sola geçer. (Yerleşim üreticileri ilgili cp-*.js dosyalarında.)
 var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard', 'road',
   // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir)
-  'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer'];
+  'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
+  // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
+  'parametric'];
+
+// Hafif paneller — içerik az (kısa metin / birkaç alan / tek eylem): geniş yerine
+// DAR "eylem kartı" + kompakt-sol kimlik (ortalı-simge boşluğu gitsin). Salt sunum.
+var VE_COMPACT_PANEL_TYPES = ['mnt-solver', 'mnt-report', 'mount-analysis',
+  'arac-performans', 'terminator', 'sensor', 'scenario', 'coast-down', 'propshaft', 'differential', 'wheel'];
 
 // Son gösterilen bileşen — pencere konumunu sıfırlamak için. Başka bileşene
 // geçince pencere ortalanır; aynı bileşenin yerinde yenilenmesinde korunur.
@@ -268,9 +275,9 @@ function showNodeProperties(node) {
   if(_propWin) _propWin.classList.toggle('ve-properties--wide', VE_WIDE_PANEL_TYPES.indexOf(node.type) >= 0);
   // Yol / Ortam: harita hero → çok geniş+yüksek pencere (--wide boyutunu ezer).
   if(_propWin) _propWin.classList.toggle('ve-properties--road', node.type === 'road');
-  // Takoz hafif başlatıcıları (Çözücü / Rapor / modül girişi): içerik az → dar
-  // pencere + kompakt-sol kimlik. Geniş yapmak boş sütun bırakırdı. Salt sunum.
-  if(_propWin) _propWin.classList.toggle('ve-properties--compact', ['mnt-solver', 'mnt-report', 'mount-analysis'].indexOf(node.type) >= 0);
+  // Hafif paneller (VE_COMPACT_PANEL_TYPES): içerik az → dar pencere + kompakt-sol
+  // kimlik. Geniş yapmak boş sütun bırakırdı. Salt sunum.
+  if(_propWin) _propWin.classList.toggle('ve-properties--compact', VE_COMPACT_PANEL_TYPES.indexOf(node.type) >= 0);
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 
