@@ -92,8 +92,15 @@ describe('loadState / saveState', () => {
     expect(s.stationId).toBeNull();
     expect(s.stationCat).toBe('Tümü');
     expect(s.open).toBe(false);
+    expect(s.favorites).toEqual([]);
     expect(s.customStations).toEqual([]);
     expect(s.pos).toBeNull();
+  });
+
+  test('favorites yalnızca string id\'leri geri yükler + kaydedilir', () => {
+    const api = load();
+    api.saveState({ favorites: ['groove-salad', 123, null, 'joy-fm'] });
+    expect(api.loadState().favorites).toEqual(['groove-salad', 'joy-fm']);
   });
 
   test('stationCat kaydedilir ve geri okunur', () => {
@@ -283,6 +290,43 @@ describe('filterStationsByCat / stationCategories', () => {
   });
 });
 
+// ── Favoriler (saf) ───────────────────────────────────────────────────────────
+describe('favoriler: isFavorite / toggleFavorite / favoriteStations', () => {
+  const api = load();
+
+  test('toggleFavorite ekler ve çıkarır', () => {
+    let f = api.toggleFavorite([], 'a');
+    expect(f).toEqual(['a']);
+    f = api.toggleFavorite(f, 'b');
+    expect(f).toEqual(['a', 'b']);
+    f = api.toggleFavorite(f, 'a');   // tekrar → çıkar
+    expect(f).toEqual(['b']);
+  });
+
+  test('toggleFavorite girdiyi mutasyona uğratmaz (saf)', () => {
+    const src = ['x'];
+    api.toggleFavorite(src, 'y');
+    expect(src).toEqual(['x']);
+  });
+
+  test('isFavorite doğru raporlar', () => {
+    expect(api.isFavorite(['a', 'b'], 'b')).toBe(true);
+    expect(api.isFavorite(['a'], 'z')).toBe(false);
+    expect(api.isFavorite(null, 'a')).toBe(false);
+  });
+
+  test('favoriteStations liste sırasını koruyarak süzer', () => {
+    const favIds = [api.STATIONS[3].id, api.STATIONS[0].id];
+    const r = api.favoriteStations(api.STATIONS, favIds);
+    expect(r.map(s => s.id)).toEqual([api.STATIONS[0].id, api.STATIONS[3].id]);
+  });
+
+  test('boş/geçersiz favoride boş döner', () => {
+    expect(api.favoriteStations(api.STATIONS, [])).toEqual([]);
+    expect(api.favoriteStations(api.STATIONS, ['yok'])).toEqual([]);
+  });
+});
+
 // ── UI smoke: widget kurulur ve patlamaz (tek smoke testi — bkz. test politikası)
 describe('UI smoke', () => {
   let playCalls;
@@ -363,5 +407,34 @@ describe('UI smoke', () => {
     const shown = w.querySelectorAll('.mf-radio-item[data-station]').length;
     expect(shown).toBe(api.STATIONS.filter(s => s.cat === 'Türkçe').length);
     expect(api.loadState().stationCat).toBe('Türkçe');
+  });
+
+  test('yıldız ile favori ekle/çıkar + Favoriler filtresi', () => {
+    const api = require('../../js/radio.js');
+    const w = document.getElementById('mf-radio');
+
+    // İlk istasyonu yıldızla (Tümü görünümünde)
+    const star = w.querySelector('.mf-radio-fav[data-fav]');
+    expect(star).not.toBeNull();
+    const favId = star.getAttribute('data-fav');
+    star.click();
+    expect(api.loadState().favorites).toContain(favId);
+
+    // Seçiciyi aç → "Favoriler" seç
+    w.querySelector('.mf-radio-catsel').click();
+    const favOpt = [...w.querySelectorAll('.mf-radio-catopt')].find(o => o.getAttribute('data-cat') === api.CAT_FAV);
+    expect(favOpt).toBeTruthy();
+    favOpt.click();
+
+    // Yalnızca favorilenen istasyon görünür
+    let shown = w.querySelectorAll('.mf-radio-item[data-station]');
+    expect(shown.length).toBe(1);
+    expect(shown[0].getAttribute('data-station')).toBe(favId);
+
+    // Yıldıza tekrar bas → favoriden çıkar → boş durum
+    w.querySelector('.mf-radio-fav[data-fav]').click();
+    expect(api.loadState().favorites).not.toContain(favId);
+    expect(w.querySelector('.mf-radio-item[data-station]')).toBeNull();
+    expect(w.querySelector('.mf-radio-empty')).not.toBeNull();
   });
 });

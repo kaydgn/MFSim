@@ -4023,6 +4023,23 @@ body.mf-radio-dragging .mf-radio-head{ cursor:grabbing; }
 }
 .mf-radio-item:hover{ background:var(--bg-tertiary); border-color:var(--border-light); }
 .mf-radio-item.active{ background:var(--bg-tertiary); border-color:var(--accent-primary); }
+/* Favori: istasyon satırı sarmalayıcı + sağdaki yıldız düğmesi */
+.mf-radio-item-row{ position:relative; display:flex; }
+.mf-radio-item-row .mf-radio-item{ flex:1; padding-right:34px; }
+.mf-radio-fav{
+  position:absolute; right:4px; top:50%; transform:translateY(-50%);
+  display:inline-flex; align-items:center; justify-content:center;
+  width:28px; height:28px; padding:0;
+  background:transparent; border:none; border-radius:var(--radius-sm,6px);
+  color:var(--text-muted); cursor:pointer; opacity:0.5;
+  transition:opacity var(--dur-fast,0.12s), color var(--dur-fast,0.12s), background var(--dur-fast,0.12s);
+}
+.mf-radio-item-row:hover .mf-radio-fav{ opacity:0.85; }
+.mf-radio-fav:hover{ background:var(--bg-input); }
+.mf-radio-fav.on, .mf-radio-item-row:hover .mf-radio-fav.on{ color:var(--accent-warning); opacity:1; }
+.mf-radio-fav svg{ width:16px; height:16px; }
+/* Açılır menüdeki "★ Favoriler" seçeneğinin noktası altın */
+.mf-radio-catopt.is-fav .mf-radio-item-dot{ background:var(--accent-warning); box-shadow:0 0 6px var(--accent-warning); }
 .mf-radio-item-dot{
   flex-shrink:0; width:7px; height:7px; border-radius:50%;
   background:var(--border-hover); transition:background var(--dur-fast,0.12s);
