@@ -34,6 +34,7 @@
   // Kategori filtresi: "Tümü" sanal kategori, "Özel" kullanıcı yayınları.
   // CAT_ORDER, çip sırasını belirler; listede olmayan kategoriler sona düşer.
   var CAT_ALL    = 'Tümü';
+  var CAT_FAV    = 'Favoriler';   // sanal kategori (yıldızlanan istasyonlar)
   var CAT_CUSTOM = 'Özel';
   var CAT_ORDER  = ['Chill', 'Türkçe', 'Rock', 'Metal', 'Klasik', 'Bach & Barok',
                     'Caz & Blues', 'Elektronik', 'Pop', 'Dünya', CAT_CUSTOM];
@@ -183,6 +184,7 @@
       stationId: typeof s.stationId === 'string' ? s.stationId : null,
       stationCat: (typeof s.stationCat === 'string' && s.stationCat) ? s.stationCat : CAT_ALL,
       open:      !!s.open,
+      favorites: Array.isArray(s.favorites) ? s.favorites.filter(function (x) { return typeof x === 'string'; }) : [],
       customStations: [],
       pos: null
     };
@@ -248,6 +250,23 @@
     return stations.filter(function (s) { return (s.cat || 'Diğer') === cat; });
   }
 
+  // ─── Favoriler (saf) ────────────────────────────────────────────────────────
+  function isFavorite(favs, id) {
+    return Array.isArray(favs) && favs.indexOf(id) >= 0;
+  }
+  // Favoriyi ekle/çıkar → YENİ dizi döndür (girdiyi mutasyona uğratmaz).
+  function toggleFavorite(favs, id) {
+    favs = Array.isArray(favs) ? favs.slice() : [];
+    var i = favs.indexOf(id);
+    if (i >= 0) favs.splice(i, 1); else favs.push(id);
+    return favs;
+  }
+  // Favorilenmiş istasyonları liste sırasını koruyarak süz (saf).
+  function favoriteStations(stations, favs) {
+    stations = Array.isArray(stations) ? stations : [];
+    return stations.filter(function (s) { return isFavorite(favs, s.id); });
+  }
+
   // Mevcut kategoriler (yerleşik + özel), CAT_ORDER sırasıyla + adet (saf).
   // Sırada olmayan beklenmedik kategoriler sona eklenir.
   function stationCategories(customList) {
@@ -276,7 +295,7 @@
   var current = null;                 // { type:'station'|'track', ... }
   var catMenuOpen = false;            // kategori açılır menüsü açık mı (kalıcı değil)
   var lastVol = DEFAULT_VOLUME;       // sessize alma öncesi ses
-  var st      = { volume: DEFAULT_VOLUME, tab: 'stations', stationId: null, stationCat: CAT_ALL, open: false, customStations: [], pos: null };
+  var st      = { volume: DEFAULT_VOLUME, tab: 'stations', stationId: null, stationCat: CAT_ALL, open: false, favorites: [], customStations: [], pos: null };
 
   var ICONS = {
     play:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>',
@@ -288,7 +307,9 @@
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>',
     plus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
-    chev:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'
+    chev:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+    star:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>',
+    starO: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>'
   };
 
   function $(id) { return global.document.getElementById(id); }
@@ -447,17 +468,22 @@
     if (!pane) return;
     var all = allStations(st.customStations);
     var cats = stationCategories(st.customStations);
+    var favs = st.favorites || [];
+    var favCount = favoriteStations(all, favs).length;
     var sel = st.stationCat || CAT_ALL;
     // Seçili kategori artık yoksa (ör. özel yayın silindi) Tümü'ye dön.
-    if (sel !== CAT_ALL && !cats.some(function (c) { return c.cat === sel; })) sel = st.stationCat = CAT_ALL;
+    // (Tümü ve Favoriler sanal kategorileri her zaman geçerli.)
+    if (sel !== CAT_ALL && sel !== CAT_FAV && !cats.some(function (c) { return c.cat === sel; })) sel = st.stationCat = CAT_ALL;
 
     // Tek satırlık kategori seçici (üstte sabit; açılır menüyü tetikler).
     var selCount = (sel === CAT_ALL) ? all.length
+      : (sel === CAT_FAV) ? favCount
       : ((cats.filter(function (c) { return c.cat === sel; })[0] || { count: 0 }).count);
+    var selLabel = (sel === CAT_ALL) ? 'Tümü' : (sel === CAT_FAV) ? '★ Favoriler' : sel;
     var selector =
       '<div class="mf-radio-catbar">' +
         '<button type="button" class="mf-radio-catsel' + (catMenuOpen ? ' open' : '') + '" aria-haspopup="listbox" aria-expanded="' + catMenuOpen + '">' +
-          '<span class="mf-radio-catsel-label">' + esc(sel === CAT_ALL ? 'Tümü' : sel) + '</span>' +
+          '<span class="mf-radio-catsel-label">' + esc(selLabel) + '</span>' +
           '<span class="mf-radio-catsel-count">' + selCount + '</span>' +
           '<span class="mf-radio-catsel-chev" aria-hidden="true">' + ICONS.chev + '</span>' +
         '</button>' +
@@ -465,32 +491,39 @@
 
     var body;
     if (catMenuOpen) {
-      // Açık — kategori listesi (Tümü + her kategori, adetli)
-      var opt = function (cat, label, count) {
+      // Açık — kategori listesi (Favoriler + Tümü + her kategori, adetli)
+      var opt = function (cat, label, count, extraCls) {
         var on = sel === cat;
-        return '<button type="button" class="mf-radio-catopt' + (on ? ' active' : '') + '" data-cat="' + esc(cat) + '" role="option" aria-selected="' + on + '">' +
+        return '<button type="button" class="mf-radio-catopt' + (on ? ' active' : '') + (extraCls ? ' ' + extraCls : '') + '" data-cat="' + esc(cat) + '" role="option" aria-selected="' + on + '">' +
                  '<span class="mf-radio-item-dot"></span>' +
                  '<span class="mf-radio-catopt-name">' + esc(label) + '</span>' +
                  '<span class="mf-radio-catopt-n">' + count + '</span>' +
                '</button>';
       };
       body = '<div class="mf-radio-catlist" role="listbox">' +
+        opt(CAT_FAV, '★ Favoriler', favCount, 'is-fav') +
         opt(CAT_ALL, 'Tümü', all.length) +
         cats.map(function (c) { return opt(c.cat, c.cat, c.count); }).join('') +
         '</div>';
     } else {
       // Normal — süzülmüş istasyon listesi + özel URL ekleme
-      var list = filterStationsByCat(all, sel);
+      var list = (sel === CAT_FAV) ? favoriteStations(all, favs) : filterStationsByCat(all, sel);
       var curId = current && current.type === 'station' ? current.id : null;
       var rows = list.map(function (s2) {
         var on = s2.id === curId;
-        return '<button type="button" class="mf-radio-item' + (on ? ' active' : '') + '" data-station="' + esc(s2.id) + '">' +
-                 '<span class="mf-radio-item-dot"></span>' +
-                 '<span class="mf-radio-item-main"><span class="mf-radio-item-name">' + esc(s2.name) + '</span>' +
-                 '<span class="mf-radio-item-sub">' + esc(s2.genre || s2.cat || '') + '</span></span>' +
-               '</button>';
+        var fav = isFavorite(favs, s2.id);
+        return '<div class="mf-radio-item-row">' +
+                 '<button type="button" class="mf-radio-item' + (on ? ' active' : '') + '" data-station="' + esc(s2.id) + '">' +
+                   '<span class="mf-radio-item-dot"></span>' +
+                   '<span class="mf-radio-item-main"><span class="mf-radio-item-name">' + esc(s2.name) + '</span>' +
+                   '<span class="mf-radio-item-sub">' + esc(s2.genre || s2.cat || '') + '</span></span>' +
+                 '</button>' +
+                 '<button type="button" class="mf-radio-fav' + (fav ? ' on' : '') + '" data-fav="' + esc(s2.id) + '" title="' + (fav ? 'Favoriden çıkar' : 'Favorilere ekle') + '" aria-label="Favori" aria-pressed="' + fav + '">' + (fav ? ICONS.star : ICONS.starO) + '</button>' +
+               '</div>';
       }).join('');
-      if (!rows) rows = '<div class="mf-radio-empty">Bu kategoride yayın yok.</div>';
+      if (!rows) rows = (sel === CAT_FAV)
+        ? '<div class="mf-radio-empty">Henüz favori yok. Bir yayının ★ yıldızına basarak ekle.</div>'
+        : '<div class="mf-radio-empty">Bu kategoride yayın yok.</div>';
       body = '<div class="mf-radio-list">' + rows + '</div>' +
         '<div class="mf-radio-add">' +
           '<input type="url" class="mf-radio-url" placeholder="https://… özel yayın URL\'si" aria-label="Özel yayın URL\'si" />' +
@@ -655,6 +688,23 @@
       if (catsel) { catMenuOpen = !catMenuOpen; renderStations(); return; }
       var catopt = t.closest && t.closest('.mf-radio-catopt');
       if (catopt) { st.stationCat = catopt.getAttribute('data-cat') || CAT_ALL; catMenuOpen = false; saveState({ stationCat: st.stationCat }); renderStations(); return; }
+      var favBtn = t.closest && t.closest('[data-fav]');
+      if (favBtn) {
+        var fid = favBtn.getAttribute('data-fav');
+        st.favorites = toggleFavorite(st.favorites, fid);
+        saveState({ favorites: st.favorites });
+        if (st.stationCat === CAT_FAV) {
+          renderStations();   // Favoriler görünümünde satır eklenir/çıkar
+        } else {
+          // Yerinde güncelle → liste yeniden çizilmez, kaydırma konumu korunur.
+          var onNow = isFavorite(st.favorites, fid);
+          favBtn.classList.toggle('on', onNow);
+          favBtn.innerHTML = onNow ? ICONS.star : ICONS.starO;
+          favBtn.setAttribute('aria-pressed', onNow);
+          favBtn.title = onNow ? 'Favoriden çıkar' : 'Favorilere ekle';
+        }
+        return;
+      }
       var stn = t.closest && t.closest('[data-station]');
       if (stn) { var s2 = allStations(st.customStations).filter(function (x) { return x.id === stn.getAttribute('data-station'); })[0]; if (s2) playStation(s2); return; }
       var trk = t.closest && t.closest('[data-track]');
@@ -765,6 +815,7 @@
     STATIONS: STATIONS,
     DEFAULT_VOLUME: DEFAULT_VOLUME,
     CAT_ALL: CAT_ALL,
+    CAT_FAV: CAT_FAV,
     CAT_CUSTOM: CAT_CUSTOM,
     CAT_ORDER: CAT_ORDER,
     // saf
@@ -782,6 +833,9 @@
     stationIndexById: stationIndexById,
     filterStationsByCat: filterStationsByCat,
     stationCategories: stationCategories,
+    isFavorite: isFavorite,
+    toggleFavorite: toggleFavorite,
+    favoriteStations: favoriteStations,
     // ui
     open: openPlayer,
     close: closePlayer,
