@@ -196,6 +196,8 @@ function getEnginePropertiesHTML(node) {
 
   if(isFullThrottle) {
     // ── TAM GAZ: AKSESUAR KAYIPLARI ──
+    // Bağlı aksesuar düğümlerinden (Klima/Alternatör/Hava Komp.) modeli güncelle
+    if(typeof veSyncEngineAccessories === 'function') veSyncEngineAccessories(node);
     var accessories = nodeData.accessories || [];
     accHtml += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     accHtml += '<div class="sw-pkg-header" style="cursor:default;">';
@@ -253,31 +255,37 @@ function getEnginePropertiesHTML(node) {
         var grossT = parseFloat(r.torque) || 0;
         var rpm = parseFloat(r.rpm) || 0;
         if(rpm <= 0) return;
-        // RPM bağımlı kayıp: Fan → küp, diğerleri → lineer
-        var lossAtRPM = 0;
-        var ratio = rpm / initGoverned;
-        accData.forEach(function(a) {
-          var loss = a.userLoss || 0;
-          if(loss <= 0) return;
-          if(a.name && a.name.toLowerCase().indexOf('fan') >= 0) {
-            lossAtRPM += loss * ratio * ratio * ratio;
-          } else {
-            lossAtRPM += loss * ratio;
-          }
-        });
+        // RPM bağımlı kayıp: eğrili aksesuarlar (Klima/Alternatör/Hava Komp.) →
+        // aksesuar_devri = rpm×oran, kW = interp(eğri); manuel → sabit; legacy
+        // scalar → fan küp / diğer lineer. Tek doğruluk kaynağı veAccessoryLossKw.
+        var lossAtRPM = (typeof veAccessoryLossKw === 'function')
+          ? veAccessoryLossKw(accData, rpm, initGoverned, nodeData.accFanMode)
+          : (function(){
+              var l = 0, ratio = rpm / initGoverned;
+              accData.forEach(function(a){
+                var loss = a.userLoss || 0; if(loss <= 0) return;
+                if(a.name && a.name.toLowerCase().indexOf('fan') >= 0) l += loss*ratio*ratio*ratio;
+                else l += loss*ratio;
+              });
+              return l;
+            })();
         var netP = grossP - lossAtRPM;
         var netT = netP * 9549.3 / rpm;
         netRows.push({rpm: rpm, torque: netT, power: netP, grossTorque: grossT, grossPower: grossP, loss: lossAtRPM});
       });
     }
 
+    // Governed devirdeki toplam aksesuar kaybı (eğrili/manuel/legacy — tek kaynak).
+    var lossAtGoverned = (typeof veAccessoryLossKw === 'function')
+      ? veAccessoryLossKw(accData, initGoverned, initGoverned, nodeData.accFanMode)
+      : totalUserLoss;
     netHtml += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     netHtml += '<div class="sw-pkg-header" style="cursor:default;">';
     netHtml += '<span class="sw-pkg-name">Net Değerler</span>';
-    netHtml += '<span class="sw-pkg-badge ok" style="margin-left:auto;">' + totalUserLoss.toFixed(1) + ' kW kayıp</span>';
+    netHtml += '<span id="ve-net-badge-' + node.id + '" class="sw-pkg-badge ok" style="margin-left:auto;">' + lossAtGoverned.toFixed(1) + ' kW kayıp</span>';
     netHtml += '</div>';
     netHtml += '<div class="sw-pkg-body">';
-    netHtml += '<div class="sw-pkg-desc">Governed Speed (' + initGoverned + ' rpm) değerindeki aksesuar kaybı: ' + totalUserLoss.toFixed(1) + ' kW. Fan → RPM³, diğerleri → RPM oranında ölçeklenir.</div>';
+    netHtml += '<div id="ve-net-desc-' + node.id + '" class="sw-pkg-desc">Governed Speed (' + initGoverned + ' rpm) değerindeki aksesuar kaybı: ' + lossAtGoverned.toFixed(1) + ' kW. Eğrili aksesuarlar devir×orana göre; fan → RPM³, diğerleri → RPM oranında ölçeklenir.</div>';
 
     // Net tablo
     netHtml += '<div id="ve-net-table-wrapper-' + node.id + '" style="max-height:180px; overflow-y:auto; margin-bottom:8px; border:1px solid var(--border-color); border-radius:0;">';
@@ -2201,7 +2209,19 @@ function onVEFTMotorSelect(nodeId, value) {
     // Toplamları güncelle
     veUpdateAccTotals(nodeId);
   }
-  
+
+  // Bağlı aksesuar düğümleri (Klima/Alternatör/Hava Komp.) varsa: motor preset'inin
+  // aksesuar değerlerinin ÜSTÜNE bağlı düğümlerin eğri/oran modelini YENİDEN uygula
+  // (kullanıcı bağlantıyı motor seçiminden önce yapmış olabilir → preset silmesin).
+  var _engSync = nodes.find(function(n) { return n.id === nodeId; });
+  if(_engSync && typeof veSyncEngineAccessories === 'function') {
+    veSyncEngineAccessories(_engSync);
+    var _uIn = document.querySelectorAll('.ve-acc-user-' + nodeId);
+    (_engSync.data.accessories || []).forEach(function(a, idx) { if(_uIn[idx]) _uIn[idx].value = a.userLoss; });
+    veUpdateAccTotals(nodeId);
+    updateVENetChart(nodeId);
+  }
+
   // Governed speed'i tüm bağımlı bileşenlere yay
   propagateGovernedSpeed();
   
@@ -2247,15 +2267,30 @@ function onVEAccChange(nodeId) {
   var stdInputs = document.querySelectorAll('.ve-acc-std-' + nodeId);
   var userInputs = document.querySelectorAll('.ve-acc-user-' + nodeId);
   
+  // Bağlı aksesuar düğümünden gelen eğri/oran verisini KORU (isim ile eşleştir).
+  // Aksi halde manuel bir satır düzenlemesi node-kaynaklı eğriyi silerdi.
+  var _prevAcc = {};
+  (node.data.accessories || []).forEach(function(a){ _prevAcc[a.name] = a; });
+
   var accessories = [];
   accNames.forEach(function(name, idx) {
-    accessories.push({
+    var row = {
       name: name,
       standardLoss: stdInputs[idx] ? parseFloat(stdInputs[idx].value) || 0 : 0,
       userLoss: userInputs[idx] ? parseFloat(userInputs[idx].value) || 0 : 0
-    });
+    };
+    var p = _prevAcc[name];
+    if(p && p.sourceNodeId) {
+      row.sourceNodeId = p.sourceNodeId;
+      if(p.curve) row.curve = p.curve;
+      if(p.driveRatio != null) row.driveRatio = p.driveRatio;
+      if(p.kwConst != null) row.kwConst = p.kwConst;
+      // Node-kaynaklı satırda kayıp bileşenden gelir → DOM değerini node değeri ezmesin
+      if(p.userLoss != null) row.userLoss = p.userLoss;
+    }
+    accessories.push(row);
   });
-  
+
   node.data.accessories = accessories;
   veUpdateAccTotals(nodeId);
   updateVENetChart(nodeId);
@@ -2475,16 +2510,16 @@ function updateVEMotorChart(nodeId) {
 // Diğer aksesuarlar: lineer (RPM/governed)
 function veCalcAccLossAtRPM(accessories, rpm, governedSpeed) {
   if(!accessories || accessories.length === 0 || !governedSpeed) return 0;
+  // Eğrili/manuel/legacy aksesuarlar için tek doğruluk kaynağı (cp-accessories.js).
+  if(typeof veAccessoryLossKw === 'function') return veAccessoryLossKw(accessories, rpm, governedSpeed);
   var ratio = rpm / governedSpeed;
   var totalLoss = 0;
   accessories.forEach(function(acc) {
     var loss = acc.userLoss || 0;
     if(loss <= 0) return;
-    // Fan (Kavramalı Fan) → küp yasası
     if(acc.name && acc.name.toLowerCase().indexOf('fan') >= 0) {
       totalLoss += loss * ratio * ratio * ratio;
     } else {
-      // Diğer aksesuarlar → lineer
       totalLoss += loss * ratio;
     }
   });
@@ -2504,7 +2539,14 @@ function updateVENetChart(nodeId) {
   var acc = nd.accessories || [];
   var specs = nd.motorSpecs || {};
   var governed = specs.governedSpeed || nd.governedRpm || 2100;
-  
+
+  // Net Değerler kartı başlığındaki rozet + açıklamayı güncel governed/aksesuarla tazele
+  var _lossGov = veCalcAccLossAtRPM(acc, governed, governed);
+  var _badge = document.getElementById('ve-net-badge-' + nodeId);
+  if(_badge) _badge.textContent = _lossGov.toFixed(1) + ' kW kayıp';
+  var _desc = document.getElementById('ve-net-desc-' + nodeId);
+  if(_desc) _desc.textContent = 'Governed Speed (' + governed + ' rpm) değerindeki aksesuar kaybı: ' + _lossGov.toFixed(1) + ' kW. Eğrili aksesuarlar devir×orana göre; fan → RPM³, diğerleri → RPM oranında ölçeklenir.';
+
   // Brüt ve net veri
   var grossTorque = [], grossPower = [], netTorque = [], netPower = [];
   rows.forEach(function(r) {

@@ -259,6 +259,13 @@ function veFlushOpenPanelData() {
         var ecmRatingEl = document.getElementById('ecm-turbine-rating-' + nid);
         if(ecmRatingEl) { var ecmVal = parseFloat(ecmRatingEl.value); node.data.turbineRating = isNaN(ecmVal) ? 3320 : ecmVal; }
         break;
+      case 'acc-ac':
+      case 'acc-alternator':
+      case 'acc-aircomp':
+        if(typeof onVEAccParamChange === 'function') onVEAccParamChange(nid);
+        var accSel = document.getElementById('ve-acc-preset-' + nid);
+        if(accSel) node.data.accPreset = accSel.value;
+        break;
     }
   } catch(e) {
     // Panel açık değilse DOM elemanları bulunamaz — debug için logla

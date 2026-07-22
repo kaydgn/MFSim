@@ -208,13 +208,13 @@ function veFTRunObstacleCrossingAnalysis(obsData) {
 
   function motorTorqueFn(rpm) {
     var T_gross = grossMotorTorqueFn(rpm);
-    if(!hasAccessoryLoss || rpm <= 0) return T_gross;
-    var ratio = rpm / governedSpeed;
-    var P_fan_kW = (accFanMode === 'on') ? accTotalFanLoss : accTotalFanLoss * ratio * ratio * ratio;
-    var P_loss_kW = P_fan_kW + accTotalOtherLoss * ratio;
+    if(rpm <= 0) return T_gross;
+    var P_loss_kW = (typeof veAccessoryLossKw === 'function')
+      ? veAccessoryLossKw(accList, rpm, governedSpeed, accFanMode)
+      : (hasAccessoryLoss ? (function(){ var ratio=rpm/governedSpeed; var Pf=(accFanMode==='on')?accTotalFanLoss:accTotalFanLoss*ratio*ratio*ratio; return Pf+accTotalOtherLoss*ratio; })() : 0);
+    if(P_loss_kW <= 0) return T_gross;
     var omega = 2 * Math.PI * rpm / 60;
-    var T_loss = P_loss_kW * 1000 / omega;
-    return Math.max(0, T_gross - T_loss);
+    return Math.max(0, T_gross - P_loss_kW * 1000 / omega);
   }
 
   // Tork konvertörü bileşeni
@@ -564,13 +564,13 @@ function veFTRunObstacleDynamicSim(obsResult, dynOpts) {
 
   function motorTorqueFn(rpm) {
     var T_gross = grossMotorTorqueFn(rpm);
-    if(!hasAccessoryLoss || rpm <= 0) return T_gross;
-    var ratio = rpm / governedSpeed;
-    var P_fan_kW = (accFanMode === 'on') ? accTotalFanLoss : accTotalFanLoss * ratio * ratio * ratio;
-    var P_loss_kW = P_fan_kW + accTotalOtherLoss * ratio;
+    if(rpm <= 0) return T_gross;
+    var P_loss_kW = (typeof veAccessoryLossKw === 'function')
+      ? veAccessoryLossKw(accList, rpm, governedSpeed, accFanMode)
+      : (hasAccessoryLoss ? (function(){ var ratio=rpm/governedSpeed; var Pf=(accFanMode==='on')?accTotalFanLoss:accTotalFanLoss*ratio*ratio*ratio; return Pf+accTotalOtherLoss*ratio; })() : 0);
+    if(P_loss_kW <= 0) return T_gross;
     var omega = 2 * Math.PI * rpm / 60;
-    var T_loss = P_loss_kW * 1000 / omega;
-    return Math.max(0, T_gross - T_loss);
+    return Math.max(0, T_gross - P_loss_kW * 1000 / omega);
   }
 
   // TC fonksiyonları

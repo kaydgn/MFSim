@@ -207,6 +207,25 @@ function veSolverValidate() {
     var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
     var hasData = engineNode && engineNode.data && engineNode.data.torqueData && engineNode.data.torqueData.length >= 2;
     addItem(hasData, 'Motor tork verileri', hasData ? engineNode.data.torqueData.length + ' veri noktası' : 'eksik veya yetersiz');
+
+    // Aksesuar portları (Klima / Alternatör / Hava Kompresörü) bağlı mı?
+    // Bağlanmayan port = o aksesuarın kaybı hesaba katılmaz → UYARI (bloklamaz).
+    if(engineNode && typeof VE_ACC_PORT_MAP !== 'undefined' && typeof VE_ACC_TYPES !== 'undefined') {
+      Object.keys(VE_ACC_PORT_MAP).forEach(function(portId) {
+        var accType = VE_ACC_PORT_MAP[portId];
+        var info = VE_ACC_TYPES[accType] || {};
+        var connectedAcc = connections.some(function(c) {
+          if(c.to !== engineNode.id || c.toPort !== portId) return false;
+          var fn = nodes.find(function(n){ return n.id === c.from; });
+          return fn && fn.type === accType;
+        });
+        if(connectedAcc) {
+          addInfo((info.label || accType) + ' bağlı — aksesuar kaybı modellendi');
+        } else {
+          addWarn((info.label || accType) + ' portu boş — bu aksesuarın kaybı hesaba katılmıyor');
+        }
+      });
+    }
   }
   
   if(hasVehicle) {
