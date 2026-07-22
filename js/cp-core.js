@@ -264,6 +264,8 @@ function showNodeProperties(node) {
   // İçerik-yoğun paneller (VE_WIDE_PANEL_TYPES listesi): geniş pencere +
   // kompakt-sol kimlik + iki sütun düzeni. Liste dalga dalga büyür. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--wide', VE_WIDE_PANEL_TYPES.indexOf(node.type) >= 0);
+  // Yol / Ortam: harita hero → çok geniş+yüksek pencere (--wide boyutunu ezer).
+  if(_propWin) _propWin.classList.toggle('ve-properties--road', node.type === 'road');
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 

@@ -236,8 +236,10 @@ function veInitRoadMap(nodeId) {
     veAddRoutePoint(nodeId, e.latlng);
   });
 
-  // Harita boyutunu düzelt
+  // Harita boyutunu düzelt — container CSS ile büyük (58vh); modal açılış
+  // animasyonu + layout otursun diye birkaç kez invalidateSize (gri tile'a karşı).
   setTimeout(function() { map.invalidateSize(); }, 300);
+  setTimeout(function() { map.invalidateSize(); }, 700);
 
   // ── Kayıtlı rota verisini geri yükle ──
   var node = nodes.find(function(n) { return n.id === nodeId; });
