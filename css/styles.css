@@ -3093,6 +3093,10 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-rslot-btns button:hover{background:var(--bg-input);color:var(--text-primary);}
 .ve-rslot-btns button.btn-close:hover{color:var(--accent-danger);}
 .ve-rslot-btns button.btn-collapse{font-size:0.6rem;font-weight:700;}
+/* Panel 1 başlığına taşınan global kontroller (Data Browser'dan) */
+.ve-rslot-btns .mf-ico{width:13px;height:13px;}
+.ve-rslot-btns button.btn-slot-clearall:hover{color:var(--accent-danger);}
+.ve-rslot-sep{width:1px;height:14px;background:var(--border-color);margin:0 3px;flex-shrink:0;}
 .ve-rslot-body{
   flex:1;overflow:hidden;position:relative;min-height:0;
   display:flex;align-items:center;justify-content:center;

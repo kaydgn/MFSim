@@ -4346,7 +4346,7 @@ function veRenderLayoutChooser() {
   var html = '<div class="ve-layout-chooser">';
   html += '<div class="ve-layout-chooser-head">';
   html += '<div class="ve-layout-chooser-title">Panel düzenini seçin</div>';
-  html += '<div class="ve-layout-chooser-sub">Sonuçları görüntülemek için bir yerleşim seçin. Daha sonra sol alttaki <strong>Panel Düzeni</strong> ile değiştirebilirsiniz.</div>';
+  html += '<div class="ve-layout-chooser-sub">Sonuçları görüntülemek için bir yerleşim seçin. Daha sonra Panel 1 başlığındaki <strong>Panel Düzeni</strong> (ızgara ikonu) ile değiştirebilirsiniz.</div>';
   html += '</div>';
   html += '<div class="ve-layout-cards">';
   VE_RESULT_LAYOUTS.forEach(function(L) {
@@ -4388,6 +4388,12 @@ function veSlotShellHTML(slotIdx) {
   h += '<div class="ve-rslot-hdr">';
   h += '<div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-' + slotIdx + '">Panel ' + (slotIdx + 1) + '</span></div>';
   h += '<div class="ve-rslot-btns">';
+  // Panel 1 başlığı: global sonuç kontrolleri (Data Browser'dan taşındı) küçük ikonlar
+  if(slotIdx === 0) {
+    h += '<button class="btn-slot-layout" onclick="event.stopPropagation();veChangeResultLayout()" title="Panel Düzeni — yerleşimi değiştir"><span class="mf-ico mf-ico-grid-cells"></span></button>';
+    h += '<button class="btn-slot-clearall" onclick="event.stopPropagation();veClearAllResults()" title="Sonuçları Temizle — tüm sonuçları sil"><span class="mf-ico mf-ico-trash"></span></button>';
+    h += '<span class="ve-rslot-sep"></span>';
+  }
   h += '<button class="btn-collapse" onclick="veSlotToggle(' + slotIdx + ')" title="Daralt / Genişlet">▼</button>';
   h += '<button class="btn-close" onclick="veSlotClear(' + slotIdx + ')" title="Temizle">✕</button>';
   h += '</div></div>';

@@ -644,13 +644,10 @@
         
         <!-- Tree -->
         <div id="ve-results-tree" style="flex:1; overflow-y:auto; padding:4px 0; font-size:0.78rem;"></div>
-        
-        <!-- Aksiyon Butonları -->
-        <div style="padding:6px 8px; border-top:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px; flex-shrink:0;">
-          <button onclick="veChangeResultLayout()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-primary)';this.style.color='var(--accent-primary)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Panel yerleşimini değiştir (düzen seçiciyi aç)"><span class="mf-ico mf-ico-grid-cells"></span>Panel Düzeni</button>
-          <button onclick="veClearAllResults()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='var(--accent-danger)';this.style.color='var(--accent-danger)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)'" title="Tüm sonuçları ve grafikleri temizle"><span class="mf-ico mf-ico-trash"></span>Sonuçları Temizle</button>
-          <button onclick="veShowRaporModal()" style="width:100%; padding:5px 8px; font-size:0.68rem; font-weight:600; border:1px solid var(--border-color); border-radius:0; background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; transition:all 0.12s;" onmouseover="this.style.borderColor='#1a5a3f';this.style.color='#2d8a5a';this.style.background='rgba(26,90,63,0.1)'" onmouseout="this.style.borderColor='var(--border-color)';this.style.color='var(--text-secondary)';this.style.background='var(--bg-tertiary)'" title="Detaylı TXT rapor indir (Klasik format)"><span class="mf-ico mf-ico-bar-chart"></span>Detaylı Rapor İndir</button>
-        </div>
+        <!-- Aksiyon butonları buradan kaldırıldı: "Panel Düzeni" + "Sonuçları
+             Temizle" Panel 1 başlık araç çubuğuna küçük ikonlar olarak taşındı
+             (veSlotShellHTML). "Detaylı Rapor İndir" kaldırıldı — rapora ağaçtaki
+             "Detaylı Rapor" düğümünden ve komut paletinden erişilir. -->
       </div>
       
       <!-- Sağ Panel: Dinamik Panel Grid -->
