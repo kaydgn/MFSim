@@ -37,7 +37,7 @@
   var CAT_FAV    = 'Favoriler';   // sanal kategori (yıldızlanan istasyonlar)
   var CAT_CUSTOM = 'Özel';
   var CAT_ORDER  = ['Chill', 'Türkçe', 'Rock', 'Metal', 'Klasik', 'Bach & Barok',
-                    'Caz & Blues', 'Elektronik', 'Pop', 'Dünya', CAT_CUSTOM];
+                    'Caz & Blues', 'Elektronik', 'Phonk', 'Pop', 'Dünya', CAT_CUSTOM];
 
   // ─── Küratörlü istasyonlar (HTTPS zorunlu) ─────────────────────────────────
   // SomaFM: reklamsız, dinleyici destekli; doğrudan yayın bağlantısına izin
@@ -112,6 +112,12 @@
     { id: 'somafm-underground-80s', name: "SomaFM Underground 80s", genre: "Synthpop · new wave", cat: "Elektronik", url: 'https://ice1.somafm.com/u80s-128-mp3' },
     { id: 'somafm-vaporwaves', name: "SomaFM Vaporwaves", genre: "Vaporwave", cat: "Elektronik", url: 'https://ice1.somafm.com/vaporwaves-128-mp3' },
     { id: 'nightride-fm', name: "Nightride FM", genre: "Synthwave", cat: "Elektronik", url: 'https://stream.nightride.fm/nightride.mp3' },
+    { id: 'badradio', name: "badradio", genre: "OG phonk · Memphis", cat: "Phonk", url: 'https://s2.radio.co/s2b2b68744/listen' },
+    { id: 'phonkio', name: "Phonkio Radio", genre: "OG phonk · HQ", cat: "Phonk", url: 'https://stream.phonkioradio.com/listen/phonkio_radio/radio.mp3' },
+    { id: 'dopephonk', name: "DOPEPHONK", genre: "Phonk", cat: "Phonk", url: 'https://listen.atomic.radio/dopephonk/middlequality' },
+    { id: 'record-phonk', name: "Radio Record Phonk", genre: "Phonk", cat: "Phonk", url: 'https://radiorecord.hostingradio.ru/phonk96.aacp' },
+    { id: 'radio-goose-phonk', name: "Radio Goose Phonk", genre: "Phonk", cat: "Phonk", url: 'https://stream3.radiogoose.ru/listen/phonk/play' },
+    { id: 'phonk-nation', name: "Phonk Nation Radio", genre: "Drift phonk", cat: "Phonk", url: 'https://radio.mxnticek.eu/listen/phonk/128.mp3' },
     { id: 'indie-pop-rocks', name: "Indie Pop Rocks", genre: "Indie pop", cat: "Pop", url: 'https://ice1.somafm.com/indiepop-128-mp3' },
     { id: 'somafm-poptron', name: "SomaFM PopTron", genre: "Elektro-pop", cat: "Pop", url: 'https://ice1.somafm.com/poptron-128-mp3' },
     { id: 'somafm-heavyweight-reggae', name: "SomaFM Heavyweight Reggae", genre: "Reggae", cat: "Dünya", url: 'https://ice1.somafm.com/reggae-128-mp3' },
