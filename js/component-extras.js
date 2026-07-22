@@ -1930,7 +1930,7 @@ function getRoadPropertiesHTML(node) {
   html += '</div>'; // sw-pkg-header
   html += '<div class="sw-pkg-body">';
   // Harita container
-  html += '<div id="ve-road-map-' + node.id + '" style="width:100%; height:220px; border-radius:0; border:1px solid var(--border-color); margin-bottom:6px; background:var(--bg-secondary); position:relative;"></div>';
+  html += '<div id="ve-road-map-' + node.id + '" class="ve-road-map-el" style="width:100%; border-radius:0; border:1px solid var(--border-color); margin-bottom:6px; background:var(--bg-secondary); position:relative;"></div>';
   html += '<div class="sw-pkg-desc" style="text-align:center; opacity:0.8;">Özellikler için haritayı büyültün ⛶</div>';
   
   // Sonuç kutusu

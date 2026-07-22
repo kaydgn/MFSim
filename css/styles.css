@@ -2652,6 +2652,19 @@
 .ve-properties.ve-properties--wide{
   max-width:980px;
 }
+/* Yol / Ortam paneli — harita hero. Pencere çok geniş+yüksek, harita kocaman.
+   --wide (980px) ile birlikte gelir; bu kural sonra tanımlı → boyutu EZER.
+   (Segment/harita modu: büyük harita + tam-genişlik irtifa profilleri.) */
+.ve-properties.ve-properties--road{
+  max-width:min(1320px, 96vw);
+  max-height:96vh;
+}
+/* Büyük harita alanı (segment/harita modu). Leaflet container'ı bu yükseklikte
+   kurulur; inline height yerine sınıf → tek yerden ayarlanır. */
+.ve-road-map-el{
+  height:min(58vh, 660px);
+  min-height:320px;
+}
 .ve-cp-grid{
   display:grid;
   grid-template-columns:minmax(0,0.95fr) minmax(0,1.05fr);
