@@ -221,7 +221,7 @@ describe('STATIONS + allStations + stationIndexById', () => {
     });
   });
 
-  test('kullanıcının istediği kilit istasyonlar mevcut (Joy FM + Bach + Metal + Klasik)', () => {
+  test('kullanıcının istediği kilit istasyonlar mevcut (Joy FM + Bach + Metal + Klasik + Phonk)', () => {
     const names = api.STATIONS.map(s => s.name.toLowerCase());
     const cats = api.STATIONS.map(s => s.cat);
     expect(names.some(n => n.includes('joy fm'))).toBe(true);
@@ -229,8 +229,10 @@ describe('STATIONS + allStations + stationIndexById', () => {
     expect(cats).toContain('Metal');
     expect(cats).toContain('Klasik');
     expect(cats).toContain('Rock');
-    // Türkçe kategorisinde birden fazla istasyon olmalı
+    expect(cats).toContain('Phonk');
+    // Türkçe ve Phonk kategorilerinde birden fazla istasyon olmalı
     expect(cats.filter(c => c === 'Türkçe').length).toBeGreaterThanOrEqual(5);
+    expect(cats.filter(c => c === 'Phonk').length).toBeGreaterThanOrEqual(3);
   });
 
   test('istasyon id\'leri benzersiz', () => {
