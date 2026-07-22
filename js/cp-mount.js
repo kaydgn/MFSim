@@ -1235,22 +1235,30 @@ function getMntViewerPropertiesHTML(node){
 // ════════════════════════════════════════════════════════════════════════════
 function getMntCoordFramePropertiesHTML(node){
   if(!node.data) node.data={};
-  var html='<div class="sw-panel">';
-  html+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:6px;">Koordinat Sistemi</div>';
   // Eksen yönü açıklaması (konum/CG değerlerinin hangi eksene göre girildiği)
-  function axRow(col,ax,desc){ return '<div style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:0.62rem;"><span style="width:11px; height:11px; border-radius:2px; background:'+col+'; flex-shrink:0;"></span><b style="color:var(--text-primary); width:14px;">'+ax+'</b><span style="color:var(--text-secondary);">'+desc+'</span></div>'; }
-  html+='<div style="margin-bottom:8px;">';
-  html+=axRow('#ef4444','X','İleri–geri ekseni · +X araç arkası, −X ön');
-  html+=axRow('#22c55e','Y','Yanal eksen · +Y sağ, −Y sol');
-  html+=axRow('#3b82f6','Z','Düşey eksen · +Z yukarı, −Z aşağı');
+  function axRow(col,ax,desc){ return '<div style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:0.62rem;"><span style="width:11px; height:11px; border-radius:0; background:'+col+'; flex-shrink:0;"></span><b style="color:var(--text-primary); width:14px;">'+ax+'</b><span style="color:var(--text-secondary);">'+desc+'</span></div>'; }
+  // SOL rayı (ince): eksen açıklaması + görünüm düğmeleri + etkileşim ipucu.
+  var left='';
+  left+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:6px;">Koordinat Sistemi</div>';
+  left+='<div style="margin-bottom:10px;">';
+  left+=axRow('#ef4444','X','İleri–geri ekseni · +X araç arkası, −X ön');
+  left+=axRow('#22c55e','Y','Yanal eksen · +Y sağ, −Y sol');
+  left+=axRow('#3b82f6','Z','Düşey eksen · +Z yukarı, −Z aşağı');
+  left+='</div>';
+  left+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:9px;">';
+  left+=_mntVwrBtn("var v=veMountViewerToggle('planes'); this.style.opacity=v?'1':'0.45';",'Düzlem','Koordinat düzlemlerini gizle/göster');
+  left+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
+  left+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
+  left+='</div>';
+  left+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.5;">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
+  // SAĞ (geniş): 3B koordinat kanvası — büyük. Canvas boyutu wrap'ın client boyutuna
+  // göre kurulur (veMountViewerInit + ResizeObserver) → geniş sütunda ferahça oturur.
+  var right='<div id="ve-mnt-coord-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:0;"><canvas id="ve-mnt-coord-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
+  var html='<div class="sw-panel">';
+  html+='<div class="ve-cp-grid ve-cp-grid--wideright">';
+  html+='<div class="ve-cp-col ve-cp-col--in">'+left+'</div>';
+  html+='<div class="ve-cp-col ve-cp-col--out">'+right+'</div>';
   html+='</div>';
-  html+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:7px;">';
-  html+=_mntVwrBtn("var v=veMountViewerToggle('planes'); this.style.opacity=v?'1':'0.45';",'Düzlem','Koordinat düzlemlerini gizle/göster');
-  html+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
-  html+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
-  html+='</div>';
-  html+='<div id="ve-mnt-coord-wrap" style="width:100%; height:340px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px;"><canvas id="ve-mnt-coord-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
-  html+='<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px;">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
   html+='</div>';
   return html;
 }
