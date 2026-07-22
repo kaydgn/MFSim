@@ -149,7 +149,7 @@ function clearSelection() {
 // kimlik kompakt-sola geçer. (Yerleşim üreticileri ilgili cp-*.js dosyalarında.)
 var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard', 'road',
   // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir)
-  'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer'];
+  'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-mount'];
 
 // Son gösterilen bileşen — pencere konumunu sıfırlamak için. Başka bileşene
 // geçince pencere ortalanır; aynı bileşenin yerinde yenilenmesinde korunur.

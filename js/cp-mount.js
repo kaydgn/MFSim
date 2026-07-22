@@ -504,15 +504,21 @@ function getMntMountPropertiesHTML(node){
   var _lib=veMntGetLibraryList();
   var _libB=_lib.filter(function(e){ return e.builtin; });
   var _libC=_lib.filter(function(e){ return !e.builtin; });
-  var sel='<select onchange="veMntApplyLib(\''+node.id+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px;"><option value="">— Kütüphaneden rijitlik yükle —</option>';
+  var sel='<select onchange="veMntApplyLib(\''+node.id+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;"><option value="">— Kütüphaneden rijitlik yükle —</option>';
   if(_libB.length){ sel+='<optgroup label="Gömülü">'; _libB.forEach(function(e){ sel+='<option value="'+_mntEsc(e.key)+'"'+(node.data.libKey===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; }); sel+='</optgroup>'; }
   if(_libC.length){ sel+='<optgroup label="Özel (Takoz Özellikleri)">'; _libC.forEach(function(e){ sel+='<option value="'+_mntEsc(e.key)+'"'+(node.data.libKey===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; }); sel+='</optgroup>'; }
   sel+='</select>';
-  html+=_mntCard('Kütüphane','', 'var(--accent-success)', sel);
-  html+=_mntCard('Konum','[mm]','var(--accent-primary)', _mntTriple(node,'','',['x','y','z'],['x','y','z'],'0.01'));
-  html+=_mntCard('Statik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxs','kys','kzs'],['kx','ky','kz'],'1'));
-  html+=_mntCard('Dinamik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxd','kyd','kzd'],['kx','ky','kz'],'1'));
-  html+=_mntMountCurveNote(node);
+  // İki sütun: SOL = kaynak/konum (kütüphaneden yükle + nereye konumlanmış),
+  // SAĞ = rijitlik çifti (statik + dinamik, aynı 3-eksen biçimi → doğal eş).
+  var left  = _mntCard('Kütüphane','', 'var(--accent-success)', sel)
+            + _mntCard('Konum','[mm]','var(--accent-primary)', _mntTriple(node,'','',['x','y','z'],['x','y','z'],'0.01'));
+  var right = _mntCard('Statik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxs','kys','kzs'],['kx','ky','kz'],'1'))
+            + _mntCard('Dinamik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxd','kyd','kzd'],['kx','ky','kz'],'1'));
+  html+='<div class="ve-cp-grid ve-cp-grid--cards">';
+  html+='<div class="ve-cp-col ve-cp-col--in">'+left+'</div>';
+  html+='<div class="ve-cp-col ve-cp-col--out">'+right+'</div>';
+  html+='</div>';
+  html+=_mntMountCurveNote(node);   // nonlineer eğri notu (varsa) — tam genişlik alt
   html+='</div>';
   return html;
 }
