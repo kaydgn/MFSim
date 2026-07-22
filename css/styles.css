@@ -2752,6 +2752,30 @@
   opacity:1;
 }
 .ve-properties--wide .ve-prop-del:hover{ background:var(--bg-input); }
+
+/* ══ HAFİF BAŞLATICI PANELLERİ — dar pencere + kompakt-sol kimlik ══
+   Çözücü / Rapor / modül girişi gibi "kısa metin + tek eylem" panelleri içeriği
+   azdır: geniş/iki-sütun yapmak boş sağ sütun bırakır. Bunun yerine DAR pencere +
+   (geniş panellerdeki gibi) kompakt-sol kimlik satırı → düzenli, kasıtlı görünür.
+   Kimlik stilleri --wide ile aynı; yalnız pencere dar. Salt yerleşim. */
+.ve-properties.ve-properties--compact{ max-width:560px; }
+.ve-properties--compact .ve-prop-identity{
+  flex-direction:row; align-items:center; gap:11px;
+  margin-bottom:10px; padding-bottom:9px;
+  border-bottom:1px solid var(--border-color);
+}
+.ve-properties--compact .ve-prop-identity .ve-prop-symbol{ min-height:0; margin:0; flex:0 0 auto; }
+.ve-properties--compact .ve-prop-identity .ve-prop-symbol svg{ width:34px; height:34px; }
+.ve-properties--compact .ve-prop-meta{ align-items:flex-start; }
+.ve-properties--compact .ve-prop-name{ margin-bottom:1px; }
+.ve-properties--compact .ve-prop-del{
+  position:static; margin-left:auto;
+  width:24px; height:24px; border-radius:var(--radius-sm);
+  background:transparent; color:var(--accent-danger);
+  border:1px solid color-mix(in srgb, var(--accent-danger) 35%, transparent);
+  opacity:1;
+}
+.ve-properties--compact .ve-prop-del:hover{ background:var(--bg-input); }
 /* İnteraktif 2D figürler: fare tekerleğiyle yakınlaştır, sürükleyerek kaydır.
    grabbing imleci sürükleme sırasında JS ile ayarlanır. */
 .ve-mnt2d-fig{ cursor:grab; }

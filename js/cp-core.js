@@ -268,6 +268,9 @@ function showNodeProperties(node) {
   if(_propWin) _propWin.classList.toggle('ve-properties--wide', VE_WIDE_PANEL_TYPES.indexOf(node.type) >= 0);
   // Yol / Ortam: harita hero → çok geniş+yüksek pencere (--wide boyutunu ezer).
   if(_propWin) _propWin.classList.toggle('ve-properties--road', node.type === 'road');
+  // Takoz hafif başlatıcıları (Çözücü / Rapor / modül girişi): içerik az → dar
+  // pencere + kompakt-sol kimlik. Geniş yapmak boş sütun bırakırdı. Salt sunum.
+  if(_propWin) _propWin.classList.toggle('ve-properties--compact', ['mnt-solver', 'mnt-report', 'mount-analysis'].indexOf(node.type) >= 0);
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 

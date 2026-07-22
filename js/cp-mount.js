@@ -2259,7 +2259,7 @@ function getMntSolverPropertiesHTML(node){
   var _sm=node.data.solveMode||'auto';
   html+='<div style="margin-bottom:10px;">';
   html+='<div style="font-size:0.58rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Çözüm Modu</div>';
-  html+='<select onchange="veMntSetSolveMode(\''+node.id+'\',this.value)" style="width:100%; padding:6px 8px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px;">';
+  html+='<select onchange="veMntSetSolveMode(\''+node.id+'\',this.value)" style="width:100%; padding:6px 8px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;">';
   [['auto','Otomatik — eğri tanımlıysa nonlineer'],
    ['nonlinear','Nonlineer — tanımlı eğrileri kullan (Newton)'],
    ['linear','Lineer — eğrileri yok say (statik rijitlik)']
@@ -2267,7 +2267,7 @@ function getMntSolverPropertiesHTML(node){
   html+='</select>';
   html+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4; margin-top:4px;">Nonlineer eğriler <b>Takoz Özellikleri</b>\'nde tanımlanır. Bu seçim yalnız ▶ Hesapla ile uygulanır.</div>';
   html+='</div>';
-  html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:5px;">▶ Hesapla</button>';
+  html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:0;">▶ Hesapla</button>';
   html+='<div id="ve-mnt-results"></div>';
   html+='</div>';
   return html;
