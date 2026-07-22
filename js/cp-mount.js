@@ -359,7 +359,7 @@ function _mntEnsureMassData(node){
 }
 function _mntInp(node, key, ph, step){
   var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
-  return '<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;">';
+  return '<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" placeholder="'+(ph||'')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;">';
 }
 function _mntRow(label, sub, inner){
   return '<tr style="border-bottom:1px solid var(--border-color);">'
@@ -368,7 +368,7 @@ function _mntRow(label, sub, inner){
 }
 // ─── Estetik girdi yardımcıları (kompakt, ince, hizalı) ──────────────────────
 // Ortak input stili — küçük, zarif, odakta vurgu.
-var _MNT_INP='padding:4px 6px; font-size:0.66rem; height:25px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right; box-sizing:border-box;';
+var _MNT_INP='padding:4px 6px; font-size:0.66rem; height:25px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; box-sizing:border-box;';
 // Bölüm başlığı (ince alt çizgi + opsiyonel birim).
 function _mntGrpTitle(title, unit){
   return '<div style="font-size:0.6rem; font-weight:700; color:var(--text-heading); border-bottom:1px solid var(--border-color); padding-bottom:4px; margin:3px 0 9px;">'+title+(unit?' <span style="font-size:0.52rem; font-weight:400; color:var(--text-muted);">'+unit+'</span>':'')+'</div>';
@@ -377,11 +377,11 @@ function _mntGrpTitle(title, unit){
 // (estetik: yumuşak zemin, yuvarlak köşe, sol aksan).
 function _mntCard(title, unit, accent, inner){
   var head = title ? '<div style="display:flex; align-items:center; gap:7px; margin-bottom:9px;">'
-    + '<span style="width:3px; height:12px; border-radius:0; background:'+(accent||'var(--accent-primary)')+';"></span>'
+    + '<span style="width:3px; height:12px; border-radius:2px; background:'+(accent||'var(--accent-primary)')+';"></span>'
     + '<span style="font-size:0.635rem; font-weight:700; color:var(--text-heading); letter-spacing:0.02em;">'+title+'</span>'
     + (unit ? '<span style="font-size:0.5rem; font-weight:400; color:var(--text-muted);">'+unit+'</span>' : '')
     + '</div>' : '';
-  return '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; padding:11px 12px 6px; margin-bottom:9px;">'+head+inner+'</div>';
+  return '<div style="background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:11px 12px 6px; margin-bottom:9px;">'+head+inner+'</div>';
 }
 // Etiketli 3'lü inline grup (x/y/z yan yana). title boşsa üst başlık çizilmez
 // (kart başlığı kapsıyorsa). subLabel verilirse solda küçük bir alt-etiket olur.
@@ -504,7 +504,7 @@ function getMntMountPropertiesHTML(node){
   var _lib=veMntGetLibraryList();
   var _libB=_lib.filter(function(e){ return e.builtin; });
   var _libC=_lib.filter(function(e){ return !e.builtin; });
-  var sel='<select onchange="veMntApplyLib(\''+node.id+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;"><option value="">— Kütüphaneden rijitlik yükle —</option>';
+  var sel='<select onchange="veMntApplyLib(\''+node.id+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);"><option value="">— Kütüphaneden rijitlik yükle —</option>';
   if(_libB.length){ sel+='<optgroup label="Gömülü">'; _libB.forEach(function(e){ sel+='<option value="'+_mntEsc(e.key)+'"'+(node.data.libKey===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; }); sel+='</optgroup>'; }
   if(_libC.length){ sel+='<optgroup label="Özel (Takoz Özellikleri)">'; _libC.forEach(function(e){ sel+='<option value="'+_mntEsc(e.key)+'"'+(node.data.libKey===e.key?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; }); sel+='</optgroup>'; }
   sel+='</select>';
@@ -738,12 +738,12 @@ function getMntExamplePropertiesHTML(node){
   // ── SOL (girdi/bilgi): model seçici + detay + aktar/dışa-aktar + tutarlılık raporu ──
   var left='';
   left+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek Model</div>';
-  left+='<select id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; margin-bottom:11px;">';
+  left+='<select id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-bottom:11px;">';
   list.forEach(function(e){ left+='<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; });
   left+='</select>';
   left+=_mntExampleDetailsHTML(ex);
-  left+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:0; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği Aktar</button>';
-  left+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:0.68rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:0;" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">⬇ İç Topolojiyi JSON Dışa Aktar</button>';
+  left+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği Aktar</button>';
+  left+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:0.68rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">⬇ İç Topolojiyi JSON Dışa Aktar</button>';
   left+='<div id="ve-mnt-example-report" style="margin-top:12px;"></div>';
 
   // ── SAĞ (önizleme): topoloji şeması — geniş sütunda büyük gösterilir ──
@@ -751,7 +751,7 @@ function getMntExamplePropertiesHTML(node){
   if(diagram){
     right+='<div style="font-size:0.55rem; font-weight:700; color:var(--text-muted); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:5px;">Topoloji</div>';
     // İç kap genişliği sınırlar (en-boy korunur), içteki <img>/<svg> %100 ile doldurur.
-    right+='<div style="width:100%; padding:14px; box-sizing:border-box; border:1px solid var(--border-color); background:var(--bg-primary); border-radius:0; overflow:hidden; text-align:center;">'
+    right+='<div style="width:100%; padding:14px; box-sizing:border-box; border:1px solid var(--border-color); background:var(--bg-primary); border-radius:var(--radius-md); overflow:hidden; text-align:center;">'
       +'<div style="display:inline-block; width:100%; max-width:460px; vertical-align:top;">'+diagram+'</div>'
       +'</div>';
   }
@@ -1202,7 +1202,7 @@ function _mntLoadExampleFromModel(nodeId){
 // ════════════════════════════════════════════════════════════════════════════
 // Görüntüleyici araç çubuğu düğmesi (aç/kapa görünümlü).
 function _mntVwrBtn(onclick, label, title, active){
-  return '<button onclick="'+onclick+'" title="'+_mntEsc(title||label)+'" style="padding:4px 9px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; opacity:'+(active===false?'0.45':'1')+';">'+label+'</button>';
+  return '<button onclick="'+onclick+'" title="'+_mntEsc(title||label)+'" style="padding:4px 9px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; opacity:'+(active===false?'0.45':'1')+';">'+label+'</button>';
 }
 // Renk lejantı (slim, tek satır).
 function _mntVwrLegend(){
@@ -1224,10 +1224,10 @@ function getMntViewerPropertiesHTML(node){
   left+=_mntVwrBtn("veMntViewerFullscreen();",'⛶ Tam Ekran','Görüntüleyiciyi tam ekran aç');
   left+='</div>';
   left+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.5; margin-bottom:9px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
-  left+='<button onclick="veMntViewerRefresh()" style="width:100%; padding:8px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">↻ Yenile</button>';
+  left+='<button onclick="veMntViewerRefresh()" style="width:100%; padding:8px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">↻ Yenile</button>';
   // SAĞ (geniş): 3B görüntüleyici kanvası — büyük. Canvas boyutu wrap'ın client
   // boyutuna göre kurulur (veMountViewerInit + ResizeObserver) → geniş sütunda oturur.
-  var right='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:0;"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
+  var right='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:var(--radius-md);"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
   var html='<div class="sw-panel">';
   html+='<div class="ve-cp-grid ve-cp-grid--wideright">';
   html+='<div class="ve-cp-col ve-cp-col--in">'+left+'</div>';
@@ -1243,7 +1243,7 @@ function getMntViewerPropertiesHTML(node){
 function getMntCoordFramePropertiesHTML(node){
   if(!node.data) node.data={};
   // Eksen yönü açıklaması (konum/CG değerlerinin hangi eksene göre girildiği)
-  function axRow(col,ax,desc){ return '<div style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:0.62rem;"><span style="width:11px; height:11px; border-radius:0; background:'+col+'; flex-shrink:0;"></span><b style="color:var(--text-primary); width:14px;">'+ax+'</b><span style="color:var(--text-secondary);">'+desc+'</span></div>'; }
+  function axRow(col,ax,desc){ return '<div style="display:flex; align-items:center; gap:8px; padding:4px 0; font-size:0.62rem;"><span style="width:11px; height:11px; border-radius:var(--radius-sm); background:'+col+'; flex-shrink:0;"></span><b style="color:var(--text-primary); width:14px;">'+ax+'</b><span style="color:var(--text-secondary);">'+desc+'</span></div>'; }
   // SOL rayı (ince): eksen açıklaması + görünüm düğmeleri + etkileşim ipucu.
   var left='';
   left+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:6px;">Koordinat Sistemi</div>';
@@ -1260,7 +1260,7 @@ function getMntCoordFramePropertiesHTML(node){
   left+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.5;">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
   // SAĞ (geniş): 3B koordinat kanvası — büyük. Canvas boyutu wrap'ın client boyutuna
   // göre kurulur (veMountViewerInit + ResizeObserver) → geniş sütunda ferahça oturur.
-  var right='<div id="ve-mnt-coord-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:0;"><canvas id="ve-mnt-coord-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
+  var right='<div id="ve-mnt-coord-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:var(--radius-md);"><canvas id="ve-mnt-coord-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
   var html='<div class="sw-panel">';
   html+='<div class="ve-cp-grid ve-cp-grid--wideright">';
   html+='<div class="ve-cp-col ve-cp-col--in">'+left+'</div>';
@@ -1285,9 +1285,9 @@ function getMnt2DViewPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
   html+='<div style="display:flex; gap:6px; margin-bottom:7px;">';
-  html+='<button onclick="veMnt2DViewRefresh()" style="flex:1; padding:7px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">↻ Yenile</button>';
+  html+='<button onclick="veMnt2DViewRefresh()" style="flex:1; padding:7px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">↻ Yenile</button>';
   html+='</div>';
-  html+='<div id="ve-mnt-2dview-box" style="width:100%; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:0; padding:8px; overflow:auto;"></div>';
+  html+='<div id="ve-mnt-2dview-box" style="width:100%; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:var(--radius-md); padding:8px; overflow:auto;"></div>';
   html+='</div>';
   return html;
 }
@@ -1513,7 +1513,7 @@ function _mnt2DFigure(o){
   var hKey=o.hKey||'x';
   function hval(p){ return hKey==='y'?p.y:(hKey==='z'?p.z:p.x); }
   // dış panel
-  svg+='<rect x="'+_mnt2DR(o.boxX)+'" y="'+_mnt2DR(o.boxY)+'" width="'+_mnt2DR(o.boxW)+'" height="'+_mnt2DR(o.boxH)+'" rx="0" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>';
+  svg+='<rect x="'+_mnt2DR(o.boxX)+'" y="'+_mnt2DR(o.boxY)+'" width="'+_mnt2DR(o.boxW)+'" height="'+_mnt2DR(o.boxH)+'" rx="8" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>';
   // ── ÖLÇEK IZGARASI + SAYISAL EKSEN DEĞERLERİ (mm) — işaretlerin ALTINDA ──
   var gl=o.ox+o.plotL, gr=o.ox+o.FIG_W-o.plotR;
   if(o.hMin!=null && o.hMax!=null){
@@ -2259,7 +2259,7 @@ function getMntSolverPropertiesHTML(node){
   var _sm=node.data.solveMode||'auto';
   html+='<div style="margin-bottom:10px;">';
   html+='<div style="font-size:0.58rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Çözüm Modu</div>';
-  html+='<select onchange="veMntSetSolveMode(\''+node.id+'\',this.value)" style="width:100%; padding:6px 8px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;">';
+  html+='<select onchange="veMntSetSolveMode(\''+node.id+'\',this.value)" style="width:100%; padding:6px 8px; font-size:0.64rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
   [['auto','Otomatik — eğri tanımlıysa nonlineer'],
    ['nonlinear','Nonlineer — tanımlı eğrileri kullan (Newton)'],
    ['linear','Lineer — eğrileri yok say (statik rijitlik)']
@@ -2267,7 +2267,7 @@ function getMntSolverPropertiesHTML(node){
   html+='</select>';
   html+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.4; margin-top:4px;">Nonlineer eğriler <b>Takoz Özellikleri</b>\'nde tanımlanır. Bu seçim yalnız ▶ Hesapla ile uygulanır.</div>';
   html+='</div>';
-  html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:0;">▶ Hesapla</button>';
+  html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:0.74rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:var(--radius-sm);">▶ Hesapla</button>';
   html+='<div id="ve-mnt-results"></div>';
   html+='</div>';
   return html;

@@ -2787,7 +2787,7 @@
 .ve-mnt2d-summary{
   display:flex; flex-wrap:wrap; gap:6px 16px;
   padding:7px 10px; margin-bottom:6px;
-  background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0;
+  background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm);
   font-size:0.64rem; color:var(--text-secondary);
 }
 .ve-mnt2d-summary b{ color:var(--text-heading); font-weight:600; }
@@ -2814,7 +2814,7 @@
   display:flex; align-items:center; justify-content:center;
   font-size:0.82rem !important; line-height:1;
   background:var(--bg-tertiary); color:var(--text-primary);
-  border:1px solid var(--border-color); border-radius:0; cursor:pointer;
+  border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;
   transition:background 0.12s, border-color 0.12s;
 }
 .ve-mnt2d-zoomctl button:hover{ background:var(--bg-input); border-color:var(--accent-primary); }
