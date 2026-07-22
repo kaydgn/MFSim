@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','arac-performans','mount-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -169,8 +169,15 @@ var componentDefs = {
   'engine': {
     name: 'Motor',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="20" y="25" width="60" height="50" fill="var(--text-secondary, #666)" rx="4"/><rect x="30" y="15" width="15" height="15" fill="var(--text-muted, #888)" rx="2"/><rect x="55" y="15" width="15" height="15" fill="var(--text-muted, #888)" rx="2"/><rect x="10" y="40" width="15" height="20" fill="var(--text-muted, #888)" rx="2"/><rect x="75" y="40" width="15" height="20" fill="var(--text-muted, #888)" rx="2"/><rect x="35" y="75" width="30" height="10" fill="var(--text-muted, #888)" rx="2"/></svg>',
-    inputs: 0,
-    outputs: 1
+    // Ön (sol) taraftaki 3 GİRİŞ portu = aksesuarlar (Klima / Alternatör / Hava
+    // Komp.). Sıra port index'ine kilitli (bkz. cp-accessories.js VE_ACC_PORT_MAP):
+    //   input-0 = Klima, input-1 = Alternatör, input-2 = Hava Kompresörü.
+    // Çıkış (güç aktarma) sağda kalır. Kutu 3 sol port için biraz büyütüldü.
+    inputs: 3,
+    outputs: 1,
+    portLayout: { inputs: ['left','left','left'], outputs: ['right'] },
+    defaultWidth: 66,
+    defaultHeight: 76
   },
   'transfer': {
     name: 'Transfer Kutusu',
@@ -381,6 +388,24 @@ var componentDefs = {
     isMountModule: true,
     defaultWidth: 80,
     defaultHeight: 66
+  },
+  // ── Aksesuarlar (Araç Performans) — Motor'un ön portlarına bağlanır ──────
+  // Diğer bileşenlerden bir tık daha küçük kutular. Çıkış portu (sağ) Motor'un
+  // ilgili giriş portuna gider. Panel/veri/senkron: js/cp-accessories.js.
+  'acc-ac': {
+    name: 'Klima Kompresörü',
+    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><g stroke="var(--text-secondary, #666)" stroke-width="6" stroke-linecap="round"><line x1="50" y1="14" x2="50" y2="86"/><line x1="19" y1="32" x2="81" y2="68"/><line x1="81" y1="32" x2="19" y2="68"/></g><g stroke="var(--text-muted, #888)" stroke-width="4.5" stroke-linecap="round" fill="none"><path d="M50 14 l-9 11 M50 14 l9 11 M50 86 l-9 -11 M50 86 l9 -11 M19 32 l1 14 M19 32 l13 -3 M81 68 l-1 -14 M81 68 l-13 3 M81 32 l-13 -3 M81 32 l1 14 M19 68 l13 3 M19 68 l1 -14"/></g></svg>',
+    inputs: 0, outputs: 1, defaultWidth: 54, defaultHeight: 50
+  },
+  'acc-alternator': {
+    name: 'Alternatör',
+    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><circle cx="52" cy="52" r="30" fill="none" stroke="var(--text-secondary, #666)" stroke-width="6"/><path d="M56 30 L38 57 L50 57 L45 74 L64 46 L52 46 Z" fill="var(--text-muted, #888)"/><rect x="10" y="47" width="13" height="9" rx="1" fill="var(--text-muted, #888)"/></svg>',
+    inputs: 0, outputs: 1, defaultWidth: 54, defaultHeight: 50
+  },
+  'acc-aircomp': {
+    name: 'Hava Kompresörü',
+    svg: '<svg width="34" height="34" viewBox="0 0 100 100"><rect x="20" y="34" width="48" height="46" rx="8" fill="var(--text-secondary, #666)"/><circle cx="44" cy="57" r="13" fill="none" stroke="var(--text-muted, #888)" stroke-width="4"/><line x1="44" y1="57" x2="52" y2="49" stroke="var(--text-muted, #888)" stroke-width="3" stroke-linecap="round"/><rect x="68" y="44" width="16" height="9" rx="1" fill="var(--text-muted, #888)"/><rect x="38" y="20" width="14" height="14" rx="2" fill="var(--text-muted, #888)"/></svg>',
+    inputs: 0, outputs: 1, defaultWidth: 54, defaultHeight: 50
   },
 };
 

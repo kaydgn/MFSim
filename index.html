@@ -153,7 +153,29 @@
                 <line x1="85" y1="48" x2="100" y2="48" stroke="currentColor" stroke-width="6"/>
               </svg> <span class="ve-comp-label">Motor</span></div>
           </div>
-          
+
+          <div class="ve-category" data-ve-scope="arac-performans">
+            <div class="ve-category-title">Aksesuarlar</div>
+            <div class="ve-component" draggable="true" data-type="acc-ac" title="Klima kompresörü — Motor'un ön portuna bağlanır. Devire bağlı çektiği güç net torktan düşülür.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <g stroke="currentColor" stroke-width="7" stroke-linecap="round"><line x1="50" y1="14" x2="50" y2="86"/><line x1="19" y1="32" x2="81" y2="68"/><line x1="81" y1="32" x2="19" y2="68"/></g>
+                <g stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.7"><path d="M50 14 l-9 11 M50 14 l9 11 M50 86 l-9 -11 M50 86 l9 -11"/></g>
+              </svg> <span class="ve-comp-label">Klima Kompresörü</span></div>
+            <div class="ve-component" draggable="true" data-type="acc-alternator" title="Alternatör — Motor'un ön portuna bağlanır. Devire bağlı çektiği güç net torktan düşülür.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <circle cx="52" cy="52" r="30" fill="none" stroke="currentColor" stroke-width="6"/>
+                <path d="M56 30 L38 57 L50 57 L45 74 L64 46 L52 46 Z" fill="currentColor"/>
+                <rect x="10" y="47" width="13" height="9" rx="1" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Alternatör</span></div>
+            <div class="ve-component" draggable="true" data-type="acc-aircomp" title="Hava kompresörü — Motor'un ön portuna bağlanır. Devire bağlı çektiği güç net torktan düşülür.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <rect x="20" y="34" width="48" height="46" rx="8" fill="none" stroke="currentColor" stroke-width="6"/>
+                <circle cx="44" cy="57" r="12" fill="none" stroke="currentColor" stroke-width="4"/>
+                <line x1="44" y1="57" x2="52" y2="49" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                <rect x="68" y="44" width="16" height="9" rx="1" fill="currentColor"/>
+              </svg> <span class="ve-comp-label">Hava Kompresörü</span></div>
+          </div>
+
           <div class="ve-category" data-ve-scope="arac-performans">
             <div class="ve-category-title">Aktarma Organları</div>
             <div class="ve-component" draggable="true" data-type="torque-converter">
@@ -679,6 +701,7 @@
 <script type="text/x-mfsim-defer" src="js/ui-core.js" data-mfsim-label="Kullanıcı arayüzü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-core.js" data-mfsim-label="Bileşen panelleri..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-engine.js" data-mfsim-label="Motor modülü..."></script>
+<script type="text/x-mfsim-defer" src="js/cp-accessories.js" data-mfsim-label="Aksesuarlar (klima/alternatör/hava komp.)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-gearbox.js" data-mfsim-label="Vites kutusu modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-matching.js" data-mfsim-label="Eşleştirme algoritmaları..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-torque-converter.js" data-mfsim-label="Tork konvertörü modülü..."></script>

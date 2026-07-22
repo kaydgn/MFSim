@@ -100,13 +100,23 @@ function deleteConnection(connId) {
   });
   
   connections = connections.filter(function(c) { return c.id !== connId; });
-  
+
   // Port işaretlerini güncelle
   updatePortStatus(conn.from);
   updatePortStatus(conn.to);
-  
+
   updateAllConnections();
   updateNodeCount();
+
+  // Aksesuar bağlantısı koptuysa → Motor'un net-tork modelini tazele
+  if(typeof VE_ACC_PORT_MAP !== 'undefined' && VE_ACC_PORT_MAP[conn.toPort] && typeof veSyncEngineAccessories === 'function') {
+    var engN = nodes.find(function(n){ return n.id === conn.to && n.type === 'engine'; });
+    if(engN) {
+      veSyncEngineAccessories(engN);
+      if(typeof updateVENetChart === 'function') { try { updateVENetChart(engN.id); } catch(e){} }
+    }
+    if(typeof veSolverValidate === 'function' && document.getElementById('ve-solver-validation')) { try { veSolverValidate(); } catch(e){} }
+  }
 }
 
 function updatePortStatus(nodeId) {
@@ -251,6 +261,8 @@ function showNodeProperties(node) {
     html += getTerminatorPropertiesHTML(node);
   } else if(node.type === 'gear-shift') {
     html += getGearShiftPropertiesHTML(node);
+  } else if(node.type === 'acc-ac' || node.type === 'acc-alternator' || node.type === 'acc-aircomp') {
+    html += getAccessoryPropertiesHTML(node);
   } else {
     html += getDefaultPropertiesHTML(node);
   }

@@ -2552,13 +2552,21 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     // iSCAAN "Net Torque Fan On" egrisine karsilik gelir
     function _cmNetMotorFn(rpm) {
       var T_gross = _cmGrossMotorFn(rpm);
-      if (!_cmHasAccLoss || rpm <= 0) return T_gross;
-      var ratio = rpm / _cmGovSpeed;
-      var P_fan_kW = (_cmFanMode === 'on') ? _cmFanLoss : _cmFanLoss * ratio * ratio * ratio;
-      var P_loss_kW = P_fan_kW + _cmOtherLoss * ratio;
+      if (rpm <= 0) return T_gross;
+      // Eğrili/manuel/legacy aksesuarlar → tek doğruluk kaynağı (çözücüyle aynı).
+      var P_loss_kW;
+      if (typeof veAccessoryLossKw === 'function' && R.accessories && R.accessories.length) {
+        P_loss_kW = veAccessoryLossKw(R.accessories, rpm, _cmGovSpeed, _cmFanMode);
+      } else if (_cmHasAccLoss) {
+        var ratio = rpm / _cmGovSpeed;
+        var P_fan_kW = (_cmFanMode === 'on') ? _cmFanLoss : _cmFanLoss * ratio * ratio * ratio;
+        P_loss_kW = P_fan_kW + _cmOtherLoss * ratio;
+      } else {
+        return T_gross;
+      }
+      if (P_loss_kW <= 0) return T_gross;
       var omega = 2 * Math.PI * rpm / 60;
-      var T_loss = omega > 0 ? P_loss_kW * 1000 / omega : 0;
-      return Math.max(0, T_gross - T_loss);
+      return Math.max(0, T_gross - P_loss_kW * 1000 / omega);
     }
 
     // Coupling SR — interpolasyonla hassas hesapla (tau = 1.0 gecis noktasi)

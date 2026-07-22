@@ -567,6 +567,10 @@ function createNode(type, x, y, width, height) {
     if(node.data.efficiency === undefined) node.data.efficiency = 96;
     if(node.data.diffInertia === undefined) node.data.diffInertia = 1.0;
   }
+  if(typeof VE_ACC_TYPES !== 'undefined' && VE_ACC_TYPES[type]) {
+    if(node.data.accDriveRatio === undefined) node.data.accDriveRatio = VE_ACC_TYPES[type].defRatio;
+    if(node.data.accPreset === undefined) node.data.accPreset = '';
+  }
   // State kaydet
   if(typeof saveState === 'function') saveState();
   
@@ -836,7 +840,28 @@ function createConnection(fromNodeId, toNodeId, fromPort, toPort) {
     return c.from === fromNodeId && c.to === toNodeId && c.fromPort === fromPort && c.toPort === toPort;
   });
   if(exists) return;
-  
+
+  // ── Aksesuar bağlantı-tipi doğrulaması ──
+  // Motor'un ön portları (input-0/1/2) yalnız eşleşen aksesuar tipini kabul eder;
+  // aksesuar çıkışı da yalnız Motor'un aksesuar portuna gider. (Yükleme yolu
+  // createConnection'ı atlar → kayıtlı topolojiler reddedilmez.)
+  if(typeof VE_ACC_PORT_MAP !== 'undefined') {
+    var _fromNode = nodes.find(function(n){ return n.id === fromNodeId; });
+    var _toNode = nodes.find(function(n){ return n.id === toNodeId; });
+    var _expectAcc = (_toNode && _toNode.type === 'engine') ? VE_ACC_PORT_MAP[toPort] : null;
+    var _fromIsAcc = (typeof veAccIsAccessoryType === 'function') && _fromNode && veAccIsAccessoryType(_fromNode.type);
+    if(_expectAcc) {
+      if(!_fromNode || _fromNode.type !== _expectAcc) {
+        var _lbl = (typeof VE_ACC_TYPES !== 'undefined' && VE_ACC_TYPES[_expectAcc]) ? VE_ACC_TYPES[_expectAcc].label : _expectAcc;
+        if(typeof showToast === 'function') showToast('Bu port yalnızca "' + _lbl + '" bileşenine bağlanır.', 'error');
+        return;
+      }
+    } else if(_fromIsAcc) {
+      if(typeof showToast === 'function') showToast(VE_ACC_TYPES[_fromNode.type].label + ' yalnızca Motor\'un ön aksesuar portuna bağlanır.', 'error');
+      return;
+    }
+  }
+
   var conn = {
     id: 'conn-' + Date.now(),
     from: fromNodeId,
@@ -857,6 +882,16 @@ function createConnection(fromNodeId, toNodeId, fromPort, toPort) {
 
   // TC ↔ Şanzıman bağlantısı kontrolü: Şanzıman Kontrol zorunluluğu
   veCheckShiftControllerRequired();
+
+  // Aksesuar bağlandıysa → Motor'un net-tork modelini güncelle
+  if(typeof VE_ACC_PORT_MAP !== 'undefined' && VE_ACC_PORT_MAP[toPort] && typeof veSyncEngineAccessories === 'function') {
+    var _engN = nodes.find(function(n){ return n.id === toNodeId && n.type === 'engine'; });
+    if(_engN) {
+      veSyncEngineAccessories(_engN);
+      if(typeof updateVENetChart === 'function') { try { updateVENetChart(_engN.id); } catch(e){} }
+    }
+    if(typeof veSolverValidate === 'function' && document.getElementById('ve-solver-validation')) { try { veSolverValidate(); } catch(e){} }
+  }
 }
 
 // ═══ TC ↔ Şanzıman bağlantısında Şanzıman Kontrol zorunluluğu ═══

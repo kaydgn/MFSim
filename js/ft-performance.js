@@ -476,22 +476,23 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   var hasAccessoryLoss = (accTotalFanLoss + accTotalOtherLoss) > 0;
 
   // NET motor tork fonksiyonu (brüt − aksesuar kayıpları)
+  // Aksesuar kaybı: eğrili (Klima/Alternatör/Hava Komp. → aksesuar_devri=rpm×oran,
+  // kW=interp(eğri)) + manuel (sabit kW) + legacy scalar (fan N³ / diğer lineer).
+  // Tek doğruluk kaynağı veAccessoryLossKw (cp-accessories.js).
   function motorTorqueFn(rpm) {
     var T_gross = grossMotorTorqueFn(rpm);
-    if(!hasAccessoryLoss || rpm <= 0) return T_gross;
-    var ratio = rpm / governedSpeed;
-    var P_fan_kW;
-    if(accFanMode === 'on') {
-      // iSCAAN uyumlu: Fan kaybı tüm devirlerde sabit (governed hızdaki değer)
-      P_fan_kW = accTotalFanLoss;
-    } else {
-      // Kavramalı fan: P ∝ N³
-      P_fan_kW = accTotalFanLoss * ratio * ratio * ratio;
-    }
-    var P_loss_kW = P_fan_kW + accTotalOtherLoss * ratio;
+    if(rpm <= 0) return T_gross;
+    var P_loss_kW = (typeof veAccessoryLossKw === 'function')
+      ? veAccessoryLossKw(accList, rpm, governedSpeed, accFanMode)
+      : (function(){
+          if(!hasAccessoryLoss) return 0;
+          var ratio = rpm / governedSpeed;
+          var Pf = (accFanMode === 'on') ? accTotalFanLoss : accTotalFanLoss * ratio * ratio * ratio;
+          return Pf + accTotalOtherLoss * ratio;
+        })();
+    if(P_loss_kW <= 0) return T_gross;
     var omega = 2 * Math.PI * rpm / 60;
-    var T_loss = P_loss_kW * 1000 / omega;
-    return Math.max(0, T_gross - T_loss);
+    return Math.max(0, T_gross - P_loss_kW * 1000 / omega);
   }
 
   // ── TORK KONVERTÖRÜ ──
@@ -1960,7 +1961,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         tireName: _wd.ftTireName||'Michelin XZL 395/85R20', tireRadius: r_tire, tireInertia: I_tire, crr: Crr, surfFactor: surfFactor,
         engineName: _engName, displacement: parseFloat(_specs.displacement)||0, governed: governedSpeed, noLoad: noLoadGoverned,
         idleRpm: parseFloat(_specs.idleRpm)||700, engineInertia: I_engine,
-        accessories: (_ed.accessories||[]).map(function(a){return{name:a.name,standardLoss:parseFloat(a.standardLoss)||0,userLoss:parseFloat(a.userLoss)||0};}),
+        accessories: (_ed.accessories||[]).map(function(a){return{name:a.name,standardLoss:parseFloat(a.standardLoss)||0,userLoss:parseFloat(a.userLoss)||0,curve:a.curve?a.curve.slice():undefined,driveRatio:a.driveRatio,kwConst:a.kwConst};}),
         torqueData: (ed.torqueData||ed.motorData||[]).map(function(p){return{rpm:p.rpm,torque:p.torque,power:p.power};}),
         fanLossGov: accTotalFanLoss, otherLossGov: accTotalOtherLoss, accFanMode: accFanMode,
         gbName: _gbP ? _gbP.name : (_gbd.gbName||'—'), gbFamily: _gbP ? (_gbP.family||'—') : '—', gbEff: parseFloat(_gbd.efficiency)||97, tcName: _tcN,
