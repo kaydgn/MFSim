@@ -64,12 +64,12 @@ function getMntReportPropertiesHTML(node){
         +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Silindir sayısı<input type="number" min="1" step="1" value="'+_rEsc(node.data.cylinders==null?'':node.data.cylinders)+'" placeholder="ör: 6" onchange="veMntSet(\''+node.id+'\',\'cylinders\',this.value)" style="'+inpSt+'"></label>'
         +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Sönüm ζ<input type="number" min="0" step="0.001" value="'+_rEsc(node.data.zeta==null?'':node.data.zeta)+'" placeholder="0,001" onchange="veMntSet(\''+node.id+'\',\'zeta\',this.value)" style="'+inpSt+'"></label>'
         + '</div></div>';
-    html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:0.8rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:5px;" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
+    html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:0.8rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:0;" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
   } else {
     html+='<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:0.66rem; line-height:1.5;">'
         + '<b>Önce hesaplayın.</b> Rapor, <b>Çözücü</b> bileşenindeki <b>▶ Hesapla</b> ile üretilen sonuçları kullanır. '
         + 'Çözücü\'yü çalıştırdıktan sonra buraya dönün.</div>';
-    html+='<button disabled style="width:100%; padding:13px 16px; font-size:0.8rem; font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:5px;">📄 Raporu Oluştur ve İndir</button>';
+    html+='<button disabled style="width:100%; padding:13px 16px; font-size:0.8rem; font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:0;">📄 Raporu Oluştur ve İndir</button>';
   }
   html+='<div id="ve-mnt-report-status" style="margin-top:8px; font-size:0.6rem; color:var(--text-muted);"></div>';
   html+='</div>';
