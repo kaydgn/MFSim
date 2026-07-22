@@ -735,23 +735,32 @@ function getMntExamplePropertiesHTML(node){
   var nid=node.id;
   var autoSvg = _mntExampleDiagramSVG(ex.model, ex.tools);
   var diagram = ex.image ? _mntExampleImageHTML(ex.image, autoSvg) : autoSvg;
-  var html='<div class="sw-panel">';
-  html+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek Model</div>';
-  html+='<select id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; margin-bottom:11px;">';
-  list.forEach(function(e){ html+='<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; });
-  html+='</select>';
+  // ── SOL (girdi/bilgi): model seçici + detay + aktar/dışa-aktar + tutarlılık raporu ──
+  var left='';
+  left+='<div style="font-size:0.575rem; font-weight:700; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin-bottom:5px;">Örnek Model</div>';
+  left+='<select id="ve-mnt-example-sel" onchange="veMntSetExample(\''+nid+'\',this.value)" style="width:100%; padding:5px 8px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; margin-bottom:11px;">';
+  list.forEach(function(e){ left+='<option value="'+_mntEsc(e.id)+'"'+(sel===e.id?' selected':'')+'>'+_mntEsc(e.name)+'</option>'; });
+  left+='</select>';
+  left+=_mntExampleDetailsHTML(ex);
+  left+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:0; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği Aktar</button>';
+  left+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:0.68rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:0;" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">⬇ İç Topolojiyi JSON Dışa Aktar</button>';
+  left+='<div id="ve-mnt-example-report" style="margin-top:12px;"></div>';
+
+  // ── SAĞ (önizleme): topoloji şeması — geniş sütunda büyük gösterilir ──
+  var right='';
   if(diagram){
-    html+='<div style="font-size:0.55rem; font-weight:700; color:var(--text-muted); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:5px;">Topoloji</div>';
-    // Görsel/şema panele oranla küçültülür (en-boy korunur) ve ortalanır —
-    // iç kap genişliği sınırlar, içteki <img>/<svg> %100 ile onu doldurur.
-    html+='<div style="width:100%; padding:10px; box-sizing:border-box; border:1px solid var(--border-color); background:var(--bg-primary); border-radius:6px; margin-bottom:12px; overflow:hidden; text-align:center;">'
-      +'<div style="display:inline-block; width:70%; max-width:280px; vertical-align:top;">'+diagram+'</div>'
+    right+='<div style="font-size:0.55rem; font-weight:700; color:var(--text-muted); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:5px;">Topoloji</div>';
+    // İç kap genişliği sınırlar (en-boy korunur), içteki <img>/<svg> %100 ile doldurur.
+    right+='<div style="width:100%; padding:14px; box-sizing:border-box; border:1px solid var(--border-color); background:var(--bg-primary); border-radius:0; overflow:hidden; text-align:center;">'
+      +'<div style="display:inline-block; width:100%; max-width:460px; vertical-align:top;">'+diagram+'</div>'
       +'</div>';
   }
-  html+=_mntExampleDetailsHTML(ex);
-  html+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:5px; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği Aktar</button>';
-  html+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:0.68rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:5px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">⬇ İç Topolojiyi JSON Dışa Aktar</button>';
-  html+='<div id="ve-mnt-example-report" style="margin-top:12px;"></div>';
+
+  var html='<div class="sw-panel">';
+  html+='<div class="ve-cp-grid">';
+  html+='<div class="ve-cp-col ve-cp-col--in">'+left+'</div>';
+  html+='<div class="ve-cp-col ve-cp-col--out">'+right+'</div>';
+  html+='</div>';
   html+='</div>';
   return html;
 }
