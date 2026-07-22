@@ -65,7 +65,8 @@ function _veSettingsRenderAppearance() {
   var dark = [
     { id: 'slate',  name: 'Midnight' },
     { id: 'cream',  name: 'Carbon' },
-    { id: 'claude', name: 'Claude' }
+    { id: 'claude', name: 'Claude' },
+    { id: 'navy',   name: 'Donanma Mavisi' }
   ];
   var pro = [
     { id: 'ansys',  name: 'ANSYS' },
