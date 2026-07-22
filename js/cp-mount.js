@@ -1202,7 +1202,7 @@ function _mntLoadExampleFromModel(nodeId){
 // ════════════════════════════════════════════════════════════════════════════
 // Görüntüleyici araç çubuğu düğmesi (aç/kapa görünümlü).
 function _mntVwrBtn(onclick, label, title, active){
-  return '<button onclick="'+onclick+'" title="'+_mntEsc(title||label)+'" style="padding:4px 9px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; opacity:'+(active===false?'0.45':'1')+';">'+label+'</button>';
+  return '<button onclick="'+onclick+'" title="'+_mntEsc(title||label)+'" style="padding:4px 9px; font-size:0.6rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; opacity:'+(active===false?'0.45':'1')+';">'+label+'</button>';
 }
 // Renk lejantı (slim, tek satır).
 function _mntVwrLegend(){
@@ -1212,20 +1212,27 @@ function _mntVwrLegend(){
 }
 function getMntViewerPropertiesHTML(node){
   if(!node.data) node.data={};
+  // SOL rayı (ince): lejant + görünüm düğmeleri + ipucu + yenile.
+  var left='';
+  left+=_mntVwrLegend();
+  // Görünüm katmanları + sıfırla + tam ekran (Zemin varsayılan gizli)
+  left+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:9px;">';
+  left+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
+  left+=_mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksenleri gizle/göster');
+  left+=_mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Eksen etiketlerini gizle/göster');
+  left+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
+  left+=_mntVwrBtn("veMntViewerFullscreen();",'⛶ Tam Ekran','Görüntüleyiciyi tam ekran aç');
+  left+='</div>';
+  left+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.5; margin-bottom:9px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
+  left+='<button onclick="veMntViewerRefresh()" style="width:100%; padding:8px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">↻ Yenile</button>';
+  // SAĞ (geniş): 3B görüntüleyici kanvası — büyük. Canvas boyutu wrap'ın client
+  // boyutuna göre kurulur (veMountViewerInit + ResizeObserver) → geniş sütunda oturur.
+  var right='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:0;"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
   var html='<div class="sw-panel">';
-  html+=_mntVwrLegend();
-  // Araç çubuğu — görünüm katmanları + sıfırla + tam ekran (Zemin varsayılan gizli)
-  html+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:7px;">';
-  html+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
-  html+=_mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksenleri gizle/göster');
-  html+=_mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Eksen etiketlerini gizle/göster');
-  html+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
-  html+='<span style="flex:1;"></span>';
-  html+=_mntVwrBtn("veMntViewerFullscreen();",'⛶ Tam Ekran','Görüntüleyiciyi tam ekran aç');
+  html+='<div class="ve-cp-grid ve-cp-grid--wideright">';
+  html+='<div class="ve-cp-col ve-cp-col--in">'+left+'</div>';
+  html+='<div class="ve-cp-col ve-cp-col--out">'+right+'</div>';
   html+='</div>';
-  html+='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:340px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:6px;"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
-  html+='<div style="font-size:0.5rem; color:var(--text-muted); margin-top:4px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
-  html+='<button onclick="veMntViewerRefresh()" style="width:100%; margin-top:7px; padding:8px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">↻ Yenile</button>';
   html+='</div>';
   return html;
 }
