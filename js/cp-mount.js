@@ -1285,9 +1285,9 @@ function getMnt2DViewPropertiesHTML(node){
   if(!node.data) node.data={};
   var html='<div class="sw-panel">';
   html+='<div style="display:flex; gap:6px; margin-bottom:7px;">';
-  html+='<button onclick="veMnt2DViewRefresh()" style="flex:1; padding:7px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:5px; cursor:pointer;">↻ Yenile</button>';
+  html+='<button onclick="veMnt2DViewRefresh()" style="flex:1; padding:7px; font-size:0.66rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">↻ Yenile</button>';
   html+='</div>';
-  html+='<div id="ve-mnt-2dview-box" style="width:100%; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:8px; padding:8px; overflow:auto;"></div>';
+  html+='<div id="ve-mnt-2dview-box" style="width:100%; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:0; padding:8px; overflow:auto;"></div>';
   html+='</div>';
   return html;
 }
@@ -1513,7 +1513,7 @@ function _mnt2DFigure(o){
   var hKey=o.hKey||'x';
   function hval(p){ return hKey==='y'?p.y:(hKey==='z'?p.z:p.x); }
   // dış panel
-  svg+='<rect x="'+_mnt2DR(o.boxX)+'" y="'+_mnt2DR(o.boxY)+'" width="'+_mnt2DR(o.boxW)+'" height="'+_mnt2DR(o.boxH)+'" rx="9" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>';
+  svg+='<rect x="'+_mnt2DR(o.boxX)+'" y="'+_mnt2DR(o.boxY)+'" width="'+_mnt2DR(o.boxW)+'" height="'+_mnt2DR(o.boxH)+'" rx="0" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1"/>';
   // ── ÖLÇEK IZGARASI + SAYISAL EKSEN DEĞERLERİ (mm) — işaretlerin ALTINDA ──
   var gl=o.ox+o.plotL, gr=o.ox+o.FIG_W-o.plotR;
   if(o.hMin!=null && o.hMax!=null){
