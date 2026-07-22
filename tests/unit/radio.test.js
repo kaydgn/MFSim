@@ -339,4 +339,29 @@ describe('UI smoke', () => {
     expect(pane.querySelector('.mf-radio-pick')).not.toBeNull();
     expect(pane.querySelector('.mf-radio-empty')).not.toBeNull();
   });
+
+  test('kategori açılır menüsü: seçici açar, kategori seçince süzer + kalıcı', () => {
+    const api = require('../../js/radio.js');
+    const w = document.getElementById('mf-radio');
+    // Başlangıç: menü kapalı → seçici var, kategori seçenekleri yok
+    expect(w.querySelector('.mf-radio-catsel')).not.toBeNull();
+    expect(w.querySelector('.mf-radio-catopt')).toBeNull();
+
+    // Seçiciye tıkla → menü açılır (Tümü + kategoriler)
+    w.querySelector('.mf-radio-catsel').click();
+    const opts = w.querySelectorAll('.mf-radio-catopt');
+    expect(opts.length).toBeGreaterThan(1);
+
+    // "Türkçe" kategorisini seç
+    const tr = [...opts].find(o => o.getAttribute('data-cat') === 'Türkçe');
+    expect(tr).toBeTruthy();
+    tr.click();
+
+    // Menü kapanır; etiket "Türkçe"; liste yalnızca Türkçe istasyonları
+    expect(w.querySelector('.mf-radio-catopt')).toBeNull();
+    expect(w.querySelector('.mf-radio-catsel-label').textContent).toBe('Türkçe');
+    const shown = w.querySelectorAll('.mf-radio-item[data-station]').length;
+    expect(shown).toBe(api.STATIONS.filter(s => s.cat === 'Türkçe').length);
+    expect(api.loadState().stationCat).toBe('Türkçe');
+  });
 });

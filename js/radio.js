@@ -274,6 +274,7 @@
   var libUrls = [];                   // temizlenecek object-url'ler
   var libIndex = -1;                  // çalan yerel parça indeksi
   var current = null;                 // { type:'station'|'track', ... }
+  var catMenuOpen = false;            // kategori açılır menüsü açık mı (kalıcı değil)
   var lastVol = DEFAULT_VOLUME;       // sessize alma öncesi ses
   var st      = { volume: DEFAULT_VOLUME, tab: 'stations', stationId: null, stationCat: CAT_ALL, open: false, customStations: [], pos: null };
 
@@ -286,7 +287,8 @@
     mute:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4 9.5v5h3.5L13 19V5L7.5 9.5z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
     close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     folder:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg>',
-    plus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
+    plus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    chev:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>'
   };
 
   function $(id) { return global.document.getElementById(id); }
@@ -449,32 +451,53 @@
     // Seçili kategori artık yoksa (ör. özel yayın silindi) Tümü'ye dön.
     if (sel !== CAT_ALL && !cats.some(function (c) { return c.cat === sel; })) sel = st.stationCat = CAT_ALL;
 
-    var chip = function (cat, label, count) {
-      return '<button type="button" class="mf-radio-chip' + (sel === cat ? ' active' : '') + '" data-cat="' + esc(cat) + '">' +
-             esc(label) + '<span class="mf-radio-chip-n">' + count + '</span></button>';
-    };
-    var chips = chip(CAT_ALL, 'Tümü', all.length) +
-      cats.map(function (c) { return chip(c.cat, c.cat, c.count); }).join('');
-
-    var list = filterStationsByCat(all, sel);
-    var curId = current && current.type === 'station' ? current.id : null;
-    var rows = list.map(function (s2) {
-      var on = s2.id === curId;
-      return '<button type="button" class="mf-radio-item' + (on ? ' active' : '') + '" data-station="' + esc(s2.id) + '">' +
-               '<span class="mf-radio-item-dot"></span>' +
-               '<span class="mf-radio-item-main"><span class="mf-radio-item-name">' + esc(s2.name) + '</span>' +
-               '<span class="mf-radio-item-sub">' + esc(s2.genre || s2.cat || '') + '</span></span>' +
-             '</button>';
-    }).join('');
-    if (!rows) rows = '<div class="mf-radio-empty">Bu kategoride yayın yok.</div>';
-
-    pane.innerHTML =
-      '<div class="mf-radio-chips">' + chips + '</div>' +
-      '<div class="mf-radio-list">' + rows + '</div>' +
-      '<div class="mf-radio-add">' +
-        '<input type="url" class="mf-radio-url" placeholder="https://… özel yayın URL\'si" aria-label="Özel yayın URL\'si" />' +
-        '<button type="button" class="mf-radio-add-btn" title="Özel istasyon ekle">' + ICONS.plus + '</button>' +
+    // Tek satırlık kategori seçici (üstte sabit; açılır menüyü tetikler).
+    var selCount = (sel === CAT_ALL) ? all.length
+      : ((cats.filter(function (c) { return c.cat === sel; })[0] || { count: 0 }).count);
+    var selector =
+      '<div class="mf-radio-catbar">' +
+        '<button type="button" class="mf-radio-catsel' + (catMenuOpen ? ' open' : '') + '" aria-haspopup="listbox" aria-expanded="' + catMenuOpen + '">' +
+          '<span class="mf-radio-catsel-label">' + esc(sel === CAT_ALL ? 'Tümü' : sel) + '</span>' +
+          '<span class="mf-radio-catsel-count">' + selCount + '</span>' +
+          '<span class="mf-radio-catsel-chev" aria-hidden="true">' + ICONS.chev + '</span>' +
+        '</button>' +
       '</div>';
+
+    var body;
+    if (catMenuOpen) {
+      // Açık — kategori listesi (Tümü + her kategori, adetli)
+      var opt = function (cat, label, count) {
+        var on = sel === cat;
+        return '<button type="button" class="mf-radio-catopt' + (on ? ' active' : '') + '" data-cat="' + esc(cat) + '" role="option" aria-selected="' + on + '">' +
+                 '<span class="mf-radio-item-dot"></span>' +
+                 '<span class="mf-radio-catopt-name">' + esc(label) + '</span>' +
+                 '<span class="mf-radio-catopt-n">' + count + '</span>' +
+               '</button>';
+      };
+      body = '<div class="mf-radio-catlist" role="listbox">' +
+        opt(CAT_ALL, 'Tümü', all.length) +
+        cats.map(function (c) { return opt(c.cat, c.cat, c.count); }).join('') +
+        '</div>';
+    } else {
+      // Normal — süzülmüş istasyon listesi + özel URL ekleme
+      var list = filterStationsByCat(all, sel);
+      var curId = current && current.type === 'station' ? current.id : null;
+      var rows = list.map(function (s2) {
+        var on = s2.id === curId;
+        return '<button type="button" class="mf-radio-item' + (on ? ' active' : '') + '" data-station="' + esc(s2.id) + '">' +
+                 '<span class="mf-radio-item-dot"></span>' +
+                 '<span class="mf-radio-item-main"><span class="mf-radio-item-name">' + esc(s2.name) + '</span>' +
+                 '<span class="mf-radio-item-sub">' + esc(s2.genre || s2.cat || '') + '</span></span>' +
+               '</button>';
+      }).join('');
+      if (!rows) rows = '<div class="mf-radio-empty">Bu kategoride yayın yok.</div>';
+      body = '<div class="mf-radio-list">' + rows + '</div>' +
+        '<div class="mf-radio-add">' +
+          '<input type="url" class="mf-radio-url" placeholder="https://… özel yayın URL\'si" aria-label="Özel yayın URL\'si" />' +
+          '<button type="button" class="mf-radio-add-btn" title="Özel istasyon ekle">' + ICONS.plus + '</button>' +
+        '</div>';
+    }
+    pane.innerHTML = selector + body;
   }
 
   function renderLibrary() {
@@ -499,6 +522,7 @@
 
   function switchTab(tab) {
     st.tab = (tab === 'library') ? 'library' : 'stations';
+    catMenuOpen = false;   // sekme değişince kategori menüsünü kapat
     var w = $(WIDGET_ID);
     if (!w) return;
     w.querySelectorAll('.mf-radio-tab').forEach(function (b) {
@@ -627,8 +651,10 @@
       if (t.closest && t.closest('.mf-radio-close')) { closePlayer(); return; }
       var tab = t.closest && t.closest('.mf-radio-tab');
       if (tab) { switchTab(tab.getAttribute('data-tab')); saveState({ tab: st.tab }); return; }
-      var chip = t.closest && t.closest('.mf-radio-chip');
-      if (chip) { st.stationCat = chip.getAttribute('data-cat') || CAT_ALL; saveState({ stationCat: st.stationCat }); renderStations(); return; }
+      var catsel = t.closest && t.closest('.mf-radio-catsel');
+      if (catsel) { catMenuOpen = !catMenuOpen; renderStations(); return; }
+      var catopt = t.closest && t.closest('.mf-radio-catopt');
+      if (catopt) { st.stationCat = catopt.getAttribute('data-cat') || CAT_ALL; catMenuOpen = false; saveState({ stationCat: st.stationCat }); renderStations(); return; }
       var stn = t.closest && t.closest('[data-station]');
       if (stn) { var s2 = allStations(st.customStations).filter(function (x) { return x.id === stn.getAttribute('data-station'); })[0]; if (s2) playStation(s2); return; }
       var trk = t.closest && t.closest('[data-track]');
@@ -644,11 +670,23 @@
     slider.addEventListener('input',  function () { setVolume(this.value / 100, false); });
     slider.addEventListener('change', function () { setVolume(this.value / 100, true); });
 
-    // Özel URL: Enter ile ekle.
+    // Özel URL: Enter ile ekle. Escape: açık kategori menüsünü kapat.
     w.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && e.target && e.target.classList && e.target.classList.contains('mf-radio-url')) {
         e.preventDefault(); doAddCustom(w);
+      } else if (e.key === 'Escape' && catMenuOpen) {
+        catMenuOpen = false; renderStations();
       }
+    });
+
+    // Pencere DIŞINA tıklama → açık kategori menüsünü kapat.
+    // composedPath() tık ANINDAKİ yolu verir; widget handler render'la hedefi
+    // koparsa bile "içeride mi" doğru saptanır (aksi halde menü açılır açılmaz kapanırdı).
+    global.document.addEventListener('click', function (e) {
+      if (!catMenuOpen) return;
+      var path = (e.composedPath && e.composedPath()) || [];
+      var inside = path.some(function (n) { return n && n.id === WIDGET_ID; });
+      if (!inside) { catMenuOpen = false; renderStations(); }
     });
 
     // Dosya seçimi.
