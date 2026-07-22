@@ -31,21 +31,94 @@
   var WIDGET_ID      = 'mf-radio';
   var BTN_ID         = 've-radio-btn';
 
+  // Kategori filtresi: "Tümü" sanal kategori, "Özel" kullanıcı yayınları.
+  // CAT_ORDER, çip sırasını belirler; listede olmayan kategoriler sona düşer.
+  var CAT_ALL    = 'Tümü';
+  var CAT_CUSTOM = 'Özel';
+  var CAT_ORDER  = ['Chill', 'Türkçe', 'Rock', 'Metal', 'Klasik', 'Bach & Barok',
+                    'Caz & Blues', 'Elektronik', 'Pop', 'Dünya', CAT_CUSTOM];
+
   // ─── Küratörlü istasyonlar (HTTPS zorunlu) ─────────────────────────────────
   // SomaFM: reklamsız, dinleyici destekli; doğrudan yayın bağlantısına izin
   // verir ve HTTPS sunar. URL'ler zamanla değişebilir → kullanıcı "Özel URL"
   // ile kendi yayınını da ekleyebilir; düşen yayın 'error' ile bildirilir.
+  // Not: Yayın URL'leri curl ile (redirect izleyerek) doğrulandı — hepsi HTTPS
+  // ve son hedefi de HTTPS (mixed-content yok). Yayınlar zamanla değişebilir;
+  // düşen bir yayın 'error' olayıyla bildirilir, kullanıcı "Özel URL" ekleyebilir.
   var STATIONS = [
-    { id: 'groovesalad',  name: 'Groove Salad',    genre: 'Chill · Downtempo',   url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
-    { id: 'dronezone',    name: 'Drone Zone',      genre: 'Ambient',             url: 'https://ice1.somafm.com/dronezone-128-mp3' },
-    { id: 'lush',         name: 'Lush',            genre: 'Vokal · Elektronik',  url: 'https://ice1.somafm.com/lush-128-mp3' },
-    { id: 'secretagent',  name: 'Secret Agent',    genre: 'Lounge · Jazz-noir',  url: 'https://ice1.somafm.com/secretagent-128-mp3' },
-    { id: 'indiepop',     name: 'Indie Pop Rocks', genre: 'Indie Pop',           url: 'https://ice1.somafm.com/indiepop-128-mp3' },
-    { id: 'beatblender',  name: 'Beat Blender',    genre: 'Deep House',          url: 'https://ice1.somafm.com/beatblender-128-mp3' },
-    { id: 'spacestation', name: 'Space Station',   genre: 'Space · Electronica', url: 'https://ice1.somafm.com/spacestation-128-mp3' },
-    { id: 'defcon',       name: 'DEF CON Radio',   genre: 'Techno · Hacker',     url: 'https://ice1.somafm.com/defcon-128-mp3' },
-    { id: 'fluid',        name: 'Fluid',           genre: 'Chillhop · Future',   url: 'https://ice1.somafm.com/fluid-128-mp3' },
-    { id: 'sonicuniverse',name: 'Sonic Universe',  genre: 'Jazz · Avangard',     url: 'https://ice1.somafm.com/sonicuniverse-128-mp3' }
+    { id: 'groove-salad', name: "Groove Salad", genre: "Chill · Downtempo", cat: "Chill", url: 'https://ice1.somafm.com/groovesalad-128-mp3' },
+    { id: 'drone-zone', name: "Drone Zone", genre: "Ambient", cat: "Chill", url: 'https://ice1.somafm.com/dronezone-128-mp3' },
+    { id: 'lush', name: "Lush", genre: "Vokal · Elektronik", cat: "Chill", url: 'https://ice1.somafm.com/lush-128-mp3' },
+    { id: 'secret-agent', name: "Secret Agent", genre: "Lounge · Jazz-noir", cat: "Chill", url: 'https://ice1.somafm.com/secretagent-128-mp3' },
+    { id: 'fluid', name: "Fluid", genre: "Chillhop · Future", cat: "Chill", url: 'https://ice1.somafm.com/fluid-128-mp3' },
+    { id: 'cafe-del-mar', name: "Café del Mar", genre: "Balearic chill", cat: "Chill", url: 'https://streams.radio.co/se1a320b47/listen' },
+    { id: '1-fm-chillout-lounge', name: "1.FM Chillout Lounge", genre: "Chillout", cat: "Chill", url: 'https://strm112.1.fm/chilloutlounge_mobile_mp3' },
+    { id: 'joy-fm', name: "Joy FM", genre: "Türkçe pop · yabancı", cat: "Türkçe", url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/JOY_FM.mp3' },
+    { id: 'joy-turk', name: "Joy Türk", genre: "Türkçe pop", cat: "Türkçe", url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/JOY_TURK.mp3' },
+    { id: 'joyturk-rock', name: "JoyTürk Rock", genre: "Türk rock", cat: "Türkçe", url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/JOYTURK_ROCK.mp3' },
+    { id: 'metro-fm', name: "Metro FM", genre: "Pop · hit", cat: "Türkçe", url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/METRO_FM.mp3' },
+    { id: 'virgin-radio-turkiye', name: "Virgin Radio Türkiye", genre: "Pop · rock", cat: "Türkçe", url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/VIRGIN_RADIO.mp3' },
+    { id: 'super-fm', name: "Süper FM", genre: "Pop", cat: "Türkçe", url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/SUPER_FM.mp3' },
+    { id: 'powerturk', name: "PowerTürk", genre: "Türkçe pop", cat: "Türkçe", url: 'https://listen.powerapp.com.tr/powerturk/mpeg/icecast.audio' },
+    { id: 'power-pop', name: "Power Pop", genre: "Pop · hit", cat: "Türkçe", url: 'https://listen.powerapp.com.tr/powerpop/mpeg/icecast.audio' },
+    { id: 'radyo-fenomen', name: "Radyo Fenomen", genre: "Pop · hit", cat: "Türkçe", url: 'https://live.radyofenomen.com/fenomen/128/icecast.audio' },
+    { id: 'radyo-eksen', name: "Radyo Eksen", genre: "Alternatif · rock", cat: "Türkçe", url: 'https://eksenwmp.radyotvonline.com/;stream.mp3' },
+    { id: 'trt-fm', name: "TRT FM", genre: "Pop", cat: "Türkçe", url: 'https://trt.radyotvonline.net/trtfm' },
+    { id: 'trt-radyo-1', name: "TRT Radyo 1", genre: "Genel", cat: "Türkçe", url: 'https://trt.radyotvonline.net/trt1' },
+    { id: 'alem-fm', name: "Alem FM", genre: "Türkçe", cat: "Türkçe", url: 'https://turkmedya.radyotvonline.net/alemfmaac' },
+    { id: 'radyo-viva', name: "Radyo Viva", genre: "Türkçe pop", cat: "Türkçe", url: 'https://edge1.radyotvonline.net/shoutcast/play/radyoviva' },
+    { id: 'radio-paradise-rock', name: "Radio Paradise Rock", genre: "Rock mix", cat: "Rock", url: 'https://stream.radioparadise.com/rock-320' },
+    { id: 'somafm-left-coast-70s', name: "SomaFM Left Coast 70s", genre: "70ler albüm rock", cat: "Rock", url: 'https://ice1.somafm.com/seventies-128-mp3' },
+    { id: 'somafm-boot-liquor', name: "SomaFM Boot Liquor", genre: "Americana · roots", cat: "Rock", url: 'https://ice1.somafm.com/bootliquor-128-mp3' },
+    { id: '1-fm-classic-rock', name: "1.FM Classic Rock", genre: "Klasik rock", cat: "Rock", url: 'https://strm112.1.fm/crock_mobile_mp3' },
+    { id: 'virgin-classic-rock', name: "Virgin Classic Rock", genre: "Klasik rock", cat: "Rock", url: 'https://icy.unitedradio.it/VirginRockClassics.mp3' },
+    { id: 'arrow-classic-rock', name: "Arrow Classic Rock", genre: "Klasik rock", cat: "Rock", url: 'https://stream.gal.io/arrow' },
+    { id: 'radio-roks', name: "Radio ROKS", genre: "Rock (UA)", cat: "Rock", url: 'https://online.radioroks.ua/RadioROKS_HD' },
+    { id: 'fm4', name: "FM4", genre: "Alternatif", cat: "Rock", url: 'https://orf-live.ors-shoutcast.at/fm4-q2a' },
+    { id: 'somafm-metal-detector', name: "SomaFM Metal Detector", genre: "Metal · doom · thrash", cat: "Metal", url: 'https://ice1.somafm.com/metal-128-mp3' },
+    { id: 'fip-metal', name: "FIP Metal", genre: "Metal", cat: "Metal", url: 'https://icecast.radiofrance.fr/fipmetal-hifi.aac' },
+    { id: 'rock-antenne-heavy-metal', name: "Rock Antenne Heavy Metal", genre: "Heavy metal", cat: "Metal", url: 'https://mp3channels.webradio.rockantenne.de/heavy-metal' },
+    { id: 'rock-antenne-modern-metal', name: "Rock Antenne Modern Metal", genre: "Modern metal", cat: "Metal", url: 'https://stream.rockantenne.de/modern-metal/stream/mp3' },
+    { id: 'la-grosse-radio-metal', name: "La Grosse Radio Métal", genre: "Hard · heavy", cat: "Metal", url: 'https://hd.lagrosseradio.info/lagrosseradio-metal-192.mp3' },
+    { id: 'radio-bob-power-metal', name: "RADIO BOB Power Metal", genre: "Power metal", cat: "Metal", url: 'https://streams.radiobob.de/powermetal/mp3-192/' },
+    { id: '181-fm-80s-hairband', name: "181.FM 80s HairBand", genre: "80ler metal", cat: "Metal", url: 'https://listen.181fm.com/181-hairband_128k.mp3' },
+    { id: 'classic-fm', name: "Classic FM", genre: "Klasik", cat: "Klasik", url: 'https://media-ssl.musicradio.com/ClassicFMMP3' },
+    { id: '1-fm-classical', name: "1.FM Classical", genre: "Klasik", cat: "Klasik", url: 'https://strm112.1.fm/classical_mobile_mp3' },
+    { id: 'france-musique', name: "France Musique", genre: "Klasik", cat: "Klasik", url: 'https://direct.francemusique.fr/live/francemusique-midfi.mp3' },
+    { id: 'br-klassik', name: "BR-Klassik", genre: "Klasik", cat: "Klasik", url: 'https://dispatcher.rndfnk.com/br/brklassik/live/mp3/high' },
+    { id: 'npo-klassiek', name: "NPO Klassiek", genre: "Klasik", cat: "Klasik", url: 'https://icecast.omroep.nl/radio4-bb-mp3' },
+    { id: 'rai-radio-3', name: "Rai Radio 3", genre: "Klasik", cat: "Klasik", url: 'https://icestreaming.rai.it/3.mp3' },
+    { id: 'mpr-classical', name: "MPR Classical", genre: "Klasik", cat: "Klasik", url: 'https://cms.stream.publicradio.org/cms.mp3' },
+    { id: 'radio-classique', name: "Radio Classique", genre: "Klasik", cat: "Klasik", url: 'https://radioclassique.ice.infomaniak.ch/radioclassique-high.mp3' },
+    { id: '1-fm-otto-s-baroque', name: "1.FM Otto’s Baroque", genre: "Barok", cat: "Bach & Barok", url: 'https://strm112.1.fm/baroque_mobile_mp3' },
+    { id: '0nlineradio-bach', name: "0nlineradio Bach", genre: "Bach", cat: "Bach & Barok", url: 'https://stream.0nlineradio.com/bach?ref=radiobrowser' },
+    { id: 'radio-clasic-bach', name: "Radio Clasic Bach", genre: "Bach", cat: "Bach & Barok", url: 'https://live.radioclasic.com/listen/radio_clasic_bach/live.mp3' },
+    { id: 'france-musique-baroque', name: "France Musique Baroque", genre: "Barok", cat: "Bach & Barok", url: 'https://icecast.radiofrance.fr/francemusiquebaroque-hifi.aac' },
+    { id: '0nlineradio-mozart', name: "0nlineradio Mozart", genre: "Mozart", cat: "Bach & Barok", url: 'https://stream.0nlineradio.com/mozart?ref=radiobrowser' },
+    { id: 'radio-clasic-mozart', name: "Radio Clasic Mozart", genre: "Mozart", cat: "Bach & Barok", url: 'https://live.radioclasic.com/listen/radio_clasic_mozart/live.mp3' },
+    { id: 'radio-clasic-chopin', name: "Radio Clasic Chopin", genre: "Chopin", cat: "Bach & Barok", url: 'https://live.radioclasic.com/listen/radio_clasic_chopin/live.mp3' },
+    { id: 'epic-piano-chopin', name: "Epic Piano Chopin", genre: "Chopin", cat: "Bach & Barok", url: 'https://stream.epic-piano.com/chopin?ref=radiobrowser' },
+    { id: 'sonic-universe', name: "Sonic Universe", genre: "Caz · avangard", cat: "Caz & Blues", url: 'https://ice1.somafm.com/sonicuniverse-128-mp3' },
+    { id: 'jazz-radio', name: "Jazz Radio", genre: "Caz", cat: "Caz & Blues", url: 'https://jazzradio.ice.infomaniak.ch/jazzradio-high.mp3' },
+    { id: '1-fm-smooth-jazz', name: "1.FM Smooth Jazz", genre: "Smooth jazz", cat: "Caz & Blues", url: 'https://strm112.1.fm/smoothjazz_mobile_mp3' },
+    { id: '1-fm-blues', name: "1.FM Blues", genre: "Blues", cat: "Caz & Blues", url: 'https://strm112.1.fm/blues_mobile_mp3' },
+    { id: '181-fm-true-blues', name: "181.FM True Blues", genre: "Blues", cat: "Caz & Blues", url: 'https://listen.181fm.com/181-blues_128k.mp3' },
+    { id: 'beat-blender', name: "Beat Blender", genre: "Deep house", cat: "Elektronik", url: 'https://ice1.somafm.com/beatblender-128-mp3' },
+    { id: 'space-station', name: "Space Station", genre: "Space · electronica", cat: "Elektronik", url: 'https://ice1.somafm.com/spacestation-128-mp3' },
+    { id: 'def-con-radio', name: "DEF CON Radio", genre: "Techno · hacker", cat: "Elektronik", url: 'https://ice1.somafm.com/defcon-128-mp3' },
+    { id: 'somafm-cliqhop-idm', name: "SomaFM cliqhop idm", genre: "IDM · glitch", cat: "Elektronik", url: 'https://ice1.somafm.com/cliqhop-128-mp3' },
+    { id: 'somafm-synphaera', name: "SomaFM Synphaera", genre: "Uzay · ambient", cat: "Elektronik", url: 'https://ice1.somafm.com/synphaera-128-mp3' },
+    { id: 'somafm-underground-80s', name: "SomaFM Underground 80s", genre: "Synthpop · new wave", cat: "Elektronik", url: 'https://ice1.somafm.com/u80s-128-mp3' },
+    { id: 'somafm-vaporwaves', name: "SomaFM Vaporwaves", genre: "Vaporwave", cat: "Elektronik", url: 'https://ice1.somafm.com/vaporwaves-128-mp3' },
+    { id: 'nightride-fm', name: "Nightride FM", genre: "Synthwave", cat: "Elektronik", url: 'https://stream.nightride.fm/nightride.mp3' },
+    { id: 'indie-pop-rocks', name: "Indie Pop Rocks", genre: "Indie pop", cat: "Pop", url: 'https://ice1.somafm.com/indiepop-128-mp3' },
+    { id: 'somafm-poptron', name: "SomaFM PopTron", genre: "Elektro-pop", cat: "Pop", url: 'https://ice1.somafm.com/poptron-128-mp3' },
+    { id: 'somafm-heavyweight-reggae', name: "SomaFM Heavyweight Reggae", genre: "Reggae", cat: "Dünya", url: 'https://ice1.somafm.com/reggae-128-mp3' },
+    { id: 'somafm-seven-inch-soul', name: "SomaFM Seven Inch Soul", genre: "Soul · 45lik", cat: "Dünya", url: 'https://ice1.somafm.com/7soul-128-mp3' },
+    { id: 'somafm-illinois-street-lounge', name: "SomaFM Illinois Street Lounge", genre: "Retro lounge", cat: "Dünya", url: 'https://ice1.somafm.com/illstreet-128-mp3' },
+    { id: 'somafm-suburbs-of-goa', name: "SomaFM Suburbs of Goa", genre: "Dünya · Asya", cat: "Dünya", url: 'https://ice1.somafm.com/suburbsofgoa-128-mp3' },
+    { id: 'fip-reggae', name: "FIP Reggae", genre: "Reggae", cat: "Dünya", url: 'https://icecast.radiofrance.fr/fipreggae-hifi.aac' },
+    { id: 'la-grosse-radio-reggae', name: "La Grosse Radio Reggae", genre: "Reggae · dub", cat: "Dünya", url: 'https://hd.lagrosseradio.info/lagrosseradio-reggae-192.mp3' }
   ];
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -108,6 +181,7 @@
       volume:    clampVolume(typeof s.volume === 'number' ? s.volume : DEFAULT_VOLUME),
       tab:       (s.tab === 'library') ? 'library' : 'stations',
       stationId: typeof s.stationId === 'string' ? s.stationId : null,
+      stationCat: (typeof s.stationCat === 'string' && s.stationCat) ? s.stationCat : CAT_ALL,
       open:      !!s.open,
       customStations: [],
       pos: null
@@ -119,7 +193,7 @@
           ? st.name : st.url.replace(/^https:\/\//i, '').split('/')[0];   // host adı
         out.customStations.push({
           id: (typeof st.id === 'string' && st.id) ? st.id : ('custom-' + out.customStations.length),
-          name: nm, genre: st.genre || 'Özel', url: st.url, custom: true
+          name: nm, genre: st.genre || 'Özel yayın', cat: CAT_CUSTOM, url: st.url, custom: true
         });
       });
     }
@@ -150,7 +224,7 @@
     }
     if (!name) name = url.replace(/^https:\/\//i, '').split('/')[0];   // host adı
     var st = { id: 'custom-' + list.length + '-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-               name: name, genre: 'Özel', url: url, custom: true };
+               name: name, genre: 'Özel yayın', cat: CAT_CUSTOM, url: url, custom: true };
     list.push(st);
     return { ok: true, station: st, list: list };
   }
@@ -167,6 +241,29 @@
     return -1;
   }
 
+  // İstasyonları kategoriye göre süz (saf). CAT_ALL → hepsi.
+  function filterStationsByCat(stations, cat) {
+    stations = Array.isArray(stations) ? stations : [];
+    if (!cat || cat === CAT_ALL) return stations.slice();
+    return stations.filter(function (s) { return (s.cat || 'Diğer') === cat; });
+  }
+
+  // Mevcut kategoriler (yerleşik + özel), CAT_ORDER sırasıyla + adet (saf).
+  // Sırada olmayan beklenmedik kategoriler sona eklenir.
+  function stationCategories(customList) {
+    var present = {};
+    allStations(customList).forEach(function (s) {
+      var c = s.cat || 'Diğer';
+      present[c] = (present[c] || 0) + 1;
+    });
+    var cats = [];
+    CAT_ORDER.forEach(function (c) {
+      if (present[c]) { cats.push({ cat: c, count: present[c] }); delete present[c]; }
+    });
+    Object.keys(present).forEach(function (c) { cats.push({ cat: c, count: present[c] }); });
+    return cats;
+  }
+
   // ══════════════════════════════════════════════════════════════════════════
   // UI KATMANI (yalnızca tarayıcıda; #tab-bar yoksa hiç kurulmaz)
   // ══════════════════════════════════════════════════════════════════════════
@@ -178,7 +275,7 @@
   var libIndex = -1;                  // çalan yerel parça indeksi
   var current = null;                 // { type:'station'|'track', ... }
   var lastVol = DEFAULT_VOLUME;       // sessize alma öncesi ses
-  var st      = { volume: DEFAULT_VOLUME, tab: 'stations', stationId: null, open: false, customStations: [], pos: null };
+  var st      = { volume: DEFAULT_VOLUME, tab: 'stations', stationId: null, stationCat: CAT_ALL, open: false, customStations: [], pos: null };
 
   var ICONS = {
     play:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>',
@@ -347,16 +444,32 @@
     var pane = $(WIDGET_ID) && $(WIDGET_ID).querySelector('[data-pane="stations"]');
     if (!pane) return;
     var all = allStations(st.customStations);
+    var cats = stationCategories(st.customStations);
+    var sel = st.stationCat || CAT_ALL;
+    // Seçili kategori artık yoksa (ör. özel yayın silindi) Tümü'ye dön.
+    if (sel !== CAT_ALL && !cats.some(function (c) { return c.cat === sel; })) sel = st.stationCat = CAT_ALL;
+
+    var chip = function (cat, label, count) {
+      return '<button type="button" class="mf-radio-chip' + (sel === cat ? ' active' : '') + '" data-cat="' + esc(cat) + '">' +
+             esc(label) + '<span class="mf-radio-chip-n">' + count + '</span></button>';
+    };
+    var chips = chip(CAT_ALL, 'Tümü', all.length) +
+      cats.map(function (c) { return chip(c.cat, c.cat, c.count); }).join('');
+
+    var list = filterStationsByCat(all, sel);
     var curId = current && current.type === 'station' ? current.id : null;
-    var rows = all.map(function (s2) {
+    var rows = list.map(function (s2) {
       var on = s2.id === curId;
       return '<button type="button" class="mf-radio-item' + (on ? ' active' : '') + '" data-station="' + esc(s2.id) + '">' +
                '<span class="mf-radio-item-dot"></span>' +
                '<span class="mf-radio-item-main"><span class="mf-radio-item-name">' + esc(s2.name) + '</span>' +
-               '<span class="mf-radio-item-sub">' + esc(s2.genre || '') + '</span></span>' +
+               '<span class="mf-radio-item-sub">' + esc(s2.genre || s2.cat || '') + '</span></span>' +
              '</button>';
     }).join('');
+    if (!rows) rows = '<div class="mf-radio-empty">Bu kategoride yayın yok.</div>';
+
     pane.innerHTML =
+      '<div class="mf-radio-chips">' + chips + '</div>' +
       '<div class="mf-radio-list">' + rows + '</div>' +
       '<div class="mf-radio-add">' +
         '<input type="url" class="mf-radio-url" placeholder="https://… özel yayın URL\'si" aria-label="Özel yayın URL\'si" />' +
@@ -514,6 +627,8 @@
       if (t.closest && t.closest('.mf-radio-close')) { closePlayer(); return; }
       var tab = t.closest && t.closest('.mf-radio-tab');
       if (tab) { switchTab(tab.getAttribute('data-tab')); saveState({ tab: st.tab }); return; }
+      var chip = t.closest && t.closest('.mf-radio-chip');
+      if (chip) { st.stationCat = chip.getAttribute('data-cat') || CAT_ALL; saveState({ stationCat: st.stationCat }); renderStations(); return; }
       var stn = t.closest && t.closest('[data-station]');
       if (stn) { var s2 = allStations(st.customStations).filter(function (x) { return x.id === stn.getAttribute('data-station'); })[0]; if (s2) playStation(s2); return; }
       var trk = t.closest && t.closest('[data-track]');
@@ -554,7 +669,8 @@
       return;
     }
     st.customStations = res.list;
-    saveState({ customStations: st.customStations });
+    st.stationCat = CAT_CUSTOM;   // eklenen yayın görünsün
+    saveState({ customStations: st.customStations, stationCat: st.stationCat });
     input.value = '';
     renderStations();
     toast('İstasyon eklendi: ' + res.station.name, 'info');
@@ -610,6 +726,9 @@
     STORE_KEY: STORE_KEY,
     STATIONS: STATIONS,
     DEFAULT_VOLUME: DEFAULT_VOLUME,
+    CAT_ALL: CAT_ALL,
+    CAT_CUSTOM: CAT_CUSTOM,
+    CAT_ORDER: CAT_ORDER,
     // saf
     clampVolume: clampVolume,
     wrapIndex: wrapIndex,
@@ -623,6 +742,8 @@
     addCustomStation: addCustomStation,
     allStations: allStations,
     stationIndexById: stationIndexById,
+    filterStationsByCat: filterStationsByCat,
+    stationCategories: stationCategories,
     // ui
     open: openPlayer,
     close: closePlayer,

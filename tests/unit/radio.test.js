@@ -90,9 +90,16 @@ describe('loadState / saveState', () => {
     expect(s.volume).toBe(DEFAULT_VOLUME);
     expect(s.tab).toBe('stations');
     expect(s.stationId).toBeNull();
+    expect(s.stationCat).toBe('Tümü');
     expect(s.open).toBe(false);
     expect(s.customStations).toEqual([]);
     expect(s.pos).toBeNull();
+  });
+
+  test('stationCat kaydedilir ve geri okunur', () => {
+    const api = load();
+    api.saveState({ stationCat: 'Metal' });
+    expect(api.loadState().stationCat).toBe('Metal');
   });
 
   test('saveState yazar, loadState geri okur', () => {
@@ -194,15 +201,29 @@ describe('addCustomStation', () => {
 describe('STATIONS + allStations + stationIndexById', () => {
   const api = load();
 
-  test('tüm yerleşik istasyonlar HTTPS ve eksiksiz', () => {
+  test('tüm yerleşik istasyonlar HTTPS, eksiksiz ve geçerli kategoride', () => {
     expect(api.STATIONS.length).toBeGreaterThan(0);
     api.STATIONS.forEach(s => {
-      expect(api.isHttps(s.url)).toBe(true);
+      expect(api.isHttps(s.url)).toBe(true);           // mixed-content olmasın
       expect(typeof s.name).toBe('string');
       expect(s.name.length).toBeGreaterThan(0);
       expect(typeof s.genre).toBe('string');
       expect(typeof s.id).toBe('string');
+      expect(typeof s.cat).toBe('string');
+      expect(api.CAT_ORDER.indexOf(s.cat)).toBeGreaterThanOrEqual(0);   // bilinen kategori
     });
+  });
+
+  test('kullanıcının istediği kilit istasyonlar mevcut (Joy FM + Bach + Metal + Klasik)', () => {
+    const names = api.STATIONS.map(s => s.name.toLowerCase());
+    const cats = api.STATIONS.map(s => s.cat);
+    expect(names.some(n => n.includes('joy fm'))).toBe(true);
+    expect(names.some(n => n.includes('bach'))).toBe(true);
+    expect(cats).toContain('Metal');
+    expect(cats).toContain('Klasik');
+    expect(cats).toContain('Rock');
+    // Türkçe kategorisinde birden fazla istasyon olmalı
+    expect(cats.filter(c => c === 'Türkçe').length).toBeGreaterThanOrEqual(5);
   });
 
   test('istasyon id\'leri benzersiz', () => {
@@ -221,6 +242,44 @@ describe('STATIONS + allStations + stationIndexById', () => {
     expect(api.stationIndexById(custom, api.STATIONS[0].id)).toBe(0);
     expect(api.stationIndexById(custom, 'c1')).toBe(api.STATIONS.length);
     expect(api.stationIndexById(custom, 'yok')).toBe(-1);
+  });
+});
+
+// ── Kategori süzme + kategori listesi (saf) ───────────────────────────────────
+describe('filterStationsByCat / stationCategories', () => {
+  const api = load();
+
+  test('CAT_ALL tüm istasyonları döndürür (kopya)', () => {
+    const r = api.filterStationsByCat(api.STATIONS, api.CAT_ALL);
+    expect(r.length).toBe(api.STATIONS.length);
+    expect(r).not.toBe(api.STATIONS);   // kopya, referans değil
+  });
+
+  test('belirli kategori yalnızca o kategoriyi süzer', () => {
+    const tr = api.filterStationsByCat(api.STATIONS, 'Türkçe');
+    expect(tr.length).toBeGreaterThan(0);
+    expect(tr.every(s => s.cat === 'Türkçe')).toBe(true);
+  });
+
+  test('boş/bilinmeyen girdi güvenli', () => {
+    expect(api.filterStationsByCat(null, 'Rock')).toEqual([]);
+    expect(api.filterStationsByCat(api.STATIONS, 'YokBöyle')).toEqual([]);
+  });
+
+  test('stationCategories CAT_ORDER sırasında + adetli döner', () => {
+    const cats = api.stationCategories(null);
+    expect(cats.length).toBeGreaterThan(0);
+    // her kategori CAT_ORDER içinde ve sıralı
+    const idx = cats.map(c => api.CAT_ORDER.indexOf(c.cat));
+    for (let i = 1; i < idx.length; i++) expect(idx[i]).toBeGreaterThan(idx[i - 1]);
+    // adet toplamı istasyon sayısına eşit
+    expect(cats.reduce((n, c) => n + c.count, 0)).toBe(api.STATIONS.length);
+  });
+
+  test('özel istasyon "Özel" kategorisini ekler', () => {
+    const custom = [{ id: 'c1', name: 'C', genre: 'x', cat: api.CAT_CUSTOM, url: 'https://c/1', custom: true }];
+    const cats = api.stationCategories(custom);
+    expect(cats.some(c => c.cat === api.CAT_CUSTOM && c.count === 1)).toBe(true);
   });
 });
 
