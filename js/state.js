@@ -326,6 +326,11 @@ function restoreState(state) {
   updateNodeCount();
   clearSelection();
 
+  // Motor aksesuar modelini canlı bağlantılara göre uzlaştır — yükleme/geri-al
+  // yolu createConnection'ı atlar; kayıtlı node.data.accessories bayat/orphan
+  // eğri taşıyabilir (ör. aksesuar silindikten sonra kaydedilmiş proje).
+  if(typeof veSyncAllEngineAccessories === 'function') veSyncAllEngineAccessories();
+
   // Annotasyonları geri yükle
   if(typeof restoreAnnotations === 'function') {
     restoreAnnotations(state.annotations || []);

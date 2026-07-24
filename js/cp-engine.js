@@ -269,7 +269,7 @@ function getEnginePropertiesHTML(node) {
               });
               return l;
             })();
-        var netP = grossP - lossAtRPM;
+        var netP = Math.max(0, grossP - lossAtRPM);   // çözücüyle tutarlı: net ≥ 0
         var netT = netP * 9549.3 / rpm;
         netRows.push({rpm: rpm, torque: netT, power: netP, grossTorque: grossT, grossPower: grossP, loss: lossAtRPM});
       });
@@ -2555,7 +2555,7 @@ function updateVENetChart(nodeId) {
     var gP = parseFloat(r.power) || 0;
     if(rpm <= 0) return;
     var lossAtRPM = veCalcAccLossAtRPM(acc, rpm, governed);
-    var nP = gP - lossAtRPM;
+    var nP = Math.max(0, gP - lossAtRPM);   // çözücüyle tutarlı: net ≥ 0
     var nT = rpm > 0 ? (nP * 9549.3 / rpm) : 0;
     grossTorque.push({x: rpm, y: gT});
     grossPower.push({x: rpm, y: gP});

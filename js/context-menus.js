@@ -260,9 +260,20 @@ function handlePortContextAction(action) {
       delete node.data.portPositions[portKey];
       break;
     case 'addPort':
+      // Motor'un 3 aksesuar GİRİŞ portu sabittir (input-0=Klima, input-1=Alternatör,
+      // input-2=Hava Komp. — VE_ACC_PORT_MAP'e kilitli). Port ekle/kaldır id'leri
+      // yeniden numaralar → tip eşlemesini bozardı. Çıkış portu düzenlenebilir kalır.
+      if(node.type === 'engine' && portKey.indexOf('input') === 0) {
+        showToast('Motor\'un aksesuar giriş portları sabittir (Klima / Alternatör / Hava Komp.).', 'warning');
+        return;
+      }
       addNodePort(node, portKey);
       return;   // kendi rebuild/toast'ını yapar
     case 'removePort':
+      if(node.type === 'engine' && portKey.indexOf('input') === 0) {
+        showToast('Motor\'un aksesuar giriş portları kaldırılamaz.', 'warning');
+        return;
+      }
       removeNodePort(node, portKey);
       return;
   }
