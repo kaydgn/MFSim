@@ -3061,6 +3061,11 @@ function deleteSelectedNodes() {
   });
   
   selectedNodes = [];
+  // Aksesuar düğümü/bağlantısı silinmiş olabilir → Motor'un net-tork modelini
+  // yeniden senkronla. Bu yol createConnection/deleteConnection'ı ATLADIĞI için
+  // (bağlantıları doğrudan filtreliyor) aksi halde silinen aksesuarın eğrisi
+  // Motor'da hayalet kayıp olarak kalırdı.
+  if(typeof veSyncAllEngineAccessories === 'function') veSyncAllEngineAccessories();
   showEmptyProperties();
   updateAllConnections();
   updateNodeCount();

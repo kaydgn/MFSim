@@ -256,6 +256,28 @@ describe('veSyncEngineAccessories', () => {
     expect(altRow.userLoss).toBe(0);
   });
 
+  test('veSyncAllEngineAccessories: düğüm silme sonrası orphan/hayalet kayıp temizlenir', () => {
+    // Regresyon: aksesuar DÜĞÜMÜ silinince (deleteSelectedNodes / restoreState yolu),
+    // Motor'un accessories satırı bayat eğri taşımamalı — aksi halde çözücü hayalet
+    // kayıp çıkarır. veSyncAllEngineAccessories bunu uzlaştırır.
+    var eng = engineNode('eng-1', { governedSpeed: 2000 });
+    var alt = accNode('acc-alternator', 'alt-1', { accPreset:'prestolite_180a' });
+    nodes = [eng, alt];
+    connections = [{ id:'c1', from:'alt-1', to:'eng-1', fromPort:'output', toPort:'input-1' }];
+    veSyncAllEngineAccessories();
+    expect(eng.data.accessories.find(a => a.name==='Alternatör / Jeneratör').sourceNodeId).toBe('alt-1');
+
+    // Aksesuar düğümü ve bağlantısı silindi (bağlantılar doğrudan filtrelendi)
+    nodes = [eng]; connections = [];
+    veSyncAllEngineAccessories();
+    var row = eng.data.accessories.find(a => a.name==='Alternatör / Jeneratör');
+    expect(row.sourceNodeId).toBeUndefined();
+    expect(row.curve).toBeUndefined();
+    expect(row.userLoss).toBe(0);
+    // Hayalet kayıp KALMADI
+    expect(veAccessoryLossKw(eng.data.accessories, 1500, 2000)).toBe(0);
+  });
+
   test('mevcut manuel satırlar (Fan/Direksiyon) korunur', () => {
     var eng = engineNode('eng-1', { governedSpeed: 2000 });
     eng.data.accessories = [
