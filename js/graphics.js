@@ -5231,36 +5231,152 @@ function veGenerateSegmentDriveTxtReport(sim, optHazirlayan) {
   r += pad(sectionNum + '. HESAPLAMA YONTEMI', W, 'center') + '\n';
   r += ln('=', W) + '\n\n';
 
-  r += '  DIFERANSIYEL DENKLEM\n';
-  r += '  ' + ln('-', 60) + '\n';
-  r += '  m_eff * dv/dt = F_cekis - F_yuvarlanma - F_aero - F_egim\n\n';
-  r += '  m_eff : Efektif kutle (donerlik ataleti dahil, vites bagimli)\n';
-  r += '  F_cekis = T_turbin * i_gear * i_ps * i_tr * i_axle * eta / r_tire\n';
-  r += '  F_yuv = Crr * m * g * cos(theta)\n';
+  r += '  1) HAREKET DENKLEMI\n';
+  r += '  ' + ln('-', 68) + '\n';
+  r += '  m_eff * dv/dt = F_cekis - F_yuv - F_aero - F_egim - F_motor_fren\n';
+  r += '  a = F_net / m_eff ,  F_net = F_cekis - F_yuv - F_aero - F_egim - F_motor_fren\n\n';
+
+  r += '  2) DIRENC KUVVETLERI   (g=9.81, theta=atan(aktif_egim/100))\n';
+  r += '  ' + ln('-', 68) + '\n';
+  r += '  Crr_eff = Crr * (1 + K1*v + K2*v^2)     K1=' + num(ss0.crrK1 || 0.026909, 6) + '  K2=' + num(ss0.crrK2 || -0.00018893, 8) + '\n';
+  r += '  F_yuv  = Crr_eff * yuzey * m * g * cos(theta)\n';
   r += '  F_aero = 0.5 * rho * Cd * A * v^2\n';
-  r += '  F_egim = m * g * sin(theta)\n\n';
+  r += '  F_egim = m * g * sin(theta)\n';
+  r += '  Egim isareti: aktif_egim = -(segment egimi)  (harita "+ = yokus asagi" -> fizik "+ = yokusa direnc").\n';
+  r += '  -> Yokus asagi segmentte F_egim < 0 (itici); yokus yukari F_egim > 0 (direnc).\n\n';
 
-  r += '  GAZ KESME (COAST) MODELI\n';
-  r += '  ' + ln('-', 60) + '\n';
-  r += '  F_cekis = 0 (motor gaz kesmede)\n';
-  r += '  F_motor_surukleme = T_motoring * i_total / r_tire\n';
-  r += '  T_motoring = BMEP_motoring * V_d / (4 * pi)\n';
-  r += '  BMEP_motoring ~ 50 kPa (tipik dizel motor kompresyon suruklemesi)\n\n';
+  r += '  3) TAM GAZ — CEKIS KUVVETI\n';
+  r += '  ' + ln('-', 68) + '\n';
+  r += '  F_cekis = T_out * i_gear * i_ps*eta_ps * i_tr*eta_tr * i_axle*eta_axle / r_tire\n';
+  r += '   NOT: Sanziman disli verimi cekiste UYGULANMAZ (calcTractiveEffort gear-eta = 1.0 ile cagrilir;\n';
+  r += '        eta_gear yalniz raporda gosterilir).  Grip siniri (F>0 iken): F_cekis <= F_grip = ' + numI(ss0.F_grip) + ' N = mu*m*tahrik%*g.\n';
+  r += '  Lockup/dogrudan: T_out = (T_net - drop - (10 + 0.00367*N)) * eta_lockup\n';
+  r += '     drop = ' + num(ss0.pumpTorqueDrop, 2) + ' N.m (pompa) ,  eta_lockup = ' + num(ss0.etaLockup, 3) + '\n';
+  if (ss0.hasTC) r += '  Converter: motor-TK calisma noktasi (solveTCOperatingPoint biseksiyon) -> T_out = T_turbin * eta_conv_ic (' + num(ss0.etaConvInternal, 3) + ')\n';
+  r += '  Asiri devir freni: N > ' + numI(ss0.mechanicalLimit) + ' rpm (governed*1.30) -> T_net = -(BMEP_mot*V_d/4pi), BMEP_mot=50 kPa\n\n';
 
-  r += '  SEGMENT GECISLERI\n';
-  r += '  ' + ln('-', 60) + '\n';
-  r += '  Her segment sonunda hiz surekliligi saglanir (v_cikis = v_giris).\n';
-  r += '  Egim ve komut degisiklikleri anlik uygulanir.\n';
-  r += '  Vites durumu segment gecisinde korunur.\n\n';
+  r += '  4) GAZ KESME (COAST) — YAVASLAMA MODELI\n';
+  r += '  ' + ln('-', 68) + '\n';
+  r += '  F_cekis = 0.  Yavaslama = yol direnci + motor kompresyon (surtunme) freni:\n';
+  r += '  F_motor_fren = T_motoring * i_total / r_tire   (i_total = i_gear*i_ps*i_tr*i_axle ; HAM oran, verimsiz)\n';
+  r += '  T_motoring   = BMEP_coast * V_d / (4*pi)\n';
+  r += '  BMEP_coast   = 50000 * (0.5 + 0.5*N/governed) Pa   (~25 kPa idle .. ~50 kPa governed)   [yalniz v>0.5 m/s]\n';
+  r += '  V_d = ' + num(ss0.displacement_L, 2) + ' L = ' + num((ss0.displacement_L || 0) / 1000, 5) + ' m^3\n';
+  r += '  -> F_net = -(F_yuv + F_aero + F_egim) - F_motor_fren   (yeterince dik inniste F_egim<0 -> yine hizlanabilir).\n\n';
+
+  r += '  5) ESDEGER (DONEN) KUTLE\n';
+  r += '  ' + ln('-', 68) + '\n';
+  r += '  m_eff = m + I_eff / r_tire^2 ;   i_total=i_gear*i_ps*i_tr*i_axle ,  i_down=i_ps*i_tr*i_axle\n';
+  r += '  Lockup:    I_eff = I_eng*i_total^2 + I_conv*i_total^2 + I_trans*i_down^2 + I_ps*i_down^2 + I_tc*i_axle^2 + I_axle + I_tire\n';
+  r += '  Converter: I_eff = I_conv_turbin*i_total^2 + I_trans*i_down^2 + I_ps*i_down^2 + I_tc*i_axle^2 + I_axle + I_tire\n';
+  r += '  Atalet [kg.m^2]: I_eng=' + num(ss0.I_engine, 3) + ' I_conv=' + num(ss0.I_conv, 3) + ' I_conv_t=' + num(ss0.I_conv_turbine, 3) + ' I_trans=' + num(ss0.I_trans, 3) + ' I_ps=' + num(ss0.I_propshaft, 3) + ' I_tc=' + num(ss0.I_tc, 3) + ' I_axle=' + num(ss0.I_axle, 3) + ' I_tire=' + num(ss0.I_tire, 3) + '\n\n';
+
+  r += '  6) ENTEGRASYON VE SEGMENT SONUCLARININ HESABI\n';
+  r += '  ' + ln('-', 68) + '\n';
+  r += '  Hiz (varsayilan RK4):  dv = (k1 + 2k2 + 2k3 + k4)/6 * dt\n';
+  r += '     k1=a(v), k2=a(v+k1*dt/2), k3=a(v+k2*dt/2), k4=a(v+k3*dt)   (Heun/Euler secilirse kendi formulu)\n';
+  r += '     ("RK4/5 Adaptif"/"Ralston" etiketi gorunse de segment cozucu sabit adimli RK4 kosar.)\n';
+  r += '  Mesafe (YAMUK kural):  s += (v + v_yeni)/2 * dt      (s += v*dt DEGIL)\n';
+  r += '  Segment biter:  biriken segment mesafesi >= hedef mesafe (veya sure/adim limiti veya durma).\n';
+  r += '  Sure (segment): bitis_t - baslangic_t = (segmentteki adim sayisi) * dt.\n';
+  r += '  V_max / V_min:  segment boyunca v izlenerek gorulen en yuksek / en dusuk hiz.\n';
+  r += '  dV = V_cikis - V_giris.   Bas./Bit. Vites: segment sinirinda vites korunur (sureklilik).\n';
+  r += '  Ort. hiz = toplam_mesafe / toplam_sure * 3.6 [km/h].\n';
+  r += '  Waypoint interpolasyonu:  oran = (wp_mesafe - seg_bas)/seg_uzunluk (0..1),\n';
+  r += '     v_wp = v_giris + oran*(v_cikis - v_giris) ;  t_wp = onceki segment sureleri + oran*seg_suresi.\n\n';
 
   r += '  COZUCU PARAMETRELERI\n';
   r += '  ' + ln('-', 60) + '\n';
-  r += pRow('Entegrasyon Metodu', solverLabel);
+  r += pRow('Entegrasyon Metodu', solverLabel + (solverMethod !== 'rk4' && solverMethod !== 'euler' && solverMethod !== 'heun' ? ' (fiilen RK4)' : ''));
   r += pRow('Zaman Adimi (dt)', num(ss0.dt, 4) + ' s');
   r += pRow('Toplam Adim', String(ss0.steps || '-'));
   r += pRow('Maks. Simulasyon Suresi', num(ss0.maxTime, 0) + ' s');
   r += '\n\n';
   sectionNum++;
+
+
+  // ════════════════════════════════════════════════════════════════════════
+  // SAYISAL DERIVASYON ORNEKLERI (bir hizlanma + bir yavaslama adimi)
+  // ════════════════════════════════════════════════════════════════════════
+  (function () {
+    var A = sdPrimary;
+    if (!A || !A.time || A.time.length < 2) return;
+    var fg = ss0.forwardGears || [];
+    var inSegs = inputSegs;
+    var g = 9.81, K1 = ss0.crrK1 || 0.026909, K2 = ss0.crrK2 || -0.00018893;
+    var m = ss0.m_vehicle, r_t = ss0.r_tire, r2 = r_t * r_t;
+    var i_ps = ss0.i_propshaft, i_tr = ss0.i_transfer, i_ax = ss0.i_axle;
+
+    // Temsili indeksleri seç: hareket halindeki bir tam-gaz ve bir coast adımı.
+    function pick(coast) {
+      var fallback = -1;
+      for (var i = 1; i < A.time.length; i++) {
+        var isC = (A.command && A.command[i] === 'coast');
+        if (coast ? !isC : isC) continue;          // istenen komut değil
+        var vk = A.speed[i] || 0;
+        if (coast ? (vk <= 3) : (vk <= 5)) continue; // hareket halinde olsun
+        if (fallback < 0) fallback = i;
+        var segIdx = (A.segment ? A.segment[i] : 0) || 0;
+        var gr = (inSegs[segIdx] && inSegs[segIdx].grade) || 0;
+        if (Math.abs(gr) > 0.01) return i;          // eğimli segment adımını tercih et (F_egim!=0 gösterimi)
+      }
+      return fallback;
+    }
+
+    function deriv(i, coast) {
+      var vk = A.speed[i], v = vk / 3.6, N = A.rpm[i] || 0;
+      var segIdx = (A.segment ? A.segment[i] : 0) || 0;
+      var seg = inSegs[segIdx] || {};
+      var gradeMap = seg.grade || 0, gradeAkt = -gradeMap;
+      var th = Math.atan(gradeAkt / 100), cth = Math.cos(th), sth = Math.sin(th);
+      var rho = (A.segmentSummary && A.segmentSummary[segIdx] && A.segmentSummary[segIdx].rho) || ss0.rho_initial || 1.225;
+      var label = String(A.gearMode ? A.gearMode[i] : '');
+      var gnum = parseInt(label.replace(/[^0-9]/g, ''), 10) || 1;
+      var isLU = !ss0.hasTC || /L/i.test(label);
+      var i_gear = (fg[gnum - 1] && fg[gnum - 1].ratio) || 1.0;
+      var i_total = i_gear * i_ps * i_tr * i_ax, i_down = i_ps * i_tr * i_ax;
+      var fcrr = 1 + K1 * v + K2 * v * v, crrEff = ss0.Crr * fcrr;
+      // eşdeğer kütle
+      var I_eff = (isLU ? (ss0.I_engine + ss0.I_conv) : ss0.I_conv_turbine) * i_total * i_total
+        + ss0.I_trans * i_down * i_down + ss0.I_propshaft * i_down * i_down
+        + ss0.I_tc * i_ax * i_ax + ss0.I_axle + ss0.I_tire;
+      var m_eff = m + I_eff / r2;
+
+      var o = '';
+      o += '  >> ' + (coast ? 'YAVASLAMA (Gaz Kesme)' : 'HIZLANMA (Tam Gaz)') + ' adimi:  t=' + num(A.time[i], 2) + ' s | segment ' + (segIdx + 1)
+        + ' | v=' + num(vk, 1) + ' km/h (' + num(v, 3) + ' m/s) | N=' + numI(N) + ' rpm | vites ' + ascii(label) + '\n';
+      o += '     ' + ln('.', 72) + '\n';
+      o += '     aktif_egim = -(' + num(gradeMap, 2) + ') = ' + num(gradeAkt, 2) + '%   theta=atan(' + num(gradeAkt / 100, 4) + ')=' + num(th, 5) + ' rad  cos=' + num(cth, 5) + ' sin=' + num(sth, 5) + '\n';
+      o += '     Crr_eff = ' + num(ss0.Crr, 5) + '*(1+' + num(K1, 6) + '*' + num(v, 2) + num(K2, 8) + '*' + num(v * v, 2) + ') = ' + num(crrEff, 6) + '\n';
+      o += '     F_yuv   = Crr_eff*yuzey*m*g*cos = ' + num(crrEff, 6) + '*' + num(ss0.surfFactor, 2) + '*' + numI(m) + '*9.81*' + num(cth, 4) + ' = ' + numI(A.F_rolling[i]) + ' N\n';
+      o += '     F_aero  = 0.5*rho*Cd*A*v^2 = 0.5*' + num(rho, 3) + '*' + num(ss0.Cd, 3) + '*' + num(ss0.A_frontal, 3) + '*' + num(v * v, 2) + ' = ' + numI(A.F_aero[i]) + ' N\n';
+      o += '     F_egim  = m*g*sin = ' + numI(m) + '*9.81*' + num(sth, 5) + ' = ' + numI(A.F_grade[i]) + ' N\n';
+      if (coast) {
+        var bmep = 50000 * (0.5 + 0.5 * N / ss0.governedSpeed);
+        var Vd = (ss0.displacement_L || 0) / 1000;
+        var Tmot = bmep * Vd / (4 * Math.PI);
+        o += '     BMEP_coast = 50000*(0.5+0.5*' + numI(N) + '/' + numI(ss0.governedSpeed) + ') = ' + numI(bmep) + ' Pa\n';
+        o += '     T_motoring = BMEP*V_d/(4pi) = ' + numI(bmep) + '*' + num(Vd, 5) + '/12.566 = ' + num(Tmot, 1) + ' N.m\n';
+        o += '     F_motor_fren = T_motoring*i_total/r_tire = ' + num(Tmot, 1) + '*' + num(i_total, 3) + '/' + num(r_t, 4) + ' = ' + numI(A.F_engine_drag ? A.F_engine_drag[i] : 0) + ' N\n';
+        o += '     F_cekis = 0 (gaz kesme)\n';
+      } else {
+        o += '     F_cekis = ' + numI((A.TE[i] || 0) * 1000) + ' N   (T_out * i_gear*i_ps*eta_ps*i_tr*eta_tr*i_axle*eta_axle / r_tire ; T_out motor/TK calisma noktasindan)\n';
+      }
+      o += '     F_net = ' + numI(A.F_net[i]) + ' N   (= F_cekis - F_yuv - F_aero - F_egim' + (coast ? ' - F_motor_fren' : '') + ')\n';
+      o += '     I_eff = ' + num(I_eff, 1) + ' kg.m^2 (' + (isLU ? 'lockup' : 'converter') + ', i_total=' + num(i_total, 3) + ')  ->  m_eff = ' + numI(m) + ' + ' + num(I_eff, 1) + '/' + num(r2, 4) + ' = ' + numI(m_eff) + ' kg\n';
+      o += '     a = F_net / m_eff = ' + numI(A.F_net[i]) + ' / ' + numI(m_eff) + ' = ' + num(A.accel[i], 4) + ' m/s^2\n\n';
+      return o;
+    }
+
+    r += ln('=', W) + '\n';
+    r += pad(sectionNum + '. SAYISAL DERIVASYON ORNEKLERI', W, 'center') + '\n';
+    r += ln('=', W) + '\n\n';
+    r += '  Zamansal tablodaki degerlerin formul+sayi ile nasil ciktigini gosterir (birincil kademe).\n\n';
+    var iA = pick(false), iC = pick(true);
+    if (iA >= 0) r += deriv(iA, false);
+    if (iC >= 0) r += deriv(iC, true); else r += '  (Bu kosuda hareket halinde gaz-kesme (coast) adimi bulunamadi — yavaslama ornegi atlandi.)\n\n';
+    sectionNum++;
+  })();
 
 
   // ════════════════════════════════════════════════════════════════════════
