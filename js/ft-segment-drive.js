@@ -613,7 +613,14 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
       isLockup: shiftState.isLockup,
       governedSpeed: governedSpeed,
       noLoadGoverned: noLoadGoverned,
-      mechanicalLimit: mechanicalLimit
+      mechanicalLimit: mechanicalLimit,
+      // ── Rapor türetme sabitleri (yalnız rapor/derivasyon; hesaba etkisiz) ──
+      i_propshaft: i_propshaft, psEff: psEff, drivenPct: drivenPct, F_grip: F_grip,
+      surfFactor: surfFactor, idleRpm: idleRpm, displacement_L: displacement_L, hasTC: !!tcNode,
+      pumpTorqueDrop: pumpTorqueDrop, etaLockup: (tcd.etaLockup || 0.965), etaConvInternal: (tcd.etaConvInternal || 0.975),
+      I_engine: I_engine, I_conv: I_conv, I_conv_turbine: I_conv_turbine, I_trans: I_trans,
+      I_propshaft: I_propshaft, I_tc: I_tc, I_axle: I_axle_inertia, I_tire: I_tire,
+      crrK1: 0.026909, crrK2: -0.00018893
     }
   };
 }
