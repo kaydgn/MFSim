@@ -250,81 +250,157 @@ function getAccessoryPropertiesHTML(node){
     return c.from === nid && VE_ACC_PORT_MAP[c.toPort] === node.type;
   });
 
-  var html = '<div class="sw-panel">';
-
-  // Başlık + bağlantı rozeti
-  html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">' + info.label;
+  // ══ SOL SÜTUN: girdiler (model + oran) ══
+  var L = '';
+  L += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Model Seçimi';
   if(connected){
-    html += ' <span style="background:rgba(34,197,94,0.15);color:var(--accent-success);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid rgba(34,197,94,0.4);">● MOTORA BAĞLI</span>';
+    L += ' <span style="background:rgba(34,197,94,0.15);color:var(--accent-success);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid rgba(34,197,94,0.4);">● MOTORA BAĞLI</span>';
   } else {
-    html += ' <span style="background:rgba(245,158,11,0.12);color:var(--accent-warning,#f59e0b);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid rgba(245,158,11,0.4);">○ BAĞLANMADI</span>';
+    L += ' <span style="background:rgba(245,158,11,0.12);color:var(--accent-warning,#f59e0b);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid rgba(245,158,11,0.4);">○ BAĞLANMADI</span>';
   }
-  html += '</div>';
+  L += '</div>';
+  L += '<div class="sw-pkg-desc">Bu bileşeni Motor kutusunun önündeki ilgili porta bağlayın. Devire bağlı çektiği güç, motorun net torkundan düşülür.</div>';
 
-  html += '<div class="sw-pkg-desc">Bu bileşeni Motor kutusunun önündeki ilgili porta bağlayın. Devire bağlı çektiği güç, motorun net torkundan düşülür.</div>';
-
-  // ── Model seçimi ──
-  html += '<div class="sw-section-title" style="margin-top:6px;">Model Seçimi</div>';
-  html += '<select id="ve-acc-preset-' + nid + '" onchange="onVEAccPresetSelect(\'' + nid + '\', this.value)" style="width:100%; font-size:0.7rem; padding:5px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; margin-bottom:8px;">';
-  html += '<option value="">-- Model Seçiniz (' + Object.keys(lib).length + ' preset) --</option>';
+  L += '<select id="ve-acc-preset-' + nid + '" onchange="onVEAccPresetSelect(\'' + nid + '\', this.value)" style="width:100%; font-size:0.7rem; padding:5px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; margin-bottom:8px;">';
+  L += '<option value="">-- Model Seçiniz (' + Object.keys(lib).length + ' preset) --</option>';
   Object.keys(lib).forEach(function(key){
     var sel = (key === d.accPreset) ? ' selected' : '';
-    html += '<option value="' + key + '"' + sel + '>' + lib[key].name + '</option>';
+    L += '<option value="' + key + '"' + sel + '>' + lib[key].name + '</option>';
   });
-  html += '<option value="__manual__"' + (isManual ? ' selected' : '') + '>+ Manuel kW Girişi</option>';
-  html += '</select>';
+  L += '<option value="__manual__"' + (isManual ? ' selected' : '') + '>+ Manuel kW Girişi</option>';
+  L += '</select>';
 
-  // ── Manuel kW (yalnız manuel modda) ──
-  html += '<div id="ve-acc-manual-wrap-' + nid + '" style="display:' + (isManual ? 'block' : 'none') + '; margin-bottom:8px;">';
-  html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
-  html += '<tr><th style="padding:7px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Sabit güç [kW]</th>';
-  html += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-manualkw-' + nid + '" value="' + (d.accManualKw != null ? d.accManualKw : 0) + '" step="0.1" min="0" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
-  html += '</table>';
-  html += '<div style="font-size:0.62rem; color:var(--text-muted); margin-top:4px;">Manuel modda güç tüm devirlerde sabit alınır.</div>';
-  html += '</div>';
+  // Manuel kW (yalnız manuel modda)
+  L += '<div id="ve-acc-manual-wrap-' + nid + '" style="display:' + (isManual ? 'block' : 'none') + '; margin-bottom:8px;">';
+  L += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+  L += '<tr><th style="padding:7px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Sabit güç [kW]</th>';
+  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-manualkw-' + nid + '" value="' + (d.accManualKw != null ? d.accManualKw : 0) + '" step="0.1" min="0" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
+  L += '</table>';
+  L += '<div style="font-size:0.62rem; color:var(--text-muted); margin-top:4px;">Manuel modda güç tüm devirlerde sabit alınır.</div>';
+  L += '</div>';
 
-  // ── Tahrik oranı ──
-  html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:8px;">';
-  html += '<tr><th style="padding:7px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Tahrik oranı [-]</th>';
-  html += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-ratio-' + nid + '" value="' + d.accDriveRatio + '" step="0.01" min="0.1" max="10" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
-  html += '<tr><td colspan="2" style="padding:6px 8px; font-size:0.62rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Aksesuar_devri = Motor_devri × oran. Aksesuar motordan daha hızlı döner (ör. alternatör ≈ 3.15).</td></tr>';
-  html += '</table>';
+  // Tahrik oranı
+  L += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:8px;">';
+  L += '<tr><th style="padding:7px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Tahrik oranı [-]</th>';
+  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-ratio-' + nid + '" value="' + d.accDriveRatio + '" step="0.01" min="0.1" max="10" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
+  L += '<tr><td colspan="2" style="padding:6px 8px; font-size:0.62rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Aksesuar_devri = Motor_devri × oran. Aksesuar motordan daha hızlı döner (ör. alternatör ≈ 3.15).</td></tr>';
+  L += '</table>';
 
-  // ── Eğri önizleme (SVG sparkline) ──
-  html += '<div id="ve-acc-preview-' + nid + '">' + veAccBuildPreview(node) + '</div>';
+  // ══ SAĞ SÜTUN: güç çekişi grafiği (motor devrine göre) ══
+  var Rr = '';
+  Rr += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
+  Rr += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Güç Çekişi</span>';
+  Rr += '<span id="ve-acc-badge-' + nid + '" class="sw-pkg-badge ok" style="margin-left:auto;">–</span></div>';
+  Rr += '<div class="sw-pkg-body">';
+  Rr += '<div class="sw-pkg-desc" id="ve-acc-desc-' + nid + '">Motor devrine göre bu aksesuarın çektiği güç (kW). Değer, motorun net torkundan düşülür.</div>';
+  Rr += '<canvas id="ve-acc-chart-' + nid + '" style="width:100%; height:210px; display:block; background:var(--bg-tertiary); border:1px solid var(--border-color);"></canvas>';
+  Rr += '</div></div>';
 
-  html += '</div>'; // sw-panel
+  // İki sütun ızgara (diğer bileşen panelleriyle aynı: ve-cp-grid)
+  var html = '<div class="sw-panel">';
+  html += '<div class="ve-cp-grid">';
+  html += '<div class="ve-cp-col ve-cp-col--in">' + L + '</div>';
+  html += '<div class="ve-cp-col ve-cp-col--out">' + Rr + '</div>';
+  html += '</div>';   // ve-cp-grid
+  html += '</div>';   // sw-panel
   return html;
 }
 
-// Eğri önizlemesi — küçük SVG sparkline (devir → kW). Manuelde düz çizgi.
-function veAccBuildPreview(node){
+// Bu aksesuar düğümünün bağlı olduğu Motor'u (varsa) döndürür — grafiğin gerçek
+// devir aralığını (idle→governed) alması için.
+function veAccGetContextEngine(node){
+  var conns = (typeof connections !== 'undefined') ? connections : [];
+  var nlist = (typeof nodes !== 'undefined') ? nodes : [];
+  var eng = null;
+  conns.forEach(function(c){
+    if(c.from === node.id && VE_ACC_PORT_MAP[c.toPort]){
+      var e = nlist.find(function(n){ return n.id === c.to && n.type === 'engine'; });
+      if(e) eng = e;
+    }
+  });
+  return eng;
+}
+
+// Güç çekişi grafiği — MOTOR DEVRİNE göre çekilen güç [kW]. Bağlıysa motorun
+// idle→governed aralığı, değilse varsayılan (600–2200 rpm) kullanılır. Eksenli,
+// ızgaralı, sayısal etiketli — Motor panelindeki grafiklerle aynı dil. Aksesuarın
+// kendi eğrisi (aksesuar devrinde) motor devrine oran ile eşlenir.
+function veAccDrawChart(nodeId){
+  if(typeof document === 'undefined') return;
+  var canvas = document.getElementById('ve-acc-chart-' + nodeId);
+  if(!canvas || !canvas.getContext) return;
+  var node = (typeof nodes !== 'undefined') ? nodes.find(function(n){ return n.id === nodeId; }) : null;
+  if(!node) return;
   var model = veAccGetNodeModel(node);
-  if(!model) return '<div class="sw-pkg-desc" style="text-align:center;color:var(--text-muted);">Önizleme için bir model seçin.</div>';
-  var pts;
-  if(model.curve){
-    pts = model.curve.map(function(p){ return {x:p.rpm, y:p.kw}; });
-  } else {
-    // Manuel sabit kW: 0..3000 düz çizgi
-    pts = [{x:0,y:model.kwConst||0},{x:3000,y:model.kwConst||0}];
+
+  var eng = veAccGetContextEngine(node);
+  var specs = (eng && eng.data && eng.data.motorSpecs) || {};
+  var idle = parseFloat(specs.idleRpm) || 600;
+  var gov = parseFloat(specs.governedSpeed) || (eng && eng.data && eng.data.governedRpm) || 2200;
+  if(!(gov > idle)) gov = idle + 1600;
+  var ratio = (node.data && node.data.accDriveRatio != null) ? parseFloat(node.data.accDriveRatio) : VE_ACC_TYPES[node.type].defRatio;
+  if(isNaN(ratio)) ratio = VE_ACC_TYPES[node.type].defRatio;
+
+  function kwAt(engineRpm){
+    if(!model) return 0;
+    if(model.curve) return veAccInterpCurve(model.curve, engineRpm * ratio);
+    return model.kwConst || 0;
   }
-  var W=260, H=90, pad=6;
-  var xs=pts.map(function(p){return p.x;}), ys=pts.map(function(p){return p.y;});
-  var xmin=Math.min.apply(null,xs), xmax=Math.max.apply(null,xs);
-  var ymin=0, ymax=Math.max.apply(null,ys)*1.15 || 1;
-  if(xmax===xmin) xmax=xmin+1;
-  function sx(x){ return pad + (x-xmin)/(xmax-xmin)*(W-2*pad); }
-  function sy(y){ return H-pad - (y-ymin)/(ymax-ymin)*(H-2*pad); }
-  var dpath = pts.map(function(p,i){ return (i?'L':'M') + sx(p.x).toFixed(1) + ' ' + sy(p.y).toFixed(1); }).join(' ');
-  var dots = pts.map(function(p){ return '<circle cx="'+sx(p.x).toFixed(1)+'" cy="'+sy(p.y).toFixed(1)+'" r="2" fill="var(--accent-primary,#3b82f6)"/>'; }).join('');
-  var html = '<div class="sw-pkg-card"><div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Eğri: ' + model.label + '</span>';
-  html += '<span class="sw-pkg-badge ok" style="margin-left:auto;">' + ymax.toFixed(0) + ' kW maks</span></div>';
-  html += '<div class="sw-pkg-body">';
-  html += '<svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="display:block; background:var(--bg-tertiary); border:1px solid var(--border-color);">';
-  html += '<path d="'+dpath+'" fill="none" stroke="var(--accent-primary,#3b82f6)" stroke-width="1.6"/>' + dots + '</svg>';
-  html += '<div style="display:flex; justify-content:space-between; font-size:0.6rem; color:var(--text-muted); margin-top:2px;"><span>' + xmin + ' rpm</span><span>Aksesuar devri</span><span>' + xmax + ' rpm</span></div>';
-  html += '</div></div>';
-  return html;
+  var pts = [];
+  for(var i = 0; i <= 40; i++){ var r = idle + (gov - idle) * i / 40; pts.push({ x: r, y: kwAt(r) }); }
+  var govKw = kwAt(gov);
+
+  var badge = document.getElementById('ve-acc-badge-' + nodeId);
+  if(badge) badge.textContent = model ? (govKw.toFixed(1) + ' kW @ ' + Math.round(gov) + ' rpm') : '– model seçilmedi';
+  var desc = document.getElementById('ve-acc-desc-' + nodeId);
+  if(desc){
+    desc.textContent = model
+      ? ('Motor ' + Math.round(idle) + '–' + Math.round(gov) + ' rpm aralığında bu aksesuarın çektiği güç (kW); motorun net torkundan düşülür. ' + (eng ? 'Bağlı motorun devir aralığı kullanıldı.' : 'Motor bağlı değil — varsayılan aralık.'))
+      : 'Grafik için bir model seçin.';
+  }
+
+  var rect = canvas.getBoundingClientRect();
+  var W = Math.max(220, rect.width || 360), H = 210;
+  canvas.width = W * 2; canvas.height = H * 2; canvas.style.height = H + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  var css = (typeof getComputedStyle === 'function') ? getComputedStyle(document.documentElement) : null;
+  function cssv(name, dflt){ var x = css ? (css.getPropertyValue(name) || '').trim() : ''; return x || dflt; }
+  var col = cssv('--accent-primary', '#3b82f6');
+  var muted = cssv('--text-muted', '#8a93a6');
+
+  var m = { l: 48, r: 14, t: 12, b: 34 };
+  var pw = W - m.l - m.r, ph = H - m.t - m.b;
+  var xMin = idle, xMax = gov;
+  var yMax = Math.max.apply(null, pts.map(function(p){ return p.y; })) * 1.15 || 1;
+  if(yMax <= 0) yMax = 1;
+  function sx(x){ return m.l + (x - xMin) / (xMax - xMin) * pw; }
+  function sy(y){ return m.t + ph - (y / yMax) * ph; }
+
+  ctx.font = '9px sans-serif';
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+  ctx.fillStyle = muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(var g = 0; g <= 4; g++){
+    var yy = m.t + ph * g / 4;
+    ctx.beginPath(); ctx.moveTo(m.l, yy); ctx.lineTo(m.l + pw, yy); ctx.stroke();
+    ctx.fillText((yMax * (1 - g / 4)).toFixed(1), m.l - 5, yy);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(var t = 0; t <= 4; t++){ var xr = xMin + (xMax - xMin) * t / 4; ctx.fillText(String(Math.round(xr)), sx(xr), m.t + ph + 5); }
+  ctx.fillText('Motor devri [rpm]', m.l + pw / 2, H - 12);
+  ctx.save(); ctx.translate(11, m.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'bottom'; ctx.textAlign = 'center'; ctx.fillText('Çekilen güç [kW]', 0, 0); ctx.restore();
+
+  if(model){
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+    pts.forEach(function(p, i){ var X = sx(p.x), Y = sy(p.y); if(i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); });
+    ctx.stroke();
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(sx(gov), sy(govKw), 3.5, 0, 2 * Math.PI); ctx.fill();
+  } else {
+    ctx.fillStyle = muted; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Model seçilmedi', m.l + pw / 2, m.t + ph / 2);
+  }
 }
 
 // ── Panel olay işleyicileri ─────────────────────────────────────────────────
@@ -354,9 +430,8 @@ function onVEAccPresetSelect(nodeId, value){
   // Oran input'unu güncelle (preset oranı uygulanmış olabilir)
   var ratioEl = document.getElementById('ve-acc-ratio-' + nodeId);
   if(ratioEl && node.data.accDriveRatio != null) ratioEl.value = node.data.accDriveRatio;
-  // Önizleme + Motor senkron + etiket
-  var prev = document.getElementById('ve-acc-preview-' + nodeId);
-  if(prev) prev.innerHTML = veAccBuildPreview(node);
+  // Grafiği yeniden çiz + Motor senkron
+  if(typeof veAccDrawChart === 'function') veAccDrawChart(nodeId);
   veAccApplyAndSync(node);
   if(typeof saveState === 'function') saveState();
 }
@@ -370,8 +445,7 @@ function onVEAccParamChange(nodeId){
   var pf = function(v, def){ var n = parseFloat(v); return isNaN(n) ? def : n; };
   if(ratioEl) node.data.accDriveRatio = pf(ratioEl.value, VE_ACC_TYPES[node.type].defRatio);
   if(kwEl) node.data.accManualKw = pf(kwEl.value, 0);
-  var prev = document.getElementById('ve-acc-preview-' + nodeId);
-  if(prev) prev.innerHTML = veAccBuildPreview(node);
+  if(typeof veAccDrawChart === 'function') veAccDrawChart(nodeId);
   veAccApplyAndSync(node);
   if(typeof saveState === 'function') saveState();
 }
