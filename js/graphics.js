@@ -3053,6 +3053,7 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
   r += kv('Aks / Transfer ataleti', n(P.I_axle, 3) + ' / ' + n(P.I_tc, 3), 'kg.m^2');
   r += kv('Sanziman ic ataleti  I_trans', n(P.I_trans, 3), 'kg.m^2');
   r += h2('A.7 Tutunma ve Cozucu — Turetilen');
+  r += kv('Yercekimi ivmesi  g', n(9.81, 2), 'm/s^2');
   r += kv('Tutunma katsayisi  mu', n(P.mu_traction, 3));
   r += '    F_grip = mu * m * tahrik% * g\n';
   r += '           = ' + n(P.mu_traction, 2) + ' * ' + ni(P.m_vehicle) + ' * ' + n(P.drivenPct, 2) + ' * 9.81  =  ' + ni(P.F_grip) + ' N\n';
@@ -3061,22 +3062,32 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
 
   // ── BÖLÜM B: FORMÜL SÖZLÜĞÜ ──
   r += h1('B. FORMUL SOZLUGU (kod konumlariyla)');
+  r += '  Bu bolum YALNIZ bu aracin konfigurasyonunda GERCEKTEN kullanilan yolu gosterir\n';
+  r += '  (' + (P.hasTC ? 'tork konvertorlu' : 'konvertorsuz / dogrudan tahrik') + ').\n\n';
   r += '  Motor devri (kinematik):  N = (v/r_tire) * i_total * 60/(2*pi)      [ft-performance.js: speedToTurbineRpm]\n';
   r += '  Motor torku (net):        T_net = T_gross(N) - T_aksesuar(N)         [motorTorqueFn]\n';
-  r += '  Aksesuar kaybi:           P = Fan*(N/Ngov)^k + Diger*(N/Ngov) ; T=P/omega\n';
-  r += '  Pompa emisi (converter):  T_pump = N_engine^2 / K_pump(SR)^2         [calcStepPhysics]\n';
-  r += '  Turbin torku (converter): T_cikis(ham) = T_pump * tau(SR)            (etaConvIc yok; yalniz isi)\n';
-  r += '  Lockup cikis:             T_cikis(ham) = T_net - dT_lockup           (pompa drop YOK, SR=1)\n';
-  r += '   (dT_lockup = 10 + 0.00367*N ; kilit-klac surtunmesi)\n';
-  r += '  Disli verimi (TK modu):   T_cikis = T_cikis(ham) * eta_gear          [calcGearEfficiency]\n';
-  r += '   (eta_gear = 1 - |ln(i_gear)| * (0.0175 + 2.93e-6 * N_turb) ; TEK uygulama)\n';
-  r += '  Dusuk-dal eslesme:        excess(N)=T_net-drop-N^2/K_pump^2 vadisi, N in [idle, noLoad]\n';
-  r += '  Rev-up (yuksek dal):      dN/dt = (T_net - drop - T_pump)/I_eng_rev * 60/(2pi)\n';
-  r += '  Cekis kuvveti:            F = T_cikis * i_ps*eta_ps * i_tr*eta_tr * i_ax*eta_ax / r_tire  [calcTractiveEffort]\n';
+  r += '  Aksesuar kaybi:           P_kayip = SUM(egri-interp | sabit-kW | legacy) ; T=P/omega   [veAccessoryLossKw]\n';
+  r += '   (legacy: Fan*(N/Ngov)^3 [kavramali] veya sabit [on] + Diger*(N/Ngov))\n';
+  if (P.hasTC) {
+    r += '  Pompa emisi (converter):  T_pump = N_engine^2 / K_pump(SR)^2         [calcStepPhysics]\n';
+    r += '  Turbin torku (converter): T_cikis(ham) = T_pump * tau(SR)            (etaConvIc yok; yalniz isi)\n';
+    r += '  Lockup cikis:             T_cikis(ham) = T_net - dT_lockup           (pompa drop YOK, SR=1)\n';
+    r += '   (dT_lockup = 10 + 0.00367*N ; kilit-klac surtunmesi)\n';
+    r += '  Disli verimi (TK modu):   T_cikis = T_cikis(ham) * eta_gear          [calcGearEfficiency]\n';
+    r += '   (eta_gear = 1 - |ln(i_gear)| * (0.0175 + 2.93e-6 * N_turb) ; TEK uygulama)\n';
+    r += '  Dusuk-dal eslesme:        excess(N)=T_net-drop-N^2/K_pump^2 vadisi, N in [idle, noLoad]\n';
+    r += '  Rev-up (yuksek dal):      dN/dt = (T_net - drop - T_pump)/I_eng_rev * 60/(2pi)\n';
+  } else {
+    r += '  Dogrudan tahrik cikis:    T_cikis = T_net * eta_direct              [calcStepPhysics: no-tc-direct]\n';
+    r += '   (eta_direct = vitesin verimi ftGearData.eff/100 ; rijit motor-sanziman — TK/pompa/lockup YOK)\n';
+    r += '   (kalkis: motor tork-tepe devrinde tutulur — debriyaj kaydirma stall)\n';
+  }
+  r += '  Cekis kuvveti:            F = T_cikis * i_gear * i_ps*eta_ps * i_tr*eta_tr * i_ax*eta_ax / r_tire  [calcTractiveEffort]\n';
   r += '  Yuvarlanma direnci:       F_roll = Crr_eff * yuzey * m * g * cos(theta)   [calcResistForces]\n';
   r += '   (Crr_eff = Crr*(1 + K1*v + K2*v^2))                                  [getCrrEffective]\n';
   r += '  Aerodinamik direnc:       F_aero = 0.5 * rho * Cd * A * v^2\n';
   r += '  Egim direnci:             F_grade = m * g * sin(theta) ; theta=atan(egim/100)\n';
+  r += '  Guc (turetilen):          P_motor = T_net*omega_eng/1000 ; P_teker = F_cekis*v/1000\n';
   r += '  Esdeger kutle:            m_eff = m + I_eff/r_tire^2 ; I_eff = SUM(I_k * i_k^2)  [calcEquivalentMass]\n';
   r += '  Ivme:                     a = (F_cekis - F_direnc) / m_eff\n';
   r += '  Entegrasyon (RK4):        dv = (k1+2k2+2k3+k4)/6 * dt ; k=a(v+...)\n';
@@ -3120,7 +3131,40 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
 
   // ── BÖLÜM E: ADIM ADIM HIZLANMA İZİ ──
   r += h1('E. ADIM ADIM HIZLANMA IZI (kilit noktalar)');
-  T.steps.forEach(function (s, idx) { r += veFTTraceRenderStep(s, idx, { n: n, ni: ni, pad: pad, ln: ln, ascii: ascii, W: W, P: P }); });
+  var _prevMassSig = null;
+  T.steps.forEach(function (s, idx) {
+    // Eşdeğer-kütle ayrışım tablosu yalnız VİTES/MOD değişince tam basılır; tekrar
+    // adımlarda (aynı i_total → aynı I_eff) tek satır özet — rapor uzunluğu düşer.
+    var _mt = s.massTerms || {};
+    var _sig = String(s.gearName || '') + '|' + (_mt.isLockup ? 'L' : 'C');
+    var _showFullMass = (_sig !== _prevMassSig);
+    _prevMassSig = _sig;
+    r += veFTTraceRenderStep(s, idx, { n: n, ni: ni, pad: pad, ln: ln, ascii: ascii, W: W, P: P, showFullMass: _showFullMass });
+  });
+
+  // ── BÖLÜM F: PERFORMANS ÖZETİ (mikro iz → makro sonuç çapraz kontrolü) ──
+  try {
+    if (typeof veCalculateAcceleration === 'function' && traced && traced.speed && traced.speed.length > 1) {
+      var _accSum = veCalculateAcceleration(traced);
+      var _hi = _accSum && _accSum.high;
+      if (_hi && _hi.rows) {
+        r += h1('F. PERFORMANS OZETI — MAKRO DOGRULAMA');
+        r += '  Adim-adim iz (mikro) ile biten ayni kosunun makro sonuclari — capraz kontrol icin.\n\n';
+        r += '  ' + pad('Hedef', 12) + pad('Sure (s)', 12, 'right') + pad('Mesafe (m)', 14, 'right') + '\n';
+        r += '  ' + ln('-', 38) + '\n';
+        _hi.rows.forEach(function (row) {
+          var _tv = (row.time == null) ? 'ulasilmadi' : n(row.time, 1);
+          var _dv = (row.distance == null) ? '-' : ni(row.distance);
+          r += '  ' + pad(ni(row.targetSpeed) + ' km/h', 12) + pad(_tv, 12, 'right') + pad(_dv, 14, 'right') + '\n';
+        });
+        r += '  ' + ln('-', 38) + '\n';
+        r += kv('Ulasilan V_max', n(_hi.maxSpeed, 1), 'km/h');
+        var _tEnd = traced.time[traced.time.length - 1];
+        r += kv('Toplam sure', n(_tEnd, 1), 's');
+        if (traced.distance && traced.distance.length) r += kv('Toplam mesafe', ni(traced.distance[traced.distance.length - 1]), 'm');
+      }
+    }
+  } catch (eF) { /* performans ozeti uretilemezse rapor yine de tamamlanir */ }
 
   // ── SON ──
   r += '\n' + ln('=', W) + '\n';
@@ -3268,15 +3312,20 @@ function veFTTraceRenderStep(s, idx, H) {
   var _K1 = (P.crrK1 != null ? P.crrK1 : 0.026909), _K2 = (P.crrK2 != null ? P.crrK2 : -0.00018893);
   var _fcrr = 1 + _K1 * s.v_ms + _K2 * s.v_ms * s.v_ms;
   var _kaero = 0.5 * s.rho * s.Cd * s.A_frontal;
-  r += E('theta', ['atan(grade% / 100)', 'atan(' + n((s.grade_pct || 0) / 100, 4) + ')', n(_theta, 6) + ' rad (' + n(_theta * 180 / Math.PI, 3) + ' deg)']);
-  r += SUB('cos(theta)', n(_cos, 6));
-  r += SUB('sin(theta)', n(_sin, 6));
+  var _flatRoad = Math.abs(s.grade_pct || 0) < 1e-9;
+  if (_flatRoad) {
+    r += TX('Egim %0  ->  theta=0, cos=1, sin=0, F_grade=0 N  (bu kosuda tum adimlarda ayni)');
+  } else {
+    r += E('theta', ['atan(grade% / 100)', 'atan(' + n((s.grade_pct || 0) / 100, 4) + ')', n(_theta, 6) + ' rad (' + n(_theta * 180 / Math.PI, 3) + ' deg)']);
+    r += SUB('cos(theta)', n(_cos, 6));
+    r += SUB('sin(theta)', n(_sin, 6));
+  }
   r += E('f (hiz duz.)', ['1 + K1*v + K2*v^2', '1 + ' + n(_K1, 6) + '*' + n(s.v_ms, 3) + ' + (' + n(_K2, 8) + ')*' + n(s.v_ms * s.v_ms, 3), n(_fcrr, 6)]);
   r += E('Crr_eff', ['Crr_static * f', n(s.Crr_static, 5) + ' * ' + n(_fcrr, 6), n(s.Crr_eff, 6)]);
   r += E('F_roll', ['Crr_eff * yuzey * m * g * cos(theta)', n(s.Crr_eff, 6) + ' * ' + n(s.surfFactor, 3) + ' * ' + ni(s.m_vehicle) + ' * 9.81 * ' + n(_cos, 5), ni(s.F_rolling) + ' N']);
   r += SUB('k_aero', '0.5*rho*Cd*A = 0.5*' + n(s.rho, 3) + '*' + n(s.Cd, 3) + '*' + n(s.A_frontal, 3) + ' = ' + n(_kaero, 4));
   r += E('F_aero', ['k_aero * v^2', n(_kaero, 4) + ' * ' + n(s.v_ms * s.v_ms, 3), ni(s.F_aero) + ' N']);
-  r += E('F_grade', ['m * g * sin(theta)', ni(s.m_vehicle) + ' * 9.81 * ' + n(_sin, 5), ni(s.F_grade) + ' N   (egim ' + n(s.grade_pct, 1) + '%)']);
+  if (!_flatRoad) r += E('F_grade', ['m * g * sin(theta)', ni(s.m_vehicle) + ' * 9.81 * ' + n(_sin, 5), ni(s.F_grade) + ' N   (egim ' + n(s.grade_pct, 1) + '%)']);
   r += E('F_direnc', ['F_roll + F_aero + F_grade', ni(s.F_rolling) + ' + ' + ni(s.F_aero) + ' + ' + ni(s.F_grade), ni(s.F_resist) + ' N']);
 
   // ── [5] EŞDEĞER KÜTLE + İVME ──
@@ -3285,27 +3334,39 @@ function veFTTraceRenderStep(s, idx, H) {
   var _r2 = (mt.r2 != null ? mt.r2 : (d.r_tire || 0) * (d.r_tire || 0));
   r += BH(5, 'ESDEGER KUTLE VE IVME');
   r += E('F_net', ['F_cekis - F_direnc', ni(s.F_traction) + ' - ' + ni(s.F_resist), ni(s.F_net) + ' N']);
-  r += '\n' + TX('I_eff = SUM( I_k(ham) * carpan^2 )  — her terimin acik katkisi:');
-  r += IND + '  ' + pad('terim', 13) + pad('I_ham', 8, 'right') + '  ' + pad('carpan^2', 20) + pad('katki', 9, 'right') + '\n';
-  r += IND + '  ' + ln('-', 50) + '\n';
-  function _mrow(lbl, Iraw, facLbl, facVal, contrib) { return IND + '  ' + pad(lbl, 13) + pad(n(Iraw, 2), 8, 'right') + '  ' + pad(facLbl + ' = ' + n(facVal, 3), 20) + pad(n(contrib, 2), 9, 'right') + '\n'; }
-  if (mt.isLockup) {
-    r += _mrow('motor', P.I_engine, 'i_total^2', _it2, mt.I_engine);
-    r += _mrow('konvertor', P.I_conv, 'i_total^2', _it2, mt.I_conv);
+  if (H.showFullMass !== false) {
+    r += '\n' + TX('I_eff = SUM( I_k(ham) * carpan^2 )  — her terimin acik katkisi:');
+    r += IND + '  ' + pad('terim', 13) + pad('I_ham', 8, 'right') + '  ' + pad('carpan^2', 20) + pad('katki', 9, 'right') + '\n';
+    r += IND + '  ' + ln('-', 50) + '\n';
+    var _mrow = function (lbl, Iraw, facLbl, facVal, contrib) { return IND + '  ' + pad(lbl, 13) + pad(n(Iraw, 2), 8, 'right') + '  ' + pad(facLbl + ' = ' + n(facVal, 3), 20) + pad(n(contrib, 2), 9, 'right') + '\n'; };
+    if (mt.isLockup) {
+      r += _mrow('motor', P.I_engine, 'i_total^2', _it2, mt.I_engine);
+      if (P.I_conv > 0) r += _mrow('konvertor', P.I_conv, 'i_total^2', _it2, mt.I_conv);   // TK yoksa 0 → satiri atla
+    } else {
+      r += _mrow('konv-turbin', P.I_conv_turbine, 'i_total^2', _it2, mt.I_conv_turbine);
+    }
+    r += _mrow('sanziman', P.I_trans, 'i_down^2', _id2, mt.I_trans);
+    r += _mrow('propsaft', P.I_propshaft, 'i_down^2', _id2, mt.I_propshaft);
+    r += _mrow('transfer', P.I_tc, 'i_axle^2', _ia2, mt.I_tc);
+    r += _mrow('aks', P.I_axle, '1', 1, mt.I_axle);
+    r += _mrow('teker', P.I_tire, '1', 1, mt.I_tire);
+    r += IND + '  ' + ln('-', 50) + '\n';
+    r += IND + '  ' + pad('toplam', 13) + pad('', 8) + '  ' + pad('', 20) + pad(n(s.I_eff, 2), 9, 'right') + ' kg.m^2\n';
+    r += SUB('i_down', 'i_ps*i_tr*i_axle = ' + n(mt.i_down, 3) + '  (sanziman/propsaft carpani)');
+    r += SUB('r_tire^2', n(d.r_tire, 4) + '^2 = ' + n(_r2, 4) + ' m^2  (m_eff boleni)');
   } else {
-    r += _mrow('konv-turbin', P.I_conv_turbine, 'i_total^2', _it2, mt.I_conv_turbine);
+    r += '\n' + TX('I_eff = ' + n(s.I_eff, 2) + ' kg.m^2   (ayrisim degismedi — ayni vites/mod; yukaridaki son tam tablo)');
   }
-  r += _mrow('sanziman', P.I_trans, 'i_down^2', _id2, mt.I_trans);
-  r += _mrow('propsaft', P.I_propshaft, 'i_down^2', _id2, mt.I_propshaft);
-  r += _mrow('transfer', P.I_tc, 'i_axle^2', _ia2, mt.I_tc);
-  r += _mrow('aks', P.I_axle, '1', 1, mt.I_axle);
-  r += _mrow('teker', P.I_tire, '1', 1, mt.I_tire);
-  r += IND + '  ' + ln('-', 50) + '\n';
-  r += IND + '  ' + pad('toplam', 13) + pad('', 8) + '  ' + pad('', 20) + pad(n(s.I_eff, 2), 9, 'right') + ' kg.m^2\n';
-  r += SUB('i_down', 'i_ps*i_tr*i_axle = ' + n(mt.i_down, 3) + '  (sanziman/propsaft carpani)');
-  r += SUB('r_tire^2', n(d.r_tire, 4) + '^2 = ' + n(_r2, 4) + ' m^2  (m_eff boleni)');
   r += E('m_eff', ['m + I_eff / r_tire^2', ni(s.m_vehicle) + ' + ' + n(s.I_eff, 2) + ' / ' + n(_r2, 4), ni(s.m_eff) + ' kg   (x' + n(s.massRatio, 4) + ')']);
   r += E('a', ['F_net / m_eff', ni(s.F_net) + ' / ' + ni(s.m_eff), n(s.accel, 4) + ' m/s^2   (' + n(s.accel_g, 4) + ' g)']);
+
+  // Güç (türetilen): motor krank net gücü ve tekerlekteki (yer teması) güç — iz alanlarından.
+  var _omgEng = (s.N_engine || 0) * 2 * Math.PI / 60;
+  var _Pmotor = (s.T_engine || 0) * _omgEng / 1000;
+  var _Pteker = (s.F_traction || 0) * (s.v_ms || 0) / 1000;
+  r += '\n' + TX('Guc (turetilen):');
+  r += SUB('P_motor', 'T_net * omega_eng / 1000 = ' + n(s.T_engine, 1) + ' * ' + n(_omgEng, 1) + ' / 1000 = ' + n(_Pmotor, 1) + ' kW  (krank, net)');
+  r += SUB('P_teker', 'F_cekis * v / 1000 = ' + ni(s.F_traction) + ' * ' + n(s.v_ms, 3) + ' / 1000 = ' + n(_Pteker, 1) + ' kW  (yer temasi)');
 
   // ── [6] VİTES KARARI (varsa) ──
   var lastNum = 5;
