@@ -293,7 +293,8 @@ function getAccessoryPropertiesHTML(node){
   Rr += '<span id="ve-acc-badge-' + nid + '" class="sw-pkg-badge ok" style="margin-left:auto;">–</span></div>';
   Rr += '<div class="sw-pkg-body">';
   Rr += '<div class="sw-pkg-desc" id="ve-acc-desc-' + nid + '">Motor devrine göre bu aksesuarın çektiği güç (kW). Değer, motorun net torkundan düşülür.</div>';
-  Rr += '<canvas id="ve-acc-chart-' + nid + '" style="width:100%; height:210px; display:block; background:var(--bg-tertiary); border:1px solid var(--border-color);"></canvas>';
+  Rr += '<div id="ve-acc-chart-' + nid + '" style="width:100%; height:230px; background:var(--bg-tertiary); border:1px solid var(--border-color);"></div>';
+  Rr += '<div style="font-size:0.6rem; color:var(--text-muted); margin-top:4px; text-align:center;">● Ölçüm noktaları · üzerine gelince değerler · sürükleyerek yakınlaş, çift tık sıfırla</div>';
   Rr += '</div></div>';
 
   // İki sütun ızgara (diğer bileşen panelleriyle aynı: ve-cp-grid)
@@ -321,14 +322,14 @@ function veAccGetContextEngine(node){
   return eng;
 }
 
-// Güç çekişi grafiği — MOTOR DEVRİNE göre çekilen güç [kW]. Bağlıysa motorun
-// idle→governed aralığı, değilse varsayılan (600–2200 rpm) kullanılır. Eksenli,
-// ızgaralı, sayısal etiketli — Motor panelindeki grafiklerle aynı dil. Aksesuarın
-// kendi eğrisi (aksesuar devrinde) motor devrine oran ile eşlenir.
+// Güç çekişi grafiği — ETKİLEŞİMLİ (Plotly). MOTOR DEVRİNE göre çekilen güç [kW].
+// Çizgi = eğri (motor idle→governed), işaretçiler = GERÇEK ölçüm noktaları
+// (aksesuar eğri noktaları motor devrine oran ile eşlenmiş). Üzerine gelince
+// motor devri + aksesuar devri + kW gösterir; sürükleyerek yakınlaşılır.
 function veAccDrawChart(nodeId){
   if(typeof document === 'undefined') return;
-  var canvas = document.getElementById('ve-acc-chart-' + nodeId);
-  if(!canvas || !canvas.getContext) return;
+  var el = document.getElementById('ve-acc-chart-' + nodeId);
+  if(!el) return;
   var node = (typeof nodes !== 'undefined') ? nodes.find(function(n){ return n.id === nodeId; }) : null;
   if(!node) return;
   var model = veAccGetNodeModel(node);
@@ -346,10 +347,9 @@ function veAccDrawChart(nodeId){
     if(model.curve) return veAccInterpCurve(model.curve, engineRpm * ratio);
     return model.kwConst || 0;
   }
-  var pts = [];
-  for(var i = 0; i <= 40; i++){ var r = idle + (gov - idle) * i / 40; pts.push({ x: r, y: kwAt(r) }); }
   var govKw = kwAt(gov);
 
+  // Rozet + açıklama
   var badge = document.getElementById('ve-acc-badge-' + nodeId);
   if(badge) badge.textContent = model ? (govKw.toFixed(1) + ' kW @ ' + Math.round(gov) + ' rpm') : '– model seçilmedi';
   var desc = document.getElementById('ve-acc-desc-' + nodeId);
@@ -359,48 +359,72 @@ function veAccDrawChart(nodeId){
       : 'Grafik için bir model seçin.';
   }
 
-  var rect = canvas.getBoundingClientRect();
-  var W = Math.max(220, rect.width || 360), H = 210;
-  canvas.width = W * 2; canvas.height = H * 2; canvas.style.height = H + 'px';
-  var ctx = canvas.getContext('2d');
-  ctx.setTransform(2, 0, 0, 2, 0, 0);
-  ctx.clearRect(0, 0, W, H);
+  if(typeof Plotly === 'undefined'){ el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.7rem;">Grafik kütüphanesi (Plotly) yükleniyor…</div>'; return; }
 
+  // Tema renkleri (CSS değişkenlerinden — açık/koyu temaya uyum)
   var css = (typeof getComputedStyle === 'function') ? getComputedStyle(document.documentElement) : null;
   function cssv(name, dflt){ var x = css ? (css.getPropertyValue(name) || '').trim() : ''; return x || dflt; }
   var col = cssv('--accent-primary', '#3b82f6');
-  var muted = cssv('--text-muted', '#8a93a6');
+  var txt = cssv('--text-secondary', '#8a93a6');
+  var grid = 'rgba(128,128,128,0.18)';
 
-  var m = { l: 48, r: 14, t: 12, b: 34 };
-  var pw = W - m.l - m.r, ph = H - m.t - m.b;
-  var xMin = idle, xMax = gov;
-  var yMax = Math.max.apply(null, pts.map(function(p){ return p.y; })) * 1.15 || 1;
-  if(yMax <= 0) yMax = 1;
-  function sx(x){ return m.l + (x - xMin) / (xMax - xMin) * pw; }
-  function sy(y){ return m.t + ph - (y / yMax) * ph; }
-
-  ctx.font = '9px sans-serif';
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
-  ctx.fillStyle = muted; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  for(var g = 0; g <= 4; g++){
-    var yy = m.t + ph * g / 4;
-    ctx.beginPath(); ctx.moveTo(m.l, yy); ctx.lineTo(m.l + pw, yy); ctx.stroke();
-    ctx.fillText((yMax * (1 - g / 4)).toFixed(1), m.l - 5, yy);
+  if(!model){
+    Plotly.purge(el);
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:0.72rem;">Grafik için bir model seçin.</div>';
+    return;
   }
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  for(var t = 0; t <= 4; t++){ var xr = xMin + (xMax - xMin) * t / 4; ctx.fillText(String(Math.round(xr)), sx(xr), m.t + ph + 5); }
-  ctx.fillText('Motor devri [rpm]', m.l + pw / 2, H - 12);
-  ctx.save(); ctx.translate(11, m.t + ph / 2); ctx.rotate(-Math.PI / 2); ctx.textBaseline = 'bottom'; ctx.textAlign = 'center'; ctx.fillText('Çekilen güç [kW]', 0, 0); ctx.restore();
 
-  if(model){
-    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
-    pts.forEach(function(p, i){ var X = sx(p.x), Y = sy(p.y); if(i) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); });
-    ctx.stroke();
-    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(sx(gov), sy(govKw), 3.5, 0, 2 * Math.PI); ctx.fill();
-  } else {
-    ctx.fillStyle = muted; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('Model seçilmedi', m.l + pw / 2, m.t + ph / 2);
+  // Çizgi için: motor aralığında gerçek ölçüm noktalarını (aksesuar_rpm/oran) +
+  // uç noktaları örnekle → çizgi lineer interp'e SADIK kalır, işaretçiler gerçek veride.
+  var xset = {};
+  xset[idle] = 1; xset[gov] = 1;
+  if(model.curve){
+    model.curve.forEach(function(p){ var er = p.rpm / ratio; if(er >= idle && er <= gov) xset[Math.round(er)] = 1; });
   }
+  var xs = Object.keys(xset).map(Number).sort(function(a,b){ return a - b; });
+  var ys = xs.map(kwAt);
+  var accRpm = xs.map(function(x){ return Math.round(x * ratio); });
+
+  // Ölçüm noktaları (motor aralığındaki gerçek eğri noktaları) — vurgulu işaretçi
+  var mx = [], my = [], macc = [];
+  if(model.curve){
+    model.curve.forEach(function(p){ var er = p.rpm / ratio; if(er >= idle && er <= gov){ mx.push(Math.round(er)); my.push(p.kw); macc.push(p.rpm); } });
+  }
+
+  var lineTrace = {
+    x: xs, y: ys, customdata: accRpm,
+    mode: 'lines', type: 'scatter',
+    line: { color: col, width: 2.5 },
+    hovertemplate: 'Motor: %{x:.0f} rpm<br>Aksesuar: %{customdata} rpm<br>Çekilen güç: <b>%{y:.2f} kW</b><extra></extra>',
+    name: model.label
+  };
+  var ptTrace = {
+    x: mx, y: my, customdata: macc,
+    mode: 'markers', type: 'scatter',
+    marker: { color: col, size: 7, line: { color: '#fff', width: 1 } },
+    hovertemplate: 'Ölçüm<br>Aksesuar: %{customdata} rpm<br>Güç: <b>%{y:.2f} kW</b><extra></extra>',
+    name: 'Ölçüm'
+  };
+  var govTrace = {
+    x: [gov], y: [govKw], mode: 'markers', type: 'scatter',
+    marker: { color: '#f59e0b', size: 11, symbol: 'star', line: { color: '#fff', width: 1 } },
+    hovertemplate: 'Governed: %{x:.0f} rpm<br><b>%{y:.2f} kW</b><extra></extra>',
+    name: 'Governed'
+  };
+
+  var layout = {
+    margin: { l: 52, r: 14, t: 8, b: 40 },
+    paper_bgcolor: 'transparent', plot_bgcolor: 'transparent',
+    font: { family: 'system-ui, -apple-system, sans-serif', size: 10, color: txt },
+    xaxis: { title: { text: 'Motor devri [rpm]', font: { size: 10.5, color: txt } }, gridcolor: grid, zeroline: false, linecolor: grid, tickfont: { size: 9, color: txt } },
+    yaxis: { title: { text: 'Çekilen güç [kW]', font: { size: 10.5, color: txt } }, gridcolor: grid, zeroline: false, rangemode: 'tozero', linecolor: grid, tickfont: { size: 9, color: txt } },
+    showlegend: false, hovermode: 'closest',
+    hoverlabel: { bgcolor: cssv('--bg-secondary', '#1b2233'), bordercolor: col, font: { size: 10, color: cssv('--text-primary', '#e5e9f0') } }
+  };
+  var config = { responsive: true, displayModeBar: false, displaylogo: false, doubleClick: 'reset', scrollZoom: false };
+
+  try { Plotly.react(el, [lineTrace, ptTrace, govTrace], layout, config); }
+  catch(e){ el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.7rem;">Grafik çizilemedi: ' + e.message + '</div>'; }
 }
 
 // ── Panel olay işleyicileri ─────────────────────────────────────────────────
