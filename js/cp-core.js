@@ -158,6 +158,8 @@ function clearSelection() {
 // Yeni panel dönüştürüldükçe buraya eklenir → pencere otomatik genişler,
 // kimlik kompakt-sola geçer. (Yerleşim üreticileri ilgili cp-*.js dosyalarında.)
 var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-controller', 'vehicle', 'transfer', 'obstacle-crossing', 'engine-gearbox-matching', 'gear-shift', 'gearbox', 'solver', 'sensor-wizard', 'road',
+  // Aksesuarlar — iki sütun (model/oran | güç-çekişi grafiği)
+  'acc-ac', 'acc-alternator', 'acc-aircomp',
   // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir)
   'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
@@ -293,6 +295,13 @@ function showNodeProperties(node) {
   // Modal OTOMATİK AÇILMAZ — tek tık sadece seçim yapar, çift tık (veAttachNodeDrag)
   // veya marker tıklaması modal'ı açar. Eğer modal zaten açıksa içerik yenilenir.
 
+
+  // Aksesuar bileşenleri: güç-çekişi grafiğini panel DOM'u oluştuktan sonra çiz
+  if(node.type === 'acc-ac' || node.type === 'acc-alternator' || node.type === 'acc-aircomp') {
+    setTimeout(function() {
+      if(typeof veAccDrawChart === 'function') veAccDrawChart(node.id);
+    }, 60);
+  }
 
   // Motor bileşeni için grafik çiz ve kategori dropdown'ı doldur
   if(node.type === 'engine') {
