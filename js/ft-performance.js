@@ -1235,10 +1235,15 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       governedSpeed: governedSpeed, noLoadGoverned: noLoadGoverned, idleRpm: idleRpm,
       I_engine: I_engine, accFanLoss: accTotalFanLoss, accOtherLoss: accTotalOtherLoss,
       accFanMode: accFanMode, hasAccessoryLoss: hasAccessoryLoss,
+      // Motor tork eğrisi ham verisi (rapor: PCHIP + governor bölümü için)
+      torqueData: torqueTable.slice().sort(function(a,b){ return a.rpm - b.rpm; }),
       // Tork konvertörü
       hasTC: !!tcNode, hasTCData: hasTCData, pumpTorqueDrop: pumpTorqueDrop,
       I_conv: I_conv, I_conv_turbine: I_conv_turbine, I_eng_rev: I_eng_rev,
       CONV_MATCH_THRESHOLD: CONV_MATCH_THRESHOLD, couplingSR: tcFns.couplingSR,
+      // Konvertör karakteristik ham verisi (rapor: K_pump/τ/η eğrileri için)
+      tcData: tcDataArr.slice().sort(function(a,b){ return a.sr - b.sr; }),
+      tcName: (tcNode ? (tcd.tcName || '') : ''),
       // Şanzıman / shift
       forwardGears: forwardGears.map(function(g){ return { name:g.name, ratio:parseFloat(g.ratio)||1.0, eff:parseFloat(g.eff)||98.0 }; }),
       shiftProfile: shiftProfile, shiftRefRPM: shiftRefRPM, lockupOffset: lockupOffset,
