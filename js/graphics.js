@@ -3200,13 +3200,13 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
     r += h2('Motor-turbin devir izi (converter-modu kilit adimlari)');
     var _cvRows = (T.steps || []).filter(function (s) { return s.branch === 'converter'; });
     if (_cvRows.length) {
-      r += '  ' + pad('v(km/h)', 9, 'right') + pad('N_turb', 9, 'right') + pad('N_mot', 9, 'right') + pad('SR', 7, 'right') + pad('tau', 7, 'right') + pad('T_pump', 9, 'right') + pad('T_turb', 9, 'right') + '  dal\n';
-      r += '  ' + ln('-', 69) + '\n';
+      r += '  ' + pad('v(km/h)', 9, 'right') + pad('N_turb', 9, 'right') + pad('N_mot', 9, 'right') + pad('SR', 7, 'right') + pad('tau', 7, 'right') + pad('K_pump', 9, 'right') + pad('T_pump', 9, 'right') + pad('T_turb', 9, 'right') + '  dal\n';
+      r += '  ' + ln('-', 78) + '\n';
       _cvRows.forEach(function (s) {
         var _br = (s.lowBranchScan && s.lowBranchScan.onLowBranch) ? 'dusuk' : 'yuksek';
-        r += '  ' + pad(n(s.v_kmh, 1), 9, 'right') + pad(ni(s.N_turbine), 9, 'right') + pad(ni(s.N_engine), 9, 'right') + pad(n(s.SR, 3), 7, 'right') + pad(n(s.tau, 3), 7, 'right') + pad(ni(s.T_pump_absorbed), 9, 'right') + pad(ni(s.T_turbine_raw), 9, 'right') + '  ' + _br + '\n';
+        r += '  ' + pad(n(s.v_kmh, 1), 9, 'right') + pad(ni(s.N_turbine), 9, 'right') + pad(ni(s.N_engine), 9, 'right') + pad(n(s.SR, 3), 7, 'right') + pad(n(s.tau, 3), 7, 'right') + pad(n(s.Kp, 2), 9, 'right') + pad(ni(s.T_pump_absorbed), 9, 'right') + pad(ni(s.T_turbine_raw), 9, 'right') + '  ' + _br + '\n';
       });
-      r += '  ' + ln('-', 69) + '\n';
+      r += '  ' + ln('-', 78) + '\n';
     } else {
       r += '  (Bu kosuda converter-modu kilit adimi yakalanmadi — kalkis fazi cok kisa;\n';
       r += '   stall ve dusuk-hiz calisma noktalari asagidaki bolumlerde ayrintili.)\n';
@@ -3221,7 +3221,8 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
     r += H1('OTURMUS STALL (v=0) — kalkis/egim metrigi');
     r += '  Motor kalkista anlik dengeye ATLAMAZ; teget bolgesinde asili kalir (surunur).\n';
     r += '  Tarama: N=idle..' + ni(sc.iterations && sc.iterations.length ? sc.iterations[sc.iterations.length - 1].N : 0) + ', fazlalik = T_net(N) - drop - N^2/K0^2\n';
-    r += '  K0=K_pump(0)=' + n(sc.K0, 3) + '   tau0=tau(0)=' + n(sc.tau0, 3) + '   drop=' + n(sc.pumpDrop, 2) + '   tol=' + n(sc.tol, 1) + ' N.m\n\n';
+    r += '  K0=K_pump(0)=' + n(sc.K0, 3) + '   tau0=tau(0)=' + n(sc.tau0, 3) + '   drop=' + n(sc.pumpDrop, 2) + ' N.m\n';
+    r += '  (tol=' + n(sc.tol, 1) + ' N.m yalnizca referans/geriye-uyum; KABUL KAPISI excess<=0 ilk gecisidir.)\n\n';
     r += '  ' + pad('N (rpm)', 10, 'right') + pad('T_net', 12, 'right') + pad('T_pump_emis', 14, 'right') + pad('Fazlalik', 12, 'right') + '\n';
     r += '  ' + ln('-', 48) + '\n';
     (sc.iterations || []).forEach(function (it) {
@@ -3239,6 +3240,9 @@ function veGenerateFTCalcTraceReport(sim, optHazirlayan, rangeSel) {
   if (_hasLowOp) {
     var LO = T.lowSpeedOp, bi = LO.bisection;
     r += H1('DUSUK-HIZ CALISMA NOKTASI (~10 km/h) — bisection');
+    r += '  NOT: Bu STATIK bir referans calisma noktasidir (excess=0 tam dengesi bisection ile).\n';
+    r += '  Kosunun GERCEK motor devri DINAMIK durumdur (KONVERTOR-MOTOR BAGLASIMI devir-izi ve\n';
+    r += '  adim [2] bloklari); dinamik durum tam oturmadigindan ikisi yakin ama birebir olmayabilir.\n\n';
     r += '  Turbin devri: N_turb = ' + ni(LO.N_turbine) + ' rpm  (v=' + n(LO.v_ms, 3) + ' m/s)\n';
     r += '  Bisection: motor devri N icin  hata(N) = (T_net(N)-drop) - N^2/K_pump(SR)^2 = 0\n';
     r += '  Baslangic araligi: [' + ni(bi.N_lo0) + ', ' + ni(bi.N_hi0) + ']  hata=[' + n(bi.f_lo0, 1) + ', ' + n(bi.f_hi0, 1) + ']\n\n';
