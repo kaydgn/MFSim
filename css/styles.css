@@ -3722,7 +3722,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   font-size:10px;
   background:var(--bg-secondary);
   border:1px solid var(--border-color);
-  border-radius:0;
+  border-radius:var(--radius-xs);
   cursor:move;
   opacity:0.5;
   transition:opacity 0.15s;
@@ -3742,7 +3742,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   cursor:se-resize;
   background:var(--text-muted);
   opacity:0.35;
-  border-radius:0;
+  border-radius:var(--radius-xs);
   transition:opacity 0.15s;
   pointer-events:auto;
 }
@@ -3766,7 +3766,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-annotation-edit-input{
   background:var(--bg-input);
   border:1px solid var(--accent-primary);
-  border-radius:0;
+  border-radius:var(--radius-xs);
   padding:2px 4px;
   outline:none;
   font-weight:600;
@@ -3789,7 +3789,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   font-size:14px;
   background:var(--bg-secondary);
   border:1px solid var(--border-hover);
-  border-radius:0;
+  border-radius:var(--radius-sm);
   cursor:pointer;
   opacity:0.55;
   transition:opacity 0.2s, transform 0.15s, box-shadow 0.2s;

@@ -25,7 +25,7 @@ function getECMatchingPropertiesHTML(node) {
   html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
   html += '<tr>';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:55%;">Şanzıman Türbin Torku Limiti [N·m]</th>';
-  html += '<td style="padding:4px 6px; border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="number" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:4px 6px; border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="number" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '</table>';
   html += '<div class="sw-pkg-desc">C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir (Net Turbine Torque limiti).</div>';
@@ -92,7 +92,7 @@ function runECMatchingAnalysis(nodeId) {
   var resultsEl = document.getElementById('ecm-results-' + nodeId);
 
   if(!engineNode || !engineNode.data || !engineNode.data.torqueData || engineNode.data.torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:0; font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     return;
   }
   
@@ -314,7 +314,7 @@ function runECMatchingAnalysis(nodeId) {
     h += '<div class="sw-section-title">Konvertör Uyumluluk Tablosu</div>';
     h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.ecm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.ecm-info-tip\').style.display=\'none\'">';
     h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
-    h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
+    h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:0.65rem;">Kontrol Kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).<br>';
     h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + peakRPM + ' rpm): Konvertör fazında motorun ulaştığı minimum devir. Altına düşerse motor lugging yapar.<br>';
@@ -327,7 +327,7 @@ function runECMatchingAnalysis(nodeId) {
     
     // C9/C10 uyarı bandı (şanzıman seviyesi kontroller)
     if(!c9ok || !c10ok) {
-      h += '<div style="margin-bottom:8px; padding:8px 10px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:0;">';
+      h += '<div style="margin-bottom:8px; padding:8px 10px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:var(--radius-sm);">';
       h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-danger);">❌ Şanzıman Giriş Limiti Aşılıyor</div>';
       h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">';
       if(!c9ok) h += 'C9: Motor gücü (' + powerAtGov.toFixed(0) + ' kW) > Şanzıman giriş güç limiti (' + gbLimits.grossInputPower + ' kW)<br>';
@@ -675,14 +675,14 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
   // Bağlı motoru bul
   var engineNode = findConnectedEngine(nodeId);
   if(!engineNode) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:0; font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
 
   var torqueData = engineNode.data ? (engineNode.data.torqueData || []) : [];
   if(torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:0; font-size:0.65rem; color:var(--accent-warning);">⚠ Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-warning);">⚠ Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
@@ -789,7 +789,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<div class="sw-section-title">Şanzıman Uyumluluk Tablosu</div>';
     h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.egm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.egm-info-tip\').style.display=\'none\'">';
     h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
-    h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
+    h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
     h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:0.65rem;">Kontrol Kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + powerAtGov.toFixed(0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
     h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + torqueAtGov.toFixed(0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
@@ -851,7 +851,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       var shortName = r.name.replace(/^Allison\s*\|\s*/i, '');
       h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';" title="' + statusText + ': ' + r.name + '">';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center;" title="' + statusText + '"><span style="font-size:0.6rem;">' + statusIcon + '</span></td>';
-      h += '<td style="padding:2px 3px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + shortName + calMark + (isSelected ? ' <span style="font-size:0.45rem; background:var(--accent-primary); color:white; padding:0 3px; border-radius:0;">✔</span>' : '') + '</td>';
+      h += '<td style="padding:2px 3px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + shortName + calMark + (isSelected ? ' <span style="font-size:0.45rem; background:var(--accent-primary); color:white; padding:0 3px; border-radius:var(--radius-sm);">✔</span>' : '') + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.gearCount + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? r.grossInputPower : '—') + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? r.grossInputTorque : '—') + '</td>';
@@ -980,7 +980,7 @@ function ecmExpandChart(nodeId) {
 
   // Modal
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:100%; max-width:1100px; height:85vh; max-height:820px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  modal.style.cssText = 'width:100%; max-width:1100px; height:85vh; max-height:820px; background:var(--bg-secondary, #0f1218); border:1px solid var(--border-color, #1c2333); border-radius:var(--radius-lg); display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
 
   // Header
   var header = document.createElement('div');
@@ -992,8 +992,8 @@ function ecmExpandChart(nodeId) {
   // Chart container
   var chartBox = document.createElement('div');
   chartBox.style.cssText = 'flex:1; position:relative; min-height:0; padding:10px;';
-  chartBox.innerHTML = '<canvas id="ecm-modal-canvas" style="width:100%; height:100%; display:block; border-radius:0;"></canvas>' +
-    '<div id="ecm-modal-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary, #151a22); border:1px solid var(--border-light, #222b3a); border-radius:0; padding:8px 12px; font-size:0.65rem; color:var(--text-primary, #c8d1dc); line-height:1.5; box-shadow:0 4px 16px rgba(0,0,0,0.5); z-index:10; max-width:260px; white-space:nowrap;"></div>' +
+  chartBox.innerHTML = '<canvas id="ecm-modal-canvas" style="width:100%; height:100%; display:block; border-radius:var(--radius-sm);"></canvas>' +
+    '<div id="ecm-modal-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary, #151a22); border:1px solid var(--border-light, #222b3a); border-radius:var(--radius-sm); padding:8px 12px; font-size:0.65rem; color:var(--text-primary, #c8d1dc); line-height:1.5; box-shadow:0 4px 16px rgba(0,0,0,0.5); z-index:10; max-width:260px; white-space:nowrap;"></div>' +
     '<div id="ecm-modal-crosshair-v" style="position:absolute; top:0; width:1px; height:100%; background:rgba(255,255,255,0.12); pointer-events:none; display:none; z-index:5;"></div>' +
     '<div id="ecm-modal-crosshair-h" style="position:absolute; left:0; width:100%; height:1px; background:rgba(255,255,255,0.12); pointer-events:none; display:none; z-index:5;"></div>';
   modal.appendChild(chartBox);
@@ -1582,7 +1582,7 @@ function ecmModalMouseMove(e) {
   
   // Motor line
   if(motorT > 0) {
-    var motorHL = nearestIsMotor ? 'background:rgba(245,158,11,0.12); margin:0 -8px; padding:2px 8px; border-radius:0;' : '';
+    var motorHL = nearestIsMotor ? 'background:rgba(245,158,11,0.12); margin:0 -8px; padding:2px 8px; border-radius:var(--radius-sm);' : '';
     html += '<div style="display:flex; align-items:center; gap:6px; padding:2px 0; ' + motorHL + '">';
     html += '<span style="width:16px; height:3px; background:#f59e0b; border-radius:1px; flex-shrink:0;"></span>';
     html += '<span style="color:#f59e0b; font-weight:600; min-width:65px;">Motor</span>';
@@ -1597,7 +1597,7 @@ function ecmModalMouseMove(e) {
     if(shown >= 3) return;
     shown++;
     var isNearest = c === nearest && !nearestIsMotor;
-    var hl = isNearest ? 'background:rgba(255,255,255,0.04); margin:0 -8px; padding:2px 8px; border-radius:0;' : '';
+    var hl = isNearest ? 'background:rgba(255,255,255,0.04); margin:0 -8px; padding:2px 8px; border-radius:var(--radius-sm);' : '';
     html += '<div style="display:flex; align-items:center; gap:6px; padding:2px 0; ' + hl + '">';
     html += '<span style="width:16px; height:3px; background:' + c.color + '; border-radius:1px; flex-shrink:0;"></span>';
     html += '<span style="color:' + c.color + '; font-weight:600; min-width:65px;">' + c.name + '</span>';

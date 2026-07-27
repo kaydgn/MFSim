@@ -14,7 +14,7 @@ function veSolverRunProfessional() {
   overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.72);z-index:100050;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px);';
   
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:780px;max-width:94vw;max-height:58vh;background:var(--bg-primary);border:2px solid var(--border-color);border-radius:0;box-shadow:0 4px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;';
+  modal.style.cssText = 'width:780px;max-width:94vw;max-height:58vh;background:var(--bg-primary);border:2px solid var(--border-color);border-radius:var(--radius-lg);box-shadow:0 4px 32px rgba(0,0,0,0.5);display:flex;flex-direction:column;overflow:hidden;';
   
   // Header — keskin, iç içe pencere
   var header = document.createElement('div');
@@ -40,7 +40,7 @@ function veSolverRunProfessional() {
     '<span id="ve-sp-phase" style="font-size:0.68rem;font-weight:600;color:var(--text-heading);letter-spacing:0.02em;">Başlatılıyor...</span>' +
     '<span id="ve-sp-percent" style="font-size:0.68rem;font-weight:700;color:var(--accent-primary);font-family:Consolas,monospace;">0%</span>' +
   '</div>' +
-  '<div style="width:100%;height:3px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:0;overflow:hidden;">' +
+  '<div style="width:100%;height:3px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;">' +
     '<div id="ve-sp-bar" style="width:0%;height:100%;background:linear-gradient(90deg,#1b6a2a,#35a050);transition:width 0.3s ease;"></div>' +
   '</div>';
   modal.appendChild(progressWrap);
