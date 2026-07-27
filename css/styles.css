@@ -1765,8 +1765,10 @@
   border-radius:2px;
   background:transparent;
   pointer-events:none;
-  /* görünmeyen alanı hafifçe karart (Figma tarzı) — overflow:hidden ile kırpılır */
-  box-shadow:0 0 0 2000px rgba(15,23,42,0.22);
+  /* Görünmeyen alanı hafifçe perdele (Figma tarzı) — overflow:hidden ile
+     kırpılır. Perde rengi temanın zemininden türetilir: sabit koyu lacivert,
+     açık temalarda haritanın üzerine kirli gri bir film gibi biniyordu. */
+  box-shadow:0 0 0 2000px color-mix(in srgb, var(--bg-primary) 35%, transparent);
 }
 .ve-minimap-toggle{
   position:absolute;
@@ -2093,7 +2095,10 @@
   width:65px;
   height:60px;
   background:var(--bg-tertiary);
-  border:2.5px solid #999;
+  /* Kenar, temanın metin nötrlerinden türetilir — koyu temalarda eski #999'a
+     çok yakın kalır; sıcak temalarda (Claude) griye değil sıcak nötre düşer,
+     açık temalarda ise kontrast artar (açık zeminde #999 siliniyordu). */
+  border:2.5px solid color-mix(in srgb, var(--text-secondary) 60%, var(--text-primary));
   border-radius:var(--radius-md);
   box-shadow:var(--shadow-sm);
   display:flex;
@@ -2325,7 +2330,7 @@
   right:-6px;
   width:14px;
   height:14px;
-  background:#f59e0b;
+  background:var(--accent-warning);
   color:#000;
   border-radius:50%;
   font-size:8px;
@@ -3284,7 +3289,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-rslot-btns button:hover{background:var(--bg-input);color:var(--text-primary);}
 .ve-rslot-btns button.btn-close:hover{color:var(--accent-danger);}
 .ve-rslot-btns button.btn-collapse{font-size:0.6rem;font-weight:700;}
-/* Panel 1 başlığına taşınan global kontroller (Data Browser'dan) */
+/* Panel 1 başlığına taşınan global kontroller (Veri Gezgini'nden) */
 .ve-rslot-btns .mf-ico{width:13px;height:13px;}
 .ve-rslot-btns button.btn-slot-clearall:hover{color:var(--accent-danger);}
 .ve-rslot-sep{width:1px;height:14px;background:var(--border-color);margin:0 3px;flex-shrink:0;}
@@ -3494,7 +3499,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;margin:4px;
 }
 .ve-add-panel-btn:hover{background:var(--accent-tint-8);color:var(--accent-primary);border-color:var(--accent-primary);}
-/* Data Browser */
+/* Veri Gezgini */
 .ve-tree-item{}
 .ve-tree-row{
   display:flex;
