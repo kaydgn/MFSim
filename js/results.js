@@ -4388,7 +4388,7 @@ function veSlotShellHTML(slotIdx) {
   h += '<div class="ve-rslot-hdr">';
   h += '<div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-' + slotIdx + '">Panel ' + (slotIdx + 1) + '</span></div>';
   h += '<div class="ve-rslot-btns">';
-  // Panel 1 başlığı: global sonuç kontrolleri (Data Browser'dan taşındı) küçük ikonlar
+  // Panel 1 başlığı: global sonuç kontrolleri (Veri Gezgini'nden taşındı) küçük ikonlar
   if(slotIdx === 0) {
     h += '<button class="btn-slot-layout" onclick="event.stopPropagation();veChangeResultLayout()" title="Panel Düzeni — yerleşimi değiştir"><span class="mf-ico mf-ico-grid-cells"></span></button>';
     h += '<button class="btn-slot-clearall" onclick="event.stopPropagation();veClearAllResults()" title="Sonuçları Temizle — tüm sonuçları sil"><span class="mf-ico mf-ico-trash"></span></button>';
@@ -5079,7 +5079,7 @@ function veRenderSlot(slotIdx) {
   if(sensors.length === 0) {
     var emptyIcon = type === 'line' ? 'trending-up' : (type === 'scatter3d' ? 'package' : 'clipboard');
     var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'scatter3d' ? '3D Scatter Grafik' : 'Veri Tablosu');
-    var emptyHint = type === 'scatter3d' ? 'Data Browser\'dan en az 2 sinyal sürükleyin (X, Y). 3. sinyal Z olur.' : 'Data Browser\'dan sensör sürükleyin';
+    var emptyHint = type === 'scatter3d' ? 'Veri Gezgini\'nden en az 2 sinyal sürükleyin (X, Y). 3. sinyal Z olur.' : 'Veri Gezgini\'nden sensör sürükleyin';
     var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted);">';
     html += '<div style="font-size:2.2rem; margin-bottom:10px;"><span class="mf-ico mf-ico-' + emptyIcon + '"></span></div>';
     html += '<div style="font-size:0.82rem; font-weight:600;">' + emptyName + '</div>';

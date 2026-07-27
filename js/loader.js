@@ -68,7 +68,9 @@
     var pctEl = $(ELS.pct);
     var msg = $(ELS.msg);
     if (bar) bar.style.width = pct + '%';
-    if (pctEl) pctEl.textContent = pct + '%';
+    // Türkçe yüzde biçimi: işaret sayının önünde (%42) — durum çubuğundaki
+    // zoom göstergesiyle (%100) aynı dil.
+    if (pctEl) pctEl.textContent = '%' + pct;
     if (label && msg) msg.textContent = label;
   }
 
