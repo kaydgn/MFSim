@@ -147,7 +147,7 @@ function getSolverPropertiesHTML(node) {
   
   // ===== HESAPLA BUTONU =====
   html += '<div style="margin-top:14px;">';
-  html += '<button onclick="veSolverRunProfessional()" style="width:100%; padding:8px 12px; font-size:0.72rem; font-weight:600; background:linear-gradient(135deg, #1b5e20, #2e7d32); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(27,94,32,0.25); transition:all 0.15s; letter-spacing:0.03em;" onmouseenter="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(27,94,32,0.35)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 6px rgba(27,94,32,0.25)\'">';
+  html += '<button onclick="veSolverRunProfessional()" style="width:100%; padding:8px 12px; font-size:0.72rem; font-weight:600; background:linear-gradient(135deg, color-mix(in srgb, var(--accent-success) 65%, #000), color-mix(in srgb, var(--accent-success) 82%, #000)); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 2px 6px rgba(27,94,32,0.25); transition:all 0.15s; letter-spacing:0.03em;" onmouseenter="this.style.transform=\'translateY(-1px)\';this.style.boxShadow=\'0 4px 12px rgba(27,94,32,0.35)\'" onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'0 2px 6px rgba(27,94,32,0.25)\'">';
   html += '▶ Hesapla';
   html += '</button>';
   html += '</div>';

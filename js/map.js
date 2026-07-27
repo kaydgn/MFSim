@@ -43,8 +43,8 @@ function veExpandRoadMap(nodeId) {
   var toolbar = document.createElement('div');
   toolbar.style.cssText = 'display:flex; align-items:center; gap:5px; padding:6px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;';
 
-  toolbar.innerHTML = '<button onclick="veCalcRouteAndProfiles(\'' + nodeId + '\')" style="' + bs + 'background:#1b5e20;color:white;">🛣️ Rota Hesapla</button>' +
-    '<button onclick="veSearchLocation(\'' + nodeId + '\')" style="' + bs + 'background:#1565c0;color:white;"><span class="mf-ico mf-ico-search"></span> Konum Ara</button>' +
+  toolbar.innerHTML = '<button onclick="veCalcRouteAndProfiles(\'' + nodeId + '\')" style="' + bs + 'background:color-mix(in srgb, var(--accent-success) 65%, #000);color:white;">🛣️ Rota Hesapla</button>' +
+    '<button onclick="veSearchLocation(\'' + nodeId + '\')" style="' + bs + 'background:var(--accent-primary);color:white;"><span class="mf-ico mf-ico-search"></span> Konum Ara</button>' +
     '<button onclick="veClearRoute(\'' + nodeId + '\')" style="' + bs + 'background:var(--accent-danger);color:white;"><span class="mf-ico mf-ico-trash"></span> Temizle</button>' +
     '<span style="flex:1;"></span>' +
     '<span id="ve-map-modal-info" style="font-size:0.6rem; color:var(--text-muted);">Haritaya tıklayarak nokta ekleyin</span>';
@@ -362,7 +362,7 @@ function veSearchLocation(nodeId) {
   var searchDiv = document.createElement('div');
   searchDiv.id = 've-map-search-' + nodeId;
   searchDiv.style.cssText = 'position:absolute; top:8px; left:50px; right:50px; z-index:1000; display:flex; gap:3px;';
-  searchDiv.innerHTML = '<input type="text" placeholder="Konum veya adres ara..." style="flex:1; padding:6px 8px; font-size:0.72rem; border:2px solid #2196f3; border-radius:var(--radius-sm); outline:none; background:white; color:#333; box-shadow:0 2px 8px rgba(0,0,0,0.2);"><button style="padding:6px 10px; background:#2196f3; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:0.68rem; white-space:nowrap;">Ara</button>';
+  searchDiv.innerHTML = '<input type="text" placeholder="Konum veya adres ara..." style="flex:1; padding:6px 8px; font-size:0.72rem; border:2px solid var(--accent-primary); border-radius:var(--radius-sm); outline:none; background:white; color:#333; box-shadow:0 2px 8px rgba(0,0,0,0.2);"><button style="padding:6px 10px; background:#2196f3; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:0.68rem; white-space:nowrap;">Ara</button>';
   container.style.position = 'relative';
   container.appendChild(searchDiv);
   
@@ -2551,7 +2551,7 @@ function veAltReverseDirection(nodeId) {
   // Bilgi kutusundaki başlangıç/bitiş değerlerini güncelle
   var selInfo = document.getElementById('ve-alt-selection-info-' + nodeId);
   if(selInfo) {
-    selInfo.innerHTML = '<span style="color:#1565c0; font-weight:600;">Yön çevrildi</span>';
+    selInfo.innerHTML = '<span style="color:var(--accent-primary); font-weight:600;">Yön çevrildi</span>';
     selInfo.style.fontStyle = 'normal';
   }
 
@@ -2595,8 +2595,8 @@ function veExpandProfileChart(nodeId, chartType) {
     '<option value="2"' + (curSmooth === 2 ? ' selected' : '') + '>SavGol Orta</option>' +
     '<option value="3"' + (curSmooth === 3 ? ' selected' : '') + '>SavGol Güçlü</option>' +
     '</select></div>' +
-    '<button onclick="veUpdateProfilesExpanded(\'' + nodeId + '\')" style="padding:4px 10px; font-size:0.6rem; font-weight:600; background:#1b5e20; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">Güncelle</button>' +
-    '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:0.6rem; font-weight:600; background:#1565c0; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">↔ Yönü çevir</button>' +
+    '<button onclick="veUpdateProfilesExpanded(\'' + nodeId + '\')" style="padding:4px 10px; font-size:0.6rem; font-weight:600; background:color-mix(in srgb, var(--accent-success) 65%, #000); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">Güncelle</button>' +
+    '<button onclick="veAltReverseDirection(\'' + nodeId + '\')" style="padding:4px 10px; font-size:0.6rem; font-weight:600; background:var(--accent-primary); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">↔ Yönü çevir</button>' +
     '<button onclick="veCloseProfileModal()" title="Kapat (ESC)" style="width:28px; height:28px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:0.9rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button></div>';
   modal.appendChild(header);
 
