@@ -765,7 +765,7 @@ function getVETCRowHTML(nodeId, sr, kpump, tau) {
   var etaVal = (sr !== '' && sr !== undefined && tau !== '' && tau !== undefined) ? (parseFloat(sr) * parseFloat(tau) * 100) : '';
   var etaStr = (!isNaN(etaVal) && etaVal !== '') ? etaVal.toFixed(1) : '';
   html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="text" value="' + etaStr + '" readonly style="width:100%; padding:4px; font-size:0.7rem; background:transparent; color:var(--accent-primary); border:1px solid var(--border-color); border-radius:0; text-align:center; cursor:default; font-weight:500;" tabindex="-1"></td>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color); text-align:center;"><button onclick="removeVETCRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:0.6rem; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer;" title="Satırı sil">×</button></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color); text-align:center;"><button onclick="removeVETCRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:0.6rem; background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;" title="Satırı sil">×</button></td>';
   html += '</tr>';
   return html;
 }

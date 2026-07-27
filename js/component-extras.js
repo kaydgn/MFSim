@@ -61,8 +61,8 @@ function getSensorPropertiesHTML(node) {
     html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); font-size:0.65rem; vertical-align:top;">Sinyaller</th>';
     html += '<td style="padding:6px; background:var(--bg-tertiary);">';
     html += '<div style="display:flex; gap:4px; margin-bottom:4px;">';
-    html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', true)" style="flex:1; padding:2px 4px; font-size:0.55rem; background:var(--bg-input); color:var(--accent-success); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">✅ Tümü</button>';
-    html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', false)" style="flex:1; padding:2px 4px; font-size:0.55rem; background:var(--bg-input); color:var(--text-muted); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">⬜ Hiçbiri</button>';
+    html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', true)" style="flex:1; padding:2px 4px; font-size:0.55rem; background:var(--bg-input); color:var(--accent-success); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">✅ Tümü</button>';
+    html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', false)" style="flex:1; padding:2px 4px; font-size:0.55rem; background:var(--bg-input); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">⬜ Hiçbiri</button>';
     html += '</div>';
     availableSignals.forEach(function(sig) {
       var isChecked = selectedSignals.indexOf(sig.id) >= 0;
@@ -79,7 +79,7 @@ function getSensorPropertiesHTML(node) {
     
     // Koparma
     html += '<tr><td colspan="2" style="padding:6px; background:var(--bg-tertiary); text-align:center;">';
-    html += '<button onclick="var sn=nodes.find(function(n){return n.id==\'' + node.id + '\'});if(sn){veDetachSensor(sn);updateAllConnections();showNodeProperties(sn);}" style="padding:4px 12px; font-size:0.6rem; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer;"><span class="mf-ico mf-ico-link"></span> Bağlantıyı Kopar</button>';
+    html += '<button onclick="var sn=nodes.find(function(n){return n.id==\'' + node.id + '\'});if(sn){veDetachSensor(sn);updateAllConnections();showNodeProperties(sn);}" style="padding:4px 12px; font-size:0.6rem; background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;"><span class="mf-ico mf-ico-link"></span> Bağlantıyı Kopar</button>';
     html += '</td></tr>';
   } else {
     // Bağlantı üzerinden bağlı
@@ -138,8 +138,8 @@ function getSensorPropertiesHTML(node) {
       }
       html += '<td style="padding:6px; background:var(--bg-tertiary);">';
       html += '<div style="display:flex; gap:4px; margin-bottom:4px;">';
-      html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', true)" style="flex:1; padding:2px 4px; font-size:0.55rem; background:var(--bg-input); color:var(--accent-success); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">✅ Tümü</button>';
-      html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', false)" style="flex:1; padding:2px 4px; font-size:0.55rem; background:var(--bg-input); color:var(--text-muted); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">⬜ Hiçbiri</button>';
+      html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', true)" style="flex:1; padding:2px 4px; font-size:0.55rem; background:var(--bg-input); color:var(--accent-success); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">✅ Tümü</button>';
+      html += '<button onclick="veToggleAllSensorSignals(\'' + node.id + '\', false)" style="flex:1; padding:2px 4px; font-size:0.55rem; background:var(--bg-input); color:var(--text-muted); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">⬜ Hiçbiri</button>';
       html += '</div>';
       availableSignals.forEach(function(sig) {
         var isChecked = selectedSignals.indexOf(sig.id) >= 0;
@@ -155,7 +155,7 @@ function getSensorPropertiesHTML(node) {
     html += '</td></tr>';
     
     html += '<tr><td colspan="2" style="padding:6px; background:var(--bg-tertiary); text-align:center;">';
-    html += '<button onclick="var sn=nodes.find(function(n){return n.id==\'' + node.id + '\'});if(sn){veDetachSensor(sn);updateAllConnections();showNodeProperties(sn);}" style="padding:4px 12px; font-size:0.6rem; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer;"><span class="mf-ico mf-ico-link"></span> Bağlantıyı Kopar</button>';
+    html += '<button onclick="var sn=nodes.find(function(n){return n.id==\'' + node.id + '\'});if(sn){veDetachSensor(sn);updateAllConnections();showNodeProperties(sn);}" style="padding:4px 12px; font-size:0.6rem; background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;"><span class="mf-ico mf-ico-link"></span> Bağlantıyı Kopar</button>';
     html += '</td></tr>';
   }
   
@@ -442,7 +442,7 @@ function getCoastDownPropertiesHTML(node) {
   html += '<tr id="ve-cd-crr-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (method==='test'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Crr [-]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-cd-crr-' + node.id + '" value="' + crr + '" step="0.001" min="0" placeholder="0.015" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVECoastDownChange(\'' + node.id + '\')"></td></tr>';
   
   // Sihirbaz butonu - sadece test modunda
-  html += '<tr id="ve-cd-wizard-row-' + node.id + '" style="' + (method!=='test'?'display:none;':'') + '"><td colspan="2" style="padding:8px 6px; background:var(--bg-tertiary);"><button onclick="veOpenCoastDownWizard(\'' + node.id + '\')" style="width:100%; padding:8px 10px; font-size:0.72rem; font-weight:600; background:linear-gradient(135deg, var(--accent-primary), #2563eb); color:white; border:none; border-radius:0; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:opacity 0.15s;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'">🧙 Sihirbazı Çalıştır</button></td></tr>';
+  html += '<tr id="ve-cd-wizard-row-' + node.id + '" style="' + (method!=='test'?'display:none;':'') + '"><td colspan="2" style="padding:8px 6px; background:var(--bg-tertiary);"><button onclick="veOpenCoastDownWizard(\'' + node.id + '\')" style="width:100%; padding:8px 10px; font-size:0.72rem; font-weight:600; background:linear-gradient(135deg, var(--accent-primary), #2563eb); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:opacity 0.15s;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'">🧙 Sihirbazı Çalıştır</button></td></tr>';
 
   // Sonuç - sadece test modunda anlamlı
   html += '<tr id="ve-cd-result-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (method!=='test'?'display:none;':'') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Hesaplanan Crr</th><td style="padding:6px; background:var(--bg-tertiary);"><span id="ve-cd-result-' + node.id + '" style="font-weight:600; color:var(--accent-primary);">' + (method==='test' && crr ? crr : '—') + '</span></td></tr>';
@@ -635,7 +635,7 @@ function getObstacleCrossingPropertiesHTML(node) {
   var loadTransferEnabled = node.data.loadTransferAnalysis || false;
   html += '<div class="sw-section-title" style="margin-top:10px;">Parametrik Çalışma</div>';
 
-  html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.66rem; color:var(--text-primary); margin-bottom:6px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
+  html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:0.66rem; color:var(--text-primary); margin-bottom:6px;" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
   html += '<input type="checkbox" id="ve-obs-load-transfer-' + nid + '" ' + (loadTransferEnabled ? 'checked' : '') + ' onchange="onVEObstacleCrossingChange(\'' + nid + '\')" style="accent-color:var(--accent-primary); width:15px; height:15px; cursor:pointer;">';
   html += '<div><div style="font-weight:600;">Yük Transferi Analizi</div><div style="font-size:0.52rem; color:var(--text-muted); margin-top:2px;">Ağırlık merkezi kaymasıyla engel aşma kabiliyetinin parametrik analizi. Sonuçlar TXT raporunda gösterilir.</div></div>';
   html += '</label>';
@@ -750,8 +750,8 @@ function veOpenCoastDownWizard(nodeId) {
     '<div style="font-size:0.72rem; font-weight:700; color:var(--text-heading);">🧙 Coast-Down Test Sihirbazı</div>' +
     '<div style="font-size:0.6rem; color:var(--text-muted);">— Crr & Cd analizi</div></div>' +
     '<div style="display:flex; align-items:center; gap:8px;">' +
-    '<button onclick="cdwLoadExample()" style="padding:3px 10px; font-size:0.65rem; font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-clipboard"></span> Örnek Yükle</button>' +
-    '<button onclick="veCloseCoastDownWizard()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>' +
+    '<button onclick="cdwLoadExample()" style="padding:3px 10px; font-size:0.65rem; font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'"><span class="mf-ico mf-ico-clipboard"></span> Örnek Yükle</button>' +
+    '<button onclick="veCloseCoastDownWizard()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>' +
     '</div>';
   modal.appendChild(header);
 
@@ -795,8 +795,8 @@ function veOpenCoastDownWizard(nodeId) {
     '<div><div style="font-size:0.78rem; font-weight:700; color:var(--text-heading);">📉 Coast-Down Test Verileri</div>' +
     '<div style="font-size:0.62rem; color:var(--text-muted);">Her satır tek bir coast-down testi.</div></div>' +
     '<div style="display:flex; gap:6px;">' +
-    '<button onclick="cdwAddRow()" style="padding:3px 10px; font-size:0.66rem; font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;">+ Satır</button>' +
-    '<button onclick="cdwClearRows()" style="padding:3px 10px; font-size:0.66rem; font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer;"><span class="mf-ico mf-ico-trash"></span> Sil</button>' +
+    '<button onclick="cdwAddRow()" style="padding:3px 10px; font-size:0.66rem; font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">+ Satır</button>' +
+    '<button onclick="cdwClearRows()" style="padding:3px 10px; font-size:0.66rem; font-weight:600; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;"><span class="mf-ico mf-ico-trash"></span> Sil</button>' +
     '</div></div>' +
     '<div style="overflow-x:auto; display:flex; justify-content:center; padding:4px 0;">' +
     '<table style="border-collapse:collapse;">' +
@@ -816,7 +816,7 @@ function veOpenCoastDownWizard(nodeId) {
     '<tbody id="cdw-data-body"></tbody>' +
     '</table></div>' +
     '<div style="display:flex; gap:6px; padding:6px 12px; justify-content:flex-end; border-top:1px solid var(--border-color);">' +
-    '<button onclick="cdwComputeCrr()" style="padding:5px 14px; font-size:0.7rem; font-weight:700; background:#1b5e20; color:white; border:none; border-radius:0; cursor:pointer;">▶ Crr Hesapla</button>' +
+    '<button onclick="cdwComputeCrr()" style="padding:5px 14px; font-size:0.7rem; font-weight:700; background:#1b5e20; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">▶ Crr Hesapla</button>' +
     '</div></div>';
 
   // === Section 3: Özet Sonuçlar ===
@@ -842,7 +842,7 @@ function veOpenCoastDownWizard(nodeId) {
   // === Sonucu Aktar butonu ===
   var applyHtml = '<div style="display:flex; gap:10px; justify-content:flex-end; align-items:center; margin-bottom:8px;">' +
     '<span style="font-size:0.64rem; color:var(--text-muted);">Crr → Tekerlek, CFD Cd → Araç bileşenine aktarılır</span>' +
-    '<button onclick="cdwApplyResults(\'' + nodeId + '\')" style="padding:7px 20px; font-size:0.76rem; font-weight:700; background:#16a34a; color:white; border:none; border-radius:0; cursor:pointer;">✅ Sonuçları Bileşene Aktar</button>' +
+    '<button onclick="cdwApplyResults(\'' + nodeId + '\')" style="padding:7px 20px; font-size:0.76rem; font-weight:700; background:#16a34a; color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">✅ Sonuçları Bileşene Aktar</button>' +
     '</div>';
 
   var footerNote = '<div style="font-size:0.6rem; color:var(--text-muted); border-top:1px dashed var(--border-color); padding-top:8px;">⚠️ Basitleştirilmiş coast-down modeli. Çok düşük hızlar, kısa süreler veya ölçüm hataları sonuçları etkileyebilir.</div>';
@@ -1880,7 +1880,7 @@ function getRoadPropertiesHTML(node) {
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;">';
   html += '<span class="sw-pkg-name"><span class="mf-ico mf-ico-clipboard"></span> Segment Tablosu</span>';
-  html += '<button onclick="veManualSegAdd(\'' + node.id + '\')" title="Segment ekle" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--accent-success); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.9rem; font-weight:700; flex-shrink:0;">+</button>';
+  html += '<button onclick="veManualSegAdd(\'' + node.id + '\')" title="Segment ekle" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--accent-success); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:0.9rem; font-weight:700; flex-shrink:0;">+</button>';
   html += '</div>';
   html += '<div class="sw-pkg-body" style="padding:0;">';
   html += '<div id="ve-road-mseg-table-' + node.id + '">';
@@ -1900,7 +1900,7 @@ function getRoadPropertiesHTML(node) {
 
   // Senaryoya aktar butonu
   html += '<div id="ve-road-mseg-transfer-' + node.id + '" style="' + (manualSegs.length === 0 ? 'display:none;' : '') + 'margin-bottom:10px;">';
-  html += '<button onclick="veManualSegTransfer(\'' + node.id + '\')" style="width:100%; padding:8px 10px; font-size:0.66rem; font-weight:600; background:linear-gradient(135deg, var(--accent-primary), #2563eb); color:white; border:none; border-radius:0; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:opacity 0.15s;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'"><span class="mf-ico mf-ico-upload"></span> Segmentleri Senaryolar Bileşenine Aktar</button>';
+  html += '<button onclick="veManualSegTransfer(\'' + node.id + '\')" style="width:100%; padding:8px 10px; font-size:0.66rem; font-weight:600; background:linear-gradient(135deg, var(--accent-primary), #2563eb); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:opacity 0.15s;" onmouseenter="this.style.opacity=\'0.85\'" onmouseleave="this.style.opacity=\'1\'"><span class="mf-ico mf-ico-upload"></span> Segmentleri Senaryolar Bileşenine Aktar</button>';
   html += '</div>';
 
   // Profil diyagramı (canvas)
@@ -1908,7 +1908,7 @@ function getRoadPropertiesHTML(node) {
   html += '<div class="sw-pkg-card">';
   html += '<div class="sw-pkg-header" style="cursor:default;">';
   html += '<span class="sw-pkg-name"><span class="mf-ico mf-ico-bar-chart"></span> Yol Profili</span>';
-  html += '<button onclick="veManualSegExpandProfile(\'' + node.id + '\')" title="Profili büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
+  html += '<button onclick="veManualSegExpandProfile(\'' + node.id + '\')" title="Profili büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
   html += '</div>';
   html += '<div class="sw-pkg-body" style="padding:6px;">';
   html += '<canvas id="ve-road-mseg-canvas-' + node.id + '" width="380" height="160" style="width:100%; height:160px; border:1px solid var(--border-color); background:var(--bg-secondary);"></canvas>';
@@ -1926,7 +1926,7 @@ function getRoadPropertiesHTML(node) {
   html += '<div class="sw-pkg-card" style="margin-bottom:12px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;">';
   html += '<span class="sw-pkg-name">🗺️ Güzergah Haritası</span>';
-  html += '<button onclick="veExpandRoadMap(\'' + node.id + '\')" title="Haritayı büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
+  html += '<button onclick="veExpandRoadMap(\'' + node.id + '\')" title="Haritayı büyüt" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:0.8rem; color:var(--text-secondary); transition:all 0.12s; flex-shrink:0;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-primary)\'" onmouseout="this.style.background=\'var(--bg-secondary)\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">⛶</button>';
   html += '</div>'; // sw-pkg-header
   html += '<div class="sw-pkg-body">';
   // Harita container
@@ -2011,7 +2011,7 @@ function _veManualSegTableHTML(nodeId, segs) {
     var deltaH = _veManualSegCalcDH(s);
     html += '<td style="padding:2px 3px; text-align:right; border-right:1px solid var(--border-color); color:' + dirColor + '; font-weight:500;">' + deltaH.toFixed(1) + '</td>';
     // Sil
-    html += '<td style="padding:1px 1px; text-align:center;"><button onclick="veManualSegRemove(\'' + nodeId + '\',' + i + ')" title="Sil" style="width:18px; height:18px; display:flex; align-items:center; justify-content:center; background:var(--accent-danger); color:white; border:none; border-radius:0; cursor:pointer; font-size:0.65rem; font-weight:700;">×</button></td>';
+    html += '<td style="padding:1px 1px; text-align:center;"><button onclick="veManualSegRemove(\'' + nodeId + '\',' + i + ')" title="Sil" style="width:18px; height:18px; display:flex; align-items:center; justify-content:center; background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer; font-size:0.65rem; font-weight:700;">×</button></td>';
     html += '</tr>';
   }
   html += '</tbody></table>';
@@ -2183,7 +2183,7 @@ function veManualSegExpandProfile(nodeId) {
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
   header.innerHTML = '<span style="font-size:0.72rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Yol Profili <span style="font-size:0.6rem; font-weight:400; color:var(--text-muted); margin-left:8px;">' + segs.length + ' segment</span></span>' +
-    '<button onclick="veCloseManualProfileModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:0; cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button>';
+    '<button onclick="veCloseManualProfileModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\'">✕</button>';
   modal.appendChild(header);
 
   // Canvas container

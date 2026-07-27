@@ -1016,7 +1016,7 @@
   background:var(--bg-tertiary);
   color:var(--accent-primary);
   border:1px solid var(--accent-primary);
-  border-radius:0;
+  border-radius:var(--radius-sm);
   cursor:pointer;
   outline:none;
   appearance:auto;
@@ -1275,7 +1275,7 @@
   padding:3px 6px;
   background:none;
   border:1px solid transparent;
-  border-radius:0;
+  border-radius:var(--radius-sm);
   color:var(--text-secondary);
   font-size:0.62rem;
   cursor:pointer;
@@ -1480,7 +1480,7 @@
 .ve-pane-header .ve-pane-focus-dot{width:6px;height:6px;border-radius:50%;background:var(--accent-primary);flex-shrink:0;display:none;}
 .ve-split-pane.focused .ve-pane-focus-dot{display:block;}
 .ve-pane-header .ve-pane-close{
-  cursor:pointer;font-size:0.6rem;padding:1px 4px;border-radius:0;color:var(--text-muted);opacity:0.5;transition:all 0.1s;
+  cursor:pointer;font-size:0.6rem;padding:1px 4px;border-radius:var(--radius-xs);color:var(--text-muted);opacity:0.5;transition:all 0.1s;
 }
 .ve-pane-header .ve-pane-close:hover{opacity:1;background:var(--accent-danger);color:white;}
 .ve-split-resizer{
