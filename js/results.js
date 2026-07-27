@@ -5838,30 +5838,68 @@ function veUpdateBoundary() {
 
 }
 
-// Toast bildirimi göster (sağdan gelen)
+// Toast bildirimi göster (sağ üstte yığılır)
+// Aynı anda en fazla VE_TOAST_MAX bildirim durur; yenisi gelince en eskisi
+// düşer. Eskiden yeni bildirim öncekini SİLİYORDU — arka arkaya iki işlemde
+// ilkinin sonucu hiç okunamıyordu.
+var VE_TOAST_MAX = 3;
+
+function _veToastStack() {
+  var stack = document.querySelector('.ve-toast-stack');
+  if(!stack) {
+    stack = document.createElement('div');
+    stack.className = 've-toast-stack';
+    // Ekran okuyucular bildirimi kesintiye uğratmadan duyursun
+    stack.setAttribute('role', 'status');
+    stack.setAttribute('aria-live', 'polite');
+    document.body.appendChild(stack);
+  }
+  return stack;
+}
+
+function _veToastDismiss(toast) {
+  if(!toast || toast._veDismissed) return;
+  toast._veDismissed = true;
+  toast.classList.remove('show');
+  setTimeout(function() { toast.remove(); }, 300);
+}
+
 function showToast(message, type) {
-  var existing = document.querySelector('.ve-toast');
-  if(existing) existing.remove();
-  
+  var stack = _veToastStack();
+
+  // Kuyruk dolduysa en eskisini düşür. Kapanmakta olanlar (fade-out için
+  // 300ms DOM'da kalır) sayılmaz — yoksa sayım şişip yaşayanları düşürürdü.
+  var live = Array.prototype.filter.call(
+    stack.querySelectorAll('.ve-toast'),
+    function(t) { return !t._veDismissed; }
+  );
+  for(var i = 0; i <= live.length - VE_TOAST_MAX; i++) _veToastDismiss(live[i]);
+
   var toast = document.createElement('div');
   toast.className = 've-toast';
-  if(type === 'warning') toast.classList.add('warning');
-  if(type === 'error') toast.classList.add('error');
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  
+  if(type === 'warning' || type === 'error' || type === 'info') toast.classList.add(type);
+
+  var icon = document.createElement('span');
+  icon.className = 've-toast-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = (type === 'error') ? '!' : (type === 'warning') ? '!' : (type === 'info') ? 'i' : '✓';
+
+  var text = document.createElement('span');
+  text.textContent = message;
+
+  toast.appendChild(icon);
+  toast.appendChild(text);
+  // Tıklayınca hemen kapansın — üst üste binen bildirimleri elle temizleme
+  toast.addEventListener('click', function() { _veToastDismiss(toast); });
+  stack.appendChild(toast);
+
   // Göster
   setTimeout(function() {
     toast.classList.add('show');
   }, 10);
-  
+
   // 2.5 saniye sonra gizle
-  setTimeout(function() {
-    toast.classList.remove('show');
-    setTimeout(function() {
-      toast.remove();
-    }, 300);
-  }, 2500);
+  setTimeout(function() { _veToastDismiss(toast); }, 2500);
 }
 
 // Onay gerektiren toast bildirimi

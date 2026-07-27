@@ -1,7 +1,14 @@
     /* ========== TEMA DEĞİŞKENLERİ ========== */
     
+    /* Her tema bloğu `color-scheme` de bildirir: tarayıcının kendi çizdiği
+       kontroller (select açılır listesi, sayı girdisi okları, onay kutusu,
+       kaydırma çubuğu, otomatik-doldurma) temanın aydınlığına uysun.
+       Bildirilmezse Chromium hepsini AÇIK çizer — koyu temada koyu bir
+       <select>'e tıklayınca bembeyaz bir liste açılıyordu. */
+
     /* Varsayılan Tema: Koyu Gece (Slate) */
     :root, [data-theme="slate"] {
+      color-scheme: dark;
       --bg-primary: #0a0c10;
       --bg-secondary: #0f1218;
       --bg-tertiary: #151a22;
@@ -22,6 +29,7 @@
     
     /* Tema: Karbon */
     [data-theme="cream"] {
+      color-scheme: dark;
       --bg-primary: #161616;
       --bg-secondary: #1c1c1c;
       --bg-tertiary: #222222;
@@ -42,6 +50,7 @@
     
     /* Tema: Pearl — Notion/Apple tarzı inci beyaz */
     [data-theme="pearl"] {
+      color-scheme: light;
       --bg-primary: #fafbfc;
       --bg-secondary: #ffffff;
       --bg-tertiary: #f0f1f3;
@@ -62,6 +71,7 @@
 
     /* Tema: Steel — CAD/mühendislik tarzı çelik gri */
     [data-theme="steel"] {
+      color-scheme: light;
       --bg-primary: #e4e7ec;
       --bg-secondary: #edf0f5;
       --bg-tertiary: #d8dce4;
@@ -82,6 +92,7 @@
 
     /* Tema: Claude — Claude Code koyu sıcak kahve */
     [data-theme="claude"] {
+      color-scheme: dark;
       --bg-primary: #2b2520;
       --bg-secondary: #231e1a;
       --bg-tertiary: #342e28;
@@ -102,6 +113,7 @@
 
     /* Tema: ANSYS — Koyu mavi-gri mühendislik, altın aksan */
     [data-theme="ansys"] {
+      color-scheme: dark;
       --bg-primary: #1a2632;
       --bg-secondary: #213140;
       --bg-tertiary: #2a3d4f;
@@ -122,6 +134,7 @@
 
     /* Tema: Fusion 360 — Autodesk koyu kömür, camgöbeği aksan */
     [data-theme="fusion"] {
+      color-scheme: dark;
       --bg-primary: #2b2e32;
       --bg-secondary: #33373c;
       --bg-tertiary: #3c4147;
@@ -142,6 +155,7 @@
 
     /* Tema: VS Code Dark+ — Klasik editör koyusu, mavi aksan */
     [data-theme="vscode"] {
+      color-scheme: dark;
       --bg-primary: #1e1e1e;
       --bg-secondary: #252526;
       --bg-tertiary: #2d2d2d;
@@ -162,6 +176,7 @@
 
     /* Tema: SolidWorks — Açık mavi-gri, SolidWorks kırmızı aksan */
     [data-theme="solidworks"] {
+      color-scheme: light;
       --bg-primary: #e9eef3;
       --bg-secondary: #f2f5f8;
       --bg-tertiary: #dde4ec;
@@ -182,6 +197,7 @@
 
     /* Tema: Donanma Mavisi — Derin lacivert deniz gecesi, sırma altını aksan */
     [data-theme="navy"] {
+      color-scheme: dark;
       --bg-primary: #0a1728;
       --bg-secondary: #0f2237;
       --bg-tertiary: #17324f;
@@ -253,6 +269,22 @@
 
       /* Odak halkası — erişilebilirlik + profesyonel his (aktif accent'e uyar) */
       --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent-primary) 35%, transparent);
+
+      /* Aksan tonları — hover/seçim/sürükle vurgularının ortak dili.
+         Daha önce bu vurgular sabit `rgba(59,130,246,…)` maviydi; aksanı
+         turuncu (Carbon/Claude), altın (ANSYS/Donanma) veya kırmızı
+         (SolidWorks) olan temalarda mavi lekeler olarak kalıyordu. Aktif
+         aksandan türetince 10 temanın tümü tek renk dilini konuşur. */
+      --accent-tint-6:  color-mix(in srgb, var(--accent-primary)  6%, transparent);
+      --accent-tint-8:  color-mix(in srgb, var(--accent-primary)  8%, transparent);
+      --accent-tint-10: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+      --accent-tint-15: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+      --accent-tint-20: color-mix(in srgb, var(--accent-primary) 20%, transparent);
+      --accent-tint-22: color-mix(in srgb, var(--accent-primary) 22%, transparent);
+      --accent-tint-35: color-mix(in srgb, var(--accent-primary) 35%, transparent);
+      --accent-tint-60: color-mix(in srgb, var(--accent-primary) 60%, transparent);
+      /* Seçili öğe halkası — düğüm kutusu, sonuç paneli, kart */
+      --accent-glow: 0 0 0 3px var(--accent-tint-35);
     }
 
     /* Tema Seçici Stilleri */
@@ -501,6 +533,9 @@
       margin-bottom: 8px;
     }
     .ve-settings-theme-grid .ve-theme-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
       background: var(--bg-tertiary);
       border: 1px solid var(--border-color);
       border-radius: var(--radius-sm);
@@ -508,7 +543,7 @@
       font-family: inherit;
       font-size: 0.75rem;
       color: var(--text-primary);
-      padding: 9px 10px 9px 28px;
+      padding: 8px 10px 8px 26px;
       cursor: pointer;
     }
     .ve-settings-theme-grid .ve-theme-menu-item:hover {
@@ -519,6 +554,25 @@
     .ve-settings-theme-grid .ve-theme-menu-item.active {
       border-color: var(--accent-primary);
     }
+
+    /* Tema önizleme pulu — her seçeneğin yanında o temanın gerçek zemin /
+       yüzey / aksan renkleri. İsim listesi hangi temanın ne olduğunu
+       anlatmıyordu; palet, seçmeden önce görünsün. */
+    .ve-theme-swatch {
+      flex-shrink: 0;
+      display: flex;
+      width: 34px;
+      height: 20px;
+      border-radius: var(--radius-xs);
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    .ve-theme-swatch i { display: block; height: 100%; }
+    .ve-theme-swatch i:nth-child(1) { width: 44%; }
+    .ve-theme-swatch i:nth-child(2) { width: 30%; }
+    .ve-theme-swatch i:nth-child(3) { width: 26%; }
+    .ve-theme-swatch-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
     /* ===== LOGIN EKRANI ===== */
     .mfsim-login-overlay{
@@ -714,13 +768,18 @@
     ::-webkit-scrollbar-track {
       background: var(--bg-secondary);
     }
+    /* Yuvarlatılmış, zeminden ayrılan başparmak — uygulamanın geri kalanındaki
+       köşe diliyle (--radius-*) aynı. Köşesiz blok, yuvarlatılmış panellerin
+       içinde yamalı duruyordu. */
     ::-webkit-scrollbar-thumb {
-      background: var(--border-color);
-      border-radius: 0;
+      background: var(--border-hover);
+      border-radius: var(--radius-pill);
       border: 2px solid var(--bg-secondary);
+      background-clip: padding-box;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: var(--border-hover);
+      background: var(--text-muted);
+      background-clip: padding-box;
     }
     ::-webkit-scrollbar-corner {
       background: var(--bg-secondary);
@@ -728,7 +787,7 @@
     /* Firefox */
     * {
       scrollbar-width: thin;
-      scrollbar-color: var(--border-color) var(--bg-secondary);
+      scrollbar-color: var(--border-hover) var(--bg-secondary);
     }
 
     body {
@@ -2187,15 +2246,15 @@
 
 .ve-node[data-type="parametric"] .ve-node-box{
   border:2.5px solid var(--accent-primary, #3b82f6);
-  background:rgba(59,130,246,0.06);
+  background:var(--accent-tint-6);
 }
 .ve-node[data-type="parametric"] .ve-node-label{
   color:var(--accent-primary, #3b82f6);
   font-weight:600;
 }
 .ve-node[data-type="parametric"]:hover .ve-node-box{
-  border-color:#2563eb;
-  box-shadow:0 0 12px rgba(59,130,246,0.35);
+  border-color:var(--accent-primary);
+  box-shadow:0 0 12px var(--accent-tint-35);
 }
 
 .ve-node:hover .ve-node-box{
@@ -2205,7 +2264,7 @@
 
 .ve-node.selected .ve-node-box{
   border-color:var(--accent-primary);
-  box-shadow:0 0 0 3px rgba(59,130,246,0.3);
+  box-shadow:var(--accent-glow);
 }
 
 /* Yeni bileşen canvas'a eklenince yaylanarak belirir (drop-in) — yalnızca
@@ -2235,11 +2294,28 @@
   white-space:nowrap;
   overflow:visible;
   pointer-events:none;
+  transition:transform var(--dur-fast) var(--ease-out);
 }
 /* Etiket konumu — sağ-tık menüsüyle taşınır (node.data.labelPos). Varsayılan alt. */
 .ve-node-label.lbl-top{ top:auto; bottom:100%; margin-top:0; margin-bottom:4px; }
 .ve-node-label.lbl-left{ top:50%; left:auto; right:100%; transform:translateY(-50%); margin-top:0; margin-right:7px; text-align:right; }
 .ve-node-label.lbl-right{ top:50%; left:100%; right:auto; transform:translateY(-50%); margin-top:0; margin-left:7px; text-align:left; }
+
+/* Seçiliyken etiket, tutamak bandının dışına kayar.
+   Tutamaklar düğüm kenarından 10px dışarıda ve 10px boyunda (node-resize.js:
+   offset=10, handleSize=10) → dış sınırları kenardan 15px. Etiket ise 4px
+   sonra başlıyordu; seçili her düğümde ad, alt tutamakların ARKASINDA kalıyor
+   ve okunmuyordu. 12px'lik kayma bandı temizler; seçim kalkınca geri döner. */
+.ve-node.selected .ve-node-label{ transform:translateX(-50%) translateY(12px); }
+.ve-node.selected .ve-node-label.lbl-top{ transform:translateX(-50%) translateY(-12px); }
+.ve-node.selected .ve-node-label.lbl-left{ transform:translateY(-50%) translateX(-12px); }
+.ve-node.selected .ve-node-label.lbl-right{ transform:translateY(-50%) translateX(12px); }
+/* Tutamağı olmayan düğümlerde (sensör, sihirbaz) kaydıracak bir şey yok */
+.ve-node[data-type="sensor"].selected .ve-node-label,
+.ve-node[data-type="sensor-wizard"].selected .ve-node-label{ transform:translateX(-50%); }
+@media (prefers-reduced-motion: reduce){
+  .ve-node-label{ transition:none; }
+}
 /* Şasi metaforu: takoz modülü düğümlerinde port kareleri gizli — bağlantı, düğümden
    şasi çerçevesine giden yay ile temsil edilir (cp-mount.js veMntDecorateConnections). */
 .ve-node[data-type^="mnt-"] .ve-node-port{ display:none; }
@@ -2291,21 +2367,35 @@
   background:var(--accent-warning);
 }
 
-/* Resize handles - bileşen dışında */
+/* Resize handles - bileşen dışında.
+   Ölçü (10px) ve konum JS'te (node-resize.js updateNodeHandles) hesaplanır —
+   burada yalnız görünüm var. Eskiden sabit hardal (#d4a017/#8b6914) kareydi:
+   paletin dışında kalıyor, altın aksanlı temalarda (ANSYS/Donanma) düğüm
+   kenarından ayırt edilemiyordu. Artık aktif aksan + zıt bir halka ile hem
+   koyu hem açık zeminde okunur. */
 .ve-resize-handle{
   position:absolute;
   width:10px;
   height:10px;
-  background:#d4a017;
-  border:1px solid #8b6914;
+  box-sizing:border-box;
+  background:var(--accent-primary);
+  border:1px solid var(--bg-secondary);
+  border-radius:var(--radius-xs);
+  box-shadow:0 0 0 1px var(--accent-primary), var(--shadow-sm);
   opacity:0;
-  transition:opacity 0.15s;
+  transition:opacity var(--dur-fast) var(--ease-out),
+             transform var(--dur-fast) var(--ease-out);
   z-index:20;
   pointer-events:auto;
 }
 
 .ve-node.selected .ve-resize-handle{
   opacity:1;
+}
+
+/* Tutamağın üstüne gelince hafifçe büyür — tıklanabilir olduğu belli olur */
+.ve-resize-handle:hover{
+  transform:scale(1.25);
 }
 
 /* Köşe ve kenar handle'ları - pozisyonlar JS ile ayarlanacak */
@@ -2318,10 +2408,13 @@
 .ve-resize-e{ cursor:e-resize; }
 .ve-resize-w{ cursor:w-resize; }
 
-/* Seçili node'da dış çerçeve - sadece seçili olduğunda görünür */
+/* Seçili node'da dış çerçeve - sadece seçili olduğunda görünür.
+   Sabit gri (#888) yerine aksandan türetilmiş ton: tutamaklar, halka ve
+   çerçeve tek renkte konuşur; açık temalarda da soluklaşmaz. */
 .ve-selection-border{
   position:absolute;
-  border:1px dashed #888;
+  border:1px dashed color-mix(in srgb, var(--accent-primary) 55%, var(--text-muted));
+  border-radius:var(--radius-sm);
   pointer-events:none;
   z-index:15;
   display:none;
@@ -2426,7 +2519,7 @@
 .ve-selection-box{
   position:absolute;
   border:2px dashed var(--accent-primary);
-  background:rgba(59,130,246,0.1);
+  background:var(--accent-tint-10);
   pointer-events:none;
   z-index:1000;
   display:none;
@@ -2462,58 +2555,110 @@
   border-left-color:#4ecdc4;
 }
 
-/* Toast bildirimi - sağdan gelen */
-.ve-toast{
+/* ── Toast bildirimi — sağ üstte yığılan serbest kart ──────────────────────
+   Önce ekranın sağ kenarına YAPIŞIK, köşesiz bir şeritti (right:0, radius:0,
+   border-right:none): pencere kenarından kesilmiş görünüyor, açık temalarda
+   beyaz tuvale karışıyordu. Ayrıca yeni bildirim eskisini siliyordu — arka
+   arkaya iki işlem yapınca ilkinin sonucu hiç okunamıyordu.
+   Şimdi: kenardan boşluklu, yuvarlatılmış, tam çerçeveli kart + üst üste
+   yığılan kuyruk (aşağıdaki .ve-toast-stack). */
+.ve-toast-stack{
   position:fixed;
-  top:80px;
-  right:-350px;
+  top:56px;
+  right:16px;
+  z-index:10000;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:8px;
+  pointer-events:none;   /* tuvale tıklamayı engellemesin */
+}
+
+.ve-toast{
+  pointer-events:auto;
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
   background:var(--bg-secondary);
   color:var(--text-primary);
-  padding:12px 20px;
-  border-radius:0;
-  font-size:0.85rem;
-  z-index:10000;
-  transition:right 0.3s ease;
-  max-width:320px;
-  box-shadow:-4px 4px 12px var(--shadow-color);
+  padding:11px 15px;
+  border-radius:var(--radius-md);
+  font-size:0.8rem;
+  line-height:var(--leading-normal);
+  max-width:340px;
+  box-shadow:var(--shadow-lg);
   border:1px solid var(--border-color);
-  border-left:4px solid var(--accent-success);
-  border-right:none;
+  border-left:3px solid var(--accent-success);
+  opacity:0;
+  transform:translateX(24px);
+  transition:opacity var(--dur-base) var(--ease-out),
+             transform var(--dur-base) var(--ease-out);
 }
 
 .ve-toast.show{
-  right:0;
+  opacity:1;
+  transform:translateX(0);
 }
 
-.ve-toast.warning{
-  border-left-color:var(--accent-warning);
+/* Tür göstergesi — kenarlık rengiyle aynı dili konuşan yuvarlak simge */
+.ve-toast-icon{
+  flex-shrink:0;
+  width:16px;
+  height:16px;
+  margin-top:1px;
+  border-radius:var(--radius-pill);
+  background:var(--accent-success);
+  color:var(--bg-secondary);
+  font-size:11px;
+  font-weight:700;
+  line-height:16px;
+  text-align:center;
 }
 
-.ve-toast.error{
-  border-left-color:var(--accent-danger);
+.ve-toast.warning{ border-left-color:var(--accent-warning); }
+.ve-toast.warning .ve-toast-icon{ background:var(--accent-warning); }
+
+.ve-toast.error{ border-left-color:var(--accent-danger); }
+.ve-toast.error .ve-toast-icon{ background:var(--accent-danger); }
+
+.ve-toast.info{ border-left-color:var(--accent-primary); }
+.ve-toast.info .ve-toast-icon{ background:var(--accent-primary); }
+
+@media (prefers-reduced-motion: reduce){
+  .ve-toast{ transition:opacity var(--dur-fast) linear; transform:none; }
+  .ve-toast.show{ transform:none; }
 }
 
-/* Onay gerektiren toast */
+/* Onay gerektiren toast — bilgi toast'ıyla aynı kart dili (kenardan boşluklu,
+   yuvarlatılmış, tam çerçeveli); yalnız daha yüksek katmanda durur. */
 .ve-toast-confirm{
   position:fixed;
-  top:80px;
-  right:-400px;
+  top:56px;
+  right:16px;
   background:var(--bg-secondary);
   color:var(--text-primary);
-  padding:16px 20px;
-  border-radius:0;
-  font-size:0.85rem;
+  padding:15px 18px;
+  border-radius:var(--radius-md);
+  font-size:0.82rem;
   z-index:10001;
-  transition:right 0.3s ease;
-  max-width:350px;
-  box-shadow:-4px 4px 16px var(--shadow-color);
+  max-width:360px;
+  box-shadow:var(--shadow-xl);
   border:1px solid var(--border-color);
-  border-left:4px solid var(--accent-danger);
-  border-right:none;
+  border-left:3px solid var(--accent-danger);
+  opacity:0;
+  transform:translateX(24px);
+  transition:opacity var(--dur-base) var(--ease-out),
+             transform var(--dur-base) var(--ease-out);
 }
 
 .ve-toast-confirm.show{
-  right:0;
+  opacity:1;
+  transform:translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce){
+  .ve-toast-confirm{ transition:opacity var(--dur-fast) linear; transform:none; }
+  .ve-toast-confirm.show{ transform:none; }
 }
 
 .ve-toast-confirm-message{
@@ -2530,10 +2675,10 @@
 .ve-toast-confirm-btn{
   padding:6px 16px;
   border:none;
-  border-radius:0;
+  border-radius:var(--radius-sm);
   font-size:0.8rem;
   cursor:pointer;
-  transition:background 0.2s, opacity 0.2s;
+  transition:background var(--dur-base) var(--ease-out), opacity var(--dur-base) var(--ease-out);
 }
 
 .ve-toast-confirm-btn.cancel{
@@ -3115,8 +3260,8 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-rslot.collapsed{flex:0 0 28px !important;overflow:hidden;}
 .ve-rslot.collapsed .ve-rslot-body{display:none;}
 .ve-rslot.collapsed .ve-rslot-hdr{border-bottom:none;}
-.ve-rslot.drag-over .ve-rslot-body{background:rgba(59,130,246,0.06);}
-.ve-rslot.drag-over{border-color:var(--accent-primary);box-shadow:inset 0 0 0 2px rgba(59,130,246,0.2);}
+.ve-rslot.drag-over .ve-rslot-body{background:var(--accent-tint-6);}
+.ve-rslot.drag-over{border-color:var(--accent-primary);box-shadow:inset 0 0 0 2px var(--accent-tint-20);}
 .ve-rslot-hdr{
   display:flex;align-items:center;justify-content:space-between;
   padding:0 2px 0 6px;min-height:28px;height:28px;
@@ -3154,7 +3299,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   padding:14px 6px;border-radius:var(--radius-sm);cursor:pointer;
   transition:all 0.15s;border:1px solid transparent;
 }
-.ve-slot-pick-item:hover{background:rgba(59,130,246,0.08);border-color:var(--accent-primary);transform:translateY(-1px);}
+.ve-slot-pick-item:hover{background:var(--accent-tint-8);border-color:var(--accent-primary);transform:translateY(-1px);}
 .ve-slot-pick-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;}
 .ve-slot-pick-label{font-size:0.72rem;color:var(--text-secondary);text-align:center;line-height:1.2;}
 
@@ -3182,17 +3327,17 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   background:var(--bg-secondary);cursor:pointer;transition:transform 0.15s,border-color 0.15s,background 0.15s,box-shadow 0.15s;
 }
 .ve-layout-card:hover,.ve-layout-card:focus-visible{
-  border-color:var(--accent-primary);background:rgba(59,130,246,0.06);
+  border-color:var(--accent-primary);background:var(--accent-tint-6);
   transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.14);outline:none;
 }
 .ve-layout-preview{
   width:100%;height:80px;display:flex;align-items:center;justify-content:center;padding:2px;
 }
 .ve-layout-preview svg rect{
-  fill:rgba(59,130,246,0.10);stroke:var(--accent-primary);stroke-width:2;transition:fill 0.15s;
+  fill:var(--accent-tint-10);stroke:var(--accent-primary);stroke-width:2;transition:fill 0.15s;
 }
 .ve-layout-card:hover .ve-layout-preview svg rect,
-.ve-layout-card:focus-visible .ve-layout-preview svg rect{fill:rgba(59,130,246,0.22);}
+.ve-layout-card:focus-visible .ve-layout-preview svg rect{fill:var(--accent-tint-22);}
 .ve-layout-card-label{font-size:0.86rem;font-weight:700;color:var(--text-heading);}
 .ve-layout-card-desc{font-size:0.68rem;color:var(--text-muted);text-align:center;line-height:1.25;}
 @media (prefers-reduced-motion: reduce){
@@ -3337,9 +3482,9 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   padding:4px 10px;text-align:right;border-bottom:1px solid rgba(128,128,128,0.08);
   transition:background 0.08s;
 }
-.ve-result-table tbody tr:hover td{background:rgba(59,130,246,0.06);}
+.ve-result-table tbody tr:hover td{background:var(--accent-tint-6);}
 .ve-result-table tbody tr:nth-child(even) td{background:rgba(128,128,128,0.02);}
-.ve-result-table tbody tr:hover td{background:rgba(59,130,246,0.08) !important;}
+.ve-result-table tbody tr:hover td{background:var(--accent-tint-8) !important;}
 .ve-result-table td:first-child{text-align:center;color:var(--text-muted);font-size:0.62rem;}
 /* Panel add button */
 .ve-add-panel-btn{
@@ -3348,7 +3493,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   background:transparent;color:var(--text-muted);border:1px dashed var(--border-color);
   border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;margin:4px;
 }
-.ve-add-panel-btn:hover{background:rgba(59,130,246,0.08);color:var(--accent-primary);border-color:var(--accent-primary);}
+.ve-add-panel-btn:hover{background:var(--accent-tint-8);color:var(--accent-primary);border-color:var(--accent-primary);}
 /* Data Browser */
 .ve-tree-item{}
 .ve-tree-row{
@@ -3361,9 +3506,9 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   border-radius:var(--radius-sm);
   margin:0 4px;
 }
-.ve-tree-row:hover{background:rgba(59,130,246,0.08);}
+.ve-tree-row:hover{background:var(--accent-tint-8);}
 .ve-tree-row .arrow{width:14px;text-align:center;font-size:0.68rem;color:var(--text-muted);flex-shrink:0;cursor:pointer;padding:2px;border-radius:var(--radius-xs);}
-.ve-tree-row .arrow:hover{background:rgba(59,130,246,0.15);color:var(--text-primary);}
+.ve-tree-row .arrow:hover{background:var(--accent-tint-15);color:var(--text-primary);}
 .ve-tree-row .icon{width:16px;text-align:center;flex-shrink:0;font-size:0.78rem;}
 .ve-tree-children{display:none;margin-left:10px;}
 .ve-tree-children.open{display:block;}
@@ -3390,10 +3535,10 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   gap:4px;
   border-radius:var(--radius-sm);
   margin:0 4px;
-  color:#3b82f6;
+  color:var(--accent-primary);
   font-weight:500;
 }
-.ve-tree-signal:hover{background:rgba(59,130,246,0.1);}
+.ve-tree-signal:hover{background:var(--accent-tint-10);}
 .ve-tree-signal:active{cursor:grabbing;opacity:0.6;}
 
 /* Solver Tab Bar */
@@ -3483,7 +3628,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-result-table td{padding:5px 10px;border:1px solid var(--border-color);font-weight:500;}
 .ve-result-table tbody tr:nth-child(even){background:var(--bg-secondary);}
 .ve-result-table tbody tr:nth-child(odd){background:var(--bg-primary);}
-.ve-result-table tbody tr:hover{background:rgba(59,130,246,0.06)!important;}
+.ve-result-table tbody tr:hover{background:var(--accent-tint-6)!important;}
   font-weight:700;
   color:var(--text-heading);
 }
@@ -3825,8 +3970,8 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   animation: deployPulse 1.2s ease-in-out infinite;
 }
 .ve-deploy-update-available {
-  background:#3b82f6;
-  box-shadow:0 0 8px rgba(59,130,246,0.6);
+  background:var(--accent-primary);
+  box-shadow:0 0 8px var(--accent-tint-60);
   animation: deployPulse 1.8s ease-in-out infinite;
 }
 .ve-deploy-error {
