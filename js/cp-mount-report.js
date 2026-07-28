@@ -604,7 +604,7 @@ function _mntRepStep4Torque(R){
 function _mntRepLoadCaseMatrix(R){
   var mounts=R.mounts||[];
   var h='<h3>8.5 Adım 5 — Yük durumu özeti (düşey çökme δ_z)</h3>';
-  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> çökme özeti. Her hücre takozun δ_z\'si [mm]; <b>çekme / lift-off</b> mor çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç-eksen (δ_x/δ_y/δ_z) ayrıntı için §8.6.</p>';
+  h+='<p>Otomatik yük durumlarının tamamı (yerçekimi + g-tabanlı manevralar + tahrik torku) için <b>düşey</b> çökme özeti. Her hücre takozun δ_z\'si [mm]; <b>çekme / lift-off</b> amber çerçeveyle, <b>±10 mm aşımı</b> altı çizgiyle işaretlidir. Üç-eksen (δ_x/δ_y/δ_z) ayrıntı için §8.6.</p>';
   h+='<table><caption>Tablo '+_rTbl()+' — Yük durumu × takoz düşey sehim matrisi [mm]</caption>';
   h+='<tr><th>Yük durumu</th>';
   mounts.forEach(function(m){ h+='<th title="'+_rEsc(m.name)+'">'+_rEsc(_mntRepShort(m.name,8))+'</th>'; });
@@ -614,7 +614,7 @@ function _mntRepLoadCaseMatrix(R){
     if(!rc.res){ h+='<td colspan="'+(mounts.length+1)+'" class="c">— (K tekil / çözülemedi)</td></tr>'; return; }
     rc.res.perMount.forEach(function(pm){
       var dz=pm.delta[2]*1000, st='';
-      if(pm.tension) st+='outline:2px solid #a855f7; outline-offset:-2px;';
+      if(pm.tension) st+='outline:2px solid var(--warn); outline-offset:-2px; background:var(--warn-soft);';
       if(pm.overLinear) st+='text-decoration:underline;';
       h+='<td'+(st?' style="'+st+'"':'')+'>'+_rFs(dz,2)+'</td>';
     });
