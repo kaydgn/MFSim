@@ -1399,8 +1399,8 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
     ctx.lineTo(toX(linePoints[linePoints.length - 1].x), zeroY);
     ctx.closePath();
     var gradPos = ctx.createLinearGradient(0, padT, 0, padT + plotH);
-    gradPos.addColorStop(0, 'rgba(76,175,80,0.35)');
-    gradPos.addColorStop(1, 'rgba(76,175,80,0.03)');
+    gradPos.addColorStop(0, veThemeRgba('--accent-success', 0.35, 'rgba(76,175,80,0.35)'));
+    gradPos.addColorStop(1, veThemeRgba('--accent-success', 0.03, 'rgba(76,175,80,0.03)'));
     ctx.fillStyle = gradPos;
     ctx.fill();
 
@@ -1415,8 +1415,8 @@ function veRenderDistGradeProfile(canvasId, segments, nodeId) {
     ctx.lineTo(toX(linePoints[linePoints.length - 1].x), zeroY);
     ctx.closePath();
     var gradNeg = ctx.createLinearGradient(0, padT, 0, padT + plotH);
-    gradNeg.addColorStop(0, 'rgba(239,83,80,0.03)');
-    gradNeg.addColorStop(1, 'rgba(239,83,80,0.35)');
+    gradNeg.addColorStop(0, veThemeRgba('--accent-danger', 0.03, 'rgba(239,83,80,0.03)'));
+    gradNeg.addColorStop(1, veThemeRgba('--accent-danger', 0.35, 'rgba(239,83,80,0.35)'));
     ctx.fillStyle = gradNeg;
     ctx.fill();
   }

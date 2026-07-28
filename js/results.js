@@ -1401,7 +1401,7 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
-    ctx.fillStyle = 'rgba(59,130,246,0.8)'; ctx.font = '600 10px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = veThemeRgba('--accent-primary', 0.8, 'rgba(59,130,246,0.8)'); ctx.font = '600 10px Segoe UI, sans-serif'; ctx.textAlign = 'right';
     ctx.fillText('' + zs.toFixed(1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
   }
   
@@ -1560,7 +1560,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
   
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
-    ctx.fillStyle = 'rgba(59,130,246,0.8)'; ctx.font = '600 10px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = veThemeRgba('--accent-primary', 0.8, 'rgba(59,130,246,0.8)'); ctx.font = '600 10px Segoe UI, sans-serif'; ctx.textAlign = 'right';
     ctx.fillText('' + zs.toFixed(1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
   }
   
@@ -2080,7 +2080,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
-    ctx.fillStyle = 'rgba(59,130,246,0.8)'; ctx.font = '600 10px Segoe UI, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillStyle = veThemeRgba('--accent-primary', 0.8, 'rgba(59,130,246,0.8)'); ctx.font = '600 10px Segoe UI, sans-serif'; ctx.textAlign = 'right';
     ctx.fillText('' + zs.toFixed(1) + '×', W - margin.right - 4, margin.top + 14);
   }
   
