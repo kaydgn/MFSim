@@ -6,6 +6,19 @@
 // Mevcut motor freni solver'ından bağımsız çalışır.
 // ============================================================================
 
+// Eğim kabiliyeti gösterimi — fiziksel sınır senteli (≥900: "çekiş kuvveti
+// ağırlığı aşıyor, araç her eğimi tırmanır") kullanıcıya HAM SAYI olarak
+// gösterilmez; raporlarda ve panellerde "%999.0" görünüyordu. Hesap değerleri
+// (999/997) değişmez — yalnız sunum. pctPrefix=true panel/özet biçimi (≥%100),
+// false tablo sütunu biçimidir (≥100).
+function veGradeDisplay(v, dec, pctPrefix) {
+  if (v == null || isNaN(v)) return pctPrefix ? '%—' : '—';
+  if (v >= 900) return pctPrefix ? '≥%100' : '≥100';
+  if (v <= -900) return pctPrefix ? '≤−%100' : '≤−100';
+  var s = Number(v).toFixed(dec == null ? 1 : dec);
+  return pctPrefix ? '%' + s : s;
+}
+
 var FT_SOLVER = (function() {
   'use strict';
 
