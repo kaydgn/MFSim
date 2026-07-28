@@ -6429,7 +6429,7 @@ function veRender3DScatter(slotIdx) {
   // Plotly yüklü mü kontrol et
   if(typeof Plotly === 'undefined') {
     if(placeholder) {
-      placeholder.innerHTML = '<div style="font-size:1.5rem; margin-bottom:6px;">⚠️</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
+      placeholder.innerHTML = '<div style="font-size:1.5rem; margin-bottom:6px;">⚠</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
       placeholder.style.display = '';
     }
     return;

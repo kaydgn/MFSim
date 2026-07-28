@@ -739,7 +739,7 @@ function getGearboxPropertiesHTML(node) {
     var sel = (key === selectedGearbox) ? ' selected' : '';
     html += '<option value="' + key + '"' + sel + '>' + gp.name + ' (' + fwdCount + 'V)' + calMark + '</option>';
   });
-  html += '<option value="__new__">➕ Manuel Giriş</option>';
+  html += '<option value="__new__">+ Manuel Giriş</option>';
   html += '</select>';
   html += '</div>';
   html += '<div style="font-size:0.55rem; color:var(--text-muted); margin:-4px 0 6px 2px; line-height:1.3;"><span style="color:var(--accent-warning);" title="Upshift kalibrasyon mevcut">✦</span> = Upshift kalibrasyon &nbsp; <span style="color:var(--accent-danger);" title="Downshift kalibrasyon mevcut">✧</span> = Downshift kalibrasyon</div>';

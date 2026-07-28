@@ -263,7 +263,7 @@ function veSolverRunProfessional() {
           _acc.forEach(function(a) {
             if((parseFloat(a.userLoss) || 0) > 0) log('    • ' + a.name + ': ' + a.userLoss + ' kW', 'dim');
           });
-          log('  ⚡ NET motor torku kullanılıyor (brüt − aksesuar)', 'dim');
+          log('  » NET motor torku kullanılıyor (brüt − aksesuar)', 'dim');
         } else {
           log('  Aksesuar kayıp  : Tanımsız — brüt motor torku kullanılacak', 'warn');
         }
@@ -393,7 +393,7 @@ function veSolverRunProfessional() {
         ftTrG.forEach(function(g) {
           log('    ' + g.kademe + ': i=' + (g.ratio || g.oran) + ', η=' + (g.eff || g.verim) + '%', 'dim');
         });
-        log('  ⚡ Her kademe için ayrı hesap yapılacak', 'dim');
+        log('  » Her kademe için ayrı hesap yapılacak', 'dim');
       } else {
         log('  Aktif kademe    : ' + (trd.selectedMode || 'Belirtilmemiş'), trd.selectedMode ? 'ok' : 'warn');
         log('  Aktif oran      : ' + (trd.selectedRatio || '—'));
@@ -517,7 +517,7 @@ function veSolverRunProfessional() {
           var icon = s.egim > 1 ? '↓' : (s.egim < -1 ? '↑' : '→');
           log('    [' + (i+1) + '] ' + s.mesafe.toFixed(0) + 'm  %' + s.egim.toFixed(1) + ' ' + icon + '  (kümülatif: ' + (cumD/1000).toFixed(2) + ' km)', 'dim');
         });
-        log('  ⚡ Dinamik eğim aktif: her adımda mesafeye göre eğim güncellenir', 'head');
+        log('  » Dinamik eğim aktif: her adımda mesafeye göre eğim güncellenir', 'head');
       } else if(rd.egimMode !== 'segment') {
         var grade = parseFloat(rd.grade);
         log('  Arazi eğimi     : ' + (grade || 0) + '%', grade !== undefined && grade !== '' ? 'ok' : 'warn');
@@ -668,7 +668,7 @@ function veSolverRunProfessional() {
     
     log('Yöntem: ' + mLabel + ' | ' + (sd.method === 'rk45' ? 'Çıktı: ' + res + ' nokta' : 'Adım: ' + res) + ' | Süre: ' + simTime + 's');
     if(_isSegMode) {
-      log('📐 Segment bazlı dinamik eğim aktif (' + _segRoad.data.routeSegments.length + ' segment)', 'head');
+      log('Segment bazlı dinamik eğim aktif (' + _segRoad.data.routeSegments.length + ' segment)', 'head');
       var _totalRouteDist = 0;
       _segRoad.data.routeSegments.forEach(function(s) { _totalRouteDist += s.mesafe; });
       var _vehicle = nodes.find(function(n) { return n.type === 'vehicle'; });
@@ -861,7 +861,7 @@ function veSolverRunProfessional() {
             }
             log('  Güzergah ilerleme: %' + pctDone.toFixed(1) + ' (' + segsTraversed + '/' + _rd.routeSegments.length + ' segment)');
             if(distF >= _totalRouteDist - 1) {
-              log('  🏁 Güzergah tamamlandı!', 'ok');
+              log('  ✓ Güzergah tamamlandı!', 'ok');
             }
           }
         }
@@ -960,7 +960,7 @@ function veSolverRunProfessional() {
                   + ' rpm | SR=' + s.SR.toFixed(3));
               });
               if(r.solverStats.reachedMaxSpeed) {
-                log('  🏁 Maks. hız: ' + r.solverStats.maxSpeed_kmh.toFixed(1) + ' km/h (' + r.solverStats.finalGear + ')', 'ok');
+                log('  ✓ Maks. hız: ' + r.solverStats.maxSpeed_kmh.toFixed(1) + ' km/h (' + r.solverStats.finalGear + ')', 'ok');
               }
             }
           });
@@ -982,7 +982,7 @@ function veSolverRunProfessional() {
         // Sonuç kartını da güncelle
         var resultEl = document.getElementById('ve-solver-result');
         if(resultEl) {
-          var rhtml = '<div style="padding:8px;text-align:center;"><div style="font-size:1.2rem;">✅</div><div style="font-weight:600;font-size:0.8rem;color:var(--text-heading);">Hesaplama Tamamlandı</div><div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px;">' + mode + ' | ' + totalSteps + ' adım | ' + finalTime.toFixed(1) + ' s</div></div>';
+          var rhtml = '<div style="padding:8px;text-align:center;"><div style="font-size:1.2rem;">✓</div><div style="font-weight:600;font-size:0.8rem;color:var(--text-heading);">Hesaplama Tamamlandı</div><div style="font-size:0.65rem;color:var(--text-muted);margin-top:2px;">' + mode + ' | ' + totalSteps + ' adım | ' + finalTime.toFixed(1) + ' s</div></div>';
           resultEl.innerHTML = rhtml;
         }
         
@@ -1281,9 +1281,9 @@ function veSolverRunProfessional() {
             var totalChecks = kinChecked + sh.length + (convSamples > 0 ? 1 : 0) + 1 + 1;
             var totalFails = kinErrors + (lockSR_err > 0 ? 1 : 0) + energyErrors + physWarn.length;
             if(totalFails === 0) {
-              log('  📊 ' + trg.kademe.toUpperCase() + ' sonuç: Tüm doğrulamalar başarılı', 'ok');
+              log('  ' + trg.kademe.toUpperCase() + ' sonuç: Tüm doğrulamalar başarılı', 'ok');
             } else {
-              log('  📊 ' + trg.kademe.toUpperCase() + ' sonuç: ' + totalFails + ' uyarı/hata tespit edildi', 'warn');
+              log('  ' + trg.kademe.toUpperCase() + ' sonuç: ' + totalFails + ' uyarı/hata tespit edildi', 'warn');
             }
           });
           
@@ -1388,10 +1388,10 @@ function veSolverRunProfessional() {
         logSpacer();
         log('═══════════════════════════════════════════', 'ok');
         if(errors.length === 0 && warnings.length === 0) {
-          log('  ✅ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji', 'ok');
+          log('  ✓ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji', 'ok');
           log('  Herhangi bir sorunla karşılaşılmadı.', 'ok');
         } else if(errors.length === 0) {
-          log('  ✅ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji (' + warnings.length + ' uyarı)', 'ok');
+          log('  ✓ HESAP TAMAMLANDI — ' + veTabs.length + ' topoloji (' + warnings.length + ' uyarı)', 'ok');
           log('  Hesap başarılı, ancak bazı uyarılar mevcut.', 'warn');
         }
         log('═══════════════════════════════════════════', 'ok');

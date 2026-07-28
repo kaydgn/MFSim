@@ -34,7 +34,7 @@ function veExpandRoadMap(nodeId) {
 
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:0.72rem; font-weight:700; color:var(--text-heading);">🗺️ Güzergah Haritası' + badge + '</span>' +
+  header.innerHTML = '<span style="font-size:0.72rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-map"></span> Güzergah Haritası' + badge + '</span>' +
     '<button onclick="veCloseMapModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
   modal.appendChild(header);
   
@@ -43,7 +43,7 @@ function veExpandRoadMap(nodeId) {
   var toolbar = document.createElement('div');
   toolbar.style.cssText = 'display:flex; align-items:center; gap:5px; padding:6px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border-color); flex-shrink:0; flex-wrap:wrap;';
 
-  toolbar.innerHTML = '<button onclick="veCalcRouteAndProfiles(\'' + nodeId + '\')" style="' + bs + 'background:color-mix(in srgb, var(--accent-success) 65%, #000);color:white;">🛣️ Rota Hesapla</button>' +
+  toolbar.innerHTML = '<button onclick="veCalcRouteAndProfiles(\'' + nodeId + '\')" style="' + bs + 'background:color-mix(in srgb, var(--accent-success) 65%, #000);color:white;"><span class="mf-ico mf-ico-route"></span> Rota Hesapla</button>' +
     '<button onclick="veSearchLocation(\'' + nodeId + '\')" style="' + bs + 'background:var(--accent-primary);color:white;"><span class="mf-ico mf-ico-search"></span> Konum Ara</button>' +
     '<button onclick="veClearRoute(\'' + nodeId + '\')" style="' + bs + 'background:var(--accent-danger);color:white;"><span class="mf-ico mf-ico-trash"></span> Temizle</button>' +
     '<span style="flex:1;"></span>' +
@@ -58,7 +58,7 @@ function veExpandRoadMap(nodeId) {
   // Footer
   var footer = document.createElement('div');
   footer.style.cssText = 'display:flex; align-items:center; gap:10px; padding:5px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:0.58rem; color:var(--text-muted);';
-  footer.innerHTML = '<span>Sol tık: Rota noktası ekle</span><span style="opacity:0.4;">│</span><span>Rota üzerine tık: 📍 Referans noktası</span><span style="opacity:0.4;">│</span><span>Scroll: Zoom</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
+  footer.innerHTML = '<span>Sol tık: Rota noktası ekle</span><span style="opacity:0.4;">│</span><span>Rota üzerine tık: referans noktası</span><span style="opacity:0.4;">│</span><span>Scroll: Zoom</span><span style="margin-left:auto; color:var(--text-secondary);">ESC — Kapat</span>';
   modal.appendChild(footer);
   
   // ── Sol ve sağ kenar resize tutamaçları ──
@@ -333,7 +333,7 @@ function _veRestoreRoute(nodeId, node, map) {
         '<span style="color:var(--accent-primary);"><span class="mf-ico mf-ico-ruler"></span> <b>' + (td / 1000).toFixed(2) + ' km</b></span>' +
         '<span style="color:var(--accent-success);"><span class="mf-ico mf-ico-bar-chart"></span> <b>' + segs2.length + '</b> seg.</span>' +
         '<span style="color:var(--accent-warning);"><span class="mf-ico mf-ico-ruler"></span> Ort: <b>%' + (node.data.routeAvgGrade || 0).toFixed(1) + '</b></span>' +
-        '<span style="color:var(--accent-danger);">⬆️ Max: <b>%' + maxE.toFixed(1) + '</b></span>' +
+        '<span style="color:var(--accent-danger);">↑ Max: <b>%' + maxE.toFixed(1) + '</b></span>' +
         '</div>';
     }
   }
@@ -781,12 +781,12 @@ function veFetchElevations(coords) {
   return tryOpenMeteo()
     .catch(function(e) {
       console.warn('Open-Meteo başarısız, Open-Elevation deneniyor...', e.message);
-      showToast('⚠️ Open-Meteo yanıt vermedi, alternatif deneniyor...', 'warning');
+      showToast('⚠ Open-Meteo yanıt vermedi, alternatif deneniyor...', 'warning');
       return tryOpenElevation();
     })
     .catch(function(e) {
       console.warn('Open-Elevation başarısız, Open Topo Data deneniyor...', e.message);
-      showToast('⚠️ Alternatif API yanıt vermedi, son seçenek deneniyor...', 'warning');
+      showToast('⚠ Alternatif API yanıt vermedi, son seçenek deneniyor...', 'warning');
       return tryOpenTopoData();
     })
     .then(function(coarseElev) {
@@ -1051,7 +1051,7 @@ function veCalcElevation(nodeId, onComplete) {
     // Haritada waypoint'leri göster
     _veWaypointShowOnMap(nodeId);
 
-    showToast('✅ Rakım verisi okundu: ' + gpsSamples.length + ' sample, ' + (toplamMesafe / 1000).toFixed(2) + ' km');
+    showToast('Rakım verisi okundu: ' + gpsSamples.length + ' sample, ' + (toplamMesafe / 1000).toFixed(2) + ' km');
 
     // Callback (profil oluşturma vb.)
     if(typeof onComplete === 'function') onComplete();
@@ -1203,7 +1203,7 @@ function veCalcDistGradeProfile(nodeId) {
     return '<div style="position:relative; margin-bottom:8px;">' +
       '<canvas id="' + altCanvasId + '" style="width:100%; cursor:crosshair; border-radius:var(--radius-sm);"></canvas>' +
       '<div id="' + altCanvasId + '-tooltip" class="dr-chart-tooltip"></div>' +
-      '<button onclick="veExpandProfileChart(\'' + nodeId + '\', \'altitude\')" title="Grafiği büyüt" style="position:absolute; top:4px; right:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:rgba(30,36,48,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:var(--radius-sm); cursor:pointer; font-size:0.7rem; color:var(--text-secondary); transition:all 0.12s; z-index:2;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(30,36,48,0.7)\';this.style.color=\'var(--text-secondary)\'">⛶</button>' +
+      '<button onclick="veExpandProfileChart(\'' + nodeId + '\', \'altitude\')" title="Grafiği büyüt" style="position:absolute; top:4px; right:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; background:rgba(30,36,48,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:var(--radius-sm); cursor:pointer; font-size:0.7rem; color:var(--text-secondary); transition:all 0.12s; z-index:2;" onmouseover="this.style.background=\'var(--accent-primary)\';this.style.color=\'#fff\'" onmouseout="this.style.background=\'rgba(30,36,48,0.7)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-maximize"></span></button>' +
       '</div>' +
       '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; padding:5px 8px; background:var(--bg-secondary); border-radius:var(--radius-sm); border:1px solid var(--border-color); font-size:0.58rem;">' +
       '<span style="color:var(--text-muted);">Başlangıç:</span><span style="color:#b39ddb; font-weight:600;">' + elevFirst.toFixed(0) + 'm</span>' +
@@ -1773,7 +1773,7 @@ function _veAttachRouteClickForWaypoint(nodeId) {
       _veWaypointUpdateList(nodeId);
       _veAltRedrawAll(nodeId);
       _veWaypointShowOnMap(nodeId);
-      showToast('📍 Referans noktası eklendi: ' + name);
+      showToast('Referans noktası eklendi: ' + name);
     });
   });
 }
@@ -2799,7 +2799,7 @@ function getTerminatorPropertiesHTML(node) {
   
   // Açıklama
   html += '<div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); border-radius:var(--radius-sm); padding:10px 12px; margin-bottom:12px;">';
-  html += '<div style="font-size:0.72rem; color:var(--accent-danger); font-weight:600; margin-bottom:4px;">✂️ Hesap Sonlandırma Noktası</div>';
+  html += '<div style="font-size:0.72rem; color:var(--accent-danger); font-weight:600; margin-bottom:4px;"><span class="mf-ico mf-ico-scissors"></span> Hesap Sonlandırma Noktası</div>';
   html += '<div style="font-size:0.68rem; color:var(--text-secondary); line-height:1.5;">Bu bileşen, güç akış zincirini burada keser. Çözücü, bu noktaya kadar olan bileşenlerin hesabını yapar ve durur. Tam model kurmadan kısmi analizler yapmanızı sağlar.</div>';
   html += '</div>';
   
@@ -2808,7 +2808,7 @@ function getTerminatorPropertiesHTML(node) {
   
   if(!inConn) {
     html += '<div style="background:var(--bg-tertiary); border-radius:var(--radius-sm); padding:12px; text-align:center;">';
-    html += '<div style="font-size:0.75rem; color:var(--text-muted);">⚠️ Henüz bir bileşene bağlanmadı</div>';
+    html += '<div style="font-size:0.75rem; color:var(--text-muted);">⚠ Henüz bir bileşene bağlanmadı</div>';
     html += '<div style="font-size:0.65rem; color:var(--text-muted); margin-top:4px;">Bir bileşenin çıkış portuna bağlayın</div>';
     html += '</div>';
   } else {

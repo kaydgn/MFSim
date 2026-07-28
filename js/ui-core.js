@@ -537,7 +537,7 @@ function createNode(type, x, y, width, height) {
   if(def.maxInstances) {
     var existingCount = nodes.filter(function(n) { return n.type === type; }).length;
     if(existingCount >= def.maxInstances) {
-      if(typeof showNotification === 'function') showNotification('⚠️ ' + def.name + ' topolojide en fazla ' + def.maxInstances + ' tane olabilir.', 'warning');
+      if(typeof showNotification === 'function') showNotification('⚠ ' + def.name + ' topolojide en fazla ' + def.maxInstances + ' tane olabilir.', 'warning');
       return;
     }
   }

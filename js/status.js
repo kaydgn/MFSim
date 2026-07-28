@@ -92,7 +92,7 @@ function _veStatusRender() {
   if(updateAvailable) {
     html += '<div class="ve-status-update-banner">';
     html += '<div class="ve-status-update-banner-info">';
-    html += '<div class="ve-status-update-banner-title">🔔 Yeni Sürüm Mevcut</div>';
+    html += '<div class="ve-status-update-banner-title"><span class="mf-ico mf-ico-bell"></span> Yeni Sürüm Mevcut</div>';
     html += '<div class="ve-status-update-banner-desc">Program güncellendi. Şimdi Güncelle butonuna basarak sayfayı yenileyin; güncelleme uygulanır ve "Program Güncel" onayı gelir.</div>';
     html += '</div>';
     html += '<button class="ve-status-update-banner-btn" onclick="_veApplyUpdate()"><span class="mf-ico mf-ico-refresh"></span> Şimdi Güncelle</button>';

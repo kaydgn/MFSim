@@ -25,14 +25,14 @@ function veRefreshApp() {
         isNewer = String(info.runId) !== String(runId);
       }
       if(isNewer) {
-        _veShowPopup(dot, info, '🔔 Güncelleme Mevcut', true);
+        _veShowPopup(dot, info, '<span class="mf-ico mf-ico-bell"></span> Güncelleme Mevcut', true);
       } else {
-        _veShowPopup(dot, info, '✅ Program Güncel', false);
+        _veShowPopup(dot, info, '✓ Program Güncel', false);
       }
     } else if(info.status === 'in_progress' || info.status === 'queued') {
       _veShowPopup(dot, info, '⏳ Deploy Devam Ediyor', false);
     } else {
-      _veShowPopup(dot, info, '❌ Deploy Başarısız', false);
+      _veShowPopup(dot, info, '✗ Deploy Başarısız', false);
     }
   });
 }
@@ -65,10 +65,10 @@ function _veApplyDotState(dot, info) {
     dot.title = '⏳ Deploy devam ediyor...';
   } else if(info.status === 'completed' && info.conclusion === 'success') {
     dot.className = 've-deploy-dot ve-deploy-success';
-    dot.title = '✅ Güncel';
+    dot.title = 'Güncel';
   } else {
     dot.className = 've-deploy-dot ve-deploy-error';
-    dot.title = '❌ Deploy başarısız';
+    dot.title = 'Deploy başarısız';
   }
 }
 
@@ -237,9 +237,9 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 
   // Detaylar
   html += '<div style="color:var(--text-muted); font-size:0.7rem; border-top:1px solid var(--border-color); padding-top:10px; line-height:1.8;">';
-  html += '👤 ' + _veEscHtml(info.author);
-  html += '<br>🕐 ' + fullDate;
-  html += '<br>🌿 ' + _veEscHtml(info.branch);
+  html += '<span class="mf-ico mf-ico-user"></span> ' + _veEscHtml(info.author);
+  html += '<br><span class="mf-ico mf-ico-clock"></span> ' + fullDate;
+  html += '<br><span class="mf-ico mf-ico-git-branch"></span> ' + _veEscHtml(info.branch);
   html += '</div>';
 
   // Otomatik kontrol ayarı
@@ -385,7 +385,7 @@ function _veAutoCheck() {
     }
     if(isNewer && info.status === 'completed' && info.conclusion === 'success') {
       dot.className = 've-deploy-dot ve-deploy-update-available';
-      dot.title = '🔔 Yeni sürüm mevcut — tıklayın';
+      dot.title = 'Yeni sürüm mevcut — tıklayın';
     }
   });
 }
@@ -407,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var dot = document.getElementById('ve-deploy-dot');
       if(dot) {
         dot.className = 've-deploy-dot ve-deploy-success';
-        dot.title = '✅ Güncel';
+        dot.title = 'Güncel';
       }
       _veShowRefreshedPopup();
     }, 1000);
@@ -444,7 +444,7 @@ function _veShowRefreshedPopup() {
 
   popup.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-      '<span style="font-weight:600; color:#22c55e; font-size:0.85rem;">✅ Program Güncellendi</span>' +
+      '<span style="font-weight:600; color:#22c55e; font-size:0.85rem;">✓ Program Güncellendi</span>' +
       '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>' +
     '</div>' +
     '<div style="color:var(--text-secondary); line-height:1.5;">Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.</div>';

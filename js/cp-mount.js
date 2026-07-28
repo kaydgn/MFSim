@@ -743,7 +743,7 @@ function getMntExamplePropertiesHTML(node){
   left+='</select>';
   left+=_mntExampleDetailsHTML(ex);
   left+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği Aktar</button>';
-  left+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:0.68rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">⬇ İç Topolojiyi JSON Dışa Aktar</button>';
+  left+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:0.68rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">↓ İç Topolojiyi JSON Dışa Aktar</button>';
   left+='<div id="ve-mnt-example-report" style="margin-top:12px;"></div>';
 
   // ── SAĞ (önizleme): topoloji şeması — geniş sütunda büyük gösterilir ──
@@ -1221,7 +1221,7 @@ function getMntViewerPropertiesHTML(node){
   left+=_mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksenleri gizle/göster');
   left+=_mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Eksen etiketlerini gizle/göster');
   left+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
-  left+=_mntVwrBtn("veMntViewerFullscreen();",'⛶ Tam Ekran','Görüntüleyiciyi tam ekran aç');
+  left+=_mntVwrBtn("veMntViewerFullscreen();",'<span class="mf-ico mf-ico-maximize"></span> Tam Ekran','Görüntüleyiciyi tam ekran aç');
   left+='</div>';
   left+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.5; margin-bottom:9px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
   left+='<button onclick="veMntViewerRefresh()" style="width:100%; padding:8px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">↻ Yenile</button>';

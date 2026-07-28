@@ -7,7 +7,7 @@ var SENSOR_PACKAGES = [
   //  PERFORMANS ANALİZİ (Tam Gaz Hızlanma) — solverTab: 'performance'
   // ══════════════════════════════════════════════════════════════
   {
-    id: 'performance', name: 'Performans Eğrileri', icon: '🏁', priority: 'essential',
+    id: 'performance', name: 'Performans Eğrileri', icon: '<span class="mf-ico mf-ico-flag"></span>', priority: 'essential',
     solverTab: 'performance',
     description: 'Temel hızlanma performansı: hız-zaman, mesafe-zaman, ivme eğrileri',
     requires: ['vehicle'],
@@ -28,7 +28,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'engine-analysis', name: 'Motor Çalışma Analizi', icon: '⚙️', priority: 'essential',
+    id: 'engine-analysis', name: 'Motor Çalışma Analizi', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'essential',
     solverTab: 'performance',
     description: 'Motor devri, tork ve güç eğrileri — motorun hızlanma boyunca nasıl çalıştığını gösterir',
     requires: ['engine'],
@@ -49,7 +49,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'tc-analysis', name: 'Tork Konvertör Analizi', icon: '🌀', priority: 'recommended',
+    id: 'tc-analysis', name: 'Tork Konvertör Analizi', icon: '<span class="mf-ico mf-ico-disc"></span>', priority: 'recommended',
     solverTab: 'performance',
     description: 'TC çalışma noktası, tork çarpanı, verim ve kayma analizi',
     requires: ['torque-converter'],
@@ -75,7 +75,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'traction-analysis', name: 'Çekiş Kuvveti Analizi', icon: '💪', priority: 'essential',
+    id: 'traction-analysis', name: 'Çekiş Kuvveti Analizi', icon: '<span class="mf-ico mf-ico-activity"></span>', priority: 'essential',
     solverTab: 'performance',
     description: 'Tekerlekte çekiş kuvveti, direnç kuvvetleri ve net çekiş gücü',
     requires: ['vehicle'],
@@ -100,7 +100,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'shift-analysis', name: 'Vites Geçiş Analizi', icon: '🔄', priority: 'recommended',
+    id: 'shift-analysis', name: 'Vites Geçiş Analizi', icon: '<span class="mf-ico mf-ico-refresh"></span>', priority: 'recommended',
     solverTab: 'performance',
     description: 'Vites değişim noktaları, şanzıman çıkış parametreleri ve shift kalitesi',
     requires: ['gearbox', 'shift-controller'],
@@ -121,7 +121,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'gearbox-analysis', name: 'Şanzıman Detay Analizi', icon: '⚙️', priority: 'recommended',
+    id: 'gearbox-analysis', name: 'Şanzıman Detay Analizi', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'recommended',
     solverTab: 'performance',
     description: 'Şanzıman giriş/çıkış devir-tork, güç kaybı, verim ve vites oranı profilleri',
     requires: ['gearbox'],
@@ -150,7 +150,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'transfer-analysis', name: 'Transfer Kutusu Analizi', icon: '🔀', priority: 'recommended',
+    id: 'transfer-analysis', name: 'Transfer Kutusu Analizi', icon: '<span class="mf-ico mf-ico-shuffle"></span>', priority: 'recommended',
     solverTab: 'performance',
     description: 'Transfer kutusu giriş/çıkış devir-tork ve güç kaybı profilleri',
     requires: ['transfer'],
@@ -171,7 +171,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'propshaft-analysis', name: 'Propşaft Analizi', icon: '🔩', priority: 'optional',
+    id: 'propshaft-analysis', name: 'Propşaft Analizi', icon: '<span class="mf-ico mf-ico-nut"></span>', priority: 'optional',
     solverTab: 'performance',
     description: 'Propşaft devir-tork ve güç iletim kaybı profilleri',
     requires: ['propshaft'],
@@ -192,7 +192,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'diff-analysis', name: 'Diferansiyel Analizi', icon: '⚙️', priority: 'optional',
+    id: 'diff-analysis', name: 'Diferansiyel Analizi', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'optional',
     solverTab: 'performance',
     description: 'Diferansiyel giriş/çıkış devir-tork ve güç kaybı profilleri',
     requires: ['differential'],
@@ -213,7 +213,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'wheel-analysis', name: 'Tekerlek Analizi', icon: '🛞', priority: 'recommended',
+    id: 'wheel-analysis', name: 'Tekerlek Analizi', icon: '<span class="mf-ico mf-ico-wheel"></span>', priority: 'recommended',
     solverTab: 'performance',
     description: 'Tekerlek devri, torku, çekiş kuvveti ve eğim kapasitesi profilleri',
     requires: ['wheel'],
@@ -239,7 +239,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'vehicle-extended', name: 'Araç Ek Sinyaller', icon: '🚗', priority: 'optional',
+    id: 'vehicle-extended', name: 'Araç Ek Sinyaller', icon: '<span class="mf-ico mf-ico-car"></span>', priority: 'optional',
     solverTab: 'performance',
     description: 'Kinetik enerji, yavaşlama (g) ve eşdeğer kütle profilleri',
     requires: ['vehicle'],
@@ -257,7 +257,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'road-extended', name: 'Yol Ek Sinyaller', icon: '🛣️', priority: 'optional',
+    id: 'road-extended', name: 'Yol Ek Sinyaller', icon: '<span class="mf-ico mf-ico-route"></span>', priority: 'optional',
     solverTab: 'performance',
     description: 'Anlık eğim yüzdesi ve aktif segment numarası profilleri',
     requires: ['road'],
@@ -271,7 +271,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'tc-extended', name: 'TC Ek Sinyaller', icon: '🌀', priority: 'optional',
+    id: 'tc-extended', name: 'TC Ek Sinyaller', icon: '<span class="mf-ico mf-ico-disc"></span>', priority: 'optional',
     solverTab: 'performance',
     description: 'TC devir, güç ve K-Factor profilleri',
     requires: ['torque-converter'],
@@ -291,7 +291,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'engine-extended', name: 'Motor Ek Sinyaller', icon: '⚙️', priority: 'optional',
+    id: 'engine-extended', name: 'Motor Ek Sinyaller', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'optional',
     solverTab: 'performance',
     description: 'Motor açısal hız profili',
     requires: ['engine'],
@@ -304,7 +304,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'shift-ctrl-extended', name: 'Vites Kontrol Ek Sinyaller', icon: '🔄', priority: 'optional',
+    id: 'shift-ctrl-extended', name: 'Vites Kontrol Ek Sinyaller', icon: '<span class="mf-ico mf-ico-refresh"></span>', priority: 'optional',
     solverTab: 'performance',
     description: 'Lockup durumu, şanzıman çıkış devri ve devir oranı profilleri',
     requires: ['shift-controller'],
@@ -322,7 +322,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'solver-extended', name: 'Çözücü Ek Sinyaller', icon: '📐', priority: 'optional',
+    id: 'solver-extended', name: 'Çözücü Ek Sinyaller', icon: '<span class="mf-ico mf-ico-ruler"></span>', priority: 'optional',
     solverTab: 'performance',
     description: 'Eğim kapasitesi ve toplam ısı reddi profilleri',
     requires: ['solver'],
@@ -338,7 +338,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'comparison', name: 'Karşılaştırma Diyagramları', icon: '⚖️', priority: 'advanced',
+    id: 'comparison', name: 'Karşılaştırma Diyagramları', icon: '<span class="mf-ico mf-ico-contrast"></span>', priority: 'advanced',
     solverTab: 'performance',
     description: 'Transfer kademe karşılaştırması, verimlilik zinciri ve ileri analizler',
     requires: ['vehicle', 'engine', 'torque-converter'],
@@ -362,7 +362,7 @@ var SENSOR_PACKAGES = [
   //  HIZLANMA-YAVAŞLAMA (Segment-Drive) — solverTab: 'accel-decel'
   // ══════════════════════════════════════════════════════════════
   {
-    id: 'sd-speed-profile', name: 'Hız ve Mesafe Profili', icon: '🛤️', priority: 'essential',
+    id: 'sd-speed-profile', name: 'Hız ve Mesafe Profili', icon: '<span class="mf-ico mf-ico-route"></span>', priority: 'essential',
     solverTab: 'accel-decel',
     description: 'Segment bazlı hız, mesafe ve ivme profilleri — sürüş çevriminin genel görünümü',
     requires: ['vehicle'],
@@ -381,7 +381,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'sd-forces', name: 'Kuvvet ve Direnç Analizi', icon: '⚡', priority: 'essential',
+    id: 'sd-forces', name: 'Kuvvet ve Direnç Analizi', icon: '<span class="mf-ico mf-ico-zap"></span>', priority: 'essential',
     solverTab: 'accel-decel',
     description: 'Segment bazlı çekiş, direnç ve eğim kuvvetleri — arazi etkisini gösterir',
     requires: ['vehicle', 'engine'],
@@ -401,7 +401,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'sd-powertrain', name: 'Güç Aktarma Profili', icon: '⚙️', priority: 'recommended',
+    id: 'sd-powertrain', name: 'Güç Aktarma Profili', icon: '<span class="mf-ico mf-ico-settings"></span>', priority: 'recommended',
     solverTab: 'accel-decel',
     description: 'Motor devri, tork, güç ve vites değişimleri — segment bazlı güç aktarma davranışı',
     requires: ['engine', 'gearbox'],
@@ -423,7 +423,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'sd-thermal', name: 'Isı Reddi ve Verimlilik', icon: '🌡️', priority: 'advanced',
+    id: 'sd-thermal', name: 'Isı Reddi ve Verimlilik', icon: '<span class="mf-ico mf-ico-thermometer"></span>', priority: 'advanced',
     solverTab: 'accel-decel',
     description: 'TC ısı kaybı ve motor fren kuvveti — termal yük ve enerji dağılımı',
     requires: ['torque-converter', 'engine'],
@@ -443,7 +443,7 @@ var SENSOR_PACKAGES = [
   //  ENGEL ATLAMA — solverTab: 'obstacle'
   // ══════════════════════════════════════════════════════════════
   {
-    id: 'obs-torque', name: 'Tork ve Kuvvet Analizi', icon: '🧱', priority: 'essential',
+    id: 'obs-torque', name: 'Tork ve Kuvvet Analizi', icon: '<span class="mf-ico mf-ico-barrier"></span>', priority: 'essential',
     solverTab: 'obstacle',
     description: 'Engel atlama için gerekli tork, mevcut tork kapasitesi ve güvenlik marjı',
     requires: ['vehicle', 'engine', 'torque-converter'],
@@ -460,7 +460,7 @@ var SENSOR_PACKAGES = [
     ]
   },
   {
-    id: 'obs-thermal', name: 'Termal ve Verimlilik Analizi', icon: '🌡️', priority: 'recommended',
+    id: 'obs-thermal', name: 'Termal ve Verimlilik Analizi', icon: '<span class="mf-ico mf-ico-thermometer"></span>', priority: 'recommended',
     solverTab: 'obstacle',
     description: 'Engel atlama sırasında TC ısı üretimi, verim ve kayma profilleri',
     requires: ['torque-converter'],
@@ -480,7 +480,7 @@ var SENSOR_PACKAGES = [
   //  3B YÜZEY DİYAGRAMLARI — Performans
   // ══════════════════════════════════════════════════════════════
   {
-    id: '3d-perf', name: '3D Performans Diyagramları', icon: '🔮', priority: 'advanced',
+    id: '3d-perf', name: '3D Performans Diyagramları', icon: '<span class="mf-ico mf-ico-box"></span>', priority: 'advanced',
     solverTab: 'performance',
     description: '3 boyutlu diyagramlar: motor haritası, çekiş kuvveti, TC verimi, güç akışı, direnç ve ivme',
     requires: ['vehicle', 'engine'],
@@ -505,7 +505,7 @@ var SENSOR_PACKAGES = [
   //  3B YÜZEY DİYAGRAMLARI — Hızlanma-Yavaşlama
   // ══════════════════════════════════════════════════════════════
   {
-    id: '3d-sd', name: '3D Segment Diyagramları', icon: '🔮', priority: 'advanced',
+    id: '3d-sd', name: '3D Segment Diyagramları', icon: '<span class="mf-ico mf-ico-box"></span>', priority: 'advanced',
     solverTab: 'accel-decel',
     description: '3 boyutlu diyagramlar: hız-mesafe-eğim, kuvvet, ısı, güç-devir, çekiş-direnç',
     requires: ['vehicle', 'engine'],
@@ -528,7 +528,7 @@ var SENSOR_PACKAGES = [
   //  3B YÜZEY DİYAGRAMLARI — Engel Atlama
   // ══════════════════════════════════════════════════════════════
   {
-    id: '3d-obs', name: '3D Engel Atlama Diyagramları', icon: '🔮', priority: 'advanced',
+    id: '3d-obs', name: '3D Engel Atlama Diyagramları', icon: '<span class="mf-ico mf-ico-box"></span>', priority: 'advanced',
     solverTab: 'obstacle',
     description: '3 boyutlu diyagramlar: tork eşleme, kuvvet-açı, enerji, güç-verim, itme-reaksiyon',
     requires: ['torque-converter'],
@@ -984,7 +984,7 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   html += '<div style="font-size:0.72rem;color:var(--text-secondary,#666);margin-bottom:8px;">' + axisInfo + '</div>';
   html += '<div style="font-size:0.72rem;line-height:1.5;color:var(--text-primary,#333);border-top:1px solid var(--border-color,#eee);padding-top:10px;">' + d.significance + '</div>';
   if(d.note) {
-    html += '<div style="font-size:0.68rem;color:#f59e0b;margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.08);border-radius:var(--radius-sm);">⚠️ ' + d.note + '</div>';
+    html += '<div style="font-size:0.68rem;color:var(--accent-warning);margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.08);border-radius:var(--radius-sm);">⚠ ' + d.note + '</div>';
   }
   html += '</div>';
   ov.innerHTML = html;
@@ -1059,9 +1059,9 @@ function getSensorWizardPropertiesHTML(node) {
   // ── Çözüm Kümesi Tabları ──
   var activeTabs = swGetActiveSolverTabs();
   var solverTabs = [
-    { id:'performance', name:'Performans', icon:'🏎️' },
-    { id:'accel-decel', name:'Hızl.-Yavaşl.', icon:'🛤️' },
-    { id:'obstacle', name:'Engel Atlama', icon:'🧱' }
+    { id:'performance', name:'Performans', icon:'<span class="mf-ico mf-ico-gauge"></span>' },
+    { id:'accel-decel', name:'Hızl.-Yavaşl.', icon:'<span class="mf-ico mf-ico-route"></span>' },
+    { id:'obstacle', name:'Engel Atlama', icon:'<span class="mf-ico mf-ico-barrier"></span>' }
   ];
 
   // Her tab için paket sayısını hesapla

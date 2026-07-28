@@ -138,7 +138,7 @@ function getEnginePropertiesHTML(node) {
   dataAreaHtml += '<button class="sw-btn sw-btn-outline" onclick="addVEMotorRow(\'' + node.id + '\')">+ Satır Ekle</button>';
   dataAreaHtml += '<button class="sw-btn sw-btn-outline" onclick="clearVEMotorTable(\'' + node.id + '\')">Tümünü Sil</button>';
   dataAreaHtml += '<button class="sw-btn sw-btn-danger" onclick="deleteVEMotorSavedSet(\'' + node.id + '\')">Veriyi Temizle</button>';
-  dataAreaHtml += '<button class="sw-btn sw-btn-primary" onclick="saveVEMotorData(\'' + node.id + '\')">💾 Kaydet</button>';
+  dataAreaHtml += '<button class="sw-btn sw-btn-primary" onclick="saveVEMotorData(\'' + node.id + '\')"><span class="mf-ico mf-ico-save"></span> Kaydet</button>';
   dataAreaHtml += '</div>';
   dataAreaHtml += '</div>'; // ve-motor-data-area kapatma (artık butonlardan hemen sonra)
 

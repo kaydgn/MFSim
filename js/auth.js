@@ -39,7 +39,7 @@ async function mfsimLogin() {
   var rl = mfsimGetRL();
   if(rl.lockUntil > now) {
     var sec = Math.ceil((rl.lockUntil - now) / 1000);
-    errEl.textContent = '🔒 Çok fazla hatalı deneme. ' + sec + ' sn sonra tekrar deneyin.';
+    errEl.textContent = 'Çok fazla hatalı deneme. ' + sec + ' sn sonra tekrar deneyin.';
     return;
   }
 
@@ -57,11 +57,11 @@ async function mfsimLogin() {
     var attempts = rl.attempts + 1;
     if(attempts >= MFSIM_AUTH_MAX_ATTEMPTS) {
       mfsimSetRL({ attempts: attempts, lockUntil: now + MFSIM_AUTH_LOCK_MS });
-      errEl.textContent = '🔒 Çok fazla hatalı deneme. ' + Math.ceil(MFSIM_AUTH_LOCK_MS / 1000) + ' sn kilitlendi.';
+      errEl.textContent = 'Çok fazla hatalı deneme. ' + Math.ceil(MFSIM_AUTH_LOCK_MS / 1000) + ' sn kilitlendi.';
     } else {
       mfsimSetRL({ attempts: attempts, lockUntil: 0 });
       var left = MFSIM_AUTH_MAX_ATTEMPTS - attempts;
-      errEl.textContent = '❌ Hatalı şifre. Kalan deneme: ' + left + '.';
+      errEl.textContent = 'Hatalı şifre. Kalan deneme: ' + left + '.';
     }
     document.getElementById('mfsim-login-password').value = '';
     document.getElementById('mfsim-login-password').focus();
