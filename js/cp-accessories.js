@@ -254,9 +254,9 @@ function getAccessoryPropertiesHTML(node){
   var L = '';
   L += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Model Seçimi';
   if(connected){
-    L += ' <span style="background:rgba(34,197,94,0.15);color:var(--accent-success);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid rgba(34,197,94,0.4);">● MOTORA BAĞLI</span>';
+    L += ' <span style="background:color-mix(in srgb, var(--accent-success) 15%, transparent);color:var(--accent-success);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid color-mix(in srgb, var(--accent-success) 40%, transparent);">● MOTORA BAĞLI</span>';
   } else {
-    L += ' <span style="background:rgba(245,158,11,0.12);color:var(--accent-warning,#f59e0b);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid rgba(245,158,11,0.4);">○ BAĞLANMADI</span>';
+    L += ' <span style="background:color-mix(in srgb, var(--accent-warning) 12%, transparent);color:var(--accent-warning,#f59e0b);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid color-mix(in srgb, var(--accent-warning) 40%, transparent);">○ BAĞLANMADI</span>';
   }
   L += '</div>';
   L += '<div class="sw-pkg-desc">Bu bileşeni Motor kutusunun önündeki ilgili porta bağlayın. Devire bağlı çektiği güç, motorun net torkundan düşülür.</div>';

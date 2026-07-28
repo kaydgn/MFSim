@@ -495,17 +495,17 @@ function updateAllConnections() {
       midpoint.setAttribute('height', '12');
       midpoint.setAttribute('rx', '3');
       midpoint.setAttribute('data-conn-id', conn.id);
-      midpoint.style.cssText = 'fill:rgba(59,130,246,0.3); stroke:#3b82f6; stroke-width:2.5; cursor:pointer; pointer-events:all;';
+      midpoint.style.cssText = 'fill:color-mix(in srgb, var(--accent-primary) 30%, transparent); stroke:var(--accent-primary); stroke-width:2.5; cursor:pointer; pointer-events:all;';
       
       // Hover efekti
       midpoint.addEventListener('mouseenter', function() {
-        this.style.fill = 'rgba(59,130,246,0.6)';
+        this.style.fill = 'color-mix(in srgb, var(--accent-primary) 60%, transparent)';
         this.setAttribute('width', '16'); this.setAttribute('height', '16');
         this.setAttribute('x', parseFloat(this.getAttribute('x')) - 2);
         this.setAttribute('y', parseFloat(this.getAttribute('y')) - 2);
       });
       midpoint.addEventListener('mouseleave', function() {
-        this.style.fill = 'rgba(59,130,246,0.3)';
+        this.style.fill = 'color-mix(in srgb, var(--accent-primary) 30%, transparent)';
         this.setAttribute('width', '12'); this.setAttribute('height', '12');
         this.setAttribute('x', parseFloat(this.getAttribute('x')) + 2);
         this.setAttribute('y', parseFloat(this.getAttribute('y')) + 2);
@@ -590,16 +590,16 @@ function updateAllConnections() {
       compDot.setAttribute('height', '16');
       compDot.setAttribute('rx', '4');
       compDot.setAttribute('data-comp-id', nd.id);
-      compDot.style.cssText = 'fill:rgba(245,158,11,0.4); stroke:#f59e0b; stroke-width:2.5; cursor:pointer; pointer-events:all;';
+      compDot.style.cssText = 'fill:color-mix(in srgb, var(--accent-warning) 40%, transparent); stroke:#f59e0b; stroke-width:2.5; cursor:pointer; pointer-events:all;';
       
       compDot.addEventListener('mouseenter', function() {
-        this.style.fill = 'rgba(245,158,11,0.7)';
+        this.style.fill = 'color-mix(in srgb, var(--accent-warning) 70%, transparent)';
         this.setAttribute('width', '20'); this.setAttribute('height', '20');
         this.setAttribute('x', parseFloat(this.getAttribute('x')) - 2);
         this.setAttribute('y', parseFloat(this.getAttribute('y')) - 2);
       });
       compDot.addEventListener('mouseleave', function() {
-        this.style.fill = 'rgba(245,158,11,0.4)';
+        this.style.fill = 'color-mix(in srgb, var(--accent-warning) 40%, transparent)';
         this.setAttribute('width', '16'); this.setAttribute('height', '16');
         this.setAttribute('x', parseFloat(this.getAttribute('x')) + 2);
         this.setAttribute('y', parseFloat(this.getAttribute('y')) + 2);

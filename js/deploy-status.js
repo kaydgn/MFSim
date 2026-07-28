@@ -198,7 +198,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 
   var isPending = info.status === 'in_progress' || info.status === 'queued';
   var isSuccess = info.status === 'completed' && info.conclusion === 'success';
-  var titleColor = isPending ? '#f59e0b' : isSuccess ? '#22c55e' : '#ef4444';
+  var titleColor = isPending ? 'var(--accent-warning)' : isSuccess ? 'var(--accent-success)' : 'var(--accent-danger)';
 
   var popup = document.createElement('div');
   popup.id = 've-deploy-popup';
@@ -258,7 +258,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
     }
     var summaryLabel = 'Son değişiklikler (' + info.changes.length + ')';
     if(newCount > 0 && lastSeen > 0) {
-      summaryLabel += ' — <span style="color:#22c55e; font-weight:600;">' + newCount + ' yeni</span>';
+      summaryLabel += ' — <span style="color:var(--accent-success); font-weight:600;">' + newCount + ' yeni</span>';
     }
     html += '<details style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;"' + (showUpdateBtn ? ' open' : '') + '>';
     html += '<summary style="cursor:pointer; font-weight:600; color:var(--text-heading); font-size:0.76rem;">' + summaryLabel + '</summary>';
@@ -269,7 +269,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
       var isNew = lastSeen > 0 && c.prNumber > lastSeen;
       var cTitle = c.title || c.message || ('PR #' + c.prNumber);
       var cDate = _veFormatDeployDate(c.date);
-      var bg = isNew ? 'background:rgba(34,197,94,0.08); border-left:2px solid #22c55e; padding:4px 6px;' : 'padding:4px 6px; border-left:2px solid transparent;';
+      var bg = isNew ? 'background:color-mix(in srgb, var(--accent-success) 8%, transparent); border-left:2px solid var(--accent-success); padding:4px 6px;' : 'padding:4px 6px; border-left:2px solid transparent;';
       html += '<div style="font-size:0.72rem; line-height:1.4; ' + bg + '">';
       if(c.url) {
         html += '<a href="' + c.url + '" target="_blank" rel="noopener" style="color:var(--accent-primary); text-decoration:none; font-weight:600;">#' + c.prNumber + '</a> ';
@@ -285,9 +285,9 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 
   // Güncelle butonu
   if(showUpdateBtn) {
-    html += '<button onclick="_veApplyUpdate()" style="width:100%; margin-top:12px; padding:10px; background:#22c55e; color:white; border:none; cursor:pointer; font-weight:600; font-size:0.82rem; transition:background 0.2s;" onmouseenter="this.style.background=\'#16a34a\'" onmouseleave="this.style.background=\'#22c55e\'">Şimdi Güncelle</button>';
+    html += '<button onclick="_veApplyUpdate()" style="width:100%; margin-top:12px; padding:10px; background:var(--accent-success); color:white; border:none; cursor:pointer; font-weight:600; font-size:0.82rem; transition:background 0.2s;" onmouseenter="this.style.background=\'#16a34a\'" onmouseleave="this.style.background=\'#22c55e\'">Şimdi Güncelle</button>';
   } else if(isPending) {
-    html += '<div style="margin-top:12px; padding:10px; background:var(--bg-primary); text-align:center; color:#f59e0b; font-size:0.75rem;">Deploy devam ediyor, biraz sonra tekrar deneyin.</div>';
+    html += '<div style="margin-top:12px; padding:10px; background:var(--bg-primary); text-align:center; color:var(--accent-warning); font-size:0.75rem;">Deploy devam ediyor, biraz sonra tekrar deneyin.</div>';
   }
 
   // Linkler
@@ -444,7 +444,7 @@ function _veShowRefreshedPopup() {
 
   popup.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-      '<span style="font-weight:600; color:#22c55e; font-size:0.85rem;">✓ Program Güncellendi</span>' +
+      '<span style="font-weight:600; color:var(--accent-success); font-size:0.85rem;">✓ Program Güncellendi</span>' +
       '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>' +
     '</div>' +
     '<div style="color:var(--text-secondary); line-height:1.5;">Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.</div>';
