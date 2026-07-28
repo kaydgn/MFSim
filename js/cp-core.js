@@ -287,6 +287,16 @@ function showNodeProperties(node) {
   // İçerik-yoğun paneller (VE_WIDE_PANEL_TYPES listesi): geniş pencere +
   // kompakt-sol kimlik + iki sütun düzeni. Liste dalga dalga büyür. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--wide', VE_WIDE_PANEL_TYPES.indexOf(node.type) >= 0);
+  // Motor paneli, veri gelene kadar DAR açılır: geniş pencerede sağ (çıktı)
+  // sütunu tamamen boş kalıyor, 980px'lik pencerenin yarısı boşluktu. Preset
+  // seçilince onVEFTMotorSelect bu sınıfı kaldırıp --wide'a genişletir;
+  // tüm veri silinirse showVEMotorPlaceholder geri daraltır. Salt sunum.
+  if(_propWin) {
+    var _engEmpty = node.type === 'engine' &&
+      !(node.data && node.data.torqueData && node.data.torqueData.length);
+    _propWin.classList.toggle('ve-properties--engine-empty', _engEmpty);
+    if(_engEmpty) _propWin.classList.remove('ve-properties--wide');
+  }
   // Yol / Ortam: harita hero → çok geniş+yüksek pencere (--wide boyutunu ezer).
   if(_propWin) _propWin.classList.toggle('ve-properties--road', node.type === 'road');
   // Hafif paneller (VE_COMPACT_PANEL_TYPES): içerik az → dar pencere + kompakt-sol
