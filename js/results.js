@@ -4778,15 +4778,28 @@ function veInheritedXAxis(slotIdx) {
   return { id: 'time', name: tm === 'stop' ? 'Zaman [s] (Durma)' : 'Zaman [s]', unit: 's' };
 }
 
-// Pano ekseni değiştiyse Veri Gezgini'ni tazele (kilitli/açık diyagramlar
-// güncellensin). Ağaç yeniden kurulması kullanıcının açtığı dalları
-// kapattığı için YALNIZCA eksen kimliği gerçekten değişince çalışır.
+// Pano durumu değiştikten sonra çağrılır. İki işi vardır ve ikisi de
+// PAHALI olduğu için yalnızca gerçekten değişiklik varsa çalışır:
+//
+//  1) Eksen kimliği değiştiyse Veri Gezgini'ni tazeler (kilitli/açık
+//     diyagramlar güncellensin). Ağacın yeniden kurulması kullanıcının açtığı
+//     dalları kapattığından koşulsuz tazelemek rahatsız edici olurdu.
+//  2) Pano marjı değiştiyse TÜM grafikleri yeniden çizer — yeni bir panel
+//     ikinci bir Y ekseni getirdiğinde diğer panellerin plot alanı da
+//     genişlemeli, yoksa ortak imleç panelden panele kayar.
 var _veLastBoardXKey = null;
-function veSyncXAxisTree() {
+var _veLastBoardMargin = '';
+function veSyncBoardState() {
   var k = (typeof veSharedXKey === 'function') ? veSharedXKey(veResultSlots) : null;
-  if(k === _veLastBoardXKey) return;
-  _veLastBoardXKey = k;
-  if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
+  if(k !== _veLastBoardXKey) {
+    _veLastBoardXKey = k;
+    if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
+  }
+  var m = (typeof veBoardChartMargin === 'function') ? JSON.stringify(veBoardChartMargin()) : '';
+  if(m !== _veLastBoardMargin) {
+    _veLastBoardMargin = m;
+    if(window.veSimResults && typeof veRefreshAllCharts === 'function') veRefreshAllCharts();
+  }
 }
 
 // Uyumsuz bırakma uyarısı — hangi eksenin geçerli olduğunu ve nasıl
@@ -4876,7 +4889,7 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   }
 
   veRenderSlot(slotIdx);
-  veSyncXAxisTree();   // pano ekseni kilitlendi/değişti mi → ağacı tazele
+  veSyncBoardState();   // pano ekseni / marjı değişti mi → ağaç + grafikler
   if(typeof showToast === 'function') showToast(diag.name + ' diyagramı eklendi', 'success');
 }
 
@@ -4912,7 +4925,7 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
     var displayName = '[SW] ' + compName + ' — ' + (sigInfo ? sigInfo.name : signalId);
     slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
     veRenderSlot(slotIdx);
-    veSyncXAxisTree();   // pano ekseni kilitlendi/değişti mi → ağacı tazele
+    veSyncBoardState();   // pano ekseni / marjı değişti mi → ağaç + grafikler
     return;
   }
 
@@ -4979,7 +4992,7 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
   slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
   
   veRenderSlot(slotIdx);
-  veSyncXAxisTree();   // pano ekseni kilitlendi/değişti mi → ağacı tazele
+  veSyncBoardState();   // pano ekseni / marjı değişti mi → ağaç + grafikler
 }
 
 function veAddSensorToSlot(slotIdx, sensorId) {
@@ -5122,7 +5135,7 @@ function veSlotClear(slotIdx) {
   var btn = el ? el.querySelector('.btn-collapse') : null;
   if(btn) btn.textContent = '▼';
   // Son dolu panel de boşaldıysa pano ekseni serbest kalır
-  veSyncXAxisTree();
+  veSyncBoardState();
 }
 
 function veRenderSlot(slotIdx) {
@@ -5583,7 +5596,7 @@ function veSetSlotXAxis(slotIdx, optIdx) {
 
   // Eksen değişti — sabitlenmiş referans imleç artık başka bir alana ait
   if(typeof veCursorClearPin === 'function') veCursorClearPin();
-  veSyncXAxisTree();
+  veSyncBoardState();
 
   if(changed > 1 && typeof showToast === 'function') {
     showToast('X ekseni ' + newAxis.name + ' olarak ayarlandı (' + changed + ' panel)', 'info');

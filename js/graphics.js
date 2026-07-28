@@ -422,6 +422,33 @@ function veShowYAxisLockPopup(slotIdx, axIdx, color, unit, e) {
   setTimeout(function() { document.getElementById('ve-yp-min').focus(); }, 50);
 }
 
+// Panodaki en çok eksene sahip panelin eksen sayısı (sol/sağ). Ortak X ekseni
+// panelleri aynı X değerine kilitler; marjı da ortaklaştırmazsak imleç çizgisi
+// panelden panele birkaç piksel kayar ve "tek çizgi" hissi bozulur.
+//
+// Sayım sinyallerin BİRİMİNDEN yapılır (veriye ihtiyaç duymaz). Verisi
+// bulunamayan bir sinyal çizimde eksen açmaz; bu durumda marj birkaç piksel
+// geniş kalır — hizalama bozulmadığı için kabul edilebilir.
+function veBoardChartMargin() {
+  var maxLeft = 1, maxRight = 0;
+  if(typeof veResultSlots === 'undefined') return { leftAxes: maxLeft, rightAxes: maxRight };
+  for(var i = 0; i < veResultSlots.length; i++) {
+    var s = veResultSlots[i];
+    if(!s || !s.sensors || s.sensors.length === 0) continue;
+    if((s.type || 'line') !== 'line') continue;
+    var units = [];
+    for(var k = 0; k < s.sensors.length; k++) {
+      var u = s.sensors[k].unit || '';
+      if(units.indexOf(u) < 0) units.push(u);
+    }
+    // veRenderChart eksenleri sol/sağ sırayla dağıtır: 0→sol, 1→sağ, 2→sol...
+    var l = Math.ceil(units.length / 2), r = Math.floor(units.length / 2);
+    if(l > maxLeft) maxLeft = l;
+    if(r > maxRight) maxRight = r;
+  }
+  return { leftAxes: maxLeft, rightAxes: maxRight };
+}
+
 function veRenderChart(slotIdx) {
   var slot = veResultSlots[slotIdx];
   if(!slot || !slot.sensors || slot.sensors.length === 0) return;
@@ -612,11 +639,17 @@ function veRenderChart(slotIdx) {
     }
   });
 
-  // ====== MARJİN (dinamik — eksen sayısına göre) ======
+  // ====== MARJİN (pano geneli — eksen sayısına göre) ======
+  // Pano tek X ekseninde çalışır; imlecin panelden panele KAYMAMASI için plot
+  // alanları da aynı yerden başlamalı. Bu yüzden marj yalnız bu panelin değil,
+  // panodaki en çok eksene sahip panelin ihtiyacına göre hesaplanır.
   var AXIS_W = 52; // Her eksen için piksel genişlik
+  var _board = (typeof veBoardChartMargin === 'function') ? veBoardChartMargin() : null;
+  var nLeft = _board ? Math.max(leftAxes.length, _board.leftAxes) : leftAxes.length;
+  var nRight = _board ? Math.max(rightAxes.length, _board.rightAxes) : rightAxes.length;
   var margin = {
-    left: Math.max(58, 14 + leftAxes.length * AXIS_W),
-    right: rightAxes.length > 0 ? Math.max(58, 14 + rightAxes.length * AXIS_W) : 14,
+    left: Math.max(58, 14 + nLeft * AXIS_W),
+    right: nRight > 0 ? Math.max(58, 14 + nRight * AXIS_W) : 14,
     top: 16, bottom: 38
   };
   var pw = w - margin.left - margin.right;
@@ -4212,7 +4245,7 @@ function veClearAllResults() {
 
   // Pano boşaldı — ortak X ekseni serbest kalır, ağaçtaki kilitler açılır
   if(typeof veCursorClearPin === 'function') veCursorClearPin();
-  if(typeof veSyncXAxisTree === 'function') veSyncXAxisTree();
+  if(typeof veSyncBoardState === 'function') veSyncBoardState();
 
   // Simülasyon verilerini temizle
   window.veSimResults = null;
