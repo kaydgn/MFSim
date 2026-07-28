@@ -2281,7 +2281,7 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
     var sd = parseFloat(segs[si].distance) || 0;
     var dir = segs[si].direction || 'flat';
     var x1 = toX(segStart), x2 = toX(segStart + sd);
-    var fillColor = dir === 'down' ? 'rgba(34,197,94,0.08)' : dir === 'up' ? 'rgba(239,68,68,0.08)' : 'rgba(128,128,128,0.04)';
+    var fillColor = dir === 'down' ? 'color-mix(in srgb, var(--accent-success) 8%, transparent)' : dir === 'up' ? 'rgba(239,68,68,0.08)' : 'rgba(128,128,128,0.04)';
     ctx.fillStyle = fillColor;
     ctx.fillRect(x1, pad.t, x2 - x1, ph);
     // Segment sınır çizgisi
@@ -2445,7 +2445,7 @@ function getParametricPropertiesHTML(node) {
     });
     
     if(allValid && params.length > 0) {
-      html += '<div style="margin-top:8px; padding:6px 10px; background:linear-gradient(135deg,rgba(59,130,246,0.1),rgba(139,92,246,0.1)); border:1px solid var(--accent-primary); border-radius:var(--radius-sm); text-align:center;">';
+      html += '<div style="margin-top:8px; padding:6px 10px; background:linear-gradient(135deg,color-mix(in srgb, var(--accent-primary) 10%, transparent),rgba(139,92,246,0.1)); border:1px solid var(--accent-primary); border-radius:var(--radius-sm); text-align:center;">';
       html += '<span style="font-size:0.65rem; font-weight:600; color:var(--accent-primary);">Toplam: ' + totalRuns + ' simülasyon koşusu</span>';
       if(totalRuns > 100) {
         html += '<div style="font-size:0.52rem; color:var(--accent-warning); margin-top:2px;">⚠ Yüksek koşu sayısı — uzun sürebilir</div>';

@@ -243,11 +243,11 @@ function veSolverValidate() {
   // Sonuç
   if(allOk) {
     var modeText = (hasTerminator && terminatorConnected) ? 'Kısmi analiz' : 'Tam analiz';
-    html += '<div style="margin-top:12px;padding:10px;background:rgba(76,175,80,0.1);border-radius:var(--radius-sm);border:1px solid rgba(76,175,80,0.3);text-align:center;font-size:0.8rem;color:var(--accent-success);font-weight:600;">✓ ' + modeText + ' - hesaplamaya hazır</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-success) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-success) 30%, transparent);text-align:center;font-size:0.8rem;color:var(--accent-success);font-weight:600;">✓ ' + modeText + ' - hesaplamaya hazır</div>';
     document.getElementById('ve-solver-run-btn').disabled = false;
     document.getElementById('ve-solver-run-btn').style.opacity = '1';
   } else {
-    html += '<div style="margin-top:12px;padding:10px;background:rgba(244,67,54,0.1);border-radius:var(--radius-sm);border:1px solid rgba(244,67,54,0.3);text-align:center;font-size:0.8rem;color:var(--accent-danger);font-weight:600;">✗ Eksikler var - hesaplama yapılamaz</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-danger) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent);text-align:center;font-size:0.8rem;color:var(--accent-danger);font-weight:600;">✗ Eksikler var - hesaplama yapılamaz</div>';
     document.getElementById('ve-solver-run-btn').disabled = true;
     document.getElementById('ve-solver-run-btn').style.opacity = '0.5';
   }

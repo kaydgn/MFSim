@@ -92,7 +92,7 @@ function runECMatchingAnalysis(nodeId) {
   var resultsEl = document.getElementById('ecm-results-' + nodeId);
 
   if(!engineNode || !engineNode.data || !engineNode.data.torqueData || engineNode.data.torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     return;
   }
   
@@ -327,7 +327,7 @@ function runECMatchingAnalysis(nodeId) {
     
     // C9/C10 uyarı bandı (şanzıman seviyesi kontroller)
     if(!c9ok || !c10ok) {
-      h += '<div style="margin-bottom:8px; padding:8px 10px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:var(--radius-sm);">';
+      h += '<div style="margin-bottom:8px; padding:8px 10px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm);">';
       h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-danger);">✗ Şanzıman Giriş Limiti Aşılıyor</div>';
       h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">';
       if(!c9ok) h += 'C9: Motor gücü (' + powerAtGov.toFixed(0) + ' kW) > Şanzıman giriş güç limiti (' + gbLimits.grossInputPower + ' kW)<br>';
@@ -358,9 +358,9 @@ function runECMatchingAnalysis(nodeId) {
 
     results.forEach(function(r, idx) {
       var bgColor = r.status === 'recommended' ? 'rgba(22,163,74,0.06)' :
-                    r.status === 'caution' ? 'rgba(217,119,6,0.06)' :
-                    r.status === 'not-recommended' ? 'rgba(217,119,6,0.08)' :
-                    'rgba(220,38,38,0.06)';
+                    r.status === 'caution' ? 'color-mix(in srgb, var(--accent-warning) 6%, transparent)' :
+                    r.status === 'not-recommended' ? 'color-mix(in srgb, var(--accent-warning) 8%, transparent)' :
+                    'color-mix(in srgb, var(--accent-danger) 6%, transparent)';
       var statusIcon = r.status === 'recommended' ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' :
                        r.status === 'caution' ? '<span style="color:var(--accent-warning);font-weight:700;">⚠</span>' :
                        r.status === 'not-recommended' ? '<span style="color:var(--accent-warning);font-weight:700;">⚠</span>' :
@@ -675,14 +675,14 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
   // Bağlı motoru bul
   var engineNode = findConnectedEngine(nodeId);
   if(!engineNode) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(220,38,38,0.1); border:1px solid rgba(220,38,38,0.3); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
 
   var torqueData = engineNode.data ? (engineNode.data.torqueData || []) : [];
   if(torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-warning);">⚠ Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-warning) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-warning);">⚠ Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
@@ -827,9 +827,9 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
 
     results.forEach(function(r) {
       var bgColor = r.status === 'recommended' ? 'rgba(22,163,74,0.06)' :
-                    r.status === 'caution' ? 'rgba(217,119,6,0.06)' :
+                    r.status === 'caution' ? 'color-mix(in srgb, var(--accent-warning) 6%, transparent)' :
                     r.status === 'tight' ? 'rgba(249,115,22,0.06)' :
-                    r.status === 'unacceptable' ? 'rgba(220,38,38,0.06)' :
+                    r.status === 'unacceptable' ? 'color-mix(in srgb, var(--accent-danger) 6%, transparent)' :
                     'transparent';
       var statusIcon = r.status === 'recommended' ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' :
                        r.status === 'caution' ? '<span style="color:var(--accent-warning);font-weight:700;">⚠</span>' :
@@ -1582,7 +1582,7 @@ function ecmModalMouseMove(e) {
   
   // Motor line
   if(motorT > 0) {
-    var motorHL = nearestIsMotor ? 'background:rgba(245,158,11,0.12); margin:0 -8px; padding:2px 8px; border-radius:var(--radius-sm);' : '';
+    var motorHL = nearestIsMotor ? 'background:color-mix(in srgb, var(--accent-warning) 12%, transparent); margin:0 -8px; padding:2px 8px; border-radius:var(--radius-sm);' : '';
     html += '<div style="display:flex; align-items:center; gap:6px; padding:2px 0; ' + motorHL + '">';
     html += '<span style="width:16px; height:3px; background:#f59e0b; border-radius:1px; flex-shrink:0;"></span>';
     html += '<span style="color:#f59e0b; font-weight:600; min-width:65px;">Motor</span>';

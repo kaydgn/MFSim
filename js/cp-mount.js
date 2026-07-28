@@ -787,7 +787,7 @@ function _mntRenderExampleReport(warnings, silent){
   var el = (typeof document!=='undefined') ? document.getElementById('ve-mnt-example-report') : null;
   if(!el) return;
   if(!warnings.length){
-    el.innerHTML='<div style="padding:9px 11px; background:rgba(34,197,94,0.12); border:1px solid var(--accent-success); border-radius:5px; font-size:0.64rem; color:var(--accent-success);"><b>✓ Model tutarlı</b> — herhangi bir uyarı yok.</div>';
+    el.innerHTML='<div style="padding:9px 11px; background:color-mix(in srgb, var(--accent-success) 12%, transparent); border:1px solid var(--accent-success); border-radius:5px; font-size:0.64rem; color:var(--accent-success);"><b>✓ Model tutarlı</b> — herhangi bir uyarı yok.</div>';
     return;
   }
   var errN=warnings.filter(function(w){return w.level==='err';}).length;
@@ -796,7 +796,7 @@ function _mntRenderExampleReport(warnings, silent){
   warnings.forEach(function(w){
     var isErr=w.level==='err';
     var col=isErr?'var(--accent-danger)':'var(--accent-warning)';
-    var bg=isErr?'rgba(239,68,68,0.10)':'rgba(245,158,11,0.10)';
+    var bg=isErr?'rgba(239,68,68,0.10)':'color-mix(in srgb, var(--accent-warning) 10%, transparent)';
     h+='<div style="padding:6px 9px; background:'+bg+'; border-left:3px solid '+col+'; border-radius:3px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary);"><b style="color:'+col+';">'+(isErr?'HATA':'UYARI')+':</b> '+w.msg+'</div>';
   });
   h+='</div>';
@@ -2452,7 +2452,7 @@ async function veMntSolverCompute(solverId){
 // (çekme, durdurucu, ±10 mm aşımı, modal f≈0, yakınsama). Ayrıntı → Rapor.
 function _mntSolverStatusHTML(R){
   if(R.error){
-    return '<div style="padding:10px 12px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:0.66rem; line-height:1.5;"><b>Çözülemedi — eksik/geçersiz girdi:</b><ul style="margin:6px 0 0 16px; padding:0;">'
+    return '<div style="padding:10px 12px; background:color-mix(in srgb, var(--accent-warning) 12%, transparent); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:0.66rem; line-height:1.5;"><b>Çözülemedi — eksik/geçersiz girdi:</b><ul style="margin:6px 0 0 16px; padding:0;">'
       + R.error.map(function(p){return '<li>'+_mntEsc(p)+'</li>';}).join('')
       + '</ul><div style="margin-top:6px; color:var(--text-muted);">İç topolojide Kütle ve Takoz bileşenleri bulunmalı ve geçerli değerler girilmelidir.</div></div>';
   }
@@ -2471,7 +2471,7 @@ function _mntSolverStatusHTML(R){
   });
   var modalWarn=(R.modes||[]).filter(function(m){return m && m.warning;}).length;
 
-  var h='<div style="padding:9px 11px; border:1px solid var(--accent-success); background:rgba(34,197,94,0.10); border-radius:5px;">';
+  var h='<div style="padding:9px 11px; border:1px solid var(--accent-success); background:color-mix(in srgb, var(--accent-success) 10%, transparent); border-radius:5px;">';
   h+='<div style="display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; font-size:0.72rem; font-weight:700; color:var(--accent-success);"><span>✓ Çözüldü</span>'
     + '<span style="font-weight:400; color:var(--text-muted); font-size:0.58rem;">'+nC+' kütle · '+nM+' takoz · '+nCase+' yük durumu · '+nMode+' mod</span></div>';
   h+='<div style="margin-top:5px; font-size:0.62rem; color:var(--text-secondary); line-height:1.5;">'
