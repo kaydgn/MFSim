@@ -19,6 +19,9 @@ const {
   veCursorSample,
   veCursorDelta,
   veCursorFmtDelta,
+  veSharedXAxis,
+  veSharedXKey,
+  veXAxisAllowed,
 } = cursor;
 
 // veRenderChart'ın ürettiği _chartMeta'nın imleç için gereken alt kümesi.
@@ -142,6 +145,77 @@ describe('veCursorSyncTargets — hangi paneller birlikte okunur', () => {
 
   test('slot dizisi yoksa boş liste', () => {
     expect(veCursorSyncTargets(null, 0)).toEqual([]);
+  });
+});
+
+describe('ortak X ekseni — panonun tek ekseni', () => {
+  // Pano tek bir X ekseni üzerinde çalışır: ilk dolu panel onu belirler,
+  // sonraki bırakmalar ona uymak zorundadır. Kural gevşerse imleç artık "tüm
+  // paneller için ortak" olmaz — kullanıcı farkında olmadan senkronsuz bir
+  // panel edinir. Bu yüzden kuralın kendisi test edilir.
+  const filled = (xAxis, extra) => Object.assign({ type: 'line', sensors: [{ id: 'a' }], xAxis }, extra);
+  const empty = { type: 'line', sensors: [] };
+
+  test('boş pano ekseni serbest bırakır — her şey eklenebilir', () => {
+    expect(veSharedXAxis([empty, empty])).toBeNull();
+    expect(veSharedXKey([empty, empty])).toBeNull();
+    expect(veXAxisAllowed({ id: '~vehicle:v_speed' }, '', [empty, empty])).toBe(true);
+  });
+
+  test('ilk dolu panel panonun eksenini belirler', () => {
+    const slots = [empty, filled({ id: 'time', name: 'Zaman [s]' }), filled({ id: '~vehicle:v_speed' })];
+    expect(veSharedXAxis(slots).slotIdx).toBe(1);
+    expect(veSharedXKey(slots)).toBe('time');
+  });
+
+  test('aynı eksene izin verir, farklı ekseni reddeder', () => {
+    const slots = [filled({ id: 'time' })];
+    expect(veXAxisAllowed({ id: 'time' }, '', slots)).toBe(true);
+    expect(veXAxisAllowed({ id: '~vehicle:v_speed' }, '', slots)).toBe(false);
+  });
+
+  test('X ekseni tanımsız gelen öğe zaman ekseni sayılır', () => {
+    // Sinyallerin kendi X ekseni yoktur; panoya zaman ekseninde girerler
+    expect(veXAxisAllowed(null, '', [filled({ id: 'time' })])).toBe(true);
+    expect(veXAxisAllowed(null, '', [filled({ id: '~vehicle:v_speed' })])).toBe(false);
+  });
+
+  test('farklı koşudan gelen aynı isimli eksen ayrı alan sayılır', () => {
+    const slots = [filled({ id: 'time' })];
+    expect(veXAxisAllowed({ id: 'time' }, 'segmentDrive', slots)).toBe(false);
+    const segSlots = [filled({ id: 'time' }, { _dataSource: 'segmentDrive' })];
+    expect(veSharedXKey(segSlots)).toBe('time@segmentDrive');
+    expect(veXAxisAllowed({ id: 'time' }, 'segmentDrive', segSlots)).toBe(true);
+  });
+
+  test('3D panel ekseni belirlemez — kendi X/Y/Z ekseni vardır', () => {
+    const slots = [
+      { type: 'scatter3d', sensors: [{ id: 'a' }], xAxis: { id: '~engine:rpm' } },
+      filled({ id: 'time' }),
+    ];
+    expect(veSharedXKey(slots)).toBe('time');
+    expect(veSharedXAxis(slots).slotIdx).toBe(1);
+  });
+
+  test('yalnızca 3D panel varsa pano ekseni hâlâ serbesttir', () => {
+    const slots = [{ type: 'scatter3d', sensors: [{ id: 'a' }], xAxis: { id: '~engine:rpm' } }];
+    expect(veSharedXKey(slots)).toBeNull();
+    expect(veXAxisAllowed({ id: 'time' }, '', slots)).toBe(true);
+  });
+
+  test('kural uygulandığında her panel senkron hedefi olur', () => {
+    // Ortak eksenin asıl amacı: "senkronlanmayan panel" durumu kalmasın
+    const m = meta([0, 1], [{ name: 'a', data: [1, 2] }]);
+    const slots = [0, 1, 2, 3].map(() => ({
+      type: 'line', sensors: [{ id: 'a' }], xAxis: { id: 'time' }, _chartMeta: m,
+    }));
+    expect(veCursorSyncTargets(slots, 0)).toEqual([1, 2, 3]);
+    expect(veCursorSyncTargets(slots, 2)).toEqual([0, 1, 3]);
+  });
+
+  test('slot dizisi yoksa null / serbest', () => {
+    expect(veSharedXAxis(null)).toBeNull();
+    expect(veXAxisAllowed({ id: 'time' }, '', null)).toBe(true);
   });
 });
 

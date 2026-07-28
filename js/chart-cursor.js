@@ -66,16 +66,51 @@ function veCursorSnapIndex(arr, x) {
   return idx;
 }
 
-// Bir slotun X ekseni kimliği. İki panel ancak aynı kimliği taşıyorsa
-// senkronlanır: zaman ekseni ile hız ekseni aynı X değerini paylaşmaz.
-// Veri kaynağı (segmentDrive vb.) da kimliğe girer — aynı "zaman" adı farklı
-// koşulardan gelirse ayrı alan sayılır.
+// Bir X ekseni tanımının kimliği. Veri kaynağı (segmentDrive vb.) de kimliğe
+// girer — aynı "zaman" adı farklı koşulardan gelirse ayrı alan sayılır.
+function veXAxisKeyOf(xAxis, dataSource) {
+  var base = (xAxis && xAxis.id) ? xAxis.id : 'time';
+  var ds = (xAxis && xAxis._dataSource) ? xAxis._dataSource : (dataSource || '');
+  return ds ? (base + '@' + ds) : base;
+}
+
+// Bir slotun X ekseni kimliği.
 function veCursorXKey(slot) {
   if(!slot) return null;
-  var ax = slot.xAxis;
-  var base = (ax && ax.id) ? ax.id : 'time';
-  var ds = (ax && ax._dataSource) ? ax._dataSource : (slot._dataSource || '');
-  return ds ? (base + '@' + ds) : base;
+  return veXAxisKeyOf(slot.xAxis, slot._dataSource);
+}
+
+// ── Ortak X ekseni (pano kuralı) ─────────────────────────────────────────
+// Sonuç panosunda TEK bir X ekseni geçerlidir: ilk dolu panel onu belirler,
+// sonraki bırakmalar ona uymak zorundadır. Bu sayede fare imleci gerçekten
+// TÜM paneller için ortak tek bir çizgidir; "bu panel senkronlanmaz" durumu
+// hiç oluşmaz. Boş pano = eksen serbest, ilk bırakılan öğe belirler.
+//
+// 3D scatter paneli muaftır: X/Y/Z üç ayrı sinyalden gelir ve 2B imleç orada
+// zaten çalışmaz — ortak eksene zorlamak anlamsız olurdu.
+
+// Panoyu belirleyen eksen. Pano boşsa null (serbest).
+function veSharedXAxis(slots) {
+  if(!slots) return null;
+  for(var i = 0; i < slots.length; i++) {
+    var s = slots[i];
+    if(!s || !s.sensors || s.sensors.length === 0) continue;
+    if((s.type || 'line') === 'scatter3d') continue;
+    return { xAxis: s.xAxis || null, dataSource: s._dataSource || '', slotIdx: i };
+  }
+  return null;
+}
+
+function veSharedXKey(slots) {
+  var b = veSharedXAxis(slots);
+  return b ? veXAxisKeyOf(b.xAxis, b.dataSource) : null;
+}
+
+// Verilen X ekseni bu panoya girebilir mi? Pano boşsa her şey uyar.
+function veXAxisAllowed(xAxis, dataSource, slots) {
+  var key = veSharedXKey(slots);
+  if(key === null) return true;
+  return veXAxisKeyOf(xAxis, dataSource) === key;
 }
 
 // Kaynak slotla senkronlanabilecek diğer slot indeksleri.
@@ -580,7 +615,11 @@ document.addEventListener('keydown', function(e) {
 if(typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veCursorSnapIndex: veCursorSnapIndex,
+    veXAxisKeyOf: veXAxisKeyOf,
     veCursorXKey: veCursorXKey,
+    veSharedXAxis: veSharedXAxis,
+    veSharedXKey: veSharedXKey,
+    veXAxisAllowed: veXAxisAllowed,
     veCursorSyncTargets: veCursorSyncTargets,
     veCursorSample: veCursorSample,
     veCursorDelta: veCursorDelta,
