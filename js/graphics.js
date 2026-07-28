@@ -2342,8 +2342,8 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     var _gGr = G.low || G.high;
     var _lowSfx = G.low ? ' (Düşük)' : '';
     var eRows = [
-      { label: 'Stall/Kalkış Eğim' + _lowSfx, value: '%' + num(_gGr.stallGrade, 1) },
-      { label: '%80 Eğim Kabiliyeti' + _lowSfx, value: '%' + num(_gGr.lowSpeedGrade, 1) },
+      { label: 'Stall/Kalkış Eğim' + _lowSfx, value: veGradeDisplay(_gGr.stallGrade, 1, true) },
+      { label: '%80 Eğim Kabiliyeti' + _lowSfx, value: veGradeDisplay(_gGr.lowSpeedGrade, 1, true) },
       { label: 'Düz Yol Maks. Hız', value: num(gH2.maxSpeedFlat, 1) + ' km/h' }
     ];
     [5, 10, 20].forEach(function(gr) {
@@ -2467,9 +2467,9 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     rg += tRule(_w, '┌', '┬', '┐', '─');
     rg += tRow(['Eğim Kabiliyeti', '% Eğim', 'Hız (km/h)', 'Vites', 'Eşleme'], _w, _al);
     rg += tRule(_w, '├', '┼', '┤', '─');
-    rg += tRow(['Durma Eğim Kab. (Stall)', num(gd.stallGrade, 1), '–', gd.stallGear, 'Stall'], _w, _al);
-    rg += tRow(['Kalkış Eğim Kab. (Launch)', num(gd.launchGrade, 1), '–', gd.launchGear, ''], _w, _al);
-    rg += tRow(['Düşük Hız Eğim Kabiliyeti', num(gd.lowSpeedGrade, 1), num(gd.lowSpeedV, 1), gd.lowSpeedGear, '%80'], _w, _al);
+    rg += tRow(['Durma Eğim Kab. (Stall)', veGradeDisplay(gd.stallGrade, 1), '–', gd.stallGear, 'Stall'], _w, _al);
+    rg += tRow(['Kalkış Eğim Kab. (Launch)', veGradeDisplay(gd.launchGrade, 1), '–', gd.launchGear, ''], _w, _al);
+    rg += tRow(['Düşük Hız Eğim Kabiliyeti', veGradeDisplay(gd.lowSpeedGrade, 1), num(gd.lowSpeedV, 1), gd.lowSpeedGear, '%80'], _w, _al);
     rg += tRow(['Düz Yolda Maksimum Hız', '0.0', num(gd.maxSpeedFlat, 1), gd.maxSpeedFlatGear, 'Yol Yükü'], _w, _al);
     (gd.gradeTable || []).forEach(function(row) {
       if (row.v_max <= 0 && row.grade > 0) return;

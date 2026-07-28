@@ -1103,9 +1103,9 @@ function veRenderDetailedReport(filter) {
       h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); text-align:left; color:var(--text-secondary); font-weight:500;">Eşleşme Noktası</th>';
       h += '</tr></thead><tbody>';
       
-      h += '<tr>' + _tdName('Durma Eğim Kabiliyeti (Stall)') + _td(gd.stallGrade.toFixed(1)) + _td('') + _td(gd.stallGear) + _tdL('Stall') + '</tr>';
-      h += '<tr>' + _tdName('Kalkış Eğim Kabiliyeti (Launch)') + _td(gd.launchGrade.toFixed(1)) + _td('') + _td(gd.launchGear) + _tdL('') + '</tr>';
-      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(gd.lowSpeedGrade.toFixed(1)) + _td(gd.lowSpeedV.toFixed(1)) + _td(gd.lowSpeedGear) + _tdL('%80') + '</tr>';
+      h += '<tr>' + _tdName('Durma Eğim Kabiliyeti (Stall)') + _td(veGradeDisplay(gd.stallGrade, 1)) + _td('') + _td(gd.stallGear) + _tdL('Stall') + '</tr>';
+      h += '<tr>' + _tdName('Kalkış Eğim Kabiliyeti (Launch)') + _td(veGradeDisplay(gd.launchGrade, 1)) + _td('') + _td(gd.launchGear) + _tdL('') + '</tr>';
+      h += '<tr>' + _tdName('Düşük Hız Eğim Kabiliyeti') + _td(veGradeDisplay(gd.lowSpeedGrade, 1)) + _td(gd.lowSpeedV.toFixed(1)) + _td(gd.lowSpeedGear) + _tdL('%80') + '</tr>';
       h += '<tr>' + _tdName('Düz Yolda Maksimum Hız') + _td('0.0') + _td(gd.maxSpeedFlat.toFixed(1)) + _td(gd.maxSpeedFlatGear) + _tdL('Yol Yükü') + '</tr>';
       
       gd.gradeTable.forEach(function(row) {
@@ -3109,8 +3109,8 @@ function _veRepSecGrade(R, sim, H, charts) {
       { t: 'Eşleşme Noktası', a: 'l' }
     ];
     var rows = [];
-    rows.push(['Durma Eğim Kabiliyeti (Stall)', H.f(gd.stallGrade, 1), '', H.esc(gd.stallGear), 'Stall']);
-    rows.push(['Kalkış Eğim Kabiliyeti (Launch)', H.f(gd.launchGrade, 1), '', H.esc(gd.launchGear), '']);
+    rows.push(['Durma Eğim Kabiliyeti (Stall)', veGradeDisplay(gd.stallGrade, 1), '', H.esc(gd.stallGear), 'Stall']);
+    rows.push(['Kalkış Eğim Kabiliyeti (Launch)', veGradeDisplay(gd.launchGrade, 1), '', H.esc(gd.launchGear), '']);
     rows.push(['Düşük Hız Eğim Kabiliyeti', H.f(gd.lowSpeedGrade, 1), H.f(gd.lowSpeedV, 1), H.esc(gd.lowSpeedGear), '%80']);
     rows.push(['Düz Yolda Maksimum Hız', H.f(0, 1), H.f(gd.maxSpeedFlat, 1), H.esc(gd.maxSpeedFlatGear), 'Yol Yükü']);
     (gd.gradeTable || []).forEach(function(row) {
