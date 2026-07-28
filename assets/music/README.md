@@ -13,6 +13,9 @@ assets/music/acilis.mp3
   m4a/aac ve ogg de çoğu tarayıcıda çalışır).
 - Ses seviyesi ve döngü ayarı da aynı dosyanın başındaki `VOLUME` / `LOOP`
   sabitlerinden değiştirilir.
+- Müzik çalarken sağ-alt köşede mini bir çalar görünür: çal/duraklat, ses
+  kaydırıcısı, sessize alma ve kapatma. Kaydırıcıyla seçilen ses seviyesi
+  localStorage'da (`mf-splash-music`) saklanır ve sonraki açılışta uygulanır.
 
 Tarayıcı otomatik çalma politikası notu: normal girişte "Giriş Yap"
 tıklaması kullanıcı jesti sayılır ve müzik splash ile birlikte başlar.
