@@ -12,6 +12,23 @@ function changeTheme(themeId) {
   });
 }
 
+// Tema değişkenini canvas'ın anlayacağı 'rgba(r,g,b,a)' dizgesine çevirir.
+// Canvas API'si (fillStyle/strokeStyle/addColorStop) CSS değişkeni çözemez;
+// bu yardımcı çizim anında çağrılır → tema değişince bir sonraki çizimde
+// yeni renk gelir (minimap'in kullandığı teknikle aynı). Tüm temalar 6 haneli
+// hex tanımlar; çözülemeyen değerde fallback döner ki grafik hiç renksiz
+// kalmasın.
+function veThemeRgba(varName, alpha, fallback) {
+  var v = '';
+  try {
+    v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  } catch(e) {}
+  var m = /^#([0-9a-fA-F]{6})$/.exec(v);
+  if(!m) return fallback || v || '#888888';
+  var n = parseInt(m[1], 16);
+  return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + alpha + ')';
+}
+
 // Sayfa yüklendiğinde kayıtlı temayı uygula
 document.addEventListener('DOMContentLoaded', function() {
   var savedTheme = 'slate';
@@ -26,3 +43,8 @@ document.addEventListener('DOMContentLoaded', function() {
   if (valid.indexOf(savedTheme) < 0) savedTheme = 'slate';
   changeTheme(savedTheme);
 });
+
+// Birim testleri için (tarayıcıda etkisiz)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { changeTheme: changeTheme, veThemeRgba: veThemeRgba };
+}

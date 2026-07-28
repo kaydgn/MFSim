@@ -862,7 +862,7 @@ function veRenderChart(slotIdx) {
 
   // X ekseni başlığı (canvas üzerinde, altta ortada) — tıklanabilir
   var xAxisName = (slot.xAxis ? slot.xAxis.name : 'Zaman [s]');
-  ctx.fillStyle = 'rgba(59,130,246,0.85)';
+  ctx.fillStyle = veThemeRgba('--accent-primary', 0.85, 'rgba(59,130,246,0.85)');
   ctx.font = '600 11px -apple-system,system-ui,sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   var xTitleX = margin.left + pw / 2;
@@ -895,13 +895,13 @@ function veRenderChart(slotIdx) {
     ctx.font = '9px -apple-system,system-ui,sans-serif';
     var ztw = ctx.measureText(zoomText).width;
     // Arka plan kutusu
-    ctx.fillStyle = 'rgba(59,130,246,0.12)';
+    ctx.fillStyle = veThemeRgba('--accent-primary', 0.12, 'rgba(59,130,246,0.12)');
     ctx.beginPath();
     var zx = w - 8 - ztw - 8, zy = 4;
     if(ctx.roundRect) { ctx.roundRect(zx, zy, ztw + 16, 18, 4); } else { ctx.rect(zx, zy, ztw + 16, 18); }
     ctx.fill();
-    ctx.strokeStyle = 'rgba(59,130,246,0.3)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = 'rgba(59,130,246,0.85)';
+    ctx.strokeStyle = veThemeRgba('--accent-primary', 0.3, 'rgba(59,130,246,0.3)'); ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = veThemeRgba('--accent-primary', 0.85, 'rgba(59,130,246,0.85)');
     ctx.textAlign = 'right'; ctx.textBaseline = 'top';
     ctx.fillText(zoomText, w - 8, 8);
   }

@@ -36,6 +36,9 @@ global.stubGlobals = function stubGlobals(extra) {
       saveState: jest.fn(),
       showNodeProperties: jest.fn(),
       render: jest.fn(),
+      // Canvas çizimleri tema rengini bununla okur (js/theme.js); testte
+      // sabit bir renk yeterli.
+      veThemeRgba: jest.fn(() => 'rgba(0,0,0,1)'),
     },
     extra || {}
   );

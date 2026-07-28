@@ -1243,7 +1243,7 @@ function ecmDrawModalChart() {
   
   // Motor fill (subtle)
   ctx.beginPath();
-  ctx.fillStyle = isDark ? 'rgba(245,158,11,0.06)' : 'rgba(245,158,11,0.08)';
+  ctx.fillStyle = veThemeRgba('--accent-warning', isDark ? 0.06 : 0.08, 'rgba(245,158,11,0.08)');
   var fFirst = true;
   motorPts.forEach(function(p) { var x = xPos(p.rpm), y = yPos(p.torque); if(fFirst) { ctx.moveTo(x, y); fFirst = false; } else ctx.lineTo(x, y); });
   ctx.lineTo(xPos(motorPts[motorPts.length-1].rpm), yPos(0));
@@ -1382,7 +1382,7 @@ function ecmDrawModalChart() {
   
   // Zoom indicator on chart
   if(_ecmZoom.scale > 1.05 || _ecmZoom.scale < 0.95) {
-    ctx.fillStyle = isDark ? 'rgba(96,165,250,0.25)' : 'rgba(59,130,246,0.15)';
+    ctx.fillStyle = veThemeRgba('--accent-primary', isDark ? 0.25 : 0.15, 'rgba(59,130,246,0.15)');
     ctx.font = '11px system-ui, sans-serif';
     ctx.textAlign = 'right';
     ctx.fillText('' + _ecmZoom.scale.toFixed(1) + '× — scroll ile yakınlaştırın, tıklayarak sıfırlayın', ml + pw - 4, mt + 14);

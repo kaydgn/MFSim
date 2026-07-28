@@ -2312,7 +2312,7 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
   ctx.lineTo(toX(points[points.length - 1].x), pad.t + ph);
   ctx.lineTo(toX(points[0].x), pad.t + ph);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(59,130,246,0.12)';
+  ctx.fillStyle = veThemeRgba('--accent-primary', 0.12, 'rgba(59,130,246,0.12)');
   ctx.fill();
 
   // Yükseklik çizgisi — segment segment renklendir
