@@ -1921,6 +1921,16 @@ function showVEMotorPlaceholder(nodeId) {
   var placeholder = document.getElementById('ve-motor-placeholder-' + nodeId);
   if(dataArea) dataArea.style.display = 'none';
   if(placeholder) placeholder.style.display = 'block';
+
+  // Veri tamamen silindi → sağ (çıktı) sütunu da kapat ve pencereyi
+  // "boş motor" dar haline döndür (onVEFTMotorSelect'teki büyümenin tersi).
+  var ftExtras = document.querySelectorAll('.ve-ft-extra[data-node="' + nodeId + '"]');
+  ftExtras.forEach(function(el){ el.style.display = 'none'; });
+  var _propWin = document.getElementById('ve-properties');
+  if(_propWin && _propWin.classList.contains('ve-properties--wide') && placeholder) {
+    _propWin.classList.remove('ve-properties--wide');
+    _propWin.classList.add('ve-properties--engine-empty');
+  }
   
   // Motor dropdown'ını da sıfırla
   var selectEl = document.getElementById('ve-motor-select-' + nodeId);
@@ -2149,6 +2159,15 @@ function onVEFTMotorSelect(nodeId, value) {
   if(dataArea) dataArea.style.display = 'block';
   if(placeholder) placeholder.style.display = 'none';
   ftExtras.forEach(function(el){ el.style.display = 'block'; });
+
+  // Veri geldi → dar "boş motor" penceresini iki sütunlu genişe büyüt
+  // (yeniden render yok; yalnız pencere sınıfı değişir, cp-core'daki
+  // engine-empty kuralının tersi).
+  var _propWin = document.getElementById('ve-properties');
+  if(_propWin && _propWin.classList.contains('ve-properties--engine-empty')) {
+    _propWin.classList.remove('ve-properties--engine-empty');
+    _propWin.classList.add('ve-properties--wide');
+  }
   
   tbody.innerHTML = '';
   

@@ -2795,7 +2795,8 @@
   flex-direction:column;
   overflow:hidden;
   transform:scale(0.96);
-  transition:transform 0.22s cubic-bezier(0.4,0,0.2,1);
+  transition:transform 0.22s cubic-bezier(0.4,0,0.2,1),
+             max-width 0.25s var(--ease-out);
 }
 .ve-properties-overlay.visible .ve-properties{ transform:scale(1); }
 
@@ -2821,6 +2822,16 @@
    listesinde. Yalnız yerleşim; işlevsel mantık değişmez. */
 .ve-properties.ve-properties--wide{
   max-width:980px;
+}
+/* Motor paneli, veri gelene kadar dar "seçim diyaloğu" halinde durur —
+   geniş pencerede sağ (çıktı) sütunu bomboş kalıyordu. Preset seçilince
+   JS bu sınıfı --wide ile değiştirir; max-width geçişi büyümeyi yumuşatır
+   (transition .ve-properties tabanında). Veri silinirse geri daralır. */
+.ve-properties.ve-properties--engine-empty{
+  max-width:560px;
+}
+.ve-properties.ve-properties--engine-empty .ve-cp-grid{
+  grid-template-columns:1fr;
 }
 /* Yol / Ortam paneli — harita hero. Pencere çok geniş+yüksek, harita kocaman.
    --wide (980px) ile birlikte gelir; bu kural sonra tanımlı → boyutu EZER.
