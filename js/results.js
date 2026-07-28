@@ -4391,6 +4391,8 @@ function veSlotShellHTML(slotIdx) {
   // Panel 1 başlığı: global sonuç kontrolleri (Veri Gezgini'nden taşındı) küçük ikonlar
   if(slotIdx === 0) {
     h += '<button class="btn-slot-layout" onclick="event.stopPropagation();veChangeResultLayout()" title="Panel Düzeni — yerleşimi değiştir"><span class="mf-ico mf-ico-grid-cells"></span></button>';
+    // Ölçüm imleci (js/chart-cursor.js): aynı X eksenli panelleri tek imleçle okur
+    h += '<button class="btn-slot-cursor" id="ve-cursor-sync-btn" onclick="event.stopPropagation();veCursorToggleSync()" title="Senkron İmleç"><span class="mf-ico mf-ico-crosshair"></span></button>';
     h += '<button class="btn-slot-clearall" onclick="event.stopPropagation();veClearAllResults()" title="Sonuçları Temizle — tüm sonuçları sil"><span class="mf-ico mf-ico-trash"></span></button>';
     h += '<span class="ve-rslot-sep"></span>';
   }
@@ -4422,6 +4424,8 @@ function veApplyResultLayout(layoutId) {
   veBuildResultsGrid(layoutId);
   veInitRowResizer();
   veInitColResizers();
+  // Senkron imleç düğmesi yeni izgarada yeniden olustu — durumunu yansit
+  if(typeof veCursorSyncButtonRefresh === 'function') veCursorSyncButtonRefresh();
 
   // Aktif slotlari icerige gore cizdir (verisi olan grafik, bos olan secici)
   for(var s = 0; s < 4; s++) {
