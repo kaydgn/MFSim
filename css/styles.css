@@ -3482,6 +3482,35 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-chart-crosshair-v{position:absolute;top:0;bottom:0;width:1px;background:var(--accent-primary);opacity:0.5;}
 .ve-chart-crosshair-h{position:absolute;left:0;right:0;height:1px;background:var(--text-muted);opacity:0.3;}
 .ve-chart-crosshair-dot{position:absolute;width:10px;height:10px;border-radius:50%;border:2px solid;transform:translate(-50%,-50%);background:var(--bg-primary);box-shadow:0 0 6px rgba(0,0,0,0.3);}
+/* Ölçüm imleci (js/chart-cursor.js) — CANoe tarzi senkron/sabit imleç */
+.ve-chart-tooltip-head{
+  font-weight:700;font-size:0.65rem;color:var(--text-secondary);margin-bottom:4px;
+  border-bottom:1px solid var(--border-color);padding-bottom:3px;letter-spacing:0.2px;
+}
+.ve-chart-tooltip-delta{
+  margin-top:5px;padding-top:4px;border-top:1px dashed var(--border-color);
+}
+/* Sabitlenmiş referans imleç (A) — hover imlecinden ayrişsin diye kesikli */
+.ve-chart-cursor-pin{
+  position:absolute;width:0;border-left:1px dashed var(--accent-warning);
+  pointer-events:none;z-index:16;
+}
+.ve-chart-cursor-pin-tag{
+  position:absolute;top:0;left:3px;white-space:nowrap;
+  font-size:0.55rem;font-weight:700;line-height:1.4;
+  font-family:'SF Mono','Fira Code',monospace;
+  padding:1px 4px;border-radius:var(--radius-sm);
+  color:var(--accent-warning);
+  background:color-mix(in srgb, var(--bg-primary) 82%, transparent);
+  border:1px solid color-mix(in srgb, var(--accent-warning) 40%, transparent);
+}
+/* Legend rozetinde imleç konumundaki canli deger (CANoe deger sutunu) */
+.ve-legend-cursor-val{
+  margin-left:5px;padding-left:5px;font-size:0.6rem;font-weight:700;
+  font-family:'SF Mono','Fira Code',monospace;
+  border-left:1px solid currentColor;
+}
+.ve-rslot-btns button.btn-slot-cursor.active{color:var(--accent-primary);}
 /* Result table */
 .ve-result-table{
   width:100%;border-collapse:collapse;font-size:0.72rem;

@@ -907,6 +907,10 @@ function veRenderChart(slotIdx) {
   }
   
   // Eksen kontrolü: Y birim etiketine çift tıklayınca popup açılır (veShowYAxisLockPopup)
+
+  // Ölçüm imleci (js/chart-cursor.js): yakınlaştırma/kaydırma sonrası sabit ve
+  // aktif imleç yeni piksel geometrisine yeniden otursun.
+  if(typeof veCursorAfterRender === 'function') veCursorAfterRender(slotIdx);
 }
 
 // ═══════ CHART İNTERAKTİVİTE — PAN / ZOOM / TOOLTIP ═══════
@@ -921,6 +925,7 @@ function veInitChartInteraction(slotIdx) {
   var panStartX = 0, panStartY = 0;
   var panStartPanX = 0, panStartPanY = 0;
   var _panRAF = null;
+  var _pinTimer = null;   // çift-tık ayrımı için bekleyen "imleci sabitle"
   var PAN_THRESHOLD = 4; // piksel — bu mesafe aşılmadan pan başlamaz
 
   // Fare hareketi: tooltip veya pan
@@ -1025,10 +1030,26 @@ function veInitChartInteraction(slotIdx) {
   });
 
   document.addEventListener('mouseup', function(e) {
+    // Sürüklemeden biten sol tık = "sabitle" tıklaması: ölçüm imlecini o
+    // noktaya kilitler, sonraki gezinmede Δ okuması çıkar (CANoe ölçüm
+    // imleci). Pan başladıysa (isPanning) tıklama sayılmaz.
+    var wasClick = panPending && !isPanning;
     if(isPanning || panPending) {
       isPanning = false;
       panPending = false;
       area.style.cursor = '';
+    }
+    if(wasClick && typeof veCursorTogglePin === 'function') {
+      var xv = veChartEventToXValue(slotIdx, e);
+      if(xv !== null) {
+        // Çift tık "görünümü sıfırla" demek — ikinci tık gelirse sabitlemeyi
+        // iptal et. Bu yüzden sabitleme çift-tık penceresi kadar bekletilir.
+        if(_pinTimer) clearTimeout(_pinTimer);
+        _pinTimer = setTimeout(function() {
+          _pinTimer = null;
+          veCursorTogglePin(slotIdx, xv);
+        }, 260);
+      }
     }
   });
 
@@ -1058,6 +1079,8 @@ function veInitChartInteraction(slotIdx) {
   // Çift tık: Y ekseni birimine tıklanırsa min/max popup, değilse görünümü sıfırla
   area.addEventListener('dblclick', function(e) {
     e.preventDefault();
+    // Bekleyen "imleci sabitle" varsa iptal — çift tık sıfırlama demektir.
+    if(_pinTimer) { clearTimeout(_pinTimer); _pinTimer = null; }
     var slot2 = veResultSlots[slotIdx];
     var m2 = slot2 && slot2._chartMeta;
     if(m2 && m2.yUnitHits && m2.yUnitHits.length > 0) {
@@ -1176,133 +1199,41 @@ function veChartPlayhead(slotIdx) {
   slot._playRAF = requestAnimationFrame(step);
 }
 
-function veChartShowTooltip(slotIdx, e) {
+// Fare olayının plot alanındaki X-ekseni değeri. Plot dışındaysa null.
+function veChartEventToXValue(slotIdx, e) {
   var slot = veResultSlots[slotIdx];
-  if(!slot || !slot._chartMeta) return;
+  if(!slot || !slot._chartMeta) return null;
   var m = slot._chartMeta;
-  var tArr = m.timeArr;
-  if(!tArr || tArr.length === 0) return;
-  
+  if(!m.timeArr || m.timeArr.length === 0) return null;
   var canvas = document.getElementById('ve-chart-canvas-' + slotIdx);
-  var tooltip = document.getElementById('ve-tooltip-' + slotIdx);
-  var crosshair = document.getElementById('ve-crosshair-' + slotIdx);
-  var crossV = document.getElementById('ve-crosshair-v-' + slotIdx);
-  if(!canvas || !tooltip || !crosshair) return;
-  
-  // Canvas bounding rect kullan
-  var cRect = canvas.getBoundingClientRect();
-  var cw = cRect.width;
-  var ch = cRect.height;
-  if(cw < 10 || ch < 10) return;
-  
-  var mx = e.clientX - cRect.left;
-  var my = e.clientY - cRect.top;
-  
-  // Canvas CSS boyutu ile meta boyutu ölçek farkı
-  var scaleX = cw / m.w;
-  var scaleY = ch / m.h;
-  
-  // Plot alanı sınırları (CSS px)
+  if(!canvas) return null;
+  var rect = canvas.getBoundingClientRect();
+  if(rect.width < 10 || rect.height < 10) return null;
+  var mx = e.clientX - rect.left;
+  var my = e.clientY - rect.top;
+  var scaleX = rect.width / m.w, scaleY = rect.height / m.h;
   var plotLeft = m.margin.left * scaleX;
   var plotRight = (m.margin.left + m.pw) * scaleX;
   var plotTop = m.margin.top * scaleY;
   var plotBottom = (m.margin.top + m.ph) * scaleY;
-  
-  if(mx < plotLeft - 2 || mx > plotRight + 2 || my < plotTop - 2 || my > plotBottom + 2) {
-    tooltip.classList.remove('visible');
-    crosshair.style.display = 'none';
-    return;
-  }
-  
-  // X → zaman
-  var tVal = m.xMin + (mx - plotLeft) / (plotRight - plotLeft) * (m.xMax - m.xMin);
-  
-  // Binary search
-  var idx = 0, lo = 0, hi = tArr.length - 1;
-  while(lo <= hi) { var mid = (lo + hi) >> 1; if(tArr[mid] < tVal) lo = mid + 1; else hi = mid - 1; }
-  idx = lo;
-  if(idx > 0 && idx < tArr.length && Math.abs(tArr[idx - 1] - tVal) < Math.abs(tArr[idx] - tVal)) idx--;
-  if(idx >= tArr.length) idx = tArr.length - 1;
-  
-  var snapX = plotLeft + (tArr[idx] - m.xMin) / (m.xMax - m.xMin) * (plotRight - plotLeft);
-  
-  crosshair.style.display = '';
-  crosshair.style.width = cw + 'px';
-  crosshair.style.height = ch + 'px';
-  crossV.style.left = snapX + 'px';
-  crossV.style.top = plotTop + 'px';
-  crossV.style.height = (plotBottom - plotTop) + 'px';
-  
-  crosshair.querySelectorAll('.ve-chart-crosshair-dot').forEach(function(d) { d.remove(); });
-  
-  var xLabel = 't';
-  var xUnit = 's';
-  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
-    xLabel = slot.xAxis.name || 'X';
-    xUnit = slot.xAxis.unit || '';
-  }
-  var html = '<div style="font-weight:700; font-size:0.65rem; color:var(--text-secondary); margin-bottom:4px; border-bottom:1px solid var(--border-color); padding-bottom:3px; letter-spacing:0.2px;">' + xLabel + ' = ' + tArr[idx].toFixed(3) + (xUnit ? ' ' + xUnit : '') + '</div>';
-  
-  // Dual axis bilgisi
-  var axesInfo = m.axes || [{ yMin: m.yMin, yMax: m.yMax }];
-  
-  m.datasets.forEach(function(ds) {
-    if(ds._noData) {
-      // Verisi olmayan sensör — sadece tooltip'te uyarı göster
-      html += '<div class="ve-chart-tooltip-row">';
-      html += '<div class="ve-chart-tooltip-dot" style="background:' + ds.color + '; opacity:0.3;"></div>';
-      html += '<span style="font-size:0.65rem; opacity:0.5;">' + ds.name + '</span>';
-      html += '<span class="ve-chart-tooltip-val" style="opacity:0.4;">— veri yok</span>';
-      html += '</div>';
-      return;
-    }
-    var val = (ds.data && idx < ds.data.length) ? ds.data[idx] : 0;
-    
-    // Dataset'in bağlı olduğu eksen
-    var axIdx = ds._axisIdx || 0;
-    var ax = axesInfo[axIdx] || axesInfo[0];
-    
-    // Y pozisyonu: kendi eksenine göre hesapla
-    var plotH = plotBottom - plotTop;
-    var valY = plotTop + plotH - (val - ax.yMin) / (ax.yMax - ax.yMin) * plotH;
-    
-    var dot = document.createElement('div');
-    dot.className = 've-chart-crosshair-dot';
-    dot.style.left = snapX + 'px';
-    dot.style.top = valY + 'px';
-    dot.style.borderColor = ds.color;
-    crosshair.appendChild(dot);
-    
-    // Eksen tarafı göstergesi (çoklu eksen modunda)
-    var axisBadge = '';
-    if(m.hasDualAxis && axesInfo[axIdx]) {
-      var axUnit = axesInfo[axIdx].unit;
-      var axClr = axesInfo[axIdx].color || ds.color;
-      axisBadge = ' <span style="opacity:0.5;font-size:0.5rem;color:' + axClr + ';">[' + (axUnit || ('Y' + (axIdx+1))) + ']</span>';
-    }
-    
-    html += '<div class="ve-chart-tooltip-row">';
-    html += '<div class="ve-chart-tooltip-dot" style="background:' + ds.color + ';"></div>';
-    html += '<span style="font-size:0.65rem;">' + ds.name + axisBadge + '</span>';
-    html += '<span class="ve-chart-tooltip-val">' + veFormatTooltipVal(val) + ' <span style="opacity:0.5;">' + ds.unit + '</span></span>';
-    html += '</div>';
-  });
-  
-  tooltip.innerHTML = html;
-  tooltip.classList.add('visible');
-  
-  var tw = tooltip.offsetWidth || 160;
-  var th = tooltip.offsetHeight || 60;
-  var tx = snapX + 14;
-  var ty = my - th / 2;
-  if(tx + tw > cw - 4) tx = snapX - tw - 14;
-  if(ty < 4) ty = 4;
-  if(ty + th > ch - 4) ty = ch - th - 4;
-  tooltip.style.left = tx + 'px';
-  tooltip.style.top = ty + 'px';
+  if(mx < plotLeft - 2 || mx > plotRight + 2 || my < plotTop - 2 || my > plotBottom + 2) return null;
+  return m.xMin + (mx - plotLeft) / (plotRight - plotLeft) * (m.xMax - m.xMin);
+}
+
+// Fare konumunu X değerine çevirip ölçüm imlecine devreder
+// (js/chart-cursor.js — senkron paneller, sabit referans imleç, Δ okuması).
+// veChartPlayhead sentetik {clientX, clientY} ile aynı yolu kullanır.
+function veChartShowTooltip(slotIdx, e) {
+  var xVal = veChartEventToXValue(slotIdx, e);
+  if(xVal === null) { veChartHideTooltip(slotIdx); return; }
+  var canvas = document.getElementById('ve-chart-canvas-' + slotIdx);
+  // Fare Y'si yalnızca değer kutusunu dikeyde konumlamak için gerekir
+  var my = e.clientY - canvas.getBoundingClientRect().top;
+  if(typeof veCursorMoveTo === 'function') veCursorMoveTo(slotIdx, xVal, my);
 }
 
 function veChartHideTooltip(slotIdx) {
+  if(typeof veCursorHide === 'function') { veCursorHide(slotIdx); return; }
   var tooltip = document.getElementById('ve-tooltip-' + slotIdx);
   var crosshair = document.getElementById('ve-crosshair-' + slotIdx);
   if(tooltip) tooltip.classList.remove('visible');
