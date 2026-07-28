@@ -4209,7 +4209,11 @@ function veClearAllResults() {
     if(tab) tab.textContent = 'Panel ' + (i + 1);
     veRenderSlotPicker(i);
   }
-  
+
+  // Pano boşaldı — ortak X ekseni serbest kalır, ağaçtaki kilitler açılır
+  if(typeof veCursorClearPin === 'function') veCursorClearPin();
+  if(typeof veSyncXAxisTree === 'function') veSyncXAxisTree();
+
   // Simülasyon verilerini temizle
   window.veSimResults = null;
 

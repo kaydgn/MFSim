@@ -434,9 +434,20 @@ function veUpdateResultsTree() {
         html += '</div>';
         html += '<div class="ve-tree-children">';
 
+        // Panonun ortak X ekseni — uyumsuz diyagramlar sürüklenmeden ÖNCE
+        // kilitli görünür, kullanıcı deneyerek öğrenmek zorunda kalmaz.
+        var _boardX = (typeof veSharedXAxis === 'function') ? veSharedXAxis(veResultSlots) : null;
+        var _boardXName = (_boardX && _boardX.xAxis && _boardX.xAxis.name) ? _boardX.xAxis.name : null;
+
         pkg.diagrams.forEach(function(diag, dIdx) {
           var diagSigDef = (typeof SW_DIAGRAM_SIGNALS !== 'undefined') ? SW_DIAGRAM_SIGNALS[diag.id] : null;
-          var canDrag = hasSimForWiz && !!diagSigDef;
+          var is3dDiag = diagSigDef && diagSigDef.z;
+          // 3D diyagram muaf: X/Y/Z üç sinyalden gelir, ortak eksene girmez
+          var xOk = true;
+          if(diagSigDef && !is3dDiag && typeof veXAxisAllowed === 'function') {
+            xOk = veXAxisAllowed(veWizDiagXAxis(diagSigDef), diagSigDef.dataSource || '', veResultSlots);
+          }
+          var canDrag = hasSimForWiz && !!diagSigDef && xOk;
           var diagStyle = canDrag
             ? 'cursor:grab; color:var(--text-primary);'
             : 'cursor:default; color:var(--text-muted); opacity:0.6;';
@@ -444,9 +455,13 @@ function veUpdateResultsTree() {
             ? ' onmousedown="veStartWizardDiagDrag(event,\'' + pkgId + '\',' + dIdx + ')"'
             : '';
 
-          var is3dDiag = diagSigDef && diagSigDef.z;
+          var reason = !hasSimForWiz || !diagSigDef
+            ? ' — Simülasyon gerekli'
+            : (!xOk ? ' — Pano X ekseni: ' + (_boardXName || 'Zaman [s]') +
+                      ' (bu diyagram ' + veWizDiagXAxis(diagSigDef).name + ' istiyor)'
+                    : ' — Slota sürükle');
           var diagIcon = canDrag ? (is3dDiag ? '<span class="mf-ico mf-ico-package"></span>' : '<span class="mf-ico mf-ico-trending-up"></span>') : '<span class="mf-ico mf-ico-lock"></span>';
-          html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + (canDrag ? ' — Slota sürükle' : ' — Simülasyon gerekli') + '">';
+          html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + reason + '">';
           html += diagIcon + ' ' + diag.name;
           if(diag.note) html += ' <span style="font-size:0.5rem; color:var(--accent-warning);">⚠</span>';
           html += '</div>';
@@ -4734,6 +4749,58 @@ function veStartWizardDiagDrag(e, pkgId, diagIdx) {
   document.addEventListener('mouseup', upHandler);
 }
 
+// ═══ ORTAK X EKSENİ — pano genelinde tek eksen ═══
+// Kural ve kimlik hesabı js/chart-cursor.js'te; buradakiler sonuç panosunun
+// bırakma (drop) yollarında o kuralı uygulayan ince sarmalayıcılardır.
+
+// Bir sihirbaz diyagramının gerektirdiği X ekseni tanımı.
+function veWizDiagXAxis(sigDef) {
+  if(!sigDef || !sigDef.x) return { id:'time', name:'Zaman [s]', unit:'s' };
+  if(sigDef.x.target === 'time') return { id:'time', name:'Zaman [s]', unit:'s' };
+  return {
+    id: '~' + sigDef.x.target + ':' + sigDef.x.signal,
+    name: (sigDef.x.name || sigDef.x.signal) + ' [' + (sigDef.x.unit || '') + ']',
+    unit: sigDef.x.unit || ''
+  };
+}
+
+// Boş panele düşen sinyal panonun eksenini devralır; pano boşsa zaman ekseni.
+// (Sinyallerin kendi X ekseni yoktur — hangi eksende çizileceklerini pano söyler.)
+function veInheritedXAxis(slotIdx) {
+  var b = (typeof veSharedXAxis === 'function') ? veSharedXAxis(veResultSlots) : null;
+  if(b && b.xAxis) {
+    var copy = Object.assign({}, b.xAxis);
+    if(b.dataSource && slotIdx !== undefined) veResultSlots[slotIdx]._dataSource = b.dataSource;
+    return copy;
+  }
+  var solver = (nodes || []).find(function(n) { return n.type === 'solver'; });
+  var tm = solver && solver.data ? (solver.data.timeMode || 'duration') : 'duration';
+  return { id: 'time', name: tm === 'stop' ? 'Zaman [s] (Durma)' : 'Zaman [s]', unit: 's' };
+}
+
+// Pano ekseni değiştiyse Veri Gezgini'ni tazele (kilitli/açık diyagramlar
+// güncellensin). Ağaç yeniden kurulması kullanıcının açtığı dalları
+// kapattığı için YALNIZCA eksen kimliği gerçekten değişince çalışır.
+var _veLastBoardXKey = null;
+function veSyncXAxisTree() {
+  var k = (typeof veSharedXKey === 'function') ? veSharedXKey(veResultSlots) : null;
+  if(k === _veLastBoardXKey) return;
+  _veLastBoardXKey = k;
+  if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
+}
+
+// Uyumsuz bırakma uyarısı — hangi eksenin geçerli olduğunu ve nasıl
+// değiştirileceğini söyler, yoksa kullanıcı neden reddedildiğini bilemez.
+function veWarnXAxisMismatch(wantedXAxis) {
+  if(typeof showToast !== 'function') return;
+  var b = (typeof veSharedXAxis === 'function') ? veSharedXAxis(veResultSlots) : null;
+  var cur = (b && b.xAxis && b.xAxis.name) ? b.xAxis.name : 'Zaman [s]';
+  var want = (wantedXAxis && wantedXAxis.name) ? wantedXAxis.name : 'farklı bir eksen';
+  showToast('Pano X ekseni: ' + cur + ' — bu öğe ' + want +
+            ' istiyor. Değiştirmek için X ekseni seçicisini kullanın (tüm panelleri birden değiştirir).',
+            'warning');
+}
+
 function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   var pkg = (typeof SENSOR_PACKAGES !== 'undefined') ? SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; }) : null;
   if(!pkg || !pkg.diagrams[diagIdx]) return;
@@ -4746,6 +4813,18 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
 
   var slot = veResultSlots[slotIdx];
   var is3D = !!sigDef.z;
+
+  // ── Ortak X ekseni kuralı ──
+  // Pano tek bir X ekseni üzerinde çalışır (bkz. js/chart-cursor.js). Farklı
+  // eksen isteyen bir diyagram bırakılırsa reddedilir — aksi halde imleç o
+  // panelde ortak olamazdı. 3D panel muaf (X/Y/Z üç sinyalden gelir).
+  if(!is3D && typeof veXAxisAllowed === 'function') {
+    var dropX = veWizDiagXAxis(sigDef);
+    if(!veXAxisAllowed(dropX, sigDef.dataSource || '', veResultSlots)) {
+      veWarnXAxisMismatch(dropX);
+      return;
+    }
+  }
 
   // Slot'u temizle ve yeni diyagram ile doldur
   slot.type = is3D ? 'scatter3d' : 'line';
@@ -4783,15 +4862,7 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
     slot.xAxis = { id: xEntry.id + ':' + xEntry.signal, name: xEntry.name + ' [' + xEntry.unit + ']', unit: xEntry.unit };
   } else {
     // 2D: X ekseni ayarla
-    if(sigDef.x.target === 'time') {
-      slot.xAxis = { id:'time', name:'Zaman [s]', unit:'s' };
-    } else {
-      slot.xAxis = {
-        id: '~' + sigDef.x.target + ':' + sigDef.x.signal,
-        name: (sigDef.x.name || sigDef.x.signal) + ' [' + (sigDef.x.unit || '') + ']',
-        unit: sigDef.x.unit || ''
-      };
-    }
+    slot.xAxis = veWizDiagXAxis(sigDef);
     if(ds && slot.xAxis.id !== 'time') slot.xAxis._dataSource = ds;
 
     // Y eksen sinyallerini ekle
@@ -4805,6 +4876,7 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   }
 
   veRenderSlot(slotIdx);
+  veSyncXAxisTree();   // pano ekseni kilitlendi/değişti mi → ağacı tazele
   if(typeof showToast === 'function') showToast(diag.name + ' diyagramı eklendi', 'success');
 }
 
@@ -4822,11 +4894,9 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
     if(!slot.sensors) slot.sensors = [];
     if(!slot.type) slot.type = 'line';
 
-    // X ekseni otomatik
+    // X ekseni: panonun ortak ekseni devralınır (pano boşsa zaman)
     if(slot.sensors.length === 0) {
-      var solver = nodes.find(function(n) { return n.type === 'solver'; });
-      var tm = solver && solver.data ? (solver.data.timeMode || 'duration') : 'duration';
-      slot.xAxis = { id: 'time', name: tm === 'stop' ? 'Zaman [s] (Durma)' : 'Zaman [s]', unit: 's' };
+      slot.xAxis = veInheritedXAxis(slotIdx);
     }
 
     // Çakışma kontrolü
@@ -4842,6 +4912,7 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
     var displayName = '[SW] ' + compName + ' — ' + (sigInfo ? sigInfo.name : signalId);
     slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
     veRenderSlot(slotIdx);
+    veSyncXAxisTree();   // pano ekseni kilitlendi/değişti mi → ağacı tazele
     return;
   }
 
@@ -4863,11 +4934,9 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
   if(!slot.sensors) slot.sensors = [];
   if(!slot.type) slot.type = 'line';
   
-  // X ekseni otomatik
+  // X ekseni: panonun ortak ekseni devralınır (pano boşsa zaman)
   if(slot.sensors.length === 0) {
-    var solver = nodes.find(function(n) { return n.type === 'solver'; });
-    var tm = solver && solver.data ? (solver.data.timeMode || 'duration') : 'duration';
-    slot.xAxis = { id: 'time', name: tm === 'stop' ? 'Zaman [s] (Durma)' : 'Zaman [s]', unit: 's' };
+    slot.xAxis = veInheritedXAxis(slotIdx);
   }
   
   // Zaten ekli mi kontrol
@@ -4910,6 +4979,7 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
   slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
   
   veRenderSlot(slotIdx);
+  veSyncXAxisTree();   // pano ekseni kilitlendi/değişti mi → ağacı tazele
 }
 
 function veAddSensorToSlot(slotIdx, sensorId) {
@@ -4947,11 +5017,9 @@ function veAddSensorToSlot(slotIdx, sensorId) {
   if(!slot.sensors) slot.sensors = [];
   if(!slot.type) slot.type = 'line';
   
-  // X ekseni otomatik
+  // X ekseni: panonun ortak ekseni devralınır (pano boşsa zaman)
   if(slot.sensors.length === 0) {
-    var solver = nodes.find(function(n) { return n.type === 'solver'; });
-    var tm = solver && solver.data ? (solver.data.timeMode || 'duration') : 'duration';
-    slot.xAxis = { id: 'time', name: tm === 'stop' ? 'Zaman [s] (Durma)' : 'Zaman [s]', unit: 's' };
+    slot.xAxis = veInheritedXAxis(slotIdx);
   }
   
   // Kaynak bileşen tipini ve mevcut sinyalleri bul
@@ -5053,6 +5121,8 @@ function veSlotClear(slotIdx) {
   if(el) { el.classList.remove('collapsed'); el.style.flex = ''; }
   var btn = el ? el.querySelector('.btn-collapse') : null;
   if(btn) btn.textContent = '▼';
+  // Son dolu panel de boşaldıysa pano ekseni serbest kalır
+  veSyncXAxisTree();
 }
 
 function veRenderSlot(slotIdx) {
@@ -5304,18 +5374,18 @@ function veGetAvailableXAxisOptions(slotIdx) {
   // 1) Zaman ekseni (her zaman mevcut)
   options.push({ group: 'Varsayılan', id: 'time', name: 'Zaman', unit: 's', active: currentId === 'time' });
 
-  // 2) Slot'taki Y sinyallerinden (kullanıcı zaten eklemiş)
-  var slotSensors = slot.sensors || [];
-  if(slotSensors.length > 0) {
-    slotSensors.forEach(function(s) {
-      var axId;
-      if(s.id && s.id.charAt(0) === '~') {
-        axId = s.id + ':' + s.signal;
-      } else {
-        axId = s.id + ':' + s.signal;
-      }
+  // 2) Panodaki Y sinyallerinden (kullanıcı zaten eklemiş). Seçim tüm
+  //    panelleri birden değiştirdiği için liste de pano geneli olmalı —
+  //    yalnız bu panelin sinyalleri gösterilirse seçici yanıltıcı olurdu.
+  var seenAx = {};
+  veResultSlots.forEach(function(sl) {
+    if(!sl || !sl.sensors || (sl.type || 'line') === 'scatter3d') return;
+    sl.sensors.forEach(function(s) {
+      var axId = s.id + ':' + s.signal;
+      if(seenAx[axId]) return;
+      seenAx[axId] = true;
       options.push({
-        group: 'Paneldeki Sinyaller',
+        group: 'Panodaki Sinyaller',
         id: axId,
         sensorId: s.id,
         signal: s.signal,
@@ -5324,7 +5394,7 @@ function veGetAvailableXAxisOptions(slotIdx) {
         active: currentId === axId
       });
     });
-  }
+  });
 
   // 3) Topolojideki bileşen sinyalleri
   var tabNodes = nodes || [];
@@ -5471,14 +5541,12 @@ function veSetSlotXAxis(slotIdx, optIdx) {
   var opt = dd._options[optIdx];
   if(!opt) return;
 
-  var slot = veResultSlots[slotIdx];
-
+  // Yeni eksen tanımı
+  var newAxis;
   if(opt.id === 'time') {
-    var solver = (nodes || []).find(function(n) { return n.type === 'solver'; });
-    var tm = solver && solver.data ? (solver.data.timeMode || 'duration') : 'duration';
-    slot.xAxis = { id: 'time', name: 'Zaman [s]', unit: 's' };
+    newAxis = { id: 'time', name: 'Zaman [s]', unit: 's' };
   } else {
-    slot.xAxis = {
+    newAxis = {
       id: opt.id,
       name: opt.name + ' [' + opt.unit + ']',
       unit: opt.unit,
@@ -5490,24 +5558,35 @@ function veSetSlotXAxis(slotIdx, optIdx) {
   // Dropdown kapat
   dd.remove();
 
-  // X-axis etiketini güncelle
-  var btn = document.querySelector('#ve-xaxis-area-' + slotIdx + ' .ve-xaxis-btn span:first-child');
-  if(btn) btn.textContent = slot.xAxis.name;
+  // ── Ortak X ekseni: seçim TÜM panelleri birden değiştirir ──
+  // Pano tek eksen üzerinde çalıştığı için tek paneli ayırmak, imleci o
+  // panelde ortak olmaktan çıkarırdı. 3D paneller muaf (kendi X/Y/Z'leri var).
+  var changed = 0;
+  for(var si = 0; si < veResultSlots.length; si++) {
+    var s = veResultSlots[si];
+    if(!s || !s.sensors || s.sensors.length === 0) continue;
+    if((s.type || 'line') === 'scatter3d') continue;
+    s.xAxis = Object.assign({}, newAxis);
+    changed++;
 
-  // Tablo modundaysa başlığı güncelle
-  var tableHeader = document.querySelector('#ve-table-' + slotIdx + ' thead th:nth-child(2)');
-  if(tableHeader) tableHeader.textContent = slot.xAxis.name;
+    // X-axis etiketi ve tablo başlığı
+    var btn = document.querySelector('#ve-xaxis-area-' + si + ' .ve-xaxis-btn span:first-child');
+    if(btn) btn.textContent = s.xAxis.name;
+    var th = document.querySelector('#ve-table-' + si + ' thead th:nth-child(2)');
+    if(th) th.textContent = s.xAxis.name;
 
-  // Grafik/tabloyu yeniden çiz
-  if(window.veSimResults) {
-    if(slot.type === 'line') {
-      veResetChartView(slotIdx);
-      veRenderChart(slotIdx);
-    } else if(slot.type === 'scatter3d') {
-      veRender3DScatter(slotIdx);
-    } else {
-      veRenderTable(slotIdx);
+    if(window.veSimResults) {
+      if(s.type === 'line') { veResetChartView(si); veRenderChart(si); }
+      else veRenderTable(si);
     }
+  }
+
+  // Eksen değişti — sabitlenmiş referans imleç artık başka bir alana ait
+  if(typeof veCursorClearPin === 'function') veCursorClearPin();
+  veSyncXAxisTree();
+
+  if(changed > 1 && typeof showToast === 'function') {
+    showToast('X ekseni ' + newAxis.name + ' olarak ayarlandı (' + changed + ' panel)', 'info');
   }
 }
 
