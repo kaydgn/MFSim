@@ -335,6 +335,10 @@
     audio.addEventListener('play',  syncPlaying);
     audio.addEventListener('pause', syncPlaying);
     audio.addEventListener('playing', syncPlaying);
+    // Radyo/parça çalmaya başlayınca açılış müziğini durdur (ses üst üste binmesin).
+    audio.addEventListener('play', function () {
+      if (global.MFSimSplashMusic && global.MFSimSplashMusic.stop) global.MFSimSplashMusic.stop();
+    });
     audio.addEventListener('ended', function () {
       // Yerel çalma listesinde otomatik sıradaki parçaya geç (istasyon "bitmez").
       if (current && current.type === 'track' && library.length) { playTrack(nextIndex(libIndex, library.length)); }
