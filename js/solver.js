@@ -148,13 +148,13 @@ function veSolverValidate() {
   
   function addItem(ok, label, detail) {
     var cls = ok ? 've-validation-ok' : 've-validation-err';
-    var icon = ok ? '✅' : '❌';
+    var icon = ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>';
     html += '<div class="ve-validation-item ' + cls + '"><span>' + icon + '</span><span>' + label + (detail ? ' <span style="color:var(--text-muted);font-size:0.7rem;">(' + detail + ')</span>' : '') + '</span></div>';
     if(!ok) allOk = false;
   }
   
   function addWarn(label) {
-    html += '<div class="ve-validation-item ve-validation-warn"><span>⚠️</span><span>' + label + '</span></div>';
+    html += '<div class="ve-validation-item ve-validation-warn"><span>⚠</span><span>' + label + '</span></div>';
   }
   
   function addInfo(label) {
@@ -243,11 +243,11 @@ function veSolverValidate() {
   // Sonuç
   if(allOk) {
     var modeText = (hasTerminator && terminatorConnected) ? 'Kısmi analiz' : 'Tam analiz';
-    html += '<div style="margin-top:12px;padding:10px;background:rgba(76,175,80,0.1);border-radius:var(--radius-sm);border:1px solid rgba(76,175,80,0.3);text-align:center;font-size:0.8rem;color:var(--accent-success);font-weight:600;">✅ ' + modeText + ' - hesaplamaya hazır</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:rgba(76,175,80,0.1);border-radius:var(--radius-sm);border:1px solid rgba(76,175,80,0.3);text-align:center;font-size:0.8rem;color:var(--accent-success);font-weight:600;">✓ ' + modeText + ' - hesaplamaya hazır</div>';
     document.getElementById('ve-solver-run-btn').disabled = false;
     document.getElementById('ve-solver-run-btn').style.opacity = '1';
   } else {
-    html += '<div style="margin-top:12px;padding:10px;background:rgba(244,67,54,0.1);border-radius:var(--radius-sm);border:1px solid rgba(244,67,54,0.3);text-align:center;font-size:0.8rem;color:var(--accent-danger);font-weight:600;">❌ Eksikler var - hesaplama yapılamaz</div>';
+    html += '<div style="margin-top:12px;padding:10px;background:rgba(244,67,54,0.1);border-radius:var(--radius-sm);border:1px solid rgba(244,67,54,0.3);text-align:center;font-size:0.8rem;color:var(--accent-danger);font-weight:600;">✗ Eksikler var - hesaplama yapılamaz</div>';
     document.getElementById('ve-solver-run-btn').disabled = true;
     document.getElementById('ve-solver-run-btn').style.opacity = '0.5';
   }
@@ -317,8 +317,8 @@ function veSolverRun() {
         var ss = simResult.solverStats || {};
         
         var rhtml = '<div style="padding:12px;">';
-        rhtml += '<div style="text-align:center; margin-bottom:12px;"><div style="font-size:1.5rem; margin-bottom:4px;">✅</div><div style="font-weight:600; color:var(--text-heading); font-size:0.85rem;">Hesaplama Tamamlandı</div>';
-        rhtml += '<div style="font-size:0.65rem; color:var(--text-muted); margin-top:2px;">' + (simResult.mode === 'partial' ? '✂️ Kısmi Analiz Modu' : '🔗 Tam Analiz Modu') + '</div></div>';
+        rhtml += '<div style="text-align:center; margin-bottom:12px;"><div style="font-size:1.5rem; margin-bottom:4px;"><span style="color:var(--accent-success);">✓</span></div><div style="font-weight:600; color:var(--text-heading); font-size:0.85rem;">Hesaplama Tamamlandı</div>';
+        rhtml += '<div style="font-size:0.65rem; color:var(--text-muted); margin-top:2px;">' + (simResult.mode === 'partial' ? 'Kısmi analiz Modu' : 'Tam Analiz Modu') + '</div></div>';
         
         rhtml += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">';
         rhtml += '<div style="background:var(--bg-tertiary); padding:10px; border-radius:var(--radius-sm); border:1px solid var(--border-color); text-align:center;"><div style="font-size:0.65rem; color:var(--text-muted);">Toplam Süre</div><div style="font-size:1rem; font-weight:700; color:var(--accent-primary);">' + totalTime.toFixed(1) + ' s</div></div>';
@@ -350,7 +350,7 @@ function veSolverRun() {
             if(ss.dtMin !== undefined) rhtml += '<tr><td>dt aralığı:</td><td style="text-align:right; font-weight:600; font-family:monospace;">' + ss.dtMin.toExponential(2) + ' → ' + ss.dtMax.toExponential(2) + ' s</td></tr>';
             if(ss.maxError !== undefined) rhtml += '<tr><td>Maks yerel hata:</td><td style="text-align:right; font-weight:600; font-family:monospace;">' + ss.maxError.toExponential(2) + '</td></tr>';
             if(ss.events && ss.events.length > 0) rhtml += '<tr><td>Algılanan olaylar:</td><td style="text-align:right; font-weight:600;">' + ss.events.length + '</td></tr>';
-            if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:#ef4444;">⚠️ Sertlik Uyarısı</td></tr><tr><td colspan="2" style="font-size:0.6rem; color:#ef4444;">Problem sert (stiff) olabilir. Adım boyutu sürekli minimumda veya ardışık redler algılandı. Tolerans değerlerini gevşetmeyi veya simülasyon parametrelerini gözden geçirmeyi deneyin.</td></tr>';
+            if(ss.stiffnessDetected) rhtml += '<tr style="border-top:1px solid var(--border-color);"><td colspan="2" style="padding-top:6px; font-weight:700; color:#ef4444;">⚠ Sertlik Uyarısı</td></tr><tr><td colspan="2" style="font-size:0.6rem; color:#ef4444;">Problem sert (stiff) olabilir. Adım boyutu sürekli minimumda veya ardışık redler algılandı. Tolerans değerlerini gevşetmeyi veya simülasyon parametrelerini gözden geçirmeyi deneyin.</td></tr>';
           }
           
           // Enerji dengesi (tüm yöntemler için)
@@ -398,7 +398,7 @@ function veSolverRun() {
         progressFill.style.width = '100%';
         progressFill.style.background = 'var(--accent-danger)';
         progressText.textContent = 'HATA!';
-        resultEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--accent-danger);"><div style="font-size:1.5rem; margin-bottom:8px;">❌</div><div style="font-weight:600;">Hesaplama Hatası</div><div style="font-size:0.72rem; margin-top:8px; color:var(--text-muted);">' + err.message + '</div></div>';
+        resultEl.innerHTML = '<div style="padding:16px; text-align:center; color:var(--accent-danger);"><div style="font-size:1.5rem; margin-bottom:8px;"><span style="color:var(--accent-danger);">✗</span></div><div style="font-weight:600;">Hesaplama Hatası</div><div style="font-size:0.72rem; margin-top:8px; color:var(--text-muted);">' + err.message + '</div></div>';
         showToast('Hesaplama hatası: ' + err.message, 'error');
       }
     }, 200);

@@ -852,7 +852,7 @@ function veUpdatePaneLabels() {
     var tab = veTabs[tabIdx];
     var name = tab ? tab.name : '?';
     var isFocused = (i === veFocusedPane);
-    label.textContent = name + (isFocused ? ' ✎' : ' 👁');
+    label.textContent = name + (isFocused ? ' ✎' : ' ◎');
     label.title = isFocused ? 'Düzenlenebilir (aktif)' : 'Salt görüntüleme — tıklayarak aktif edin';
   }
 }

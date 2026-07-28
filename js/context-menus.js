@@ -159,23 +159,23 @@ function createPortContextMenu() {
   
   menu.innerHTML = `
     <div class="ve-context-item" data-action="top">
-      <span>⬆️</span> Üste Taşı
+      <span>↑</span> Üste Taşı
     </div>
     <div class="ve-context-item" data-action="right">
-      <span>➡️</span> Sağa Taşı
+      <span>→</span> Sağa Taşı
     </div>
     <div class="ve-context-item" data-action="bottom">
-      <span>⬇️</span> Alta Taşı
+      <span>↓</span> Alta Taşı
     </div>
     <div class="ve-context-item" data-action="left">
-      <span>⬅️</span> Sola Taşı
+      <span>←</span> Sola Taşı
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="addPort">
-      <span>➕</span> Aynı Tipten Port Ekle
+      <span>+</span> Aynı Tipten Port Ekle
     </div>
     <div class="ve-context-item ve-context-danger" data-action="removePort">
-      <span>➖</span> Bu Portu Kaldır
+      <span>−</span> Bu Portu Kaldır
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="reset">
@@ -435,10 +435,10 @@ function createLabelContextMenu(){
   menu.className = 've-context-menu';
   menu.style.cssText = 'display:none; position:fixed; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-md); box-shadow:var(--shadow-lg); z-index:10001; min-width:150px; padding:4px 0;';
   menu.innerHTML = `
-    <div class="ve-context-item" data-action="top"><span>⬆️</span> Etiketi Üste</div>
-    <div class="ve-context-item" data-action="bottom"><span>⬇️</span> Etiketi Alta</div>
-    <div class="ve-context-item" data-action="left"><span>⬅️</span> Etiketi Sola</div>
-    <div class="ve-context-item" data-action="right"><span>➡️</span> Etiketi Sağa</div>
+    <div class="ve-context-item" data-action="top"><span>↑</span> Etiketi Üste</div>
+    <div class="ve-context-item" data-action="bottom"><span>↓</span> Etiketi Alta</div>
+    <div class="ve-context-item" data-action="left"><span>←</span> Etiketi Sola</div>
+    <div class="ve-context-item" data-action="right"><span>→</span> Etiketi Sağa</div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="reset"><span><span class="mf-ico mf-ico-refresh"></span></span> Varsayılana Dön</div>
   `;
@@ -497,7 +497,7 @@ function createConnectionContextMenu() {
   
   menu.innerHTML = `
     <div class="ve-context-item" data-action="curve">
-      <span>🔀</span> Eğri Çizgi
+      <span><span class="mf-ico mf-ico-shuffle"></span></span> Eğri Çizgi
     </div>
     <div class="ve-context-item" data-action="straight">
       <span><span class="mf-ico mf-ico-ruler"></span></span> Düz Çizgi
@@ -507,7 +507,7 @@ function createConnectionContextMenu() {
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item" data-action="addPoint">
-      <span>➕</span> Kontrol Noktası Ekle
+      <span>+</span> Kontrol Noktası Ekle
     </div>
     <div class="ve-context-divider"></div>
     <div class="ve-context-item ve-context-danger" data-action="delete">

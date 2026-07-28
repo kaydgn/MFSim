@@ -1,8 +1,8 @@
 // ===== SONUÇLAR: SOLVER TAB SİSTEMİ =====
 var veSolverTabDefs = [
-  { id: 'performance',  name: 'Performans Analizi',  icon: '🏎️', resultKey: 'speed' },
-  { id: 'accel-decel',  name: 'Hızlanma-Yavaşlama',  icon: '🛤️', resultKey: 'segmentDrive' },
-  { id: 'obstacle',     name: 'Engel Atlama',         icon: '🧱', resultKey: 'obstacleCrossing' }
+  { id: 'performance',  name: 'Performans Analizi',  icon: '<span class="mf-ico mf-ico-gauge"></span>', resultKey: 'speed' },
+  { id: 'accel-decel',  name: 'Hızlanma-Yavaşlama',  icon: '<span class="mf-ico mf-ico-route"></span>', resultKey: 'segmentDrive' },
+  { id: 'obstacle',     name: 'Engel Atlama',         icon: '<span class="mf-ico mf-ico-barrier"></span>', resultKey: 'obstacleCrossing' }
 ];
 var veActiveSolverTabId = 'performance';
 var veSolverTabSlots = {};  // { tabId: [{},{},{},{}] }
@@ -203,7 +203,7 @@ function veUpdateResultsTree() {
     var totalSensorCount = sensorCount + tabWizSensors.length;
     var hasSim = !!tabSimR;
 
-    var tabIcon = hasSim ? '✅' : (totalSensorCount > 0 ? '📊' : '📂');
+    var tabIcon = hasSim ? '<span class="mf-ico mf-ico-check-circle"></span>' : (totalSensorCount > 0 ? '<span class="mf-ico mf-ico-bar-chart"></span>' : '<span class="mf-ico mf-ico-folder"></span>');
     var tabLabel = tab.name + (hasSim ? '' : ' (çözülmedi)');
 
     html += '<div class="ve-tree-item">';
@@ -242,7 +242,7 @@ function veUpdateResultsTree() {
           });
           // Tümünü sürükle seçeneği
           html += '<div class="ve-tree-signal" style="padding-left:' + (indentPx + 16) + 'px; color:var(--accent-success); font-style:italic;" onmousedown="veStartSensorDrag(event,\'' + prefix + sn.id + '\')" title="Tüm sinyalleri sürükle">';
-          html += '<span>📦</span> Tümünü Ekle (' + signals.length + ' sinyal)';
+          html += '<span><span class="mf-ico mf-ico-package"></span></span> Tümünü Ekle (' + signals.length + ' sinyal)';
           html += '</div>';
           html += '</div></div>';
         } else {
@@ -284,11 +284,11 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-children">';
           
           if(inputSensors.length > 0) {
-            html += '<div style="padding:2px 0 2px 44px; font-size:0.65rem; color:var(--text-muted); font-weight:600;">⬅ Giriş</div>';
+            html += '<div style="padding:2px 0 2px 44px; font-size:0.65rem; color:var(--text-muted); font-weight:600;">← Giriş</div>';
             inputSensors.forEach(function(sn) { renderSensor(sn, 48); });
           }
           if(outputSensors.length > 0) {
-            html += '<div style="padding:2px 0 2px 44px; font-size:0.65rem; color:var(--text-muted); font-weight:600;">➡ Çıkış</div>';
+            html += '<div style="padding:2px 0 2px 44px; font-size:0.65rem; color:var(--text-muted); font-weight:600;">→ Çıkış</div>';
             outputSensors.forEach(function(sn) { renderSensor(sn, 48); });
           }
           html += '</div></div>';
@@ -306,7 +306,7 @@ function veUpdateResultsTree() {
           });
           if(directSensors.length === 0) return;
           
-          var icon = type === 'vehicle' ? '🚗' : type === 'scenario' ? '📈' : '🛤️';
+          var icon = type === 'vehicle' ? '<span class="mf-ico mf-ico-car"></span>' : type === 'scenario' ? '<span class="mf-ico mf-ico-trending-up"></span>' : '<span class="mf-ico mf-ico-route"></span>';
           
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
@@ -352,7 +352,7 @@ function veUpdateResultsTree() {
             var engN = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
             if(engN && componentDefs[engN.type]) compName = componentDefs[engN.type].name;
           }
-          var compIcon = compType === 'vehicle' ? '🚗' : compType === 'road' ? '🛤️' : compType === 'solver' ? '📐' : compType === 'wheel' ? '🛞' : compType === 'transfer' ? '🔀' : compType === 'propshaft' ? '🔩' : '⚙️';
+          var compIcon = compType === 'vehicle' ? '<span class="mf-ico mf-ico-car"></span>' : compType === 'road' ? '<span class="mf-ico mf-ico-route"></span>' : compType === 'solver' ? '<span class="mf-ico mf-ico-ruler"></span>' : compType === 'wheel' ? '<span class="mf-ico mf-ico-wheel"></span>' : compType === 'transfer' ? '<span class="mf-ico mf-ico-shuffle"></span>' : compType === 'propshaft' ? '<span class="mf-ico mf-ico-nut"></span>' : '<span class="mf-ico mf-ico-settings"></span>';
 
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
@@ -378,7 +378,7 @@ function veUpdateResultsTree() {
 
           // Tümünü Ekle
           html += '<div class="ve-tree-signal" style="padding-left:48px; color:var(--accent-success); font-style:italic;" onmousedown="veStartSensorDrag(event,\'~' + compType + '\')" title="Tüm sinyalleri sürükle">';
-          html += '📦 Tümünü Ekle (' + sensors.length + ' sinyal)';
+          html += '<span class="mf-ico mf-ico-package"></span> Tümünü Ekle (' + sensors.length + ' sinyal)';
           html += '</div>';
           html += '</div></div>';
         });
@@ -476,14 +476,14 @@ function veUpdateResultsTree() {
       html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
       html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
       html += '<span onclick="veRenderDetailedReport(\'girdi\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Girdi Özeti">';
-      html += '<span class="icon" style="font-size:0.6rem;">📑</span><span style="font-size:0.68rem;">Girdi Özeti</span></span></div>';
+      html += '<span class="icon" style="font-size:0.6rem;"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-size:0.68rem;">Girdi Özeti</span></span></div>';
       html += '<div class="ve-tree-children">';
       var girdiSubs = [
-        {id:'platform', icon:'🚛', label:'Platform'},
-        {id:'engine', icon:'⚙️', label:'Motor'},
-        {id:'transmission', icon:'🔧', label:'Şanzıman'},
-        {id:'ecm', icon:'🌀', label:'Konvertör Değerlendirmesi'},
-        {id:'driveline', icon:'⛓️', label:'Aktarma Organları'}
+        {id:'platform', icon:'<span class="mf-ico mf-ico-truck"></span>', label:'Platform'},
+        {id:'engine', icon:'<span class="mf-ico mf-ico-settings"></span>', label:'Motor'},
+        {id:'transmission', icon:'<span class="mf-ico mf-ico-wrench"></span>', label:'Şanzıman'},
+        {id:'ecm', icon:'<span class="mf-ico mf-ico-disc"></span>', label:'Konvertör Değerlendirmesi'},
+        {id:'driveline', icon:'<span class="mf-ico mf-ico-link"></span>', label:'Aktarma Organları'}
       ];
       girdiSubs.forEach(function(s) {
         html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'' + s.id + '\')" style="cursor:pointer; padding-left:24px;" title="' + s.label + '">';
@@ -497,9 +497,9 @@ function veUpdateResultsTree() {
       html += '<span class="icon" style="font-size:0.6rem;"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:0.68rem;">Araç Performans Özeti</span></span></div>';
       html += '<div class="ve-tree-children">';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-grade\')" style="cursor:pointer; padding-left:24px;" title="Eğim Kabiliyeti">';
-      html += '<span class="icon" style="font-size:0.58rem;">⛰️</span><span style="font-size:0.66rem;">Eğim Kabiliyeti</span></div>';
+      html += '<span class="icon" style="font-size:0.58rem;"><span class="mf-ico mf-ico-mountain"></span></span><span style="font-size:0.66rem;">Eğim Kabiliyeti</span></div>';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-accel\')" style="cursor:pointer; padding-left:24px;" title="Hızlanma">';
-      html += '<span class="icon" style="font-size:0.58rem;">🏎️</span><span style="font-size:0.66rem;">Hızlanma</span></div>';
+      html += '<span class="icon" style="font-size:0.58rem;"><span class="mf-ico mf-ico-gauge"></span></span><span style="font-size:0.66rem;">Hızlanma</span></div>';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-upshifts\')" style="cursor:pointer; padding-left:24px;" title="Vites Geçişleri (Detaylı)">';
       html += '<span class="icon" style="font-size:0.58rem;"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:0.66rem;">Vites Geçişleri (Detaylı)</span></div>';
       html += '</div>';
@@ -959,8 +959,8 @@ function veRenderDetailedReport(filter) {
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Governed Devir</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + _gov + ' rpm</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Pompa Düşümü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + _pDrop + ' N·m</td></tr>';
     ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Türbin Limiti</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + _tRating + ' N·m</td></tr>';
-    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Giriş Güç Limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:0.73rem;">' + _rPowerAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputPower + ' kW ' + (_rc9ok ? '✅' : '❌') + '</td></tr>';
-    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Giriş Tork Limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:0.73rem;">' + _rTorqueAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputTorque + ' N·m ' + (_rc10ok ? '✅' : '❌') + '</td></tr>';
+    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Giriş Güç Limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:0.73rem;">' + _rPowerAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputPower + ' kW ' + (_rc9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td></tr>';
+    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Giriş Tork Limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:0.73rem;">' + _rTorqueAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputTorque + ' N·m ' + (_rc10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td></tr>';
     ecmHTML += '</table>';
     
     // Tablo
@@ -973,7 +973,7 @@ function veRenderDetailedReport(filter) {
     ecmHTML += '</tr></thead><tbody>';
     
     _ecmResults.forEach(function(r, idx){
-      var stI = r.status==='recommended'?'✅':r.status==='caution'?'⚠️':r.status==='not-recommended'?'⚠️':'❌';
+      var stI = r.status==='recommended'?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':r.status==='caution'?'<span style="color:var(--accent-warning);font-weight:700;">⚠</span>':r.status==='not-recommended'?'<span style="color:var(--accent-warning);font-weight:700;">⚠</span>':'<span style="color:var(--accent-danger);font-weight:700;">✗</span>';
       var stT = r.status==='recommended'?'Önerilen':r.status==='caution'?'Dikkat':r.status==='not-recommended'?'Önerilmez':'Uyumsuz';
       var stC = r.status==='recommended'?'var(--accent-success)':r.status==='caution'?'var(--accent-warning)':r.status==='not-recommended'?'var(--accent-warning)':'var(--accent-danger)';
       var td = function(v,c){return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:'+(c||'var(--text-primary)')+';">'+v+'</td>';};
@@ -982,7 +982,7 @@ function veRenderDetailedReport(filter) {
       ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">'+r.name+'</td>';
       ecmHTML += td(r.stallTau.toFixed(2)) + td(r.stallSpeed.toFixed(0)) + td(r.minSpeed.toFixed(0), r.c5ok?'#333':'#dc2626');
       ecmHTML += td(r.tTurbineStall.toFixed(0), r.c7ok?'#333':'#dc2626') + td(r.srGov.toFixed(3), r.c8ok?'#333':'#d97706');
-      ecmHTML += td(r.c5ok?'✅':'❌') + td(r.c7ok?'✅':'❌') + td(r.c8ok?'✅':'⚠️');
+      ecmHTML += td(r.c5ok?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':'<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + td(r.c7ok?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':'<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + td(r.c8ok?'<span style="color:var(--accent-success);font-weight:700;">✓</span>':'<span style="color:var(--accent-warning);font-weight:700;">⚠</span>');
       ecmHTML += '</tr>';
     });
     ecmHTML += '</tbody></table></div>';
@@ -992,7 +992,7 @@ function veRenderDetailedReport(filter) {
       var best = _ecmResults[0];
       ecmHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); margin-top:10px;">';
       ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:0.73rem;">Önerilen Konvertör</td>';
-      ecmHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + (best.status==='recommended'?'🏆 ':'') + best.name + '  —  Stall: ' + best.stallSpeed.toFixed(0) + ' rpm | SR@Gov: ' + best.srGov.toFixed(3) + ' | T_turb: ' + best.tTurbineStall.toFixed(0) + ' N·m</td></tr>';
+      ecmHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + (best.status==='recommended'?'<span class="mf-ico mf-ico-trophy"></span> ':'') + best.name + '  —  Stall: ' + best.stallSpeed.toFixed(0) + ' rpm | SR@Gov: ' + best.srGov.toFixed(3) + ' | T_turb: ' + best.tTurbineStall.toFixed(0) + ' N·m</td></tr>';
       ecmHTML += '</table>';
     }
     
@@ -1402,7 +1402,7 @@ function veRenderGradeChart(canvasId, data, title, showLabels) {
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = 'rgba(59,130,246,0.8)'; ctx.font = '600 10px Segoe UI, sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText('🔍 ' + zs.toFixed(1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
+    ctx.fillText('' + zs.toFixed(1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
   }
   
   // Clip to plot area
@@ -1561,7 +1561,7 @@ function veRenderAccelChart(canvasId, chartData, title) {
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = 'rgba(59,130,246,0.8)'; ctx.font = '600 10px Segoe UI, sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText('🔍 ' + zs.toFixed(1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
+    ctx.fillText('' + zs.toFixed(1) + '×  Scroll: Zoom — Sağ Tık+Sürükle: Kaydır — Çift Tık: Sıfırla', W - padR, padT - 8);
   }
   
   // Grid
@@ -2081,7 +2081,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
   // Zoom indicator
   if(zs > 1.05 || zs < 0.95) {
     ctx.fillStyle = 'rgba(59,130,246,0.8)'; ctx.font = '600 10px Segoe UI, sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText('🔍 ' + zs.toFixed(1) + '×', W - margin.right - 4, margin.top + 14);
+    ctx.fillText('' + zs.toFixed(1) + '×', W - margin.right - 4, margin.top + 14);
   }
   
   // Legend
@@ -2114,7 +2114,7 @@ function veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGo
       if(_drEngZoom.scale === old) return;
       veDrawEngineChart(torqueData, governed, noLoad, fanLossGov, otherLossGov);
       var ind = document.getElementById('dr-engine-zoom-ind');
-      if(ind) { if(_drEngZoom.scale > 1.05 || _drEngZoom.scale < 0.95){ind.textContent='🔍 '+_drEngZoom.scale.toFixed(1)+'×';ind.style.display='inline';}else{ind.style.display='none';} }
+      if(ind) { if(_drEngZoom.scale > 1.05 || _drEngZoom.scale < 0.95){ind.textContent=''+_drEngZoom.scale.toFixed(1)+'×';ind.style.display='inline';}else{ind.style.display='none';} }
     }, {passive:false});
     wrap.addEventListener('mousedown', function(e) {
       if(e.button !== 2) return; e.preventDefault();
@@ -3546,7 +3546,7 @@ function veDrawReportECMChart(R) {
       if(_drEcmZoom.scale === old) return;
       _drEcmRedraw();
       var ind = document.getElementById('dr-ecm-zoom-ind');
-      if(ind) { if(_drEcmZoom.scale > 1.05 || _drEcmZoom.scale < 0.95){ind.textContent='🔍 '+_drEcmZoom.scale.toFixed(1)+'×';ind.style.display='inline';}else{ind.style.display='none';} }
+      if(ind) { if(_drEcmZoom.scale > 1.05 || _drEcmZoom.scale < 0.95){ind.textContent=''+_drEcmZoom.scale.toFixed(1)+'×';ind.style.display='inline';}else{ind.style.display='none';} }
     }, {passive: false});
     wrap.addEventListener('mousedown', function(e) {
       if(e.button !== 2) return; e.preventDefault();
@@ -5384,7 +5384,7 @@ function veGetAvailableXAxisOptions(slotIdx) {
       if(added[axId]) return;
       added[axId] = true;
       options.push({
-        group: '📌 ' + sensorLabel,
+        group: sensorLabel,
         id: axId,
         sensorId: sNode.id,
         signal: sig.id,
