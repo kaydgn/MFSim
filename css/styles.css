@@ -220,6 +220,15 @@
        Renkler temaya göre değişir; aşağıdaki ölçekler tüm temalarda ortaktır.
        Amaç: köşe/derinlik/boşluk/hareket tutarlılığı — "tasarlanmış" his. */
     :root {
+      /* Üst krom yüksekliği — başlık satırı + şerit (bkz. js/ribbon.js).
+         Şerit daraltılınca --ribbon-h JS tarafından 26px'e iner; sayfa alanı
+         --chrome-h üzerinden kendiliğinden yeniden konumlanır. */
+      --titlebar-h: 34px;
+      --ribbon-strip-h: 26px;
+      --ribbon-expanded-h: 112px;
+      --ribbon-h: var(--ribbon-expanded-h);
+      --chrome-h: calc(var(--titlebar-h) + var(--ribbon-h));
+
       /* Köşe yarıçapı */
       --radius-xs: 3px;
       --radius-sm: 5px;
@@ -857,7 +866,8 @@
 /* ===== GÖRSEL EDİTÖR SAYFASI ===== */
 #sayfa2.active{
   position:fixed;
-  top:34px;
+  top:var(--chrome-h,140px);
+  transition:top var(--dur-fast,0.14s) var(--ease-out,ease);
   left:0;
   right:0;
   bottom:0;
@@ -4388,4 +4398,181 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 @media (max-width:420px){
   .mf-splash-player{ width:calc(100vw - 24px); right:12px; bottom:12px; }
   body:has(.mf-radio.open) .mf-splash-player{ opacity:0; pointer-events:none; right:12px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RIBBON (Fluent tarzı şerit) — bkz. js/ribbon.js
+   Renkler tema değişkenlerinden gelir; ayrı bir palet YOK, böylece sekiz
+   temanın hepsinde krom otomatik uyar. Şeridin yüksekliği --ribbon-h ile
+   yönetilir; #sayfa2 üstten --chrome-h kadar kayar (ikisi de :root'ta).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+#ve-ribbon{
+  position:fixed; top:34px; left:0; right:0;
+  height:var(--ribbon-h);
+  z-index:99998;
+  background:var(--bg-secondary);
+  border-bottom:1px solid var(--border-color);
+  display:flex; flex-direction:column;
+  transform:translateY(-140%);
+  transition:transform var(--dur-slow,0.3s) var(--ease-out,ease),
+             height var(--dur-fast,0.14s) var(--ease-out,ease);
+  box-shadow:var(--shadow-sm);
+}
+#ve-ribbon.visible{ transform:translateY(0); }
+
+/* ── Sekme şeridi ── */
+.ve-rb-strip{
+  display:flex; align-items:stretch; gap:1px;
+  height:var(--ribbon-strip-h,26px); flex-shrink:0; padding:0 8px;
+  background:linear-gradient(180deg,var(--bg-tertiary),var(--bg-secondary));
+  border-bottom:1px solid var(--border-color);
+}
+.ve-rb-strip-fill{ flex:1; }
+.ve-rb-tab{
+  background:none; border:none; cursor:pointer; font:inherit;
+  font-size:0.68rem; font-weight:500; letter-spacing:0.01em;
+  color:var(--text-secondary); padding:0 14px;
+  border-top:2px solid transparent; border-bottom:1px solid transparent;
+  margin-bottom:-1px; white-space:nowrap;
+  transition:color var(--dur-fast,0.12s), background var(--dur-fast,0.12s);
+}
+.ve-rb-tab:hover{ color:var(--text-primary); background:var(--bg-input); }
+.ve-rb-tab.active{
+  color:var(--accent-primary); font-weight:600;
+  background:var(--bg-secondary);
+  border-top-color:var(--accent-primary);
+  border-bottom-color:var(--bg-secondary);
+}
+/* Bağlamsal sekme (yalnız ilgili sayfada görünür) — Office'teki renkli
+   vurgu geleneği: geçici olduğu ilk bakışta anlaşılsın. */
+.ve-rb-tab.contextual{
+  color:var(--accent-warning);
+  background:color-mix(in srgb, var(--accent-warning) 10%, transparent);
+}
+.ve-rb-tab.contextual:hover{ background:color-mix(in srgb, var(--accent-warning) 18%, transparent); }
+.ve-rb-tab.contextual.active{
+  color:var(--accent-warning); border-top-color:var(--accent-warning);
+  background:var(--bg-secondary); border-bottom-color:var(--bg-secondary);
+}
+.ve-rb-tab:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
+
+.ve-rb-collapse{
+  background:none; border:none; cursor:pointer; font:inherit;
+  color:var(--text-muted); font-size:0.6rem; padding:0 8px; align-self:center;
+  line-height:1; border-radius:var(--radius-sm);
+  transition:color var(--dur-fast,0.12s), background var(--dur-fast,0.12s);
+}
+.ve-rb-collapse:hover{ color:var(--accent-primary); background:var(--bg-input); }
+.ve-rb-collapse:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
+
+/* ── Gövde ── */
+.ve-rb-body{
+  flex:1; min-height:0;
+  display:flex; align-items:stretch; gap:0;
+  padding:4px 8px 2px;
+  overflow-x:auto; overflow-y:hidden;
+}
+#ve-ribbon.is-collapsed .ve-rb-body{ display:none; }
+/* "Peek": daraltılmışken sekmeye tıklanınca gövde overlay olarak açılır —
+   sayfa kaymaz, şerit geçici olarak üste biner. */
+#ve-ribbon.is-peek .ve-rb-body{
+  display:flex;
+  position:absolute; top:var(--ribbon-strip-h,26px); left:0; right:0;
+  height:calc(var(--ribbon-expanded-h) - var(--ribbon-strip-h));
+  background:var(--bg-secondary);
+  border-bottom:1px solid var(--border-color);
+  box-shadow:var(--shadow-lg);
+  z-index:2;
+}
+
+/* ── Grup ── */
+.ve-rb-group{
+  display:flex; flex-direction:column; justify-content:space-between;
+  padding:0 10px; flex-shrink:0;
+  border-right:1px solid var(--border-color);
+}
+.ve-rb-group:last-child{ border-right:none; }
+.ve-rb-group-items{ display:flex; align-items:flex-start; gap:2px; flex:1; }
+.ve-rb-group-label{
+  text-align:center; font-size:0.52rem; letter-spacing:0.06em;
+  text-transform:uppercase; color:var(--text-muted);
+  padding-top:2px; white-space:nowrap; user-select:none;
+}
+
+/* ── Butonlar ── */
+.ve-rb-btn{
+  background:none; border:1px solid transparent; cursor:pointer; font:inherit;
+  color:var(--text-primary); border-radius:var(--radius-sm);
+  display:flex; align-items:center; gap:6px;
+  transition:background var(--dur-fast,0.12s), border-color var(--dur-fast,0.12s),
+             color var(--dur-fast,0.12s);
+}
+.ve-rb-btn:hover:not(:disabled){ background:var(--bg-input); border-color:var(--border-light); }
+.ve-rb-btn:active:not(:disabled){ background:var(--bg-tertiary); }
+.ve-rb-btn:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:1px; }
+.ve-rb-btn.is-disabled, .ve-rb-btn:disabled{ opacity:0.38; cursor:default; }
+
+.ve-rb-btn--lg{
+  flex-direction:column; justify-content:flex-start; gap:3px;
+  width:62px; min-height:60px; padding:5px 3px 3px;
+}
+.ve-rb-btn--lg .ve-rb-ico{ width:20px; height:20px; }
+.ve-rb-btn--lg .ve-rb-lbl{
+  font-size:0.57rem; line-height:1.2; text-align:center;
+  color:var(--text-secondary); white-space:normal;
+}
+.ve-rb-btn--sm{
+  padding:3px 8px 3px 5px; min-height:19px;
+  justify-content:flex-start; flex:0 0 auto;
+  align-self:stretch;   /* sütundaki en genişe hizalan, sütunu esnetme */
+}
+.ve-rb-btn--sm .ve-rb-ico{ width:13px; height:13px; flex-shrink:0; }
+.ve-rb-btn--sm .ve-rb-lbl{
+  font-size:0.6rem; line-height:1.25; color:var(--text-secondary); white-space:nowrap;
+}
+/* Küçük butonlar sütun başına 3 satır — Office'teki düzenin aynısı.
+   Izgara kullanılır çünkü flex-wrap sarmayı piksel yüksekliğine göre karar
+   verir: yazı tipi ya da yoğunluk birkaç piksel değişince istif bozulurdu. */
+.ve-rb-group-items:has(.ve-rb-btn--sm){
+  display:grid; grid-template-rows:repeat(3, min-content);
+  grid-auto-flow:column; align-content:start; justify-items:stretch;
+  gap:1px 12px;
+}
+
+.ve-rb-btn:hover:not(:disabled) .ve-rb-lbl{ color:var(--text-primary); }
+.ve-rb-btn .ve-rb-ico{ color:var(--accent-primary); flex-shrink:0; }
+.ve-rb-btn.is-disabled .ve-rb-ico{ color:var(--text-muted); }
+
+/* Basılı (aç/kapa) durumu */
+.ve-rb-btn.is-pressed{
+  background:var(--accent-tint-12, color-mix(in srgb, var(--accent-primary) 12%, transparent));
+  border-color:color-mix(in srgb, var(--accent-primary) 40%, transparent);
+}
+.ve-rb-btn.is-pressed .ve-rb-lbl{ color:var(--accent-primary); font-weight:600; }
+
+/* Birincil eylem (Çalıştır) — şeritteki tek renkli buton */
+.ve-rb-btn--accent .ve-rb-ico{ color:var(--accent-success); }
+.ve-rb-btn--accent:hover:not(:disabled){
+  background:color-mix(in srgb, var(--accent-success) 12%, transparent);
+  border-color:color-mix(in srgb, var(--accent-success) 40%, transparent);
+}
+
+/* ── Hızlı erişim araç çubuğu (başlık satırında) ── */
+.ve-qat{ display:inline-flex; align-items:center; gap:1px; margin-left:2px; }
+.ve-qat-btn{
+  background:none; border:none; cursor:pointer; padding:3px; line-height:0;
+  border-radius:var(--radius-sm); color:var(--text-secondary);
+  transition:background var(--dur-fast,0.12s), color var(--dur-fast,0.12s);
+}
+.ve-qat-btn:hover{ background:var(--bg-input); color:var(--accent-primary); }
+.ve-qat-btn:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:1px; }
+.ve-qat-btn .mf-ico{ width:13px; height:13px; }
+.ve-qat-sep{ width:1px; height:14px; background:var(--border-color); margin:0 4px; }
+
+/* Dar ekran: büyük butonlar küçülür, grup etiketleri gizlenir */
+@media (max-width:900px){
+  .ve-rb-btn--lg{ width:54px; min-height:54px; }
+  .ve-rb-group-label{ display:none; }
+  .ve-qat{ display:none; }
 }
