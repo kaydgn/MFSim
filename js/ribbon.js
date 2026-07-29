@@ -377,7 +377,20 @@ function veRibbonInit() {
 }
 
 // Sayfa değişince bağlamsal sekme gelir/gider ve buton durumları değişir.
+// Bağlamsal sekme YENİ belirdiyse otomatik seçilir (Office davranışı): kullanıcı
+// Sonuçlar'a geçtiğinde şeridin hâlâ "Yeni Proje / PNG" göstermesi anlamsızdı.
+// Sekme zaten görünürken yeniden seçilmez — kullanıcı başka sekmeye geçtiyse
+// orada kalır.
+var _veRibbonCtxWasVisible = {};
 function veRibbonOnPageChange() {
+  var newlyShown = null;
+  VE_RIBBON_TABS.forEach(function(t) {
+    if(!t.contextual) return;
+    var visible = !t.when || t.when();
+    if(visible && !_veRibbonCtxWasVisible[t.id]) newlyShown = t.id;
+    _veRibbonCtxWasVisible[t.id] = visible;
+  });
+  if(newlyShown) veRibbonActiveTab = newlyShown;
   veRibbonRender();
 }
 
