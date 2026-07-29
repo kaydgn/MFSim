@@ -1281,36 +1281,6 @@
   margin:4px 6px;
 }
 
-.ve-toolbar-btn{
-  padding:3px 6px;
-  background:none;
-  border:1px solid transparent;
-  border-radius:var(--radius-sm);
-  color:var(--text-secondary);
-  font-size:0.62rem;
-  cursor:pointer;
-  transition:all 0.12s;
-  display:flex;
-  align-items:center;
-  gap:3px;
-  flex-shrink:0;
-}
-
-.ve-toolbar-btn:hover{
-  border-color:var(--border-color);
-  background:var(--bg-tertiary);
-  color:var(--text-primary);
-}
-
-.ve-toolbar-sep{
-  width:1px;
-  height:16px;
-  background:var(--border-color);
-  margin:0 2px;
-  flex-shrink:0;
-  opacity:0.5;
-}
-
 .ve-toolbar-info{
   font-size:0.62rem;
   color:var(--text-secondary);
@@ -1366,10 +1336,25 @@
   min-height:32px;
   overflow:hidden;
 }
+/* Alt konum: sekmeler YUKARIYA, canvas'a bağlanır. Kenarlık, yuvarlatma ve
+   aksan çubuğu bu yüzden dikeyde aynalanır. */
+.ve-tab-bar--bottom{
+  align-items:flex-start;
+  border-bottom:none;
+  border-top:1px solid var(--border-color);
+  min-height:30px;
+}
+.ve-tab-bar--bottom .ve-tab{
+  top:-1px;
+  border-top:none;
+  border-bottom:1px solid transparent;
+  border-radius:0 0 var(--radius-sm) var(--radius-sm);
+}
+.ve-tab-bar--bottom .ve-tab.active{ border-color:var(--border-color); border-top:none; }
+.ve-tab-bar--bottom .ve-tab.active::before{
+  top:auto; bottom:-1px; border-radius:0 0 2px 2px;
+}
 .ve-tab-bar::-webkit-scrollbar{display:none;}
-/* Sekmelerle aynı satırdaki araç butonları dikeyde ortalı kalsın */
-.ve-tab-bar > .ve-toolbar-btn,
-.ve-tab-bar > .ve-toolbar-sep{align-self:center;}
 .ve-tab{
   display:flex;
   align-items:center;
@@ -1899,14 +1884,6 @@
 .ve-cmdk-foot-grow{ flex:1; }
 .ve-cmdk-brand{ font-weight:700; letter-spacing:.06em; color:var(--text-secondary); opacity:.8; }
 /* Toolbar tetikleyici — arama ikonu + ⌘K ipucu (keşfedilebilirlik) */
-.ve-cmdk-trigger{ width:auto; gap:6px; padding:0 9px; }
-.ve-cmdk-trigger-kbd{
-  font-family:var(--font-mono,ui-monospace,monospace); font-size:.62rem; font-weight:600;
-  color:var(--text-muted); line-height:1;
-  border:1px solid var(--border-color); border-radius:4px; padding:2px 4px;
-}
-.ve-cmdk-trigger:hover .ve-cmdk-trigger-kbd{ color:var(--text-secondary); }
-@media (max-width:900px){ .ve-cmdk-trigger-kbd{ display:none; } }
 @media (prefers-reduced-motion: reduce){
   .ve-cmdk-overlay, .ve-cmdk-panel{ transition:none; }
 }
@@ -4412,7 +4389,7 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
   height:var(--ribbon-h);
   z-index:99998;
   background:var(--bg-secondary);
-  border-bottom:1px solid var(--border-color);
+  border-bottom:1px solid var(--border-hover);
   display:flex; flex-direction:column;
   transform:translateY(-140%);
   transition:transform var(--dur-slow,0.3s) var(--ease-out,ease),
@@ -4424,8 +4401,8 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 /* ── Sekme şeridi ── */
 .ve-rb-strip{
   display:flex; align-items:stretch; gap:1px;
-  height:var(--ribbon-strip-h,26px); flex-shrink:0; padding:0 8px;
-  background:linear-gradient(180deg,var(--bg-tertiary),var(--bg-secondary));
+  height:var(--ribbon-strip-h,26px); flex-shrink:0; padding:0 6px;
+  background:var(--bg-tertiary);
   border-bottom:1px solid var(--border-color);
 }
 .ve-rb-strip-fill{ flex:1; }
@@ -4439,7 +4416,7 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 }
 .ve-rb-tab:hover{ color:var(--text-primary); background:var(--bg-input); }
 .ve-rb-tab.active{
-  color:var(--accent-primary); font-weight:600;
+  color:var(--text-heading); font-weight:600;
   background:var(--bg-secondary);
   border-top-color:var(--accent-primary);
   border-bottom-color:var(--bg-secondary);
@@ -4454,6 +4431,7 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 .ve-rb-tab.contextual.active{
   color:var(--accent-warning); border-top-color:var(--accent-warning);
   background:var(--bg-secondary); border-bottom-color:var(--bg-secondary);
+  font-weight:600;
 }
 .ve-rb-tab:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
 
@@ -4470,7 +4448,7 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 .ve-rb-body{
   flex:1; min-height:0;
   display:flex; align-items:stretch; gap:0;
-  padding:4px 8px 2px;
+  padding:5px 6px 3px;
   overflow-x:auto; overflow-y:hidden;
 }
 #ve-ribbon.is-collapsed .ve-rb-body{ display:none; }
@@ -4489,10 +4467,14 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 /* ── Grup ── */
 .ve-rb-group{
   display:flex; flex-direction:column; justify-content:space-between;
-  padding:0 10px; flex-shrink:0;
-  border-right:1px solid var(--border-color);
+  padding:0 11px; flex-shrink:0; position:relative;
 }
-.ve-rb-group:last-child{ border-right:none; }
+/* Ayraç kenardan kenara değil, ortada kısa bir dikey çizgi — kenara dayanan
+   tam boy çizgi şeridi ızgara gibi gösterip ağırlaştırıyordu. */
+.ve-rb-group + .ve-rb-group::before{
+  content:""; position:absolute; left:0; top:12%; bottom:22%;
+  border-left:1px solid var(--border-color);
+}
 .ve-rb-group-items{ display:flex; align-items:flex-start; gap:2px; flex:1; }
 .ve-rb-group-label{
   text-align:center; font-size:0.52rem; letter-spacing:0.06em;
@@ -4538,6 +4520,12 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
   display:grid; grid-template-rows:repeat(3, min-content);
   grid-auto-flow:column; align-content:start; justify-items:stretch;
   gap:1px 12px;
+}
+/* Karışık grup (büyük + küçük): büyük buton kendi sütununda üç satırı birden
+   kaplar, küçükler sonraki sütuna akar. Aksi hâlde büyük buton bir satır
+   sayılır, küçükler taşar ve grup etiketinin üstüne biner. */
+.ve-rb-group-items:has(.ve-rb-btn--sm) .ve-rb-btn--lg{
+  grid-row:1 / span 3; align-self:start;
 }
 
 .ve-rb-btn:hover:not(:disabled) .ve-rb-lbl{ color:var(--text-primary); }
