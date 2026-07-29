@@ -74,7 +74,18 @@ var VE_RIBBON_TABS = [
         { size:'sm', icon:'alert-triangle',  label:'Uyarılar',   run:'veToggleWarnings',
           state:function(){ return !veRibbonHasClass('ve-warnings-body', 'collapsed'); } },
         { size:'sm', icon:'map',             label:'Genel Görünüm', run:'veMinimapToggle',
-          state:function(){ return !veRibbonHasClass('ve-minimap', 'collapsed'); } }
+          // "ve-minimap-hidden" kullanıcı tercihi değil, çizecek içerik
+          // olmadığında otomatik gelir. Basılı göstergesi kullanıcının GÖRDÜĞÜ
+          // durumu yansıtmalı: boş topolojide açık ama görünmezken basılı
+          // görünmesi yanıltıcı olurdu.
+          state:function(){ return !veRibbonHasClass('ve-minimap', 'collapsed') &&
+                                   !veRibbonHasClass('ve-minimap', 've-minimap-hidden'); } }
+      ]},
+      { label: 'Sınır', items: [
+        { size:'sm', icon:'frame',    label:'Sınırı Göster', run:'veToggleBoundary',
+          state:function(){ return typeof veBoundaryVisible !== 'undefined' && veBoundaryVisible; } },
+        { size:'sm', icon:'contrast', label:'Opaklık',       run:'veCycleBoundaryOpacity',
+          tip:'Sınır opaklığını sırayla değiştir' }
       ]},
       { label: 'Efektler', items: [
         { size:'sm', icon:'zap',     label:'Güç Akışı',        run:'veToggleFlow',

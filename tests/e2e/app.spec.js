@@ -20,14 +20,16 @@ test.describe('Sayfa Yükleme', () => {
     await expect(canvas).toBeVisible();
   });
 
-  test('toolbar butonları mevcut', async ({ page }) => {
+  test('şerit ve hızlı erişim çubuğu mevcut', async ({ page }) => {
     await page.goto('/index.html');
 
-    // Zoom butonları
-    const zoomIn = page.locator('[onclick*="veZoomIn"]');
-    const zoomOut = page.locator('[onclick*="veZoomOut"]');
-    await expect(zoomIn).toBeVisible();
-    await expect(zoomOut).toBeVisible();
+    // Zoom/ızgara gibi komutlar artık canvas araç çubuğunda değil, şeritte
+    // (bkz. js/ribbon.js). Şeridin gövdesi modüller yüklendikten sonra çizilir;
+    // burada statik iskeletin ve hızlı erişim butonlarının varlığı doğrulanır.
+    await expect(page.locator('#ve-ribbon')).toHaveCount(1);
+    await expect(page.locator('#ve-qat [data-qat="veSaveTopology"]')).toHaveCount(1);
+    await expect(page.locator('#ve-qat [data-qat="veUndo"]')).toHaveCount(1);
+    await expect(page.locator('#ve-qat [data-qat="veRedo"]')).toHaveCount(1);
   });
 });
 

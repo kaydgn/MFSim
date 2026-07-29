@@ -505,7 +505,6 @@
 
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
-        <div class="ve-tab-bar" id="ve-tab-bar"></div>
         <div class="ve-split-container" id="ve-split-container">
           <div class="ve-split-pane focused" id="ve-pane-0">
             <div class="ve-canvas-wrapper grid-hidden" id="ve-canvas-wrapper">
@@ -585,6 +584,10 @@
             </div>
           </div>
         </div>
+        <!-- Topoloji (belge) sekmeleri — CANoe'daki gibi çalışma alanının ALTINDA.
+             Şerit üstte komut yüzeyi, burası "hangi belgedeyim" yüzeyi; ikisini
+             ayrı uçlara koymak üst kromdaki dördüncü bandı kaldırır. -->
+        <div class="ve-tab-bar ve-tab-bar--bottom" id="ve-tab-bar"></div>
         <!-- Alt Uyarı Paneli -->
         <div class="ve-warnings-panel" id="ve-warnings-panel">
           <div class="ve-warnings-header" onclick="veToggleWarnings()">
