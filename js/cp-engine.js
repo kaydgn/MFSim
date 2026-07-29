@@ -66,7 +66,10 @@ function getEnginePropertiesHTML(node) {
     // Placeholder (veri yoksa)
     selectHtml += '<div id="ve-motor-placeholder-' + node.id + '" style="display:' + (hasData ? 'none' : 'block') + '; padding:20px; text-align:center; background:var(--bg-tertiary); border-radius:var(--radius-sm); margin-bottom:12px;">';
     selectHtml += '<div style="font-size:1.5rem; margin-bottom:8px;"><span class="mf-ico mf-ico-zap"></span></div>';
-    selectHtml += '<div style="font-size:0.75rem; color:var(--text-muted);">Yukarıdan bir motor seçin<br>veya Manuel Giriş ile veri girin.</div>';
+    // Kontrolün NEREDE olduğunu söyle: "Manuel Giriş" ayrı bir düğme değil,
+    // yukarıdaki listenin son seçeneği. Eski metin var olmayan bir kontrole
+    // işaret ediyor gibi okunuyordu.
+    selectHtml += '<div style="font-size:0.75rem; color:var(--text-muted);">Yukarıdaki listeden hazır bir motor seçin<br>ya da listenin sonundaki <strong>+ Manuel Giriş</strong> ile kendi verinizi girin.</div>';
     selectHtml += '</div>';
   }
 

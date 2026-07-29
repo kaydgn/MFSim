@@ -622,6 +622,13 @@ var COMPONENT_SIGNALS = {
 // .ve-main.ve-no-module sınıfını otomatik aç/kapa — tek noktadan kontrol, tüm
 // overlay show/hide yollarını (overlay tıklama, top tab, proje yükle, vb.)
 // otomatik yakalar.
+// Fiziksel güç zincirine bağlanmayan, "mantıksal" bileşenler. Doğrulama
+// bunları bağlantısız saymaz; canvas'ta da kesikli çerçeveyle ayrışırlar ki
+// kullanıcı "bunu bağlamayı mı unuttum?" diye tereddüt etmesin.
+var VE_STANDALONE_TYPES = ['vehicle','road','sensor','sensor-wizard','solver','scenario',
+                           'coast-down','parametric','terminator','obstacle-crossing',
+                           'ec-matching','engine-gearbox-matching','shift-controller'];
+
 (function veObserveModuleOverlay() {
   function attach() {
     var overlay = document.getElementById('ve-module-overlay');
@@ -630,6 +637,10 @@ var COMPONENT_SIGNALS = {
     function sync() {
       var visible = getComputedStyle(overlay).display !== 'none';
       main.classList.toggle('ve-no-module', visible);
+      // Şerit de aynı duruma uysun: çalışma alanı yokken Kaydet/Doğrula/
+      // Çalıştır gibi komutlar pasif çizilir (sol panel zaten gizleniyordu,
+      // şeridin etkin görünmesi tutarsızdı).
+      if(typeof veRibbonRender === 'function') veRibbonRender();
     }
     sync();
     new MutationObserver(sync).observe(overlay, { attributes: true, attributeFilter: ['style', 'class'] });

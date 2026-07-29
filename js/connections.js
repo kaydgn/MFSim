@@ -392,6 +392,10 @@ function updateAllConnections() {
     var connTypes = [fromNode.type, toNode.type].sort().join('|');
     if(connTypes === 'gearbox|torque-converter') {
       path.classList.add('ve-connection-tc-gb');
+      // Rengin anlamı yalnızca renkte gizliydi — üzerine gelince açıklansın.
+      var tcTitle = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+      tcTitle.textContent = 'Konvertör ↔ Şanzıman: eşleştirme ilişkisi — konvertör ailesi şanzımana göre filtrelenir';
+      path.appendChild(tcTitle);
     }
     path.addEventListener('contextmenu', function(e) {
       showConnectionContextMenu(e, conn.id);

@@ -48,12 +48,22 @@ function veTidyLayout(opts) {
     }
   }
 
-  // İzole ana düğümleri (hiç kenarı olmayan) son katmana topla → 0. katmanı şişirmesin
+  // İzole ana düğümler (hiç kenarı olmayan) 0. katmanı şişirmesin diye sona
+  // alınır — ama HEPSİNİ tek katmana yığmak, hiç bağlantı yokken tüm topolojiyi
+  // upuzun tek bir sütuna diziyordu: geniş canvas'ın büyük kısmı boş kalıyor,
+  // görünüme sığdırma da zoom'u aşırı düşürüyordu. Bunun yerine yaklaşık kare
+  // bir ızgaraya dağıtılırlar.
   var hasEdge = {};
   edges.forEach(function(e) { hasEdge[e.from] = 1; hasEdge[e.to] = 1; });
   var maxLayer = 0;
   mainNodes.forEach(function(n) { if(layer[n.id] > maxLayer) maxLayer = layer[n.id]; });
-  mainNodes.forEach(function(n) { if(!hasEdge[n.id]) layer[n.id] = maxLayer + 1; });
+  var isolated = mainNodes.filter(function(n) { return !hasEdge[n.id]; });
+  if(isolated.length) {
+    var rowsPerCol = Math.max(1, Math.ceil(Math.sqrt(isolated.length)));
+    isolated.forEach(function(n, i) {
+      layer[n.id] = maxLayer + 1 + Math.floor(i / rowsPerCol);
+    });
+  }
 
   // ── Katmanlara grupla; başlangıç sırası mevcut y ──
   var layers = {};

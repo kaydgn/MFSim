@@ -160,6 +160,24 @@ function veRibbonRunnable(item) {
   return !!(item && item.run && typeof window[item.run] === 'function');
 }
 
+// Modül seçim ekranı açıkken çalışma alanı yok: Kaydet / Doğrula / Çalıştır /
+// PNG gibi komutlar bir işe yaramaz. Şeridin tamamı etkin görünürken sol panel
+// gizleniyordu — tutarsızdı. Bu durumda proje açma/oluşturma ve program
+// komutları dışındaki her şey pasif çizilir.
+var VE_RIBBON_ALWAYS_ON = [
+  'veNewProject', 'veLoadTopology', 'veOpenSettings', 'veOpenStatusModal',
+  'veShortcutsHelpOpen', 'veCmdkOpen', 'veGame2048Open'
+];
+function veRibbonNoWorkspace() {
+  var ov = document.getElementById('ve-module-overlay');
+  return !!(ov && ov.offsetParent !== null);
+}
+function veRibbonItemEnabled(item) {
+  if(!veRibbonRunnable(item)) return false;
+  if(veRibbonNoWorkspace() && VE_RIBBON_ALWAYS_ON.indexOf(item.run) < 0) return false;
+  return true;
+}
+
 function veRibbonVisibleTabs() {
   return VE_RIBBON_TABS.filter(function(t) {
     return !t.when || t.when();
@@ -170,7 +188,7 @@ function veRibbonVisibleTabs() {
 
 function veRibbonItemHTML(item, tabId, gi, ii) {
   if(item.when && !item.when()) return '';
-  var ok = veRibbonRunnable(item);
+  var ok = veRibbonItemEnabled(item);
   var pressed = false;
   if(ok && typeof item.state === 'function') {
     try { pressed = !!item.state(); } catch(e) { pressed = false; }
@@ -182,6 +200,7 @@ function veRibbonItemHTML(item, tabId, gi, ii) {
 
   var label = veRibbonEsc(item.label).replace(/\n/g, '<br>');
   var tip = veRibbonEsc(item.tip || item.label.replace(/\n/g, ' '));
+  if(!ok && veRibbonRunnable(item)) tip = 'Önce bir modül seçin — ' + tip;
 
   var h = '<button type="button" class="' + cls + '" title="' + tip + '"';
   h += ' data-rb="' + tabId + ':' + gi + ':' + ii + '"';
@@ -245,6 +264,21 @@ function veRibbonRender() {
   host.classList.toggle('is-collapsed', veRibbonCollapsed);
   host.classList.toggle('is-peek', veRibbonCollapsed && _veRibbonPeek);
   veRibbonApplyHeight();
+  veRibbonSyncQat();
+}
+
+// Hızlı Erişim çubuğu (Kaydet/Geri/İleri) şeritle aynı kuralı izler: çalışma
+// alanı yokken hepsi pasif. Aksi hâlde şeritteki "Kaydet" gri, başlıktaki aynı
+// komut tıklanabilir görünüyordu.
+function veRibbonSyncQat() {
+  var qat = document.getElementById('ve-qat');
+  if(!qat) return;
+  var blocked = veRibbonNoWorkspace();
+  qat.querySelectorAll('[data-qat]').forEach(function(btn) {
+    if(btn.dataset.qatTitle === undefined) btn.dataset.qatTitle = btn.getAttribute('title') || '';
+    btn.disabled = blocked;
+    btn.setAttribute('title', (blocked ? 'Önce bir modül seçin — ' : '') + btn.dataset.qatTitle);
+  });
 }
 
 // Ölçüler CSS'te tanımlı (--ribbon-expanded-h / --ribbon-strip-h); JS yalnızca
@@ -274,6 +308,7 @@ function veRibbonRefreshStates() {
     btn.classList.toggle('is-pressed', on);
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+  veRibbonSyncQat();
 }
 
 // ── Etkileşim ────────────────────────────────────────────────────────────
@@ -300,7 +335,7 @@ function veRibbonRunItem(tabId, gi, ii) {
   var tab = VE_RIBBON_TABS.filter(function(t) { return t.id === tabId; })[0];
   var g = tab && tab.groups[gi];
   var item = g && g.items[ii];
-  if(!item || !veRibbonRunnable(item)) return;
+  if(!item || !veRibbonItemEnabled(item)) return;
   try {
     window[item.run].apply(null, item.args || []);
   } catch(e) {
@@ -400,6 +435,7 @@ if(typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VE_RIBBON_TABS: VE_RIBBON_TABS,
     veRibbonEsc: veRibbonEsc,
-    veRibbonRunnable: veRibbonRunnable
+    veRibbonRunnable: veRibbonRunnable,
+    VE_RIBBON_ALWAYS_ON: VE_RIBBON_ALWAYS_ON
   };
 }
