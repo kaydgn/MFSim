@@ -4621,6 +4621,32 @@ function veRenderSlotPicker(slotIdx) {
     {type:'scatter3d', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="g3d" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><line x1="6" y1="34" x2="6" y2="6" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="34" y2="34" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="18" y2="24" stroke="#94a3b8" stroke-width="1.2"/><circle cx="14" cy="18" r="2.8" fill="url(#g3d)" opacity="0.9"/><circle cx="22" cy="24" r="2.2" fill="#3b82f6" opacity="0.7"/><circle cx="28" cy="14" r="3" fill="url(#g3d)" opacity="0.95"/><circle cx="18" cy="28" r="2" fill="#8b5cf6" opacity="0.65"/><circle cx="26" cy="20" r="2.5" fill="#3b82f6" opacity="0.8"/><circle cx="11" cy="26" r="1.8" fill="#8b5cf6" opacity="0.6"/><circle cx="30" cy="28" r="2.3" fill="url(#g3d)" opacity="0.75"/></svg>', label:'3D\nGrafik'}
   ];
   
+  // ── Simülasyon yokken tip seçici anlamsız ──
+  // Veri olmadan hangi grafiği seçtiğinizin bir önemi yok; dört panelde aynı
+  // üç ikonun tekrarı (12 özdeş ikon) yalnızca gürültü yapıyordu. Bunun
+  // yerine gerçek engeli söyleyip oradan çözen tek bir yönlendirme gösterilir.
+  if(!window.veSimResults) {
+    var canRun = typeof veSolverRun === 'function';
+    // Açıklama ve eylem YALNIZCA ilk panelde. Aynı cümleyi dört kez yazmak
+    // 12 özdeş ikonun yerine 4 özdeş paragraf koymak olurdu; diğer paneller
+    // yalnızca durumu belirtir.
+    var lead = (slotIdx === 0);
+    var h = '<div class="ve-slot-empty' + (lead ? '' : ' ve-slot-empty--quiet') + '">';
+    h += '<div class="ve-slot-empty-icon"><span class="mf-ico mf-ico-play"></span></div>';
+    h += '<div class="ve-slot-empty-title">Sonuç yok</div>';
+    if(lead) {
+      h += '<div class="ve-slot-empty-text">Grafik çizebilmek için önce simülasyonu çalıştırın.</div>';
+      if(canRun) {
+        h += '<button class="ve-slot-empty-btn" onclick="veSolverRun()">';
+        h += '<span class="mf-ico mf-ico-play"></span> Simülasyonu Çalıştır</button>';
+        h += '<div class="ve-slot-empty-hint">Eksik varsa Uyarılar panelinde listelenir.</div>';
+      }
+    }
+    h += '</div>';
+    body.innerHTML = h;
+    return;
+  }
+
   var html = '<div class="ve-slot-picker">';
   items.forEach(function(item) {
     html += '<div class="ve-slot-pick-item" onclick="veSlotSetType(' + slotIdx + ',\'' + item.type + '\')">';
