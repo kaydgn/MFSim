@@ -37,7 +37,7 @@
   var CAT_FAV    = 'Favoriler';   // sanal kategori (yıldızlanan istasyonlar)
   var CAT_CUSTOM = 'Özel';
   var CAT_ORDER  = ['Chill', 'Türkçe', 'Rock', 'Metal', 'Klasik', 'Bach & Barok',
-                    'Caz & Blues', 'Elektronik', 'Phonk', 'Pop', 'Dünya', CAT_CUSTOM];
+                    'Caz & Blues', 'Elektronik', 'Phonk', 'Pop', 'Dünya', 'Marşlar', CAT_CUSTOM];
 
   // ─── Küratörlü istasyonlar (HTTPS zorunlu) ─────────────────────────────────
   // SomaFM: reklamsız, dinleyici destekli; doğrudan yayın bağlantısına izin
@@ -125,7 +125,10 @@
     { id: 'somafm-illinois-street-lounge', name: "SomaFM Illinois Street Lounge", genre: "Retro lounge", cat: "Dünya", url: 'https://ice1.somafm.com/illstreet-128-mp3' },
     { id: 'somafm-suburbs-of-goa', name: "SomaFM Suburbs of Goa", genre: "Dünya · Asya", cat: "Dünya", url: 'https://ice1.somafm.com/suburbsofgoa-128-mp3' },
     { id: 'fip-reggae', name: "FIP Reggae", genre: "Reggae", cat: "Dünya", url: 'https://icecast.radiofrance.fr/fipreggae-hifi.aac' },
-    { id: 'la-grosse-radio-reggae', name: "La Grosse Radio Reggae", genre: "Reggae · dub", cat: "Dünya", url: 'https://hd.lagrosseradio.info/lagrosseradio-reggae-192.mp3' }
+    { id: 'la-grosse-radio-reggae', name: "La Grosse Radio Reggae", genre: "Reggae · dub", cat: "Dünya", url: 'https://hd.lagrosseradio.info/lagrosseradio-reggae-192.mp3' },
+    { id: 'red-army', name: "Radio Red Army", genre: "Sovyet · Kızıl Ordu", cat: "Marşlar", url: 'https://live.rzs.ru/ka.128.mp3' },
+    { id: 'blasmusikradio', name: "Blasmusikradio", genre: "Alman bando · marş", cat: "Marşlar", url: 'https://stream.laut.fm/blasmusikradio' },
+    { id: 'blasmusik-bernd', name: "Blasmusikradio mit Bernd", genre: "Alman bando · marş", cat: "Marşlar", url: 'https://stream.laut.fm/blasmusikradio_mit_bernd' }
   ];
 
   // ══════════════════════════════════════════════════════════════════════════
