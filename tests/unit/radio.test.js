@@ -230,6 +230,8 @@ describe('STATIONS + allStations + stationIndexById', () => {
     expect(cats).toContain('Klasik');
     expect(cats).toContain('Rock');
     expect(cats).toContain('Phonk');
+    expect(cats).toContain('Marşlar');
+    expect(names.some(n => n.includes('red army'))).toBe(true);   // Sovyet marşı isteği
     // Türkçe ve Phonk kategorilerinde birden fazla istasyon olmalı
     expect(cats.filter(c => c === 'Türkçe').length).toBeGreaterThanOrEqual(5);
     expect(cats.filter(c => c === 'Phonk').length).toBeGreaterThanOrEqual(3);
