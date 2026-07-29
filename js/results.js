@@ -4403,14 +4403,10 @@ function veSlotShellHTML(slotIdx) {
   h += '<div class="ve-rslot-hdr">';
   h += '<div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-' + slotIdx + '">Panel ' + (slotIdx + 1) + '</span></div>';
   h += '<div class="ve-rslot-btns">';
-  // Panel 1 başlığı: global sonuç kontrolleri (Veri Gezgini'nden taşındı) küçük ikonlar
-  if(slotIdx === 0) {
-    h += '<button class="btn-slot-layout" onclick="event.stopPropagation();veChangeResultLayout()" title="Panel Düzeni — yerleşimi değiştir"><span class="mf-ico mf-ico-grid-cells"></span></button>';
-    // Ölçüm imleci (js/chart-cursor.js): aynı X eksenli panelleri tek imleçle okur
-    h += '<button class="btn-slot-cursor" id="ve-cursor-sync-btn" onclick="event.stopPropagation();veCursorToggleSync()" title="Senkron İmleç"><span class="mf-ico mf-ico-crosshair"></span></button>';
-    h += '<button class="btn-slot-clearall" onclick="event.stopPropagation();veClearAllResults()" title="Sonuçları Temizle — tüm sonuçları sil"><span class="mf-ico mf-ico-trash"></span></button>';
-    h += '<span class="ve-rslot-sep"></span>';
-  }
+  // Pano-seviyesi komutlar (Panel Düzeni / Senkron İmleç / Sonuçları Temizle)
+  // ARTIK BURADA DEĞİL: şeritteki bağlamsal "Sonuç Araçları" sekmesinde.
+  // Panel 1'in başlığında durmaları asimetrik ve keşfedilemezdi — kimse pano
+  // düzenini bir panelin başlığında aramaz. Dört panel artık aynı görünüyor.
   h += '<button class="btn-collapse" onclick="veSlotToggle(' + slotIdx + ')" title="Daralt / Genişlet">▼</button>';
   h += '<button class="btn-close" onclick="veSlotClear(' + slotIdx + ')" title="Temizle">✕</button>';
   h += '</div></div>';
@@ -4439,8 +4435,6 @@ function veApplyResultLayout(layoutId) {
   veBuildResultsGrid(layoutId);
   veInitRowResizer();
   veInitColResizers();
-  // Senkron imleç düğmesi yeni izgarada yeniden olustu — durumunu yansit
-  if(typeof veCursorSyncButtonRefresh === 'function') veCursorSyncButtonRefresh();
 
   // Aktif slotlari icerige gore cizdir (verisi olan grafik, bos olan secici)
   for(var s = 0; s < 4; s++) {

@@ -571,13 +571,11 @@ function veCursorToggleSync() {
   }
 }
 
+// Senkron durumunun göstergesi artık şeritteki "Sonuç Araçları > Senkron
+// İmleç" butonu (Panel 1 başlığındaki eski düğme kaldırıldı). Toggle nereden
+// çağrılırsa çağrılsın şerit tazelensin.
 function veCursorSyncButtonRefresh() {
-  var btn = document.getElementById('ve-cursor-sync-btn');
-  if(!btn) return;
-  btn.classList.toggle('active', !!veCursorState.sync);
-  btn.title = veCursorState.sync
-    ? 'Senkron İmleç: AÇIK — aynı X eksenli paneller birlikte okunur (kapatmak için tıklayın)'
-    : 'Senkron İmleç: KAPALI — imleç yalnızca fare altındaki panelde';
+  if(typeof veRibbonRefreshStates === 'function') veRibbonRefreshStates();
 }
 
 // ── Klavye: ok tuşlarıyla örnek adımlama, Esc ile sabiti kaldır ──────────
