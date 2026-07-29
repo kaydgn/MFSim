@@ -4574,3 +4574,37 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
   .ve-rb-group-label{ display:none; }
   .ve-qat{ display:none; }
 }
+
+/* ═══ SONUÇ PANELİ — BOŞ DURUM (simülasyon yok) ═══
+   Veri yokken tip seçici (Çizgi/Tablo/3D) anlamsız: hangi grafiği seçtiğinizin
+   önemi yok. Dört panelde aynı üç ikonun tekrarı 12 özdeş ikon demekti.
+   Yerine gerçek engeli söyleyip oradan çözen tek bir yönlendirme. */
+.ve-slot-empty{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  width:100%; height:100%; gap:8px; padding:20px; text-align:center;
+}
+.ve-slot-empty-icon{
+  width:40px; height:40px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--bg-tertiary); border:1px solid var(--border-color);
+  color:var(--text-muted); margin-bottom:2px;
+}
+.ve-slot-empty-icon .mf-ico{ width:17px; height:17px; }
+.ve-slot-empty-title{ font-size:0.82rem; font-weight:600; color:var(--text-secondary); }
+.ve-slot-empty-text{ font-size:0.72rem; color:var(--text-muted); max-width:34ch; line-height:1.5; }
+.ve-slot-empty-btn{
+  margin-top:6px; display:inline-flex; align-items:center; gap:6px;
+  font:inherit; font-size:0.72rem; font-weight:600; cursor:pointer;
+  padding:6px 14px; border-radius:var(--radius-sm);
+  background:var(--accent-primary); color:#fff; border:1px solid transparent;
+  transition:filter var(--dur-fast,0.12s);
+}
+.ve-slot-empty-btn:hover{ filter:brightness(1.12); }
+.ve-slot-empty-btn:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:2px; }
+.ve-slot-empty-btn .mf-ico{ width:13px; height:13px; }
+.ve-slot-empty-hint{ font-size:0.64rem; color:var(--text-muted); opacity:0.85; }
+/* Yardımcı paneller: yalnız durum, açıklama yok — tekrarı azaltır */
+.ve-slot-empty--quiet{ opacity:0.55; }
+.ve-slot-empty--quiet .ve-slot-empty-icon{ width:32px; height:32px; }
+.ve-slot-empty--quiet .ve-slot-empty-icon .mf-ico{ width:14px; height:14px; }
+.ve-slot-empty--quiet .ve-slot-empty-title{ font-size:0.74rem; }

@@ -339,6 +339,12 @@ function veSolverRun() {
         
         window.veSimResults = simResult;
 
+        // Sonuç panelleri "Sonuç yok" boş durumundan tip seçiciye geçmeli;
+        // aksi hâlde kullanıcı çalıştırdıktan sonra da eski mesajı görür.
+        if(typeof veInitResultSlots === 'function') {
+          try { veInitResultSlots(); } catch(_e) {}
+        }
+
         // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
         try {
           _veSolveOtherTopologies();
