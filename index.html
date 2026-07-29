@@ -90,10 +90,13 @@
     </div>
   </div>
   <!-- Hızlı Erişim Araç Çubuğu (QAT) — şerit sekmesinden bağımsız, hep görünür -->
+  <!-- Komutlar data-qat ile bağlanır (js/ribbon.js). Inline onclick KULLANILMAZ:
+       menüdeki aynı komutla `[onclick*="..."]` seçicilerini çoğaltır ve
+       E2E testlerinde belirsizlik yaratırdı. -->
   <span class="ve-qat" id="ve-qat">
-    <button type="button" class="ve-qat-btn" onclick="veSaveTopology()" title="Projeyi Kaydet" aria-label="Projeyi Kaydet"><span class="mf-ico mf-ico-save"></span></button>
-    <button type="button" class="ve-qat-btn" onclick="veUndo()" title="Geri Al (Ctrl+Z)" aria-label="Geri Al"><span class="mf-ico mf-ico-undo"></span></button>
-    <button type="button" class="ve-qat-btn" onclick="veRedo()" title="İleri Al (Ctrl+Y)" aria-label="İleri Al"><span class="mf-ico mf-ico-redo"></span></button>
+    <button type="button" class="ve-qat-btn" data-qat="veSaveTopology" title="Projeyi Kaydet" aria-label="Projeyi Kaydet"><span class="mf-ico mf-ico-save"></span></button>
+    <button type="button" class="ve-qat-btn" data-qat="veUndo" title="Geri Al (Ctrl+Z)" aria-label="Geri Al"><span class="mf-ico mf-ico-undo"></span></button>
+    <button type="button" class="ve-qat-btn" data-qat="veRedo" title="İleri Al (Ctrl+Y)" aria-label="İleri Al"><span class="mf-ico mf-ico-redo"></span></button>
   </span>
   <span class="ve-qat-sep"></span>
   <div class="ve-tab-group">

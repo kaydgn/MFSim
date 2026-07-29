@@ -53,7 +53,9 @@ test.describe('Dosya Menüsü', () => {
     const fileBtn = page.locator('[onclick*="veToggleFileMenu"]');
     await fileBtn.click();
 
-    const saveBtn = page.locator('[onclick*="veSaveTopology"]');
+    // Menü içine kapsamlandırılmıştır: aynı komut hızlı erişim çubuğunda ya da
+    // başka bir yüzeyde de bulunabilir; kapsamsız seçici strict-mode ihlali verir.
+    const saveBtn = page.locator('#ve-file-menu [onclick*="veSaveTopology"]');
     await expect(saveBtn).toBeVisible();
   });
 
@@ -63,7 +65,7 @@ test.describe('Dosya Menüsü', () => {
     const fileBtn = page.locator('[onclick*="veToggleFileMenu"]');
     await fileBtn.click();
 
-    const loadBtn = page.locator('[onclick*="veLoadTopology"]');
+    const loadBtn = page.locator('#ve-file-menu [onclick*="veLoadTopology"]');
     await expect(loadBtn).toBeVisible();
   });
 });

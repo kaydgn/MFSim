@@ -348,6 +348,20 @@ function veRibbonInit() {
     veRibbonRender();
   });
 
+  // Hızlı Erişim Araç Çubuğu (#tab-bar içinde) — inline onclick yerine
+  // delegasyon: aynı komut menüde de bulunduğundan `[onclick*="..."]`
+  // seçicilerini çoğaltmamak için.
+  var qat = document.getElementById('ve-qat');
+  if(qat && !qat._rbInit) {
+    qat._rbInit = true;
+    qat.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-qat]');
+      if(!btn) return;
+      var fn = window[btn.getAttribute('data-qat')];
+      if(typeof fn === 'function') fn();
+    });
+  }
+
   veRibbonRender();
 }
 
