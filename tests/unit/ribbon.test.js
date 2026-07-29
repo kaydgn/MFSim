@@ -19,7 +19,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '../../');
 const JS_DIR = path.join(ROOT, 'js');
 
-const { VE_RIBBON_TABS, veRibbonEsc } = require('../../js/ribbon.js');
+const { VE_RIBBON_TABS, veRibbonEsc, VE_RIBBON_ALWAYS_ON } = require('../../js/ribbon.js');
 
 // js/ altındaki TÜM üst-seviye fonksiyon adları
 const declaredFns = (() => {
@@ -122,6 +122,32 @@ describe('şerit tanımı — komut ve ikon referansları', () => {
       .filter(({ item }) => item.size !== 'lg' && item.size !== 'sm')
       .map(({ tab, item }) => tab + '/' + item.label + ' → ' + item.size);
     expect(bad).toEqual([]);
+  });
+});
+
+describe('çalışma alanı yokken pasifleşme muafiyet listesi', () => {
+  // Modül seçim ekranında şeridin TAMAMI pasif çizilir; yalnızca bu listedeki
+  // komutlar etkin kalır. Liste komut ADLARINI tutar — bir komut yeniden
+  // adlandırılırsa liste sessizce eşleşmeyi kaybeder ve "Yeni Proje" de pasif
+  // olur: kullanıcı hiçbir şey yapamaz hâle gelir. Bu test o sessiz kırılmayı
+  // yakalar.
+  const allRuns = new Set(
+    VE_RIBBON_TABS.flatMap((t) => t.groups.flatMap((g) => g.items.map((i) => i.run)))
+  );
+
+  test('muaf komutların tümü şeritte gerçekten var', () => {
+    const missing = VE_RIBBON_ALWAYS_ON.filter((r) => !allRuns.has(r));
+    expect(missing).toEqual([]);
+  });
+
+  test('proje oluşturma ve açma her hâlükârda muaf', () => {
+    expect(VE_RIBBON_ALWAYS_ON).toEqual(expect.arrayContaining(['veNewProject', 'veLoadTopology']));
+  });
+
+  test('çalışma alanı gerektiren komutlar muaf değil', () => {
+    ['veSaveTopology', 'veSolverRun', 'veSolverValidate', 'veTidyLayout'].forEach((run) => {
+      expect(VE_RIBBON_ALWAYS_ON).not.toContain(run);
+    });
   });
 });
 

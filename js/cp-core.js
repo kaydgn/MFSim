@@ -188,7 +188,9 @@ function showNodeProperties(node) {
   var titleEl = document.getElementById('ve-properties-title');
   if(titleEl) {
     var nm = (node && (node.customName || (node.def && node.def.name))) || 'Özellikler';
-    titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>' + nm + ' <span style="opacity:0.5;font-weight:400;font-size:0.7rem;margin-left:6px;">' + (node.id || '') + '</span>';
+    // Yalnız ad — ID gövdedeki kimlik bloğunda zaten var. İkisi 120 px arayla
+    // aynı bilgiyi tekrarlıyordu ("Motor  comp-2" / "Motor ✎  ID: comp-2").
+    titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>' + nm;
   }
   
   // Kimlik bloğu — sınıf tabanlı (yerleşim CSS'te). Varsayılan: ortalanmış

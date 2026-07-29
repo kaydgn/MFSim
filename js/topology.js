@@ -893,7 +893,7 @@ function veRenderSnapshot(paneIdx) {
       var w = n.width || 65, h = n.height || 60;
       
       var nodeEl = document.createElement('div');
-      nodeEl.className = 've-node';
+      nodeEl.className = 've-node' + (VE_STANDALONE_TYPES.indexOf(node.type) >= 0 ? ' ve-node--standalone' : '');
       nodeEl.style.left = n.x + 'px';
       nodeEl.style.top = n.y + 'px';
       nodeEl.style.pointerEvents = 'none';

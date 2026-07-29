@@ -171,7 +171,7 @@ function restoreState(state) {
     
     // Node element oluştur (createNode ile uyumlu)
     var nodeEl = document.createElement('div');
-    nodeEl.className = 've-node';
+    nodeEl.className = 've-node' + (VE_STANDALONE_TYPES.indexOf(node.type) >= 0 ? ' ve-node--standalone' : '');
     nodeEl.id = node.id;
     nodeEl.style.left = node.x + 'px';
     nodeEl.style.top = node.y + 'px';

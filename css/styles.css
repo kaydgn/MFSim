@@ -1732,8 +1732,9 @@
   border-radius:var(--radius-md,8px);
   box-shadow:var(--shadow-lg);
   overflow:hidden;
-  opacity:0.96;
-  transition:width var(--dur-base,.2s) var(--ease-out),
+  opacity:0.62;
+  transition:opacity var(--dur-fast,.12s) var(--ease-out),
+             width var(--dur-base,.2s) var(--ease-out),
              height var(--dur-base,.2s) var(--ease-out),
              opacity var(--dur-base,.2s);
 }
@@ -2877,14 +2878,25 @@
 }
 .ve-prop-nameedit:hover{ opacity:1; }
 .ve-prop-id{ font-size:0.7rem; color:var(--text-muted); }
+/* Silme: YIKICI eylem, panelin en dikkat çekici öğesi olmamalı. Önce dolu
+   kırmızı bir daireydi ve bileşen ikonunun hemen yanında duruyordu — paneldeki
+   en güçlü renk yanlışlıkla tıklanabilecek bir eylemdeydi. Artık nötr duruyor,
+   niyet belirdiğinde (hover/odak) kırmızıya döner. */
 .ve-prop-del{
-  position:absolute; top:-4px; right:-4px;
-  width:22px; height:22px; border-radius:50%;
-  background:var(--accent-danger); color:#fff; border:none;
+  position:absolute; top:-2px; right:-2px;
+  width:22px; height:22px; border-radius:var(--radius-sm,5px);
+  background:transparent; color:var(--text-muted);
+  border:1px solid var(--border-color);
   display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:0.65rem; opacity:0.7; transition:opacity 0.15s;
+  cursor:pointer; font-size:0.65rem;
+  transition:color 0.15s, border-color 0.15s, background 0.15s;
 }
-.ve-prop-del:hover{ opacity:1; }
+.ve-prop-del:hover, .ve-prop-del:focus-visible{
+  color:var(--accent-danger);
+  border-color:color-mix(in srgb, var(--accent-danger) 55%, transparent);
+  background:color-mix(in srgb, var(--accent-danger) 12%, transparent);
+}
+.ve-prop-del:focus-visible{ outline:2px solid var(--accent-danger); outline-offset:1px; }
 
 /* Geniş (içerik-yoğun) pencereler: kimlik KOMPAKT-SOL satır — simge solda,
    ad/ID yanında, sil düğmesi sağa yaslı, altında ince ayraç. Böylece sağ sütun
@@ -4327,7 +4339,7 @@ body.mf-radio-dragging .mf-radio-head{ cursor:grabbing; }
   box-shadow:0 12px 40px var(--shadow-color), 0 2px 8px rgba(0,0,0,0.3);
   color:var(--text-primary);
   font-family:var(--font-sans);
-  z-index:1000001;
+  z-index:1000001;   /* açılış ekranının (1000000) üstünde */
   animation:mfSplashPlayerIn 0.35s var(--ease-out,ease) both;
   transition:opacity 0.3s ease, transform 0.3s ease, right 0.25s var(--ease-out,ease);
 }
@@ -4565,6 +4577,9 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 }
 .ve-qat-btn:hover{ background:var(--bg-input); color:var(--accent-primary); }
 .ve-qat-btn:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:1px; }
+/* Çalışma alanı yokken şeritle aynı kural: komut pasif, sebebi title'da. */
+.ve-qat-btn:disabled{ opacity:0.35; cursor:default; }
+.ve-qat-btn:disabled:hover{ background:none; color:var(--text-secondary); }
 .ve-qat-btn .mf-ico{ width:13px; height:13px; }
 .ve-qat-sep{ width:1px; height:14px; background:var(--border-color); margin:0 4px; }
 
@@ -4608,3 +4623,25 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 .ve-slot-empty--quiet .ve-slot-empty-icon{ width:32px; height:32px; }
 .ve-slot-empty--quiet .ve-slot-empty-icon .mf-ico{ width:14px; height:14px; }
 .ve-slot-empty--quiet .ve-slot-empty-title{ font-size:0.74rem; }
+
+/* Genel görünüm (minimap): çalışma alanının üstünde duruyor. Opak hâlde
+   sağ-alttaki bileşenleri kapatıyordu; artık soluk durur, üstüne gelince
+   netleşir. Dar ekranda canvas'ın önemli bir kısmını yiyeceği için gizlenir. */
+.ve-minimap:hover{ opacity:1; }
+@media (max-width:1100px){
+  .ve-minimap{ display:none !important; }
+}
+
+/* Müzik çalar açılış ekranının üstünde başlar (splash 1000000). Uygulama
+   yüklendikten sonra (body.tab-bar-visible) modalların ALTINA iner; aksi hâlde
+   Ayarlar/Özellikler penceresi açıkken karartılmayan tek öğe olarak öne
+   çıkıyordu. 100005: şeridin (99998) üstünde, modalların (100010+) altında. */
+body.tab-bar-visible .mf-splash-player{ z-index:100005; }
+
+/* Mantıksal bileşenler (Çözücü, Araç, Yol, Sensör, Senaryo…): fiziksel güç
+   zincirine bağlanmazlar. Zincirin dışında dururken "bağlamayı mı unuttum?"
+   diye okunuyorlardı; kesikli çerçeve bunun kasıtlı olduğunu söyler. */
+.ve-node--standalone .ve-node-box{
+  border-style:dashed;
+  border-color:color-mix(in srgb, var(--border-hover) 85%, transparent);
+}

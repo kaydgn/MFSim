@@ -576,7 +576,7 @@ function createNode(type, x, y, width, height) {
   
   // Node HTML oluştur
   var nodeEl = document.createElement('div');
-  nodeEl.className = 've-node';
+  nodeEl.className = 've-node' + (VE_STANDALONE_TYPES.indexOf(node.type) >= 0 ? ' ve-node--standalone' : '');
   nodeEl.id = nodeId;
   nodeEl.style.left = x + 'px';
   nodeEl.style.top = y + 'px';
