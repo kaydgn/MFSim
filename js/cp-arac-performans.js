@@ -185,6 +185,10 @@ function veAracOpenEditor(nodeId, _silent){
   if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('enter');
   veAracUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
+  // Topoloji kapsamı değişti → uyarı paneli tazelensin. Aksi hâlde panel
+  // ana topolojinin (ya da statik yer tutucunun) durumunu göstermeye devam
+  // eder ve alt topolojideki gerçek eksikleri saklar.
+  if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
   if(!_silent && typeof showToast === 'function') showToast('Araç Performans — Alt Topoloji', 'info');
 }
 
@@ -217,6 +221,10 @@ function veAracCloseEditor(_silent){
   if(!_silent && typeof veAnimateCanvasTransition === 'function') veAnimateCanvasTransition('exit');
   veAracUpdateBreadcrumb();
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
+  // Topoloji kapsamı değişti → uyarı paneli tazelensin. Aksi hâlde panel
+  // ana topolojinin (ya da statik yer tutucunun) durumunu göstermeye devam
+  // eder ve alt topolojideki gerçek eksikleri saklar.
+  if(typeof veUpdateWarnings === 'function') veUpdateWarnings();
 
   // Ana topolojiye dönünce ilgili düğümü seç
   var back = veAracStack.length === 0;

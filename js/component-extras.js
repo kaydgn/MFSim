@@ -1178,34 +1178,118 @@ function veUpdateWarnings() {
       var name = n.customName || (def ? def.name : n.type);
       
       if(def && def.inputs > 0 && !hasIn) {
-        warnings.push({type:'warn', msg: name + ': giriş portu bağlanmamış'});
+        warnings.push({type:'warn', msg: name + ': giriş portu bağlanmamış', nodeId: n.id});
       }
       // Çıkış portu: sonlandırıcıya bağlıysa uyarı verme
       if(def && def.outputs > 0 && !hasOut && !terminatedNodeIds[n.id]) {
-        warnings.push({type:'warn', msg: name + ': çıkış portu bağlanmamış'});
+        warnings.push({type:'warn', msg: name + ': çıkış portu bağlanmamış', nodeId: n.id});
       }
     });
   }
   
-  // Uyarı panelini güncelle
+  veRenderWarningsPanel(warnings, { source: 'topoloji' });
+}
+
+// ═══ UYARI PANELİ — TEK YAZICI ═══
+// Panele iki kaynak yazar: sürekli topoloji taraması (veUpdateWarnings) ve
+// "Doğrula" komutu (veShowValidationInWarnings). İkisi de buradan geçer ki
+// panel hiçbir zaman iki farklı gerçeği anlatmasın.
+//
+// items: [{type:'error'|'warn'|'info', msg, nodeId?}]
+function veRenderWarningsPanel(items, opts) {
+  opts = opts || {};
+  items = items || [];
   var body = document.getElementById('ve-warnings-body');
   var countEl = document.getElementById('ve-warnings-count');
-  
+  var errCount = items.filter(function(w) { return w.type === 'error'; }).length;
+  var warnCount = items.filter(function(w) { return w.type === 'warn'; }).length;
+  var badgeCount = errCount + warnCount;
+
   if(countEl) {
-    countEl.textContent = warnings.length;
-    countEl.style.background = warnings.some(function(w){return w.type==='error';}) ? 'var(--accent-danger)' : (warnings.length > 0 ? 'var(--accent-warning)' : 'var(--accent-success)');
-    countEl.style.color = warnings.length > 0 ? '#000' : '#fff';
+    countEl.textContent = badgeCount;
+    countEl.style.background = errCount > 0 ? 'var(--accent-danger)'
+      : (warnCount > 0 ? 'var(--accent-warning)' : 'var(--accent-success)');
+    countEl.style.color = badgeCount > 0 ? '#000' : '#fff';
   }
-  
-  if(body) {
-    if(warnings.length === 0) {
-      body.innerHTML = '<div style="padding:10px 14px;font-size:0.75rem;color:var(--accent-success);">Uyarı yok. Topoloji hazır görünüyor.</div>';
-    } else {
-      body.innerHTML = warnings.map(function(w) {
-        return '<div class="ve-warning-item ' + w.type + '"><span>' + w.msg + '</span></div>';
-      }).join('');
+  if(!body) return;
+
+  if(items.length === 0) {
+    // Dürüst boş durum: doğrulanmadıysa "hazır" DEME. Eskiden hiç bileşen
+    // yokken bile "Topoloji hazır" yazıyordu ve Çalıştır aynı anda reddediyordu.
+    var msg = (opts.source === 'dogrulama')
+      ? '<span style="color:var(--accent-success);">✓ Doğrulama temiz — hesaplamaya hazır.</span>'
+      : 'Uyarı yok. Doğrulamak için Giriş sekmesindeki <strong>Doğrula</strong>\'ya basın.';
+    body.innerHTML = '<div style="padding:10px 14px;font-size:0.75rem;color:var(--text-muted);">' + msg + '</div>';
+    return;
+  }
+
+  // 'ok' = doğrulamanın başarı satırı; şiddet sıralamasında en üstte kalmalı
+  var order = { ok: -1, error: 0, warn: 1, info: 2 };
+  var sorted = items.slice().sort(function(a, b) { return (order[a.type] || 3) - (order[b.type] || 3); });
+  body.innerHTML = sorted.map(function(w) {
+    // Bir bileşene işaret eden satır tıklanabilir olsun — "2 bileşen bağlı
+    // değil" deyip hangisi olduğunu söylememek en sinir bozucu kısımdı.
+    var clickable = w.nodeId ? ' ve-warning-clickable" onclick="veFocusNode(\'' + w.nodeId + '\')" title="Bileşene git"' : '"';
+    return '<div class="ve-warning-item ' + w.type + clickable + '><span>' + w.msg + '</span></div>';
+  }).join('');
+}
+
+// "Doğrula" sonucunu görünür panele dök ve paneli aç.
+function veShowValidationInWarnings(res) {
+  if(!res) return;
+  var items = [];
+  res.items.forEach(function(it) {
+    if(it.level === 'err') items.push({ type:'error', msg: it.label + (it.detail ? ' — ' + it.detail : ''), nodeId: it.nodeId });
+    else if(it.level === 'warn') items.push({ type:'warn', msg: it.label, nodeId: it.nodeId });
+  });
+  // Bloklayan hata yokken listede yalnız uyarılar kalırsa "başarısız mı?" diye
+  // okunur. Sonucu açıkça söyleyen bir satır başa eklenir.
+  if(res.allOk && items.length > 0) {
+    items.unshift({ type:'ok', msg: 'Hesaplamaya hazır (' + res.mode + ') — aşağıdakiler bloklamıyor' });
+  }
+  veRenderWarningsPanel(items, { source: 'dogrulama' });
+  veOpenWarningsPanel();
+  if(typeof showToast === 'function') {
+    if(res.allOk) showToast('Doğrulama temiz — ' + res.mode + ', hesaplamaya hazır', 'success');
+    else showToast(res.errors.length + ' eksik bulundu — Uyarılar panelinde listelendi', 'error');
+  }
+}
+
+// Paneli açar (kapalıysa). Doğrulama sonucu kapalı panelin arkasında kalmasın.
+function veOpenWarningsPanel() {
+  var body = document.getElementById('ve-warnings-body');
+  var toggle = document.getElementById('ve-warnings-toggle');
+  if(body && body.classList.contains('collapsed')) {
+    body.classList.remove('collapsed');
+    if(toggle) toggle.textContent = '▲';
+  }
+}
+
+// Uyarı satırından bileşene git: seç, ortala, özelliklerini aç.
+function veFocusNode(nodeId) {
+  var n = (typeof nodes !== 'undefined') ? nodes.find(function(x) { return x.id === nodeId; }) : null;
+  if(!n) return;
+  if(typeof selectedNodes !== 'undefined') {
+    selectedNodes.length = 0;
+    selectedNodes.push(nodeId);
+  }
+  if(typeof render === 'function') render();
+
+  // Bileşeni görünüm merkezine getir (canvas kamerası; düğüm koordinatına
+  // DOKUNMAZ — veFitViewToContent ile aynı dönüşüm).
+  var wrap = document.getElementById('ve-canvas-wrapper');
+  if(wrap && typeof canvasOffset !== 'undefined' && typeof canvasZoom !== 'undefined') {
+    var W = wrap.clientWidth, H = wrap.clientHeight;
+    if(W > 20 && H > 20) {
+      var CANVAS_OFFSET = 3000;
+      var cx = n.x + (n.width || 65) / 2;
+      var cy = n.y + (n.height || 60) / 2;
+      canvasOffset.x = W / 2 - (cx - CANVAS_OFFSET) * canvasZoom;
+      canvasOffset.y = H / 2 - (cy - CANVAS_OFFSET) * canvasZoom;
+      if(typeof updateCanvasTransform === 'function') updateCanvasTransform();
     }
   }
+  if(typeof showNodeProperties === 'function') showNodeProperties(n);
 }
 
 // Bileşen eklendiğinde/silindiğinde uyarıları güncelle
