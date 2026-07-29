@@ -120,14 +120,26 @@ function _veSolveOtherTopologies(options) {
     logSpacer();
   }
 }
-function veSolverValidate() {
-  var container = document.getElementById('ve-solver-validation');
-  if(!container) return;
-  
-  var html = '';
+// ═══ TOPOLOJİ DOĞRULAMA ═══
+// veCollectValidation() saf veri üretir: [{level, label, detail, nodeId}].
+// Çizim iki ayrı yerde yapılır — Çözücü kartı ve GÖRÜNÜR uyarılar paneli.
+// Önceden doğrulama yalnızca #ve-solver-validation'a yazıyordu; o eleman
+// ulaşılamayan bir sayfada durduğu için "Doğrula"ya basmak ekranda hiçbir şey
+// değiştirmiyordu. Sonuç: kullanıcı hatasını göremiyor, Çalıştır ise sessizce
+// reddediyordu.
+//
+// level: 'ok' | 'err' | 'warn' | 'info'   ('err' hesaplamayı bloklar)
+function veCollectValidation() {
+  var items = [];
   var allOk = true;
-  
-  // Bileşen kontrolleri
+
+  function addItem(ok, label, detail, nodeId) {
+    items.push({ level: ok ? 'ok' : 'err', label: label, detail: detail || '', nodeId: nodeId || null });
+    if(!ok) allOk = false;
+  }
+  function addWarn(label, nodeId) { items.push({ level:'warn', label:label, detail:'', nodeId:nodeId || null }); }
+  function addInfo(label) { items.push({ level:'info', label:label, detail:'' }); }
+
   var hasEngine = nodes.some(function(n) { return n.type === 'engine'; });
   var hasGearbox = nodes.some(function(n) { return n.type === 'gearbox'; });
   var hasWheel = nodes.some(function(n) { return n.type === 'wheel'; });
@@ -136,8 +148,7 @@ function veSolverValidate() {
   var hasDiff = nodes.some(function(n) { return n.type === 'differential'; });
   var hasTerminator = nodes.some(function(n) { return n.type === 'terminator'; });
   var hasScenario = nodes.some(function(n) { return n.type === 'scenario'; });
-  
-  // Terminator bağlı mı?
+
   var terminatorConnected = false;
   if(hasTerminator) {
     terminatorConnected = nodes.some(function(n) {
@@ -145,27 +156,11 @@ function veSolverValidate() {
       return connections.some(function(c) { return c.to === n.id; });
     });
   }
-  
-  function addItem(ok, label, detail) {
-    var cls = ok ? 've-validation-ok' : 've-validation-err';
-    var icon = ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>';
-    html += '<div class="ve-validation-item ' + cls + '"><span>' + icon + '</span><span>' + label + (detail ? ' <span style="color:var(--text-muted);font-size:0.7rem;">(' + detail + ')</span>' : '') + '</span></div>';
-    if(!ok) allOk = false;
-  }
-  
-  function addWarn(label) {
-    html += '<div class="ve-validation-item ve-validation-warn"><span>⚠</span><span>' + label + '</span></div>';
-  }
-  
-  function addInfo(label) {
-    html += '<div class="ve-validation-item" style="font-size:0.75rem;"><span>ℹ️</span><span>' + label + '</span></div>';
-  }
-  
+
   addItem(hasEngine, 'Motor bileşeni', hasEngine ? 'mevcut' : 'eksik');
 
-  // Senaryo bileşeni zorunlu kontrolü
-  var mod = veGetActiveModule();
-  var scenarioRequired = mod.requiredComponents && mod.requiredComponents.indexOf('scenario') > -1;
+  var mod = (typeof veGetActiveModule === 'function') ? veGetActiveModule() : {};
+  var scenarioRequired = mod && mod.requiredComponents && mod.requiredComponents.indexOf('scenario') > -1;
   if(scenarioRequired) {
     addItem(hasScenario, 'Senaryolar bileşeni', hasScenario ? 'mevcut' : 'eksik — zorunlu bileşen');
   } else if(hasScenario) {
@@ -173,43 +168,46 @@ function veSolverValidate() {
   }
 
   if(hasTerminator && terminatorConnected) {
-    // Kısmi analiz modu — sonlandırıcıya kadar hesap yapılacak
-    addInfo('<span style="color:var(--accent-danger);font-weight:600;">Kısmi Analiz Modu</span> — Sonlandırıcı tespit edildi, zincir sonlandırıcıya kadar hesaplanacak');
-    // Kısmi modda gearbox/wheel/vehicle zorunlu değil, ama motor zorunlu
+    addInfo('Kısmi Analiz Modu — Sonlandırıcı tespit edildi, zincir sonlandırıcıya kadar hesaplanacak');
     if(hasGearbox) addItem(true, 'Şanzıman bileşeni', 'mevcut');
     if(hasWheel) addItem(true, 'Tekerlek bileşeni', 'mevcut');
     if(hasVehicle) addItem(true, 'Araç Gövdesi bileşeni', 'mevcut');
   } else {
-    // Tam analiz modu — tüm bileşenler gerekli
     addItem(hasGearbox, 'Şanzıman bileşeni', hasGearbox ? 'mevcut' : 'eksik');
     addItem(hasWheel, 'Tekerlek bileşeni', hasWheel ? 'mevcut' : 'eksik');
     addItem(hasVehicle, 'Araç Gövdesi bileşeni', hasVehicle ? 'mevcut' : 'eksik');
-    if(veActiveModule !== 'full-throttle') {
+    if(typeof veActiveModule !== 'undefined' && veActiveModule !== 'full-throttle') {
       addItem(hasRoad, 'Yol / Eğim bileşeni', hasRoad ? 'mevcut' : 'eksik');
     } else if(hasRoad) {
       addInfo('Yol / Eğim bileşeni mevcut (opsiyonel — eğim Araç bileşeninden alınır)');
     }
-    if(!hasDiff) addWarn('Diferansiyel bileşeni eksik - varsayılan oran kullanılacak');
+    if(!hasDiff) addWarn('Diferansiyel bileşeni eksik — varsayılan oran kullanılacak');
   }
-  
-  // Bağlantı kontrolleri - terminator ve standalone hariç
+
+  // Bağlantı kontrolü — bağımsız çalışan tipler hariç
   var standaloneTypes = ['vehicle','road','sensor','solver','scenario','coast-down','parametric','terminator'];
-  var connectedNodes = new Set();
-  connections.forEach(function(c) { connectedNodes.add(c.from); connectedNodes.add(c.to); });
+  var connectedNodes = {};
+  connections.forEach(function(c) { connectedNodes[c.from] = true; connectedNodes[c.to] = true; });
   var disconnected = nodes.filter(function(n) {
-    return standaloneTypes.indexOf(n.type) === -1 && !connectedNodes.has(n.id);
+    return standaloneTypes.indexOf(n.type) === -1 && !connectedNodes[n.id];
   });
-  
-  addItem(disconnected.length === 0, 'Güç zinciri bileşenleri bağlı', disconnected.length > 0 ? disconnected.length + ' bileşen bağlı değil' : 'OK');
-  
-  // Veri kontrolleri
+  addItem(disconnected.length === 0, 'Güç zinciri bileşenleri bağlı',
+    disconnected.length > 0 ? disconnected.length + ' bileşen bağlı değil' : 'OK',
+    disconnected.length > 0 ? disconnected[0].id : null);
+  // Hangi bileşenlerin bağlı olmadığını tek tek söyle — "2 bileşen bağlı değil"
+  // demek kullanıcıya hangisini arayacağını söylemiyordu.
+  disconnected.forEach(function(n) {
+    var nm = n.customName || ((typeof componentDefs !== 'undefined' && componentDefs[n.type]) ? componentDefs[n.type].name : n.type);
+    addWarn(nm + ' bağlı değil', n.id);
+  });
+
   if(hasEngine) {
     var engineNode = nodes.find(function(n) { return n.type === 'engine'; });
     var hasData = engineNode && engineNode.data && engineNode.data.torqueData && engineNode.data.torqueData.length >= 2;
-    addItem(hasData, 'Motor tork verileri', hasData ? engineNode.data.torqueData.length + ' veri noktası' : 'eksik veya yetersiz');
+    addItem(hasData, 'Motor tork verileri',
+      hasData ? engineNode.data.torqueData.length + ' veri noktası' : 'eksik veya yetersiz',
+      engineNode ? engineNode.id : null);
 
-    // Aksesuar portları (Klima / Alternatör / Hava Kompresörü) bağlı mı?
-    // Bağlanmayan port = o aksesuarın kaybı hesaba katılmaz → UYARI (bloklamaz).
     if(engineNode && typeof VE_ACC_PORT_MAP !== 'undefined' && typeof VE_ACC_TYPES !== 'undefined') {
       Object.keys(VE_ACC_PORT_MAP).forEach(function(portId) {
         var accType = VE_ACC_PORT_MAP[portId];
@@ -219,49 +217,84 @@ function veSolverValidate() {
           var fn = nodes.find(function(n){ return n.id === c.from; });
           return fn && fn.type === accType;
         });
-        if(connectedAcc) {
-          addInfo((info.label || accType) + ' bağlı — aksesuar kaybı modellendi');
-        } else {
-          addWarn((info.label || accType) + ' portu boş — bu aksesuarın kaybı hesaba katılmıyor');
-        }
+        if(connectedAcc) addInfo((info.label || accType) + ' bağlı — aksesuar kaybı modellendi');
+        else addWarn((info.label || accType) + ' portu boş — bu aksesuarın kaybı hesaba katılmıyor', engineNode.id);
       });
     }
   }
-  
+
   if(hasVehicle) {
     var vehicleNode = nodes.find(function(n) { return n.type === 'vehicle'; });
     var hasMass = vehicleNode && vehicleNode.data && vehicleNode.data.mass > 0;
-    addItem(hasMass, 'Araç ağırlığı', hasMass ? vehicleNode.data.mass + ' kg' : 'girilmemiş');
+    addItem(hasMass, 'Araç ağırlığı', hasMass ? vehicleNode.data.mass + ' kg' : 'girilmemiş',
+      vehicleNode ? vehicleNode.id : null);
   }
-  
+
   if(hasRoad) {
     var roadNode = nodes.find(function(n) { return n.type === 'road'; });
     var hasGrade = roadNode && roadNode.data && !isNaN(roadNode.data.grade) && roadNode.data.grade !== '';
-    addItem(hasGrade, 'Arazi eğimi', hasGrade ? '%' + roadNode.data.grade : 'girilmemiş');
+    addItem(hasGrade, 'Arazi eğimi', hasGrade ? '%' + roadNode.data.grade : 'girilmemiş',
+      roadNode ? roadNode.id : null);
   }
-  
-  // Sonuç
-  if(allOk) {
-    var modeText = (hasTerminator && terminatorConnected) ? 'Kısmi analiz' : 'Tam analiz';
-    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-success) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-success) 30%, transparent);text-align:center;font-size:0.8rem;color:var(--accent-success);font-weight:600;">✓ ' + modeText + ' - hesaplamaya hazır</div>';
-    document.getElementById('ve-solver-run-btn').disabled = false;
-    document.getElementById('ve-solver-run-btn').style.opacity = '1';
+
+  return {
+    items: items,
+    allOk: allOk,
+    mode: (hasTerminator && terminatorConnected) ? 'Kısmi analiz' : 'Tam analiz',
+    errors: items.filter(function(i) { return i.level === 'err'; }),
+    warnings: items.filter(function(i) { return i.level === 'warn'; })
+  };
+}
+
+// Çözücü sayfasındaki doğrulama kartı (sayfa şu an gezinmede yok; eleman
+// bulunamazsa sessizce atlanır — çizim artık zorunlu değil).
+function veRenderValidationCard(res) {
+  var container = document.getElementById('ve-solver-validation');
+  if(!container) return;
+  var html = '';
+  res.items.forEach(function(it) {
+    if(it.level === 'info') {
+      html += '<div class="ve-validation-item" style="font-size:0.75rem;"><span>ℹ️</span><span>' + it.label + '</span></div>';
+      return;
+    }
+    if(it.level === 'warn') {
+      html += '<div class="ve-validation-item ve-validation-warn"><span>⚠</span><span>' + it.label + '</span></div>';
+      return;
+    }
+    var ok = it.level === 'ok';
+    var icon = ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>'
+                  : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>';
+    html += '<div class="ve-validation-item ' + (ok ? 've-validation-ok' : 've-validation-err') + '"><span>' + icon +
+            '</span><span>' + it.label + (it.detail ? ' <span style="color:var(--text-muted);font-size:0.7rem;">(' + it.detail + ')</span>' : '') + '</span></div>';
+  });
+  if(res.allOk) {
+    html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-success) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-success) 30%, transparent);text-align:center;font-size:0.8rem;color:var(--accent-success);font-weight:600;">✓ ' + res.mode + ' - hesaplamaya hazır</div>';
   } else {
     html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-danger) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent);text-align:center;font-size:0.8rem;color:var(--accent-danger);font-weight:600;">✗ Eksikler var - hesaplama yapılamaz</div>';
-    document.getElementById('ve-solver-run-btn').disabled = true;
-    document.getElementById('ve-solver-run-btn').style.opacity = '0.5';
   }
-  
   container.innerHTML = html;
-  return allOk;
+
+  var runBtn = document.getElementById('ve-solver-run-btn');
+  if(runBtn) {
+    runBtn.disabled = !res.allOk;
+    runBtn.style.opacity = res.allOk ? '1' : '0.5';
+  }
+}
+
+function veSolverValidate() {
+  var res = veCollectValidation();
+  veRenderValidationCard(res);
+  // Asıl geri bildirim burada: kullanıcının GÖRDÜĞÜ panel
+  if(typeof veShowValidationInWarnings === 'function') veShowValidationInWarnings(res);
+  return res.allOk;
 }
 
 function veSolverRun() {
+  // veSolverValidate zaten sonucu görünür panele döküyor ve toast atıyor;
+  // burada ikinci bir toast atmak aynı bilgiyi iki kez söylemek olurdu.
+  // Eksikler panelde kalıcı durur — kaybolan bir toast'ın aksine.
   var valid = veSolverValidate();
-  if(!valid) {
-    showToast('Eksik bileşenler var — önce topolojiyi tamamlayın', 'error');
-    return;
-  }
+  if(!valid) return;
   
   var progressEl = document.getElementById('ve-solver-progress');
   var progressFill = document.getElementById('ve-solver-progress-fill');

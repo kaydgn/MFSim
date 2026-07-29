@@ -2733,6 +2733,16 @@
   flex-shrink:0;
   background:var(--text-muted);
 }
+/* Bir bileşene işaret eden uyarı satırı tıklanabilir: seçer, ortalar, açar */
+.ve-warning-item.ve-warning-clickable{ cursor:pointer; }
+.ve-warning-item.ve-warning-clickable:hover{ background:var(--bg-input); }
+.ve-warning-item.ve-warning-clickable::after{
+  content:"→"; margin-left:auto; opacity:0; color:var(--text-muted);
+  font-size:0.8rem; transition:opacity var(--dur-fast,0.12s);
+}
+.ve-warning-item.ve-warning-clickable:hover::after{ opacity:0.8; }
+.ve-warning-item.ok{border-left:3px solid var(--accent-success);color:var(--accent-success);font-weight:600;}
+.ve-warning-item.ok::before{background:var(--accent-success);}
 .ve-warning-item.error{border-left:3px solid var(--accent-danger);}
 .ve-warning-item.error::before{background:var(--accent-danger);}
 .ve-warning-item.warn{border-left:3px solid var(--accent-warning);}
