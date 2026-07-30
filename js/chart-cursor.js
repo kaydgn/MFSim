@@ -292,7 +292,8 @@ function veCursorApplyToSlot(slotIdx, xVal, opts) {
 function veCursorPaintTooltip(slotIdx, g, sample, snapX, mouseY) {
   var tooltip = document.getElementById('ve-tooltip-' + slotIdx);
   if(!tooltip) return;
-  var slot = g.slot, m = g.meta;
+  var slot = g.slot;   // m (g.meta) artık kullanılmıyor: eksen rozetleri seri
+                       // satırlarıyla birlikte göstergeye taşındı.
 
   var xLabel = 't', xUnit = 's';
   if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
@@ -300,28 +301,22 @@ function veCursorPaintTooltip(slotIdx, g, sample, snapX, mouseY) {
     xUnit = slot.xAxis.unit || '';
   }
 
+  // OKUMA KUTUSU yalnız X değerini (ve varsa Δ bölümünü) taşır.
+  // Seri değerleri GÖSTERGENİN değer sütununda yazılıyor (veCursorPaintLegend)
+  // — ikisi birlikte aynı sayıları İKİ KEZ gösteriyordu ve kutu, örttüğü
+  // eğrinin okunmasını engelleyecek kadar büyüyordu. CANoe'da da okuma
+  // değerleri sinyal listesinde durur, izin üstünde değil.
   var html = '<div class="ve-chart-tooltip-head">' + veCursorEsc(xLabel) + ' = ' +
     sample.x.toFixed(3) + (xUnit ? ' ' + veCursorEsc(xUnit) : '') + '</div>';
 
-  sample.rows.forEach(function(row) {
-    var axisBadge = '';
-    if(m.hasDualAxis && m.axes && m.axes[row.axisIdx]) {
-      var axUnit = m.axes[row.axisIdx].unit;
-      var axClr = m.axes[row.axisIdx].color || row.color;
-      axisBadge = ' <span style="opacity:0.5;font-size:0.5rem;color:' + axClr + ';">[' +
-        veCursorEsc(axUnit || ('Y' + (row.axisIdx + 1))) + ']</span>';
-    }
+  // Veri olmayan seriler sessizce atlanmaz: gösterge sütununda değer
+  // yazılamayacağı için burada tek satırla bildirilir.
+  var eksik = sample.rows.filter(function(row) { return row.noData; });
+  eksik.forEach(function(row) {
     html += '<div class="ve-chart-tooltip-row">';
-    if(row.noData) {
-      html += '<div class="ve-chart-tooltip-dot" style="background:' + row.color + '; opacity:0.3;"></div>';
-      html += '<span style="font-size:0.65rem; opacity:0.5;">' + veCursorEsc(row.name) + '</span>';
-      html += '<span class="ve-chart-tooltip-val" style="opacity:0.4;">— veri yok</span>';
-    } else {
-      html += '<div class="ve-chart-tooltip-dot" style="background:' + row.color + ';"></div>';
-      html += '<span style="font-size:0.65rem;">' + veCursorEsc(row.name) + axisBadge + '</span>';
-      html += '<span class="ve-chart-tooltip-val">' + veCursorFmt(row.value) +
-        ' <span style="opacity:0.5;">' + veCursorEsc(row.unit) + '</span></span>';
-    }
+    html += '<div class="ve-chart-tooltip-dot" style="background:' + row.color + '; opacity:0.3;"></div>';
+    html += '<span style="font-size:0.65rem; opacity:0.5;">' + veCursorEsc(row.name) + '</span>';
+    html += '<span class="ve-chart-tooltip-val" style="opacity:0.4;">— veri yok</span>';
     html += '</div>';
   });
 

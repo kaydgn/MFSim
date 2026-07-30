@@ -871,13 +871,13 @@ function drawVETCTauChart(nodeId, pts) {
   var canvas = document.getElementById('ve-tc-chart-tau-' + nodeId);
   if(!canvas) return;
   
-  var rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * 2;
-  canvas.height = 200 * 2;
-  canvas.style.height = '200px';
-  var ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
-  ctx.clearRect(0, 0, rect.width, 200);
+  // Ölçek: veFitCanvas (js/graphics.js) — sabit 2 ve yerleşim oturmadan
+  // okunan rect.width yüzünden çizim büyüyüp bulanıklaşıyordu.
+  var fit = veFitCanvas(canvas, 200);
+  if(!fit) return;
+  canvas._veRedraw = function() { drawVETCTauChart(nodeId, pts); };
+  var ctx = fit.ctx;
+  var rect = { width: fit.w };
   
   var margin = {left: 45, right: 45, top: 20, bottom: 30};
   var pw = rect.width - margin.left - margin.right;
@@ -958,13 +958,11 @@ function drawVETCKpumpChart(nodeId, pts) {
   var canvas = document.getElementById('ve-tc-chart-kpump-' + nodeId);
   if(!canvas) return;
   
-  var rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * 2;
-  canvas.height = 180 * 2;
-  canvas.style.height = '180px';
-  var ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
-  ctx.clearRect(0, 0, rect.width, 180);
+  var fit = veFitCanvas(canvas, 180);
+  if(!fit) return;
+  canvas._veRedraw = function() { drawVETCKpumpChart(nodeId, pts); };
+  var ctx = fit.ctx;
+  var rect = { width: fit.w };
   
   var margin = {left: 50, right: 20, top: 20, bottom: 30};
   var pw = rect.width - margin.left - margin.right;

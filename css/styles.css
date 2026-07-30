@@ -2195,8 +2195,11 @@
 .sw-btn-primary:hover{filter:brightness(1.1);}
 .sw-btn-outline{background:transparent;color:var(--text-secondary);border-color:var(--border-color);}
 .sw-btn-outline:hover{border-color:var(--text-muted);background:var(--bg-tertiary);}
-.sw-btn-danger{background:transparent;color:#dc2626;border-color:rgba(220,38,38,0.3);}
-.sw-btn-danger:hover{background:rgba(220,38,38,0.06);}
+/* Sabit #dc2626 yerine jeton: açık temalarda sabit kırmızı paletin dışına
+   düşüyordu. Görsel ağırlık AYNI kaldı — üç buton ağırlığı (dolu birincil /
+   çerçeveli nötr / çerçeveli yıkıcı) niyeti doğru kodluyor, korunuyor. */
+.sw-btn-danger{background:transparent;color:var(--accent-danger);border-color:color-mix(in srgb, var(--accent-danger) 35%, transparent);}
+.sw-btn-danger:hover{background:color-mix(in srgb, var(--accent-danger) 8%, transparent);}
 .sw-tab-bar{
   display:flex;gap:0;margin-bottom:8px;
   border:1px solid var(--border-color);border-radius:var(--radius-md);overflow:hidden;
@@ -2230,11 +2233,24 @@
 .sw-pkg-arrow{font-size:0.5rem;color:var(--text-muted);width:10px;flex-shrink:0;transition:transform 0.12s;}
 .sw-pkg-name{flex:1;font-weight:600;color:var(--text-primary);}
 .sw-pkg-badge{
-  font-size:0.52rem;padding:1px 7px;border-radius:var(--radius-pill);font-weight:600;
+  /* Rozet bir etiket, bir anahtar değil: pill yarıçapı keskin köşeye indi. */
+  font-size:0.52rem;padding:1px 7px;border-radius:var(--radius-sm);font-weight:600;
 }
 .sw-pkg-badge.ok{background:rgba(34,197,94,0.1);color:#16a34a;}
 .sw-pkg-badge.partial{background:rgba(245,158,11,0.1);color:#d97706;}
 .sw-pkg-badge.miss{background:rgba(148,163,184,0.1);color:#94a3b8;}
+/* Tablo satırı silme düğmesi — eskiden her satırda DOLU KIRMIZI bir kutuydu:
+   20 satırlık tork tablosunda sayfanın sağında kırmızı bir sütun oluşuyor,
+   gözün ilk gittiği yer "sil" oluyordu. Artık sessiz; kırmızıya yalnız üzerine
+   gelince dönüyor (özellik penceresindeki Sil düğmesiyle aynı dil). */
+.ve-row-del{
+  padding:1px 5px; font-size:0.6rem; line-height:1.2;
+  background:transparent; color:var(--text-muted);
+  border:1px solid transparent; border-radius:var(--radius-sm);
+  cursor:pointer; transition:color var(--dur-fast), border-color var(--dur-fast);
+}
+.ve-row-del:hover{ color:var(--accent-danger); border-color:var(--accent-danger); }
+.ve-row-del:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:1px; }
 .sw-pkg-body{padding:6px 8px;border-top:1px solid var(--border-color);font-size:0.58rem;}
 .sw-pkg-desc{color:var(--text-muted);line-height:1.45;margin-bottom:6px;}
 .sw-pkg-sub{font-size:0.56rem;font-weight:600;color:var(--text-secondary);margin:6px 0 3px;text-transform:uppercase;letter-spacing:0.3px;}
@@ -3470,26 +3486,33 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-chart-legend-overlay{
   position:absolute;bottom:8px;left:8px;z-index:15;
   display:flex;flex-direction:column;gap:2px;max-width:50%;
-  padding:5px 8px 6px;border-radius:var(--radius-sm);cursor:grab;
+  padding:4px 6px;border-radius:var(--radius-sm);cursor:grab;
   background:var(--bg-primary);border:1px solid var(--border-color);
-  box-shadow:var(--shadow-md);
-  opacity:0.88;transition:opacity 0.15s;
+  opacity:0.9;transition:opacity var(--dur-fast);
 }
 .ve-chart-legend-overlay:hover{opacity:1;}
+ /* Gösterge = DEĞER SÜTUNU (osiloskop/CANoe): her satır "renk | ad | birim |
+    değer". Renkli zemin ve renkli çerçeve kaldırıldı — satırlar düğme gibi
+    görünüyordu. Sütunlar grid ile hizalı; değer monospace ve tabular, böylece
+    imleç gezerken basamaklar yerinde durur, satır genişliği zıplamaz. */
 .ve-slot-legend-item{
-  font-size:0.68rem;padding:3px 8px;border-radius:var(--radius-sm);
-  display:flex;align-items:center;gap:4px;cursor:default;transition:all 0.15s;
-  position:relative;
+  font-size:0.62rem;padding:1px 2px;
+  display:grid;grid-template-columns:14px minmax(0,1fr) auto auto 14px;
+  align-items:center;gap:5px;cursor:default;position:relative;
+  color:var(--text-secondary);
 }
-.ve-slot-legend-item:hover{filter:brightness(1.15);box-shadow:var(--shadow-sm);}
-.ve-legend-color-line{width:14px;height:3px;border-radius:0;display:inline-block;flex-shrink:0;}
+.ve-legend-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ve-legend-unit{color:var(--text-muted);font-size:0.56rem;}
+.ve-legend-color-line{width:14px;height:2px;border-radius:0;display:inline-block;flex-shrink:0;}
 .ve-legend-remove{
-  margin-left:4px;cursor:pointer;font-size:0.6rem;opacity:0.45;
-  transition:all 0.15s;width:16px;height:16px;border-radius:50%;font-weight:700;
+  cursor:pointer;font-size:0.6rem;opacity:0;
+  transition:opacity var(--dur-fast),color var(--dur-fast);
+  width:14px;height:14px;border-radius:0;font-weight:700;
   display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  color:var(--text-muted);background:none;
 }
-.ve-slot-legend-item:hover .ve-legend-remove{opacity:0.8;}
-.ve-legend-remove:hover{opacity:1 !important;background:rgba(255,60,60,0.25);color:#ef4444 !important;}
+.ve-slot-legend-item:hover .ve-legend-remove{opacity:0.7;}
+.ve-legend-remove:hover{opacity:1 !important;color:var(--accent-danger);}
 /* 3D Plotly container */
 .ve-slot-chart-area .js-plotly-plot{position:absolute;left:0;top:0;width:100%;height:100%;}
 .ve-slot-chart-area .js-plotly-plot .modebar-group{background:transparent !important;}
@@ -3548,11 +3571,12 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   background:color-mix(in srgb, var(--bg-primary) 82%, transparent);
   border:1px solid color-mix(in srgb, var(--accent-warning) 40%, transparent);
 }
-/* Legend rozetinde imleç konumundaki canli deger (CANoe deger sutunu) */
+/* İmleç konumundaki canlı değer — göstergenin DEĞER sütunu. Tabular sayılar:
+   imleç gezerken basamak genişliği sabit kaldığı için satır titremez. */
 .ve-legend-cursor-val{
-  margin-left:5px;padding-left:5px;font-size:0.6rem;font-weight:700;
-  font-family:'SF Mono','Fira Code',monospace;
-  border-left:1px solid currentColor;
+  font-family:var(--font-mono);font-size:0.62rem;font-weight:600;
+  font-variant-numeric:tabular-nums;
+  color:var(--text-heading);text-align:right;min-width:6ch;
 }
 .ve-rslot-btns button.btn-slot-cursor.active{color:var(--accent-primary);}
 /* Result table */

@@ -5214,10 +5214,13 @@ function veRenderSlot(slotIdx) {
       html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
       sensors.forEach(function(s, i) {
         var c = colors[i % colors.length];
-        html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
+        // Gösterge bir DEĞER SÜTUNUDUR (CANoe), buton kümesi değil: renkli
+        // zemin + renkli çerçeve her satırı bir düğmeye benzetiyordu. Artık
+        // renk yalnız çizgi örneğinde; ad nötr, değer sağda hizalı.
+        html += '<span class="ve-slot-legend-item">';
         html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
-        html += '<span>' + s.name + '</span>';
-        if(s.unit) html += ' <span style="opacity:0.55; font-size:0.6rem;">[' + s.unit + ']</span>';
+        html += '<span class="ve-legend-name">' + s.name + '</span>';
+        if(s.unit) html += '<span class="ve-legend-unit">' + s.unit + '</span>';
         html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
         html += '</span>';
       });
