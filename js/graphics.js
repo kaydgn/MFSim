@@ -718,11 +718,10 @@ function veRenderChart(slotIdx) {
   };
   
   // ====== ÇİZİM ======
-  // Arka plan (hafif gradient)
-  var bgGrad = ctx.createLinearGradient(margin.left, margin.top, margin.left, margin.top + ph);
-  bgGrad.addColorStop(0, 'rgba(0,0,0,0.02)');
-  bgGrad.addColorStop(1, 'rgba(0,0,0,0.005)');
-  ctx.fillStyle = bgGrad;
+  // Arka plan DÜZ. Eskiden 0.02 → 0.005 opaklıkta bir gradyandı: gözle
+   // neredeyse görünmüyor ama çizim alanının üstünü alta göre karartıyor,
+   // aynı yükseklikteki iki eğri farklı zeminde okunuyordu.
+  ctx.fillStyle = 'rgba(0,0,0,0.015)';
   ctx.fillRect(margin.left, margin.top, pw, ph);
 
   // Clip region
@@ -743,6 +742,7 @@ function veRenderChart(slotIdx) {
   }
 
   // X grid
+  var xDec = veAxisDecimals(xStep);
   for(var xv = Math.ceil(xMin / xStep) * xStep; xv <= xMax + xStep * 0.01; xv += xStep) {
     var gx = xPos(xv);
     ctx.strokeStyle = 'rgba(128,128,128,0.12)';
@@ -759,24 +759,11 @@ function veRenderChart(slotIdx) {
     var step = Math.max(1, Math.floor(n / (pw * 2)));
     var axIdx = ds._axisIdx;
 
-    // Gradient dolgu (max 3 aktif dataset)
-    if(activeCount <= 3) {
-      ctx.beginPath();
-      var first = true;
-      for(var i = 0; i < n; i += step) {
-        var x = xPos(timeArr[i]); var y = yPosAxis(ds.data[i], axIdx);
-        if(first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
-      }
-      var lastI = Math.min(n - 1, timeArr.length - 1);
-      ctx.lineTo(xPos(timeArr[lastI]), margin.top + ph);
-      ctx.lineTo(xPos(timeArr[0]), margin.top + ph);
-      ctx.closePath();
-      var grad = ctx.createLinearGradient(0, margin.top, 0, margin.top + ph);
-      grad.addColorStop(0, ds.color + '20');
-      grad.addColorStop(0.6, ds.color + '08');
-      grad.addColorStop(1, ds.color + '01');
-      ctx.fillStyle = grad; ctx.fill();
-    }
+    // EĞRİ ALTI GRADYAN DOLGU KALDIRILDI. Ölçüm yazılımında iz saf bir
+    // çizgidir: dolgu (a) eğrinin altını renkli bir buğuyla kaplayıp
+    // ızgarayı yutuyor, (b) üç seri üst üste geldiğinde renkleri karıştırıp
+    // hangi eğrinin nerede olduğunu belirsizleştiriyordu. Alan grafiği
+    // istenirse ayrı bir grafik TİPİ olur, çizgi grafiğin süsü olmaz.
 
     // Çizgi
     ctx.strokeStyle = ds.color;
@@ -798,6 +785,7 @@ function veRenderChart(slotIdx) {
     var labelX = margin.left - 6 - li * AXIS_W;
     var unitX = margin.left - 40 - li * AXIS_W;
     var aStep = ax._yStep;
+    var aDec = veAxisDecimals(aStep);
     for(var yv = ax._tickStart; yv <= ax._viewMax + aStep * 0.01; yv += aStep) {
       var gy = yPosAxis(yv, ax._globalIdx);
       if(gy < margin.top - 2 || gy > margin.top + ph + 2) continue;
@@ -807,7 +795,7 @@ function veRenderChart(slotIdx) {
       ctx.fillStyle = axColor;
       ctx.font = '10.5px -apple-system,system-ui,sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(veFormatAxisVal(yv), labelX, gy);
+      ctx.fillText(veFormatAxisVal(yv, aDec), labelX, gy);
     }
     if(ax.unit) {
       ctx.save();
@@ -842,6 +830,7 @@ function veRenderChart(slotIdx) {
     var labelX = margin.left + pw + 6 + ri * AXIS_W;
     var unitX = margin.left + pw + 40 + ri * AXIS_W;
     var aStep = ax._yStep;
+    var aDec = veAxisDecimals(aStep);
     for(var yv = ax._tickStart; yv <= ax._viewMax + aStep * 0.01; yv += aStep) {
       var gy = yPosAxis(yv, ax._globalIdx);
       if(gy < margin.top - 2 || gy > margin.top + ph + 2) continue;
@@ -851,7 +840,7 @@ function veRenderChart(slotIdx) {
       ctx.fillStyle = axColor;
       ctx.font = '10.5px -apple-system,system-ui,sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText(veFormatAxisVal(yv), labelX, gy);
+      ctx.fillText(veFormatAxisVal(yv, aDec), labelX, gy);
     }
     if(ax.unit) {
       ctx.save();
@@ -890,7 +879,7 @@ function veRenderChart(slotIdx) {
     ctx.fillStyle = 'rgba(160,160,180,0.85)';
     ctx.font = '10.5px -apple-system,system-ui,sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(veFormatAxisVal(xv), gx, margin.top + ph + 7);
+    ctx.fillText(veFormatAxisVal(xv, xDec), gx, margin.top + ph + 7);
   }
 
   // X ekseni başlığı (canvas üzerinde, altta ortada) — tıklanabilir
@@ -1292,14 +1281,34 @@ function veNiceStep(rough) {
   return 10 * mag;
 }
 
-function veFormatAxisVal(v) {
+// Eksen basamak sayısı ADIMA göre BİR KEZ belirlenir; her etiket aynı
+// basamakla yazılır. Eskiden basamak DEĞER BAŞINA seçiliyordu: 60 ve 80
+// (>=10 → 1 basamak) ile 100 ve 120 (>=100 → 0 basamak) yan yana düşünce
+// eksen "60.0  80.0  100  120" diye okunuyordu — ölçekli bir eksende
+// basamak sayısı değişmez.
+function veAxisDecimals(step) {
+  var a = Math.abs(step);
+  if(!isFinite(a) || a <= 0) return 0;
+  if(a >= 10000) return 0;
+  if(a >= 1) return 0;
+  if(a >= 0.1) return 1;
+  if(a >= 0.01) return 2;
+  return 3;
+}
+
+function veFormatAxisVal(v, dec) {
   var a = Math.abs(v);
-  if(a >= 10000) return (v/1000).toFixed(0) + 'k';
-  if(a >= 100) return v.toFixed(0);
-  if(a >= 10) return v.toFixed(1);
-  if(a >= 1) return v.toFixed(1);
-  if(a >= 0.01) return v.toFixed(2);
-  return v.toFixed(3);
+  if(dec === undefined) {
+    // Geriye dönük yol (adım bilinmiyorsa): eski davranış
+    if(a >= 10000) return (v/1000).toFixed(0) + 'k';
+    if(a >= 100) return v.toFixed(0);
+    if(a >= 10) return v.toFixed(1);
+    if(a >= 1) return v.toFixed(1);
+    if(a >= 0.01) return v.toFixed(2);
+    return v.toFixed(3);
+  }
+  if(a >= 10000 && dec === 0) return (v/1000).toFixed(0) + 'k';
+  return v.toFixed(dec);
 }
 
 // ═══════ TABLO RENDERLAMA ═══════
@@ -6595,3 +6604,68 @@ function veRender3DScatter(slotIdx) {
   }
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// veFitCanvas — canvas'ı GERÇEK yerleşim genişliğine ve cihaz piksel oranına
+// göre hazırlar.
+//
+// Özellik penceresi grafikleri şunu yazıyordu:
+//     var rect = canvas.getBoundingClientRect();
+//     canvas.width = rect.width * 2;   ctx.scale(2, 2);
+// İki hata birlikte:
+//   (a) "2" sabiti cihaz piksel oranını VARSAYIYOR.
+//   (b) rect.width, canvas henüz son genişliğine yerleşmeden okunuyordu
+//       (modal açılış geçişi sırasında). Geri-tampon o eski ölçüye kurulunca
+//       tarayıcı onu CSS genişliğine GERİYOR: ölçülen değerlerle 258px'lik
+//       çizim 479px'e gerilip her şey 1,86× büyüyor ve bulanıklaşıyordu.
+//       Kod eksen yazısını 9px diye çiziyor, ekranda 16,7px görünüyordu —
+//       yanındaki arayüz yazısı 9,92px iken.
+//
+// Bu yardımcı: ölçüyü style yazıldıktan SONRA okur, ölçeği setTransform ile
+// sıfırdan kurar (üst üste binmez) ve CSS piksel cinsinden çalışılacak
+// genişliği döndürür. Yerleşim sonradan değişirse çizimi tekrarlar; yoksa ilk
+// yanlış ölçü kalıcı oluyordu.
+//
+// Kullanım:
+//   var fit = veFitCanvas(canvas, 200);
+//   if(!fit) return;                       // henüz yerleşmedi
+//   canvas._veRedraw = function(){ ... };  // yeniden boyutlanınca çağrılır
+//   var ctx = fit.ctx, w = fit.w;
+// ═══════════════════════════════════════════════════════════════════════════
+function veFitCanvas(canvas, cssHeight) {
+  if(!canvas) return null;
+  canvas.style.height = cssHeight + 'px';
+  var w = canvas.clientWidth || canvas.getBoundingClientRect().width;
+  if(!w) return null;
+
+  var dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, cssHeight);
+
+  if(!canvas._veFitObs && typeof ResizeObserver === 'function') {
+    canvas._veFitObs = true;
+    canvas._veFitW = w;
+    var ro = new ResizeObserver(function() {
+      if(canvas._veFitBusy) return;                 // yeniden girişi engelle
+      var nw = canvas.clientWidth;
+      if(!nw || Math.abs(nw - canvas._veFitW) <= 1) return;
+      canvas._veFitW = nw;
+      if(typeof canvas._veRedraw !== 'function') return;
+      canvas._veFitBusy = true;
+      try { canvas._veRedraw(); } catch(e) {}
+      canvas._veFitBusy = false;
+    });
+    ro.observe(canvas);
+  } else if(canvas._veFitObs) {
+    canvas._veFitW = w;
+  }
+  return { ctx: ctx, w: w, h: cssHeight, dpr: dpr };
+}
+
+if(typeof module !== 'undefined' && module.exports) {
+  module.exports = Object.assign(module.exports || {}, { veFitCanvas: veFitCanvas });
+}
