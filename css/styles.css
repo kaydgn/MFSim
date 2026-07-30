@@ -1173,15 +1173,19 @@
 }
 
 /* Alt modül kartı — sürüklenmez, tıklanınca hazır topoloji kurar */
+/* Modül satırları accent renkli metin + accent kenar + accent zemin
+   taşıyordu: İKİSİ DE "seçili" görünüyordu, oysa hiçbiri seçili değil —
+   ikisi de sürüklenmeyi bekleyen palet ögesi. Accent seçime/odağa ayrıldı;
+   modül olma durumu artık soldaki 2px'lik işaretle anlatılıyor. */
 .ve-submodule{
   cursor:grab;
   font-weight:600;
-  color:var(--accent-primary);
-  background:color-mix(in srgb, var(--accent-primary) 8%, var(--bg-tertiary));
-  border-color:color-mix(in srgb, var(--accent-primary) 35%, var(--border-color));
+  border-left:2px solid color-mix(in srgb, var(--accent-primary) 60%, var(--border-color));
 }
 .ve-submodule:hover{
-  background:color-mix(in srgb, var(--accent-primary) 16%, var(--bg-input));
+  background:var(--bg-input);
+  border-color:var(--border-hover);
+  border-left-color:var(--accent-primary);
 }
 
 /* Alt-topoloji çıkış çipi — bir alt topolojinin ("Araç Performans" / "Takoz")
@@ -1550,14 +1554,17 @@
     var(--bg-primary);
   background-size:34px 34px, 34px 34px, auto;
 }
-/* Üst katman: yumuşak accent ışıltısı (color-mix destekli tarayıcılarda) */
+/* Izgara YARI SAYDAM tona indi ve üstündeki accent ışıltısı kaldırıldı.
+   Karşılama ekranının baskın dokusu bu ızgaraydı; ışıltı da kabukta rengin
+   dekoratif kullanımıydı (renk veriye ayrılır). Not: TUVAL ızgarası
+   (#ve-canvas) varsayılan KAPALI — gözle görülen ızgara buydu; ikisi de aynı
+   tona çekildi ki kullanıcı tuval ızgarasını açtığında dil bozulmasın. */
 .ve-module-overlay{
   background:
-    radial-gradient(135% 100% at 50% -20%, color-mix(in srgb, var(--accent-primary) 9%, transparent), transparent 58%),
-    linear-gradient(var(--border-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-color) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
     var(--bg-primary);
-  background-size:auto, 34px 34px, 34px 34px, auto;
+  background-size:34px 34px, 34px 34px, auto;
 }
 
 .ve-welcome{
@@ -2070,9 +2077,12 @@
    bileşenlerle birlikte pan'da kayar, zoom'da ölçeklenir; hep hizalı kalır.
    Boyut veCycleGridDensity ile inline güncellenir (varsayılan 20px). */
 #ve-canvas{
+  /* Izgara YERLEŞİM yardımcısıdır, desen değil: --border-light en parlak
+     kenar tonuydu ve boş tuvalde ekranın baskın dokusu oluyordu. Yarı saydam
+     bir kenar tonuna indirildi — hizalamaya yetiyor, göze girmiyor. */
   background-image:
-    linear-gradient(var(--border-light) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-light) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px);
   background-size:20px 20px;
 }
 
@@ -2090,7 +2100,10 @@
   /* Kenar, temanın metin nötrlerinden türetilir — koyu temalarda eski #999'a
      çok yakın kalır; sıcak temalarda (Claude) griye değil sıcak nötre düşer,
      açık temalarda ise kontrast artar (açık zeminde #999 siliniyordu). */
-  border:2.5px solid color-mix(in srgb, var(--text-secondary) 60%, var(--text-primary));
+  /* Saç teli kenar (CANoe/Simulink bloğu): 2,5px kalın çerçeve kutuyu bir
+     "düğme" gibi gösteriyordu. 1px'te blok, dolgusuyla ayrışır. Renk 1px'te
+     zayıflamasın diye metin-birincile bir tık daha yaklaştırıldı. */
+  border:1px solid color-mix(in srgb, var(--text-secondary) 45%, var(--text-primary));
   border-radius:var(--radius-md);
   box-shadow:var(--shadow-sm);
   display:flex;
@@ -2322,13 +2335,17 @@
   position:absolute;
   top:-6px;
   right:-6px;
-  width:14px;
-  height:14px;
-  background:var(--accent-warning);
-  color:#000;
-  border-radius:50%;
+  /* Rozet ANLAM taşıyor (bu bileşenin parametreleri diğerlerini sürer) →
+     kalıyor. Ama dolu turuncu daire düğümden daha çok dikkat çekiyordu;
+     çerçeveli keskin bir işarete indirildi. */
+  width:12px;
+  height:12px;
+  background:var(--bg-primary);
+  color:var(--accent-warning);
+  border:1px solid var(--accent-warning);
+  border-radius:0;
   font-size:8px;
-  line-height:14px;
+  line-height:10px;
   text-align:center;
   font-weight:700;
   z-index:5;
@@ -2337,33 +2354,36 @@
 }
 
 /* Port stilleri */
+/* Port DURUMU renkle değil DOLULUKLA anlatılır (Simulink/CANoe geleneği):
+   içi boş = bağlanmamış, dolu = bağlı. Eskiden boş port parlak yeşil, bağlı
+   port turuncuydu — iki dekoratif renk, sıfır bilgi. */
 .ve-node-port{
   position:absolute;
-  width:10px;
-  height:10px;
-  background:var(--accent-success);
-  border:2px solid var(--bg-secondary);
+  width:8px;
+  height:8px;
+  background:var(--bg-primary);
+  border:1px solid color-mix(in srgb, var(--text-secondary) 45%, var(--text-primary));
   border-radius:50%;
   cursor:crosshair;
-  transition:transform 0.15s, background 0.15s;
+  transition:background var(--dur-fast), border-color var(--dur-fast);
   z-index:15;
 }
 
 .ve-node-port:hover{
-  transform:scale(1.4);
   background:var(--accent-primary);
+  border-color:var(--accent-primary);
 }
 
 .ve-node-port.input{
-  left:-7px;
+  left:-5px;
 }
 
 .ve-node-port.output{
-  right:-7px;
+  right:-5px;
 }
 
 .ve-node-port.connected{
-  background:var(--accent-warning);
+  background:color-mix(in srgb, var(--text-secondary) 45%, var(--text-primary));
 }
 
 /* Resize handles - bileşen dışında.
@@ -2372,15 +2392,18 @@
    paletin dışında kalıyor, altın aksanlı temalarda (ANSYS/Donanma) düğüm
    kenarından ayırt edilemiyordu. Artık aktif aksan + zıt bir halka ile hem
    koyu hem açık zeminde okunur. */
+/* SEKİZ tutamaç KORUNDU: kenar tutamaçları yalnız-genişlik / yalnız-yükseklik
+   boyutlandırmayı sağlıyor — görünüş için işlev atılmaz. Gürültü onun yerine
+   ölçüden indirildi: 10px → 7px ve çift halka (kenar + iki katmanlı gölge)
+   yerine tek kenar. */
 .ve-resize-handle{
   position:absolute;
-  width:10px;
-  height:10px;
+  width:7px;
+  height:7px;
   box-sizing:border-box;
   background:var(--accent-primary);
   border:1px solid var(--bg-secondary);
-  border-radius:var(--radius-xs);
-  box-shadow:0 0 0 1px var(--accent-primary), var(--shadow-sm);
+  border-radius:0;
   opacity:0;
   transition:opacity var(--dur-fast) var(--ease-out),
              transform var(--dur-fast) var(--ease-out);
@@ -2419,8 +2442,11 @@
   display:none;
 }
 
+/* Seçim ÜÇ ayrı göstergeye bölünmüştü: 1px halka + kesikli dış çerçeve +
+   8 tutamaç. Kesikli çerçeve kaldırıldı; halka "bu seçili", tutamaçlar
+   "boyutlandırılabilir" diyor — çerçevenin söyleyeceği üçüncü bir şey yok. */
 .ve-node.selected .ve-selection-border{
-  display:block;
+  display:none;
 }
 
 /* Context menu */
@@ -2491,8 +2517,12 @@
 
 .ve-connection{
   fill:none;
-  stroke:var(--accent-success);
-  stroke-width:3;
+  /* Renk VERİYE ayrılır: bağlantının varlığı bilgi değil, geometri. Parlak
+     yeşil 3px çizgi diyagramın en baskın ögesiydi; nötr saç teli olarak
+     geriye çekildi. Anlam taşıyan çizgiler (turuncu konvertör↔şanzıman,
+     sarı vurgu) rengini KORUYOR. */
+  stroke:color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
+  stroke-width:1.5;
   pointer-events:stroke;
   cursor:pointer;
 }

@@ -142,7 +142,9 @@ function doResize(e) {
 // Handle ve selection border pozisyonlarını güncelle
 function updateNodeHandles(nodeEl, width, height) {
   var offset = 10; // Bileşenden uzaklık
-  var handleSize = 10;
+  // CSS'teki .ve-resize-handle ölçüsüyle AYNI olmalı (keskin sadelik geçişinde
+  // 10px'ten 7px'e indi); burası konumlandırmayı o ölçüye göre hesaplıyor.
+  var handleSize = 7;
   var halfHandle = handleSize / 2;
   
   // Küçük bileşenler (sensör, sonlandırıcı) için daha geniş offset
