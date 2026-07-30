@@ -422,6 +422,33 @@ function veShowYAxisLockPopup(slotIdx, axIdx, color, unit, e) {
   setTimeout(function() { document.getElementById('ve-yp-min').focus(); }, 50);
 }
 
+// Panodaki en çok eksene sahip panelin eksen sayısı (sol/sağ). Ortak X ekseni
+// panelleri aynı X değerine kilitler; marjı da ortaklaştırmazsak imleç çizgisi
+// panelden panele birkaç piksel kayar ve "tek çizgi" hissi bozulur.
+//
+// Sayım sinyallerin BİRİMİNDEN yapılır (veriye ihtiyaç duymaz). Verisi
+// bulunamayan bir sinyal çizimde eksen açmaz; bu durumda marj birkaç piksel
+// geniş kalır — hizalama bozulmadığı için kabul edilebilir.
+function veBoardChartMargin() {
+  var maxLeft = 1, maxRight = 0;
+  if(typeof veResultSlots === 'undefined') return { leftAxes: maxLeft, rightAxes: maxRight };
+  for(var i = 0; i < veResultSlots.length; i++) {
+    var s = veResultSlots[i];
+    if(!s || !s.sensors || s.sensors.length === 0) continue;
+    if((s.type || 'line') !== 'line') continue;
+    var units = [];
+    for(var k = 0; k < s.sensors.length; k++) {
+      var u = s.sensors[k].unit || '';
+      if(units.indexOf(u) < 0) units.push(u);
+    }
+    // veRenderChart eksenleri sol/sağ sırayla dağıtır: 0→sol, 1→sağ, 2→sol...
+    var l = Math.ceil(units.length / 2), r = Math.floor(units.length / 2);
+    if(l > maxLeft) maxLeft = l;
+    if(r > maxRight) maxRight = r;
+  }
+  return { leftAxes: maxLeft, rightAxes: maxRight };
+}
+
 function veRenderChart(slotIdx) {
   var slot = veResultSlots[slotIdx];
   if(!slot || !slot.sensors || slot.sensors.length === 0) return;
@@ -612,11 +639,17 @@ function veRenderChart(slotIdx) {
     }
   });
 
-  // ====== MARJİN (dinamik — eksen sayısına göre) ======
+  // ====== MARJİN (pano geneli — eksen sayısına göre) ======
+  // Pano tek X ekseninde çalışır; imlecin panelden panele KAYMAMASI için plot
+  // alanları da aynı yerden başlamalı. Bu yüzden marj yalnız bu panelin değil,
+  // panodaki en çok eksene sahip panelin ihtiyacına göre hesaplanır.
   var AXIS_W = 52; // Her eksen için piksel genişlik
+  var _board = (typeof veBoardChartMargin === 'function') ? veBoardChartMargin() : null;
+  var nLeft = _board ? Math.max(leftAxes.length, _board.leftAxes) : leftAxes.length;
+  var nRight = _board ? Math.max(rightAxes.length, _board.rightAxes) : rightAxes.length;
   var margin = {
-    left: Math.max(58, 14 + leftAxes.length * AXIS_W),
-    right: rightAxes.length > 0 ? Math.max(58, 14 + rightAxes.length * AXIS_W) : 14,
+    left: Math.max(58, 14 + nLeft * AXIS_W),
+    right: nRight > 0 ? Math.max(58, 14 + nRight * AXIS_W) : 14,
     top: 16, bottom: 38
   };
   var pw = w - margin.left - margin.right;
@@ -862,7 +895,7 @@ function veRenderChart(slotIdx) {
 
   // X ekseni başlığı (canvas üzerinde, altta ortada) — tıklanabilir
   var xAxisName = (slot.xAxis ? slot.xAxis.name : 'Zaman [s]');
-  ctx.fillStyle = 'rgba(59,130,246,0.85)';
+  ctx.fillStyle = veThemeRgba('--accent-primary', 0.85, 'rgba(59,130,246,0.85)');
   ctx.font = '600 11px -apple-system,system-ui,sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   var xTitleX = margin.left + pw / 2;
@@ -895,18 +928,22 @@ function veRenderChart(slotIdx) {
     ctx.font = '9px -apple-system,system-ui,sans-serif';
     var ztw = ctx.measureText(zoomText).width;
     // Arka plan kutusu
-    ctx.fillStyle = 'rgba(59,130,246,0.12)';
+    ctx.fillStyle = veThemeRgba('--accent-primary', 0.12, 'rgba(59,130,246,0.12)');
     ctx.beginPath();
     var zx = w - 8 - ztw - 8, zy = 4;
     if(ctx.roundRect) { ctx.roundRect(zx, zy, ztw + 16, 18, 4); } else { ctx.rect(zx, zy, ztw + 16, 18); }
     ctx.fill();
-    ctx.strokeStyle = 'rgba(59,130,246,0.3)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.fillStyle = 'rgba(59,130,246,0.85)';
+    ctx.strokeStyle = veThemeRgba('--accent-primary', 0.3, 'rgba(59,130,246,0.3)'); ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = veThemeRgba('--accent-primary', 0.85, 'rgba(59,130,246,0.85)');
     ctx.textAlign = 'right'; ctx.textBaseline = 'top';
     ctx.fillText(zoomText, w - 8, 8);
   }
   
   // Eksen kontrolü: Y birim etiketine çift tıklayınca popup açılır (veShowYAxisLockPopup)
+
+  // Ölçüm imleci (js/chart-cursor.js): yakınlaştırma/kaydırma sonrası sabit ve
+  // aktif imleç yeni piksel geometrisine yeniden otursun.
+  if(typeof veCursorAfterRender === 'function') veCursorAfterRender(slotIdx);
 }
 
 // ═══════ CHART İNTERAKTİVİTE — PAN / ZOOM / TOOLTIP ═══════
@@ -921,6 +958,7 @@ function veInitChartInteraction(slotIdx) {
   var panStartX = 0, panStartY = 0;
   var panStartPanX = 0, panStartPanY = 0;
   var _panRAF = null;
+  var _pinTimer = null;   // çift-tık ayrımı için bekleyen "imleci sabitle"
   var PAN_THRESHOLD = 4; // piksel — bu mesafe aşılmadan pan başlamaz
 
   // Fare hareketi: tooltip veya pan
@@ -1025,10 +1063,26 @@ function veInitChartInteraction(slotIdx) {
   });
 
   document.addEventListener('mouseup', function(e) {
+    // Sürüklemeden biten sol tık = "sabitle" tıklaması: ölçüm imlecini o
+    // noktaya kilitler, sonraki gezinmede Δ okuması çıkar (CANoe ölçüm
+    // imleci). Pan başladıysa (isPanning) tıklama sayılmaz.
+    var wasClick = panPending && !isPanning;
     if(isPanning || panPending) {
       isPanning = false;
       panPending = false;
       area.style.cursor = '';
+    }
+    if(wasClick && typeof veCursorTogglePin === 'function') {
+      var xv = veChartEventToXValue(slotIdx, e);
+      if(xv !== null) {
+        // Çift tık "görünümü sıfırla" demek — ikinci tık gelirse sabitlemeyi
+        // iptal et. Bu yüzden sabitleme çift-tık penceresi kadar bekletilir.
+        if(_pinTimer) clearTimeout(_pinTimer);
+        _pinTimer = setTimeout(function() {
+          _pinTimer = null;
+          veCursorTogglePin(slotIdx, xv);
+        }, 260);
+      }
     }
   });
 
@@ -1058,6 +1112,8 @@ function veInitChartInteraction(slotIdx) {
   // Çift tık: Y ekseni birimine tıklanırsa min/max popup, değilse görünümü sıfırla
   area.addEventListener('dblclick', function(e) {
     e.preventDefault();
+    // Bekleyen "imleci sabitle" varsa iptal — çift tık sıfırlama demektir.
+    if(_pinTimer) { clearTimeout(_pinTimer); _pinTimer = null; }
     var slot2 = veResultSlots[slotIdx];
     var m2 = slot2 && slot2._chartMeta;
     if(m2 && m2.yUnitHits && m2.yUnitHits.length > 0) {
@@ -1176,133 +1232,41 @@ function veChartPlayhead(slotIdx) {
   slot._playRAF = requestAnimationFrame(step);
 }
 
-function veChartShowTooltip(slotIdx, e) {
+// Fare olayının plot alanındaki X-ekseni değeri. Plot dışındaysa null.
+function veChartEventToXValue(slotIdx, e) {
   var slot = veResultSlots[slotIdx];
-  if(!slot || !slot._chartMeta) return;
+  if(!slot || !slot._chartMeta) return null;
   var m = slot._chartMeta;
-  var tArr = m.timeArr;
-  if(!tArr || tArr.length === 0) return;
-  
+  if(!m.timeArr || m.timeArr.length === 0) return null;
   var canvas = document.getElementById('ve-chart-canvas-' + slotIdx);
-  var tooltip = document.getElementById('ve-tooltip-' + slotIdx);
-  var crosshair = document.getElementById('ve-crosshair-' + slotIdx);
-  var crossV = document.getElementById('ve-crosshair-v-' + slotIdx);
-  if(!canvas || !tooltip || !crosshair) return;
-  
-  // Canvas bounding rect kullan
-  var cRect = canvas.getBoundingClientRect();
-  var cw = cRect.width;
-  var ch = cRect.height;
-  if(cw < 10 || ch < 10) return;
-  
-  var mx = e.clientX - cRect.left;
-  var my = e.clientY - cRect.top;
-  
-  // Canvas CSS boyutu ile meta boyutu ölçek farkı
-  var scaleX = cw / m.w;
-  var scaleY = ch / m.h;
-  
-  // Plot alanı sınırları (CSS px)
+  if(!canvas) return null;
+  var rect = canvas.getBoundingClientRect();
+  if(rect.width < 10 || rect.height < 10) return null;
+  var mx = e.clientX - rect.left;
+  var my = e.clientY - rect.top;
+  var scaleX = rect.width / m.w, scaleY = rect.height / m.h;
   var plotLeft = m.margin.left * scaleX;
   var plotRight = (m.margin.left + m.pw) * scaleX;
   var plotTop = m.margin.top * scaleY;
   var plotBottom = (m.margin.top + m.ph) * scaleY;
-  
-  if(mx < plotLeft - 2 || mx > plotRight + 2 || my < plotTop - 2 || my > plotBottom + 2) {
-    tooltip.classList.remove('visible');
-    crosshair.style.display = 'none';
-    return;
-  }
-  
-  // X → zaman
-  var tVal = m.xMin + (mx - plotLeft) / (plotRight - plotLeft) * (m.xMax - m.xMin);
-  
-  // Binary search
-  var idx = 0, lo = 0, hi = tArr.length - 1;
-  while(lo <= hi) { var mid = (lo + hi) >> 1; if(tArr[mid] < tVal) lo = mid + 1; else hi = mid - 1; }
-  idx = lo;
-  if(idx > 0 && idx < tArr.length && Math.abs(tArr[idx - 1] - tVal) < Math.abs(tArr[idx] - tVal)) idx--;
-  if(idx >= tArr.length) idx = tArr.length - 1;
-  
-  var snapX = plotLeft + (tArr[idx] - m.xMin) / (m.xMax - m.xMin) * (plotRight - plotLeft);
-  
-  crosshair.style.display = '';
-  crosshair.style.width = cw + 'px';
-  crosshair.style.height = ch + 'px';
-  crossV.style.left = snapX + 'px';
-  crossV.style.top = plotTop + 'px';
-  crossV.style.height = (plotBottom - plotTop) + 'px';
-  
-  crosshair.querySelectorAll('.ve-chart-crosshair-dot').forEach(function(d) { d.remove(); });
-  
-  var xLabel = 't';
-  var xUnit = 's';
-  if(slot.xAxis && slot.xAxis.id && slot.xAxis.id !== 'time') {
-    xLabel = slot.xAxis.name || 'X';
-    xUnit = slot.xAxis.unit || '';
-  }
-  var html = '<div style="font-weight:700; font-size:0.65rem; color:var(--text-secondary); margin-bottom:4px; border-bottom:1px solid var(--border-color); padding-bottom:3px; letter-spacing:0.2px;">' + xLabel + ' = ' + tArr[idx].toFixed(3) + (xUnit ? ' ' + xUnit : '') + '</div>';
-  
-  // Dual axis bilgisi
-  var axesInfo = m.axes || [{ yMin: m.yMin, yMax: m.yMax }];
-  
-  m.datasets.forEach(function(ds) {
-    if(ds._noData) {
-      // Verisi olmayan sensör — sadece tooltip'te uyarı göster
-      html += '<div class="ve-chart-tooltip-row">';
-      html += '<div class="ve-chart-tooltip-dot" style="background:' + ds.color + '; opacity:0.3;"></div>';
-      html += '<span style="font-size:0.65rem; opacity:0.5;">' + ds.name + '</span>';
-      html += '<span class="ve-chart-tooltip-val" style="opacity:0.4;">— veri yok</span>';
-      html += '</div>';
-      return;
-    }
-    var val = (ds.data && idx < ds.data.length) ? ds.data[idx] : 0;
-    
-    // Dataset'in bağlı olduğu eksen
-    var axIdx = ds._axisIdx || 0;
-    var ax = axesInfo[axIdx] || axesInfo[0];
-    
-    // Y pozisyonu: kendi eksenine göre hesapla
-    var plotH = plotBottom - plotTop;
-    var valY = plotTop + plotH - (val - ax.yMin) / (ax.yMax - ax.yMin) * plotH;
-    
-    var dot = document.createElement('div');
-    dot.className = 've-chart-crosshair-dot';
-    dot.style.left = snapX + 'px';
-    dot.style.top = valY + 'px';
-    dot.style.borderColor = ds.color;
-    crosshair.appendChild(dot);
-    
-    // Eksen tarafı göstergesi (çoklu eksen modunda)
-    var axisBadge = '';
-    if(m.hasDualAxis && axesInfo[axIdx]) {
-      var axUnit = axesInfo[axIdx].unit;
-      var axClr = axesInfo[axIdx].color || ds.color;
-      axisBadge = ' <span style="opacity:0.5;font-size:0.5rem;color:' + axClr + ';">[' + (axUnit || ('Y' + (axIdx+1))) + ']</span>';
-    }
-    
-    html += '<div class="ve-chart-tooltip-row">';
-    html += '<div class="ve-chart-tooltip-dot" style="background:' + ds.color + ';"></div>';
-    html += '<span style="font-size:0.65rem;">' + ds.name + axisBadge + '</span>';
-    html += '<span class="ve-chart-tooltip-val">' + veFormatTooltipVal(val) + ' <span style="opacity:0.5;">' + ds.unit + '</span></span>';
-    html += '</div>';
-  });
-  
-  tooltip.innerHTML = html;
-  tooltip.classList.add('visible');
-  
-  var tw = tooltip.offsetWidth || 160;
-  var th = tooltip.offsetHeight || 60;
-  var tx = snapX + 14;
-  var ty = my - th / 2;
-  if(tx + tw > cw - 4) tx = snapX - tw - 14;
-  if(ty < 4) ty = 4;
-  if(ty + th > ch - 4) ty = ch - th - 4;
-  tooltip.style.left = tx + 'px';
-  tooltip.style.top = ty + 'px';
+  if(mx < plotLeft - 2 || mx > plotRight + 2 || my < plotTop - 2 || my > plotBottom + 2) return null;
+  return m.xMin + (mx - plotLeft) / (plotRight - plotLeft) * (m.xMax - m.xMin);
+}
+
+// Fare konumunu X değerine çevirip ölçüm imlecine devreder
+// (js/chart-cursor.js — senkron paneller, sabit referans imleç, Δ okuması).
+// veChartPlayhead sentetik {clientX, clientY} ile aynı yolu kullanır.
+function veChartShowTooltip(slotIdx, e) {
+  var xVal = veChartEventToXValue(slotIdx, e);
+  if(xVal === null) { veChartHideTooltip(slotIdx); return; }
+  var canvas = document.getElementById('ve-chart-canvas-' + slotIdx);
+  // Fare Y'si yalnızca değer kutusunu dikeyde konumlamak için gerekir
+  var my = e.clientY - canvas.getBoundingClientRect().top;
+  if(typeof veCursorMoveTo === 'function') veCursorMoveTo(slotIdx, xVal, my);
 }
 
 function veChartHideTooltip(slotIdx) {
+  if(typeof veCursorHide === 'function') { veCursorHide(slotIdx); return; }
   var tooltip = document.getElementById('ve-tooltip-' + slotIdx);
   var crosshair = document.getElementById('ve-crosshair-' + slotIdx);
   if(tooltip) tooltip.classList.remove('visible');
@@ -1465,38 +1429,38 @@ function veShowRaporModal() {
   overlay.addEventListener('mousedown', function(e) { if(e.target === overlay) veCloseRaporModal(); });
   
   var modal = document.createElement('div');
-  modal.style.cssText = 'width:360px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+  modal.style.cssText = 'width:360px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
   
   modal.innerHTML = '' +
     '<div style="padding:12px 16px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); display:flex; align-items:center; justify-content:space-between;">' +
       '<span style="font-size:0.88rem; font-weight:700; color:#e2e8f0; display:flex; align-items:center; gap:8px;"><span class="mf-ico mf-ico-bar-chart"></span> BMC Detaylı Hesap Raporu</span>' +
-      '<button onclick="veCloseRaporModal()" style="width:26px; height:26px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:0; color:#e2e8f0; cursor:pointer; font-size:0.9rem;">✕</button>' +
+      '<button onclick="veCloseRaporModal()" style="width:26px; height:26px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:var(--radius-sm); color:#e2e8f0; cursor:pointer; font-size:0.9rem;">✕</button>' +
     '</div>' +
     '<div style="padding:16px;">' +
-      '<div style="text-align:center; margin-bottom:14px; padding:8px; background:linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%); border-radius:0; border:1px solid var(--border-color);">' +
+      '<div style="text-align:center; margin-bottom:14px; padding:8px; background:linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%); border-radius:var(--radius-sm); border:1px solid var(--border-color);">' +
         '<div style="font-size:0.85rem; font-weight:700; color:#63b3ed; letter-spacing:2px;">BMC</div>' +
         '<div style="font-size:0.6rem; color:var(--text-muted); margin-top:2px;">Güç Grubu Müdürlüğü — Görsel Editör</div>' +
       '</div>' +
       '<div style="margin-bottom:12px;">' +
         '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Raporu Hazırlayan:</label>' +
-        '<input type="text" id="ve-rapor-hazirlayan" value="Kerem Aydoğan" placeholder="İsim Soyisim" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;">' +
+        '<input type="text" id="ve-rapor-hazirlayan" value="Kerem Aydoğan" placeholder="İsim Soyisim" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
       '</div>' +
       '<hr style="border:none; border-top:1px solid var(--border-color); margin:12px 0;">' +
       '<div id="ve-rapor-zaman-wrap" style="margin-bottom:12px; display:none;">' +
         '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Zaman Adımı (Motor Freni CSV):</label>' +
-        '<select id="ve-rapor-zaman-adimi" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;">' +
+        '<select id="ve-rapor-zaman-adimi" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
           '<option value="0.5" selected>0.5 saniye</option>' +
           '<option value="1.0">1.0 saniye</option>' +
         '</select>' +
       '</div>' +
       '<div style="margin-bottom:14px;">' +
         '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Rapor Formatı:</label>' +
-        '<select id="ve-rapor-format" onchange="var w=document.getElementById(\'ve-rapor-zaman-wrap\');if(w)w.style.display=this.value===\'csv\'?\'block\':\'none\';" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0;">' +
+        '<select id="ve-rapor-format" onchange="var w=document.getElementById(\'ve-rapor-zaman-wrap\');if(w)w.style.display=this.value===\'csv\'?\'block\':\'none\';" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
           (veActiveModule === 'full-throttle' ? '<option value="txt" selected>TXT (Metin Dosyası — Tam Rapor)</option>' : '') +
           '<option value="csv"' + (veActiveModule !== 'full-throttle' ? ' selected' : '') + '>CSV (Excel Uyumlu — Sadece Veri)</option>' +
         '</select>' +
       '</div>' +
-      '<button onclick="veGenerateReport()" style="width:100%; padding:10px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:0; font-size:0.82rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;"><span class="mf-ico mf-ico-download"></span> BMC Raporu Oluştur ve İndir</button>' +
+      '<button onclick="veGenerateReport()" style="width:100%; padding:10px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:var(--radius-sm); font-size:0.82rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;"><span class="mf-ico mf-ico-download"></span> BMC Raporu Oluştur ve İndir</button>' +
       '<div style="text-align:center; color:var(--text-muted); font-size:0.6rem; margin-top:8px;">Rapor BMC kurumsal formatında oluşturulacaktır</div>' +
     '</div>';
   
@@ -2342,8 +2306,8 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     var _gGr = G.low || G.high;
     var _lowSfx = G.low ? ' (Düşük)' : '';
     var eRows = [
-      { label: 'Stall/Kalkış Eğim' + _lowSfx, value: '%' + num(_gGr.stallGrade, 1) },
-      { label: '%80 Eğim Kabiliyeti' + _lowSfx, value: '%' + num(_gGr.lowSpeedGrade, 1) },
+      { label: 'Stall/Kalkış Eğim' + _lowSfx, value: veGradeDisplay(_gGr.stallGrade, 1, true) },
+      { label: '%80 Eğim Kabiliyeti' + _lowSfx, value: veGradeDisplay(_gGr.lowSpeedGrade, 1, true) },
       { label: 'Düz Yol Maks. Hız', value: num(gH2.maxSpeedFlat, 1) + ' km/h' }
     ];
     [5, 10, 20].forEach(function(gr) {
@@ -2467,9 +2431,9 @@ function veGenerateFTTxtReport(sim, optHazirlayan) {
     rg += tRule(_w, '┌', '┬', '┐', '─');
     rg += tRow(['Eğim Kabiliyeti', '% Eğim', 'Hız (km/h)', 'Vites', 'Eşleme'], _w, _al);
     rg += tRule(_w, '├', '┼', '┤', '─');
-    rg += tRow(['Durma Eğim Kab. (Stall)', num(gd.stallGrade, 1), '–', gd.stallGear, 'Stall'], _w, _al);
-    rg += tRow(['Kalkış Eğim Kab. (Launch)', num(gd.launchGrade, 1), '–', gd.launchGear, ''], _w, _al);
-    rg += tRow(['Düşük Hız Eğim Kabiliyeti', num(gd.lowSpeedGrade, 1), num(gd.lowSpeedV, 1), gd.lowSpeedGear, '%80'], _w, _al);
+    rg += tRow(['Durma Eğim Kab. (Stall)', veGradeDisplay(gd.stallGrade, 1), '–', gd.stallGear, 'Stall'], _w, _al);
+    rg += tRow(['Kalkış Eğim Kab. (Launch)', veGradeDisplay(gd.launchGrade, 1), '–', gd.launchGear, ''], _w, _al);
+    rg += tRow(['Düşük Hız Eğim Kabiliyeti', veGradeDisplay(gd.lowSpeedGrade, 1), num(gd.lowSpeedV, 1), gd.lowSpeedGear, '%80'], _w, _al);
     rg += tRow(['Düz Yolda Maksimum Hız', '0.0', num(gd.maxSpeedFlat, 1), gd.maxSpeedFlatGear, 'Yol Yükü'], _w, _al);
     (gd.gradeTable || []).forEach(function(row) {
       if (row.v_max <= 0 && row.grade > 0) return;
@@ -4278,7 +4242,11 @@ function veClearAllResults() {
     if(tab) tab.textContent = 'Panel ' + (i + 1);
     veRenderSlotPicker(i);
   }
-  
+
+  // Pano boşaldı — ortak X ekseni serbest kalır, ağaçtaki kilitler açılır
+  if(typeof veCursorClearPin === 'function') veCursorClearPin();
+  if(typeof veSyncBoardState === 'function') veSyncBoardState();
+
   // Simülasyon verilerini temizle
   window.veSimResults = null;
 
@@ -6429,7 +6397,7 @@ function veRender3DScatter(slotIdx) {
   // Plotly yüklü mü kontrol et
   if(typeof Plotly === 'undefined') {
     if(placeholder) {
-      placeholder.innerHTML = '<div style="font-size:1.5rem; margin-bottom:6px;">⚠️</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
+      placeholder.innerHTML = '<div style="font-size:1.5rem; margin-bottom:6px;">⚠</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
       placeholder.style.display = '';
     }
     return;

@@ -230,6 +230,8 @@ describe('STATIONS + allStations + stationIndexById', () => {
     expect(cats).toContain('Klasik');
     expect(cats).toContain('Rock');
     expect(cats).toContain('Phonk');
+    expect(cats).toContain('Marşlar');
+    expect(names.some(n => n.includes('red army'))).toBe(true);   // Sovyet marşı isteği
     // Türkçe ve Phonk kategorilerinde birden fazla istasyon olmalı
     expect(cats.filter(c => c === 'Türkçe').length).toBeGreaterThanOrEqual(5);
     expect(cats.filter(c => c === 'Phonk').length).toBeGreaterThanOrEqual(3);
@@ -438,5 +440,29 @@ describe('UI smoke', () => {
     expect(api.loadState().favorites).not.toContain(favId);
     expect(w.querySelector('.mf-radio-item[data-station]')).toBeNull();
     expect(w.querySelector('.mf-radio-empty')).not.toBeNull();
+  });
+
+  test('mini oynatıcı: panel kapalıyken çalarken görünür; expand açar, kapatınca döner', () => {
+    const api = require('../../js/radio.js');
+    const w = document.getElementById('mf-radio');
+    const mini = document.getElementById('mf-radio-mini');
+    expect(mini).not.toBeNull();
+    expect(mini.classList.contains('show')).toBe(false);   // henüz çalmıyor + panel kapalı
+
+    // Panel kapalıyken bir istasyon çal → mini görünür + doğru başlık + EQ (playing)
+    w.querySelector('.mf-radio-item[data-station]').click();
+    expect(mini.classList.contains('show')).toBe(true);
+    expect(mini.classList.contains('playing')).toBe(true);
+    expect(mini.querySelector('.mf-radio-mini-title').textContent).toBe(api.STATIONS[0].name);
+
+    // Expand → panel açılır, mini gizlenir
+    mini.querySelector('[data-act="expand"]').click();
+    expect(w.classList.contains('open')).toBe(true);
+    expect(mini.classList.contains('show')).toBe(false);
+
+    // Paneli kapat → mini tekrar görünür
+    w.querySelector('.mf-radio-close').click();
+    expect(w.classList.contains('open')).toBe(false);
+    expect(mini.classList.contains('show')).toBe(true);
   });
 });

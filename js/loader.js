@@ -73,7 +73,9 @@
     var pctEl = $(ELS.pct);
     var msg = $(ELS.msg);
     if (bar) bar.style.width = pct + '%';
-    if (pctEl) pctEl.textContent = pct + '%';
+    // Türkçe yüzde biçimi: işaret sayının önünde (%42) — durum çubuğundaki
+    // zoom göstergesiyle (%100) aynı dil.
+    if (pctEl) pctEl.textContent = '%' + pct;
     if (label && msg) msg.textContent = label;
   }
 
@@ -170,6 +172,12 @@
     startTime = Date.now();
     hideLogin();
     showSplash();
+
+    // Açılış müziği: splash göründüğü anda başlat (bkz. js/splash-music.js).
+    // Modül yoksa ya da çalamazsa yükleme akışı etkilenmez.
+    try {
+      if (window.MFSimSplashMusic) window.MFSimSplashMusic.start();
+    } catch (e) {}
 
     var placeholders = Array.prototype.slice.call(
       document.querySelectorAll('script[type="text/x-mfsim-defer"]')

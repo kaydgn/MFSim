@@ -62,28 +62,38 @@ function veSettingsShowSection(name) {
 function _veSettingsRenderAppearance() {
   var current = 'slate';
   try { current = localStorage.getItem('mf-theme') || 'slate'; } catch(e) {}
+  // swatch: [zemin, yüzey, aksan] — styles.css'teki tema bloklarıyla aynı
+  // değerler (--bg-primary / --bg-tertiary / --accent-primary). Önizleme pulu
+  // aktif temanın değişkenlerini kullanamaz (hepsi aynı görünürdü), bu yüzden
+  // renkler burada sabit. Tema paleti değişirse burası da güncellenmeli —
+  // tests/unit/theme-consistency.test.js bu senkronu korur.
   var dark = [
-    { id: 'slate',  name: 'Midnight' },
-    { id: 'cream',  name: 'Carbon' },
-    { id: 'claude', name: 'Claude' },
-    { id: 'navy',   name: 'Donanma Mavisi' }
+    { id: 'slate',  name: 'Midnight',        swatch: ['#0a0c10', '#151a22', '#2563eb'] },
+    { id: 'cream',  name: 'Carbon',          swatch: ['#161616', '#222222', '#e05020'] },
+    { id: 'claude', name: 'Claude',          swatch: ['#2b2520', '#342e28', '#d4835e'] },
+    { id: 'navy',   name: 'Donanma Mavisi',  swatch: ['#0a1728', '#17324f', '#d9b25a'] }
   ];
   var pro = [
-    { id: 'ansys',  name: 'ANSYS' },
-    { id: 'fusion', name: 'Fusion 360' },
-    { id: 'vscode', name: 'VS Code Dark+' }
+    { id: 'ansys',  name: 'ANSYS',           swatch: ['#1a2632', '#2a3d4f', '#ffb71b'] },
+    { id: 'fusion', name: 'Fusion 360',      swatch: ['#2b2e32', '#3c4147', '#0696d7'] },
+    { id: 'vscode', name: 'VS Code Dark+',   swatch: ['#1e1e1e', '#2d2d2d', '#007acc'] }
   ];
   var light = [
-    { id: 'pearl',      name: 'Pearl' },
-    { id: 'steel',      name: 'Steel' },
-    { id: 'solidworks', name: 'SolidWorks' }
+    { id: 'pearl',      name: 'Pearl',       swatch: ['#fafbfc', '#f0f1f3', '#2d6fe6'] },
+    { id: 'steel',      name: 'Steel',       swatch: ['#e4e7ec', '#d8dce4', '#3d5ba9'] },
+    { id: 'solidworks', name: 'SolidWorks',  swatch: ['#e9eef3', '#dde4ec', '#d51820'] }
   ];
   function group(label, list) {
     var h = '<div class="ve-settings-subhead">' + label + '</div>';
     h += '<div class="ve-settings-theme-grid">';
     list.forEach(function(t) {
       var a = (t.id === current) ? ' active' : '';
-      h += '<button class="ve-theme-menu-item' + a + '" data-mf-theme="' + t.id + '" onclick="changeTheme(\'' + t.id + '\')">' + t.name + '</button>';
+      h += '<button class="ve-theme-menu-item' + a + '" data-mf-theme="' + t.id + '" onclick="changeTheme(\'' + t.id + '\')">';
+      h += '<span class="ve-theme-swatch" aria-hidden="true">';
+      t.swatch.forEach(function(c) { h += '<i style="background:' + c + '"></i>'; });
+      h += '</span>';
+      h += '<span class="ve-theme-swatch-name">' + t.name + '</span>';
+      h += '</button>';
     });
     h += '</div>';
     return h;

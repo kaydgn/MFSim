@@ -62,7 +62,7 @@ function showInfoPopup(infoKey) {
   
   var popup = document.createElement('div');
   popup.id = 've-info-popup';
-  popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:0; box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:10005; max-width:400px; padding:20px;';
+  popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:10005; max-width:400px; padding:20px;';
   
   popup.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
     '<h3 style="margin:0; font-size:1rem; color:var(--text-heading);">' + info.title + '</h3>' +
@@ -188,7 +188,9 @@ function showNodeProperties(node) {
   var titleEl = document.getElementById('ve-properties-title');
   if(titleEl) {
     var nm = (node && (node.customName || (node.def && node.def.name))) || 'Özellikler';
-    titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>' + nm + ' <span style="opacity:0.5;font-weight:400;font-size:0.7rem;margin-left:6px;">' + (node.id || '') + '</span>';
+    // Yalnız ad — ID gövdedeki kimlik bloğunda zaten var. İkisi 120 px arayla
+    // aynı bilgiyi tekrarlıyordu ("Motor  comp-2" / "Motor ✎  ID: comp-2").
+    titleEl.innerHTML = '<span class="mf-ico mf-ico-sliders"></span>' + nm;
   }
   
   // Kimlik bloğu — sınıf tabanlı (yerleşim CSS'te). Varsayılan: ortalanmış
@@ -287,6 +289,16 @@ function showNodeProperties(node) {
   // İçerik-yoğun paneller (VE_WIDE_PANEL_TYPES listesi): geniş pencere +
   // kompakt-sol kimlik + iki sütun düzeni. Liste dalga dalga büyür. Salt sunum.
   if(_propWin) _propWin.classList.toggle('ve-properties--wide', VE_WIDE_PANEL_TYPES.indexOf(node.type) >= 0);
+  // Motor paneli, veri gelene kadar DAR açılır: geniş pencerede sağ (çıktı)
+  // sütunu tamamen boş kalıyor, 980px'lik pencerenin yarısı boşluktu. Preset
+  // seçilince onVEFTMotorSelect bu sınıfı kaldırıp --wide'a genişletir;
+  // tüm veri silinirse showVEMotorPlaceholder geri daraltır. Salt sunum.
+  if(_propWin) {
+    var _engEmpty = node.type === 'engine' &&
+      !(node.data && node.data.torqueData && node.data.torqueData.length);
+    _propWin.classList.toggle('ve-properties--engine-empty', _engEmpty);
+    if(_engEmpty) _propWin.classList.remove('ve-properties--wide');
+  }
   // Yol / Ortam: harita hero → çok geniş+yüksek pencere (--wide boyutunu ezer).
   if(_propWin) _propWin.classList.toggle('ve-properties--road', node.type === 'road');
   // Hafif paneller (VE_COMPACT_PANEL_TYPES): içerik az → dar pencere + kompakt-sol

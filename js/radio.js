@@ -37,7 +37,7 @@
   var CAT_FAV    = 'Favoriler';   // sanal kategori (yıldızlanan istasyonlar)
   var CAT_CUSTOM = 'Özel';
   var CAT_ORDER  = ['Chill', 'Türkçe', 'Rock', 'Metal', 'Klasik', 'Bach & Barok',
-                    'Caz & Blues', 'Elektronik', 'Phonk', 'Pop', 'Dünya', CAT_CUSTOM];
+                    'Caz & Blues', 'Elektronik', 'Phonk', 'Pop', 'Dünya', 'Marşlar', CAT_CUSTOM];
 
   // ─── Küratörlü istasyonlar (HTTPS zorunlu) ─────────────────────────────────
   // SomaFM: reklamsız, dinleyici destekli; doğrudan yayın bağlantısına izin
@@ -125,7 +125,10 @@
     { id: 'somafm-illinois-street-lounge', name: "SomaFM Illinois Street Lounge", genre: "Retro lounge", cat: "Dünya", url: 'https://ice1.somafm.com/illstreet-128-mp3' },
     { id: 'somafm-suburbs-of-goa', name: "SomaFM Suburbs of Goa", genre: "Dünya · Asya", cat: "Dünya", url: 'https://ice1.somafm.com/suburbsofgoa-128-mp3' },
     { id: 'fip-reggae', name: "FIP Reggae", genre: "Reggae", cat: "Dünya", url: 'https://icecast.radiofrance.fr/fipreggae-hifi.aac' },
-    { id: 'la-grosse-radio-reggae', name: "La Grosse Radio Reggae", genre: "Reggae · dub", cat: "Dünya", url: 'https://hd.lagrosseradio.info/lagrosseradio-reggae-192.mp3' }
+    { id: 'la-grosse-radio-reggae', name: "La Grosse Radio Reggae", genre: "Reggae · dub", cat: "Dünya", url: 'https://hd.lagrosseradio.info/lagrosseradio-reggae-192.mp3' },
+    { id: 'red-army', name: "Radio Red Army", genre: "Sovyet · Kızıl Ordu", cat: "Marşlar", url: 'https://live.rzs.ru/ka.128.mp3' },
+    { id: 'blasmusikradio', name: "Blasmusikradio", genre: "Alman bando · marş", cat: "Marşlar", url: 'https://stream.laut.fm/blasmusikradio' },
+    { id: 'blasmusik-bernd', name: "Blasmusikradio mit Bernd", genre: "Alman bando · marş", cat: "Marşlar", url: 'https://stream.laut.fm/blasmusikradio_mit_bernd' }
   ];
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -192,7 +195,8 @@
       open:      !!s.open,
       favorites: Array.isArray(s.favorites) ? s.favorites.filter(function (x) { return typeof x === 'string'; }) : [],
       customStations: [],
-      pos: null
+      pos: null,
+      miniPos: null
     };
     if (Array.isArray(s.customStations)) {
       s.customStations.forEach(function (st) {
@@ -208,6 +212,10 @@
     if (s.pos && typeof s.pos.left === 'number' && typeof s.pos.top === 'number' &&
         isFinite(s.pos.left) && isFinite(s.pos.top)) {
       out.pos = { left: s.pos.left, top: s.pos.top };
+    }
+    if (s.miniPos && typeof s.miniPos.left === 'number' && typeof s.miniPos.top === 'number' &&
+        isFinite(s.miniPos.left) && isFinite(s.miniPos.top)) {
+      out.miniPos = { left: s.miniPos.left, top: s.miniPos.top };
     }
     return out;
   }
@@ -301,7 +309,7 @@
   var current = null;                 // { type:'station'|'track', ... }
   var catMenuOpen = false;            // kategori açılır menüsü açık mı (kalıcı değil)
   var lastVol = DEFAULT_VOLUME;       // sessize alma öncesi ses
-  var st      = { volume: DEFAULT_VOLUME, tab: 'stations', stationId: null, stationCat: CAT_ALL, open: false, favorites: [], customStations: [], pos: null };
+  var st      = { volume: DEFAULT_VOLUME, tab: 'stations', stationId: null, stationCat: CAT_ALL, open: false, favorites: [], customStations: [], pos: null, miniPos: null };
 
   var ICONS = {
     play:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12-7.5z"/></svg>',
@@ -315,7 +323,8 @@
     plus:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
     chev:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
     star:  '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>',
-    starO: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>'
+    starO: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>',
+    expand:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>'
   };
 
   function $(id) { return global.document.getElementById(id); }
@@ -335,6 +344,10 @@
     audio.addEventListener('play',  syncPlaying);
     audio.addEventListener('pause', syncPlaying);
     audio.addEventListener('playing', syncPlaying);
+    // Radyo/parça çalmaya başlayınca açılış müziğini durdur (ses üst üste binmesin).
+    audio.addEventListener('play', function () {
+      if (global.MFSimSplashMusic && global.MFSimSplashMusic.stop) global.MFSimSplashMusic.stop();
+    });
     audio.addEventListener('ended', function () {
       // Yerel çalma listesinde otomatik sıradaki parçaya geç (istasyon "bitmez").
       if (current && current.type === 'track' && library.length) { playTrack(nextIndex(libIndex, library.length)); }
@@ -369,6 +382,28 @@
     if (w) w.classList.toggle('playing', !!on);
     var pp = w && w.querySelector('[data-act="playpause"]');
     if (pp) { pp.innerHTML = on ? ICONS.pause : ICONS.play; pp.title = on ? 'Duraklat' : 'Oynat'; }
+    refreshMini();
+  }
+
+  // ─── Mini oynatıcı ────────────────────────────────────────────────────────────
+  // Topoloji üstünde duran, sürüklenebilir "şimdi çalıyor" çubuğu. Bir şey çalarken
+  // (current var) ve ana panel KAPALIYKEN görünür; panel açılınca gizlenir.
+  function refreshMini() {
+    var mini = $('mf-radio-mini');
+    if (!mini) return;
+    var w = $(WIDGET_ID);
+    var panelOpen = !!(w && w.classList.contains('open'));
+    var show = !!current && !panelOpen;
+    mini.classList.toggle('show', show);
+    if (!show) return;
+    var playing = !!(audio && !audio.paused);
+    mini.classList.toggle('playing', playing);
+    var pp = mini.querySelector('[data-act="playpause"]');
+    if (pp) { pp.innerHTML = playing ? ICONS.pause : ICONS.play; pp.title = playing ? 'Duraklat' : 'Oynat'; }
+    var title = current.type === 'station' ? current.name : trackTitle(current.name);
+    var sub   = current.type === 'station' ? (current.genre || 'Canlı yayın') : 'Kütüphanem';
+    var tEl = mini.querySelector('.mf-radio-mini-title'); if (tEl) tEl.textContent = title;
+    var sEl = mini.querySelector('.mf-radio-mini-sub');   if (sEl) sEl.textContent = sub;
   }
 
   // ─── Çalma ────────────────────────────────────────────────────────────────────
@@ -382,7 +417,7 @@
     var p = a.play();
     if (p && p.catch) p.catch(function () {/* error olayı ele alır */});
     st.stationId = station.id; saveState({ stationId: station.id });
-    renderStations(); renderLibrary();
+    renderStations(); renderLibrary(); refreshMini();
   }
 
   function playTrack(i) {
@@ -395,7 +430,7 @@
     a.src = tr.url;
     var p = a.play();
     if (p && p.catch) p.catch(function () {});
-    renderStations(); renderLibrary();
+    renderStations(); renderLibrary(); refreshMini();
   }
 
   function togglePlayPause() {
@@ -580,6 +615,7 @@
     w.classList.add('open');
     st.open = true; saveState({ open: true });
     var btn = $(BTN_ID); if (btn) btn.classList.add('active');
+    refreshMini();   // panel açıldı → mini gizlensin
   }
 
   function closePlayer() {
@@ -587,6 +623,7 @@
     if (w) w.classList.remove('open');
     st.open = false; saveState({ open: false });
     var btn = $(BTN_ID); if (btn) btn.classList.remove('active');
+    refreshMini();   // panel kapandı → çalıyorsa mini görünsün
   }
 
   function togglePlayer() {
@@ -595,7 +632,7 @@
   }
 
   // ─── Sürükleme ────────────────────────────────────────────────────────────────
-  var drag = { active: false, sx: 0, sy: 0, bl: 0, bt: 0 };
+  var drag = { active: false, sx: 0, sy: 0, bl: 0, bt: 0, el: null, key: null };
 
   function placeAbsolute(w, left, top) {
     w.style.left = left + 'px';
@@ -609,34 +646,40 @@
     return { w: global.innerWidth || (d && d.clientWidth) || 1280, h: global.innerHeight || (d && d.clientHeight) || 800 };
   }
 
-  function onHeadDown(e) {
-    if (e.button !== 0) return;
+  // Genel sürükleme başlat: verilen elemanı (ana panel veya mini oynatıcı) taşı.
+  // key='pos' → ana panel konumu, key='miniPos' → mini oynatıcı konumu.
+  function startDrag(el, key, e) {
+    if (e.button !== 0 || !el) return;
     if (e.target.closest && e.target.closest('.mf-radio-close, button, input')) return;
-    var w = $(WIDGET_ID);
-    if (!w) return;
-    var r = w.getBoundingClientRect();
-    drag.active = true; drag.sx = e.clientX; drag.sy = e.clientY; drag.bl = r.left; drag.bt = r.top;
-    placeAbsolute(w, r.left, r.top);
+    var r = el.getBoundingClientRect();
+    drag.active = true; drag.el = el; drag.key = key;
+    drag.sx = e.clientX; drag.sy = e.clientY; drag.bl = r.left; drag.bt = r.top;
+    placeAbsolute(el, r.left, r.top);
     global.document.body.classList.add('mf-radio-dragging');
     e.preventDefault();
   }
 
+  function onHeadDown(e) { startDrag($(WIDGET_ID), 'pos', e); }
+
   function onMove(e) {
-    if (!drag.active) return;
-    var w = $(WIDGET_ID);
-    if (!w) return;
+    if (!drag.active || !drag.el) return;
     var v = vp();
-    var c = clampPos(drag.bl + (e.clientX - drag.sx), drag.bt + (e.clientY - drag.sy), w.offsetWidth, w.offsetHeight, v.w, v.h);
-    w.style.left = c.left + 'px'; w.style.top = c.top + 'px'; w.style.right = 'auto'; w.style.bottom = 'auto';
+    var c = clampPos(drag.bl + (e.clientX - drag.sx), drag.bt + (e.clientY - drag.sy), drag.el.offsetWidth, drag.el.offsetHeight, v.w, v.h);
+    drag.el.style.left = c.left + 'px'; drag.el.style.top = c.top + 'px'; drag.el.style.right = 'auto'; drag.el.style.bottom = 'auto';
   }
 
   function onUp() {
     if (!drag.active) return;
     drag.active = false;
     global.document.body.classList.remove('mf-radio-dragging');
-    var w = $(WIDGET_ID);
-    if (w) { var left = parseFloat(w.style.left), top = parseFloat(w.style.top);
-      if (isFinite(left) && isFinite(top)) { st.pos = { left: left, top: top }; saveState({ pos: st.pos }); } }
+    var el = drag.el, key = drag.key; drag.el = null;
+    if (!el) return;
+    var left = parseFloat(el.style.left), top = parseFloat(el.style.top);
+    if (isFinite(left) && isFinite(top)) {
+      var p = { left: left, top: top };
+      if (key === 'miniPos') { st.miniPos = p; saveState({ miniPos: p }); }
+      else { st.pos = p; saveState({ pos: p }); }
+    }
   }
 
   // ─── Kurulum ──────────────────────────────────────────────────────────────────
@@ -674,6 +717,38 @@
       '</div>' +
       '<input type="file" class="mf-radio-file" accept="audio/*" multiple hidden />';
     global.document.body.appendChild(w);
+
+    // ── Mini oynatıcı (topoloji üstünde, panel kapalıyken görünen "şimdi çalıyor") ──
+    var mini = global.document.createElement('div');
+    mini.id = 'mf-radio-mini';
+    mini.className = 'mf-radio-mini';
+    mini.setAttribute('role', 'group');
+    mini.setAttribute('aria-label', 'Mini oynatıcı');
+    mini.innerHTML =
+      '<button type="button" class="mf-radio-mini-pp" data-act="playpause" title="Oynat" aria-label="Oynat/Duraklat">' + ICONS.play + '</button>' +
+      '<div class="mf-radio-mini-info">' +
+        '<span class="mf-radio-mini-eq" aria-hidden="true"><i></i><i></i><i></i></span>' +
+        '<span class="mf-radio-mini-text">' +
+          '<span class="mf-radio-mini-title">—</span>' +
+          '<span class="mf-radio-mini-sub"></span>' +
+        '</span>' +
+      '</div>' +
+      '<button type="button" class="mf-radio-mini-btn" data-act="prev" title="Önceki" aria-label="Önceki">' + ICONS.prev + '</button>' +
+      '<button type="button" class="mf-radio-mini-btn" data-act="next" title="Sonraki" aria-label="Sonraki">' + ICONS.next + '</button>' +
+      '<button type="button" class="mf-radio-mini-btn" data-act="expand" title="Radyoyu aç" aria-label="Radyoyu aç">' + ICONS.expand + '</button>';
+    global.document.body.appendChild(mini);
+
+    // Mini: kontroller (ayrı eleman → kendi click dinleyicisi) + başlıktan sürükleme
+    mini.addEventListener('click', function (e) {
+      var act = e.target.closest && e.target.closest('[data-act]');
+      if (!act) return;
+      var a = act.getAttribute('data-act');
+      if (a === 'playpause') togglePlayPause();
+      else if (a === 'next') skip(1);
+      else if (a === 'prev') skip(-1);
+      else if (a === 'expand') openPlayer();
+    });
+    mini.addEventListener('mousedown', function (e) { startDrag(mini, 'miniPos', e); });
 
     // ── Olay delegasyonu (içerik yeniden üretilse de kalır) ──
     w.addEventListener('click', function (e) {
@@ -790,8 +865,19 @@
       var c = clampPos(s.pos.left, s.pos.top, r.width || 300, r.height || 360, v.w, v.h);
       placeAbsolute(w, c.left, c.top);
     }
+    // Mini oynatıcı konumu (sürüklendiyse hatırlanır)
+    if (s.miniPos) {
+      var mini = $('mf-radio-mini');
+      if (mini) {
+        var v2 = vp();
+        var mr = mini.getBoundingClientRect();
+        var mc = clampPos(s.miniPos.left, s.miniPos.top, mr.width || 240, mr.height || 54, v2.w, v2.h);
+        placeAbsolute(mini, mc.left, mc.top);
+      }
+    }
     // Açık/kapalı (ses ÇALMAZ — yalnızca panel görünürlüğü)
     if (s.open) { w.classList.add('open'); var btn = $(BTN_ID); if (btn) btn.classList.add('active'); }
+    refreshMini();   // başlangıçta bir şey çalmıyorsa mini gizli kalır
   }
 
   function init() {

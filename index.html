@@ -41,12 +41,13 @@
     </div>
     <div class="mfsim-loading-meta">
       <div id="mfsim-loading-message" class="mfsim-loading-message">Başlatılıyor...</div>
-      <div id="mfsim-loading-percent" class="mfsim-loading-percent">0%</div>
+      <div id="mfsim-loading-percent" class="mfsim-loading-percent">%0</div>
     </div>
   </div>
 </div>
 
 <script src="js/loader.js"></script>
+<script src="js/splash-music.js"></script>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
 <div id="mfsim-login-overlay" class="mfsim-login-overlay">
@@ -94,6 +95,16 @@
       <div class="ve-menu-item" onclick="mfsimLogout()" style="color:var(--accent-danger);"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
     </div>
   </div>
+  <!-- Hızlı Erişim Araç Çubuğu (QAT) — şerit sekmesinden bağımsız, hep görünür -->
+  <!-- Komutlar data-qat ile bağlanır (js/ribbon.js). Inline onclick KULLANILMAZ:
+       menüdeki aynı komutla `[onclick*="..."]` seçicilerini çoğaltır ve
+       E2E testlerinde belirsizlik yaratırdı. -->
+  <span class="ve-qat" id="ve-qat">
+    <button type="button" class="ve-qat-btn" data-qat="veSaveTopology" title="Projeyi Kaydet" aria-label="Projeyi Kaydet"><span class="mf-ico mf-ico-save"></span></button>
+    <button type="button" class="ve-qat-btn" data-qat="veUndo" title="Geri Al (Ctrl+Z)" aria-label="Geri Al"><span class="mf-ico mf-ico-undo"></span></button>
+    <button type="button" class="ve-qat-btn" data-qat="veRedo" title="İleri Al (Ctrl+Y)" aria-label="İleri Al"><span class="mf-ico mf-ico-redo"></span></button>
+  </span>
+  <span class="ve-qat-sep"></span>
   <div class="ve-tab-group">
     <div class="ve-sub-tabs visible" id="ve-sub-tabs">
       <button class="ve-sub-tab active" onclick="veSubTabDegistir('arac-performans')" data-subtab="arac-performans">Araç Performans</button>
@@ -106,6 +117,9 @@
     <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
   </span>
 </div>
+
+<!-- RIBBON (Fluent tarzı şerit) — içeriği js/ribbon.js üretir -->
+<div id="ve-ribbon"></div>
 
 <!-- GÖRSEL EDİTÖR -->
 <div id="sayfa2" class="tab-page active">
@@ -497,7 +511,6 @@
 
       <!-- Orta - Canvas -->
       <div class="ve-canvas-area">
-        <div class="ve-tab-bar" id="ve-tab-bar"></div>
         <div class="ve-split-container" id="ve-split-container">
           <div class="ve-split-pane focused" id="ve-pane-0">
             <div class="ve-canvas-wrapper grid-hidden" id="ve-canvas-wrapper">
@@ -577,6 +590,10 @@
             </div>
           </div>
         </div>
+        <!-- Topoloji (belge) sekmeleri — CANoe'daki gibi çalışma alanının ALTINDA.
+             Şerit üstte komut yüzeyi, burası "hangi belgedeyim" yüzeyi; ikisini
+             ayrı uçlara koymak üst kromdaki dördüncü bandı kaldırır. -->
+        <div class="ve-tab-bar ve-tab-bar--bottom" id="ve-tab-bar"></div>
         <!-- Alt Uyarı Paneli -->
         <div class="ve-warnings-panel" id="ve-warnings-panel">
           <div class="ve-warnings-header" onclick="veToggleWarnings()">
@@ -585,7 +602,7 @@
             <span id="ve-warnings-toggle" style="margin-left:auto;font-size:0.7rem;">▲</span>
           </div>
           <div class="ve-warnings-body" id="ve-warnings-body">
-            <div style="padding:8px 12px;font-size:0.65rem;color:var(--text-muted);">Uyarı bulunmuyor. Topoloji hazır.</div>
+            <div style="padding:8px 12px;font-size:0.65rem;color:var(--text-muted);">Henüz doğrulanmadı. Giriş sekmesindeki <strong>Doğrula</strong>&#39;ya basın.</div>
           </div>
         </div>
         <div id="ve-status-bar" class="ve-status-bar">
@@ -653,13 +670,13 @@
   <!-- ===== SONUÇLAR SUB-SAYFASI ===== -->
   <div id="ve-page-sonuclar" class="ve-sub-page" style="display:none; flex-direction:row;">
       
-      <!-- Sol Panel: Data Browser -->
+      <!-- Sol Panel: Veri Gezgini -->
       <div id="ve-results-browser" style="width:250px; min-width:160px; max-width:400px; background:var(--bg-secondary); border-right:2px solid var(--border-color); display:flex; flex-direction:column; position:relative; flex-shrink:0;">
         <div id="ve-results-browser-resizer" style="position:absolute; top:0; right:-3px; width:6px; height:100%; cursor:ew-resize; z-index:10;"></div>
         
         <!-- Browser Header -->
         <div style="padding:8px 12px; background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:6px;">
-          <span style="font-size:0.85rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Data Browser</span>
+          <span style="font-size:0.85rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Veri Gezgini</span>
         </div>
 
         <!-- Solver Tab Bar -->
@@ -740,6 +757,7 @@
 <script type="text/x-mfsim-defer" src="js/numerics.js" data-mfsim-label="Sayısal yöntemler (RK45, PCHIP)..."></script>
 <script type="text/x-mfsim-defer" src="js/simulation-engine.js" data-mfsim-label="Simülasyon motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/graphics.js" data-mfsim-label="Grafik motoru..."></script>
+<script type="text/x-mfsim-defer" src="js/chart-cursor.js" data-mfsim-label="Ölçüm imleci (senkron kursör)..."></script>
 <script type="text/x-mfsim-defer" src="js/node-resize.js" data-mfsim-label="Düğüm yönetimi..."></script>
 <script type="text/x-mfsim-defer" src="js/context-menus.js" data-mfsim-label="Sağ tık menüleri..."></script>
 <script type="text/x-mfsim-defer" src="js/connections.js" data-mfsim-label="Bağlantı motoru..."></script>
@@ -748,6 +766,7 @@
 <script type="text/x-mfsim-defer" src="js/deploy-status.js" data-mfsim-label="Dağıtım bilgisi..."></script>
 <script type="text/x-mfsim-defer" src="js/minimap.js" data-mfsim-label="Genel görünüm (minimap)..."></script>
 <script type="text/x-mfsim-defer" src="js/command-palette.js" data-mfsim-label="Komut paleti (Ctrl+K)..."></script>
+<script type="text/x-mfsim-defer" src="js/ribbon.js" data-mfsim-label="Şerit (ribbon) komut yüzeyi..."></script>
 <script type="text/x-mfsim-defer" src="js/tidy-layout.js" data-mfsim-label="Otomatik düzen (tidy)..."></script>
 <script type="text/x-mfsim-defer" src="js/export-topology.js" data-mfsim-label="Görüntü dışa aktarma (PNG/SVG)..."></script>
 <script type="text/x-mfsim-defer" src="js/shortcuts-help.js" data-mfsim-label="Klavye kısayolları yardımı..."></script>

@@ -572,28 +572,11 @@ function veRenderTabs() {
       '</div>';
   });
   html += '<div class="ve-tab-add" onclick="veAddTab()" title="Yeni topoloji sekmesi">+</div>';
-  
-  // Sağ taraf — araç butonları
-  html += '<div style="flex:1;"></div>';
-  html += '<button class="ve-toolbar-btn ve-cmdk-trigger" onclick="veCmdkOpen()" title="Komut paleti — her eylemi arayıp çalıştır (Ctrl+K)"><span class="mf-ico mf-ico-search"></span><span class="ve-cmdk-trigger-kbd">⌘K</span></button>';
-  html += '<div class="ve-toolbar-sep"></div>';
-  html += '<button class="ve-toolbar-btn" onclick="veUndo()" title="Geri Al (Ctrl+Z)"><span class="mf-ico mf-ico-undo"></span></button>';
-  html += '<button class="ve-toolbar-btn" onclick="veRedo()" title="İleri Al (Ctrl+Y)"><span class="mf-ico mf-ico-redo"></span></button>';
-  html += '<div class="ve-toolbar-sep"></div>';
-  html += '<button class="ve-toolbar-btn" onclick="veZoomIn()" title="Yakınlaştır"><span class="mf-ico mf-ico-zoom-in"></span></button>';
-  html += '<button class="ve-toolbar-btn" onclick="veZoomOut()" title="Uzaklaştır"><span class="mf-ico mf-ico-zoom-out"></span></button>';
-  html += '<button class="ve-toolbar-btn" onclick="veResetView()" title="Görünümü Sıfırla"><span class="mf-ico mf-ico-crosshair"></span></button>';
-  html += '<button class="ve-toolbar-btn" onclick="veFitViewToContent({maxZoom:2})" title="İçeriğe Sığdır"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg></button>';
-  html += '<button class="ve-toolbar-btn" onclick="veTidyLayout()" title="Otomatik Düzenle — topolojiyi katmanlı, düzenli hâle getir"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="6" height="6" rx="1"/><rect x="15" y="4" width="6" height="6" rx="1"/><rect x="9" y="14" width="6" height="6" rx="1"/><path d="M6 10v2a2 2 0 0 0 2 2h4M18 10v2a2 2 0 0 1-2 2h-4"/></svg></button>';
-  html += '<div class="ve-toolbar-sep"></div>';
-  html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof SNAP_ENABLED !== 'undefined' && SNAP_ENABLED ? ' active' : '') + '" id="ve-snap-btn" onclick="veToggleSnap()" title="Hizalama"><span class="mf-ico mf-ico-ruler"></span></button>';
-  html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof veGridVisible !== 'undefined' && veGridVisible ? ' active' : '') + '" id="ve-grid-btn" onclick="veToggleGrid()" title="Grid Göster/Gizle"><span class="mf-ico mf-ico-grid"></span></button>';
-  html += '<button class="ve-toolbar-btn" id="ve-grid-density-btn" onclick="veCycleGridDensity()" title="Grid: ' + (typeof veGridLabels !== 'undefined' ? veGridLabels[veGridDensity] : 'Normal') + '"><span class="mf-ico mf-ico-grid-cells"></span></button>';
-  html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof veBoundaryVisible !== 'undefined' && veBoundaryVisible ? ' active' : '') + '" id="ve-boundary-btn" onclick="veToggleBoundary()" title="Sınır Göster/Gizle"><span class="mf-ico mf-ico-frame"></span></button>';
-  html += '<button class="ve-toolbar-btn" id="ve-boundary-opacity-btn" onclick="veCycleBoundaryOpacity()" title="Sınır Opaklığı: ' + (typeof veBoundaryOpacity !== 'undefined' ? Math.round(veBoundaryOpacity * 100) : '55') + '%"><span class="mf-ico mf-ico-contrast"></span></button>';
-  html += '<div class="ve-toolbar-sep"></div>';
-  html += '<button class="ve-toolbar-btn ve-toolbar-toggle' + (typeof veFlowAnim !== 'undefined' && veFlowAnim ? ' active' : '') + '" id="ve-flow-btn" onclick="veToggleFlow()" title="Güç akışı animasyonu (bağlantılarda akan çizgiler)"><span class="mf-ico mf-ico-zap"></span></button>';
 
+  // Sağdaki araç butonları KALDIRILDI: hepsi artık şeritte (js/ribbon.js).
+  // Şerit geldikten sonra aynı 14 komut 150 px arayla iki yerde duruyordu; bu
+  // satır artık yalnızca belge sekmeleri taşır — CANoe'daki belge sekmesi
+  // şeridinin karşılığı. Komutlar: Şerit, Ctrl+K ve klavye kısayolları.
   bar.innerHTML = html;
 }
 
@@ -852,7 +835,7 @@ function veUpdatePaneLabels() {
     var tab = veTabs[tabIdx];
     var name = tab ? tab.name : '?';
     var isFocused = (i === veFocusedPane);
-    label.textContent = name + (isFocused ? ' ✎' : ' 👁');
+    label.textContent = name + (isFocused ? ' ✎' : ' ◎');
     label.title = isFocused ? 'Düzenlenebilir (aktif)' : 'Salt görüntüleme — tıklayarak aktif edin';
   }
 }
@@ -910,7 +893,7 @@ function veRenderSnapshot(paneIdx) {
       var w = n.width || 65, h = n.height || 60;
       
       var nodeEl = document.createElement('div');
-      nodeEl.className = 've-node';
+      nodeEl.className = 've-node' + (VE_STANDALONE_TYPES.indexOf(node.type) >= 0 ? ' ve-node--standalone' : '');
       nodeEl.style.left = n.x + 'px';
       nodeEl.style.top = n.y + 'px';
       nodeEl.style.pointerEvents = 'none';

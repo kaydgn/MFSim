@@ -743,7 +743,7 @@ function getMntExamplePropertiesHTML(node){
   left+='</select>';
   left+=_mntExampleDetailsHTML(ex);
   left+='<button onclick="veMntLoadExample(\''+nid+'\')" style="width:100%; padding:11px 14px; font-size:0.76rem; font-weight:700; background:var(--accent-warning); color:#111; border:none; cursor:pointer; border-radius:var(--radius-sm); letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">▶ Örneği Aktar</button>';
-  left+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:0.68rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">⬇ İç Topolojiyi JSON Dışa Aktar</button>';
+  left+='<button onclick="veMntExportTopology()" title="Kanvastaki iç topolojiyi JSON dosyası olarak indir — yeni örnek üretmek için" style="width:100%; margin-top:8px; padding:8px 14px; font-size:0.68rem; font-weight:600; background:var(--bg-tertiary); color:var(--text-secondary); border:1px solid var(--border-color); cursor:pointer; border-radius:var(--radius-sm);" onmouseover="this.style.borderColor=\'var(--accent-primary)\'; this.style.color=\'var(--text-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\'; this.style.color=\'var(--text-secondary)\'">↓ İç Topolojiyi JSON Dışa Aktar</button>';
   left+='<div id="ve-mnt-example-report" style="margin-top:12px;"></div>';
 
   // ── SAĞ (önizleme): topoloji şeması — geniş sütunda büyük gösterilir ──
@@ -787,7 +787,7 @@ function _mntRenderExampleReport(warnings, silent){
   var el = (typeof document!=='undefined') ? document.getElementById('ve-mnt-example-report') : null;
   if(!el) return;
   if(!warnings.length){
-    el.innerHTML='<div style="padding:9px 11px; background:rgba(34,197,94,0.12); border:1px solid var(--accent-success); border-radius:5px; font-size:0.64rem; color:var(--accent-success);"><b>✓ Model tutarlı</b> — herhangi bir uyarı yok.</div>';
+    el.innerHTML='<div style="padding:9px 11px; background:color-mix(in srgb, var(--accent-success) 12%, transparent); border:1px solid var(--accent-success); border-radius:5px; font-size:0.64rem; color:var(--accent-success);"><b>✓ Model tutarlı</b> — herhangi bir uyarı yok.</div>';
     return;
   }
   var errN=warnings.filter(function(w){return w.level==='err';}).length;
@@ -796,7 +796,7 @@ function _mntRenderExampleReport(warnings, silent){
   warnings.forEach(function(w){
     var isErr=w.level==='err';
     var col=isErr?'var(--accent-danger)':'var(--accent-warning)';
-    var bg=isErr?'rgba(239,68,68,0.10)':'rgba(245,158,11,0.10)';
+    var bg=isErr?'rgba(239,68,68,0.10)':'color-mix(in srgb, var(--accent-warning) 10%, transparent)';
     h+='<div style="padding:6px 9px; background:'+bg+'; border-left:3px solid '+col+'; border-radius:3px; font-size:0.62rem; line-height:1.4; color:var(--text-secondary);"><b style="color:'+col+';">'+(isErr?'HATA':'UYARI')+':</b> '+w.msg+'</div>';
   });
   h+='</div>';
@@ -1221,7 +1221,7 @@ function getMntViewerPropertiesHTML(node){
   left+=_mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksenleri gizle/göster');
   left+=_mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Eksen etiketlerini gizle/göster');
   left+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
-  left+=_mntVwrBtn("veMntViewerFullscreen();",'⛶ Tam Ekran','Görüntüleyiciyi tam ekran aç');
+  left+=_mntVwrBtn("veMntViewerFullscreen();",'<span class="mf-ico mf-ico-maximize"></span> Tam Ekran','Görüntüleyiciyi tam ekran aç');
   left+='</div>';
   left+='<div style="font-size:0.52rem; color:var(--text-muted); line-height:1.5; margin-bottom:9px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
   left+='<button onclick="veMntViewerRefresh()" style="width:100%; padding:8px; font-size:0.68rem; background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">↻ Yenile</button>';
@@ -2452,7 +2452,7 @@ async function veMntSolverCompute(solverId){
 // (çekme, durdurucu, ±10 mm aşımı, modal f≈0, yakınsama). Ayrıntı → Rapor.
 function _mntSolverStatusHTML(R){
   if(R.error){
-    return '<div style="padding:10px 12px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:0.66rem; line-height:1.5;"><b>Çözülemedi — eksik/geçersiz girdi:</b><ul style="margin:6px 0 0 16px; padding:0;">'
+    return '<div style="padding:10px 12px; background:color-mix(in srgb, var(--accent-warning) 12%, transparent); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:0.66rem; line-height:1.5;"><b>Çözülemedi — eksik/geçersiz girdi:</b><ul style="margin:6px 0 0 16px; padding:0;">'
       + R.error.map(function(p){return '<li>'+_mntEsc(p)+'</li>';}).join('')
       + '</ul><div style="margin-top:6px; color:var(--text-muted);">İç topolojide Kütle ve Takoz bileşenleri bulunmalı ve geçerli değerler girilmelidir.</div></div>';
   }
@@ -2471,7 +2471,7 @@ function _mntSolverStatusHTML(R){
   });
   var modalWarn=(R.modes||[]).filter(function(m){return m && m.warning;}).length;
 
-  var h='<div style="padding:9px 11px; border:1px solid var(--accent-success); background:rgba(34,197,94,0.10); border-radius:5px;">';
+  var h='<div style="padding:9px 11px; border:1px solid var(--accent-success); background:color-mix(in srgb, var(--accent-success) 10%, transparent); border-radius:5px;">';
   h+='<div style="display:flex; align-items:baseline; gap:7px; flex-wrap:wrap; font-size:0.72rem; font-weight:700; color:var(--accent-success);"><span>✓ Çözüldü</span>'
     + '<span style="font-weight:400; color:var(--text-muted); font-size:0.58rem;">'+nC+' kütle · '+nM+' takoz · '+nCase+' yük durumu · '+nMode+' mod</span></div>';
   h+='<div style="margin-top:5px; font-size:0.62rem; color:var(--text-secondary); line-height:1.5;">'

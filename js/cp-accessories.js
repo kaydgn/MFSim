@@ -254,14 +254,14 @@ function getAccessoryPropertiesHTML(node){
   var L = '';
   L += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Model Seçimi';
   if(connected){
-    L += ' <span style="background:rgba(34,197,94,0.15);color:var(--accent-success);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid rgba(34,197,94,0.4);">● MOTORA BAĞLI</span>';
+    L += ' <span style="background:color-mix(in srgb, var(--accent-success) 15%, transparent);color:var(--accent-success);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid color-mix(in srgb, var(--accent-success) 40%, transparent);">● MOTORA BAĞLI</span>';
   } else {
-    L += ' <span style="background:rgba(245,158,11,0.12);color:var(--accent-warning,#f59e0b);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid rgba(245,158,11,0.4);">○ BAĞLANMADI</span>';
+    L += ' <span style="background:color-mix(in srgb, var(--accent-warning) 12%, transparent);color:var(--accent-warning,#f59e0b);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid color-mix(in srgb, var(--accent-warning) 40%, transparent);">○ BAĞLANMADI</span>';
   }
   L += '</div>';
   L += '<div class="sw-pkg-desc">Bu bileşeni Motor kutusunun önündeki ilgili porta bağlayın. Devire bağlı çektiği güç, motorun net torkundan düşülür.</div>';
 
-  L += '<select id="ve-acc-preset-' + nid + '" onchange="onVEAccPresetSelect(\'' + nid + '\', this.value)" style="width:100%; font-size:0.7rem; padding:5px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; margin-bottom:8px;">';
+  L += '<select id="ve-acc-preset-' + nid + '" onchange="onVEAccPresetSelect(\'' + nid + '\', this.value)" style="width:100%; font-size:0.7rem; padding:5px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-bottom:8px;">';
   L += '<option value="">-- Model Seçiniz (' + Object.keys(lib).length + ' preset) --</option>';
   Object.keys(lib).forEach(function(key){
     var sel = (key === d.accPreset) ? ' selected' : '';
@@ -274,7 +274,7 @@ function getAccessoryPropertiesHTML(node){
   L += '<div id="ve-acc-manual-wrap-' + nid + '" style="display:' + (isManual ? 'block' : 'none') + '; margin-bottom:8px;">';
   L += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
   L += '<tr><th style="padding:7px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Sabit güç [kW]</th>';
-  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-manualkw-' + nid + '" value="' + (d.accManualKw != null ? d.accManualKw : 0) + '" step="0.1" min="0" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
+  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-manualkw-' + nid + '" value="' + (d.accManualKw != null ? d.accManualKw : 0) + '" step="0.1" min="0" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
   L += '</table>';
   L += '<div style="font-size:0.62rem; color:var(--text-muted); margin-top:4px;">Manuel modda güç tüm devirlerde sabit alınır.</div>';
   L += '</div>';
@@ -282,7 +282,7 @@ function getAccessoryPropertiesHTML(node){
   // Tahrik oranı
   L += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:8px;">';
   L += '<tr><th style="padding:7px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Tahrik oranı [-]</th>';
-  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-ratio-' + nid + '" value="' + d.accDriveRatio + '" step="0.01" min="0.1" max="10" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
+  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-ratio-' + nid + '" value="' + d.accDriveRatio + '" step="0.01" min="0.1" max="10" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
   L += '<tr><td colspan="2" style="padding:6px 8px; font-size:0.62rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Aksesuar_devri = Motor_devri × oran. Aksesuar motordan daha hızlı döner (ör. alternatör ≈ 3.15).</td></tr>';
   L += '</table>';
 

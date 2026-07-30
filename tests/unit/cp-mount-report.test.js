@@ -172,7 +172,7 @@ describe('§8 zenginleştirmeleri', () => {
     const h = rep._mntRepLoadCaseMatrix(R);
     ['Statik', 'Tümsek', 'Frenleme', 'Viraj', 'Frenlemeli viraj', 'Çukur + fren',
      'Yanal bordür', 'İleri tork', 'Geri tork'].forEach(n => expect(h).toContain(n));
-    expect(h).toContain('outline:2px solid #a855f7'); // en az bir çekme hücresi
+    expect(h).toContain('outline:2px solid var(--warn)'); // en az bir çekme hücresi — palet içi amber işaret
   });
   test('§8.6 üç-eksen çökme detayı: her takoz için δx/δy/δz tablosu', () => {
     const h = rep._mntRepDeflectionDetail(R);

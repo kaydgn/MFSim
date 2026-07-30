@@ -287,13 +287,13 @@ function showAnnotationContextMenu(e, annot) {
     {name: 'Kırmızı', value: 'var(--accent-danger)'}
   ];
   colors.forEach(function(c) {
-    items += '<div class="ve-menu-item" data-action="color" data-color="' + c.value + '">🎨 ' + c.name + '</div>';
+    items += '<div class="ve-menu-item" data-action="color" data-color="' + c.value + '"><span class="mf-ico mf-ico-palette"></span> ' + c.name + '</div>';
   });
 
   if(annot.type === 'text') {
     items += '<div class="ve-menu-divider"></div>';
-    items += '<div class="ve-menu-item" data-action="size-up">🔠 Yazıyı Büyüt</div>';
-    items += '<div class="ve-menu-item" data-action="size-down">🔡 Yazıyı Küçült</div>';
+    items += '<div class="ve-menu-item" data-action="size-up">A+ Yazıyı Büyüt</div>';
+    items += '<div class="ve-menu-item" data-action="size-down">A− Yazıyı Küçült</div>';
   }
 
   items += '<div class="ve-menu-divider"></div>';
