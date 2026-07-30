@@ -461,8 +461,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Bir sonraki yapıştırma için offset'i güncelle
         clipboardOffset.x += pasteOffset;
         clipboardOffset.y += pasteOffset;
-        
-        showToast(clipboard.length + ' bileşen yapıştırıldı');
+
+        // GERÇEKTEN yapıştırılan sayıyı bildir — maxInstances dolu bileşenler
+        // reddedilir; clipboard.length'i raporlamak kullanıcıya yalan söylerdi.
+        if(newNodes.length === clipboard.length) {
+          showToast(newNodes.length + ' bileşen yapıştırıldı');
+        } else if(newNodes.length === 0) {
+          showToast('Yapıştırılamadı — bileşen sınırı dolu', 'warning');
+        } else {
+          showToast(newNodes.length + '/' + clipboard.length + ' bileşen yapıştırıldı — kalanı sınır dolu', 'warning');
+        }
       }
     }
     
@@ -485,17 +493,26 @@ document.addEventListener('DOMContentLoaded', function() {
         
         var toDuplicate = selectedNodes.slice();
         clearSelection();
-        
+
+        var duplicated = 0;
         toDuplicate.forEach(function(node) {
           // TÜM özellikleriyle klonla (data/değerler dahil)
           var newNode = veCloneNodeFrom(node, node.x + 40, node.y + 40);
           if(newNode) {
+            duplicated++;
             addToSelection(newNode);
           }
         });
         if(typeof updateAllConnections === 'function') updateAllConnections();
 
-        showToast(toDuplicate.length + ' bileşen kopyalandı');
+        // GERÇEKTEN kopyalanan sayıyı bildir (bkz. Ctrl+V'deki aynı gerekçe).
+        if(duplicated === toDuplicate.length) {
+          showToast(duplicated + ' bileşen kopyalandı');
+        } else if(duplicated === 0) {
+          showToast('Kopyalanamadı — bileşen sınırı dolu', 'warning');
+        } else {
+          showToast(duplicated + '/' + toDuplicate.length + ' bileşen kopyalandı — kalanı sınır dolu', 'warning');
+        }
       }
     }
     
@@ -529,16 +546,24 @@ function createCurvedPath(x1, y1, x2, y2) {
   return 'M ' + x1 + ' ' + y1 + ' C ' + cp1x + ' ' + cp1y + ', ' + cp2x + ' ' + cp2y + ', ' + x2 + ' ' + y2;
 }
 
+// Yeni bileşen düğümü oluşturur.
+// DÖNÜŞ SÖZLEŞMESİ: başarıda oluşturulan düğüm nesnesi, başarısızlıkta null.
+// Çağıranlar dönüşü KONTROL ETMELİ — özellikle veCloneNodeFrom, aksi halde
+// erken dönüşte nodes[nodes.length-1] alakasız bir düğüme denk gelir ve
+// o düğümün verisi ezilir.
 function createNode(type, x, y, width, height) {
   var def = componentDefs[type];
-  if(!def) return;
+  if(!def) return null;
 
   // maxInstances kontrolü
   if(def.maxInstances) {
     var existingCount = nodes.filter(function(n) { return n.type === type; }).length;
     if(existingCount >= def.maxInstances) {
-      if(typeof showNotification === 'function') showNotification('⚠️ ' + def.name + ' topolojide en fazla ' + def.maxInstances + ' tane olabilir.', 'warning');
-      return;
+      // showToast: tanımlı olan bildirim yolu (eskiden burada hiç tanımlanmamış
+      // showNotification çağrılıyordu → typeof guard'ı yutuyor, reddetme
+      // tamamen sessiz kalıyordu).
+      if(typeof showToast === 'function') showToast(def.name + ' topolojide en fazla ' + def.maxInstances + ' tane olabilir.', 'warning');
+      return null;
     }
   }
   
@@ -722,6 +747,8 @@ function createNode(type, x, y, width, height) {
     var el = document.getElementById(_newNode.id);
     if(el) updateNodeHandles(el, _newNode.width, _newNode.height);
   }, 20);
+
+  return node;
 }
 
 // Bir port DOM elemanına bağlantı-oluşturma (tıkla-bağla) dinleyicilerini ekler.
@@ -804,8 +831,11 @@ function veRebuildNodePorts(node) {
 // Master bayrakları (isMasterWheel/isMasterDiff) KOPYALANMAZ — topolojide tekil olmalı.
 function veCloneNodeFrom(src, x, y) {
   if(!src || typeof createNode !== 'function') return null;
-  createNode(src.type, x, y);
-  var n = nodes[nodes.length - 1];
+  // createNode'un DÖNÜŞÜNÜ kullan — nodes[nodes.length-1] DEĞİL. createNode
+  // maxInstances dolduğunda null döner; dizinin sonuna bakmak o durumda
+  // ALAKASIZ bir düğüm seçer ve aşağıdaki n.data ataması o düğümün verisini
+  // sessizce yok eder (Ctrl+D / yapıştır ile tetiklenebilir veri kaybı).
+  var n = createNode(src.type, x, y);
   if(!n) return null;
   n.data = src.data ? JSON.parse(JSON.stringify(src.data)) : {};
   if(src.customName) n.customName = src.customName;

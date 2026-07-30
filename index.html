@@ -7,11 +7,17 @@
        ile gelirdi; bu satır kullanıcının temasını (ör. Carbon) anında geçerli kılar. -->
   <script>try{var _mfT=localStorage.getItem('mf-theme');if(_mfT)document.documentElement.setAttribute('data-theme',_mfT);}catch(e){}</script>
   <title>MFSim — Araç Performans Simülasyonu</title>
-  <!-- Leaflet CSS - harita stilleri (kucuk, kalsin) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- Leaflet JS ve Plotly login sonrasi MFSim Loader tarafindan yuklenir -->
-  <script type="text/x-mfsim-defer" src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" data-mfsim-label="Harita kütüphanesi (Leaflet)..."></script>
-  <script type="text/x-mfsim-defer" src="https://cdn.plot.ly/plotly-gl3d-2.35.2.min.js" data-mfsim-label="Grafik kütüphanesi (Plotly)..."></script>
+  <!-- Leaflet CSS (vendored from unpkg leaflet@1.9.4) -->
+  <link rel="stylesheet" href="vendor/leaflet.css" />
+  <!-- Leaflet JS ve Plotly login sonrasi MFSim Loader tarafindan yuklenir.
+       VENDORLU (three.min.js gibi): CDN'den cekilmiyor. Gerekce — CDN'e
+       ulasilamadiginda (kurumsal ag, cevrimdisi) baglanti hata vermek yerine
+       ASKIDA kalirsa loader'in adimi hic tamamlanmiyordu ve splash ekrani
+       sonsuza takiliyordu; program hic acilmiyordu. Ayrica pwa/sw.js
+       cross-origin opaque yanitlari (status 0) onbellege alamadigi icin bu
+       ikisi cevrimdisi hicbir zaman hazir olmuyordu. -->
+  <script type="text/x-mfsim-defer" src="vendor/leaflet.js" data-mfsim-label="Harita kütüphanesi (Leaflet)..."></script>
+  <script type="text/x-mfsim-defer" src="vendor/plotly-gl3d.min.js" data-mfsim-label="Grafik kütüphanesi (Plotly)..."></script>
   <link rel="stylesheet" href="css/fonts.css" />
   <link rel="stylesheet" href="css/icons.css" />
   <link rel="stylesheet" href="css/styles.css" />
