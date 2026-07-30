@@ -1996,6 +1996,7 @@ function getRoadPropertiesHTML(node) {
   html += '</div>';
   html += '<div class="sw-pkg-body" style="padding:6px;">';
   html += '<canvas id="ve-road-mseg-canvas-' + node.id + '" width="380" height="160" style="width:100%; height:160px; border:1px solid var(--border-color); background:var(--bg-secondary);"></canvas>';
+  html += '<div class="sw-pkg-desc" style="margin-top:4px;">' + (typeof PC_HINT_HTML !== 'undefined' ? PC_HINT_HTML : '') + '</div>';
   html += '</div></div>';
   html += '</div>';
 
@@ -2348,8 +2349,22 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
   var pad = {l: 42, r: 10, t: 12, b: 28};
   var pw = W - pad.l - pad.r, ph = H - pad.t - pad.b;
 
-  function toX(d) { return pad.l + (d / cumDist) * pw; }
+  // ── Zoom penceresi (js/panel-chart.js) ──
+  // X = mesafe [m], Y = irtifa [m]; ikisi de gerçek değer uzayında.
+  var _pcWin = (typeof pcZoomWindow === 'function')
+    ? pcZoomWindow({ minX: 0, maxX: cumDist, minY: yMin, maxY: yMax }, pcZoomState(canvas))
+    : { minX: 0, maxX: cumDist, minY: yMin, maxY: yMax };
+  var xLo = _pcWin.minX, xHi = _pcWin.maxX;
+  yMin = _pcWin.minY; yMax = _pcWin.maxY; yRange = yMax - yMin;
+
+  function toX(d) { return pad.l + (d - xLo) / (xHi - xLo) * pw; }
   function toY(elev) { return pad.t + ph - ((elev - yMin) / yRange) * ph; }
+
+  // Çizim plot alanına kırpılır — yakınlaştırınca eksenlere taşmasın
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(pad.l, pad.t, pw, ph);
+  ctx.clip();
 
   // Arka plan grid
   ctx.strokeStyle = 'rgba(128,128,128,0.15)';
@@ -2421,6 +2436,8 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
     ctx.fill();
   }
 
+  ctx.restore();   // kırpma biter — eksenler ve etiketler plot DIŞINDA
+
   // Eksenler
   ctx.strokeStyle = 'rgba(128,128,128,0.5)';
   ctx.lineWidth = 1;
@@ -2437,12 +2454,49 @@ function _veManualSegDrawProfile(nodeId, segs, targetCanvas) {
     ctx.fillText(val.toFixed(0) + ' m', pad.l - 3, pad.t + (ly / 4) * ph + 3);
   }
 
-  // X ekseni etiketleri (mesafe)
+  // X ekseni etiketleri (mesafe) — görünen aralığı izler
   ctx.textAlign = 'center';
   for(var lx = 0; lx <= 4; lx++) {
-    var dVal = (lx / 4) * cumDist;
+    var dVal = xLo + (lx / 4) * (xHi - xLo);
     var label = dVal >= 1000 ? (dVal / 1000).toFixed(1) + ' km' : dVal.toFixed(0) + ' m';
     ctx.fillText(label, toX(dVal), H - 4);
+  }
+
+  // ── Etkileşim (js/panel-chart.js) ──
+  if(typeof pcAttach === 'function') {
+    canvas._veRedraw = function() { _veManualSegDrawProfile(nodeId, segs, targetCanvas); };
+    var _profPts = points.map(function(pt) { return { x: pt.x, y: pt.y }; });
+    pcAttach(canvas, {
+      uid: (canvas.id || 've-road-mseg') + '-prof',
+      ml: pad.l, mr: pad.r, mt: pad.t, mb: pad.b, pw: pw, ph: ph,
+      minX: xLo, maxX: xHi, minY: yMin, maxY: yMax,
+      xFromPx: function(px) { return xLo + (px - pad.l) / pw * (xHi - xLo); },
+      yFromPx: function(py) { return yMin + (pad.t + ph - py) / ph * (yMax - yMin); },
+      tooltipWidth: 190,
+      tooltipHTML: function(d) {
+        var elev = vePcInterpY(_profPts, d);
+        if(elev === null) return null;
+        // İmlecin hangi segmentte olduğunu bul (yön + eğim bilgisi için)
+        var acc = 0, seg = null;
+        for(var q = 0; q < segs.length; q++) {
+          var sd = parseFloat(segs[q].distance) || 0;
+          if(d >= acc && d <= acc + sd) { seg = segs[q]; break; }
+          acc += sd;
+        }
+        var dLbl = d >= 1000 ? (d / 1000).toFixed(2) + ' km' : d.toFixed(0) + ' m';
+        var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">' + dLbl + '</div>';
+        h += '<div style="padding:1px 0;">İrtifa: <b>' + elev.toFixed(1) + ' m</b></div>';
+        if(seg) {
+          var dirTxt = seg.direction === 'down' ? 'İniş' : seg.direction === 'up' ? 'Çıkış' : 'Düz';
+          var dirCol = seg.direction === 'down' ? '#22c55e' : seg.direction === 'up' ? '#ef4444' : '#3b82f6';
+          h += '<div style="padding:1px 0;">Segment: <span style="color:' + dirCol + '; font-weight:600;">' + dirTxt + '</span>';
+          if(seg.slope !== undefined && seg.slope !== '') h += ' <span style="color:var(--text-muted);">(%' + seg.slope + ')</span>';
+          h += '</div>';
+        }
+        return h;
+      }
+    });
+    pcDrawHint(ctx, canvas, pad.l, pad.t, pw, true);
   }
 }
 
