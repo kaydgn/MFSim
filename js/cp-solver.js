@@ -23,7 +23,14 @@ function getSolverPropertiesHTML(node) {
   // İKİ SÜTUN: SOL = çözüm kümesi + yöntem/tolerans (girdi), SAĞ = referans + zincir + hesapla
   html += '<div class="ve-cp-grid"><div class="ve-cp-col ve-cp-col--in">';
   // ===== ÇÖZÜM KÜMESİ =====
-  var perfAnalysis = d.performanceAnalysis || false;
+  // VARSAYILAN AÇIK. Burası `|| false` yazıyordu, yani tanımsız değeri KAPALI
+  // sayıyordu; oysa tüketiciler açık sayıyor (sensors.js swGetActiveSolverTabs
+  // ve solver-pro.js: `performanceAnalysis !== false`). Sonuç: taze çözücüde
+  // kutu boş çiziliyor, kullanıcı panele dokunduğu anda onchange `false`
+  // yazıyor ve Performans çözüm kümesi KAPANIYOR. O anda Sensör Sihirbazı
+  // 26 paketin hiçbirini kuramıyor → Sonuçlar ağacında hiç sinyal çıkmıyor.
+  // Tek varsayılan: tanımsız = açık.
+  var perfAnalysis = d.performanceAnalysis !== false;
   html += '<div style="margin-bottom:10px;">';
   html += '<div style="font-size:var(--fs-body); font-weight:600; color:var(--text-heading); margin-bottom:6px;">Çözüm Kümesi</div>';
   html += '<label style="display:flex; align-items:center; gap:8px; padding:7px 10px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-body); color:var(--text-primary);" onmouseenter="this.style.borderColor=\'var(--accent-primary)\'" onmouseleave="this.style.borderColor=\'var(--border-color)\'">';
