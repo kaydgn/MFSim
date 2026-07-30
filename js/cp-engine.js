@@ -159,6 +159,9 @@ function getEnginePropertiesHTML(node) {
   chartHtml += '<span style="color:#4aa3ff;">● Tork [Nm]</span>';
   chartHtml += '<span style="color:#ff6b6b;">● Güç [kW]</span>';
   chartHtml += '</div>';
+  // Etkileşim ipucu GERÇEK METİN olarak (canvas bitmap'indeki ipucu seçilemez,
+  // çevrilemez ve ekran okuyucuya görünmez) — bkz. js/panel-chart.js
+  chartHtml += '<div class="sw-pkg-desc" style="margin-top:4px;">' + (typeof PC_HINT_HTML !== 'undefined' ? PC_HINT_HTML : '') + '</div>';
   chartHtml += '</div></div>';
 
   // ── CHUNK: Eğri Yaklaşımı — sağ sütun ──
@@ -2408,20 +2411,37 @@ function updateVEMotorChart(nodeId) {
   var plotWidth = rect.width - margin.left - margin.right;
   var plotHeight = 200 - margin.top - margin.bottom;
   
-  // X ekseni (RPM)
+  // X ekseni (RPM) — taban aralık
   var allX = torquePoints.concat(powerPoints).map(function(p) { return p.x; });
-  var xMin = Math.min.apply(null, allX);
-  var xMax = Math.max.apply(null, allX);
+  var xMinBase = Math.min.apply(null, allX);
+  var xMaxBase = Math.max.apply(null, allX);
   
-  // Y eksenleri
+  // Y eksenleri — taban aralıklar
   var yMinTorque = 0;
   var yMaxTorque = torquePoints.length > 0 ? Math.max.apply(null, torquePoints.map(function(p) { return p.y; })) * 1.15 : 100;
   var yMinPower = 0;
   var yMaxPower = powerPoints.length > 0 ? Math.max.apply(null, powerPoints.map(function(p) { return p.y; })) * 1.15 : 100;
-  
+
+  // ── Zoom penceresi (js/panel-chart.js) ──
+  // Grafik ÇİFT Y eksenli (tork + güç, farklı ölçekler). Zoom normalize [0,1]
+  // Y üzerinden uygulanır ki iki eğri birbirine göre kaymadan yakınlaşsın.
+  var _pcWin = (typeof pcZoomWindow === 'function')
+    ? pcZoomWindow({ minX: xMinBase, maxX: xMaxBase, minY: 0, maxY: 1 }, pcZoomState(canvas))
+    : { minX: xMinBase, maxX: xMaxBase, minY: 0, maxY: 1 };
+  var xMin = _pcWin.minX, xMax = _pcWin.maxX;
+
+  function _pcYFromNorm(n) { return margin.top + plotHeight - (n - _pcWin.minY) / (_pcWin.maxY - _pcWin.minY) * plotHeight; }
+  function _pcNormTorque(y) { return (y - yMinTorque) / (yMaxTorque - yMinTorque); }
+  function _pcNormPower(y) { return (y - yMinPower) / (yMaxPower - yMinPower); }
+  // Görünen (zoom'lanmış) eksen aralıkları — etiketler bunları izler
+  var visTorqueLo = yMinTorque + _pcWin.minY * (yMaxTorque - yMinTorque);
+  var visTorqueHi = yMinTorque + _pcWin.maxY * (yMaxTorque - yMinTorque);
+  var visPowerLo  = yMinPower  + _pcWin.minY * (yMaxPower  - yMinPower);
+  var visPowerHi  = yMinPower  + _pcWin.maxY * (yMaxPower  - yMinPower);
+
   function xScale(x) { return margin.left + (x - xMin) / (xMax - xMin) * plotWidth; }
-  function yScaleTorque(y) { return margin.top + plotHeight - (y - yMinTorque) / (yMaxTorque - yMinTorque) * plotHeight; }
-  function yScalePower(y) { return margin.top + plotHeight - (y - yMinPower) / (yMaxPower - yMinPower) * plotHeight; }
+  function yScaleTorque(y) { return _pcYFromNorm(_pcNormTorque(y)); }
+  function yScalePower(y) { return _pcYFromNorm(_pcNormPower(y)); }
   
   // Arka plan grid
   ctx.strokeStyle = 'rgba(255,255,255,0.05)';
@@ -2473,7 +2493,7 @@ function updateVEMotorChart(nodeId) {
   ctx.fillStyle = VE_ENG_C.seri1;
   ctx.textAlign = 'right';
   for(var i = 0; i <= 4; i++) {
-    var yVal = yMinTorque + (yMaxTorque - yMinTorque) * i / 4;
+    var yVal = visTorqueLo + (visTorqueHi - visTorqueLo) * i / 4;
     var yPos = yScaleTorque(yVal);
     ctx.fillText(Math.round(yVal), margin.left - 5, yPos + 3);
   }
@@ -2482,11 +2502,17 @@ function updateVEMotorChart(nodeId) {
   ctx.fillStyle = VE_ENG_C.seri2;
   ctx.textAlign = 'left';
   for(var i = 0; i <= 4; i++) {
-    var yVal = yMinPower + (yMaxPower - yMinPower) * i / 4;
+    var yVal = visPowerLo + (visPowerHi - visPowerLo) * i / 4;
     var yPos = yScalePower(yVal);
     ctx.fillText(Math.round(yVal), margin.left + plotWidth + 5, yPos + 3);
   }
   
+  // Eğriler plot alanına kırpılır — yakınlaştırınca eksen bölgesine taşmasın
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(margin.left, margin.top, plotWidth, plotHeight);
+  ctx.clip();
+
   // Tork eğrisi
   if(torquePoints.length >= 2) {
     ctx.strokeStyle = VE_ENG_C.seri1;
@@ -2531,6 +2557,31 @@ function updateVEMotorChart(nodeId) {
     });
   }
   
+  ctx.restore();   // kırpma biter
+
+  // ── Etkileşim (js/panel-chart.js): zoom + pan + crosshair + tooltip ──
+  if(typeof pcAttach === 'function') {
+    pcAttach(canvas, {
+      uid: 've-motor-chart-' + nodeId,
+      ml: margin.left, mr: margin.right, mt: margin.top, mb: margin.bottom,
+      pw: plotWidth, ph: plotHeight,
+      minX: xMin, maxX: xMax, minY: _pcWin.minY, maxY: _pcWin.maxY,
+      xFromPx: function(px) { return xMin + (px - margin.left) / plotWidth * (xMax - xMin); },
+      yFromPx: function(py) { return _pcWin.minY + (margin.top + plotHeight - py) / plotHeight * (_pcWin.maxY - _pcWin.minY); },
+      tooltipWidth: 190,
+      tooltipHTML: function(rpm) {
+        var t = vePcInterpY(torquePoints, rpm);
+        var pw2 = vePcInterpY(powerPoints, rpm);
+        if(t === null && pw2 === null) return null;
+        var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">' + Math.round(rpm) + ' rpm</div>';
+        if(t !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:' + VE_ENG_C.seri1 + ';border-radius:1px;"></span><span style="color:' + VE_ENG_C.seri1 + '; font-weight:600; min-width:42px;">Tork</span><span>' + t.toFixed(0) + ' N·m</span></div>';
+        if(pw2 !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:' + VE_ENG_C.seri2 + ';border-radius:1px;"></span><span style="color:' + VE_ENG_C.seri2 + '; font-weight:600; min-width:42px;">Güç</span><span>' + pw2.toFixed(1) + ' kW</span></div>';
+        return h;
+      }
+    });
+    pcDrawHint(ctx, canvas, margin.left, margin.top, plotWidth, true);
+  }
+
   // Polinom fit bilgisi
   updateVEMotorFitEquation(nodeId, torquePoints, powerPoints);
   

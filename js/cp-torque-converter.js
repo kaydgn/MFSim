@@ -142,6 +142,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-pkg-body">';
     html += '<div style="position:relative; background:var(--bg-input); border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-tc-chart-tau-' + node.id + '" style="width:100%; height:200px;"></canvas>';
+    html += '<div class="sw-pkg-desc" style="margin-top:4px;">' + (typeof PC_HINT_HTML !== 'undefined' ? PC_HINT_HTML : '') + '</div>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
     html += '<span style="color:#4aa3ff;">● τ Tork Oranı</span>';
@@ -156,6 +157,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-pkg-body">';
     html += '<div style="position:relative; background:var(--bg-input); border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-tc-chart-kpump-' + node.id + '" style="width:100%; height:180px;"></canvas>';
+    html += '<div class="sw-pkg-desc" style="margin-top:4px;">' + (typeof PC_HINT_HTML !== 'undefined' ? PC_HINT_HTML : '') + '</div>';
     html += '</div>';
     html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
     html += '<span style="color:#a78bfa;">● K<sub>pump</sub> [rpm/√Nm]</span>';
@@ -889,14 +891,21 @@ function drawVETCTauChart(nodeId, pts) {
     return;
   }
   
-  // Eksen aralıkları
-  var xMin = 0, xMax = 1.0;
+  // Eksen aralıkları — taban
+  var xMinBase = 0, xMaxBase = 1.0;
   var tauMax = Math.max.apply(null, pts.map(function(p) { return p.tau; })) * 1.15;
   var etaMax = Math.min(110, Math.max.apply(null, pts.map(function(p) { return p.eta; })) * 1.15);
-  
+
+  // Zoom penceresi (js/panel-chart.js) — çift Y ekseni → Y normalize [0,1]
+  var _pcWin = (typeof pcZoomWindow === 'function')
+    ? pcZoomWindow({ minX: xMinBase, maxX: xMaxBase, minY: 0, maxY: 1 }, pcZoomState(canvas))
+    : { minX: xMinBase, maxX: xMaxBase, minY: 0, maxY: 1 };
+  var xMin = _pcWin.minX, xMax = _pcWin.maxX;
+
+  function _yN(n) { return margin.top + ph - (n - _pcWin.minY) / (_pcWin.maxY - _pcWin.minY) * ph; }
   function xS(x) { return margin.left + (x - xMin) / (xMax - xMin) * pw; }
-  function yT(y) { return margin.top + ph - y / tauMax * ph; }
-  function yE(y) { return margin.top + ph - y / etaMax * ph; }
+  function yT(y) { return _yN(y / tauMax); }
+  function yE(y) { return _yN(y / etaMax); }
   
   // Grid
   ctx.strokeStyle = 'rgba(255,255,255,0.05)'; ctx.lineWidth = 1;
@@ -926,19 +935,22 @@ function drawVETCTauChart(nodeId, pts) {
   // X etiketleri
   ctx.fillStyle = '#888'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
   for(var i = 0; i <= 5; i++) {
-    var xv = i * 0.2;
-    ctx.fillText(xv.toFixed(1), xS(xv), margin.top + ph + 15);
+    var xv = xMin + (xMax - xMin) * i / 5;
+    ctx.fillText(xv.toFixed(2), xS(xv), margin.top + ph + 15);
   }
   ctx.fillText('SR [-]', margin.left + pw / 2, 200 - 5);
   
   // Sol Y etiketleri (τ)
   ctx.fillStyle = '#4aa3ff'; ctx.textAlign = 'right';
-  for(var i = 0; i <= 4; i++) { var yv = tauMax * i / 4; ctx.fillText(yv.toFixed(1), margin.left - 5, yT(yv) + 3); }
+  for(var i = 0; i <= 4; i++) { var yv = tauMax * (_pcWin.minY + (_pcWin.maxY - _pcWin.minY) * i / 4); ctx.fillText(yv.toFixed(1), margin.left - 5, yT(yv) + 3); }
   
   // Sağ Y etiketleri (η)
   ctx.fillStyle = '#ff6b6b'; ctx.textAlign = 'left';
-  for(var i = 0; i <= 4; i++) { var yv = etaMax * i / 4; ctx.fillText(Math.round(yv), margin.left + pw + 5, yE(yv) + 3); }
+  for(var i = 0; i <= 4; i++) { var yv = etaMax * (_pcWin.minY + (_pcWin.maxY - _pcWin.minY) * i / 4); ctx.fillText(Math.round(yv), margin.left + pw + 5, yE(yv) + 3); }
   
+  // Eğriler plot alanına kırpılır (yakınlaştırma taşmasın)
+  ctx.save(); ctx.beginPath(); ctx.rect(margin.left, margin.top, pw, ph); ctx.clip();
+
   // τ eğrisi
   ctx.strokeStyle = '#4aa3ff'; ctx.lineWidth = 2.5; ctx.beginPath();
   pts.forEach(function(p, i) { var x = xS(p.sr), y = yT(p.tau); if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
@@ -952,6 +964,29 @@ function drawVETCTauChart(nodeId, pts) {
   ctx.stroke();
   ctx.fillStyle = '#ff6b6b';
   pts.forEach(function(p) { ctx.beginPath(); ctx.arc(xS(p.sr), yE(p.eta), 3.5, 0, Math.PI * 2); ctx.fill(); });
+  ctx.restore();   // kırpma biter
+
+  // ── Etkileşim (js/panel-chart.js) ──
+  if(typeof pcAttach === 'function') {
+    var _tauPts = pts.map(function(p) { return { x: p.sr, y: p.tau }; });
+    var _etaPts = pts.map(function(p) { return { x: p.sr, y: p.eta }; });
+    pcAttach(canvas, {
+      uid: 've-tc-chart-tau-' + nodeId,
+      ml: margin.left, mr: margin.right, mt: margin.top, mb: margin.bottom, pw: pw, ph: ph,
+      minX: xMin, maxX: xMax, minY: _pcWin.minY, maxY: _pcWin.maxY,
+      xFromPx: function(px) { return xMin + (px - margin.left) / pw * (xMax - xMin); },
+      tooltipWidth: 180,
+      tooltipHTML: function(sr) {
+        var tv = vePcInterpY(_tauPts, sr), ev = vePcInterpY(_etaPts, sr);
+        if(tv === null && ev === null) return null;
+        var h = '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">SR ' + sr.toFixed(3) + '</div>';
+        if(tv !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:#4aa3ff;border-radius:1px;"></span><span style="color:#4aa3ff; font-weight:600; min-width:26px;">&tau;</span><span>' + tv.toFixed(3) + '</span></div>';
+        if(ev !== null) h += '<div style="display:flex; gap:6px; align-items:center; padding:1px 0;"><span style="width:14px;height:3px;background:#ff6b6b;border-radius:1px;"></span><span style="color:#ff6b6b; font-weight:600; min-width:26px;">&eta;</span><span>' + ev.toFixed(1) + ' %</span></div>';
+        return h;
+      }
+    });
+    pcDrawHint(ctx, canvas, margin.left, margin.top, pw, true);
+  }
 }
 
 function drawVETCKpumpChart(nodeId, pts) {
@@ -974,10 +1009,16 @@ function drawVETCKpumpChart(nodeId, pts) {
     return;
   }
   
-  var xMin = 0, xMax = 1.0;
-  var kMin = Math.min.apply(null, pts.map(function(p) { return p.kpump; })) * 0.9;
-  var kMax = Math.max.apply(null, pts.map(function(p) { return p.kpump; })) * 1.1;
-  
+  var xMinBase = 0, xMaxBase = 1.0;
+  var kMinBase = Math.min.apply(null, pts.map(function(p) { return p.kpump; })) * 0.9;
+  var kMaxBase = Math.max.apply(null, pts.map(function(p) { return p.kpump; })) * 1.1;
+
+  // Zoom penceresi (js/panel-chart.js) — tek Y ekseni, gerçek değer uzayı
+  var _pcWin = (typeof pcZoomWindow === 'function')
+    ? pcZoomWindow({ minX: xMinBase, maxX: xMaxBase, minY: kMinBase, maxY: kMaxBase }, pcZoomState(canvas))
+    : { minX: xMinBase, maxX: xMaxBase, minY: kMinBase, maxY: kMaxBase };
+  var xMin = _pcWin.minX, xMax = _pcWin.maxX, kMin = _pcWin.minY, kMax = _pcWin.maxY;
+
   function xS(x) { return margin.left + (x - xMin) / (xMax - xMin) * pw; }
   function yS(y) { return margin.top + ph - (y - kMin) / (kMax - kMin) * ph; }
   
@@ -998,8 +1039,8 @@ function drawVETCKpumpChart(nodeId, pts) {
   // X etiketleri
   ctx.fillStyle = '#888'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
   for(var i = 0; i <= 5; i++) {
-    var xv = i * 0.2;
-    ctx.fillText(xv.toFixed(1), xS(xv), margin.top + ph + 15);
+    var xv = xMin + (xMax - xMin) * i / 5;
+    ctx.fillText(xv.toFixed(2), xS(xv), margin.top + ph + 15);
   }
   ctx.fillText('SR [-]', margin.left + pw / 2, 180 - 5);
   
@@ -1010,12 +1051,36 @@ function drawVETCKpumpChart(nodeId, pts) {
     ctx.fillText(yv.toFixed(1), margin.left - 5, yS(yv) + 3);
   }
   
+  // Eğri plot alanına kırpılır
+  ctx.save(); ctx.beginPath(); ctx.rect(margin.left, margin.top, pw, ph); ctx.clip();
+
   // K_pump eğrisi
   ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 2.5; ctx.beginPath();
   pts.forEach(function(p, i) { var x = xS(p.sr), y = yS(p.kpump); if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); });
   ctx.stroke();
   ctx.fillStyle = '#a78bfa';
   pts.forEach(function(p) { ctx.beginPath(); ctx.arc(xS(p.sr), yS(p.kpump), 3.5, 0, Math.PI * 2); ctx.fill(); });
+  ctx.restore();
+
+  // ── Etkileşim (js/panel-chart.js) ──
+  if(typeof pcAttach === 'function') {
+    var _kPts = pts.map(function(p) { return { x: p.sr, y: p.kpump }; });
+    pcAttach(canvas, {
+      uid: 've-tc-chart-kpump-' + nodeId,
+      ml: margin.left, mr: margin.right, mt: margin.top, mb: margin.bottom, pw: pw, ph: ph,
+      minX: xMin, maxX: xMax, minY: kMin, maxY: kMax,
+      xFromPx: function(px) { return xMin + (px - margin.left) / pw * (xMax - xMin); },
+      yFromPx: function(py) { return kMin + (margin.top + ph - py) / ph * (kMax - kMin); },
+      tooltipWidth: 170,
+      tooltipHTML: function(sr) {
+        var kv = vePcInterpY(_kPts, sr);
+        if(kv === null) return null;
+        return '<div style="font-weight:700; color:var(--text-heading); margin-bottom:4px; padding-bottom:3px; border-bottom:1px solid var(--border-color);">SR ' + sr.toFixed(3) + '</div>' +
+               '<div style="display:flex; gap:6px; align-items:center;"><span style="width:14px;height:3px;background:#a78bfa;border-radius:1px;"></span><span style="color:#a78bfa; font-weight:600;">K<sub>pump</sub></span><span>' + kv.toFixed(2) + '</span></div>';
+      }
+    });
+    pcDrawHint(ctx, canvas, margin.left, margin.top, pw, true);
+  }
 }
 
 // TC tablo resize
