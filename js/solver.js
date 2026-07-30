@@ -184,12 +184,34 @@ function veCollectValidation() {
     if(!hasDiff) addWarn('Diferansiyel bileşeni eksik — varsayılan oran kullanılacak');
   }
 
-  // Bağlantı kontrolü — bağımsız çalışan tipler hariç
-  var standaloneTypes = ['vehicle','road','sensor','solver','scenario','coast-down','parametric','terminator'];
+  // ── Bağlantı kontrolü ────────────────────────────────────────────────
+  // Bir düğüm YALNIZCA bağlanabiliyorsa "bağlı değil" olabilir. Buradaki
+  // muafiyet eskiden ELLE TUTULAN bir kopya listeydi ve components.js'teki
+  // VE_STANDALONE_TYPES ile SENKRON DEĞİLDİ: ec-matching, sensor-wizard,
+  // obstacle-crossing, engine-gearbox-matching ve shift-controller kopyada
+  // yoktu. Sonuç: kullanıcı "Motor-Konvertör Eşleştirme" bileşenini eklediğinde
+  // "bağlı değil" diye BLOKLAYAN bir hata alıyordu.
+  //
+  // Artık iki muafiyet var ve ikisi de TÜRETİLMİŞ:
+  //   1. PORTU OLMAYAN düğüm (inputs=0 ve outputs=0) hiç bağlanamaz — modül
+  //      kapsayıcıları (arac-performans, mount-analysis), çözücü, araç, yol,
+  //      senaryo, tüm mnt-* araç blokları buraya girer. Bu kural tanımdan
+  //      gelir, liste tutmayı gerektirmez.
+  //   2. VE_STANDALONE_TYPES — portu OLAN ama bağlantısı zorunlu OLMAYAN
+  //      tipler (sensor, terminator, ec-matching, engine-gearbox-matching).
+  //      Tek kaynak: components.js.
+  var standaloneTypes = (typeof VE_STANDALONE_TYPES !== 'undefined') ? VE_STANDALONE_TYPES : [];
+  function veCanConnect(type) {
+    var def = (typeof componentDefs !== 'undefined') ? componentDefs[type] : null;
+    if(!def) return true;                        // tanım yoksa iddia etme
+    return (def.inputs || 0) > 0 || (def.outputs || 0) > 0;
+  }
   var connectedNodes = {};
   connections.forEach(function(c) { connectedNodes[c.from] = true; connectedNodes[c.to] = true; });
   var disconnected = nodes.filter(function(n) {
-    return standaloneTypes.indexOf(n.type) === -1 && !connectedNodes[n.id];
+    if(!veCanConnect(n.type)) return false;              // portu yok → bağlanamaz
+    if(standaloneTypes.indexOf(n.type) > -1) return false; // bağlantısı zorunlu değil
+    return !connectedNodes[n.id];
   });
   addItem(disconnected.length === 0, 'Güç zinciri bileşenleri bağlı',
     disconnected.length > 0 ? disconnected.length + ' bileşen bağlı değil' : 'OK',
@@ -225,16 +247,40 @@ function veCollectValidation() {
 
   if(hasVehicle) {
     var vehicleNode = nodes.find(function(n) { return n.type === 'vehicle'; });
-    var hasMass = vehicleNode && vehicleNode.data && vehicleNode.data.mass > 0;
-    addItem(hasMass, 'Araç ağırlığı', hasMass ? vehicleNode.data.mass + ' kg' : 'girilmemiş',
+    // Araç panelindeki "Toplam Kütle (GVW)" alanı data.ftGVW yazar
+    // (component-extras.js onVEFTVehicleParamChange) ve çözücü de ftGVW okur
+    // (simulation-engine.js, ft-performance.js, ft-obstacle.js).
+    // BURASI data.mass OKUYORDU — hiçbir panelin YAZMADIĞI bir anahtar. Sonuç:
+    // kullanıcı kütleyi girse bile "girilmemiş" deyip hesaplamayı BLOKLUYORDU.
+    // Eski projelerde başka bir ad kullanılmış olabileceği için mass da kabul
+    // edilir; asıl kaynak ftGVW.
+    var vd = (vehicleNode && vehicleNode.data) ? vehicleNode.data : {};
+    var kutle = parseFloat(vd.ftGVW);
+    if(!(kutle > 0)) kutle = parseFloat(vd.mass);
+    var hasMass = kutle > 0;
+    addItem(hasMass, 'Araç ağırlığı', hasMass ? kutle + ' kg' : 'girilmemiş',
       vehicleNode ? vehicleNode.id : null);
   }
 
   if(hasRoad) {
     var roadNode = nodes.find(function(n) { return n.type === 'road'; });
-    var hasGrade = roadNode && roadNode.data && !isNaN(roadNode.data.grade) && roadNode.data.grade !== '';
-    addItem(hasGrade, 'Arazi eğimi', hasGrade ? '%' + roadNode.data.grade : 'girilmemiş',
-      roadNode ? roadNode.id : null);
+    var rdd = (roadNode && roadNode.data) ? roadNode.data : {};
+    // Burada BLOKLAYAN bir "Arazi eğimi — girilmemiş" hatası vardı ve
+    // SAĞLANAMAZDI: yol panelinde manuel eğim girişi YOK (yalnız eğim modu ve
+    // segment tablosu var; "Ort. Eğim" salt-okunur bir gösterge). data.grade'i
+    // hiçbir panel yazmıyor, çözücü de yokken 0 kabul ediyor. Üstelik hemen
+    // yukarıdaki bilgi satırı eğimin opsiyonel olduğunu söylüyordu — aynı
+    // panelde iki çelişik ifade.
+    // Artık eğimin NEREDEN geldiğini söyleyen bir bilgi satırı:
+    var segMod = rdd.egimMode === 'segment' && rdd.routeSegments && rdd.routeSegments.length > 0;
+    var elGrade = parseFloat(rdd.grade);
+    if(segMod) {
+      addInfo('Eğim segment tablosundan alınacak (' + rdd.routeSegments.length + ' segment)');
+    } else if(elGrade > 0 || elGrade < 0) {
+      addInfo('Sabit eğim: %' + elGrade);
+    } else {
+      addInfo('Eğim girilmedi — düz yol (%0) kabul edilecek');
+    }
   }
 
   return {
