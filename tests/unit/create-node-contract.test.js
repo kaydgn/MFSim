@@ -41,6 +41,9 @@ global.nodes = [];
 global.connections = [];
 global.compCounter = 0;
 global.selectedNodes = [];
+// createNode düğüm sınıfını buna göre veriyor (js/components.js). Gerçek
+// listeden bağımsız olsun diye test tipleri kasten dışında bırakıldı.
+global.VE_STANDALONE_TYPES = ['vehicle', 'road', 'sensor', 'solver'];
 
 eval(loadSource('ui-core.js'));
 
