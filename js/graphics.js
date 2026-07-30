@@ -353,23 +353,23 @@ function veShowYAxisLockPopup(slotIdx, axIdx, color, unit, e) {
 
   var popup = document.createElement('div');
   popup.id = 've-yaxis-popup';
-  popup.style.cssText = 'position:fixed; z-index:10000; background:var(--bg-primary,#fff); border:1.5px solid ' + color + '; border-radius:6px; padding:8px 10px; box-shadow:0 4px 16px rgba(0,0,0,0.18); font-size:0.72rem; display:flex; flex-direction:column; gap:6px;';
+  popup.style.cssText = 'position:fixed; z-index:10000; background:var(--bg-primary,#fff); border:1.5px solid ' + color + '; border-radius:6px; padding:8px 10px; box-shadow:0 4px 16px rgba(0,0,0,0.18); font-size:var(--fs-body); display:flex; flex-direction:column; gap:6px;';
   popup.style.left = e.clientX + 'px';
   popup.style.top = e.clientY + 'px';
 
   popup.innerHTML =
-    '<div style="font-weight:700; color:' + color + '; font-size:0.7rem; text-align:center; border-bottom:1px solid ' + color + '30; padding-bottom:4px;">[' + unit + '] Eksen Aralığı</div>' +
+    '<div style="font-weight:700; color:' + color + '; font-size:var(--fs-body); text-align:center; border-bottom:1px solid ' + color + '30; padding-bottom:4px;">[' + unit + '] Eksen Aralığı</div>' +
     '<div style="display:flex; align-items:center; gap:4px;">' +
-      '<label style="font-size:0.65rem; opacity:0.8; width:28px; color:' + color + '; font-weight:600;">Min</label>' +
-      '<input type="number" id="ve-yp-min" value="' + minVal + '" step="any" placeholder="Oto" style="width:70px; padding:2px 4px; font-size:0.68rem; border:1px solid ' + color + '60; border-radius:3px; background:var(--bg-input,#fff); color:var(--text-primary,#333); text-align:center; outline-color:' + color + ';">' +
+      '<label style="font-size:var(--fs-tiny); opacity:0.8; width:28px; color:' + color + '; font-weight:600;">Min</label>' +
+      '<input type="number" id="ve-yp-min" value="' + minVal + '" step="any" placeholder="Oto" style="width:70px; padding:2px 4px; font-size:var(--fs-body); border:1px solid ' + color + '60; border-radius:3px; background:var(--bg-input,#fff); color:var(--text-primary,#333); text-align:center; outline-color:' + color + ';">' +
     '</div>' +
     '<div style="display:flex; align-items:center; gap:4px;">' +
-      '<label style="font-size:0.65rem; opacity:0.8; width:28px; color:' + color + '; font-weight:600;">Max</label>' +
-      '<input type="number" id="ve-yp-max" value="' + maxVal + '" step="any" placeholder="Oto" style="width:70px; padding:2px 4px; font-size:0.68rem; border:1px solid ' + color + '60; border-radius:3px; background:var(--bg-input,#fff); color:var(--text-primary,#333); text-align:center; outline-color:' + color + ';">' +
+      '<label style="font-size:var(--fs-tiny); opacity:0.8; width:28px; color:' + color + '; font-weight:600;">Max</label>' +
+      '<input type="number" id="ve-yp-max" value="' + maxVal + '" step="any" placeholder="Oto" style="width:70px; padding:2px 4px; font-size:var(--fs-body); border:1px solid ' + color + '60; border-radius:3px; background:var(--bg-input,#fff); color:var(--text-primary,#333); text-align:center; outline-color:' + color + ';">' +
     '</div>' +
     '<div style="display:flex; gap:4px; justify-content:center;">' +
-      '<button id="ve-yp-apply" style="padding:2px 10px; font-size:0.65rem; background:' + color + '; color:#fff; border:none; border-radius:3px; cursor:pointer; transition:opacity 0.15s;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">Uygula</button>' +
-      '<button id="ve-yp-auto" style="padding:2px 10px; font-size:0.65rem; background:transparent; color:' + color + '; border:1px solid ' + color + '60; border-radius:3px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background=\'' + color + '10\'" onmouseout="this.style.background=\'transparent\'">↺ Oto</button>' +
+      '<button id="ve-yp-apply" style="padding:2px 10px; font-size:var(--fs-tiny); background:' + color + '; color:#fff; border:none; border-radius:3px; cursor:pointer; transition:opacity 0.15s;" onmouseover="this.style.opacity=\'0.8\'" onmouseout="this.style.opacity=\'1\'">Uygula</button>' +
+      '<button id="ve-yp-auto" style="padding:2px 10px; font-size:var(--fs-tiny); background:transparent; color:' + color + '; border:1px solid ' + color + '60; border-radius:3px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background=\'' + color + '10\'" onmouseout="this.style.background=\'transparent\'">↺ Oto</button>' +
     '</div>';
 
   document.body.appendChild(popup);
@@ -1442,35 +1442,35 @@ function veShowRaporModal() {
   
   modal.innerHTML = '' +
     '<div style="padding:12px 16px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); display:flex; align-items:center; justify-content:space-between;">' +
-      '<span style="font-size:0.88rem; font-weight:700; color:#e2e8f0; display:flex; align-items:center; gap:8px;"><span class="mf-ico mf-ico-bar-chart"></span> BMC Detaylı Hesap Raporu</span>' +
-      '<button onclick="veCloseRaporModal()" style="width:26px; height:26px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:var(--radius-sm); color:#e2e8f0; cursor:pointer; font-size:0.9rem;">✕</button>' +
+      '<span style="font-size:var(--fs-lg); font-weight:700; color:#e2e8f0; display:flex; align-items:center; gap:8px;"><span class="mf-ico mf-ico-bar-chart"></span> BMC Detaylı Hesap Raporu</span>' +
+      '<button onclick="veCloseRaporModal()" style="width:26px; height:26px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:var(--radius-sm); color:#e2e8f0; cursor:pointer; font-size:var(--fs-lg);">✕</button>' +
     '</div>' +
     '<div style="padding:16px;">' +
       '<div style="text-align:center; margin-bottom:14px; padding:8px; background:linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%); border-radius:var(--radius-sm); border:1px solid var(--border-color);">' +
-        '<div style="font-size:0.85rem; font-weight:700; color:#63b3ed; letter-spacing:2px;">BMC</div>' +
-        '<div style="font-size:0.6rem; color:var(--text-muted); margin-top:2px;">Güç Grubu Müdürlüğü — Görsel Editör</div>' +
+        '<div style="font-size:var(--fs-lg); font-weight:700; color:#63b3ed; letter-spacing:2px;">BMC</div>' +
+        '<div style="font-size:var(--fs-tiny); color:var(--text-muted); margin-top:2px;">Güç Grubu Müdürlüğü — Görsel Editör</div>' +
       '</div>' +
       '<div style="margin-bottom:12px;">' +
-        '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Raporu Hazırlayan:</label>' +
-        '<input type="text" id="ve-rapor-hazirlayan" value="Kerem Aydoğan" placeholder="İsim Soyisim" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
+        '<label style="color:var(--text-muted); font-size:var(--fs-body); display:block; margin-bottom:3px;">Raporu Hazırlayan:</label>' +
+        '<input type="text" id="ve-rapor-hazirlayan" value="Kerem Aydoğan" placeholder="İsim Soyisim" style="width:100%; padding:6px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
       '</div>' +
       '<hr style="border:none; border-top:1px solid var(--border-color); margin:12px 0;">' +
       '<div id="ve-rapor-zaman-wrap" style="margin-bottom:12px; display:none;">' +
-        '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Zaman Adımı (Motor Freni CSV):</label>' +
-        '<select id="ve-rapor-zaman-adimi" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
+        '<label style="color:var(--text-muted); font-size:var(--fs-body); display:block; margin-bottom:3px;">Zaman Adımı (Motor Freni CSV):</label>' +
+        '<select id="ve-rapor-zaman-adimi" style="width:100%; padding:6px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
           '<option value="0.5" selected>0.5 saniye</option>' +
           '<option value="1.0">1.0 saniye</option>' +
         '</select>' +
       '</div>' +
       '<div style="margin-bottom:14px;">' +
-        '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Rapor Formatı:</label>' +
-        '<select id="ve-rapor-format" onchange="var w=document.getElementById(\'ve-rapor-zaman-wrap\');if(w)w.style.display=this.value===\'csv\'?\'block\':\'none\';" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
+        '<label style="color:var(--text-muted); font-size:var(--fs-body); display:block; margin-bottom:3px;">Rapor Formatı:</label>' +
+        '<select id="ve-rapor-format" onchange="var w=document.getElementById(\'ve-rapor-zaman-wrap\');if(w)w.style.display=this.value===\'csv\'?\'block\':\'none\';" style="width:100%; padding:6px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">' +
           (veActiveModule === 'full-throttle' ? '<option value="txt" selected>TXT (Metin Dosyası — Tam Rapor)</option>' : '') +
           '<option value="csv"' + (veActiveModule !== 'full-throttle' ? ' selected' : '') + '>CSV (Excel Uyumlu — Sadece Veri)</option>' +
         '</select>' +
       '</div>' +
-      '<button onclick="veGenerateReport()" style="width:100%; padding:10px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:var(--radius-sm); font-size:0.82rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;"><span class="mf-ico mf-ico-download"></span> BMC Raporu Oluştur ve İndir</button>' +
-      '<div style="text-align:center; color:var(--text-muted); font-size:0.6rem; margin-top:8px;">Rapor BMC kurumsal formatında oluşturulacaktır</div>' +
+      '<button onclick="veGenerateReport()" style="width:100%; padding:10px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:var(--radius-sm); font-size:var(--fs-lg); font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;"><span class="mf-ico mf-ico-download"></span> BMC Raporu Oluştur ve İndir</button>' +
+      '<div style="text-align:center; color:var(--text-muted); font-size:var(--fs-tiny); margin-top:8px;">Rapor BMC kurumsal formatında oluşturulacaktır</div>' +
     '</div>';
   
   overlay.appendChild(modal);
@@ -6406,7 +6406,7 @@ function veRender3DScatter(slotIdx) {
   // Plotly yüklü mü kontrol et
   if(typeof Plotly === 'undefined') {
     if(placeholder) {
-      placeholder.innerHTML = '<div style="font-size:1.5rem; margin-bottom:6px;">⚠</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
+      placeholder.innerHTML = '<div style="font-size:var(--fs-h1); margin-bottom:6px;">⚠</div>Plotly.js yüklenemedi.<br>İnternet bağlantınızı kontrol edin.';
       placeholder.style.display = '';
     }
     return;

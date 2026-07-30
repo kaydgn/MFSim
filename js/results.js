@@ -211,7 +211,7 @@ function veUpdateResultsTree() {
     html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensorCount > 0 ? '▶' : ' ') + '</span>';
     html += '<span class="icon">' + tabIcon + '</span>';
     html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--accent-primary);' : '') + '">' + tabLabel + '</span>';
-    if(totalSensorCount > 0) html += ' <span style="font-size:0.6rem; color:var(--text-muted); margin-left:auto;">' + totalSensorCount + ' sensör</span>';
+    if(totalSensorCount > 0) html += ' <span style="font-size:var(--fs-tiny); color:var(--text-muted); margin-left:auto;">' + totalSensorCount + ' sensör</span>';
     html += '</div>';
 
     if(totalSensorCount > 0) {
@@ -230,14 +230,14 @@ function veUpdateResultsTree() {
           // Sensör expandable — sinyalleri alt öğe olarak göster
           html += '<div class="ve-tree-item">';
           html += '<div class="ve-tree-sensor" style="padding-left:' + indentPx + 'px;">';
-          html += '<span class="arrow" onclick="event.stopPropagation();veToggleTree(this.closest(\'.ve-tree-item\').querySelector(\'.ve-tree-sensor\'))" style="font-size:0.55rem; width:12px; cursor:pointer; color:var(--text-muted);">▶</span>';
+          html += '<span class="arrow" onclick="event.stopPropagation();veToggleTree(this.closest(\'.ve-tree-item\').querySelector(\'.ve-tree-sensor\'))" style="font-size:var(--fs-micro); width:12px; cursor:pointer; color:var(--text-muted);">▶</span>';
           html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + sensorLabel;
-          html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + signals.length + ' sinyal</span>';
+          html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + signals.length + ' sinyal</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
           signals.forEach(function(sig) {
             html += '<div class="ve-tree-signal" style="padding-left:' + (indentPx + 16) + 'px;" onmousedown="veStartSignalDrag(event,\'' + prefix + sn.id + '\',\'' + sig.id + '\')" title="' + sig.name + ' (' + sig.unit + ') — Sürükle">';
-            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sig.name + ' <span style="font-size:0.55rem; color:var(--text-muted);">(' + sig.unit + ')</span>';
+            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sig.name + ' <span style="font-size:var(--fs-micro); color:var(--text-muted);">(' + sig.unit + ')</span>';
             html += '</div>';
           });
           // Tümünü sürükle seçeneği
@@ -279,16 +279,16 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
           html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensors > 0 ? '▶' : ' ') + '</span>';
           html += '<span class="icon"><span class="mf-ico mf-ico-settings"></span></span><span>' + escapeHTML(name) + '</span>';
-          html += ' <span style="font-size:0.6rem; color:var(--accent-primary); margin-left:auto; opacity:0.7;">' + totalSensors + '</span>';
+          html += ' <span style="font-size:var(--fs-tiny); color:var(--accent-primary); margin-left:auto; opacity:0.7;">' + totalSensors + '</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
           
           if(inputSensors.length > 0) {
-            html += '<div style="padding:2px 0 2px 44px; font-size:0.65rem; color:var(--text-muted); font-weight:600;">← Giriş</div>';
+            html += '<div style="padding:2px 0 2px 44px; font-size:var(--fs-tiny); color:var(--text-muted); font-weight:600;">← Giriş</div>';
             inputSensors.forEach(function(sn) { renderSensor(sn, 48); });
           }
           if(outputSensors.length > 0) {
-            html += '<div style="padding:2px 0 2px 44px; font-size:0.65rem; color:var(--text-muted); font-weight:600;">→ Çıkış</div>';
+            html += '<div style="padding:2px 0 2px 44px; font-size:var(--fs-tiny); color:var(--text-muted); font-weight:600;">→ Çıkış</div>';
             outputSensors.forEach(function(sn) { renderSensor(sn, 48); });
           }
           html += '</div></div>';
@@ -312,7 +312,7 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
           html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
           html += '<span class="icon">' + icon + '</span><span>' + escapeHTML(name) + '</span>';
-          html += ' <span style="font-size:0.6rem; color:var(--accent-warning); margin-left:auto; opacity:0.7;">' + directSensors.length + '</span>';
+          html += ' <span style="font-size:var(--fs-tiny); color:var(--accent-warning); margin-left:auto; opacity:0.7;">' + directSensors.length + '</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
           directSensors.forEach(function(sn) { renderSensor(sn, 48); });
@@ -325,7 +325,7 @@ function veUpdateResultsTree() {
         return n.type === 'sensor' && (!n.data || (!n.data.attachedConnection && !n.data.attachedComponent));
       });
       if(unbound.length > 0) {
-        html += '<div style="padding:4px 0 2px 32px; font-size:0.65rem; color:var(--text-muted); font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">Bağlı olmayan</div>';
+        html += '<div style="padding:4px 0 2px 32px; font-size:var(--fs-tiny); color:var(--text-muted); font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">Bağlı olmayan</div>';
         unbound.forEach(function(sn) {
           html += '<div class="ve-tree-sensor" style="padding-left:36px; opacity:0.5;">';
           html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + escapeHTML(sn.customName || 'Sensör') + '</div>';
@@ -358,7 +358,7 @@ function veUpdateResultsTree() {
           html += '<div class="ve-tree-row" style="padding-left:32px;">';
           html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
           html += '<span class="icon">' + compIcon + '</span><span>' + compName + '</span>';
-          html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + sensors.length + ' sinyal</span>';
+          html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + sensors.length + ' sinyal</span>';
           html += '</div>';
           html += '<div class="ve-tree-children">';
 
@@ -372,7 +372,7 @@ function veUpdateResultsTree() {
             var wizSensorId = '~' + compType;
 
             html += '<div class="ve-tree-signal" style="padding-left:48px;" onmousedown="veStartSignalDrag(event,\'' + wizSensorId + '\',\'' + ws.signal + '\')" title="' + sigName + ' (' + sigUnit + ') — Sürükle">';
-            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sigName + ' <span style="font-size:0.55rem; color:var(--text-muted);">(' + sigUnit + ')</span>';
+            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sigName + ' <span style="font-size:var(--fs-micro); color:var(--text-muted);">(' + sigUnit + ')</span>';
             html += '</div>';
           });
 
@@ -418,7 +418,7 @@ function veUpdateResultsTree() {
       html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
       html += '<span class="icon"><span class="mf-ico mf-ico-bar-chart"></span></span>';
       html += '<span style="font-weight:600;">Diyagramlar</span>';
-      html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + totalDiags + '</span>';
+      html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + totalDiags + '</span>';
       html += '</div>';
       html += '<div class="ve-tree-children open">';
 
@@ -430,7 +430,7 @@ function veUpdateResultsTree() {
         html += '<div class="ve-tree-row" style="padding-left:16px;">';
         html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
         html += '<span>' + pkg.name + '</span>';
-        html += ' <span style="font-size:0.55rem; color:var(--text-muted); margin-left:auto;">' + pkg.diagrams.length + '</span>';
+        html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + pkg.diagrams.length + '</span>';
         html += '</div>';
         html += '<div class="ve-tree-children">';
 
@@ -463,7 +463,7 @@ function veUpdateResultsTree() {
           var diagIcon = canDrag ? (is3dDiag ? '<span class="mf-ico mf-ico-package"></span>' : '<span class="mf-ico mf-ico-trending-up"></span>') : '<span class="mf-ico mf-ico-lock"></span>';
           html += '<div class="ve-tree-signal" style="padding-left:32px; ' + diagStyle + '"' + dragAttr + ' title="' + diag.name + reason + '">';
           html += diagIcon + ' ' + diag.name;
-          if(diag.note) html += ' <span style="font-size:0.5rem; color:var(--accent-warning);">⚠</span>';
+          if(diag.note) html += ' <span style="font-size:var(--fs-micro); color:var(--accent-warning);">⚠</span>';
           html += '</div>';
         });
 
@@ -482,16 +482,16 @@ function veUpdateResultsTree() {
     if(_activeTab === 'performance') {
       html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
       html += '<div class="ve-tree-row" style="cursor:pointer; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:var(--fs-micro); width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
       html += '<span onclick="veRenderDetailedReport()" style="display:flex; align-items:center; gap:4px; flex:1;" title="Tüm raporu görüntüle">';
       html += '<span class="icon"><span class="mf-ico mf-ico-clipboard"></span></span><span style="font-weight:600; color:var(--accent-primary);">Detaylı Rapor</span></span>';
       html += '</div>';
       html += '<div class="ve-tree-children">';
       // Girdi Özeti group
       html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:var(--fs-micro); width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
       html += '<span onclick="veRenderDetailedReport(\'girdi\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Girdi Özeti">';
-      html += '<span class="icon" style="font-size:0.6rem;"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-size:0.68rem;">Girdi Özeti</span></span></div>';
+      html += '<span class="icon" style="font-size:var(--fs-tiny);"><span class="mf-ico mf-ico-file-text"></span></span><span style="font-size:var(--fs-body);">Girdi Özeti</span></span></div>';
       html += '<div class="ve-tree-children">';
       var girdiSubs = [
         {id:'platform', icon:'<span class="mf-ico mf-ico-truck"></span>', label:'Platform'},
@@ -502,21 +502,21 @@ function veUpdateResultsTree() {
       ];
       girdiSubs.forEach(function(s) {
         html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'' + s.id + '\')" style="cursor:pointer; padding-left:24px;" title="' + s.label + '">';
-        html += '<span class="icon" style="font-size:0.58rem;">' + s.icon + '</span><span style="font-size:0.66rem;">' + s.label + '</span></div>';
+        html += '<span class="icon" style="font-size:var(--fs-micro);">' + s.icon + '</span><span style="font-size:var(--fs-body);">' + s.label + '</span></div>';
       });
       html += '</div>';
       // Araç Performans Özeti group
       html += '<div class="ve-tree-row" style="cursor:pointer; padding-left:10px; display:flex; align-items:center; gap:4px;">';
-      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:0.5rem; width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)" style="font-size:var(--fs-micro); width:12px; text-align:center; cursor:pointer; color:var(--text-muted);">▶</span>';
       html += '<span onclick="veRenderDetailedReport(\'performans\')" style="display:flex; align-items:center; gap:4px; flex:1;" title="Araç Performans Özeti">';
-      html += '<span class="icon" style="font-size:0.6rem;"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:0.68rem;">Araç Performans Özeti</span></span></div>';
+      html += '<span class="icon" style="font-size:var(--fs-tiny);"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:var(--fs-body);">Araç Performans Özeti</span></span></div>';
       html += '<div class="ve-tree-children">';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-grade\')" style="cursor:pointer; padding-left:24px;" title="Eğim Kabiliyeti">';
-      html += '<span class="icon" style="font-size:0.58rem;"><span class="mf-ico mf-ico-mountain"></span></span><span style="font-size:0.66rem;">Eğim Kabiliyeti</span></div>';
+      html += '<span class="icon" style="font-size:var(--fs-micro);"><span class="mf-ico mf-ico-mountain"></span></span><span style="font-size:var(--fs-body);">Eğim Kabiliyeti</span></div>';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-accel\')" style="cursor:pointer; padding-left:24px;" title="Hızlanma">';
-      html += '<span class="icon" style="font-size:0.58rem;"><span class="mf-ico mf-ico-gauge"></span></span><span style="font-size:0.66rem;">Hızlanma</span></div>';
+      html += '<span class="icon" style="font-size:var(--fs-micro);"><span class="mf-ico mf-ico-gauge"></span></span><span style="font-size:var(--fs-body);">Hızlanma</span></div>';
       html += '<div class="ve-tree-row" onclick="veRenderDetailedReport(\'ft-upshifts\')" style="cursor:pointer; padding-left:24px;" title="Vites Geçişleri (Detaylı)">';
-      html += '<span class="icon" style="font-size:0.58rem;"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:0.66rem;">Vites Geçişleri (Detaylı)</span></div>';
+      html += '<span class="icon" style="font-size:var(--fs-micro);"><span class="mf-ico mf-ico-bar-chart"></span></span><span style="font-size:var(--fs-body);">Vites Geçişleri (Detaylı)</span></div>';
       html += '</div>';
       html += '</div></div>';
       // Topoloji detayı artık Tam Gaz Hızlanma raporunun içine dahil edildi —
@@ -716,10 +716,10 @@ function veRenderDetailedReport(filter) {
   
   // Tablo yardımcıları
   function row(label, value) {
-    return '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:0.73rem;">' + label + '</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + value + '</td></tr>';
+    return '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:var(--fs-md);">' + label + '</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + value + '</td></tr>';
   }
   function subHeader(title) {
-    return '<tr><td colspan="2" style="padding:7px 14px; font-weight:700; font-size:0.75rem; color:var(--text-primary); font-style:italic; border-bottom:1px solid var(--border-color); background:var(--bg-tertiary);">' + title + '</td></tr>';
+    return '<tr><td colspan="2" style="padding:7px 14px; font-weight:700; font-size:var(--fs-md); color:var(--text-primary); font-style:italic; border-bottom:1px solid var(--border-color); background:var(--bg-tertiary);">' + title + '</td></tr>';
   }
   function tableWrap(content) {
     return '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary);">' + content + '</table>';
@@ -747,7 +747,7 @@ function veRenderDetailedReport(filter) {
     {name:'Hava Kompresörü',standardLoss:0,userLoss:0},{name:'Direksiyon Pompası',standardLoss:0,userLoss:0},
     {name:'Klima',standardLoss:0,userLoss:0},{name:'Ek Tahrik',standardLoss:0,userLoss:0}
   ];
-  var accHTML = '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:0.73rem;">';
+  var accHTML = '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-md);">';
   accHTML += '<thead><tr style="background:var(--bg-tertiary);"><th style="padding:6px 14px; text-align:left; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Aksesuar</th>';
   accHTML += '<th style="padding:6px 14px; text-align:center; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500; width:150px;">Standart Kayıp (kW)</th>';
   accHTML += '<th style="padding:6px 14px; text-align:center; border-bottom:1px solid var(--border-color); color:var(--text-secondary); font-weight:500; width:170px;">Kullanıcı Tanımlı Kayıp (kW)</th>';
@@ -783,7 +783,7 @@ function veRenderDetailedReport(filter) {
   var motorDetailHTML = '';
   if(R.torqueData.length > 0) {
     motorDetailHTML += '<div style="overflow-x:auto;">';
-    motorDetailHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:0.68rem;">';
+    motorDetailHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
     motorDetailHTML += '<thead><tr style="background:var(--bg-tertiary);">';
     ['Devir<br>(rpm)','Brüt Güç<br>(kW)','Brüt Tork<br>(N·m)','Net Güç<br>Fan Açık (kW)','Net Tork<br>Fan Açık (N·m)','Net Güç<br>Fan Kapalı (kW)','Net Tork<br>Fan Kapalı (N·m)','Tanım'].forEach(function(th) {
       motorDetailHTML += '<th style="padding:5px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); color:var(--text-secondary); font-weight:500; text-align:center; white-space:nowrap;">' + th + '</th>';
@@ -810,7 +810,7 @@ function veRenderDetailedReport(filter) {
       motorDetailHTML += '<tr>';
       motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; font-weight:600; color:var(--text-primary);">' + rpm + '</td>';
       motorDetailHTML += td(grossPwr.toFixed(1)) + td(grossTrk.toFixed(1)) + td(netPwrFanOn.toFixed(1)) + td(netTrkFanOn.toFixed(1)) + td(netPwr.toFixed(1)) + td(netTrk.toFixed(1));
-      motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); text-align:center; color:var(--text-muted); font-style:italic; font-size:0.64rem;">' + ident + '</td>';
+      motorDetailHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); text-align:center; color:var(--text-muted); font-style:italic; font-size:var(--fs-tiny);">' + ident + '</td>';
       motorDetailHTML += '</tr>';
     });
     motorDetailHTML += '</tbody></table></div>';
@@ -819,8 +819,8 @@ function veRenderDetailedReport(filter) {
     motorDetailHTML += '<div id="dr-engine-tooltip" class="dr-chart-tooltip"></div>';
     motorDetailHTML += '<div id="dr-engine-crossV" class="dr-chart-crossV"></div>';
     motorDetailHTML += '<div id="dr-engine-crossH" class="dr-chart-crossH"></div>';
-    motorDetailHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:0.58rem; color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır  │  Çift Tık — Sıfırla</div>';
-    motorDetailHTML += '<span id="dr-engine-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:0.62rem; font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEngineResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
+    motorDetailHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:var(--fs-micro); color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır  │  Çift Tık — Sıfırla</div>';
+    motorDetailHTML += '<span id="dr-engine-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:var(--fs-tiny); font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEngineResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
     motorDetailHTML += '</div>';
   } else {
     motorDetailHTML = '<span style="color:var(--text-muted); font-style:italic;">Motor tork eğrisi verisi bulunamadı</span>';
@@ -868,7 +868,7 @@ function veRenderDetailedReport(filter) {
   controlHTML = tableWrap(controlHTML);
   
   // ═══ AKTARMA ORGANLARI ═══
-  var driveHTML = '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:0.71rem; margin-bottom:12px;">';
+  var driveHTML = '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body); margin-bottom:12px;">';
   driveHTML += '<thead><tr style="background:var(--bg-tertiary);"><th style="padding:5px 12px; text-align:left; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Bileşen</th>';
   driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Açıklama</th>';
   driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Oran</th>';
@@ -897,7 +897,7 @@ function veRenderDetailedReport(filter) {
   driveHTML += '</tbody></table>';
   
   if(R.hasTransfer && R.transferGears.length > 0) {
-    driveHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:0.71rem;">';
+    driveHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
     driveHTML += '<thead><tr style="background:var(--bg-tertiary);"><th style="padding:5px 12px; text-align:left; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Toplam Aktarma Oranı</th>';
     driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Kademe</th>';
     driveHTML += '<th style="padding:5px 12px; text-align:center; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-color); color:var(--text-secondary); font-weight:500;">Oran</th>';
@@ -969,18 +969,18 @@ function veRenderDetailedReport(filter) {
 
     // Motor bilgisi
     ecmHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); margin-bottom:12px;">';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:0.73rem;">Motor</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + R.engineName + '</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Pik Tork</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + _peakT.toFixed(0) + ' N·m @ ' + _peakRPM + ' rpm</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Governed Devir</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + _gov + ' rpm</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Pompa Düşümü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + _pDrop + ' N·m</td></tr>';
-    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Türbin Limiti</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + _tRating + ' N·m</td></tr>';
-    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Giriş Güç Limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:0.73rem;">' + _rPowerAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputPower + ' kW ' + (_rc9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td></tr>';
-    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Giriş Tork Limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:0.73rem;">' + _rTorqueAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputTorque + ' N·m ' + (_rc10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:var(--fs-md);">Motor</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + R.engineName + '</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Pik Tork</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _peakT.toFixed(0) + ' N·m @ ' + _peakRPM + ' rpm</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Governed Devir</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _gov + ' rpm</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Pompa Düşümü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _pDrop + ' N·m</td></tr>';
+    ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Türbin Limiti</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + _tRating + ' N·m</td></tr>';
+    if(_rGbLimits.grossInputPower !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş Güç Limiti (C9)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + _rPowerAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputPower + ' kW ' + (_rc9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td></tr>';
+    if(_rGbLimits.grossInputTorque !== null) ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Giriş Tork Limiti (C10)</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:' + (_rc10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + '; font-size:var(--fs-md);">' + _rTorqueAtGov.toFixed(0) + ' / ' + _rGbLimits.grossInputTorque + ' N·m ' + (_rc10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + '</td></tr>';
     ecmHTML += '</table>';
     
     // Tablo
     ecmHTML += '<div style="overflow-x:auto;">';
-    ecmHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:0.68rem;">';
+    ecmHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
     ecmHTML += '<thead><tr style="background:var(--bg-tertiary);">';
     ['Durum','Konvertör','Stall τ','Stall rpm','Min N rpm','T_turb N·m','SR@Gov','C5','C7','C8'].forEach(function(th){
       ecmHTML += '<th style="padding:5px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); color:var(--text-secondary); font-weight:500; text-align:center; white-space:nowrap;">' + th + '</th>';
@@ -993,7 +993,7 @@ function veRenderDetailedReport(filter) {
       var stC = r.status==='recommended'?'var(--accent-success)':r.status==='caution'?'var(--accent-warning)':r.status==='not-recommended'?'var(--accent-warning)':'var(--accent-danger)';
       var td = function(v,c){return '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:'+(c||'var(--text-primary)')+';">'+v+'</td>';};
       ecmHTML += '<tr>';
-      ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); white-space:nowrap;"><span style="font-weight:600; color:'+stC+'; font-size:0.65rem;">'+stI+' '+stT+'</span></td>';
+      ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); white-space:nowrap;"><span style="font-weight:600; color:'+stC+'; font-size:var(--fs-tiny);">'+stI+' '+stT+'</span></td>';
       ecmHTML += '<td style="padding:4px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); font-weight:600; color:var(--text-primary);">'+r.name+'</td>';
       ecmHTML += td(r.stallTau.toFixed(2)) + td(r.stallSpeed.toFixed(0)) + td(r.minSpeed.toFixed(0), r.c5ok?'#333':'#dc2626');
       ecmHTML += td(r.tTurbineStall.toFixed(0), r.c7ok?'#333':'#dc2626') + td(r.srGov.toFixed(3), r.c8ok?'#333':'#d97706');
@@ -1006,16 +1006,16 @@ function veRenderDetailedReport(filter) {
     if(_ecmResults.length > 0) {
       var best = _ecmResults[0];
       ecmHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); margin-top:10px;">';
-      ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:0.73rem;">Önerilen Konvertör</td>';
-      ecmHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + (best.status==='recommended'?'<span class="mf-ico mf-ico-trophy"></span> ':'') + best.name + '  —  Stall: ' + best.stallSpeed.toFixed(0) + ' rpm | SR@Gov: ' + best.srGov.toFixed(3) + ' | T_turb: ' + best.tTurbineStall.toFixed(0) + ' N·m</td></tr>';
+      ecmHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:230px; font-size:var(--fs-md);">Önerilen Konvertör</td>';
+      ecmHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + (best.status==='recommended'?'<span class="mf-ico mf-ico-trophy"></span> ':'') + best.name + '  —  Stall: ' + best.stallSpeed.toFixed(0) + ' rpm | SR@Gov: ' + best.srGov.toFixed(3) + ' | T_turb: ' + best.tTurbineStall.toFixed(0) + ' N·m</td></tr>';
       ecmHTML += '</table>';
     }
     
     // Chart alanı — interactive wrapper
     ecmHTML += '<div id="dr-ecm-chart-wrap" style="margin-top:14px; position:relative; max-width:800px; margin:0 auto; height:450px; border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden; background:var(--bg-secondary); cursor:crosshair;">';
     ecmHTML += '<canvas id="dr-ecm-chart" style="width:100%; height:100%; display:block;"></canvas>';
-    ecmHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:0.58rem; color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır</div>';
-    ecmHTML += '<span id="dr-ecm-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:0.62rem; font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEcmResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
+    ecmHTML += '<div style="position:absolute; bottom:6px; right:10px; font-size:var(--fs-micro); color:var(--text-muted); pointer-events:none;">Scroll — Yakınlaştır  │  Sağ Tık + Sürükle — Kaydır</div>';
+    ecmHTML += '<span id="dr-ecm-zoom-ind" style="position:absolute; top:6px; right:10px; display:none; font-size:var(--fs-tiny); font-weight:600; color:var(--accent-primary); cursor:pointer; background:var(--bg-secondary); padding:2px 6px; border-radius:var(--radius-sm);" onclick="drEcmResetZoom()"><span class="mf-ico mf-ico-search"></span> 1.0×</span>';
     ecmHTML += '</div>';
   } else {
     ecmHTML = '<span style="color:var(--text-muted); font-style:italic;">Motor-TC eşleştirme verisi bulunamadı</span>';
@@ -1024,8 +1024,8 @@ function veRenderDetailedReport(filter) {
   // ═══ Bölümler ═══
   var sections = [
     {id:'platform', title:'PLATFORM', content: platformHTML},
-    {id:'engine', title:'MOTOR', content: motorHTML + '<div style="height:16px;"></div><div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px; padding-left:24px;">Motor Kayıpları (Governed Devirde Güç)</div><div style="height:8px;"></div>' + accHTML + '<div style="height:16px;"></div><div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px; padding-left:24px;">Motor Detayları</div><div style="height:8px;"></div>' + motorDetailHTML},
-    {id:'transmission', title:'ŞANZIMAN', content: transHTML + '<div style="height:16px;"></div><div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px; padding-left:24px;">Kontrol</div><div style="height:8px;"></div>' + controlHTML},
+    {id:'engine', title:'MOTOR', content: motorHTML + '<div style="height:16px;"></div><div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px; padding-left:24px;">Motor Kayıpları (Governed Devirde Güç)</div><div style="height:8px;"></div>' + accHTML + '<div style="height:16px;"></div><div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px; padding-left:24px;">Motor Detayları</div><div style="height:8px;"></div>' + motorDetailHTML},
+    {id:'transmission', title:'ŞANZIMAN', content: transHTML + '<div style="height:16px;"></div><div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px; padding-left:24px;">Kontrol</div><div style="height:8px;"></div>' + controlHTML},
     {id:'driveline', title:'AKTARMA ORGANLARI', content: driveHTML}
   ];
   // Konvertör Değerlendirmesi bölümü yalnız TK veya Motor-TC Eşleştirme varsa gösterilir
@@ -1034,15 +1034,15 @@ function veRenderDetailedReport(filter) {
   // ═══ HTML oluştur ═══
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
-  html += '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:1rem;"><span class="mf-ico mf-ico-clipboard"></span></span>';
-  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">' + reportTitle + '</span>';
+  html += '<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-clipboard"></span></span>';
+  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">' + reportTitle + '</span>';
   if(filter) {
-    html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Tüm Rapor</button>';
+    html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Tüm Rapor</button>';
   }
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'" title="Bağımsız, baskıya hazır HTML rapor indir"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'" title="Bağımsız, baskıya hazır HTML rapor indir"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
   
@@ -1055,8 +1055,8 @@ function veRenderDetailedReport(filter) {
   html += '<div style="max-width:1100px; margin:0 auto; background:var(--bg-secondary); border-radius:var(--radius-sm); box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
   
   // Girdi Özeti ana başlık
-  html += '<div style="padding:12px 18px; font-size:0.95rem; font-weight:400; color:var(--text-primary); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="veToggleGirdiOzeti(this)">';
-  html += '<span>Girdi Özeti</span><span class="dr-gs-arrow" style="font-size:0.6rem; color:var(--text-muted); transition:transform 0.35s ease;">▲</span></div>';
+  html += '<div style="padding:12px 18px; font-size:var(--fs-title); font-weight:400; color:var(--text-primary); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="veToggleGirdiOzeti(this)">';
+  html += '<span>Girdi Özeti</span><span class="dr-gs-arrow" style="font-size:var(--fs-tiny); color:var(--text-muted); transition:transform 0.35s ease;">▲</span></div>';
   html += '<div class="dr-girdi-wrapper dr-girdi-open">';
   
   sections.forEach(function(s) {
@@ -1077,8 +1077,8 @@ function veRenderDetailedReport(filter) {
   var showPerf = showAll || isPerf || perfIds.indexOf(filter) >= 0;
   if(showPerf) {
   html += '<div style="max-width:1100px; margin:16px auto 0; background:var(--bg-secondary); border-radius:var(--radius-sm); box-shadow:0 1px 6px rgba(0,0,0,0.12); overflow:hidden;">';
-  html += '<div style="padding:12px 18px; font-size:0.95rem; font-weight:400; color:var(--text-primary); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="veToggleGirdiOzeti(this)">';
-  html += '<span>Araç Performans Özeti</span><span class="dr-gs-arrow" style="font-size:0.6rem; color:var(--text-muted); transition:transform 0.35s ease;">▲</span></div>';
+  html += '<div style="padding:12px 18px; font-size:var(--fs-title); font-weight:400; color:var(--text-primary); border-bottom:1px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; cursor:pointer;" onclick="veToggleGirdiOzeti(this)">';
+  html += '<span>Araç Performans Özeti</span><span class="dr-gs-arrow" style="font-size:var(--fs-tiny); color:var(--text-muted); transition:transform 0.35s ease;">▲</span></div>';
   html += '<div class="dr-girdi-wrapper dr-girdi-open">';
   
   // Tam Gaz Otomatik Vites Artışı (Eğim Kabiliyeti)
@@ -1088,12 +1088,12 @@ function veRenderDetailedReport(filter) {
     // Üst bilgi tablosu
     var trRatioHigh = G.high.transferRatio || 1.0;
     ftGradeHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); margin-bottom:14px;">';
-    ftGradeHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:0.73rem;">Motor Fanı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Açık</td>';
-    ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:0.73rem;">Motor Gücü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Standart Güç Eğrisi</td></tr>';
-    ftGradeHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Klima</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Kapalı</td>';
-    ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Araç Parametreleri</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Standart</td></tr>';
-    ftGradeHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Aks Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + R.diffRatio.toFixed(3) + '</td>';
-    ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Transfer Kutusu Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + trRatioHigh.toFixed(3) + '</td></tr>';
+    ftGradeHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:var(--fs-md);">Motor Fanı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Açık</td>';
+    ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:var(--fs-md);">Motor Gücü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart Güç Eğrisi</td></tr>';
+    ftGradeHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Klima</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Kapalı</td>';
+    ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Araç Parametreleri</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart</td></tr>';
+    ftGradeHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Aks Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + R.diffRatio.toFixed(3) + '</td>';
+    ftGradeHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Transfer Kutusu Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + trRatioHigh.toFixed(3) + '</td></tr>';
     ftGradeHTML += '</table>';
     
     // Yardımcı fonksiyonlar
@@ -1106,10 +1106,10 @@ function veRenderDetailedReport(filter) {
       var h = '';
       // Kademe etiketi (çift tablo varsa)
       if(G.low) {
-        h += '<div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">' + gd.label + '</div>';
+        h += '<div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">' + gd.label + '</div>';
       }
       h += '<div style="overflow-x:auto;">';
-      h += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:0.71rem;">';
+      h += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
       h += '<thead><tr style="background:var(--bg-tertiary);">';
       h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:left; color:var(--text-secondary); font-weight:500; width:280px;">Eğim Kabiliyeti</th>';
       h += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">% Eğim</th>';
@@ -1168,12 +1168,12 @@ function veRenderDetailedReport(filter) {
     
     // Üst bilgi tablosu (gradeability ile aynı stil)
     ftAccelHTML += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); margin-bottom:14px;">';
-    ftAccelHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:0.73rem;">Motor Fanı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Açık</td>';
-    ftAccelHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:0.73rem;">Motor Gücü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Standart Güç Eğrisi</td></tr>';
-    ftAccelHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Klima</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Kapalı</td>';
-    ftAccelHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Araç Parametreleri</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Standart</td></tr>';
-    ftAccelHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Aks Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + axleR + '</td>';
-    ftAccelHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Transfer Kutusu Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + trRatioAccel.toFixed(3) + '</td></tr>';
+    ftAccelHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:var(--fs-md);">Motor Fanı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Açık</td>';
+    ftAccelHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:var(--fs-md);">Motor Gücü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart Güç Eğrisi</td></tr>';
+    ftAccelHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Klima</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Kapalı</td>';
+    ftAccelHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Araç Parametreleri</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart</td></tr>';
+    ftAccelHTML += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Aks Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + axleR + '</td>';
+    ftAccelHTML += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Transfer Kutusu Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + trRatioAccel.toFixed(3) + '</td></tr>';
     ftAccelHTML += '</table>';
     
     // Tek kademe tablosu oluşturucu
@@ -1181,10 +1181,10 @@ function veRenderDetailedReport(filter) {
       var bh = '';
       // Kademe etiketi (çift tablo varsa)
       if(A.low) {
-        bh += '<div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">' + ad.label + '</div>';
+        bh += '<div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">' + ad.label + '</div>';
       }
       bh += '<div style="overflow-x:auto;">';
-      bh += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:0.71rem;">';
+      bh += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
       bh += '<thead><tr style="background:var(--bg-tertiary);">';
       bh += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:left; color:var(--text-secondary); font-weight:500; width:280px;">Hız</th>';
       bh += '<th style="padding:6px 12px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Süre<br>(saniye)</th>';
@@ -2257,7 +2257,7 @@ function veBuildReportHTML(content, title) {
     'border:1px solid #d8dce2;box-shadow:0 2px 14px rgba(0,0,0,.08);' +
     'padding:26px 34px;box-sizing:border-box;}' +
     '.mf-card pre{margin:0 auto;padding:0;width:fit-content;max-width:100%;' +
-    'white-space:pre;overflow-x:auto;line-height:1.5;font-size:12.5px;color:#14171c;' +
+    'white-space:pre;overflow-x:auto;line-height:1.5;font-size:var(--fs-md);color:#14171c;' +
     "font-family:'Consolas','Menlo','DejaVu Sans Mono','Courier New',monospace;}" +
     '@media(prefers-color-scheme:dark){html,body{background:#23201c;}' +
     '.mf-card{background:#2b2621;border-color:#3d352e;}.mf-card pre{color:#e6ddd0;}}' +
@@ -2317,21 +2317,21 @@ function veRenderTXTReport(reportType) {
   // Header bar
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:1rem;"><span class="mf-ico mf-ico-file-text"></span></span>';
-  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">' + reportTitle + '</span>';
-  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
+  html += '<span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-file-text"></span></span>';
+  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">' + reportTitle + '</span>';
+  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
 
   // TXT content area — düz belge görünümü
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
   html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; color:var(--text-primary); tab-size:4;">';
+  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:var(--fs-body); color:var(--text-primary); tab-size:4;">';
   html += veRenderCenteredTXT(txtContent);
   html += '</div>';
   html += '</div></div>';
@@ -2370,19 +2370,19 @@ function veRenderSegmentDriveTXTReport() {
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:1rem;"><span class="mf-ico mf-ico-file-text"></span></span>';
-  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Hızlanma-Yavaşlama Raporu (TXT)</span>';
-  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
+  html += '<span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-file-text"></span></span>';
+  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">Hızlanma-Yavaşlama Raporu (TXT)</span>';
+  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
   html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; color:var(--text-primary); tab-size:4;">';
+  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:var(--fs-body); color:var(--text-primary); tab-size:4;">';
   html += veRenderCenteredTXT(txtContent);
   html += '</div>';
   html += '</div></div>';
@@ -2415,19 +2415,19 @@ function veRenderObstacleCrossingTXTReport() {
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:1rem;"><span class="mf-ico mf-ico-file-text"></span></span>';
-  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Engel Atlama Raporu (TXT)</span>';
-  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
+  html += '<span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-file-text"></span></span>';
+  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">Engel Atlama Raporu (TXT)</span>';
+  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
   html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; color:var(--text-primary); tab-size:4;">';
+  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:var(--fs-body); color:var(--text-primary); tab-size:4;">';
   html += veRenderCenteredTXT(txtContent);
   html += '</div>';
   html += '</div></div>';
@@ -2461,19 +2461,19 @@ function veRenderTopologyTXTReport() {
   var html = '';
   html += '<div style="padding:10px 16px; background:var(--bg-secondary); border-bottom:2px solid var(--border-color); display:flex; align-items:center; justify-content:space-between; flex-shrink:0;">';
   html += '<div style="display:flex; align-items:center; gap:8px;">';
-  html += '<span style="font-size:1rem;"><span class="mf-ico mf-ico-file-text"></span></span>';
-  html += '<span style="font-size:0.88rem; font-weight:700; color:var(--text-heading);">Topoloji Detay Raporu (TXT)</span>';
-  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:0.62rem; font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
+  html += '<span style="font-size:var(--fs-title);"><span class="mf-ico mf-ico-file-text"></span></span>';
+  html += '<span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);">Topoloji Detay Raporu (TXT)</span>';
+  html += '<button onclick="veRenderDetailedReport()" style="padding:3px 10px; font-size:var(--fs-tiny); font-weight:500; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer; margin-left:6px;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">← Detaylı Rapor</button>';
   html += '</div>';
   html += '<div style="display:flex; align-items:center; gap:6px;">';
-  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
-  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
-  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:0.70rem; font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
+  html += '<button onclick="veDownloadReportHTML()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> HTML İndir</button>';
+  html += '<button onclick="veDownloadTXTFromPreview()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-primary)\';this.style.color=\'var(--accent-primary)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'"><span class="mf-ico mf-ico-download"></span> TXT İndir</button>';
+  html += '<button onclick="veCloseDetailedReport()" style="padding:5px 14px; font-size:var(--fs-body); font-weight:600; border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-tertiary); color:var(--text-secondary); cursor:pointer;" onmouseover="this.style.borderColor=\'var(--accent-danger)\';this.style.color=\'var(--accent-danger)\'" onmouseout="this.style.borderColor=\'var(--border-color)\';this.style.color=\'var(--text-secondary)\'">✕ Kapat</button>';
   html += '</div>';
   html += '</div>';
   html += '<div style="flex:1; overflow-y:auto; background:var(--bg-primary); padding:20px 0;">';
   html += '<div style="width:fit-content; max-width:100%; margin:0 auto; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 1px 6px var(--shadow-color); overflow:hidden;">';
-  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:0.72rem; color:var(--text-primary); tab-size:4;">';
+  html += '<div id="ve-txt-report-content" style="padding:24px 32px; font-family:\'Consolas\',\'Monaco\',\'Courier New\',monospace; font-size:var(--fs-body); color:var(--text-primary); tab-size:4;">';
   html += veRenderCenteredTXT(txtContent);
   html += '</div>';
   html += '</div></div>';
@@ -2499,14 +2499,14 @@ function veDownloadTXTFromPreview() {
   box.style.cssText = 'width:340px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.6);';
   box.innerHTML = '' +
     '<div style="padding:10px 14px; background:linear-gradient(135deg, #1a365d 0%, #2c5282 100%); display:flex; align-items:center; justify-content:space-between;">' +
-      '<span style="font-size:0.82rem; font-weight:700; color:#e2e8f0;"><span class="mf-ico mf-ico-download"></span> TXT Rapor İndir</span>' +
-      '<button onclick="document.getElementById(\'ve-txt-author-overlay\').remove()" style="width:24px; height:24px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:var(--radius-sm); color:#e2e8f0; cursor:pointer; font-size:0.85rem;">✕</button>' +
+      '<span style="font-size:var(--fs-lg); font-weight:700; color:#e2e8f0;"><span class="mf-ico mf-ico-download"></span> TXT Rapor İndir</span>' +
+      '<button onclick="document.getElementById(\'ve-txt-author-overlay\').remove()" style="width:24px; height:24px; background:transparent; border:1px solid rgba(255,255,255,0.2); border-radius:var(--radius-sm); color:#e2e8f0; cursor:pointer; font-size:var(--fs-lg);">✕</button>' +
     '</div>' +
     '<div style="padding:14px 16px;">' +
-      '<label style="color:var(--text-muted); font-size:0.68rem; display:block; margin-bottom:3px;">Yazar Adı:</label>' +
-      '<input type="text" id="ve-txt-author-input" placeholder="İsim Soyisim" style="width:100%; padding:6px 8px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-sizing:border-box;">' +
-      '<div id="ve-txt-author-email" style="margin-top:6px; font-size:0.65rem; color:var(--text-muted); min-height:1.2em;"></div>' +
-      '<button id="ve-txt-author-ok" style="width:100%; margin-top:10px; padding:8px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:var(--radius-sm); font-size:0.78rem; font-weight:700; cursor:pointer;"><span class="mf-ico mf-ico-download"></span> İndir</button>' +
+      '<label style="color:var(--text-muted); font-size:var(--fs-body); display:block; margin-bottom:3px;">Yazar Adı:</label>' +
+      '<input type="text" id="ve-txt-author-input" placeholder="İsim Soyisim" style="width:100%; padding:6px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-sizing:border-box;">' +
+      '<div id="ve-txt-author-email" style="margin-top:6px; font-size:var(--fs-tiny); color:var(--text-muted); min-height:1.2em;"></div>' +
+      '<button id="ve-txt-author-ok" style="width:100%; margin-top:10px; padding:8px; background:linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%); color:#fff; border:none; border-radius:var(--radius-sm); font-size:var(--fs-md); font-weight:700; cursor:pointer;"><span class="mf-ico mf-ico-download"></span> İndir</button>' +
     '</div>';
   ov.appendChild(box);
   document.body.appendChild(ov);
@@ -3346,47 +3346,47 @@ var _VE_REPORT_CSS = `
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--paper);color:var(--ink);
-  font-family:"Source Serif 4",Georgia,serif;font-size:15.5px;line-height:1.68;
+  font-family:"Source Serif 4",Georgia,serif;font-size:var(--fs-title);line-height:1.68;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;}
 .page{max-width:880px;margin:0 auto;padding:48px 32px 96px}
 h1,h2,h3{font-family:"Archivo",system-ui,sans-serif;color:var(--prusya);line-height:1.25;font-stretch:87%}
-h1{font-size:27px;font-weight:700;letter-spacing:.2px;margin:0 0 6px}
-h2{font-size:19px;font-weight:700;margin:56px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
+h1{font-size:var(--fs-h1);font-weight:700;letter-spacing:.2px;margin:0 0 6px}
+h2{font-size:var(--fs-h2);font-weight:700;margin:56px 0 14px;padding-top:14px;border-top:2px solid var(--prusya);
   display:flex;gap:14px;align-items:baseline}
-h2 .no{font-family:var(--mono);font-size:13px;color:var(--paper);background:var(--prusya);
+h2 .no{font-family:var(--mono);font-size:var(--fs-lg);color:var(--paper);background:var(--prusya);
   padding:2px 8px;border-radius:2px;transform:translateY(-2px)}
-h3{font-size:15.5px;font-weight:600;margin:26px 0 8px;color:var(--ink)}
+h3{font-size:var(--fs-title);font-weight:600;margin:26px 0 8px;color:var(--ink)}
 p{margin:0 0 13px;text-align:justify;hyphens:auto}
 strong{font-weight:600} em{font-style:italic}
 
 /* ── Antet ── */
 .antet{border:1.5px solid var(--ink);margin-bottom:36px}
 .antet .band{background:var(--prusya);color:#fff;padding:16px 20px}
-.antet .band .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
+.antet .band .eyebrow{font-family:var(--mono);font-size:var(--fs-body);letter-spacing:2.5px;text-transform:uppercase;opacity:.85;margin-bottom:6px}
 .antet .band h1{color:#fff}
-.antet .band .sub{font-family:"Archivo",sans-serif;font-size:13.5px;font-weight:400;opacity:.92;margin-top:4px;line-height:1.4}
+.antet .band .sub{font-family:"Archivo",sans-serif;font-size:var(--fs-lg);font-weight:400;opacity:.92;margin-top:4px;line-height:1.4}
 .antet .fields{display:grid;grid-template-columns:repeat(5,1fr);border-top:1.5px solid var(--ink)}
 .antet .f{padding:8px 12px;border-right:1px solid var(--line)}
 .antet .f:last-child{border-right:none}
-.antet .f .k{font-family:var(--mono);font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#5a6270}
-.antet .f .v{font-family:"Archivo",sans-serif;font-size:13px;font-weight:600;margin-top:2px;word-break:break-word}
+.antet .f .k{font-family:var(--mono);font-size:var(--fs-tiny);letter-spacing:1.5px;text-transform:uppercase;color:#5a6270}
+.antet .f .v{font-family:"Archivo",sans-serif;font-size:var(--fs-lg);font-weight:600;margin-top:2px;word-break:break-word}
 
 /* ── Notlar ── */
-.note{background:var(--prusya-soft);border-left:3px solid var(--prusya);padding:12px 16px;margin:16px 0;font-size:14.5px}
+.note{background:var(--prusya-soft);border-left:3px solid var(--prusya);padding:12px 16px;margin:16px 0;font-size:var(--fs-lg)}
 .note.warn{background:var(--warn-soft);border-left-color:var(--warn)}
 .note.check{background:var(--check-soft);border-left-color:var(--check)}
-.note .t{font-family:"Archivo",sans-serif;font-weight:700;font-size:12px;letter-spacing:1.5px;
+.note .t{font-family:"Archivo",sans-serif;font-weight:700;font-size:var(--fs-md);letter-spacing:1.5px;
   text-transform:uppercase;display:block;margin-bottom:4px;color:var(--prusya)}
 .note.warn .t{color:var(--warn)} .note.check .t{color:var(--check)}
 
 /* ── Tablolar ── */
-table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:13.5px}
-caption{caption-side:top;text-align:left;font-family:"Archivo",sans-serif;font-size:12.5px;
+table{border-collapse:collapse;width:100%;margin:14px 0 20px;font-size:var(--fs-lg)}
+caption{caption-side:top;text-align:left;font-family:"Archivo",sans-serif;font-size:var(--fs-md);
   font-weight:600;color:var(--prusya);padding-bottom:6px;letter-spacing:.3px}
-th{font-family:"Archivo",sans-serif;font-size:12px;font-weight:600;letter-spacing:.5px;
+th{font-family:"Archivo",sans-serif;font-size:var(--fs-md);font-weight:600;letter-spacing:.5px;
   background:var(--prusya-soft);color:var(--prusya);padding:7px 10px;border:1px solid var(--line);text-align:center}
-td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:12.8px;text-align:right;white-space:nowrap}
-td.l{text-align:left;font-family:"Source Serif 4",Georgia,serif;font-size:13.8px;white-space:normal}
+td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:var(--fs-lg);text-align:right;white-space:nowrap}
+td.l{text-align:left;font-family:"Source Serif 4",Georgia,serif;font-size:var(--fs-lg);white-space:normal}
 td.c{text-align:center}
 tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:600}
 table.kv td.l{width:46%;color:#3c4350}
@@ -3394,23 +3394,23 @@ table.kv td:not(.l){font-weight:600}
 .st-ok{color:var(--check);font-weight:600;white-space:nowrap}
 .st-warn{color:var(--warn);font-weight:600;white-space:nowrap}
 .st-bad{color:var(--bad);font-weight:600;white-space:nowrap}
-.chip{display:inline-block;font-family:var(--mono);font-size:11px;background:var(--check-soft);
+.chip{display:inline-block;font-family:var(--mono);font-size:var(--fs-body);background:var(--check-soft);
   color:var(--check);border:1px solid var(--check);border-radius:2px;padding:0 6px;margin-left:6px;vertical-align:1px}
 
 /* ── Şekiller ── */
 figure{margin:22px 0 26px;border:1px solid var(--line);padding:14px 14px 10px;background:#fff}
 figure img{width:100%;height:auto;display:block}
-figcaption{font-family:"Archivo",sans-serif;font-size:12.5px;color:#3c4350;margin-top:10px;
+figcaption{font-family:"Archivo",sans-serif;font-size:var(--fs-md);color:#3c4350;margin-top:10px;
   padding-top:8px;border-top:1px solid var(--line-soft)}
 figcaption b{color:var(--prusya)}
 
 /* ── İçindekiler ── */
-.toc{font-family:"Archivo",sans-serif;font-size:13.5px;columns:2;column-gap:36px;margin:10px 0 4px}
+.toc{font-family:"Archivo",sans-serif;font-size:var(--fs-lg);columns:2;column-gap:36px;margin:10px 0 4px}
 .toc a{color:var(--ink);text-decoration:none;display:block;padding:3px 0;border-bottom:1px dotted var(--line-soft);break-inside:avoid}
 .toc a:hover{color:var(--prusya)}
-.toc .n{font-family:var(--mono);font-size:11.5px;color:var(--prusya);margin-right:8px;font-weight:600}
+.toc .n{font-family:var(--mono);font-size:var(--fs-body);color:var(--prusya);margin-right:8px;font-weight:600}
 
-.foot{margin-top:40px;font-size:13px;color:#5a6270;border-top:1px solid var(--line);padding-top:12px;font-family:"Archivo",sans-serif}
+.foot{margin-top:40px;font-size:var(--fs-lg);color:#5a6270;border-top:1px solid var(--line);padding-top:12px;font-family:"Archivo",sans-serif}
 
 @media print{
   .page{max-width:100%;padding:0}
@@ -3852,7 +3852,7 @@ function veBuildFTStepsFromSim(sim, transferLabel) {
 // Build complete HTML for FT Upshifts section
 function veBuildFTUpshiftsHTML(sim, R) {
   if(!sim || !sim.speed || sim.speed.length < 2) {
-    return '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:0.7rem;">Simülasyon verisi bulunamadı.</div>';
+    return '<div style="padding:20px; text-align:center; color:var(--text-muted); font-size:var(--fs-body);">Simülasyon verisi bulunamadı.</div>';
   }
   
   var ss = sim.solverStats || {};
@@ -3866,12 +3866,12 @@ function veBuildFTUpshiftsHTML(sim, R) {
   
   // Üst bilgi tablosu (gradeability/accel ile aynı stil)
   html += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); margin-bottom:14px;">';
-  html += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:0.73rem;">Motor Fanı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Açık</td>';
-  html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:0.73rem;">Motor Gücü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Standart Güç Eğrisi</td></tr>';
-  html += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Klima</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Kapalı</td>';
-  html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Araç Parametreleri</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">Standart</td></tr>';
-  html += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Aks Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + axleRatio.toFixed(3) + '</td>';
-  html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:0.73rem;">Transfer Kutusu Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:0.73rem;">' + activeRatio.toFixed(3) + '</td></tr>';
+  html += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:var(--fs-md);">Motor Fanı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Açık</td>';
+  html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); width:200px; font-size:var(--fs-md);">Motor Gücü</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart Güç Eğrisi</td></tr>';
+  html += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Klima</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Kapalı</td>';
+  html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Araç Parametreleri</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">Standart</td></tr>';
+  html += '<tr><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Aks Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + axleRatio.toFixed(3) + '</td>';
+  html += '<td style="padding:6px 14px; border-bottom:1px solid var(--border-light); color:var(--text-secondary); font-size:var(--fs-md);">Transfer Kutusu Oranı</td><td style="padding:6px 14px; border-bottom:1px solid var(--border-light); font-weight:600; color:var(--text-primary); font-size:var(--fs-md);">' + activeRatio.toFixed(3) + '</td></tr>';
   html += '</table>';
   
   // ═══ HIGH RANGE ═══
@@ -3880,7 +3880,7 @@ function veBuildFTUpshiftsHTML(sim, R) {
   
   if(stepsHigh.length > 0) {
     if(hasTransfer) {
-      html += '<div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')</div>';
+      html += '<div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">Transfer Kutusu: Yüksek Kademe (' + activeRatio.toFixed(3) + ')</div>';
     }
     html += _ftBuildTable(stepsHigh);
     
@@ -3917,7 +3917,7 @@ function veBuildFTUpshiftsHTML(sim, R) {
     
     if(stepsLow.length > 0) {
       html += '<div style="height:20px;"></div>';
-      html += '<div style="font-weight:700; font-size:0.75rem; color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')</div>';
+      html += '<div style="font-weight:700; font-size:var(--fs-md); color:var(--text-primary); padding:7px 14px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); margin:0 -24px 10px; padding-left:24px;">Transfer Kutusu: Düşük Kademe (' + lowRatio.toFixed(3) + ')</div>';
       html += _ftBuildTable(stepsLow);
       
       html += '<div style="max-width:800px; margin:20px auto 0; position:relative;"><canvas id="ftUpshiftChartLow" height="450" style="cursor:crosshair;"></canvas>';
@@ -3933,7 +3933,7 @@ function veBuildFTUpshiftsHTML(sim, R) {
 // Build detail table HTML — Turkish, inline styles matching grade/accel tables
 function _ftBuildTable(steps) {
   var html = '<div style="overflow-x:auto;">';
-  html += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:0.71rem;">';
+  html += '<table style="width:100%; border-collapse:collapse; background:var(--bg-secondary); font-size:var(--fs-body);">';
   html += '<thead><tr style="background:var(--bg-tertiary);">';
   html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:left; color:var(--text-secondary); font-weight:500;">Vites<br>Kademe</th>';
   html += '<th style="padding:6px 8px; border-bottom:1px solid var(--border-color); border-right:1px solid var(--border-light); text-align:center; color:var(--text-secondary); font-weight:500;">Araç Hızı<br>(km/h)</th>';
@@ -3964,7 +3964,7 @@ function _ftBuildTable(steps) {
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + s.wheelPower.toFixed(1) + '</td>';
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; ' + grColor + '">' + s.netGrade.toFixed(2) + '</td>';
     html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); border-right:1px solid var(--border-light); text-align:center; color:var(--text-primary);">' + s.heatRejection.toFixed(2) + '</td>';
-    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); text-align:left; color:var(--accent-primary); font-style:italic; font-size:0.65rem; white-space:nowrap;">' + (s.matchPoint || '') + '</td>';
+    html += '<td style="padding:5px 8px; border-bottom:1px solid var(--border-light); text-align:left; color:var(--accent-primary); font-style:italic; font-size:var(--fs-tiny); white-space:nowrap;">' + (s.matchPoint || '') + '</td>';
     html += '</tr>';
     prevGear = s.gear;
   }
@@ -5188,9 +5188,9 @@ function veRenderSlot(slotIdx) {
     var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'scatter3d' ? '3D Scatter Grafik' : 'Veri Tablosu');
     var emptyHint = type === 'scatter3d' ? 'Veri Gezgini\'nden en az 2 sinyal sürükleyin (X, Y). 3. sinyal Z olur.' : 'Veri Gezgini\'nden sensör sürükleyin';
     var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted);">';
-    html += '<div style="font-size:2.2rem; margin-bottom:10px;"><span class="mf-ico mf-ico-' + emptyIcon + '"></span></div>';
-    html += '<div style="font-size:0.82rem; font-weight:600;">' + emptyName + '</div>';
-    html += '<div style="font-size:0.72rem; margin-top:6px; opacity:0.7;">' + emptyHint + '</div>';
+    html += '<div style="font-size:var(--fs-display); margin-bottom:10px;"><span class="mf-ico mf-ico-' + emptyIcon + '"></span></div>';
+    html += '<div style="font-size:var(--fs-lg); font-weight:600;">' + emptyName + '</div>';
+    html += '<div style="font-size:var(--fs-body); margin-top:6px; opacity:0.7;">' + emptyHint + '</div>';
     html += '</div>';
     body.innerHTML = html;
     return;
@@ -5207,8 +5207,8 @@ function veRenderSlot(slotIdx) {
     html += '</div>';
     html += '<div class="ve-chart-tooltip" id="ve-tooltip-' + slotIdx + '"></div>';
     html += '<button class="ve-chart-play" id="ve-chart-play-' + slotIdx + '" onclick="event.stopPropagation();veChartPlayhead(' + slotIdx + ')" title="Simülasyonu oynat (zaman-kafası eğriyi tarar)"><span class="mf-ico mf-ico-play"></span></button>';
-    html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
-    html += '<div style="font-size:1.5rem; margin-bottom:6px;"><span class="mf-ico mf-ico-trending-up"></span></div>Simülasyon sonrası grafik görünecek</div>';
+    html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:var(--fs-md); text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
+    html += '<div style="font-size:var(--fs-h1); margin-bottom:6px;"><span class="mf-ico mf-ico-trending-up"></span></div>Simülasyon sonrası grafik görünecek</div>';
     // ── Grafik içi legend (overlay, sürüklenebilir) ──
     if(sensors.length > 0) {
       html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
@@ -5232,8 +5232,8 @@ function veRenderSlot(slotIdx) {
     // ── 3D Scatter modu ──
     html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '" style="overflow:hidden;">';
     html += '<div id="ve-3d-container-' + slotIdx + '" style="position:absolute;left:0;top:0;width:100%;height:100%;"></div>';
-    html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:0.78rem; text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
-    html += '<div style="font-size:1.5rem; margin-bottom:6px;"><span class="mf-ico mf-ico-package"></span></div>';
+    html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:var(--fs-md); text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
+    html += '<div style="font-size:var(--fs-h1); margin-bottom:6px;"><span class="mf-ico mf-ico-package"></span></div>';
     if(sensors.length < 2) {
       html += 'En az 2 sinyal sürükleyin (X, Y). 3. sinyal Z ekseni olur, yoksa zaman kullanılır.';
     } else {
@@ -5248,17 +5248,17 @@ function veRenderSlot(slotIdx) {
         var c = colors[i % colors.length];
         var axisLabel = axisLabels3d[i] || '';
         html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
-        if(axisLabel) html += '<span style="font-weight:700; font-size:0.6rem; opacity:0.7; margin-right:2px;">' + axisLabel + ':</span>';
+        if(axisLabel) html += '<span style="font-weight:700; font-size:var(--fs-tiny); opacity:0.7; margin-right:2px;">' + axisLabel + ':</span>';
         html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
         html += '<span>' + s.name + '</span>';
-        if(s.unit) html += ' <span style="opacity:0.55; font-size:0.6rem;">[' + s.unit + ']</span>';
+        if(s.unit) html += ' <span style="opacity:0.55; font-size:var(--fs-tiny);">[' + s.unit + ']</span>';
         html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
         html += '</span>';
       });
       // Z ekseni yoksa zaman bilgisi göster
       if(sensors.length === 2) {
         html += '<span class="ve-slot-legend-item" style="background:rgba(148,163,184,0.1); color:var(--text-muted); border:1px solid rgba(148,163,184,0.2);">';
-        html += '<span style="font-weight:700; font-size:0.6rem; opacity:0.7; margin-right:2px;">Z:</span>';
+        html += '<span style="font-weight:700; font-size:var(--fs-tiny); opacity:0.7; margin-right:2px;">Z:</span>';
         html += '<span>Zaman [s]</span>';
         html += '</span>';
       }
@@ -5297,7 +5297,7 @@ function veRenderSlot(slotIdx) {
       html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
       html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
       html += '<span>' + s.name + '</span>';
-      if(s.unit) html += ' <span style="opacity:0.55; font-size:0.6rem;">[' + s.unit + ']</span>';
+      if(s.unit) html += ' <span style="opacity:0.55; font-size:var(--fs-tiny);">[' + s.unit + ']</span>';
       html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
       html += '</span>';
     });

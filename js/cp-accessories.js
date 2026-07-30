@@ -254,14 +254,14 @@ function getAccessoryPropertiesHTML(node){
   var L = '';
   L += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Model Seçimi';
   if(connected){
-    L += ' <span style="background:color-mix(in srgb, var(--accent-success) 15%, transparent);color:var(--accent-success);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid color-mix(in srgb, var(--accent-success) 40%, transparent);">● MOTORA BAĞLI</span>';
+    L += ' <span style="background:color-mix(in srgb, var(--accent-success) 15%, transparent);color:var(--accent-success);font-size:var(--fs-micro);font-weight:700;padding:2px 7px;border:1px solid color-mix(in srgb, var(--accent-success) 40%, transparent);">● MOTORA BAĞLI</span>';
   } else {
-    L += ' <span style="background:color-mix(in srgb, var(--accent-warning) 12%, transparent);color:var(--accent-warning,#f59e0b);font-size:0.55rem;font-weight:700;padding:2px 7px;border:1px solid color-mix(in srgb, var(--accent-warning) 40%, transparent);">○ BAĞLANMADI</span>';
+    L += ' <span style="background:color-mix(in srgb, var(--accent-warning) 12%, transparent);color:var(--accent-warning,#f59e0b);font-size:var(--fs-micro);font-weight:700;padding:2px 7px;border:1px solid color-mix(in srgb, var(--accent-warning) 40%, transparent);">○ BAĞLANMADI</span>';
   }
   L += '</div>';
   L += '<div class="sw-pkg-desc">Bu bileşeni Motor kutusunun önündeki ilgili porta bağlayın. Devire bağlı çektiği güç, motorun net torkundan düşülür.</div>';
 
-  L += '<select id="ve-acc-preset-' + nid + '" onchange="onVEAccPresetSelect(\'' + nid + '\', this.value)" style="width:100%; font-size:0.7rem; padding:5px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-bottom:8px;">';
+  L += '<select id="ve-acc-preset-' + nid + '" onchange="onVEAccPresetSelect(\'' + nid + '\', this.value)" style="width:100%; font-size:var(--fs-body); padding:5px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); margin-bottom:8px;">';
   L += '<option value="">-- Model Seçiniz (' + Object.keys(lib).length + ' preset) --</option>';
   Object.keys(lib).forEach(function(key){
     var sel = (key === d.accPreset) ? ' selected' : '';
@@ -272,18 +272,18 @@ function getAccessoryPropertiesHTML(node){
 
   // Manuel kW (yalnız manuel modda)
   L += '<div id="ve-acc-manual-wrap-' + nid + '" style="display:' + (isManual ? 'block' : 'none') + '; margin-bottom:8px;">';
-  L += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+  L += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
   L += '<tr><th style="padding:7px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Sabit güç [kW]</th>';
-  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-manualkw-' + nid + '" value="' + (d.accManualKw != null ? d.accManualKw : 0) + '" step="0.1" min="0" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
+  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-manualkw-' + nid + '" value="' + (d.accManualKw != null ? d.accManualKw : 0) + '" step="0.1" min="0" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
   L += '</table>';
-  L += '<div style="font-size:0.62rem; color:var(--text-muted); margin-top:4px;">Manuel modda güç tüm devirlerde sabit alınır.</div>';
+  L += '<div style="font-size:var(--fs-tiny); color:var(--text-muted); margin-top:4px;">Manuel modda güç tüm devirlerde sabit alınır.</div>';
   L += '</div>';
 
   // Tahrik oranı
-  L += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:8px;">';
+  L += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color); margin-bottom:8px;">';
   L += '<tr><th style="padding:7px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Tahrik oranı [-]</th>';
-  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-ratio-' + nid + '" value="' + d.accDriveRatio + '" step="0.01" min="0.1" max="10" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
-  L += '<tr><td colspan="2" style="padding:6px 8px; font-size:0.62rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Aksesuar_devri = Motor_devri × oran. Aksesuar motordan daha hızlı döner (ör. alternatör ≈ 3.15).</td></tr>';
+  L += '<td style="padding:6px 8px; background:var(--bg-tertiary);"><input type="number" id="ve-acc-ratio-' + nid + '" value="' + d.accDriveRatio + '" step="0.01" min="0.1" max="10" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccParamChange(\'' + nid + '\')"></td></tr>';
+  L += '<tr><td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Aksesuar_devri = Motor_devri × oran. Aksesuar motordan daha hızlı döner (ör. alternatör ≈ 3.15).</td></tr>';
   L += '</table>';
 
   // ══ SAĞ SÜTUN: güç çekişi grafiği (motor devrine göre) ══
@@ -294,7 +294,7 @@ function getAccessoryPropertiesHTML(node){
   Rr += '<div class="sw-pkg-body">';
   Rr += '<div class="sw-pkg-desc" id="ve-acc-desc-' + nid + '">Motor devrine göre bu aksesuarın çektiği güç (kW). Değer, motorun net torkundan düşülür.</div>';
   Rr += '<div id="ve-acc-chart-' + nid + '" style="width:100%; height:230px; background:var(--bg-tertiary); border:1px solid var(--border-color);"></div>';
-  Rr += '<div style="font-size:0.6rem; color:var(--text-muted); margin-top:4px; text-align:center;">● Ölçüm noktaları · üzerine gelince değerler · sürükleyerek yakınlaş, çift tık sıfırla</div>';
+  Rr += '<div style="font-size:var(--fs-tiny); color:var(--text-muted); margin-top:4px; text-align:center;">● Ölçüm noktaları · üzerine gelince değerler · sürükleyerek yakınlaş, çift tık sıfırla</div>';
   Rr += '</div></div>';
 
   // İki sütun ızgara (diğer bileşen panelleriyle aynı: ve-cp-grid)
@@ -359,7 +359,7 @@ function veAccDrawChart(nodeId){
       : 'Grafik için bir model seçin.';
   }
 
-  if(typeof Plotly === 'undefined'){ el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.7rem;">Grafik kütüphanesi (Plotly) yükleniyor…</div>'; return; }
+  if(typeof Plotly === 'undefined'){ el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:var(--fs-body);">Grafik kütüphanesi (Plotly) yükleniyor…</div>'; return; }
 
   // Tema renkleri (CSS değişkenlerinden — açık/koyu temaya uyum)
   var css = (typeof getComputedStyle === 'function') ? getComputedStyle(document.documentElement) : null;
@@ -370,7 +370,7 @@ function veAccDrawChart(nodeId){
 
   if(!model){
     Plotly.purge(el);
-    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:0.72rem;">Grafik için bir model seçin.</div>';
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:var(--fs-body);">Grafik için bir model seçin.</div>';
     return;
   }
 
@@ -424,7 +424,7 @@ function veAccDrawChart(nodeId){
   var config = { responsive: true, displayModeBar: false, displaylogo: false, doubleClick: 'reset', scrollZoom: false };
 
   try { Plotly.react(el, [lineTrace, ptTrace, govTrace], layout, config); }
-  catch(e){ el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:0.7rem;">Grafik çizilemedi: ' + e.message + '</div>'; }
+  catch(e){ el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-muted);font-size:var(--fs-body);">Grafik çizilemedi: ' + e.message + '</div>'; }
 }
 
 // ── Panel olay işleyicileri ─────────────────────────────────────────────────

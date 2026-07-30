@@ -35,7 +35,7 @@ function getTorqueConverterPropertiesHTML(node) {
     if(hasECM) {
       html += '<div class="sw-chain-bar fail" style="margin-bottom:6px;"><span class="mf-ico mf-ico-lock"></span> Konvertör seçimi Motor-Konvertör Eşleştirme bileşeni üzerinden yapılmaktadır.</div>';
     }
-    html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:0.7rem; padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
+    html += '<select id="ve-tc-select-' + node.id + '"' + (hasECM ? ' disabled' : '') + ' onchange="onVEFTTCSelect(\'' + node.id + '\', this.value)" style="width:100%; font-size:var(--fs-body); padding:6px 8px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);' + (hasECM ? ' opacity:0.6; cursor:not-allowed;' : '') + '">';
     html += '<option value="">-- Konvertör Seçiniz --</option>';
     
     if(!_gbFamily) {
@@ -73,17 +73,17 @@ function getTorqueConverterPropertiesHTML(node) {
     if(tcPresetKey && tcPresetKey !== 'manual' && VE_FT_TC_PRESETS[tcPresetKey]) {
       selDesc = VE_FT_TC_PRESETS[tcPresetKey].description || '';
     }
-    html += '<div id="ve-tc-desc-' + node.id + '" style="font-size:0.52rem; color:var(--text-muted); margin-top:3px; line-height:1.3; min-height:12px;">' + selDesc + '</div>';
+    html += '<div id="ve-tc-desc-' + node.id + '" style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px; line-height:1.3; min-height:12px;">' + selDesc + '</div>';
     html += '</div>';
     
     html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Konvertör Parametreleri</span></div>';
     html += '<div class="sw-pkg-body">';
-    html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+    html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Pump Tork Düşümü <span style="color:var(--text-muted); font-weight:400;">[N·m]</span></th>';
-    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-tc-pump-drop-' + node.id + '" value="' + pumpTorqueDrop + '" step="0.1" min="0" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTCParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-tc-pump-drop-' + node.id + '" value="' + pumpTorqueDrop + '" step="0.1" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTCParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '</table>';
@@ -96,7 +96,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-section-title">Konvertör Veri Tablosu</div>';
     html += '<div class="sw-pkg-desc" style="margin-bottom:8px;"><b>SR</b> = Türbin/Pump Devir Oranı. <b>K<sub>pump</sub></b> = Pump K-Factor [rpm/√(N·m)]. <b>τ</b> = Tork Oranı.</div>';
     html += '<div id="ve-tc-table-wrapper-' + node.id + '" style="max-height:' + tcTableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:var(--radius-sm); border-bottom:none;">';
-    html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
+    html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body);">';
     html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
     html += '<tr>';
     html += '<th style="padding:6px; border-bottom:1px solid var(--border-color); text-align:center;">SR<br>[-]</th>';
@@ -130,7 +130,7 @@ function getTorqueConverterPropertiesHTML(node) {
 
     // Güncelle butonu
     html += '<div class="sw-btn-row" style="justify-content:flex-end; margin-bottom:2px;">';
-    html += '<button class="sw-btn sw-btn-primary" style="font-size:0.56rem;padding:3px 10px;" onclick="updateVETCCharts(\'' + node.id + '\')">Güncelle</button>';
+    html += '<button class="sw-btn sw-btn-primary" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="updateVETCCharts(\'' + node.id + '\')">Güncelle</button>';
     html += '</div>';
     html += '</div>';                                    // ve-tc-data-area kapat (tablo girdi bölümü)
     html += '</div>';                                    // ve-cp-col--in kapat (sol/girdi)
@@ -143,7 +143,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div style="position:relative; background:var(--bg-input); border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-tc-chart-tau-' + node.id + '" style="width:100%; height:200px;"></canvas>';
     html += '</div>';
-    html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.56rem; color:var(--text-muted);">';
+    html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
     html += '<span style="color:#4aa3ff;">● τ Tork Oranı</span>';
     html += '<span style="color:#ff6b6b;">● η Verim [%]</span>';
     html += '<span style="color:var(--text-muted); opacity:0.5;">┆ Coupling (SR=0.88)</span>';
@@ -157,7 +157,7 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div style="position:relative; background:var(--bg-input); border:1px solid var(--border-color); padding:4px;">';
     html += '<canvas id="ve-tc-chart-kpump-' + node.id + '" style="width:100%; height:180px;"></canvas>';
     html += '</div>';
-    html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.56rem; color:var(--text-muted);">';
+    html += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
     html += '<span style="color:#a78bfa;">● K<sub>pump</sub> [rpm/√Nm]</span>';
     html += '</div>';
     html += '</div></div>';
@@ -173,29 +173,29 @@ function getTorqueConverterPropertiesHTML(node) {
     html += '<div class="sw-pkg-card">';
     html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Konvertör Parametreleri</span></div>';
     html += '<div class="sw-pkg-body">';
-    html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+    html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Konvertör kilidi</th>';
     html += '<td style="padding:8px; background:var(--bg-tertiary);">';
     html += '<label style="display:flex; align-items:center; gap:6px; cursor:pointer;">';
     html += '<input type="checkbox" id="ve-tc-locked-' + node.id + '" ' + (isLocked ? 'checked' : '') + ' onchange="onVETCParamChange(\'' + node.id + '\')" style="width:16px; height:16px;">';
-    html += '<span style="font-size:0.7rem; color:var(--text-primary);">Kilitli</span>';
+    html += '<span style="font-size:var(--fs-body); color:var(--text-primary);">Kilitli</span>';
     html += '</label>';
     html += '</td>';
     html += '</tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
-    html += '<td colspan="2" style="padding:6px 8px; font-size:0.65rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Kilitli konvertör direkt bağlantı sağlar (oran 1.0). Kilitsiz durumda tork çarpanı uygulanır.</td>';
+    html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Kilitli konvertör direkt bağlantı sağlar (oran 1.0). Kilitsiz durumda tork çarpanı uygulanır.</td>';
     html += '</tr>';
     
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tork konvertörü oranı [-]</th>';
-    html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-tc-ratio-' + node.id + '" value="' + tcRatio + '" min="0.5" max="3" step="0.01" ' + (isLocked ? 'disabled' : '') + ' style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;' + (isLocked ? ' opacity:0.5; cursor:not-allowed;' : '') + '" onchange="onVETCParamChange(\'' + node.id + '\')"></td>';
+    html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-tc-ratio-' + node.id + '" value="' + tcRatio + '" min="0.5" max="3" step="0.01" ' + (isLocked ? 'disabled' : '') + ' style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;' + (isLocked ? ' opacity:0.5; cursor:not-allowed;' : '') + '" onchange="onVETCParamChange(\'' + node.id + '\')"></td>';
     html += '</tr>';
     
     html += '<tr>';
-    html += '<td colspan="2" style="padding:6px 8px; font-size:0.65rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;"><b>Kilitli tork konvertörü için 1.0 giriniz.</b> Eğer tork konvertörü kilidi yoksa veya aktif değilse, dönüştürme oranını giriniz. Tipik değerler: 1.8–2.5 (düşük hızda), yaklaşık 1.0 (yüksek hızda).</td>';
+    html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;"><b>Kilitli tork konvertörü için 1.0 giriniz.</b> Eğer tork konvertörü kilidi yoksa veya aktif değilse, dönüştürme oranını giriniz. Tipik değerler: 1.8–2.5 (düşük hızda), yaklaşık 1.0 (yüksek hızda).</td>';
     html += '</tr>';
     
     html += '</table>';
@@ -759,13 +759,13 @@ function onVEFTTCSelect(nodeId, value) {
 
 function getVETCRowHTML(nodeId, sr, kpump, tau) {
   var html = '<tr>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (sr !== undefined && sr !== '' ? sr : '') + '" step="0.01" min="0" max="1" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (kpump !== undefined && kpump !== '' ? kpump : '') + '" step="0.01" min="0" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETCDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (tau !== undefined && tau !== '' ? tau : '') + '" step="0.001" min="0" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (sr !== undefined && sr !== '' ? sr : '') + '" step="0.01" min="0" max="1" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (kpump !== undefined && kpump !== '' ? kpump : '') + '" step="0.01" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETCDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (tau !== undefined && tau !== '' ? tau : '') + '" step="0.001" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETCDataChange(\'' + nodeId + '\')" oninput="onVETCDataChange(\'' + nodeId + '\')"></td>';
   var etaVal = (sr !== '' && sr !== undefined && tau !== '' && tau !== undefined) ? (parseFloat(sr) * parseFloat(tau) * 100) : '';
   var etaStr = (!isNaN(etaVal) && etaVal !== '') ? etaVal.toFixed(1) : '';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="text" value="' + etaStr + '" readonly style="width:100%; padding:4px; font-size:0.7rem; background:transparent; color:var(--accent-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center; cursor:default; font-weight:500;" tabindex="-1"></td>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color); text-align:center;"><button onclick="removeVETCRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:0.6rem; background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;" title="Satırı sil">×</button></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="text" value="' + etaStr + '" readonly style="width:100%; padding:4px; font-size:var(--fs-body); background:transparent; color:var(--accent-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center; cursor:default; font-weight:500;" tabindex="-1"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color); text-align:center;"><button onclick="removeVETCRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:var(--fs-tiny); background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;" title="Satırı sil">×</button></td>';
   html += '</tr>';
   return html;
 }

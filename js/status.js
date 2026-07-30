@@ -112,7 +112,7 @@ function _veStatusRender() {
   }
   if(info && info.headSha) {
     html += '<div class="ve-settings-row"><span class="ve-settings-label">Commit</span>';
-    html += '<div class="ve-settings-value"><code style="font-size:0.7rem;">' + info.headSha.slice(0,8) + '</code></div></div>';
+    html += '<div class="ve-settings-value"><code style="font-size:var(--fs-body);">' + info.headSha.slice(0,8) + '</code></div></div>';
   }
   if(info && (info.updated_at || info.timestamp)) {
     var ts = info.updated_at || info.timestamp;
@@ -127,7 +127,7 @@ function _veStatusRender() {
   // Son güncellemeler bölümü — GitHub commits API
   html += '<h3 class="ve-settings-section-title" style="margin-top:24px;">Son Güncellemeler</h3>';
   html += '<p class="ve-settings-desc">main branch\'ine yapılan son commit\'ler.</p>';
-  html += '<div id="ve-status-commits"><div style="color:var(--text-muted);font-size:0.72rem;padding:10px 0;">Yükleniyor...</div></div>';
+  html += '<div id="ve-status-commits"><div style="color:var(--text-muted);font-size:var(--fs-body);padding:10px 0;">Yükleniyor...</div></div>';
 
   content.innerHTML = html;
   _veStatusLoadCommits();
@@ -143,7 +143,7 @@ function _veStatusLoadCommits() {
       var el = document.getElementById('ve-status-commits');
       if(!el) return;
       if(!Array.isArray(commits) || !commits.length) {
-        el.innerHTML = '<div style="color:var(--text-muted);font-size:0.72rem;">Commit bulunamadı.</div>';
+        el.innerHTML = '<div style="color:var(--text-muted);font-size:var(--fs-body);">Commit bulunamadı.</div>';
         return;
       }
       // Tarihe göre grupla: Bugün / Dün / Bu hafta / Eski
@@ -198,7 +198,7 @@ function _veStatusLoadCommits() {
         if(authorLogin) html += ' <small style="opacity:0.7;">(@' + _veStatusEsc(authorLogin) + ')</small>';
         html += '</div>';
         if(dateStr) html += '<div><span class="ve-status-commit-meta-label">Tarih</span>' + _veStatusEsc(dateStr) + '</div>';
-        html += '<div><span class="ve-status-commit-meta-label">Commit</span><code style="font-size:0.65rem;opacity:0.85;">' + _veStatusEsc(fullSha) + '</code></div>';
+        html += '<div><span class="ve-status-commit-meta-label">Commit</span><code style="font-size:var(--fs-tiny);opacity:0.85;">' + _veStatusEsc(fullSha) + '</code></div>';
         html += '</div>';
         html += '<div class="ve-status-commit-actions"><a href="' + url + '" target="_blank" rel="noopener" class="ve-settings-btn"><span class="mf-ico mf-ico-link"></span> GitHub\'da Aç</a></div>';
         html += '</div>';
@@ -210,7 +210,7 @@ function _veStatusLoadCommits() {
     })
     .catch(function(e) {
       var el = document.getElementById('ve-status-commits');
-      if(el) el.innerHTML = '<div style="color:var(--accent-warning);font-size:0.72rem;padding:10px 0;">Güncellemeler alınamadı: ' + _veStatusEsc(e.message) + '</div>';
+      if(el) el.innerHTML = '<div style="color:var(--accent-warning);font-size:var(--fs-body);padding:10px 0;">Güncellemeler alınamadı: ' + _veStatusEsc(e.message) + '</div>';
     });
 }
 

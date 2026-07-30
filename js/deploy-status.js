@@ -203,20 +203,20 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   var popup = document.createElement('div');
   popup.id = 've-deploy-popup';
   popup.setAttribute('data-pr-number', String(info.prNumber || 0));
-  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:360px; padding:16px; font-size:0.78rem;';
+  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:360px; padding:16px; font-size:var(--fs-md);';
 
   var html = '';
 
   // Başlık
   html += '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">';
-  html += '<span style="font-weight:600; color:' + titleColor + '; font-size:0.85rem;">' + title + '</span>';
-  html += '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>';
+  html += '<span style="font-weight:600; color:' + titleColor + '; font-size:var(--fs-lg);">' + title + '</span>';
+  html += '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-title);">✕</button>';
   html += '</div>';
 
   // PR bilgisi
   if(info.prTitle) {
     html += '<div style="margin-bottom:10px;">';
-    html += '<div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:3px;">Pull Request #' + info.prNumber + '</div>';
+    html += '<div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:3px;">Pull Request #' + info.prNumber + '</div>';
     html += '<div style="font-weight:600; color:var(--text-heading); line-height:1.4;">' + _veEscHtml(info.prTitle) + '</div>';
     if(info.prBody) {
       var bodyHtml = info.prBody
@@ -225,10 +225,10 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
         .replace(/\*(.+?)\*/g, '<i>$1</i>')
         .replace(/`(.+?)`/g, '<code style="background:var(--bg-primary); padding:1px 4px;">$1</code>')
         .replace(/^### (.+)$/gm, '<div style="font-weight:600; margin-top:8px;">$1</div>')
-        .replace(/^## (.+)$/gm, '<div style="font-weight:600; font-size:0.8rem; margin-top:8px;">$1</div>')
+        .replace(/^## (.+)$/gm, '<div style="font-weight:600; font-size:var(--fs-lg); margin-top:8px;">$1</div>')
         .replace(/^- (.+)$/gm, '• $1')
         .replace(/\n/g, '<br>');
-      html += '<div style="color:var(--text-secondary); font-size:0.72rem; margin-top:6px; line-height:1.5; max-height:300px; overflow-y:auto; padding-right:4px;">' + bodyHtml + '</div>';
+      html += '<div style="color:var(--text-secondary); font-size:var(--fs-body); margin-top:6px; line-height:1.5; max-height:300px; overflow-y:auto; padding-right:4px;">' + bodyHtml + '</div>';
     }
     html += '</div>';
   } else {
@@ -236,7 +236,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
   }
 
   // Detaylar
-  html += '<div style="color:var(--text-muted); font-size:0.7rem; border-top:1px solid var(--border-color); padding-top:10px; line-height:1.8;">';
+  html += '<div style="color:var(--text-muted); font-size:var(--fs-body); border-top:1px solid var(--border-color); padding-top:10px; line-height:1.8;">';
   html += '<span class="mf-ico mf-ico-user"></span> ' + _veEscHtml(info.author);
   html += '<br><span class="mf-ico mf-ico-clock"></span> ' + fullDate;
   html += '<br><span class="mf-ico mf-ico-git-branch"></span> ' + _veEscHtml(info.branch);
@@ -244,7 +244,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 
   // Otomatik kontrol ayarı
   var autoOn = _veAutoCheckEnabled();
-  html += '<label style="margin-top:10px; display:flex; align-items:center; gap:6px; font-size:0.7rem; color:var(--text-muted); cursor:pointer; user-select:none;">';
+  html += '<label style="margin-top:10px; display:flex; align-items:center; gap:6px; font-size:var(--fs-body); color:var(--text-muted); cursor:pointer; user-select:none;">';
   html += '<input type="checkbox"' + (autoOn ? ' checked' : '') + ' onchange="_veToggleAutoCheck(this.checked)" style="margin:0; cursor:pointer;">';
   html += 'Otomatik kontrol (15 dk)';
   html += '</label>';
@@ -261,7 +261,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
       summaryLabel += ' — <span style="color:var(--accent-success); font-weight:600;">' + newCount + ' yeni</span>';
     }
     html += '<details style="margin-top:10px; border-top:1px solid var(--border-color); padding-top:10px;"' + (showUpdateBtn ? ' open' : '') + '>';
-    html += '<summary style="cursor:pointer; font-weight:600; color:var(--text-heading); font-size:0.76rem;">' + summaryLabel + '</summary>';
+    html += '<summary style="cursor:pointer; font-weight:600; color:var(--text-heading); font-size:var(--fs-md);">' + summaryLabel + '</summary>';
     html += '<div style="margin-top:8px; display:flex; flex-direction:column; gap:4px; max-height:200px; overflow-y:auto;">';
     for(var i = 0; i < info.changes.length; i++) {
       var c = info.changes[i];
@@ -270,14 +270,14 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
       var cTitle = c.title || c.message || ('PR #' + c.prNumber);
       var cDate = _veFormatDeployDate(c.date);
       var bg = isNew ? 'background:color-mix(in srgb, var(--accent-success) 8%, transparent); border-left:2px solid var(--accent-success); padding:4px 6px;' : 'padding:4px 6px; border-left:2px solid transparent;';
-      html += '<div style="font-size:0.72rem; line-height:1.4; ' + bg + '">';
+      html += '<div style="font-size:var(--fs-body); line-height:1.4; ' + bg + '">';
       if(c.url) {
         html += '<a href="' + c.url + '" target="_blank" rel="noopener" style="color:var(--accent-primary); text-decoration:none; font-weight:600;">#' + c.prNumber + '</a> ';
       } else {
         html += '<span style="font-weight:600;">#' + c.prNumber + '</span> ';
       }
       html += '<span style="color:var(--text-primary);">' + _veEscHtml(cTitle) + '</span>';
-      html += '<div style="color:var(--text-muted); font-size:0.66rem; margin-top:1px;">' + _veEscHtml(c.author) + ' • ' + cDate + '</div>';
+      html += '<div style="color:var(--text-muted); font-size:var(--fs-body); margin-top:1px;">' + _veEscHtml(c.author) + ' • ' + cDate + '</div>';
       html += '</div>';
     }
     html += '</div></details>';
@@ -285,18 +285,18 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 
   // Güncelle butonu
   if(showUpdateBtn) {
-    html += '<button onclick="_veApplyUpdate()" style="width:100%; margin-top:12px; padding:10px; background:var(--accent-success); color:white; border:none; cursor:pointer; font-weight:600; font-size:0.82rem; transition:background 0.2s;" onmouseenter="this.style.background=\'#16a34a\'" onmouseleave="this.style.background=\'#22c55e\'">Şimdi Güncelle</button>';
+    html += '<button onclick="_veApplyUpdate()" style="width:100%; margin-top:12px; padding:10px; background:var(--accent-success); color:white; border:none; cursor:pointer; font-weight:600; font-size:var(--fs-lg); transition:background 0.2s;" onmouseenter="this.style.background=\'#16a34a\'" onmouseleave="this.style.background=\'#22c55e\'">Şimdi Güncelle</button>';
   } else if(isPending) {
-    html += '<div style="margin-top:12px; padding:10px; background:var(--bg-primary); text-align:center; color:var(--accent-warning); font-size:0.75rem;">Deploy devam ediyor, biraz sonra tekrar deneyin.</div>';
+    html += '<div style="margin-top:12px; padding:10px; background:var(--bg-primary); text-align:center; color:var(--accent-warning); font-size:var(--fs-md);">Deploy devam ediyor, biraz sonra tekrar deneyin.</div>';
   }
 
   // Linkler
   html += '<div style="margin-top:10px; display:flex; gap:12px;">';
   if(info.prUrl) {
-    html += '<a href="' + info.prUrl + '" target="_blank" rel="noopener" style="font-size:0.7rem; color:var(--accent-primary); text-decoration:none;">PR Detayı →</a>';
+    html += '<a href="' + info.prUrl + '" target="_blank" rel="noopener" style="font-size:var(--fs-body); color:var(--accent-primary); text-decoration:none;">PR Detayı →</a>';
   }
   if(info.url) {
-    html += '<a href="' + info.url + '" target="_blank" rel="noopener" style="font-size:0.7rem; color:var(--accent-primary); text-decoration:none;">Actions Log →</a>';
+    html += '<a href="' + info.url + '" target="_blank" rel="noopener" style="font-size:var(--fs-body); color:var(--accent-primary); text-decoration:none;">Actions Log →</a>';
   }
   html += '</div>';
 
@@ -320,7 +320,7 @@ function _veShowPopup(dot, info, title, showUpdateBtn) {
 function _veApplyUpdate() {
   var popup = document.getElementById('ve-deploy-popup');
   if(popup) {
-    popup.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-heading);"><div style="font-size:1.5rem; margin-bottom:8px;"><span class="mf-ico mf-ico-refresh"></span></div>Güncelleniyor...</div>';
+    popup.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-heading);"><div style="font-size:var(--fs-h1); margin-bottom:8px;"><span class="mf-ico mf-ico-refresh"></span></div>Güncelleniyor...</div>';
   }
   localStorage.setItem('ve-deploy-refreshed', '1');
 
@@ -440,12 +440,12 @@ function _veShowRefreshedPopup() {
 
   var popup = document.createElement('div');
   popup.id = 've-deploy-popup';
-  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:360px; padding:16px; font-size:0.78rem;';
+  popup.style.cssText = 'position:fixed; top:42px; right:12px; background:var(--bg-secondary); border:1px solid var(--border-color); box-shadow:0 8px 24px rgba(0,0,0,0.4); z-index:10005; width:360px; padding:16px; font-size:var(--fs-md);';
 
   popup.innerHTML =
     '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-      '<span style="font-weight:600; color:var(--accent-success); font-size:0.85rem;">✓ Program Güncellendi</span>' +
-      '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1rem;">✕</button>' +
+      '<span style="font-weight:600; color:var(--accent-success); font-size:var(--fs-lg);">✓ Program Güncellendi</span>' +
+      '<button onclick="_veDismissPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-title);">✕</button>' +
     '</div>' +
     '<div style="color:var(--text-secondary); line-height:1.5;">Program en son sürüme güncellendi. Detayları görmek için yeşil noktaya tıklayın.</div>';
 

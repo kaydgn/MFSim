@@ -65,10 +65,10 @@ function showInfoPopup(infoKey) {
   popup.style.cssText = 'position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:10005; max-width:400px; padding:20px;';
   
   popup.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">' +
-    '<h3 style="margin:0; font-size:1rem; color:var(--text-heading);">' + info.title + '</h3>' +
-    '<button onclick="closeInfoPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:1.2rem;">✕</button>' +
+    '<h3 style="margin:0; font-size:var(--fs-title); color:var(--text-heading);">' + info.title + '</h3>' +
+    '<button onclick="closeInfoPopup()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-h2);">✕</button>' +
     '</div>' +
-    '<p style="margin:0; font-size:0.85rem; color:var(--text-secondary); line-height:1.5;">' + info.content + '</p>';
+    '<p style="margin:0; font-size:var(--fs-lg); color:var(--text-secondary); line-height:1.5;">' + info.content + '</p>';
   
   // Arka plan overlay
   var overlay = document.createElement('div');
