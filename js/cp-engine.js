@@ -28,7 +28,7 @@ function getEnginePropertiesHTML(node) {
     // Motor seçici
     var savedPreset = nodeData.ftMotorPreset || '';
     selectHtml += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
-    selectHtml += '<select id="ve-ft-motor-select-' + node.id + '" onchange="onVEFTMotorSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:0.7rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+    selectHtml += '<select id="ve-ft-motor-select-' + node.id + '" onchange="onVEFTMotorSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
     selectHtml += '<option value="">-- Motor Seçiniz (' + Object.keys(VE_FT_MOTOR_PRESETS).length + ' preset) --</option>';
     // Aile bazlı gruplama
     var _ftFamilies = [
@@ -65,11 +65,11 @@ function getEnginePropertiesHTML(node) {
 
     // Placeholder (veri yoksa)
     selectHtml += '<div id="ve-motor-placeholder-' + node.id + '" style="display:' + (hasData ? 'none' : 'block') + '; padding:20px; text-align:center; background:var(--bg-tertiary); border-radius:var(--radius-sm); margin-bottom:12px;">';
-    selectHtml += '<div style="font-size:1.5rem; margin-bottom:8px;"><span class="mf-ico mf-ico-zap"></span></div>';
+    selectHtml += '<div style="font-size:var(--fs-h1); margin-bottom:8px;"><span class="mf-ico mf-ico-zap"></span></div>';
     // Kontrolün NEREDE olduğunu söyle: "Manuel Giriş" ayrı bir düğme değil,
     // yukarıdaki listenin son seçeneği. Eski metin var olmayan bir kontrole
     // işaret ediyor gibi okunuyordu.
-    selectHtml += '<div style="font-size:0.75rem; color:var(--text-muted);">Yukarıdaki listeden hazır bir motor seçin<br>ya da listenin sonundaki <strong>+ Manuel Giriş</strong> ile kendi verinizi girin.</div>';
+    selectHtml += '<div style="font-size:var(--fs-md); color:var(--text-muted);">Yukarıdaki listeden hazır bir motor seçin<br>ya da listenin sonundaki <strong>+ Manuel Giriş</strong> ile kendi verinizi girin.</div>';
     selectHtml += '</div>';
   }
 
@@ -82,7 +82,7 @@ function getEnginePropertiesHTML(node) {
     specCardHtml += '<button onclick="showInfoPopup(\'motorVerileri\')" class="sw-info-btn" title="Bilgi">?</button>';
     specCardHtml += '</div>';
     specCardHtml += '<div class="sw-pkg-body">';
-    specCardHtml += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+    specCardHtml += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
 
     var specRows = [
       {id: 'displacement', label: 'Silindir Hacmi', unit: 'L', val: sp.displacement || '', step: '0.01'},
@@ -94,7 +94,7 @@ function getEnginePropertiesHTML(node) {
     specRows.forEach(function(r) {
       specCardHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
       specCardHtml += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:55%; font-weight:500; color:var(--text-secondary);">' + r.label + ' <span style="color:var(--text-muted); font-weight:400;">[' + r.unit + ']</span></th>';
-      specCardHtml += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ft-spec-' + r.id + '-' + node.id + '" value="' + r.val + '" step="' + r.step + '" min="0" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTSpecChange(\'' + node.id + '\')"></td>';
+      specCardHtml += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ft-spec-' + r.id + '-' + node.id + '" value="' + r.val + '" step="' + r.step + '" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTSpecChange(\'' + node.id + '\')"></td>';
       specCardHtml += '</tr>';
     });
     specCardHtml += '</table>';
@@ -109,7 +109,7 @@ function getEnginePropertiesHTML(node) {
   dataAreaHtml += '<div id="ve-motor-data-area-' + node.id + '" style="display:' + (showDataArea ? 'block' : 'none') + ';">';
   dataAreaHtml += '<div class="sw-section-title">Tork & Güç Verileri</div>';
   dataAreaHtml += '<div id="ve-motor-table-wrapper-' + node.id + '" style="max-height:' + tableHeight + 'px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:var(--radius-sm); border-bottom:none;">';
-  dataAreaHtml += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
+  dataAreaHtml += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body);">';
   dataAreaHtml += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   dataAreaHtml += '<tr>';
   dataAreaHtml += '<th style="padding:6px; border-bottom:1px solid var(--border-color); text-align:center;">Devir<br>[rpm]</th>';
@@ -151,11 +151,11 @@ function getEnginePropertiesHTML(node) {
   chartHtml += '<div class="sw-pkg-header" style="cursor:default;">';
   chartHtml += '<span class="sw-pkg-name">Tork & Güç Eğrisi</span>';
   chartHtml += '<button onclick="showInfoPopup(\'torkGucEgrisi\')" class="sw-info-btn" title="Bilgi">?</button>';
-  chartHtml += '<button class="sw-btn sw-btn-outline" style="font-size:0.56rem;padding:2px 8px;margin-left:auto;" onclick="updateVEMotorChart(\'' + node.id + '\')">Güncelle</button>';
+  chartHtml += '<button class="sw-btn sw-btn-outline" style="font-size:var(--fs-micro);padding:2px 8px;margin-left:auto;" onclick="updateVEMotorChart(\'' + node.id + '\')">Güncelle</button>';
   chartHtml += '</div>';
   chartHtml += '<div class="sw-pkg-body">';
   chartHtml += '<canvas id="ve-motor-chart-' + node.id + '" style="width:100%; height:200px; background:var(--bg-input);"></canvas>';
-  chartHtml += '<div style="display:flex; justify-content:center; gap:16px; margin-top:6px; font-size:0.58rem;">';
+  chartHtml += '<div style="display:flex; justify-content:center; gap:16px; margin-top:6px; font-size:var(--fs-micro);">';
   chartHtml += '<span style="color:#4aa3ff;">● Tork [Nm]</span>';
   chartHtml += '<span style="color:#ff6b6b;">● Güç [kW]</span>';
   chartHtml += '</div>';
@@ -171,7 +171,7 @@ function getEnginePropertiesHTML(node) {
   fitHtml += '<div class="sw-pkg-body">';
 
   fitHtml += '<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">';
-  fitHtml += '<select id="ve-fit-method-' + node.id + '" onchange="onVEFitMethodChange(\'' + node.id + '\')" style="flex:1; font-size:0.7rem; padding:4px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+  fitHtml += '<select id="ve-fit-method-' + node.id + '" onchange="onVEFitMethodChange(\'' + node.id + '\')" style="flex:1; font-size:var(--fs-body); padding:4px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
   fitHtml += '<option value="linear"' + (fitMethod === 'linear' ? ' selected' : '') + '>Parça-parça Lineer (İnterpolasyon)</option>';
   fitHtml += '<option value="pchip"' + (fitMethod === 'pchip' ? ' selected' : '') + '>Kübik Spline (PCHIP)</option>';
   fitHtml += '<option value="poly"' + (fitMethod === 'poly' ? ' selected' : '') + '>Polinom</option>';
@@ -179,15 +179,15 @@ function getEnginePropertiesHTML(node) {
   fitHtml += '</div>';
 
   fitHtml += '<div id="ve-poly-degree-wrapper-' + node.id + '" style="display:' + (fitMethod === 'poly' ? 'flex' : 'none') + '; gap:8px; align-items:center; margin-bottom:8px;">';
-  fitHtml += '<span style="font-size:0.7rem; color:var(--text-muted);">Polinom derecesi:</span>';
-  fitHtml += '<select id="ve-poly-degree-' + node.id + '" onchange="updateVEMotorChart(\'' + node.id + '\')" style="width:60px; font-size:0.7rem; padding:3px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+  fitHtml += '<span style="font-size:var(--fs-body); color:var(--text-muted);">Polinom derecesi:</span>';
+  fitHtml += '<select id="ve-poly-degree-' + node.id + '" onchange="updateVEMotorChart(\'' + node.id + '\')" style="width:60px; font-size:var(--fs-body); padding:3px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
   for(var d = 2; d <= 5; d++) {
     fitHtml += '<option value="' + d + '"' + (polyDegree == d ? ' selected' : '') + '>' + d + '</option>';
   }
   fitHtml += '</select>';
   fitHtml += '</div>';
 
-  fitHtml += '<div id="ve-motor-fit-' + node.id + '" style="font-size:0.6rem; color:var(--text-muted); padding:6px 8px; background:var(--bg-input); border:1px solid var(--border-color); font-family:monospace; word-break:break-all;">';
+  fitHtml += '<div id="ve-motor-fit-' + node.id + '" style="font-size:var(--fs-tiny); color:var(--text-muted); padding:6px 8px; background:var(--bg-input); border:1px solid var(--border-color); font-family:monospace; word-break:break-all;">';
   fitHtml += 'Veri girildikten sonra denklem gösterilecek.';
   fitHtml += '</div>';
   fitHtml += '</div></div>'; // sw-pkg-body + sw-pkg-card
@@ -209,7 +209,7 @@ function getEnginePropertiesHTML(node) {
     accHtml += '<div class="sw-pkg-body">';
     accHtml += '<div class="sw-pkg-desc">Brüt güçten net güce geçiş için aksesuar kayıplarını tanımlayın. Toplam kayıp, her devirdeki güçten düşülür.</div>';
 
-    accHtml += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+    accHtml += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
     accHtml += '<thead><tr style="background:var(--bg-secondary);">';
     accHtml += '<th style="padding:5px 6px; text-align:left; border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Aksesuar</th>';
     accHtml += '<th style="padding:5px 6px; text-align:center; border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:75px;">Standart [kW]</th>';
@@ -229,8 +229,8 @@ function getEnginePropertiesHTML(node) {
     accData.forEach(function(acc, idx) {
       accHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
       accHtml += '<td style="padding:5px 6px; background:var(--bg-tertiary); border-right:1px solid var(--border-color); color:var(--text-secondary);">' + acc.name + '</td>';
-      accHtml += '<td style="padding:3px 4px; background:var(--bg-tertiary); border-right:1px solid var(--border-color); text-align:center;"><input type="number" class="ve-acc-std-' + node.id + '" data-idx="' + idx + '" value="' + (acc.standardLoss || 0) + '" step="0.1" min="0" style="width:100%; padding:3px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccChange(\'' + node.id + '\')"></td>';
-      accHtml += '<td style="padding:3px 4px; background:var(--bg-tertiary); text-align:center;"><input type="number" class="ve-acc-user-' + node.id + '" data-idx="' + idx + '" value="' + (acc.userLoss || 0) + '" step="0.1" min="0" style="width:100%; padding:3px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccChange(\'' + node.id + '\')"></td>';
+      accHtml += '<td style="padding:3px 4px; background:var(--bg-tertiary); border-right:1px solid var(--border-color); text-align:center;"><input type="number" class="ve-acc-std-' + node.id + '" data-idx="' + idx + '" value="' + (acc.standardLoss || 0) + '" step="0.1" min="0" style="width:100%; padding:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccChange(\'' + node.id + '\')"></td>';
+      accHtml += '<td style="padding:3px 4px; background:var(--bg-tertiary); text-align:center;"><input type="number" class="ve-acc-user-' + node.id + '" data-idx="' + idx + '" value="' + (acc.userLoss || 0) + '" step="0.1" min="0" style="width:100%; padding:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEAccChange(\'' + node.id + '\')"></td>';
       accHtml += '</tr>';
     });
 
@@ -294,7 +294,7 @@ function getEnginePropertiesHTML(node) {
 
     // Net tablo
     netHtml += '<div id="ve-net-table-wrapper-' + node.id + '" style="max-height:180px; overflow-y:auto; margin-bottom:8px; border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
-    netHtml += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
+    netHtml += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body);">';
     netHtml += '<thead style="position:sticky; top:0; background:var(--bg-secondary); z-index:1;">';
     netHtml += '<tr>';
     netHtml += '<th style="padding:5px; border-bottom:1px solid var(--border-color); text-align:center;">Devir<br>[rpm]</th>';
@@ -324,7 +324,7 @@ function getEnginePropertiesHTML(node) {
     netHtml += '<div style="position:relative; background:var(--bg-input); border-radius:var(--radius-sm); border:1px solid var(--border-color); padding:4px;">';
     netHtml += '<canvas id="ve-net-chart-' + node.id + '" style="width:100%; height:200px;"></canvas>';
     netHtml += '</div>';
-    netHtml += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:0.56rem; color:var(--text-muted);">';
+    netHtml += '<div style="display:flex; gap:12px; justify-content:center; margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">';
     netHtml += '<span style="color:var(--text-muted); opacity:0.5;">┅ Brüt Tork</span>';
     netHtml += '<span style="color:#5b95fb;">● Net Tork [Nm]</span>';
     netHtml += '<span style="color:var(--text-muted); opacity:0.5;">┅ Brüt Güç</span>';
@@ -342,28 +342,28 @@ function getEnginePropertiesHTML(node) {
     brakeHtml += '<div class="sw-pkg-body">';
 
     // Kenarlıklı tablo - daha okunaklı renkler
-    brakeHtml += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+    brakeHtml += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
 
     // Verim satırı
     brakeHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
     brakeHtml += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:65%; font-weight:500; color:var(--text-secondary);">Kabul edilen motor freni verimi [%]</th>';
-    brakeHtml += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-mf-verim-' + node.id + '" value="' + verim + '" min="0" max="100" step="1" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEMotorParamChange(\'' + node.id + '\')"></td>';
+    brakeHtml += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-mf-verim-' + node.id + '" value="' + verim + '" min="0" max="100" step="1" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEMotorParamChange(\'' + node.id + '\')"></td>';
     brakeHtml += '</tr>';
 
     // Verim açıklama satırı
     brakeHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
-    brakeHtml += '<td colspan="2" style="padding:6px 8px; font-size:0.65rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Üretici katalog değerlerinin ne kadarının gerçek araca aktarılacağını ifade eder. Örneğin %95 girildiğinde, tork/güç değerleri 0,95 ile çarpılarak kullanılır.</td>';
+    brakeHtml += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Üretici katalog değerlerinin ne kadarının gerçek araca aktarılacağını ifade eder. Örneğin %95 girildiğinde, tork/güç değerleri 0,95 ile çarpılarak kullanılır.</td>';
     brakeHtml += '</tr>';
 
     // Governed RPM satırı
     brakeHtml += '<tr style="border-bottom:1px solid var(--border-color);">';
     brakeHtml += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Governed RPM [d/d]</th>';
-    brakeHtml += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-governed-rpm-' + node.id + '" value="' + governedRpm + '" min="500" max="5000" step="100" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEMotorParamChange(\'' + node.id + '\')"></td>';
+    brakeHtml += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-governed-rpm-' + node.id + '" value="' + governedRpm + '" min="500" max="5000" step="100" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEMotorParamChange(\'' + node.id + '\')"></td>';
     brakeHtml += '</tr>';
 
     // Governed RPM açıklama satırı
     brakeHtml += '<tr>';
-    brakeHtml += '<td colspan="2" style="padding:6px 8px; font-size:0.65rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Motorun maksimum çalışma devri. Vites değişim mantığı:<br>• <b>Upshift:</b> Motor devri > Governed + 400 olunca üst vitese geçer<br>• <b>Downshift:</b> Motor devri < (Governed + 400) × (i<sub>mevcut</sub> / i<sub>alt</sub>) olunca alt vitese geçer</td>';
+    brakeHtml += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Motorun maksimum çalışma devri. Vites değişim mantığı:<br>• <b>Upshift:</b> Motor devri > Governed + 400 olunca üst vitese geçer<br>• <b>Downshift:</b> Motor devri < (Governed + 400) × (i<sub>mevcut</sub> / i<sub>alt</sub>) olunca alt vitese geçer</td>';
     brakeHtml += '</tr>';
 
     brakeHtml += '</table>';
@@ -1890,9 +1890,9 @@ function onVEMotorCategoryChange(nodeId) {
 
 function getVEMotorRowHTML(nodeId, rpm, torque, power) {
   var html = '<tr>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (rpm !== '' && rpm !== undefined ? rpm : '') + '" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (torque !== '' && torque !== undefined ? torque : '') + '" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (power !== '' && power !== undefined ? power : '') + '" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (rpm !== '' && rpm !== undefined ? rpm : '') + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (torque !== '' && torque !== undefined ? torque : '') + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" value="' + (power !== '' && power !== undefined ? power : '') + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVEMotorDataChange(\'' + nodeId + '\')"></td>';
   html += '<td style="padding:3px; border-bottom:1px solid var(--border-color); text-align:center;"><button class="ve-row-del" onclick="removeVEMotorRow(this, \'' + nodeId + '\')" title="Satırı sil">×</button></td>';
   html += '</tr>';
   return html;
@@ -2741,7 +2741,7 @@ function updateVEMotorFitEquation(nodeId, torquePoints, powerPoints) {
       
       html += '<b style="color:#4aa3ff;">Tork [Nm]</b> (' + torqueCoeffs.length + '. derece)';
       html += ' <span style="color:var(--text-muted);">R²=' + torqueR2.toFixed(4) + '</span><br>';
-      html += '<span style="font-size:0.6rem;">T(n) = ' + formatVEPolynomial(torqueCoeffs) + '</span>';
+      html += '<span style="font-size:var(--fs-tiny);">T(n) = ' + formatVEPolynomial(torqueCoeffs) + '</span>';
     }
     
     // Güç için polinom fit
@@ -2761,7 +2761,7 @@ function updateVEMotorFitEquation(nodeId, torquePoints, powerPoints) {
         
         html += '<br><b style="color:#ff6b6b;">Güç [kW]</b> (' + powerCoeffs.length + '. derece)';
         html += ' <span style="color:var(--text-muted);">R²=' + powerR2.toFixed(4) + '</span><br>';
-        html += '<span style="font-size:0.6rem;">P(n) = ' + formatVEPolynomial(powerCoeffs) + '</span>';
+        html += '<span style="font-size:var(--fs-tiny);">P(n) = ' + formatVEPolynomial(powerCoeffs) + '</span>';
       }
     }
   }

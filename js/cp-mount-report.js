@@ -46,32 +46,32 @@ function getMntReportPropertiesHTML(node){
   var nC=0,nM=0;
   if(solved){ nC=(_veMntLast.gather.components||[]).length; nM=(_veMntLast.mounts||[]).length; }
   var html='<div class="sw-panel">';
-  html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.62rem; line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
+  html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); line-height:1.45; color:var(--text-secondary); background:var(--bg-secondary); border:1px solid var(--border-color); border-left:3px solid var(--accent-primary);">'
       + '<b style="color:var(--text-heading);">Rapor — çökme &amp; titreşim.</b> '
       + 'Çözücü\'nün 6 SD sonuçlarını akademik bir <b>HTML rapora</b> döker (teori + bu modelin sayısal örneği). '
       + 'Dosya <b>tamamen çevrimdışı</b>; matematik ve fontlar gömülüdür — her yerde açılır, yazdırılabilir.</div>';
   if(solved){
-    html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:0.64rem; background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-primary);">'
+    html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-primary);">'
         + '<span style="color:var(--accent-success); font-weight:700;">✓ Model çözüldü</span> — '
         + nC+' bileşen · '+nM+' takoz. Rapor güncel çözüme göre üretilir.</div>';
     // Frekans yerleşimi (opsiyonel) — doldurulursa rapora §8.7 eklenir.
-    var inpSt='width:100%; padding:4px 6px; margin-top:3px; font-size:0.66rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); text-align:right;';
+    var inpSt='width:100%; padding:4px 6px; margin-top:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); text-align:right;';
     html+='<div style="margin:0 0 10px; padding:9px 10px; background:var(--bg-secondary); border:1px solid var(--border-color);">'
-        + '<div style="font-size:0.64rem; font-weight:600; color:var(--text-heading);">Frekans yerleşimi & izolasyon <span style="font-weight:400; color:var(--text-muted);">(opsiyonel)</span></div>'
-        + '<div style="font-size:0.56rem; color:var(--text-muted); line-height:1.4; margin:3px 0 6px;">Doldurulursa rapora §8.8 eklenir: ateşleme frekansı (f<sub>ateş</sub>), Kriter 1 (roll modu &lt; %50 f<sub>ateş</sub>) ve Kriter 2 (rölanti iletilebilirliği &lt; %50). ζ = sönüm oranı (boş → 0,001).</div>'
+        + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading);">Frekans yerleşimi & izolasyon <span style="font-weight:400; color:var(--text-muted);">(opsiyonel)</span></div>'
+        + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin:3px 0 6px;">Doldurulursa rapora §8.8 eklenir: ateşleme frekansı (f<sub>ateş</sub>), Kriter 1 (roll modu &lt; %50 f<sub>ateş</sub>) ve Kriter 2 (rölanti iletilebilirliği &lt; %50). ζ = sönüm oranı (boş → 0,001).</div>'
         + '<div style="display:flex; gap:8px;">'
-        +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Rölanti [d/dk]<input type="number" min="0" step="10" value="'+_rEsc(node.data.idleRpm==null?'':node.data.idleRpm)+'" placeholder="ör: 650" onchange="veMntSet(\''+node.id+'\',\'idleRpm\',this.value)" style="'+inpSt+'"></label>'
-        +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Silindir sayısı<input type="number" min="1" step="1" value="'+_rEsc(node.data.cylinders==null?'':node.data.cylinders)+'" placeholder="ör: 6" onchange="veMntSet(\''+node.id+'\',\'cylinders\',this.value)" style="'+inpSt+'"></label>'
-        +   '<label style="flex:1; font-size:0.58rem; color:var(--text-secondary);">Sönüm ζ<input type="number" min="0" step="0.001" value="'+_rEsc(node.data.zeta==null?'':node.data.zeta)+'" placeholder="0,001" onchange="veMntSet(\''+node.id+'\',\'zeta\',this.value)" style="'+inpSt+'"></label>'
+        +   '<label style="flex:1; font-size:var(--fs-micro); color:var(--text-secondary);">Rölanti [d/dk]<input type="number" min="0" step="10" value="'+_rEsc(node.data.idleRpm==null?'':node.data.idleRpm)+'" placeholder="ör: 650" onchange="veMntSet(\''+node.id+'\',\'idleRpm\',this.value)" style="'+inpSt+'"></label>'
+        +   '<label style="flex:1; font-size:var(--fs-micro); color:var(--text-secondary);">Silindir sayısı<input type="number" min="1" step="1" value="'+_rEsc(node.data.cylinders==null?'':node.data.cylinders)+'" placeholder="ör: 6" onchange="veMntSet(\''+node.id+'\',\'cylinders\',this.value)" style="'+inpSt+'"></label>'
+        +   '<label style="flex:1; font-size:var(--fs-micro); color:var(--text-secondary);">Sönüm ζ<input type="number" min="0" step="0.001" value="'+_rEsc(node.data.zeta==null?'':node.data.zeta)+'" placeholder="0,001" onchange="veMntSet(\''+node.id+'\',\'zeta\',this.value)" style="'+inpSt+'"></label>'
         + '</div></div>';
-    html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:0.8rem; font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
+    html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
   } else {
-    html+='<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:0.66rem; line-height:1.5;">'
+    html+='<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
         + '<b>Önce hesaplayın.</b> Rapor, <b>Çözücü</b> bileşenindeki <b>▶ Hesapla</b> ile üretilen sonuçları kullanır. '
         + 'Çözücü\'yü çalıştırdıktan sonra buraya dönün.</div>';
-    html+='<button disabled style="width:100%; padding:13px 16px; font-size:0.8rem; font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:var(--radius-sm);">📄 Raporu Oluştur ve İndir</button>';
+    html+='<button disabled style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--bg-tertiary); color:var(--text-muted); border:1px solid var(--border-color); cursor:not-allowed; border-radius:var(--radius-sm);">📄 Raporu Oluştur ve İndir</button>';
   }
-  html+='<div id="ve-mnt-report-status" style="margin-top:8px; font-size:0.6rem; color:var(--text-muted);"></div>';
+  html+='<div id="ve-mnt-report-status" style="margin-top:8px; font-size:var(--fs-tiny); color:var(--text-muted);"></div>';
   html+='</div>';
   return html;
 }
@@ -756,7 +756,7 @@ function _mntRepGearForces(R){
   if(!rows.length) return '';   // tork girilmemişse bölümü atla
   var h='<h3>8.9 Kriter 3 — Vites bazında takoz kuvvetleri</h3>';
   h+='<p>Tasarım kriteri her vites için takoz kuvvetlerinin kontrolünü ister. Kütle ve rijitlik sabit, yalnız şaft torku \\(T_{\\text{shaft}}\\) vites oranıyla ölçeklenir; en yüksek redüksiyonlu <b>1. vites en yüksek tork</b> ürettiğinden ileri vitesler için <b>bağlayıcı</b> durumdur. Değerler ±15 mm durdurucu modeliyle (bkz. §9) çözülür.</p>';
-  h+='<table style="width:100%; border-collapse:collapse; font-size:0.72rem; margin:8px 0;">';
+  h+='<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body); margin:8px 0;">';
   h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c9cdd3);">'
     +'<th style="text-align:left; padding:4px 6px;">Vites</th>'
     +'<th style="text-align:right; padding:4px 6px;">Oran</th>'
@@ -786,7 +786,7 @@ function _mntRepDesignLoads(R){
   if(!design.length && !maxTq) return '';
   var h='<h3>8.10 Kriter 4 — Tasarım yük koşulları</h3>';
   h+='<p>Tasarım kriterinin dört zorunlu yük koşulunda maksimum takoz kuvveti (dayanım tasarımı için). 1g yanal koşul, kalibreli 0,6g viraj manevrasından ayrı bir dayanım zarfıdır.</p>';
-  h+='<table style="width:100%; border-collapse:collapse; font-size:0.72rem; margin:8px 0;">';
+  h+='<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body); margin:8px 0;">';
   h+='<thead><tr style="border-bottom:1.5px solid var(--line,#c9cdd3);">'
     +'<th style="text-align:left; padding:4px 6px;">Koşul</th>'
     +'<th style="text-align:right; padding:4px 6px;">Maks |F| [kN]</th>'

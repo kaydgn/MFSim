@@ -315,7 +315,7 @@ function veCursorPaintTooltip(slotIdx, g, sample, snapX, mouseY) {
   eksik.forEach(function(row) {
     html += '<div class="ve-chart-tooltip-row">';
     html += '<div class="ve-chart-tooltip-dot" style="background:' + row.color + '; opacity:0.3;"></div>';
-    html += '<span style="font-size:0.65rem; opacity:0.5;">' + veCursorEsc(row.name) + '</span>';
+    html += '<span style="font-size:var(--fs-tiny); opacity:0.5;">' + veCursorEsc(row.name) + '</span>';
     html += '<span class="ve-chart-tooltip-val" style="opacity:0.4;">— veri yok</span>';
     html += '</div>';
   });
@@ -331,7 +331,7 @@ function veCursorPaintTooltip(slotIdx, g, sample, snapX, mouseY) {
       if(row.dv === null) return;
       html += '<div class="ve-chart-tooltip-row">';
       html += '<div class="ve-chart-tooltip-dot" style="background:' + row.color + '; opacity:0.55;"></div>';
-      html += '<span style="font-size:0.65rem; opacity:0.75;">Δ ' + veCursorEsc(row.name) + '</span>';
+      html += '<span style="font-size:var(--fs-tiny); opacity:0.75;">Δ ' + veCursorEsc(row.name) + '</span>';
       html += '<span class="ve-chart-tooltip-val">' + veCursorFmtDelta(row.dv) +
         ' <span style="opacity:0.5;">' + veCursorEsc(row.unit) + '</span></span>';
       html += '</div>';

@@ -976,15 +976,15 @@ function swShowDiagramInfo(pkgId, diagIdx) {
   var html = '<div style="background:var(--bg-primary,#fff);border-radius:var(--radius-sm);padding:20px;max-width:440px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.3);color:var(--text-primary,#333);">';
   html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">';
   var diagIcon = d.zAxis ? '<span class="mf-ico mf-ico-package"></span>' : '<span class="mf-ico mf-ico-trending-up"></span>';
-  html += '<span style="font-weight:700;font-size:0.9rem;">' + diagIcon + ' ' + d.name + '</span>';
-  html += '<button onclick="document.getElementById(\'sw-info-overlay\').remove()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted,#999);">✕</button>';
+  html += '<span style="font-weight:700;font-size:var(--fs-lg);">' + diagIcon + ' ' + d.name + '</span>';
+  html += '<button onclick="document.getElementById(\'sw-info-overlay\').remove()" style="background:none;border:none;font-size:var(--fs-title);cursor:pointer;color:var(--text-muted,#999);">✕</button>';
   html += '</div>';
   var axisInfo = '<b>X:</b> ' + d.xAxis + ' &nbsp; <b>Y:</b> ' + (Array.isArray(d.yAxis) ? d.yAxis.join(' / ') : d.yAxis);
   if(d.zAxis) axisInfo += ' &nbsp; <b>Z (renk):</b> ' + d.zAxis;
-  html += '<div style="font-size:0.72rem;color:var(--text-secondary,#666);margin-bottom:8px;">' + axisInfo + '</div>';
-  html += '<div style="font-size:0.72rem;line-height:1.5;color:var(--text-primary,#333);border-top:1px solid var(--border-color,#eee);padding-top:10px;">' + d.significance + '</div>';
+  html += '<div style="font-size:var(--fs-body);color:var(--text-secondary,#666);margin-bottom:8px;">' + axisInfo + '</div>';
+  html += '<div style="font-size:var(--fs-body);line-height:1.5;color:var(--text-primary,#333);border-top:1px solid var(--border-color,#eee);padding-top:10px;">' + d.significance + '</div>';
   if(d.note) {
-    html += '<div style="font-size:0.68rem;color:var(--accent-warning);margin-top:8px;padding:6px 8px;background:color-mix(in srgb, var(--accent-warning) 8%, transparent);border-radius:var(--radius-sm);">⚠ ' + d.note + '</div>';
+    html += '<div style="font-size:var(--fs-body);color:var(--accent-warning);margin-top:8px;padding:6px 8px;background:color-mix(in srgb, var(--accent-warning) 8%, transparent);border-radius:var(--radius-sm);">⚠ ' + d.note + '</div>';
   }
   html += '</div>';
   ov.innerHTML = html;
@@ -1013,7 +1013,7 @@ function getSensorWizardPropertiesHTML(node) {
     html += '<div class="sw-status-bar installed">';
     html += '<span class="sw-status-dot"></span>';
     html += '<span>Sensörler Kurulu</span>';
-    html += '<span style="margin-left:auto;font-weight:400;font-size:0.56rem;opacity:0.8;">' + installedPkgs.length + ' paket, ' + sCount + ' sensör</span>';
+    html += '<span style="margin-left:auto;font-weight:400;font-size:var(--fs-micro);opacity:0.8;">' + installedPkgs.length + ' paket, ' + sCount + ' sensör</span>';
     html += '</div>';
   } else {
     html += '<div class="sw-status-bar not-installed">';
@@ -1205,7 +1205,7 @@ function getSensorWizardPropertiesHTML(node) {
 
   // Yenile
   html += '<div style="text-align:center;margin-top:6px;">';
-  html += '<button class="sw-btn sw-btn-outline" style="font-size:0.56rem;padding:3px 10px;" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)showNodeProperties(w);">Durumu Yenile</button>';
+  html += '<button class="sw-btn sw-btn-outline" style="font-size:var(--fs-micro);padding:3px 10px;" onclick="var w=nodes.find(function(n){return n.type===\'sensor-wizard\';});if(w)showNodeProperties(w);">Durumu Yenile</button>';
   html += '</div>';
   html += '</div>';                                   // ve-cp-col--out kapat
   html += '</div>';                                   // ve-cp-grid kapat

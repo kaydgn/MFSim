@@ -28,7 +28,7 @@ function getTransferPropertiesHTML(node) {
     // Transfer Case Preset Seçici
     var ftTrPreset = nodeData.ftTrPreset || '';
     html += '<div style="display:flex; gap:6px; margin-bottom:8px; align-items:center;">';
-    html += '<select id="ve-fttr-preset-' + node.id + '" onchange="onVEFTTransferPresetSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:0.68rem; padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+    html += '<select id="ve-fttr-preset-' + node.id + '" onchange="onVEFTTransferPresetSelect(\'' + node.id + '\', this.value)" style="flex:1; font-size:var(--fs-body); padding:4px 6px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
     html += '<option value="">-- Transfer Case Preset (' + Object.keys(VE_TRANSFER_PRESETS).length + ') --</option>';
     var _trBrands = {};
     Object.keys(VE_TRANSFER_PRESETS).forEach(function(tk) { var b = VE_TRANSFER_PRESETS[tk].marka; if(!_trBrands[b]) _trBrands[b] = []; _trBrands[b].push(tk); });
@@ -45,10 +45,10 @@ function getTransferPropertiesHTML(node) {
     html += '</select>';
     html += '</div>';
     
-    html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+    html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
     
     // Kademe Sayısı (readonly)
-    var roStyle = 'width:100%; padding:4px; font-size:0.68rem; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:default;';
+    var roStyle = 'width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:default;';
     html += '<tr style="border-bottom:1px solid var(--border-color);">';
     html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Kademe Sayısı</th>';
     html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" value="' + ftTrGears.length + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
@@ -64,7 +64,7 @@ function getTransferPropertiesHTML(node) {
     html += '<div class="sw-section-title">Kademe Tablosu</div>';
     
     html += '<div style="border:1px solid var(--border-color); border-radius:var(--radius-sm); overflow:hidden;">';
-    html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
+    html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body);">';
     html += '<thead style="background:var(--bg-tertiary);">';
     html += '<tr>';
     html += '<th style="padding:5px; border-bottom:1px solid var(--border-color); text-align:center; width:30%;">Kademe</th>';
@@ -78,8 +78,8 @@ function getTransferPropertiesHTML(node) {
       var isLast = idx === ftTrGears.length - 1;
       html += '<tr style="' + (isLast ? '' : 'border-bottom:1px solid var(--border-color);') + '">';
       html += '<td style="padding:5px; text-align:center; background:var(--bg-tertiary); font-weight:500; color:var(--text-secondary);">' + g.kademe + '</td>';
-      html += '<td style="padding:3px 5px; background:var(--bg-tertiary);"><input type="number" id="ve-fttr-ratio-' + node.id + '-' + idx + '" value="' + g.ratio + '" step="0.001" min="0.1" style="width:100%; padding:3px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTransferParamChange(\'' + node.id + '\')"></td>';
-      html += '<td style="padding:3px 5px; background:var(--bg-tertiary);"><input type="number" id="ve-fttr-eff-' + node.id + '-' + idx + '" value="' + g.eff + '" step="0.01" min="80" max="100" style="width:100%; padding:3px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTransferParamChange(\'' + node.id + '\')"></td>';
+      html += '<td style="padding:3px 5px; background:var(--bg-tertiary);"><input type="number" id="ve-fttr-ratio-' + node.id + '-' + idx + '" value="' + g.ratio + '" step="0.001" min="0.1" style="width:100%; padding:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTransferParamChange(\'' + node.id + '\')"></td>';
+      html += '<td style="padding:3px 5px; background:var(--bg-tertiary);"><input type="number" id="ve-fttr-eff-' + node.id + '-' + idx + '" value="' + g.eff + '" step="0.01" min="80" max="100" style="width:100%; padding:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEFTTransferParamChange(\'' + node.id + '\')"></td>';
       html += '</tr>';
     });
     
@@ -107,21 +107,21 @@ function getTransferPropertiesHTML(node) {
   html += '<div class="ve-cp-grid ve-cp-grid--cards"><div class="ve-cp-col">';
   // Transfer Kutusu Marka/Model Seçici
   html += '<div style="display:flex; gap:4px; margin-bottom:8px; align-items:center;">';
-  html += '<select id="ve-transfer-brand-' + node.id + '" onchange="veUpdateTransferModels(\'' + node.id + '\')" style="flex:1; font-size:0.68rem; padding:4px 4px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+  html += '<select id="ve-transfer-brand-' + node.id + '" onchange="veUpdateTransferModels(\'' + node.id + '\')" style="flex:1; font-size:var(--fs-body); padding:4px 4px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
   html += '<option value="">-- Marka --</option>';
   html += '<option value="AxleTech">AxleTech</option>';
   html += '<option value="Base Studio">Base Studio</option>';
   html += '<option value="GHM">GHM</option>';
   html += '<option value="ZF">ZF</option>';
   html += '</select>';
-  html += '<select id="ve-transfer-model-' + node.id + '" onchange="veLoadTransferModel(\'' + node.id + '\')" style="flex:1; font-size:0.68rem; padding:4px 4px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+  html += '<select id="ve-transfer-model-' + node.id + '" onchange="veLoadTransferModel(\'' + node.id + '\')" style="flex:1; font-size:var(--fs-body); padding:4px 4px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
   html += '<option value="">-- Model --</option>';
   html += '</select>';
   html += '</div>';
   
   // Kademe Tablosu
   html += '<div id="ve-transfer-table-wrapper-' + node.id + '" style="max-height:150px; overflow-y:auto; margin-bottom:0; border:1px solid var(--border-color); border-radius:var(--radius-sm); border-bottom:none;">';
-  html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem;">';
+  html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body);">';
   html += '<thead style="position:sticky; top:0; background:var(--bg-tertiary); z-index:1;">';
   html += '<tr>';
   html += '<th style="padding:6px; text-align:center; border-bottom:1px solid var(--border-color); width:30%;">Kademe</th>';
@@ -157,18 +157,18 @@ function getTransferPropertiesHTML(node) {
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Aktif Kademe</span></div>';
   html += '<div class="sw-pkg-body">';
   
-  html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+  html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:50%; font-weight:500; color:var(--text-secondary);">Seçili kademe</th>';
   html += '<td style="padding:8px; background:var(--bg-tertiary);">';
-  html += '<select id="ve-transfer-mode-' + node.id + '" onchange="onVETransferModeChange(\'' + node.id + '\')" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+  html += '<select id="ve-transfer-mode-' + node.id + '" onchange="onVETransferModeChange(\'' + node.id + '\')" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
   html += '<option value="">-- Seçin --</option>';
   html += '</select>';
   html += '</td>';
   html += '</tr>';
   html += '<tr>';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Aktif oran</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-transfer-ratio-' + node.id + '" value="' + selectedRatio + '" readonly style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:not-allowed;"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-transfer-ratio-' + node.id + '" value="' + selectedRatio + '" readonly style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:not-allowed;"></td>';
   html += '</tr>';
   html += '</table>';
   html += '</div></div>';
@@ -178,12 +178,12 @@ function getTransferPropertiesHTML(node) {
   html += '<div class="sw-pkg-card" style="margin-bottom:10px; margin-top:12px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Verim</span></div>';
   html += '<div class="sw-pkg-body">';
-  html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+  html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:55%; font-weight:500; color:var(--text-secondary);">Transfer kutusu verimi [%]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-transfer-eff-' + node.id + '" value="' + transferEfficiency + '" step="0.5" min="80" max="100" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVETransferEffChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-transfer-eff-' + node.id + '" value="' + transferEfficiency + '" step="0.5" min="80" max="100" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVETransferEffChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
-  html += '<tr><td colspan="2" style="padding:5px 8px; font-size:0.62rem; color:var(--text-muted); background:var(--bg-secondary);">Tipik değer: %95–98</td></tr>';
+  html += '<tr><td colspan="2" style="padding:5px 8px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary);">Tipik değer: %95–98</td></tr>';
   html += '</table></div></div>';
   html += '</div>';                                   // ve-cp-col (sağ) kapat
   html += '</div>';                                   // ve-cp-grid kapat
@@ -313,10 +313,10 @@ function veLoadTransferModel(nodeId) {
 
 function getVETransferRowHTML(nodeId, mode, ratio, note) {
   var html = '<tr>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="text" value="' + mode + '" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETransferDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" step="0.001" value="' + ratio + '" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETransferDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="text" value="' + note + '" style="width:100%; padding:4px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETransferDataChange(\'' + nodeId + '\')"></td>';
-  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color); text-align:center;"><button onclick="removeVETransferRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:0.6rem; background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">×</button></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="text" value="' + mode + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETransferDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="number" step="0.001" value="' + ratio + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETransferDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color);"><input type="text" value="' + note + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:center;" onchange="onVETransferDataChange(\'' + nodeId + '\')"></td>';
+  html += '<td style="padding:3px; border-bottom:1px solid var(--border-color); text-align:center;"><button onclick="removeVETransferRow(this, \'' + nodeId + '\')" style="padding:2px 6px; font-size:var(--fs-tiny); background:var(--accent-danger); color:white; border:none; border-radius:var(--radius-sm); cursor:pointer;">×</button></td>';
   html += '</tr>';
   return html;
 }
@@ -409,16 +409,16 @@ function getPropshaftPropertiesHTML(node) {
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Propşaft Parametreleri</span></div>';
   html += '<div class="sw-pkg-body">';
-  html += '<table style="width:100%; font-size:0.68rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+  html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
   
   // Propşaft Adı
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:45%; font-weight:500; color:var(--text-secondary);">Propşaft Adı</th>';
-  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-ps-name-' + node.id + '" value="' + psName + '" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);" onchange="onVEPropshaftParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" id="ve-ps-name-' + node.id + '" value="' + psName + '" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);" onchange="onVEPropshaftParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   // Oran (readonly)
-  var roStyle = 'width:100%; padding:4px; font-size:0.68rem; background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:default;';
+  var roStyle = 'width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; cursor:default;';
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Oran [-]</th>';
   html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="text" value="' + psRatio.toFixed(3) + '" readonly style="' + roStyle + '" tabindex="-1"></td>';
@@ -427,13 +427,13 @@ function getPropshaftPropertiesHTML(node) {
   // Verim
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Verim <span style="color:var(--text-muted); font-weight:400;">[%]</span></th>';
-  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ps-eff-' + node.id + '" value="' + psEff + '" step="0.01" min="90" max="100" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEPropshaftParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ps-eff-' + node.id + '" value="' + psEff + '" step="0.01" min="90" max="100" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEPropshaftParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   // Atalet
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Atalet <span style="color:var(--text-muted); font-weight:400;">[kg·m²]</span></th>';
-  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ps-inertia-' + node.id + '" value="' + psInertia + '" step="0.01" min="0" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEPropshaftParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:4px 6px; background:var(--bg-tertiary);"><input type="number" id="ve-ps-inertia-' + node.id + '" value="' + psInertia + '" step="0.01" min="0" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEPropshaftParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   html += '</table>';
@@ -487,7 +487,7 @@ function getDifferentialPropertiesHTML(node) {
     // Slave diferansiyel: sadece görsel
     if(!isMaster) {
       var html = '<div class="sw-panel">';
-      html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:0.52rem; font-weight:600; padding:1px 5px; border:1px solid var(--border-color);">SLAVE</span></div>';
+      html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel <span style="background:var(--bg-tertiary); color:var(--text-muted); font-size:var(--fs-micro); font-weight:600; padding:1px 5px; border:1px solid var(--border-color);">SLAVE</span></div>';
       html += '<div class="sw-pkg-desc">';
       html += 'Bu diferansiyel görsel amaçlıdır. Tüm parametreler Master diferansiyel' + (masterNode ? ' (' + escapeHTML(masterNode.customName || 'Diferansiyel') + ')' : '') + ' üzerinden tanımlanır.';
       html += '</div>';
@@ -504,38 +504,38 @@ function getDifferentialPropertiesHTML(node) {
   // Başlık
   html += '<div class="sw-section-title" style="display:flex;align-items:center;justify-content:space-between;">Diferansiyel';
   if(isFullThrottle) {
-    html += ' <span style="background:#f59e0b; color:#000; font-size:0.52rem; font-weight:700; padding:1px 5px;">★ MASTER</span>';
+    html += ' <span style="background:#f59e0b; color:#000; font-size:var(--fs-micro); font-weight:700; padding:1px 5px;">★ MASTER</span>';
   }
   html += ' <button class="sw-info-btn" onclick="showInfoPopup(\'diferansiyel\')" title="Bilgi">?</button></div>';
   
   // Tablo
-  html += '<table style="width:100%; font-size:0.7rem; border-collapse:collapse; border:1px solid var(--border-color);">';
+  html += '<table style="width:100%; font-size:var(--fs-body); border-collapse:collapse; border:1px solid var(--border-color);">';
   
   // Diferansiyel oranı
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); width:60%; font-weight:500; color:var(--text-secondary);">Diferansiyel oranı [-]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-diff-ratio-' + node.id + '" value="' + diffRatio + '" step="0.01" min="1" max="20" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEDiffParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-diff-ratio-' + node.id + '" value="' + diffRatio + '" step="0.01" min="1" max="20" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEDiffParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
-  html += '<td colspan="2" style="padding:6px 8px; font-size:0.65rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Son tahrik oranı. Askeri araçlarda tipik değer: 4.5–8.0 arası.</td>';
+  html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Son tahrik oranı. Askeri araçlarda tipik değer: 4.5–8.0 arası.</td>';
   html += '</tr>';
   
   // Verim
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Diferansiyel verimi [%]</th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-diff-eff-' + node.id + '" value="' + efficiency + '" step="0.5" min="80" max="100" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEDiffParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-diff-eff-' + node.id + '" value="' + efficiency + '" step="0.5" min="80" max="100" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEDiffParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   html += '<tr>';
-  html += '<td colspan="2" style="padding:6px 8px; font-size:0.65rem; color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Diferansiyel mekanik verimi. Tipik değer: %95–98 arası.</td>';
+  html += '<td colspan="2" style="padding:6px 8px; font-size:var(--fs-tiny); color:var(--text-secondary); background:var(--bg-secondary); line-height:1.4;">Diferansiyel mekanik verimi. Tipik değer: %95–98 arası.</td>';
   html += '</tr>';
   
   // Atalet
   var diffInertia = nodeData.diffInertia !== undefined ? nodeData.diffInertia : 1.0;
   html += '<tr style="border-bottom:1px solid var(--border-color);">';
   html += '<th style="padding:8px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Atalet <span style="color:var(--text-muted); font-weight:400;">[kg·m²]</span></th>';
-  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-diff-inertia-' + node.id + '" value="' + diffInertia + '" step="0.01" min="0" style="width:100%; padding:5px; font-size:0.7rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEDiffParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:8px; background:var(--bg-tertiary);"><input type="number" id="ve-diff-inertia-' + node.id + '" value="' + diffInertia + '" step="0.01" min="0" style="width:100%; padding:5px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onVEDiffParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   
   html += '</table>';

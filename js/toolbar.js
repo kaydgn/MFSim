@@ -145,16 +145,16 @@ function veShowSaveDialog(defaultName, blob, toastMsg) {
   var ext = defaultName.slice(nameOnly.length);
 
   modal.innerHTML =
-    '<h3 style="margin:0 0 16px 0;font-size:1rem;">Farklı Kaydet</h3>' +
-    '<label style="font-size:0.8rem;color:var(--text-muted,#aaa);display:block;margin-bottom:6px;">Dosya adı</label>' +
+    '<h3 style="margin:0 0 16px 0;font-size:var(--fs-title);">Farklı Kaydet</h3>' +
+    '<label style="font-size:var(--fs-lg);color:var(--text-muted,#aaa);display:block;margin-bottom:6px;">Dosya adı</label>' +
     '<div style="display:flex;align-items:center;gap:0;">' +
       '<input id="ve-save-filename" type="text" value="' + nameOnly.replace(/"/g, '&quot;') + '" ' +
-        'style="flex:1;padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:var(--radius-sm) 0 0 var(--radius-sm);font-size:0.85rem;outline:none;" />' +
-      '<span style="padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-muted,#888);border:1px solid var(--border-color,#444);border-left:none;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:0.85rem;white-space:nowrap;">' + ext + '</span>' +
+        'style="flex:1;padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:var(--radius-sm) 0 0 var(--radius-sm);font-size:var(--fs-lg);outline:none;" />' +
+      '<span style="padding:8px 12px;background:var(--bg-tertiary,#111);color:var(--text-muted,#888);border:1px solid var(--border-color,#444);border-left:none;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-size:var(--fs-lg);white-space:nowrap;">' + ext + '</span>' +
     '</div>' +
     '<div style="margin-top:18px;display:flex;gap:8px;justify-content:flex-end;">' +
-      '<button id="ve-save-cancel" style="padding:7px 18px;background:var(--bg-tertiary,#222);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:var(--radius-sm);cursor:pointer;font-size:0.8rem;">İptal</button>' +
-      '<button id="ve-save-confirm" style="padding:7px 18px;background:var(--accent-primary,#3b82f6);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:0.8rem;font-weight:600;">Kaydet</button>' +
+      '<button id="ve-save-cancel" style="padding:7px 18px;background:var(--bg-tertiary,#222);color:var(--text-primary,#e0e0e0);border:1px solid var(--border-color,#444);border-radius:var(--radius-sm);cursor:pointer;font-size:var(--fs-lg);">İptal</button>' +
+      '<button id="ve-save-confirm" style="padding:7px 18px;background:var(--accent-primary,#3b82f6);color:white;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:var(--fs-lg);font-weight:600;">Kaydet</button>' +
     '</div>';
 
   overlay.appendChild(modal);

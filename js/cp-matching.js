@@ -14,7 +14,7 @@ function getECMatchingPropertiesHTML(node) {
 
   // Motor algılama bilgisi
   html += '<div id="ecm-engine-info-' + node.id + '" style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';
-  html += '<div style="font-size:0.65rem; color:var(--text-muted);">Motor bileşeni aranıyor...</div>';
+  html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted);">Motor bileşeni aranıyor...</div>';
   html += '</div>';
   
   // Şanzıman Türbin Torku Rating
@@ -22,10 +22,10 @@ function getECMatchingPropertiesHTML(node) {
   html += '<div class="sw-pkg-card" style="margin-bottom:10px;">';
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Şanzıman Türbin Torku Limiti</span></div>';
   html += '<div class="sw-pkg-body">';
-  html += '<table style="width:100%; border-collapse:collapse; font-size:0.68rem;">';
+  html += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-body);">';
   html += '<tr>';
   html += '<th style="padding:6px 8px; text-align:left; background:var(--bg-tertiary); border:1px solid var(--border-color); font-weight:500; color:var(--text-secondary); width:55%;">Şanzıman Türbin Torku Limiti [N·m]</th>';
-  html += '<td style="padding:4px 6px; border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="number" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
+  html += '<td style="padding:4px 6px; border:1px solid var(--border-color); background:var(--bg-secondary);"><input type="number" id="ecm-turbine-rating-' + node.id + '" value="' + turbineRating + '" step="10" min="500" style="width:100%; padding:4px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;" onchange="onECMParamChange(\'' + node.id + '\')"></td>';
   html += '</tr>';
   html += '</table>';
   html += '<div class="sw-pkg-desc">C7 kontrolü için kullanılır. Şanzıman preseti seçildiğinde otomatik güncellenir (Net Turbine Torque limiti).</div>';
@@ -35,7 +35,7 @@ function getECMatchingPropertiesHTML(node) {
 
   // Analiz sonuç tablosu
   html += '<div id="ecm-results-' + node.id + '" style="padding:10px 12px;">';
-  html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.68rem;">Analiz bekleniyor... Motor bileşeni tanımlandığında otomatik çalışır.</div>';
+  html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:var(--fs-body);">Analiz bekleniyor... Motor bileşeni tanımlandığında otomatik çalışır.</div>';
   html += '</div>';
   
   // Absorption chart canvas — Büyüt butonu canvas üzerinde
@@ -44,7 +44,7 @@ function getECMatchingPropertiesHTML(node) {
   html += '<div class="sw-pkg-body">';
   html += '<div style="position:relative;">';
   html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color);"></canvas>';
-  html += '<button class="sw-btn sw-btn-outline" onclick="ecmExpandChart(\'' + node.id + '\')" title="Diyagramı büyüt" style="position:absolute; top:6px; right:6px; font-size:0.54rem; padding:2px 6px; opacity:0.7;"><span class="mf-ico mf-ico-maximize"></span> Büyüt</button>';
+  html += '<button class="sw-btn sw-btn-outline" onclick="ecmExpandChart(\'' + node.id + '\')" title="Diyagramı büyüt" style="position:absolute; top:6px; right:6px; font-size:var(--fs-micro); padding:2px 6px; opacity:0.7;"><span class="mf-ico mf-ico-maximize"></span> Büyüt</button>';
   html += '</div>';
   html += '<div class="sw-pkg-desc">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0.80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0.80 SR çalışma noktalarını verir.</div>';
   html += '</div></div>';
@@ -92,7 +92,7 @@ function runECMatchingAnalysis(nodeId) {
   var resultsEl = document.getElementById('ecm-results-' + nodeId);
 
   if(!engineNode || !engineNode.data || !engineNode.data.torqueData || engineNode.data.torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil veya tork verisi girilmemiş. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     return;
   }
   
@@ -137,19 +137,19 @@ function runECMatchingAnalysis(nodeId) {
   if(infoEl) {
     var c9c10html = '';
     if(gbLimits.grossInputPower !== null || gbLimits.grossInputTorque !== null) {
-      c9c10html += '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">';
+      c9c10html += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">';
       c9c10html += '<span>Governed Güç: <b style="color:' + (c9ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + powerAtGov.toFixed(0) + ' kW</b>';
-      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:0.55rem; color:' + (c9ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputPower + ' kW ' + (c9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + ')</span>';
+      if(gbLimits.grossInputPower !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c9ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputPower + ' kW ' + (c9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + ')</span>';
       c9c10html += '</span>';
       c9c10html += '<span>Governed Tork: <b style="color:' + (c10ok ? 'var(--text-primary)' : 'var(--accent-danger)') + ';">' + torqueAtGov.toFixed(0) + ' Nm</b>';
-      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:0.55rem; color:' + (c10ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputTorque + ' Nm ' + (c10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + ')</span>';
+      if(gbLimits.grossInputTorque !== null) c9c10html += ' <span style="font-size:var(--fs-micro); color:' + (c10ok ? 'var(--text-muted)' : 'var(--accent-danger)') + ';">(limit: ' + gbLimits.grossInputTorque + ' Nm ' + (c10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>') + ')</span>';
       c9c10html += '</span>';
       c9c10html += '</div>';
     }
     infoEl.innerHTML = '<div class="sw-pkg-card" style="margin-bottom:10px;">' +
       '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name"><span class="mf-ico mf-ico-wrench"></span> ' + engineName + '</span></div>' +
       '<div class="sw-pkg-body">' +
-      '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
+      '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
       '<span>Peak Tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
       '<span>Governed: <b style="color:var(--text-primary);">' + governed + ' rpm</b></span>' +
       '<span>Pump Düşüm: <b style="color:var(--text-primary);">TC\'ye bağlı</b></span>' +
@@ -314,22 +314,22 @@ function runECMatchingAnalysis(nodeId) {
     h += '<div class="sw-section-title">Konvertör Uyumluluk Tablosu</div>';
     h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.ecm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.ecm-info-tip\').style.display=\'none\'">';
     h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
-    h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
-    h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:0.65rem;">Kontrol Kriterleri</div>';
+    h += '<div class="ecm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:320px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
+    h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:var(--fs-tiny);">Kontrol Kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C4</b> — Stall Speed: Tam gaz, türbin çıkışı blokeli durumda motor devri (referans).<br>';
     h += '<b style="color:var(--text-primary);">C5</b> — Min Motor Devri ≥ Peak Tork Devri (' + peakRPM + ' rpm): Konvertör fazında motorun ulaştığı minimum devir. Altına düşerse motor lugging yapar.<br>';
     h += '<b style="color:var(--text-primary);">C7</b> — Stall Türbin Torku ≤ ' + turbineRating.toFixed(0) + ' N·m: Stall\'da türbin torku şanzıman limitini aşmamalı.<br>';
     h += '<b style="color:var(--text-primary);">C8</b> — SR @ Governed ≥ 0.80: Governed hızda kayma oranı. Düşükse loose match → performans kaybı (lockup\'ta sorun yok).<br>';
     if(gbLimits.grossInputPower !== null) h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov ≤ ' + gbLimits.grossInputPower + ' kW: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
     if(gbLimits.grossInputTorque !== null) h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov ≤ ' + gbLimits.grossInputTorque + ' N·m: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.';
-    h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color); font-size:0.55rem; color:var(--text-muted); font-style:italic;">Referans Doküman: TD-148G</div>';
+    h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color); font-size:var(--fs-micro); color:var(--text-muted); font-style:italic;">Referans Doküman: TD-148G</div>';
     h += '</div></div></div>';
     
     // C9/C10 uyarı bandı (şanzıman seviyesi kontroller)
     if(!c9ok || !c10ok) {
       h += '<div style="margin-bottom:8px; padding:8px 10px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm);">';
-      h += '<div style="font-size:0.68rem; font-weight:700; color:var(--accent-danger);">✗ Şanzıman Giriş Limiti Aşılıyor</div>';
-      h += '<div style="font-size:0.6rem; color:var(--text-secondary); margin-top:2px;">';
+      h += '<div style="font-size:var(--fs-body); font-weight:700; color:var(--accent-danger);">✗ Şanzıman Giriş Limiti Aşılıyor</div>';
+      h += '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); margin-top:2px;">';
       if(!c9ok) h += 'C9: Motor gücü (' + powerAtGov.toFixed(0) + ' kW) > Şanzıman giriş güç limiti (' + gbLimits.grossInputPower + ' kW)<br>';
       if(!c10ok) h += 'C10: Motor torku (' + torqueAtGov.toFixed(0) + ' Nm) > Şanzıman giriş tork limiti (' + gbLimits.grossInputTorque + ' Nm)';
       h += '</div></div>';
@@ -337,7 +337,7 @@ function runECMatchingAnalysis(nodeId) {
 
     // Tablo
     h += '<div style="overflow-x:auto;">';
-    h += '<table style="width:100%; border-collapse:collapse; font-size:0.62rem; min-width:420px;">';
+    h += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-tiny); min-width:420px;">';
     h += '<thead><tr style="background:var(--bg-tertiary);">';
     h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Durum</th>';
     h += '<th style="padding:5px 4px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Konvertör</th>';
@@ -377,7 +377,7 @@ function runECMatchingAnalysis(nodeId) {
       var borderLeft = isSelected ? '3px solid var(--accent-success)' : 'none';
       
       h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';">';
-      h += '<td style="padding:4px; border:1px solid var(--border-color); white-space:nowrap;"><span style="font-size:0.6rem; font-weight:600; color:' + statusColor + ';">' + statusIcon + ' ' + statusText + '</span></td>';
+      h += '<td style="padding:4px; border:1px solid var(--border-color); white-space:nowrap;"><span style="font-size:var(--fs-tiny); font-weight:600; color:' + statusColor + ';">' + statusIcon + ' ' + statusText + '</span></td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading);">' + r.name + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.stallTau.toFixed(2) + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.stallSpeed.toFixed(0) + '</td>';
@@ -389,7 +389,7 @@ function runECMatchingAnalysis(nodeId) {
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">' + (r.c8ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '⚠') + '</td>';
       h += '<td style="padding:4px; border:1px solid var(--border-color); text-align:center;">';
       if(r.status !== 'unacceptable') {
-        h += '<button class="sw-btn sw-btn-primary" onclick="ecmSelectConverter(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:2px 8px; font-size:0.58rem;" title="Bu konvertörü TC bileşenine yükle">Seç</button>';
+        h += '<button class="sw-btn sw-btn-primary" onclick="ecmSelectConverter(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:2px 8px; font-size:var(--fs-micro);" title="Bu konvertörü TC bileşenine yükle">Seç</button>';
       }
       h += '</td>';
       h += '</tr>';
@@ -652,12 +652,12 @@ function getEngineGearboxMatchingHTML(node) {
 
   // Motor bağlantı durumu
   html += '<div id="egm-engine-info-' + node.id + '" style="padding:10px 12px; border-bottom:1px solid var(--border-color);">';
-  html += '<div style="font-size:0.65rem; color:var(--text-muted);">Motor bağlantısı kontrol ediliyor...</div>';
+  html += '<div style="font-size:var(--fs-tiny); color:var(--text-muted);">Motor bağlantısı kontrol ediliyor...</div>';
   html += '</div>';
 
   // Analiz sonuç tablosu
   html += '<div id="egm-results-' + node.id + '" style="padding:10px 12px;">';
-  html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.68rem;">Analiz bekleniyor... Motor bileşenine bağlandığında otomatik çalışır.</div>';
+  html += '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:var(--fs-body);">Analiz bekleniyor... Motor bileşenine bağlandığında otomatik çalışır.</div>';
   html += '</div>';
 
   html += '</div>'; // close sw-panel
@@ -675,14 +675,14 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
   // Bağlı motoru bul
   var engineNode = findConnectedEngine(nodeId);
   if(!engineNode) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-danger) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-danger) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--accent-danger);">⚠ Motor bileşenine bağlı değil. Lütfen bu bileşenin giriş portunu Motor bileşeninin çıkış portuna bağlayın.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
 
   var torqueData = engineNode.data ? (engineNode.data.torqueData || []) : [];
   if(torqueData.length < 2) {
-    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-warning) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent); border-radius:var(--radius-sm); font-size:0.65rem; color:var(--accent-warning);">⚠ Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
+    if(infoEl) infoEl.innerHTML = '<div style="padding:8px; background:color-mix(in srgb, var(--accent-warning) 10%, transparent); border:1px solid color-mix(in srgb, var(--accent-warning) 30%, transparent); border-radius:var(--radius-sm); font-size:var(--fs-tiny); color:var(--accent-warning);">⚠ Motor tork verisi girilmemiş. Önce motor bileşeninde tork-devir verilerini girin.</div>';
     if(resultsEl) resultsEl.innerHTML = '';
     return;
   }
@@ -715,11 +715,11 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     infoEl.innerHTML = '<div class="sw-pkg-card" style="margin-bottom:10px;">' +
       '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name"><span class="mf-ico mf-ico-wrench"></span> ' + engineName + '</span></div>' +
       '<div class="sw-pkg-body">' +
-      '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
+      '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px;">' +
       '<span>Peak Tork: <b style="color:var(--text-primary);">' + peakT.toFixed(0) + ' N·m @ ' + peakRPM + ' rpm</b></span>' +
       '<span>Governed: <b style="color:var(--text-primary);">' + governed + ' rpm</b></span>' +
       '</div>' +
-      '<div style="font-size:0.62rem; color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">' +
+      '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; padding-top:4px; border-top:1px solid var(--border-color);">' +
       '<span>Güç@Gov: <b style="color:var(--text-primary);">' + powerAtGov.toFixed(0) + ' kW</b></span>' +
       '<span>Tork@Gov: <b style="color:var(--text-primary);">' + torqueAtGov.toFixed(0) + ' N·m</b></span>' +
       '</div></div></div>';
@@ -789,8 +789,8 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<div class="sw-section-title">Şanzıman Uyumluluk Tablosu</div>';
     h += '<div style="position:relative; display:inline-block;" onmouseenter="this.querySelector(\'.egm-info-tip\').style.display=\'block\'" onmouseleave="this.querySelector(\'.egm-info-tip\').style.display=\'none\'">';
     h += '<button class="sw-info-btn" onclick="void(0)" title="Bilgi">?</button>';
-    h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:0.6rem; color:var(--text-secondary); line-height:1.55;">';
-    h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:0.65rem;">Kontrol Kriterleri</div>';
+    h += '<div class="egm-info-tip" style="display:none; position:absolute; left:20px; top:-8px; z-index:1000; width:300px; padding:10px 12px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-sm); box-shadow:0 8px 24px rgba(0,0,0,0.4); font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55;">';
+    h += '<div style="font-weight:700; color:var(--text-heading); margin-bottom:6px; font-size:var(--fs-tiny);">Kontrol Kriterleri</div>';
     h += '<b style="color:var(--text-primary);">C9</b> — Motor Gücü@Gov (' + powerAtGov.toFixed(0) + ' kW) ≤ Şanzıman Giriş Güç Limiti: Governed devirdeki motor gücü şanzıman giriş güç limitini aşmamalı.<br>';
     h += '<b style="color:var(--text-primary);">C10</b> — Motor Torku@Gov (' + torqueAtGov.toFixed(0) + ' N·m) ≤ Şanzıman Giriş Tork Limiti: Governed devirdeki motor torku şanzıman giriş tork limitini aşmamalı.<br>';
     h += '<div style="margin-top:6px; padding-top:5px; border-top:1px solid var(--border-color);">';
@@ -799,7 +799,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
 
     // Tablo
     h += '<div style="overflow-x:auto;">';
-    h += '<table style="width:100%; border-collapse:collapse; font-size:0.58rem; table-layout:fixed;">';
+    h += '<table style="width:100%; border-collapse:collapse; font-size:var(--fs-micro); table-layout:fixed;">';
     h += '<colgroup>';
     h += '<col style="width:28px;">';   // Durum (ikon)
     h += '<col style="width:auto;">';   // Şanzıman
@@ -813,7 +813,7 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
     h += '<col style="width:34px;">';   // Seç
     h += '</colgroup>';
     h += '<thead><tr style="background:var(--bg-tertiary);">';
-    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:600; color:var(--text-heading); font-size:0.55rem;" title="Durum">⊘</th>';
+    h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:600; color:var(--text-heading); font-size:var(--fs-micro);" title="Durum">⊘</th>';
     h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:left; font-weight:600; color:var(--text-heading);">Şanzıman</th>';
     h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);">V</th>';
     h += '<th style="padding:3px 2px; border:1px solid var(--border-color); text-align:center; font-weight:500; color:var(--text-secondary);" title="C9: Giriş Güç Limiti (kW)">Güç</th>';
@@ -850,17 +850,17 @@ function runEngineGearboxMatchingAnalysis(nodeId) {
       // Şanzıman adını kısalt: "Allison | 4000SP" → "4000SP"
       var shortName = r.name.replace(/^Allison\s*\|\s*/i, '');
       h += '<tr style="background:' + bgColor + '; border-left:' + borderLeft + ';" title="' + statusText + ': ' + r.name + '">';
-      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center;" title="' + statusText + '"><span style="font-size:0.6rem;">' + statusIcon + '</span></td>';
-      h += '<td style="padding:2px 3px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + shortName + calMark + (isSelected ? ' <span style="font-size:0.45rem; background:var(--accent-primary); color:white; padding:0 3px; border-radius:var(--radius-sm);">✔</span>' : '') + '</td>';
+      h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center;" title="' + statusText + '"><span style="font-size:var(--fs-tiny);">' + statusIcon + '</span></td>';
+      h += '<td style="padding:2px 3px; border:1px solid var(--border-color); font-weight:600; color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + shortName + calMark + (isSelected ? ' <span style="font-size:var(--fs-micro); background:var(--accent-primary); color:white; padding:0 3px; border-radius:var(--radius-sm);">✔</span>' : '') + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + r.gearCount + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c9ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputPower !== null ? r.grossInputPower : '—') + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:' + (r.c10ok ? 'var(--text-primary)' : 'var(--accent-danger); font-weight:700') + ';">' + (r.grossInputTorque !== null ? r.grossInputTorque : '—') + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.netTurbineTorque !== null ? r.netTurbineTorque : '—') + '</td>';
       h += '<td style="padding:2px; border:1px solid var(--border-color); text-align:center; color:var(--text-primary);">' + (r.maxOutputSpeed !== null ? r.maxOutputSpeed : '—') + '</td>';
-      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
-      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:0.55rem;">' + (r.score < 0 ? '—' : (r.c10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
+      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c9ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
+      h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center; font-size:var(--fs-micro);">' + (r.score < 0 ? '—' : (r.c10ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>' : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>')) + '</td>';
       h += '<td style="padding:2px 1px; border:1px solid var(--border-color); text-align:center;">';
-      h += '<button class="sw-btn ' + (isSelected ? '' : 'sw-btn-primary') + '" onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:0.52rem;' + (isSelected ? ' opacity:0.5; cursor:default;' : '') + '"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
+      h += '<button class="sw-btn ' + (isSelected ? '' : 'sw-btn-primary') + '" onclick="egmSelectGearbox(\'' + nodeId + '\',\'' + r.key + '\')" style="padding:1px 4px; font-size:var(--fs-micro);' + (isSelected ? ' opacity:0.5; cursor:default;' : '') + '"' + (isSelected ? ' disabled' : '') + '>' + (isSelected ? '✔' : 'Seç') + '</button>';
       h += '</td>';
       h += '</tr>';
     });
@@ -985,22 +985,22 @@ function ecmExpandChart(nodeId) {
   // Header
   var header = document.createElement('div');
   header.style.cssText = 'display:flex; align-items:center; justify-content:space-between; padding:5px 12px; background:var(--bg-tertiary); border-bottom:1px solid var(--border-color); flex-shrink:0;';
-  header.innerHTML = '<span style="font-size:0.72rem; font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-settings"></span> Motor Eğrisi × Konvertör Kapasiteleri — ' + engineName + '</span>' +
-    '<button onclick="ecmCloseChartModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:0.78rem; color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
+  header.innerHTML = '<span style="font-size:var(--fs-body); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-settings"></span> Motor Eğrisi × Konvertör Kapasiteleri — ' + engineName + '</span>' +
+    '<button onclick="ecmCloseChartModal()" title="Kapat (ESC)" style="width:24px; height:24px; display:flex; align-items:center; justify-content:center; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; font-size:var(--fs-md); color:var(--text-secondary); transition:all 0.12s;" onmouseover="this.style.background=\'var(--accent-danger)\';this.style.color=\'#fff\';this.style.borderColor=\'var(--accent-danger)\'" onmouseout="this.style.background=\'transparent\';this.style.color=\'var(--text-secondary)\';this.style.borderColor=\'var(--border-color)\'">✕</button>';
   modal.appendChild(header);
   
   // Chart container
   var chartBox = document.createElement('div');
   chartBox.style.cssText = 'flex:1; position:relative; min-height:0; padding:10px;';
   chartBox.innerHTML = '<canvas id="ecm-modal-canvas" style="width:100%; height:100%; display:block; border-radius:var(--radius-sm);"></canvas>' +
-    '<div id="ecm-modal-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary, #151a22); border:1px solid var(--border-light, #222b3a); border-radius:var(--radius-sm); padding:8px 12px; font-size:0.65rem; color:var(--text-primary, #c8d1dc); line-height:1.5; box-shadow:0 4px 16px rgba(0,0,0,0.5); z-index:10; max-width:260px; white-space:nowrap;"></div>' +
+    '<div id="ecm-modal-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary, #151a22); border:1px solid var(--border-light, #222b3a); border-radius:var(--radius-sm); padding:8px 12px; font-size:var(--fs-tiny); color:var(--text-primary, #c8d1dc); line-height:1.5; box-shadow:0 4px 16px rgba(0,0,0,0.5); z-index:10; max-width:260px; white-space:nowrap;"></div>' +
     '<div id="ecm-modal-crosshair-v" style="position:absolute; top:0; width:1px; height:100%; background:rgba(255,255,255,0.12); pointer-events:none; display:none; z-index:5;"></div>' +
     '<div id="ecm-modal-crosshair-h" style="position:absolute; left:0; width:100%; height:1px; background:rgba(255,255,255,0.12); pointer-events:none; display:none; z-index:5;"></div>';
   modal.appendChild(chartBox);
   
   // Footer — Legend
   var footer = document.createElement('div');
-  footer.style.cssText = 'display:flex; align-items:center; gap:14px; padding:7px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:0.65rem; color:var(--text-secondary);';
+  footer.style.cssText = 'display:flex; align-items:center; gap:14px; padding:7px 14px; background:var(--bg-tertiary); border-top:1px solid var(--border-color); flex-shrink:0; font-size:var(--fs-tiny); color:var(--text-secondary);';
   
   var tcKeys = veGetFamilyTCKeys();
   var tcColors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#a855f7'];
@@ -1012,10 +1012,10 @@ function ecmExpandChart(nodeId) {
   footer.innerHTML = '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:18px; height:3px; background:#f59e0b; border-radius:1px;"></span><span style="font-weight:700; color:#f59e0b;">Motor</span></span>' +
     '<span style="opacity:0.3;">│</span>' + legendItems +
     '<span style="opacity:0.3; margin-left:4px;">│</span>' +
-    '<span style="color:var(--text-muted); font-size:0.58rem;">── Stall &nbsp; <span style="border-bottom:1px dashed var(--text-muted);">┄┄</span> 0.80 SR &nbsp; ● Kesişim</span>' +
+    '<span style="color:var(--text-muted); font-size:var(--fs-micro);">── Stall &nbsp; <span style="border-bottom:1px dashed var(--text-muted);">┄┄</span> 0.80 SR &nbsp; ● Kesişim</span>' +
     '<span style="margin-left:auto; display:flex; align-items:center; gap:10px;">' +
-    '<span id="ecm-zoom-indicator" style="display:none; color:#60a5fa; font-weight:600; font-size:0.62rem; cursor:pointer;" onclick="ecmResetZoom()" title="Tıklayarak sıfırlayın"><span class="mf-ico mf-ico-search"></span> 1.0×</span>' +
-    '<span style="color:var(--text-muted); font-size:0.56rem;">Scroll — Yakınlaştır &nbsp;│&nbsp; Sağ Tık + Sürükle — Kaydır</span>' +
+    '<span id="ecm-zoom-indicator" style="display:none; color:#60a5fa; font-weight:600; font-size:var(--fs-tiny); cursor:pointer;" onclick="ecmResetZoom()" title="Tıklayarak sıfırlayın"><span class="mf-ico mf-ico-search"></span> 1.0×</span>' +
+    '<span style="color:var(--text-muted); font-size:var(--fs-micro);">Scroll — Yakınlaştır &nbsp;│&nbsp; Sağ Tık + Sürükle — Kaydır</span>' +
     '<span style="color:var(--text-primary); font-weight:500;">ESC — Kapat</span></span>';
   modal.appendChild(footer);
   
@@ -1577,7 +1577,7 @@ function ecmModalMouseMove(e) {
   
   // Build tooltip — compact
   var html = '<div style="display:flex; align-items:baseline; gap:8px; margin-bottom:5px; padding-bottom:4px; border-bottom:1px solid var(--border-color);">';
-  html += '<span style="font-weight:700; color:var(--text-heading); font-size:0.72rem;">' + rpm.toFixed(0) + ' rpm</span>';
+  html += '<span style="font-weight:700; color:var(--text-heading); font-size:var(--fs-body);">' + rpm.toFixed(0) + ' rpm</span>';
   html += '</div>';
   
   // Motor line
@@ -1603,7 +1603,7 @@ function ecmModalMouseMove(e) {
     html += '<span style="color:' + c.color + '; font-weight:600; min-width:65px;">' + c.name + '</span>';
     html += '<span style="color:var(--text-primary);">' + c.tStall.toFixed(0) + '</span>';
     if(c.t80 !== null && c.t80 < data.maxT * 1.1) {
-      html += '<span style="color:var(--text-muted); font-size:0.55rem;">(0.80: ' + c.t80.toFixed(0) + ')</span>';
+      html += '<span style="color:var(--text-muted); font-size:var(--fs-micro);">(0.80: ' + c.t80.toFixed(0) + ')</span>';
     }
     html += '</div>';
   });
@@ -1612,7 +1612,7 @@ function ecmModalMouseMove(e) {
   if(motorT > 0) {
     var intersections = items.filter(function(c) { return Math.abs(c.tStall - motorT) < motorT * 0.04; });
     if(intersections.length > 0) {
-      html += '<div style="margin-top:4px; padding-top:3px; border-top:1px solid var(--border-color); color:var(--accent-success); font-weight:600; font-size:0.6rem;">';
+      html += '<div style="margin-top:4px; padding-top:3px; border-top:1px solid var(--border-color); color:var(--accent-success); font-weight:600; font-size:var(--fs-tiny);">';
       html += '★ Stall kesişim: ' + intersections.map(function(c) { return c.name; }).join(', ');
       html += '</div>';
     }

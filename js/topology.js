@@ -607,7 +607,7 @@ function veShowTabMenu(e, idx) {
       return;
     }
     var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius-sm);font-size:0.7rem;cursor:pointer;color:' + (item.danger ? 'var(--accent-danger)' : 'var(--text-primary)') + ';transition:background 0.12s;';
+    el.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius-sm);font-size:var(--fs-body);cursor:pointer;color:' + (item.danger ? 'var(--accent-danger)' : 'var(--text-primary)') + ';transition:background 0.12s;';
     el.innerHTML = '<span class="mf-ico mf-ico-' + item.icon + '"></span><span>' + item.label + '</span>';
     el.onmouseover = function() { this.style.background = item.danger ? 'color-mix(in srgb, var(--accent-danger) 15%, transparent)' : 'var(--bg-tertiary)'; };
     el.onmouseout = function() { this.style.background = 'transparent'; };
@@ -859,7 +859,7 @@ function veRenderSnapshot(paneIdx) {
     state = tab.state;
   }
   if(!state || !state.nodes || state.nodes.length === 0) {
-    snapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:0.75rem;">Boş topoloji</div>';
+    snapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:var(--fs-md);">Boş topoloji</div>';
     return;
   }
   
