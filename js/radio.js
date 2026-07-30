@@ -16,7 +16,7 @@
 //     kullanıcı bilgilendirilir. Kullanıcı "Özel URL" ile kendi yayınını ekler.
 //   - Durum (ses, sekme, son istasyon, özel istasyonlar, pencere konumu,
 //     açık/kapalı) localStorage'da 'mf-radio' altında saklanır.
-//   - Uygulama kabuğu (#tab-bar) yoksa init() no-op'tur → birim testleri saf
+//   - Uygulama kabuğu (#ve-ribbon) yoksa init() no-op'tur → birim testleri saf
 //     fonksiyonları require ile yükleyip UI kurmadan test edebilir.
 //
 // Saf/testlenebilir fonksiyonlar module.exports ile dışa verilir.
@@ -298,7 +298,7 @@
   }
 
   // ══════════════════════════════════════════════════════════════════════════
-  // UI KATMANI (yalnızca tarayıcıda; #tab-bar yoksa hiç kurulmaz)
+  // UI KATMANI (yalnızca tarayıcıda; #ve-ribbon yoksa hiç kurulmaz)
   // ══════════════════════════════════════════════════════════════════════════
 
   var built   = false;
@@ -883,8 +883,10 @@
   function init() {
     if (built) return;
     if (!global.document || !global.document.body) return;
-    // Uygulama kabuğu yoksa (ör. birim testleri) UI kurma — saf fonksiyonlar yeterli.
-    if (!global.document.getElementById('tab-bar')) return;
+    // Uygulama kabuğu yoksa (ör. birim testleri) UI kurma — saf fonksiyonlar
+    // yeterli. Sentinel #tab-bar'dan #ve-ribbon'a taşındı: başlık bandı şerit
+    // şeridiyle birleşti ve #tab-bar kaldırıldı.
+    if (!global.document.getElementById('ve-ribbon')) return;
     if (global.document.getElementById(WIDGET_ID)) { built = true; return; }
     buildWidget();
     built = true;

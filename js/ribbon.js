@@ -9,7 +9,8 @@
 // için önce aranması gerekiyordu. Ribbon bunu tersine çevirir.
 //
 // Yapı:
-//   #tab-bar        → başlık satırı (marka + hızlı erişim + sayfa sekmeleri)
+//   #ve-rb-strip    → tek krom bandı (marka + hızlı erişim + sekmeler +
+//                     sayfa anahtarı + radyo); STATİK markup, JS ezmez
 //   #ve-ribbon      → sekme şeridi + gövde
 //
 // Sekme şeridi daima görünür; gövde daraltılabilir (aktif sekmeye çift tık ya
@@ -224,10 +225,16 @@ function veRibbonRender() {
     _veRibbonPeek = false;
   }
 
-  var h = '';
+  // Şerit ARTIK KABUĞU EZMEZ. Krom bandı (marka menüsü, hızlı erişim, sayfa
+  // anahtarı, radyo, daralt düğmesi) index.html'de STATİK markup; JS yalnız iki
+  // kabın içini yazar. Eskiden host.innerHTML her çizimde her şeyi siliyordu —
+  // statik markup orada duramazdı.
+  var tabsHost = document.getElementById('ve-rb-tabs');
+  var bodyHost = document.getElementById('ve-rb-body');
+  if(!tabsHost || !bodyHost) return;
 
-  // ── Sekme şeridi ──
-  h += '<div class="ve-rb-strip" role="tablist" aria-label="Şerit sekmeleri">';
+  // ── Sekmeler ──
+  var h = '';
   tabs.forEach(function(t) {
     var active = t.id === veRibbonActiveTab;
     h += '<button type="button" role="tab" class="ve-rb-tab' +
@@ -236,31 +243,34 @@ function veRibbonRender() {
          ' tabindex="' + (active ? '0' : '-1') + '"' +
          ' data-rb-tab="' + t.id + '">' + veRibbonEsc(t.label) + '</button>';
   });
-  h += '<span class="ve-rb-strip-fill"></span>';
-  h += '<button type="button" class="ve-rb-collapse" id="ve-rb-collapse" ' +
-       'title="' + (veRibbonCollapsed ? 'Şeridi sabitle' : 'Şeridi daralt') + '" ' +
-       'aria-label="' + (veRibbonCollapsed ? 'Şeridi sabitle' : 'Şeridi daralt') + '">' +
-       (veRibbonCollapsed ? '▼' : '▲') + '</button>';
-  h += '</div>';
+  tabsHost.innerHTML = h;
+
+  // ── Daralt düğmesi: statik, yerinde güncellenir ──
+  var col = document.getElementById('ve-rb-collapse');
+  if(col) {
+    var etiket = veRibbonCollapsed ? 'Şeridi sabitle' : 'Şeridi daralt';
+    col.textContent = veRibbonCollapsed ? '▼' : '▲';
+    col.setAttribute('title', etiket);
+    col.setAttribute('aria-label', etiket);
+  }
 
   // ── Gövde ──
   var tab = tabs.filter(function(t) { return t.id === veRibbonActiveTab; })[0];
-  h += '<div class="ve-rb-body" role="tabpanel">';
+  var b = '';
   if(tab) {
     tab.groups.forEach(function(g, gi) {
       var itemsHTML = g.items.map(function(it, ii) {
         return veRibbonItemHTML(it, tab.id, gi, ii);
       }).join('');
       if(!itemsHTML) return;
-      h += '<div class="ve-rb-group">';
-      h += '<div class="ve-rb-group-items">' + itemsHTML + '</div>';
-      h += '<div class="ve-rb-group-label">' + veRibbonEsc(g.label) + '</div>';
-      h += '</div>';
+      b += '<div class="ve-rb-group">';
+      b += '<div class="ve-rb-group-items">' + itemsHTML + '</div>';
+      b += '<div class="ve-rb-group-label">' + veRibbonEsc(g.label) + '</div>';
+      b += '</div>';
     });
   }
-  h += '</div>';
+  bodyHost.innerHTML = b;
 
-  host.innerHTML = h;
   host.classList.toggle('is-collapsed', veRibbonCollapsed);
   host.classList.toggle('is-peek', veRibbonCollapsed && _veRibbonPeek);
   veRibbonApplyHeight();
@@ -394,7 +404,7 @@ function veRibbonInit() {
     veRibbonRender();
   });
 
-  // Hızlı Erişim Araç Çubuğu (#tab-bar içinde) — inline onclick yerine
+  // Hızlı Erişim Araç Çubuğu (krom bandı içinde) — inline onclick yerine
   // delegasyon: aynı komut menüde de bulunduğundan `[onclick*="..."]`
   // seçicilerini çoğaltmamak için.
   var qat = document.getElementById('ve-qat');
