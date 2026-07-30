@@ -429,9 +429,36 @@ function runECMatchingAnalysis(nodeId) {
 function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDrop, results) {
   var canvas = document.getElementById('ecm-chart-' + nodeId);
   if(!canvas) return;
+
+  // ── DPR-duyarlı boyutlandırma ──
+  // Eskiden backing store sabit 440×300 iken canvas CSS ile ~681 px'e
+  // gerdiriliyordu → hem bulanık görünüyor hem de fare koordinatları
+  // ölçeksiz kalıyordu. Görünen kutuya göre boyutlandırıp ctx'i dpr ile
+  // ölçekliyoruz; böylece TÜM geometri CSS px uzayında kalır (modal ile aynı
+  // sözleşme) ve ecmPointerPos ölçeği 1 bulur.
+  var _rect = canvas.getBoundingClientRect();
+  var dpr = window.devicePixelRatio || 1;
+  var cssW = Math.max(320, Math.round(_rect.width || 440));
+  // Yükseklik özgün 440×300 oranından türetilir. style.width'e DOKUNMUYORUZ —
+  // HTML'deki width:100% korunsun ki panel genişliği değişince grafik akışkan
+  // kalsın (yalnızca height:auto'yu sabitliyoruz, aksi halde backing store
+  // değişimi görünen yüksekliği de oynatır).
+  var cssH = Math.max(220, Math.round(cssW * 300 / 440));
+  canvas.width = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  canvas.style.height = cssH + 'px';
+
   var ctx = canvas.getContext('2d');
-  var W = canvas.width, H = canvas.height;
-  
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  var W = cssW, H = cssH;
+
+  // ── Canvas'a ait zoom/pan durumu ──
+  // Yeniden çizimler arasında korunur (zoom yapıp veri yenilenince sıfırlanmaz).
+  if(!canvas._ecmZoomState) canvas._ecmZoomState = { scale: 1.0, centerRPM: null, centerT: null };
+  if(!canvas._ecmPanState) canvas._ecmPanState = { active: false, startX: 0, startY: 0, startCenterRPM: 0, startCenterT: 0, _raf: null };
+  var zoomState = canvas._ecmZoomState;
+  var panState = canvas._ecmPanState;
+
   // Temizle — tema renklerini oku
   var tc = (typeof _drThemeColors === 'function') ? (_drTC || _drThemeColors()) : {bg:'#0a0c10', border:'#1c2333', textMuted:'#4a5568', textSec:'#7a8599', axisLine:'#333'};
   // Koyu/açık tema tespiti: bg renginin parlaklığına bak
@@ -447,28 +474,42 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   var ml = 52, mr = 16, mt = 16, mb = 36;
   var pw = W - ml - mr, ph = H - mt - mb;
 
-  // Veri aralıkları
-  var maxRPM = noLoadGov + 100;
-  var minRPM = 400;
-  var maxT = 0;
-  torqueData.forEach(function(d) { if(d.torque > maxT) maxT = d.torque; });
-  maxT = Math.ceil(maxT / 200) * 200 + 200;
+  // Veri aralıkları — TABAN (zoom uygulanmadan önceki tam görünüm)
+  var baseMaxRPM = noLoadGov + 100;
+  var baseMinRPM = 400;
+  var baseMaxT = 0;
+  torqueData.forEach(function(d) { if(d.torque > baseMaxT) baseMaxT = d.torque; });
+  baseMaxT = Math.ceil(baseMaxT / 200) * 200 + 200;
+  var baseMinT = 0;
+
+  // Zoom penceresi — modal ile AYNI saf fonksiyon (ecmZoomWindow)
+  var _win = ecmZoomWindow(
+    { minRPM: baseMinRPM, maxRPM: baseMaxRPM, minT: baseMinT, maxT: baseMaxT },
+    zoomState
+  );
+  var minRPM = _win.minRPM, maxRPM = _win.maxRPM, minT = _win.minT, maxT = _win.maxT;
 
   function xPos(rpm) { return ml + (rpm - minRPM) / (maxRPM - minRPM) * pw; }
-  function yPos(t) { return mt + ph - (t / maxT) * ph; }
+  function yPos(t) { return mt + ph - ((t - minT) / (maxT - minT)) * ph; }
+  function rpmFromX(x) { return minRPM + (x - ml) / pw * (maxRPM - minRPM); }
+  function torqueFromY(y) { return minT + (mt + ph - y) / ph * (maxT - minT); }
 
-  // Grid
+  // Grid — görünen aralığa göre uyarlanır (yakınlaştırınca daha ince kademe)
+  var _tSpan = maxT - minT, _rSpan = maxRPM - minRPM;
+  var tStep = _tSpan > 2000 ? 500 : _tSpan > 800 ? 200 : _tSpan > 400 ? 100 : 50;
+  var rpmStep = _rSpan > 2000 ? 500 : _rSpan > 1000 ? 200 : 100;
+
   ctx.strokeStyle = tc.border;
   ctx.lineWidth = 0.5;
-  for(var gt = 0; gt <= maxT; gt += 200) {
+  for(var gt = Math.ceil(minT / tStep) * tStep; gt <= maxT; gt += tStep) {
     ctx.beginPath(); ctx.moveTo(ml, yPos(gt)); ctx.lineTo(ml + pw, yPos(gt)); ctx.stroke();
     ctx.fillStyle = tc.textMuted; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
-    ctx.fillText(gt, ml - 4, yPos(gt) + 3);
+    ctx.fillText(Math.round(gt), ml - 4, yPos(gt) + 3);
   }
-  for(var gr = minRPM; gr <= maxRPM; gr += 200) {
+  for(var gr = Math.ceil(minRPM / rpmStep) * rpmStep; gr <= maxRPM; gr += rpmStep) {
     ctx.beginPath(); ctx.moveTo(xPos(gr), mt); ctx.lineTo(xPos(gr), mt + ph); ctx.stroke();
     ctx.fillStyle = tc.textMuted; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(gr, xPos(gr), mt + ph + 14);
+    ctx.fillText(Math.round(gr), xPos(gr), mt + ph + 14);
   }
 
   // Eksen etiketleri
@@ -481,7 +522,17 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   // Konvertör kapasite eğrileri (stall ve 0.80 SR)
   var tcColors = ['#ef4444','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6'];
   var tcKeys = veGetFamilyTCKeys();
-  
+
+  // Tooltip'in okuyacağı eğri verisi — modal bağlamıyla AYNI şekil
+  // ({name,color,kpStall,kp80,stallTau}).
+  var _ecmInlineCurves = [];
+
+  // Eğrileri plot alanına kırp: yakınlaştırınca eksen/etiket bölgesine taşmasın
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ml, mt, pw, ph);
+  ctx.clip();
+
   tcKeys.forEach(function(key, ci) {
     var tc = VE_FT_TC_PRESETS[key];
     var tcData = tc.data;
@@ -527,6 +578,11 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
     }
     ctx.setLineDash([]);
     
+    _ecmInlineCurves.push({
+      key: key, name: tc.name, color: color,
+      kpStall: kpStall, kp80: kp80, stallTau: tcData[0].tau
+    });
+
     // Etiket (stall eğrisi üzerinde)
     var labelN = minRPM + (ci + 1) * (maxRPM - minRPM) / (tcKeys.length + 2);
     var labelT = (labelN * labelN) / (kpStall * kpStall);
@@ -542,12 +598,15 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   ctx.lineWidth = 2.5;
   ctx.setLineDash([]);
   var firstM = true;
+  var _ecmInlineMotorPts = [];   // tooltip icin: {rpm, torque(net)}
   torqueData.forEach(function(d) {
     var tp = d.torque - pumpDrop;
     if(tp < 0) tp = 0;
+    _ecmInlineMotorPts.push({ rpm: d.rpm, torque: tp });
     var x = xPos(d.rpm), y = yPos(tp);
     if(firstM) { ctx.moveTo(x, y); firstM = false; } else ctx.lineTo(x, y);
   });
+  _ecmInlineMotorPts.push({ rpm: noLoadGov, torque: 0 });   // droop kuyrugu
   // Governor droop
   var tGov = 0;
   torqueData.forEach(function(d) { if(d.rpm <= governed) tGov = d.torque; });
@@ -557,7 +616,9 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   
   // Motor eğrisi etiketi
   ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText('Motor (Net − ' + pumpDrop + ')', xPos(torqueData[0].rpm) + 4, yPos(torqueData[0].torque - pumpDrop) - 8);
+  // pumpDrop konvertörler arası ORTALAMA (bkz. chartPumpDrop) → ham float
+  // basılırsa etikete 23.67059823029812 gibi bir değer sızar. 1 ondalık yeter.
+  ctx.fillText('Motor (Net − ' + pumpDrop.toFixed(1) + ' N·m)', xPos(torqueData[0].rpm) + 4, yPos(torqueData[0].torque - pumpDrop) - 8);
   
   // Governed çizgisi
   ctx.beginPath();
@@ -567,8 +628,11 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   ctx.moveTo(xPos(governed), mt); ctx.lineTo(xPos(governed), mt + ph);
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.restore();   // kirpma biter — asagidaki etiketler plot alaninin DISINDA
   ctx.fillStyle = isDark ? '#7a8599' : '#64748b'; ctx.font = '8px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('Gov ' + governed, xPos(governed), mt + ph + 26);
+  if(governed >= minRPM && governed <= maxRPM) {
+    ctx.fillText('Gov ' + governed, xPos(governed), mt + ph + 26);
+  }
   
   // ── INTERSECTION DOTS (small chart) ──
   try {
@@ -601,7 +665,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
         if(mV > cV + 1) wasAbove = true;
         else if(wasAbove && mV > 0 && cV >= mV) { fRPM = sr; fT = cV; break; }
       }
-      if(fRPM > 0 && fT > 0 && fT < maxT) {
+      if(fRPM > 0 && fT > 0 && fT >= minT && fT < maxT && fRPM >= minRPM && fRPM <= maxRPM) {
         var sx = xPos(fRPM), sy = yPos(fT);
         ctx.beginPath(); ctx.arc(sx, sy, 4, 0, Math.PI * 2);
         ctx.fillStyle = color; ctx.fill();
@@ -620,6 +684,64 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   var ly = mt + 8;
   ctx.fillStyle = isDark ? '#7a8599' : '#64748b';
   ctx.fillText('── Stall   --- 0.80 SR', ml + pw - 100, ly);
+
+  // ── Zoom durumu / kullanım ipucu ──
+  // Yakınlaştırılmışken oran + sıfırlama ipucu; taban görünümde ne yapılabileceğini
+  // anlatan sessiz bir ipucu (kullanıcı grafiğin etkileşimli olduğunu bilmiyordu).
+  ctx.textAlign = 'right';
+  if((zoomState.scale || 1) > 1.05 || (zoomState.scale || 1) < 0.95) {
+    ctx.fillStyle = '#60a5fa'; ctx.font = 'bold 9px sans-serif';
+    ctx.fillText(zoomState.scale.toFixed(1) + '× — sol tık: sıfırla', ml + pw - 4, mt + ph - 6);
+  } else {
+    ctx.fillStyle = isDark ? 'rgba(122,133,153,0.75)' : 'rgba(100,116,139,0.8)';
+    ctx.font = '8px sans-serif';
+    ctx.fillText('Scroll: yakınlaştır  ·  Sağ tık + sürükle: kaydır', ml + pw - 4, mt + ph - 6);
+  }
+
+  // ── ETKİLEŞİM KURULUMU ──
+  // Overlay elemanları (tooltip + crosshair) canvas'ın position:relative
+  // sarmalayıcısına BİR KEZ eklenir; sonraki çizimlerde yeniden kullanılır.
+  var wrap = canvas.parentElement;
+  var uid = 'ecm-inline-' + nodeId;
+  if(wrap && !wrap.querySelector('#' + uid + '-tooltip')) {
+    var ov = document.createElement('div');
+    ov.innerHTML =
+      '<div id="' + uid + '-tooltip" style="position:absolute; display:none; pointer-events:none; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:var(--radius-sm); padding:6px 9px; font-size:var(--fs-tiny); color:var(--text-primary); line-height:1.45; box-shadow:0 4px 16px rgba(0,0,0,0.45); z-index:10; max-width:220px; white-space:nowrap;"></div>' +
+      '<div id="' + uid + '-crossv" style="position:absolute; top:0; width:1px; height:100%; background:rgba(255,255,255,0.14); pointer-events:none; display:none; z-index:5;"></div>' +
+      '<div id="' + uid + '-crossh" style="position:absolute; left:0; width:100%; height:1px; background:rgba(255,255,255,0.14); pointer-events:none; display:none; z-index:5;"></div>';
+    while(ov.firstChild) wrap.appendChild(ov.firstChild);
+  }
+
+  // Bağlam — modal ile aynı sözleşme, ama BU canvas'a ait zoom/pan nesneleri
+  canvas._ecmInteractive = {
+    ml: ml, mr: mr, mt: mt, mb: mb, pw: pw, ph: ph,
+    minRPM: minRPM, maxRPM: maxRPM, minT: minT, maxT: maxT,
+    xPos: xPos, yPos: yPos, rpmFromX: rpmFromX, torqueFromY: torqueFromY,
+    curves: _ecmInlineCurves, motorPts: _ecmInlineMotorPts,
+    governed: governed, pumpDrop: pumpDrop, dpr: dpr,
+    zoom: zoomState,
+    pan: panState,
+    tooltipWidth: 220,
+    // Aynı argümanlarla yeniden çizer → zoom/pan durumu canvas'ta yaşadığı için
+    // pencere korunur.
+    redraw: function() {
+      drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDrop, results);
+    },
+    els: {
+      tooltip: uid + '-tooltip',
+      crossV: uid + '-crossv',
+      crossH: uid + '-crossh'
+      // zoomInd yok — oran canvas üzerine çiziliyor
+    }
+  };
+
+  canvas.onmousemove = ecmChartMouseMove;
+  canvas.onmouseleave = ecmChartMouseLeave;
+  canvas.onwheel = ecmChartWheel;
+  canvas.onmousedown = ecmChartMouseDown;
+  canvas.onmouseup = ecmChartMouseUp;
+  canvas.oncontextmenu = function(e) { e.preventDefault(); };
+  canvas.style.cursor = 'crosshair';
 }
 
 // ── Bağlantı üzerinden motor bileşenini bul ──
@@ -939,6 +1061,84 @@ function ecmSelectConverter(ecmNodeId, tcPresetKey) {
   runECMatchingAnalysis(ecmNodeId);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PAYLAŞILAN ETKİLEŞİM KATMANI (panel içi grafik + tam ekran modal)
+// ───────────────────────────────────────────────────────────────────────────
+// Etkileşim durumu CANVAS BAŞINA tutulur (canvas._ecmInteractive). Böylece
+// panel içindeki küçük grafik ile modal aynı dinleyicileri paylaşır ama
+// zoom/pan durumları birbirine karışmaz. Bağlam şu alanları taşır:
+//   ml/mr/mt/mb/pw/ph      — çizim alanı geometrisi (canvas px)
+//   minRPM/maxRPM/minT/maxT — o an görünen veri penceresi
+//   xPos/yPos/rpmFromX/torqueFromY — ölçek dönüşümleri
+//   curves/motorPts        — tooltip'in okuduğu eğri verisi
+//   zoom {scale,centerRPM,centerT} / pan {...} — bu canvas'a ait durum
+//   redraw()               — bu canvas'ı yeniden çizen kapanış
+//   els {tooltip,crossV,crossH,zoomInd} — bu örneğe ait overlay elemanları
+//   cssScale               — CSS px → canvas px katsayısı (fare eşlemesi)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Zoom penceresini hesaplar. SAF fonksiyon: base aralıklar + zoom durumundan
+// görünür pencereyi üretir, taban sınırların dışına taşmayı kırpar ve kırpma
+// sonrası merkezi günceller. Panel içi grafik ile modal aynı matematiği
+// kullanır → ikisi arasında sapma olamaz.
+function ecmZoomWindow(base, zoom) {
+  var zs = zoom.scale || 1.0;
+  var rpmRange = (base.maxRPM - base.minRPM) / zs;
+  var tRange = (base.maxT - base.minT) / zs;
+
+  if(zoom.centerRPM === null || zoom.centerRPM === undefined) {
+    zoom.centerRPM = (base.minRPM + base.maxRPM) / 2;
+  }
+  if(zoom.centerT === null || zoom.centerT === undefined) {
+    zoom.centerT = (base.minT + base.maxT) / 2;
+  }
+
+  var minRPM = zoom.centerRPM - rpmRange / 2;
+  var maxRPM = zoom.centerRPM + rpmRange / 2;
+  var minT = zoom.centerT - tRange / 2;
+  var maxT = zoom.centerT + tRange / 2;
+
+  // Yalnızca yakınlaştırmada kırp — uzaklaşınca taban aralığın dışını görmek
+  // meşru (eğrilerin nereye gittiği görünür).
+  if(zs >= 1.0) {
+    if(minRPM < base.minRPM) { minRPM = base.minRPM; maxRPM = base.minRPM + rpmRange; }
+    if(maxRPM > base.maxRPM) { maxRPM = base.maxRPM; minRPM = base.maxRPM - rpmRange; }
+    if(minT < base.minT) { minT = base.minT; maxT = base.minT + tRange; }
+    if(maxT > base.maxT) { maxT = base.maxT; minT = base.maxT - tRange; }
+  }
+
+  zoom.centerRPM = (minRPM + maxRPM) / 2;
+  zoom.centerT = (minT + maxT) / 2;
+
+  return { minRPM: minRPM, maxRPM: maxRPM, minT: minT, maxT: maxT };
+}
+
+// Zoom sınırları — scroll ve sıfırlama bu değerleri paylaşır.
+var ECM_ZOOM_MIN = 0.3;
+var ECM_ZOOM_MAX = 12.0;
+var ECM_ZOOM_STEP_IN = 1.18;
+var ECM_ZOOM_STEP_OUT = 0.85;
+
+// Fare olayının konumunu CANVAS px uzayına çevirir. Panel içi canvas'ın
+// backing store'u CSS boyutundan farklı olabilir (width/height attribute'u vs
+// style), bu yüzden ham offsetX/Y kullanmak hit-test'i kaydırır.
+function ecmPointerPos(e, canvas, ctx) {
+  var rect = canvas.getBoundingClientRect();
+  var sx = rect.width > 0 ? (ctx.pw + ctx.ml + ctx.mr) / rect.width : 1;
+  var sy = rect.height > 0 ? (ctx.ph + ctx.mt + ctx.mb) / rect.height : 1;
+  return {
+    mx: (e.clientX - rect.left) * sx,
+    my: (e.clientY - rect.top) * sy,
+    rect: rect,
+    sx: sx, sy: sy
+  };
+}
+
+function ecmInPlot(pos, ctx) {
+  return pos.mx >= ctx.ml && pos.mx <= ctx.ml + ctx.pw &&
+         pos.my >= ctx.mt && pos.my <= ctx.mt + ctx.ph;
+}
+
 // ── FULLSCREEN INTERACTIVE CHART ──
 var _ecmModalActive = null;
 var _ecmModalData = null;
@@ -968,7 +1168,9 @@ function ecmExpandChart(nodeId) {
 
   _ecmModalData = { torqueData: torqueData, governed: governed, noLoadGov: noLoadGov, pumpDrop: modalPumpDrop, engineName: engineName };
   _ecmModalActive = nodeId;
-  _ecmZoom = { scale: 1.0, centerRPM: null, centerT: null };
+  // YERİNDE sıfırla — yeniden atama, canvas._ecmInteractive.zoom'un tuttuğu
+  // referansı koparır ve etkileşim sessizce ölü bir nesneyi günceller.
+  _ecmZoom.scale = 1.0; _ecmZoom.centerRPM = null; _ecmZoom.centerT = null;
 
   // Alttaki Özellikler modalı bu büyük chart'ın altında kalmasın → otomatik kapan
   if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(false);
@@ -1050,7 +1252,7 @@ function ecmCloseChartModal() {
   overlay.remove();
   _ecmModalActive = null;
   _ecmModalData = null;
-  _ecmZoom = { scale: 1.0, centerRPM: null, centerT: null };
+  _ecmZoom.scale = 1.0; _ecmZoom.centerRPM = null; _ecmZoom.centerT = null;
   _ecmPan.active = false;
 }
 
@@ -1090,33 +1292,13 @@ function ecmDrawModalChart() {
   baseMaxT = Math.ceil(baseMaxT / 200) * 200 + 400;
   var baseMinT = 0;
   
-  // Apply zoom
-  var zs = _ecmZoom.scale || 1.0;
-  var baseRPMRange = baseMaxRPM - baseMinRPM;
-  var baseTRange = baseMaxT - baseMinT;
-  var visRPMRange = baseRPMRange / zs;
-  var visTRange = baseTRange / zs;
-  
-  // Center defaults
-  if(_ecmZoom.centerRPM === null) _ecmZoom.centerRPM = (baseMinRPM + baseMaxRPM) / 2;
-  if(_ecmZoom.centerT === null) _ecmZoom.centerT = baseMaxT / 2;
-  
-  var minRPM = _ecmZoom.centerRPM - visRPMRange / 2;
-  var maxRPM = _ecmZoom.centerRPM + visRPMRange / 2;
-  var minT = _ecmZoom.centerT - visTRange / 2;
-  var maxT = _ecmZoom.centerT + visTRange / 2;
-  
-  // Clamp so we don't go beyond base bounds (only when zoomed in)
-  if(zs >= 1.0) {
-    if(minRPM < baseMinRPM) { minRPM = baseMinRPM; maxRPM = baseMinRPM + visRPMRange; }
-    if(maxRPM > baseMaxRPM) { maxRPM = baseMaxRPM; minRPM = baseMaxRPM - visRPMRange; }
-    if(minT < baseMinT) { minT = baseMinT; maxT = baseMinT + visTRange; }
-    if(maxT > baseMaxT) { maxT = baseMaxT; minT = baseMaxT - visTRange; }
-  }
-  // Update center after clamping
-  _ecmZoom.centerRPM = (minRPM + maxRPM) / 2;
-  _ecmZoom.centerT = (minT + maxT) / 2;
-  
+  // Apply zoom — panel içi grafikle AYNI saf fonksiyon (ecmZoomWindow)
+  var _win = ecmZoomWindow(
+    { minRPM: baseMinRPM, maxRPM: baseMaxRPM, minT: baseMinT, maxT: baseMaxT },
+    _ecmZoom
+  );
+  var minRPM = _win.minRPM, maxRPM = _win.maxRPM, minT = _win.minT, maxT = _win.maxT;
+
   function xPos(rpm) { return ml + (rpm - minRPM) / (maxRPM - minRPM) * pw; }
   function yPos(t) { return mt + ph - ((t - minT) / (maxT - minT)) * ph; }
   function rpmFromX(x) { return minRPM + (x - ml) / pw * (maxRPM - minRPM); }
@@ -1388,20 +1570,32 @@ function ecmDrawModalChart() {
     ctx.fillText('' + _ecmZoom.scale.toFixed(1) + '× — scroll ile yakınlaştırın, tıklayarak sıfırlayın', ml + pw - 4, mt + 14);
   }
   
-  // Store data for interaction
+  // Store data for interaction — paylaşılan bağlam sözleşmesi (bkz. dosya başı).
+  // Modal, modül düzeyindeki _ecmZoom/_ecmPan tekillerini kullanmayı sürdürür;
+  // panel içi grafik kendi nesnelerini verir → durumlar karışmaz.
   canvas._ecmInteractive = {
     ml: ml, mr: mr, mt: mt, mb: mb, pw: pw, ph: ph,
     minRPM: minRPM, maxRPM: maxRPM, minT: minT, maxT: maxT,
     xPos: xPos, yPos: yPos, rpmFromX: rpmFromX, torqueFromY: torqueFromY,
-    curves: _ecmCurves, motorPts: motorPts, governed: d.governed, pumpDrop: d.pumpDrop, dpr: dpr
+    curves: _ecmCurves, motorPts: motorPts, governed: d.governed, pumpDrop: d.pumpDrop, dpr: dpr,
+    zoom: _ecmZoom,
+    pan: _ecmPan,
+    redraw: ecmDrawModalChart,
+    tooltipWidth: 260,
+    els: {
+      tooltip: 'ecm-modal-tooltip',
+      crossV: 'ecm-modal-crosshair-v',
+      crossH: 'ecm-modal-crosshair-h',
+      zoomInd: 'ecm-zoom-indicator'
+    }
   };
-  
-  // Attach mouse events
-  canvas.onmousemove = ecmModalMouseMove;
-  canvas.onmouseleave = ecmModalMouseLeave;
-  canvas.onwheel = ecmModalWheel;
-  canvas.onmousedown = ecmModalMouseDown;
-  canvas.onmouseup = ecmModalMouseUp;
+
+  // Attach mouse events — paylaşılan (bağlam-genel) dinleyiciler
+  canvas.onmousemove = ecmChartMouseMove;
+  canvas.onmouseleave = ecmChartMouseLeave;
+  canvas.onwheel = ecmChartWheel;
+  canvas.onmousedown = ecmChartMouseDown;
+  canvas.onmouseup = ecmChartMouseUp;
   canvas.oncontextmenu = function(e) { e.preventDefault(); };
   canvas.style.cursor = 'crosshair';
 }
@@ -1409,62 +1603,83 @@ function ecmDrawModalChart() {
 // ── ECM Pan state ──
 var _ecmPan = { active: false, startX: 0, startY: 0, startCenterRPM: 0, startCenterT: 0, _raf: null };
 
-function ecmModalMouseDown(e) {
-  // Sağ tık (button=2) → pan başlat
-  if(e.button !== 2) return;
-  e.preventDefault();
-  var canvas = e.target;
-  var data = canvas._ecmInteractive;
-  if(!data) return;
-  
-  _ecmPan.active = true;
-  _ecmPan.startX = e.clientX;
-  _ecmPan.startY = e.clientY;
-  _ecmPan.startCenterRPM = _ecmZoom.centerRPM;
-  _ecmPan.startCenterT = _ecmZoom.centerT;
-  canvas.style.cursor = 'grabbing';
-  
-  // Hide tooltip during pan
-  var tooltip = document.getElementById('ecm-modal-tooltip');
-  if(tooltip) tooltip.style.display = 'none';
+// Bağlamın overlay elemanlarını id'den çözer (yoksa null).
+function ecmEls(ctx) {
+  var e = (ctx && ctx.els) || {};
+  return {
+    tooltip: e.tooltip ? document.getElementById(e.tooltip) : null,
+    crossV: e.crossV ? document.getElementById(e.crossV) : null,
+    crossH: e.crossH ? document.getElementById(e.crossH) : null,
+    zoomInd: e.zoomInd ? document.getElementById(e.zoomInd) : null
+  };
 }
 
-function ecmModalMouseUp(e) {
+function ecmHideOverlays(ctx) {
+  var els = ecmEls(ctx);
+  if(els.tooltip) els.tooltip.style.display = 'none';
+  if(els.crossV) els.crossV.style.display = 'none';
+  if(els.crossH) els.crossH.style.display = 'none';
+}
+
+function ecmChartMouseDown(e) {
+  var canvas = e.currentTarget;
+  var ctx = canvas._ecmInteractive;
+  if(!ctx) return;
+
+  // Sol tık → zoom sıfırla (modal footer'ındaki göstergeyle aynı davranış,
+  // panel içinde de tek tıkla tabana dönüş sağlar).
+  if(e.button === 0) {
+    if((ctx.zoom.scale || 1) !== 1) { e.preventDefault(); ecmResetZoomFor(canvas); }
+    return;
+  }
+  // Sağ tık → pan başlat
   if(e.button !== 2) return;
-  if(!_ecmPan.active) return;
-  _ecmPan.active = false;
-  var canvas = e.target;
+  e.preventDefault();
+
+  ctx.pan.active = true;
+  ctx.pan.startX = e.clientX;
+  ctx.pan.startY = e.clientY;
+  ctx.pan.startCenterRPM = ctx.zoom.centerRPM;
+  ctx.pan.startCenterT = ctx.zoom.centerT;
+  canvas.style.cursor = 'grabbing';
+
+  ecmHideOverlays(ctx);
+}
+
+function ecmChartMouseUp(e) {
+  if(e.button !== 2) return;
+  var canvas = e.currentTarget;
+  var ctx = canvas._ecmInteractive;
+  if(!ctx || !ctx.pan.active) return;
+  ctx.pan.active = false;
   canvas.style.cursor = 'crosshair';
 }
 
-function ecmModalWheel(e) {
+function ecmChartWheel(e) {
+  var canvas = e.currentTarget;
+  var ctx = canvas._ecmInteractive;
+  if(!ctx) return;
+
+  var pos = ecmPointerPos(e, canvas, ctx);
+  if(!ecmInPlot(pos, ctx)) return;   // eksen/marj bölgesinde sayfa kaydırmasını engelleme
   e.preventDefault();
-  var canvas = e.target;
-  var data = canvas._ecmInteractive;
-  if(!data) return;
-  
-  var rect = canvas.getBoundingClientRect();
-  var mx = e.clientX - rect.left;
-  var my = e.clientY - rect.top;
-  
-  // Ignore if outside plot area
-  if(mx < data.ml || mx > data.ml + data.pw || my < data.mt || my > data.mt + data.ph) return;
-  
-  // Center-based zoom (no mouse-position anchoring)
-  var oldScale = _ecmZoom.scale;
-  var delta = e.deltaY > 0 ? 0.85 : 1.18;
-  var newScale = Math.max(0.3, Math.min(12.0, oldScale * delta));
-  
+
+  // Merkez tabanlı zoom (fare konumuna sabitleme yok)
+  var oldScale = ctx.zoom.scale || 1.0;
+  var delta = e.deltaY > 0 ? ECM_ZOOM_STEP_OUT : ECM_ZOOM_STEP_IN;
+  var newScale = Math.max(ECM_ZOOM_MIN, Math.min(ECM_ZOOM_MAX, oldScale * delta));
   if(newScale === oldScale) return;
-  
-  _ecmZoom.scale = newScale;
-  
-  ecmDrawModalChart();
-  ecmUpdateZoomIndicator(newScale);
+
+  ctx.zoom.scale = newScale;
+  ctx.redraw();
+  ecmUpdateZoomIndicatorFor(canvas, newScale);
 }
 
-function ecmUpdateZoomIndicator(scale) {
-  var zoomEl = document.getElementById('ecm-zoom-indicator');
+// Bağlamın zoom göstergesini günceller. Panel içi grafikte gösterge canvas
+// üzerine çizildiği için ayrı DOM elemanı olmayabilir — o durumda sessiz geçer.
+function ecmUpdateZoomIndicatorFor(canvas, scale) {
+  var ctx = canvas && canvas._ecmInteractive;
+  var zoomEl = ecmEls(ctx).zoomInd;
   if(!zoomEl) return;
   if(scale > 1.05 || scale < 0.95) {
     zoomEl.textContent = scale.toFixed(1) + '×';
@@ -1474,74 +1689,84 @@ function ecmUpdateZoomIndicator(scale) {
   }
 }
 
-function ecmResetZoom() {
-  _ecmZoom = { scale: 1.0, centerRPM: null, centerT: null };
-  _ecmPan.active = false;
-  ecmUpdateZoomIndicator(1.0);
-  ecmDrawModalChart();
+// Geriye dönük uyum: modal footer'ı ecmUpdateZoomIndicator(scale) çağırıyor.
+function ecmUpdateZoomIndicator(scale) {
+  var canvas = document.getElementById('ecm-modal-canvas');
+  if(canvas) ecmUpdateZoomIndicatorFor(canvas, scale);
 }
 
-function ecmModalMouseMove(e) {
-  var canvas = e.target;
+// Belirli bir canvas'ın zoom'unu tabana döndürür.
+function ecmResetZoomFor(canvas) {
+  var ctx = canvas && canvas._ecmInteractive;
+  if(!ctx) return;
+  ctx.zoom.scale = 1.0;
+  ctx.zoom.centerRPM = null;
+  ctx.zoom.centerT = null;
+  ctx.pan.active = false;
+  ecmHideOverlays(ctx);
+  ecmUpdateZoomIndicatorFor(canvas, 1.0);
+  ctx.redraw();
+}
+
+// Modal footer'ındaki gösterge bunu onclick ile çağırıyor.
+function ecmResetZoom() {
+  var canvas = document.getElementById('ecm-modal-canvas');
+  if(canvas) ecmResetZoomFor(canvas);
+}
+
+function ecmChartMouseMove(e) {
+  var canvas = e.currentTarget;
   var data = canvas._ecmInteractive;
   if(!data) return;
-  
+
+  var pos = ecmPointerPos(e, canvas, data);
+  var rect = pos.rect;
+  var mx = pos.mx, my = pos.my;
+
   // ── Pan mode (sağ tık sürükleme) ──
-  if(_ecmPan.active) {
-    var d = _ecmModalData;
-    if(!d) return;
-    
-    // Hide tooltip and crosshairs during pan
-    var _tt = document.getElementById('ecm-modal-tooltip');
-    var _cv = document.getElementById('ecm-modal-crosshair-v');
-    var _ch = document.getElementById('ecm-modal-crosshair-h');
-    if(_tt) _tt.style.display = 'none';
-    if(_cv) _cv.style.display = 'none';
-    if(_ch) _ch.style.display = 'none';
-    
-    // Pixel delta → data delta
-    var dxPx = e.clientX - _ecmPan.startX;
-    var dyPx = e.clientY - _ecmPan.startY;
-    
+  if(data.pan.active) {
+    ecmHideOverlays(data);
+
+    // Pixel delta → data delta (CSS px → canvas px ölçeği uygulanır)
+    var dxPx = (e.clientX - data.pan.startX) * pos.sx;
+    var dyPx = (e.clientY - data.pan.startY) * pos.sy;
+
     var visRPMRange = data.maxRPM - data.minRPM;
     var visTRange = data.maxT - data.minT;
-    
+
     var dRPM = -dxPx / data.pw * visRPMRange;
     var dT = dyPx / data.ph * visTRange;
-    
-    _ecmZoom.centerRPM = _ecmPan.startCenterRPM + dRPM;
-    _ecmZoom.centerT = _ecmPan.startCenterT + dT;
-    
-    if(!_ecmPan._raf) {
-      _ecmPan._raf = requestAnimationFrame(function() {
-        ecmDrawModalChart();
-        _ecmPan._raf = null;
+
+    data.zoom.centerRPM = data.pan.startCenterRPM + dRPM;
+    data.zoom.centerT = data.pan.startCenterT + dT;
+
+    if(!data.pan._raf) {
+      data.pan._raf = requestAnimationFrame(function() {
+        data.pan._raf = null;
+        var live = canvas._ecmInteractive;   // yeniden çizim bağlamı tazeler
+        (live || data).redraw();
       });
     }
     return;
   }
-  
+
   // ── Normal tooltip mode ──
-  var rect = canvas.getBoundingClientRect();
-  var mx = e.clientX - rect.left;
-  var my = e.clientY - rect.top;
-  
-  var tooltip = document.getElementById('ecm-modal-tooltip');
-  var crossV = document.getElementById('ecm-modal-crosshair-v');
-  var crossH = document.getElementById('ecm-modal-crosshair-h');
-  
+  var _els = ecmEls(data);
+  var tooltip = _els.tooltip, crossV = _els.crossV, crossH = _els.crossH;
+
   // Check bounds
-  if(mx < data.ml || mx > data.ml + data.pw || my < data.mt || my > data.mt + data.ph) {
+  if(!ecmInPlot(pos, data)) {
     if(tooltip) tooltip.style.display = 'none';
     if(crossV) crossV.style.display = 'none';
     if(crossH) crossH.style.display = 'none';
     return;
   }
-  
-  // Crosshairs
-  if(crossV) { crossV.style.display = 'block'; crossV.style.left = mx + 'px'; }
-  if(crossH) { crossH.style.display = 'block'; crossH.style.top = my + 'px'; }
-  
+
+  // Crosshairs — overlay elemanları CSS px uzayında konumlanır
+  var cssX = mx / pos.sx, cssY = my / pos.sy;
+  if(crossV) { crossV.style.display = 'block'; crossV.style.left = cssX + 'px'; }
+  if(crossH) { crossH.style.display = 'block'; crossH.style.top = cssY + 'px'; }
+
   var rpm = data.rpmFromX(mx);
   var cursorT = data.torqueFromY(my);
   
@@ -1621,9 +1846,11 @@ function ecmModalMouseMove(e) {
   if(tooltip) {
     tooltip.innerHTML = html;
     tooltip.style.display = 'block';
-    var tw = 260, th = tooltip.offsetHeight || 120;
-    var tx = mx + 18, ty = my - 10;
-    if(tx + tw > rect.width - 10) tx = mx - tw - 12;
+    // Konumlandırma CSS px uzayında (overlay canvas'ın üstünde duruyor)
+    var tw = data.tooltipWidth || 260, th = tooltip.offsetHeight || 120;
+    var tx = cssX + 18, ty = cssY - 10;
+    if(tx + tw > rect.width - 10) tx = cssX - tw - 12;
+    if(tx < 4) tx = 4;
     if(ty + th > rect.height - 10) ty = rect.height - th - 10;
     if(ty < 4) ty = 4;
     tooltip.style.left = tx + 'px';
@@ -1631,18 +1858,15 @@ function ecmModalMouseMove(e) {
   }
 }
 
-function ecmModalMouseLeave(e) {
+function ecmChartMouseLeave(e) {
+  var canvas = e.currentTarget;
+  var ctx = canvas && canvas._ecmInteractive;
+  if(!ctx) return;
   // Pan duruyorsa bitir
-  if(_ecmPan.active) {
-    _ecmPan.active = false;
-    var canvas = document.getElementById('ecm-modal-canvas');
-    if(canvas) canvas.style.cursor = 'crosshair';
+  if(ctx.pan.active) {
+    ctx.pan.active = false;
+    canvas.style.cursor = 'crosshair';
   }
-  var tooltip = document.getElementById('ecm-modal-tooltip');
-  var crossV = document.getElementById('ecm-modal-crosshair-v');
-  var crossH = document.getElementById('ecm-modal-crosshair-h');
-  if(tooltip) tooltip.style.display = 'none';
-  if(crossV) crossV.style.display = 'none';
-  if(crossH) crossH.style.display = 'none';
+  ecmHideOverlays(ctx);
 }
 
