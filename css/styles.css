@@ -4322,6 +4322,48 @@ body.mf-radio-dragging .mf-radio-head{ cursor:grabbing; }
   .mf-radio{ width:calc(100vw - 24px); right:12px; bottom:12px; }
 }
 
+/* ═══ Mini oynatıcı — topoloji üstünde, panel kapalıyken görünen "şimdi çalıyor" ═══ */
+.mf-radio-mini{
+  position:fixed; right:18px; bottom:18px; z-index:9998;
+  display:none; align-items:center; gap:7px;
+  width:270px; max-width:calc(100vw - 24px);
+  padding:6px 8px 6px 6px;
+  background:linear-gradient(180deg,var(--bg-tertiary),var(--bg-secondary));
+  border:1px solid var(--border-color); border-radius:var(--radius-lg,12px);
+  box-shadow:0 10px 30px var(--shadow-color), 0 2px 8px rgba(0,0,0,0.3);
+  color:var(--text-primary); cursor:grab; user-select:none;
+}
+.mf-radio-mini.show{ display:flex; animation:mfRadioMiniIn var(--dur-base,0.2s) var(--ease-out,ease); }
+body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
+@keyframes mfRadioMiniIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+.mf-radio-mini-pp{
+  flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+  width:34px; height:34px; padding:0;
+  background:var(--accent-primary); border:none; border-radius:50%;
+  color:#fff; cursor:pointer; transition:filter var(--dur-fast,0.12s);
+}
+.mf-radio-mini-pp:hover{ filter:brightness(1.08); }
+.mf-radio-mini-pp svg{ width:18px; height:18px; }
+.mf-radio-mini-info{ flex:1; min-width:0; display:flex; align-items:center; gap:7px; }
+.mf-radio-mini-text{ min-width:0; display:flex; flex-direction:column; }
+.mf-radio-mini-title{ font-size:0.8rem; font-weight:600; color:var(--text-heading); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mf-radio-mini-sub{ font-size:0.66rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mf-radio-mini-btn{
+  flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;
+  width:26px; height:26px; padding:0;
+  background:transparent; border:none; border-radius:var(--radius-sm,6px);
+  color:var(--text-secondary); cursor:pointer;
+  transition:background var(--dur-fast,0.12s), color var(--dur-fast,0.12s);
+}
+.mf-radio-mini-btn:hover{ background:var(--bg-input); color:var(--text-primary); }
+.mf-radio-mini-btn svg{ width:15px; height:15px; }
+/* Mini EQ çubukları (yalnızca çalarken oynar) */
+.mf-radio-mini-eq{ display:inline-flex; align-items:flex-end; gap:2px; height:12px; flex-shrink:0; }
+.mf-radio-mini-eq i{ width:2.5px; height:4px; border-radius:1px; background:var(--accent-primary); opacity:0.55; }
+.mf-radio-mini.playing .mf-radio-mini-eq i{ animation:mfRadioEq 0.9s ease-in-out infinite; opacity:0.9; }
+.mf-radio-mini.playing .mf-radio-mini-eq i:nth-child(2){ animation-delay:0.15s; }
+.mf-radio-mini.playing .mf-radio-mini-eq i:nth-child(3){ animation-delay:0.3s; }
+
 
 /* ═══════════════════════════════════════════════════════════════════════════
    AÇILIŞ MÜZİĞİ MİNİ ÇALAR (js/splash-music.js)
