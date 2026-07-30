@@ -73,53 +73,84 @@
 
 <script src="js/auth.js"></script>
 
-<!-- TAB BAR -->
-<div id="tab-bar">
-  <div class="ve-menu-wrapper" style="position:relative;">
-    <span class="logo" id="ve-project-name-btn" onclick="veToggleFileMenu()" style="cursor:pointer;" title="Proje Menüsü"><span class="ve-brand-mark"><span class="mf-ico mf-ico-settings"></span></span><span class="ve-brand-name">MFSim</span><span class="mf-ico mf-ico-chevron-down ve-brand-chev"></span></span>
-    <div id="ve-file-menu" class="ve-file-menu" style="display:none;">
-      <div class="ve-menu-item" onclick="veNewProject()"><span class="mf-ico mf-ico-file-plus"></span> Yeni Proje</div>
-      <div class="ve-menu-item" onclick="veLoadTopology()"><span class="mf-ico mf-ico-folder-open"></span> Proje Aç</div>
-      <div class="ve-menu-item" onclick="veSaveTopology()"><span class="mf-ico mf-ico-save"></span> Projeyi Kaydet</div>
-      <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="veExportTopology('png')"><span class="mf-ico mf-ico-download"></span> PNG olarak dışa aktar</div>
-      <div class="ve-menu-item" onclick="veExportTopology('svg')"><span class="mf-ico mf-ico-download"></span> SVG olarak dışa aktar</div>
-      <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
-      <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="veOpenStatusModal()"><span class="mf-ico mf-ico-refresh"></span> Program Durumu<span class="ve-menu-badge" id="ve-status-menu-badge" style="display:none;" title="Yeni güncelleme mevcut"></span></div>
-      <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
-      <div class="ve-menu-item" onclick="veShortcutsHelpOpen()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="8" y1="14" x2="16" y2="14"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01"/></svg> Klavye Kısayolları <span style="margin-left:auto;opacity:.6;font-size:var(--fs-body);">?</span></div>
-      <div class="ve-menu-item" onclick="veGame2048Open()"><span class="mf-ico mf-ico-grid"></span> Mola: 2048</div>
-      <div class="ve-menu-divider"></div>
-      <div class="ve-menu-item" onclick="mfsimLogout()" style="color:var(--accent-danger);"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
-    </div>
-  </div>
-  <!-- Hızlı Erişim Araç Çubuğu (QAT) — şerit sekmesinden bağımsız, hep görünür -->
-  <!-- Komutlar data-qat ile bağlanır (js/ribbon.js). Inline onclick KULLANILMAZ:
-       menüdeki aynı komutla `[onclick*="..."]` seçicilerini çoğaltır ve
-       E2E testlerinde belirsizlik yaratırdı. -->
-  <span class="ve-qat" id="ve-qat">
-    <button type="button" class="ve-qat-btn" data-qat="veSaveTopology" title="Projeyi Kaydet" aria-label="Projeyi Kaydet"><span class="mf-ico mf-ico-save"></span></button>
-    <button type="button" class="ve-qat-btn" data-qat="veUndo" title="Geri Al (Ctrl+Z)" aria-label="Geri Al"><span class="mf-ico mf-ico-undo"></span></button>
-    <button type="button" class="ve-qat-btn" data-qat="veRedo" title="İleri Al (Ctrl+Y)" aria-label="İleri Al"><span class="mf-ico mf-ico-redo"></span></button>
-  </span>
-  <span class="ve-qat-sep"></span>
-  <div class="ve-tab-group">
-    <div class="ve-sub-tabs visible" id="ve-sub-tabs">
-      <button class="ve-sub-tab active" onclick="veSubTabDegistir('arac-performans')" data-subtab="arac-performans">Araç Performans</button>
-      <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
-    </div>
-  </div>
-  <span class="theme-selector" style="margin-left:auto;">
-    <button id="ve-radio-btn" class="ve-radio-btn" onclick="veToggleRadio()" title="Radyo / müzik çalar" aria-label="Radyo"><span class="mf-ico mf-ico-radio"></span></button>
-    <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
-    <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
-  </span>
-</div>
+<!-- ═══ TEK KROM BANDI ═══
+     Başlık satırı ve şerit sekme satırı BİRLEŞTİRİLDİ. Eskiden iki ayrı bant
+     vardı: #tab-bar (34px — marka menüsü + hızlı erişim + sayfa sekmeleri) ve
+     şeridin sekme şeridi (26px). İkisi de tek satıra bol bol sığacak kadar
+     seyrekti; 60px'lik krom 30px'e indi, kazanılan 30px tuvale gitti.
 
-<!-- RIBBON (Fluent tarzı şerit) — içeriği js/ribbon.js üretir -->
-<div id="ve-ribbon"></div>
+     Yerleşim: marka │ hızlı erişim │ şerit sekmeleri ····· sayfa anahtarı │
+     radyo │ daralt.
+
+     Sayfa anahtarı (Araç Performans / Sonuçlar) SAĞA alındı ve bölmeli düğme
+     görünümünü koruyor: şerit sekmeleri bir KOMUT grubu seçer, sayfa anahtarı
+     hangi SAYFADA olduğunu söyler. İki farklı iş, iki farklı biçim — yan yana
+     aynı görünselerdi hangisinin ne yaptığı anlaşılmazdı.
+
+     ÖNEMLİ: #ve-rb-tabs ve #ve-rb-body'yi js/ribbon.js DOLDURUR; bandın geri
+     kalanı statik markup'tır. Bu yüzden ribbon.js artık #ve-ribbon.innerHTML'i
+     EZMEZ — yalnız o iki kabın içini yazar. -->
+<div id="ve-ribbon">
+  <div class="ve-rb-strip" id="ve-rb-strip">
+    <div class="ve-menu-wrapper" style="position:relative;">
+      <span class="logo" id="ve-project-name-btn" onclick="veToggleFileMenu()" style="cursor:pointer;" title="Proje Menüsü"><span class="ve-brand-mark"><span class="mf-ico mf-ico-settings"></span></span><span class="ve-brand-name">MFSim</span><span class="mf-ico mf-ico-chevron-down ve-brand-chev"></span></span>
+      <div id="ve-file-menu" class="ve-file-menu" style="display:none;">
+        <div class="ve-menu-item" onclick="veNewProject()"><span class="mf-ico mf-ico-file-plus"></span> Yeni Proje</div>
+        <div class="ve-menu-item" onclick="veLoadTopology()"><span class="mf-ico mf-ico-folder-open"></span> Proje Aç</div>
+        <div class="ve-menu-item" onclick="veSaveTopology()"><span class="mf-ico mf-ico-save"></span> Projeyi Kaydet</div>
+        <div class="ve-menu-divider"></div>
+        <div class="ve-menu-item" onclick="veExportTopology('png')"><span class="mf-ico mf-ico-download"></span> PNG olarak dışa aktar</div>
+        <div class="ve-menu-item" onclick="veExportTopology('svg')"><span class="mf-ico mf-ico-download"></span> SVG olarak dışa aktar</div>
+        <div class="ve-menu-divider"></div>
+        <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
+        <div class="ve-menu-divider"></div>
+        <div class="ve-menu-item" onclick="veOpenStatusModal()"><span class="mf-ico mf-ico-refresh"></span> Program Durumu<span class="ve-menu-badge" id="ve-status-menu-badge" style="display:none;" title="Yeni güncelleme mevcut"></span></div>
+        <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
+        <div class="ve-menu-item" onclick="veShortcutsHelpOpen()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="8" y1="14" x2="16" y2="14"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01"/></svg> Klavye Kısayolları <span style="margin-left:auto;opacity:.6;font-size:var(--fs-body);">?</span></div>
+        <div class="ve-menu-item" onclick="veGame2048Open()"><span class="mf-ico mf-ico-grid"></span> Mola: 2048</div>
+        <div class="ve-menu-divider"></div>
+        <div class="ve-menu-item" onclick="mfsimLogout()" style="color:var(--accent-danger);"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
+      </div>
+    </div>
+
+    <span class="ve-qat-sep"></span>
+
+    <!-- Hızlı Erişim Araç Çubuğu (QAT) — şerit sekmesinden bağımsız, hep görünür.
+         Komutlar data-qat ile bağlanır (js/ribbon.js). Inline onclick KULLANILMAZ:
+         menüdeki aynı komutla `[onclick*="..."]` seçicilerini çoğaltır ve
+         E2E testlerinde belirsizlik yaratırdı. -->
+    <span class="ve-qat" id="ve-qat">
+      <button type="button" class="ve-qat-btn" data-qat="veSaveTopology" title="Projeyi Kaydet" aria-label="Projeyi Kaydet"><span class="mf-ico mf-ico-save"></span></button>
+      <button type="button" class="ve-qat-btn" data-qat="veUndo" title="Geri Al (Ctrl+Z)" aria-label="Geri Al"><span class="mf-ico mf-ico-undo"></span></button>
+      <button type="button" class="ve-qat-btn" data-qat="veRedo" title="İleri Al (Ctrl+Y)" aria-label="İleri Al"><span class="mf-ico mf-ico-redo"></span></button>
+    </span>
+
+    <span class="ve-qat-sep"></span>
+
+    <!-- Şerit sekmeleri — js/ribbon.js doldurur -->
+    <div class="ve-rb-tabs" id="ve-rb-tabs" role="tablist" aria-label="Şerit sekmeleri"></div>
+
+    <span class="ve-rb-strip-fill"></span>
+
+    <!-- Sayfa anahtarı -->
+    <div class="ve-tab-group">
+      <div class="ve-sub-tabs visible" id="ve-sub-tabs">
+        <button class="ve-sub-tab active" onclick="veSubTabDegistir('arac-performans')" data-subtab="arac-performans">Araç Performans</button>
+        <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
+      </div>
+    </div>
+
+    <span class="theme-selector">
+      <button id="ve-radio-btn" class="ve-radio-btn" onclick="veToggleRadio()" title="Radyo / müzik çalar" aria-label="Radyo"><span class="mf-ico mf-ico-radio"></span></button>
+      <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
+      <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
+    </span>
+
+    <button type="button" class="ve-rb-collapse" id="ve-rb-collapse" title="Şeridi daralt" aria-label="Şeridi daralt">▲</button>
+  </div>
+
+  <div class="ve-rb-body" id="ve-rb-body" role="tabpanel"></div>
+</div>
 
 <!-- GÖRSEL EDİTÖR -->
 <div id="sayfa2" class="tab-page active">

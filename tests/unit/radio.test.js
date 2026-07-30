@@ -4,7 +4,7 @@
  * ses clamp, çalma-listesi indeks sarmalama, başlık türetme, URL doğrulama,
  * durum serileştirme (localStorage) ve özel istasyon ekleme.
  *
- * NOT: require anında modül init() çağırır; #tab-bar olmadığından (jsdom)
+ * NOT: require anında modül init() çağırır; #ve-ribbon olmadığından (jsdom)
  * UI kurulmaz → yalnızca saf fonksiyonlar test kapsamına gelir.
  */
 
@@ -335,8 +335,8 @@ describe('favoriler: isFavorite / toggleFavorite / favoriteStations', () => {
 describe('UI smoke', () => {
   let playCalls;
   beforeEach(() => {
-    // Uygulama kabuğu (#tab-bar) + toolbar düğmesi → init() UI'yı kurar.
-    document.body.innerHTML = '<div id="tab-bar"></div><button id="ve-radio-btn"></button>';
+    // Uygulama kabuğu (#ve-ribbon) + toolbar düğmesi → init() UI'yı kurar.
+    document.body.innerHTML = '<div id="ve-ribbon"></div><button id="ve-radio-btn"></button>';
     playCalls = 0;
     const AudioStub = function () {
       return {

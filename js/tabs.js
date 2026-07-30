@@ -1,12 +1,12 @@
 // ============================================================================
-// TAB BAR — Her zaman görünür (artık tek sayfa)
+// KROM BANDI — Her zaman görünür (artık tek sayfa, tek bant)
 // ============================================================================
-var tabBar = document.getElementById('tab-bar');
-tabBar.classList.add('visible');
-document.body.classList.add('tab-bar-visible');
-// Şerit başlık satırıyla birlikte iner (bkz. js/ribbon.js)
+// #tab-bar kaldırıldı: marka menüsü, hızlı erişim ve sayfa anahtarı şerit
+// şeridine taşındı (bkz. index.html "TEK KROM BANDI"). Kabuğun var olduğunu
+// gösteren sentinel artık #ve-ribbon.
 var _veRibbonEl = document.getElementById('ve-ribbon');
 if(_veRibbonEl) _veRibbonEl.classList.add('visible');
+document.body.classList.add('app-chrome-visible');
 
 // Görsel Editör sub-tab değiştirme
 var currentSubTab = 'arac-performans';
