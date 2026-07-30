@@ -612,7 +612,10 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   // ── ÇÖZÜCÜ PARAMETRELERİ ──
   var sd = solverNode ? (solverNode.data || {}) : {};
-  var maxTime = parseFloat(sd.maxSimTime) || 120;  // Güvenlik limiti [s]
+  // Güvenlik limiti [s] — varsayılan, çözücü panelininkiyle AYNI kaynaktan
+  // gelir (cp-solver.js: VE_DEFAULT_MAX_SIM_TIME). Burada 120 sabitlenince
+  // panel 300 gösterirken çözücü 120'de kesiyordu.
+  var maxTime = parseFloat(sd.maxSimTime) || (typeof VE_DEFAULT_MAX_SIM_TIME !== 'undefined' ? VE_DEFAULT_MAX_SIM_TIME : 300);
   var dt = parseFloat(sd.ftDt) || 0.01;  // Kullanıcı seçimi (varsayılan 10 ms)
   var method = sd.method || 'rk4';  // Kullanıcı seçimi (varsayılan RK4)
 

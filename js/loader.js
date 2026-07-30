@@ -19,6 +19,11 @@
   // Tum yuklemenin (script'ler bitti, splash kapanmadan onceki) minimum
   // toplam suresi. Gerçek is bu su̇reden hızlıysa fark kadar bekleriz.
   var MIN_TOTAL_DURATION_MS = 6500;
+  // Tek bir external modulun yuklenmesi icin ust sinir. Bu sureyi asan modul
+  // ATLANIR ve yukleme devam eder — boylece askida kalan tek bir kaynak tum
+  // uygulamayi baslatilamaz hale getiremez. Tum kutuphaneler artik yerel
+  // (vendor/) oldugu icin normal kosulda bu sinir hic devreye girmez.
+  var MODULE_TIMEOUT_MS = 15000;
 
   var started = false;
   var startTime = 0;
@@ -116,11 +121,26 @@
       }
       var isExternal = !!placeholder.src;
       if (isExternal) {
-        s.onload = function() { resolve(); };
-        s.onerror = function() {
-          console.warn('[MFSim Loader] Yuklenemedi:', placeholder.src);
+        // Bir kez cozulme garantisi: onload / onerror / timeout hangisi once
+        // gelirse. TIMEOUT KRITIK — bir kaynak hata VERMEZ ama ASKIDA kalirsa
+        // (kurumsal proxy, captive portal, paket dusuren guvenlik duvari)
+        // onerror hic tetiklenmez, promise hic cozulmez ve next() ilerlemez →
+        // splash ekrani sonsuza takilir, program hic acilmaz. Timeout ile en
+        // kotu durumda o modul atlanir ve uygulama acilir.
+        var settled = false;
+        var timer = null;
+        function settle(reason) {
+          if (settled) return;
+          settled = true;
+          if (timer) { clearTimeout(timer); timer = null; }
+          if (reason) console.warn('[MFSim Loader] ' + reason + ':', placeholder.src);
           resolve();
-        };
+        }
+        s.onload = function() { settle(null); };
+        s.onerror = function() { settle('Yuklenemedi'); };
+        timer = setTimeout(function() {
+          settle('Zaman asimi (' + MODULE_TIMEOUT_MS + ' ms) — atlaniyor');
+        }, MODULE_TIMEOUT_MS);
         placeholder.parentNode.replaceChild(s, placeholder);
       } else {
         // Inline script: icerigi kopyala, replaceChild sonra senkron calisir

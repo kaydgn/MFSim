@@ -1,7 +1,16 @@
 // ===== TEKERLEK ÖZELLİKLERİ =====
+
+// Simülasyon güvenlik limitinin TEK doğruluk kaynağı [s].
+// Bu panel ile çözücüler (ft-performance.js, solver-pro.js) aynı değeri
+// kullanmalı. Eskiden panel 300, çözücüler ise 120 varsayıyordu; değer
+// görünmeyen bir hidden input'ta olduğu için kullanıcı farkı göremiyordu ve
+// aynı proje, çözücü düğümü bir kez açılmışsa 300'e, açılmamışsa 120 s'ye
+// kadar entegre ediliyordu (30 t örnekte 138 vs 81 km/h üst hız).
+var VE_DEFAULT_MAX_SIM_TIME = 300;
+
 function getSolverPropertiesHTML(node) {
   var d = node.data || {};
-  var maxSimTime = d.maxSimTime !== undefined ? d.maxSimTime : 300;
+  var maxSimTime = d.maxSimTime !== undefined ? d.maxSimTime : VE_DEFAULT_MAX_SIM_TIME;
 
   var html = '<div class="ve-cp-panel" style="border-top:1px solid var(--border-color); padding-top:12px;">';
 
@@ -91,7 +100,6 @@ function getSolverPropertiesHTML(node) {
 
   // Zaman modu: otomatik "maks hıza kadar"
   html += '<input type="hidden" id="ve-solver-timemode-' + node.id + '" value="stop">';
-  html += '<input type="hidden" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '">';
 
   // Çözüm yöntemi
   var method = d.method || 'rk4';
@@ -111,6 +119,12 @@ function getSolverPropertiesHTML(node) {
   html += '<tr id="ve-solver-fttol-row-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Tolerans (ATol / RTol)</th><td style="padding:6px; background:var(--bg-tertiary);"><div style="display:flex; gap:4px; align-items:center;"><input type="text" id="ve-solver-ftatol-' + node.id + '" value="' + ftAtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"><input type="text" id="ve-solver-ftrtol-' + node.id + '" value="' + ftRtol + '" style="width:50%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right; font-family:monospace;" onchange="onVESolverParamChange(\'' + node.id + '\')"></div></td></tr>';
   html += '<tr id="ve-solver-fttol-desc-' + node.id + '" style="border-bottom:1px solid var(--border-color);' + (!showFtTol ? 'display:none;' : '') + '"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;"><b>ATol</b>: Mutlak tolerans (hız m/s). <b>RTol</b>: Bağıl tolerans. Adaptif adım sayısı toleransa göre otomatik belirlenir.</td></tr>';
   
+  // Güvenlik limiti — GÖRÜNÜR ve düzenlenebilir. Koşu bu süreye ulaşırsa
+  // kesilir; kesilen koşu üst hızı olduğundan düşük raporlar, bu yüzden
+  // değerin gizli kalmaması gerekiyor.
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><th style="padding:6px; text-align:left; background:var(--bg-tertiary); border-right:1px solid var(--border-color); font-weight:500; color:var(--text-secondary);">Güvenlik limiti [s]</th><td style="padding:6px; background:var(--bg-tertiary);"><input type="number" id="ve-solver-maxtime-' + node.id + '" value="' + maxSimTime + '" min="1" step="10" onchange="onVESolverParamChange(\'' + node.id + '\')" style="width:100%; padding:4px; font-size:0.68rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:0; text-align:right; font-family:monospace;"></td></tr>';
+  html += '<tr style="border-bottom:1px solid var(--border-color);"><td colspan="2" style="padding:3px 6px; font-size:0.54rem; color:var(--text-muted); background:var(--bg-secondary); line-height:1.3;">Simülasyon en fazla bu kadar sürer. Koşu limite dayanırsa üst hıza ulaşılmadan kesilir — sonuç olduğundan düşük çıkar. Varsayılan ' + VE_DEFAULT_MAX_SIM_TIME + ' s.</td></tr>';
+
   html += '</table>';
   html += '</div>';                                   // ve-cp-col--in kapat (girdi)
   html += '<div class="ve-cp-col ve-cp-col--out">';   // SAĞ: referans + zincir + hesapla
@@ -182,7 +196,7 @@ function onVESolverParamChange(nodeId) {
   }
   var pf = function(v, def) { var n = parseFloat(v); return isNaN(n) ? def : n; };
   if(durEl) node.data.duration = pf(durEl.value, 60);
-  if(maxEl) node.data.maxSimTime = pf(maxEl.value, 300);
+  if(maxEl) node.data.maxSimTime = pf(maxEl.value, VE_DEFAULT_MAX_SIM_TIME);
   if(ssEl) node.data.stopSpeed = pf(ssEl.value, 2);
 
   // Çözünürlük → dt hesapla

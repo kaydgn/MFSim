@@ -45,8 +45,11 @@ console.log('  Syntax kontrolü: ' + jsFiles.length + ' JS dosyası OK');
 var html = fs.readFileSync(INDEX, 'utf8');
 
 // ── 1) CSS: <link rel="stylesheet" href="css/..."> → <style>içerik</style>
+// css/ ve vendor/ altindaki stylesheet'ler inline edilir. vendor/ dahil olmali:
+// deploy yalnizca MFSim_Code.html'i yayinliyor (bkz. .github/workflows/ci-deploy.yml),
+// vendor/ klasoru _site'a kopyalanmiyor → inline edilmeyen vendor CSS 404 olurdu.
 html = html.replace(
-  /<link\s+rel="stylesheet"\s+href="(css\/[^"]+)"\s*\/?>/g,
+  /<link\s+rel="stylesheet"\s+href="((?:css|vendor)\/[^"]+)"\s*\/?>/g,
   function(match, cssPath) {
     var fullPath = path.join(ROOT, cssPath);
     if (!fs.existsSync(fullPath)) {

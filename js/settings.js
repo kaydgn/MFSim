@@ -324,16 +324,23 @@ function _veSettingsBuildProjectData() {
       // sonuçları buraya sığmaz ve yedeği sessizce bozar; kurtarma için
       // önemli olan topolojidir. Bu yüzden sonuçları hiç yazmıyoruz —
       // yedekten dönünce sonuçlar tek "Hesapla" ile yeniden üretilir.
+      // Fallback de veBuildCleanTabState ile AYNI alan kümesini üretmeli;
+      // schemaVersion/annotations burada da düşerse yedekten dönüş notları
+      // siler ve LEGACY migrasyonu kullanıcı girdilerini ezer.
       var cleanState = (typeof veBuildCleanTabState === 'function')
         ? veBuildCleanTabState(tab.state, { stripResults: true })
         : (tab.state ? {
+            schemaVersion: (tab.state.schemaVersion !== undefined && tab.state.schemaVersion !== null)
+              ? tab.state.schemaVersion
+              : (typeof VE_SCHEMA_VERSION !== 'undefined' ? VE_SCHEMA_VERSION : 2),
             nodes: tab.state.nodes,
             connections: tab.state.connections,
             compCounter: tab.state.compCounter,
             canvasOffset: tab.state.canvasOffset,
             canvasZoom: tab.state.canvasZoom,
             simResults: null,
-            resultSlots: tab.state.resultSlots || [{},{},{},{}]
+            resultSlots: tab.state.resultSlots || [{},{},{},{}],
+            annotations: tab.state.annotations || []
           } : null);
       return { id: tab.id, name: tab.name, state: cleanState };
     })

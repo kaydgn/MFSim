@@ -544,7 +544,7 @@ function veSolverRunProfessional() {
         } else {
           log('  Δt              : ' + (sd.ftDt || 0.01) + ' s — sabit', 'dim');
         }
-        log('  Güvenlik limiti : ' + (sd.maxSimTime || 120) + ' s', 'dim');
+        log('  Güvenlik limiti : ' + (sd.maxSimTime || (typeof VE_DEFAULT_MAX_SIM_TIME !== 'undefined' ? VE_DEFAULT_MAX_SIM_TIME : 300)) + ' s', 'dim');
         log('  Bitiş koşulu   : F_net ≤ 0 (son vites, çekiş = direnç)', 'dim');
         log('  Tork interpol.  : PCHIP Spline (C¹ sürekli)', 'dim');
       } else {
@@ -655,7 +655,7 @@ function veSolverRunProfessional() {
     var sd = solver ? (solver.data || {}) : {};
     
     if(veActiveModule === 'full-throttle') {
-      var ftMaxTime = parseFloat(sd.maxSimTime) || 120;
+      var ftMaxTime = parseFloat(sd.maxSimTime) || (typeof VE_DEFAULT_MAX_SIM_TIME !== 'undefined' ? VE_DEFAULT_MAX_SIM_TIME : 300);
       log('Yöntem: RK4 | Δt = 0.01 s | Güvenlik limiti: ' + ftMaxTime + ' s');
       log('Mod: Tam Gaz Hızlanma — V=0 → Maks Hız (F_net ≤ 0)');
     } else {

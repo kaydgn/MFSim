@@ -332,13 +332,24 @@ function veBuildCleanTabState(tabState, opts) {
       })
     : tabState.nodes;
   return {
+    // Migrasyon damgası KORUNMALI. Düşerse restoreState state'i sürümsüz
+    // (LEGACY) sayar ve veMigrateNodeData kullanıcının kasıtlı girdilerini
+    // (ör. Cd=0.75 → 0.900) sessizce ezer; ezilen değer sonraki kayıtta diske
+    // de yazıldığı için geri dönüşü olmaz. Bkz. veSerializeCurrentState
+    // (topology.js) — damgayı üreten yer.
+    schemaVersion: (tabState.schemaVersion !== undefined && tabState.schemaVersion !== null)
+      ? tabState.schemaVersion
+      : (typeof VE_SCHEMA_VERSION !== 'undefined' ? VE_SCHEMA_VERSION : 2),
     nodes: cleanNodes,
     connections: tabState.connections,
     compCounter: tabState.compCounter,
     canvasOffset: tabState.canvasOffset,
     canvasZoom: tabState.canvasZoom,
     simResults: sim,
-    resultSlots: tabState.resultSlots || [{},{},{},{}]
+    resultSlots: tabState.resultSlots || [{},{},{},{}],
+    // Tuval notları/çerçeveleri de yazılmalı — aksi halde kaydedilen projede
+    // hiç yer almaz ve açılışta restoreAnnotations([]) ile silinirler.
+    annotations: tabState.annotations || []
   };
 }
 
