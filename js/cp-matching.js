@@ -43,10 +43,10 @@ function getECMatchingPropertiesHTML(node) {
   html += '<div class="sw-pkg-header" style="cursor:default;"><span class="sw-pkg-name">Motor Eğrisi × Konvertör Kapasiteleri</span></div>';
   html += '<div class="sw-pkg-body">';
   html += '<div style="position:relative;">';
-  html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color);"></canvas>';
+  html += '<canvas id="ecm-chart-' + node.id + '" width="440" height="300" role="img" aria-label="Motor net tork eğrisi ve konvertör kapasite eğrileri — etkileşimli: Ctrl+tekerlek yakınlaştırır, sağ tık sürükleme kaydırır" title="İmleçle değerleri okuyun · Ctrl + tekerlek: yakınlaştır · Sağ tık + sürükle: kaydır · Sol tık: sıfırla" style="width:100%; height:auto; background:var(--bg-input); border:1px solid var(--border-color);"></canvas>';
   html += '<button class="sw-btn sw-btn-outline" onclick="ecmExpandChart(\'' + node.id + '\')" title="Diyagramı büyüt" style="position:absolute; top:6px; right:6px; font-size:var(--fs-micro); padding:2px 6px; opacity:0.7;"><span class="mf-ico mf-ico-maximize"></span> Büyüt</button>';
   html += '</div>';
-  html += '<div class="sw-pkg-desc">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0.80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0.80 SR çalışma noktalarını verir.</div>';
+  html += '<div class="sw-pkg-desc">Motor net tork eğrisi (sarı) ile tüm konvertörlerin stall ve 0.80 SR kapasite eğrileri gösterilmektedir. Kesişim noktaları stall devir ve 0.80 SR çalışma noktalarını verir.<br><b>Etkileşim:</b> imleçle gezinerek değerleri okuyun · <b>Ctrl + tekerlek</b> yakınlaştırır · <b>sağ tık + sürükle</b> kaydırır · <b>sol tık</b> sıfırlar · <b>Büyüt</b> tam ekran açar.</div>';
   html += '</div></div>';
   html += '</div>';  // ve-cp-col--out kapat
   html += '</div>';  // ve-cp-grid kapat
@@ -102,7 +102,7 @@ function runECMatchingAnalysis(nodeId) {
   var governed = motorSpecs.governedSpeed || engineNode.data.governedRpm || 2100;
   var noLoadGov = motorSpecs.noLoadGoverned || governed + 200;
   var engineName = engineNode.data.motorName || engineNode.customName || 'Motor';
-  var defaultPumpDrop = 17.6; // Allison 3000 family default (bilgi panelinde gösterilir)
+  var defaultPumpDrop = ECM_DEFAULT_PUMP_DROP; // Allison 3000 family default (bilgi panelinde gösterilir)
   
   // Peak torque bul
   var peakT = 0, peakRPM = 0;
@@ -414,12 +414,9 @@ function runECMatchingAnalysis(nodeId) {
   }
   
   // Chart için ortalama pump drop hesapla (motor eğrisi gösterimi)
-  var chartPumpDrop = defaultPumpDrop;
-  if(results.length > 0) {
-    var sumDrop = 0;
-    results.forEach(function(r) { var tc = VE_FT_TC_PRESETS[r.key]; sumDrop += (tc && tc.pumpTorqueDrop !== undefined) ? tc.pumpTorqueDrop : defaultPumpDrop; });
-    chartPumpDrop = sumDrop / results.length;
-  }
+  var chartPumpDrop = ecmAveragePumpDrop(
+    results.map(function(r) { return r.key; }), VE_FT_TC_PRESETS, defaultPumpDrop
+  );
 
   // Absorption chart çiz
   drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, chartPumpDrop, results);
@@ -618,7 +615,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'left';
   // pumpDrop konvertörler arası ORTALAMA (bkz. chartPumpDrop) → ham float
   // basılırsa etikete 23.67059823029812 gibi bir değer sızar. 1 ondalık yeter.
-  ctx.fillText('Motor (Net − ' + pumpDrop.toFixed(1) + ' N·m)', xPos(torqueData[0].rpm) + 4, yPos(torqueData[0].torque - pumpDrop) - 8);
+  ctx.fillText('Motor (Net − ort. ' + pumpDrop.toFixed(1) + ' N·m)', xPos(torqueData[0].rpm) + 4, yPos(torqueData[0].torque - pumpDrop) - 8);
   
   // Governed çizgisi
   ctx.beginPath();
@@ -688,14 +685,17 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
   // ── Zoom durumu / kullanım ipucu ──
   // Yakınlaştırılmışken oran + sıfırlama ipucu; taban görünümde ne yapılabileceğini
   // anlatan sessiz bir ipucu (kullanıcı grafiğin etkileşimli olduğunu bilmiyordu).
-  ctx.textAlign = 'right';
+  // Plot ÜSTÜNE yazılır: panel açılışında grafiğin yalnızca üst yarısı görünür,
+  // plot dibindeki bir ipucu katın altında kalıp hiç okunmazdı. Sağ üst köşe
+  // legend'e ait olduğu için sol üstte duruyor.
+  ctx.textAlign = 'left';
   if((zoomState.scale || 1) > 1.05 || (zoomState.scale || 1) < 0.95) {
     ctx.fillStyle = '#60a5fa'; ctx.font = 'bold 9px sans-serif';
-    ctx.fillText(zoomState.scale.toFixed(1) + '× — sol tık: sıfırla', ml + pw - 4, mt + ph - 6);
+    ctx.fillText(zoomState.scale.toFixed(1) + '× — sol tık: sıfırla', ml + 6, mt + 11);
   } else {
-    ctx.fillStyle = isDark ? 'rgba(122,133,153,0.75)' : 'rgba(100,116,139,0.8)';
+    ctx.fillStyle = isDark ? 'rgba(122,133,153,0.8)' : 'rgba(100,116,139,0.85)';
     ctx.font = '8px sans-serif';
-    ctx.fillText('Scroll: yakınlaştır  ·  Sağ tık + sürükle: kaydır', ml + pw - 4, mt + ph - 6);
+    ctx.fillText('Ctrl + Scroll: yakınlaştır  ·  Sağ tık + sürükle: kaydır', ml + 6, mt + 11);
   }
 
   // ── ETKİLEŞİM KURULUMU ──
@@ -722,6 +722,7 @@ function drawECMAbsorptionChart(nodeId, torqueData, governed, noLoadGov, pumpDro
     zoom: zoomState,
     pan: panState,
     tooltipWidth: 220,
+    zoomModifier: true,   // Ctrl/⌘ + tekerlek — bkz. ecmChartWheel gerekçesi
     // Aynı argümanlarla yeniden çizer → zoom/pan durumu canvas'ta yaşadığı için
     // pencere korunur.
     redraw: function() {
@@ -1077,6 +1078,27 @@ function ecmSelectConverter(ecmNodeId, tcPresetKey) {
 //   cssScale               — CSS px → canvas px katsayısı (fare eşlemesi)
 // ═══════════════════════════════════════════════════════════════════════════
 
+// Allison 3000 ailesi varsayılan pompa tork düşümü [N·m].
+// Tek kaynak: eskiden hem defaultPumpDrop'ta hem modal hesabında ayrı ayrı
+// 17.6 yazılıydı ve biri değişse diğeri sessizce sapardı.
+var ECM_DEFAULT_PUMP_DROP = 17.6;
+
+// Verilen konvertör preset anahtarları için ORTALAMA pompa tork düşümü [N·m].
+// SAF fonksiyon. 1 ondalığa yuvarlar — yuvarlanmamış ortalama kayan-nokta
+// artefaktı üretiyordu (7 × 17.6 / 7 = 17.599999999999998) ve bu değer grafik
+// etiketine ham basıldığında "Motor (Net − 23.67059823029812)" gibi sızıyordu.
+function ecmAveragePumpDrop(keys, presets, fallback) {
+  var fb = (fallback === undefined) ? ECM_DEFAULT_PUMP_DROP : fallback;
+  var db = presets || (typeof VE_FT_TC_PRESETS !== 'undefined' ? VE_FT_TC_PRESETS : {});
+  if(!keys || !keys.length) return fb;
+  var sum = 0;
+  for(var i = 0; i < keys.length; i++) {
+    var tc = db[keys[i]];
+    sum += (tc && tc.pumpTorqueDrop !== undefined) ? tc.pumpTorqueDrop : fb;
+  }
+  return Math.round((sum / keys.length) * 10) / 10;
+}
+
 // Zoom penceresini hesaplar. SAF fonksiyon: base aralıklar + zoom durumundan
 // görünür pencereyi üretir, taban sınırların dışına taşmayı kırpar ve kırpma
 // sonrası merkezi günceller. Panel içi grafik ile modal aynı matematiği
@@ -1159,12 +1181,7 @@ function ecmExpandChart(nodeId) {
   var engineName = engineNode.data.motorName || engineNode.customName || 'Motor';
   // Modal chart için ortalama pump drop hesapla
   var tcKeys = veGetFamilyTCKeys();
-  var modalPumpDrop = 17.6;
-  if(tcKeys.length > 0) {
-    var sumD = 0;
-    tcKeys.forEach(function(k) { var tc = VE_FT_TC_PRESETS[k]; sumD += (tc && tc.pumpTorqueDrop !== undefined) ? tc.pumpTorqueDrop : 17.6; });
-    modalPumpDrop = sumD / tcKeys.length;
-  }
+  var modalPumpDrop = ecmAveragePumpDrop(tcKeys, VE_FT_TC_PRESETS);
 
   _ecmModalData = { torqueData: torqueData, governed: governed, noLoadGov: noLoadGov, pumpDrop: modalPumpDrop, engineName: engineName };
   _ecmModalActive = nodeId;
@@ -1434,7 +1451,8 @@ function ecmDrawModalChart() {
   
   // Motor label
   ctx.fillStyle = '#f59e0b'; ctx.font = 'bold 12px system-ui, sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText('Motor (Net − ' + d.pumpDrop + ' N·m)', xPos(d.torqueData[1].rpm) + 6, yPos(d.torqueData[1].torque - d.pumpDrop) - 12);
+  // Ortalama düşüm — ham basılırsa uzun ondalık sızar (bkz. ecmAveragePumpDrop)
+  ctx.fillText('Motor (Net − ort. ' + d.pumpDrop.toFixed(1) + ' N·m)', xPos(d.torqueData[1].rpm) + 6, yPos(d.torqueData[1].torque - d.pumpDrop) - 12);
   
   // Governed line
   ctx.beginPath();
@@ -1662,6 +1680,12 @@ function ecmChartWheel(e) {
 
   var pos = ecmPointerPos(e, canvas, ctx);
   if(!ecmInPlot(pos, ctx)) return;   // eksen/marj bölgesinde sayfa kaydırmasını engelleme
+  // Panel içi grafik KAYDIRILABİLİR bir panelin içinde duruyor ve açılışta
+  // yalnızca yarısı görünüyor. Düz tekerleği yakalamak, kullanıcının grafiğin
+  // geri kalanını görmek için yaptığı en doğal hareketi sessizce zoom'a
+  // çevirirdi. Bu yüzden orada değiştirici tuş şart. Modal tam ekran olduğu
+  // için (arkada kaydırılacak içerik yok) düz tekerlekle zoom yapmayı sürdürür.
+  if(ctx.zoomModifier && !(e.ctrlKey || e.metaKey)) return;
   e.preventDefault();
 
   // Merkez tabanlı zoom (fare konumuna sabitleme yok)

@@ -124,3 +124,55 @@ describe('ecmInPlot — çizim alanı sınır kontrolü', () => {
     expect(ecmInPlot({ mx: 52 + 611, my: 16 + 411 }, ctx)).toBe(true);
   });
 });
+
+describe('ecmAveragePumpDrop — ortalama pompa tork düşümü', () => {
+  // Regresyon zemini: hesap iki yerde kopyalanmıştı ve fallback'leri sapmıştı
+  // (biri defaultPumpDrop, diğeri sabit 17.6). Ayrıca yuvarlanmadığı için
+  // kayan-nokta artefaktı etikete ham sızıyordu.
+  const PRESETS = {
+    a: { pumpTorqueDrop: 17.6 },
+    b: { pumpTorqueDrop: 17.6 },
+    c: { pumpTorqueDrop: 30.0 },
+    noDrop: {},          // pumpTorqueDrop tanımsız → fallback
+  };
+
+  test('tek değerli küme o değeri döndürür', () => {
+    expect(ecmAveragePumpDrop(['a'], PRESETS)).toBe(17.6);
+  });
+
+  test('kayan-nokta artefaktı sızmaz (7 × 17.6 / 7)', () => {
+    const keys = ['a', 'a', 'a', 'a', 'a', 'a', 'a'];
+    // Yuvarlanmamış hâli 17.599999999999998 verir — etikete böyle basılıyordu
+    expect(ecmAveragePumpDrop(keys, PRESETS)).toBe(17.6);
+  });
+
+  test('sonuç her zaman en fazla 1 ondalıklı', () => {
+    const v = ecmAveragePumpDrop(['a', 'c'], PRESETS);   // (17.6+30)/2 = 23.8
+    expect(v).toBe(23.8);
+    expect(String(v).split('.')[1] || '').toHaveLength(1);
+  });
+
+  test('pumpTorqueDrop tanımsız preset fallback kullanır', () => {
+    expect(ecmAveragePumpDrop(['noDrop'], PRESETS, 12.5)).toBe(12.5);
+    // varsayılan fallback = ECM_DEFAULT_PUMP_DROP
+    expect(ecmAveragePumpDrop(['noDrop'], PRESETS)).toBe(ECM_DEFAULT_PUMP_DROP);
+  });
+
+  test('bilinmeyen anahtar da fallback kullanır', () => {
+    expect(ecmAveragePumpDrop(['boyle-bir-key-yok'], PRESETS, 9.9)).toBe(9.9);
+  });
+
+  test('boş/eksik girdi fallback döndürür (bölme-sıfır yok)', () => {
+    expect(ecmAveragePumpDrop([], PRESETS, 5)).toBe(5);
+    expect(ecmAveragePumpDrop(null, PRESETS, 5)).toBe(5);
+    expect(ecmAveragePumpDrop(undefined, PRESETS)).toBe(ECM_DEFAULT_PUMP_DROP);
+  });
+
+  test('varsayılan sabit tek kaynaktan gelir', () => {
+    expect(ECM_DEFAULT_PUMP_DROP).toBe(17.6);
+    // Kaynakta artık ikinci bir sabit 17.6 tanımı olmamalı
+    const src = loadSource('cp-matching.js');
+    const decls = src.match(/=\s*17\.6\s*;/g) || [];
+    expect(decls).toHaveLength(1);   // yalnızca ECM_DEFAULT_PUMP_DROP
+  });
+});
