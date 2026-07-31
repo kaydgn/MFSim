@@ -4718,7 +4718,7 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 .ve-rb-body{
   flex:1; min-height:0;
   display:flex; align-items:stretch; gap:0;
-  padding:5px 6px 3px;
+  padding:5px 4px 3px;
   overflow-x:auto; overflow-y:hidden;
 }
 #ve-ribbon.is-collapsed .ve-rb-body{ display:none; }
@@ -4735,9 +4735,11 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 }
 
 /* ── Grup ── */
+/* Yan boşluk grup ARASI mesafeyi iki kere sayar (7 + 7 = 14px). 11px'te bu 22px
+   ediyordu: gruplar birbirinden kopuk, şerit gereğinden geniş duruyordu. */
 .ve-rb-group{
   display:flex; flex-direction:column; justify-content:space-between;
-  padding:0 11px; flex-shrink:0; position:relative;
+  padding:0 7px; flex-shrink:0; position:relative;
 }
 /* Ayraç kenardan kenara değil, ortada kısa bir dikey çizgi — kenara dayanan
    tam boy çizgi şeridi ızgara gibi gösterip ağırlaştırıyordu. */
@@ -4745,7 +4747,10 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
   content:""; position:absolute; left:0; top:12%; bottom:22%;
   border-left:1px solid var(--border-color);
 }
-.ve-rb-group-items{ display:flex; align-items:flex-start; gap:2px; flex:1; }
+/* Büyük butonlar arası ritim: 4px. Aşağıdaki ızgara kuralı da aynı değeri
+   kullanır — yoksa karışık gruptaki (büyük + küçük) büyük butonlar ızgaranın
+   sütun boşluğunu alıp yalnız-büyük gruplardakinden daha seyrek dururdu. */
+.ve-rb-group-items{ display:flex; align-items:flex-start; gap:4px; flex:1; }
 .ve-rb-group-label{
   text-align:center; font-size:var(--fs-micro); letter-spacing:0.06em;
   text-transform:uppercase; color:var(--text-muted);
@@ -4756,7 +4761,7 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 .ve-rb-btn{
   background:none; border:1px solid transparent; cursor:pointer; font:inherit;
   color:var(--text-primary); border-radius:var(--radius-sm);
-  display:flex; align-items:center; gap:6px;
+  display:flex; align-items:center; gap:5px;
   transition:background var(--dur-fast,0.12s), border-color var(--dur-fast,0.12s),
              color var(--dur-fast,0.12s);
 }
@@ -4765,9 +4770,14 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 .ve-rb-btn:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:1px; }
 .ve-rb-btn.is-disabled, .ve-rb-btn:disabled{ opacity:0.38; cursor:default; }
 
+/* Genişlik en uzun etikete göre ölçülür, gözle değil: şeritteki en geniş lg
+   sözcüğü "Sonuçları" (9px yazıda 40px). 50px, 2px yan dolgu ve kenarlıkla
+   ~44px'lik yazı alanı bırakır — en uzun sözcük bile yazı tipi yedeğe düşse
+   sığar, ama boşluğa yer kalmaz. Eskiden 62px'ti: her büyük butonda 12px havayı
+   boşuna taşıyor, ikonları birbirinden uzak gösteriyordu. */
 .ve-rb-btn--lg{
-  flex-direction:column; justify-content:flex-start; gap:3px;
-  width:62px; min-height:60px; padding:5px 3px 3px;
+  flex-direction:column; justify-content:flex-start; gap:2px;
+  width:50px; min-height:60px; padding:5px 2px 3px;
 }
 .ve-rb-btn--lg .ve-rb-ico{ width:20px; height:20px; }
 .ve-rb-btn--lg .ve-rb-lbl{
@@ -4775,7 +4785,7 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
   color:var(--text-secondary); white-space:normal;
 }
 .ve-rb-btn--sm{
-  padding:3px 8px 3px 5px; min-height:19px;
+  padding:3px 6px 3px 4px; min-height:19px;
   justify-content:flex-start; flex:0 0 auto;
   align-self:stretch;   /* sütundaki en genişe hizalan, sütunu esnetme */
 }
@@ -4789,7 +4799,7 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 .ve-rb-group-items:has(.ve-rb-btn--sm){
   display:grid; grid-template-rows:repeat(3, min-content);
   grid-auto-flow:column; align-content:start; justify-items:stretch;
-  gap:1px 12px;
+  gap:1px 4px;
 }
 /* Karışık grup (büyük + küçük): büyük buton kendi sütununda üç satırı birden
    kaplar, küçükler sonraki sütuna akar. Aksi hâlde büyük buton bir satır
@@ -4858,8 +4868,11 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 .ve-qat-sep{ width:1px; height:14px; background:var(--border-color); margin:0 4px; }
 
 /* Dar ekran: büyük butonlar küçülür, grup etiketleri gizlenir */
+/* Dar ekranda genişlik ARTIK KISILMAZ: taban ölçü (50px) zaten en uzun etikete
+   göre biçilmiş; daha da daraltmak "Sonuçları" gibi sözcükleri kutuya sığmaz
+   hâle getirirdi. Yalnız yükseklik ve grup etiketleri feda edilir. */
 @media (max-width:900px){
-  .ve-rb-btn--lg{ width:54px; min-height:54px; }
+  .ve-rb-btn--lg{ min-height:54px; }
   .ve-rb-group-label{ display:none; }
   .ve-qat{ display:none; }
 }
