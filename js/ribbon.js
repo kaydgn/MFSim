@@ -21,11 +21,13 @@
 // kendiliğinden kayar (bkz. --chrome-h). JS piksel hesabı yapmaz.
 
 // ── Komut tanımları ──────────────────────────────────────────────────────
-// run   : global fonksiyon adı (yoksa buton sessizce devre dışı görünür)
-// args  : run'a geçilecek argümanlar
-// size  : 'lg' (ikon üstte, iki satır etiket) | 'sm' (ikon solda, tek satır)
-// state : true dönerse buton "basılı" görünür (aç/kapa komutları için)
-// when  : false dönerse öğe hiç çizilmez
+// run    : global fonksiyon adı (yoksa buton sessizce devre dışı görünür)
+// args   : run'a geçilecek argümanlar
+// size   : 'lg' (ikon üstte, iki satır etiket) | 'sm' (ikon solda, tek satır)
+// state  : true dönerse buton "basılı" görünür (aç/kapa komutları için)
+// when   : false dönerse öğe hiç çizilmez
+// badge  : true dönerse butonda (ve sekmesinde) bildirim noktası belirir
+// danger : yıkıcı komut — ikon kırmızı çizilir (Çıkış Yap)
 var VE_RIBBON_TABS = [
   {
     id: 'giris', label: 'Giriş',
@@ -33,7 +35,8 @@ var VE_RIBBON_TABS = [
       { label: 'Proje', items: [
         { size:'lg', icon:'file-plus',   label:'Yeni\nProje',  run:'veNewProject',    tip:'Yeni proje oluştur' },
         { size:'lg', icon:'folder-open', label:'Proje\nAç',    run:'veLoadTopology',  tip:'Kayıtlı bir proje dosyası aç' },
-        { size:'lg', icon:'save',        label:'Kaydet',       run:'veSaveTopology',  tip:'Projeyi dosyaya kaydet' }
+        { size:'lg', icon:'save',        label:'Kaydet',       run:'veSaveTopology',  tip:'Projeyi dosyaya kaydet' },
+        { size:'sm', icon:'trash',       label:'Temizle',      run:'veClearAll',      tip:'Bu sekmedeki tüm bileşenleri sil' }
       ]},
       { label: 'Çözüm', items: [
         { size:'lg', icon:'search', label:'Doğrula',  run:'veSolverValidate', tip:'Topolojiyi doğrula' },
@@ -100,7 +103,11 @@ var VE_RIBBON_TABS = [
     groups: [
       { label: 'Program', items: [
         { size:'lg', icon:'settings', label:'Ayarlar',  run:'veOpenSettings',    tip:'Tema ve program ayarları' },
-        { size:'lg', icon:'activity', label:'Program\nDurumu', run:'veOpenStatusModal', tip:'Sürüm ve dağıtım durumu' }
+        // Güncelleme rozeti: eskiden marka menüsünde duruyordu (menü kaldırıldı).
+        // Şeritteki karşılığı hem bu butonda hem "Araçlar" sekmesinde görünür —
+        // yani haber, sekme kapalıyken de kromda okunur.
+        { size:'lg', icon:'activity', label:'Program\nDurumu', run:'veOpenStatusModal', tip:'Sürüm ve dağıtım durumu',
+          badge:function(){ return typeof veStatusUpdatePending === 'function' && veStatusUpdatePending(); } }
       ]},
       { label: 'Yardım', items: [
         { size:'sm', icon:'lightbulb', label:'Klavye Kısayolları', run:'veShortcutsHelpOpen' },
@@ -108,6 +115,10 @@ var VE_RIBBON_TABS = [
       ]},
       { label: 'Mola', items: [
         { size:'sm', icon:'grid', label:'2048', run:'veGame2048Open' }
+      ]},
+      { label: 'Oturum', items: [
+        { size:'sm', icon:'log-out', label:'Çıkış Yap', run:'mfsimLogout', danger:true,
+          tip:'Oturumu kapat ve giriş ekranına dön' }
       ]}
     ]
   },
@@ -167,7 +178,7 @@ function veRibbonRunnable(item) {
 // komutları dışındaki her şey pasif çizilir.
 var VE_RIBBON_ALWAYS_ON = [
   'veNewProject', 'veLoadTopology', 'veOpenSettings', 'veOpenStatusModal',
-  'veShortcutsHelpOpen', 'veCmdkOpen', 'veGame2048Open'
+  'veShortcutsHelpOpen', 'veCmdkOpen', 'veGame2048Open', 'mfsimLogout'
 ];
 function veRibbonNoWorkspace() {
   var ov = document.getElementById('ve-module-overlay');
@@ -185,6 +196,17 @@ function veRibbonVisibleTabs() {
   });
 }
 
+// Rozet (bildirim noktası) — öğe kendi durumunu bildirir, şerit yalnız çizer.
+function veRibbonItemBadge(item) {
+  if(!item || typeof item.badge !== 'function') return false;
+  try { return !!item.badge(); } catch(e) { return false; }
+}
+// Sekme rozeti: içindeki herhangi bir komutun haberi varsa sekme de işaretlenir.
+// Aksi hâlde haber, o sekme açılana dek görünmez kalırdı.
+function veRibbonTabBadge(tab) {
+  return tab.groups.some(function(g) { return g.items.some(veRibbonItemBadge); });
+}
+
 // ── Çizim ────────────────────────────────────────────────────────────────
 
 function veRibbonItemHTML(item, tabId, gi, ii) {
@@ -196,7 +218,9 @@ function veRibbonItemHTML(item, tabId, gi, ii) {
   }
   var cls = 've-rb-btn ve-rb-btn--' + (item.size === 'lg' ? 'lg' : 'sm');
   if(item.accent) cls += ' ve-rb-btn--accent';
+  if(item.danger) cls += ' ve-rb-btn--danger';
   if(pressed) cls += ' is-pressed';
+  if(veRibbonItemBadge(item)) cls += ' has-badge';
   if(!ok) cls += ' is-disabled';
 
   var label = veRibbonEsc(item.label).replace(/\n/g, '<br>');
@@ -238,7 +262,8 @@ function veRibbonRender() {
   tabs.forEach(function(t) {
     var active = t.id === veRibbonActiveTab;
     h += '<button type="button" role="tab" class="ve-rb-tab' +
-         (active ? ' active' : '') + (t.contextual ? ' contextual' : '') + '"' +
+         (active ? ' active' : '') + (t.contextual ? ' contextual' : '') +
+         (veRibbonTabBadge(t) ? ' has-badge' : '') + '"' +
          ' aria-selected="' + (active ? 'true' : 'false') + '"' +
          ' tabindex="' + (active ? '0' : '-1') + '"' +
          ' data-rb-tab="' + t.id + '">' + veRibbonEsc(t.label) + '</button>';
@@ -318,7 +343,32 @@ function veRibbonRefreshStates() {
     btn.classList.toggle('is-pressed', on);
     btn.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+  veRibbonRefreshBadges();
   veRibbonSyncQat();
+}
+
+// Rozetleri yerinde tazeler (yeniden çizmeden) — haber şeritten bağımsız gelir:
+// deploy durumu değişince js/status.js bunu çağırır.
+function veRibbonRefreshBadges() {
+  var host = document.getElementById('ve-ribbon');
+  if(!host) return;
+
+  var tabsHost = document.getElementById('ve-rb-tabs');
+  if(tabsHost) {
+    VE_RIBBON_TABS.forEach(function(t) {
+      var tb = tabsHost.querySelector('[data-rb-tab="' + t.id + '"]');
+      if(tb) tb.classList.toggle('has-badge', veRibbonTabBadge(t));
+    });
+  }
+
+  host.querySelectorAll('.ve-rb-btn[data-rb]').forEach(function(btn) {
+    var p = btn.getAttribute('data-rb').split(':');
+    var tab = VE_RIBBON_TABS.filter(function(t) { return t.id === p[0]; })[0];
+    var g = tab && tab.groups[parseInt(p[1], 10)];
+    var item = g && g.items[parseInt(p[2], 10)];
+    if(!item) return;
+    btn.classList.toggle('has-badge', veRibbonItemBadge(item));
+  });
 }
 
 // ── Etkileşim ────────────────────────────────────────────────────────────
@@ -446,6 +496,7 @@ if(typeof module !== 'undefined' && module.exports) {
     VE_RIBBON_TABS: VE_RIBBON_TABS,
     veRibbonEsc: veRibbonEsc,
     veRibbonRunnable: veRibbonRunnable,
+    veRibbonItemBadge: veRibbonItemBadge,
     VE_RIBBON_ALWAYS_ON: VE_RIBBON_ALWAYS_ON
   };
 }

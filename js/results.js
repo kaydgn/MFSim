@@ -6022,7 +6022,9 @@ function showToast(message, type) {
 }
 
 // Onay gerektiren toast bildirimi
-function showConfirmToast(message, onConfirm, onCancel) {
+// confirmLabel: onay butonunun yazısı (varsayılan "Evet, Sil"). Silme dışı
+// eylemlerde — örn. oturum kapatma — varsayılan yanlış vaatte bulunuyordu.
+function showConfirmToast(message, onConfirm, onCancel, confirmLabel) {
   // Mevcut confirm toast'ı kaldır
   var existing = document.querySelector('.ve-toast-confirm');
   if(existing) existing.remove();
@@ -6033,7 +6035,7 @@ function showConfirmToast(message, onConfirm, onCancel) {
   var html = '<div class="ve-toast-confirm-message">' + message + '</div>';
   html += '<div class="ve-toast-confirm-buttons">';
   html += '<button class="ve-toast-confirm-btn cancel">İptal</button>';
-  html += '<button class="ve-toast-confirm-btn confirm">Evet, Sil</button>';
+  html += '<button class="ve-toast-confirm-btn confirm">' + (confirmLabel || 'Evet, Sil') + '</button>';
   html += '</div>';
   
   toast.innerHTML = html;

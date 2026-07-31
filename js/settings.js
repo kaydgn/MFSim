@@ -22,7 +22,6 @@ var _veSettingsCurrentSection = 'appearance';
 
 // ─── Aç / Kapat ────────────────────────────────────────────────────────────
 function veOpenSettings() {
-  if(typeof veCloseFileMenu === 'function') veCloseFileMenu();
   var ov = document.getElementById('ve-settings-overlay');
   if(!ov) return;
   ov.style.display = 'flex';

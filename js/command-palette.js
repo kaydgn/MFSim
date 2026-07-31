@@ -95,7 +95,8 @@ function _cmdkStaticCommands() {
     { sec:'Panel',   label:'Kenar çubuğu (sidebar)',    kw:'sidebar kenar çubuğu bileşen',      icon:_cmdkSvg('panel'),      run:function(){ _cmdkCall('veToggleSidebar'); } },
     { sec:'Panel',   label:'Özellikler paneli',         kw:'özellik properties panel',          icon:_cmdkIco('sliders'),    run:function(){ _cmdkCall('veTogglePropertiesPanel'); } },
     { sec:'Panel',   label:'Rapor',                     kw:'rapor report pdf',                  icon:_cmdkIco('file-text'),  run:function(){ _cmdkCall('veShowRaporModal'); } },
-    { sec:'Genel',   label:'Klavye kısayolları',        kw:'klavye kısayol shortcut yardım help tuş', icon:_cmdkSvg('kbd'), run:function(){ _cmdkCall('veShortcutsHelpOpen'); } }
+    { sec:'Genel',   label:'Klavye kısayolları',        kw:'klavye kısayol shortcut yardım help tuş', icon:_cmdkSvg('kbd'), run:function(){ _cmdkCall('veShortcutsHelpOpen'); } },
+    { sec:'Genel',   label:'Çıkış yap',                 kw:'çıkış logout oturum kapat exit',    icon:_cmdkIco('log-out'),    run:function(){ _cmdkCall('mfsimLogout'); } }
   ];
 }
 

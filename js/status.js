@@ -1,37 +1,50 @@
 // ============================================================================
 // PROGRAM DURUMU MODALI
 // ============================================================================
-// Proje menüsündeki "Program Durumu" öğesinden açılır. Mevcut deploy bilgisini
+// Şeritteki (Araçlar → Program) "Program Durumu" öğesinden açılır. Mevcut deploy bilgisini
 // (sağ-üstten taşındı) ve GitHub'dan son commit'leri (Son Güncellemeler) gösterir.
 // deploy-status.js'in altyapısını yeniden kullanır: _veCheckDeploy çağrılır
 // (popup açmadan), dot data attribute'undan mevcut durum okunur.
 // ============================================================================
 
 function veOpenStatusModal() {
-  if(typeof veCloseFileMenu === 'function') veCloseFileMenu();
   var ov = document.getElementById('ve-status-overlay');
   if(!ov) return;
   ov.style.display = 'flex';
   _veStatusRender();
-  // Menü rozetini kaldır — kullanıcı modalı açtı, gördü
-  var badge = document.getElementById('ve-status-menu-badge');
-  if(badge) badge.style.display = 'none';
+  // Rozeti düşür — kullanıcı modalı açtı, haberi gördü
+  _veStatusUpdateSeen = true;
+  if(typeof veRibbonRefreshBadges === 'function') veRibbonRefreshBadges();
   document.addEventListener('keydown', _veStatusEscHandler);
 }
 
-// Güncelleme rozeti: deploy-status.js dot'unun class'ını izle.
-// "ve-deploy-update-available" eklenince menü item'ında kırmızı nokta belirir.
+// ── Güncelleme rozeti ──────────────────────────────────────────────────────
+// Tek doğruluk kaynağı deploy-status.js'in dot'undaki class. Rozeti şerit çizer
+// (Araçlar → Program Durumu butonu ve "Araçlar" sekmesi); burada yalnız
+// "gösterilmeli mi?" sorusu yanıtlanır. Eskiden rozet marka menüsünün içinde
+// duruyordu — menü kaldırıldı, haber ise kaldırılmadı.
+var _veStatusUpdateSeen = false;
+
+function veStatusUpdatePending() {
+  if(_veStatusUpdateSeen) return false;
+  var dot = document.getElementById('ve-deploy-dot');
+  return !!(dot && dot.classList.contains('ve-deploy-update-available'));
+}
+
 (function _veStatusInitBadgeWatcher() {
   function attach() {
     var dot = document.getElementById('ve-deploy-dot');
-    var badge = document.getElementById('ve-status-menu-badge');
-    if(!dot || !badge) { setTimeout(attach, 500); return; }
-    function sync() {
-      var hasUpdate = dot.classList.contains('ve-deploy-update-available');
-      badge.style.display = hasUpdate ? 'inline-block' : 'none';
-    }
-    sync();
-    new MutationObserver(sync).observe(dot, { attributes: true, attributeFilter: ['class'] });
+    if(!dot) { setTimeout(attach, 500); return; }
+    var wasUpdate = dot.classList.contains('ve-deploy-update-available');
+    new MutationObserver(function() {
+      var isUpdate = dot.classList.contains('ve-deploy-update-available');
+      // Yeni bir güncelleme geldiyse "görüldü" sıfırlanır: bir sonraki sürüm
+      // de haber vermeli, ilk modal açılışı sonsuza dek susturmamalı.
+      if(isUpdate && !wasUpdate) _veStatusUpdateSeen = false;
+      wasUpdate = isUpdate;
+      if(typeof veRibbonRefreshBadges === 'function') veRibbonRefreshBadges();
+    }).observe(dot, { attributes: true, attributeFilter: ['class'] });
+    if(typeof veRibbonRefreshBadges === 'function') veRibbonRefreshBadges();
   }
   attach();
 })();
