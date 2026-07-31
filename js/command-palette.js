@@ -87,7 +87,7 @@ function _cmdkStaticCommands() {
     { sec:'Dosya',   label:'Tümünü temizle',            kw:'temizle sil clear hepsi',           icon:_cmdkIco('trash'),      run:function(){ _cmdkCall('veClearAll'); } },
     // Çözücü
     { sec:'Çözücü',  label:'Çözümü doğrula',            kw:'doğrula validate kontrol çözücü',   icon:_cmdkSvg('check'),      run:function(){ _cmdkCall('veSolverValidate'); } },
-    { sec:'Çözücü',  label:'Çözücüyü çalıştır',         kw:'çalıştır run simüle çözücü solve',  icon:_cmdkIco('play'),       run:function(){ _cmdkCall('veSolverRun'); } },
+    { sec:'Çözücü',  label:'Çözücüyü aç',               kw:'çalıştır run simüle çözücü solve aç',  icon:_cmdkIco('play'),    run:function(){ _cmdkCall('veSolverRun'); } },
     // Paneller
     { sec:'Panel',   label:'Ayarlar',                   kw:'ayarlar settings tema',             icon:_cmdkIco('settings'),   run:function(){ _cmdkCall('veOpenSettings'); } },
     { sec:'Panel',   label:'Program durumu',            kw:'durum status bilgi versiyon',       icon:_cmdkSvg('info'),       run:function(){ _cmdkCall('veOpenStatusModal'); } },
