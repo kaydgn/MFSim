@@ -110,6 +110,13 @@ describe('şerit tanımı — komut ve ikon referansları', () => {
     expect(bad).toEqual([]);
   });
 
+  test('`badge` verilmişse fonksiyondur (bildirim noktası çizilebilsin)', () => {
+    const bad = allItems()
+      .filter(({ item }) => item.badge !== undefined && typeof item.badge !== 'function')
+      .map(({ tab, item }) => tab + '/' + item.label);
+    expect(bad).toEqual([]);
+  });
+
   test('`args` verilmişse dizidir (apply çağrısı patlamasın)', () => {
     const bad = allItems()
       .filter(({ item }) => item.args !== undefined && !Array.isArray(item.args))
@@ -122,6 +129,34 @@ describe('şerit tanımı — komut ve ikon referansları', () => {
       .filter(({ item }) => item.size !== 'lg' && item.size !== 'sm')
       .map(({ tab, item }) => tab + '/' + item.label + ' → ' + item.size);
     expect(bad).toEqual([]);
+  });
+});
+
+describe('kaldırılan marka menüsünün komutları', () => {
+  // Marka (MFSim) menüsü kaldırıldı; şerit tek komut yüzeyi. Menüdeki her komut
+  // şeride taşınmış olmalı — biri düşerse KULLANICI O KOMUTA ULAŞAMAZ. "Çıkış
+  // Yap" özellikle kritik: başka hiçbir yüzeyde yok (komut paletinde de).
+  const allRuns = new Set(
+    VE_RIBBON_TABS.flatMap((t) => t.groups.flatMap((g) => g.items.map((i) => i.run)))
+  );
+
+  test.each([
+    'veNewProject',
+    'veLoadTopology',
+    'veSaveTopology',
+    'veExportTopology',
+    'veClearAll',
+    'veOpenStatusModal',
+    'veOpenSettings',
+    'veShortcutsHelpOpen',
+    'veGame2048Open',
+    'mfsimLogout'
+  ])('%s şeritte var', (run) => {
+    expect(allRuns.has(run)).toBe(true);
+  });
+
+  test('çıkış, modül seçim ekranında da etkin (muafiyet listesinde)', () => {
+    expect(VE_RIBBON_ALWAYS_ON).toContain('mfsimLogout');
   });
 });
 

@@ -420,7 +420,6 @@ function veGame2048KeepGoing() {
 }
 
 function veGame2048Open() {
-  if (typeof veCloseFileMenu === 'function') { try { veCloseFileMenu(); } catch (e) {} }
   _mf2048Build();
   if (!_mf2048Board) veGame2048New();
   var ov = document.getElementById('mf2048');

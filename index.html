@@ -92,26 +92,13 @@
      EZMEZ — yalnız o iki kabın içini yazar. -->
 <div id="ve-ribbon">
   <div class="ve-rb-strip" id="ve-rb-strip">
-    <div class="ve-menu-wrapper" style="position:relative;">
-      <span class="logo" id="ve-project-name-btn" onclick="veToggleFileMenu()" style="cursor:pointer;" title="Proje Menüsü"><span class="ve-brand-mark"><span class="mf-ico mf-ico-settings"></span></span><span class="ve-brand-name">MFSim</span><span class="mf-ico mf-ico-chevron-down ve-brand-chev"></span></span>
-      <div id="ve-file-menu" class="ve-file-menu" style="display:none;">
-        <div class="ve-menu-item" onclick="veNewProject()"><span class="mf-ico mf-ico-file-plus"></span> Yeni Proje</div>
-        <div class="ve-menu-item" onclick="veLoadTopology()"><span class="mf-ico mf-ico-folder-open"></span> Proje Aç</div>
-        <div class="ve-menu-item" onclick="veSaveTopology()"><span class="mf-ico mf-ico-save"></span> Projeyi Kaydet</div>
-        <div class="ve-menu-divider"></div>
-        <div class="ve-menu-item" onclick="veExportTopology('png')"><span class="mf-ico mf-ico-download"></span> PNG olarak dışa aktar</div>
-        <div class="ve-menu-item" onclick="veExportTopology('svg')"><span class="mf-ico mf-ico-download"></span> SVG olarak dışa aktar</div>
-        <div class="ve-menu-divider"></div>
-        <div class="ve-menu-item" onclick="veClearAll()"><span class="mf-ico mf-ico-trash"></span> Projeyi Temizle</div>
-        <div class="ve-menu-divider"></div>
-        <div class="ve-menu-item" onclick="veOpenStatusModal()"><span class="mf-ico mf-ico-refresh"></span> Program Durumu<span class="ve-menu-badge" id="ve-status-menu-badge" style="display:none;" title="Yeni güncelleme mevcut"></span></div>
-        <div class="ve-menu-item" onclick="veOpenSettings()"><span class="mf-ico mf-ico-sliders"></span> Ayarlar</div>
-        <div class="ve-menu-item" onclick="veShortcutsHelpOpen()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="8" y1="14" x2="16" y2="14"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01"/></svg> Klavye Kısayolları <span style="margin-left:auto;opacity:.6;font-size:var(--fs-body);">?</span></div>
-        <div class="ve-menu-item" onclick="veGame2048Open()"><span class="mf-ico mf-ico-grid"></span> Mola: 2048</div>
-        <div class="ve-menu-divider"></div>
-        <div class="ve-menu-item" onclick="mfsimLogout()" style="color:var(--accent-danger);"><span class="mf-ico mf-ico-log-out"></span> Çıkış Yap</div>
-      </div>
-    </div>
+    <!-- Marka + proje adı — ETİKET, düğme değil. Buradan bir proje menüsü
+         açılıyordu; içindeki komutların tümü artık şeritte (Giriş / Araçlar
+         sekmeleri, bkz. js/ribbon.js), bu yüzden menü kaldırıldı. Aynı komutu
+         iki yüzeyde tutmak yalnızca yer ve bakım maliyeti demekti.
+         id KORUNUR: js/toolbar.js proje adını buraya yazar, js/results.js
+         rapor başlığı için geri okur. -->
+    <span class="logo" id="ve-project-name-btn" title="MFSim"><span class="ve-brand-mark"><span class="mf-ico mf-ico-settings"></span></span><span class="ve-brand-name">MFSim</span></span>
 
     <span class="ve-qat-sep"></span>
 

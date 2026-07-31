@@ -9,7 +9,6 @@ const _origCreateElement = document.createElement.bind(document);
 // DOM setup
 document.body.innerHTML = `
   <div id="ve-canvas"></div>
-  <div id="ve-file-menu" style="display:none"></div>
   <div id="node-count"></div>
   <div id="ve-project-name-label"></div>
 `;
@@ -32,7 +31,6 @@ global.redoStack = [];
 // Stub fonksiyonlar
 global.showToast = jest.fn();
 global.showConfirmToast = jest.fn();
-global.veCloseFileMenu = jest.fn();
 global.veSaveActiveTabState = jest.fn();
 global.veFlushOpenPanelData = jest.fn();
 global.updateAllConnections = jest.fn();

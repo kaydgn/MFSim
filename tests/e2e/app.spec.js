@@ -33,42 +33,20 @@ test.describe('Sayfa Yükleme', () => {
   });
 });
 
-test.describe('Dosya Menüsü', () => {
-  test('dosya menüsü açılır ve kapanır', async ({ page }) => {
+test.describe('Marka şeridi', () => {
+  // Marka menüsü (Yeni Proje / Kaydet / Ayarlar / Çıkış …) kaldırıldı: her
+  // komutu şeritte de vardı. Komutların ŞERİTTE bulunduğunu birim testi
+  // güvenceye alır (tests/unit/ribbon.test.js — şerit gövdesi ancak modüller
+  // yüklendikten sonra çizilir). Burada yalnız statik markup doğrulanır.
+  test('proje menüsü kaldırıldı, marka düz etiket', async ({ page }) => {
     await page.goto('/index.html');
 
-    // Dosya menüsünü aç
-    const fileBtn = page.locator('[onclick*="veToggleFileMenu"]');
-    await fileBtn.click();
+    await expect(page.locator('#ve-file-menu')).toHaveCount(0);
+    await expect(page.locator('[onclick*="veToggleFileMenu"]')).toHaveCount(0);
 
-    const fileMenu = page.locator('#ve-file-menu');
-    await expect(fileMenu).toBeVisible();
-
-    // Tekrar tıkla → kapansın
-    await fileBtn.click();
-    await expect(fileMenu).not.toBeVisible();
-  });
-
-  test('kaydet butonu mevcut', async ({ page }) => {
-    await page.goto('/index.html');
-
-    const fileBtn = page.locator('[onclick*="veToggleFileMenu"]');
-    await fileBtn.click();
-
-    // Menü içine kapsamlandırılmıştır: aynı komut hızlı erişim çubuğunda ya da
-    // başka bir yüzeyde de bulunabilir; kapsamsız seçici strict-mode ihlali verir.
-    const saveBtn = page.locator('#ve-file-menu [onclick*="veSaveTopology"]');
-    await expect(saveBtn).toBeVisible();
-  });
-
-  test('yükle butonu mevcut', async ({ page }) => {
-    await page.goto('/index.html');
-
-    const fileBtn = page.locator('[onclick*="veToggleFileMenu"]');
-    await fileBtn.click();
-
-    const loadBtn = page.locator('#ve-file-menu [onclick*="veLoadTopology"]');
-    await expect(loadBtn).toBeVisible();
+    // Marka yerinde duruyor ama artık açılır menü vaat etmiyor (chevron yok)
+    await expect(page.locator('#ve-project-name-btn')).toBeVisible();
+    await expect(page.locator('#ve-project-name-btn .ve-brand-chev')).toHaveCount(0);
   });
 });
 
