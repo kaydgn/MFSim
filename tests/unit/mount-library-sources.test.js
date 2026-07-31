@@ -62,16 +62,25 @@ describe('İki kaynak ayrı girdi olarak duruyor', () => {
     });
   });
 
-  test('adlar hem kaynağı hem ÖN/ARKA rolünü ayırt ediyor', () => {
+  test('ad yalnız KOD + KAYNAK taşır; konum etiketi (ÖN/ARKA) YOK', () => {
     const L = cp.VE_MOUNT_LIBRARY;
-    expect(L['57RS313773'].name).toContain('A26');
-    expect(L['57RS313773'].name).toContain('ÖN');
-    expect(L['57RS313773-sr116'].name).toContain('ASR-SR-116');
-    expect(L['57RS313773-sr116'].name).toContain('ARKA');
-    expect(L['57RS313774'].name).toContain('A26');
-    expect(L['57RS313774-sr116'].name).toContain('ASR-SR-116');
-    // aynı kod, farklı takoz → adlar da farklı olmalı
+    ['57RS313773', '57RS313774', '57RS313773-sr116', '57RS313774-sr116'].forEach((k) => {
+      // ön/arka takozun değil, monte edildiği yerin özelliğidir → adda geçmemeli
+      expect(L[k].name).not.toMatch(/ÖN|ARKA|Ön|Arka/);
+    });
+    expect(L['57RS313773'].name).toBe('57RS313773 (A26)');
+    expect(L['57RS313774'].name).toBe('57RS313774 (A26)');
+    expect(L['57RS313773-sr116'].name).toBe('57RS313773 (ASR-SR-116)');
+    expect(L['57RS313774-sr116'].name).toBe('57RS313774 (ASR-SR-116)');
+  });
+
+  test('aynı kodun iki sürümü adından ayırt edilebiliyor', () => {
+    const L = cp.VE_MOUNT_LIBRARY;
     expect(L['57RS313773'].name).not.toBe(L['57RS313773-sr116'].name);
+    expect(L['57RS313774'].name).not.toBe(L['57RS313774-sr116'].name);
+    // tüm gömülü adlar tekil olmalı (listede aynı satır iki kez görünmesin)
+    const names = Object.values(L).map((e) => e.name);
+    expect(new Set(names).size).toBe(names.length);
   });
 
   test('iki kaynağın değerleri birbirine karışmıyor', () => {
