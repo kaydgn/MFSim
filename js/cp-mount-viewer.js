@@ -15,6 +15,14 @@
 
 var _veMountViewer = null;
 
+// Kamera hafızası (mod başına: 'model' | 'coordframe'). Görüntüleyici kendi
+// kanvasına bağlıdır; panel HTML'i her yeniden çizildiğinde (arka-plan kaydetme
+// sonrası panel tazeleme, "Yenile", tam ekrandan dönüş) kanvas yeniden kurulur
+// ve sahne SIFIRDAN inşa edilir. Açıyı da sıfırlamak kullanıcının döndürüp
+// yakınlaştırdığı görüşü habersiz siliyordu → dispose anında sakla, aynı modda
+// kurulurken geri yükle. "Sıfırla" düğmesi hafızayı da temizler.
+var _veMountViewerCam = {};
+
 // ─── Tema yardımcıları ───────────────────────────────────────────────────────
 // Aktif temanın CSS değişkenlerinden renk oku (koyu/açık tema uyumu). THREE.Color
 // setStyle 'rgb()/hsl()/#hex/isim' değerlerini çözer; çözülemezse yedeğe düşer.
@@ -93,9 +101,20 @@ function veMountViewerInit(canvasId, mode){
     axes:[], labelSprites:[], planes:[],
     massScale:{min:0,max:1},
     ctrl:{ theta:-Math.PI*0.75, phi:Math.PI/3, radius:2800, target:new THREE.Vector3(0,0,0) },
-    raf:null, disposed:false, ro:null,
+    raf:null, disposed:false, ro:null, detach:[],
     raycaster:new THREE.Raycaster(), mouse:new THREE.Vector2(), tooltip:null, dragging:false
   };
+
+  // Önceki oturumun kamera açısı varsa geri yükle (bkz. _veMountViewerCam).
+  // _framed=true → veMountViewerUpdate içerik gelince kamerayı yeniden
+  // çerçevelemeye kalkmaz, kullanıcının bıraktığı açı korunur.
+  var _memo = _veMountViewerCam[_mode];
+  if(_memo){
+    var _c = _veMountViewer.ctrl;
+    _c.theta=_memo.theta; _c.phi=_memo.phi; _c.radius=_memo.radius;
+    _c.target.set(_memo.tx, _memo.ty, _memo.tz);
+    _veMountViewer._framed = true;
+  }
 
   // Sabit eksen üçlüsü (model modu). Koordinat modu ekseni kendi çizer.
   if(_veMountViewer.mode !== 'coordframe') _mntViewerAxes(scene);
@@ -112,8 +131,20 @@ function veMountViewerInit(canvasId, mode){
   }
 
   function loop(){
-    if(!_veMountViewer || _veMountViewer.disposed) return;
-    _veMountViewer.raf = requestAnimationFrame(loop);
+    var V=_veMountViewer;
+    // Bu döngü ARTIK güncel görüntüleyiciye ait değilse (araya yeni bir init
+    // girdi) sessizce sus — yoksa iki döngü aynı anda döner.
+    if(!V || V.disposed || V.renderer!==renderer) return;
+    V.raf = requestAnimationFrame(loop);
+    // Kanvas DOM'dan koparıldıysa görüntüleyici görünmez ama rAF döngüsü ve
+    // WebGL bağlamı yaşamaya devam ederdi. Panel her yeniden çizildiğinde
+    // (bileşen değiştir, arka-plan kaydetme, sekme) bir bağlam daha sızar;
+    // tarayıcının bağlam sınırı (~8-16) dolunca EN ESKİ bağlam zorla düşürülür
+    // ve o an AÇIK olan görüntüleyicinin ekranı kendiliğinden boşalır.
+    // Koptuğunu görür görmez kendini topla.
+    if(canvas.isConnected === false){ veMountViewerDispose(); return; }
+    // Panel gizliyken (display:none → 0 ölçü) çizmenin anlamı yok.
+    if(!canvas.clientWidth || !canvas.clientHeight) return;
     renderer.render(scene, camera);
   }
   loop();
@@ -142,6 +173,9 @@ function veMountViewerToggle(what){
 // Görünümü başlangıç açısına/uzaklığına sıfırla (ve içeriğe yeniden çerçevele).
 function veMountViewerReset(){
   var V=_veMountViewer; if(!V) return;
+  // Sıfırlama kamera hafızasını da siler — yoksa panel bir sonraki yeniden
+  // çiziminde sıfırladığın açı yerine eski açıya dönerdi.
+  try { delete _veMountViewerCam[V.mode]; } catch(e){}
   V.ctrl.theta=-Math.PI*0.75; V.ctrl.phi=Math.PI/3;
   V.ctrl.radius=(V.mode==='coordframe')?2600:2800;
   // Koordinat modu: dikey ekseni (+Z) çerçevelemek için hedefi biraz yukarı al.
@@ -161,18 +195,22 @@ function _mntViewerUpdateCamera(){
   V.camera.lookAt(c.target);
 }
 
+// NOT: pencere (window) düzeyindeki dinleyiciler dispose'ta MUTLAKA sökülür
+// (V.detach). Aksi hâlde görüntüleyici her yeniden kurulduğunda bir çift
+// mousemove/mouseup dinleyicisi daha birikirdi.
 function _mntViewerAttachControls(canvas){
+  var V=_veMountViewer; if(!V) return;
   var dragging=false, btn=0, px=0, py=0;
-  canvas.addEventListener('mousedown', function(e){ dragging=true; btn=e.button; px=e.clientX; py=e.clientY; if(_veMountViewer) _veMountViewer.dragging=true; e.preventDefault(); });
-  window.addEventListener('mouseup', function(){ dragging=false; if(_veMountViewer) _veMountViewer.dragging=false; });
-  window.addEventListener('mousemove', function(e){
-    var V=_veMountViewer; if(!V || !dragging) return;
+  function onDown(e){ dragging=true; btn=e.button; px=e.clientX; py=e.clientY; if(_veMountViewer) _veMountViewer.dragging=true; e.preventDefault(); }
+  function onUp(){ dragging=false; if(_veMountViewer) _veMountViewer.dragging=false; }
+  function onMove(e){
+    var W=_veMountViewer; if(!W || W.disposed || !dragging) return;
     var dx=e.clientX-px, dy=e.clientY-py; px=e.clientX; py=e.clientY;
-    var c=V.ctrl;
+    var c=W.ctrl;
     if(btn===2){ // pan
       var sp=c.radius*0.001;
-      var dir=new THREE.Vector3().subVectors(c.target, V.camera.position).normalize();
-      var right=new THREE.Vector3().crossVectors(dir, V.camera.up).normalize();
+      var dir=new THREE.Vector3().subVectors(c.target, W.camera.position).normalize();
+      var right=new THREE.Vector3().crossVectors(dir, W.camera.up).normalize();
       var up=new THREE.Vector3().crossVectors(right, dir).normalize();
       c.target.addScaledVector(right, -dx*sp);
       c.target.addScaledVector(up, dy*sp);
@@ -181,14 +219,26 @@ function _mntViewerAttachControls(canvas){
       c.phi = Math.max(0.1, Math.min(Math.PI-0.1, c.phi - dy*0.01));
     }
     _mntViewerUpdateCamera();
-  });
-  canvas.addEventListener('wheel', function(e){
-    var V=_veMountViewer; if(!V) return;
+  }
+  function onWheel(e){
+    var W=_veMountViewer; if(!W || W.disposed) return;
     e.preventDefault();
-    V.ctrl.radius = Math.max(500, Math.min(20000, V.ctrl.radius + e.deltaY*2));
+    W.ctrl.radius = Math.max(500, Math.min(20000, W.ctrl.radius + e.deltaY*2));
     _mntViewerUpdateCamera();
-  }, {passive:false});
-  canvas.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  }
+  function onCtx(e){ e.preventDefault(); }
+  canvas.addEventListener('mousedown', onDown);
+  window.addEventListener('mouseup', onUp);
+  window.addEventListener('mousemove', onMove);
+  canvas.addEventListener('wheel', onWheel, {passive:false});
+  canvas.addEventListener('contextmenu', onCtx);
+  V.detach.push(function(){
+    canvas.removeEventListener('mousedown', onDown);
+    window.removeEventListener('mouseup', onUp);
+    window.removeEventListener('mousemove', onMove);
+    canvas.removeEventListener('wheel', onWheel);
+    canvas.removeEventListener('contextmenu', onCtx);
+  });
 }
 
 // Fare ile bileşen/takoz üzerine gelince özelliklerini tooltip olarak göster
@@ -202,7 +252,7 @@ function _mntViewerAttachHover(canvas){
     +'box-shadow:0 6px 20px rgba(0,0,0,0.45);';
   document.body.appendChild(tip);
   V.tooltip=tip;
-  canvas.addEventListener('mousemove', function(e){
+  function onHover(e){
     var W=_veMountViewer; if(!W || W.disposed || !W.tooltip) return;
     if(W.dragging){ W.tooltip.style.display='none'; return; }
     var rect=canvas.getBoundingClientRect();
@@ -225,8 +275,14 @@ function _mntViewerAttachHover(canvas){
       W.tooltip.style.display='none';
       canvas.style.cursor='';
     }
+  }
+  function onLeave(){ if(_veMountViewer && _veMountViewer.tooltip) _veMountViewer.tooltip.style.display='none'; }
+  canvas.addEventListener('mousemove', onHover);
+  canvas.addEventListener('mouseleave', onLeave);
+  V.detach.push(function(){
+    canvas.removeEventListener('mousemove', onHover);
+    canvas.removeEventListener('mouseleave', onLeave);
   });
-  canvas.addEventListener('mouseleave', function(){ if(_veMountViewer && _veMountViewer.tooltip) _veMountViewer.tooltip.style.display='none'; });
 }
 
 function _mntViewerAxes(scene){
@@ -425,16 +481,40 @@ function _mntViewerDrawCoordFrame(V){
 function veMountViewerDispose(){
   var V=_veMountViewer; if(!V) return;
   V.disposed=true;
+  // Kamera açısını sakla (yalnız çerçevelenmiş bir görünüm anlamlıdır).
+  if(V.mode && V.ctrl && V._framed){
+    try {
+      _veMountViewerCam[V.mode] = {
+        theta:V.ctrl.theta, phi:V.ctrl.phi, radius:V.ctrl.radius,
+        tx:V.ctrl.target.x, ty:V.ctrl.target.y, tz:V.ctrl.target.z
+      };
+    } catch(e){}
+  }
   if(V.raf) cancelAnimationFrame(V.raf);
   if(V.ro){ try{ V.ro.disconnect(); }catch(e){} }
+  if(V.detach){ V.detach.forEach(function(fn){ try{ fn(); }catch(e){} }); V.detach=[]; }
   if(V.tooltip){ try{ V.tooltip.remove(); }catch(e){} V.tooltip=null; }
   try {
-    while(V.group && V.group.children.length){
-      var o=V.group.children.pop();
-      if(o.geometry) o.geometry.dispose();
-      if(o.material){ if(o.material.map) o.material.map.dispose(); o.material.dispose(); }
+    // Sahnenin TAMAMINI boşalt: group içeriği + doğrudan sahneye eklenen
+    // eksen çizgileri/etiket sprite'ları (bunlar eskiden sızıyordu).
+    if(V.scene && typeof V.scene.traverse==='function'){
+      V.scene.traverse(function(o){
+        if(o.geometry && o.geometry.dispose) o.geometry.dispose();
+        var mats = o.material ? (Array.isArray(o.material)?o.material:[o.material]) : [];
+        mats.forEach(function(m){
+          if(!m) return;
+          if(m.map && m.map.dispose) m.map.dispose();
+          if(m.dispose) m.dispose();
+        });
+      });
     }
-    if(V.renderer){ V.renderer.dispose(); }
+    if(V.renderer){
+      // dispose() TEK BAŞINA WebGL bağlamını bırakmaz; bağlam sayacı dolunca
+      // tarayıcı en eski bağlamı düşürür ve açık görüntüleyici kararır.
+      // forceContextLoss() bağlamı gerçekten serbest bırakır.
+      if(typeof V.renderer.forceContextLoss==='function'){ try{ V.renderer.forceContextLoss(); }catch(e){} }
+      V.renderer.dispose();
+    }
   } catch(e){}
   _veMountViewer=null;
 }
