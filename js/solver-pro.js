@@ -656,7 +656,17 @@ function veSolverRunProfessional() {
     
     if(veActiveModule === 'full-throttle') {
       var ftMaxTime = parseFloat(sd.maxSimTime) || (typeof VE_DEFAULT_MAX_SIM_TIME !== 'undefined' ? VE_DEFAULT_MAX_SIM_TIME : 300);
-      log('Yöntem: RK4 | Δt = 0.01 s | Güvenlik limiti: ' + ftMaxTime + ' s');
+      // Yöntem ve Δt SABİT yazılıyordu ('RK4 | Δt = 0.01 s'), oysa motor
+      // (ft-performance.js) gerçekte sd.method / sd.ftDt okuyor. Kullanıcı RK45
+      // seçtiğinde bile log "RK4" diyordu → takılma teşhisi yanlış yöne gidiyordu.
+      // Tek doğruluk kaynağı: çözücü düğümünün kendi verisi.
+      var ftMethodLabel = sd.method === 'heun' ? 'Heun'
+                        : sd.method === 'rk45' ? 'RK45 (adaptif)'
+                        : sd.method === 'ralston' ? 'Ralston'
+                        : sd.method === 'euler' ? 'Euler'
+                        : 'RK4';
+      var ftDtShown = parseFloat(sd.ftDt) || 0.01;
+      log('Yöntem: ' + ftMethodLabel + ' | Δt = ' + ftDtShown + ' s | Güvenlik limiti: ' + ftMaxTime + ' s');
       log('Mod: Tam Gaz Hızlanma — V=0 → Maks Hız (F_net ≤ 0)');
     } else {
     var mLabel = sd.method === 'heun' ? 'Heun' : sd.method === 'rk4' ? 'RK4' : sd.method === 'rk45' ? 'RK45 (adaptif)' : sd.method === 'ralston' ? 'Ralston' : 'Euler';
@@ -809,6 +819,14 @@ function veSolverRunProfessional() {
         var mode = simResult.mode === 'partial' ? 'Kısmi Analiz' : simResult.mode === 'full-throttle' ? 'Tam Gaz Hızlanma' : 'Tam Analiz';
         
         log('Entegrasyon tamamlandı (' + elapsed + ' s).', 'ok');
+
+        // Adım bütçesi hedef süreye varmadan bittiyse sonuç EKSİKTİR — sessiz kalma.
+        if(simResult.solverStats && simResult.solverStats.truncatedByStepBudget) {
+          log('  ⚠ Adım bütçesi doldu: simülasyon ' +
+              (simResult.solverStats.simEndTime || 0).toFixed(2) + ' s\'de kesildi (hedef ' +
+              (simResult.solverStats.maxTime || 0) + ' s). Sonuç EKSİK.', 'warn');
+          log('    Δt\'yi büyütün ya da sabit adımlı bir yöntem (RK4) kullanın.', 'warn');
+        }
 
         // Segment drive da çalıştıysa çift analiz modunu belirt
         var _hasSegDriveResult = simResult.segmentDrive && simResult.segmentDrive.segmentSummary;
