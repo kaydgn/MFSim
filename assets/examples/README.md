@@ -37,7 +37,11 @@ JSON'ları tek dosyaya **gömer** (görseller harici kalır). Böylece hem `inde
    | Örnek (kayıt anahtarı) | Dosya adı |
    |------------------------|-----------|
    | `siper`                | `siper.png` |
-   | `tulga`                | `tulga.png` *(henüz yok — panel otomatik şemaya düşüyor)* |
+   | `tulga`                | `tulga.png` |
+
+   Ekran görüntüsünü elle almak zorunda değilsin: örneği "Örneği Aktar" ile kur,
+   kenar çubuğu/şerit/durum çubuğunu gizle ve kanvası düğümlerin + `.ve-boundary-rect`
+   sınır kutusuna kırparak kaydet — `siper.png`/`tulga.png` böyle üretildi.
 
 3. Kayıt defterinde (`js/mount-core.js` → `MOUNT_EXAMPLES`) ilgili örneğin
    `image` alanını bu yola ayarla:

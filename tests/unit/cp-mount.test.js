@@ -508,12 +508,13 @@ describe('Örnek bileşeni', () => {
     // tork dışı durumlar defaultLoadCases ile aynı kalır (mutasyon yok)
     expect(m.loadCases.find(c => c.name === 'Static').T).toEqual([0, 0, 0]);
     expect(core.defaultLoadCases().find(c => c.name === 'Forward Torque').T).toEqual([0, 0, 0]);
-    // görsel yok → panel otomatik şemaya düşer (kırık <img> basılmaz)
-    expect(ex.image).toBe('');
+    // topoloji görseli + yüklenemezse otomatik şema YEDEĞİ (kırık resim yok)
+    expect(ex.image).toBe('assets/examples/tulga.png');
     const html = cp.getMntExamplePropertiesHTML({ id: 'e', type: 'mnt-example', data: { exampleKey: 'tulga' } });
     expect(html).toContain('TULGA');
-    expect(html).toContain('<svg');
-    expect(html).not.toContain('<img');
+    expect(html).toContain('assets/examples/tulga.png');
+    expect(html).toContain('onerror');   // resim yoksa yedeğe geç
+    expect(html).toContain('<svg');      // yedek şema HTML'de hazır duruyor
   });
   test('TULGA: yayınlanan JSON topolojisi kayıt defterindeki modelle birebir', () => {
     // Bu iki kaynak AYRI dosyalarda yaşıyor; biri elle güncellenip diğeri

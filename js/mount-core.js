@@ -1092,9 +1092,10 @@ var veMountCore = (function() {
         {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[983,235]},
         {type:'mnt-example',    name:'Örnek',             at:[995,401]}
       ],
-      // Görsel yok → panel modelden otomatik (tema uyumlu) şema üretir.
-      // assets/examples/tulga.png eklenirse burayı o yola çevirmek yeterli.
-      image: '',
+      // Topoloji ekran görüntüsü. Dosya yoksa/yüklenemezse panel otomatik
+      // şemaya düşer (kırık resim gösterilmez) — model + tools o yedek için
+      // de duruyor.
+      image: 'assets/examples/tulga.png',
       topology: 'assets/examples/tulga_topoloji.json',
       model: TULGA_EXAMPLE
     }
