@@ -120,7 +120,9 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
   test('kütüphane düğümü yokken birleşik liste yalnız gömülü katalogdur', () => {
     delete global.nodes;
     const list = cp.veMntGetLibraryList();
-    expect(list).toHaveLength(6);
+    // Sayı SABİT KODLANMAZ: gömülü katalog büyüdükçe (yeni takoz/kaynak eklenince)
+    // kırılmasın — kaynağın kendisinden türet.
+    expect(list).toHaveLength(Object.keys(cp.VE_MOUNT_LIBRARY).length);
     expect(list.every(e => e.builtin)).toBe(true);
     expect(list.map(e => e.key)).toContain('amc55sha');
     expect(list.map(e => e.key)).toContain('TK035');
@@ -132,7 +134,7 @@ describe('Takoz Özellikleri (mnt-library — kullanıcı tanımlı katalog)', (
     cp.veMntLibAdd('lib1');
     expect(lib.data.mounts).toHaveLength(1);
     const list = cp.veMntGetLibraryList();
-    expect(list).toHaveLength(7); // 6 gömülü + 1 özel
+    expect(list).toHaveLength(Object.keys(cp.VE_MOUNT_LIBRARY).length + 1); // gömülü + 1 özel
     const custom = list.filter(e => !e.builtin);
     expect(custom).toHaveLength(1);
     expect(custom[0].name).toContain('Yeni Takoz');
