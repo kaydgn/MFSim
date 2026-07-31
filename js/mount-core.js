@@ -899,6 +899,109 @@ var veMountCore = (function() {
     });
   }
 
+  // ═══════════════ Frekans yanıtı — çok serbestlikli (SPEC ek — Faz 5) ═══════════════
+  //
+  // bounceFrequency + transmissibility bir SDOF KESTİRİMİDİR. Burası gerçeğidir:
+  // 6 SD sönümlü sistemin harmonik kuvvet iletilebilirliği.
+  //
+  //   [K − ω²M + iωC]·Q = F₀            (harmonik tahrik, F = F₀e^{iωt})
+  //   δᵢ = Aᵢ·Q ,  fᵢ = (kᵢ + iω cᵢ)·δᵢ  (takozun şasiye ilettiği kuvvet)
+  //   T(f) = |Σ fᵢ,eksen| / |F₀,eksen|
+  //
+  // Karmaşık 6×6 sistem, 12×12 GERÇEL sisteme açılarak çözülür (çekirdekte
+  // karmaşık aritmetik yok):
+  //   [ A  −B ][Q_R]   [F_R]
+  //   [ B   A ][Q_I] = [F_I] ,   A = K − ω²M ,  B = ωC
+  // Doğrulama: (A+iB)(Q_R+iQ_I) = (A·Q_R − B·Q_I) + i(B·Q_R + A·Q_I).
+  //
+  // Referans: ASR-SR-116 Şekil 9 (ADAMS VibrationAnalysis, 0,1–100 Hz, sönümlü
+  // ve sönümsüz iki eğri). ζ=0 ile rezonanslarda tepe sonsuza gider — logaritmik
+  // ızgara tam rezonansa oturmadığından sonlu ama çok büyük değerler çıkar.
+
+  // Sönüm matrisi — rijitlikle AYNI kinematikten: C = Σ Aᵢᵀ·diag(cᵢ)·Aᵢ.
+  // damping = mountDamping(...) çıktısı (c: N·s/m). Eksik girdi → o takoz sönümsüz.
+  function buildCdamp(mounts, cg, damping){
+    const C6 = zeros(6,6);
+    (mounts || []).forEach(function(mnt, i){
+      const c = (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0];
+      const d = [mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
+      const A = makeA(d);
+      const Ci = [[c[0],0,0],[0,c[1],0],[0,0,c[2]]];
+      addInPlace(C6, matMul(matMul(matT(A),Ci),A));
+    });
+    return C6;
+  }
+
+  // Tek frekansta iletilebilirlik. w = 2πf [rad/s], dir = tahrik/çıktı ekseni
+  // (0=x, 1=y, 2=z). cList = takoz başına [cx,cy,cz] (N·s/m) — sönümsüz için 0.
+  // Birim tahrik kuvveti uygulanır → dönüş doğrudan T'dir. Tekil sistem → NaN.
+  function frfPoint(mounts, cg, M6, K6, C6, cList, w, dir){
+    const n = 6, N = 12;
+    const S = zeros(N,N), rhs = Array(N).fill(0);
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+      const a = K6[i][j] - w*w*M6[i][j];
+      const b = w*C6[i][j];
+      S[i][j]     = a;   S[i][j+n]   = -b;
+      S[i+n][j]   = b;   S[i+n][j+n] = a;
+    }
+    rhs[dir] = 1;                                  // birim gerçel tahrik
+    const x = solveLinear(S, rhs);
+    if(!x) return NaN;
+    const QR = x.slice(0,6), QI = x.slice(6,12);
+    let trR = 0, trI = 0;
+    for(let i=0;i<mounts.length;i++){
+      const mnt = mounts[i];
+      const d = [mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
+      const A = makeA(d);
+      const k = (mnt.kdyn && mnt.kdyn[dir] > 0) ? mnt.kdyn[dir] : 0;
+      const c = (cList && cList[i] && cList[i][dir] > 0) ? cList[i][dir] : 0;
+      let dR = 0, dI = 0;
+      for(let j=0;j<6;j++){ dR += A[dir][j]*QR[j]; dI += A[dir][j]*QI[j]; }
+      trR += k*dR - w*c*dI;                        // (k + iωc)(δ_R + iδ_I)
+      trI += k*dI + w*c*dR;
+    }
+    return Math.sqrt(trR*trR + trI*trI);           // |F₀| = 1
+  }
+
+  // Frekans taraması. opts: { fMin=0.1, fMax=100, nPts=240, dir=2 (düşey) }.
+  // Dönüş: { f:[Hz], T:[sönümlü], T0:[sönümsüz] } — logaritmik eşit aralıklı.
+  function frequencyResponse(mounts, cg, M6, damping, opts){
+    opts = opts || {};
+    const fMin = (opts.fMin > 0) ? opts.fMin : 0.1;
+    const fMax = (opts.fMax > fMin) ? opts.fMax : 100;
+    const nPts = (opts.nPts > 1) ? Math.floor(opts.nPts) : 240;
+    const dir  = (opts.dir === 0 || opts.dir === 1) ? opts.dir : 2;
+    if(!mounts || !mounts.length || !M6) return null;
+    const K6 = buildK(mounts, cg, true);                       // dinamik rijitlik
+    const C6 = buildCdamp(mounts, cg, damping);
+    const Z6 = zeros(6,6);                                     // sönümsüz karşılaştırma
+    const cList = (mounts).map(function(_, i){
+      return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
+    const zeroC = mounts.map(function(){ return [0,0,0]; });
+    const f = [], T = [], T0 = [];
+    const lo = Math.log10(fMin), hi = Math.log10(fMax);
+    for(let i=0;i<nPts;i++){
+      const ff = Math.pow(10, lo + (hi-lo)*i/(nPts-1));
+      const w = 2*Math.PI*ff;
+      f.push(ff);
+      T.push(frfPoint(mounts, cg, M6, K6, C6, cList, w, dir));
+      T0.push(frfPoint(mounts, cg, M6, K6, Z6, zeroC, w, dir));
+    }
+    return { f:f, T:T, T0:T0, dir:dir };
+  }
+
+  // Taramadan tek frekansta değer (ör. f_ateş) — logaritmik ara değerleme.
+  // Izgara dışında uçtaki değere kırpılır.
+  function frfAt(mounts, cg, M6, damping, fHz, dir){
+    if(!(fHz > 0)) return NaN;
+    const K6 = buildK(mounts, cg, true);
+    const C6 = buildCdamp(mounts, cg, damping);
+    const cList = (mounts || []).map(function(_, i){
+      return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
+    return frfPoint(mounts, cg, M6, K6, C6, cList, 2*Math.PI*fHz,
+                    (dir === 0 || dir === 1) ? dir : 2);
+  }
+
   // ═══════════════════ Tork zinciri (SPEC 4.5) ═══════════════════
 
   // T_shaft = Te,max × R_stall × i_gear × i_transfer × φ_axle × derate
@@ -1407,6 +1510,7 @@ var veMountCore = (function() {
     buildKtangentDyn, solveModalAtState,
     transmissibility, bounceFrequency,
     mountLoadShares, mountDamping,
+    buildCdamp, frfPoint, frequencyResponse, frfAt,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
     defaultLoadCases, TTAR_EXAMPLE, ttarComponentsSI, ttarMountsSI, selfTest,

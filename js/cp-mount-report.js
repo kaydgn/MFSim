@@ -326,6 +326,7 @@ function _mntRepSection8(R, opts){
   h+=_mntRepGearForces(R);
   h+=_mntRepDesignLoads(R);
   h+=_mntRepDamping(R);
+  h+=_mntRepFRF(R, opts);
   h+=_mntRepConsistency(R);
   return h;
 }
@@ -922,6 +923,122 @@ function _mntRepDamping(R){
   return h;
 }
 
+// §8.13 — Frekans yanıtı (tam çok-serbestlikli iletilebilirlik eğrisi).
+// §8.8'deki SDOF kestiriminin GERÇEĞİ: 6 SD sönümlü sistemin harmonik kuvvet
+// iletilebilirliği, düşey tahrik/düşey çıktı. Referans: ASR-SR-116 Şekil 9.
+var _FRF_TMIN = 0.01, _FRF_TMAX = 1000, _FRF_FMIN = 0.1, _FRF_FMAX = 100;
+
+// Log-log eğri grafiği (SVG). pts = { f, T, T0 }. fFire varsa dikey imleç.
+function _mntRepFRFChart(pts, fFire){
+  var W=760, H=400, L=64, Rr=18, Tp=16, Bt=44;
+  var pw=W-L-Rr, ph=H-Tp-Bt;
+  var lf0=Math.log10(_FRF_FMIN), lf1=Math.log10(_FRF_FMAX);
+  var lt0=Math.log10(_FRF_TMIN), lt1=Math.log10(_FRF_TMAX);
+  var px=function(f){ return L + (Math.log10(f)-lf0)/(lf1-lf0)*pw; };
+  var py=function(t){ var v=Math.min(_FRF_TMAX, Math.max(_FRF_TMIN, t));
+                      return Tp + (lt1-Math.log10(v))/(lt1-lt0)*ph; };
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" font-family="inherit">';
+  // ── ızgara: ondalık ana çizgiler + 2..9 ara çizgiler ──
+  var d, k;
+  for(d=lf0; d<=lf1; d++){
+    for(k=1;k<10;k++){
+      var fv=k*Math.pow(10,d); if(fv<_FRF_FMIN||fv>_FRF_FMAX) continue;
+      var X=px(fv);
+      s+='<line x1="'+X.toFixed(1)+'" y1="'+Tp+'" x2="'+X.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#c9cdd3" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';
+    }
+  }
+  for(d=lt0; d<=lt1; d++){
+    for(k=1;k<10;k++){
+      var tv=k*Math.pow(10,d); if(tv<_FRF_TMIN||tv>_FRF_TMAX) continue;
+      var Y=py(tv);
+      s+='<line x1="'+L+'" y1="'+Y.toFixed(1)+'" x2="'+(L+pw)+'" y2="'+Y.toFixed(1)+'" stroke="#c9cdd3" stroke-width="'+(k===1?1:0.4)+'" opacity="'+(k===1?0.9:0.45)+'"/>';
+    }
+  }
+  // ── eksen etiketleri ──
+  for(d=lf0; d<=lf1; d++){
+    var fl=Math.pow(10,d);
+    s+='<text x="'+px(fl).toFixed(1)+'" y="'+(Tp+ph+16)+'" text-anchor="middle" font-size="11" fill="#3c4350">'+_rEsc(_rF(fl,fl<1?1:0))+'</text>';
+  }
+  for(d=lt0; d<=lt1; d++){
+    var tl=Math.pow(10,d);
+    s+='<text x="'+(L-7)+'" y="'+(py(tl)+4).toFixed(1)+'" text-anchor="end" font-size="11" fill="#3c4350">'+_rEsc(tl<1?_rF(tl,2):_rF(tl,0))+'</text>';
+  }
+  s+='<text x="'+(L+pw/2)+'" y="'+(H-8)+'" text-anchor="middle" font-size="12" fill="#1b1e24">Frekans [Hz]</text>';
+  s+='<text x="14" y="'+(Tp+ph/2)+'" text-anchor="middle" font-size="12" fill="#1b1e24" transform="rotate(-90 14 '+(Tp+ph/2)+')">İletilebilirlik T</text>';
+  // ── T = 1 referansı (izolasyon sınırı) ──
+  s+='<line x1="'+L+'" y1="'+py(1).toFixed(1)+'" x2="'+(L+pw)+'" y2="'+py(1).toFixed(1)+'" stroke="#8a5a1e" stroke-width="1.4" stroke-dasharray="5 4"/>';
+  s+='<text x="'+(L+6)+'" y="'+(py(1)-5).toFixed(1)+'" font-size="10.5" fill="#8a5a1e">T = 1 (izolasyon yok)</text>';
+  // ── eğriler ──
+  var path=function(arr){
+    var p='', started=false;
+    for(var i=0;i<pts.f.length;i++){
+      var v=arr[i];
+      if(!Number.isFinite(v)||v<=0){ started=false; continue; }
+      p += (started?'L':'M') + px(pts.f[i]).toFixed(1) + ' ' + py(v).toFixed(1) + ' ';
+      started=true;
+    }
+    return p;
+  };
+  s+='<path d="'+path(pts.T0)+'" fill="none" stroke="#24425f" stroke-width="1.4" stroke-dasharray="6 4" opacity="0.85"/>';
+  s+='<path d="'+path(pts.T)+'" fill="none" stroke="#b02a2a" stroke-width="2.1"/>';
+  // ── f_ateş imleci ──
+  if(Number.isFinite(fFire) && fFire>=_FRF_FMIN && fFire<=_FRF_FMAX){
+    var XF=px(fFire);
+    s+='<line x1="'+XF.toFixed(1)+'" y1="'+Tp+'" x2="'+XF.toFixed(1)+'" y2="'+(Tp+ph)+'" stroke="#1b7f4b" stroke-width="1.6" stroke-dasharray="4 3"/>';
+    s+='<text x="'+(XF+5).toFixed(1)+'" y="'+(Tp+13)+'" font-size="10.5" fill="#1b7f4b">f_ateş = '+_rEsc(_rF(fFire,1))+' Hz</text>';
+  }
+  // ── lejant ──
+  s+='<g transform="translate('+(L+pw-190)+',' +(Tp+ph-46)+')">';
+  s+='<rect x="-8" y="-13" width="196" height="42" fill="#ffffff" opacity="0.82" stroke="#c9cdd3" stroke-width="0.6"/>';
+  s+='<line x1="0" y1="0" x2="26" y2="0" stroke="#b02a2a" stroke-width="2.1"/><text x="32" y="4" font-size="10.5" fill="#1b1e24">sönümlü</text>';
+  s+='<line x1="0" y1="18" x2="26" y2="18" stroke="#24425f" stroke-width="1.4" stroke-dasharray="6 4"/><text x="32" y="22" font-size="10.5" fill="#1b1e24">sönümsüz</text>';
+  s+='</g>';
+  s+='</svg>';
+  return s;
+}
+
+function _mntRepFRF(R, opts){
+  var C=_rMountCore();
+  if(!C || !C.frequencyResponse || !R.mounts || !R.mounts.length || !R.damping) return '';
+  var M6=C.buildM6(R.mp.m, R.mp.I_G);
+  var pts=C.frequencyResponse(R.mounts, R.mp.cg, M6, R.damping,
+    { fMin:_FRF_FMIN, fMax:_FRF_FMAX, nPts:260, dir:2 });
+  if(!pts) return '';
+  var iso=_mntRepIsolation(R, opts);
+  var fFire=iso.fFire;
+
+  var h='<h3>8.13 Frekans yanıtı — tam çok serbestlikli iletilebilirlik</h3>';
+  h+='<p>§8.8\'deki değerlendirme tek-serbestlik <em>kestirimidir</em>. Burada aynı büyüklük '
+    +'<strong>6 serbestlik dereceli sönümlü sistemin</strong> harmonik yanıtından doğrudan hesaplanır — yaklaşım yok:</p>';
+  h+='$$ \\left[\\mathbf K-\\omega^2\\mathbf M+i\\omega\\mathbf C\\right]\\mathbf Q=\\mathbf F_0,\\qquad '
+    +'\\mathbf C=\\sum_i \\mathbf A_i^{\\mathsf T}\\,\\mathrm{diag}(c_i)\\,\\mathbf A_i,\\qquad '
+    +'T(f)=\\frac{\\left|\\sum_i (k_i+i\\omega c_i)\\,\\delta_i\\right|}{|\\mathbf F_0|} $$';
+  h+='<p>Tahrik ve çıktı <b>düşey</b>dir (birim harmonik kuvvet, birleşik ağırlık merkezinde). '
+    +'Sönüm matrisi rijitlikle aynı kinematikten kurulur; takoz sönüm katsayıları §8.12\'den gelir.</p>';
+  h+='<figure>'+_mntRepFRFChart(pts, fFire)
+    +'<figcaption><b>Şekil '+_rFig()+' —</b> Düşey kuvvet iletilebilirliği (log–log). '
+    +'Kesintisiz eğri sönümlü (ζ = '+_rF(iso.zeta,3)+'), kesikli eğri sönümsüz sistemdir. '
+    +'Tepeler düşey harekete katılan rijit gövde modlarındadır; T = 1 çizgisinin altı izolasyon bölgesidir.'
+    +'</figcaption></figure>';
+
+  // ── SDOF kestirimi ile karşılaştırma: kestirim ne kadar iyi? ──
+  if(Number.isFinite(fFire)){
+    var Td=C.frfAt(R.mounts, R.mp.cg, M6, R.damping, fFire, 2);
+    var Tu=C.frfAt(R.mounts, R.mp.cg, M6, null,       fFire, 2);
+    h+='<table><caption>Tablo '+_rTbl()+' — Ateşleme frekansında iletilebilirlik: tam çözüm ve tek-serbestlik kestirimi</caption>';
+    h+='<tr><th>Yöntem</th><th>Sönümlü</th><th>Sönümsüz</th></tr>';
+    h+='<tr><td class="l">Tam frekans yanıtı (6 SD)</td><td>'+_rF(Td*100,1)+'%</td><td>'+_rF(Tu*100,1)+'%</td></tr>';
+    h+='<tr><td class="l">Tek-serbestlik kestirimi (§8.8)</td><td>'+(isFinite(iso.T)?_rF(iso.T*100,1)+'%':'—')+'</td><td>'+(isFinite(iso.T0)?_rF(iso.T0*100,1)+'%':'—')+'</td></tr>';
+    var dev=(Number.isFinite(Td)&&Td>0)?Math.abs(iso.T-Td)/Td*100:NaN;
+    h+='</table>';
+    h+='<p style="font-size:0.9em; color:#5a6270;">Fark '+(Number.isFinite(dev)?_rF(dev,1)+'%':'—')
+      +'. İzolasyon bölgesinde (r &gt; √2) tek-serbestlik kestirimi tam çözüme çok yakındır; '
+      +'bu, §8.8 değerlendirmesinin bu model için geçerli olduğunu doğrular. Rezonans civarında '
+      +'ikisi ayrışır — orada yalnız bu bölümün eğrisi kullanılmalıdır.</p>';
+  }
+  return h;
+}
+
 // Doğrulama → iç-tutarlılık özeti
 function _mntRepConsistency(R){
   var h='<h3>8.11 Model içi tutarlılık kontrolleri</h3>';
@@ -1040,6 +1157,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepDamping: _mntRepDamping,
     _mntRepZeta: _mntRepZeta,
     _mntRepIsolation: _mntRepIsolation,
+    _mntRepFRF: _mntRepFRF,
+    _mntRepFRFChart: _mntRepFRFChart,
     _mntRepEngine: _mntRepEngine,
     _mntRepFindCase: _mntRepFindCase,
     _mntRepCritical: _mntRepCritical,
