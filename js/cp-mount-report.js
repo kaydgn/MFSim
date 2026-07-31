@@ -56,14 +56,38 @@ function _mntRepEngine(R, opts){
   };
 }
 
+// İzolasyon değerlendirmesinin TEK hesap noktası — §8.8 ve uygunluk tablosu
+// aynı sayıyı kullansın diye burada toplanır (iki yerde ayrı hesaplanıp
+// birbirinden sapmasın).
+//
+// TABAN: düşey (bounce) doğal frekansı. Tahrik düşeydir; tek-serbestlik
+// bağıntısının f_nat'ı da güç grubunun düşey kütle-yay frekansı olmalıdır.
+// Modal frekanslardan biri (ör. roll) bu bağıntıya KONMAZ — bkz. çekirdek
+// bounceFrequency yorumu.
+// Dönüş: { fFire, fBounce, r, T (sönümlü), T0 (sönümsüz), zeta, ok }
+function _mntRepIsolation(R, opts){
+  var C=_rMountCore();
+  var eng=_mntRepEngine(R, opts);
+  var zeta=_mntRepZeta(R, opts);
+  var fFire=(eng.idleRpm>0 && eng.cylinders>0) ? (eng.idleRpm/60)*(eng.cylinders/2) : NaN;
+  var m=(R && R.mp && R.mp.m)>0 ? R.mp.m : NaN;
+  var fB=(C && C.bounceFrequency) ? C.bounceFrequency(R && R.mounts, m) : NaN;
+  var T =(C && Number.isFinite(fFire) && fB>0) ? C.transmissibility(fFire, fB, zeta) : NaN;
+  var T0=(C && Number.isFinite(fFire) && fB>0) ? C.transmissibility(fFire, fB, 0)    : NaN;
+  return { fFire:fFire, fBounce:fB, r:(fB>0?fFire/fB:NaN), T:T, T0:T0, zeta:zeta, ok:(T<0.5) };
+}
+
 // Raporun kullanacağı sönüm oranı. TEK kaynak Çözücü'dür (R.zeta). Eski
 // projelerde ζ Rapor düğümünde tutuluyordu → o değer yalnız YEDEK olarak
 // okunur; ikisi de yoksa çekirdek varsayılanına düşülür.
+// ζ=0 GEÇERLİ BİR SEÇİMDİR (kasıtlı sönümsüz çözüm) — "girilmemiş" ile
+// karıştırılmaz. Çözücü de aynı kapıyı kullanır (0 ≤ ζ < 1); ikisi ayrışırsa
+// sönüm tablosu ζ=0, iletilebilirlik ζ=0,02 ile hesaplanırdı.
 function _mntRepZeta(R, opts){
-  var z = R && Number(R.zeta);
-  if(Number.isFinite(z) && z>0) return z;
-  z = opts && Number(opts.zeta);
-  if(Number.isFinite(z) && z>0) return z;
+  var z = R ? Number(R.zeta) : NaN;
+  if(Number.isFinite(z) && z>=0 && z<1) return z;
+  z = opts ? Number(opts.zeta) : NaN;
+  if(Number.isFinite(z) && z>=0 && z<1) return z;
   var C=_rMountCore();
   return (C && C.DEFAULT_ZETA>0) ? C.DEFAULT_ZETA : 0.02;
 }
@@ -743,12 +767,16 @@ function _mntRepFreqPlacement(R, opts){
   // ── Kriter 1: Roll modu < %50 ateşleme frekansı  (⟺ f_ateş > 2·f_roll) ──
   var lim1=0.5*fFire, ok1=(fRoll<lim1), r1=(fRoll>0?fFire/fRoll:0);
 
-  // ── Kriter 2: Rölanti iletilebilirliği < %50 (ateşlemeye en yakın = en kötü mod) ──
-  var Tmax=0, govIdx=modes.length-1;
-  modes.forEach(function(m,i){ var T=core?core.transmissibility(fFire,m.f_Hz,zeta):NaN;
-    if(T>Tmax){ Tmax=T; govIdx=i; } });
-  var ok2=(Tmax<0.5), govF=modes[govIdx].f_Hz, govLbl=modes[govIdx].label||'—';
-  var Tstr=isFinite(Tmax)?(_rF(Tmax*100,1)+'%'):'∞';
+  // ── Kriter 2: Rölanti iletilebilirliği — TABAN: DÜŞEY (bounce) frekansı ──
+  // Tahrik düşeydir; SDOF bağıntısına konacak f_nat da güç grubunun düşey
+  // kütle-yay frekansı olmalıdır (bkz. çekirdek bounceFrequency yorumu).
+  // Modal frekanslar bu bağıntının tabanı DEĞİLDİR — aşağıda yalnız bağlam
+  // (tanı) olarak gösterilir.
+  var iso=_mntRepIsolation(R, opts);
+  var fB=iso.fBounce, Tiso=iso.T, ok2=(Tiso<0.5);
+  var Tstr=isFinite(Tiso)?(_rF(Tiso*100,1)+'%'):'∞';
+  // Tanı: modal bant ve bounce frekansının bant içindeki yeri.
+  var fLo=modes[0].f_Hz, fHi=modes[modes.length-1].f_Hz;
 
   var h='<h3>8.8 Adım 8 — Frekans yerleşimi ve iletilebilirlik</h3>';
   h+='<p>Dört zamanlı motorun rölanti ateşleme frekansı \\( f_{\\text{ateş}}=\\dfrac{N}{60}\\cdot\\dfrac{z}{2} \\); '
@@ -764,16 +792,27 @@ function _mntRepFreqPlacement(R, opts){
          : '<b>ÜZERİNDEDİR</b> (f_ateş/f_roll = '+_rF(r1,2)+' &lt; 2) — %50 kriterini karşılamıyor; takoz dinamik rijitliklerini düşürmek (mod bandını aşağı taşımak) önerilir.';
   h+='</div>';
 
+  // İzolasyon tabanı — düşey frekans, modal bant içindeki yeri
+  h+='<p>İletilebilirlik <strong>düşey (bounce) doğal frekansı</strong> üzerinden değerlendirilir; '
+    +'tahrik düşey olduğundan tek-serbestlik bağıntısının tabanı budur:</p>';
+  h+='$$ f_{\\text{bounce}}=\\frac{1}{2\\pi}\\sqrt{\\frac{\\sum k_{z,\\text{din}}}{m}}='
+    +_rF(fB,2)+'\\ \\text{Hz},\\qquad r=\\frac{f_{\\text{ateş}}}{f_{\\text{bounce}}}='+_rF(iso.r,2)+' $$';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Rijit gövde modları '+_rF(fLo,2)+'–'+_rF(fHi,2)+' Hz bandındadır. '
+    +'Bounce modu simetrik yerleşimde tam ayrışır; asimetride pitch ile kuplajlanıp iki moda bölünür ve '
+    +'\\( f_{\\text{bounce}} \\) aralarına düşer — bu modelde '+(fB>fLo&&fB<fHi?'öyledir':'bandın dışındadır, yerleşim gözden geçirilmelidir')+'.</p>';
+
   // Kriter 2 rozeti
   var cls2=ok2?'check':'warn';
   h+='<div class="note '+cls2+'"><span class="t">'+(ok2?'Uygun':'Dikkat')+' · Kriter 2 — Rölanti iletilebilirliği &lt; %50</span>';
-  h+='Rölanti ateşlemesinde en belirleyici mod <b>'+_rEsc(govLbl)+' ('+_rF(govF,2)+' Hz)</b> için '
-    +'\\( T=\\sqrt{\\tfrac{1+(2\\zeta r)^2}{(1-r^2)^2+(2\\zeta r)^2}} \\) = <b>'+Tstr+'</b> ';
+  h+='\\( T=\\sqrt{\\tfrac{1+(2\\zeta r)^2}{(1-r^2)^2+(2\\zeta r)^2}} \\) = <b>'+Tstr+'</b> '
+    +'(sönümsüz karşılığı '+(isFinite(iso.T0)?_rF(iso.T0*100,1)+'%':'∞')+') ';
   h+= ok2 ? '&lt; %50 — güç grubu rölantide izole bölgede çalışır.'
-         : '&ge; %50 — izolasyon yetersiz; mod frekansını ateşlemeden uzaklaştırmak (rijitliği düşürmek) veya sönümü artırmak gerekir.';
+         : '&ge; %50 — izolasyon yetersiz; düşey rijitliği düşürmek (f_bounce\'u aşağı taşımak) veya sönümü artırmak gerekir.';
   h+='</div>';
 
-  h+='<p style="font-size:0.9em; color:#5a6270;">Not: iletilebilirlik tek-serbestlik yaklaşımıyla, ateşlemeye en yakın (en yüksek T veren) mod üzerinden hesaplanır. Çok küçük ζ ile sonuç neredeyse tümüyle frekans oranına bağlıdır. Değerlendirme temel ateşleme mertebesine göredir; gerçek rölanti devri, baskın tahrik mertebeleri ve sönüm ölçümüyle teyit edilmelidir.</p>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Not: bu bir <b>tek-serbestlik kestirimidir</b> — güç grubunu düşey yönde tek kütle-yay olarak alır. '
+    +'İzolasyon bölgesinde (r &gt; √2) tam çok-serbestlikli frekans yanıtına yakın sonuç verir; rezonans civarında kullanılmamalıdır. '
+    +'Değerlendirme temel ateşleme mertebesine göredir; gerçek rölanti devri, baskın tahrik mertebeleri ve sönüm ölçümüyle teyit edilmelidir.</p>';
   return h;
 }
 
@@ -925,15 +964,13 @@ function _mntRepCompliance(R, opts){
   if(!haveIdle) c1={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
   else { var lim1=0.5*fFire; c1={st:(fRoll<lim1?'ok':'no'), bulgu:'Roll modu (mod '+modes.length+') <b>'+_rF(fRoll,2)+'</b> Hz · sınır %50·f_ateş = '+_rF(lim1,2)+' Hz'}; }
 
-  // Kriter 2 — Rölanti transmissibility < %50. §8.8 ile AYNI hesap: en yüksek
-  // mod (ateşlemeye en yakın), sönüm oranı ζ (varsayılan 0,001 ≈ sönümsüz).
-  var fMax=modes[modes.length-1].f_Hz, c2;
-  var zeta=_mntRepZeta(R, opts);          // TEK kaynak: Çözücü (R.zeta)
-  var _core=_rMountCore();
+  // Kriter 2 — Rölanti transmissibility < %50. §8.8 ile AYNI hesap noktası
+  // (_mntRepIsolation): taban DÜŞEY (bounce) frekansıdır, modal frekans değil.
+  var iso=_mntRepIsolation(R, opts), c2;
   if(!haveIdle) c2={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
-  else { var rr=fFire/fMax, T=_core?_core.transmissibility(fFire,fMax,zeta):Infinity;
-    c2={st:(T<0.5?'ok':'no'),
-      bulgu:'f_ateş '+_rF(fFire,1)+' Hz / en yüksek mod '+_rF(fMax,2)+' Hz → r='+_rF(rr,2)+', T=<b>'+(isFinite(T)?_rF(T*100,1)+'%':'∞')+'</b> (§8.8)'}; }
+  else c2={st:(iso.T<0.5?'ok':'no'),
+    bulgu:'f_ateş '+_rF(iso.fFire,1)+' Hz / f_bounce '+_rF(iso.fBounce,2)+' Hz → r='+_rF(iso.r,2)
+         +', T=<b>'+(isFinite(iso.T)?_rF(iso.T*100,1)+'%':'∞')+'</b> (§8.8)'};
 
   // Kriter 3 — Vites başına takoz kuvvetleri (§8.9): tanımlı her vites ayrı çözülür.
   var gears=R.gearCases||[], gmax=null;
@@ -969,7 +1006,7 @@ function _mntRepCompliance(R, opts){
   else h+='<b>Tüm hedef kriterler sağlanıyor</b> — güç grubu takoz sistemi şirket motor takozu hedeflerini karşılıyor.';
   if(concern.length) h+=' <span style="color:var(--warn);">Not: '+_rEsc(concern.join(', '))+' durum(lar)ında çekme (lift-off) var — takoz seçimi gözden geçirilmeli.</span>';
   h+='</div>';
-  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Roll modu = en yüksek rijit gövde modu (mod '+(modes.length)+', §8.8). Ateşleme frekansı f_ateş = (N/60)·(z/2). Transmissibility §8.8 formülüyle T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] hesaplanır (ζ varsayılan 0,001; küçük sönümde ≈ sönümsüz). Vites başına kuvvetler §8.9, tasarım yük koşulları (1g yanal dâhil) §8.10\'da ayrıntılıdır.</div>';
+  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Roll modu = en yüksek rijit gövde modu (mod '+(modes.length)+', §8.8). Ateşleme frekansı f_ateş = (N/60)·(z/2). Transmissibility T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] ile, DÜŞEY (bounce) doğal frekansı f_bounce=(1/2π)·√(Σk_z,din/m) tabanında hesaplanır (§8.8); ζ Çözücü\'de girilir. Roll modu Kriter 1\'in konusudur ve iletilebilirlik hesabına GİRMEZ. Vites başına kuvvetler §8.9, tasarım yük koşulları (1g yanal dâhil) §8.10\'da ayrıntılıdır.</div>';
   return h;
 }
 
@@ -1002,6 +1039,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepConsistency: _mntRepConsistency,
     _mntRepDamping: _mntRepDamping,
     _mntRepZeta: _mntRepZeta,
+    _mntRepIsolation: _mntRepIsolation,
     _mntRepEngine: _mntRepEngine,
     _mntRepFindCase: _mntRepFindCase,
     _mntRepCritical: _mntRepCritical,

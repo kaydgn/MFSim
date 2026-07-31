@@ -825,6 +825,39 @@ var veMountCore = (function() {
     return Math.sqrt((1 + a*a) / den);
   }
 
+  // ── İzolasyon değerlendirmesinin TABANI: düşey (bounce) doğal frekansı ──
+  //
+  // transmissibility() TEK serbestlik dereceli bir bağıntıdır: f_nat'ın, tahrik
+  // yönündeki kütle-yay sisteminin doğal frekansı olması gerekir. Motor takozu
+  // izolasyonunda tahrik DÜŞEYDİR (ateşleme kuvveti), dolayısıyla doğru taban
+  // güç grubunun DÜŞEY (bounce) frekansıdır:
+  //
+  //   f_bounce = (1/2π)·√( Σk_z,dyn / m_toplam )
+  //
+  // NEDEN MODAL FREKANS DEĞİL: rijit gövde modlarından biri (ör. roll) SDOF
+  // bağıntısına konursa, o modun frekansı sanki TÜM kütleyi taşıyan bir düşey
+  // yayın frekansıymış gibi işlenir — fiziksel karşılığı yoktur ve izolasyonu
+  // ciddi biçimde olduğundan kötü/iyi gösterebilir.
+  //
+  // GEÇERLİLİK: bounce modu simetrik yerleşimde tam ayrışır (ω²=Σk_z/m); asimetrik
+  // yerleşimde pitch ile kuplajlanıp iki moda bölünür ve bu değer aralarına düşer
+  // (ASFAT 8x8 Obüs: modlar 11,33 ve 13,27 Hz, f_bounce 12,69 Hz — tam ortasında).
+  // Doğrulama: ASR-SR-116 s.12 el hesabı bu tabanla %21,9 / %21,8 (sönümlü/sönümsüz)
+  // veriyor ve ADAMS'ın tam frekans yanıtıyla (%21,9 / %21,8) örtüşüyor.
+  //
+  // NOT: bu SDOF kestirimidir. Tam çok-serbestlikli frekans yanıtı (Şekil 9
+  // eğrisi) ayrı bir adımdır; sönüm matrisi C = ΣAᵀcA ile kurulur.
+  function bounceFrequency(mounts, mTotal){
+    if(!(mTotal > 0)) return NaN;
+    let kz = 0;
+    for(const mnt of (mounts || [])){
+      const k = (mnt.kdyn && mnt.kdyn[2] > 0) ? mnt.kdyn[2] : 0;
+      kz += k;
+    }
+    if(!(kz > 0)) return NaN;
+    return Math.sqrt(kz / mTotal) / (2 * Math.PI);
+  }
+
   // ═══════════════════ Viskoz sönüm (SPEC ek — Faz 4) ═══════════════════
   //
   // Sönüm oranı ζ bir ŞİRKET KABULÜDÜR: takoz başına ölçülmez, tüm montaj için
@@ -1372,7 +1405,7 @@ var veMountCore = (function() {
     combineMassProps, buildK, buildM6, buildModel,
     solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
     buildKtangentDyn, solveModalAtState,
-    transmissibility,
+    transmissibility, bounceFrequency,
     mountLoadShares, mountDamping,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
