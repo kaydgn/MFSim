@@ -505,6 +505,43 @@
               </svg> <span class="ve-comp-label">Rapor</span></div>
           </div>
 
+          <div class="ve-category" data-ve-scope="mount-analysis">
+            <div class="ve-category-title">PTO Grubu</div>
+            <div class="ve-component" draggable="true" data-type="mnt-pto" title="PTO (kuyruk mili) — güç grubuna civatalanan yardımcı kütle: kütle + CG. Parça ataleti verilmiyorsa nokta kütle bırakın; yayılımın ataleti birleştirmede otomatik oluşur.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <g stroke="currentColor" stroke-width="7" stroke-linecap="round">
+                  <line x1="32" y1="15" x2="32" y2="25"/>
+                  <line x1="32" y1="75" x2="32" y2="85"/>
+                  <line x1="7" y1="50" x2="17" y2="50"/>
+                  <line x1="14" y1="32" x2="21" y2="39"/>
+                  <line x1="14" y1="68" x2="21" y2="61"/>
+                  <line x1="50" y1="32" x2="43" y2="39"/>
+                  <line x1="50" y1="68" x2="43" y2="61"/>
+                </g>
+                <circle cx="32" cy="50" r="18" fill="none" stroke="currentColor" stroke-width="6"/>
+                <circle cx="32" cy="50" r="4" fill="currentColor"/>
+                <line x1="52" y1="50" x2="78" y2="50" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+                <line x1="84" y1="36" x2="84" y2="64" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+              </svg> <span class="ve-comp-label">PTO</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-pump" title="Pompa — PTO'dan tahrikli pompa kütlesi: kütle + CG. Her pompa ayrı bileşen olarak eklenebilir.">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <line x1="10" y1="50" x2="30" y2="50" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+                <circle cx="57" cy="50" r="26" fill="none" stroke="currentColor" stroke-width="6"/>
+                <polygon points="48,37 48,63 71,50" fill="currentColor"/>
+                <line x1="57" y1="24" x2="57" y2="10" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+                <line x1="57" y1="76" x2="57" y2="90" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+              </svg> <span class="ve-comp-label">Pompa</span></div>
+            <div class="ve-component" draggable="true" data-type="mnt-pto-group" title="PTO Toplam — tüm PTO grubunu (kuyruk mili + pompalar) TEK kalemde gir: grup kütlesi + grup CG'si + grup ataleti. Ayrı PTO/Pompa bileşenleriyle birlikte kullanılmaz (kütle iki kez sayılır).">
+              <svg width="18" height="18" viewBox="0 0 100 100" style="vertical-align:middle; margin-right:4px;">
+                <text x="50" y="21" text-anchor="middle" font-size="24" font-weight="700" fill="currentColor">&#931;</text>
+                <rect x="7" y="28" width="86" height="57" rx="10" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="9 6"/>
+                <circle cx="28" cy="56" r="13" fill="none" stroke="currentColor" stroke-width="5"/>
+                <circle cx="28" cy="56" r="4" fill="currentColor"/>
+                <circle cx="58" cy="56" r="10" fill="currentColor" opacity="0.65"/>
+                <circle cx="79" cy="56" r="8" fill="currentColor" opacity="0.4"/>
+              </svg> <span class="ve-comp-label">PTO Toplam</span></div>
+          </div>
+
           <div class="ve-category ve-category-tools" data-always-visible="true">
             <div class="ve-category-title">Araçlar</div>
             <div class="ve-annotation-tool ve-component" draggable="true" data-annotation-type="frame">
