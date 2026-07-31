@@ -26,9 +26,32 @@ var FT_SOLVER = (function() {
   // 1. PCHIP SPLINE İNTERPOLASYON
   // ═══════════════════════════════════════════════════════════════════════════
 
-  function pchipCreate(xs, ys) {
+  function pchipCreate(xs, ys, label) {
     var n = xs.length;
-    if(n < 2) throw new Error('PCHIP: en az 2 veri noktası gerekli');
+    var who = label ? (label + ' — ') : 'PCHIP: ';
+    if(n < 2) throw new Error(who + 'en az 2 veri noktası gerekli');
+    // xs KESİN ARTAN, tüm değerler SONLU olmalı.
+    //
+    // Neden burada patlıyoruz (sessiz NaN yerine): yinelenen bir x — örneğin motor
+    // tork tablosuna iki kez girilmiş aynı devir — hs[i]=0 yapar, deltas'ta 0/0
+    // oluşur ve ds[] üzerinden spline'ın TAMAMI NaN'a düşer (yalnız o satır değil).
+    // O NaN çözücüde SESSİZCE yayılır: NaN karşılaştırmaları hep false döndüğü
+    // için ne düşük-dal taramasının break'leri (satır ~995) ne de ana döngünün
+    // maks-hız erken çıkışı (satır ~1650) tetiklenebilir. Sonuç: koşum 300 s
+    // güvenlik limitine kadar, her fizik çağrısında tam tarama yaparak sürer.
+    // Ölçüm (RK4, dt=0.01, iki transfer kademesi): temiz veri 0.4 s → yinelenen
+    // devirli veri 248 s. Kullanıcı bunu "program takıldı" olarak görüyor, çünkü
+    // hesap tek senkron blokta ve ilerleme çubuğu boyanamıyor.
+    for(var _v = 0; _v < n; _v++) {
+      if(!isFinite(xs[_v]) || !isFinite(ys[_v])) {
+        throw new Error(who + 'sayısal olmayan veri noktası (satır ' + (_v + 1) +
+                        ': x=' + xs[_v] + ', y=' + ys[_v] + ')');
+      }
+      if(_v > 0 && xs[_v] <= xs[_v - 1]) {
+        throw new Error(who + 'x değerleri kesin artan olmalı — yinelenen/azalan değer: ' +
+                        xs[_v] + ' (satır ' + (_v + 1) + ')');
+      }
+    }
     if(n === 2) {
       var slope = (ys[1] - ys[0]) / (xs[1] - xs[0]);
       return { xs: xs, ys: ys, ds: [slope, slope] };
@@ -104,7 +127,7 @@ var FT_SOLVER = (function() {
     var sorted = torqueData.slice().sort(function(a, b) { return a.rpm - b.rpm; });
     var rpms = sorted.map(function(d) { return d.rpm; });
     var torques = sorted.map(function(d) { return d.torque; });
-    var spline = pchipCreate(rpms, torques);
+    var spline = pchipCreate(rpms, torques, 'Motor tork tablosu');
     var tableMaxRpm = rpms[rpms.length - 1];   // tablo verisinin en yüksek devri
 
     return function(rpm) {
@@ -138,8 +161,8 @@ var FT_SOLVER = (function() {
     var srs = sorted.map(function(d) { return d.sr; });
     var kps = sorted.map(function(d) { return d.kpump; });
     var taus = sorted.map(function(d) { return d.tau; });
-    var spKp = pchipCreate(srs, kps);
-    var spTau = pchipCreate(srs, taus);
+    var spKp = pchipCreate(srs, kps, 'Konvertör tablosu (K-faktör)');
+    var spTau = pchipCreate(srs, taus, 'Konvertör tablosu (tork oranı τ)');
 
     return {
       kpump: function(sr) { return pchipEval(spKp, Math.max(0, Math.min(0.99, sr))); },
@@ -989,6 +1012,11 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         var _kpS = tcFns.kpump(_srS);
         var _eS = motorTorqueFn(_nS) - pumpTorqueDrop - (_nS * _nS) / (_kpS * _kpS);
         if(_scanRows) _scanRows.push({ N: _nS, SR: _srS, kpump: _kpS, excess: _eS });
+        // NaN KALKANI: _eS sonlu değilse aşağıdaki üç karşılaştırma da false döner
+        // ve tarama hiç kırılmadan tam sweep (motora göre ~214 iterasyon) yapar.
+        // Bu, ölçülen donmanın %98'inin kaynağıydı. Sonlu değilse hemen çık —
+        // asıl teşhis zaten pchipCreate'in attığı adresli hatadan geliyor.
+        if(!isFinite(_eS)) { onLowBranch = false; break; }
         if(_eS < _lmE) { _lmE = _eS; _lmN = _nS; }
         if(_eS <= 0) { onLowBranch = true; break; }       // GERÇEK denge: excess ilk ≤0 geçişi → o noktada (_lmN) tut
         if(_eS > _prevE) { onLowBranch = false; break; }  // sığ pozitif vadi (near-hang) — düşük denge yok → yüksek dala
@@ -1228,8 +1256,16 @@ function veFTRunSimulationEngine(transferRangeOverride) {
                     : (!tcNode ? _noTcLaunchStall : idleRpm);   // MOTOR DEVRİ — dinamik durum
   var dist = 0;    // m
   var step = 0;
+  // Adım bütçesi. Sabit adımlı yöntemlerde maxTime/dt tam doğru sayıdır.
+  // RK45'te DEĞİL: adaptif adım kalkışta dt'yi dt_min'e (1e-5) kadar küçültüyor,
+  // bu yüzden başlangıç dt'sinden hesaplanan bütçe koşumu SESSİZCE erken kesiyordu
+  // (ölçüm: limit 30 s iken yalnız 0.71 s simüle edilip "tamamlandı" gibi
+  // döndürülüyordu). Gerçek sonlandırıcı ana döngüdeki `t >= maxTime` koşulu;
+  // buradaki sayaç yalnız kaçak korumasıdır → RK45'e bol bütçe ver.
   var maxSteps = Math.ceil(maxTime / dt);
+  if(method === 'rk45') maxSteps = Math.min(maxSteps * 50, 2000000);
   var reachedMaxSpeed = false;
+  var truncatedByStepBudget = false;   // adım bütçesi bitti mi (sessiz kalmasın)
 
   // Örnekleme: her adımı kaydetmek çok fazla veri üretir (12000 adım @ 120s/0.01s)
   // Her N adımda bir kayıt al
@@ -1596,8 +1632,24 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
   // ── RK4 Entegrasyon ──
   for(step = 0; step < maxSteps; step++) {
+    // GÜVENLİK LİMİTİ — zaman tabanlı. maxSteps yalnız BAŞLANGIÇ dt'sinden
+    // hesaplanıyor; RK45 dalı dt'yi adım adım büyütebildiği için adım sayacı tek
+    // başına limiti korumuyordu (300 s ayarlıyken 2586 s simüle edilebiliyordu).
+    if(t >= maxTime) break;
+
     // Fizik hesapla (mevcut durumda)
     var ph = calcStepPhysics(v);
+
+    // NaN KALKANI: durum bir kez sonlu olmaktan çıkarsa aşağıdaki hiçbir erken
+    // çıkış koşulu (F_net ≤ 0, |accel| < 0.005) bir daha tetiklenemez — NaN
+    // karşılaştırmaları hep false. Sessizce maxSteps'i yakıp NaN dolu bir sonuç
+    // döndürmek yerine, nerede bozulduğunu söyleyen bir hata at.
+    if(!isFinite(v) || !isFinite(ph.accel)) {
+      throw new Error('Sayısal çözüm bozuldu (adım ' + step + ', t=' + t.toFixed(2) + ' s): ' +
+                      'hız=' + v + ', ivme=' + ph.accel + '. ' +
+                      'Genellikle motor tork tablosu veya konvertör tablosundaki geçersiz/yinelenen ' +
+                      'satırdan kaynaklanır — ilgili bileşenin verisini kontrol edin.');
+    }
 
     // Kayıt (örnekleme aralığında)
     if(step - lastSampleStep >= sampleInterval || step === 0) {
@@ -1665,13 +1717,28 @@ function veFTRunSimulationEngine(transferRangeOverride) {
       dv = (r1 / 4 + r2 * 3/4) * dt;
     } else if(method === 'rk45') {
       // RK45 Dormand-Prince: adaptif adım boyutu
-      var ftAtol = parseFloat(sd.ftAtol) || 1e-6;
-      var ftRtol = parseFloat(sd.ftRtol) || 1e-4;
+      // Toleranslar POZİTİF olmalı. `parseFloat(x) || varsayılan` negatifi elemez
+      // (negatif sayı truthy'dir); tol < 0 iken `err <= tol` asla sağlanmaz ve
+      // Math.pow(negatif, 0.25) = NaN üzerinden dt kalıcı NaN olur → aşağıdaki
+      // kabul döngüsü sonsuza kadar döner.
+      var ftAtol = Math.abs(parseFloat(sd.ftAtol)) || 1e-6;
+      var ftRtol = Math.abs(parseFloat(sd.ftRtol)) || 1e-4;
       var dt_min = 1e-5;
       var dt_max = 0.1;
       var accepted = false;
       var dt_used = dt; // Bu adımda kullanılan dt'yi sakla
+      // Adım-küçültme denemesi için ÜST SINIR. dt_min'e inmek en kötü ihtimalle
+      // ~40 yarılama alır (0.1 → 1e-5, çarpan ≥ 0.2); 100 fazlasıyla yeterli.
+      // Sınır olmadan bu döngü tek gerçek sonsuz döngüydü: err/dt NaN olduğunda
+      // iki çıkış koşulu da (err <= tol, dt <= dt_min) kalıcı olarak false kalır.
+      var rk45Tries = 0;
       while(!accepted) {
+        if(!isFinite(dt) || dt <= 0) dt = dt_min;   // NaN/0 dt'yi tabana çek
+        if(++rk45Tries > 100) {
+          throw new Error('RK45 adaptif adım yakınsamadı (adım ' + step + ', t=' + t.toFixed(2) +
+                          ' s, dt=' + dt + '). Sabit adımlı bir yöntem (RK4) deneyin ya da ' +
+                          'motor/konvertör tablolarını kontrol edin.');
+        }
         // Dormand-Prince katsayıları (Butcher tablosu)
         var dk1 = calcStepPhysics(v).accel;
         var dk2 = calcStepPhysics(v + dk1 * dt / 5).accel;
@@ -1739,6 +1806,14 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     }
   }
 
+  // Adım bütçesi, hedef süreye VARILMADAN ve maks hıza ULAŞILMADAN bittiyse sonuç
+  // eksiktir. Sessizce "tamamlandı" gibi dönmesin — solverStats üzerinden raporlansın.
+  // Bir adımdan fazla geride kaldıysa gerçekten kesilmiştir; kayan nokta birikmesi
+  // yüzünden t'nin maxTime'ın kıl payı altında kalması yanlış uyarı üretmesin.
+  if(step >= maxSteps && t < maxTime - Math.max(dt, 1e-9) && !reachedMaxSpeed) {
+    truncatedByStepBudget = true;
+  }
+
   // Son adımı kaydet (eğer henüz kaydedilmediyse)
   if(timeArr.length === 0 || timeArr[timeArr.length - 1] < t - dt/2) {
     var phFinal = calcStepPhysics(v);
@@ -1781,6 +1856,8 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     events: [],
     shiftHistory: shiftState.shiftHistory,
     reachedMaxSpeed: reachedMaxSpeed,
+    truncatedByStepBudget: truncatedByStepBudget,
+    simEndTime: t,
     maxSpeed_kmh: actualMaxSpeed_kmh,
     finalGear: getCurrentGearData().name,
     transferRange: activeTransfer,
