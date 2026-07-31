@@ -545,13 +545,14 @@ function _mntEngineSection(node){
   return _mntCard('Motor · Tahrik','', 'var(--accent-danger)',
       head
     + _mntGrid(node, [
-        {key:'Te',      label:'Tepe Tork [Nm]', step:'1',   ph:'760'},
-        {key:'TeRpm',   label:'@ Devir [rpm]',  step:'1',   ph:'1500'},
-        {key:'Pmax',    label:'Maks Güç [kW]',  step:'0.1', ph:'156.6'},
-        {key:'PmaxRpm', label:'@ Devir [rpm]',  step:'1',   ph:'2300'},
-        {key:'idleRpm', label:'Rölanti [rpm]',  step:'1',   ph:'800'}
+        {key:'Te',        label:'Tepe Tork [Nm]',  step:'1',   ph:'760'},
+        {key:'TeRpm',     label:'@ Devir [rpm]',   step:'1',   ph:'1500'},
+        {key:'Pmax',      label:'Maks Güç [kW]',   step:'0.1', ph:'156.6'},
+        {key:'PmaxRpm',   label:'@ Devir [rpm]',   step:'1',   ph:'2300'},
+        {key:'idleRpm',   label:'Rölanti [rpm]',   step:'1',   ph:'800'},
+        {key:'cylinders', label:'Silindir sayısı', step:'1',   ph:'6'}
       ], 3)
-    + _mntHint('Tork yük durumları <b>Tepe Tork</b> değerinden türetilir; devir/güç bilgi amaçlıdır. Katalogdan gelen değerler elle düzenlenebilir.'));
+    + _mntHint('Tork yük durumları <b>Tepe Tork</b> değerinden türetilir. <b>Rölanti devri + silindir sayısı</b> raporun ateşleme frekansını verir: f<sub>ateş</sub> = (N/60)·(z/2) — Kriter 1 ve iletilebilirlik bunun üzerine kurulur. Silindir sayısı katalogda yoktur, elle girilir.'));
 }
 function _mntGearboxSection(node){
   return _mntCard('Şanzıman · Vites Oranları','', 'var(--accent-danger)',
@@ -2386,8 +2387,12 @@ function _mntLibCurveEditor(node, e){
 // Tork zinciri girdilerini (Te / vites / transfer / aks payı) kütle
 // gövdelerinden konumdan bağımsız topla — hangi bileşende girildiği fark etmez
 // (ilk tanımlı değer geçerli). Motor→Te, Şanzıman→vites+stall, Transfer→oran+φ.
+// Tahrik/motor büyüklüklerini kütle gövdelerinden topla (ilk tanımlı değer kazanır).
+// idleRpm + cylinders motorun ÖZELLİĞİDİR: buradan toplanıp rapora akar; raporun
+// ateşleme frekansı f_ateş=(N/60)·(z/2) bu ikisine dayanır.
 function _mntGatherTorque(){
-  var keys=['Te','Rstall','g1','g2','g3','g4','g5','g6','gR','iTransfer','phiFwd','phiRev','derate'];
+  var keys=['Te','Rstall','g1','g2','g3','g4','g5','g6','gR','iTransfer','phiFwd','phiRev','derate',
+            'idleRpm','cylinders'];
   var t={};
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
     if(!(_mntDef(n)||{}).isMountBody) return;

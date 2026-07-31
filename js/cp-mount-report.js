@@ -39,6 +39,23 @@ function _rFs(v, d){
 }
 function _rMountCore(){ return (typeof veMountCore!=='undefined')?veMountCore:(typeof window!=='undefined'?window.veMountCore:null); }
 
+// Raporun kullanacağı MOTOR büyüklükleri (ateşleme frekansı için). Rölanti devri
+// ve silindir sayısı motorun özelliğidir → TEK kaynak Motor bileşenidir; çözümle
+// birlikte R.gather.torque içinde gelir. Eski projelerde bu ikisi Rapor düğümünde
+// tutuluyordu → o değerler yalnız YEDEK olarak okunur.
+// Dönüş: { idleRpm, cylinders, fromMotor:bool }  (bilinmeyen alan NaN)
+function _mntRepEngine(R, opts){
+  opts = opts || {};
+  var tq = (R && R.gather && R.gather.torque) || {};
+  var mRpm = Number(tq.idleRpm), mCyl = Number(tq.cylinders);
+  var rpm = (Number.isFinite(mRpm) && mRpm > 0) ? mRpm : Number(opts.idleRpm);
+  var cyl = (Number.isFinite(mCyl) && mCyl > 0) ? mCyl : Number(opts.cylinders);
+  return {
+    idleRpm: rpm, cylinders: cyl,
+    fromMotor: (Number.isFinite(mRpm) && mRpm > 0) || (Number.isFinite(mCyl) && mCyl > 0)
+  };
+}
+
 // Raporun kullanacağı sönüm oranı. TEK kaynak Çözücü'dür (R.zeta). Eski
 // projelerde ζ Rapor düğümünde tutuluyordu → o değer yalnız YEDEK olarak
 // okunur; ikisi de yoksa çekirdek varsayılanına düşülür.
@@ -66,22 +83,28 @@ function getMntReportPropertiesHTML(node){
     html+='<div style="padding:8px 10px; margin-bottom:10px; font-size:var(--fs-tiny); background:var(--bg-tertiary); border:1px solid var(--border-color); color:var(--text-primary);">'
         + '<span style="color:var(--accent-success); font-weight:700;">✓ Model çözüldü</span> — '
         + nC+' bileşen · '+nM+' takoz. Rapor güncel çözüme göre üretilir.</div>';
-    // Frekans yerleşimi (opsiyonel) — doldurulursa rapora §8.7 eklenir.
-    var inpSt='width:100%; padding:4px 6px; margin-top:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); text-align:right;';
+    // Frekans yerleşimi & izolasyon girdileri BURADA GİRİLMEZ — her biri ait
+    // olduğu bileşenin özelliğidir ve çözümle birlikte rapora akar:
+    //   rölanti devri + silindir sayısı → Motor   (R.gather.torque)
+    //   sönüm oranı ζ                   → Çözücü  (R.zeta)
+    // Aynı sayının iki yerde girilip birbirinden sapması bir hata kaynağıydı;
+    // panel artık yalnız YÜRÜRLÜKTEKİ değeri ve nereden geldiğini gösterir.
+    var _eng=_mntRepEngine(_veMntLast, node.data);
+    var _zt =_mntRepZeta(_veMntLast, node.data);
+    var _val=function(v,dg,unit){ return (Number.isFinite(v)&&v>0)
+        ? '<b style="color:var(--text-primary);">'+_rF(v,dg)+(unit||'')+'</b>'
+        : '<b style="color:var(--accent-warning);">girilmedi</b>'; };
+    var _fFire=(_eng.idleRpm>0 && _eng.cylinders>0) ? (_eng.idleRpm/60)*(_eng.cylinders/2) : NaN;
     html+='<div style="margin:0 0 10px; padding:9px 10px; background:var(--bg-secondary); border:1px solid var(--border-color);">'
-        + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading);">Frekans yerleşimi & izolasyon <span style="font-weight:400; color:var(--text-muted);">(opsiyonel)</span></div>'
-        + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin:3px 0 6px;">Doldurulursa rapora §8.8 eklenir: ateşleme frekansı (f<sub>ateş</sub>), Kriter 1 (roll modu &lt; %50 f<sub>ateş</sub>) ve Kriter 2 (rölanti iletilebilirliği &lt; %50).</div>'
-        + '<div style="display:flex; gap:8px;">'
-        +   '<label style="flex:1; font-size:var(--fs-micro); color:var(--text-secondary);">Rölanti [d/dk]<input type="number" min="0" step="10" value="'+_rEsc(node.data.idleRpm==null?'':node.data.idleRpm)+'" placeholder="ör: 650" onchange="veMntSet(\''+node.id+'\',\'idleRpm\',this.value)" style="'+inpSt+'"></label>'
-        +   '<label style="flex:1; font-size:var(--fs-micro); color:var(--text-secondary);">Silindir sayısı<input type="number" min="1" step="1" value="'+_rEsc(node.data.cylinders==null?'':node.data.cylinders)+'" placeholder="ör: 6" onchange="veMntSet(\''+node.id+'\',\'cylinders\',this.value)" style="'+inpSt+'"></label>'
-        + '</div>'
-        // ζ artık burada DEĞİL: tüm montaj için tek şirket kabulü olarak Çözücü'de
-        // girilir ve çözümle birlikte rapora akar (R.zeta). İki yerde girilip
-        // birbirinden sapmasın diye alan kaldırıldı.
-        + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:6px; padding-top:6px; border-top:1px solid var(--border-color);">'
-        +   'Sönüm oranı <b style="color:var(--text-secondary);">ζ = '+_rF(_mntRepZeta(_veMntLast, {}),3)+'</b> '
-        +   '<b>Çözücü</b> bileşeninden gelir (tüm takozlar için tek değer). Değiştirmek için Çözücü panelini kullanın.</div>'
-        + '</div>';
+        + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading);">Frekans yerleşimi &amp; izolasyon</div>'
+        + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin:3px 0 7px;">Bu değerler girilmişse rapora §8.8 eklenir: ateşleme frekansı (f<sub>ateş</sub>), Kriter 1 ve Kriter 2.</div>'
+        + '<div style="display:flex; flex-direction:column; gap:4px; font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.5;">'
+        +   '<div>Rölanti devri '+_val(_eng.idleRpm,0,' d/dk')+' · Silindir '+_val(_eng.cylinders,0,'')+' <span style="color:var(--text-muted);">← <b>Motor</b> bileşeni</span></div>'
+        +   '<div>Sönüm oranı ζ = <b style="color:var(--text-primary);">'+_rF(_zt,3)+'</b> <span style="color:var(--text-muted);">← <b>Çözücü</b> bileşeni</span></div>'
+        +   (Number.isFinite(_fFire)
+              ? '<div style="color:var(--text-muted);">f<sub>ateş</sub> = (N/60)·(z/2) = <b style="color:var(--text-primary);">'+_rF(_fFire,1)+' Hz</b></div>'
+              : '<div style="color:var(--accent-warning);">Ateşleme frekansı hesaplanamıyor — Motor bileşenine rölanti devri ve silindir sayısını girin (§8.8 atlanır).</div>')
+        + '</div></div>';
     html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
   } else {
     html+='<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
@@ -707,7 +730,8 @@ function _mntRepModeMatrix(modes){
 // Kriter 2: Rölantide iletilebilirlik (transmissibility) < %50 (en kötü mod belirleyici).
 function _mntRepFreqPlacement(R, opts){
   opts=opts||{};
-  var rpm=Number(opts.idleRpm), z=Number(opts.cylinders);
+  var _eng=_mntRepEngine(R, opts);        // TEK kaynak: Motor bileşeni
+  var rpm=_eng.idleRpm, z=_eng.cylinders;
   var zeta=_mntRepZeta(R, opts);          // TEK kaynak: Çözücü (R.zeta)
   var modes=R.modes||[];
   if(!(rpm>0 && z>0) || !modes.length) return '';   // girdi yoksa bölümü atla
@@ -887,9 +911,10 @@ function _mntRepCompliance(R, opts){
   opts=opts||{};
   var modes=R.modes||[];
   var h='<h2 id="uygunluk"><span class="no">✓</span>Motor Takozu Uygunluğu</h2>';
-  h+='<p>Bu bölüm, §8 analiz sonuçlarını <strong>şirket motor takozu hedef kriterlerine</strong> göre değerlendirir. Roll modu ve rölanti izolasyon kriterleri, motor rölanti devri ve silindir sayısı girdisine bağlıdır (Rapor panelinden girilir).</p>';
+  h+='<p>Bu bölüm, §8 analiz sonuçlarını <strong>şirket motor takozu hedef kriterlerine</strong> göre değerlendirir. Roll modu ve rölanti izolasyon kriterleri, motor rölanti devri ve silindir sayısı girdisine bağlıdır (<strong>Motor</strong> bileşeninden girilir).</p>';
   if(!modes.length){ return h+'<div class="note warn"><span class="t">Değerlendirilemedi</span>Modal sonuç yok — çözüm üretilemedi.</div>'; }
-  var rpm=Number(opts.idleRpm), z=Number(opts.cylinders);
+  var _eng=_mntRepEngine(R, opts);        // TEK kaynak: Motor bileşeni
+  var rpm=_eng.idleRpm, z=_eng.cylinders;
   var haveIdle=(rpm>0 && z>0), fFire=haveIdle?(rpm/60)*(z/2):NaN;
 
   // Kriter 1 — PowerPack Roll modu < %50·f_ateş. Roll modu = EN YÜKSEK rijit
@@ -897,7 +922,7 @@ function _mntRepCompliance(R, opts){
   // budur (§8.8 hesabı ve tasarım tanımıyla tutarlı).
   var rollM=modes[modes.length-1];
   var fRoll=rollM?rollM.f_Hz:NaN, c1;
-  if(!haveIdle) c1={st:'wait', bulgu:'Motor rölanti devri + silindir sayısı girin (Rapor paneli)'};
+  if(!haveIdle) c1={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
   else { var lim1=0.5*fFire; c1={st:(fRoll<lim1?'ok':'no'), bulgu:'Roll modu (mod '+modes.length+') <b>'+_rF(fRoll,2)+'</b> Hz · sınır %50·f_ateş = '+_rF(lim1,2)+' Hz'}; }
 
   // Kriter 2 — Rölanti transmissibility < %50. §8.8 ile AYNI hesap: en yüksek
@@ -905,7 +930,7 @@ function _mntRepCompliance(R, opts){
   var fMax=modes[modes.length-1].f_Hz, c2;
   var zeta=_mntRepZeta(R, opts);          // TEK kaynak: Çözücü (R.zeta)
   var _core=_rMountCore();
-  if(!haveIdle) c2={st:'wait', bulgu:'Motor rölanti devri + silindir sayısı girin'};
+  if(!haveIdle) c2={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
   else { var rr=fFire/fMax, T=_core?_core.transmissibility(fFire,fMax,zeta):Infinity;
     c2={st:(T<0.5?'ok':'no'),
       bulgu:'f_ateş '+_rF(fFire,1)+' Hz / en yüksek mod '+_rF(fMax,2)+' Hz → r='+_rF(rr,2)+', T=<b>'+(isFinite(T)?_rF(T*100,1)+'%':'∞')+'</b> (§8.8)'}; }
@@ -940,7 +965,7 @@ function _mntRepCompliance(R, opts){
   var sts=[c1.st,c2.st,c3.st,c4.st], anyNo=sts.indexOf('no')>=0, anyWait=sts.indexOf('wait')>=0;
   h+='<div class="note '+(anyNo?'warn':(anyWait?'':'check'))+'"><span class="t">Genel hüküm</span>';
   if(anyNo) h+='Bir veya daha fazla kriter <b>sağlanmıyor / kontrol gerektiriyor</b>; ilgili satırları ve §8 ayrıntısını inceleyin.';
-  else if(anyWait) h+='Kuvvet ve yükleme kriterleri sağlanıyor; roll modu ve transmissibility için motor rölanti devri + silindir sayısı girin (Rapor paneli) → tam değerlendirme.';
+  else if(anyWait) h+='Kuvvet ve yükleme kriterleri sağlanıyor; roll modu ve transmissibility için <b>Motor</b> bileşenine rölanti devri + silindir sayısı girin → tam değerlendirme.';
   else h+='<b>Tüm hedef kriterler sağlanıyor</b> — güç grubu takoz sistemi şirket motor takozu hedeflerini karşılıyor.';
   if(concern.length) h+=' <span style="color:var(--warn);">Not: '+_rEsc(concern.join(', '))+' durum(lar)ında çekme (lift-off) var — takoz seçimi gözden geçirilmeli.</span>';
   h+='</div>';
@@ -977,6 +1002,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepConsistency: _mntRepConsistency,
     _mntRepDamping: _mntRepDamping,
     _mntRepZeta: _mntRepZeta,
+    _mntRepEngine: _mntRepEngine,
     _mntRepFindCase: _mntRepFindCase,
     _mntRepCritical: _mntRepCritical,
     _mntRepCaseTr: _mntRepCaseTr,
