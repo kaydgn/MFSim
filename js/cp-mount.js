@@ -41,14 +41,20 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // 57RS313773 ve 57RS313774 kodları İKİ AYRI kaynakta, İKİ AYRI takoz için
 // geçiyor (kullanıcı teyidi: kodlar aynı olsa da farklı takozlardır). Bu yüzden
 // her biri AYRI girdi olarak tutulur; hangisinin kullanılacağına kullanıcı
-// açılır listede karar verir. Girdi adları kaynağı taşır.
+// açılır listede karar verir. Girdi adı KOD + KAYNAK taşır — başka bir şey değil.
 //
-//   kaynak       | kod        | etiket | statik x/y/z    | dinamik x/y/z
-//   -------------|------------|--------|-----------------|-----------------
-//   A26          | 57RS313773 | ÖN     |  334/ 334/2300  |  435/ 435/3000
-//   A26          | 57RS313774 | ARKA   | 1200/1200/2400  |  950/ 950/1900
-//   ASR-SR-116   | 57RS313773 | ARKA   |  462/ 462/2200  |  630/ 630/3000
-//   ASR-SR-116   | 57RS313774 | ÖN     | 1045/1045/1800  | 1045/1045/1800
+//   kaynak       | kod        | statik x/y/z    | dinamik x/y/z
+//   -------------|------------|-----------------|-----------------
+//   A26          | 57RS313773 |  334/ 334/2300  |  435/ 435/3000
+//   A26          | 57RS313774 | 1200/1200/2400  |  950/ 950/1900
+//   ASR-SR-116   | 57RS313773 |  462/ 462/2200  |  630/ 630/3000
+//   ASR-SR-116   | 57RS313774 | 1045/1045/1800  | 1045/1045/1800
+//
+// ÖN/ARKA gibi KONUM etiketleri girdi adına KONMAZ: bir takozun ön mü arka mı
+// olduğu takozun değil, monte edildiği yerin özelliğidir — araçtan araca
+// değişir. Konum, takoz düğümünün kendi adıyla (customName) ifade edilir.
+// (Kaynak dokümanlardaki roller kayıt olsun diye: A26'da 773=ön, 774=arka;
+//  ASR-SR-116'da tersi. Bu yalnız köken bilgisidir, koda girmez.)
 //
 // A26 satırları powerpack_mount_analysis_A26.html'den birebir port edilmiştir.
 // ASR-SR-116 satırları BMC "ASFAT 8x8 OBUS Takoz Seçimi" (04.08.2021) Tablo 9'dur;
@@ -60,10 +66,10 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // kaynak '-sr116' sonekiyle eklenir. Yalnız görünen ad kaynağı belirtir.
 var VE_MOUNT_LIBRARY = {
   'amc55sha':         { name:'AMC 55 ShA',                       sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
-  '57RS313773':       { name:'ÖN - 57RS313773 (A26)',            sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
-  '57RS313774':       { name:'ARKA - 57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
-  '57RS313773-sr116': { name:'ARKA - 57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
-  '57RS313774-sr116': { name:'ÖN - 57RS313774 (ASR-SR-116)',     sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
+  '57RS313773':       { name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
+  '57RS313774':       { name:'57RS313774 (A26)',          sx:1200, sy:1200, sz:2400, dx:950,  dy:950,  dz:1900 },
+  '57RS313773-sr116': { name:'57RS313773 (ASR-SR-116)',   sx:462,  sy:462,  sz:2200, dx:630,  dy:630,  dz:3000 },
+  '57RS313774-sr116': { name:'57RS313774 (ASR-SR-116)',   sx:1045, sy:1045, sz:1800, dx:1045, dy:1045, dz:1800 },
   // TK035 · 57RS328045 · 35 ShA — MLMT-0216-33-TK035 (curve-fit, R²≈0.997)
   'TK035': { name:'TK035 (57RS328045)', sx:415, sy:210, sz:192, dx:535, dy:250, dz:230,
     fits:{
