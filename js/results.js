@@ -4637,8 +4637,10 @@ function veRenderSlotPicker(slotIdx) {
     if(lead) {
       h += '<div class="ve-slot-empty-text">Grafik çizebilmek için önce simülasyonu çalıştırın.</div>';
       if(canRun) {
+        // Düğme hesabı başlatmıyor, Çözücü bileşenini açıyor (veSolverRun) —
+        // etiket de bunu söylesin; "Çalıştır" yazıp panel açmak yanıltıyordu.
         h += '<button class="ve-slot-empty-btn" onclick="veSolverRun()">';
-        h += '<span class="mf-ico mf-ico-play"></span> Simülasyonu Çalıştır</button>';
+        h += '<span class="mf-ico mf-ico-play"></span> Çözücüyü Aç</button>';
         h += '<div class="ve-slot-empty-hint">Eksik varsa Uyarılar panelinde listelenir.</div>';
       }
     }
