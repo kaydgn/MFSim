@@ -476,6 +476,81 @@ describe('Örnek bileşeni', () => {
     expect(html).toContain('BMC Siper');
     expect(html).toContain('<svg');
   });
+  test('TULGA örneği: 8 kütle + 5 takoz, 788.4 kg, tork zincirinden yük durumları', () => {
+    const ex = core.getMountExample('tulga');
+    expect(ex.vehicle).toBe('TULGA');
+    expect(ex.topology).toBe('assets/examples/tulga_topoloji.json');
+    const m = ex.model;
+    expect(m.components).toHaveLength(8);
+    expect(m.mounts).toHaveLength(5);
+    // toplam kütle: 418 + 162 + 184 + 3.7 + 3.7 + 3.5 + 3.5 + 10
+    expect(m.components.reduce((s, c) => s + c.mass, 0)).toBeCloseTo(788.4, 2);
+    // braketler nokta kütle; ana gövdeler atalet tensörü taşır
+    expect(m.components.filter(c => c.pointMass)).toHaveLength(5);
+    expect(m.components.slice(0, 3).every(c => c.Ixx > 0 && c.Iyy > 0 && c.Izz > 0)).toBe(true);
+    // gövde tipleri açıkça verilir (ad tahminine bırakılmaz)
+    expect(m.components.map(c => c.kind)).toEqual([
+      'mnt-motor', 'mnt-gearbox', 'mnt-transfer',
+      'mnt-bracket', 'mnt-bracket', 'mnt-bracket', 'mnt-bracket', 'mnt-bracket']);
+    // takozlar TEK rijitlikte değil (ön 290, orta 242, arka 192 N/mm düşey)
+    expect([...new Set(m.mounts.map(x => x.kstat[2]))].sort((a, b) => a - b)).toEqual([192, 242, 290]);
+    // her gövde/takoz at:[lx,ly] taşır → önizleme ile kurulan kanvas örtüşür
+    expect(m.components.every(c => Array.isArray(c.at) && c.at.length === 2)).toBe(true);
+    expect(m.mounts.every(x => Array.isArray(x.at) && x.at.length === 2)).toBe(true);
+    // tork durumları elle yazılmadı: Tx = −T_shaft (ileri negatif, geri pozitif)
+    const t = m.torque, chain = d => t.Te * t.Rstall * d.iGear * t.iTransfer * d.phiAxle * t.derate;
+    const fwd = m.loadCases.find(c => c.name === 'Forward Torque');
+    const rev = m.loadCases.find(c => c.name === 'Reverse Torque');
+    expect(fwd.T[0]).toBeCloseTo(-chain(t.fwd), 6);
+    expect(rev.T[0]).toBeCloseTo(-chain(t.rev), 6);
+    expect(fwd.T[0]).toBeLessThan(0);
+    expect(rev.T[0]).toBeGreaterThan(0);
+    // tork dışı durumlar defaultLoadCases ile aynı kalır (mutasyon yok)
+    expect(m.loadCases.find(c => c.name === 'Static').T).toEqual([0, 0, 0]);
+    expect(core.defaultLoadCases().find(c => c.name === 'Forward Torque').T).toEqual([0, 0, 0]);
+    // görsel yok → panel otomatik şemaya düşer (kırık <img> basılmaz)
+    expect(ex.image).toBe('');
+    const html = cp.getMntExamplePropertiesHTML({ id: 'e', type: 'mnt-example', data: { exampleKey: 'tulga' } });
+    expect(html).toContain('TULGA');
+    expect(html).toContain('<svg');
+    expect(html).not.toContain('<img');
+  });
+  test('TULGA: yayınlanan JSON topolojisi kayıt defterindeki modelle birebir', () => {
+    // Bu iki kaynak AYRI dosyalarda yaşıyor; biri elle güncellenip diğeri
+    // unutulursa panel bir şey, "Örneği Aktar" başka bir model kurar.
+    const topo = require('../../assets/examples/tulga_topoloji.json');
+    const m = core.getMountExample('tulga').model;
+    expect(topo.format).toBe('mfsim-mount-example');
+    const num = v => Number(v);
+    const bodies = topo.nodes.filter(n => /^mnt-(motor|gearbox|transfer|bracket|shaft)$/.test(n.type));
+    const mounts = topo.nodes.filter(n => n.type === 'mnt-mount');
+    expect(bodies).toHaveLength(m.components.length);
+    expect(mounts).toHaveLength(m.mounts.length);
+    // kütle ve CG'ler (JSON'da string, modelde sayı) — sıra JSON düğüm sırasıyla aynı
+    bodies.forEach((n, i) => {
+      const c = m.components[i];
+      expect(n.type).toBe(c.kind);
+      expect(num(n.data.mass)).toBeCloseTo(c.mass, 6);
+      expect([num(n.data.cgx), num(n.data.cgy), num(n.data.cgz)]).toEqual(c.cg);
+      expect(!!n.data.pointMass).toBe(!!c.pointMass);
+    });
+    mounts.forEach((n, i) => {
+      const x = m.mounts[i];
+      expect([num(n.data.x), num(n.data.y), num(n.data.z)]).toEqual(x.pos);
+      expect([num(n.data.kxs), num(n.data.kys), num(n.data.kzs)]).toEqual(x.kstat);
+      expect([num(n.data.kxd), num(n.data.kyd), num(n.data.kzd)]).toEqual(x.kdyn);
+    });
+    // motor/şanzıman/transfer tork zinciri de modeldeki torque ile aynı
+    const byType = t => topo.nodes.find(n => n.type === t).data;
+    expect(num(byType('mnt-motor').Te)).toBe(m.torque.Te);
+    expect(num(byType('mnt-gearbox').Rstall)).toBe(m.torque.Rstall);
+    expect(num(byType('mnt-gearbox').g1)).toBe(m.torque.fwd.iGear);
+    expect(num(byType('mnt-gearbox').gR)).toBe(m.torque.rev.iGear);
+    expect(num(byType('mnt-transfer').iTransfer)).toBe(m.torque.iTransfer);
+    // yükleyici bu JSON'u kabul etmeli (state'e dönüşmeli)
+    const st = cp._mntTopoState(topo);
+    expect(st.nodes).toHaveLength(topo.nodes.length);
+  });
   test('TTAR modeli (6 takoz) → "Fazla takoz" UYARI verir, hata değil', () => {
     const topo = buildTTARTopology();
     global.nodes = topo.nodes;
@@ -592,6 +667,27 @@ describe('Örnek JSON topolojisi (dışa aktar + çözümleme)', () => {
     expect(obj.compCounter).toBe(3);
     expect(obj.undoStack).toBeUndefined();   // uçucu alanlar dışa aktarılmaz
     expect(obj.simResults).toBeUndefined();
+  });
+
+  test('_mntTopoState: örnek dosyası, {state}, ham state ve TAM PROJE KAYDI kabul', () => {
+    const N = [{ id: 'n1', type: 'mnt-motor', data: {} }];
+    expect(cp._mntTopoState({ format: 'mfsim-mount-example', nodes: N }).nodes).toBe(N);
+    expect(cp._mntTopoState({ state: { nodes: N } }).nodes).toBe(N);
+    // Proje kaydı ({tabs:[{state}]}) — kullanıcı örneği çoğu zaman böyle verir.
+    expect(cp._mntTopoState({ version: 2, tabs: [{ state: { nodes: N, connections: [] } }] }).nodes).toBe(N);
+    // activeTabIdx işaret ettiği sekme öncelikli
+    const A = [{ id: 'a' }], B = [{ id: 'b' }];
+    expect(cp._mntTopoState({ activeTabIdx: 1, tabs: [{ state: { nodes: A } }, { state: { nodes: B } }] }).nodes).toBe(B);
+    // aktif sekme BOŞ → ilk dolu sekmeye düşer (boş sekme örnek değildir)
+    expect(cp._mntTopoState({ activeTabIdx: 0, tabs: [{ state: { nodes: [] } }, { state: { nodes: B } }] }).nodes).toBe(B);
+    // düğüm taşımayan hiçbir biçim state üretmez
+    expect(cp._mntTopoState({ tabs: [{ state: { nodes: [] } }] })).toBeNull();
+    expect(cp._mntTopoState({ tabs: [] })).toBeNull();
+    expect(cp._mntTopoState(null)).toBeNull();
+    // varsayılanlar: bağlantı/sayaç/kanvas alanları eksikse güvenli değerler
+    const d = cp._mntTopoState({ nodes: N });
+    expect(d.connections).toEqual([]);
+    expect(d.canvasZoom).toBe(1);
   });
 
   test('_mntResolveTopology: nesne ref doğrudan; string → gömülü __MNT_TOPOLOGIES', () => {

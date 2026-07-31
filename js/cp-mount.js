@@ -805,10 +805,23 @@ function _mntRenderExampleReport(warnings, silent){
 }
 
 // Ayrıştırılmış JSON'u veLoadTabState'in beklediği "state" biçimine getir.
-// Kabul edilenler: {format,version,nodes,connections,…} · {state:{…}} · ham state.
+// Kabul edilenler: {format,version,nodes,connections,…} · {state:{…}} · ham state
+// · TAM PROJE KAYDI {tabs:[{state:{…}}],activeTabIdx}. Sonuncusu şart: kullanıcı
+// örneği çoğu zaman "Kaydet" ile ürettiği proje dosyasından getirir; o biçim
+// reddedilirse örnek sessizce "yüklenemedi" olur.
 function _mntTopoState(j){
   if(!j) return null;
   var s = (j.state && j.state.nodes) ? j.state : (j.nodes ? j : null);
+  if(!s && Array.isArray(j.tabs) && j.tabs.length){
+    // Önce aktif sekme, sonra sırayla ilk DOLU sekme (boş sekme örnek değildir).
+    var order = [], ai = j.activeTabIdx;
+    if(typeof ai === 'number' && j.tabs[ai]) order.push(ai);
+    j.tabs.forEach(function(_, i){ if(i !== ai) order.push(i); });
+    for(var k = 0; k < order.length && !s; k++){
+      var ts = j.tabs[order[k]] && j.tabs[order[k]].state;
+      if(ts && ts.nodes && ts.nodes.length) s = ts;
+    }
+  }
   if(!s || !s.nodes) return null;
   return {
     nodes: s.nodes, connections: s.connections || [],
