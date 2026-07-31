@@ -99,3 +99,29 @@ npm run build               # MFSim_Code.html üret (modüler → monolitik) —
 npm run test:e2e            # E2E testleri (Chromium gerekli)
 npm run test:all            # birim + E2E
 ```
+
+## Teslim Akışı — PR + merge OTOMATİK
+
+Kullanıcı talimatı (2026-07-31): **her güncellemeden sonra PR aç ve merge et.**
+Ayrıca sorma, ayrıca onay bekleme.
+
+Sıra — her adım bir öncekine KAPI:
+
+```bash
+npm run build     # MFSim_Code.html üret
+npm test          # tüm birim testleri
+```
+
+1. `npm run build` + `npm test` **ikisi de yeşil** olmadan commit YOK.
+2. Commit → `git push -u origin <dal>`
+3. PR aç (gövdede: sorun, kök neden, ölçüm, test, doğrulama)
+4. **Merge et** (`merge` yöntemi — depo geçmişi merge commit'i kullanıyor)
+5. CI'ı izle (`main`'e push'ta koşar, PR'da KOŞMAZ) ve sonucu kullanıcıya bildir
+
+**Kapı kuralı:** testler kırmızıysa ya da build patlıyorsa merge etme —
+durumu kullanıcıya söyle. "Otomatik merge" testleri atlamak demek değil;
+tören kısaltılıyor, doğrulama kısaltılmıyor.
+
+Yeşil testler tek başına "düzeldi" demek değildir: kullanıcının bildirdiği
+senaryo birebir yeniden üretilip ESKİ kodda kırıldığı, YENİ kodda geçtiği
+ölçülmeden sonuç kesin dille sunulmaz.
