@@ -352,9 +352,15 @@ function veMntUpdateBreadcrumb(){
 // ════════════════════════════════════════════════════════════════════════════
 //  KÜTLE GÖVDESİ PANELİ (Motor / Şanzıman / Şaft / Braket / Kütle)
 // ════════════════════════════════════════════════════════════════════════════
+// Nokta-kütle VARSAYILANI tipe göre: Şaft ince/hafif; PTO ve Pompa parçalarının
+// kendi atalet tensörü katalog/CAD verisinde çoğu zaman YOKTUR (ASR-SR-116 Tablo 4
+// yalnız kütle+CG verir) → nokta kütle. Grubun ataleti parçaların CG yayılımından
+// paralel-eksen teoremiyle zaten doğar. 'PTO Toplam' ise grup ataletini TAŞIR
+// (ASR-SR-116 Tablo 3) → nokta kütle DEĞİL.
+var _MNT_POINTMASS_DEFAULT = { 'mnt-shaft':1, 'mnt-pto':1, 'mnt-pump':1 };
 function _mntEnsureMassData(node){
   if(!node.data) node.data = {};
-  if(node.data.pointMass===undefined) node.data.pointMass = (node.type==='mnt-shaft');
+  if(node.data.pointMass===undefined) node.data.pointMass = !!_MNT_POINTMASS_DEFAULT[node.type];
   return node.data;
 }
 function _mntInp(node, key, ph, step){
@@ -385,16 +391,18 @@ function _mntCard(title, unit, accent, inner){
 }
 // Etiketli 3'lü inline grup (x/y/z yan yana). title boşsa üst başlık çizilmez
 // (kart başlığı kapsıyorsa). subLabel verilirse solda küçük bir alt-etiket olur.
-function _mntTriple(node, title, unit, keys, subs, step){
+// phs (ops.): 3 elemanlı placeholder dizisi — kullanıcı beklenen mertebeyi görsün.
+function _mntTriple(node, title, unit, keys, subs, step, phs){
   var h='<div style="margin-bottom:9px;">';
   if(title){ h+='<div style="font-size:var(--fs-micro); font-weight:600; color:var(--text-secondary); letter-spacing:0.03em; text-transform:uppercase; margin-bottom:5px;">'+title+(unit?' <span style="color:var(--text-muted); font-weight:400; text-transform:none; letter-spacing:0;">'+unit+'</span>':'')+'</div>'; }
   h+='<div style="display:flex; gap:5px;">';
   for(var i=0;i<3;i++){
     var key=keys[i];
     var v=(node.data[key]===undefined||node.data[key]===null)?'':node.data[key];
+    var ph=(phs&&phs[i]!=null)?' placeholder="'+_mntEsc(phs[i])+'"':'';
     h+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
       +'<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center;">'+subs[i]+'</span>'
-      +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'" onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
+      +'<input type="number" id="ve-mnt-'+key+'-'+node.id+'" value="'+_mntEsc(v)+'" step="'+(step||'any')+'"'+ph+' onchange="veMntSet(\''+node.id+'\',\''+key+'\',this.value)" style="width:100%; '+_MNT_INP+'">'
       +'</label>';
   }
   h+='</div></div>';
@@ -465,31 +473,133 @@ function _mntTransferSection(node){
     + _mntHint('Aks payı φ: takozlara ulaşan tork oranı (varsayılan 1 = tam tepki).'));
 }
 
+// ─── PTO GRUBU (PTO · Pompa · PTO Toplam) ────────────────────────────────────
+// Bu üç bileşen aynı kütle panelini kullanır; farkları burada eklenen bilgi
+// şerididir: (1) hangi giriş yolunda olduğun, (2) referans değerler, (3) iki
+// yolun ÇAKIŞTIĞI durumun canlı uyarısı. "Bu bir PTO tipi mi?" sorusunun tek
+// kaynağı _MNT_PTO_REF anahtarlarıdır (ayrı bir tip listesi tutulmaz).
+
+// Panel girdilerinin placeholder'ları — kullanıcı beklenen mertebeyi görsün.
+// Kaynak: ASR-SR-116 (ASFAT 8x8 Obüs) Tablo 2/3/4, mm · kg · kg·m².
+var _MNT_PTO_PH = {
+  'mnt-pto':       { mass:'25',   cg:['741,21','77,01','894,73'] },
+  'mnt-pump':      { mass:'37',   cg:['971,21','77,01','894,73'] },
+  'mnt-pto-group': { mass:'97',   cg:['1058,06','77,01','894,73'], I:['0,45','6,515','6,15'] }
+};
+
+// Referans tabloları — ASR-SR-116 Tablo 4 (parça bazında) ve Tablo 2+3 (grup).
+// Rapor grup ataletini YALNIZ toplam için verir; tek tek PTO/pompa ataleti
+// belgede yoktur — bu yüzden parça satırlarında atalet sütunu da yoktur.
+var _MNT_PTO_REF = {
+  'mnt-pto': {
+    head: ['PTO parçası','m [kg]','X [mm]','Y [mm]','Z [mm]'],
+    rows: [['Üst PTO','25','741,21','77,01','894,73'],
+           ['Yan PTO','25','741,21','−269,52','473,30']]
+  },
+  'mnt-pump': {
+    head: ['Pompa','m [kg]','X [mm]','Y [mm]','Z [mm]'],
+    rows: [['Üst Pompa 1','37','971,21','77,01','894,73'],
+           ['Üst Pompa 2','17,5','1271,20','77,01','894,73'],
+           ['Üst Pompa 3','17,5','1481,21','77,01','894,73'],
+           ['Yan Pompa 1','21','991,21','−269,52','473,30']]
+  },
+  'mnt-pto-group': {
+    head: ['Grup','m [kg]','X [mm]','Y [mm]','Z [mm]','Ixx','Iyy','Izz'],
+    rows: [['Üst PTO Grubu','97','1058,06','77,01','894,73','0,45','6,515','6,15'],
+           ['Yan PTO Grubu','46','855,34','−269,52','473,30','0,136','0,915','0,915']]
+  }
+};
+
+// Topolojide İKİ giriş yolu birden kullanılıyor mu? (PTO Toplam + ayrı PTO/Pompa
+// → aynı kütle iki kez sayılır). Döner: null | {groups:[ad], parts:[ad]}.
+function _mntPtoConflict(){
+  if(typeof nodes==='undefined' || !nodes) return null;
+  var groups=[], parts=[];
+  nodes.forEach(function(n){
+    if(!n) return;
+    if(n.type==='mnt-pto-group') groups.push(_mntNodeName(n));
+    else if(n.type==='mnt-pto' || n.type==='mnt-pump') parts.push(_mntNodeName(n));
+  });
+  return (groups.length && parts.length) ? { groups:groups, parts:parts } : null;
+}
+
+// Referans değer tablosu — katlanır (<details>), varsayılan kapalı: panel sade
+// kalsın, isteyen açsın.
+function _mntPtoRefTable(type){
+  var ref=_MNT_PTO_REF[type]; if(!ref) return '';
+  var th='padding:4px 7px; text-align:right; color:var(--text-muted); font-weight:600; border-bottom:1px solid var(--border-color); white-space:nowrap;';
+  var td='padding:3px 7px; text-align:right; color:var(--text-primary); font-variant-numeric:tabular-nums; white-space:nowrap;';
+  var h='<details style="margin-top:2px;"><summary style="cursor:pointer; font-size:var(--fs-micro); color:var(--text-secondary); padding:2px 0; user-select:none;">ASR-SR-116 referans değerleri <span style="color:var(--text-muted);">(ASFAT 8x8 Obüs)</span></summary>';
+  h+='<div style="overflow-x:auto; margin-top:6px;"><table style="width:100%; border-collapse:collapse; font-size:var(--fs-micro);"><thead><tr>';
+  ref.head.forEach(function(c,i){ h+='<th style="'+th+(i===0?' text-align:left;':'')+'">'+_mntEsc(c)+'</th>'; });
+  h+='</tr></thead><tbody>';
+  ref.rows.forEach(function(r){
+    h+='<tr style="border-bottom:1px solid var(--border-color);">';
+    r.forEach(function(c,i){ h+='<td style="'+td+(i===0?' text-align:left; color:var(--text-secondary);':'')+'">'+_mntEsc(c)+'</td>'; });
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  h+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin-top:6px;">Değerler global eksen takımına göredir. Atalet birimi kg·m². Kendi projenin değerlerini gir — bunlar yalnız mertebe referansıdır.</div>';
+  h+='</details>';
+  return h;
+}
+
+// PTO grubu bilgi şeridi (tam genişlik alt kart): giriş yolu + çakışma uyarısı
+// + referans tablosu.
+function _mntPtoSection(node){
+  var isGroup = (node.type==='mnt-pto-group');
+  var lead = isGroup
+    ? '<b style="color:var(--text-heading);">Toplu giriş.</b> Tüm PTO grubunu (kuyruk mili + pompalar) tek kalemde tanımlarsın: '
+      + 'grup kütlesi, grup ağırlık merkezi ve <b>grup atalet tensörü</b>. Ayrıntı gerekmiyorsa en pratik yol budur.'
+    : '<b style="color:var(--text-heading);">Ayrıntılı giriş.</b> Her parçayı kendi kütle ve ağırlık merkeziyle ayrı ayrı tanımlarsın. '
+      + 'Parça ataleti çoğu katalogda verilmez — <b>nokta kütle</b> bırakılırsa grubun ataleti, parçaların CG yayılımından '
+      + 'paralel-eksen teoremiyle çözücüde kendiliğinden oluşur.';
+  var body = '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.55; margin-bottom:8px;">'+lead+'</div>';
+
+  var cf=_mntPtoConflict();
+  if(cf){
+    body += '<div style="display:flex; gap:8px; padding:8px 10px; margin-bottom:8px; border:1px solid var(--accent-warning); '
+      + 'background:color-mix(in srgb, var(--accent-warning) 11%, transparent); border-radius:var(--radius-sm); '
+      + 'font-size:var(--fs-tiny); line-height:1.5; color:var(--text-secondary);">'
+      + '<span style="color:var(--accent-warning); font-weight:700;">⚠</span>'
+      + '<span><b style="color:var(--accent-warning);">Kütle iki kez sayılıyor olabilir.</b> Topolojide hem <b>PTO Toplam</b> ('
+      + cf.groups.length + ') hem de ayrı <b>PTO/Pompa</b> (' + cf.parts.length + ') bileşeni var. '
+      + 'İki giriş yolu aynı kütleyi temsil eder — birini seçip diğerini silin.</span></div>';
+  }
+  body += _mntPtoRefTable(node.type);
+  return _mntCard('PTO Grubu · Giriş Yolu','', 'var(--accent-success)', body);
+}
+
 function getMntMassPropertiesHTML(node){
   _mntEnsureMassData(node);
   var d=node.data;
+  var ph=_MNT_PTO_PH[node.type] || null;      // tipe özel placeholder (PTO grubu)
   // SOL (girdi): kütle + ağırlık merkezi + nokta-kütle anahtarı.
   var massCard=_mntCard('Kütle & Ağırlık Merkezi','[kg · mm]','var(--accent-primary)',
-      _mntSingle(node,'Kütle','[kg]','mass','ör: 1386.3','0.001')
-    + _mntTriple(node,'Ağırlık Merkezi (CG)','[mm]',['cgx','cgy','cgz'],['x','y','z'],'0.01'));
+      _mntSingle(node,'Kütle','[kg]','mass',(ph?ph.mass:'ör: 1386.3'),'0.001')
+    + _mntTriple(node,'Ağırlık Merkezi (CG)','[mm]',['cgx','cgy','cgz'],['x','y','z'],'0.01',(ph?ph.cg:null)));
   var toggle='<label style="display:flex; align-items:center; gap:8px; font-size:var(--fs-tiny); color:var(--text-secondary); margin:0 2px 9px; cursor:pointer;"><input type="checkbox" '+(d.pointMass?'checked':'')+' onchange="veMntSetCheck(\''+node.id+'\',\'pointMass\',this.checked)"> Nokta kütle (atalet = 0)</label>';
   // SAĞ (çıktı/tanım): atalet tensörü — nokta kütlede yerine kısa bilgi kartı gelir
   // (sağ sütun boş kalmasın, tüm gövde tiplerinde denge korunsun).
+  var ptFor = (node.type==='mnt-pto'||node.type==='mnt-pump')
+    ? 'PTO/pompa parçaları gibi ataleti katalogda verilmeyen gövdeler için uygundur; grubun ataleti parçaların CG yayılımından paralel-eksen teoremiyle zaten oluşur.'
+    : 'Şaft gibi ince/hafif gövdeler için uygundur.';
   var rightCard = (!d.pointMass)
     ? _mntCard('Atalet Tensörü','[kg·m²]','var(--accent-warning)',
-          _mntTriple(node,'Köşegen','',['Ixx','Iyy','Izz'],['Ixx','Iyy','Izz'],'0.001')
+          _mntTriple(node,'Köşegen','',['Ixx','Iyy','Izz'],['Ixx','Iyy','Izz'],'0.001',(ph&&ph.I?ph.I:null))
         + _mntTriple(node,'Çarpım','',['Ixy','Ixz','Iyz'],['Ixy','Ixz','Iyz'],'0.001'))
     : _mntCard('Nokta Kütle','I = 0','var(--accent-warning)',
-          '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5;">Atalet tensörü <b style="color:var(--text-heading);">sıfır</b> kabul edilir; kütle tümüyle ağırlık merkezinde toplanır. Şaft gibi ince/hafif gövdeler için uygundur. Atalet girmek için işareti kaldırın.</div>');
+          '<div style="font-size:var(--fs-tiny); color:var(--text-secondary); line-height:1.5;">Atalet tensörü <b style="color:var(--text-heading);">sıfır</b> kabul edilir; kütle tümüyle ağırlık merkezinde toplanır. '+ptFor+' Atalet girmek için işareti kaldırın.</div>');
   var drive = node.type==='mnt-motor'  ? _mntEngineSection(node)
             : node.type==='mnt-gearbox' ? _mntGearboxSection(node)
-            : node.type==='mnt-transfer'? _mntTransferSection(node) : '';
+            : node.type==='mnt-transfer'? _mntTransferSection(node)
+            : _MNT_PTO_REF[node.type]   ? _mntPtoSection(node) : '';
   var html='<div class="sw-panel">';
   html+='<div class="ve-cp-grid ve-cp-grid--cards">';
   html+='<div class="ve-cp-col ve-cp-col--in">'+massCard+toggle+'</div>';
   html+='<div class="ve-cp-col ve-cp-col--out">'+rightCard+'</div>';
   html+='</div>';
-  if(drive) html+=drive;   // tork/tahrik zinciri girdileri — tam genişlik alt şerit
+  if(drive) html+=drive;   // tork/tahrik veya PTO bilgi şeridi — tam genişlik alt şerit
   html+='</div>';
   return html;
 }
@@ -614,8 +724,14 @@ function _mntExampleList(){
 
 // Örnek adı → kanvas kütle-gövdesi tipi (test buildTTARTopology ile aynı eşleme).
 // Yükleyici önce c.kind'i, yoksa bu adı kullanır.
+// PTO kalıpları motor/şanzımandan ÖNCE denenir ("PTO Grubu" içinde motor/şanzıman
+// geçmez ama sıralama niyeti açık tutsun); grup → pompa → PTO sırası zorunlu:
+// "Top PTO Group" hem /pto/ hem /group/ eşler, en özgül olan kazanmalı.
 function _mntExampleBodyType(name){
-  return /motor/i.test(name) ? 'mnt-motor'
+  return /(pto|pompa|pump)[^a-zçğıöşü]*(grubu|grup|group|toplam|total)|(grubu|grup|group|toplam|total)[^a-zçğıöşü]*(pto|pompa|pump)/i.test(name) ? 'mnt-pto-group'
+    : /pompa|pump/i.test(name) ? 'mnt-pump'
+    : /\bpto\b|kuyruk\s*mili/i.test(name) ? 'mnt-pto'
+    : /motor/i.test(name) ? 'mnt-motor'
     : /şanz|sanz/i.test(name) ? 'mnt-gearbox'
     : /şaft|saft|shaft/i.test(name) ? 'mnt-shaft'
     : /cradle|braket|bracket/i.test(name) ? 'mnt-bracket' : 'mnt-transfer';
@@ -778,6 +894,10 @@ function _mntExampleValidate(){
     if(!(_mntNum(m.kzs)>0)) out.push({level:'warn', msg:_mntEsc(m.name)+': düşey (z) statik rijitlik tanımsız.'});
     if(!Number.isFinite(_mntNum(m.z,NaN))) out.push({level:'warn', msg:_mntEsc(m.name)+': z konumu tanımsız.'});
   });
+  // PTO grubu: iki giriş yolu (toplu / ayrıntılı) aynı anda kullanılırsa kütle
+  // İKİ KEZ sayılır — çözücü sessizce "makul ama yanlış" bir toplam üretir.
+  var pc=_mntPtoConflict();
+  if(pc) out.push({level:'warn', msg:'PTO Toplam ('+pc.groups.length+') ile ayrı PTO/Pompa bileşenleri ('+pc.parts.length+') birlikte tanımlı — aynı kütle iki kez sayılıyor olabilir. Bir giriş yolunu seçin.'});
   var hasSolver = (typeof nodes!=='undefined') && nodes.some(function(n){ return (_mntDef(n)||{}).isMountSolver; });
   if(!hasSolver) out.push({level:'warn', msg:'Çözücü bulunamadı — sonuç için bir Çözücü ekleyin.'});
   return out;
@@ -908,8 +1028,16 @@ function veMntLoadExample(nodeId){
 function _mntComputeSupportLinks(items){
   items = items || [];
   var BODY = { 'mnt-motor':1, 'mnt-gearbox':1, 'mnt-shaft':1, 'mnt-transfer':1 };
+  // PTO grubu bileşenleri TAŞINAN kütlelerdir: güç grubuna civatalanır, takoza
+  // doğrudan oturmaz. Bu yüzden (a) cradle gibi kendi çıkışlarıyla en yakın ana
+  // gövdeye bağlanırlar, (b) supportTargets'a GİRMEZLER — bir takoz asla PTO'ya
+  // asılmaz (fiziksel olarak yanlış olurdu).
+  // Liste burada YEREL: bu fonksiyon saf kalsın diye global componentDefs'e
+  // (isMountCarried) bakmaz — girdisi düğüm değil {id,kind,lx,ly} verisidir.
+  var CARRIED = { 'mnt-pto':1, 'mnt-pump':1, 'mnt-pto-group':1 };
   var pureBodies = items.filter(function(it){ return BODY[it.kind]; });
   var cradles    = items.filter(function(it){ return it.kind==='mnt-bracket'; });
+  var carried    = items.filter(function(it){ return CARRIED[it.kind]; });
   var mounts     = items.filter(function(it){ return it.kind==='mnt-mount'; });
   var supportTargets = pureBodies.concat(cradles);
   var byId={}; items.forEach(function(it){ byId[it.id]=it; });
@@ -934,6 +1062,7 @@ function _mntComputeSupportLinks(items){
   function addRaw(src, tgt){ if(src&&tgt) (byTarget[tgt.id]=byTarget[tgt.id]||[]).push(src); }
   mounts.forEach(function(m){ addRaw(m, nearest(m, supportTargets)); });
   cradles.forEach(function(c){ addRaw(c, nearest(c, pureBodies)); });
+  carried.forEach(function(p){ addRaw(p, nearest(p, pureBodies)); });   // PTO/Pompa → taşıyıcı gövde
 
   // 2. Her hedefte gelenleri AYRI giriş portlarına dağıt; hem kaynağın çıkışını hem
   //    hedefin o portunu KARŞILIKLI birbirine baktır (per-instance portPositions).
@@ -1029,8 +1158,12 @@ function veMntDecorateConnections(svg){
     t.setAttribute('font-family','ui-monospace, monospace'); t.textContent='ŞASİ'; g.appendChild(t);
   }
 
-  // ── Aktarma hattı omurgası: cradle olmayan gövdeler, x sırasına göre merkezden ──
-  var spineB = bodiesN.filter(function(n){ return n.type!=='mnt-bracket'; })
+  // ── Aktarma hattı omurgası: ana gövdeler, x sırasına göre merkezden ──
+  // Braket/cradle ve "taşınan" gövdeler (PTO/Pompa/PTO Toplam — isMountCarried)
+  // omurgaya GİRMEZ: hiçbiri aktarma hattının kendisi değil, ona asılan yardımcı
+  // kütlelerdir.
+  var spineB = bodiesN.filter(function(n){
+      return n.type!=='mnt-bracket' && !(_mntDef(n)||{}).isMountCarried; })
     .sort(function(a,b){ return a.x - b.x; });
   for(var i=0;i<spineB.length-1;i++){
     var a=spineB[i], b=spineB[i+1];
@@ -2629,6 +2762,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntExampleDiagramSVG: _mntExampleDiagramSVG,
     _mntExampleBodyType: _mntExampleBodyType,
     _mntComputeSupportLinks: _mntComputeSupportLinks,
+    _mntPtoConflict: _mntPtoConflict,
+    _MNT_PTO_REF: _MNT_PTO_REF,
     _mntExampleValidate: _mntExampleValidate,
     _mntGatherForSolver: _mntGatherForSolver,
     _mntGatherTorque: _mntGatherTorque,

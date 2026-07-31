@@ -7,7 +7,7 @@ var VE_MODULES = {
     name: 'Ana Sayfa',
     icon: '',
     description: 'Araç güç aktarma organları simülasyonu — tam gaz hızlanma ve performans analizi',
-    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','arac-performans','mount-analysis'],
+    components: ['engine','acc-ac','acc-alternator','acc-aircomp','torque-converter','ec-matching','engine-gearbox-matching','gearbox','shift-controller','gear-shift','propshaft','transfer','differential','wheel','vehicle','sensor','sensor-wizard','terminator','scenario','coast-down','solver','road','parametric','obstacle-crossing','mnt-motor','mnt-gearbox','mnt-shaft','mnt-bracket','mnt-transfer','mnt-pto','mnt-pump','mnt-pto-group','mnt-mount','mnt-library','mnt-solver','mnt-example','mnt-viewer','mnt-coordframe','mnt-2dview','mnt-report','arac-performans','mount-analysis'],
     defaultScenario: 'full_throttle',
     scenarios: ['full_throttle','partial_throttle','custom'],
     requiresFull: true
@@ -309,6 +309,37 @@ var componentDefs = {
     name: 'Transfer Kutusu',
     svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="28" y="24" width="44" height="52" rx="4" fill="var(--accent-primary, #3b82f6)" opacity="0.75"/><rect x="12" y="36" width="16" height="8" fill="var(--text-muted, #aaa)"/><rect x="72" y="34" width="16" height="7" fill="var(--text-muted, #aaa)"/><rect x="72" y="59" width="16" height="7" fill="var(--text-muted, #aaa)"/><circle cx="50" cy="50" r="5" fill="#fff"/></svg>',
     inputs: 1, outputs: 0, isMountBody: true
+  },
+  // ── PTO GRUBU (kuyruk mili + pompalar) ────────────────────────────────────
+  // Güç grubuna CIVATALANAN yardımcı kütleler. Motor/Şanzıman gibi doğrudan
+  // takoza oturmazlar; taşıyıcı gövdeye (tipik: Şanzıman) asılırlar → çıkış
+  // portu "taşındığı gövde"ye gider (isMountCarried; bkz. cp-mount.js
+  // _mntComputeSupportLinks). Çözücü açısından bunlar da isMountBody'dir:
+  // kütle + CG + atalet birleşik ağırlık merkezine katılır.
+  //
+  // İKİ GİRİŞ YOLU — biri VEYA diğeri, ikisi birden DEĞİL (kütle iki kez sayılır):
+  //   (a) ayrıntılı: 'mnt-pto' + n×'mnt-pump' — her parça kendi kütle/CG'siyle;
+  //       parça ataleti veri sayfalarında genelde yoktur → nokta kütle varsayılan,
+  //       yayılımın ataleti paralel-eksen teoremiyle birleştirmede kendiliğinden oluşur.
+  //   (b) toplu: 'mnt-pto-group' — grubun kütlesi + grup CG'si + grup ataleti tek kalemde.
+  // Panel her iki yolu da tanır ve çakışmayı canlı uyarır (cp-mount.js _mntPtoConflict).
+  'mnt-pto': {
+    name: 'PTO',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><g stroke="var(--accent-primary, #3b82f6)" stroke-width="6.5" stroke-linecap="round"><line x1="32" y1="15" x2="32" y2="25"/><line x1="32" y1="75" x2="32" y2="85"/><line x1="7" y1="50" x2="17" y2="50"/><line x1="14" y1="32" x2="21" y2="39"/><line x1="14" y1="68" x2="21" y2="61"/><line x1="50" y1="32" x2="43" y2="39"/><line x1="50" y1="68" x2="43" y2="61"/></g><circle cx="32" cy="50" r="18" fill="var(--accent-primary, #3b82f6)" opacity="0.9"/><circle cx="32" cy="50" r="5.5" fill="#fff"/><rect x="50" y="46" width="30" height="8" rx="4" fill="var(--text-secondary, #888)"/><rect x="78" y="34" width="10" height="32" rx="3" fill="var(--text-secondary, #888)"/></svg>',
+    inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, defaultWidth: 50, defaultHeight: 46,
+    portLayout: { inputs: ['bottom'], outputs: ['right'] }
+  },
+  'mnt-pump': {
+    name: 'Pompa',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><rect x="6" y="45" width="24" height="10" rx="5" fill="var(--text-secondary, #888)"/><circle cx="57" cy="50" r="27" fill="var(--accent-primary, #3b82f6)" opacity="0.85"/><polygon points="47,36 47,64 73,50" fill="#fff"/><rect x="49" y="8" width="16" height="17" rx="3" fill="var(--text-secondary, #888)"/><rect x="49" y="75" width="16" height="17" rx="3" fill="var(--text-secondary, #888)"/></svg>',
+    inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, defaultWidth: 50, defaultHeight: 46,
+    portLayout: { inputs: ['bottom'], outputs: ['left'] }
+  },
+  'mnt-pto-group': {
+    name: 'PTO Toplam',
+    svg: '<svg width="38" height="38" viewBox="0 0 100 100"><text x="50" y="21" text-anchor="middle" font-size="22" font-weight="700" fill="var(--accent-primary, #3b82f6)" font-family="ui-monospace, monospace">&#931;</text><rect x="7" y="28" width="86" height="57" rx="10" fill="var(--accent-primary, #3b82f6)" fill-opacity="0.10" stroke="var(--accent-primary, #3b82f6)" stroke-width="4" stroke-dasharray="9 6"/><line x1="41" y1="56" x2="50" y2="56" stroke="var(--text-secondary, #888)" stroke-width="4" stroke-linecap="round"/><line x1="66" y1="56" x2="72" y2="56" stroke="var(--text-secondary, #888)" stroke-width="4" stroke-linecap="round"/><circle cx="28" cy="56" r="14" fill="var(--accent-primary, #3b82f6)" opacity="0.9"/><circle cx="28" cy="56" r="4.5" fill="#fff"/><circle cx="58" cy="56" r="10" fill="var(--accent-primary, #3b82f6)" opacity="0.6"/><circle cx="79" cy="56" r="8" fill="var(--accent-primary, #3b82f6)" opacity="0.42"/></svg>',
+    inputs: 1, outputs: 1, isMountBody: true, isMountCarried: true, defaultWidth: 60, defaultHeight: 50,
+    portLayout: { inputs: ['bottom'], outputs: ['left'] }
   },
   'mnt-mount': {
     name: 'Takoz',

@@ -161,7 +161,8 @@ var VE_WIDE_PANEL_TYPES = ['engine', 'torque-converter', 'ec-matching', 'shift-c
   // Aksesuarlar — iki sütun (model/oran | güç-çekişi grafiği)
   'acc-ac', 'acc-alternator', 'acc-aircomp',
   // Takoz Çökme-Titreşim modülü — içerik-yoğun paneller (dalga dalga eklenir)
-  'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
+  'mnt-motor', 'mnt-gearbox', 'mnt-shaft', 'mnt-bracket', 'mnt-transfer', 'mnt-pto', 'mnt-pump', 'mnt-pto-group',
+  'mnt-mount', 'mnt-example', 'mnt-coordframe', 'mnt-viewer',
   // Parametrik: çoklu-seri sonuç grafiği tam genişlikte ferah okunur.
   'parametric'];
 
@@ -238,7 +239,8 @@ function showNodeProperties(node) {
     html += getCoastDownPropertiesHTML(node);
   } else if(node.type === 'obstacle-crossing') {
     html += getObstacleCrossingPropertiesHTML(node);
-  } else if(node.type === 'mnt-motor' || node.type === 'mnt-gearbox' || node.type === 'mnt-shaft' || node.type === 'mnt-bracket' || node.type === 'mnt-transfer') {
+  } else if(node.type === 'mnt-motor' || node.type === 'mnt-gearbox' || node.type === 'mnt-shaft' || node.type === 'mnt-bracket' || node.type === 'mnt-transfer'
+         || node.type === 'mnt-pto' || node.type === 'mnt-pump' || node.type === 'mnt-pto-group') {
     html += getMntMassPropertiesHTML(node);
   } else if(node.type === 'mnt-mount') {
     html += getMntMountPropertiesHTML(node);
