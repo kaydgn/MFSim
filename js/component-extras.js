@@ -1123,13 +1123,33 @@ function cdwApplyResults(nodeId) {
 }
 
 // ===== UYARI PANELİ =====
+// Panel artık alt bandın ÜSTÜNE açılan yüzen bir katman (bkz. .ve-warnings-panel).
+// Açık/kapalı durumunu TEK yazıcı kurar ki üç gösterge — panel, durum
+// çubuğundaki düğme ve şeritteki basılı hâl — asla ayrışmasın.
+// Gövdedeki 'collapsed' sınıfı sözleşmedir: şerit (js/ribbon.js) ve komut
+// paleti basılı durumu oradan okur, bu yüzden yeri değiştirilmedi.
+function veSetWarningsOpen(open) {
+  var panel  = document.getElementById('ve-warnings-panel');
+  var body   = document.getElementById('ve-warnings-body');
+  var toggle = document.getElementById('ve-warnings-toggle');
+  var chip   = document.getElementById('ve-warnings-chip');
+  if(body)   body.classList.toggle('collapsed', !open);
+  if(panel)  panel.classList.toggle('open', open);
+  // Panel YUKARI açıldığı için ok da öyle okunur: kapalıyken "yukarı açılır" (▲),
+  // açıkken "aşağı kapanır" (▼).
+  if(toggle) toggle.textContent = open ? '▼' : '▲';
+  if(chip)   chip.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
 function veToggleWarnings() {
   var body = document.getElementById('ve-warnings-body');
-  var toggle = document.getElementById('ve-warnings-toggle');
-  if(body) {
-    body.classList.toggle('collapsed');
-    if(toggle) toggle.textContent = body.classList.contains('collapsed') ? '▼' : '▲';
-  }
+  veSetWarningsOpen(!body || body.classList.contains('collapsed'));
+}
+
+// Panel açık mı? (Esc gibi katman-sırası kararları için)
+function veWarningsPanelOpen() {
+  var body = document.getElementById('ve-warnings-body');
+  return !!(body && !body.classList.contains('collapsed'));
 }
 
 function veUpdateWarnings() {
@@ -1201,16 +1221,16 @@ function veRenderWarningsPanel(items, opts) {
   items = items || [];
   var body = document.getElementById('ve-warnings-body');
   var countEl = document.getElementById('ve-warnings-count');
+  var chip = document.getElementById('ve-warnings-chip');
   var errCount = items.filter(function(w) { return w.type === 'error'; }).length;
   var warnCount = items.filter(function(w) { return w.type === 'warn'; }).length;
   var badgeCount = errCount + warnCount;
 
-  if(countEl) {
-    countEl.textContent = badgeCount;
-    countEl.style.background = errCount > 0 ? 'var(--accent-danger)'
-      : (warnCount > 0 ? 'var(--accent-warning)' : 'var(--accent-success)');
-    countEl.style.color = badgeCount > 0 ? '#000' : '#fff';
-  }
+  if(countEl) countEl.textContent = badgeCount;
+  // Rozet artık durum çubuğunda SÜREKLİ duruyor (panel kapalıyken de). Rengi
+  // inline yazmak yerine severity'yi CSS'e devrediyoruz: sıfırda sessiz gri,
+  // uyarıda amber, hatada kırmızı — boş topolojide yanıp sönen bir rozet yok.
+  if(chip) chip.setAttribute('data-severity', errCount > 0 ? 'error' : (warnCount > 0 ? 'warn' : 'none'));
   if(!body) return;
 
   if(items.length === 0) {
@@ -1257,12 +1277,7 @@ function veShowValidationInWarnings(res) {
 
 // Paneli açar (kapalıysa). Doğrulama sonucu kapalı panelin arkasında kalmasın.
 function veOpenWarningsPanel() {
-  var body = document.getElementById('ve-warnings-body');
-  var toggle = document.getElementById('ve-warnings-toggle');
-  if(body && body.classList.contains('collapsed')) {
-    body.classList.remove('collapsed');
-    if(toggle) toggle.textContent = '▲';
-  }
+  veSetWarningsOpen(true);
 }
 
 // Uyarı satırından bileşene git: seç, ortala, özelliklerini aç.

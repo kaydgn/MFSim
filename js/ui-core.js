@@ -528,8 +528,14 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
     
-    // Escape tuşu - seçimi temizle ve tempLine'ı sil
+    // Escape tuşu - önce üstteki katmanı kapat, sonra seçimi temizle.
+    // Uyarı paneli tuvalin üzerine açılan yüzen bir katman olduğu için ilk Esc
+    // onu kapatır; seçim ikinci Esc'te temizlenir (alışılmış katman sırası).
     if(e.key === 'Escape') {
+      if(typeof veWarningsPanelOpen === 'function' && veWarningsPanelOpen()) {
+        veToggleWarnings();
+        return;
+      }
       clearSelection();
       cleanupTempLine();
     }
