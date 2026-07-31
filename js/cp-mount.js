@@ -438,16 +438,120 @@ function _mntHint(text){
 // ─── Tipe özel kinematik bölümleri (tork yük durumları için) ─────────────────
 // Motor tork zinciri girdileri komponentler içine dağıtılır: Motor→tepe tork,
 // Şanzıman→vites oranları + stall, Transfer→transfer oranı + aks payı.
+// ─── Motor kataloğu köprüsü (Araç Performans preset'leri → takoz Motor'u) ────
+// Aynı motor iki modülde de kullanılabiliyor; TAHRİK büyüklükleri (tepe tork,
+// maks güç, rölanti) katalogda ZATEN var — elle ikinci kez girilmesin.
+//
+//   KATALOGDAN GELİR : Te · TeRpm · Pmax · PmaxRpm · idleRpm
+//   ELLE KALIR       : kütle · ağırlık merkezi · atalet tensörü · silindir sayısı
+//
+// Elle kalanlar motor kataloğu verisi DEĞİL, araca özel entegrasyon verisidir
+// (CATIA ölçümü); katalog onları taşımaz ve seçim onlara DOKUNMAZ.
+//
+// SESSİZ HATA TUZAĞI: preset'teki specs.inertia KRANK MİLİ DÖNER ataletidir
+// (0,5–3 kg·m²) — takozun istediği rijit gövde atalet TENSÖRÜ (100+ kg·m²) ile
+// aynı şey DEĞİLDİR, iki mertebe fark eder. Bu yüzden asla aktarılmaz.
+function _mntEnginePresets(){
+  if(typeof VE_FT_MOTOR_PRESETS!=='undefined') return VE_FT_MOTOR_PRESETS;
+  if(typeof window!=='undefined' && window.VE_FT_MOTOR_PRESETS) return window.VE_FT_MOTOR_PRESETS;
+  return null;
+}
+
+// Preset → takoz Motor alanları. Tepe tork ve maks güç eğriden okunur; düz tork
+// platosunda EN DÜŞÜK devir alınır (katalog konvansiyonu — data artan devirde
+// sıralı, kesin '>' ile ilk maksimum korunur). Bilinmeyen anahtar → null.
+function _mntEnginePresetValues(key){
+  var P=_mntEnginePresets(); if(!P || !P[key]) return null;
+  var p=P[key], sp=p.specs||{}, rows=Array.isArray(p.data)?p.data:[];
+  var out={};
+  if(_mntNum(sp.idleRpm,0)>0) out.idleRpm=_mntNum(sp.idleRpm);
+  var bt=null, bp=null;
+  rows.forEach(function(r){
+    var rpm=_mntNum(r.rpm,NaN), tq=_mntNum(r.torque,NaN), pw=_mntNum(r.power,NaN);
+    if(!Number.isFinite(rpm)) return;
+    if(Number.isFinite(tq) && (!bt || tq>bt.v)) bt={v:tq, rpm:rpm};
+    if(Number.isFinite(pw) && (!bp || pw>bp.v)) bp={v:pw, rpm:rpm};
+  });
+  if(bt){ out.Te=bt.v;                        out.TeRpm=bt.rpm; }
+  if(bp){ out.Pmax=Math.round(bp.v*10)/10;    out.PmaxRpm=bp.rpm; }
+  return out;
+}
+
+// Katalog seçimi uygula. Boş anahtar → yalnız bağ kaldırılır, GİRİLEN DEĞERLER
+// SİLİNMEZ (kullanıcı katalogdan yükleyip sonra elle rötuşlayabilsin).
+function veMntApplyEnginePreset(nodeId, key){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  if(!key){
+    delete node.data.enginePreset;
+  } else {
+    var v=_mntEnginePresetValues(key); if(!v) return;
+    Object.keys(v).forEach(function(k){ node.data[k]=v[k]; });
+    node.data.enginePreset=key;
+    if(typeof showToast==='function'){
+      var P=_mntEnginePresets(), nm=(P && P[key] && P[key].name) || key;
+      showToast('Motor katalogdan yüklendi: '+nm+' — kütle / CG / atalet elle girilir.','success');
+    }
+  }
+  if(typeof saveState==='function') saveState();
+  if(typeof showNodeProperties==='function') showNodeProperties(node);
+}
+
+// Aile gruplaması — Araç Performans motor seçicisiyle (cp-engine.js) AYNI düzen,
+// böylece kullanıcı iki modülde aynı listeyi görür.
+var _MNT_ENG_FAMILIES = [
+  {label:'BMC / AZRA',        prefix:['azra_','bmc_']},
+  {label:'Cummins ISB 4.5L',  prefix:['isb45']},
+  {label:'Cummins ISB 6.7L',  prefix:['isb67']},
+  {label:'Cummins ISL 8.9L',  prefix:['isl']},
+  {label:'Cummins ISG 12L',   prefix:['isg']},
+  {label:'Cummins ISM 10.8L', prefix:['ism']},
+  {label:'Cummins ISX 15L',   prefix:['isx']},
+  {label:'GM Duramax',        prefix:['duramax_']},
+  {label:'Diğer',             prefix:[]}
+];
+function _mntEnginePresetSelect(node){
+  var P=_mntEnginePresets();
+  if(!P) return '';                      // katalog yüklü değil → seçiciyi hiç gösterme
+  var keys=Object.keys(P); if(!keys.length) return '';
+  var cur=node.data.enginePreset||'';
+  var h='<select onchange="veMntApplyEnginePreset(\''+node.id+'\',this.value)" style="width:100%; padding:5px 8px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm);">';
+  h+='<option value="">— Katalogdan motor seç ('+keys.length+' motor) —</option>';
+  var used={};
+  _MNT_ENG_FAMILIES.forEach(function(fam){
+    var ks=keys.filter(function(k){
+      if(used[k]) return false;
+      if(!fam.prefix.length) return true;
+      return fam.prefix.some(function(p){ return k.indexOf(p)===0; });
+    });
+    if(!ks.length) return;
+    h+='<optgroup label="'+_mntEsc(fam.label)+' ('+ks.length+')">';
+    ks.forEach(function(k){ used[k]=1;
+      h+='<option value="'+_mntEsc(k)+'"'+(k===cur?' selected':'')+'>'+_mntEsc(P[k].name||k)+'</option>'; });
+    h+='</optgroup>';
+  });
+  h+='</select>';
+  return h;
+}
+
 function _mntEngineSection(node){
+  var sel=_mntEnginePresetSelect(node);
+  var head='';
+  if(sel){
+    head = sel + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin:5px 0 10px;">'
+      + 'Seçilen motorun <b>tepe tork, maks güç ve rölanti devri</b> katalogdan otomatik dolar. '
+      + '<b>Kütle, ağırlık merkezi ve atalet tensörü</b> katalogda bulunmaz (araca özel CATIA verisi) — elle girilir, seçim onlara dokunmaz.</div>';
+  }
   return _mntCard('Motor · Tahrik','', 'var(--accent-danger)',
-      _mntGrid(node, [
+      head
+    + _mntGrid(node, [
         {key:'Te',      label:'Tepe Tork [Nm]', step:'1',   ph:'760'},
         {key:'TeRpm',   label:'@ Devir [rpm]',  step:'1',   ph:'1500'},
         {key:'Pmax',    label:'Maks Güç [kW]',  step:'0.1', ph:'156.6'},
         {key:'PmaxRpm', label:'@ Devir [rpm]',  step:'1',   ph:'2300'},
         {key:'idleRpm', label:'Rölanti [rpm]',  step:'1',   ph:'800'}
       ], 3)
-    + _mntHint('Tork yük durumları <b>Tepe Tork</b> değerinden türetilir; devir/güç bilgi amaçlıdır.'));
+    + _mntHint('Tork yük durumları <b>Tepe Tork</b> değerinden türetilir; devir/güç bilgi amaçlıdır. Katalogdan gelen değerler elle düzenlenebilir.'));
 }
 function _mntGearboxSection(node){
   return _mntCard('Şanzıman · Vites Oranları','', 'var(--accent-danger)',
@@ -2783,6 +2887,10 @@ if(typeof module!=='undefined' && module.exports){
     veMntSetZeta: veMntSetZeta,
     _mntZetaDefault: _mntZetaDefault,
     _mntZetaOf: _mntZetaOf,
+    veMntApplyEnginePreset: veMntApplyEnginePreset,
+    _mntEnginePresetValues: _mntEnginePresetValues,
+    _mntEnginePresetSelect: _mntEnginePresetSelect,
+    _mntEngineSection: _mntEngineSection,
     _mntComputeResults: _mntComputeResults,
     getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
     getMntViewerPropertiesHTML: getMntViewerPropertiesHTML,
