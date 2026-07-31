@@ -87,10 +87,19 @@ describe('veSolverRun — Çözücü bileşenini açar', () => {
 });
 
 describe('kaynak bekçileri — iki düğme ayrışmasın', () => {
-  test('şerit Çalıştır düğmesi veSolverRun çağırıyor', () => {
+  test('şerit düğmesi "Çözücü" adıyla veSolverRun çağırıyor', () => {
     const ribbon = loadSource('ribbon.js');
-    expect(ribbon).toContain("label:'Çalıştır'");
+    // Ad davranışı anlatmalı: düğme hesabı başlatmıyor, Çözücü'yü açıyor.
+    expect(ribbon).toContain("label:'Çözücü'");
     expect(ribbon).toContain("run:'veSolverRun'");
+    // Eski yanıltıcı ad geri gelmemeli.
+    expect(ribbon).not.toContain("label:'Çalıştır'");
+  });
+
+  test('Sonuçlar boş-yuva düğmesi de "aç" diyor', () => {
+    const results = loadSource('results.js');
+    expect(results).toContain('Çözücüyü Aç');
+    expect(results).not.toContain('Simülasyonu Çalıştır<');
   });
 
   test('eski hesap yolu Çalıştır düğmesine bağlı değil', () => {

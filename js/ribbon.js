@@ -40,7 +40,10 @@ var VE_RIBBON_TABS = [
       ]},
       { label: 'Çözüm', items: [
         { size:'lg', icon:'search', label:'Doğrula',  run:'veSolverValidate', tip:'Topolojiyi doğrula' },
-        { size:'lg', icon:'play',   label:'Çalıştır', run:'veSolverRun',      tip:'Çözücü bileşenini aç', accent:true }
+        // Ad "Çalıştır" değil "Çözücü": düğme hesabı başlatmıyor, Çözücü
+        // bileşenini açıyor (hesap oradaki "Hesapla" ile başlar). İkon play —
+        // Çözücü bileşeninin tuvaldeki simgesiyle aynı (kare içinde üçgen).
+        { size:'lg', icon:'play',   label:'Çözücü',   run:'veSolverRun',      tip:'Çözücü bileşenini aç', accent:true }
       ]},
       { label: 'Düzen', items: [
         { size:'sm', icon:'undo', label:'Geri Al',          run:'veUndo',       tip:'Son işlemi geri al (Ctrl+Z)' },
@@ -172,7 +175,7 @@ function veRibbonRunnable(item) {
   return !!(item && item.run && typeof window[item.run] === 'function');
 }
 
-// Modül seçim ekranı açıkken çalışma alanı yok: Kaydet / Doğrula / Çalıştır /
+// Modül seçim ekranı açıkken çalışma alanı yok: Kaydet / Doğrula / Çözücü /
 // PNG gibi komutlar bir işe yaramaz. Şeridin tamamı etkin görünürken sol panel
 // gizleniyordu — tutarsızdı. Bu durumda proje açma/oluşturma ve program
 // komutları dışındaki her şey pasif çizilir.
