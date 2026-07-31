@@ -313,6 +313,24 @@ function veClearCanvasDOM() {
   if(typeof annotations !== 'undefined') { annotations = []; selectedAnnotations = []; }
 }
 
+// Bir PROJE yüklenirken (dosya açma / otomatik yedekten dönüş) açık alt-topoloji
+// gezinme yolu GEÇERSİZDİR: veAracStack/veMntStack girdilerindeki parentState
+// ÖNCEKİ projeye aittir. Temizlenmezse ilk arka-plan kaydı (otomatik yedek,
+// sonuç ağacı yenileme, sekme değiştirme → veSaveActiveTabState) önce
+// veAracCollapseToRoot ile "köke çıkar" ve o ESKİ parentState'i canlı duruma
+// geri yazar → yeni açılan projenin düğümleri, bağlantıları ve gruplama
+// çerçeveleri sessizce önceki projeyle DEĞİŞİR. Ölçülen senaryo: alt-topoloji
+// açıkken proje aç → tab.state 1 düğüm/1 çerçeve yerine önceki projenin 3
+// düğüm/başka çerçevesini taşıyor.
+function veResetSubtopoNav() {
+  if(typeof veAracStack !== 'undefined' && Array.isArray(veAracStack)) veAracStack.length = 0;
+  if(typeof veMntStack !== 'undefined' && Array.isArray(veMntStack)) veMntStack.length = 0;
+  // Breadcrumb çipleri stack boşalınca kendini kaldırır; sidebar kapsamı köke döner.
+  if(typeof veAracUpdateBreadcrumb === 'function') veAracUpdateBreadcrumb();
+  if(typeof veMntUpdateBreadcrumb === 'function') veMntUpdateBreadcrumb();
+  if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
+}
+
 function veLoadTabState(tab) {
   var s = tab.state;
   if(!s) {

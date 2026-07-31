@@ -1052,7 +1052,11 @@ function _mntTopoState(j){
     nodes: s.nodes, connections: s.connections || [],
     compCounter: s.compCounter || 0,
     canvasOffset: s.canvasOffset || { x:3000, y:3000 },
-    canvasZoom: s.canvasZoom || 1
+    canvasZoom: s.canvasZoom || 1,
+    // Gruplama çerçeveleri / yazı etiketleri de örnekle birlikte gelir. Alan
+    // DÜŞERSE veLoadTabState → restoreState → restoreAnnotations([]) çağrılır ve
+    // iç topolojideki çerçeveler örnek aktarımında sessizce SİLİNİR.
+    annotations: s.annotations || []
   };
 }
 
@@ -1078,7 +1082,10 @@ function veMntExportTopology(){
   var st = veSerializeCurrentState();
   var out = { format:'mfsim-mount-example', version:1,
     nodes: st.nodes, connections: st.connections,
-    compCounter: st.compCounter, canvasOffset: st.canvasOffset, canvasZoom: st.canvasZoom };
+    compCounter: st.compCounter, canvasOffset: st.canvasOffset, canvasZoom: st.canvasZoom,
+    // Tuval açıklamaları (gruplama çerçevesi / yazı etiketi) uçucu DEĞİL:
+    // yazılmazsa dışa aktarılan örnek yeniden yüklendiğinde çerçeveler kaybolur.
+    annotations: st.annotations || [] };
   var json = JSON.stringify(out, null, 2);
   if(typeof document==='undefined') return json;
   var blob = new Blob([json], { type:'application/json' });
