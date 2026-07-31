@@ -2951,6 +2951,11 @@ function veTogglePropertiesPanel(forceState) {
   if(!ov) return;
   var isVisible = ov.classList.contains('visible');
   var open = (typeof forceState === 'boolean') ? forceState : !isVisible;
+  // Arka-plan kaydetmesinin tetiklediği SESSİZ alt-topoloji gidiş-dönüşü
+  // sırasında pencere kapatılmaz (bkz. topology.js _veCaptureSubtopoNav).
+  // Kullanıcı hiçbir şey yapmadı; o turdaki clearSelection/openEditor
+  // kapatma çağrıları paneli gözünün önünde kapatıyordu.
+  if(!open && typeof veSubtopoNavRestoring === 'function' && veSubtopoNavRestoring()) return;
   if(open) {
     if(ov.style.display !== 'flex') {
       // Tamamen kapalıydı → display set, sonra rAF ile visible (geçiş 0→1)

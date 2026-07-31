@@ -3054,6 +3054,78 @@
   .ve-cp-grid{ grid-template-columns:1fr; }
 }
 
+/* ══ TAKOZ 3D GÖRÜNTÜLEYİCİ / KOORDİNAT DÜZLEMİ — SOL RAY DENETİMLERİ ══
+   Önceki hâl: tek bir flex-wrap satırında beş farklı genişlikte buton →
+   dar sol rayda "4 + 1" diye kırılıyor, kapalı katman butonu opacity:0.45
+   ile soldurulduğu için AÇIK/KAPALI yerine ETKİN/DEVRE-DIŞI okunuyordu.
+   Yeni hâl: sabit sütunlu ızgaralar (asla ragged wrap yok) + kapalı/açık
+   ayrımı renkle ve öndeki nokta göstergesiyle (opacity ile değil). */
+.mnt-vwr-toggles{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:5px;margin-bottom:12px;
+}
+.mnt-vwr-actions{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:5px;margin-bottom:12px;
+}
+.mnt-vwr-actions .mnt-vwr-wide{ grid-column:1 / -1; }
+.mnt-vwr-toggle,.mnt-vwr-action{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  width:100%;min-height:27px;padding:5px 7px;
+  font-family:inherit;font-size:var(--fs-micro);font-weight:600;line-height:1;
+  color:var(--text-secondary);background:var(--bg-tertiary);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  cursor:pointer;white-space:nowrap;min-width:0;
+  transition:background var(--dur-fast) var(--ease-out),
+             border-color var(--dur-fast) var(--ease-out),
+             color var(--dur-fast) var(--ease-out);
+}
+.mnt-vwr-toggle:hover,.mnt-vwr-action:hover{
+  border-color:var(--text-muted);color:var(--text-primary);
+}
+/* Kapalı katman: nötr gri nokta. Açık katman: vurgu dolgusu + vurgu noktası. */
+.mnt-vwr-toggle::before{
+  content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0;
+  background:var(--text-muted);
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.mnt-vwr-toggle.is-on{
+  color:var(--accent-primary);
+  background:color-mix(in srgb, var(--accent-primary) 12%, var(--bg-tertiary));
+  border-color:color-mix(in srgb, var(--accent-primary) 45%, var(--border-color));
+}
+.mnt-vwr-toggle.is-on::before{ background:var(--accent-primary); }
+.mnt-vwr-action .mf-ico{ font-size:var(--fs-body); }
+/* Gösterge: dikey liste — üç çip tek satıra sığmadığı için sarıp taşıyordu. */
+.mnt-vwr-legend{
+  display:flex;flex-direction:column;gap:5px;margin-bottom:12px;
+  padding:7px 9px;background:var(--bg-secondary);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+}
+.mnt-vwr-legend-row{
+  display:flex;align-items:baseline;gap:7px;min-width:0;
+  font-size:var(--fs-micro);line-height:1.35;
+}
+.mnt-vwr-dot{
+  width:9px;height:9px;border-radius:50%;flex-shrink:0;
+  align-self:center;
+}
+.mnt-vwr-legend-name{ color:var(--text-primary);font-weight:600;flex-shrink:0; }
+.mnt-vwr-legend-desc{
+  color:var(--text-muted);min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.mnt-vwr-hint{
+  font-size:var(--fs-micro);color:var(--text-muted);
+  line-height:1.55;margin-bottom:2px;
+}
+/* Tam ekran üst çubuğu: aynı çip dili, yatay dizilim. */
+.mnt-vwr-bar{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  padding:8px 14px;flex-shrink:0;border-bottom:1px solid var(--border-color);
+}
+.mnt-vwr-bar .mnt-vwr-toggle,.mnt-vwr-bar .mnt-vwr-action{ width:auto;padding:5px 11px; }
+
 /* ── Bileşen kimlik bloğu (simge + ad + ID + sil düğmesi) ──
    Varsayılan: ORTALANMIŞ dikey yığın — tüm bileşen pencerelerinde eskisi gibi. */
 .ve-prop-identity{

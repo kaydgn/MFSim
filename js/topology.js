@@ -131,14 +131,60 @@ function veSaveActiveTabState() {
   tab.connCount = connections.length;
 }
 
+// Sessiz alt-topoloji gidiş-dönüşü (köke çök → serialize → geri gir) SÜRÜYOR mu?
+// Bu tur boyunca canvas ve seçim baştan kurulur; yol üzerindeki her adım açık
+// özellik penceresini kapatmaya çalışır (clearSelection → showEmptyProperties,
+// ve veMntOpenEditor/veAracOpenEditor'ın kendi kapatma çağrısı). Kullanıcı
+// HİÇBİR ŞEY yapmadığı için (tetikleyen arka-plan kaydetmesi) pencerenin
+// kapanması bir hataydı: 3D Görüntüleyici gibi uzun süre açık kalan paneller
+// "kendiliğinden kapanıyor" görünüyordu. Bayrak açıkken kapatma çağrıları
+// yutulur (bkz. veTogglePropertiesPanel) ve tur sonunda panel geri açılır.
+var _veSubtopoNavRestoring = false;
+function veSubtopoNavRestoring() { return _veSubtopoNavRestoring; }
+
+// Açık özellik penceresini (tek seçili düğüm + görünürlük) yakalar; tur sonunda
+// AYNI düğümün panelini sessizce geri açan bir fonksiyon döndürür.
+function _veCaptureOpenPanel() {
+  var nodeId = null, wasOpen = false;
+  try {
+    if(typeof selectedNodes !== 'undefined' && selectedNodes && selectedNodes.length === 1 && selectedNodes[0]) {
+      nodeId = selectedNodes[0].id;
+    }
+    if(typeof document !== 'undefined') {
+      var ov = document.getElementById('ve-properties-overlay');
+      wasOpen = !!(ov && ov.classList && ov.classList.contains('visible'));
+    }
+  } catch(e) {}
+  return function _veRestoreOpenPanel() {
+    if(!nodeId) return;
+    try {
+      // Düğüm nesneleri veLoadTabState ile YENİDEN oluşturulur → id ile bul.
+      var n = (typeof nodes !== 'undefined' && nodes) ? nodes.find(function(x){ return x && x.id === nodeId; }) : null;
+      if(!n) return;                                  // düğüm silinmiş → sessizce geç
+      if(typeof clearSelection === 'function') clearSelection();
+      if(typeof addToSelection === 'function') addToSelection(n);   // → showNodeProperties
+      else if(typeof showNodeProperties === 'function') showNodeProperties(n);
+      if(wasOpen && typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+    } catch(e) { if(typeof console !== 'undefined') console.warn('[MFSim] panel geri yükleme:', e && e.message); }
+  };
+}
+
 // Alt-topoloji (Araç Performans / Takoz iç topolojisi) gezinme yolunu yakalar ve
 // kullanıcıyı aynı yola SESSİZCE (toast/animasyon yok) geri götüren bir "restore"
 // fonksiyonu döndürür. Köke çökme (veSaveActiveTabState) sonrası yeniden giriş için.
+// Açık özellik penceresi de aynı turda korunur (bkz. _veCaptureOpenPanel).
 function _veCaptureSubtopoNav() {
   var aracPath = [];
   var mntPath = [];
   try { if(typeof veAracStack !== 'undefined' && veAracStack && veAracStack.length) aracPath = veAracStack.map(function(c){ return c.nodeId; }); } catch(e) {}
   try { if(typeof veMntStack !== 'undefined' && veMntStack && veMntStack.length) mntPath = veMntStack.map(function(c){ return c.nodeId; }); } catch(e) {}
+  // Alt-topolojide DEĞİLSEK canvas hiç değişmez → panele dokunma (gereksiz
+  // yeniden çizim açık panelin kaydırma konumunu/odağını bozardı).
+  if(!aracPath.length && !mntPath.length) {
+    return function _veRestoreSubtopoNavNoop() {};
+  }
+  var restorePanel = _veCaptureOpenPanel();
+  _veSubtopoNavRestoring = true;
   return function _veRestoreSubtopoNav() {
     try {
       // Köke çökmüş canvas'ta yolu baştan (kök→derin) yeniden gir; _silent=true.
@@ -146,6 +192,11 @@ function _veCaptureSubtopoNav() {
       if(aracPath.length && typeof veAracOpenEditor === 'function') aracPath.forEach(function(id){ veAracOpenEditor(id, true); });
       if(mntPath.length && typeof veMntOpenEditor === 'function') mntPath.forEach(function(id){ veMntOpenEditor(id, true); });
     } catch(e) { if(typeof console !== 'undefined') console.warn('[MFSim] alt-topoloji geri yükleme:', e && e.message); }
+    finally {
+      // Panel geri açılırken bayrak HÂLÂ açık: addToSelection'ın içindeki
+      // clearSelection→showEmptyProperties zinciri pencereyi kapatmasın.
+      try { restorePanel(); } finally { _veSubtopoNavRestoring = false; }
+    }
   };
 }
 
@@ -158,8 +209,9 @@ function _veCaptureSubtopoNav() {
 // değiştirdiği için geri-giriş gereksiz/yanlış olurdu).
 function veSaveActiveTabStateKeepView() {
   var restore = _veCaptureSubtopoNav();
-  veSaveActiveTabState();
-  restore();
+  // try/finally: serileştirme patlasa bile kullanıcı alt-topolojisine geri
+  // getirilir ve "panel kapatma yutma" bayrağı asla açık kalmaz.
+  try { veSaveActiveTabState(); } finally { restore(); }
 }
 
 /**

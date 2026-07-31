@@ -1488,31 +1488,57 @@ function _mntLoadExampleFromModel(nodeId){
 // ════════════════════════════════════════════════════════════════════════════
 //  3D GÖRÜNTÜLEYİCİ — iç topolojinin 3B yerleşimi (tema uyumlu)
 // ════════════════════════════════════════════════════════════════════════════
-// Görüntüleyici araç çubuğu düğmesi (aç/kapa görünümlü).
-function _mntVwrBtn(onclick, label, title, active){
-  return '<button onclick="'+onclick+'" title="'+_mntEsc(title||label)+'" style="padding:4px 9px; font-size:var(--fs-tiny); background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; opacity:'+(active===false?'0.45':'1')+';">'+label+'</button>';
+// ─── Görüntüleyici sol-ray denetimleri ───────────────────────────────────────
+// İki ayrı buton dili: KATMAN ÇİPİ (aç/kapa, durumu renkle taşır) ve EYLEM
+// düğmesi (tek seferlik iş). Eskiden ikisi de aynı gri butondu ve kapalı katman
+// opacity:0.45 ile soldurulduğu için "devre dışı/bozuk" görünüyordu; hepsi tek
+// bir flex-wrap satırında olduğundan dar sol rayda ragged sarıyordu. Yerleşim
+// artık CSS ızgarasında (bkz. .mnt-vwr-toggles / .mnt-vwr-actions).
+function _mntVwrToggle(what, label, title, on){
+  var isOn = (on !== false);
+  return '<button type="button" class="mnt-vwr-toggle'+(isOn?' is-on':'')+'" aria-pressed="'+(isOn?'true':'false')+'"'
+    + ' title="'+_mntEsc(title||label)+'"'
+    + ' onclick="var v=veMountViewerToggle(\''+what+'\'); this.classList.toggle(\'is-on\', v); this.setAttribute(\'aria-pressed\', v?\'true\':\'false\');">'
+    + _mntEsc(label) + '</button>';
 }
-// Renk lejantı (slim, tek satır).
+function _mntVwrAction(onclick, icon, label, title, wide){
+  return '<button type="button" class="mnt-vwr-action'+(wide?' mnt-vwr-wide':'')+'" onclick="'+onclick+'" title="'+_mntEsc(title||label)+'">'
+    + (icon ? '<span class="mf-ico mf-ico-'+icon+'"></span>' : '')
+    + '<span>'+_mntEsc(label)+'</span></button>';
+}
+// Renk göstergesi — dikey liste (üç çip dar sol rayda tek satıra sığmıyordu).
 function _mntVwrLegend(){
-  function chip(col,txt){ return '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:9px; height:9px; border-radius:50%; background:'+col+'; display:inline-block;"></span>'+txt+'</span>'; }
-  return '<div style="display:flex; flex-wrap:wrap; gap:12px; font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:7px;">'
-    + chip('var(--accent-success)','Takoz') + chip('var(--accent-warning)','Bileşen CG') + chip('var(--accent-danger)','Birleşik CG') + '</div>';
+  function row(col,name,desc){
+    return '<div class="mnt-vwr-legend-row"><span class="mnt-vwr-dot" style="background:'+col+';"></span>'
+      + '<span class="mnt-vwr-legend-name">'+name+'</span>'
+      + '<span class="mnt-vwr-legend-desc">'+desc+'</span></div>';
+  }
+  return '<div class="mnt-vwr-legend">'
+    + row('var(--accent-success)','Takoz','küp')
+    + row('var(--accent-warning)','Bileşen CG','küre · kütleyle büyür')
+    + row('var(--accent-danger)','Birleşik CG','toplam ağırlık merkezi')
+    + '</div>';
 }
 function getMntViewerPropertiesHTML(node){
   if(!node.data) node.data={};
-  // SOL rayı (ince): lejant + görünüm düğmeleri + ipucu + yenile.
+  // SOL rayı (ince): gösterge → katmanlar → görünüm eylemleri → ipucu.
   var left='';
+  left+='<div class="sw-section-title">Gösterge</div>';
   left+=_mntVwrLegend();
-  // Görünüm katmanları + sıfırla + tam ekran (Zemin varsayılan gizli)
-  left+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:9px;">';
-  left+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
-  left+=_mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksenleri gizle/göster');
-  left+=_mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Eksen etiketlerini gizle/göster');
-  left+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
-  left+=_mntVwrBtn("veMntViewerFullscreen();",'<span class="mf-ico mf-ico-maximize"></span> Tam Ekran','Görüntüleyiciyi tam ekran aç');
+  // Katman aç/kapa (Zemin varsayılan KAPALI — eksenler "havada" görünsün)
+  left+='<div class="sw-section-title">Katmanlar</div>';
+  left+='<div class="mnt-vwr-toggles">';
+  left+=_mntVwrToggle('grid','Zemin','Zemin ızgarasını gizle/göster', false);
+  left+=_mntVwrToggle('axes','Eksen','Eksenleri gizle/göster');
+  left+=_mntVwrToggle('labels','Etiket','Eksen etiketlerini gizle/göster');
   left+='</div>';
-  left+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5; margin-bottom:9px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
-  left+='<button onclick="veMntViewerRefresh()" style="width:100%; padding:8px; font-size:var(--fs-body); background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">↻ Yenile</button>';
+  left+='<div class="sw-section-title">Görünüm</div>';
+  left+='<div class="mnt-vwr-actions">';
+  left+=_mntVwrAction("veMountViewerReset();",'crosshair','Sıfırla','Kamera açısını ve yakınlığı başlangıca döndür');
+  left+=_mntVwrAction("veMntViewerFullscreen();",'maximize','Tam Ekran','Görüntüleyiciyi tam ekran aç');
+  left+=_mntVwrAction("veMntViewerRefresh()",'refresh','Yenile','Topolojiyi yeniden oku ve sahneyi güncelle', true);
+  left+='</div>';
+  left+='<div class="mnt-vwr-hint">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
   // SAĞ (geniş): 3B görüntüleyici kanvası — büyük. Canvas boyutu wrap'ın client
   // boyutuna göre kurulur (veMountViewerInit + ResizeObserver) → geniş sütunda oturur.
   var right='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:var(--radius-md);"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
@@ -1540,12 +1566,16 @@ function getMntCoordFramePropertiesHTML(node){
   left+=axRow('#22c55e','Y','Yanal eksen · +Y sağ, −Y sol');
   left+=axRow('#3b82f6','Z','Düşey eksen · +Z yukarı, −Z aşağı');
   left+='</div>';
-  left+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:9px;">';
-  left+=_mntVwrBtn("var v=veMountViewerToggle('planes'); this.style.opacity=v?'1':'0.45';",'Düzlem','Koordinat düzlemlerini gizle/göster');
-  left+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
-  left+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
+  left+='<div class="sw-section-title">Katmanlar</div>';
+  left+='<div class="mnt-vwr-toggles" style="grid-template-columns:repeat(2,minmax(0,1fr));">';
+  left+=_mntVwrToggle('planes','Düzlem','Koordinat düzlemlerini gizle/göster');
+  left+=_mntVwrToggle('grid','Zemin','Zemin ızgarasını gizle/göster', false);
   left+='</div>';
-  left+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
+  left+='<div class="sw-section-title">Görünüm</div>';
+  left+='<div class="mnt-vwr-actions">';
+  left+=_mntVwrAction("veMountViewerReset();",'crosshair','Sıfırla','Kamera açısını ve yakınlığı başlangıca döndür', true);
+  left+='</div>';
+  left+='<div class="mnt-vwr-hint">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
   // SAĞ (geniş): 3B koordinat kanvası — büyük. Canvas boyutu wrap'ın client boyutuna
   // göre kurulur (veMountViewerInit + ResizeObserver) → geniş sütunda ferahça oturur.
   var right='<div id="ve-mnt-coord-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:var(--radius-md);"><canvas id="ve-mnt-coord-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
@@ -2899,11 +2929,11 @@ function _mntFsOverlay(title, innerHTML, onMount, onClose){
 }
 // 3D Görüntüleyici'yi (model modu) tam ekran aç. Koordinat Düzlemi'nde tam ekran yok.
 function veMntViewerFullscreen(){
-  var toggles = _mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin', false)
-    + _mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksen')
-    + _mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Etiket');
-  var bar='<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 14px; flex-shrink:0; border-bottom:1px solid var(--border-color);">'
-    + toggles + _mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Sıfırla')
+  var toggles = _mntVwrToggle('grid','Zemin','Zemin ızgarasını gizle/göster', false)
+    + _mntVwrToggle('axes','Eksen','Eksenleri gizle/göster')
+    + _mntVwrToggle('labels','Etiket','Eksen etiketlerini gizle/göster');
+  var bar='<div class="mnt-vwr-bar">'
+    + toggles + _mntVwrAction("veMountViewerReset();",'crosshair','Sıfırla','Kamera açısını ve yakınlığı başlangıca döndür')
     + '<span style="flex:1;"></span><span style="font-size:var(--fs-micro); color:var(--text-muted);">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşen bilgisi</span></div>';
   var wrap='<div style="flex:1; min-height:0; position:relative; background:var(--bg-primary);"><canvas id="ve-mnt-fs-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
   _mntFsOverlay('3D Görüntüleyici', bar+wrap,

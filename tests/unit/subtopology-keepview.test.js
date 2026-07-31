@@ -113,6 +113,114 @@ describe('veSaveActiveTabStateKeepView — kullanıcı alt-topolojide kalır', (
   });
 });
 
+/**
+ * REGRESYON: alt-topolojide AÇIK özellik penceresi arka-plan kaydetmede kapanıyordu
+ * ──────────────────────────────────────────────────────────────────────────────
+ * Kullanıcı 3D Görüntüleyici panelini açık bırakıp beklerken (otomatik-kaydet gibi
+ * bir arka-plan işi tetiklendiğinde) pencere KENDİLİĞİNDEN kapanıyordu. Zincir:
+ * veSaveActiveTabStateKeepView → köke çök (veLoadTabState → clearSelection →
+ * showEmptyProperties → veTogglePropertiesPanel(false)) → sessiz geri giriş
+ * (veMntOpenEditor de paneli kapatır). Kullanıcı hiçbir şey yapmadığı hâlde açık
+ * panel yok oluyordu.
+ *
+ * Çözüm: tur boyunca veSubtopoNavRestoring() true → kapatma çağrıları yutulur
+ * (bkz. map.js veTogglePropertiesPanel); tur sonunda AYNI düğümün paneli sessizce
+ * geri açılır.
+ */
+describe('veSaveActiveTabStateKeepView — açık özellik penceresi korunur', () => {
+  let overlay;
+
+  beforeEach(() => {
+    document.body.innerHTML = '<div id="ve-properties-overlay" class="visible"></div>';
+    overlay = document.getElementById('ve-properties-overlay');
+    global.clearSelection = jest.fn(function () { global.selectedNodes = []; });
+    global.addToSelection = jest.fn();
+    global.showNodeProperties = jest.fn();
+    global.veTogglePropertiesPanel = jest.fn();
+    global.selectedNodes = [];
+    // veFlushOpenPanelData bunu okur (açık panelin DOM değerlerini node.data'ya yazar).
+    global.veActiveModule = 'full-throttle';
+  });
+
+  test('tur sonunda AYNI düğümün paneli geri açılır (seçim + görünürlük)', () => {
+    const viewer = { id: 'comp-25', type: 'mnt-viewer' };
+    global.nodes = [viewer];
+    global.selectedNodes = [viewer];
+    global.veMntStack = [{ nodeId: 'm3', parentState: {} }];
+
+    veSaveActiveTabStateKeepView();
+
+    // Alt-topolojiye geri girildi...
+    expect(veMntOpenEditor).toHaveBeenCalledWith('m3', true);
+    // ...ve açık panel geri getirildi (aynı düğüm nesnesi, kimlikten bulunarak).
+    expect(addToSelection).toHaveBeenCalledWith(viewer);
+    expect(veTogglePropertiesPanel).toHaveBeenCalledWith(true);
+  });
+
+  test('tur BOYUNCA kapatma çağrıları yutulur, tur BİTİNCE bayrak iner', () => {
+    const viewer = { id: 'comp-25', type: 'mnt-viewer' };
+    global.nodes = [viewer];
+    global.selectedNodes = [viewer];
+    global.veMntStack = [{ nodeId: 'm3', parentState: {} }];
+
+    // Geri-giriş anında bayrak açık olmalı: veMntOpenEditor'ın kendi
+    // veTogglePropertiesPanel(false) çağrısı paneli kapatamasın.
+    let flagDuringReentry = null;
+    veMntOpenEditor.mockImplementationOnce(() => { flagDuringReentry = veSubtopoNavRestoring(); });
+
+    expect(veSubtopoNavRestoring()).toBe(false);
+    veSaveActiveTabStateKeepView();
+
+    expect(flagDuringReentry).toBe(true);
+    expect(veSubtopoNavRestoring()).toBe(false);   // tur bitti → normal davranış
+  });
+
+  test('serileştirme patlasa bile bayrak açık kalmaz (panel bir daha kapanamaz olmasın)', () => {
+    global.nodes = [{ id: 'comp-25', type: 'mnt-viewer' }];
+    global.veMntStack = [{ nodeId: 'm3', parentState: {} }];
+    veMntCollapseToRoot.mockImplementationOnce(() => { throw new Error('serialize patladı'); });
+
+    expect(() => veSaveActiveTabStateKeepView()).toThrow('serialize patladı');
+    expect(veSubtopoNavRestoring()).toBe(false);
+  });
+
+  test('düğüm bu arada silinmişse sessizce geçilir (çökme yok)', () => {
+    const viewer = { id: 'comp-25', type: 'mnt-viewer' };
+    global.nodes = [];                       // düğüm artık yok
+    global.selectedNodes = [viewer];
+    global.veMntStack = [{ nodeId: 'm3', parentState: {} }];
+
+    expect(() => veSaveActiveTabStateKeepView()).not.toThrow();
+    expect(addToSelection).not.toHaveBeenCalled();
+    expect(veSubtopoNavRestoring()).toBe(false);
+  });
+
+  test('ANA topolojideyken panele hiç dokunulmaz (gereksiz yeniden çizim yok)', () => {
+    const other = { id: 'comp-2', type: 'terminator' };
+    global.nodes = [other];
+    global.selectedNodes = [other];          // ana topolojide açık bir panel
+
+    veSaveActiveTabStateKeepView();
+
+    expect(clearSelection).not.toHaveBeenCalled();
+    expect(addToSelection).not.toHaveBeenCalled();
+    expect(veTogglePropertiesPanel).not.toHaveBeenCalled();
+  });
+
+  test('panel KAPALIYKEN tur sonunda açılmaz (yalnız seçim geri gelir)', () => {
+    const viewer = { id: 'comp-25', type: 'mnt-viewer' };
+    overlay.classList.remove('visible');     // pencere kapalı
+    global.nodes = [viewer];
+    global.selectedNodes = [viewer];
+    global.veMntStack = [{ nodeId: 'm3', parentState: {} }];
+
+    veSaveActiveTabStateKeepView();
+
+    expect(addToSelection).toHaveBeenCalledWith(viewer);
+    expect(veTogglePropertiesPanel).not.toHaveBeenCalledWith(true);
+  });
+});
+
 describe('veSaveActiveTabState (TERMINAL) — davranış değişmedi', () => {
   test('Köke çökertir ve kullanıcıyı geri GETİRMEZ (sekme değiştir/yükle akışı)', () => {
     global.veAracStack = [{ nodeId: 'comp-9', parentState: {} }];
