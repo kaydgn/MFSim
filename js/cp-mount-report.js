@@ -39,6 +39,18 @@ function _rFs(v, d){
 }
 function _rMountCore(){ return (typeof veMountCore!=='undefined')?veMountCore:(typeof window!=='undefined'?window.veMountCore:null); }
 
+// Raporun kullanacağı sönüm oranı. TEK kaynak Çözücü'dür (R.zeta). Eski
+// projelerde ζ Rapor düğümünde tutuluyordu → o değer yalnız YEDEK olarak
+// okunur; ikisi de yoksa çekirdek varsayılanına düşülür.
+function _mntRepZeta(R, opts){
+  var z = R && Number(R.zeta);
+  if(Number.isFinite(z) && z>0) return z;
+  z = opts && Number(opts.zeta);
+  if(Number.isFinite(z) && z>0) return z;
+  var C=_rMountCore();
+  return (C && C.DEFAULT_ZETA>0) ? C.DEFAULT_ZETA : 0.02;
+}
+
 // ═══════════════════ BİLEŞEN PANELİ ═════════════════════════════════════════
 function getMntReportPropertiesHTML(node){
   if(!node.data) node.data={};
@@ -58,12 +70,18 @@ function getMntReportPropertiesHTML(node){
     var inpSt='width:100%; padding:4px 6px; margin-top:3px; font-size:var(--fs-body); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); text-align:right;';
     html+='<div style="margin:0 0 10px; padding:9px 10px; background:var(--bg-secondary); border:1px solid var(--border-color);">'
         + '<div style="font-size:var(--fs-tiny); font-weight:600; color:var(--text-heading);">Frekans yerleşimi & izolasyon <span style="font-weight:400; color:var(--text-muted);">(opsiyonel)</span></div>'
-        + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin:3px 0 6px;">Doldurulursa rapora §8.8 eklenir: ateşleme frekansı (f<sub>ateş</sub>), Kriter 1 (roll modu &lt; %50 f<sub>ateş</sub>) ve Kriter 2 (rölanti iletilebilirliği &lt; %50). ζ = sönüm oranı (boş → 0,001).</div>'
+        + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin:3px 0 6px;">Doldurulursa rapora §8.8 eklenir: ateşleme frekansı (f<sub>ateş</sub>), Kriter 1 (roll modu &lt; %50 f<sub>ateş</sub>) ve Kriter 2 (rölanti iletilebilirliği &lt; %50).</div>'
         + '<div style="display:flex; gap:8px;">'
         +   '<label style="flex:1; font-size:var(--fs-micro); color:var(--text-secondary);">Rölanti [d/dk]<input type="number" min="0" step="10" value="'+_rEsc(node.data.idleRpm==null?'':node.data.idleRpm)+'" placeholder="ör: 650" onchange="veMntSet(\''+node.id+'\',\'idleRpm\',this.value)" style="'+inpSt+'"></label>'
         +   '<label style="flex:1; font-size:var(--fs-micro); color:var(--text-secondary);">Silindir sayısı<input type="number" min="1" step="1" value="'+_rEsc(node.data.cylinders==null?'':node.data.cylinders)+'" placeholder="ör: 6" onchange="veMntSet(\''+node.id+'\',\'cylinders\',this.value)" style="'+inpSt+'"></label>'
-        +   '<label style="flex:1; font-size:var(--fs-micro); color:var(--text-secondary);">Sönüm ζ<input type="number" min="0" step="0.001" value="'+_rEsc(node.data.zeta==null?'':node.data.zeta)+'" placeholder="0,001" onchange="veMntSet(\''+node.id+'\',\'zeta\',this.value)" style="'+inpSt+'"></label>'
-        + '</div></div>';
+        + '</div>'
+        // ζ artık burada DEĞİL: tüm montaj için tek şirket kabulü olarak Çözücü'de
+        // girilir ve çözümle birlikte rapora akar (R.zeta). İki yerde girilip
+        // birbirinden sapmasın diye alan kaldırıldı.
+        + '<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:6px; padding-top:6px; border-top:1px solid var(--border-color);">'
+        +   'Sönüm oranı <b style="color:var(--text-secondary);">ζ = '+_rF(_mntRepZeta(_veMntLast, {}),3)+'</b> '
+        +   '<b>Çözücü</b> bileşeninden gelir (tüm takozlar için tek değer). Değiştirmek için Çözücü panelini kullanın.</div>'
+        + '</div>';
     html+='<button onclick="veMntGenerateReport(\''+node.id+'\')" style="width:100%; padding:13px 16px; font-size:var(--fs-lg); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; letter-spacing:0.02em; border-radius:var(--radius-sm);" onmouseover="this.style.filter=\'brightness(1.12)\'" onmouseout="this.style.filter=\'none\'">📄 Raporu Oluştur ve İndir</button>';
   } else {
     html+='<div style="padding:10px 12px; margin-bottom:10px; background:rgba(245,158,11,0.12); border:1px solid var(--accent-warning); color:var(--accent-warning); font-size:var(--fs-body); line-height:1.5;">'
@@ -260,6 +278,7 @@ function _mntRepSection8(R, opts){
   h+=_mntRepFreqPlacement(R, opts);
   h+=_mntRepGearForces(R);
   h+=_mntRepDesignLoads(R);
+  h+=_mntRepDamping(R);
   h+=_mntRepConsistency(R);
   return h;
 }
@@ -689,7 +708,7 @@ function _mntRepModeMatrix(modes){
 function _mntRepFreqPlacement(R, opts){
   opts=opts||{};
   var rpm=Number(opts.idleRpm), z=Number(opts.cylinders);
-  var zeta=Number(opts.zeta); if(!(zeta>0)) zeta=0.001;   // varsayılan — referans analizle uyumlu
+  var zeta=_mntRepZeta(R, opts);          // TEK kaynak: Çözücü (R.zeta)
   var modes=R.modes||[];
   if(!(rpm>0 && z>0) || !modes.length) return '';   // girdi yoksa bölümü atla
   var core=_rMountCore();
@@ -710,7 +729,8 @@ function _mntRepFreqPlacement(R, opts){
   var h='<h3>8.8 Adım 8 — Frekans yerleşimi ve iletilebilirlik</h3>';
   h+='<p>Dört zamanlı motorun rölanti ateşleme frekansı \\( f_{\\text{ateş}}=\\dfrac{N}{60}\\cdot\\dfrac{z}{2} \\); '
     +'girilen değerlerle \\( N='+_rF(rpm,0)+' \\) d/dk, \\( z='+_rF(z,0)+' \\) silindir → '
-    +'\\( f_{\\text{ateş}}='+_rF(fFire,1)+' \\) Hz; sönüm oranı \\( \\zeta='+_rF(zeta,4)+' \\).</p>';
+    +'\\( f_{\\text{ateş}}='+_rF(fFire,1)+' \\) Hz; sönüm oranı \\( \\zeta='+_rF(zeta,4)+' \\) '
+    +'(Çözücü\'de tüm montaj için tek değer olarak girilir — bkz. §8.12).</p>';
 
   // Kriter 1 rozeti
   var cls1=ok1?'check':'warn';
@@ -807,6 +827,38 @@ function _mntRepDesignLoads(R){
   return h;
 }
 
+// §8.12 — Takoz sönüm katsayıları. TEK sönüm oranından (Çözücü, şirket kabulü)
+// takoz başına türetilen viskoz sönüm. Referans: ASR-SR-116 Tablo 11 aynı
+// bağıntıyla üretilmiştir.
+function _mntRepDamping(R){
+  var d=R.damping;
+  if(!d || !d.length) return '';          // statik durum çözülemedi → tablo basma
+  var zeta=_mntRepZeta(R, {});
+  var h='<h3>8.12 Takoz sönüm katsayıları</h3>';
+  h+='<p>Sönüm oranı \\( \\zeta \\) montaj genelinde <b>tek bir şirket kabulü</b> olarak girilir (Çözücü paneli); '
+    +'burada \\( \\zeta='+_rF(zeta,4)+' \\). Her takozun eksen başına viskoz sönüm katsayısı bu orandan, '
+    +'takozun <b>dinamik rijitliği</b> ve üzerine düşen <b>statik yük payı</b> ile türetilir:</p>';
+  h+='$$ c_{\\text{eksen}} = 2\\,\\zeta\\,\\sqrt{k_{\\text{din,eksen}}\\; m_{\\text{pay}}} $$';
+  h+='<table><caption>Tablo '+_rTbl()+' — Takoz başına yük payı ve viskoz sönüm katsayıları</caption>';
+  h+='<tr><th>Takoz</th><th>m<sub>pay</sub> [kg]</th><th>c<sub>x</sub> [N·s/mm]</th><th>c<sub>y</sub> [N·s/mm]</th><th>c<sub>z</sub> [N·s/mm]</th><th>ζ</th></tr>';
+  var sum=0;
+  d.forEach(function(e,i){
+    sum += e.mShare||0;
+    h+='<tr><td class="l">'+_rEsc(e.name||('takoz '+(i+1)))+'</td>'
+      +'<td>'+_rF(e.mShare,2)+'</td>'
+      +'<td>'+_rF(e.c[0]/1000,3)+'</td><td>'+_rF(e.c[1]/1000,3)+'</td><td>'+_rF(e.c[2]/1000,3)+'</td>'
+      +'<td>'+_rF(e.zeta,3)+'</td></tr>';
+  });
+  h+='<tr class="sum"><td class="l">Toplam yük payı</td><td>'+_rF(sum,2)+'</td>'
+    +'<td colspan="3" class="c">güç grubu toplam kütlesi '+_rF(R.mp.m,2)+' kg</td><td class="c">—</td></tr>';
+  h+='</table>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Yük payı statik (1g) çözümden alınır: \\( m_{\\text{pay}}=|f_z|/g \\); toplamı güç grubunun kütlesini verir. '
+    +'Daha sert ve/veya daha çok yük taşıyan takoz daha çok söner. '
+    +'<b>Not:</b> bu katsayılar modal analize henüz girmez — doğal frekanslar sönümsüz özdeğer probleminden hesaplanır (§8.7); '
+    +'sönüm, iletilebilirlik değerlendirmesinde (§8.8) ve takoz seçiminde kullanılır.</p>';
+  return h;
+}
+
 // Doğrulama → iç-tutarlılık özeti
 function _mntRepConsistency(R){
   var h='<h3>8.11 Model içi tutarlılık kontrolleri</h3>';
@@ -851,7 +903,7 @@ function _mntRepCompliance(R, opts){
   // Kriter 2 — Rölanti transmissibility < %50. §8.8 ile AYNI hesap: en yüksek
   // mod (ateşlemeye en yakın), sönüm oranı ζ (varsayılan 0,001 ≈ sönümsüz).
   var fMax=modes[modes.length-1].f_Hz, c2;
-  var zeta=Number(opts.zeta); if(!(zeta>0)) zeta=0.001;
+  var zeta=_mntRepZeta(R, opts);          // TEK kaynak: Çözücü (R.zeta)
   var _core=_rMountCore();
   if(!haveIdle) c2={st:'wait', bulgu:'Motor rölanti devri + silindir sayısı girin'};
   else { var rr=fFire/fMax, T=_core?_core.transmissibility(fFire,fMax,zeta):Infinity;
@@ -923,6 +975,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepStep4Torque: _mntRepStep4Torque,
     _mntRepStep5Modal: _mntRepStep5Modal,
     _mntRepConsistency: _mntRepConsistency,
+    _mntRepDamping: _mntRepDamping,
+    _mntRepZeta: _mntRepZeta,
     _mntRepFindCase: _mntRepFindCase,
     _mntRepCritical: _mntRepCritical,
     _mntRepCaseTr: _mntRepCaseTr,

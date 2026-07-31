@@ -2394,6 +2394,20 @@ function _mntToSI(gather, g){
   };
 }
 
+// Sönüm oranı varsayılanı — TEK doğruluk kaynağı çekirdektir (veMountCore
+// .DEFAULT_ZETA). Çağrı anında okunur ki modül yükleme sırasına bağlı olmasın;
+// çekirdek yoksa (test izolasyonu) aynı değere düşer.
+function _mntZetaDefault(){
+  var C=(typeof veMountCore!=='undefined')?veMountCore:null;
+  return (C && C.DEFAULT_ZETA>0) ? C.DEFAULT_ZETA : 0.02;
+}
+// Çözücü düğümünden geçerli ζ (girilmemiş/geçersiz → varsayılan).
+function _mntZetaOf(solver){
+  var v = solver && solver.data ? solver.data.zeta : undefined;
+  var z = _mntNum(v, NaN);
+  return (Number.isFinite(z) && z>=0 && z<1) ? z : _mntZetaDefault();
+}
+
 var _veMntLast=null;      // son sonuç (kopyala/CSV/3D için)
 function getMntSolverPropertiesHTML(node){
   if(!node.data) node.data={};
@@ -2413,6 +2427,18 @@ function getMntSolverPropertiesHTML(node){
   html+='</select>';
   html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Nonlineer eğriler <b>Takoz Özellikleri</b>\'nde tanımlanır. Bu seçim yalnız ▶ Hesapla ile uygulanır.</div>';
   html+='</div>';
+  // ── Sönüm oranı ζ: TÜM montaj için TEK değer (şirket kabulü) ──
+  // Takoz başına ayrı girilmez; her takozun c katsayısı bundan türetilir
+  // (çekirdek mountDamping: c = 2ζ√(k_dyn·m_pay)).
+  var _z = (node.data.zeta==null || node.data.zeta==='') ? '' : node.data.zeta;
+  var _zd = _mntZetaDefault();
+  html+='<div style="margin-bottom:10px;">';
+  html+='<div style="font-size:var(--fs-micro); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Sönüm Oranı ζ <span style="font-weight:400; color:var(--text-muted);">— tüm takozlar için tek değer</span></div>';
+  html+='<input type="number" min="0" max="1" step="0.001" value="'+_mntEsc(_z)+'" placeholder="'+_mntFmt(_zd,3)+'" '
+      + 'onchange="veMntSetZeta(\''+node.id+'\',this.value)" '
+      + 'style="width:100%; padding:6px 8px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;">';
+  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Şirket kabulü olarak tüm montaja uygulanır (boş → '+_mntFmt(_zd,3)+'). Her takozun sönüm katsayısı <b>c = 2ζ√(k<sub>din</sub>·m<sub>pay</sub>)</b> ile buradan türetilir; ayrıca girilmez. Raporda tablo olarak çıkar.</div>';
+  html+='</div>';
   html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:var(--fs-md); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:var(--radius-sm);">▶ Hesapla</button>';
   html+='<div id="ve-mnt-results"></div>';
   html+='</div>';
@@ -2425,6 +2451,21 @@ function veMntSetSolveMode(nodeId, val){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
   if(!node.data) node.data={};
   node.data.solveMode=(val==='linear'||val==='nonlinear')?val:'auto';
+  if(typeof saveState==='function') saveState();
+}
+
+// Sönüm oranı ζ (0 < ζ < 1). Boş/geçersiz → alan silinir, çözümde varsayılan
+// (MNT_DEFAULT_ZETA) kullanılır. Yeniden çizme YOK — sonuç korunur; değer bir
+// sonraki ▶ Hesapla'da uygulanır (çözüm modu ile aynı davranış).
+function veMntSetZeta(nodeId, val){
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  var s=(typeof val==='string')?val.trim():val;
+  if(s===''||s==null){ delete node.data.zeta; }
+  else {
+    var z=_mntNum(s, NaN);
+    if(Number.isFinite(z) && z>=0 && z<1) node.data.zeta=z;
+  }
   if(typeof saveState==='function') saveState();
 }
 
@@ -2455,6 +2496,7 @@ function _mntPrepareSolve(solverId){
   var prep={
     C:C, solver:solver, gather:gather, si:si, mp:mp, mode:mode, mounts:mounts,
     solvedNL:solvedNL, nlNoCurve:(mode==='nonlinear' && !solvedNL),
+    zeta:_mntZetaOf(solver),               // şirket kabulü — tüm montaja tek değer
     loadCases:si.loadCases, gearDefs:_mntGearTorqueCases(gather.torque),
     designDefs:[ {name:'3.5g Düşey',       n:[ 0,0,-3.5], T:[0,0,0]},
                  {name:'1g Yanal',         n:[ 0,1,-1  ], T:[0,0,0]},
@@ -2487,7 +2529,15 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
   var R={ mp:prep.mp, allCases:allCases, mounts:prep.mounts, modes:modes, gather:prep.gather,
           gearCases:gearCases, designCases:designCases, g:prep.si.g,
           matrixMode:((prep.solver.data&&prep.solver.data.matrixMode)||'delta'), solveMode:prep.mode,
-          solvedNL:prep.solvedNL, nlNoCurve:prep.nlNoCurve, solverId:prep.solver.id };
+          solvedNL:prep.solvedNL, nlNoCurve:prep.nlNoCurve, solverId:prep.solver.id,
+          zeta:prep.zeta };
+  // ── Takoz sönüm katsayıları — TEK ζ'den türetilir (çekirdek mountDamping).
+  // Yük payı STATİK durumdan alınır; Static çözülemediyse damping null kalır
+  // (yük payı bilinmeden c türetilemez — uydurma değer üretilmez).
+  var C=prep.C, stat=null;
+  for(var i=0;i<(allCases||[]).length;i++){ if(allCases[i] && allCases[i].name==='Static'){ stat=allCases[i]; break; } }
+  R.loadShares = (stat && stat.res && C.mountLoadShares) ? C.mountLoadShares(stat.res, prep.si.g) : null;
+  R.damping    = (R.loadShares && C.mountDamping) ? C.mountDamping(prep.mounts, R.loadShares, prep.zeta) : null;
   _veMntLast=R;
   return R;
 }
@@ -2627,6 +2677,12 @@ function _mntSolverStatusHTML(R){
     : R.solveMode==='nonlinear' ? (R.solvedNL ? 'Nonlineer (Newton)' : 'Nonlineer seçildi — eğri yok, lineer')
     : (R.solvedNL ? 'Otomatik → Nonlineer (Newton)' : 'Otomatik → Lineer');
   h+='<div style="margin-top:4px; font-size:var(--fs-micro); color:var(--text-muted);">Çözüm modu: <b style="color:'+(R.solvedNL?'var(--accent-danger)':'var(--text-secondary)')+';">'+_mntEsc(modeLbl)+'</b></div>';
+  if(Number.isFinite(R.zeta)){
+    var _dOk=(R.damping&&R.damping.length);
+    h+='<div style="margin-top:3px; font-size:var(--fs-micro); color:var(--text-muted);">Sönüm oranı: <b style="color:var(--text-secondary);">ζ = '+_mntFmt(R.zeta,3)+'</b>'
+      + (_dOk ? ' · '+R.damping.length+' takozun c katsayısı türetildi'
+              : ' <span style="color:var(--accent-warning);">· statik durum çözülemedi, c türetilemedi</span>')+'</div>';
+  }
   h+='</div>';
 
   var warns=[];
@@ -2724,6 +2780,9 @@ if(typeof module!=='undefined' && module.exports){
     getMntLibraryPropertiesHTML: getMntLibraryPropertiesHTML,
     getMntSolverPropertiesHTML: getMntSolverPropertiesHTML,
     veMntSetSolveMode: veMntSetSolveMode,
+    veMntSetZeta: veMntSetZeta,
+    _mntZetaDefault: _mntZetaDefault,
+    _mntZetaOf: _mntZetaOf,
     _mntComputeResults: _mntComputeResults,
     getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
     getMntViewerPropertiesHTML: getMntViewerPropertiesHTML,
