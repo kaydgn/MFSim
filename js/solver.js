@@ -335,13 +335,55 @@ function veSolverValidate() {
   return res.allOk;
 }
 
+/**
+ * Şerit "Çalıştır" düğmesi (ve komut paleti / Sonuçlar boş-yuva düğmesi).
+ *
+ * ARTIK ÇÖZÜCÜ BİLEŞENİNİ AÇAR — ayrı bir hesap yolu koşturmaz.
+ *
+ * Neden değişti: "Çalıştır" eskiden veSolverRunLegacy'yi çağırıyordu; o da
+ * sonuçlarını #ve-page-cozucu alt-sayfasındaki elemanlara (ve-solver-progress /
+ * ve-solver-result) yazıyordu. O sayfa gezinmede YOK ve display:none —
+ * getElementById onu yine buluyor, dolayısıyla simülasyon gerçekten koşuyor ama
+ * çıktısı görünmez bir sayfaya gidiyordu. Kullanıcı açısından düğme "hiçbir şey
+ * yapmıyor" gibi görünüyordu; üstelik Çözücü bileşeninin "Hesapla" düğmesinden
+ * (veSolverRunProfessional) TAMAMEN AYRI, eski bir kod yoluydu.
+ *
+ * Tek doğruluk kaynağı: Çözücü bileşeni. Çalıştır artık onu açar; hesap oradan
+ * başlatılır. Böylece iki düğme aynı davranışa sahip olur.
+ */
 function veSolverRun() {
+  var solverNode = (typeof nodes !== 'undefined' && nodes)
+    ? nodes.find(function(n) { return n.type === 'solver'; })
+    : null;
+
+  if(!solverNode) {
+    if(typeof showToast === 'function') {
+      showToast('Topolojide Çözücü bileşeni yok — önce bir Çözücü ekleyin.', 'error');
+    }
+    return;
+  }
+
+  // Bileşene çift tıklamayla aynı yol: seç (panel içeriğini üretir) + pencereyi aç.
+  if(typeof clearSelection === 'function') clearSelection();
+  if(typeof addToSelection === 'function') {
+    addToSelection(solverNode);
+  } else if(typeof showNodeProperties === 'function') {
+    showNodeProperties(solverNode);
+  }
+  if(typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+}
+
+// ── ESKİ HESAP YOLU (kullanılmıyor) ────────────────────────────────────────
+// Sonuçlarını gezinmede olmayan #ve-page-cozucu sayfasına yazar. Çözücü
+// bileşenindeki veSolverRunProfessional'ın yerini aldığı için hiçbir düğmeye
+// bağlı değildir; referans olarak duruyor.
+function veSolverRunLegacy() {
   // veSolverValidate zaten sonucu görünür panele döküyor ve toast atıyor;
   // burada ikinci bir toast atmak aynı bilgiyi iki kez söylemek olurdu.
   // Eksikler panelde kalıcı durur — kaybolan bir toast'ın aksine.
   var valid = veSolverValidate();
   if(!valid) return;
-  
+
   var progressEl = document.getElementById('ve-solver-progress');
   var progressFill = document.getElementById('ve-solver-progress-fill');
   var progressText = document.getElementById('ve-solver-progress-text');

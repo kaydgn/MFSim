@@ -37,7 +37,7 @@ var VE_RIBBON_TABS = [
       ]},
       { label: 'Çözüm', items: [
         { size:'lg', icon:'search', label:'Doğrula',  run:'veSolverValidate', tip:'Topolojiyi doğrula' },
-        { size:'lg', icon:'play',   label:'Çalıştır', run:'veSolverRun',      tip:'Simülasyonu çalıştır', accent:true }
+        { size:'lg', icon:'play',   label:'Çalıştır', run:'veSolverRun',      tip:'Çözücü bileşenini aç', accent:true }
       ]},
       { label: 'Düzen', items: [
         { size:'sm', icon:'undo', label:'Geri Al',          run:'veUndo',       tip:'Son işlemi geri al (Ctrl+Z)' },
