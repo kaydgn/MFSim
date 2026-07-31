@@ -729,8 +729,31 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   var shiftState = {
     gearIdx: 0,
     isLockup: false,   // Başlangıç: 1C (converter mod) — TK varsa; TK yoksa etiket salt vites no
-    shiftHistory: []    // [{t, fromGear, toGear, fromMode, toMode, v_kmh, N_engine, SR}]
+    shiftHistory: [],   // [{t, fromGear, toGear, fromMode, toMode, v_kmh, N_engine, SR}]
+    lastShiftT: -Infinity, // son vites değişiminin zamanı [s]
+    lastShiftDir: 0,       // +1 = yukarı, -1 = aşağı, 0 = henüz yok
+    suppressedHunts: 0     // anti-hunt tarafından engellenen ters yön denemesi sayısı
   };
+
+  // Ters yön kilidi [s]: bir üst-vites geçişinden hemen sonra alt-vitese (veya
+  // tersi) dönmek gerçek şanzıman kontrolcülerinde de yasaktır. Kalibre eşikler
+  // şanzıman donanımıyla uyuşmadığında (farklı vites sayısı/oranları için
+  // ayarlanmış profil) iki kural birbirini kovalayıp adım başına gidiş-dönüş
+  // üretebiliyor; bu kilit onu tek bir geçişe indirir. Aynı YÖNDEKI ardışık
+  // geçişler etkilenmez — tam gaz hızlanmada hızlı seri yukarı vites normaldir.
+  var SHIFT_REVERSAL_LOCKOUT = 0.5;
+
+  // Bu adımda `dir` yönünde vites değiştirmek serbest mi?
+  function shiftReversalAllowed(t, dir) {
+    if(shiftState.lastShiftDir === 0) return true;
+    if(dir === shiftState.lastShiftDir) return true;             // aynı yön — serbest
+    return (t - shiftState.lastShiftT) >= SHIFT_REVERSAL_LOCKOUT;
+  }
+
+  function noteShift(t, dir) {
+    shiftState.lastShiftT = t;
+    shiftState.lastShiftDir = dir;
+  }
 
   // Vites-modu etiketi. TK VARSA 'C' (converter) / 'L' (lockup) soneki; TK YOKSA
   // konvertör/kilit kavramı olmadığından SALT vites numarası (doğrudan tahrik).
@@ -818,6 +841,10 @@ function veFTRunSimulationEngine(transferRangeOverride) {
           if(N_engine >= N_shift_lockup) luShiftTriggered = true;
         }
 
+        if(luShiftTriggered && !shiftReversalAllowed(t, +1)) {
+          luShiftTriggered = false;              // ters yön kilidi — hunt bastırıldı
+          shiftState.suppressedHunts++;
+        }
         if(luShiftTriggered) {
           shiftState.shiftHistory.push({
             t: t, fromGear: g, toGear: g + 1, fromMode: veGearModeLabel(g + 1, true), toMode: veGearModeLabel(g + 2, true),
@@ -825,6 +852,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
             threshold: lu_threshold, thresholdBasis: lu_basis
           });
           shiftState.gearIdx = g + 1;
+          noteShift(t, +1);
           shifted = true;
         }
       }
@@ -839,7 +867,13 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     // 0 çekişte takılır. Bu güvenlik: motor governed'a ulaşınca ve üst vites varsa, mod/eşik
     // ne olursa olsun ÜST vitese (lockup) geç. İyi kalibre profillerde normal eşik governed'ın
     // altında tetiklendiğinden bu koşul no-op'tur (kalibre shift hızlarını etkilemez).
-    if(!shifted && g < maxGear && N_engine >= governedSpeed) {
+    // KALKIŞ İSTİSNASI: araç henüz duruyorken bu güvenlik ÇALIŞMAZ. Konvertörlü
+    // bir kalkışta motorun stall devrinde governed'ın ÜSTÜNDE olması normaldir
+    // (türbin duruyor, motor konvertöre karşı devir alıyor) — burada üst vitese
+    // atmak hem fiziksel olarak yanlış (0 km/h'te lockup) hem de downshift kuralı
+    // ile birlikte kalkışta salınım üretiyor. Güvenliğin asıl hedefi hareket
+    // hâlindeyken eşiklerin tetiklenmemesi durumudur.
+    if(!shifted && g < maxGear && N_engine >= governedSpeed && v_kmh > 1 && shiftReversalAllowed(t, +1)) {
       var _iGcur = parseFloat(getCurrentGearData().ratio) || 1.0;
       // TK VAR: yüksek viteste lockup'a geç. TK YOK: mode-flag anlamsız (converter yok) →
       // false bırak; aksi halde downshift dalı (isLU gerektirir) her governed-güvenlik
@@ -851,6 +885,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
         v_kmh: v_kmh, N_engine: N_engine, SR: SR, N_out: N_engine / _iGcur, reason: 'governed-safety'
       });
       shiftState.gearIdx = g + 1;
+      noteShift(t, +1);
       shifted = true;
     }
 
@@ -866,7 +901,29 @@ function veFTRunSimulationEngine(transferRangeOverride) {
 
       if(dsEntry) {
         var dsThreshold = calcDownshiftThreshold(dsEntry, shiftRefRPM);
-        if(N_out_ds < dsThreshold) {
+        // ── OVER-REV KİLİDİ (anti-hunt) ──
+        // Alt vitese düşmek motoru governed'ın ÜSTÜNE çıkaracaksa o düşüş fiziksel
+        // olarak geçersizdir — ve yukarıdaki "governed güvenliği" onu bir sonraki
+        // adımda hemen geri yukarı atacağı için sonsuz salınım (hunt) üretir.
+        //
+        // Gözlenen vaka (Allison 2500SP S1 profili + 9 vitesli şanzıman, ESL=2500):
+        // 5L'de N_out=2425 → N_engine=2425×1.439=3489 > 2500 → governed güvenliği
+        // 6L'ye atıyor; 6L'de N_out=2425 < 3011 ('6to5' eşiği) → downshift 5L'ye
+        // geri atıyor → adım başına bir gidiş-dönüş, 25.134 vites geçişi.
+        // Profilin kendi histerezis bantları DOĞRU; kavga eden iki AYRI kural.
+        //
+        // N_out lockup'ta vitesten bağımsızdır (araç hızına bağlı), bu yüzden alt
+        // vitesteki motor devri doğrudan N_out × i_alt olur.
+        var _iGearLower = parseFloat((forwardGears[g - 1] || {}).ratio) || 1.0;
+        var _nEngAfterDs = N_out_ds * _iGearLower;
+        var _dsWouldOverRev = _nEngAfterDs >= governedSpeed;
+
+        var _dsWanted = N_out_ds < dsThreshold && !_dsWouldOverRev;
+        if(_dsWanted && !shiftReversalAllowed(t, -1)) {
+          _dsWanted = false;                     // ters yön kilidi — hunt bastırıldı
+          shiftState.suppressedHunts++;
+        }
+        if(_dsWanted) {
           var dsFromName = veGearModeLabel(g + 1, true);
           var dsToName = veGearModeLabel(g, true);
           // 2→1 özel durum: converter moda geçiş (yalnız TK varsa; TK yoksa kilit yok)
@@ -880,6 +937,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
             isDownshift: true, threshold: dsThreshold, thresholdBasis: 'N_out_ds < esik (downshift)'
           });
           shiftState.gearIdx = g - 1;
+          noteShift(t, -1);
           shifted = true;
         }
       }
@@ -1858,6 +1916,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
     reachedMaxSpeed: reachedMaxSpeed,
     truncatedByStepBudget: truncatedByStepBudget,
     simEndTime: t,
+    suppressedHunts: shiftState.suppressedHunts,
     maxSpeed_kmh: actualMaxSpeed_kmh,
     finalGear: getCurrentGearData().name,
     transferRange: activeTransfer,

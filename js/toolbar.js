@@ -45,25 +45,9 @@ function veRedo() {
   redo();
 }
 
-// ===== DOSYA MENÜSÜ =====
-function veToggleFileMenu() {
-  var menu = document.getElementById('ve-file-menu');
-  if(!menu) return;
-  var show = menu.style.display === 'none';
-  menu.style.display = show ? 'block' : 'none';
-  if(show) {
-    // Menü dışına tıklanınca kapat
-    setTimeout(function() {
-      document.addEventListener('click', veCloseFileMenu, {once: true});
-    }, 10);
-  }
-}
-function veCloseFileMenu(e) {
-  var menu = document.getElementById('ve-file-menu');
-  if(menu) menu.style.display = 'none';
-}
+// ===== PROJE KOMUTLARI =====
+// (Marka menüsü kaldırıldı — bu komutların yüzeyi artık şerit: js/ribbon.js)
 function veNewProject() {
-  veCloseFileMenu();
   var totalNodes = 0;
   veTabs.forEach(function(t, i) {
     if(i === veActiveTabIdx) totalNodes += nodes.length;
@@ -93,10 +77,13 @@ function veNewProject() {
 // Proje adı - dosya adından veya topolojiden otomatik al
 var veProjectName = '';
 
-// Marka / proje-adı butonunu tutarlı ve yapısal biçimde çizer:
-// [ikon kutusu] [proje adı] [chevron]. İsim boşsa ya da uygulamanın kendi
-// <title>'ıysa sade "MFSim" markası gösterilir (kırpılmış başlık görünmez).
+// Marka / proje-adı etiketini tutarlı ve yapısal biçimde çizer:
+// [ikon kutusu] [proje adı]. İsim boşsa ya da uygulamanın kendi <title>'ıysa
+// sade "MFSim" markası gösterilir (kırpılmış başlık görünmez).
 // textContent = gösterilen isim → results.js'in geri-okuması korunur.
+// Menü kaldırıldığından chevron da yok: tıklanabilirlik vaat eden bir işaret
+// bırakmak, tıklayınca hiçbir şey olmayan bir yüzey demekti. Kırpılan uzun
+// isim title'da tam hâliyle durur.
 function veSetProjectNameButton(name) {
   var btn = document.getElementById('ve-project-name-btn');
   if(!btn) return;
@@ -105,9 +92,9 @@ function veSetProjectNameButton(name) {
   var display = raw.length > 22 ? raw.substring(0, 20) + '…' : raw;
   btn.innerHTML =
     '<span class="ve-brand-mark"><span class="mf-ico mf-ico-settings"></span></span>' +
-    '<span class="ve-brand-name"></span>' +
-    '<span class="mf-ico mf-ico-chevron-down ve-brand-chev"></span>';
+    '<span class="ve-brand-name"></span>';
   btn.querySelector('.ve-brand-name').textContent = display;
+  btn.setAttribute('title', raw);
 }
 
 (function() {
@@ -354,8 +341,6 @@ function veBuildCleanTabState(tabState, opts) {
 }
 
 function veSaveTopology() {
-  veCloseFileMenu();
-
   // Aktif sekmeyi kaydet (alt-topolojideysek kullanıcıyı yerinden etme)
   if(typeof veSaveActiveTabStateKeepView === 'function') veSaveActiveTabStateKeepView();
   else veSaveActiveTabState();
@@ -384,7 +369,6 @@ function veSaveTopology() {
 }
 
 function veLoadTopology() {
-  veCloseFileMenu();
   var input = document.createElement('input');
   input.type = 'file';
   input.accept = '.json';

@@ -82,7 +82,6 @@ function _veHelpBuild() {
 }
 
 function veShortcutsHelpOpen() {
-  if(typeof veCloseFileMenu === 'function') veCloseFileMenu();
   _veHelpBuild();
   var ov = document.getElementById('ve-help');
   if(!ov) return;

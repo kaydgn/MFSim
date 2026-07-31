@@ -83,10 +83,21 @@ function mfsimShowApp() {
   }
 }
 
+// Çıkış sayfayı yeniler: kaydedilmemiş topoloji kaybolur. Komut, kapalı bir
+// menünün içinden şeride (Araçlar → Oturum) taşındı — yani artık tek tıkla
+// erişilebilir. Yıkıcı ve geri alınamaz olduğundan onay istenir.
 function mfsimLogout() {
-  localStorage.removeItem(MFSIM_AUTH_KEY);
-  sessionStorage.removeItem(MFSIM_AUTH_KEY);
-  location.reload();
+  var doLogout = function() {
+    localStorage.removeItem(MFSIM_AUTH_KEY);
+    sessionStorage.removeItem(MFSIM_AUTH_KEY);
+    location.reload();
+  };
+  if(typeof showConfirmToast === 'function') {
+    showConfirmToast('Oturumu kapatmak istediğinize emin misiniz? Kaydedilmemiş değişiklikler kaybolur.',
+                     doLogout, null, 'Çıkış Yap');
+  } else {
+    doLogout();
+  }
 }
 
 // Sayfa yüklendiğinde oturum kontrolü

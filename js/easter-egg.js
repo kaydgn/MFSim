@@ -191,7 +191,6 @@ function _mfDhoBuild() {
 }
 
 function veDenizHarpOpen() {
-  if (typeof veCloseFileMenu === 'function') { try { veCloseFileMenu(); } catch (e) {} }
   _mfDhoBuild();
   var ov = document.getElementById('mf-dho');
   if (!ov) return;

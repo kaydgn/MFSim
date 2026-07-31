@@ -144,7 +144,6 @@ function veRasterizeSVG(svgStr, scale, cb) {
 // Dışa aktar: format 'png' | 'svg'.
 function veExportTopology(format) {
   format = (format || 'png').toString().toLowerCase();
-  if(typeof veCloseFileMenu === 'function') veCloseFileMenu();
   if(typeof nodes === 'undefined' || !nodes || nodes.length === 0) {
     if(typeof showToast === 'function') showToast('Dışa aktarılacak bileşen yok', 'warning');
     return;
