@@ -121,7 +121,24 @@ function veApplyLegacyMigrations(state) {
   return state;
 }
 
+// Tuval açıklamaları (gruplama çerçevesi / yazı etiketi) düğüm-bağlantı geri
+// yüklemesinin SONUNDA değil, try/finally ile HER DURUMDA geri yüklenir.
+// Gerekçe: _veRestoreStateNodes içinde tek bir bozuk düğüm (tanımı kaldırılmış
+// tip, eksik/bozuk data, panel senkron hatası) istisna atarsa, akış eski hâlde
+// annotasyon adımına HİÇ ulaşmıyordu → kullanıcı topolojiyi yüklenmiş görüyor
+// ama gruplama çerçeveleri sessizce kayboluyordu. İstisna yutulmaz; yalnızca
+// çerçeveler ondan ÖNCE kurtarılır.
 function restoreState(state) {
+  try {
+    _veRestoreStateNodes(state);
+  } finally {
+    if(typeof restoreAnnotations === 'function') {
+      restoreAnnotations((state && state.annotations) || []);
+    }
+  }
+}
+
+function _veRestoreStateNodes(state) {
   // Yüklenen state LEGACY ise (sürümsüz/eski) eski varsayılanları bir kez
   // yeni değerlere yükselt; sürümlüyse dokunma (kasıtlı girdiler korunur).
   veApplyLegacyMigrations(state);
@@ -331,10 +348,9 @@ function restoreState(state) {
   // eğri taşıyabilir (ör. aksesuar silindikten sonra kaydedilmiş proje).
   if(typeof veSyncAllEngineAccessories === 'function') veSyncAllEngineAccessories();
 
-  // Annotasyonları geri yükle
-  if(typeof restoreAnnotations === 'function') {
-    restoreAnnotations(state.annotations || []);
-  }
+  // Annotasyonlar burada DEĞİL, restoreState'in finally bloğunda geri yüklenir
+  // (bkz. restoreState) — böylece buraya kadarki adımlardan biri patlarsa bile
+  // gruplama çerçeveleri kaybolmaz.
 
   // Sensör sihirbazı görsellerini güncelle
   if(typeof swRefreshAllWizardVisuals === 'function') swRefreshAllWizardVisuals();
