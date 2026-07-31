@@ -1,6 +1,31 @@
 // PROFESYONEL SOLVER - ANSYS-TARZI HESAPLAMA MOTORU
 // ============================================================================
 
+// Çözücü logunda tek bir listenin basabileceği EN ÇOK satır sayısı.
+// Her log() çağrısı DOM'a bir düğüm ekliyor; sınırsız liste tarayıcıyı kilitler.
+// Gerçek vaka: vites salınımı 25.134 geçiş üretti, entegrasyon 0,728 s'de bitti
+// ama satırların basılması 14+ SAAT sürdü (log zaman damgası 3,4 s → 51.639 s).
+// Hesap doğru olsa bile kullanıcı bunu "program takıldı" olarak görüyor.
+var VE_LOG_LIST_CAP = 300;
+
+/**
+ * Uzun bir listeyi loga basar ama VE_LOG_LIST_CAP satırında keser.
+ * Kesilirse kaç satırın atlandığını söyler — sessizce kırpmaz.
+ * @param {Array}    arr      basılacak kayıtlar
+ * @param {function} logFn    log(mesaj, tip) — çağıranın kendi log fonksiyonu
+ * @param {function} lineFn   (kayıt, indeks) → satır metni
+ * @param {string}   whatNote kesme mesajında geçen açıklama (opsiyonel)
+ */
+function veLogCappedList(arr, logFn, lineFn, whatNote) {
+  var n = arr.length;
+  var shown = Math.min(n, VE_LOG_LIST_CAP);
+  for(var i = 0; i < shown; i++) logFn(lineFn(arr[i], i));
+  if(n > shown) {
+    logFn('  … ' + (n - shown) + ' satır daha (toplam ' + n + ') — log okunabilirliği için gizlendi.', 'dim');
+    if(whatNote) logFn('    ' + whatNote, 'dim');
+  }
+}
+
 function veSolverRunProfessional() {
   // Tek modül — veActiveModule her zaman 'full-throttle'
   if(!veActiveModule) veActiveModule = 'full-throttle';
@@ -972,11 +997,15 @@ function veSolverRunProfessional() {
               logSpacer();
               var i_tr = trg.ratio || trg.oran || '?';
               log('Vites Geçiş Tablosu — ' + trg.kademe + ' (i=' + i_tr + ') — ' + sh.length + ' geçiş:', 'info');
-              sh.forEach(function(s) {
-                log('  t=' + s.t.toFixed(2) + 's | ' + s.fromMode + ' → ' + s.toMode
+              veLogCappedList(sh, log, function(s) {
+                return '  t=' + s.t.toFixed(2) + 's | ' + s.fromMode + ' → ' + s.toMode
                   + ' | V=' + s.v_kmh.toFixed(1) + ' km/h | N=' + s.N_engine.toFixed(0)
-                  + ' rpm | SR=' + s.SR.toFixed(3));
-              });
+                  + ' rpm | SR=' + s.SR.toFixed(3);
+              }, 'Tam liste için Log İndir düğmesini kullanın.');
+              if(r.solverStats.suppressedHunts > 0) {
+                log('  ⚠ ' + r.solverStats.suppressedHunts + ' vites salınımı (hunt) bastırıldı — ' +
+                    'shift profili şanzıman oranlarıyla tam uyuşmuyor olabilir.', 'warn');
+              }
               if(r.solverStats.reachedMaxSpeed) {
                 log('  ✓ Maks. hız: ' + r.solverStats.maxSpeed_kmh.toFixed(1) + ' km/h (' + r.solverStats.finalGear + ')', 'ok');
               }
@@ -988,11 +1017,11 @@ function veSolverRunProfessional() {
           if(sh.length > 0) {
             logSpacer();
             log('Vites Geçiş Tablosu (' + sh.length + ' geçiş):', 'info');
-            sh.forEach(function(s) {
-              log('  t=' + s.t.toFixed(2) + 's | ' + s.fromMode + ' → ' + s.toMode
+            veLogCappedList(sh, log, function(s) {
+              return '  t=' + s.t.toFixed(2) + 's | ' + s.fromMode + ' → ' + s.toMode
                 + ' | V=' + s.v_kmh.toFixed(1) + ' km/h | N=' + s.N_engine.toFixed(0)
-                + ' rpm | SR=' + s.SR.toFixed(3));
-            });
+                + ' rpm | SR=' + s.SR.toFixed(3);
+            }, 'Tam liste için Log İndir düğmesini kullanın.');
           }
         }
         logSpacer();
@@ -1029,6 +1058,12 @@ function veSolverRunProfessional() {
             var sh = ss.shiftHistory || [];
             var governed = ss.N_governed || 2100;
             var fgArr = ss.forwardGears || [];
+            // Shift profili — aşağıdaki "Vites Geçiş Doğrulama" bölümü bunu
+            // kullanıyor. Eskiden ADIM 2'de tanımlı `gd` değişkenine bakıyordu;
+            // o değişken BU kapsamda yok → Lock→Lock geçişi olan her topolojide
+            // "gd is not defined" ile çözüm son anda çöküyordu.
+            var _gbNodeV = nodes.find(function(n) { return n.type === 'gearbox'; });
+            var _gbDataV = _gbNodeV ? (_gbNodeV.data || {}) : {};
             
             logSpacer();
             log('═══════════════════════════════════════════', 'head');
@@ -1073,7 +1108,10 @@ function veSolverRunProfessional() {
             log('VİTES GEÇİŞ DOĞRULAMA (' + sh.length + ' geçiş):', 'info');
             if(sh.length > 0) {
               var shiftErrors = 0;
-              sh.forEach(function(s) {
+              // Doğrulama TÜM geçişler için yapılır (hata sayımı eksilmesin), ama
+              // loga yalnız ilk VE_LOG_LIST_CAP satır basılır — 25.000 DOM düğümü
+              // tarayıcıyı kilitliyordu.
+              sh.forEach(function(s, _si) {
                 var fromMode = s.fromMode || '';
                 var toMode = s.toMode || '';
                 var isConvToConv = fromMode.match(/C$/) && toMode.match(/C$/);
@@ -1087,7 +1125,7 @@ function veSolverRunProfessional() {
                 
                 // Lockup vites geçişlerinde doğrulama
                 if(isLockToLock) {
-                  var spValData = VE_FT_SHIFT_PROFILES[gd.shiftProfile || 'allison3200sp_s1'] || {};
+                  var spValData = VE_FT_SHIFT_PROFILES[_gbDataV.shiftProfile || 'allison3200sp_s1'] || {};
                   var valShiftKey = fromMode + toMode;  // örn. '2L3L'
                   if(spValData.lockupShifts && spValData.lockupShifts[valShiftKey]) {
                     // Per-gear kalibrasyon: N_out = a × ESL + b
@@ -1124,9 +1162,14 @@ function veSolverRunProfessional() {
                   }
                 }
                 
-                log('  ' + statusIcon + ' ' + s.fromMode + ' → ' + s.toMode + ' @ V=' + (s.v_kmh||0).toFixed(1) + ' km/h, N=' + (s.N_engine||0).toFixed(0) + ' rpm [' + shiftType + ']' + statusNote);
+                if(_si < VE_LOG_LIST_CAP) {
+                  log('  ' + statusIcon + ' ' + s.fromMode + ' → ' + s.toMode + ' @ V=' + (s.v_kmh||0).toFixed(1) + ' km/h, N=' + (s.N_engine||0).toFixed(0) + ' rpm [' + shiftType + ']' + statusNote);
+                } else if(_si === VE_LOG_LIST_CAP) {
+                  log('  … ' + (sh.length - VE_LOG_LIST_CAP) + ' satır daha (toplam ' + sh.length +
+                      ') — log okunabilirliği için gizlendi. Doğrulama hepsi için yapıldı.', 'dim');
+                }
               });
-              
+
               if(shiftErrors === 0) {
                 log('  ─── Tüm vites geçişleri doğrulandı ✓', 'ok');
               } else {
