@@ -12,7 +12,10 @@ JSON'ları tek dosyaya **gömer** (görseller harici kalır). Böylece hem `inde
    (mevcut bir örneği "Örneği Aktar" ile getirip düzenle **veya** kütle/takoz/Çözücü
    ekleyip değerleri gir, bağla).
 2. Panelde **"⬇ İç Topolojiyi JSON Dışa Aktar"** ile `.json` indir.
-3. Dosyayı bu klasöre koy, örn. `siper.json`.
+3. Dosyayı bu klasöre koy, örn. `siper.json`. Doğrudan **proje kaydı**
+   (`{tabs:[{state:{…}}]}`) de kabul edilir — yükleyici aktif/ilk dolu sekmenin
+   durumunu alır; ama örnek dosyası biçimi (`{format:'mfsim-mount-example',…}`)
+   tercih edilir: uçucu alanlar (undo/redo, simResults) taşınmaz.
 4. Kayıt defterinde (`js/mount-core.js` → `MOUNT_EXAMPLES`) ilgili örneğe **`topology`**
    alanını ekle (varsa `model`'den önceliklidir):
 
@@ -34,6 +37,7 @@ JSON'ları tek dosyaya **gömer** (görseller harici kalır). Böylece hem `inde
    | Örnek (kayıt anahtarı) | Dosya adı |
    |------------------------|-----------|
    | `siper`                | `siper.png` |
+   | `tulga`                | `tulga.png` *(henüz yok — panel otomatik şemaya düşüyor)* |
 
 3. Kayıt defterinde (`js/mount-core.js` → `MOUNT_EXAMPLES`) ilgili örneğin
    `image` alanını bu yola ayarla:

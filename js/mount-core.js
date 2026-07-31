@@ -945,6 +945,56 @@ var veMountCore = (function() {
     ]
   };
 
+  // ═══════════════════ TULGA referans örneği ═══════════════════
+  // Kaynak: kullanıcının 2026-07-06 tarihli "TULGA" proje kaydı; kütle/CG/atalet,
+  // takoz konumu ve rijitlikleri o dosyadan BİREBİR alındı (mm, kg, kg·m², N/mm,
+  // N·m — UI ile aynı birimler). 8 kütle gövdesi (motor + şanzıman + transfer
+  // kutusu + 5 braket) toplam 788.4 kg; 5 elastomer takozla şasiye bağlanır.
+  // at:[lx,ly] değerleri JSON topolojisindeki düğüm MERKEZLERİNDEN türetildi →
+  // panel önizlemesi ile "Örneği Aktar"ın kurduğu kanvas aynı yerleşimi gösterir.
+  //
+  // NOT (kaynak dosyadaki etiket): alttaki ön takoz kaynak kayıtta "Sağ Ön Takoz"
+  // adını taşıyor ama y = −355.957 (sol taraf) — yani üsttekiyle aynı ada sahip.
+  // Kullanıcı verisi DEĞİŞTİRİLMEDİ (ad yalnız etikettir, çözüme girmez); konum
+  // ve rijitlikler doğrudur. Düzeltilmesi istenirse tek yer: bu ad + JSON'daki
+  // customName.
+  const TULGA_TORQUE = { Te:760, Rstall:1.58, iTransfer:3.428,
+                         fwd:{iGear:3.10, phiAxle:1}, rev:{iGear:-4.49, phiAxle:1},
+                         derate:1 };
+  const TULGA_EXAMPLE = {
+    g: 9.81,
+    components: [
+      {name:'Motor',            mass:418,  cg:[ 124.960,   0.050, 550.030], Ixx:14.7, Iyy:25.00, Izz:19.10, Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-motor',    at:[327,280]},
+      {name:'Şanzıman',         mass:162,  cg:[ 814.550,  40.817, 365.138], Ixx:2.80, Iyy:6.96,  Izz:6.71,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox',  at:[450,280]},
+      {name:'Transfer Kutusu',  mass:184,  cg:[1431.449,  54.419, 202.336], Ixx:4.75, Iyy:6.25,  Izz:3.93,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-transfer', at:[566,280]},
+      {name:'Sağ Arka Braket',  mass:3.7,  cg:[1381.732, 297.711,  72.438], Ixx:0,    Iyy:0,     Izz:0,     Ixy:0, Ixz:0, Iyz:0, pointMass:true,  kind:'mnt-bracket',  at:[612,198]},
+      {name:'Sol Arka Braket',  mass:3.7,  cg:[1381.734,-201.321,  76.001], Ixx:0,    Iyy:0,     Izz:0,     Ixy:0, Ixz:0, Iyz:0, pointMass:true,  kind:'mnt-bracket',  at:[619,374]},
+      {name:'Sağ Ön Braket',    mass:3.5,  cg:[ 479.996, 293.464, 528.943], Ixx:0,    Iyy:0,     Izz:0,     Ixy:0, Ixz:0, Iyz:0, pointMass:true,  kind:'mnt-bracket',  at:[442,191]},
+      {name:'Sol Ön Braket',    mass:3.5,  cg:[ 480.001,-295.736, 528.936], Ixx:0,    Iyy:0,     Izz:0,     Ixy:0, Ixz:0, Iyz:0, pointMass:true,  kind:'mnt-bracket',  at:[442,374]},
+      {name:'Ön Takoz Braketi', mass:10,   cg:[-191.918,  -2.787, 278.202], Ixx:0,    Iyy:0,     Izz:0,     Ixy:0, Ixz:0, Iyz:0, pointMass:true,  kind:'mnt-bracket',  at:[207,282]}
+    ],
+    mounts: [
+      {name:'Ön Takoz',       pos:[-196.034,   0.047, 179.682], kstat:[665,335,290], kdyn:[1165,590,490], at:[ 85,282]},
+      {name:'Sağ Ön Takoz',   pos:[ 439.961, 356.042, 499.855], kstat:[515,260,242], kdyn:[ 335,355,740], at:[437, 88]},
+      {name:'Sağ Arka Takoz', pos:[1381.672, 305.873,  43.452], kstat:[415,210,192], kdyn:[ 535,250,230], at:[605, 87]},
+      {name:'Sağ Ön Takoz',   pos:[ 439.961,-355.957, 499.855], kstat:[515,260,242], kdyn:[ 335,355,740], at:[442,484]},
+      {name:'Sol Arka Takoz', pos:[1381.672,-304.131,  51.439], kstat:[415,210,192], kdyn:[ 535,250,230], at:[600,485]}
+    ],
+    torque: TULGA_TORQUE,
+    // Tork durumları tork zincirinden (torqueChain) TÜRETİLİR — elle yazılmaz ki
+    // TULGA_TORQUE değişince sessizce eskimesin. İşaret kuralı T5 ile aynı:
+    // Tx = −T_shaft (ileri viteste negatif, geri viteste pozitif).
+    //   ileri: 760 × 1.58 × 3.10 × 3.428 × 1 =  12760.66 N·m → Tx = −12760.66
+    //   geri : 760 × 1.58 × (−4.49) × 3.428 × 1 = −18482.38 N·m → Tx = +18482.38
+    loadCases: (function(){
+      const t = TULGA_TORQUE;
+      const chain = d => torqueChain({ Te:t.Te, Rstall:t.Rstall, iGear:d.iGear,
+                                       iTransfer:t.iTransfer, phiAxle:d.phiAxle, derate:t.derate });
+      const T = { 'Forward Torque': -chain(t.fwd), 'Reverse Torque': -chain(t.rev) };
+      return defaultLoadCases().map(c => (c.name in T) ? Object.assign({}, c, { T:[T[c.name],0,0] }) : c);
+    })()
+  };
+
   // ═══════════════════ Çoklu örnek kayıt defteri ═══════════════════
   // Her giriş kendi kendine yeterli bir doğrulama örneğidir: sayısal model
   // (TTAR_EXAMPLE biçimi) + sunum meta verisi (araç adı, açıklama, teknik özet)
@@ -1010,6 +1060,43 @@ var veMountCore = (function() {
       // selfTest onu kullanır; JSON yüklenemezse programatik yola düşülür).
       topology: 'assets/examples/siper_topoloji.json',
       model: SIPER_EXAMPLE
+    },
+    tulga: {
+      id: 'tulga',
+      name: 'TULGA Takoz Analizi',
+      vehicle: 'TULGA',
+      subtitle: '8 kütle · 5 takoz güç grubu',
+      description: 'TULGA güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — motor, şanzıman ve transfer kutusu, dört takoz braketi ve bir ön takoz braketiyle birlikte beş elastomer takoz üzerinden şasiye oturur. Kütle, ağırlık merkezi, atalet ve takoz rijitlikleri kullanıcının TULGA proje kaydından birebir alınmıştır.',
+      specs: [
+        ['Kütle gövdesi', String(TULGA_EXAMPLE.components.length)],
+        ['Takoz', String(TULGA_EXAMPLE.mounts.length)],
+        ['Toplam kütle', TULGA_EXAMPLE.components.reduce(function(s,c){ return s + (c.mass||0); }, 0).toFixed(1) + ' kg'],
+        ['Motor torku', TULGA_EXAMPLE.torque.Te + ' N·m @ 1500 d/dk'],
+        ['Motor gücü', '156.6 kW @ 2300 d/dk'],
+        // Takozlar aynı rijitlikte DEĞİL (ön/orta/arka farklı) → tek değer yerine
+        // aralık göster; sabit kodlanmazsa model değişince kendiliğinden düzelir.
+        ['Takoz statik (Z)', (function(){
+          var z = TULGA_EXAMPLE.mounts.map(function(m){ return m.kstat[2]; });
+          var lo = Math.min.apply(null, z), hi = Math.max.apply(null, z);
+          return (lo === hi ? String(lo) : lo + ' – ' + hi) + ' N/mm';
+        })()]
+      ],
+      // Panel önizleme sahnesi — yalnız görsel süs (yükleyici bunları KURMAZ).
+      // Konumlar JSON topolojisindeki yardımcı araç düğümleriyle aynı.
+      tools: [
+        {type:'mnt-library',    name:'Takoz Özellikleri', at:[816, 40]},
+        {type:'mnt-solver',     name:'Çözücü',            at:[913, 40]},
+        {type:'mnt-report',     name:'Rapor',             at:[997, 41]},
+        {type:'mnt-2dview',     name:'2D Görünüm',        at:[790,232]},
+        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[884,234]},
+        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[983,235]},
+        {type:'mnt-example',    name:'Örnek',             at:[995,401]}
+      ],
+      // Görsel yok → panel modelden otomatik (tema uyumlu) şema üretir.
+      // assets/examples/tulga.png eklenirse burayı o yola çevirmek yeterli.
+      image: '',
+      topology: 'assets/examples/tulga_topoloji.json',
+      model: TULGA_EXAMPLE
     }
   };
   // id → örnek girişi (bilinmezse defterdeki ilk örneğe düşer).
