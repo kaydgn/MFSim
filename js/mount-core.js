@@ -825,6 +825,47 @@ var veMountCore = (function() {
     return Math.sqrt((1 + a*a) / den);
   }
 
+  // ═══════════════════ Viskoz sönüm (SPEC ek — Faz 4) ═══════════════════
+  //
+  // Sönüm oranı ζ bir ŞİRKET KABULÜDÜR: takoz başına ölçülmez, tüm montaj için
+  // TEK değer girilir (UI: Çözücü paneli). Takozun eksen başına viskoz sönüm
+  // katsayısı bu tek orandan TÜRETİLİR — kritik sönümün ζ katı:
+  //
+  //   c_eksen = 2·ζ·√( k_dyn,eksen · m_pay )        [N·s/m]
+  //
+  // m_pay = o takoza düşen STATİK düşey yük payı (kg). Yani hem daha sert hem
+  // daha çok yük taşıyan takoz daha çok söner — fiziksel beklenti budur.
+  //
+  // DOĞRULAMA: BMC ASR-SR-116 (ASFAT 8x8 Obüs) Tablo 11, ζ=0,02 ile bu
+  // bağıntıdan 12/12 değerde ±0,005 N·s/mm içinde yeniden üretilir.
+  // NOT: burada üretilen c'ler henüz MODAL çözüme girmez (sönümsüz özdeğer
+  // problemi korunur); rapor tablosu ve iletilebilirlik için kullanılır.
+  const DEFAULT_ZETA = 0.02;
+
+  // Statik çözümden takoz başına düşey yük payı (kg). res = solveCase* dönüşü.
+  // g yoksa 9.81. Çözüm yoksa null.
+  function mountLoadShares(res, g){
+    if(!res || !res.perMount) return null;
+    const gg = (g > 0) ? g : 9.81;
+    return res.perMount.map(pm => Math.abs(pm.f[2]) / gg);
+  }
+
+  // Takoz başına viskoz sönüm katsayıları. shares (kg) mountLoadShares'ten;
+  // verilmezse/0 ise o takozun c'si 0 çıkar (yük payı bilinmeden sönüm türetilemez).
+  // Dönüş: [{ name, mShare (kg), zeta, c:[cx,cy,cz] (N·s/m) }]
+  function mountDamping(mounts, shares, zeta){
+    const z = (zeta > 0) ? zeta : 0;
+    return (mounts || []).map(function(mnt, i){
+      const m = (shares && shares[i] > 0) ? shares[i] : 0;
+      const kd = mnt.kdyn || [0,0,0];
+      const c = [0,1,2].map(function(ax){
+        const k = kd[ax] > 0 ? kd[ax] : 0;
+        return 2 * z * Math.sqrt(k * m);
+      });
+      return { name: mnt.name, mShare: m, zeta: z, c: c };
+    });
+  }
+
   // ═══════════════════ Tork zinciri (SPEC 4.5) ═══════════════════
 
   // T_shaft = Te,max × R_stall × i_gear × i_transfer × φ_axle × derate
@@ -1332,6 +1373,7 @@ var veMountCore = (function() {
     solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
     buildKtangentDyn, solveModalAtState,
     transmissibility,
+    mountLoadShares, mountDamping,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
     defaultLoadCases, TTAR_EXAMPLE, ttarComponentsSI, ttarMountsSI, selfTest,
@@ -1344,7 +1386,7 @@ var veMountCore = (function() {
     // Numerik yardımcılar (test/ileri kullanım)
     solveLinear, cholesky, jacobiEigenSym, generalizedEigenSym,
     // Sabitler
-    TENSION_EPS_M, LINEAR_LIMIT_M, STOP_GAP_M, STOP_STIFF_RATIO
+    TENSION_EPS_M, LINEAR_LIMIT_M, STOP_GAP_M, STOP_STIFF_RATIO, DEFAULT_ZETA
   };
 })();
 
