@@ -383,13 +383,20 @@ function veResetSubtopoNav() {
   if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
 }
 
+// Boş/kamerasız durumlar için "ev" kamerası: kanvas merkezi (3000,3000) görünümün
+// ORTASINDA. Eski sabit {3000,3000} yerel (0,0)'ı sol-üst köşeye koyuyordu → yeni
+// sekmede kurulan topoloji ızgaranın köşesinden başlıyordu (bkz. js/canvas-space.js).
+function _veHomeOffset() {
+  return (typeof veHomeCameraOffset === 'function') ? veHomeCameraOffset() : { x: 3000, y: 3000 };
+}
+
 function veLoadTabState(tab) {
   var s = tab.state;
   if(!s) {
     nodes = [];
     connections = [];
     compCounter = tab.compCounterBase || compCounter;
-    canvasOffset = { x: 3000, y: 3000 };
+    canvasOffset = _veHomeOffset();
     canvasZoom = 1;
     undoStack = [];
     redoStack = [];
@@ -405,7 +412,7 @@ function veLoadTabState(tab) {
   }
   
   compCounter = s.compCounter || 0;
-  canvasOffset = s.canvasOffset || { x: 3000, y: 3000 };
+  canvasOffset = s.canvasOffset || _veHomeOffset();
   canvasZoom = s.canvasZoom || 1;
   undoStack = s.undoStack || [];
   redoStack = s.redoStack || [];
@@ -503,7 +510,7 @@ function veAddTab(name, silent) {
   nodes = [];
   connections = [];
   selectedNodes = [];
-  canvasOffset = { x: 3000, y: 3000 };
+  canvasOffset = _veHomeOffset();
   canvasZoom = 1;
   undoStack = [];
   redoStack = [];

@@ -78,6 +78,14 @@ function veStartModule(type) {
     if(typeof veShowAllSidebarComponents === 'function') veShowAllSidebarComponents();
   }
 
+  // Boş tuvalde kamerayı "ev" konumuna al: kanvasın merkezi görünümün ortasına
+  // gelsin (bkz. js/canvas-space.js). Açılışta karşılama ekranı yüzünden wrapper
+  // ölçülemediyse ilk konum kaymış olabilir; blok ızgaranın ortasına düşsün diye
+  // burada — ölçülerin kesin olduğu anda — bir kez daha uygulanır.
+  if(typeof veCameraHome === 'function' && typeof nodes !== 'undefined' && nodes && !nodes.length) {
+    veCameraHome();
+  }
+
   // Seçilen modül bloğunu görünür alanın ortasına oluştur.
   // Canvas CSS'te -3000px offset'li → görünür merkez ≈ 3000 + yarı-genişlik.
   if(typeof createNode === 'function' && componentDefs[type]) {

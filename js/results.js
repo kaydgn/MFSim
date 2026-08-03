@@ -5760,8 +5760,11 @@ var nodes = [];
 var connections = [];
 var selectedNodes = [];
 
-// Canvas transform değerleri
-var canvasOffset = {x: 3000, y: 3000}; // Başlangıçta ortada
+// Canvas transform değerleri. Bu ilk değer YALNIZCA DOM hazır olana kadar geçerli
+// (görünüm ölçüsü daha okunamaz): yerel (0,0)'ı görünümün sol-üst köşesine koyar.
+// Açılışta ui-core.js veCameraHome() ile "ev" konumuna alır → kanvasın MERKEZİ
+// görünümün ortasına gelir (bkz. js/canvas-space.js).
+var canvasOffset = {x: 3000, y: 3000};
 var canvasZoom = 1;
 
 // Bağlantı oluşturma durumu
@@ -5871,11 +5874,9 @@ function veToggleFlow() {
 function veCycleGridDensity() {
   veGridDensity = (veGridDensity + 1) % veGridSizes.length;
   var size = veGridSizes[veGridDensity];
-  // Izgara artık #ve-canvas'ta (bileşenlerle birlikte hareket eder) → boyutu orada güncelle
-  var canvasEl = document.getElementById('ve-canvas');
-  if(canvasEl) {
-    canvasEl.style.backgroundSize = size + 'px ' + size + 'px';
-  }
+  // Izgara görünüm katmanında ve deseni kameradan türetiliyor (sonsuz ızgara,
+  // bkz. js/canvas-space.js) → yoğunluk değişince deseni yeniden hesapla.
+  if(typeof veApplyGridPattern === 'function') veApplyGridPattern();
   // Snapshot panelini de güncelle
   var snap = document.querySelector('.ve-snapshot-pane');
   if(snap) snap.style.backgroundSize = size + 'px ' + size + 'px';

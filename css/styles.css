@@ -2123,8 +2123,29 @@
 .ve-canvas-wrapper.panning{
   cursor:grabbing;
 }
-.ve-canvas-wrapper.grid-hidden #ve-canvas{
-  background-image:none;
+/* ── SONSUZ IZGARA ────────────────────────────────────────────────────────
+   Izgara sabit boyutlu #ve-canvas'a değil GÖRÜNÜMÜN kendisine çizilir; deseni
+   kameradan türetilir (js/canvas-space.js → veApplyGridPattern, her pan/zoom
+   karesinde --ve-grid-* değişkenlerini tazeler). Kazanç:
+     • ızgaranın kenarı yok → nereye kaydırırsan kaydır devam eder,
+     • çizgi kalınlığı zoom'dan bağımsız 1px (eskiden zoom 3'te 3px oluyordu),
+     • hücre çok küçülünce desen katlanır (bkz. VE_GRID_MIN_PX).
+   Renk: --border-light en parlak kenar tonuydu ve boş tuvalde ekranın baskın
+   dokusu oluyordu; yarı saydam kenar tonu hizalamaya yetiyor, göze girmiyor. */
+.ve-canvas-wrapper::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:0;
+  pointer-events:none;
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px);
+  background-size:var(--ve-grid-size,20px) var(--ve-grid-size,20px);
+  background-position:var(--ve-grid-x,0px) var(--ve-grid-y,0px);
+}
+.ve-canvas-wrapper.grid-hidden::before{
+  display:none;
 }
 
 /* ── Alt-topoloji giriş/çıkış yumuşak geçişi ──────────────────────────────────
@@ -2163,19 +2184,9 @@
   left:-3000px;
   transform-origin:center center;
 }
-/* Izgara ana canvas'ın kendi (transform'lu) koordinat uzayında — id ile hedeflenir
-   ki split-view snapshot klonları (class 've-canvas') etkilenmesin. Böylece ızgara
-   bileşenlerle birlikte pan'da kayar, zoom'da ölçeklenir; hep hizalı kalır.
-   Boyut veCycleGridDensity ile inline güncellenir (varsayılan 20px). */
-#ve-canvas{
-  /* Izgara YERLEŞİM yardımcısıdır, desen değil: --border-light en parlak
-     kenar tonuydu ve boş tuvalde ekranın baskın dokusu oluyordu. Yarı saydam
-     bir kenar tonuna indirildi — hizalamaya yetiyor, göze girmiyor. */
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--border-color) 55%, transparent) 1px, transparent 1px);
-  background-size:20px 20px;
-}
+/* Izgara ARTIK #ve-canvas'ta DEĞİL — bkz. ".ve-canvas-wrapper::before" (sonsuz
+   ızgara). Sabit 6000×6000 kutuya çizilen ızgaranın görünür bir KENARI vardı:
+   uzaklaşınca topoloji ızgaranın sol-üst köşesine yapışmış görünüyordu. */
 
 /* ===== NODE STİLLERİ ===== */
 .ve-node{
