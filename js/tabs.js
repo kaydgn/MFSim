@@ -44,8 +44,8 @@ function veSubTabDegistir(tabName) {
     }
   }
   
-  // Sonuçlar sayfası açıldığında: veri ağacını güncelle, ardından düzen seçili
-  // değilse önce panel-düzeni seçiciyi göster (paneller otomatik açılmaz).
+  // Sonuçlar sayfası açıldığında: veri ağacını güncelle, ölçüm penceresini
+  // kur/tazele (veEnterResults → veTrEnter).
   if(tabName === 'sonuclar') {
     if(typeof veEnterResults === 'function') {
       veEnterResults();
@@ -53,7 +53,7 @@ function veSubTabDegistir(tabName) {
       // Geriye dönük güvenlik: eski davranış
       if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
       veUpdateResultsTree();
-      veInitResultSlots();
+      if(typeof veTrEnter === 'function') veTrEnter();
     }
     // Sonuç açılışı: içerik yumuşakça belirir (animasyon CSS'te; reduced-motion'a saygılı).
     // remove → reflow → add ile her geçişte yeniden tetiklenir.

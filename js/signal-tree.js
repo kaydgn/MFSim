@@ -352,30 +352,13 @@ function veSigCollectGroups(tabNodeObjs, tabConns, wizSensors, prefix) {
   return groups;
 }
 
-// ── Hedef panel ───────────────────────────────────────────────────────────────
+// ── Hedef pano ────────────────────────────────────────────────────────────────
 
-// Onay kutusunun yazdığı panel. Seçili panel mevcut düzende yoksa düzenin
-// ilk paneline düşülür — kullanıcı görünmeyen bir panele sinyal göndermez.
-function veSigVisibleSlots() {
-  var def = (typeof veGetLayoutDef === 'function' && typeof veResultLayout !== 'undefined')
-    ? veGetLayoutDef(veResultLayout) : null;
-  if(!def || !def.rows) return [0];
-  var out = [];
-  def.rows.forEach(function(r) {
-    r.forEach(function(i) { if(out.indexOf(i) < 0) out.push(i); });
-  });
-  return out.length ? out : [0];
-}
-
+// Onay kutusunun yazdığı yer. Eskiden "hangi panel?" diye bir soru vardı ve
+// listenin üstünde 1/2/3/4 seçici duruyordu; paneller kalkınca soru da kalktı.
+// Tek bir ölçüm penceresi var, işaretlenen sinyal orada kendi şeridine düşer.
 function veSigTargetSlot() {
-  var vis = veSigVisibleSlots();
-  if(vis.indexOf(veSigState.target) < 0) veSigState.target = vis[0];
-  return veSigState.target;
-}
-
-function veSigSetTargetSlot(idx) {
-  veSigState.target = idx;
-  if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
+  return (typeof VE_BOARD !== 'undefined') ? VE_BOARD : 0;
 }
 
 // ── Eylemler ──────────────────────────────────────────────────────────────────
@@ -570,22 +553,12 @@ function veSigApplyFilter(groups, slot, q, filter) {
 // ── Araç çubuğu (hedef panel + filtre) ────────────────────────────────────────
 
 function veSigToolbarHTML(slot) {
-  var vis = veSigVisibleSlots();
-  var target = veSigTargetSlot();
   var count = (slot && slot.sensors) ? slot.sensors.length : 0;
 
   var h = '<div class="vsig-toolbar">';
   h += '<div class="vsig-tl-row">';
-  h += '<span class="vsig-tl-label">Hedef</span>';
-  h += '<div class="vsig-panels" role="group" aria-label="Hedef panel">';
-  vis.forEach(function(i) {
-    h += '<button type="button" class="vsig-panel-btn' + (i === target ? ' active' : '') + '"' +
-         ' data-act="target" data-slot="' + i + '"' +
-         ' aria-pressed="' + (i === target ? 'true' : 'false') + '"' +
-         ' title="Onay kutuları Panel ' + (i + 1) + '\'e yazar">' + (i + 1) + '</button>';
-  });
-  h += '</div>';
-  h += '<span class="vsig-tl-count">' + count + ' eğri</span>';
+  h += '<span class="vsig-tl-label">Ölçüm penceresi</span>';
+  h += '<span class="vsig-tl-count">' + count + ' şerit</span>';
   h += '</div>';
 
   h += '<div class="vsig-tl-row">';
@@ -666,7 +639,7 @@ function veSigSetColor(sensorId, signalId, color) {
   }
   if(at < 0) return;
   slot.sensors[at].color = color;
-  if(typeof veRenderSlot === 'function') veRenderSlot(idx);
+  if(typeof veTrRefresh === 'function') veTrRefresh();
   veSigRefreshTree();
 }
 
@@ -716,7 +689,7 @@ function veSigInspectorHTML() {
   h += '</div>';
 
   // Görünürlük
-  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Panel ' + (idx + 1) + '</span>';
+  h += '<div class="vsig-fld"><span class="vsig-fld-lbl">Ölçüm penceresi</span>';
   h += '<div class="vsig-seg wide">';
   h += '<button type="button" data-act="insp-vis" data-on="1" aria-pressed="' + (on ? 'true' : 'false') + '">Çizili</button>';
   h += '<button type="button" data-act="insp-vis" data-on="0" aria-pressed="' + (!on ? 'true' : 'false') + '">Kapalı</button>';
@@ -788,8 +761,6 @@ function veSigBindTree(treeEl) {
     } else if(act === 'inspect' && row) {
       e.stopPropagation();
       veSigOpenInspector(row.getAttribute('data-sig'), row.getAttribute('data-sid'));
-    } else if(act === 'target') {
-      veSigSetTargetSlot(parseInt(el.getAttribute('data-slot'), 10) || 0);
     } else if(act === 'filter') {
       veSigSetFilter(el.getAttribute('data-filter'));
     } else if(act === 'collapse-all') {

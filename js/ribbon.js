@@ -131,16 +131,22 @@ var VE_RIBBON_TABS = [
     id: 'sonuc', label: 'Sonuç Araçları', contextual: true,
     when: function() { return typeof currentSubTab !== 'undefined' && currentSubTab === 'sonuclar'; },
     groups: [
-      { label: 'Pano', items: [
-        { size:'lg', icon:'grid-cells', label:'Panel\nDüzeni',  run:'veChangeResultLayout', tip:'Panel yerleşimini değiştir' },
-        { size:'lg', icon:'trash',      label:'Sonuçları\nTemizle', run:'veClearAllResults', tip:'Tüm panelleri boşalt' }
+      // "Panel Düzeni" komutu kaldırıldı: seçilecek bir düzen kalmadı, tek
+      // ölçüm penceresi var. "Senkron İmleç" de kalktı — senkronlanacak
+      // ikinci bir yüzey yok, imleç zaten tüm şeritleri kesiyor.
+      { label: 'Ölçüm Penceresi', items: [
+        { size:'lg', icon:'maximize', label:'Tümünü\nSığdır', run:'veTrFit',
+          tip:'Zaman eksenini tüm veriye sığdır' },
+        { size:'lg', icon:'trash', label:'Sonuçları\nTemizle', run:'veClearAllResults',
+          tip:'Ölçüm penceresini ve çözüm sonuçlarını boşalt' }
       ]},
-      { label: 'Ölçüm İmleci', items: [
-        { size:'sm', icon:'crosshair', label:'Senkron İmleç', run:'veCursorToggleSync',
-          tip:'Paneller tek imleçle birlikte okunur',
-          state:function(){ return typeof veCursorState !== 'undefined' && veCursorState.sync; } },
-        { size:'sm', icon:'x', label:'Referansı Kaldır', run:'veCursorClearPin',
-          tip:'Sabitlenmiş referans imleci kaldır (Esc)' }
+      { label: 'Şeritler', items: [
+        { size:'sm', icon:'scissors', label:'Şeritlere Ayır', run:'veTrSplitAll',
+          tip:'Her sinyal kendi Y ekseninde ayrı şeride' },
+        { size:'sm', icon:'grid-cells', label:'Birime Göre Birleştir', run:'veTrMergeByUnit',
+          tip:'Aynı birimli sinyalleri tek şeritte topla' },
+        { size:'sm', icon:'crosshair', label:'Referansı Kaldır', run:'veTrUnpin',
+          tip:'Sabitlenmiş Δ referans imlecini kaldır' }
       ]}
     ]
   }

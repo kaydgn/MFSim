@@ -759,21 +759,21 @@
         
         <!-- Tree -->
         <div id="ve-results-tree" style="flex:1; overflow-y:auto; padding:4px 0; font-size:var(--fs-md);"></div>
-        <!-- Aksiyon butonları buradan kaldırıldı: "Panel Düzeni" + "Sonuçları
-             Temizle" Panel 1 başlık araç çubuğuna küçük ikonlar olarak taşındı
-             (veSlotShellHTML). "Detaylı Rapor İndir" kaldırıldı — rapora ağaçtaki
+        <!-- Pano komutları ("Sığdır", "Temizle", şerit işlemleri) şeritteki
+             bağlamsal "Sonuç Araçları" sekmesinde ve ölçüm penceresinin kendi
+             araç çubuğunda. "Detaylı Rapor İndir" kaldırıldı — rapora ağaçtaki
              "Detaylı Rapor" düğümünden ve komut paletinden erişilir. -->
       </div>
       
-      <!-- Sağ Panel: Dinamik Panel Grid -->
-      <!-- Paneller artık statik değil: Sonuçlar sekmesine girildiğinde önce
-           düzen seçici (veRenderLayoutChooser) gösterilir; kullanıcı bir
-           yerleşim seçince izgara #ve-results-panels içine JS ile üretilir
-           (veBuildResultsGrid / veApplyResultLayout). -->
+      <!-- Sağ Panel: Ölçüm Penceresi -->
+      <!-- Panel ızgarası ve "Panel düzenini seçin" ekranı kaldırıldı. Burada
+           tek bir ölçüm penceresi var (js/trace-view.js → veTrBuildShell):
+           soldaki listede işaretlenen her sinyal alt alta kendi şeridinde,
+           kendi Y ekseniyle çizilir, hepsi tek zaman eksenini paylaşır. -->
       <div class="ve-results-grid" id="ve-results-grid" style="position:relative;">
         <!-- Detaylı Rapor Overlay -->
         <div id="ve-report-overlay"></div>
-        <!-- Panel alanı (düzen seçici veya seçilen izgara buraya çizilir) -->
+        <!-- Ölçüm penceresi kabuğu buraya çizilir -->
         <div id="ve-results-panels" style="flex:1; display:flex; flex-direction:column; min-width:0; min-height:0;"></div>
       </div>
   </div>
@@ -829,7 +829,8 @@
 <script type="text/x-mfsim-defer" src="js/numerics.js" data-mfsim-label="Sayısal yöntemler (RK45, PCHIP)..."></script>
 <script type="text/x-mfsim-defer" src="js/simulation-engine.js" data-mfsim-label="Simülasyon motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/graphics.js" data-mfsim-label="Grafik motoru..."></script>
-<script type="text/x-mfsim-defer" src="js/chart-cursor.js" data-mfsim-label="Ölçüm imleci (senkron kursör)..."></script>
+<script type="text/x-mfsim-defer" src="js/measure-core.js" data-mfsim-label="Ölçüm çekirdeği (X ekseni kuralı)..."></script>
+<script type="text/x-mfsim-defer" src="js/trace-view.js" data-mfsim-label="Ölçüm penceresi (şerit grafikleri)..."></script>
 <script type="text/x-mfsim-defer" src="js/node-resize.js" data-mfsim-label="Düğüm yönetimi..."></script>
 <script type="text/x-mfsim-defer" src="js/context-menus.js" data-mfsim-label="Sağ tık menüleri..."></script>
 <script type="text/x-mfsim-defer" src="js/connections.js" data-mfsim-label="Bağlantı motoru..."></script>

@@ -2348,7 +2348,6 @@
 .ve-qat-btn,
 .ve-radio-btn,
 .ve-minimap-toggle,
-.ve-chart-play,
 .mf-splash-player-btn,
 .mf-splash-player-vol,
 .mf-radio-mini-btn{ font-size:var(--fs-lg); }
@@ -3534,119 +3533,141 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-validation-warn{color:var(--accent-warning);}
 
 /* Sonuçlar sayfası */
-.ve-results-empty-state{
-  text-align:center;
-  padding:60px 20px;
-  color:var(--text-muted);
-}
-/* ===== SONUÇLAR PANEL SİSTEMİ (Profesyonel IDE tarzı) ===== */
+/* .ve-results-empty-state kaldırıldı: panel ızgarasının boş ekranıydı,
+   karşılığı .ve-trace-empty. */
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ÖLÇÜM PENCERESİ (Trace View) — Vector CANoe "Graphics Window" karşılığı
+   ═══════════════════════════════════════════════════════════════════════
+   Panel ızgarası (.ve-rslot, .ve-results-row*, .ve-layout-*, .ve-slot-pick*)
+   buradaydı. Sonuçlar sayfası tek yüzeye geçince hepsi düştü: seçilecek
+   düzen, daraltılacak panel başlığı, sürüklenecek satır/sütun ayırıcısı
+   kalmadı. Yerine tek bir kabuk var — araç çubuğu, kaydırılan şerit yüzeyi,
+   ALTTA SABİT zaman ekseni ve durum çubuğu.
+
+   Zaman ekseni neden ayrı bir canvas: şeritler kaydırılırken eksen yerinde
+   kalmalı. Aynı canvas'ta olsaydı sekiz şeritli bir pencerede aşağı inince
+   eksen ekrandan çıkardı. */
 .ve-results-grid{
   flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;
 }
-.ve-results-row{
-  display:flex;flex:1;min-height:0;position:relative;
+.ve-trace{
+  flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;
+  background:var(--bg-primary);position:relative;
 }
-.ve-results-row-resizer{
-  height:5px;cursor:ns-resize;background:transparent;position:relative;z-index:5;flex-shrink:0;
+.ve-trace.drop-active::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:6;
+  border:2px dashed var(--accent-primary);background:var(--accent-tint-6);
+  border-radius:var(--radius-sm);
 }
-.ve-results-row-resizer:hover,.ve-results-row-resizer.active{background:var(--accent-primary);opacity:0.4;}
-.ve-results-col-resizer{
-  width:5px;cursor:ew-resize;background:transparent;position:relative;z-index:5;flex-shrink:0;
-}
-.ve-results-col-resizer:hover,.ve-results-col-resizer.active{background:var(--accent-primary);opacity:0.4;}
-.ve-rslot{
-  border:1px solid var(--border-color);
-  display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;
-  background:var(--bg-primary);flex:1;position:relative;
-  transition:flex 0.18s ease;
-}
-.ve-rslot.collapsed{flex:0 0 28px !important;overflow:hidden;}
-.ve-rslot.collapsed .ve-rslot-body{display:none;}
-.ve-rslot.collapsed .ve-rslot-hdr{border-bottom:none;}
-.ve-rslot.drag-over .ve-rslot-body{background:var(--accent-tint-6);}
-.ve-rslot.drag-over{border-color:var(--accent-primary);box-shadow:inset 0 0 0 2px var(--accent-tint-20);}
-.ve-rslot-hdr{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 2px 0 6px;min-height:28px;height:28px;
-  background:var(--bg-tertiary);
-  border-bottom:1px solid var(--border-color);gap:2px;flex-shrink:0;
-  user-select:none;
-}
-.ve-rslot-tabs{display:flex;align-items:center;gap:2px;flex:1;min-width:0;overflow:hidden;}
-.ve-rslot-tab{
-  font-size:var(--fs-body);padding:3px 8px;color:var(--text-secondary);
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;
-}
-.ve-rslot-tab.active{font-weight:600;color:var(--text-heading);}
-.ve-rslot-btns{display:flex;align-items:center;gap:0;flex-shrink:0;}
-.ve-rslot-btns button{
-  width:24px;height:24px;border:none;background:none;cursor:pointer;
-  font-size:var(--fs-body);color:var(--text-muted);display:flex;align-items:center;
-  justify-content:center;border-radius:var(--radius-sm);padding:0;transition:all 0.12s;
-}
-.ve-rslot-btns button:hover{background:var(--bg-input);color:var(--text-primary);}
-.ve-rslot-btns button.btn-close:hover{color:var(--accent-danger);}
-.ve-rslot-btns button.btn-collapse{font-size:var(--fs-tiny);font-weight:700;}
-/* Panel 1 başlığına taşınan global kontroller (Veri Gezgini'nden) */
-.ve-rslot-btns .mf-ico{width:13px;height:13px;}
-.ve-rslot-btns button.btn-slot-clearall:hover{color:var(--accent-danger);}
-.ve-rslot-sep{width:1px;height:14px;background:var(--border-color);margin:0 3px;flex-shrink:0;}
-.ve-rslot-body{
-  flex:1;overflow:hidden;position:relative;min-height:0;
-  display:flex;align-items:center;justify-content:center;
-}
-/* Chart type icons grid (boş slot durumu) */
-.ve-slot-picker{display:grid;grid-template-columns:repeat(3, 80px);gap:10px;padding:20px;}
-.ve-slot-pick-item{
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-  padding:14px 6px;border-radius:var(--radius-sm);cursor:pointer;
-  transition:all 0.15s;border:1px solid transparent;
-}
-.ve-slot-pick-item:hover{background:var(--accent-tint-8);border-color:var(--accent-primary);transform:translateY(-1px);}
-.ve-slot-pick-icon{width:40px;height:40px;display:flex;align-items:center;justify-content:center;font-size:var(--fs-h1);}
-.ve-slot-pick-label{font-size:var(--fs-body);color:var(--text-secondary);text-align:center;line-height:1.2;}
 
-/* ===== SONUÇLAR: PANEL DÜZENİ SEÇİCİ =====
-   Sonuçlar sekmesine girildiğinde paneller otomatik açılmaz; önce burada
-   3-4 yerleşim kartı gösterilir. Kullanıcı seçtikten sonra izgara kurulur. */
-.ve-layout-chooser{
-  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:26px;padding:32px 24px;overflow:auto;min-width:0;min-height:0;
+/* ── Araç çubuğu ── */
+.ve-trace-toolbar{
+  display:flex;align-items:center;gap:4px;flex-wrap:wrap;
+  padding:5px 8px;flex-shrink:0;
+  background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary));
+  border-bottom:1px solid var(--border-color);
 }
-.ve-layout-chooser-head{text-align:center;max-width:540px;}
-.ve-layout-chooser-title{
-  font-size:var(--fs-title);font-weight:700;color:var(--text-heading);letter-spacing:-0.01em;
+.ve-trace-spacer{flex:1;}
+.ve-trace-sep{width:1px;height:16px;background:var(--border-color);margin:0 3px;flex-shrink:0;}
+.ve-trace-btn{
+  display:inline-flex;align-items:center;gap:4px;
+  height:22px;padding:0 8px;
+  font-size:var(--fs-md);font-family:inherit;
+  color:var(--text-secondary);background:transparent;
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  cursor:pointer;white-space:nowrap;
 }
-.ve-layout-chooser-sub{
-  font-size:var(--fs-lg);color:var(--text-muted);margin-top:8px;line-height:1.45;
+.ve-trace-btn:hover:not(:disabled){background:var(--bg-input);color:var(--text-primary);border-color:var(--border-hover);}
+.ve-trace-btn:disabled{opacity:0.4;cursor:default;}
+.ve-trace-btn.icon{width:22px;padding:0;justify-content:center;font-weight:700;}
+.ve-trace-btn.wide{max-width:230px;}
+.ve-trace-btn.wide span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ve-trace-btn.pin{color:var(--accent-warning);border-color:var(--accent-warning);}
+.ve-trace-btn.danger:hover:not(:disabled){color:var(--accent-danger);border-color:var(--accent-danger);}
+.ve-trace-btn .mf-ico{width:12px;height:12px;flex-shrink:0;}
+.ve-trace-caret{font-size:var(--fs-micro);opacity:0.7;}
+.ve-trace-xaxis{position:relative;display:flex;}
+.ve-trace-seg{display:flex;border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;}
+.ve-trace-seg button{
+  height:22px;padding:0 9px;border:0;border-right:1px solid var(--border-color);
+  background:transparent;color:var(--text-muted);
+  font-size:var(--fs-md);font-family:inherit;cursor:pointer;
 }
-.ve-layout-chooser-sub strong{color:var(--text-secondary);font-weight:600;}
-.ve-layout-cards{
-  display:flex;flex-wrap:wrap;gap:16px;justify-content:center;align-items:stretch;
+.ve-trace-seg button:last-child{border-right:0;}
+.ve-trace-seg button:hover[aria-pressed="false"]{background:var(--bg-input);color:var(--text-primary);}
+.ve-trace-seg button[aria-pressed="true"]{background:var(--accent-primary);color:#fff;}
+
+/* ── Gövde ── */
+.ve-trace-body{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0;}
+.ve-trace-graph{flex:1;display:flex;flex-direction:column;min-height:0;min-width:0;}
+.ve-trace-scroll{
+  flex:1;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;position:relative;
 }
-.ve-layout-card{
-  width:152px;display:flex;flex-direction:column;align-items:center;gap:9px;
-  padding:16px 12px 14px;border:1px solid var(--border-color);border-radius:var(--radius-md);
-  background:var(--bg-secondary);cursor:pointer;transition:transform 0.15s,border-color 0.15s,background 0.15s,box-shadow 0.15s;
+.ve-trace-surface{position:relative;}
+.ve-trace-surface canvas{display:block;position:absolute;left:0;top:0;}
+.ve-trace-surface canvas:first-child{position:relative;}
+#ve-trace-overlay{pointer-events:none;}
+.ve-trace-axis{display:block;flex-shrink:0;}
+.ve-trace-alt{flex:1;min-height:0;min-width:0;overflow:hidden;}
+
+/* ── Boş durum ── */
+.ve-trace-empty{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:6px;padding:24px;text-align:center;color:var(--text-muted);
 }
-.ve-layout-card:hover,.ve-layout-card:focus-visible{
-  border-color:var(--accent-primary);background:var(--accent-tint-6);
-  transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.14);outline:none;
+.ve-trace-empty-ico{font-size:var(--fs-display);opacity:0.5;line-height:1;}
+.ve-trace-empty-ico .mf-ico{width:38px;height:38px;}
+.ve-trace-empty-title{font-size:var(--fs-lg);font-weight:600;color:var(--text-secondary);}
+.ve-trace-empty-sub{font-size:var(--fs-body);max-width:400px;line-height:1.45;opacity:0.85;}
+.ve-trace-empty-sub b{color:var(--text-secondary);font-weight:600;}
+
+/* ── Durum çubuğu (CANoe'nun Begin/End/Div kutusu) ── */
+.ve-trace-status{
+  display:flex;align-items:center;gap:14px;flex-shrink:0;flex-wrap:wrap;
+  padding:3px 8px;min-height:20px;
+  background:var(--bg-secondary);border-top:1px solid var(--border-color);
+  font-size:var(--fs-tiny);
 }
-.ve-layout-preview{
-  width:100%;height:80px;display:flex;align-items:center;justify-content:center;padding:2px;
+.ve-trace-st-group{display:flex;align-items:center;gap:5px;}
+.ve-trace-st-group.right{margin-left:auto;}
+.ve-trace-st-k{color:var(--text-muted);}
+.ve-trace-st-k.cur{color:var(--accent-primary);}
+.ve-trace-st-k.pin{color:var(--accent-warning);}
+.ve-trace-st-v{
+  color:var(--text-secondary);font-weight:600;
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum";
 }
-.ve-layout-preview svg rect{
-  fill:var(--accent-tint-10);stroke:var(--accent-primary);stroke-width:2;transition:fill 0.15s;
+
+/* ── Şerit ölçeği açılır kutusu ── */
+.ve-trace-pop{
+  position:fixed;z-index:var(--z-menu);min-width:190px;
+  display:flex;flex-direction:column;gap:6px;padding:9px;
+  background:var(--bg-secondary);border:1px solid var(--border-color);
+  border-radius:var(--radius-md);box-shadow:var(--shadow-lg);
 }
-.ve-layout-card:hover .ve-layout-preview svg rect,
-.ve-layout-card:focus-visible .ve-layout-preview svg rect{fill:var(--accent-tint-22);}
-.ve-layout-card-label{font-size:var(--fs-lg);font-weight:700;color:var(--text-heading);}
-.ve-layout-card-desc{font-size:var(--fs-body);color:var(--text-muted);text-align:center;line-height:1.25;}
-@media (prefers-reduced-motion: reduce){
-  .ve-layout-card{transition:none;}
-  .ve-layout-card:hover,.ve-layout-card:focus-visible{transform:none;}
+.ve-trace-pop-title{
+  font-size:var(--fs-md);font-weight:700;color:var(--text-heading);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
+.ve-trace-pop label{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  font-size:var(--fs-md);color:var(--text-muted);
+}
+.ve-trace-pop input{
+  width:96px;padding:2px 5px;font-size:var(--fs-md);font-family:inherit;
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  background:var(--bg-input);color:var(--text-primary);
+}
+.ve-trace-pop-row{display:flex;gap:5px;margin-top:2px;}
+.ve-trace-pop-row button{
+  flex:1;height:23px;font-size:var(--fs-md);font-family:inherit;cursor:pointer;
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);
+  background:transparent;color:var(--text-secondary);
+}
+.ve-trace-pop-row button:hover{background:var(--bg-input);color:var(--text-primary);}
+.ve-trace-pop-row button.primary{background:var(--accent-primary);border-color:var(--accent-primary);color:#fff;}
 
 /* Assigned slot */
 .ve-slot-assigned{width:100%;height:100%;display:flex;flex-direction:column;overflow:visible;}
@@ -3702,13 +3723,9 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-xaxis-dropdown-item .ve-xaxis-unit{
   font-size:var(--fs-micro);color:var(--text-muted);margin-left:auto;opacity:0.7;
 }
-.ve-slot-axis-y{
-  width:22px;position:absolute;left:0;top:0;bottom:0;
-  display:flex;align-items:center;justify-content:center;
-  writing-mode:vertical-rl;transform:rotate(180deg);
-  font-size:var(--fs-body);color:var(--text-muted);background:var(--bg-secondary);
-  border-right:1px solid var(--border-color);
-}
+/* .ve-slot-axis-y kaldırıldı: panelin ayrı Y ekseni şeridiydi. Ölçüm
+   penceresinde her şeridin ekseni canvas'a çiziliyor. */
+
 .ve-slot-legend{display:flex;gap:5px;padding:4px 8px 5px;flex-wrap:wrap;flex-shrink:0;background:var(--bg-secondary);border-top:1px solid var(--border-color);}
 .ve-chart-legend-overlay{
   position:absolute;bottom:8px;left:8px;z-index:15;
@@ -3746,66 +3763,11 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-slot-chart-area .js-plotly-plot .modebar-btn{color:var(--text-muted) !important;}
 .ve-slot-chart-area .js-plotly-plot .modebar-btn:hover{color:var(--accent-primary) !important;}
 .ve-slot-chart-area .js-plotly-plot .modebar-btn.active{color:var(--accent-primary) !important;}
-/* Chart tooltip / crosshair */
-.ve-chart-tooltip{
-  position:absolute;pointer-events:none;z-index:20;
-  background:var(--bg-primary);border:1px solid var(--border-light);
-  border-radius:var(--radius-sm);padding:8px 12px;font-size:var(--fs-body);
-  box-shadow:var(--shadow-lg);white-space:nowrap;
-  opacity:0;transition:opacity 0.12s ease;color:var(--text-primary);
-  
-}
-.ve-chart-tooltip.visible{opacity:1;}
-/* Simülasyon oynatma (playhead) butonu — grafik alanında hover'da beliren overlay */
-.ve-chart-play{
-  position:absolute; top:8px; left:8px; z-index:16;
-  width:26px; height:26px; display:flex; align-items:center; justify-content:center;
-  border-radius:var(--radius-sm); cursor:pointer; padding:0;
-  background:color-mix(in srgb, var(--bg-secondary) 88%, transparent);
-  border:1px solid var(--border-color); color:var(--text-secondary);
-  opacity:0; transition:opacity 0.15s ease, background 0.12s, color 0.12s, border-color 0.12s;
-}
-.ve-slot-chart-area:hover .ve-chart-play{ opacity:0.85; }
-.ve-chart-play:hover{ opacity:1; background:var(--bg-input); border-color:var(--accent-primary); color:var(--accent-primary); }
-.ve-chart-play.playing{ opacity:1; border-color:var(--accent-primary); color:var(--accent-primary); }
-.ve-chart-play .mf-ico{ width:14px; height:14px; }
-.ve-chart-tooltip-row{display:flex;align-items:center;gap:7px;padding:2px 0;}
-.ve-chart-tooltip-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 0 4px rgba(0,0,0,0.2);}
-.ve-chart-tooltip-val{font-weight:600;font-family:'SF Mono','Fira Code',monospace;margin-left:auto;padding-left:14px;font-size:var(--fs-body);}
-.ve-chart-crosshair{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;z-index:15;overflow:visible;}
-.ve-chart-crosshair-v{position:absolute;top:0;bottom:0;width:1px;background:var(--accent-primary);opacity:0.5;}
-.ve-chart-crosshair-h{position:absolute;left:0;right:0;height:1px;background:var(--text-muted);opacity:0.3;}
-.ve-chart-crosshair-dot{position:absolute;width:10px;height:10px;border-radius:50%;border:2px solid;transform:translate(-50%,-50%);background:var(--bg-primary);box-shadow:0 0 6px rgba(0,0,0,0.3);}
-/* Ölçüm imleci (js/chart-cursor.js) — CANoe tarzi senkron/sabit imleç */
-.ve-chart-tooltip-head{
-  font-weight:700;font-size:var(--fs-tiny);color:var(--text-secondary);margin-bottom:4px;
-  border-bottom:1px solid var(--border-color);padding-bottom:3px;letter-spacing:0.2px;
-}
-.ve-chart-tooltip-delta{
-  margin-top:5px;padding-top:4px;border-top:1px dashed var(--border-color);
-}
-/* Sabitlenmiş referans imleç (A) — hover imlecinden ayrişsin diye kesikli */
-.ve-chart-cursor-pin{
-  position:absolute;width:0;border-left:1px dashed var(--accent-warning);
-  pointer-events:none;z-index:16;
-}
-.ve-chart-cursor-pin-tag{
-  position:absolute;top:0;left:3px;white-space:nowrap;
-  font-size:var(--fs-micro);font-weight:700;line-height:1.4;
-  font-family:'SF Mono','Fira Code',monospace;
-  padding:1px 4px;border-radius:var(--radius-sm);
-  color:var(--accent-warning);
-  background:color-mix(in srgb, var(--bg-primary) 82%, transparent);
-  border:1px solid color-mix(in srgb, var(--accent-warning) 40%, transparent);
-}
-/* İmleç konumundaki canlı değer — göstergenin DEĞER sütunu. Tabular sayılar:
-   imleç gezerken basamak genişliği sabit kaldığı için satır titremez. */
-.ve-legend-cursor-val{
-  font-family:var(--font-mono);font-size:var(--fs-tiny);font-weight:600;
-  font-variant-numeric:tabular-nums;
-  color:var(--text-heading);text-align:right;min-width:6ch;
-}
-.ve-rslot-btns button.btn-slot-cursor.active{color:var(--accent-primary);}
+/* Panel grafiğinin tooltip / crosshair / oynat düğmesi CSS'i kaldırıldı:
+   üçü de veRenderChart'ın DOM katmanına aitti. Ölçüm penceresinde imleç ve
+   değer rozetleri canvas'a çiziliyor — DOM düğümü yok, dolayısıyla stil de
+   yok (bkz. veTrDrawOverlay). */
+
 /* Result table */
 .ve-result-table{
   width:100%;border-collapse:collapse;font-size:var(--fs-body);
@@ -3827,12 +3789,8 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-result-table tbody tr:hover td{background:var(--accent-tint-8) !important;}
 .ve-result-table td:first-child{text-align:center;color:var(--text-muted);font-size:var(--fs-tiny);}
 /* Panel add button */
-.ve-add-panel-btn{
-  display:flex;align-items:center;justify-content:center;gap:4px;
-  padding:4px 12px;font-size:var(--fs-body);font-weight:600;
-  background:transparent;color:var(--text-muted);border:1px dashed var(--border-color);
-  border-radius:var(--radius-sm);cursor:pointer;transition:all 0.15s;margin:4px;
-}
+/* .ve-add-panel-btn kaldırıldı: eklenecek panel kalmadı. */
+
 .ve-add-panel-btn:hover{background:var(--accent-tint-8);color:var(--accent-primary);border-color:var(--accent-primary);}
 /* ════════════════════════════════════════════════════════════════════════
    VERİ GEZGİNİ — ölçüm kanalı listesi
@@ -3902,16 +3860,6 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   margin-left:auto;font-size:var(--fs-micro);color:var(--text-muted);
   font-variant-numeric:tabular-nums;white-space:nowrap;
 }
-.vsig-panels{display:flex;border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;}
-.vsig-panel-btn{
-  min-width:20px;height:17px;padding:0 6px;
-  font:inherit;font-size:var(--fs-micro);font-weight:600;font-variant-numeric:tabular-nums;
-  background:var(--bg-secondary);border:0;border-right:1px solid var(--border-color);
-  color:var(--text-muted);cursor:pointer;transition:background .12s,color .12s;
-}
-.vsig-panel-btn:last-child{border-right:0;}
-.vsig-panel-btn:hover{background:var(--bg-primary);color:var(--text-primary);}
-.vsig-panel-btn.active{background:var(--accent-primary);color:#fff;}
 .vsig-seg{display:flex;border:1px solid var(--border-color);border-radius:var(--radius-sm);overflow:hidden;}
 .vsig-seg.wide{width:100%;}
 .vsig-seg button{
@@ -4273,14 +4221,13 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 #ve-page-sonuclar.ve-reveal-play #ve-results-browser{
   animation:veResultReveal 0.40s var(--ease-out) both;
 }
-#ve-page-sonuclar.ve-reveal-play .ve-rslot{
+#ve-page-sonuclar.ve-reveal-play .ve-trace{
   animation:veResultReveal 0.46s var(--ease-out) both;
+  animation-delay:0.05s;
 }
-#ve-page-sonuclar.ve-reveal-play .ve-results-row:nth-child(1) .ve-rslot{ animation-delay:0.05s; }
-#ve-page-sonuclar.ve-reveal-play .ve-results-row:nth-child(2) .ve-rslot{ animation-delay:0.13s; }
 @media (prefers-reduced-motion: reduce){
   #ve-page-sonuclar.ve-reveal-play #ve-results-browser,
-  #ve-page-sonuclar.ve-reveal-play .ve-rslot{ animation:none; }
+  #ve-page-sonuclar.ve-reveal-play .ve-trace{ animation:none; }
 }
 
 /* ===== ANNOTATIONS (Gruplama Çerçevesi & Yazı Etiketi) ===== */
@@ -5227,39 +5174,9 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
   .ve-qat{ display:none; }
 }
 
-/* ═══ SONUÇ PANELİ — BOŞ DURUM (simülasyon yok) ═══
-   Veri yokken tip seçici (Çizgi/Tablo/3D) anlamsız: hangi grafiği seçtiğinizin
-   önemi yok. Dört panelde aynı üç ikonun tekrarı 12 özdeş ikon demekti.
-   Yerine gerçek engeli söyleyip oradan çözen tek bir yönlendirme. */
-.ve-slot-empty{
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  width:100%; height:100%; gap:8px; padding:20px; text-align:center;
-}
-.ve-slot-empty-icon{
-  width:40px; height:40px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  background:var(--bg-tertiary); border:1px solid var(--border-color);
-  color:var(--text-muted); margin-bottom:2px;
-}
-.ve-slot-empty-icon .mf-ico{ width:17px; height:17px; }
-.ve-slot-empty-title{ font-size:var(--fs-lg); font-weight:600; color:var(--text-secondary); }
-.ve-slot-empty-text{ font-size:var(--fs-body); color:var(--text-muted); max-width:34ch; line-height:1.5; }
-.ve-slot-empty-btn{
-  margin-top:6px; display:inline-flex; align-items:center; gap:6px;
-  font:inherit; font-size:var(--fs-body); font-weight:600; cursor:pointer;
-  padding:6px 14px; border-radius:var(--radius-sm);
-  background:var(--accent-primary); color:#fff; border:1px solid transparent;
-  transition:filter var(--dur-fast,0.12s);
-}
-.ve-slot-empty-btn:hover{ filter:brightness(1.12); }
-.ve-slot-empty-btn:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:2px; }
-.ve-slot-empty-btn .mf-ico{ width:13px; height:13px; }
-.ve-slot-empty-hint{ font-size:var(--fs-tiny); color:var(--text-muted); opacity:0.85; }
-/* Yardımcı paneller: yalnız durum, açıklama yok — tekrarı azaltır */
-.ve-slot-empty--quiet{ opacity:0.55; }
-.ve-slot-empty--quiet .ve-slot-empty-icon{ width:32px; height:32px; }
-.ve-slot-empty--quiet .ve-slot-empty-icon .mf-ico{ width:14px; height:14px; }
-.ve-slot-empty--quiet .ve-slot-empty-title{ font-size:var(--fs-md); }
+/* Panel başına boş-durum kartı (.ve-slot-empty*) kaldırıldı: dört panel
+   yokken aynı cümleyi dört kez yazma sorunu da yok. Ölçüm penceresinin tek
+   boş durumu .ve-trace-empty. */
 
 /* Genel görünüm (minimap): çalışma alanının üstünde duruyor. Opak hâlde
    sağ-alttaki bileşenleri kapatıyordu; artık soluk durur, üstüne gelince
