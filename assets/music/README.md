@@ -1,27 +1,21 @@
-# Açılış Müziği
+# Müzik dosyaları
 
-Yükleme (splash) ekranı göründüğü anda otomatik çalacak şarkı bu klasöre
-konur. Beklenen dosya adı:
+Bu klasördeki ses dosyaları CI deploy ile GitHub Pages'e aynı yolla kopyalanır
+(`.github/workflows/ci-deploy.yml`), yani yayınlanan sürümde de erişilebilir.
 
-```
-assets/music/acilis.mp3
-```
+## `acilis.mp3` — "Gobble Glitch"
 
-- Dosya yoksa uygulama normal çalışır, sadece müzik çalmaz (sessizce atlanır).
-- Farklı bir dosya adı/format kullanmak için `js/splash-music.js` içindeki
-  `TRACK_SRC` sabitini değiştirin (tarayıcı desteği: mp3 en güvenlisi;
-  m4a/aac ve ogg de çoğu tarayıcıda çalışır).
-- Ses seviyesi ve döngü ayarı da aynı dosyanın başındaki `VOLUME` / `LOOP`
-  sabitlerinden değiştirilir.
-- Müzik çalarken sağ-alt köşede mini bir çalar görünür: çal/duraklat, ses
-  kaydırıcısı, sessize alma ve kapatma. Kaydırıcıyla seçilen ses seviyesi
-  localStorage'da (`mf-splash-music`) saklanır ve sonraki açılışta uygulanır.
+Bu parça artık **program açılışında otomatik ÇALMAZ**. Bunun yerine radyo /
+müzik çaların **"Kütüphanem"** sekmesine gömülü bir parça olarak hazır durur;
+kullanıcı isterse oradan çalar (bkz. `js/radio.js` → `LIBRARY_BUILTIN`).
 
-Tarayıcı otomatik çalma politikası notu: normal girişte "Giriş Yap"
-tıklaması kullanıcı jesti sayılır ve müzik splash ile birlikte başlar.
-"Beni hatırla" ile açılan oturumda tarayıcı sesli otomatik çalmayı
-engelleyebilir; bu durumda müzik sayfadaki ilk tıklama/tuş basımında başlar.
+- Radyoyu aç (üst bardaki 📻) → **Kütüphanem** sekmesi → **Gobble Glitch**
+  ("Açılış müziği") parçasına tıkla.
+- Dosya yoksa uygulama normal çalışır; parça listede kalır ama çalınamaz.
+- Farklı dosya adı/format için `js/radio.js` içindeki `LIBRARY_BUILTIN` dizisini
+  düzenle (tarayıcı desteği: mp3 en güvenlisi; m4a/aac ve ogg de çoğu tarayıcıda
+  çalışır).
 
-Bu klasördeki ses dosyaları CI deploy ile GitHub Pages'e aynı yolla
-kopyalanır (`.github/workflows/ci-deploy.yml`), yani yayınlanan sürümde de
-çalışır.
+> Tarih notu: Eskiden splash (yükleme) ekranında otomatik çalan bir "açılış
+> müziği" mini çaları vardı (`js/splash-music.js`). Kullanıcı isteğiyle otomatik
+> çalma kaldırıldı ve parça Kütüphanem'e taşındı.

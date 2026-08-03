@@ -303,8 +303,14 @@
 
   var built   = false;
   var audio   = null;                 // paylaşılan <audio> (tembel)
-  var library = [];                   // [{ name, url }]  yerel parçalar
-  var libUrls = [];                   // temizlenecek object-url'ler
+  // Gömülü kütüphane parçası: eski "açılış müziği" artık AÇILIŞTA OTOMATİK ÇALMAZ;
+  // Kütüphanem'de hazır durur, kullanıcı isterse buradan çalar. Göreli URL deploy'da
+  // (assets/ CI ile Pages'e kopyalanır) ve dev'de çalışır.
+  var LIBRARY_BUILTIN = [
+    { name: 'Gobble Glitch', url: 'assets/music/acilis.mp3', builtin: true }
+  ];
+  var library = LIBRARY_BUILTIN.slice();   // [{ name, url, builtin? }]  gömülü + kullanıcı parçaları
+  var libUrls = [];                   // temizlenecek object-url'ler (yalnız kullanıcı dosyaları)
   var libIndex = -1;                  // çalan yerel parça indeksi
   var current = null;                 // { type:'station'|'track', ... }
   var catMenuOpen = false;            // kategori açılır menüsü açık mı (kalıcı değil)
@@ -344,10 +350,6 @@
     audio.addEventListener('play',  syncPlaying);
     audio.addEventListener('pause', syncPlaying);
     audio.addEventListener('playing', syncPlaying);
-    // Radyo/parça çalmaya başlayınca açılış müziğini durdur (ses üst üste binmesin).
-    audio.addEventListener('play', function () {
-      if (global.MFSimSplashMusic && global.MFSimSplashMusic.stop) global.MFSimSplashMusic.stop();
-    });
     audio.addEventListener('ended', function () {
       // Yerel çalma listesinde otomatik sıradaki parçaya geç (istasyon "bitmez").
       if (current && current.type === 'track' && library.length) { playTrack(nextIndex(libIndex, library.length)); }
@@ -483,17 +485,18 @@
     if (!files.length) { toast('Ses dosyası bulunamadı.', 'warning'); return; }
     // Önceki object-url'leri serbest bırak (bellek sızıntısı olmasın).
     revokeLibUrls();
-    library = files.map(function (f) {
+    var userTracks = files.map(function (f) {
       var url = global.URL.createObjectURL(f);
       libUrls.push(url);
       return { name: f.name, url: url };
     });
+    library = LIBRARY_BUILTIN.concat(userTracks);   // gömülü parça hep kalır
     libIndex = -1;
     st.tab = 'library'; saveState({ tab: 'library' });
     switchTab('library');
     renderLibrary();
-    toast(library.length + ' parça eklendi.', 'info');
-    playTrack(0);
+    toast(userTracks.length + ' parça eklendi.', 'info');
+    playTrack(LIBRARY_BUILTIN.length);   // ilk KULLANICI parçasını çal (gömülüyü değil)
   }
 
   function revokeLibUrls() {
@@ -585,10 +588,11 @@
     }
     var rows = library.map(function (tr, i) {
       var on = current && current.type === 'track' && i === libIndex;
+      var sub = tr.builtin ? 'Açılış müziği' : ('#' + (i + 1));
       return '<button type="button" class="mf-radio-item' + (on ? ' active' : '') + '" data-track="' + i + '">' +
                '<span class="mf-radio-item-dot"></span>' +
                '<span class="mf-radio-item-main"><span class="mf-radio-item-name">' + esc(trackTitle(tr.name)) + '</span>' +
-               '<span class="mf-radio-item-sub">' + esc('#' + (i + 1)) + '</span></span>' +
+               '<span class="mf-radio-item-sub">' + esc(sub) + '</span></span>' +
              '</button>';
     }).join('');
     pane.innerHTML = head + '<div class="mf-radio-list">' + rows + '</div>';
