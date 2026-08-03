@@ -103,6 +103,11 @@ function veUpdateResultsTree() {
   var tree = document.getElementById('ve-results-tree');
   if(!tree) return;
 
+  // Ağaç her etkileşimde baştan çizilir. Kaydırma konumu korunmazsa onay
+  // kutusuna her tıklayışta liste başa fırlıyordu.
+  var _scrollTop = tree.scrollTop;
+  if(typeof veSigResetCache === 'function') veSigResetCache();
+
   // Solver tab bar'ı güncelle
   veUpdateSolverTabs();
 
@@ -120,70 +125,21 @@ function veUpdateResultsTree() {
     else veSaveActiveTabState();
   }
   
-  // Helper: sensörün bağlı olduğu bileşenden sinyal listesi al
-  function getSensorSignals(sensor, tNodes, tConns) {
-    var sourceType = '';
-    var sourceName = '';
-    if(sensor.data && sensor.data.attachedConnection) {
-      var conn = tConns.find(function(c) { return c.id === sensor.data.attachedConnection; });
-      if(conn) {
-        var dir = sensor.data.sensorDirection || 'from';
-        var srcNode = tNodes.find(function(n) { return n.id === (dir === 'to' ? conn.to : conn.from); });
-        if(srcNode) {
-          sourceType = srcNode.type;
-          sourceName = srcNode.customName || (componentDefs[srcNode.type] ? componentDefs[srcNode.type].name : srcNode.type);
-        }
-      }
-    }
-    if(!sourceType && sensor.data && sensor.data.attachedComponent) {
-      var compN = tNodes.find(function(n) { return n.id === sensor.data.attachedComponent; });
-      if(compN) {
-        sourceType = compN.type;
-        sourceName = compN.customName || (componentDefs[compN.type] ? componentDefs[compN.type].name : compN.type);
-      }
-    }
-    if(!sourceType || !COMPONENT_SIGNALS[sourceType]) return [];
-    var allSigs = COMPONENT_SIGNALS[sourceType].outputs || [];
-    var sDir = sensor.data ? sensor.data.sensorDirection || 'from' : 'from';
-    var filtered = allSigs;
-    if(sensor.data && sensor.data.attachedConnection) {
-      filtered = allSigs.filter(function(sig) {
-        var id = sig.id;
-        var hasIn = id.length > 3 && id.substring(id.length - 3) === '_in';
-        if(sDir === 'from') return !hasIn;
-        else return hasIn;
-      });
-    }
-    // selectedSignals filtresi
-    var sel = sensor.data ? sensor.data.selectedSignals : null;
-    if(sel && sel.length > 0) {
-      filtered = filtered.filter(function(s) { return sel.indexOf(s.id) >= 0; });
-    }
-    return filtered.map(function(s) { return { id: s.id, name: s.name, unit: s.unit, sourceName: sourceName }; });
-  }
-  
-  // Helper: ağaç satırı oluştur (sadece ok toggle yapar)
-  function treeRow(indent, arrowState, icon, label, extra) {
-    var h = '<div class="ve-tree-row" style="padding-left:' + indent + 'px;">';
-    if(arrowState) {
-      h += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + arrowState + '</span>';
-    } else {
-      h += '<span style="width:14px;display:inline-block;"></span>';
-    }
-    h += '<span class="icon">' + icon + '</span>';
-    h += '<span>' + label + '</span>';
-    if(extra) h += extra;
-    h += '</div>';
-    return h;
-  }
-  
+  // Sensör → sinyal çözümü ve ağaç satırı üretimi js/signal-tree.js'e taşındı
+  // (veSigCollectGroups / veSigGroupHTML). Burada yalnızca çerçeve kalıyor.
+
+  // Onay kutularının yazdığı panel ve bu turda çizilen gruplar
+  var _targetSlot = veResultSlots[(typeof veSigTargetSlot === 'function') ? veSigTargetSlot() : 0];
+  var _allGroups = [];
+
   var html = '';
+  html += veSigToolbarHTML(_targetSlot);
   html += '<div class="ve-tree-item">';
   html += '<div class="ve-tree-row">';
   html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span><span class="icon"><span class="mf-ico mf-ico-folder"></span></span><span style="font-weight:600;">' + projectName + '</span>';
   html += '</div>';
   html += '<div class="ve-tree-children open">';
-  
+
   // Her sekme bir alt klasör
   veTabs.forEach(function(tab, tabIdx) {
     var isActive = (tabIdx === veActiveTabIdx);
@@ -206,181 +162,53 @@ function veUpdateResultsTree() {
     var tabIcon = hasSim ? '<span class="mf-ico mf-ico-check-circle"></span>' : (totalSensorCount > 0 ? '<span class="mf-ico mf-ico-bar-chart"></span>' : '<span class="mf-ico mf-ico-folder"></span>');
     var tabLabel = tab.name + (hasSim ? '' : ' (çözülmedi)');
 
+    // Prefix: aktif sekme → sensörId direkt, diğer → @tabIdx:sensörId
+    var prefix = isActive ? '' : ('@' + tabIdx + ':');
+
+    // Ölçüm kanalları bileşen bazında TEK listede toplanır: fiziksel
+    // sensörler + sihirbazın sanal sensörleri. Eski ağaçta bunlar ayrı
+    // dallardı (bileşen → yön → sensör → sinyal, dört seviye) ve aynı sinyal
+    // iki ayrı yerde görünebiliyordu. Artık bileşen → sinyal, iki seviye.
+    var tabGroups = veSigCollectGroups(tabNodeObjs, tabConns, tabWizSensors, prefix);
+    var tabChannelCount = 0;
+    tabGroups.forEach(function(g) { tabChannelCount += g.items.length; });
+
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row" style="padding-left:16px;">';
     html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensorCount > 0 ? '▶' : ' ') + '</span>';
     html += '<span class="icon">' + tabIcon + '</span>';
     html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--accent-primary);' : '') + '">' + tabLabel + '</span>';
-    if(totalSensorCount > 0) html += ' <span style="font-size:var(--fs-tiny); color:var(--text-muted); margin-left:auto;">' + totalSensorCount + ' sensör</span>';
+    // Sayaç artık sensör değil SİNYAL sayar: listede görünen satır sayısıyla
+    // birebir tutar. "17 sensör" yazıp 24 satır göstermek güven kırıyordu.
+    if(tabChannelCount > 0) html += ' <span style="font-size:var(--fs-tiny); color:var(--text-muted); margin-left:auto;">' + tabChannelCount + ' sinyal</span>';
     html += '</div>';
 
     if(totalSensorCount > 0) {
       html += '<div class="ve-tree-children' + (isActive ? ' open' : '') + '">';
-      
-      // Prefix: aktif sekme → sensörId direkt, diğer → @tabIdx:sensörId
-      var prefix = isActive ? '' : ('@' + tabIdx + ':');
-      
-      // Helper: sensör + sinyallerini render et
-      function renderSensor(sn, indentPx) {
-        var signals = getSensorSignals(sn, tabNodeObjs, tabConns);
-        var hasSignals = signals.length > 0;
-        var sensorLabel = sn.customName || 'Sensör';
-        
-        if(hasSignals) {
-          // Sensör expandable — sinyalleri alt öğe olarak göster
-          html += '<div class="ve-tree-item">';
-          html += '<div class="ve-tree-sensor" style="padding-left:' + indentPx + 'px;">';
-          html += '<span class="arrow" onclick="event.stopPropagation();veToggleTree(this.closest(\'.ve-tree-item\').querySelector(\'.ve-tree-sensor\'))" style="font-size:var(--fs-micro); width:12px; cursor:pointer; color:var(--text-muted);">▶</span>';
-          html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + sensorLabel;
-          html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + signals.length + ' sinyal</span>';
-          html += '</div>';
-          html += '<div class="ve-tree-children">';
-          signals.forEach(function(sig) {
-            html += '<div class="ve-tree-signal" style="padding-left:' + (indentPx + 16) + 'px;" onmousedown="veStartSignalDrag(event,\'' + prefix + sn.id + '\',\'' + sig.id + '\')" title="' + sig.name + ' (' + sig.unit + ') — Sürükle">';
-            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sig.name + ' <span style="font-size:var(--fs-micro); color:var(--text-muted);">(' + sig.unit + ')</span>';
-            html += '</div>';
-          });
-          // Tümünü sürükle seçeneği
-          html += '<div class="ve-tree-signal" style="padding-left:' + (indentPx + 16) + 'px; color:var(--accent-success); font-style:italic;" onmousedown="veStartSensorDrag(event,\'' + prefix + sn.id + '\')" title="Tüm sinyalleri sürükle">';
-          html += '<span><span class="mf-ico mf-ico-package"></span></span> Tümünü Ekle (' + signals.length + ' sinyal)';
-          html += '</div>';
-          html += '</div></div>';
-        } else {
-          // Sinyal bulunamadı — eski davranış
-          html += '<div class="ve-tree-sensor" style="padding-left:' + indentPx + 'px;" onmousedown="veStartSensorDrag(event,\'' + prefix + sn.id + '\')">';
-          html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + sensorLabel + '</div>';
-        }
+      var shownGroups = veSigDecorateOpen(
+        veSigApplyFilter(tabGroups, _targetSlot, veSigState.query, veSigState.filter), _targetSlot);
+      shownGroups.forEach(function(g) { _allGroups.push(g); });
+
+      if(shownGroups.length === 0) {
+        html += '<div class="vsig-empty">' +
+          (veSigState.query ? 'Aramayla eşleşen sinyal yok.'
+                            : (veSigState.filter === 'on' ? 'Hedef panelde çizili sinyal yok.'
+                                                          : 'Bu filtrede sinyal yok.')) + '</div>';
+      } else {
+        shownGroups.forEach(function(g) {
+          html += veSigGroupHTML(g, _targetSlot, veSigState.query);
+        });
       }
-      
-      // Güç aktarma bileşenleri
-      var driveTypes = ['engine','torque-converter','gearbox','transfer','differential','wheel'];
-      driveTypes.forEach(function(type) {
-        var comps = tabNodeObjs.filter(function(n) { return n.type === type; });
-        comps.forEach(function(comp) {
-          var name = comp.customName || (componentDefs[comp.type] ? componentDefs[comp.type].name : comp.type);
-          var inputSensors = [];
-          var outputSensors = [];
-          
-          var connSensors = tabNodeObjs.filter(function(n) { return n.type === 'sensor' && n.data && n.data.attachedConnection; });
-          connSensors.forEach(function(sn) {
-            var conn = tabConns.find(function(c) { return c.id === sn.data.attachedConnection; });
-            if(!conn) return;
-            var dir = sn.data.sensorDirection || 'from';
-            var targetNodeId = (dir === 'from') ? conn.from : conn.to;
-            if(targetNodeId !== comp.id) return;
-            if(dir === 'from' && conn.from === comp.id) outputSensors.push(sn);
-            else if(dir === 'to' && conn.to === comp.id) inputSensors.push(sn);
-          });
-          
-          var totalSensors = inputSensors.length + outputSensors.length;
-          if(totalSensors === 0) return;
-          
-          html += '<div class="ve-tree-item">';
-          html += '<div class="ve-tree-row" style="padding-left:32px;">';
-          html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensors > 0 ? '▶' : ' ') + '</span>';
-          html += '<span class="icon"><span class="mf-ico mf-ico-settings"></span></span><span>' + escapeHTML(name) + '</span>';
-          html += ' <span style="font-size:var(--fs-tiny); color:var(--accent-primary); margin-left:auto; opacity:0.7;">' + totalSensors + '</span>';
-          html += '</div>';
-          html += '<div class="ve-tree-children">';
-          
-          if(inputSensors.length > 0) {
-            html += '<div style="padding:2px 0 2px 44px; font-size:var(--fs-tiny); color:var(--text-muted); font-weight:600;">← Giriş</div>';
-            inputSensors.forEach(function(sn) { renderSensor(sn, 48); });
-          }
-          if(outputSensors.length > 0) {
-            html += '<div style="padding:2px 0 2px 44px; font-size:var(--fs-tiny); color:var(--text-muted); font-weight:600;">→ Çıkış</div>';
-            outputSensors.forEach(function(sn) { renderSensor(sn, 48); });
-          }
-          html += '</div></div>';
-        });
-      });
-      
-      // Doğrudan bağlı sensörler (vehicle, road, scenario)
-      var compAttachTypes = ['vehicle','road','scenario'];
-      compAttachTypes.forEach(function(type) {
-        var comps = tabNodeObjs.filter(function(n) { return n.type === type; });
-        comps.forEach(function(comp) {
-          var name = comp.customName || (componentDefs[comp.type] ? componentDefs[comp.type].name : comp.type);
-          var directSensors = tabNodeObjs.filter(function(n) {
-            return n.type === 'sensor' && n.data && n.data.attachedComponent === comp.id;
-          });
-          if(directSensors.length === 0) return;
-          
-          var icon = type === 'vehicle' ? '<span class="mf-ico mf-ico-car"></span>' : type === 'scenario' ? '<span class="mf-ico mf-ico-trending-up"></span>' : '<span class="mf-ico mf-ico-route"></span>';
-          
-          html += '<div class="ve-tree-item">';
-          html += '<div class="ve-tree-row" style="padding-left:32px;">';
-          html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
-          html += '<span class="icon">' + icon + '</span><span>' + escapeHTML(name) + '</span>';
-          html += ' <span style="font-size:var(--fs-tiny); color:var(--accent-warning); margin-left:auto; opacity:0.7;">' + directSensors.length + '</span>';
-          html += '</div>';
-          html += '<div class="ve-tree-children">';
-          directSensors.forEach(function(sn) { renderSensor(sn, 48); });
-          html += '</div></div>';
-        });
-      });
-      
-      // Bağlı olmayan sensörler
+
+      // Bağlı olmayan sensörler ölçüm vermez — listenin altında, sönük.
       var unbound = tabNodeObjs.filter(function(n) {
         return n.type === 'sensor' && (!n.data || (!n.data.attachedConnection && !n.data.attachedComponent));
       });
-      if(unbound.length > 0) {
-        html += '<div style="padding:4px 0 2px 32px; font-size:var(--fs-tiny); color:var(--text-muted); font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">Bağlı olmayan</div>';
+      if(unbound.length > 0 && !veSigState.query) {
+        html += '<div class="vsig-orphan-head">Bağlı olmayan · ' + unbound.length + '</div>';
         unbound.forEach(function(sn) {
-          html += '<div class="ve-tree-sensor" style="padding-left:36px; opacity:0.5;">';
-          html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + escapeHTML(sn.customName || 'Sensör') + '</div>';
-        });
-      }
-
-      // ── Sihirbaz Sanal Sensörleri (bileşen grupları olarak) ──
-      if(tabWizSensors.length > 0) {
-        // Sanal sensörleri bileşen tipine göre grupla
-        var wizCompGroups = {};
-        tabWizSensors.forEach(function(ws) {
-          var key = ws.target;
-          if(!wizCompGroups[key]) wizCompGroups[key] = [];
-          wizCompGroups[key].push(ws);
-        });
-
-        var wizCompOrder = ['engine','torque-converter','gearbox','shift-controller','transfer','propshaft','differential','wheel','vehicle','road','solver'];
-        wizCompOrder.forEach(function(compType) {
-          var sensors = wizCompGroups[compType];
-          if(!sensors || sensors.length === 0) return;
-
-          var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
-          if(compType === 'engine') {
-            var engN = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
-            if(engN && componentDefs[engN.type]) compName = componentDefs[engN.type].name;
-          }
-          var compIcon = compType === 'vehicle' ? '<span class="mf-ico mf-ico-car"></span>' : compType === 'road' ? '<span class="mf-ico mf-ico-route"></span>' : compType === 'solver' ? '<span class="mf-ico mf-ico-ruler"></span>' : compType === 'wheel' ? '<span class="mf-ico mf-ico-wheel"></span>' : compType === 'transfer' ? '<span class="mf-ico mf-ico-shuffle"></span>' : compType === 'propshaft' ? '<span class="mf-ico mf-ico-nut"></span>' : '<span class="mf-ico mf-ico-settings"></span>';
-
-          html += '<div class="ve-tree-item">';
-          html += '<div class="ve-tree-row" style="padding-left:32px;">';
-          html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
-          html += '<span class="icon">' + compIcon + '</span><span>' + compName + '</span>';
-          html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + sensors.length + ' sinyal</span>';
-          html += '</div>';
-          html += '<div class="ve-tree-children">';
-
-          sensors.forEach(function(ws) {
-            var sigInfo = null;
-            if(COMPONENT_SIGNALS[compType]) {
-              sigInfo = (COMPONENT_SIGNALS[compType].outputs || []).find(function(s) { return s.id === ws.signal; });
-            }
-            var sigName = sigInfo ? sigInfo.name : ws.signal;
-            var sigUnit = sigInfo ? sigInfo.unit : '';
-            var wizSensorId = '~' + compType;
-
-            html += '<div class="ve-tree-signal" style="padding-left:48px;" onmousedown="veStartSignalDrag(event,\'' + wizSensorId + '\',\'' + ws.signal + '\')" title="' + sigName + ' (' + sigUnit + ') — Sürükle">';
-            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sigName + ' <span style="font-size:var(--fs-micro); color:var(--text-muted);">(' + sigUnit + ')</span>';
-            html += '</div>';
-          });
-
-          // Tümünü Ekle
-          html += '<div class="ve-tree-signal" style="padding-left:48px; color:var(--accent-success); font-style:italic;" onmousedown="veStartSensorDrag(event,\'~' + compType + '\')" title="Tüm sinyalleri sürükle">';
-          html += '<span class="mf-ico mf-ico-package"></span> Tümünü Ekle (' + sensors.length + ' sinyal)';
-          html += '</div>';
-          html += '</div></div>';
+          html += '<div class="vsig-orphan" title="Bir bağlantıya ya da bileşene tutturulmadığı için veri üretmiyor">' +
+                  escapeHTML(sn.customName || 'Sensör') + '</div>';
         });
       }
 
@@ -575,7 +403,17 @@ function veUpdateResultsTree() {
     }
   }
   
+  // Denetçi ağacın ÜSTÜNE binmez, YERİNE geçer. Kaplama denemesi kaydırılmış
+  // ağaçta hizadan kayıyor ve altındaki satırlar tıklanabilir kalıyordu.
+  // Gruplar yine de hesaplanır: kapanınca ağaç aynı durumla geri gelir.
+  veSigLastGroups = _allGroups;
+  var inspecting = !!veSigState.inspect;
+  if(inspecting) html = veSigInspectorHTML();
+
   tree.innerHTML = html;
+  // Denetçiye geçerken ağacın kaydırma konumu korunur, denetçiye uygulanmaz
+  if(!inspecting) tree.scrollTop = _scrollTop;
+  veSigBindTree(tree);
 }
 
 function veToggleTree(el) {
@@ -4286,15 +4124,11 @@ function _ftUpshiftMouseMove(e) {
   }
 }
 
+// Arama artık DOM'u gizleyip göstermiyor: sorgu ağacın durumuna yazılır ve
+// ağaç yeniden çizilir. Böylece eşleşme vurgulanır, eşleşen gruplar kendiliğinden
+// açılır ve boş kalan gruplar tamamen düşer.
 function veFilterResultsTree(query) {
-  // Basit filtre - tum sensor satirlarini goster/gizle
-  var tree = document.getElementById('ve-results-tree');
-  if(!tree) return;
-  var sensors = tree.querySelectorAll('.ve-tree-sensor');
-  var q = query.toLowerCase();
-  sensors.forEach(function(s) {
-    s.style.display = (!q || s.textContent.toLowerCase().indexOf(q) > -1) ? '' : 'none';
-  });
+  if(typeof veSigSetQuery === 'function') veSigSetQuery(query);
 }
 
 // ===== SONUCLAR: SLOT YONETIMI =====
@@ -4948,6 +4782,7 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
     slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
     veRenderSlot(slotIdx);
     veSyncBoardState();   // pano ekseni / marjı değişti mi → ağaç + grafikler
+    if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
     return;
   }
 
@@ -5012,9 +4847,11 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
   
   var displayName = tabPrefix + sourceName + ' — ' + (sigInfo ? sigInfo.name : signalId);
   slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
-  
+
   veRenderSlot(slotIdx);
   veSyncBoardState();   // pano ekseni / marjı değişti mi → ağaç + grafikler
+  // Sürükle-bırak ile de eklenebiliyor: ağaçtaki onay kutusu işaretlensin
+  if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
 }
 
 function veAddSensorToSlot(slotIdx, sensorId) {
@@ -5158,6 +4995,8 @@ function veSlotClear(slotIdx) {
   if(btn) btn.textContent = '▼';
   // Son dolu panel de boşaldıysa pano ekseni serbest kalır
   veSyncBoardState();
+  // Panel boşaldı: ağaçtaki tüm onay kutuları da boşalmalı
+  if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
 }
 
 function veRenderSlot(slotIdx) {
@@ -5183,7 +5022,6 @@ function veRenderSlot(slotIdx) {
     tab.appendChild(document.createTextNode(tabText));
   }
   
-  var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   
   if(sensors.length === 0) {
     var emptyIcon = type === 'line' ? 'trending-up' : (type === 'scatter3d' ? 'package' : 'clipboard');
@@ -5215,7 +5053,7 @@ function veRenderSlot(slotIdx) {
     if(sensors.length > 0) {
       html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
       sensors.forEach(function(s, i) {
-        var c = colors[i % colors.length];
+        var c = veSlotSignalColor(slot, i);
         // Gösterge bir DEĞER SÜTUNUDUR (CANoe), buton kümesi değil: renkli
         // zemin + renkli çerçeve her satırı bir düğmeye benzetiyordu. Artık
         // renk yalnız çizgi örneğinde; ad nötr, değer sağda hizalı.
@@ -5247,7 +5085,7 @@ function veRenderSlot(slotIdx) {
       var axisLabels3d = ['X', 'Y', 'Z'];
       html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
       sensors.forEach(function(s, i) {
-        var c = colors[i % colors.length];
+        var c = veSlotSignalColor(slot, i);
         var axisLabel = axisLabels3d[i] || '';
         html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
         if(axisLabel) html += '<span style="font-weight:700; font-size:var(--fs-tiny); opacity:0.7; margin-right:2px;">' + axisLabel + ':</span>';
@@ -5275,7 +5113,7 @@ function veRenderSlot(slotIdx) {
     html += '<th>#</th>';
     html += '<th>' + (slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</th>';
     sensors.forEach(function(s, i) {
-      html += '<th style="color:' + colors[i % colors.length] + '; border-bottom:3px solid ' + colors[i % colors.length] + ';">' + s.name + (s.unit ? ' [' + s.unit + ']' : '') + '</th>';
+      html += '<th style="color:' + veSlotSignalColor(slot, i) + '; border-bottom:3px solid ' + veSlotSignalColor(slot, i) + ';">' + s.name + (s.unit ? ' [' + s.unit + ']' : '') + '</th>';
     });
     html += '</tr></thead>';
     html += '<tbody id="ve-table-body-' + slotIdx + '">';
@@ -5295,7 +5133,7 @@ function veRenderSlot(slotIdx) {
   if(type !== 'line' && type !== 'scatter3d') {
     html += '<div class="ve-slot-legend">';
     sensors.forEach(function(s, i) {
-      var c = colors[i % colors.length];
+      var c = veSlotSignalColor(slot, i);
       html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
       html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
       html += '<span>' + s.name + '</span>';
@@ -5399,6 +5237,8 @@ function veRemoveSensorFromSlot(slotIdx, sensorIdx) {
   // Eksen lock'larını sıfırla (birim grupları değişmiş olabilir)
   slot.yAxisLock = {};
   veRenderSlot(slotIdx);
+  // Lejanttaki ✕ ile de silinebiliyor: ağaçtaki onay kutusu bayat kalmasın
+  if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
 }
 
 // ===== X EKSENİ SEÇİCİ (DROPDOWN) =====

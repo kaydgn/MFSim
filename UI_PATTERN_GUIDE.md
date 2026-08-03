@@ -2,6 +2,10 @@
 
 Tüm bileşen properties panelleri bu pattern'leri kullanmalıdır.
 
+> **Liste/ağaç panelleri için ayrı bölüm var:** Veri Gezgini'nin ölçüm kanalı
+> listesi `vsig-*` sınıflarını kullanır (bkz. en alttaki "Ölçüm Kanalı Listesi").
+> Yeni bir sinyal/kanal listesi yazarken oradaki kurallara uyun.
+
 ## Ana Container
 ```javascript
 html += '<div class="sw-panel">';
@@ -88,3 +92,58 @@ html += '<button class="sw-info-btn" onclick="showInfoPopup(\'id\')" title="Bilg
 | Legend | 0.56rem |
 | Alt bilgi | 0.54rem |
 | Badge | 0.52rem |
+
+---
+
+## Ölçüm Kanalı Listesi (`vsig-*`) — Veri Gezgini
+
+Sinyal/kanal listeleri `js/signal-tree.js` + `css/styles.css` içindeki
+`vsig-*` sistemini kullanır. Kurallar pazarlık konusu değil: bu listede
+"profesyonel" hissini veren şey hizadır, süs değil.
+
+### 1. Tek satır ritmi
+Grup başlığı da sinyal satırı da `var(--vsig-row)` = **22px**. İstisna yok.
+Farklı yükseklikte satırlar listeyi el yapımı gösterir.
+
+### 2. Girinti tek kuralla
+```css
+padding-left: calc(var(--vsig-pad) + var(--vsig-indent));
+```
+JS'te `padding-left:' + (indent + 16) + 'px'` gibi elle hesap **YASAK**.
+Yeni seviye gerekirse `--vsig-indent` çarpanı kullanılır.
+
+### 3. Durum satırın kendisinde okunur
+| Öğe | Anlamı |
+|-----|--------|
+| `.vsig-ck` (`.on` / `.some` / `.all`) | Sinyal hedef panelde çizili mi |
+| `.vsig-sw` | Paneldeki eğri rengi. Çizili değilse `.off` → nötr kutu (rengi henüz yok) |
+| `.vsig-badge` | Grupta kaç sinyal çizili (`3/6`); sıfırdan büyükse mavi |
+
+### 4. Sütun ızgarası
+```css
+grid-template-columns: 12px 11px minmax(0,1fr) auto 46px;
+/*                     kutu  renk  ad          birim  eğri */
+```
+Ad sütunu **blok** akışta olmalı (flex değil) — yoksa `text-overflow:ellipsis`
+çalışmaz ve uzun adlar sertçe kesilir.
+
+### 5. Renk tek kaynaktan
+Listedeki kutucuk, grafikteki eğri, lejant ve tablo **aynı** fonksiyonu çağırır:
+```javascript
+veSlotSignalColor(slot, idx)   // kullanıcı seçimi varsa o, yoksa palet sırası
+```
+Yerel `var colors = [...]` dizisi açmayın; ayrışırlar.
+
+### 6. Ağaç panelin aynasıdır
+Slotu değiştiren her yol (`veAddSignalToSlot`, `veRemoveSensorFromSlot`,
+`veSlotClear`) sonunda `veSigRefreshTree()` çağırır. Toplu işlemde ara
+render'lar `veSigSuspendRefresh` sayacıyla bastırılır.
+
+### 7. Arama
+`veSigNorm` **uzunluk koruyucudur** — vurgulama indeksleri ham metne
+uygulandığı için `toLocaleLowerCase('tr')` kullanılamaz ('İ' iki karakter
+üretir). Aksanlar katlanır: "hiz" yazan kullanıcı "Hız"ı bulur.
+
+### 8. Klavye
+↑/↓ satır gezinme, Space görünürlük, Enter denetçi (grup başlığında aç/kapa),
+Esc denetçiyi kapatır. Her odaklanabilir öğede görünür odak halkası olmalı.
