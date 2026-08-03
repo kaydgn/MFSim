@@ -64,6 +64,50 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // ANAHTARLAR DEĞİŞMEZ: kayıtlı projeler takozu node.data.libKey ile bağlar;
 // mevcut '57RS313773'/'57RS313774' anahtarları A26 girdilerinde KALIR, yeni
 // kaynak '-sr116' sonekiyle eklenir. Yalnız görünen ad kaynağı belirtir.
+//
+// ── AMC MECANOCAUCHO® KONİK TAKOZLAR (BMC 8x8 Zırhlı Personel Taşıyıcı) ──────
+// Kaynak: AMC Technical Assistance Service çok-gövdeli titreşim analizi raporları,
+// müşteri 79724 BMC Otomotiv, proje 3066 "8x8 Armored Carrier Truck – Powertrain",
+// hesaplar 13440 / 13948 / 13955 / 13957 (27–28.11.2025, yazar IGORLOPEZ).
+// Dört rapor AYNI güç grubunu (Motor 1472,2 kg + Şanzıman 813 kg, toplam 2285,2 kg)
+// dört FARKLI takoz kombinasyonuyla çözer — yani aynı takoz tipi birden çok
+// bağımsız yapılandırmada görünür. Katalog verisi (kod/tip/sertlik/maks. yük):
+//
+//   kod    | tip           | Sh | maks. yük | sıkma tork. | katalog
+//   -------|---------------|----|-----------|-------------|--------------------
+//   137963 | Cone 38       | 60 |   650 kg  |   170 Nm    | CONE WITH CUTOUTS
+//   137731 | Cone 67       | 50 |   900 kg  |   350 Nm    | CONE WITH CUTOUTS
+//   137829 | Cone 121 NP   | 55 |  1200 kg  |   600 Nm    | SOLID CONE
+//   137830 | Cone 121 NG   | 55 |  1750 kg  |   600 Nm    | SOLID CONE
+//
+// RİJİTLİKLER RAPORLARDAN GERİ ÇÖZÜLDÜ (AMC rijitlik tablosu yayımlamıyor):
+//   • statik (sx/sy/sz) ← 4 raporun "Static Results" tablolarındaki 20 takoz
+//     satırının sehim+kuvvet çiftlerine (1g yerçekimi) en küçük kareler uyumu;
+//   • dinamik (dx/dy/dz) ← 4 raporun "Natural Frequencies" tablolarındaki 24
+//     özdeğere 6 SD rijit gövde özdeğer probleminin en küçük kareler uyumu.
+//   Elde edilen dinamik/statik oranları 1,27–1,64 — doğal kauçuk için beklenen
+//   aralık; bu, iki bağımsız veri kümesinin tutarlılığının çapraz kontrolüdür.
+//
+// RADYAL ANİZOTROPİ KASITLIDIR — sx ≠ sy YAZIM HATASI DEĞİLDİR:
+//   Cone 38 ve Cone 67 "CONE WITH CUTOUTS" ailesindendir; AMC kataloğu birebir
+//   şöyle der: "The cutouts on the rubber section offer different horizontal/
+//   vertical stiffness ratios… a lower stiffness is required in one of the axes…
+//   [we] can recommend you the optimal position of the cutouts." Yani kauçuktaki
+//   oyuklar İKİ YATAY EKSENİ AYRIŞTIRIR. Buradaki sx/sy, raporlardaki montaj
+//   yönüne aittir (dördünde de Rotation X/Y/Z = 0 → YUMUŞAK eksen y/yanal, SERT
+//   eksen x/boyuna). Takoz 90° döndürülerek monte edilirse sx ve sy YER DEĞİŞİR.
+//   Cone 121 NP/NG ise "SOLID CONE" — eksenel simetrik; onlarda sx = sy zorlanmıştır
+//   (raporların y-sütunu bu tipleri ayırt edemeyecek kadar küçük: |y| ≤ 0,005 mm,
+//   son hane yuvarlaması baskın; simetri fizikten gelir, uydurmadan değil).
+//
+// DOĞRULAMA (tests/unit/mount-library-amc-cone.test.js): bu değerlerle MFSim
+// çekirdeği dört raporun TAMAMINI yeniden üretir — statik sehim ≤ 0,03 mm,
+// takoz kuvveti ≤ 0,005 kN, 24 doğal frekansın 22'si ≤ 0,07 Hz sapmayla.
+// Tek belirgin artık: hesap 13948'in 4. ve 5. modu (≤ 0,47 Hz). Bu, eksenel
+// simetri kısıtının bedeli DEĞİLDİR — o raporda Cone 121 NP takozları %65–67
+// yüklü (7,1–7,4 mm çökme), yani AMC'nin nonlineer basma eğrisinin çalışma
+// noktası teğetiyle çözdüğü bölgede; tek bir lineer rijitlik oraya tam oturmaz
+// (yalnız o raporu, anizotropi serbest bırakarak uydurmak bile 0,17 Hz bırakıyor).
 var VE_MOUNT_LIBRARY = {
   'amc55sha':         { name:'AMC 55 ShA',                       sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
   '57RS313773':       { name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
@@ -90,7 +134,14 @@ var VE_MOUNT_LIBRARY = {
       x:{ form:'poly', k0:665, c3:-5.85, c5:0.0618 },
       y:{ form:'poly', k0:335, c3:-2.53, c5:0.0249 },
       z:{ form:'asym', comp:{k0:381, xmax:5.02}, ext:{k0:374, c3:2.11} }
-    } }
+    } },
+  // ── AMC MECANOCAUCHO® konik takozlar (BMC 8x8, proje 3066) ───────────────
+  // Oyuklu koniler: sx ≠ sy KASITLI (oyuk yönü; rapordaki montaj → yumuşak eksen y).
+  'amc137963': { name:'Cone 38 60Sh (AMC 137963)',     sx:2670, sy:1065, sz:1180, dx:4265, dy:1690, dz:1715 },
+  'amc137731': { name:'Cone 67 50Sh (AMC 137731)',     sx:3550, sy:2115, sz:1280, dx:4630, dy:2785, dz:1625 },
+  // Masif koniler: eksenel simetrik → sx = sy.
+  'amc137829': { name:'Cone 121 NP 55Sh (AMC 137829)', sx:3150, sy:3150, sz:1075, dx:4605, dy:4605, dz:1755 },
+  'amc137830': { name:'Cone 121 NG 55Sh (AMC 137830)', sx:4405, sy:4405, sz:1530, dx:6380, dy:6380, dz:2080 }
 };
 
 // ─── ETKİN KÜTÜPHANE (gömülü + gömülü override + kullanıcı tanımlı) ───────────
