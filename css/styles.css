@@ -892,15 +892,6 @@
 .ve-brand-mark .mf-ico{width:14px;height:14px;}
 .ve-brand-name{white-space:nowrap;}
 
-/* ── Mod geçişi: segmented control ── */
-.ve-tab-group{display:flex;align-items:center;gap:0;}
- /* Sayfa anahtarı 30px'lik bandın içinde durmalı: dolgu kısıldı, yoksa
-    bileşik yüksekliği (~29px) bandı tamamen doldurup kenarlara yapışıyordu. */
-.ve-sub-tabs{display:none;align-items:center;gap:1px;padding:1px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:var(--radius-md);}
-.ve-sub-tabs.visible{display:inline-flex;}
-.ve-sub-tab{background:none;border:none;cursor:pointer;font:inherit;color:var(--text-secondary);font-size:var(--fs-body);font-weight:500;line-height:1.2;padding:2px 10px;border-radius:var(--radius-sm);white-space:nowrap;transition:color var(--dur-fast) var(--ease-out),background var(--dur-fast) var(--ease-out);}
-.ve-sub-tab:hover{color:var(--text-primary);}
-.ve-sub-tab.active{background:var(--bg-primary);color:var(--accent-primary);font-weight:600;box-shadow:var(--shadow-sm);}
 .tab-page{display:none;}
 .tab-page.active{display:block;}
 
@@ -915,20 +906,115 @@
   overflow:hidden;
 }
 
+/* SATIR akışı: sayfa rayı │ görünür sayfa.
+   Eskiden column'du ama tek çocuğu vardı (o an görünür olan sayfa), yani yön
+   fark etmiyordu. Sayfa rayı eklenince row anlamlı hale geldi: ray solda sabit
+   genişlikte durur, görünür sayfa kalan yeri alır. Sayfalar birbirini gizler
+   (js/tabs.js), dolayısıyla satırda her zaman en fazla iki öğe olur. */
 #sayfa2-content{
   height:100%;
   background:var(--bg-primary);
   display:flex;
-  flex-direction:column;
+  flex-direction:row;
   overflow:hidden;
 }
 
+/* ===== SAYFA RAYI (activity bar) ===== */
+/* Krom ailesinden: arka planı şerit şeridiyle aynı (--bg-tertiary). Aktif öğe
+   çalışma alanının rengine (--bg-primary) boyanır ve ekranın sol kenarına
+   oturan bir aksan çubuğu alır — "buradan o alana açılıyorum" böyle okunur.
+   Gerekçe ve konum kararı: index.html "SAYFA RAYI" yorumu. */
+/* Genişlik en uzun etikete göre: "Sonuçlar" 10px/600'de ~43px sürer, kap 52px
+   → ~%20 pay. Inter yüklü değilse yedek sistem fontuna (Segoe UI / genel sans)
+   düşülür ve o metrikler daha geniştir; 58px'te etiket tam sınıra oturuyordu. */
+.ve-nav-rail{
+  width:64px;
+  flex-shrink:0;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:2px;
+  padding:6px 4px;
+  background:var(--bg-tertiary);
+  border-right:1px solid var(--border-color);
+}
+/* Karşılama ekranındayken (modül seçilmemiş) ray gizlenir — sınıfı sidebar ile
+   aynı yer yönetir: js/components.js › veObserveModuleOverlay(). Ray .ve-main'in
+   DIŞINDA olduğu için sınıf kabına da yazılır. */
+#sayfa2-content.ve-no-module .ve-nav-rail{ display:none; }
+
+.ve-nav-item{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:4px;
+  padding:7px 2px 6px;
+  background:none;
+  border:none;
+  cursor:pointer;
+  font:inherit;
+  font-size:var(--fs-tiny);
+  font-weight:600;
+  line-height:1.1;
+  /* --text-secondary DEĞİL: o jeton --bg-tertiary üzerinde bazı temalarda
+     4,5:1'in altında kalıyor (fusion 3,90 · claude 4,28 · ansys 4,29) ve ray
+     ikincil krom değil, birincil navigasyon. --text-primary her temada
+     7,5–14,8:1. Aktif/pasif ayrımını renk değil arka plan + aksan taşıyor. */
+  color:var(--text-primary);
+  border-radius:var(--radius-sm);
+  transition:color var(--dur-fast) var(--ease-out),
+             background var(--dur-fast) var(--ease-out);
+}
+.ve-nav-item:hover{ color:var(--text-heading); background:var(--bg-input); }
+/* Aktif öğede AKSAN yalnız ikonda ve sol çubukta; etiket --text-heading kalır.
+   Etiketi de aksana boyamak bazı temalarda okunmuyordu: 10px metin için WCAG
+   AA 4,5:1 ister, aksan/tuval çifti vscode'da 3,7:1 slate'te 3,8:1 veriyordu.
+   Renk kaybı değil yer değişimi — "buradayım" sinyali dört yerden okunuyor:
+   sol çubuk, ikon rengi, arka plan (tuval rengi) ve etiket parlaklığı. */
+.ve-nav-item.active{ color:var(--text-heading); background:var(--bg-primary); }
+.ve-nav-item.active .ve-nav-ico{ color:var(--accent-primary); }
+/* Aktif göstergesi rayın sol kenarına taşar (rayın 4px'lik yan dolgusunu
+   -4px ile iptal eder): ray zaten en solda, çubuk ekran kenarına oturur. */
+.ve-nav-item.active::before{
+  content:"";
+  position:absolute;
+  left:-4px; top:3px; bottom:3px;
+  width:2px;
+  background:var(--accent-primary);
+  border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+}
+.ve-nav-item:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
+.ve-nav-ico{
+  width:20px; height:20px;
+  fill:none; stroke:currentColor;
+  stroke-width:2; stroke-linecap:round; stroke-linejoin:round;
+}
+/* Emniyet ağı: pay tükenirse etiket rayın DIŞINA taşıp tuvale sarkmasın —
+   üç noktayla kısalsın. (.ve-nav-item'e overflow:hidden konamaz, aktif aksan
+   çubuğu ::before rayın soluna taşıyor.) */
+.ve-nav-label{
+  max-width:100%;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Dar ekranda etiketler düşer, ikonlar kalır: 64px'lik ray 1000px'in altında
+   tuvalden görünür pay alır. İkon + title yeterli — hedef boyutu küçülmez. */
+@media (max-width: 1000px){
+  .ve-nav-rail{ width:40px; padding:6px 4px; }
+  .ve-nav-label{ display:none; }
+  .ve-nav-item{ padding:8px 2px; }
+  .ve-nav-item.active::before{ left:-4px; }
+}
 
 .ve-main{
   flex:1;
   display:flex;
   overflow:hidden;
   min-height:0;
+  min-width:0;   /* satır akışında: uzun içerik rayı ezmesin */
   position:relative;
 }
 
@@ -2348,8 +2434,6 @@
 .ve-qat-btn,
 .ve-radio-btn,
 .ve-minimap-toggle,
-.mf-splash-player-btn,
-.mf-splash-player-vol,
 .mf-radio-mini-btn{ font-size:var(--fs-lg); }
 
 /* Tablo satırı silme düğmesi — eskiden her satırda DOLU KIRMIZI bir kutuydu:
@@ -3381,6 +3465,7 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-sub-page{
   flex:1;
   min-height:0;
+  min-width:0;   /* #sayfa2-content satır akışında — bkz. .ve-main */
   overflow:hidden;
   background:var(--bg-primary);
 }
@@ -4853,85 +4938,6 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .mf-radio-mini.playing .mf-radio-mini-eq i:nth-child(2){ animation-delay:0.15s; }
 .mf-radio-mini.playing .mf-radio-mini-eq i:nth-child(3){ animation-delay:0.3s; }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   AÇILIŞ MÜZİĞİ MİNİ ÇALAR (js/splash-music.js)
-   Sağ-alt köşede kompakt çubuk: EQ + parça adı + çal/duraklat + ses + kapat.
-   Splash (z:1000000) ÜZERİNDE görünür — müzik yükleme ekranındayken de
-   kontrol edilebilir. Radyo paneli açılırsa köşeyi ona bırakıp sola kayar.
-   ═══════════════════════════════════════════════════════════════════════════ */
-.mf-splash-player{
-  position:fixed; right:18px; bottom:18px;
-  display:flex; align-items:center; gap:10px;
-  width:330px; padding:10px 12px;
-  background:var(--bg-tertiary);
-  border:1px solid var(--border-color);
-  border-radius:var(--radius-lg,12px);
-  box-shadow:0 12px 40px var(--shadow-color), 0 2px 8px rgba(0,0,0,0.3);
-  color:var(--text-primary);
-  font-family:var(--font-sans);
-  z-index:var(--z-widget);   /* radyo ile aynı bant: kromun üstünde,
-                                pencerelerin altında. Açılış ekranı
-                                --z-boot'ta zaten daha yüksek. */
-  animation:mfSplashPlayerIn 0.35s var(--ease-out,ease) both;
-  transition:opacity 0.18s ease, transform 0.18s ease, right 0.18s var(--ease-out,ease);
-}
-@keyframes mfSplashPlayerIn{
-  from{ opacity:0; transform:translateY(14px) scale(0.97); }
-  to{ opacity:1; transform:none; }
-}
-.mf-splash-player-leaving{
-  opacity:0; transform:translateY(14px) scale(0.97);
-  pointer-events:none;
-}
-/* Radyo paneli açıkken sağ-alt köşeyi radyoya bırak */
-body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
-
-/* EQ çubukları — radyodaki mfRadioEq animasyonunu paylaşır */
-.mf-splash-player-eq{ display:inline-flex; align-items:flex-end; gap:2px; height:14px; flex-shrink:0; }
-.mf-splash-player-eq i{
-  width:3px; height:4px; border-radius:1px;
-  background:var(--accent-primary); opacity:0.5;
-}
-.mf-splash-player.playing .mf-splash-player-eq i{ animation:mfRadioEq 0.9s ease-in-out infinite; opacity:0.9; }
-.mf-splash-player.playing .mf-splash-player-eq i:nth-child(2){ animation-delay:0.15s; }
-.mf-splash-player.playing .mf-splash-player-eq i:nth-child(3){ animation-delay:0.3s; }
-.mf-splash-player.playing .mf-splash-player-eq i:nth-child(4){ animation-delay:0.45s; }
-
-.mf-splash-player-info{ display:flex; flex-direction:column; flex:1; min-width:0; }
-.mf-splash-player-title{
-  font-size:var(--fs-md); font-weight:700; color:var(--text-heading);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.mf-splash-player.playing .mf-splash-player-title{ color:var(--accent-primary); }
-.mf-splash-player-sub{
-  margin-top:1px;
-  font-size:var(--fs-tiny); color:var(--text-muted);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-
-.mf-splash-player-btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:28px; height:28px; padding:0; flex-shrink:0;
-  background:var(--bg-secondary); border:1px solid var(--border-color);
-  border-radius:var(--radius-sm,6px); color:var(--text-secondary); cursor:pointer;
-  transition:background var(--dur-fast,0.12s), color var(--dur-fast,0.12s), border-color var(--dur-fast,0.12s), transform var(--dur-fast,0.12s);
-}
-.mf-splash-player-btn:hover{ background:var(--bg-input); color:var(--text-primary); border-color:var(--border-hover); }
-.mf-splash-player-btn:active{ transform:translateY(1px); }
-.mf-splash-player-btn svg{ width:15px; height:15px; }
-.mf-splash-player-close{ background:transparent; border-color:transparent; }
-.mf-splash-player-close:hover{ color:var(--accent-danger); }
-
-.mf-splash-player-volwrap{ display:inline-flex; align-items:center; gap:5px; flex-shrink:0; }
-.mf-splash-player-vol{ width:60px; accent-color:var(--accent-primary); cursor:pointer; }
-
-/* Dar ekran: tam genişliğe yakın; radyo açıksa (tam genişlik) çakışmayı önle */
-@media (max-width:420px){
-  .mf-splash-player{ width:calc(100vw - 24px); right:12px; bottom:12px; }
-  body:has(.mf-radio.open) .mf-splash-player{ opacity:0; pointer-events:none; right:12px; }
-}
-
 /* ═══════════════════════════════════════════════════════════════════════
    RIBBON (Fluent tarzı şerit) — bkz. js/ribbon.js
    Renkler tema değişkenlerinden gelir; ayrı bir palet YOK, böylece sekiz
@@ -4968,7 +4974,6 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 .ve-rb-strip > .logo,
 .ve-rb-strip > .ve-qat,
 .ve-rb-strip > .ve-qat-sep,
-.ve-rb-strip > .ve-tab-group,
 .ve-rb-strip > .theme-selector{ display:flex; align-items:center; flex-shrink:0; }
 .ve-rb-strip > .theme-selector{ gap:4px; margin-left:6px; }
 .ve-rb-tabs{ display:flex; align-items:stretch; gap:1px; min-width:0; }
@@ -5185,13 +5190,6 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 @media (max-width:1100px){
   .ve-minimap{ display:none !important; }
 }
-
-/* Müzik çalar artık --z-widget bandında: kromun üstünde, pencerelerin altında.
-   Eskiden 1000001'de duruyordu (açılış ekranının üstünde kalması için) ve
-   uygulama yüklendikten sonra body.tab-bar-visible ile 100005'e indiriliyordu —
-   durum bağımlı bir istisna. Katman düzeni jetonlaştıktan sonra istisnaya gerek
-   kalmadı: --z-widget < --z-modal kuralı bunu zaten sağlıyor, açılış ekranı da
-   --z-boot ile daha yüksekte. */
 
 /* Mantıksal bileşenler (Çözücü, Araç, Yol, Sensör, Senaryo…): fiziksel güç
    zincirine bağlanmazlar. Zincirin dışında dururken "bağlamayı mı unuttum?"

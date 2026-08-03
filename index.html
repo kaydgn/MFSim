@@ -47,7 +47,6 @@
 </div>
 
 <script src="js/loader.js"></script>
-<script src="js/splash-music.js"></script>
 
 <!-- ═══ LOGIN SCREEN ═══ -->
 <div id="mfsim-login-overlay" class="mfsim-login-overlay">
@@ -79,13 +78,11 @@
      şeridin sekme şeridi (26px). İkisi de tek satıra bol bol sığacak kadar
      seyrekti; 60px'lik krom 30px'e indi, kazanılan 30px tuvale gitti.
 
-     Yerleşim: marka │ hızlı erişim │ şerit sekmeleri ····· sayfa anahtarı │
-     radyo │ daralt.
+     Yerleşim: marka │ hızlı erişim │ şerit sekmeleri ····· radyo │ daralt.
 
-     Sayfa anahtarı (Araç Performans / Sonuçlar) SAĞA alındı ve bölmeli düğme
-     görünümünü koruyor: şerit sekmeleri bir KOMUT grubu seçer, sayfa anahtarı
-     hangi SAYFADA olduğunu söyler. İki farklı iş, iki farklı biçim — yan yana
-     aynı görünselerdi hangisinin ne yaptığı anlaşılmazdı.
+     Bant YALNIZ komut yüzeyidir. Sayfa anahtarı (Topoloji / Sonuçlar) bir
+     zamanlar buranın sağ ucundaydı; artık çalışma alanının solundaki dikey
+     sayfa rayında (.ve-nav-rail, aşağıda). Gerekçe orada yazılı.
 
      ÖNEMLİ: #ve-rb-tabs ve #ve-rb-body'yi js/ribbon.js DOLDURUR; bandın geri
      kalanı statik markup'tır. Bu yüzden ribbon.js artık #ve-ribbon.innerHTML'i
@@ -119,14 +116,6 @@
 
     <span class="ve-rb-strip-fill"></span>
 
-    <!-- Sayfa anahtarı -->
-    <div class="ve-tab-group">
-      <div class="ve-sub-tabs visible" id="ve-sub-tabs">
-        <button class="ve-sub-tab active" onclick="veSubTabDegistir('arac-performans')" data-subtab="arac-performans">Araç Performans</button>
-        <button class="ve-sub-tab" onclick="veSubTabDegistir('sonuclar')" data-subtab="sonuclar">Sonuçlar</button>
-      </div>
-    </div>
-
     <span class="theme-selector">
       <button id="ve-radio-btn" class="ve-radio-btn" onclick="veToggleRadio()" title="Radyo / müzik çalar" aria-label="Radyo"><span class="mf-ico mf-ico-radio"></span></button>
       <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
@@ -142,10 +131,53 @@
 <!-- GÖRSEL EDİTÖR -->
 <div id="sayfa2" class="tab-page active">
   <div id="sayfa2-content">
-    
+
+    <!-- ═══ SAYFA RAYI (activity bar) ═══
+         "Neredeyim" yüzeyi. Eskiden krom bandının SAĞ ucunda, radyo düğmesinin
+         yanında iki küçük düğmeydi. İki sorunu vardı:
+           • Uygulamanın en üst düzey navigasyonu dekoratif bölgeye düşmüştü —
+             kaydet/geri-al'dan da şerit sekmelerinden de önemli olan "hangi
+             sayfadayım" sorusu, müzik çalarla aynı köşede duruyordu.
+           • Sebep ile sonuç ~1500px ayrıydı: sağdaki düğmeye basınca SOLDA
+             "Sonuç Araçları" bağlamsal şerit sekmesi beliriyordu.
+
+         Ray, çalışma alanının SOLUNDA ve Bileşenler panelinin DIŞINDA durur:
+         sayfa değişince panel de tuval de değişir, ray yerinde kalır. Bu yüzden
+         .ve-main'in dışında, #sayfa2-content'in doğrudan çocuğudur — Sonuçlar'a
+         geçildiğinde .ve-main gizlenir (bkz. js/tabs.js), ray gizlenmez.
+         Karşılama ekranında (.ve-no-module) gizlenir: proje yokken "Sonuçlar"
+         gidilecek bir yer değil.
+
+         Sol düğmenin adı "Araç Performans" değil "Topoloji": ikisi de bir
+         GÖRÜNÜM adı olmalı. "Araç Performans" bir MODÜL adı ve sol panelde
+         sürüklenebilir bileşen olarak da geçiyor — aynı kelimenin iki anlamı
+         kalmasın diye ayrıştırıldı. -->
+    <nav class="ve-nav-rail" id="ve-nav-rail" role="tablist" aria-orientation="vertical" aria-label="Sayfa">
+      <button type="button" class="ve-nav-item active" data-subtab="arac-performans"
+              role="tab" aria-selected="true" aria-controls="ve-page-topoloji" tabindex="0"
+              title="Topoloji — modeli kur ve düzenle" onclick="veSubTabDegistir('arac-performans')">
+        <svg class="ve-nav-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="2" y="9" width="6" height="6" rx="1.5"/>
+          <rect x="16" y="3" width="6" height="6" rx="1.5"/>
+          <rect x="16" y="15" width="6" height="6" rx="1.5"/>
+          <path d="M8 12h4"/><path d="M12 12V6h4"/><path d="M12 12v6h4"/>
+        </svg>
+        <span class="ve-nav-label">Topoloji</span>
+      </button>
+      <button type="button" class="ve-nav-item" data-subtab="sonuclar"
+              role="tab" aria-selected="false" aria-controls="ve-page-sonuclar" tabindex="-1"
+              title="Sonuçlar — çözüm çıktılarını incele" onclick="veSubTabDegistir('sonuclar')">
+        <svg class="ve-nav-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 3v16a2 2 0 0 0 2 2h16"/>
+          <path d="M7.5 15.5l3.5-4.5 3 2.5 4.5-6"/>
+        </svg>
+        <span class="ve-nav-label">Sonuçlar</span>
+      </button>
+    </nav>
+
     <!-- Ana İçerik -->
-    <div class="ve-main">
-      
+    <div class="ve-main" id="ve-page-topoloji" role="tabpanel" aria-label="Topoloji">
+
       <!-- Sol Panel - Bileşenler -->
       <div class="ve-sidebar" id="ve-sidebar">
         <!-- Modül seçici kaldırıldı — tek ana modül -->
@@ -737,7 +769,7 @@
   </div>
 
   <!-- ===== SONUÇLAR SUB-SAYFASI ===== -->
-  <div id="ve-page-sonuclar" class="ve-sub-page" style="display:none; flex-direction:row;">
+  <div id="ve-page-sonuclar" class="ve-sub-page" role="tabpanel" aria-label="Sonuçlar" style="display:none; flex-direction:row;">
       
       <!-- Sol Panel: Veri Gezgini -->
       <div id="ve-results-browser" style="width:250px; min-width:160px; max-width:400px; background:var(--bg-secondary); border-right:2px solid var(--border-color); display:flex; flex-direction:column; position:relative; flex-shrink:0;">
