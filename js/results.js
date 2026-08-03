@@ -218,6 +218,46 @@ function veUpdateResultsTree() {
   
   html += '</div></div>';
 
+  // ── İçe aktarılan ölçümler (Excel/CSV) ──
+  // Ayrı bir dal: bu kanallar topolojiden değil dosyadan geliyor ve sekmeye
+  // bağlı değil. Satır/grup üretimi ortak (veSigGroupHTML) — kullanıcı için
+  // simülasyon sinyaliyle aynı arayüz: tikle, sürükle, çift tıkla incele.
+  if(typeof veImpCollectGroups === 'function') {
+    var impGroups = veImpCollectGroups();
+    if(impGroups.length > 0) {
+      var impChannels = 0;
+      impGroups.forEach(function(g) { impChannels += g.items.length; });
+
+      html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      html += '<div class="ve-tree-item">';
+      html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-upload"></span></span>';
+      html += '<span style="font-weight:600;">İçe Aktarılan Ölçümler</span>';
+      html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' +
+              impChannels + ' sinyal</span>';
+      html += '</div>';
+      html += '<div class="ve-tree-children open">';
+
+      var impShown = veSigDecorateOpen(
+        veSigApplyFilter(impGroups, _targetSlot, veSigState.query, veSigState.filter), _targetSlot);
+      impShown.forEach(function(g) { _allGroups.push(g); });
+
+      if(impShown.length === 0) {
+        html += '<div class="vsig-empty">Aramayla eşleşen sinyal yok.</div>';
+      } else {
+        impShown.forEach(function(g) {
+          html += veSigGroupHTML(g, _targetSlot, veSigState.query);
+          // Veri kümesini kaldırma: grup başlığının altında, sönük bir satır.
+          html += '<div class="vsig-orphan" style="cursor:pointer;" title="Bu ölçüm dosyasını oturumdan kaldır"' +
+                  ' onclick="veImpDropDataset(\'' + escapeHTML(g._import) + '\')">✕ ' +
+                  escapeHTML(g.name) + ' — kaldır</div>';
+        });
+      }
+      html += '</div></div></div>';
+    }
+  }
+
   // ── Diyagramlar (sihirbaz paketlerinden, aktif solver tab'a göre filtrelenir) ──
   var wizNode = nodes.find(function(n) { return n.type === 'sensor-wizard'; });
   var wizInstalled = wizNode && wizNode.data && wizNode.data.sensorsInstalled;
@@ -4148,6 +4188,16 @@ var veResultSlots = [{},{},{},{}];
 // penceresini kurar. Eskiden burada bir düzen seçici dallanması vardı.
 function veEnterResults() {
   if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
+  // Proje dosyası şerit listesini saklar ama ölçüm verisini saklamaz (ham
+  // ölçüm onlarca MB olabilir). Yeniden açılışta artık var olmayan bir veri
+  // kümesine bakan şeritler sonsuza dek "veri yok" gösterirdi — temizlenir.
+  if(typeof veImpPruneSlots === 'function') {
+    var dropped = veImpPruneSlots(veResultSlots);
+    if(dropped > 0 && typeof showToast === 'function') {
+      showToast(dropped + ' şerit kaldırıldı: içe aktarılan ölçüm verisi bu oturumda yok. ' +
+                'Dosyayı yeniden içe aktarın.', 'info');
+    }
+  }
   veUpdateResultsTree();
   if(typeof veTrEnter === 'function') veTrEnter();
   veInitResultSlots();
@@ -4389,6 +4439,49 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
   var tabConns = connections;
   var rawSensorId = sensorId;
   var lookupId = sensorId;
+
+  // ── İçe aktarılan ölçüm: #veriKümesiId ──
+  // Kendi zaman eksenini getirir, bu yüzden slot._dataSource ve xAxis birlikte
+  // kurulur. Tek-X-ekseni kuralı (js/measure-core.js) böylece kendiliğinden
+  // korunur: farklı bir eksendeki panoya bırakılırsa reddedilir.
+  if(sensorId.charAt(0) === '#') {
+    var impDs = (typeof veImpFind === 'function') ? veImpFind(veImpIdOf(sensorId)) : null;
+    if(!impDs) return;
+    var impCol = veImpColumn(impDs, signalId);
+    if(!impCol) return;
+
+    var iSlot = veResultSlots[slotIdx];
+    if(!iSlot.sensors) iSlot.sensors = [];
+    if(!iSlot.type) iSlot.type = 'line';
+
+    var impX = {
+      id: 'time',
+      name: impDs.x.name + (impDs.x.unit ? ' [' + impDs.x.unit + ']' : ''),
+      unit: impDs.x.unit || '',
+      _dataSource: impDs.dataSource
+    };
+    if(typeof veXAxisAllowed === 'function' &&
+       !veXAxisAllowed(impX, impDs.dataSource, veResultSlots)) {
+      veWarnXAxisMismatch(impX);
+      return;
+    }
+
+    if(iSlot.sensors.some(function(s) { return s.id === rawSensorId && s.signal === signalId; })) return;
+
+    iSlot.xAxis = impX;
+    iSlot._dataSource = impDs.dataSource;
+    iSlot.sensors.push({
+      id: rawSensorId,
+      name: impCol.name,
+      unit: impCol.unit || '',
+      signal: signalId,
+      _dataSource: impDs.dataSource
+    });
+    if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
+    veSyncBoardState();
+    if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
+    return;
+  }
 
   // ── Sihirbaz sanal sensörü: ~compType formatı ──
   if(sensorId.charAt(0) === '~') {

@@ -778,6 +778,10 @@
         <!-- Browser Header -->
         <div style="padding:8px 12px; background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:6px;">
           <span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Veri Gezgini</span>
+          <button type="button" id="ve-import-btn" class="ve-imp-tool" onclick="veImpOpenPicker()" style="margin-left:auto;"
+                  title="Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı)">
+            <span class="mf-ico mf-ico-upload"></span> İçe Aktar
+          </button>
         </div>
 
         <!-- Solver Tab Bar -->
@@ -862,6 +866,9 @@
 <script type="text/x-mfsim-defer" src="js/simulation-engine.js" data-mfsim-label="Simülasyon motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/graphics.js" data-mfsim-label="Grafik motoru..."></script>
 <script type="text/x-mfsim-defer" src="js/measure-core.js" data-mfsim-label="Ölçüm çekirdeği (X ekseni kuralı)..."></script>
+<script type="text/x-mfsim-defer" src="js/xlsx-read.js" data-mfsim-label="Excel/CSV okuyucu..."></script>
+<script type="text/x-mfsim-defer" src="js/measure-import.js" data-mfsim-label="Ölçüm içe aktarma..."></script>
+<script type="text/x-mfsim-defer" src="js/measure-import-ui.js" data-mfsim-label="İçe aktarma sihirbazı..."></script>
 <script type="text/x-mfsim-defer" src="js/trace-view.js" data-mfsim-label="Ölçüm penceresi (şerit grafikleri)..."></script>
 <script type="text/x-mfsim-defer" src="js/node-resize.js" data-mfsim-label="Düğüm yönetimi..."></script>
 <script type="text/x-mfsim-defer" src="js/context-menus.js" data-mfsim-label="Sağ tık menüleri..."></script>
@@ -900,6 +907,22 @@
     </div>
     <div class="ve-settings-body" style="flex-direction:column;">
       <section class="ve-settings-content" id="ve-status-content" style="width:100%;"></section>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ÖLÇÜM İÇE AKTARMA SİHİRBAZI ═══ -->
+<div id="ve-import-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veImpCloseModal()">
+  <div class="ve-settings-modal ve-imp-modal" role="dialog" aria-labelledby="ve-import-title">
+    <div class="ve-settings-header">
+      <span id="ve-import-title"><span class="mf-ico mf-ico-upload"></span> Ölçüm Verisi İçe Aktar</span>
+      <button class="ve-settings-close" onclick="veImpCloseModal()" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-imp-body" id="ve-import-content"></div>
+    <div class="ve-imp-footer">
+      <span class="ve-imp-hint">İlk sütun genelde zaman eksenidir — yukarıdan değiştirebilirsiniz.</span>
+      <button type="button" class="ve-imp-btn" onclick="veImpCloseModal()">İptal</button>
+      <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled>Diyagramlara Aktar</button>
     </div>
   </div>
 </div>

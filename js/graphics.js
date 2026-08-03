@@ -3,6 +3,15 @@
 // ============================================================================
 
 function veGetSensorData(sensorId, signalOverride, dataSource) {
+  // ====== İÇE AKTARILAN ÖLÇÜM (#veriKümesiId) ======
+  // EN BAŞTA durmak zorunda: aşağıdaki '~' dalı engel-atlama kipinde global
+  // veActiveSolverTabId'ye bakıp önekli her kimliği yakalayabiliyor. Excel
+  // sütunu topolojiden değil, oturumdaki veri kümesinden gelir — hiçbir düğüm
+  // aramasına girmemeli.
+  if(String(sensorId).charAt(0) === '#') {
+    return (typeof veImpSeries === 'function') ? veImpSeries(sensorId, signalOverride) : null;
+  }
+
   // Cross-tab sensör desteği: @tabIdx:sensorId formatı
   var tabNodes = nodes;
   var tabConns = connections;
