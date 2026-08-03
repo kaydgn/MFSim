@@ -64,6 +64,158 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // ANAHTARLAR DEĞİŞMEZ: kayıtlı projeler takozu node.data.libKey ile bağlar;
 // mevcut '57RS313773'/'57RS313774' anahtarları A26 girdilerinde KALIR, yeni
 // kaynak '-sr116' sonekiyle eklenir. Yalnız görünen ad kaynağı belirtir.
+//
+// ── AMC MECANOCAUCHO® KONİK TAKOZLAR ────────────────────────────────────────
+// İKİ AYRI VERİ TABANI VAR; İKİSİ DE DOĞRU, AMA AYNI ŞEY DEĞİL:
+//
+//   (A) NOMİNAL KATALOG — üreticinin ürün verisi. Yüksüz, küçük-sehim rijitliği.
+//       Takozun KENDİ özelliğidir, hangi araca takıldığından bağımsızdır.
+//   (B) BMC 8x8 ÇALIŞMA NOKTASI — AMC'nin o araç için yaptığı hesapların
+//       içinden geri çözülen EFEKTİF rijitlik. Takozun o montajdaki ön yükü
+//       altındaki sekant değeridir; araca özgüdür.
+//
+// (A) gömülü katalog girdileridir (anahtar: 'amcNNNNNN'). (B) yalnız o dört
+// AMC raporunu birebir yeniden üretmek için '-calc' sonekiyle AYRI girdi olarak
+// durur. Farkı görmezden gelmeyin: Cone 38'de sx 1800 (nominal) ↔ 2670 (çalışma
+// noktası) — %48. Nedeni fiziksel, bkz. "NEDEN FARKLILAR" başlığı.
+//
+// ── (A) NOMİNAL KATALOG ─────────────────────────────────────────────────────
+// Kaynak: AMC ürün karşılaştırma aracı (amceodev.amcsa.es/curves_comparative.aspx,
+// 24.11.2025 dökümü) + Cone 67 için AMC teknik departmanından yazılı bildirim
+// (Okan Tandoğan) + SOLID CONE / CONE WITH CUTOUTS katalogları (kod, sertlik,
+// maks. yük, sıkma torku).
+//
+//   kod    | tip         | kauçuk| Sh | maks. yük | kx    | ky    | kz   | cdyn/cstat
+//   -------|-------------|-------|----|-----------|-------|-------|------|-----------
+//   137963 | Cone 38     |  NR   | 60 |   650 kg  | 1800  | 1210  | 1150 | 1,6
+//   137964 | Cone 38     |  NR   | 70 |   900 kg  | 2770  | 1990  | 1900 | 1,8
+//   137731 | Cone 67     |  NR   | 50 |   900 kg  | 3090  | 2150  | 1325 | 1,4
+//   137981 | Cone 39     |  NR   | 40 |   400 kg  | 1340  | 1340  |  720 | 1,2 ⚠
+//   137982 | Cone 39     |  NR   | 50 |   600 kg  | 2200  | 2200  | 1150 | 1,4 ⚠
+//   137983 | Cone 39     |  NR   | 60 |   900 kg  | 2490  | 2490  | 1400 | 1,6 ⚠
+//   137830 | Cone 121 NG |  NR   | 55 |  1750 kg  | 4000  | 4000  | 1350 | 1,5
+//   137833 | Cone 121 NG |  NR   | 65 |  2000 kg  | 5800  | 5800  | 2500 | 1,7
+//   177296 | (tip adı kaynakta yok)| — |  900 kg  | 1090  | 1090  |  650 | 2,0
+//                                                     [kx,ky,kz = N/mm, statik]
+//   dx/dy/dz = sx/sy/sz × cdyn/cstat (üreticinin verdiği yöntem).
+//
+//   ⚠ Cone 39'un cdyn/cstat satırı elimizdeki ekran görüntüsünde KESİK. Değerler
+//     AMC'nin kendi NR verisinden çıkan kuraldan alındı: cdyn/cstat = (Sh+20)/50.
+//     Kural, elimizdeki BEŞ NR koni verisinin BEŞİNİ de birebir veriyor —
+//     50Sh→1,4 (137731) · 55Sh→1,5 (137830) · 60Sh→1,6 (137963) · 65Sh→1,7
+//     (137833) · 70Sh→1,8 (137964). Yine de TÜRETİLMİŞ değerdir: AMC'nin gerçek
+//     satırı gelirse 137981/137982/137983'ün dx/dy/dz'si güncellenmeli.
+//
+//   SÖNÜM kütüphanede tutulmaz (ζ takoz başına değil, Çözücü'de montaj geneli
+//   tek değerdir). Kaynaktaki değerler kayıt olsun diye: Cone 121 NG 55/65Sh
+//   ζ = 0,05 · Cone 67 50Sh ζ = 0,04.
+//
+//   EKSİK: 137984 (Cone 39 70Sh, 1100 kg) kataloğda var ama rijitlik verisi
+//   verilmedi → girdi AÇILMADI. 137829 (Cone 121 NP 55Sh, 1200 kg) için de
+//   nominal veri gelmedi → o girdi yalnız (B) tabanını taşır, adında yazılıdır.
+//
+// RADYAL ANİZOTROPİ KASITLIDIR — sx ≠ sy yazım hatası değildir:
+//   Cone 38 ve Cone 67 "CONE WITH CUTOUTS" ailesinden. AMC kataloğu birebir
+//   şöyle der: "The cutouts on the rubber section offer different horizontal/
+//   vertical stiffness ratios… a lower stiffness is required in one of the axes."
+//   AMC'nin Cone 67 bildirimi ekseni açıkça adlandırıyor: "Longitudinal X 3090 —
+//   Transversal Y (Cutouts) 2150 — Axial Z 1325". Yani YUMUŞAK eksen oyukların
+//   olduğu Y. Takoz 90° döndürülerek monte edilirse sx ve sy YER DEĞİŞİR.
+//   Cone 39 ve Cone 121 NG "SOLID CONE" — eksenel simetrik, kx = ky (üreticinin
+//   tablosu da öyle veriyor; uydurma değil, ölçüm).
+//
+// ── (B) BMC 8x8 ÇALIŞMA NOKTASI ('-calc' sonekli girdiler) ──────────────────
+// Kaynak: AMC Technical Assistance Service çok-gövdeli titreşim analizi raporları,
+// müşteri 79724 BMC Otomotiv, proje 3066 "8x8 Armored Carrier Truck – Powertrain",
+// hesaplar 13440 / 13948 / 13955 / 13957. Dört rapor AYNI güç grubunu (Motor
+// 1472,2 kg + Şanzıman 813 kg, toplam 2285,2 kg) dört FARKLI takoz kombinasyonuyla
+// çözer — aynı takoz tipi birden çok bağımsız yapılandırmada görünür.
+//   • statik ← 4 raporun "Static Results" tablolarındaki 20 takoz satırının
+//     sehim+kuvvet çiftlerine (1g) en küçük kareler uyumu;
+//   • dinamik ← "Natural Frequencies" tablolarındaki 24 özdeğere 6 SD rijit gövde
+//     özdeğer probleminin uyumu.
+// Bu girdilerle MFSim çekirdeği dört raporun TAMAMINI yeniden üretir: statik
+// sehim ≤ 0,03 mm · takoz kuvveti ≤ 0,005 kN · 24 doğal frekansın 22'si ≤ 0,07 Hz.
+// (Tek belirgin artık hesap 13948'in 4.–5. modu, ≤ 0,47 Hz: o raporda Cone 121 NP
+// %65–67 yüklü, AMC'nin nonlineer basma eğrisinin çalışma noktası teğetiyle
+// çözdüğü bölge; tek lineer rijitlik oraya tam oturmuyor.)
+//
+// ── NEDEN FARKLILAR ─────────────────────────────────────────────────────────
+// Nominal değerler yüksüz/küçük-sehim; rapor değerleri ise takozun GERÇEK ön
+// yükü altındaki sekant rijitliği. İki fizik etkisi farkı açıklıyor:
+//   • Eksenel: koninin basma eğrisi yükle sertleşir — AMC kataloğunun kendi
+//     ifadesiyle "increasing progressively as the load increases". Cone 121 NG
+//     %45 yükte kz 1350 → 1530 (+%13).
+//   • Radyal: eksenel ön yük kauçuğu kayma yönünde de sertleştirir; oyuklu
+//     konide bu etki sert eksende (x) çok daha belirgin — Cone 38'de 1800 →
+//     2670 (+%48), Cone 67'de 3090 → 3550 (+%15), buna karşılık yumuşak eksen
+//     (y) ve eksenel (z) neredeyse değişmiyor (≤ %12 / ≤ %3).
+// ÖLÇÜLDÜ: nominal değerlerle dört rapor çözülünce sapma Δf 2,92 Hz'e, Δδz
+// 0,70 mm'ye çıkıyor; '-calc' değerleriyle 0,47 Hz / 0,03 mm. Yani hangi tabanı
+// seçtiğiniz sonucu değiştirir — GENEL ÜRÜN SEÇİMİ için nominal (A), BU ARACIN
+// AMC raporlarını yeniden üretmek için (B) kullanın.
+//
+// ── LMT-1433-00 (AMC DEĞİL — BMC güç grubu FEA raporlarının takozu) ─────────
+// Kaynak: BMC R&D FEA raporları — "BMC Engine Mount (8x8 Ttar)" (Onur GÖR,
+// 02.10.2018, V00) ve "(4x4 Tatar)" (12.02.2019, V01). İkisinin "Engine Mount
+// Design Proposal (Standard Part)" tablosu takoz BAŞINA rijitliği sertliğe göre
+// veriyor; V01 sunumu bu satırın parça adını açıkça "LMT-1433-00" yazıyor.
+// Teknik resimler Angst+Pfister logosu taşıyor → parça büyük olasılıkla A+P'dir,
+// AMC Mecanocaucho değil (KATALOGLA TEYİT EDİLMEDİ, arama sonuç vermedi).
+//
+//   ShA | X N/mm | Y N/mm | Z N/mm      (takoz başına; flanş 107×90, delik 80×65)
+//   ----|--------|--------|--------
+//    40 |   900  |   900  |   450
+//    55 |  1500  |  1500  |   750
+//    70 |  2500  |  2500  |  1150
+//
+// TEK TABAN — sx = dx KASITLI: kaynak statik/dinamik ayrımı yapmıyor, sertlik
+// başına TEK üçlü veriyor. Kütüphanede bunun emsali var (57RS313774-sr116 de
+// tek tabanlıdır). Uydurma bir cdyn/cstat oranı YAZILMADI.
+//
+// DEĞERLER RAPORUN KENDİ MODAL SONUCUNU VERİYOR (ölçüldü): Konsept 2 = 3 konum ×
+// 2 adet LMT-1433-00 + Z'de 110 N/mm yay. Takoz konumları raporlarda YOK, ama
+// düşey (bounce) modu konumdan bağımsızdır: f=(1/2π)·√(Σkz/m).
+//   65 ShA · 2302 kg → hesap 8,266 Hz ↔ raporun modu 8,250 Hz   (%0,20)
+//   55 ShA · 2302 kg → hesap 7,122 Hz ↔ raporun modu 7,281 Hz   (%2,2)
+//   55 ShA · 1966 kg → hesap 7,707 Hz ↔ raporun modu 8,090 Hz   (%4,7)
+// Yani tablo, FEA'nın modal analizinde kullandığı rijitliktir.
+//
+// STATİK TARAFTA AÇIK UÇ: raporlanan "@1g çökme" doğrusal tahminin 1,26 / 1,18 /
+// 1,10 katı (sırasıyla yukarıdaki üç durum). Oran SABİT DEĞİL — bir kısmı takoz
+// başına eğilme (raporlanan değer büyük olasılıkla maksimum), bir kısmı
+// nonlineerlik olabilir; ikisi ayrıştırılamıyor (konumlar yok). Bu yüzden
+// buradan bir statik/dinamik oranı TÜRETİLMEDİ. Angst+Pfister'in statik+dinamik
+// ayrımlı verisi gelirse sz/sx düşürülüp dx/dz ayrıştırılmalıdır.
+//
+// ── "Mount 1" — aynı tablonun ÖTEKİ satırı (kullanıcı kararı: numarasız ekle) ─
+// Aynı "Design Proposal (Standard Part)" tablosunun ilk satırı. PARÇA NUMARASI
+// HİÇBİR DOKÜMANDA GEÇMİYOR — kaynak yalnız "Mount 1" diye anıyor (LMT-1433-00
+// ise "Mount 2"). Numara bulununca girdi ADI düzeltilmeli, anahtarlar kalır.
+//
+//   ShA | X N/mm | Y N/mm | Z N/mm      (takoz başına)
+//   ----|--------|--------|--------
+//    40 |   800  |   450  |   300
+//    55 |  1000  |   750  |   500
+//    70 |  1350  |  1100  |   800
+//
+// LMT-1433-00'ın aksine RADYAL ANİZOTROPİK (sx > sy > sz).
+//
+// RAPORUN KENDİ TOPLAMLARIYLA ÇAPRAZ DOĞRULANDI: Konsept 1'in "Total Stiffness"
+// satırı bu tablodan yeniden kuruluyor → Konsept 1 = 6 adet "Mount 1" @ 70 ShA.
+//   arka sol/sağ  rapor Z1600 Y2100 X2700  ↔  2×(800,1100,1350) = Z1600 Y2200 X2700
+//   ön            rapor Z1600 Y2700 X2100  ↔  aynı takoz 90° DÖNDÜRÜLMÜŞ (X↔Y)
+// Z ve X birebir; tek sapma Y'de %4,8 (2200 ↔ 2100) — tablodaki 1100 ya da
+// rapordaki 2100 yuvarlanmış olmalı. Döndürme bulgusu önemlidir: MFSim'de takoz
+// düğümünün AÇI ALANI YOKTUR, döndürülmüş montaj sx ↔ sy takas edilerek girilir.
+//
+// EKLENMEYENLER (veri yok):
+//   • LMT-1433-20 — TTAR ölçüm raporunda ön takoz olarak geçiyor ("X yönü
+//     yumuşatılmış" varyant), rijitlik verisi hiçbir dokümanda yok.
+//   • LMT-1433-37 — mount-core.js SIPER_EXAMPLE'ın kaynağı; kütüphanedeki
+//     'amc55sha' girdisi (1252/1252/640) odur. DİKKAT: o girdinin adı "AMC 55 ShA"
+//     ama parça LMT-1433 ailesinden, yani muhtemelen AMC değil A+P — ad yanıltıcı
+//     olabilir. Teyit gelmeden DEĞİŞTİRİLMEDİ.
 var VE_MOUNT_LIBRARY = {
   'amc55sha':         { name:'AMC 55 ShA',                       sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
   '57RS313773':       { name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
@@ -90,7 +242,41 @@ var VE_MOUNT_LIBRARY = {
       x:{ form:'poly', k0:665, c3:-5.85, c5:0.0618 },
       y:{ form:'poly', k0:335, c3:-2.53, c5:0.0249 },
       z:{ form:'asym', comp:{k0:381, xmax:5.02}, ext:{k0:374, c3:2.11} }
-    } }
+    } },
+  // ── (A) AMC MECANOCAUCHO® konik takozlar — NOMİNAL KATALOG ───────────────
+  // dx/dy/dz = sx/sy/sz × cdyn/cstat. Oyuklu konide sx ≠ sy KASITLI (oyuk ekseni
+  // = yumuşak eksen y); masif konide kx = ky (üreticinin tablosu da öyle).
+  'amc137963': { name:'Cone 38 60Sh (AMC 137963)',      sx:1800, sy:1210, sz:1150, dx:2880, dy:1936, dz:1840 },  // ×1,6
+  'amc137964': { name:'Cone 38 70Sh (AMC 137964)',      sx:2770, sy:1990, sz:1900, dx:4986, dy:3582, dz:3420 },  // ×1,8
+  'amc137731': { name:'Cone 67 50Sh (AMC 137731)',      sx:3090, sy:2150, sz:1325, dx:4326, dy:3010, dz:1855 },  // ×1,4
+  'amc137981': { name:'Cone 39 40Sh (AMC 137981)',      sx:1340, sy:1340, sz:720,  dx:1608, dy:1608, dz:864  },  // ×1,2 ⚠türetilmiş oran
+  'amc137982': { name:'Cone 39 50Sh (AMC 137982)',      sx:2200, sy:2200, sz:1150, dx:3080, dy:3080, dz:1610 },  // ×1,4 ⚠türetilmiş oran
+  'amc137983': { name:'Cone 39 60Sh (AMC 137983)',      sx:2490, sy:2490, sz:1400, dx:3984, dy:3984, dz:2240 },  // ×1,6 ⚠türetilmiş oran
+  'amc137830': { name:'Cone 121 NG 55Sh (AMC 137830)',  sx:4000, sy:4000, sz:1350, dx:6000, dy:6000, dz:2025 },  // ×1,5
+  'amc137833': { name:'Cone 121 NG 65Sh (AMC 137833)',  sx:5800, sy:5800, sz:2500, dx:9860, dy:9860, dz:4250 },  // ×1,7
+  'amc177296': { name:'AMC 177296',                     sx:1090, sy:1090, sz:650,  dx:2180, dy:2180, dz:1300 },  // ×2,0 (tip adı kaynakta yok)
+  // ── (B) BMC 8x8 ÇALIŞMA NOKTASI — AMC hesaplarından geri çözüm ───────────
+  // Ön yük altındaki EFEKTİF sekant rijitlik; yalnız o dört raporu (13440/13948/
+  // 13955/13957) yeniden üretmek için. Genel ürün seçiminde (A)'yı kullanın.
+  'amc137963-calc': { name:'Cone 38 60Sh (AMC 137963 · BMC 8x8 çalışma noktası)',     sx:2670, sy:1065, sz:1180, dx:4265, dy:1690, dz:1715 },
+  'amc137731-calc': { name:'Cone 67 50Sh (AMC 137731 · BMC 8x8 çalışma noktası)',     sx:3550, sy:2115, sz:1280, dx:4630, dy:2785, dz:1625 },
+  'amc137830-calc': { name:'Cone 121 NG 55Sh (AMC 137830 · BMC 8x8 çalışma noktası)', sx:4405, sy:4405, sz:1530, dx:6380, dy:6380, dz:2080 },
+  // Cone 121 NP 55Sh için nominal veri GELMEDİ — bu girdi yalnız çalışma noktası
+  // tabanını taşır. Anahtar değişmedi (kayıtlı projelerin bağı kopmasın).
+  'amc137829': { name:'Cone 121 NP 55Sh (AMC 137829 · BMC 8x8 çalışma noktası)', sx:3150, sy:3150, sz:1075, dx:4605, dy:4605, dz:1755 },
+  // ── LMT-1433-00 — BMC güç grubu FEA raporlarının takozu ─────────────────
+  // TEK RİJİTLİK TABANI: kaynak statik/dinamik AYRIMI YAPMIYOR → sx = dx.
+  // Nedeni ve ölçümü için aşağıdaki "LMT-1433-00" blok yorumuna bakın.
+  'lmt1433-00-40sh': { name:'LMT-1433-00 40 ShA', sx:900,  sy:900,  sz:450,  dx:900,  dy:900,  dz:450  },
+  'lmt1433-00-55sh': { name:'LMT-1433-00 55 ShA', sx:1500, sy:1500, sz:750,  dx:1500, dy:1500, dz:750  },
+  'lmt1433-00-70sh': { name:'LMT-1433-00 70 ShA', sx:2500, sy:2500, sz:1150, dx:2500, dy:2500, dz:1150 },
+  // ── "Mount 1" — aynı raporun ÖTEKİ standart parçası, PARÇA NUMARASI YOK ──
+  // Ad kaynaktaki etiketin kendisidir ("Mount 1"); numara bulununca girdi adı
+  // düzeltilmeli (anahtarlar kalır). LMT-1433-00'dan farklı olarak radyal
+  // ANİZOTROPİK: sx > sy. Tek taban (sx = dx), gerekçesi LMT-1433-00 ile aynı.
+  'bmc-mount1-40sh': { name:'Mount 1 40 ShA (BMC FEA · parça no yok)', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
+  'bmc-mount1-55sh': { name:'Mount 1 55 ShA (BMC FEA · parça no yok)', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
+  'bmc-mount1-70sh': { name:'Mount 1 70 ShA (BMC FEA · parça no yok)', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
 };
 
 // ─── ETKİN KÜTÜPHANE (gömülü + gömülü override + kullanıcı tanımlı) ───────────
@@ -163,6 +349,18 @@ function veMntGetLibraryList(){
 // L/R varyantları a_y işaretiyle ayrışır. Büyük sehimli satırlar (Max Bump, Pothole,
 // Reverse) ±15 mm metal-metal durdurucuyla klipslenir (solveCaseStop, F4);
 // çözücü useStop=true ile çağrılır.
+//
+// ÇEKİRDEK DÖRTLÜNÜN KAYNAĞI: "Maks. Tork, 3.5 Düşey, 1g yanal ve 1g boyuna
+// yükleme koşulları kontrol edilmelidir" — MSB Tank Taşıyıcı Araç motor takoz
+// inceleme raporu (Güven YAVUZ, 11.03.2019) "Hedef Kriterleri" sayfası. Aynı
+// dörtlü BMC R&D FEA raporunda da hesaplanmıştır (Onur GÖR, 02.10.2018 / V01
+// 12.02.2019) — "Max. Displacement Results" tablosu, Konsept 2 · LMT-1433-00:
+//   motor 1266 kg 55 ShA → Z(1g) 5,3 · Z(3,5g) 15 · X(1g) 3,3 · Y(1g) 4,5 · tork 2,5 mm
+//   motor 1602 kg 55 ShA → 5,8 · 17,5 · 4,0 · 5,8 · 2,5 mm
+//   motor 1602 kg 65 ShA → 4,0 · 11,8 · 2,6 · 3,7 · 1,6 mm
+// ±15 mm metal-metal durdurucu eşiği de bu tabloyla aynı mertebededir (3,5g
+// düşeyde 15–17,5 mm). Diğer satırlar (Cornering, Kerb Strike, Pothole, Rebound)
+// bu dörtlünün ÜSTÜNE eklenen genel araç yük kitabıdır, o raporlarda yoktur.
 var MNT_AUTO_CASES = [
   { name:'Static',            n:[ 0,    0,   -1  ], T:[0,0,0] }, // 1g düşey
   { name:'Max Bump',          n:[ 0,    0,   -3.5], T:[0,0,0] }, // 3.5g düşey → klips
@@ -1078,15 +1276,22 @@ function _mntTopoState(j){
     }
   }
   if(!s || !s.nodes) return null;
-  return {
+  var state = {
     nodes: s.nodes, connections: s.connections || [],
     compCounter: s.compCounter || 0,
     canvasOffset: s.canvasOffset || { x:3000, y:3000 },
     canvasZoom: s.canvasZoom || 1,
-    // Çerçeve/notlar örneğin parçasıdır — burada taşınmazsa veLoadTabState
-    // restoreAnnotations([]) çağırıp kullanıcının gruplamalarını siler.
+    // Gruplama çerçeveleri / yazı etiketleri de örnekle birlikte gelir. Alan
+    // DÜŞERSE veLoadTabState → restoreState → restoreAnnotations([]) çağrılır ve
+    // iç topolojideki çerçeveler örnek aktarımında sessizce SİLİNİR.
     annotations: s.annotations || []
   };
+  // Kayıtlı örnekler yerel (300..1300, 150..650) bandında üretilmişti — yani
+  // kanvasın SOL-ÜST köşesinde. Yükleme sırasında koordinatlar kanvas merkezine
+  // taşınır: örneğin her yönünde ~2700px boş alan kalır (topoloji birleştirme
+  // için yer) ve ızgaranın köşesine yapışmış görünmez. Kaynak JSON değişmez.
+  if(typeof veCenterTopoState === 'function') veCenterTopoState(state);
+  return state;
 }
 
 // Örnek topolojisini çöz: önce build'e gömülü (window.__MNT_TOPOLOGIES), yoksa
@@ -1109,12 +1314,11 @@ function veMntExportTopology(){
   if(typeof veSerializeCurrentState!=='function'){ if(typeof showToast==='function') showToast('Dışa aktarma kullanılamıyor.','warning'); return; }
   if(typeof veFlushOpenPanelData==='function') veFlushOpenPanelData();
   var st = veSerializeCurrentState();
-  // annotations DA yazılır: kullanıcının tuvale koyduğu çerçeve/notlar örneğin
-  // parçasıdır (yükleyici veLoadTabState → restoreAnnotations ile geri kurar).
-  // Yazılmazsa dışa aktarılan örnek, kurulduğunda gruplama çerçevelerini kaybeder.
   var out = { format:'mfsim-mount-example', version:1,
     nodes: st.nodes, connections: st.connections,
     compCounter: st.compCounter, canvasOffset: st.canvasOffset, canvasZoom: st.canvasZoom,
+    // Tuval açıklamaları (gruplama çerçevesi / yazı etiketi) uçucu DEĞİL:
+    // yazılmazsa dışa aktarılan örnek yeniden yüklendiğinde çerçeveler kaybolur.
     annotations: st.annotations || [] };
   var json = JSON.stringify(out, null, 2);
   if(typeof document==='undefined') return json;
@@ -1142,6 +1346,10 @@ function _mntLoadExampleFromJSON(ref, ex){
     if(typeof saveState==='function') saveState();
     if(typeof updateAllConnections==='function') updateAllConnections();
     if(typeof veMntUpdateBreadcrumb==='function') veMntUpdateBreadcrumb();
+    // Kamerayı yüklenen içeriğe otur. Kayıttaki kamera örneği ÜRETEN pencerenin
+    // ölçüsüne göreydi; başka boyutta bir ekranda topolojinin bir kısmı görüş
+    // dışında (kenara yapışmış) kalıyordu.
+    if(typeof veFitViewToContent==='function') veFitViewToContent({ maxZoom:1 });
     if(typeof showToast==='function') showToast('Örnek yüklendi'+(ex&&ex.vehicle?(' — '+ex.vehicle):'')+' (JSON).','info');
   });
 }
@@ -1488,31 +1696,57 @@ function _mntLoadExampleFromModel(nodeId){
 // ════════════════════════════════════════════════════════════════════════════
 //  3D GÖRÜNTÜLEYİCİ — iç topolojinin 3B yerleşimi (tema uyumlu)
 // ════════════════════════════════════════════════════════════════════════════
-// Görüntüleyici araç çubuğu düğmesi (aç/kapa görünümlü).
-function _mntVwrBtn(onclick, label, title, active){
-  return '<button onclick="'+onclick+'" title="'+_mntEsc(title||label)+'" style="padding:4px 9px; font-size:var(--fs-tiny); background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer; opacity:'+(active===false?'0.45':'1')+';">'+label+'</button>';
+// ─── Görüntüleyici sol-ray denetimleri ───────────────────────────────────────
+// İki ayrı buton dili: KATMAN ÇİPİ (aç/kapa, durumu renkle taşır) ve EYLEM
+// düğmesi (tek seferlik iş). Eskiden ikisi de aynı gri butondu ve kapalı katman
+// opacity:0.45 ile soldurulduğu için "devre dışı/bozuk" görünüyordu; hepsi tek
+// bir flex-wrap satırında olduğundan dar sol rayda ragged sarıyordu. Yerleşim
+// artık CSS ızgarasında (bkz. .mnt-vwr-toggles / .mnt-vwr-actions).
+function _mntVwrToggle(what, label, title, on){
+  var isOn = (on !== false);
+  return '<button type="button" class="mnt-vwr-toggle'+(isOn?' is-on':'')+'" aria-pressed="'+(isOn?'true':'false')+'"'
+    + ' title="'+_mntEsc(title||label)+'"'
+    + ' onclick="var v=veMountViewerToggle(\''+what+'\'); this.classList.toggle(\'is-on\', v); this.setAttribute(\'aria-pressed\', v?\'true\':\'false\');">'
+    + _mntEsc(label) + '</button>';
 }
-// Renk lejantı (slim, tek satır).
+function _mntVwrAction(onclick, icon, label, title, wide){
+  return '<button type="button" class="mnt-vwr-action'+(wide?' mnt-vwr-wide':'')+'" onclick="'+onclick+'" title="'+_mntEsc(title||label)+'">'
+    + (icon ? '<span class="mf-ico mf-ico-'+icon+'"></span>' : '')
+    + '<span>'+_mntEsc(label)+'</span></button>';
+}
+// Renk göstergesi — dikey liste (üç çip dar sol rayda tek satıra sığmıyordu).
 function _mntVwrLegend(){
-  function chip(col,txt){ return '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:9px; height:9px; border-radius:50%; background:'+col+'; display:inline-block;"></span>'+txt+'</span>'; }
-  return '<div style="display:flex; flex-wrap:wrap; gap:12px; font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:7px;">'
-    + chip('var(--accent-success)','Takoz') + chip('var(--accent-warning)','Bileşen CG') + chip('var(--accent-danger)','Birleşik CG') + '</div>';
+  function row(col,name,desc){
+    return '<div class="mnt-vwr-legend-row"><span class="mnt-vwr-dot" style="background:'+col+';"></span>'
+      + '<span class="mnt-vwr-legend-name">'+name+'</span>'
+      + '<span class="mnt-vwr-legend-desc">'+desc+'</span></div>';
+  }
+  return '<div class="mnt-vwr-legend">'
+    + row('var(--accent-success)','Takoz','küp')
+    + row('var(--accent-warning)','Bileşen CG','küre · kütleyle büyür')
+    + row('var(--accent-danger)','Birleşik CG','toplam ağırlık merkezi')
+    + '</div>';
 }
 function getMntViewerPropertiesHTML(node){
   if(!node.data) node.data={};
-  // SOL rayı (ince): lejant + görünüm düğmeleri + ipucu + yenile.
+  // SOL rayı (ince): gösterge → katmanlar → görünüm eylemleri → ipucu.
   var left='';
+  left+='<div class="sw-section-title">Gösterge</div>';
   left+=_mntVwrLegend();
-  // Görünüm katmanları + sıfırla + tam ekran (Zemin varsayılan gizli)
-  left+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:9px;">';
-  left+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
-  left+=_mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksenleri gizle/göster');
-  left+=_mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Eksen etiketlerini gizle/göster');
-  left+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
-  left+=_mntVwrBtn("veMntViewerFullscreen();",'<span class="mf-ico mf-ico-maximize"></span> Tam Ekran','Görüntüleyiciyi tam ekran aç');
+  // Katman aç/kapa (Zemin varsayılan KAPALI — eksenler "havada" görünsün)
+  left+='<div class="sw-section-title">Katmanlar</div>';
+  left+='<div class="mnt-vwr-toggles">';
+  left+=_mntVwrToggle('grid','Zemin','Zemin ızgarasını gizle/göster', false);
+  left+=_mntVwrToggle('axes','Eksen','Eksenleri gizle/göster');
+  left+=_mntVwrToggle('labels','Etiket','Eksen etiketlerini gizle/göster');
   left+='</div>';
-  left+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5; margin-bottom:9px;">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
-  left+='<button onclick="veMntViewerRefresh()" style="width:100%; padding:8px; font-size:var(--fs-body); background:var(--bg-tertiary); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); cursor:pointer;">↻ Yenile</button>';
+  left+='<div class="sw-section-title">Görünüm</div>';
+  left+='<div class="mnt-vwr-actions">';
+  left+=_mntVwrAction("veMountViewerReset();",'crosshair','Sıfırla','Kamera açısını ve yakınlığı başlangıca döndür');
+  left+=_mntVwrAction("veMntViewerFullscreen();",'maximize','Tam Ekran','Görüntüleyiciyi tam ekran aç');
+  left+=_mntVwrAction("veMntViewerRefresh()",'refresh','Yenile','Topolojiyi yeniden oku ve sahneyi güncelle', true);
+  left+='</div>';
+  left+='<div class="mnt-vwr-hint">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşenin üzerine gel → bilgi.</div>';
   // SAĞ (geniş): 3B görüntüleyici kanvası — büyük. Canvas boyutu wrap'ın client
   // boyutuna göre kurulur (veMountViewerInit + ResizeObserver) → geniş sütunda oturur.
   var right='<div id="ve-mnt-inline-viewer-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:var(--radius-md);"><canvas id="ve-mnt-inline-viewer-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
@@ -1540,12 +1774,16 @@ function getMntCoordFramePropertiesHTML(node){
   left+=axRow('#22c55e','Y','Yanal eksen · +Y sağ, −Y sol');
   left+=axRow('#3b82f6','Z','Düşey eksen · +Z yukarı, −Z aşağı');
   left+='</div>';
-  left+='<div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:9px;">';
-  left+=_mntVwrBtn("var v=veMountViewerToggle('planes'); this.style.opacity=v?'1':'0.45';",'Düzlem','Koordinat düzlemlerini gizle/göster');
-  left+=_mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin ızgarasını gizle/göster', false);
-  left+=_mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Görünümü sıfırla');
+  left+='<div class="sw-section-title">Katmanlar</div>';
+  left+='<div class="mnt-vwr-toggles" style="grid-template-columns:repeat(2,minmax(0,1fr));">';
+  left+=_mntVwrToggle('planes','Düzlem','Koordinat düzlemlerini gizle/göster');
+  left+=_mntVwrToggle('grid','Zemin','Zemin ızgarasını gizle/göster', false);
   left+='</div>';
-  left+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.5;">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
+  left+='<div class="sw-section-title">Görünüm</div>';
+  left+='<div class="mnt-vwr-actions">';
+  left+=_mntVwrAction("veMountViewerReset();",'crosshair','Sıfırla','Kamera açısını ve yakınlığı başlangıca döndür', true);
+  left+='</div>';
+  left+='<div class="mnt-vwr-hint">Sol tık döndür · tekerlek yakınlaş. Konum ve CG değerleri bu eksenlere göre girilir.</div>';
   // SAĞ (geniş): 3B koordinat kanvası — büyük. Canvas boyutu wrap'ın client boyutuna
   // göre kurulur (veMountViewerInit + ResizeObserver) → geniş sütunda ferahça oturur.
   var right='<div id="ve-mnt-coord-wrap" style="width:100%; height:min(58vh,540px); min-height:320px; overflow:hidden; border:1px solid var(--border-color); background:var(--bg-primary); position:relative; border-radius:var(--radius-md);"><canvas id="ve-mnt-coord-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
@@ -2928,11 +3166,11 @@ function _mntFsOverlay(title, innerHTML, onMount, onClose){
 }
 // 3D Görüntüleyici'yi (model modu) tam ekran aç. Koordinat Düzlemi'nde tam ekran yok.
 function veMntViewerFullscreen(){
-  var toggles = _mntVwrBtn("var v=veMountViewerToggle('grid'); this.style.opacity=v?'1':'0.45';",'Zemin','Zemin', false)
-    + _mntVwrBtn("var v=veMountViewerToggle('axes'); this.style.opacity=v?'1':'0.45';",'Eksen','Eksen')
-    + _mntVwrBtn("var v=veMountViewerToggle('labels'); this.style.opacity=v?'1':'0.45';",'Etiket','Etiket');
-  var bar='<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding:8px 14px; flex-shrink:0; border-bottom:1px solid var(--border-color);">'
-    + toggles + _mntVwrBtn("veMountViewerReset();",'⟳ Sıfırla','Sıfırla')
+  var toggles = _mntVwrToggle('grid','Zemin','Zemin ızgarasını gizle/göster', false)
+    + _mntVwrToggle('axes','Eksen','Eksenleri gizle/göster')
+    + _mntVwrToggle('labels','Etiket','Eksen etiketlerini gizle/göster');
+  var bar='<div class="mnt-vwr-bar">'
+    + toggles + _mntVwrAction("veMountViewerReset();",'crosshair','Sıfırla','Kamera açısını ve yakınlığı başlangıca döndür')
     + '<span style="flex:1;"></span><span style="font-size:var(--fs-micro); color:var(--text-muted);">Sol tık döndür · sağ tık kaydır · tekerlek yakınlaş · fare ile bileşen bilgisi</span></div>';
   var wrap='<div style="flex:1; min-height:0; position:relative; background:var(--bg-primary);"><canvas id="ve-mnt-fs-canvas" style="width:100%; height:100%; display:block;"></canvas></div>';
   _mntFsOverlay('3D Görüntüleyici', bar+wrap,

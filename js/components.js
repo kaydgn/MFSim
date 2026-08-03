@@ -78,6 +78,14 @@ function veStartModule(type) {
     if(typeof veShowAllSidebarComponents === 'function') veShowAllSidebarComponents();
   }
 
+  // Boş tuvalde kamerayı "ev" konumuna al: kanvasın merkezi görünümün ortasına
+  // gelsin (bkz. js/canvas-space.js). Açılışta karşılama ekranı yüzünden wrapper
+  // ölçülemediyse ilk konum kaymış olabilir; blok ızgaranın ortasına düşsün diye
+  // burada — ölçülerin kesin olduğu anda — bir kez daha uygulanır.
+  if(typeof veCameraHome === 'function' && typeof nodes !== 'undefined' && nodes && !nodes.length) {
+    veCameraHome();
+  }
+
   // Seçilen modül bloğunu görünür alanın ortasına oluştur.
   // Canvas CSS'te -3000px offset'li → görünür merkez ≈ 3000 + yarı-genişlik.
   if(typeof createNode === 'function' && componentDefs[type]) {
@@ -668,6 +676,11 @@ var VE_STANDALONE_TYPES = ['vehicle','road','sensor','sensor-wizard','solver','s
     function sync() {
       var visible = getComputedStyle(overlay).display !== 'none';
       main.classList.toggle('ve-no-module', visible);
+      // Sayfa rayı (.ve-nav-rail) .ve-main'in DIŞINDA — Sonuçlar'da da durması
+      // gerektiği için kabına taşındı. Aynı durumu oraya da yaz ki karşılama
+      // ekranında ray da gizlensin: proje yokken "Sonuçlar" gidilecek yer değil.
+      var shell = document.getElementById('sayfa2-content');
+      if(shell) shell.classList.toggle('ve-no-module', visible);
       // Şerit de aynı duruma uysun: çalışma alanı yokken Kaydet/Doğrula/
       // Çalıştır gibi komutlar pasif çizilir (sol panel zaten gizleniyordu,
       // şeridin etkin görünmesi tutarsızdı).

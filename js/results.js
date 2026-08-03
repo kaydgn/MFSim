@@ -48,33 +48,31 @@ function veUpdateSolverTabs() {
 function veSwitchSolverTab(tabId) {
   if(tabId === veActiveSolverTabId) return;
 
-  // Mevcut tab'ın slot durumunu kaydet
-  veSolverTabSlots[veActiveSolverTabId] = veResultSlots.map(function(s) { return Object.assign({}, s); });
-  veSolverTabCollapsed[veActiveSolverTabId] = veSlotCollapsed.slice();
+  // Mevcut çözüm sekmesinin pano durumunu kaydet.
+  //
+  // DERİN kopya şart: Object.assign sığ kopyalıyordu, yani `sensors` ve
+  // `lanes` dizileri iki çözüm sekmesi arasında AYNI nesneydi. Performans
+  // sekmesinde bir sinyal eklemek Engel Atlama sekmesinin listesini de
+  // değiştiriyordu. _chartMeta benzeri çizim artıkları zaten yok; kalan alanlar
+  // (sensors, lanes, xAxis, type, _dataSource) JSON'a girer.
+  veSolverTabSlots[veActiveSolverTabId] = veTrCloneBoard(veResultSlots);
 
   veActiveSolverTabId = tabId;
 
-  // Yeni tab'ın slot durumunu geri yükle (yoksa boş oluştur)
-  if(veSolverTabSlots[tabId]) {
-    veResultSlots = veSolverTabSlots[tabId].map(function(s) { return Object.assign({}, s); });
-    veSlotCollapsed = veSolverTabCollapsed[tabId] ? veSolverTabCollapsed[tabId].slice() : [false,false,false,false];
-  } else {
-    veResultSlots = [{},{},{},{}];
-    veSlotCollapsed = [false,false,false,false];
+  // Yeni sekmenin pano durumunu geri yükle (yoksa boş pano)
+  veResultSlots = veSolverTabSlots[tabId]
+    ? veTrCloneBoard(veSolverTabSlots[tabId])
+    : [{},{},{},{}];
+
+  // Sekme değişti — görünüm penceresi ve referans imleç önceki koşuya aitti
+  if(typeof veTrState !== 'undefined') {
+    veTrState.xMin = null; veTrState.xMax = null;
+    veTrState.pinX = null; veTrState.cursorX = null;
   }
 
-  // UI güncelle
   veUpdateSolverTabs();
   veUpdateResultsTree();
-
-  // Slotları yeniden renderla
-  for(var i = 0; i < 4; i++) {
-    if(veResultSlots[i].sensors && veResultSlots[i].sensors.length > 0) {
-      veRenderSlot(i);
-    } else {
-      veRenderSlotPicker(i);
-    }
-  }
+  if(typeof veTrRefresh === 'function') veTrRefresh();
 }
 
 // Çözümü ETKİLEYEN bir girdi (Cd, GVW, alın alanı, oran…) değiştiğinde, önceki
@@ -103,6 +101,11 @@ function veUpdateResultsTree() {
   var tree = document.getElementById('ve-results-tree');
   if(!tree) return;
 
+  // Ağaç her etkileşimde baştan çizilir. Kaydırma konumu korunmazsa onay
+  // kutusuna her tıklayışta liste başa fırlıyordu.
+  var _scrollTop = tree.scrollTop;
+  if(typeof veSigResetCache === 'function') veSigResetCache();
+
   // Solver tab bar'ı güncelle
   veUpdateSolverTabs();
 
@@ -120,70 +123,21 @@ function veUpdateResultsTree() {
     else veSaveActiveTabState();
   }
   
-  // Helper: sensörün bağlı olduğu bileşenden sinyal listesi al
-  function getSensorSignals(sensor, tNodes, tConns) {
-    var sourceType = '';
-    var sourceName = '';
-    if(sensor.data && sensor.data.attachedConnection) {
-      var conn = tConns.find(function(c) { return c.id === sensor.data.attachedConnection; });
-      if(conn) {
-        var dir = sensor.data.sensorDirection || 'from';
-        var srcNode = tNodes.find(function(n) { return n.id === (dir === 'to' ? conn.to : conn.from); });
-        if(srcNode) {
-          sourceType = srcNode.type;
-          sourceName = srcNode.customName || (componentDefs[srcNode.type] ? componentDefs[srcNode.type].name : srcNode.type);
-        }
-      }
-    }
-    if(!sourceType && sensor.data && sensor.data.attachedComponent) {
-      var compN = tNodes.find(function(n) { return n.id === sensor.data.attachedComponent; });
-      if(compN) {
-        sourceType = compN.type;
-        sourceName = compN.customName || (componentDefs[compN.type] ? componentDefs[compN.type].name : compN.type);
-      }
-    }
-    if(!sourceType || !COMPONENT_SIGNALS[sourceType]) return [];
-    var allSigs = COMPONENT_SIGNALS[sourceType].outputs || [];
-    var sDir = sensor.data ? sensor.data.sensorDirection || 'from' : 'from';
-    var filtered = allSigs;
-    if(sensor.data && sensor.data.attachedConnection) {
-      filtered = allSigs.filter(function(sig) {
-        var id = sig.id;
-        var hasIn = id.length > 3 && id.substring(id.length - 3) === '_in';
-        if(sDir === 'from') return !hasIn;
-        else return hasIn;
-      });
-    }
-    // selectedSignals filtresi
-    var sel = sensor.data ? sensor.data.selectedSignals : null;
-    if(sel && sel.length > 0) {
-      filtered = filtered.filter(function(s) { return sel.indexOf(s.id) >= 0; });
-    }
-    return filtered.map(function(s) { return { id: s.id, name: s.name, unit: s.unit, sourceName: sourceName }; });
-  }
-  
-  // Helper: ağaç satırı oluştur (sadece ok toggle yapar)
-  function treeRow(indent, arrowState, icon, label, extra) {
-    var h = '<div class="ve-tree-row" style="padding-left:' + indent + 'px;">';
-    if(arrowState) {
-      h += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + arrowState + '</span>';
-    } else {
-      h += '<span style="width:14px;display:inline-block;"></span>';
-    }
-    h += '<span class="icon">' + icon + '</span>';
-    h += '<span>' + label + '</span>';
-    if(extra) h += extra;
-    h += '</div>';
-    return h;
-  }
-  
+  // Sensör → sinyal çözümü ve ağaç satırı üretimi js/signal-tree.js'e taşındı
+  // (veSigCollectGroups / veSigGroupHTML). Burada yalnızca çerçeve kalıyor.
+
+  // Onay kutularının yazdığı panel ve bu turda çizilen gruplar
+  var _targetSlot = veResultSlots[(typeof veSigTargetSlot === 'function') ? veSigTargetSlot() : 0];
+  var _allGroups = [];
+
   var html = '';
+  html += veSigToolbarHTML(_targetSlot);
   html += '<div class="ve-tree-item">';
   html += '<div class="ve-tree-row">';
   html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span><span class="icon"><span class="mf-ico mf-ico-folder"></span></span><span style="font-weight:600;">' + projectName + '</span>';
   html += '</div>';
   html += '<div class="ve-tree-children open">';
-  
+
   // Her sekme bir alt klasör
   veTabs.forEach(function(tab, tabIdx) {
     var isActive = (tabIdx === veActiveTabIdx);
@@ -206,181 +160,53 @@ function veUpdateResultsTree() {
     var tabIcon = hasSim ? '<span class="mf-ico mf-ico-check-circle"></span>' : (totalSensorCount > 0 ? '<span class="mf-ico mf-ico-bar-chart"></span>' : '<span class="mf-ico mf-ico-folder"></span>');
     var tabLabel = tab.name + (hasSim ? '' : ' (çözülmedi)');
 
+    // Prefix: aktif sekme → sensörId direkt, diğer → @tabIdx:sensörId
+    var prefix = isActive ? '' : ('@' + tabIdx + ':');
+
+    // Ölçüm kanalları bileşen bazında TEK listede toplanır: fiziksel
+    // sensörler + sihirbazın sanal sensörleri. Eski ağaçta bunlar ayrı
+    // dallardı (bileşen → yön → sensör → sinyal, dört seviye) ve aynı sinyal
+    // iki ayrı yerde görünebiliyordu. Artık bileşen → sinyal, iki seviye.
+    var tabGroups = veSigCollectGroups(tabNodeObjs, tabConns, tabWizSensors, prefix);
+    var tabChannelCount = 0;
+    tabGroups.forEach(function(g) { tabChannelCount += g.items.length; });
+
     html += '<div class="ve-tree-item">';
     html += '<div class="ve-tree-row" style="padding-left:16px;">';
     html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensorCount > 0 ? '▶' : ' ') + '</span>';
     html += '<span class="icon">' + tabIcon + '</span>';
     html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--accent-primary);' : '') + '">' + tabLabel + '</span>';
-    if(totalSensorCount > 0) html += ' <span style="font-size:var(--fs-tiny); color:var(--text-muted); margin-left:auto;">' + totalSensorCount + ' sensör</span>';
+    // Sayaç artık sensör değil SİNYAL sayar: listede görünen satır sayısıyla
+    // birebir tutar. "17 sensör" yazıp 24 satır göstermek güven kırıyordu.
+    if(tabChannelCount > 0) html += ' <span style="font-size:var(--fs-tiny); color:var(--text-muted); margin-left:auto;">' + tabChannelCount + ' sinyal</span>';
     html += '</div>';
 
     if(totalSensorCount > 0) {
       html += '<div class="ve-tree-children' + (isActive ? ' open' : '') + '">';
-      
-      // Prefix: aktif sekme → sensörId direkt, diğer → @tabIdx:sensörId
-      var prefix = isActive ? '' : ('@' + tabIdx + ':');
-      
-      // Helper: sensör + sinyallerini render et
-      function renderSensor(sn, indentPx) {
-        var signals = getSensorSignals(sn, tabNodeObjs, tabConns);
-        var hasSignals = signals.length > 0;
-        var sensorLabel = sn.customName || 'Sensör';
-        
-        if(hasSignals) {
-          // Sensör expandable — sinyalleri alt öğe olarak göster
-          html += '<div class="ve-tree-item">';
-          html += '<div class="ve-tree-sensor" style="padding-left:' + indentPx + 'px;">';
-          html += '<span class="arrow" onclick="event.stopPropagation();veToggleTree(this.closest(\'.ve-tree-item\').querySelector(\'.ve-tree-sensor\'))" style="font-size:var(--fs-micro); width:12px; cursor:pointer; color:var(--text-muted);">▶</span>';
-          html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + sensorLabel;
-          html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + signals.length + ' sinyal</span>';
-          html += '</div>';
-          html += '<div class="ve-tree-children">';
-          signals.forEach(function(sig) {
-            html += '<div class="ve-tree-signal" style="padding-left:' + (indentPx + 16) + 'px;" onmousedown="veStartSignalDrag(event,\'' + prefix + sn.id + '\',\'' + sig.id + '\')" title="' + sig.name + ' (' + sig.unit + ') — Sürükle">';
-            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sig.name + ' <span style="font-size:var(--fs-micro); color:var(--text-muted);">(' + sig.unit + ')</span>';
-            html += '</div>';
-          });
-          // Tümünü sürükle seçeneği
-          html += '<div class="ve-tree-signal" style="padding-left:' + (indentPx + 16) + 'px; color:var(--accent-success); font-style:italic;" onmousedown="veStartSensorDrag(event,\'' + prefix + sn.id + '\')" title="Tüm sinyalleri sürükle">';
-          html += '<span><span class="mf-ico mf-ico-package"></span></span> Tümünü Ekle (' + signals.length + ' sinyal)';
-          html += '</div>';
-          html += '</div></div>';
-        } else {
-          // Sinyal bulunamadı — eski davranış
-          html += '<div class="ve-tree-sensor" style="padding-left:' + indentPx + 'px;" onmousedown="veStartSensorDrag(event,\'' + prefix + sn.id + '\')">';
-          html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + sensorLabel + '</div>';
-        }
+      var shownGroups = veSigDecorateOpen(
+        veSigApplyFilter(tabGroups, _targetSlot, veSigState.query, veSigState.filter), _targetSlot);
+      shownGroups.forEach(function(g) { _allGroups.push(g); });
+
+      if(shownGroups.length === 0) {
+        html += '<div class="vsig-empty">' +
+          (veSigState.query ? 'Aramayla eşleşen sinyal yok.'
+                            : (veSigState.filter === 'on' ? 'Ölçüm penceresinde çizili sinyal yok.'
+                                                          : 'Bu filtrede sinyal yok.')) + '</div>';
+      } else {
+        shownGroups.forEach(function(g) {
+          html += veSigGroupHTML(g, _targetSlot, veSigState.query);
+        });
       }
-      
-      // Güç aktarma bileşenleri
-      var driveTypes = ['engine','torque-converter','gearbox','transfer','differential','wheel'];
-      driveTypes.forEach(function(type) {
-        var comps = tabNodeObjs.filter(function(n) { return n.type === type; });
-        comps.forEach(function(comp) {
-          var name = comp.customName || (componentDefs[comp.type] ? componentDefs[comp.type].name : comp.type);
-          var inputSensors = [];
-          var outputSensors = [];
-          
-          var connSensors = tabNodeObjs.filter(function(n) { return n.type === 'sensor' && n.data && n.data.attachedConnection; });
-          connSensors.forEach(function(sn) {
-            var conn = tabConns.find(function(c) { return c.id === sn.data.attachedConnection; });
-            if(!conn) return;
-            var dir = sn.data.sensorDirection || 'from';
-            var targetNodeId = (dir === 'from') ? conn.from : conn.to;
-            if(targetNodeId !== comp.id) return;
-            if(dir === 'from' && conn.from === comp.id) outputSensors.push(sn);
-            else if(dir === 'to' && conn.to === comp.id) inputSensors.push(sn);
-          });
-          
-          var totalSensors = inputSensors.length + outputSensors.length;
-          if(totalSensors === 0) return;
-          
-          html += '<div class="ve-tree-item">';
-          html += '<div class="ve-tree-row" style="padding-left:32px;">';
-          html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensors > 0 ? '▶' : ' ') + '</span>';
-          html += '<span class="icon"><span class="mf-ico mf-ico-settings"></span></span><span>' + escapeHTML(name) + '</span>';
-          html += ' <span style="font-size:var(--fs-tiny); color:var(--accent-primary); margin-left:auto; opacity:0.7;">' + totalSensors + '</span>';
-          html += '</div>';
-          html += '<div class="ve-tree-children">';
-          
-          if(inputSensors.length > 0) {
-            html += '<div style="padding:2px 0 2px 44px; font-size:var(--fs-tiny); color:var(--text-muted); font-weight:600;">← Giriş</div>';
-            inputSensors.forEach(function(sn) { renderSensor(sn, 48); });
-          }
-          if(outputSensors.length > 0) {
-            html += '<div style="padding:2px 0 2px 44px; font-size:var(--fs-tiny); color:var(--text-muted); font-weight:600;">→ Çıkış</div>';
-            outputSensors.forEach(function(sn) { renderSensor(sn, 48); });
-          }
-          html += '</div></div>';
-        });
-      });
-      
-      // Doğrudan bağlı sensörler (vehicle, road, scenario)
-      var compAttachTypes = ['vehicle','road','scenario'];
-      compAttachTypes.forEach(function(type) {
-        var comps = tabNodeObjs.filter(function(n) { return n.type === type; });
-        comps.forEach(function(comp) {
-          var name = comp.customName || (componentDefs[comp.type] ? componentDefs[comp.type].name : comp.type);
-          var directSensors = tabNodeObjs.filter(function(n) {
-            return n.type === 'sensor' && n.data && n.data.attachedComponent === comp.id;
-          });
-          if(directSensors.length === 0) return;
-          
-          var icon = type === 'vehicle' ? '<span class="mf-ico mf-ico-car"></span>' : type === 'scenario' ? '<span class="mf-ico mf-ico-trending-up"></span>' : '<span class="mf-ico mf-ico-route"></span>';
-          
-          html += '<div class="ve-tree-item">';
-          html += '<div class="ve-tree-row" style="padding-left:32px;">';
-          html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
-          html += '<span class="icon">' + icon + '</span><span>' + escapeHTML(name) + '</span>';
-          html += ' <span style="font-size:var(--fs-tiny); color:var(--accent-warning); margin-left:auto; opacity:0.7;">' + directSensors.length + '</span>';
-          html += '</div>';
-          html += '<div class="ve-tree-children">';
-          directSensors.forEach(function(sn) { renderSensor(sn, 48); });
-          html += '</div></div>';
-        });
-      });
-      
-      // Bağlı olmayan sensörler
+
+      // Bağlı olmayan sensörler ölçüm vermez — listenin altında, sönük.
       var unbound = tabNodeObjs.filter(function(n) {
         return n.type === 'sensor' && (!n.data || (!n.data.attachedConnection && !n.data.attachedComponent));
       });
-      if(unbound.length > 0) {
-        html += '<div style="padding:4px 0 2px 32px; font-size:var(--fs-tiny); color:var(--text-muted); font-weight:600; border-top:1px solid var(--border-color); margin-top:4px; padding-top:4px;">Bağlı olmayan</div>';
+      if(unbound.length > 0 && !veSigState.query) {
+        html += '<div class="vsig-orphan-head">Bağlı olmayan · ' + unbound.length + '</div>';
         unbound.forEach(function(sn) {
-          html += '<div class="ve-tree-sensor" style="padding-left:36px; opacity:0.5;">';
-          html += '<span><span class="mf-ico mf-ico-map-pin"></span></span> ' + escapeHTML(sn.customName || 'Sensör') + '</div>';
-        });
-      }
-
-      // ── Sihirbaz Sanal Sensörleri (bileşen grupları olarak) ──
-      if(tabWizSensors.length > 0) {
-        // Sanal sensörleri bileşen tipine göre grupla
-        var wizCompGroups = {};
-        tabWizSensors.forEach(function(ws) {
-          var key = ws.target;
-          if(!wizCompGroups[key]) wizCompGroups[key] = [];
-          wizCompGroups[key].push(ws);
-        });
-
-        var wizCompOrder = ['engine','torque-converter','gearbox','shift-controller','transfer','propshaft','differential','wheel','vehicle','road','solver'];
-        wizCompOrder.forEach(function(compType) {
-          var sensors = wizCompGroups[compType];
-          if(!sensors || sensors.length === 0) return;
-
-          var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
-          if(compType === 'engine') {
-            var engN = tabNodeObjs.find(function(n) { return n.type === 'engine' || n.type === 'engine-brake'; });
-            if(engN && componentDefs[engN.type]) compName = componentDefs[engN.type].name;
-          }
-          var compIcon = compType === 'vehicle' ? '<span class="mf-ico mf-ico-car"></span>' : compType === 'road' ? '<span class="mf-ico mf-ico-route"></span>' : compType === 'solver' ? '<span class="mf-ico mf-ico-ruler"></span>' : compType === 'wheel' ? '<span class="mf-ico mf-ico-wheel"></span>' : compType === 'transfer' ? '<span class="mf-ico mf-ico-shuffle"></span>' : compType === 'propshaft' ? '<span class="mf-ico mf-ico-nut"></span>' : '<span class="mf-ico mf-ico-settings"></span>';
-
-          html += '<div class="ve-tree-item">';
-          html += '<div class="ve-tree-row" style="padding-left:32px;">';
-          html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▶</span>';
-          html += '<span class="icon">' + compIcon + '</span><span>' + compName + '</span>';
-          html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' + sensors.length + ' sinyal</span>';
-          html += '</div>';
-          html += '<div class="ve-tree-children">';
-
-          sensors.forEach(function(ws) {
-            var sigInfo = null;
-            if(COMPONENT_SIGNALS[compType]) {
-              sigInfo = (COMPONENT_SIGNALS[compType].outputs || []).find(function(s) { return s.id === ws.signal; });
-            }
-            var sigName = sigInfo ? sigInfo.name : ws.signal;
-            var sigUnit = sigInfo ? sigInfo.unit : '';
-            var wizSensorId = '~' + compType;
-
-            html += '<div class="ve-tree-signal" style="padding-left:48px;" onmousedown="veStartSignalDrag(event,\'' + wizSensorId + '\',\'' + ws.signal + '\')" title="' + sigName + ' (' + sigUnit + ') — Sürükle">';
-            html += '<span><span class="mf-ico mf-ico-bar-chart"></span></span> ' + sigName + ' <span style="font-size:var(--fs-micro); color:var(--text-muted);">(' + sigUnit + ')</span>';
-            html += '</div>';
-          });
-
-          // Tümünü Ekle
-          html += '<div class="ve-tree-signal" style="padding-left:48px; color:var(--accent-success); font-style:italic;" onmousedown="veStartSensorDrag(event,\'~' + compType + '\')" title="Tüm sinyalleri sürükle">';
-          html += '<span class="mf-ico mf-ico-package"></span> Tümünü Ekle (' + sensors.length + ' sinyal)';
-          html += '</div>';
-          html += '</div></div>';
+          html += '<div class="vsig-orphan" title="Bir bağlantıya ya da bileşene tutturulmadığı için veri üretmiyor">' +
+                  escapeHTML(sn.customName || 'Sensör') + '</div>';
         });
       }
 
@@ -575,7 +401,17 @@ function veUpdateResultsTree() {
     }
   }
   
+  // Denetçi ağacın ÜSTÜNE binmez, YERİNE geçer. Kaplama denemesi kaydırılmış
+  // ağaçta hizadan kayıyor ve altındaki satırlar tıklanabilir kalıyordu.
+  // Gruplar yine de hesaplanır: kapanınca ağaç aynı durumla geri gelir.
+  veSigLastGroups = _allGroups;
+  var inspecting = !!veSigState.inspect;
+  if(inspecting) html = veSigInspectorHTML();
+
   tree.innerHTML = html;
+  // Denetçiye geçerken ağacın kaydırma konumu korunur, denetçiye uygulanmaz
+  if(!inspecting) tree.scrollTop = _scrollTop;
+  veSigBindTree(tree);
 }
 
 function veToggleTree(el) {
@@ -4286,493 +4122,132 @@ function _ftUpshiftMouseMove(e) {
   }
 }
 
+// Arama artık DOM'u gizleyip göstermiyor: sorgu ağacın durumuna yazılır ve
+// ağaç yeniden çizilir. Böylece eşleşme vurgulanır, eşleşen gruplar kendiliğinden
+// açılır ve boş kalan gruplar tamamen düşer.
 function veFilterResultsTree(query) {
-  // Basit filtre - tum sensor satirlarini goster/gizle
-  var tree = document.getElementById('ve-results-tree');
-  if(!tree) return;
-  var sensors = tree.querySelectorAll('.ve-tree-sensor');
-  var q = query.toLowerCase();
-  sensors.forEach(function(s) {
-    s.style.display = (!q || s.textContent.toLowerCase().indexOf(q) > -1) ? '' : 'none';
-  });
+  if(typeof veSigSetQuery === 'function') veSigSetQuery(query);
 }
 
-// ===== SONUCLAR: SLOT YONETIMI =====
+// ===== SONUÇLAR: ÖLÇÜM PANOSU =====
+//
+// Sonuçlar sayfası TEK bir ölçüm penceresi üzerinde çalışır (js/trace-view.js).
+// Panel ızgarası ve "Panel düzenini seçin" ekranı KALDIRILDI: kullanıcıdan
+// ölçümden ÖNCE kaç panel istediğini seçmesini beklemek, cevabını kimsenin
+// bilmediği bir soruydu — kaç sinyale bakacağı ancak bakarken belli oluyor.
+// Sinyaller artık panele değil, alt alta ŞERİTLERE düşüyor; her şeridin kendi
+// Y ekseni var, hepsi tek zaman eksenini paylaşıyor.
+//
+// veResultSlots dizisi 4 uzunlukta KALIR: eski proje dosyaları resultSlots'u
+// bu şekilde saklıyor ve yükleme yolu bozulmamalı. Yalnızca index 0 (VE_BOARD)
+// kullanılır; eski dosyalarda 1..3'e dağılmış sinyaller veTrMigrateSlots() ile
+// panoya taşınır, hiçbiri kaybolmaz.
 var veResultSlots = [{},{},{},{}];
-var veSlotCollapsed = [false, false, false, false];
 
-// ===== SONUCLAR: PANEL DUZENI (LAYOUT) SECIMI =====
-// Sonuclar sekmesine ilk gecildiginde paneller otomatik acilmaz; once kullaniciya
-// bir yerlesim (layout) sectirilir. Her duzen, satir satir hangi slot indekslerinin
-// gosterilecegini tanimlar. Slotlar daima 0..N-1 sirasiyla kullanilir; boylece mevcut
-// slot fonksiyonlari (0..3) hicbir degisiklik olmadan calisir.
-var veResultLayout = null;   // null => henuz duzen secilmedi (secici ekrani gosterilir)
-
-var VE_RESULT_LAYOUTS = [
-  {
-    id: 'single', label: '1 Panel', desc: 'Tek geniş panel',
-    rows: [[0]],
-    preview: '<rect x="3" y="3" width="58" height="38" rx="3"/>'
-  },
-  {
-    id: 'dual', label: '2 Panel', desc: 'Yan yana iki panel',
-    rows: [[0, 1]],
-    preview: '<rect x="3" y="3" width="27.5" height="38" rx="3"/><rect x="33.5" y="3" width="27.5" height="38" rx="3"/>'
-  },
-  {
-    id: 'triple', label: '3 Panel', desc: 'Üstte bir, altta iki',
-    rows: [[0], [1, 2]],
-    preview: '<rect x="3" y="3" width="58" height="17.5" rx="3"/><rect x="3" y="23.5" width="27.5" height="17.5" rx="3"/><rect x="33.5" y="23.5" width="27.5" height="17.5" rx="3"/>'
-  },
-  {
-    id: 'quad', label: '4 Panel', desc: '2×2 dörtlü ızgara',
-    rows: [[0, 1], [2, 3]],
-    preview: '<rect x="3" y="3" width="27.5" height="17.5" rx="3"/><rect x="33.5" y="3" width="27.5" height="17.5" rx="3"/><rect x="3" y="23.5" width="27.5" height="17.5" rx="3"/><rect x="33.5" y="23.5" width="27.5" height="17.5" rx="3"/>'
-  }
-];
-
-function veGetLayoutDef(id) {
-  for(var i = 0; i < VE_RESULT_LAYOUTS.length; i++) {
-    if(VE_RESULT_LAYOUTS[i].id === id) return VE_RESULT_LAYOUTS[i];
-  }
-  return null;
-}
-
-// Sonuclar sekmesine girisin tek giris noktasi: veri agacini tazeler, ardindan
-// duzen secili degilse secici ekranini, seciliyse mevcut izgarayi hazirlar.
+// Sonuçlar sekmesine girişin tek kapısı: veri ağacını tazeler, ölçüm
+// penceresini kurar. Eskiden burada bir düzen seçici dallanması vardı.
 function veEnterResults() {
   if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
   veUpdateResultsTree();
-  if(veResultLayout == null) {
-    veRenderLayoutChooser();
-  } else if(!document.getElementById('ve-rslot-0')) {
-    // Duzen secili ama izgara henuz kurulmamis (ilk uygulama) — kur.
-    veApplyResultLayout(veResultLayout);
-  } else {
-    // Izgara zaten duruyor (sekmeler arasi gecis) — bos slotlarin secicilerini tazele.
-    veInitResultSlots();
-  }
+  if(typeof veTrEnter === 'function') veTrEnter();
+  veInitResultSlots();
 }
 
-// Duzen secici ekrani: panel alanina 3-4 yerlesim karti cizer.
-function veRenderLayoutChooser() {
-  var host = document.getElementById('ve-results-panels');
-  if(!host) return;
-  var html = '<div class="ve-layout-chooser">';
-  html += '<div class="ve-layout-chooser-head">';
-  html += '<div class="ve-layout-chooser-title">Panel düzenini seçin</div>';
-  html += '<div class="ve-layout-chooser-sub">Sonuçları görüntülemek için bir yerleşim seçin. Daha sonra Panel 1 başlığındaki <strong>Panel Düzeni</strong> (ızgara ikonu) ile değiştirebilirsiniz.</div>';
-  html += '</div>';
-  html += '<div class="ve-layout-cards">';
-  VE_RESULT_LAYOUTS.forEach(function(L) {
-    html += '<div class="ve-layout-card" onclick="veApplyResultLayout(\'' + L.id + '\')" title="' + L.desc + '" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();veApplyResultLayout(\'' + L.id + '\');}">';
-    html += '<div class="ve-layout-preview"><svg viewBox="0 0 64 44" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">' + L.preview + '</svg></div>';
-    html += '<div class="ve-layout-card-label">' + L.label + '</div>';
-    html += '<div class="ve-layout-card-desc">' + L.desc + '</div>';
-    html += '</div>';
-  });
-  html += '</div>';
-  html += '</div>';
-  host.innerHTML = html;
-}
-
-// Secilen duzenin satir/slot yapisini panel alanina uretir (izgara + ayiricilar).
-function veBuildResultsGrid(layoutId) {
-  var host = document.getElementById('ve-results-panels');
-  var def = veGetLayoutDef(layoutId);
-  if(!host || !def) return;
-  var html = '';
-  def.rows.forEach(function(slotIdxs, rowIdx) {
-    if(rowIdx > 0) {
-      // Satir ayiricisi (veInitRowResizer 've-row-resizer-0' id'sini bekler)
-      html += '<div class="ve-results-row-resizer" id="ve-row-resizer-' + (rowIdx - 1) + '"></div>';
-    }
-    html += '<div class="ve-results-row" id="ve-results-row-' + rowIdx + '" style="flex:1;">';
-    slotIdxs.forEach(function(slotIdx, colPos) {
-      if(colPos > 0) html += '<div class="ve-results-col-resizer" data-row="' + rowIdx + '"></div>';
-      html += veSlotShellHTML(slotIdx);
-    });
-    html += '</div>';
-  });
-  host.innerHTML = html;
-}
-
-// Tek bir slot kabugunun HTML'i (baslik + daralt/kapat butonlari + govde).
-function veSlotShellHTML(slotIdx) {
-  var h = '<div class="ve-rslot" id="ve-rslot-' + slotIdx + '" data-slot="' + slotIdx + '">';
-  h += '<div class="ve-rslot-hdr">';
-  h += '<div class="ve-rslot-tabs"><span class="ve-rslot-tab active" id="ve-rslot-tab-' + slotIdx + '">Panel ' + (slotIdx + 1) + '</span></div>';
-  h += '<div class="ve-rslot-btns">';
-  // Pano-seviyesi komutlar (Panel Düzeni / Senkron İmleç / Sonuçları Temizle)
-  // ARTIK BURADA DEĞİL: şeritteki bağlamsal "Sonuç Araçları" sekmesinde.
-  // Panel 1'in başlığında durmaları asimetrik ve keşfedilemezdi — kimse pano
-  // düzenini bir panelin başlığında aramaz. Dört panel artık aynı görünüyor.
-  h += '<button class="btn-collapse" onclick="veSlotToggle(' + slotIdx + ')" title="Daralt / Genişlet">▼</button>';
-  h += '<button class="btn-close" onclick="veSlotClear(' + slotIdx + ')" title="Temizle">✕</button>';
-  h += '</div></div>';
-  h += '<div class="ve-rslot-body" id="ve-rslot-body-' + slotIdx + '"></div>';
-  h += '</div>';
-  return h;
-}
-
-// Bir duzeni uygula: izgarayi kur, kullanilmayan slotlarin durumunu temizle,
-// aktif slotlari (varsa verisiyle) tekrar cizdir.
-function veApplyResultLayout(layoutId) {
-  var def = veGetLayoutDef(layoutId);
-  if(!def) return;
-  veResultLayout = layoutId;
-
-  // Bu duzende kullanilan slot indeksleri
-  var used = {};
-  def.rows.forEach(function(r) { r.forEach(function(i) { used[i] = true; }); });
-
-  // Kullanilmayan slotlarin durumunu sifirla (izgarada olmayan slot hayalet veri tutmasin)
-  for(var i = 0; i < 4; i++) {
-    if(!used[i]) { veResultSlots[i] = {}; veSlotCollapsed[i] = false; }
-  }
-
-  // Izgarayi kur ve ayiricilarini baglat
-  veBuildResultsGrid(layoutId);
-  veInitRowResizer();
-  veInitColResizers();
-
-  // Aktif slotlari icerige gore cizdir (verisi olan grafik, bos olan secici)
-  for(var s = 0; s < 4; s++) {
-    if(!used[s]) continue;
-    var slot = veResultSlots[s];
-    if(slot && slot.sensors && slot.sensors.length > 0) veRenderSlot(s);
-    else veRenderSlotPicker(s);
-    // Onceki daralt durumunu gorsele yansit
-    var el = document.getElementById('ve-rslot-' + s);
-    if(el && veSlotCollapsed[s]) {
-      el.classList.add('collapsed');
-      var cb = el.querySelector('.btn-collapse');
-      if(cb) cb.textContent = '▶';
-    }
-  }
-
-  // Simulasyon verisi varsa grafikleri ciz
-  if(window.veSimResults) veRefreshAllCharts();
-
-  // Acilis animasyonunu yeniden tetikle (yeni paneller yumusakca belirir)
-  var _resPage = document.getElementById('ve-page-sonuclar');
-  if(_resPage) { _resPage.classList.remove('ve-reveal-play'); void _resPage.offsetWidth; _resPage.classList.add('ve-reveal-play'); }
-}
-
-// "Panel Duzeni" butonu: secici ekranina geri don. Slot durumu bellekte korunur;
-// ayni/daha genis duzen secilirse mevcut paneller geri gelir.
-function veChangeResultLayout() {
-  // Sonuclar sekmesinde degilsek once oraya gec
-  if(typeof veSubTabDegistir === 'function' && typeof currentSubTab !== 'undefined' && currentSubTab !== 'sonuclar') {
-    veSubTabDegistir('sonuclar');
-  }
-  veResultLayout = null;
-  var ov = document.getElementById('ve-report-overlay');
-  if(ov) ov.style.display = 'none';
-  veRenderLayoutChooser();
-}
-
+// Veri Gezgini'nin genişlik ayırıcısı. Panel satır/sütun ayırıcıları
+// (veInitRowResizer / veInitColResizers) panel ızgarasıyla birlikte kalktı.
 function veInitResultSlots() {
-  for(var i = 0; i < 4; i++) {
-    if(!veResultSlots[i].sensors || veResultSlots[i].sensors.length === 0) {
-      veRenderSlotPicker(i);
-    }
-  }
-  
-  // Browser resizer
   var br = document.getElementById('ve-results-browser-resizer');
   var bp = document.getElementById('ve-results-browser');
-  if(br && bp && !br._init) {
-    br._init = true;
-    var resizing = false, startX, startW;
-    br.addEventListener('mousedown', function(e) {
-      resizing = true; startX = e.clientX; startW = bp.offsetWidth;
-      document.body.style.cursor = 'ew-resize'; document.body.style.userSelect = 'none';
-      e.preventDefault();
-    });
-    document.addEventListener('mousemove', function(e) {
-      if(!resizing) return;
-      bp.style.width = Math.max(160, Math.min(400, startW + (e.clientX - startX))) + 'px';
-    });
-    document.addEventListener('mouseup', function() {
-      if(resizing) { resizing = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; }
-    });
-  }
-  
-  // Satır ayırıcı (üst/alt satır arası)
-  veInitRowResizer();
-  // Sütun ayırıcıları
-  veInitColResizers();
-}
-
-function veInitRowResizer() {
-  var resizer = document.getElementById('ve-row-resizer-0');
-  if(!resizer || resizer._init) return;
-  resizer._init = true;
-  var row0 = document.getElementById('ve-results-row-0');
-  var row1 = document.getElementById('ve-results-row-1');
-  if(!row0 || !row1) return;
-  
-  var dragging = false, startY, startH0, startH1;
-  resizer.addEventListener('mousedown', function(e) {
-    dragging = true; startY = e.clientY;
-    startH0 = row0.offsetHeight; startH1 = row1.offsetHeight;
-    resizer.classList.add('active');
-    document.body.style.cursor = 'ns-resize'; document.body.style.userSelect = 'none';
+  if(!br || !bp || br._init) return;
+  br._init = true;
+  var resizing = false, startX, startW;
+  br.addEventListener('mousedown', function(e) {
+    resizing = true; startX = e.clientX; startW = bp.offsetWidth;
+    document.body.style.cursor = 'ew-resize'; document.body.style.userSelect = 'none';
     e.preventDefault();
   });
   document.addEventListener('mousemove', function(e) {
-    if(!dragging) return;
-    var dy = e.clientY - startY;
-    var h0 = Math.max(60, startH0 + dy);
-    var h1 = Math.max(60, startH1 - dy);
-    var total = h0 + h1;
-    row0.style.flex = '0 0 ' + (h0 / total * 100) + '%';
-    row1.style.flex = '0 0 ' + (h1 / total * 100) + '%';
+    if(!resizing) return;
+    bp.style.width = Math.max(160, Math.min(400, startW + (e.clientX - startX))) + 'px';
   });
   document.addEventListener('mouseup', function() {
-    if(dragging) {
-      dragging = false; resizer.classList.remove('active');
-      document.body.style.cursor = ''; document.body.style.userSelect = '';
-      veRefreshAllCharts();
-    }
+    if(!resizing) return;
+    resizing = false;
+    document.body.style.cursor = ''; document.body.style.userSelect = '';
+    // Ölçüm penceresinin genişliği değişti — zaman ekseni yeniden hizalanmalı
+    if(typeof veTrRenderSoon === 'function') veTrRenderSoon();
   });
 }
 
-function veInitColResizers() {
-  document.querySelectorAll('.ve-results-col-resizer').forEach(function(resizer) {
-    if(resizer._init) return;
-    resizer._init = true;
-    
-    var dragging = false, startX;
-    var slotL, slotR, startWL, startWR;
-    
-    resizer.addEventListener('mousedown', function(e) {
-      slotL = resizer.previousElementSibling;
-      slotR = resizer.nextElementSibling;
-      if(!slotL || !slotR) return;
-      dragging = true; startX = e.clientX;
-      startWL = slotL.offsetWidth; startWR = slotR.offsetWidth;
-      resizer.classList.add('active');
-      document.body.style.cursor = 'ew-resize'; document.body.style.userSelect = 'none';
-      e.preventDefault();
-    });
-    document.addEventListener('mousemove', function(e) {
-      if(!dragging) return;
-      var dx = e.clientX - startX;
-      var wL = Math.max(80, startWL + dx);
-      var wR = Math.max(80, startWR - dx);
-      var total = wL + wR;
-      slotL.style.flex = '0 0 ' + (wL / total * 100) + '%';
-      slotR.style.flex = '0 0 ' + (wR / total * 100) + '%';
-    });
-    document.addEventListener('mouseup', function() {
-      if(dragging) {
-        dragging = false; resizer.classList.remove('active');
-        document.body.style.cursor = ''; document.body.style.userSelect = '';
-        veRefreshAllCharts();
-      }
-    });
-  });
-}
-
-function veSlotToggle(slotIdx) {
-  var el = document.getElementById('ve-rslot-' + slotIdx);
-  if(!el) return;
-  veSlotCollapsed[slotIdx] = !veSlotCollapsed[slotIdx];
-  el.classList.toggle('collapsed', veSlotCollapsed[slotIdx]);
-  
-  // Daralt butonunu güncelle
-  var btn = el.querySelector('.btn-collapse');
-  if(btn) btn.textContent = veSlotCollapsed[slotIdx] ? '▶' : '▼';
-  
-  // Aynı satırdaki diğer slot genişlesin
-  var row = el.parentElement;
-  if(!row) return;
-  var slots = row.querySelectorAll('.ve-rslot');
-  var openCount = 0;
-  slots.forEach(function(s) { if(!s.classList.contains('collapsed')) openCount++; });
-  slots.forEach(function(s) {
-    if(!s.classList.contains('collapsed')) {
-      s.style.flex = openCount === 1 ? '1' : '';
-    }
-  });
-  
-  setTimeout(veRefreshAllCharts, 50);
-}
-
+// Çözüm bitince / sekme değişince / proje yüklenince çağrılan tazeleme kapısı.
+// Adı korunuyor: js/topology.js, js/graphics.js ve js/ft-segment-drive.js
+// buradan geçiyor.
 function veRefreshAllCharts() {
-  for(var i = 0; i < 4; i++) {
-    var s = veResultSlots[i];
-    if(!s.sensors || s.sensors.length === 0) continue;
-    if(!window.veSimResults) continue;
-    if(s.type === 'line') veRenderChart(i);
-    else if(s.type === 'scatter3d') veRender3DScatter(i);
-  }
-}
-
-function veRenderSlotPicker(slotIdx) {
-  var body = document.getElementById('ve-rslot-body-' + slotIdx);
-  if(!body) return;
-  
-  var items = [
-    {type:'line', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="gLine" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><line x1="6" y1="34" x2="6" y2="6" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="34" y2="34" stroke="#94a3b8" stroke-width="1.2"/><polyline points="8,27 15,19 21,23 28,11 33,14" fill="none" stroke="url(#gLine)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="27" r="1.7" fill="#3b82f6"/><circle cx="28" cy="11" r="1.7" fill="#8b5cf6"/></svg>', label:'Çizgi\nGrafik'},
-    {type:'table', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="gTbl" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><rect x="7" y="10" width="26" height="20" rx="2.5" fill="none" stroke="#94a3b8" stroke-width="1.2"/><path d="M7.6 16.6 H32.4" stroke="#94a3b8" stroke-width="1"/><path d="M15.3 16.6 V29.5 M24 16.6 V29.5" stroke="#94a3b8" stroke-width="1"/><rect x="9.2" y="12.2" width="21.6" height="2.6" rx="1.3" fill="url(#gTbl)"/></svg>', label:'Tablo'},
-    {type:'scatter3d', icon:'<svg viewBox="0 0 40 40" width="32" height="32" style="display:block;margin:auto;"><defs><linearGradient id="g3d" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#8b5cf6"/></linearGradient></defs><line x1="6" y1="34" x2="6" y2="6" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="34" y2="34" stroke="#94a3b8" stroke-width="1.2"/><line x1="6" y1="34" x2="18" y2="24" stroke="#94a3b8" stroke-width="1.2"/><circle cx="14" cy="18" r="2.8" fill="url(#g3d)" opacity="0.9"/><circle cx="22" cy="24" r="2.2" fill="#3b82f6" opacity="0.7"/><circle cx="28" cy="14" r="3" fill="url(#g3d)" opacity="0.95"/><circle cx="18" cy="28" r="2" fill="#8b5cf6" opacity="0.65"/><circle cx="26" cy="20" r="2.5" fill="#3b82f6" opacity="0.8"/><circle cx="11" cy="26" r="1.8" fill="#8b5cf6" opacity="0.6"/><circle cx="30" cy="28" r="2.3" fill="url(#g3d)" opacity="0.75"/></svg>', label:'3D\nGrafik'}
-  ];
-  
-  // ── Simülasyon yokken tip seçici anlamsız ──
-  // Veri olmadan hangi grafiği seçtiğinizin bir önemi yok; dört panelde aynı
-  // üç ikonun tekrarı (12 özdeş ikon) yalnızca gürültü yapıyordu. Bunun
-  // yerine gerçek engeli söyleyip oradan çözen tek bir yönlendirme gösterilir.
-  if(!window.veSimResults) {
-    var canRun = typeof veSolverRun === 'function';
-    // Açıklama ve eylem YALNIZCA ilk panelde. Aynı cümleyi dört kez yazmak
-    // 12 özdeş ikonun yerine 4 özdeş paragraf koymak olurdu; diğer paneller
-    // yalnızca durumu belirtir.
-    var lead = (slotIdx === 0);
-    var h = '<div class="ve-slot-empty' + (lead ? '' : ' ve-slot-empty--quiet') + '">';
-    h += '<div class="ve-slot-empty-icon"><span class="mf-ico mf-ico-play"></span></div>';
-    h += '<div class="ve-slot-empty-title">Sonuç yok</div>';
-    if(lead) {
-      h += '<div class="ve-slot-empty-text">Grafik çizebilmek için önce simülasyonu çalıştırın.</div>';
-      if(canRun) {
-        // Düğme hesabı başlatmıyor, Çözücü bileşenini açıyor (veSolverRun) —
-        // etiket de bunu söylesin; "Çalıştır" yazıp panel açmak yanıltıyordu.
-        h += '<button class="ve-slot-empty-btn" onclick="veSolverRun()">';
-        h += '<span class="mf-ico mf-ico-play"></span> Çözücüyü Aç</button>';
-        h += '<div class="ve-slot-empty-hint">Eksik varsa Uyarılar panelinde listelenir.</div>';
-      }
-    }
-    h += '</div>';
-    body.innerHTML = h;
-    return;
-  }
-
-  var html = '<div class="ve-slot-picker">';
-  items.forEach(function(item) {
-    html += '<div class="ve-slot-pick-item" onclick="veSlotSetType(' + slotIdx + ',\'' + item.type + '\')">';
-    html += '<div class="ve-slot-pick-icon">' + item.icon + '</div>';
-    html += '<div class="ve-slot-pick-label">' + item.label.replace('\n','<br>') + '</div>';
-    html += '</div>';
-  });
-  html += '</div>';
-  body.innerHTML = html;
+  if(typeof veTrRefresh === 'function') veTrRefresh();
 }
 
 // Sensor drag
 var veDraggingSensor = null;
 var veDraggingSignal = null;
 
-function veStartSensorDrag(e, sensorId) {
+// Sürükle-bırak hedefi ARTIK TEK: ölçüm penceresi. Eskiden dört panel vardı
+// ve her sürüklemede dördü birden taranıp "üzerindeyim" vurgusu hesaplanıyordu;
+// kullanıcı da sinyali hangi panele bırakacağına karar vermek zorundaydı.
+// Şimdi bırakma noktasının tek anlamı var: ŞERİDİN üzerine bırakılırsa o
+// şeride katılır (ortak Y ekseni), boşluğa bırakılırsa kendi şeridini açar.
+// Ortak gövde: fare hareketinde vurgula, bırakınca uygula.
+function veTrDragSession(e, onDrop) {
   if(e.button !== 0) return;
   e.preventDefault();
-  veDraggingSensor = sensorId;
-  veDraggingSignal = null; // tüm sinyaller modu
-  
-  document.querySelectorAll('.ve-rslot').forEach(function(s) { s.classList.remove('drag-over'); });
-  
+
   var moveHandler = function(ev) {
-    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
-      var r = slot.getBoundingClientRect();
-      slot.classList.toggle('drag-over', ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom);
-    });
+    if(typeof veTrHighlightDrop === 'function') veTrHighlightDrop(ev.clientX, ev.clientY);
   };
-  
   var upHandler = function(ev) {
     document.removeEventListener('mousemove', moveHandler);
     document.removeEventListener('mouseup', upHandler);
-    if(!veDraggingSensor) return;
-    
-    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
-      var r = slot.getBoundingClientRect();
-      if(ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
-        veAddSensorToSlot(parseInt(slot.getAttribute('data-slot')), veDraggingSensor);
-      }
-      slot.classList.remove('drag-over');
-    });
-    veDraggingSensor = null;
-    veDraggingSignal = null;
+    var host = document.getElementById('ve-trace');
+    if(host) host.classList.remove('drop-active');
+    if(typeof veTrIsOver === 'function' && veTrIsOver(ev.clientX, ev.clientY)) onDrop(ev);
   };
-  
   document.addEventListener('mousemove', moveHandler);
   document.addEventListener('mouseup', upHandler);
 }
 
-// Tek sinyal sürükleme
+function veStartSensorDrag(e, sensorId) {
+  veDraggingSensor = sensorId;
+  veDraggingSignal = null;   // tüm sinyaller modu
+  veTrDragSession(e, function() {
+    veAddSensorToSlot(VE_BOARD, sensorId);
+    veDraggingSensor = null;
+  });
+}
+
+// Tek sinyal sürükleme — bırakıldığı şeride katılır.
 function veStartSignalDrag(e, sensorId, signalId) {
-  if(e.button !== 0) return;
-  e.preventDefault();
   veDraggingSensor = sensorId;
   veDraggingSignal = signalId;
-  
-  document.querySelectorAll('.ve-rslot').forEach(function(s) { s.classList.remove('drag-over'); });
-  
-  var moveHandler = function(ev) {
-    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
-      var r = slot.getBoundingClientRect();
-      slot.classList.toggle('drag-over', ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom);
-    });
-  };
-  
-  var upHandler = function(ev) {
-    document.removeEventListener('mousemove', moveHandler);
-    document.removeEventListener('mouseup', upHandler);
-    if(!veDraggingSensor) return;
-    
-    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
-      var r = slot.getBoundingClientRect();
-      if(ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
-        veAddSignalToSlot(parseInt(slot.getAttribute('data-slot')), veDraggingSensor, veDraggingSignal);
-      }
-      slot.classList.remove('drag-over');
-    });
+  veTrDragSession(e, function(ev) {
+    if(typeof veTrDropSignal === 'function') veTrDropSignal(ev.clientX, ev.clientY, sensorId, signalId);
+    else veAddSignalToSlot(VE_BOARD, sensorId, signalId);
     veDraggingSensor = null;
     veDraggingSignal = null;
-  };
-  
-  document.addEventListener('mousemove', moveHandler);
-  document.addEventListener('mouseup', upHandler);
+  });
 }
 
 // ── Sihirbaz diyagramı sürükleme ──
 var veDraggingWizDiag = null; // { pkgId, diagIdx }
 
 function veStartWizardDiagDrag(e, pkgId, diagIdx) {
-  if(e.button !== 0) return;
-  e.preventDefault();
   veDraggingWizDiag = { pkgId: pkgId, diagIdx: diagIdx };
-
-  document.querySelectorAll('.ve-rslot').forEach(function(s) { s.classList.remove('drag-over'); });
-
-  var moveHandler = function(ev) {
-    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
-      var r = slot.getBoundingClientRect();
-      slot.classList.toggle('drag-over', ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom);
-    });
-  };
-
-  var upHandler = function(ev) {
-    document.removeEventListener('mousemove', moveHandler);
-    document.removeEventListener('mouseup', upHandler);
-    if(!veDraggingWizDiag) return;
-
-    document.querySelectorAll('.ve-rslot').forEach(function(slot) {
-      var r = slot.getBoundingClientRect();
-      if(ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom) {
-        veAddWizardDiagramToSlot(parseInt(slot.getAttribute('data-slot')), veDraggingWizDiag.pkgId, veDraggingWizDiag.diagIdx);
-      }
-      slot.classList.remove('drag-over');
-    });
+  veTrDragSession(e, function() {
+    veAddWizardDiagramToSlot(VE_BOARD, pkgId, diagIdx);
     veDraggingWizDiag = null;
-  };
-
-  document.addEventListener('mousemove', moveHandler);
-  document.addEventListener('mouseup', upHandler);
+  });
 }
 
 // ═══ ORTAK X EKSENİ — pano genelinde tek eksen ═══
-// Kural ve kimlik hesabı js/chart-cursor.js'te; buradakiler sonuç panosunun
+// Kural ve kimlik hesabı js/measure-core.js'te; buradakiler sonuç panosunun
 // bırakma (drop) yollarında o kuralı uygulayan ince sarmalayıcılardır.
 
 // Bir sihirbaz diyagramının gerektirdiği X ekseni tanımı.
@@ -4800,28 +4275,19 @@ function veInheritedXAxis(slotIdx) {
   return { id: 'time', name: tm === 'stop' ? 'Zaman [s] (Durma)' : 'Zaman [s]', unit: 's' };
 }
 
-// Pano durumu değiştikten sonra çağrılır. İki işi vardır ve ikisi de
-// PAHALI olduğu için yalnızca gerçekten değişiklik varsa çalışır:
+// Pano ekseni değiştikten sonra çağrılır. Tek işi kaldı: eksen KİMLİĞİ
+// değiştiyse Veri Gezgini'ni tazeler, böylece o eksene uymayan sihirbaz
+// diyagramları kilitli görünür. Ağacın yeniden kurulması kullanıcının açtığı
+// dalları kapattığı için koşulsuz tazelemek rahatsız edici olurdu.
 //
-//  1) Eksen kimliği değiştiyse Veri Gezgini'ni tazeler (kilitli/açık
-//     diyagramlar güncellensin). Ağacın yeniden kurulması kullanıcının açtığı
-//     dalları kapattığından koşulsuz tazelemek rahatsız edici olurdu.
-//  2) Pano marjı değiştiyse TÜM grafikleri yeniden çizer — yeni bir panel
-//     ikinci bir Y ekseni getirdiğinde diğer panellerin plot alanı da
-//     genişlemeli, yoksa ortak imleç panelden panele kayar.
+// İkinci işi (pano marjını tüm panellerde hizalamak) panel ızgarasıyla
+// birlikte kalktı — tek yüzeyde hizalanacak ikinci bir plot alanı yok.
 var _veLastBoardXKey = null;
-var _veLastBoardMargin = '';
 function veSyncBoardState() {
   var k = (typeof veSharedXKey === 'function') ? veSharedXKey(veResultSlots) : null;
-  if(k !== _veLastBoardXKey) {
-    _veLastBoardXKey = k;
-    if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
-  }
-  var m = (typeof veBoardChartMargin === 'function') ? JSON.stringify(veBoardChartMargin()) : '';
-  if(m !== _veLastBoardMargin) {
-    _veLastBoardMargin = m;
-    if(window.veSimResults && typeof veRefreshAllCharts === 'function') veRefreshAllCharts();
-  }
+  if(k === _veLastBoardXKey) return;
+  _veLastBoardXKey = k;
+  if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
 }
 
 // Uyumsuz bırakma uyarısı — hangi eksenin geçerli olduğunu ve nasıl
@@ -4832,7 +4298,7 @@ function veWarnXAxisMismatch(wantedXAxis) {
   var cur = (b && b.xAxis && b.xAxis.name) ? b.xAxis.name : 'Zaman [s]';
   var want = (wantedXAxis && wantedXAxis.name) ? wantedXAxis.name : 'farklı bir eksen';
   showToast('Pano X ekseni: ' + cur + ' — bu öğe ' + want +
-            ' istiyor. Değiştirmek için X ekseni seçicisini kullanın (tüm panelleri birden değiştirir).',
+            ' istiyor. Değiştirmek için ölçüm penceresinin X ekseni seçicisini kullanın.',
             'warning');
 }
 
@@ -4866,7 +4332,9 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   slot.sensors = [];
   slot.yAxisLock = {};
   delete slot.zAxis;
-  if(typeof veChartViews !== 'undefined') veChartViews[slotIdx] = { panX:0, panY:0, zoomX:1, zoomY:1 };
+  slot.lanes = [];
+  // Yeni diyagram yeni bir zaman aralığı getirebilir — görünüm penceresi sıfırlanır
+  if(typeof veTrResetView === 'function') veTrResetView();
 
   // dataSource etiketi (segmentDrive, obstacleDynamic vb.)
   var ds = sigDef.dataSource || null;
@@ -4910,7 +4378,7 @@ function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
     });
   }
 
-  veRenderSlot(slotIdx);
+  if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
   veSyncBoardState();   // pano ekseni / marjı değişti mi → ağaç + grafikler
   if(typeof showToast === 'function') showToast(diag.name + ' diyagramı eklendi', 'success');
 }
@@ -4946,8 +4414,9 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
     var compName = componentDefs[compType] ? componentDefs[compType].name : compType;
     var displayName = '[SW] ' + compName + ' — ' + (sigInfo ? sigInfo.name : signalId);
     slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
-    veRenderSlot(slotIdx);
+    if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
     veSyncBoardState();   // pano ekseni / marjı değişti mi → ağaç + grafikler
+    if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
     return;
   }
 
@@ -5012,9 +4481,11 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
   
   var displayName = tabPrefix + sourceName + ' — ' + (sigInfo ? sigInfo.name : signalId);
   slot.sensors.push({ id: rawSensorId, name: displayName, unit: sigInfo ? sigInfo.unit : '', signal: signalId });
-  
-  veRenderSlot(slotIdx);
+
+  if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
   veSyncBoardState();   // pano ekseni / marjı değişti mi → ağaç + grafikler
+  // Sürükle-bırak ile de eklenebiliyor: ağaçtaki onay kutusu işaretlensin
+  if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
 }
 
 function veAddSensorToSlot(slotIdx, sensorId) {
@@ -5135,186 +4606,94 @@ function veAddSensorToSlot(slotIdx, sensorId) {
     });
   }
   
-  veRenderSlot(slotIdx);
+  if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
 }
 
-function veSlotSetType(slotIdx, type) {
-  var slot = veResultSlots[slotIdx];
-  slot.type = type;
-  if(!slot.sensors) slot.sensors = [];
-  veRenderSlot(slotIdx);
-}
+// veSlotSetType / veSlotClear kaldırıldı: ikisi de panel kabuğunun
+// (başlık sekmesi, daralt düğmesi, tip seçici) parçasıydı. Karşılıkları
+// ölçüm penceresinde: veTrSetMode() ve veTrClear().
 
-function veSlotClear(slotIdx) {
-  veResultSlots[slotIdx] = {};
-  veRenderSlotPicker(slotIdx);
-  var tab = document.getElementById('ve-rslot-tab-' + slotIdx);
-  if(tab) tab.textContent = 'Panel ' + (slotIdx + 1);
-  // Collapsed durumunu sıfırla
-  veSlotCollapsed[slotIdx] = false;
-  var el = document.getElementById('ve-rslot-' + slotIdx);
-  if(el) { el.classList.remove('collapsed'); el.style.flex = ''; }
-  var btn = el ? el.querySelector('.btn-collapse') : null;
-  if(btn) btn.textContent = '▼';
-  // Son dolu panel de boşaldıysa pano ekseni serbest kalır
-  veSyncBoardState();
-}
-
+// TABLO ve 3B görünümlerinin gövdesi. ÇİZGİ GRAFİK ARTIK BURADA DEĞİL:
+// onu ölçüm penceresi (js/trace-view.js) kendi canvas'ına, şerit şerit
+// çiziyor. Geriye kalan iki görünüm panel kavramına değil slot VERİSİNE
+// bağlıydı, bu yüzden aynen çalışıyor; hedef kap ('#ve-rslot-body-0') artık
+// bir panel değil, ölçüm penceresinin tablo/3B sekmesi.
 function veRenderSlot(slotIdx) {
   var slot = veResultSlots[slotIdx];
   var body = document.getElementById('ve-rslot-body-' + slotIdx);
   if(!body) return;
-  
-  var type = slot.type || 'line';
-  var sensors = slot.sensors || [];
-  var typeIconName = type === 'line' ? 'trending-up' : (type === 'scatter3d' ? 'package' : 'clipboard');
 
-  // Tab başlığını güncelle
-  var tab = document.getElementById('ve-rslot-tab-' + slotIdx);
-  if(tab) {
-    var tabText;
-    if(sensors.length > 0) {
-      tabText = sensors.map(function(s){return s.name;}).join(', ');
-    } else {
-      var typeLabel = type === 'line' ? 'Grafik' : (type === 'scatter3d' ? '3D Grafik' : 'Tablo');
-      tabText = typeLabel + ' ' + (slotIdx + 1);
-    }
-    tab.innerHTML = '<span class="mf-ico mf-ico-' + typeIconName + '"></span> ';
-    tab.appendChild(document.createTextNode(tabText));
-  }
-  
-  var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
-  
-  if(sensors.length === 0) {
-    var emptyIcon = type === 'line' ? 'trending-up' : (type === 'scatter3d' ? 'package' : 'clipboard');
-    var emptyName = type === 'line' ? 'Çizgi Grafik' : (type === 'scatter3d' ? '3D Scatter Grafik' : 'Veri Tablosu');
-    var emptyHint = type === 'scatter3d' ? 'Veri Gezgini\'nden en az 2 sinyal sürükleyin (X, Y). 3. sinyal Z olur.' : 'Veri Gezgini\'nden sensör sürükleyin';
-    var html = '<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; color:var(--text-muted);">';
-    html += '<div style="font-size:var(--fs-display); margin-bottom:10px;"><span class="mf-ico mf-ico-' + emptyIcon + '"></span></div>';
-    html += '<div style="font-size:var(--fs-lg); font-weight:600;">' + emptyName + '</div>';
-    html += '<div style="font-size:var(--fs-body); margin-top:6px; opacity:0.7;">' + emptyHint + '</div>';
-    html += '</div>';
-    body.innerHTML = html;
+  var type = slot.type || 'line';
+  if(type === 'line') {
+    if(typeof veTrRender === 'function') veTrRender();
     return;
   }
-  
+
+  var sensors = slot.sensors || [];
+  if(sensors.length === 0) {
+    var emptyName = (type === 'scatter3d') ? '3B Dağılım' : 'Veri Tablosu';
+    var emptyHint = (type === 'scatter3d')
+      ? 'Veri Gezgini\'nden en az 2 sinyal seçin (X, Y). 3. sinyal Z olur.'
+      : 'Veri Gezgini\'nden sinyal seçin.';
+    body.innerHTML =
+      '<div class="ve-trace-empty" style="display:flex;">' +
+      '<div class="ve-trace-empty-ico"><span class="mf-ico mf-ico-' +
+        (type === 'scatter3d' ? 'package' : 'clipboard') + '"></span></div>' +
+      '<div class="ve-trace-empty-title">' + emptyName + ' boş</div>' +
+      '<div class="ve-trace-empty-sub">' + emptyHint + '</div></div>';
+    return;
+  }
+
   var html = '<div class="ve-slot-assigned">';
-  
-  if(type === 'line') {
-    // ── Grafik modu ──
-    html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '">';
-    html += '<canvas id="ve-chart-canvas-' + slotIdx + '" style="position:absolute;left:0;top:0;width:100%;height:100%;"></canvas>';
-    html += '<div class="ve-chart-crosshair" id="ve-crosshair-' + slotIdx + '" style="display:none;">';
-    html += '<div class="ve-chart-crosshair-v" id="ve-crosshair-v-' + slotIdx + '"></div>';
-    html += '</div>';
-    html += '<div class="ve-chart-tooltip" id="ve-tooltip-' + slotIdx + '"></div>';
-    html += '<button class="ve-chart-play" id="ve-chart-play-' + slotIdx + '" onclick="event.stopPropagation();veChartPlayhead(' + slotIdx + ')" title="Simülasyonu oynat (zaman-kafası eğriyi tarar)"><span class="mf-ico mf-ico-play"></span></button>';
-    html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:var(--fs-md); text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
-    html += '<div style="font-size:var(--fs-h1); margin-bottom:6px;"><span class="mf-ico mf-ico-trending-up"></span></div>Simülasyon sonrası grafik görünecek</div>';
-    // ── Grafik içi legend (overlay, sürüklenebilir) ──
-    if(sensors.length > 0) {
-      html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
-      sensors.forEach(function(s, i) {
-        var c = colors[i % colors.length];
-        // Gösterge bir DEĞER SÜTUNUDUR (CANoe), buton kümesi değil: renkli
-        // zemin + renkli çerçeve her satırı bir düğmeye benzetiyordu. Artık
-        // renk yalnız çizgi örneğinde; ad nötr, değer sağda hizalı.
-        html += '<span class="ve-slot-legend-item">';
-        html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
-        html += '<span class="ve-legend-name">' + s.name + '</span>';
-        if(s.unit) html += '<span class="ve-legend-unit">' + s.unit + '</span>';
-        html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
-        html += '</span>';
-      });
-      html += '</div>';
-    }
-    html += '</div>';
-    // Eksen kontrolü: Y birim etiketine çift tıklayınca popup açılır
-  } else if(type === 'scatter3d') {
-    // ── 3D Scatter modu ──
+
+  if(type === 'scatter3d') {
     html += '<div class="ve-slot-chart-area" id="ve-chart-area-' + slotIdx + '" style="overflow:hidden;">';
     html += '<div id="ve-3d-container-' + slotIdx + '" style="position:absolute;left:0;top:0;width:100%;height:100%;"></div>';
     html += '<div id="ve-chart-placeholder-' + slotIdx + '" style="color:var(--text-muted); font-size:var(--fs-md); text-align:center; padding:0 30px; z-index:1; pointer-events:none;">';
     html += '<div style="font-size:var(--fs-h1); margin-bottom:6px;"><span class="mf-ico mf-ico-package"></span></div>';
-    if(sensors.length < 2) {
-      html += 'En az 2 sinyal sürükleyin (X, Y). 3. sinyal Z ekseni olur, yoksa zaman kullanılır.';
-    } else {
-      html += 'Simülasyon sonrası 3D grafik görünecek';
+    html += (sensors.length < 2)
+      ? 'En az 2 sinyal seçin (X, Y). 3. sinyal Z ekseni olur, yoksa zaman kullanılır.'
+      : 'Simülasyon sonrası 3B grafik görünecek';
+    html += '</div>';
+
+    var axisLabels3d = ['X', 'Y', 'Z'];
+    html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
+    sensors.forEach(function(s, i) {
+      var c = veSlotSignalColor(slot, i);
+      var axisLabel = axisLabels3d[i] || '';
+      html += '<span class="ve-slot-legend-item">';
+      if(axisLabel) html += '<span style="font-weight:700; font-size:var(--fs-tiny); opacity:0.7; margin-right:2px;">' + axisLabel + ':</span>';
+      html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
+      html += '<span class="ve-legend-name">' + s.name + '</span>';
+      if(s.unit) html += '<span class="ve-legend-unit">' + s.unit + '</span>';
+      html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
+      html += '</span>';
+    });
+    if(sensors.length === 2) {
+      html += '<span class="ve-slot-legend-item"><span style="font-weight:700; font-size:var(--fs-tiny); opacity:0.7; margin-right:2px;">Z:</span>';
+      html += '<span class="ve-legend-name">Zaman [s]</span></span>';
     }
     html += '</div>';
-    // ── 3D grafik içi legend ──
-    if(sensors.length > 0) {
-      var axisLabels3d = ['X', 'Y', 'Z'];
-      html += '<div class="ve-chart-legend-overlay" id="ve-chart-legend-' + slotIdx + '">';
-      sensors.forEach(function(s, i) {
-        var c = colors[i % colors.length];
-        var axisLabel = axisLabels3d[i] || '';
-        html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
-        if(axisLabel) html += '<span style="font-weight:700; font-size:var(--fs-tiny); opacity:0.7; margin-right:2px;">' + axisLabel + ':</span>';
-        html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
-        html += '<span>' + s.name + '</span>';
-        if(s.unit) html += ' <span style="opacity:0.55; font-size:var(--fs-tiny);">[' + s.unit + ']</span>';
-        html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
-        html += '</span>';
-      });
-      // Z ekseni yoksa zaman bilgisi göster
-      if(sensors.length === 2) {
-        html += '<span class="ve-slot-legend-item" style="background:rgba(148,163,184,0.1); color:var(--text-muted); border:1px solid rgba(148,163,184,0.2);">';
-        html += '<span style="font-weight:700; font-size:var(--fs-tiny); opacity:0.7; margin-right:2px;">Z:</span>';
-        html += '<span>Zaman [s]</span>';
-        html += '</span>';
-      }
-      html += '</div>';
-    }
     html += '</div>';
   } else {
-    // ── Tablo modu ──
     html += '<div style="overflow:auto; width:100%; height:100%; flex:1;">';
     html += '<table id="ve-table-' + slotIdx + '" class="ve-result-table">';
     html += '<thead><tr>';
     html += '<th>#</th>';
     html += '<th>' + (slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</th>';
     sensors.forEach(function(s, i) {
-      html += '<th style="color:' + colors[i % colors.length] + '; border-bottom:3px solid ' + colors[i % colors.length] + ';">' + s.name + (s.unit ? ' [' + s.unit + ']' : '') + '</th>';
+      html += '<th style="color:' + veSlotSignalColor(slot, i) + '; border-bottom:3px solid ' + veSlotSignalColor(slot, i) + ';">' + s.name + (s.unit ? ' [' + s.unit + ']' : '') + '</th>';
     });
     html += '</tr></thead>';
     html += '<tbody id="ve-table-body-' + slotIdx + '">';
     html += '<tr><td colspan="' + (sensors.length + 2) + '" style="padding:20px; text-align:center; color:var(--text-muted);">Simülasyon verisi bekleniyor</td></tr>';
     html += '</tbody></table></div>';
-    // Tablo modu için de X ekseni seçici
-    var xNameTbl = slot.xAxis ? slot.xAxis.name : 'Zaman [s]';
-    html += '<div class="ve-slot-axis-x" id="ve-xaxis-area-' + slotIdx + '">';
-    html += '<span class="ve-xaxis-btn" onclick="veShowXAxisPicker(' + slotIdx + ',event)" title="X eksenini değiştir">';
-    html += '<span>' + xNameTbl + '</span>';
-    html += '<span class="ve-xaxis-arrow">▲</span>';
-    html += '</span>';
-    html += '</div>';
   }
-  
-  // Legend — Tablo modu için altta, grafik/3D modu için chart içinde overlay olarak zaten eklendi
-  if(type !== 'line' && type !== 'scatter3d') {
-    html += '<div class="ve-slot-legend">';
-    sensors.forEach(function(s, i) {
-      var c = colors[i % colors.length];
-      html += '<span class="ve-slot-legend-item" style="background:' + c + '15; color:' + c + '; border:1px solid ' + c + '30;">';
-      html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
-      html += '<span>' + s.name + '</span>';
-      if(s.unit) html += ' <span style="opacity:0.55; font-size:var(--fs-tiny);">[' + s.unit + ']</span>';
-      html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
-      html += '</span>';
-    });
-    html += '</div>';
-  }
+
   html += '</div>';
-  
   body.innerHTML = html;
-  
-  if(type === 'line') {
-    veResetChartView(slotIdx);
-    if(window.veSimResults) veRenderChart(slotIdx);
-    veInitChartInteraction(slotIdx);
-    veInitLegendDrag(slotIdx);
-  } else if(type === 'scatter3d') {
+
+  if(type === 'scatter3d') {
     if(window.veSimResults) veRender3DScatter(slotIdx);
     veInitLegendDrag(slotIdx);
   } else {
@@ -5398,7 +4777,9 @@ function veRemoveSensorFromSlot(slotIdx, sensorIdx) {
   slot.sensors.splice(sensorIdx, 1);
   // Eksen lock'larını sıfırla (birim grupları değişmiş olabilir)
   slot.yAxisLock = {};
-  veRenderSlot(slotIdx);
+  if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
+  // Lejanttaki ✕ ile de silinebiliyor: ağaçtaki onay kutusu bayat kalmasın
+  if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
 }
 
 // ===== X EKSENİ SEÇİCİ (DROPDOWN) =====
@@ -5614,17 +4995,20 @@ function veSetSlotXAxis(slotIdx, optIdx) {
     if(th) th.textContent = s.xAxis.name;
 
     if(window.veSimResults) {
-      if(s.type === 'line') { veResetChartView(si); veRenderChart(si); }
-      else veRenderTable(si);
+      if(s.type === 'line') {
+        if(typeof veTrResetView === 'function') veTrResetView();
+        if(typeof veTrRender === 'function') veTrRender();
+      } else veRenderTable(si);
     }
   }
 
-  // Eksen değişti — sabitlenmiş referans imleç artık başka bir alana ait
-  if(typeof veCursorClearPin === 'function') veCursorClearPin();
+  // Eksen değişti — sabitlenmiş referans imleç ve görünüm penceresi artık
+  // başka bir alana ait (zaman pini devir eksenine taşınmaz)
+  if(typeof veTrResetView === 'function') veTrResetView();
   veSyncBoardState();
 
-  if(changed > 1 && typeof showToast === 'function') {
-    showToast('X ekseni ' + newAxis.name + ' olarak ayarlandı (' + changed + ' panel)', 'info');
+  if(changed && typeof showToast === 'function') {
+    showToast('X ekseni ' + newAxis.name + ' olarak ayarlandı', 'info');
   }
 }
 
@@ -5760,8 +5144,11 @@ var nodes = [];
 var connections = [];
 var selectedNodes = [];
 
-// Canvas transform değerleri
-var canvasOffset = {x: 3000, y: 3000}; // Başlangıçta ortada
+// Canvas transform değerleri. Bu ilk değer YALNIZCA DOM hazır olana kadar geçerli
+// (görünüm ölçüsü daha okunamaz): yerel (0,0)'ı görünümün sol-üst köşesine koyar.
+// Açılışta ui-core.js veCameraHome() ile "ev" konumuna alır → kanvasın MERKEZİ
+// görünümün ortasına gelir (bkz. js/canvas-space.js).
+var canvasOffset = {x: 3000, y: 3000};
 var canvasZoom = 1;
 
 // Bağlantı oluşturma durumu
@@ -5871,11 +5258,9 @@ function veToggleFlow() {
 function veCycleGridDensity() {
   veGridDensity = (veGridDensity + 1) % veGridSizes.length;
   var size = veGridSizes[veGridDensity];
-  // Izgara artık #ve-canvas'ta (bileşenlerle birlikte hareket eder) → boyutu orada güncelle
-  var canvasEl = document.getElementById('ve-canvas');
-  if(canvasEl) {
-    canvasEl.style.backgroundSize = size + 'px ' + size + 'px';
-  }
+  // Izgara görünüm katmanında ve deseni kameradan türetiliyor (sonsuz ızgara,
+  // bkz. js/canvas-space.js) → yoğunluk değişince deseni yeniden hesapla.
+  if(typeof veApplyGridPattern === 'function') veApplyGridPattern();
   // Snapshot panelini de güncelle
   var snap = document.querySelector('.ve-snapshot-pane');
   if(snap) snap.style.backgroundSize = size + 'px ' + size + 'px';

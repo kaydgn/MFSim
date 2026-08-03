@@ -131,14 +131,60 @@ function veSaveActiveTabState() {
   tab.connCount = connections.length;
 }
 
+// Sessiz alt-topoloji gidiş-dönüşü (köke çök → serialize → geri gir) SÜRÜYOR mu?
+// Bu tur boyunca canvas ve seçim baştan kurulur; yol üzerindeki her adım açık
+// özellik penceresini kapatmaya çalışır (clearSelection → showEmptyProperties,
+// ve veMntOpenEditor/veAracOpenEditor'ın kendi kapatma çağrısı). Kullanıcı
+// HİÇBİR ŞEY yapmadığı için (tetikleyen arka-plan kaydetmesi) pencerenin
+// kapanması bir hataydı: 3D Görüntüleyici gibi uzun süre açık kalan paneller
+// "kendiliğinden kapanıyor" görünüyordu. Bayrak açıkken kapatma çağrıları
+// yutulur (bkz. veTogglePropertiesPanel) ve tur sonunda panel geri açılır.
+var _veSubtopoNavRestoring = false;
+function veSubtopoNavRestoring() { return _veSubtopoNavRestoring; }
+
+// Açık özellik penceresini (tek seçili düğüm + görünürlük) yakalar; tur sonunda
+// AYNI düğümün panelini sessizce geri açan bir fonksiyon döndürür.
+function _veCaptureOpenPanel() {
+  var nodeId = null, wasOpen = false;
+  try {
+    if(typeof selectedNodes !== 'undefined' && selectedNodes && selectedNodes.length === 1 && selectedNodes[0]) {
+      nodeId = selectedNodes[0].id;
+    }
+    if(typeof document !== 'undefined') {
+      var ov = document.getElementById('ve-properties-overlay');
+      wasOpen = !!(ov && ov.classList && ov.classList.contains('visible'));
+    }
+  } catch(e) {}
+  return function _veRestoreOpenPanel() {
+    if(!nodeId) return;
+    try {
+      // Düğüm nesneleri veLoadTabState ile YENİDEN oluşturulur → id ile bul.
+      var n = (typeof nodes !== 'undefined' && nodes) ? nodes.find(function(x){ return x && x.id === nodeId; }) : null;
+      if(!n) return;                                  // düğüm silinmiş → sessizce geç
+      if(typeof clearSelection === 'function') clearSelection();
+      if(typeof addToSelection === 'function') addToSelection(n);   // → showNodeProperties
+      else if(typeof showNodeProperties === 'function') showNodeProperties(n);
+      if(wasOpen && typeof veTogglePropertiesPanel === 'function') veTogglePropertiesPanel(true);
+    } catch(e) { if(typeof console !== 'undefined') console.warn('[MFSim] panel geri yükleme:', e && e.message); }
+  };
+}
+
 // Alt-topoloji (Araç Performans / Takoz iç topolojisi) gezinme yolunu yakalar ve
 // kullanıcıyı aynı yola SESSİZCE (toast/animasyon yok) geri götüren bir "restore"
 // fonksiyonu döndürür. Köke çökme (veSaveActiveTabState) sonrası yeniden giriş için.
+// Açık özellik penceresi de aynı turda korunur (bkz. _veCaptureOpenPanel).
 function _veCaptureSubtopoNav() {
   var aracPath = [];
   var mntPath = [];
   try { if(typeof veAracStack !== 'undefined' && veAracStack && veAracStack.length) aracPath = veAracStack.map(function(c){ return c.nodeId; }); } catch(e) {}
   try { if(typeof veMntStack !== 'undefined' && veMntStack && veMntStack.length) mntPath = veMntStack.map(function(c){ return c.nodeId; }); } catch(e) {}
+  // Alt-topolojide DEĞİLSEK canvas hiç değişmez → panele dokunma (gereksiz
+  // yeniden çizim açık panelin kaydırma konumunu/odağını bozardı).
+  if(!aracPath.length && !mntPath.length) {
+    return function _veRestoreSubtopoNavNoop() {};
+  }
+  var restorePanel = _veCaptureOpenPanel();
+  _veSubtopoNavRestoring = true;
   return function _veRestoreSubtopoNav() {
     try {
       // Köke çökmüş canvas'ta yolu baştan (kök→derin) yeniden gir; _silent=true.
@@ -146,6 +192,11 @@ function _veCaptureSubtopoNav() {
       if(aracPath.length && typeof veAracOpenEditor === 'function') aracPath.forEach(function(id){ veAracOpenEditor(id, true); });
       if(mntPath.length && typeof veMntOpenEditor === 'function') mntPath.forEach(function(id){ veMntOpenEditor(id, true); });
     } catch(e) { if(typeof console !== 'undefined') console.warn('[MFSim] alt-topoloji geri yükleme:', e && e.message); }
+    finally {
+      // Panel geri açılırken bayrak HÂLÂ açık: addToSelection'ın içindeki
+      // clearSelection→showEmptyProperties zinciri pencereyi kapatmasın.
+      try { restorePanel(); } finally { _veSubtopoNavRestoring = false; }
+    }
   };
 }
 
@@ -158,8 +209,9 @@ function _veCaptureSubtopoNav() {
 // değiştirdiği için geri-giriş gereksiz/yanlış olurdu).
 function veSaveActiveTabStateKeepView() {
   var restore = _veCaptureSubtopoNav();
-  veSaveActiveTabState();
-  restore();
+  // try/finally: serileştirme patlasa bile kullanıcı alt-topolojisine geri
+  // getirilir ve "panel kapatma yutma" bayrağı asla açık kalmaz.
+  try { veSaveActiveTabState(); } finally { restore(); }
 }
 
 /**
@@ -313,13 +365,38 @@ function veClearCanvasDOM() {
   if(typeof annotations !== 'undefined') { annotations = []; selectedAnnotations = []; }
 }
 
+// Bir PROJE yüklenirken (dosya açma / otomatik yedekten dönüş) açık alt-topoloji
+// gezinme yolu GEÇERSİZDİR: veAracStack/veMntStack girdilerindeki parentState
+// ÖNCEKİ projeye aittir. Temizlenmezse ilk arka-plan kaydı (otomatik yedek,
+// sonuç ağacı yenileme, sekme değiştirme → veSaveActiveTabState) önce
+// veAracCollapseToRoot ile "köke çıkar" ve o ESKİ parentState'i canlı duruma
+// geri yazar → yeni açılan projenin düğümleri, bağlantıları ve gruplama
+// çerçeveleri sessizce önceki projeyle DEĞİŞİR. Ölçülen senaryo: alt-topoloji
+// açıkken proje aç → tab.state 1 düğüm/1 çerçeve yerine önceki projenin 3
+// düğüm/başka çerçevesini taşıyor.
+function veResetSubtopoNav() {
+  if(typeof veAracStack !== 'undefined' && Array.isArray(veAracStack)) veAracStack.length = 0;
+  if(typeof veMntStack !== 'undefined' && Array.isArray(veMntStack)) veMntStack.length = 0;
+  // Breadcrumb çipleri stack boşalınca kendini kaldırır; sidebar kapsamı köke döner.
+  if(typeof veAracUpdateBreadcrumb === 'function') veAracUpdateBreadcrumb();
+  if(typeof veMntUpdateBreadcrumb === 'function') veMntUpdateBreadcrumb();
+  if(typeof veSyncSidebarScope === 'function') veSyncSidebarScope();
+}
+
+// Boş/kamerasız durumlar için "ev" kamerası: kanvas merkezi (3000,3000) görünümün
+// ORTASINDA. Eski sabit {3000,3000} yerel (0,0)'ı sol-üst köşeye koyuyordu → yeni
+// sekmede kurulan topoloji ızgaranın köşesinden başlıyordu (bkz. js/canvas-space.js).
+function _veHomeOffset() {
+  return (typeof veHomeCameraOffset === 'function') ? veHomeCameraOffset() : { x: 3000, y: 3000 };
+}
+
 function veLoadTabState(tab) {
   var s = tab.state;
   if(!s) {
     nodes = [];
     connections = [];
     compCounter = tab.compCounterBase || compCounter;
-    canvasOffset = { x: 3000, y: 3000 };
+    canvasOffset = _veHomeOffset();
     canvasZoom = 1;
     undoStack = [];
     redoStack = [];
@@ -335,7 +412,7 @@ function veLoadTabState(tab) {
   }
   
   compCounter = s.compCounter || 0;
-  canvasOffset = s.canvasOffset || { x: 3000, y: 3000 };
+  canvasOffset = s.canvasOffset || _veHomeOffset();
   canvasZoom = s.canvasZoom || 1;
   undoStack = s.undoStack || [];
   redoStack = s.redoStack || [];
@@ -360,18 +437,10 @@ function veLoadTabState(tab) {
 function veRefreshResultsUI() {
   // Results tree güncelle
   if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
-  // Grafik slotlarını yeniden render et
-  for(var i = 0; i < 4; i++) {
-    if(veResultSlots[i].sensors && veResultSlots[i].sensors.length > 0) {
-      if(typeof veRenderSlot === 'function') veRenderSlot(i);
-    } else {
-      if(typeof veRenderSlotPicker === 'function') veRenderSlotPicker(i);
-    }
-  }
-  // Grafikleri çiz
-  if(window.veSimResults && typeof veRefreshAllCharts === 'function') {
-    setTimeout(veRefreshAllCharts, 50);
-  }
+  // Ölçüm penceresini kur/tazele. Eski projelerde sinyaller 1..3 numaralı
+  // panellerde olabilir; veTrEnter() onları panoya taşır.
+  if(typeof veTrEnter === 'function') veTrEnter();
+  else if(typeof veRefreshAllCharts === 'function') setTimeout(veRefreshAllCharts, 50);
 }
 
 function veSwitchTab(idx) {
@@ -433,7 +502,7 @@ function veAddTab(name, silent) {
   nodes = [];
   connections = [];
   selectedNodes = [];
-  canvasOffset = { x: 3000, y: 3000 };
+  canvasOffset = _veHomeOffset();
   canvasZoom = 1;
   undoStack = [];
   redoStack = [];

@@ -31,8 +31,9 @@ function veZoomOut() {
 }
 
 function veResetView() {
+  // "Ev" kamerası: kanvas merkezi görünümün ortasında (bkz. js/canvas-space.js).
   canvasZoom = 1;
-  canvasOffset = {x: 3000, y: 3000};
+  canvasOffset = (typeof veHomeCameraOffset === 'function') ? veHomeCameraOffset() : {x: 3000, y: 3000};
   updateCanvasTransform();
   showToast('Görünüm sıfırlandı');
 }
@@ -384,6 +385,10 @@ function veLoadTopology() {
         
         // Format v2: çoklu sekme projesi
         if(data.version === 2 && data.tabs && data.tabs.length > 0) {
+          // Açık alt-topoloji gezinme yolu önceki projeye ait — bkz.
+          // veResetSubtopoNav (topology.js). Temizlenmezse ilk arka-plan kaydı
+          // eski parentState'i geri yazar ve yeni açılan proje kaybolur.
+          if(typeof veResetSubtopoNav === 'function') veResetSubtopoNav();
           veClearCanvasDOM();
           veTabs = [];
           veTabCounter = data.tabCounter || data.tabs.length;
@@ -430,6 +435,7 @@ function veLoadTopology() {
         }
         
         // Eski formatı aktif sekmeye yükle
+        if(typeof veResetSubtopoNav === 'function') veResetSubtopoNav();
         veClearCanvasDOM();
         
         if(data.canvasOffset) canvasOffset = data.canvasOffset;

@@ -96,10 +96,13 @@ describe('kaynak bekçileri — iki düğme ayrışmasın', () => {
     expect(ribbon).not.toContain("label:'Çalıştır'");
   });
 
-  test('Sonuçlar boş-yuva düğmesi de "aç" diyor', () => {
-    const results = loadSource('results.js');
-    expect(results).toContain('Çözücüyü Aç');
-    expect(results).not.toContain('Simülasyonu Çalıştır<');
+  test('Ölçüm penceresinin boş-durum düğmesi de "aç" diyor', () => {
+    // Metin panel tip seçicisinden (veRenderSlotPicker, kaldırıldı) ölçüm
+    // penceresinin boş durumuna taşındı — güvence aynı kaldı: düğme hesabı
+    // başlatmıyor, Çözücü bileşenini açıyor, adı da bunu söylemeli.
+    const trace = loadSource('trace-view.js');
+    expect(trace).toContain('Çözücüyü Aç');
+    expect(trace).not.toContain('Simülasyonu Çalıştır<');
   });
 
   test('eski hesap yolu Çalıştır düğmesine bağlı değil', () => {

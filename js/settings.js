@@ -350,6 +350,10 @@ function _veSettingsApplyProjectData(data) {
     if(typeof showToast === 'function') showToast('Geçersiz yedek verisi', 'error');
     return false;
   }
+  // Yedekten dönüş de bir PROJE yüklemesidir: açık alt-topoloji gezinme yolu
+  // önceki projeye aittir, temizlenmezse ilk arka-plan kaydı onu geri yazar
+  // (bkz. veResetSubtopoNav — topology.js).
+  if(typeof veResetSubtopoNav === 'function') veResetSubtopoNav();
   if(typeof veClearCanvasDOM === 'function') veClearCanvasDOM();
   veTabs = [];
   veTabCounter = data.tabCounter || data.tabs.length;

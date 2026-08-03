@@ -378,14 +378,22 @@ describe('UI smoke', () => {
     expect(api.loadState().customStations.some(s => s.url === 'https://example.com/live')).toBe(true);
   });
 
-  test('boş kütüphane sekmesi bilgilendirici boş durum gösterir', () => {
+  test('kütüphane sekmesi gömülü açılış parçasını gösterir + çalınabilir', () => {
     require('../../js/radio.js');
     const w = document.getElementById('mf-radio');
     w.querySelector('.mf-radio-tab[data-tab="library"]').click();
     const pane = w.querySelector('[data-pane="library"]');
     expect(pane.hidden).toBe(false);
-    expect(pane.querySelector('.mf-radio-pick')).not.toBeNull();
-    expect(pane.querySelector('.mf-radio-empty')).not.toBeNull();
+    expect(pane.querySelector('.mf-radio-pick')).not.toBeNull();   // "Dosya ekle…"
+    // Gömülü açılış parçası hazır durur (artık boş durum yok, otomatik da çalmaz)
+    expect(pane.querySelector('.mf-radio-empty')).toBeNull();
+    const tracks = pane.querySelectorAll('.mf-radio-item[data-track]');
+    expect(tracks.length).toBe(1);
+    expect(tracks[0].querySelector('.mf-radio-item-name').textContent).toBe('Gobble Glitch');
+    expect(tracks[0].querySelector('.mf-radio-item-sub').textContent).toBe('Açılış müziği');
+    // Ancak KULLANICI çalarsa: tıklayınca çalar (otomatik başlamaz)
+    tracks[0].click();
+    expect(playCalls).toBeGreaterThan(0);
   });
 
   test('kategori açılır menüsü: seçici açar, kategori seçince süzer + kalıcı', () => {

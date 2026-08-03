@@ -382,30 +382,45 @@ function restoreAnnotations(arr) {
 
   if(!arr || !Array.isArray(arr)) return;
 
-  // annotCounter güncelle
+  // annotCounter güncelle. a.id eksik/dizi-dışı bir kayıt eskiden burada
+  // TypeError atıyor ve TÜM çerçeveleri birlikte düşürüyordu — kayıt başına
+  // dayanıklı ol: bozuk olanı atla, geri kalanı geri yükle.
   arr.forEach(function(a) {
-    var numMatch = a.id.match(/annot-(\d+)/);
+    if(!a || typeof a !== 'object') return;
+    var numMatch = String(a.id || '').match(/annot-(\d+)/);
     if(numMatch) {
-      var num = parseInt(numMatch[1]);
+      var num = parseInt(numMatch[1], 10);
       if(num > annotCounter) annotCounter = num;
     }
   });
 
   // Her birini yeniden oluştur
   arr.forEach(function(a) {
+    if(!a || typeof a !== 'object') return;
+    var type = (a.type === 'text') ? 'text' : 'frame';   // bilinmeyen tip → çerçeve
+    var x = Number(a.x), y = Number(a.y);
+    if(!isFinite(x)) x = 0;
+    if(!isFinite(y)) y = 0;
+    var id = a.id;
+    if(!id) { annotCounter++; id = 'annot-' + annotCounter; }  // id'siz kayıt atılmaz
     var annot = {
-      id: a.id,
-      type: a.type,
-      x: a.x,
-      y: a.y,
-      width: a.width || (a.type === 'frame' ? 250 : 120),
-      height: a.height || (a.type === 'frame' ? 150 : 30),
-      text: a.text || '',
+      id: id,
+      type: type,
+      x: x,
+      y: y,
+      width: a.width || (type === 'frame' ? 250 : 120),
+      height: a.height || (type === 'frame' ? 150 : 30),
+      text: (a.text === undefined || a.text === null) ? '' : a.text,
       color: a.color || 'var(--text-muted)',
-      fontSize: a.fontSize || (a.type === 'text' ? 13 : 11)
+      fontSize: a.fontSize || (type === 'text' ? 13 : 11)
     };
     annotations.push(annot);
-    renderAnnotation(annot);
+    try {
+      renderAnnotation(annot);
+    } catch(e) {
+      // Tek bir açıklamanın render hatası diğerlerini götürmesin
+      if(typeof console !== 'undefined') console.warn('[MFSim] açıklama render edilemedi:', annot.id, e && e.message);
+    }
   });
 }
 

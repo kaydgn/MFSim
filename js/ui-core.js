@@ -89,6 +89,9 @@ function updateCanvasTransform() {
   if(canvas) {
     canvas.style.transform = 'translate(' + canvasOffset.x + 'px, ' + canvasOffset.y + 'px) scale(' + canvasZoom + ')';
   }
+  // Sonsuz ızgara deseni kameradan türetilir (js/canvas-space.js) — transform ile
+  // AYNI karede tazelenmezse ızgara içerikten kayar.
+  if(typeof veApplyGridPattern === 'function') veApplyGridPattern();
   // Alt durum çubuğundaki yakınlaştırma yüzdesini güncelle
   var _zoomStatus = document.getElementById('ve-status-zoom');
   if(_zoomStatus) _zoomStatus.textContent = '%' + Math.round(canvasZoom * 100);
@@ -181,8 +184,15 @@ document.addEventListener('DOMContentLoaded', function() {
     veShowAllSidebarComponents();
   }
   
-  // Başlangıç transform
-  updateCanvasTransform();
+  // Başlangıç kamerası: kanvasın MERKEZİ görünümün ortasında (bkz. canvas-space.js).
+  // Eski varsayılan {3000,3000} yerel (0,0)'ı sol-üst köşeye koyuyordu; sürüklenen
+  // /kurulan her şey ızgaranın köşesinden başlıyordu. Yüklenmiş bir topoloji varsa
+  // (proje/sekme geri yüklemesi) kameraya DOKUNMA — yalnız transform'u uygula.
+  if(typeof veCameraHome === 'function' && (typeof nodes === 'undefined' || !nodes || !nodes.length)) {
+    veCameraHome();
+  } else {
+    updateCanvasTransform();
+  }
   
   // Drop event
   canvasWrapper.addEventListener('dragover', function(e) {

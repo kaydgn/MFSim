@@ -29,7 +29,7 @@ function veFTRunSegmentDrive(segments, initSpeed_kmh, transferRangeOverride) {
   if(!vehicleNode) throw new Error('Araç bileşeni eksik');
   if(!wheelNode) throw new Error('Tekerlek bileşeni eksik');
 
-  for(var _vi = 0; _vi < 4; _vi++) veResetChartView(_vi);
+  if(typeof veTrResetView === 'function') veTrResetView();
 
   // ── MOTOR PARAMETRELERİ ──
   var ed = engineNode.data || {};
