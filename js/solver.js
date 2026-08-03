@@ -25,7 +25,8 @@ function _veSolveOtherTopologies(options) {
   var _origNodes = nodes;
   var _origConns = connections;
   var _origSimResults = window.veSimResults;
-  var _origChartViews = (typeof veChartViews !== 'undefined') ? JSON.parse(JSON.stringify(veChartViews)) : null;
+  var _origTraceView = (typeof veTrState !== 'undefined')
+    ? { xMin: veTrState.xMin, xMax: veTrState.xMax, pinX: veTrState.pinX } : null;
 
   var _solvedCount = 0;
   var _failCount = 0;
@@ -111,7 +112,11 @@ function _veSolveOtherTopologies(options) {
     nodes = _origNodes;
     connections = _origConns;
     window.veSimResults = _origSimResults;
-    if(_origChartViews) veChartViews = _origChartViews;
+    if(_origTraceView && typeof veTrState !== 'undefined') {
+      veTrState.xMin = _origTraceView.xMin;
+      veTrState.xMax = _origTraceView.xMax;
+      veTrState.pinX = _origTraceView.pinX;
+    }
   }
 
   if(options && options.log) {
@@ -427,11 +432,13 @@ function veSolverRunLegacy() {
         
         window.veSimResults = simResult;
 
-        // Sonuç panelleri "Sonuç yok" boş durumundan tip seçiciye geçmeli;
-        // aksi hâlde kullanıcı çalıştırdıktan sonra da eski mesajı görür.
-        if(typeof veInitResultSlots === 'function') {
-          try { veInitResultSlots(); } catch(_e) {}
-        }
+        // Ölçüm penceresi "Çözüm sonucu yok" boş durumundan çıkmalı ve
+        // şeritler yeni veriyle çizilmeli; aksi hâlde kullanıcı çalıştırdıktan
+        // sonra da eski mesajı ya da bayat eğriyi görür.
+        try {
+          if(typeof veTrResetView === 'function') veTrResetView();
+          if(typeof veTrRefresh === 'function') veTrRefresh();
+        } catch(_e) {}
 
         // ── DİĞER TOPOLOJİLERİ OTOMATİK ÇÖZ ──
         try {
@@ -506,14 +513,8 @@ function veSolverRunLegacy() {
         rhtml += '</div>';
         resultEl.innerHTML = rhtml;
         
-        // Sonuçlar sayfasındaki grafik/tabloları güncelle
-        for(var si = 0; si < 4; si++) {
-          var slot = veResultSlots[si];
-          if(slot && slot.sensors && slot.sensors.length > 0) {
-            if(slot.type === 'line') veRenderChart(si);
-            else veRenderTable(si);
-          }
-        }
+        // Ölçüm penceresini tazele (şeritler + tablo/3B aynı kapıdan)
+        if(typeof veTrRefresh === 'function') veTrRefresh();
         
         var _toastMsg = 'Hesaplama tamamlandı (' + simResult.time.length + ' nokta';
         if(ss.method === 'rk45') _toastMsg += ', ' + (ss.steps || 0) + ' iç adım';

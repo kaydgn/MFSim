@@ -437,18 +437,10 @@ function veLoadTabState(tab) {
 function veRefreshResultsUI() {
   // Results tree güncelle
   if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
-  // Grafik slotlarını yeniden render et
-  for(var i = 0; i < 4; i++) {
-    if(veResultSlots[i].sensors && veResultSlots[i].sensors.length > 0) {
-      if(typeof veRenderSlot === 'function') veRenderSlot(i);
-    } else {
-      if(typeof veRenderSlotPicker === 'function') veRenderSlotPicker(i);
-    }
-  }
-  // Grafikleri çiz
-  if(window.veSimResults && typeof veRefreshAllCharts === 'function') {
-    setTimeout(veRefreshAllCharts, 50);
-  }
+  // Ölçüm penceresini kur/tazele. Eski projelerde sinyaller 1..3 numaralı
+  // panellerde olabilir; veTrEnter() onları panoya taşır.
+  if(typeof veTrEnter === 'function') veTrEnter();
+  else if(typeof veRefreshAllCharts === 'function') setTimeout(veRefreshAllCharts, 50);
 }
 
 function veSwitchTab(idx) {

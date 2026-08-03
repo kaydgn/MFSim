@@ -6,7 +6,7 @@
 
 function veRunSimulationEngine() {
   // Eski grafik görünümlerini sıfırla (yeni simülasyon = temiz görünüm)
-  for(var _vi = 0; _vi < 4; _vi++) veResetChartView(_vi);
+  if(typeof veTrResetView === 'function') veTrResetView();
   
   var chain = veGetPowertrainChain();
   if(chain.length === 0) throw new Error('Güç aktarma zinciri bulunamadı');

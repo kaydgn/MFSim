@@ -477,7 +477,7 @@ function veFTRunSimulationEngine(transferRangeOverride) {
   var calcTrace = traceMode ? { params: null, steps: [], settledStall: null, lowSpeedOp: null, meta: {} } : null;
 
   // Grafik görünümlerini sıfırla (izli sessiz koşuda atlanır)
-  if(!traceMode) { for(var _vi = 0; _vi < 4; _vi++) veResetChartView(_vi); }
+  if(!traceMode && typeof veTrResetView === 'function') veTrResetView();
 
   // ── MOTOR PARAMETRELERİ ──
   var ed = engineNode.data || {};
