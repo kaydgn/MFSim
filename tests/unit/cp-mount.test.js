@@ -554,6 +554,78 @@ describe('Örnek bileşeni', () => {
     const st = cp._mntTopoState(topo);
     expect(st.nodes).toHaveLength(topo.nodes.length);
   });
+  test('ASFAT: yayınlanan JSON topolojisi kayıt defterindeki modelle birebir', () => {
+    // TULGA testiyle aynı gerekçe: panel spec tablosu (model) ile "Örneği Aktar"
+    // (JSON) ayrı dosyalarda yaşıyor; biri güncellenip diğeri unutulursa kullanıcı
+    // panelde bir modeli okur, kanvasa başkasını kurar.
+    const topo = require('../../assets/examples/asfat_topoloji.json');
+    const m = core.getMountExample('asfat').model;
+    expect(topo.format).toBe('mfsim-mount-example');
+    const num = v => Number(v);
+    const bodies = topo.nodes.filter(n => /^mnt-(motor|gearbox|shaft|bracket|pto-group)$/.test(n.type));
+    const mounts = topo.nodes.filter(n => n.type === 'mnt-mount');
+    expect(bodies).toHaveLength(m.components.length);
+    expect(mounts).toHaveLength(m.mounts.length);
+    bodies.forEach((n, i) => {
+      const c = m.components[i];
+      expect(n.type).toBe(c.kind);
+      expect(num(n.data.mass)).toBeCloseTo(c.mass, 6);
+      expect([num(n.data.cgx), num(n.data.cgy), num(n.data.cgz)]).toEqual(c.cg);
+      expect([num(n.data.Ixx), num(n.data.Iyy), num(n.data.Izz)]).toEqual([c.Ixx, c.Iyy, c.Izz]);
+      expect(!!n.data.pointMass).toBe(!!c.pointMass);
+    });
+    mounts.forEach((n, i) => {
+      const x = m.mounts[i];
+      expect([num(n.data.x), num(n.data.y), num(n.data.z)]).toEqual(x.pos);
+      expect([num(n.data.kxs), num(n.data.kys), num(n.data.kzs)]).toEqual(x.kstat);
+      expect([num(n.data.kxd), num(n.data.kyd), num(n.data.kzd)]).toEqual(x.kdyn);
+    });
+    // §4: rölanti 600 d/dk · 6 silindir → f_ateş 30 Hz (rapor §8.8 buradan okur)
+    const motor = topo.nodes.find(n => n.type === 'mnt-motor').data;
+    expect(num(motor.idleRpm)).toBe(600);
+    expect(num(motor.cylinders)).toBe(6);
+    expect((num(motor.idleRpm) / 60) * (num(motor.cylinders) / 2)).toBe(30);
+    // Tablo 11: ζ = 0,02 Çözücü'de
+    expect(num(topo.nodes.find(n => n.type === 'mnt-solver').data.zeta)).toBe(0.02);
+    // TORK YOK — doküman vermiyor; uydurma değer sızmamalı
+    expect(m.torque).toBeUndefined();
+    expect(motor.Te).toBeUndefined();
+    // çerçeveler/notlar korunmuş olmalı (dışa aktarma bunları düşürüyordu)
+    expect(Array.isArray(topo.annotations)).toBe(true);
+    expect(topo.annotations.length).toBeGreaterThan(0);
+    // yükleyici bu JSON'u kabul etmeli
+    const st = cp._mntTopoState(topo);
+    expect(st.nodes).toHaveLength(topo.nodes.length);
+    expect(st.annotations).toHaveLength(topo.annotations.length);
+  });
+  test('ASFAT: model ASR-SR-116 sonuçlarını yeniden üretiyor (uçtan uca)', () => {
+    // Kayıt defterindeki sayılar bozulursa bu test kırılır — "örnek" adı altında
+    // sessizce yanlış bir doğrulama modeli yayınlanmasın.
+    const m = core.getMountExample('asfat').model;
+    const mmv = v => v / 1000, kNv = v => v * 1000;
+    const comps = m.components.map(c => ({ name: c.name, mass: c.mass,
+      cg: c.cg.map(mmv), I: [[c.Ixx, 0, 0], [0, c.Iyy, 0], [0, 0, c.Izz]], pointMass: !!c.pointMass }));
+    const mnts = m.mounts.map(x => ({ name: x.name, pos: x.pos.map(mmv),
+      kstat: x.kstat.map(kNv), kdyn: x.kdyn.map(kNv) }));
+    const mp = core.combineMassProps(comps);
+    expect(mp.m).toBeCloseTo(2455, 6);                       // Tablo 7 toplamı 2455,05
+    const stat = core.solveCase(core.buildK(mnts, mp.cg, false), mnts, mp.cg, mp.m, 9.81,
+                                { name: 'Static', n: [0, 0, -1], T: [0, 0, 0] });
+    // Tablo 7 — takozlara etkiyen düşey yükler [kg]
+    const PDF_YUK = [365.83, 364.36, 437.83, 425.59, 436.84, 424.60];
+    core.mountLoadShares(stat, 9.81).forEach((v, i) => expect(v).toBeCloseTo(PDF_YUK[i], 1));
+    // Tablo 8 — düşey deplasmanlar [mm]
+    const PDF_DZ = [1.993, 1.985, 1.952, 1.897, 1.947, 1.893];
+    stat.perMount.forEach((pm, i) => expect(Math.abs(pm.delta[2] * 1000)).toBeCloseTo(PDF_DZ[i], 2));
+    // Tablo 10 — mod frekansları (%2 içinde)
+    const PDF_F = [5.93, 6.61, 7.40, 11.40, 13.31, 19.01];
+    const modes = core.solveModal(core.buildK(mnts, mp.cg, true),
+                                  core.buildM6(mp.m, mp.I_G), mnts, mp.cg);
+    modes.forEach((md, i) => expect(Math.abs(md.f_Hz - PDF_F[i]) / PDF_F[i]).toBeLessThan(0.02));
+    // s.12 — rölantide iletilebilirlik %21,9 (Adams 0,219)
+    const T = core.transmissibility(30, core.bounceFrequency(mnts, mp.m), 0.02);
+    expect(T).toBeCloseTo(0.219, 3);
+  });
   test('TTAR modeli (6 takoz) → "Fazla takoz" UYARI verir, hata değil', () => {
     const topo = buildTTARTopology();
     global.nodes = topo.nodes;

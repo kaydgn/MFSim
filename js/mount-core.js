@@ -1287,6 +1287,51 @@ var veMountCore = (function() {
     })()
   };
 
+  // ── ASFAT 8x8 Obüs (BMC ASR-SR-116) ────────────────────────────────────────
+  // Kaynak: BMC SAS Mühendislik, "ASFAT 8x8 OBUS Aracına Uygun Takoz Seçimi,
+  // Frekans ve Mod Hesaplamaları", Dok. No ASR-SR-116, 04.08.2021.
+  //   kütle/CG  → Tablo 2 · atalet → Tablo 3 · hardpoint → Tablo 6 · rijitlik → Tablo 9
+  //   ζ = 0,02  → Tablo 11 · rölanti 600 d/dk, 6 silindir → §4 (f_ateş = 30 Hz)
+  //
+  // TORK YOK: doküman tahrik torku / konvertör stall oranı / vites oranı vermez.
+  // torque alanı bilinçli olarak tanımsızdır — uydurma değerle Kriter 3/4 "geçti"
+  // görüntüsü üretmemek için. Yükleyici EX.torque||{} ile bunu zaten karşılıyor.
+  //
+  // ŞAFT AĞIRLIK MERKEZİ dokümanda HİÇBİR tabloda verilmemiştir (yalnız Şekil 7'de
+  // küre olarak görünür). Buradaki (2246; 156; 0) değeri, Tablo 7'nin altı düşey
+  // takoz yüküne en küçük kareler ile oturtularak geri çözülmüştür (RMS 0,009 kg);
+  // z statik düşey dağılımı etkilemediğinden 0 bırakılmıştır.
+  //
+  // PTO'lar parça bazında değil GRUP olarak modellenmiştir (Tablo 2 CG + Tablo 3
+  // atalet). Tablo 4 altı ayrı parça verir ama parça başına atalet vermez; nokta
+  // kütleye indirgemek grubun KENDİ roll ataletini (Top 0,45 · Side 0,136 kg·m²)
+  // tümüyle düşürür, çünkü parçalar aynı y–z koordinatındadır. Etki küçüktür
+  // (roll modu 19,25 → 19,22 Hz) ama grup biçimi dokümanı birebir yeniden üretir.
+  const ASFAT_EXAMPLE = {
+    g: 9.81,
+    components: [
+      {name:'Motor — Cummins 57RS303308',      mass:1600, cg:[-314.940,  -0.127, 857.560], Ixx:110.7,  Iyy:260.2,  Izz:205.9,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-motor',     at:[336,238]},
+      {name:'Şanzıman + Retarder — Allison 4700', mass:600, cg:[945.373, -9.970, 680.960], Ixx:16.43,  Iyy:68.15,  Izz:64.91,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-gearbox',   at:[536,247]},
+      {name:'Şaft',                            mass:16,   cg:[2246.000, 156.000,   0.000], Ixx:0.042,  Iyy:1.16,   Izz:1.16,   Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-shaft',     at:[686,247]},
+      {name:'Sol Motor Braketi',               mass:48,   cg:[ 760.963,-300.631, 736.392], Ixx:0.315,  Iyy:4.392,  Izz:4.211,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-bracket',   at:[336,356]},
+      {name:'Sağ Motor Braketi',               mass:48,   cg:[ 760.963, 300.631, 736.392], Ixx:0.315,  Iyy:4.392,  Izz:4.211,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-bracket',   at:[336,152]},
+      {name:'Top PTO Grubu',                   mass:97,   cg:[1058.064,  77.013, 894.726], Ixx:0.45,   Iyy:6.515,  Izz:6.15,   Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-pto-group', at:[442,154]},
+      {name:'Side PTO Grubu',                  mass:46,   cg:[ 855.340,-269.520, 473.300], Ixx:0.136,  Iyy:0.915,  Izz:0.915,  Ixy:0, Ixz:0, Iyz:0, pointMass:false, kind:'mnt-pto-group', at:[220,354]}
+    ],
+    // ÖN ikili 57RS313774 statik = dinamik (Tablo 9 böyle verir — elastomer için
+    // atipiktir ama dokümandan aynen alınmıştır). ARKA dörtlü 57RS313773 dinamik
+    // olarak sertleşir: 462→630 (x,y) ve 2200→3000 (z).
+    mounts: [
+      {name:'Ön Sol · 57RS313774',   pos:[-953.45, -50.67, 367.00], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 89,187]},
+      {name:'Ön Sağ · 57RS313774',   pos:[-953.45,  50.67, 367.00], kstat:[1045,1045,1800], kdyn:[1045,1045,1800], at:[ 85,303]},
+      {name:'Sol Ön · 57RS313773',   pos:[ 535.31,-347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[336,468]},
+      {name:'Sağ Ön · 57RS313773',   pos:[ 535.31, 347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[337, 41]},
+      {name:'Sol Arka · 57RS313773', pos:[ 636.80,-347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[428,469]},
+      {name:'Sağ Arka · 57RS313773', pos:[ 636.80, 347.10, 615.77], kstat:[ 462, 462,2200], kdyn:[ 630, 630,3000], at:[428, 40]}
+    ],
+    loadCases: defaultLoadCases()
+  };
+
   // ═══════════════════ Çoklu örnek kayıt defteri ═══════════════════
   // Her giriş kendi kendine yeterli bir doğrulama örneğidir: sayısal model
   // (TTAR_EXAMPLE biçimi) + sunum meta verisi (araç adı, açıklama, teknik özet)
@@ -1390,6 +1435,40 @@ var veMountCore = (function() {
       image: 'assets/examples/tulga.png',
       topology: 'assets/examples/tulga_topoloji.json',
       model: TULGA_EXAMPLE
+    },
+    asfat: {
+      id: 'asfat',
+      name: 'ASFAT 8x8 Obüs Takoz Analizi',
+      vehicle: 'ASFAT 8x8 Obüs',
+      subtitle: '7 kütle · 6 takoz güç grubu',
+      description: 'ASFAT 8x8 Obüs güç grubunun 6 serbestlik dereceli rijit gövde takoz modeli — Cummins motor, Allison 4700 şanzıman + retarder, şaft, sol/sağ motor braketi ve üst/yan PTO grupları, altı elastomer takoz (57RS313774 ön ikili, 57RS313773 yan dörtlü) ile şasiye bağlanır. Değerler BMC ASR-SR-116 raporundan birebir alınmıştır; takoz yükleri ve çökmeleri raporun Adams sonuçlarını 0,01 kg / 0,005 mm içinde yeniden üretir.',
+      specs: [
+        ['Kütle gövdesi', String(ASFAT_EXAMPLE.components.length)],
+        ['Takoz', String(ASFAT_EXAMPLE.mounts.length)],
+        ['Toplam kütle', ASFAT_EXAMPLE.components.reduce(function(s,c){ return s + (c.mass||0); }, 0).toFixed(1) + ' kg'],
+        ['Rölanti · silindir', '600 d/dk · 6 → f_ateş 30 Hz'],
+        ['Sönüm oranı ζ', '0.02 (şirket kabulü)'],
+        // Ön ve arka takoz farklı → tek değer yanıltıcı olur; aralık göster.
+        ['Takoz dinamik (Z)', (function(){
+          var z = ASFAT_EXAMPLE.mounts.map(function(m){ return m.kdyn[2]; });
+          var lo = Math.min.apply(null, z), hi = Math.max.apply(null, z);
+          return (lo === hi ? String(lo) : lo + ' – ' + hi) + ' N/mm';
+        })()],
+        ['Kaynak', 'BMC ASR-SR-116 · 04.08.2021']
+      ],
+      // Panel önizleme sahnesi — yalnız görsel süs (yükleyici bunları KURMAZ).
+      // Konumlar JSON topolojisindeki yardımcı araç düğümleriyle aynı.
+      tools: [
+        {type:'mnt-library',    name:'Takoz Özellikleri', at:[893,226]},
+        {type:'mnt-solver',     name:'Çözücü',            at:[893,328]},
+        {type:'mnt-report',     name:'Rapor',             at:[987,330]},
+        {type:'mnt-2dview',     name:'2D Görünüm',        at:[812,490]},
+        {type:'mnt-coordframe', name:'Koordinat Düzlemi', at:[925,490]},
+        {type:'mnt-viewer',     name:'3D Görüntüleyici',  at:[1036,490]}
+      ],
+      image: 'assets/examples/asfat.png',
+      topology: 'assets/examples/asfat_topoloji.json',
+      model: ASFAT_EXAMPLE
     }
   };
   // id → örnek girişi (bilinmezse defterdeki ilk örneğe düşer).
