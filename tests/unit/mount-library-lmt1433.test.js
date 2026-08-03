@@ -142,12 +142,76 @@ describe('Değerler FEA raporunun KENDİ modal sonucunu üretiyor', () => {
   });
 });
 
+// ── "Mount 1" — aynı tablonun ilk satırı, parça numarası yok ────────────────
+describe('"Mount 1" girdileri', () => {
+  const M1 = {                                     // takoz başına [X, Y, Z] N/mm
+    'bmc-mount1-40sh': { sh: 40, k: [800, 450, 300] },
+    'bmc-mount1-55sh': { sh: 55, k: [1000, 750, 500] },
+    'bmc-mount1-70sh': { sh: 70, k: [1350, 1100, 800] },
+  };
+
+  test('üç sertlik de kütüphanede, değerleri raporun tablosuyla birebir', () => {
+    Object.entries(M1).forEach(([key, v]) => {
+      const e = cp.VE_MOUNT_LIBRARY[key];
+      expect(e).toBeDefined();
+      expect([e.sx, e.sy, e.sz]).toEqual(v.k);
+      expect([e.dx, e.dy, e.dz]).toEqual(v.k);     // tek taban
+    });
+  });
+
+  test('adı parça numarasının OLMADIĞINI söylüyor — sessizce uydurulmasın', () => {
+    Object.keys(M1).forEach((k) =>
+      expect(cp.VE_MOUNT_LIBRARY[k].name).toContain('parça no yok'));
+  });
+
+  test('radyal ANİZOTROPİK (sx > sy > sz) — LMT-1433-00 ile karışmaz', () => {
+    Object.keys(M1).forEach((k) => {
+      const e = cp.VE_MOUNT_LIBRARY[k];
+      expect(e.sx).toBeGreaterThan(e.sy);
+      expect(e.sy).toBeGreaterThan(e.sz);
+    });
+    // LMT-1433-00 ise radyal izotropik — iki parça birbirinin yerine geçmez
+    expect(cp.VE_MOUNT_LIBRARY['lmt1433-00-55sh'].sx)
+      .toBe(cp.VE_MOUNT_LIBRARY['lmt1433-00-55sh'].sy);
+  });
+
+  test('sertlikle monoton', () => {
+    const keys = Object.keys(M1).sort((a, b) => M1[a].sh - M1[b].sh);
+    for (let i = 1; i < keys.length; i++) {
+      expect(cp.VE_MOUNT_LIBRARY[keys[i]].sx).toBeGreaterThan(cp.VE_MOUNT_LIBRARY[keys[i - 1]].sx);
+      expect(cp.VE_MOUNT_LIBRARY[keys[i]].sz).toBeGreaterThan(cp.VE_MOUNT_LIBRARY[keys[i - 1]].sz);
+    }
+  });
+
+  // Raporun Konsept 1 "Total Stiffness" satırı (konum başına 2 adet takoz):
+  //   arka sol/sağ  Z1600 Y2100 X2700   ·   ön  Z1600 Y2700 X2100
+  // Bu satır, tablodaki 70 ShA değerlerinden yeniden kurulabilmelidir.
+  test('Konsept 1 toplam rijitlikleri 70 ShA satırından yeniden kuruluyor', () => {
+    const e = cp.VE_MOUNT_LIBRARY['bmc-mount1-70sh'];
+    const pair = { X: 2 * e.sx, Y: 2 * e.sy, Z: 2 * e.sz };       // konum başına 2 adet
+    const rear = { Z: 1600, Y: 2100, X: 2700 };
+    expect(pair.Z).toBe(rear.Z);                                   // birebir
+    expect(pair.X).toBe(rear.X);                                   // birebir
+    expect(100 * Math.abs(pair.Y - rear.Y) / rear.Y).toBeLessThan(5);   // %4,8 yuvarlama
+  });
+
+  test('ön takozlar 90° DÖNDÜRÜLMÜŞ — X↔Y takasıyla ön satır çıkıyor', () => {
+    const e = cp.VE_MOUNT_LIBRARY['bmc-mount1-70sh'];
+    const front = { Z: 1600, Y: 2700, X: 2100 };
+    const rot = { Z: 2 * e.sz, Y: 2 * e.sx, X: 2 * e.sy };         // X ile Y yer değiştirmiş
+    expect(rot.Z).toBe(front.Z);
+    expect(rot.Y).toBe(front.Y);                                   // 2×1350 = 2700 birebir
+    expect(100 * Math.abs(rot.X - front.X) / front.X).toBeLessThan(5);
+    // döndürülmemiş hâli ön satırı TUTMAZ — bulgunun gerçek olduğunun kanıtı
+    const norot = { Z: 2 * e.sz, Y: 2 * e.sy, X: 2 * e.sx };
+    expect(100 * Math.abs(norot.Y - front.Y) / front.Y).toBeGreaterThan(15);
+  });
+});
+
 describe('Kaynak sınırları kayıt altında', () => {
-  test('LMT-1433-20 ve adsız "Mount 1" kütüphaneye GİRMEDİ (verisi yok)', () => {
+  test('LMT-1433-20 kütüphaneye GİRMEDİ (rijitlik verisi hiçbir dokümanda yok)', () => {
     const keys = Object.keys(cp.VE_MOUNT_LIBRARY);
     expect(keys.some((k) => /1433-20/.test(k))).toBe(false);
-    const names = Object.values(cp.VE_MOUNT_LIBRARY).map((e) => e.name);
-    expect(names.some((n) => /^Mount 1$/i.test(n))).toBe(false);
   });
 
   test('mevcut girdiler DEĞİŞMEDİ (regresyon)', () => {
