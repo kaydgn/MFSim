@@ -154,6 +154,50 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // 0,70 mm'ye çıkıyor; '-calc' değerleriyle 0,47 Hz / 0,03 mm. Yani hangi tabanı
 // seçtiğiniz sonucu değiştirir — GENEL ÜRÜN SEÇİMİ için nominal (A), BU ARACIN
 // AMC raporlarını yeniden üretmek için (B) kullanın.
+//
+// ── LMT-1433-00 (AMC DEĞİL — BMC güç grubu FEA raporlarının takozu) ─────────
+// Kaynak: BMC R&D FEA raporları — "BMC Engine Mount (8x8 Ttar)" (Onur GÖR,
+// 02.10.2018, V00) ve "(4x4 Tatar)" (12.02.2019, V01). İkisinin "Engine Mount
+// Design Proposal (Standard Part)" tablosu takoz BAŞINA rijitliği sertliğe göre
+// veriyor; V01 sunumu bu satırın parça adını açıkça "LMT-1433-00" yazıyor.
+// Teknik resimler Angst+Pfister logosu taşıyor → parça büyük olasılıkla A+P'dir,
+// AMC Mecanocaucho değil (KATALOGLA TEYİT EDİLMEDİ, arama sonuç vermedi).
+//
+//   ShA | X N/mm | Y N/mm | Z N/mm      (takoz başına; flanş 107×90, delik 80×65)
+//   ----|--------|--------|--------
+//    40 |   900  |   900  |   450
+//    55 |  1500  |  1500  |   750
+//    70 |  2500  |  2500  |  1150
+//
+// TEK TABAN — sx = dx KASITLI: kaynak statik/dinamik ayrımı yapmıyor, sertlik
+// başına TEK üçlü veriyor. Kütüphanede bunun emsali var (57RS313774-sr116 de
+// tek tabanlıdır). Uydurma bir cdyn/cstat oranı YAZILMADI.
+//
+// DEĞERLER RAPORUN KENDİ MODAL SONUCUNU VERİYOR (ölçüldü): Konsept 2 = 3 konum ×
+// 2 adet LMT-1433-00 + Z'de 110 N/mm yay. Takoz konumları raporlarda YOK, ama
+// düşey (bounce) modu konumdan bağımsızdır: f=(1/2π)·√(Σkz/m).
+//   65 ShA · 2302 kg → hesap 8,266 Hz ↔ raporun modu 8,250 Hz   (%0,20)
+//   55 ShA · 2302 kg → hesap 7,122 Hz ↔ raporun modu 7,281 Hz   (%2,2)
+//   55 ShA · 1966 kg → hesap 7,707 Hz ↔ raporun modu 8,090 Hz   (%4,7)
+// Yani tablo, FEA'nın modal analizinde kullandığı rijitliktir.
+//
+// STATİK TARAFTA AÇIK UÇ: raporlanan "@1g çökme" doğrusal tahminin 1,26 / 1,18 /
+// 1,10 katı (sırasıyla yukarıdaki üç durum). Oran SABİT DEĞİL — bir kısmı takoz
+// başına eğilme (raporlanan değer büyük olasılıkla maksimum), bir kısmı
+// nonlineerlik olabilir; ikisi ayrıştırılamıyor (konumlar yok). Bu yüzden
+// buradan bir statik/dinamik oranı TÜRETİLMEDİ. Angst+Pfister'in statik+dinamik
+// ayrımlı verisi gelirse sz/sx düşürülüp dx/dz ayrıştırılmalıdır.
+//
+// EKLENMEYENLER (veri yok):
+//   • LMT-1433-20 — TTAR ölçüm raporunda ön takoz olarak geçiyor ("X yönü
+//     yumuşatılmış" varyant), rijitlik verisi hiçbir dokümanda yok.
+//   • Raporların "Mount 1" satırı (40/55/70 ShA: X 800/1000/1350 · Y 450/750/1100
+//     · Z 300/500/800) — PARÇA NUMARASI hiçbir yerde geçmiyor, yalnız "Mount 1".
+//     Kütüphaneye adsız girdi açılmadı.
+//   • LMT-1433-37 — mount-core.js SIPER_EXAMPLE'ın kaynağı; kütüphanedeki
+//     'amc55sha' girdisi (1252/1252/640) odur. DİKKAT: o girdinin adı "AMC 55 ShA"
+//     ama parça LMT-1433 ailesinden, yani muhtemelen AMC değil A+P — ad yanıltıcı
+//     olabilir. Teyit gelmeden DEĞİŞTİRİLMEDİ.
 var VE_MOUNT_LIBRARY = {
   'amc55sha':         { name:'AMC 55 ShA',                       sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
   '57RS313773':       { name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
@@ -201,7 +245,13 @@ var VE_MOUNT_LIBRARY = {
   'amc137830-calc': { name:'Cone 121 NG 55Sh (AMC 137830 · BMC 8x8 çalışma noktası)', sx:4405, sy:4405, sz:1530, dx:6380, dy:6380, dz:2080 },
   // Cone 121 NP 55Sh için nominal veri GELMEDİ — bu girdi yalnız çalışma noktası
   // tabanını taşır. Anahtar değişmedi (kayıtlı projelerin bağı kopmasın).
-  'amc137829': { name:'Cone 121 NP 55Sh (AMC 137829 · BMC 8x8 çalışma noktası)', sx:3150, sy:3150, sz:1075, dx:4605, dy:4605, dz:1755 }
+  'amc137829': { name:'Cone 121 NP 55Sh (AMC 137829 · BMC 8x8 çalışma noktası)', sx:3150, sy:3150, sz:1075, dx:4605, dy:4605, dz:1755 },
+  // ── LMT-1433-00 — BMC güç grubu FEA raporlarının takozu ─────────────────
+  // TEK RİJİTLİK TABANI: kaynak statik/dinamik AYRIMI YAPMIYOR → sx = dx.
+  // Nedeni ve ölçümü için aşağıdaki "LMT-1433-00" blok yorumuna bakın.
+  'lmt1433-00-40sh': { name:'LMT-1433-00 40 ShA', sx:900,  sy:900,  sz:450,  dx:900,  dy:900,  dz:450  },
+  'lmt1433-00-55sh': { name:'LMT-1433-00 55 ShA', sx:1500, sy:1500, sz:750,  dx:1500, dy:1500, dz:750  },
+  'lmt1433-00-70sh': { name:'LMT-1433-00 70 ShA', sx:2500, sy:2500, sz:1150, dx:2500, dy:2500, dz:1150 }
 };
 
 // ─── ETKİN KÜTÜPHANE (gömülü + gömülü override + kullanıcı tanımlı) ───────────
@@ -274,6 +324,18 @@ function veMntGetLibraryList(){
 // L/R varyantları a_y işaretiyle ayrışır. Büyük sehimli satırlar (Max Bump, Pothole,
 // Reverse) ±15 mm metal-metal durdurucuyla klipslenir (solveCaseStop, F4);
 // çözücü useStop=true ile çağrılır.
+//
+// ÇEKİRDEK DÖRTLÜNÜN KAYNAĞI: "Maks. Tork, 3.5 Düşey, 1g yanal ve 1g boyuna
+// yükleme koşulları kontrol edilmelidir" — MSB Tank Taşıyıcı Araç motor takoz
+// inceleme raporu (Güven YAVUZ, 11.03.2019) "Hedef Kriterleri" sayfası. Aynı
+// dörtlü BMC R&D FEA raporunda da hesaplanmıştır (Onur GÖR, 02.10.2018 / V01
+// 12.02.2019) — "Max. Displacement Results" tablosu, Konsept 2 · LMT-1433-00:
+//   motor 1266 kg 55 ShA → Z(1g) 5,3 · Z(3,5g) 15 · X(1g) 3,3 · Y(1g) 4,5 · tork 2,5 mm
+//   motor 1602 kg 55 ShA → 5,8 · 17,5 · 4,0 · 5,8 · 2,5 mm
+//   motor 1602 kg 65 ShA → 4,0 · 11,8 · 2,6 · 3,7 · 1,6 mm
+// ±15 mm metal-metal durdurucu eşiği de bu tabloyla aynı mertebededir (3,5g
+// düşeyde 15–17,5 mm). Diğer satırlar (Cornering, Kerb Strike, Pothole, Rebound)
+// bu dörtlünün ÜSTÜNE eklenen genel araç yük kitabıdır, o raporlarda yoktur.
 var MNT_AUTO_CASES = [
   { name:'Static',            n:[ 0,    0,   -1  ], T:[0,0,0] }, // 1g düşey
   { name:'Max Bump',          n:[ 0,    0,   -3.5], T:[0,0,0] }, // 3.5g düşey → klips

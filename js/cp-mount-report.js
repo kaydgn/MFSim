@@ -753,6 +753,20 @@ function _mntRepModeMatrix(modes){
 // §8.8 — Frekans yerleşimi + iletilebilirlik (opsiyonel; motor devri + silindir + sönüm girdisi)
 // Kriter 1: Roll modu (en yüksek rijit gövde modu) < %50 ateşleme frekansı.
 // Kriter 2: Rölantide iletilebilirlik (transmissibility) < %50 (en kötü mod belirleyici).
+//
+// BU İKİ KRİTERİN KAYNAĞI (uydurma eşik değil, müşteri hedef kriteri):
+//   "MSB Tank Taşıyıcı Araç — Motor Takoz İncelemesi" (Güven YAVUZ, 11.03.2019),
+//   "Hedef Kriterleri" sayfası, birebir:
+//     • "PowerPack Roll Mode; Motor Ateşleme frekansının %50'sinden az olmalıdır."
+//     • "Motor Idle'da Transmissibility %50'den küçük olmalıdır."
+//     • "Her bir vites için Mount kuvvetleri kontrol edilmelidir."
+//     • "Maks. Tork, 3.5 Düşey, 1g yanal ve 1g boyuna yükleme koşulları
+//        kontrol edilmelidir."   → cp-mount.js MNT_AUTO_CASES'in çekirdeği budur.
+//   Aynı doküman ölçüm zincirini de veriyor: prototip araçta takozun aktif/pasif
+//   tarafından 20 kHz örnekleme, 2 kHz alçak geçiren filtre, iletilebilirlik =
+//   pasif/aktif ivme oranı; motor 3. mertebe (6 silindir, 4 zamanlı), rölanti
+//   700 d/dk → f_ateş = 35 Hz. §8.8'in f_ateş=(N/60)·(z/2) bağıntısı bununla
+//   birebir tutarlıdır (700/60·3 = 35 Hz).
 function _mntRepFreqPlacement(R, opts){
   opts=opts||{};
   var _eng=_mntRepEngine(R, opts);        // TEK kaynak: Motor bileşeni
