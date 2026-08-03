@@ -776,21 +776,34 @@ var veMountCore = (function() {
   // φ'(δ_static)·oran → önyüklü çalışma noktasına duyarlı frekanslar (fiziksel
   // olarak doğru: nonlineer takozun frekansı çalışma noktasına bağlıdır).
   // qStatic yoksa (null) → δ=0 tanjantı (küçük-sehim) kullanılır.
-  function buildKtangentDyn(mounts, cg, qStatic){
-    const K=zeros(6,6);
-    for(const mnt of mounts){
+  // Takoz BAŞINA dinamik tanjant rijitlik [kx,ky,kz] (statik dengede). Hem
+  // buildKtangentDyn hem sönüm katsayıları AYNI kaynaktan beslensin diye ayrı
+  // fonksiyon: c = 2ζ√(k·m) bağıntısındaki k, modal frekansı üreten k ile aynı
+  // olmalıdır; yoksa ζ_mod tutarsız bir tabana oturur (nonlineer takozlarda
+  // nominal k_dyn ile tanjant arasında kat farkı olabilir).
+  function mountTangentKdyn(mounts, cg, qStatic){
+    return (mounts||[]).map(function(mnt){
       const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
       const A=makeA(d);
       const laws=mountStaticLaws(mnt);
-      const kt=[0,1,2].map(function(ax){
+      return [0,1,2].map(function(ax){
         const dax = qStatic ? A[ax].reduce((s,a,j)=>s+a*qStatic[j],0) : 0;
         const kStat = laws[ax].tangent(dax);                           // statik tanjant @ δ
         const ratio = (mnt.kstat && mnt.kstat[ax]>0) ? (mnt.kdyn[ax]/mnt.kstat[ax]) : 1;
         return kStat * ratio;                                          // dinamik tanjant
       });
+    });
+  }
+  function buildKtangentDyn(mounts, cg, qStatic){
+    const K=zeros(6,6);
+    const kts=mountTangentKdyn(mounts, cg, qStatic);
+    mounts.forEach(function(mnt, i){
+      const d=[mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
+      const A=makeA(d);
+      const kt=kts[i];
       const Ki=[[kt[0],0,0],[0,kt[1],0],[0,0,kt[2]]];
       addInPlace(K, matMul(matMul(matT(A),Ki),A));
-    }
+    });
     return K;
   }
 
@@ -886,16 +899,20 @@ var veMountCore = (function() {
   // Takoz başına viskoz sönüm katsayıları. shares (kg) mountLoadShares'ten;
   // verilmezse/0 ise o takozun c'si 0 çıkar (yük payı bilinmeden sönüm türetilemez).
   // Dönüş: [{ name, mShare (kg), zeta, c:[cx,cy,cz] (N·s/m) }]
-  function mountDamping(mounts, shares, zeta){
+  // kBasis (ops.): takoz başına [kx,ky,kz] — verilirse mnt.kdyn yerine BU kullanılır.
+  // Nonlineer takozlarda modal frekansı üreten rijitlik, nominal k_dyn değil statik
+  // dengedeki dinamik TANJANT'tır (mountTangentKdyn); c aynı tabandan türemezse
+  // ζ_mod = φᵀCφ/(2ωφᵀMφ) tutarsız bir orana oturur.
+  function mountDamping(mounts, shares, zeta, kBasis){
     const z = (zeta > 0) ? zeta : 0;
     return (mounts || []).map(function(mnt, i){
       const m = (shares && shares[i] > 0) ? shares[i] : 0;
-      const kd = mnt.kdyn || [0,0,0];
+      const kd = (kBasis && kBasis[i]) ? kBasis[i] : (mnt.kdyn || [0,0,0]);
       const c = [0,1,2].map(function(ax){
         const k = kd[ax] > 0 ? kd[ax] : 0;
         return 2 * z * Math.sqrt(k * m);
       });
-      return { name: mnt.name, mShare: m, zeta: z, c: c };
+      return { name: mnt.name, mShare: m, zeta: z, c: c, kBasis: kd };
     });
   }
 
@@ -1000,6 +1017,104 @@ var veMountCore = (function() {
       return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
     return frfPoint(mounts, cg, M6, K6, C6, cList, 2*Math.PI*fHz,
                     (dir === 0 || dir === 1) ? dir : 2);
+  }
+
+  // ═══════════ Modal sönüm ve modal enerji (SPEC ek — Faz 6) ═══════════
+
+  // ── Mod başına sönüm oranı ──
+  // Sönümsüz mod şekli φ_r üzerine sönüm matrisini izdüşürerek:
+  //
+  //   ζ_r = (φ_rᵀ C φ_r) / (2 ω_r φ_rᵀ M φ_r)
+  //
+  // NEDEN YAKLAŞIM: kesin değer kuadratik özdeğer probleminden (λ²M+λC+K)φ=0
+  // gelir; bu, modlar arası sönüm kuplajını da hesaba katar. Hafif sönümde
+  // (ζ ≲ 0,1 — elastomer takozun tipik bandı) kuplaj ihmal edilebilir ve bu
+  // izdüşüm standart mühendislik pratiğidir. GEÇERLİLİK ÖLÇÜLEBİLİR: frekans
+  // yanıtı eğrisinden yarı-güç genişliğiyle çıkarılan ζ ile karşılaştırılır
+  // (bkz. tests/unit/mount-modal-energy.test.js).
+  //
+  // NİYE DEĞERLİ: girilen TEK ζ montaja uygulanır ama modların gördüğü sönüm
+  // AYNI DEĞİLDİR — c = 2ζ√(k·m) bağıntısı √k ile ölçeklendiğinden C, K ile
+  // orantılı çıkmaz. Hangi modun az söndüğü tasarım bilgisidir.
+  //
+  // Normalizasyondan bağımsızdır (pay ve payda φ'de ikinci derecedendir).
+  //
+  // AŞIRI SÖNÜM: ζ_r ≥ 1 fiziksel olarak mümkündür — kullanıcı ζ girişi 0..1
+  // arasında olsa bile mod başına oran girilenin katı çıkabilir (ASFAT modelinde
+  // roll modu 1,78×; ζ_giriş > 0,562 → roll kritik sönümü aşar). Bu durum SESSİZCE
+  // YUTULMAZ: ζ_r gerçek değeriyle döner, over=true işaretlenir ve f_d = NaN olur
+  // (aşırı sönümlü modda salınım yoktur, "sönümlü doğal frekans" tanımsızdır).
+  // Dönüş: [{ zeta, f_d, over }] — f_d = f_n·√(1−ζ²) (yalnız ζ<1 için).
+  function quadForm(A, v){
+    let s = 0;
+    for(let i=0;i<6;i++){ let r=0; for(let j=0;j<6;j++) r += A[i][j]*v[j]; s += v[i]*r; }
+    return s;
+  }
+  function modalDampingRatios(modes, M6, C6){
+    if(!modes || !M6 || !C6) return null;
+    return modes.map(function(md){
+      const phi = md.phi;
+      const w = 2*Math.PI*md.f_Hz;
+      if(!phi || !(w > 0)) return { zeta: NaN, f_d: NaN, over: false };
+      const mG = quadForm(M6, phi);
+      if(!(mG > 0)) return { zeta: NaN, f_d: NaN, over: false };
+      const z = quadForm(C6, phi) / (2*w*mG);
+      if(!(z >= 0)) return { zeta: NaN, f_d: NaN, over: false };
+      return { zeta: z, over: (z >= 1),
+               f_d: (z < 1) ? md.f_Hz*Math.sqrt(1-z*z) : NaN };
+    });
+  }
+
+  // ── Modal enerji: genelleştirilmiş büyüklükler + gövde bazında dağılım ──
+  //
+  //   m_gen = φᵀMφ ,  k_gen = φᵀKφ ,  KE = ½ω²·m_gen
+  //
+  // m_gen/k_gen φ'nin ÖLÇEĞİNE bağlıdır (burada φ en büyük bileşene normalize);
+  // ORAN k_gen/m_gen = ω² ise normalizasyondan bağımsızdır — tutarlılık kapısı.
+  //
+  // GÖVDE BAZINDA KİNETİK ENERJİ: güç grubu tek rijit gövde olarak hareket eder,
+  // ama her alt gövde farklı hızdadır (v_j = u + θ×d_j). Payı:
+  //
+  //   KE_j = ½ω²·[ m_j|v_j|² + θᵀ I_j θ ]        (I_j gövdenin KENDİ CG'sinde)
+  //
+  // ve bileşenlerine ayrılır: X/Y/Z (öteleme), RXX/RYY/RZZ (dönme köşegen),
+  // RXY/RXZ/RYZ (dönme çarpım — tensör konvansiyonu, ½·2 = 1 katsayılı).
+  //
+  // ÖZDEŞLİK (test kilidi): Σ_j KE_j = ½ω²·φᵀM6φ. Kanıt: Σm_j d_j = 0 olduğundan
+  // çapraz terim düşer, paralel-eksen toplamı I_G'yi verir. Bu, dağılımın
+  // uydurma değil türetilmiş olduğunun güvencesidir.
+  //
+  // components: SI ({mass, cg[3], I:3x3, pointMass}), cg: birleşik ağırlık merkezi.
+  // Dönüş: [{ mGen, kGen, ke, bodies:[{name, ke, pct, X,Y,Z,RXX,RYY,RZZ,RXY,RXZ,RYZ}] }]
+  function modalEnergy(modes, M6, K6, components, cg){
+    if(!modes || !M6 || !K6) return null;
+    const comps = components || [];
+    return modes.map(function(md){
+      const phi = md.phi || [0,0,0,0,0,0];
+      const w = 2*Math.PI*md.f_Hz;
+      const mGen = quadForm(M6, phi), kGen = quadForm(K6, phi);
+      const half = 0.5*w*w;
+      const u = [phi[0],phi[1],phi[2]], th = [phi[3],phi[4],phi[5]];
+      const bodies = comps.map(function(c){
+        const d = [c.cg[0]-cg[0], c.cg[1]-cg[1], c.cg[2]-cg[2]];
+        // v = u + θ×d
+        const v = [ u[0] + th[1]*d[2] - th[2]*d[1],
+                    u[1] + th[2]*d[0] - th[0]*d[2],
+                    u[2] + th[0]*d[1] - th[1]*d[0] ];
+        const I = c.pointMass ? [[0,0,0],[0,0,0],[0,0,0]] : (c.I || [[0,0,0],[0,0,0],[0,0,0]]);
+        const e = {
+          name: c.name,
+          X: half*c.mass*v[0]*v[0], Y: half*c.mass*v[1]*v[1], Z: half*c.mass*v[2]*v[2],
+          RXX: half*I[0][0]*th[0]*th[0], RYY: half*I[1][1]*th[1]*th[1], RZZ: half*I[2][2]*th[2]*th[2],
+          RXY: half*2*I[0][1]*th[0]*th[1], RXZ: half*2*I[0][2]*th[0]*th[2], RYZ: half*2*I[1][2]*th[1]*th[2]
+        };
+        e.ke = e.X+e.Y+e.Z+e.RXX+e.RYY+e.RZZ+e.RXY+e.RXZ+e.RYZ;
+        return e;
+      });
+      const total = bodies.reduce(function(s,b){ return s + b.ke; }, 0);
+      bodies.forEach(function(b){ b.pct = (total !== 0) ? 100*b.ke/total : 0; });
+      return { mGen: mGen, kGen: kGen, ke: half*mGen, bodies: bodies, total: total };
+    });
   }
 
   // ═══════════════════ Tork zinciri (SPEC 4.5) ═══════════════════
@@ -1507,10 +1622,11 @@ var veMountCore = (function() {
     // Model
     combineMassProps, buildK, buildM6, buildModel,
     solveCase, solveCaseStop, solveCaseNL, solveAllCases, solveModal,
-    buildKtangentDyn, solveModalAtState,
+    buildKtangentDyn, mountTangentKdyn, solveModalAtState,
     transmissibility, bounceFrequency,
     mountLoadShares, mountDamping,
     buildCdamp, frfPoint, frequencyResponse, frfAt,
+    modalDampingRatios, modalEnergy,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
     defaultLoadCases, TTAR_EXAMPLE, ttarComponentsSI, ttarMountsSI, selfTest,
