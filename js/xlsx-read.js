@@ -4,8 +4,9 @@
 //
 // Neden kendi okuyucumuz: build.js her şeyi TEK bir MFSim_Code.html'e gömüyor.
 // SheetJS'in tam sürümü ~900 KB; bu dosyaya %18 ekliyor ve npm'deki kopyası
-// 2022'den beri güncellenmiyor. Buradaki okuyucu ~20 KB ve yalnızca bizim
-// ihtiyacımız olan alt kümeyi çözüyor: DİKDÖRTGEN bir ölçüm sayfası
+// 2022'den beri güncellenmiyor. Buradaki okuyucu ~26 KB (yorumlar dahil, ham
+// hâliyle gömülüyor) ve yalnızca bizim ihtiyacımız olan alt kümeyi çözüyor:
+// DİKDÖRTGEN bir ölçüm sayfası
 // (başlık satırı + sayı/metin hücreleri). Formül, grafik, pivot, koşullu
 // biçim OKUNMAZ — ölçüm dosyasında bunlar yok.
 //
