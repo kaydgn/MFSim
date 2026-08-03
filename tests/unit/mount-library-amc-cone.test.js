@@ -1,18 +1,22 @@
 /**
  * AMC MECANOCAUCHO® konik takozlar — kaynağa karşı altın referans
  * ───────────────────────────────────────────────────────────────
- * Kaynak: AMC Technical Assistance Service çok-gövdeli titreşim analizi raporları
- * (müşteri 79724 BMC Otomotiv, proje 3066 "8x8 Armored Carrier Truck – Powertrain",
- * hesaplar 13440 / 13948 / 13955 / 13957).
+ * Kütüphanede bu takozların İKİ AYRI VERİ TABANI var; test ikisini de kilitler:
  *
- * Kütüphaneye eklenen dört takozun (Cone 38 / Cone 67 / Cone 121 NP / Cone 121 NG)
- * rijitlikleri bu raporlardan geri çözüldü. Bu testler, DEĞERLERİN RAPORLARIN
- * KENDİ SONUÇLARINI yeniden ürettiğini kalıcı olarak kilitler:
+ *   (A) NOMİNAL KATALOG ('amcNNNNNN')  — üreticinin ürün verisi (AMC karşılaştırma
+ *       aracı dökümü + Cone 67 için AMC teknik departmanı bildirimi). Yüksüz,
+ *       küçük-sehim rijitliği; takozun kendi özelliği.
+ *   (B) BMC 8x8 ÇALIŞMA NOKTASI ('...-calc') — AMC'nin proje 3066 hesaplarından
+ *       (13440/13948/13955/13957) geri çözülen efektif sekant rijitlik.
  *
- *   • dört yapılandırmanın statik çökme + takoz kuvvetleri (Static Results),
- *   • dört yapılandırmanın 6 doğal frekansı (Natural Frequencies),
+ * Test neyi kilitliyor:
+ *   • (A) katalog değerleri birebir + dx = sx × cdyn/cstat özdeşliği;
+ *   • (B) değerlerinin dört raporun KENDİ sonuçlarını yeniden ürettiği
+ *     (statik çökme + takoz kuvvetleri + 6 doğal frekans, her rapor için);
  *   • oyuklu konilerin KASITLI radyal anizotropisi (sx ≠ sy) ve masif konilerin
- *     eksenel simetrisi (sx = sy).
+ *     eksenel simetrisi (sx = sy);
+ *   • iki tabanın BİRBİRİNE KARIŞMADIĞI ve farkın gerçek olduğu (nominal
+ *     değerlerle aynı raporlar belirgin şekilde SAPAR — bu kayıt altında).
  *
  * Bir hane kayarsa sonuç sessizce "makul ama yanlış" çıkar — testin karşılığı burada.
  * Aynı güç grubu (2285,2 kg) dört FARKLI takoz kombinasyonuyla çözüldüğü için tek
@@ -51,7 +55,12 @@ const P4 = [1506.40, 398.30, 264.20];
 const P5 = [1656.40, -296.70, 264.20];
 const P6 = [1656.40, 398.30, 264.20];
 
-const K38 = 'amc137963', K67 = 'amc137731', KNP = 'amc137829', KNG = 'amc137830';
+// (B) çalışma-noktası girdileri — raporları yeniden üreten taban
+const K38 = 'amc137963-calc', K67 = 'amc137731-calc',
+      KNP = 'amc137829',                       // NP'nin nominal karşılığı yok
+      KNG = 'amc137830-calc';
+// (A) nominal katalog girdileri
+const N38 = 'amc137963', N67 = 'amc137731', NNG = 'amc137830';
 
 // ── Dört rapor: takoz dizilimi + raporun KENDİ sonuçları ─────────────────────
 const REPORTS = [
@@ -117,22 +126,107 @@ const solveReport = (R) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-describe('Dört takoz kütüphaneye eklendi ve katalog kimliğini taşıyor', () => {
-  const EXPECT = {
-    [K38]: { name: 'Cone 38 60Sh (AMC 137963)',     s: [2670, 1065, 1180], d: [4265, 1690, 1715] },
-    [K67]: { name: 'Cone 67 50Sh (AMC 137731)',     s: [3550, 2115, 1280], d: [4630, 2785, 1625] },
-    [KNP]: { name: 'Cone 121 NP 55Sh (AMC 137829)', s: [3150, 3150, 1075], d: [4605, 4605, 1755] },
-    [KNG]: { name: 'Cone 121 NG 55Sh (AMC 137830)', s: [4405, 4405, 1530], d: [6380, 6380, 2080] },
-  };
+// ── (A) NOMİNAL KATALOG — üreticinin ürün verisi ─────────────────────────────
+// kod → [ad, kx, ky, kz (N/mm, statik), cdyn/cstat, maks. yük (kg), Sh, oyuklu?]
+const CATALOG = {
+  'amc137963': ['Cone 38 60Sh (AMC 137963)',     1800, 1210, 1150, 1.6,  650, 60, true],
+  'amc137964': ['Cone 38 70Sh (AMC 137964)',     2770, 1990, 1900, 1.8,  900, 70, true],
+  'amc137731': ['Cone 67 50Sh (AMC 137731)',     3090, 2150, 1325, 1.4,  900, 50, true],
+  'amc137981': ['Cone 39 40Sh (AMC 137981)',     1340, 1340,  720, 1.2,  400, 40, false],
+  'amc137982': ['Cone 39 50Sh (AMC 137982)',     2200, 2200, 1150, 1.4,  600, 50, false],
+  'amc137983': ['Cone 39 60Sh (AMC 137983)',     2490, 2490, 1400, 1.6,  900, 60, false],
+  'amc137830': ['Cone 121 NG 55Sh (AMC 137830)', 4000, 4000, 1350, 1.5, 1750, 55, false],
+  'amc137833': ['Cone 121 NG 65Sh (AMC 137833)', 5800, 5800, 2500, 1.7, 2000, 65, false],
+  'amc177296': ['AMC 177296',                    1090, 1090,  650, 2.0,  900, null, false],
+};
+// ── (B) BMC 8x8 çalışma noktası — AMC hesaplarından geri çözüm ───────────────
+const WORKPOINT = {
+  [K38]: ['Cone 38 60Sh (AMC 137963 · BMC 8x8 çalışma noktası)',     [2670, 1065, 1180], [4265, 1690, 1715]],
+  [K67]: ['Cone 67 50Sh (AMC 137731 · BMC 8x8 çalışma noktası)',     [3550, 2115, 1280], [4630, 2785, 1625]],
+  [KNG]: ['Cone 121 NG 55Sh (AMC 137830 · BMC 8x8 çalışma noktası)', [4405, 4405, 1530], [6380, 6380, 2080]],
+  [KNP]: ['Cone 121 NP 55Sh (AMC 137829 · BMC 8x8 çalışma noktası)', [3150, 3150, 1075], [4605, 4605, 1755]],
+};
 
-  test('dördü de gömülü katalogda, değerleri birebir', () => {
-    Object.entries(EXPECT).forEach(([k, v]) => {
+describe('(A) Nominal katalog girdileri', () => {
+  test('dokuz girdi de kütüphanede, statik değerleri üreticinin tablosuyla birebir', () => {
+    Object.entries(CATALOG).forEach(([k, [name, kx, ky, kz]]) => {
       const e = cp.VE_MOUNT_LIBRARY[k];
       expect(e).toBeDefined();
-      expect(e.name).toBe(v.name);
-      expect([e.sx, e.sy, e.sz]).toEqual(v.s);
-      expect([e.dx, e.dy, e.dz]).toEqual(v.d);
+      expect(e.name).toBe(name);
+      expect([e.sx, e.sy, e.sz]).toEqual([kx, ky, kz]);
     });
+  });
+
+  test('dinamik = statik × cdyn/cstat (üreticinin verdiği yöntem, tam sayı)', () => {
+    Object.entries(CATALOG).forEach(([k, [, kx, ky, kz, r]]) => {
+      const e = cp.VE_MOUNT_LIBRARY[k];
+      expect([e.dx, e.dy, e.dz]).toEqual([kx * r, ky * r, kz * r].map((v) => Math.round(v * 1e6) / 1e6));
+      expect(Number.isInteger(e.dx) && Number.isInteger(e.dy) && Number.isInteger(e.dz)).toBe(true);
+    });
+  });
+
+  test('AMC NR kuralı cdyn/cstat = (Sh+20)/50 — bilinen beş veriyi de veriyor', () => {
+    // Cone 39'un oranı bu kuraldan TÜRETİLDİ; kural, sertliği bilinen ve oranı
+    // kaynakta AÇIKÇA verilen beş NR koniyi birebir vermeli. Kural kayarsa
+    // 137981/137982/137983'ün dinamik değerleri de dayanaksız kalır.
+    const GIVEN = ['amc137731', 'amc137830', 'amc137963', 'amc137833', 'amc137964'];
+    GIVEN.forEach((k) => {
+      const [, , , , r, , sh] = CATALOG[k];
+      expect((sh + 20) / 50).toBeCloseTo(r, 10);
+    });
+    ['amc137981', 'amc137982', 'amc137983'].forEach((k) => {
+      const [, , , , r, , sh] = CATALOG[k];
+      expect((sh + 20) / 50).toBeCloseTo(r, 10);
+    });
+  });
+
+  test('oyuklu koni radyal anizotropik, masif koni eksenel simetrik', () => {
+    Object.entries(CATALOG).forEach(([k, [, kx, ky, , , , , cutouts]]) => {
+      const e = cp.VE_MOUNT_LIBRARY[k];
+      if (cutouts) {                          // CONE WITH CUTOUTS → kx > ky
+        expect(kx).toBeGreaterThan(ky);
+        expect(e.dx).toBeGreaterThan(e.dy);
+      } else {                                // SOLID CONE → eksenel simetrik
+        expect(e.sx).toBe(e.sy);
+        expect(e.dx).toBe(e.dy);
+      }
+      expect(e.sz).toBeLessThan(e.sx);        // koni: eksenel her zaman en yumuşak
+    });
+  });
+});
+
+describe('(B) Çalışma-noktası girdileri', () => {
+  test('dördü de kütüphanede, değerleri birebir', () => {
+    Object.entries(WORKPOINT).forEach(([k, [name, s, d]]) => {
+      const e = cp.VE_MOUNT_LIBRARY[k];
+      expect(e).toBeDefined();
+      expect(e.name).toBe(name);
+      expect([e.sx, e.sy, e.sz]).toEqual(s);
+      expect([e.dx, e.dy, e.dz]).toEqual(d);
+    });
+  });
+
+  test('adları "çalışma noktası" taşıyor — nominalle karıştırılamaz', () => {
+    Object.keys(WORKPOINT).forEach((k) =>
+      expect(cp.VE_MOUNT_LIBRARY[k].name).toContain('çalışma noktası'));
+    Object.keys(CATALOG).forEach((k) =>
+      expect(cp.VE_MOUNT_LIBRARY[k].name).not.toContain('çalışma noktası'));
+  });
+});
+
+describe('İki taban birbirine karışmıyor', () => {
+  test('aynı parça kodunun iki girdisi AYRI ve değerleri farklı', () => {
+    [['amc137963', K38], ['amc137731', K67], ['amc137830', KNG]].forEach(([nom, wp]) => {
+      const a = cp.VE_MOUNT_LIBRARY[nom], b = cp.VE_MOUNT_LIBRARY[wp];
+      expect(a).not.toBe(b);
+      expect([a.sx, a.sy, a.sz]).not.toEqual([b.sx, b.sy, b.sz]);
+    });
+  });
+
+  test('sert eksende fark BÜYÜK — sessizce takas edilirse fark edilir', () => {
+    // ön yük kauçuğu kayma yönünde sertleştirir; oyuklu konide sert eksende belirgin
+    expect(cp.VE_MOUNT_LIBRARY[K38].sx / cp.VE_MOUNT_LIBRARY['amc137963'].sx).toBeGreaterThan(1.4);
+    expect(cp.VE_MOUNT_LIBRARY[K67].sx / cp.VE_MOUNT_LIBRARY['amc137731'].sx).toBeGreaterThan(1.1);
   });
 
   test('anahtarlar ve adlar tekil — mevcut girdilerle çakışmıyor', () => {
@@ -150,48 +244,21 @@ describe('Dört takoz kütüphaneye eklendi ve katalog kimliğini taşıyor', ()
     expect(L['TK050'].fits.z.comp.k0).toBe(381);
   });
 
-  test('dördü de Takoz panelinin kütüphane listesinde görünüyor', () => {
+  test('hepsi Takoz panelinin kütüphane listesinde görünüyor', () => {
     const html = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: {} });
-    [K38, K67, KNP, KNG].forEach((k) => expect(html).toContain('value="' + k + '"'));
+    Object.keys(CATALOG).concat(Object.keys(WORKPOINT))
+      .forEach((k) => expect(html).toContain('value="' + k + '"'));
   });
 
   test('kütüphaneden uygulanınca Takoz düğümüne doğru rijitlikler yazılıyor', () => {
     const n = { id: 'm1', type: 'mnt-mount', def: componentDefs['mnt-mount'], data: {} };
     global.nodes = [n];
-    cp.veMntApplyLib('m1', K67);
+    cp.veMntApplyLib('m1', N67);                                   // nominal
+    expect([n.data.kxs, n.data.kys, n.data.kzs]).toEqual([3090, 2150, 1325]);
+    expect([n.data.kxd, n.data.kyd, n.data.kzd]).toEqual([4326, 3010, 1855]);
+    cp.veMntApplyLib('m1', K67);                                   // çalışma noktası
     expect([n.data.kxs, n.data.kys, n.data.kzs]).toEqual([3550, 2115, 1280]);
-    expect([n.data.kxd, n.data.kyd, n.data.kzd]).toEqual([4630, 2785, 1625]);
     expect(n.data.libKey).toBe(K67);
-  });
-});
-
-describe('Oyuklu / masif koni ayrımı korunuyor', () => {
-  // AMC kataloğu: "CONE WITH CUTOUTS ... offer different horizontal/vertical
-  // stiffness ratios". Oyuklu konide sx ≠ sy KASITLIDIR; masif konide sx = sy.
-  test('oyuklu koniler radyal olarak anizotropik (sx belirgin şekilde > sy)', () => {
-    [K38, K67].forEach((k) => {
-      const e = cp.VE_MOUNT_LIBRARY[k];
-      expect(e.sx / e.sy).toBeGreaterThan(1.5);
-      expect(e.dx / e.dy).toBeGreaterThan(1.5);
-    });
-  });
-
-  test('masif koniler eksenel simetrik (sx = sy, dx = dy)', () => {
-    [KNP, KNG].forEach((k) => {
-      const e = cp.VE_MOUNT_LIBRARY[k];
-      expect(e.sx).toBe(e.sy);
-      expect(e.dx).toBe(e.dy);
-    });
-  });
-
-  test('dinamik/statik oranı kauçuk için makul aralıkta (1,1–1,9)', () => {
-    [K38, K67, KNP, KNG].forEach((k) => {
-      const e = cp.VE_MOUNT_LIBRARY[k];
-      [[e.dx, e.sx], [e.dy, e.sy], [e.dz, e.sz]].forEach(([d, s]) => {
-        expect(d / s).toBeGreaterThan(1.1);
-        expect(d / s).toBeLessThan(1.9);
-      });
-    });
   });
 });
 
@@ -269,5 +336,31 @@ describe('Değerler yapılandırmalar arası TUTARLI — tesadüf değil', () =>
     const diff = Math.max(...good.stat.perMount.map((pm, i) =>
       Math.abs(pm.delta[2] - bad.stat.perMount[i].delta[2]) * 1000));
     expect(diff).toBeGreaterThan(1.0);                   // mm mertebesinde ayrışıyor
+  });
+});
+
+describe('Nominal taban raporları YENİDEN ÜRETMEZ — fark ölçülü ve kayıtlı', () => {
+  // Bu, kütüphanede neden iki taban durduğunun kanıtı. Nominal (yüksüz) değerler
+  // ürün seçimi için doğrudur ama AMC'nin ön yüklü hesabını tutturmaz. Biri gelip
+  // '-calc' girdilerini "gereksiz" diye silerse bu test, neyin kaybedildiğini
+  // sayıyla gösterir. Beklenen sapma ÖLÇÜLDÜ: Δf ≈ 2,92 Hz · Δδz ≈ 0,70 mm.
+  const NOMINAL_FOR = { [K38]: N38, [K67]: N67, [KNG]: NNG, [KNP]: KNP };
+
+  test('nominal değerlerle sapma, çalışma noktasınınkinden mertebe olarak büyük', () => {
+    let worstNomF = 0, worstNomZ = 0, worstWpF = 0, worstWpZ = 0;
+    REPORTS.forEach((R) => {
+      const nomR = { ...R, mounts: R.mounts.map(([k, p]) => [NOMINAL_FOR[k], p]) };
+      const wp = solveReport(R), nom = solveReport(nomR);
+      worstWpF = Math.max(worstWpF, ...wp.modes.map((m, i) => Math.abs(m.f_Hz - R.f[i])));
+      worstNomF = Math.max(worstNomF, ...nom.modes.map((m, i) => Math.abs(m.f_Hz - R.f[i])));
+      worstWpZ = Math.max(worstWpZ, ...wp.stat.perMount.map((pm, i) => Math.abs(pm.delta[2] * 1000 - R.dz[i])));
+      worstNomZ = Math.max(worstNomZ, ...nom.stat.perMount.map((pm, i) => Math.abs(pm.delta[2] * 1000 - R.dz[i])));
+    });
+    // çalışma noktası: sıkı  ·  nominal: belirgin şekilde sapıyor
+    expect(worstWpF).toBeLessThanOrEqual(0.47);
+    expect(worstWpZ).toBeLessThanOrEqual(TOL.dz);
+    expect(worstNomF).toBeGreaterThan(2.0);              // ölçülen ≈ 2,92 Hz
+    expect(worstNomZ).toBeGreaterThan(0.3);              // ölçülen ≈ 0,70 mm
+    expect(worstNomF / worstWpF).toBeGreaterThan(5);     // mertebe farkı
   });
 });
