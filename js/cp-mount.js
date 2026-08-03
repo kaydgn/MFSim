@@ -2621,13 +2621,17 @@ function _mntPrepareSolve(solverId){
   if(problems.length) return { error:problems, gather:gather };
   var mp=C.combineMassProps(si.components);
   if(!mp) return { error:['Kütle hesaplanamadı (toplam ≤ 0).'], gather:gather };
-  // Çözüm Modu: linear → curves'i sıyır (saf lineer); nonlinear/auto → eğrileri kullan.
+  // Çözüm Modu: linear → nonlineer yasaları sıyır (saf lineer); nonlinear/auto → kullan.
+  // HEM nokta tablosu (curves) HEM analitik fit (fits) sıyrılmalıdır: çekirdeğin
+  // mountHasCurve'ü ikisine de bakar. Yalnız curves atılırsa, analitik fit taşıyan
+  // takozda kullanıcı "Lineer" seçse bile solvedNL true kalır ve modal/enerji
+  // bölümleri tanjant rijitlikten üretilir — yani seçilmeyen model raporlanır.
   var mode=(solver.data && solver.data.solveMode) || 'auto';
   var mounts=si.mounts;
   if(mode==='linear'){
     mounts=si.mounts.map(function(m){
-      if(!m.curves) return m;
-      var c={}; Object.keys(m).forEach(function(k){ if(k!=='curves') c[k]=m[k]; }); return c;
+      if(!m.curves && !m.fits) return m;
+      var c={}; Object.keys(m).forEach(function(k){ if(k!=='curves' && k!=='fits') c[k]=m[k]; }); return c;
     });
   }
   var solvedNL=(typeof C.anyCurve==='function') && C.anyCurve(mounts);   // fiilen nonlineer mi
@@ -2652,13 +2656,24 @@ function _mntPrepareSolve(solverId){
                : {name:lc.name, loadCase:lc, res:null, error:'K matrisi singular/çözülemedi (montaj kinematik olarak serbest olabilir).'};
   };
   // Modal — nonlineerde statik dengedeki (Static) tanjant rijitlik; değilse K_dyn.
+  // Modal çözüm. Kullanılan M6 ve K matrisi prep'e SAKLANIR: modal enerji
+  // (genelleştirilmiş kütle/rijitlik) ve mod başına sönüm oranı, modları üreten
+  // AYNI matrislerden hesaplanmalı — yoksa k_gen/m_gen = ω² özdeşliği bozulur.
   prep.solveModes=function(allCases){
     var M6=C.buildM6(mp.m, mp.I_G);
+    prep.M6=M6;
     if(solvedNL){
       var qStat=(allCases[0] && allCases[0].res) ? allCases[0].res.q : null;
-      return C.solveModalAtState(mounts, mp.cg, M6, qStat);
+      prep.Kmodal=C.buildKtangentDyn(mounts, mp.cg, qStat);
+      // Sönüm de AYNI tabandan: c = 2ζ√(k·m) içindeki k, modal frekansı üreten
+      // dinamik tanjant olmalı. Nominal k_dyn kullanılırsa sertleşen takozda
+      // ζ_mod = φᵀCφ/(2ωφᵀMφ) sistematik olarak kayar (√(k_dyn/k_tan) kadar).
+      prep.kBasis=(typeof C.mountTangentKdyn==='function') ? C.mountTangentKdyn(mounts, mp.cg, qStat) : null;
+    } else {
+      prep.Kmodal=C.buildK(mounts, mp.cg, true);
+      prep.kBasis=null;                        // lineerde tanjant == nominal k_dyn
     }
-    return C.solveModal(C.buildK(mounts,mp.cg,true), M6, mounts, mp.cg);
+    return C.solveModal(prep.Kmodal, M6, mounts, mp.cg);
   };
   return prep;
 }
@@ -2676,7 +2691,21 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
   var C=prep.C, stat=null;
   for(var i=0;i<(allCases||[]).length;i++){ if(allCases[i] && allCases[i].name==='Static'){ stat=allCases[i]; break; } }
   R.loadShares = (stat && stat.res && C.mountLoadShares) ? C.mountLoadShares(stat.res, prep.si.g) : null;
-  R.damping    = (R.loadShares && C.mountDamping) ? C.mountDamping(prep.mounts, R.loadShares, prep.zeta) : null;
+  R.damping    = (R.loadShares && C.mountDamping) ? C.mountDamping(prep.mounts, R.loadShares, prep.zeta, prep.kBasis) : null;
+  R.kBasisTangent = !!prep.kBasis;                         // rapor notu: c hangi k'den türedi
+  R.components = prep.si.components;                       // modal enerji gövde dağılımı için
+  // ── Sönümlü modal + modal enerji ──────────────────────────────────────────
+  // Modları üreten AYNI M6/K ile hesaplanır (prep.solveModes bunları saklar).
+  // Farklı bir K kullanılırsa k_gen/m_gen = ω² özdeşliği bozulur ve modal enerji
+  // moda ait olmayan bir rijitliği raporlar. Matrisler yoksa (modal çözülmediyse)
+  // alanlar null kalır — uydurma sayı üretilmez.
+  if(modes && modes.length && prep.M6 && prep.Kmodal){
+    if(R.damping && C.buildCdamp && C.modalDampingRatios){
+      R.C6 = C.buildCdamp(prep.mounts, prep.mp.cg, R.damping);
+      R.modalDamping = C.modalDampingRatios(modes, prep.M6, R.C6);
+    }
+    if(C.modalEnergy) R.modalEnergy = C.modalEnergy(modes, prep.M6, prep.Kmodal, prep.si.components, prep.mp.cg);
+  }
   _veMntLast=R;
   return R;
 }

@@ -1165,6 +1165,32 @@ describe('Çözücü çözüm modu (auto/linear/nonlinear)', () => {
     expect(R.nlNoCurve).toBe(true);
   });
 
+  // Nokta tablosu (curveZ) yerine ANALİTİK FİT (fitZ) taşıyan takoz.
+  function fittedTopo(mode) {
+    const topo = buildTTARTopology();
+    topo.nodes.forEach((n) => {
+      if (n.type !== 'mnt-mount') return;
+      n.data.fitZ = { form: 'poly', k0: n.data.kzs, c3: n.data.kzs * 0.05 };
+    });
+    topo.solver.data.solveMode = mode;
+    global.nodes = topo.nodes;
+    global.connections = topo.connections;
+    return topo;
+  }
+
+  test('mod=linear ANALİTİK FİT\'i de sıyırır (yalnız curves değil)', () => {
+    // Regresyon: eskiden `if(!m.curves) return m;` yüzünden fitZ taşıyan takoz
+    // dokunulmadan geçiyordu → mountHasCurve true → solvedNL true. Kullanıcı
+    // "Lineer" seçmişken modal/enerji bölümleri tanjant rijitlikten üretiliyordu.
+    fittedTopo('auto');
+    expect(cp._mntComputeResults('sv').solvedNL).toBe(true);       // fit gerçekten etkin
+    fittedTopo('linear');
+    const R = cp._mntComputeResults('sv');
+    expect(R.solvedNL).toBe(false);
+    expect(core.anyCurve(R.mounts)).toBe(false);
+    R.mounts.forEach((m) => { expect(m.fits).toBeUndefined(); expect(m.curves).toBeUndefined(); });
+  });
+
   test('linear vs nonlinear sonuç FARKLI (eğri gerçekten yok sayılıyor)', () => {
     curvedTopo('linear');
     const Rlin = cp._mntComputeResults('sv');

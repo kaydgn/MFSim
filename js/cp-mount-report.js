@@ -37,6 +37,21 @@ function _rFs(v, d){
   if(s==='0') return '0';
   return (n<0?'−':'+')+s;
 }
+// Büyük/küçük mertebeler için bilimsel gösterim: 1,68·10⁶. 0,001 ≤ |v| < 10000
+// aralığında normal ondalık basılır — okunabilirlik için.
+// Mantis YUVARLAMA SONRASI normalize edilir: 9,9996·10⁶ değeri 2 haneye
+// yuvarlanınca "10·10⁶" olurdu; üs bir artırılıp "1·10⁷" basılır.
+function _rE(v, d){
+  var n=Number(v); if(!Number.isFinite(n)) return '—';
+  if(n===0) return '0';
+  var dd=(d==null)?2:d;
+  var e=Math.floor(Math.log10(Math.abs(n)));
+  if(e>=-3 && e<4) return _rF(n, dd);
+  var m=n/Math.pow(10,e);
+  if(!Number.isFinite(m)) return '—';                 // subnormal: 10^e taşar
+  if(Math.abs(Number(m.toFixed(dd)))>=10){ m/=10; e+=1; }
+  return _rF(m, dd)+'·10<sup>'+String(e).replace(/^-/, '−')+'</sup>';
+}
 function _rMountCore(){ return (typeof veMountCore!=='undefined')?veMountCore:(typeof window!=='undefined'?window.veMountCore:null); }
 
 // Raporun kullanacağı MOTOR büyüklükleri (ateşleme frekansı için). Rölanti devri
@@ -325,9 +340,10 @@ function _mntRepSection8(R, opts){
   h+=_mntRepFreqPlacement(R, opts);
   h+=_mntRepGearForces(R);
   h+=_mntRepDesignLoads(R);
+  h+=_mntRepConsistency(R);          // 8.11 — numara sırası okuma sırasıyla aynı olsun
   h+=_mntRepDamping(R);
   h+=_mntRepFRF(R, opts);
-  h+=_mntRepConsistency(R);
+  h+=_mntRepModalEnergy(R);
   return h;
 }
 
@@ -700,8 +716,21 @@ function _mntRepStep5Modal(R, C){
   var mstat=null;
   try { if(C && C.buildK && C.buildM6 && C.solveModal){ mstat=C.solveModal(C.buildK(R.mounts,R.mp.cg,false), C.buildM6(R.mp.m,R.mp.I_G), R.mounts, R.mp.cg); } } catch(e){}
   h+='<p>Sönümsüz özdeğer problemi (7.1) dinamik rijitlikle çözülür. Karşılaştırma için statik rijitlikle hesaplanan frekanslar da verilmiştir; oran, dinamik sertleşmeyi \\( \\sqrt{k_{\\text{din}}/k_{\\text{stat}}} \\) mertebesinde gösterir.</p>';
-  h+='<table><caption>Tablo '+_rTbl()+' — Rijit gövde modları: doğal frekanslar ve baskın mod şekli</caption>';
-  h+='<tr><th>Mod</th><th>f (k_din) [Hz]</th><th>f (k_stat) [Hz]</th><th>Baskın hareket (mod şekli)</th></tr>';
+  // Sönümlü modal — mod başına ζ_r ve sönümlü frekans (varsa; §8.12 sönüm tablosu
+  // üretilemediyse sütunlar hiç basılmaz, boş sütun gösterilmez).
+  var zmod=R.modalDamping;
+  var haveZ=!!(zmod && zmod.length===modes.length);
+  if(haveZ){
+    h+='<p>Takoz sönümü (§8.12) modal koordinatlara <em>izdüşürülerek</em> her mod için bir sönüm oranı verir; '
+      +'sönümlü doğal frekans buradan gelir:</p>';
+    h+='$$ \\zeta_r=\\frac{\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf C\\,\\boldsymbol\\varphi_r}'
+      +'{2\\,\\omega_r\\,\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf M\\,\\boldsymbol\\varphi_r},\\qquad '
+      +'f_{d,r}=f_r\\sqrt{1-\\zeta_r^{\\,2}} $$';
+  }
+  h+='<table><caption>Tablo '+_rTbl()+' — Rijit gövde modları: doğal frekanslar'+(haveZ?', mod başına sönüm':'')+' ve baskın mod şekli</caption>';
+  h+='<tr><th>Mod</th><th>f (k_din) [Hz]</th><th>f (k_stat) [Hz]</th>'
+    +(haveZ?'<th>ζ<sub>mod</sub></th><th>f<sub>d</sub> [Hz]</th>':'')
+    +'<th>Baskın hareket (mod şekli)</th></tr>';
   var lbl=['u_x','u_y','u_z','θ_x','θ_y','θ_z'];
   modes.forEach(function(md,i){
     var shape='';
@@ -711,11 +740,57 @@ function _mntRepStep5Modal(R, C){
     }
     var fs = (mstat && mstat[i]) ? _rF(mstat[i].f_Hz,3) : '—';
     var lb=_rEsc(md.label||'—')+(md.phi?' <span style="color:#5a6270">('+shape+')</span>':'');
+    var zc='';
+    if(haveZ){
+      var zr=zmod[i]||{};
+      // ζ_mod ≥ 1: aşırı sönümlü — salınım yok, f_d tanımsız. Sayı GİZLENMEZ,
+      // işaretlenir (NaN basmak "hesaplanamadı" gibi okunur, oysa hesaplandı).
+      zc='<td>'+(Number.isFinite(zr.zeta)?_rF(zr.zeta,4)+(zr.over?' <b title="aşırı sönümlü">≥1</b>':''):'—')+'</td>'
+        +'<td>'+(Number.isFinite(zr.f_d)?_rF(zr.f_d,3):(zr.over?'salınım yok':'—'))+'</td>';
+    }
     h+='<tr><td class="c">'+(i+1)+'</td>'
-      +'<td>'+_rF(md.f_Hz,3)+'</td><td>'+fs+'</td>'
+      +'<td>'+_rF(md.f_Hz,3)+'</td><td>'+fs+'</td>'+zc
       +'<td class="l">'+lb+'</td></tr>';
   });
   h+='</table>';
+  if(haveZ){
+    // Argmax/argmin ORİJİNAL dizide aranır — sonlu olmayan ζ'ler filtrelenip
+    // indeks kaydırılırsa rapor yanlış mod numarası basar (kendi tablosuyla çelişir).
+    var iMax=-1, iMin=-1;
+    zmod.forEach(function(e,i){
+      if(!Number.isFinite(e.zeta)) return;
+      if(iMax<0 || e.zeta>zmod[iMax].zeta) iMax=i;
+      if(iMin<0 || e.zeta<zmod[iMin].zeta) iMin=i;
+    });
+    var zIn=_mntRepZeta(R, {});
+    if(iMax>=0){
+      var zmax=zmod[iMax].zeta, zmin=zmod[iMin].zeta;
+      // Nedensel açıklama VERİDEN türetilir: en sönümlü mod gerçekten dönme
+      // baskın mı? Değilse kaldıraç gerekçesi yazılmaz (her modelde doğru değil).
+      var phiMax=(modes[iMax] && modes[iMax].phi) || [0,0,0,0,0,0];
+      var rotDom=Math.max(Math.abs(phiMax[3]),Math.abs(phiMax[4]),Math.abs(phiMax[5]))
+               > Math.max(Math.abs(phiMax[0]),Math.abs(phiMax[1]),Math.abs(phiMax[2]));
+      h+='<p style="font-size:0.9em; color:#5a6270;">Girilen tek sönüm oranı \\( \\zeta='+_rF(zIn,4)+' \\) '
+        +'modlara <b>eşit dağılmaz</b>: burada '+_rF(zmin,4)+' – '+_rF(zmax,4)+' aralığında çıkar '
+        +'(en sönümlü mod '+(iMax+1)+' — '+_rEsc(modes[iMax].label||'—')+'). Sebep, sönüm katsayılarının takoz başına '
+        +'\\( c=2\\zeta\\sqrt{k_{\\text{din}}m_{\\text{pay}}} \\) ile türetilmesi ve her modun takozları farklı '
+        +'oranlarda zorlamasıdır'
+        +(rotDom ? ' — bu modelde en sönümlü mod <b>dönme baskın</b>dır: takozlar kaldıraç koluyla zorlanır ve daha çok söner.'
+                 : ' — bu modelde en sönümlü mod öteleme baskındır; belirleyici olan, o modun en sert / en yüklü takozları ne ölçüde zorladığıdır.')
+        +' Bağıntı hafif sönüm varsayımıyla (modlar arası kuplaj ihmal) yazılmıştır; orantılı sönümde tamdır.</p>';
+      if(zmod.some(function(e){return e.over;})){
+        h+='<div class="note warn"><span class="t">Uyarı · aşırı sönüm</span>Bir veya daha fazla modun '
+          +'sönüm oranı kritik sönümü aşıyor ( \\( \\zeta_{\\text{mod}}\\ge 1 \\) ): o modda salınım yoktur, '
+          +'sönümlü doğal frekans tanımsızdır. Girilen \\( \\zeta \\) elastomer takoz için tipik banda '
+          +'(0,02–0,10) göre yüksek olabilir.</div>';
+      }
+    }
+    if(R.kBasisTangent){
+      h+='<p style="font-size:0.9em; color:#5a6270;">Nonlineer takoz bulunduğundan sönüm katsayıları da '
+        +'modal frekansları üreten <b>dinamik tanjant</b> rijitlikten türetilmiştir (nominal \\( k_{\\text{din}} \\) '
+        +'değil) — böylece \\( \\zeta_{\\text{mod}} \\) ile modal frekans aynı çalışma noktasına oturur.</p>';
+    }
+  }
   var warn=modes.some(function(m){return m.warning;});
   if(warn){
     h+='<div class="note warn"><span class="t">Uyarı · serbest mod</span>Bir veya daha fazla mod sıfıra yakın frekansta çıktı — yapılandırma kinematik olarak serbest olabilir (yetersiz takoz kısıtı). Takoz sayısını/yerleşimini gözden geçirin.</div>';
@@ -918,8 +993,12 @@ function _mntRepDamping(R){
   h+='</table>';
   h+='<p style="font-size:0.9em; color:#5a6270;">Yük payı statik (1g) çözümden alınır: \\( m_{\\text{pay}}=|f_z|/g \\); toplamı güç grubunun kütlesini verir. '
     +'Daha sert ve/veya daha çok yük taşıyan takoz daha çok söner. '
-    +'<b>Not:</b> bu katsayılar modal analize henüz girmez — doğal frekanslar sönümsüz özdeğer probleminden hesaplanır (§8.7); '
-    +'sönüm, iletilebilirlik değerlendirmesinde (§8.8) ve takoz seçiminde kullanılır.</p>';
+    +'<b>Nereye girer:</b> doğal frekanslar sönümsüz özdeğer probleminden hesaplanır (§8.7). Bu katsayılar '
+    +'\\( \\mathbf C=\\sum_i \\mathbf A_i^{\\mathsf T}\\mathrm{diag}(c_i)\\mathbf A_i \\) matrisine toplanır ve '
+    +'yalnız iki yerde KULLANILIR: mod başına sönüm oranı \\( \\zeta_{\\text{mod}} \\) (§8.7 tablosu) ve tam '
+    +'frekans yanıtı (§8.13). §8.8 ise C matrisini değil, girilen skaler \\( \\zeta \\)\'yı kullanır; §8.14 '
+    +'modal enerji hesabı sönümü hiç içermez — oradaki \\( \\zeta_{\\text{mod}} \\) sütunu §8.7\'den yalnızca '
+    +'gösterim amaçlı taşınır.</p>';
   return h;
 }
 
@@ -1035,6 +1114,135 @@ function _mntRepFRF(R, opts){
       +'. İzolasyon bölgesinde (r &gt; √2) tek-serbestlik kestirimi tam çözüme çok yakındır; '
       +'bu, §8.8 değerlendirmesinin bu model için geçerli olduğunu doğrular. Rezonans civarında '
       +'ikisi ayrışır — orada yalnız bu bölümün eğrisi kullanılmalıdır.</p>';
+  }
+  return h;
+}
+
+// §8.14 — Modal enerji: genelleştirilmiş kütle/rijitlik, kinetik enerji ve
+// enerjinin gövdeler + serbestlik dereceleri üzerindeki dağılımı.
+// Referans: ASR-SR-116 Tablo 12–17 (Adams "Modal Energy" çıktısı) aynı yapıdadır.
+//
+// NORMALİZASYON UYARISI: mod şekli en büyük bileşene normalize edilir (max|φ|=1),
+// dolayısıyla m_gen, k_gen ve KE'nin MUTLAK büyüklüğü keyfidir — ölçek seçimine
+// bağlıdır. Fiziksel bilgi taşıyan iki büyüklük vardır ve ikisi de normalizasyondan
+// bağımsızdır: (1) k_gen/m_gen = ω² oranı, (2) enerjinin yüzde dağılımı.
+// Rapor bu ikisini öne çıkarır; mutlak değerler yalnızca izlenebilirlik için verilir.
+function _mntRepModalEnergy(R){
+  var me=R.modalEnergy, modes=R.modes;
+  if(!me || !me.length || !modes || modes.length!==me.length) return '';
+  var zmod=R.modalDamping, haveZ=!!(zmod && zmod.length===me.length);
+  var h='<h3>8.14 Modal enerji dağılımı</h3>';
+  h+='<p>Her mod için genelleştirilmiş kütle ve rijitlik, mod şeklinin kütle ve rijitlik '
+    +'matrisleriyle iç çarpımından gelir; kinetik enerji bunlardan türer:</p>';
+  h+='$$ m_r=\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf M\\,\\boldsymbol\\varphi_r,\\qquad '
+    +'k_r=\\boldsymbol\\varphi_r^{\\mathsf T}\\mathbf K\\,\\boldsymbol\\varphi_r,\\qquad '
+    +'T_r=\\tfrac12\\,\\omega_r^2\\,m_r,\\qquad \\frac{k_r}{m_r}=\\omega_r^2 $$';
+  h+='<p>Son eşitlik <b>bağımsız bir doğrulamadır</b>: özdeğer çözümü doğruysa \\( \\sqrt{k_r/m_r}/2\\pi \\) '
+    +'tablodaki frekansı birebir vermelidir. Mod şekilleri en büyük bileşene normalize edildiğinden '
+    +'\\( m_r,\\,k_r,\\,T_r \\) değerlerinin <em>mutlak</em> büyüklüğü ölçek seçimine bağlıdır; '
+    +'fiziksel yorum <b>oranlarda ve yüzde dağılımdadır</b>. Birimler: φ öteleme [m], dönme [rad] '
+    +'→ \\( m_r \\) [kg·m²], \\( k_r \\) ve \\( T_r \\) [J].</p>';
+
+  h+='<table><caption>Tablo '+_rTbl()+' — Mod başına genelleştirilmiş kütle, rijitlik ve kinetik enerji</caption>';
+  h+='<tr><th>Mod</th><th>f [Hz]</th><th>m<sub>r</sub> [kg·m²]</th><th>k<sub>r</sub> [J]</th>'
+    +'<th>√(k<sub>r</sub>/m<sub>r</sub>)/2π [Hz]</th><th>T<sub>r</sub> [J]</th>'
+    +(haveZ?'<th>ζ<sub>mod</sub></th>':'')+'<th>Baskın hareket</th></tr>';
+  // Kapı yalnız DEĞERLENDİRİLEBİLİR modlarda anlamlıdır. Serbest modda (f≈0)
+  // hem f hem k_r sayısal olarak sıfırdır: bağıl fark 0/0 mertebesindedir ve
+  // rastgele 1'e çıkar. Böyle bir modu kapıya sokmak, "farklı matrisler
+  // kullanılıyor olabilir" diye YANLIŞ bir teşhis bastırır — oysa sebep
+  // yetersiz takoz kısıtıdır ve §8.7 bunu zaten doğru söyler.
+  var F_MIN=1e-6, maxErr=0, nEval=0, nSkip=0;
+  me.forEach(function(e,i){
+    var fChk=(e.mGen>0)?Math.sqrt(Math.max(e.kGen,0)/e.mGen)/(2*Math.PI):NaN;
+    if(Number.isFinite(fChk) && modes[i].f_Hz>F_MIN){
+      maxErr=Math.max(maxErr, Math.abs(fChk-modes[i].f_Hz)/modes[i].f_Hz); nEval++;
+    } else nSkip++;
+    h+='<tr><td class="c">'+(i+1)+'</td><td>'+_rF(modes[i].f_Hz,3)+'</td>'
+      +'<td>'+_rE(e.mGen,3)+'</td><td>'+_rE(e.kGen,3)+'</td>'
+      +'<td>'+_rF(fChk,3)+'</td><td>'+_rE(e.ke,3)+'</td>'
+      +(haveZ?'<td>'+((zmod[i]&&Number.isFinite(zmod[i].zeta))?_rF(zmod[i].zeta,4):'—')+'</td>':'')
+      +'<td class="l">'+_rEsc(modes[i].label||'—')+'</td></tr>';
+  });
+  h+='</table>';
+  var skipTxt = nSkip ? ' '+nSkip+' mod sıfıra yakın frekansta olduğu için kapı dışında bırakıldı (bkz. §8.7 serbest mod uyarısı).' : '';
+  if(!nEval){
+    // Değerlendirilebilir tek mod yok → "fark 0" gibi DOĞRULANMAMIŞ bir olumlu
+    // iddia basılmaz; kapı nötr kalır.
+    h+='<div class="note warn"><span class="t">Özdeğer tutarlılığı</span>'
+      +'Kontrol edilebilir mod bulunamadı — genelleştirilmiş kütle/rijitlik hesaplanamadı.'+skipTxt+'</div>';
+  } else {
+    h+='<div class="note '+(maxErr<1e-6?'check':'warn')+'"><span class="t">Özdeğer tutarlılığı</span>'
+      +'\\( \\sqrt{k_r/m_r}/2\\pi \\) ile modal frekans arasındaki en büyük bağıl fark ('+nEval+' modda): '
+      +(maxErr===0?'0':_rE(maxErr,2))+'. '
+      +(maxErr<1e-6 ? 'Modlar, enerji hesabında kullanılan aynı K ve M matrislerinin özçözümüdür.'
+                    : '<b>Beklenenden büyük</b> — modal çözüm ile enerji hesabı farklı matrisler kullanıyor olabilir.')
+      +skipTxt+'</div>';
+  }
+
+  // ── Gövde bazında dağılım — modlar × bileşenler (özet) ──
+  var bodies=me[0].bodies||[];
+  if(bodies.length){
+    h+='<p>Kinetik enerjinin gövdeler arasındaki dağılımı, hangi bileşenin modu <em>sürüklediğini</em> '
+      +'gösterir: bir mod ağırlıklı olarak tek bir gövdedeyse, o gövdenin bağlantısı (takoz veya '
+      +'iç bağlantı) o modun denetim noktasıdır. Gövde hızları rijit gövde kinematiğinden gelir: '
+      +'\\( \\mathbf v_j=\\mathbf u+\\boldsymbol\\theta\\times\\mathbf d_j \\).</p>';
+    h+='<table><caption>Tablo '+_rTbl()+' — Kinetik enerjinin gövdeler arasındaki dağılımı [%]</caption>';
+    h+='<tr><th>Mod</th><th>f [Hz]</th>';
+    bodies.forEach(function(b){ h+='<th>'+_rEsc(b.name)+'</th>'; });
+    h+='<th>Baskın hareket</th></tr>';
+    me.forEach(function(e,i){
+      h+='<tr><td class="c">'+(i+1)+'</td><td>'+_rF(modes[i].f_Hz,2)+'</td>';
+      (e.bodies||[]).forEach(function(b){
+        var p=Math.max(0, Math.min(100, b.pct||0));
+        var bar='background:linear-gradient(90deg, rgba(36,66,95,0.20) '+p.toFixed(1)+'%, transparent '+p.toFixed(1)+'%);';
+        h+='<td style="'+bar+'">'+_rF(b.pct,1)+'%</td>';
+      });
+      h+='<td class="l">'+_rEsc(modes[i].label||'—')+'</td></tr>';
+    });
+    h+='</table>';
+
+    // ── Mod başına ayrıntı: gövde × serbestlik derecesi (PDF Tablo 12–17 yapısı) ──
+    h+='<p>Aşağıda her mod için enerji, gövde <em>ve</em> serbestlik derecesi bazında ayrıştırılmıştır. '
+      +'X/Y/Z öteleme, RXX/RYY/RZZ dönme atalet terimleri, RXY/RXZ/RYZ ise atalet <b>çarpım</b> '
+      +'terimleridir (asimetrik kütle dağılımının kuplaj katkısı; nokta kütlelerde ve simetrik '
+      +'bileşenlerde sıfırdır). Tüm değerler o modun toplam kinetik enerjisinin yüzdesidir.</p>';
+    var dofs=[['X','X'],['Y','Y'],['Z','Z'],['RXX','RXX'],['RYY','RYY'],['RZZ','RZZ'],
+              ['RXY','RXY'],['RXZ','RXZ'],['RYZ','RYZ']];
+    var atlanan=[];
+    me.forEach(function(e,i){
+      var tot=e.total||0;
+      // ω=0 → tüm enerjiler 0 → yüzde tanımsız. Tablo basılmaz ama SESSİZCE
+      // atlanmaz: okuyucu eksik mod numarasını aşağıdaki notta bulur.
+      if(!(Math.abs(tot)>0)){ atlanan.push(i+1); return; }
+      h+='<table><caption>Tablo '+_rTbl()+' — Mod '+(i+1)+' ('+_rF(modes[i].f_Hz,2)+' Hz, '
+        +_rEsc(modes[i].label||'—')+'): kinetik enerji dağılımı [%]</caption>';
+      h+='<tr><th>Gövde</th><th>Toplam</th>';
+      dofs.forEach(function(dd){ h+='<th>'+dd[1]+'</th>'; });
+      h+='</tr>';
+      (e.bodies||[]).forEach(function(b){
+        h+='<tr><td class="l">'+_rEsc(b.name)+'</td><td><b>'+_rF(b.pct,2)+'</b></td>';
+        dofs.forEach(function(dd){ h+='<td>'+_rF(100*(b[dd[0]]||0)/tot,2)+'</td>'; });
+        h+='</tr>';
+      });
+      h+='<tr class="sum"><td class="l">Toplam</td><td><b>100</b></td>';
+      dofs.forEach(function(dd){
+        var s=(e.bodies||[]).reduce(function(a,b){ return a+(b[dd[0]]||0); },0);
+        h+='<td>'+_rF(100*s/tot,2)+'</td>';
+      });
+      h+='</tr></table>';
+    });
+    if(atlanan.length){
+      h+='<div class="note warn"><span class="t">Atlanan modlar</span>'
+        +'Mod '+atlanan.join(', ')+' için ayrıntı tablosu üretilmedi: frekans sıfıra yakın olduğundan '
+        +'kinetik enerji de sıfırdır ve yüzde dağılım tanımsızdır (serbest mod — bkz. §8.7).</div>';
+    }
+    h+='<p style="font-size:0.9em; color:#5a6270;">Gövde enerjilerinin toplamı, birleşik kütle '
+      +'matrisiyle hesaplanan \\( \\tfrac12\\omega^2\\boldsymbol\\varphi^{\\mathsf T}\\mathbf M\\boldsymbol\\varphi \\) '
+      +'değerine <b>tam olarak</b> eşittir; bu, ağırlık merkezi tanımının (\\( \\sum_j m_j\\mathbf d_j=\\mathbf 0 \\)) '
+      +'doğrudan sonucudur ve kütle birleştirmenin (§8.1) bağımsız bir kontrolüdür. '
+      +'<b>Nokta kütle</b> işaretli bileşenlerde eşitlik korunur: kütle birleştirme de o bileşenin '
+      +'kendi ataletini sıfır alır, yani her iki taraf aynı kabulü paylaşır.</p>';
   }
   return h;
 }
@@ -1173,6 +1381,7 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepDesignLoads: _mntRepDesignLoads,
     _mntRepMaxForce: _mntRepMaxForce,
     _mntRepCompliance: _mntRepCompliance,
-    _rF: _rF, _rFs: _rFs, _rEsc: _rEsc
+    _mntRepModalEnergy: _mntRepModalEnergy,
+    _rF: _rF, _rFs: _rFs, _rE: _rE, _rEsc: _rEsc
   };
 }
