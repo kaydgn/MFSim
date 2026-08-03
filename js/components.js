@@ -676,6 +676,11 @@ var VE_STANDALONE_TYPES = ['vehicle','road','sensor','sensor-wizard','solver','s
     function sync() {
       var visible = getComputedStyle(overlay).display !== 'none';
       main.classList.toggle('ve-no-module', visible);
+      // Sayfa rayı (.ve-nav-rail) .ve-main'in DIŞINDA — Sonuçlar'da da durması
+      // gerektiği için kabına taşındı. Aynı durumu oraya da yaz ki karşılama
+      // ekranında ray da gizlensin: proje yokken "Sonuçlar" gidilecek yer değil.
+      var shell = document.getElementById('sayfa2-content');
+      if(shell) shell.classList.toggle('ve-no-module', visible);
       // Şerit de aynı duruma uysun: çalışma alanı yokken Kaydet/Doğrula/
       // Çalıştır gibi komutlar pasif çizilir (sol panel zaten gizleniyordu,
       // şeridin etkin görünmesi tutarsızdı).
