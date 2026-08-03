@@ -344,6 +344,8 @@ function _mntRepSection8(R, opts){
   h+=_mntRepDamping(R);
   h+=_mntRepFRF(R, opts);
   h+=_mntRepModalEnergy(R);
+  h+=_mntRepSoftening(R, opts);
+  h+=_mntRepModeShapes(R);
   return h;
 }
 
@@ -575,6 +577,41 @@ function _mntRepStep1Mass(R){
       +'Statik durumda takozların ilettiği toplam düşey kuvvet Σf_z = '+_rF(sfz/1000,2)+' kN, dış düşey yükü '
       +'F_z = '+_rF(Fz/1000,2)+' kN dengeler (fark '+_rF(Math.abs(stat.res.checks.sumFzResidual),1)+' N). '
       +'Atalet tensöründeki çarpım terimleri (I_xz, I_yz) sıfırdan farklıysa, bounce–pitch ve roll–yaw kuplajlarının kütle tarafındaki kaynağıdır.</div>';
+  }
+  // ── Asal atalet — dış referanslarla karşılaştırma için ────────────────────
+  // Çok gövdeli yazılımların "aggregate mass" çıktısı ataleti çoğu zaman ASAL
+  // eksende, bir yönelim açısıyla birlikte basar. Global eksendeki I_G ile o
+  // sayılar doğrudan karşılaştırılamaz; okuyucu farkı "hata" sanmasın diye
+  // ayrıştırma burada verilir.
+  var C0=_rMountCore();
+  var pr = (C0 && C0.principalInertia) ? C0.principalInertia(I) : null;
+  if(pr){
+    var off = Math.max(Math.abs(I[0][1]), Math.abs(I[0][2]), Math.abs(I[1][2]));
+    var diag = Math.max(Math.abs(I[0][0]), Math.abs(I[1][1]), Math.abs(I[2][2]));
+    var oran = (diag>0) ? off/diag : 0;
+    h+='<table><caption>Tablo '+_rTbl()+' — Birleşik gövdenin atalet tensörü: global eksen ve asal eksen</caption>';
+    h+='<tr><th></th><th>1</th><th>2</th><th>3</th><th>Açıklama</th></tr>';
+    h+='<tr><td class="l">Global köşegen I<sub>xx</sub>/I<sub>yy</sub>/I<sub>zz</sub></td>'
+      +'<td>'+_rF(I[0][0],2)+'</td><td>'+_rF(I[1][1],2)+'</td><td>'+_rF(I[2][2],2)+'</td>'
+      +'<td class="l">model eksen takımında [kg·m²]</td></tr>';
+    h+='<tr><td class="l">Çarpım I<sub>xy</sub>/I<sub>xz</sub>/I<sub>yz</sub></td>'
+      +'<td>'+_rF(I[0][1],3)+'</td><td>'+_rF(I[0][2],3)+'</td><td>'+_rF(I[1][2],3)+'</td>'
+      +'<td class="l">kütle kaynaklı kuplaj terimleri</td></tr>';
+    h+='<tr><td class="l"><b>Asal atalet</b> I<sub>1</sub>&lt;I<sub>2</sub>&lt;I<sub>3</sub></td>'
+      +'<td><b>'+_rF(pr.values[0],2)+'</b></td><td><b>'+_rF(pr.values[1],2)+'</b></td><td><b>'+_rF(pr.values[2],2)+'</b></td>'
+      +'<td class="l">tensörün özdeğerleri</td></tr>';
+    ['1','2','3'].forEach(function(n,k){
+      h+='<tr><td class="l">Asal eksen e<sub>'+n+'</sub></td>'
+        +'<td>'+_rFs(pr.axes[k][0],3)+'</td><td>'+_rFs(pr.axes[k][1],3)+'</td><td>'+_rFs(pr.axes[k][2],3)+'</td>'
+        +'<td class="l">global eksende birim vektör</td></tr>';
+    });
+    h+='</table>';
+    h+='<p style="font-size:0.9em; color:#5a6270;">Çarpım terimlerinin köşegene oranı '
+      +_rF(100*oran,1)+'%. '
+      +(oran < 0.02
+        ? 'Model eksenleri asal eksenlere pratik olarak çakışıktır; global köşegen değerler doğrudan yorumlanabilir.'
+        : '<b>Model eksenleri asal eksenlerle çakışık değildir.</b> Dış bir yazılımın (Adams/CATIA) "aggregate mass" çıktısı ataleti asal eksende ve bir yönelim açısıyla basıyorsa, o sayılar buradaki global köşegenle DEĞİL, yukarıdaki asal atalet satırıyla karşılaştırılmalıdır.')
+      +' Birleştirme paralel-eksen teoremiyle yapılır; nokta kütle işaretli bileşenlerin kendi ataleti sıfır alınır.</p>';
   }
   return h;
 }
@@ -1261,6 +1298,230 @@ function _mntRepModalEnergy(R){
   return h;
 }
 
+// §8.16 — Mod şekli görselleştirmesi (ASR-SR-116 Şekil 10–15 karşılığı).
+// Mod şekli φ = [u; θ] rijit gövde yer değiştirmesidir: her nokta
+//   Δp = u + θ × (p − c_G)
+// kadar öteler. Sayısal matris (§8.7) hangi serbestlik derecesinin baskın
+// olduğunu söyler ama gövdenin NASIL hareket ettiğini göstermez; bu bölüm
+// deforme şekli çizer. Ölçek görseldir (mod şekli normalize, mutlak genlik yok).
+function _mntRepModeFigure(geom, cgM, phi, plane, no, scale){
+  var horiz='x', vert=(plane==='xy')?'y':'z';
+  var hi=(plane==='xy')?1:2;                      // dikey eksenin indeksi (y ya da z)
+  // Rijit gövde yer değiştirmesi: Δ = u + θ×d   (mm cinsinden; θ [rad] × d [mm])
+  function disp(p){
+    var d=[p.x-cgM.x, p.y-cgM.y, p.z-cgM.z];
+    return [ phi[0]*1000 + phi[4]*d[2] - phi[5]*d[1],
+             phi[1]*1000 + phi[5]*d[0] - phi[3]*d[2],
+             phi[2]*1000 + phi[3]*d[1] - phi[4]*d[0] ];
+  }
+  var items=geom.comps.map(function(c){ return {p:c, tip:'k', ad:c.name}; })
+             .concat(geom.mounts.map(function(m){ return {p:m, tip:'t', ad:m.name}; }));
+  var pts=[];
+  items.forEach(function(it){
+    var dd=disp(it.p);
+    pts.push({h:it.p[horiz], v:it.p[vert]});
+    pts.push({h:it.p[horiz]+dd[0]*scale, v:it.p[vert]+dd[hi]*scale});
+  });
+  pts.push({h:cgM.x, v:(plane==='xy')?cgM.y:cgM.z});
+  var hs=pts.map(function(p){return p.h;}), vs=pts.map(function(p){return p.v;});
+  var minH=Math.min.apply(null,hs), maxH=Math.max.apply(null,hs);
+  var minV=Math.min.apply(null,vs), maxV=Math.max.apply(null,vs);
+  var W=760, H=250, padL=54, padR=40, padT=34, padB=34;
+  var rngH=Math.max(maxH-minH,1), rngV=Math.max(maxV-minV,1);
+  var plotW=W-padL-padR, plotH=H-padT-padB;
+  var sc=Math.min(plotW/rngH, plotH/rngV);
+  var offH=padL+(plotW-rngH*sc)/2, offV=padT+(plotH-rngV*sc)/2;
+  function sx(hh){ return offH+(hh-minH)*sc; }
+  function sy(vv){ return offV+(maxV-vv)*sc; }
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+  s+='<text x="'+padL+'" y="18" font-size="11.5" fill="#5a6270">'+(plane==='xy'?'Üstten (X–Y)':'Yandan (X–Z)')+'</text>';
+  // ── referans (deforme olmamış) konum: soluk ──
+  items.forEach(function(it){
+    var x=sx(it.p[horiz]), y=sy(it.p[vert]);
+    if(it.tip==='t') s+='<rect x="'+(x-4).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" width="8" height="8" fill="none" stroke="#c3cad3" stroke-width="1.2"/>';
+    else s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.6" fill="none" stroke="#c3cad3" stroke-width="1.2"/>';
+  });
+  // ── deforme konum + yer değiştirme oku ──
+  var takozNo=0;
+  items.forEach(function(it){
+    var dd=disp(it.p);
+    var x0=sx(it.p[horiz]), y0=sy(it.p[vert]);
+    var x1=sx(it.p[horiz]+dd[0]*scale), y1=sy(it.p[vert]+dd[hi]*scale);
+    var renk=(it.tip==='t')?'#8a3ca0':'#24425f';
+    if(Math.abs(x1-x0)>0.8 || Math.abs(y1-y0)>0.8)
+      s+='<line x1="'+x0.toFixed(1)+'" y1="'+y0.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y1.toFixed(1)+'" stroke="'+renk+'" stroke-width="1" opacity="0.45"/>';
+    if(it.tip==='t'){
+      s+='<rect x="'+(x1-4).toFixed(1)+'" y="'+(y1-4).toFixed(1)+'" width="8" height="8" fill="'+renk+'"/>';
+      // Takoz adı — hangi takozun ne kadar hareket ettiği okunabilsin diye.
+      // Uzun adlar (parça numarası ekli) ilk sözcük öbeğine kısaltılır.
+      var ad=String(it.ad||'').split('·')[0].trim();
+      // Etiket dikey ofseti 3 kademede döner: birbirine çok yakın takozlar
+      // (ör. Sol Ön x=535 ile Sol Arka x=637, aynı y) üst üste binmesin.
+      var dyEt=[-7, 4, 15][takozNo % 3];
+      takozNo++;
+      if(ad) s+='<text x="'+(x1+6).toFixed(1)+'" y="'+(y1+dyEt).toFixed(1)+'" font-size="9" fill="#5a6270">'+_rEsc(ad)+'</text>';
+    }
+    else s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="4" fill="'+renk+'"/>';
+  });
+  // birleşik ağırlık merkezi
+  var gx=sx(cgM.x), gy=sy((plane==='xy')?cgM.y:cgM.z);
+  s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="5.5" fill="none" stroke="#1b1e24" stroke-width="1.4"/>';
+  s+='<text x="'+(gx+8).toFixed(1)+'" y="'+(gy-6).toFixed(1)+'" font-size="10.5" fill="#1b1e24">G</text>';
+  s+='</svg>';
+  return s;
+}
+function _mntRepModeShapes(R){
+  var modes=R.modes||[];
+  if(!modes.length || !R.mp) return '';
+  var geom=_mntRepGeom(R);
+  if(!geom.comps.length && !geom.mounts.length) return '';
+  var cgM={x:R.mp.cg[0]*1000, y:R.mp.cg[1]*1000, z:R.mp.cg[2]*1000};
+  // Görsel ölçek: en büyük yer değiştirme, modelin karakteristik boyutunun
+  // ~%12'si kadar görünsün. Mod şekli normalize olduğu için mutlak genlik yoktur.
+  var hs=geom.mounts.map(function(m){return m.x;}).concat(geom.comps.map(function(c){return c.x;}));
+  var span=(hs.length>1) ? (Math.max.apply(null,hs)-Math.min.apply(null,hs)) : 1000;
+  var h='<h3>8.16 Mod şekilleri — deforme geometri</h3>';
+  h+='<p>Mod şekli \\( \\boldsymbol\\varphi=[\\mathbf u;\\boldsymbol\\theta] \\) bir rijit gövde yer değiştirmesidir: '
+    +'geometrideki her nokta \\( \\Delta\\mathbf p=\\mathbf u+\\boldsymbol\\theta\\times(\\mathbf p-\\mathbf c_G) \\) kadar öteler. '
+    +'§8.7 matrisi hangi serbestlik derecesinin baskın olduğunu <em>sayıyla</em> verir; burada gövdenin '
+    +'<b>nasıl</b> hareket ettiği çizilir. Soluk şekiller referans (deforme olmamış) konumu, dolu şekiller '
+    +'deforme konumu gösterir; kare = takoz, daire = bileşen ağırlık merkezi, G = birleşik ağırlık merkezi.</p>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Genlik <b>görseldir</b>: mod şekli en büyük bileşene normalize edildiği '
+    +'için mutlak bir yer değiştirme değeri yoktur — şekiller karşılaştırılabilir olsun diye her modda aynı görsel ölçek kullanılır.</p>';
+  modes.forEach(function(md,i){
+    var phi=md.phi||[0,0,0,0,0,0];
+    // Her mod için ölçek: bu modun en büyük nokta yer değiştirmesi span'ın %12'si olsun
+    var maxD=0;
+    geom.comps.concat(geom.mounts).forEach(function(p){
+      var d=[p.x-cgM.x, p.y-cgM.y, p.z-cgM.z];
+      var dd=[ phi[0]*1000 + phi[4]*d[2] - phi[5]*d[1],
+               phi[1]*1000 + phi[5]*d[0] - phi[3]*d[2],
+               phi[2]*1000 + phi[3]*d[1] - phi[4]*d[0] ];
+      maxD=Math.max(maxD, Math.abs(dd[0]), Math.abs(dd[1]), Math.abs(dd[2]));
+    });
+    var scale=(maxD>0) ? (span*0.12/maxD) : 0;
+    h+='<figure style="break-inside:avoid;">'
+      +_mntRepModeFigure(geom, cgM, phi, 'xy', 'm'+i+'a', scale)
+      +_mntRepModeFigure(geom, cgM, phi, 'xz', 'm'+i+'b', scale)
+      +'<figcaption><b>Şekil '+_rFig()+' —</b> Mod '+(i+1)+': '+_rF(md.f_Hz,2)+' Hz · '
+      +_rEsc(md.label||'—')+'. Üstten (X–Y) ve yandan (X–Z) görünüş.</figcaption></figure>';
+  });
+  return h;
+}
+
+// §8.15 — Rijitlik yumuşatma duyarlılığı (tasarım iterasyonu).
+// Mevcut takozlar frekans kriterlerini sağlamıyorsa sorulacak soru "ne kadar
+// yumuşatmalı?" olur. Bu bölüm takoz rijitliklerini (statik + dinamik birlikte)
+// ölçekleyip her adımda modal çözümü ve düşey iletilebilirliği YENİDEN çözer —
+// f ∝ √k yaklaşımı VARSAYILMAZ, özdeğer problemi her katsayı için kurulur.
+// Referans: ASR-SR-116 §5 / Tablo 19 (%50 yumuşatma sonrası beklenen modlar).
+var _SOFT_FACTORS = [1.00, 0.80, 0.65, 0.50, 0.40, 0.30];
+function _mntRepSoftening(R, opts){
+  var C=_rMountCore();
+  if(!C || !C.softeningScan || !R.mounts || !R.mounts.length || !R.mp) return '';
+  var modes=R.modes||[];
+  if(!modes.length) return '';
+  var _eng=_mntRepEngine(R, opts||{});
+  var rpm=_eng.idleRpm, z=_eng.cylinders;
+  var haveIdle=(rpm>0 && z>0), fFire=haveIdle?(rpm/60)*(z/2):NaN;
+  var zeta=_mntRepZeta(R, opts||{});
+  var M6=C.buildM6(R.mp.m, R.mp.I_G);
+  var scan=C.softeningScan(R.mounts, R.mp.cg, M6, R.mp.m, _SOFT_FACTORS, fFire, zeta);
+  if(!scan || !scan.length) return '';
+
+  var GAP_MIN=0.5, BAND=[8,10], lim=haveIdle?0.5*fFire:NaN;
+  function degerlendir(row){
+    var pl=C.modePlacement(row.modes.map(function(m){ return {f_Hz:m.f_Hz, label:m.label}; }),
+                           { fLimit: haveIdle?lim:undefined, gapMin:GAP_MIN, bandLo:BAND[0], bandHi:BAND[1] });
+    return {
+      pl: pl,
+      k1:  haveIdle ? (pl.exceed.length===0) : null,
+      k1a: pl.minGapPair ? (pl.minGap > GAP_MIN) : null,
+      k1b: (pl.inBand.length===0),
+      k2:  Number.isFinite(row.T) ? (row.T < 0.5) : null,
+      k2r: Number.isFinite(row.T) ? (row.T < 0.10) : null
+    };
+  }
+  var sonuc=scan.map(degerlendir);
+
+  var h='<h3>8.15 Rijitlik yumuşatma duyarlılığı</h3>';
+  h+='<p>Frekans kriterleri sağlanmıyorsa tasarım adımı takozu <em>yumuşatmaktır</em>. '
+    +'Aşağıda takoz rijitlikleri (statik ve dinamik birlikte) ölçeklenip her adımda '
+    +'özdeğer problemi ve iletilebilirlik <b>yeniden çözülür</b>.</p>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Tüm takozlar aynı katsayıyla ölçeklendiğinde '
+    +'frekanslar <b>tam olarak</b> \\( \\sqrt{\\alpha} \\) ile gider ( \\( \\alpha\\mathbf K\\boldsymbol\\varphi'
+    +'=\\omega^2\\mathbf M\\boldsymbol\\varphi\\Rightarrow\\omega^2\\propto\\alpha \\), kuplaj olsun olmasın). '
+    +'Tablonun asıl bilgisi frekans sütunları değil, <b>iletilebilirlik ve kriter sonuçlarıdır</b>: '
+    +'T katsayıyla orantılı ölçeklenmez, mod ayrıklığı ve bant çakışması ise ancak gerçek '
+    +'frekans listesine bakılarak değerlendirilebilir.</p>';
+  h+='<table><caption>Tablo '+_rTbl()+' — Takoz rijitliği ölçeklendikçe mod frekansları ve rölanti iletilebilirliği</caption>';
+  h+='<tr><th>Ölçek</th>';
+  for(var i=1;i<=modes.length;i++) h+='<th>f<sub>'+i+'</sub></th>';
+  h+='<th>f<sub>bounce</sub></th><th>T</th><th>Kriter 1</th><th>1a</th><th>1b</th><th>2</th></tr>';
+  function tik(v){ return (v===null)?'—':(v?'<span class="ok">✓</span>':'<span style="color:var(--warn);font-weight:600;">✗</span>'); }
+  scan.forEach(function(row,k){
+    var s=sonuc[k];
+    var vurgu=(row.factor===1) ? ' style="background:rgba(36,66,95,0.10);"' : '';
+    h+='<tr'+vurgu+'><td class="c"><b>'+_rF(row.factor*100,0)+'%</b></td>';
+    row.modes.forEach(function(m){ h+='<td>'+_rF(m.f_Hz,2)+'</td>'; });
+    h+='<td>'+_rF(row.fBounce,2)+'</td>'
+      +'<td>'+(Number.isFinite(row.T)?_rF(row.T*100,1)+'%':'—')+'</td>'
+      +'<td class="c">'+tik(s.k1)+'</td><td class="c">'+tik(s.k1a)+'</td>'
+      +'<td class="c">'+tik(s.k1b)+'</td><td class="c">'+tik(s.k2)+'</td></tr>';
+  });
+  h+='</table>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">%100 satırı mevcut tasarımdır (§8.7 ile aynı frekanslar). '
+    +'Frekanslar [Hz], T rölanti ateşleme frekansındaki düşey kuvvet iletilebilirliğidir.</p>';
+
+  // ── Hüküm: kriterleri sağlayan en SERT (en az yumuşatılmış) tasarım ──
+  var uygunIdx=-1;
+  for(var j=0;j<scan.length;j++){
+    var s2=sonuc[j];
+    if(s2.k1!==false && s2.k1a!==false && s2.k1b!==false && s2.k2!==false){ uygunIdx=j; break; }
+  }
+  var mevcutOK = sonuc[0] && sonuc[0].k1!==false && sonuc[0].k1a!==false && sonuc[0].k1b!==false && sonuc[0].k2!==false;
+  if(mevcutOK){
+    h+='<div class="note check"><span class="t">Yumuşatma gerekmiyor</span>'
+      +'Mevcut takoz rijitlikleri (%100) taranan frekans ve izolasyon kriterlerinin tümünü sağlıyor. '
+      +'Tablo yine de tasarım payını gösterir: hangi yumuşatma seviyesine kadar kriterlerin korunduğu okunabilir.</div>';
+  } else if(uygunIdx>=0){
+    var f0=scan[uygunIdx];
+    h+='<div class="note warn"><span class="t">Yumuşatma gerekiyor</span>'
+      +'Mevcut rijitlikte en az bir kriter sağlanmıyor. Taranan seviyeler içinde kriterleri sağlayan '
+      +'<b>en sert</b> tasarım <b>%'+_rF(f0.factor*100,0)+'</b> ölçek: modlar '
+      +f0.modes.map(function(m){ return _rF(m.f_Hz,2); }).join(' / ')+' Hz, '
+      +'T = '+(Number.isFinite(f0.T)?_rF(f0.T*100,1)+'%':'—')+'. '
+      +'Bu bir <em>hedef</em>tir; nihai takoz kataloğundan seçildikten sonra analiz tekrarlanmalıdır.</div>';
+  } else {
+    // Hangi kriter(ler) engelliyor? Yalnız "olmadı" demek kullanıcıyı kör bırakır;
+    // takozu daha da yumuşatmanın çözmeyeceği bir kriter varsa bunu söylemek gerekir.
+    var AD={k1:'Kriter 1 (modal bant)', k1a:'Kriter 1a (mod ayrıklığı)',
+            k1b:'Kriter 1b (8–10 Hz bandı)', k2:'Kriter 2 (iletilebilirlik)'};
+    var engel={};
+    sonuc.forEach(function(s3){ ['k1','k1a','k1b','k2'].forEach(function(k){ if(s3[k]===false) engel[k]=(engel[k]||0)+1; }); });
+    // Yumuşatmayla İYİLEŞEN kriter en az bir seviyede sağlanmışsa "kısmen çözülür".
+    var hicSaglanmayan=Object.keys(engel).filter(function(k){ return engel[k]===sonuc.length; });
+    h+='<div class="note warn"><span class="t">Taranan aralıkta tüm kriterleri sağlayan seviye yok</span>'
+      +'%'+_rF(_SOFT_FACTORS[0]*100,0)+' – %'+_rF(_SOFT_FACTORS[_SOFT_FACTORS.length-1]*100,0)
+      +' aralığında hiçbir ölçek katsayısı kriterlerin tümünü aynı anda sağlamıyor. '
+      +'Engelleyen kriterler: '
+      +Object.keys(engel).map(function(k){ return '<b>'+AD[k]+'</b> ('+engel[k]+'/'+sonuc.length+' seviyede kırmızı)'; }).join(', ')+'. ';
+    if(hicSaglanmayan.length){
+      h+='<b>'+hicSaglanmayan.map(function(k){ return AD[k]; }).join(' ve ')+' hiçbir seviyede sağlanmıyor</b> — '
+        +'bu kriter(ler) rijitlik ölçeğine duyarsızdır ya da ters yönde çalışır; '
+        +'yalnız yumuşatarak çözülemez. ';
+    }
+    h+='Takoz <b>yerleşimi</b> (hardpoint), kütle dağılımı veya eksen başına farklı '
+      +'oranda yumuşatma (yalnız düşey ekseni indirmek gibi) değerlendirilmelidir. '
+      +'Bu tablo tüm takozları AYNI katsayıyla ölçekler; eksen ya da takoz başına '
+      +'farklılaştırma bu taramanın kapsamı dışındadır.</div>';
+  }
+  h+='<p style="font-size:0.9em; color:#5a6270;">Tarama yalnız <b>frekans ve izolasyon</b> kriterlerini değerlendirir. '
+    +'Yumuşatma statik çökmeyi \\( 1/\\text{ölçek} \\) oranında büyütür: %50 yumuşatma statik çökmeyi ikiye katlar '
+    +'ve ±15 mm metal-metal durdurucuya yaklaştırır. Seçim kesinleşmeden §8.5, §8.6 ve §8.10 yeniden okunmalıdır.</p>';
+  return h;
+}
+
 // Doğrulama → iç-tutarlılık özeti
 function _mntRepConsistency(R){
   var h='<h3>8.11 Model içi tutarlılık kontrolleri</h3>';
@@ -1289,27 +1550,66 @@ function _mntRepCompliance(R, opts){
   opts=opts||{};
   var modes=R.modes||[];
   var h='<h2 id="uygunluk"><span class="no">✓</span>Motor Takozu Uygunluğu</h2>';
-  h+='<p>Bu bölüm, §8 analiz sonuçlarını <strong>şirket motor takozu hedef kriterlerine</strong> göre değerlendirir. Roll modu ve rölanti izolasyon kriterleri, motor rölanti devri ve silindir sayısı girdisine bağlıdır (<strong>Motor</strong> bileşeninden girilir).</p>';
+  h+='<p>Bu bölüm, §8 analiz sonuçlarını <strong>şirket motor takozu hedef kriterlerine</strong> göre değerlendirir. Modal bant ve rölanti izolasyon kriterleri, motor rölanti devri ve silindir sayısı girdisine bağlıdır (<strong>Motor</strong> bileşeninden girilir); mod ayrıklığı ve yaylandırılmamış kütle bandı kriterleri yalnız modal sonuca bakar.</p>';
   if(!modes.length){ return h+'<div class="note warn"><span class="t">Değerlendirilemedi</span>Modal sonuç yok — çözüm üretilemedi.</div>'; }
   var _eng=_mntRepEngine(R, opts);        // TEK kaynak: Motor bileşeni
   var rpm=_eng.idleRpm, z=_eng.cylinders;
   var haveIdle=(rpm>0 && z>0), fFire=haveIdle?(rpm/60)*(z/2):NaN;
 
-  // Kriter 1 — PowerPack Roll modu < %50·f_ateş. Roll modu = EN YÜKSEK rijit
-  // gövde modu (mod 6); ateşlemeye en yakın ve izolasyon için belirleyici mod
-  // budur (§8.8 hesabı ve tasarım tanımıyla tutarlı).
-  var rollM=modes[modes.length-1];
-  var fRoll=rollM?rollM.f_Hz:NaN, c1;
-  if(!haveIdle) c1={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
-  else { var lim1=0.5*fFire; c1={st:(fRoll<lim1?'ok':'no'), bulgu:'Roll modu (mod '+modes.length+') <b>'+_rF(fRoll,2)+'</b> Hz · sınır %50·f_ateş = '+_rF(lim1,2)+' Hz'}; }
+  // ── Mod yerleşimi ölçümleri (çekirdek: modePlacement) ───────────────────
+  // KAPSAM DÜZELTMESİ: Kriter 1 eskiden yalnız EN YÜKSEK (roll) modu sınardı.
+  // Kaynak kriter "modlar ... 15 Hz değerini geçmemeli" der — HEPSİ. Yalnız en
+  // yükseği bakmak, ortadaki bir modun sınırı aşıp fark edilmemesine yol açar
+  // (en yüksek mod sınırın altındaysa tablo "uygun" derdi).
+  var _C=_rMountCore();
+  var pl = (_C && _C.modePlacement)
+    ? _C.modePlacement(modes, { fLimit: haveIdle ? 0.5*fFire : undefined }) : null;
 
-  // Kriter 2 — Rölanti transmissibility < %50. §8.8 ile AYNI hesap noktası
+  var c1;
+  if(!haveIdle) c1={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
+  else {
+    var lim1=0.5*fFire;
+    var asan=(pl&&pl.exceed)||[];
+    c1={ st:(asan.length?'no':'ok'),
+         bulgu: asan.length
+           ? asan.length+' mod sınırı aşıyor ('+asan.map(function(m){ return 'mod '+m.no+' '+_rF(m.f,2)+' Hz'; }).join(', ')
+             +') · sınır %50·f_ateş = '+_rF(lim1,2)+' Hz'
+           : 'En yüksek mod (mod '+modes.length+') <b>'+_rF(pl?pl.fMax:NaN,2)+'</b> Hz &lt; sınır '+_rF(lim1,2)+' Hz — 6/6 mod bandın altında' };
+  }
+
+  // Kriter 1a — komşu modlar arası ayrıklık > 0,5 Hz. Birbirine çok yakın iki
+  // mod pratikte tek bir geniş rezonans gibi davranır; yarı-güç genişliğinden
+  // sönüm okumak da güvenilmez olur (bkz. §8.7 geçerlilik notu).
+  var GAP_MIN=0.5, c1a;
+  if(!pl || !pl.minGapPair) c1a={st:'wait', bulgu:'Modal sonuç yok'};
+  else c1a={ st:(pl.minGap>GAP_MIN?'ok':'no'),
+    bulgu:'En küçük ayrıklık <b>'+_rF(pl.minGap,3)+'</b> Hz (mod '+pl.minGapPair[0]+'–'+pl.minGapPair[1]+') · sınır &gt; '+_rF(GAP_MIN,1)+' Hz' };
+
+  // Kriter 1b — yaylandırılmamış kütle (aks/lastik) modu bandı 8–10 Hz ile
+  // çakışma. Güç grubu modu bu banda düşerse süspansiyon üzerinden enerji
+  // alışverişi olur; takoz izolasyonu tek başına yetmez.
+  var c1b;
+  if(!pl) c1b={st:'wait', bulgu:'Modal sonuç yok'};
+  else c1b={ st:(pl.inBand.length?'no':'ok'),
+    bulgu: pl.inBand.length
+      ? pl.inBand.length+' mod bantta ('+pl.inBand.map(function(m){ return 'mod '+m.no+' '+_rF(m.f,2)+' Hz'; }).join(', ')+') · bant '+_rF(pl.bandLo,0)+'–'+_rF(pl.bandHi,0)+' Hz'
+      : 'Hiçbir mod '+_rF(pl.bandLo,0)+'–'+_rF(pl.bandHi,0)+' Hz bandında değil' };
+
+  // Kriter 2 — Rölanti transmissibility. §8.8 ile AYNI hesap noktası
   // (_mntRepIsolation): taban DÜŞEY (bounce) frekansıdır, modal frekans değil.
+  // İKİ EŞİK gösterilir: uygulamanın hükmü %50 kapısına göredir; kaynak
+  // dokümanların (ör. ASR-SR-116) kullandığı %10 referansı da basılır ki aynı
+  // sayı için iki farklı hükmün nereden geldiği görünsün.
+  var T_GATE=0.5, T_REF=0.10;
   var iso=_mntRepIsolation(R, opts), c2;
   if(!haveIdle) c2={st:'wait', bulgu:'Rölanti devri + silindir sayısı girin (Motor bileşeni)'};
-  else c2={st:(iso.T<0.5?'ok':'no'),
+  else c2={st:(iso.T<T_GATE?'ok':'no'),
     bulgu:'f_ateş '+_rF(iso.fFire,1)+' Hz / f_bounce '+_rF(iso.fBounce,2)+' Hz → r='+_rF(iso.r,2)
-         +', T=<b>'+(isFinite(iso.T)?_rF(iso.T*100,1)+'%':'∞')+'</b> (§8.8)'};
+         +', T=<b>'+(isFinite(iso.T)?_rF(iso.T*100,1)+'%':'∞')+'</b> (§8.8) · '
+         +(isFinite(iso.T)
+            ? (iso.T<T_REF ? '%10 referans eşiğini de sağlıyor'
+                           : '<span style="color:var(--warn);">%10 referans eşiğinin üzerinde</span>')
+            : '—')};
 
   // Kriter 3 — Vites başına takoz kuvvetleri (§8.9): tanımlı her vites ayrı çözülür.
   var gears=R.gearCases||[], gmax=null;
@@ -1333,19 +1633,23 @@ function _mntRepCompliance(R, opts){
   function badge(st){ return st==='ok'?'<span class="ok">✓ Uygun</span>':(st==='wait'?'<span style="color:#5a6270;">— bekliyor</span>':'<span style="color:var(--warn);font-weight:600;">✗ kontrol</span>'); }
   h+='<table><caption>Tablo '+_rTbl()+' — Motor takozu hedef kriterleri uygunluk kontrolü</caption>';
   h+='<tr><th>#</th><th>Kriter</th><th>Hedef</th><th>Bulgu</th><th>Sonuç</th></tr>';
-  [['1','PowerPack Roll modu','&lt; %50 · f_ateş',c1],['2','Rölanti transmissibility','&lt; %50',c2],
-   ['3','Vites başına takoz kuvvetleri','kontrol',c3],['4','Maks tork · 3,5g düşey · 1g yanal · 1g boyuna','kontrol',c4]
+  [['1', 'Modal bant — tüm modlar','&lt; %50 · f_ateş',c1],
+   ['1a','Modlar arası ayrıklık','&gt; 0,5 Hz',c1a],
+   ['1b','Yaylandırılmamış kütle bandı','8–10 Hz ile çakışmama',c1b],
+   ['2', 'Rölanti transmissibility','&lt; %50 (referans %10)',c2],
+   ['3', 'Vites başına takoz kuvvetleri','kontrol',c3],
+   ['4', 'Maks tork · 3,5g düşey · 1g yanal · 1g boyuna','kontrol',c4]
   ].forEach(function(r){ h+='<tr><td class="c">'+r[0]+'</td><td class="l">'+r[1]+'</td><td class="l">'+r[2]+'</td><td class="l">'+r[3].bulgu+'</td><td class="c">'+badge(r[3].st)+'</td></tr>'; });
   h+='</table>';
 
-  var sts=[c1.st,c2.st,c3.st,c4.st], anyNo=sts.indexOf('no')>=0, anyWait=sts.indexOf('wait')>=0;
+  var sts=[c1.st,c1a.st,c1b.st,c2.st,c3.st,c4.st], anyNo=sts.indexOf('no')>=0, anyWait=sts.indexOf('wait')>=0;
   h+='<div class="note '+(anyNo?'warn':(anyWait?'':'check'))+'"><span class="t">Genel hüküm</span>';
   if(anyNo) h+='Bir veya daha fazla kriter <b>sağlanmıyor / kontrol gerektiriyor</b>; ilgili satırları ve §8 ayrıntısını inceleyin.';
   else if(anyWait) h+='Kuvvet ve yükleme kriterleri sağlanıyor; roll modu ve transmissibility için <b>Motor</b> bileşenine rölanti devri + silindir sayısı girin → tam değerlendirme.';
   else h+='<b>Tüm hedef kriterler sağlanıyor</b> — güç grubu takoz sistemi şirket motor takozu hedeflerini karşılıyor.';
   if(concern.length) h+=' <span style="color:var(--warn);">Not: '+_rEsc(concern.join(', '))+' durum(lar)ında çekme (lift-off) var — takoz seçimi gözden geçirilmeli.</span>';
   h+='</div>';
-  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Roll modu = en yüksek rijit gövde modu (mod '+(modes.length)+', §8.8). Ateşleme frekansı f_ateş = (N/60)·(z/2). Transmissibility T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] ile, DÜŞEY (bounce) doğal frekansı f_bounce=(1/2π)·√(Σk_z,din/m) tabanında hesaplanır (§8.8); ζ Çözücü\'de girilir. Roll modu Kriter 1\'in konusudur ve iletilebilirlik hesabına GİRMEZ. Vites başına kuvvetler §8.9, tasarım yük koşulları (1g yanal dâhil) §8.10\'da ayrıntılıdır.</div>';
+  h+='<div style="font-size:0.9em; color:#5a6270; margin-top:6px;">Ateşleme frekansı f_ateş = (N/60)·(z/2). <b>Kriter 1</b> modların TAMAMINI sınar — en yüksek mod (mod '+(modes.length)+') tek başına belirleyici değildir; ortadaki bir mod da sınırı aşabilir. <b>Kriter 1a</b> komşu modların birbirine karışmasını, <b>1b</b> güç grubu modlarının aks/lastik (yaylandırılmamış kütle) bandına düşmesini engeller. Transmissibility T=√[(1+(2ζr)²)/((1−r²)²+(2ζr)²)] ile, DÜŞEY (bounce) doğal frekansı f_bounce=(1/2π)·√(Σk_z,din/m) tabanında hesaplanır (§8.8); ζ Çözücü\'de girilir; modal frekans bu hesaba GİRMEZ. Vites başına kuvvetler §8.9, tasarım yük koşulları (1g yanal dâhil) §8.10, kriterleri sağlamak için gereken rijitlik yumuşatması §8.15\'te ayrıntılıdır.</div>';
   return h;
 }
 
@@ -1396,6 +1700,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepMaxForce: _mntRepMaxForce,
     _mntRepCompliance: _mntRepCompliance,
     _mntRepModalEnergy: _mntRepModalEnergy,
+    _mntRepSoftening: _mntRepSoftening,
+    _mntRepModeShapes: _mntRepModeShapes,
     _rF: _rF, _rFs: _rFs, _rE: _rE, _rEsc: _rEsc
   };
 }

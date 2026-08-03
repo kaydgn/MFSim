@@ -871,6 +871,119 @@ var veMountCore = (function() {
     return Math.sqrt(kz / mTotal) / (2 * Math.PI);
   }
 
+  // ═══════ Asal atalet — Adams "aggregate mass" çıktısının karşılığı ═══════
+  //
+  // Birleşik atalet tensörünün ÖZDEĞERLERİ (asal atalet momentleri) ve
+  // ÖZVEKTÖRLERİ (asal eksenler). Köşegen dışı terimler sıfır değilse global
+  // eksende okunan I_xx/I_yy/I_zz, gövdenin "gerçek" atalet mertebelerini
+  // vermez — Adams'ın aggregate mass komutu da bu yüzden bir Orientation
+  // (yönelim) satırı basar. Referans dokümanla (ASR-SR-116 Şekil 5) sayıları
+  // karşılaştırmak için bu ayrıştırma gerekir: oradaki 44,6 / 97,8 / 94,6
+  // değerleri döndürülmüş eksende verilmiştir, global eksende değil.
+  //
+  // Jacobi döndürme yöntemi — 3×3 simetrik matris için kesin ve kararlı.
+  // Dönüş: { values:[I1,I2,I3] (artan), axes:[[e1],[e2],[e3]] (satır = eksen) }
+  function principalInertia(I){
+    if(!I) return null;
+    let a = [[I[0][0],I[0][1],I[0][2]],[I[1][0],I[1][1],I[1][2]],[I[2][0],I[2][1],I[2][2]]];
+    let V = [[1,0,0],[0,1,0],[0,0,1]];
+    for(let sweep=0; sweep<100; sweep++){
+      let p=0, q=1, mx=0;
+      for(let i=0;i<3;i++) for(let j=i+1;j<3;j++){
+        if(Math.abs(a[i][j])>mx){ mx=Math.abs(a[i][j]); p=i; q=j; }
+      }
+      if(mx < 1e-14) break;
+      const th = 0.5*Math.atan2(2*a[p][q], a[p][p]-a[q][q]);
+      const c = Math.cos(th), s = Math.sin(th);
+      const rot = [[1,0,0],[0,1,0],[0,0,1]];
+      rot[p][p]=c; rot[q][q]=c; rot[p][q]=s; rot[q][p]=-s;
+      // a ← Rᵀ a R   ve   V ← V R
+      const RtA = matMul(matT(rot), a);
+      a = matMul(RtA, rot);
+      V = matMul(V, rot);
+    }
+    const idx = [0,1,2].sort((i,j)=>a[i][i]-a[j][j]);
+    return {
+      values: idx.map(i=>a[i][i]),
+      axes:   idx.map(i=>[V[0][i], V[1][i], V[2][i]])   // sütun i = i'nci özvektör
+    };
+  }
+
+  // ═══════ Mod yerleşimi kriterleri (ASR-SR-116 s.10 listesi) ═══════
+  //
+  // Kaynak dokümanın dört isterinden ÜÇÜ doğrudan mod listesinden okunur:
+  //   (a) hiçbir mod ½·f_ateş sınırını aşmamalı  — TÜM modlar, yalnız en yüksek değil
+  //   (b) komşu modlar arası fark > gapMin (varsayılan 0,5 Hz)
+  //   (c) hiçbir mod yaylandırılmamış kütle bandında (varsayılan 8–10 Hz) olmamalı
+  // Saf veri fonksiyonu — hüküm vermez, ölçümü döndürür; eşik/yorum rapor katmanında.
+  // opts: { fLimit, gapMin, bandLo, bandHi }
+  function modePlacement(modes, opts){
+    const o = opts || {};
+    const gapMin = (o.gapMin > 0) ? o.gapMin : 0.5;
+    const bandLo = (o.bandLo > 0) ? o.bandLo : 8;
+    const bandHi = (o.bandHi > 0) ? o.bandHi : 10;
+    const f = (modes || []).map(m => m.f_Hz).filter(v => Number.isFinite(v));
+    if(!f.length) return null;
+    const fLimit = (o.fLimit > 0) ? o.fLimit : NaN;
+    const gaps = [];
+    for(let i=1;i<f.length;i++) gaps.push({ i:i, gap: f[i]-f[i-1] });
+    let minGap = null;
+    gaps.forEach(g => { if(!minGap || g.gap < minGap.gap) minGap = g; });
+    return {
+      fMax: Math.max.apply(null, f),
+      fLimit: fLimit,
+      exceed: Number.isFinite(fLimit)
+        ? modes.map((m,i)=>({no:i+1, f:m.f_Hz, label:m.label}))
+               .filter(m => m.f > fLimit) : [],
+      gaps: gaps,
+      gapMin: gapMin,
+      minGap: minGap ? minGap.gap : NaN,
+      minGapPair: minGap ? [minGap.i, minGap.i+1] : null,     // 1 tabanlı mod numaraları
+      bandLo: bandLo, bandHi: bandHi,
+      inBand: modes.map((m,i)=>({no:i+1, f:m.f_Hz, label:m.label}))
+                   .filter(m => m.f >= bandLo && m.f <= bandHi)
+    };
+  }
+
+  // ═══════ Rijitlik yumuşatma taraması (ASR-SR-116 §5 / Tablo 19 karşılığı) ═══════
+  //
+  // Mevcut takozlar kriterleri sağlamıyorsa sorulacak soru "ne kadar yumuşatmalı?"
+  // olur. Her ölçek katsayısı için takoz rijitlikleri (statik ve dinamik birlikte)
+  // ölçeklenip modal çözüm ve düşey iletilebilirlik yeniden hesaplanır.
+  //
+  // NOT — frekanslar TÜM takozlar aynı katsayıyla ölçeklendiğinde tam olarak
+  // √katsayı ile gider: αKφ = ω²Mφ ⇒ ω² ∝ α, kuplaj olsun olmasın. Yani modal
+  // kısım kapalı formda da bulunabilirdi. Tarama yine de çözer, çünkü:
+  //   · İLETİLEBİLİRLİK katsayıyla basit ölçeklenmez — T(r) rasyoneldir, r=f/f_b
+  //     değiştikçe T bambaşka bir eğri üzerinde gezer (bu tablonun asıl değeri).
+  //   · Katsayı takoz başına farklılaştırılırsa (yalnız arka dörtlüyü yumuşatmak
+  //     gibi) √α kuralı DÜŞER; aynı fonksiyon o durumu da doğru çözer.
+  //   · Kriter değerlendirmesi (mod ayrıklığı, 8–10 Hz bandı) gerçek frekans
+  //     listesini ister; ölçekten çıkarım yapmak hataya açıktır.
+  // Dönüş: [{ factor, modes:[{f_Hz,label}], fBounce, T, T0 }]
+  function softeningScan(mounts, cg, M6, mTotal, factors, fExc, zeta){
+    if(!mounts || !mounts.length || !M6) return null;
+    const z = (zeta >= 0 && zeta < 1) ? zeta : 0;
+    return (factors || [1]).map(function(fac){
+      const scaled = mounts.map(function(m){
+        const c = {};
+        Object.keys(m).forEach(function(k){ c[k] = m[k]; });
+        c.kstat = (m.kstat||[0,0,0]).map(function(v){ return v*fac; });
+        c.kdyn  = (m.kdyn ||[0,0,0]).map(function(v){ return v*fac; });
+        return c;
+      });
+      const md = solveModal(buildK(scaled, cg, true), M6, scaled, cg);
+      const fB = bounceFrequency(scaled, mTotal);
+      return {
+        factor: fac,
+        modes: (md||[]).map(function(m){ return { f_Hz:m.f_Hz, label:m.label }; }),
+        fBounce: fB,
+        T:  Number.isFinite(fExc) ? transmissibility(fExc, fB, z) : NaN,
+        T0: Number.isFinite(fExc) ? transmissibility(fExc, fB, 0) : NaN
+      };
+    });
+  }
+
   // ═══════════════════ Viskoz sönüm (SPEC ek — Faz 4) ═══════════════════
   //
   // Sönüm oranı ζ bir ŞİRKET KABULÜDÜR: takoz başına ölçülmez, tüm montaj için
@@ -1705,6 +1818,7 @@ var veMountCore = (function() {
     transmissibility, bounceFrequency,
     mountLoadShares, mountDamping,
     buildCdamp, frfPoint, frequencyResponse, frfAt,
+    principalInertia, modePlacement, softeningScan,
     modalDampingRatios, modalEnergy,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test

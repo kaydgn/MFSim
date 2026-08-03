@@ -226,14 +226,35 @@ describe('§8 zenginleştirmeleri', () => {
 });
 
 describe('Motor Takozu Uygunluğu (hedef kontrolü)', () => {
-  test('4 kriter tablosu + genel hüküm (idle girdisiyle tam değerlendirme)', () => {
+  test('6 kriter tablosu + genel hüküm (idle girdisiyle tam değerlendirme)', () => {
     const h = rep._mntRepCompliance(R, { idleRpm: 650, cylinders: 6 });
     expect(h).toContain('Motor Takozu Uygunluğu');
-    ['PowerPack Roll modu', 'transmissibility', 'Vites başına takoz kuvvetleri', 'Genel hüküm'].forEach(s =>
+    ['Modal bant — tüm modlar', 'Modlar arası ayrıklık', 'Yaylandırılmamış kütle bandı',
+     'transmissibility', 'Vites başına takoz kuvvetleri', 'Genel hüküm'].forEach(s =>
       expect(h).toContain(s));
-    expect(h).toContain('Roll modu');       // roll modu bulundu ve değerlendirildi
-    expect(h).not.toContain('bekliyor');     // idle var → 1&2 beklemiyor
+    expect(h).not.toContain('bekliyor');     // idle var → frekans kriterleri beklemiyor
     expect(h).toContain('f_ateş');           // ateşleme frekansı hesaplandı
+  });
+  test('Kriter 1 TÜM modları sınar — yalnız en yüksek modu değil', () => {
+    // Regresyon: eskiden yalnız roll (en yüksek) modu bakılırdı; ortadaki bir mod
+    // sınırı aşsa bile tablo "uygun" derdi. Burada en yüksek mod sınırın ALTINDA,
+    // ortadaki bir mod ÜSTÜNDE olacak şekilde bir mod listesi kurulur.
+    const modes = [2, 4, 30, 6, 8].map((f) => ({ f_Hz: f, phi: [0, 0, 1, 0, 0, 0], label: 'x' }));
+    const R2 = Object.assign({}, R, { modes });
+    const h = rep._mntRepCompliance(R2, { idleRpm: 650, cylinders: 6 });   // f_ateş 32,5 → sınır 16,25
+    expect(h).toContain('1 mod sınırı aşıyor');
+    expect(h).toContain('mod 3');            // 30 Hz olan mod, en yüksek olmadığı hâlde yakalandı
+  });
+  test('Kriter 1a/1b: ayrıklık ve yaylandırılmamış kütle bandı ölçülüyor', () => {
+    const yakin = [5, 5.2, 9.4, 12, 14, 20].map((f) => ({ f_Hz: f, phi: [0, 0, 1, 0, 0, 0], label: 'x' }));
+    const h = rep._mntRepCompliance(Object.assign({}, R, { modes: yakin }), { idleRpm: 650, cylinders: 6 });
+    expect(h).toContain('0,2');              // en küçük ayrıklık 0,2 Hz → 1a kırmızı
+    expect(h).toContain('mod 3 9,4 Hz');     // 8–10 Hz bandında → 1b kırmızı
+  });
+  test('Kriter 2 hem %50 kapısını hem %10 referansını basar', () => {
+    const h = rep._mntRepCompliance(R, { idleRpm: 650, cylinders: 6 });
+    expect(h).toContain('%50 (referans %10)');
+    expect(h).toMatch(/%10 referans eşiğin(in üzerinde|i de sağlıyor)/);
   });
   test('idle girdisi yoksa kriter 1&2 bekliyor; 3&4 değerlendirilir', () => {
     const h = rep._mntRepCompliance(R, {});
