@@ -1078,7 +1078,7 @@ function _mntTopoState(j){
     }
   }
   if(!s || !s.nodes) return null;
-  return {
+  var state = {
     nodes: s.nodes, connections: s.connections || [],
     compCounter: s.compCounter || 0,
     canvasOffset: s.canvasOffset || { x:3000, y:3000 },
@@ -1088,6 +1088,12 @@ function _mntTopoState(j){
     // iç topolojideki çerçeveler örnek aktarımında sessizce SİLİNİR.
     annotations: s.annotations || []
   };
+  // Kayıtlı örnekler yerel (300..1300, 150..650) bandında üretilmişti — yani
+  // kanvasın SOL-ÜST köşesinde. Yükleme sırasında koordinatlar kanvas merkezine
+  // taşınır: örneğin her yönünde ~2700px boş alan kalır (topoloji birleştirme
+  // için yer) ve ızgaranın köşesine yapışmış görünmez. Kaynak JSON değişmez.
+  if(typeof veCenterTopoState === 'function') veCenterTopoState(state);
+  return state;
 }
 
 // Örnek topolojisini çöz: önce build'e gömülü (window.__MNT_TOPOLOGIES), yoksa
@@ -1142,6 +1148,10 @@ function _mntLoadExampleFromJSON(ref, ex){
     if(typeof saveState==='function') saveState();
     if(typeof updateAllConnections==='function') updateAllConnections();
     if(typeof veMntUpdateBreadcrumb==='function') veMntUpdateBreadcrumb();
+    // Kamerayı yüklenen içeriğe otur. Kayıttaki kamera örneği ÜRETEN pencerenin
+    // ölçüsüne göreydi; başka boyutta bir ekranda topolojinin bir kısmı görüş
+    // dışında (kenara yapışmış) kalıyordu.
+    if(typeof veFitViewToContent==='function') veFitViewToContent({ maxZoom:1 });
     if(typeof showToast==='function') showToast('Örnek yüklendi'+(ex&&ex.vehicle?(' — '+ex.vehicle):'')+' (JSON).','info');
   });
 }

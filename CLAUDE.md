@@ -84,6 +84,8 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | Dosya | Test Edilen Modül | Kapsam |
 |-------|-------------------|--------|
 | `tests/unit/numerics.test.js` | `js/numerics.js` | PCHIP spline, RK45 solver, enerji dengesi |
+| `tests/unit/canvas-space.test.js` | `js/canvas-space.js` | Sonsuz ızgara deseni, "ev" kamerası, topoloji ortalama |
+| `tests/unit/example-topology-center.test.js` | `js/cp-mount.js` + `assets/examples/` | Örnek JSON'ları kanvas merkezine açar |
 | `tests/unit/state.test.js` | `js/state.js` | Undo/redo stack yönetimi |
 | `tests/unit/toolbar-save.test.js` | `js/toolbar.js` | Proje kaydetme, JSON serileştirme, showSaveFilePicker |
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |

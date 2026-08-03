@@ -31,8 +31,9 @@ function veZoomOut() {
 }
 
 function veResetView() {
+  // "Ev" kamerası: kanvas merkezi görünümün ortasında (bkz. js/canvas-space.js).
   canvasZoom = 1;
-  canvasOffset = {x: 3000, y: 3000};
+  canvasOffset = (typeof veHomeCameraOffset === 'function') ? veHomeCameraOffset() : {x: 3000, y: 3000};
   updateCanvasTransform();
   showToast('Görünüm sıfırlandı');
 }
