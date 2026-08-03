@@ -38,10 +38,16 @@ JSON'ları tek dosyaya **gömer** (görseller harici kalır). Böylece hem `inde
    |------------------------|-----------|
    | `siper`                | `siper.png` |
    | `tulga`                | `tulga.png` |
+   | `asfat`                | `asfat.png` |
 
    Ekran görüntüsünü elle almak zorunda değilsin: örneği "Örneği Aktar" ile kur,
    kenar çubuğu/şerit/durum çubuğunu gizle ve kanvası düğümlerin + `.ve-boundary-rect`
    sınır kutusuna kırparak kaydet — `siper.png`/`tulga.png` böyle üretildi.
+   `asfat.png` Playwright ile `#ve-canvas-wrapper` elemanı kırpılarak alındı; o
+   akışta ayrıca şunlar gizlenir: seçim halkaları, iç-topoloji breadcrumb çipi
+   (`#ve-mnt-breadcrumb`), minimap (`.ve-minimap*`) ve ses oynatıcı
+   (`#mf-splash-player`). Bunlar görselde durursa örnek kartı "uygulamanın
+   ekran görüntüsü" gibi değil, "topoloji şeması" gibi görünmez.
 
 3. Kayıt defterinde (`js/mount-core.js` → `MOUNT_EXAMPLES`) ilgili örneğin
    `image` alanını bu yola ayarla:
@@ -56,6 +62,9 @@ JSON'ları tek dosyaya **gömer** (görseller harici kalır). Böylece hem `inde
 
 ## Notlar
 
+- **Çerçeveler ve notlar da taşınır.** Dışa aktarma `annotations` alanını yazar,
+  yükleyici (`_mntTopoState`) geri kurar. Kullanıcının kurduğu gruplama
+  çerçeveleri (örn. "ŞASİ", "Araçlar", "Görselleştirici") örneğin parçasıdır.
 - Görsel harici dosya olduğu için `MFSim_Code.html` boyutunu şişirmez.
 - Makul boyut (< ~500 KB) sayfa yükleme hızını korur.
 - Yol **göreli** olmalı (`assets/examples/…`), başında `/` olmadan — hem alt

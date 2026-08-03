@@ -32,20 +32,33 @@ function centerOf(state) {
   return { x: (bb.minX + bb.maxX) / 2, y: (bb.minY + bb.maxY) / 2, bb };
 }
 
+// Köşede üretilmiş ESKİ örnekler — recentering bunlar için yazıldı. Uygulamadan
+// BUGÜN "İç Topolojiyi JSON Dışa Aktar" ile alınan bir dosya zaten kanvas
+// koordinatlarındadır (merkeze yakın); onu da "köşede olmalı" diye zorlamak,
+// yeni her örneği yapay olarak sol-üste taşımaya mecbur bırakırdı. Asıl güvence
+// zaten aşağıdaki "yüklenen durum kanvas merkezine oturur" testidir ve o, ham
+// koordinat nerede olursa olsun HER dosya için koşar.
+const LEGACY_CORNER = ['siper_topoloji.json', 'tulga_topoloji.json'];
+
 describe('Kayıtlı örnek topolojileri (assets/examples/*.json)', () => {
   test('en az bir örnek dosyası var', () => {
     expect(exampleFiles.length).toBeGreaterThan(0);
   });
 
+  test('regresyon kaydı: köşede üretilmiş eski örnekler hâlâ defterde', () => {
+    // Bu dosyalar kaybolursa recentering'in çözdüğü senaryo test edilmez olur.
+    const found = LEGACY_CORNER.filter((f) => exampleFiles.includes(f));
+    expect(found.length).toBeGreaterThan(0);
+    found.forEach((f) => {
+      const c = centerOf(JSON.parse(fs.readFileSync(path.join(EX_DIR, f), 'utf8')));
+      expect(c.x).toBeLessThan(cs.VE_CANVAS_CENTER / 2);   // 3000'in çok solunda
+      expect(c.y).toBeLessThan(cs.VE_CANVAS_CENTER / 2);   // 3000'in çok yukarısında
+    });
+  });
+
   exampleFiles.forEach((file) => {
     describe(file, () => {
       const raw = JSON.parse(fs.readFileSync(path.join(EX_DIR, file), 'utf8'));
-
-      test('dosyadaki HAM koordinatlar kanvasın sol-üst köşesinde (sorunun kaynağı)', () => {
-        const c = centerOf(raw);
-        expect(c.x).toBeLessThan(cs.VE_CANVAS_CENTER / 2);   // 3000'in çok solunda
-        expect(c.y).toBeLessThan(cs.VE_CANVAS_CENTER / 2);   // 3000'in çok yukarısında
-      });
 
       test('yüklenen durum kanvas merkezine oturur', () => {
         const st = cp._mntTopoState(raw);
