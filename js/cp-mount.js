@@ -188,12 +188,30 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 // buradan bir statik/dinamik oranı TÜRETİLMEDİ. Angst+Pfister'in statik+dinamik
 // ayrımlı verisi gelirse sz/sx düşürülüp dx/dz ayrıştırılmalıdır.
 //
+// ── "Mount 1" — aynı tablonun ÖTEKİ satırı (kullanıcı kararı: numarasız ekle) ─
+// Aynı "Design Proposal (Standard Part)" tablosunun ilk satırı. PARÇA NUMARASI
+// HİÇBİR DOKÜMANDA GEÇMİYOR — kaynak yalnız "Mount 1" diye anıyor (LMT-1433-00
+// ise "Mount 2"). Numara bulununca girdi ADI düzeltilmeli, anahtarlar kalır.
+//
+//   ShA | X N/mm | Y N/mm | Z N/mm      (takoz başına)
+//   ----|--------|--------|--------
+//    40 |   800  |   450  |   300
+//    55 |  1000  |   750  |   500
+//    70 |  1350  |  1100  |   800
+//
+// LMT-1433-00'ın aksine RADYAL ANİZOTROPİK (sx > sy > sz).
+//
+// RAPORUN KENDİ TOPLAMLARIYLA ÇAPRAZ DOĞRULANDI: Konsept 1'in "Total Stiffness"
+// satırı bu tablodan yeniden kuruluyor → Konsept 1 = 6 adet "Mount 1" @ 70 ShA.
+//   arka sol/sağ  rapor Z1600 Y2100 X2700  ↔  2×(800,1100,1350) = Z1600 Y2200 X2700
+//   ön            rapor Z1600 Y2700 X2100  ↔  aynı takoz 90° DÖNDÜRÜLMÜŞ (X↔Y)
+// Z ve X birebir; tek sapma Y'de %4,8 (2200 ↔ 2100) — tablodaki 1100 ya da
+// rapordaki 2100 yuvarlanmış olmalı. Döndürme bulgusu önemlidir: MFSim'de takoz
+// düğümünün AÇI ALANI YOKTUR, döndürülmüş montaj sx ↔ sy takas edilerek girilir.
+//
 // EKLENMEYENLER (veri yok):
 //   • LMT-1433-20 — TTAR ölçüm raporunda ön takoz olarak geçiyor ("X yönü
 //     yumuşatılmış" varyant), rijitlik verisi hiçbir dokümanda yok.
-//   • Raporların "Mount 1" satırı (40/55/70 ShA: X 800/1000/1350 · Y 450/750/1100
-//     · Z 300/500/800) — PARÇA NUMARASI hiçbir yerde geçmiyor, yalnız "Mount 1".
-//     Kütüphaneye adsız girdi açılmadı.
 //   • LMT-1433-37 — mount-core.js SIPER_EXAMPLE'ın kaynağı; kütüphanedeki
 //     'amc55sha' girdisi (1252/1252/640) odur. DİKKAT: o girdinin adı "AMC 55 ShA"
 //     ama parça LMT-1433 ailesinden, yani muhtemelen AMC değil A+P — ad yanıltıcı
@@ -251,7 +269,14 @@ var VE_MOUNT_LIBRARY = {
   // Nedeni ve ölçümü için aşağıdaki "LMT-1433-00" blok yorumuna bakın.
   'lmt1433-00-40sh': { name:'LMT-1433-00 40 ShA', sx:900,  sy:900,  sz:450,  dx:900,  dy:900,  dz:450  },
   'lmt1433-00-55sh': { name:'LMT-1433-00 55 ShA', sx:1500, sy:1500, sz:750,  dx:1500, dy:1500, dz:750  },
-  'lmt1433-00-70sh': { name:'LMT-1433-00 70 ShA', sx:2500, sy:2500, sz:1150, dx:2500, dy:2500, dz:1150 }
+  'lmt1433-00-70sh': { name:'LMT-1433-00 70 ShA', sx:2500, sy:2500, sz:1150, dx:2500, dy:2500, dz:1150 },
+  // ── "Mount 1" — aynı raporun ÖTEKİ standart parçası, PARÇA NUMARASI YOK ──
+  // Ad kaynaktaki etiketin kendisidir ("Mount 1"); numara bulununca girdi adı
+  // düzeltilmeli (anahtarlar kalır). LMT-1433-00'dan farklı olarak radyal
+  // ANİZOTROPİK: sx > sy. Tek taban (sx = dx), gerekçesi LMT-1433-00 ile aynı.
+  'bmc-mount1-40sh': { name:'Mount 1 40 ShA (BMC FEA · parça no yok)', sx:800,  sy:450,  sz:300, dx:800,  dy:450,  dz:300 },
+  'bmc-mount1-55sh': { name:'Mount 1 55 ShA (BMC FEA · parça no yok)', sx:1000, sy:750,  sz:500, dx:1000, dy:750,  dz:500 },
+  'bmc-mount1-70sh': { name:'Mount 1 70 ShA (BMC FEA · parça no yok)', sx:1350, sy:1100, sz:800, dx:1350, dy:1100, dz:800 }
 };
 
 // ─── ETKİN KÜTÜPHANE (gömülü + gömülü override + kullanıcı tanımlı) ───────────
