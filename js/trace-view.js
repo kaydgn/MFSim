@@ -792,6 +792,11 @@ function veTrDrawAxis(geo, tick, axisName) {
   ctx.lineTo(geo.plotX + geo.plotW, 0.5);
   ctx.stroke();
 
+  // Eksen adı sağ uçta — CANoe'da "[s]" burada durur. ÖNCE ölçülür: son bölme
+  // etiketi adın altına girerse ikisi üst üste binip okunmaz oluyordu.
+  ctx.font = '600 10px ' + VE_TR.FONT;
+  var nameLeft = w - 4 - ctx.measureText(axisName).width - 8;
+
   ctx.font = '10px ' + VE_TR.FONT;
   ctx.fillStyle = 'rgba(140,140,155,0.95)';
   ctx.strokeStyle = 'rgba(140,140,155,0.6)';
@@ -804,10 +809,11 @@ function veTrDrawAxis(geo, tick, axisName) {
     ctx.beginPath(); ctx.moveTo(gx, 1); ctx.lineTo(gx, 5); ctx.stroke();
     var lbl = (typeof veFormatAxisVal === 'function')
       ? veFormatAxisVal(t, tick.dec) : String(t);
+    // Çizgi kalır (ızgara hizası bozulmasın), yalnız ÇAKIŞAN etiket düşer
+    if(gx + ctx.measureText(lbl).width / 2 > nameLeft) return;
     ctx.fillText(lbl, gx, 7);
   });
 
-  // Eksen adı sağ uçta — CANoe'da "[s]" burada durur
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(140,140,155,0.95)';
   ctx.font = '600 10px ' + VE_TR.FONT;
