@@ -105,8 +105,11 @@ describe('Rapor — tek hesap noktası (_mntRepIsolation)', () => {
     expect(s8).toContain('21,9');
     expect(uy).toContain('21,9');
     expect(uy).toContain('f_bounce');
-    // eski taban metni gitmeli
-    expect(uy).not.toContain('en yüksek mod');
+    // Eski hatanın kilidi: iletilebilirlik tabanı MODAL frekans olmamalı.
+    // (Metin eşleşmesi değil, niyet kilitlenir — rapor bunu açıkça söylemeli.)
+    expect(uy).toContain('modal frekans bu hesaba GİRMEZ');
+    // roll modunun frekansı (18,87 Hz) taban olarak GEÇMEMELİ
+    expect(uy).not.toContain('f_bounce 18,87');
   });
 
   test('§8.8 düşey taban formülünü ve modal bandı gösteriyor', () => {
