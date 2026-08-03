@@ -2349,8 +2349,6 @@
 .ve-radio-btn,
 .ve-minimap-toggle,
 .ve-chart-play,
-.mf-splash-player-btn,
-.mf-splash-player-vol,
 .mf-radio-mini-btn{ font-size:var(--fs-lg); }
 
 /* Tablo satırı silme düğmesi — eskiden her satırda DOLU KIRMIZI bir kutuydu:
@@ -4906,85 +4904,6 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .mf-radio-mini.playing .mf-radio-mini-eq i:nth-child(2){ animation-delay:0.15s; }
 .mf-radio-mini.playing .mf-radio-mini-eq i:nth-child(3){ animation-delay:0.3s; }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   AÇILIŞ MÜZİĞİ MİNİ ÇALAR (js/splash-music.js)
-   Sağ-alt köşede kompakt çubuk: EQ + parça adı + çal/duraklat + ses + kapat.
-   Splash (z:1000000) ÜZERİNDE görünür — müzik yükleme ekranındayken de
-   kontrol edilebilir. Radyo paneli açılırsa köşeyi ona bırakıp sola kayar.
-   ═══════════════════════════════════════════════════════════════════════════ */
-.mf-splash-player{
-  position:fixed; right:18px; bottom:18px;
-  display:flex; align-items:center; gap:10px;
-  width:330px; padding:10px 12px;
-  background:var(--bg-tertiary);
-  border:1px solid var(--border-color);
-  border-radius:var(--radius-lg,12px);
-  box-shadow:0 12px 40px var(--shadow-color), 0 2px 8px rgba(0,0,0,0.3);
-  color:var(--text-primary);
-  font-family:var(--font-sans);
-  z-index:var(--z-widget);   /* radyo ile aynı bant: kromun üstünde,
-                                pencerelerin altında. Açılış ekranı
-                                --z-boot'ta zaten daha yüksek. */
-  animation:mfSplashPlayerIn 0.35s var(--ease-out,ease) both;
-  transition:opacity 0.18s ease, transform 0.18s ease, right 0.18s var(--ease-out,ease);
-}
-@keyframes mfSplashPlayerIn{
-  from{ opacity:0; transform:translateY(14px) scale(0.97); }
-  to{ opacity:1; transform:none; }
-}
-.mf-splash-player-leaving{
-  opacity:0; transform:translateY(14px) scale(0.97);
-  pointer-events:none;
-}
-/* Radyo paneli açıkken sağ-alt köşeyi radyoya bırak */
-body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
-
-/* EQ çubukları — radyodaki mfRadioEq animasyonunu paylaşır */
-.mf-splash-player-eq{ display:inline-flex; align-items:flex-end; gap:2px; height:14px; flex-shrink:0; }
-.mf-splash-player-eq i{
-  width:3px; height:4px; border-radius:1px;
-  background:var(--accent-primary); opacity:0.5;
-}
-.mf-splash-player.playing .mf-splash-player-eq i{ animation:mfRadioEq 0.9s ease-in-out infinite; opacity:0.9; }
-.mf-splash-player.playing .mf-splash-player-eq i:nth-child(2){ animation-delay:0.15s; }
-.mf-splash-player.playing .mf-splash-player-eq i:nth-child(3){ animation-delay:0.3s; }
-.mf-splash-player.playing .mf-splash-player-eq i:nth-child(4){ animation-delay:0.45s; }
-
-.mf-splash-player-info{ display:flex; flex-direction:column; flex:1; min-width:0; }
-.mf-splash-player-title{
-  font-size:var(--fs-md); font-weight:700; color:var(--text-heading);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.mf-splash-player.playing .mf-splash-player-title{ color:var(--accent-primary); }
-.mf-splash-player-sub{
-  margin-top:1px;
-  font-size:var(--fs-tiny); color:var(--text-muted);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-
-.mf-splash-player-btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:28px; height:28px; padding:0; flex-shrink:0;
-  background:var(--bg-secondary); border:1px solid var(--border-color);
-  border-radius:var(--radius-sm,6px); color:var(--text-secondary); cursor:pointer;
-  transition:background var(--dur-fast,0.12s), color var(--dur-fast,0.12s), border-color var(--dur-fast,0.12s), transform var(--dur-fast,0.12s);
-}
-.mf-splash-player-btn:hover{ background:var(--bg-input); color:var(--text-primary); border-color:var(--border-hover); }
-.mf-splash-player-btn:active{ transform:translateY(1px); }
-.mf-splash-player-btn svg{ width:15px; height:15px; }
-.mf-splash-player-close{ background:transparent; border-color:transparent; }
-.mf-splash-player-close:hover{ color:var(--accent-danger); }
-
-.mf-splash-player-volwrap{ display:inline-flex; align-items:center; gap:5px; flex-shrink:0; }
-.mf-splash-player-vol{ width:60px; accent-color:var(--accent-primary); cursor:pointer; }
-
-/* Dar ekran: tam genişliğe yakın; radyo açıksa (tam genişlik) çakışmayı önle */
-@media (max-width:420px){
-  .mf-splash-player{ width:calc(100vw - 24px); right:12px; bottom:12px; }
-  body:has(.mf-radio.open) .mf-splash-player{ opacity:0; pointer-events:none; right:12px; }
-}
-
 /* ═══════════════════════════════════════════════════════════════════════
    RIBBON (Fluent tarzı şerit) — bkz. js/ribbon.js
    Renkler tema değişkenlerinden gelir; ayrı bir palet YOK, böylece sekiz
@@ -5268,13 +5187,6 @@ body:has(.mf-radio.open) .mf-splash-player{ right:330px; }
 @media (max-width:1100px){
   .ve-minimap{ display:none !important; }
 }
-
-/* Müzik çalar artık --z-widget bandında: kromun üstünde, pencerelerin altında.
-   Eskiden 1000001'de duruyordu (açılış ekranının üstünde kalması için) ve
-   uygulama yüklendikten sonra body.tab-bar-visible ile 100005'e indiriliyordu —
-   durum bağımlı bir istisna. Katman düzeni jetonlaştıktan sonra istisnaya gerek
-   kalmadı: --z-widget < --z-modal kuralı bunu zaten sağlıyor, açılış ekranı da
-   --z-boot ile daha yüksekte. */
 
 /* Mantıksal bileşenler (Çözücü, Araç, Yol, Sensör, Senaryo…): fiziksel güç
    zincirine bağlanmazlar. Zincirin dışında dururken "bağlamayı mı unuttum?"
