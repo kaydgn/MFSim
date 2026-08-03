@@ -527,9 +527,7 @@ function veRenderChart(slotIdx) {
   
   var ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
-  
-  var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
-  
+
   // ====== VERİ TOPLA ======
   var datasets = [];
   slot.sensors.forEach(function(s, idx) {
@@ -537,7 +535,7 @@ function veRenderChart(slotIdx) {
     var data = veGetSensorData(s.id, s.signal, sDS);
     // Veri bulunamadıysa boş dizi — asla başka sensörün verisini kullanma!
     if(!data || data.length === 0) data = null;
-    datasets.push({data: data, color: colors[idx % colors.length], name: s.name, unit: s.unit || '', _noData: !data});
+    datasets.push({data: data, color: veSlotSignalColor(slot, idx), name: s.name, unit: s.unit || '', _noData: !data});
   });
 
   // Tüm sensörler boşsa çık
@@ -1365,7 +1363,6 @@ function veRenderTable(slotIdx) {
 
   if(!timeArr || timeArr.length === 0) return;
 
-  var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   var datasets = [];
   slot.sensors.forEach(function(s) {
     var sDS = s._dataSource || slotDataSource;
@@ -1385,7 +1382,7 @@ function veRenderTable(slotIdx) {
     row += '<td style="font-weight:600;">' + timeArr[i].toFixed(3) + '</td>';
     datasets.forEach(function(ds, di) {
       var val = (ds && i < ds.length) ? ds[i] : 0;
-      row += '<td style="color:' + colors[di % colors.length] + ';">' + (ds ? veFormatTooltipVal(val) : '—') + '</td>';
+      row += '<td style="color:' + veSlotSignalColor(slot, di) + ';">' + (ds ? veFormatTooltipVal(val) : '—') + '</td>';
     });
     row += '</tr>';
     rows.push(row);
@@ -1397,7 +1394,7 @@ function veRenderTable(slotIdx) {
     row += '<td style="font-weight:700;">' + timeArr[n - 1].toFixed(3) + '</td>';
     datasets.forEach(function(ds, di) {
       var val = (ds && n - 1 < ds.length) ? ds[n - 1] : 0;
-      row += '<td style="color:' + colors[di % colors.length] + '; font-weight:700;">' + (ds ? veFormatTooltipVal(val) : '—') + '</td>';
+      row += '<td style="color:' + veSlotSignalColor(slot, di) + '; font-weight:700;">' + (ds ? veFormatTooltipVal(val) : '—') + '</td>';
     });
     row += '</tr>';
     rows.push(row);
@@ -1407,7 +1404,7 @@ function veRenderTable(slotIdx) {
   var sumRow = function(label, borderTop, fn) {
     var r2 = '<tr style="background:var(--bg-tertiary);' + (borderTop ? ' border-top:2px solid var(--accent-primary);' : '') + '"><td colspan="2" style="font-weight:700; color:var(--text-muted);">' + label + '</td>';
     datasets.forEach(function(ds, di) {
-      r2 += '<td style="color:' + colors[di % colors.length] + '; font-weight:700;">' + veFormatTooltipVal(fn(ds)) + '</td>';
+      r2 += '<td style="color:' + veSlotSignalColor(slot, di) + '; font-weight:700;">' + veFormatTooltipVal(fn(ds)) + '</td>';
     });
     return r2 + '</tr>';
   };
@@ -4281,7 +4278,6 @@ function veExportResultsCSV() {
   // Tüm slotlardaki sensörleri topla
   var allSensors = [];
   var allData = [];
-  var colors = ['#3b82f6','#ef4444','#22c55e','#f59e0b','#8b5cf6','#ec4899'];
   
   for(var si = 0; si < 4; si++) {
     var slot = veResultSlots[si];

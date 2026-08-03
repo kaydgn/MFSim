@@ -83,6 +83,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 
 | Dosya | Test Edilen Modül | Kapsam |
 |-------|-------------------|--------|
+| `tests/unit/signal-tree.test.js` | `js/signal-tree.js` | Arama katlaması, üç-durumlu grup, istatistik, mini eğri, kanal toplama |
 | `tests/unit/numerics.test.js` | `js/numerics.js` | PCHIP spline, RK45 solver, enerji dengesi |
 | `tests/unit/state.test.js` | `js/state.js` | Undo/redo stack yönetimi |
 | `tests/unit/toolbar-save.test.js` | `js/toolbar.js` | Proje kaydetme, JSON serileştirme, showSaveFilePicker |
