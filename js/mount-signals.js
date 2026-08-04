@@ -52,6 +52,71 @@ var veMntSignals = (function() {
     return SET_KEYS.indexOf(sensorId.substring(SENSOR_PREFIX.length)) >= 0;
   }
 
+  // ── Diyagram notları ──────────────────────────────────────────────────────
+  //
+  // Grafiğin altındaki açıklama şeridinin metni (js/trace-view.js veTrNoteHTML).
+  // Okur kitlesi YALNIZCA takoz mühendisi değil: aynı ekrana bakan proje
+  // yöneticisi, müşteri ya da yeni başlayan bir mühendis de bir şey anlamalı.
+  // Bu yüzden metinler günlük Türkçe; zorunlu terim geçtiğinde aynı cümlede
+  // sade karşılığı veriliyor. Formül ve sembol yok — onların yeri Rapor.
+  //
+  // headline kapalı hâlde görünen tek satırdır (≤110 karakter); diğer üçü
+  // açılınca gelir (≤240 karakter). Sayısal ölçütler sektörde yaygın kabul
+  // değerleridir; proje sözleşmesi farklı bir hedef koyabilir.
+  var INFO = {
+    frf: {
+      headline: 'Motorun ürettiği titreşimin ne kadarının şasiye geçtiğini gösterir.',
+      what: 'Motor çalışırken saniyede belirli sayıda titreşim üretir; yatay eksen bu sayıdır (Hz). ' +
+            'Eğri, o titreşimin ne kadarının takozlardan geçip şasiye ulaştığını verir. ' +
+            '1 değeri "hiç azalmadan geçti" demektir.',
+      read: 'Eğrinin 1\'in altında kaldığı bölge, takozun işini yaptığı bölgedir. Tepe yaptığı yerler ' +
+            'güç grubunun kendi salınım frekanslarıdır; orada titreşim azalmaz, büyür. ' +
+            '"Sönümsüz" kanal, kauçuğun sönümü olmasaydı tepenin ne kadar yüksek olacağını gösterir.',
+      good: 'Motorun rölantideki ateşleme frekansında eğrinin 0,2\'nin altında kalması hedeflenir — ' +
+            'yani titreşimin en az %80\'i takozda kalır. Tepe noktalarının hepsi o frekansın ' +
+            'belirgin şekilde altında olmalıdır.'
+    },
+    fdefl: {
+      headline: 'Takozun ne kadar kuvvet altında ne kadar ezildiğini — yani ne kadar yumuşak olduğunu gösterir.',
+      what: 'Yatay eksen takozun şekil değiştirme miktarı (mm), dikey eksen bunun için gereken kuvvet. ' +
+            'Eksi değerler takozun basıldığını, artı değerler çekildiğini gösterir.',
+      read: 'Düz bir çizgi, takozun her yükte aynı sertlikte davrandığı anlamına gelir. Yukarı kıvrılan ' +
+            'eğri ise yük arttıkça sertleştiğini gösterir; bu, büyük darbelerde dibe vurmayı geciktirir.',
+      good: 'Aracın kendi ağırlığı altındaki çalışma noktası eğrinin düz bölümünde olmalıdır. ' +
+            '±15 mm metal metale değme sınırıdır; normal kullanımda o kadar ezilme beklenmez.'
+    },
+    gz: {
+      headline: 'Araç çukura girip zıpladıkça takozların ne kadar ezildiğini ve ne kadar yüklendiğini gösterir.',
+      what: 'Yatay eksen düşey ivme. 1 g aracın düz zeminde durduğu hâldir; 3,5 g sert bir çukur ' +
+            'darbesine karşılık gelir. Eğriler her takozun o yükteki ezilmesini ve taşıdığı kuvveti verir.',
+      read: 'Eğrinin düz gittiği yerde takoz alışıldık şekilde çalışıyor demektir. Kırılma noktası, ' +
+            'takozun ya sertleşmeye başladığı ya da dayanağına oturduğu yerdir. "Çekmedeki takoz" ' +
+            'sayısı sıfırdan büyüdüğü anda bir takozun üzerinden yük kalkıp asılmaya başlamıştır.',
+      good: '3,5 g\'ye kadar hiçbir takozun dayanağına oturmaması ve hiçbirinin üzerinden yük ' +
+            'kalkmaması istenir. İki sayaç kanalı da bu yüzden sıfırda kalmalıdır.'
+    },
+    gy: {
+      headline: 'Araç virajda savrulurken takozlara binen yanal yükü gösterir.',
+      what: 'Yatay eksen yanal ivme; düşey yük 1 g\'de sabit tutulur. Sıfır noktası aracın düz gittiği ' +
+            'hâldir, sağa doğru viraj sertleşir.',
+      read: 'Yanal yük arttıkça yük bir taraftaki takozlara kayar, diğer taraf hafifler. ' +
+            '"Çekmedeki takoz" sayısının sıfırdan çıktığı ivme, hafifleyen takozun asılmaya ' +
+            'başladığı noktadır.',
+      good: '1 g yanal ivme tasarım koşuludur; o noktaya kadar hiçbir takozun üzerinden yük ' +
+            'kalkmaması ve dayanağa oturma olmaması beklenir.'
+    },
+    gx: {
+      headline: 'Sert frende veya hızlanmada takozlara binen ileri-geri yükü gösterir.',
+      what: 'Yatay eksen boyuna ivme; düşey yük 1 g\'de sabit tutulur. Sıfır noktası sabit hızda ' +
+            'gidiş, sağa doğru fren sertleşir.',
+      read: 'Fren sertleştikçe güç grubu öne doğru devrilmeye çalışır: bir kısım takoz sıkışırken ' +
+            'diğerleri hafifler. Eğrilerin birbirinden ayrıldığı yer bu devrilmenin belirginleştiği ' +
+            'noktadır.',
+      good: '1 g boyuna ivme tasarım koşuludur; o noktaya kadar dayanağa oturma ve yük kalkması ' +
+            'olmaması hedeflenir.'
+    }
+  };
+
   function _core() {
     if(typeof veMountCore !== 'undefined' && veMountCore) return veMountCore;
     if(typeof window !== 'undefined' && window.veMountCore) return window.veMountCore;
@@ -302,6 +367,9 @@ var veMntSignals = (function() {
       var g = _gSweepSet(R, opts.solveOne, def);
       if(g) sets.push(g);
     });
+    // Açıklama metni kümenin bir parçası: panonun altındaki not şeridi
+    // (js/trace-view.js) hangi kümeye baktığını bilir, metni oradan okur.
+    sets.forEach(function(ds) { ds.info = INFO[ds.key] || null; });
     return sets;
   }
 
@@ -356,6 +424,21 @@ var veMntSignals = (function() {
     return null;
   }
 
+  // Ölçüm penceresi hangi veri kümesini gösteriyor? Önce çizili sinyallere,
+  // yoksa panonun X eksenine bakılır. Pano tek X ekseninde çalıştığı için
+  // (js/measure-core.js) cevap TEK bir kümedir; karışık pano oluşamaz.
+  function setOfSlot(sets, slot) {
+    if(!slot) return null;
+    var i;
+    for(i = 0; i < ((slot.sensors) || []).length; i++) {
+      var ds = setOf(sets, slot.sensors[i].id);
+      if(ds) return ds;
+    }
+    var xid = (slot.xAxis && slot.xAxis.id) ? String(slot.xAxis.id) : '';
+    var c = xid.indexOf(':');
+    return setOf(sets, c > 0 ? xid.substring(0, c) : xid);
+  }
+
   // Kümenin X ekseni → panonun xAxis biçimi. Pano tek eksen kuralını
   // (js/measure-core.js veXAxisKeyOf) bu kimlik üzerinden uygular: farklı
   // küme = farklı kimlik = aynı pencereye giremez.
@@ -384,6 +467,8 @@ var veMntSignals = (function() {
     groups: groups,
     series: series,
     setOf: setOf,
+    setOfSlot: setOfSlot,
+    INFO: INFO,
     xAxisOf: xAxisOf,
     channelOf: channelOf,
     isMountSensor: isMountSensor,

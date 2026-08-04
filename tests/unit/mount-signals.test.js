@@ -220,6 +220,43 @@ describe('ivme süpürmesi (gz / gy / gx)', () => {
   });
 });
 
+describe('diyagram açıklamaları', () => {
+  // İçerik sözleşmesi: şerit kapalıyken TEK SATIR, açıkken üç kısa blok.
+  // Eksik ya da taşan bir metin yerleşimi bozar; sessizce olmaz, burada patlar.
+  test('her veri kümesinin dört alanlı açıklaması var', () => {
+    SETS.forEach((ds) => {
+      expect(ds.info).toBeTruthy();
+      ['headline', 'what', 'read', 'good'].forEach((k) => {
+        expect(typeof ds.info[k]).toBe('string');
+        expect(ds.info[k].trim().length).toBeGreaterThan(20);
+      });
+    });
+  });
+
+  test('başlık tek satıra sığar, gövde blokları kısa kalır', () => {
+    SETS.forEach((ds) => {
+      expect(ds.info.headline.length).toBeLessThanOrEqual(110);
+      ['what', 'read', 'good'].forEach((k) => {
+        expect(ds.info[k].length).toBeLessThanOrEqual(260);
+      });
+    });
+  });
+
+  test('metinlerde formül ve sembol yok — sade dil sözleşmesi', () => {
+    // Okur kitlesi yalnız mühendis değil. Formül gerekiyorsa yeri Rapor.
+    SETS.forEach((ds) => {
+      ['headline', 'what', 'read', 'good'].forEach((k) => {
+        expect(ds.info[k]).not.toMatch(/[=∑√≤≥×·]|\$\$|\bω\b|\bζ\b/);
+      });
+    });
+  });
+
+  test('her diyagramın başlığı kendine ait', () => {
+    const heads = SETS.map((d) => d.info.headline);
+    expect(new Set(heads).size).toBe(heads.length);
+  });
+});
+
 describe('kanal çözümleme ve X ekseni kuralı', () => {
   test('series: X ekseni de kanallar gibi okunur', () => {
     const ds = setOf('frf');
@@ -327,6 +364,19 @@ describe('kanal çözümleme ve X ekseni kuralı', () => {
     }
     const fd = sets.find((d) => d.key === 'fdefl');
     expect(fd.channels.every((c) => c.id.indexOf('m.') === 0)).toBe(true);
+  });
+
+  test('setOfSlot: pencerenin hangi kümeyi gösterdiği çizili sinyalden çözülür', () => {
+    const slot = { sensors: [{ id: '~mnt-gz', signal: 'dmax' }],
+                   xAxis: { id: '~mnt-gz:a' } };
+    expect(S.setOfSlot(SETS, slot).key).toBe('gz');
+  });
+
+  test('setOfSlot: sinyal yoksa X eksenine düşer, araç panosunda null', () => {
+    expect(S.setOfSlot(SETS, { sensors: [], xAxis: { id: '~mnt-frf:f' } }).key).toBe('frf');
+    expect(S.setOfSlot(SETS, { sensors: [{ id: '~engine', signal: 'rpm' }],
+                               xAxis: { id: 'time' } })).toBeNull();
+    expect(S.setOfSlot(SETS, null)).toBeNull();
   });
 
   test('channelOf: ad ve birim panoya eklerken buradan gelir', () => {
