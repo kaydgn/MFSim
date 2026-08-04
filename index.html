@@ -78,8 +78,9 @@
      şeridin sekme şeridi (26px). İkisi de tek satıra bol bol sığacak kadar
      seyrekti; 60px'lik krom 30px'e indi, kazanılan 30px tuvale gitti.
 
-     Yerleşim: marka │ hızlı erişim │ şerit sekmeleri ····· radyo.
+     Yerleşim: marka │ hızlı erişim │ şerit sekmeleri ····· radyo │ [geri aç].
      Daralt tutamağı bantta DEĞİL: gövdenin sağ alt köşesinde (aşağıda).
+     Bandın sağ ucundaki "geri aç" yalnız daraltılmışken görünür.
 
      Bant YALNIZ komut yüzeyidir. Sayfa anahtarı (Topoloji / Sonuçlar) bir
      zamanlar buranın sağ ucundaydı; artık çalışma alanının solundaki dikey
@@ -122,6 +123,14 @@
       <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
       <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
     </span>
+
+    <!-- Geri aç — YALNIZ şerit daraltılmışken görünür (css: .is-collapsed).
+         Daralt tutamağı gövdenin köşesinde olduğu için gövdeyle birlikte
+         gizleniyor; daraltılmış durumda geri açmanın GÖRÜNÜR bir yolu
+         kalmıyordu (çift tık ve peek çalışıyordu ama görünmüyordu; bilmeyen
+         için şerit kilitlenmiş gibiydi). Sabit durumda gizli kalır: bandın
+         sağ ucunun yeniden kalabalıklaşmaması bu düzenlemenin amacıydı. -->
+    <button type="button" class="ve-rb-expand" id="ve-rb-expand" title="Şeridi geri aç" aria-label="Şeridi geri aç">▼</button>
   </div>
 
   <!-- Gövde + daralt tutamağı AYNI kapta.

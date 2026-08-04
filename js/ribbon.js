@@ -16,8 +16,9 @@
 // Sekme şeridi daima görünür; gövde daraltılabilir (aktif sekmeye çift tık ya
 // da gövdenin SAĞ ALT köşesindeki ok). Daraltılmışken bir sekmeye tıklamak
 // gövdeyi geçici olarak açar (Office'teki "peek" davranışı) — dışarı tıklayınca
-// yeniden kapanır. Tutamak gövdenin köşesinde olduğu için daraltılmışken
-// görünmez; geri açmanın yolu çift tık ya da peek içindeki "sabitle" okudur.
+// yeniden kapanır. Daralt tutamağı gövdeye ait olduğu için daraltılmışken o da
+// gizlenir; geri açmak için bandın sağ ucunda yalnız o durumda beliren
+// #ve-rb-expand vardır (çift tık ve peek'teki "sabitle" oku da çalışır).
 //
 // Yükseklik CSS değişkeniyle yönetilir: --ribbon-h değişince #sayfa2 üstten
 // kendiliğinden kayar (bkz. --chrome-h). JS piksel hesabı yapmaz.
@@ -435,7 +436,9 @@ function veRibbonInit() {
   host._rbInit = true;
 
   host.addEventListener('click', function(e) {
-    var collapseBtn = e.target.closest('#ve-rb-collapse');
+    // Aynı komutun iki yüzeyi: gövdenin köşesindeki tutamak (daralt / sabitle)
+    // ve bandın sağ ucundaki geri aç düğmesi (yalnız daraltılmışken görünür).
+    var collapseBtn = e.target.closest('#ve-rb-collapse, #ve-rb-expand');
     if(collapseBtn) { veRibbonToggleCollapse(); return; }
 
     var tabBtn = e.target.closest('.ve-rb-tab');

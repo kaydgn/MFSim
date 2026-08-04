@@ -5263,6 +5263,25 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 .ve-rb-collapse:hover{ color:var(--accent-primary); background:var(--bg-input); }
 .ve-rb-collapse:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
 
+/* ── Geri aç düğmesi (bandın sağ ucu) ──
+   Daralt tutamağı gövdeye ait olduğu için gövdeyle birlikte gizlenir; şerit
+   daraltılmışken geri açmanın görünür bir yolu kalmaz. Bu düğme tam o boşluğu
+   kapatır ve YALNIZ o durumda görünür — sabit şeritte bandın sağ ucu boş kalır,
+   ki tutamağı oradan almanın nedeni buydu. Peek'te de görünür: şerit hâlâ
+   daraltılmış durumdadır, düğme "geri aç" anlamını korur. */
+.ve-rb-expand{
+  display:none;                       /* sabit şeritte yok */
+  align-items:center; justify-content:center;
+  width:22px; height:20px; padding:0; align-self:center; margin-left:4px;
+  background:none; border:none; cursor:pointer; font:inherit;
+  color:var(--text-muted); font-size:var(--fs-tiny);
+  line-height:1; border-radius:var(--radius-sm);
+  transition:color var(--dur-fast,0.12s), background var(--dur-fast,0.12s);
+}
+#ve-ribbon.is-collapsed .ve-rb-expand{ display:flex; }
+.ve-rb-expand:hover{ color:var(--accent-primary); background:var(--bg-input); }
+.ve-rb-expand:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
+
 /* ── Grup ── */
 /* Yan boşluk grup ARASI mesafeyi iki kere sayar (7 + 7 = 14px). 11px'te bu 22px
    ediyordu: gruplar birbirinden kopuk, şerit gereğinden geniş duruyordu. */
