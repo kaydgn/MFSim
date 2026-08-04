@@ -118,8 +118,13 @@
 
     <span class="ve-rb-strip-fill"></span>
 
+    <!-- Radyo düğmesi buradaydı; komut şeride taşındı (Araçlar → Mola → Radyo,
+         bkz. js/ribbon.js). Bant komut yüzeyidir ve bandın sağ ucu artık
+         yalnızca şeridin kendi denetimine ayrılmıştır.
+         Kalan iki öğe GÖRÜNMEZ (css: .ve-rb-strip #ve-deploy-* → display:none)
+         ama silinemez: js/status.js ve js/deploy-status.js deploy durumunu bu
+         id'ler üzerinden okuyup yazar, "Program Durumu" modalı oradan besleniyor. -->
     <span class="theme-selector">
-      <button id="ve-radio-btn" class="ve-radio-btn" onclick="veToggleRadio()" title="Radyo / müzik çalar" aria-label="Radyo"><span class="mf-ico mf-ico-radio"></span></button>
       <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
       <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
     </span>

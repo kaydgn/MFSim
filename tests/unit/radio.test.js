@@ -335,8 +335,10 @@ describe('favoriler: isFavorite / toggleFavorite / favoriteStations', () => {
 describe('UI smoke', () => {
   let playCalls;
   beforeEach(() => {
-    // Uygulama kabuğu (#ve-ribbon) + toolbar düğmesi → init() UI'yı kurar.
-    document.body.innerHTML = '<div id="ve-ribbon"></div><button id="ve-radio-btn"></button>';
+    // Uygulama kabuğu (#ve-ribbon) → init() UI'yı kurar. Krom bandındaki radyo
+    // düğmesi kaldırıldı (komut şeritte: Araçlar → Mola → Radyo), sentinel
+    // yalnızca şeridin kendisi.
+    document.body.innerHTML = '<div id="ve-ribbon"></div>';
     playCalls = 0;
     const AudioStub = function () {
       return {

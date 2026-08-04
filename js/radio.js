@@ -29,7 +29,8 @@
   var DEFAULT_VOLUME = 0.7;
   var MARGIN         = 8;   // pencere-viewport kenar boşluğu (px)
   var WIDGET_ID      = 'mf-radio';
-  var BTN_ID         = 've-radio-btn';
+  // Radyonun krom bandında kendi düğmesi YOK: komut şeride taşındı
+  // (Araçlar → Mola → Radyo). Basılı göstergesi de oradan okunur.
 
   // Kategori filtresi: "Tümü" sanal kategori, "Özel" kullanıcı yayınları.
   // CAT_ORDER, çip sırasını belirler; listede olmayan kategoriler sona düşer.
@@ -611,6 +612,14 @@
     });
   }
 
+  // Basılı göstergesi ŞERİTTE (Araçlar → Mola → Radyo). Şerit durumu bildirimsel
+  // okur (VE_RIBBON_TABS[].state), ama kendiliğinden yeniden çizmez: panel kendi
+  // × düğmesiyle ya da Esc'le kapandığında şeridin haberi olmaz ve düğme basılı
+  // kalırdı. Bu yüzden panelin görünürlüğü her değiştiğinde şerit tazelenir.
+  function syncRibbonState() {
+    if (typeof global.veRibbonRefreshStates === 'function') global.veRibbonRefreshStates();
+  }
+
   // ─── Aç / kapat ───────────────────────────────────────────────────────────────
   function openPlayer() {
     if (!built) init();
@@ -618,7 +627,7 @@
     if (!w) return;
     w.classList.add('open');
     st.open = true; saveState({ open: true });
-    var btn = $(BTN_ID); if (btn) btn.classList.add('active');
+    syncRibbonState();
     refreshMini();   // panel açıldı → mini gizlensin
   }
 
@@ -626,7 +635,7 @@
     var w = $(WIDGET_ID);
     if (w) w.classList.remove('open');
     st.open = false; saveState({ open: false });
-    var btn = $(BTN_ID); if (btn) btn.classList.remove('active');
+    syncRibbonState();
     refreshMini();   // panel kapandı → çalıyorsa mini görünsün
   }
 
@@ -880,7 +889,7 @@
       }
     }
     // Açık/kapalı (ses ÇALMAZ — yalnızca panel görünürlüğü)
-    if (s.open) { w.classList.add('open'); var btn = $(BTN_ID); if (btn) btn.classList.add('active'); }
+    if (s.open) { w.classList.add('open'); syncRibbonState(); }
     refreshMini();   // başlangıçta bir şey çalmıyorsa mini gizli kalır
   }
 
@@ -941,7 +950,14 @@
     init: init
   };
   global.MFRadio = api;
-  global.veToggleRadio = togglePlayer;   // toolbar onclick
+
+  // Şerit komutu (Araçlar → Mola → Radyo). ADLI bildirim, doğrudan
+  // `global.veToggleRadio = togglePlayer` ataması değil: şerit tanımındaki her
+  // `run` adının js/ içinde gerçekten tanımlı olduğunu doğrulayan test
+  // (tests/unit/ribbon.test.js) kaynağı statik tarar ve yalnız bildirim
+  // biçimini görür — atama yazılsaydı komut "tanımsız" sayılırdı.
+  function veToggleRadio() { return togglePlayer(); }
+  global.veToggleRadio = veToggleRadio;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 
 })(typeof window !== 'undefined' ? window : (typeof global !== 'undefined' ? global : this));

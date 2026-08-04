@@ -127,7 +127,13 @@ var VE_RIBBON_TABS = [
         { size:'sm', icon:'lightbulb', label:'Klavye Kısayolları', run:'veShortcutsHelpOpen' },
         { size:'sm', icon:'search',    label:'Komut Paleti',       run:'veCmdkOpen', tip:'Tüm komutlarda ara (Ctrl+K)' }
       ]},
+      // Radyo eskiden krom bandının sağ ucundaydı: komut yüzeyinin dışında,
+      // hiçbir sekmeye ait olmayan tek başına bir düğme. Yeri burası — 2048'in
+      // yanı: ikisi de işin kendisine değil, işin arasındaki molaya ait.
       { label: 'Mola', items: [
+        { size:'sm', icon:'radio', label:'Radyo', run:'veToggleRadio',
+          tip:'Radyo / müzik çalar',
+          state:function(){ return veRibbonHasClass('mf-radio', 'open'); } },
         { size:'sm', icon:'grid', label:'2048', run:'veGame2048Open' }
       ]},
       { label: 'Oturum', items: [
