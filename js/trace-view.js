@@ -1345,7 +1345,19 @@ function veTrApplyNoteH(el) {
   var body = el ? el.querySelector('.ve-trace-note-body') : null;
   if(!body) return;
   var v = veTrNoteH();
-  body.style.maxHeight = (v == null) ? '' : (Math.min(v, veTrNoteMaxH()) + 'px');
+  if(v == null) {
+    // Ayar yok: yükseklik içeriğe göre, CSS'teki üst sınıra kadar.
+    body.style.height = '';
+    body.style.maxHeight = '';
+    return;
+  }
+  // Ayar var: pencere TAM O BOYDA. Üst sınır olarak uygulamak yanlıştı —
+  // metin kısa olduğunda tutamağı yukarı çekmek hiçbir şey yapmıyordu ve
+  // kullanıcı düğmeyi bozuk sanıyordu. Ayarlanabilir bir pencere, içi boş
+  // kalsa bile istenen boyda durur.
+  var h = Math.min(v, veTrNoteMaxH());
+  body.style.height = h + 'px';
+  body.style.maxHeight = h + 'px';
 }
 
 // Tutamak sürüklemesi. Yukarı çekmek büyütür (şerit yukarı doğru büyür), bu
@@ -1359,9 +1371,12 @@ function veTrNoteGripDown(e, el) {
   var startH = body.getBoundingClientRect().height;
   el.classList.add('resizing');
 
+  var last = startH;
   function move(ev) {
     var next = startH + (startY - ev.clientY);
     next = Math.max(VE_TR_NOTE_H_MIN, Math.min(veTrNoteMaxH(), next));
+    last = next;
+    body.style.height = next + 'px';
     body.style.maxHeight = next + 'px';
     veTrNoteOverflow(el);
   }
@@ -1369,7 +1384,9 @@ function veTrNoteGripDown(e, el) {
     document.removeEventListener('mousemove', move);
     document.removeEventListener('mouseup', up);
     el.classList.remove('resizing');
-    veTrSetNoteH(body.getBoundingClientRect().height);
+    // Ölçülen değil SÜRÜKLENEN değer saklanır: kutu içeriğinden kısaysa
+    // ölçüm içeriği verir ve kullanıcının seçtiği boy sessizce kaybolurdu.
+    veTrSetNoteH(last);
     // Şerit boyu değişti → grafik alanı da değişti, yeniden çiz.
     if(typeof veTrRenderSoon === 'function') veTrRenderSoon(); else veTrRender();
   }
