@@ -394,7 +394,7 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
       svgs.forEach((svg, pi) => {
         const P = PLAN[pi];
         const kare = (re) => [...svg.matchAll(re)]
-          .map((m) => ({ x: +m[1] + 4, y: +m[2] + 4 })).filter((r) => r.y > 20);  // lejant hariç
+          .map((m) => ({ x: +m[1] + 4, y: +m[2] + 4 }));
         const ref = kare(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="8" height="8" fill="none" stroke="#c9ced6"/g);
         const def = kare(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="8" height="8" fill="#8a3ca0"/g);
         expect(ref).toHaveLength(MOUNTS.length);
@@ -475,6 +475,72 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     const eM = core.equivalentBox(1600, [[110.7, 0, 0], [0, 260.2, 0], [0, 0, 205.9]], false);
     const eS = core.equivalentBox(600, [[16.43, 0, 0], [0, 68.15, 0], [0, 0, 64.91]], false);
     expect(k[0].h / k[1].h).toBeCloseTo(eM[2] / eS[2], 2);   // 787 / 444
+  });
+
+  test('§8.16 üç görünüş YAN YANA dizilir ve aynı yükseklikte hizalanır', () => {
+    const h = rep._mntRepModeShapes(R);
+    const figs = h.split('<figure').slice(1);
+    expect(figs).toHaveLength(MODES.length);
+    figs.forEach((fig) => {
+      // tek satır: üç görünüş bir flex kabında
+      expect((fig.match(/display:flex; gap:12px/g) || []).length).toBe(1);
+      const vb = [...fig.matchAll(/viewBox="0 0 ([\d.]+) ([\d.]+)"/g)]
+        .map((m) => ({ w: +m[1], hgt: +m[2] }));
+      expect(vb).toHaveLength(3);
+      // Aynı viewBox yüksekliği + genişlikle orantılı flex-grow ⇒ üç SVG ekranda
+      // aynı K katsayısıyla ölçeklenir: yükseklikleri eşit, px/mm ortak.
+      expect(vb[1].hgt).toBe(vb[0].hgt);
+      expect(vb[2].hgt).toBe(vb[0].hgt);
+      const grow = [...fig.matchAll(/flex:([\d.]+) 1 0/g)].map((m) => +m[1]);
+      expect(grow).toEqual(vb.map((v) => v.w));
+      // Satır rapor gövdesini (880 − 2×32 = 816 px) boşluk bırakmadan doldurur —
+      // yan yana koymanın amacı buydu. 2 boşluk × 12 px payı düşülür.
+      const satir = grow.reduce((a, b) => a + b, 0) + 2 * 12;
+      expect(Math.abs(satir - 816)).toBeLessThanOrEqual(3);   // panel başına ≤1 px yuvarlama
+      // Önden görünüş en dar panel olmalı: y açıklığı x'ten küçük
+      expect(vb[2].w).toBeLessThan(vb[0].w);
+    });
+  });
+
+  test('§8.16 px/mm ÜÇ görünüşte de AYNI — gövde oranları karşılaştırılabilir', () => {
+    // Yan yana yerleşimin tek gerçek riski buydu: paneller farklı ölçeğe kayarsa
+    // "kutu ölçekle çizilir" iddiası çöker. Ölçek her görünüşte referans
+    // takozlardan geri okunur ve üçünün eşitliği sınanır.
+    const svgs = rep._mntRepModeShapes(R).match(/<svg [\s\S]*?<\/svg>/g).slice(0, 3);
+    const MPOS = MOUNTS.map((m) => m.pos.map((v) => v * 1000));
+    const EKS = [0, 0, 1];                       // üstten x, yandan x, önden y
+    const olcek = svgs.map((svg, pi) => {
+      const r = [...svg.matchAll(
+        /<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="8" height="8" fill="none" stroke="#c9ced6"/g)]
+        .map((m) => ({ x: +m[1] + 4 }));
+      expect(r).toHaveLength(MOUNTS.length);
+      // en uzak takoz çifti (bölme hatası birikmesin)
+      let en = 0, sc = 0, px = 0;
+      r.forEach((a, i) => r.forEach((b, j) => {
+        const dmm = MPOS[j][EKS[pi]] - MPOS[i][EKS[pi]];
+        if (Math.abs(dmm) > en) { en = Math.abs(dmm); sc = (b.x - a.x) / dmm; px = Math.abs(b.x - a.x); }
+      }));
+      expect(en).toBeGreaterThan(0);
+      return { sc, px };
+    });
+    // Kalan sapmanın TEK kaynağı SVG koordinatlarının 1 ondalığa yuvarlanmasıdır:
+    // iki uçtan ±0,05 px → taban uzunluğunda 0,1 px belirsizlik. Tolerans bu
+    // fizikten türetilir, elle seçilmez — önden görünüşün tabanı kısa olduğu için
+    // (takozların y açıklığı x'ten dar) oradaki bağıl belirsizlik en büyüğüdür.
+    olcek.slice(1).forEach((o) => {
+      const sinir = 0.1 / Math.min(o.px, olcek[0].px);
+      expect(sinir).toBeLessThan(3e-3);                       // ölçüm gerçekten hassas
+      expect(Math.abs(o.sc / olcek[0].sc - 1)).toBeLessThan(sinir);
+    });
+  });
+
+  test('§8.16 lejant çizimin İÇİNDE değil (dar panelde üstüne biniyordu)', () => {
+    const h = rep._mntRepModeShapes(R);
+    h.match(/<svg [\s\S]*?<\/svg>/g).forEach((svg) => {
+      expect(svg).not.toContain('takoz');
+      expect(svg).not.toContain('ana gövde');
+    });
+    expect(h).toContain('ana gövde');            // ama figürün altında duruyor
   });
 
   test('§8.16 şekil üzerine bileşen ADI yazılmaz', () => {
