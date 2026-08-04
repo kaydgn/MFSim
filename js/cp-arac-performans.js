@@ -241,7 +241,7 @@ function veAracCollapseToRoot(){
   while(veAracStack.length && guard++ < 32){ veAracCloseEditor(true); }
 }
 
-// Alt-topoloji içindeyken canvas alanının sol-üst köşesine (topoloji sınırına)
+// Alt-topoloji içindeyken canvas alanının ALT-ORTASINA (diyagramın altına)
 // iliştirilen çıkış çipi — "← Ana topolojiye dön" + kapsam etiketi.
 function veAracUpdateBreadcrumb(){
   if(typeof document === 'undefined') return;
@@ -251,9 +251,9 @@ function veAracUpdateBreadcrumb(){
     el = document.createElement('div');
     el.id = 've-arac-breadcrumb';
     el.className = 've-arac-breadcrumb';
-    // Canvas alanının sol-üst köşesine iliştir. #ve-split-container position:relative
+    // Canvas alanının alt-ortasına iliştir. #ve-split-container position:relative
     // ve geçiş animasyonunun transform'u alt-seviye .ve-canvas-wrapper'a uygulandığı
-    // için çip konumunu şaşırmaz → sınıra sabit kalır.
+    // için çip konumunu şaşırmaz → pan/zoom'dan bağımsız, kanvasa sabit kalır.
     var host = document.getElementById('ve-split-container')
             || document.querySelector('.ve-canvas-area')
             || document.body;
