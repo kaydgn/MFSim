@@ -92,6 +92,39 @@ function _mntRepIsolation(R, opts){
   return { fFire:fFire, fBounce:fB, r:(fB>0?fFire/fB:NaN), T:T, T0:T0, zeta:zeta, ok:(T<0.5) };
 }
 
+// Ateşleme frekansında YÖN BAŞINA iletilebilirlik ve izolasyon yüzdesi.
+//
+// Yukarıdaki _mntRepIsolation TEK-SERBESTLİK kestirimidir ve yalnız düşeydir.
+// Burası TAM 6 SD frekans yanıtından okur (çekirdek frfAt) ve üç yönü birden
+// verir. Tedarikçi raporlarının "Isolation %" sütunu tam olarak bu büyüklüktür;
+// doğrudan karşılaştırılabilsin diye ayrı bir tablo hak ediyor.
+//
+// İki sayı ayrışabilir ve ayrışması NORMALDİR: SDOF düşeyde tek kütle-yay
+// varsayar, 6 SD çözüm dönme kuplajlarını da içerir. Rapor ikisini yan yana
+// koyar ki fark görünsün — birini ötekinin yerine yazmak, kestirimin
+// belirsizliğini gizlerdi.
+var _MNT_ISO_DIRS = ['X (boyuna)', 'Y (yanal)', 'Z (düşey)'];
+
+function _mntRepIsolation3(R, opts){
+  var C=_rMountCore();
+  if(!C || !C.frfAt || !C.buildM6) return null;
+  if(!R || !R.mounts || !R.mounts.length || !R.mp || !R.damping) return null;
+  var eng=_mntRepEngine(R, opts);
+  var fFire=(eng.idleRpm>0 && eng.cylinders>0) ? (eng.idleRpm/60)*(eng.cylinders/2) : NaN;
+  if(!(fFire>0)) return null;
+  var M6=C.buildM6(R.mp.m, R.mp.I_G);
+  if(!M6) return null;
+  var dirs=_MNT_ISO_DIRS.map(function(nm, d){
+    var T=C.frfAt(R.mounts, R.mp.cg, M6, R.damping, fFire, d);
+    return { name:nm, dir:d, T:T,
+             // İzolasyon yüzdesi = (1−T)·100. T > 1'de NEGATİF çıkar ve öyle
+             // bırakılır: rezonans bölgesinde titreşim azalmaz, katlanır.
+             iso:(Number.isFinite(T)?(1-T)*100:NaN),
+             ok:(Number.isFinite(T) && T<0.5) };
+  });
+  return { fFire:fFire, dirs:dirs };
+}
+
 // Raporun kullanacağı sönüm oranı. TEK kaynak Çözücü'dür (R.zeta). Eski
 // projelerde ζ Rapor düğümünde tutuluyordu → o değer yalnız YEDEK olarak
 // okunur; ikisi de yoksa çekirdek varsayılanına düşülür.
@@ -984,6 +1017,43 @@ function _mntRepFreqPlacement(R, opts){
   h+='<p style="font-size:0.9em; color:#5a6270;">Not: bu bir <b>tek-serbestlik kestirimidir</b> — güç grubunu düşey yönde tek kütle-yay olarak alır. '
     +'İzolasyon bölgesinde (r &gt; √2) tam çok-serbestlikli frekans yanıtına yakın sonuç verir; rezonans civarında kullanılmamalıdır. '
     +'Değerlendirme temel ateşleme mertebesine göredir; gerçek rölanti devri, baskın tahrik mertebeleri ve sönüm ölçümüyle teyit edilmelidir.</p>';
+
+  h+=_mntRepIso3Table(R, opts, iso);
+  return h;
+}
+
+// Üç yönde izolasyon yüzdesi — tedarikçi raporlarıyla doğrudan karşılaştırma.
+//
+// Neden ayrı tablo: yukarıdaki kestirim TEK SAYI ve YALNIZ DÜŞEY. Tedarikçi
+// raporları izolasyonu üç yönde ayrı ayrı, tam 6 SD çözümden verir. Kullanıcı
+// elindeki AMC/A+P raporunu bizim sonucumuzla yan yana koyacaksa
+// karşılaştırılacak sayı budur.
+function _mntRepIso3Table(R, opts, sdof){
+  var i3=_mntRepIsolation3(R, opts);
+  if(!i3) return '';
+  var h='<table><caption>Tablo '+_rTbl()+' — Rölanti ateşleme frekansında ('
+    +_rF(i3.fFire,2)+' Hz) yön başına izolasyon (tam 6 SD çözüm)</caption>';
+  h+='<tr><th>Tahrik yönü</th><th>İletilebilirlik T</th><th>İzolasyon [%]</th><th>Durum</th></tr>';
+  i3.dirs.forEach(function(d){
+    var st = !Number.isFinite(d.T) ? '—'
+      : (d.T<0.2 ? '<span class="ok">✓ iyi</span>'
+      : (d.T<0.5 ? '<span class="ok">✓</span>'
+      : (d.T<1 ? '<span style="color:var(--warn,#8a5a1e)">zayıf</span>'
+               : '<span style="color:var(--warn,#8a5a1e)">büyütme ⚠</span>')));
+    h+='<tr><td class="l">'+_rEsc(d.name)+'</td>'
+      +'<td>'+(Number.isFinite(d.T)?_rF(d.T,4):'—')+'</td>'
+      +'<td>'+(Number.isFinite(d.iso)?_rFs(d.iso,2):'—')+'</td>'
+      +'<td class="c">'+st+'</td></tr>';
+  });
+  h+='</table>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">\\( \\text{İzolasyon}\\,[\\%]=(1-T)\\cdot 100 \\). '
+    +'Bu değerler <b>tam 6 serbestlik dereceli</b> frekans yanıtından okunur (dönme kuplajları dahil); '
+    +'yukarıdaki \\( T='+(isFinite(sdof && sdof.T)?_rF(sdof.T,4):'—')+' \\) ise düşey tek-serbestlik kestirimidir. '
+    +'İkisinin ayrışması normaldir — kestirim güç grubunu tek kütle-yay sayar, tabloda ise gerçek mod kuplajları vardır. '
+    +'Tedarikçi raporlarında (AMC, Angst+Pfister) verilen "Isolation %" sütunu <b>bu tablodaki</b> büyüklüktür; '
+    +'karşılaştırma buradan yapılmalıdır. Yaygın tasarım hedefi \\( T&lt;0{,}2 \\) (≥ %80 izolasyon); '
+    +'şirket kriteri (Kriter 2) \\( T&lt;0{,}5 \\). Negatif izolasyon bir hata değil: o yönde ateşleme frekansı '
+    +'bir rezonansa denk geliyor ve titreşim azalmak yerine katlanıyor demektir.</p>';
   return h;
 }
 
@@ -1893,6 +1963,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntRepDamping: _mntRepDamping,
     _mntRepZeta: _mntRepZeta,
     _mntRepIsolation: _mntRepIsolation,
+    _mntRepIsolation3: _mntRepIsolation3,
+    _mntRepIso3Table: _mntRepIso3Table,
     _mntRepFRF: _mntRepFRF,
     _mntRepFRFChart: _mntRepFRFChart,
     _mntRepEngine: _mntRepEngine,

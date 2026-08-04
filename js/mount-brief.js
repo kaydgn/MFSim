@@ -449,8 +449,11 @@ var veMntBrief = (function() {
         if(eng) {
           var Tf2 = interpAt(f, e.ch.data, eng.f, true);
           if(isFinite(Tf2)) s3 += 'Rölanti ateşleme frekansı ' + b(na(eng.f) + ' Hz') +
-            ' ve orada iletilebilirlik ' + b(na(Tf2)) + '; hedef ' + b('0,2') + '\'nin altı, ' +
-            (Tf2 < 0.2 ? 'model ' + b('sağlıyor') + '.' : 'model ' + b('sağlamıyor') + '.');
+            ' ve orada iletilebilirlik ' + b(na(Tf2)) + ' — yani ' +
+            b('izolasyon ' + pct((1 - Tf2) * 100, 1)) + '. Tedarikçi raporlarındaki ' +
+            b('"Isolation %"') + ' sütunu bu sayıdır. Yaygın tasarım hedefi ' +
+            b('T < 0,2') + ' (≥ %80 izolasyon); model bunu ' +
+            (Tf2 < 0.2 ? b('sağlıyor') : b('sağlamıyor')) + '.';
         }
         if(s3) paras.push(s3);
       } else {
