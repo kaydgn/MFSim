@@ -38,6 +38,14 @@ var VE_RIBBON_TABS = [
         { size:'lg', icon:'save',        label:'Kaydet',       run:'veSaveTopology',  tip:'Projeyi dosyaya kaydet' },
         { size:'sm', icon:'trash',       label:'Temizle',      run:'veClearAll',      tip:'Bu sekmedeki tüm bileşenleri sil' }
       ]},
+      // Ölçüm dosyası açmak proje açmanın kardeşi: ikisi de "programa dışarıdan
+      // veri getir" işi. Bu yüzden Proje grubunun hemen yanında ve Giriş
+      // sekmesinde — Sonuçlar sayfasına gitmeden, elinde dosya olan kullanıcı
+      // ilk baktığı yerde bulsun.
+      { label: 'Ölçüm Verisi', items: [
+        { size:'lg', icon:'upload', label:'Ölçüm\nİçe Aktar', run:'veImpOpenPicker',
+          tip:'Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı) — sütunları seçip diyagrama dök' }
+      ]},
       { label: 'Çözüm', items: [
         { size:'lg', icon:'search', label:'Doğrula',  run:'veSolverValidate', tip:'Topolojiyi doğrula' },
         // Ad "Çalıştır" değil "Çözücü": düğme hesabı başlatmıyor, Çözücü
@@ -135,6 +143,10 @@ var VE_RIBBON_TABS = [
       // ölçüm penceresi var. "Senkron İmleç" de kalktı — senkronlanacak
       // ikinci bir yüzey yok, imleç zaten tüm şeritleri kesiyor.
       { label: 'Ölçüm Penceresi', items: [
+        // Grafiklere bakarken "bir de şu ölçümü açayım" en sık istenen şey;
+        // Giriş sekmesine dönmeye gerek kalmasın.
+        { size:'lg', icon:'upload', label:'Ölçüm\nİçe Aktar', run:'veImpOpenPicker',
+          tip:'Excel/CSV ölçüm dosyasını içe aktar ve şeritlere dök' },
         { size:'lg', icon:'maximize', label:'Tümünü\nSığdır', run:'veTrFit',
           tip:'Zaman eksenini tüm veriye sığdır' },
         { size:'lg', icon:'trash', label:'Sonuçları\nTemizle', run:'veClearAllResults',

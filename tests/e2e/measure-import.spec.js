@@ -170,6 +170,35 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
     await expect(page.locator('#ve-import-btn')).toBeVisible();
   });
 
+  test('komut şeritte de var — Giriş sekmesinde ve Sonuç Araçları\'nda', async ({ page }) => {
+    // Keşfedilebilirlik: elinde dosya olan kullanıcı Sonuçlar sayfasına
+    // gitmeden, ilk baktığı sekmede komutu bulabilmeli.
+    await page.goto('/index.html');
+    await page.fill('#mfsim-login-password', 'mfsim2024');
+    await page.press('#mfsim-login-password', 'Enter');
+    await page.waitForFunction(() => typeof veImpOpenPicker === 'function', null, { timeout: 60000 });
+    await page.waitForSelector('#mfsim-loading-screen', { state: 'hidden', timeout: 60000 });
+    await page.click('.ve-module-card');
+
+    const ribbonImport = page.locator('#ve-ribbon button', { hasText: 'İçe Aktar' });
+    await expect(ribbonImport).toHaveCount(1);              // Giriş sekmesi
+    await expect(ribbonImport.first()).toBeVisible();
+
+    await page.click('.ve-nav-item[data-subtab="sonuclar"]');
+    await expect(page.locator('#ve-ribbon button', { hasText: 'İçe Aktar' })).toHaveCount(1);
+  });
+
+  test('şerit düğmesi de sihirbazı açar', async ({ page }) => {
+    await openApp(page);
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser'),
+      page.locator('#ve-ribbon button', { hasText: 'İçe Aktar' }).first().click(),
+    ]);
+    await chooser.setFiles({ name: 'x.xlsx', mimeType: 'application/vnd.ms-excel', buffer: canoeXlsx(120) });
+    await page.waitForFunction(() => veImpUI && veImpUI.rows && !veImpUI.busy, null, { timeout: 30000 });
+    await expect(page.locator('#ve-import-apply')).toBeEnabled();
+  });
+
   test('sütun adları ilk satırdan taranır, X ekseni Time olarak önerilir', async ({ page }) => {
     await openApp(page);
     await importFixture(page, canoeXlsx());
