@@ -229,7 +229,8 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     allCases: [{ name: 'Static', res: STAT }],
     gather: { torque: { idleRpm: 600, cylinders: 6 },
               components: COMPS.map((x) => ({ name: x.name, mass: x.mass,
-                cgx: x.cg[0] * 1000, cgy: x.cg[1] * 1000, cgz: x.cg[2] * 1000 })),
+                cgx: x.cg[0] * 1000, cgy: x.cg[1] * 1000, cgz: x.cg[2] * 1000,
+                Ixx: x.I[0][0], Iyy: x.I[1][1], Izz: x.I[2][2], pointMass: !!x.pointMass })),
               mounts: MOUNTS.map((m) => ({ name: m.name,
                 x: m.pos[0] * 1000, y: m.pos[1] * 1000, z: m.pos[2] * 1000 })) },
   };
@@ -296,13 +297,14 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     expect(rep._mntRepSoftening(R, {})).toContain('statik çökmeyi');
   });
 
-  test('§8.16 her mod için deforme şekil çizilir (üstten + yandan)', () => {
+  test('§8.16 her mod için ÜÇ görünüş çizilir (üstten + yandan + önden)', () => {
     const h = rep._mntRepModeShapes(R);
     expect(h).toContain('8.16 Mod şekilleri');
     expect((h.match(/<figure/g) || []).length).toBe(MODES.length);
-    expect((h.match(/<svg /g) || []).length).toBe(MODES.length * 2);
+    expect((h.match(/<svg /g) || []).length).toBe(MODES.length * 3);
     expect(h).toContain('Üstten (X–Y)');
     expect(h).toContain('Yandan (X–Z)');
+    expect(h).toContain('Önden (Y–Z)');
     expect(h).toContain('görseldir');                          // genlik uyarısı
     expect(h).toContain('uydurma ikon değildir');              // kutuların kaynağı açıklanıyor
     // Motor kutusu ölçekli çizilmeli: eşdeğer prizma 1154×460×787 mm
@@ -327,10 +329,40 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     const dus = [{ f_Hz: 10, phi: [0, 0, 1, 0, 0, 0], label: 'bounce' }];
     const h = rep._mntRepModeShapes(Object.assign({}, R, { modes: dus }));
     const svgs = h.match(/<svg [\s\S]*?<\/svg>/g);
-    expect(svgs).toHaveLength(2);
+    expect(svgs).toHaveLength(3);
     // Yalnız YER DEĞİŞTİRME çizgileri sayılır (G imleci de <line> kullanır).
     expect(svgs[0].match(/<line class="disp"/g)).toBeNull();   // üstten: hareket yok
-    expect((svgs[1].match(/<line class="disp"/g) || []).length).toBeGreaterThan(0);   // yandan: var
+    expect((svgs[1].match(/<line class="disp"/g) || []).length).toBeGreaterThan(0);   // yandan
+    expect((svgs[2].match(/<line class="disp"/g) || []).length).toBeGreaterThan(0);   // önden
+  });
+
+  test('§8.16 ROLL modu yandan görünüşte kaybolur, ÖNDEN görünüşte okunur', () => {
+    // Üçüncü görünüşün varlık sebebi bu. θ_x yandan bakışta ±y'deki gövdelerin
+    // zıt hareketi olarak görünür ve görsel olarak birbirini götürür; önden
+    // bakışta ise kutular açıkça yatar.
+    const roll = [{ f_Hz: 19, phi: [0, 0, 0, 1, 0, 0], label: 'roll' }];
+    const svgs = rep._mntRepModeShapes(Object.assign({}, R, { modes: roll }))
+      .match(/<svg [\s\S]*?<\/svg>/g);
+    const donme = (svg) => (svg.match(/rotate\((-?[\d.]+)/g) || [])
+      .map((m) => Math.abs(parseFloat(m.slice(7))));
+    const yandan = donme(svgs[1]), onden = donme(svgs[2]);
+    // Yandan görünüşün dönmesi θ_y'den gelir; saf roll'de θ_y = 0 → dönme yok
+    yandan.forEach((a) => expect(a).toBeCloseTo(0, 6));
+    // Önden görünüş θ_x ile döner → belirgin açı
+    expect(Math.max.apply(null, onden)).toBeGreaterThan(1);
+  });
+
+  test('§8.16 kutu+etiket yalnız KÜTLECE BASKIN gövdelere (ASFAT: Motor+Şanzıman)', () => {
+    const h = rep._mntRepModeShapes(R);
+    // Motor %65, Şanzıman %24 → eşiği (%10) yalnız bu ikisi geçer
+    expect(h).toContain('Motor');
+    expect(h).toContain('Şanzıman');
+    // Şaft (%0,65) ve braketler (%2) etiketlenmez — kalabalık bunlardı
+    const s816 = h.slice(h.indexOf('<svg '));
+    expect(s816).not.toContain('>Şaft<');
+    expect(s816).not.toContain('>Sol Braket<');
+    // ama modelden ÇIKARILMAZ: nokta olarak duruyorlar
+    expect((s816.match(/<circle/g) || []).length).toBeGreaterThan(MODES.length * 3);
   });
 
   test('§8.16 veri yoksa boş döner', () => {
