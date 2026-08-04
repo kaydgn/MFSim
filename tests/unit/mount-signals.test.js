@@ -230,64 +230,124 @@ describe('ivme süpürmesi (gz / gy / gx)', () => {
   });
 });
 
-describe('diyagram yorumu', () => {
-  // Yorum SABİT METİN DEĞİL: mount-brief çözümü okuyup bu modele ait sayılarla
-  // yazar. Sözleşme burada: her kümenin yorumu olacak, yorum modelden gelen
-  // sayıları içerecek ve beş diyagramda aynı olmayacak.
-  test('her veri kümesinin paragraflı yorumu var', () => {
+describe('diyagram yorumu — ŞERİT BAŞINA', () => {
+  // Yorum artık veri kümesine değil, O ŞERİTTE ÇİZİLİ KANALLARA ait. Tek bir
+  // kanalın yorumu ile dokuz kanalın üst üste bindiği hâlin yorumu farklı
+  // şeyler anlatır; tek metin ikisine birden hizmet edemez.
+  const B = require('../../js/mount-brief.js');
+  const lane = (key, ids) => B.forLane(setOf(key), R, ids);
+  const text = (br) => br.paras.join(' ');
+
+  test('kümenin kendisi tek satır özet + grafik işaretleri taşır', () => {
     SETS.forEach((ds) => {
-      expect(ds.brief).toBeTruthy();
-      expect(typeof ds.brief.lead).toBe('string');
       expect(ds.brief.lead.length).toBeGreaterThan(20);
-      expect(Array.isArray(ds.brief.paras)).toBe(true);
-      expect(ds.brief.paras.length).toBeGreaterThanOrEqual(3);
-      ds.brief.paras.forEach((p) => expect(p.length).toBeGreaterThan(40));
+      expect(ds.brief.marks.length).toBeGreaterThan(0);
     });
-  });
-
-  test('yorum modelin KENDİ sayılarını içerir — genel geçer metin değil', () => {
-    // Frekans yanıtı yorumu bu modelin mod frekanslarından söz etmeli.
-    const frf = setOf('frf').brief.paras.join(' ');
-    expect(frf).toMatch(/\d+,\d+ Hz/);        // ondalık Türkçe, birimli sayı
-    expect(frf).toMatch(/mod/i);
-
-    // Süpürme yorumu tasarım yükündeki gerçek çökmeyi yazmalı.
-    const gz = setOf('gz').brief.paras.join(' ');
-    expect(gz).toMatch(/mm/);
-    expect(gz).toMatch(/g/);
-  });
-
-  test('beş diyagramın yorumu birbirinden farklı', () => {
-    const bodies = SETS.map((d) => d.brief.paras.join(' '));
-    expect(new Set(bodies).size).toBe(bodies.length);
     const leads = SETS.map((d) => d.brief.lead);
     expect(new Set(leads).size).toBe(leads.length);
   });
 
-  test('yorumda formül ve sembol yok — sade dil sözleşmesi', () => {
-    SETS.forEach((ds) => {
-      [ds.brief.lead].concat(ds.brief.paras).forEach((t) => {
-        expect(t).not.toMatch(/[=∑√≤≥×·]|\$\$|\bω\b/);
-      });
+  test('tek kanal: o yönün kendi sayıları', () => {
+    const br = lane('frf', ['T_2']);
+    expect(br.title).toContain('düşey');
+    expect(text(br)).toMatch(/\d+,\d+ Hz/);
+    expect(text(br)).toContain('ateşleme');
+  });
+
+  test('üç yön birlikte: yön yön karşılaştırma', () => {
+    const br = lane('frf', ['T_0', 'T_1', 'T_2']);
+    expect(br.title).toContain('üç yön');
+    const t = text(br);
+    ['boyuna', 'yanal', 'düşey'].forEach((ax) => expect(t).toContain(ax));
+    // Tek kanallık yorumdan FARKLI olmalı — asıl sözleşme bu
+    expect(t).not.toBe(text(lane('frf', ['T_2'])));
+  });
+
+  test('sönümlü + sönümsüz: sönümün katkısı sayıyla', () => {
+    const br = lane('frf', ['T_2', 'T0_2']);
+    expect(br.title).toContain('sönüm');
+    expect(text(br)).toMatch(/kat\b/);
+  });
+
+  test('BİRLEŞİK: tüm kanallar tek şeritteyken kendine özel yorum', () => {
+    const ds = setOf('frf');
+    const br = lane('frf', ds.channels.map((c) => c.id));
+    expect(br.title).toContain('birleşik');
+    const t = text(br);
+    expect(t).toContain('9 kanal');
+    // Okuma tuzaklarını söylemeli: ölçeği ele geçiren eğri ve eksi verim
+    expect(t).toMatch(/sönümsüz/);
+    expect(t).toMatch(/eksi/);
+    // Ve diğer hiçbir şerit yorumuyla aynı olmamalı
+    [['T_2'], ['T_0', 'T_1', 'T_2'], ['T_2', 'T0_2'], ['eta_2']]
+      .forEach((ids) => expect(t).not.toBe(text(lane('frf', ids))));
+  });
+
+  test('yalnız verim kanalı: yüzde okuması ve eksi değer açıklaması', () => {
+    const br = lane('frf', ['eta_2']);
+    expect(br.title).toContain('verim');
+    expect(text(br)).toContain('%');
+  });
+
+  test('kuvvet-deformasyon: tek takoz çok eksen → yön farkı', () => {
+    const ds = setOf('fdefl');
+    const ids = ds.channels.filter((c) => c.name.indexOf(MOUNTS[0].name) === 0).map((c) => c.id);
+    const br = B.forLane(ds, R, ids);
+    expect(br.title).toContain(MOUNTS[0].name);
+    expect(text(br)).toMatch(/N\/mm/);
+    expect(text(br)).toMatch(/kat/);
+  });
+
+  test('kuvvet-deformasyon: tek kanal → o eksenin sertliği ve çalışma noktası', () => {
+    const ds = setOf('fdefl');
+    const id = ds.channels.find((c) => c.name === MOUNTS[0].name + ' · Z (düşey)').id;
+    const t = text(B.forLane(ds, R, [id]));
+    // kstat_z = 1800 N/mm; eğriden okunan eğim bunu vermeli
+    expect(t).toContain('1800 N/mm');
+    expect(t).toMatch(/mm.*eziliyor|eziliyor/);
+  });
+
+  test('süpürme: çok takoz → en çok ve en az yüklenen', () => {
+    const ds = setOf('gz');
+    const ids = ds.channels.filter((c) => /bileşke çökme/.test(c.name)).map((c) => c.id);
+    const br = B.forLane(ds, R, ids);
+    const t = text(br);
+    expect(t).toContain('en çok yüklenen');
+    expect(t).toContain('en az yüklenen');
+    expect(t).toMatch(/mm/);
+  });
+
+  test('süpürme: dmax tek başına → en kötü takozun izi', () => {
+    const t = text(lane('gz', ['dmax']));
+    expect(t).toContain('En büyük takoz çökmesi');
+    expect(t).toMatch(/mm/);
+  });
+
+  test('sayılar vurgulanmış — düz yazı değil', () => {
+    // Vurgu `**...**` ile işaretlenir; sunum katmanı <b>'ye çevirir.
+    const cases = [['frf', ['T_2']], ['frf', ['T_0', 'T_1', 'T_2']], ['gz', ['dmax']]];
+    cases.forEach(([k, ids]) => {
+      const t = text(lane(k, ids));
+      expect((t.match(/\*\*[^*]+\*\*/g) || []).length).toBeGreaterThanOrEqual(3);
     });
   });
 
-  test('her kümenin diyagram üzerinde işareti var', () => {
-    SETS.forEach((ds) => {
-      expect(Array.isArray(ds.brief.marks)).toBe(true);
-      expect(ds.brief.marks.length).toBeGreaterThan(0);
-      ds.brief.marks.forEach((m) => {
-        expect(['x', 'y']).toContain(m.axis);
-        expect(Number.isFinite(m.value)).toBe(true);
-        expect(typeof m.label).toBe('string');
-      });
-    });
+  test('yüzde eksi değerde de doğru yazılır', () => {
+    // "%-1295" değil "−%1295"; ayrıca sayıya Türkçe iyelik eki takılmaz
+    const t = text(lane('frf', ['eta_2']));
+    expect(t).not.toMatch(/%-/);
+    expect(t).not.toMatch(/%\d[\d,]*'[iıuü]/);
+  });
+
+  test('çizilmemiş kanal için yorum üretilmez', () => {
+    expect(B.forLane(setOf('frf'), R, [])).toBeNull();
+    expect(B.forLane(setOf('frf'), R, ['yok'])).toBeNull();
+    expect(B.forLane(null, R, ['T_2'])).toBeNull();
   });
 
   test('frekans yanıtı ekseni logaritmik olarak işaretlenmiş', () => {
     expect(setOf('frf').x.scale).toBe('log');
     expect(S.xAxisOf(setOf('frf')).scale).toBe('log');
-    // Diğerleri lineer — süpürme ve deformasyon ekseni sıfırdan/eksiden başlar
     expect(S.xAxisOf(setOf('gz')).scale).toBeUndefined();
     expect(S.xAxisOf(setOf('fdefl')).scale).toBeUndefined();
   });

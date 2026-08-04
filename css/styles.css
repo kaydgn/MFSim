@@ -3990,7 +3990,24 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   flex-shrink:0;
   background:var(--bg-secondary);
   border-top:1px solid var(--border-color);
+  position:relative;
 }
+
+/* Boy ayarı: yorum penceresi kullanıcının. Şerit sayısı arttıkça yorum uzuyor;
+   kimi zaman iki satır yeter, kimi zaman hepsi okunmak istenir. Tutamak üst
+   kenarda, ayırıcı çizginin üstünde — sürükleme yönü doğrudan büyüme yönü. */
+.ve-trace-note-grip{
+  position:absolute;top:-3px;left:0;right:0;height:7px;
+  cursor:row-resize;z-index:2;
+}
+.ve-trace-note-grip::after{
+  content:'';position:absolute;left:50%;top:2px;
+  width:34px;height:3px;margin-left:-17px;border-radius:2px;
+  background:var(--text-muted);opacity:0;transition:opacity 0.12s ease;
+}
+.ve-trace-note-grip:hover::after,
+.ve-trace-note.resizing .ve-trace-note-grip::after{opacity:0.5;}
+.ve-trace-note.resizing{user-select:none;}
 .ve-trace-note-head{
   display:flex;align-items:center;gap:7px;width:100%;
   padding:4px 8px;min-height:22px;
@@ -4068,12 +4085,28 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-trace-note-body{
   column-width:46ch;column-gap:26px;
 }
+/* Şerit başına bir bölüm. Sütun kırılması bölümün İÇİNDE olabilir ama
+   başlık kendi metninden ayrı düşmemeli. */
+.ve-trace-note-sec{margin:0 0 8px 0;break-inside:avoid;-webkit-column-break-inside:avoid;}
+.ve-trace-note-sec:last-child{margin-bottom:0;}
+.ve-trace-note-h{
+  margin:0 0 3px 0;
+  font-size:var(--fs-micro);font-weight:700;letter-spacing:0.03em;
+  text-transform:uppercase;color:var(--text-muted);
+  break-after:avoid;-webkit-column-break-after:avoid;
+}
 .ve-trace-note-p{
   margin:0 0 6px 0;
   font-size:var(--fs-tiny);line-height:1.62;color:var(--text-secondary);
   break-inside:avoid;-webkit-column-break-inside:avoid;
 }
 .ve-trace-note-p:last-child{margin-bottom:0;}
+/* Sayılar vurgulu: düz metin içinde göz doğrudan ölçüme gider. Renk değil
+   AĞIRLIK kullanılır — renk, grafikteki eğri renkleriyle yarışırdı. */
+.ve-trace-note-b{
+  font-weight:700;color:var(--text-primary);
+  font-variant-numeric:tabular-nums;font-feature-settings:"tnum";
+}
 
 @media (prefers-reduced-motion: reduce){
   .ve-trace-note-caret{transition:none;}
