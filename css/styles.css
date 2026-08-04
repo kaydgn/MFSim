@@ -3243,12 +3243,115 @@
   max-width:1000px;
   max-height:95vh;
 }
-/* Takoz Özellikleri paneli — solda takoz seçici, sağda detay + 3 eksen kuvvet–sehim
-   grafiği yan yana. Bu düzen için pencere geniş. Diğer bileşenler varsayılan kalır. */
+/* Takoz Özellikleri paneli — üstte açılır takoz seçici, altında seçili takozun
+   detayı + 3 eksen kuvvet–sehim grafiği yan yana. Bu düzen için pencere geniş.
+   Diğer bileşenler varsayılan kalır. */
 .ve-properties.ve-properties--mntlib{
   max-width:1040px;
   max-height:92vh;
 }
+
+/* ══ TAKOZ SEÇİCİ — AÇILIR LİSTE (combobox) ══
+   Önceki hâl: 25+ gömülü takoz sol sütunda alt alta dizili; seçili takozun
+   özelliklerini takip etmek için listede sürekli kaydırma gerekiyordu ve
+   detay kartı panelin ancak dar bir kısmını kullanıyordu.
+   Yeni hâl: tek satırlık tetikleyici + aranabilir açılır liste; detay kartı
+   panelin TAMAMINI kullanır. Liste HTML'in parçası (JS yalnız gizler/gösterir
+   ve DOM'da filtreler) → arama yazarken panel yeniden çizilmez, odak kaçmaz.
+   Salt yerleşim; kütüphane mantığı değişmez. */
+.mntlib-bar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;
+}
+.mntlib-picker{ position:relative;flex:1 1 340px;min-width:240px; }
+.mntlib-trigger{
+  display:flex;align-items:center;gap:8px;width:100%;
+  padding:7px 10px;cursor:pointer;text-align:left;
+  font-family:inherit;font-size:var(--fs-body) !important;
+  color:var(--text-primary);background:var(--bg-input);
+  border:1px solid var(--border-color);border-radius:var(--radius-md);
+  transition:border-color var(--dur-fast) var(--ease-out);
+}
+.mntlib-trigger:hover{ border-color:var(--accent-primary); }
+.mntlib-trigger:focus-visible{ outline:none;box-shadow:var(--focus-ring); }
+.mntlib-trigger.open{ border-color:var(--accent-primary); }
+.mntlib-trigger-name{
+  flex:1;min-width:0;font-weight:600;color:var(--text-heading);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mntlib-trigger-name.empty{ font-weight:500;color:var(--text-muted); }
+.mntlib-caret{
+  font-size:var(--fs-micro);color:var(--text-muted);
+  transition:transform var(--dur-fast) var(--ease-out);
+}
+.mntlib-trigger.open .mntlib-caret{ transform:rotate(180deg); }
+.mntlib-add{
+  flex:0 0 auto;padding:7px 12px;cursor:pointer;
+  font-family:inherit;font-size:var(--fs-body) !important;font-weight:700;
+  letter-spacing:0.02em;color:#fff;background:var(--accent-success);
+  border:none;border-radius:var(--radius-md);
+  transition:filter var(--dur-fast) var(--ease-out);
+}
+.mntlib-add:hover{ filter:brightness(1.1); }
+/* Satır göstergeleri — tetikleyici ve liste satırları aynı dili konuşur:
+   nokta = girdi türü (özel / gömülü / değiştirilmiş / eğrili), kz = statik
+   eksenel rijitlik, ∿ = nonlineer yasa taşıyor. */
+.mntlib-dot{ width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+.mntlib-kz{
+  font-size:var(--fs-micro);color:var(--text-muted);
+  font-family:var(--font-mono);white-space:nowrap;
+}
+/* ∿ ve ✓ SABİT genişlikte yuvalar (satırda hep var, gerekmeyince boş): eğrili
+   ve eğrisiz satırlarda kz sütunu aynı hizada kalsın — listedeki profesyonel
+   his hizadan gelir, ragged bir sağ kenardan değil. */
+.mntlib-wave{
+  flex:0 0 11px;text-align:center;
+  font-size:var(--fs-body);color:var(--accent-danger);line-height:1;
+}
+.mntlib-check{
+  flex:0 0 9px;text-align:center;
+  font-size:var(--fs-micro);color:var(--accent-primary);line-height:1;
+}
+
+.mntlib-dd{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:var(--z-menu);
+  display:flex;flex-direction:column;max-height:min(52vh,400px);
+  background:var(--bg-primary);border:1px solid var(--border-color);
+  border-radius:var(--radius-md);box-shadow:var(--shadow-lg);overflow:hidden;
+}
+/* [hidden] tek başına yetmez: sınıf kuralları (display:flex) UA stilini ezer. */
+.mntlib-dd[hidden],.mntlib-dd [hidden]{ display:none !important; }
+.mntlib-search{
+  width:100%;box-sizing:border-box;padding:7px 10px;
+  font-family:inherit;font-size:var(--fs-body) !important;
+  color:var(--text-primary);background:var(--bg-input);
+  border:none;border-bottom:1px solid var(--border-color);border-radius:0;
+}
+.mntlib-search:focus{ outline:none; }
+.mntlib-list{ overflow-y:auto;padding:4px; }
+.mntlib-group{
+  padding:7px 8px 3px;
+  font-size:var(--fs-micro);font-weight:700;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;
+}
+/* Arama sırasında eşleşen sayısına dönen grup sayacı (bkz. veMntLibFilter). */
+.mntlib-count{ font-variant-numeric:tabular-nums; }
+.mntlib-opt{
+  display:flex;align-items:center;gap:8px;padding:6px 9px;
+  border-radius:var(--radius-sm);cursor:pointer;
+  transition:background var(--dur-fast) var(--ease-out);
+}
+.mntlib-opt:hover{ background:var(--bg-tertiary); }
+.mntlib-opt.sel{ background:var(--bg-tertiary); }
+.mntlib-opt-name{
+  flex:1;min-width:0;font-size:var(--fs-body);color:var(--text-primary);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.mntlib-opt.sel .mntlib-opt-name{ font-weight:700;color:var(--text-heading); }
+.mntlib-note,.mntlib-empty{
+  padding:8px 10px;font-size:var(--fs-tiny);color:var(--text-muted);
+  line-height:1.4;
+}
+.mntlib-empty{ text-align:center; }
 /* ══ İÇERİK-YOĞUN BİLEŞEN PENCERELERİ — ORTAK İKİ SÜTUN SİSTEMİ ══
    Motor panelinden genelleştirildi. İçeriği çok olan paneller (motor, tork
    konvertörü, eşleştirme, solver, yol…) bu sınıfları paylaşır:

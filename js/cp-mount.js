@@ -2262,21 +2262,77 @@ function _mntEntryHasLaw(e){
   return ['fitX','fitY','fitZ'].some(function(f){ return !!e[f]; })
       || ['curveX','curveY','curveZ'].some(function(f){ return Array.isArray(e[f])&&e[f].length>=2; });
 }
-// Master listede tek tıklanabilir takoz satırı (seçili → aksan çerçeve + koyu zemin).
-function _mntLibMasterRow(node, e, sel){
-  var isSel=sel && e.key===sel.key;
-  var hasCurve=_mntEntryHasLaw(e);
-  var dotColor=hasCurve?'var(--accent-danger)':(e.overridden?'var(--accent-warning)':(e.builtin?'var(--accent-primary)':'var(--accent-success)'));
-  var baseBg=isSel?'var(--bg-tertiary)':'transparent';
-  var border=isSel?('1px solid '+dotColor):'1px solid transparent';
-  var hover=isSel?'':' onmouseover="this.style.background=\'var(--bg-tertiary)\'" onmouseout="this.style.background=\'transparent\'"';
-  var h='<div onclick="veMntLibSelect(\''+node.id+'\',\''+_mntEsc(e.key)+'\')"'+hover
-    +' style="cursor:pointer; display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:7px; background:'+baseBg+'; border:'+border+'; margin-bottom:4px;">';
-  h+='<span style="width:8px; height:8px; border-radius:50%; background:'+dotColor+'; flex-shrink:0;"></span>';
-  h+='<span style="flex:1; min-width:0; font-size:var(--fs-body); font-weight:'+(isSel?'700':'500')+'; color:var(--text-'+(isSel?'heading':'primary')+'); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">'+_mntEsc(e.name)+'</span>';
-  h+='<span style="font-size:var(--fs-micro); color:var(--text-muted); font-family:'+_MNT2D_MONO+'; white-space:nowrap;">kz '+Math.round(_mntNum(e.sz))+'</span>';
-  if(hasCurve) h+='<span title="nonlineer eğri" style="font-size:var(--fs-body); color:var(--accent-danger); line-height:1;">∿</span>';
+// Girdi türünün nokta rengi — tetikleyici ve liste satırı AYNI kodu kullanır
+// (eğrili = kırmızı, değiştirilmiş gömülü = sarı, gömülü = mavi, özel = yeşil).
+function _mntLibDotColor(e){
+  return _mntEntryHasLaw(e)?'var(--accent-danger)'
+    :(e.overridden?'var(--accent-warning)':(e.builtin?'var(--accent-primary)':'var(--accent-success)'));
+}
+// Arama için ad/anahtar normalleştirme: Türkçe harf katlaması + küçük harf.
+// 'İ'/'I' önce eşlenir — JS toLowerCase('İ') birleşik nokta üretir ve eşleşmeyi
+// bozar. Böylece "sasi" → "şasi", "TK035" → "tk035" aramaları tutar.
+function _mntLibNorm(s){
+  return String(s==null?'':s)
+    .replace(/İ/g,'i').replace(/I/g,'ı')
+    .toLowerCase()
+    .replace(/ı/g,'i').replace(/ş/g,'s').replace(/ğ/g,'g')
+    .replace(/ü/g,'u').replace(/ö/g,'o').replace(/ç/g,'c');
+}
+// Açılır listede tek tıklanabilir takoz satırı (seçili → koyu zemin + ✓).
+// data-search: filtrelemenin okuduğu normalleştirilmiş "ad + anahtar" metni.
+function _mntLibOptionRow(node, e, sel){
+  var isSel=!!sel && e.key===sel.key;
+  var h='<div class="mntlib-opt'+(isSel?' sel':'')+'" role="option" aria-selected="'+(isSel?'true':'false')+'"'
+    +' data-search="'+_mntEsc(_mntLibNorm(e.name+' '+e.key))+'"'
+    +' onclick="veMntLibSelect(\''+node.id+'\',\''+_mntEsc(e.key)+'\')">';
+  h+='<span class="mntlib-dot" style="background:'+_mntLibDotColor(e)+';"></span>';
+  h+='<span class="mntlib-opt-name">'+_mntEsc(e.name)+'</span>';
+  h+='<span class="mntlib-kz">kz '+Math.round(_mntNum(e.sz))+'</span>';
+  // ∿ / ✓ yuvaları HER satırda basılır (gerekmiyorsa boş) → kz sütunu hizalı kalır
+  h+='<span class="mntlib-wave"'+(_mntEntryHasLaw(e)?' title="nonlineer eğri">∿':'>')+'</span>';
+  h+='<span class="mntlib-check">'+(isSel?'✓':'')+'</span>';
   h+='</div>';
+  return h;
+}
+// Kapalı hâldeki seçici: seçili takozun nokta/ad/kz/∿ özeti + ▾.
+function _mntLibTrigger(node, sel){
+  var h='<button type="button" class="mntlib-trigger" id="mntlib-tr-'+node.id+'"'
+    +' aria-haspopup="listbox" aria-expanded="false" title="Takoz listesini aç"'
+    +' onclick="veMntLibDropdownToggle(\''+node.id+'\',event)">';
+  if(sel){
+    h+='<span class="mntlib-dot" style="background:'+_mntLibDotColor(sel)+';"></span>';
+    h+='<span class="mntlib-trigger-name">'+_mntEsc(sel.name)+'</span>';
+    h+='<span class="mntlib-kz">kz '+Math.round(_mntNum(sel.sz))+'</span>';
+    if(_mntEntryHasLaw(sel)) h+='<span class="mntlib-wave" title="nonlineer eğri">∿</span>';
+  } else {
+    h+='<span class="mntlib-trigger-name empty">Takoz seçin…</span>';
+  }
+  h+='<span class="mntlib-caret">▾</span></button>';
+  return h;
+}
+// Açılır liste gövdesi: arama kutusu + iki grup (Özel / Gömülü) + satırlar.
+// Gizli olarak basılır; veMntLibDropdownToggle yalnız hidden'ı kaldırır.
+function _mntLibDropdown(node, custom, builtins, sel){
+  var nOv=builtins.filter(function(e){ return e.overridden; }).length;
+  var h='<div class="mntlib-dd" id="mntlib-dd-'+node.id+'" role="listbox" hidden>';
+  h+='<input type="text" class="mntlib-search" id="mntlib-q-'+node.id+'" placeholder="Takoz ara… (ad ya da kod)"'
+    +' autocomplete="off" oninput="veMntLibFilter(\''+node.id+'\')"'
+    +' onkeydown="veMntLibSearchKey(event,\''+node.id+'\')">';
+  // Grup sayacı ayrı bir span: arama sırasında EŞLEŞEN sayısına döner (aksi
+  // hâlde "Gömülü Katalog · 27" başlığı 3 satırın üstünde asılı kalır ve
+  // listenin süzüldüğünü yalanlar). data-total ile aramasız hâline geri döner.
+  var cnt=function(n){ return '<span class="mntlib-count" data-total="'+n+'">'+n+'</span>'; };
+  h+='<div class="mntlib-list" id="mntlib-list-'+node.id+'">';
+  h+='<div class="mntlib-group">Özel Takozlar · '+cnt(custom.length)+'</div>';
+  if(!custom.length){
+    h+='<div class="mntlib-note">Henüz özel takoz yok. Sağdaki <b>＋ Yeni Takoz</b> ile ekleyin.</div>';
+  } else {
+    custom.forEach(function(e){ h+=_mntLibOptionRow(node, e, sel); });
+  }
+  h+='<div class="mntlib-group">Gömülü Katalog · '+cnt(builtins.length)+(nOv?' · '+nOv+' değiştirildi':'')+'</div>';
+  builtins.forEach(function(e){ h+=_mntLibOptionRow(node, e, sel); });
+  h+='<div class="mntlib-empty" id="mntlib-none-'+node.id+'" hidden>Eşleşen takoz yok.</div>';
+  h+='</div></div>';
   return h;
 }
 // Rijitlik ızgarası: satır = eksen (kx/ky/kz), sütun = Statik / Dinamik. Kompakt,
@@ -2458,8 +2514,11 @@ function _mntLibDetail(node, e){
     +'<div style="font-size:var(--fs-micro); font-weight:700; letter-spacing:0.05em; color:var(--text-muted); text-transform:uppercase; margin-bottom:9px;">Seçili Takoz</div>'
     +inner+'</div>';
 }
-// Master-detay panel: tıklanabilir takoz listesi (Özel + Gömülü) → seçili takozun
-// statik/dinamik rijitlikleri ve kuvvet-sehim eğrisi detay kartında görünür.
+// Seçici-detay panel: üstte AÇILIR takoz listesi (Özel + Gömülü), altında seçili
+// takozun statik/dinamik rijitlikleri ve 3 eksen kuvvet-sehim eğrisi.
+// Liste neden açılır? 25+ gömülü girdi alt alta dizilince seçili takozun
+// özelliklerini takip etmek kaydırma gerektiriyordu; ayrıca sol sütun panelin
+// dörtte birini kalıcı olarak yiyordu. Açılır listede detay kartı TAM GENİŞLİK.
 function getMntLibraryPropertiesHTML(node){
   var d=_mntLibEnsure(node);
   var custom=d.mounts;                                        // bu düğümün özel takozları (ham girdiler; builtin yok → özel)
@@ -2472,35 +2531,114 @@ function getMntLibraryPropertiesHTML(node){
   var html='<div class="sw-panel">';
   html+='<div class="sw-status-bar installed"><span class="sw-status-dot"></span><span>Takoz Kütüphanesi</span>'
     +'<span style="margin-left:auto; font-weight:400; font-size:var(--fs-micro); opacity:0.85;">'+custom.length+' özel · '+builtins.length+' gömülü'+(nCurve?' · '+nCurve+' eğri':'')+'</span></div>';
-  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin:8px 0 12px;">Soldan bir takoz <b>seçin</b>: sağda statik + dinamik rijitlikleri ve 3 eksen kuvvet–sehim eğrisi görünür. Eklenen takozlar tüm Takoz bileşenlerinin listesinde çıkar. Rijitlikler <b>N/mm</b>.</div>';
+  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.45; margin:8px 0 12px;">Listeden bir takoz <b>seçin</b>: altında statik + dinamik rijitlikleri ve 3 eksen kuvvet–sehim eğrisi görünür. Eklenen takozlar tüm Takoz bileşenlerinin listesinde çıkar. Rijitlikler <b>N/mm</b>.</div>';
 
-  // İki sütun: SOL = takoz seçici (Özel + Gömülü), SAĞ = seçili takoz detayı.
-  // Dar ekranda flex-wrap ile alt alta yığılır.
-  html+='<div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">';
-
-  // ── SOL: seçici ──
-  html+='<div style="flex:0 0 262px; min-width:228px;">';
-  html+='<div class="sw-section-title">Özel Takozlar <span style="font-size:var(--fs-micro); font-weight:400; color:var(--text-muted);">'+custom.length+' adet</span></div>';
-  if(!custom.length){
-    html+='<div style="padding:8px 10px; margin-bottom:6px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-tertiary); border:1px dashed var(--border-color); border-radius:6px;">Henüz özel takoz yok. Aşağıdaki <b>＋</b> ile ekleyin.</div>';
-  } else {
-    custom.forEach(function(e){ html+=_mntLibMasterRow(node, e, sel); });
-  }
-  html+='<button onclick="veMntLibAdd(\''+node.id+'\')" style="width:100%; padding:8px 12px; margin:4px 0 14px; font-size:var(--fs-body); font-weight:700; background:var(--accent-success); color:#fff; border:none; border-radius:6px; cursor:pointer; letter-spacing:0.02em;" onmouseover="this.style.filter=\'brightness(1.1)\'" onmouseout="this.style.filter=\'none\'">＋ Yeni Takoz Ekle</button>';
-  var nOv=builtins.filter(function(e){ return e.overridden; }).length;
-  html+='<div class="sw-section-title">Gömülü Katalog <span style="font-size:var(--fs-micro); font-weight:400; color:var(--text-muted);">'+builtins.length+' adet'+(nOv?' · '+nOv+' değiştirildi':'')+'</span></div>';
-  builtins.forEach(function(e){ html+=_mntLibMasterRow(node, e, sel); });
+  // ── Seçici: açılır liste + yeni takoz ──
+  html+='<div class="sw-section-title">Takoz Seçimi</div>';
+  html+='<div class="mntlib-bar">';
+  html+='<div class="mntlib-picker">'+_mntLibTrigger(node, sel)+_mntLibDropdown(node, custom, builtins, sel)+'</div>';
+  html+='<button class="mntlib-add" onclick="veMntLibAdd(\''+node.id+'\')" title="Yeni özel takoz ekle ve seç">＋ Yeni Takoz</button>';
   html+='</div>';
 
-  // ── SAĞ: seçili takoz detayı ──
-  html+='<div style="flex:1; min-width:300px;">';
+  // ── Seçili takoz detayı (tam genişlik) ──
   if(sel){ html+=_mntLibDetail(node, sel); }
-  else { html+='<div style="padding:14px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); border:1px dashed var(--border-color); border-radius:9px;">Soldan bir takoz seçin.</div>'; }
-  html+='</div>';
+  else { html+='<div style="padding:14px; font-size:var(--fs-tiny); color:var(--text-muted); background:var(--bg-secondary); border:1px dashed var(--border-color); border-radius:9px;">Yukarıdaki listeden bir takoz seçin.</div>'; }
 
-  html+='</div>';   // /iki sütun
   html+='</div>';   // /sw-panel
   return html;
+}
+
+// ─── Açılır liste denetimi (aç/kapa · ara · klavye) ──────────────────────────
+// Liste innerHTML'in parçası olduğu için buradaki işler SALT DOM: hidden bayrağı
+// ve satır filtresi. Panel yeniden çizilmez → arama yazarken odak korunur.
+// _mntLibDDClose: açık listenin kapatıcısı (dış-tık/Escape dinleyicilerini de
+// söker). Aynı anda tek liste açık kalır.
+var _mntLibDDClose=null;
+function veMntLibDropdownClose(){ if(_mntLibDDClose) _mntLibDDClose(); }
+function veMntLibDropdownToggle(nodeId, ev){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  if(typeof document==='undefined') return;
+  var dd=document.getElementById('mntlib-dd-'+nodeId);
+  if(!dd) return;
+  var tr=document.getElementById('mntlib-tr-'+nodeId);
+  var willOpen=dd.hidden;
+  veMntLibDropdownClose();                 // açık liste varsa (bu ya da başka düğüm) kapat
+  if(!willOpen) return;                    // aynı tetikleyiciye ikinci tık → kapalı kalsın
+  dd.hidden=false;
+  if(tr){ tr.classList.add('open'); tr.setAttribute('aria-expanded','true'); }
+  var q=document.getElementById('mntlib-q-'+nodeId);
+  if(q){ q.value=''; veMntLibFilter(nodeId); try{ q.focus(); }catch(_e){} }
+  // dd.isConnected: panel kapandıysa ya da yeniden çizildiyse liste DOM'dan
+  // koptu demektir — dinleyiciler sessizce sökülür. Aksi hâlde ölü bir liste
+  // ilk Escape'i yutar ve özellik penceresi kapanmaz.
+  var onDown=function(e){
+    if(!dd.isConnected){ veMntLibDropdownClose(); return; }
+    if(!dd.contains(e.target) && !(tr && tr.contains(e.target))) veMntLibDropdownClose();
+  };
+  // Escape önce listeyi kapatır (özellik penceresi açık kalsın) → yakalama
+  // evresinde durdurulur; ikinci Escape normal katman sırasına döner.
+  var onKey=function(e){
+    if(e.key!=='Escape') return;
+    var live=dd.isConnected;
+    veMntLibDropdownClose();
+    if(!live) return;
+    e.stopPropagation();
+    if(tr) try{ tr.focus(); }catch(_e){}
+  };
+  _mntLibDDClose=function(){
+    dd.hidden=true;
+    if(tr){ tr.classList.remove('open'); tr.setAttribute('aria-expanded','false'); }
+    document.removeEventListener('mousedown', onDown, true);
+    document.removeEventListener('keydown', onKey, true);
+    _mntLibDDClose=null;
+  };
+  document.addEventListener('mousedown', onDown, true);
+  document.addEventListener('keydown', onKey, true);
+}
+// Arama: satırları DOM'da gizler/gösterir; boşalan grup başlığı gizlenir,
+// dolu başlığın sayacı EŞLEŞEN sayısına döner (arama silinince toplama geri).
+function veMntLibFilter(nodeId){
+  if(typeof document==='undefined') return;
+  var list=document.getElementById('mntlib-list-'+nodeId);
+  if(!list) return;
+  var q=document.getElementById('mntlib-q-'+nodeId);
+  var needle=_mntLibNorm(q?q.value:'').trim();
+  // Grubu kapat: başlığı gizle ya da sayacını güncelle (opt sayısı; not satırı sayılmaz).
+  var closeGrp=function(g, nOpt, nRow){
+    if(!g) return;
+    g.hidden=(nRow===0);
+    var c=g.querySelector('.mntlib-count');
+    if(c) c.textContent = needle ? String(nOpt) : (c.getAttribute('data-total')||String(nOpt));
+  };
+  var kids=list.children, grp=null, grpOpt=0, grpRow=0, hits=0;
+  for(var i=0;i<kids.length;i++){
+    var el=kids[i], cl=el.classList;
+    if(cl.contains('mntlib-group')){
+      closeGrp(grp, grpOpt, grpRow);
+      grp=el; grpOpt=0; grpRow=0;
+    } else if(cl.contains('mntlib-opt')){
+      var ok=!needle || (el.getAttribute('data-search')||'').indexOf(needle)>=0;
+      el.hidden=!ok;
+      if(ok){ grpOpt++; grpRow++; hits++; }
+    } else if(cl.contains('mntlib-note')){
+      el.hidden=!!needle;                  // "henüz özel takoz yok" notu yalnız aramasız görünür
+      if(!needle) grpRow++;
+    }
+  }
+  closeGrp(grp, grpOpt, grpRow);
+  var none=document.getElementById('mntlib-none-'+nodeId);
+  if(none) none.hidden=(hits>0);
+}
+// Arama kutusu klavyesi: Enter → ilk görünen satırı seç, Escape → kapat.
+function veMntLibSearchKey(ev, nodeId){
+  if(!ev) return;
+  if(ev.key==='Escape'){ ev.stopPropagation(); veMntLibDropdownClose(); return; }
+  if(ev.key!=='Enter') return;
+  ev.preventDefault();
+  if(typeof document==='undefined') return;
+  var list=document.getElementById('mntlib-list-'+nodeId);
+  var first=list?list.querySelector('.mntlib-opt:not([hidden])'):null;
+  if(first) first.click();
 }
 
 // Panel içi 3B görüntüleyiciyi güncel topolojiyle (yeniden) başlat.
@@ -2513,20 +2651,28 @@ function veMntViewerRefresh(){
 }
 
 // ─── Kütüphane setter'ları ───────────────────────────────────────────────────
+// Yeni takoz EKLENİR VE SEÇİLİR: liste artık açılır olduğu için seçim
+// taşınmazsa yeni girdi kapalı listede gömülü kalır, detay kartı önceki takozu
+// göstermeye devam ederdi (kullanıcı "eklendi mi?" diye listeyi açmak zorunda).
 function veMntLibAdd(nodeId){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
   var d=_mntLibEnsure(node);
   d._seq=(d._seq||0)+1;
   var key='mnt-usr-'+nodeId+'-'+d._seq;
   d.mounts.push({ key:key, name:'Yeni Takoz '+d._seq, sx:0, sy:0, sz:0, dx:0, dy:0, dz:0 });
+  d._selKey=key;
   if(typeof saveState==='function') saveState();
+  veMntLibDropdownClose();
   if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
 function veMntLibRemove(nodeId, key){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
   var d=_mntLibEnsure(node);
   d.mounts=d.mounts.filter(function(e){ return e.key!==key; });
+  if(d._selKey===key) d._selKey=null;      // silinen takozda asılı kalmasın
+  if(d._curveEditKey===key) d._curveEditKey=null;
   if(typeof saveState==='function') saveState();
+  veMntLibDropdownClose();
   if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
 function veMntLibSet(nodeId, key, field, val){
@@ -2560,13 +2706,15 @@ function veMntLibResetBuiltin(nodeId, key){
   }
   if(typeof showNodeProperties==='function') showNodeProperties(node); // fabrika değerlerini geri bas
 }
-// Master listede bir takoz seç → detay kartı o takozu gösterir (panel yeniden çizilir).
-// Başka takoza geçilince açık eğri editörü kapanır (görsel durum temiz kalır).
+// Açılır listede bir takoz seç → detay kartı o takozu gösterir (panel yeniden
+// çizilir; liste yeni HTML'de kapalı gelir). Başka takoza geçilince açık eğri
+// editörü kapanır (görsel durum temiz kalır).
 function veMntLibSelect(nodeId, key){
   var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
   var d=_mntLibEnsure(node);
   d._selKey=key;
   if(d._curveEditKey && d._curveEditKey!==key) d._curveEditKey=null;
+  veMntLibDropdownClose();                 // dış-tık/Escape dinleyicileri sökülsün
   if(typeof showNodeProperties==='function') showNodeProperties(node);
 }
 
@@ -3258,6 +3406,14 @@ if(typeof module!=='undefined' && module.exports){
     veMntLibSetBuiltin: veMntLibSetBuiltin,
     veMntLibResetBuiltin: veMntLibResetBuiltin,
     veMntLibSelect: veMntLibSelect,
+    veMntLibDropdownToggle: veMntLibDropdownToggle,
+    veMntLibDropdownClose: veMntLibDropdownClose,
+    veMntLibFilter: veMntLibFilter,
+    veMntLibSearchKey: veMntLibSearchKey,
+    _mntLibNorm: _mntLibNorm,
+    _mntLibOptionRow: _mntLibOptionRow,
+    _mntLibTrigger: _mntLibTrigger,
+    _mntLibDropdown: _mntLibDropdown,
     MNT_AUTO_CASES: MNT_AUTO_CASES,
     VE_MNT_STARTER_LAYOUT: VE_MNT_STARTER_LAYOUT,
     veMntPopulateStarter: veMntPopulateStarter,
