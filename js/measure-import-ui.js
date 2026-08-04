@@ -130,12 +130,19 @@ function veImpRebuildColumns(keepSelection) {
   var rows = veImpUI.rows, layout = veImpUI.layout;
   veImpUI.columns = veImpBuildColumns(rows, layout, veImpUI.commaDecimal);
 
-  // Zaman ekseni tahmini için artan-sıralılık bilgisi (ilk 2000 satır yeter)
+  // Aralık ve artan-sıralılık sütunun TAMAMINDAN örneklenir.
+  //
+  // Gerçek bir CANoe ölçümünde ilk on saniye rölantide geçebiliyor: baştan
+  // örnekleyince araç hızı "0 … 0" görünüyor ve kullanıcı sütunu boş sanıp
+  // işaretini kaldırıyordu. Uzun dosyada adımlanır; 20.000 örnek min/max için
+  // fazlasıyla yeterli, tipik ölçümde adım 1 (tam tarama).
+  var total = Math.max(0, rows.length - layout.dataRow);
+  var step = Math.max(1, Math.ceil(total / 20000));
+
   veImpUI.columns.forEach(function(c) {
     if(c.kind !== 'num') return;
     var sample = [];
-    var end = Math.min(rows.length, layout.dataRow + 2000);
-    for(var r = layout.dataRow; r < end; r++) {
+    for(var r = layout.dataRow; r < rows.length; r += step) {
       sample.push(veImpToNumber((rows[r] || [])[c.index], veImpUI.commaDecimal));
     }
     c._monotonic = veImpIsMonotonic(sample);

@@ -57,6 +57,24 @@ describe('veImpParseHeader', () => {
     expect(M.veImpParseHeader('T_gb_out.max').group).toBe('');
   });
 
+  test('CANoe Graphics biçimi: boşluksuz köşeli parantez', () => {
+    // Gerçek kullanıcı dosyasından birebir başlıklar (Graphics.csv).
+    expect(M.veImpParseHeader('Time[s]')).toMatchObject({ name: 'Time', unit: 's', group: '' });
+    expect(M.veImpParseHeader('EEC1::EngSpeed[rpm]')).toMatchObject({
+      group: 'EEC1', name: 'EngSpeed', unit: 'rpm',
+    });
+    expect(M.veImpParseHeader('EEC1::ActualEngPercentTorque[%]')).toMatchObject({
+      group: 'EEC1', name: 'ActualEngPercentTorque', unit: '%',
+    });
+    expect(M.veImpParseHeader('CCVS1::WheelBasedVehicleSpeed[km/h]')).toMatchObject({
+      group: 'CCVS1', name: 'WheelBasedVehicleSpeed', unit: 'km/h',
+    });
+    // Birimsiz sütun: parantez yok, ad olduğu gibi kalır
+    expect(M.veImpParseHeader('ETC2::TransCurrentGear')).toMatchObject({
+      group: 'ETC2', name: 'TransCurrentGear', unit: '',
+    });
+  });
+
   test('Türkçe karakterli başlık bozulmaz', () => {
     expect(M.veImpParseHeader('Motor Sıcaklığı [°C]')).toMatchObject({
       name: 'Motor Sıcaklığı', unit: '°C',
@@ -204,6 +222,24 @@ describe('veImpBuildColumns', () => {
     const rows = [['Time', ''], [0, 1], [0.1, 2]];
     const L = M.veImpDetectHeaderRow(rows, false);
     expect(M.veImpBuildColumns(rows, L, false)[1].name).toBe('Sütun 2');
+  });
+
+  test('geç başlayan sinyal boş sayılmaz', () => {
+    // Gerçek CANoe dosyasında bulundu: sütun tipi yalnızca ilk satırlardan
+    // belirlenirse, koşunun ortasında konuşmaya başlayan bir sinyal 'empty'
+    // damgası yiyip listeden tamamen düşüyordu.
+    const rows = [['Time', 'GecKanal']];
+    for (let i = 0; i < 3000; i++) rows.push([i * 0.01, i < 2500 ? null : i]);
+    const L = M.veImpDetectHeaderRow(rows, false);
+    const cols = M.veImpBuildColumns(rows, L, false);
+    expect(cols[1].kind).toBe('num');
+  });
+
+  test('sonradan metne dönen sütun metin sayılır', () => {
+    const rows = [['Time', 'Mod']];
+    for (let i = 0; i < 1200; i++) rows.push([i * 0.01, i < 600 ? null : '2L']);
+    const L = M.veImpDetectHeaderRow(rows, false);
+    expect(M.veImpBuildColumns(rows, L, false)[1].kind).toBe('text');
   });
 
   test('seyrek sütun işaretlenir', () => {

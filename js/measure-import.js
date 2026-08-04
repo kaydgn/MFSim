@@ -269,6 +269,12 @@ function veImpBuildColumns(rows, layout, commaDecimal) {
   var width = 0;
   rows.forEach(function(r) { if(r && r.length > width) width = r.length; });
 
+  // Tarama adımı: uzun dosyada her satıra bakmak gereksiz, ama örneklem
+  // dosyanın TAMAMINA yayılmalı. 20.000 örnek tip ve doluluk için fazlasıyla
+  // yeterli; 15.000 satırlık tipik bir ölçümde adım 1, yani tam tarama.
+  var totalRows = Math.max(0, rows.length - layout.dataRow);
+  var step = Math.max(1, Math.ceil(totalRows / 20000));
+
   var cols = [];
   for(var c = 0; c < width; c++) {
     var rawName = hdr[c];
@@ -278,10 +284,12 @@ function veImpBuildColumns(rows, layout, commaDecimal) {
       unit = String(units[c]).trim();
     }
 
-    // Tip ve doluluk: veri satırlarından örnekle
+    // Tip ve doluluk: sütunun TAMAMINDAN örneklenir, yalnızca baştan değil.
+    // Baştan örnekleme gerçek ölçümlerde yanılıyor: bir sinyal koşunun 20.
+    // saniyesinde konuşmaya başlıyorsa ilk yüzlerce satırı boştur ve sütun
+    // 'empty' sayılıp listeden tamamen düşerdi.
     var num = 0, text = 0, empty = 0, sampled = 0;
-    var end = Math.min(rows.length, layout.dataRow + 500);
-    for(var r2 = layout.dataRow; r2 < end; r2++) {
+    for(var r2 = layout.dataRow; r2 < rows.length; r2 += step) {
       var v = (rows[r2] || [])[c];
       sampled++;
       if(v === null || v === undefined || v === '') { empty++; continue; }
