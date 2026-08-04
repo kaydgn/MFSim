@@ -1412,6 +1412,44 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
       s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.6" fill="none" stroke="#d3d8de" stroke-width="1"/>';
     }
   });
+  // ── ANA GÖVDELER ARASI BAĞLANTI BANDI ────────────────────────────────────
+  // Motor ile şanzıman gerçekte cıvatalı tek bir yapıdır (volan muhafazası).
+  // Eşdeğer atalet kutuları kendi CG'lerinde ve kendi boyutlarında olduğu için
+  // aralarında boşluk kalıyor ve iki AYRI parça gibi okunuyordu. Bandı kutuları
+  // BÜYÜTEREK kapatmak yanlış olurdu — kutu boyutları ataletten türetilmiş kesin
+  // değerlerdir. Onun yerine deforme CG'ler arasına bir bağlantı bandı çizilir:
+  // gövdelerle birlikte hareket eder, kutu boyutlarına dokunmaz.
+  var anaKutulu=items.filter(function(it){ return it.tip==='k' && it.box; });
+  if(anaKutulu.length>1){
+    var sirali=anaKutulu.slice().sort(function(a,b){ return a.p[horiz]-b.p[horiz]; });
+    for(var q=0;q<sirali.length-1;q++){
+      var A=sirali[q], B=sirali[q+1];
+      var dA=disp(A.p), dB=disp(B.p);
+      var ax=sx(A.p[horiz]+dA[hIdx]*scale), ay=sy(A.p[vert]+dA[vIdx]*scale);
+      var bx2=sx(B.p[horiz]+dB[hIdx]*scale), by2=sy(B.p[vert]+dB[vIdx]*scale);
+      // Band yalnız kutuların BAKAN YÜZLERİ arasına çizilir; merkezden merkeze
+      // çizmek kutuların içinden geçip üstlerine biniyordu. Yüz noktaları da
+      // kutularla birlikte döner (küçük açıda offset vektörünü döndürmek yeterli).
+      var rad=donme*Math.PI/180, cA=Math.cos(rad), sA=Math.sin(rad);
+      var offA=A.box[hIdx]*1000*sc/2, offB=B.box[hIdx]*1000*sc/2;
+      var p1x=ax+offA*cA, p1y=ay+offA*sA;
+      var p2x=bx2-offB*cA, p2y=by2-offB*sA;
+      // Yüzler zaten çakışıyorsa (gövdeler iç içe) band gereksiz
+      var acik=(p2x-p1x)*cA + (p2y-p1y)*sA;
+      if(acik>0.5){
+        // İki YÜZÜ birleştiren yamuk. Kalın çizgi kullanmak, gövdelerin düşey
+        // merkezleri farklı olduğunda (motor z=858, şanzıman z=681) eğik bir
+        // blok gibi görünüyordu; yamuk her iki yüzün kendi yüksekliğine oturur.
+        var pex=-sA, pey=cA;                                  // döndürülmüş dikey yön
+        var hA=A.box[vIdx]*1000*sc*0.62/2, hB=B.box[vIdx]*1000*sc*0.62/2;
+        var poly=[[p1x+pex*hA, p1y+pey*hA], [p2x+pex*hB, p2y+pey*hB],
+                  [p2x-pex*hB, p2y-pey*hB], [p1x-pex*hA, p1y-pey*hA]];
+        s+='<polygon points="'+poly.map(function(q){ return q[0].toFixed(1)+','+q[1].toFixed(1); }).join(' ')
+          +'" fill="rgba(36,66,95,0.13)"/>';
+      }
+    }
+  }
+
   // ── DEFORME ──
   var yerlesik=[];
   function etiketYerlestir(cx, yAlt, metin){
