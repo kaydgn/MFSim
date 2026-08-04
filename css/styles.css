@@ -4025,9 +4025,13 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 /* Yorum gövdesi: uzun metin dar sütunda okunmaz, geniş sütunda göz satır
    kaybeder. 78ch üst sınır tipografik okunabilirlik bandının içinde tutar;
    şerit tam genişlikte kalır, METİN sınırlanır. */
+/* Şeridin ne kadar yer kaplayacağı bir TASARIM KISITI: bu metin grafiğin
+   altında duruyor, uzadıkça eğriye yer kalmıyor. Üst sınır panelin dörtte
+   birini geçmemeli — geri kalan grafiğin. Metnin kendisi de bu bütçeye göre
+   yazılır (js/mount-brief.js: en fazla üç paragraf, her cümle bir sayı). */
 .ve-trace-note-body{
   display:none;padding:2px 8px 9px 26px;
-  max-height:38vh;overflow-y:auto;
+  max-height:min(25vh, 220px);overflow-y:auto;
   scrollbar-width:thin;
 }
 .ve-trace-note.open .ve-trace-note-body{display:block;}
@@ -4056,9 +4060,18 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   font-size:var(--fs-micro);color:var(--text-muted);opacity:0.8;
 }
 .ve-trace-note.open .ve-trace-note-more.on{display:block;}
+/* Paragraflar SÜTUNLARA akar. Tek sütunda üç paragraf şeridi gereksiz yere
+   uzatıyordu: dar bir metin kolonu, panelin sağ yarısı boş, buna karşılık
+   grafiğin yarısı yenmiş. Sütun genişliği sabit (~46ch, okunabilir band),
+   sütun SAYISI panele göre kendiliğinden değişir — geniş ekranda üç, dar
+   ekranda tek. Yükseklik böylece üçte birine iner. */
+.ve-trace-note-body{
+  column-width:46ch;column-gap:26px;
+}
 .ve-trace-note-p{
-  margin:0 0 6px 0;max-width:78ch;
+  margin:0 0 6px 0;
   font-size:var(--fs-tiny);line-height:1.62;color:var(--text-secondary);
+  break-inside:avoid;-webkit-column-break-inside:avoid;
 }
 .ve-trace-note-p:last-child{margin-bottom:0;}
 
