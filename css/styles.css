@@ -5157,26 +5157,27 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
 }
 .ve-rb-tab:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
 
-.ve-rb-collapse{
-  background:none; border:none; cursor:pointer; font:inherit;
-  color:var(--text-muted); font-size:var(--fs-tiny); padding:0 8px; align-self:center;
-  line-height:1; border-radius:var(--radius-sm);
-  transition:color var(--dur-fast,0.12s), background var(--dur-fast,0.12s);
-}
-.ve-rb-collapse:hover{ color:var(--accent-primary); background:var(--bg-input); }
-.ve-rb-collapse:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
-
 /* ── Gövde ── */
+/* Gövde ve daralt tutamağı ortak bir kapta (.ve-rb-dock) durur. Kapsam
+   konumlandırma içindir: tutamak mutlak konumlanıp GÖVDENİN sağ alt köşesine
+   yapışır. "Peek" durumunda gövde overlay'e dönüşüp #ve-ribbon'ın kutusunun
+   dışına taştığı için, tutamağın referansı şerit değil bu kap olmalı — yoksa
+   şerit daralttığında tutamak yukarıda, gövdeden kopuk kalırdı.
+   Daralt/peek kuralları bu yüzden gövdeye değil kaba uygulanır: gövde
+   gizlenip tutamak ekranda kalmasın. */
+.ve-rb-dock{ position:relative; flex:1; min-height:0; display:flex; }
 .ve-rb-body{
   flex:1; min-height:0;
   display:flex; align-items:stretch; gap:0;
-  padding:5px 4px 3px;
+  /* Sağ boşluk tutamağa ayrılmıştır: gövde yatay kayarken son grup
+     tutamağın altına girmesin. */
+  padding:5px 24px 3px 4px;
   overflow-x:auto; overflow-y:hidden;
 }
-#ve-ribbon.is-collapsed .ve-rb-body{ display:none; }
+#ve-ribbon.is-collapsed .ve-rb-dock{ display:none; }
 /* "Peek": daraltılmışken sekmeye tıklanınca gövde overlay olarak açılır —
    sayfa kaymaz, şerit geçici olarak üste biner. */
-#ve-ribbon.is-peek .ve-rb-body{
+#ve-ribbon.is-peek .ve-rb-dock{
   display:flex;
   position:absolute; top:var(--ribbon-strip-h,26px); left:0; right:0;
   height:calc(var(--ribbon-expanded-h) - var(--ribbon-strip-h));
@@ -5185,6 +5186,26 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   box-shadow:var(--shadow-lg);
   z-index:2;
 }
+
+/* ── Daralt tutamağı ──
+   Yeri: gövdenin sağ alt köşesi (Office'teki yeriyle aynı). Eskiden krom
+   bandının sağ ucunda, radyo düğmesinin YANINDAYDI; şeridi denetleyen düğme
+   müzik çalarla aynı köşede duruyor, hangi yüzeyi kapattığı okunmuyordu.
+   Artık denetlediği yüzeyin kenarında: gövde gizlenince tutamak da gider,
+   şerit yeniden sabitlenir (peek'te "Şeridi sabitle" olur, bkz. js/ribbon.js).
+   Gövdenin kaydırma kutusunun DIŞINDA (kapta) durur — yoksa yatay kaydırmada
+   içerikle birlikte kayardı. */
+.ve-rb-collapse{
+  position:absolute; right:3px; bottom:2px; z-index:1;
+  display:flex; align-items:center; justify-content:center;
+  width:20px; height:18px; padding:0;
+  background:none; border:none; cursor:pointer; font:inherit;
+  color:var(--text-muted); font-size:var(--fs-tiny);
+  line-height:1; border-radius:var(--radius-sm);
+  transition:color var(--dur-fast,0.12s), background var(--dur-fast,0.12s);
+}
+.ve-rb-collapse:hover{ color:var(--accent-primary); background:var(--bg-input); }
+.ve-rb-collapse:focus-visible{ outline:2px solid var(--accent-primary); outline-offset:-2px; }
 
 /* ── Grup ── */
 /* Yan boşluk grup ARASI mesafeyi iki kere sayar (7 + 7 = 14px). 11px'te bu 22px

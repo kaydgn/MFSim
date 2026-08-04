@@ -14,8 +14,10 @@
 //   #ve-ribbon      → sekme şeridi + gövde
 //
 // Sekme şeridi daima görünür; gövde daraltılabilir (aktif sekmeye çift tık ya
-// da sağdaki ok). Daraltılmışken bir sekmeye tıklamak gövdeyi geçici olarak
-// açar (Office'teki "peek" davranışı) — dışarı tıklayınca yeniden kapanır.
+// da gövdenin SAĞ ALT köşesindeki ok). Daraltılmışken bir sekmeye tıklamak
+// gövdeyi geçici olarak açar (Office'teki "peek" davranışı) — dışarı tıklayınca
+// yeniden kapanır. Tutamak gövdenin köşesinde olduğu için daraltılmışken
+// görünmez; geri açmanın yolu çift tık ya da peek içindeki "sabitle" okudur.
 //
 // Yükseklik CSS değişkeniyle yönetilir: --ribbon-h değişince #sayfa2 üstten
 // kendiliğinden kayar (bkz. --chrome-h). JS piksel hesabı yapmaz.
@@ -259,9 +261,9 @@ function veRibbonRender() {
   }
 
   // Şerit ARTIK KABUĞU EZMEZ. Krom bandı (marka menüsü, hızlı erişim, sayfa
-  // anahtarı, radyo, daralt düğmesi) index.html'de STATİK markup; JS yalnız iki
-  // kabın içini yazar. Eskiden host.innerHTML her çizimde her şeyi siliyordu —
-  // statik markup orada duramazdı.
+  // anahtarı, radyo) ve gövdenin köşesindeki daralt tutamağı index.html'de
+  // STATİK markup; JS yalnız iki kabın içini yazar. Eskiden host.innerHTML her
+  // çizimde her şeyi siliyordu — statik markup orada duramazdı.
   var tabsHost = document.getElementById('ve-rb-tabs');
   var bodyHost = document.getElementById('ve-rb-body');
   if(!tabsHost || !bodyHost) return;
@@ -279,7 +281,7 @@ function veRibbonRender() {
   });
   tabsHost.innerHTML = h;
 
-  // ── Daralt düğmesi: statik, yerinde güncellenir ──
+  // ── Daralt tutamağı (gövdenin sağ alt köşesi): statik, yerinde güncellenir ──
   var col = document.getElementById('ve-rb-collapse');
   if(col) {
     var etiket = veRibbonCollapsed ? 'Şeridi sabitle' : 'Şeridi daralt';
