@@ -405,3 +405,116 @@ describe('veXlsSniffDelimiter — ayracı içermeyen satırlar adayı ELEMEZ', (
     expect(X.veXlsSniffDelimiter(tsv)).toBe('\t');
   });
 });
+
+describe('veXlsSniffDelimiter — ondalık ayırıcı ayraç sanılmaz', () => {
+  // Başlık satırı olmayan Avrupa biçimli dosyada her satırda 10 ';' ve 11
+  // ondalık ',' var; ikisi de %100 tutarlı. Alan sayısı eşitlik bozucu olsaydı
+  // ',' bir puanla kazanır ve "0,004600;798,625000" → ["0","004600;798", …]
+  // olurdu: zaman ekseni tam saniyeye yuvarlanır, tüm sinyaller metne döner.
+  const headless =
+    '0,004600;798,625000;21,000000\n' +
+    '0,009380;798,625000;21,000000\n' +
+    '0,011870;799,125000;21,000000\n' +
+    '0,014600;800,250000;22,000000\n';
+
+  test('başlıksız Avrupa dosyasında ayraç noktalı virgüldür', () => {
+    expect(X.veXlsSniffDelimiter(headless)).toBe(';');
+  });
+
+  test('sayılar ikiye bölünmez', () => {
+    expect(X.veXlsCsvParse(headless).rows[0]).toEqual(['0,004600', '798,625000', '21,000000']);
+  });
+
+  test('başlıksız gerçek virgüllü dosya hâlâ virgülle okunur', () => {
+    const us = '0.0,798.6,0.0\n0.1,799.1,0.4\n0.2,800.2,0.9\n';
+    expect(X.veXlsSniffDelimiter(us)).toBe(',');
+    expect(X.veXlsCsvParse(us).rows[0]).toEqual(['0.0', '798.6', '0.0']);
+  });
+
+  test('tam sayılı noktalı virgüllü dosya (ondalık ipucu yok)', () => {
+    expect(X.veXlsSniffDelimiter('a;b;c\n1;2;3\n4;5;6\n')).toBe(';');
+  });
+
+  test('boru ayraçlı dosya', () => {
+    expect(X.veXlsSniffDelimiter('Time|RPM\n0.0|800\n0.1|812\n')).toBe('|');
+  });
+});
+
+describe('veXlsCsvParse — alan ORTASINDAKİ tırnak alan açmaz', () => {
+  // RFC 4180: tırnak yalnızca alan başında alan açar. Eskiden ortadaki tek bir
+  // " tırnak açıyor, sonraki ayraçlar VE SATIR SONLARI alan içi sayılıyordu:
+  // 3" boru gibi tek bir hücre dosyanın kalanını tek hücreye yığıyordu.
+  test('inç işareti satırları yutmaz', () => {
+    const r = X.veXlsCsvParse('a,b\n3" boru,5\nx,y\n');
+    expect(r.rows).toEqual([['a', 'b'], ['3" boru', '5'], ['x', 'y']]);
+  });
+
+  test('gerçek tırnaklı alan hâlâ çalışır (içinde ayraç dahil)', () => {
+    const r = X.veXlsCsvParse('a,b\n"1,5",2\nx,y\n');
+    expect(r.rows).toEqual([['a', 'b'], ['1,5', '2'], ['x', 'y']]);
+  });
+
+  test('tırnak içi satır sonu korunur', () => {
+    const r = X.veXlsCsvParse('a,b\n"iki\nsatır",2\n');
+    expect(r.rows[1]).toEqual(['iki\nsatır', '2']);
+  });
+});
+
+describe('veXlsSniffDelimiter — tek sütunlu dosya bölünmez', () => {
+  // Ondalık virgüllü tek sütunlu dosyada ',' seçilirse her satır ikiye
+  // ayrılırdı: "0,0046" → ["0","0046"].
+  test('ondalık virgüllü tek sütun', () => {
+    const one = 'Time\n0,0046\n0,0093\n0,0118\n';
+    expect(X.veXlsCsvParse(one).rows.every((r) => r.length === 1)).toBe(true);
+  });
+
+  test('ondalık noktalı tek sütun', () => {
+    const one = 'Time\n0.0046\n0.0093\n';
+    expect(X.veXlsCsvParse(one).rows.every((r) => r.length === 1)).toBe(true);
+  });
+
+  test('Avrupa biçimli sekmeli dosyada ayraç sekmedir', () => {
+    const tsv = 'Time\tRPM\n0,0046\t798,625\n0,0093\t799,125\n';
+    expect(X.veXlsSniffDelimiter(tsv)).toBe('\t');
+    expect(X.veXlsCsvParse(tsv).rows[1]).toEqual(['0,0046', '798,625']);
+  });
+
+  test('veto tek adaylı düzgün dosyayı bölünmeden bırakmaz', () => {
+    // "1,2" ondalık gibi görünse de ',' burada tek adaydır: elenirse dosya
+    // hiç bölünmezdi.
+    expect(X.veXlsCsvParse('a,b,c\n1,2\n').rows[1]).toEqual(['1', '2', '']);
+  });
+});
+
+describe('veXlsDecodeText — kodlama tespiti', () => {
+  // Excel'in "Unicode Metin" dışa aktarması UTF-16 üretiyor; koşulsuz UTF-8
+  // çözümü her karakterin arasına NUL serpilmiş çöp metin veriyordu.
+  function utf16(str, little, bom) {
+    const b = [];
+    if (bom) b.push(little ? 0xff : 0xfe, little ? 0xfe : 0xff);
+    for (const ch of str) {
+      const k = ch.charCodeAt(0);
+      b.push(little ? (k & 255) : (k >> 8), little ? (k >> 8) : (k & 255));
+    }
+    return Uint8Array.from(b);
+  }
+  const sample = 'Time;RPM\n0,0046;798,625\n';
+
+  test('UTF-16LE (BOM ile)', () => {
+    expect(X.veXlsDecodeText(utf16(sample, true, true))).toBe(sample);
+  });
+
+  test('UTF-16BE (BOM ile)', () => {
+    expect(X.veXlsDecodeText(utf16(sample, false, true))).toBe(sample);
+  });
+
+  test('UTF-16LE (BOM olmadan — NUL örüntüsünden anlaşılır)', () => {
+    expect(X.veXlsDecodeText(utf16(sample, true, false))).toBe(sample);
+  });
+
+  test('UTF-8 Türkçe karakterlerle bozulmadan geçer', () => {
+    const t = 'Zaman;Sıcaklık;Ölçüm\n0,5;21,3;çalışıyor\n';
+    const bytes = Uint8Array.from(Buffer.from(t, 'utf8'));
+    expect(X.veXlsDecodeText(bytes)).toBe(t);
+  });
+});

@@ -99,7 +99,7 @@ function veImpIngest(bytes) {
   } else {
     veImpUI.wb = null;
     veImpUI.sheets = [];
-    var text = veXlsUtf8(bytes);
+    var text = veXlsDecodeText(bytes);
     var parsed = veXlsCsvParse(text);
     veImpApplyParsed(parsed);
   }
@@ -295,6 +295,15 @@ function veImpAxisHTML() {
   }
   if(veImpUI.dateCols[xc ? xc.index : -1]) {
     h += '<span class="ve-imp-badge">tarih/saat biçimi → saniyeye çevrilecek</span>';
+  }
+  // X ekseninde boşluk olamaz (imleç ve zaman ölçeği ona dayanıyor), bu yüzden
+  // eksik zaman damgası bir öncekiyle DOLDURULUR. Sessiz kalırsa kullanıcı iki
+  // örneğin aynı ana düştüğünü fark etmez ve "artan" notu da yeşil kalır —
+  // eksik hücre sayısı açıkça yazılır.
+  if(xc && xc.sampled > 0 && xc.filled < xc.sampled) {
+    var gaps = xc.sampled - xc.filled;
+    h += '<span class="ve-imp-xnote bad">' + gaps + ' satırda zaman değeri boş — ' +
+         'bir önceki damga sürdürülecek</span>';
   }
   h += '</div>';
   h += '<label class="ve-imp-check"><input type="checkbox"' + (veImpUI.holdSparse ? ' checked' : '') +

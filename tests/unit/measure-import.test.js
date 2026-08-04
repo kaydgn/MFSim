@@ -659,3 +659,52 @@ describe('veImpDropStaleAxis', () => {
     expect(slot._dataSource).toBe('segmentDrive');
   });
 });
+
+describe('seyrek sütun adımlı taramada kaybolmaz', () => {
+  // Adımlı tarama (20.000 satırdan uzun dosyada step > 1) çok seyrek bir
+  // sinyalin TÜM örneklerini atlayabiliyordu: sütun 'empty' sayılıp
+  // sihirbazdan tamamen düşüyordu — kullanıcı sinyalin var olduğunu bile
+  // göremiyordu. 'empty' kararı artık tam taramayla teyit edilir.
+  test('40.000 satırda 3 kez konuşan kanal listede kalır', () => {
+    const rows = [['Time', 'Rare']];
+    for (let i = 0; i < 40000; i++) rows.push([i * 0.01, null]);
+    // Adımın (ceil(40000/20000) = 2) arasına düşen tek sayılı satırlar
+    rows[1001][1] = 5;
+    rows[20001][1] = 6;
+    rows[39999][1] = 7;
+    const layout = M.veImpDetectHeaderRow(rows, false);
+    const cols = M.veImpBuildColumns(rows, layout, false);
+    expect(cols[1].kind).toBe('num');
+  });
+
+  test('gerçekten boş sütun hâlâ boş sayılır', () => {
+    const rows = [['Time', 'Bos']];
+    for (let i = 0; i < 40000; i++) rows.push([i * 0.01, null]);
+    const layout = M.veImpDetectHeaderRow(rows, false);
+    const cols = M.veImpBuildColumns(rows, layout, false);
+    expect(cols[1].kind).toBe('empty');
+  });
+});
+
+describe('aynı adlı sinyaller mesaj adıyla ayrılır', () => {
+  // İki farklı CAN mesajında aynı sinyal adı geçebilir. Ad tek başına
+  // gösterilirse iki şerit ayırt edilemiyordu.
+  function rows() {
+    return [
+      ['Time', 'EEC1::EngSpeed', 'EEC2::EngSpeed', 'CCVS1::VehSpeed'],
+      [0.0, 800, 810, 0],
+      [0.1, 812, 822, 4],
+    ];
+  }
+
+  test('çakışanlara mesaj adı eklenir, çakışmayan sade kalır', () => {
+    const r = rows();
+    const layout = M.veImpDetectHeaderRow(r, false);
+    const cols = M.veImpBuildColumns(r, layout, false);
+    const ds = M.veImpBuildDataset({
+      rows: r, layout, columns: cols, commaDecimal: false, xIndex: 0, yIndexes: [1, 2, 3],
+    });
+    expect(ds.columns.map((c) => c.name))
+      .toEqual(['EEC1::EngSpeed', 'EEC2::EngSpeed', 'VehSpeed']);
+  });
+});

@@ -96,6 +96,10 @@ function veAdoptSolverTab(tabId) {
   veResultSlots = veSolverTabSlots[tabId]
     ? veTrCloneBoard(veSolverTabSlots[tabId])
     : [{},{},{},{}];
+  // Pano her GERİ YÜKLENDİĞİNDE bayat içe aktarma referansları düşer.
+  // Yalnızca veEnterResults'ta budamak yetmiyordu: çözücü sekmesi değiştirmek
+  // ya da proje açmak da panoyu geri yükleyen bir yol.
+  if(typeof veImpPruneSlots === 'function') veImpPruneSlots(veResultSlots);
   // Sekme değişti — görünüm penceresi ve referans imleç önceki koşuya aitti
   if(typeof veTrState !== 'undefined') {
     veTrState.xMin = null; veTrState.xMax = null;

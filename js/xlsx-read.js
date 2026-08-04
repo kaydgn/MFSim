@@ -288,6 +288,43 @@ function veXlsZipRead(bytes) {
 
 // TextDecoder tarayıcıda var, jsdom'da yok. Elle çözüm hem testte hem
 // tarayıcıda aynı sonucu vermeli — hızlı yol varsa o kullanılır.
+// Metin dosyasının kodlaması. Excel'in "Unicode Metin" dışa aktarması ve
+// bazı Windows araçları UTF-16 üretiyor; koşulsuz UTF-8 çözümü bunu her
+// karakterin arasına NUL serpilmiş bir çöp metne çeviriyordu — dosya
+// "okunuyor", sütunlar anlamsız çıkıyordu.
+function veXlsDecodeText(bytes) {
+  var n = bytes.length;
+  if(n >= 2) {
+    if(bytes[0] === 0xff && bytes[1] === 0xfe) return veXlsUtf16(bytes, 2, true);
+    if(bytes[0] === 0xfe && bytes[1] === 0xff) return veXlsUtf16(bytes, 2, false);
+  }
+  // BOM'suz UTF-16: ASCII ağırlıklı metinde bayt sırasına göre her ikinci
+  // bayt NUL olur. İlk 512 baytta bu oran belirleyicidir.
+  if(n >= 16) {
+    var lim = Math.min(n - (n % 2), 512), zEven = 0, zOdd = 0;
+    for(var i = 0; i < lim; i += 2) {
+      if(bytes[i] === 0) zEven++;
+      if(bytes[i + 1] === 0) zOdd++;
+    }
+    var pairs = lim / 2;
+    if(zOdd > pairs * 0.6 && zEven < pairs * 0.1) return veXlsUtf16(bytes, 0, true);
+    if(zEven > pairs * 0.6 && zOdd < pairs * 0.1) return veXlsUtf16(bytes, 0, false);
+  }
+  return veXlsUtf8(bytes);
+}
+
+function veXlsUtf16(bytes, start, little) {
+  var out = '', chunk = [];
+  for(var i = start; i + 1 < bytes.length; i += 2) {
+    var code = little ? (bytes[i] | (bytes[i + 1] << 8)) : ((bytes[i] << 8) | bytes[i + 1]);
+    if(code === 0xfeff) continue;                       // BOM / sıfır genişlik
+    chunk.push(code);
+    if(chunk.length >= 4096) { out += String.fromCharCode.apply(null, chunk); chunk = []; }
+  }
+  if(chunk.length) out += String.fromCharCode.apply(null, chunk);
+  return out;
+}
+
 function veXlsUtf8(bytes) {
   if(typeof TextDecoder !== 'undefined') {
     try { return new TextDecoder('utf-8').decode(bytes); } catch(e) {}
@@ -577,11 +614,34 @@ function veXlsOpen(bytes) {
 // Ayracı ilk satırlara bakarak seçer. Ondalık VİRGÜL kullanan bir dışa
 // aktarımda ayraç noktalı virgüldür; virgülü ayraç sanmak tüm sayıları
 // ikiye böler — bu yüzden aday başına satır başı tutarlılığa bakılır.
+var VE_XLS_DELIMS = [';', '\t', ',', '|'];
+var VE_XLS_DEC = /^[+-]?\d+[.,]\d+$/;
+
 function veXlsSniffDelimiter(text) {
   var lines = text.split(/\r\n|\n|\r/).filter(function(l) { return l.trim() !== ''; }).slice(0, 20);
   if(lines.length === 0) return ',';
-  var best = ',', bestScore = -1;
-  [';', '\t', ',', '|'].forEach(function(d) {
+  var best = ',', bestHits = -1, bestDec = -1, bestMode = -1;
+  // Dosyada ondalık sayı var mı? Veto ölçütü buna dayanıyor.
+  var rawDec = 0;
+  lines.forEach(function(l) { var m = l.match(/\d+[.,]\d+/g); if(m) rawDec += m.length; });
+  var vetoed = [];
+
+  // TEK SÜTUN kontrolü. Ondalık sayı kalıplarını sildikten sonra hiçbir
+  // satırda aday ayraç kalmıyorsa dosya tek sütunludur ve BÖLÜNMEMELİDİR:
+  // "0,0046" satırlarından oluşan bir dosyada ',' seçilirse her satır iki
+  // sütuna ayrılır, zaman ekseni tanınmaz hâle gelirdi.
+  var anyDelim = false;
+  lines.forEach(function(l) {
+    var rest = l.replace(/[+-]?\d+[.,]\d+/g, '');
+    VE_XLS_DELIMS.forEach(function(d) { if(rest.indexOf(d) >= 0) anyDelim = true; });
+  });
+  if(!anyDelim) {
+    for(var vi = 0; vi < VE_XLS_DELIMS.length; vi++) {
+      if(text.indexOf(VE_XLS_DELIMS[vi]) < 0) return VE_XLS_DELIMS[vi];
+    }
+  }
+
+  VE_XLS_DELIMS.forEach(function(d) {
     var counts = lines.map(function(l) {
       // Tırnak içindeki ayraçlar sayılmamalı.
       var n = 0, inQ = false;
@@ -605,10 +665,43 @@ function veXlsSniffDelimiter(text) {
       var hits = nz.filter(function(c) { return c === cand; }).length;
       if(hits > modeHits || (hits === modeHits && cand > mode)) { modeHits = hits; mode = cand; }
     });
-    // Tutarlılık ana ölçüt, sütun sayısı eşitlik bozucu.
-    var score = modeHits * 1000 + mode;
-    if(score > bestScore) { bestScore = score; best = d; }
+    // Bölünmüş alanların kaçı DÜZGÜN ONDALIK SAYI görünüyor.
+    var dec = 0;
+    lines.forEach(function(l) {
+      l.split(d).forEach(function(f) {
+        if(VE_XLS_DEC.test(f.trim())) dec++;
+      });
+    });
+
+    // ONDALIK AYIRICI VETOSU. Dosyada ondalık sayı VAR ama bu adayla bölünce
+    // hiç ondalık sayı KALMIYORSA, aday sütun sınırı değil ondalık ayıraçtır.
+    //
+    // Neden gerekli: başlıksız Avrupa biçimli bir dosyada her satırda 10 ';'
+    // ve 11 ondalık ',' vardır; ikisi de %100 tutarlıdır ve alan sayısı
+    // eşitlik bozucu olduğu için ',' bir puanla KAZANIRDI. Sonuç sessizce
+    // yanlıştı: "0,004600;798,625000" → ["0","004600;798", …] — zaman ekseni
+    // tam saniyeye yuvarlanıyor, tüm sinyaller metin kanalına dönüyordu.
+    // Veto tam sayılı dosyalarda hiç tetiklenmez (rawDec = 0).
+    if(rawDec > 0 && dec === 0) { vetoed.push({ d: d, hits: modeHits, dec: dec, mode: mode }); return; }
+
+    // Sıra: tutarlılık → düzgün ondalık sayı üretimi → alan sayısı.
+    if(modeHits > bestHits ||
+       (modeHits === bestHits && dec > bestDec) ||
+       (modeHits === bestHits && dec === bestDec && mode > bestMode)) {
+      bestHits = modeHits; bestDec = dec; bestMode = mode; best = d;
+    }
   });
+
+  // Veto yalnızca ELEYİCİ bir ölçüttür, tek başına karar veremez: geriye hiç
+  // aday kalmadıysa vetoyu yok say. Aksi halde "a,b,c / 1,2" gibi tek adaylı
+  // düzgün bir dosya bölünmeden kalırdı.
+  if(bestHits < 0 && vetoed.length) {
+    var top = vetoed[0];
+    vetoed.forEach(function(v) {
+      if(v.hits > top.hits || (v.hits === top.hits && v.mode > top.mode)) top = v;
+    });
+    return top.d;
+  }
   return best;
 }
 
@@ -627,7 +720,12 @@ function veXlsCsvParse(text, delim) {
       }
       field += ch; i++; continue;
     }
-    if(ch === '"') { inQ = true; i++; continue; }
+    // Tırnak yalnızca ALAN BAŞINDA alan açar (RFC 4180). Alan ortasındaki tek
+    // bir " düz karakterdir: eskiden orada tırnak açılıyor, sonraki ayraçlar
+    // ve SATIR SONLARI alan içi sayılıyor ve araya giren satırlar sessizce
+    // yutuluyordu — 3 inç anlamına gelen 3" gibi bir hücre dosyanın kalanını
+    // tek hücreye yığardı.
+    if(ch === '"' && field === '') { inQ = true; i++; continue; }
     if(ch === delim) { row.push(field); field = ''; i++; continue; }
     if(ch === '\r' || ch === '\n') {
       if(ch === '\r' && text.charAt(i + 1) === '\n') i++;
@@ -655,6 +753,8 @@ if(typeof module !== 'undefined' && module.exports) {
     veXlsBuildHuff: veXlsBuildHuff,
     veXlsZipRead: veXlsZipRead,
     veXlsUtf8: veXlsUtf8,
+    veXlsDecodeText: veXlsDecodeText,
+    veXlsUtf16: veXlsUtf16,
     veXlsUnescape: veXlsUnescape,
     veXlsAttr: veXlsAttr,
     veXlsColIndex: veXlsColIndex,

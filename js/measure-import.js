@@ -348,6 +348,21 @@ function veImpBuildColumns(rows, layout, commaDecimal) {
     if(num >= text && num > 0) kind = (mixed && distinct <= VE_IMP_STATE_MAX) ? 'text' : 'num';
     else kind = (text > 0) ? 'text' : 'empty';
 
+    // 'empty' KESİN bir karardır: sütun sihirbazdan tamamen düşer. Adımlı
+    // tarama (20.000 satırdan uzun dosyalarda step > 1) çok seyrek bir sinyali
+    // ıskalayabilir — örneğin 40.000 satırda yalnızca 15 kez konuşan bir
+    // kanalın tüm örnekleri adımın arasına düşebilir. Bu yüzden yalnızca boş
+    // görünen sütunlar için TAM tarama yapılır: nadir ve ucuz.
+    if(kind === 'empty' && step > 1) {
+      for(var r3 = layout.dataRow; r3 < rows.length; r3++) {
+        var v3 = (rows[r3] || [])[c];
+        if(v3 === null || v3 === undefined || v3 === '') continue;
+        if(veImpToNumber(v3, commaDecimal) !== null) num++; else text++;
+        if(num + text >= 4) break;                 // tip için bu kadarı yeter
+      }
+      if(num + text > 0) kind = (num >= text) ? 'num' : 'text';
+    }
+
     cols.push({
       key: 'c' + c,
       index: c,
@@ -479,10 +494,23 @@ function veImpBuildDataset(opts) {
   xVals = veImpForwardFill(xVals);
 
   var id = 'imp' + VE_IMP_SESSION + '-' + (++veImpSeq);
+
+  // Aynı sinyal adı birden çok MESAJDA geçebilir ("EEC1::EngSpeed" ve
+  // "EEC2::EngSpeed"). Ad tek başına gösterilirse iki şerit ayırt edilemez ve
+  // kullanıcı hangisine baktığını bilemez. Yalnızca ÇAKIŞANLARA mesaj adı
+  // önekle: çakışma yoksa etiket sade kalır.
+  var nameCount = {};
+  (opts.yIndexes || []).forEach(function(ci) {
+    var cc = cols[ci];
+    if(!cc || ci === opts.xIndex) return;
+    nameCount[cc.name] = (nameCount[cc.name] || 0) + 1;
+  });
+
   var columns = [];
   (opts.yIndexes || []).forEach(function(ci) {
     var c = cols[ci];
     if(!c || ci === opts.xIndex) return;
+    var label = (nameCount[c.name] > 1 && c.group) ? (c.group + '::' + c.name) : c.name;
     var asText = (c.kind === 'text');
     var vals = veImpReadValues(rows, c, layout, commaDecimal, asText);
     // Örnekle-ve-tut METİN kanallarında da geçerli: vites modu ('1C'/'2L')
@@ -491,7 +519,7 @@ function veImpBuildDataset(opts) {
     // görünür — Y ekseninde etiketler durduğu hâlde tek çizgi çıkmaz.
     if(opts.holdSparse !== false) vals = veImpForwardFill(vals);
     columns.push({
-      key: c.key, name: c.name, rawName: c.rawName, group: c.group,
+      key: c.key, name: label, rawName: c.rawName, group: c.group,
       unit: c.unit, kind: c.kind, sparse: c.sparse, values: vals
     });
   });
