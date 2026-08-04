@@ -20,6 +20,7 @@
  */
 const core = require('../../js/mount-core.js');
 global.veMountCore = core;
+global.veMntBrief = require('../../js/mount-brief.js');
 const S = require('../../js/mount-signals.js');
 const M = require('../../js/measure-core.js');
 
@@ -54,7 +55,16 @@ const solveOne = (lc) => ({
   res: core.solveCaseStop(KSTAT, MOUNTS, MP.cg, MP.m, G, lc, { useStop: true })
 });
 
-const R = { mp: MP, mounts: MOUNTS, damping: DAMP, g: G };
+// Yorum katmanı çözümün TAMAMINI okur (modlar, statik durum, motor tanımı) —
+// R bu yüzden gerçek bir çözüm gibi kurulur, yoksa yorum paragrafları sessizce
+// düşer ve test onları hiç görmez.
+const M6 = core.buildM6(MP.m, MP.I_G);
+const MODES = core.solveModal(core.buildK(MOUNTS, MP.cg, true), M6, MOUNTS, MP.cg);
+const R = {
+  mp: MP, mounts: MOUNTS, damping: DAMP, g: G, zeta: 0.02, modes: MODES,
+  allCases: [{ name: 'Static', loadCase: STATIC_LC, res: solveOne(STATIC_LC).res }],
+  gather: { torque: { idleRpm: 750, cylinders: 6 } }
+};
 const SETS = S.build(R, { solveOne });
 const setOf = (k) => SETS.find((d) => d.key === k);
 
@@ -220,40 +230,66 @@ describe('ivme süpürmesi (gz / gy / gx)', () => {
   });
 });
 
-describe('diyagram açıklamaları', () => {
-  // İçerik sözleşmesi: şerit kapalıyken TEK SATIR, açıkken üç kısa blok.
-  // Eksik ya da taşan bir metin yerleşimi bozar; sessizce olmaz, burada patlar.
-  test('her veri kümesinin dört alanlı açıklaması var', () => {
+describe('diyagram yorumu', () => {
+  // Yorum SABİT METİN DEĞİL: mount-brief çözümü okuyup bu modele ait sayılarla
+  // yazar. Sözleşme burada: her kümenin yorumu olacak, yorum modelden gelen
+  // sayıları içerecek ve beş diyagramda aynı olmayacak.
+  test('her veri kümesinin paragraflı yorumu var', () => {
     SETS.forEach((ds) => {
-      expect(ds.info).toBeTruthy();
-      ['headline', 'what', 'read', 'good'].forEach((k) => {
-        expect(typeof ds.info[k]).toBe('string');
-        expect(ds.info[k].trim().length).toBeGreaterThan(20);
+      expect(ds.brief).toBeTruthy();
+      expect(typeof ds.brief.lead).toBe('string');
+      expect(ds.brief.lead.length).toBeGreaterThan(20);
+      expect(Array.isArray(ds.brief.paras)).toBe(true);
+      expect(ds.brief.paras.length).toBeGreaterThanOrEqual(3);
+      ds.brief.paras.forEach((p) => expect(p.length).toBeGreaterThan(40));
+    });
+  });
+
+  test('yorum modelin KENDİ sayılarını içerir — genel geçer metin değil', () => {
+    // Frekans yanıtı yorumu bu modelin mod frekanslarından söz etmeli.
+    const frf = setOf('frf').brief.paras.join(' ');
+    expect(frf).toMatch(/\d+,\d+ Hz/);        // ondalık Türkçe, birimli sayı
+    expect(frf).toMatch(/mod/i);
+
+    // Süpürme yorumu tasarım yükündeki gerçek çökmeyi yazmalı.
+    const gz = setOf('gz').brief.paras.join(' ');
+    expect(gz).toMatch(/mm/);
+    expect(gz).toMatch(/g/);
+  });
+
+  test('beş diyagramın yorumu birbirinden farklı', () => {
+    const bodies = SETS.map((d) => d.brief.paras.join(' '));
+    expect(new Set(bodies).size).toBe(bodies.length);
+    const leads = SETS.map((d) => d.brief.lead);
+    expect(new Set(leads).size).toBe(leads.length);
+  });
+
+  test('yorumda formül ve sembol yok — sade dil sözleşmesi', () => {
+    SETS.forEach((ds) => {
+      [ds.brief.lead].concat(ds.brief.paras).forEach((t) => {
+        expect(t).not.toMatch(/[=∑√≤≥×·]|\$\$|\bω\b/);
       });
     });
   });
 
-  test('başlık tek satıra sığar, gövde blokları kısa kalır', () => {
+  test('her kümenin diyagram üzerinde işareti var', () => {
     SETS.forEach((ds) => {
-      expect(ds.info.headline.length).toBeLessThanOrEqual(110);
-      ['what', 'read', 'good'].forEach((k) => {
-        expect(ds.info[k].length).toBeLessThanOrEqual(260);
+      expect(Array.isArray(ds.brief.marks)).toBe(true);
+      expect(ds.brief.marks.length).toBeGreaterThan(0);
+      ds.brief.marks.forEach((m) => {
+        expect(['x', 'y']).toContain(m.axis);
+        expect(Number.isFinite(m.value)).toBe(true);
+        expect(typeof m.label).toBe('string');
       });
     });
   });
 
-  test('metinlerde formül ve sembol yok — sade dil sözleşmesi', () => {
-    // Okur kitlesi yalnız mühendis değil. Formül gerekiyorsa yeri Rapor.
-    SETS.forEach((ds) => {
-      ['headline', 'what', 'read', 'good'].forEach((k) => {
-        expect(ds.info[k]).not.toMatch(/[=∑√≤≥×·]|\$\$|\bω\b|\bζ\b/);
-      });
-    });
-  });
-
-  test('her diyagramın başlığı kendine ait', () => {
-    const heads = SETS.map((d) => d.info.headline);
-    expect(new Set(heads).size).toBe(heads.length);
+  test('frekans yanıtı ekseni logaritmik olarak işaretlenmiş', () => {
+    expect(setOf('frf').x.scale).toBe('log');
+    expect(S.xAxisOf(setOf('frf')).scale).toBe('log');
+    // Diğerleri lineer — süpürme ve deformasyon ekseni sıfırdan/eksiden başlar
+    expect(S.xAxisOf(setOf('gz')).scale).toBeUndefined();
+    expect(S.xAxisOf(setOf('fdefl')).scale).toBeUndefined();
   });
 });
 

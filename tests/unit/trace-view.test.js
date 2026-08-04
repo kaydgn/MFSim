@@ -460,7 +460,7 @@ describe('veTrNoteHTML — grafiğin altındaki açıklama şeridi', () => {
   // testi kırmamalı (bkz. CLAUDE.md test politikası).
   const entry = {
     name: 'Frekans yanıtı',
-    info: { headline: 'Baş satır', what: 'Ne', read: 'Nasıl', good: 'İyi' }
+    brief: { lead: 'Baş satır', paras: ['Birinci paragraf.', 'İkinci paragraf.'], marks: [] }
   };
 
   test('metni ve aç/kapa düğmesini üretir', () => {
@@ -474,12 +474,108 @@ describe('veTrNoteHTML — grafiğin altındaki açıklama şeridi', () => {
     // Söyleyecek sözü olmayan bir kutu gürültüdür: araç panosunda ve boş
     // panoda şerit hiç çizilmemeli.
     expect(T.veTrNoteHTML(null)).toBe('');
-    expect(T.veTrNoteHTML({ name: 'X', info: null })).toBe('');
+    expect(T.veTrNoteHTML({ name: 'X', brief: null })).toBe('');
+    expect(T.veTrNoteHTML({ name: 'X', brief: { lead: 'a', paras: [] } })).toBe('');
   });
 
   test('metin HTML olarak kaçırılır', () => {
-    const h = T.veTrNoteHTML({ name: '<b>', info: { headline: '<script>', what: 'a', read: 'b', good: 'c' } });
+    const h = T.veTrNoteHTML({ name: '<b>', brief: { lead: '<script>', paras: ['x'], marks: [] } });
     expect(h).not.toContain('<script>');
     expect(h).toContain('&lt;script&gt;');
+  });
+});
+
+describe('logaritmik X ekseni', () => {
+  // Takozun frekans yanıtı 0,1–100 Hz arasında LOGARİTMİK örneklenir (rezonans
+  // tepesinin yarı-güç genişliği ~0,4 Hz; eşit aralıklı ızgara onu ıskalar).
+  // Aynı veri lineer eksende çizilince üç dekat sıkışır ve rijit gövde
+  // modlarının tamamı genişliğin ~%10'una düşer. Eşleme tek noktada olduğu
+  // için burada test edilen o eşlemenin kendisidir.
+  const geo = { plotX: 100, plotW: 600, xMin: 0.1, xMax: 100, dataMin: 0.1, dataMax: 100, xLog: true };
+  const lin = Object.assign({}, geo, { xLog: false });
+
+  test('log ekseni yalnız tüm veri POZİTİFSE mümkün', () => {
+    expect(T.veTrXLogOk([0.1, 1, 10])).toBe(true);
+    expect(T.veTrXLogOk([0, 1, 2])).toBe(false);      // zaman ekseni 0'dan başlar
+    expect(T.veTrXLogOk([-1, 1])).toBe(false);
+    expect(T.veTrXLogOk([])).toBe(false);
+    expect(T.veTrXLogOk(null)).toBe(false);
+  });
+
+  test('kip seçimi: kullanıcı seçimi veri kümesinin önerisini ezer', () => {
+    const arr = [0.1, 1, 10, 100];
+    expect(T.veTrXLogOn({ xAxis: { scale: 'log' } }, arr)).toBe(true);
+    expect(T.veTrXLogOn({ xAxis: {} }, arr)).toBe(false);
+    expect(T.veTrXLogOn({ xAxis: { scale: 'log' }, xLog: false }, arr)).toBe(false);
+    // Veri elverişsizse öneri de seçim de geçersiz
+    expect(T.veTrXLogOn({ xAxis: { scale: 'log' }, xLog: true }, [0, 1])).toBe(false);
+  });
+
+  test('dekatlar eşit genişlikte — asıl kazanç bu', () => {
+    // 0,1→1 ile 1→10 aynı piksel genişliğini kaplamalı. Lineer eksende
+    // ilki toplam genişliğin binde 9'una düşerdi.
+    const d1 = T.veTrXPos(geo, 1) - T.veTrXPos(geo, 0.1);
+    const d2 = T.veTrXPos(geo, 10) - T.veTrXPos(geo, 1);
+    expect(d1).toBeCloseTo(d2, 6);
+    expect(d1).toBeCloseTo(200, 6);                  // 600 px / 3 dekat
+    // Aynı veri lineer eksende: 0,1→1 neredeyse hiç yer kaplamaz
+    expect(T.veTrXPos(lin, 1) - T.veTrXPos(lin, 0.1)).toBeLessThan(6);
+  });
+
+  test('uçlar çizim alanının sınırlarına oturur', () => {
+    expect(T.veTrXPos(geo, 0.1)).toBeCloseTo(100, 6);
+    expect(T.veTrXPos(geo, 100)).toBeCloseTo(700, 6);
+  });
+
+  test('imleç için ters eşleme tutarlı — okunan değer çizilen değerdir', () => {
+    [0.1, 0.37, 1, 6.5, 13.6, 37.5, 100].forEach((v) => {
+      expect(T.veTrXVal(geo, T.veTrXPos(geo, v))).toBeCloseTo(v, 6);
+    });
+  });
+
+  test('pozitif olmayan değer çizim alanının dışına atılır, NaN üretmez', () => {
+    const px = T.veTrXPos(geo, 0);
+    expect(Number.isFinite(px)).toBe(true);
+    expect(px).toBeLessThan(geo.plotX);
+  });
+
+  test('görünüm penceresi log kipinde sıfıra düşmez', () => {
+    // Lineer kipten kalmış bir pencere (xMin=0) log'da tanımsızdır.
+    T.veTrResetView();
+    const v = T.veTrXView([0.1, 1, 10, 100], true);
+    expect(v.xMin).toBeGreaterThan(0);
+    expect(v.xLog).toBe(true);
+  });
+
+  test('bölme değerleri dekat başına 1-2-5', () => {
+    const tk = T.veTrLogTicks(geo);
+    expect(tk.log).toBe(true);
+    expect(tk.ticks).toEqual(expect.arrayContaining([0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100]));
+    // Kesin artan — imleç ikili aramayla örnek kilitliyor
+    for (let i = 1; i < tk.ticks.length; i++) {
+      expect(tk.ticks[i]).toBeGreaterThan(tk.ticks[i - 1]);
+    }
+  });
+
+  test('dar yakınlaştırmada ızgara boş kalmaz — lineer üretece düşülür', () => {
+    // 11–14 Hz aralığında hiçbir 1-2-5 (ya da ara) çarpanı yok. Log üreteci
+    // bunu bildirir (null) ve veTrTimeTicks eşit aralıklı değerlere düşer;
+    // değerler yine LOG konuma çizilir, yalnız seçimleri eşit aralıklıdır.
+    const zoom = Object.assign({}, geo, { xMin: 11, xMax: 14 });
+    expect(T.veTrLogTicks(zoom)).toBeNull();
+    const tk = T.veTrTimeTicks(zoom);
+    expect(tk.ticks.length).toBeGreaterThanOrEqual(3);
+    tk.ticks.forEach((v) => {
+      expect(v).toBeGreaterThanOrEqual(10.9);
+      expect(v).toBeLessThanOrEqual(14.1);
+    });
+  });
+
+  test('etiket ondalığı DEĞERİN büyüklüğünden gelir', () => {
+    // Tek bir `dec` ile "0,10" ve "100,00" yan yana yazılıyordu.
+    expect(T.veTrFmtLogTick(0.1)).toBe('0.1');
+    expect(T.veTrFmtLogTick(1)).toBe('1');
+    expect(T.veTrFmtLogTick(20)).toBe('20');
+    expect(T.veTrFmtLogTick(100)).toBe('100');
   });
 });
