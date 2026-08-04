@@ -1330,6 +1330,19 @@ function _mntRepModalEnergy(R){
 // deforme şekli çizer. Ölçek görseldir (mod şekli normalize, mutlak genlik yok).
 // plane: 'xy' üstten · 'xz' yandan · 'yz' önden
 // ana: bu figürde KUTU+ETİKET alacak gövde adları (kütle payı eşiğini geçenler)
+// Lejant SVG'nin İÇİNDEN çıkarıldı: görünüşler yan yana gelince paneller
+// daralıyor ve lejant çizimin üstüne biniyordu. Figür başına bir kez, saf HTML
+// olarak (SVG değil — çizimi geri okuyan doğrulama testinin işaret saymasına
+// karışmasın diye).
+var _MNT_MOD_LEJANT =
+  '<div style="display:flex; gap:14px; align-items:center; justify-content:flex-end;'
+ +' font-size:9.5px; color:#5a6270; margin-top:3px;">'
+ +'<span><i style="display:inline-block; width:8px; height:8px; background:#8a3ca0;'
+ +' vertical-align:-1px"></i> takoz</span>'
+ +'<span><i style="display:inline-block; width:12px; height:8px; border-radius:2px;'
+ +' background:rgba(36,66,95,0.13); border:1px solid #24425f; vertical-align:-1px"></i>'
+ +' ana gövde</span></div>';
+
 function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
   // Eksen eşlemesi ve mod DÖNMESİNİN ekrandaki yönü.
   //   Δ = θ×d  ⇒  θ_x: Δy=−θx·dz, Δz=+θx·dy   (önden bakışta belirgin)
@@ -1406,29 +1419,43 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
   }
   var bbXY=aralik('x','y',0,1), bbXZ=aralik('x','z',0,2), bbYZ=aralik('y','z',1,2);
   var bb={xy:bbXY, xz:bbXZ, yz:bbYZ}[plane];
-  var W=760, padL=30, padR=26, padT=22, padB=14;
-  var plotW=W-padL-padR;
-  var hSpanMax=Math.max(bbXY.maxH-bbXY.minH, bbXZ.maxH-bbXZ.minH, bbYZ.maxH-bbYZ.minH, 1);
+
+  // ── YAN YANA YERLEŞİM ────────────────────────────────────────────────────
+  // Üç görünüş tek satırda durur (alt alta dizilince rapor gereksiz uzuyordu).
+  // İki koşul birlikte sağlanmalı:
+  //   (1) px/mm ÜÇÜNDE AYNI olsun — yoksa gövde oranları görünüşler arasında
+  //       karşılaştırılamaz hâle gelir;
+  //   (2) üç kutu aynı yükseklikte hizalansın.
+  // Çözüm: viewBox YÜKSEKLİĞİ üçünde eşit, viewBox GENİŞLİĞİ her görünüşün
+  // kendi yatay açıklığıyla orantılı, flex-grow da o genişlikle orantılı.
+  // Böylece her SVG aynı K katsayısıyla ölçeklenir (K = kap/ΣW) → hem px/mm
+  // eşit kalır hem de üçünün ekrandaki yüksekliği K·H olur, yani aynıdır.
+  // padB: figürün altındaki nefes payı. Bir önceki turda bu satır kaldırılmıştı
+  // ve şekiller birbirine yapışık görünüyordu — geri kondu.
+  var padL=22, padR=14, padT=24, padB=30;
+  // TOT: raporun GERÇEK gövde genişliği — .page max-width 880 px, yatay
+  // padding 2×32 px ⇒ 816 px. Böylece viewBox birimi ekranda ~1 px'e oturur ve
+  // içerideki yazı/çizgi kalınlıkları tasarlandığı boyutta çıkar.
+  var GAP=12, TOT=816;
+  var hSpanXY=Math.max(bbXY.maxH-bbXY.minH,1), hSpanXZ=Math.max(bbXZ.maxH-bbXZ.minH,1),
+      hSpanYZ=Math.max(bbYZ.maxH-bbYZ.minH,1);
+  var hSpanTop=hSpanXY+hSpanXZ+hSpanYZ;
   var vSpanMax=Math.max(bbXY.maxV-bbXY.minV, bbXZ.maxV-bbXZ.minV, bbYZ.maxV-bbYZ.minV, 1);
-  var sc=Math.min(plotW/hSpanMax, 155/vSpanMax);   // 155 px: rapor yerini şişirmeden okunur
+  var sc=Math.min((TOT-2*GAP-3*(padL+padR))/hSpanTop, 230/vSpanMax);
   var minH=bb.minH, maxH=bb.maxH, minV=bb.minV, maxV=bb.maxV;
   var rngH=Math.max(maxH-minH,1), rngV=Math.max(maxV-minV,1);
-  var H=Math.round(padT+padB+rngV*sc);
-  var plotH=H-padT-padB;
+  var W=Math.round(padL+padR+rngH*sc);
+  var H=Math.round(padT+padB+vSpanMax*sc);          // ÜÇÜNDE AYNI
+  var plotW=W-padL-padR, plotH=H-padT-padB;
   var offH=padL+(plotW-rngH*sc)/2, offV=padT+(plotH-rngV*sc)/2;
   function sx(hh){ return offH+(hh-minH)*sc; }
   function sy(vv){ return offV+(maxV-vv)*sc; }
 
   // display:block — SVG varsayılan olarak satır-içidir ve altında satır-yüksekliği
-  // kadar boşluk bırakır; üç görünüş alt alta gelince bu boşluk birikiyordu.
-  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="display:block">';
-  s+='<text x="6" y="12" font-size="11" fill="#5a6270">'+EK.ad+'</text>';
-  if(plane==='xy'){
-    s+='<rect x="'+(W-152)+'" y="6" width="8" height="8" fill="#8a3ca0"/>'
-      +'<text x="'+(W-140)+'" y="14" font-size="9.5" fill="#5a6270">takoz</text>'
-      +'<rect x="'+(W-98)+'" y="6" width="12" height="8" rx="2" fill="rgba(36,66,95,0.13)" stroke="#24425f" stroke-width="1.1"/>'
-      +'<text x="'+(W-82)+'" y="14" font-size="9.5" fill="#5a6270">ana gövde</text>';
-  }
+  // kadar boşluk bırakır.
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" '
+       +'style="display:block; width:100%; height:auto">';
+  s+='<text x="'+padL+'" y="13" font-size="11" fill="#5a6270">'+EK.ad+'</text>';
   // ── REFERANS (deforme olmamış) ──
   items.forEach(function(it){
     var x=sx(it.p[horiz]), y=sy(it.p[vert]);
@@ -1474,7 +1501,9 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
   s+='<line x1="'+gx.toFixed(1)+'" y1="'+(gy-7).toFixed(1)+'" x2="'+gx.toFixed(1)+'" y2="'+(gy+7).toFixed(1)+'" stroke="#1b1e24" stroke-width="1"/>';
   s+='<text x="'+(gx+9).toFixed(1)+'" y="'+(gy-7).toFixed(1)+'" font-size="10.5" font-weight="600" fill="#1b1e24">G</text>';
   s+='</svg>';
-  return s;
+  // flex-grow = viewBox genişliği → ekrandaki genişlik de W ile orantılı olur,
+  // yani K = kap/ΣW üçünde ortaktır (px/mm eşitliğinin dayanağı budur).
+  return '<div style="flex:'+W+' 1 0; min-width:0;">'+s+'</div>';
 }
 function _mntRepModeShapes(R){
   var modes=R.modes||[];
@@ -1530,7 +1559,10 @@ function _mntRepModeShapes(R){
   h+='<p style="font-size:0.9em; color:#5a6270;"><b>Üç görünüş neden gerekli:</b> her dönme ekseni farklı '
     +'düzlemde görünür. Roll ( \\( \\theta_x \\) ) yandan bakışta kaybolur — ±y\'deki gövdeler üst üste '
     +'düşer ve zıt hareketleri görsel olarak birbirini götürür; <b>önden (Y–Z)</b> görünüşte ise açıkça okunur. '
-    +'Yunuslama ( \\( \\theta_y \\) ) yandan, sapma ( \\( \\theta_z \\) ) üstten görünüşün konusudur.</p>';
+    +'Yunuslama ( \\( \\theta_y \\) ) yandan, sapma ( \\( \\theta_z \\) ) üstten görünüşün konusudur. '
+    +'Üçü <b>yan yana</b> verilir ve <b>aynı mm/px ölçeğini</b> paylaşır: panel genişlikleri kendi yatay '
+    +'açıklıklarıyla orantılıdır, bu yüzden önden görünüş dardır — çizim küçültülmüş değildir, gövde '
+    +'boyutları üç panelde birebir karşılaştırılabilir.</p>';
   modes.forEach(function(md,i){
     var phi=md.phi||[0,0,0,0,0,0];
     // Her mod için ölçek: bu modun en büyük nokta yer değiştirmesi span'ın %12'si olsun
@@ -1555,9 +1587,12 @@ function _mntRepModeShapes(R){
     var scale=Math.min(sTrans, sRot);
     if(!Number.isFinite(scale)) scale=0;
     h+='<figure style="break-inside:avoid;">'
+      +'<div style="display:flex; gap:12px; align-items:flex-start;">'
       +_mntRepModeFigure(geom, cgM, phi, 'xy', 'm'+i+'a', scale, ANA)
       +_mntRepModeFigure(geom, cgM, phi, 'xz', 'm'+i+'b', scale, ANA)
       +_mntRepModeFigure(geom, cgM, phi, 'yz', 'm'+i+'c', scale, ANA)
+      +'</div>'
+      +_MNT_MOD_LEJANT
       +'<figcaption><b>Şekil '+_rFig()+' —</b> Mod '+(i+1)+': '+_rF(md.f_Hz,2)+' Hz · '
       +_rEsc(md.label||'—')+'. Üstten (X–Y), yandan (X–Z) ve önden (Y–Z) görünüş.</figcaption></figure>';
   });
