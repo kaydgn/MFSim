@@ -3875,6 +3875,62 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
   font-variant-numeric:tabular-nums;font-feature-settings:"tnum";
 }
 
+/* ── Diyagram notu ──────────────────────────────────────────────────────────
+   Grafiğin ALTINDA, durum çubuğunun da altında duran açıklama şeridi. Bu alanın
+   tek işi "bu eğri ne anlatıyor?" sorusunu, konuya hiç hâkim olmayan bir okur
+   için de cevaplamak.
+
+   TASARIM KURALI — göze batmaz: kapalıyken tek satır, sönük renk, çerçevesiz.
+   Grafiğin kendisiyle kontrast yarışına girmez; okumak isteyen açar. Açıkken
+   bile arka plan durum çubuğuyla aynı tondadır, yeni bir "kutu" hissi vermez. */
+.ve-trace-note{
+  flex-shrink:0;
+  background:var(--bg-secondary);
+  border-top:1px solid var(--border-color);
+}
+.ve-trace-note-head{
+  display:flex;align-items:center;gap:7px;width:100%;
+  padding:4px 8px;min-height:22px;
+  background:transparent;border:0;
+  font-family:inherit;font-size:var(--fs-tiny);text-align:left;
+  color:var(--text-muted);cursor:pointer;
+}
+.ve-trace-note-head:hover{color:var(--text-secondary);}
+.ve-trace-note-head:focus-visible{
+  outline:2px solid var(--accent-primary);outline-offset:-2px;
+}
+.ve-trace-note-head .mf-ico{
+  width:11px;height:11px;flex-shrink:0;opacity:0.55;
+}
+.ve-trace-note-head:hover .mf-ico{opacity:0.8;}
+.ve-trace-note-line{
+  flex:1;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.ve-trace-note-caret{
+  flex-shrink:0;font-size:var(--fs-micro);opacity:0.6;
+  transition:transform 0.14s ease;
+}
+.ve-trace-note.open .ve-trace-note-caret{transform:rotate(180deg);}
+.ve-trace-note.open .ve-trace-note-line{white-space:normal;overflow:visible;}
+
+.ve-trace-note-body{display:none;padding:0 8px 8px 26px;}
+.ve-trace-note.open .ve-trace-note-body{display:block;}
+.ve-trace-note-item{
+  display:grid;grid-template-columns:minmax(0,1fr);gap:1px;
+  padding:5px 0 0 0;
+  font-size:var(--fs-tiny);line-height:1.5;
+}
+.ve-trace-note-k{
+  font-size:var(--fs-micro);font-weight:700;letter-spacing:0.04em;
+  text-transform:uppercase;color:var(--text-muted);opacity:0.75;
+}
+.ve-trace-note-v{color:var(--text-secondary);}
+
+@media (prefers-reduced-motion: reduce){
+  .ve-trace-note-caret{transition:none;}
+}
+
 /* ── Şerit ölçeği açılır kutusu ── */
 .ve-trace-pop{
   position:fixed;z-index:var(--z-menu);min-width:190px;

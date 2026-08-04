@@ -973,6 +973,7 @@ function veTrRender() {
   if(!slot || !scrollEl || !cv || !ov) return;
 
   veTrRenderToolbar();
+  veTrRenderNote();
 
   var hasSignals = (slot.sensors || []).length > 0;
   var emptyEl = document.getElementById('ve-trace-empty');
@@ -1067,6 +1068,96 @@ function veTrRenderStatus(geo, tick) {
   h += '</div>';
 
   el.innerHTML = h;
+}
+
+// ── Diyagram notu ────────────────────────────────────────────────────────────
+//
+// Grafiğin altındaki açıklama şeridi. Amaç: bu ekrana bakan HERKES — takoz
+// mühendisi olmayan bir yönetici ya da müşteri dahil — eğrinin ne anlattığını
+// okuyabilsin. Metin veri kümesinin kendisinden gelir (js/mount-signals.js
+// INFO), yani "hangi grafiğe bakıyorum" sorusunu panonun kendisi cevaplar.
+//
+// GÖZE BATMAMA KURALI: kapalıyken tek satır, sönük renk, çerçevesiz. Açık/kapalı
+// tercihi localStorage'da tutulur — kullanıcıya her açılışta aynı soruyu sormaz.
+// Proje dosyasına GİRMEZ: bu bir okuma tercihi, model verisi değil.
+var VE_TR_NOTE_KEY = 'mf-trace-note-open';
+
+function veTrNoteOpen() {
+  try {
+    return localStorage.getItem(VE_TR_NOTE_KEY) === '1';
+  } catch(e) { return false; }
+}
+
+function veTrSetNoteOpen(v) {
+  try { localStorage.setItem(VE_TR_NOTE_KEY, v ? '1' : '0'); } catch(e) {}
+}
+
+// Pencerenin gösterdiği veri kümesinin açıklaması; yoksa null.
+// Açıklaması olmayan bir pano (araç sinyalleri, boş pano) için şerit hiç
+// çizilmez — söyleyecek sözü olmayan bir kutu, gürültüden başka bir şey değil.
+function veTrNoteInfo() {
+  if(typeof veMntSignals === 'undefined') return null;
+  var sets = (typeof veMntSets === 'function') ? veMntSets() : [];
+  if(!sets.length) return null;
+  var ds = veMntSignals.setOfSlot(sets, veTrBoard());
+  return (ds && ds.info) ? { name: ds.name, info: ds.info } : null;
+}
+
+// Kaçış: tarayıcıda signal-tree'nin veSigEsc'i, Jest'te (tek dosya require
+// edildiğinde) yerel yedek. Metin sabit olsa da kaçışsız innerHTML alışkanlığı
+// açılmaz.
+function _veTrEsc(s) {
+  if(typeof veSigEsc === 'function') return veSigEsc(s);
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function veTrNoteHTML(entry) {
+  if(!entry || !entry.info) return '';
+  var open = veTrNoteOpen();
+  var i = entry.info;
+  var h = '<button type="button" class="ve-trace-note-head" data-act="note-toggle"' +
+          ' aria-expanded="' + (open ? 'true' : 'false') + '"' +
+          ' title="' + _veTrEsc(entry.name) + ' — açıklamayı ' + (open ? 'gizle' : 'göster') + '">';
+  h += '<span class="mf-ico mf-ico-lightbulb"></span>';
+  h += '<span class="ve-trace-note-line">' + _veTrEsc(i.headline) + '</span>';
+  h += '<span class="ve-trace-note-caret" aria-hidden="true">▾</span>';
+  h += '</button>';
+  h += '<div class="ve-trace-note-body">';
+  [['Ne gösteriyor', i.what], ['Nasıl okunur', i.read], ['İyi sonuç', i.good]].forEach(function(row) {
+    h += '<div class="ve-trace-note-item">' +
+         '<span class="ve-trace-note-k">' + row[0] + '</span>' +
+         '<span class="ve-trace-note-v">' + _veTrEsc(row[1]) + '</span></div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+// Son çizilen not — her veTrRender'da (yani her yakınlaştırma/sürükleme
+// karesinde) innerHTML yeniden kurulmasın diye. Şerit yalnız veri kümesi ya da
+// açık/kapalı durumu değişince yeniden çizilir.
+var _veTrNoteKey = null;
+
+function veTrRenderNote(force) {
+  var el = document.getElementById('ve-trace-note');
+  if(!el) return;
+  var entry = veTrNoteInfo();
+  var key = (entry ? entry.name : '') + '|' + (veTrNoteOpen() ? '1' : '0');
+  if(!force && key === _veTrNoteKey) return;
+  _veTrNoteKey = key;
+
+  if(!entry) { el.style.display = 'none'; el.innerHTML = ''; el.classList.remove('open'); return; }
+  el.style.display = '';
+  el.classList.toggle('open', veTrNoteOpen());
+  el.innerHTML = veTrNoteHTML(entry);
+  if(el._veTrBound) return;
+  el._veTrBound = true;
+  el.addEventListener('click', function(e) {
+    if(!e.target.closest('[data-act="note-toggle"]')) return;
+    veTrSetNoteOpen(!veTrNoteOpen());
+    veTrRenderNote();
+  });
 }
 
 // ── Boş durum ────────────────────────────────────────────────────────────────
@@ -1279,6 +1370,9 @@ function veTrApplyMode() {
     veTrRenderToolbar();
     if(typeof veRenderSlot === 'function') veRenderSlot(VE_BOARD);
   }
+  // Not şeridi kipe bağlı değil: tabloya geçen kullanıcı da neye baktığını
+  // okuyabilmeli. Tek giriş noktası burası — çizim yolları ikiye ayrılıyor.
+  veTrRenderNote();
 }
 
 // Şeridi kaldır: şeritteki tüm sinyaller listeden düşer.
@@ -1747,6 +1841,7 @@ function veTrShellHTML() {
   h += '</div>';
   h += '<canvas class="ve-trace-axis" id="ve-trace-axis"></canvas>';
   h += '<div class="ve-trace-status" id="ve-trace-status"></div>';
+  h += '<div class="ve-trace-note" id="ve-trace-note"></div>';
   h += '</div>';
 
   // Tablo / 3B görünümü — veRenderSlot(0) buraya çizer
@@ -1932,6 +2027,7 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrLaneTitle: veTrLaneTitle,
     veTrFitTitle: veTrFitTitle,
     veTrSnapIndex: veTrSnapIndex,
+    veTrNoteHTML: veTrNoteHTML,
     veTrFmt: veTrFmt,
     veTrInRect: veTrInRect,
     veTrLaneCloseRect: veTrLaneCloseRect,
