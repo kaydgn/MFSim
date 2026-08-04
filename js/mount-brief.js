@@ -17,6 +17,18 @@
 // ateşleme frekansı paragrafı hiç yazılmaz — "bilinmiyor" yazan bir cümle,
 // olmayan bir cümleden kötüdür.
 //
+// YORUM ŞERİT BAŞINADIR, veri kümesi başına değil. Kullanıcı tek bir kanal
+// açtıysa o kanalın yorumu; alt alta iki şerit açtıysa iki başlıklı iki yorum;
+// bir kümenin tüm kanallarını TEK şeritte birleştirdiyse o birleşime özel bir
+// yorum gelir. Aynı diyagramın "düşey iletilebilirlik" hâliyle "dokuz kanal
+// üst üste" hâli farklı şeyler anlatır — tek bir metin ikisine birden hizmet
+// edemez.
+//
+// VURGU: sayılar `**...**` ile işaretlenir. Bu, mount-brief'in HTML üretmediği
+// anlamına gelir — işaretleme sunum katmanında (js/trace-view.js) kaçırılarak
+// <b>'ye çevrilir. Yorum motoru HTML yazsaydı, üretilen her cümle bir enjeksiyon
+// yüzeyi olurdu.
+//
 // Saf modül: DOM'a dokunmaz, global duruma yazmaz. Jest'te doğrudan test edilir.
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -40,11 +52,18 @@ var veMntBrief = (function() {
     return n(v, 4);
   }
   // Türkçede yüzde işareti sayının ÖNÜNDE durur: %98,3. Gereksiz ",0" kuyruğu
-  // atılır — "%2,0" değil "%2".
+  // atılır ("%2,0" değil "%2"). Eksi işareti yüzdenin de ÖNÜNDE kalır —
+  // "%-1295" değil "−%1295".
+  //
+  // EK ALMAZ: metinlerde "%96,4'i" gibi iyelik eki KULLANILMAZ. Türkçede ek,
+  // sayının okunuşundaki son ünlüye göre değişir (%2'si, %4'ü, %6'sı, %9'u);
+  // basamaktan kural çıkarmak yuvarlak sayılarda ("%20" → "yirmi") kırılır.
+  // Cümleler "%96,4 kadarı" biçiminde, eksiz kurulur.
   function pct(v, dec) {
-    var s = n(v, dec == null ? 1 : dec);
+    var neg = v < 0;
+    var s = n(Math.abs(v), dec == null ? 1 : dec);
     if(s.indexOf(',') >= 0) s = s.replace(/,?0+$/, '');
-    return '%' + s;
+    return (neg ? '−%' : '%') + s;
   }
 
   // Çekirdeğin mod etiketleri (classifyMode) İngilizce kısaltmalardır. Panoyu
@@ -172,225 +191,476 @@ var veMntBrief = (function() {
     return s ? s : ('Takoz ' + (i + 1));
   }
 
-  // ── 1) Frekans yanıtı ────────────────────────────────────────────────────
-  //
-  // UZUNLUK BİR TASARIM KISITI: bu metin grafiğin ALTINDA duruyor ve şerit ne
-  // kadar uzarsa eğriye o kadar az yer kalıyor. Altı paragraflık ilk sürüm
-  // pencerenin yarısını yiyordu. Kural: en fazla üç paragraf, her cümle bir
-  // SAYI taşısın. Genel tanım (eksen ne, birim ne) tek cümleye sıkışır;
-  // yerini modelin kendi ölçümüne bırakır.
-  function briefFRF(ds, R) {
-    var f = ds.x.data;
-    var T = chan(ds, 'T_2'), T0 = chan(ds, 'T0_2');
-    if(!T) return null;
-    var paras = [], marks = [];
-
-    // P1 — eksenler + tepeler
-    var modes = ((R && R.modes) || []).filter(function(m) { return m && m.f_Hz > 1e-6; });
-    var pk = peaks(f, T.data, 1.05);
-    var s1 = 'Yatay eksen titreşim frekansı, dikey eksen o titreşimin ne kadarının ' +
-             'takozlardan geçip şasiye ulaştığı; 1 değeri "hiç azalmadan geçti" demek.';
-    if(modes.length) {
-      var fs = modes.map(function(m) { return m.f_Hz; });
-      s1 += ' Tepeler güç grubunun doğal frekanslarıdır: ' + modes.length + ' tane, ' +
-            na(Math.min.apply(null, fs)) + '–' + na(Math.max.apply(null, fs)) + ' Hz arasında.';
-      modes.forEach(function(m) {
-        marks.push({ axis: 'x', value: m.f_Hz, kind: 'mode',
-                     label: na(m.f_Hz) + ' Hz · ' + modeShort(m.label) });
-      });
-    }
-    if(pk.length) {
-      var top = pk[0], near = null, bestD = Infinity;
-      modes.forEach(function(m) {
-        var d = Math.abs(Math.log10(m.f_Hz) - Math.log10(top.f));
-        if(d < bestD) { bestD = d; near = m; }
-      });
-      s1 += ' En keskini ' + na(top.f) + ' Hz' +
-            ((near && bestD < 0.05) ? ' (' + modeShort(near.label) + ')' : '') +
-            ': orada şasiye giden kuvvet ' + na(top.v) + ' katına çıkıyor — takoz izole etmez, büyütür.';
-    }
-    paras.push(s1);
-
-    // P2 — izolasyon bölgesi + ateşleme frekansı hükmü
-    var cross = lastCrossBelow(f, T.data, 1);
-    var s2 = '';
-    if(isFinite(cross)) {
-      s2 = na(cross) + ' Hz\'den sonra eğri kalıcı olarak 1\'in altında; takozun asıl ' +
-           'işini yaptığı bölge orası.';
-      marks.push({ axis: 'x', value: cross, kind: 'ref',
-                   label: 'izolasyon başlangıcı ' + na(cross) + ' Hz' });
-    }
-    var eng = engineFiring(R);
-    if(eng) {
-      var Tf = interpAt(f, T.data, eng.f, true);
-      s2 += (s2 ? ' ' : '') + 'Rölanti ateşleme frekansı ' + na(eng.f) + ' Hz (' +
-            n(eng.rpm, 0) + ' d/dk, ' + n(eng.cyl, 0) + ' silindir)';
-      if(isFinite(Tf)) {
-        s2 += ' ve orada iletilebilirlik ' + na(Tf) + ' — titreşimin ' +
-              pct((1 - Tf) * 100, 1) + '\'i takozda kalıyor. Hedef 0,2\'nin altı; ' +
-              (Tf < 0.2 ? 'model sağlıyor.'
-                        : (Tf < 1 ? 'model üstünde kalıyor, takozlar yumuşatılmalı.'
-                                  : 'burada izolasyon yok, yerleşim değişmeli.'));
-        marks.push({ axis: 'x', value: eng.f, kind: 'event',
-                     label: 'rölanti ateşleme ' + na(eng.f) + ' Hz' });
-      } else { s2 += '.'; }
-    }
-    marks.push({ axis: 'y', value: 1, unit: '−', kind: 'limit',
-                 label: 'T = 1 · altı izolasyon, üstü büyütme' });
-    if(s2) paras.push(s2);
-
-    // P3 — okuma uyarıları (kullanıcının bildirdiği iki tuzak)
-    var s3 = 'Sönümsüz kanal, kauçuğun sönüm payı çıkarılmış hâldir';
-    if(T0 && pk.length) {
-      var p0 = peaks(f, T0.data, 1.05);
-      if(p0.length) s3 += ': tepeyi ' + na(p0[0].v) + '\'ten ' + na(pk[0].v) + '\'e indiriyor';
-    }
-    s3 += '. Onu ve izolasyon verimini AYRI şeritte okuyun — biri ölçeği ele geçirir, ' +
-          'öteki rezonansta büyük eksi değerlere iner.';
-    paras.push(s3);
-
-    return {
-      lead: 'Motorun ürettiği titreşimin ne kadarının şasiye geçtiğini, her titreşim hızı için ayrı ayrı gösterir.',
-      paras: paras, marks: marks
-    };
-  }
-
-  // ── 2) Kuvvet-deformasyon ────────────────────────────────────────────────
-  function briefFdefl(ds, R) {
-    var mounts = (R && R.mounts) || [];
-    if(!mounts.length) return null;
-    var paras = [], marks = [];
-
-    var nl = mounts.filter(function(m) {
-      return (m.curves && Object.keys(m.curves).length) || (m.fits && Object.keys(m.fits).length);
-    }).length;
-
-    paras.push(
-      'Yatay eksen takozun şekil değiştirme miktarı (mm), dikey eksen bunun için gereken ' +
-      'kuvvet; eksi değer basma, artı değer çekme. Eğrinin eğimi takozun sertliğidir.');
-
-    paras.push(
-      'Modelde ' + mounts.length + ' takoz var; ' +
-      (nl === 0
-        ? 'hepsi doğrusal, yani eğriler düz çizgi. Kütüphaneden eğri tanımlanırsa ' +
-          'büyük ezilmedeki sertleşme de burada görünür.'
-        : nl + ' tanesi nonlineer: yük arttıkça sertleşip dibe vurmayı geciktiriyor, ' +
-          'kalan ' + (mounts.length - nl) + ' takoz doğrusal.'));
-
-    var stat = staticCase(R);
-    if(stat && stat.perMount && stat.perMount.length) {
-      var worst = null, wi = -1;
-      stat.perMount.forEach(function(pm, i) {
-        var dz = Math.abs((pm.delta && pm.delta[2]) || 0);
-        if(!worst || dz > worst) { worst = dz; wi = i; }
-      });
-      var wmm = worst * 1000;
-      paras.push(
-        'Araç kendi ağırlığındayken en çok yüklenen takoz "' + mountLabel(mounts[wi], wi) +
-        '": düşeyde ' + na(wmm) + ' mm — doğrusal bandın (±10 mm) ' + pct(wmm / 10 * 100, 0) +
-        '\'i. Metal metale değmeye ' + na(15 - wmm) + ' mm pay var.');
-      marks.push({ axis: 'x', value: -wmm, kind: 'event',
-                   label: 'çalışma noktası ' + na(-wmm) + ' mm' });
-    }
-
-    marks.push({ axis: 'x', value: -10, kind: 'limit', label: 'doğrusal bant −10 mm' });
-    marks.push({ axis: 'x', value:  10, kind: 'limit', label: 'doğrusal bant +10 mm' });
-    marks.push({ axis: 'x', value: -15, kind: 'stop',  label: 'durdurucu −15 mm' });
-    marks.push({ axis: 'x', value:  15, kind: 'stop',  label: 'durdurucu +15 mm' });
-
-    return {
-      lead: 'Takozun ne kadar kuvvet altında ne kadar ezildiğini — yani ne kadar yumuşak olduğunu gösterir.',
-      paras: paras, marks: marks
-    };
-  }
-
-  // ── 3) İvme süpürmeleri ──────────────────────────────────────────────────
   var GS_TEXT = {
-    gz: { yon: 'düşey', olay: 'araç çukura girip zıpladığında',
-          sifir: '0 g\'de hiç yük yok; 1 g aracın düz zeminde durduğu hâl',
+    gz: { yon: 'düşey', baslik: 'Düşey ivme süpürmesi', olay: 'araç çukura girip zıpladığında',
+          sifir: '0 g\'de hiç yük yok, 1 g aracın düz zeminde durduğu hâl',
           tasarim: 3.5, tasarimAd: '3,5 g\'lik sert çukur darbesi' },
-    gy: { yon: 'yanal', olay: 'araç virajda savrulduğunda',
-          sifir: '0 g aracın düz gittiği hâl (düşey yük 1 g\'de sabit)',
+    gy: { yon: 'yanal', baslik: 'Yanal ivme süpürmesi', olay: 'araç virajda savrulduğunda',
+          sifir: '0 g aracın düz gittiği hâl, düşey yük 1 g\'de sabit',
           tasarim: 1, tasarimAd: '1 g\'lik viraj' },
-    gx: { yon: 'boyuna', olay: 'sert frende veya hızlanmada',
-          sifir: '0 g sabit hızda gidiş (düşey yük 1 g\'de sabit)',
+    gx: { yon: 'boyuna', baslik: 'Boyuna ivme süpürmesi', olay: 'sert frende veya hızlanmada',
+          sifir: '0 g sabit hızda gidiş, düşey yük 1 g\'de sabit',
           tasarim: 1, tasarimAd: '1 g\'lik fren' }
   };
 
-  function briefSweep(ds, R) {
+  // Vurgu işaretleyici — sayılar bu sarmalın içine girer, sunum katmanı
+  // (js/trace-view.js _veTrRich) bunu <b>'ye çevirir.
+  function b(x) { return '**' + x + '**'; }
+
+  var AX_TR = ['boyuna (X)', 'yanal (Y)', 'düşey (Z)'];
+
+  // ── Kanal kimliği çözümleme ──────────────────────────────────────────────
+  // FRF:    T_<dir> | T0_<dir> | eta_<dir>
+  // fdefl:  m.<slug>.<eksen>
+  // süpürme:m.<slug>.d | m.<slug>.f | dmax | ntens | nclamp
+  function parseId(id) {
+    var m = /^(T0|T|eta)_([012])$/.exec(id);
+    if(m) return { kind: m[1], dir: +m[2] };
+    m = /^(m\..+)\.([012dfDF])$/.exec(id);
+    if(m) return { kind: 'mount', mount: m[1], part: m[2] };
+    return { kind: id };
+  }
+
+  // Kanalın adından takoz adını çıkar ("Ön Sol · bileşke çökme" → "Ön Sol").
+  function chanMount(ch) {
+    var s = (ch && ch.name) ? String(ch.name) : '';
+    var i = s.indexOf(' · ');
+    return i > 0 ? s.substring(0, i) : s;
+  }
+
+  // Eğrinin bir noktadaki eğimi — kuvvet-deformasyon şeridinde "sertlik".
+  // δ = ±1 mm arasındaki fark alınır: sıfırdaki teğet, nonlineer eğride
+  // çalışma bandını temsil etmiyor.
+  function slopeAt0(x, y) {
+    var lo = interpAt(x, y, -1), hi = interpAt(x, y, 1);
+    if(!isFinite(lo) || !isFinite(hi)) return NaN;
+    return (hi - lo) / 2;      // N/mm
+  }
+
+  // ═══════════ 1) FREKANS YANITI — şerit yorumu ═══════════
+  function frfLane(ds, R, chans) {
+    var f = ds.x.data;
+    var eng = engineFiring(R);
+    var modes = ((R && R.modes) || []).filter(function(m) { return m && m.f_Hz > 1e-6; });
+    var paras = [];
+
+    var damped = [], undamped = [], effs = [];
+    chans.forEach(function(ch) {
+      var p = parseId(ch.id);
+      if(p.kind === 'T') damped.push({ ch: ch, dir: p.dir });
+      else if(p.kind === 'T0') undamped.push({ ch: ch, dir: p.dir });
+      else if(p.kind === 'eta') effs.push({ ch: ch, dir: p.dir });
+    });
+
+    var full = chans.length === ds.channels.length;
+    var title = full ? 'Frekans yanıtı — birleşik (' + chans.length + ' kanal)'
+      : (damped.length && !undamped.length && !effs.length
+          ? 'Frekans yanıtı — ' + (damped.length === 3 ? 'üç yön birlikte' : AX_TR[damped[0].dir])
+          : 'Frekans yanıtı');
+
+    // Her sönümlü kanal için tepe + ateşleme frekansındaki değer
+    function line(e) {
+      var pk = peaks(f, e.ch.data, 1.05);
+      var s = b(AX_TR[e.dir]) + ': ';
+      if(pk.length) {
+        var near = null, bestD = Infinity;
+        modes.forEach(function(m) {
+          var d = Math.abs(Math.log10(m.f_Hz) - Math.log10(pk[0].f));
+          if(d < bestD) { bestD = d; near = m; }
+        });
+        s += 'en yüksek tepe ' + b(na(pk[0].f) + ' Hz') +
+             (near && bestD < 0.05 ? ' (' + modeShort(near.label) + ')' : '') +
+             ', orada kuvvet ' + b(na(pk[0].v) + '×') + ' büyüyor';
+      } else { s += 'belirgin tepe yok'; }
+      if(eng) {
+        var Tf = interpAt(f, e.ch.data, eng.f, true);
+        if(isFinite(Tf)) s += '; ateşlemede ' + b(na(Tf)) +
+          ' (titreşimin ' + b(pct((1 - Tf) * 100, 1)) + ' kadarı takozda kalıyor)';
+      }
+      return s + '.';
+    }
+
+    // ── BİRLEŞİK: kümenin tüm kanalları tek şeritte ──
+    if(full) {
+      paras.push(
+        'Bu şeritte kümenin ' + b(chans.length + ' kanalı') + ' üst üste: üç yönün ' +
+        'sönümlü ve sönümsüz iletilebilirliği ile izolasyon verimi. Toplu bakış için ' +
+        'iyi, okuma için zor — çünkü birimler farklı (iletilebilirlik birimsiz, verim ' +
+        b('%') + ') ve ölçekler bir arada durmuyor.');
+      var worst = null;
+      damped.forEach(function(e) {
+        var pk = peaks(f, e.ch.data, 1.05);
+        if(pk.length && (!worst || pk[0].v > worst.v)) worst = { v: pk[0].v, f: pk[0].f, dir: e.dir };
+      });
+      var pk0 = [];
+      undamped.forEach(function(e) { var q = peaks(f, e.ch.data, 1.05); if(q.length) pk0.push(q[0].v); });
+      var s = '';
+      if(worst) s += 'En kötü durum ' + b(AX_TR[worst.dir]) + ' yönde: ' + b(na(worst.f) + ' Hz') +
+                     '\'de kuvvet ' + b(na(worst.v) + '×') + ' büyüyor. ';
+      if(pk0.length) s += 'Ölçeği ele geçiren eğri sönümsüz olandır — tepesi ' +
+                          b(na(Math.max.apply(null, pk0)) + '×') + '. ';
+      s += 'Verim kanalı rezonansta ' + b('eksi') + ' değerlere iner (titreşim azalmıyor, katlanıyor), ' +
+           'bu yüzden dikey eksen iki tarafa birden gerilir.';
+      paras.push(s);
+      paras.push(
+        'Okumak için: "Birime Göre Birleştir" ile kanalları birimlerine ayırın ya da ' +
+        'yalnız sönümlü üç yönü bırakın. Sayıları imleçle okumak isterseniz tek yön ' +
+        'tek şerit en nettir.');
+      return { title: title, paras: paras };
+    }
+
+    // ── Yalnız sönümlü iletilebilirlik ──
+    if(damped.length && !undamped.length && !effs.length) {
+      if(damped.length === 1) {
+        var e = damped[0];
+        paras.push('Bu şeritte ' + b(AX_TR[e.dir]) + ' yönde iletilebilirlik var: motorun o ' +
+                   'yöndeki titreşiminin ne kadarının şasiye geçtiği. ' + b('1') +
+                   ' değeri "hiç azalmadan geçti" demek.');
+        var pk = peaks(f, e.ch.data, 1.05);
+        if(pk.length) {
+          var det = pk.slice(0, 3).map(function(q) {
+            var near = null, bd = Infinity;
+            modes.forEach(function(m) {
+              var d = Math.abs(Math.log10(m.f_Hz) - Math.log10(q.f));
+              if(d < bd) { bd = d; near = m; }
+            });
+            return b(na(q.f) + ' Hz') + (near && bd < 0.05 ? ' (' + modeShort(near.label) + ')' : '') +
+                   ' → ' + b(na(q.v) + '×');
+          });
+          paras.push('Tepeler güç grubunun doğal frekanslarıdır. ' +
+                     (modes.length ? 'Toplam ' + b(modes.length + ' mod') + ' var, ' : '') +
+                     'bu yönde ' + b(pk.length + ' tanesi') + ' belirgin tepe veriyor: ' +
+                     det.join(', ') + '. Diğer modlar bu yönde uyarılmıyor.');
+        }
+        var cross = lastCrossBelow(f, e.ch.data, 1);
+        var s3 = '';
+        if(isFinite(cross)) s3 += b(na(cross) + ' Hz') + '\'den sonra eğri kalıcı olarak ' +
+                                  b('1') + '\'in altında — izolasyon bölgesi orası. ';
+        if(eng) {
+          var Tf2 = interpAt(f, e.ch.data, eng.f, true);
+          if(isFinite(Tf2)) s3 += 'Rölanti ateşleme frekansı ' + b(na(eng.f) + ' Hz') +
+            ' ve orada iletilebilirlik ' + b(na(Tf2)) + '; hedef ' + b('0,2') + '\'nin altı, ' +
+            (Tf2 < 0.2 ? 'model ' + b('sağlıyor') + '.' : 'model ' + b('sağlamıyor') + '.');
+        }
+        if(s3) paras.push(s3);
+      } else {
+        paras.push('Bu şeritte ' + b(damped.length + ' yönün') + ' iletilebilirliği üst üste. ' +
+                   'Aynı eksende okundukları için hangi yönün daha kötü izole edildiği ' +
+                   'doğrudan görünür.');
+        damped.sort(function(a, c) { return a.dir - c.dir; }).forEach(function(e) {
+          paras.push(line(e));
+        });
+      }
+      return { title: title, paras: paras };
+    }
+
+    // ── Sönümlü + sönümsüz karşılaştırması ──
+    if(damped.length && undamped.length) {
+      paras.push('Bu şeritte sönümlü ve sönümsüz iletilebilirlik birlikte. Sönümsüz eğri, ' +
+                 'kauçuğun titreşimi ısıya çevirme payı çıkarılmış hâldir; aradaki fark ' +
+                 'sönümün katkısıdır.');
+      damped.forEach(function(e) {
+        var u = null;
+        undamped.forEach(function(q) { if(q.dir === e.dir) u = q; });
+        if(!u) return;
+        var pd = peaks(f, e.ch.data, 1.05), pu = peaks(f, u.ch.data, 1.05);
+        if(!pd.length || !pu.length) return;
+        paras.push(b(AX_TR[e.dir]) + ': sönümsüz tepe ' + b(na(pu[0].v) + '×') +
+                   ', sönümlü tepe ' + b(na(pd[0].v) + '×') + ' — sönüm tepeyi ' +
+                   b(na(pu[0].v / pd[0].v) + ' kat') + ' bastırıyor' +
+                   (isFinite(R.zeta) ? ' (kritik sönüm payı ' + b(pct(R.zeta * 100, 1)) + ')' : '') + '.');
+      });
+      paras.push('Dikkat: sönümsüz tepe çok daha yüksek olduğu için ortak eksende sönümlü ' +
+                 'eğri düz görünür. Karşılaştırmayı sayıyla yapın, gözle değil.');
+      return { title: 'Frekans yanıtı — sönüm karşılaştırması', paras: paras };
+    }
+
+    // ── Yalnız izolasyon verimi ──
+    if(effs.length && !damped.length && !undamped.length) {
+      paras.push('İzolasyon verimi, iletilebilirliğin yüzde cinsinden hâli: ' + b('%100') +
+                 ' "titreşimin tamamı takozda kaldı", ' + b('%0') + ' "hiç azalmadan geçti" demek.');
+      effs.forEach(function(e) {
+        var y = e.ch.data, last = y[y.length - 1];
+        var mn = Infinity, mnf = NaN;
+        y.forEach(function(v, i) { if(isFinite(v) && v < mn) { mn = v; mnf = f[i]; } });
+        paras.push(b(AX_TR[e.dir]) + ': ' + b(na(f[f.length - 1]) + ' Hz') + '\'de verim ' +
+                   b(pct(last, 1)) + '; en kötü nokta ' + b(na(mnf) + ' Hz') + '\'de ' +
+                   b(pct(mn, 0)) + '.');
+      });
+      paras.push('Eksi değer bir hata değil: rezonansta titreşim azalmaz, katlanır. ' +
+                 'Bu yüzden bu kanalı iletilebilirlikle aynı şeride koymayın — ölçek çok açılır.');
+      return { title: 'Frekans yanıtı — izolasyon verimi', paras: paras };
+    }
+
+    // ── Karışık ──
+    paras.push('Bu şeritte ' + b(chans.length + ' kanal') + ' birlikte çiziliyor.');
+    damped.forEach(function(e) { paras.push(line(e)); });
+    return { title: title, paras: paras };
+  }
+
+  // ═══════════ 2) KUVVET-DEFORMASYON — şerit yorumu ═══════════
+  function fdeflLane(ds, R, chans) {
+    var x = ds.x.data, paras = [];
+    var mounts = (R && R.mounts) || [];
+    var stat = staticCase(R);
+
+    var items = chans.map(function(ch) {
+      var p = parseId(ch.id);
+      return { ch: ch, mount: chanMount(ch), ax: +p.part, k: slopeAt0(x, ch.data),
+               nl: /nonlineer/.test(ch.name || '') };
+    }).filter(function(it) { return it.ax >= 0 && it.ax <= 2; });
+    if(!items.length) return null;
+
+    var uniqMounts = {}, uniqAx = {};
+    items.forEach(function(it) { uniqMounts[it.mount] = 1; uniqAx[it.ax] = 1; });
+    var nM = Object.keys(uniqMounts).length, nA = Object.keys(uniqAx).length;
+
+    // Statik çalışma noktası (düşey) — takoz adına göre
+    function workPoint(name) {
+      if(!stat || !stat.perMount) return NaN;
+      for(var i = 0; i < stat.perMount.length; i++) {
+        var nm = mounts[i] ? mountLabel(mounts[i], i) : null;
+        if(nm === name) return Math.abs((stat.perMount[i].delta || [])[2] || 0) * 1000;
+      }
+      return NaN;
+    }
+
+    paras.push('Yatay eksen takozun ezilme miktarı (' + b('mm') + '), dikey eksen bunun için ' +
+               'gereken kuvvet. Eğrinin eğimi = takozun sertliği; dik eğri sert, yatık eğri ' +
+               'yumuşak takoz demek.');
+
+    var title = 'Kuvvet-deformasyon';
+    if(nM === 1 && nA > 1) {
+      // Tek takoz, birden çok eksen → yön farkı (anizotropi)
+      var mn = Object.keys(uniqMounts)[0];
+      title += ' — ' + mn;
+      var byAx = items.slice().sort(function(a, c) { return a.ax - c.ax; });
+      paras.push('Bu şeritte ' + b(mn) + ' takozunun ' + b(byAx.length + ' ekseni') + ' var: ' +
+        byAx.map(function(it) { return AX_TR[it.ax] + ' ' + b(na(it.k) + ' N/mm'); }).join(', ') + '.');
+      var ks = byAx.map(function(it) { return it.k; }).filter(isFinite);
+      if(ks.length > 1) {
+        var mx = Math.max.apply(null, ks), mnk = Math.min.apply(null, ks);
+        if(mnk > 0) paras.push('En sert eksen en yumuşağın ' + b(na(mx / mnk) + ' katı') +
+          '. Takozun yön yön farklı sertlikte olması tasarımın kendisidir: titreşimi ' +
+          'yumuşak eksende yutar, yükü sert eksende taşır.');
+      }
+    } else if(nA === 1 && nM > 1) {
+      // Aynı eksen, birden çok takoz → yük paylaşımı
+      var axi = +Object.keys(uniqAx)[0];
+      title += ' — ' + AX_TR[axi] + ' eksen';
+      paras.push('Bu şeritte ' + b(nM + ' takozun') + ' ' + b(AX_TR[axi]) + ' eksen eğrisi var. ' +
+        'Eğriler üst üste düşüyorsa takozlar aynı, ayrışıyorsa farklı sertlikte demektir.');
+      var srt = items.slice().sort(function(a, c) { return c.k - a.k; });
+      paras.push('En sert: ' + b(srt[0].mount) + ' ' + b(na(srt[0].k) + ' N/mm') +
+        ' · en yumuşak: ' + b(srt[srt.length - 1].mount) + ' ' + b(na(srt[srt.length - 1].k) + ' N/mm') + '.');
+    } else if(items.length === 1) {
+      var it = items[0];
+      title += ' — ' + it.mount + ' · ' + AX_TR[it.ax];
+      paras.push('Bu şerit ' + b(it.mount) + ' takozunun ' + b(AX_TR[it.ax]) + ' eksen yasası. ' +
+        'Sertlik ' + b(na(it.k) + ' N/mm') + '; eğri ' +
+        (it.nl ? b('nonlineer') + ' — yük arttıkça sertleşiyor.' : b('doğrusal') + ' — her yükte aynı sertlikte.'));
+      var wp = workPoint(it.mount);
+      if(it.ax === 2 && isFinite(wp)) {
+        paras.push('Araç kendi ağırlığındayken bu takoz ' + b(na(wp) + ' mm') + ' eziliyor: ' +
+          'doğrusal bandın (' + b('±10 mm') + ') ' + b(pct(wp / 10 * 100, 0)) + ' kadarı, metal metale ' +
+          'değmeye ' + b(na(15 - wp) + ' mm') + ' pay var.');
+      }
+    } else {
+      title += ' — ' + items.length + ' kanal';
+      var kk = items.map(function(i2) { return i2.k; }).filter(isFinite);
+      if(kk.length) paras.push('Bu şeritte ' + b(items.length + ' eğri') + ' var; sertlikler ' +
+        b(na(Math.min.apply(null, kk)) + ' N/mm') + ' ile ' +
+        b(na(Math.max.apply(null, kk)) + ' N/mm') + ' arasında.');
+    }
+
+    var anyNL = items.some(function(i2) { return i2.nl; });
+    paras.push(anyNL
+      ? 'Yukarı kıvrılan eğri, büyük darbede dibe vurmayı geciktirir. ' + b('±15 mm') +
+        ' metal metale değme sınırıdır.'
+      : 'Doğrusal eğri, modelde takoz için sabit bir oran girildiği anlamına gelir. ' +
+        'Kütüphaneden eğri tanımlanırsa büyük ezilmedeki sertleşme de burada görünür.');
+    return { title: title, paras: paras };
+  }
+
+  // ═══════════ 3) İVME SÜPÜRMESİ — şerit yorumu ═══════════
+  function sweepLane(ds, R, chans) {
     var t = GS_TEXT[ds.key];
     if(!t) return null;
-    var a = ds.x.data;
-    var dmax = chan(ds, 'dmax'), nt = chan(ds, 'ntens'), nc = chan(ds, 'nclamp');
-    if(!dmax) return null;
-    var paras = [], marks = [];
+    var a = ds.x.data, paras = [];
 
-    paras.push(
-      'Yatay eksen ' + t.yon + ' ivme: ' + t.olay + ' takozlara binen yük. ' + t.sifir +
-      '. "En büyük takoz çökmesi" kanalı hepsinin en kötüsünü tek eğride toplar.');
+    var defl = [], forc = [], sums = [], counters = [];
+    chans.forEach(function(ch) {
+      var p = parseId(ch.id);
+      if(p.kind === 'mount' && (p.part === 'd')) defl.push(ch);
+      else if(p.kind === 'mount' && (p.part === 'f')) forc.push(ch);
+      else if(ch.id === 'dmax') sums.push(ch);
+      else counters.push(ch);
+    });
 
-    var dAtDesign = interpAt(a, dmax.data, t.tasarim);
-    var dAtEnd = dmax.data[dmax.data.length - 1];
-    var dRef = isFinite(dAtDesign) ? dAtDesign : dAtEnd;
-    var s = t.tasarimAd + ' altında en çok yüklenen takoz ' + na(dRef) + ' mm eziliyor';
-    if(ds.key === 'gz') {
-      var d1 = interpAt(a, dmax.data, 1);
-      if(isFinite(d1)) s += ' (araç dururken ' + na(d1) + ' mm)';
+    var title = t.baslik;
+    paras.push('Yatay eksen ' + b(t.yon + ' ivme') + ': ' + t.olay + ' takozlara binen yük. ' +
+               t.sifir + '.');
+
+    function atDesign(ch) { return interpAt(a, ch.data, t.tasarim); }
+
+    if(defl.length) {
+      var srt = defl.map(function(ch) {
+        return { name: chanMount(ch), v: atDesign(ch) };
+      }).filter(function(o) { return isFinite(o.v); }).sort(function(p2, q) { return q.v - p2.v; });
+      if(srt.length === 1) {
+        title += ' — ' + srt[0].name;
+        paras.push(b(srt[0].name) + ' takozu ' + b(t.tasarimAd) + ' altında ' +
+          b(na(srt[0].v) + ' mm') + ' eziliyor; ' + b('±15 mm') + ' sınırına ' +
+          b(na(15 - srt[0].v) + ' mm') + ' pay kalıyor.');
+      } else if(srt.length > 1) {
+        title += ' — ' + srt.length + ' takoz';
+        paras.push('Bu şeritte ' + b(srt.length + ' takozun') + ' çökmesi karşılaştırılıyor. ' +
+          b(t.tasarimAd) + ' altında en çok yüklenen ' + b(srt[0].name) + ' (' +
+          b(na(srt[0].v) + ' mm') + '), en az yüklenen ' + b(srt[srt.length - 1].name) + ' (' +
+          b(na(srt[srt.length - 1].v) + ' mm') + '). Aradaki fark ' +
+          b(na(srt[0].v - srt[srt.length - 1].v) + ' mm') + ' — yük dağılımının ne kadar ' +
+          'dengesiz olduğunu bu gösterir.');
+      }
     }
-    s += '; ±15 mm sınırına ' + na(15 - dRef) + ' mm pay kalıyor.';
-    paras.push(s);
-    marks.push({ axis: 'x', value: t.tasarim, kind: 'event',
-                 label: 'tasarım yükü ' + n(t.tasarim, 1).replace(',0', '') + ' g' });
-    if(ds.key === 'gz') {
-      marks.push({ axis: 'x', value: 1, kind: 'ref', label: 'araç dururken 1 g' });
+
+    if(forc.length) {
+      var fs = forc.map(function(ch) { return { name: chanMount(ch), v: atDesign(ch) }; })
+        .filter(function(o) { return isFinite(o.v); }).sort(function(p2, q) { return q.v - p2.v; });
+      if(fs.length) paras.push((fs.length === 1 ? b(fs[0].name) + ' takozuna' : 'En çok yüklenen takoza (' + b(fs[0].name) + ')') +
+        ' ' + b(t.tasarimAd) + ' altında ' + b(na(fs[0].v) + ' N') + ' bileşke kuvvet biniyor.');
     }
 
+    if(sums.length) {
+      var dMax = sums[0];
+      var vD = atDesign(dMax), vEnd = dMax.data[dMax.data.length - 1];
+      var v1 = interpAt(a, dMax.data, 1);
+      var s = '"En büyük takoz çökmesi" kanalı her ivmede en kötü takozu izler. ' +
+              b(t.tasarimAd) + ' altında ' + b(na(isFinite(vD) ? vD : vEnd) + ' mm');
+      if(ds.key === 'gz' && isFinite(v1)) s += ', araç dururken ' + b(na(v1) + ' mm');
+      s += '; ' + b('±15 mm') + ' sınırına ' + b(na(15 - (isFinite(vD) ? vD : vEnd)) + ' mm') + ' pay var.';
+      paras.push(s);
+    }
+
+    // Olaylar — bu şeritte sayaç olmasa bile kritik bilgi
+    var nt = null, nc = null;
+    ds.channels.forEach(function(ch) {
+      if(ch.id === 'ntens') nt = ch;
+      if(ch.id === 'nclamp') nc = ch;
+    });
     var aT = nt ? firstNonZero(a, nt.data) : NaN;
     var aC = nc ? firstNonZero(a, nc.data) : NaN;
     var ev = [];
-    if(isFinite(aT)) {
-      ev.push('İlk çekme ' + na(aT) + ' g\'de: bir takozun üzerinden yük tamamen kalkıp ' +
-              'asılmaya geçiyor — elastomer çekmede basmadaki gibi davranmaz.');
-      marks.push({ axis: 'x', value: aT, kind: 'warn', label: 'ilk çekme ' + na(aT) + ' g' });
-    }
-    if(isFinite(aC)) {
-      ev.push('İlk metal-metal temas ' + na(aC) + ' g\'de: yük artık kauçuktan değil ' +
-              'çelikten geçiyor, eğrideki keskin kırılma orada.');
-      marks.push({ axis: 'x', value: aC, kind: 'warn', label: 'durdurucu teması ' + na(aC) + ' g' });
-    }
-    paras.push(ev.length
-      ? ev.join(' ')
+    if(isFinite(aT)) ev.push('İlk çekme ' + b(na(aT) + ' g') + '\'de: bir takozun üzerinden yük ' +
+      'tamamen kalkıp asılmaya geçiyor.');
+    if(isFinite(aC)) ev.push('İlk metal-metal temas ' + b(na(aC) + ' g') + '\'de: yük artık ' +
+      'kauçuktan değil çelikten geçiyor, eğrideki keskin kırılma orada.');
+    paras.push(ev.length ? ev.join(' ')
       : 'Süpürmenin tamamında hiçbir takoz dayanağına oturmuyor, hiçbirinin üzerinden yük ' +
-        'kalkmıyor — iki sayaç da sıfırda. Aranan sonuç budur.');
+        'kalkmıyor — ' + b('aranan sonuç budur') + '.');
 
-    return {
-      lead: 'Takozların ' + t.olay + ' ne kadar ezildiğini ve ne kadar yüklendiğini gösterir.',
-      paras: paras, marks: marks
-    };
+    if(counters.length) {
+      paras.push('Sayaç kanalları ' + b('adet') + ' gösterir, mm değil: kaç takozun çekmeye ' +
+        'geçtiğini / dayanağa oturduğunu sayar. Basamaklı görünmeleri normaldir.');
+    }
+    return { title: title, paras: paras };
   }
 
-  // ── Giriş noktası ────────────────────────────────────────────────────────
+  // ── Şerit yorumu: giriş noktası ──────────────────────────────────────────
   //
-  // Yorum üretilemezse null döner ve pano açıklama şeridini hiç çizmez.
-  // Yarım bir yorum, yorumsuzluktan kötüdür.
-  function build(ds, R) {
-    if(!ds || !R || R.error) return null;
+  // ids = O ŞERİTTE çizili kanal kimlikleri. Aynı şeritte hangi kanalların
+  // birlikte durduğu yorumu değiştirir; bu yüzden yorum çözüm anında değil,
+  // ÇİZİM anında üretilir.
+  function forLane(ds, R, ids) {
+    if(!ds || !R || R.error || !ids || !ids.length) return null;
     try {
-      if(ds.key === 'frf')   return briefFRF(ds, R);
-      if(ds.key === 'fdefl') return briefFdefl(ds, R);
-      return briefSweep(ds, R);
+      var chans = ids.map(function(id) { return chan(ds, id); }).filter(Boolean);
+      if(!chans.length) return null;
+      if(ds.key === 'frf')   return frfLane(ds, R, chans);
+      if(ds.key === 'fdefl') return fdeflLane(ds, R, chans);
+      return sweepLane(ds, R, chans);
+    } catch(e) { return null; }
+  }
+
+  // ── Veri kümesi düzeyi: grafik üstü işaretler + tek satır özet ───────────
+  // Şerit yorumu değişkendir, işaretler değil: mod frekansları ve sınırlar
+  // hangi kanalın çizildiğinden bağımsızdır.
+  function datasetMarks(ds, R) {
+    var marks = [];
+    if(ds.key === 'frf') {
+      ((R.modes) || []).forEach(function(m) {
+        if(!(m.f_Hz > 1e-6)) return;
+        marks.push({ axis: 'x', value: m.f_Hz, kind: 'mode',
+                     label: na(m.f_Hz) + ' Hz · ' + modeShort(m.label) });
+      });
+      var T = chan(ds, 'T_2');
+      if(T) {
+        var cross = lastCrossBelow(ds.x.data, T.data, 1);
+        if(isFinite(cross)) marks.push({ axis: 'x', value: cross, kind: 'ref',
+          label: 'izolasyon başlangıcı ' + na(cross) + ' Hz' });
+      }
+      var eng = engineFiring(R);
+      if(eng) marks.push({ axis: 'x', value: eng.f, kind: 'event',
+        label: 'rölanti ateşleme ' + na(eng.f) + ' Hz' });
+      marks.push({ axis: 'y', value: 1, unit: '−', kind: 'limit',
+                   label: 'T = 1 · altı izolasyon, üstü büyütme' });
+    } else if(ds.key === 'fdefl') {
+      var stat = staticCase(R), mounts = (R.mounts) || [];
+      if(stat && stat.perMount) {
+        var worst = 0;
+        stat.perMount.forEach(function(pm) {
+          var dz = Math.abs((pm.delta || [])[2] || 0);
+          if(dz > worst) worst = dz;
+        });
+        if(worst > 0) marks.push({ axis: 'x', value: -worst * 1000, kind: 'event',
+          label: 'çalışma noktası ' + na(-worst * 1000) + ' mm' });
+      }
+      marks.push({ axis: 'x', value: -10, kind: 'limit', label: 'doğrusal bant −10 mm' });
+      marks.push({ axis: 'x', value:  10, kind: 'limit', label: 'doğrusal bant +10 mm' });
+      marks.push({ axis: 'x', value: -15, kind: 'stop',  label: 'durdurucu −15 mm' });
+      marks.push({ axis: 'x', value:  15, kind: 'stop',  label: 'durdurucu +15 mm' });
+    } else {
+      var t = GS_TEXT[ds.key];
+      if(t) {
+        marks.push({ axis: 'x', value: t.tasarim, kind: 'event',
+                     label: 'tasarım yükü ' + n(t.tasarim, 1).replace(',0', '') + ' g' });
+        if(ds.key === 'gz') marks.push({ axis: 'x', value: 1, kind: 'ref', label: 'araç dururken 1 g' });
+        var a = ds.x.data, nt = chan(ds, 'ntens'), nc = chan(ds, 'nclamp');
+        var aT = nt ? firstNonZero(a, nt.data) : NaN;
+        var aC = nc ? firstNonZero(a, nc.data) : NaN;
+        if(isFinite(aT)) marks.push({ axis: 'x', value: aT, kind: 'warn', label: 'ilk çekme ' + na(aT) + ' g' });
+        if(isFinite(aC)) marks.push({ axis: 'x', value: aC, kind: 'warn', label: 'durdurucu teması ' + na(aC) + ' g' });
+      }
+    }
+    return marks;
+  }
+
+  var LEADS = {
+    frf:   'Motorun ürettiği titreşimin ne kadarının şasiye geçtiğini, her titreşim hızı için ayrı ayrı gösterir.',
+    fdefl: 'Takozun ne kadar kuvvet altında ne kadar ezildiğini — yani ne kadar yumuşak olduğunu gösterir.',
+    gz:    'Takozların araç çukura girip zıpladığında ne kadar ezildiğini ve yüklendiğini gösterir.',
+    gy:    'Takozların araç virajda savrulduğunda ne kadar ezildiğini ve yüklendiğini gösterir.',
+    gx:    'Takozların sert frende veya hızlanmada ne kadar ezildiğini ve yüklendiğini gösterir.'
+  };
+
+  function build(ds, R) {
+    if(!ds || !R || R.error || !LEADS[ds.key]) return null;
+    try {
+      return { lead: LEADS[ds.key], marks: datasetMarks(ds, R) };
     } catch(e) { return null; }
   }
 
   return {
     build: build,
+    forLane: forLane,
     modeTR: modeTR,
     modeShort: modeShort,
     interpAt: interpAt,
     peaks: peaks,
     lastCrossBelow: lastCrossBelow,
     firstNonZero: firstNonZero,
-    engineFiring: engineFiring
+    engineFiring: engineFiring,
+    slopeAt0: slopeAt0,
+    parseId: parseId
   };
 })();
 

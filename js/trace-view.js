@@ -1060,7 +1060,6 @@ function veTrRender() {
   if(!slot || !scrollEl || !cv || !ov) return;
 
   veTrRenderToolbar();
-  veTrRenderNote();
 
   var hasSignals = (slot.sensors || []).length > 0;
   var emptyEl = document.getElementById('ve-trace-empty');
@@ -1076,6 +1075,7 @@ function veTrRender() {
   if(!hasSignals) {
     veTrState.geo = null;
     veTrRenderStatus(null, null);
+    veTrRenderNote([]);
     return;
   }
 
@@ -1110,6 +1110,8 @@ function veTrRender() {
   });
   // İşaretler eğrilerin ÜSTÜNE: altta kalsalar yoğun eğri onları gizlerdi.
   veTrDrawMarks(ctx, geo, lanes);
+  // Yorum şeritlerden türer — şerit listesi ancak burada kesinleşiyor.
+  veTrRenderNote(lanes);
 
   var axisName = (slot.xAxis && slot.xAxis.name) ? slot.xAxis.name : 'Zaman [s]';
   geo.tick = tick;
@@ -1304,16 +1306,114 @@ function veTrSetNoteOpen(v) {
   try { localStorage.setItem(VE_TR_NOTE_KEY, v ? '1' : '0'); } catch(e) {}
 }
 
+// ── Yorum penceresinin boyu ──────────────────────────────────────────────────
+//
+// Kullanıcının ayarı. Şerit sayısı arttıkça yorum uzuyor; kimi zaman iki satır
+// yeter, kimi zaman hepsi okunmak istenir — bu karar yazılımın değil kullanıcının.
+// Ayar YOKSA CSS'teki üst sınır geçerli (panelin dörtte biri).
+//
+// Değer bir ÜST SINIR olarak uygulanır, sabit yükseklik olarak değil: kullanıcı
+// aşağı sürükleyip yer açtığında metin kısaysa kutu boş uzamaz.
+// Proje dosyasına GİRMEZ — okuma tercihi, model verisi değil.
+var VE_TR_NOTE_H_KEY = 'mf-trace-note-h';
+var VE_TR_NOTE_H_MIN = 44;
+
+function veTrNoteH() {
+  try {
+    var v = parseInt(localStorage.getItem(VE_TR_NOTE_H_KEY), 10);
+    return (isFinite(v) && v >= VE_TR_NOTE_H_MIN) ? v : null;
+  } catch(e) { return null; }
+}
+
+function veTrSetNoteH(v) {
+  try {
+    if(v == null) localStorage.removeItem(VE_TR_NOTE_H_KEY);
+    else localStorage.setItem(VE_TR_NOTE_H_KEY, String(Math.round(v)));
+  } catch(e) {}
+}
+
+// Sürükleme sınırları: en az bir satır, en çok pencerenin yarısı. Üst sınır
+// olmasa yorum grafiği tümüyle yutabilirdi; alt sınır olmasa şerit görünmez
+// bir çizgiye inip geri açılamazdı.
+function veTrNoteMaxH() {
+  var host = document.getElementById('ve-trace');
+  var h = host ? host.clientHeight : (typeof window !== 'undefined' ? window.innerHeight : 800);
+  return Math.max(VE_TR_NOTE_H_MIN, Math.round(h * 0.5));
+}
+
+function veTrApplyNoteH(el) {
+  var body = el ? el.querySelector('.ve-trace-note-body') : null;
+  if(!body) return;
+  var v = veTrNoteH();
+  body.style.maxHeight = (v == null) ? '' : (Math.min(v, veTrNoteMaxH()) + 'px');
+}
+
+// Tutamak sürüklemesi. Yukarı çekmek büyütür (şerit yukarı doğru büyür), bu
+// yüzden delta ters işaretle uygulanır.
+function veTrNoteGripDown(e, el) {
+  var body = el.querySelector('.ve-trace-note-body');
+  if(!body) return;
+  if(!veTrNoteOpen()) { veTrSetNoteOpen(true); veTrRenderNote(null, true); return; }
+  e.preventDefault();
+  var startY = e.clientY;
+  var startH = body.getBoundingClientRect().height;
+  el.classList.add('resizing');
+
+  function move(ev) {
+    var next = startH + (startY - ev.clientY);
+    next = Math.max(VE_TR_NOTE_H_MIN, Math.min(veTrNoteMaxH(), next));
+    body.style.maxHeight = next + 'px';
+    veTrNoteOverflow(el);
+  }
+  function up() {
+    document.removeEventListener('mousemove', move);
+    document.removeEventListener('mouseup', up);
+    el.classList.remove('resizing');
+    veTrSetNoteH(body.getBoundingClientRect().height);
+    // Şerit boyu değişti → grafik alanı da değişti, yeniden çiz.
+    if(typeof veTrRenderSoon === 'function') veTrRenderSoon(); else veTrRender();
+  }
+  document.addEventListener('mousemove', move);
+  document.addEventListener('mouseup', up);
+}
+
 // Pencerenin gösterdiği veri kümesinin açıklaması; yoksa null.
 // Açıklaması olmayan bir pano (araç sinyalleri, boş pano) için şerit hiç
 // çizilmez — söyleyecek sözü olmayan bir kutu, gürültüden başka bir şey değil.
-function veTrNoteInfo() {
+// Panodaki HER ŞERİT için bir yorum. Yorum, o şeritte hangi kanalların
+// birlikte durduğuna göre değişir — tek bir kanal ile dokuz kanalın üst üste
+// bindiği hâl farklı şeyler anlatır, tek metin ikisine birden hizmet edemez.
+// Bu yüzden çözüm anında değil ÇİZİM anında üretilir.
+function veTrNoteEntries(lanes) {
+  if(typeof veMntSignals === 'undefined' || typeof veMntBrief === 'undefined') return [];
+  var sets = (typeof veMntSets === 'function') ? veMntSets() : [];
+  if(!sets.length) return [];
+  var R = (typeof window !== 'undefined') ? window.veMountResults : null;
+  if(!R) return [];
+  var slot = veTrBoard();
+  var ds = veMntSignals.setOfSlot(sets, slot);
+  if(!ds) return [];
+
+  if(!lanes) {
+    try { lanes = veTrBuildLanes(slot); } catch(e) { return []; }
+  }
+  var out = [];
+  (lanes || []).forEach(function(lane) {
+    var ids = (lane.sigs || []).map(function(g) { return g.sensor.signal; });
+    if(!ids.length) return;
+    var br = veMntBrief.forLane(ds, R, ids);
+    if(br && br.paras && br.paras.length) out.push(br);
+  });
+  return out;
+}
+
+// Kapalı hâlde görünen tek satır — panonun genel özeti.
+function veTrNoteLead() {
   if(typeof veMntSignals === 'undefined') return null;
   var sets = (typeof veMntSets === 'function') ? veMntSets() : [];
   if(!sets.length) return null;
   var ds = veMntSignals.setOfSlot(sets, veTrBoard());
-  return (ds && ds.brief && ds.brief.paras && ds.brief.paras.length)
-    ? { name: ds.name, brief: ds.brief } : null;
+  return (ds && ds.brief) ? { name: ds.name, lead: ds.brief.lead || '' } : null;
 }
 
 // Kaçış: tarayıcıda signal-tree'nin veSigEsc'i, Jest'te (tek dosya require
@@ -1326,21 +1426,39 @@ function _veTrEsc(s) {
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function veTrNoteHTML(entry) {
-  if(!entry || !entry.brief || !entry.brief.paras || !entry.brief.paras.length) return '';
+// Zengin metin: yorum motoru HTML DEĞİL, `**vurgu**` işaretli düz metin
+// üretir. Burada önce KAÇIRILIR, sonra işaret <b>'ye çevrilir — sıra bu
+// olmalı; ters çevrilirse üretilen her cümle bir enjeksiyon yüzeyi olur.
+function _veTrRich(s) {
+  return _veTrEsc(s).replace(/\*\*([^*]+)\*\*/g,
+    '<b class="ve-trace-note-b">$1</b>');
+}
+
+function veTrNoteHTML(entries, lead) {
+  if(!entries || !entries.length) return '';
   var open = veTrNoteOpen();
-  var b = entry.brief;
-  var h = '<button type="button" class="ve-trace-note-head" data-act="note-toggle"' +
+  var multi = entries.length > 1;
+  var h = '<div class="ve-trace-note-grip" data-act="note-grip" ' +
+          'title="Yorum penceresinin boyunu sürükleyerek ayarlayın"></div>';
+  h += '<button type="button" class="ve-trace-note-head" data-act="note-toggle"' +
           ' aria-expanded="' + (open ? 'true' : 'false') + '"' +
           ' title="Yorumu ' + (open ? 'gizle' : 'göster') + '">';
   h += '<span class="mf-ico mf-ico-lightbulb"></span>';
-  h += '<span class="ve-trace-note-title">' + _veTrEsc(entry.name) + '</span>';
-  h += '<span class="ve-trace-note-line">' + _veTrEsc(b.lead || '') + '</span>';
+  h += '<span class="ve-trace-note-title">' +
+       _veTrEsc(multi ? (entries.length + ' şerit') : entries[0].title) + '</span>';
+  h += '<span class="ve-trace-note-line">' + _veTrEsc((lead && lead.lead) || '') + '</span>';
   h += '<span class="ve-trace-note-caret" aria-hidden="true">▾</span>';
   h += '</button>';
   h += '<div class="ve-trace-note-body">';
-  b.paras.forEach(function(p) {
-    h += '<p class="ve-trace-note-p">' + _veTrEsc(p) + '</p>';
+  entries.forEach(function(e) {
+    h += '<section class="ve-trace-note-sec">';
+    // Başlık YALNIZ birden çok şerit varken: tek şeritte üstteki satır zaten
+    // aynı şeyi söylüyor, ikinci kez yazmak yer israfı.
+    if(multi) h += '<h4 class="ve-trace-note-h">' + _veTrEsc(e.title) + '</h4>';
+    e.paras.forEach(function(p) {
+      h += '<p class="ve-trace-note-p">' + _veTrRich(p) + '</p>';
+    });
+    h += '</section>';
   });
   h += '</div>';
   h += '<div class="ve-trace-note-more">↓ devamı var — yorumu kaydırın</div>';
@@ -1365,25 +1483,41 @@ function veTrNoteOverflow(el) {
 // açık/kapalı durumu değişince yeniden çizilir.
 var _veTrNoteKey = null;
 
-function veTrRenderNote(force) {
+function veTrRenderNote(lanes, force) {
   var el = document.getElementById('ve-trace-note');
   if(!el) return;
-  var entry = veTrNoteInfo();
-  var key = (entry ? entry.name : '') + '|' + (veTrNoteOpen() ? '1' : '0');
+  var entries = veTrNoteEntries(lanes);
+  var lead = veTrNoteLead();
+  // Anahtar şeritlerin BAŞLIKLARINDAN kurulur: kanal eklenip çıkarıldığında
+  // yorum değişmeli, ama yakınlaştırma/sürükleme karesinde yeniden kurulmamalı.
+  var key = entries.map(function(e) { return e.title; }).join('¦') +
+            '|' + entries.length + '|' + (veTrNoteOpen() ? '1' : '0');
   if(!force && key === _veTrNoteKey) return;
   _veTrNoteKey = key;
 
-  if(!entry) { el.style.display = 'none'; el.innerHTML = ''; el.classList.remove('open'); return; }
+  if(!entries.length) { el.style.display = 'none'; el.innerHTML = ''; el.classList.remove('open'); return; }
   el.style.display = '';
   el.classList.toggle('open', veTrNoteOpen());
-  el.innerHTML = veTrNoteHTML(entry);
+  el.innerHTML = veTrNoteHTML(entries, lead);
+  veTrApplyNoteH(el);
   veTrNoteOverflow(el);
   if(el._veTrBound) return;
   el._veTrBound = true;
+  el.addEventListener('mousedown', function(e) {
+    if(!e.target.closest('[data-act="note-grip"]')) return;
+    veTrNoteGripDown(e, el);
+  });
   el.addEventListener('click', function(e) {
     if(!e.target.closest('[data-act="note-toggle"]')) return;
     veTrSetNoteOpen(!veTrNoteOpen());
-    veTrRenderNote();
+    veTrRenderNote(null, true);
+  });
+  // Çift tık: kullanıcının boy ayarını sıfırla (varsayılan üst sınıra dön).
+  el.addEventListener('dblclick', function(e) {
+    if(!e.target.closest('[data-act="note-grip"]')) return;
+    veTrSetNoteH(null);
+    veTrRenderNote(null, true);
+    if(typeof veTrRenderSoon === 'function') veTrRenderSoon();
   });
   // Kullanıcı sona kaydırınca "devamı var" ipucu kalkar; pencere yeniden
   // boyutlandığında taşma durumu değişebilir — ikisi de yeniden ölçülür.

@@ -454,34 +454,45 @@ describe('veTrSnapIndex — ölçüm çekirdeğine devredilir', () => {
   });
 });
 
-describe('veTrNoteHTML — grafiğin altındaki açıklama şeridi', () => {
-  // Sunum katmanı: burada TEK bir "üretiliyor mu / patlamıyor mu" smoke testi
-  // var. Her etiket için ayrı assertion açılmaz — bir başlığı değiştirmek
-  // testi kırmamalı (bkz. CLAUDE.md test politikası).
-  const entry = {
-    name: 'Frekans yanıtı',
-    brief: { lead: 'Baş satır', paras: ['Birinci paragraf.', 'İkinci paragraf.'], marks: [] }
-  };
+describe('veTrNoteHTML — grafiğin altındaki yorum şeridi', () => {
+  // Sunum katmanı: tek smoke testi + iki DAVRANIŞSAL kural (şerit başına
+  // başlık, vurgu işaretinin güvenli çevrimi). Etiket başına assertion açılmaz.
+  const one = { title: 'Frekans yanıtı — düşey (Z)', paras: ['Tepe **13,6 Hz**.'] };
+  const two = { title: 'Düşey ivme süpürmesi', paras: ['Çökme **7,1 mm**.'] };
 
-  test('metni ve aç/kapa düğmesini üretir', () => {
-    const h = T.veTrNoteHTML(entry);
+  test('tek şerit: başlık üstte, gövde tek bölüm', () => {
+    const h = T.veTrNoteHTML([one], { lead: 'özet' });
     expect(h).toContain('data-act="note-toggle"');
-    expect(h).toContain('Baş satır');
-    expect(h).toContain('aria-expanded');
+    expect(h).toContain('Frekans yanıtı — düşey (Z)');
+    // Tek şeritte bölüm başlığı TEKRARLANMAZ — üstteki satır zaten söylüyor
+    expect(h).not.toContain('ve-trace-note-h"');
   });
 
-  test('açıklaması olmayan pano için hiç şerit üretilmez', () => {
-    // Söyleyecek sözü olmayan bir kutu gürültüdür: araç panosunda ve boş
-    // panoda şerit hiç çizilmemeli.
-    expect(T.veTrNoteHTML(null)).toBe('');
-    expect(T.veTrNoteHTML({ name: 'X', brief: null })).toBe('');
-    expect(T.veTrNoteHTML({ name: 'X', brief: { lead: 'a', paras: [] } })).toBe('');
+  test('iki şerit: her biri kendi başlığıyla ayrı bölüm', () => {
+    const h = T.veTrNoteHTML([one, two], { lead: 'özet' });
+    expect((h.match(/ve-trace-note-sec/g) || []).length).toBe(2);
+    expect((h.match(/ve-trace-note-h"/g) || []).length).toBe(2);
+    expect(h).toContain('Düşey ivme süpürmesi');
+    expect(h).toContain('2 şerit');
   });
 
-  test('metin HTML olarak kaçırılır', () => {
-    const h = T.veTrNoteHTML({ name: '<b>', brief: { lead: '<script>', paras: ['x'], marks: [] } });
-    expect(h).not.toContain('<script>');
-    expect(h).toContain('&lt;script&gt;');
+  test('sayı vurgusu <b> olur, HTML kaçışı ÖNCE uygulanır', () => {
+    // Yorum motoru HTML üretmez; `**` işaretini sunum katmanı çevirir. Kaçış
+    // önce olmazsa üretilen her cümle bir enjeksiyon yüzeyi olurdu.
+    const h = T.veTrNoteHTML([{ title: 'x', paras: ['a **13,6 Hz** b'] }], null);
+    expect(h).toContain('<b class="ve-trace-note-b">13,6 Hz</b>');
+    const evil = T.veTrNoteHTML([{ title: '<b>', paras: ['<script>**x**'] }], null);
+    expect(evil).not.toContain('<script>');
+    expect(evil).toContain('&lt;script&gt;');
+  });
+
+  test('boyu ayarlanabilsin diye tutamak var', () => {
+    expect(T.veTrNoteHTML([one], null)).toContain('data-act="note-grip"');
+  });
+
+  test('yorum yoksa şerit hiç çizilmez', () => {
+    expect(T.veTrNoteHTML([], null)).toBe('');
+    expect(T.veTrNoteHTML(null, null)).toBe('');
   });
 });
 
