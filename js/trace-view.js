@@ -330,6 +330,18 @@ function veTrResolveX(slot) {
     }
   }
 
+  // TAKOZ EKSENİ ÇÖZÜLEMEDİYSE ZAMANA DÜŞÜLMEZ.
+  // Kayıtlı proje takoz eksenini (ör. "~mnt-frf:f") taşır ama takoz sonucu
+  // oturumluktur; yeniden açılışta seri null döner. Aşağıdaki genel geri
+  // düşüş devreye girerse ARAÇ zaman dizisi kullanılır ve pencere "Frekans
+  // [Hz]" etiketiyle 0–30 s'lik bir ekseni çizer; imleç saniyeyi Hz diye okur.
+  // Böyle bir durumda eksen YOK'tur — pencere boş durumunu göstersin.
+  if(!arr && typeof veMntSignals !== 'undefined') {
+    var _xid = (slot.xAxis && slot.xAxis.id) ? String(slot.xAxis.id) : '';
+    var _cx = _xid.indexOf(':');
+    if(veMntSignals.isMountSensor(_cx > 0 ? _xid.substring(0, _cx) : _xid)) return null;
+  }
+
   if(!arr) {
     if(ds === 'segmentDrive' && r && r.segmentDrive && r.segmentDrive.time) {
       arr = r.segmentDrive.time;
@@ -1064,7 +1076,12 @@ function veTrRenderStatus(geo, tick) {
 // listesine yollamak onu boş bir şeride götürür. Çözüm varsa asıl eksik
 // gerçekten sinyal seçimidir.
 function veTrEmptyHTML() {
-  var noSim = !window.veSimResults;
+  // Takoz sekmesi ARAÇ çözümünden bağımsız beslenir (window.veMountResults):
+  // yalnız takoz modelini çözmüş kullanıcıya "çözüm sonucu yok" demek yanlış
+  // olurdu — verisi var, eksik olan sinyal seçimi.
+  var mntOnly = (typeof veActiveSolverTabId !== 'undefined') && veActiveSolverTabId === 'mount' &&
+                (typeof veMntSets === 'function') && veMntSets().length > 0;
+  var noSim = !window.veSimResults && !mntOnly;
   var h = '';
 
   if(noSim) {

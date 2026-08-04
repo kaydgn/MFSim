@@ -377,6 +377,12 @@ function veClearCanvasDOM() {
 function veResetSubtopoNav() {
   if(typeof veAracStack !== 'undefined' && Array.isArray(veAracStack)) veAracStack.length = 0;
   if(typeof veMntStack !== 'undefined' && Array.isArray(veMntStack)) veMntStack.length = 0;
+  // Takoz çözüm sonucu OTURUMLUK bir global (window.veMountResults / _veMntLast)
+  // ve hiçbir sekme durumuna bağlı değil. Proje değiştirilirken temizlenmezse
+  // yeni projede — takoz modülü hiç olmasa bile — "Takoz Çökme-Titreşim" çözüm
+  // sekmesi ÖNCEKİ projenin takoz adlarıyla durur, kanalları panoya bırakılabilir
+  // ve Rapor kısayolu önceki projenin raporunu üretir.
+  if(typeof _mntForgetResults === 'function') _mntForgetResults();
   // Breadcrumb çipleri stack boşalınca kendini kaldırır; sidebar kapsamı köke döner.
   if(typeof veAracUpdateBreadcrumb === 'function') veAracUpdateBreadcrumb();
   if(typeof veMntUpdateBreadcrumb === 'function') veMntUpdateBreadcrumb();

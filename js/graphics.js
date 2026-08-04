@@ -8,6 +8,23 @@ function veGetSensorData(sensorId, signalOverride, dataSource) {
   var tabConns = connections;
   var r = window.veSimResults;
 
+  // ====== TAKOZ ÇÖKME-TİTREŞİM KANALLARI ======
+  // ~mnt-<küme> (frf / fdefl / gz / gy / gx) — veri ARAÇ çözümünden değil,
+  // takoz çözücüsünün ürettiği window.veMountResults'tan gelir. Bu yüzden
+  // veSimResults kontrollerinden ÖNCE ele alınır: araç hiç çözülmemişken de
+  // takoz kanalları çizilebilmeli. X ekseni de (frekans/deformasyon/ivme) aynı
+  // yoldan okunur — pano onu normal bir sinyal gibi çözer.
+  //
+  // Eşleşme TAM anahtar listesiyle (isMountSensor), salt önekle değil: alt
+  // topolojide 'mnt-motor' gibi bileşen tipleri var ve sihirbazın sanal sensör
+  // kimliği '~'+tip biçiminde — önek kontrolü onları kaçırırdı.
+  if(typeof veMntSignals !== 'undefined' && veMntSignals.isMountSensor(sensorId)) {
+    if(!signalOverride) return null;
+    var mntR = window.veMountResults;
+    if(!mntR || mntR.error || !mntR.signals) return null;
+    return veMntSignals.series(mntR.signals, sensorId, signalOverride);
+  }
+
   if(sensorId.charAt(0) === '@') {
     var parts = sensorId.substring(1).split(':');
     var tabIdx = parseInt(parts[0]);
@@ -3333,6 +3350,9 @@ function veClearAllResults() {
   if(typeof veSyncBoardState === 'function') veSyncBoardState();
 
   window.veSimResults = null;
+  // "Tüm sonuçlar" TAKOZ sonucunu da kapsar; yoksa temizlemeden sonra takoz
+  // çözüm sekmesi ayakta kalır ve kullanıcıya sonuçlar silinmemiş gibi görünür.
+  if(typeof _mntForgetResults === 'function') _mntForgetResults();
 
   veSolverTabSlots = {};
   veSolverTabCollapsed = {};
