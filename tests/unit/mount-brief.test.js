@@ -126,3 +126,43 @@ describe('build — üretilemeyen yorum null döner', () => {
     expect(B.build({ key: 'yok', x: { data: [] }, channels: [] }, { mounts: [] })).toBeNull();
   });
 });
+
+describe('campbellCrossings — rezonans devri', () => {
+  // Kesişim devri N = f·60/mertebe. Bu bağıntıda bir kayma, kullanıcıyı yanlış
+  // devirde sorun aramaya gönderir; cümle akıcı, sayı yanlış olur.
+  const ords = [{ o: 1 }, { o: 3, firing: true }];
+  const mds = [{ no: 1, f: 10, label: 'zıplama' }, { no: 2, f: 20, label: 'yalpalama' }];
+
+  test('N = f · 60 / mertebe', () => {
+    const cr = B.campbellCrossings(ords, mds, 5000);
+    const at = (o, f) => cr.find((c) => c.o === o && c.f === f).rpm;
+    expect(at(1, 10)).toBeCloseTo(600, 9);
+    expect(at(3, 10)).toBeCloseTo(200, 9);
+    expect(at(1, 20)).toBeCloseTo(1200, 9);
+    expect(at(3, 20)).toBeCloseTo(400, 9);
+  });
+
+  test('devirden küçüğe göre sıralı — okuma sırası bu', () => {
+    const cr = B.campbellCrossings(ords, mds, 5000);
+    for (let i = 1; i < cr.length; i++) expect(cr[i].rpm).toBeGreaterThanOrEqual(cr[i - 1].rpm);
+  });
+
+  test('devir tavanının üstündeki kesişim RAPORLANMAZ', () => {
+    // Grafikte görünmeyen bir kesişimi yorumda saymak, kullanıcıyı olmayan
+    // bir çizgiyi aramaya gönderir.
+    const cr = B.campbellCrossings(ords, mds, 700);
+    expect(cr.every((c) => c.rpm <= 700)).toBe(true);
+    expect(cr.some((c) => c.o === 1 && c.f === 20)).toBe(false);   // 1200 d/dk
+  });
+
+  test('ateşleme bayrağı kesişime taşınır', () => {
+    const cr = B.campbellCrossings(ords, mds, 5000);
+    expect(cr.filter((c) => c.firing).every((c) => c.o === 3)).toBe(true);
+    expect(cr.some((c) => c.firing)).toBe(true);
+  });
+
+  test('geçersiz mertebe / frekans kesişim üretmez', () => {
+    expect(B.campbellCrossings([{ o: 0 }], mds, 5000)).toEqual([]);
+    expect(B.campbellCrossings(ords, [{ no: 1, f: 0 }], 5000)).toEqual([]);
+  });
+});

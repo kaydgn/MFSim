@@ -10,6 +10,7 @@
 //   frf    X = frekans [Hz]   → iletilebilirlik T(f), izolasyon verimi
 //   fdefl  X = deformasyon [mm] → takoz kuvvet-deformasyon yasası F(δ)
 //   gz/gy/gx  X = ivme [g]    → takoz çökmesi ve kuvveti, ivme süpürmesi
+//   campbell X = motor devri [d/dk] → mertebe çizgileri × mod çizgileri
 //
 // Tek sayı (modal frekans, ζ, TRA açısı) ve matris (KED, 6×6 K/M) BURAYA
 // GİRMEZ — süpürülecek ekseni yoktur, yeri Rapor'dur. Bu ayrım kasıtlıdır:
@@ -36,6 +37,10 @@ var veMntSignals = (function() {
   // aynı (cp-mount.js designDefs) — süpürme o noktayı İÇERMELİ, yoksa tasarım
   // durumu eğrinin dışında kalır ve ikisi karşılaştırılamaz.
   var GS_MAX = 3.5, GS_NPTS = 36;
+  // Campbell: devir ekseni doğrusal örneklenir. Mertebe çizgileri devirde
+  // DOĞRUSAL (f = mertebe·N/60) olduğu için iki uç nokta yeterdi; yine de
+  // ızgara açılır ki imleç ara devirlerde de sayı okusun.
+  var CAMP_NPTS = 121;
 
   var SENSOR_PREFIX = '~mnt-';
 
@@ -45,7 +50,7 @@ var veMntSignals = (function() {
   // Salt önek kontrolü, ileride o bileşenlerden birine sinyal tanımlandığı gün
   // '~mnt-motor'u sessizce buraya çeker ve o sensör ölür. Beyaz liste bu sınıf
   // hatayı bugünden kapatır.
-  var SET_KEYS = ['frf', 'fdefl', 'gz', 'gy', 'gx'];
+  var SET_KEYS = ['frf', 'fdefl', 'gz', 'gy', 'gx', 'campbell'];
 
   function isMountSensor(sensorId) {
     if(typeof sensorId !== 'string' || sensorId.indexOf(SENSOR_PREFIX) !== 0) return false;
@@ -303,6 +308,133 @@ var veMntSignals = (function() {
     };
   }
 
+  // ── 4) Campbell diyagramı ─────────────────────────────────────────────────
+  //
+  // Frekans yanıtı "hangi frekansta rezonans var?" sorusunu cevaplar; Campbell
+  // "motor HANGİ DEVİRDE o frekansı üretir?" sorusunu. İkisi aynı şey değildir
+  // ve tasarımı belirleyen ikincisidir: 13,6 Hz'lik bir mod, motor onu hiç
+  // uyarmıyorsa zararsızdır.
+  //
+  // Diyagram iki çizgi ailesinden oluşur:
+  //   EĞİK  mertebe çizgileri  f = mertebe · N/60   (uyarma, devirle büyür)
+  //   YATAY mod çizgileri      f = sabit            (yapının doğal frekansı)
+  // Kesişimleri REZONANS devirleridir. Çalışma bandının içine düşen kesişim
+  // tasarım sorunudur; dışına düşen (ör. rölantinin altı) yalnız kalkış/durma
+  // sırasında geçilir.
+  //
+  // 4 zamanlı motorda ateşleme mertebesi z/2'dir — silindir sayısı girilmemişse
+  // hangi mertebenin ateşleme olduğu BİLİNEMEZ ve o etiket hiç yazılmaz.
+  function _nTr(v, dec) {
+    if(!isFinite(v)) return '—';
+    return v.toFixed(dec == null ? 2 : dec).replace('.', ',');
+  }
+
+  function _engineSpec(R) {
+    var tq = (R && R.gather && R.gather.torque) || {};
+    var idle = Number(tq.idleRpm), cyl = Number(tq.cylinders);
+    var top = 0;
+    [tq.TeRpm, tq.PmaxRpm].forEach(function(v) {
+      var x = Number(v);
+      if(isFinite(x) && x > top) top = x;
+    });
+    return {
+      idle: (isFinite(idle) && idle > 0) ? idle : NaN,
+      cyl:  (isFinite(cyl)  && cyl  > 0) ? cyl  : NaN,
+      top:  top > 0 ? top : NaN
+    };
+  }
+
+  // Çizilecek mertebeler. AMC raporu 6 silindir için 1 · 3 · 6 · 12 çiziyor —
+  // dönme, ateşleme, ikinci ve dördüncü harmonik. Aynı kural z'den türetilir.
+  function _campOrders(cyl) {
+    if(isFinite(cyl) && cyl > 0) {
+      var main = cyl / 2;
+      return [
+        { o: 1,        label: 'dönme (balanssızlık)' },
+        { o: main,     label: 'ateşleme', firing: true },
+        { o: 2 * main, label: '2. harmonik' },
+        { o: 4 * main, label: '4. harmonik' }
+      ];
+    }
+    return [ { o: 1, label: 'dönme' }, { o: 2, label: '' },
+             { o: 4, label: '' }, { o: 6, label: '' } ];
+  }
+
+  // Mertebe kimliği ondalıklı olabilir (5 silindirde ana mertebe 2,5). Nokta
+  // kimlikte ayraç olduğu için alt çizgiye çevrilir: 'ord.2_5'.
+  function _ordId(o) { return 'ord.' + String(o).replace('.', '_'); }
+
+  function _campbellSet(R) {
+    if(!R) return null;
+    var modes = ((R.modes) || []).filter(function(m) { return m && m.f_Hz > 1e-6; });
+    if(!modes.length) return null;     // yatay çizgi yoksa kesişim de yok
+    var eng = _engineSpec(R);
+    var orders = _campOrders(eng.cyl);
+    var oMin = orders[0].o;
+
+    var fMax = 0;
+    modes.forEach(function(m) { if(m.f_Hz > fMax) fMax = m.f_Hz; });
+    if(!(fMax > 0)) return null;
+
+    // Y tavanı: en yüksek modun 1,6 katı (rölanti ateşleme frekansı daha
+    // yukarıdaysa o). Tavanın üstünde mertebe çizgisinin taşıyacağı bilgi yok
+    // — kesişim kalmadı — ama ölçeği ele geçirip mod çizgilerini dibe
+    // yapıştırırdı. Tavan üstü NaN: çizgi grafiğin üstünden çıkar, Campbell
+    // diyagramlarında olağan görüntü budur.
+    var eF = (isFinite(eng.idle) && isFinite(eng.cyl)) ? (eng.idle / 60) * (eng.cyl / 2) : NaN;
+    var fCap = Math.max(1.6 * fMax, isFinite(eF) ? 1.25 * eF : 0);
+
+    // Devir tavanı: motorun bilinen en yüksek devri (+%10), yoksa rölantinin
+    // 3 katı. Her hâlükârda EN DÜŞÜK mertebenin EN YÜKSEK modu kestiği devir
+    // içeride kalır — yoksa aranan kesişim grafiğin dışında olurdu.
+    var rpmTop = 0;
+    if(isFinite(eng.top))  rpmTop = eng.top * 1.1;
+    if(isFinite(eng.idle)) rpmTop = Math.max(rpmTop, eng.idle * 3);
+    rpmTop = Math.max(rpmTop, fMax * 60 / oMin * 1.15);
+    rpmTop = Math.ceil(rpmTop / 100) * 100;
+    if(!(rpmTop > 0)) return null;
+
+    var rpm = [], i;
+    for(i = 0; i < CAMP_NPTS; i++) rpm.push(rpmTop * i / (CAMP_NPTS - 1));
+
+    var B = _brief();
+    var chans = [];
+    orders.forEach(function(od) {
+      chans.push({
+        id: _ordId(od.o),
+        name: _nTr(od.o, 1).replace(',0', '') + '. mertebe' + (od.label ? ' — ' + od.label : ''),
+        unit: 'Hz',
+        data: rpm.map(function(N) {
+          var f = od.o * N / 60;
+          return f <= fCap ? f : NaN;
+        })
+      });
+    });
+    modes.forEach(function(m, k) {
+      var sh = (B && B.modeShort) ? B.modeShort(m.label) : (m.label || 'mod');
+      chans.push({
+        id: 'mode.' + (k + 1),
+        name: 'Mod ' + (k + 1) + ' · ' + sh + ' — ' + _nTr(m.f_Hz, 2) + ' Hz',
+        unit: 'Hz',
+        data: rpm.map(function() { return m.f_Hz; })
+      });
+    });
+
+    return {
+      key: 'campbell',
+      sensorId: SENSOR_PREFIX + 'campbell',
+      name: 'Campbell diyagramı',
+      icon: '<span class="mf-ico mf-ico-git-branch"></span>',
+      x: { id: 'rpm', name: 'Motor devri', unit: 'd/dk', data: rpm },
+      channels: chans,
+      // Yorum katmanı bu değerleri yeniden türetmesin: kesişim devirleri ve
+      // çalışma bandı burada bir kez hesaplandı, orada tekrar hesaplanırsa
+      // ikisi sessizce ayrışabilir.
+      meta: { idleRpm: eng.idle, maxRpm: isFinite(eng.top) ? eng.top : NaN,
+              cyl: eng.cyl, rpmTop: rpmTop, fCap: fCap, orders: orders }
+    };
+  }
+
   // ── Kurulum ───────────────────────────────────────────────────────────────
 
   // R (+ opts.solveOne) → veri kümeleri dizisi. Üretilemeyen küme SESSİZCE
@@ -313,8 +445,9 @@ var veMntSignals = (function() {
     if(!R || R.error) return [];
     var sets = [];
     var s;
-    s = _frfSet(R);   if(s) sets.push(s);
-    s = _fdeflSet(R); if(s) sets.push(s);
+    s = _frfSet(R);      if(s) sets.push(s);
+    s = _campbellSet(R); if(s) sets.push(s);
+    s = _fdeflSet(R);    if(s) sets.push(s);
     GS_DEFS.forEach(function(def) {
       var g = _gSweepSet(R, opts.solveOne, def);
       if(g) sets.push(g);
@@ -436,7 +569,8 @@ var veMntSignals = (function() {
     SET_KEYS: SET_KEYS,
     FRF_FMIN: FRF_FMIN, FRF_FMAX: FRF_FMAX, FRF_NPTS: FRF_NPTS,
     FD_LIM_MM: FD_LIM_MM, FD_NPTS: FD_NPTS,
-    GS_MAX: GS_MAX, GS_NPTS: GS_NPTS
+    GS_MAX: GS_MAX, GS_NPTS: GS_NPTS,
+    CAMP_NPTS: CAMP_NPTS
   };
 })();
 

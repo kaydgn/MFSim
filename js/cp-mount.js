@@ -2813,9 +2813,13 @@ function _mntLibCurveEditor(node, e){
 // Tahrik/motor büyüklüklerini kütle gövdelerinden topla (ilk tanımlı değer kazanır).
 // idleRpm + cylinders motorun ÖZELLİĞİDİR: buradan toplanıp rapora akar; raporun
 // ateşleme frekansı f_ateş=(N/60)·(z/2) bu ikisine dayanır.
+// TeRpm + PmaxRpm de toplanır: yük durumu hesabında kullanılmazlar ama Campbell
+// diyagramının ÇALIŞMA BANDI üst sınırı bunlardan gelir (js/mount-signals.js
+// _engineSpec). Motorun en yüksek devri bilinmezse band rölantinin katından
+// tahmin edilir ve kesişimlerin bant içinde mi dışında mı olduğu yanlış söylenir.
 function _mntGatherTorque(){
   var keys=['Te','Rstall','g1','g2','g3','g4','g5','g6','gR','iTransfer','phiFwd','phiRev','derate',
-            'idleRpm','cylinders'];
+            'idleRpm','cylinders','TeRpm','PmaxRpm'];
   var t={};
   (typeof nodes!=='undefined'?nodes:[]).forEach(function(n){
     if(!(_mntDef(n)||{}).isMountBody) return;
