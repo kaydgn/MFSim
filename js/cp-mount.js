@@ -394,6 +394,14 @@ var MNT_AUTO_CASES = [
   { name:'Max Rebound',       n:[ 0,    0,    1  ], T:[0,0,0] }  // droop / negatif-g (ekstansiyon)
 ];
 
+// ── Şok darbesi varsayılanı ─────────────────────────────────────────────────
+// AMC Mecanocaucho raporlarının kullandığı darbe: 3 g tepe, 20 ms süre.
+// Yük durumlarından FARKLI bir şeydir — onlar yarı-statik ivme katsayısı,
+// bu ise ZAMANA BAĞLI bir darbe (yarım sinüs). Aynı 3,5 g'lik çukur yük
+// durumu ile karıştırılmasın: orada sonuç tek bir denge hâli, burada bir
+// salınım geçmişi.
+var MNT_SHOCK_G = 3, MNT_SHOCK_MS = 20;
+
 // ════════════════════════════════════════════════════════════════════════════
 //  ANA MODÜL — ALT-SİSTEM (SUBSYSTEM) DÜĞÜMÜ  (arac-performans kalıbı)
 // ════════════════════════════════════════════════════════════════════════════
@@ -3028,10 +3036,44 @@ function getMntSolverPropertiesHTML(node){
       + 'style="width:100%; padding:6px 8px; font-size:var(--fs-tiny); background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:var(--radius-sm); text-align:right;">';
   html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Şirket kabulü olarak tüm montaja uygulanır (boş → '+_mntFmt(_zd,3)+'). Her takozun sönüm katsayısı <b>c = 2ζ√(k<sub>din</sub>·m<sub>pay</sub>)</b> ile buradan türetilir; ayrıca girilmez. Raporda tablo olarak çıkar.</div>';
   html+='</div>';
+  // ── Şok darbesi: tepe ivme + süre ──
+  // Sonuçlar'daki geçici rejim analizinin girdisi. Varsayılan 3 g / 20 ms,
+  // tedarikçi raporlarının (AMC) kullandığı darbedir. Yalnız Sonuçlar'daki
+  // şok kanallarını etkiler; yük durumlarına ve modal çözüme DOKUNMAZ.
+  var _sg = (node.data.shockG==null || node.data.shockG==='') ? '' : node.data.shockG;
+  var _ss = (node.data.shockMs==null || node.data.shockMs==='') ? '' : node.data.shockMs;
+  html+='<div style="margin-bottom:10px;">';
+  html+='<div style="font-size:var(--fs-micro); font-weight:600; color:var(--text-secondary); margin-bottom:4px;">Şok Darbesi <span style="font-weight:400; color:var(--text-muted);">— geçici rejim analizi</span></div>';
+  html+='<div style="display:flex; gap:6px;">';
+  html+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
+      + '<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center;">tepe ivme [g]</span>'
+      + '<input type="number" min="0" step="0.1" value="'+_mntEsc(_sg)+'" placeholder="'+MNT_SHOCK_G+'" '
+      + 'onchange="veMntSetShock(\''+node.id+'\',\'shockG\',this.value)" style="width:100%; '+_MNT_INP+'"></label>';
+  html+='<label style="flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;">'
+      + '<span style="font-size:var(--fs-micro); color:var(--text-muted); text-align:center;">süre [ms]</span>'
+      + '<input type="number" min="0" step="1" value="'+_mntEsc(_ss)+'" placeholder="'+MNT_SHOCK_MS+'" '
+      + 'onchange="veMntSetShock(\''+node.id+'\',\'shockMs\',this.value)" style="width:100%; '+_MNT_INP+'"></label>';
+  html+='</div>';
+  html+='<div style="font-size:var(--fs-micro); color:var(--text-muted); line-height:1.4; margin-top:4px;">Yarım sinüs darbe (şok deneylerinin standardı). Boş → <b>'+MNT_SHOCK_G+' g / '+MNT_SHOCK_MS+' ms</b>. Sonuçlar\'da <b>şok yanıtı</b> kanallarını üretir; yük durumlarına ve modal çözüme etkisi yoktur.</div>';
+  html+='</div>';
   html+='<button onclick="veMntSolverCompute(\''+node.id+'\')" style="width:100%; margin-bottom:10px; padding:9px; font-size:var(--fs-md); font-weight:700; background:var(--accent-primary); color:#fff; border:none; cursor:pointer; border-radius:var(--radius-sm);">▶ Hesapla</button>';
   html+='<div id="ve-mnt-results"></div>';
   html+='</div>';
   return html;
+}
+
+// Şok darbesi girdisi (tepe ivme [g] / süre [ms]). Boş/geçersiz → alan silinir
+// ve varsayılan kullanılır. Yeniden çizme YOK — sonuç korunur; değer bir
+// sonraki ▶ Hesapla'da uygulanır (ζ ve çözüm modu ile aynı davranış).
+function veMntSetShock(nodeId, key, val){
+  if(key!=='shockG' && key!=='shockMs') return;
+  var node=nodes.find(function(n){return n.id===nodeId;}); if(!node) return;
+  if(!node.data) node.data={};
+  var s=(typeof val==='string')?val.trim():val;
+  var v=_mntNum(s, NaN);
+  if(s===''||s==null||!Number.isFinite(v)||!(v>0)) delete node.data[key];
+  else node.data[key]=v;
+  if(typeof saveState==='function') saveState();
 }
 
 // Çözüm modu seç (auto/nonlinear/linear). Yeniden çizme YOK — sonuç korunur;
@@ -3132,6 +3174,11 @@ function _mntPrepareSolve(solverId){
 function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
   var R={ mp:prep.mp, allCases:allCases, mounts:prep.mounts, modes:modes, gather:prep.gather,
           gearCases:gearCases, designCases:designCases, g:prep.si.g,
+          // Şok darbesi girdisi Çözücü'de yaşar, Sonuçlar'daki geçici rejim
+          // kanalları (js/mount-signals.js) onu buradan okur. Yük durumlarına
+          // ve modal çözüme GİRMEZ.
+          shock:{ aG:_mntNum((prep.solver.data||{}).shockG, MNT_SHOCK_G),
+                  ms:_mntNum((prep.solver.data||{}).shockMs, MNT_SHOCK_MS) },
           matrixMode:((prep.solver.data&&prep.solver.data.matrixMode)||'delta'), solveMode:prep.mode,
           solvedNL:prep.solvedNL, nlNoCurve:prep.nlNoCurve, solverId:prep.solver.id,
           zeta:prep.zeta };

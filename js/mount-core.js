@@ -1188,6 +1188,168 @@ var veMountCore = (function() {
                     (dir === 0 || dir === 1) ? dir : 2);
   }
 
+  // ═══════════ Şok / geçici rejim yanıtı ═══════════
+  //
+  // Frekans yanıtı SÜREKLİ rejimi anlatır: sonsuza kadar süren bir titreşimde
+  // kararlı hâl. Ama takozun ömrünü belirleyen olay çoğu zaman TEK BİR DARBEDİR
+  // — bordür, çukur, fren, mayın etkisi. O darbede takoz ne kadar eziliyor,
+  // şasiye ne kadar kuvvet geçiyor, salınım ne kadar sürüyor? Frekans yanıtı bu
+  // soruların hiçbirini cevaplamaz; tedarikçi raporları (AMC) ayrı bir "Shock
+  // response" bölümü açar.
+  //
+  // MODEL: taban (şasi) ivme darbesi görüyor, güç grubu takozlar üzerinde
+  // BAĞIL hareket ediyor. Ağırlık merkezi eksenli koordinatlarda:
+  //
+  //     M q̈ + C q̇ + K q = −M ι a(t)
+  //
+  // ι = tahrik yönündeki birim vektör (yalnız öteleme; taban dönmüyor). Sağ
+  // taraf statik çözücünün F = m·g·n vektörünün zaman bağlı hâlidir — aynı
+  // fizik, aynı işaret sözleşmesi. UZUN darbe limitinde çözüm statik duruma
+  // yakınsar; bu bir tutarlılık kilididir (tests/unit/mount-shock.test.js).
+  //
+  // DARBE BİÇİMİ yarım sinüs: a(t) = A·sin(πt/τ), 0 ≤ t ≤ τ. Şok deneylerinin
+  // standart darbesi budur (MIL-STD-810, ISO 8568). Dikdörtgen darbe fiziksel
+  // olarak üretilemez (sonsuz jerk) ve yapay yüksek frekans içeriği katar.
+  //
+  // İNTEGRASYON: Newmark-β, ortalama ivme (γ=1/2, β=1/4). Seçim gerekçesi:
+  //   • KOŞULSUZ KARARLI — adım boyu doğrulukla sınırlıdır, kararlılıkla değil.
+  //     Açık bir yöntem (RK4) 20 Hz'lik modda dt < ~1/(π·f) şartına takılır ve
+  //     sessizce patlar.
+  //   • Enerji korumalı (γ=1/2): yapay sönüm EKLEMEZ. Kullanıcının girdiği ζ
+  //     dışında bir sönüm görünmesi, salınımın ne kadar sürdüğü sorusunun
+  //     cevabını bozardı.
+  //   • M, C, K sabit → etkin matris BİR KEZ kurulur, her adımda yalnız 6×6
+  //     çözüm yapılır.
+  //
+  // LİNEER ÇÖZÜM: dinamik rijitlik (kdyn) kullanılır, nonlineer eğri ve
+  // metal-metal durdurucu DEVREDE DEĞİLDİR — frekans yanıtıyla aynı varsayım.
+  // Genlik durdurucu boşluğunu aşarsa çözüm oradan sonra geçersizdir ve yorum
+  // katmanı bunu SÖYLER (uydurma bir sınır uygulamak yerine).
+  //
+  // Dönüş: { t:[s], a:[g], q:[[6]], qd:[[6]], per:[{f:[N], fz:[N], d:[mm]}],
+  //          dMax:[mm], dir, aPeak, dur }
+  function shockResponse(mounts, cg, M6, damping, opts){
+    opts = opts || {};
+    if(!mounts || !mounts.length || !M6) return null;
+    const dir = (opts.dir === 0 || opts.dir === 1) ? opts.dir : 2;
+    const g   = (opts.g > 0) ? opts.g : 9.81;
+    const A   = (opts.aG > 0) ? opts.aG : 3;          // darbe tepe ivmesi [g]
+    const tau = (opts.dur > 0) ? opts.dur : 0.020;    // darbe süresi [s]
+    const K6 = buildK(mounts, cg, true);              // dinamik rijitlik
+    const C6 = buildCdamp(mounts, cg, damping);
+
+    // Kayıt süresi: darbe + en yavaş modun birkaç çevrimi. Sabit bir süre
+    // (ör. 1 s) yumuşak montajda salınımın başını, sert montajda saatlerce
+    // düz çizgi gösterirdi.
+    let fLo = 0, fHi = 0;
+    const md = solveModal(K6, M6, mounts, cg);
+    (md || []).forEach(function(m){
+      if(!(m.f_Hz > 1e-6)) return;
+      if(!fLo || m.f_Hz < fLo) fLo = m.f_Hz;
+      if(m.f_Hz > fHi) fHi = m.f_Hz;
+    });
+    if(!(fLo > 0)) return null;
+    const tEnd = Math.min(tau + 8 / fLo, 3);
+
+    // Adım boyu: en hızlı modun periyodunun 1/40'ı VE darbenin 1/40'ı.
+    // Newmark kararlı olsa da doğruluk adım boyuna bağlıdır; darbeyi kaba
+    // örneklemek tepeyi düşürür.
+    let dt = Math.min(tau / 40, 1 / (40 * (fHi > 0 ? fHi : fLo)));
+    let nStep = Math.ceil(tEnd / dt);
+    if(nStep > 40000) { nStep = 40000; dt = tEnd / nStep; }
+
+    // Çıktı seyreltme: integrasyon ince, kayıt kaba. 40 000 noktalı bir kanal
+    // panoya da yorum katmanına da yük, bilgi katkısı yok.
+    const OUT_MAX = 1500;
+    const every = Math.max(1, Math.ceil(nStep / OUT_MAX));
+
+    const beta = 0.25, gamma = 0.5;
+    const a0 = 1/(beta*dt*dt), a1 = gamma/(beta*dt), a2 = 1/(beta*dt);
+    const a3 = 1/(2*beta) - 1, a4 = gamma/beta - 1, a5 = dt*(gamma/(2*beta) - 1);
+
+    const Keff = zeros(6,6);
+    for(let i=0;i<6;i++) for(let j=0;j<6;j++) Keff[i][j] = K6[i][j] + a0*M6[i][j] + a1*C6[i][j];
+
+    // Takoz geometrisi bir kez
+    const AA = mounts.map(function(mnt){
+      return makeA([mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]]);
+    });
+    const cList = mounts.map(function(_, i){
+      return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
+
+    // a(t): yarım sinüs [m/s²]
+    const aOf = function(t){
+      return (t >= 0 && t <= tau) ? A*g*Math.sin(Math.PI*t/tau) : 0;
+    };
+    // F(t) = −M ι a(t) — yalnız öteleme serbestliği uyarılır
+    const Fof = function(t){
+      const av = aOf(t), F = [0,0,0,0,0,0];
+      for(let i=0;i<6;i++) F[i] = -M6[i][dir]*av;
+      return F;
+    };
+
+    let q = [0,0,0,0,0,0], qd = [0,0,0,0,0,0];
+    // q̈₀ = M⁻¹(F₀ − C q̇₀ − K q₀); yarım sinüste F(0)=0 → sıfır, yine de genel
+    // kalsın diye çözülür (başka darbe biçimi eklenirse doğru başlar).
+    let qdd = solveLinear(M6, Fof(0)) || [0,0,0,0,0,0];
+
+    const out = { t: [], a: [], q: [], qd: [], dMax: [],
+                  per: mounts.map(function(){ return { f: [], fz: [], d: [] }; }),
+                  dir: dir, aPeak: A, dur: tau, dt: dt, tEnd: tEnd };
+
+    const record = function(t, q_, qd_){
+      out.t.push(t);
+      out.a.push(aOf(t)/g);                       // kayıtta [g]
+      out.q.push(q_.slice());
+      out.qd.push(qd_.slice());
+      let worst = 0;
+      for(let i=0;i<mounts.length;i++){
+        const Ai = AA[i];
+        let dR=[0,0,0], vR=[0,0,0];
+        for(let r=0;r<3;r++){
+          let s=0, sv=0;
+          for(let c=0;c<6;c++){ s += Ai[r][c]*q_[c]; sv += Ai[r][c]*qd_[c]; }
+          dR[r]=s; vR[r]=sv;
+        }
+        const k = mounts[i].kdyn || [0,0,0], cc = cList[i];
+        const fv = [k[0]*dR[0] + cc[0]*vR[0],
+                    k[1]*dR[1] + cc[1]*vR[1],
+                    k[2]*dR[2] + cc[2]*vR[2]];
+        out.per[i].f.push(Math.sqrt(fv[0]*fv[0]+fv[1]*fv[1]+fv[2]*fv[2]));
+        out.per[i].fz.push(fv[2]);
+        const dm = Math.sqrt(dR[0]*dR[0]+dR[1]*dR[1]+dR[2]*dR[2])*1000;
+        out.per[i].d.push(dm);
+        if(dm > worst) worst = dm;
+      }
+      out.dMax.push(worst);
+    };
+
+    record(0, q, qd);
+    for(let n=1;n<=nStep;n++){
+      const t = n*dt;
+      const F = Fof(t);
+      const rhs = [0,0,0,0,0,0];
+      for(let i=0;i<6;i++){
+        let mTerm=0, cTerm=0;
+        for(let j=0;j<6;j++){
+          mTerm += M6[i][j]*(a0*q[j] + a2*qd[j] + a3*qdd[j]);
+          cTerm += C6[i][j]*(a1*q[j] + a4*qd[j] + a5*qdd[j]);
+        }
+        rhs[i] = F[i] + mTerm + cTerm;
+      }
+      const qn = solveLinear(Keff, rhs);
+      if(!qn) return null;
+      const qddN = [], qdN = [];
+      for(let i=0;i<6;i++){
+        qddN.push(a0*(qn[i]-q[i]) - a2*qd[i] - a3*qdd[i]);
+        qdN.push(qd[i] + dt*((1-gamma)*qdd[i] + gamma*qddN[i]));
+      }
+      q = qn; qd = qdN; qdd = qddN;
+      if(n % every === 0 || n === nStep) record(t, q, qd);
+    }
+    return out;
+  }
+
   // ═══════════ Modal sönüm ve modal enerji (SPEC ek — Faz 6) ═══════════
 
   // ── Mod başına sönüm oranı ──
@@ -1873,7 +2035,7 @@ var veMountCore = (function() {
     buildKtangentDyn, mountTangentKdyn, solveModalAtState,
     transmissibility, bounceFrequency,
     mountLoadShares, mountDamping,
-    buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt,
+    buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt, shockResponse,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,
     torqueChain, classifyMode, validateModel,

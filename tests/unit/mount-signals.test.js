@@ -76,8 +76,8 @@ const chan = (ds, name) => ds.channels.find((c) => c.name === name);
 const mchan = (ds, mnt, kind) => chan(ds, mnt.name + ' · ' + kind);
 
 describe('build — hangi veri kümeleri üretiliyor', () => {
-  test('altı küme: frekans yanıtı, Campbell, kuvvet-deformasyon ve üç ivme süpürmesi', () => {
-    expect(SETS.map((d) => d.key)).toEqual(['frf', 'campbell', 'fdefl', 'gz', 'gy', 'gx']);
+  test('dokuz küme: frekans yanıtı, Campbell, F(δ), üç ivme süpürmesi, üç şok yönü', () => {
+    expect(SETS.map((d) => d.key)).toEqual(['frf', 'campbell', 'fdefl', 'gz', 'gy', 'gx', 'shockz', 'shocky', 'shockx']);
   });
 
   test('her kümenin X ekseni ve en az bir kanalı var', () => {
@@ -229,8 +229,10 @@ describe('ivme süpürmesi (gz / gy / gx)', () => {
   });
 
   test('çözücü verilmezse süpürme üretilmez', () => {
+    // Şok yanıtı solveOne'a bağlı DEĞİLDİR (lineer geçici rejim) — o yüzden
+    // çözücü verilmese de üretilir; süpürmeler üretilmez.
     const keys = S.build(R, {}).map((d) => d.key);
-    expect(keys).toEqual(['frf', 'campbell', 'fdefl']);
+    expect(keys).toEqual(['frf', 'campbell', 'fdefl', 'shockz', 'shocky', 'shockx']);
   });
 });
 

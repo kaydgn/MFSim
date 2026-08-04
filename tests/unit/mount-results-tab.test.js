@@ -304,9 +304,13 @@ describe('X ekseni seçici', () => {
     veActiveSolverTabId = 'mount';
     const opts = veGetAvailableXAxisOptions(0);
     expect(opts.map((o) => o.id)).toEqual([
-      '~mnt-frf:f', '~mnt-fdefl:d', '~mnt-gz:a', '~mnt-gy:a', '~mnt-gx:a'
+      '~mnt-frf:f', '~mnt-fdefl:d', '~mnt-gz:a', '~mnt-gy:a', '~mnt-gx:a',
+      '~mnt-shockz:t', '~mnt-shocky:t', '~mnt-shockx:t'
     ]);
-    expect(opts.map((o) => o.unit)).toEqual(['Hz', 'mm', 'g', 'g', 'g']);
+    expect(opts.map((o) => o.unit)).toEqual(['Hz', 'mm', 'g', 'g', 'g', 's', 's', 's']);
+    // Şok kümesinin ekseni ZAMAN ama araç zaman ekseni DEĞİL: kimliği kümeye
+    // bağlı, tek-eksen kuralı onu araç sinyalleriyle aynı pencereye sokmaz.
+    expect(opts.some((o) => o.id === 'time')).toBe(false);
   });
 
   test('pano doluyken YALNIZ o kümenin ekseni sunulur', () => {

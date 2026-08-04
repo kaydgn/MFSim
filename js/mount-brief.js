@@ -65,6 +65,14 @@ var veMntBrief = (function() {
     if(s.indexOf(',') >= 0) s = s.replace(/,?0+$/, '');
     return (neg ? '−%' : '%') + s;
   }
+  // Kuyruktaki sıfırları atan biçim: girdi olarak GİRİLEN bir sayıyı ("3 g",
+  // "20 ms") "3,00 g" diye yazmak, olmayan bir hassasiyet iddia eder.
+  function nz(v, dec) {
+    if(!isFinite(v)) return '—';
+    var s = n(v, dec == null ? 2 : dec);
+    if(s.indexOf(',') >= 0) s = s.replace(/,?0+$/, '');
+    return s;
+  }
 
   // Çekirdeğin mod etiketleri (classifyMode) İngilizce kısaltmalardır. Panoyu
   // okuyan herkes bunları bilmek zorunda değil: Türkçe karşılık + parantezde
@@ -897,6 +905,150 @@ var veMntBrief = (function() {
     return { title: title, paras: paras };
   }
 
+  // ═══════════ 5) ŞOK / GEÇİCİ REJİM — şerit yorumu ═══════════
+  //
+  // Buradaki asıl bilgi TEPE DEĞERLER ve SÖNÜM SÜRESİDİR: darbede ne kadar
+  // ezildi, ne kadar kuvvet geçti, salınım ne zaman bitti. Frekans yanıtı bu
+  // üçünü de söyleyemez.
+
+  // Serinin tepe genliğinin %5'ine kalıcı olarak indiği an — "salınım ne kadar
+  // sürdü" sorusunun sayısal karşılığı. Sağdan taranır ki geçici bir dip
+  // erken bitiş gibi okunmasın.
+  function settleTime(t, y, frac) {
+    if(!t || !y || t.length !== y.length) return NaN;
+    var pk = 0, i;
+    for(i = 0; i < y.length; i++) { var a = Math.abs(y[i]); if(a > pk) pk = a; }
+    if(!(pk > 0)) return NaN;
+    var lim = pk * (frac == null ? 0.05 : frac);
+    for(i = y.length - 1; i >= 0; i--) {
+      if(Math.abs(y[i]) > lim) return t[i];
+    }
+    return t[0];
+  }
+
+  function minMax(y) {
+    var mn = Infinity, mx = -Infinity;
+    (y || []).forEach(function(v) {
+      if(!isFinite(v)) return;
+      if(v < mn) mn = v;
+      if(v > mx) mx = v;
+    });
+    return isFinite(mn) ? { min: mn, max: mx } : null;
+  }
+
+  // Metal-metal durdurucu boşluğu (js/mount-signals.js FD_LIM_MM ile aynı).
+  // Şok çözümü LİNEERDİR: durdurucu devrede değildir. Genlik bu değeri aşarsa
+  // çözüm oradan sonra geçersizdir ve bunu SÖYLEMEK zorundayız — sessizce
+  // geçmek, gerçekte çelikten geçen bir yükü kauçuktan geçiyormuş gibi
+  // raporlamak olurdu.
+  var STOP_MM = 15;
+  var SHOCK_KEYS = ['shockz', 'shocky', 'shockx'];
+
+  function shockLane(ds, R, chans) {
+    var t = ds.x.data, meta = ds.meta || {}, paras = [];
+    var yon = (meta.ax || '').toLowerCase();
+
+    var acc = null, cg = [], defl = [], forc = [], dmax = null;
+    chans.forEach(function(ch) {
+      var p = parseId(ch.id);
+      if(ch.id === 'aIn') acc = ch;
+      else if(/^q[012]$/.test(ch.id)) cg.push({ ch: ch, c: +ch.id.charAt(1) });
+      else if(p.kind === 'mount' && p.part === 'd') defl.push(ch);
+      else if(p.kind === 'mount' && p.part === 'f') forc.push(ch);
+      else if(ch.id === 'dmax') dmax = ch;
+    });
+
+    // Giriş TEK CÜMLE: aynı panoda üç şerit açıldığında bu paragraf üç kez
+    // tekrarlanıyor. Uzun bir tanım üçe katlanınca yorum penceresi asıl
+    // bilgiyi (tepe değerler, sönme süresi) aşağı itiyordu.
+    paras.push('Yatay eksen ' + b('zaman') + '; güç grubuna ' + b(yon) + ' yönde ' +
+      b(nz(meta.aPeak) + ' g') + ' tepeli ' + b(nz(meta.dur * 1000, 1) + ' ms') +
+      '\'lik bir ' + b('yarım sinüs darbe') + ' uygulanıyor — bordür ya da çukur gibi ' +
+      'TEK bir olay. Darbe bittikten sonrası güç grubunun kendi doğal ' +
+      'frekanslarıyla sönmesidir.');
+
+    // ── Ağırlık merkezi yer değiştirmesi ──
+    if(cg.length) {
+      var parts = cg.sort(function(a, c) { return a.c - c.c; }).map(function(e) {
+        var mm2 = minMax(e.ch.data);
+        return mm2 ? b(AX_TR[e.c]) + ' ' + b(na(mm2.min) + ' … ' + na(mm2.max) + ' mm') : null;
+      }).filter(Boolean);
+      if(parts.length) {
+        paras.push('Ağırlık merkezinin şasiye göre gidip geldiği aralık: ' +
+          parts.join(', ') + '. Tedarikçi raporlarının "shock response" bölümünde ' +
+          'verilen referans nokta yer değiştirmesi bu büyüklüktür.');
+      }
+    }
+
+    // ── Takoz çökmesi ve durdurucu kontrolü ──
+    var dSrc = dmax ? [dmax] : defl;
+    if(dSrc.length) {
+      var worst = 0, worstName = '';
+      dSrc.forEach(function(ch) {
+        var mm3 = minMax(ch.data);
+        if(mm3 && mm3.max > worst) { worst = mm3.max; worstName = chanMount(ch); }
+      });
+      if(worst > 0) {
+        var s = (dmax ? 'Darbe boyunca en çok yüklenen takoz ' : b(worstName) + ' takozu ') +
+          b(na(worst) + ' mm') + ' eziliyor';
+        if(worst >= STOP_MM) {
+          s += ' — ' + b('metal-metal durdurucu boşluğunu (±' + STOP_MM + ' mm) AŞIYOR') +
+               '. Şok çözümü lineerdir, durdurucu devrede değildir: bu genlikten ' +
+               'sonrası ' + b('geçerli değildir') + '. Gerçekte yük çelikten geçer, ' +
+               'ivme çok daha sert olur. Darbeyi küçültün ya da takozu yumuşatın.';
+        } else {
+          s += '; ' + b('±' + STOP_MM + ' mm') + ' durdurucu sınırına ' +
+               b(na(STOP_MM - worst) + ' mm') + ' pay kalıyor.';
+        }
+        paras.push(s);
+      }
+    }
+
+    // ── Takoz kuvvetleri ──
+    if(forc.length) {
+      var fRows = forc.map(function(ch) {
+        var mm4 = minMax(ch.data);
+        return mm4 ? { name: chanMount(ch), v: mm4.max } : null;
+      }).filter(Boolean).sort(function(a, c) { return c.v - a.v; });
+      if(fRows.length) {
+        var sf = (fRows.length === 1 ? b(fRows[0].name) + ' takozuna' :
+                  'En çok zorlanan takoza (' + b(fRows[0].name) + ')') +
+          ' darbede ' + b(na(fRows[0].v / 1000) + ' kN') + ' tepe kuvvet biniyor';
+        var fc = capOf(R, fRows[0].name);
+        if(isFinite(fc)) {
+          sf += ' — katalog kapasitesinin (' + b(na(fc / 1000) + ' kN') + ') ' +
+                b(pct(fRows[0].v / fc * 100, 0)) + ' kadarı';
+        }
+        paras.push(sf + '. Ömür hesabında kullanılacak dinamik yük budur; ' +
+          'statik yük tek başına yeterli değildir.');
+      }
+    }
+
+    // ── Sönüm süresi ──
+    var sRef = dmax || (defl.length ? defl[0] : (cg.length ? cg[0].ch : null));
+    if(sRef) {
+      var ts = settleTime(t, sRef.data, 0.05);
+      if(isFinite(ts) && ts > meta.dur) {
+        paras.push('Salınım, tepe genliğinin ' + b('%5') + '\'ine ' + b(na(ts * 1000) + ' ms') +
+          '\'de iniyor — darbenin kendisi ' + b(nz(meta.dur * 1000, 1) + ' ms') + ' sürüyor, ' +
+          'yani sarsıntının ' + b(na(ts / meta.dur) + ' katı') + ' kadar sonra sönüyor. ' +
+          'Bu süreyi kısaltan tek şey ' + b('sönümdür') + ' (ζ' +
+          (isFinite(R.zeta) ? ' = ' + b(pct(R.zeta * 100, 1)) : '') +
+          '); rijitliği değiştirmek frekansı değiştirir, sönme süresini değil.');
+      }
+    }
+
+    if(acc && chans.length === 1) {
+      paras.push('Bu şeritte yalnız ' + b('uygulanan darbe') + ' var — sistemin yanıtı ' +
+        'değil, girdinin kendisi. Yanıtı görmek için aynı şeride bir takoz çökmesi ' +
+        'ya da ağırlık merkezi kanalı ekleyin.');
+    }
+
+    return { title: (ds.name || 'Şok yanıtı') +
+             (chans.length === ds.channels.length ? ' — birleşik (' + chans.length + ' kanal)' : ''),
+             paras: paras };
+  }
+
   // ── Şerit yorumu: giriş noktası ──────────────────────────────────────────
   //
   // ids = O ŞERİTTE çizili kanal kimlikleri. Aynı şeritte hangi kanalların
@@ -910,6 +1062,7 @@ var veMntBrief = (function() {
       if(ds.key === 'frf')      return frfLane(ds, R, chans);
       if(ds.key === 'campbell') return campbellLane(ds, R, chans);
       if(ds.key === 'fdefl')    return fdeflLane(ds, R, chans);
+      if(SHOCK_KEYS.indexOf(ds.key) >= 0) return shockLane(ds, R, chans);
       return sweepLane(ds, R, chans);
     } catch(e) { return null; }
   }
@@ -1016,6 +1169,24 @@ var veMntBrief = (function() {
       marks.push({ axis: 'x', value:  10, kind: 'limit', label: 'doğrusal bant +10 mm' });
       marks.push({ axis: 'x', value: -15, kind: 'stop',  label: 'durdurucu −15 mm' });
       marks.push({ axis: 'x', value:  15, kind: 'stop',  label: 'durdurucu +15 mm' });
+    } else if(SHOCK_KEYS.indexOf(ds.key) >= 0) {
+      var mt2 = ds.meta || {};
+      if(mt2.dur > 0) {
+        marks.push({ axis: 'x', value: mt2.dur, kind: 'event',
+                     label: 'darbe biter ' + na(mt2.dur * 1000) + ' ms' });
+      }
+      // Durdurucu sınırı mm şeridinde: lineer çözümün NEREDE geçersizleştiği
+      // grafiğin üstünde görünsün.
+      marks.push({ axis: 'y', value: STOP_MM, unit: 'mm', kind: 'stop',
+                   label: 'durdurucu ' + STOP_MM + ' mm — üstü lineer çözümün dışı' });
+      var dm = chan(ds, 'dmax');
+      if(dm) {
+        var ts2 = settleTime(ds.x.data, dm.data, 0.05);
+        if(isFinite(ts2) && ts2 > mt2.dur) {
+          marks.push({ axis: 'x', value: ts2, kind: 'ref',
+                       label: 'salınım %5\'e iner ' + na(ts2 * 1000) + ' ms' });
+        }
+      }
     } else {
       var t = GS_TEXT[ds.key];
       if(t) {
@@ -1038,7 +1209,10 @@ var veMntBrief = (function() {
     fdefl: 'Takozun ne kadar kuvvet altında ne kadar ezildiğini — yani ne kadar yumuşak olduğunu gösterir.',
     gz:    'Takozların araç çukura girip zıpladığında ne kadar ezildiğini ve yüklendiğini gösterir.',
     gy:    'Takozların araç virajda savrulduğunda ne kadar ezildiğini ve yüklendiğini gösterir.',
-    gx:    'Takozların sert frende veya hızlanmada ne kadar ezildiğini ve yüklendiğini gösterir.'
+    gx:    'Takozların sert frende veya hızlanmada ne kadar ezildiğini ve yüklendiğini gösterir.',
+    shockz: 'Tek bir düşey darbede (çukur, bordür) güç grubunun nasıl sarsıldığını ve salınımın ne kadar sürdüğünü gösterir — frekans yanıtının anlatamadığı geçiş budur.',
+    shocky: 'Tek bir yanal darbede güç grubunun nasıl sarsıldığını ve salınımın ne kadar sürdüğünü gösterir — frekans yanıtının anlatamadığı geçiş budur.',
+    shockx: 'Tek bir boyuna darbede (sert fren, çarpma) güç grubunun nasıl sarsıldığını ve salınımın ne kadar sürdüğünü gösterir — frekans yanıtının anlatamadığı geçiş budur.'
   };
 
   function build(ds, R) {
@@ -1061,7 +1235,9 @@ var veMntBrief = (function() {
     slopeAt0: slopeAt0,
     parseId: parseId,
     campbellCrossings: campbellCrossings,
-    ISO_RATIO: ISO_RATIO
+    settleTime: settleTime,
+    ISO_RATIO: ISO_RATIO,
+    STOP_MM: STOP_MM
   };
 })();
 

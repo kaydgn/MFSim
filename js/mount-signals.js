@@ -50,7 +50,8 @@ var veMntSignals = (function() {
   // Salt önek kontrolü, ileride o bileşenlerden birine sinyal tanımlandığı gün
   // '~mnt-motor'u sessizce buraya çeker ve o sensör ölür. Beyaz liste bu sınıf
   // hatayı bugünden kapatır.
-  var SET_KEYS = ['frf', 'fdefl', 'gz', 'gy', 'gx', 'campbell'];
+  var SET_KEYS = ['frf', 'fdefl', 'gz', 'gy', 'gx', 'campbell',
+                  'shockz', 'shocky', 'shockx'];
 
   function isMountSensor(sensorId) {
     if(typeof sensorId !== 'string' || sensorId.indexOf(SENSOR_PREFIX) !== 0) return false;
@@ -456,6 +457,79 @@ var veMntSignals = (function() {
     };
   }
 
+  // ── 5) Şok / geçici rejim yanıtı ──────────────────────────────────────────
+  //
+  // Frekans yanıtı SÜREKLİ rejimi, ivme süpürmesi YARI-STATİK dengeyi anlatır.
+  // İkisinin de anlatamadığı şey TEK BİR DARBEDİR: bordür, çukur, sert fren.
+  // O darbede takoz ne kadar eziliyor, şasiye ne kadar kuvvet geçiyor, salınım
+  // ne kadar sürüyor? Zaman ekseni olan tek takoz analizi budur.
+  //
+  // Üç yön AYRI veri kümesidir, tek küme değil: aynı zaman ekseni olsa bile
+  // "Z şoku" ile "X şoku" iki ayrı deneydir; tek kümede 50+ kanal yan yana
+  // dizilir ve hangi kanalın hangi deneye ait olduğu kaybolurdu.
+  var SHOCK_DEFS = [
+    { key: 'shockz', dir: 2, name: 'Şok yanıtı — düşey (Z)',
+      icon: '<span class="mf-ico mf-ico-zap"></span>', ax: 'Düşey' },
+    { key: 'shocky', dir: 1, name: 'Şok yanıtı — yanal (Y)',
+      icon: '<span class="mf-ico mf-ico-zap"></span>', ax: 'Yanal' },
+    { key: 'shockx', dir: 0, name: 'Şok yanıtı — boyuna (X)',
+      icon: '<span class="mf-ico mf-ico-zap"></span>', ax: 'Boyuna' }
+  ];
+
+  var CG_NAMES = ['Ağırlık merkezi · X', 'Ağırlık merkezi · Y', 'Ağırlık merkezi · Z'];
+
+  function _shockSet(R, def, opts) {
+    var C = _core();
+    if(!C || !C.shockResponse || !C.buildM6) return null;
+    if(!R || !R.mounts || !R.mounts.length || !R.mp || !R.damping) return null;
+    var M6 = C.buildM6(R.mp.m, R.mp.I_G);
+    if(!M6) return null;
+
+    var res;
+    try {
+      res = C.shockResponse(R.mounts, R.mp.cg, M6, R.damping, {
+        dir: def.dir, aG: opts.aG, dur: opts.dur, g: R.g || 9.81
+      });
+    } catch(e) { res = null; }
+    if(!res || !res.t || res.t.length < 2) return null;
+
+    var keys = _mountKeys(R.mounts);
+    var chans = [];
+    chans.push({ id: 'aIn', name: 'Uygulanan ivme (' + def.ax.toLowerCase() + ')',
+                 unit: 'g', data: res.a });
+    for(var c = 0; c < 3; c++) {
+      chans.push({ id: 'q' + c, name: CG_NAMES[c] + ' yer değiştirme', unit: 'mm',
+                   data: res.q.map(function(v) { return v[c] * 1000; }) });
+    }
+    R.mounts.forEach(function(mnt, mi) {
+      var label = _mountLabel(mnt, mi);
+      chans.push({ id: keys[mi] + '.d', name: label + ' · bileşke çökme',
+                   unit: 'mm', data: res.per[mi].d });
+      chans.push({ id: keys[mi] + '.f', name: label + ' · bileşke kuvvet',
+                   unit: 'N', data: res.per[mi].f });
+    });
+    chans.push({ id: 'dmax', name: 'En büyük takoz çökmesi', unit: 'mm', data: res.dMax });
+
+    return {
+      key: def.key,
+      sensorId: SENSOR_PREFIX + def.key,
+      name: def.name,
+      icon: def.icon,
+      x: { id: 't', name: 'Zaman', unit: 's', data: res.t },
+      channels: chans,
+      meta: { dir: def.dir, aPeak: res.aPeak, dur: res.dur, ax: def.ax }
+    };
+  }
+
+  // Şok darbesi girdisi — Çözücü düğümünden gelir (cp-mount.js), yoksa AMC
+  // raporlarının darbesi (3 g / 20 ms).
+  function _shockOpts(R) {
+    var s = (R && R.shock) || {};
+    var a = Number(s.aG), d = Number(s.ms);
+    return { aG: (isFinite(a) && a > 0) ? a : 3,
+             dur: ((isFinite(d) && d > 0) ? d : 20) / 1000 };
+  }
+
   // ── Kurulum ───────────────────────────────────────────────────────────────
 
   // R (+ opts.solveOne) → veri kümeleri dizisi. Üretilemeyen küme SESSİZCE
@@ -472,6 +546,11 @@ var veMntSignals = (function() {
     GS_DEFS.forEach(function(def) {
       var g = _gSweepSet(R, opts.solveOne, def);
       if(g) sets.push(g);
+    });
+    var so = _shockOpts(R);
+    SHOCK_DEFS.forEach(function(def) {
+      var s2 = _shockSet(R, def, so);
+      if(s2) sets.push(s2);
     });
     // Yorum kümenin bir parçası: panonun altındaki şerit (js/trace-view.js)
     // hangi kümeye baktığını bilir, yorumu oradan okur. Üretilemezse null
