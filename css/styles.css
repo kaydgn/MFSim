@@ -2590,7 +2590,6 @@
    değer. Görünen bir metin taşımadıkları için etkisi yoktu, ama düğmeye ileride
    bir metin girerse ölçek dışına düşerdi. Ölçeğin en yakın basamağına bağlandı. */
 .ve-qat-btn,
-.ve-radio-btn,
 .ve-minimap-toggle,
 .mf-radio-mini-btn{ font-size:var(--fs-lg); }
 
@@ -5272,17 +5271,9 @@ body.mf-radio-dragging .mf-radio-head{ cursor:grabbing; }
 .mf-radio-pick svg{ width:16px; height:16px; }
 .mf-radio-empty{ padding:14px 10px; text-align:center; font-size:var(--fs-md); color:var(--text-muted); line-height:1.5; }
 
-/* ── Toolbar düğmesi ── */
-.ve-radio-btn{
-  display:inline-flex; align-items:center; justify-content:center;
-  width:26px; height:26px; padding:0; margin-right:2px;
-  background:transparent; border:none; border-radius:var(--radius-sm,6px);
-  color:var(--text-secondary); cursor:pointer;
-  transition:background var(--dur-fast,0.12s), color var(--dur-fast,0.12s);
-}
-.ve-radio-btn:hover{ background:var(--bg-tertiary); color:var(--text-primary); }
-.ve-radio-btn .mf-ico{ width:16px; height:16px; }
-#ve-radio-btn.active{ color:var(--accent-primary); }
+/* Radyonun krom bandında kendi düğmesi yok — komut şeritte (Araçlar → Mola →
+   Radyo). Buradaki .ve-radio-btn kuralları o düğmeyle birlikte kaldırıldı;
+   basılı göstergesi artık şeridin kendi .is-pressed biçimidir. */
 
 /* Dar ekran: paneli tam genişliğe yakın al */
 @media (max-width:420px){
