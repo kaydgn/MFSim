@@ -1359,16 +1359,44 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
       return {p:c, tip:'k', ad:c.name, ana:anaMi, box:anaMi?kutu(c):null};
     }).concat(geom.mounts.map(function(m){ return {p:m, tip:'t', ad:m.name, ana:false, box:null}; }));
 
+  // ── BİTİŞİK ANA GÖVDELER: kutular değene kadar uzatılır ─────────────────
+  // Motor ile şanzıman gerçekte cıvatalı tek yapıdır. Eşdeğer atalet kutuları
+  // kendi CG'lerinde ve kendi boyutlarında olduğu için aralarında boşluk kalır
+  // (ASFAT'ta 143 mm) ve iki AYRI parça gibi okunur. Boşluk, iki kutunun BAKAN
+  // uçları yarı yarıya uzatılarak kapatılır — genişlik ve yükseklik ataletten
+  // gelen değerde KALIR, yalnız tahrik ekseni boyunca uzunluk büyür.
+  // Uzatma yalnız yatay eksen MODELİN X'i olduğunda uygulanır (üstten/yandan);
+  // önden görünüşte gövdeler zaten üst üste düşer, uzatılacak bir açıklık yoktur.
+  var uzat={};   // ad → {eksi, arti} mm
+  if(horiz==='x'){
+    var kutulu=items.filter(function(it){ return it.tip==='k' && it.box; })
+                    .sort(function(a,b){ return a.p.x-b.p.x; });
+    kutulu.forEach(function(it){ uzat[it.ad]={eksi:0, arti:0}; });
+    for(var q=0;q<kutulu.length-1;q++){
+      var A=kutulu[q], B=kutulu[q+1];
+      var bos=(B.p.x - B.box[0]*500) - (A.p.x + A.box[0]*500);
+      if(bos>0){ uzat[A.ad].arti += bos/2; uzat[B.ad].eksi += bos/2; }
+    }
+  }
+  function yariEn(it){                       // [sol yarı, sağ yarı] mm
+    var yari=it.box[hIdx]*500;
+    var u=uzat[it.ad];
+    return u ? [yari+u.eksi, yari+u.arti] : [yari, yari];
+  }
+
   // Sınır kutusu her düzlem için ayrı; ÖLÇEK üçünde ortak (px/mm aynı olsun ki
   // gövde oranları görünüşler arasında karşılaştırılabilsin).
   function aralik(hK, vK, hI, vI){
     var P=[];
     items.forEach(function(it){
       var dd=disp(it.p);
-      var eh=it.box ? it.box[hI]*500 : 0, ev=it.box ? it.box[vI]*500 : 0;
+      var u=(hK==='x' && it.box) ? uzat[it.ad] : null;
+      var ehL=it.box ? it.box[hI]*500+(u?u.eksi:0) : 0;
+      var ehR=it.box ? it.box[hI]*500+(u?u.arti:0) : 0;
+      var ev=it.box ? it.box[vI]*500 : 0;
       [[0,0],[1,1]].forEach(function(k){
         var bh=it.p[hK]+dd[hI]*scale*k[0], bv=it.p[vK]+dd[vI]*scale*k[1];
-        P.push({h:bh-eh, v:bv-ev}); P.push({h:bh+eh, v:bv+ev});
+        P.push({h:bh-ehL, v:bv-ev}); P.push({h:bh+ehR, v:bv+ev});
       });
     });
     P.push({h:cgM[hK], v:cgM[vK]});
@@ -1378,21 +1406,23 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
   }
   var bbXY=aralik('x','y',0,1), bbXZ=aralik('x','z',0,2), bbYZ=aralik('y','z',1,2);
   var bb={xy:bbXY, xz:bbXZ, yz:bbYZ}[plane];
-  var W=760, padL=46, padR=34, padT=30, padB=26;
+  var W=760, padL=30, padR=26, padT=22, padB=14;
   var plotW=W-padL-padR;
   var hSpanMax=Math.max(bbXY.maxH-bbXY.minH, bbXZ.maxH-bbXZ.minH, bbYZ.maxH-bbYZ.minH, 1);
   var vSpanMax=Math.max(bbXY.maxV-bbXY.minV, bbXZ.maxV-bbXZ.minV, bbYZ.maxV-bbYZ.minV, 1);
-  var sc=Math.min(plotW/hSpanMax, 250/vSpanMax);
+  var sc=Math.min(plotW/hSpanMax, 155/vSpanMax);   // 155 px: rapor yerini şişirmeden okunur
   var minH=bb.minH, maxH=bb.maxH, minV=bb.minV, maxV=bb.maxV;
   var rngH=Math.max(maxH-minH,1), rngV=Math.max(maxV-minV,1);
-  var H=Math.round(padT+padB+rngV*sc)+18;
+  var H=Math.round(padT+padB+rngV*sc);
   var plotH=H-padT-padB;
   var offH=padL+(plotW-rngH*sc)/2, offV=padT+(plotH-rngV*sc)/2;
   function sx(hh){ return offH+(hh-minH)*sc; }
   function sy(vv){ return offV+(maxV-vv)*sc; }
 
-  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
-  s+='<text x="6" y="14" font-size="11" fill="#5a6270">'+EK.ad+'</text>';
+  // display:block — SVG varsayılan olarak satır-içidir ve altında satır-yüksekliği
+  // kadar boşluk bırakır; üç görünüş alt alta gelince bu boşluk birikiyordu.
+  var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg" style="display:block">';
+  s+='<text x="6" y="12" font-size="11" fill="#5a6270">'+EK.ad+'</text>';
   if(plane==='xy'){
     s+='<rect x="'+(W-152)+'" y="6" width="8" height="8" fill="#8a3ca0"/>'
       +'<text x="'+(W-140)+'" y="14" font-size="9.5" fill="#5a6270">takoz</text>'
@@ -1405,66 +1435,15 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
     if(it.tip==='t'){
       s+='<rect x="'+(x-4).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" width="8" height="8" fill="none" stroke="#c9ced6" stroke-width="1.1"/>';
     } else if(it.box){
-      var w=it.box[hIdx]*1000*sc, hh=it.box[vIdx]*1000*sc;
-      s+='<rect x="'+(x-w/2).toFixed(1)+'" y="'+(y-hh/2).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+hh.toFixed(1)
+      var ye=yariEn(it), hh=it.box[vIdx]*1000*sc;
+      s+='<rect x="'+(x-ye[0]*sc).toFixed(1)+'" y="'+(y-hh/2).toFixed(1)+'" width="'+((ye[0]+ye[1])*sc).toFixed(1)+'" height="'+hh.toFixed(1)
         +'" rx="3" fill="none" stroke="#d3d8de" stroke-width="1.1" stroke-dasharray="4 3"/>';
     } else {
       s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.6" fill="none" stroke="#d3d8de" stroke-width="1"/>';
     }
   });
-  // ── ANA GÖVDELER ARASI BAĞLANTI BANDI ────────────────────────────────────
-  // Motor ile şanzıman gerçekte cıvatalı tek bir yapıdır (volan muhafazası).
-  // Eşdeğer atalet kutuları kendi CG'lerinde ve kendi boyutlarında olduğu için
-  // aralarında boşluk kalıyor ve iki AYRI parça gibi okunuyordu. Bandı kutuları
-  // BÜYÜTEREK kapatmak yanlış olurdu — kutu boyutları ataletten türetilmiş kesin
-  // değerlerdir. Onun yerine deforme CG'ler arasına bir bağlantı bandı çizilir:
-  // gövdelerle birlikte hareket eder, kutu boyutlarına dokunmaz.
-  var anaKutulu=items.filter(function(it){ return it.tip==='k' && it.box; });
-  if(anaKutulu.length>1){
-    var sirali=anaKutulu.slice().sort(function(a,b){ return a.p[horiz]-b.p[horiz]; });
-    for(var q=0;q<sirali.length-1;q++){
-      var A=sirali[q], B=sirali[q+1];
-      var dA=disp(A.p), dB=disp(B.p);
-      var ax=sx(A.p[horiz]+dA[hIdx]*scale), ay=sy(A.p[vert]+dA[vIdx]*scale);
-      var bx2=sx(B.p[horiz]+dB[hIdx]*scale), by2=sy(B.p[vert]+dB[vIdx]*scale);
-      // Band yalnız kutuların BAKAN YÜZLERİ arasına çizilir; merkezden merkeze
-      // çizmek kutuların içinden geçip üstlerine biniyordu. Yüz noktaları da
-      // kutularla birlikte döner (küçük açıda offset vektörünü döndürmek yeterli).
-      var rad=donme*Math.PI/180, cA=Math.cos(rad), sA=Math.sin(rad);
-      var offA=A.box[hIdx]*1000*sc/2, offB=B.box[hIdx]*1000*sc/2;
-      var p1x=ax+offA*cA, p1y=ay+offA*sA;
-      var p2x=bx2-offB*cA, p2y=by2-offB*sA;
-      // Yüzler zaten çakışıyorsa (gövdeler iç içe) band gereksiz
-      var acik=(p2x-p1x)*cA + (p2y-p1y)*sA;
-      if(acik>0.5){
-        // İki YÜZÜ birleştiren yamuk. Kalın çizgi kullanmak, gövdelerin düşey
-        // merkezleri farklı olduğunda (motor z=858, şanzıman z=681) eğik bir
-        // blok gibi görünüyordu; yamuk her iki yüzün kendi yüksekliğine oturur.
-        var pex=-sA, pey=cA;                                  // döndürülmüş dikey yön
-        var hA=A.box[vIdx]*1000*sc*0.62/2, hB=B.box[vIdx]*1000*sc*0.62/2;
-        var poly=[[p1x+pex*hA, p1y+pey*hA], [p2x+pex*hB, p2y+pey*hB],
-                  [p2x-pex*hB, p2y-pey*hB], [p1x-pex*hA, p1y-pey*hA]];
-        s+='<polygon points="'+poly.map(function(q){ return q[0].toFixed(1)+','+q[1].toFixed(1); }).join(' ')
-          +'" fill="rgba(36,66,95,0.13)"/>';
-      }
-    }
-  }
 
   // ── DEFORME ──
-  var yerlesik=[];
-  function etiketYerlestir(cx, yAlt, metin){
-    var gen=metin.length*4.7, yy=yAlt;
-    for(var tur=0; tur<8; tur++){
-      var carpisma=yerlesik.some(function(r){
-        return Math.abs(r.cx-cx) < (r.gen+gen)/2 + 4 && Math.abs(r.y-yy) < 11;
-      });
-      if(!carpisma) break;
-      yy += 11.5;
-    }
-    yerlesik.push({cx:cx, y:yy, gen:gen});
-    return yy;
-  }
-  var HALE=' paint-order="stroke" stroke="#ffffff" stroke-width="2.6" stroke-linejoin="round"';
   items.forEach(function(it){
     var dd=disp(it.p);
     var x0=sx(it.p[horiz]), y0=sy(it.p[vert]);
@@ -1476,16 +1455,13 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale, ana){
     if(it.tip==='t'){
       s+='<rect x="'+(x1-4).toFixed(1)+'" y="'+(y1-4).toFixed(1)+'" width="8" height="8" fill="'+renk+'"/>';
     } else if(it.box){
-      var w2=it.box[hIdx]*1000*sc, h2=it.box[vIdx]*1000*sc;
+      // Ad YAZILMAZ: şekil üzerindeki metinler raporu kalabalıklaştırıyordu.
+      // Hangi kutunun hangi gövde olduğu bölüm metninde (soldan sağa) verilir.
+      var ye2=yariEn(it), h2=it.box[vIdx]*1000*sc;
       s+='<g transform="rotate('+donme.toFixed(3)+' '+x1.toFixed(1)+' '+y1.toFixed(1)+')">'
-        +'<rect x="'+(x1-w2/2).toFixed(1)+'" y="'+(y1-h2/2).toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+h2.toFixed(1)
+        +'<rect x="'+(x1-ye2[0]*sc).toFixed(1)+'" y="'+(y1-h2/2).toFixed(1)+'" width="'+((ye2[0]+ye2[1])*sc).toFixed(1)+'" height="'+h2.toFixed(1)
         +'" rx="3" fill="rgba(36,66,95,0.13)" stroke="'+renk+'" stroke-width="1.4"/></g>';
       s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="2" fill="'+renk+'"/>';
-      var adk=String(it.ad||'').split('—')[0].trim();
-      if(adk){
-        var yE=etiketYerlestir(x1, y1+h2/2+12, adk);
-        s+='<text x="'+x1.toFixed(1)+'" y="'+yE.toFixed(1)+'" font-size="9.5" fill="#4a5462" text-anchor="middle"'+HALE+'>'+_rEsc(adk)+'</text>';
-      }
     } else {
       // Yardımcı gövde: küçük soluk nokta, etiket YOK (görsel kalabalığı bunlar yapıyordu)
       s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="3" fill="'+renk+'"/>';
@@ -1541,10 +1517,15 @@ function _mntRepModeShapes(R){
     +'daire ile gösterilir. Genlik ise <b>görseldir</b>: mod şekli normalize edildiği için mutlak yer '
     +'değiştirme değeri yoktur — şekiller karşılaştırılabilir olsun diye her modda aynı görsel ölçek kullanılır. '
     +'Kutuların dönmesi de aynı görsel ölçekle büyütülmüştür.</p>';
-  h+='<p style="font-size:0.9em; color:#5a6270;">Şekil okunabilir kalsın diye kutu ve etiket yalnız '
+  h+='<p style="font-size:0.9em; color:#5a6270;"><b>Bitişik gövdeler değdirilir:</b> motor ve şanzıman '
+    +'gerçekte cıvatalı tek yapıdır, ama iki kutu kendi ağırlık merkezlerinde durduğu için aralarında '
+    +'boşluk kalır. Bu boşluk, bakan uçlar yarı yarıya uzatılarak kapatılır — <b>en ve yükseklik '
+    +'ataletten gelen değerde kalır</b>, yalnız tahrik ekseni boyunca uzunluk büyür. Önden görünüşte '
+    +'gövdeler zaten üst üste düştüğü için uzatma uygulanmaz.</p>';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Şekil okunabilir kalsın diye kutu yalnız '
     +'<b>kütlece baskın</b> gövdelere çizilir (toplam kütlenin %10\'undan fazlasını taşıyanlar: '
     +ANA.map(function(n){ return _rEsc(String(n).split('—')[0].trim()); }).join(', ')
-    +'). Kalan gövdeler ağırlık merkezleriyle küçük soluk nokta olarak yer alır — modelden '
+    +'; şekil üzerine ad yazılmaz, sıra soldan sağa aynıdır). Kalan gövdeler ağırlık merkezleriyle küçük soluk nokta olarak yer alır — modelden '
     +'çıkarılmazlar, yalnız görsel ağırlıkları azaltılır; kinetik enerji payları §8.14\'te tam olarak verilir.</p>';
   h+='<p style="font-size:0.9em; color:#5a6270;"><b>Üç görünüş neden gerekli:</b> her dönme ekseni farklı '
     +'düzlemde görünür. Roll ( \\( \\theta_x \\) ) yandan bakışta kaybolur — ±y\'deki gövdeler üst üste '

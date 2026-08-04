@@ -439,29 +439,53 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     expect(enKotuAci).toBeLessThan(0.05);
   });
 
-  test('§8.16 ana gövdeler BAĞLANTI BANDI ile birleşik çizilir', () => {
-    // Motor ile şanzıman gerçekte cıvatalı tek yapıdır. Eşdeğer atalet kutuları
-    // kendi CG'lerinde olduğu için aralarında boşluk kalıyor ve iki ayrı parça
-    // gibi okunuyordu. Band bu boşluğu kapatır — kutu BOYUTLARINA dokunmadan.
+  test('§8.16 bitişik ana gövdeler DEĞDİRİLİR (kutular uzatılarak, band ile değil)', () => {
+    // Motor ile şanzıman cıvatalı tek yapıdır; iki kutu arasında 143 mm boşluk
+    // kalıyordu. Boşluk, bakan uçlar yarı yarıya uzatılarak kapatılır.
     const h = rep._mntRepModeShapes(R);
     const svgs = h.match(/<svg [\s\S]*?<\/svg>/g);
-    // Motor ve şanzıman X boyunca ayrık → ÜSTTEN ve YANDAN görünüşte band var.
-    expect((svgs[0].match(/<polygon points="/g) || []).length).toBe(1);   // üstten
-    expect((svgs[1].match(/<polygon points="/g) || []).length).toBe(1);   // yandan
-    // ÖNDEN (Y–Z) görünüşte ikisi neredeyse aynı y'de (−0,13 ve −9,97 mm) —
-    // projeksiyonda üst üste düşerler, kapatılacak boşluk YOKTUR. Band çizmemek
-    // doğrudur; çizilseydi var olmayan bir ara parça uydurulmuş olurdu.
-    expect(svgs[2]).not.toContain('<polygon');
-    // Kutu boyutları band yüzünden DEĞİŞMEMELİ: motorun eşdeğer kutusu 1154 mm
-    const e = core.equivalentBox(1600, [[110.7, 0, 0], [0, 260.2, 0], [0, 0, 205.9]], false);
-    expect(e[0] * 1000).toBeCloseTo(1154, 0);
+    expect(h).not.toContain('<polygon');           // ara yapı YOK
+    // Referans (kesikli) kutular: x ve genişlik
+    const kutular = (svg) => [...svg.matchAll(
+      /<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)" rx="3" fill="none" stroke="#d3d8de"/g)]
+      .map((m) => ({ x: +m[1], y: +m[2], w: +m[3], h: +m[4] }))
+      .sort((p, q) => p.x - q.x);
+    [0, 1].forEach((pi) => {                       // üstten ve yandan
+      const k = kutular(svgs[pi]);
+      expect(k).toHaveLength(2);
+      // sol kutunun sağ kenarı ile sağ kutunun sol kenarı ÇAKIŞMALI
+      expect(Math.abs((k[0].x + k[0].w) - k[1].x)).toBeLessThan(0.6);
+    });
+    // ÖNDEN görünüşte uzatma YOK: gövdeler o projeksiyonda üst üste düşer,
+    // kapatılacak bir açıklık yoktur. Kutu genişlikleri ataletten gelen değerde.
+    const kY = kutular(svgs[2]);
+    const eM = core.equivalentBox(1600, [[110.7, 0, 0], [0, 260.2, 0], [0, 0, 205.9]], false);
+    const eS = core.equivalentBox(600, [[16.43, 0, 0], [0, 68.15, 0], [0, 0, 64.91]], false);
+    // önden görünüşte yatay eksen y → genişlik oranı b_motor / b_şanzıman
+    expect(kY[0].w / kY[1].w).toBeCloseTo(eM[1] / eS[1], 2);
   });
 
-  test('§8.16 tek ana gövde varsa band çizilmez', () => {
-    const tek = Object.assign({}, R, { gather: Object.assign({}, R.gather, {
-      components: [R.gather.components[0]] }) });
-    const svgs = rep._mntRepModeShapes(tek).match(/<svg [\s\S]*?<\/svg>/g);
-    svgs.forEach((svg) => expect(svg).not.toContain('<polygon'));
+  test('§8.16 uzatma YALNIZ uzunluğu büyütür — en ve yükseklik ataletten gelen değerde', () => {
+    // Kritik: kutuları büyütmek boyutları uydurma hâline getirmemeli. Yandan
+    // görünüşte YÜKSEKLİK (z) uzatmadan etkilenmez; oran tam olarak c_motor/c_şanzıman.
+    const svgs = rep._mntRepModeShapes(R).match(/<svg [\s\S]*?<\/svg>/g);
+    const k = [...svgs[1].matchAll(
+      /<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)" rx="3" fill="none" stroke="#d3d8de"/g)]
+      .map((m) => ({ x: +m[1], h: +m[4] })).sort((p, q) => p.x - q.x);
+    const eM = core.equivalentBox(1600, [[110.7, 0, 0], [0, 260.2, 0], [0, 0, 205.9]], false);
+    const eS = core.equivalentBox(600, [[16.43, 0, 0], [0, 68.15, 0], [0, 0, 64.91]], false);
+    expect(k[0].h / k[1].h).toBeCloseTo(eM[2] / eS[2], 2);   // 787 / 444
+  });
+
+  test('§8.16 şekil üzerine bileşen ADI yazılmaz', () => {
+    // Rapor kalabalıklaşmasın diye adlar figürden kaldırıldı; bölüm metninde var.
+    const h = rep._mntRepModeShapes(R);
+    const cizim = h.slice(h.indexOf('<svg '));
+    expect(cizim).not.toContain('Motor —');
+    expect(cizim).not.toContain('>Şanzıman');
+    expect(cizim).not.toContain('>Şaft<');
+    // metinde ise duruyor (hangi kutunun ne olduğu okunabilsin)
+    expect(h.slice(0, h.indexOf('<svg '))).toContain('Motor');
   });
 
   test('§8.16 veri yoksa boş döner', () => {
