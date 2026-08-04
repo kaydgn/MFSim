@@ -4085,9 +4085,12 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
 .ve-trace-note-body{
   column-width:46ch;column-gap:26px;
 }
-/* Şerit başına bir bölüm. Sütun kırılması bölümün İÇİNDE olabilir ama
-   başlık kendi metninden ayrı düşmemeli. */
-.ve-trace-note-sec{margin:0 0 8px 0;break-inside:avoid;-webkit-column-break-inside:avoid;}
+/* Şerit başına bir bölüm.
+   BÖLÜM SÜTUNA KIRILABİLİR OLMALI — `break-inside:avoid` konulursa tek şeritli
+   bir yorum tek bölünemez blok olur, ikinci sütuna geçemez ve pencerenin sağ
+   yarısı boş kalır. Kırılmaması gereken tek şey PARAGRAFIN kendisi (aşağıda)
+   ve başlığın metninden kopmaması (break-after:avoid). */
+.ve-trace-note-sec{margin:0 0 8px 0;}
 .ve-trace-note-sec:last-child{margin-bottom:0;}
 .ve-trace-note-h{
   margin:0 0 3px 0;
