@@ -323,7 +323,8 @@ function _mntRepNLNote(R){
 // ─── Geometri (mm) — R.gather'dan sayısal; birleşik CG R.mp'den (otorite) ────
 function _mntRepGeom(R){
   var comps=(R.gather.components||[]).map(function(c){
-    return { name:c.name||'bileşen', mass:_rNum(c.mass), x:_rNum(c.cgx), y:_rNum(c.cgy), z:_rNum(c.cgz), pointMass:!!c.pointMass };
+    return { name:c.name||'bileşen', mass:_rNum(c.mass), x:_rNum(c.cgx), y:_rNum(c.cgy), z:_rNum(c.cgz),
+             Ixx:_rNum(c.Ixx), Iyy:_rNum(c.Iyy), Izz:_rNum(c.Izz), pointMass:!!c.pointMass };
   }).filter(function(c){ return Number.isFinite(c.x)&&Number.isFinite(c.y)&&Number.isFinite(c.z); });
   var mounts=(R.gather.mounts||[]).map(function(m){
     return { name:m.name||'takoz', x:_rNum(m.x), y:_rNum(m.y), z:_rNum(m.z) };
@@ -1330,6 +1331,7 @@ function _mntRepModalEnergy(R){
 function _mntRepModeFigure(geom, cgM, phi, plane, no, scale){
   var horiz='x', vert=(plane==='xy')?'y':'z';
   var hi=(plane==='xy')?1:2;                      // dikey eksenin indeksi (y ya da z)
+  var C0=_rMountCore();
   // Rijit gövde yer değiştirmesi: Δ = u + θ×d   (mm cinsinden; θ [rad] × d [mm])
   function disp(p){
     var d=[p.x-cgM.x, p.y-cgM.y, p.z-cgM.z];
@@ -1337,59 +1339,139 @@ function _mntRepModeFigure(geom, cgM, phi, plane, no, scale){
              phi[1]*1000 + phi[5]*d[0] - phi[3]*d[2],
              phi[2]*1000 + phi[3]*d[1] - phi[4]*d[0] ];
   }
-  var items=geom.comps.map(function(c){ return {p:c, tip:'k', ad:c.name}; })
-             .concat(geom.mounts.map(function(m){ return {p:m, tip:'t', ad:m.name}; }));
-  var pts=[];
-  items.forEach(function(it){
-    var dd=disp(it.p);
-    pts.push({h:it.p[horiz], v:it.p[vert]});
-    pts.push({h:it.p[horiz]+dd[0]*scale, v:it.p[vert]+dd[hi]*scale});
-  });
-  pts.push({h:cgM.x, v:(plane==='xy')?cgM.y:cgM.z});
-  var hs=pts.map(function(p){return p.h;}), vs=pts.map(function(p){return p.v;});
-  var minH=Math.min.apply(null,hs), maxH=Math.max.apply(null,hs);
-  var minV=Math.min.apply(null,vs), maxV=Math.max.apply(null,vs);
-  var W=760, H=250, padL=54, padR=40, padT=34, padB=34;
-  var rngH=Math.max(maxH-minH,1), rngV=Math.max(maxV-minV,1);
-  var plotW=W-padL-padR, plotH=H-padT-padB;
-  var sc=Math.min(plotW/rngH, plotH/rngV);
+  // Gövde kutusu: kütle+atalet → eşdeğer prizma kenarları (mm). Yoksa null.
+  function kutu(c){
+    if(!C0 || !C0.equivalentBox) return null;
+    var e=C0.equivalentBox(c.mass, [[c.Ixx,0,0],[0,c.Iyy,0],[0,0,c.Izz]], c.pointMass);
+    return e;   // [a,b,c] mm (girdi mm² tabanlı değil — atalet kg·m², kütle kg → m)
+  }
+  // DÖNME (görsel): tüm gövdeler aynı θ ile döner (rijit gövde modu).
+  //   X–Y düzlemi: θ_z ekranda SAAT YÖNÜNÜN TERSİ → SVG rotate negatif
+  //   X–Z düzlemi: θ_y ekranda SAAT YÖNÜNDE      → SVG rotate pozitif
+  var donme = (plane==='xy') ? (-phi[5]*scale*180/Math.PI) : (phi[4]*scale*180/Math.PI);
+
+  var items=geom.comps.map(function(c){ return {p:c, tip:'k', ad:c.name, box:kutu(c)}; })
+             .concat(geom.mounts.map(function(m){ return {p:m, tip:'t', ad:m.name, box:null}; }));
+  // Sınır kutusu: gövde köşeleri de hesaba katılsın ki kutular taşmasın
+  // Sınır kutusu HER İKİ görünüş için ayrı ayrı hesaplanır ama ÖLÇEK ortaktır:
+  // iki figür farklı px/mm ile çizilirse okuyucu yandan görünüşü "yakınlaştırılmış"
+  // sanır ve gövde oranlarını yanlış karşılaştırır.
+  function kutuAralik(vIdx){
+    var P=[];
+    items.forEach(function(it){
+      var dd=disp(it.p);
+      var eh=it.box ? it.box[0]*500 : 0;
+      var ev=it.box ? it.box[vIdx]*500 : 0;
+      var vAd=(vIdx===1)?'y':'z';
+      [[0,0],[1,1]].forEach(function(k){
+        var bx=it.p.x+dd[0]*scale*k[0], bv=it.p[vAd]+dd[vIdx]*scale*k[1];
+        P.push({h:bx-eh, v:bv-ev}); P.push({h:bx+eh, v:bv+ev});
+      });
+    });
+    P.push({h:cgM.x, v:(vIdx===1)?cgM.y:cgM.z});
+    var H2=P.map(function(q){return q.h;}), V2=P.map(function(q){return q.v;});
+    return { minH:Math.min.apply(null,H2), maxH:Math.max.apply(null,H2),
+             minV:Math.min.apply(null,V2), maxV:Math.max.apply(null,V2) };
+  }
+  var bbY=kutuAralik(1), bbZ=kutuAralik(2);
+  var bb=(plane==='xy')?bbY:bbZ;
+  var minH=Math.min(bbY.minH, bbZ.minH), maxH=Math.max(bbY.maxH, bbZ.maxH);
+  // Dikey aralık: bu görünüşün kendi merkezine oturur ama YÜKSEKLİK ortak
+  var minV=bb.minV, maxV=bb.maxV;
+  // ÖLÇEK ortak (iki görünüş aynı px/mm), YÜKSEKLİK her görünüşün kendi içeriğine
+  // göre. Ortak yükseklik verilirse dar görünüşte kocaman boşluk kalıyor; ortak
+  // ölçek verilmezse gövde oranları iki figür arasında karşılaştırılamaz oluyor.
+  var W=760, padL=46, padR=34, padT=30, padB=26;
+  var rngH=Math.max(maxH-minH,1);
+  var vSpanOrtak=Math.max(bbY.maxV-bbY.minV, bbZ.maxV-bbZ.minV, 1);
+  var plotW=W-padL-padR;
+  var sc=Math.min(plotW/rngH, 250/vSpanOrtak);          // 250 px = en yüksek görünüşe ayrılan alan
+  var rngV=Math.max(maxV-minV,1);
+  var H=Math.round(padT+padB+rngV*sc)+18;               // +18: alt etiket satırı için
+  var plotH=H-padT-padB;
   var offH=padL+(plotW-rngH*sc)/2, offV=padT+(plotH-rngV*sc)/2;
   function sx(hh){ return offH+(hh-minH)*sc; }
   function sy(vv){ return offV+(maxV-vv)*sc; }
   var s='<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
-  s+='<text x="'+padL+'" y="18" font-size="11.5" fill="#5a6270">'+(plane==='xy'?'Üstten (X–Y)':'Yandan (X–Z)')+'</text>';
-  // ── referans (deforme olmamış) konum: soluk ──
+  s+='<text x="6" y="14" font-size="11" fill="#5a6270">'+(plane==='xy'?'Üstten (X–Y)':'Yandan (X–Z)')+'</text>';
+  if(plane==='xy'){
+    s+='<rect x="'+(W-152)+'" y="6" width="8" height="8" fill="#8a3ca0"/>'
+      +'<text x="'+(W-140)+'" y="14" font-size="9.5" fill="#5a6270">takoz</text>'
+      +'<rect x="'+(W-98)+'" y="6" width="12" height="8" rx="2" fill="rgba(36,66,95,0.13)" stroke="#24425f" stroke-width="1.1"/>'
+      +'<text x="'+(W-82)+'" y="14" font-size="9.5" fill="#5a6270">gövde kutusu</text>';
+  }
+
+  // ── REFERANS (deforme olmamış) — soluk gövdeler ──
   items.forEach(function(it){
     var x=sx(it.p[horiz]), y=sy(it.p[vert]);
-    if(it.tip==='t') s+='<rect x="'+(x-4).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" width="8" height="8" fill="none" stroke="#c3cad3" stroke-width="1.2"/>';
-    else s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.6" fill="none" stroke="#c3cad3" stroke-width="1.2"/>';
+    if(it.tip==='t'){
+      s+='<rect x="'+(x-4).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" width="8" height="8" fill="none" stroke="#c9ced6" stroke-width="1.1"/>';
+    } else if(it.box){
+      var w=it.box[0]*1000*sc, hh=it.box[hi]*1000*sc;
+      s+='<rect x="'+(x-w/2).toFixed(1)+'" y="'+(y-hh/2).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+hh.toFixed(1)
+        +'" rx="3" fill="none" stroke="#d3d8de" stroke-width="1.1" stroke-dasharray="4 3"/>';
+    } else {
+      s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3.4" fill="none" stroke="#c9ced6" stroke-width="1.1"/>';
+    }
   });
-  // ── deforme konum + yer değiştirme oku ──
+
+  // ── DEFORME konum — dolu gövdeler, mod dönmesiyle döndürülmüş ──
   var takozNo=0;
+  // Etiket çakışma önleyici: yerleştirilen her etiketin kapladığı dikdörtgen
+  // tutulur; yeni etiket çakışıyorsa bir satır aşağı itilir. Kademeli sabit
+  // ofset yetmiyordu — aynı x'te üç gövde varsa (braket/PTO/şanzıman) yine
+  // üst üste biniyorlardı.
+  var yerlesik=[];
+  function etiketYerlestir(cx, yAlt, metin){
+    var gen=metin.length*4.7, yy=yAlt;
+    for(var tur=0; tur<8; tur++){
+      var carpisma=yerlesik.some(function(r){
+        return Math.abs(r.cx-cx) < (r.gen+gen)/2 + 4 && Math.abs(r.y-yy) < 11;
+      });
+      if(!carpisma) break;
+      yy += 11.5;
+    }
+    yerlesik.push({cx:cx, y:yy, gen:gen});
+    return yy;
+  }
   items.forEach(function(it){
     var dd=disp(it.p);
     var x0=sx(it.p[horiz]), y0=sy(it.p[vert]);
     var x1=sx(it.p[horiz]+dd[0]*scale), y1=sy(it.p[vert]+dd[hi]*scale);
     var renk=(it.tip==='t')?'#8a3ca0':'#24425f';
     if(Math.abs(x1-x0)>0.8 || Math.abs(y1-y0)>0.8)
-      s+='<line x1="'+x0.toFixed(1)+'" y1="'+y0.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y1.toFixed(1)+'" stroke="'+renk+'" stroke-width="1" opacity="0.45"/>';
+      s+='<line class="disp" x1="'+x0.toFixed(1)+'" y1="'+y0.toFixed(1)+'" x2="'+x1.toFixed(1)+'" y2="'+y1.toFixed(1)+'" stroke="'+renk+'" stroke-width="1" opacity="0.4"/>';
     if(it.tip==='t'){
       s+='<rect x="'+(x1-4).toFixed(1)+'" y="'+(y1-4).toFixed(1)+'" width="8" height="8" fill="'+renk+'"/>';
-      // Takoz adı — hangi takozun ne kadar hareket ettiği okunabilsin diye.
-      // Uzun adlar (parça numarası ekli) ilk sözcük öbeğine kısaltılır.
-      var ad=String(it.ad||'').split('·')[0].trim();
-      // Etiket dikey ofseti 3 kademede döner: birbirine çok yakın takozlar
-      // (ör. Sol Ön x=535 ile Sol Arka x=637, aynı y) üst üste binmesin.
-      var dyEt=[-7, 4, 15][takozNo % 3];
-      takozNo++;
-      if(ad) s+='<text x="'+(x1+6).toFixed(1)+'" y="'+(y1+dyEt).toFixed(1)+'" font-size="9" fill="#5a6270">'+_rEsc(ad)+'</text>';
+      takozNo++;   // takoz adları BASILMAZ — altı küçük kare, üstelik gövde
+                   // adlarıyla aynı bölgede yığılıyordu. Konumları §8.5/§8.7'de
+                   // adlarıyla verilir; burada mor kare olmaları yeterli.
+    } else if(it.box){
+      var w2=it.box[0]*1000*sc, h2=it.box[hi]*1000*sc;
+      s+='<g transform="rotate('+donme.toFixed(3)+' '+x1.toFixed(1)+' '+y1.toFixed(1)+')">'
+        +'<rect x="'+(x1-w2/2).toFixed(1)+'" y="'+(y1-h2/2).toFixed(1)+'" width="'+w2.toFixed(1)+'" height="'+h2.toFixed(1)
+        +'" rx="3" fill="rgba(36,66,95,0.13)" stroke="'+renk+'" stroke-width="1.4"/></g>';
+      s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="2" fill="'+renk+'"/>';
+      var adk=String(it.ad||'').split('—')[0].trim();
+      if(adk && plane==='xy'){
+        var yE=etiketYerlestir(x1, y1+h2/2+12, adk);
+        s+='<text x="'+x1.toFixed(1)+'" y="'+yE.toFixed(1)+'" font-size="9.5" fill="#4a5462" text-anchor="middle" paint-order="stroke" stroke="#ffffff" stroke-width="2.6" stroke-linejoin="round">'+_rEsc(adk)+'</text>';
+      }
+    } else {
+      s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="3.6" fill="'+renk+'"/>';
+      var adn=String(it.ad||'').split('—')[0].trim();
+      if(adn && plane==='xy'){
+        var yN=etiketYerlestir(x1, y1+13, adn);
+        s+='<text x="'+x1.toFixed(1)+'" y="'+yN.toFixed(1)+'" font-size="9.5" fill="#4a5462" text-anchor="middle" paint-order="stroke" stroke="#ffffff" stroke-width="2.6" stroke-linejoin="round">'+_rEsc(adn)+'</text>';
+      }
     }
-    else s+='<circle cx="'+x1.toFixed(1)+'" cy="'+y1.toFixed(1)+'" r="4" fill="'+renk+'"/>';
   });
-  // birleşik ağırlık merkezi
-  var gx=sx(cgM.x), gy=sy((plane==='xy')?cgM.y:cgM.z);
-  s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="5.5" fill="none" stroke="#1b1e24" stroke-width="1.4"/>';
-  s+='<text x="'+(gx+8).toFixed(1)+'" y="'+(gy-6).toFixed(1)+'" font-size="10.5" fill="#1b1e24">G</text>';
+  // birleşik ağırlık merkezi (deforme konumda — u kadar öteler, θ×0 = 0)
+  var gx=sx(cgM.x+phi[0]*1000*scale), gy=sy(((plane==='xy')?cgM.y:cgM.z)+phi[hi]*1000*scale);
+  s+='<circle cx="'+gx.toFixed(1)+'" cy="'+gy.toFixed(1)+'" r="5.5" fill="none" stroke="#1b1e24" stroke-width="1.5"/>';
+  s+='<line x1="'+(gx-7).toFixed(1)+'" y1="'+gy.toFixed(1)+'" x2="'+(gx+7).toFixed(1)+'" y2="'+gy.toFixed(1)+'" stroke="#1b1e24" stroke-width="1"/>';
+  s+='<line x1="'+gx.toFixed(1)+'" y1="'+(gy-7).toFixed(1)+'" x2="'+gx.toFixed(1)+'" y2="'+(gy+7).toFixed(1)+'" stroke="#1b1e24" stroke-width="1"/>';
+  s+='<text x="'+(gx+9).toFixed(1)+'" y="'+(gy-7).toFixed(1)+'" font-size="10.5" font-weight="600" fill="#1b1e24">G</text>';
   s+='</svg>';
   return s;
 }
@@ -1407,10 +1489,19 @@ function _mntRepModeShapes(R){
   h+='<p>Mod şekli \\( \\boldsymbol\\varphi=[\\mathbf u;\\boldsymbol\\theta] \\) bir rijit gövde yer değiştirmesidir: '
     +'geometrideki her nokta \\( \\Delta\\mathbf p=\\mathbf u+\\boldsymbol\\theta\\times(\\mathbf p-\\mathbf c_G) \\) kadar öteler. '
     +'§8.7 matrisi hangi serbestlik derecesinin baskın olduğunu <em>sayıyla</em> verir; burada gövdenin '
-    +'<b>nasıl</b> hareket ettiği çizilir. Soluk şekiller referans (deforme olmamış) konumu, dolu şekiller '
-    +'deforme konumu gösterir; kare = takoz, daire = bileşen ağırlık merkezi, G = birleşik ağırlık merkezi.</p>';
-  h+='<p style="font-size:0.9em; color:#5a6270;">Genlik <b>görseldir</b>: mod şekli en büyük bileşene normalize edildiği '
-    +'için mutlak bir yer değiştirme değeri yoktur — şekiller karşılaştırılabilir olsun diye her modda aynı görsel ölçek kullanılır.</p>';
+    +'<b>nasıl</b> hareket ettiği çizilir. Kesikli soluk şekiller referans (deforme olmamış) konumu, dolu '
+    +'şekiller deforme konumu gösterir; mor kare = takoz, ⊕ = birleşik ağırlık merkezi.</p>';
+  h+='<p>Gövde kutuları <b>uydurma ikon değildir</b>: her bileşenin girilen kütlesini ve atalet momentlerini '
+    +'birebir veren <em>tek</em> düzgün yoğunluklu dikdörtgen prizmadır. '
+    +'\\( I_{xx}=\\tfrac{m}{12}(b^2+c^2) \\) üçlüsü a, b, c için tek çözümlüdür:</p>';
+  h+='$$ a=\\sqrt{\\tfrac{6}{m}(I_{yy}{+}I_{zz}{-}I_{xx})},\\quad '
+    +'b=\\sqrt{\\tfrac{6}{m}(I_{xx}{+}I_{zz}{-}I_{yy})},\\quad '
+    +'c=\\sqrt{\\tfrac{6}{m}(I_{xx}{+}I_{yy}{-}I_{zz})} $$';
+  h+='<p style="font-size:0.9em; color:#5a6270;">Kutu ölçekle çizilir; yani şekillerin göreli büyüklüğü '
+    +'gerçek atalet dağılımını yansıtır. Nokta kütle işaretli bileşenlerde (atalet = 0) boyut tanımsızdır, '
+    +'daire ile gösterilir. Genlik ise <b>görseldir</b>: mod şekli normalize edildiği için mutlak yer '
+    +'değiştirme değeri yoktur — şekiller karşılaştırılabilir olsun diye her modda aynı görsel ölçek kullanılır. '
+    +'Kutuların dönmesi de aynı görsel ölçekle büyütülmüştür.</p>';
   modes.forEach(function(md,i){
     var phi=md.phi||[0,0,0,0,0,0];
     // Her mod için ölçek: bu modun en büyük nokta yer değiştirmesi span'ın %12'si olsun
@@ -1422,7 +1513,18 @@ function _mntRepModeShapes(R){
                phi[2]*1000 + phi[3]*d[1] - phi[4]*d[0] ];
       maxD=Math.max(maxD, Math.abs(dd[0]), Math.abs(dd[1]), Math.abs(dd[2]));
     });
-    var scale=(maxD>0) ? (span*0.12/maxD) : 0;
+    // Görsel ölçek İKİ sınırla birden belirlenir:
+    //   (a) en büyük öteleme, modelin boyunun %12'sini geçmesin
+    //   (b) en büyük DÖNME 6°'yi geçmesin
+    // (b) olmazsa dönme baskın modlarda kutular 15–20° yatar; okuyucu bunu
+    // "model bozuk" diye okur. Mod şekli normalize olduğundan genlik zaten
+    // keyfidir — kısıtlayan hangisiyse o belirler.
+    var ROT_MAX=6*Math.PI/180;
+    var maxRot=Math.max(Math.abs(phi[3]), Math.abs(phi[4]), Math.abs(phi[5]));
+    var sTrans=(maxD>0) ? (span*0.12/maxD) : Infinity;
+    var sRot  =(maxRot>0) ? (ROT_MAX/maxRot) : Infinity;
+    var scale=Math.min(sTrans, sRot);
+    if(!Number.isFinite(scale)) scale=0;
     h+='<figure style="break-inside:avoid;">'
       +_mntRepModeFigure(geom, cgM, phi, 'xy', 'm'+i+'a', scale)
       +_mntRepModeFigure(geom, cgM, phi, 'xz', 'm'+i+'b', scale)

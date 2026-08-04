@@ -304,6 +304,21 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     expect(h).toContain('Üstten (X–Y)');
     expect(h).toContain('Yandan (X–Z)');
     expect(h).toContain('görseldir');                          // genlik uyarısı
+    expect(h).toContain('uydurma ikon değildir');              // kutuların kaynağı açıklanıyor
+    // Motor kutusu ölçekli çizilmeli: eşdeğer prizma 1154×460×787 mm
+    const e = core.equivalentBox(1600, [[110.7, 0, 0], [0, 260.2, 0], [0, 0, 205.9]], false);
+    expect(e[0] * 1000).toBeCloseTo(1154, 0);
+    expect((h.match(/<rect /g) || []).length).toBeGreaterThan(MODES.length * 10);
+  });
+
+  test('§8.16 nokta kütle daire ile çizilir, kutu ile DEĞİL', () => {
+    const nk = { name: 'Nokta', mass: 50, cgx: 500, cgy: 0, cgz: 400,
+                 Ixx: 0, Iyy: 0, Izz: 0, pointMass: true };
+    const R2 = Object.assign({}, R, { gather: Object.assign({}, R.gather,
+      { components: [nk] }) });
+    const h = rep._mntRepModeShapes(R2);
+    expect(h).toContain('<circle');
+    expect(core.equivalentBox(50, [[0, 0, 0], [0, 0, 0], [0, 0, 0]], true)).toBeNull();
   });
 
   test('§8.16 saf düşey modda yatay yer değiştirme YOK (kinematik doğru)', () => {
@@ -313,8 +328,9 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     const h = rep._mntRepModeShapes(Object.assign({}, R, { modes: dus }));
     const svgs = h.match(/<svg [\s\S]*?<\/svg>/g);
     expect(svgs).toHaveLength(2);
-    expect(svgs[0].match(/<line /g)).toBeNull();               // üstten: yer değiştirme oku yok
-    expect((svgs[1].match(/<line /g) || []).length).toBeGreaterThan(0);   // yandan: var
+    // Yalnız YER DEĞİŞTİRME çizgileri sayılır (G imleci de <line> kullanır).
+    expect(svgs[0].match(/<line class="disp"/g)).toBeNull();   // üstten: hareket yok
+    expect((svgs[1].match(/<line class="disp"/g) || []).length).toBeGreaterThan(0);   // yandan: var
   });
 
   test('§8.16 veri yoksa boş döner', () => {

@@ -909,6 +909,35 @@ var veMountCore = (function() {
     };
   }
 
+  // ═══════ Eşdeğer atalet kutusu — gövdeye görsel gövde vermek için ═══════
+  //
+  // Model bir bileşeni yalnız kütle + atalet + ağırlık merkezi olarak tanır;
+  // geometri (şekil) taşımaz. Ama düzgün yoğunluklu katı bir dikdörtgen prizma
+  // için atalet kapalı formdadır:
+  //     I_xx = m(b²+c²)/12 ,  I_yy = m(a²+c²)/12 ,  I_zz = m(a²+b²)/12
+  // Bu üç denklem a, b, c için TEK ÇÖZÜMLÜDÜR:
+  //     a² = 6(I_yy+I_zz−I_xx)/m , b² = 6(I_xx+I_zz−I_yy)/m , c² = 6(I_xx+I_yy−I_zz)/m
+  //
+  // Yani "temsili kutu" uydurma bir ikon DEĞİL: kullanıcının girdiği kütle ve
+  // ataleti birebir veren tek prizmadır. ASFAT motoru için 1154×460×787 mm
+  // çıkar — sıra-6 dizelin gerçek mertebesi.
+  //
+  // NE ZAMAN null DÖNER: (a) nokta kütle (atalet sıfır → boyut tanımsız),
+  // (b) atalet üçgen eşitsizliğini sağlamıyorsa (I_xx+I_yy ≥ I_zz vb.) — böyle
+  // bir tensör hiçbir katı cisme ait olamaz; uydurma kutu çizmektense çizmemek
+  // doğrudur. Çağıran taraf o durumda nokta işareti kullanır.
+  // Dönüş: [a,b,c] (x,y,z boyunca tam kenar uzunlukları, girdiyle aynı birimde)
+  function equivalentBox(mass, I, pointMass){
+    if(!(mass > 0) || pointMass || !I) return null;
+    const Ix=I[0][0], Iy=I[1][1], Iz=I[2][2];
+    if(!(Ix > 0) || !(Iy > 0) || !(Iz > 0)) return null;
+    const a2 = 6*(Iy + Iz - Ix)/mass;
+    const b2 = 6*(Ix + Iz - Iy)/mass;
+    const c2 = 6*(Ix + Iy - Iz)/mass;
+    if(!(a2 > 0) || !(b2 > 0) || !(c2 > 0)) return null;
+    return [Math.sqrt(a2), Math.sqrt(b2), Math.sqrt(c2)];
+  }
+
   // ═══════ Mod yerleşimi kriterleri (ASR-SR-116 s.10 listesi) ═══════
   //
   // Kaynak dokümanın dört isterinden ÜÇÜ doğrudan mod listesinden okunur:
@@ -1818,7 +1847,7 @@ var veMountCore = (function() {
     transmissibility, bounceFrequency,
     mountLoadShares, mountDamping,
     buildCdamp, frfPoint, frequencyResponse, frfAt,
-    principalInertia, modePlacement, softeningScan,
+    principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,
     torqueChain, classifyMode, validateModel,
     // Şablon / örnek / test
