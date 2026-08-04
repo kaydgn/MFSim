@@ -210,12 +210,17 @@ var veMntBrief = (function() {
   var AX_TR = ['boyuna (X)', 'yanal (Y)', 'düşey (Z)'];
 
   // ── Kanal kimliği çözümleme ──────────────────────────────────────────────
-  // FRF:    T_<dir> | T0_<dir> | eta_<dir>
-  // fdefl:  m.<slug>.<eksen>
-  // süpürme:m.<slug>.d | m.<slug>.f | dmax | ntens | nclamp
+  // FRF:      T_<dir> | T0_<dir> | eta_<dir>
+  // fdefl:    m.<slug>.<eksen>
+  // süpürme:  m.<slug>.d | m.<slug>.f | dmax | ntens | nclamp
+  // campbell: ord.<mertebe> | mode.<no>
   function parseId(id) {
     var m = /^(T0|T|eta)_([012])$/.exec(id);
     if(m) return { kind: m[1], dir: +m[2] };
+    m = /^ord\.([0-9]+(?:_[0-9]+)?)$/.exec(id);
+    if(m) return { kind: 'order', order: parseFloat(m[1].replace('_', '.')) };
+    m = /^mode\.([0-9]+)$/.exec(id);
+    if(m) return { kind: 'mode', no: +m[1] };
     m = /^(m\..+)\.([012dfDF])$/.exec(id);
     if(m) return { kind: 'mount', mount: m[1], part: m[2] };
     return { kind: id };
@@ -565,6 +570,175 @@ var veMntBrief = (function() {
     return { title: title, paras: paras };
   }
 
+  // ═══════════ 4) CAMPBELL DİYAGRAMI — şerit yorumu ═══════════
+  //
+  // Campbell'in cevapladığı soru frekans yanıtınınkinden FARKLIDIR: "hangi
+  // frekansta rezonans var" değil, "motor hangi DEVİRDE o frekansı üretir".
+  // 13,6 Hz'lik bir mod, motorun o frekansı hiç üretmediği bir devir bandında
+  // çalışıyorsa zararsızdır. Yorum bu yüzden kesişim DEVİRLERİNİ sayar ve
+  // her birinin çalışma bandının içinde mi dışında mı olduğunu söyler.
+
+  // İzolasyonun başlayabilmesi için uyarma frekansının doğal frekansın √2
+  // katından yukarıda olması gerekir (T < 1 koşulu). Bu, takoz seçiminin
+  // klasik ilk ölçütüdür.
+  var ISO_RATIO = Math.SQRT2;
+
+  function campbellCrossings(ords, mds, rpmTop) {
+    var out = [];
+    ords.forEach(function(od) {
+      mds.forEach(function(md) {
+        if(!(od.o > 0) || !(md.f > 0)) return;
+        var r = md.f * 60 / od.o;
+        if(!(r > 0) || r > rpmTop) return;
+        out.push({ rpm: r, o: od.o, firing: !!od.firing, no: md.no, f: md.f, label: md.label });
+      });
+    });
+    return out.sort(function(a, c) { return a.rpm - c.rpm; });
+  }
+
+  // "271 d/dk (yalpalama)" — kesişimin okunur hâli.
+  function crossTxt(c) {
+    return b(n(c.rpm, 0) + ' d/dk') + (c.label ? ' (' + c.label + ')' : '');
+  }
+  // Mertebe adı. Ondalıklı olabilir (5 silindirde 2,5) ama tam sayılarda
+  // gereksiz ",0" kuyruğu taşımaz.
+  function ordTxt(o) { return n(o, 1).replace(',0', '') + '. mertebe'; }
+
+  function campbellLane(ds, R, chans) {
+    var meta = ds.meta || {};
+    var idle = meta.idleRpm, top = meta.maxRpm, rpmTop = meta.rpmTop;
+    var bandHi = isFinite(top) ? top : NaN;
+    var modes = (R && R.modes) || [];
+    var paras = [];
+
+    var firingOrder = NaN;
+    (meta.orders || []).forEach(function(od) { if(od.firing) firingOrder = od.o; });
+
+    var ords = [], mds = [];
+    chans.forEach(function(ch) {
+      var p = parseId(ch.id);
+      if(p.kind === 'order') {
+        ords.push({ ch: ch, o: p.order, firing: (p.order === firingOrder) });
+      } else if(p.kind === 'mode') {
+        var md = modes[p.no - 1];
+        mds.push({ ch: ch, no: p.no, f: (md && md.f_Hz) || ch.data[0],
+                   label: md ? modeShort(md.label) : '' });
+      }
+    });
+    ords.sort(function(a, c) { return a.o - c.o; });
+    mds.sort(function(a, c) { return a.f - c.f; });
+
+    paras.push('Yatay eksen ' + b('motor devri') + ', dikey eksen ' + b('frekans') + '. ' +
+      b('Eğik') + ' çizgiler motorun ürettiği uyarmalardır — devir arttıkça frekansları ' +
+      'büyür. ' + b('Yatay') + ' çizgiler güç grubunun kendi doğal frekanslarıdır; devirden ' +
+      'bağımsız, sabit. İkisinin kesiştiği devirde motor o modu tam frekansından besler: ' +
+      b('rezonans') + ' orada olur.');
+
+    // ── Çalışma bandı ──
+    var bandTxt = '';
+    if(isFinite(idle) && isFinite(bandHi)) {
+      bandTxt = 'Çalışma bandı ' + b(n(idle, 0) + ' d/dk') + ' rölanti ile ' +
+                b(n(bandHi, 0) + ' d/dk') + ' arasında. ';
+    } else if(isFinite(idle)) {
+      bandTxt = 'Rölanti ' + b(n(idle, 0) + ' d/dk') + '; motorun en yüksek devri modelde ' +
+                'tanımlı değil, bu yüzden bandın üst ucu çizilemiyor (Motor bileşenine ' +
+                b('@ Devir') + ' girilirse görünür). ';
+    }
+    if(bandTxt) {
+      bandTxt += 'Bandın ' + b('altına') + ' düşen kesişimler yalnız kalkış ve durma ' +
+                 'sırasında bir anda geçilir — tehlikeleri geçici, süresi kısadır. Bandın ' +
+                 b('içine') + ' düşen kesişimler ise motor o devirde ÇALIŞIRKEN sürer.';
+      paras.push(bandTxt);
+    }
+
+    // ── Şerit eksikse önce onu söyle ──
+    if(!ords.length || !mds.length) {
+      paras.push(ords.length
+        ? 'Bu şeritte yalnız ' + b('mertebe çizgileri') + ' var. Kesişimi görebilmek için ' +
+          'ağaçtan en az bir ' + b('mod') + ' çizgisini de aynı şeride ekleyin — tek başına ' +
+          'eğik çizgi "motor bu devirde şu frekansı üretir" der, "bu kötü mü" demez.'
+        : 'Bu şeritte yalnız ' + b('mod çizgileri') + ' var: güç grubunun doğal frekansları, ' +
+          'devirden bağımsız yatay doğrular. Hangi devirde uyarıldıklarını görmek için ' +
+          'ağaçtan bir ' + b('mertebe') + ' çizgisi ekleyin.');
+      return { title: 'Campbell diyagramı', paras: paras };
+    }
+
+    // ── Kesişimler ──
+    var cr = campbellCrossings(ords, mds, rpmTop);
+    var inBand = [], below = [];
+    cr.forEach(function(c) {
+      if(isFinite(idle) && c.rpm < idle) below.push(c);
+      else if(isFinite(bandHi) && c.rpm > bandHi) { /* bandın üstü — motor oraya çıkmıyor */ }
+      else inBand.push(c);
+    });
+
+    var fir = cr.filter(function(c) { return c.firing; });
+    if(fir.length) {
+      var firIn = fir.filter(function(c) { return !(isFinite(idle) && c.rpm < idle) &&
+                                                 !(isFinite(bandHi) && c.rpm > bandHi); });
+      var s = 'Uyarmanın baskın bileşeni ' + b(ordTxt(firingOrder)) +
+              ' (ateşleme). Modları şu devirlerde kesiyor: ' +
+              fir.slice(0, 6).map(crossTxt).join(', ') + '. ';
+      if(!firIn.length) {
+        s += 'Hiçbiri çalışma bandının içinde değil — ' + b('aranan sonuç budur') + ': motor ' +
+             'bu rezonansların üstünden yalnız kalkarken ve dururken geçer.';
+      } else {
+        s += b(firIn.length + ' tanesi') + ' çalışma bandının içinde (' +
+             firIn.map(function(c) { return b(n(c.rpm, 0) + ' d/dk'); }).join(', ') +
+             '); motor o devirde çalışırken ilgili modu sürekli besler. ' +
+             'Takoz sertliğini düşürmek mod frekansını aşağı çeker ve kesişimi bandın ' +
+             'altına iter.';
+      }
+      paras.push(s);
+    } else if(inBand.length) {
+      paras.push('Çalışma bandının içinde ' + b(inBand.length + ' kesişim') + ' var: ' +
+        inBand.slice(0, 6).map(crossTxt).join(', ') + '.');
+    } else if(below.length) {
+      paras.push('Çizili mertebelerin tüm kesişimleri (' + b(below.length + ' adet') +
+        ') rölantinin altında kalıyor: ' + below.slice(0, 4).map(crossTxt).join(', ') +
+        (below.length > 4 ? ' …' : '') + '. Motor çalışırken bu modların hiçbiri ' +
+        'doğrudan uyarılmıyor.');
+    }
+
+    // Ateşleme temiz çıksa bile iş bitmez: krank balanssızlığı (1. mertebe) ve
+    // ateşlemenin harmonikleri kendi kesişimlerini yapar. Bunları söylememek,
+    // "bandın içinde rezonans yok" izlenimi bırakırdı — yanlış olurdu.
+    var other = inBand.filter(function(c) { return !c.firing; });
+    if(fir.length && other.length) {
+      paras.push('Bandın içinde ateşleme dışı ' + b(other.length + ' kesişim') + ' daha var: ' +
+        other.slice(0, 5).map(function(c) {
+          return b(n(c.rpm, 0) + ' d/dk') + ' (' + ordTxt(c.o) +
+                 (c.label ? ' × ' + c.label : '') + ')';
+        }).join(', ') + (other.length > 5 ? ' …' : '') + '. Bunlar ateşlemeden zayıf ' +
+        'uyarmalardır — ' + b('1. mertebe') + ' krank/volan balanssızlığı, yüksek mertebeler ' +
+        'ateşlemenin harmonikleri — ama bandın içinde oldukları için motor o devirde ' +
+        'çalıştığı sürece devam eder.');
+    }
+
+    // ── Asıl ölçüt: rölantide izolasyon var mı? ──
+    var eng = engineFiring(R);
+    var fMax = 0;
+    mds.forEach(function(m2) { if(m2.f > fMax) fMax = m2.f; });
+    if(eng && fMax > 0) {
+      var ratio = eng.f / fMax;
+      paras.push('Tasarımın asıl ölçütü rölantidir: rölantide ateşleme frekansı ' +
+        b(na(eng.f) + ' Hz') + ', bu şeritteki en yüksek mod ' + b(na(fMax) + ' Hz') +
+        ' — oran ' + b(na(ratio)) + '. İzolasyonun başlaması için oranın ' +
+        b('√2 ≈ 1,41') + ' üstünde olması gerekir; ' +
+        (ratio > ISO_RATIO
+          ? 'model bunu ' + b('sağlıyor') + ': rölantide bile takozlar titreşimi azaltıyor.'
+          : 'model bunu ' + b('sağlamıyor') + ' — rölantide en yüksek mod hâlâ büyütme ' +
+            'bölgesinde, yani takoz titreşimi azaltmak yerine katlıyor. Çare ya daha ' +
+            'yumuşak takoz (mod frekansı düşer) ya da daha yüksek rölanti devri.'));
+    }
+
+    var title = 'Campbell diyagramı';
+    if(ords.length === 1 && mds.length) title += ' — ' + n(ords[0].o, 1).replace(',0', '') + '. mertebe';
+    else if(ords.length && mds.length === 1) title += ' — mod ' + mds[0].no;
+    else if(chans.length === ds.channels.length) title += ' — birleşik (' + chans.length + ' kanal)';
+    return { title: title, paras: paras };
+  }
+
   // ── Şerit yorumu: giriş noktası ──────────────────────────────────────────
   //
   // ids = O ŞERİTTE çizili kanal kimlikleri. Aynı şeritte hangi kanalların
@@ -575,8 +749,9 @@ var veMntBrief = (function() {
     try {
       var chans = ids.map(function(id) { return chan(ds, id); }).filter(Boolean);
       if(!chans.length) return null;
-      if(ds.key === 'frf')   return frfLane(ds, R, chans);
-      if(ds.key === 'fdefl') return fdeflLane(ds, R, chans);
+      if(ds.key === 'frf')      return frfLane(ds, R, chans);
+      if(ds.key === 'campbell') return campbellLane(ds, R, chans);
+      if(ds.key === 'fdefl')    return fdeflLane(ds, R, chans);
       return sweepLane(ds, R, chans);
     } catch(e) { return null; }
   }
@@ -603,6 +778,31 @@ var veMntBrief = (function() {
         label: 'rölanti ateşleme ' + na(eng.f) + ' Hz' });
       marks.push({ axis: 'y', value: 1, unit: '−', kind: 'limit',
                    label: 'T = 1 · altı izolasyon, üstü büyütme' });
+    } else if(ds.key === 'campbell') {
+      var mt = ds.meta || {};
+      if(isFinite(mt.idleRpm)) marks.push({ axis: 'x', value: mt.idleRpm, kind: 'event',
+        label: 'rölanti ' + n(mt.idleRpm, 0) + ' d/dk' });
+      if(isFinite(mt.maxRpm)) marks.push({ axis: 'x', value: mt.maxRpm, kind: 'limit',
+        label: 'en yüksek devir ' + n(mt.maxRpm, 0) + ' d/dk' });
+      // Uyarı çizgileri YALNIZ fiziksel olarak baskın iki uyarma için: ateşleme
+      // (z/2) ve krank/volan balanssızlığı (1. mertebe). Dört mertebe × altı
+      // mod = 24 kesişim; hepsini çizmek diyagramı okunmaz yapardı. Yüksek
+      // harmonikler zaten ateşlemeden zayıftır — yorumda sayılır, çizilmez.
+      var fo = NaN;
+      (mt.orders || []).forEach(function(od) { if(od.firing) fo = od.o; });
+      var key = [1];
+      if(isFinite(fo) && fo > 0 && key.indexOf(fo) < 0) key.push(fo);
+      key.forEach(function(o) {
+        ((R.modes) || []).forEach(function(m2) {
+          if(!(m2 && m2.f_Hz > 1e-6)) return;
+          var r = m2.f_Hz * 60 / o;
+          if(!(r > 0) || r > mt.rpmTop) return;
+          if(isFinite(mt.idleRpm) && r < mt.idleRpm) return;      // bandın altı
+          if(isFinite(mt.maxRpm) && r > mt.maxRpm) return;        // bandın üstü
+          marks.push({ axis: 'x', value: r, kind: 'warn',
+            label: 'rezonans ' + n(r, 0) + ' d/dk · ' + ordTxt(o) + ' × ' + modeShort(m2.label) });
+        });
+      });
     } else if(ds.key === 'fdefl') {
       var stat = staticCase(R), mounts = (R.mounts) || [];
       if(stat && stat.perMount) {
@@ -636,6 +836,7 @@ var veMntBrief = (function() {
 
   var LEADS = {
     frf:   'Motorun ürettiği titreşimin ne kadarının şasiye geçtiğini, her titreşim hızı için ayrı ayrı gösterir.',
+    campbell: 'Motorun hangi devirde güç grubunun doğal frekanslarını uyardığını — yani rezonans devirlerini gösterir.',
     fdefl: 'Takozun ne kadar kuvvet altında ne kadar ezildiğini — yani ne kadar yumuşak olduğunu gösterir.',
     gz:    'Takozların araç çukura girip zıpladığında ne kadar ezildiğini ve yüklendiğini gösterir.',
     gy:    'Takozların araç virajda savrulduğunda ne kadar ezildiğini ve yüklendiğini gösterir.',
@@ -660,7 +861,9 @@ var veMntBrief = (function() {
     firstNonZero: firstNonZero,
     engineFiring: engineFiring,
     slopeAt0: slopeAt0,
-    parseId: parseId
+    parseId: parseId,
+    campbellCrossings: campbellCrossings,
+    ISO_RATIO: ISO_RATIO
   };
 })();
 

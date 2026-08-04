@@ -67,7 +67,7 @@ describe('çözüm sonucunun yayınlanması', () => {
   test('senkron çözüm window.veMountResults ve R.signals üretir', () => {
     const R = cp._mntComputeResults('sv');
     expect(R.error).toBeUndefined();
-    expect(R.signals.map((d) => d.key)).toEqual(['frf', 'fdefl', 'gz', 'gy', 'gx']);
+    expect(R.signals.map((d) => d.key)).toEqual(['frf', 'campbell', 'fdefl', 'gz', 'gy', 'gx']);
     expect(window.veMountResults).toBe(R);
   });
 
@@ -117,7 +117,7 @@ describe('çözüm Sonuçlar ağacını tazelemez (alt-topoloji çökertme regre
     const R = await cp.veMntSolverCompute('sv');
     expect(R.error).toBeUndefined();
     expect(window.veMountResults).toBe(R);
-    expect(R.signals.length).toBe(5);
+    expect(R.signals.length).toBe(6);
     // Bu satır kırmızıya dönerse: çözüm bittiğinde kanvas köke çökertiliyor,
     // kullanıcı alt-topolojiden atılıyor ve çözüm durumu ekrandan siliniyor.
     expect(treeRefreshes).toBe(0);

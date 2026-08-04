@@ -76,8 +76,8 @@ const chan = (ds, name) => ds.channels.find((c) => c.name === name);
 const mchan = (ds, mnt, kind) => chan(ds, mnt.name + ' · ' + kind);
 
 describe('build — hangi veri kümeleri üretiliyor', () => {
-  test('beş küme: frekans yanıtı, kuvvet-deformasyon ve üç ivme süpürmesi', () => {
-    expect(SETS.map((d) => d.key)).toEqual(['frf', 'fdefl', 'gz', 'gy', 'gx']);
+  test('altı küme: frekans yanıtı, Campbell, kuvvet-deformasyon ve üç ivme süpürmesi', () => {
+    expect(SETS.map((d) => d.key)).toEqual(['frf', 'campbell', 'fdefl', 'gz', 'gy', 'gx']);
   });
 
   test('her kümenin X ekseni ve en az bir kanalı var', () => {
@@ -226,7 +226,102 @@ describe('ivme süpürmesi (gz / gy / gx)', () => {
 
   test('çözücü verilmezse süpürme üretilmez', () => {
     const keys = S.build(R, {}).map((d) => d.key);
-    expect(keys).toEqual(['frf', 'fdefl']);
+    expect(keys).toEqual(['frf', 'campbell', 'fdefl']);
+  });
+});
+
+describe('Campbell diyagramı — mertebe × mod', () => {
+  // Campbell'in tek işi iki çizgi ailesinin KESİŞTİĞİ DEVRİ doğru vermek.
+  // f = mertebe · N/60 bağıntısında bir kayma, rezonans devrini yanlış söyler:
+  // kullanıcı 900 d/dk'da sorun ararken sorun 1200'dedir. Gözle yakalanmaz.
+  const camp = setOf('campbell');
+  const fOf = (m) => m.f_Hz;
+  const fMax = Math.max(...MODES.filter((m) => m.f_Hz > 1e-6).map(fOf));
+  const ordChan = (o) => camp.channels.find((c) => c.id === 'ord.' + o);
+
+  test('X ekseni motor devri, kanallar Hz', () => {
+    expect(camp.x.name).toBe('Motor devri');
+    expect(camp.x.unit).toBe('d/dk');
+    expect(camp.x.data[0]).toBe(0);
+    camp.channels.forEach((ch) => expect(ch.unit).toBe('Hz'));
+  });
+
+  test('mertebe çizgisi tam olarak f = mertebe · N/60', () => {
+    [1, 3, 6, 12].forEach((o) => {
+      const ch = ordChan(o);
+      expect(ch).toBeTruthy();
+      ch.data.forEach((v, i) => {
+        if (!Number.isFinite(v)) return;              // tavanın üstü kesilmiş
+        expect(v).toBeCloseTo((o * camp.x.data[i]) / 60, 12);
+      });
+    });
+  });
+
+  test('ateşleme mertebesi silindir sayısından türer: z/2', () => {
+    // 4 zamanlıda her iki devirde bir ateşleme → 6 silindir = 3. mertebe.
+    // Bu etiket yanlış olursa kullanıcı yanlış çizgiyi baskın uyarma sanar.
+    expect(ordChan(3).name).toContain('ateşleme');
+    expect(ordChan(1).name).not.toContain('ateşleme');
+    expect(ordChan(6).name).not.toContain('ateşleme');
+  });
+
+  test('mod çizgileri sabit ve modal frekanslara BİREBİR eşit', () => {
+    const live = MODES.filter((m) => m.f_Hz > 1e-6);
+    live.forEach((m, k) => {
+      const ch = camp.channels.find((c) => c.id === 'mode.' + (k + 1));
+      expect(ch).toBeTruthy();
+      ch.data.forEach((v) => expect(v).toBe(m.f_Hz));
+      expect(ch.name).toContain('Hz');
+    });
+  });
+
+  test('Y tavanının üstü NaN — mertebe çizgisi grafiğin üstünden çıkar', () => {
+    // Kesişim kalmadığı yükseklikte çizgiyi sürdürmek ölçeği ele geçirir,
+    // mod çizgilerini dibe yapıştırırdı. Kesme kasıtlı.
+    const hi = ordChan(12).data;
+    expect(hi.some((v) => !Number.isFinite(v))).toBe(true);
+    const finite = hi.filter(Number.isFinite);
+    expect(Math.max(...finite)).toBeLessThanOrEqual(camp.meta.fCap + 1e-9);
+    // Tavan en yüksek modun üstünde: mod çizgileri hep görünür kalır. Rölanti
+    // ateşleme frekansı daha yukarıdaysa tavan ona uzar — yoksa "rölanti en
+    // yüksek modun üstünde mi" sorusu grafikte hiç görünmezdi.
+    expect(camp.meta.fCap).toBeGreaterThanOrEqual(1.6 * fMax - 1e-9);
+    expect(camp.meta.fCap).toBeGreaterThan((750 / 60) * (6 / 2));
+    // Kesme yalnız KUYRUKTA: baştaki değerler kesintisiz
+    const firstNaN = hi.findIndex((v) => !Number.isFinite(v));
+    expect(hi.slice(0, firstNaN).every(Number.isFinite)).toBe(true);
+    expect(hi.slice(firstNaN).every((v) => !Number.isFinite(v))).toBe(true);
+  });
+
+  test('devir ekseni 1. mertebenin en yüksek modu kestiği deviri KAPSAR', () => {
+    // Aranan kesişim grafiğin dışında kalırsa diyagram sorulan soruyu
+    // cevaplayamaz. En düşük mertebe en geç kesen mertebedir.
+    const cross = (fMax * 60) / 1;
+    expect(camp.x.data[camp.x.data.length - 1]).toBeGreaterThan(cross);
+  });
+
+  test('modal çözüm yoksa Campbell üretilmez', () => {
+    const keys = S.build({ ...R, modes: [] }, { solveOne }).map((d) => d.key);
+    expect(keys).not.toContain('campbell');
+  });
+
+  test('silindir sayısı yoksa HİÇBİR mertebe "ateşleme" sayılmaz', () => {
+    // Ateşleme mertebesi z'den türer; z yoksa hangi çizginin baskın olduğu
+    // bilinemez. Uydurma etiket, eksik etiketten sinsidir.
+    const sets = S.build({ ...R, gather: { torque: { idleRpm: 750 } } }, { solveOne });
+    const c2 = sets.find((d) => d.key === 'campbell');
+    expect(c2.channels.some((ch) => /ateşleme/.test(ch.name))).toBe(false);
+    expect(c2.meta.orders.some((o) => o.firing)).toBeFalsy();
+  });
+
+  test('en yüksek devir katalogdan geliyorsa bandın üst ucu ondan okunur', () => {
+    const sets = S.build(
+      { ...R, gather: { torque: { idleRpm: 750, cylinders: 6, PmaxRpm: 2300, TeRpm: 1500 } } },
+      { solveOne });
+    const c2 = sets.find((d) => d.key === 'campbell');
+    expect(c2.meta.maxRpm).toBe(2300);            // ikisinin büyüğü
+    expect(c2.meta.rpmTop).toBeGreaterThanOrEqual(2300);
+    expect(camp.meta.maxRpm).toBeNaN();           // katalog yoksa üst uç yok
   });
 });
 
@@ -480,5 +575,72 @@ describe('kanal çözümleme ve X ekseni kuralı', () => {
     expect(ch.unit).toBe('−');
     expect(ch.name).toContain('düşey');
     expect(S.channelOf(SETS, '~mnt-frf', 'yok')).toBeNull();
+  });
+});
+
+describe('Campbell yorumu — kesişim devirleri ve işaretler', () => {
+  const B = require('../../js/mount-brief.js');
+  const R2 = { ...R, gather: { torque: { idleRpm: 750, cylinders: 6, PmaxRpm: 2300 } } };
+  const sets2 = S.build(R2, { solveOne });
+  const camp = sets2.find((d) => d.key === 'campbell');
+  const lane = (ids) => B.forLane(camp, R2, ids);
+  const text = (br) => br.paras.join(' ');
+  const live = MODES.filter((m) => m.f_Hz > 1e-6);
+  const modeIds = live.map((_, k) => 'mode.' + (k + 1));
+
+  test('yorumdaki kesişim devri f · 60 / mertebe ile birebir', () => {
+    // Cümledeki sayı, grafikteki kesişimle aynı olmak zorunda. Ayrışırsa
+    // kullanıcı yorumu okuyup grafikte başka bir yere bakar.
+    const t = text(lane(['ord.3'].concat(modeIds)));
+    live.forEach((m) => {
+      const rpm = Math.round((m.f_Hz * 60) / 3);
+      expect(t).toContain(rpm + ' d/dk');
+    });
+  });
+
+  test('rölanti / √2 ölçütü modelin kendi sayısıyla kurulur', () => {
+    const t = text(lane(['ord.3'].concat(modeIds)));
+    const fMax = Math.max(...live.map((m) => m.f_Hz));
+    expect(t).toContain('√2');
+    // (750/60)·(6/2) = 37,5 Hz, en yüksek mod 19,05 → oran 1,97 > √2 → sağlıyor
+    expect(37.5 / fMax).toBeGreaterThan(Math.SQRT2);
+    expect(t).toContain('sağlıyor');
+    expect(t).not.toContain('sağlamıyor');
+  });
+
+  test('rölanti düşerse aynı model ölçütü SAĞLAMAZ olur', () => {
+    // Yorum sabit metin değil: aynı takozlar, düşük rölanti → başka sonuç.
+    const R3 = { ...R, gather: { torque: { idleRpm: 300, cylinders: 4 } } };
+    const c3 = S.build(R3, { solveOne }).find((d) => d.key === 'campbell');
+    const ids = ['ord.2'].concat(live.map((_, k) => 'mode.' + (k + 1)));
+    const t = B.forLane(c3, R3, ids).paras.join(' ');
+    expect((300 / 60) * (4 / 2)).toBeLessThan(Math.SQRT2 * Math.max(...live.map((m) => m.f_Hz)));
+    expect(t).toContain('sağlamıyor');
+  });
+
+  test('tek aile çizilmişse kesişim uydurulmaz, eksik olan söylenir', () => {
+    expect(text(lane(['ord.1', 'ord.3']))).toContain('yalnız');
+    expect(text(lane(['ord.1', 'ord.3']))).not.toContain('kesiyor');
+    expect(text(lane(modeIds))).toContain('mertebe');
+  });
+
+  test('işaretler: rölanti ve en yüksek devir çizgileri', () => {
+    const marks = camp.brief.marks;
+    expect(marks.find((m) => m.kind === 'event').value).toBe(750);
+    expect(marks.find((m) => m.kind === 'limit').value).toBe(2300);
+  });
+
+  test('uyarı çizgisi YALNIZ bandın içindeki kesişimler için', () => {
+    // Bandın altındaki kesişim tehlikeli değil (bir anda geçilir); onu da
+    // kırmızı çizmek gerçek uyarıları görünmez kılardı.
+    const warn = camp.brief.marks.filter((m) => m.kind === 'warn');
+    expect(warn.length).toBeGreaterThan(0);
+    warn.forEach((m) => {
+      expect(m.value).toBeGreaterThanOrEqual(750);
+      expect(m.value).toBeLessThanOrEqual(2300);
+    });
+    // Bu modelde ateşleme kesişimlerinin tamamı rölantinin altında (en yükseği
+    // 381 d/dk); bandın içindekiler 1. mertebeden gelir.
+    expect(warn.every((m) => /1\. mertebe/.test(m.label))).toBe(true);
   });
 });
