@@ -68,6 +68,10 @@ function solve(caps) {
 const NM = core.TTAR_EXAMPLE.mounts.length;
 const capsAll = (kg) => new Array(NM).fill(kg);
 
+// Kapasitesiz referans çözüm (birden çok testte paylaşılır).
+let R0 = null;
+beforeAll(() => { R0 = solve(null); });
+
 describe('kg → N dönüşümü TEK yerde', () => {
   test('fCap = maxLoad · g — katalog kg\'ı SI newton olur', () => {
     const R = solve(capsAll(2000));
@@ -216,5 +220,60 @@ describe('kütüphaneden uygulama', () => {
     Object.keys(cp.VE_MOUNT_LIBRARY).forEach((k) => {
       expect(cp.VE_MOUNT_LIBRARY[k].maxLoad).toBeUndefined();
     });
+  });
+});
+
+describe('F(δ) üzerinde takoz başına çalışma noktası', () => {
+  // Çalışma noktası (δ, F) ÇİFTİDİR. Eskiden yalnız en çok ezilen takozun
+  // δ'sını gösteren tek bir dikey çizgi vardı; öteki takozların nerede
+  // çalıştığı ve her birinin taşıdığı kuvvet görünmüyordu.
+  const pts = (R) => R.signals.find((d) => d.key === 'fdefl').brief.marks
+    .filter((m) => m.axis === 'point');
+
+  test('her takoz için bir nokta, koordinatlar statik çözümden', () => {
+    const R = solve(null);
+    const stat = R.allCases.find((c) => c.name === 'Static').res;
+    const p = pts(R);
+    expect(p.length).toBe(R.mounts.length);
+    stat.perMount.forEach((pm, i) => {
+      const hit = p.find((m) => m.label.indexOf(R.mounts[i].name) === 0);
+      expect(hit).toBeTruthy();
+      expect(hit.value).toBeCloseTo(pm.delta[2] * 1000, 9);   // x: mm
+      expect(hit.y).toBeCloseTo(pm.f[2], 6);                  // y: N
+      expect(hit.unit).toBe('N');
+    });
+  });
+
+  test('nokta KENDİ eğrisine bağlı — chanId o takozun Z kanalı', () => {
+    // Bağ olmasaydı altı nokta her şeritte çizilir, kullanıcı bir takozun
+    // çalışma noktasını başka bir takozun eğrisi üstünde okurdu.
+    const R = solve(null);
+    const ds = R.signals.find((d) => d.key === 'fdefl');
+    pts(R).forEach((m) => {
+      const ch = ds.channels.find((c) => c.id === m.chanId);
+      expect(ch).toBeTruthy();
+      expect(ch.name).toContain('Z (düşey)');
+      expect(m.label.indexOf(ch.name.split(' · ')[0])).toBe(0);
+    });
+  });
+
+  test('nokta gerçekten EĞRİNİN ÜSTÜNDE — F(δ_çalışma) ile birebir', () => {
+    // Nokta ile eğri ayrışırsa kullanıcı "bu takoz eğrisinin dışında çalışıyor"
+    // diye okur. Aynı yasadan geldikleri için birebir örtüşmeleri gerekir.
+    const R = solve(null);
+    const ds = R.signals.find((d) => d.key === 'fdefl');
+    pts(R).forEach((m) => {
+      const ch = ds.channels.find((c) => c.id === m.chanId);
+      const onCurve = B.interpAt(ds.x.data, ch.data, m.value);
+      expect(onCurve).toBeCloseTo(m.y, 6);
+    });
+  });
+
+  test('tek dikey "çalışma noktası" çizgisi KALDIRILDI', () => {
+    const xm = R0.signals.find((d) => d.key === 'fdefl').brief.marks
+      .filter((m) => m.axis === 'x');
+    expect(xm.some((m) => /çalışma noktası/.test(m.label))).toBe(false);
+    // Bant ve durdurucu çizgileri duruyor
+    expect(xm.map((m) => m.value).sort((a, b) => a - b)).toEqual([-15, -10, 10, 15]);
   });
 });
