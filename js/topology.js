@@ -424,6 +424,9 @@ function veLoadTabState(tab) {
   redoStack = s.redoStack || [];
   window.veSimResults = s.simResults || null;
   veResultSlots = s.resultSlots || [{},{},{},{}];
+  // Proje dosyası şerit listesini saklar, ham ölçümü saklamaz: bu oturumda
+  // olmayan bir veri kümesine bakan şeritler burada düşer (bkz. veEnterResults).
+  if(typeof veImpPruneSlots === 'function') veImpPruneSlots(veResultSlots);
   updateCanvasTransform();
   
   if(s.nodes && s.nodes.length > 0) {

@@ -3,6 +3,15 @@
 // ============================================================================
 
 function veGetSensorData(sensorId, signalOverride, dataSource) {
+  // ====== İÇE AKTARILAN ÖLÇÜM (#veriKümesiId) ======
+  // EN BAŞTA durmak zorunda: aşağıdaki '~' dalı engel-atlama kipinde global
+  // veActiveSolverTabId'ye bakıp önekli her kimliği yakalayabiliyor. Excel
+  // sütunu topolojiden değil, oturumdaki veri kümesinden gelir — hiçbir düğüm
+  // aramasına girmemeli.
+  if(String(sensorId).charAt(0) === '#') {
+    return (typeof veImpSeries === 'function') ? veImpSeries(sensorId, signalOverride) : null;
+  }
+
   // Cross-tab sensör desteği: @tabIdx:sensorId formatı
   var tabNodes = nodes;
   var tabConns = connections;
@@ -428,7 +437,13 @@ function veRenderTable(slotIdx) {
   }
 
   if(!timeArr) {
-    if(slotDataSource === 'segmentDrive' && r && r.segmentDrive && r.segmentDrive.time) {
+    // İçe aktarılan ölçüm kendi zaman dizisini getirir (bkz. veTrResolveX).
+    // Bu dal olmadan tablo, ölçüm satırlarını simülasyonun zamanıyla
+    // etiketliyordu.
+    if(slotDataSource && String(slotDataSource).indexOf('import:') === 0 &&
+       typeof veImpXSeries === 'function') {
+      timeArr = veImpXSeries(slotDataSource);
+    } else if(slotDataSource === 'segmentDrive' && r && r.segmentDrive && r.segmentDrive.time) {
       timeArr = r.segmentDrive.time;
     } else {
       timeArr = (r && r.time) ? r.time : null;
@@ -456,6 +471,12 @@ function veRenderTable(slotIdx) {
     datasets.push(data); // null olabilir
   });
   
+  // X ekseni içe aktarılan bir ölçümden gelebilir: metin ya da boşluk
+  // içerebilir, toFixed doğrudan çağrılamaz.
+  var veTblX = function(v) {
+    return (typeof v === 'number' && isFinite(v)) ? v.toFixed(3) : (v == null ? '—' : String(v));
+  };
+
   var n = timeArr.length;
   var maxRows = 200;
   var step = Math.max(1, Math.floor(n / maxRows));
@@ -465,7 +486,7 @@ function veRenderTable(slotIdx) {
   for(var i = 0; i < n; i += step) {
     rowNum++;
     var row = '<tr><td>' + rowNum + '</td>';
-    row += '<td style="font-weight:600;">' + timeArr[i].toFixed(3) + '</td>';
+    row += '<td style="font-weight:600;">' + veTblX(timeArr[i]) + '</td>';
     datasets.forEach(function(ds, di) {
       var val = (ds && i < ds.length) ? ds[i] : 0;
       row += '<td style="color:' + veSlotSignalColor(slot, di) + ';">' + (ds ? veFormatTooltipVal(val) : '—') + '</td>';
@@ -477,7 +498,7 @@ function veRenderTable(slotIdx) {
   if((n - 1) % step !== 0 && n > 1) {
     rowNum++;
     var row = '<tr style="border-top:2px solid var(--border-color);"><td>' + rowNum + '</td>';
-    row += '<td style="font-weight:700;">' + timeArr[n - 1].toFixed(3) + '</td>';
+    row += '<td style="font-weight:700;">' + veTblX(timeArr[n - 1]) + '</td>';
     datasets.forEach(function(ds, di) {
       var val = (ds && n - 1 < ds.length) ? ds[n - 1] : 0;
       row += '<td style="color:' + veSlotSignalColor(slot, di) + '; font-weight:700;">' + (ds ? veFormatTooltipVal(val) : '—') + '</td>';

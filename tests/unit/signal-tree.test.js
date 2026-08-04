@@ -278,6 +278,30 @@ describe('veSigApplyFilter', () => {
     expect(out[0].items.map((i) => i.signalId)).toEqual(['torque']);
   });
 
+  // Denetim bulgusu: filtre grubu beyaz listeyle YENİDEN kuruyordu ve
+  // içe aktarma gruplarındaki `_import` alanı düşüyordu. Ağaçtaki
+  // "✕ — kaldır" bağlantısı veImpDropDataset('undefined') üretiyor, tıklama
+  // hiçbir şey yapmıyordu — hata da vermiyordu.
+  test('gruba özel ek alanlar korunur (_import)', () => {
+    const imp = [{
+      gid: 'imp:imp1', key: 'imp:imp1', name: 'Graphics.csv', icon: '',
+      dragId: '#imp1', _import: 'imp1',
+      items: [{ sensorId: '#imp1', signalId: 'c1', name: 'EngSpeed' }]
+    }];
+    const out = S.veSigApplyFilter(imp, { sensors: [] }, '', 'all');
+    expect(out).toHaveLength(1);
+    expect(out[0]._import).toBe('imp1');
+    expect(out[0].dragId).toBe('#imp1');
+  });
+
+  test('filtre kaynak grubu DEĞİŞTİRMEZ', () => {
+    const src = [{ gid: 'g', key: 'g', name: 'G', icon: '', dragId: '~g',
+                   items: [{ sensorId: '~g', signalId: 'a', name: 'A' },
+                           { sensorId: '~g', signalId: 'b', name: 'B' }] }];
+    S.veSigApplyFilter(src, { sensors: [{ id: '~g', signal: 'a' }] }, '', 'on');
+    expect(src[0].items).toHaveLength(2);
+  });
+
   test('arama sinyal adında eşleşir, boş grup düşer', () => {
     const out = S.veSigApplyFilter(groups, slot, 'tork', 'all');
     expect(out).toHaveLength(1);

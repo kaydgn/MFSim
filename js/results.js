@@ -96,6 +96,10 @@ function veAdoptSolverTab(tabId) {
   veResultSlots = veSolverTabSlots[tabId]
     ? veTrCloneBoard(veSolverTabSlots[tabId])
     : [{},{},{},{}];
+  // Pano her GERİ YÜKLENDİĞİNDE bayat içe aktarma referansları düşer.
+  // Yalnızca veEnterResults'ta budamak yetmiyordu: çözücü sekmesi değiştirmek
+  // ya da proje açmak da panoyu geri yükleyen bir yol.
+  if(typeof veImpPruneSlots === 'function') veImpPruneSlots(veResultSlots);
   // Sekme değişti — görünüm penceresi ve referans imleç önceki koşuya aitti
   if(typeof veTrState !== 'undefined') {
     veTrState.xMin = null; veTrState.xMax = null;
@@ -345,6 +349,46 @@ function veUpdateResultsTree() {
   });
   
   html += '</div></div>';
+
+  // ── İçe aktarılan ölçümler (Excel/CSV) ──
+  // Ayrı bir dal: bu kanallar topolojiden değil dosyadan geliyor ve sekmeye
+  // bağlı değil. Satır/grup üretimi ortak (veSigGroupHTML) — kullanıcı için
+  // simülasyon sinyaliyle aynı arayüz: tikle, sürükle, çift tıkla incele.
+  if(typeof veImpCollectGroups === 'function') {
+    var impGroups = veImpCollectGroups();
+    if(impGroups.length > 0) {
+      var impChannels = 0;
+      impGroups.forEach(function(g) { impChannels += g.items.length; });
+
+      html += '<div style="margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">';
+      html += '<div class="ve-tree-item">';
+      html += '<div class="ve-tree-row" style="display:flex; align-items:center; gap:4px;">';
+      html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">▼</span>';
+      html += '<span class="icon"><span class="mf-ico mf-ico-upload"></span></span>';
+      html += '<span style="font-weight:600;">İçe Aktarılan Ölçümler</span>';
+      html += ' <span style="font-size:var(--fs-micro); color:var(--text-muted); margin-left:auto;">' +
+              impChannels + ' sinyal</span>';
+      html += '</div>';
+      html += '<div class="ve-tree-children open">';
+
+      var impShown = veSigDecorateOpen(
+        veSigApplyFilter(impGroups, _targetSlot, veSigState.query, veSigState.filter), _targetSlot);
+      impShown.forEach(function(g) { _allGroups.push(g); });
+
+      if(impShown.length === 0) {
+        html += '<div class="vsig-empty">Aramayla eşleşen sinyal yok.</div>';
+      } else {
+        impShown.forEach(function(g) {
+          html += veSigGroupHTML(g, _targetSlot, veSigState.query);
+          // Veri kümesini kaldırma: grup başlığının altında, sönük bir satır.
+          html += '<div class="vsig-orphan" style="cursor:pointer;" title="Bu ölçüm dosyasını oturumdan kaldır"' +
+                  ' onclick="veImpDropDataset(\'' + escapeHTML(g._import) + '\')">✕ ' +
+                  escapeHTML(g.name) + ' — kaldır</div>';
+        });
+      }
+      html += '</div></div></div>';
+    }
+  }
 
   // ── Diyagramlar (sihirbaz paketlerinden, aktif solver tab'a göre filtrelenir) ──
   var wizNode = nodes.find(function(n) { return n.type === 'sensor-wizard'; });
@@ -4299,6 +4343,16 @@ function veEnterResults() {
               'Takoz alt topolojisinde ▶ Hesapla ile yeniden çözün.', 'warning');
   }
   if(typeof veUpdateSolverTabs === 'function') veUpdateSolverTabs();
+  // Proje dosyası şerit listesini saklar ama ölçüm verisini saklamaz (ham
+  // ölçüm onlarca MB olabilir). Yeniden açılışta artık var olmayan bir veri
+  // kümesine bakan şeritler sonsuza dek "veri yok" gösterirdi — temizlenir.
+  if(typeof veImpPruneSlots === 'function') {
+    var dropped = veImpPruneSlots(veResultSlots);
+    if(dropped > 0 && typeof showToast === 'function') {
+      showToast(dropped + ' şerit kaldırıldı: içe aktarılan ölçüm verisi bu oturumda yok. ' +
+                'Dosyayı yeniden içe aktarın.', 'info');
+    }
+  }
   veUpdateResultsTree();
   if(typeof veTrEnter === 'function') veTrEnter();
   veInitResultSlots();
@@ -4453,6 +4507,20 @@ function veWarnXAxisMismatch(wantedXAxis) {
             'warning');
 }
 
+// İçe aktarılan ölçüm panosuna simülasyon sinyali giremez.
+// Gerekçe: ölçümün KENDİ zaman dizisi vardır (dosyadan gelir) ve seriler
+// veGetSensorData'da indeks hizasıyla çizilir. Sim sinyali böyle bir panoya
+// girerse ölçümün zaman ekseni üzerinde, hiç ilgisi olmayan bir eğri olarak
+// sessizce çizilirdi. Ters yön (ölçüm → sim panosu) veXAxisAllowed ile zaten
+// kapalı; bu koşu simülasyon tarafında aynı kapıyı kurar.
+function veImpBoardRejects(slotIdx) {
+  if(typeof veSharedXKey !== 'function') return false;
+  var key = veSharedXKey(veResultSlots);
+  if(!key || String(key).indexOf('@import:') < 0) return false;
+  if(typeof veWarnXAxisMismatch === 'function') veWarnXAxisMismatch({ name: 'Zaman [s]' });
+  return true;
+}
+
 function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   var pkg = (typeof SENSOR_PACKAGES !== 'undefined') ? SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; }) : null;
   if(!pkg || !pkg.diagrams[diagIdx]) return;
@@ -4541,6 +4609,49 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
   var rawSensorId = sensorId;
   var lookupId = sensorId;
 
+  // ── İçe aktarılan ölçüm: #veriKümesiId ──
+  // Kendi zaman eksenini getirir, bu yüzden slot._dataSource ve xAxis birlikte
+  // kurulur. Tek-X-ekseni kuralı (js/measure-core.js) böylece kendiliğinden
+  // korunur: farklı bir eksendeki panoya bırakılırsa reddedilir.
+  if(sensorId.charAt(0) === '#') {
+    var impDs = (typeof veImpFind === 'function') ? veImpFind(veImpIdOf(sensorId)) : null;
+    if(!impDs) return;
+    var impCol = veImpColumn(impDs, signalId);
+    if(!impCol) return;
+
+    var iSlot = veResultSlots[slotIdx];
+    if(!iSlot.sensors) iSlot.sensors = [];
+    if(!iSlot.type) iSlot.type = 'line';
+
+    var impX = {
+      id: 'time',
+      name: impDs.x.name + (impDs.x.unit ? ' [' + impDs.x.unit + ']' : ''),
+      unit: impDs.x.unit || '',
+      _dataSource: impDs.dataSource
+    };
+    if(typeof veXAxisAllowed === 'function' &&
+       !veXAxisAllowed(impX, impDs.dataSource, veResultSlots)) {
+      veWarnXAxisMismatch(impX);
+      return;
+    }
+
+    if(iSlot.sensors.some(function(s) { return s.id === rawSensorId && s.signal === signalId; })) return;
+
+    iSlot.xAxis = impX;
+    iSlot._dataSource = impDs.dataSource;
+    iSlot.sensors.push({
+      id: rawSensorId,
+      name: impCol.name,
+      unit: impCol.unit || '',
+      signal: signalId,
+      _dataSource: impDs.dataSource
+    });
+    if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
+    veSyncBoardState();
+    if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
+    return;
+  }
+
   // ── Takoz kanalı: ~mnt-<küme> formatı ──
   // Takoz kanalının X ekseni KENDİ veri kümesinden gelir (frekans / deformasyon
   // / ivme); panodan DEVRALINMAZ. Pano başka bir eksende çalışıyorsa bırakma
@@ -4574,6 +4685,9 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
     if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
     return;
   }
+
+  // Buradan aşağısı simülasyon sinyalleridir: içe aktarma panosuna giremezler.
+  if(veImpBoardRejects(slotIdx)) return;
 
   // ── Sihirbaz sanal sensörü: ~compType formatı ──
   if(sensorId.charAt(0) === '~') {
@@ -4674,6 +4788,16 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
 }
 
 function veAddSensorToSlot(slotIdx, sensorId) {
+  // ── İçe aktarılan ölçüm: #veriKümesiId — tüm sütunları ekle ──
+  // Ağaçtaki grup başlığı bu ID ile sürüklenir; dal olmadan sessiz bir
+  // hiçbir-şey-yapma davranışı oluşuyordu.
+  if(sensorId.charAt(0) === '#') {
+    var impSet = (typeof veImpFind === 'function') ? veImpFind(veImpIdOf(sensorId)) : null;
+    if(!impSet) return;
+    impSet.columns.forEach(function(c) { veAddSignalToSlot(slotIdx, sensorId, c.key); });
+    return;
+  }
+
   // ── Takoz veri kümesi: ~mnt-<küme> — kümenin tüm kanallarını ekle ──
   // Grup sürüklemesi ile grup onay kutusu (veSigToggleGroup) AYNI sonucu
   // vermeli; ikisi de tek kanal ekleyen yoldan geçer, eksen kuralı orada bir
@@ -4977,6 +5101,7 @@ function veRemoveSensorFromSlot(slotIdx, sensorIdx) {
   slot.sensors.splice(sensorIdx, 1);
   // Eksen lock'larını sıfırla (birim grupları değişmiş olabilir)
   slot.yAxisLock = {};
+  veImpDropStaleAxis(slot);
   if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
   // Lejanttaki ✕ ile de silinebiliyor: ağaçtaki onay kutusu bayat kalmasın
   if(typeof veSigRefreshTree === 'function') veSigRefreshTree();

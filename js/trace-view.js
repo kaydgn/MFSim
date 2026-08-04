@@ -343,7 +343,11 @@ function veTrResolveX(slot) {
   }
 
   if(!arr) {
-    if(ds === 'segmentDrive' && r && r.segmentDrive && r.segmentDrive.time) {
+    // İçe aktarılan ölçüm kendi zaman dizisini getirir (js/measure-import.js).
+    // Simülasyonun time dizisiyle alakası yok; ilk sırada sorulur.
+    if(ds && String(ds).indexOf('import:') === 0 && typeof veImpXSeries === 'function') {
+      arr = veImpXSeries(ds);
+    } else if(ds === 'segmentDrive' && r && r.segmentDrive && r.segmentDrive.time) {
       arr = r.segmentDrive.time;
     } else if(typeof veActiveSolverTabId !== 'undefined' && veActiveSolverTabId === 'obstacle' &&
               r && r.obstacleDynamic && r.obstacleDynamic.log && r.obstacleDynamic.log.length > 1) {
@@ -1167,12 +1171,15 @@ function veTrRenderNote(force) {
 // listesine yollamak onu boş bir şeride götürür. Çözüm varsa asıl eksik
 // gerçekten sinyal seçimidir.
 function veTrEmptyHTML() {
+  // İçe aktarılmış ölçüm de çizilecek veridir: varsa "önce çözümü çalıştırın"
+  // demek yanlış olur — kullanıcının verisi zaten var, eksik olan sinyal seçimi.
+  var hasImport = (typeof veImpAny === 'function') && veImpAny();
   // Takoz sekmesi ARAÇ çözümünden bağımsız beslenir (window.veMountResults):
   // yalnız takoz modelini çözmüş kullanıcıya "çözüm sonucu yok" demek yanlış
   // olurdu — verisi var, eksik olan sinyal seçimi.
   var mntOnly = (typeof veActiveSolverTabId !== 'undefined') && veActiveSolverTabId === 'mount' &&
                 (typeof veMntSets === 'function') && veMntSets().length > 0;
-  var noSim = !window.veSimResults && !mntOnly;
+  var noSim = !window.veSimResults && !hasImport && !mntOnly;
   var h = '';
 
   if(noSim) {
@@ -1186,6 +1193,14 @@ function veTrEmptyHTML() {
       h += '<button type="button" class="ve-trace-btn" data-act="open-solver" ' +
            'style="height:26px;margin-top:4px;">' +
            '<span class="mf-ico mf-ico-play"></span> Çözücüyü Aç</button>';
+    }
+    // Çözüm koşmak tek yol değil: hazır bir ölçüm dosyası da çizilebilir.
+    if(typeof veImpOpenPicker === 'function') {
+      h += '<div class="ve-trace-empty-sub" style="margin-top:10px;">ya da elinizdeki ' +
+           'ölçüm dosyasını (Excel/CSV) doğrudan açın:</div>';
+      h += '<button type="button" class="ve-trace-btn" data-act="import-measure" ' +
+           'style="height:26px;margin-top:4px;">' +
+           '<span class="mf-ico mf-ico-upload"></span> Ölçüm Verisi İçe Aktar</button>';
     }
     return h;
   }
@@ -1337,6 +1352,8 @@ function veTrClear() {
   slot.sensors = [];
   slot.lanes = [];
   slot.yAxisLock = {};
+  // İçe aktarma panosu temizlenince ölçümün zaman ekseni de kalksın
+  if(typeof veImpDropStaleAxis === 'function') veImpDropStaleAxis(slot);
   veTrState.pinX = null;
   veTrState.cursorX = null;
   veTrFit();
@@ -1869,7 +1886,9 @@ function veTrBindToolbar() {
     empty._veTrBound = true;
     empty.addEventListener('click', function(e) {
       var b = e.target.closest('[data-act="open-solver"]');
-      if(b && typeof veSolverRun === 'function') veSolverRun();
+      if(b && typeof veSolverRun === 'function') { veSolverRun(); return; }
+      var imp = e.target.closest('[data-act="import-measure"]');
+      if(imp && typeof veImpOpenPicker === 'function') veImpOpenPicker();
     });
   }
 
