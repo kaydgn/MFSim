@@ -187,6 +187,28 @@ function _mntReportEnsureAssets(cb){
 }
 
 // ═══════════════════ GİRİŞ NOKTASI ══════════════════════════════════════════
+// Rapor düğümünü nerede olursa olsun bul: canlı kanvasta (alt topoloji açıksa)
+// ya da ana topolojideki 'mount-analysis' düğümlerinin gömülü alt topolojisinde.
+//
+// NEDEN: rölanti devri / silindir sayısı / ζ'nin TEK kaynağı çözüm sonucudur
+// (R.gather). Ama ESKİ projelerde bu üçü Rapor düğümünde tutuluyordu ve
+// _mntRepEngine onları yalnız opts YEDEĞİNDEN okuyabiliyor. Rapor, Çözücü
+// panelinden değil de Sonuçlar ağacındaki kısayoldan üretildiğinde düğüm
+// kimliği bilinmez; yedek bulunamazsa ateşleme frekansı NaN kalır ve §8.13 ile
+// uygunluk satırı sessizce boşalır. Yani AYNI rapor iki yoldan farklı çıkardı.
+function _mntFindReportNode(){
+  if(typeof nodes==='undefined' || !Array.isArray(nodes)) return null;
+  var live=nodes.find(function(n){ return n.type==='mnt-report'; });
+  if(live) return live;
+  for(var i=0;i<nodes.length;i++){
+    var sub=nodes[i] && nodes[i].data && nodes[i].data.subTopology;
+    var inner=(sub && Array.isArray(sub.nodes))
+      ? sub.nodes.find(function(n){ return n.type==='mnt-report'; }) : null;
+    if(inner) return inner;
+  }
+  return null;
+}
+
 function veMntGenerateReport(nodeId){
   var st = (typeof document!=='undefined') ? document.getElementById('ve-mnt-report-status') : null;
   function setStatus(m,c){ if(st){ st.textContent=m; st.style.color=c||'var(--text-muted)'; } }
@@ -197,6 +219,7 @@ function veMntGenerateReport(nodeId){
   }
   var R=_veMntLast;
   var node=(typeof nodes!=='undefined') ? nodes.find(function(n){return n.id===nodeId;}) : null;
+  if(!node) node=_mntFindReportNode();
   var opts=(node && node.data) ? { idleRpm:node.data.idleRpm, cylinders:node.data.cylinders, zeta:node.data.zeta } : {};
   setStatus('Rapor hazırlanıyor…');
   if(typeof showToast==='function') showToast('Rapor hazırlanıyor…','info');

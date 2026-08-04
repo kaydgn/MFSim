@@ -453,3 +453,33 @@ describe('veTrSnapIndex — ölçüm çekirdeğine devredilir', () => {
     expect(veTrSnapIndex([0, 1, 2], 1.4)).toBe(-1);
   });
 });
+
+describe('veTrNoteHTML — grafiğin altındaki açıklama şeridi', () => {
+  // Sunum katmanı: burada TEK bir "üretiliyor mu / patlamıyor mu" smoke testi
+  // var. Her etiket için ayrı assertion açılmaz — bir başlığı değiştirmek
+  // testi kırmamalı (bkz. CLAUDE.md test politikası).
+  const entry = {
+    name: 'Frekans yanıtı',
+    info: { headline: 'Baş satır', what: 'Ne', read: 'Nasıl', good: 'İyi' }
+  };
+
+  test('metni ve aç/kapa düğmesini üretir', () => {
+    const h = T.veTrNoteHTML(entry);
+    expect(h).toContain('data-act="note-toggle"');
+    expect(h).toContain('Baş satır');
+    expect(h).toContain('aria-expanded');
+  });
+
+  test('açıklaması olmayan pano için hiç şerit üretilmez', () => {
+    // Söyleyecek sözü olmayan bir kutu gürültüdür: araç panosunda ve boş
+    // panoda şerit hiç çizilmemeli.
+    expect(T.veTrNoteHTML(null)).toBe('');
+    expect(T.veTrNoteHTML({ name: 'X', info: null })).toBe('');
+  });
+
+  test('metin HTML olarak kaçırılır', () => {
+    const h = T.veTrNoteHTML({ name: '<b>', info: { headline: '<script>', what: 'a', read: 'b', good: 'c' } });
+    expect(h).not.toContain('<script>');
+    expect(h).toContain('&lt;script&gt;');
+  });
+});

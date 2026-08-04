@@ -2793,6 +2793,15 @@ function _mntZetaOf(solver){
 }
 
 var _veMntLast=null;      // son sonuç (kopyala/CSV/3D için)
+
+// Saklanan takoz sonucunu unut. İKİ yer birden temizlenmeli: Rapor _veMntLast'e,
+// Sonuçlar paneli window.veMountResults'a bakar. Yalnız biri temizlenirse çözüm
+// başarısızken pano hâlâ ESKİ koşunun kanallarını çizer — sessiz yalan.
+function _mntForgetResults(){
+  _veMntLast=null;
+  if(typeof window!=='undefined') window.veMountResults=null;
+}
+
 function getMntSolverPropertiesHTML(node){
   if(!node.data) node.data={};
   if(!node.data.matrixMode) node.data.matrixMode='delta';
@@ -2951,7 +2960,19 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
     }
     if(C.modalEnergy) R.modalEnergy = C.modalEnergy(modes, prep.M6, prep.Kmodal, prep.si.components, prep.mp.cg);
   }
+  // ── Sonuçlar paneli kanalları (js/mount-signals.js) ───────────────────────
+  // Süpürmeler ÇÖZÜCÜNÜN kendi yolunu (prep.solveOne) kullanır — nonlineerse
+  // Newton, değilse durduruculu lineer. Ayrı bir "gösterim için" çözüm yolu
+  // açılmaz: pano ile Rapor aynı fizikten okumalı.
+  //
+  // Kanal üretimi çözümü BAĞLAMAZ: patlarsa R yine döner, pano yalnız kanalsız
+  // kalır. Takoz hesabı raporun ana ürünü; panoya veri hazırlarken kaybedilemez.
+  try {
+    R.signals = (typeof veMntSignals!=='undefined' && veMntSignals)
+      ? veMntSignals.build(R, { solveOne: prep.solveOne }) : [];
+  } catch(e) { R.signals=[]; }
   _veMntLast=R;
+  if(typeof window!=='undefined') window.veMountResults=R;
   return R;
 }
 
@@ -2960,7 +2981,7 @@ function _mntAssembleR(prep, allCases, modes, gearCases, designCases){
 // (Canlı ilerleme çubuğu için async sürüm veMntSolverCompute; AYNI R'yi üretir.)
 function _mntComputeResults(solverId){
   var prep=_mntPrepareSolve(solverId); if(!prep) return null;
-  if(prep.error){ _veMntLast=null; return { error:prep.error, gather:prep.gather }; }
+  if(prep.error){ _mntForgetResults(); return { error:prep.error, gather:prep.gather }; }
   var allCases=prep.loadCases.map(function(lc){ return prep.solveOne(lc); });
   var modes=prep.solveModes(allCases);
   var gearCases=prep.gearDefs.length ? prep.gearDefs.map(function(lc){ return prep.solveOne(lc); }) : [];
@@ -3018,7 +3039,7 @@ async function veMntSolverCompute(solverId){
   var out=(typeof document!=='undefined') ? document.getElementById('ve-mnt-results') : null;
   var prep=_mntPrepareSolve(solverId);
   if(!prep){ if(out) out.innerHTML=''; return null; }
-  if(prep.error){ _veMntLast=null; var Rerr={ error:prep.error, gather:prep.gather };
+  if(prep.error){ _mntForgetResults(); var Rerr={ error:prep.error, gather:prep.gather };
     if(out) out.innerHTML=_mntSolverStatusHTML(Rerr); return Rerr; }
   var total=prep.loadCases.length + prep.gearDefs.length + prep.designDefs.length + 1; // +modal
   var done=0;
@@ -3053,6 +3074,18 @@ async function veMntSolverCompute(solverId){
   var R=_mntAssembleR(prep, allCases, modes, gearCases, designCases);
   R._worstIter=worst;   // profesyonel yakınsama özeti için
   if(out) out.innerHTML=_mntSolverStatusHTML(R);
+  // Sonuçlar ağacını BURADAN TAZELEMEYİZ — bilerek.
+  //
+  // veUpdateResultsTree ilk işi olarak veSaveActiveTabStateKeepView'i çağırır;
+  // o da veSaveActiveTabState → veMntCollapseToRoot zincirini işletir
+  // (js/topology.js:122). Yani "▶ Hesapla"ya basan kullanıcı ALT TOPOLOJİDEyken
+  // kanvas köke çökertilir, DOM yeniden kurulur ve az önce bu satırda basılan
+  // çözüm durumu ekrandan silinir. (KeepView sonradan geri getirir ama araya
+  // tam bir serileştir-yükle turu girer — bkz. tests/unit/topology-save-
+  // reentrancy.test.js, aynı zincirin daha önce dosya bozduğu yer.)
+  //
+  // Tazelemeye gerek de yok: kullanıcı Sonuçlar sayfasına geçtiğinde
+  // veEnterResults zaten sekmeleri ve ağacı kuruyor (js/tabs.js:56).
   return R;
 }
 
@@ -3201,6 +3234,8 @@ if(typeof module!=='undefined' && module.exports){
     _mntEnginePresetSelect: _mntEnginePresetSelect,
     _mntEngineSection: _mntEngineSection,
     _mntComputeResults: _mntComputeResults,
+    veMntSolverCompute: veMntSolverCompute,
+    _mntForgetResults: _mntForgetResults,
     getMntExamplePropertiesHTML: getMntExamplePropertiesHTML,
     getMntViewerPropertiesHTML: getMntViewerPropertiesHTML,
     getMntCoordFramePropertiesHTML: getMntCoordFramePropertiesHTML,

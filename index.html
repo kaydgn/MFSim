@@ -78,7 +78,8 @@
      şeridin sekme şeridi (26px). İkisi de tek satıra bol bol sığacak kadar
      seyrekti; 60px'lik krom 30px'e indi, kazanılan 30px tuvale gitti.
 
-     Yerleşim: marka │ hızlı erişim │ şerit sekmeleri ····· radyo │ daralt.
+     Yerleşim: marka │ hızlı erişim │ şerit sekmeleri ····· radyo.
+     Daralt tutamağı bantta DEĞİL: gövdenin sağ alt köşesinde (aşağıda).
 
      Bant YALNIZ komut yüzeyidir. Sayfa anahtarı (Topoloji / Sonuçlar) bir
      zamanlar buranın sağ ucundaydı; artık çalışma alanının solundaki dikey
@@ -121,11 +122,24 @@
       <span id="ve-deploy-dot" class="ve-deploy-dot ve-deploy-unknown" onclick="veShowDeployDetails()" title="Deploy durumu kontrol ediliyor..."></span>
       <span id="ve-deploy-refresh" class="ve-deploy-refresh" onclick="veRefreshApp()" title="Güncellemeyi al"><span class="mf-ico mf-ico-refresh"></span></span>
     </span>
-
-    <button type="button" class="ve-rb-collapse" id="ve-rb-collapse" title="Şeridi daralt" aria-label="Şeridi daralt">▲</button>
   </div>
 
-  <div class="ve-rb-body" id="ve-rb-body" role="tabpanel"></div>
+  <!-- Gövde + daralt tutamağı AYNI kapta.
+       Tutamak eskiden yukarıdaki krom bandında, radyo düğmesinin yanındaydı:
+       şeridi denetleyen düğme, denetlemediği bir yüzeyin (müzik çalar) komşusu
+       olarak duruyordu. Artık denetlediği şeyin kenarında — gövdenin SAĞ ALT
+       köşesinde, Office'teki yeriyle aynı.
+
+       Kap gerekli, çünkü tutamak MUTLAK konumlanır ve konumlandığı kutu
+       gövdenin kutusu olmalı: "peek" durumunda gövde overlay'e dönüşüp
+       #ve-ribbon'ın kendi kutusunun DIŞINA taşar (bkz. css .ve-rb-dock).
+       Tutamak doğrudan #ve-ribbon'ın çocuğu olsaydı o durumda geride kalırdı.
+       Tutamak #ve-rb-body'nin İÇİNE de konulamaz: js/ribbon.js her çizimde
+       o kabın innerHTML'ini yeniden yazar, statik markup orada duramaz. -->
+  <div class="ve-rb-dock" id="ve-rb-dock">
+    <div class="ve-rb-body" id="ve-rb-body" role="tabpanel"></div>
+    <button type="button" class="ve-rb-collapse" id="ve-rb-collapse" title="Şeridi daralt" aria-label="Şeridi daralt">▲</button>
+  </div>
 </div>
 
 <!-- GÖRSEL EDİTÖR -->
@@ -840,6 +854,7 @@
 <script type="text/x-mfsim-defer" src="js/cp-drivetrain.js" data-mfsim-label="Aktarma organları..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-solver.js" data-mfsim-label="Çözücü panelleri..."></script>
 <script type="text/x-mfsim-defer" src="js/mount-core.js" data-mfsim-label="Takoz: hesap çekirdeği (6 SD)..."></script>
+<script type="text/x-mfsim-defer" src="js/mount-signals.js" data-mfsim-label="Takoz: sonuç kanalları (FRF / F-δ / ivme süpürmesi)..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount.js" data-mfsim-label="Takoz çökme-titreşim modülü..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-viewer.js" data-mfsim-label="Takoz: 3D görüntüleyici..."></script>
 <script type="text/x-mfsim-defer" src="js/cp-mount-report.js" data-mfsim-label="Takoz: rapor üreteci..."></script>

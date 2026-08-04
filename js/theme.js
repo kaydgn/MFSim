@@ -38,8 +38,10 @@ document.addEventListener('DOMContentLoaded', function() {
   // Geçerli temalar — CSS'teki [data-theme] blokları + Ayarlar > Görünüm listesiyle
   // birebir aynı olmalı (js/settings.js _veSettingsRenderAppearance). Listede
   // olmayan (eski/geçersiz) değerler güvenle 'slate'e döner.
+  // SADE: graphite, ink, basalt, mono (koyu) · paper, zinc (açık)
   // KOYU: slate, cream, claude, navy · PROFESYONEL: ansys, fusion, vscode · AÇIK: pearl, steel, solidworks
-  var valid = ['slate','cream','claude','navy','ansys','fusion','vscode','pearl','steel','solidworks'];
+  var valid = ['graphite','ink','basalt','mono','paper','zinc',
+               'slate','cream','claude','navy','ansys','fusion','vscode','pearl','steel','solidworks'];
   if (valid.indexOf(savedTheme) < 0) savedTheme = 'slate';
   changeTheme(savedTheme);
 });
