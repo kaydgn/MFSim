@@ -262,6 +262,17 @@ var veMntBrief = (function() {
     return i > 0 ? s.substring(0, i) : s;
   }
 
+  // Bir takozun düşey (Z) F(δ) kanalının kimliği. Kanal ADINDAN değil KİMLİK
+  // biçiminden ve takoz adından bulunur: ad "(nonlineer)" gibi ekler alabilir,
+  // kimlik biçimi (m.<slug>.<eksen>) almaz.
+  function zChanId(ds, label) {
+    for(var i = 0; i < ((ds && ds.channels) || []).length; i++) {
+      var ch = ds.channels[i], p = parseId(ch.id);
+      if(p.kind === 'mount' && +p.part === 2 && chanMount(ch) === label) return ch.id;
+    }
+    return null;
+  }
+
   // Eğrinin bir noktadaki eğimi — kuvvet-deformasyon şeridinde "sertlik".
   // δ = ±1 mm arasındaki fark alınır: sıfırdaki teğet, nonlineer eğride
   // çalışma bandını temsil etmiyor.
@@ -461,7 +472,15 @@ var veMntBrief = (function() {
 
     paras.push('Yatay eksen takozun ezilme miktarı (' + b('mm') + '), dikey eksen bunun için ' +
                'gereken kuvvet. Eğrinin eğimi = takozun sertliği; dik eğri sert, yatık eğri ' +
-               'yumuşak takoz demek.');
+               'yumuşak takoz demek.' +
+      // Nokta işaretleri yalnız düşey eksen çizildiğinde görünür (datasetMarks
+      // Z kanalına bağlar); yoksa olmayan bir işareti anlatmış oluruz.
+      ((stat && items.some(function(i2) { return i2.ax === 2; }))
+        ? ' Eğrilerin üstündeki ' + b('noktalar') + ' her takozun araç kendi ağırlığındayken ' +
+          'bulunduğu çalışma noktasıdır: yatayda ne kadar ezildiği, dikeyde ne kadar kuvvet ' +
+          'taşıdığı. Takoz ömrü ve izolasyon, eğrinin bu noktadaki eğiminden okunur — ' +
+          'sıfırdaki eğimden değil.'
+        : ''));
 
     var title = 'Kuvvet-deformasyon';
     if(nM === 1 && nA > 1) {
@@ -897,14 +916,33 @@ var veMntBrief = (function() {
         marks.push({ axis: 'y', value: -fc, unit: 'N', kind: 'limit',
                      label: 'taşıma kapasitesi ' + na(fc / 1000) + ' kN' + tag });
       });
+      // ── Takoz başına statik çalışma noktası ──
+      //
+      // Eskiden tek bir DİKEY ÇİZGİ vardı: en çok ezilen takozun δ'sı. İki şeyi
+      // birden kaybediyordu — öteki beş takozun nerede çalıştığını ve her
+      // birinin o noktada TAŞIDIĞI KUVVETİ. Tedarikçi raporları bunu nokta
+      // olarak basar, çünkü çalışma noktası (δ, F) çiftidir.
+      //
+      // Nokta, ait olduğu kanalın kimliğini taşır (chanId): şeritte o takozun
+      // eğrisi yoksa nokta da çizilmez. Başka bir takozun eğrisi üstünde duran
+      // bir çalışma noktası, o takozun sanki oradaymış gibi okunurdu.
+      //
+      // Yalnız Z (düşey): statik durumda yükü taşıyan eksen odur, x/y bileşenler
+      // simetrik modelde sıfıra yakındır ve altı nokta daha eklemek grafiği
+      // doldurmaktan başka bir şey yapmazdı.
       if(stat && stat.perMount) {
-        var worst = 0;
-        stat.perMount.forEach(function(pm) {
-          var dz = Math.abs((pm.delta || [])[2] || 0);
-          if(dz > worst) worst = dz;
+        stat.perMount.forEach(function(pm, i) {
+          var mnt = mounts[i];
+          if(!mnt || !pm) return;
+          var dz = ((pm.delta || [])[2] || 0) * 1000, fz = (pm.f || [])[2];
+          if(!isFinite(dz) || !isFinite(fz)) return;
+          var label = mountLabel(mnt, i);
+          var id = zChanId(ds, label);
+          if(!id) return;
+          marks.push({ axis: 'point', value: dz, y: fz, unit: 'N', kind: 'event',
+                       chanId: id,
+                       label: label + ' · ' + na(dz) + ' mm · ' + na(fz / 1000) + ' kN' });
         });
-        if(worst > 0) marks.push({ axis: 'x', value: -worst * 1000, kind: 'event',
-          label: 'çalışma noktası ' + na(-worst * 1000) + ' mm' });
       }
       marks.push({ axis: 'x', value: -10, kind: 'limit', label: 'doğrusal bant −10 mm' });
       marks.push({ axis: 'x', value:  10, kind: 'limit', label: 'doğrusal bant +10 mm' });

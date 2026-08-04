@@ -1277,6 +1277,66 @@ function veTrDrawMarks(ctx, geo, lanes) {
     });
   });
 
+  // ── Nokta işaretler: eğrinin ÜSTÜNDE tek bir çalışma noktası ──
+  //
+  // Neden çizgi değil nokta: "bu takoz kendi eğrisinin ŞURASINDA çalışıyor"
+  // bilgisi iki koordinatı birden taşır (δ ve F). Dikey bir çizgi yalnız δ'yı
+  // söyler; altı takozun altı farklı kuvveti tek çizgiye iner ve hangi noktanın
+  // hangi eğriye ait olduğu kaybolur.
+  //
+  // chanId verilmişse nokta YALNIZ o kanalın çizili olduğu şeritte görünür ve
+  // o kanalın RENGİNİ alır. Kanal şeritte yoksa nokta da çizilmez: başka bir
+  // takozun eğrisi üstünde duran bir çalışma noktası yanlış okunurdu.
+  var placedPt = [];
+  marks.forEach(function(m) {
+    if(m.axis !== 'point') return;
+    var gx = veTrXPos(geo, m.value);
+    if(gx < geo.plotX - 0.5 || gx > geo.plotX + geo.plotW + 0.5) return;
+    lanes.forEach(function(lane, i) {
+      if(m.unit != null && (lane.unit || '') !== m.unit) return;
+      var rect = geo.rects[i];
+      if(!rect) return;
+      if(!(m.y >= lane.yMin) || !(m.y <= lane.yMax)) return;
+      var col = null;
+      if(m.chanId) {
+        var hit = null;
+        lane.sigs.forEach(function(g) {
+          if(g.sensor && g.sensor.signal === m.chanId) hit = g;
+        });
+        if(!hit) return;
+        col = hit.color;
+      }
+      var gy = veTrYPos(lane, rect, m.y);
+      var c = col || veTrMarkColor(m.kind, 0.95);
+      // Halka + dolu merkez: eğrinin üstünde durduğu için düz bir dolu daire
+      // eğriyle karışırdı. Dış halka arka plan renginde, nokta eğri renginde.
+      ctx.beginPath();
+      ctx.arc(gx, gy, 5, 0, Math.PI * 2);
+      ctx.fillStyle = (typeof veThemeRgba === 'function')
+        ? veThemeRgba('--bg-primary', 0.85, 'rgba(20,22,28,0.85)') : 'rgba(20,22,28,0.85)';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = c;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(gx, gy, 2, 0, Math.PI * 2);
+      ctx.fillStyle = c;
+      ctx.fill();
+      if(!m.label) return;
+      // Çakışan etiket DÜŞER, nokta kalır — çizgi işaretlerindeki kuralın aynısı.
+      var clash = placedPt.some(function(p) {
+        return Math.abs(p[0] - gx) < 60 && Math.abs(p[1] - gy) < 11;
+      });
+      if(clash) return;
+      placedPt.push([gx, gy]);
+      // Sağa sığmıyorsa sola yaz: kenardaki nokta etiketsiz kalmasın.
+      var right = gx + 8 + ctx.measureText(m.label).width < geo.plotX + geo.plotW;
+      ctx.textAlign = right ? 'left' : 'right';
+      ctx.fillStyle = c;
+      ctx.fillText(m.label, gx + (right ? 8 : -8), gy - 8);
+    });
+  });
+
   ctx.restore();
 }
 
