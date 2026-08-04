@@ -365,6 +365,105 @@ describe('Rapor — §8.1 asal atalet, §8.15 yumuşatma, §8.16 mod şekilleri'
     expect((s816.match(/<circle/g) || []).length).toBeGreaterThan(MODES.length * 3);
   });
 
+  test('§8.16 ÇİZİM DOĞRULAMASI: SVG geri okunup bağımsız kinematikle karşılaştırılıyor', () => {
+    // Bu test, çizilen şeklin doğruluğunu KODU TEKRARLAMADAN sınar: üretilen SVG
+    // ayrıştırılır, işaretlerin ekran konumları okunur ve bunların TEK bir rijit
+    // gövde alanı Δ = u + θ×(p−c_G) ile üretilmiş olması gerektiği doğrulanır.
+    // Bir eksen eşlemesi ya da dönme işareti hatası burada hemen patlar.
+    const h = rep._mntRepModeShapes(R);
+    const figs = h.split('<figure').slice(1);
+    expect(figs).toHaveLength(MODES.length);
+    const cg = [MP.cg[0] * 1000, MP.cg[1] * 1000, MP.cg[2] * 1000];
+    const delta = (phi, p) => {
+      const d = [p[0] - cg[0], p[1] - cg[1], p[2] - cg[2]];
+      return [phi[0] * 1000 + phi[4] * d[2] - phi[5] * d[1],
+              phi[1] * 1000 + phi[5] * d[0] - phi[3] * d[2],
+              phi[2] * 1000 + phi[3] * d[1] - phi[4] * d[0]];
+    };
+    // Görünüş sırası ve her birinde EKRANDA görünen dönme bileşeni
+    const PLAN = [{ h: 0, v: 1, rot: (p) => -p[5] },      // üstten  (X–Y) ← θ_z
+                  { h: 0, v: 2, rot: (p) => p[4] },       // yandan  (X–Z) ← θ_y
+                  { h: 1, v: 2, rot: (p) => -p[3] }];     // önden   (Y–Z) ← θ_x
+    const MPOS = MOUNTS.map((m) => m.pos.map((v) => v * 1000));
+    const ANA = COMPS.filter((x) => x.mass / MP.m >= 0.10).map((x) => x.cg.map((v) => v * 1000));
+    let enKotuPx = 0, enKotuAci = 0, kontrol = 0;
+    figs.forEach((fig, mi) => {
+      const phi = MODES[mi].phi;
+      const svgs = fig.match(/<svg [\s\S]*?<\/svg>/g);
+      expect(svgs).toHaveLength(3);
+      svgs.forEach((svg, pi) => {
+        const P = PLAN[pi];
+        const kare = (re) => [...svg.matchAll(re)]
+          .map((m) => ({ x: +m[1] + 4, y: +m[2] + 4 })).filter((r) => r.y > 20);  // lejant hariç
+        const ref = kare(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="8" height="8" fill="none" stroke="#c9ced6"/g);
+        const def = kare(/<rect x="(-?[\d.]+)" y="(-?[\d.]+)" width="8" height="8" fill="#8a3ca0"/g);
+        expect(ref).toHaveLength(MOUNTS.length);
+        expect(def).toHaveLength(MOUNTS.length);
+        // px/mm ölçeği iki referans takozdan; görsel genlik EN KÜÇÜK KARELER ile
+        const sc = (ref[2].x - ref[0].x) / (MPOS[2][P.h] - MPOS[0][P.h]);
+        expect(Math.abs(sc)).toBeGreaterThan(0);
+        let num = 0, den = 0;
+        def.forEach((t, k) => {
+          const d = delta(phi, MPOS[k]);
+          num += d[P.h] * ((t.x - ref[k].x) / sc) + d[P.v] * (-(t.y - ref[k].y) / sc);
+          den += d[P.h] * d[P.h] + d[P.v] * d[P.v];
+        });
+        if (!(den > 1e-12)) return;
+        const amp = num / den;
+        // 1) HER takoz aynı rijit gövde alanıyla mı çizilmiş?
+        def.forEach((t, k) => {
+          const d = delta(phi, MPOS[k]);
+          const hataPx = Math.hypot((t.x - ref[k].x) - d[P.h] * amp * sc,
+                                    (t.y - ref[k].y) + d[P.v] * amp * sc);
+          enKotuPx = Math.max(enKotuPx, hataPx); kontrol++;
+        });
+        // 2) Gövde kutusunun merkezi ve DÖNME AÇISI aynı alandan mı geliyor?
+        const gs = [...svg.matchAll(/<g transform="rotate\((-?[\d.]+) (-?[\d.]+) (-?[\d.]+)\)">/g)];
+        gs.forEach((g, k) => {
+          if (k >= ANA.length) return;
+          const d = delta(phi, ANA[k]);
+          const bekX = ref[0].x + (ANA[k][P.h] - MPOS[0][P.h]) * sc + d[P.h] * amp * sc;
+          const bekY = ref[0].y - (ANA[k][P.v] - MPOS[0][P.v]) * sc - d[P.v] * amp * sc;
+          enKotuPx = Math.max(enKotuPx, Math.hypot(+g[2] - bekX, +g[3] - bekY));
+          enKotuAci = Math.max(enKotuAci, Math.abs(+g[1] - P.rot(phi) * amp * 180 / Math.PI));
+          kontrol += 2;
+        });
+      });
+    });
+    expect(kontrol).toBeGreaterThanOrEqual(150);
+    // Kalan sapma yalnız SVG çıktısının 1 ondalığa yuvarlanmasıdır: koordinatlar
+    // ±0,05 px, ölçek ve genlik de yuvarlanmış işaretlerden çözüldüğü için birikir.
+    // Hassasiyet 5 ondalığa çıkarıldığında bu değerler 0,0000 px / 1e-6 dereceye
+    // düşüyor — yani sapma çizim mantığından DEĞİL, yazım hassasiyetinden geliyor.
+    expect(enKotuPx).toBeLessThan(0.35);
+    expect(enKotuAci).toBeLessThan(0.05);
+  });
+
+  test('§8.16 ana gövdeler BAĞLANTI BANDI ile birleşik çizilir', () => {
+    // Motor ile şanzıman gerçekte cıvatalı tek yapıdır. Eşdeğer atalet kutuları
+    // kendi CG'lerinde olduğu için aralarında boşluk kalıyor ve iki ayrı parça
+    // gibi okunuyordu. Band bu boşluğu kapatır — kutu BOYUTLARINA dokunmadan.
+    const h = rep._mntRepModeShapes(R);
+    const svgs = h.match(/<svg [\s\S]*?<\/svg>/g);
+    // Motor ve şanzıman X boyunca ayrık → ÜSTTEN ve YANDAN görünüşte band var.
+    expect((svgs[0].match(/<polygon points="/g) || []).length).toBe(1);   // üstten
+    expect((svgs[1].match(/<polygon points="/g) || []).length).toBe(1);   // yandan
+    // ÖNDEN (Y–Z) görünüşte ikisi neredeyse aynı y'de (−0,13 ve −9,97 mm) —
+    // projeksiyonda üst üste düşerler, kapatılacak boşluk YOKTUR. Band çizmemek
+    // doğrudur; çizilseydi var olmayan bir ara parça uydurulmuş olurdu.
+    expect(svgs[2]).not.toContain('<polygon');
+    // Kutu boyutları band yüzünden DEĞİŞMEMELİ: motorun eşdeğer kutusu 1154 mm
+    const e = core.equivalentBox(1600, [[110.7, 0, 0], [0, 260.2, 0], [0, 0, 205.9]], false);
+    expect(e[0] * 1000).toBeCloseTo(1154, 0);
+  });
+
+  test('§8.16 tek ana gövde varsa band çizilmez', () => {
+    const tek = Object.assign({}, R, { gather: Object.assign({}, R.gather, {
+      components: [R.gather.components[0]] }) });
+    const svgs = rep._mntRepModeShapes(tek).match(/<svg [\s\S]*?<\/svg>/g);
+    svgs.forEach((svg) => expect(svg).not.toContain('<polygon'));
+  });
+
   test('§8.16 veri yoksa boş döner', () => {
     expect(rep._mntRepModeShapes(Object.assign({}, R, { modes: [] }))).toBe('');
     expect(rep._mntRepSoftening(Object.assign({}, R, { modes: [] }), {})).toBe('');
