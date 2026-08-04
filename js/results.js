@@ -91,6 +91,12 @@ function veGetAvailableSolverTabs() {
 // tam olarak bu olurdu.
 function veAdoptSolverTab(tabId) {
   if(tabId === veActiveSolverTabId) return;
+  // veTrCloneBoard js/trace-view.js'te ve o modül results.js'ten SONRA yükleniyor.
+  // veUpdateSolverTabs yükleme sırasında da çağrılabildiği için burası koşulsuz
+  // ona güvenemez. Sığ kopya ile idare etmek YANLIŞ olurdu (iki sekme aynı
+  // sensör dizisini paylaşırdı); kopyalayıcı yoksa henüz taşınacak bir pano da
+  // yoktur — kimlik değişir, takas atlanır.
+  if(typeof veTrCloneBoard !== 'function') { veActiveSolverTabId = tabId; return; }
   veSolverTabSlots[veActiveSolverTabId] = veTrCloneBoard(veResultSlots);
   veActiveSolverTabId = tabId;
   veResultSlots = veSolverTabSlots[tabId]

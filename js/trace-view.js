@@ -376,7 +376,7 @@ function veTrResolveX(slot) {
 // geçici alanlar (geometri, önbellek, RAF tutamakları) ileride eklenirse
 // kendiliğinden dışarıda kalır. Aksi hâlde bir gün diske canvas geometrisi
 // yazılır ve dosya boyutu sessizce şişer.
-var VE_TR_SLOT_KEYS = ['sensors', 'lanes', 'xAxis', 'type', '_dataSource', 'yAxisLock', 'zAxis'];
+var VE_TR_SLOT_KEYS = ['sensors', 'lanes', 'xAxis', 'type', '_dataSource', 'yAxisLock', 'zAxis', 'xLog'];
 
 function veTrCloneSlot(s) {
   var out = {};
@@ -485,14 +485,50 @@ function veTrLaneStep(lane, px) {
 }
 
 // Görünüm penceresi. Kullanıcı yakınlaştırmadıysa verinin tamamı.
-function veTrXView(timeArr) {
+// ── Logaritmik X ekseni ──────────────────────────────────────────────────────
+//
+// NEDEN VAR: takozun frekans yanıtı 0,1–100 Hz arasında LOGARİTMİK örneklenir
+// (js/mount-signals.js). Bunun sebebi süs değil: ζ=0,02'de rezonans tepesinin
+// yarı-güç genişliği ~0,4 Hz'dir; eşit aralıklı bir ızgara o tepeyi ıskalar ve
+// YANLIŞ bir tepe değeri raporlar. Ama aynı veri lineer eksende çizilince üç
+// dekat 100 birimlik bir eksene sıkışır: 240 örneğin 160'ı genişliğin %10'una
+// düşer, rezonans bölgesi tek piksellik bir sıçramaya döner.
+//
+// Çözüm ekseni logaritmik çizmek. Eşleme TEK noktada (veTrXPos / veTrXVal)
+// olduğu için yakınlaştırma, kaydırma, imleç ve ızgara kendiliğinden uyar —
+// tek koşul, bu iki fonksiyonun dışında elle x→piksel hesabı YAPILMAMASI.
+
+// Log ekseni yalnız tüm veri POZİTİFSE mümkün. Zaman ekseni 0'dan başladığı
+// için araç sinyallerinde kendiliğinden kapalı kalır.
+function veTrXLogOk(arr) {
+  if(!arr || !arr.length) return false;
+  for(var i = 0; i < arr.length; i++) { if(!(arr[i] > 0)) return false; }
+  return true;
+}
+
+// Pencerenin log kipinde olup olmadığı. Kullanıcı açıkça seçtiyse o, yoksa
+// veri kümesinin önerisi (xAxis.scale), o da yoksa lineer.
+function veTrXLogOn(slot, arr) {
+  if(!veTrXLogOk(arr)) return false;
+  if(slot && typeof slot.xLog === 'boolean') return slot.xLog;
+  return !!(slot && slot.xAxis && slot.xAxis.scale === 'log');
+}
+
+function veTrXView(timeArr, isLog) {
   var dMin = (timeArr && timeArr.length) ? timeArr[0] : 0;
   var dMax = (timeArr && timeArr.length) ? timeArr[timeArr.length - 1] : 1;
   if(!(dMax > dMin)) dMax = dMin + 1;
   var xMin = (veTrState.xMin == null) ? dMin : veTrState.xMin;
   var xMax = (veTrState.xMax == null) ? dMax : veTrState.xMax;
   if(!(xMax > xMin)) { xMin = dMin; xMax = dMax; }
-  return { xMin: xMin, xMax: xMax, dataMin: dMin, dataMax: dMax };
+  // Log kipinde sıfır/negatif sınır tanımsızdır: saklanan görünüm penceresi
+  // lineer kipten kalmış olabilir, sessizce veri sınırına çekilir.
+  if(isLog) {
+    if(!(dMin > 0)) dMin = 1e-9;
+    if(!(xMin > 0)) xMin = dMin;
+    if(!(xMax > xMin)) xMax = dMax;
+  }
+  return { xMin: xMin, xMax: xMax, dataMin: dMin, dataMax: dMax, xLog: !!isLog };
 }
 
 // Yerleşim: sol oluk genişliği ETİKETLERDEN doğar. Sabit bir oluk ya rpm'de
@@ -534,15 +570,26 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
     xMin: view.xMin,
     xMax: view.xMax,
     dataMin: view.dataMin,
-    dataMax: view.dataMax
+    dataMax: view.dataMax,
+    xLog: !!view.xLog
   };
 }
 
 function veTrXPos(geo, t) {
+  if(geo.xLog) {
+    if(!(t > 0)) return geo.plotX - 1e6;      // çizim alanının dışına at
+    var lo = Math.log10(geo.xMin), hi = Math.log10(geo.xMax);
+    if(!(hi > lo)) return geo.plotX;
+    return geo.plotX + (Math.log10(t) - lo) / (hi - lo) * geo.plotW;
+  }
   return geo.plotX + (t - geo.xMin) / (geo.xMax - geo.xMin) * geo.plotW;
 }
 
 function veTrXVal(geo, px) {
+  if(geo.xLog) {
+    var lo = Math.log10(geo.xMin), hi = Math.log10(geo.xMax);
+    return Math.pow(10, lo + (px - geo.plotX) / geo.plotW * (hi - lo));
+  }
   return geo.xMin + (px - geo.plotX) / geo.plotW * (geo.xMax - geo.xMin);
 }
 
@@ -764,7 +811,43 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
 
 // ── Çizim: zaman ekseni (alta sabit) ─────────────────────────────────────────
 
+// Log eksende bölme değerleri: dekat başına 1-2-5. Dar yakınlaştırmada bu
+// üçlü 3 etiketten az bırakırsa ara çarpanlar açılır; o da yetmezse lineer
+// üreteç devreye girer (değerler yine log konuma çizilir, yalnız seçimleri
+// eşit aralıklıdır). Amaç her yakınlaştırma seviyesinde okunur bir ızgara.
+function veTrLogTicks(geo) {
+  var MULT = [[1, 2, 5], [1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9]];
+  for(var m = 0; m < MULT.length; m++) {
+    var ticks = [];
+    for(var d = Math.floor(Math.log10(geo.xMin)) - 1; d <= Math.ceil(Math.log10(geo.xMax)); d++) {
+      for(var k = 0; k < MULT[m].length; k++) {
+        var t = MULT[m][k] * Math.pow(10, d);
+        if(t >= geo.xMin * 0.9999 && t <= geo.xMax * 1.0001) ticks.push(t);
+      }
+    }
+    if(ticks.length >= 3) {
+      ticks.sort(function(a, b) { return a - b; });
+      return { ticks: ticks, step: null, dec: 0, log: true };
+    }
+  }
+  return null;
+}
+
+// Log bölmesinin etiketi: ondalık sayısı DEĞERİN kendi büyüklüğünden gelir.
+// Tek bir `dec` kullanılırsa aynı eksende "0.10" ile "100.00" yan yana yazılır.
+function veTrFmtLogTick(v) {
+  var a = Math.abs(v);
+  var dec = a >= 10 ? 0 : (a >= 1 ? 1 : (a >= 0.1 ? 2 : 3));
+  var s = v.toFixed(dec);
+  if(dec > 0) s = s.replace(/\.?0+$/, '');
+  return s;
+}
+
 function veTrTimeTicks(geo) {
+  if(geo.xLog) {
+    var lg = veTrLogTicks(geo);
+    if(lg) return lg;
+  }
   var span = geo.xMax - geo.xMin;
   var count = Math.max(3, Math.min(14, Math.floor(geo.plotW / 78)));
   var step = (typeof veNiceStep === 'function')
@@ -823,8 +906,8 @@ function veTrDrawAxis(geo, tick, axisName) {
     var gx = veTrXPos(geo, t);
     if(gx < geo.plotX - 1 || gx > geo.plotX + geo.plotW + 1) return;
     ctx.beginPath(); ctx.moveTo(gx, 1); ctx.lineTo(gx, 5); ctx.stroke();
-    var lbl = (typeof veFormatAxisVal === 'function')
-      ? veFormatAxisVal(t, tick.dec) : String(t);
+    var lbl = tick.log ? veTrFmtLogTick(t)
+      : ((typeof veFormatAxisVal === 'function') ? veFormatAxisVal(t, tick.dec) : String(t));
     // Çizgi kalır (ızgara hizası bozulmasın), yalnız ÇAKIŞAN etiket düşer
     if(gx + ctx.measureText(lbl).width / 2 > nameLeft) return;
     ctx.fillText(lbl, gx, 7);
@@ -999,7 +1082,7 @@ function veTrRender() {
   veTrResetCache();
   var lanes = veTrBuildLanes(slot);
   var timeArr = veTrResolveX(slot);
-  var view = veTrXView(timeArr);
+  var view = veTrXView(timeArr, veTrXLogOn(slot, timeArr));
 
   var w = Math.max(120, scrollEl.clientWidth);
   var availH = Math.max(120, scrollEl.clientHeight);
@@ -1025,6 +1108,8 @@ function veTrRender() {
   lanes.forEach(function(lane, i) {
     veTrDrawLane(ctx, geo, lane, geo.rects[i], i, timeArr, tick.ticks);
   });
+  // İşaretler eğrilerin ÜSTÜNE: altta kalsalar yoğun eğri onları gizlerdi.
+  veTrDrawMarks(ctx, geo, lanes);
 
   var axisName = (slot.xAxis && slot.xAxis.name) ? slot.xAxis.name : 'Zaman [s]';
   geo.tick = tick;
@@ -1047,14 +1132,21 @@ function veTrRenderStatus(geo, tick) {
   var slot = veTrBoard();
   var u = (slot.xAxis && slot.xAxis.unit) ? slot.xAxis.unit : 's';
   var dec = tick ? tick.dec : 2;
+  // Log eksende TEK bir ondalık sayısı yoktur: 0,1 ile 100 aynı kuralla
+  // yazılamaz (dec=0 ile başlangıç "0 Hz" görünüyordu — okuyan 0'dan
+  // başladığını sanır). Her değer kendi büyüklüğüne göre biçimlenir.
   var fmt = function(v) {
+    if(geo.xLog) return veTrFmtLogTick(v);
     return (typeof veFormatAxisVal === 'function') ? veFormatAxisVal(v, dec) : String(v);
   };
 
   var h = '<div class="ve-trace-st-group">';
   h += '<span class="ve-trace-st-k">Başlangıç</span><span class="ve-trace-st-v">' + fmt(geo.xMin) + ' ' + u + '</span>';
   h += '<span class="ve-trace-st-k">Bitiş</span><span class="ve-trace-st-v">' + fmt(geo.xMax) + ' ' + u + '</span>';
-  if(tick) h += '<span class="ve-trace-st-k">Bölme</span><span class="ve-trace-st-v">' + fmt(tick.step) + ' ' + u + '</span>';
+  // Log eksende "bölme" diye sabit bir aralık yoktur — her dekat aynı genişliği
+  // kaplar. Boş bir değer basmak yerine ölçeğin kendisi söylenir.
+  if(geo.xLog) h += '<span class="ve-trace-st-k">Ölçek</span><span class="ve-trace-st-v">logaritmik</span>';
+  else if(tick) h += '<span class="ve-trace-st-k">Bölme</span><span class="ve-trace-st-v">' + fmt(tick.step) + ' ' + u + '</span>';
   h += '</div>';
 
   h += '<div class="ve-trace-st-group right">';
@@ -1074,6 +1166,118 @@ function veTrRenderStatus(geo, tick) {
   el.innerHTML = h;
 }
 
+// ── Diyagram üzerindeki işaretler ────────────────────────────────────────────
+//
+// Bir tepe niye orada? Hangi frekanstan sonra takoz işini yapıyor? Motorun
+// asıl çalıştığı frekans nerede? Bunlar eğriye bakarak GÖRÜLEMEZ; sayı olarak
+// biliniyor olmaları da yetmez — kullanıcının bakışıyla sayının buluşacağı yer
+// grafiğin kendisidir. Bu yüzden çözümden çıkan kritik x/y değerleri eğrinin
+// üstüne çizilir: rijit gövde modları, izolasyonun başladığı frekans, rölanti
+// ateşleme frekansı, çekmenin/durdurucunun devreye girdiği ivme, ±10/±15 mm
+// sınırları.
+//
+// İşaretler ANA katmana çizilir (imleç katmanına değil): sabit bilgidir, her
+// fare hareketinde yeniden üretilmesi gerekmez.
+var VE_TR_MARK_STYLE = {
+  mode:  { v: '--accent-primary', a: 0.55, dash: [4, 3] },
+  ref:   { v: null,               a: 0.45, dash: [2, 3] },
+  event: { v: '--accent-primary', a: 0.85, dash: [] },
+  warn:  { v: '--accent-danger',  a: 0.85, dash: [5, 3] },
+  limit: { v: null,               a: 0.5,  dash: [6, 4] },
+  stop:  { v: '--accent-warning', a: 0.7,  dash: [6, 4] }
+};
+
+function veTrMarkColor(kind, alpha) {
+  var st = VE_TR_MARK_STYLE[kind] || VE_TR_MARK_STYLE.ref;
+  var a = (alpha == null) ? st.a : alpha;
+  if(!st.v) return 'rgba(130,130,145,' + a + ')';
+  return (typeof veThemeRgba === 'function')
+    ? veThemeRgba(st.v, a, 'rgba(59,130,246,' + a + ')')
+    : 'rgba(59,130,246,' + a + ')';
+}
+
+// Panonun gösterdiği veri kümesinin işaretleri; yoksa boş.
+function veTrMarks() {
+  if(typeof veMntSignals === 'undefined') return [];
+  var sets = (typeof veMntSets === 'function') ? veMntSets() : [];
+  if(!sets.length) return [];
+  var ds = veMntSignals.setOfSlot(sets, veTrBoard());
+  return (ds && ds.brief && ds.brief.marks) ? ds.brief.marks : [];
+}
+
+function veTrDrawMarks(ctx, geo, lanes) {
+  var marks = veTrMarks();
+  if(!marks.length || !geo.rects.length) return;
+
+  var top = geo.rects[0].y;
+  var last = geo.rects[geo.rects.length - 1];
+  var bot = last.y + last.h;
+
+  ctx.save();
+  ctx.font = '9px ' + VE_TR.FONT;
+  ctx.textBaseline = 'middle';
+
+  // ── Dikey (x) işaretler: tüm şeritleri boydan boya keser ──
+  // Etiketler dik yazılır. Yatay yazılsalardı 6 rijit gövde modu birbirinin
+  // üstüne binerdi; dik etiket dar eksende bile okunur ve eğriyi kapatmaz.
+  var placed = [];
+  marks.forEach(function(m) {
+    if(m.axis !== 'x') return;
+    var gx = veTrXPos(geo, m.value);
+    if(gx < geo.plotX - 0.5 || gx > geo.plotX + geo.plotW + 0.5) return;
+    var st = VE_TR_MARK_STYLE[m.kind] || VE_TR_MARK_STYLE.ref;
+
+    ctx.setLineDash(st.dash);
+    ctx.strokeStyle = veTrMarkColor(m.kind);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(Math.round(gx) + 0.5, top);
+    ctx.lineTo(Math.round(gx) + 0.5, bot);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    if(!m.label) return;
+    // Çakışan etiket DÜŞER, çizgi kalır: bilgi kaybı yok, karmaşa yok.
+    var clash = placed.some(function(px) { return Math.abs(px - gx) < 11; });
+    if(clash) return;
+    placed.push(gx);
+    ctx.save();
+    ctx.translate(gx - 2, top + 3);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = veTrMarkColor(m.kind, 0.95);
+    ctx.fillText(m.label, 0, 0);
+    ctx.restore();
+  });
+
+  // ── Yatay (y) işaretler: yalnız BİRİMİ TUTAN şeride ──
+  // "T = 1" çizgisini newton eksenli bir şeride çizmek anlamsız olurdu.
+  marks.forEach(function(m) {
+    if(m.axis !== 'y') return;
+    lanes.forEach(function(lane, i) {
+      if(m.unit != null && (lane.unit || '') !== m.unit) return;
+      var rect = geo.rects[i];
+      if(!rect) return;
+      if(m.value < lane.yMin || m.value > lane.yMax) return;
+      var gy = veTrYPos(lane, rect, m.value);
+      var st = VE_TR_MARK_STYLE[m.kind] || VE_TR_MARK_STYLE.ref;
+      ctx.setLineDash(st.dash);
+      ctx.strokeStyle = veTrMarkColor(m.kind);
+      ctx.beginPath();
+      ctx.moveTo(geo.plotX, Math.round(gy) + 0.5);
+      ctx.lineTo(geo.plotX + geo.plotW, Math.round(gy) + 0.5);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if(!m.label) return;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = veTrMarkColor(m.kind, 0.95);
+      ctx.fillText(m.label, geo.plotX + 5, gy - 6);
+    });
+  });
+
+  ctx.restore();
+}
+
 // ── Diyagram notu ────────────────────────────────────────────────────────────
 //
 // Grafiğin altındaki açıklama şeridi. Amaç: bu ekrana bakan HERKES — takoz
@@ -1086,10 +1290,14 @@ function veTrRenderStatus(geo, tick) {
 // Proje dosyasına GİRMEZ: bu bir okuma tercihi, model verisi değil.
 var VE_TR_NOTE_KEY = 'mf-trace-note-open';
 
+// VARSAYILAN AÇIK. Yorum artık genel geçer bir tanım değil, modelin kendi
+// sayılarıyla yazılmış bir okuma; kullanıcının onu bulmak için bir şeye
+// tıklaması gerekmemeli. Kapatma yine mümkün ve tercih hatırlanır.
 function veTrNoteOpen() {
   try {
-    return localStorage.getItem(VE_TR_NOTE_KEY) === '1';
-  } catch(e) { return false; }
+    var v = localStorage.getItem(VE_TR_NOTE_KEY);
+    return v === null ? true : v === '1';
+  } catch(e) { return true; }
 }
 
 function veTrSetNoteOpen(v) {
@@ -1104,7 +1312,8 @@ function veTrNoteInfo() {
   var sets = (typeof veMntSets === 'function') ? veMntSets() : [];
   if(!sets.length) return null;
   var ds = veMntSignals.setOfSlot(sets, veTrBoard());
-  return (ds && ds.info) ? { name: ds.name, info: ds.info } : null;
+  return (ds && ds.brief && ds.brief.paras && ds.brief.paras.length)
+    ? { name: ds.name, brief: ds.brief } : null;
 }
 
 // Kaçış: tarayıcıda signal-tree'nin veSigEsc'i, Jest'te (tek dosya require
@@ -1118,21 +1327,20 @@ function _veTrEsc(s) {
 }
 
 function veTrNoteHTML(entry) {
-  if(!entry || !entry.info) return '';
+  if(!entry || !entry.brief || !entry.brief.paras || !entry.brief.paras.length) return '';
   var open = veTrNoteOpen();
-  var i = entry.info;
+  var b = entry.brief;
   var h = '<button type="button" class="ve-trace-note-head" data-act="note-toggle"' +
           ' aria-expanded="' + (open ? 'true' : 'false') + '"' +
-          ' title="' + _veTrEsc(entry.name) + ' — açıklamayı ' + (open ? 'gizle' : 'göster') + '">';
+          ' title="Yorumu ' + (open ? 'gizle' : 'göster') + '">';
   h += '<span class="mf-ico mf-ico-lightbulb"></span>';
-  h += '<span class="ve-trace-note-line">' + _veTrEsc(i.headline) + '</span>';
+  h += '<span class="ve-trace-note-title">' + _veTrEsc(entry.name) + '</span>';
+  h += '<span class="ve-trace-note-line">' + _veTrEsc(b.lead || '') + '</span>';
   h += '<span class="ve-trace-note-caret" aria-hidden="true">▾</span>';
   h += '</button>';
   h += '<div class="ve-trace-note-body">';
-  [['Ne gösteriyor', i.what], ['Nasıl okunur', i.read], ['İyi sonuç', i.good]].forEach(function(row) {
-    h += '<div class="ve-trace-note-item">' +
-         '<span class="ve-trace-note-k">' + row[0] + '</span>' +
-         '<span class="ve-trace-note-v">' + _veTrEsc(row[1]) + '</span></div>';
+  b.paras.forEach(function(p) {
+    h += '<p class="ve-trace-note-p">' + _veTrEsc(p) + '</p>';
   });
   h += '</div>';
   return h;
@@ -1234,6 +1442,22 @@ function veTrRenderToolbar() {
        '<span class="ve-trace-caret">▾</span></button>';
   h += '</div>';
 
+  // Log/lineer anahtarı — yalnız veri buna elverişliyse (tüm x > 0) görünür.
+  // Frekans yanıtı gibi çok dekatlı eğrilerde lineer eksen okunmaz olur;
+  // düğme kapalıyken de görünüp kilitli durmaz, hiç çizilmez: kullanabildiği
+  // yerde teklif edilir, kullanamadığı yerde ortada durmaz.
+  var _xArr = veTrResolveX(slot);
+  if(veTrXLogOk(_xArr)) {
+    var logOn = veTrXLogOn(slot, _xArr);
+    h += '<button type="button" class="ve-trace-btn" data-act="xlog"' +
+         ' aria-pressed="' + (logOn ? 'true' : 'false') + '"' +
+         (logOn ? ' style="color:var(--accent-primary);border-color:var(--accent-primary);"' : '') +
+         ' title="' + (logOn
+            ? 'Logaritmik X ekseni açık — lineer eksene geç'
+            : 'X eksenini logaritmik yap (geniş frekans aralığı okunur hâle gelir)') +
+         '">log x</button>';
+  }
+
   h += '<span class="ve-trace-sep"></span>';
 
   h += '<button type="button" class="ve-trace-btn" data-act="fit"' +
@@ -1284,36 +1508,60 @@ function veTrFit() {
 }
 
 // Zaman ekseninde yakınlaştırma. focus null ise pencerenin ortası korunur.
+// Yakınlaştırma/kaydırma ÇİZİM UZAYINDA yapılır: log eksende pencere
+// log10 tabanında daraltılır. Aksi halde log eksende tekerleği çevirmek
+// sol uçta hiç, sağ uçta aşırı yakınlaştırırdı — fare nerede duruyorsa orada
+// aynı oranda yakınlaşmalı.
+function _veTrFwd(geo, v) { return geo.xLog ? Math.log10(v) : v; }
+function _veTrInv(geo, v) { return geo.xLog ? Math.pow(10, v) : v; }
+
 function veTrZoom(factor, focus) {
   var geo = veTrState.geo;
   if(!geo) return;
-  var c = (focus == null) ? (geo.xMin + geo.xMax) / 2 : focus;
-  var span = (geo.xMax - geo.xMin) / factor;
-  var full = geo.dataMax - geo.dataMin;
+  var lo = _veTrFwd(geo, geo.xMin), hi = _veTrFwd(geo, geo.xMax);
+  var dLo = _veTrFwd(geo, geo.dataMin), dHi = _veTrFwd(geo, geo.dataMax);
+  var c = (focus == null) ? (lo + hi) / 2 : _veTrFwd(geo, focus);
+  var span = (hi - lo) / factor;
+  var full = dHi - dLo;
   // Tam veriden geniş bir pencereye izin verilmez: sağda solda boşluk kalır,
   // "sığdır" ile ayırt edilemez bir duruma düşer.
   if(span >= full) { veTrFit(); return; }
   if(span < full / 5000) span = full / 5000;
-  var f = (c - geo.xMin) / (geo.xMax - geo.xMin);
+  var f = (hi > lo) ? (c - lo) / (hi - lo) : 0.5;
   var nMin = c - span * f;
   var nMax = nMin + span;
-  if(nMin < geo.dataMin) { nMin = geo.dataMin; nMax = nMin + span; }
-  if(nMax > geo.dataMax) { nMax = geo.dataMax; nMin = nMax - span; }
-  veTrState.xMin = nMin;
-  veTrState.xMax = nMax;
+  if(nMin < dLo) { nMin = dLo; nMax = nMin + span; }
+  if(nMax > dHi) { nMax = dHi; nMin = nMax - span; }
+  veTrState.xMin = _veTrInv(geo, nMin);
+  veTrState.xMax = _veTrInv(geo, nMax);
   veTrRender();
+}
+
+// Log ↔ lineer. Eksen ALANI değişmiyor (aynı büyüklük, aynı birim), yalnız
+// çizim ölçeği değişiyor; yine de görünüm penceresi sıfırlanır: lineer kipte
+// seçilmiş bir aralık log kipte ekranın tamamını kaplayabilir.
+function veTrToggleXLog() {
+  var slot = veTrBoard();
+  var arr = veTrResolveX(slot);
+  if(!veTrXLogOk(arr)) return;
+  slot.xLog = !veTrXLogOn(slot, arr);
+  veTrResetView();
+  veTrRender();
+  if(typeof veSyncBoardState === 'function') veSyncBoardState();
 }
 
 function veTrPan(dxPixels) {
   var geo = veTrState.geo;
   if(!geo) return;
-  var span = geo.xMax - geo.xMin;
+  var lo = _veTrFwd(geo, geo.xMin), hi = _veTrFwd(geo, geo.xMax);
+  var dLo = _veTrFwd(geo, geo.dataMin), dHi = _veTrFwd(geo, geo.dataMax);
+  var span = hi - lo;
   var d = dxPixels / geo.plotW * span;
-  var nMin = geo.xMin - d, nMax = geo.xMax - d;
-  if(nMin < geo.dataMin) { nMin = geo.dataMin; nMax = nMin + span; }
-  if(nMax > geo.dataMax) { nMax = geo.dataMax; nMin = nMax - span; }
-  veTrState.xMin = nMin;
-  veTrState.xMax = nMax;
+  var nMin = lo - d, nMax = hi - d;
+  if(nMin < dLo) { nMin = dLo; nMax = nMin + span; }
+  if(nMax > dHi) { nMax = dHi; nMin = nMax - span; }
+  veTrState.xMin = _veTrInv(geo, nMin);
+  veTrState.xMax = _veTrInv(geo, nMax);
   veTrRender();
 }
 
@@ -1902,6 +2150,7 @@ function veTrBindToolbar() {
     if(act === 'xaxis') {
       if(typeof veShowXAxisPicker === 'function') veShowXAxisPicker(VE_BOARD, e);
     }
+    else if(act === 'xlog') veTrToggleXLog();
     else if(act === 'fit') veTrFit();
     else if(act === 'zoom-in') veTrZoom(1.4, null);
     else if(act === 'zoom-out') veTrZoom(1 / 1.4, null);
@@ -2047,6 +2296,14 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrFitTitle: veTrFitTitle,
     veTrSnapIndex: veTrSnapIndex,
     veTrNoteHTML: veTrNoteHTML,
+    veTrXLogOk: veTrXLogOk,
+    veTrXLogOn: veTrXLogOn,
+    veTrXView: veTrXView,
+    veTrXPos: veTrXPos,
+    veTrXVal: veTrXVal,
+    veTrLogTicks: veTrLogTicks,
+    veTrTimeTicks: veTrTimeTicks,
+    veTrFmtLogTick: veTrFmtLogTick,
     veTrFmt: veTrFmt,
     veTrInRect: veTrInRect,
     veTrLaneCloseRect: veTrLaneCloseRect,
