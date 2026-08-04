@@ -147,10 +147,11 @@ var veMntSignals = (function() {
     var M6 = C.buildM6(R.mp.m, R.mp.I_G);
     if(!M6) return null;
 
-    var f = null, chans = [];
+    var f = null, chans = [], perChans = [];
+    var keys = _mountKeys(R.mounts);
     for(var dir = 0; dir < 3; dir++) {
       var pts = C.frequencyResponse(R.mounts, R.mp.cg, M6, R.damping,
-        { fMin: FRF_FMIN, fMax: FRF_FMAX, nPts: FRF_NPTS, dir: dir });
+        { fMin: FRF_FMIN, fMax: FRF_FMAX, nPts: FRF_NPTS, dir: dir, perMount: true });
       if(!pts || !pts.f || !pts.f.length) return null;
       if(!f) f = pts.f;
       var ax = AXIS_NAMES[dir];
@@ -164,7 +165,27 @@ var veMntSignals = (function() {
                    data: pts.T.map(function(t) {
                      return isFinite(t) ? (1 - t) * 100 : NaN;
                    }) });
+      // ── Takoz başına iletilebilirlik ──
+      // Tedarikçi raporları (AMC) destek başına AYRI eğri basar: "hangi takoz
+      // şasiye en çok kuvvet geçiriyor" sorusu sistem toplamından okunamaz.
+      // Toplam ile parçalar aynı çözümden gelir (mount-core frfForces), ayrı
+      // bir hesap yolu yok — ikisi sessizce ayrışamaz.
+      //
+      // Sistem kanallarının ARDINDAN eklenir: ağaçta önce üç yönün toplamı,
+      // sonra takoz kırılımı görünsün.
+      if(pts.Tm) {
+        (function(dirLocal, Tm) {
+          R.mounts.forEach(function(mnt, mi) {
+            perChans.push({
+              id: 'Tm_' + dirLocal + '_' + keys[mi],
+              name: _mountLabel(mnt, mi) + ' · iletilebilirlik T — ' + AXIS_NAMES[dirLocal],
+              unit: '−', data: Tm[mi]
+            });
+          });
+        })(dir, pts.Tm);
+      }
     }
+    chans = chans.concat(perChans);
 
     return {
       key: 'frf',

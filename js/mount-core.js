@@ -1094,7 +1094,19 @@ var veMountCore = (function() {
   // Tek frekansta iletilebilirlik. w = 2πf [rad/s], dir = tahrik/çıktı ekseni
   // (0=x, 1=y, 2=z). cList = takoz başına [cx,cy,cz] (N·s/m) — sönümsüz için 0.
   // Birim tahrik kuvveti uygulanır → dönüş doğrudan T'dir. Tekil sistem → NaN.
-  function frfPoint(mounts, cg, M6, K6, C6, cList, w, dir){
+  // Tek frekansta iletilen kuvvet — TOPLAM ve TAKOZ BAŞINA.
+  //
+  // DİKKAT — |Σ Fᵢ| ≠ Σ |Fᵢ|. Takoz kuvvetleri KARMAŞIK sayılardır (genlik +
+  // faz); toplam vektörel alınır. Modun şekline göre iki takoz zıt fazda
+  // çalışabilir ve birbirini götürebilir: o zaman tek tek genlikler büyük,
+  // sistem toplamı küçüktür. Bu bir tutarsızlık değil, fiziğin kendisidir —
+  // ama sayıları yan yana gören kullanıcıya SÖYLENMESİ gerekir (yorum katmanı
+  // js/mount-brief.js bunu yazar).
+  //
+  // Takoz başına değer aynı çözüm vektöründen çıkar: ek denklem çözülmez,
+  // maliyeti sıfırdır. Ayrı bir yol yazılsaydı toplam ile parçalar sessizce
+  // ayrışabilirdi.
+  function frfForces(mounts, cg, M6, K6, C6, cList, w, dir){
     const n = 6, N = 12;
     const S = zeros(N,N), rhs = Array(N).fill(0);
     for(let i=0;i<n;i++) for(let j=0;j<n;j++){
@@ -1105,9 +1117,10 @@ var veMountCore = (function() {
     }
     rhs[dir] = 1;                                  // birim gerçel tahrik
     const x = solveLinear(S, rhs);
-    if(!x) return NaN;
+    if(!x) return null;
     const QR = x.slice(0,6), QI = x.slice(6,12);
     let trR = 0, trI = 0;
+    const per = [];
     for(let i=0;i<mounts.length;i++){
       const mnt = mounts[i];
       const d = [mnt.pos[0]-cg[0], mnt.pos[1]-cg[1], mnt.pos[2]-cg[2]];
@@ -1116,14 +1129,23 @@ var veMountCore = (function() {
       const c = (cList && cList[i] && cList[i][dir] > 0) ? cList[i][dir] : 0;
       let dR = 0, dI = 0;
       for(let j=0;j<6;j++){ dR += A[dir][j]*QR[j]; dI += A[dir][j]*QI[j]; }
-      trR += k*dR - w*c*dI;                        // (k + iωc)(δ_R + iδ_I)
-      trI += k*dI + w*c*dR;
+      const fR = k*dR - w*c*dI;                    // (k + iωc)(δ_R + iδ_I)
+      const fI = k*dI + w*c*dR;
+      per.push(Math.sqrt(fR*fR + fI*fI));
+      trR += fR; trI += fI;
     }
-    return Math.sqrt(trR*trR + trI*trI);           // |F₀| = 1
+    return { total: Math.sqrt(trR*trR + trI*trI), per: per };   // |F₀| = 1
   }
 
-  // Frekans taraması. opts: { fMin=0.1, fMax=100, nPts=240, dir=2 (düşey) }.
+  function frfPoint(mounts, cg, M6, K6, C6, cList, w, dir){
+    const r = frfForces(mounts, cg, M6, K6, C6, cList, w, dir);
+    return r ? r.total : NaN;
+  }
+
+  // Frekans taraması. opts: { fMin=0.1, fMax=100, nPts=240, dir=2 (düşey),
+  //                           perMount=false }.
   // Dönüş: { f:[Hz], T:[sönümlü], T0:[sönümsüz] } — logaritmik eşit aralıklı.
+  // perMount istenirse Tm:[[takoz başına |Fᵢ|]] de döner (takoz sırasıyla).
   function frequencyResponse(mounts, cg, M6, damping, opts){
     opts = opts || {};
     const fMin = (opts.fMin > 0) ? opts.fMin : 0.1;
@@ -1138,15 +1160,20 @@ var veMountCore = (function() {
       return (damping && damping[i] && damping[i].c) ? damping[i].c : [0,0,0]; });
     const zeroC = mounts.map(function(){ return [0,0,0]; });
     const f = [], T = [], T0 = [];
+    const Tm = opts.perMount ? mounts.map(function(){ return []; }) : null;
     const lo = Math.log10(fMin), hi = Math.log10(fMax);
     for(let i=0;i<nPts;i++){
       const ff = Math.pow(10, lo + (hi-lo)*i/(nPts-1));
       const w = 2*Math.PI*ff;
       f.push(ff);
-      T.push(frfPoint(mounts, cg, M6, K6, C6, cList, w, dir));
+      const r = frfForces(mounts, cg, M6, K6, C6, cList, w, dir);
+      T.push(r ? r.total : NaN);
+      if(Tm) mounts.forEach(function(_, k){ Tm[k].push(r ? r.per[k] : NaN); });
       T0.push(frfPoint(mounts, cg, M6, K6, Z6, zeroC, w, dir));
     }
-    return { f:f, T:T, T0:T0, dir:dir };
+    const out = { f:f, T:T, T0:T0, dir:dir };
+    if(Tm) out.Tm = Tm;
+    return out;
   }
 
   // Taramadan tek frekansta değer (ör. f_ateş) — logaritmik ara değerleme.
@@ -1846,7 +1873,7 @@ var veMountCore = (function() {
     buildKtangentDyn, mountTangentKdyn, solveModalAtState,
     transmissibility, bounceFrequency,
     mountLoadShares, mountDamping,
-    buildCdamp, frfPoint, frequencyResponse, frfAt,
+    buildCdamp, frfPoint, frfForces, frequencyResponse, frfAt,
     principalInertia, modePlacement, softeningScan, equivalentBox,
     modalDampingRatios, modalEnergy,
     torqueChain, classifyMode, validateModel,
