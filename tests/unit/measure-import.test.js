@@ -501,3 +501,161 @@ describe('veImpIsUnitToken', () => {
     expect(M.veImpIsUnitToken('aracın ölçülen hızı')).toBe(false);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DENETİM BULGULARI — sessizce YANLIŞ çıktı üreten hatalar
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Aşağıdakilerin ortak özelliği: hiçbiri hata vermiyordu. Grafik çiziliyor,
+// sayı okunuyor, kullanıcı sonuca bakıp doğru sanıyordu. Test politikası
+// gereği tam da bu sınıf test edilir.
+
+describe('binlik ayracı ondalık virgülle karıştırılmaz', () => {
+  // "1,200" iki okumaya birden uyuyor. Avrupa dosyası sanılınca 1200 değeri
+  // grafiğe 1.2 olarak giriyordu — bin kat sapma, gözle "makul" görünürdü.
+  // Zaman sütunu tam sayı: dosyada ondalık NOKTA kanıtı yok, geriye yalnızca
+  // binlik virgülleri kalıyor ve dosya Avrupa biçimi sanılıyordu.
+  const grouped = [
+    ['Time', 'Load'],
+    ['0', '1,200'],
+    ['1', '2,400'],
+    ['2', '12,345'],
+  ];
+
+  test('binlik ayraçlı dosya Avrupa biçimi SAYILMAZ', () => {
+    expect(M.veImpDetectCommaDecimal(grouped, 1)).toBe(false);
+  });
+
+  test('gerçek Avrupa dosyası hâlâ tanınır', () => {
+    const eu = [
+      ['Time', 'EngSpeed'],
+      ['0,000', '798,625000'],
+      ['0,010', '804,375000'],
+    ];
+    expect(M.veImpDetectCommaDecimal(eu, 1)).toBe(true);
+  });
+
+  test('nokta-binlikli Avrupa dosyası tanınır', () => {
+    const eu = [['Time', 'Odo'], ['0,0', '1.234.567'], ['0,1', '1.234.890']];
+    expect(M.veImpDetectCommaDecimal(eu, 1)).toBe(true);
+  });
+
+  test('binlik virgülü nokta kipinde atılır', () => {
+    expect(M.veImpToNumber('1,200', false)).toBe(1200);
+    expect(M.veImpToNumber('1,234,567', false)).toBe(1234567);
+  });
+});
+
+describe('virgül kipinde üstel gösterim', () => {
+  // Nokta toptan siliniyordu: 1.5E-05 → 15E-05 = 0.00015. On kat sapma.
+  test('mantisin ondalık noktası korunur', () => {
+    expect(M.veImpToNumber('1.5E-05', true)).toBeCloseTo(0.000015, 12);
+    expect(M.veImpToNumber('2.5e3', true)).toBeCloseTo(2500, 9);
+  });
+
+  test('virgüllü mantis + üstel', () => {
+    expect(M.veImpToNumber('1,5E-05', true)).toBeCloseTo(0.000015, 12);
+  });
+
+  test('gerçek binlik grupları hâlâ atılır', () => {
+    expect(M.veImpToNumber('1.234,5', true)).toBeCloseTo(1234.5, 9);
+    expect(M.veImpToNumber('1.234.567,89', true)).toBeCloseTo(1234567.89, 6);
+  });
+});
+
+describe('karma sütun: sayı + sembolik değer', () => {
+  // Vites sütununda 'N'/'R' geçtiğinde bu hücreler null'a düşüyor ve
+  // örnekle-ve-tut onları bir ÖNCEKİ SAYIYA yapıştırıyordu: vites boştayken
+  // grafikte 3 görünüyordu.
+  function gearRows() {
+    return [
+      ['Time', 'Gear'],
+      [0.0, 1],
+      [0.1, 2],
+      [0.2, 'N'],
+      [0.3, 'N'],
+      [0.4, 3],
+      [0.5, 'R'],
+    ];
+  }
+
+  test('az ayrık değerli karma sütun metin şeridine çevrilir', () => {
+    const layout = M.veImpDetectHeaderRow(gearRows(), false);
+    const cols = M.veImpBuildColumns(gearRows(), layout, false);
+    const gear = cols[1];
+    expect(gear.mixed).toBe(true);
+    expect(gear.kind).toBe('text');
+  });
+
+  test("'N' bir önceki vitese yapışmaz", () => {
+    const rows = gearRows();
+    const layout = M.veImpDetectHeaderRow(rows, false);
+    const cols = M.veImpBuildColumns(rows, layout, false);
+    const ds = M.veImpBuildDataset({
+      rows, layout, columns: cols, commaDecimal: false, xIndex: 0, yIndexes: [1],
+    });
+    const vals = ds.columns[0].values;
+    expect(vals).toEqual(['1', '2', 'N', 'N', '3', 'R']);
+  });
+
+  test('çok ayrık değerli sütunda okunamayan hücre boşluk olur, uydurulmaz', () => {
+    // 20 ayrık sayı + tek bir 'error' → durum şeridi anlamsız olurdu, sayı
+    // kalır; ama 'error' hücresi bir ÖNCEKİ ölçüme dönüşmez.
+    const rows = [['Time', 'Val']];
+    for (let i = 0; i < 20; i++) rows.push([i * 0.1, 100 + i]);
+    rows.push([2.0, 'error']);
+    const layout = M.veImpDetectHeaderRow(rows, false);
+    const cols = M.veImpBuildColumns(rows, layout, false);
+    expect(cols[1].kind).toBe('num');
+    const ds = M.veImpBuildDataset({
+      rows, layout, columns: cols, commaDecimal: false, xIndex: 0, yIndexes: [1],
+    });
+    const vals = ds.columns[0].values;
+    expect(Number.isNaN(vals[vals.length - 1])).toBe(true);   // 119 DEĞİL
+    expect(vals[vals.length - 2]).toBe(119);
+  });
+});
+
+describe('X ekseninde NaN bırakılmaz', () => {
+  // İmleç ikili arama yapıyor; NaN'lı bir X dizisi aramayı sessizce
+  // yanlış örneğe kilitlerdi.
+  test('okunamayan zaman hücresi bir öncekini sürdürür', () => {
+    const rows = [
+      ['Time', 'Val'],
+      [0.0, 10], ['???', 11], [0.2, 12],
+    ];
+    const layout = M.veImpDetectHeaderRow(rows, false);
+    const cols = M.veImpBuildColumns(rows, layout, false);
+    const ds = M.veImpBuildDataset({
+      rows, layout, columns: cols, commaDecimal: false, xIndex: 0, yIndexes: [1],
+    });
+    ds.x.values.forEach((v) => expect(Number.isFinite(v)).toBe(true));
+    expect(ds.x.values).toEqual([0, 0, 0.2]);
+  });
+});
+
+describe('veImpDropStaleAxis', () => {
+  // Pano boşaldığında ölçümün zaman ekseni yapışık kalıyordu: sonradan
+  // eklenen bir SİMÜLASYON sinyali ölçümün zaman dizisine karşı çiziliyordu.
+  test('son içe aktarma sinyali kalkınca eksen serbest kalır', () => {
+    const slot = { sensors: [], _dataSource: 'import:imp1',
+                   xAxis: { id: 'time', name: 'Time [s]', _dataSource: 'import:imp1' } };
+    expect(M.veImpDropStaleAxis(slot)).toBe(true);
+    expect(slot._dataSource).toBeUndefined();
+    expect(slot.xAxis.id).toBe('time');
+    expect(slot.xAxis._dataSource).toBeUndefined();
+  });
+
+  test('hâlâ içe aktarma sinyali varsa eksen korunur', () => {
+    const slot = { sensors: [{ id: '#imp1', _dataSource: 'import:imp1' }],
+                   _dataSource: 'import:imp1', xAxis: { id: 'time' } };
+    expect(M.veImpDropStaleAxis(slot)).toBe(false);
+    expect(slot._dataSource).toBe('import:imp1');
+  });
+
+  test('simülasyon panosuna dokunulmaz', () => {
+    const slot = { sensors: [], _dataSource: 'segmentDrive', xAxis: { id: 'time' } };
+    expect(M.veImpDropStaleAxis(slot)).toBe(false);
+    expect(slot._dataSource).toBe('segmentDrive');
+  });
+});

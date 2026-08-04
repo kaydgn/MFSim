@@ -544,8 +544,13 @@ function veSigApplyFilter(groups, slot, q, filter) {
          !veSigMatches(it.signalId, q)) return false;
       return true;
     });
-    if(items.length) out.push({ gid: g.gid, key: g.key, name: g.name, icon: g.icon,
-                                dragId: g.dragId, items: items });
+    if(!items.length) return;
+    // Grubun tüm alanları korunur (ör. içe aktarma gruplarındaki `_import`);
+    // yalnızca `items` filtrelenmiş listeyle değiştirilir.
+    var copy = {};
+    Object.keys(g).forEach(function(k) { copy[k] = g[k]; });
+    copy.items = items;
+    out.push(copy);
   });
   return out;
 }

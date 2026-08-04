@@ -592,11 +592,21 @@ function veXlsSniffDelimiter(text) {
       }
       return n;
     });
-    var first = counts[0];
-    if(first === 0) return;
-    var consistent = counts.filter(function(c) { return c === first; }).length;
+    // Ayracı HİÇ içermeyen satırlar (tek hücrelik başlık/açıklama satırı gibi)
+    // adayı elemez, yalnızca oylamaya katılmaz. Eskiden ilk satır ayracı
+    // içermiyorsa aday tamamen düşüyordu: üstünde tek hücrelik bir başlık
+    // taşıyan noktalı virgüllü CANoe dosyasında ayraç ',' seçiliyor ve
+    // ondalık virgüller sütun sınırı sanılıp sayılar ikiye bölünüyordu.
+    var nz = counts.filter(function(c) { return c > 0; });
+    if(nz.length === 0) return;
+    // En sık görülen alan sayısı (mod) ve kaç satırın ona uyduğu.
+    var mode = 0, modeHits = 0;
+    nz.forEach(function(cand) {
+      var hits = nz.filter(function(c) { return c === cand; }).length;
+      if(hits > modeHits || (hits === modeHits && cand > mode)) { modeHits = hits; mode = cand; }
+    });
     // Tutarlılık ana ölçüt, sütun sayısı eşitlik bozucu.
-    var score = consistent * 1000 + first;
+    var score = modeHits * 1000 + mode;
     if(score > bestScore) { bestScore = score; best = d; }
   });
   return best;

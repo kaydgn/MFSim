@@ -1244,6 +1244,8 @@ function veTrClear() {
   slot.sensors = [];
   slot.lanes = [];
   slot.yAxisLock = {};
+  // İçe aktarma panosu temizlenince ölçümün zaman ekseni de kalksın
+  if(typeof veImpDropStaleAxis === 'function') veImpDropStaleAxis(slot);
   veTrState.pinX = null;
   veTrState.cursorX = null;
   veTrFit();

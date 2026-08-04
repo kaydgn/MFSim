@@ -372,3 +372,36 @@ describe('CSV', () => {
     expect(r.rows[1]).toEqual(['1', '2', '']);
   });
 });
+
+describe('veXlsSniffDelimiter — ayracı içermeyen satırlar adayı ELEMEZ', () => {
+  // Gerçek hata: CANoe dosyasının üstünde tek hücrelik bir başlık satırı
+  // varsa ';' adayı ilk satırda hiç geçmediği için tamamen düşüyor, ayraç ','
+  // seçiliyor ve ondalık virgüller sütun sınırı sanılıyordu:
+  // "0,0046;798,625;0,0" → ["0","0046;798","625;0","0"]. Hata vermiyordu.
+  const withTitle =
+    'CANoe Messung Testfahrt\n' +
+    'Time;EngSpeed;VehSpeed\n' +
+    '0,0046;798,625;0,0\n' +
+    '0,0146;799,125;0,1\n' +
+    '0,0246;800,250;0,2\n';
+
+  test('üstteki tek hücrelik başlık ayraç seçimini bozmaz', () => {
+    expect(X.veXlsSniffDelimiter(withTitle)).toBe(';');
+  });
+
+  test('ondalık virgüller sütuna bölünmez', () => {
+    const out = X.veXlsCsvParse(withTitle);
+    expect(out.delimiter).toBe(';');
+    expect(out.rows[2]).toEqual(['0,0046', '798,625', '0,0']);
+  });
+
+  test('gerçekten virgüllü dosya hâlâ virgülle okunur', () => {
+    const csv = 'Time,EngSpeed,VehSpeed\n0.0,798.6,0.0\n0.1,799.1,0.4\n';
+    expect(X.veXlsSniffDelimiter(csv)).toBe(',');
+  });
+
+  test('sekmeli dosya tanınır', () => {
+    const tsv = 'Rapor\nTime\tRPM\n0.0\t800\n0.1\t812\n';
+    expect(X.veXlsSniffDelimiter(tsv)).toBe('\t');
+  });
+});

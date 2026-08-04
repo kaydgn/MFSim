@@ -26,6 +26,18 @@
 var veImpDatasets = [];
 var veImpSeq = 0;
 
+// Oturuma özgü kimlik damgası. Veri kümeleri projeye yazılmaz ama panodaki
+// slot REFERANSI ('#imp1') proje durumuyla birlikte kaydediliyor. Sayaç her
+// oturumda 1'den başlasaydı, yeni bir oturumda yapılan ilk içe aktarma da
+// 'imp1' kimliğini alır ve eski projedeki bayat referans sessizce BAŞKA bir
+// ölçüm dosyasına bağlanırdı: grafik açılır, veri yanlış olur. Damga ile
+// bayat referans hiçbir şeye çözülmez ve veImpPruneSlots onu temizler.
+var VE_IMP_SESSION = (function() {
+  var t = Date.now().toString(36);
+  var r = Math.floor(Math.random() * 46656).toString(36);
+  return t.slice(-5) + ('00' + r).slice(-3);
+})();
+
 // ── Metin yardımcıları ────────────────────────────────────────────────────
 
 // Türkçe duyarlı katlama. 'İ'.toLocaleLowerCase('tr') iki karakter ürettiği
@@ -99,7 +111,19 @@ function veImpToNumber(v, commaDecimal) {
   if(s === '') return null;
 
   if(commaDecimal) {
-    s = s.replace(/\./g, '').replace(',', '.');
+    // Üstel kısım ayrılır: "1.5E-05" içindeki nokta ondalıktır, binlik ayracı
+    // değil. Toptan silinince sayı 0.00015 oluyordu — on kat sapma.
+    // Ön elemeler: bu yol on binlerce hücrede koşuyor, düzenli ifadeler
+    // yalnızca ilgili karakter varsa çalıştırılır.
+    var em = (s.indexOf('e') >= 0 || s.indexOf('E') >= 0) ? /^([^eE]*)([eE][+-]?\d+)$/.exec(s) : null;
+    var mant = em ? em[1] : s, exp = em ? em[2] : '';
+    // Nokta yalnızca GEÇERLİ binlik gruplarında ayraçtır: 1.234.567,89.
+    // "1.5" gibi üç basamaklı olmayan bir grup binlik olamaz — orada nokta
+    // ondalıktır ve korunur.
+    if(mant.indexOf('.') >= 0 && /^[+-]?\d{1,3}(\.\d{3})+(,\d+)?$/.test(mant)) {
+      mant = mant.replace(/\./g, '');
+    }
+    s = mant.replace(',', '.') + exp;
   } else {
     // "1,234.56" → binlik virgülü at. "12,5" gibi tek virgül DOKUNULMAZ:
     // ondalık bayrağı kapalıysa bu sayı değildir, metindir.
@@ -112,8 +136,13 @@ function veImpToNumber(v, commaDecimal) {
 }
 
 // Dosyada ondalık ayırıcı virgül mü? Örnek hücrelere bakar.
+//
+// "1,200" iki okumaya birden uyar: Avrupa'da 1.2, İngilizcede 1200. Bu kalıp
+// (1-3 basamak + tam üç basamaklı gruplar) KANIT SAYILMAZ, ayrı tutulur —
+// aksi halde binlik ayraçlı bir dosya Avrupa biçimi sanılıyor ve 1200 değeri
+// grafiğe 1.2 olarak giriyordu. Kararsızlıkta binlik okuması seçilir.
 function veImpDetectCommaDecimal(rows, startRow) {
-  var comma = 0, dot = 0;
+  var comma = 0, dot = 0, grouped = 0;
   var end = Math.min(rows.length, (startRow || 0) + 200);
   for(var r = startRow || 0; r < end; r++) {
     var row = rows[r] || [];
@@ -121,10 +150,12 @@ function veImpDetectCommaDecimal(rows, startRow) {
       var v = row[c];
       if(typeof v !== 'string') continue;
       var s = v.trim();
-      if(/^[+-]?\d+,\d+$/.test(s)) comma++;
+      if(/^[+-]?\d{1,3}(,\d{3})+$/.test(s)) grouped++;
+      else if(/^[+-]?\d+,\d+$/.test(s)) comma++;
       else if(/^[+-]?\d+\.\d+$/.test(s)) dot++;
+      else if(/^[+-]?\d{1,3}(\.\d{3})+$/.test(s)) comma++;   // 1.234.567 → Avrupa binliği
     }
-    if(comma + dot > 400) break;
+    if(comma + dot + grouped > 400) break;
   }
   return comma > dot;
 }
@@ -262,6 +293,10 @@ function veImpDetectHeaderRow(rows, commaDecimal) {
 // Ham satırlardan sütun tanımlarını üretir. Değerler HENÜZ okunmaz —
 // önizleme ekranı yalnızca ad/birim/tip göstereceği için tüm dosyayı sayıya
 // çevirmek gereksiz beklemedir.
+// Etiketli durum şeridine çevrilebilecek en fazla ayrık değer sayısı.
+// js/trace-view.js veTrEncodeText en çok 16 etiket çizebiliyor.
+var VE_IMP_STATE_MAX = 16;
+
 function veImpBuildColumns(rows, layout, commaDecimal) {
   var hdr = (layout.headerRow >= 0 ? rows[layout.headerRow] : null) || [];
   var units = (layout.unitRow >= 0 ? rows[layout.unitRow] : null) || [];
@@ -289,12 +324,29 @@ function veImpBuildColumns(rows, layout, commaDecimal) {
     // saniyesinde konuşmaya başlıyorsa ilk yüzlerce satırı boştur ve sütun
     // 'empty' sayılıp listeden tamamen düşerdi.
     var num = 0, text = 0, empty = 0, sampled = 0;
+    var seen = {}, distinct = 0;
     for(var r2 = layout.dataRow; r2 < rows.length; r2 += step) {
       var v = (rows[r2] || [])[c];
       sampled++;
       if(v === null || v === undefined || v === '') { empty++; continue; }
       if(veImpToNumber(v, commaDecimal) !== null) num++; else text++;
+      if(distinct <= VE_IMP_STATE_MAX) {
+        var sk = String(v);
+        if(!Object.prototype.hasOwnProperty.call(seen, sk)) { seen[sk] = 1; distinct++; }
+      }
     }
+
+    // Karma sütun: çoğunlukla sayı, arada sembolik değer ('N', 'R1', 'error').
+    // CAN'de bu bir DURUM sinyalidir. Sayı sayıldığı için sütun 'num' olur,
+    // sembolik hücreler null'a düşer ve örnekle-ve-tut onları bir önceki
+    // SAYIYA yapıştırırdı — vites 'N' iken grafikte 3 görünürdü. Ayrık değer
+    // sayısı azsa sütun metin şeridine çevrilir (etiketli durum kanalı);
+    // değilse sayı kalır ama sembolik hücreler gerçek boşluk olur (bkz.
+    // veImpReadValues), asla uydurulmaz.
+    var mixed = num > 0 && text > 0;
+    var kind;
+    if(num >= text && num > 0) kind = (mixed && distinct <= VE_IMP_STATE_MAX) ? 'text' : 'num';
+    else kind = (text > 0) ? 'text' : 'empty';
 
     cols.push({
       key: 'c' + c,
@@ -303,7 +355,9 @@ function veImpBuildColumns(rows, layout, commaDecimal) {
       rawName: parsed.raw,
       group: parsed.group,
       unit: unit || '',
-      kind: (num >= text && num > 0) ? 'num' : (text > 0 ? 'text' : 'empty'),
+      kind: kind,
+      mixed: mixed,
+      distinct: distinct,
       sparse: sampled > 0 && empty > sampled * 0.1,
       filled: num + text,
       sampled: sampled
@@ -321,8 +375,14 @@ function veImpReadValues(rows, col, layout, commaDecimal, asText) {
     var v = (rows[r] || [])[col.index];
     if(asText) {
       out.push(v === null || v === undefined || v === '' ? null : String(v));
+    } else if(v === null || v === undefined || v === '') {
+      out.push(null);                       // gerçekten boş → örnekle-ve-tut sürdürür
     } else {
-      out.push(veImpToNumber(v, commaDecimal));
+      // Dolu ama sayıya çevrilemiyor: NaN. null DEĞİL — null olsaydı
+      // veImpForwardFill bir önceki sayıyı buraya kopyalar, okunamayan hücre
+      // uydurma bir değer olarak çizilirdi. NaN'da kalem kalkar (boşluk).
+      var nv = veImpToNumber(v, commaDecimal);
+      out.push(nv === null ? NaN : nv);
     }
   }
   return out;
@@ -396,6 +456,12 @@ function veImpBuildDataset(opts) {
   if(!xCol) throw new Error('X ekseni sütunu seçilmedi.');
 
   var xVals = veImpReadValues(rows, xCol, layout, commaDecimal, false);
+  // X ekseninde NaN olamaz: imleç ikili arama yapıyor (veCursorSnapIndex) ve
+  // zaman ölçeği bu diziye dayanıyor. Okunamayan zaman hücresi boşluk sayılır,
+  // hemen aşağıda örnekle-ve-tut ile kapatılır.
+  for(var xi = 0; xi < xVals.length; xi++) {
+    if(typeof xVals[xi] === 'number' && !isFinite(xVals[xi])) xVals[xi] = null;
+  }
 
   // Zaman ekseni tarih biçimliyse hücrede Excel seri numarası durur (gün
   // cinsinden). Saniyeye çevrilmezse eksen 45000 civarı anlamsız sayılar
@@ -412,7 +478,7 @@ function veImpBuildDataset(opts) {
   // X ekseninde boşluk olamaz — imleç ve zaman ölçeği ona dayanıyor.
   xVals = veImpForwardFill(xVals);
 
-  var id = 'imp' + (++veImpSeq);
+  var id = 'imp' + VE_IMP_SESSION + '-' + (++veImpSeq);
   var columns = [];
   (opts.yIndexes || []).forEach(function(ci) {
     var c = cols[ci];
@@ -487,6 +553,23 @@ function veImpSeries(sensorId, signalId) {
 function veImpXSeries(dataSourceOrId) {
   var ds = veImpFind(veImpIdOf(dataSourceOrId));
   return ds ? ds.x.values : null;
+}
+
+// Panodan son içe aktarma sinyali de kalktığında ölçümün zaman ekseni panoyu
+// terk etmelidir. Aksi halde `slot._dataSource` yapışık kalır ve sonradan
+// eklenen bir SİMÜLASYON sinyali ölçümün zaman dizisine karşı çizilir —
+// grafik makul görünür, veri yanlıştır. Boş panoda eksen yeniden serbesttir.
+function veImpDropStaleAxis(slot) {
+  if(!slot) return false;
+  var ds = slot._dataSource;
+  if(!ds || String(ds).indexOf('import:') !== 0) return false;
+  var stillThere = (slot.sensors || []).some(function(s) {
+    return s && (s._dataSource === ds || String(s.id).charAt(0) === '#');
+  });
+  if(stillThere) return false;
+  delete slot._dataSource;
+  slot.xAxis = { id: 'time', name: 'Zaman', unit: 's' };
+  return true;
 }
 
 function veImpRemove(id) {
@@ -577,6 +660,7 @@ if(typeof module !== 'undefined' && module.exports) {
     veImpSeries: veImpSeries,
     veImpXSeries: veImpXSeries,
     veImpRemove: veImpRemove,
+    veImpDropStaleAxis: veImpDropStaleAxis,
     veImpAny: veImpAny,
     veImpPruneSlots: veImpPruneSlots,
     veImpCollectGroups: veImpCollectGroups,

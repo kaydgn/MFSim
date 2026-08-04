@@ -4352,6 +4352,20 @@ function veWarnXAxisMismatch(wantedXAxis) {
             'warning');
 }
 
+// İçe aktarılan ölçüm panosuna simülasyon sinyali giremez.
+// Gerekçe: ölçümün KENDİ zaman dizisi vardır (dosyadan gelir) ve seriler
+// veGetSensorData'da indeks hizasıyla çizilir. Sim sinyali böyle bir panoya
+// girerse ölçümün zaman ekseni üzerinde, hiç ilgisi olmayan bir eğri olarak
+// sessizce çizilirdi. Ters yön (ölçüm → sim panosu) veXAxisAllowed ile zaten
+// kapalı; bu koşu simülasyon tarafında aynı kapıyı kurar.
+function veImpBoardRejects(slotIdx) {
+  if(typeof veSharedXKey !== 'function') return false;
+  var key = veSharedXKey(veResultSlots);
+  if(!key || String(key).indexOf('@import:') < 0) return false;
+  if(typeof veWarnXAxisMismatch === 'function') veWarnXAxisMismatch({ name: 'Zaman [s]' });
+  return true;
+}
+
 function veAddWizardDiagramToSlot(slotIdx, pkgId, diagIdx) {
   var pkg = (typeof SENSOR_PACKAGES !== 'undefined') ? SENSOR_PACKAGES.find(function(p) { return p.id === pkgId; }) : null;
   if(!pkg || !pkg.diagrams[diagIdx]) return;
@@ -4483,6 +4497,9 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
     return;
   }
 
+  // Buradan aşağısı simülasyon sinyalleridir: içe aktarma panosuna giremezler.
+  if(veImpBoardRejects(slotIdx)) return;
+
   // ── Sihirbaz sanal sensörü: ~compType formatı ──
   if(sensorId.charAt(0) === '~') {
     var compType = sensorId.substring(1);
@@ -4582,6 +4599,16 @@ function veAddSignalToSlot(slotIdx, sensorId, signalId) {
 }
 
 function veAddSensorToSlot(slotIdx, sensorId) {
+  // ── İçe aktarılan ölçüm: #veriKümesiId — tüm sütunları ekle ──
+  // Ağaçtaki grup başlığı bu ID ile sürüklenir; dal olmadan sessiz bir
+  // hiçbir-şey-yapma davranışı oluşuyordu.
+  if(sensorId.charAt(0) === '#') {
+    var impSet = (typeof veImpFind === 'function') ? veImpFind(veImpIdOf(sensorId)) : null;
+    if(!impSet) return;
+    impSet.columns.forEach(function(c) { veAddSignalToSlot(slotIdx, sensorId, c.key); });
+    return;
+  }
+
   // ── Sihirbaz sanal sensörü: ~compType formatı — tüm sinyalleri ekle ──
   if(sensorId.charAt(0) === '~') {
     var compType = sensorId.substring(1);
@@ -4870,6 +4897,7 @@ function veRemoveSensorFromSlot(slotIdx, sensorIdx) {
   slot.sensors.splice(sensorIdx, 1);
   // Eksen lock'larını sıfırla (birim grupları değişmiş olabilir)
   slot.yAxisLock = {};
+  veImpDropStaleAxis(slot);
   if(typeof veTrRefresh === 'function') veTrRefresh(); else veRenderSlot(slotIdx);
   // Lejanttaki ✕ ile de silinebiliyor: ağaçtaki onay kutusu bayat kalmasın
   if(typeof veSigRefreshTree === 'function') veSigRefreshTree();
