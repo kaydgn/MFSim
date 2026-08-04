@@ -244,7 +244,11 @@ var veMntBrief = (function() {
   // süpürme:  m.<slug>.d | m.<slug>.f | dmax | ntens | nclamp
   // campbell: ord.<mertebe> | mode.<no>
   function parseId(id) {
-    var m = /^(T0|T|eta)_([012])$/.exec(id);
+    // Takoz kırılımı sistem kanallarından ÖNCE denenir: 'Tm_2_m.on_sol'
+    // kimliğinin başı 'T'..' ile karışmasın.
+    var m = /^Tm_([012])_(m\..+)$/.exec(id);
+    if(m) return { kind: 'Tm', dir: +m[1], mount: m[2] };
+    m = /^(T0|T|eta)_([012])$/.exec(id);
     if(m) return { kind: m[1], dir: +m[2] };
     m = /^ord\.([0-9]+(?:_[0-9]+)?)$/.exec(id);
     if(m) return { kind: 'order', order: parseFloat(m[1].replace('_', '.')) };
@@ -289,12 +293,13 @@ var veMntBrief = (function() {
     var modes = ((R && R.modes) || []).filter(function(m) { return m && m.f_Hz > 1e-6; });
     var paras = [];
 
-    var damped = [], undamped = [], effs = [];
+    var damped = [], undamped = [], effs = [], perM = [];
     chans.forEach(function(ch) {
       var p = parseId(ch.id);
       if(p.kind === 'T') damped.push({ ch: ch, dir: p.dir });
       else if(p.kind === 'T0') undamped.push({ ch: ch, dir: p.dir });
       else if(p.kind === 'eta') effs.push({ ch: ch, dir: p.dir });
+      else if(p.kind === 'Tm') perM.push({ ch: ch, dir: p.dir, mount: chanMount(ch) });
     });
 
     var full = chans.length === ds.channels.length;
@@ -329,9 +334,10 @@ var veMntBrief = (function() {
     if(full) {
       paras.push(
         'Bu şeritte kümenin ' + b(chans.length + ' kanalı') + ' üst üste: üç yönün ' +
-        'sönümlü ve sönümsüz iletilebilirliği ile izolasyon verimi. Toplu bakış için ' +
-        'iyi, okuma için zor — çünkü birimler farklı (iletilebilirlik birimsiz, verim ' +
-        b('%') + ') ve ölçekler bir arada durmuyor.');
+        'sönümlü ve sönümsüz iletilebilirliği, izolasyon verimi' +
+        (perM.length ? ' ve ' + b(perM.length + ' takoz kırılımı') : '') +
+        '. Toplu bakış için iyi, okuma için zor — çünkü birimler farklı ' +
+        '(iletilebilirlik birimsiz, verim ' + b('%') + ') ve ölçekler bir arada durmuyor.');
       var worst = null;
       damped.forEach(function(e) {
         var pk = peaks(f, e.ch.data, 1.05);
@@ -354,8 +360,67 @@ var veMntBrief = (function() {
       return { title: title, paras: paras };
     }
 
+    // ── Takoz başına iletilebilirlik ──
+    // Tedarikçi raporlarındaki "destek başına eğri". Buradaki asıl mesele,
+    // sayıların sistem toplamıyla neden örtüşmediği: kuvvetler karmaşıktır,
+    // toplam VEKTÖREL alınır. Söylenmezse kullanıcı bunu bir hata sanar.
+    if(perM.length && !undamped.length && !effs.length) {
+      var dirsUsed = {};
+      perM.forEach(function(e) { dirsUsed[e.dir] = 1; });
+      var dks = Object.keys(dirsUsed);
+      var titleM = 'Takoz başına iletilebilirlik' +
+        (dks.length === 1 ? ' — ' + AX_TR[+dks[0]] : '');
+      paras.push('Bu şeritte ' + b(perM.length + ' takozun') + ' ayrı ayrı ' +
+        'iletilebilirliği var: her eğri O TAKOZUN şasiye geçirdiği kuvvettir. ' +
+        'Sistem eğrisi hepsinin toplamıdır; buradaki kırılım "yükü kim ' +
+        'geçiriyor" sorusunu cevaplar — takoz seçimi ve bağlantı noktası ' +
+        'kararları bu kırılımdan çıkar.');
+
+      // Ateşleme frekansında sıralama — asıl kullanım noktası burası.
+      if(eng) {
+        var rows = perM.map(function(e) {
+          return { name: e.mount, dir: e.dir, v: interpAt(f, e.ch.data, eng.f, true) };
+        }).filter(function(o) { return isFinite(o.v); }).sort(function(a, c) { return c.v - a.v; });
+        if(rows.length) {
+          var sum = 0;
+          rows.forEach(function(o) { sum += o.v; });
+          var s = 'Rölanti ateşleme frekansında (' + b(na(eng.f) + ' Hz') + ') en çok ' +
+            'kuvvet geçiren takoz ' + b(rows[0].name) + ' (' + b(na(rows[0].v)) + ')';
+          if(rows.length > 1) {
+            s += ', en az geçiren ' + b(rows[rows.length - 1].name) + ' (' +
+                 b(na(rows[rows.length - 1].v)) + ')';
+            if(rows[rows.length - 1].v > 0) {
+              s += ' — aralarında ' + b(na(rows[0].v / rows[rows.length - 1].v) + ' kat') + ' fark var';
+            }
+          }
+          paras.push(s + '. Dengesizlik büyükse yükü en çok geçiren takozu ' +
+            'yumuşatmak ya da konumunu değiştirmek, sistem toplamını tek başına ' +
+            'aşağı çeker.');
+        }
+      }
+
+      // Tepe frekansları takoz başına
+      var pkRows = perM.map(function(e) {
+        var q = peaks(f, e.ch.data, 0);
+        return q.length ? { name: e.mount, f: q[0].f, v: q[0].v } : null;
+      }).filter(Boolean).sort(function(a, c) { return c.v - a.v; });
+      if(pkRows.length) {
+        paras.push('En yüksek tepe ' + b(pkRows[0].name) + ' takozunda: ' +
+          b(na(pkRows[0].f) + ' Hz') + '\'de ' + b(na(pkRows[0].v) + '×') +
+          '. Tüm takozlar aynı frekanslarda tepe verir — tepeler yapının ' +
+          'modlarına aittir, takoza değil; değişen yalnız o takozun o moda ne ' +
+          'kadar katıldığıdır.');
+      }
+
+      paras.push('Sayılar toplandığında sistem eğrisini VERMEZ, bu bir hata değil: ' +
+        'takoz kuvvetleri ' + b('genlik ve faz') + ' taşır, toplam vektörel alınır. ' +
+        'Zıt fazda çalışan iki takoz birbirini götürür — o zaman tek tek ' +
+        'genlikler büyük, sistem toplamı küçüktür.');
+      return { title: titleM, paras: paras };
+    }
+
     // ── Yalnız sönümlü iletilebilirlik ──
-    if(damped.length && !undamped.length && !effs.length) {
+    if(damped.length && !undamped.length && !effs.length && !perM.length) {
       if(damped.length === 1) {
         var e = damped[0];
         paras.push('Bu şeritte ' + b(AX_TR[e.dir]) + ' yönde iletilebilirlik var: motorun o ' +

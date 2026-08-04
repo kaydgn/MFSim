@@ -110,9 +110,13 @@ describe('frekans yanıtı (frf)', () => {
   });
 
   test('üç yönün her biri için sönümlü / sönümsüz / verim kanalı', () => {
-    expect(ds.channels.map((c) => c.id)).toEqual([
+    // Sistem kanalları ÖNCE, takoz kırılımı SONRA: ağaçta önce toplam,
+    // sonra "hangi takoz ne kadar geçiriyor" görünsün.
+    expect(ds.channels.slice(0, 9).map((c) => c.id)).toEqual([
       'T_0', 'T0_0', 'eta_0', 'T_1', 'T0_1', 'eta_1', 'T_2', 'T0_2', 'eta_2'
     ]);
+    expect(ds.channels.length).toBe(9 + 3 * MOUNTS.length);
+    expect(ds.channels.slice(9).every((c) => /^Tm_[012]_m\./.test(c.id))).toBe(true);
   });
 
   test('statik limitte iletilebilirlik 1 — kuvvet olduğu gibi geçer', () => {
@@ -369,7 +373,7 @@ describe('diyagram yorumu — ŞERİT BAŞINA', () => {
     const br = lane('frf', ds.channels.map((c) => c.id));
     expect(br.title).toContain('birleşik');
     const t = text(br);
-    expect(t).toContain('9 kanal');
+    expect(t).toContain(ds.channels.length + ' kanal');
     // Okuma tuzaklarını söylemeli: ölçeği ele geçiren eğri ve eksi verim
     expect(t).toMatch(/sönümsüz/);
     expect(t).toMatch(/eksi/);
@@ -642,5 +646,97 @@ describe('Campbell yorumu — kesişim devirleri ve işaretler', () => {
     // Bu modelde ateşleme kesişimlerinin tamamı rölantinin altında (en yükseği
     // 381 d/dk); bandın içindekiler 1. mertebeden gelir.
     expect(warn.every((m) => /1\. mertebe/.test(m.label))).toBe(true);
+  });
+});
+
+describe('takoz başına iletilebilirlik', () => {
+  // Tedarikçi raporları destek başına ayrı eğri basar: "hangi takoz şasiye en
+  // çok kuvvet geçiriyor" sorusu sistem toplamından okunamaz.
+  const ds = setOf('frf');
+  const B = require('../../js/mount-brief.js');
+  const tmId = (dir, mnt) => {
+    const ch = ds.channels.find((c) =>
+      c.name === mnt.name + ' · iletilebilirlik T — ' +
+      ['X (boyuna)', 'Y (yanal)', 'Z (düşey)'][dir]);
+    return ch ? ch.id : null;
+  };
+
+  test('her takoz × her yön için bir kanal, kimlik takoz ADINDAN', () => {
+    MOUNTS.forEach((mnt) => {
+      [0, 1, 2].forEach((dir) => {
+        const id = tmId(dir, mnt);
+        expect(id).toBeTruthy();
+        const p = B.parseId(id);
+        expect(p.kind).toBe('Tm');
+        expect(p.dir).toBe(dir);
+        expect(p.mount).toBe(B.parseId(
+          setOf('fdefl').channels.find((c) => c.name.indexOf(mnt.name + ' · ') === 0).id).mount);
+      });
+    });
+  });
+
+  test('takoz kimliği sistem kanallarıyla KARIŞMAZ', () => {
+    // 'Tm_2_m.on_sol' ile 'T_2' aynı önekle başlar; kimlik çözümleyici
+    // yanlış eşleşirse takoz eğrisi sistem eğrisi sanılır.
+    expect(B.parseId('T_2').kind).toBe('T');
+    expect(B.parseId('T0_2').kind).toBe('T0');
+    expect(B.parseId('Tm_2_m.on_sol')).toEqual({ kind: 'Tm', dir: 2, mount: 'm.on_sol' });
+  });
+
+  test('parçalar TOPLAMI değil, VEKTÖREL toplamı sistem eğrisini verir', () => {
+    // |Σ Fᵢ| ≠ Σ |Fᵢ|. Skaler toplam her frekansta sistem değerinden BÜYÜK
+    // ya da eşit olmalı (üçgen eşitsizliği) — küçük çıkarsa kuvvetler yanlış
+    // bir çözümden geliyordur.
+    const sys = ds.channels.find((c) => c.id === 'T_2').data;
+    const per = MOUNTS.map((m) => ds.channels.find((c) => c.id === tmId(2, m)).data);
+    let anyStrict = false;
+    sys.forEach((v, i) => {
+      const sum = per.reduce((a, p) => a + p[i], 0);
+      expect(sum).toBeGreaterThanOrEqual(v - 1e-9);
+      if (sum > v * 1.05) anyStrict = true;
+    });
+    // En az bir frekansta belirgin fark olmalı: yoksa tüm takozlar hep aynı
+    // fazda demektir ve kırılımın bilgi değeri kalmaz (model bunu doğrulasın).
+    expect(anyStrict).toBe(true);
+  });
+
+  test('takoz tepeleri MODLARIN frekansındadır, takoza göre kaymaz', () => {
+    // Tepeler yapının modlarına aittir; takozdan takoza değişen yalnız o
+    // takozun o moda ne kadar katıldığı — yani tepenin YÜKSEKLİĞİ. Frekans
+    // kaysaydı takoz eğrisi sistemden bağımsız bir dinamik anlatıyor olurdu.
+    const f = ds.x.data;
+    const modeF = MODES.filter((m) => m.f_Hz > 1e-6).map((m) => m.f_Hz);
+    const yakin = (v) => modeF.some((mf) => Math.abs(Math.log10(v / mf)) < 0.03);
+    MOUNTS.forEach((m) => {
+      const pk = B.peaks(f, ds.channels.find((c) => c.id === tmId(2, m)).data, 0);
+      expect(pk.length).toBeGreaterThan(0);
+      pk.slice(0, 3).forEach((q) => expect(yakin(q.f)).toBe(true));
+    });
+  });
+
+  test('perMount istenmezse çekirdek fazladan iş yapmaz', () => {
+    const M6 = core.buildM6(MP.m, MP.I_G);
+    const a = core.frequencyResponse(MOUNTS, MP.cg, M6, DAMP, { nPts: 8 });
+    const b = core.frequencyResponse(MOUNTS, MP.cg, M6, DAMP, { nPts: 8, perMount: true });
+    expect(a.Tm).toBeUndefined();
+    expect(b.Tm.length).toBe(MOUNTS.length);
+    // Toplam eğri İKİ ÇAĞRIDA DA AYNI — kırılım eklemek sistemi değiştirmedi
+    a.T.forEach((v, i) => expect(b.T[i]).toBeCloseTo(v, 12));
+  });
+
+  test('yorum: en çok / en az geçiren takoz ve vektörel toplam uyarısı', () => {
+    const ids = MOUNTS.map((m) => tmId(2, m));
+    const br = B.forLane(ds, R, ids);
+    const t = br.paras.join(' ');
+    expect(br.title).toContain('Takoz başına');
+    expect(t).toContain('vektörel');
+    // Ateşleme frekansındaki sıralama modelin kendi sayısından
+    const fExc = (750 / 60) * (6 / 2);
+    const vals = MOUNTS.map((m) => ({
+      name: m.name,
+      v: B.interpAt(ds.x.data, ds.channels.find((c) => c.id === tmId(2, m)).data, fExc, true),
+    })).sort((a, b2) => b2.v - a.v);
+    expect(t).toContain(vals[0].name);
+    expect(t).toContain(vals[vals.length - 1].name);
   });
 });
