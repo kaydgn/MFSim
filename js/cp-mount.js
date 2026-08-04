@@ -216,6 +216,21 @@ function _mntNodeName(n){ return n.customName || (_mntDef(n)||{}).name || n.type
 //     'amc55sha' girdisi (1252/1252/640) odur. DİKKAT: o girdinin adı "AMC 55 ShA"
 //     ama parça LMT-1433 ailesinden, yani muhtemelen AMC değil A+P — ad yanıltıcı
 //     olabilir. Teyit gelmeden DEĞİŞTİRİLMEDİ.
+// ── maxLoad — TAŞIMA KAPASİTESİ [kg], opsiyonel ─────────────────────────────
+// Üretici kataloğunun verdiği en büyük statik EKSENEL (basma, z) yük. Birim
+// KİLOGRAM'dır: AMC, Angst+Pfister ve benzeri kataloglar kapasiteyi kg olarak
+// yazar ("Max. Load 2.000 kg"), kullanıcı datasheet'ten okuduğu sayıyı çevirmek
+// zorunda kalmasın. Kuvvete tek bir yerde dönüşür: F_max = maxLoad · g [N].
+//
+// FİZİĞE GİRMEZ: çözücü bu alanı görmez, rijitliği ve çökmeyi değiştirmez.
+// Yalnız RAPORLAMA sınırıdır — "bu takoz taşıdığı yükün yüzde kaçında
+// çalışıyor" sorusunu cevaplar (Rapor §8.3 Yük (%) sütunu, Sonuçlar'da F(δ)
+// kapasite çizgisi ve yorum cümleleri).
+//
+// GÖMÜLÜ GİRDİLERDE BOŞ: elimizdeki kaynak dokümanların hiçbiri bu katalog
+// girdileri için kapasite vermiyor. Makul bir sayı UYDURULMADI — kapasite
+// tanımsızken sütun, çizgi ve cümle hiç görünmez. Kullanıcı datasheet'ten
+// okuduğu değeri Takoz panelinden ya da Takoz Özellikleri'nden girer.
 var VE_MOUNT_LIBRARY = {
   'amc55sha':         { name:'AMC 55 ShA',                       sx:1252, sy:1252, sz:640,  dx:2055, dy:2055, dz:977 },
   '57RS313773':       { name:'57RS313773 (A26)',          sx:334,  sy:334,  sz:2300, dx:435,  dy:435,  dz:3000 },
@@ -296,6 +311,7 @@ function veMntGetLibraryMap(){
   Object.keys(VE_MOUNT_LIBRARY).forEach(function(k){
     var m=VE_MOUNT_LIBRARY[k], c=m.curves||{}, f=m.fits||{};
     map[k]={ key:k, name:m.name, sx:m.sx, sy:m.sy, sz:m.sz, dx:m.dx, dy:m.dy, dz:m.dz, builtin:true, overridden:false,
+      maxLoad:(m.maxLoad!==undefined?m.maxLoad:null),        // taşıma kapasitesi [kg] (opsiyonel)
       fitX:f.x||null, fitY:f.y||null, fitZ:f.z||null,       // fabrika analitik fit (varsa)
       curveX:cv(c.x), curveY:cv(c.y), curveZ:cv(c.z) };     // ya da nokta tablosu (varsa)
   });
@@ -312,6 +328,7 @@ function veMntGetLibraryMap(){
         var pick=function(f){ return (o[f]!==undefined && o[f]!==null && o[f]!=='') ? (f==='name'?o[f]:_mntNum(o[f])) : base[f]; };
         map[k]={ key:k, name:pick('name'), sx:pick('sx'), sy:pick('sy'), sz:pick('sz'),
           dx:pick('dx'), dy:pick('dy'), dz:pick('dz'), builtin:true, overridden:true,
+          maxLoad:pick('maxLoad'),
           fitX:base.fitX, fitY:base.fitY, fitZ:base.fitZ,
           curveX:base.curveX, curveY:base.curveY, curveZ:base.curveZ };
       });
@@ -323,6 +340,7 @@ function veMntGetLibraryMap(){
         map[e.key]={ key:e.key, name:(e.name||'Özel Takoz'),
           sx:_mntNum(e.sx), sy:_mntNum(e.sy), sz:_mntNum(e.sz),
           dx:_mntNum(e.dx), dy:_mntNum(e.dy), dz:_mntNum(e.dz), builtin:false,
+          maxLoad:(e.maxLoad===undefined||e.maxLoad===null||e.maxLoad==='')?null:_mntNum(e.maxLoad),
           // Opsiyonel nonlineer yasa (takoz tipinin özelliği) — Takoz'a uygulanınca kopyalanır.
           fitX:(e.fitX||null), fitY:(e.fitY||null), fitZ:(e.fitZ||null),
           curveX:cv(e.curveX), curveY:cv(e.curveY), curveZ:cv(e.curveZ) };
@@ -956,7 +974,12 @@ function getMntMountPropertiesHTML(node){
   var left  = _mntCard('Kütüphane','', 'var(--accent-success)', sel)
             + _mntCard('Konum','[mm]','var(--accent-primary)', _mntTriple(node,'','',['x','y','z'],['x','y','z'],'0.01'));
   var right = _mntCard('Statik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxs','kys','kzs'],['kx','ky','kz'],'1'))
-            + _mntCard('Dinamik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxd','kyd','kzd'],['kx','ky','kz'],'1'));
+            + _mntCard('Dinamik Rijitlik','[N/mm]','var(--accent-warning)', _mntTriple(node,'','',['kxd','kyd','kzd'],['kx','ky','kz'],'1'))
+            // Kapasite hesabın GİRDİSİ DEĞİL, sonucun ölçüldüğü sınır: çözücü
+            // onu görmez. Boş bırakılabilir; o zaman % kullanım hiç raporlanmaz.
+            + _mntCard('Taşıma Kapasitesi','[kg] · opsiyonel','var(--accent-success)',
+                _mntSingle(node,'Maks. eksenel yük','[kg]','maxLoad','katalogdan','1')
+              + _mntHint('Üretici kataloğunun verdiği en büyük statik basma yükü. Girilirse Rapor\'da <b>Yük (%)</b> sütunu ve F(δ) diyagramında kapasite çizgisi çıkar; girilmezse hiçbiri görünmez.'));
   html+='<div class="ve-cp-grid ve-cp-grid--cards">';
   html+='<div class="ve-cp-col ve-cp-col--in">'+left+'</div>';
   html+='<div class="ve-cp-col ve-cp-col--out">'+right+'</div>';
@@ -1013,6 +1036,12 @@ function veMntApplyLib(nodeId, key){
   if(!node.data) node.data={};
   node.data.kxs=m.sx; node.data.kys=m.sy; node.data.kzs=m.sz;
   node.data.kxd=m.dx; node.data.kyd=m.dy; node.data.kzd=m.dz; node.data.libKey=key;
+  // Taşıma kapasitesi de takoz TİPİNİN özelliğidir. Kütüphane girdisinde
+  // tanımlıysa kopyalanır; tanımsızsa Takoz'daki eski değer TEMİZLENİR —
+  // yoksa başka bir takoz tipine geçildiğinde önceki tipin kapasitesi sessizce
+  // devam eder ve "%42 kullanımdasın" gibi yanlış bir cümle üretilirdi.
+  if(m.maxLoad!==undefined && m.maxLoad!==null && _mntNum(m.maxLoad,0)>0) node.data.maxLoad=m.maxLoad;
+  else delete node.data.maxLoad;
   // Nonlineer yasa kütüphane girdisinin özelliği: uygularken 3 ekseni de Takoz'a
   // KOPYALA (anlık snapshot; gather okur). Eksen başına fit ÖNCELİKLİ; yoksa nokta
   // tablosu; ikisi de yoksa o eksende eski yasa temizlenir (lineere döner).
@@ -2354,7 +2383,16 @@ function _mntLibStiffGrid(node, e, setter){
       +'<div>'+_mntLibInp(node.id, e.key, 's'+r[0], sv, false, setter)+'</div>'
       +'<div>'+_mntLibInp(node.id, e.key, 'd'+r[0], dv, false, setter)+'</div>';
   });
-  h+='</div></div>';
+  h+='</div>';
+  // Taşıma kapasitesi rijitliğin YANINDA değil ALTINDA: rijitlik 3×2'lik bir
+  // matris (eksen × statik/dinamik), kapasite tek skaler. Aynı ızgaraya
+  // sokulsaydı boş hücreler "bu eksenin kapasitesi yok mu?" diye okunurdu.
+  var mlv=(e.maxLoad===undefined||e.maxLoad===null)?'':e.maxLoad;
+  h+='<div style="display:grid; grid-template-columns:auto 1fr; gap:5px 8px; max-width:266px; align-items:center; margin-top:9px;">'
+    +'<div style="'+lbl+'">Kapasite <span style="color:var(--text-muted); font-weight:400;">[kg]</span></div>'
+    +'<div>'+_mntLibInp(node.id, e.key, 'maxLoad', mlv, false, setter)+'</div>'
+    +'</div>';
+  h+='</div>';
   return h;
 }
 // Grafik altına açıklamalı legend (statik/dinamik/ölçüm).
@@ -2838,6 +2876,7 @@ function _mntGatherForSolver(solver){
     } else if(def.isMount){
       var m=n.data||{};
       mounts.push({ name:_mntNodeName(n), x:m.x, y:m.y, z:m.z, kxs:m.kxs, kys:m.kys, kzs:m.kzs, kxd:m.kxd, kyd:m.kyd, kzd:m.kzd,
+                    maxLoad:m.maxLoad,                                        // taşıma kapasitesi [kg] (opsiyonel, fiziğe girmez)
                     fitX:(m.fitX||null), fitY:(m.fitY||null), fitZ:(m.fitZ||null),   // opsiyonel analitik fit (x/y/z)
                     curveX:(Array.isArray(m.curveX)?m.curveX:null),                  // ya da nokta tablosu (x/y/z)
                     curveY:(Array.isArray(m.curveY)?m.curveY:null),
@@ -2911,6 +2950,11 @@ function _mntToSI(gather, g){
         name:m.name||'takoz', pos:[C.mmToM(_mntNum(m.x)),C.mmToM(_mntNum(m.y)),C.mmToM(_mntNum(m.z))],
         kstat:[C.nPerMmToNPerM(_mntNum(m.kxs)),C.nPerMmToNPerM(_mntNum(m.kys)),C.nPerMmToNPerM(_mntNum(m.kzs))],
         kdyn:[C.nPerMmToNPerM(_mntNum(m.kxd)),C.nPerMmToNPerM(_mntNum(m.kyd)),C.nPerMmToNPerM(_mntNum(m.kzd))] };
+      // Kapasite [kg] → SI'da KUVVET [N] olarak taşınır: raporlama katmanı bir
+      // daha g ile çarpmak zorunda kalmasın (iki yerde çarpılırsa biri unutulur
+      // ve % kullanım 9,81 kat şaşar). Tanımsızsa alan HİÇ eklenmez.
+      var ml=_mntNum(m.maxLoad,0);
+      if(ml>0) mnt.fCap=ml*(g||9.81);
       // Nonlineer yasa → çekirdek. Eksen başına FİT (analitik) ÖNCELİKLİ: mm/N olarak
       // AYNEN geçer (çekirdek makeAxisLaw mm↔m dönüşümünü yapar). Yoksa nokta tablosu:
       // burada SI'ya (δ mm→m, f N aynı) çevrilir. Çekirdek mnt.fits/mnt.curves okur.
