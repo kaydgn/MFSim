@@ -553,8 +553,8 @@ function veMntCollapseToRoot(){
   while(veMntStack.length && guard++<32){ veMntCloseEditor(true); }
 }
 
-// Alt-topoloji çıkış çipi — canvas alanının sol-üst köşesine (topoloji sınırına)
-// iliştirilir (arac-performans ile aynı CSS sınıfı ve konumlama mantığı).
+// Alt-topoloji çıkış çipi — canvas alanının ALT-ORTASINA iliştirilir, yani
+// diyagramın altında (arac-performans ile aynı CSS sınıfı ve konumlama mantığı).
 function veMntUpdateBreadcrumb(){
   if(typeof document==='undefined') return;
   var el=document.getElementById('ve-mnt-breadcrumb');
@@ -563,9 +563,9 @@ function veMntUpdateBreadcrumb(){
     el=document.createElement('div');
     el.id='ve-mnt-breadcrumb';
     el.className='ve-arac-breadcrumb';
-    // Canvas alanının sol-üst köşesine iliştir. #ve-split-container position:relative
+    // Canvas alanının alt-ortasına iliştir. #ve-split-container position:relative
     // ve geçiş animasyonunun transform'u alt-seviye .ve-canvas-wrapper'a uygulandığı
-    // için çip konumunu şaşırmaz → sınıra sabit kalır.
+    // için çip konumunu şaşırmaz → pan/zoom'dan bağımsız, kanvasa sabit kalır.
     var host=document.getElementById('ve-split-container')
           || document.querySelector('.ve-canvas-area')
           || document.body;
