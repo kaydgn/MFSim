@@ -191,6 +191,35 @@ var veMntBrief = (function() {
     return s ? s : ('Takoz ' + (i + 1));
   }
 
+  // ── Taşıma kapasitesi kullanımı ─────────────────────────────────────────
+  // mnt.fCap [N] OPSİYONEL katalog verisidir (cp-mount.js _mntToSI: kg × g).
+  // Tanımsızsa hiçbir cümle kurulmaz — "kapasite bilinmiyor" yazan bir cümle,
+  // olmayan bir cümleden kötüdür.
+  //
+  // Statik düşey kuvvetin kapasiteye oranı. Sıra numarası ADLA eşleşir: şeritte
+  // takoz adı görünür, kimlik değil.
+  function capOf(R, name) {
+    var mounts = (R && R.mounts) || [];
+    for(var i = 0; i < mounts.length; i++) {
+      if(mountLabel(mounts[i], i) === name) return (mounts[i].fCap > 0) ? mounts[i].fCap : NaN;
+    }
+    return NaN;
+  }
+
+  function capUse(R, name) {
+    var mounts = (R && R.mounts) || [], stat = staticCase(R);
+    if(!stat || !stat.perMount) return null;
+    for(var i = 0; i < mounts.length; i++) {
+      if(mountLabel(mounts[i], i) !== name) continue;
+      var fc = mounts[i].fCap;
+      var pm = stat.perMount[i];
+      if(!(fc > 0) || !pm) return null;
+      var fz = Math.abs((pm.f || [])[2] || 0);
+      return { fCap: fc, f: fz, pct: fz / fc * 100 };
+    }
+    return null;
+  }
+
   var GS_TEXT = {
     gz: { yon: 'düşey', baslik: 'Düşey ivme süpürmesi', olay: 'araç çukura girip zıpladığında',
           sifir: '0 g\'de hiç yük yok, 1 g aracın düz zeminde durduğu hâl',
@@ -478,6 +507,34 @@ var veMntBrief = (function() {
         b(na(Math.max.apply(null, kk)) + ' N/mm') + ' arasında.');
     }
 
+    // ── Katalog kapasitesine göre kullanım ──
+    // Tedarikçi raporlarının "Load (%)" sütununun karşılığı. Kapasite girilmiş
+    // takoz yoksa bu paragraf hiç yazılmaz.
+    var uses = [];
+    Object.keys(uniqMounts).forEach(function(nm) {
+      var u = capUse(R, nm);
+      if(u) uses.push({ name: nm, u: u });
+    });
+    if(uses.length) {
+      uses.sort(function(a, c) { return c.u.pct - a.u.pct; });
+      var top = uses[0];
+      var s2 = (uses.length === 1 ? b(top.name) + ' takozu' : 'En çok yüklenen takoz (' + b(top.name) + ')') +
+        ' araç kendi ağırlığındayken ' + b(na(top.u.f / 1000) + ' kN') + ' taşıyor: katalog ' +
+        'kapasitesinin (' + b(na(top.u.fCap / 1000) + ' kN') + ') ' + b(pct(top.u.pct, 1)) + ' kadarı. ';
+      s2 += (top.u.pct > 100)
+        ? b('Kapasite aşılıyor') + ' — bu takoz statik yükü tek başına taşıyamaz, daha büyük ' +
+          'bir tip ya da daha fazla takoz gerekir.'
+        : (top.u.pct > 50
+            ? 'Tedarikçi raporlarında tipik tasarım hedefi ' + b('%25–50') + ' bandıdır; bu değer ' +
+              'bandın üstünde — statik yük yüksek, dinamik darbelerde pay az kalıyor.'
+            : (top.u.pct < 15
+                ? 'Tipik tasarım hedefi ' + b('%25–50') + '; bu değer bandın altında — takoz ' +
+                  'gereğinden büyük seçilmiş olabilir, gereksiz sertlik izolasyonu kötüleştirir.'
+                : 'Tedarikçi raporlarının tipik tasarım hedefi olan ' + b('%25–50') + ' bandının ' +
+                  'içinde — ' + b('aranan sonuç budur') + '.'));
+      paras.push(s2);
+    }
+
     var anyNL = items.some(function(i2) { return i2.nl; });
     paras.push(anyNL
       ? 'Yukarı kıvrılan eğri, büyük darbede dibe vurmayı geciktirir. ' + b('±15 mm') +
@@ -531,8 +588,22 @@ var veMntBrief = (function() {
     if(forc.length) {
       var fs = forc.map(function(ch) { return { name: chanMount(ch), v: atDesign(ch) }; })
         .filter(function(o) { return isFinite(o.v); }).sort(function(p2, q) { return q.v - p2.v; });
-      if(fs.length) paras.push((fs.length === 1 ? b(fs[0].name) + ' takozuna' : 'En çok yüklenen takoza (' + b(fs[0].name) + ')') +
-        ' ' + b(t.tasarimAd) + ' altında ' + b(na(fs[0].v) + ' N') + ' bileşke kuvvet biniyor.');
+      if(fs.length) {
+        var sF = (fs.length === 1 ? b(fs[0].name) + ' takozuna' : 'En çok yüklenen takoza (' + b(fs[0].name) + ')') +
+                 ' ' + b(t.tasarimAd) + ' altında ' + b(na(fs[0].v) + ' N') + ' bileşke kuvvet biniyor.';
+        // Katalog kapasitesi EKSENEL BASMA için verilir; bileşke ondan biraz
+        // büyüktür. Oran yine de anlamlıdır — ama cümle bunu saklamaz.
+        var fc = capOf(R, fs[0].name);
+        if(isFinite(fc)) {
+          var r = fs[0].v / fc * 100;
+          sF += ' Katalog kapasitesi ' + b(na(fc / 1000) + ' kN') + ', yani bu yükte kapasitenin ' +
+                b(pct(r, 0)) + ' kadarı' +
+                (r > 100 ? ' — ' + b('kapasite aşılıyor') + '.' : '.') +
+                ' (Kapasite eksenel basma için verilir; buradaki bileşke kuvvet yanal ' +
+                'bileşenleri de içerdiği için biraz büyüktür.)';
+        }
+        paras.push(sF);
+      }
     }
 
     if(sums.length) {
@@ -805,6 +876,27 @@ var veMntBrief = (function() {
       });
     } else if(ds.key === 'fdefl') {
       var stat = staticCase(R), mounts = (R.mounts) || [];
+      // Taşıma kapasitesi çizgisi (opsiyonel katalog verisi, mnt.fCap [N]).
+      // Takozlar farklı tipte olabilir → farklı kapasite. Tek bir çizgi çizmek
+      // yanlış olurdu; AYRI DEĞERLER ayrı çizgi alır. Üçten fazla ayrı değerde
+      // grafiği doldurmamak için yalnız EN DÜŞÜĞÜ çizilir — sınırı ilk zorlayan
+      // odur, kritik olan da odur.
+      var caps = [];
+      mounts.forEach(function(mt) {
+        if(!(mt && mt.fCap > 0)) return;
+        if(caps.indexOf(mt.fCap) < 0) caps.push(mt.fCap);
+      });
+      caps.sort(function(a, c) { return a - c; });
+      (caps.length > 3 ? [caps[0]] : caps).forEach(function(fc) {
+        var who = mounts.filter(function(mt) { return mt && mt.fCap === fc; });
+        var tag = (caps.length === 1) ? '' :
+                  (caps.length > 3 ? ' (en düşük)' :
+                   (who.length === 1 ? ' · ' + mountLabel(who[0], mounts.indexOf(who[0])) : ''));
+        // Basma tarafı NEGATİF (çekirdek işaret sözleşmesi): kapasite çizgisi
+        // eğrinin ezilme kolunda durmalı, yansımasında değil.
+        marks.push({ axis: 'y', value: -fc, unit: 'N', kind: 'limit',
+                     label: 'taşıma kapasitesi ' + na(fc / 1000) + ' kN' + tag });
+      });
       if(stat && stat.perMount) {
         var worst = 0;
         stat.perMount.forEach(function(pm) {

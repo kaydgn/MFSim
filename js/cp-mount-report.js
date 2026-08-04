@@ -661,14 +661,31 @@ function _mntRepStep3Static(R, geom){
   if(!stat || !stat.res){ return h+'<p>Statik durum çözülemedi.</p>'; }
   var res=stat.res, m=R.mp.m;
   h+='<p>\\( \\mathbf F=[0,0,-mg,0,0,0]^{\\mathsf T} \\), \\( mg='+_rF(m*9.81/1000,2)+' \\) kN ile (6.1) çözülür. Takoz düşey sehimleri (δ_z) ve şasiye ilettikleri düşey kuvvetler:</p>';
-  h+='<table><caption>Tablo '+_rTbl()+' — Statik durum: takoz düşey sehimleri ve kuvvetleri (statik rijitlik)</caption>';
-  h+='<tr><th>Takoz</th><th>δ_z [mm]</th><th>Düşey kuvvet f_z [kN]</th><th>Durum</th></tr>';
   var mounts=R.mounts;
+  // Taşıma kapasitesi OPSİYONEL bir katalog verisidir (mnt.fCap [N], cp-mount.js
+  // _mntToSI). Hiçbir takozda tanımlı değilse sütun HİÇ açılmaz — boş bir
+  // "Yük (%)" sütunu, kapasitenin bilindiği ama sıfır olduğu izlenimi verirdi.
+  var anyCap=mounts.some(function(mt){ return mt && mt.fCap>0; });
+  h+='<table><caption>Tablo '+_rTbl()+' — Statik durum: takoz düşey sehimleri ve kuvvetleri (statik rijitlik)</caption>';
+  h+='<tr><th>Takoz</th><th>δ_z [mm]</th><th>Düşey kuvvet f_z [kN]</th>'
+    +(anyCap?'<th>Kapasite [kN]</th><th>Yük [%]</th>':'')+'<th>Durum</th></tr>';
   res.perMount.forEach(function(pm,i){
     var dz=pm.delta[2]*1000, fz=pm.f[2]/1000;
     var flag = pm.tension ? '<span style="color:var(--warn,#8a5a1e)">çekme ⟂</span>' : (pm.clamped ? '<span style="color:var(--warn,#8a5a1e)">durdurucu ▢</span>' : (pm.overLinear ? 'lineer-dışı' : '<span class="ok">✓</span>'));
+    var cap='';
+    if(anyCap){
+      var fc=(mounts[i] && mounts[i].fCap>0) ? mounts[i].fCap : NaN;
+      if(Number.isFinite(fc)){
+        var use=Math.abs(pm.f[2])/fc*100;
+        // %100 aşımı sessizce geçmez: kapasite AŞILDIYSA satır işaretlenir.
+        cap='<td>'+_rF(fc/1000,2)+'</td><td'+(use>100?' style="color:var(--warn,#8a5a1e); font-weight:700;"':'')+'>'
+           +_rF(use,1)+(use>100?' ⚠':'')+'</td>';
+      } else {
+        cap='<td class="c">—</td><td class="c">—</td>';
+      }
+    }
     h+='<tr><td class="l">'+_rEsc(pm.name||('takoz '+(i+1)))+'</td>'
-      +'<td>'+_rFs(dz,2)+'</td><td>'+_rF(fz,2)+'</td><td class="c">'+flag+'</td></tr>';
+      +'<td>'+_rFs(dz,2)+'</td><td>'+_rF(fz,2)+'</td>'+cap+'<td class="c">'+flag+'</td></tr>';
   });
   // ön/arka dağılım (X medyanına göre)
   var xs=mounts.map(function(mm){return mm.pos[0];}).slice().sort(function(a,b){return a-b;});
@@ -677,10 +694,13 @@ function _mntRepStep3Static(R, geom){
   res.perMount.forEach(function(pm,i){ var fz=Math.abs(pm.f[2]); if(mounts[i].pos[0] < medX) front+=fz; else rear+=fz; });
   var tot=front+rear||1;
   h+='<tr class="sum"><td class="l">Toplam / dağılım</td>'
-    +'<td colspan="2" class="c">ön (küçük X) %'+_rF(100*front/tot,1)+' · arka %'+_rF(100*rear/tot,1)+'</td>'
+    +'<td colspan="'+(anyCap?4:2)+'" class="c">ön (küçük X) %'+_rF(100*front/tot,1)+' · arka %'+_rF(100*rear/tot,1)+'</td>'
     +'<td class="c">Σf_z = '+_rF(res.sumF[2]/1000,2)+' kN '+(res.checks.sumFzOk?'✓':'✗')+'</td></tr>';
   h+='</table>';
   h+='<p>Σf_z değeri dış yükü (−mg) dengeler; ön/arka dağılım, ağırlık merkezinin takoz grubu içindeki boylamsal konumunu yansıtır. Çekme (lift-off) işaretli takozlar, o yük durumunda basıdan çıkıp gerilmeye geçtiğini gösterir.</p>';
+  if(anyCap){
+    h+='<p>Yük (%) sütunu, takozun düşey kuvvetini üretici kataloğunun verdiği en büyük statik eksenel yüke oranlar (\\( F_{\\max}=m_{\\max}\\,g \\)). Bu bir DAYANIM hesabı değil, katalog sınırıyla karşılaştırmadır: kapasite çözüme girmez, rijitliği ve çökmeyi değiştirmez. Tedarikçi raporlarında aynı sütun "Load (%)" adıyla geçer ve tipik tasarım hedefi %25–50 bandıdır — çok düşük değer gereğinden sert/büyük takozu, %100\'e yaklaşan değer ömür riskini gösterir.</p>';
+  }
   h+=_mntRepLoadBar(R);
   return h;
 }
