@@ -232,6 +232,51 @@ function veTrLaneRange(min, max, discrete) {
   return { min: min - pad, max: max + pad };
 }
 
+// ── Logaritmik Y ekseni ──────────────────────────────────────────────────────
+//
+// NEDEN VAR: iletilebilirlik T(f) üç mertebe değişir — rezonansta 25, izolasyon
+// bölgesinde 0,003. Lineer eksende ölçeği tepe belirler ve asıl ilgilendiğimiz
+// bölge (T < 1) grafiğin en alt %4'üne yapışır: "0,003 mü 0,03 mu" ayırt
+// edilemez, hâlbuki aradaki fark on kat titreşimdir. Tedarikçi raporları bu
+// diyagramı LOG-LOG basar; bizde X log oldu, Y lineer kalmıştı.
+//
+// Şerit bazında uygulanır: aynı panoda kuvvet (işaret değiştiren) ve
+// iletilebilirlik (hep pozitif) şeritleri bir arada olabilir. Log yalnız
+// TÜMÜ POZİTİF şeritte açılır; ötekiler lineer kalır. Kilitli kalan bir düğme
+// yerine uygulanabildiği şeride uygulanır.
+function veTrYLogOk(min, max) {
+  return isFinite(min) && isFinite(max) && min > 0 && max > 0;
+}
+
+// Log şeridin Y aralığı. Pay ÇARPIMSAL: lineerdeki "aralığın %8'i" kuralı log
+// ölçekte alt uçta devasa, üst uçta görünmez bir boşluk açardı.
+function veTrLaneRangeLog(min, max) {
+  if(!veTrYLogOk(min, max)) return { min: 1, max: 10 };
+  if(max <= min) return { min: min / 3, max: max * 3 };
+  var f = Math.pow(max / min, 0.06);
+  return { min: min / f, max: max * f };
+}
+
+// Ondalık bölmeleri (1-2-5, gerekirse 1..9) — X ve Y ekseni AYNI üreteci
+// kullanır ki iki eksende farklı bölme mantığı olmasın.
+function veTrLogTickList(lo, hi) {
+  var MULT = [[1, 2, 5], [1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9]];
+  for(var m = 0; m < MULT.length; m++) {
+    var ticks = [];
+    for(var d = Math.floor(Math.log10(lo)) - 1; d <= Math.ceil(Math.log10(hi)); d++) {
+      for(var k = 0; k < MULT[m].length; k++) {
+        var t = MULT[m][k] * Math.pow(10, d);
+        if(t >= lo * 0.9999 && t <= hi * 1.0001) ticks.push(t);
+      }
+    }
+    if(ticks.length >= 3) {
+      ticks.sort(function(a, b) { return a - b; });
+      return ticks;
+    }
+  }
+  return null;
+}
+
 // Şerit dikdörtgenleri. Yükseklikler piksel cinsinden saklanır (kullanıcı
 // ayırıcıyı sürükleyince doğrudan bu değer değişir). Kullanılabilir alan
 // yetiyorsa şeritler ORANTILI büyütülür — üç sinyalde ekranın yarısı boş
@@ -376,7 +421,7 @@ function veTrResolveX(slot) {
 // geçici alanlar (geometri, önbellek, RAF tutamakları) ileride eklenirse
 // kendiliğinden dışarıda kalır. Aksi hâlde bir gün diske canvas geometrisi
 // yazılır ve dosya boyutu sessizce şişer.
-var VE_TR_SLOT_KEYS = ['sensors', 'lanes', 'xAxis', 'type', '_dataSource', 'yAxisLock', 'zAxis', 'xLog'];
+var VE_TR_SLOT_KEYS = ['sensors', 'lanes', 'xAxis', 'type', '_dataSource', 'yAxisLock', 'zAxis', 'xLog', 'yLog'];
 
 function veTrCloneSlot(s) {
   var out = {};
@@ -447,14 +492,26 @@ function veTrBuildLanes(slot) {
       if(e.max > mx) mx = e.max;
     });
 
-    var range = anyData ? veTrLaneRange(mn, mx, allDiscrete) : { min: 0, max: 1 };
-    if(L.min != null && isFinite(L.min)) range.min = L.min;
-    if(L.max != null && isFinite(L.max)) range.max = L.max;
-    if(range.max <= range.min) range.max = range.min + 1;
+    // Log Y pano düzeyinde açılır ama ŞERİT BAŞINA uygulanır: aynı panoda
+    // işaret değiştiren bir kuvvet şeridi ile hep pozitif bir iletilebilirlik
+    // şeridi yan yana durabilir. Ayrık (basamaklı) şeritte log anlamsızdır —
+    // seviye numaralarının logaritması diye bir şey yok.
+    var yLog = !!(slot && slot.yLog) && anyData && !allDiscrete && !levels
+               && veTrYLogOk(mn, mx);
+
+    var range = anyData
+      ? (yLog ? veTrLaneRangeLog(mn, mx) : veTrLaneRange(mn, mx, allDiscrete))
+      : { min: 0, max: 1 };
+    // Elle kilitlenen sınır log kipte POZİTİF olmak zorunda; lineer kipten
+    // kalmış bir 0/negatif sınır sessizce yok sayılır (log10 tanımsız).
+    if(L.min != null && isFinite(L.min) && (!yLog || L.min > 0)) range.min = L.min;
+    if(L.max != null && isFinite(L.max) && (!yLog || L.max > 0)) range.max = L.max;
+    if(range.max <= range.min) range.max = yLog ? range.min * 10 : range.min + 1;
 
     return {
       def: L,
       sigs: sigs,
+      yLog: yLog,
       unit: sigs.length ? (sigs[0].sensor.unit || '') : '',
       title: sigs.length
         ? (veTrLaneTitle(sigs[0].sensor) + (sigs.length > 1 ? ' +' + (sigs.length - 1) : ''))
@@ -463,6 +520,12 @@ function veTrBuildLanes(slot) {
       discrete: allDiscrete,
       levels: levels,
       hasData: anyData,
+      // Verinin HAM uçları (pay eklenmemiş). Log elverişliliği buradan
+      // sorulur: lineer pay "aralığın %8'i" olduğu için tamamı pozitif bir
+      // seride bile yMin sıfırın altına düşebilir ([0,5 … 7] → −0,02) ve
+      // elverişli bir şerit elverişsiz görünürdü.
+      vMin: anyData ? mn : NaN,
+      vMax: anyData ? mx : NaN,
       locked: (L.min != null || L.max != null),
       yMin: range.min,
       yMax: range.max
@@ -542,6 +605,12 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   };
   lanes.forEach(function(lane) {
     if(lane.levels) { lane.levels.forEach(measure); return; }
+    if(lane.yLog) {
+      // Log şeritte oluk genişliği bölme etiketlerinden doğar; uçların
+      // biçimi (0,003 / 25) ölçekle birlikte değiştiği için ikisi de ölçülür.
+      [lane.yMin, lane.yMax].forEach(function(v) { measure(veTrFmtLogTick(v)); });
+      return;
+    }
     var step = veTrLaneStep(lane, VE_TR.LANE_DEF_H);
     var dec = (typeof veAxisDecimals === 'function') ? veAxisDecimals(step) : 2;
     [lane.yMin, lane.yMax].forEach(function(v) {
@@ -593,7 +662,16 @@ function veTrXVal(geo, px) {
   return geo.xMin + (px - geo.plotX) / geo.plotW * (geo.xMax - geo.xMin);
 }
 
+// Değer → piksel. Log kipinde eşleme burada, TEK yerde değişir; ızgara,
+// eğri, imleç ve işaretler hepsi buradan geçtiği için kendiliğinden uyar.
+// Log şeritte v ≤ 0 tanımsızdır: NaN döner ve çizim o noktada kesilir
+// (sıfıra kırpmak eğriyi olmadığı yerden geçirirdi).
 function veTrYPos(lane, rect, v) {
+  if(lane.yLog) {
+    if(!(v > 0)) return NaN;
+    var lo = Math.log10(lane.yMin), hi = Math.log10(lane.yMax);
+    return rect.y + rect.h - (Math.log10(v) - lo) / (hi - lo) * rect.h;
+  }
   return rect.y + rect.h - (v - lane.yMin) / (lane.yMax - lane.yMin) * rect.h;
 }
 
@@ -621,6 +699,8 @@ function veTrStrokeSeries(ctx, geo, lane, rect, series, timeArr, discrete) {
         // eğrinin ilk parçası kesilmesin diye clip'e bırakılır.
       }
       x = veTrXPos(geo, t); y = veTrYPos(lane, rect, v);
+      // Log şeritte v ≤ 0 eşlenemez (NaN): kalem kaldırılır, eğri orada kesilir.
+      if(!isFinite(y)) { started = false; continue; }
       if(!started) { ctx.moveTo(x, y); started = true; }
       else if(discrete) { ctx.lineTo(x, prevY); ctx.lineTo(x, y); }
       else ctx.lineTo(x, y);
@@ -690,18 +770,28 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
   ctx.fillRect(x0, y0, pw, ph);
 
   // Y ızgarası + etiketler
+  // Log kipinde bölmeler ondalık (1-2-5); "adım" diye bir şey yok, o yüzden
+  // liste önceden üretilir. Lineer kipte eski davranış aynen sürer.
   var step = veTrLaneStep(lane, ph);
   var dec = (typeof veAxisDecimals === 'function') ? veAxisDecimals(step) : 2;
+  var yTicks = null;
+  if(lane.yLog) {
+    yTicks = veTrLogTickList(lane.yMin, lane.yMax);
+    if(!yTicks) yTicks = [lane.yMin, Math.sqrt(lane.yMin * lane.yMax), lane.yMax];
+  }
   var start = Math.ceil(lane.yMin / step) * step;
-  var v, gy;
+  var v, gy, _ti = 0;
 
   ctx.font = '9.5px ' + VE_TR.FONT;
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'right';
 
-  for(v = start; v <= lane.yMax + step * 0.001; v += step) {
+  for(v = yTicks ? yTicks[0] : start;
+      yTicks ? (_ti < yTicks.length) : (v <= lane.yMax + step * 0.001);
+      v = yTicks ? yTicks[++_ti] : v + step) {
+    if(yTicks && !isFinite(v)) break;
     gy = veTrYPos(lane, rect, v);
-    if(gy < y0 - 0.5 || gy > y0 + ph + 0.5) continue;
+    if(!isFinite(gy) || gy < y0 - 0.5 || gy > y0 + ph + 0.5) continue;
 
     ctx.strokeStyle = 'rgba(128,128,128,0.16)';
     ctx.lineWidth = 1;
@@ -722,6 +812,10 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
       lbl = (Math.abs(v - lv) < 1e-9 && lane.levels[lv] !== undefined) ? lane.levels[lv] : '';
     } else if(lane.discrete) {
       lbl = String(Math.round(v));
+    } else if(lane.yLog) {
+      // Ondalık sayısı DEĞERİN büyüklüğünden gelir: aynı eksende "0,003" ile
+      // "25" yan yana durur, tek bir `dec` ikisini birden yazamaz.
+      lbl = veTrFmtLogTick(v);
     } else {
       lbl = (typeof veFormatAxisVal === 'function') ? veFormatAxisVal(v, dec) : String(v);
     }
@@ -816,21 +910,8 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
 // üreteç devreye girer (değerler yine log konuma çizilir, yalnız seçimleri
 // eşit aralıklıdır). Amaç her yakınlaştırma seviyesinde okunur bir ızgara.
 function veTrLogTicks(geo) {
-  var MULT = [[1, 2, 5], [1, 1.5, 2, 3, 4, 5, 6, 7, 8, 9]];
-  for(var m = 0; m < MULT.length; m++) {
-    var ticks = [];
-    for(var d = Math.floor(Math.log10(geo.xMin)) - 1; d <= Math.ceil(Math.log10(geo.xMax)); d++) {
-      for(var k = 0; k < MULT[m].length; k++) {
-        var t = MULT[m][k] * Math.pow(10, d);
-        if(t >= geo.xMin * 0.9999 && t <= geo.xMax * 1.0001) ticks.push(t);
-      }
-    }
-    if(ticks.length >= 3) {
-      ticks.sort(function(a, b) { return a - b; });
-      return { ticks: ticks, step: null, dec: 0, log: true };
-    }
-  }
-  return null;
+  var ticks = veTrLogTickList(geo.xMin, geo.xMax);
+  return ticks ? { ticks: ticks, step: null, dec: 0, log: true } : null;
 }
 
 // Log bölmesinin etiketi: ondalık sayısı DEĞERİN kendi büyüklüğünden gelir.
@@ -1697,6 +1778,20 @@ function veTrRenderToolbar() {
          '">log x</button>';
   }
 
+  // Log Y — yalnız en az bir şerit buna elverişliyse (tüm değerleri pozitif,
+  // ayrık değil). İletilebilirlik üç mertebe değişir: lineer eksende izolasyon
+  // bölgesi grafiğin dibine yapışır ve 0,003 ile 0,03 ayırt edilmez.
+  if(veTrYLogAny(slot)) {
+    var yOn = !!slot.yLog;
+    h += '<button type="button" class="ve-trace-btn" data-act="ylog"' +
+         ' aria-pressed="' + (yOn ? 'true' : 'false') + '"' +
+         (yOn ? ' style="color:var(--accent-primary);border-color:var(--accent-primary);"' : '') +
+         ' title="' + (yOn
+            ? 'Logaritmik Y ekseni açık — lineer eksene geç'
+            : 'Y eksenini logaritmik yap (küçük değerler de okunur hâle gelir)') +
+         '">log y</button>';
+  }
+
   h += '<span class="ve-trace-sep"></span>';
 
   h += '<button type="button" class="ve-trace-btn" data-act="fit"' +
@@ -1779,6 +1874,32 @@ function veTrZoom(factor, focus) {
 // Log ↔ lineer. Eksen ALANI değişmiyor (aynı büyüklük, aynı birim), yalnız
 // çizim ölçeği değişiyor; yine de görünüm penceresi sıfırlanır: lineer kipte
 // seçilmiş bir aralık log kipte ekranın tamamını kaplayabilir.
+// Panoda log Y'ye elverişli en az bir şerit var mı? Düğme yalnız o zaman
+// görünür — kullanamadığı yerde kilitli bir düğme durmasın.
+//
+// Soru şeridin ÇİZİM aralığına değil verinin HAM uçlarına (vMin/vMax) sorulur:
+// çizim aralığı kipin kendisine göre kurulduğu için ona bakmak sorunun cevabını
+// sorunun içine koymak olurdu.
+function veTrYLogAny(slot) {
+  if(!slot) return false;
+  var lanes;
+  try { lanes = veTrBuildLanes(slot); } catch(e) { lanes = []; }
+  return lanes.some(function(lane) {
+    return lane.hasData && !lane.discrete && !lane.levels
+        && veTrYLogOk(lane.vMin, lane.vMax);
+  });
+}
+
+// Log ↔ lineer Y. X'ten farkı: görünüm penceresi X'e ait olduğu için
+// sıfırlanmaz — Y ölçeği değişince zaman/frekans penceresi değişmemeli.
+function veTrToggleYLog() {
+  var slot = veTrBoard();
+  if(!veTrYLogAny(slot)) return;
+  slot.yLog = !slot.yLog;
+  veTrRender();
+  if(typeof veSyncBoardState === 'function') veSyncBoardState();
+}
+
 function veTrToggleXLog() {
   var slot = veTrBoard();
   var arr = veTrResolveX(slot);
@@ -2390,6 +2511,7 @@ function veTrBindToolbar() {
       if(typeof veShowXAxisPicker === 'function') veShowXAxisPicker(VE_BOARD, e);
     }
     else if(act === 'xlog') veTrToggleXLog();
+    else if(act === 'ylog') veTrToggleYLog();
     else if(act === 'fit') veTrFit();
     else if(act === 'zoom-in') veTrZoom(1.4, null);
     else if(act === 'zoom-out') veTrZoom(1 / 1.4, null);
@@ -2541,6 +2663,12 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrXPos: veTrXPos,
     veTrXVal: veTrXVal,
     veTrLogTicks: veTrLogTicks,
+    veTrLogTickList: veTrLogTickList,
+    veTrYLogOk: veTrYLogOk,
+    veTrYLogAny: veTrYLogAny,
+    veTrLaneRangeLog: veTrLaneRangeLog,
+    veTrBuildLanes: veTrBuildLanes,
+    veTrYPos: veTrYPos,
     veTrTimeTicks: veTrTimeTicks,
     veTrFmtLogTick: veTrFmtLogTick,
     veTrFmt: veTrFmt,

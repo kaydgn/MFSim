@@ -590,3 +590,120 @@ describe('logaritmik X ekseni', () => {
     expect(T.veTrFmtLogTick(100)).toBe('100');
   });
 });
+
+describe('logaritmik Y ekseni', () => {
+  // İletilebilirlik T(f) üç mertebe değişir: rezonansta ~25, izolasyon
+  // bölgesinde ~0,003. Lineer eksende ölçeği tepe belirler ve asıl
+  // ilgilendiğimiz bölge grafiğin en alt %4'üne yapışır — 0,003 ile 0,03 ayırt
+  // edilmez, hâlbuki aradaki fark ON KAT titreşimdir.
+  const rect = { y: 0, h: 300 };
+  const logLane = { yLog: true, yMin: 0.001, yMax: 100 };
+  const linLane = { yLog: false, yMin: 0.001, yMax: 100 };
+
+  test('log yalnız TÜM aralık pozitifse mümkün', () => {
+    expect(T.veTrYLogOk(0.001, 100)).toBe(true);
+    expect(T.veTrYLogOk(0, 100)).toBe(false);        // kuvvet şeridi sıfırdan geçer
+    expect(T.veTrYLogOk(-5, 100)).toBe(false);       // basma/çekme işaret değiştirir
+    expect(T.veTrYLogOk(NaN, 1)).toBe(false);
+  });
+
+  test('dekatlar eşit yükseklikte — asıl kazanç bu', () => {
+    const d1 = T.veTrYPos(logLane, rect, 0.001) - T.veTrYPos(logLane, rect, 0.01);
+    const d2 = T.veTrYPos(logLane, rect, 10) - T.veTrYPos(logLane, rect, 100);
+    expect(d1).toBeCloseTo(d2, 6);
+    expect(d1).toBeCloseTo(60, 6);                   // 300 px / 5 dekat
+    // Lineerde 0,001→0,01 neredeyse hiç yer kaplamaz
+    expect(T.veTrYPos(linLane, rect, 0.001) - T.veTrYPos(linLane, rect, 0.01))
+      .toBeLessThan(0.1);
+  });
+
+  test('uçlar şeridin sınırlarına oturur, yön doğru (büyük değer YUKARIDA)', () => {
+    expect(T.veTrYPos(logLane, rect, 100)).toBeCloseTo(0, 6);
+    expect(T.veTrYPos(logLane, rect, 0.001)).toBeCloseTo(300, 6);
+    expect(T.veTrYPos(logLane, rect, 1)).toBeLessThan(T.veTrYPos(logLane, rect, 0.1));
+  });
+
+  test('pozitif olmayan değer eşlenmez — NaN, sıfıra KIRPILMAZ', () => {
+    // Kırpılsaydı eğri olmadığı bir yerden geçer, kullanıcı "burada bir değer
+    // var" diye okurdu. NaN'da çizim kesilir.
+    expect(Number.isNaN(T.veTrYPos(logLane, rect, 0))).toBe(true);
+    expect(Number.isNaN(T.veTrYPos(logLane, rect, -1))).toBe(true);
+    expect(Number.isFinite(T.veTrYPos(linLane, rect, 0))).toBe(true);   // lineerde normal
+  });
+
+  test('log aralık payı ÇARPIMSAL — veri uçları içeride kalır', () => {
+    const r = T.veTrLaneRangeLog(0.01, 10);
+    expect(r.min).toBeLessThan(0.01);
+    expect(r.max).toBeGreaterThan(10);
+    // Pay iki uçta da AYNI oranda: lineerdeki "%8 mutlak" kuralı log ölçekte
+    // alt uçta devasa, üst uçta görünmez bir boşluk açardı.
+    expect(0.01 / r.min).toBeCloseTo(r.max / 10, 9);
+    // Sabit seride simetrik bant
+    const c = T.veTrLaneRangeLog(5, 5);
+    expect(c.min).toBeLessThan(5);
+    expect(c.max).toBeGreaterThan(5);
+    // Geçersiz girdi çökertmez
+    expect(T.veTrLaneRangeLog(0, 10)).toEqual({ min: 1, max: 10 });
+  });
+
+  test('bölme değerleri dekat başına 1-2-5, X ekseniyle AYNI üreteçten', () => {
+    const y = T.veTrLogTickList(0.1, 100);
+    expect(y).toEqual(expect.arrayContaining([0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50, 100]));
+    const x = T.veTrLogTicks({ xMin: 0.1, xMax: 100 }).ticks;
+    expect(y).toEqual(x);
+    // Dar aralıkta üreteç null bildirir (çağıran lineer/uç değere düşer)
+    expect(T.veTrLogTickList(11, 14)).toBeNull();
+  });
+
+  // veTrSeries sonucu ANAHTAR BAŞINA önbelleklenir; her senaryo kendi sinyal
+  // adını kullanır ki bir testin verisi ötekine sızmasın.
+  const DATA = {
+    pos: [0.01, 0.5, 25], mix: [-3, 0, 7], disc: [0, 1, 1],
+    negOnly: [-3, -1], posOnly: [0.5, 3, 7], lock: [0.01, 0.5, 25],
+  };
+  global.veGetSensorData = (id, signal) => DATA[signal] || null;
+
+  test('şerit kipi PANO düzeyinde açılır, ŞERİT başına uygulanır', () => {
+    // Aynı panoda işaret değiştiren bir kuvvet şeridi ile hep pozitif bir
+    // iletilebilirlik şeridi yan yana durabilir. Log yalnız ikincisine uyar.
+    const slot = {
+      yLog: true,
+      sensors: [sig('s', 'pos', { unit: '−' }), sig('s', 'mix', { unit: 'N' }),
+                sig('s', 'disc', { unit: 'adet' })],
+      lanes: [{ ids: [veTrKey('s', 'pos')] }, { ids: [veTrKey('s', 'mix')] },
+              { ids: [veTrKey('s', 'disc')] }],
+    };
+    const lanes = T.veTrBuildLanes(slot);
+    expect(lanes[0].yLog).toBe(true);        // hepsi pozitif
+    expect(lanes[1].yLog).toBe(false);       // sıfır ve negatif içeriyor
+    expect(lanes[2].yLog).toBe(false);       // ayrık: seviye numarasının logu olmaz
+    // Kapatınca hepsi lineer
+    slot.yLog = false;
+    expect(T.veTrBuildLanes(slot).every((L) => !L.yLog)).toBe(true);
+  });
+
+  test('elverişli şerit yoksa kip hiç açılmaz, sorgu bayrağı BOZMAZ', () => {
+    const neg = { yLog: true, sensors: [sig('s', 'negOnly', { unit: 'N' })],
+                  lanes: [{ ids: [veTrKey('s', 'negOnly')] }] };
+    expect(T.veTrYLogAny(neg)).toBe(false);
+    expect(neg.yLog).toBe(true);
+    const pos = { yLog: true, sensors: [sig('s', 'posOnly', { unit: '−' })],
+                  lanes: [{ ids: [veTrKey('s', 'posOnly')] }] };
+    expect(T.veTrYLogAny(pos)).toBe(true);
+    expect(pos.yLog).toBe(true);
+    // Elverişlilik verinin HAM uçlarından sorulur: lineer pay ([0,5 … 7] →
+    // yMin −0,02) tamamı pozitif bir seriyi elverişsiz gösterirdi.
+    expect(T.veTrBuildLanes(pos)[0].vMin).toBe(0.5);
+  });
+
+  test('log kipte 0/negatif elle kilit sessizce yok sayılır', () => {
+    // Lineer kipten kalmış bir "min = 0" kilidi log10 için tanımsızdır;
+    // uygulansaydı tüm şerit çizilemezdi.
+    const slot = { yLog: true, sensors: [sig('s', 'lock', { unit: '−' })],
+                   lanes: [{ ids: [veTrKey('s', 'lock')], min: 0, max: 50 }] };
+    const L = T.veTrBuildLanes(slot)[0];
+    expect(L.yLog).toBe(true);
+    expect(L.yMin).toBeGreaterThan(0);
+    expect(L.yMax).toBe(50);                 // pozitif kilit geçerli
+  });
+});
