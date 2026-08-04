@@ -4027,9 +4027,35 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
    şerit tam genişlikte kalır, METİN sınırlanır. */
 .ve-trace-note-body{
   display:none;padding:2px 8px 9px 26px;
-  max-height:34vh;overflow-y:auto;
+  max-height:38vh;overflow-y:auto;
+  scrollbar-width:thin;
 }
 .ve-trace-note.open .ve-trace-note-body{display:block;}
+
+/* Devamı var: metin sığmadığında alt kenar söner ve ince bir kaydırma çubuğu
+   görünür. Bu ipucu OLMADAN şerit "kesilmiş" gibi okunuyordu — kullanıcı
+   kaydırılabildiğini bilmiyordu. Maske yalnız TAŞMA varken uygulanır
+   (js/trace-view.js has-more sınıfı); her zaman açık bırakmak son satırı
+   sebepsiz soldururdu. */
+.ve-trace-note-body.has-more{
+  -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+          mask-image:linear-gradient(to bottom, #000 calc(100% - 26px), transparent 100%);
+}
+.ve-trace-note-body::-webkit-scrollbar{width:8px;}
+.ve-trace-note-body::-webkit-scrollbar-thumb{
+  background:color-mix(in srgb, var(--text-muted) 45%, transparent);
+  border-radius:4px;
+}
+.ve-trace-note-body::-webkit-scrollbar-track{background:transparent;}
+
+/* "Devamı var" rozeti — maske sessiz bir ipucu, bu ise açık sözlü olanı.
+   Yalnız taşma varken ve şerit açıkken görünür. */
+.ve-trace-note-more{
+  display:none;
+  padding:0 8px 5px 26px;
+  font-size:var(--fs-micro);color:var(--text-muted);opacity:0.8;
+}
+.ve-trace-note.open .ve-trace-note-more.on{display:block;}
 .ve-trace-note-p{
   margin:0 0 6px 0;max-width:78ch;
   font-size:var(--fs-tiny);line-height:1.62;color:var(--text-secondary);

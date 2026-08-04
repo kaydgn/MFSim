@@ -1343,7 +1343,21 @@ function veTrNoteHTML(entry) {
     h += '<p class="ve-trace-note-p">' + _veTrEsc(p) + '</p>';
   });
   h += '</div>';
+  h += '<div class="ve-trace-note-more">↓ devamı var — yorumu kaydırın</div>';
   return h;
+}
+
+// Yorum penceredeki yerine sığdı mı? Sığmadıysa alt kenar sönüyor ve "devamı
+// var" satırı açılıyor. Ölçüm ancak DOM'a basıldıktan sonra yapılabilir:
+// scrollHeight, yerleşim tamamlanmadan doğru değeri vermez.
+function veTrNoteOverflow(el) {
+  if(!el) return;
+  var body = el.querySelector('.ve-trace-note-body');
+  var more = el.querySelector('.ve-trace-note-more');
+  if(!body) return;
+  var over = veTrNoteOpen() && body.scrollHeight > body.clientHeight + 1;
+  body.classList.toggle('has-more', over);
+  if(more) more.classList.toggle('on', over);
 }
 
 // Son çizilen not — her veTrRender'da (yani her yakınlaştırma/sürükleme
@@ -1363,6 +1377,7 @@ function veTrRenderNote(force) {
   el.style.display = '';
   el.classList.toggle('open', veTrNoteOpen());
   el.innerHTML = veTrNoteHTML(entry);
+  veTrNoteOverflow(el);
   if(el._veTrBound) return;
   el._veTrBound = true;
   el.addEventListener('click', function(e) {
@@ -1370,6 +1385,19 @@ function veTrRenderNote(force) {
     veTrSetNoteOpen(!veTrNoteOpen());
     veTrRenderNote();
   });
+  // Kullanıcı sona kaydırınca "devamı var" ipucu kalkar; pencere yeniden
+  // boyutlandığında taşma durumu değişebilir — ikisi de yeniden ölçülür.
+  el.addEventListener('scroll', function() {
+    var body = el.querySelector('.ve-trace-note-body');
+    if(!body) return;
+    var atEnd = body.scrollTop + body.clientHeight >= body.scrollHeight - 2;
+    var more = el.querySelector('.ve-trace-note-more');
+    if(more) more.classList.toggle('on', !atEnd && body.scrollHeight > body.clientHeight + 1);
+    body.classList.toggle('has-more', !atEnd && body.scrollHeight > body.clientHeight + 1);
+  }, true);
+  if(typeof ResizeObserver !== 'undefined') {
+    try { new ResizeObserver(function() { veTrNoteOverflow(el); }).observe(el); } catch(e) {}
+  }
 }
 
 // ── Boş durum ────────────────────────────────────────────────────────────────
