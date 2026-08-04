@@ -173,99 +173,81 @@ var veMntBrief = (function() {
   }
 
   // ── 1) Frekans yanıtı ────────────────────────────────────────────────────
+  //
+  // UZUNLUK BİR TASARIM KISITI: bu metin grafiğin ALTINDA duruyor ve şerit ne
+  // kadar uzarsa eğriye o kadar az yer kalıyor. Altı paragraflık ilk sürüm
+  // pencerenin yarısını yiyordu. Kural: en fazla üç paragraf, her cümle bir
+  // SAYI taşısın. Genel tanım (eksen ne, birim ne) tek cümleye sıkışır;
+  // yerini modelin kendi ölçümüne bırakır.
   function briefFRF(ds, R) {
     var f = ds.x.data;
     var T = chan(ds, 'T_2'), T0 = chan(ds, 'T0_2');
     if(!T) return null;
     var paras = [], marks = [];
 
-    paras.push(
-      'Yatay eksen motorun saniyede kaç kez titreştiğini (Hz), dikey eksen o ' +
-      'titreşimin ne kadarının takozlardan geçip şasiye ulaştığını gösterir. ' +
-      '1 değeri "hiç azalmadan geçti", 0,1 değeri "onda birine düştü" demektir.');
-
-    // Modlar ve tepeler
+    // P1 — eksenler + tepeler
     var modes = ((R && R.modes) || []).filter(function(m) { return m && m.f_Hz > 1e-6; });
     var pk = peaks(f, T.data, 1.05);
+    var s1 = 'Yatay eksen titreşim frekansı, dikey eksen o titreşimin ne kadarının ' +
+             'takozlardan geçip şasiye ulaştığı; 1 değeri "hiç azalmadan geçti" demek.';
     if(modes.length) {
       var fs = modes.map(function(m) { return m.f_Hz; });
-      var s = 'Eğrideki tepeler güç grubunun kendi doğal frekanslarıdır — yani ' +
-              'motor kapalıyken bile takozların üzerinde salınabileceği hızlar. ' +
-              'Bu modelde ' + modes.length + ' tane var, ' +
-              na(Math.min.apply(null, fs)) + ' Hz ile ' + na(Math.max.apply(null, fs)) + ' Hz arasında.';
-      if(pk.length) {
-        var top = pk[0];
-        var near = null, bestD = Infinity;
-        modes.forEach(function(m) {
-          var d = Math.abs(Math.log10(m.f_Hz) - Math.log10(top.f));
-          if(d < bestD) { bestD = d; near = m; }
-        });
-        s += ' En keskin tepe ' + na(top.f) + ' Hz\'de';
-        if(near && bestD < 0.05) s += ', ' + modeTR(near.label) + ' modunda';
-        s += ': orada şasiye giden kuvvet, motorun uyguladığı kuvvetin ' +
-             na(top.v) + ' katına çıkıyor. Bu frekansta takoz titreşimi azaltmaz, ' +
-             'büyütür — motorun çalışma aralığı bu tepelerden uzak olmalıdır.';
-      }
-      paras.push(s);
-
+      s1 += ' Tepeler güç grubunun doğal frekanslarıdır: ' + modes.length + ' tane, ' +
+            na(Math.min.apply(null, fs)) + '–' + na(Math.max.apply(null, fs)) + ' Hz arasında.';
       modes.forEach(function(m) {
         marks.push({ axis: 'x', value: m.f_Hz, kind: 'mode',
                      label: na(m.f_Hz) + ' Hz · ' + modeShort(m.label) });
       });
     }
+    if(pk.length) {
+      var top = pk[0], near = null, bestD = Infinity;
+      modes.forEach(function(m) {
+        var d = Math.abs(Math.log10(m.f_Hz) - Math.log10(top.f));
+        if(d < bestD) { bestD = d; near = m; }
+      });
+      s1 += ' En keskini ' + na(top.f) + ' Hz' +
+            ((near && bestD < 0.05) ? ' (' + modeShort(near.label) + ')' : '') +
+            ': orada şasiye giden kuvvet ' + na(top.v) + ' katına çıkıyor — takoz izole etmez, büyütür.';
+    }
+    paras.push(s1);
 
-    // İzolasyon bölgesi
+    // P2 — izolasyon bölgesi + ateşleme frekansı hükmü
     var cross = lastCrossBelow(f, T.data, 1);
-    var tEnd = T.data[T.data.length - 1];
+    var s2 = '';
     if(isFinite(cross)) {
-      paras.push(
-        'Eğri ' + na(cross) + ' Hz\'den sonra kalıcı olarak 1\'in altına iniyor; ' +
-        'takozun asıl işini yaptığı bölge orası. ' + na(f[f.length - 1]) + ' Hz\'de ' +
-        'iletilebilirlik ' + na(tEnd) + ', yani titreşimin ' +
-        pct((1 - tEnd) * 100, 1) + '\'i takozda kalıyor.');
+      s2 = na(cross) + ' Hz\'den sonra eğri kalıcı olarak 1\'in altında; takozun asıl ' +
+           'işini yaptığı bölge orası.';
       marks.push({ axis: 'x', value: cross, kind: 'ref',
                    label: 'izolasyon başlangıcı ' + na(cross) + ' Hz' });
     }
-    marks.push({ axis: 'y', value: 1, unit: '−', kind: 'limit',
-                 label: 'T = 1 · altı izolasyon, üstü büyütme' });
-
-    // Ateşleme frekansı hükmü — motor tanımı yoksa bu paragraf HİÇ yazılmaz.
     var eng = engineFiring(R);
     if(eng) {
-      var Tf = interpAt(f, T.data, eng.f, true);   // frekans ızgarası logaritmik
-      var s2 = 'Motor rölantide ' + n(eng.rpm, 0) + ' d/dk\'da dönüyor ve ' +
-               n(eng.cyl, 0) + ' silindirli; bu ' + na(eng.f) + ' Hz\'lik bir ateşleme ' +
-               'frekansı demek — motorun sürekli ürettiği asıl titreşim orada.';
+      var Tf = interpAt(f, T.data, eng.f, true);
+      s2 += (s2 ? ' ' : '') + 'Rölanti ateşleme frekansı ' + na(eng.f) + ' Hz (' +
+            n(eng.rpm, 0) + ' d/dk, ' + n(eng.cyl, 0) + ' silindir)';
       if(isFinite(Tf)) {
-        s2 += ' O noktada iletilebilirlik ' + na(Tf) + ', yani titreşimin ' +
-              pct((1 - Tf) * 100, 1) + '\'i takozda kalıyor. Sektörde bu değerin ' +
-              '0,2\'nin altında olması beklenir; ' +
-              (Tf < 0.2 ? 'model bunu sağlıyor.' :
-               (Tf < 1 ? 'model bu hedefin üstünde kalıyor — takozlar yumuşatılmalı ya da yerleşim gözden geçirilmeli.'
-                       : 'bu frekansta sistem izole etmiyor, büyütüyor — yerleşim mutlaka değiştirilmeli.'));
+        s2 += ' ve orada iletilebilirlik ' + na(Tf) + ' — titreşimin ' +
+              pct((1 - Tf) * 100, 1) + '\'i takozda kalıyor. Hedef 0,2\'nin altı; ' +
+              (Tf < 0.2 ? 'model sağlıyor.'
+                        : (Tf < 1 ? 'model üstünde kalıyor, takozlar yumuşatılmalı.'
+                                  : 'burada izolasyon yok, yerleşim değişmeli.'));
         marks.push({ axis: 'x', value: eng.f, kind: 'event',
                      label: 'rölanti ateşleme ' + na(eng.f) + ' Hz' });
-      }
-      paras.push(s2);
+      } else { s2 += '.'; }
     }
+    marks.push({ axis: 'y', value: 1, unit: '−', kind: 'limit',
+                 label: 'T = 1 · altı izolasyon, üstü büyütme' });
+    if(s2) paras.push(s2);
 
-    // Sönüm ve okuma uyarısı
+    // P3 — okuma uyarıları (kullanıcının bildirdiği iki tuzak)
+    var s3 = 'Sönümsüz kanal, kauçuğun sönüm payı çıkarılmış hâldir';
     if(T0 && pk.length) {
       var p0 = peaks(f, T0.data, 1.05);
-      if(p0.length && isFinite(R.zeta)) {
-        paras.push(
-          '"Sönümsüz" kanal, aynı sistemin kauçuğun sönümü olmadan hâlidir; kauçuğun ' +
-          'titreşimi ısıya çevirip söndürme payı çıkarılmıştır. Aradaki fark o payın ' +
-          'katkısıdır: modelde sönüm kritik değerin ' + pct(R.zeta * 100, 1) + '\'i ' +
-          'kadar ve bu, en yüksek tepeyi ' + na(p0[0].v) + '\'ten ' + na(pk[0].v) +
-          '\'e indiriyor. İki eğriyi AYNI şeride koyarsanız sönümsüz tepe ölçeği ele ' +
-          'geçirir ve sönümlü eğri düz görünür; ayrı şeritlerde okumak daha doğrudur.');
-      }
+      if(p0.length) s3 += ': tepeyi ' + na(p0[0].v) + '\'ten ' + na(pk[0].v) + '\'e indiriyor';
     }
-    paras.push(
-      'Not: "izolasyon verimi" kanalı rezonans tepelerinde büyük eksi değerlere ' +
-      'iner — çünkü orada titreşim azalmaz, katlanır. Bu bir hata değil, aynı ' +
-      'bilginin yüzde cinsinden hâlidir; o kanalı ayrı bir şeritte okuyun.');
+    s3 += '. Onu ve izolasyon verimini AYRI şeritte okuyun — biri ölçeği ele geçirir, ' +
+          'öteki rezonansta büyük eksi değerlere iner.';
+    paras.push(s3);
 
     return {
       lead: 'Motorun ürettiği titreşimin ne kadarının şasiye geçtiğini, her titreşim hızı için ayrı ayrı gösterir.',
@@ -284,21 +266,17 @@ var veMntBrief = (function() {
     }).length;
 
     paras.push(
-      'Yatay eksen takozun şekil değiştirme miktarı (mm), dikey eksen bunun için ' +
-      'gereken kuvvet. Eksi değerler takozun basıldığını, artı değerler çekildiğini ' +
-      'gösterir. Eğrinin eğimi takozun sertliğidir: dik eğri sert, yatık eğri yumuşak takoz.');
+      'Yatay eksen takozun şekil değiştirme miktarı (mm), dikey eksen bunun için gereken ' +
+      'kuvvet; eksi değer basma, artı değer çekme. Eğrinin eğimi takozun sertliğidir.');
 
     paras.push(
       'Modelde ' + mounts.length + ' takoz var; ' +
       (nl === 0
-        ? 'hepsi doğrusal tanımlı, yani kuvvet ezilmeyle orantılı artıyor ve eğriler düz çizgi. ' +
-          'Gerçek elastomer takoz büyük ezilmede sertleşir — kütüphaneden eğri tanımlanırsa ' +
-          'bu grafik o sertleşmeyi de gösterir.'
-        : nl + ' tanesinde nonlineer eğri tanımlı: yük arttıkça sertleşiyorlar, ' +
-          'bu da büyük darbelerde dibe vurmayı geciktirir. Kalan ' + (mounts.length - nl) +
-          ' takoz doğrusal.'));
+        ? 'hepsi doğrusal, yani eğriler düz çizgi. Kütüphaneden eğri tanımlanırsa ' +
+          'büyük ezilmedeki sertleşme de burada görünür.'
+        : nl + ' tanesi nonlineer: yük arttıkça sertleşip dibe vurmayı geciktiriyor, ' +
+          'kalan ' + (mounts.length - nl) + ' takoz doğrusal.'));
 
-    // Çalışma noktası — statik durumdan
     var stat = staticCase(R);
     if(stat && stat.perMount && stat.perMount.length) {
       var worst = null, wi = -1;
@@ -308,11 +286,9 @@ var veMntBrief = (function() {
       });
       var wmm = worst * 1000;
       paras.push(
-        'Aracın kendi ağırlığı altında en çok yüklenen takoz "' + mountLabel(mounts[wi], wi) +
-        '"; düşeyde ' + na(wmm) + ' mm eziliyor. Bu, ±10 mm\'lik doğrusal çalışma bandının ' +
-        pct(wmm / 10 * 100, 0) + '\'i. Metal metale değme sınırı ±15 mm; kalan pay ' +
-        na(15 - wmm) + ' mm. Çalışma noktası eğrinin düz bölümünde kaldığı sürece takoz ' +
-        'tasarlandığı gibi davranıyor demektir.');
+        'Araç kendi ağırlığındayken en çok yüklenen takoz "' + mountLabel(mounts[wi], wi) +
+        '": düşeyde ' + na(wmm) + ' mm — doğrusal bandın (±10 mm) ' + pct(wmm / 10 * 100, 0) +
+        '\'i. Metal metale değmeye ' + na(15 - wmm) + ' mm pay var.');
       marks.push({ axis: 'x', value: -wmm, kind: 'event',
                    label: 'çalışma noktası ' + na(-wmm) + ' mm' });
     }
@@ -350,48 +326,42 @@ var veMntBrief = (function() {
     var paras = [], marks = [];
 
     paras.push(
-      'Yatay eksen ' + t.yon + ' ivme: ' + t.olay + ' takozlara binen yükü temsil eder. ' +
-      t.sifir + '. Eğriler her takozun o yükteki ezilmesini ve taşıdığı kuvveti gösterir; ' +
-      '"en büyük takoz çökmesi" kanalı hepsinin en kötüsünü tek eğride toplar.');
+      'Yatay eksen ' + t.yon + ' ivme: ' + t.olay + ' takozlara binen yük. ' + t.sifir +
+      '. "En büyük takoz çökmesi" kanalı hepsinin en kötüsünü tek eğride toplar.');
 
     var dAtDesign = interpAt(a, dmax.data, t.tasarim);
     var dAtEnd = dmax.data[dmax.data.length - 1];
-    var s = 'Bu modelde ' + t.tasarimAd + ' altında en çok yüklenen takoz ' +
-            na(isFinite(dAtDesign) ? dAtDesign : dAtEnd) + ' mm eziliyor';
+    var dRef = isFinite(dAtDesign) ? dAtDesign : dAtEnd;
+    var s = t.tasarimAd + ' altında en çok yüklenen takoz ' + na(dRef) + ' mm eziliyor';
     if(ds.key === 'gz') {
       var d1 = interpAt(a, dmax.data, 1);
-      if(isFinite(d1)) s += ' (araç dururken bu değer ' + na(d1) + ' mm)';
+      if(isFinite(d1)) s += ' (araç dururken ' + na(d1) + ' mm)';
     }
-    s += '. ±15 mm metal metale değme sınırı olduğuna göre kalan pay ' +
-         na(15 - (isFinite(dAtDesign) ? dAtDesign : dAtEnd)) + ' mm.';
+    s += '; ±15 mm sınırına ' + na(15 - dRef) + ' mm pay kalıyor.';
     paras.push(s);
     marks.push({ axis: 'x', value: t.tasarim, kind: 'event',
                  label: 'tasarım yükü ' + n(t.tasarim, 1).replace(',0', '') + ' g' });
-    // Düşey süpürmede 1 g ayrıca ARACIN DURDUĞU hâldir: çalışma noktası orada.
     if(ds.key === 'gz') {
       marks.push({ axis: 'x', value: 1, kind: 'ref', label: 'araç dururken 1 g' });
     }
 
-    // Kırılma noktaları — asıl bilgi burada
     var aT = nt ? firstNonZero(a, nt.data) : NaN;
     var aC = nc ? firstNonZero(a, nc.data) : NaN;
     var ev = [];
     if(isFinite(aT)) {
-      ev.push('İlk çekme (lift-off) ' + na(aT) + ' g\'de başlıyor: o noktadan sonra bir ' +
-              'takozun üzerinden yük tamamen kalkıyor ve takoz asılmaya geçiyor. Elastomer ' +
-              'takoz çekmede basmadaki gibi davranmaz; bu, tasarımın sınırıdır.');
+      ev.push('İlk çekme ' + na(aT) + ' g\'de: bir takozun üzerinden yük tamamen kalkıp ' +
+              'asılmaya geçiyor — elastomer çekmede basmadaki gibi davranmaz.');
       marks.push({ axis: 'x', value: aT, kind: 'warn', label: 'ilk çekme ' + na(aT) + ' g' });
     }
     if(isFinite(aC)) {
-      ev.push('İlk metal-metal temas ' + na(aC) + ' g\'de: takoz dayanağına oturuyor ve ' +
-              'yük artık kauçuktan değil çelikten geçiyor. Eğrideki keskin kırılma tam orada.');
+      ev.push('İlk metal-metal temas ' + na(aC) + ' g\'de: yük artık kauçuktan değil ' +
+              'çelikten geçiyor, eğrideki keskin kırılma orada.');
       marks.push({ axis: 'x', value: aC, kind: 'warn', label: 'durdurucu teması ' + na(aC) + ' g' });
     }
     paras.push(ev.length
       ? ev.join(' ')
-      : 'Süpürmenin tamamında hiçbir takoz dayanağına oturmuyor ve hiçbirinin üzerinden ' +
-        'yük kalkmıyor — iki sayaç kanalı da sıfırda kalıyor. Aranan sonuç budur: ' +
-        'yük tümüyle kauçuk üzerinden taşınıyor.');
+      : 'Süpürmenin tamamında hiçbir takoz dayanağına oturmuyor, hiçbirinin üzerinden yük ' +
+        'kalkmıyor — iki sayaç da sıfırda. Aranan sonuç budur.');
 
     return {
       lead: 'Takozların ' + t.olay + ' ne kadar ezildiğini ve ne kadar yüklendiğini gösterir.',
