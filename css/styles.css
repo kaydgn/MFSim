@@ -4082,26 +4082,21 @@ body.ve-window-dragging{ user-select:none; cursor:move; }
    grafiğin yarısı yenmiş. Sütun genişliği sabit (~46ch, okunabilir band),
    sütun SAYISI panele göre kendiliğinden değişir — geniş ekranda üç, dar
    ekranda tek. Yükseklik böylece üçte birine iner. */
-.ve-trace-note-body{
-  column-width:46ch;column-gap:26px;
-}
-/* Şerit başına bir bölüm.
-   BÖLÜM SÜTUNA KIRILABİLİR OLMALI — `break-inside:avoid` konulursa tek şeritli
-   bir yorum tek bölünemez blok olur, ikinci sütuna geçemez ve pencerenin sağ
-   yarısı boş kalır. Kırılmaması gereken tek şey PARAGRAFIN kendisi (aşağıda)
-   ve başlığın metninden kopmaması (break-after:avoid). */
-.ve-trace-note-sec{margin:0 0 8px 0;}
+/* SÜTUN YOK. Metin, pencerenin tam genişliğinde tek akışta durur — sıradan
+   bir metin penceresi gibi. Sütunlu düzen yüksekliği azaltıyordu ama iki
+   yarımlı bir görüntü üretiyordu; okuyan kişi "pencerenin yarısı boş" diye
+   algılıyor. Yükseklik zaten kullanıcının elinde (üst kenardaki tutamak). */
+/* Şerit başına bir bölüm — düz akış, sütun yok. */
+.ve-trace-note-sec{margin:0 0 9px 0;}
 .ve-trace-note-sec:last-child{margin-bottom:0;}
 .ve-trace-note-h{
   margin:0 0 3px 0;
   font-size:var(--fs-micro);font-weight:700;letter-spacing:0.03em;
   text-transform:uppercase;color:var(--text-muted);
-  break-after:avoid;-webkit-column-break-after:avoid;
 }
 .ve-trace-note-p{
   margin:0 0 6px 0;
   font-size:var(--fs-tiny);line-height:1.62;color:var(--text-secondary);
-  break-inside:avoid;-webkit-column-break-inside:avoid;
 }
 .ve-trace-note-p:last-child{margin-bottom:0;}
 /* Sayılar vurgulu: düz metin içinde göz doğrudan ölçüme gider. Renk değil
