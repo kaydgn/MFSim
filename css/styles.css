@@ -216,6 +216,156 @@
       --shadow-color: rgba(0, 6, 16, 0.6);
     }
 
+    /* ══════════════════════════════════════════════════════════════════════
+       SADE AİLESİ — düşük doygunlukta, mühendislik yazılımı tonunda temalar
+       ══════════════════════════════════════════════════════════════════════
+       Yukarıdaki temalar marka renklerini taklit eder (ANSYS altını, Fusion
+       camgöbeği, SolidWorks kırmızısı) ve aksanları çok doygundur: on temanın
+       ortalama aksan chroma'sı OKLCH'te 0,163. Aksan yalnız marka lekesi
+       değildir — seçim çerçevesi, hover dolgusu, odak halkası, buton zemini
+       ve grafik eğrisi hep ondan türer (--accent-tint-*). Doygunluk yüksek
+       olunca arayüz "renkli" değil GÜRÜLTÜLÜ okunur.
+
+       Bu ailenin üç kuralı var:
+         1. Aksan chroma'sı ≤ 0,09 (ortalama 0,061 — mevcut ailenin %38'i).
+            Renk hâlâ ayırt edilebilir ama bakışı çekip bırakmaz.
+         2. Yüzeyler arası basamak küçük ve eşit (OKLCH ΔL ≈ 0,05–0,065).
+            Panel/zemin/kart sıçramadan ayrışır; katmanlar "yapışkan" değil.
+         3. Anlam renkleri (success/warning/danger) aynı ölçüde kısılır —
+            yoksa tek bir kırmızı rozet tüm ekranı domine eder.
+
+       Kontrast eşikleri (hepsi ölçülüp doğrulandı):
+         text-primary/zemin ≥ 7:1 · text-secondary ≥ 4,5:1 · text-muted ≥ 3:1
+         accent/zemin ≥ 3:1 (UI bileşeni sınırı) · #fff/accent ≥ 4,5:1
+       Son koşul kritik: aksan birincil butonun ZEMİNİ ve üstündeki yazı
+       #fff — aksan fazla açılırsa buton yazısı okunmaz olur. */
+
+    /* Tema: Grafit — nötr grafit, çelik mavisi aksan (ailenin varsayılanı) */
+    [data-theme="graphite"] {
+      color-scheme: dark;
+      --bg-primary: #16181b;
+      --bg-secondary: #1c1f23;
+      --bg-tertiary: #23272c;
+      --bg-input: #101215;
+      --border-color: #2b3036;
+      --border-light: #343941;
+      --border-hover: #454c55;
+      --text-primary: #d2d6db;
+      --text-secondary: #949aa2;
+      --text-muted: #696f78;
+      --text-heading: #eceef1;
+      --accent-primary: #4a739f;
+      --accent-success: #4e8f66;
+      --accent-warning: #a8823f;
+      --accent-danger: #b45c56;
+      --shadow-color: rgba(0, 0, 0, 0.55);
+    }
+
+    /* Tema: Mürekkep — soğuk mavi-siyah, kısık indigo aksan */
+    [data-theme="ink"] {
+      color-scheme: dark;
+      --bg-primary: #111419;
+      --bg-secondary: #171b21;
+      --bg-tertiary: #1e232b;
+      --bg-input: #0c0e12;
+      --border-color: #262c36;
+      --border-light: #2f3641;
+      --border-hover: #3f4856;
+      --text-primary: #ccd2da;
+      --text-secondary: #8d96a3;
+      --text-muted: #636c7a;
+      --text-heading: #e8ecf1;
+      --accent-primary: #5570a6;
+      --accent-success: #4c8f70;
+      --accent-warning: #a5843f;
+      --accent-danger: #b0605c;
+      --shadow-color: rgba(0, 0, 0, 0.6);
+    }
+
+    /* Tema: Bazalt — sıcak nötr taş, kısık yeşil-mavi aksan */
+    [data-theme="basalt"] {
+      color-scheme: dark;
+      --bg-primary: #1a1917;
+      --bg-secondary: #201f1c;
+      --bg-tertiary: #282622;
+      --bg-input: #131211;
+      --border-color: #302e2a;
+      --border-light: #3a3732;
+      --border-hover: #4b473f;
+      --text-primary: #d6d2cb;
+      --text-secondary: #9a958c;
+      --text-muted: #6e6a63;
+      --text-heading: #f0ece5;
+      --accent-primary: #4b7c72;
+      --accent-success: #5a8a5c;
+      --accent-warning: #a3813d;
+      --accent-danger: #b05f52;
+      --shadow-color: rgba(0, 0, 0, 0.5);
+    }
+
+    /* Tema: Monokrom — sıfır chroma; renk yalnız durum bildirir */
+    [data-theme="mono"] {
+      color-scheme: dark;
+      --bg-primary: #151515;
+      --bg-secondary: #1b1b1b;
+      --bg-tertiary: #232323;
+      --bg-input: #0f0f0f;
+      --border-color: #2c2c2c;
+      --border-light: #363636;
+      --border-hover: #4a4a4a;
+      --text-primary: #d4d4d4;
+      --text-secondary: #969696;
+      --text-muted: #6b6b6b;
+      --text-heading: #f2f2f2;
+      --accent-primary: #6e6e6e;
+      --accent-success: #5e8a63;
+      --accent-warning: #9c8342;
+      --accent-danger: #ab5f5b;
+      --shadow-color: rgba(0, 0, 0, 0.55);
+    }
+
+    /* Tema: Kağıt — sıcak kırık beyaz, mürekkep mavisi aksan */
+    [data-theme="paper"] {
+      color-scheme: light;
+      --bg-primary: #f6f4f0;
+      --bg-secondary: #fbfaf7;
+      --bg-tertiary: #eceae4;
+      --bg-input: #ffffff;
+      --border-color: #dcd8d0;
+      --border-light: #e5e1da;
+      --border-hover: #b6b0a5;
+      --text-primary: #26241f;
+      --text-secondary: #5c584f;
+      --text-muted: #8b8579;
+      --text-heading: #14120f;
+      --accent-primary: #3a6288;
+      --accent-success: #2f7150;
+      --accent-warning: #916324;
+      --accent-danger: #a4433c;
+      --shadow-color: rgba(40, 34, 24, 0.10);
+    }
+
+    /* Tema: Çinko — soğuk açık gri, arduvaz aksan */
+    [data-theme="zinc"] {
+      color-scheme: light;
+      --bg-primary: #eef0f2;
+      --bg-secondary: #f7f8f9;
+      --bg-tertiary: #e3e6e9;
+      --bg-input: #ffffff;
+      --border-color: #d2d6db;
+      --border-light: #dcdfe4;
+      --border-hover: #a8aeb6;
+      --text-primary: #22262b;
+      --text-secondary: #555b63;
+      --text-muted: #7d838c;
+      --text-heading: #101418;
+      --accent-primary: #3f637f;
+      --accent-success: #2f6f4f;
+      --accent-warning: #8c6222;
+      --accent-danger: #9e433f;
+      --shadow-color: rgba(20, 26, 34, 0.10);
+    }
+
     /* ========== TASARIM SİSTEMİ ÖLÇEKLERİ (tema-bağımsız) ==========
        Renkler temaya göre değişir; aşağıdaki ölçekler tüm temalarda ortaktır.
        Amaç: köşe/derinlik/boşluk/hareket tutarlılığı — "tasarlanmış" his. */
