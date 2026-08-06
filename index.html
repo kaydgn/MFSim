@@ -899,6 +899,7 @@
 <script type="text/x-mfsim-defer" src="js/xlsx-read.js" data-mfsim-label="Excel/CSV okuyucu..."></script>
 <script type="text/x-mfsim-defer" src="js/measure-import.js" data-mfsim-label="Ölçüm içe aktarma..."></script>
 <script type="text/x-mfsim-defer" src="js/measure-import-ui.js" data-mfsim-label="İçe aktarma sihirbazı..."></script>
+<script type="text/x-mfsim-defer" src="js/measure-dropzone.js" data-mfsim-label="Ölçüm dosyası sürükle-bırak..."></script>
 <script type="text/x-mfsim-defer" src="js/trace-view.js" data-mfsim-label="Ölçüm penceresi (şerit grafikleri)..."></script>
 <script type="text/x-mfsim-defer" src="js/node-resize.js" data-mfsim-label="Düğüm yönetimi..."></script>
 <script type="text/x-mfsim-defer" src="js/context-menus.js" data-mfsim-label="Sağ tık menüleri..."></script>
@@ -938,6 +939,18 @@
     <div class="ve-settings-body" style="flex-direction:column;">
       <section class="ve-settings-content" id="ve-status-content" style="width:100%;"></section>
     </div>
+  </div>
+</div>
+
+<!-- ═══ ÖLÇÜM DOSYASI SÜRÜKLE-BIRAK KAPLAMASI ═══
+     Yalnızca dosya sürüklenirken görünür (js/measure-dropzone.js). Kabul
+     edilen uzantılar burada YAZILI: kullanıcı bırakmadan ÖNCE görsün, sonra
+     reddedilmesin. Ölçüm Görüntüleyici ile ortak kimlikler. -->
+<div id="ve-imp-drop" aria-hidden="true">
+  <div class="ve-imp-drop-card">
+    <span class="mf-ico mf-ico-upload"></span>
+    <div class="ve-imp-drop-title">Ölçüm dosyasını bırakın</div>
+    <div class="ve-imp-drop-sub">.xlsx · .xlsm · .csv · .tsv · .txt</div>
   </div>
 </div>
 

@@ -707,3 +707,143 @@ describe('logaritmik Y ekseni', () => {
     expect(L.yMax).toBe(50);                 // pozitif kilit geçerli
   });
 });
+
+// ── Çok eksenli birleşik şerit ───────────────────────────────────────────────
+//
+// "Birleştir" artık kullanıcının SEÇTİĞİ şeritleri tek diyagramda topluyor ve
+// birleşen her sinyal KENDİ Y ölçeğini koruyor.
+//
+// Neden bu test değerli: ortak ölçek paylaşmak sessizce yanlış bir grafik
+// üretir. Devir (800…2200) ile hız (0…40) tek ölçekte çizilirse hız tabana
+// düz bir çizgi olarak yapışır — grafik "hız hiç değişmemiş" der, oysa 0'dan
+// 40'a çıkmıştır. Kullanıcının bunu gözle yakalama şansı yok.
+describe('birleşik şeritte sinyal başına Y ekseni', () => {
+  const DATA = {
+    // Sürekli kanallar KASITEN ondalıklı: tamsayı ve az örnekli bir seri
+    // veTrIsDiscrete sezgisince "basamaklı" sayılıyor (doğru davranış), ve o
+    // zaman test ölçmek istediği şeyi değil sezgiyi ölçerdi.
+    rpm: [800.5, 1500.25, 2200.75],
+    kmh: [0.4, 20.2, 40.1],
+    degC: [20.5, 50.25, 60.75],
+    gear: [1, 2, 3],
+    txt: ['1C', '2L', '2H'],
+    txt2: ['A', 'B', 'C'],
+  };
+
+  // İZOLASYON: describe gövdeleri tüm testlerden ÖNCE koşuyor. Bu satır
+  // gövdeye yazılsaydı en son değerlendirilen describe'ın verisi bütün
+  // dosyaya sızar ve ondan önceki testler (log Y bloğu) başka bir veriyle
+  // ölçülürdü — nitekim ilk denemede tam olarak bu oldu.
+  let prevGet;
+  beforeEach(() => {
+    prevGet = global.veGetSensorData;
+    global.veGetSensorData = (id, signal) => DATA[signal] || null;
+  });
+  afterEach(() => { global.veGetSensorData = prevGet; });
+
+  const board = (units) => ({
+    sensors: Object.keys(units).map((s) => sig('s', s, { unit: units[s] })),
+    lanes: [{ ids: Object.keys(units).map((s) => veTrKey('s', s)) }],
+  });
+
+  test('her sinyal kendi ölçeğini alır — hiçbiri ezilmez', () => {
+    const L = T.veTrBuildLanes(board({ rpm: '1/min', kmh: 'km/h' }))[0];
+    expect(L.axes).toHaveLength(2);
+
+    // Her eksen KENDİ sinyalinin uçlarını sarmalı, ötekininkini değil.
+    expect(L.axes[0].vMin).toBe(800.5);
+    expect(L.axes[0].vMax).toBe(2200.75);
+    expect(L.axes[1].vMin).toBe(0.4);
+    expect(L.axes[1].vMax).toBe(40.1);
+
+    // Hız ekseni devrin tepesine kadar uzanmamalı — uzanırsa eğri ezilir.
+    expect(L.axes[1].yMax).toBeLessThan(100);
+  });
+
+  test('eksen sırası sinyal sırasını izler ve renkleri eğriyle aynı', () => {
+    const L = T.veTrBuildLanes(board({ rpm: '1/min', kmh: 'km/h', degC: '°C' }))[0];
+    expect(L.axes).toHaveLength(3);
+    expect(L.axes.map((a) => a.unit)).toEqual(['1/min', 'km/h', '°C']);
+    // Eksen etiketleri eğri renginde yazılıyor; ayrışırsa hangi eksenin hangi
+    // eğriye ait olduğu okunamaz hâle gelir.
+    L.axes.forEach((a, i) => expect(a.color).toBe(L.sigs[i].color));
+  });
+
+  test('TEK sinyalli şerit tek eksenli kalır — eski davranış birebir', () => {
+    // Çok eksenli yolun tek sinyalli şeritleri etkilememesi bu değişikliğin
+    // regresyon güvencesi.
+    const L = T.veTrBuildLanes(board({ rpm: '1/min' }))[0];
+    expect(L.axes).toHaveLength(1);
+    expect(L.yMin).toBe(L.axes[0].yMin);
+    expect(L.yMax).toBe(L.axes[0].yMax);
+    expect(L.vMin).toBe(800.5);
+    expect(L.vMax).toBe(2200.75);
+  });
+
+  test('birincil eksen şeridin kendisidir — eski alanlar korunur', () => {
+    const L = T.veTrBuildLanes(board({ rpm: '1/min', kmh: 'km/h' }))[0];
+    expect(L.yMin).toBe(L.axes[0].yMin);
+    expect(L.yMax).toBe(L.axes[0].yMax);
+    expect(L.unit).toBe('1/min');
+  });
+
+  test('ham uçlar TÜM eksenleri kapsar — "log y" sorusu şeridin tamamına ait', () => {
+    const L = T.veTrBuildLanes(board({ rpm: '1/min', kmh: 'km/h' }))[0];
+    expect(L.vMin).toBe(0.4);        // hızın alt ucu
+    expect(L.vMax).toBe(2200.75);    // devrin üst ucu
+  });
+
+  test('elle Y kilidi YALNIZ birincil eksene uygulanır', () => {
+    // Kilit şeridin kenarından konuyor ve o kenarın gösterdiği ölçek
+    // birincil eksenindir. İkinci eksene de uygulansaydı, ilgisiz bir
+    // sinyalin eğrisi sessizce kırpılırdı.
+    const slot = board({ rpm: '1/min', kmh: 'km/h' });
+    slot.lanes[0].min = 0;
+    slot.lanes[0].max = 3000;
+    const L = T.veTrBuildLanes(slot)[0];
+    expect(L.axes[0].yMin).toBe(0);
+    expect(L.axes[0].yMax).toBe(3000);
+    expect(L.axes[1].yMax).toBeLessThan(100);   // hız ekseni kilitten etkilenmedi
+  });
+
+  test('metin kanalının seviye adları SİNYALE ait — birleşince karışmaz', () => {
+    // Eskiden seviye adları şeride aitti ve şeritteki ilk metin kanalından
+    // geliyordu: iki metin kanalı birleştirilince ikincisi birincinin
+    // etiketleriyle okunurdu ("B" yerine "2L").
+    // Seviyeler alfabetik sıralanır (veTrEncodeText) — eksende kararlı bir
+    // sıra olsun diye; burada test edilen şey sıra değil, KİMİN etiketi
+    // olduğu.
+    const L = T.veTrBuildLanes(board({ txt: '', txt2: '' }))[0];
+    expect(L.sigs[0].levels).toEqual(['1C', '2H', '2L']);
+    expect(L.sigs[1].levels).toEqual(['A', 'B', 'C']);
+    expect(L.axes[0].levels).toEqual(['1C', '2H', '2L']);
+    expect(L.axes[1].levels).toEqual(['A', 'B', 'C']);
+  });
+
+  test('ayrık ve sürekli sinyal birleşince her biri kendi kipinde kalır', () => {
+    const L = T.veTrBuildLanes(board({ gear: '', rpm: '1/min' }))[0];
+    expect(L.axes[0].discrete).toBe(true);     // vites: basamaklı
+    expect(L.axes[1].discrete).toBe(false);    // devir: sürekli
+  });
+
+  test('veTrAxisOfSig doğru ekseni verir, eksen yoksa şeride düşer', () => {
+    const L = T.veTrBuildLanes(board({ rpm: '1/min', kmh: 'km/h' }))[0];
+    expect(T.veTrAxisOfSig(L, 0)).toBe(L.axes[0]);
+    expect(T.veTrAxisOfSig(L, 1)).toBe(L.axes[1]);
+    // Sınır dışı indekste birincil eksene düşer — çizim yolu asla undefined
+    // bir ölçekle NaN üretmemeli.
+    expect(T.veTrAxisOfSig(L, 9)).toBe(L.axes[0]);
+    const bare = { yMin: 0, yMax: 1 };
+    expect(T.veTrAxisOfSig(bare, 0)).toBe(bare);
+  });
+
+  test('veTrAxisByUnit birimi tutan ekseni bulur', () => {
+    // Takoz işaretleri ("δ = 3 mm") birimi tutan eksene çizilmeli; birincil
+    // eksene konsaydı şeridin rastgele bir yerinden geçerdi.
+    const L = T.veTrBuildLanes(board({ rpm: '1/min', kmh: 'km/h' }))[0];
+    expect(T.veTrAxisByUnit(L, 'km/h')).toBe(L.axes[1]);
+    expect(T.veTrAxisByUnit(L, 'N')).toBeNull();
+    // Birim sorulmuyorsa birincil eksen
+    expect(T.veTrAxisByUnit(L, null)).toBe(L.axes[0]);
+  });
+});

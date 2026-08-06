@@ -330,7 +330,7 @@ function dropInPage(arg) {
   const dt = new DataTransfer();
   arg.files.forEach((f) => dt.items.add(new File([new Uint8Array(f.bytes)], f.name)));
   const mk = (t) => new DragEvent(t, { dataTransfer: dt, bubbles: true, cancelable: true });
-  const el = document.getElementById('mfv-drop');
+  const el = document.getElementById('ve-imp-drop');
 
   document.dispatchEvent(mk('dragenter'));
   const overPrevented = !document.dispatchEvent(mk('dragover'));
@@ -409,10 +409,10 @@ test.describe('Sürükle-bırak', () => {
     // Kaplama ekranda kalırsa program kilitlenmiş gibi görünür.
     await openViewer(page);
     await dropFiles(page, [{ bytes: [1, 2, 3], name: 'x.xlsx' }], { enterOnly: true });
-    await expect(page.locator('#mfv-drop.on')).toBeVisible();
+    await expect(page.locator('#ve-imp-drop.on')).toBeVisible();
 
     await page.evaluate(() => window.dispatchEvent(new Event('dragend')));
-    await expect(page.locator('#mfv-drop.on')).toHaveCount(0);
+    await expect(page.locator('#ve-imp-drop.on')).toHaveCount(0);
   });
 
   test('dosya OLMAYAN sürükleme kaplamayı açmaz', async ({ page }) => {
@@ -424,7 +424,7 @@ test.describe('Sürükle-bırak', () => {
       dt.setData('text/plain', 'merhaba');
       document.dispatchEvent(new DragEvent('dragenter',
         { dataTransfer: dt, bubbles: true, cancelable: true }));
-      return document.getElementById('mfv-drop').classList.contains('on');
+      return document.getElementById('ve-imp-drop').classList.contains('on');
     });
     expect(shown).toBe(false);
   });
@@ -448,6 +448,138 @@ test.describe('Sürükle-bırak', () => {
     await page.waitForFunction(() => veImpUI && veImpUI.rows && !veImpUI.busy,
       null, { timeout: 30000 });
     expect(await page.evaluate(() => veImpUI.commaDecimal)).toBe(true);
+  });
+});
+
+// ── Birleştirme ──────────────────────────────────────────────────────────
+//
+// "Birleştir" artık kullanıcının SEÇTİĞİ şeritleri tek diyagramda topluyor ve
+// birleşen her sinyal kendi Y ölçeğini koruyor. Buradaki testler seçim
+// akışını ve sonucun gerçekten çok eksenli çıktığını koruyor; ölçek
+// matematiği birim testlerde (tests/unit/trace-view.test.js).
+
+async function boardWithFive(page) {
+  await openViewer(page);
+  await importFixture(page, canoeXlsx(300));
+  await page.click('#ve-import-apply');
+  await page.waitForFunction(() => veResultSlots[0].sensors.length === 5,
+    null, { timeout: 15000 });
+}
+
+const laneCount = (page) => page.evaluate(() => veTrBoard().lanes.length);
+
+test.describe('Birleştir — seçerek, çok eksenli', () => {
+
+  test('düğme seçim listesini açar', async ({ page }) => {
+    await boardWithFive(page);
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    const pop = page.locator('#ve-trace-merge-pop');
+    await expect(pop).toBeVisible();
+    // Her şerit listede, kendi birimiyle
+    await expect(pop.locator('.ve-trace-pop-item')).toHaveCount(5);
+    await expect(pop).toContainText('EngSpeed');
+    await expect(pop).toContainText('1/min');
+  });
+
+  test('seçilenler tek şeritte toplanır, ötekiler YERİNDE kalır', async ({ page }) => {
+    await boardWithFive(page);
+    expect(await laneCount(page)).toBe(5);
+
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await page.check('#ve-trace-merge-pop input[data-lane="0"]');
+    await page.check('#ve-trace-merge-pop input[data-lane="1"]');
+    await page.click('#ve-trace-merge-pop [data-act="merge-ok"]');
+
+    // 5 şerit → 4 (ikisi birleşti). Seçilmeyen üçü dokunulmadan kaldı:
+    // "birleştir" tüm panoyu yeniden düzenlememeli.
+    await expect.poll(() => laneCount(page)).toBe(4);
+    const st = await page.evaluate(() => ({
+      first: veTrBoard().lanes[0].ids.length,
+      rest: veTrBoard().lanes.slice(1).map((L) => L.ids.length),
+    }));
+    expect(st.first).toBe(2);
+    expect(st.rest).toEqual([1, 1, 1]);
+  });
+
+  test('birleşen her sinyal KENDİ Y ekseninde — hiçbiri ezilmez', async ({ page }) => {
+    await boardWithFive(page);
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    for (const i of [0, 1, 2]) {
+      await page.check(`#ve-trace-merge-pop input[data-lane="${i}"]`);
+    }
+    await page.click('#ve-trace-merge-pop [data-act="merge-ok"]');
+    await expect.poll(() => laneCount(page)).toBe(3);
+
+    const axes = await page.evaluate(() =>
+      veTrState.geo.lanes[0].axes.map((a) => ({ unit: a.unit, min: a.yMin, max: a.yMax })));
+
+    expect(axes).toHaveLength(3);
+    expect(axes.map((a) => a.unit)).toEqual(['1/min', 'km/h', '°C']);
+    // Asıl güvence: hız ekseni devrin tepesine kadar uzanmıyor. Uzansaydı
+    // 0…40 km/h eğrisi tabanda düz bir çizgiye dönerdi ve grafik "hız hiç
+    // değişmemiş" derdi.
+    expect(axes[1].max).toBeLessThan(100);
+    expect(axes[2].max).toBeLessThan(100);
+    expect(axes[0].max).toBeGreaterThan(2000);
+  });
+
+  test('BİRDEN ÇOK birleşik diyagram kurulabilir', async ({ page }) => {
+    await boardWithFive(page);
+
+    // 1. birleşim: ilk iki şerit
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await page.check('#ve-trace-merge-pop input[data-lane="0"]');
+    await page.check('#ve-trace-merge-pop input[data-lane="1"]');
+    await page.click('#ve-trace-merge-pop [data-act="merge-ok"]');
+    await expect.poll(() => laneCount(page)).toBe(4);
+
+    // 2. birleşim: kalanlardan ikisi. Liste yeniden açıldığında GÜNCEL
+    // şeritleri göstermeli, yoksa ikinci birleşim yanlış şeritleri toplardı.
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await expect(page.locator('#ve-trace-merge-pop .ve-trace-pop-item')).toHaveCount(4);
+    await page.check('#ve-trace-merge-pop input[data-lane="2"]');
+    await page.check('#ve-trace-merge-pop input[data-lane="3"]');
+    await page.click('#ve-trace-merge-pop [data-act="merge-ok"]');
+    await expect.poll(() => laneCount(page)).toBe(3);
+
+    const sizes = await page.evaluate(() => veTrBoard().lanes.map((L) => L.ids.length));
+    expect(sizes).toEqual([2, 1, 2]);
+  });
+
+  test('birleşik şerit tekrar dağıtılabilir', async ({ page }) => {
+    await boardWithFive(page);
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await page.check('#ve-trace-merge-pop input[data-lane="0"]');
+    await page.check('#ve-trace-merge-pop input[data-lane="1"]');
+    await page.click('#ve-trace-merge-pop [data-act="merge-ok"]');
+    await expect.poll(() => laneCount(page)).toBe(4);
+
+    // "Dağıt" yalnızca birleşik şeritte çıkar ve yalnız ONU dağıtır —
+    // her şeyi dağıtan "Ayır"a gitmek zorunda kalınmamalı.
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await expect(page.locator('#ve-trace-merge-pop [data-act="split"]')).toHaveCount(1);
+    await page.click('#ve-trace-merge-pop [data-act="split"]');
+    await expect.poll(() => laneCount(page)).toBe(5);
+  });
+
+  test('tek seçimle birleştirme reddedilir ve sebebi söylenir', async ({ page }) => {
+    await boardWithFive(page);
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await page.check('#ve-trace-merge-pop input[data-lane="0"]');
+    await page.click('#ve-trace-merge-pop [data-act="merge-ok"]');
+    // Pencere KAPANMAMALI: kullanıcı ikinciyi işaretleyip devam edebilmeli.
+    await expect(page.locator('#ve-trace-merge-pop')).toBeVisible();
+    await expect(page.locator('.ve-toast', { hasText: 'en az iki' })).toBeVisible();
+    expect(await laneCount(page)).toBe(5);
+  });
+
+  test('"Birime göre" kısayolu korundu', async ({ page }) => {
+    // Eski davranış kaybolmadı, listenin içine taşındı. Fixture'da beş farklı
+    // birim var (1/min, km/h, °C, ve iki birimsiz) → birimsiz ikisi birleşir.
+    await boardWithFive(page);
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await page.click('#ve-trace-merge-pop [data-act="by-unit"]');
+    await expect.poll(() => laneCount(page)).toBe(4);
   });
 });
 

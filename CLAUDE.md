@@ -18,12 +18,12 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 ### Ölçüm Görüntüleyici (`viewer/`)
 
 MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
-dosyası olarak dağıtılıyor. `viewer/js/` altındaki ALTI dosya `js/`'ten
+dosyası olarak dağıtılıyor. `viewer/js/` altındaki YEDİ dosya `js/`'ten
 **birebir kopya** (`trace-view.js`'te iki işaretli fark hariç). Bu yüzden:
 
 **İçe aktarma / şerit diyagramı tarafında bir düzeltme yaparsan
 (`xlsx-read.js`, `measure-import*.js`, `measure-core.js`, `signal-tree.js`,
-`trace-view.js`), aynı düzeltmeyi `viewer/js/` altına da taşı** — `cp` yeter.
+`trace-view.js`, `measure-dropzone.js`), aynı düzeltmeyi `viewer/js/` altına da taşı** — `cp` yeter.
 Taşımazsan iki program zamanla ayrışır. Yordamı `viewer/README.md`'de.
 
 `viewer/js/theme.js`, `board.js`, `app.js` görüntüleyiciye özgüdür, kopya
@@ -100,7 +100,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | Dosya | Test Edilen Modül | Kapsam |
 |-------|-------------------|--------|
 | `tests/unit/signal-tree.test.js` | `js/signal-tree.js` | Arama katlaması, üç-durumlu grup, istatistik, mini eğri, kanal toplama |
-| `tests/unit/trace-view.test.js` | `js/trace-view.js` | Şerit uzlaştırma, ayrık/metin kanal tespiti, Y aralığı, şerit yerleşimi, tutamak isabeti, logaritmik X ve Y ekseni |
+| `tests/unit/trace-view.test.js` | `js/trace-view.js` | Şerit uzlaştırma, ayrık/metin kanal tespiti, Y aralığı, şerit yerleşimi, tutamak isabeti, logaritmik X ve Y ekseni, **birleşik şeritte sinyal başına Y ekseni** |
 | `tests/unit/measure-core.test.js` | `js/measure-core.js` | Örnek kilitleme, pencerenin tek X ekseni kuralı |
 | `tests/unit/numerics.test.js` | `js/numerics.js` | PCHIP spline, RK45 solver, enerji dengesi |
 | `tests/unit/mount-signals.test.js` | `js/mount-signals.js` | Takoz kanalları: FRF ızgarası, Campbell mertebe/mod çizgileri, F(δ) yasası, ivme süpürmesi, kanal kimliği, diyagram yorumu |
@@ -115,9 +115,11 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/state.test.js` | `js/state.js` | Undo/redo stack yönetimi |
 | `tests/unit/toolbar-save.test.js` | `js/toolbar.js` | Proje kaydetme, JSON serileştirme, showSaveFilePicker |
 | `tests/unit/viewer-board.test.js` | `viewer/js/board.js` | Görüntüleyici panosu: bir panoda tek ölçüm dosyası kuralı, X ekseni seçenekleri, veri kapısı |
+| `tests/unit/measure-dropzone.test.js` | `js/measure-dropzone.js` | Sürükle-bırak uzantı süzgeci (sessiz yanlış çıktıya karşı) |
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
 | `tests/e2e/measure-import.spec.js` | İçe aktarma sihirbazı | Gerçek .xlsx → sütun tarama → X/Y seçimi → şeritler |
-| `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, çizim, sıfır ağ isteği |
+| `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |
+| `tests/e2e/measure-merge-drop.spec.js` | `js/measure-dropzone.js` + `js/trace-view.js` | MFSim'de sürükle-bırak ve çok eksenli birleştirme — araç performans VE takoz sekmesi |
 
 ## Sık Kullanılan Komutlar
 
