@@ -506,6 +506,10 @@ function veTrAxisOf(sigs, opts) {
     levels: levels,
     hasData: anyData,
     color: sigs.length ? sigs[0].color : '#888',
+    // Ekseni birden çok sinyal paylaşıyor mu? Paylaşılan bir sütunu birinci
+    // sinyalin rengiyle boyamak, sütunun YALNIZ o eğriye ait olduğunu söyler
+    // ve ötekinin ekseni yokmuş gibi görünür (bkz. veTrAxisInk).
+    shared: sigs.length > 1,
     unit: sigs.length ? (sigs[0].sensor.unit || '') : '',
     // Verinin HAM uçları (pay eklenmemiş). Log elverişliliği buradan sorulur:
     // lineer pay "aralığın %8'i" olduğu için tamamı pozitif bir seride bile
@@ -897,6 +901,19 @@ function veTrAxisOfSig(lane, i) {
   return axes[i] || axes[0];
 }
 
+// Eksen sütununun çizim rengi. Tek sinyalli eksende EĞRİNİN rengi — sütunu
+// eğriyle eşleştiren şey bu. Paylaşılan eksende NÖTR: sütun birden çok eğriye
+// hizmet ediyor ve birinin rengiyle boyanırsa ötekinin ekseni yok sanılır.
+// Hangi eğrilerin o ölçeği kullandığı ad bloğundan okunuyor (birim eşleşmesi).
+function veTrAxisInk(axis) {
+  if(axis && axis.shared) {
+    return (typeof veThemeRgba === 'function')
+      ? veThemeRgba('--text-secondary', 0.95, 'rgba(190,196,208,0.95)')
+      : 'rgba(190,196,208,0.95)';
+  }
+  return (axis && axis.color) ? axis.color : '#888';
+}
+
 function veTrYPos(lane, rect, v) {
   if(lane.yLog) {
     if(!(v > 0)) return NaN;
@@ -1178,12 +1195,12 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
         ctx.setLineDash([]);
       }
 
-      ctx.strokeStyle = ax.color;
+      ctx.strokeStyle = veTrAxisInk(ax);
       ctx.globalAlpha = 0.55;
       ctx.beginPath(); ctx.moveTo(tickX - 3, gy); ctx.lineTo(tickX, gy); ctx.stroke();
       ctx.globalAlpha = 1;
 
-      ctx.fillStyle = ax.color;
+      ctx.fillStyle = veTrAxisInk(ax);
       var lbl;
       if(ax.levels) {
         // Metin ekseni: sayı değil seviyenin adı okunur
@@ -3411,6 +3428,7 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrLaneRangeLog: veTrLaneRangeLog,
     veTrAxisOf: veTrAxisOf,
     veTrAxisTitle: veTrAxisTitle,
+    veTrAxisInk: veTrAxisInk,
     veTrStackBadges: veTrStackBadges,
     veTrDrawAxisNames: veTrDrawAxisNames,
     veTrNameRows: veTrNameRows,
