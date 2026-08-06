@@ -319,6 +319,138 @@ test.describe('Ölçüm Görüntüleyici — tek dosya', () => {
   });
 });
 
+// ── Sürükle-bırak ────────────────────────────────────────────────────────
+//
+// Sentetik DragEvent kullanılıyor: Playwright işletim sisteminden tarayıcıya
+// gerçek bir dosya sürüklemesi üretemiyor. Sayfada bir DataTransfer kurup
+// olayları elle atmak, tarayıcının kendi olay yolunu aynen çalıştırıyor —
+// dinleyiciler, preventDefault ve dropEffect dahil.
+
+function dropInPage(arg) {
+  const dt = new DataTransfer();
+  arg.files.forEach((f) => dt.items.add(new File([new Uint8Array(f.bytes)], f.name)));
+  const mk = (t) => new DragEvent(t, { dataTransfer: dt, bubbles: true, cancelable: true });
+  const el = document.getElementById('mfv-drop');
+
+  document.dispatchEvent(mk('dragenter'));
+  const overPrevented = !document.dispatchEvent(mk('dragover'));
+  const shownWhileDragging = el.classList.contains('on');
+  const dropPrevented = arg.enterOnly ? null : !document.dispatchEvent(mk('drop'));
+
+  return {
+    shownWhileDragging,
+    overPrevented,
+    dropPrevented,
+    shownAfter: el.classList.contains('on'),
+  };
+}
+
+async function dropFiles(page, files, opts) {
+  return page.evaluate(dropInPage, Object.assign({ files: files }, opts || {}));
+}
+
+const asBytes = (buf) => Array.from(buf);
+
+test.describe('Sürükle-bırak', () => {
+
+  test('bırakılan .xlsx sihirbazı açar ve şeritlere döner', async ({ page }) => {
+    await openViewer(page);
+    await dropFiles(page, [{ bytes: asBytes(canoeXlsx(300)), name: 'Testfahrt_2026.xlsx' }]);
+
+    await page.waitForFunction(() => veImpUI && veImpUI.rows && !veImpUI.busy,
+      null, { timeout: 30000 });
+    await expect(page.locator('#ve-import-overlay')).toBeVisible();
+
+    // "Gözat" ile AYNI kapıdan geçtiğinin kanıtı: sütun taraması, birim satırı
+    // ve X ekseni önerisi birebir aynı sonucu vermeli.
+    const st = await page.evaluate(() => ({
+      xName: veImpUI.columns[veImpUI.xIndex].name,
+      names: veImpUI.columns.map((c) => c.name),
+    }));
+    expect(st.xName).toBe('Time');
+    expect(st.names).toEqual(['Time', 'EngSpeed', 'VehSpeed', 'Motor Sıcaklığı', 'Gear', 'Mode']);
+
+    await page.click('#ve-import-apply');
+    await page.waitForFunction(() => veResultSlots[0].sensors.length > 0, null, { timeout: 15000 });
+    expect(await page.evaluate(() => veResultSlots[0].sensors.length)).toBe(5);
+  });
+
+  test('TARAYICI VARSAYILANI ENGELLENİR — sekme dosyaya gitmez', async ({ page }) => {
+    // Bu testin koruduğu şey en pahalı hata: dragover/drop üzerinde
+    // preventDefault çağrılmazsa tarayıcı bırakılan .xlsx'e gider, program
+    // kapanır ve açık olan ölçüm kaybolur.
+    await openViewer(page);
+    const r = await dropFiles(page, [{ bytes: asBytes(canoeXlsx(50)), name: 'x.xlsx' }]);
+    expect(r.overPrevented).toBe(true);
+    expect(r.dropPrevented).toBe(true);
+  });
+
+  test('varsayılan REDDEDİLEN dosyada da engellenir', async ({ page }) => {
+    // Program yanlış dosyada da AYAKTA kalmalı. Yalnızca kabul edilen
+    // dosyalarda preventDefault çağıran bir kod, .png bırakan kullanıcıyı
+    // resmin açıldığı boş bir sekmeye götürürdü.
+    await openViewer(page);
+    const r = await dropFiles(page, [{ bytes: [137, 80, 78, 71], name: 'resim.png' }]);
+    expect(r.overPrevented).toBe(true);
+    expect(r.dropPrevented).toBe(true);
+    await expect(page.locator('#ve-import-overlay')).toBeHidden();
+    await expect(page.locator('.ve-toast', { hasText: 'resim.png' })).toBeVisible();
+  });
+
+  test('sürüklerken kaplama görünür, bırakınca kaybolur', async ({ page }) => {
+    await openViewer(page);
+    const r = await dropFiles(page, [{ bytes: asBytes(canoeXlsx(50)), name: 'x.xlsx' }]);
+    expect(r.shownWhileDragging).toBe(true);
+    expect(r.shownAfter).toBe(false);
+  });
+
+  test('sürükleme pencere dışında biterse kaplama asılı kalmaz', async ({ page }) => {
+    // Kullanıcı vazgeçip masaüstüne bırakırsa dragleave gelmeyebiliyor.
+    // Kaplama ekranda kalırsa program kilitlenmiş gibi görünür.
+    await openViewer(page);
+    await dropFiles(page, [{ bytes: [1, 2, 3], name: 'x.xlsx' }], { enterOnly: true });
+    await expect(page.locator('#mfv-drop.on')).toBeVisible();
+
+    await page.evaluate(() => window.dispatchEvent(new Event('dragend')));
+    await expect(page.locator('#mfv-drop.on')).toHaveCount(0);
+  });
+
+  test('dosya OLMAYAN sürükleme kaplamayı açmaz', async ({ page }) => {
+    // Başka bir sayfadan metin sürükleyen kullanıcıya "ölçüm dosyasını
+    // bırakın" demek yanıltıcı olurdu.
+    await openViewer(page);
+    const shown = await page.evaluate(() => {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', 'merhaba');
+      document.dispatchEvent(new DragEvent('dragenter',
+        { dataTransfer: dt, bubbles: true, cancelable: true }));
+      return document.getElementById('mfv-drop').classList.contains('on');
+    });
+    expect(shown).toBe(false);
+  });
+
+  test('birden çok dosyada ilki açılır ve bu SÖYLENİR', async ({ page }) => {
+    await openViewer(page);
+    const x = asBytes(canoeXlsx(120));
+    await dropFiles(page, [{ bytes: x, name: 'A.xlsx' }, { bytes: x, name: 'B.xlsx' }]);
+
+    // Sessizce tek dosya açmak "ikisi de yüklendi" sanısına yol açardı.
+    await expect(page.locator('.ve-toast', { hasText: 'A.xlsx' })).toBeVisible();
+    await page.waitForFunction(() => veImpUI && veImpUI.rows && !veImpUI.busy,
+      null, { timeout: 30000 });
+    expect(await page.evaluate(() => veImpUI.fileName)).toBe('A.xlsx');
+  });
+
+  test('bırakma CSV yolunu da açar', async ({ page }) => {
+    await openViewer(page);
+    const csv = 'Time;EngSpeed\n0,00;800,5\n0,01;812,25\n';
+    await dropFiles(page, [{ bytes: Array.from(Buffer.from(csv, 'utf8')), name: 'olcum.csv' }]);
+    await page.waitForFunction(() => veImpUI && veImpUI.rows && !veImpUI.busy,
+      null, { timeout: 30000 });
+    expect(await page.evaluate(() => veImpUI.commaDecimal)).toBe(true);
+  });
+});
+
 // ── Tema ─────────────────────────────────────────────────────────────────
 //
 // Program tek başına, günün her saatinde açık duruyor; tema bir tercih değil

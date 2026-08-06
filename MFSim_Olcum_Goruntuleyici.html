@@ -5998,6 +5998,27 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
     #mfv-topbar .mfv-hint { font-size:var(--fs-micro); color:var(--text-muted); }
     /* .ve-sub-page flex:1 + min-height:0 bekliyor; body kolonu onu karşılıyor. */
     #ve-page-sonuclar { display:flex; flex-direction:row; }
+
+    /* Sürükle-bırak kaplaması. pointer-events:none KRİTİK: kaplama fare
+       hedefi olursa sürükleme sırasında altındaki öğelerle arasında
+       dragenter/dragleave çifti üretir ve kaplama yanıp söner. */
+    #mfv-drop {
+      position:fixed; inset:0; z-index:9999; display:none;
+      align-items:center; justify-content:center;
+      background:var(--accent-tint-6, rgba(37,99,235,0.10));
+      pointer-events:none;
+    }
+    #mfv-drop.on { display:flex; }
+    .mfv-drop-card {
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      padding:26px 44px; text-align:center;
+      background:var(--bg-secondary); color:var(--text-primary);
+      border:2px dashed var(--accent-primary); border-radius:var(--radius-md, 8px);
+      box-shadow:0 8px 32px var(--shadow-color);
+    }
+    .mfv-drop-card .mf-ico { font-size:var(--fs-h1); color:var(--accent-primary); }
+    .mfv-drop-title { font-size:var(--fs-lg); font-weight:700; color:var(--text-heading); }
+    .mfv-drop-sub { font-size:var(--fs-micro); color:var(--text-muted); }
   </style>
 </head>
 <body>
@@ -6009,7 +6030,7 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   <span class="mfv-brand"><span class="mf-ico mf-ico-activity"></span> CACIK</span>
   <span class="mfv-sub">Excel / CSV ölçüm dosyalarını okur ve diyagrama döker</span>
   <span class="mfv-spacer"></span>
-  <span class="mfv-hint">Tek dosya · kurulum gerekmez · veri bilgisayarınızdan çıkmaz</span>
+  <span class="mfv-hint">Dosyayı buraya sürükleyip bırakabilirsiniz · veri bilgisayarınızdan çıkmaz</span>
   <button type="button" id="mfv-theme-btn" class="ve-imp-tool" onclick="mfvCycleTheme()"
           title="Tema — değiştirmek için tıklayın">
     <span class="mf-ico mf-ico-contrast"></span> <span id="mfv-theme-label">Sistem</span>
@@ -6047,6 +6068,18 @@ body.mf-radio-dragging .mf-radio-mini{ cursor:grabbing; }
   <!-- Sağ Panel: Ölçüm Penceresi (kabuğu veTrBuildShell çizer) -->
   <div class="ve-results-grid" id="ve-results-grid" style="position:relative;">
     <div id="ve-results-panels" style="flex:1; display:flex; flex-direction:column; min-width:0; min-height:0;"></div>
+  </div>
+</div>
+
+<!-- ═══ SÜRÜKLE-BIRAK KAPLAMASI ═══
+     Yalnızca dosya sürüklenirken görünür (js/dropzone.js). Kabul edilen
+     uzantılar burada YAZILI: kullanıcı bırakmadan önce görsün, sonra
+     reddedilmesin. -->
+<div id="mfv-drop" aria-hidden="true">
+  <div class="mfv-drop-card">
+    <span class="mf-ico mf-ico-upload"></span>
+    <div class="mfv-drop-title">Ölçüm dosyasını bırakın</div>
+    <div class="mfv-drop-sub">.xlsx · .xlsm · .csv · .tsv · .txt</div>
   </div>
 </div>
 
@@ -12711,6 +12744,145 @@ function veImpDropDataset(id) {
   if(typeof veUpdateResultsTree === 'function') veUpdateResultsTree();
   if(typeof veTrRefresh === 'function') veTrRefresh();
   if(typeof showToast === 'function') showToast(ds.name + ' kaldırıldı', 'info');
+}
+
+</script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// SÜRÜKLE-BIRAK — dosyayı pencereye bırakınca sihirbaz açılır
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// VIEWER'A ÖZGÜ. MFSim'de yok: orada pencere bir simülasyon tuvali ve bırakma
+// eyleminin başka bir anlamı var (sinyali şeride bırakmak). Burada programın
+// tek işi dosya açmak, o yüzden pencerenin tamamı bırakma hedefi olabilir.
+//
+// TARAYICI VARSAYILANI TEHLİKELİ: dragover VE drop üzerinde preventDefault
+// çağrılmazsa tarayıcı bırakılan dosyaya GİDER — sekme .xlsx'i indirmeye ya da
+// göstermeye kalkar, program kapanır ve o ana kadar açılmış ölçüm kaybolur.
+// Bu yüzden aşağıdaki dinleyiciler dosya kabul edilmediğinde bile varsayılanı
+// engeller; "yanlış dosya" durumunda bile program AYAKTA kalmalı.
+//
+// Bırakma yolu "Gözat" ile AYNI kapıya bağlanır (veImpLoadFile): sihirbaz,
+// sütun taraması, X ekseni önerisi, hata ekranı — hepsi ortak. İkinci bir
+// okuma yolu açmak iki davranışın zamanla ayrışması demekti.
+
+// Kabul edilen uzantılar — veImpOpenPicker'ın accept listesiyle aynı.
+//
+// NEDEN UZANTI SÜZGECİ VAR: veImpIngest ZIP imzası görmezse dosyayı METİN
+// kabul edip CSV olarak çözüyor. Bir .png bırakılırsa bu yol patlamaz —
+// ikili çöpten "sütunlar" üretir. Kullanıcı makul görünen ama tamamen
+// anlamsız bir tabloya bakar. Sessiz yanlış çıktı, açık bir retten çok daha
+// kötü; kapı burada kapanıyor.
+var MFV_DROP_EXT = /\.(xlsx|xlsm|csv|tsv|txt)$/i;
+
+// ── Kaplama ───────────────────────────────────────────────────────────────
+
+// dragenter/dragleave ALT ÖĞELERDE DE tetiklenir: fare kaplamanın üstünden
+// bir düğmenin üstüne geçerken önce leave, sonra enter gelir. Tek bir bayrakla
+// izlenirse kaplama sürükleme sırasında yanıp söner. Sayaç bunu çözer:
+// yalnızca sıfıra düşünce gizlenir.
+var _mfvDragDepth = 0;
+
+function mfvDropShow(on) {
+  var el = document.getElementById('mfv-drop');
+  if(!el) return;
+  el.classList.toggle('on', !!on);
+  el.setAttribute('aria-hidden', on ? 'false' : 'true');
+}
+
+// Sürüklenen şey DOSYA mı? Başka bir sayfadan metin ya da resim sürükleyen
+// kullanıcıya "ölçüm dosyasını bırakın" demek yanıltıcı olurdu.
+function mfvDragHasFiles(e) {
+  var dt = e.dataTransfer;
+  if(!dt || !dt.types) return false;
+  for(var i = 0; i < dt.types.length; i++) {
+    if(dt.types[i] === 'Files') return true;
+  }
+  return false;
+}
+
+// ── Bırakma ───────────────────────────────────────────────────────────────
+
+function mfvAcceptDropped(files) {
+  var all = Array.prototype.slice.call(files || []);
+  if(all.length === 0) return null;
+
+  var ok = all.filter(function(f) { return MFV_DROP_EXT.test(f.name || ''); });
+
+  if(ok.length === 0) {
+    if(typeof showToast === 'function') {
+      showToast('"' + (all[0].name || 'Dosya') + '" okunamaz — yalnızca ' +
+                '.xlsx, .xlsm, .csv, .tsv ve .txt açılabilir.', 'warning');
+    }
+    return null;
+  }
+
+  // Birden çok dosya: sihirbaz dosya BAŞINA sütun seçimi istiyor, bu yüzden
+  // sıraya dizmek modal üstüne modal olurdu. İlki açılır — ama sessizce değil,
+  // kullanıcı diğerlerinin ne olduğunu bilmeli.
+  if(all.length > 1 && typeof showToast === 'function') {
+    showToast(all.length + ' dosya bırakıldı, ilki açılıyor: ' + ok[0].name +
+              '. Diğerlerini tek tek bırakabilirsiniz.', 'info');
+  }
+  return ok[0];
+}
+
+function mfvOnDrop(e) {
+  // Kabul etsek de etmesek de varsayılan engellenir (bkz. dosya başı).
+  e.preventDefault();
+  _mfvDragDepth = 0;
+  mfvDropShow(false);
+
+  if(!mfvDragHasFiles(e)) return;
+  var file = mfvAcceptDropped(e.dataTransfer.files);
+  if(file && typeof veImpLoadFile === 'function') veImpLoadFile(file);
+}
+
+// ── Bağlama ───────────────────────────────────────────────────────────────
+
+function mfvBindDropzone() {
+  document.addEventListener('dragenter', function(e) {
+    e.preventDefault();
+    if(!mfvDragHasFiles(e)) return;
+    _mfvDragDepth++;
+    mfvDropShow(true);
+  });
+
+  // dragover'da preventDefault ŞART: çağrılmazsa tarayıcı bırakmayı hiç kabul
+  // etmez ve drop olayı gelmez — kaplama açılır, dosya bırakılır, hiçbir şey
+  // olmaz.
+  document.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    if(mfvDragHasFiles(e) && e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  });
+
+  document.addEventListener('dragleave', function(e) {
+    if(!mfvDragHasFiles(e)) return;
+    _mfvDragDepth = Math.max(0, _mfvDragDepth - 1);
+    if(_mfvDragDepth === 0) mfvDropShow(false);
+  });
+
+  document.addEventListener('drop', mfvOnDrop);
+
+  // Sürükleme pencere dışında biterse (kullanıcı vazgeçip masaüstüne bıraktı)
+  // dragleave gelmeyebilir ve kaplama ekranda ASILI kalırdı — program
+  // kilitlenmiş gibi görünür. İki kaçış kapısı:
+  window.addEventListener('dragend', function() { _mfvDragDepth = 0; mfvDropShow(false); });
+  window.addEventListener('blur', function() { _mfvDragDepth = 0; mfvDropShow(false); });
+}
+
+if(document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mfvBindDropzone, { once: true });
+} else {
+  mfvBindDropzone();
+}
+
+// Jest: saf yardımcılar doğrudan test edilebilsin
+if(typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    MFV_DROP_EXT: MFV_DROP_EXT,
+    mfvAcceptDropped: mfvAcceptDropped
+  };
 }
 
 </script>
