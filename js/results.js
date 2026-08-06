@@ -4990,8 +4990,8 @@ function veRenderSlot(slotIdx) {
       html += '<span class="ve-slot-legend-item">';
       if(axisLabel) html += '<span style="font-weight:700; font-size:var(--fs-tiny); opacity:0.7; margin-right:2px;">' + axisLabel + ':</span>';
       html += '<span class="ve-legend-color-line" style="background:' + c + ';"></span>';
-      html += '<span class="ve-legend-name">' + s.name + '</span>';
-      if(s.unit) html += '<span class="ve-legend-unit">' + s.unit + '</span>';
+      html += '<span class="ve-legend-name">' + escapeHTML(s.name) + '</span>';
+      if(s.unit) html += '<span class="ve-legend-unit">' + escapeHTML(s.unit) + '</span>';
       html += '<span class="ve-legend-remove" onclick="event.stopPropagation();veRemoveSensorFromSlot(' + slotIdx + ',' + i + ')" title="Kaldır">✕</span>';
       html += '</span>';
     });
@@ -5006,9 +5006,9 @@ function veRenderSlot(slotIdx) {
     html += '<table id="ve-table-' + slotIdx + '" class="ve-result-table">';
     html += '<thead><tr>';
     html += '<th>#</th>';
-    html += '<th>' + (slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</th>';
+    html += '<th>' + escapeHTML(slot.xAxis ? slot.xAxis.name : 'Zaman [s]') + '</th>';
     sensors.forEach(function(s, i) {
-      html += '<th style="color:' + veSlotSignalColor(slot, i) + '; border-bottom:3px solid ' + veSlotSignalColor(slot, i) + ';">' + s.name + (s.unit ? ' [' + s.unit + ']' : '') + '</th>';
+      html += '<th style="color:' + veSlotSignalColor(slot, i) + '; border-bottom:3px solid ' + veSlotSignalColor(slot, i) + ';">' + escapeHTML(s.name) + (s.unit ? ' [' + escapeHTML(s.unit) + ']' : '') + '</th>';
     });
     html += '</tr></thead>';
     html += '<tbody id="ve-table-body-' + slotIdx + '">';
@@ -5253,6 +5253,12 @@ function veGetAvailableXAxisOptions(slotIdx) {
 }
 
 // Dropdown menüyü göster
+// SİNYAL ADLARI KULLANICI VERİSİDİR: içe aktarılan Excel/CSV dosyasının
+// başlık satırından geliyorlar ve HTML'e ham gömülemezler. Ölçüldü — başlığı
+//   Basinc <img src=x onerror="...">
+// olan bir CSV içe aktarılıp bu liste açıldığında <img> gerçekten DOM'a
+// giriyor ve onerror ÇALIŞIYORDU. Kötü niyet gerekmez: '<' içeren bir başlık
+// menüyü sessizce bozmaya zaten yetiyor (metin kayboluyor).
 function veShowXAxisPicker(slotIdx, e) {
   if(e) e.stopPropagation();
 
@@ -5276,13 +5282,13 @@ function veShowXAxisPicker(slotIdx, e) {
   options.forEach(function(opt, i) {
     if(opt.group !== lastGroup) {
       lastGroup = opt.group;
-      html += '<div class="ve-xaxis-dropdown-group">' + opt.group + '</div>';
+      html += '<div class="ve-xaxis-dropdown-group">' + escapeHTML(opt.group) + '</div>';
     }
     html += '<div class="ve-xaxis-dropdown-item' + (opt.active ? ' active' : '') + '" ';
     html += 'onclick="veSetSlotXAxis(' + slotIdx + ',' + i + ');event.stopPropagation();" ';
     html += 'data-opt-idx="' + i + '">';
-    html += '<span>' + (opt.active ? '● ' : '') + opt.name + '</span>';
-    if(opt.unit) html += '<span class="ve-xaxis-unit">' + opt.unit + '</span>';
+    html += '<span>' + (opt.active ? '● ' : '') + escapeHTML(opt.name) + '</span>';
+    if(opt.unit) html += '<span class="ve-xaxis-unit">' + escapeHTML(opt.unit) + '</span>';
     html += '</div>';
   });
 

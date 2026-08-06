@@ -77,7 +77,18 @@ function escapeHTML(str) {
 // gözle görülür bir fark açardı.
 
 function veFormatTooltipVal(v) {
+  // Her kanal sayısal değil: vites modu '1C'/'2L' gibi METİN üretiyor.
+  // Korumasız toFixed/toExponential bu kanal seçiliyken tabloyu ve CSV'yi
+  // çökertiyordu (TypeError: v.toExponential is not a function).
+  var num = Number(v);
+  if(v === null || v === undefined || !isFinite(num)) {
+    return (typeof v === 'string' && v !== '') ? v : '—';
+  }
+  v = num;
   var a = Math.abs(v);
+  // Tam sıfır düz yazılır: aşağıdaki üstel dal 0'ı "0.00e+0" yapıyordu ve
+  // imleç rozetinde/tabloda okunmuyordu.
+  if(a === 0) return '0';
   if(a >= 10000) return v.toFixed(0);
   if(a >= 100) return v.toFixed(1);
   if(a >= 1) return v.toFixed(2);
@@ -110,14 +121,19 @@ function veAxisDecimals(step) {
 function veFormatAxisVal(v, dec) {
   var a = Math.abs(v);
   if(dec === undefined) {
+    if(a === 0) return '0';
     if(a >= 10000) return (v / 1000).toFixed(0) + 'k';
     if(a >= 100) return v.toFixed(0);
     if(a >= 10) return v.toFixed(1);
     if(a >= 1) return v.toFixed(1);
     if(a >= 0.01) return v.toFixed(2);
+    // Küçük değer üstel yazılır: toFixed(3) 0,0001 ile 0,0005'i aynı "0.000"
+    // etiketine çeviriyordu.
     return v.toExponential(1);
   }
-  if(a >= 10000) return (v / 1000).toFixed(Math.max(0, dec - 3)) + 'k';
+  // KISALTMA YALNIZ dec === 0 İKEN. Eksen bir ondalık istiyorsa (dec > 0)
+  // "12k" o ondalığı atar ve 12345,6 ile 12345,7 aynı etikete düşer.
+  if(a >= 10000 && dec === 0) return (v / 1000).toFixed(0) + 'k';
   return v.toFixed(dec);
 }
 

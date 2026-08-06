@@ -393,13 +393,21 @@ function veFormatAxisVal(v, dec) {
   var a = Math.abs(v);
   if(dec === undefined) {
     // Geriye dönük yol (adım bilinmiyorsa): eski davranış
+    if(a === 0) return '0';
     if(a >= 10000) return (v/1000).toFixed(0) + 'k';
     if(a >= 100) return v.toFixed(0);
     if(a >= 10) return v.toFixed(1);
     if(a >= 1) return v.toFixed(1);
     if(a >= 0.01) return v.toFixed(2);
-    return v.toFixed(3);
+    // KÜÇÜK DEĞER ÜSTEL YAZILIR. toFixed(3) burada 0,0001 ile 0,0005'i aynı
+    // "0.000" etiketine çeviriyordu: log eksende birbirinden mertebe farklı
+    // iki bölme aynı sayıyı gösteriyor, eksen okunamıyordu. Takoz
+    // iletilebilirliği tam bu aralıkta (0,003 … 0,03).
+    return v.toExponential(1);
   }
+  // KISALTMA YALNIZ dec === 0 İKEN. Eksen bir ondalık istiyorsa (dec > 0)
+  // "12k" o ondalığı atar ve 12345,6 ile 12345,7 aynı etikete düşer —
+  // birbirinden farklı iki bölme aynı sayıyı gösterir.
   if(a >= 10000 && dec === 0) return (v/1000).toFixed(0) + 'k';
   return v.toFixed(dec);
 }
