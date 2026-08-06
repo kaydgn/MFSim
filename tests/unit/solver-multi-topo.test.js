@@ -313,8 +313,9 @@ describe('_veSolveOtherTopologies — loglama', () => {
       makeTab('Aktif', [{ id: 'e1', type: 'engine', data: {} }]),
       makeTab('İkinci', [{ id: 'e2', type: 'engine', data: {} }])
     ];
-    _veSolveOtherTopologies(); // options yok
-    // Hata olmadan çalışmalı
+    // İddia AÇIK yazılıyor: gövdesi iddiasız bir test, ileride biri çağrıyı
+    // try/catch'e sararsa sessizce anlamsızlaşır ve yine yeşil kalırdı.
+    expect(() => _veSolveOtherTopologies()).not.toThrow();   // options yok
     consoleWarnSpy.mockRestore();
   });
 

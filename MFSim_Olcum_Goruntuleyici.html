@@ -6315,12 +6315,51 @@ if(typeof module !== 'undefined' && module.exports) {
 
 // ── Saf çekirdek ─────────────────────────────────────────────────────────
 
-// X değerine en yakın örnek indeksi (ikili arama). Eşitlikte sağdaki örnek
-// seçilir — mevcut tooltip davranışıyla birebir aynı.
+// X dizisi ARTAN mı? Sonuç dizinin kendisine göre önbelleklenir: imleç her
+// fare hareketinde çağrılıyor ve ölçüm dizileri yüz binlerce örnek olabiliyor,
+// her harekette baştan taramak imleci ağırlaştırırdı. WeakMap kullanılıyor ki
+// kullanıcı verisine alan eklenmesin ve dizi çöpe gidince kayıt da gitsin.
+var _veSnapSortedCache = (typeof WeakMap === 'function') ? new WeakMap() : null;
+
+function veCursorIsSorted(arr) {
+  if(_veSnapSortedCache && _veSnapSortedCache.has(arr)) return _veSnapSortedCache.get(arr);
+  var ok = true;
+  for(var i = 1; i < arr.length; i++) {
+    if(arr[i] < arr[i - 1]) { ok = false; break; }
+  }
+  if(_veSnapSortedCache) _veSnapSortedCache.set(arr, ok);
+  return ok;
+}
+
+// X değerine en yakın örnek indeksi. Eşitlikte sağdaki örnek seçilir —
+// mevcut tooltip davranışıyla birebir aynı.
+//
+// ARTMAYAN X EKSENİ: pano X eksenini başka bir SİNYALE çevirmeye izin veriyor
+// (js/results.js veSetSlotXAxis — "devir–hız" gibi grafikler için). O zaman X
+// dizisi artan olmuyor: araç hızlanıp yavaşlayınca hız 0→40→10 gidiyor. İkili
+// arama sıralı dizi varsayar ve böyle bir dizide SESSİZCE yanlış örneği
+// döndürür — imleç "25 km/h" gösterirken 20 km/h'deki devri okur. Ölçülen
+// örnek: [0,20,40,30,10,25] dizisinde x=25 sorulduğunda indeks 1 (değer 20)
+// dönüyordu; doğrusu indeks 5.
+//
+// Çözüm ikili aramayı ATMAK DEĞİL: sıralı durum yaygın (zaman ekseni) ve
+// 400 000 örnekte doğrusal tarama imleci hissedilir yavaşlatır. Sıralılık bir
+// kez ölçülüp önbelleğe alınıyor, yalnızca artmayan dizide tarama yapılıyor.
 function veCursorSnapIndex(arr, x) {
   if(!arr || arr.length === 0) return -1;
   if(!isFinite(x)) return -1;
   if(arr.length === 1) return 0;
+
+  if(!veCursorIsSorted(arr)) {
+    var best = 0, bestD = Infinity;
+    for(var i = 0; i < arr.length; i++) {
+      var d = Math.abs(arr[i] - x);
+      // '<=' → eşitlikte SAĞDAKİ kazanır; sıralı yoldaki kuralla aynı.
+      if(d <= bestD) { bestD = d; best = i; }
+    }
+    return isFinite(bestD) ? best : -1;
+  }
+
   var lo = 0, hi = arr.length - 1;
   while(lo <= hi) {
     var mid = (lo + hi) >> 1;
@@ -6405,6 +6444,7 @@ function veCursorFmtDelta(v) {
 if(typeof module !== 'undefined' && module.exports) {
   module.exports = {
     veCursorSnapIndex: veCursorSnapIndex,
+    veCursorIsSorted: veCursorIsSorted,
     veXAxisKeyOf: veXAxisKeyOf,
     veCursorXKey: veCursorXKey,
     veSharedXAxis: veSharedXAxis,
