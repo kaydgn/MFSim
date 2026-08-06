@@ -9577,6 +9577,11 @@ var VE_TR = {
   GUTTER_MAX: 132,
   AXIS_GAP: 13,       // birleşik şeritte iki Y ekseni sütunu arası
   AXIS_COL_W: 46,     // ek her eksenin oluk üst sınırına kattığı pay
+  NAME_MAX_W: 120,    // eksen adı bloğunun üst sınırı (uzun ad kırpılır)
+  NAME_GAP: 10,       // ad bloğu ile sayı sütunları arası
+  NAME_LINE_H: 12,    // ad satır yüksekliği
+  NAME_DOT: 7,        // ad satırındaki renk kutucuğu
+  NAME_DOT_GAP: 5,
   AXIS_H: 30,         // alttaki sabit zaman ekseni canvas'ının yüksekliği
   FONT: '-apple-system,system-ui,Segoe UI,sans-serif'
 };
@@ -10212,20 +10217,36 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // bırakır; eksenler her zaman çizim alanına YASLI dizilir, böylece birincil
   // eksen tüm şeritlerde aynı yerde olur.
   //
-  // OLUKTA YALNIZCA SAYILAR DURUR — eksen ADLARI şeridin içindeki lejanttadır
-  // (veTrDrawAxisLegend). Ad şeridini eksen başına oluğa koymak denendi ve
-  // ÖLÇÜLDÜ: dört eksende oluk 215 px'e çıkıyor, 700 px'lik bir pencerede üst
-  // sınıra takılıyor ve en dıştaki eksen tuvalin dışına (x = −1,5) düşüp
-  // tamamen görünmez oluyordu. Ad yatay bir lejantta çok daha az yer kaplıyor
-  // ve şeridin içinde bol boşluk var.
+  // ÇOK EKSENLİ ŞERİTTE AD BLOĞU EKSENLERİN YANINDA, OLUKTA durur: adlar YATAY
+  // yazılır ve sayı sütunlarının solunda alt alta dizilir.
+  //
+  // İki yol denendi ve elendi:
+  //   • Eksen başına DİKEY ad şeridi (oluğa): dört eksende oluk 215 px'e
+  //     çıkıyor, dar pencerede en dıştaki eksen tuvalin dışına düşüyordu.
+  //   • Şeridin İÇİNDE yatay lejant: yer sorunu yoktu ama diyagramın üstüne
+  //     biniyordu; eğrilerin okunduğu alana yazı koymak hoş durmuyor.
+  // Yatay ad bloğu oluğa alınınca ikisi de çözülüyor: çizim alanı temiz kalıyor
+  // ve genişlik dikey yazıdan daha öngörülebilir (ad uzunluğu ÖLÇÜLÜYOR, üst
+  // sınırla kırpılıyor).
   var maxStack = 0, maxAxes = 1;
   lanes.forEach(function(lane) {
     var axes = lane.axes || [lane];
-    var total = 0;
+    var multi = axes.length > 1;
+    var total = 0, nameW = 0;
     axes.forEach(function(a, i) {
       a._w = veTrAxisLabelW(ctx, a);
       total += a._w + (i > 0 ? VE_TR.AXIS_GAP : 0);
+      if(multi) {
+        ctx.font = '600 9px ' + VE_TR.FONT;
+        var nw = ctx.measureText(veTrAxisTitle(a)).width + VE_TR.NAME_DOT + VE_TR.NAME_DOT_GAP;
+        if(nw > nameW) nameW = nw;
+        ctx.font = '9.5px ' + VE_TR.FONT;
+      }
     });
+    // Ad bloğu üst sınırlı: uzun bir sinyal adı oluğu çizim alanına ortak
+    // edemez. Sığmayan ad kırpılır (veTrFitTitle), sütunlar yerinde kalır.
+    lane._nameW = multi ? Math.min(nameW, VE_TR.NAME_MAX_W) : 0;
+    total += multi ? (lane._nameW + VE_TR.NAME_GAP) : VE_TR.TITLE_BAND;
     if(total > maxStack) maxStack = total;
     if(axes.length > maxAxes) maxAxes = axes.length;
   });
@@ -10233,10 +10254,12 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // Üst sınır eksen sayısıyla büyür ama çizim alanını yutamaz: altı sinyal
   // birleştirildiğinde oluk genişlerken eğrilere kalan yer %58'in altına
   // inmez — okunamayan bir grafik, ezilmiş bir eğriden iyi değil.
-  var cap = Math.min(VE_TR.GUTTER_MAX + (maxAxes - 1) * VE_TR.AXIS_COL_W,
-                     Math.max(VE_TR.GUTTER_MAX, w * 0.42));
-  var gutter = Math.max(VE_TR.GUTTER_MIN,
-                Math.min(cap, VE_TR.TITLE_BAND + maxStack + 14));
+  // Üst sınır eksen sayısıyla büyür ama çizim alanını yutamaz. Ad bloğu da
+  // hesaba katıldığı için pay daha geniş; yine de eğrilere kalan yer %55'in
+  // altına inmez.
+  var cap = Math.min(VE_TR.GUTTER_MAX + VE_TR.NAME_MAX_W + (maxAxes - 1) * VE_TR.AXIS_COL_W,
+                     Math.max(VE_TR.GUTTER_MAX, w * 0.45));
+  var gutter = Math.max(VE_TR.GUTTER_MIN, Math.min(cap, maxStack + 14));
 
   // Eksen sütunlarının x konumları. Birincil eksen (i=0) çizim alanına
   // bitişik: onun etiket x'i gutter-6, yani tek eksenli şeritteki değerin
@@ -10249,11 +10272,17 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // eğrisi yerinde kalır, şeridi ayırmak (ya da pencereyi genişletmek)
   // eksenini geri getirir.
   lanes.forEach(function(lane) {
+    var axes = lane.axes || [];
+    var multi = axes.length > 1;
+    // Ad bloğu oluğun EN SOLUNDA; sayı sütunları onun sağında, çizim alanına
+    // yaslı. Tek eksenli şeritte ad bloğu yok, sınır eski TITLE_BAND.
+    var leftEdge = multi ? (lane._nameW + VE_TR.NAME_GAP) : VE_TR.TITLE_BAND;
+    lane._nameX = multi ? 4 : null;
     var off = 0;
-    (lane.axes || []).forEach(function(a) {
+    axes.forEach(function(a) {
       a._labelX = gutter - 6 - off;
       a._tickX = gutter - off;
-      a._fits = (a._labelX - a._w) >= VE_TR.TITLE_BAND;
+      a._fits = (a._labelX - a._w) >= leftEdge;
       off += a._w + VE_TR.AXIS_GAP;
     });
   });
@@ -10431,72 +10460,55 @@ function veTrFitTitle(ctx, title, maxW) {
   return t + '…';
 }
 
-// ── Çizim: birleşik şeridin eksen lejantı ────────────────────────────────────
+// ── Çizim: birleşik şeridin eksen adları ─────────────────────────────────────
 //
-// Çok eksenli şeritte hangi sayının hangi eğriye ait olduğu SORULMAMALI. Oluğa
-// eksen başına dikey ad şeridi koymak denendi ve ölçüldü: dört eksende oluk
-// 215 px'e çıkıyor, dar pencerede en dıştaki eksen tuvalin dışına düşüyordu.
-// Ad yatay yazıldığında aynı bilgi çok daha az yer kaplıyor ve şeridin
-// içindeki boşluğa sığıyor.
+// Adlar OLUKTA, sayı sütunlarının SOLUNDA ve YATAY. Şeridin dikey ortasında
+// alt alta dizilir; sıra eksen sırasıyla aynıdır (üstteki ad, çizim alanına en
+// yakın sütuna karşılık gelir).
 //
-// Sıra EKSEN SIRASI ile aynı: soldaki ad, oluktaki en içteki (çizim alanına
-// en yakın) sütuna karşılık gelir. Böyle olmasaydı lejant eşlemeyi çözmek
-// yerine yeni bir bilmece eklerdi.
-function veTrDrawAxisLegend(ctx, geo, lane, rect) {
+// Neden burada: çizim alanının içine konan yatay bir lejant eğrilerin üstüne
+// biniyordu. Eksen başına DİKEY ad şeridi ise oluğu dört eksende 215 px'e
+// çıkarıp dar pencerede en dıştaki ekseni tuval dışına atıyordu. Yatay ad
+// oluğun solunda hem ölçülebilir bir genişlik kaplıyor hem çizim alanını
+// temiz bırakıyor.
+function veTrDrawAxisNames(ctx, geo, lane, rect) {
   var axes = lane.axes || [];
-  if(axes.length < 2) return;
+  if(axes.length < 2 || lane._nameX == null) return;
+
+  var LH = VE_TR.NAME_LINE_H;
+  var maxLines = Math.max(1, Math.floor((rect.h - 4) / LH));
+  var shown = Math.min(axes.length, maxLines);
+  // Şerit kısaysa hepsi sığmaz. Sığmayanı sessizce yutmak yerine son satır
+  // "+N" der; kullanıcı şeridi büyüterek ya da ayırarak hepsini görebilir.
+  var extra = axes.length - shown;
+  if(extra > 0 && shown > 1) { shown -= 1; extra += 1; }
+
+  var blockH = (shown + (extra > 0 ? 1 : 0)) * LH;
+  var y = rect.y + Math.max(2, (rect.h - blockH) / 2) + LH / 2;
+  var x = lane._nameX;
+  var textX = x + VE_TR.NAME_DOT + VE_TR.NAME_DOT_GAP;
+  var textMax = lane._nameW - VE_TR.NAME_DOT - VE_TR.NAME_DOT_GAP;
 
   ctx.save();
   ctx.font = '600 9px ' + VE_TR.FONT;
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
 
-  var DOT = 6, GAP_IN = 4, GAP_OUT = 11, PAD = 4;
-  var items = axes.map(function(a) {
+  for(var i = 0; i < shown; i++) {
+    var a = axes[i];
+    // Renk kutucuğu eğrinin rengi — ad ile sütunu eşleştiren şey bu.
+    ctx.fillStyle = a.color;
+    ctx.fillRect(x, y - 2.5, VE_TR.NAME_DOT, 5);
     // Sığmayan eksen SESSİZ kalmamalı: sayıları çizilmedi, sebebi burada yazılı.
-    var t = veTrAxisTitle(a) + (a._fits === false ? ' (oluğa sığmadı)' : '');
-    return { color: a.color, text: t, w: DOT + GAP_IN + ctx.measureText(t).width };
-  });
-
-  var total = items.reduce(function(s, it) { return s + it.w; }, 0)
-              + GAP_OUT * (items.length - 1);
-  var maxW = geo.plotW - 16;
-
-  // Sığmıyorsa SONDAN kırp ve kaç tanesinin düştüğünü yaz. Sessizce taşırmak
-  // lejantı eğrilerin üstüne yayardı.
-  var shown = items, extra = 0;
-  if(total > maxW) {
-    shown = []; var acc = 0;
-    for(var i = 0; i < items.length; i++) {
-      var next = acc + items[i].w + (shown.length ? GAP_OUT : 0);
-      if(next > maxW - 34) break;
-      shown.push(items[i]); acc = next;
-    }
-    extra = items.length - shown.length;
-    total = acc + (extra ? GAP_OUT + 30 : 0);
+    var t = veTrAxisTitle(a) + (a._fits === false ? ' (sığmadı)' : '');
+    ctx.fillText(veTrFitTitle(ctx, t, textMax), textX, y);
+    y += LH;
   }
 
-  var x = geo.plotX + 8;
-  var y = rect.y + 9;
-
-  // Zemin: eğri lejantın altından geçtiğinde yazı okunmaz kalmasın.
-  ctx.fillStyle = (typeof veThemeRgba === 'function')
-    ? veThemeRgba('--bg-primary', 0.82, 'rgba(20,22,28,0.82)') : 'rgba(20,22,28,0.82)';
-  ctx.fillRect(x - PAD, y - 7, Math.min(total, maxW) + PAD * 2, 14);
-
-  shown.forEach(function(it, i) {
-    if(i) x += GAP_OUT;
-    ctx.fillStyle = it.color;
-    ctx.fillRect(x, y - 2.5, DOT, 5);
-    x += DOT + GAP_IN;
-    ctx.fillText(it.text, x, y);
-    x += it.w - DOT - GAP_IN;
-  });
-
-  if(extra) {
+  if(extra > 0) {
     ctx.fillStyle = (typeof veThemeRgba === 'function')
       ? veThemeRgba('--text-muted', 0.9, 'rgba(140,148,160,0.9)') : 'rgba(140,148,160,0.9)';
-    ctx.fillText('+' + extra, x + GAP_OUT, y);
+    ctx.fillText('+' + extra + ' daha', textX, y);
   }
 
   ctx.restore();
@@ -10642,10 +10654,18 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
   //
   // ÇOK EKSENLİ ŞERİTTE ÇİZİLMEZ: orada "EngSpeed [1/min] +1" yalnız birinci
   // sinyali adlandırıp ötekileri adsız bırakıyordu ve grafik okunamıyordu.
-  // Adların tamamı şeridin içindeki lejantta (hemen aşağıda).
+  // Adların tamamı oluktaki yatay ad bloğunda (veTrDrawAxisNames).
   if(axes.length <= 1) {
+    // Başlık KENDİ sayılarının solunda durur, oluğun en solunda değil. Oluk
+    // pano genelinde tek ve birleşik bir şerit onu genişletebiliyor; sabit
+    // konumda kalsaydı birleştirme yapılan bir panoda tek eksenli şeritlerin
+    // başlığı sayılarından yüz piksel uzağa düşer, arada boş bir koridor
+    // kalırdı. Alt sınır eski konum: birleşme yoksa görünüm birebir aynı.
+    var a0 = axes[0] || lane;
+    var tx = Math.max(VE_TR.TITLE_BAND - 5,
+                      (a0._labelX != null ? a0._labelX - a0._w : VE_TR.TITLE_BAND) - 11);
     ctx.save();
-    ctx.translate(VE_TR.TITLE_BAND - 5, y0 + ph / 2);
+    ctx.translate(tx, y0 + ph / 2);
     ctx.rotate(-Math.PI / 2);
     ctx.font = '600 9.5px ' + VE_TR.FONT;
     ctx.textAlign = 'center';
@@ -10654,7 +10674,7 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
     ctx.fillText(veTrFitTitle(ctx, lane.title, ph - 6), 0, 0);
     ctx.restore();
   } else {
-    veTrDrawAxisLegend(ctx, geo, lane, rect);
+    veTrDrawAxisNames(ctx, geo, lane, rect);
   }
 
   // Veri yoksa şerit boş kalmasın: neden boş olduğunu söylesin
@@ -12642,6 +12662,9 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrYLogAny: veTrYLogAny,
     veTrLaneRangeLog: veTrLaneRangeLog,
     veTrAxisOf: veTrAxisOf,
+    veTrAxisTitle: veTrAxisTitle,
+    veTrAxisLabelW: veTrAxisLabelW,
+    veTrGeometry: veTrGeometry,
     veTrAxisOfSig: veTrAxisOfSig,
     veTrAxisByUnit: veTrAxisByUnit,
     veTrBuildLanes: veTrBuildLanes,

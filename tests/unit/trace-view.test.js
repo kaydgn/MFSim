@@ -955,3 +955,66 @@ describe('veTrAxisTitle — her eksen kendi adını taşır', () => {
     expect(T.veTrAxisTitle(null)).toBe('');
   });
 });
+
+// ── Eksen ad bloğu (oluğun solunda, yatay) ───────────────────────────────────
+//
+// Adlar önce çizim alanının içine yatay lejant olarak kondu — eğrilerin üstüne
+// biniyordu. Sonra eksen başına DİKEY ad şeridi denendi — oluğu şişirip dar
+// pencerede en dıştaki ekseni tuval dışına attı. Şimdiki yer ikisinin de
+// sorununu çözüyor: oluğun solunda, yatay, sayı sütunlarının dışında.
+describe('oluk — eksen ad bloğu', () => {
+  const fakeCtx = (perChar = 6) => ({
+    font: '',
+    measureText: (t) => ({ width: String(t).length * perChar }),
+  });
+  const axis = (unit, min, max, name) => ({
+    unit, yMin: min, yMax: max, yLog: false, discrete: false, levels: null,
+    hasData: true, color: '#000',
+    sigs: [{ sensor: { name: name || 'Sinyal', unit: unit } }],
+  });
+  const lane = (...axes) => ({ axes, def: { h: VE_TR.LANE_DEF_H }, sigs: [] });
+  const view = { xMin: 0, xMax: 1, dataMin: 0, dataMax: 1, xLog: false };
+
+  test('çok eksenli şeritte ad bloğuna yer ayrılır', () => {
+    const L = lane(axis('1/min', 800, 2200, 'EngSpeed'), axis('km/h', 0, 40, 'VehSpeed'));
+    T.veTrGeometry(fakeCtx(), [L], view, 1200, 600);
+    expect(L._nameW).toBeGreaterThan(0);
+    expect(L._nameX).toBe(4);
+    // Sayı sütunları ad bloğunun SAĞINDA başlamalı; üstüne binerse iki yazı
+    // birbirini okunmaz kılar.
+    L.axes.forEach((a) => {
+      expect(a._labelX - a._w).toBeGreaterThanOrEqual(L._nameW + VE_TR.NAME_GAP);
+    });
+  });
+
+  test('tek eksenli şeritte ad bloğu YOK — oluk dar kalır', () => {
+    const one = lane(axis('1/min', 800, 2200, 'EngSpeed'));
+    const geo = T.veTrGeometry(fakeCtx(), [one], view, 1200, 600);
+    expect(one._nameW).toBe(0);
+    expect(one._nameX).toBeNull();
+    expect(geo.gutter).toBeLessThanOrEqual(VE_TR.GUTTER_MAX);
+  });
+
+  test('çok uzun ad oluğu şişirmez — üst sınırla kırpılır', () => {
+    // Sinyal adları kullanıcı verisinden geliyor ve uzunluğu sınırsız.
+    // Sınır olmasa tek bir uzun ad çizim alanını yutardı.
+    const long = 'Cok::Uzun::Bir::Mesaj::Yolu::Ve::Sinyal::Adi::Daha::Da::Uzun';
+    const L = lane(axis('N', 0, 10, long), axis('mm', 0, 5, long));
+    const geo = T.veTrGeometry(fakeCtx(), [L], view, 1200, 600);
+    expect(L._nameW).toBeLessThanOrEqual(VE_TR.NAME_MAX_W);
+    expect(geo.plotW).toBeGreaterThan(1200 * 0.5);
+  });
+
+  test('tek eksenli şerit başlığı KENDİ sayılarının yanında durur', () => {
+    // Birleşik bir şerit oluğu genişletince, birleşmeyen şeritlerin başlığı
+    // sabit konumda kalsaydı sayılarından yüz piksel uzağa düşerdi.
+    const merged = lane(axis('1/min', 800, 2200, 'EngSpeed'), axis('km/h', 0, 40, 'VehSpeed'));
+    const single = lane(axis('°C', 20, 60, 'Sicaklik'));
+    const geo = T.veTrGeometry(fakeCtx(), [merged, single], view, 1200, 600);
+    // Çizim katmanının kullandığı formül: labelX - w - 11, alt sınır eski konum
+    const tx = Math.max(VE_TR.TITLE_BAND - 5,
+                        single.axes[0]._labelX - single.axes[0]._w - 11);
+    expect(tx).toBeGreaterThan(VE_TR.TITLE_BAND);      // sağa kaymış
+    expect(tx).toBeLessThan(geo.gutter);
+  });
+});
