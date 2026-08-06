@@ -547,18 +547,43 @@ function veTrBuildLanes(slot) {
     });
 
     // ── ÇOK EKSENLİ ŞERİT ──
-    // Birleştirilmiş her sinyal KENDİ Y ölçeğini alır. Tek ölçek paylaşmak,
-    // birlikte bakılmak istenen sinyalleri ezerdi: devir (800…2200) ile hız
-    // (0…40) aynı eksende çizilince hız tabana yapışır ve birleştirmenin tek
-    // kazancı ortak zaman ekseni olurdu — oysa amaç iki eğrinin ŞEKLİNİ yan
-    // yana okumak (nerede yükseliyor, nerede kırılıyor).
+    // Birleştirilmiş şeritte eksen BİRİM BAŞINA açılır: FARKLI birimli her
+    // sinyal kendi Y ölçeğini alır, AYNI birimli sinyaller tek ölçeği paylaşır.
+    //
+    // Farklı birimde ayrı ölçek şart: devir (800…2200) ile hız (0…40) aynı
+    // eksende çizilince hız tabana yapışır ve birleştirmenin tek kazancı ortak
+    // zaman ekseni olurdu — oysa amaç iki eğrinin ŞEKLİNİ yan yana okumak.
+    //
+    // AYNI birimde ortak ölçek de aynı ölçüde şart, ve sebebi daha sinsi.
+    // Her sinyale ayrı eksen verildiğinde 0…500 Nm'lik motor torku ile
+    // 0…50 Nm'lik fren torku İKİSİ DE şeridi baştan sona dolduruyordu:
+    // eğriler ÜST ÜSTE çakışıyor, grafik "iki tork eşit" diyordu. On kat
+    // farklılar. Kullanıcı "Birime göre"ye tam da bunları KIYASLAMAK için
+    // basıyor; ayrı ölçek, sorduğu sorunun cevabını yok ediyordu.
     //
     // TEK SİNYALLİ ŞERİTTE küme tek elemanlıdır ve sonuç bugünküyle BİREBİR
     // aynı çıkar; çok eksenli yol yalnızca birleştirilmiş şeritte açılır.
     var axes;
     if(sigs.length > 1) {
-      axes = sigs.map(function(g, i) {
-        return veTrAxisOf([g], {
+      var byUnit = {}, unitOrder = [];
+      sigs.forEach(function(g, i) {
+        // ORTAK EKSEN ANAHTARI. Paylaşım yalnız GERÇEK bir birim eşleşmesinde:
+        //
+        //  • Boş birim BİR BİRİM DEĞİLDİR. "Gear" ile "Mode" ikisi de birimsiz
+        //    diye aynı ölçeğe konamaz — kıyaslanabilir oldukları iddiası
+        //    hiçbir yerden gelmiyor. Birimsiz her sinyal kendi eksenini alır.
+        //
+        //  • Metin kanalı (levels) hiçbir zaman paylaşmaz: ölçeği sayı değil,
+        //    KENDİ etiket kümesidir. Paylaşsalardı ikinci kanal birincinin
+        //    etiketleriyle okunurdu — "B" yerine "2L".
+        var u = g.sensor.unit || '';
+        var key = (g.levels || !u) ? (' tek:' + i) : ('u:' + u);
+        if(byUnit[key] === undefined) { byUnit[key] = unitOrder.length; unitOrder.push([]); }
+        g.axisIdx = byUnit[key];
+        unitOrder[g.axisIdx].push(g);
+      });
+      axes = unitOrder.map(function(group, i) {
+        return veTrAxisOf(group, {
           yLog: slot && slot.yLog,
           // Elle kilit BİRİNCİL eksene uygulanır: kilit şeridin kenarından
           // konuyor ve o kenarın gösterdiği ölçek birincil eksenindir.
@@ -567,6 +592,7 @@ function veTrBuildLanes(slot) {
         });
       });
     } else {
+      sigs.forEach(function(g) { g.axisIdx = 0; });
       axes = [veTrAxisOf(sigs, { yLog: slot && slot.yLog, lockMin: L.min, lockMax: L.max })];
     }
 
@@ -725,14 +751,16 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // TÜM şeritler adlarını yatay yazar ve boşluk kalmaz. Hiç birleşme yoksa ad
   // bloğu hiç açılmaz ve görünüm eskisi gibi dar kalır (döndürülmüş başlık).
   // Tetikleyici tek ve pano düzeyinde: "birleştirdim mi, birleştirmedim mi".
-  var anyMulti = lanes.some(function(lane) { return (lane.axes || []).length > 1; });
+  // Ölçüt SİNYAL sayısı: aynı birimli iki sinyal TEK ekseni paylaşıyor ama
+  // yine de iki addır ve ad bloğu olmadan biri "+1" diye yutulurdu.
+  var anyMulti = lanes.some(veTrLaneMerged);
 
   ctx.font = '600 9px ' + VE_TR.FONT;
   var nameW = 0;
   if(anyMulti) {
     lanes.forEach(function(lane) {
-      (lane.axes || [lane]).forEach(function(a) {
-        var nw = ctx.measureText(veTrAxisTitle(a)).width + VE_TR.NAME_DOT + VE_TR.NAME_DOT_GAP;
+      veTrNameRows(lane).forEach(function(r) {
+        var nw = ctx.measureText(r.text).width + VE_TR.NAME_DOT + VE_TR.NAME_DOT_GAP;
         if(nw > nameW) nameW = nw;
       });
     });
@@ -852,14 +880,21 @@ function veTrAxisByUnit(lane, unit) {
   return null;
 }
 
-// i. sinyalin bağlı olduğu eksen. Tek eksenli şeritte hepsi aynı ekseni
-// paylaşır (bugünkü davranış); birleşik şeritte her sinyalin kendi ekseni var.
+// i. sinyalin bağlı olduğu eksen. Eşleme BİRİM üzerinden: veTrBuildLanes her
+// sinyale `axisIdx` yazıyor (aynı birimli sinyaller aynı ekseni gösterir).
+//
+// axisIdx yoksa (elle kurulmuş şerit, test kurgusu, eski kayıt) sıra numarası
+// yedek eşleme olarak kullanılır — eskiden tek yol buydu.
+//
 // Şerit nesnesinin kendisi de bir eksen gibi davranır (yMin/yMax/yLog), bu
 // yüzden `axes` hiç kurulmamışsa şeride düşmek güvenli.
 function veTrAxisOfSig(lane, i) {
   var axes = (lane && lane.axes) ? lane.axes : null;
   if(!axes || !axes.length) return lane;
-  return axes.length > 1 ? (axes[i] || axes[0]) : axes[0];
+  if(axes.length === 1) return axes[0];
+  var g = (lane.sigs && lane.sigs[i]) ? lane.sigs[i] : null;
+  if(g && g.axisIdx != null && axes[g.axisIdx]) return axes[g.axisIdx];
+  return axes[i] || axes[0];
 }
 
 function veTrYPos(lane, rect, v) {
@@ -964,11 +999,46 @@ function veTrFitTitle(ctx, title, maxW) {
   return t + '…';
 }
 
+// Ad bloğunun satırları — EKSEN başına değil, SİNYAL başına.
+//
+// Eksen birim başına açılıyor, yani iki sinyal tek ekseni paylaşabiliyor.
+// Satırlar eksene göre yazılsaydı paylaşan sinyallerden yalnız biri adlanır,
+// öteki "+1" olarak yutulurdu — birleştirmenin okunamaz eski hâli.
+//
+// `off`: bu sinyalin ekseni oluğa sığmadı (sayıları çizilmedi).
+//
+// YEDEK YOL: `sigs` yoksa (elle kurulmuş şerit, test kurgusu) eksen adlarına
+// düşülür; eskiden tek yol buydu.
+function veTrNameRows(lane) {
+  var axes = (lane && lane.axes) ? lane.axes : [];
+  var sigs = (lane && lane.sigs) ? lane.sigs : [];
+  if(!sigs.length) {
+    return axes.map(function(a) {
+      return { text: veTrAxisTitle(a), color: a.color, off: a._fits === false };
+    });
+  }
+  return sigs.map(function(g, i) {
+    var a = veTrAxisOfSig(lane, i);
+    return {
+      text: veTrLaneTitle(g.sensor),
+      color: g.color,
+      off: !!(a && a._fits === false)
+    };
+  });
+}
+
+// Şerit "birleşik" mi? Ölçüt SİNYAL sayısı, eksen sayısı değil: aynı birimli
+// iki sinyal tek ekseni paylaşıyor ama yine de iki addır ve ad bloğu gerekir.
+function veTrLaneMerged(lane) {
+  var sigs = (lane && lane.sigs) ? lane.sigs : null;
+  if(sigs && sigs.length) return sigs.length > 1;
+  return ((lane && lane.axes) ? lane.axes.length : 0) > 1;
+}
+
 // ── Çizim: birleşik şeridin eksen adları ─────────────────────────────────────
 //
 // Adlar OLUKTA, sayı sütunlarının SOLUNDA ve YATAY. Şeridin dikey ortasında
-// alt alta dizilir; sıra eksen sırasıyla aynıdır (üstteki ad, çizim alanına en
-// yakın sütuna karşılık gelir).
+// alt alta dizilir; sıra sinyal sırasıyla aynıdır.
 //
 // Neden burada: çizim alanının içine konan yatay bir lejant eğrilerin üstüne
 // biniyordu. Eksen başına DİKEY ad şeridi ise oluğu dört eksende 215 px'e
@@ -976,10 +1046,10 @@ function veTrFitTitle(ctx, title, maxW) {
 // oluğun solunda hem ölçülebilir bir genişlik kaplıyor hem çizim alanını
 // temiz bırakıyor.
 function veTrDrawAxisNames(ctx, geo, lane, rect) {
-  var axes = lane.axes || [];
-  // Tek eksenli şerit de buraya düşebiliyor: panoda başka bir şerit birleşikse
+  var rows = veTrNameRows(lane);
+  // Tek sinyalli şerit de buraya düşebiliyor: panoda başka bir şerit birleşikse
   // ad bloğu zaten açık ve bu şeridin adı da oraya yatay yazılıyor.
-  if(!axes.length || lane._nameX == null) return;
+  if(!rows.length || lane._nameX == null) return;
 
   var LH = VE_TR.NAME_LINE_H;
   var maxLines = Math.max(1, Math.floor((rect.h - 4) / LH));
@@ -991,14 +1061,15 @@ function veTrDrawAxisNames(ctx, geo, lane, rect) {
   // sınırlı olduğundan uzun bir sinyalde tam da o açıklama kırpılıyordu —
   // ekranda "Signal_8 [kPa] (sığ…" kalıyor, kullanıcı ne dediğini
   // anlamıyordu. Yani uyarı, en çok gerektiği yerde kayboluyordu.
+  var axes = lane.axes || [];
   var unfit = 0;
   for(var u = 0; u < axes.length; u++) if(axes[u]._fits === false) unfit++;
   var noteLine = unfit > 0 ? 1 : 0;
 
-  var shown = Math.min(axes.length, Math.max(1, maxLines - noteLine));
+  var shown = Math.min(rows.length, Math.max(1, maxLines - noteLine));
   // Şerit kısaysa hepsi sığmaz. Sığmayanı sessizce yutmak yerine son satır
   // "+N" der; kullanıcı şeridi büyüterek ya da ayırarak hepsini görebilir.
-  var extra = axes.length - shown;
+  var extra = rows.length - shown;
   if(extra > 0 && shown > 1) { shown -= 1; extra += 1; }
 
   var blockH = (shown + (extra > 0 ? 1 : 0) + noteLine) * LH;
@@ -1015,21 +1086,20 @@ function veTrDrawAxisNames(ctx, geo, lane, rect) {
   ctx.textAlign = 'left';
 
   for(var i = 0; i < shown; i++) {
-    var a = axes[i];
-    var off = (a._fits === false);
-    // Renk kutucuğu eğrinin rengi — ad ile sütunu eşleştiren şey bu.
-    // Sayıları çizilmeyen eksende kutucuk İÇİ BOŞ: hangi eksenlerin
+    var r = rows[i];
+    // Renk kutucuğu EĞRİNİN rengi — adı eğriyle eşleştiren şey bu.
+    // Sayıları çizilmeyen eksene bağlı sinyalde kutucuk İÇİ BOŞ: hangilerinin
     // etkilendiği, alttaki toplu nota bakmadan da görülür.
-    if(off) {
-      ctx.strokeStyle = a.color;
+    if(r.off) {
+      ctx.strokeStyle = r.color;
       ctx.lineWidth = 1;
       ctx.strokeRect(x + 0.5, y - 2, VE_TR.NAME_DOT - 1, 4);
     } else {
-      ctx.fillStyle = a.color;
+      ctx.fillStyle = r.color;
       ctx.fillRect(x, y - 2.5, VE_TR.NAME_DOT, 5);
     }
-    ctx.fillStyle = off ? muted : a.color;
-    ctx.fillText(veTrFitTitle(ctx, veTrAxisTitle(a), textMax), textX, y);
+    ctx.fillStyle = r.off ? muted : r.color;
+    ctx.fillText(veTrFitTitle(ctx, r.text, textMax), textX, y);
     y += LH;
   }
 
@@ -3343,6 +3413,8 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrAxisTitle: veTrAxisTitle,
     veTrStackBadges: veTrStackBadges,
     veTrDrawAxisNames: veTrDrawAxisNames,
+    veTrNameRows: veTrNameRows,
+    veTrLaneMerged: veTrLaneMerged,
     veTrAxisLabelW: veTrAxisLabelW,
     veTrGeometry: veTrGeometry,
     veTrAxisOfSig: veTrAxisOfSig,
