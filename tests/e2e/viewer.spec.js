@@ -523,6 +523,49 @@ test.describe('Birleştir — seçerek, çok eksenli', () => {
     expect(axes[0].max).toBeGreaterThan(2000);
   });
 
+  // İmleç okuması: birleşik şeritte sinyal başına bir değer rozeti çiziliyor.
+  // İki eğri o anda birbirine yakınsa rozetler üst üste biniyor ve İKİSİ DE
+  // okunamıyordu — beş sinyal birleşikken ekranda "1C )3 °C" görünüyordu,
+  // gerçek değer 36.03 °C idi. Yanlış sayı okunabilecek sessiz bir kusurdu.
+  test('imleç rozetleri üst üste BİNMEZ — yakın iki eğride de okunur', async ({ page }) => {
+    await boardWithFive(page);
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    for (const i of [0, 1, 2, 3, 4]) {
+      await page.check(`#ve-trace-merge-pop input[data-lane="${i}"]`);
+    }
+    await page.click('#ve-trace-merge-pop [data-act="merge-ok"]');
+    await expect.poll(() => laneCount(page)).toBe(1);
+
+    // İmleci çizim alanının ortasına götür (gerçek fare hareketi).
+    const geo = await page.evaluate(() => ({
+      gutter: veTrState.geo.gutter, plotW: veTrState.geo.plotW,
+      y: veTrState.geo.rects[0].y, h: veTrState.geo.rects[0].h,
+    }));
+    const box = await page.locator('#ve-trace-overlay').boundingBox();
+    await page.mouse.move(box.x + geo.gutter + geo.plotW * 0.4, box.y + geo.y + geo.h / 2);
+    await expect.poll(() => page.evaluate(() => veTrState.cursorX)).not.toBeNull();
+
+    // Çizim katmanının kullandığı yerleşimin ta kendisi.
+    const yer = await page.evaluate(() => {
+      const g = veTrState.geo, lane = g.lanes[0], rect = g.rects[0];
+      const i = veTrSnapIndex(g.timeArr, veTrState.cursorX);
+      const items = lane.sigs.map((sg, gi) => ({
+        ad: sg.sensor.name,
+        y: veTrYPos(veTrAxisOfSig(lane, gi), rect, sg.series[i]),
+      }));
+      const fit = veTrStackBadges(items, rect);
+      return { fit, items: items.map((b) => ({ ad: b.ad, by: b.by, hidden: !!b.hidden })) };
+    });
+
+    const gorunen = yer.items.filter((b) => !b.hidden).map((b) => b.by).sort((a, b) => a - b);
+    expect(gorunen.length).toBe(5);          // 764 px'lik şeritte hepsi sığar
+    expect(yer.fit.hidden).toBe(0);
+    for (let i = 1; i < gorunen.length; i++) {
+      // 14 px rozet yüksekliği: aradaki mesafe bundan küçükse metinler girişir.
+      expect(gorunen[i] - gorunen[i - 1]).toBeGreaterThanOrEqual(14);
+    }
+  });
+
   test('BİRDEN ÇOK birleşik diyagram kurulabilir', async ({ page }) => {
     await boardWithFive(page);
 

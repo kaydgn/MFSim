@@ -9622,6 +9622,8 @@ var VE_TR = {
   NAME_LINE_H: 12,    // ad satır yüksekliği
   NAME_DOT: 7,        // ad satırındaki renk kutucuğu
   NAME_DOT_GAP: 5,
+  BADGE_H: 14,        // imleç değer rozetinin yüksekliği
+  BADGE_GAP: 2,       // iki rozet arası en az boşluk (0 olsa kenarlar birleşir)
   AXIS_H: 30,         // alttaki sabit zaman ekseni canvas'ının yüksekliği
   FONT: '-apple-system,system-ui,Segoe UI,sans-serif'
 };
@@ -10932,6 +10934,11 @@ function veTrDrawOverlay() {
   lanes.forEach(function(lane, li) {
     var rect = geo.rects[li];
     if(!rect) return;
+
+    // ÖNCE topla, SONRA yerleştir, EN SON çiz. Tek geçişte çizilirse iki
+    // rozet aynı yüksekliğe düştüğünde üst üste biniyor ve ikisi de
+    // okunamıyordu — bkz. veTrStackBadges.
+    var badges = [];
     lane.sigs.forEach(function(g, gi) {
       if(!g.series) return;
       var v = g.series[i];
@@ -10940,10 +10947,6 @@ function veTrDrawOverlay() {
       // şeritte ortak ölçek kullanılsa nokta eğrinin üstünden kayardı.
       var y = veTrYPos(veTrAxisOfSig(lane, gi), rect, v);
       if(y < rect.y - 2 || y > rect.y + rect.h + 2) return;
-
-      // Eğri üzerinde nokta
-      ctx.fillStyle = g.color;
-      ctx.beginPath(); ctx.arc(cx, y, 2.6, 0, Math.PI * 2); ctx.fill();
 
       // Değer rozeti — Δ varsa farkı da yazar
       // Ayrık şeritte sayı okunmaz: "0.00e+0 0/1" yerine "Lockup açık",
@@ -10962,26 +10965,152 @@ function veTrDrawOverlay() {
         txt = veTrFmt(v, g.sensor.unit);
         if(pi >= 0 && isFinite(g.series[pi])) txt += '  Δ' + veTrFmtDelta(v - g.series[pi]);
       }
-      var tw = ctx.measureText(txt).width;
+      badges.push({ y: y, txt: txt, tw: ctx.measureText(txt).width, color: g.color });
+    });
+
+    var fit = veTrStackBadges(badges, rect);
+
+    badges.forEach(function(bd) {
+      // Eğri üzerinde nokta — HER ZAMAN gerçek değerin yerinde, rozeti
+      // gizlenmiş sinyal için bile: eğrinin o andaki yeri bilgidir.
+      ctx.fillStyle = bd.color;
+      ctx.beginPath(); ctx.arc(cx, bd.y, 2.6, 0, Math.PI * 2); ctx.fill();
+      if(bd.hidden) return;
+
       var bx = cx + 7, right = true;
-      if(bx + tw + 8 > geo.plotX + geo.plotW) { bx = cx - 7 - tw - 8; right = false; }
-      var by = Math.max(rect.y + 1, Math.min(rect.y + rect.h - 15, y - 7));
+      if(bx + bd.tw + 8 > geo.plotX + geo.plotW) { bx = cx - 7 - bd.tw - 8; right = false; }
+
+      // Rozet çakışma yüzünden kaydıysa noktaya ince bir bağ çizilir; yoksa
+      // hangi rozetin hangi eğriye ait olduğu yalnızca renkten anlaşılırdı
+      // ve aynı renge yakın iki sinyalde bu yetmez.
+      if(Math.abs(bd.by + 7 - bd.y) > 3) {
+        ctx.strokeStyle = bd.color;
+        ctx.globalAlpha = 0.45;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cx, bd.y);
+        ctx.lineTo(right ? bx : bx + bd.tw + 8, bd.by + 7);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
 
       ctx.fillStyle = veThemeRgba('--bg-secondary', 0.94, 'rgba(20,22,28,0.94)');
-      ctx.strokeStyle = g.color;
+      ctx.strokeStyle = bd.color;
       ctx.lineWidth = 1;
       if(ctx.roundRect) {
-        ctx.beginPath(); ctx.roundRect(bx, by, tw + 8, 14, 3); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(bx, bd.by, bd.tw + 8, VE_TR.BADGE_H, 3); ctx.fill(); ctx.stroke();
       } else {
-        ctx.fillRect(bx, by, tw + 8, 14);
-        ctx.strokeRect(bx + 0.5, by + 0.5, tw + 7, 13);
+        ctx.fillRect(bx, bd.by, bd.tw + 8, VE_TR.BADGE_H);
+        ctx.strokeRect(bx + 0.5, bd.by + 0.5, bd.tw + 7, VE_TR.BADGE_H - 1);
       }
-      ctx.fillStyle = g.color;
+      ctx.fillStyle = bd.color;
       ctx.textAlign = 'left';
-      ctx.fillText(txt, bx + 4, by + 7);
-      if(!right) { /* sol yerleşim: metin yine soldan hizalı, kutu kaydırıldı */ }
+      ctx.fillText(bd.txt, bx + 4, bd.by + 7);
     });
+
+    // Sığmayanlar SESSİZ kalmaz: kaç değerin gizlendiği yazılır. Kullanıcı
+    // şeridi büyütünce ya da ayırınca hepsi geri gelir.
+    if(fit.hidden > 0 && fit.overflowY != null) {
+      var ot = '+' + fit.hidden + ' değer';
+      var ow = ctx.measureText(ot).width;
+      var ox = cx + 7;
+      if(ox + ow + 8 > geo.plotX + geo.plotW) ox = cx - 7 - ow - 8;
+      ctx.fillStyle = veThemeRgba('--bg-secondary', 0.94, 'rgba(20,22,28,0.94)');
+      ctx.strokeStyle = veThemeRgba('--text-muted', 0.7, 'rgba(140,148,160,0.7)');
+      ctx.lineWidth = 1;
+      if(ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(ox, fit.overflowY, ow + 8, VE_TR.BADGE_H, 3);
+        ctx.fill(); ctx.stroke();
+      } else {
+        ctx.fillRect(ox, fit.overflowY, ow + 8, VE_TR.BADGE_H);
+        ctx.strokeRect(ox + 0.5, fit.overflowY + 0.5, ow + 7, VE_TR.BADGE_H - 1);
+      }
+      ctx.fillStyle = veThemeRgba('--text-muted', 0.95, 'rgba(140,148,160,0.95)');
+      ctx.textAlign = 'left';
+      ctx.fillText(ot, ox + 4, fit.overflowY + 7);
+    }
   });
+}
+
+// ── İmleç rozetlerinin dikey yerleşimi ───────────────────────────────────────
+//
+// Birleşik şeritte imleç anında sinyal başına bir rozet çiziliyor. İki eğri o
+// anda birbirine yakınsa rozetleri de üst üste biner ve ikisi de okunamaz —
+// ÖLÇÜLDÜ: 5 sinyal birleşikken "1C" (Mode) ile "43 °C" (Motor Sıcaklığı)
+// rozetleri 1 px arayla çizilip ekranda "1C )3 °C" oluyordu. Kullanıcı yanlış
+// bir sayı okuyabilirdi; kusur sessizdi, çünkü eğriler ayrıldığında kendini
+// toparlıyordu.
+//
+// Yerleşim klasik iki geçişli etiket dizme: tercih edilen yükseklikten başla,
+// aşağı doğru süpürüp çakışanı it; son rozet şeridin altını aşarsa yukarı
+// doğru geri it. Sıralama korunur (üstteki eğrinin rozeti üstte kalır), böylece
+// okuma sırası eğri sırasıyla aynı olur.
+//
+// ŞERİT HEPSİNİ ALMIYORSA: sığmayan rozetler ÇİZİLMEZ (`hidden = true`) ve
+// sayıları "+N" ile söylenir. Eşit aralıkla sıkıştırmak denendi ama dürüst
+// değil: 54 px'lik bir şeride altı rozet "sıkıştırıldığında" yine üst üste
+// biniyor, yalnız bindirme düzenli oluyor — okunamayan sayı yine okunamıyor.
+// Gizlemek + saymak, şerit adları bloğundaki "+N daha" ile aynı yordam:
+// kullanıcı bir şeyin eksik olduğunu GÖRÜR ve şeridi büyütüp hepsini alır.
+// Eğri üzerindeki nokta gizlenen sinyal için de çizilmeye devam eder.
+//
+// items: [{ y }] — girdi. Her öğeye `by` (rozetin ÜST kenarı) ve `hidden`
+// yazılır. Dönen değer: { hidden: <gizlenen sayısı>, overflowY: <"+N" satırının
+// üst kenarı ya da null> }.
+function veTrStackBadges(items, rect) {
+  var H = VE_TR.BADGE_H, GAP = VE_TR.BADGE_GAP, step = H + GAP;
+  var top = rect.y + 1, bot = rect.y + rect.h - H - 1;
+  if(bot < top) bot = top;
+  var none = { hidden: 0, overflowY: null };
+
+  if(!items || items.length === 0) return none;
+  if(items.length === 1) {
+    items[0].hidden = false;
+    items[0].by = Math.max(top, Math.min(bot, items[0].y - H / 2));
+    return none;
+  }
+
+  // Sıralama eğrilerin o andaki dikey sırası — rozet sırası da bu olmalı.
+  var order = items.slice().sort(function(a, b) { return a.y - b.y; });
+
+  // Şeride kaç rozet sığar? (bot - top) son rozetin ÜST kenarının gidebileceği
+  // en uzak nokta; aralarındaki mesafe step.
+  var cap = Math.max(1, Math.floor((bot - top) / step) + 1);
+  var overflowY = null;
+
+  if(order.length > cap) {
+    // Son yuva "+N" satırına ayrılır — yoksa gizlenen sinyaller sessizce yok
+    // olurdu ve kullanıcı eksik olduğunu anlamazdı.
+    var show = Math.max(1, cap - 1);
+    for(var h = show; h < order.length; h++) { order[h].hidden = true; order[h].by = null; }
+    order = order.slice(0, show);
+    overflowY = Math.min(bot, top + show * step);
+  }
+  order.forEach(function(it) { it.hidden = false; });
+
+  // 1) Aşağı süpür: her rozet tercih ettiği yerde ya da bir öncekinin altında.
+  var prev = -Infinity;
+  order.forEach(function(it) {
+    var want = it.y - H / 2;
+    it.by = Math.max(want, prev === -Infinity ? top : prev + step);
+    prev = it.by;
+  });
+
+  // 2) Taşma varsa yukarı geri it. Aşağıdan yukarı gidilir; üst sınıra
+  // dayanınca durur — 1. adımda toplam yüksekliğin sığdığı doğrulandı.
+  var limitBot = (overflowY != null) ? (overflowY - step) : bot;
+  if(order[order.length - 1].by > limitBot) {
+    var limit = limitBot;
+    for(var k = order.length - 1; k >= 0; k--) {
+      if(order[k].by > limit) order[k].by = limit;
+      limit = order[k].by - step;
+    }
+    // Üst sınırın üstüne çıkmış olabilir — tümünü aşağı kaydır.
+    var under = top - order[0].by;
+    if(under > 0) order.forEach(function(it) { it.by += under; });
+  }
+
+  return { hidden: items.length - order.length, overflowY: overflowY };
 }
 
 // ── Ana çizim ────────────────────────────────────────────────────────────────
@@ -12739,6 +12868,7 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrLaneRangeLog: veTrLaneRangeLog,
     veTrAxisOf: veTrAxisOf,
     veTrAxisTitle: veTrAxisTitle,
+    veTrStackBadges: veTrStackBadges,
     veTrAxisLabelW: veTrAxisLabelW,
     veTrGeometry: veTrGeometry,
     veTrAxisOfSig: veTrAxisOfSig,
