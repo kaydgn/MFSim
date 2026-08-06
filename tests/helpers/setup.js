@@ -20,10 +20,18 @@ const fs = require('fs');
 const path = require('path');
 
 const JS_DIR = path.join(__dirname, '../../js');
+const VIEWER_JS_DIR = path.join(__dirname, '../../viewer/js');
 
 // js/<file> kaynağını string olarak okur.
 global.loadSource = function loadSource(file) {
   return fs.readFileSync(path.join(JS_DIR, file), 'utf8');
+};
+
+// viewer/js/<file> kaynağını string olarak okur. Ölçüm Görüntüleyici ayrı bir
+// programdır (bkz. viewer/README.md); modüllerinin yedisi js/'ten birebir
+// kopya, biri (board.js) yalnızca orada var. Testi de yalnızca orada anlamlı.
+global.loadViewerSource = function loadViewerSource(file) {
+  return fs.readFileSync(path.join(VIEWER_JS_DIR, file), 'utf8');
 };
 
 // UI katmanının çağırdığı, çekirdek mantık açısından önemsiz olan ortak
