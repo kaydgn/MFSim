@@ -1084,3 +1084,123 @@ describe('oluk — eksen ad bloğu', () => {
     expect(tx).toBeLessThan(geo.gutter);
   });
 });
+
+// ── İmleç değer rozetlerinin dikey yerleşimi ─────────────────────────────────
+//
+// Birleşik şeritte imleç anında sinyal başına bir rozet çiziliyor. İki eğri o
+// anda birbirine yakınsa rozetler üst üste biniyordu ve İKİSİ DE okunamıyordu.
+//
+// ÖLÇÜLEN kusur (5 sinyal tek şeritte, görüntüleyici, 1500x900):
+//   Motor Sıcaklığı  rozetY=384   → ekranda "1C )3 °C"
+//   Mode             rozetY=383
+// İki rozet 1 px arayla çizilince metinler birbirine giriyor. Kullanıcı yanlış
+// bir sayı okuyabilir ve kusur SESSİZ: eğriler ayrılınca kendini toparlıyor.
+describe('imleç rozetleri — çakışma yerleşimi', () => {
+  const H = VE_TR.BADGE_H, GAP = VE_TR.BADGE_GAP;
+  const rect = (y, h) => ({ y, h });
+  const put = (...ys) => ys.map((y) => ({ y }));
+
+  // Bindirme ölçütü: ÇİZİLEN iki rozetin dikey aralığı kesişiyor mu?
+  const overlaps = (items) => {
+    const s = items.filter((b) => !b.hidden).sort((a, b) => a.by - b.by);
+    let n = 0;
+    for (let i = 1; i < s.length; i++) if (s[i].by < s[i - 1].by + H) n++;
+    return n;
+  };
+
+  test('ölçülen senaryo: 1 px arayla iki rozet ARTIK binmiyor', () => {
+    const it = put(391, 390);                       // Motor Sıcaklığı, Mode
+    T.veTrStackBadges(it, rect(8, 764));
+    expect(overlaps(it)).toBe(0);
+    expect(Math.abs(it[0].by - it[1].by)).toBeGreaterThanOrEqual(H + GAP);
+  });
+
+  test('tek rozet tercih ettiği yerde kalır — boşuna kaydırma yok', () => {
+    const it = put(300);
+    T.veTrStackBadges(it, rect(8, 764));
+    expect(it[0].by).toBe(300 - H / 2);
+  });
+
+  test('birbirinden uzak rozetler HİÇ kaydırılmaz', () => {
+    const ys = [100, 300, 500, 700];
+    const it = put(...ys);
+    T.veTrStackBadges(it, rect(8, 800));
+    it.forEach((b, i) => expect(b.by).toBe(ys[i] - H / 2));
+  });
+
+  test('beş sinyal aynı yükseklikte — hepsi ayrı ve şeridin İÇİNDE', () => {
+    const it = put(400, 400, 400, 400, 400);
+    const r = rect(8, 764);
+    T.veTrStackBadges(it, r);
+    expect(overlaps(it)).toBe(0);
+    it.forEach((b) => {
+      expect(b.by).toBeGreaterThanOrEqual(r.y);
+      expect(b.by + H).toBeLessThanOrEqual(r.y + r.h);
+    });
+  });
+
+  test('şeridin ALT kenarındaki yığın taşmaz — yukarı geri itilir', () => {
+    const r = rect(0, 60);
+    const it = put(55, 56, 57);
+    T.veTrStackBadges(it, r);
+    expect(overlaps(it)).toBe(0);
+    it.forEach((b) => {
+      expect(b.by).toBeGreaterThanOrEqual(r.y);
+      expect(b.by + H).toBeLessThanOrEqual(r.y + r.h);
+    });
+  });
+
+  test('şeridin ÜST kenarındaki yığın da içeride kalır', () => {
+    const r = rect(100, 60);
+    const it = put(100, 101, 102);
+    T.veTrStackBadges(it, r);
+    expect(overlaps(it)).toBe(0);
+    it.forEach((b) => expect(b.by).toBeGreaterThanOrEqual(r.y));
+  });
+
+  test('sıra korunur — üstteki eğrinin rozeti üstte kalır', () => {
+    // Renkten başka ipucu yok; sıra bozulursa kullanıcı değeri yanlış eğriye
+    // atfeder ve bu, çakışmadan daha sinsi bir hatadır.
+    const it = [{ y: 300, ad: 'a' }, { y: 100, ad: 'b' }, { y: 200, ad: 'c' }];
+    T.veTrStackBadges(it, rect(0, 400));
+    const sirali = it.slice().sort((x, z) => x.by - z.by).map((x) => x.ad);
+    expect(sirali).toEqual(['b', 'c', 'a']);
+  });
+
+  test('şerit hepsini ALMIYORSA sığmayanlar gizlenir ve SAYILIR', () => {
+    // 6 rozet × 16 px = 94 px; şerit 50 px. Sıkıştırmak dürüst değil —
+    // sıkıştırılmış rozet de üst üste biner, yalnız düzenli biner. Gizlenen
+    // sayısı "+N" ile söylenir; kullanıcı şeridi büyütünce hepsi döner.
+    const r = rect(0, 50);
+    const it = put(10, 12, 14, 16, 18, 20);
+    const fit = T.veTrStackBadges(it, r);
+
+    expect(fit.hidden).toBeGreaterThan(0);
+    expect(fit.overflowY).not.toBeNull();
+    expect(overlaps(it)).toBe(0);                       // çizilenler binmiyor
+    expect(it.filter((b) => b.hidden).length).toBe(fit.hidden);
+    expect(it.filter((b) => !b.hidden).length + fit.hidden).toBe(it.length);
+
+    // "+N" satırı da şeridin içinde ve son rozetin ALTINDA.
+    expect(fit.overflowY + H).toBeLessThanOrEqual(r.y + r.h);
+    const son = Math.max(...it.filter((b) => !b.hidden).map((b) => b.by));
+    expect(fit.overflowY).toBeGreaterThanOrEqual(son + H);
+  });
+
+  test('tam sığan sayıda rozette HİÇBİRİ gizlenmez', () => {
+    // Sınırın hemen berisi: gizleme yalnız gerçekten gerektiğinde devreye
+    // girmeli, yoksa kullanıcı sebepsiz yere değer kaybeder.
+    const r = rect(0, 50);
+    const cap = Math.floor((r.h - H - 2) / (H + GAP)) + 1;
+    const it = put(...Array.from({ length: cap }, (_, k) => 5 + k * 3));
+    const fit = T.veTrStackBadges(it, r);
+    expect(fit.hidden).toBe(0);
+    expect(fit.overflowY).toBeNull();
+    expect(overlaps(it)).toBe(0);
+  });
+
+  test('boş liste patlatmaz', () => {
+    expect(() => T.veTrStackBadges([], rect(0, 100))).not.toThrow();
+    expect(T.veTrStackBadges([], rect(0, 100)).hidden).toBe(0);
+  });
+});
