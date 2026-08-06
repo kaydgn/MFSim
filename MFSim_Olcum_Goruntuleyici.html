@@ -10539,17 +10539,31 @@ function veTrDrawAxisNames(ctx, geo, lane, rect) {
 
   var LH = VE_TR.NAME_LINE_H;
   var maxLines = Math.max(1, Math.floor((rect.h - 4) / LH));
-  var shown = Math.min(axes.length, maxLines);
+
+  // Oluğa sığmadığı için SAYILARI çizilmeyen eksenler. Sebep bir kez, blok
+  // sonunda toplu yazılır.
+  //
+  // Eskiden her adın ARDINA ' (sığmadı)' ekleniyordu. Ad bloğu 120 px'le
+  // sınırlı olduğundan uzun bir sinyalde tam da o açıklama kırpılıyordu —
+  // ekranda "Signal_8 [kPa] (sığ…" kalıyor, kullanıcı ne dediğini
+  // anlamıyordu. Yani uyarı, en çok gerektiği yerde kayboluyordu.
+  var unfit = 0;
+  for(var u = 0; u < axes.length; u++) if(axes[u]._fits === false) unfit++;
+  var noteLine = unfit > 0 ? 1 : 0;
+
+  var shown = Math.min(axes.length, Math.max(1, maxLines - noteLine));
   // Şerit kısaysa hepsi sığmaz. Sığmayanı sessizce yutmak yerine son satır
   // "+N" der; kullanıcı şeridi büyüterek ya da ayırarak hepsini görebilir.
   var extra = axes.length - shown;
   if(extra > 0 && shown > 1) { shown -= 1; extra += 1; }
 
-  var blockH = (shown + (extra > 0 ? 1 : 0)) * LH;
+  var blockH = (shown + (extra > 0 ? 1 : 0) + noteLine) * LH;
   var y = rect.y + Math.max(2, (rect.h - blockH) / 2) + LH / 2;
   var x = lane._nameX;
   var textX = x + VE_TR.NAME_DOT + VE_TR.NAME_DOT_GAP;
   var textMax = lane._nameW - VE_TR.NAME_DOT - VE_TR.NAME_DOT_GAP;
+  var muted = (typeof veThemeRgba === 'function')
+    ? veThemeRgba('--text-muted', 0.9, 'rgba(140,148,160,0.9)') : 'rgba(140,148,160,0.9)';
 
   ctx.save();
   ctx.font = '600 9px ' + VE_TR.FONT;
@@ -10558,19 +10572,34 @@ function veTrDrawAxisNames(ctx, geo, lane, rect) {
 
   for(var i = 0; i < shown; i++) {
     var a = axes[i];
+    var off = (a._fits === false);
     // Renk kutucuğu eğrinin rengi — ad ile sütunu eşleştiren şey bu.
-    ctx.fillStyle = a.color;
-    ctx.fillRect(x, y - 2.5, VE_TR.NAME_DOT, 5);
-    // Sığmayan eksen SESSİZ kalmamalı: sayıları çizilmedi, sebebi burada yazılı.
-    var t = veTrAxisTitle(a) + (a._fits === false ? ' (sığmadı)' : '');
-    ctx.fillText(veTrFitTitle(ctx, t, textMax), textX, y);
+    // Sayıları çizilmeyen eksende kutucuk İÇİ BOŞ: hangi eksenlerin
+    // etkilendiği, alttaki toplu nota bakmadan da görülür.
+    if(off) {
+      ctx.strokeStyle = a.color;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x + 0.5, y - 2, VE_TR.NAME_DOT - 1, 4);
+    } else {
+      ctx.fillStyle = a.color;
+      ctx.fillRect(x, y - 2.5, VE_TR.NAME_DOT, 5);
+    }
+    ctx.fillStyle = off ? muted : a.color;
+    ctx.fillText(veTrFitTitle(ctx, veTrAxisTitle(a), textMax), textX, y);
     y += LH;
   }
 
   if(extra > 0) {
-    ctx.fillStyle = (typeof veThemeRgba === 'function')
-      ? veThemeRgba('--text-muted', 0.9, 'rgba(140,148,160,0.9)') : 'rgba(140,148,160,0.9)';
+    ctx.fillStyle = muted;
     ctx.fillText('+' + extra + ' daha', textX, y);
+    y += LH;
+  }
+
+  // Sığmayan eksen SESSİZ kalmamalı: sayıları çizilmedi, sebebi burada.
+  // Kısa tutuluyor ki 120 px'lik blokta kırpılmasın.
+  if(unfit > 0) {
+    ctx.fillStyle = muted;
+    ctx.fillText(veTrFitTitle(ctx, unfit + ' eksen sığmadı', lane._nameW), x, y);
   }
 
   ctx.restore();
@@ -12869,6 +12898,7 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrAxisOf: veTrAxisOf,
     veTrAxisTitle: veTrAxisTitle,
     veTrStackBadges: veTrStackBadges,
+    veTrDrawAxisNames: veTrDrawAxisNames,
     veTrAxisLabelW: veTrAxisLabelW,
     veTrGeometry: veTrGeometry,
     veTrAxisOfSig: veTrAxisOfSig,

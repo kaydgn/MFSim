@@ -1204,3 +1204,80 @@ describe('imleç rozetleri — çakışma yerleşimi', () => {
     expect(T.veTrStackBadges([], rect(0, 100)).hidden).toBe(0);
   });
 });
+
+// ── Ad bloğu: sığmayan eksenin sebebi ────────────────────────────────────────
+//
+// Oluğa sığmayan eksenin SAYILARI çizilmez (veTrGeometry `_fits = false`
+// koyar). Kullanıcı o zaman "eksen yok" sanmasın diye sebep yazılıyordu — ama
+// her adın ARDINA ' (sığmadı)' eklenerek. Ad bloğu 120 px'le sınırlı olduğu
+// için uzun bir sinyalde tam da o açıklama kırpılıyordu:
+//   ölçülen çıktı → "Signal_8 [kPa] (sığ…"
+// Uyarı, en çok gerektiği yerde okunamıyordu. Artık sebep blok sonunda BİR
+// KEZ ve kısa yazılıyor; hangi eksenler olduğu içi boş renk kutucuğundan.
+describe('ad bloğu — sığmayan eksenin sebebi', () => {
+  const recCtx = () => {
+    const c = {
+      font: '', textBaseline: '', textAlign: '', fillStyle: '', strokeStyle: '', lineWidth: 1,
+      yazi: [], dolu: [], bos: [],
+      measureText: (t) => ({ width: String(t).length * 6 }),
+      fillText: (t, x, y) => c.yazi.push({ t, x, y }),
+      fillRect: (x, y, w, h) => c.dolu.push({ x, y, w, h }),
+      strokeRect: (x, y, w, h) => c.bos.push({ x, y, w, h }),
+      save: () => {}, restore: () => {},
+    };
+    return c;
+  };
+  const axis = (name, fits) => ({
+    unit: 'kPa', color: '#0a0', _fits: fits,
+    sigs: [{ sensor: { name, unit: 'kPa' } }],
+  });
+  const lane = (...axes) => ({ axes, _nameX: 4, _nameW: VE_TR.NAME_MAX_W });
+  const rect = { y: 10, h: 300 };
+
+  test('sebep TEK satırda, kırpılmadan yazılır', () => {
+    const uzun = 'PowerTrain::TransmissionControlUnit::ClutchSlipTargetValue';
+    const L = lane(axis(uzun, true), axis(uzun, false), axis(uzun, false));
+    const ctx = recCtx();
+    T.veTrDrawAxisNames(ctx, {}, L, rect);
+
+    const not = ctx.yazi.map((w) => w.t).find((t) => /sığmadı/.test(t));
+    expect(not).toBe('2 eksen sığmadı');       // '…' YOK — kırpılmamış
+    expect(not).not.toMatch(/…/);
+    // Ve ad satırlarının hiçbirine artık sebep eklenmiyor.
+    expect(ctx.yazi.filter((w) => /sığmadı/.test(w.t))).toHaveLength(1);
+  });
+
+  test('sığmayan eksenin renk kutucuğu İÇİ BOŞ — hangileri olduğu görünür', () => {
+    const L = lane(axis('A', true), axis('B', false), axis('C', true));
+    const ctx = recCtx();
+    T.veTrDrawAxisNames(ctx, {}, L, rect);
+    expect(ctx.dolu).toHaveLength(2);          // sığan iki eksen: dolu kutucuk
+    expect(ctx.bos).toHaveLength(1);           // sığmayan: içi boş
+  });
+
+  test('hepsi sığıyorsa not HİÇ yazılmaz ve satır harcanmaz', () => {
+    const L = lane(axis('A', true), axis('B', true));
+    const ctx = recCtx();
+    T.veTrDrawAxisNames(ctx, {}, L, rect);
+    expect(ctx.yazi.map((w) => w.t)).toEqual(['A [kPa]', 'B [kPa]']);
+    expect(ctx.bos).toHaveLength(0);
+  });
+
+  test('kısa şeritte not satırı yerini korur — "+N daha" ile birlikte', () => {
+    // 3 satırlık yer: 1 ad + "+N daha" + not. Not, sığmayanların varlığını
+    // söyleyen tek işaret; onu düşürmek kusuru geri getirirdi.
+    const many = [];
+    for (let i = 0; i < 8; i++) many.push(axis('S' + i, i > 5));
+    const L = lane(...many);
+    const ctx = recCtx();
+    T.veTrDrawAxisNames(ctx, {}, L, { y: 0, h: 3 * VE_TR.NAME_LINE_H + 4 });
+    const metinler = ctx.yazi.map((w) => w.t);
+    expect(metinler.some((t) => /daha$/.test(t))).toBe(true);
+    expect(metinler.some((t) => /sığmadı$/.test(t))).toBe(true);
+    // Satırlar üst üste binmemeli — okunmaz olurdu.
+    const ys = ctx.yazi.map((w) => w.y).sort((a, b) => a - b);
+    for (let i = 1; i < ys.length; i++) {
+      expect(ys[i] - ys[i - 1]).toBeGreaterThanOrEqual(VE_TR.NAME_LINE_H);
+    }
+  });
+});
