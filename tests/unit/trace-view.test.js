@@ -848,6 +848,21 @@ describe('birleşik şeritte sinyal başına Y ekseni', () => {
     expect(L.axes[1].levels).toEqual(['A', 'B', 'C']);
   });
 
+  test('PAYLAŞILAN eksen sütunu nötr renkte — tek sinyalli eksen eğri renginde', () => {
+    // Sütunu birinci sinyalin rengiyle boyamak, sütunun YALNIZ o eğriye ait
+    // olduğunu söylerdi: kullanıcı iki Nm eğrisinden birini görüp ötekinin
+    // "ekseni yok" sanardı.
+    const paylasan = T.veTrBuildLanes(board({ torkBuyuk: 'Nm', torkKucuk: 'Nm' }))[0];
+    expect(paylasan.axes[0].shared).toBe(true);
+    expect(T.veTrAxisInk(paylasan.axes[0])).not.toBe(paylasan.sigs[0].color);
+
+    const ayri = T.veTrBuildLanes(board({ rpm: '1/min', kmh: 'km/h' }))[0];
+    ayri.axes.forEach((a, i) => {
+      expect(a.shared).toBe(false);
+      expect(T.veTrAxisInk(a)).toBe(ayri.sigs[i].color);   // eski davranış birebir
+    });
+  });
+
   test('ad bloğu SİNYAL başına satır verir — paylaşan hiçbiri adsız kalmaz', () => {
     // Satırlar eksene göre yazılsaydı ortak eksendeki ikinci sinyal "+1"
     // olarak yutulur, grafikte adsız bir eğri kalırdı.
