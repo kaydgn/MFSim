@@ -616,6 +616,56 @@ test.describe('Birleştir — seçerek, çok eksenli', () => {
     expect(await laneCount(page)).toBe(5);
   });
 
+  // AYNI BİRİM → ORTAK ÖLÇEK.
+  //
+  // ÖLÇÜLEN KUSUR: 0…500 Nm motor torku ile 0…50 Nm fren torku birleştirilince
+  // ayrı eksen alıyordu; İKİSİ DE şeridin %86'sını dolduruyor, eğriler
+  // çakışıyor ve grafik "iki tork eşit" diyordu. On kat farklılar.
+  test('aynı birimli iki sinyal ORTAK ölçekte — büyüklük farkı görünür', async ({ page }) => {
+    // İki Nm sinyali (biri on kat büyük) + bir km/h.
+    const satir = ['Time;Motor Torku;Fren Torku;Hiz', 's;Nm;Nm;km/h'];
+    for (let k = 0; k < 300; k++) {
+      const t = k * 0.02;
+      satir.push([t.toFixed(3), (500 * Math.abs(Math.sin(t / 2))).toFixed(2),
+        (50 * Math.abs(Math.sin(t / 2))).toFixed(2),
+        (60 * Math.abs(Math.sin(t / 3))).toFixed(2)].join(';'));
+    }
+    await openViewer(page);
+    const [ch] = await Promise.all([
+      page.waitForEvent('filechooser'), page.click('#ve-import-btn')]);
+    await ch.setFiles({ name: 'tork.csv', mimeType: 'text/csv',
+      buffer: Buffer.from(satir.join('\n'), 'utf8') });
+    await page.waitForFunction(() => veImpUI && veImpUI.rows && !veImpUI.busy);
+    await page.click('#ve-import-apply');
+    await expect.poll(() => page.evaluate(() => veResultSlots[0].sensors.length)).toBe(3);
+
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await page.click('#ve-trace-merge-pop [data-act="by-unit"]');
+    await expect.poll(() => laneCount(page)).toBe(2);   // Nm şeridi + km/h şeridi
+
+    const m = await page.evaluate(() => {
+      const g = veTrState.geo, L = g.lanes[0], r = g.rects[0];
+      const yayilim = (i) => {
+        const a = veTrAxisOfSig(L, i), s = L.sigs[i].series;
+        let mn = Infinity, mx = -Infinity;
+        for (const v of s) if (isFinite(v)) { if (v < mn) mn = v; if (v > mx) mx = v; }
+        return veTrYPos(a, r, mn) - veTrYPos(a, r, mx);
+      };
+      return { eksen: L.axes.length, birim: L.axes.map((a) => a.unit),
+        sinyal: L.sigs.length, oran: yayilim(0) / yayilim(1),
+        adSatiri: veTrNameRows(L).length };
+    });
+
+    expect(m.sinyal).toBe(2);
+    expect(m.eksen).toBe(1);              // TEK Nm ekseni
+    expect(m.birim).toEqual(['Nm']);
+    // Gerçek oran 10 kat; grafikteki dikey yayılım da onu göstermeli.
+    expect(m.oran).toBeGreaterThan(8);
+    expect(m.oran).toBeLessThan(12);
+    // Ortak eksene rağmen iki sinyalin de adı listeleniyor.
+    expect(m.adSatiri).toBe(2);
+  });
+
   test('"Birime göre" kısayolu korundu', async ({ page }) => {
     // Eski davranış kaybolmadı, listenin içine taşındı. Fixture'da beş farklı
     // birim var (1/min, km/h, °C, ve iki birimsiz) → birimsiz ikisi birleşir.

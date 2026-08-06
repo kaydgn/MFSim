@@ -174,11 +174,31 @@ test.describe('MFSim — Birleştir: seçerek, çok eksenli', () => {
     await page.click('#ve-trace-merge-pop [data-act="merge-ok"]');
 
     await expect.poll(() => page.evaluate(() => veTrBoard().lanes[0].ids.length)).toBe(2);
-    const st = await page.evaluate(() => ({
-      axes: veTrState.geo.lanes[0].axes.length,
-      lanes: veTrBoard().lanes.length,
-    }));
-    expect(st.axes).toBe(2);       // iki kanal → iki Y ekseni
+    const st = await page.evaluate(() => {
+      const L = veTrState.geo.lanes[0];
+      return {
+        axes: L.axes.length,
+        birim: L.axes.map((a) => a.unit),
+        sinyal: L.sigs.length,
+        adSatiri: veTrNameRows(L).length,
+        // İki sinyal de gerçekten AYNI eksen nesnesini mi gösteriyor?
+        ortak: veTrAxisOfSig(L, 0) === veTrAxisOfSig(L, 1),
+        // İşaretler (rezonans çizgisi, çalışma noktası) hâlâ birimi tutan
+        // eksene mi düşüyor? Birimsiz çağrı birincil ekseni vermeli.
+        markAxis: veTrAxisByUnit(L, L.axes[0].unit) === L.axes[0],
+        lanes: veTrBoard().lanes.length,
+      };
+    });
+    // Grubun ilk iki kanalı sönümlü ve SÖNÜMSÜZ iletilebilirlik: aynı büyüklük,
+    // aynı birim (−). Ayrı eksen alsalardı tepe değerleri (yaklaşık 3 ve 30)
+    // İKİSİ DE şeridi doldurur, "sönüm hiçbir şey değiştirmemiş" gibi
+    // görünürdü. Kıyaslanabilmeleri için ORTAK ölçek şart.
+    expect(st.sinyal).toBe(2);
+    expect(st.axes).toBe(1);
+    expect(st.birim).toEqual(['−']);
+    expect(st.ortak).toBe(true);
+    expect(st.markAxis).toBe(true);
+    expect(st.adSatiri).toBe(2);   // ortak eksene rağmen iki ad da listeleniyor
     expect(st.lanes).toBe(1);      // tek diyagramda birleştiler
   });
 });

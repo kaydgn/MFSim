@@ -756,6 +756,11 @@ describe('birleşik şeritte sinyal başına Y ekseni', () => {
     gear: [1, 2, 3],
     txt: ['1C', '2L', '2H'],
     txt2: ['A', 'B', 'C'],
+    // AYNI birimde on kat farklı iki büyüklük — ortak eksen sınavı.
+    torkBuyuk: [0.5, 250.25, 500.75],
+    torkKucuk: [0.05, 25.5, 50.25],
+    // Birimsiz ikinci bir sayısal kanal (boş birim BİR BİRİM DEĞİLDİR).
+    oran: [0.1, 0.55, 0.95],
   };
 
   // İZOLASYON: describe gövdeleri tüm testlerden ÖNCE koşuyor. Bu satır
@@ -786,6 +791,82 @@ describe('birleşik şeritte sinyal başına Y ekseni', () => {
 
     // Hız ekseni devrin tepesine kadar uzanmamalı — uzanırsa eğri ezilir.
     expect(L.axes[1].yMax).toBeLessThan(100);
+  });
+
+  // ── ORTAK EKSEN: aynı birim ────────────────────────────────────────────
+  //
+  // ÖLÇÜLEN KUSUR: "Birime göre" ile birleştirilen 0…500 Nm motor torku ile
+  // 0…50 Nm fren torku, ayrı eksen aldıkları için İKİSİ DE şeridi baştan sona
+  // dolduruyordu — eğriler çakışıyor, grafik "iki tork eşit" diyordu. On kat
+  // farklılar ve kullanıcı düğmeye tam da bunu kıyaslamak için basıyor.
+  test('AYNI birimli iki sinyal TEK ekseni paylaşır', () => {
+    const L = T.veTrBuildLanes(board({ torkBuyuk: 'Nm', torkKucuk: 'Nm' }))[0];
+    expect(L.axes).toHaveLength(1);
+    expect(L.axes[0].unit).toBe('Nm');
+    // Ortak eksen İKİ sinyalin de uçlarını sarmalı.
+    expect(L.axes[0].vMin).toBe(0.05);
+    expect(L.axes[0].vMax).toBe(500.75);
+    // Ve iki sinyal de o eksene bağlı olmalı.
+    expect(T.veTrAxisOfSig(L, 0)).toBe(L.axes[0]);
+    expect(T.veTrAxisOfSig(L, 1)).toBe(L.axes[0]);
+  });
+
+  test('ortak eksende küçük sinyal EZİLMEZ ama büyümez de — oran korunur', () => {
+    const L = T.veTrBuildLanes(board({ torkBuyuk: 'Nm', torkKucuk: 'Nm' }))[0];
+    const rect = { y: 0, h: 400 };
+    const yayilim = (i) => {
+      const a = T.veTrAxisOfSig(L, i);
+      const s = L.sigs[i].series;
+      return T.veTrYPos(a, rect, Math.min(...s)) - T.veTrYPos(a, rect, Math.max(...s));
+    };
+    // Gerçek oran ~10 kat; grafikteki dikey yayılım da ~10 kat olmalı.
+    const oran = yayilim(0) / yayilim(1);
+    expect(oran).toBeGreaterThan(8);
+    expect(oran).toBeLessThan(12);
+  });
+
+  test('FARKLI birimler ayrı eksende kalır — eski gerekçe bozulmadı', () => {
+    // Devir (800…2200) ile hız (0…40) ortak eksende olsaydı hız tabana
+    // yapışırdı. Ortak eksen kuralı YALNIZ birim eşleşmesinde devreye girer.
+    const L = T.veTrBuildLanes(board({ rpm: '1/min', kmh: 'km/h' }))[0];
+    expect(L.axes).toHaveLength(2);
+    expect(L.axes.map((a) => a.unit)).toEqual(['1/min', 'km/h']);
+  });
+
+  test('BOŞ birim bir birim değildir — birimsizler paylaşmaz', () => {
+    // "Gear" ile "Oran" ikisi de birimsiz diye aynı ölçeğe konamaz:
+    // kıyaslanabilir oldukları iddiası hiçbir yerden gelmiyor.
+    const L = T.veTrBuildLanes(board({ gear: '', oran: '' }))[0];
+    expect(L.axes).toHaveLength(2);
+    expect(T.veTrAxisOfSig(L, 0)).not.toBe(T.veTrAxisOfSig(L, 1));
+  });
+
+  test('metin kanalı birim eşleşse bile paylaşmaz — ölçeği kendi etiketleri', () => {
+    const L = T.veTrBuildLanes(board({ txt: 'kod', txt2: 'kod' }))[0];
+    expect(L.axes).toHaveLength(2);
+    expect(L.axes[0].levels).toEqual(['1C', '2H', '2L']);
+    expect(L.axes[1].levels).toEqual(['A', 'B', 'C']);
+  });
+
+  test('ad bloğu SİNYAL başına satır verir — paylaşan hiçbiri adsız kalmaz', () => {
+    // Satırlar eksene göre yazılsaydı ortak eksendeki ikinci sinyal "+1"
+    // olarak yutulur, grafikte adsız bir eğri kalırdı.
+    // Adlar SENSÖRDEN geliyor; board() hepsine aynı sensörü veriyor, o yüzden
+    // burada sensörler ayrı ayrı kuruluyor — sınanan şey "her sinyal kendi
+    // adıyla listeleniyor mu".
+    const slot = {
+      sensors: [sig('mot', 'torkBuyuk', { unit: 'Nm', name: 'Motor Torku' }),
+                sig('fren', 'torkKucuk', { unit: 'Nm', name: 'Fren Torku' })],
+      lanes: [{ ids: [veTrKey('mot', 'torkBuyuk'), veTrKey('fren', 'torkKucuk')] }],
+    };
+    const L = T.veTrBuildLanes(slot)[0];
+    const rows = T.veTrNameRows(L);
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.text)).toEqual(['Motor Torku [Nm]', 'Fren Torku [Nm]']);
+    expect(rows[0].color).toBe(L.sigs[0].color);
+    expect(rows[1].color).toBe(L.sigs[1].color);
+    // Ve tek eksenli olmasına rağmen şerit "birleşik" sayılır → ad bloğu açılır.
+    expect(T.veTrLaneMerged(L)).toBe(true);
   });
 
   test('eksen sırası sinyal sırasını izler ve renkleri eğriyle aynı', () => {
