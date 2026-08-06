@@ -11,7 +11,8 @@ npm run build:viewer      →  MFSim_Olcum_Goruntuleyici.html   (depo kökü, ~9
 ## Ne yapar
 
 - `.xlsx` / `.xlsm` / `.csv` / `.tsv` ölçüm dosyası açar (Vector CANoe çıktısı
-  ve benzerleri)
+  ve benzerleri) — **İçe Aktar** düğmesiyle ya da dosyayı pencereye
+  **sürükleyip bırakarak**
 - Başlık satırını, birimleri, mesaj adlarını (`EngineData::EngSpeed [1/min]`)
   ve ondalık ayırıcıyı (`1.234,56` ↔ `1,234.56`) kendi çözer
 - X eksenini önerir (genelde zaman), kullanıcı değiştirebilir
@@ -42,6 +43,7 @@ ekliyordu. Kodu duruyor, yalnızca kip düğmesi listede değil.
 | `js/signal-tree.js` | **birebir kopya** |
 | `js/trace-view.js` | kopya + **iki yerel fark** (aşağıda) |
 | `js/theme.js` | yalnızca burada — iki tema, işletim sistemini izler |
+| `js/dropzone.js` | yalnızca burada — sürükle-bırak |
 | `js/board.js` | yalnızca burada — pano katmanı |
 | `js/app.js` | yalnızca burada — açılış |
 | `index.html` | yalnızca burada — kabuk |
