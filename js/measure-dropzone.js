@@ -1,10 +1,13 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// SÜRÜKLE-BIRAK — dosyayı pencereye bırakınca sihirbaz açılır
+// ÖLÇÜM SÜRÜKLE-BIRAK — dosyayı pencereye bırakınca sihirbaz açılır
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// VIEWER'A ÖZGÜ. MFSim'de yok: orada pencere bir simülasyon tuvali ve bırakma
-// eyleminin başka bir anlamı var (sinyali şeride bırakmak). Burada programın
-// tek işi dosya açmak, o yüzden pencerenin tamamı bırakma hedefi olabilir.
+// ORTAK DOSYA: MFSim ve Ölçüm Görüntüleyici (CACIK) aynı kaynağı kullanıyor,
+// viewer/js/ altındaki kopya BİREBİR aynı (bkz. viewer/README.md).
+//
+// Sinyal sürükleme ile çakışmaz: şeride sinyal bırakma mousedown/mousemove
+// üzerinden yürüyor (js/results.js veTrDragSession), buradaki ise HTML5
+// dosya sürükleme olayları. İkisi ayrı olay ailesi.
 //
 // TARAYICI VARSAYILANI TEHLİKELİ: dragover VE drop üzerinde preventDefault
 // çağrılmazsa tarayıcı bırakılan dosyaya GİDER — sekme .xlsx'i indirmeye ya da
@@ -23,7 +26,7 @@
 // ikili çöpten "sütunlar" üretir. Kullanıcı makul görünen ama tamamen
 // anlamsız bir tabloya bakar. Sessiz yanlış çıktı, açık bir retten çok daha
 // kötü; kapı burada kapanıyor.
-var MFV_DROP_EXT = /\.(xlsx|xlsm|csv|tsv|txt)$/i;
+var VE_IMP_DROP_EXT = /\.(xlsx|xlsm|csv|tsv|txt)$/i;
 
 // ── Kaplama ───────────────────────────────────────────────────────────────
 
@@ -31,10 +34,10 @@ var MFV_DROP_EXT = /\.(xlsx|xlsm|csv|tsv|txt)$/i;
 // bir düğmenin üstüne geçerken önce leave, sonra enter gelir. Tek bir bayrakla
 // izlenirse kaplama sürükleme sırasında yanıp söner. Sayaç bunu çözer:
 // yalnızca sıfıra düşünce gizlenir.
-var _mfvDragDepth = 0;
+var _veImpDragDepth = 0;
 
-function mfvDropShow(on) {
-  var el = document.getElementById('mfv-drop');
+function veImpDropShow(on) {
+  var el = document.getElementById('ve-imp-drop');
   if(!el) return;
   el.classList.toggle('on', !!on);
   el.setAttribute('aria-hidden', on ? 'false' : 'true');
@@ -42,7 +45,7 @@ function mfvDropShow(on) {
 
 // Sürüklenen şey DOSYA mı? Başka bir sayfadan metin ya da resim sürükleyen
 // kullanıcıya "ölçüm dosyasını bırakın" demek yanıltıcı olurdu.
-function mfvDragHasFiles(e) {
+function veImpDragHasFiles(e) {
   var dt = e.dataTransfer;
   if(!dt || !dt.types) return false;
   for(var i = 0; i < dt.types.length; i++) {
@@ -53,11 +56,11 @@ function mfvDragHasFiles(e) {
 
 // ── Bırakma ───────────────────────────────────────────────────────────────
 
-function mfvAcceptDropped(files) {
+function veImpAcceptDropped(files) {
   var all = Array.prototype.slice.call(files || []);
   if(all.length === 0) return null;
 
-  var ok = all.filter(function(f) { return MFV_DROP_EXT.test(f.name || ''); });
+  var ok = all.filter(function(f) { return VE_IMP_DROP_EXT.test(f.name || ''); });
 
   if(ok.length === 0) {
     if(typeof showToast === 'function') {
@@ -77,25 +80,25 @@ function mfvAcceptDropped(files) {
   return ok[0];
 }
 
-function mfvOnDrop(e) {
+function veImpOnDrop(e) {
   // Kabul etsek de etmesek de varsayılan engellenir (bkz. dosya başı).
   e.preventDefault();
-  _mfvDragDepth = 0;
-  mfvDropShow(false);
+  _veImpDragDepth = 0;
+  veImpDropShow(false);
 
-  if(!mfvDragHasFiles(e)) return;
-  var file = mfvAcceptDropped(e.dataTransfer.files);
+  if(!veImpDragHasFiles(e)) return;
+  var file = veImpAcceptDropped(e.dataTransfer.files);
   if(file && typeof veImpLoadFile === 'function') veImpLoadFile(file);
 }
 
 // ── Bağlama ───────────────────────────────────────────────────────────────
 
-function mfvBindDropzone() {
+function veImpBindDropzone() {
   document.addEventListener('dragenter', function(e) {
     e.preventDefault();
-    if(!mfvDragHasFiles(e)) return;
-    _mfvDragDepth++;
-    mfvDropShow(true);
+    if(!veImpDragHasFiles(e)) return;
+    _veImpDragDepth++;
+    veImpDropShow(true);
   });
 
   // dragover'da preventDefault ŞART: çağrılmazsa tarayıcı bırakmayı hiç kabul
@@ -103,34 +106,34 @@ function mfvBindDropzone() {
   // olmaz.
   document.addEventListener('dragover', function(e) {
     e.preventDefault();
-    if(mfvDragHasFiles(e) && e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+    if(veImpDragHasFiles(e) && e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
   });
 
   document.addEventListener('dragleave', function(e) {
-    if(!mfvDragHasFiles(e)) return;
-    _mfvDragDepth = Math.max(0, _mfvDragDepth - 1);
-    if(_mfvDragDepth === 0) mfvDropShow(false);
+    if(!veImpDragHasFiles(e)) return;
+    _veImpDragDepth = Math.max(0, _veImpDragDepth - 1);
+    if(_veImpDragDepth === 0) veImpDropShow(false);
   });
 
-  document.addEventListener('drop', mfvOnDrop);
+  document.addEventListener('drop', veImpOnDrop);
 
   // Sürükleme pencere dışında biterse (kullanıcı vazgeçip masaüstüne bıraktı)
   // dragleave gelmeyebilir ve kaplama ekranda ASILI kalırdı — program
   // kilitlenmiş gibi görünür. İki kaçış kapısı:
-  window.addEventListener('dragend', function() { _mfvDragDepth = 0; mfvDropShow(false); });
-  window.addEventListener('blur', function() { _mfvDragDepth = 0; mfvDropShow(false); });
+  window.addEventListener('dragend', function() { _veImpDragDepth = 0; veImpDropShow(false); });
+  window.addEventListener('blur', function() { _veImpDragDepth = 0; veImpDropShow(false); });
 }
 
 if(document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', mfvBindDropzone, { once: true });
+  document.addEventListener('DOMContentLoaded', veImpBindDropzone, { once: true });
 } else {
-  mfvBindDropzone();
+  veImpBindDropzone();
 }
 
 // Jest: saf yardımcılar doğrudan test edilebilsin
 if(typeof module !== 'undefined' && module.exports) {
   module.exports = {
-    MFV_DROP_EXT: MFV_DROP_EXT,
-    mfvAcceptDropped: mfvAcceptDropped
+    VE_IMP_DROP_EXT: VE_IMP_DROP_EXT,
+    veImpAcceptDropped: veImpAcceptDropped
   };
 }

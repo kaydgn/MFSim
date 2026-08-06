@@ -59,6 +59,8 @@ var VE_TR = {
   TITLE_BAND: 17,     // döndürülmüş şerit başlığının şeridi
   GUTTER_MIN: 62,
   GUTTER_MAX: 132,
+  AXIS_GAP: 13,       // birleşik şeritte iki Y ekseni sütunu arası
+  AXIS_COL_W: 46,     // ek her eksenin oluk üst sınırına kattığı pay
   AXIS_H: 30,         // alttaki sabit zaman ekseni canvas'ının yüksekliği
   FONT: '-apple-system,system-ui,Segoe UI,sans-serif'
 };
@@ -457,24 +459,79 @@ function veTrSensorAt(slot, key) {
 }
 
 // Çizime hazır şerit tanımları: veri, aralık, renk, başlık.
+// Bir sinyal kümesinin Y ölçeği (bir EKSEN). Dönen nesne veTrYPos ve
+// veTrLaneStep'in beklediği şekle sahiptir — o iki fonksiyon eskiden şeridin
+// kendisini alıyordu, artık ekseni alıyor ve gövdeleri değişmedi.
+function veTrAxisOf(sigs, opts) {
+  opts = opts || {};
+  var mn = Infinity, mx = -Infinity, anyData = false;
+  var allDiscrete = sigs.length > 0, levels = null;
+
+  sigs.forEach(function(g) {
+    if(!g.discrete) allDiscrete = false;
+    if(g.levels && !levels) levels = g.levels;
+    var e = veTrExtent(g.series);
+    if(!e) return;
+    anyData = true;
+    if(e.min < mn) mn = e.min;
+    if(e.max > mx) mx = e.max;
+  });
+
+  // Log Y pano düzeyinde açılır ama EKSEN BAŞINA uygulanır: aynı panoda
+  // işaret değiştiren bir kuvvet ile hep pozitif bir iletilebilirlik yan yana
+  // durabilir. Ayrık (basamaklı) eksende log anlamsızdır — seviye
+  // numaralarının logaritması diye bir şey yok.
+  var yLog = !!opts.yLog && anyData && !allDiscrete && !levels && veTrYLogOk(mn, mx);
+
+  var range = anyData
+    ? (yLog ? veTrLaneRangeLog(mn, mx) : veTrLaneRange(mn, mx, allDiscrete))
+    : { min: 0, max: 1 };
+  // Elle kilitlenen sınır log kipte POZİTİF olmak zorunda; lineer kipten
+  // kalmış bir 0/negatif sınır sessizce yok sayılır (log10 tanımsız).
+  if(opts.lockMin != null && isFinite(opts.lockMin) && (!yLog || opts.lockMin > 0)) range.min = opts.lockMin;
+  if(opts.lockMax != null && isFinite(opts.lockMax) && (!yLog || opts.lockMax > 0)) range.max = opts.lockMax;
+  if(range.max <= range.min) range.max = yLog ? range.min * 10 : range.min + 1;
+
+  return {
+    sigs: sigs,
+    yLog: yLog,
+    discrete: allDiscrete,
+    levels: levels,
+    hasData: anyData,
+    color: sigs.length ? sigs[0].color : '#888',
+    unit: sigs.length ? (sigs[0].sensor.unit || '') : '',
+    // Verinin HAM uçları (pay eklenmemiş). Log elverişliliği buradan sorulur:
+    // lineer pay "aralığın %8'i" olduğu için tamamı pozitif bir seride bile
+    // yMin sıfırın altına düşebilir ([0,5 … 7] → −0,02) ve elverişli bir
+    // eksen elverişsiz görünürdü.
+    vMin: anyData ? mn : NaN,
+    vMax: anyData ? mx : NaN,
+    yMin: range.min,
+    yMax: range.max
+  };
+}
+
 function veTrBuildLanes(slot) {
   slot.lanes = veTrReconcileLanes(slot.sensors, slot.lanes);
   var ds = slot._dataSource || null;
 
   return slot.lanes.map(function(L) {
     var sigs = [];
-    var levels = null;
     L.ids.forEach(function(k) {
       var hit = veTrSensorAt(slot, k);
       if(!hit) return;
       var series = veTrSeries(hit.s.id, hit.s.signal, hit.s._dataSource || ds);
       var enc = veTrEncodeText(series);
-      if(enc) { series = enc.data; if(!levels) levels = enc.labels; }
+      if(enc) series = enc.data;
       sigs.push({
         key: k,
         idx: hit.i,
         sensor: hit.s,
         series: series,
+        // Seviye adları artık SİNYALE ait. Eskiden şeride aitti ve şeritteki
+        // ilk metin kanalından geliyordu; birleştirilmiş bir şeritte ikinci
+        // metin kanalı birincinin etiketleriyle okunurdu.
+        levels: enc ? enc.labels : null,
         color: (typeof veSlotSignalColor === 'function')
           ? veSlotSignalColor(slot, hit.i)
           : '#3b82f6',
@@ -482,53 +539,63 @@ function veTrBuildLanes(slot) {
       });
     });
 
-    var mn = Infinity, mx = -Infinity, anyData = false, allDiscrete = sigs.length > 0;
-    sigs.forEach(function(g) {
-      if(!g.discrete) allDiscrete = false;
-      var e = veTrExtent(g.series);
-      if(!e) return;
+    // ── ÇOK EKSENLİ ŞERİT ──
+    // Birleştirilmiş her sinyal KENDİ Y ölçeğini alır. Tek ölçek paylaşmak,
+    // birlikte bakılmak istenen sinyalleri ezerdi: devir (800…2200) ile hız
+    // (0…40) aynı eksende çizilince hız tabana yapışır ve birleştirmenin tek
+    // kazancı ortak zaman ekseni olurdu — oysa amaç iki eğrinin ŞEKLİNİ yan
+    // yana okumak (nerede yükseliyor, nerede kırılıyor).
+    //
+    // TEK SİNYALLİ ŞERİTTE küme tek elemanlıdır ve sonuç bugünküyle BİREBİR
+    // aynı çıkar; çok eksenli yol yalnızca birleştirilmiş şeritte açılır.
+    var axes;
+    if(sigs.length > 1) {
+      axes = sigs.map(function(g, i) {
+        return veTrAxisOf([g], {
+          yLog: slot && slot.yLog,
+          // Elle kilit BİRİNCİL eksene uygulanır: kilit şeridin kenarından
+          // konuyor ve o kenarın gösterdiği ölçek birincil eksenindir.
+          lockMin: i === 0 ? L.min : null,
+          lockMax: i === 0 ? L.max : null
+        });
+      });
+    } else {
+      axes = [veTrAxisOf(sigs, { yLog: slot && slot.yLog, lockMin: L.min, lockMax: L.max })];
+    }
+
+    // Birincil eksen = şeridin "kendisi". Eski alanlar (yMin/yMax/yLog/…)
+    // ondan doğuyor, böylece tek eksenli her yol (imleç, kilit girdisi,
+    // takoz işaretleri, Y ızgarası) değişmeden çalışmaya devam ediyor.
+    var primary = axes[0];
+
+    // Ham uçlar TÜM eksenleri kapsar: "log y" düğmesinin elverişlilik sorusu
+    // şeridin tamamına ait, yalnız birincil eksene değil.
+    var vMn = Infinity, vMx = -Infinity, anyData = false;
+    axes.forEach(function(a) {
+      if(!a.hasData) return;
       anyData = true;
-      if(e.min < mn) mn = e.min;
-      if(e.max > mx) mx = e.max;
+      if(a.vMin < vMn) vMn = a.vMin;
+      if(a.vMax > vMx) vMx = a.vMax;
     });
-
-    // Log Y pano düzeyinde açılır ama ŞERİT BAŞINA uygulanır: aynı panoda
-    // işaret değiştiren bir kuvvet şeridi ile hep pozitif bir iletilebilirlik
-    // şeridi yan yana durabilir. Ayrık (basamaklı) şeritte log anlamsızdır —
-    // seviye numaralarının logaritması diye bir şey yok.
-    var yLog = !!(slot && slot.yLog) && anyData && !allDiscrete && !levels
-               && veTrYLogOk(mn, mx);
-
-    var range = anyData
-      ? (yLog ? veTrLaneRangeLog(mn, mx) : veTrLaneRange(mn, mx, allDiscrete))
-      : { min: 0, max: 1 };
-    // Elle kilitlenen sınır log kipte POZİTİF olmak zorunda; lineer kipten
-    // kalmış bir 0/negatif sınır sessizce yok sayılır (log10 tanımsız).
-    if(L.min != null && isFinite(L.min) && (!yLog || L.min > 0)) range.min = L.min;
-    if(L.max != null && isFinite(L.max) && (!yLog || L.max > 0)) range.max = L.max;
-    if(range.max <= range.min) range.max = yLog ? range.min * 10 : range.min + 1;
 
     return {
       def: L,
       sigs: sigs,
-      yLog: yLog,
-      unit: sigs.length ? (sigs[0].sensor.unit || '') : '',
+      axes: axes,
+      yLog: primary.yLog,
+      unit: primary.unit,
       title: sigs.length
         ? (veTrLaneTitle(sigs[0].sensor) + (sigs.length > 1 ? ' +' + (sigs.length - 1) : ''))
         : '',
       color: sigs.length ? sigs[0].color : '#888',
-      discrete: allDiscrete,
-      levels: levels,
+      discrete: primary.discrete,
+      levels: primary.levels,
       hasData: anyData,
-      // Verinin HAM uçları (pay eklenmemiş). Log elverişliliği buradan
-      // sorulur: lineer pay "aralığın %8'i" olduğu için tamamı pozitif bir
-      // seride bile yMin sıfırın altına düşebilir ([0,5 … 7] → −0,02) ve
-      // elverişli bir şerit elverişsiz görünürdü.
-      vMin: anyData ? mn : NaN,
-      vMax: anyData ? mx : NaN,
+      vMin: anyData ? vMn : NaN,
+      vMax: anyData ? vMx : NaN,
       locked: (L.min != null || L.max != null),
-      yMin: range.min,
-      yMax: range.max
+      yMin: primary.yMin,
+      yMax: primary.yMax
     };
   });
 }
@@ -596,30 +663,69 @@ function veTrXView(timeArr, isLog) {
 
 // Yerleşim: sol oluk genişliği ETİKETLERDEN doğar. Sabit bir oluk ya rpm'de
 // taşar ya yüzde'de boşluk bırakırdı; burada en geniş tick etiketi ölçülür.
-function veTrGeometry(ctx, lanes, view, w, availH) {
-  ctx.font = '9.5px ' + VE_TR.FONT;
-  var maxLabel = 0;
+// Bir EKSENİN en geniş etiketinin piksel genişliği. Eskiden bu ölçüm şerit
+// başına yapılıyordu; çok eksenli şeritte her eksenin kendi sütunu var ve
+// genişlikleri ayrı ayrı gerekiyor.
+function veTrAxisLabelW(ctx, axis) {
+  var w = 0;
   var measure = function(t) {
     var tw = ctx.measureText(String(t)).width;
-    if(tw > maxLabel) maxLabel = tw;
+    if(tw > w) w = tw;
   };
+  if(axis.levels) { axis.levels.forEach(measure); return w; }
+  if(axis.yLog) {
+    // Log eksende oluk genişliği bölme etiketlerinden doğar; uçların biçimi
+    // (0,003 / 25) ölçekle birlikte değiştiği için ikisi de ölçülür.
+    [axis.yMin, axis.yMax].forEach(function(v) { measure(veTrFmtLogTick(v)); });
+    return w;
+  }
+  var step = veTrLaneStep(axis, VE_TR.LANE_DEF_H);
+  var dec = (typeof veAxisDecimals === 'function') ? veAxisDecimals(step) : 2;
+  [axis.yMin, axis.yMax].forEach(function(v) {
+    measure((typeof veFormatAxisVal === 'function') ? veFormatAxisVal(v, dec) : v);
+  });
+  return w;
+}
+
+function veTrGeometry(ctx, lanes, view, w, availH) {
+  ctx.font = '9.5px ' + VE_TR.FONT;
+
+  // Oluk, EN ÇOK EKSENLİ şeridin sütun yığınını taşımak zorunda: eksenler
+  // şerit başına değişse de plotX pano genelinde tektir (bütün şeritler aynı
+  // zaman ekseninde hizalı durmalı). Az eksenli şeritler soldaki boşluğu boş
+  // bırakır; eksenler her zaman çizim alanına YASLI dizilir, böylece birincil
+  // eksen tüm şeritlerde aynı yerde olur.
+  var maxStack = 0, maxAxes = 1;
   lanes.forEach(function(lane) {
-    if(lane.levels) { lane.levels.forEach(measure); return; }
-    if(lane.yLog) {
-      // Log şeritte oluk genişliği bölme etiketlerinden doğar; uçların
-      // biçimi (0,003 / 25) ölçekle birlikte değiştiği için ikisi de ölçülür.
-      [lane.yMin, lane.yMax].forEach(function(v) { measure(veTrFmtLogTick(v)); });
-      return;
-    }
-    var step = veTrLaneStep(lane, VE_TR.LANE_DEF_H);
-    var dec = (typeof veAxisDecimals === 'function') ? veAxisDecimals(step) : 2;
-    [lane.yMin, lane.yMax].forEach(function(v) {
-      measure((typeof veFormatAxisVal === 'function') ? veFormatAxisVal(v, dec) : v);
+    var axes = lane.axes || [lane];
+    var total = 0;
+    axes.forEach(function(a, i) {
+      a._w = veTrAxisLabelW(ctx, a);
+      total += a._w + (i > 0 ? VE_TR.AXIS_GAP : 0);
     });
+    if(total > maxStack) maxStack = total;
+    if(axes.length > maxAxes) maxAxes = axes.length;
   });
 
+  // Üst sınır eksen sayısıyla büyür ama çizim alanını yutamaz: altı sinyal
+  // birleştirildiğinde oluk genişlerken eğrilere kalan yer %58'in altına
+  // inmez — okunamayan bir grafik, ezilmiş bir eğriden iyi değil.
+  var cap = Math.min(VE_TR.GUTTER_MAX + (maxAxes - 1) * VE_TR.AXIS_COL_W,
+                     Math.max(VE_TR.GUTTER_MAX, w * 0.42));
   var gutter = Math.max(VE_TR.GUTTER_MIN,
-                Math.min(VE_TR.GUTTER_MAX, VE_TR.TITLE_BAND + maxLabel + 14));
+                Math.min(cap, VE_TR.TITLE_BAND + maxStack + 14));
+
+  // Eksen sütunlarının x konumları. Birincil eksen (i=0) çizim alanına
+  // bitişik: onun etiket x'i gutter-6, yani tek eksenli şeritteki değerin
+  // TAM AYNISI — eski görünüm bozulmuyor.
+  lanes.forEach(function(lane) {
+    var off = 0;
+    (lane.axes || []).forEach(function(a) {
+      a._labelX = gutter - 6 - off;
+      a._tickX = gutter - off;
+      off += a._w + VE_TR.AXIS_GAP;
+    });
+  });
 
   var heights = lanes.map(function(lane) { return lane.def.h; });
   var rects = veTrLaneRects(heights, VE_TR.PAD_TOP,
@@ -666,6 +772,32 @@ function veTrXVal(geo, px) {
 // eğri, imleç ve işaretler hepsi buradan geçtiği için kendiliğinden uyar.
 // Log şeritte v ≤ 0 tanımsızdır: NaN döner ve çizim o noktada kesilir
 // (sıfıra kırpmak eğriyi olmadığı yerden geçirirdi).
+// i. sinyalin bağlı olduğu eksen. Tek eksenli şeritte hepsi aynı ekseni
+// paylaşır (bugünkü davranış); birleşik şeritte her sinyalin kendi ekseni var.
+// Şerit nesnesinin kendisi de bir eksen gibi davranır (yMin/yMax/yLog), bu
+// yüzden `axes` hiç kurulmamışsa şeride düşmek güvenli.
+// Şeritte verilen birimi taşıyan eksen; yoksa null. unit null/undefined ise
+// "birim aramıyorum" demektir ve birincil eksen döner (takoz işaretlerinin
+// birimsiz kullanımı bu yoldan geçiyor).
+function veTrAxisByUnit(lane, unit) {
+  var axes = (lane && lane.axes && lane.axes.length) ? lane.axes : [lane];
+  if(unit == null) return axes[0];
+  for(var i = 0; i < axes.length; i++) {
+    if((axes[i].unit || '') === unit) return axes[i];
+  }
+  return null;
+}
+
+// i. sinyalin bağlı olduğu eksen. Tek eksenli şeritte hepsi aynı ekseni
+// paylaşır (bugünkü davranış); birleşik şeritte her sinyalin kendi ekseni var.
+// Şerit nesnesinin kendisi de bir eksen gibi davranır (yMin/yMax/yLog), bu
+// yüzden `axes` hiç kurulmamışsa şeride düşmek güvenli.
+function veTrAxisOfSig(lane, i) {
+  var axes = (lane && lane.axes) ? lane.axes : null;
+  if(!axes || !axes.length) return lane;
+  return axes.length > 1 ? (axes[i] || axes[0]) : axes[0];
+}
+
 function veTrYPos(lane, rect, v) {
   if(lane.yLog) {
     if(!(v > 0)) return NaN;
@@ -769,58 +901,75 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
   ctx.fillStyle = 'rgba(128,128,128,0.045)';
   ctx.fillRect(x0, y0, pw, ph);
 
-  // Y ızgarası + etiketler
-  // Log kipinde bölmeler ondalık (1-2-5); "adım" diye bir şey yok, o yüzden
-  // liste önceden üretilir. Lineer kipte eski davranış aynen sürer.
-  var step = veTrLaneStep(lane, ph);
-  var dec = (typeof veAxisDecimals === 'function') ? veAxisDecimals(step) : 2;
-  var yTicks = null;
-  if(lane.yLog) {
-    yTicks = veTrLogTickList(lane.yMin, lane.yMax);
-    if(!yTicks) yTicks = [lane.yMin, Math.sqrt(lane.yMin * lane.yMax), lane.yMax];
-  }
-  var start = Math.ceil(lane.yMin / step) * step;
-  var v, gy, _ti = 0;
-
+  // Y ızgarası + etiketler — EKSEN BAŞINA.
+  //
+  // Yatay IZGARA yalnızca BİRİNCİL eksenden çizilir. Her eksen kendi ızgarasını
+  // çizseydi üç eksenli bir şeritte birbirini kesen üç kesikli çizgi ağı
+  // oluşur, hiçbiri hangi eksene ait olduğu anlaşılmadan okunurdu. Ötekiler
+  // yalnızca kendi tik çentiklerini ve etiketlerini yazar; hangi eğriye ait
+  // olduğu RENKTEN belli olur.
   ctx.font = '9.5px ' + VE_TR.FONT;
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'right';
 
-  for(v = yTicks ? yTicks[0] : start;
-      yTicks ? (_ti < yTicks.length) : (v <= lane.yMax + step * 0.001);
-      v = yTicks ? yTicks[++_ti] : v + step) {
-    if(yTicks && !isFinite(v)) break;
-    gy = veTrYPos(lane, rect, v);
-    if(!isFinite(gy) || gy < y0 - 0.5 || gy > y0 + ph + 0.5) continue;
+  var axes = lane.axes || [lane];
+  axes.forEach(function(ax, ai) {
+    var isPrimary = (ai === 0);
+    // _labelX / _tickX geometri aşamasında konuyor. Geometri koşmadan
+    // çizilirse (test, beklenmedik yol) birincil eksenin eski konumuna düş.
+    var labelX = (ax._labelX != null) ? ax._labelX : (x0 - 6);
+    var tickX = (ax._tickX != null) ? ax._tickX : x0;
 
-    ctx.strokeStyle = 'rgba(128,128,128,0.16)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(x0, gy); ctx.lineTo(x0 + pw, gy); ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.strokeStyle = lane.color;
-    ctx.globalAlpha = 0.55;
-    ctx.beginPath(); ctx.moveTo(x0 - 3, gy); ctx.lineTo(x0, gy); ctx.stroke();
-    ctx.globalAlpha = 1;
-
-    ctx.fillStyle = lane.color;
-    var lbl;
-    if(lane.levels) {
-      // Metin şeridi: eksende sayı değil seviyenin adı okunur
-      var lv = Math.round(v);
-      lbl = (Math.abs(v - lv) < 1e-9 && lane.levels[lv] !== undefined) ? lane.levels[lv] : '';
-    } else if(lane.discrete) {
-      lbl = String(Math.round(v));
-    } else if(lane.yLog) {
-      // Ondalık sayısı DEĞERİN büyüklüğünden gelir: aynı eksende "0,003" ile
-      // "25" yan yana durur, tek bir `dec` ikisini birden yazamaz.
-      lbl = veTrFmtLogTick(v);
-    } else {
-      lbl = (typeof veFormatAxisVal === 'function') ? veFormatAxisVal(v, dec) : String(v);
+    // Log kipinde bölmeler ondalık (1-2-5); "adım" diye bir şey yok, o yüzden
+    // liste önceden üretilir. Lineer kipte eski davranış aynen sürer.
+    var step = veTrLaneStep(ax, ph);
+    var dec = (typeof veAxisDecimals === 'function') ? veAxisDecimals(step) : 2;
+    var yTicks = null;
+    if(ax.yLog) {
+      yTicks = veTrLogTickList(ax.yMin, ax.yMax);
+      if(!yTicks) yTicks = [ax.yMin, Math.sqrt(ax.yMin * ax.yMax), ax.yMax];
     }
-    if(lbl !== '') ctx.fillText(lbl, x0 - 6, gy);
-  }
+    var start = Math.ceil(ax.yMin / step) * step;
+    var v, gy, _ti = 0;
+
+    for(v = yTicks ? yTicks[0] : start;
+        yTicks ? (_ti < yTicks.length) : (v <= ax.yMax + step * 0.001);
+        v = yTicks ? yTicks[++_ti] : v + step) {
+      if(yTicks && !isFinite(v)) break;
+      gy = veTrYPos(ax, rect, v);
+      if(!isFinite(gy) || gy < y0 - 0.5 || gy > y0 + ph + 0.5) continue;
+
+      if(isPrimary) {
+        ctx.strokeStyle = 'rgba(128,128,128,0.16)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(x0, gy); ctx.lineTo(x0 + pw, gy); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.strokeStyle = ax.color;
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath(); ctx.moveTo(tickX - 3, gy); ctx.lineTo(tickX, gy); ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = ax.color;
+      var lbl;
+      if(ax.levels) {
+        // Metin ekseni: sayı değil seviyenin adı okunur
+        var lv = Math.round(v);
+        lbl = (Math.abs(v - lv) < 1e-9 && ax.levels[lv] !== undefined) ? ax.levels[lv] : '';
+      } else if(ax.discrete) {
+        lbl = String(Math.round(v));
+      } else if(ax.yLog) {
+        // Ondalık sayısı DEĞERİN büyüklüğünden gelir: aynı eksende "0,003" ile
+        // "25" yan yana durur, tek bir `dec` ikisini birden yazamaz.
+        lbl = veTrFmtLogTick(v);
+      } else {
+        lbl = (typeof veFormatAxisVal === 'function') ? veFormatAxisVal(v, dec) : String(v);
+      }
+      if(lbl !== '') ctx.fillText(lbl, labelX, gy);
+    }
+  });
 
   // X ızgarası
   ctx.strokeStyle = 'rgba(128,128,128,0.16)';
@@ -837,11 +986,13 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
   ctx.save();
   ctx.beginPath(); ctx.rect(x0, y0, pw, ph); ctx.clip();
   ctx.lineJoin = 'round'; ctx.lineCap = 'butt';
-  lane.sigs.forEach(function(g) {
+  lane.sigs.forEach(function(g, i) {
     if(!g.series || !timeArr) return;
     ctx.strokeStyle = g.color;
     ctx.lineWidth = 1.35;
-    veTrStrokeSeries(ctx, geo, lane, rect, g.series, timeArr, g.discrete);
+    // Eğri KENDİ ekseninin ölçeğinde çizilir. Birleşik şeritte ortak ölçek
+    // kullanmak, birlikte bakılmak istenen ikinci eğriyi tabana yapıştırırdı.
+    veTrStrokeSeries(ctx, geo, veTrAxisOfSig(lane, i), rect, g.series, timeArr, g.discrete);
   });
   ctx.restore();
 
@@ -1076,11 +1227,13 @@ function veTrDrawOverlay() {
   lanes.forEach(function(lane, li) {
     var rect = geo.rects[li];
     if(!rect) return;
-    lane.sigs.forEach(function(g) {
+    lane.sigs.forEach(function(g, gi) {
       if(!g.series) return;
       var v = g.series[i];
       if(!isFinite(v)) return;
-      var y = veTrYPos(lane, rect, v);
+      // İmleç noktası eğrinin çizildiği ölçekte konumlanmalı; birleşik
+      // şeritte ortak ölçek kullanılsa nokta eğrinin üstünden kayardı.
+      var y = veTrYPos(veTrAxisOfSig(lane, gi), rect, v);
       if(y < rect.y - 2 || y > rect.y + rect.h + 2) return;
 
       // Eğri üzerinde nokta
@@ -1092,9 +1245,11 @@ function veTrDrawOverlay() {
       // "5.00 −" yerine "5. vites". Δ da anlamsız — 3. vitesten 5'e "+2"
       // bir büyüklük değil, bir geçiş.
       var txt = null;
-      if(lane.levels) {
+      // Seviye adları SİNYALE ait: birleşik şeritteki ikinci metin kanalı
+      // birincinin etiketleriyle okunamaz ("2L" yerine "1C" yazardı).
+      if(g.levels) {
         var lvi = Math.round(v);
-        if(lane.levels[lvi] !== undefined) txt = lane.levels[lvi];
+        if(g.levels[lvi] !== undefined) txt = g.levels[lvi];
       } else if(g.discrete) {
         txt = veTrStateLabel(g.sensor.signal, Math.round(v));
       }
@@ -1338,11 +1493,15 @@ function veTrDrawMarks(ctx, geo, lanes) {
   marks.forEach(function(m) {
     if(m.axis !== 'y') return;
     lanes.forEach(function(lane, i) {
-      if(m.unit != null && (lane.unit || '') !== m.unit) return;
+      // Birleşik şeritte işaret, BİRİMİ TUTAN EKSENİN ölçeğine çizilir.
+      // Şeridin birincil ekseni newton, ikincisi mm ise "δ = 3 mm" çizgisi
+      // birincil ölçeğe konsaydı şeridin rastgele bir yerinden geçerdi.
+      var ax = veTrAxisByUnit(lane, m.unit);
+      if(!ax) return;
       var rect = geo.rects[i];
       if(!rect) return;
-      if(m.value < lane.yMin || m.value > lane.yMax) return;
-      var gy = veTrYPos(lane, rect, m.value);
+      if(m.value < ax.yMin || m.value > ax.yMax) return;
+      var gy = veTrYPos(ax, rect, m.value);
       var st = VE_TR_MARK_STYLE[m.kind] || VE_TR_MARK_STYLE.ref;
       ctx.setLineDash(st.dash);
       ctx.strokeStyle = veTrMarkColor(m.kind);
@@ -1374,20 +1533,28 @@ function veTrDrawMarks(ctx, geo, lanes) {
     var gx = veTrXPos(geo, m.value);
     if(gx < geo.plotX - 0.5 || gx > geo.plotX + geo.plotW + 0.5) return;
     lanes.forEach(function(lane, i) {
-      if(m.unit != null && (lane.unit || '') !== m.unit) return;
       var rect = geo.rects[i];
       if(!rect) return;
-      if(!(m.y >= lane.yMin) || !(m.y <= lane.yMax)) return;
       var col = null;
+      // Kanal verilmişse nokta O KANALIN ekseninde durmalı: birleşik şeritte
+      // her eğrinin kendi ölçeği var, çalışma noktası başka bir eğrinin
+      // ölçeğine konsaydı kendi eğrisinin üstünden kayardı.
+      var ax = null;
       if(m.chanId) {
-        var hit = null;
-        lane.sigs.forEach(function(g) {
-          if(g.sensor && g.sensor.signal === m.chanId) hit = g;
+        var hitIdx = -1;
+        lane.sigs.forEach(function(g, gi) {
+          if(g.sensor && g.sensor.signal === m.chanId) hitIdx = gi;
         });
-        if(!hit) return;
-        col = hit.color;
+        if(hitIdx < 0) return;
+        col = lane.sigs[hitIdx].color;
+        ax = veTrAxisOfSig(lane, hitIdx);
+        if(m.unit != null && (ax.unit || '') !== m.unit) return;
+      } else {
+        ax = veTrAxisByUnit(lane, m.unit);
+        if(!ax) return;
       }
-      var gy = veTrYPos(lane, rect, m.y);
+      if(!(m.y >= ax.yMin) || !(m.y <= ax.yMax)) return;
+      var gy = veTrYPos(ax, rect, m.y);
       var c = col || veTrMarkColor(m.kind, 0.95);
       // Halka + dolu merkez: eğrinin üstünde durduğu için düz bir dolu daire
       // eğriyle karışırdı. Dış halka arka plan renginde, nokta eğri renginde.
@@ -1808,7 +1975,8 @@ function veTrRenderToolbar() {
   h += '<button type="button" class="ve-trace-btn" data-act="split-all"' +
        (n > 1 ? '' : ' disabled') + ' title="Her sinyali kendi şeridine ayır">Ayır</button>';
   h += '<button type="button" class="ve-trace-btn" data-act="merge-all"' +
-       (n > 1 ? '' : ' disabled') + ' title="Aynı birimli sinyalleri tek şeritte topla">Birleştir</button>';
+       (n > 1 ? '' : ' disabled') +
+       ' title="Hangi şeritlerin tek diyagramda birleşeceğini seç — her sinyal kendi Y ekseninde kalır">Birleştir</button>';
 
   h += '<span class="ve-trace-spacer"></span>';
 
@@ -2398,6 +2566,169 @@ function veTrShowLaneScale(laneIdx, e) {
   }, 0);
 }
 
+// ── Birleştirme seçicisi ─────────────────────────────────────────────────────
+//
+// "Birleştir" eskiden SORMADAN birime göre birleştiriyordu. İki sorunu vardı:
+// birim tek başına birlikte bakılmak istenen sinyalleri tarif etmiyor (devir
+// ile hız farklı birimde ama birlikte okunur), ve kullanıcının seçme şansı
+// yoktu — sonuç beğenilmezse "Ayır" ile her şeyi dağıtıp baştan başlamak
+// gerekiyordu.
+//
+// Artık liste açılıyor: hangi şeritler birleşecek, kullanıcı işaretliyor.
+// Tekrar tekrar kullanılarak BİRDEN ÇOK birleşik diyagram kurulabiliyor —
+// her çağrı yalnız işaretlenenlere dokunur, ötekiler yerinde kalır.
+// Birime göre birleştirme kaybolmadı, listenin içine bir kısayol oldu.
+
+function veTrMergeSelected(idxs) {
+  var slot = veTrBoard();
+  var cur = veTrReconcileLanes(slot.sensors, slot.lanes);
+  var pick = (idxs || []).filter(function(i) { return cur[i]; })
+                         .sort(function(a, b) { return a - b; });
+  if(pick.length < 2) return 0;
+
+  // Birleşik şerit İLK seçilenin yerinde durur: kullanıcı listede yukarıdan
+  // aşağı seçiyor ve sonucun en üstteki şeridin yerinde çıkmasını bekliyor.
+  var ids = [];
+  pick.forEach(function(i) { ids = ids.concat(cur[i].ids); });
+
+  // Yükseklik: birleşenlerin en büyüğü. Toplamak şeridi ekranı kaplayacak
+  // kadar büyütürdü; en küçüğü almak ise üst üste gelen eğrileri okunmaz
+  // kılardı.
+  var h = 0;
+  pick.forEach(function(i) { h = Math.max(h, cur[i].h || VE_TR.LANE_DEF_H); });
+
+  var merged = {
+    ids: ids,
+    h: h,
+    // Elle Y kilidi DÜŞER: kilit tek bir ölçeğe aitti, birleşik şeritte artık
+    // sinyal başına ölçek var. Eski kilidi taşımak, birincil eksene ait olmayan
+    // eğrileri sessizce kırpardı.
+    min: null,
+    max: null
+  };
+
+  var out = [];
+  cur.forEach(function(L, i) {
+    if(i === pick[0]) out.push(merged);
+    else if(pick.indexOf(i) < 0) out.push(L);
+  });
+  slot.lanes = out;
+  veTrRender();
+  return pick.length;
+}
+
+// Birleşik bir şeridi tekrar tek tek şeritlere dağıtır.
+function veTrSplitLane(laneIdx) {
+  var slot = veTrBoard();
+  var cur = veTrReconcileLanes(slot.sensors, slot.lanes);
+  var L = cur[laneIdx];
+  if(!L || L.ids.length < 2) return;
+  var parts = L.ids.map(function(k) {
+    return { ids: [k], h: L.h || VE_TR.LANE_DEF_H, min: null, max: null };
+  });
+  slot.lanes = cur.slice(0, laneIdx).concat(parts, cur.slice(laneIdx + 1));
+  veTrRender();
+}
+
+function veTrShowMergePicker(e) {
+  var old = document.getElementById('ve-trace-merge-pop');
+  if(old) { old.remove(); return; }
+
+  var slot = veTrBoard();
+  var lanes = veTrState.geo && veTrState.geo.lanes ? veTrState.geo.lanes : null;
+  var defs = veTrReconcileLanes(slot.sensors, slot.lanes);
+  if(defs.length < 2) {
+    if(typeof showToast === 'function') {
+      showToast('Birleştirmek için en az iki şerit gerekir.', 'info');
+    }
+    return;
+  }
+
+  var pop = document.createElement('div');
+  pop.id = 've-trace-merge-pop';
+  pop.className = 've-trace-pop ve-trace-pop-wide';
+
+  var h = '<div class="ve-trace-pop-title">Birleştirilecek şeritler</div>';
+  h += '<div class="ve-trace-pop-hint">Seçilenler tek diyagramda toplanır; ' +
+       'her sinyal kendi Y ekseninde kalır.</div>';
+  h += '<div class="ve-trace-pop-list" role="group">';
+  defs.forEach(function(L, i) {
+    var built = lanes && lanes[i] ? lanes[i] : null;
+    var title = built ? built.title : ('Şerit ' + (i + 1));
+    var unit = built && built.unit ? built.unit : '';
+    var color = built ? built.color : '#888';
+    h += '<label class="ve-trace-pop-item">' +
+         '<input type="checkbox" data-lane="' + i + '">' +
+         '<span class="ve-trace-pop-sw" style="background:' + color + ';"></span>' +
+         '<span class="ve-trace-pop-name">' + veSigEsc(title) + '</span>' +
+         '<span class="ve-trace-pop-unit">' + veSigEsc(unit || '−') + '</span>';
+    // Zaten birleşik olan şerit dağıtılabilsin: kullanıcı yanlış birleştirdiyse
+    // her şeyi dağıtan "Ayır"a gitmek zorunda kalmasın.
+    if(L.ids.length > 1) {
+      h += '<button type="button" class="ve-trace-pop-x" data-act="split" data-lane="' + i +
+           '" title="Bu birleşik şeridi dağıt">Dağıt</button>';
+    }
+    h += '</label>';
+  });
+  h += '</div>';
+  h += '<div class="ve-trace-pop-row">' +
+       '<button type="button" data-act="by-unit" title="Aynı birimdeki şeritleri kendiliğinden birleştir">Birime göre</button>' +
+       '<button type="button" class="primary" data-act="merge-ok">Birleştir</button>' +
+       '</div>';
+  pop.innerHTML = h;
+
+  document.body.appendChild(pop);
+  var pw = pop.offsetWidth || 260, phh = pop.offsetHeight || 220;
+  var ax = (e && e.clientX != null) ? e.clientX - 20 : 40;
+  var ay = (e && e.clientY != null) ? e.clientY + 14 : 60;
+  pop.style.left = Math.min(window.innerWidth - pw - 8, Math.max(8, ax)) + 'px';
+  pop.style.top = Math.min(window.innerHeight - phh - 8, Math.max(8, ay)) + 'px';
+
+  pop.addEventListener('click', function(ev) {
+    var b = ev.target.closest('[data-act]');
+    if(!b) return;
+    var act = b.getAttribute('data-act');
+    if(act === 'split') {
+      ev.preventDefault();
+      pop.remove();
+      veTrSplitLane(parseInt(b.getAttribute('data-lane'), 10));
+      return;
+    }
+    if(act === 'by-unit') {
+      pop.remove();
+      veTrMergeByUnit();
+      return;
+    }
+    if(act === 'merge-ok') {
+      var idxs = [];
+      pop.querySelectorAll('input[type="checkbox"]').forEach(function(cb) {
+        if(cb.checked) idxs.push(parseInt(cb.getAttribute('data-lane'), 10));
+      });
+      if(idxs.length < 2) {
+        if(typeof showToast === 'function') {
+          showToast('En az iki şerit işaretleyin.', 'warning');
+        }
+        return;
+      }
+      pop.remove();
+      var n = veTrMergeSelected(idxs);
+      if(n && typeof showToast === 'function') {
+        showToast(n + ' şerit tek diyagramda birleşti — her sinyal kendi Y ekseninde.', 'success');
+      }
+    }
+  });
+
+  setTimeout(function() {
+    function close(ev) {
+      if(!pop.contains(ev.target)) {
+        pop.remove();
+        document.removeEventListener('mousedown', close, true);
+      }
+    }
+    document.addEventListener('mousedown', close, true);
+  }, 0);
+}
+
 // ── Sürükle-bırak hedefi ─────────────────────────────────────────────────────
 //
 // Bir sinyal ŞERİDİN ÜZERİNE bırakılırsa o şeride katılır (ortak Y ekseni) —
@@ -2517,7 +2848,7 @@ function veTrBindToolbar() {
     else if(act === 'zoom-out') veTrZoom(1 / 1.4, null);
     else if(act === 'unpin') veTrUnpin();
     else if(act === 'split-all') veTrSplitAll();
-    else if(act === 'merge-all') veTrMergeByUnit();
+    else if(act === 'merge-all') veTrShowMergePicker(e);
     else if(act === 'clear') veTrClear();
     else if(act === 'mode') veTrSetMode(b.getAttribute('data-mode'));
   });
@@ -2667,6 +2998,9 @@ if(typeof module !== 'undefined' && module.exports) {
     veTrYLogOk: veTrYLogOk,
     veTrYLogAny: veTrYLogAny,
     veTrLaneRangeLog: veTrLaneRangeLog,
+    veTrAxisOf: veTrAxisOf,
+    veTrAxisOfSig: veTrAxisOfSig,
+    veTrAxisByUnit: veTrAxisByUnit,
     veTrBuildLanes: veTrBuildLanes,
     veTrYPos: veTrYPos,
     veTrTimeTicks: veTrTimeTicks,

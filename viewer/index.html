@@ -55,26 +55,7 @@
     /* .ve-sub-page flex:1 + min-height:0 bekliyor; body kolonu onu karşılıyor. */
     #ve-page-sonuclar { display:flex; flex-direction:row; }
 
-    /* Sürükle-bırak kaplaması. pointer-events:none KRİTİK: kaplama fare
-       hedefi olursa sürükleme sırasında altındaki öğelerle arasında
-       dragenter/dragleave çifti üretir ve kaplama yanıp söner. */
-    #mfv-drop {
-      position:fixed; inset:0; z-index:9999; display:none;
-      align-items:center; justify-content:center;
-      background:var(--accent-tint-6, rgba(37,99,235,0.10));
-      pointer-events:none;
-    }
-    #mfv-drop.on { display:flex; }
-    .mfv-drop-card {
-      display:flex; flex-direction:column; align-items:center; gap:6px;
-      padding:26px 44px; text-align:center;
-      background:var(--bg-secondary); color:var(--text-primary);
-      border:2px dashed var(--accent-primary); border-radius:var(--radius-md, 8px);
-      box-shadow:0 8px 32px var(--shadow-color);
-    }
-    .mfv-drop-card .mf-ico { font-size:var(--fs-h1); color:var(--accent-primary); }
-    .mfv-drop-title { font-size:var(--fs-lg); font-weight:700; color:var(--text-heading); }
-    .mfv-drop-sub { font-size:var(--fs-micro); color:var(--text-muted); }
+    /* Sürükle-bırak kaplamasının stili ORTAK: css/styles.css (#ve-imp-drop) */
   </style>
 </head>
 <body>
@@ -128,14 +109,14 @@
 </div>
 
 <!-- ═══ SÜRÜKLE-BIRAK KAPLAMASI ═══
-     Yalnızca dosya sürüklenirken görünür (js/dropzone.js). Kabul edilen
+     Yalnızca dosya sürüklenirken görünür (js/measure-dropzone.js — MFSim ile ORTAK). Kabul edilen
      uzantılar burada YAZILI: kullanıcı bırakmadan önce görsün, sonra
      reddedilmesin. -->
-<div id="mfv-drop" aria-hidden="true">
-  <div class="mfv-drop-card">
+<div id="ve-imp-drop" aria-hidden="true">
+  <div class="ve-imp-drop-card">
     <span class="mf-ico mf-ico-upload"></span>
-    <div class="mfv-drop-title">Ölçüm dosyasını bırakın</div>
-    <div class="mfv-drop-sub">.xlsx · .xlsm · .csv · .tsv · .txt</div>
+    <div class="ve-imp-drop-title">Ölçüm dosyasını bırakın</div>
+    <div class="ve-imp-drop-sub">.xlsx · .xlsm · .csv · .tsv · .txt</div>
   </div>
 </div>
 
@@ -169,7 +150,7 @@
 <script src="js/board.js"></script>
 <script src="js/trace-view.js"></script>
 <script src="js/measure-import-ui.js"></script>
-<script src="js/dropzone.js"></script>
+<script src="js/measure-dropzone.js"></script>
 <script src="js/app.js"></script>
 
 </body>

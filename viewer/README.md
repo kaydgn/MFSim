@@ -20,7 +20,9 @@ npm run build:viewer      →  MFSim_Olcum_Goruntuleyici.html   (depo kökü, ~9
   şeridinde, kendi Y ekseniyle, hepsi tek X ekseninde
 - Ayrık kanalları basamak, metin kanallarını (`1C` / `2L`) durum şeridi olarak
   çizer; seyrek CAN sinyallerinde örnekle-ve-tut uygular
-- İmleç, yakınlaştırma, şerit ayırma/birleştirme, logaritmik eksen, tablo kipi
+- **Birleştir**: seçtiğiniz şeritleri tek diyagramda toplar; birleşen her sinyal
+  KENDİ Y ekseninde kalır (hiçbiri ezilmez). Birden çok birleşik diyagram kurulabilir.
+- İmleç, yakınlaştırma, şerit ayırma, logaritmik eksen, tablo kipi
 - **Tema işletim sistemini izler** (açık/koyu); sağ üstteki düğme
   Sistem → Açık → Koyu → Sistem döngüsünü yürütür ve seçim hatırlanır
 
@@ -41,9 +43,9 @@ ekliyordu. Kodu duruyor, yalnızca kip düğmesi listede değil.
 | `js/measure-import.js` | **birebir kopya** |
 | `js/measure-import-ui.js` | **birebir kopya** |
 | `js/signal-tree.js` | **birebir kopya** |
+| `js/measure-dropzone.js` | **birebir kopya** (sürükle-bırak, MFSim ile ortak) |
 | `js/trace-view.js` | kopya + **iki yerel fark** (aşağıda) |
 | `js/theme.js` | yalnızca burada — iki tema, işletim sistemini izler |
-| `js/dropzone.js` | yalnızca burada — sürükle-bırak |
 | `js/board.js` | yalnızca burada — pano katmanı |
 | `js/app.js` | yalnızca burada — açılış |
 | `index.html` | yalnızca burada — kabuk |
@@ -56,7 +58,7 @@ Kopyalar bilerek **birebir** tutuldu; taşımak düz bir `cp`:
 
 ```bash
 # Fark var mı?
-for f in xlsx-read measure-core measure-import measure-import-ui signal-tree; do
+for f in xlsx-read measure-core measure-import measure-import-ui signal-tree measure-dropzone; do
   diff -q js/$f.js viewer/js/$f.js
 done
 diff js/trace-view.js viewer/js/trace-view.js    # iki bilinen fark çıkmalı
