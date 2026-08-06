@@ -2503,18 +2503,42 @@ function veTrSplitAll() {
 
 // Aynı birimli sinyaller tek şeritte. Birim ortak olmadan birleştirmek
 // ölçeği anlamsız kılar (rpm ile % aynı eksende okunmaz).
+// "Birime göre": aynı birimdeki sinyalleri tek şeritte toplar — ortak ölçekte
+// kıyaslamak için (bkz. veTrBuildLanes'teki birim başına eksen kuralı).
+//
+// BOŞ BİRİM GRUPLANMAZ. Eskiden birimsiz sinyaller `'−'` diye tek kovaya
+// giriyor ve "Gear" ile "Mode" tek şeritte toplanıyordu. Bu, eksen kuralında
+// düzeltilen kategori hatasının bir üst katmandaki hâli: birimsiz olmak ortak
+// bir birim DEĞİLDİR, iki sinyalin kıyaslanabilir olduğunu söylemez. Düğmenin
+// adı "birime göre" — ortada birim yokken gruplamak adının tersini yapıyordu.
 function veTrMergeByUnit() {
   var slot = veTrBoard();
   var byUnit = {}, order = [];
-  (slot.sensors || []).forEach(function(s) {
-    var u = s.unit || '−';
-    if(!byUnit[u]) { byUnit[u] = []; order.push(u); }
-    byUnit[u].push(veTrKey(s.id, s.signal));
+  (slot.sensors || []).forEach(function(s, i) {
+    var u = s.unit || '';
+    // Birimsizler kendi kovalarında kalsın diye benzersiz anahtar.
+    var key = u ? ('u:' + u) : (' tek:' + i);
+    if(!byUnit[key]) { byUnit[key] = []; order.push(key); }
+    byUnit[key].push(veTrKey(s.id, s.signal));
   });
-  slot.lanes = order.map(function(u) {
-    return { ids: byUnit[u], h: VE_TR.LANE_DEF_H, min: null, max: null };
+
+  var merged = order.filter(function(k) { return byUnit[k].length > 1; }).length;
+  if(!merged) {
+    // Hiçbir şey değişmeyecekse şeritleri yeniden kurup kullanıcının
+    // yüksekliklerini sıfırlamanın anlamı yok; sebebi söylemek daha yararlı.
+    if(typeof showToast === 'function') {
+      showToast('Aynı birimi paylaşan şerit yok — birleştirilecek bir şey bulunamadı.', 'info');
+    }
+    return;
+  }
+
+  slot.lanes = order.map(function(k) {
+    return { ids: byUnit[k], h: VE_TR.LANE_DEF_H, min: null, max: null };
   });
   veTrRender();
+  if(typeof showToast === 'function') {
+    showToast(merged + ' birim ortak ölçekte toplandı.', 'success');
+  }
 }
 
 function veTrClear() {
