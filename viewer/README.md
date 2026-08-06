@@ -20,6 +20,8 @@ npm run build:viewer      →  MFSim_Olcum_Goruntuleyici.html   (depo kökü, ~9
 - Ayrık kanalları basamak, metin kanallarını (`1C` / `2L`) durum şeridi olarak
   çizer; seyrek CAN sinyallerinde örnekle-ve-tut uygular
 - İmleç, yakınlaştırma, şerit ayırma/birleştirme, logaritmik eksen, tablo kipi
+- **Tema işletim sistemini izler** (açık/koyu); sağ üstteki düğme
+  Sistem → Açık → Koyu → Sistem döngüsünü yürütür ve seçim hatırlanır
 
 ## Ne yapmaz
 
@@ -38,8 +40,8 @@ ekliyordu. Kodu duruyor, yalnızca kip düğmesi listede değil.
 | `js/measure-import.js` | **birebir kopya** |
 | `js/measure-import-ui.js` | **birebir kopya** |
 | `js/signal-tree.js` | **birebir kopya** |
-| `js/theme.js` | **birebir kopya** |
 | `js/trace-view.js` | kopya + **iki yerel fark** (aşağıda) |
+| `js/theme.js` | yalnızca burada — iki tema, işletim sistemini izler |
 | `js/board.js` | yalnızca burada — pano katmanı |
 | `js/app.js` | yalnızca burada — açılış |
 | `index.html` | yalnızca burada — kabuk |
@@ -52,7 +54,7 @@ Kopyalar bilerek **birebir** tutuldu; taşımak düz bir `cp`:
 
 ```bash
 # Fark var mı?
-for f in xlsx-read measure-core measure-import measure-import-ui signal-tree theme; do
+for f in xlsx-read measure-core measure-import measure-import-ui signal-tree; do
   diff -q js/$f.js viewer/js/$f.js
 done
 diff js/trace-view.js viewer/js/trace-view.js    # iki bilinen fark çıkmalı
@@ -69,6 +71,13 @@ işaretli, elle uzlaştırılır):
 2. Boş durum metni: MFSim "Çözüm sonucu yok / Çözücüyü Aç" der; burada çözücü
    yok, "Henüz ölçüm yok / Ölçüm Verisi İçe Aktar" denir. Ayrım `veSolverRun`
    varlığına bakarak yapılıyor, dalın kendisi duruyor.
+
+`theme.js` **birebir kopya değil**, görüntüleyiciye ait. MFSim'de tema Ayarlar
+panelinden seçilen bir tercih ve on altı seçenek var; burada tek başına, günün
+her saatinde açık duran bir program söz konusu, o yüzden varsayılan işletim
+sisteminin kendisi. MFSim'in `js/theme.js`'inden yalnızca `veThemeRgba` birebir
+alındı (canvas'ın CSS değişkeni çözememesinin köprüsü) — o fonksiyon upstream'de
+değişirse elle taşınır.
 
 `board.js` MFSim'deki `js/results.js` + `js/graphics.js`'in yalnızca panoyla
 ilgili yüzeyini karşılar. Oralarda pano mantığı değişirse **elle** taşınması

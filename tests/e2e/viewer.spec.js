@@ -318,3 +318,113 @@ test.describe('Ölçüm Görüntüleyici — tek dosya', () => {
     expect(external).toEqual([]);
   });
 });
+
+// ── Tema ─────────────────────────────────────────────────────────────────
+//
+// Program tek başına, günün her saatinde açık duruyor; tema bir tercih değil
+// ortama uyum meselesi. Varsayılan işletim sisteminin kendisi, kullanıcı
+// geçersiz kılabiliyor.
+
+async function themeState(page) {
+  return page.evaluate(() => ({
+    theme: document.documentElement.getAttribute('data-theme'),
+    label: document.getElementById('mfv-theme-label').textContent.trim(),
+    stored: localStorage.getItem('mfv-theme'),
+  }));
+}
+
+test.describe('Tema — işletim sistemini izler', () => {
+
+  test.describe('işletim sistemi AÇIK iken', () => {
+    test.use({ colorScheme: 'light' });
+    test('açık temayla açılır', async ({ page }) => {
+      await openViewer(page);
+      const st = await themeState(page);
+      expect(st.theme).toBe('pearl');
+      expect(st.label).toBe('Sistem');
+      // Hiçbir şey seçilmeden localStorage'a yazılmamalı: yazılırsa kullanıcı
+      // sisteme bir daha hiç dönemez, "sistem gibi davran" tek seferlik olurdu.
+      expect(st.stored).toBeNull();
+    });
+  });
+
+  test.describe('işletim sistemi KOYU iken', () => {
+    test.use({ colorScheme: 'dark' });
+    test('koyu temayla açılır', async ({ page }) => {
+      await openViewer(page);
+      const st = await themeState(page);
+      expect(st.theme).toBe('slate');
+      expect(st.label).toBe('Sistem');
+    });
+
+    test('düğme Sistem → Açık → Koyu → Sistem döngüsünü yürütür', async ({ page }) => {
+      await openViewer(page);
+
+      await page.click('#mfv-theme-btn');
+      expect(await themeState(page)).toMatchObject({ theme: 'pearl', label: 'Açık' });
+
+      await page.click('#mfv-theme-btn');
+      expect(await themeState(page)).toMatchObject({ theme: 'slate', label: 'Koyu' });
+
+      // Üçüncü tık sisteme DÖNER. İki durumlu bir anahtarda bu dönüş
+      // mümkün olmazdı — istenen davranışın çekirdeği burası.
+      await page.click('#mfv-theme-btn');
+      expect(await themeState(page)).toMatchObject({ theme: 'slate', label: 'Sistem' });
+    });
+
+    test('elle yapılan seçim yeniden açılışta hatırlanır', async ({ page }) => {
+      await openViewer(page);
+      await page.click('#mfv-theme-btn');            // Açık
+      await page.reload();
+      await page.waitForSelector('#ve-trace');
+      const st = await themeState(page);
+      expect(st.theme).toBe('pearl');
+      expect(st.label).toBe('Açık');
+    });
+
+    test('ilk boyamada doğru tema — koyu/açık parlaması yok', async ({ page }) => {
+      // index.html'deki <head> betiği ile js/theme.js'in mantığı ayrı yerlerde
+      // duruyor; ayrışırsa açık temadaki kullanıcı her açılışta bir kare koyu
+      // ekran görür. Betiği DOM hazır olmadan, ilk fırsatta yokluyoruz.
+      await page.goto(FILE_URL);
+      const early = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+      expect(early).toBe('slate');
+      await page.waitForSelector('#ve-trace');
+      expect((await themeState(page)).theme).toBe('slate');
+    });
+
+    test('diyagram çiziliyken tema değişimi ekranı gerçekten açar', async ({ page }) => {
+      // Şeritler doluyken geçiş yapılıyor: ölçüm penceresi kurulduktan sonra
+      // tema değişimi en riskli anda sınanmış olur.
+      //
+      // TUVAL DEĞİL, ZEMİN ÖLÇÜLÜYOR — ve bu bilerek. Ölçüldü: js/trace-view.js
+      // temel şerit çizimini tema-NÖTR gri ile yapıyor, eğri renkleri sabit
+      // paletten geliyor; tuval iki temada bayt bayt aynı. Açık/koyu görünümü
+      // CSS'ten geliyor. Tuvale bakan bir doğrulama, doğru davranışta bile
+      // kırmızı yanardı.
+      await openViewer(page);
+      await importFixture(page, canoeXlsx(200));
+      await page.click('#ve-import-apply');
+      await page.waitForFunction(() => veResultSlots[0].sensors.length > 0, null, { timeout: 15000 });
+
+      const bg = () => page.evaluate(() =>
+        getComputedStyle(document.getElementById('ve-trace')).backgroundColor);
+
+      const dark = await bg();
+      await page.click('#mfv-theme-btn');            // → Açık
+      await page.waitForTimeout(200);
+      const light = await bg();
+      expect(light).not.toBe(dark);
+
+      // "Açık" gerçekten açık olmalı: yalnızca "değişti" demek, iki koyu tema
+      // arasında gidip gelen bir hatayı yakalamazdı.
+      const lum = (c) => c.match(/\d+/g).slice(0, 3).reduce((a, v) => a + +v, 0) / 3;
+      expect(lum(light)).toBeGreaterThan(200);
+      expect(lum(dark)).toBeLessThan(60);
+
+      // Şeritler geçişte kaybolmamalı
+      await expect(page.locator('#ve-trace-empty')).toBeHidden();
+      expect(await page.evaluate(() => veResultSlots[0].sensors.length)).toBe(5);
+    });
+  });
+});
