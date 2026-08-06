@@ -667,12 +667,49 @@ test.describe('Birleştir — seçerek, çok eksenli', () => {
   });
 
   test('"Birime göre" kısayolu korundu', async ({ page }) => {
-    // Eski davranış kaybolmadı, listenin içine taşındı. Fixture'da beş farklı
-    // birim var (1/min, km/h, °C, ve iki birimsiz) → birimsiz ikisi birleşir.
+    // Eski davranış kaybolmadı, listenin içine taşındı.
+    //
+    // Fixture'ın beş sinyalinde TEKRAR EDEN birim yok (1/min, km/h, °C ve iki
+    // BİRİMSİZ). Birimsiz olmak ortak bir birim değildir — "Gear" ile "Mode"
+    // aynı ölçeğe konamaz. Bu yüzden ortada birleştirilecek bir şey yok:
+    // beş şerit yerinde kalır ve sebep söylenir.
     await boardWithFive(page);
     await page.click('#ve-trace-toolbar [data-act="merge-all"]');
     await page.click('#ve-trace-merge-pop [data-act="by-unit"]');
-    await expect.poll(() => laneCount(page)).toBe(4);
+    await expect(page.locator('.ve-toast', { hasText: 'Aynı birimi paylaşan şerit yok' }))
+      .toBeVisible();
+    expect(await laneCount(page)).toBe(5);
+  });
+
+  test('"Birime göre" TEKRAR EDEN birimi toplar, birimsizlere dokunmaz', async ({ page }) => {
+    // İki Nm + bir km/h + bir birimsiz. Beklenen: Nm'ler tek şeritte, ötekiler
+    // kendi şeritlerinde → 3 şerit.
+    const satir = ['Time;Motor Torku;Fren Torku;Hiz;Mod', 's;Nm;Nm;km/h;'];
+    for (let k = 0; k < 200; k++) {
+      const t = k * 0.02;
+      satir.push([t.toFixed(3), (500 * Math.abs(Math.sin(t / 2))).toFixed(2),
+        (50 * Math.abs(Math.sin(t / 2))).toFixed(2),
+        (60 * Math.abs(Math.sin(t / 3))).toFixed(2), (k % 3)].join(';'));
+    }
+    await openViewer(page);
+    const [ch] = await Promise.all([
+      page.waitForEvent('filechooser'), page.click('#ve-import-btn')]);
+    await ch.setFiles({ name: 'karisik.csv', mimeType: 'text/csv',
+      buffer: Buffer.from(satir.join('\n'), 'utf8') });
+    await page.waitForFunction(() => veImpUI && veImpUI.rows && !veImpUI.busy);
+    await page.click('#ve-import-apply');
+    await expect.poll(() => page.evaluate(() => veResultSlots[0].sensors.length)).toBe(4);
+
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await page.click('#ve-trace-merge-pop [data-act="by-unit"]');
+    await expect.poll(() => laneCount(page)).toBe(3);
+
+    const st = await page.evaluate(() => veTrState.geo.lanes.map((L) => ({
+      sinyal: L.sigs.length, eksen: L.axes.length,
+    })));
+    expect(st[0]).toEqual({ sinyal: 2, eksen: 1 });   // iki Nm, ORTAK ölçek
+    expect(st[1]).toEqual({ sinyal: 1, eksen: 1 });   // km/h
+    expect(st[2]).toEqual({ sinyal: 1, eksen: 1 });   // birimsiz — kendi şeridi
   });
 });
 
