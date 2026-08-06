@@ -147,16 +147,25 @@ test.describe('Araç Performans — alt-sistem düğümü', () => {
     expect(await catVisible('Takoz Alt Bileşenleri')).toBe(false);
 
     // Araç Performans bloğunu aç
-    await page.evaluate(() => { createNode('arac-performans', 560, 360); });
+    // Kanvas uzayının merkezi 3000,3000 (CSS'te -3000 px kaydırma, bkz.
+    // js/canvas-space.js). Düğüm 560,360'a konursa görünür alanın DIŞINDA
+    // kalıyor ve Playwright ona hiç tıklayamıyordu — bu testin tek arızası
+    // buydu: eski koordinat düzeninden kalma bir sayı. Diğer testler zaten
+    // 3200,3200 kullanıyor.
+    await page.evaluate(() => { createNode('arac-performans', 3200, 3200); });
     await page.waitForFunction(() => window.nodes.length === 1, null, { timeout: 5000 });
     await page.locator('#ve-canvas .ve-node[data-type="arac-performans"]').dblclick();
     await page.waitForFunction(() => window.nodes.length === 16, null, { timeout: 10000 });
 
-    // Modül içi: güç aktarma bileşenleri görünür; Takoz gizli; Modüller yine görünür
+    // Modül içi: güç aktarma bileşenleri görünür; Takoz gizli.
+    // "Modüller" de GİZLİ — modül içinde modül açılmaz (js/components.js
+    // veShowAllSidebarComponents, 'module' kapsam kuralı). Test eskiden
+    // burada `true` bekliyordu; o beklenti kuraldan ÖNCEYE ait ve kırmızı
+    // yanan şey uygulamanın hatası değil testin kendisiydi.
     expect(await catVisible('Güç Kaynağı')).toBe(true);
     expect(await catVisible('Ölçüm')).toBe(true);
     expect(await catVisible('Takoz Alt Bileşenleri')).toBe(false);
-    expect(await catVisible('Modüller')).toBe(true);
+    expect(await catVisible('Modüller')).toBe(false);
 
     // Geri dön → üst seviye kapsamı
     await page.locator('.ve-arac-breadcrumb button').click();
