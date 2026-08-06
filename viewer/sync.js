@@ -108,11 +108,63 @@ function buildTraceView() {
   return src;
 }
 
+// ── Elden taşınan TEK fonksiyonlar ────────────────────────────────────────
+//
+// Görüntüleyiciye ait bir dosyanın İÇİNDE, MFSim'den birebir alınmış bir
+// fonksiyon durabiliyor. Dosyanın tamamı kopya olmadığı için otomatik
+// kopyalanamaz — ama AYRIŞTIĞI söylenebilir, ve söylenmeli: README'de
+// "upstream'de değişirse elle taşınır" yazan bir kural, hatırlanmadığı gün
+// sessizce bozulur. board.js'in sayı biçimlendiricilerinde tam olarak bu oldu:
+// iki kopya birbirinden habersiz ayrı ayrı düzeltilmişti.
+//
+// Bunlar OTOMATİK TAŞINMAZ (çevreleyen dosya görüntüleyiciye ait, körlemesine
+// yazmak tehlikeli); yalnız rapor edilir, kararı insan verir.
+var CARRIED = [
+  { fn: 'veThemeRgba', from: 'js/theme.js', to: 'viewer/js/theme.js',
+    neden: 'canvas CSS değişkeni çözemiyor; köprü fonksiyon' }
+];
+
+function fnBody(src, name) {
+  var i = src.indexOf('function ' + name);
+  if(i < 0) return null;
+  var j = src.indexOf('{', i), d = 0;
+  for(var k = j; k < src.length; k++) {
+    if(src[k] === '{') d++;
+    else if(src[k] === '}') { d--; if(d === 0) return src.slice(i, k + 1); }
+  }
+  return null;
+}
+
+function carriedDrift() {
+  return CARRIED.filter(function(c) {
+    var a = fnBody(fs.readFileSync(path.join(ROOT, c.from), 'utf8'), c.fn);
+    var b = fnBody(fs.readFileSync(path.join(ROOT, c.to), 'utf8'), c.fn);
+    if(a == null || b == null) {
+      c.hata = c.fn + ' bulunamadı (' + (a == null ? c.from : c.to) + ')';
+      return true;
+    }
+    return a !== b;
+  });
+}
+
 // ── Yürüt ─────────────────────────────────────────────────────────────────
 var hedefler = VERBATIM.map(function(f) {
   return { ad: f, icerik: fs.readFileSync(path.join(ROOT, 'js', f), 'utf8') };
 });
 hedefler.push({ ad: 'trace-view.js', icerik: buildTraceView() });
+
+var kayan = carriedDrift();
+if(kayan.length) {
+  kayan.forEach(function(c) {
+    console.error('✗ ELDEN TAŞINAN FONKSİYON AYRIŞMIŞ: ' + c.fn +
+                  '  (' + c.from + ' → ' + c.to + ')');
+    console.error('  ' + (c.hata || 'Gövdeler birebir değil.') +
+                  '  Sebep: ' + c.neden);
+    console.error('  Bu otomatik taşınmaz — çevreleyen dosya görüntüleyiciye ait.');
+    console.error('  ' + c.from + ' içindeki sürümü okuyup ' + c.to + '\'e ELLE taşıyın.');
+  });
+  process.exit(1);
+}
 
 var degisen = [];
 hedefler.forEach(function(t) {

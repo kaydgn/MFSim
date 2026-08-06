@@ -16,6 +16,7 @@
 
 const { execFileSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 const ROOT = path.join(__dirname, '..', '..');
 
@@ -32,5 +33,26 @@ describe('görüntüleyici senkronu', () => {
         String(e.stderr || e.stdout || e.message));
     }
     expect(out).toMatch(/güncel/);
+  });
+
+  // Görüntüleyiciye ait bir dosyanın İÇİNDE duran, MFSim'den birebir alınmış
+  // fonksiyonlar (bugün: veThemeRgba). Dosyanın tamamı kopya olmadığı için
+  // otomatik taşınamıyorlar — README'de "upstream'de değişirse elle taşınır"
+  // yazıyordu ve elle taşınan bir kural hatırlanmadığı gün bozulur.
+  // board.js'in sayı biçimlendiricilerinde tam olarak bu oldu.
+  test('elden taşınan fonksiyonlar birebir aynı', () => {
+    const gövde = (dosya, ad) => {
+      const src = fs.readFileSync(path.join(ROOT, dosya), 'utf8');
+      const i = src.indexOf('function ' + ad);
+      expect(i).toBeGreaterThanOrEqual(0);
+      let j = src.indexOf('{', i), d = 0;
+      for (let k = j; k < src.length; k++) {
+        if (src[k] === '{') d++;
+        else if (src[k] === '}' && --d === 0) return src.slice(i, k + 1);
+      }
+      throw new Error(ad + ' gövdesi kapanmadı: ' + dosya);
+    };
+    expect(gövde('viewer/js/theme.js', 'veThemeRgba'))
+      .toBe(gövde('js/theme.js', 'veThemeRgba'));
   });
 });
