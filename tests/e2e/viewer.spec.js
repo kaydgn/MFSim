@@ -692,3 +692,43 @@ test.describe('Tema — işletim sistemini izler', () => {
     });
   });
 });
+
+// ── Açılır pencerelerden çıkış ───────────────────────────────────────────
+//
+// Şerit ölçeği ve birleştirme seçicisi ESC ile kapanmıyordu: açılan kutudan
+// çıkmanın tek yolu boşluğa tıklamaktı. Klavyeyle çalışan kullanıcı için
+// çıkışsız bir kutu demek bu.
+test.describe('Açılır pencereler ESC ile kapanır', () => {
+  test('birleştirme seçicisi', async ({ page }) => {
+    await openViewer(page);
+    await importFixture(page, canoeXlsx(120));
+    await page.click('#ve-import-apply');
+    await page.waitForFunction(() => veResultSlots[0].sensors.length === 5,
+      null, { timeout: 15000 });
+
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await expect(page.locator('#ve-trace-merge-pop')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#ve-trace-merge-pop')).toHaveCount(0);
+
+    // Kapanan pencere dinleyicisini de SÖKMELİ: bırakırsa her açılışta bir
+    // tane daha birikir. Tekrar açılıp kapanabiliyor olması bunun kanıtı.
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await expect(page.locator('#ve-trace-merge-pop')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#ve-trace-merge-pop')).toHaveCount(0);
+  });
+
+  test('dışarı tıklama hâlâ kapatıyor', async ({ page }) => {
+    await openViewer(page);
+    await importFixture(page, canoeXlsx(120));
+    await page.click('#ve-import-apply');
+    await page.waitForFunction(() => veResultSlots[0].sensors.length === 5,
+      null, { timeout: 15000 });
+
+    await page.click('#ve-trace-toolbar [data-act="merge-all"]');
+    await expect(page.locator('#ve-trace-merge-pop')).toBeVisible();
+    await page.mouse.click(600, 700);
+    await expect(page.locator('#ve-trace-merge-pop')).toHaveCount(0);
+  });
+});
