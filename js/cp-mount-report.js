@@ -303,16 +303,94 @@ function _mntBuildReportHTML(R, opts){
 
 // ─── Antet (dinamik başlık bloğu) ────────────────────────────────────────────
 // Nonlineer (eğri) z-yasası taşıyan takozları döndür (SI R.mounts üzerinden).
+// ── Nonlineer takozlar — ÖLÇÜT ÇEKİRDEĞİN, RAPORUN DEĞİL ────────────────────
+//
+// Bu filtre eskiden `m.curves.z` uzunluğuna bakıyordu ve üç kere yanılıyordu:
+//   (a) ANALİTİK FİT'İ görmüyordu. Gömülü kütüphanedeki TK035/TK040/TK050
+//       nonlineerliği yalnız `fits` ile taşır (nokta tablosu YOK) ve _mntToSI
+//       eksen başına fit'i curve'e TERCİH eder — yani o takozlarda `curves`
+//       hiç oluşmaz.
+//   (b) Yalnız z eksenine bakıyordu; x/y'de eğrisi olan takoz sayılmıyordu.
+//   (c) Karışık envanterde SAYIYI eksik veriyordu (2 eğri + 2 fit → "2").
+//
+// Sonuç sessiz bir yalandı: çözücü Newton koşarken (solvedNL = anyCurve → true,
+// modal tanjant rijitlikten) raporun kapağı "Lineer (kapalı-form)" yazıyor,
+// §8 nonlineer notu hiç basılmıyor, ama aynı belgenin §8.12'si R.kBasisTangent'a
+// baktığı için "Nonlineer takoz bulunduğundan…" diyordu — tek dokümanda iki zıt
+// hüküm.
+//
+// Artık ölçüt TEK yerde: çekirdeğin mountHasCurve'ü. Rapor kendi ölçütünü
+// yazmaz; yazsaydı bir gün yine ayrışırdı (regresyon kilidi:
+// tests/unit/cp-mount-report.test.js "ÖLÇÜT KİLİDİ").
+function _mntRepHasLaw(m){
+  if(!m) return false;
+  var C=_rMountCore();
+  if(C && typeof C.mountHasCurve==='function') return C.mountHasCurve(m);
+  // Çekirdek yoksa (test izolasyonu) AYNI kuralın yerel kopyası — sapmasın diye
+  // birebir: fit VEYA ≥2 noktalı tablo, üç eksenden herhangi biri.
+  var f=m.fits; if(f && (f.x||f.y||f.z)) return true;
+  var c=m.curves; if(!c) return false;
+  return (c.x&&c.x.length>=2)||(c.y&&c.y.length>=2)||(c.z&&c.z.length>=2);
+}
+
 function _mntRepNLMounts(R){
-  return (R.mounts||[]).filter(function(m){ return m && m.curves && m.curves.z && m.curves.z.length>=2; });
+  return (R.mounts||[]).filter(_mntRepHasLaw);
+}
+
+// Newton FİİLEN koştu mu? Otorite çözücüdür (R.solvedNL) — rapor bunu eldeki
+// takozlardan yeniden türetmez. Türetseydi 'linear' kipinde yanılırdı: o kipte
+// çözücü curves+fits'i R'ye girmeden SIYIRIR, yani takozlara bakarak "eğri
+// vardı ama yok sayıldı" bilgisine ulaşmak imkânsızdır.
+// Bayrak yoksa (elle kurulmuş R, eski oturum) yasa taramasına düşülür.
+function _mntRepSolvedNL(R){
+  if(R && typeof R.solvedNL==='boolean') return R.solvedNL;
+  return _mntRepNLMounts(R||{}).length>0;
+}
+
+// Takozun yasasının KAYNAĞI ve hangi eksende olduğu — §8 notu bunu dürüstçe
+// yazsın diye. "Ölçülmüş düşey kuvvet–sehim eğrisi" cümlesi analitik fit için
+// de x/y ekseni için de yanlıştı.
+function _mntRepLawKind(m){
+  var ax=[], fit=false, tab=false;
+  [['x','X'],['y','Y'],['z','Z']].forEach(function(a){
+    var f=m && m.fits && m.fits[a[0]];
+    var c=m && m.curves && m.curves[a[0]];
+    if(f){ ax.push(a[1]); fit=true; }
+    else if(c && c.length>=2){ ax.push(a[1]); tab=true; }
+  });
+  var kaynak = (fit&&tab) ? 'analitik eğri-uyumu + ölçülmüş nokta tablosu'
+             : fit ? 'analitik eğri-uyumu'
+             : 'ölçülmüş nokta tablosu';
+  return { eksenler: ax.join('/'), kaynak: kaynak };
 }
 function _mntRepAntet(R){
   var nC=(R.gather.components||[]).length, nM=(R.mounts||[]).length;
   var mass=_rF(R.mp.m,1);
   var date='—';
   try { date=new Date().toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch(e){}
+  // ── Çözüm Yöntemi — kapakta YANLIŞ BEYAN olmaz ──
+  // Otorite sırası: kullanıcının niyeti (solveMode) + fiilen koşan yol (solvedNL)
+  // + ikisinin çeliştiği hâl (nlNoCurve). Metin Çözücü panelindeki etiketle
+  // (cp-mount.js veMntSolverCompute durum kutusu) BİLEREK aynı dili konuşur —
+  // ekranda "Otomatik → Nonlineer (Newton)" yazarken kapakta "Lineer" yazması
+  // kullanıcının iki ayrı yerde iki ayrı şey okuması demekti.
+  //
+  // "kapalı-form" ibaresi bırakıldı yalnız gerçekten kapalı-form olan hâlde:
+  // durdurucu klipsi (solveCaseStop) devredeyken çözüm iteratiftir, ama o ayrım
+  // burada değil §8.3'te anlatılıyor; kapakta lineer/nonlineer ayrımı yeterli.
   var nNL=_mntRepNLMounts(R).length;
-  var method = nNL ? ('Newton-Raphson · '+nNL+' nonlineer takoz') : 'Lineer (kapalı-form)';
+  var solvedNL=_mntRepSolvedNL(R);
+  var method;
+  if(R.solveMode==='linear'){
+    method='Lineer — tanımlı nonlineer yasalar yok sayıldı (kullanıcı seçimi)';
+  } else if(solvedNL){
+    method=(R.solveMode==='auto' ? 'Otomatik → ' : '')
+         + 'Newton-Raphson'+(nNL ? (' · '+nNL+' nonlineer takoz') : '');
+  } else if(R.nlNoCurve){
+    method='Lineer — nonlineer istendi, tanımlı eğri/fit yok';
+  } else {
+    method='Lineer (kapalı-form)';
+  }
   return ''
   + '<div class="antet">'
   + '  <div class="band">'
@@ -334,8 +412,16 @@ function _mntRepAntet(R){
 // Tüm takozlar lineerse boş döner (rapora hiçbir şey eklenmez).
 function _mntRepNLNote(R){
   var nl=_mntRepNLMounts(R);
-  if(!nl.length) return '';
-  var names=nl.map(function(m){ return _rEsc(m.name||'takoz'); }).join(', ');
+  // Not, Newton'un fiilen koştuğu HER durumda basılmalı — yakınsama uyarısı da
+  // buradan çıkıyor. Eskiden filtre fit'li takozu göremediği için, yakınsamayan
+  // bir Newton koşusunun uyarısı da tamamen kayboluyordu.
+  if(!nl.length || !_mntRepSolvedNL(R)) return '';
+  // Yasanın kaynağını ve eksenini takoz başına yaz: "ölçülmüş düşey eğri"
+  // cümlesi analitik fit için de x/y ekseni için de yanlıştı.
+  var names=nl.map(function(m){
+    var k=_mntRepLawKind(m);
+    return _rEsc(m.name||'takoz')+' <span style="color:#5a6270;">('+_rEsc(k.eksenler)+' · '+_rEsc(k.kaynak)+')</span>';
+  }).join(', ');
   var notConv=0, iters=0;
   (R.allCases||[]).concat(R.gearCases||[], R.designCases||[]).forEach(function(rc){
     var ck=rc && rc.res && rc.res.checks; if(!ck) return;
@@ -346,7 +432,7 @@ function _mntRepNLNote(R){
     ? '<b style="color:#b45309;">'+notConv+' yük durumunda yakınsama sağlanamadı</b>'
     : 'tüm yük durumları yakınsadı (en çok '+iters+' Newton iterasyonu)';
   return '<div style="margin:10px 0 14px; padding:10px 13px; border-left:3px solid #b45309; background:rgba(180,83,9,0.06); font-size:0.93em; line-height:1.55;">'
-    + '<b>Nonlineer çözüm.</b> '+nl.length+' takoz ('+names+') ölçülmüş düşey kuvvet–sehim eğrisi taşır; '
+    + '<b>Nonlineer çözüm.</b> '+nl.length+' takoz ('+names+') nonlineer kuvvet–sehim yasası taşır; '
     + 'denge doğrudan lineer ters-çözüm yerine <b>Newton-Raphson</b> ile bulunmuştur '
     + '(tanjant rijitlik K<sub>T</sub> = Σ&nbsp;Aᵀ&nbsp;φ′(δ)&nbsp;A). Lineer ve nonlineer takozlar tek bağlı '
     + 'sistemde birlikte çözülür; modal analiz statik dengedeki tanjant rijitlikle yapılır '
@@ -1948,6 +2034,9 @@ if(typeof module!=='undefined' && module.exports){
     _mntBuildReportHTML: _mntBuildReportHTML,
     _mntRepAntet: _mntRepAntet,
     _mntRepNLMounts: _mntRepNLMounts,
+    _mntRepHasLaw: _mntRepHasLaw,
+    _mntRepSolvedNL: _mntRepSolvedNL,
+    _mntRepLawKind: _mntRepLawKind,
     _mntRepNLNote: _mntRepNLNote,
     _mntRepGeom: _mntRepGeom,
     _mntRepSection8: _mntRepSection8,

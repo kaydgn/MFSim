@@ -389,3 +389,121 @@ describe('Nonlineer takoz rapor notu (_mntRepNLNote / antet yöntemi)', () => {
     expect(rep._mntRepNLNote(Rbad)).toContain('yakınsama sağlanamadı');
   });
 });
+
+// ═══════════ REGRESYON — nonlineerlik sınıflandırması TEK kaynaktan ═══════════
+//
+// Rapor, "bu model nonlineer mi" sorusunu KENDİ ölçütüyle cevaplıyordu
+// (yalnız m.curves.z). Çekirdeğin ölçütü (mountHasCurve) ise analitik fit'i de,
+// x/y eksenlerini de sayar. İkisi ayrıştığında rapor SESSİZCE YALAN SÖYLER:
+// kütüphanedeki TK035/TK040/TK050 nonlineerliği yalnız `fits` ile taşır, çözücü
+// Newton koşar, antet "Lineer (kapalı-form)" yazar.
+//
+// Aynı belge kendi içinde de çelişiyordu: §8.12 sönüm bölümü R.kBasisTangent'a
+// (doğru ölçüt) baktığı için "Nonlineer takoz bulunduğundan…" paragrafını
+// basarken kapak "Lineer" diyordu.
+describe('nonlineer sınıflandırması — rapor ile çekirdek AYNI cevabı vermeli', () => {
+  const core = require('../../js/mount-core.js');
+
+  // Yalnız ANALİTİK FİT taşıyan takoz — gömülü TK035/TK040/TK050 tam olarak böyle
+  // (nokta tablosu YOK). _mntToSI eksen başına fit'i curve'e tercih eder.
+  const fitMount = (m) => Object.assign({}, m, {
+    fits: { z: { form: 'asym', comp: { k0: 367, xmax: 5.6 }, ext: { k0: 361, c3: 2.2 } } },
+  });
+  const curveMount = (m) => Object.assign({}, m, {
+    curves: { z: [[-0.02, -1000], [0, 0], [0.02, 1000]] },
+  });
+  // Yalnız X ekseninde nonlineer: çekirdek bunu da Newton'a yönlendirir.
+  const xOnlyMount = (m) => Object.assign({}, m, {
+    curves: { x: [[-0.02, -900], [0, 0], [0.02, 900]] },
+  });
+
+  const withMounts = (mounts, extra) => Object.assign({
+    mp: R.mp, gather: R.gather, mounts,
+    allCases: [{ res: { checks: { converged: true, stopConverged: true, newtonIters: 5 } } }],
+    solveMode: 'auto', solvedNL: mounts.some(core.mountHasCurve), nlNoCurve: false,
+  }, extra || {});
+
+  test('ÖLÇÜT KİLİDİ: rapor filtresi çekirdeğin mountHasCurve\'ü ile birebir', () => {
+    // Bu test kırılırsa iki ölçüt yeniden ayrışmış demektir — asıl hatanın kökü buydu.
+    [
+      R.mounts,
+      [fitMount(R.mounts[0])].concat(R.mounts.slice(1)),
+      [curveMount(R.mounts[0])].concat(R.mounts.slice(1)),
+      [xOnlyMount(R.mounts[0])].concat(R.mounts.slice(1)),
+      [curveMount(R.mounts[0]), curveMount(R.mounts[1]), fitMount(R.mounts[2]), fitMount(R.mounts[3])],
+    ].forEach((mounts) => {
+      expect(rep._mntRepNLMounts({ mounts })).toHaveLength(mounts.filter(core.mountHasCurve).length);
+    });
+  });
+
+  test('analitik fit\'li model → antet Newton der, "Lineer" DEMEZ', () => {
+    const Rf = withMounts([fitMount(R.mounts[0])].concat(R.mounts.slice(1)));
+    const antet = rep._mntRepAntet(Rf);
+    expect(antet).toContain('Newton-Raphson');
+    expect(antet).not.toMatch(/Lineer \(kapalı-form\)/);
+  });
+
+  test('analitik fit\'li model → §8 nonlineer notu BASILIYOR (yakınsama izi dahil)', () => {
+    const Rf = withMounts([fitMount(R.mounts[0])].concat(R.mounts.slice(1)));
+    const note = rep._mntRepNLNote(Rf);
+    expect(note).toContain('Nonlineer çözüm');
+    expect(note).toContain(R.mounts[0].name);
+    expect(note).toContain('yakınsadı');
+    // Yasa BİÇİMİ doğru anlatılmalı: analitik fit "ölçülmüş eğri" değildir
+    expect(note).not.toContain('ölçülmüş düşey kuvvet–sehim eğrisi');
+  });
+
+  test('RAPOR KENDİ İÇİNDE ÇELİŞMEZ: kapak "Lineer" derken §8 "nonlineer" diyordu', () => {
+    // §8.7 R.kBasisTangent'a bakar (çözücünün DOĞRU bayrağı) ve "Nonlineer takoz
+    // bulunduğundan sönüm katsayıları da … tanjant rijitlikten türetilmiştir"
+    // paragrafını basar. Kapak başka bir ölçütten beslendiği için AYNI BELGEDE
+    // iki zıt hüküm çıkıyordu.
+    const M6 = core.buildM6(R.mp.m, R.mp.I_G);
+    const C6 = core.buildCdamp(R.mounts, R.mp.cg,
+      R.mounts.map((m) => ({ c: [2000, 2000, 2000] })));
+    const Rf = Object.assign({}, R, {
+      mounts: [fitMount(R.mounts[0])].concat(R.mounts.slice(1)),
+      solveMode: 'auto', solvedNL: true, nlNoCurve: false,
+      kBasisTangent: true, zeta: 0.02,
+      modalDamping: core.modalDampingRatios(R.modes, M6, C6),
+    });
+    const modal = rep._mntRepStep5Modal(Rf, core);
+    // Paragraf gerçekten basılmalı, yoksa test boşa döner
+    expect(modal).toContain('Nonlineer takoz bulunduğundan');
+    expect(rep._mntRepAntet(Rf)).not.toMatch(/Lineer \(kapalı-form\)/);
+    expect(rep._mntRepAntet(Rf)).toContain('Newton-Raphson');
+  });
+
+  test('yalnız X ekseninde eğri → Newton (z kısıtı kaldırıldı)', () => {
+    const Rx = withMounts([xOnlyMount(R.mounts[0])].concat(R.mounts.slice(1)));
+    expect(rep._mntRepNLMounts(Rx)).toHaveLength(1);
+    expect(rep._mntRepAntet(Rx)).toContain('Newton-Raphson');
+  });
+
+  test('karışık envanterde SAYI doğru: 2 nokta tablosu + 2 fit = 4', () => {
+    const Rm = withMounts([curveMount(R.mounts[0]), curveMount(R.mounts[1]),
+                           fitMount(R.mounts[2]), fitMount(R.mounts[3])]);
+    expect(rep._mntRepNLMounts(Rm)).toHaveLength(4);
+    expect(rep._mntRepAntet(Rm)).toContain('4');
+  });
+
+  test('kullanıcı "Lineer" seçtiyse antet bunu SÖYLER', () => {
+    // solveMode='linear' iken çözücü curves+fits'i sıyırır (cp-mount.js:3123);
+    // rapor R.mounts'a bakarak "eğri var mıydı" diyemez — niyeti solveMode söyler.
+    const Rl = withMounts(R.mounts, { solveMode: 'linear', solvedNL: false });
+    expect(rep._mntRepAntet(Rl)).toMatch(/yok sayıl/i);
+  });
+
+  test('nonlineer istendi ama eğri yok → rapor bunu SÖYLER', () => {
+    const Rn = withMounts(R.mounts, { solveMode: 'nonlinear', solvedNL: false, nlNoCurve: true });
+    const antet = rep._mntRepAntet(Rn);
+    expect(antet).toMatch(/eğri/i);
+    expect(antet).not.toContain('Newton-Raphson');
+  });
+
+  test('R.solvedNL OTORİTEDİR — eldeki takozlardan yeniden türetilmez', () => {
+    // Çözücü "Newton koştu" diyorsa rapor onu ezmemeli.
+    const Rs = withMounts(R.mounts, { solveMode: 'auto', solvedNL: true });
+    expect(rep._mntRepAntet(Rs)).toContain('Newton-Raphson');
+  });
+});
