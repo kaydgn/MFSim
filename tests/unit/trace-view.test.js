@@ -847,3 +847,111 @@ describe('birleşik şeritte sinyal başına Y ekseni', () => {
     expect(T.veTrAxisByUnit(L, null)).toBe(L.axes[0]);
   });
 });
+
+// ── Oluk geometrisi: çok eksenli şeritte sütunlar ────────────────────────────
+//
+// BU BLOK BİR HATADAN DOĞDU. İlk sürümde birleşik şeritte her eksenin adı
+// oluğa dikey bir şerit olarak konuyordu. Sonuç: dört eksende oluk 215 px'e
+// çıkıyor, dar pencerede üst sınıra takılıyor ve en dıştaki eksen tuvalin
+// DIŞINA (x = −1,5) düşüp tamamen görünmez oluyordu. Kullanıcının gördüğü
+// şey "sadece bir Y ekseni var" idi.
+//
+// Adlar şeridin içindeki yatay lejanta taşındı; oluk yalnız sayıları taşıyor.
+// Buradaki testler sütun matematiğini kilitliyor — gözle yakalanması zor,
+// çünkü hata ancak belirli pencere genişliği + eksen sayısı bileşiminde çıkıyor.
+describe('oluk geometrisi — çok eksenli şerit', () => {
+  // veTrGeometry canvas'tan yalnız metin genişliği istiyor; sahte ctx yeterli
+  // ve testi gerçek canvas'a bağlamaktan kurtarıyor.
+  const fakeCtx = (perChar = 6) => ({
+    font: '',
+    measureText: (t) => ({ width: String(t).length * perChar }),
+  });
+  const axis = (unit, min, max) => ({
+    unit, yMin: min, yMax: max, yLog: false, discrete: false, levels: null,
+    hasData: true, color: '#000', sigs: [],
+  });
+  const lane = (...axes) => ({ axes, def: { h: VE_TR.LANE_DEF_H }, sigs: [] });
+  const view = { xMin: 0, xMax: 1, dataMin: 0, dataMax: 1, xLog: false };
+
+  test('eksen sütunları SOLA doğru dizilir, birincil çizim alanına bitişik', () => {
+    const L = lane(axis('1/min', 800, 2200), axis('km/h', 0, 40));
+    const geo = T.veTrGeometry(fakeCtx(), [L], view, 1200, 600);
+
+    // Birincil eksenin etiket x'i tek eksenli şeritteki değerin AYNISI olmalı:
+    // birleştirme, birleşmeyen şeritlerin görünümünü kaydırmamalı.
+    expect(L.axes[0]._labelX).toBe(geo.gutter - 6);
+    // İkincil eksen SOLDA ve birincisiyle çakışmıyor
+    expect(L.axes[1]._labelX).toBeLessThan(L.axes[0]._labelX - L.axes[0]._w);
+  });
+
+  test('HİÇBİR eksen sütunu ad şeridinin altına ya da tuval dışına düşmez', () => {
+    // Hatanın tam senaryosu: dört eksen + geniş etiketler + dar pencere.
+    const L = lane(axis('Nm', 100000, 999999), axis('Nm', 100000, 999999),
+                   axis('W', 100000, 999999), axis('W', 100000, 999999));
+    [1400, 1000, 800, 640].forEach((w) => {
+      const geo = T.veTrGeometry(fakeCtx(), [L], view, w, 600);
+      L.axes.forEach((a) => {
+        if (a._fits === false) return;         // çizilmeyecek, kontrol dışı
+        expect(a._labelX - a._w).toBeGreaterThanOrEqual(VE_TR.TITLE_BAND);
+        expect(a._labelX).toBeLessThanOrEqual(geo.gutter);
+      });
+      // Çizim alanı yutulmamalı
+      expect(geo.plotW).toBeGreaterThan(w * 0.3);
+    });
+  });
+
+  test('sığmayan sütun İŞARETLENİR — sessizce yarım çizilmez', () => {
+    // Yarısı kesik sayılar okunamaz ve şerit adının üstüne biner; çizim
+    // katmanı _fits===false olanı atlıyor, lejant da sebebini yazıyor.
+    const many = [];
+    for (let i = 0; i < 8; i++) many.push(axis('Nm', 100000, 999999));
+    const L = lane(...many);
+    const geo = T.veTrGeometry(fakeCtx(9), [L], view, 520, 600);
+    const dropped = L.axes.filter((a) => a._fits === false);
+    expect(dropped.length).toBeGreaterThan(0);
+    // Sığanların hepsi gerçekten sığmalı
+    L.axes.filter((a) => a._fits !== false).forEach((a) => {
+      expect(a._labelX - a._w).toBeGreaterThanOrEqual(VE_TR.TITLE_BAND);
+    });
+  });
+
+  test('oluk EN ÇOK EKSENLİ şeride göre kurulur, plotX pano genelinde tek', () => {
+    // Bütün şeritler aynı zaman ekseninde hizalı durmalı; oluk şerit başına
+    // değişseydi şeritler birbirine göre kayardı.
+    const merged = lane(axis('1/min', 800, 2200), axis('km/h', 0, 40));
+    const single = lane(axis('°C', 20, 60));
+    const geo = T.veTrGeometry(fakeCtx(), [merged, single], view, 1200, 600);
+    expect(single.axes[0]._labelX).toBe(merged.axes[0]._labelX);
+    expect(geo.plotX).toBe(geo.gutter);
+  });
+
+  test('tek eksenli şeritte oluk eskisi gibi dar kalır', () => {
+    // Regresyon kapısı: çok eksen desteği, birleştirmeyen kullanıcının
+    // grafiğini daraltmamalı.
+    const one = lane(axis('1/min', 800, 2200));
+    const geo = T.veTrGeometry(fakeCtx(), [one], view, 1200, 600);
+    expect(geo.gutter).toBeLessThanOrEqual(VE_TR.GUTTER_MAX);
+    expect(geo.gutter).toBeGreaterThanOrEqual(VE_TR.GUTTER_MIN);
+  });
+});
+
+describe('veTrAxisTitle — her eksen kendi adını taşır', () => {
+  const s = (name, unit) => ({ sensor: { name, unit } });
+
+  test('tek sinyalli eksende sinyalin adı ve birimi', () => {
+    expect(T.veTrAxisTitle({ sigs: [s('EngSpeed', '1/min')] })).toBe('EngSpeed [1/min]');
+  });
+
+  test('birim yoksa yalnız ad', () => {
+    expect(T.veTrAxisTitle({ sigs: [s('Mode', '')] })).toBe('Mode');
+  });
+
+  test('ekseni paylaşan sinyallerde ilk ad + sayaç', () => {
+    expect(T.veTrAxisTitle({ sigs: [s('A', 'N'), s('B', 'N')] })).toBe('A [N] +1');
+  });
+
+  test('boş eksende boş dize — çizim katmanı patlamamalı', () => {
+    expect(T.veTrAxisTitle({ sigs: [] })).toBe('');
+    expect(T.veTrAxisTitle(null)).toBe('');
+  });
+});

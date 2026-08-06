@@ -10211,6 +10211,13 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // zaman ekseninde hizalı durmalı). Az eksenli şeritler soldaki boşluğu boş
   // bırakır; eksenler her zaman çizim alanına YASLI dizilir, böylece birincil
   // eksen tüm şeritlerde aynı yerde olur.
+  //
+  // OLUKTA YALNIZCA SAYILAR DURUR — eksen ADLARI şeridin içindeki lejanttadır
+  // (veTrDrawAxisLegend). Ad şeridini eksen başına oluğa koymak denendi ve
+  // ÖLÇÜLDÜ: dört eksende oluk 215 px'e çıkıyor, 700 px'lik bir pencerede üst
+  // sınıra takılıyor ve en dıştaki eksen tuvalin dışına (x = −1,5) düşüp
+  // tamamen görünmez oluyordu. Ad yatay bir lejantta çok daha az yer kaplıyor
+  // ve şeridin içinde bol boşluk var.
   var maxStack = 0, maxAxes = 1;
   lanes.forEach(function(lane) {
     var axes = lane.axes || [lane];
@@ -10234,11 +10241,19 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // Eksen sütunlarının x konumları. Birincil eksen (i=0) çizim alanına
   // bitişik: onun etiket x'i gutter-6, yani tek eksenli şeritteki değerin
   // TAM AYNISI — eski görünüm bozulmuyor.
+  //
+  // GÜVENLİK KAPISI: üst sınıra takılan bir yığında en dıştaki sütun ad
+  // şeridinin (TITLE_BAND) altına ya da tuvalin dışına düşebilir. Böyle bir
+  // eksen ÇİZİLİR ama OKUNAMAZ — kullanıcı sayıları göremediği için ekseni
+  // "yok" sanar. Sığmayan sütun işaretlenir ve çizim katmanı onu atlar;
+  // eğrisi yerinde kalır, şeridi ayırmak (ya da pencereyi genişletmek)
+  // eksenini geri getirir.
   lanes.forEach(function(lane) {
     var off = 0;
     (lane.axes || []).forEach(function(a) {
       a._labelX = gutter - 6 - off;
       a._tickX = gutter - off;
+      a._fits = (a._labelX - a._w) >= VE_TR.TITLE_BAND;
       off += a._w + VE_TR.AXIS_GAP;
     });
   });
@@ -10389,6 +10404,15 @@ function veTrStrokeSeries(ctx, geo, lane, rect, series, timeArr, discrete) {
   ctx.stroke();
 }
 
+// Bir eksenin adı. Eksende tek sinyal varsa onun adı; birden çok sinyal aynı
+// ekseni paylaşıyorsa (tek eksenli şeridin çok sinyalli hâli) ilk sinyalin adı
+// ve kaç tane daha olduğu.
+function veTrAxisTitle(axis) {
+  var sigs = (axis && axis.sigs) ? axis.sigs : [];
+  if(!sigs.length) return '';
+  return veTrLaneTitle(sigs[0].sensor) + (sigs.length > 1 ? ' +' + (sigs.length - 1) : '');
+}
+
 // Şerit başlığı dar şeride sığmıyorsa ÖNCE bileşen öneki düşer, sonra kısaltılır.
 // Harf harf kesmek "[SW] Şanzıman Kont…" gibi bir başlık üretiyordu: en ayırt
 // edici parça (sinyalin adı) tamamen kayboluyor, yedi şeridin beşi aynı
@@ -10405,6 +10429,77 @@ function veTrFitTitle(ctx, title, maxW) {
   }
   while(t.length > 3 && ctx.measureText(t + '…').width > maxW) t = t.slice(0, -1);
   return t + '…';
+}
+
+// ── Çizim: birleşik şeridin eksen lejantı ────────────────────────────────────
+//
+// Çok eksenli şeritte hangi sayının hangi eğriye ait olduğu SORULMAMALI. Oluğa
+// eksen başına dikey ad şeridi koymak denendi ve ölçüldü: dört eksende oluk
+// 215 px'e çıkıyor, dar pencerede en dıştaki eksen tuvalin dışına düşüyordu.
+// Ad yatay yazıldığında aynı bilgi çok daha az yer kaplıyor ve şeridin
+// içindeki boşluğa sığıyor.
+//
+// Sıra EKSEN SIRASI ile aynı: soldaki ad, oluktaki en içteki (çizim alanına
+// en yakın) sütuna karşılık gelir. Böyle olmasaydı lejant eşlemeyi çözmek
+// yerine yeni bir bilmece eklerdi.
+function veTrDrawAxisLegend(ctx, geo, lane, rect) {
+  var axes = lane.axes || [];
+  if(axes.length < 2) return;
+
+  ctx.save();
+  ctx.font = '600 9px ' + VE_TR.FONT;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+
+  var DOT = 6, GAP_IN = 4, GAP_OUT = 11, PAD = 4;
+  var items = axes.map(function(a) {
+    // Sığmayan eksen SESSİZ kalmamalı: sayıları çizilmedi, sebebi burada yazılı.
+    var t = veTrAxisTitle(a) + (a._fits === false ? ' (oluğa sığmadı)' : '');
+    return { color: a.color, text: t, w: DOT + GAP_IN + ctx.measureText(t).width };
+  });
+
+  var total = items.reduce(function(s, it) { return s + it.w; }, 0)
+              + GAP_OUT * (items.length - 1);
+  var maxW = geo.plotW - 16;
+
+  // Sığmıyorsa SONDAN kırp ve kaç tanesinin düştüğünü yaz. Sessizce taşırmak
+  // lejantı eğrilerin üstüne yayardı.
+  var shown = items, extra = 0;
+  if(total > maxW) {
+    shown = []; var acc = 0;
+    for(var i = 0; i < items.length; i++) {
+      var next = acc + items[i].w + (shown.length ? GAP_OUT : 0);
+      if(next > maxW - 34) break;
+      shown.push(items[i]); acc = next;
+    }
+    extra = items.length - shown.length;
+    total = acc + (extra ? GAP_OUT + 30 : 0);
+  }
+
+  var x = geo.plotX + 8;
+  var y = rect.y + 9;
+
+  // Zemin: eğri lejantın altından geçtiğinde yazı okunmaz kalmasın.
+  ctx.fillStyle = (typeof veThemeRgba === 'function')
+    ? veThemeRgba('--bg-primary', 0.82, 'rgba(20,22,28,0.82)') : 'rgba(20,22,28,0.82)';
+  ctx.fillRect(x - PAD, y - 7, Math.min(total, maxW) + PAD * 2, 14);
+
+  shown.forEach(function(it, i) {
+    if(i) x += GAP_OUT;
+    ctx.fillStyle = it.color;
+    ctx.fillRect(x, y - 2.5, DOT, 5);
+    x += DOT + GAP_IN;
+    ctx.fillText(it.text, x, y);
+    x += it.w - DOT - GAP_IN;
+  });
+
+  if(extra) {
+    ctx.fillStyle = (typeof veThemeRgba === 'function')
+      ? veThemeRgba('--text-muted', 0.9, 'rgba(140,148,160,0.9)') : 'rgba(140,148,160,0.9)';
+    ctx.fillText('+' + extra, x + GAP_OUT, y);
+  }
+
+  ctx.restore();
 }
 
 // ── Çizim: tek şerit ─────────────────────────────────────────────────────────
@@ -10431,6 +10526,9 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
   var axes = lane.axes || [lane];
   axes.forEach(function(ax, ai) {
     var isPrimary = (ai === 0);
+    // Oluğa sığmayan sütun çizilmez: yarısı kesik sayılar okunamaz ve şerit
+    // adının üstüne biner. Lejant o ekseni "oluğa sığmadı" diye işaretler.
+    if(ax._fits === false) return;
     // _labelX / _tickX geometri aşamasında konuyor. Geometri koşmadan
     // çizilirse (test, beklenmedik yol) birincil eksenin eski konumuna düş.
     var labelX = (ax._labelX != null) ? ax._labelX : (x0 - 6);
@@ -10541,15 +10639,23 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
 
   // Döndürülmüş şerit başlığı — CANoe'da eksen adı dikey yazılır: ad ne kadar
   // uzun olursa olsun oluk genişliğini büyütmez.
-  ctx.save();
-  ctx.translate(VE_TR.TITLE_BAND - 5, y0 + ph / 2);
-  ctx.rotate(-Math.PI / 2);
-  ctx.font = '600 9.5px ' + VE_TR.FONT;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = lane.color;
-  ctx.fillText(veTrFitTitle(ctx, lane.title, ph - 6), 0, 0);
-  ctx.restore();
+  //
+  // ÇOK EKSENLİ ŞERİTTE ÇİZİLMEZ: orada "EngSpeed [1/min] +1" yalnız birinci
+  // sinyali adlandırıp ötekileri adsız bırakıyordu ve grafik okunamıyordu.
+  // Adların tamamı şeridin içindeki lejantta (hemen aşağıda).
+  if(axes.length <= 1) {
+    ctx.save();
+    ctx.translate(VE_TR.TITLE_BAND - 5, y0 + ph / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.font = '600 9.5px ' + VE_TR.FONT;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = lane.color;
+    ctx.fillText(veTrFitTitle(ctx, lane.title, ph - 6), 0, 0);
+    ctx.restore();
+  } else {
+    veTrDrawAxisLegend(ctx, geo, lane, rect);
+  }
 
   // Veri yoksa şerit boş kalmasın: neden boş olduğunu söylesin
   if(!lane.hasData) {
