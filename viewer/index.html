@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="slate">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Kayıtlı temayı İLK boyamadan önce uygula; theme.js sonra devralır. -->
+  <script>try{var _mfT=localStorage.getItem('mf-theme');if(_mfT)document.documentElement.setAttribute('data-theme',_mfT);}catch(e){}</script>
+  <title>MFSim Ölçüm Görüntüleyici</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Stiller MFSim ile ORTAK (../css). Kopyalanmıyor: bir tema rötuşu iki
+       programda birden geçerli olsun ve depoda 650 KB ikinci kopya durmasın.
+       viewer/build.js tek dosya üretirken bunları gömüyor. -->
+  <link rel="stylesheet" href="../css/fonts.css" />
+  <link rel="stylesheet" href="../css/icons.css" />
+  <link rel="stylesheet" href="../css/styles.css" />
+
+  <style>
+    /* Görüntüleyiciye özgü kabuk. MFSim'de bu iş krom bandı + sayfa rayı +
+       şerit menüsüne yayılıyor; burada tek satırlık bir başlık yetiyor. */
+    html, body { height:100%; margin:0; }
+    body {
+      display:flex; flex-direction:column;
+      background:var(--bg-primary); color:var(--text-primary);
+      font-family:var(--font-ui, 'Inter', system-ui, sans-serif);
+      overflow:hidden;
+    }
+    #mfv-topbar {
+      display:flex; align-items:center; gap:10px; flex-shrink:0;
+      padding:7px 12px;
+      background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary));
+      border-bottom:2px solid var(--border-color);
+      -webkit-user-select:none; user-select:none;
+    }
+    #mfv-topbar .mfv-brand {
+      display:flex; align-items:center; gap:7px;
+      font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);
+    }
+    #mfv-topbar .mfv-sub {
+      font-size:var(--fs-micro); color:var(--text-muted);
+      padding-left:10px; margin-left:4px;
+      border-left:1px solid var(--border-color);
+    }
+    #mfv-topbar .mfv-spacer { margin-left:auto; }
+    #mfv-topbar .mfv-hint { font-size:var(--fs-micro); color:var(--text-muted); }
+    /* .ve-sub-page flex:1 + min-height:0 bekliyor; body kolonu onu karşılıyor. */
+    #ve-page-sonuclar { display:flex; flex-direction:row; }
+  </style>
+</head>
+<body>
+
+<header id="mfv-topbar">
+  <span class="mfv-brand"><span class="mf-ico mf-ico-activity"></span> MFSim Ölçüm Görüntüleyici</span>
+  <span class="mfv-sub">Excel / CSV ölçüm dosyalarını okur ve diyagrama döker</span>
+  <span class="mfv-spacer"></span>
+  <span class="mfv-hint">Tek dosya · kurulum gerekmez · veri bilgisayarınızdan çıkmaz</span>
+</header>
+
+<!-- ═══ ÖLÇÜM SAYFASI ═══
+     Yerleşim MFSim'in Sonuçlar sayfasıyla BİREBİR aynı (index.html:800-844):
+     solda Veri Gezgini, sağda ölçüm penceresi. Kimlikler de aynı, çünkü
+     viewer/js/ altındaki modüller (trace-view, signal-tree) bu kimlikleri
+     arıyor. Değiştirilirse kopyalar da değişmek zorunda kalırdı. -->
+<div id="ve-page-sonuclar" class="ve-sub-page" role="tabpanel" aria-label="Ölçüm">
+
+  <!-- Sol Panel: Veri Gezgini -->
+  <div id="ve-results-browser" style="width:250px; min-width:160px; max-width:400px; background:var(--bg-secondary); border-right:2px solid var(--border-color); display:flex; flex-direction:column; position:relative; flex-shrink:0;">
+    <div id="ve-results-browser-resizer" style="position:absolute; top:0; right:-3px; width:6px; height:100%; cursor:ew-resize; z-index:10;"></div>
+
+    <div style="padding:8px 12px; background:linear-gradient(180deg, var(--bg-tertiary), var(--bg-secondary)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:6px;">
+      <span style="font-size:var(--fs-lg); font-weight:700; color:var(--text-heading);"><span class="mf-ico mf-ico-bar-chart"></span> Veri Gezgini</span>
+      <button type="button" id="ve-import-btn" class="ve-imp-tool" onclick="veImpOpenPicker()" style="margin-left:auto;"
+              title="Excel/CSV ölçüm dosyasını içe aktar (Vector CANoe çıktısı)">
+        <span class="mf-ico mf-ico-upload"></span> İçe Aktar
+      </button>
+    </div>
+
+    <!-- Arama -->
+    <div style="padding:4px 8px; border-bottom:1px solid var(--border-color); position:relative;">
+      <span class="mf-ico mf-ico-search" style="position:absolute; left:16px; top:50%; transform:translateY(-50%); color:var(--text-muted); pointer-events:none; font-size:var(--fs-md);"></span>
+      <input type="text" id="ve-results-search" placeholder="Ara..." oninput="veFilterResultsTree(this.value)" style="width:100%; padding:5px 8px 5px 26px; font-size:var(--fs-md); border:1px solid var(--border-color); border-radius:var(--radius-sm); background:var(--bg-input); color:var(--text-primary);">
+    </div>
+
+    <div id="ve-results-tree" style="flex:1; overflow-y:auto; padding:4px 0; font-size:var(--fs-md);"></div>
+  </div>
+
+  <!-- Sağ Panel: Ölçüm Penceresi (kabuğu veTrBuildShell çizer) -->
+  <div class="ve-results-grid" id="ve-results-grid" style="position:relative;">
+    <div id="ve-results-panels" style="flex:1; display:flex; flex-direction:column; min-width:0; min-height:0;"></div>
+  </div>
+</div>
+
+<!-- ═══ ÖLÇÜM İÇE AKTARMA SİHİRBAZI ═══ (index.html:945-957 ile birebir) -->
+<div id="ve-import-overlay" class="ve-settings-overlay" style="display:none;" onmousedown="if(event.target===this) veImpCloseModal()">
+  <div class="ve-settings-modal ve-imp-modal" role="dialog" aria-labelledby="ve-import-title">
+    <div class="ve-settings-header">
+      <span id="ve-import-title"><span class="mf-ico mf-ico-upload"></span> Ölçüm Verisi İçe Aktar</span>
+      <button class="ve-settings-close" onclick="veImpCloseModal()" title="Kapat" aria-label="Kapat">✕</button>
+    </div>
+    <div class="ve-imp-body" id="ve-import-content"></div>
+    <div class="ve-imp-footer">
+      <span class="ve-imp-hint">İlk sütun genelde zaman eksenidir — yukarıdan değiştirebilirsiniz.</span>
+      <button type="button" class="ve-imp-btn" onclick="veImpCloseModal()">İptal</button>
+      <button type="button" class="ve-imp-btn ve-imp-btn-primary" id="ve-import-apply" onclick="veImpConfirm()" disabled>Diyagramlara Aktar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODÜLLER ═══
+     MFSim'de bunlar login sonrası js/loader.js ile sırayla yükleniyor (splash
+     ekranı, ilerleme çubuğu). Görüntüleyicide giriş kapısı YOK: dosya çift
+     tıklanınca doğrudan açılmalı, o yüzden düz <script src> ve düz sıra.
+     Sıra ÖNEMLİ: board.js, kendisinden önce gelen modüllerin globallerine
+     çalışma anında bakıyor; app.js hepsinden sonra başlatıyor. -->
+<script src="js/theme.js"></script>
+<script src="js/measure-core.js"></script>
+<script src="js/xlsx-read.js"></script>
+<script src="js/measure-import.js"></script>
+<script src="js/signal-tree.js"></script>
+<script src="js/board.js"></script>
+<script src="js/trace-view.js"></script>
+<script src="js/measure-import-ui.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

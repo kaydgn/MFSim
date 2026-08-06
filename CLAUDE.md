@@ -10,8 +10,21 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 - `build.js` — Build script (`index.html` + `js/` + `css/` → `MFSim_Code.html`)
 - `tests/unit/` — Jest birim testleri
 - `tests/e2e/` — Playwright E2E testleri
+- `viewer/` — **Ölçüm Görüntüleyici** (ayrı program, bkz. `viewer/README.md`)
+- `MFSim_Olcum_Goruntuleyici.html` — Görüntüleyicinin tek dosya çıktısı (`npm run build:viewer` üretir; MFSim_Code.html'in aksine **git'e dahil** — dağıtımı bu dosyanın indirilmesiyle oluyor)
 
 **ÖNEMLİ:** Kod değişiklikleri **yalnızca** `js/` ve `css/` klasörlerindeki modüler dosyalara ve `index.html`'e yapılır. `MFSim_Code.html` dosyası **elle düzenlenmez** — `npm run build` ile otomatik üretilir.
+
+### Ölçüm Görüntüleyici (`viewer/`)
+
+MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
+dosyası olarak dağıtılıyor. `viewer/js/` altındaki YEDİ dosya `js/`'ten
+**birebir kopya** (`trace-view.js`'te iki işaretli fark hariç). Bu yüzden:
+
+**İçe aktarma / şerit diyagramı tarafında bir düzeltme yaparsan
+(`xlsx-read.js`, `measure-import*.js`, `measure-core.js`, `signal-tree.js`,
+`trace-view.js`), aynı düzeltmeyi `viewer/js/` altına da taşı** — `cp` yeter.
+Taşımazsan iki program zamanla ayrışır. Yordamı `viewer/README.md`'de.
 
 ## Çalışma Akışı (hızlı döngü)
 
@@ -98,7 +111,10 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/example-topology-center.test.js` | `js/cp-mount.js` + `assets/examples/` | Örnek JSON'ları kanvas merkezine açar |
 | `tests/unit/state.test.js` | `js/state.js` | Undo/redo stack yönetimi |
 | `tests/unit/toolbar-save.test.js` | `js/toolbar.js` | Proje kaydetme, JSON serileştirme, showSaveFilePicker |
+| `tests/unit/viewer-board.test.js` | `viewer/js/board.js` | Görüntüleyici panosu: bir panoda tek ölçüm dosyası kuralı, X ekseni seçenekleri, veri kapısı |
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
+| `tests/e2e/measure-import.spec.js` | İçe aktarma sihirbazı | Gerçek .xlsx → sütun tarama → X/Y seçimi → şeritler |
+| `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, çizim, sıfır ağ isteği |
 
 ## Sık Kullanılan Komutlar
 
@@ -108,6 +124,8 @@ npm run test:changed        # git'te değişen dosyalarla ilgili testler (jest -
 npm test                    # tüm birim testleri (sessiz) — commit öncesi
 npm run test:ci             # tüm birim testleri (--verbose --ci) — CI logları için
 npm run build               # MFSim_Code.html üret (modüler → monolitik) — commit/deploy öncesi
+npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Görüntüleyici)
+npm run build:all           # ikisi birden
 npm run test:e2e            # E2E testleri (Chromium gerekli)
 npm run test:all            # birim + E2E
 ```
