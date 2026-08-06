@@ -1033,15 +1033,53 @@ describe('oluk — eksen ad bloğu', () => {
     expect(geo.plotW).toBeGreaterThan(1200 * 0.5);
   });
 
-  test('tek eksenli şerit başlığı KENDİ sayılarının yanında durur', () => {
-    // Birleşik bir şerit oluğu genişletince, birleşmeyen şeritlerin başlığı
-    // sabit konumda kalsaydı sayılarından yüz piksel uzağa düşerdi.
+  // AD BLOĞU PANO GENELİNDE: ya tüm şeritlerde var ya hiçbirinde.
+  //
+  // Ara durum ölçülen bir kusurdu: yalnız birleşik şeride ad bloğu verilince
+  // oluk (pano geneli) o kadar genişliyor ama birleşmemiş şeritler o genişliği
+  // kullanmıyordu — sollarında 1024 px'lik ekranda çizim alanının dörtte biri
+  // kadar bomboş bir bant kalıyordu.
+  test('panoda TEK bir birleşik şerit varsa ad bloğunu TÜM şeritler kullanır', () => {
     const merged = lane(axis('1/min', 800, 2200, 'EngSpeed'), axis('km/h', 0, 40, 'VehSpeed'));
     const single = lane(axis('°C', 20, 60, 'Sicaklik'));
-    const geo = T.veTrGeometry(fakeCtx(), [merged, single], view, 1200, 600);
+    T.veTrGeometry(fakeCtx(), [merged, single], view, 1200, 600);
+
+    // Birleşmemiş şerit de yatay ad yazar → solunda ödenmiş boş bant kalmaz.
+    expect(single._nameX).toBe(4);
+    expect(single._nameW).toBeGreaterThan(0);
+    // Blok genişliği pano geneli: iki şeritte de aynı, yoksa adlar hizasız olur.
+    expect(single._nameW).toBe(merged._nameW);
+    // Ve tek eksenli şeridin sayıları da ad bloğunun sağında başlar.
+    const a = single.axes[0];
+    expect(a._labelX - a._w).toBeGreaterThanOrEqual(single._nameW + VE_TR.NAME_GAP);
+  });
+
+  test('hiç birleşme yoksa ad bloğu HİÇ açılmaz — oluk eskisi gibi dar', () => {
+    const l1 = lane(axis('1/min', 800, 2200, 'EngSpeed'));
+    const l2 = lane(axis('°C', 20, 60, 'Sicaklik'));
+    const geo = T.veTrGeometry(fakeCtx(), [l1, l2], view, 1200, 600);
+    [l1, l2].forEach((L) => {
+      expect(L._nameW).toBe(0);
+      expect(L._nameX).toBeNull();          // → çizimde döndürülmüş başlık
+    });
+    // Ad bloğu açılan panoyla kıyas: birleşmeyen pano belirgin biçimde dar.
+    const m = lane(axis('1/min', 800, 2200, 'EngSpeed'), axis('km/h', 0, 40, 'VehSpeed'));
+    const wide = T.veTrGeometry(fakeCtx(), [m], view, 1200, 600);
+    expect(geo.gutter).toBeLessThan(wide.gutter);
+  });
+
+  test('döndürülmüş başlık KENDİ sayılarının yanında durur', () => {
+    // Oluk pano geneli ve en geniş sayı sütununa göre ölçülüyor; sayıları dar
+    // olan şeridin başlığı sabit konumda kalsaydı sayılarından uzağa düşer,
+    // arada boş bir koridor kalırdı. Sütunlar çizim alanına yaslı olduğu için
+    // başlık da onları izler.
+    const wideNums = lane(axis('W', -12000000, 12000000, 'Guc'));
+    const narrow = lane(axis('-', 0, 1, 'Oran'));
+    const geo = T.veTrGeometry(fakeCtx(), [wideNums, narrow], view, 1200, 600);
+    expect(narrow._nameX).toBeNull();       // ad bloğu yok → döndürülmüş yol
     // Çizim katmanının kullandığı formül: labelX - w - 11, alt sınır eski konum
     const tx = Math.max(VE_TR.TITLE_BAND - 5,
-                        single.axes[0]._labelX - single.axes[0]._w - 11);
+                        narrow.axes[0]._labelX - narrow.axes[0]._w - 11);
     expect(tx).toBeGreaterThan(VE_TR.TITLE_BAND);      // sağa kaymış
     expect(tx).toBeLessThan(geo.gutter);
   });

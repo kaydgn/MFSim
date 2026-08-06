@@ -10268,25 +10268,44 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // Yatay ad bloğu oluğa alınınca ikisi de çözülüyor: çizim alanı temiz kalıyor
   // ve genişlik dikey yazıdan daha öngörülebilir (ad uzunluğu ÖLÇÜLÜYOR, üst
   // sınırla kırpılıyor).
+  // AD BLOĞU PANO GENELİNDE ya vardır ya yoktur.
+  //
+  // Yalnız birleşik şeritlere ad bloğu verilince şu oluyordu: oluk (pano geneli)
+  // ad bloğu kadar genişliyor, ama birleşmemiş şeritler o genişliği
+  // KULLANMIYOR — sollarında 180 px'lik bomboş bir bant kalıyordu. 1024 px'lik
+  // bir ekranda bu, çizim alanının dörtte biri.
+  //
+  // Kural: panoda EN AZ BİR birleşik şerit varsa yer zaten ödenmiştir; o zaman
+  // TÜM şeritler adlarını yatay yazar ve boşluk kalmaz. Hiç birleşme yoksa ad
+  // bloğu hiç açılmaz ve görünüm eskisi gibi dar kalır (döndürülmüş başlık).
+  // Tetikleyici tek ve pano düzeyinde: "birleştirdim mi, birleştirmedim mi".
+  var anyMulti = lanes.some(function(lane) { return (lane.axes || []).length > 1; });
+
+  ctx.font = '600 9px ' + VE_TR.FONT;
+  var nameW = 0;
+  if(anyMulti) {
+    lanes.forEach(function(lane) {
+      (lane.axes || [lane]).forEach(function(a) {
+        var nw = ctx.measureText(veTrAxisTitle(a)).width + VE_TR.NAME_DOT + VE_TR.NAME_DOT_GAP;
+        if(nw > nameW) nameW = nw;
+      });
+    });
+  }
+  // Ad bloğu üst sınırlı: uzun bir sinyal adı oluğu çizim alanına ortak
+  // edemez. Sığmayan ad kırpılır (veTrFitTitle), sütunlar yerinde kalır.
+  var blockW = anyMulti ? Math.min(nameW, VE_TR.NAME_MAX_W) : 0;
+
+  ctx.font = '9.5px ' + VE_TR.FONT;
   var maxStack = 0, maxAxes = 1;
   lanes.forEach(function(lane) {
     var axes = lane.axes || [lane];
-    var multi = axes.length > 1;
-    var total = 0, nameW = 0;
+    var total = 0;
     axes.forEach(function(a, i) {
       a._w = veTrAxisLabelW(ctx, a);
       total += a._w + (i > 0 ? VE_TR.AXIS_GAP : 0);
-      if(multi) {
-        ctx.font = '600 9px ' + VE_TR.FONT;
-        var nw = ctx.measureText(veTrAxisTitle(a)).width + VE_TR.NAME_DOT + VE_TR.NAME_DOT_GAP;
-        if(nw > nameW) nameW = nw;
-        ctx.font = '9.5px ' + VE_TR.FONT;
-      }
     });
-    // Ad bloğu üst sınırlı: uzun bir sinyal adı oluğu çizim alanına ortak
-    // edemez. Sığmayan ad kırpılır (veTrFitTitle), sütunlar yerinde kalır.
-    lane._nameW = multi ? Math.min(nameW, VE_TR.NAME_MAX_W) : 0;
-    total += multi ? (lane._nameW + VE_TR.NAME_GAP) : VE_TR.TITLE_BAND;
+    lane._nameW = blockW;
+    total += anyMulti ? (blockW + VE_TR.NAME_GAP) : VE_TR.TITLE_BAND;
     if(total > maxStack) maxStack = total;
     if(axes.length > maxAxes) maxAxes = axes.length;
   });
@@ -10313,11 +10332,10 @@ function veTrGeometry(ctx, lanes, view, w, availH) {
   // eksenini geri getirir.
   lanes.forEach(function(lane) {
     var axes = lane.axes || [];
-    var multi = axes.length > 1;
     // Ad bloğu oluğun EN SOLUNDA; sayı sütunları onun sağında, çizim alanına
-    // yaslı. Tek eksenli şeritte ad bloğu yok, sınır eski TITLE_BAND.
-    var leftEdge = multi ? (lane._nameW + VE_TR.NAME_GAP) : VE_TR.TITLE_BAND;
-    lane._nameX = multi ? 4 : null;
+    // yaslı. Ad bloğu yoksa sınır eski TITLE_BAND (döndürülmüş başlık şeridi).
+    var leftEdge = anyMulti ? (lane._nameW + VE_TR.NAME_GAP) : VE_TR.TITLE_BAND;
+    lane._nameX = anyMulti ? 4 : null;
     var off = 0;
     axes.forEach(function(a) {
       a._labelX = gutter - 6 - off;
@@ -10513,7 +10531,9 @@ function veTrFitTitle(ctx, title, maxW) {
 // temiz bırakıyor.
 function veTrDrawAxisNames(ctx, geo, lane, rect) {
   var axes = lane.axes || [];
-  if(axes.length < 2 || lane._nameX == null) return;
+  // Tek eksenli şerit de buraya düşebiliyor: panoda başka bir şerit birleşikse
+  // ad bloğu zaten açık ve bu şeridin adı da oraya yatay yazılıyor.
+  if(!axes.length || lane._nameX == null) return;
 
   var LH = VE_TR.NAME_LINE_H;
   var maxLines = Math.max(1, Math.floor((rect.h - 4) / LH));
@@ -10695,7 +10715,10 @@ function veTrDrawLane(ctx, geo, lane, rect, idx, timeArr, xTicks) {
   // ÇOK EKSENLİ ŞERİTTE ÇİZİLMEZ: orada "EngSpeed [1/min] +1" yalnız birinci
   // sinyali adlandırıp ötekileri adsız bırakıyordu ve grafik okunamıyordu.
   // Adların tamamı oluktaki yatay ad bloğunda (veTrDrawAxisNames).
-  if(axes.length <= 1) {
+  if(lane._nameX == null) {
+    // AD BLOĞU YOKSA (panoda hiç birleşik şerit yok) eski görünüm: döndürülmüş
+    // tek başlık. Ad bloğu varsa TEK eksenli şerit de adını yatay yazar —
+    // aksi hâlde solunda ödenmiş ama kullanılmayan bir bant kalırdı.
     // Başlık KENDİ sayılarının solunda durur, oluğun en solunda değil. Oluk
     // pano genelinde tek ve birleşik bir şerit onu genişletebiliyor; sabit
     // konumda kalsaydı birleştirme yapılan bir panoda tek eksenli şeritlerin

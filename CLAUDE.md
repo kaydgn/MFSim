@@ -23,8 +23,17 @@ dosyası olarak dağıtılıyor. `viewer/js/` altındaki YEDİ dosya `js/`'ten
 
 **İçe aktarma / şerit diyagramı tarafında bir düzeltme yaparsan
 (`xlsx-read.js`, `measure-import*.js`, `measure-core.js`, `signal-tree.js`,
-`trace-view.js`, `measure-dropzone.js`), aynı düzeltmeyi `viewer/js/` altına da taşı** — `cp` yeter.
-Taşımazsan iki program zamanla ayrışır. Yordamı `viewer/README.md`'de.
+`trace-view.js`, `measure-dropzone.js`), düzeltmeyi `viewer/js/` altına da taşı:**
+
+```bash
+npm run sync:viewer && npm run build:viewer
+```
+
+Elle `cp` YAPMA — `trace-view.js`'in iki yerel farkı var ve elle uzlaştırma bir
+kez yanlış yapıldı (görüntüleyici açılışta hata veriyordu). Farkların metni
+`viewer/sync.js` içinde; çapa tutmazsa script durur, sessizce yanlış dosya
+üretmez. `npm test` senkron bozulunca kırmızıya döner
+(`tests/unit/viewer-sync.test.js`). Ayrıntı: `viewer/README.md`.
 
 `viewer/js/theme.js`, `board.js`, `app.js` görüntüleyiciye özgüdür, kopya
 değildir — MFSim'den taşınmaz.
@@ -115,6 +124,7 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/state.test.js` | `js/state.js` | Undo/redo stack yönetimi |
 | `tests/unit/toolbar-save.test.js` | `js/toolbar.js` | Proje kaydetme, JSON serileştirme, showSaveFilePicker |
 | `tests/unit/viewer-board.test.js` | `viewer/js/board.js` | Görüntüleyici panosu: bir panoda tek ölçüm dosyası kuralı, X ekseni seçenekleri, veri kapısı |
+| `tests/unit/viewer-sync.test.js` | `viewer/sync.js` | Görüntüleyici kopyaları `js/`'ten geride kaldıysa kırmızı — sessiz ayrışmaya karşı kapı |
 | `tests/unit/measure-dropzone.test.js` | `js/measure-dropzone.js` | Sürükle-bırak uzantı süzgeci (sessiz yanlış çıktıya karşı) |
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
 | `tests/e2e/measure-import.spec.js` | İçe aktarma sihirbazı | Gerçek .xlsx → sütun tarama → X/Y seçimi → şeritler |
@@ -129,6 +139,7 @@ npm run test:changed        # git'te değişen dosyalarla ilgili testler (jest -
 npm test                    # tüm birim testleri (sessiz) — commit öncesi
 npm run test:ci             # tüm birim testleri (--verbose --ci) — CI logları için
 npm run build               # MFSim_Code.html üret (modüler → monolitik) — commit/deploy öncesi
+npm run sync:viewer         # js/ → viewer/js/ (yedi kopya + iki yerel fark)
 npm run build:viewer        # MFSim_Olcum_Goruntuleyici.html üret (Ölçüm Görüntüleyici)
 npm run build:all           # ikisi birden
 npm run test:e2e            # E2E testleri (Chromium gerekli)
