@@ -229,6 +229,45 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
     expect(vals).toEqual([800.5, 812.25, 825]);
   });
 
+  // SÜTUN BAŞLIĞI KULLANICI VERİSİDİR.
+  //
+  // ÖLÇÜLEN KUSUR: başlığı  Basinc <img src=x onerror="...">  olan bir CSV içe
+  // aktarılıp X ekseni listesi açıldığında <img> gerçekten DOM'a giriyor ve
+  // onerror ÇALIŞIYORDU. Kötü niyet gerekmiyor: '<' içeren bir başlık menüyü
+  // sessizce bozmaya zaten yetiyordu — görünen metinden koca bir parça
+  // kayboluyor, kullanıcı hangi sütunu seçtiğini bilemiyordu.
+  test('sütun başlığındaki HTML çalıştırılmaz, olduğu gibi YAZILIR', async ({ page }) => {
+    const KOTU = 'Basinc <img src=x onerror="window.__SIZDI=1"> "kapali"';
+    const satir = [`Time;${KOTU};Hiz`, 's;bar;km/h'];
+    for (let k = 0; k < 120; k++) {
+      satir.push([(k * 0.02).toFixed(3), (k % 50).toFixed(2), (k * 0.3).toFixed(2)].join(';'));
+    }
+    await openApp(page);
+    const [chooser] = await Promise.all([
+      page.waitForEvent('filechooser'), page.click('#ve-import-btn')]);
+    await chooser.setFiles({ name: 'kotu.csv', mimeType: 'text/csv',
+      buffer: Buffer.from(satir.join('\n'), 'utf8') });
+    await page.waitForFunction(() => veImpUI && veImpUI.rows && !veImpUI.busy,
+      null, { timeout: 30000 });
+    await page.click('#ve-import-apply');
+    await page.waitForFunction(() => veResultSlots[0].sensors.length === 2,
+      null, { timeout: 20000 });
+
+    await page.click('#ve-trace-toolbar [data-act="xaxis"]');
+    const r = await page.evaluate(() => {
+      const dd = document.querySelector('.ve-xaxis-dropdown, [id^=ve-xaxis-dd]');
+      return { acildi: !!dd, img: document.querySelectorAll('img[src="x"]').length,
+        sizdi: !!window.__SIZDI, metin: dd ? dd.innerText : '' };
+    });
+
+    expect(r.acildi).toBe(true);
+    expect(r.img).toBe(0);              // enjekte düğüm YOK
+    expect(r.sizdi).toBe(false);        // script KOŞMADI
+    // Ve kaçış metni yutmuyor: başlık olduğu gibi okunuyor.
+    expect(r.metin).toContain('<img src=x');
+    expect(r.metin).toContain('"kapali"');
+  });
+
   test('Excel olmayan dosya anlaşılır hata verir, uygulama ayakta kalır', async ({ page }) => {
     await openApp(page);
     const [chooser] = await Promise.all([
