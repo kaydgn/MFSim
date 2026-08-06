@@ -997,22 +997,40 @@ function getMntMountPropertiesHTML(node){
   return html;
 }
 
-// Takoz'a uygulanmış nonlineer z-eğrisi için SALT-OKUNUR bilgi notu. Eğri artık
+// Takoz'a uygulanmış nonlineer yasa için SALT-OKUNUR bilgi notu. Yasa artık
 // "Takoz Özellikleri" (kütüphane) bileşeninde bir takoz TİPİNİN özelliği olarak
-// tanımlanır; kütüphaneden uygulandığında node.data.curveZ'e kopyalanır. Burada
+// tanımlanır; kütüphaneden uygulandığında node.data'ya kopyalanır. Burada
 // yalnız gösterilir, düzenlenmez (düzenleme kütüphane panelinde).
+//
+// İKİ BİÇİM VAR ve ikisi de nonlineerdir (çekirdek mountHasCurve ikisini de
+// sayar, veMntApplyLib ikisini de kopyalar):
+//   fit<EKSEN>    analitik yasa (poly / asym)     — TK035, TK040, TK050
+//   curve<EKSEN>  ölçülmüş nokta tablosu (≥2)
+// Bu not eskiden yalnız curve'e bakıyordu: kütüphaneden TK035 uygulanan bir
+// takozda kart HİÇ çıkmıyor, takoz sıradan lineer bir takoz gibi görünüyordu —
+// oysa çözücü onu Newton ile çözüyor. Aynı yanlış ölçüt raporun kapağında da
+// vardı (cp-mount-report.js _mntRepNLMounts).
 function _mntMountCurveNote(node){
-  var axes=[['X','x'],['Y','y'],['Z','z']].filter(function(a){
-    var p=node.data['curve'+a[0]]; return Array.isArray(p)&&p.length>=2;
+  var d=node.data||{};
+  var axes=[], anyFit=false, anyTab=false;
+  [['X','x'],['Y','y'],['Z','z']].forEach(function(a){
+    var f=d['fit'+a[0]];
+    var p=d['curve'+a[0]];
+    // Biçim kapısı çekirdekle AYNI (makeAxisLaw): tanınmayan bir form nonlineer
+    // sayılmaz — sayılsaydı panel "eğri var" derken çözücü onu atardı.
+    if(f && (f.form==='poly' || f.form==='asym')){ axes.push(a[1]); anyFit=true; }
+    else if(Array.isArray(p) && p.length>=2){ axes.push(a[1]); anyTab=true; }
   });
   if(!axes.length) return '';
-  var labels=axes.map(function(a){ return a[1]; }).join(', ');
-  var carrier=(axes.length===1) ? ('<b style="color:var(--text-heading);">nonlineer '+labels+'-eğrisi</b>')
-                                 : ('<b style="color:var(--text-heading);">'+labels+'</b> eksenlerinde <b style="color:var(--text-heading);">nonlineer eğri</b>');
+  var labels=axes.join(', ');
+  var kaynak = (anyFit&&anyTab) ? 'analitik fit + ölçüm noktaları'
+             : anyFit ? 'analitik fit' : 'ölçülmüş nokta tablosu';
+  var carrier=(axes.length===1) ? ('<b style="color:var(--text-heading);">nonlineer '+labels+'-yasası</b>')
+                                 : ('<b style="color:var(--text-heading);">'+labels+'</b> eksenlerinde <b style="color:var(--text-heading);">nonlineer yasa</b>');
   var inner = '<div style="font-size:var(--fs-micro); color:var(--text-secondary); line-height:1.5;">'
-    + 'Bu takoz '+carrier+' taşıyor → çözücü onu Newton ile çözer. '
-    + 'Eğri <b>Takoz Özellikleri</b> bileşenindeki takoz tipinden gelir ve oradan düzenlenir.</div>';
-  return _mntCard('Kuvvet–Sehim Eğrisi ('+labels+')','nonlineer · kütüphaneden','var(--accent-danger)', inner);
+    + 'Bu takoz '+carrier+' taşıyor ('+_mntEsc(kaynak)+') → çözücü onu Newton ile çözer. '
+    + 'Yasa <b>Takoz Özellikleri</b> bileşenindeki takoz tipinden gelir ve oradan düzenlenir.</div>';
+  return _mntCard('Kuvvet–Sehim Yasası ('+labels+')', kaynak+' · kütüphaneden','var(--accent-danger)', inner);
 }
 
 // ─── Setters ─────────────────────────────────────────────────────────────────
@@ -3466,6 +3484,7 @@ if(typeof module!=='undefined' && module.exports){
     getMntModulePropertiesHTML: getMntModulePropertiesHTML,
     getMntMassPropertiesHTML: getMntMassPropertiesHTML,
     getMntMountPropertiesHTML: getMntMountPropertiesHTML,
+    _mntMountCurveNote: _mntMountCurveNote,
     getMntLibraryPropertiesHTML: getMntLibraryPropertiesHTML,
     getMntSolverPropertiesHTML: getMntSolverPropertiesHTML,
     veMntSetSolveMode: veMntSetSolveMode,

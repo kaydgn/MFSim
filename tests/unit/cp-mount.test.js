@@ -972,7 +972,10 @@ describe('Nonlineer z-eğrisi — kütüphane (Takoz Özellikleri) bileşeninde'
     expect(noCurve).not.toContain('veMntCurveEnable');
     expect(noCurve).not.toContain('z-eğrisi ekle');
     const withCurve = cp.getMntMountPropertiesHTML({ id: 'm1', type: 'mnt-mount', def: {}, data: { kzs: 640, curveZ: [[-10, -6400], [0, 0], [10, 6400]] } });
-    expect(withCurve).toContain('nonlineer z-eğrisi');          // salt-okunur bilgi notu
+    // Not artık hem nokta tablosunu hem analitik fit'i kapsıyor → "eğri" yerine
+    // "yasa"; kaynağını da yazıyor. Testin amacı değişmedi: salt-okunur bilgi notu.
+    expect(withCurve).toContain('nonlineer z-yasası');           // salt-okunur bilgi notu
+    expect(withCurve).toContain('ölçülmüş nokta tablosu');
     expect(withCurve).toContain('Takoz Özellikleri');
     expect(withCurve).not.toContain('veMntLibCurveSetPoint');   // burada düzenlenmez
   });
@@ -1280,5 +1283,73 @@ describe('Çözücü paneli — Matematik yok', () => {
     expect(html).not.toContain('Matematik');
     expect(html).not.toContain('veMntOpenMathModal');
     expect(html).toContain("veMntSolverCompute('sv')");
+  });
+});
+
+// ═══════ REGRESYON — Takoz panelinde nonlineer yasa notu (fit + tablo) ═══════
+//
+// Not eskiden yalnız node.data.curve{X,Y,Z}'ye bakıyordu. Gömülü kütüphanedeki
+// TK035/TK040/TK050 nonlineerliği YALNIZ analitik fit ile taşır (nokta tablosu
+// yok) — o takozlarda kart hiç çıkmıyor, takoz sıradan lineer bir takoz gibi
+// görünüyordu. Oysa çekirdek (mountHasCurve) fit'i nonlineer sayar ve çözücü
+// Newton koşar: panel ile fizik ayrışıyordu.
+describe('takoz paneli — nonlineer yasa notu ölçütü çekirdekle aynı', () => {
+  const FIT_ASYM = { form: 'asym', comp: { k0: 367, xmax: 5.6 }, ext: { k0: 361, c3: 2.2 } };
+  const FIT_POLY = { form: 'poly', k0: 415, c3: -2.44, c5: 0.0201 };
+  const TAB = [[-5, -1000], [0, 0], [5, 1000]];
+  const note = (extra) => cp._mntMountCurveNote(
+    { id: 'n1', data: Object.assign({ x: 0, y: 0, z: 0, kxs: 400, kys: 400, kzs: 200 }, extra) });
+
+  test('analitik fit\'li takoz (TK035 kalıbı) → kart ÇIKAR', () => {
+    const h = note({ fitZ: FIT_ASYM });
+    expect(h).not.toBe('');
+    expect(h).toContain('analitik fit');
+    expect(h).toContain('Newton');
+  });
+
+  test('nokta tablolu takoz → kart çıkar, kaynağı doğru anlatır', () => {
+    const h = note({ curveZ: TAB });
+    expect(h).toContain('ölçülmüş nokta tablosu');
+    expect(h).not.toContain('analitik fit');
+  });
+
+  test('x ve y ekseninde fit → her iki eksen de listelenir', () => {
+    const h = note({ fitX: FIT_POLY, fitY: FIT_POLY });
+    expect(h).toContain('Kuvvet–Sehim Yasası (x, y)');
+    expect(h).not.toContain('Yasası (x, y, z)');
+  });
+
+  test('fit + tablo bir arada → ikisi de söylenir', () => {
+    expect(note({ fitX: FIT_POLY, curveZ: TAB })).toContain('analitik fit + ölçüm noktaları');
+  });
+
+  test('lineer takoz → kart YOK', () => {
+    expect(note({})).toBe('');
+  });
+
+  test('ÇEKİRDEK KAPISI: tanınmayan fit biçimi nonlineer SAYILMAZ', () => {
+    // makeAxisLaw yalnız 'poly' ve 'asym' tanır; _mntToSI da öyle. Panel daha
+    // gevşek olsaydı "eğri var" derken çözücü onu atardı — ekran ile fizik ayrışır.
+    expect(note({ fitZ: { form: 'spline', k0: 100 } })).toBe('');
+    expect(note({ curveZ: [[0, 0]] })).toBe('');        // tek nokta yasa değildir
+  });
+
+  test('panel notu ile çekirdeğin kararı BİREBİR örtüşür', () => {
+    // Aynı takoz hem panele hem çekirdeğe verilir; ikisi aynı cevabı vermeli.
+    [[{ fitZ: FIT_ASYM }, true], [{ fitX: FIT_POLY }, true], [{ curveZ: TAB }, true],
+     [{}, false], [{ fitZ: { form: 'spline' } }, false]].forEach(([data, beklenen]) => {
+      const panelDiyor = note(data) !== '';
+      // Çekirdeğin gördüğü biçim: _mntToSI'nin ürettiği mnt nesnesi
+      const mnt = { fits: {}, curves: {} };
+      [['X', 'x'], ['Y', 'y'], ['Z', 'z']].forEach(([A, a]) => {
+        const f = data['fit' + A];
+        if (f && (f.form === 'poly' || f.form === 'asym')) mnt.fits[a] = f;
+        else if (Array.isArray(data['curve' + A]) && data['curve' + A].length >= 2) mnt.curves[a] = data['curve' + A];
+      });
+      if (!Object.keys(mnt.fits).length) delete mnt.fits;
+      if (!Object.keys(mnt.curves).length) delete mnt.curves;
+      expect(panelDiyor).toBe(core.mountHasCurve(mnt));
+      expect(panelDiyor).toBe(beklenen);
+    });
   });
 });

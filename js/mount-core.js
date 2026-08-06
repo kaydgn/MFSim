@@ -1576,11 +1576,20 @@ var veMountCore = (function() {
   // at:[lx,ly] değerleri JSON topolojisindeki düğüm MERKEZLERİNDEN türetildi →
   // panel önizlemesi ile "Örneği Aktar"ın kurduğu kanvas aynı yerleşimi gösterir.
   //
-  // NOT (kaynak dosyadaki etiket): alttaki ön takoz kaynak kayıtta "Sağ Ön Takoz"
-  // adını taşıyor ama y = −355.957 (sol taraf) — yani üsttekiyle aynı ada sahip.
-  // Kullanıcı verisi DEĞİŞTİRİLMEDİ (ad yalnız etikettir, çözüme girmez); konum
-  // ve rijitlikler doğrudur. Düzeltilmesi istenirse tek yer: bu ad + JSON'daki
-  // customName.
+  // ETİKET DÜZELTMESİ (kaynak kayıttaki hata): alttaki ön takoz kaynak dosyada
+  // "Sağ Ön Takoz" adını taşıyordu ama y = −355.957, yani SOL taraf (depo işaret
+  // sözleşmesi +Y sağ / −Y sol; aynı modelin "Sağ Arka" +305,873 / "Sol Arka"
+  // −304,131 ikilisi ve braket adları da bunu doğruluyor). Üstteki gerçek sağ ön
+  // takozla AYNI adı taşıdığı için hem sinyal ağacında hem raporda iki satır
+  // "Sağ Ön Takoz" yazıyor, biri yanlış tarafı gösteriyordu.
+  //
+  // Ad "Sol Ön Takoz" olarak düzeltildi. KONUM VE RİJİTLİKLER DEĞİŞMEDİ — yalnız
+  // etiket. Kaynak kayıttaki yanlış ad burada bilerek yazılı: ileride "kaynakla
+  // uyuşmuyor" diye geri alınmasın.
+  // Aynı düzeltme assets/examples/tulga_topoloji.json içindeki customName'de de
+  // yapıldı; ikisi ayrışırsa "Örneği Aktar" JSON'u önceliklediği için kullanıcı
+  // yine yanlış adı görür (regresyon kilidi:
+  // tests/unit/mount-example-names.test.js).
   const TULGA_TORQUE = { Te:760, Rstall:1.58, iTransfer:3.428,
                          fwd:{iGear:3.10, phiAxle:1}, rev:{iGear:-4.49, phiAxle:1},
                          derate:1 };
@@ -1600,7 +1609,7 @@ var veMountCore = (function() {
       {name:'Ön Takoz',       pos:[-196.034,   0.047, 179.682], kstat:[665,335,290], kdyn:[1165,590,490], at:[ 85,282]},
       {name:'Sağ Ön Takoz',   pos:[ 439.961, 356.042, 499.855], kstat:[515,260,242], kdyn:[ 335,355,740], at:[437, 88]},
       {name:'Sağ Arka Takoz', pos:[1381.672, 305.873,  43.452], kstat:[415,210,192], kdyn:[ 535,250,230], at:[605, 87]},
-      {name:'Sağ Ön Takoz',   pos:[ 439.961,-355.957, 499.855], kstat:[515,260,242], kdyn:[ 335,355,740], at:[442,484]},
+      {name:'Sol Ön Takoz',   pos:[ 439.961,-355.957, 499.855], kstat:[515,260,242], kdyn:[ 335,355,740], at:[442,484]},
       {name:'Sol Arka Takoz', pos:[1381.672,-304.131,  51.439], kstat:[415,210,192], kdyn:[ 535,250,230], at:[600,485]}
     ],
     torque: TULGA_TORQUE,
