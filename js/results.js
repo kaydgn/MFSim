@@ -135,8 +135,8 @@ function veUpdateSolverTabs() {
   var html = '';
   tabs.forEach(function(tab) {
     var isActive = tab.id === veActiveSolverTabId;
-    html += '<button class="ve-solver-tab' + (isActive ? ' active' : '') + '" onclick="veSwitchSolverTab(\'' + tab.id + '\')" title="' + tab.name + '">';
-    html += '<span>' + tab.icon + '</span> ' + tab.name;
+    html += '<button class="ve-solver-tab' + (isActive ? ' active' : '') + '" onclick="veSwitchSolverTab(\'' + tab.id + '\')" title="' + escapeHTML(tab.name) + '">';
+    html += '<span>' + tab.icon + '</span> ' + escapeHTML(tab.name);
     html += '</button>';
   });
   container.innerHTML = html;

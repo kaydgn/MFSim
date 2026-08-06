@@ -1803,7 +1803,9 @@ function _veWaypointShowOnMap(nodeId) {
         iconSize: [18, 18], iconAnchor: [9, 18]
       })
     }).addTo(map);
-    var ttHtml = '<b>' + wp.name + '</b><br>Mesafe: ' + (wp.dist / 1000).toFixed(2) + ' km<br>Rakım: ' + wp.elev.toFixed(0) + ' m';
+    // Nokta adı kullanıcının yazdığı serbest metin ve proje dosyasına yazılıyor;
+    // ham gömülünce '<' içeren bir ad balonu sessizce bozuyordu.
+    var ttHtml = '<b>' + escapeHTML(wp.name) + '</b><br>Mesafe: ' + (wp.dist / 1000).toFixed(2) + ' km<br>Rakım: ' + wp.elev.toFixed(0) + ' m';
     marker.bindTooltip(ttHtml, { direction: 'top', offset: [0, -20] });
     _veWaypointMarkers[nodeId].push(marker);
   });
