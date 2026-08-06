@@ -223,6 +223,10 @@ function veCollectValidation() {
     disconnected.length > 0 ? disconnected[0].id : null);
   // Hangi bileşenlerin bağlı olmadığını tek tek söyle — "2 bileşen bağlı değil"
   // demek kullanıcıya hangisini arayacağını söylemiyordu.
+  // Aşağıdaki `nm` KULLANICI METNİ taşıyabilir (n.customName) ve doğrulama
+  // listesi HTML olarak kuruluyor. Ad proje dosyasına da yazılıyor, yani bir
+  // meslektaşın .json'unu açmak onu bu listeye taşır — çizim tarafında
+  // escapeHTML şart (bkz. veRenderValidation).
   disconnected.forEach(function(n) {
     var nm = n.customName || ((typeof componentDefs !== 'undefined' && componentDefs[n.type]) ? componentDefs[n.type].name : n.type);
     addWarn(nm + ' bağlı değil', n.id);
@@ -305,18 +309,18 @@ function veRenderValidationCard(res) {
   var html = '';
   res.items.forEach(function(it) {
     if(it.level === 'info') {
-      html += '<div class="ve-validation-item" style="font-size:var(--fs-md);"><span>ℹ️</span><span>' + it.label + '</span></div>';
+      html += '<div class="ve-validation-item" style="font-size:var(--fs-md);"><span>ℹ️</span><span>' + escapeHTML(it.label) + '</span></div>';
       return;
     }
     if(it.level === 'warn') {
-      html += '<div class="ve-validation-item ve-validation-warn"><span>⚠</span><span>' + it.label + '</span></div>';
+      html += '<div class="ve-validation-item ve-validation-warn"><span>⚠</span><span>' + escapeHTML(it.label) + '</span></div>';
       return;
     }
     var ok = it.level === 'ok';
     var icon = ok ? '<span style="color:var(--accent-success);font-weight:700;">✓</span>'
                   : '<span style="color:var(--accent-danger);font-weight:700;">✗</span>';
     html += '<div class="ve-validation-item ' + (ok ? 've-validation-ok' : 've-validation-err') + '"><span>' + icon +
-            '</span><span>' + it.label + (it.detail ? ' <span style="color:var(--text-muted);font-size:var(--fs-body);">(' + it.detail + ')</span>' : '') + '</span></div>';
+            '</span><span>' + escapeHTML(it.label) + (it.detail ? ' <span style="color:var(--text-muted);font-size:var(--fs-body);">(' + it.detail + ')</span>' : '') + '</span></div>';
   });
   if(res.allOk) {
     html += '<div style="margin-top:12px;padding:10px;background:color-mix(in srgb, var(--accent-success) 10%, transparent);border-radius:var(--radius-sm);border:1px solid color-mix(in srgb, var(--accent-success) 30%, transparent);text-align:center;font-size:var(--fs-lg);color:var(--accent-success);font-weight:600;">✓ ' + res.mode + ' - hesaplamaya hazır</div>';

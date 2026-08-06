@@ -644,7 +644,7 @@ function veRenderTabs() {
       'ondblclick="veRenameTab(' + idx + ')" ' +
       'oncontextmenu="veShowTabMenu(event,' + idx + ')" ' +
       'title="Çift tık: yeniden adlandır · Sağ tık: menü">' +
-      '<span>' + tab.name + '</span>' +
+      '<span>' + escapeHTML(tab.name) + '</span>' +
       (count > 0 ? '<span class="ve-tab-count">(' + count + ')</span>' : '') +
       '<span class="ve-tab-close" onclick="event.stopPropagation();veCloseTab(' + idx + ')" title="Kapat"><span class="mf-ico mf-ico-x"></span></span>' +
       '</div>';

@@ -34,6 +34,22 @@ global.loadViewerSource = function loadViewerSource(file) {
   return fs.readFileSync(path.join(VIEWER_JS_DIR, file), 'utf8');
 };
 
+// escapeHTML GERÇEK sürümüyle konur, jest.fn() ile DEĞİL.
+//
+// js/ui-core.js tarayıcıda her zaman ilk yüklenir ve HTML kuran her modül bu
+// fonksiyonun var olduğunu varsayar. Testte eval edilen tek bir modül ise onu
+// göremez ve ReferenceError alır — nitekim kaçış eklenince iki test tam olarak
+// böyle düştü. Kimliğe dönen bir stub konsaydı daha kötü olurdu: kaçış
+// testleri sessizce anlamsızlaşır, "kaçırılıyor" diye geçerdi.
+// Kaynak ui-core.js'ten OKUNUYOR, elle kopyalanmıyor: iki sürüm ayrışmasın.
+(function () {
+  const src = fs.readFileSync(path.join(JS_DIR, 'ui-core.js'), 'utf8');
+  const i = src.indexOf('function escapeHTML');
+  if (i < 0) throw new Error('js/ui-core.js içinde escapeHTML bulunamadı');
+  const end = src.indexOf('\n}', i) + 2;
+  global.escapeHTML = new Function(src.slice(i, end) + '\nreturn escapeHTML;')();
+})();
+
 // UI katmanının çağırdığı, çekirdek mantık açısından önemsiz olan ortak
 // yan-etki fonksiyonlarını jest.fn() olarak global'e kurar. Testte hangi
 // stub'lara ihtiyaç varsa `extra` ile eklenebilir/geçersiz kılınabilir.
