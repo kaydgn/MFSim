@@ -94,8 +94,18 @@ işaretli, metinleri `viewer/sync.js` içinde):
 panelinden seçilen bir tercih ve on altı seçenek var; burada tek başına, günün
 her saatinde açık duran bir program söz konusu, o yüzden varsayılan işletim
 sisteminin kendisi. MFSim'in `js/theme.js`'inden yalnızca `veThemeRgba` birebir
-alındı (canvas'ın CSS değişkeni çözememesinin köprüsü) — o fonksiyon upstream'de
-değişirse elle taşınır.
+alındı (canvas'ın CSS değişkeni çözememesinin köprüsü).
+
+O fonksiyon **otomatik taşınmaz** — çevreleyen dosya görüntüleyiciye ait, körü
+körüne yazmak tehlikeli. Ama ayrıştığı **söylenir**: `npm run sync:viewer`
+gövdeleri karşılaştırır, farklıysa durur ve neyi elle taşıyacağınızı yazar.
+Aynı kapı `npm test` içinde de var.
+
+> Bu kural eskiden yalnız burada yazılıydı ve `board.js`'in sayı
+> biçimlendiricilerinde bozuldu: `veFormatTooltipVal` ile `veFormatAxisVal`
+> iki tarafta **birbirinden habersiz** düzeltilmişti. Görüntüleyici sıfırı
+> `0.00e+0` yazıyor ve metin kanalında çöküyordu; MFSim ise 0,0001 ile 0,0005'i
+> aynı eksen etiketine indiriyordu. Yazılı bir kural, kapısı yoksa bozulur.
 
 `board.js` MFSim'deki `js/results.js` + `js/graphics.js`'in yalnızca panoyla
 ilgili yüzeyini karşılar. Oralarda pano mantığı değişirse **elle** taşınması
