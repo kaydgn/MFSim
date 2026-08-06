@@ -12204,6 +12204,32 @@ function veTrBindGraph() {
   }
 }
 
+// ── Açılır pencere kapanışı (ortak) ──────────────────────────────────────────
+//
+// Şerit ölçeği ve birleştirme seçicisi aynı davranışı istiyor: dışarı
+// tıklayınca ve ESC'e basınca kapan. Kod iki yerde ayrı ayrı duruyordu ve
+// ESC ikisinde de YOKTU — açılan pencereden çıkmanın tek yolu boşluğa
+// tıklamaktı. Klavyeyle çalışan kullanıcı için çıkışsız bir kutu demek bu.
+// Dinleyiciler pencere kapanınca SÖKÜLÜR: kalırlarsa her açılışta bir tane
+// daha birikir ve zamanla her tıklama onlarca ölü kapatıcı çalıştırır.
+function veTrBindPopupDismiss(pop) {
+  function done() {
+    document.removeEventListener('mousedown', onDown, true);
+    document.removeEventListener('keydown', onKey, true);
+  }
+  function onDown(ev) {
+    if(!pop.contains(ev.target)) { pop.remove(); done(); }
+  }
+  function onKey(ev) {
+    if(ev.key === 'Escape') { ev.stopPropagation(); pop.remove(); done(); }
+  }
+  // setTimeout: pencereyi AÇAN tıklamanın kendisi kapatıcıya düşmesin.
+  setTimeout(function() {
+    document.addEventListener('mousedown', onDown, true);
+    document.addEventListener('keydown', onKey, true);
+  }, 0);
+}
+
 // ── Şerit ölçeği (elle Y sınırı) ─────────────────────────────────────────────
 
 function veTrShowLaneScale(laneIdx, e) {
@@ -12261,12 +12287,7 @@ function veTrShowLaneScale(laneIdx, e) {
     veTrRender();
   });
 
-  setTimeout(function() {
-    function close(ev) {
-      if(!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('mousedown', close, true); }
-    }
-    document.addEventListener('mousedown', close, true);
-  }, 0);
+  veTrBindPopupDismiss(pop);
 }
 
 // ── Birleştirme seçicisi ─────────────────────────────────────────────────────
@@ -12421,15 +12442,7 @@ function veTrShowMergePicker(e) {
     }
   });
 
-  setTimeout(function() {
-    function close(ev) {
-      if(!pop.contains(ev.target)) {
-        pop.remove();
-        document.removeEventListener('mousedown', close, true);
-      }
-    }
-    document.addEventListener('mousedown', close, true);
-  }, 0);
+  veTrBindPopupDismiss(pop);
 }
 
 // ── Sürükle-bırak hedefi ─────────────────────────────────────────────────────

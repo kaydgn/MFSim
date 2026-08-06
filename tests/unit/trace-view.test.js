@@ -386,6 +386,34 @@ describe('veTrCloneSlot / veTrCloneBoard — kaydedilecek alanların beyaz liste
     expect(slot.lanes[0].h).toBe(90);
   });
 
+  test('BİRLEŞİK şerit kopyada bozulmadan kalır', () => {
+    // Birleştirme yeni bir özellik ve kalıcılık, özelliklerin sessizce
+    // kırıldığı klasik yer: kopya yolu şeritteki İKİNCİ kimliği düşürürse
+    // kullanıcı projesini kaydedip açtığında birleşik diyagramı iki ayrı
+    // şeride dağılmış bulur — hata mesajı yok, sadece "böyle mi bırakmıştım"
+    // sorusu.
+    const merged = {
+      sensors: [sig('a', 'rpm'), sig('b', 'kmh'), sig('c', 'degC')],
+      lanes: [
+        { ids: [veTrKey('a', 'rpm'), veTrKey('b', 'kmh')], h: 140, min: null, max: null },
+        { ids: [veTrKey('c', 'degC')], h: 96 },
+      ],
+      xAxis: { id: 'time' },
+      type: 'line',
+    };
+    const c = veTrCloneSlot(merged);
+    expect(c.lanes).toHaveLength(2);
+    expect(c.lanes[0].ids).toHaveLength(2);
+    expect(c.lanes[0].ids).toEqual(merged.lanes[0].ids);
+    expect(c.lanes[0].h).toBe(140);
+
+    // Geri yükleme: uzlaştırma birleşik şeridi TEK şerit olarak geri kurmalı
+    const back = veTrReconcileLanes(c.sensors, c.lanes);
+    expect(back).toHaveLength(2);
+    expect(back[0].ids).toHaveLength(2);
+    expect(back[1].ids).toHaveLength(1);
+  });
+
   test('pano kopyası dizi uzunluğunu korur (kayıt biçimi 4 slot)', () => {
     const board = veTrCloneBoard([{ sensors: [sig('a', 'x')] }, {}, {}, {}]);
     expect(board).toHaveLength(4);
