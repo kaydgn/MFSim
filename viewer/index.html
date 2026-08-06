@@ -2,8 +2,18 @@
 <html lang="tr" data-theme="slate">
 <head>
   <meta charset="UTF-8" />
-  <!-- Kayıtlı temayı İLK boyamadan önce uygula; theme.js sonra devralır. -->
-  <script>try{var _mfT=localStorage.getItem('mf-theme');if(_mfT)document.documentElement.setAttribute('data-theme',_mfT);}catch(e){}</script>
+  <!-- Temayı İLK BOYAMADAN ÖNCE uygula. js/theme.js <body> sonunda yükleniyor;
+       o çalışana kadar sayfa varsayılan koyu temada boyanır ve açık temadaki
+       kullanıcı her açılışta bir kare beyaz-üstüne-siyah parlaması görürdü.
+       Mantık js/theme.js'teki mfvThemeId ile AYNI olmak zorunda — orası
+       değişirse burası da değişir. -->
+  <script>try{
+    var _m=localStorage.getItem('mfv-theme');
+    if(_m!=='light'&&_m!=='dark'&&_m!=='system')_m='system';
+    var _dark=_m==='dark'||(_m==='system'&&window.matchMedia&&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.setAttribute('data-theme',_dark?'slate':'pearl');
+  }catch(e){}</script>
   <title>MFSim Ölçüm Görüntüleyici</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -53,6 +63,10 @@
   <span class="mfv-sub">Excel / CSV ölçüm dosyalarını okur ve diyagrama döker</span>
   <span class="mfv-spacer"></span>
   <span class="mfv-hint">Tek dosya · kurulum gerekmez · veri bilgisayarınızdan çıkmaz</span>
+  <button type="button" id="mfv-theme-btn" class="ve-imp-tool" onclick="mfvCycleTheme()"
+          title="Tema — değiştirmek için tıklayın">
+    <span class="mf-ico mf-ico-contrast"></span> <span id="mfv-theme-label">Sistem</span>
+  </button>
 </header>
 
 <!-- ═══ ÖLÇÜM SAYFASI ═══

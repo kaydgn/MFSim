@@ -18,13 +18,16 @@ Tarayıcı tabanlı Motor Fren Simülasyonu uygulaması (saf HTML/CSS/JS, framew
 ### Ölçüm Görüntüleyici (`viewer/`)
 
 MFSim'in içe aktarma + diyagram özelliğinin tek başına çalışan sürümü; tek HTML
-dosyası olarak dağıtılıyor. `viewer/js/` altındaki YEDİ dosya `js/`'ten
+dosyası olarak dağıtılıyor. `viewer/js/` altındaki ALTI dosya `js/`'ten
 **birebir kopya** (`trace-view.js`'te iki işaretli fark hariç). Bu yüzden:
 
 **İçe aktarma / şerit diyagramı tarafında bir düzeltme yaparsan
 (`xlsx-read.js`, `measure-import*.js`, `measure-core.js`, `signal-tree.js`,
 `trace-view.js`), aynı düzeltmeyi `viewer/js/` altına da taşı** — `cp` yeter.
 Taşımazsan iki program zamanla ayrışır. Yordamı `viewer/README.md`'de.
+
+`viewer/js/theme.js`, `board.js`, `app.js` görüntüleyiciye özgüdür, kopya
+değildir — MFSim'den taşınmaz.
 
 ## Çalışma Akışı (hızlı döngü)
 
