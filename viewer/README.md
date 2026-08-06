@@ -54,27 +54,41 @@ ekliyordu. Kodu duruyor, yalnızca kip düğmesi listede değil.
 
 ## MFSim'den düzeltme taşıma
 
-Kopyalar bilerek **birebir** tutuldu; taşımak düz bir `cp`:
+Tek komut — yedi dosyanın hepsini `js/`'ten alır, `trace-view.js`'in iki yerel
+farkını yeniden uygular:
 
 ```bash
-# Fark var mı?
-for f in xlsx-read measure-core measure-import measure-import-ui signal-tree measure-dropzone; do
-  diff -q js/$f.js viewer/js/$f.js
-done
-diff js/trace-view.js viewer/js/trace-view.js    # iki bilinen fark çıkmalı
-
-# Taşı
-cp js/xlsx-read.js viewer/js/xlsx-read.js
+npm run sync:viewer
 npm run build:viewer && npm test
 ```
 
+Senkron **kod**: farkların metni `viewer/sync.js` içinde duruyor, kimsenin
+belleğinde değil. MFSim tarafında bir farkın çevresi değişip çapa tutmazsa
+script sessizce yanlış dosya üretmez — **durur** ve hangi farkın tutmadığını
+söyler; farkın hâlâ gerekli olup olmadığına insan karar verir.
+
+```bash
+npm run sync:viewer -- --check    # uygulamaz, yalnızca "geride mi?" der
+```
+
+Aynı kapı `npm test` içinde de var (`tests/unit/viewer-sync.test.js`): kopyalar
+kaynaktan geri kalırsa birim testi kırmızıya döner. Bu sessiz bir kusurdu —
+MFSim'de düzeltilen bir hata görüntüleyicide yaşamaya devam ediyordu ve iki
+dosya da kendi başına doğru olduğu için hiçbir test görmüyordu.
+
 `trace-view.js`'in **bilinen iki farkı** (ikisi de `VIEWER FARKI` yorumuyla
-işaretli, elle uzlaştırılır):
+işaretli, metinleri `viewer/sync.js` içinde):
 
 1. Görünüm kipi listesinden `scatter3d` çıkarıldı.
 2. Boş durum metni: MFSim "Çözüm sonucu yok / Çözücüyü Aç" der; burada çözücü
    yok, "Henüz ölçüm yok / Ölçüm Verisi İçe Aktar" denir. Ayrım `veSolverRun`
    varlığına bakarak yapılıyor, dalın kendisi duruyor.
+
+> **Neden `cp` değil de script?** Bu adım bir kez elle yapıldı ve yanlış yapıldı:
+> boş-durum bloğu bellekten yeniden yazılınca var olmayan bir DOM düğümüne
+> `innerHTML` atayan bir sürüm çıktı. Görüntüleyici açılışta `TypeError`
+> veriyordu; birim testleri göremiyordu, çünkü fark yalnızca üretilen tek
+> dosyada yaşıyor. Elle uzlaştırma artık yok.
 
 `theme.js` **birebir kopya değil**, görüntüleyiciye ait. MFSim'de tema Ayarlar
 panelinden seçilen bir tercih ve on altı seçenek var; burada tek başına, günün
