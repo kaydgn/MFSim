@@ -31,41 +31,41 @@ describe('veCursorSnapIndex — en yakın örneğe kilitlenme', () => {
   const t = [0, 1, 2, 3, 4];
 
   test('tam eşleşen değerde o indeksi verir', () => {
-    expect(veCursorSnapIndex(t, 0)).toBe(0);
-    expect(veCursorSnapIndex(t, 3)).toBe(3);
-    expect(veCursorSnapIndex(t, 4)).toBe(4);
+    expect(cursor.veCursorSnapIndex(t, 0)).toBe(0);
+    expect(cursor.veCursorSnapIndex(t, 3)).toBe(3);
+    expect(cursor.veCursorSnapIndex(t, 4)).toBe(4);
   });
 
   test('aradaki değer en yakın komşuya yuvarlanır', () => {
-    expect(veCursorSnapIndex(t, 2.2)).toBe(2);
-    expect(veCursorSnapIndex(t, 2.8)).toBe(3);
+    expect(cursor.veCursorSnapIndex(t, 2.2)).toBe(2);
+    expect(cursor.veCursorSnapIndex(t, 2.8)).toBe(3);
   });
 
   test('tam ortada sağdaki örnek seçilir (mevcut tooltip davranışı)', () => {
-    expect(veCursorSnapIndex(t, 2.5)).toBe(3);
+    expect(cursor.veCursorSnapIndex(t, 2.5)).toBe(3);
   });
 
   test('aralık dışı değerler uçlara sabitlenir', () => {
-    expect(veCursorSnapIndex(t, -99)).toBe(0);
-    expect(veCursorSnapIndex(t, 99)).toBe(4);
+    expect(cursor.veCursorSnapIndex(t, -99)).toBe(0);
+    expect(cursor.veCursorSnapIndex(t, 99)).toBe(4);
   });
 
   test('düzensiz aralıklı (değişken adımlı) diziyle çalışır', () => {
     // RK45 çıktısı sabit adımlı değildir — ikili arama buna dayanmalı
     const irregular = [0, 0.05, 0.4, 0.42, 5, 12];
-    expect(veCursorSnapIndex(irregular, 0.41)).toBe(2);
-    expect(veCursorSnapIndex(irregular, 0.5)).toBe(3);
-    expect(veCursorSnapIndex(irregular, 11)).toBe(5);
+    expect(cursor.veCursorSnapIndex(irregular, 0.41)).toBe(2);
+    expect(cursor.veCursorSnapIndex(irregular, 0.5)).toBe(3);
+    expect(cursor.veCursorSnapIndex(irregular, 11)).toBe(5);
   });
 
   test('boş / geçersiz girdide -1 döner (imleç çizilmez)', () => {
-    expect(veCursorSnapIndex([], 1)).toBe(-1);
-    expect(veCursorSnapIndex(null, 1)).toBe(-1);
-    expect(veCursorSnapIndex([0, 1], NaN)).toBe(-1);
+    expect(cursor.veCursorSnapIndex([], 1)).toBe(-1);
+    expect(cursor.veCursorSnapIndex(null, 1)).toBe(-1);
+    expect(cursor.veCursorSnapIndex([0, 1], NaN)).toBe(-1);
   });
 
   test('tek örnekli dizide her zaman 0', () => {
-    expect(veCursorSnapIndex([7], 100)).toBe(0);
+    expect(cursor.veCursorSnapIndex([7], 100)).toBe(0);
   });
 });
 
@@ -187,5 +187,75 @@ describe('veCursorFmtDelta — işaretli fark biçimi', () => {
   test('ölçülemeyen fark tire ile gösterilir', () => {
     expect(veCursorFmtDelta(null)).toBe('—');
     expect(veCursorFmtDelta(NaN)).toBe('—');
+  });
+});
+
+// ── Artmayan X ekseninde imleç ───────────────────────────────────────────────
+//
+// GERÇEK BİR HATADAN DOĞDU. Pano X eksenini başka bir SİNYALE çevirmeye izin
+// veriyor ("devir–hız" gibi grafikler için, bkz. js/results.js veSetSlotXAxis).
+// O zaman X dizisi artan olmuyor: araç hızlanıp yavaşlayınca hız 0→40→10
+// gidiyor. İkili arama sıralı dizi varsayar ve böyle bir dizide SESSİZCE
+// yanlış örneği döndürüyordu — imleç "25 km/h" gösterirken 20 km/h'deki devri
+// okuyordu. Grafik doğru, okuma yanlış; gözle yakalanmaz.
+describe('veCursorSnapIndex — artmayan X ekseni', () => {
+  // Hızlanma sonra yavaşlama: hiçbir zaman ekseni değil, bir SİNYAL ekseni.
+  const speed = [0, 20, 40, 30, 10, 25];
+
+  // Bağımsız referans: doğrusal tarama. Eşitlikte sağdaki kazanır (sıralı
+  // yoldaki kuralın aynısı).
+  const nearest = (arr, x) => {
+    let best = 0, bd = Infinity;
+    arr.forEach((v, i) => { const d = Math.abs(v - x); if (d <= bd) { bd = d; best = i; } });
+    return best;
+  };
+
+  test('en yakın örneği bulur — ikili arama yanlış cevap veriyordu', () => {
+    // x=25 için eskiden indeks 1 (değer 20) dönüyordu; doğrusu indeks 5.
+    expect(cursor.veCursorSnapIndex(speed, 25)).toBe(5);
+    expect(cursor.veCursorSnapIndex(speed, 10)).toBe(4);
+  });
+
+  test('her sorgu için doğrusal taramayla AYNI sonucu verir', () => {
+    for (let q = -5; q <= 45; q += 0.5) {
+      expect(cursor.veCursorSnapIndex(speed, q)).toBe(nearest(speed, q));
+    }
+  });
+
+  test('sıralı dizide davranış DEĞİŞMEDİ', () => {
+    // Regresyon kapısı: zaman ekseni yaygın durum ve hızlı yolda kalmalı.
+    const t = [0, 0.1, 0.2, 0.3, 0.4];
+    expect(cursor.veCursorIsSorted(t)).toBe(true);
+    for (let q = -1; q <= 1; q += 0.05) {
+      expect(cursor.veCursorSnapIndex(t, q)).toBe(nearest(t, q));
+    }
+  });
+
+  test('sıralılık kararı doğru', () => {
+    expect(cursor.veCursorIsSorted([1, 2, 3])).toBe(true);
+    expect(cursor.veCursorIsSorted([1, 1, 1])).toBe(true);      // eşitlik artışı bozmaz
+    expect(cursor.veCursorIsSorted([3, 2, 1])).toBe(false);
+    expect(cursor.veCursorIsSorted([0, 5, 4, 9])).toBe(false);  // tek bir düşüş yeter
+  });
+
+  test('sıralılık ÖNBELLEKLENİR — imleç her harekette diziyi taramaz', () => {
+    // 400 000 örnekli bir ölçümde her fare hareketinde tarama yapmak imleci
+    // hissedilir yavaşlatırdı.
+    const big = Array.from({ length: 200000 }, (_, i) => i);
+    const t0 = Date.now();
+    cursor.veCursorSnapIndex(big, 100);          // ilk çağrı: bir kez tarar
+    const first = Date.now() - t0;
+    const t1 = Date.now();
+    for (let i = 0; i < 500; i++) cursor.veCursorSnapIndex(big, i);
+    const rest = Date.now() - t1;
+    // 500 çağrı, ilk tek çağrının tarama maliyetinin katı kadar sürmemeli
+    expect(rest).toBeLessThan(first * 50 + 200);
+  });
+
+  test('bozuk girdilerde eski davranış korunur', () => {
+    expect(cursor.veCursorSnapIndex([], 1)).toBe(-1);
+    expect(cursor.veCursorSnapIndex(null, 1)).toBe(-1);
+    expect(cursor.veCursorSnapIndex([5, 1, 3], NaN)).toBe(-1);
+    expect(cursor.veCursorSnapIndex([7], 99)).toBe(0);
   });
 });
