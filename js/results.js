@@ -296,6 +296,9 @@ function veUpdateResultsTree() {
     var hasSim = !!tabSimR;
 
     var tabIcon = hasSim ? '<span class="mf-ico mf-ico-check-circle"></span>' : (totalSensorCount > 0 ? '<span class="mf-ico mf-ico-bar-chart"></span>' : '<span class="mf-ico mf-ico-folder"></span>');
+    // Aktif sekme etiketi aksana boyanıyor; aksanın METİN sürümü kullanılır
+    // (--ink-accent). Aksanın kendisi slate'te 3,38:1, vscode'da 2,45:1
+    // veriyordu — 12px etiket için okunmuyordu.
     var tabLabel = tab.name + (hasSim ? '' : ' (çözülmedi)');
 
     // Prefix: aktif sekme → sensörId direkt, diğer → @tabIdx:sensörId
@@ -313,7 +316,7 @@ function veUpdateResultsTree() {
     html += '<div class="ve-tree-row" style="padding-left:16px;">';
     html += '<span class="arrow" onclick="veToggleTree(this.parentElement)">' + (totalSensorCount > 0 ? '▶' : ' ') + '</span>';
     html += '<span class="icon">' + tabIcon + '</span>';
-    html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--accent-primary);' : '') + '">' + tabLabel + '</span>';
+    html += '<span style="font-weight:' + (isActive ? '600' : '400') + ';' + (isActive ? 'color:var(--ink-accent);' : '') + '">' + tabLabel + '</span>';
     // Sayaç artık sensör değil SİNYAL sayar: listede görünen satır sayısıyla
     // birebir tutar. "17 sensör" yazıp 24 satır göstermek güven kırıyordu.
     if(tabChannelCount > 0) html += ' <span style="font-size:var(--fs-tiny); color:var(--text-muted); margin-left:auto;">' + tabChannelCount + ' sinyal</span>';
