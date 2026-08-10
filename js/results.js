@@ -5015,22 +5015,39 @@ function veRenderSlot(slotIdx) {
     });
     html += '</tr></thead>';
     html += '<tbody id="ve-table-body-' + slotIdx + '">';
-    html += '<tr><td colspan="' + (sensors.length + 2) + '" style="padding:20px; text-align:center; color:var(--text-muted);">Simülasyon verisi bekleniyor</td></tr>';
+    // Yer tutucu: aşağıdaki veri kapısı açıksa hemen üzerine yazılır. Metin
+    // "simülasyon" demeyi yalnız gerçekten simülasyon beklenirken hak eder —
+    // içe aktarılmış bir ölçümün başında bu cümle yanlış yönlendiriyordu.
+    html += '<tr><td colspan="' + (sensors.length + 2) + '" style="padding:20px; text-align:center; color:var(--text-muted);">' +
+            'Veri bekleniyor' + '</td></tr>';
     html += '</tbody></table></div>';
   }
 
   html += '</div>';
   body.innerHTML = html;
 
-  // Takoz sekmesi araç çözümü olmadan da veri taşır: tablo/3B kipini yalnız
-  // veSimResults'a bakarak kapatmak, o sekmede tabloyu kalıcı olarak
-  // "Simülasyon verisi bekleniyor" durumunda bırakırdı (veri aslında hazır).
-  var _haveData = !!window.veSimResults || veMntSets().length > 0;
+  // VERİ KAPISI KİP BAŞINADIR — iki kipin veri ihtiyacı aynı değil.
+  //
+  // Takoz sekmesi araç çözümü olmadan da veri taşır: yalnız veSimResults'a
+  // bakmak, o sekmede tabloyu kalıcı olarak "Simülasyon verisi bekleniyor"
+  // durumunda bırakırdı (veri aslında hazır). Aynı eksiklik İÇE AKTARILAN
+  // ÖLÇÜMDE de vardı ve ölçüldü: beş sinyal şerit diyagramında çiziliyor,
+  // Tablo kipine geçilince tek satır "Simülasyon verisi bekleniyor" kalıyordu.
+  // veRenderTable'ın içe aktarma dalı ZATEN yazılıydı (veImpXSeries) —
+  // eksik olan tek şey onu çağıran bu kapıydı.
+  var _mntData = veMntSets().length > 0;
+  var _impData = (typeof veImpAny === 'function') && veImpAny();
+
   if(type === 'scatter3d') {
-    if(_haveData) veRender3DScatter(slotIdx);
+    // 3B DAĞILIM İÇE AKTARMAYI KAPSAMAZ: veRender3DScatter simülasyon
+    // sonucunu zorunlu tutuyor (window.veSimResults yoksa hiç çizmiyor).
+    // Kapıyı burada açmak onu çağırıp SESSİZCE boş bir kutu bırakırdı;
+    // kullanıcı neyin eksik olduğunu anlamazdı. Kapı kapalı kalıyor ve
+    // sebebi aşağıda yazılı.
+    if(!!window.veSimResults || _mntData) veRender3DScatter(slotIdx);
     veInitLegendDrag(slotIdx);
   } else {
-    if(_haveData) veRenderTable(slotIdx);
+    if(!!window.veSimResults || _mntData || _impData) veRenderTable(slotIdx);
   }
 }
 

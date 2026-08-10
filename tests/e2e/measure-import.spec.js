@@ -229,6 +229,90 @@ test.describe('Ölçüm içe aktarma sihirbazı', () => {
     expect(vals).toEqual([800.5, 812.25, 825]);
   });
 
+  // TABLO KİPİ — içe aktarılan ölçüm için de dolmalı.
+  //
+  // ÖLÇÜLEN KUSUR: beş sinyal şerit diyagramında düzgün çiziliyordu, "Tablo"ya
+  // geçilince gövde tek satır kalıyordu: "Simülasyon verisi bekleniyor".
+  // Sebep js/results.js'teki veri kapısıydı —
+  //   _haveData = !!window.veSimResults || veMntSets().length > 0
+  // yani yalnız SİMÜLASYON ve TAKOZ tanınıyordu; içe aktarma hiç eklenmemişti.
+  // veRenderTable'ın içe aktarma dalı (veImpXSeries) ZATEN yazılıydı; eksik
+  // olan tek şey onu çağıran kapıydı.
+  //
+  // Bu kusurun hayatta kalma sebebi: aynı çizici iki programda çalışıyor ama
+  // kapı yalnız MFSim'de var ve tablo testi yalnız GÖRÜNTÜLEYİCİDE vardı
+  // (viewer.spec.js). Bu test o boşluğu kapatıyor.
+  test('Tablo kipi içe aktarılan ölçümle DOLU ve değerler ham seriyle aynı', async ({ page }) => {
+    await openApp(page);
+    await importFixture(page, canoeXlsx(200));
+    await page.click('#ve-import-apply');
+    await page.waitForFunction(() => veResultSlots[0].sensors.length === 5,
+      null, { timeout: 20000 });
+
+    await page.click('#ve-trace-toolbar [data-mode="table"]');
+    const tbody = page.locator('#ve-table-body-0');
+    await expect(tbody).toBeVisible();
+    await expect(tbody).not.toContainText('bekleniyor');
+
+    // Dolu olması yetmez: DOĞRU olmalı. Boş bir tablo göze çarpar, dolu ama
+    // yanlış bir tablo çarpmaz — asıl korunması gereken bu.
+    const r = await page.evaluate(() => {
+      const slot = veResultSlots[0];
+      const xs = veImpXSeries(slot._dataSource);
+      const seri = slot.sensors.map((s) => veGetSensorData(s.id, s.signal));
+      const tr = [...document.querySelectorAll('#ve-table-body-0 tr')];
+      const uyusmaz = [];
+      [0, 1, 2, 17, 99, 199].forEach((i) => {
+        if (i >= tr.length) return;
+        const td = [...tr[i].querySelectorAll('td')].map((e) => e.innerText.trim());
+        if (td[0] !== String(i + 1)) uyusmaz.push(`satır ${i}: sıra no ${td[0]}`);
+        if (Math.abs(parseFloat(td[1]) - xs[i]) > 1e-6) uyusmaz.push(`satır ${i}: X ${td[1]} ≠ ${xs[i]}`);
+        seri.forEach((d, k) => {
+          const bek = veFormatTooltipVal(d ? d[i] : null);
+          if (td[2 + k] !== bek) uyusmaz.push(`satır ${i} sütun ${k}: ${td[2 + k]} ≠ ${bek}`);
+        });
+      });
+      const son3 = tr.slice(-3).map((t) => t.querySelector('td').innerText.trim());
+      return { satir: tr.length, uyusmaz, son3, ornek: xs.length };
+    });
+
+    // 200 örnek → 200 veri satırı + MİN/MAKS/ORT
+    expect(r.ornek).toBe(200);
+    expect(r.satir).toBe(203);
+    expect(r.uyusmaz).toEqual([]);
+    expect(r.son3).toEqual(['MİN', 'ORT', 'MAKS']);   // görüntüleyiciyle aynı
+  });
+
+  test('Tablo X ekseni değiştirilince O EKSENİ gösterir', async ({ page }) => {
+    await openApp(page);
+    await importFixture(page, canoeXlsx(200));
+    await page.click('#ve-import-apply');
+    await page.waitForFunction(() => veResultSlots[0].sensors.length === 5,
+      null, { timeout: 20000 });
+
+    // X eksenini VehSpeed'e çevir (listeyi aç → veSetSlotXAxis İNDEKS alır)
+    await page.click('#ve-trace-toolbar [data-act="xaxis"]');
+    const sec = await page.evaluate(() => {
+      const dd = document.getElementById('ve-xaxis-dropdown-0');
+      const i = dd._options.findIndex((o) => /VehSpeed/i.test(o.name || ''));
+      veSetSlotXAxis(0, i);
+      return i;
+    });
+    expect(sec).toBeGreaterThan(0);
+
+    await page.click('#ve-trace-toolbar [data-mode="table"]');
+    const r = await page.evaluate(() => {
+      const slot = veResultSlots[0];
+      const hiz = veGetSensorData(slot.sensors[1].id, slot.sensors[1].signal);
+      const bas = [...document.querySelectorAll('#ve-table-0 th')].map((e) => e.innerText.trim());
+      const x = [...document.querySelectorAll('#ve-table-body-0 tr')].slice(0, 3)
+        .map((t) => parseFloat(t.querySelectorAll('td')[1].innerText));
+      return { baslik: bas[1], x, ham: hiz.slice(0, 3) };
+    });
+    expect(r.baslik).toBe('VehSpeed [km/h]');
+    r.x.forEach((v, i) => expect(Math.abs(v - r.ham[i])).toBeLessThan(1e-3));
+  });
+
   // SÜTUN BAŞLIĞI KULLANICI VERİSİDİR.
   //
   // ÖLÇÜLEN KUSUR: başlığı  Basinc <img src=x onerror="...">  olan bir CSV içe
