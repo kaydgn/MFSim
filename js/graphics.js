@@ -535,17 +535,21 @@ function veRenderTable(slotIdx) {
     for(var j = 0; j < ds.length; j++) { var v = Number(ds[j]); if(isFinite(v)) out.push(v); }
     return out.length ? out : null;
   };
-  rows.push(sumRow('MIN', true, function(ds) {
+  // ETİKET ve SIRA görüntüleyicinin tablosuyla aynı (viewer/js/board.js).
+  // MFSim'de 'MIN' / 'MAX' yazıyordu ve satır 'MIN, MAX, ORT' diye
+  // sıralanıyordu: hem dil karışıktı (yanındaki etiket 'ORT') hem de sıra
+  // okunuşu bozuyordu. Doğal okuma en az → ortalama → en çok.
+  rows.push(sumRow('MİN', true, function(ds) {
     var a = numOf(ds); if(!a) return null;
     var m = Infinity; for(var j = 0; j < a.length; j++) if(a[j] < m) m = a[j]; return m;
-  }));
-  rows.push(sumRow('MAX', false, function(ds) {
-    var a = numOf(ds); if(!a) return null;
-    var m = -Infinity; for(var j = 0; j < a.length; j++) if(a[j] > m) m = a[j]; return m;
   }));
   rows.push(sumRow('ORT', false, function(ds) {
     var a = numOf(ds); if(!a) return null;
     var t = 0; for(var j = 0; j < a.length; j++) t += a[j]; return t / a.length;
+  }));
+  rows.push(sumRow('MAKS', false, function(ds) {
+    var a = numOf(ds); if(!a) return null;
+    var m = -Infinity; for(var j = 0; j < a.length; j++) if(a[j] > m) m = a[j]; return m;
   }));
   
   tbody.innerHTML = rows.join('');
