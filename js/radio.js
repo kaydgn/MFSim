@@ -335,6 +335,11 @@
   };
 
   function $(id) { return global.document.getElementById(id); }
+  // BİLEREK yerel: kaçış kümesi ui-core.escapeHTML ile aynı (& < > " '), ama
+  // null/undefined'ı BOŞ DİZGEYE çevirir. escapeHTML bunları olduğu gibi
+  // döndürür ve birleştirmede "null" / "undefined" yazısı ekrana düşer —
+  // istasyon adı/başlığı gelmediğinde tam olarak bu olurdu. Tekilleştirme
+  // isteyen: önce bu farkı taşımak gerekir.
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];

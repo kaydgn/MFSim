@@ -1370,7 +1370,15 @@ function veSolverRunProfessional() {
           log('│ Motor Devri      : ' + (simResult.rpm ? simResult.rpm[0].toFixed(0) : '—') + ' d/d', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
-          log('│   Eğim Kuvveti    (F_grade) : +' + Math.abs(Fg0).toFixed(0) + ' N  (hızlandırıcı)');
+          // F_grade fizik konvansiyonunda: pozitif = yokuşa direnç (frenleyici),
+          // negatif = yokuş aşağı itici. Bu panel kuvvetleri "harekete etkisi"
+          // işaretiyle yazar (F_roll/F_aero hep '-'), yani eğimin etkisi −F_grade.
+          function _egimEtki(fg) {
+            var etki = -fg;                       // harekete etkisi
+            return (etki >= 0 ? '+' : '-') + Math.abs(etki).toFixed(0) + ' N  (' +
+                   (etki > 0 ? 'hızlandırıcı' : etki < 0 ? 'frenleyici' : 'etkisiz') + ')';
+          }
+          log('│   Eğim Kuvveti    (F_grade) : ' + _egimEtki(Fg0));
           log('│   Yuvarlanma Dir. (F_roll)  : -' + Math.abs(Fr0).toFixed(0) + ' N  (frenleme)');
           log('│   Hava Direnci    (F_aero)  : -' + Math.abs(Fa0).toFixed(0) + ' N  (frenleme)');
           log('│   ─────────────────────────────');
@@ -1396,7 +1404,7 @@ function veSolverRunProfessional() {
           log('│ Motor Devri      : ' + (simResult.rpm ? simResult.rpm[li].toFixed(0) : '—') + ' d/d', 'dim');
           log('│');
           log('│ KUVVETLER:', 'info');
-          log('│   Eğim Kuvveti    (F_grade) : +' + Math.abs(FgL).toFixed(0) + ' N');
+          log('│   Eğim Kuvveti    (F_grade) : ' + _egimEtki(FgL));
           log('│   Yuvarlanma Dir. (F_roll)  : -' + Math.abs(FrL).toFixed(0) + ' N');
           log('│   Hava Direnci    (F_aero)  : -' + Math.abs(FaL).toFixed(0) + ' N');
           log('│   ─────────────────────────────');

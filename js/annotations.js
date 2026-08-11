@@ -46,7 +46,7 @@ function renderAnnotation(annot) {
     el.style.borderColor = annot.color;
     el.innerHTML =
       '<div class="ve-annotation-label" style="color:' + annot.color + '; font-size:' + annot.fontSize + 'px;">' +
-        escapeHtml(annot.text) +
+        escapeHTML(annot.text) +
       '</div>' +
       '<div class="ve-annotation-drag" title="Sürükle">✥</div>' +
       '<div class="ve-annotation-resize" data-annot="' + annot.id + '"></div>';
@@ -54,7 +54,7 @@ function renderAnnotation(annot) {
     el.style.color = annot.color;
     el.innerHTML =
       '<span class="ve-annotation-content" style="font-size:' + annot.fontSize + 'px;">' +
-        escapeHtml(annot.text) +
+        escapeHTML(annot.text) +
       '</span>';
   }
 
@@ -69,9 +69,11 @@ function renderAnnotation(annot) {
   setupAnnotationInteractions(el, annot);
 }
 
-function escapeHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+// Buradaki yerel `escapeHtml` KALDIRILDI: js/ui-core.js'teki escapeHTML ile
+// yalnızca harf büyüklüğü farkı vardı (escapeHtml / escapeHTML) ve tek tırnağı
+// kaçırmıyordu — yani aynı işi yapan, adı karışan, daha ZAYIF bir ikinci sürüm.
+// Tek kaynak artık ui-core.js; kaçış kümesi & < > " ' (bkz.
+// tests/unit/html-escape.test.js).
 
 // ── Etkileşimler (sürükleme, boyutlandırma, düzenleme) ──
 function setupAnnotationInteractions(el, annot) {

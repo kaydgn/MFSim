@@ -58,7 +58,14 @@ function veMntSets() { return []; }
 // Dizi MFSim'deki gibi 4 uzunlukta: trace-view.js'in şerit göçü (veTrMigrateSlots)
 // ve pano klonlama kodu bu şekli varsayıyor. Yalnızca index 0 (VE_BOARD)
 // kullanılır.
-var VE_BOARD = 0;
+//
+// VE_BOARD'ı BU DOSYA TANIMLAMAZ: sahibi trace-view.js (yukarıdaki başlıkta da
+// öyle yazılı) ve o dosya birebir kopya olduğu için bildirimi oradan kalkamaz.
+// Burada ikinci bir `var VE_BOARD = 0` vardı — aynı değer olduğu için zararsızdı
+// ama tek global kapsamda gerçek bir çift bildirimdi. Bu dosya trace-view.js'ten
+// ÖNCE yüklenir; sorun değil, çünkü VE_BOARD yalnızca fonksiyon gövdelerinde
+// (satır ~233, ~422, ~432) okunur, yükleme anında değil.
+// Kapı: tests/unit/source-hygiene.test.js
 var veResultSlots = [{}, {}, {}, {}];
 
 // ── Metin ─────────────────────────────────────────────────────────────────

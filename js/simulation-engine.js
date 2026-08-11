@@ -195,7 +195,29 @@ function veRunSimulationEngine() {
   var A = parseFloat(vd.frontalArea) || 6.7;
   
   var rd = roadNode ? (roadNode.data || {}) : {};
-  var grade = parseFloat(rd.grade) || 0;
+
+  // ═══ EĞİM İŞARET ÇEVİRİSİ ═══
+  // Harita/segment konvansiyonu: grade > 0 = yokuş AŞAĞI, grade < 0 = yokuş YUKARI
+  // Fizik motoru konvansiyonu  : grade > 0 = yokuş YUKARI (direnç artar)
+  // Aynı kural js/ft-segment-drive.js:492-495'te de yazılı; js/ft-performance.js
+  // ve js/graphics.js'in rapor metni ("F_egim: pozitif = direnc / negatif =
+  // itici") de fizik konvansiyonunu kullanır.
+  //
+  // Bu modül çeviriyi ATLIYORDU. F_net'te de F_grade çıkarılacağına ekleniyordu;
+  // iki hata birbirini götürdüğü için ivme DOĞRUYDU, ama yayınlanan F_grade /
+  // r_grade_force / r_current_grade sinyalleri diğer iki modülün TERSİ işaretle
+  // çıkıyordu. Çeviri artık tek yerde, aşağıdaki yardımcıda; F_net ise standart
+  // biçimde (F_cekis − dirençler − F_egim) yazıldı. Sayısal sonuç değişmedi.
+  // Bkz. tests/unit/simulation-engine-grade.test.js.
+  // Not: düz yolda -0 döndürmemek için sıfır ayrıca ele alınır; -0 hem
+  // biçimlendiricide "-0.0" olarak görünür hem de sin(-0) = -0 ile F_grade'e
+  // sızardı.
+  function toPhysicsGradePct(mapPct) {
+    var v = parseFloat(mapPct) || 0;
+    return v === 0 ? 0 : -v;
+  }
+
+  var grade = toPhysicsGradePct(rd.grade);
   var gradeRad = Math.atan(grade / 100);
   var g = 9.81;
   var rho = parseFloat(rd.airDensity) || 1.225;
@@ -209,11 +231,13 @@ function veRunSimulationEngine() {
   if(isSegmentMode) {
     var cumD = 0;
     rd.routeSegments.forEach(function(seg) {
+      // seg.egim harita konvansiyonunda gelir → fizik konvansiyonuna çevrilir.
+      var segGradePct = toPhysicsGradePct(seg.egim);
       segmentLookup.push({
         distStart: cumD,
         distEnd: cumD + seg.mesafe,
-        gradePct: seg.egim,
-        gradeRad: Math.atan(seg.egim / 100),
+        gradePct: segGradePct,
+        gradeRad: Math.atan(segGradePct / 100),
         mesafe: seg.mesafe,
         deltaH: seg.deltaH || 0
       });
@@ -620,7 +644,8 @@ function veRunSimulationEngine() {
     var F_rolling = mass * g * Math.cos(gradeRad) * Crr_eff;
     var F_aero = 0.5 * rho * Cd * A * v_ms * v_ms;
 
-    var F_net = F_grade - F_rolling - F_aero + F_engine;
+    // Hareket denklemi: m_eff·a = F_cekis − F_yuv − F_aero − F_egim
+    var F_net = F_engine - F_rolling - F_aero - F_grade;
     var m_eff = mass * rotMass;
     
     return {
@@ -698,7 +723,8 @@ function veRunSimulationEngine() {
       var Crr_eff_rk = (typeof FT_SOLVER !== 'undefined' && FT_SOLVER.getCrrEffective) ? FT_SOLVER.getCrrEffective(Crr, v_eval) : Crr;
       var F_rolling = mass * g * Math.cos(gradeRad) * Crr_eff_rk;
       var F_aero = 0.5 * rho * Cd * A * v_eval * v_eval;
-      var F_net = F_grade - F_rolling - F_aero + F_engine;
+      // Hareket denklemi: m_eff·a = F_cekis − F_yuv − F_aero − F_egim
+      var F_net = F_engine - F_rolling - F_aero - F_grade;
 
       return F_net / (mass * rotMass);
     }
@@ -916,9 +942,13 @@ function veRunSimulationEngine() {
       if(roadNode && nodeData[roadNode.id]) {
         var nrR = nodeData[roadNode.id];
         nrR.r_grade_force.push(st_ri.F_grade); nrR.r_rolling_force.push(st_ri.F_rolling);
-        nrR.r_aero_force.push(st_ri.F_aero); nrR.r_total_resist.push(st_ri.F_rolling + st_ri.F_aero);
+        // r_total_resist eğim kuvvetini İÇERİR — js/ft-performance.js:1669
+        // (F_resist = F_roll + F_aero + F_grade) ve js/graphics.js'in yedek
+        // yolu da aynı tanımı kullanır.
+        nrR.r_aero_force.push(st_ri.F_aero);
+        nrR.r_total_resist.push(st_ri.F_rolling + st_ri.F_aero + st_ri.F_grade);
         nrR.r_net_force.push(st_ri.F_net);
-        nrR.r_current_grade.push(parseFloat(rd.grade) || 0);
+        nrR.r_current_grade.push(grade);
         nrR.r_current_segment.push(1);
       }
       
@@ -1084,9 +1114,11 @@ function veRunSimulationEngine() {
       nr.r_grade_force.push(st2.F_grade);
       nr.r_rolling_force.push(st2.F_rolling);
       nr.r_aero_force.push(st2.F_aero);
-      nr.r_total_resist.push(st2.F_rolling + st2.F_aero);
+      // r_total_resist eğim kuvvetini İÇERİR (bkz. yukarıdaki RK45 dalı).
+      nr.r_total_resist.push(st2.F_rolling + st2.F_aero + st2.F_grade);
       nr.r_net_force.push(st2.F_net);
-      nr.r_current_grade.push(isSegmentMode ? grade : (parseFloat(rd.grade) || 0));
+      // `grade` fizik konvansiyonunda; segment modunda her adımda güncellenir.
+      nr.r_current_grade.push(grade);
       nr.r_current_segment.push(isSegmentMode ? (currentSegmentIdx + 1) : 1);
     }
     

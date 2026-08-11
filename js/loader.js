@@ -1,3 +1,65 @@
+// ═══ MFSim Genel Hata Yakalayici ═══
+//
+// Neden burada: loader.js, index.html'de dogrudan calisan TEK script'tir; diger
+// tum moduller `type="text/x-mfsim-defer"` ile isaretli ve bu dosya tarafindan
+// yuklenir. Dolayisiyla yakalayici en erken buraya kurulabilir ve modul yukleme
+// sirasinda olusan hatalari da gorur.
+//
+// Neden gerekli: uygulama 66k satir, framework yok ve bir render fonksiyonunda
+// atilan istisna sessizce yutuluyordu — panel yarim ciziliyor, kullanici hicbir
+// sey gormuyor, "bende calismiyor" raporu teshis edilemiyordu. Yakalayici hatayi
+// konsola AYRINTILI basar; showToast hazirsa kullaniciya da kisa bir uyari verir.
+//
+// Onemli: preventDefault CAGRILMAZ — hata tarayici konsolunda da normal sekilde
+// gorunmeye devam eder. Amac hatayi gizlemek degil, GORUNUR kilmak.
+(function() {
+  'use strict';
+
+  var MAX_TOAST = 3;          // ekrani hata bildirimiyle doldurma
+  var shown = 0;
+  var inHandler = false;      // yakalayicinin kendi hatasi sonsuz donguye girmesin
+
+  function report(baslik, hata, ek) {
+    if(inHandler) return;
+    inHandler = true;
+    try {
+      // console.error: her zaman, kisitsiz — teshis kaydi burada. Hata nesnesi
+      // oldugu gibi verilir; yigin izini konsolun kendisi acar.
+      console.error('[MFSim] ' + baslik + (ek ? ' — ' + ek : ''), hata);
+      // Toast yalnizca showToast YUKLENDIYSE. Modul yuklemesi sirasinda olusan
+      // hatalarda henuz tanimli degildir (js/results.js gec yuklenir) — o durumda
+      // konsol kaydiyla yetinilir, sessizce dusulmez.
+      if(shown < MAX_TOAST && typeof showToast === 'function') {
+        shown++;
+        var kisa = (hata && hata.message) ? hata.message : String(hata);
+        if(kisa.length > 120) kisa = kisa.slice(0, 117) + '…';
+        showToast(baslik + ': ' + kisa +
+          (shown === MAX_TOAST ? ' (sonraki hatalar yalnizca konsola yazilacak)' : ''), 'error');
+      }
+    } catch(e) {
+      // Yakalayicinin kendisi patlarsa sessiz kal — asil hata zaten konsolda.
+    } finally {
+      inHandler = false;
+    }
+  }
+
+  window.addEventListener('error', function(ev) {
+    // Kaynak yukleme hatalari (img/script) da 'error' uretir; onlarin ev.error'u
+    // yoktur ve ev.target bir elementtir. Ikisini ayirt et.
+    if(ev && ev.target && ev.target !== window && ev.target.tagName) {
+      console.error('[MFSim] Kaynak yuklenemedi:', ev.target.tagName,
+        ev.target.src || ev.target.href || '');
+      return;
+    }
+    report('Beklenmeyen hata', (ev && ev.error) || (ev && ev.message),
+      ev && ev.filename ? ev.filename + ':' + ev.lineno : '');
+  }, true);
+
+  window.addEventListener('unhandledrejection', function(ev) {
+    report('Islenmemis soz reddi', ev && ev.reason, '');
+  });
+})();
+
 // ═══ MFSim Loader — Dinamik modul yukleyici + ilerleme cubugu ═══
 //
 // Login'den sonra cagrilir. Sayfada `<script type="text/x-mfsim-defer">` olarak

@@ -20,6 +20,17 @@ const stubs = stubGlobals();
 // pano. Hepsi aynı kapsamda eval edildiği için birbirini görür.
 eval(loadSource('measure-core.js'));      // veXAxisAllowed / veSharedXAxis
 eval(loadSource('measure-import.js'));    // veImpBuildDataset / veImpFind ...
+
+// VE_BOARD'ın sahibi trace-view.js'tir (board.js başlığında da öyle yazılı).
+// viewer/index.html'de trace-view.js, board.js'ten SONRA yüklenir; board.js onu
+// yalnızca fonksiyon gövdelerinde okuduğu için bu sıra sorun değildir. board.js
+// eskiden ikinci bir `var VE_BOARD = 0` daha taşıyordu — aynı değer olduğu için
+// zararsız, ama tek global kapsamda gerçek bir çift bildirimdi ve bu test onun
+// üzerinden çalışıyordu (bkz. tests/unit/source-hygiene.test.js). Bildirim
+// kalktı; sabiti burada trace-view.js'in verdiği değerle koyuyoruz — o dosyayı
+// eval etmek yalnızca bir sabit için gereksiz ağır.
+global.VE_BOARD = 0;
+
 eval(loadViewerSource('board.js'));       // pano
 
 // ── Yardımcı: gerçek içe aktarma yolundan bir veri kümesi üret ────────────

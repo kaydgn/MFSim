@@ -278,9 +278,15 @@ function veGetSensorData(sensorId, signalOverride, dataSource) {
   if(sig === 'r_aero_force') return r.F_aero || null;
   if(sig === 'r_net_force') return r.F_net || null;
   if(sig === 'r_total_resist' && r.F_rolling && r.F_aero) {
+    // Toplam direnç eğim kuvvetini İÇERİR: F_roll + F_aero + F_grade.
+    // Kanonik tanım js/ft-performance.js:362 (F_total) ve bu dosyadaki hesap
+    // izi metni (F_direnc = F_roll + F_aero + F_grade). Aynı fonksiyonun
+    // yukarıdaki diğer dalı da öyle hesaplıyordu; burada eğim ATLANMIŞTI, yani
+    // "Toplam Direnç" sinyali hangi dalın hizmet ettiğine göre farklı bir sayı
+    // veriyordu. F_grade fizik konvansiyonunda (pozitif = yokuşa direnç).
     var tr = [];
     for(var j = 0; j < r.F_rolling.length; j++) {
-      tr.push(r.F_rolling[j] + r.F_aero[j]);
+      tr.push(r.F_rolling[j] + r.F_aero[j] + (r.F_grade ? r.F_grade[j] : 0));
     }
     return tr;
   }
