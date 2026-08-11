@@ -197,13 +197,31 @@ function _mntReportEnsureAssets(cb){
   if(haveT && haveA){ cb(true); return; }
   var phs = document.querySelectorAll('script[type="text/x-mfsim-report"]');
   if(!phs.length){ cb(!!(window.MNT_REPORT_TEMPLATE_B64 && window.MNT_REPORT_ASSETS)); return; }
-  var pending=0, finished=false;
+  // SAYAÇ DÖNGÜDEN ÖNCE KURULUR. Artışı döngünün içine koymak, tek dosya
+  // build'inde raporu İLK tıklamada kırıyordu:
+  //
+  //   Monolitik build'de iki yer tutucu da INLINE'dır. Inline dalda
+  //   appendChild betiği SENKRON çalıştırır; hemen ardından gelen --pending
+  //   daha 1. YİNELEMEDE sayacı 0'a düşürüp done()'u ateşler. O anda 2.
+  //   yineleme hiç başlamamıştır: sırada önce mount-report-template.js var
+  //   (index.html:879), varlıklar (mount-report-assets.js, :880) henüz
+  //   yüklenmemiştir → cb(false). finished mandalı bu yanlış kararı KALICI
+  //   yapar; varlıklar bir an sonra gelse bile cb bir daha çağrılmaz.
+  //
+  //   Sonuç: her oturumun İLK rapor denemesi "Rapor varlıkları yüklenemedi."
+  //   ile düşüyor, ikincisi çalışıyordu (satır 197'deki kısa devre). Araç
+  //   Performans "HTML İndir" tarafında (results.js) ise SESSİZ: rapor iniyor
+  //   ama fontsuz ve formüller ham LaTeX olarak.
+  //
+  //   index.html'de hata GÖRÜNMÜYOR — orada ph.src dolu, iki pending++ de
+  //   herhangi bir onload'dan önce tamamlanıyor. Kırılan yalnız yayınlanan
+  //   MFSim_Code.html'di; açılış hatasıyla aynı dev/tek-dosya asimetrisi.
+  var pending=phs.length, finished=false;
   function done(){
     if(finished) return; finished=true;
     cb(!!(window.MNT_REPORT_TEMPLATE_B64 && window.MNT_REPORT_ASSETS));
   }
   Array.prototype.forEach.call(phs, function(ph){
-    pending++;
     var s=document.createElement('script');
     if(ph.src){
       s.src=ph.src;
@@ -2033,6 +2051,7 @@ if(typeof module!=='undefined' && module.exports){
   module.exports = {
     getMntReportPropertiesHTML: getMntReportPropertiesHTML,
     veMntGenerateReport: veMntGenerateReport,
+    _mntReportEnsureAssets: _mntReportEnsureAssets,
     _mntBuildReportHTML: _mntBuildReportHTML,
     _mntRepAntet: _mntRepAntet,
     _mntRepNLMounts: _mntRepNLMounts,

@@ -154,7 +154,15 @@ if (fs.existsSync(examplesDir)) {
 }
 // '<' → <: JSON içindeki olası "</script>" script tag'ini kırmasın.
 var embedScript = '<script>window.__MNT_TOPOLOGIES = ' + JSON.stringify(embedded).replace(/</g, '\\u003c') + ';</script>';
-html = html.replace(/<body([^>]*)>/, '<body$1>\n' + embedScript);
+// FONKSİYON replacer ŞART: String.replace'in İKİNCİ argümanı dizge olursa
+// içindeki '$1'..'$9', '$&', "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir.
+// Örnek topolojilerinde '$' geçen herhangi bir metin (customName, not metni,
+// takoz adı) sessizce bozulurdu — ölçüldü: "Motor $1 Takoz" → "Motor  class=…
+// Takoz", "A$&B" → "A<body …>B", "C$$D" → "C$D". Fonksiyon replacer'da bu
+// genişletme HİÇ yapılmaz; dönen dizge olduğu gibi konur.
+html = html.replace(/<body([^>]*)>/, function (m, attrs) {
+  return '<body' + attrs + '>\n' + embedScript;
+});
 
 // ── 2d) YAPISAL DOĞRULAMA: üretilen dosyada script blokları erken kapanmasın
 //

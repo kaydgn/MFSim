@@ -206,11 +206,26 @@ describe('script gövdesinin ham metin KİPLERİ — tarayıcıyla birebir', () 
     expect(SHIELD.verifyScriptBlocks(saglam, 2)).toBeNull();
   });
 
-  test('HTML yorumundaki "</script>" sahte alarm üretmez', () => {
+  test('BELGE düzeyindeki HTML yorumunda "</script>" sahte alarm üretmez', () => {
     const saglam = '<!-- <script>eski</script> --><script>window.B=1;</script>' +
                    '<script>var q=1;</script>';
-    expect(SHIELD.countScriptClosers(saglam)).toBe(2);   // yorum maskelendi
+    expect(SHIELD.countScriptClosers(saglam)).toBe(3);   // ham sayaç: yorumu da sayar
+    expect(SHIELD.scanDocument(saglam).stray).toBe(0);   // konum duyarlı: öksüz yok
     expect(SHIELD.verifyScriptBlocks(saglam, 2)).toBeNull();
+  });
+
+  test('script GÖVDESİNDEKİ "<!--" bir yorum DEĞİL — gerçek erken kapanma yutulmaz', () => {
+    // Bu, kapının kendisinde açılıp kapanan bir delik. Gövdede "<!--" görünce
+    // tokenizer escaped kipe girer ama "</script>" o kipte HÂLÂ KAPATIR.
+    // Kapının ara sürümü <!--…--> aralığını regex'le maskeliyordu ve bu gerçek
+    // kırılmayı "temiz" diye geçiriyordu. Gerçek Chromium'la ölçüldü:
+    // ikinci blok çalışıyor ama ilk bloğun kalanı gövdeye METİN olarak
+    // dökülüyor ve window.SONRA hiç tanımlanmıyor.
+    const bozuk =
+      '<script>var a=1;\n<!-- x\nvar s="</script>";\n-->\nwindow.SONRA=1;\n</script>' +
+      '<script>window.B=1;</script>';
+    expect(SHIELD.scanDocument(bozuk).stray).toBe(1);    // öksüz kapanış = imza
+    expect(SHIELD.verifyScriptBlocks(bozuk, 2)).toMatch(/ÖKSÜZ/);
   });
 
   test('<style> gövdesindeki "</script>" de sahte alarm üretmez', () => {
@@ -257,6 +272,39 @@ describe('kaynaklar tek dosyaya gömülünce sağlam kalıyor', () => {
       const { code } = SHIELD.shieldStyleEnd(css);
       expect({ file: f, raw: /<\/style/i.test(code) }).toEqual({ file: f, raw: false });
     }
+  });
+});
+
+describe('örnek topolojiler gövdeye BOZULMADAN gömülüyor', () => {
+  // build.js, gömülen JSON'u <body> etiketinin ardına String.replace ile
+  // enjekte ediyor. İKİNCİ argüman DİZGE olursa, içindeki '$1'..'$9', '$&',
+  // "$'", '$`' ve '$$' ÖZEL DİZİ sayılıp genişletilir — yani örnek adında bir
+  // '$' geçtiği anda ad SESSİZCE değişir. Ölçülen bozulma:
+  //   "Motor $1 Takoz" → "Motor  class=… Takoz"   (yakalama grubu)
+  //   "A$&B"           → "A<body …>B"             (tüm eşleşme)
+  //   "C$$D"           → "C$D"                    (kaçırılmış $)
+  // Fonksiyon replacer'da bu genişletme HİÇ yapılmaz.
+  const build = fs.readFileSync(path.join(ROOT, 'build.js'), 'utf8');
+
+  test('build.js gövde enjeksiyonunda FONKSİYON replacer kullanıyor', () => {
+    const m = /html\s*=\s*html\.replace\(\s*\/<body[^/]*\/\s*,\s*([\s\S]{0,30})/.exec(build);
+    expect(m).not.toBeNull();
+    expect(m[1]).toMatch(/function\s*\(/);
+  });
+
+  test('dizge replacer bozar, fonksiyon replacer bozmaz (davranış kanıtı)', () => {
+    const json = JSON.stringify({ 'a.json': { name: 'Motor $1 Takoz', b: 'A$&B', c: 'C$$D' } });
+    const betik = '<script>window.__MNT_TOPOLOGIES = ' + json + ';<\/script>';
+    const html = '<body class="x">';
+
+    const dizgeyle = html.replace(/<body([^>]*)>/, '<body$1>\n' + betik);
+    expect(dizgeyle.indexOf(json)).toBe(-1);            // BOZULDU
+
+    const fonksiyonla = html.replace(/<body([^>]*)>/, function (m, attrs) {
+      return '<body' + attrs + '>\n' + betik;
+    });
+    expect(fonksiyonla.indexOf(json)).toBeGreaterThan(-1);   // AYNEN KORUNDU
+    expect(fonksiyonla).toContain('<body class="x">');       // attribute da yerinde
   });
 });
 
