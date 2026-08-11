@@ -2,19 +2,37 @@
 // CACHE_NAME'deki __DEPLOY_SHA__ build sirasinda gen-version.js tarafindan
 // gercek SHA ile degistirilir. Her deploy yeni cache adi → eski cache'ler
 // activate'te temizlenir, tarayicilar yeni SW'yi otomatik tetikler.
+//
+// NEDEN KOKTE: bir service worker'in VARSAYILAN KAPSAMI kendi dosya yolunun
+// dizinidir. Bu dosya once pwa/sw.js idi; kapsami <site>/pwa/ oluyordu ve
+// uygulama sayfasini (<site>/) HIC kontrol etmiyordu. Yani "cevrimdisi acilir"
+// varsayimi hicbir zaman gerceklesmedi. Ustelik ASSETS'teki './' de <site>/pwa/
+// demek oluyordu; o dizinde index yok (olculdu: HTTP 404), cache.addAll
+// reddediyor ve install adimi basarisiz oldugu icin SW zaten AKTIVE OLMUYORDU.
+// Kok dizine tasindi: kapsam artik <site>/ ve uygulama sayfasi kapsam icinde.
+// (Service-Worker-Allowed basligi ile alt dizinden de genis kapsam alinabilirdi
+// ama GitHub Pages ozel basligi gondermiyor — dosyayi tasimak tek yol.)
 var DEPLOY_SHA = '__DEPLOY_SHA__';
 var CACHE_NAME = 'mfsim-' + DEPLOY_SHA;
 var ASSETS = [
   './',
-  './manifest.json',
-  './icon.svg'
+  './pwa/manifest.json',
+  './pwa/icon.svg'
 ];
 
-// Yükleme: temel dosyaları önbelleğe al
+// Yükleme: temel dosyaları önbelleğe al.
+//
+// addAll KULLANILMIYOR: tek bir varlık 404 verirse addAll TOPTAN reddeder,
+// waitUntil başarısız olur ve SW hiç aktive olmaz — yani bir ikon yolu
+// yanlış yazıldığı anda çevrimdışı desteğin TAMAMI sessizce ölür. Önceki
+// sürümde tam olarak bu oldu. Her varlık tek tek denenir; biri düşerse
+// diğerleri yine önbelleğe girer ve SW aktive olur.
 self.addEventListener('install', function(e) {
   e.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(ASSETS);
+      return Promise.all(ASSETS.map(function(url) {
+        return cache.add(url).catch(function() { /* eksik varlık SW'yi öldürmesin */ });
+      }));
     })
   );
   self.skipWaiting();

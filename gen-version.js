@@ -108,7 +108,8 @@ console.log('✓ ' + outPath + ' yazildi (runId=' + (runId || 'N/A') + ', change
 
 // Service Worker icindeki __DEPLOY_SHA__ placeholder'ini gercek SHA ile degistir.
 // Her deploy'da SW dosyasi degisir → tarayici yeni SW tetikler → eski cache silinir.
-const swPath = path.join(outDir, 'pwa', 'sw.js');
+// SW kok dizindedir (kapsam <site>/ olsun diye — bkz. sw.js basligi).
+const swPath = path.join(outDir, 'sw.js');
 if (fs.existsSync(swPath) && sha) {
   const shortSha = sha.slice(0, 7);
   const swContent = fs.readFileSync(swPath, 'utf8').replace(/__DEPLOY_SHA__/g, shortSha);

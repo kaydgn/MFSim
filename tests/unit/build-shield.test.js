@@ -308,6 +308,85 @@ describe('örnek topolojiler gövdeye BOZULMADAN gömülüyor', () => {
   });
 });
 
+describe('gömülmemiş kaynak kapısı', () => {
+  // Tek dosya ürününde kalan her göreli src/href, indirilen dosyada 404 verir
+  // ve program SESSİZCE yarım açılır. Kapı iki ayrı yere bakmak zorunda: ham
+  // metin blokları DIŞINDA etiketlere, <style> gövdelerinin İÇİNDE url(...)'a.
+
+  test('script gövdesindeki JS dizgesi sahte alarm üretmez', () => {
+    // Ölçüldü: MFSim_Code.html'de onlarca "href=\"' + url + '\"" gibi dizge
+    // var; gövdeyi maskelemeyen bir arama hepsini eksik kaynak sanardı.
+    const html = '<script>var a = \'<a href="\' + url + \'">\';</script>';
+    expect(SHIELD.leftoverRefs(html, [])).toEqual({ attrs: [], cssUrls: [] });
+  });
+
+  test('gerçek bir göreli öznitelik yakalanır (tek ve çift tırnak)', () => {
+    expect(SHIELD.leftoverRefs('<img src="logo.png">', []).attrs).toEqual(['logo.png']);
+    expect(SHIELD.leftoverRefs("<link href='fav.ico'>", []).attrs).toEqual(['fav.ico']);
+  });
+
+  test('uzantı süzgeci YOK — .js/.css dışı da yakalanır', () => {
+    // Eski kapı yalnız .js/.css biliyordu; .png/.ico/.woff2/uzantısız yollar
+    // aynı 404'ü verdiği hâlde sessizce geçiyordu.
+    const html = '<img src="a.png"><link href="b.woff2"><a href="c">x</a>';
+    expect(SHIELD.leftoverRefs(html, []).attrs).toEqual(['a.png', 'b.woff2', 'c']);
+  });
+
+  test('data:, #, mutlak adres ve mailto harici sayılmaz', () => {
+    const html = '<img src="data:image/png;base64,AA"><a href="#x">a</a>' +
+                 '<a href="https://ornek.test/y">b</a><a href="//cdn/z">c</a>' +
+                 '<a href="mailto:a@b.c">d</a>';
+    expect(SHIELD.leftoverRefs(html, [])).toEqual({ attrs: [], cssUrls: [] });
+  });
+
+  test('gömülü CSS içindeki url(...) YAKALANIR — asıl kaçak buydu', () => {
+    // Gerçek olay: vendored leaflet.css üç göreli görsele başvuruyordu. CSS
+    // satır içine alınınca yollar SAYFAYA göre çözülüyor ve <site>/images/...
+    // oluyor; canlı yayında ölçüldü, üçü de HTTP 404. Eski kapı CSS'e hiç
+    // bakmıyordu.
+    const html = '<style>.a{background-image:url(images/layers.png)}</style>';
+    expect(SHIELD.leftoverRefs(html, []).cssUrls).toEqual(['images/layers.png']);
+  });
+
+  test('CSS içindeki data: URI ve #çapa sahte alarm üretmez', () => {
+    const html = '<style>.a{background:url(data:image/gif;base64,AA)}' +
+                 '.b{behavior:url(#default#VML)}</style>';
+    expect(SHIELD.leftoverRefs(html, []).cssUrls).toEqual([]);
+  });
+
+  test('izinli listedeki dış dosyalar geçer', () => {
+    const html = '<link rel="manifest" href="pwa/manifest.json">';
+    expect(SHIELD.leftoverRefs(html, ['pwa/manifest.json']).attrs).toEqual([]);
+    expect(SHIELD.leftoverRefs(html, []).attrs).toEqual(['pwa/manifest.json']);
+  });
+
+  test('kaldırılan Leaflet görselleri gerçekten kullanılmıyor', () => {
+    // Üç görsel, yalnız iki Leaflet özelliği kullanılırsa çizilir:
+    //   L.control.layers  → .leaflet-control-layers-toggle (layers.png)
+    //   L.Icon.Default    → .leaflet-default-icon-path     (marker-icon.png)
+    // MFSim yalnız L.divIcon kullanıyor. Biri eklenirse görsel yeniden gerekir
+    // ve o an bu kapı öter — kaldırma kararı sessizce yanlışa dönmesin.
+    const js = fs.readdirSync(path.join(ROOT, 'js'))
+      .filter((f) => f.endsWith('.js'))
+      .map((f) => fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'))
+      .join('\n');
+    expect(js).not.toMatch(/L\.control\.layers/);
+    expect(js).not.toMatch(/L\.Icon\.Default/);
+  });
+
+  test('vendored CSS\'te göreli görsel başvurusu KALMADI', () => {
+    // Kaldırılan üç başvurunun geri sızmasına karşı doğrudan kapı.
+    const cssDir = path.join(ROOT, 'vendor');
+    for (const f of fs.readdirSync(cssDir).filter((x) => x.endsWith('.css'))) {
+      const css = fs.readFileSync(path.join(cssDir, f), 'utf8');
+      const goreli = [...css.matchAll(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g)]
+        .map((m) => m[2].trim())
+        .filter((v) => !/^(data:|#|https?:|\/\/)/i.test(v));
+      expect({ dosya: f, goreli }).toEqual({ dosya: f, goreli: [] });
+    }
+  });
+});
+
 describe('iki build de kalkanı KULLANIYOR', () => {
   // Kalkan koda girmiş ama çağrılmıyorsa hiçbir şey korumaz. Bu, "kapı hâlâ
   // takılı mı" sorusunun testi.

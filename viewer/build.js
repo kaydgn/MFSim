@@ -111,10 +111,20 @@ if(inlined !== jsFiles.length) {
 }
 
 // Gömülmemiş bir kaynak kaldıysa çıktı file:// üzerinde 404 verir ve program
-// sessizce yarım açılır. Kalan her src/href bir hatadır.
-var leftovers = html.match(/(?:src|href)="(?!data:|#|https?:)[^"]+\.(?:js|css)"/g);
-if(leftovers) {
-  console.error('\n✗ Gömülmemiş kaynak kaldı:', leftovers.join(', '), '\n');
+// sessizce yarım açılır. Görüntüleyici TEK dosya olarak dağıtıldığı için yanına
+// hiçbir şey kopyalanmaz: izinli dış kaynak YOK.
+//
+// Eski kapı yalnız .js/.css uzantısına ve ÇİFT tırnağa bakıyordu; .png, .ico,
+// .woff2, manifest, tek tırnaklı öznitelikler ve — en önemlisi — gömülen CSS
+// içindeki url(...) başvuruları hiç sorgulanmıyordu. Ortak denetleyici
+// (build-shield.js) hem etiketlere hem CSS'e bakar ve script gövdesindeki JS
+// dizgelerini sahte alarm saymaz.
+var kalan = SHIELD.leftoverRefs(html, []);
+if(kalan.attrs.length || kalan.cssUrls.length) {
+  console.error('\n✗ Gömülmemiş kaynak kaldı — indirilen dosyada 404 verir:');
+  kalan.attrs.forEach(function(v) { console.error('    öznitelik: ' + v); });
+  kalan.cssUrls.forEach(function(v) { console.error('    CSS url(): ' + v); });
+  console.error('');
   process.exit(1);
 }
 
