@@ -3758,9 +3758,18 @@ function veDownloadReportHTML() {
         var timeStr = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
 
         var asm = _veReportAssemble(R, sim, charts);
-        // KaTeX gövdesinde geçen "</script>" dizisi, gömüldüğü <script> etiketini
+        // KaTeX gövdesinde geçen "<\/script>" dizisi, gömüldüğü <script> etiketini
         // ERKEN KAPATIR ve belgenin geri kalanı ham metin olarak dökülür. Takoz
         // raporu da aynı kaçışı yapar (_mntBuildReportHTML).
+        //
+        // DİKKAT — aynı tuzak BU DOSYANIN KENDİSİ için de geçerli: results.js,
+        // MFSim_Code.html'de bir <script> etiketinin İÇİNE gömülür. Bu yüzden
+        // aşağıdaki dizgeler (ve bu yorum) kapanış etiketini ham yazamaz;
+        // "<\/script>" biçiminde kaçırılır. JS'te '<\/script>' ile ham hâli
+        // AYNI değeri üretir, davranış değişmez. Ham hâli 2026-08'de programı
+        // açılışta kırdı: kalan ~90 KB kaynak HTML olarak ayrıştırıldı, ekrana
+        // ham kod döküldü ve gövdeye giren <div class="ve-trace-empty"> tüm
+        // tıklamaları yuttu. build.js artık gömerken de kaçırıyor (iki kat kalkan).
         var katexJs = ASSETS.katexJs ? ASSETS.katexJs.replace(/<\/script>/gi, '<\\/script>') : '';
         var doc = '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">'
           + '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
@@ -3774,8 +3783,8 @@ function veDownloadReportHTML() {
           + asm.body
           + '<p class="foot">Bu rapor, projede tanımlı güç aktarma modelinden <strong>otomatik üretilmiştir</strong>; girdi değerleri modeldeki bileşen tanımlarından alınır. Tasarım kararlarında güncel tedarikçi / test verisiyle teyit edilmelidir. · MFSim — Motor Freni Simülasyon Yazılımı · ' + dateStr + ' ' + timeStr + '</p>'
           + '</div>'
-          + (katexJs ? '<script>' + katexJs + '</script>'
-              + '<script>document.addEventListener("DOMContentLoaded",function(){try{renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\\\(",right:"\\\\)",display:false}],throwOnError:false});}catch(e){}});</script>' : '')
+          + (katexJs ? '<script>' + katexJs + '<\/script>'
+              + '<script>document.addEventListener("DOMContentLoaded",function(){try{renderMathInElement(document.body,{delimiters:[{left:"$$",right:"$$",display:true},{left:"\\\\(",right:"\\\\)",display:false}],throwOnError:false});}catch(e){}});<\/script>' : '')
           + '</body></html>';
 
         _veReportDownloadBlob(doc, _veReportSlug(projectName) + '_arac_performans_raporu.html');
