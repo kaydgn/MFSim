@@ -303,8 +303,103 @@ function verifyScriptBlocks(html, intended, intendedStyles) {
   return null;
 }
 
+// ── Gömülmemiş kaynak kaldı mı? ──────────────────────────────────────────
+//
+// Tek dosya ürününde kalan her göreli src/href, indirilen dosyada 404 verir ve
+// program SESSİZCE yarım açılır (file:// üzerinde konsol dışında hiçbir işaret
+// yoktur — ikon/font/logo kaybolur, sayfa "eksik" görünür).
+//
+// İKİ AYRI YERE bakmak gerekir, çünkü ikisi de yanlış cevap verir:
+//   • Belgenin tamamında regex aramak → script GÖVDESİNDEKİ JS dizgeleri
+//     ("href=\"' + url + '\"" gibi) sahte alarm üretir. Ölçüldü: MFSim_Code.html
+//     böyle bir aramada onlarca uydurma isabet veriyor.
+//   • Yalnız etiketlere bakmak → gömülü CSS'teki url(...) başvuruları KAÇAR.
+// Bu yüzden: HTML öznitelikleri ham metin blokları DIŞINDA, url(...) ise
+// yalnız <style> gövdelerinin İÇİNDE aranır.
+//
+// Uzantı süzgeci YOK: eski kapı yalnız .js/.css biliyordu, oysa .png, .ico,
+// .woff2, .json ve uzantısız yollar da aynı 404'ü verir.
+function leftoverRefs(html, izinli) {
+  izinli = izinli || [];
+  var sonuc = { attrs: [], cssUrls: [] };
+
+  // Harici sayılmayanlar: veri URI'si, sayfa içi çapa, mutlak adres, protokole
+  // duyarsız adres, mailto/blob/javascript.
+  var HARICI_DEGIL = /^(data:|#|https?:|\/\/|mailto:|blob:|javascript:)/i;
+
+  // (1) HTML öznitelikleri — script/style gövdeleri MASKELENİR.
+  var maskeli = maskRawText(html);
+  var ATTR = /\b(?:src|href)\s*=\s*(['"])([^'"]*)\1/gi;
+  var m;
+  while ((m = ATTR.exec(maskeli))) {
+    var v = m[2].trim();
+    if (!v || HARICI_DEGIL.test(v)) continue;
+    if (izinli.indexOf(v) !== -1) continue;
+    if (sonuc.attrs.indexOf(v) === -1) sonuc.attrs.push(v);
+  }
+
+  // (2) Gömülü CSS içindeki url(...) — yalnız <style> gövdelerinde.
+  styleBodies(html).forEach(function (css) {
+    var URL_RE = /url\(\s*(['"]?)([^'")]+)\1\s*\)/gi;
+    var u;
+    while ((u = URL_RE.exec(css))) {
+      var val = u[2].trim();
+      if (!val || HARICI_DEGIL.test(val)) continue;
+      if (izinli.indexOf(val) !== -1) continue;
+      if (sonuc.cssUrls.indexOf(val) === -1) sonuc.cssUrls.push(val);
+    }
+  });
+
+  return sonuc;
+}
+
+// script ve style gövdelerini boşaltır (etiketler kalır) — öznitelik araması
+// gövdedeki JS/CSS metnine takılmasın.
+function maskRawText(src) {
+  var out = '', i = 0;
+  var OPEN = /<(script|style)\b/gi, m;
+  while (true) {
+    OPEN.lastIndex = i;
+    m = OPEN.exec(src);
+    if (!m) break;
+    var gt = endOfOpenTag(src, m.index);
+    if (gt === -1) break;
+    var ad = m[1].toLowerCase();
+    var end = (ad === 'script')
+      ? (function () { var r = scanScriptBody(src, gt + 1); return r.end; })()
+      : (function () {
+          var re = /<\/style(?=[\t\n\f \/>]|$)/gi; re.lastIndex = gt + 1;
+          var mm = re.exec(src); return mm ? mm.index : -1;
+        })();
+    if (end === -1) { out += src.slice(i, gt + 1); i = src.length; break; }
+    out += src.slice(i, gt + 1);          // açılış etiketi korunur
+    i = end;                               // gövde atlanır
+  }
+  return out + src.slice(i);
+}
+
+// <style> gövdelerinin metinleri.
+function styleBodies(src) {
+  var out = [], i = 0;
+  var OPEN = /<style\b/gi, m;
+  while (true) {
+    OPEN.lastIndex = i;
+    m = OPEN.exec(src);
+    if (!m) break;
+    var gt = endOfOpenTag(src, m.index);
+    if (gt === -1) break;
+    var re = /<\/style(?=[\t\n\f \/>]|$)/gi; re.lastIndex = gt + 1;
+    var mm = re.exec(src);
+    if (!mm) break;
+    out.push(src.slice(gt + 1, mm.index));
+    i = mm.index + 7;
+  }
+  return out;
+}
+
 module.exports = {
   shieldScriptEnd, shieldStyleEnd,
   scanDocument, countScriptElements, countScriptClosers, verifyScriptBlocks,
+  leftoverRefs, maskRawText, styleBodies,
   indexOfCI,
 };

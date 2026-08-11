@@ -1,3 +1,25 @@
+/* --------------------------------------------------------------------------
+ * MFSim YEREL DEGISIKLIGI (vendored leaflet@1.9.4)
+ *
+ * Uc adet goreli gorsel basvurusu KALDIRILDI:
+ *     layers.png . layers-2x.png . marker-icon.png
+ * (leaflet'in kendi images/ dizinine isaret ediyorlardi)
+ *
+ * NEDEN: bu CSS tek dosya build'inde <style> olarak SATIR ICINE alinir; goreli
+ * yollar artik CSS'e degil SAYFAYA gore cozulur. Hedef dizin yok - canli
+ * yayinda olculdu, ucu de HTTP 404. Gorseller depoda da yok (vendor/ altinda
+ * boyle bir dizin hic bulunmuyor).
+ *
+ * NEDEN KALDIRMAK GUVENLI: MFSim yalniz L.divIcon (ozel HTML isaretci)
+ * kullaniyor - L.Icon.Default hic olusturulmuyor, dolayisiyla
+ * .leaflet-default-icon-path yol-tahmin sezgiseli hic calismiyor. Katman
+ * denetimi (L.control.layers) de hic eklenmiyor, yani
+ * .leaflet-control-layers-toggle hic cizilmiyor. Ucu de olu istekti.
+ *
+ * Leaflet yeniden vendor'landiginda bu not kaybolur; build.js'teki kaynak
+ * butunlugu kapisi o anda tekrar oter ve karar yeniden verilir.
+ * -------------------------------------------------------------------------- */
+
 /* required styles */
 
 .leaflet-pane,
@@ -356,12 +378,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 	border-radius: 5px;
 	}
 .leaflet-control-layers-toggle {
-	background-image: url(images/layers.png);
+	/* MFSim: layers.png basvurusu kaldirildi - bkz. dosya basi notu */
 	width: 36px;
 	height: 36px;
 	}
 .leaflet-retina .leaflet-control-layers-toggle {
-	background-image: url(images/layers-2x.png);
+	/* MFSim: layers-2x.png basvurusu kaldirildi - bkz. dosya basi notu */
 	background-size: 26px 26px;
 	}
 .leaflet-touch .leaflet-control-layers-toggle {
@@ -404,7 +426,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 /* Default icon URLs */
 .leaflet-default-icon-path { /* used only in path-guessing heuristic, see L.Icon.Default */
-	background-image: url(images/marker-icon.png);
+	/* MFSim: marker-icon.png basvurusu kaldirildi - bkz. dosya basi notu */
 	}
 
 

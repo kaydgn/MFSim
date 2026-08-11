@@ -188,6 +188,26 @@ if (blockError) {
 console.log('  Yapısal doğrulama: ' + intendedScripts + ' script + ' + intendedStyles +
   ' style bloğu, hepsi kendi yerinde kapanıyor');
 
+// ── 2e) GÖMÜLMEMİŞ KAYNAK KALDI MI ────────────────────────────────────────
+// Deploy _site'a YALNIZCA index.html (=MFSim_Code.html), pwa/ ve assets/
+// kopyalar (bkz. .github/workflows/ci-deploy.yml). Bunların dışında kalan
+// göreli her başvuru Pages'te 404 verir ve program sessizce yarım açılır.
+var IZINLI_DIS_KAYNAK = [
+  'pwa/manifest.json',   // _site/pwa/manifest.json olarak kopyalanır
+  'pwa/icon.svg'         // _site/pwa/icon.svg
+];
+var kalan = SHIELD.leftoverRefs(html, IZINLI_DIS_KAYNAK);
+if (kalan.attrs.length || kalan.cssUrls.length) {
+  console.error('\n✗ Gömülmemiş kaynak kaldı — yayında 404 verir:');
+  kalan.attrs.forEach(function (v) { console.error('    öznitelik: ' + v); });
+  kalan.cssUrls.forEach(function (v) { console.error('    CSS url(): ' + v); });
+  console.error('  Ya tek dosyaya gömün ya da deploy adımında _site\'a kopyalayıp');
+  console.error('  build.js\'teki IZINLI_DIS_KAYNAK listesine ekleyin.\n');
+  process.exit(1);
+}
+console.log('  Kaynak bütünlüğü: gömülmemiş başvuru yok (izinli ' +
+  IZINLI_DIS_KAYNAK.length + ' dış dosya)');
+
 // ── 3) Yaz
 fs.writeFileSync(OUTPUT, html, 'utf8');
 

@@ -73,12 +73,59 @@ jobs:
             exit 1
           fi
 
+  # YAYINLANAN ÜRÜNÜ AÇAN kapı — birim testlerin göremediği sınıf buradan geçer.
+  #
+  # 2026-08 olayı: js/results.js'e giren ham "</script>" dizisi index.html'de
+  # zararsızdı ama MFSim_Code.html'de <script> bloğunu erken kapattı; ekrana ham
+  # kod döküldü ve ana ekranda hiçbir yere tıklanamadı. Birim testler js/
+  # dosyalarını DOĞRUDAN yükler, tek dosyaya hiç bakmaz; o tarihte tüm E2E
+  # testleri de index.html'i açıyordu. Yani yayınlanan artefakt hiçbir otomatik
+  # kapıdan geçmiyordu ve bozukluk ilk kez KULLANICIDA görüldü.
+  #
+  # Kapsam bilerek dar: yalnız İKİ ürün dosyası (MFSim_Code.html ve
+  # MFSim_Olcum_Goruntuleyici.html). Tüm E2E takımı yerel bir araç olarak kalıyor
+  # (npm run test:e2e); buradaki iş "dağıtılan şey açılıyor mu" sorusu.
+  e2e-urun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (iki ürün dosyası)
+        run: npm run build:all
+
+      - name: Chromium kur
+        run: npx playwright install --with-deps chromium
+
+      - name: Ürün açılış kapısı
+        run: npx playwright test tests/e2e/published.spec.js tests/e2e/viewer.spec.js
+
+      - name: Başarısızlık izlerini yükle
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-urun-izleri
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
   # Pages artifact'ını ÜRETEN job. Deploy'dan AYRI tutulur: böylece başarısız bir
   # deploy'u "re-run" etmek upload'ı TEKRARLAMAZ. (Upload ile deploy aynı job'da
   # olduğunda, deploy'u yeniden çalıştırmak aynı run'da ikinci bir "github-pages"
   # artifact'ı oluşturuyor ve deploy-pages "Artifact count is 2" hatası veriyordu.)
   build:
-    needs: test
+    # Ürün kapısı da geçmeden yayın YOK — açılışta kırık bir dosya Pages'e
+    # gitmesin.
+    needs: [test, e2e-urun]
     # PR'da Pages artifact'ı ÜRETİLMEZ: PR'ın işi doğrulama, yayın değil.
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
@@ -106,7 +153,9 @@ jobs:
           cp MFSim_Code.html _site/index.html
           cp pwa/manifest.json _site/pwa/manifest.json
           cp pwa/icon.svg _site/pwa/icon.svg
-          cp pwa/sw.js _site/pwa/sw.js
+          # SW KOKE kopyalanir: varsayilan kapsami kendi dizinidir, _site/pwa/
+          # altinda olsaydi uygulama sayfasini hic kontrol etmezdi (bkz. sw.js).
+          cp sw.js _site/sw.js
           # Harici varlıklar (ör. örnek topoloji görselleri) — göreli yolla
           # referans verilenler Pages'e aynı yapıda kopyalanır.
           if [ -d assets ]; then cp -r assets _site/assets; fi
