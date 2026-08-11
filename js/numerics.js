@@ -443,8 +443,12 @@ function veEnergyBalance() {
       var KE_final = 0.5 * this.mass * v_final * v_final;
       var deltaKE = KE_final - this.KE_initial;
 
-      // Enerji korunumu: ΔKE = W_grade - W_rolling - W_aero + W_engine
-      var W_net = this.W_grade - this.W_rolling - this.W_aero + this.W_engine;
+      // Enerji korunumu: ΔKE = W_engine - W_rolling - W_aero - W_grade
+      // F_grade fizik konvansiyonunda gelir (pozitif = yokuşa direnç), bu yüzden
+      // W_grade ÇIKARILIR — yukarıdaki başlık yorumundaki denklemin ta kendisi.
+      // (Eskiden eklenirdi; tek çağıran js/simulation-engine.js F_grade'i ters
+      // işaretle veriyordu ve iki hata birbirini götürüyordu.)
+      var W_net = this.W_engine - this.W_rolling - this.W_aero - this.W_grade;
       var error = deltaKE - W_net;
       var totalEnergy = Math.abs(this.KE_initial) + Math.abs(this.W_grade) + Math.abs(this.W_rolling) + Math.abs(this.W_aero) + Math.abs(this.W_engine);
       var relError = totalEnergy > 0 ? Math.abs(error) / totalEnergy : 0;

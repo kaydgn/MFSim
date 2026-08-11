@@ -581,7 +581,7 @@ function veTrBuildLanes(slot) {
         //    KENDİ etiket kümesidir. Paylaşsalardı ikinci kanal birincinin
         //    etiketleriyle okunurdu — "B" yerine "2L".
         var u = g.sensor.unit || '';
-        var key = (g.levels || !u) ? (' tek:' + i) : ('u:' + u);
+        var key = (g.levels || !u) ? ('tek:' + i) : ('u:' + u);
         if(byUnit[key] === undefined) { byUnit[key] = unitOrder.length; unitOrder.push([]); }
         g.axisIdx = byUnit[key];
         unitOrder[g.axisIdx].push(g);

@@ -127,6 +127,9 @@ Referans örnek: `tests/unit/sensors.test.js`.
 | `tests/unit/viewer-board.test.js` | `viewer/js/board.js` | Görüntüleyici panosu: bir panoda tek ölçüm dosyası kuralı, X ekseni seçenekleri, veri kapısı |
 | `tests/unit/viewer-sync.test.js` | `viewer/sync.js` | Görüntüleyici kopyaları `js/`'ten geride kaldıysa kırmızı — sessiz ayrışmaya karşı kapı |
 | `tests/unit/measure-dropzone.test.js` | `js/measure-dropzone.js` | Sürükle-bırak uzantı süzgeci (sessiz yanlış çıktıya karşı) |
+| `tests/unit/simulation-engine-grade.test.js` | `js/simulation-engine.js` | Yol eğimi işaret konvansiyonu (harita ↔ fizik çevirisi) + dinamiğin değişmediğini bağlayan altın değerler |
+| `tests/unit/source-hygiene.test.js` | `js/`, `viewer/js/`, `css/`, `index.html` | **Yapısal kapılar**: üst-seviye bildirim çakışması yok, kaynakta kontrol karakteri yok |
+| `tests/unit/results-txt-preview-download.test.js` | `js/results.js` | TXT önizlemesinin "HTML İndir" yolu — iki rapor üreticisinin ayrı kaldığı ve düğme kablolaması |
 | `tests/e2e/app.spec.js` | Tüm uygulama | Sayfa yükleme, menüler, bileşen ekleme, kaydetme |
 | `tests/e2e/measure-import.spec.js` | İçe aktarma sihirbazı | Gerçek .xlsx → sütun tarama → X/Y seçimi → şeritler |
 | `tests/e2e/viewer.spec.js` | `MFSim_Olcum_Goruntuleyici.html` | **Üretilen tek dosya**, `file://` üzerinden: açılış, içe aktarma, sürükle-bırak, birleştirme, tema, sıfır ağ isteği |
@@ -163,7 +166,12 @@ npm test          # tüm birim testleri
 2. Commit → `git push -u origin <dal>`
 3. PR aç (gövdede: sorun, kök neden, ölçüm, test, doğrulama)
 4. **Merge et** (`merge` yöntemi — depo geçmişi merge commit'i kullanıyor)
-5. CI'ı izle (`main`'e push'ta koşar, PR'da KOŞMAZ) ve sonucu kullanıcıya bildir
+5. CI'ı izle ve sonucu kullanıcıya bildir. CI artık **PR'da da koşar** (yalnız
+   `test` job'u; `build`/`deploy` PR'da atlanır) — yani kırık kod merge'den ÖNCE
+   yakalanır. `main`'e push'ta üç job da koşar ve Pages'e yayınlar.
+   `test` job'u ayrıca iki kapı içerir: görüntüleyici senkronu
+   (`npm run sync:viewer -- --check`) ve `MFSim_Olcum_Goruntuleyici.html`'in
+   kaynaklarla taze olması (yeniden üretip `git diff --exit-code`).
 
 **Kapı kuralı:** testler kırmızıysa ya da build patlıyorsa merge etme —
 durumu kullanıcıya söyle. "Otomatik merge" testleri atlamak demek değil;

@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+  # PR'da da koş — YALNIZCA "test" job'u (aşağıdaki build/deploy job'ları
+  # pull_request olayında atlanır). Önceden CI sadece main'e push'ta koşuyordu;
+  # teslim akışı "PR aç ve merge et" olduğu için kırık kod ancak MERGE EDİLDİKTEN
+  # SONRA fark ediliyordu. Kapı artık merge'den önce.
+  pull_request:
+    branches:
+      - main
   # Elle tetik — başarısız/atlanan bir Pages deploy'unu Actions sekmesinden
   # "Run workflow" ile YENİ bir çalıştırma olarak tetiklemek için (kod değişikliği
   # gerektirmez). Not: başarısız deploy için mevcut çalıştırmayı "Re-run" etmek de
@@ -17,8 +24,12 @@ permissions:
   actions: write   # aynı run'da kalan "github-pages" artifact'ını silebilmek için
 
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  # GitHub Pages aynı anda TEK deployment'a izin verir → main akışı "pages"
+  # grubunda sırayla koşar ve iptal edilmez. PR koşumları bu gruba GİRMEZ:
+  # girseydi her açık PR testi bir deploy'u kuyrukta bekletirdi. Her PR kendi
+  # grubunda koşar ve dala yeni push gelince eskisi iptal edilir.
+  group: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.head_ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -44,12 +55,32 @@ jobs:
       - name: Run tests
         run: npm run test:ci
 
+      # Görüntüleyici kopyaları js/'ten geride mi? (viewer/sync.js'in kendi
+      # CI kapısı — dosyayı DEĞİŞTİRMEZ, yalnız fark var mı söyler.)
+      - name: Görüntüleyici senkron kapısı
+        run: npm run sync:viewer -- --check
+
+      # MFSim_Olcum_Goruntuleyici.html git'e DÂHİL ve elle üretiliyor; dağıtım
+      # bu dosyanın indirilmesiyle oluyor. Kaynak değişip build unutulursa
+      # kullanıcı bayat dosya indirir. viewer/build.js deterministik olduğundan
+      # yeniden üretip diff'e bakmak güvenilir bir tazelik kapısıdır.
+      # (MFSim_Code.html .gitignore'da olduğu için ona bakılmaz.)
+      - name: Dağıtım dosyası taze mi (MFSim_Olcum_Goruntuleyici.html)
+        run: |
+          npm run build:viewer
+          if ! git diff --exit-code -- MFSim_Olcum_Goruntuleyici.html; then
+            echo "::error::MFSim_Olcum_Goruntuleyici.html kaynaklarla uyumsuz. 'npm run build:viewer' çalıştırıp sonucu commit'leyin."
+            exit 1
+          fi
+
   # Pages artifact'ını ÜRETEN job. Deploy'dan AYRI tutulur: böylece başarısız bir
   # deploy'u "re-run" etmek upload'ı TEKRARLAMAZ. (Upload ile deploy aynı job'da
   # olduğunda, deploy'u yeniden çalıştırmak aynı run'da ikinci bir "github-pages"
   # artifact'ı oluşturuyor ve deploy-pages "Artifact count is 2" hatası veriyordu.)
   build:
     needs: test
+    # PR'da Pages artifact'ı ÜRETİLMEZ: PR'ın işi doğrulama, yayın değil.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,6 +137,8 @@ jobs:
 
   deploy:
     needs: build
+    # PR'dan yayına çıkılmaz.
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.d1.outputs.page_url || steps.d2.outputs.page_url || steps.d3.outputs.page_url }}
