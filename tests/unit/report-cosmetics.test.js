@@ -136,6 +136,31 @@ describe('KaTeX — Takoz raporuyla aynı gömme sözleşmesi', () => {
   });
 });
 
+describe('Rapor kapağı projenin TAM adını taşır', () => {
+  // veSetProjectNameButton (toolbar.js) 22 karakterden uzun adı "…" ile
+  // kısaltıp textContent'e öyle yazar; tam hâli title niteliğindedir.
+  // textContent'ten okumak kapağa ve dosya adına KESİK isim taşıyordu —
+  // "Taktik Tekerlekli Araç 8x8" → "Taktik Tekerlekli Ar". Sessiz ve
+  // makul görünen yanlış çıktı: kimse raporun adının kırpıldığını fark etmez.
+  const indirici = src.slice(src.indexOf('function veDownloadReportHTML('));
+  const okuma = indirici.slice(0, indirici.indexOf('var now = new Date()'));
+
+  test('ad title niteliğinden okunuyor', () => {
+    expect(okuma).toMatch(/pnBtn\.getAttribute\('title'\)/);
+  });
+
+  test('textContent yalnız yedek (title yoksa) olarak kalıyor', () => {
+    // '||' zinciri: önce title, sonra textContent.
+    expect(okuma).toMatch(/getAttribute\('title'\)\s*\|\|\s*pnBtn\.textContent/);
+  });
+
+  test('kısaltma gerçekten toolbar.js tarafında yapılıyor (gerekçe canlı)', () => {
+    const tb = fs.readFileSync(path.join(ROOT, 'js/toolbar.js'), 'utf8');
+    expect(tb).toMatch(/substring\(0,\s*20\)\s*\+\s*['"]…['"]/);
+    expect(tb).toMatch(/setAttribute\('title',\s*raw\)/);
+  });
+});
+
 describe('Denklem yardımcısı H.eq', () => {
   const fabrika = (() => {
     const i = src.indexOf('function _veMakeReportHelpers(');
