@@ -3739,8 +3739,18 @@ function veDownloadReportHTML() {
 
         var projectName = 'MFSim Raporu';
         try {
+          // TAM ad title'dan okunur, textContent'ten DEĞİL.
+          // veSetProjectNameButton (toolbar.js) 22 karakterden uzun adı
+          // "…" ile kısaltıp textContent'e öyle yazıyor; tam hâli title
+          // niteliğinde duruyor. Buradan textContent okumak, kapağa ve dosya
+          // adına kesik ismi taşıyordu: "Taktik Tekerlekli Araç 8x8" →
+          // "Taktik Tekerlekli Ar". Kapak, ekrandaki kırpmayı değil projenin
+          // gerçek adını yazmalı.
           var pnBtn = document.getElementById('ve-project-name-btn');
-          if(pnBtn) { var pn = pnBtn.textContent.replace(/[⚙▾…]/g, '').trim(); if(pn && pn !== 'MFSim') projectName = pn; }
+          if(pnBtn) {
+            var pn = (pnBtn.getAttribute('title') || pnBtn.textContent || '').replace(/[⚙▾…]/g, '').trim();
+            if(pn && pn !== 'MFSim') projectName = pn;
+          }
         } catch(e) {}
 
         var now = new Date();
