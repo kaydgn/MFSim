@@ -199,7 +199,17 @@ function veRunSimulationEngine() {
   // ═══ EĞİM İŞARET ÇEVİRİSİ ═══
   // Harita/segment konvansiyonu: grade > 0 = yokuş AŞAĞI, grade < 0 = yokuş YUKARI
   // Fizik motoru konvansiyonu  : grade > 0 = yokuş YUKARI (direnç artar)
-  // Aynı kural js/ft-segment-drive.js:492-495'te de yazılı; js/ft-performance.js
+  //
+  // DAYANAK — Tam_Gaz_Hizlanma_Matematiksel_Hesaplar.txt (iSCAAN'a kalibre
+  // referans; bkz. tests/unit/arac-performans-turan-calibration.test.js):
+  //   §5.2      F_grade = m·g·sin(θ),  θ = atan(grade_pct/100)
+  //             F_total = F_rolling + F_aero + F_grade   ← eğim TOPLAM DİRENCE dahil
+  //   satır 320 F_net   = F_traction − F_total
+  //   satır 471 P_grade = F_grade·v/1000   (işaretli: + = yokuş YUKARI)
+  //
+  // Harita tarafının konvansiyonu ise kullanıcının girdiği yerde tanımlı:
+  // js/component-extras.js:2102-2103 ("↓ İniş" → grade = +pct) ve :2136.
+  // Çeviriyi js/ft-segment-drive.js:492-495 zaten yapıyor; js/ft-performance.js
   // ve js/graphics.js'in rapor metni ("F_egim: pozitif = direnc / negatif =
   // itici") de fizik konvansiyonunu kullanır.
   //
@@ -644,7 +654,7 @@ function veRunSimulationEngine() {
     var F_rolling = mass * g * Math.cos(gradeRad) * Crr_eff;
     var F_aero = 0.5 * rho * Cd * A * v_ms * v_ms;
 
-    // Hareket denklemi: m_eff·a = F_cekis − F_yuv − F_aero − F_egim
+    // Hareket denklemi (referans belge satır 320): F_net = F_traction − F_total
     var F_net = F_engine - F_rolling - F_aero - F_grade;
     var m_eff = mass * rotMass;
     
@@ -723,7 +733,7 @@ function veRunSimulationEngine() {
       var Crr_eff_rk = (typeof FT_SOLVER !== 'undefined' && FT_SOLVER.getCrrEffective) ? FT_SOLVER.getCrrEffective(Crr, v_eval) : Crr;
       var F_rolling = mass * g * Math.cos(gradeRad) * Crr_eff_rk;
       var F_aero = 0.5 * rho * Cd * A * v_eval * v_eval;
-      // Hareket denklemi: m_eff·a = F_cekis − F_yuv − F_aero − F_egim
+      // Hareket denklemi (referans belge satır 320): F_net = F_traction − F_total
       var F_net = F_engine - F_rolling - F_aero - F_grade;
 
       return F_net / (mass * rotMass);
@@ -942,9 +952,10 @@ function veRunSimulationEngine() {
       if(roadNode && nodeData[roadNode.id]) {
         var nrR = nodeData[roadNode.id];
         nrR.r_grade_force.push(st_ri.F_grade); nrR.r_rolling_force.push(st_ri.F_rolling);
-        // r_total_resist eğim kuvvetini İÇERİR — js/ft-performance.js:1669
-        // (F_resist = F_roll + F_aero + F_grade) ve js/graphics.js'in yedek
-        // yolu da aynı tanımı kullanır.
+        // r_total_resist eğim kuvvetini İÇERİR: referans belgenin §5.2'si
+        // (F_total = F_rolling + F_aero + F_grade) ve depodaki mevcut kapı
+        // tests/unit/arac-performans-calc-trace.test.js:133 böyle tanımlar;
+        // js/ft-performance.js:1669 ve js/graphics.js'in yedek yolu da öyle.
         nrR.r_aero_force.push(st_ri.F_aero);
         nrR.r_total_resist.push(st_ri.F_rolling + st_ri.F_aero + st_ri.F_grade);
         nrR.r_net_force.push(st_ri.F_net);
