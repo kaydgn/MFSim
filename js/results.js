@@ -3589,9 +3589,19 @@ th{font-family:"Archivo",sans-serif;font-size:var(--rfs-md);font-weight:600;lett
 td{padding:6px 10px;border:1px solid var(--line-soft);font-family:var(--mono);font-size:var(--rfs-md);text-align:right;white-space:nowrap}
 td.l{text-align:left;font-family:"Source Serif 4",Georgia,serif;font-size:var(--rfs-lg);white-space:normal}
 td.c{text-align:center}
-tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:600}
+tr.sum td{border-top:1.5px solid var(--line);background:#f7f8f9;font-weight:500}
+/* ── Anahtar–değer tablosu: İKİ SÜTUN DA gövde yazı tipi, normal ağırlık ──
+   Buradaki "değer" çoğunlukla METİNDİR: "Allison 4500 SP", "Standart Güç
+   Eğrisi", "395/85 R20 XZL". Mono + 600, solundaki serif etiketle aynı satırda
+   iki ayrı ses çıkarıyor ve satır bir özellik listesi gibi değil, vurgulanmış
+   bir veri hücresi gibi okunuyordu.
+   SAYISAL veri tabloları (tork eğrisi, vites geçişleri, konvertör adayları)
+   mono kalır — orada sütun hizası rakam genişliğine bağlı, ve Takoz raporu da
+   öyle. Ayrım "tablo" ile "özellik listesi" arasında, bold ile normal arasında
+   değil. */
 table.kv td.l{width:46%;color:#3c4350}
-table.kv td:not(.l){font-weight:600}
+table.kv td:not(.l){font-family:"Source Serif 4",Georgia,serif;font-size:var(--rfs-lg);
+  font-weight:400;font-variant-numeric:tabular-nums}
 .st-ok{color:var(--check);font-weight:600;white-space:nowrap}
 .st-warn{color:var(--warn);font-weight:600;white-space:nowrap}
 .st-bad{color:var(--bad);font-weight:600;white-space:nowrap}
