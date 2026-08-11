@@ -4052,7 +4052,12 @@ function veDownloadReportHTML() {
         // açılışta kırdı: kalan ~90 KB kaynak HTML olarak ayrıştırıldı, ekrana
         // ham kod döküldü ve gövdeye giren <div class="ve-trace-empty"> tüm
         // tıklamaları yuttu. build.js artık gömerken de kaçırıyor (iki kat kalkan).
-        var katexJs = ASSETS.katexJs ? ASSETS.katexJs.replace(/<\/script>/gi, '<\\/script>') : '';
+        // '>' ARANMAZ: tarayıcı "<\/script" dizisinden sonra boşluk, '/' ya da
+        // '>' gelirse bloğu kapatır. Yalnız tam kapanışı kaçırmak, boşluklu ve
+        // eğik çizgili biçimleri atlar. ASSETS.katexJs base64'ten çözülüyor
+        // ve tools/report-assets/ ile upstream KaTeX'ten YENİDEN üretiliyor —
+        // sürüm yükseltmesinde içerik değişir, tek savunma bu kaçıştır.
+        var katexJs = ASSETS.katexJs ? ASSETS.katexJs.replace(/<\/script/gi, '<\\/script') : '';
         var doc = '<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">'
           + '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
           + '<title>' + _veReportEsc(projectName) + ' — Araç Performans Raporu</title>'

@@ -53,17 +53,31 @@ var vm = require('vm');
 // Yine de varsayımla yetinilmez: kaçış bir şey değiştirdiyse kod YENİDEN
 // derlenir. Anlam bozulduysa build sessizce geçmez.
 function shieldScriptEnd(js, label) {
-  if (!/<\/script/i.test(js)) return { code: js, escaped: 0 };
+  // İKİ tuzak kesilir:
+  //   "</script" → bloğu erken kapatır.
+  //   "<!--"     → tokenizer'ı ESCAPED kipe sokar; gövdede ayrıca "<script"
+  //                geçiyorsa DOUBLE escaped kipe geçilir ve bizim kapanış
+  //                etiketimiz artık KAPATMAZ (bkz. scanScriptBody). Tek başına
+  //                zararsızdır, ama zinciri burada kesmek en ucuzu.
+  // '<\!--' JS'te '<!--' ile aynı değeri üretir (tanınmayan kaçış karakterin
+  // kendisine düşer). Kaynakta "<!--" ESKİ tarz tek satırlık JS yorumu olarak
+  // kullanılıyorsa kaçış sözdizimini bozar — aşağıdaki yeniden derleme bunu
+  // yakalar ve build durur, sessizce yanlış dosya üretilmez.
+  if (!/<\/script/i.test(js) && js.indexOf('<!--') === -1) {
+    return { code: js, escaped: 0 };
+  }
 
-  var escaped = js.split(/<\/script/i).length - 1;
-  var out = js.replace(/<\/(script)/gi, '<\\/$1');
+  var escaped = (js.split(/<\/script/i).length - 1) + (js.split('<!--').length - 1);
+  var out = js.replace(/<\/(script)/gi, '<\\/$1').replace(/<!--/g, '<\\!--');
 
   try {
     new vm.Script(out, { filename: label || 'shield' });
   } catch (e) {
     var err = new Error(
-      '"</script>" kaçışı ' + (label || 'kaynak') + ' dosyasının sözdizimini bozdu: ' + e.message +
-      '\n  Kaynakta dizge/yorum dışında bir "</script" var. Elle düzeltin.');
+      'Kaçış ' + (label || 'kaynak') + ' dosyasının sözdizimini bozdu: ' + e.message +
+      '\n  Kaynakta dizge/yorum DIŞINDA bir "</script" ya da "<!--" var.' +
+      '\n  ("<!--" satır başında eski tarz JS yorumudur; "//" ile değiştirin.)' +
+      '\n  Elle düzeltin — build bozuk dosya üretmemek için durdu.');
     err.mfsimShield = true;
     throw err;
   }
@@ -79,38 +93,109 @@ function indexOfCI(src, needle, from) {
   return m ? m.index : -1;
 }
 
-// HTML ayrıştırıcısını taklit ederek script ELEMANI say.
+// Açılış etiketinin '>' konumu. Tırnaklı attribute değerleri atlanır, yoksa
+// data-mfsim-label="… > …" gibi bir değer etiketi erken bitirirdi.
+function endOfOpenTag(src, from) {
+  var q = null;
+  for (var i = from; i < src.length; i++) {
+    var c = src[i];
+    if (q) { if (c === q) q = null; }
+    else if (c === '"' || c === "'") q = c;
+    else if (c === '>') return i;
+  }
+  return -1;
+}
+
+// ── script gövdesinin GERÇEK kip makinesi ────────────────────────────────
 //
-// Üç yapı önemlidir, çünkü üçü de kendi "ham metin" kipini kurar ve içlerindeki
-// '<' bir etiket BAŞLATMAZ:
-//   <!-- … -->            yorum    → '-->' ile biter
-//   <style> … </style>    RAWTEXT  → '</style' ile biter
-//   <script> … </script>  script   → '</script' ile biter
-// Bunları atlamazsak, gömülü CSS'te ya da bir yorumda geçen "<script" sahte
-// alarm üretir.
-function countScriptElements(src) {
-  var TOKEN = /<!--|<style\b|<script\b/gi;
-  var n = 0, end;
-  TOKEN.lastIndex = 0;
+// Script gövdesi TEK kipli değildir. HTML tokenizer'ında üç kip vardır ve
+// geçişler şöyledir:
+//
+//   script data          --  "<!--"   -->  script data ESCAPED
+//   script data escaped  --  "<script" -->  script data DOUBLE escaped
+//   herhangi escaped kip --  "-->"    -->  script data
+//
+// KRİTİK: DOUBLE escaped kipte "</script>" elemanı KAPATMAZ — yalnızca
+// escaped kipe geri döner. Yani bir gövdede "<!--" ve ardından "<script"
+// geçiyorsa, bizim yazdığımız kapanış etiketi işe yaramaz: blok kapanmaz,
+// belgenin GERİ KALANI o script'in metni olur ve sayfadan hiçbir şey çizilmez.
+//
+// Bu kapının ilk yazımı bu kipleri modellemiyordu ve tam bu durumu "temiz"
+// diye geçiriyordu (gerçek Chromium ile ölçülüp doğrulandı). Bugün js/ içinde
+// hiç "<!--" yok, ama js/loader.js, js/results.js ve viewer/js/app.js zaten
+// "<script …>" dizgeleri kuruyor — tuzağın yarısı hazır. Bir geliştiricinin
+// HTML yorumundan söz eden bir yoruma "<!--" yazması yeterdi. 2026-08 olayının
+// kök nedeni de tam olarak buydu: ham dizge, tuzağı ANLATAN yorumun içindeydi.
+//
+// Ayrıca: kapanış "</script" dizisinden sonra tab/LF/FF/boşluk, '/' ya da '>'
+// gelirse geçerlidir — yalnız "</script>" aramak yetmez ("</script " ve
+// "</script/" da kapatır; Chromium ile ölçüldü).
+function scanScriptBody(src, from) {
+  var TOK = /<!--|-->|<\/script(?=[\t\n\f \/>]|$)|<script(?=[\t\n\f \/>]|$)/gi;
+  TOK.lastIndex = from;
+  var state = 0;              // 0 = data, 1 = escaped, 2 = double escaped
   var m;
-  while ((m = TOKEN.exec(src))) {
-    var tok = m[0].slice(0, 6).toLowerCase();   // '<!--' | '<style' | '<scrip'
-    if (tok === '<!--') {
-      end = src.indexOf('-->', m.index);
-      if (end === -1) break;
-      TOKEN.lastIndex = end + 3;
-    } else if (tok === '<style') {
-      end = indexOfCI(src, '</style', m.index);
-      if (end === -1) break;
-      TOKEN.lastIndex = end + 7;
-    } else {
-      n++;
-      end = indexOfCI(src, '</script', m.index);
-      if (end === -1) break;
-      TOKEN.lastIndex = end + 8;
+  while ((m = TOK.exec(src))) {
+    var t = m[0];
+    if (t === '<!--') {
+      if (state === 0) state = 1;
+    } else if (t === '-->') {
+      state = 0;
+    } else if (t.charAt(1) === '/') {        // </script
+      if (state === 2) state = 1;            // KAPATMAZ, escaped'e döner
+      else return m.index;                   // asıl kapanış
+    } else {                                  // <script
+      if (state === 1) state = 2;
     }
   }
-  return n;
+  return -1;                                  // blok hiç kapanmadı
+}
+
+// Belgeyi tarayıcı gibi gez: script ve style elemanlarını say, kapanmayanları
+// bildir. Ham metin kipleri (<!-- -->, <style>, <script>) atlanır — gömülü
+// CSS'te ya da bir HTML yorumunda geçen "<script" sahte alarm üretmesin.
+function scanDocument(src) {
+  var OPEN = /<!--|<script(?=[\t\n\f \/>])|<style(?=[\t\n\f \/>])/gi;
+  var scripts = 0, styles = 0, unclosed = [];
+  var i = 0, m;
+  while (true) {
+    OPEN.lastIndex = i;
+    m = OPEN.exec(src);
+    if (!m) break;
+
+    if (m[0] === '<!--') {
+      var ce = src.indexOf('-->', m.index + 4);
+      i = (ce === -1) ? src.length : ce + 3;
+      continue;
+    }
+
+    var gt = endOfOpenTag(src, m.index);
+    if (gt === -1) break;
+
+    if (/^<script$/i.test(m[0])) {
+      scripts++;
+      var se = scanScriptBody(src, gt + 1);
+      if (se === -1) { unclosed.push('script'); break; }
+      i = se + 8;
+    } else {
+      styles++;
+      // <style> düz RAWTEXT'tir: escaped kip yok, yalnız "</style" bitirir.
+      var ye = (function () {
+        var re = /<\/style(?=[\t\n\f \/>]|$)/gi;
+        re.lastIndex = gt + 1;
+        var mm = re.exec(src);
+        return mm ? mm.index : -1;
+      })();
+      if (ye === -1) { unclosed.push('style'); break; }
+      i = ye + 7;
+    }
+  }
+  return { scripts: scripts, styles: styles, unclosed: unclosed };
+}
+
+// Tarayıcının göreceği script ELEMANI sayısı.
+function countScriptElements(src) {
+  return scanDocument(src).scripts;
 }
 
 // Belgedeki TOPLAM `</script` dizisi sayısı (nerede geçtiğine bakmaksızın).
@@ -128,7 +213,14 @@ function countScriptElements(src) {
 // eleman sayısı kıyaslanıyordu; bir gövdede hem ham `</script` hem ham
 // `<script>` varsa sayı tesadüfen tutabiliyordu.)
 function countScriptClosers(src) {
-  return (src.match(/<\/script/gi) || []).length;
+  // HTML yorumları ve <style> gövdeleri HARİÇ tutulur: oradaki bir "</script"
+  // hiçbir şey kapatmaz, sayıya katılırsa sahte alarm üretir (gerçek Chromium
+  // ile ölçüldü: yorum içinde "</script>" geçen sağlam bir belge, maskeleme
+  // olmadan "BOZUK" görünüyordu).
+  var masked = src
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style(?=[\t\n\f \/>]|$)/gi, '');
+  return (masked.match(/<\/script/gi) || []).length;
 }
 
 // <style> blokları için aynı tuzak: gömülen CSS'te ham `</style` varsa stil
@@ -148,27 +240,49 @@ function shieldStyleEnd(css) {
 //   2) eleman sayısı === kastedilen sayı → hiçbir blok kaybolmamış/eklenmemiş
 //
 // (1) asıl kapıdır; (2) gömme mantığındaki başka bir sapmayı yakalar.
-function verifyScriptBlocks(html, intended) {
-  var elements = countScriptElements(html);
+function verifyScriptBlocks(html, intended, intendedStyles) {
+  var doc = scanDocument(html);
   var closers = countScriptClosers(html);
 
-  if (closers !== elements) {
+  // (0) Hiç kapanmayan blok — DOUBLE escaped kip tuzağının imzası. Belgenin
+  //     geri kalanı o script'in metni olur; sayfadan hiçbir şey çizilmez.
+  if (doc.unclosed.length) {
+    return 'Bir <' + doc.unclosed[0] + '> bloğu HİÇ KAPANMIYOR!\n' +
+      '  Gövdede "<!--" ve ardından "<script" geçiyorsa tarayıcı DOUBLE escaped\n' +
+      '  kipe girer ve kapanış etiketi artık kapatmaz. Belgenin geri kalanı o\n' +
+      '  bloğun metni olur — sayfa bomboş açılır. Kaynakta "<\\!--" yazın.';
+  }
+
+  // (1) Erken kapanma kanıtı: sağlam belgede her eleman kapanışını tam bir kez
+  //     yazar ve "</script" başka hiçbir yerde geçemez.
+  if (closers !== doc.scripts) {
     return 'Script blokları bozuk! Belgede ' + closers + ' adet "</script" var ama ' +
-      'tarayıcı yalnızca ' + elements + ' script elemanı görüyor.\n' +
+      'tarayıcı ' + doc.scripts + ' script elemanı görüyor.\n' +
       '  Gömülen bir kaynakta ham "</script>" dizisi bloğu ERKEN KAPATIYOR: kalan\n' +
       '  kaynak HTML olarak ayrıştırılır, ekrana ham kod dökülür ve sayfa\n' +
       '  tıklanamaz hâle gelir. Kaynakta "<\\/script>" yazın.';
   }
-  if (typeof intended === 'number' && elements !== intended) {
-    return 'Script blok sayısı beklenenden farklı: ' + elements + ' bulundu, ' +
+
+  // (2) Gömme mantığındaki başka bir sapma
+  if (typeof intended === 'number' && doc.scripts !== intended) {
+    return 'Script blok sayısı beklenenden farklı: ' + doc.scripts + ' bulundu, ' +
       intended + ' kastedildi.\n' +
       '  Gömme sırasında bir <script> bloğu kayboldu ya da fazladan eklendi.';
   }
+
+  // (3) <style> tarafı: aynı tuzak, aynı sonuç (stilin kalanı sayfaya metin
+  //     olarak dökülür, o noktadan sonraki tüm kurallar düşer).
+  if (typeof intendedStyles === 'number' && doc.styles !== intendedStyles) {
+    return 'Style blok sayısı beklenenden farklı: ' + doc.styles + ' bulundu, ' +
+      intendedStyles + ' kastedildi.\n' +
+      '  Gömülen bir CSS\'te ham "</style" dizisi bloğu ERKEN KAPATIYOR.';
+  }
+
   return null;
 }
 
 module.exports = {
   shieldScriptEnd, shieldStyleEnd,
-  countScriptElements, countScriptClosers, verifyScriptBlocks,
+  scanDocument, countScriptElements, countScriptClosers, verifyScriptBlocks,
   indexOfCI,
 };

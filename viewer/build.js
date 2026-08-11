@@ -121,14 +121,17 @@ if(leftovers) {
 // Yapısal doğrulama: erken kapanan bir script bloğu, indirilen tek dosyayı
 // ham kod dökülen ve tıklanamayan bir sayfaya çevirir (bkz. build-shield.js).
 // Kalkan girdi tarafını koruyor; bu adım çıktıyı ölçüyor.
-var intendedScripts = SHIELD.countScriptElements(fs.readFileSync(INDEX, 'utf8'));
-var blockError = SHIELD.verifyScriptBlocks(html, intendedScripts);
+var viewerDoc = SHIELD.scanDocument(fs.readFileSync(INDEX, 'utf8'));
+var intendedScripts = viewerDoc.scripts;
+var intendedStyles = viewerDoc.styles +
+  (fs.readFileSync(INDEX, 'utf8').match(/<link\s+rel="stylesheet"\s+href="\.\.\/css\//g) || []).length;
+var blockError = SHIELD.verifyScriptBlocks(html, intendedScripts, intendedStyles);
 if(blockError) {
   console.error('\n✗ ' + blockError + '\n');
   process.exit(1);
 }
-console.log('  Yapısal doğrulama: ' + intendedScripts +
-  ' script bloğu, hepsi kendi yerinde kapanıyor');
+console.log('  Yapısal doğrulama: ' + intendedScripts + ' script + ' + intendedStyles +
+  ' style bloğu, hepsi kendi yerinde kapanıyor');
 
 // ── 3) Yaz ────────────────────────────────────────────────────────────────
 fs.writeFileSync(OUTPUT, html, 'utf8');

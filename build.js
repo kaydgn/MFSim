@@ -167,14 +167,18 @@ html = html.replace(/<body([^>]*)>/, '<body$1>\n' + embedScript);
 // KASTEDİLEN sayı kaynağın kendisinden okunur: index.html'deki script elemanları
 // + gömülen topoloji betiği (1). Aynı sayaç iki tarafta da kullanılır, yoksa
 // kıyas elmayla armut olur.
-var intendedScripts = SHIELD.countScriptElements(fs.readFileSync(INDEX, 'utf8')) + 1;
-var blockError = SHIELD.verifyScriptBlocks(html, intendedScripts);
+var indexDoc = SHIELD.scanDocument(fs.readFileSync(INDEX, 'utf8'));
+var intendedScripts = indexDoc.scripts + 1;   // + gömülen topoloji betiği
+// index.html'deki <style> blokları + inline edilen her stylesheet
+var intendedStyles = indexDoc.styles +
+  (fs.readFileSync(INDEX, 'utf8').match(/<link\s+rel="stylesheet"\s+href="(?:css|vendor)\//g) || []).length;
+var blockError = SHIELD.verifyScriptBlocks(html, intendedScripts, intendedStyles);
 if (blockError) {
   console.error('\n✗ ' + blockError + '\n');
   process.exit(1);
 }
-console.log('  Yapısal doğrulama: ' + intendedScripts +
-  ' script bloğu, hepsi kendi yerinde kapanıyor');
+console.log('  Yapısal doğrulama: ' + intendedScripts + ' script + ' + intendedStyles +
+  ' style bloğu, hepsi kendi yerinde kapanıyor');
 
 // ── 3) Yaz
 fs.writeFileSync(OUTPUT, html, 'utf8');

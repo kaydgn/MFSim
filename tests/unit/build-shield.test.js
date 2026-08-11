@@ -146,6 +146,95 @@ describe('verifyScriptBlocks — asıl kapı', () => {
   });
 });
 
+describe('script gövdesinin ham metin KİPLERİ — tarayıcıyla birebir', () => {
+  // Aşağıdaki beklentilerin HEPSİ gerçek Chromium'da ölçüldü (bkz. PR gövdesi).
+  // Kapının ilk yazımı kipleri modellemiyordu ve "<!-- + <script" durumunu
+  // temiz diye geçiriyordu: tarayıcı orada TEK bir script elemanı görüyor ve
+  // belgenin geri kalanını yutuyor — sayfa bomboş açılıyordu.
+
+  test('"<!--" sonrası "<script" varsa kapanış etiketi KAPATMAZ (double escaped)', () => {
+    const bozuk = '<script>\nvar a=1;\n<!-- y\nvar t="<script src=x>";\n</script>' +
+                  '<script>window.B=1;</script>';
+    // Chromium: 1 eleman, sonrası yutulur.
+    expect(SHIELD.scanDocument(bozuk).scripts).toBe(1);
+    expect(SHIELD.scanDocument(bozuk).unclosed).toEqual(['script']);
+    expect(SHIELD.verifyScriptBlocks(bozuk, 2)).toMatch(/HİÇ KAPANMIYOR/);
+  });
+
+  test('"<!--" tek başına zararsız — kapanış hâlâ kapatır', () => {
+    const saglam = '<script>\nvar a=1;\n<!-- y\n</script><script>window.B=1;</script>';
+    expect(SHIELD.scanDocument(saglam).scripts).toBe(2);
+    expect(SHIELD.verifyScriptBlocks(saglam, 2)).toBeNull();
+  });
+
+  test('"-->" escaped kipten çıkarır, tuzak dağılır', () => {
+    const saglam = '<script>\nvar a=1;\n<!-- y\nvar t="<script src=x>";\n-->\n</script>' +
+                   '<script>window.B=1;</script>';
+    expect(SHIELD.scanDocument(saglam).scripts).toBe(2);
+    expect(SHIELD.verifyScriptBlocks(saglam, 2)).toBeNull();
+  });
+
+  test('kalkan "<!--" zincirini keser — build kendiliğinden kurtarır', () => {
+    // Gerçekçi vaka ve olayın tekrarı: tuzağı ANLATAN bir yoruma "<!--" yazmak.
+    const kaynak = '// HTML yorumu "<!--" ile başlar; script gövdesinde tehlikeli.\n' +
+                   'var t = "<script src=x>";\n';
+    const { code, escaped } = SHIELD.shieldScriptEnd(kaynak, 'ornek.js');
+    expect(escaped).toBeGreaterThan(0);
+    expect(code.indexOf('<!--')).toBe(-1);
+    expect(SHIELD.verifyScriptBlocks('<script>\n' + code + '\n</script>', 1)).toBeNull();
+  });
+
+  test('"<!--" ESKİ tarz JS yorumu olarak kullanılmışsa build SESSİZ GEÇMEZ', () => {
+    // Annex B: satır başındaki "<!--" sloppy-mode JS'te tek satırlık yorumdur.
+    // Kaçırmak sözdizimini bozar — kalkan bunu yeniden derleyerek yakalar ve
+    // fırlatır. Build durur; yanlış dosya üretilip yayınlanmaz.
+    expect(() => SHIELD.shieldScriptEnd('var a=1;\n<!-- eski yorum\nvar b=2;\n', 'eski.js'))
+      .toThrow();
+  });
+
+  test('kapanış "</script" + boşluk ve + "/" de kapatır — sadece ">" aramak yetmez', () => {
+    for (const son of [' ', '/', '>']) {
+      const bozuk = '<script>\nvar s="</script' + son + '";\n</script><script>window.B=1;</script>';
+      expect(SHIELD.verifyScriptBlocks(bozuk, 2)).not.toBeNull();
+    }
+  });
+
+  test('attribute değerindeki ">" açılış etiketini erken bitirmez', () => {
+    const saglam = '<script type="text/x-mfsim-defer" data-l="a > b">var a=1;</script>' +
+                   '<script>window.B=1;</script>';
+    expect(SHIELD.scanDocument(saglam).scripts).toBe(2);
+    expect(SHIELD.verifyScriptBlocks(saglam, 2)).toBeNull();
+  });
+
+  test('HTML yorumundaki "</script>" sahte alarm üretmez', () => {
+    const saglam = '<!-- <script>eski</script> --><script>window.B=1;</script>' +
+                   '<script>var q=1;</script>';
+    expect(SHIELD.countScriptClosers(saglam)).toBe(2);   // yorum maskelendi
+    expect(SHIELD.verifyScriptBlocks(saglam, 2)).toBeNull();
+  });
+
+  test('<style> gövdesindeki "</script>" de sahte alarm üretmez', () => {
+    const saglam = '<style>.a::after{content:"</script>"}</style><script>var a=1;</script>';
+    expect(SHIELD.verifyScriptBlocks(saglam, 1, 1)).toBeNull();
+  });
+});
+
+describe('rapor üreticileri kapanışı tam kurala göre kaçırıyor', () => {
+  // İndirilen HTML raporlara KaTeX gömen iki yer. Kaçış ">" zorunlu tutarsa
+  // "</script " ve "</script/" biçimleri sızar ve raporda formül yerine yüz
+  // binlerce karakter ham JS görünür. KaTeX gövdesi upstream'den yeniden
+  // üretiliyor (tools/report-assets/) — sürüm yükseltmesinde içerik değişir.
+  test.each([
+    ['js/results.js', path.join(ROOT, 'js/results.js')],
+    ['js/cp-mount-report.js', path.join(ROOT, 'js/cp-mount-report.js')],
+  ])('%s katexJs kaçışı ">" zorunlu tutmuyor', (rel, abs) => {
+    const src = fs.readFileSync(abs, 'utf8');
+    const m = src.match(/katexJs\s*=\s*[^;]*?\.replace\((\/[^/]+\/[gi]*)/);
+    expect(m).not.toBeNull();
+    expect(m[1]).not.toMatch(/script>/);   // ">" ZORUNLU OLMAMALI
+  });
+});
+
 describe('kaynaklar tek dosyaya gömülünce sağlam kalıyor', () => {
   // Uçtan uca iddia: kalkandan geçirilen HER kaynak, bir <script> bloğunun
   // içine konduğunda TAM OLARAK bir eleman üretir. Bu test, kaynağa yeni bir
@@ -180,7 +269,8 @@ describe('iki build de kalkanı KULLANIYOR', () => {
   ])('%s hem kalkanı hem yapısal doğrulamayı çağırıyor', (rel, abs) => {
     const src = fs.readFileSync(abs, 'utf8');
     expect(src).toMatch(/require\((['"])[.\/]*build-shield\.js\1\)/);
-    expect(src).toMatch(/shieldScriptEnd\(/);
-    expect(src).toMatch(/countScriptElements\(/);
+    expect(src).toMatch(/shieldScriptEnd\(/);      // girdi kalkanı
+    expect(src).toMatch(/shieldStyleEnd\(/);       // stil kalkanı
+    expect(src).toMatch(/verifyScriptBlocks\(/);   // çıktı kapısı
   });
 });
