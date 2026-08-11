@@ -113,10 +113,18 @@ describe('KaTeX — Takoz raporuyla aynı gömme sözleşmesi', () => {
     expect(indirici).not.toMatch(/https?:\/\/[^"']*katex/i);
   });
 
-  test('gömülen JS içindeki </script> kaçışlanıyor (belge erken kapanmasın)', () => {
-    // Bu kaçış olmazsa indirilen rapor <script> ortasında biter ve
-    // belgenin geri kalanı ham metin olarak dökülür.
-    expect(indirici).toMatch(/katexJs[\s\S]{0,120}replace\(\/<\\\/script>\/gi/);
+  test('gömülen JS içindeki kapanış etiketi kaçışlanıyor (belge erken kapanmasın)', () => {
+    // Bu kaçış olmazsa indirilen rapor <script> ortasında biter ve belgenin
+    // geri kalanı ham metin olarak dökülür.
+    //
+    // Kaçış deseni ">" ZORUNLU TUTMAMALI: tarayıcı, kapanış dizisinden sonra
+    // boşluk, "/" ya da ">" gelirse bloğu bitirir (gerçek Chromium ile
+    // ölçüldü). Bu testin ilk hâli tam kapanışı sabitliyordu, yani eksik
+    // sözleşmeyi koruyordu — KaTeX gövdesi tools/report-assets/ ile
+    // upstream'den yeniden üretiliyor ve sürüm yükseltmesinde içerik değişir.
+    const m = /katexJs[\s\S]{0,400}?replace\((\/[^/]+\/[gi]*)/.exec(indirici);
+    expect(m).not.toBeNull();
+    expect(m[1]).not.toMatch(/script>/);
   });
 
   test('otomatik render $$…$$ ve \\(…\\) sınırlayıcılarıyla kuruluyor', () => {

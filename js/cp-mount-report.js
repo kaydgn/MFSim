@@ -288,7 +288,9 @@ function _mntBuildReportHTML(R, opts){
   var A=window.MNT_REPORT_ASSETS;
   var tpl=decodeURIComponent(escape(atob(window.MNT_REPORT_TEMPLATE_B64)));
   var assetsCss=A.fontsCss + '\n' + A.katexCss;
-  var katexJs=A.katexJs.replace(/<\/script>/gi,'<\\/script>');
+  // '>' ARANMAZ — tarayıcı "<\/script" + boşluk / '/' / '>' ile de kapatır.
+  // (Aynı kaçış js/results.js'te de var; ikisi aynı kuralı uygular.)
+  var katexJs=A.katexJs.replace(/<\/script/gi,'<\\/script');
   var antet=_mntRepAntet(R);
   var sec8=_mntRepSection8(R, opts);
   var compliance=_mntRepCompliance(R, opts);
